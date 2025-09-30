@@ -1,4 +1,4 @@
-{$IFNDEF WINDOWS}{$MODE DELPHI}{$ENDIF}
+{$MODE DELPHI}{$H+}
 
 unit fafafa.ssl.openssl.chacha;
 
@@ -96,13 +96,9 @@ function IsChaChaLoaded: Boolean;
 function ChaCha20Encrypt(const Key: TBytes; const IV: TBytes; const Plaintext: TBytes): TBytes;
 function ChaCha20Decrypt(const Key: TBytes; const IV: TBytes; const Ciphertext: TBytes): TBytes;
 
-function ChaCha20Poly1305AEADEncrypt(const Key: TBytes; const Nonce: TBytes;
-                                     const Plaintext: TBytes; const AAD: TBytes;
-                                     out Tag: TChaCha20Poly1305Tag): TBytes;
-                                     
-function ChaCha20Poly1305AEADDecrypt(const Key: TBytes; const Nonce: TBytes;
-                                     const Ciphertext: TBytes; const AAD: TBytes;
-                                     const Tag: TChaCha20Poly1305Tag): TBytes;
+function ChaCha20Poly1305AEADEncrypt(const Key, Nonce, Plaintext, AAD: TBytes; var AuthTag: TChaCha20Poly1305Tag): TBytes;
+
+function ChaCha20Poly1305AEADDecrypt(const Key, Nonce, Ciphertext, AAD: TBytes; const AuthTag: TChaCha20Poly1305Tag): TBytes;
 
 function Poly1305MAC(const Key: TBytes; const Message: TBytes): TBytes;
 
@@ -264,9 +260,7 @@ begin
   end;
 end;
 
-function ChaCha20Poly1305AEADEncrypt(const Key: TBytes; const Nonce: TBytes;
-                                     const Plaintext: TBytes; const AAD: TBytes;
-                                     out Tag: TChaCha20Poly1305Tag): TBytes;
+function ChaCha20Poly1305AEADEncrypt(const Key, Nonce, Plaintext, AAD: TBytes; var AuthTag: TChaCha20Poly1305Tag): TBytes;
 var
   ctx: PEVP_CIPHER_CTX;
   outlen, finlen: Integer;
@@ -281,7 +275,7 @@ begin
     raise Exception.Create('Invalid nonce size for ChaCha20-Poly1305');
   
   SetLength(Result, Length(Plaintext));
-  FillChar(Tag, SizeOf(Tag), 0);
+  FillChar(AuthTag, SizeOf(AuthTag), 0);
   
   ctx := EVP_CIPHER_CTX_new();
   try
@@ -305,16 +299,14 @@ begin
     SetLength(Result, outlen + finlen);
     
     // Get tag
-    if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, POLY1305_TAG_SIZE, @Tag) <> 1 then
+    if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, POLY1305_TAG_SIZE, @AuthTag) <> 1 then
       raise Exception.Create('Failed to get authentication tag');
   finally
     EVP_CIPHER_CTX_free(ctx);
   end;
 end;
 
-function ChaCha20Poly1305AEADDecrypt(const Key: TBytes; const Nonce: TBytes;
-                                     const Ciphertext: TBytes; const AAD: TBytes;
-                                     const Tag: TChaCha20Poly1305Tag): TBytes;
+function ChaCha20Poly1305AEADDecrypt(const Key, Nonce, Ciphertext, AAD: TBytes; const AuthTag: TChaCha20Poly1305Tag): TBytes;
 var
   ctx: PEVP_CIPHER_CTX;
   outlen, finlen: Integer;
@@ -347,7 +339,7 @@ begin
       raise Exception.Create('Failed to decrypt with ChaCha20-Poly1305');
     
     // Set expected tag
-    if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, POLY1305_TAG_SIZE, @Tag) <> 1 then
+    if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, POLY1305_TAG_SIZE, @AuthTag) <> 1 then
       raise Exception.Create('Failed to set authentication tag');
       
     // Verify tag and finalize
