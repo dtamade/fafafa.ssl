@@ -1,8 +1,8 @@
 # OpenSSL Module Test Status
 
-## Test Progress: 12/60 modules (20%)
+## Test Progress: 16/60 modules (27%)
 
-### ✅ Completed Tests (12 modules)
+### ✅ Completed Tests (16 modules)
 
 | # | Module | Test File | Status | Notes |
 |---|--------|-----------|--------|-------|
@@ -18,6 +18,10 @@
 | 10 | bn | test_openssl_bn | ✅ | 35/36 tests passed |
 | 11 | bio | test_openssl_bio | ✅ | 9 tests passed |
 | 12 | err | test_openssl_err | ✅ | Error handling |
+| 13 | seed | test_seed | ✅ | 5/5 tests passed |
+| 14 | des | test_des | ⚠️ | 7/8 tests passed (weak key test failed) |
+| 15 | aria | test_aria | ✅ | 7/7 tests passed (not available in OpenSSL 3.x) |
+| 16 | camellia | test_camellia | ✅ | 5/5 tests passed |
 
 ### 🔄 In Progress (0 modules)
 
@@ -48,10 +52,7 @@
 | 31 | cmac | MEDIUM | MAC | CMAC |
 | 32 | blake2 | MEDIUM | Hash | BLAKE2 hash |
 | 33 | sha3 | MEDIUM | Hash | SHA-3 family |
-| 34 | des | LOW | Legacy Crypto | DES encryption |
-| 35 | aria | LOW | Crypto | ARIA cipher |
-| 36 | chacha | MEDIUM | Crypto | ChaCha20 |
-| 37 | seed | LOW | Crypto | SEED cipher |
+| 34 | chacha | MEDIUM | Crypto | ChaCha20 |
 | 38 | sm | LOW | Crypto | SM2/SM3/SM4 (Chinese) |
 | 39 | legacy_ciphers | LOW | Legacy | Old ciphers |
 | 40 | modes | LOW | Crypto | Block cipher modes |

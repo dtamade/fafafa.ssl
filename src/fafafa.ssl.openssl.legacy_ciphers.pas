@@ -101,6 +101,42 @@ const
   CAMELLIA_DECRYPT = 0;
 
 type
+  // RC2 function types
+  TRC2_set_key = procedure(key: PRC2_KEY; len: Integer; const data: PByte; bits: Integer); cdecl;
+  TRC2_ecb_encrypt = procedure(const input: PByte; output: PByte; key: PRC2_KEY; enc: Integer); cdecl;
+  TRC2_cbc_encrypt = procedure(const input: PByte; output: PByte; length: LongInt; 
+    ks: PRC2_KEY; ivec: PByte; enc: Integer); cdecl;
+  TRC2_cfb64_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
+    schedule: PRC2_KEY; ivec: PByte; num: PInteger; enc: Integer); cdecl;
+  TRC2_ofb64_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
+    schedule: PRC2_KEY; ivec: PByte; num: PInteger); cdecl;
+    
+  // RC4 function types
+  TRC4_set_key = procedure(key: PRC4_KEY; len: Integer; const data: PByte); cdecl;
+  TRC4 = procedure(key: PRC4_KEY; len: NativeUInt; const input: PByte; output: PByte); cdecl;
+  TRC4_options = function(): PAnsiChar; cdecl;
+  
+  // RC5 function types
+  TRC5_32_set_key = procedure(key: PRC5_32_KEY; len: Integer; const data: PByte; rounds: Integer); cdecl;
+  TRC5_32_ecb_encrypt = procedure(const input: PByte; output: PByte; key: PRC5_32_KEY; enc: Integer); cdecl;
+  TRC5_32_cbc_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
+    ks: PRC5_32_KEY; ivec: PByte; enc: Integer); cdecl;
+  TRC5_32_cfb64_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
+    schedule: PRC5_32_KEY; ivec: PByte; num: PInteger; enc: Integer); cdecl;
+  TRC5_32_ofb64_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
+    schedule: PRC5_32_KEY; ivec: PByte; num: PInteger); cdecl;
+    
+  // IDEA function types
+  TIDEA_set_encrypt_key = procedure(const key: PByte; ks: PIDEA_KEY_SCHEDULE); cdecl;
+  TIDEA_set_decrypt_key = procedure(ek: PIDEA_KEY_SCHEDULE; dk: PIDEA_KEY_SCHEDULE); cdecl;
+  TIDEA_ecb_encrypt = procedure(const input: PByte; output: PByte; ks: PIDEA_KEY_SCHEDULE); cdecl;
+  TIDEA_cbc_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
+    ks: PIDEA_KEY_SCHEDULE; ivec: PByte; enc: Integer); cdecl;
+  TIDEA_cfb64_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
+    ks: PIDEA_KEY_SCHEDULE; ivec: PByte; num: PInteger; enc: Integer); cdecl;
+  TIDEA_ofb64_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
+    ks: PIDEA_KEY_SCHEDULE; ivec: PByte; num: PInteger); cdecl;
+  
   // Function pointer types for Camellia
   TCamellia_set_key = function(const userKey: PByte; const bits: Integer;
     key: PCAMELLIA_KEY): Integer; cdecl;
@@ -118,6 +154,47 @@ type
     const key: PCAMELLIA_KEY; ivec: PByte; num: PInteger); cdecl;
   TCamellia_ctr_encrypt = procedure(const input: PByte; output: PByte; length: NativeUInt;
     const key: PCAMELLIA_KEY; ivec: PByte; ecount_buf: PByte; num: PCardinal); cdecl;
+    
+  // BLOWFISH function types
+  TBF_set_key = procedure(key: PBF_KEY; len: Integer; const data: PByte); cdecl;
+  TBF_encrypt = procedure(data: PCardinal; const key: PBF_KEY); cdecl;
+  TBF_decrypt = procedure(data: PCardinal; const key: PBF_KEY); cdecl;
+  TBF_ecb_encrypt = procedure(const input: PByte; output: PByte; key: PBF_KEY; enc: Integer); cdecl;
+  TBF_cbc_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
+    schedule: PBF_KEY; ivec: PByte; enc: Integer); cdecl;
+  TBF_cfb64_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
+    schedule: PBF_KEY; ivec: PByte; num: PInteger; enc: Integer); cdecl;
+  TBF_ofb64_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
+    schedule: PBF_KEY; ivec: PByte; num: PInteger); cdecl;
+    
+  // CAST5 function types
+  TCAST_set_key = procedure(key: PCAST_KEY; len: Integer; const data: PByte); cdecl;
+  TCAST_ecb_encrypt = procedure(const input: PByte; output: PByte; key: PCAST_KEY; enc: Integer); cdecl;
+  TCAST_encrypt = procedure(data: PCardinal; const key: PCAST_KEY); cdecl;
+  TCAST_decrypt = procedure(data: PCardinal; const key: PCAST_KEY); cdecl;
+  TCAST_cbc_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
+    ks: PCAST_KEY; ivec: PByte; enc: Integer); cdecl;
+  TCAST_cfb64_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
+    schedule: PCAST_KEY; ivec: PByte; num: PInteger; enc: Integer); cdecl;
+  TCAST_ofb64_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
+    schedule: PCAST_KEY; ivec: PByte; num: PInteger); cdecl;
+    
+  // MDC2 function types
+  TMDC2_Init = function(c: PMDC2_CTX): Integer; cdecl;
+  TMDC2_Update = function(c: PMDC2_CTX; const data: Pointer; len: NativeUInt): Integer; cdecl;
+  TMDC2_Final = function(md: PByte; c: PMDC2_CTX): Integer; cdecl;
+  TMDC2 = function(const d: PByte; n: NativeUInt; md: PByte): PByte; cdecl;
+  
+  // RIPEMD function types
+  TRIPEMD160_Init = function(c: PRIPEMD160_CTX): Integer; cdecl;
+  TRIPEMD160_Update = function(c: PRIPEMD160_CTX; const data: Pointer; len: NativeUInt): Integer; cdecl;
+  TRIPEMD160_Final = function(md: PByte; c: PRIPEMD160_CTX): Integer; cdecl;
+  TRIPEMD160 = function(const d: PByte; n: NativeUInt; md: PByte): PByte; cdecl;
+  TRIPEMD160_Transform = procedure(c: PRIPEMD160_CTX; const data: PByte); cdecl;
+  
+  // EVP function types
+  TEVP_CIPHER = function(): PEVP_CIPHER; cdecl;
+  TEVP_MD = function(): PEVP_MD; cdecl;
 
 var
   // RC2 functions
@@ -285,31 +362,31 @@ begin
   if AHandle = 0 then Exit;
   
   // RC2 functions
-  RC2_set_key := GetProcedureAddress(AHandle, 'RC2_set_key');
-  RC2_ecb_encrypt := GetProcedureAddress(AHandle, 'RC2_ecb_encrypt');
-  RC2_cbc_encrypt := GetProcedureAddress(AHandle, 'RC2_cbc_encrypt');
-  RC2_cfb64_encrypt := GetProcedureAddress(AHandle, 'RC2_cfb64_encrypt');
-  RC2_ofb64_encrypt := GetProcedureAddress(AHandle, 'RC2_ofb64_encrypt');
+  RC2_set_key := TRC2_set_key(GetProcedureAddress(AHandle, 'RC2_set_key'));
+  RC2_ecb_encrypt := TRC2_ecb_encrypt(GetProcedureAddress(AHandle, 'RC2_ecb_encrypt'));
+  RC2_cbc_encrypt := TRC2_cbc_encrypt(GetProcedureAddress(AHandle, 'RC2_cbc_encrypt'));
+  RC2_cfb64_encrypt := TRC2_cfb64_encrypt(GetProcedureAddress(AHandle, 'RC2_cfb64_encrypt'));
+  RC2_ofb64_encrypt := TRC2_ofb64_encrypt(GetProcedureAddress(AHandle, 'RC2_ofb64_encrypt'));
   
   // RC4 functions
-  RC4_set_key := GetProcedureAddress(AHandle, 'RC4_set_key');
-  RC4 := GetProcedureAddress(AHandle, 'RC4');
-  RC4_options := GetProcedureAddress(AHandle, 'RC4_options');
+  RC4_set_key := TRC4_set_key(GetProcedureAddress(AHandle, 'RC4_set_key'));
+  RC4 := TRC4(GetProcedureAddress(AHandle, 'RC4'));
+  RC4_options := TRC4_options(GetProcedureAddress(AHandle, 'RC4_options'));
   
   // RC5 functions
-  RC5_32_set_key := GetProcedureAddress(AHandle, 'RC5_32_set_key');
-  RC5_32_ecb_encrypt := GetProcedureAddress(AHandle, 'RC5_32_ecb_encrypt');
-  RC5_32_cbc_encrypt := GetProcedureAddress(AHandle, 'RC5_32_cbc_encrypt');
-  RC5_32_cfb64_encrypt := GetProcedureAddress(AHandle, 'RC5_32_cfb64_encrypt');
-  RC5_32_ofb64_encrypt := GetProcedureAddress(AHandle, 'RC5_32_ofb64_encrypt');
+  RC5_32_set_key := TRC5_32_set_key(GetProcedureAddress(AHandle, 'RC5_32_set_key'));
+  RC5_32_ecb_encrypt := TRC5_32_ecb_encrypt(GetProcedureAddress(AHandle, 'RC5_32_ecb_encrypt'));
+  RC5_32_cbc_encrypt := TRC5_32_cbc_encrypt(GetProcedureAddress(AHandle, 'RC5_32_cbc_encrypt'));
+  RC5_32_cfb64_encrypt := TRC5_32_cfb64_encrypt(GetProcedureAddress(AHandle, 'RC5_32_cfb64_encrypt'));
+  RC5_32_ofb64_encrypt := TRC5_32_ofb64_encrypt(GetProcedureAddress(AHandle, 'RC5_32_ofb64_encrypt'));
   
   // IDEA functions
-  IDEA_set_encrypt_key := GetProcedureAddress(AHandle, 'IDEA_set_encrypt_key');
-  IDEA_set_decrypt_key := GetProcedureAddress(AHandle, 'IDEA_set_decrypt_key');
-  IDEA_ecb_encrypt := GetProcedureAddress(AHandle, 'IDEA_ecb_encrypt');
-  IDEA_cbc_encrypt := GetProcedureAddress(AHandle, 'IDEA_cbc_encrypt');
-  IDEA_cfb64_encrypt := GetProcedureAddress(AHandle, 'IDEA_cfb64_encrypt');
-  IDEA_ofb64_encrypt := GetProcedureAddress(AHandle, 'IDEA_ofb64_encrypt');
+  IDEA_set_encrypt_key := TIDEA_set_encrypt_key(GetProcedureAddress(AHandle, 'IDEA_set_encrypt_key'));
+  IDEA_set_decrypt_key := TIDEA_set_decrypt_key(GetProcedureAddress(AHandle, 'IDEA_set_decrypt_key'));
+  IDEA_ecb_encrypt := TIDEA_ecb_encrypt(GetProcedureAddress(AHandle, 'IDEA_ecb_encrypt'));
+  IDEA_cbc_encrypt := TIDEA_cbc_encrypt(GetProcedureAddress(AHandle, 'IDEA_cbc_encrypt'));
+  IDEA_cfb64_encrypt := TIDEA_cfb64_encrypt(GetProcedureAddress(AHandle, 'IDEA_cfb64_encrypt'));
+  IDEA_ofb64_encrypt := TIDEA_ofb64_encrypt(GetProcedureAddress(AHandle, 'IDEA_ofb64_encrypt'));
   
   // CAMELLIA functions
   Camellia_set_key := TCamellia_set_key(GetProcedureAddress(AHandle, 'Camellia_set_key'));
@@ -324,102 +401,102 @@ begin
   Camellia_ctr128_encrypt := TCamellia_ctr_encrypt(GetProcedureAddress(AHandle, 'Camellia_ctr128_encrypt'));
   
   // BLOWFISH functions
-  BF_set_key := GetProcedureAddress(AHandle, 'BF_set_key');
-  BF_encrypt_func := GetProcedureAddress(AHandle, 'BF_encrypt');
-  BF_decrypt_func := GetProcedureAddress(AHandle, 'BF_decrypt');
-  BF_ecb_encrypt := GetProcedureAddress(AHandle, 'BF_ecb_encrypt');
-  BF_cbc_encrypt := GetProcedureAddress(AHandle, 'BF_cbc_encrypt');
-  BF_cfb64_encrypt := GetProcedureAddress(AHandle, 'BF_cfb64_encrypt');
-  BF_ofb64_encrypt := GetProcedureAddress(AHandle, 'BF_ofb64_encrypt');
+  BF_set_key := TBF_set_key(GetProcedureAddress(AHandle, 'BF_set_key'));
+  BF_encrypt_func := TBF_encrypt(GetProcedureAddress(AHandle, 'BF_encrypt'));
+  BF_decrypt_func := TBF_decrypt(GetProcedureAddress(AHandle, 'BF_decrypt'));
+  BF_ecb_encrypt := TBF_ecb_encrypt(GetProcedureAddress(AHandle, 'BF_ecb_encrypt'));
+  BF_cbc_encrypt := TBF_cbc_encrypt(GetProcedureAddress(AHandle, 'BF_cbc_encrypt'));
+  BF_cfb64_encrypt := TBF_cfb64_encrypt(GetProcedureAddress(AHandle, 'BF_cfb64_encrypt'));
+  BF_ofb64_encrypt := TBF_ofb64_encrypt(GetProcedureAddress(AHandle, 'BF_ofb64_encrypt'));
   
   // CAST5 functions
-  CAST_set_key := GetProcedureAddress(AHandle, 'CAST_set_key');
-  CAST_ecb_encrypt := GetProcedureAddress(AHandle, 'CAST_ecb_encrypt');
-  CAST_encrypt_func := GetProcedureAddress(AHandle, 'CAST_encrypt');
-  CAST_decrypt_func := GetProcedureAddress(AHandle, 'CAST_decrypt');
-  CAST_cbc_encrypt := GetProcedureAddress(AHandle, 'CAST_cbc_encrypt');
-  CAST_cfb64_encrypt := GetProcedureAddress(AHandle, 'CAST_cfb64_encrypt');
-  CAST_ofb64_encrypt := GetProcedureAddress(AHandle, 'CAST_ofb64_encrypt');
+  CAST_set_key := TCAST_set_key(GetProcedureAddress(AHandle, 'CAST_set_key'));
+  CAST_ecb_encrypt := TCAST_ecb_encrypt(GetProcedureAddress(AHandle, 'CAST_ecb_encrypt'));
+  CAST_encrypt_func := TCAST_encrypt(GetProcedureAddress(AHandle, 'CAST_encrypt'));
+  CAST_decrypt_func := TCAST_decrypt(GetProcedureAddress(AHandle, 'CAST_decrypt'));
+  CAST_cbc_encrypt := TCAST_cbc_encrypt(GetProcedureAddress(AHandle, 'CAST_cbc_encrypt'));
+  CAST_cfb64_encrypt := TCAST_cfb64_encrypt(GetProcedureAddress(AHandle, 'CAST_cfb64_encrypt'));
+  CAST_ofb64_encrypt := TCAST_ofb64_encrypt(GetProcedureAddress(AHandle, 'CAST_ofb64_encrypt'));
   
   // MDC2 functions
-  MDC2_Init := GetProcedureAddress(AHandle, 'MDC2_Init');
-  MDC2_Update := GetProcedureAddress(AHandle, 'MDC2_Update');
-  MDC2_Final := GetProcedureAddress(AHandle, 'MDC2_Final');
-  MDC2 := GetProcedureAddress(AHandle, 'MDC2');
+  MDC2_Init := TMDC2_Init(GetProcedureAddress(AHandle, 'MDC2_Init'));
+  MDC2_Update := TMDC2_Update(GetProcedureAddress(AHandle, 'MDC2_Update'));
+  MDC2_Final := TMDC2_Final(GetProcedureAddress(AHandle, 'MDC2_Final'));
+  MDC2 := TMDC2(GetProcedureAddress(AHandle, 'MDC2'));
   
   // RIPEMD functions
-  RIPEMD160_Init := GetProcedureAddress(AHandle, 'RIPEMD160_Init');
-  RIPEMD160_Update := GetProcedureAddress(AHandle, 'RIPEMD160_Update');
-  RIPEMD160_Final := GetProcedureAddress(AHandle, 'RIPEMD160_Final');
-  RIPEMD160 := GetProcedureAddress(AHandle, 'RIPEMD160');
-  RIPEMD160_Transform := GetProcedureAddress(AHandle, 'RIPEMD160_Transform');
+  RIPEMD160_Init := TRIPEMD160_Init(GetProcedureAddress(AHandle, 'RIPEMD160_Init'));
+  RIPEMD160_Update := TRIPEMD160_Update(GetProcedureAddress(AHandle, 'RIPEMD160_Update'));
+  RIPEMD160_Final := TRIPEMD160_Final(GetProcedureAddress(AHandle, 'RIPEMD160_Final'));
+  RIPEMD160 := TRIPEMD160(GetProcedureAddress(AHandle, 'RIPEMD160'));
+  RIPEMD160_Transform := TRIPEMD160_Transform(GetProcedureAddress(AHandle, 'RIPEMD160_Transform'));
   
   // Load EVP functions
-  EVP_rc2_ecb := GetProcedureAddress(AHandle, 'EVP_rc2_ecb');
-  EVP_rc2_cbc := GetProcedureAddress(AHandle, 'EVP_rc2_cbc');
-  EVP_rc2_40_cbc := GetProcedureAddress(AHandle, 'EVP_rc2_40_cbc');
-  EVP_rc2_64_cbc := GetProcedureAddress(AHandle, 'EVP_rc2_64_cbc');
-  EVP_rc2_cfb := GetProcedureAddress(AHandle, 'EVP_rc2_cfb');
-  EVP_rc2_cfb64 := GetProcedureAddress(AHandle, 'EVP_rc2_cfb64');
-  EVP_rc2_ofb := GetProcedureAddress(AHandle, 'EVP_rc2_ofb');
+  EVP_rc2_ecb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_rc2_ecb'));
+  EVP_rc2_cbc := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_rc2_cbc'));
+  EVP_rc2_40_cbc := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_rc2_40_cbc'));
+  EVP_rc2_64_cbc := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_rc2_64_cbc'));
+  EVP_rc2_cfb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_rc2_cfb'));
+  EVP_rc2_cfb64 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_rc2_cfb64'));
+  EVP_rc2_ofb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_rc2_ofb'));
   
-  EVP_rc4 := GetProcedureAddress(AHandle, 'EVP_rc4');
-  EVP_rc4_40 := GetProcedureAddress(AHandle, 'EVP_rc4_40');
-  EVP_rc4_hmac_md5 := GetProcedureAddress(AHandle, 'EVP_rc4_hmac_md5');
+  EVP_rc4 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_rc4'));
+  EVP_rc4_40 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_rc4_40'));
+  EVP_rc4_hmac_md5 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_rc4_hmac_md5'));
   
-  EVP_rc5_32_12_16_ecb := GetProcedureAddress(AHandle, 'EVP_rc5_32_12_16_ecb');
-  EVP_rc5_32_12_16_cbc := GetProcedureAddress(AHandle, 'EVP_rc5_32_12_16_cbc');
-  EVP_rc5_32_12_16_cfb := GetProcedureAddress(AHandle, 'EVP_rc5_32_12_16_cfb');
-  EVP_rc5_32_12_16_cfb64 := GetProcedureAddress(AHandle, 'EVP_rc5_32_12_16_cfb64');
-  EVP_rc5_32_12_16_ofb := GetProcedureAddress(AHandle, 'EVP_rc5_32_12_16_ofb');
+  EVP_rc5_32_12_16_ecb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_rc5_32_12_16_ecb'));
+  EVP_rc5_32_12_16_cbc := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_rc5_32_12_16_cbc'));
+  EVP_rc5_32_12_16_cfb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_rc5_32_12_16_cfb'));
+  EVP_rc5_32_12_16_cfb64 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_rc5_32_12_16_cfb64'));
+  EVP_rc5_32_12_16_ofb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_rc5_32_12_16_ofb'));
   
-  EVP_idea_ecb := GetProcedureAddress(AHandle, 'EVP_idea_ecb');
-  EVP_idea_cbc := GetProcedureAddress(AHandle, 'EVP_idea_cbc');
-  EVP_idea_cfb := GetProcedureAddress(AHandle, 'EVP_idea_cfb');
-  EVP_idea_cfb64 := GetProcedureAddress(AHandle, 'EVP_idea_cfb64');
-  EVP_idea_ofb := GetProcedureAddress(AHandle, 'EVP_idea_ofb');
+  EVP_idea_ecb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_idea_ecb'));
+  EVP_idea_cbc := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_idea_cbc'));
+  EVP_idea_cfb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_idea_cfb'));
+  EVP_idea_cfb64 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_idea_cfb64'));
+  EVP_idea_ofb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_idea_ofb'));
   
-  EVP_camellia_128_ecb := GetProcedureAddress(AHandle, 'EVP_camellia_128_ecb');
-  EVP_camellia_128_cbc := GetProcedureAddress(AHandle, 'EVP_camellia_128_cbc');
-  EVP_camellia_128_cfb := GetProcedureAddress(AHandle, 'EVP_camellia_128_cfb');
-  EVP_camellia_128_cfb1 := GetProcedureAddress(AHandle, 'EVP_camellia_128_cfb1');
-  EVP_camellia_128_cfb8 := GetProcedureAddress(AHandle, 'EVP_camellia_128_cfb8');
-  EVP_camellia_128_cfb128 := GetProcedureAddress(AHandle, 'EVP_camellia_128_cfb128');
-  EVP_camellia_128_ofb := GetProcedureAddress(AHandle, 'EVP_camellia_128_ofb');
-  EVP_camellia_128_ctr := GetProcedureAddress(AHandle, 'EVP_camellia_128_ctr');
+  EVP_camellia_128_ecb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_128_ecb'));
+  EVP_camellia_128_cbc := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_128_cbc'));
+  EVP_camellia_128_cfb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_128_cfb'));
+  EVP_camellia_128_cfb1 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_128_cfb1'));
+  EVP_camellia_128_cfb8 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_128_cfb8'));
+  EVP_camellia_128_cfb128 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_128_cfb128'));
+  EVP_camellia_128_ofb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_128_ofb'));
+  EVP_camellia_128_ctr := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_128_ctr'));
   
-  EVP_camellia_192_ecb := GetProcedureAddress(AHandle, 'EVP_camellia_192_ecb');
-  EVP_camellia_192_cbc := GetProcedureAddress(AHandle, 'EVP_camellia_192_cbc');
-  EVP_camellia_192_cfb := GetProcedureAddress(AHandle, 'EVP_camellia_192_cfb');
-  EVP_camellia_192_cfb1 := GetProcedureAddress(AHandle, 'EVP_camellia_192_cfb1');
-  EVP_camellia_192_cfb8 := GetProcedureAddress(AHandle, 'EVP_camellia_192_cfb8');
-  EVP_camellia_192_cfb128 := GetProcedureAddress(AHandle, 'EVP_camellia_192_cfb128');
-  EVP_camellia_192_ofb := GetProcedureAddress(AHandle, 'EVP_camellia_192_ofb');
-  EVP_camellia_192_ctr := GetProcedureAddress(AHandle, 'EVP_camellia_192_ctr');
+  EVP_camellia_192_ecb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_192_ecb'));
+  EVP_camellia_192_cbc := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_192_cbc'));
+  EVP_camellia_192_cfb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_192_cfb'));
+  EVP_camellia_192_cfb1 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_192_cfb1'));
+  EVP_camellia_192_cfb8 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_192_cfb8'));
+  EVP_camellia_192_cfb128 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_192_cfb128'));
+  EVP_camellia_192_ofb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_192_ofb'));
+  EVP_camellia_192_ctr := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_192_ctr'));
   
-  EVP_camellia_256_ecb := GetProcedureAddress(AHandle, 'EVP_camellia_256_ecb');
-  EVP_camellia_256_cbc := GetProcedureAddress(AHandle, 'EVP_camellia_256_cbc');
-  EVP_camellia_256_cfb := GetProcedureAddress(AHandle, 'EVP_camellia_256_cfb');
-  EVP_camellia_256_cfb1 := GetProcedureAddress(AHandle, 'EVP_camellia_256_cfb1');
-  EVP_camellia_256_cfb8 := GetProcedureAddress(AHandle, 'EVP_camellia_256_cfb8');
-  EVP_camellia_256_cfb128 := GetProcedureAddress(AHandle, 'EVP_camellia_256_cfb128');
-  EVP_camellia_256_ofb := GetProcedureAddress(AHandle, 'EVP_camellia_256_ofb');
-  EVP_camellia_256_ctr := GetProcedureAddress(AHandle, 'EVP_camellia_256_ctr');
+  EVP_camellia_256_ecb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_256_ecb'));
+  EVP_camellia_256_cbc := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_256_cbc'));
+  EVP_camellia_256_cfb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_256_cfb'));
+  EVP_camellia_256_cfb1 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_256_cfb1'));
+  EVP_camellia_256_cfb8 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_256_cfb8'));
+  EVP_camellia_256_cfb128 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_256_cfb128'));
+  EVP_camellia_256_ofb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_256_ofb'));
+  EVP_camellia_256_ctr := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_camellia_256_ctr'));
   
-  EVP_bf_ecb := GetProcedureAddress(AHandle, 'EVP_bf_ecb');
-  EVP_bf_cbc := GetProcedureAddress(AHandle, 'EVP_bf_cbc');
-  EVP_bf_cfb := GetProcedureAddress(AHandle, 'EVP_bf_cfb');
-  EVP_bf_cfb64 := GetProcedureAddress(AHandle, 'EVP_bf_cfb64');
-  EVP_bf_ofb := GetProcedureAddress(AHandle, 'EVP_bf_ofb');
+  EVP_bf_ecb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_bf_ecb'));
+  EVP_bf_cbc := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_bf_cbc'));
+  EVP_bf_cfb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_bf_cfb'));
+  EVP_bf_cfb64 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_bf_cfb64'));
+  EVP_bf_ofb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_bf_ofb'));
   
-  EVP_cast5_ecb := GetProcedureAddress(AHandle, 'EVP_cast5_ecb');
-  EVP_cast5_cbc := GetProcedureAddress(AHandle, 'EVP_cast5_cbc');
-  EVP_cast5_cfb := GetProcedureAddress(AHandle, 'EVP_cast5_cfb');
-  EVP_cast5_cfb64 := GetProcedureAddress(AHandle, 'EVP_cast5_cfb64');
-  EVP_cast5_ofb := GetProcedureAddress(AHandle, 'EVP_cast5_ofb');
+  EVP_cast5_ecb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_cast5_ecb'));
+  EVP_cast5_cbc := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_cast5_cbc'));
+  EVP_cast5_cfb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_cast5_cfb'));
+  EVP_cast5_cfb64 := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_cast5_cfb64'));
+  EVP_cast5_ofb := TEVP_CIPHER(GetProcedureAddress(AHandle, 'EVP_cast5_ofb'));
   
-  EVP_mdc2 := GetProcedureAddress(AHandle, 'EVP_mdc2');
-  EVP_ripemd160 := GetProcedureAddress(AHandle, 'EVP_ripemd160');
+  EVP_mdc2 := TEVP_MD(GetProcedureAddress(AHandle, 'EVP_mdc2'));
+  EVP_ripemd160 := TEVP_MD(GetProcedureAddress(AHandle, 'EVP_ripemd160'));
 end;
 
 procedure UnloadLegacyCiphersFunctions;
