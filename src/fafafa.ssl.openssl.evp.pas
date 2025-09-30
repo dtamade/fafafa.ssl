@@ -261,6 +261,10 @@ type
   TEVP_MD_get_flags = function(const md: PEVP_MD): LongWord; cdecl;
   TEVP_MD_get_type = function(const md: PEVP_MD): Integer; cdecl;
   
+  // OpenSSL 3.x EVP_MD fetch API
+  TEVP_MD_fetch = function(ctx: POSSL_LIB_CTX; const algorithm: PAnsiChar; const properties: PAnsiChar): PEVP_MD; cdecl;
+  TEVP_MD_free = procedure(md: PEVP_MD); cdecl;
+  
   // Cipher functions
   TEVP_CIPHER_CTX_new = function: PEVP_CIPHER_CTX; cdecl;
   TEVP_CIPHER_CTX_free = procedure(ctx: PEVP_CIPHER_CTX); cdecl;
@@ -699,6 +703,7 @@ var
   EVP_DigestInit_ex: TEVP_DigestInit_ex = nil;
   EVP_DigestUpdate: TEVP_DigestUpdate = nil;
   EVP_DigestFinal_ex: TEVP_DigestFinal_ex = nil;
+  EVP_DigestFinalXOF: TEVP_DigestFinalXOF = nil;
   
   // MD info functions
   EVP_MD_get_size: TEVP_MD_get_size = nil;
@@ -711,6 +716,10 @@ var
   EVP_sha384: TEVP_sha384 = nil;
   EVP_sha512: TEVP_sha512 = nil;
   EVP_get_digestbyname: TEVP_get_digestbyname = nil;
+  
+  // OpenSSL 3.x EVP_MD fetch API
+  EVP_MD_fetch: TEVP_MD_fetch = nil;
+  EVP_MD_free: TEVP_MD_free = nil;
   
   // Cipher Context functions
   EVP_CIPHER_CTX_new: TEVP_CIPHER_CTX_new = nil;
@@ -773,6 +782,7 @@ begin
   EVP_DigestInit_ex := TEVP_DigestInit_ex(GetProcAddress(ALibHandle, 'EVP_DigestInit_ex'));
   EVP_DigestUpdate := TEVP_DigestUpdate(GetProcAddress(ALibHandle, 'EVP_DigestUpdate'));
   EVP_DigestFinal_ex := TEVP_DigestFinal_ex(GetProcAddress(ALibHandle, 'EVP_DigestFinal_ex'));
+  EVP_DigestFinalXOF := TEVP_DigestFinalXOF(GetProcAddress(ALibHandle, 'EVP_DigestFinalXOF'));
   
   // Load MD info functions
   EVP_MD_get_size := TEVP_MD_get_size(GetProcAddress(ALibHandle, 'EVP_MD_get_size'));
@@ -785,6 +795,10 @@ begin
   EVP_sha384 := TEVP_sha384(GetProcAddress(ALibHandle, 'EVP_sha384'));
   EVP_sha512 := TEVP_sha512(GetProcAddress(ALibHandle, 'EVP_sha512'));
   EVP_get_digestbyname := TEVP_get_digestbyname(GetProcAddress(ALibHandle, 'EVP_get_digestbyname'));
+  
+  // Load OpenSSL 3.x EVP_MD fetch API (optional for 3.x compatibility)
+  EVP_MD_fetch := TEVP_MD_fetch(GetProcAddress(ALibHandle, 'EVP_MD_fetch'));
+  EVP_MD_free := TEVP_MD_free(GetProcAddress(ALibHandle, 'EVP_MD_free'));
   
   // Load Cipher Context functions
   EVP_CIPHER_CTX_new := TEVP_CIPHER_CTX_new(GetProcAddress(ALibHandle, 'EVP_CIPHER_CTX_new'));
@@ -828,6 +842,7 @@ begin
   EVP_DigestInit_ex := nil;
   EVP_DigestUpdate := nil;
   EVP_DigestFinal_ex := nil;
+  EVP_DigestFinalXOF := nil;
   
   // Clear MD info functions
   EVP_MD_get_size := nil;
@@ -840,6 +855,10 @@ begin
   EVP_sha384 := nil;
   EVP_sha512 := nil;
   EVP_get_digestbyname := nil;
+  
+  // Clear OpenSSL 3.x EVP_MD fetch API
+  EVP_MD_fetch := nil;
+  EVP_MD_free := nil;
   
   // Clear Cipher Context functions
   EVP_CIPHER_CTX_new := nil;
