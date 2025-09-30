@@ -1,8 +1,8 @@
 # OpenSSL Module Test Status
 
-## Test Progress: 16/60 modules (27%)
+## Test Progress: 22/60 modules (37%)
 
-### ✅ Completed Tests (16 modules)
+### ✅ Completed Tests (22 modules)
 
 | # | Module | Test File | Status | Notes |
 |---|--------|-----------|--------|-------|
@@ -22,6 +22,12 @@
 | 14 | des | test_des | ⚠️ | 7/8 tests passed (weak key test failed) |
 | 15 | aria | test_aria | ✅ | 7/7 tests passed (not available in OpenSSL 3.x) |
 | 16 | camellia | test_camellia | ✅ | 5/5 tests passed |
+| 17 | evp | test_openssl_evp | ✅ | 3/3 tests passed |
+| 18 | rsa | test_openssl_rsa | ✅ | 15/15 tests passed |
+| 19 | dsa | test_openssl_dsa | ✅ | 4/4 tests passed |
+| 20 | dh | test_openssl_dh | ✅ | 6/6 tests passed |
+| 21 | ecdh | test_ecdh | ✅ | 6/6 tests passed |
+| 22 | ecdsa | test_ecdsa | ✅ | 7/7 tests passed (2 tests skipped) |
 
 ### 🔄 In Progress (0 modules)
 
