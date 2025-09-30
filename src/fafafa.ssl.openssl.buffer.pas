@@ -1,3 +1,5 @@
+{$mode objfpc}{$H+}
+
 unit fafafa.ssl.openssl.buffer;
 
 interface
@@ -49,8 +51,10 @@ var
   BUF_strlcat: TBUF_strlcat = nil;
 
 // 辅助函数
-function CreateBuffer(InitialSize: NativeUInt = 0): PBUF_MEM;
-function CreateSecureBuffer(InitialSize: NativeUInt = 0): PBUF_MEM;
+function CreateBuffer(InitialSize: NativeUInt): PBUF_MEM; overload;
+function CreateBuffer: PBUF_MEM; overload;
+function CreateSecureBuffer(InitialSize: NativeUInt): PBUF_MEM; overload;
+function CreateSecureBuffer: PBUF_MEM; overload;
 procedure FreeBuffer(var Buffer: PBUF_MEM);
 function GrowBuffer(Buffer: PBUF_MEM; NewSize: NativeUInt): Boolean;
 function AppendToBuffer(Buffer: PBUF_MEM; const Data: Pointer; DataLen: NativeUInt): Boolean;
@@ -99,6 +103,11 @@ begin
 end;
 
 // 辅助函数实现
+function CreateBuffer: PBUF_MEM;
+begin
+  Result := CreateBuffer(0);
+end;
+
 function CreateBuffer(InitialSize: NativeUInt): PBUF_MEM;
 begin
   Result := nil;
@@ -117,6 +126,11 @@ begin
       end;
     end;
   end;
+end;
+
+function CreateSecureBuffer: PBUF_MEM;
+begin
+  Result := CreateSecureBuffer(0);
 end;
 
 function CreateSecureBuffer(InitialSize: NativeUInt): PBUF_MEM;
