@@ -1,0 +1,26 @@
+# Pascal 编译产生的文件
+*.o
+*.ppu
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.compiled
+*.lps
+*.bak
+*.~*
+
+# 备份目录
+backup/
+lib/
+
+# IDE 配置文件
+*.lps
+*.layout
+
+# 日志文件
+*.log
+
+# 临时测试结果
+test_results.txt

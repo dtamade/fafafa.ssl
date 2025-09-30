@@ -1,0 +1,676 @@
+{
+  OpenSSL TS (时间戳) API 模块
+  用于 RFC 3161 时间戳协议支持
+}
+unit fafafa.ssl.openssl.ts;
+
+{$mode objfpc}{$H+}
+
+interface
+
+uses
+  SysUtils, Classes,
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.bio,
+  fafafa.ssl.openssl.x509;
+
+const
+  // TS 消息类型
+  TS_MSG_IMPRINT_FLAG_DIGEST = $01;
+  TS_MSG_IMPRINT_FLAG_MSG = $02;
+  
+  // TS 状态码
+  TS_STATUS_GRANTED = 0;
+  TS_STATUS_GRANTED_WITH_MODS = 1;
+  TS_STATUS_REJECTION = 2;
+  TS_STATUS_WAITING = 3;
+  TS_STATUS_REVOCATION_WARNING = 4;
+  TS_STATUS_REVOCATION_NOTIFICATION = 5;
+  
+  // TS 信息标志
+  TS_INFO_ALL = $FFFF;
+  TS_INFO_VERSION = $0001;
+  TS_INFO_POLICY = $0002;
+  TS_INFO_IMPRINT = $0004;
+  TS_INFO_SERIAL = $0008;
+  TS_INFO_TIME = $0010;
+  TS_INFO_ACCURACY = $0020;
+  TS_INFO_ORDERING = $0040;
+  TS_INFO_NONCE = $0080;
+  TS_INFO_TSA = $0100;
+  TS_INFO_EXTENSIONS = $0200;
+  
+  // TS 精度标志
+  TS_ACCURACY_SECONDS = $01;
+  TS_ACCURACY_MILLIS = $02;
+  TS_ACCURACY_MICROS = $04;
+  
+  // TS 验证标志
+  TS_VFY_VERSION = $01;
+  TS_VFY_POLICY = $02;
+  TS_VFY_IMPRINT = $04;
+  TS_VFY_DATA = $08;
+  TS_VFY_NONCE = $10;
+  TS_VFY_SIGNER = $20;
+  TS_VFY_TSA_NAME = $40;
+  TS_VFY_SIGNATURE = $80;
+  TS_VFY_ALL_IMPRINT = (TS_VFY_IMPRINT or TS_VFY_DATA);
+  TS_VFY_ALL_DATA = (TS_VFY_VERSION or TS_VFY_POLICY or TS_VFY_IMPRINT or 
+                     TS_VFY_DATA or TS_VFY_NONCE or TS_VFY_TSA_NAME);
+
+type
+  // 前向声明
+  PTS_MSG_IMPRINT = ^TS_MSG_IMPRINT;
+  PTS_REQ = ^TS_REQ;
+  PTS_ACCURACY = ^TS_ACCURACY;
+  PTS_TST_INFO = ^TS_TST_INFO;
+  PTS_STATUS_INFO = ^TS_STATUS_INFO;
+  PTS_RESP = ^TS_RESP;
+  PTS_RESP_CTX = ^TS_RESP_CTX;
+  PTS_VERIFY_CTX = ^TS_VERIFY_CTX;
+  
+  // 不透明结构体
+  TS_MSG_IMPRINT = record end;
+  TS_REQ = record end;
+  TS_ACCURACY = record end;
+  TS_TST_INFO = record end;
+  TS_STATUS_INFO = record end;
+  TS_RESP = record end;
+  TS_RESP_CTX = record end;
+  TS_VERIFY_CTX = record end;
+  
+  // 回调函数类型
+  TS_serial_cb = function(ctx: PTS_RESP_CTX; serial: PASN1_INTEGER): Integer; cdecl;
+  TS_time_cb = function(ctx: PTS_RESP_CTX; sec: PInt64; usec: PInt64): Integer; cdecl;
+  TS_extension_cb = function(ctx: PTS_RESP_CTX; ext: PX509_EXTENSION; 
+                            is_critical: Integer): Integer; cdecl;
+
+  // TS 函数指针类型
+  
+  // TS_MSG_IMPRINT 函数
+  TTS_MSG_IMPRINT_new = function(): PTS_MSG_IMPRINT; cdecl;
+  TTS_MSG_IMPRINT_free = procedure(a: PTS_MSG_IMPRINT); cdecl;
+  TTS_MSG_IMPRINT_dup = function(a: PTS_MSG_IMPRINT): PTS_MSG_IMPRINT; cdecl;
+  TTS_MSG_IMPRINT_set_algo = function(a: PTS_MSG_IMPRINT; alg: PX509_ALGOR): Integer; cdecl;
+  TTS_MSG_IMPRINT_get_algo = function(a: PTS_MSG_IMPRINT): PX509_ALGOR; cdecl;
+  TTS_MSG_IMPRINT_set_msg = function(a: PTS_MSG_IMPRINT; d: PByte; len: Integer): Integer; cdecl;
+  TTS_MSG_IMPRINT_get_msg = function(a: PTS_MSG_IMPRINT): PASN1_OCTET_STRING; cdecl;
+  TTS_MSG_IMPRINT_print_bio = function(bio: PBIO; msg: PTS_MSG_IMPRINT): Integer; cdecl;
+  
+  // TS_REQ 函数
+  TTS_REQ_new = function(): PTS_REQ; cdecl;
+  TTS_REQ_free = procedure(a: PTS_REQ); cdecl;
+  TTS_REQ_dup = function(a: PTS_REQ): PTS_REQ; cdecl;
+  TTS_REQ_d2i_bio = function(bio: PBIO; a: PPTS_REQ): PTS_REQ; cdecl;
+  TTS_REQ_i2d_bio = function(bio: PBIO; a: PTS_REQ): Integer; cdecl;
+  TTS_REQ_set_version = function(a: PTS_REQ; version: Int64): Integer; cdecl;
+  TTS_REQ_get_version = function(a: PTS_REQ): Int64; cdecl;
+  TTS_REQ_set_msg_imprint = function(a: PTS_REQ; msg: PTS_MSG_IMPRINT): Integer; cdecl;
+  TTS_REQ_get_msg_imprint = function(a: PTS_REQ): PTS_MSG_IMPRINT; cdecl;
+  TTS_REQ_set_policy_id = function(a: PTS_REQ; policy: PASN1_OBJECT): Integer; cdecl;
+  TTS_REQ_get_policy_id = function(a: PTS_REQ): PASN1_OBJECT; cdecl;
+  TTS_REQ_set_nonce = function(a: PTS_REQ; nonce: PASN1_INTEGER): Integer; cdecl;
+  TTS_REQ_get_nonce = function(a: PTS_REQ): PASN1_INTEGER; cdecl;
+  TTS_REQ_set_cert_req = function(a: PTS_REQ; cert_req: Integer): Integer; cdecl;
+  TTS_REQ_get_cert_req = function(a: PTS_REQ): Integer; cdecl;
+  TTS_REQ_get_ext_count = function(a: PTS_REQ): Integer; cdecl;
+  TTS_REQ_get_ext = function(a: PTS_REQ; loc: Integer): PX509_EXTENSION; cdecl;
+  TTS_REQ_get_ext_by_NID = function(a: PTS_REQ; nid: Integer; lastpos: Integer): Integer; cdecl;
+  TTS_REQ_get_ext_by_OBJ = function(a: PTS_REQ; obj: PASN1_OBJECT; lastpos: Integer): Integer; cdecl;
+  TTS_REQ_get_ext_by_critical = function(a: PTS_REQ; crit: Integer; lastpos: Integer): Integer; cdecl;
+  TTS_REQ_ext_free = procedure(a: PTS_REQ); cdecl;
+  TTS_REQ_get_ext_d2i = function(a: PTS_REQ; nid: Integer; crit: PInteger; 
+                                 idx: PInteger): Pointer; cdecl;
+  TTS_REQ_add_ext = function(a: PTS_REQ; ex: PX509_EXTENSION; loc: Integer): Integer; cdecl;
+  TTS_REQ_add1_ext_i2d = function(a: PTS_REQ; nid: Integer; value: Pointer; 
+                                  crit: Integer; flags: LongWord): Integer; cdecl;
+  TTS_REQ_delete_ext = function(a: PTS_REQ; loc: Integer): PX509_EXTENSION; cdecl;
+  TTS_REQ_print_bio = function(bio: PBIO; req: PTS_REQ): Integer; cdecl;
+  
+  // TS_TST_INFO 函数
+  TTS_TST_INFO_new = function(): PTS_TST_INFO; cdecl;
+  TTS_TST_INFO_free = procedure(a: PTS_TST_INFO); cdecl;
+  TTS_TST_INFO_dup = function(a: PTS_TST_INFO): PTS_TST_INFO; cdecl;
+  TTS_TST_INFO_d2i_bio = function(bio: PBIO; a: PPTS_TST_INFO): PTS_TST_INFO; cdecl;
+  TTS_TST_INFO_i2d_bio = function(bio: PBIO; a: PTS_TST_INFO): Integer; cdecl;
+  TTS_TST_INFO_set_version = function(a: PTS_TST_INFO; version: Int64): Integer; cdecl;
+  TTS_TST_INFO_get_version = function(a: PTS_TST_INFO): Int64; cdecl;
+  TTS_TST_INFO_set_policy_id = function(a: PTS_TST_INFO; policy: PASN1_OBJECT): Integer; cdecl;
+  TTS_TST_INFO_get_policy_id = function(a: PTS_TST_INFO): PASN1_OBJECT; cdecl;
+  TTS_TST_INFO_set_msg_imprint = function(a: PTS_TST_INFO; msg: PTS_MSG_IMPRINT): Integer; cdecl;
+  TTS_TST_INFO_get_msg_imprint = function(a: PTS_TST_INFO): PTS_MSG_IMPRINT; cdecl;
+  TTS_TST_INFO_set_serial = function(a: PTS_TST_INFO; serial: PASN1_INTEGER): Integer; cdecl;
+  TTS_TST_INFO_get_serial = function(a: PTS_TST_INFO): PASN1_INTEGER; cdecl;
+  TTS_TST_INFO_set_time = function(a: PTS_TST_INFO; gtime: PASN1_GENERALIZEDTIME): Integer; cdecl;
+  TTS_TST_INFO_get_time = function(a: PTS_TST_INFO): PASN1_GENERALIZEDTIME; cdecl;
+  TTS_TST_INFO_set_accuracy = function(a: PTS_TST_INFO; acc: PTS_ACCURACY): Integer; cdecl;
+  TTS_TST_INFO_get_accuracy = function(a: PTS_TST_INFO): PTS_ACCURACY; cdecl;
+  TTS_TST_INFO_set_ordering = function(a: PTS_TST_INFO; ordering: Integer): Integer; cdecl;
+  TTS_TST_INFO_get_ordering = function(a: PTS_TST_INFO): Integer; cdecl;
+  TTS_TST_INFO_set_nonce = function(a: PTS_TST_INFO; nonce: PASN1_INTEGER): Integer; cdecl;
+  TTS_TST_INFO_get_nonce = function(a: PTS_TST_INFO): PASN1_INTEGER; cdecl;
+  TTS_TST_INFO_set_tsa = function(a: PTS_TST_INFO; tsa: PGENERAL_NAME): Integer; cdecl;
+  TTS_TST_INFO_get_tsa = function(a: PTS_TST_INFO): PGENERAL_NAME; cdecl;
+  TTS_TST_INFO_print_bio = function(bio: PBIO; info: PTS_TST_INFO): Integer; cdecl;
+  
+  // TS_STATUS_INFO 函数
+  TTS_STATUS_INFO_new = function(): PTS_STATUS_INFO; cdecl;
+  TTS_STATUS_INFO_free = procedure(a: PTS_STATUS_INFO); cdecl;
+  TTS_STATUS_INFO_dup = function(a: PTS_STATUS_INFO): PTS_STATUS_INFO; cdecl;
+  TTS_STATUS_INFO_set_status = function(a: PTS_STATUS_INFO; status: Integer): Integer; cdecl;
+  TTS_STATUS_INFO_get0_status = function(a: PTS_STATUS_INFO): PASN1_INTEGER; cdecl;
+  TTS_STATUS_INFO_get0_text = function(a: PTS_STATUS_INFO): PSTACK_OF_ASN1_UTF8STRING; cdecl;
+  TTS_STATUS_INFO_get0_failure_info = function(a: PTS_STATUS_INFO): PASN1_BIT_STRING; cdecl;
+  TTS_STATUS_INFO_print_bio = function(bio: PBIO; info: PTS_STATUS_INFO): Integer; cdecl;
+  
+  // TS_RESP 函数
+  TTS_RESP_new = function(): PTS_RESP; cdecl;
+  TTS_RESP_free = procedure(a: PTS_RESP); cdecl;
+  TTS_RESP_dup = function(a: PTS_RESP): PTS_RESP; cdecl;
+  TTS_RESP_d2i_bio = function(bio: PBIO; a: PPTS_RESP): PTS_RESP; cdecl;
+  TTS_RESP_i2d_bio = function(bio: PBIO; a: PTS_RESP): Integer; cdecl;
+  TTS_RESP_create_response = function(ctx: PTS_RESP_CTX; req: PTS_REQ): PTS_RESP; cdecl;
+  TTS_RESP_set_status_info = function(a: PTS_RESP; info: PTS_STATUS_INFO): Integer; cdecl;
+  TTS_RESP_get_status_info = function(a: PTS_RESP): PTS_STATUS_INFO; cdecl;
+  TTS_RESP_set_tst_info = function(a: PTS_RESP; token: PPKCS7; tst_info: PTS_TST_INFO): Integer; cdecl;
+  TTS_RESP_get_token = function(a: PTS_RESP): PPKCS7; cdecl;
+  TTS_RESP_get_tst_info = function(a: PTS_RESP): PTS_TST_INFO; cdecl;
+  TTS_RESP_set_gentime_with_precision = function(info: PTS_TST_INFO; sec: Int64; 
+                                                 usec: Int64; precision: LongWord): Integer; cdecl;
+  TTS_RESP_print_bio = function(bio: PBIO; resp: PTS_RESP): Integer; cdecl;
+  TTS_RESP_verify_signature = function(token: PPKCS7; certs: PSTACK_OF_X509; 
+                                       store: PX509_STORE; signer: PPX509): Integer; cdecl;
+  TTS_RESP_verify_token = function(ctx: PTS_VERIFY_CTX; token: PPKCS7): Integer; cdecl;
+  TTS_RESP_verify_response = function(ctx: PTS_VERIFY_CTX; resp: PTS_RESP): Integer; cdecl;
+  
+  // TS_RESP_CTX 函数
+  TTS_RESP_CTX_new = function(): PTS_RESP_CTX; cdecl;
+  TTS_RESP_CTX_free = procedure(ctx: PTS_RESP_CTX); cdecl;
+  TTS_RESP_CTX_set_signer_cert = function(ctx: PTS_RESP_CTX; cert: PX509): Integer; cdecl;
+  TTS_RESP_CTX_set_signer_key = function(ctx: PTS_RESP_CTX; key: PEVP_PKEY): Integer; cdecl;
+  TTS_RESP_CTX_set_signer_digest = function(ctx: PTS_RESP_CTX; md: PEVP_MD): Integer; cdecl;
+  TTS_RESP_CTX_set_ess_cert_id_digest = function(ctx: PTS_RESP_CTX; md: PEVP_MD): Integer; cdecl;
+  TTS_RESP_CTX_set_def_policy = function(ctx: PTS_RESP_CTX; policy: PASN1_OBJECT): Integer; cdecl;
+  TTS_RESP_CTX_add_policy = function(ctx: PTS_RESP_CTX; policy: PASN1_OBJECT): Integer; cdecl;
+  TTS_RESP_CTX_add_md = function(ctx: PTS_RESP_CTX; md: PEVP_MD): Integer; cdecl;
+  TTS_RESP_CTX_set_accuracy = function(ctx: PTS_RESP_CTX; secs: Integer; 
+                                       millis: Integer; micros: Integer): Integer; cdecl;
+  TTS_RESP_CTX_set_clock_precision_digits = function(ctx: PTS_RESP_CTX; digits: LongWord): Integer; cdecl;
+  TTS_RESP_CTX_add_flags = procedure(ctx: PTS_RESP_CTX; flags: Integer); cdecl;
+  TTS_RESP_CTX_set_serial_cb = procedure(ctx: PTS_RESP_CTX; cb: TS_serial_cb; data: Pointer); cdecl;
+  TTS_RESP_CTX_set_time_cb = procedure(ctx: PTS_RESP_CTX; cb: TS_time_cb; data: Pointer); cdecl;
+  TTS_RESP_CTX_set_extension_cb = procedure(ctx: PTS_RESP_CTX; cb: TS_extension_cb; data: Pointer); cdecl;
+  TTS_RESP_CTX_set_status_info = function(ctx: PTS_RESP_CTX; status: Integer; 
+                                          text: PAnsiChar): Integer; cdecl;
+  TTS_RESP_CTX_set_status_info_cond = function(ctx: PTS_RESP_CTX; status: Integer; 
+                                               text: PAnsiChar): Integer; cdecl;
+  TTS_RESP_CTX_add_failure_info = function(ctx: PTS_RESP_CTX; failure: Integer): Integer; cdecl;
+  TTS_RESP_CTX_get_request = function(ctx: PTS_RESP_CTX): PTS_REQ; cdecl;
+  TTS_RESP_CTX_get_tst_info = function(ctx: PTS_RESP_CTX): PTS_TST_INFO; cdecl;
+  
+  // TS_VERIFY_CTX 函数  
+  TTS_VERIFY_CTX_new = function(): PTS_VERIFY_CTX; cdecl;
+  TTS_VERIFY_CTX_init = procedure(ctx: PTS_VERIFY_CTX); cdecl;
+  TTS_VERIFY_CTX_free = procedure(ctx: PTS_VERIFY_CTX); cdecl;
+  TTS_VERIFY_CTX_cleanup = procedure(ctx: PTS_VERIFY_CTX); cdecl;
+  TTS_VERIFY_CTX_set_flags = function(ctx: PTS_VERIFY_CTX; flags: Integer): Integer; cdecl;
+  TTS_VERIFY_CTX_add_flags = function(ctx: PTS_VERIFY_CTX; flags: Integer): Integer; cdecl;
+  TTS_VERIFY_CTX_set_data = function(ctx: PTS_VERIFY_CTX; bio: PBIO): PBIO; cdecl;
+  TTS_VERIFY_CTX_set_imprint = function(ctx: PTS_VERIFY_CTX; hexstr: PByte; 
+                                        len: Integer): LongWord; cdecl;
+  TTS_VERIFY_CTX_set_store = function(ctx: PTS_VERIFY_CTX; store: PX509_STORE): PX509_STORE; cdecl;
+  TTS_VERIFY_CTX_set_certs = function(ctx: PTS_VERIFY_CTX; certs: PSTACK_OF_X509): PSTACK_OF_X509; cdecl;
+  TTS_VERIFY_CTX_set_data_bio = function(ctx: PTS_VERIFY_CTX; bio: PBIO): PBIO; cdecl;
+  TTS_VERIFY_CTX_set_imprint_bio = function(ctx: PTS_VERIFY_CTX; bio: PBIO): Integer; cdecl;
+  
+  // TS_ACCURACY 函数
+  TTS_ACCURACY_new = function(): PTS_ACCURACY; cdecl;
+  TTS_ACCURACY_free = procedure(a: PTS_ACCURACY); cdecl;
+  TTS_ACCURACY_dup = function(a: PTS_ACCURACY): PTS_ACCURACY; cdecl;
+  TTS_ACCURACY_set_seconds = function(a: PTS_ACCURACY; seconds: PASN1_INTEGER): Integer; cdecl;
+  TTS_ACCURACY_get_seconds = function(a: PTS_ACCURACY): PASN1_INTEGER; cdecl;
+  TTS_ACCURACY_set_millis = function(a: PTS_ACCURACY; millis: PASN1_INTEGER): Integer; cdecl;
+  TTS_ACCURACY_get_millis = function(a: PTS_ACCURACY): PASN1_INTEGER; cdecl;
+  TTS_ACCURACY_set_micros = function(a: PTS_ACCURACY; micros: PASN1_INTEGER): Integer; cdecl;
+  TTS_ACCURACY_get_micros = function(a: PTS_ACCURACY): PASN1_INTEGER; cdecl;
+  
+  // 配置函数
+  TTS_CONF_load_cert = function(file_name: PAnsiChar): PX509; cdecl;
+  TTS_CONF_load_key = function(file_name: PAnsiChar; pass: PAnsiChar): PEVP_PKEY; cdecl;
+  TTS_CONF_set_serial = function(conf: Pointer; section: PAnsiChar; 
+                                 cb: TS_serial_cb; ctx: PTS_RESP_CTX): Integer; cdecl;
+  TTS_CONF_get_tsa_section = function(conf: Pointer; section: PAnsiChar): PAnsiChar; cdecl;
+  TTS_CONF_set_crypto_device = function(conf: Pointer; section: PAnsiChar; device: PAnsiChar): Integer; cdecl;
+  TTS_CONF_set_default_engine = function(name: PAnsiChar): Integer; cdecl;
+  TTS_CONF_set_signer_cert = function(conf: Pointer; section: PAnsiChar; 
+                                      cert: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
+  TTS_CONF_set_certs = function(conf: Pointer; section: PAnsiChar; 
+                                certs: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
+  TTS_CONF_set_signer_key = function(conf: Pointer; section: PAnsiChar; 
+                                     key: PAnsiChar; pass: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
+  TTS_CONF_set_signer_digest = function(conf: Pointer; section: PAnsiChar; 
+                                        md: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
+  TTS_CONF_set_def_policy = function(conf: Pointer; section: PAnsiChar; 
+                                     policy: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
+  TTS_CONF_set_policies = function(conf: Pointer; section: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
+  TTS_CONF_set_digests = function(conf: Pointer; section: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
+  TTS_CONF_set_accuracy = function(conf: Pointer; section: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
+  TTS_CONF_set_clock_precision_digits = function(conf: Pointer; section: PAnsiChar; 
+                                                 ctx: PTS_RESP_CTX): Integer; cdecl;
+  TTS_CONF_set_ordering = function(conf: Pointer; section: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
+  TTS_CONF_set_tsa_name = function(conf: Pointer; section: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
+  TTS_CONF_set_ess_cert_id_chain = function(conf: Pointer; section: PAnsiChar; 
+                                            ctx: PTS_RESP_CTX): Integer; cdecl;
+  TTS_CONF_set_ess_cert_id_digest = function(conf: Pointer; section: PAnsiChar; 
+                                             ctx: PTS_RESP_CTX): Integer; cdecl;
+
+var
+  // TS_MSG_IMPRINT 函数
+  TS_MSG_IMPRINT_new: TTS_MSG_IMPRINT_new;
+  TS_MSG_IMPRINT_free: TTS_MSG_IMPRINT_free;
+  TS_MSG_IMPRINT_dup: TTS_MSG_IMPRINT_dup;
+  TS_MSG_IMPRINT_set_algo: TTS_MSG_IMPRINT_set_algo;
+  TS_MSG_IMPRINT_get_algo: TTS_MSG_IMPRINT_get_algo;
+  TS_MSG_IMPRINT_set_msg: TTS_MSG_IMPRINT_set_msg;
+  TS_MSG_IMPRINT_get_msg: TTS_MSG_IMPRINT_get_msg;
+  TS_MSG_IMPRINT_print_bio: TTS_MSG_IMPRINT_print_bio;
+  
+  // TS_REQ 函数
+  TS_REQ_new: TTS_REQ_new;
+  TS_REQ_free: TTS_REQ_free;
+  TS_REQ_dup: TTS_REQ_dup;
+  TS_REQ_d2i_bio: TTS_REQ_d2i_bio;
+  TS_REQ_i2d_bio: TTS_REQ_i2d_bio;
+  TS_REQ_set_version: TTS_REQ_set_version;
+  TS_REQ_get_version: TTS_REQ_get_version;
+  TS_REQ_set_msg_imprint: TTS_REQ_set_msg_imprint;
+  TS_REQ_get_msg_imprint: TTS_REQ_get_msg_imprint;
+  TS_REQ_set_policy_id: TTS_REQ_set_policy_id;
+  TS_REQ_get_policy_id: TTS_REQ_get_policy_id;
+  TS_REQ_set_nonce: TTS_REQ_set_nonce;
+  TS_REQ_get_nonce: TTS_REQ_get_nonce;
+  TS_REQ_set_cert_req: TTS_REQ_set_cert_req;
+  TS_REQ_get_cert_req: TTS_REQ_get_cert_req;
+  TS_REQ_get_ext_count: TTS_REQ_get_ext_count;
+  TS_REQ_get_ext: TTS_REQ_get_ext;
+  TS_REQ_get_ext_by_NID: TTS_REQ_get_ext_by_NID;
+  TS_REQ_get_ext_by_OBJ: TTS_REQ_get_ext_by_OBJ;
+  TS_REQ_get_ext_by_critical: TTS_REQ_get_ext_by_critical;
+  TS_REQ_ext_free: TTS_REQ_ext_free;
+  TS_REQ_get_ext_d2i: TTS_REQ_get_ext_d2i;
+  TS_REQ_add_ext: TTS_REQ_add_ext;
+  TS_REQ_add1_ext_i2d: TTS_REQ_add1_ext_i2d;
+  TS_REQ_delete_ext: TTS_REQ_delete_ext;
+  TS_REQ_print_bio: TTS_REQ_print_bio;
+  
+  // TS_TST_INFO 函数
+  TS_TST_INFO_new: TTS_TST_INFO_new;
+  TS_TST_INFO_free: TTS_TST_INFO_free;
+  TS_TST_INFO_dup: TTS_TST_INFO_dup;
+  TS_TST_INFO_d2i_bio: TTS_TST_INFO_d2i_bio;
+  TS_TST_INFO_i2d_bio: TTS_TST_INFO_i2d_bio;
+  TS_TST_INFO_set_version: TTS_TST_INFO_set_version;
+  TS_TST_INFO_get_version: TTS_TST_INFO_get_version;
+  TS_TST_INFO_set_policy_id: TTS_TST_INFO_set_policy_id;
+  TS_TST_INFO_get_policy_id: TTS_TST_INFO_get_policy_id;
+  TS_TST_INFO_set_msg_imprint: TTS_TST_INFO_set_msg_imprint;
+  TS_TST_INFO_get_msg_imprint: TTS_TST_INFO_get_msg_imprint;
+  TS_TST_INFO_set_serial: TTS_TST_INFO_set_serial;
+  TS_TST_INFO_get_serial: TTS_TST_INFO_get_serial;
+  TS_TST_INFO_set_time: TTS_TST_INFO_set_time;
+  TS_TST_INFO_get_time: TTS_TST_INFO_get_time;
+  TS_TST_INFO_set_accuracy: TTS_TST_INFO_set_accuracy;
+  TS_TST_INFO_get_accuracy: TTS_TST_INFO_get_accuracy;
+  TS_TST_INFO_set_ordering: TTS_TST_INFO_set_ordering;
+  TS_TST_INFO_get_ordering: TTS_TST_INFO_get_ordering;
+  TS_TST_INFO_set_nonce: TTS_TST_INFO_set_nonce;
+  TS_TST_INFO_get_nonce: TTS_TST_INFO_get_nonce;
+  TS_TST_INFO_set_tsa: TTS_TST_INFO_set_tsa;
+  TS_TST_INFO_get_tsa: TTS_TST_INFO_get_tsa;
+  TS_TST_INFO_print_bio: TTS_TST_INFO_print_bio;
+  
+  // TS_STATUS_INFO 函数
+  TS_STATUS_INFO_new: TTS_STATUS_INFO_new;
+  TS_STATUS_INFO_free: TTS_STATUS_INFO_free;
+  TS_STATUS_INFO_dup: TTS_STATUS_INFO_dup;
+  TS_STATUS_INFO_set_status: TTS_STATUS_INFO_set_status;
+  TS_STATUS_INFO_get0_status: TTS_STATUS_INFO_get0_status;
+  TS_STATUS_INFO_get0_text: TTS_STATUS_INFO_get0_text;
+  TS_STATUS_INFO_get0_failure_info: TTS_STATUS_INFO_get0_failure_info;
+  TS_STATUS_INFO_print_bio: TTS_STATUS_INFO_print_bio;
+  
+  // TS_RESP 函数
+  TS_RESP_new: TTS_RESP_new;
+  TS_RESP_free: TTS_RESP_free;
+  TS_RESP_dup: TTS_RESP_dup;
+  TS_RESP_d2i_bio: TTS_RESP_d2i_bio;
+  TS_RESP_i2d_bio: TTS_RESP_i2d_bio;
+  TS_RESP_create_response: TTS_RESP_create_response;
+  TS_RESP_set_status_info: TTS_RESP_set_status_info;
+  TS_RESP_get_status_info: TTS_RESP_get_status_info;
+  TS_RESP_set_tst_info: TTS_RESP_set_tst_info;
+  TS_RESP_get_token: TTS_RESP_get_token;
+  TS_RESP_get_tst_info: TTS_RESP_get_tst_info;
+  TS_RESP_set_gentime_with_precision: TTS_RESP_set_gentime_with_precision;
+  TS_RESP_print_bio: TTS_RESP_print_bio;
+  TS_RESP_verify_signature: TTS_RESP_verify_signature;
+  TS_RESP_verify_token: TTS_RESP_verify_token;
+  TS_RESP_verify_response: TTS_RESP_verify_response;
+  
+  // TS_RESP_CTX 函数
+  TS_RESP_CTX_new: TTS_RESP_CTX_new;
+  TS_RESP_CTX_free: TTS_RESP_CTX_free;
+  TS_RESP_CTX_set_signer_cert: TTS_RESP_CTX_set_signer_cert;
+  TS_RESP_CTX_set_signer_key: TTS_RESP_CTX_set_signer_key;
+  TS_RESP_CTX_set_signer_digest: TTS_RESP_CTX_set_signer_digest;
+  TS_RESP_CTX_set_ess_cert_id_digest: TTS_RESP_CTX_set_ess_cert_id_digest;
+  TS_RESP_CTX_set_def_policy: TTS_RESP_CTX_set_def_policy;
+  TS_RESP_CTX_add_policy: TTS_RESP_CTX_add_policy;
+  TS_RESP_CTX_add_md: TTS_RESP_CTX_add_md;
+  TS_RESP_CTX_set_accuracy: TTS_RESP_CTX_set_accuracy;
+  TS_RESP_CTX_set_clock_precision_digits: TTS_RESP_CTX_set_clock_precision_digits;
+  TS_RESP_CTX_add_flags: TTS_RESP_CTX_add_flags;
+  TS_RESP_CTX_set_serial_cb: TTS_RESP_CTX_set_serial_cb;
+  TS_RESP_CTX_set_time_cb: TTS_RESP_CTX_set_time_cb;
+  TS_RESP_CTX_set_extension_cb: TTS_RESP_CTX_set_extension_cb;
+  TS_RESP_CTX_set_status_info: TTS_RESP_CTX_set_status_info;
+  TS_RESP_CTX_set_status_info_cond: TTS_RESP_CTX_set_status_info_cond;
+  TS_RESP_CTX_add_failure_info: TTS_RESP_CTX_add_failure_info;
+  TS_RESP_CTX_get_request: TTS_RESP_CTX_get_request;
+  TS_RESP_CTX_get_tst_info: TTS_RESP_CTX_get_tst_info;
+  
+  // TS_VERIFY_CTX 函数
+  TS_VERIFY_CTX_new: TTS_VERIFY_CTX_new;
+  TS_VERIFY_CTX_init: TTS_VERIFY_CTX_init;
+  TS_VERIFY_CTX_free: TTS_VERIFY_CTX_free;
+  TS_VERIFY_CTX_cleanup: TTS_VERIFY_CTX_cleanup;
+  TS_VERIFY_CTX_set_flags: TTS_VERIFY_CTX_set_flags;
+  TS_VERIFY_CTX_add_flags: TTS_VERIFY_CTX_add_flags;
+  TS_VERIFY_CTX_set_data: TTS_VERIFY_CTX_set_data;
+  TS_VERIFY_CTX_set_imprint: TTS_VERIFY_CTX_set_imprint;
+  TS_VERIFY_CTX_set_store: TTS_VERIFY_CTX_set_store;
+  TS_VERIFY_CTX_set_certs: TTS_VERIFY_CTX_set_certs;
+  TS_VERIFY_CTX_set_data_bio: TTS_VERIFY_CTX_set_data_bio;
+  TS_VERIFY_CTX_set_imprint_bio: TTS_VERIFY_CTX_set_imprint_bio;
+  
+  // TS_ACCURACY 函数
+  TS_ACCURACY_new: TTS_ACCURACY_new;
+  TS_ACCURACY_free: TTS_ACCURACY_free;
+  TS_ACCURACY_dup: TTS_ACCURACY_dup;
+  TS_ACCURACY_set_seconds: TTS_ACCURACY_set_seconds;
+  TS_ACCURACY_get_seconds: TTS_ACCURACY_get_seconds;
+  TS_ACCURACY_set_millis: TTS_ACCURACY_set_millis;
+  TS_ACCURACY_get_millis: TTS_ACCURACY_get_millis;
+  TS_ACCURACY_set_micros: TTS_ACCURACY_set_micros;
+  TS_ACCURACY_get_micros: TTS_ACCURACY_get_micros;
+  
+  // 配置函数
+  TS_CONF_load_cert: TTS_CONF_load_cert;
+  TS_CONF_load_key: TTS_CONF_load_key;
+  TS_CONF_set_serial: TTS_CONF_set_serial;
+  TS_CONF_get_tsa_section: TTS_CONF_get_tsa_section;
+  TS_CONF_set_crypto_device: TTS_CONF_set_crypto_device;
+  TS_CONF_set_default_engine: TTS_CONF_set_default_engine;
+  TS_CONF_set_signer_cert: TTS_CONF_set_signer_cert;
+  TS_CONF_set_certs: TTS_CONF_set_certs;
+  TS_CONF_set_signer_key: TTS_CONF_set_signer_key;
+  TS_CONF_set_signer_digest: TTS_CONF_set_signer_digest;
+  TS_CONF_set_def_policy: TTS_CONF_set_def_policy;
+  TS_CONF_set_policies: TTS_CONF_set_policies;
+  TS_CONF_set_digests: TTS_CONF_set_digests;
+  TS_CONF_set_accuracy: TTS_CONF_set_accuracy;
+  TS_CONF_set_clock_precision_digits: TTS_CONF_set_clock_precision_digits;
+  TS_CONF_set_ordering: TTS_CONF_set_ordering;
+  TS_CONF_set_tsa_name: TTS_CONF_set_tsa_name;
+  TS_CONF_set_ess_cert_id_chain: TTS_CONF_set_ess_cert_id_chain;
+  TS_CONF_set_ess_cert_id_digest: TTS_CONF_set_ess_cert_id_digest;
+
+procedure LoadTSFunctions;
+procedure UnloadTSFunctions;
+
+// 辅助函数
+function CreateTimestampRequest(const Data: TBytes; const PolicyOID: string = ''): PTS_REQ;
+function VerifyTimestampResponse(Response: PTS_RESP; Request: PTS_REQ; 
+                                 Store: PX509_STORE = nil): Boolean;
+function GetTimestampTime(Response: PTS_RESP): TDateTime;
+
+implementation
+
+uses
+  DateUtils, fafafa.ssl.openssl.core;
+
+procedure LoadTSFunctions;
+begin
+  if not OpenSSLLoaded then Exit;
+  
+  // TS_MSG_IMPRINT 函数
+  TS_MSG_IMPRINT_new := TTS_MSG_IMPRINT_new(GetOpenSSLProcAddress('TS_MSG_IMPRINT_new'));
+  TS_MSG_IMPRINT_free := TTS_MSG_IMPRINT_free(GetOpenSSLProcAddress('TS_MSG_IMPRINT_free'));
+  TS_MSG_IMPRINT_dup := TTS_MSG_IMPRINT_dup(GetOpenSSLProcAddress('TS_MSG_IMPRINT_dup'));
+  TS_MSG_IMPRINT_set_algo := TTS_MSG_IMPRINT_set_algo(GetOpenSSLProcAddress('TS_MSG_IMPRINT_set_algo'));
+  TS_MSG_IMPRINT_get_algo := TTS_MSG_IMPRINT_get_algo(GetOpenSSLProcAddress('TS_MSG_IMPRINT_get_algo'));
+  TS_MSG_IMPRINT_set_msg := TTS_MSG_IMPRINT_set_msg(GetOpenSSLProcAddress('TS_MSG_IMPRINT_set_msg'));
+  TS_MSG_IMPRINT_get_msg := TTS_MSG_IMPRINT_get_msg(GetOpenSSLProcAddress('TS_MSG_IMPRINT_get_msg'));
+  TS_MSG_IMPRINT_print_bio := TTS_MSG_IMPRINT_print_bio(GetOpenSSLProcAddress('TS_MSG_IMPRINT_print_bio'));
+  
+  // TS_REQ 函数
+  TS_REQ_new := TTS_REQ_new(GetOpenSSLProcAddress('TS_REQ_new'));
+  TS_REQ_free := TTS_REQ_free(GetOpenSSLProcAddress('TS_REQ_free'));
+  TS_REQ_dup := TTS_REQ_dup(GetOpenSSLProcAddress('TS_REQ_dup'));
+  TS_REQ_d2i_bio := TTS_REQ_d2i_bio(GetOpenSSLProcAddress('TS_REQ_d2i_bio'));
+  TS_REQ_i2d_bio := TTS_REQ_i2d_bio(GetOpenSSLProcAddress('TS_REQ_i2d_bio'));
+  TS_REQ_set_version := TTS_REQ_set_version(GetOpenSSLProcAddress('TS_REQ_set_version'));
+  TS_REQ_get_version := TTS_REQ_get_version(GetOpenSSLProcAddress('TS_REQ_get_version'));
+  TS_REQ_set_msg_imprint := TTS_REQ_set_msg_imprint(GetOpenSSLProcAddress('TS_REQ_set_msg_imprint'));
+  TS_REQ_get_msg_imprint := TTS_REQ_get_msg_imprint(GetOpenSSLProcAddress('TS_REQ_get_msg_imprint'));
+  TS_REQ_set_policy_id := TTS_REQ_set_policy_id(GetOpenSSLProcAddress('TS_REQ_set_policy_id'));
+  TS_REQ_get_policy_id := TTS_REQ_get_policy_id(GetOpenSSLProcAddress('TS_REQ_get_policy_id'));
+  TS_REQ_set_nonce := TTS_REQ_set_nonce(GetOpenSSLProcAddress('TS_REQ_set_nonce'));
+  TS_REQ_get_nonce := TTS_REQ_get_nonce(GetOpenSSLProcAddress('TS_REQ_get_nonce'));
+  TS_REQ_set_cert_req := TTS_REQ_set_cert_req(GetOpenSSLProcAddress('TS_REQ_set_cert_req'));
+  TS_REQ_get_cert_req := TTS_REQ_get_cert_req(GetOpenSSLProcAddress('TS_REQ_get_cert_req'));
+  TS_REQ_print_bio := TTS_REQ_print_bio(GetOpenSSLProcAddress('TS_REQ_print_bio'));
+  
+  // TS_TST_INFO 函数
+  TS_TST_INFO_new := TTS_TST_INFO_new(GetOpenSSLProcAddress('TS_TST_INFO_new'));
+  TS_TST_INFO_free := TTS_TST_INFO_free(GetOpenSSLProcAddress('TS_TST_INFO_free'));
+  TS_TST_INFO_dup := TTS_TST_INFO_dup(GetOpenSSLProcAddress('TS_TST_INFO_dup'));
+  TS_TST_INFO_d2i_bio := TTS_TST_INFO_d2i_bio(GetOpenSSLProcAddress('TS_TST_INFO_d2i_bio'));
+  TS_TST_INFO_i2d_bio := TTS_TST_INFO_i2d_bio(GetOpenSSLProcAddress('TS_TST_INFO_i2d_bio'));
+  TS_TST_INFO_get_version := TTS_TST_INFO_get_version(GetOpenSSLProcAddress('TS_TST_INFO_get_version'));
+  TS_TST_INFO_get_time := TTS_TST_INFO_get_time(GetOpenSSLProcAddress('TS_TST_INFO_get_time'));
+  TS_TST_INFO_print_bio := TTS_TST_INFO_print_bio(GetOpenSSLProcAddress('TS_TST_INFO_print_bio'));
+  
+  // TS_STATUS_INFO 函数
+  TS_STATUS_INFO_new := TTS_STATUS_INFO_new(GetOpenSSLProcAddress('TS_STATUS_INFO_new'));
+  TS_STATUS_INFO_free := TTS_STATUS_INFO_free(GetOpenSSLProcAddress('TS_STATUS_INFO_free'));
+  TS_STATUS_INFO_get0_status := TTS_STATUS_INFO_get0_status(GetOpenSSLProcAddress('TS_STATUS_INFO_get0_status'));
+  TS_STATUS_INFO_print_bio := TTS_STATUS_INFO_print_bio(GetOpenSSLProcAddress('TS_STATUS_INFO_print_bio'));
+  
+  // TS_RESP 函数
+  TS_RESP_new := TTS_RESP_new(GetOpenSSLProcAddress('TS_RESP_new'));
+  TS_RESP_free := TTS_RESP_free(GetOpenSSLProcAddress('TS_RESP_free'));
+  TS_RESP_d2i_bio := TTS_RESP_d2i_bio(GetOpenSSLProcAddress('TS_RESP_d2i_bio'));
+  TS_RESP_i2d_bio := TTS_RESP_i2d_bio(GetOpenSSLProcAddress('TS_RESP_i2d_bio'));
+  TS_RESP_create_response := TTS_RESP_create_response(GetOpenSSLProcAddress('TS_RESP_create_response'));
+  TS_RESP_get_status_info := TTS_RESP_get_status_info(GetOpenSSLProcAddress('TS_RESP_get_status_info'));
+  TS_RESP_get_token := TTS_RESP_get_token(GetOpenSSLProcAddress('TS_RESP_get_token'));
+  TS_RESP_get_tst_info := TTS_RESP_get_tst_info(GetOpenSSLProcAddress('TS_RESP_get_tst_info'));
+  TS_RESP_print_bio := TTS_RESP_print_bio(GetOpenSSLProcAddress('TS_RESP_print_bio'));
+  TS_RESP_verify_signature := TTS_RESP_verify_signature(GetOpenSSLProcAddress('TS_RESP_verify_signature'));
+  TS_RESP_verify_response := TTS_RESP_verify_response(GetOpenSSLProcAddress('TS_RESP_verify_response'));
+  
+  // TS_RESP_CTX 函数
+  TS_RESP_CTX_new := TTS_RESP_CTX_new(GetOpenSSLProcAddress('TS_RESP_CTX_new'));
+  TS_RESP_CTX_free := TTS_RESP_CTX_free(GetOpenSSLProcAddress('TS_RESP_CTX_free'));
+  TS_RESP_CTX_set_signer_cert := TTS_RESP_CTX_set_signer_cert(GetOpenSSLProcAddress('TS_RESP_CTX_set_signer_cert'));
+  TS_RESP_CTX_set_signer_key := TTS_RESP_CTX_set_signer_key(GetOpenSSLProcAddress('TS_RESP_CTX_set_signer_key'));
+  TS_RESP_CTX_set_def_policy := TTS_RESP_CTX_set_def_policy(GetOpenSSLProcAddress('TS_RESP_CTX_set_def_policy'));
+  
+  // TS_VERIFY_CTX 函数
+  TS_VERIFY_CTX_new := TTS_VERIFY_CTX_new(GetOpenSSLProcAddress('TS_VERIFY_CTX_new'));
+  TS_VERIFY_CTX_free := TTS_VERIFY_CTX_free(GetOpenSSLProcAddress('TS_VERIFY_CTX_free'));
+  TS_VERIFY_CTX_set_flags := TTS_VERIFY_CTX_set_flags(GetOpenSSLProcAddress('TS_VERIFY_CTX_set_flags'));
+  TS_VERIFY_CTX_set_store := TTS_VERIFY_CTX_set_store(GetOpenSSLProcAddress('TS_VERIFY_CTX_set_store'));
+  TS_VERIFY_CTX_set_certs := TTS_VERIFY_CTX_set_certs(GetOpenSSLProcAddress('TS_VERIFY_CTX_set_certs'));
+end;
+
+procedure UnloadTSFunctions;
+begin
+  // 重置所有函数指针
+  TS_MSG_IMPRINT_new := nil;
+  TS_MSG_IMPRINT_free := nil;
+  TS_REQ_new := nil;
+  TS_REQ_free := nil;
+  TS_TST_INFO_new := nil;
+  TS_TST_INFO_free := nil;
+  TS_STATUS_INFO_new := nil;
+  TS_STATUS_INFO_free := nil;
+  TS_RESP_new := nil;
+  TS_RESP_free := nil;
+  TS_RESP_CTX_new := nil;
+  TS_RESP_CTX_free := nil;
+  TS_VERIFY_CTX_new := nil;
+  TS_VERIFY_CTX_free := nil;
+end;
+
+function CreateTimestampRequest(const Data: TBytes; const PolicyOID: string): PTS_REQ;
+var
+  MsgImprint: PTS_MSG_IMPRINT;
+  Hash: array[0..31] of Byte; // SHA-256
+  MD: PEVP_MD;
+  MDCtx: PEVP_MD_CTX;
+  HashLen: Cardinal;
+  Policy: PASN1_OBJECT;
+  Nonce: PASN1_INTEGER;
+  RandomBytes: array[0..7] of Byte;
+  Algo: PX509_ALGOR;
+begin
+  Result := nil;
+  
+  if not Assigned(TS_REQ_new) then Exit;
+  
+  // 创建请求
+  Result := TS_REQ_new();
+  if Result = nil then Exit;
+  
+  try
+    // 设置版本
+    if Assigned(TS_REQ_set_version) then
+      TS_REQ_set_version(Result, 1);
+    
+    // 创建消息摘要印记
+    if Assigned(TS_MSG_IMPRINT_new) then
+    begin
+      MsgImprint := TS_MSG_IMPRINT_new();
+      if MsgImprint <> nil then
+      begin
+        // TODO: 计算数据哈希并设置
+        // 这里需要 EVP 函数来计算 SHA-256
+        
+        // 设置消息印记
+        if Assigned(TS_REQ_set_msg_imprint) then
+          TS_REQ_set_msg_imprint(Result, MsgImprint);
+      end;
+    end;
+    
+    // 设置策略 OID（如果提供）
+    if (PolicyOID <> '') and Assigned(TS_REQ_set_policy_id) then
+    begin
+      // TODO: 将字符串 OID 转换为 ASN1_OBJECT
+    end;
+    
+    // 设置 nonce（随机数）
+    // TODO: 生成随机数并设置
+    
+    // 请求包含证书
+    if Assigned(TS_REQ_set_cert_req) then
+      TS_REQ_set_cert_req(Result, 1);
+      
+  except
+    if Assigned(TS_REQ_free) then
+      TS_REQ_free(Result);
+    Result := nil;
+  end;
+end;
+
+function VerifyTimestampResponse(Response: PTS_RESP; Request: PTS_REQ; 
+                                Store: PX509_STORE): Boolean;
+var
+  VerifyCtx: PTS_VERIFY_CTX;
+  StatusInfo: PTS_STATUS_INFO;
+  Status: PASN1_INTEGER;
+  StatusValue: Integer;
+begin
+  Result := False;
+  
+  if not Assigned(TS_RESP_get_status_info) or not Assigned(TS_STATUS_INFO_get0_status) then
+    Exit;
+  
+  // 检查响应状态
+  StatusInfo := TS_RESP_get_status_info(Response);
+  if StatusInfo = nil then Exit;
+  
+  Status := TS_STATUS_INFO_get0_status(StatusInfo);
+  if Status = nil then Exit;
+  
+  // TODO: 获取状态值并检查
+  // StatusValue := ASN1_INTEGER_get(Status);
+  // if (StatusValue <> TS_STATUS_GRANTED) and 
+  //    (StatusValue <> TS_STATUS_GRANTED_WITH_MODS) then
+  //   Exit;
+  
+  // 创建验证上下文
+  if not Assigned(TS_VERIFY_CTX_new) then Exit;
+  
+  VerifyCtx := TS_VERIFY_CTX_new();
+  if VerifyCtx = nil then Exit;
+  
+  try
+    // 设置验证标志
+    if Assigned(TS_VERIFY_CTX_set_flags) then
+      TS_VERIFY_CTX_set_flags(VerifyCtx, TS_VFY_VERSION or TS_VFY_POLICY or 
+                              TS_VFY_IMPRINT or TS_VFY_SIGNATURE);
+    
+    // 设置证书存储
+    if (Store <> nil) and Assigned(TS_VERIFY_CTX_set_store) then
+      TS_VERIFY_CTX_set_store(VerifyCtx, Store);
+    
+    // 执行验证
+    if Assigned(TS_RESP_verify_response) then
+      Result := TS_RESP_verify_response(VerifyCtx, Response) = 1;
+      
+  finally
+    if Assigned(TS_VERIFY_CTX_free) then
+      TS_VERIFY_CTX_free(VerifyCtx);
+  end;
+end;
+
+function GetTimestampTime(Response: PTS_RESP): TDateTime;
+var
+  TstInfo: PTS_TST_INFO;
+  GenTime: PASN1_GENERALIZEDTIME;
+  TimeStr: string;
+begin
+  Result := 0;
+  
+  if not Assigned(TS_RESP_get_tst_info) or not Assigned(TS_TST_INFO_get_time) then
+    Exit;
+  
+  TstInfo := TS_RESP_get_tst_info(Response);
+  if TstInfo = nil then Exit;
+  
+  GenTime := TS_TST_INFO_get_time(TstInfo);
+  if GenTime = nil then Exit;
+  
+  // TODO: 转换 ASN1_GENERALIZEDTIME 为 TDateTime
+  // 需要解析时间字符串格式：YYYYMMDDhhmmss[.fff]Z
+end;
+
+initialization
+  
+finalization
+  UnloadTSFunctions;
+  
+end.
