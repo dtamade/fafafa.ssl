@@ -1,8 +1,8 @@
 # OpenSSL Module Test Status
 
-## Test Progress: 22/60 modules (37%)
+## Test Progress: 23/60 modules (38%)
 
-### ✅ Completed Tests (22 modules)
+### ✅ Completed Tests (23 modules)
 
 | # | Module | Test File | Status | Notes |
 |---|--------|-----------|--------|-------|
@@ -28,6 +28,7 @@
 | 20 | dh | test_openssl_dh | ✅ | 6/6 tests passed |
 | 21 | ecdh | test_ecdh | ✅ | 6/6 tests passed |
 | 22 | ecdsa | test_ecdsa | ✅ | 7/7 tests passed (2 tests skipped) |
+| 23 | sha3 | test_openssl_sha3 | ✅ | 6/6 tests passed |
 
 ### 🔄 In Progress (0 modules)
 
