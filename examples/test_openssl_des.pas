@@ -1,4 +1,4 @@
-program test_des;
+program test_openssl_des;
 
 {$mode objfpc}{$H+}
 
@@ -24,15 +24,6 @@ begin
     WriteLn('[FAIL] ', TestName);
     Inc(TestsFailed);
   end;
-end;
-
-function BytesToHex(const Data: TBytes): string;
-var
-  i: Integer;
-begin
-  Result := '';
-  for i := 0 to Length(Data) - 1 do
-    Result := Result + IntToHex(Data[i], 2);
 end;
 
 function TestDESLoadFunctions: Boolean;
@@ -318,11 +309,6 @@ end;
 
 procedure RunAllTests;
 begin
-  WriteLn('====================================');
-  WriteLn('DES Module Tests');
-  WriteLn('====================================');
-  WriteLn;
-  
   TestDESLoadFunctions;
   TestDESECBEncryptDecrypt;
   TestDES3EncryptDecrypt;
@@ -333,12 +319,9 @@ begin
   TestDESInvalidKey;
   
   WriteLn;
-  WriteLn('====================================');
-  WriteLn('Test Summary');
-  WriteLn('====================================');
-  WriteLn('Tests passed: ', TestsPassed);
-  WriteLn('Tests failed: ', TestsFailed);
-  WriteLn('Total tests:  ', TestsPassed + TestsFailed);
+  WriteLn('Tests Passed: ', TestsPassed);
+  WriteLn('Tests Failed: ', TestsFailed);
+  WriteLn('Total Tests: ', TestsPassed + TestsFailed);
   
   if TestsFailed > 0 then
     ExitCode := 1

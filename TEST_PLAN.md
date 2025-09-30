@@ -27,9 +27,9 @@ Systematically test all 72 OpenSSL modules based on their dependencies and impor
 
 **New Tests Added**:
 
-### Completed Tests (17 modules) - Updated
+### Completed Tests (19 modules) - Updated
 
-**Note**: Reached 23.6% coverage milestone! 🎉
+**Note**: Reached 26.4% coverage milestone! 🎉
 
 | Module | Test File | Tests | Status | Notes |
 |--------|-----------|-------|--------|-------|
@@ -37,6 +37,8 @@ Systematically test all 72 OpenSSL modules based on their dependencies and impor
 | DES | test_des.lpr | 8 | ⚠️ 7/8 | DES/3DES encryption (1 weak key test issue) |
 | SEED | test_seed.lpr | 5 | ✅ PASS | SEED block cipher encryption |
 | ARIA | test_aria.lpr | 7 | ℹ️ 7/7 (N/A) | ARIA cipher (not available in OpenSSL 3.x) |
+| KDF | test_kdf.lpr | 23 | ⚠️ 20/23 | Key derivation (PBKDF2, scrypt) |
+| CMAC | test_cmac.lpr | 12 | ⚠️ 5/12 | CMAC deprecated in OpenSSL 3.x, needs EVP_MAC |
 
 ### Tests Created - Pending Fix (1 module)
 
@@ -153,9 +155,11 @@ Systematically test all 72 OpenSSL modules based on their dependencies and impor
 
 ## Current Progress
 
-- **Tested**: 17/72 (23.6%) 🎯
-- **Test Cases**: 141 total (standardized format)
-- **Pass Rate**: 98.6% (139/141)
+- **Tested**: 19/72 (26.4%) 🎯
+- **Test Cases**: 176 total (standardized format)
+- **Pass Rate**: 93.2% (164/176)
+- **Status**: Core OpenSSL modules tested and working
+- **Note**: Some modules (CMAC) deprecated in OpenSSL 3.x
 - **Tests Created**: +2 (ECDSA, Version Detection - pending OpenSSL compatibility fix)
 - **Automated Test Script**: ✅ Created and working
 - **OpenSSL Version Support**: ✅ Automatic detection (3.x & 1.1.x)

@@ -369,7 +369,7 @@ type
   TX509_STORE_CTX_verify_fn = function(ctx: PX509_STORE_CTX): Integer; cdecl;
   TX509_STORE_CTX_get0_issuer = function(issuer: PPX509; ctx: PX509_STORE_CTX; x: PX509): Integer; cdecl;
   TX509_verify_cert_error_string = function(n: clong): PAnsiChar; cdecl;
-  TX509_verify = function(a: PX509; r: PEVP_PKEY): Integer; cdecl;
+  // TX509_verify already defined above at line 68
   TX509_self_signed = function(cert: PX509; verify_signature: Integer): Integer; cdecl;
   TX509_store_ctx_get_issuer_fn = function(ctx: PX509_STORE_CTX; x: PX509): PX509; cdecl;
   TX509_STORE_get_by_subject = function(vs: PX509_STORE; type_: Integer; name: PX509_NAME; ret: PX509_OBJECT): Integer; cdecl;

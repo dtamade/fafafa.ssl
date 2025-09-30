@@ -261,7 +261,8 @@ begin
     pbn := bn;
     BN_dec2bn(@pbn, '999999');
     hex := BNToHex(bn);
-    TestResult('BN_dec2bn (999999=f423f)', hex = 'f423f', 'f423f', hex);
+    // OpenSSL may return with or without leading zeros, both are correct
+    TestResult('BN_dec2bn (999999=f423f)', (hex = 'f423f') or (hex = '0f423f'), 'f423f or 0f423f', hex);
     
     // Test large number
     pbn := bn;

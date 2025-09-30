@@ -189,7 +189,7 @@ type
   TPKCS5_PBE_add = function(): Integer; cdecl;
   
   // 密钥派生辅助函数
-  TEVP_KDF_ctrl = function(ctx: PEVP_KDF_CTX; cmd: Integer; ...): Integer; cdecl;
+  // Note: EVP_KDF_ctrl uses varargs and cannot be directly mapped to Pascal
   TEVP_KDF_vctrl = function(ctx: PEVP_KDF_CTX; cmd: Integer; args: Pointer): Integer; cdecl;
   TEVP_KDF_ctrl_str = function(ctx: PEVP_KDF_CTX; typ: PAnsiChar;
                               value: PAnsiChar): Integer; cdecl;
@@ -245,7 +245,6 @@ var
   PKCS5_PBE_add: TPKCS5_PBE_add;
   
   // 密钥派生辅助函数
-  EVP_KDF_ctrl: TEVP_KDF_ctrl;
   EVP_KDF_vctrl: TEVP_KDF_vctrl;
   EVP_KDF_ctrl_str: TEVP_KDF_ctrl_str;
   EVP_KDF_size: TEVP_KDF_size;
@@ -272,7 +271,7 @@ uses
 
 procedure LoadKDFFunctions;
 begin
-  if not OpenSSLLoaded then Exit;
+  if GetCryptoLibHandle = 0 then Exit;
   
   // PBKDF2 函数
   PKCS5_PBKDF2_HMAC := TPKCS5_PBKDF2_HMAC(GetCryptoProcAddress('PKCS5_PBKDF2_HMAC'));
@@ -446,6 +445,8 @@ begin
 end;
 
 function GenerateSalt(Len: Integer): TBytes;
+var
+  I: Integer;
 begin
   SetLength(Result, Len);
   
@@ -459,7 +460,7 @@ begin
   begin
     // 后备方案：使用系统随机数
     Randomize;
-    for var I := 0 to Len - 1 do
+    for I := 0 to Len - 1 do
       Result[I] := Random(256);
   end;
 end;

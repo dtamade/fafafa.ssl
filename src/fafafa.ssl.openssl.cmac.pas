@@ -273,7 +273,7 @@ end;
 function ComputeCMAC_AES128(const Key: TBytes; const Data: TBytes): TBytes;
 begin
   if not Assigned(EVP_aes_128_cbc) then
-    LoadAESFunctions;
+    LoadAESFunctions(hCrypto);
     
   Result := ComputeCMAC(EVP_aes_128_cbc(), Key, Data);
 end;
@@ -281,7 +281,7 @@ end;
 function ComputeCMAC_AES256(const Key: TBytes; const Data: TBytes): TBytes;
 begin
   if not Assigned(EVP_aes_256_cbc) then
-    LoadAESFunctions;
+    LoadAESFunctions(hCrypto);
     
   Result := ComputeCMAC(EVP_aes_256_cbc(), Key, Data);
 end;
