@@ -105,7 +105,8 @@ function Poly1305MAC(const Key: TBytes; const Message: TBytes): TBytes;
 implementation
 
 uses
-  {$IFDEF WINDOWS}Windows{$ELSE}dynlibs{$ENDIF};
+  {$IFDEF WINDOWS}Windows{$ELSE}dynlibs{$ENDIF},
+  fafafa.ssl.openssl.api, fafafa.ssl.openssl.consts;
 
 var
   hCrypto: {$IFDEF WINDOWS}HMODULE{$ELSE}THandle{$ENDIF} = 0;
