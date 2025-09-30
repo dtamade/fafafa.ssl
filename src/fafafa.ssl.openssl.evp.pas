@@ -741,9 +741,27 @@ var
   EVP_CIPHER_get_iv_length: TEVP_CIPHER_get_iv_length = nil;
   EVP_CIPHER_get_block_size: TEVP_CIPHER_get_block_size = nil;
   
+  // Cipher control functions
+  EVP_CIPHER_CTX_ctrl: TEVP_CIPHER_CTX_ctrl = nil;
+  EVP_CIPHER_CTX_set_key_length: TEVP_CIPHER_CTX_set_key_length = nil;
+  EVP_CIPHER_CTX_set_padding: TEVP_CIPHER_CTX_set_padding = nil;
+  
   // Cipher algorithms
   EVP_aes_128_cbc: TEVP_aes_128_cbc = nil;
+  EVP_aes_128_gcm: TEVP_aes_128_gcm = nil;
+  EVP_aes_192_gcm: TEVP_aes_192_gcm = nil;
   EVP_aes_256_cbc: TEVP_aes_256_cbc = nil;
+  EVP_aes_256_gcm: TEVP_aes_256_gcm = nil;
+  EVP_aes_128_ccm: TEVP_aes_128_ccm = nil;
+  EVP_aes_192_ccm: TEVP_aes_192_ccm = nil;
+  EVP_aes_256_ccm: TEVP_aes_256_ccm = nil;
+  EVP_aes_128_xts: TEVP_aes_128_xts = nil;
+  EVP_aes_256_xts: TEVP_aes_256_xts = nil;
+  EVP_aes_128_ocb: TEVP_aes_128_ocb = nil;
+  EVP_aes_192_ocb: TEVP_aes_192_ocb = nil;
+  EVP_aes_256_ocb: TEVP_aes_256_ocb = nil;
+  EVP_chacha20: TEVP_chacha20 = nil;
+  EVP_chacha20_poly1305: TEVP_chacha20_poly1305 = nil;
   EVP_get_cipherbyname: TEVP_get_cipherbyname = nil;
 
 // Public load/unload functions
@@ -820,9 +838,27 @@ begin
   EVP_CIPHER_get_iv_length := TEVP_CIPHER_get_iv_length(GetProcAddress(ALibHandle, 'EVP_CIPHER_get_iv_length'));
   EVP_CIPHER_get_block_size := TEVP_CIPHER_get_block_size(GetProcAddress(ALibHandle, 'EVP_CIPHER_get_block_size'));
   
+  // Load Cipher control functions
+  EVP_CIPHER_CTX_ctrl := TEVP_CIPHER_CTX_ctrl(GetProcAddress(ALibHandle, 'EVP_CIPHER_CTX_ctrl'));
+  EVP_CIPHER_CTX_set_key_length := TEVP_CIPHER_CTX_set_key_length(GetProcAddress(ALibHandle, 'EVP_CIPHER_CTX_set_key_length'));
+  EVP_CIPHER_CTX_set_padding := TEVP_CIPHER_CTX_set_padding(GetProcAddress(ALibHandle, 'EVP_CIPHER_CTX_set_padding'));
+  
   // Load Cipher algorithms
   EVP_aes_128_cbc := TEVP_aes_128_cbc(GetProcAddress(ALibHandle, 'EVP_aes_128_cbc'));
+  EVP_aes_128_gcm := TEVP_aes_128_gcm(GetProcAddress(ALibHandle, 'EVP_aes_128_gcm'));
+  EVP_aes_192_gcm := TEVP_aes_192_gcm(GetProcAddress(ALibHandle, 'EVP_aes_192_gcm'));
   EVP_aes_256_cbc := TEVP_aes_256_cbc(GetProcAddress(ALibHandle, 'EVP_aes_256_cbc'));
+  EVP_aes_256_gcm := TEVP_aes_256_gcm(GetProcAddress(ALibHandle, 'EVP_aes_256_gcm'));
+  EVP_aes_128_ccm := TEVP_aes_128_ccm(GetProcAddress(ALibHandle, 'EVP_aes_128_ccm'));
+  EVP_aes_192_ccm := TEVP_aes_192_ccm(GetProcAddress(ALibHandle, 'EVP_aes_192_ccm'));
+  EVP_aes_256_ccm := TEVP_aes_256_ccm(GetProcAddress(ALibHandle, 'EVP_aes_256_ccm'));
+  EVP_aes_128_xts := TEVP_aes_128_xts(GetProcAddress(ALibHandle, 'EVP_aes_128_xts'));
+  EVP_aes_256_xts := TEVP_aes_256_xts(GetProcAddress(ALibHandle, 'EVP_aes_256_xts'));
+  EVP_aes_128_ocb := TEVP_aes_128_ocb(GetProcAddress(ALibHandle, 'EVP_aes_128_ocb'));
+  EVP_aes_192_ocb := TEVP_aes_192_ocb(GetProcAddress(ALibHandle, 'EVP_aes_192_ocb'));
+  EVP_aes_256_ocb := TEVP_aes_256_ocb(GetProcAddress(ALibHandle, 'EVP_aes_256_ocb'));
+  EVP_chacha20 := TEVP_chacha20(GetProcAddress(ALibHandle, 'EVP_chacha20'));
+  EVP_chacha20_poly1305 := TEVP_chacha20_poly1305(GetProcAddress(ALibHandle, 'EVP_chacha20_poly1305'));
   EVP_get_cipherbyname := TEVP_get_cipherbyname(GetProcAddress(ALibHandle, 'EVP_get_cipherbyname'));
   
   GEVPLoaded := Assigned(EVP_MD_CTX_new) and Assigned(EVP_CIPHER_CTX_new);
