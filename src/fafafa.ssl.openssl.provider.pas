@@ -34,7 +34,7 @@ type
   OSSL_ALGORITHM = record
     algorithm_names: PAnsiChar;
     property_definition: PAnsiChar;
-    implementation: Pointer;
+    impl: Pointer;  // 'implementation' is a reserved keyword in Pascal
     algorithm_description: PAnsiChar;
   end;
 
@@ -81,8 +81,9 @@ type
   TOSSL_PROVIDER_available = function(libctx: POSSL_LIB_CTX; 
     const name: PAnsiChar): Integer; cdecl;
   TOSSL_PROVIDER_set_fallback = function(prov: POSSL_PROVIDER): Integer; cdecl;
+  TOSSL_PROVIDER_do_all_cb = procedure(provider: POSSL_PROVIDER; cbdata: Pointer); cdecl;
   TOSSL_PROVIDER_do_all = function(libctx: POSSL_LIB_CTX; 
-    cb: procedure(provider: POSSL_PROVIDER; cbdata: Pointer); cbdata: Pointer): Integer; cdecl;
+    cb: TOSSL_PROVIDER_do_all_cb; cbdata: Pointer): Integer; cdecl;
   TOSSL_PROVIDER_gettable_params = function(prov: POSSL_PROVIDER): POSSL_PARAM; cdecl;
   TOSSL_PROVIDER_get_params = function(prov: POSSL_PROVIDER; 
     params: POSSL_PARAM): Integer; cdecl;
@@ -93,9 +94,10 @@ type
   TOSSL_PROVIDER_get_reason_strings = function(prov: POSSL_PROVIDER): Pointer; cdecl;
   TOSSL_PROVIDER_get0_dispatch = function(prov: POSSL_PROVIDER): POSSL_DISPATCH; cdecl;
   TOSSL_PROVIDER_self_test = function(prov: POSSL_PROVIDER): Integer; cdecl;
+  TOSSL_PROVIDER_get_capabilities_cb = function(params: POSSL_PARAM; arg: Pointer): Integer; cdecl;
   TOSSL_PROVIDER_get_capabilities = function(prov: POSSL_PROVIDER; 
     const capability: PAnsiChar; 
-    cb: function(params: POSSL_PARAM; arg: Pointer): Integer; arg: Pointer): Integer; cdecl;
+    cb: TOSSL_PROVIDER_get_capabilities_cb; arg: Pointer): Integer; cdecl;
   TOSSL_PROVIDER_get0_name = function(prov: POSSL_PROVIDER): PAnsiChar; cdecl;
   
   // Library context 函数
