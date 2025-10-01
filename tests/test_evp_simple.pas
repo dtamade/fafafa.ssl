@@ -1,10 +1,13 @@
 program test_evp_simple;
 
 {$mode objfpc}{$H+}
+{$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api;
+  DynLibs,
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.evp;
 
 // Helper function to convert bytes to hex string
 function BytesToHex(const Data: array of Byte): string;
@@ -81,7 +84,7 @@ begin
       end;
       
       outlen := 0;
-      if EVP_EncryptUpdate(ctx, @ciphertext[0], PInteger(@outlen),
+      if EVP_EncryptUpdate(ctx, @ciphertext[0], outlen,
          PByte(TestPlaintext), Length(TestPlaintext)) <> 1 then
       begin
         WriteLn('  [-] Failed to encrypt');
@@ -89,7 +92,7 @@ begin
       end;
       
       tmplen := 0;
-      if EVP_EncryptFinal_ex(ctx, @ciphertext[outlen], PInteger(@tmplen)) <> 1 then
+      if EVP_EncryptFinal_ex(ctx, @ciphertext[outlen], tmplen) <> 1 then
       begin
         WriteLn('  [-] Failed to finalize encryption');
         Exit;
@@ -122,7 +125,7 @@ begin
       end;
       
       outlen := 0;
-      if EVP_DecryptUpdate(ctx, @plaintext[0], PInteger(@outlen),
+      if EVP_DecryptUpdate(ctx, @plaintext[0], outlen,
          @ciphertext[0], TotalLen) <> 1 then
       begin
         WriteLn('  [-] Failed to decrypt');
@@ -130,7 +133,7 @@ begin
       end;
       
       tmplen := 0;
-      if EVP_DecryptFinal_ex(ctx, @plaintext[outlen], PInteger(@tmplen)) <> 1 then
+      if EVP_DecryptFinal_ex(ctx, @plaintext[outlen], tmplen) <> 1 then
       begin
         WriteLn('  [-] Failed to finalize decryption');
         Exit;
@@ -161,6 +164,9 @@ begin
   WriteLn;
 end;
 
+var
+  LCryptoLib: TLibHandle;
+  
 begin
   WriteLn('========================================');
   WriteLn('Simple EVP Cipher Test');
@@ -181,6 +187,38 @@ begin
   end;
   
   WriteLn('OpenSSL loaded successfully!');
+  
+  // Load libcrypto for EVP functions
+  {$IFDEF MSWINDOWS}
+  LCryptoLib := LoadLibrary('libcrypto-3-x64.dll');
+  if LCryptoLib = NilHandle then
+    LCryptoLib := LoadLibrary('libcrypto-3.dll');
+  if LCryptoLib = NilHandle then
+    LCryptoLib := LoadLibrary('libcrypto.dll');
+  {$ELSE}
+  LCryptoLib := LoadLibrary('libcrypto.so.3');
+  if LCryptoLib = NilHandle then
+    LCryptoLib := LoadLibrary('libcrypto.so');
+  {$ENDIF}
+  
+  if LCryptoLib = NilHandle then
+  begin
+    WriteLn('ERROR: Failed to load libcrypto!');
+    Halt(1);
+  end;
+  
+  WriteLn('libcrypto loaded');
+  
+  // Load EVP module
+  if not LoadEVP(LCryptoLib) then
+  begin
+    WriteLn('ERROR: Failed to load EVP module!');
+    FreeLibrary(LCryptoLib);
+    Halt(1);
+  end;
+  
+  WriteLn('EVP module loaded successfully!');
+  WriteLn;
   WriteLn;
   
   // Run test
