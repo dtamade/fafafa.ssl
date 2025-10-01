@@ -196,48 +196,48 @@ begin
   if ALibCrypto = 0 then Exit;
   
   // Provider functions
-  OSSL_PROVIDER_load := GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_load');
-  OSSL_PROVIDER_try_load := GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_try_load');
-  OSSL_PROVIDER_unload := GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_unload');
-  OSSL_PROVIDER_available := GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_available');
-  OSSL_PROVIDER_set_fallback := GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_set_fallback');
-  OSSL_PROVIDER_do_all := GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_do_all');
-  OSSL_PROVIDER_gettable_params := GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_gettable_params');
-  OSSL_PROVIDER_get_params := GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_get_params');
-  OSSL_PROVIDER_query_operation := GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_query_operation');
-  OSSL_PROVIDER_unquery_operation := GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_unquery_operation');
-  OSSL_PROVIDER_get_reason_strings := GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_get_reason_strings');
-  OSSL_PROVIDER_get0_dispatch := GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_get0_dispatch');
-  OSSL_PROVIDER_self_test := GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_self_test');
-  OSSL_PROVIDER_get_capabilities := GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_get_capabilities');
-  OSSL_PROVIDER_get0_name := GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_get0_name');
+  OSSL_PROVIDER_load := TOSSL_PROVIDER_load(GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_load'));
+  OSSL_PROVIDER_try_load := TOSSL_PROVIDER_try_load(GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_try_load'));
+  OSSL_PROVIDER_unload := TOSSL_PROVIDER_unload(GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_unload'));
+  OSSL_PROVIDER_available := TOSSL_PROVIDER_available(GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_available'));
+  OSSL_PROVIDER_set_fallback := TOSSL_PROVIDER_set_fallback(GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_set_fallback'));
+  OSSL_PROVIDER_do_all := TOSSL_PROVIDER_do_all(GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_do_all'));
+  OSSL_PROVIDER_gettable_params := TOSSL_PROVIDER_gettable_params(GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_gettable_params'));
+  OSSL_PROVIDER_get_params := TOSSL_PROVIDER_get_params(GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_get_params'));
+  OSSL_PROVIDER_query_operation := TOSSL_PROVIDER_query_operation(GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_query_operation'));
+  OSSL_PROVIDER_unquery_operation := TOSSL_PROVIDER_unquery_operation(GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_unquery_operation'));
+  OSSL_PROVIDER_get_reason_strings := TOSSL_PROVIDER_get_reason_strings(GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_get_reason_strings'));
+  OSSL_PROVIDER_get0_dispatch := TOSSL_PROVIDER_get0_dispatch(GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_get0_dispatch'));
+  OSSL_PROVIDER_self_test := TOSSL_PROVIDER_self_test(GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_self_test'));
+  OSSL_PROVIDER_get_capabilities := TOSSL_PROVIDER_get_capabilities(GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_get_capabilities'));
+  OSSL_PROVIDER_get0_name := TOSSL_PROVIDER_get0_name(GetProcAddress(ALibCrypto, 'OSSL_PROVIDER_get0_name'));
   
   // Library context functions
-  OSSL_LIB_CTX_new := GetProcAddress(ALibCrypto, 'OSSL_LIB_CTX_new');
-  OSSL_LIB_CTX_new_from_dispatch := GetProcAddress(ALibCrypto, 'OSSL_LIB_CTX_new_from_dispatch');
-  OSSL_LIB_CTX_new_child := GetProcAddress(ALibCrypto, 'OSSL_LIB_CTX_new_child');
-  OSSL_LIB_CTX_free := GetProcAddress(ALibCrypto, 'OSSL_LIB_CTX_free');
-  OSSL_LIB_CTX_load_config := GetProcAddress(ALibCrypto, 'OSSL_LIB_CTX_load_config');
-  OSSL_LIB_CTX_get0_global_default := GetProcAddress(ALibCrypto, 'OSSL_LIB_CTX_get0_global_default');
-  OSSL_LIB_CTX_set0_default := GetProcAddress(ALibCrypto, 'OSSL_LIB_CTX_set0_default');
+  OSSL_LIB_CTX_new := TOSSL_LIB_CTX_new(GetProcAddress(ALibCrypto, 'OSSL_LIB_CTX_new'));
+  OSSL_LIB_CTX_new_from_dispatch := TOSSL_LIB_CTX_new_from_dispatch(GetProcAddress(ALibCrypto, 'OSSL_LIB_CTX_new_from_dispatch'));
+  OSSL_LIB_CTX_new_child := TOSSL_LIB_CTX_new_child(GetProcAddress(ALibCrypto, 'OSSL_LIB_CTX_new_child'));
+  OSSL_LIB_CTX_free := TOSSL_LIB_CTX_free(GetProcAddress(ALibCrypto, 'OSSL_LIB_CTX_free'));
+  OSSL_LIB_CTX_load_config := TOSSL_LIB_CTX_load_config(GetProcAddress(ALibCrypto, 'OSSL_LIB_CTX_load_config'));
+  OSSL_LIB_CTX_get0_global_default := TOSSL_LIB_CTX_get0_global_default(GetProcAddress(ALibCrypto, 'OSSL_LIB_CTX_get0_global_default'));
+  OSSL_LIB_CTX_set0_default := TOSSL_LIB_CTX_set0_default(GetProcAddress(ALibCrypto, 'OSSL_LIB_CTX_set0_default'));
   
   // OSSL_PARAM construction functions
-  OSSL_PARAM_construct_int := GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_int');
-  OSSL_PARAM_construct_uint := GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_uint');
-  OSSL_PARAM_construct_long := GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_long');
-  OSSL_PARAM_construct_ulong := GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_ulong');
-  OSSL_PARAM_construct_int32 := GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_int32');
-  OSSL_PARAM_construct_uint32 := GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_uint32');
-  OSSL_PARAM_construct_int64 := GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_int64');
-  OSSL_PARAM_construct_uint64 := GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_uint64');
-  OSSL_PARAM_construct_size_t := GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_size_t');
-  OSSL_PARAM_construct_time_t := GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_time_t');
-  OSSL_PARAM_construct_double := GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_double');
-  OSSL_PARAM_construct_utf8_string := GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_utf8_string');
-  OSSL_PARAM_construct_utf8_ptr := GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_utf8_ptr');
-  OSSL_PARAM_construct_octet_string := GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_octet_string');
-  OSSL_PARAM_construct_octet_ptr := GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_octet_ptr');
-  OSSL_PARAM_construct_end := GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_end');
+  OSSL_PARAM_construct_int := TOSSL_PARAM_construct_int(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_int'));
+  OSSL_PARAM_construct_uint := TOSSL_PARAM_construct_uint(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_uint'));
+  OSSL_PARAM_construct_long := TOSSL_PARAM_construct_long(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_long'));
+  OSSL_PARAM_construct_ulong := TOSSL_PARAM_construct_ulong(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_ulong'));
+  OSSL_PARAM_construct_int32 := TOSSL_PARAM_construct_int32(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_int32'));
+  OSSL_PARAM_construct_uint32 := TOSSL_PARAM_construct_uint32(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_uint32'));
+  OSSL_PARAM_construct_int64 := TOSSL_PARAM_construct_int64(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_int64'));
+  OSSL_PARAM_construct_uint64 := TOSSL_PARAM_construct_uint64(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_uint64'));
+  OSSL_PARAM_construct_size_t := TOSSL_PARAM_construct_size_t(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_size_t'));
+  OSSL_PARAM_construct_time_t := TOSSL_PARAM_construct_time_t(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_time_t'));
+  OSSL_PARAM_construct_double := TOSSL_PARAM_construct_double(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_double'));
+  OSSL_PARAM_construct_utf8_string := TOSSL_PARAM_construct_utf8_string(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_utf8_string'));
+  OSSL_PARAM_construct_utf8_ptr := TOSSL_PARAM_construct_utf8_ptr(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_utf8_ptr'));
+  OSSL_PARAM_construct_octet_string := TOSSL_PARAM_construct_octet_string(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_octet_string'));
+  OSSL_PARAM_construct_octet_ptr := TOSSL_PARAM_construct_octet_ptr(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_octet_ptr'));
+  OSSL_PARAM_construct_end := TOSSL_PARAM_construct_end(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_end'));
 end;
 
 procedure UnloadProviderModule;
