@@ -1005,7 +1005,10 @@ begin
     try LoadFunc(FCryptoLibHandle, 'EVP_md5', EVP_md5); except end;
     try LoadFunc(FCryptoLibHandle, 'EVP_sha1', EVP_sha1); except end;
     try LoadFunc(FCryptoLibHandle, 'EVP_sha256', EVP_sha256); except end;
+    try LoadFunc(FCryptoLibHandle, 'EVP_sha384', EVP_sha384); except end;
     try LoadFunc(FCryptoLibHandle, 'EVP_sha512', EVP_sha512); except end;
+    try LoadFunc(FCryptoLibHandle, 'EVP_sha512_224', EVP_sha512_224); except end;
+    try LoadFunc(FCryptoLibHandle, 'EVP_sha512_256', EVP_sha512_256); except end;
     
     // EVP 密码函数 - 核心操作
     try LoadFunc(FCryptoLibHandle, 'EVP_CIPHER_CTX_new', EVP_CIPHER_CTX_new); except end;
