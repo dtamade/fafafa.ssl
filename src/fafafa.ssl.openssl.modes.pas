@@ -343,10 +343,9 @@ var
   ctx: PEVP_CIPHER_CTX;
   cipher: PEVP_CIPHER;
   outlen, finlen: Integer;
+  KeyPtr, IVPtr, AADPtr, PlainPtr, ResultPtr, TagPtr: PByte;
 begin
-  // Load AES functions if needed
-  if not Assigned(EVP_aes_128_gcm) then
-    LoadAESFunctions;
+  // Note: EVP functions are loaded automatically through fafafa.ssl.openssl.api
     
   // Select cipher based on key size
   case Length(Key) of
@@ -360,6 +359,20 @@ begin
   SetLength(Result, Length(Plaintext));
   SetLength(Tag, GCM_TAG_SIZE);
   
+  // Get pointers to array data
+  KeyPtr := @Key[0];
+  IVPtr := @IV[0];
+  ResultPtr := @Result[0];
+  TagPtr := @Tag[0];
+  if Length(AAD) > 0 then
+    AADPtr := @AAD[0]
+  else
+    AADPtr := nil;
+  if Length(Plaintext) > 0 then
+    PlainPtr := @Plaintext[0]
+  else
+    PlainPtr := nil;
+  
   ctx := EVP_CIPHER_CTX_new();
   try
     // Initialize encryption
@@ -369,33 +382,33 @@ begin
     // Set IV length if not default
     if Length(IV) <> 12 then
     begin
-      if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, Length(IV), nil) <> 1 then
+      if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, Integer(Length(IV)), nil) <> 1 then
         raise Exception.Create('Failed to set IV length');
     end;
     
     // Initialize with key and IV
-    if EVP_EncryptInit_ex(ctx, nil, nil, @Key[0], @IV[0]) <> 1 then
+    if EVP_EncryptInit_ex(ctx, nil, nil, KeyPtr, IVPtr) <> 1 then
       raise Exception.Create('Failed to set key and IV');
       
     // Process AAD if provided
     if Length(AAD) > 0 then
     begin
-      if EVP_EncryptUpdate(ctx, nil, @outlen, @AAD[0], Length(AAD)) <> 1 then
+      if EVP_EncryptUpdate(ctx, nil, @outlen, AADPtr, Integer(Length(AAD))) <> 1 then
         raise Exception.Create('Failed to process AAD');
     end;
     
     // Encrypt plaintext
-    if EVP_EncryptUpdate(ctx, @Result[0], @outlen, @Plaintext[0], Length(Plaintext)) <> 1 then
+    if EVP_EncryptUpdate(ctx, ResultPtr, @outlen, PlainPtr, Integer(Length(Plaintext))) <> 1 then
       raise Exception.Create('Failed to encrypt');
       
     // Finalize
-    if EVP_EncryptFinal_ex(ctx, @Result[outlen], @finlen) <> 1 then
+    if EVP_EncryptFinal_ex(ctx, PByte(PtrUInt(ResultPtr) + PtrUInt(outlen)), @finlen) <> 1 then
       raise Exception.Create('Failed to finalize encryption');
       
     SetLength(Result, outlen + finlen);
     
     // Get tag
-    if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, GCM_TAG_SIZE, @Tag[0]) <> 1 then
+    if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, GCM_TAG_SIZE, TagPtr) <> 1 then
       raise Exception.Create('Failed to get tag');
   finally
     EVP_CIPHER_CTX_free(ctx);
@@ -408,10 +421,9 @@ var
   ctx: PEVP_CIPHER_CTX;
   cipher: PEVP_CIPHER;
   outlen, finlen: Integer;
+  KeyPtr, IVPtr, AADPtr, CipherPtr, ResultPtr, TagPtr: PByte;
 begin
-  // Load AES functions if needed
-  if not Assigned(EVP_aes_128_gcm) then
-    LoadAESFunctions;
+  // Note: EVP functions are loaded automatically through fafafa.ssl.openssl.api
     
   // Select cipher based on key size
   case Length(Key) of
@@ -427,6 +439,20 @@ begin
   
   SetLength(Result, Length(Ciphertext));
   
+  // Get pointers to array data
+  KeyPtr := @Key[0];
+  IVPtr := @IV[0];
+  ResultPtr := @Result[0];
+  TagPtr := @Tag[0];
+  if Length(AAD) > 0 then
+    AADPtr := @AAD[0]
+  else
+    AADPtr := nil;
+  if Length(Ciphertext) > 0 then
+    CipherPtr := @Ciphertext[0]
+  else
+    CipherPtr := nil;
+  
   ctx := EVP_CIPHER_CTX_new();
   try
     // Initialize decryption
@@ -436,31 +462,31 @@ begin
     // Set IV length if not default
     if Length(IV) <> 12 then
     begin
-      if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, Length(IV), nil) <> 1 then
+      if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, Integer(Length(IV)), nil) <> 1 then
         raise Exception.Create('Failed to set IV length');
     end;
     
     // Initialize with key and IV
-    if EVP_DecryptInit_ex(ctx, nil, nil, @Key[0], @IV[0]) <> 1 then
+    if EVP_DecryptInit_ex(ctx, nil, nil, KeyPtr, IVPtr) <> 1 then
       raise Exception.Create('Failed to set key and IV');
       
     // Process AAD if provided
     if Length(AAD) > 0 then
     begin
-      if EVP_DecryptUpdate(ctx, nil, @outlen, @AAD[0], Length(AAD)) <> 1 then
+      if EVP_DecryptUpdate(ctx, nil, @outlen, AADPtr, Integer(Length(AAD))) <> 1 then
         raise Exception.Create('Failed to process AAD');
     end;
     
     // Decrypt ciphertext
-    if EVP_DecryptUpdate(ctx, @Result[0], @outlen, @Ciphertext[0], Length(Ciphertext)) <> 1 then
+    if EVP_DecryptUpdate(ctx, ResultPtr, @outlen, CipherPtr, Integer(Length(Ciphertext))) <> 1 then
       raise Exception.Create('Failed to decrypt');
     
     // Set expected tag
-    if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, GCM_TAG_SIZE, @Tag[0]) <> 1 then
+    if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, GCM_TAG_SIZE, TagPtr) <> 1 then
       raise Exception.Create('Failed to set tag');
       
     // Verify tag and finalize
-    if EVP_DecryptFinal_ex(ctx, @Result[outlen], @finlen) <> 1 then
+    if EVP_DecryptFinal_ex(ctx, PByte(PtrUInt(ResultPtr) + PtrUInt(outlen)), @finlen) <> 1 then
       raise Exception.Create('Authentication verification failed');
       
     SetLength(Result, outlen + finlen);
@@ -475,10 +501,9 @@ var
   ctx: PEVP_CIPHER_CTX;
   cipher: PEVP_CIPHER;
   outlen, finlen: Integer;
+  KeyPtr, NoncePtr, AADPtr, PlainPtr, ResultPtr, TagPtr: PByte;
 begin
-  // Load AES functions if needed
-  if not Assigned(EVP_aes_128_ccm) then
-    LoadAESFunctions;
+  // Note: EVP functions are loaded automatically through fafafa.ssl.openssl.api
     
   // Select cipher based on key size
   case Length(Key) of
@@ -495,6 +520,14 @@ begin
   SetLength(Result, Length(Plaintext));
   SetLength(Tag, TagSize);
   
+  // Get pointers
+  KeyPtr := @Key[0];
+  NoncePtr := @Nonce[0];
+  ResultPtr := @Result[0];
+  TagPtr := @Tag[0];
+  if Length(AAD) > 0 then AADPtr := @AAD[0] else AADPtr := nil;
+  if Length(Plaintext) > 0 then PlainPtr := @Plaintext[0] else PlainPtr := nil;
+  
   ctx := EVP_CIPHER_CTX_new();
   try
     // Initialize encryption
@@ -502,7 +535,7 @@ begin
       raise Exception.Create('Failed to initialize AES-CCM');
     
     // Set nonce length
-    if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, Length(Nonce), nil) <> 1 then
+    if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, Integer(Length(Nonce)), nil) <> 1 then
       raise Exception.Create('Failed to set nonce length');
     
     // Set tag length
@@ -510,30 +543,30 @@ begin
       raise Exception.Create('Failed to set tag length');
     
     // Initialize with key and nonce
-    if EVP_EncryptInit_ex(ctx, nil, nil, @Key[0], @Nonce[0]) <> 1 then
+    if EVP_EncryptInit_ex(ctx, nil, nil, KeyPtr, NoncePtr) <> 1 then
       raise Exception.Create('Failed to set key and nonce');
     
     // Set message length (required for CCM)
-    if EVP_EncryptUpdate(ctx, nil, @outlen, nil, Length(Plaintext)) <> 1 then
+    if EVP_EncryptUpdate(ctx, nil, @outlen, nil, Integer(Length(Plaintext))) <> 1 then
       raise Exception.Create('Failed to set message length');
     
     // Process AAD if provided
     if Length(AAD) > 0 then
     begin
-      if EVP_EncryptUpdate(ctx, nil, @outlen, @AAD[0], Length(AAD)) <> 1 then
+      if EVP_EncryptUpdate(ctx, nil, @outlen, AADPtr, Integer(Length(AAD))) <> 1 then
         raise Exception.Create('Failed to process AAD');
     end;
     
     // Encrypt plaintext
-    if EVP_EncryptUpdate(ctx, @Result[0], @outlen, @Plaintext[0], Length(Plaintext)) <> 1 then
+    if EVP_EncryptUpdate(ctx, ResultPtr, @outlen, PlainPtr, Integer(Length(Plaintext))) <> 1 then
       raise Exception.Create('Failed to encrypt');
     
     // Finalize (no output for CCM)
-    if EVP_EncryptFinal_ex(ctx, @Result[outlen], @finlen) <> 1 then
+    if EVP_EncryptFinal_ex(ctx, PByte(PtrUInt(ResultPtr) + PtrUInt(outlen)), @finlen) <> 1 then
       raise Exception.Create('Failed to finalize encryption');
     
     // Get tag
-    if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_GET_TAG, TagSize, @Tag[0]) <> 1 then
+    if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_GET_TAG, TagSize, TagPtr) <> 1 then
       raise Exception.Create('Failed to get tag');
   finally
     EVP_CIPHER_CTX_free(ctx);
@@ -547,9 +580,7 @@ var
   cipher: PEVP_CIPHER;
   outlen: Integer;
 begin
-  // Load AES functions if needed
-  if not Assigned(EVP_aes_128_ccm) then
-    LoadAESFunctions;
+  // Note: EVP functions are loaded automatically through fafafa.ssl.openssl.api
     
   // Select cipher based on key size
   case Length(Key) of
@@ -569,11 +600,11 @@ begin
       raise Exception.Create('Failed to initialize AES-CCM');
     
     // Set nonce length
-    if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, Length(Nonce), nil) <> 1 then
+    if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, Integer(Length(Nonce)), nil) <> 1 then
       raise Exception.Create('Failed to set nonce length');
     
     // Set tag
-    if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG, Length(Tag), @Tag[0]) <> 1 then
+    if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG, Integer(Length(Tag)), @Tag[0]) <> 1 then
       raise Exception.Create('Failed to set tag');
     
     // Initialize with key and nonce
@@ -618,9 +649,7 @@ begin
   Move(Key1[0], combined_key[0], Length(Key1));
   Move(Key2[0], combined_key[Length(Key1)], Length(Key2));
   
-  // Load AES XTS cipher
-  if not Assigned(EVP_aes_128_xts) then
-    LoadAESFunctions;
+  // Note: EVP functions are loaded automatically through fafafa.ssl.openssl.api
     
   case Length(Key1) of
     16: cipher := EVP_aes_128_xts();  // Total key = 256 bits
@@ -665,9 +694,7 @@ begin
   Move(Key1[0], combined_key[0], Length(Key1));
   Move(Key2[0], combined_key[Length(Key1)], Length(Key2));
   
-  // Load AES XTS cipher
-  if not Assigned(EVP_aes_128_xts) then
-    LoadAESFunctions;
+  // Note: EVP functions are loaded automatically through fafafa.ssl.openssl.api
     
   case Length(Key1) of
     16: cipher := EVP_aes_128_xts();  // Total key = 256 bits
@@ -702,9 +729,7 @@ var
   cipher: PEVP_CIPHER;
   outlen, finlen: Integer;
 begin
-  // Load AES functions if needed
-  if not Assigned(EVP_aes_128_ocb) then
-    LoadAESFunctions;
+  // Note: EVP functions are loaded automatically through fafafa.ssl.openssl.api
     
   // Select cipher based on key size
   case Length(Key) of
@@ -727,7 +752,7 @@ begin
     // Set nonce length if not default
     if Length(Nonce) <> 12 then
     begin
-      if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IVLEN, Length(Nonce), nil) <> 1 then
+      if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IVLEN, Integer(Length(Nonce)), nil) <> 1 then
         raise Exception.Create('Failed to set nonce length');
     end;
     
@@ -771,9 +796,7 @@ var
   cipher: PEVP_CIPHER;
   outlen, finlen: Integer;
 begin
-  // Load AES functions if needed
-  if not Assigned(EVP_aes_128_ocb) then
-    LoadAESFunctions;
+  // Note: EVP functions are loaded automatically through fafafa.ssl.openssl.api
     
   // Select cipher based on key size
   case Length(Key) of
@@ -798,7 +821,7 @@ begin
     // Set nonce length if not default
     if Length(Nonce) <> 12 then
     begin
-      if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IVLEN, Length(Nonce), nil) <> 1 then
+      if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IVLEN, Integer(Length(Nonce)), nil) <> 1 then
         raise Exception.Create('Failed to set nonce length');
     end;
     
