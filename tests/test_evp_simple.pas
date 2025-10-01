@@ -4,7 +4,6 @@ program test_evp_simple;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core,
   fafafa.ssl.openssl.api;
 
 // Helper function to convert bytes to hex string
@@ -170,7 +169,8 @@ begin
   
   // Initialize OpenSSL
   try
-    LoadOpenSSLCore;
+    if not LoadOpenSSLLibrary then
+      raise Exception.Create('Failed to load OpenSSL library');
   except
     on E: Exception do
     begin
@@ -189,8 +189,4 @@ begin
   WriteLn('========================================');
   WriteLn('Test completed!');
   WriteLn('========================================');
-  WriteLn;
-  
-  WriteLn('Press Enter to exit...');
-  ReadLn;
 end.
