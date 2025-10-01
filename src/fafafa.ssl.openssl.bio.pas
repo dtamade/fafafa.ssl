@@ -282,12 +282,14 @@ var
   // This is a partial list - complete implementation would include all functions
   BIO_new: TBIO_new = nil;
   BIO_free: TBIO_free = nil;
+  BIO_free_all: TBIO_free_all = nil;
   BIO_read: TBIO_read = nil;
   BIO_write: TBIO_write = nil;
   BIO_ctrl: TBIO_ctrl = nil;
   BIO_s_mem: TBIO_s_mem = nil;
   BIO_new_mem_buf: TBIO_new_mem_buf = nil;
   BIO_new_file: TBIO_new_file = nil;
+  BIO_s_file: TBIO_s_file = nil;
   
 procedure LoadOpenSSLBIO;
 procedure UnloadOpenSSLBIO;
@@ -316,12 +318,14 @@ begin
   // Load function pointers - most BIO functions are in libcrypto
   BIO_new := TBIO_new(GetProcedureAddress(LibCrypto, 'BIO_new'));
   BIO_free := TBIO_free(GetProcedureAddress(LibCrypto, 'BIO_free'));
+  BIO_free_all := TBIO_free_all(GetProcedureAddress(LibCrypto, 'BIO_free_all'));
   BIO_read := TBIO_read(GetProcedureAddress(LibCrypto, 'BIO_read'));
   BIO_write := TBIO_write(GetProcedureAddress(LibCrypto, 'BIO_write'));
   BIO_ctrl := TBIO_ctrl(GetProcedureAddress(LibCrypto, 'BIO_ctrl'));
   BIO_s_mem := TBIO_s_mem(GetProcedureAddress(LibCrypto, 'BIO_s_mem'));
   BIO_new_mem_buf := TBIO_new_mem_buf(GetProcedureAddress(LibCrypto, 'BIO_new_mem_buf'));
   BIO_new_file := TBIO_new_file(GetProcedureAddress(LibCrypto, 'BIO_new_file'));
+  BIO_s_file := TBIO_s_file(GetProcedureAddress(LibCrypto, 'BIO_s_file'));
 end;
 
 procedure UnloadOpenSSLBIO;
@@ -329,12 +333,14 @@ begin
   // Reset all function pointers
   BIO_new := nil;
   BIO_free := nil;
+  BIO_free_all := nil;
   BIO_read := nil;
   BIO_write := nil;
   BIO_ctrl := nil;
   BIO_s_mem := nil;
   BIO_new_mem_buf := nil;
   BIO_new_file := nil;
+  BIO_s_file := nil;
 end;
 
 function IsOpenSSLBIOLoaded: Boolean;

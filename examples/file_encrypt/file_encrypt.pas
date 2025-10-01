@@ -131,11 +131,11 @@ begin
             Exit;
           end;
           
-          // Add filename as AAD (Additional Authenticated Data)
+          // Add version and algorithm as AAD (Additional Authenticated Data)
+          // Note: We use header info as AAD instead of filename to avoid path issues
           LOutLen := 0;
           if EVP_EncryptUpdate(LCtx, nil, LOutLen, 
-             PByte(ExtractFileName(AInputFile)), 
-             Length(ExtractFileName(AInputFile))) <> 1 then
+             @LHeader.Version, 4) <> 1 then  // Version + Algorithm (2+2 bytes)
           begin
             WriteLn('❌ 设置 AAD 失败');
             Exit;
@@ -307,10 +307,10 @@ begin
           end;
           
           // Set AAD (must match encryption)
+          // Using header info as AAD (same as encryption)
           LOutLen := 0;
           if EVP_DecryptUpdate(LCtx, nil, LOutLen, 
-             PByte(ExtractFileName(AInputFile)), 
-             Length(ExtractFileName(AInputFile))) <> 1 then
+             @LHeader.Version, 4) <> 1 then  // Version + Algorithm (2+2 bytes)
           begin
             WriteLn('❌ 设置 AAD 失败');
             Exit;

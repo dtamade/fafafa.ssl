@@ -267,7 +267,7 @@ function GenerateSalt(Len: Integer = PKCS5_SALT_LEN): TBytes;
 implementation
 
 uses
-  fafafa.ssl.openssl.core, fafafa.ssl.openssl.rand;
+  fafafa.ssl.openssl.rand;
 
 procedure LoadKDFFunctions;
 begin

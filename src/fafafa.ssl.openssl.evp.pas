@@ -188,6 +188,20 @@ const
   EVP_PKEY_CTRL_GET_MD = 13;
   EVP_PKEY_CTRL_SET_DIGEST_SIZE = 14;
   
+  // RSA specific control commands
+  EVP_PKEY_CTRL_RSA_PADDING = $1001;
+  EVP_PKEY_CTRL_RSA_PSS_SALTLEN = $1002;
+  EVP_PKEY_CTRL_RSA_KEYGEN_BITS = $1003;
+  EVP_PKEY_CTRL_RSA_KEYGEN_PUBEXP = $1004;
+  EVP_PKEY_CTRL_RSA_MGF1_MD = $1005;
+  EVP_PKEY_CTRL_GET_RSA_PADDING = $1006;
+  EVP_PKEY_CTRL_GET_RSA_PSS_SALTLEN = $1007;
+  EVP_PKEY_CTRL_GET_RSA_MGF1_MD = $1008;
+  EVP_PKEY_CTRL_RSA_OAEP_MD = $1009;
+  EVP_PKEY_CTRL_RSA_OAEP_LABEL = $100A;
+  EVP_PKEY_CTRL_GET_RSA_OAEP_MD = $100B;
+  EVP_PKEY_CTRL_GET_RSA_OAEP_LABEL = $100C;
+  
   // PKEY operations
   EVP_PKEY_OP_UNDEFINED = 0;
   EVP_PKEY_OP_PARAMGEN = (1 shl 1);
@@ -763,6 +777,41 @@ var
   EVP_chacha20: TEVP_chacha20 = nil;
   EVP_chacha20_poly1305: TEVP_chacha20_poly1305 = nil;
   EVP_get_cipherbyname: TEVP_get_cipherbyname = nil;
+  
+  // PKEY functions
+  EVP_PKEY_new: TEVP_PKEY_new = nil;
+  EVP_PKEY_new_mac_key: TEVP_PKEY_new_mac_key = nil;
+  EVP_PKEY_free: TEVP_PKEY_free = nil;
+  EVP_PKEY_up_ref: TEVP_PKEY_up_ref = nil;
+  EVP_PKEY_assign: TEVP_PKEY_assign = nil;
+  EVP_PKEY_set1_RSA: TEVP_PKEY_set1_RSA = nil;
+  EVP_PKEY_get_id: TEVP_PKEY_get_id = nil;
+  EVP_PKEY_get_bits: TEVP_PKEY_get_bits = nil;
+  EVP_PKEY_get_size: TEVP_PKEY_get_size = nil;
+  
+  // PKEY context functions
+  EVP_PKEY_CTX_new: TEVP_PKEY_CTX_new = nil;
+  EVP_PKEY_CTX_new_id: TEVP_PKEY_CTX_new_id = nil;
+  EVP_PKEY_CTX_free: TEVP_PKEY_CTX_free = nil;
+  EVP_PKEY_CTX_ctrl: TEVP_PKEY_CTX_ctrl = nil;
+  
+  // PKEY key generation
+  EVP_PKEY_keygen_init: TEVP_PKEY_keygen_init = nil;
+  EVP_PKEY_keygen: TEVP_PKEY_keygen = nil;
+  
+  // PKEY signing
+  EVP_PKEY_sign_init: TEVP_PKEY_sign_init = nil;
+  EVP_PKEY_sign: TEVP_PKEY_sign = nil;
+  EVP_PKEY_verify_init: TEVP_PKEY_verify_init = nil;
+  EVP_PKEY_verify: TEVP_PKEY_verify = nil;
+  
+  // Digest signing/verification
+  EVP_DigestSignInit: TEVP_DigestSignInit = nil;
+  EVP_DigestSignUpdate: TEVP_DigestSignUpdate = nil;
+  EVP_DigestSignFinal: TEVP_DigestSignFinal = nil;
+  EVP_DigestVerifyInit: TEVP_DigestVerifyInit = nil;
+  EVP_DigestVerifyUpdate: TEVP_DigestVerifyUpdate = nil;
+  EVP_DigestVerifyFinal: TEVP_DigestVerifyFinal = nil;
 
 // Public load/unload functions
 function LoadEVP(ALibHandle: THandle): Boolean;
@@ -861,6 +910,41 @@ begin
   EVP_chacha20_poly1305 := TEVP_chacha20_poly1305(GetProcAddress(ALibHandle, 'EVP_chacha20_poly1305'));
   EVP_get_cipherbyname := TEVP_get_cipherbyname(GetProcAddress(ALibHandle, 'EVP_get_cipherbyname'));
   
+  // Load PKEY functions
+  EVP_PKEY_new := TEVP_PKEY_new(GetProcAddress(ALibHandle, 'EVP_PKEY_new'));
+  EVP_PKEY_new_mac_key := TEVP_PKEY_new_mac_key(GetProcAddress(ALibHandle, 'EVP_PKEY_new_mac_key'));
+  EVP_PKEY_free := TEVP_PKEY_free(GetProcAddress(ALibHandle, 'EVP_PKEY_free'));
+  EVP_PKEY_up_ref := TEVP_PKEY_up_ref(GetProcAddress(ALibHandle, 'EVP_PKEY_up_ref'));
+  EVP_PKEY_assign := TEVP_PKEY_assign(GetProcAddress(ALibHandle, 'EVP_PKEY_assign'));
+  EVP_PKEY_set1_RSA := TEVP_PKEY_set1_RSA(GetProcAddress(ALibHandle, 'EVP_PKEY_set1_RSA'));
+  EVP_PKEY_get_id := TEVP_PKEY_get_id(GetProcAddress(ALibHandle, 'EVP_PKEY_get_id'));
+  EVP_PKEY_get_bits := TEVP_PKEY_get_bits(GetProcAddress(ALibHandle, 'EVP_PKEY_get_bits'));
+  EVP_PKEY_get_size := TEVP_PKEY_get_size(GetProcAddress(ALibHandle, 'EVP_PKEY_get_size'));
+  
+  // Load PKEY context functions
+  EVP_PKEY_CTX_new := TEVP_PKEY_CTX_new(GetProcAddress(ALibHandle, 'EVP_PKEY_CTX_new'));
+  EVP_PKEY_CTX_new_id := TEVP_PKEY_CTX_new_id(GetProcAddress(ALibHandle, 'EVP_PKEY_CTX_new_id'));
+  EVP_PKEY_CTX_free := TEVP_PKEY_CTX_free(GetProcAddress(ALibHandle, 'EVP_PKEY_CTX_free'));
+  EVP_PKEY_CTX_ctrl := TEVP_PKEY_CTX_ctrl(GetProcAddress(ALibHandle, 'EVP_PKEY_CTX_ctrl'));
+  
+  // Load PKEY key generation
+  EVP_PKEY_keygen_init := TEVP_PKEY_keygen_init(GetProcAddress(ALibHandle, 'EVP_PKEY_keygen_init'));
+  EVP_PKEY_keygen := TEVP_PKEY_keygen(GetProcAddress(ALibHandle, 'EVP_PKEY_keygen'));
+  
+  // Load PKEY signing
+  EVP_PKEY_sign_init := TEVP_PKEY_sign_init(GetProcAddress(ALibHandle, 'EVP_PKEY_sign_init'));
+  EVP_PKEY_sign := TEVP_PKEY_sign(GetProcAddress(ALibHandle, 'EVP_PKEY_sign'));
+  EVP_PKEY_verify_init := TEVP_PKEY_verify_init(GetProcAddress(ALibHandle, 'EVP_PKEY_verify_init'));
+  EVP_PKEY_verify := TEVP_PKEY_verify(GetProcAddress(ALibHandle, 'EVP_PKEY_verify'));
+  
+  // Load Digest signing/verification
+  EVP_DigestSignInit := TEVP_DigestSignInit(GetProcAddress(ALibHandle, 'EVP_DigestSignInit'));
+  EVP_DigestSignUpdate := TEVP_DigestSignUpdate(GetProcAddress(ALibHandle, 'EVP_DigestSignUpdate'));
+  EVP_DigestSignFinal := TEVP_DigestSignFinal(GetProcAddress(ALibHandle, 'EVP_DigestSignFinal'));
+  EVP_DigestVerifyInit := TEVP_DigestVerifyInit(GetProcAddress(ALibHandle, 'EVP_DigestVerifyInit'));
+  EVP_DigestVerifyUpdate := TEVP_DigestVerifyUpdate(GetProcAddress(ALibHandle, 'EVP_DigestVerifyUpdate'));
+  EVP_DigestVerifyFinal := TEVP_DigestVerifyFinal(GetProcAddress(ALibHandle, 'EVP_DigestVerifyFinal'));
+  
   GEVPLoaded := Assigned(EVP_MD_CTX_new) and Assigned(EVP_CIPHER_CTX_new);
   Result := GEVPLoaded;
 end;
@@ -920,6 +1004,41 @@ begin
   EVP_aes_128_cbc := nil;
   EVP_aes_256_cbc := nil;
   EVP_get_cipherbyname := nil;
+  
+  // Clear PKEY functions
+  EVP_PKEY_new := nil;
+  EVP_PKEY_new_mac_key := nil;
+  EVP_PKEY_free := nil;
+  EVP_PKEY_up_ref := nil;
+  EVP_PKEY_assign := nil;
+  EVP_PKEY_set1_RSA := nil;
+  EVP_PKEY_get_id := nil;
+  EVP_PKEY_get_bits := nil;
+  EVP_PKEY_get_size := nil;
+  
+  // Clear PKEY context functions
+  EVP_PKEY_CTX_new := nil;
+  EVP_PKEY_CTX_new_id := nil;
+  EVP_PKEY_CTX_free := nil;
+  EVP_PKEY_CTX_ctrl := nil;
+  
+  // Clear PKEY key generation
+  EVP_PKEY_keygen_init := nil;
+  EVP_PKEY_keygen := nil;
+  
+  // Clear PKEY signing
+  EVP_PKEY_sign_init := nil;
+  EVP_PKEY_sign := nil;
+  EVP_PKEY_verify_init := nil;
+  EVP_PKEY_verify := nil;
+  
+  // Clear Digest signing/verification
+  EVP_DigestSignInit := nil;
+  EVP_DigestSignUpdate := nil;
+  EVP_DigestSignFinal := nil;
+  EVP_DigestVerifyInit := nil;
+  EVP_DigestVerifyUpdate := nil;
+  EVP_DigestVerifyFinal := nil;
   
   GEVPLoaded := False;
 end;

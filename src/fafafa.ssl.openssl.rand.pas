@@ -8,7 +8,7 @@ uses
   SysUtils, DynLibs, ctypes,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.consts,
-  fafafa.ssl.openssl.core;
+  fafafa.ssl.openssl.api;
 
 type
   { RAND types }
@@ -187,37 +187,37 @@ begin
   if not IsCryptoLibraryLoaded then
     Exit(False);
     
-  // Load RAND method functions
+  // Load RAND method functions (deprecated in OpenSSL 3.0, optional)
   RAND_set_rand_method := TRAND_set_rand_method(GetCryptoProcAddress('RAND_set_rand_method'));
   RAND_get_rand_method := TRAND_get_rand_method(GetCryptoProcAddress('RAND_get_rand_method'));
   RAND_SSLeay := TRAND_SSLeay(GetCryptoProcAddress('RAND_SSLeay'));
   RAND_OpenSSL := TRAND_OpenSSL(GetCryptoProcAddress('RAND_OpenSSL'));
   
   // Load random number generation functions
-  RAND_bytes := TRAND_bytes(GetCryptoProcAddress('RAND_bytes'));
+  RAND_bytes := TRAND_bytes(GetCryptoProcAddress('RAND_bytes'));  // Essential - required
   RAND_bytes_ex := TRAND_bytes_ex(GetCryptoProcAddress('RAND_bytes_ex'));
-  RAND_pseudo_bytes := TRAND_pseudo_bytes(GetCryptoProcAddress('RAND_pseudo_bytes'));
+  RAND_pseudo_bytes := TRAND_pseudo_bytes(GetCryptoProcAddress('RAND_pseudo_bytes'));  // Deprecated in OpenSSL 3.0
   RAND_priv_bytes := TRAND_priv_bytes(GetCryptoProcAddress('RAND_priv_bytes'));
   RAND_priv_bytes_ex := TRAND_priv_bytes_ex(GetCryptoProcAddress('RAND_priv_bytes_ex'));
   
-  // Load seeding functions
-  RAND_seed := TRAND_seed(GetCryptoProcAddress('RAND_seed'));
+  // Load seeding functions (some deprecated in OpenSSL 3.0)
+  RAND_seed := TRAND_seed(GetCryptoProcAddress('RAND_seed'));  // Deprecated in OpenSSL 3.0
   RAND_keep_random_devices_open := TRAND_keep_random_devices_open(GetCryptoProcAddress('RAND_keep_random_devices_open'));
-  RAND_add := TRAND_add(GetCryptoProcAddress('RAND_add'));
+  RAND_add := TRAND_add(GetCryptoProcAddress('RAND_add'));  // Deprecated in OpenSSL 3.0
   RAND_load_file := TRAND_load_file(GetCryptoProcAddress('RAND_load_file'));
   RAND_write_file := TRAND_write_file(GetCryptoProcAddress('RAND_write_file'));
   RAND_file_name := TRAND_file_name(GetCryptoProcAddress('RAND_file_name'));
-  RAND_status := TRAND_status(GetCryptoProcAddress('RAND_status'));
+  RAND_status := TRAND_status(GetCryptoProcAddress('RAND_status'));  // Deprecated in OpenSSL 3.0
   RAND_query_egd_bytes := TRAND_query_egd_bytes(GetCryptoProcAddress('RAND_query_egd_bytes'));
   RAND_egd := TRAND_egd(GetCryptoProcAddress('RAND_egd'));
   RAND_egd_bytes := TRAND_egd_bytes(GetCryptoProcAddress('RAND_egd_bytes'));
   RAND_poll := TRAND_poll(GetCryptoProcAddress('RAND_poll'));
   
-  // Load screen interaction functions (Windows specific)
+  // Load screen interaction functions (Windows specific, deprecated in OpenSSL 3.0)
   RAND_screen := TRAND_screen(GetCryptoProcAddress('RAND_screen'));
   RAND_event := TRAND_event(GetCryptoProcAddress('RAND_event'));
   
-  // Load DRBG functions (OpenSSL 1.1.1+, may not exist)
+  // Load DRBG functions (OpenSSL 1.1.1 only - removed in OpenSSL 3.0)
   RAND_DRBG_new := TRAND_DRBG_new(GetCryptoProcAddress('RAND_DRBG_new'));
   RAND_DRBG_new_ex := TRAND_DRBG_new_ex(GetCryptoProcAddress('RAND_DRBG_new_ex'));
   RAND_DRBG_secure_new := TRAND_DRBG_secure_new(GetCryptoProcAddress('RAND_DRBG_secure_new'));
@@ -241,7 +241,7 @@ begin
   RAND_DRBG_get_ex_data := TRAND_DRBG_get_ex_data(GetCryptoProcAddress('RAND_DRBG_get_ex_data'));
   RAND_DRBG_get_ex_new_index := TRAND_DRBG_get_ex_new_index(GetCryptoProcAddress('RAND_DRBG_get_ex_new_index'));
   
-  // Load RAND pool functions (OpenSSL 1.1.1+, may not exist)
+  // Load RAND pool functions (OpenSSL 1.1.1+ private API, may not exist)
   RAND_POOL_new := TRAND_POOL_new(GetCryptoProcAddress('RAND_POOL_new'));
   RAND_POOL_free := TRAND_POOL_free(GetCryptoProcAddress('RAND_POOL_free'));
   RAND_POOL_entropy := TRAND_POOL_entropy(GetCryptoProcAddress('RAND_POOL_entropy'));
@@ -255,8 +255,10 @@ begin
   RAND_POOL_add_end := TRAND_POOL_add_end(GetCryptoProcAddress('RAND_POOL_add_end'));
   RAND_POOL_acquire_entropy := TRAND_POOL_acquire_entropy(GetCryptoProcAddress('RAND_POOL_acquire_entropy'));
   
-  // The basic RAND functions should be available
-  GRANDLoaded := Assigned(RAND_bytes) and Assigned(RAND_seed);
+  // For OpenSSL 3.0+, only RAND_bytes is essential. RAND_seed is deprecated.
+  // For OpenSSL 1.1.1, both RAND_bytes and RAND_seed should be present.
+  // We'll be lenient and only require RAND_bytes.
+  GRANDLoaded := Assigned(RAND_bytes);
   Result := GRANDLoaded;
 end;
 

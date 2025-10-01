@@ -9,7 +9,9 @@ uses
   SysUtils, Classes, dynlibs,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.consts,
-  fafafa.ssl.openssl.asn1;
+  fafafa.ssl.openssl.asn1,
+  fafafa.ssl.openssl.bio,
+  fafafa.ssl.openssl.evp;
 
 type
   // PEM 密码回调函数类型

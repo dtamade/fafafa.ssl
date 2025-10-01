@@ -775,6 +775,12 @@ procedure UnloadOpenSSLLibrary;
 function IsOpenSSLLoaded: Boolean;
 function GetOpenSSLVersion: string;
 function GetOpenSSLErrorString: string;
+function GetCryptoLibHandle: TLibHandle;
+function GetSSLLibHandle: TLibHandle;
+
+// Helper functions for module loading compatibility (for RAND, EVP, etc.)
+function IsCryptoLibraryLoaded: Boolean;
+function GetCryptoProcAddress(const ProcName: string): Pointer;
 
 // 辅助函数
 function SSL_set_tlsext_host_name(ssl: PSSL; const name: PAnsiChar): Integer;
@@ -1192,6 +1198,28 @@ begin
     Result := SSL_ctrl(ssl, SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, Pointer(name))
   else
     Result := 0;
+end;
+
+function GetCryptoLibHandle: TLibHandle;
+begin
+  Result := FCryptoLibHandle;
+end;
+
+function GetSSLLibHandle: TLibHandle;
+begin
+  Result := FSSLLibHandle;
+end;
+
+function IsCryptoLibraryLoaded: Boolean;
+begin
+  Result := FCryptoLibHandle <> NilHandle;
+end;
+
+function GetCryptoProcAddress(const ProcName: string): Pointer;
+begin
+  Result := nil;
+  if FCryptoLibHandle <> NilHandle then
+    Result := GetProcedureAddress(FCryptoLibHandle, PAnsiChar(AnsiString(ProcName)));
 end;
 
 initialization
