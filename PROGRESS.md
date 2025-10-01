@@ -115,6 +115,7 @@
 - ✅ `test_openssl_simple.pas` - OpenSSL 基础加载测试 ✅ **通过**
 - ✅ `test_openssl_rand.pas` - 随机数生成测试 ✅ **通过** 
 - ✅ `test_openssl_err.pas` - 错误处理测试 ✅ **通过**
+- ✅ `test_provider.pas` - Provider API 测试 ✅ **通过** (检测和加载 provider)
 
 #### 4. 测试和验证
 - ✅ WinSSL 后端完全可用
