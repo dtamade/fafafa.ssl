@@ -13,7 +13,8 @@ uses
   test_openssl_core_mock,
   test_evp_cipher_mock,
   test_evp_digest_mock,
-  test_hmac_mock;
+  test_hmac_mock,
+  test_kdf_mock;
 
 var
   App: TTestRunner;
