@@ -11,7 +11,8 @@ uses
   // Test units
   test_base,
   test_openssl_core_mock,
-  test_evp_cipher_mock;
+  test_evp_cipher_mock,
+  test_evp_digest_mock;
 
 var
   App: TTestRunner;
