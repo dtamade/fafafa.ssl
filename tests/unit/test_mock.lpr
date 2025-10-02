@@ -14,7 +14,8 @@ uses
   test_evp_cipher_mock,
   test_evp_digest_mock,
   test_hmac_mock,
-  test_kdf_mock;
+  test_kdf_mock,
+  test_rand_mock;
 
 var
   App: TTestRunner;
