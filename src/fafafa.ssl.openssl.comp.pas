@@ -102,7 +102,7 @@ type
   
   // SSL 压缩函数
   TSSL_COMP_add_compression_method = function(id: Integer; cm: PCOMP_METHOD): Integer; cdecl;
-  TSSL_COMP_get_compression_methods = function(): PSTACK; cdecl;
+  TSSL_COMP_get_compression_methods = function(): POPENSSL_STACK; cdecl;
   TSSL_COMP_get0_name = function(comp: Pointer): PAnsiChar; cdecl;
   TSSL_COMP_get_id = function(comp: Pointer): Integer; cdecl;
   TSSL_COMP_free_compression_methods = procedure(); cdecl;
@@ -201,7 +201,7 @@ uses
 
 procedure LoadCOMPFunctions;
 begin
-  if not OpenSSLLoaded then Exit;
+  if not IsOpenSSLCoreLoaded then Exit;
   
   // COMP_METHOD 函数
   COMP_CTX_new := TCOMP_CTX_new(GetCryptoProcAddress('COMP_CTX_new'));
@@ -225,11 +225,11 @@ begin
   COMP_rle := TCOMP_rle(GetCryptoProcAddress('COMP_rle'));
   
   // SSL 压缩函数
-  SSL_COMP_add_compression_method := TSSL_COMP_add_compression_method(GetOpenSSLProcAddress('SSL_COMP_add_compression_method'));
-  SSL_COMP_get_compression_methods := TSSL_COMP_get_compression_methods(GetOpenSSLProcAddress('SSL_COMP_get_compression_methods'));
-  SSL_COMP_get0_name := TSSL_COMP_get0_name(GetOpenSSLProcAddress('SSL_COMP_get0_name'));
-  SSL_COMP_get_id := TSSL_COMP_get_id(GetOpenSSLProcAddress('SSL_COMP_get_id'));
-  SSL_COMP_free_compression_methods := TSSL_COMP_free_compression_methods(GetOpenSSLProcAddress('SSL_COMP_free_compression_methods'));
+  SSL_COMP_add_compression_method := TSSL_COMP_add_compression_method(GetSSLProcAddress('SSL_COMP_add_compression_method'));
+  SSL_COMP_get_compression_methods := TSSL_COMP_get_compression_methods(GetSSLProcAddress('SSL_COMP_get_compression_methods'));
+  SSL_COMP_get0_name := TSSL_COMP_get0_name(GetSSLProcAddress('SSL_COMP_get0_name'));
+  SSL_COMP_get_id := TSSL_COMP_get_id(GetSSLProcAddress('SSL_COMP_get_id'));
+  SSL_COMP_free_compression_methods := TSSL_COMP_free_compression_methods(GetSSLProcAddress('SSL_COMP_free_compression_methods'));
   
   // BIO 压缩函数
   BIO_f_zlib := TBIO_f_zlib(GetCryptoProcAddress('BIO_f_zlib'));
@@ -453,6 +453,8 @@ begin
 end;
 
 function GetCompressionMethodName(Method: PCOMP_METHOD): string;
+var
+  Name: PAnsiChar;
 begin
   Result := 'Unknown';
   
@@ -460,20 +462,22 @@ begin
   
   if Assigned(COMP_get_name) then
   begin
-    var Name := COMP_get_name(Method);
+    Name := COMP_get_name(Method);
     if Name <> nil then
       Result := string(Name);
   end;
 end;
 
 function IsCompressionSupported(Method: PCOMP_METHOD): Boolean;
+var
+  TypeId: Integer;
 begin
   Result := Method <> nil;
   
   // 可以添加更多的验证逻辑
   if Result and Assigned(COMP_get_type) then
   begin
-    var TypeId := COMP_get_type(Method);
+    TypeId := COMP_get_type(Method);
     Result := TypeId > 0;
   end;
 end;

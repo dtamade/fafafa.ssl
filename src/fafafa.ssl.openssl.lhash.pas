@@ -139,6 +139,7 @@ function GetHashTableItemCount(Hash: POPENSSL_LHASH): LongWord;
 
 // String hash helpers
 function HashString(const Str: string): LongWord;
+function HashStringWrapper(const p: Pointer): LongWord; cdecl;
 function CompareStrings(const a, b: Pointer): Integer; cdecl;
 function HashPointer(const p: Pointer): LongWord; cdecl;
 function ComparePointers(const a, b: Pointer): Integer; cdecl;
@@ -290,6 +291,14 @@ begin
 end;
 
 // Callback functions
+function HashStringWrapper(const p: Pointer): LongWord; cdecl;
+begin
+  if Assigned(OPENSSL_LH_strhash) then
+    Result := OPENSSL_LH_strhash(PAnsiChar(p))
+  else
+    Result := LongWord(PtrUInt(p));
+end;
+
 function CompareStrings(const a, b: Pointer): Integer; cdecl;
 begin
   Result := StrComp(PAnsiChar(a), PAnsiChar(b));
@@ -317,7 +326,7 @@ begin
   if not Assigned(OPENSSL_LH_new) then
     raise Exception.Create('LHASH functions not loaded');
     
-  Result := OPENSSL_LH_new(@OPENSSL_LH_strhash, @CompareStrings);
+  Result := OPENSSL_LH_new(TOPENSSL_LH_HASHFUNC(@HashStringWrapper), TOPENSSL_LH_COMPFUNC(@CompareStrings));
   if Result = nil then
     raise Exception.Create('Failed to create hash table');
 end;

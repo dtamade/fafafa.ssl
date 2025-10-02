@@ -36,11 +36,11 @@ type
   TNCONF_WIN32 = function: PCONF_METHOD; cdecl;
   TNCONF_free = procedure(conf: PCONF); cdecl;
   TNCONF_free_data = procedure(conf: PCONF); cdecl;
-  TNCONF_load = function(conf: PCONF; const filename: PAnsiChar; eline: PLong): TOpenSSL_Int; cdecl;
-  TNCONF_load_fp = function(conf: PCONF; fp: Pointer; eline: PLong): TOpenSSL_Int; cdecl;
-  TNCONF_load_bio = function(conf: PCONF; bp: PBIO; eline: PLong): TOpenSSL_Int; cdecl;
+  TNCONF_load = function(conf: PCONF; const filename: PAnsiChar; eline: PLongInt): TOpenSSL_Int; cdecl;
+  TNCONF_load_fp = function(conf: PCONF; fp: Pointer; eline: PLongInt): TOpenSSL_Int; cdecl;
+  TNCONF_load_bio = function(conf: PCONF; bp: PBIO; eline: PLongInt): TOpenSSL_Int; cdecl;
   TNCONF_get_string = function(conf: PCONF; const group: PAnsiChar; const name: PAnsiChar): PAnsiChar; cdecl;
-  TNCONF_get_number_e = function(conf: PCONF; const group: PAnsiChar; const name: PAnsiChar; result: PLong): TOpenSSL_Int; cdecl;
+  TNCONF_get_number_e = function(conf: PCONF; const group: PAnsiChar; const name: PAnsiChar; result: PLongInt): TOpenSSL_Int; cdecl;
   TNCONF_dump_fp = function(conf: PCONF; out_fp: Pointer): TOpenSSL_Int; cdecl;
   TNCONF_dump_bio = function(conf: PCONF; out_bio: PBIO): TOpenSSL_Int; cdecl;
   
@@ -62,9 +62,12 @@ type
   TOPENSSL_load_builtin_modules = procedure; cdecl;
   TOPENSSL_init = procedure; cdecl;
   
+  // Callback type for CONF_parse_list
+  TCONF_parse_list_cb = function(const elem: PAnsiChar; len: TOpenSSL_Int; usr: Pointer): TOpenSSL_Int; cdecl;
+  
   // Error handling
   TCONF_parse_list = function(const list: PAnsiChar; sep: TOpenSSL_Int; nospc: TOpenSSL_Int; 
-                              list_cb: function(const elem: PAnsiChar; len: TOpenSSL_Int; usr: Pointer): TOpenSSL_Int; cdecl;
+                              list_cb: TCONF_parse_list_cb;
                               arg: Pointer): TOpenSSL_Int; cdecl;
 
 const
@@ -136,39 +139,39 @@ begin
     Exit;
     
   // Core config functions
-  NCONF_new := GetCryptoProcAddress('NCONF_new');
-  NCONF_default := GetCryptoProcAddress('NCONF_default');
-  NCONF_WIN32 := GetCryptoProcAddress('NCONF_WIN32');
-  NCONF_free := GetCryptoProcAddress('NCONF_free');
-  NCONF_free_data := GetCryptoProcAddress('NCONF_free_data');
-  NCONF_load := GetCryptoProcAddress('NCONF_load');
-  NCONF_load_fp := GetCryptoProcAddress('NCONF_load_fp');
-  NCONF_load_bio := GetCryptoProcAddress('NCONF_load_bio');
-  NCONF_get_string := GetCryptoProcAddress('NCONF_get_string');
-  NCONF_get_number_e := GetCryptoProcAddress('NCONF_get_number_e');
-  NCONF_dump_fp := GetCryptoProcAddress('NCONF_dump_fp');
-  NCONF_dump_bio := GetCryptoProcAddress('NCONF_dump_bio');
+  NCONF_new := TNCONF_new(GetCryptoProcAddress('NCONF_new'));
+  NCONF_default := TNCONF_default(GetCryptoProcAddress('NCONF_default'));
+  NCONF_WIN32 := TNCONF_WIN32(GetCryptoProcAddress('NCONF_WIN32'));
+  NCONF_free := TNCONF_free(GetCryptoProcAddress('NCONF_free'));
+  NCONF_free_data := TNCONF_free_data(GetCryptoProcAddress('NCONF_free_data'));
+  NCONF_load := TNCONF_load(GetCryptoProcAddress('NCONF_load'));
+  NCONF_load_fp := TNCONF_load_fp(GetCryptoProcAddress('NCONF_load_fp'));
+  NCONF_load_bio := TNCONF_load_bio(GetCryptoProcAddress('NCONF_load_bio'));
+  NCONF_get_string := TNCONF_get_string(GetCryptoProcAddress('NCONF_get_string'));
+  NCONF_get_number_e := TNCONF_get_number_e(GetCryptoProcAddress('NCONF_get_number_e'));
+  NCONF_dump_fp := TNCONF_dump_fp(GetCryptoProcAddress('NCONF_dump_fp'));
+  NCONF_dump_bio := TNCONF_dump_bio(GetCryptoProcAddress('NCONF_dump_bio'));
   
   // Module management
-  CONF_modules_load := GetCryptoProcAddress('CONF_modules_load');
-  CONF_modules_load_file := GetCryptoProcAddress('CONF_modules_load_file');
-  CONF_modules_free := GetCryptoProcAddress('CONF_modules_free');
-  CONF_modules_finish := GetCryptoProcAddress('CONF_modules_finish');
-  CONF_modules_unload := GetCryptoProcAddress('CONF_modules_unload');
-  CONF_module_add := GetCryptoProcAddress('CONF_module_add');
+  CONF_modules_load := TCONF_modules_load(GetCryptoProcAddress('CONF_modules_load'));
+  CONF_modules_load_file := TCONF_modules_load_file(GetCryptoProcAddress('CONF_modules_load_file'));
+  CONF_modules_free := TCONF_modules_free(GetCryptoProcAddress('CONF_modules_free'));
+  CONF_modules_finish := TCONF_modules_finish(GetCryptoProcAddress('CONF_modules_finish'));
+  CONF_modules_unload := TCONF_modules_unload(GetCryptoProcAddress('CONF_modules_unload'));
+  CONF_module_add := TCONF_module_add(GetCryptoProcAddress('CONF_module_add'));
   
   // Section operations
-  NCONF_get_section := GetCryptoProcAddress('NCONF_get_section');
-  NCONF_get_section_names := GetCryptoProcAddress('NCONF_get_section_names');
+  NCONF_get_section := TNCONF_get_section(GetCryptoProcAddress('NCONF_get_section'));
+  NCONF_get_section_names := TNCONF_get_section_names(GetCryptoProcAddress('NCONF_get_section_names'));
   
   // OpenSSL initialization
-  OPENSSL_config := GetCryptoProcAddress('OPENSSL_config');
-  OPENSSL_no_config := GetCryptoProcAddress('OPENSSL_no_config');
-  OPENSSL_load_builtin_modules := GetCryptoProcAddress('OPENSSL_load_builtin_modules');
-  OPENSSL_init := GetCryptoProcAddress('OPENSSL_init');
+  OPENSSL_config := TOPENSSL_config(GetCryptoProcAddress('OPENSSL_config'));
+  OPENSSL_no_config := TOPENSSL_no_config(GetCryptoProcAddress('OPENSSL_no_config'));
+  OPENSSL_load_builtin_modules := TOPENSSL_load_builtin_modules(GetCryptoProcAddress('OPENSSL_load_builtin_modules'));
+  OPENSSL_init := TOPENSSL_init(GetCryptoProcAddress('OPENSSL_init'));
   
   // List parsing
-  CONF_parse_list := GetCryptoProcAddress('CONF_parse_list');
+  CONF_parse_list := TCONF_parse_list(GetCryptoProcAddress('CONF_parse_list'));
 end;
 
 procedure UnloadOpenSSLConf;

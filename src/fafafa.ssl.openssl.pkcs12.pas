@@ -30,6 +30,7 @@ type
 
   // SafeBag stack
   PSTACK_OF_PKCS12_SAFEBAG = pointer;
+  PSTACK_OF_PKCS7 = pointer;
   
   // PKCS12 常量
 const
@@ -196,39 +197,39 @@ begin
   if ALibCrypto = 0 then Exit;
   
   // 加载 PKCS12 函数
-  PKCS12_new := GetProcAddress(ALibCrypto, 'PKCS12_new');
-  PKCS12_free := GetProcAddress(ALibCrypto, 'PKCS12_free');
-  PKCS12_create := GetProcAddress(ALibCrypto, 'PKCS12_create');
-  PKCS12_parse := GetProcAddress(ALibCrypto, 'PKCS12_parse');
-  d2i_PKCS12_bio := GetProcAddress(ALibCrypto, 'd2i_PKCS12_bio');
-  i2d_PKCS12_bio := GetProcAddress(ALibCrypto, 'i2d_PKCS12_bio');
-  d2i_PKCS12_fp := GetProcAddress(ALibCrypto, 'd2i_PKCS12_fp');
-  i2d_PKCS12_fp := GetProcAddress(ALibCrypto, 'i2d_PKCS12_fp');
-  PKCS12_gen_mac := GetProcAddress(ALibCrypto, 'PKCS12_gen_mac');
-  PKCS12_verify_mac := GetProcAddress(ALibCrypto, 'PKCS12_verify_mac');
-  PKCS12_set_mac := GetProcAddress(ALibCrypto, 'PKCS12_set_mac');
-  PKCS12_add_cert := GetProcAddress(ALibCrypto, 'PKCS12_add_cert');
-  PKCS12_add_key := GetProcAddress(ALibCrypto, 'PKCS12_add_key');
-  PKCS12_add_safe := GetProcAddress(ALibCrypto, 'PKCS12_add_safe');
-  PKCS12_add_localkeyid := GetProcAddress(ALibCrypto, 'PKCS12_add_localkeyid');
-  PKCS12_add_friendlyname_asc := GetProcAddress(ALibCrypto, 'PKCS12_add_friendlyname_asc');
-  PKCS12_add_friendlyname_uni := GetProcAddress(ALibCrypto, 'PKCS12_add_friendlyname_uni');
-  PKCS12_pbe_crypt := GetProcAddress(ALibCrypto, 'PKCS12_pbe_crypt');
-  PKCS12_key_gen_asc := GetProcAddress(ALibCrypto, 'PKCS12_key_gen_asc');
-  PKCS12_key_gen_uni := GetProcAddress(ALibCrypto, 'PKCS12_key_gen_uni');
-  PKCS12_SAFEBAG_get_nid := GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get_nid');
-  PKCS12_SAFEBAG_get0_p8inf := GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get0_p8inf');
-  PKCS12_SAFEBAG_get0_safes := GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get0_safes');
-  PKCS12_SAFEBAG_get1_cert := GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get1_cert');
-  PKCS12_SAFEBAG_get1_crl := GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get1_crl');
+  PKCS12_new := TPKCS12_new(GetProcAddress(ALibCrypto, 'PKCS12_new'));
+  PKCS12_free := TPKCS12_free(GetProcAddress(ALibCrypto, 'PKCS12_free'));
+  PKCS12_create := TPKCS12_create(GetProcAddress(ALibCrypto, 'PKCS12_create'));
+  PKCS12_parse := TPKCS12_parse(GetProcAddress(ALibCrypto, 'PKCS12_parse'));
+  d2i_PKCS12_bio := Td2i_PKCS12_bio(GetProcAddress(ALibCrypto, 'd2i_PKCS12_bio'));
+  i2d_PKCS12_bio := Ti2d_PKCS12_bio(GetProcAddress(ALibCrypto, 'i2d_PKCS12_bio'));
+  d2i_PKCS12_fp := Td2i_PKCS12_fp(GetProcAddress(ALibCrypto, 'd2i_PKCS12_fp'));
+  i2d_PKCS12_fp := Ti2d_PKCS12_fp(GetProcAddress(ALibCrypto, 'i2d_PKCS12_fp'));
+  PKCS12_gen_mac := TPKCS12_gen_mac(GetProcAddress(ALibCrypto, 'PKCS12_gen_mac'));
+  PKCS12_verify_mac := TPKCS12_verify_mac(GetProcAddress(ALibCrypto, 'PKCS12_verify_mac'));
+  PKCS12_set_mac := TPKCS12_set_mac(GetProcAddress(ALibCrypto, 'PKCS12_set_mac'));
+  PKCS12_add_cert := TPKCS12_add_cert(GetProcAddress(ALibCrypto, 'PKCS12_add_cert'));
+  PKCS12_add_key := TPKCS12_add_key(GetProcAddress(ALibCrypto, 'PKCS12_add_key'));
+  PKCS12_add_safe := TPKCS12_add_safe(GetProcAddress(ALibCrypto, 'PKCS12_add_safe'));
+  PKCS12_add_localkeyid := TPKCS12_add_localkeyid(GetProcAddress(ALibCrypto, 'PKCS12_add_localkeyid'));
+  PKCS12_add_friendlyname_asc := TPKCS12_add_friendlyname_asc(GetProcAddress(ALibCrypto, 'PKCS12_add_friendlyname_asc'));
+  PKCS12_add_friendlyname_uni := TPKCS12_add_friendlyname_uni(GetProcAddress(ALibCrypto, 'PKCS12_add_friendlyname_uni'));
+  PKCS12_pbe_crypt := TPKCS12_pbe_crypt(GetProcAddress(ALibCrypto, 'PKCS12_pbe_crypt'));
+  PKCS12_key_gen_asc := TPKCS12_key_gen_asc(GetProcAddress(ALibCrypto, 'PKCS12_key_gen_asc'));
+  PKCS12_key_gen_uni := TPKCS12_key_gen_uni(GetProcAddress(ALibCrypto, 'PKCS12_key_gen_uni'));
+  PKCS12_SAFEBAG_get_nid := TPKCS12_SAFEBAG_get_nid(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get_nid'));
+  PKCS12_SAFEBAG_get0_p8inf := TPKCS12_SAFEBAG_get0_p8inf(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get0_p8inf'));
+  PKCS12_SAFEBAG_get0_safes := TPKCS12_SAFEBAG_get0_safes(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get0_safes'));
+  PKCS12_SAFEBAG_get1_cert := TPKCS12_SAFEBAG_get1_cert(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get1_cert'));
+  PKCS12_SAFEBAG_get1_crl := TPKCS12_SAFEBAG_get1_crl(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get1_crl'));
   
   // PKCS8 函数
-  PKCS8_PRIV_KEY_INFO_new := GetProcAddress(ALibCrypto, 'PKCS8_PRIV_KEY_INFO_new');
-  PKCS8_PRIV_KEY_INFO_free := GetProcAddress(ALibCrypto, 'PKCS8_PRIV_KEY_INFO_free');
-  EVP_PKCS82PKEY := GetProcAddress(ALibCrypto, 'EVP_PKCS82PKEY');
-  EVP_PKEY2PKCS8 := GetProcAddress(ALibCrypto, 'EVP_PKEY2PKCS8');
-  PKCS8_encrypt := GetProcAddress(ALibCrypto, 'PKCS8_encrypt');
-  PKCS8_decrypt := GetProcAddress(ALibCrypto, 'PKCS8_decrypt');
+  PKCS8_PRIV_KEY_INFO_new := TPKCS8_PRIV_KEY_INFO_new(GetProcAddress(ALibCrypto, 'PKCS8_PRIV_KEY_INFO_new'));
+  PKCS8_PRIV_KEY_INFO_free := TPKCS8_PRIV_KEY_INFO_free(GetProcAddress(ALibCrypto, 'PKCS8_PRIV_KEY_INFO_free'));
+  EVP_PKCS82PKEY := TEVP_PKCS82PKEY(GetProcAddress(ALibCrypto, 'EVP_PKCS82PKEY'));
+  EVP_PKEY2PKCS8 := TEVP_PKEY2PKCS8(GetProcAddress(ALibCrypto, 'EVP_PKEY2PKCS8'));
+  PKCS8_encrypt := TPKCS8_encrypt(GetProcAddress(ALibCrypto, 'PKCS8_encrypt'));
+  PKCS8_decrypt := TPKCS8_decrypt(GetProcAddress(ALibCrypto, 'PKCS8_decrypt'));
 end;
 
 procedure UnloadPKCS12Module;
@@ -425,7 +426,7 @@ function SavePKCS12ToBytes(const Password, FriendlyName: string;
 var
   Bio: PBIO;
   P12: PPKCS12;
-  DataPtr: PByte;
+  DataPtr: PAnsiChar;
   DataLen: Integer;
 begin
   SetLength(Result, 0);
@@ -443,7 +444,7 @@ begin
     try
       if i2d_PKCS12_bio(Bio, P12) = 1 then
       begin
-        DataLen := BIO_get_mem_data(Bio, DataPtr);
+        DataLen := BIO_get_mem_data(Bio, @DataPtr);
         if (DataLen > 0) and Assigned(DataPtr) then
         begin
           SetLength(Result, DataLen);

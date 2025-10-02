@@ -62,10 +62,12 @@ type
   // 前向声明
   PCT_POLICY_EVAL_CTX = ^CT_POLICY_EVAL_CTX;
   PSCT = ^SCT;
+  PPSCT = ^PSCT;
   PCTLOG = ^CTLOG;
   PCTLOG_STORE = ^CTLOG_STORE;
   PSCT_CTX = ^SCT_CTX;
   PSCT_LIST = ^SCT_LIST;
+  PPSCT_LIST = ^PSCT_LIST;
   
   // 不透明结构体
   CT_POLICY_EVAL_CTX = record end;
@@ -158,11 +160,11 @@ type
   
   // i2d/d2i 函数
   Ti2d_SCT_LIST = function(a: PSCT_LIST; pp: PPByte): Integer; cdecl;
-  Td2i_SCT_LIST = function(a: PPSCT_LIST; pp: PPByte; len: Long): PSCT_LIST; cdecl;
+  Td2i_SCT_LIST = function(a: PPSCT_LIST; pp: PPByte; len: LongInt): PSCT_LIST; cdecl;
   Ti2o_SCT_LIST = function(scts: PSCT_LIST; ext: PPByte): Integer; cdecl;
   To2i_SCT_LIST = function(scts: PPSCT_LIST; ext: PPByte; len: NativeUInt): PSCT_LIST; cdecl;
   Ti2d_SCT = function(sct: PSCT; pp: PPByte): Integer; cdecl;
-  Td2i_SCT = function(sct: PPSCT; pp: PPByte; len: Long): PSCT; cdecl;
+  Td2i_SCT = function(sct: PPSCT; pp: PPByte; len: LongInt): PSCT; cdecl;
   To2i_SCT = function(sct: PPSCT; pp: PPByte; len: NativeUInt): PSCT; cdecl;
   
   // X509 扩展函数
@@ -300,7 +302,7 @@ uses
 
 procedure LoadCTFunctions;
 begin
-  if not OpenSSLLoaded then Exit;
+  if not IsOpenSSLCoreLoaded then Exit;
   
   // CT_POLICY_EVAL_CTX 函数
   CT_POLICY_EVAL_CTX_new := TCT_POLICY_EVAL_CTX_new(GetCryptoProcAddress('CT_POLICY_EVAL_CTX_new'));
@@ -373,17 +375,17 @@ begin
   o2i_SCT := To2i_SCT(GetCryptoProcAddress('o2i_SCT'));
   
   // SSL CT 函数
-  SSL_CTX_enable_ct := TSSL_CTX_enable_ct(GetOpenSSLProcAddress('SSL_CTX_enable_ct'));
-  SSL_enable_ct := TSSL_enable_ct(GetOpenSSLProcAddress('SSL_enable_ct'));
-  SSL_CTX_ct_is_enabled := TSSL_CTX_ct_is_enabled(GetOpenSSLProcAddress('SSL_CTX_ct_is_enabled'));
-  SSL_ct_is_enabled := TSSL_ct_is_enabled(GetOpenSSLProcAddress('SSL_ct_is_enabled'));
-  SSL_CTX_set_default_ctlog_list_file := TSSL_CTX_set_default_ctlog_list_file(GetOpenSSLProcAddress('SSL_CTX_set_default_ctlog_list_file'));
-  SSL_CTX_set_ctlog_list_file := TSSL_CTX_set_ctlog_list_file(GetOpenSSLProcAddress('SSL_CTX_set_ctlog_list_file'));
-  SSL_CTX_set_ct_validation_callback := TSSL_CTX_set_ct_validation_callback(GetOpenSSLProcAddress('SSL_CTX_set_ct_validation_callback'));
-  SSL_ct_set_validation_callback := TSSL_ct_set_validation_callback(GetOpenSSLProcAddress('SSL_ct_set_validation_callback'));
-  SSL_CTX_get0_ctlog_store := TSSL_CTX_get0_ctlog_store(GetOpenSSLProcAddress('SSL_CTX_get0_ctlog_store'));
-  SSL_CTX_set0_ctlog_store := TSSL_CTX_set0_ctlog_store(GetOpenSSLProcAddress('SSL_CTX_set0_ctlog_store'));
-  SSL_get0_peer_scts := TSSL_get0_peer_scts(GetOpenSSLProcAddress('SSL_get0_peer_scts'));
+  SSL_CTX_enable_ct := TSSL_CTX_enable_ct(GetSSLProcAddress('SSL_CTX_enable_ct'));
+  SSL_enable_ct := TSSL_enable_ct(GetSSLProcAddress('SSL_enable_ct'));
+  SSL_CTX_ct_is_enabled := TSSL_CTX_ct_is_enabled(GetSSLProcAddress('SSL_CTX_ct_is_enabled'));
+  SSL_ct_is_enabled := TSSL_ct_is_enabled(GetSSLProcAddress('SSL_ct_is_enabled'));
+  SSL_CTX_set_default_ctlog_list_file := TSSL_CTX_set_default_ctlog_list_file(GetSSLProcAddress('SSL_CTX_set_default_ctlog_list_file'));
+  SSL_CTX_set_ctlog_list_file := TSSL_CTX_set_ctlog_list_file(GetSSLProcAddress('SSL_CTX_set_ctlog_list_file'));
+  SSL_CTX_set_ct_validation_callback := TSSL_CTX_set_ct_validation_callback(GetSSLProcAddress('SSL_CTX_set_ct_validation_callback'));
+  SSL_ct_set_validation_callback := TSSL_ct_set_validation_callback(GetSSLProcAddress('SSL_ct_set_validation_callback'));
+  SSL_CTX_get0_ctlog_store := TSSL_CTX_get0_ctlog_store(GetSSLProcAddress('SSL_CTX_get0_ctlog_store'));
+  SSL_CTX_set0_ctlog_store := TSSL_CTX_set0_ctlog_store(GetSSLProcAddress('SSL_CTX_set0_ctlog_store'));
+  SSL_get0_peer_scts := TSSL_get0_peer_scts(GetSSLProcAddress('SSL_get0_peer_scts'));
   
   // CT 策略函数
   CT_POLICY_EVAL_CTX_set0_log_store := TCT_POLICY_EVAL_CTX_set0_log_store(GetCryptoProcAddress('CT_POLICY_EVAL_CTX_set0_log_store'));

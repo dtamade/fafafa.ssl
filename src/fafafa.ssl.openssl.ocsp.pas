@@ -9,9 +9,19 @@ uses
   SysUtils, Classes, dynlibs,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.consts,
-  fafafa.ssl.openssl.asn1;
+  fafafa.ssl.openssl.asn1,
+  fafafa.ssl.openssl.bio,
+  fafafa.ssl.openssl.evp,
+  fafafa.ssl.openssl.stack;
 
 type
+  // Additional pointer types needed
+  PPASN1_GENERALIZEDTIME = ^PASN1_GENERALIZEDTIME;
+  POCSP_REQ_CTX = Pointer;
+  PPOCSP_REQ_CTX = ^POCSP_REQ_CTX;
+  PPASN1_VALUE = ^ASN1_VALUE;
+  PPSTACK_OF = ^POPENSSL_STACK;
+  
   // OCSP 类型定义
   OCSP_REQUEST = Pointer;
   POCSP_REQUEST = ^OCSP_REQUEST;
@@ -43,6 +53,7 @@ type
   
   OCSP_RESPID = Pointer;
   POCSP_RESPID = ^OCSP_RESPID;
+  PPOCSP_RESPID = ^POCSP_RESPID;
   
   OCSP_REVOKEDINFO = Pointer;
   POCSP_REVOKEDINFO = ^OCSP_REVOKEDINFO;
@@ -235,16 +246,6 @@ type
     // OCSP 接受语言
     TOCSP_accept_responses_new = function(const oids: PPSTACK_OF): PX509_EXTENSION; cdecl;
 
-  // OCSP REQ_CTX
-  POCSP_REQ_CTX = Pointer;
-  PPOCSP_REQ_CTX = ^POCSP_REQ_CTX;
-
-  // ASN1_VALUE
-  ASN1_VALUE = Pointer;
-  PPASN1_VALUE = ^ASN1_VALUE;
-  
-  // PSTACK
-  PPSTACK_OF = Pointer;
 
 var
   // OCSP 请求函数

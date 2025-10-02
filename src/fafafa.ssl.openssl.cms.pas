@@ -9,7 +9,9 @@ uses
   SysUtils, Classes, dynlibs,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.consts,
-  fafafa.ssl.openssl.asn1;
+  fafafa.ssl.openssl.asn1,
+  fafafa.ssl.openssl.bio,
+  fafafa.ssl.openssl.evp;
 
 type
   // CMS 类型定义
@@ -28,15 +30,21 @@ type
   
   CMS_ReceiptRequest = Pointer;
   PCMS_ReceiptRequest = ^CMS_ReceiptRequest;
+  PPCMS_ReceiptRequest = ^PCMS_ReceiptRequest;
   
   CMS_Receipt = Pointer;
   PCMS_Receipt = ^CMS_Receipt;
+  PPCMS_Receipt = ^PCMS_Receipt;
   
   CMS_RecipientEncryptedKey = Pointer;
   PCMS_RecipientEncryptedKey = ^CMS_RecipientEncryptedKey;
   
   CMS_OtherKeyAttribute = Pointer;
   PCMS_OtherKeyAttribute = ^CMS_OtherKeyAttribute;
+  
+  // Additional pointer types
+  PX509_ATTRIBUTE = Pointer;
+  PPASN1_GENERALIZEDTIME = ^PASN1_GENERALIZEDTIME;
 
   // CMS 内容类型
   const
@@ -133,7 +141,7 @@ type
     TCMS_RecipientInfo_encrypt = function(cms: PCMS_ContentInfo; ri: PCMS_RecipientInfo): Integer; cdecl;
 
     // CMS SignerInfo
-    TCMS_get0_SignerInfos = function(cms: PCMS_ContentInfo): PSTACK_OF; cdecl;
+    TCMS_get0_SignerInfos = function(cms: PCMS_ContentInfo): POPENSSL_STACK; cdecl;
     TCMS_SignerInfo_get0_signer_id = function(si: PCMS_SignerInfo; keyid: PPASN1_OCTET_STRING; 
       issuer: PPX509_NAME; sno: PPASN1_INTEGER): Integer; cdecl;
     TCMS_SignerInfo_get0_signature = function(si: PCMS_SignerInfo): ASN1_OCTET_STRING; cdecl;
@@ -212,12 +220,12 @@ type
     TCMS_add1_ReceiptRequest = function(si: PCMS_SignerInfo; rr: PCMS_ReceiptRequest): Integer; cdecl;
     TCMS_get1_ReceiptRequest = function(si: PCMS_SignerInfo; prr: PPCMS_ReceiptRequest): Integer; cdecl;
     TCMS_ReceiptRequest_create0 = function(id: PByte; idlen: Integer; allorfirst: Integer; 
-      receiptList: PSTACK_OF; receiptsTo: PSTACK_OF): PCMS_ReceiptRequest; cdecl;
+      receiptList: POPENSSL_STACK; receiptsTo: POPENSSL_STACK): PCMS_ReceiptRequest; cdecl;
     TCMS_add1_Receipt = function(si: PCMS_SignerInfo; receipt: PCMS_Receipt): Integer; cdecl;
     TCMS_get1_Receipt = function(si: PCMS_SignerInfo; pr: PPCMS_Receipt): Integer; cdecl;
     TCMS_RecipientInfo_kari_get0_alg = function(ri: PCMS_RecipientInfo; palg: PPX509_ALGOR; 
       pukm: PPASN1_OCTET_STRING): Integer; cdecl;
-    TCMS_RecipientInfo_kari_get0_reks = function(ri: PCMS_RecipientInfo): PSTACK_OF; cdecl;
+    TCMS_RecipientInfo_kari_get0_reks = function(ri: PCMS_RecipientInfo): POPENSSL_STACK; cdecl;
     TCMS_RecipientInfo_kari_get0_orig_id = function(ri: PCMS_RecipientInfo; 
       pubalg: PPX509_ALGOR; pubkey: PPASN1_BIT_STRING; keyid: PPASN1_OCTET_STRING; 
       issuer: PPX509_NAME; sno: PPASN1_INTEGER): Integer; cdecl;
@@ -307,7 +315,7 @@ var
   CMS_get0_content: TCMS_get0_content = nil;
   CMS_is_detached: TCMS_is_detached = nil;
   CMS_set_detached: TCMS_set_detached = nil;
-  CMS_stream: TCMS_stream = nil;
+  CMS_stream_func: TCMS_stream = nil;  // Renamed to avoid conflict with constant
   CMS_dataInit: TCMS_dataInit = nil;
   CMS_dataFinal: TCMS_dataFinal = nil;
   CMS_data: TCMS_data = nil;
@@ -506,6 +514,7 @@ var
   Buf: array[0..4095] of Byte;
   Stream: TMemoryStream;
 begin
+  Result := nil;
   SetLength(Result, 0);
   if not FCMSLoaded or (AEncrypted = nil) or (AKey = nil) then
     Exit;

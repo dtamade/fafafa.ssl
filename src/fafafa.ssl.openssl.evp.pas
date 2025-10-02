@@ -729,6 +729,8 @@ var
   EVP_sha256: TEVP_sha256 = nil;
   EVP_sha384: TEVP_sha384 = nil;
   EVP_sha512: TEVP_sha512 = nil;
+  EVP_blake2b512: TEVP_blake2b512 = nil;
+  EVP_blake2s256: TEVP_blake2s256 = nil;
   EVP_get_digestbyname: TEVP_get_digestbyname = nil;
   
   // OpenSSL 3.x EVP_MD fetch API
@@ -776,6 +778,13 @@ var
   EVP_aes_256_ocb: TEVP_aes_256_ocb = nil;
   EVP_chacha20: TEVP_chacha20 = nil;
   EVP_chacha20_poly1305: TEVP_chacha20_poly1305 = nil;
+  
+  // Camellia cipher algorithms
+  EVP_camellia_128_ecb: TEVP_camellia_128_ecb = nil;
+  EVP_camellia_128_cbc: TEVP_camellia_128_cbc = nil;
+  EVP_camellia_256_ecb: TEVP_camellia_256_ecb = nil;
+  EVP_camellia_256_cbc: TEVP_camellia_256_cbc = nil;
+  
   EVP_get_cipherbyname: TEVP_get_cipherbyname = nil;
   
   // PKEY functions
@@ -861,6 +870,8 @@ begin
   EVP_sha256 := TEVP_sha256(GetProcAddress(ALibHandle, 'EVP_sha256'));
   EVP_sha384 := TEVP_sha384(GetProcAddress(ALibHandle, 'EVP_sha384'));
   EVP_sha512 := TEVP_sha512(GetProcAddress(ALibHandle, 'EVP_sha512'));
+  EVP_blake2b512 := TEVP_blake2b512(GetProcAddress(ALibHandle, 'EVP_blake2b512'));
+  EVP_blake2s256 := TEVP_blake2s256(GetProcAddress(ALibHandle, 'EVP_blake2s256'));
   EVP_get_digestbyname := TEVP_get_digestbyname(GetProcAddress(ALibHandle, 'EVP_get_digestbyname'));
   
   // Load OpenSSL 3.x EVP_MD fetch API (optional for 3.x compatibility)
@@ -908,6 +919,13 @@ begin
   EVP_aes_256_ocb := TEVP_aes_256_ocb(GetProcAddress(ALibHandle, 'EVP_aes_256_ocb'));
   EVP_chacha20 := TEVP_chacha20(GetProcAddress(ALibHandle, 'EVP_chacha20'));
   EVP_chacha20_poly1305 := TEVP_chacha20_poly1305(GetProcAddress(ALibHandle, 'EVP_chacha20_poly1305'));
+  
+  // Load Camellia algorithms
+  EVP_camellia_128_ecb := TEVP_camellia_128_ecb(GetProcAddress(ALibHandle, 'EVP_camellia_128_ecb'));
+  EVP_camellia_128_cbc := TEVP_camellia_128_cbc(GetProcAddress(ALibHandle, 'EVP_camellia_128_cbc'));
+  EVP_camellia_256_ecb := TEVP_camellia_256_ecb(GetProcAddress(ALibHandle, 'EVP_camellia_256_ecb'));
+  EVP_camellia_256_cbc := TEVP_camellia_256_cbc(GetProcAddress(ALibHandle, 'EVP_camellia_256_cbc'));
+  
   EVP_get_cipherbyname := TEVP_get_cipherbyname(GetProcAddress(ALibHandle, 'EVP_get_cipherbyname'));
   
   // Load PKEY functions
@@ -974,6 +992,8 @@ begin
   EVP_sha256 := nil;
   EVP_sha384 := nil;
   EVP_sha512 := nil;
+  EVP_blake2b512 := nil;
+  EVP_blake2s256 := nil;
   EVP_get_digestbyname := nil;
   
   // Clear OpenSSL 3.x EVP_MD fetch API
@@ -1003,6 +1023,10 @@ begin
   // Clear Cipher algorithms
   EVP_aes_128_cbc := nil;
   EVP_aes_256_cbc := nil;
+  EVP_camellia_128_ecb := nil;
+  EVP_camellia_128_cbc := nil;
+  EVP_camellia_256_ecb := nil;
+  EVP_camellia_256_cbc := nil;
   EVP_get_cipherbyname := nil;
   
   // Clear PKEY functions

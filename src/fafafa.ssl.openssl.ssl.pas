@@ -67,7 +67,7 @@ type
   TSSL_set_alpn_protos = function(ssl: PSSL; const protos: PByte; protos_len: Cardinal): Integer; cdecl;
   TSSL_CTX_set_alpn_select_cb = procedure(ctx: PSSL_CTX; cb: Pointer; arg: Pointer); cdecl;
   TSSL_get0_alpn_selected = procedure(const ssl: PSSL; const data: PPByte; len: PCardinal); cdecl;
-  TSSL_select_next_proto = function(out: PPByte; outlen: PByte; const server: PByte; server_len: Cardinal; const client: PByte; client_len: Cardinal): Integer; cdecl;
+  TSSL_select_next_proto = function(&out: PPByte; outlen: PByte; const server: PByte; server_len: Cardinal; const client: PByte; client_len: Cardinal): Integer; cdecl;
 
   { Session tickets }
   TSSL_CTX_set_tlsext_ticket_key_cb = function(ctx: PSSL_CTX; cb: Pointer): Integer; cdecl;
@@ -292,78 +292,75 @@ var
   GSSLLoaded: Boolean = False;
 
 function LoadOpenSSLSSL: Boolean;
-var
-  LLib: TLibHandle;
 begin
   if GSSLLoaded then
     Exit(True);
     
-  // The library is already loaded by core module
-  LLib := GetLibHandle('libssl');
-  if LLib = NilHandle then
-    LLib := GetLibHandle('ssleay32');
+  // Make sure core is loaded first
+  if not IsOpenSSLCoreLoaded then
+    LoadOpenSSLCore;
     
-  if LLib = NilHandle then
+  if not IsOpenSSLCoreLoaded then
     Exit(False);
     
-  // Load SSL protocol functions
-  SSL_CTX_set_min_proto_version := GetProcedureAddress(LLib, 'SSL_CTX_set_min_proto_version');
-  SSL_CTX_set_max_proto_version := GetProcedureAddress(LLib, 'SSL_CTX_set_max_proto_version');
-  SSL_CTX_get_min_proto_version := GetProcedureAddress(LLib, 'SSL_CTX_get_min_proto_version');
-  SSL_CTX_get_max_proto_version := GetProcedureAddress(LLib, 'SSL_CTX_get_max_proto_version');
-  SSL_set_min_proto_version := GetProcedureAddress(LLib, 'SSL_set_min_proto_version');
-  SSL_set_max_proto_version := GetProcedureAddress(LLib, 'SSL_set_max_proto_version');
-  SSL_get_min_proto_version := GetProcedureAddress(LLib, 'SSL_get_min_proto_version');
-  SSL_get_max_proto_version := GetProcedureAddress(LLib, 'SSL_get_max_proto_version');
-  SSL_version := GetProcedureAddress(LLib, 'SSL_version');
-  SSL_client_version := GetProcedureAddress(LLib, 'SSL_client_version');
-  SSL_is_dtls := GetProcedureAddress(LLib, 'SSL_is_dtls');
+  // Load SSL protocol functions using helper function
+  SSL_CTX_set_min_proto_version := TSSL_CTX_set_min_proto_version(GetSSLProcAddress('SSL_CTX_set_min_proto_version'));
+  SSL_CTX_set_max_proto_version := TSSL_CTX_set_max_proto_version(GetSSLProcAddress('SSL_CTX_set_max_proto_version'));
+  SSL_CTX_get_min_proto_version := TSSL_CTX_get_min_proto_version(GetSSLProcAddress('SSL_CTX_get_min_proto_version'));
+  SSL_CTX_get_max_proto_version := TSSL_CTX_get_max_proto_version(GetSSLProcAddress('SSL_CTX_get_max_proto_version'));
+  SSL_set_min_proto_version := TSSL_set_min_proto_version(GetSSLProcAddress('SSL_set_min_proto_version'));
+  SSL_set_max_proto_version := TSSL_set_max_proto_version(GetSSLProcAddress('SSL_set_max_proto_version'));
+  SSL_get_min_proto_version := TSSL_get_min_proto_version(GetSSLProcAddress('SSL_get_min_proto_version'));
+  SSL_get_max_proto_version := TSSL_get_max_proto_version(GetSSLProcAddress('SSL_get_max_proto_version'));
+  SSL_version := TSSL_version(GetSSLProcAddress('SSL_version'));
+  SSL_client_version := TSSL_client_version(GetSSLProcAddress('SSL_client_version'));
+  SSL_is_dtls := TSSL_is_dtls(GetSSLProcAddress('SSL_is_dtls'));
   
   // Load Options functions
-  SSL_CTX_set_options := GetProcedureAddress(LLib, 'SSL_CTX_set_options');
-  SSL_CTX_clear_options := GetProcedureAddress(LLib, 'SSL_CTX_clear_options');
-  SSL_CTX_get_options := GetProcedureAddress(LLib, 'SSL_CTX_get_options');
-  SSL_set_options := GetProcedureAddress(LLib, 'SSL_set_options');
-  SSL_clear_options := GetProcedureAddress(LLib, 'SSL_clear_options');
-  SSL_get_options := GetProcedureAddress(LLib, 'SSL_get_options');
+  SSL_CTX_set_options := TSSL_CTX_set_options(GetSSLProcAddress('SSL_CTX_set_options'));
+  SSL_CTX_clear_options := TSSL_CTX_clear_options(GetSSLProcAddress('SSL_CTX_clear_options'));
+  SSL_CTX_get_options := TSSL_CTX_get_options(GetSSLProcAddress('SSL_CTX_get_options'));
+  SSL_set_options := TSSL_set_options(GetSSLProcAddress('SSL_set_options'));
+  SSL_clear_options := TSSL_clear_options(GetSSLProcAddress('SSL_clear_options'));
+  SSL_get_options := TSSL_get_options(GetSSLProcAddress('SSL_get_options'));
   
   // Load Mode functions
-  SSL_CTX_set_mode := GetProcedureAddress(LLib, 'SSL_CTX_set_mode');
-  SSL_CTX_clear_mode := GetProcedureAddress(LLib, 'SSL_CTX_clear_mode');
-  SSL_CTX_get_mode := GetProcedureAddress(LLib, 'SSL_CTX_get_mode');
-  SSL_set_mode := GetProcedureAddress(LLib, 'SSL_set_mode');
-  SSL_clear_mode := GetProcedureAddress(LLib, 'SSL_clear_mode');
-  SSL_get_mode := GetProcedureAddress(LLib, 'SSL_get_mode');
+  SSL_CTX_set_mode := TSSL_CTX_set_mode(GetSSLProcAddress('SSL_CTX_set_mode'));
+  SSL_CTX_clear_mode := TSSL_CTX_clear_mode(GetSSLProcAddress('SSL_CTX_clear_mode'));
+  SSL_CTX_get_mode := TSSL_CTX_get_mode(GetSSLProcAddress('SSL_CTX_get_mode'));
+  SSL_set_mode := TSSL_set_mode(GetSSLProcAddress('SSL_set_mode'));
+  SSL_clear_mode := TSSL_clear_mode(GetSSLProcAddress('SSL_clear_mode'));
+  SSL_get_mode := TSSL_get_mode(GetSSLProcAddress('SSL_get_mode'));
   
   // Load Cipher functions
-  SSL_CTX_set_cipher_list := GetProcedureAddress(LLib, 'SSL_CTX_set_cipher_list');
-  SSL_CTX_set_ciphersuites := GetProcedureAddress(LLib, 'SSL_CTX_set_ciphersuites');
-  SSL_set_cipher_list := GetProcedureAddress(LLib, 'SSL_set_cipher_list');
-  SSL_set_ciphersuites := GetProcedureAddress(LLib, 'SSL_set_ciphersuites');
-  SSL_get_ciphers := GetProcedureAddress(LLib, 'SSL_get_ciphers');
-  SSL_get_cipher_list := GetProcedureAddress(LLib, 'SSL_get_cipher_list');
-  SSL_get_shared_ciphers := GetProcedureAddress(LLib, 'SSL_get_shared_ciphers');
-  SSL_get_current_cipher := GetProcedureAddress(LLib, 'SSL_get_current_cipher');
-  SSL_get_pending_cipher := GetProcedureAddress(LLib, 'SSL_get_pending_cipher');
-  SSL_CIPHER_get_name := GetProcedureAddress(LLib, 'SSL_CIPHER_get_name');
-  SSL_CIPHER_get_bits := GetProcedureAddress(LLib, 'SSL_CIPHER_get_bits');
-  SSL_CIPHER_get_version := GetProcedureAddress(LLib, 'SSL_CIPHER_get_version');
-  SSL_CIPHER_description := GetProcedureAddress(LLib, 'SSL_CIPHER_description');
-  SSL_CIPHER_get_id := GetProcedureAddress(LLib, 'SSL_CIPHER_get_id');
+  SSL_CTX_set_cipher_list := TSSL_CTX_set_cipher_list(GetSSLProcAddress('SSL_CTX_set_cipher_list'));
+  SSL_CTX_set_ciphersuites := TSSL_CTX_set_ciphersuites(GetSSLProcAddress('SSL_CTX_set_ciphersuites'));
+  SSL_set_cipher_list := TSSL_set_cipher_list(GetSSLProcAddress('SSL_set_cipher_list'));
+  SSL_set_ciphersuites := TSSL_set_ciphersuites(GetSSLProcAddress('SSL_set_ciphersuites'));
+  SSL_get_ciphers := TSSL_get_ciphers(GetSSLProcAddress('SSL_get_ciphers'));
+  SSL_get_cipher_list := TSSL_get_cipher_list(GetSSLProcAddress('SSL_get_cipher_list'));
+  SSL_get_shared_ciphers := TSSL_get_shared_ciphers(GetSSLProcAddress('SSL_get_shared_ciphers'));
+  SSL_get_current_cipher := TSSL_get_current_cipher(GetSSLProcAddress('SSL_get_current_cipher'));
+  SSL_get_pending_cipher := TSSL_get_pending_cipher(GetSSLProcAddress('SSL_get_pending_cipher'));
+  SSL_CIPHER_get_name := TSSL_CIPHER_get_name(GetSSLProcAddress('SSL_CIPHER_get_name'));
+  SSL_CIPHER_get_bits := TSSL_CIPHER_get_bits(GetSSLProcAddress('SSL_CIPHER_get_bits'));
+  SSL_CIPHER_get_version := TSSL_CIPHER_get_version(GetSSLProcAddress('SSL_CIPHER_get_version'));
+  SSL_CIPHER_description := TSSL_CIPHER_description(GetSSLProcAddress('SSL_CIPHER_description'));
+  SSL_CIPHER_get_id := TSSL_CIPHER_get_id(GetSSLProcAddress('SSL_CIPHER_get_id'));
   
   // Load SNI functions
-  SSL_set_tlsext_host_name := GetProcedureAddress(LLib, 'SSL_set_tlsext_host_name');
-  SSL_get_servername := GetProcedureAddress(LLib, 'SSL_get_servername');
-  SSL_get_servername_type := GetProcedureAddress(LLib, 'SSL_get_servername_type');
-  SSL_CTX_set_tlsext_servername_callback := GetProcedureAddress(LLib, 'SSL_CTX_set_tlsext_servername_callback');
-  SSL_CTX_set_tlsext_servername_arg := GetProcedureAddress(LLib, 'SSL_CTX_set_tlsext_servername_arg');
+  SSL_set_tlsext_host_name := TSSL_set_tlsext_host_name(GetSSLProcAddress('SSL_set_tlsext_host_name'));
+  SSL_get_servername := TSSL_get_servername(GetSSLProcAddress('SSL_get_servername'));
+  SSL_get_servername_type := TSSL_get_servername_type(GetSSLProcAddress('SSL_get_servername_type'));
+  SSL_CTX_set_tlsext_servername_callback := TSSL_CTX_set_tlsext_servername_callback(GetSSLProcAddress('SSL_CTX_set_tlsext_servername_callback'));
+  SSL_CTX_set_tlsext_servername_arg := TSSL_CTX_set_tlsext_servername_arg(GetSSLProcAddress('SSL_CTX_set_tlsext_servername_arg'));
   
   // Load ALPN functions
-  SSL_CTX_set_alpn_protos := GetProcedureAddress(LLib, 'SSL_CTX_set_alpn_protos');
-  SSL_set_alpn_protos := GetProcedureAddress(LLib, 'SSL_set_alpn_protos');
-  SSL_CTX_set_alpn_select_cb := GetProcedureAddress(LLib, 'SSL_CTX_set_alpn_select_cb');
-  SSL_get0_alpn_selected := GetProcedureAddress(LLib, 'SSL_get0_alpn_selected');
-  SSL_select_next_proto := GetProcedureAddress(LLib, 'SSL_select_next_proto');
+  SSL_CTX_set_alpn_protos := TSSL_CTX_set_alpn_protos(GetSSLProcAddress('SSL_CTX_set_alpn_protos'));
+  SSL_set_alpn_protos := TSSL_set_alpn_protos(GetSSLProcAddress('SSL_set_alpn_protos'));
+  SSL_CTX_set_alpn_select_cb := TSSL_CTX_set_alpn_select_cb(GetSSLProcAddress('SSL_CTX_set_alpn_select_cb'));
+  SSL_get0_alpn_selected := TSSL_get0_alpn_selected(GetSSLProcAddress('SSL_get0_alpn_selected'));
+  SSL_select_next_proto := TSSL_select_next_proto(GetSSLProcAddress('SSL_select_next_proto'));
   
   // Load other extension functions...
   // Many functions are optional and may not exist in older versions

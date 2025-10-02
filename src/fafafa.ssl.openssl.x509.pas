@@ -448,6 +448,8 @@ type
 var
   // Function pointers will be dynamically loaded
   // This is a partial list - complete implementation would include all functions
+  X509_new: TX509_new;
+  X509_free: TX509_free;
   
 procedure LoadOpenSSLX509;
 procedure UnloadOpenSSLX509;

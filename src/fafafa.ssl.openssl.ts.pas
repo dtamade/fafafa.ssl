@@ -1,6 +1,6 @@
 {
-  OpenSSL TS (时间戳) API 模块
-  用于 RFC 3161 时间戳协议支持
+  OpenSSL TS (时间�? API 模块
+  用于 RFC 3161 时间戳协议支�?
 }
 unit fafafa.ssl.openssl.ts;
 
@@ -63,14 +63,20 @@ type
   // 前向声明
   PTS_MSG_IMPRINT = ^TS_MSG_IMPRINT;
   PTS_REQ = ^TS_REQ;
+  PPTS_REQ = ^PTS_REQ;
   PTS_ACCURACY = ^TS_ACCURACY;
   PTS_TST_INFO = ^TS_TST_INFO;
+  PPTS_TST_INFO = ^PTS_TST_INFO;
   PTS_STATUS_INFO = ^TS_STATUS_INFO;
   PTS_RESP = ^TS_RESP;
+  PPTS_RESP = ^PTS_RESP;
   PTS_RESP_CTX = ^TS_RESP_CTX;
   PTS_VERIFY_CTX = ^TS_VERIFY_CTX;
   
-  // 不透明结构体
+  // Stack type
+  PSTACK_OF_ASN1_UTF8STRING = POPENSSL_STACK;
+  
+  // 不透明结构�?
   TS_MSG_IMPRINT = record end;
   TS_REQ = record end;
   TS_ACCURACY = record end;
@@ -442,83 +448,83 @@ uses
 
 procedure LoadTSFunctions;
 begin
-  if not OpenSSLLoaded then Exit;
+  if not IsOpenSSLCoreLoaded then Exit;
   
   // TS_MSG_IMPRINT 函数
-  TS_MSG_IMPRINT_new := TTS_MSG_IMPRINT_new(GetOpenSSLProcAddress('TS_MSG_IMPRINT_new'));
-  TS_MSG_IMPRINT_free := TTS_MSG_IMPRINT_free(GetOpenSSLProcAddress('TS_MSG_IMPRINT_free'));
-  TS_MSG_IMPRINT_dup := TTS_MSG_IMPRINT_dup(GetOpenSSLProcAddress('TS_MSG_IMPRINT_dup'));
-  TS_MSG_IMPRINT_set_algo := TTS_MSG_IMPRINT_set_algo(GetOpenSSLProcAddress('TS_MSG_IMPRINT_set_algo'));
-  TS_MSG_IMPRINT_get_algo := TTS_MSG_IMPRINT_get_algo(GetOpenSSLProcAddress('TS_MSG_IMPRINT_get_algo'));
-  TS_MSG_IMPRINT_set_msg := TTS_MSG_IMPRINT_set_msg(GetOpenSSLProcAddress('TS_MSG_IMPRINT_set_msg'));
-  TS_MSG_IMPRINT_get_msg := TTS_MSG_IMPRINT_get_msg(GetOpenSSLProcAddress('TS_MSG_IMPRINT_get_msg'));
-  TS_MSG_IMPRINT_print_bio := TTS_MSG_IMPRINT_print_bio(GetOpenSSLProcAddress('TS_MSG_IMPRINT_print_bio'));
+  TS_MSG_IMPRINT_new := TTS_MSG_IMPRINT_new(GetCryptoProcAddress('TS_MSG_IMPRINT_new'));
+  TS_MSG_IMPRINT_free := TTS_MSG_IMPRINT_free(GetCryptoProcAddress('TS_MSG_IMPRINT_free'));
+  TS_MSG_IMPRINT_dup := TTS_MSG_IMPRINT_dup(GetCryptoProcAddress('TS_MSG_IMPRINT_dup'));
+  TS_MSG_IMPRINT_set_algo := TTS_MSG_IMPRINT_set_algo(GetCryptoProcAddress('TS_MSG_IMPRINT_set_algo'));
+  TS_MSG_IMPRINT_get_algo := TTS_MSG_IMPRINT_get_algo(GetCryptoProcAddress('TS_MSG_IMPRINT_get_algo'));
+  TS_MSG_IMPRINT_set_msg := TTS_MSG_IMPRINT_set_msg(GetCryptoProcAddress('TS_MSG_IMPRINT_set_msg'));
+  TS_MSG_IMPRINT_get_msg := TTS_MSG_IMPRINT_get_msg(GetCryptoProcAddress('TS_MSG_IMPRINT_get_msg'));
+  TS_MSG_IMPRINT_print_bio := TTS_MSG_IMPRINT_print_bio(GetCryptoProcAddress('TS_MSG_IMPRINT_print_bio'));
   
   // TS_REQ 函数
-  TS_REQ_new := TTS_REQ_new(GetOpenSSLProcAddress('TS_REQ_new'));
-  TS_REQ_free := TTS_REQ_free(GetOpenSSLProcAddress('TS_REQ_free'));
-  TS_REQ_dup := TTS_REQ_dup(GetOpenSSLProcAddress('TS_REQ_dup'));
-  TS_REQ_d2i_bio := TTS_REQ_d2i_bio(GetOpenSSLProcAddress('TS_REQ_d2i_bio'));
-  TS_REQ_i2d_bio := TTS_REQ_i2d_bio(GetOpenSSLProcAddress('TS_REQ_i2d_bio'));
-  TS_REQ_set_version := TTS_REQ_set_version(GetOpenSSLProcAddress('TS_REQ_set_version'));
-  TS_REQ_get_version := TTS_REQ_get_version(GetOpenSSLProcAddress('TS_REQ_get_version'));
-  TS_REQ_set_msg_imprint := TTS_REQ_set_msg_imprint(GetOpenSSLProcAddress('TS_REQ_set_msg_imprint'));
-  TS_REQ_get_msg_imprint := TTS_REQ_get_msg_imprint(GetOpenSSLProcAddress('TS_REQ_get_msg_imprint'));
-  TS_REQ_set_policy_id := TTS_REQ_set_policy_id(GetOpenSSLProcAddress('TS_REQ_set_policy_id'));
-  TS_REQ_get_policy_id := TTS_REQ_get_policy_id(GetOpenSSLProcAddress('TS_REQ_get_policy_id'));
-  TS_REQ_set_nonce := TTS_REQ_set_nonce(GetOpenSSLProcAddress('TS_REQ_set_nonce'));
-  TS_REQ_get_nonce := TTS_REQ_get_nonce(GetOpenSSLProcAddress('TS_REQ_get_nonce'));
-  TS_REQ_set_cert_req := TTS_REQ_set_cert_req(GetOpenSSLProcAddress('TS_REQ_set_cert_req'));
-  TS_REQ_get_cert_req := TTS_REQ_get_cert_req(GetOpenSSLProcAddress('TS_REQ_get_cert_req'));
-  TS_REQ_print_bio := TTS_REQ_print_bio(GetOpenSSLProcAddress('TS_REQ_print_bio'));
+  TS_REQ_new := TTS_REQ_new(GetCryptoProcAddress('TS_REQ_new'));
+  TS_REQ_free := TTS_REQ_free(GetCryptoProcAddress('TS_REQ_free'));
+  TS_REQ_dup := TTS_REQ_dup(GetCryptoProcAddress('TS_REQ_dup'));
+  TS_REQ_d2i_bio := TTS_REQ_d2i_bio(GetCryptoProcAddress('TS_REQ_d2i_bio'));
+  TS_REQ_i2d_bio := TTS_REQ_i2d_bio(GetCryptoProcAddress('TS_REQ_i2d_bio'));
+  TS_REQ_set_version := TTS_REQ_set_version(GetCryptoProcAddress('TS_REQ_set_version'));
+  TS_REQ_get_version := TTS_REQ_get_version(GetCryptoProcAddress('TS_REQ_get_version'));
+  TS_REQ_set_msg_imprint := TTS_REQ_set_msg_imprint(GetCryptoProcAddress('TS_REQ_set_msg_imprint'));
+  TS_REQ_get_msg_imprint := TTS_REQ_get_msg_imprint(GetCryptoProcAddress('TS_REQ_get_msg_imprint'));
+  TS_REQ_set_policy_id := TTS_REQ_set_policy_id(GetCryptoProcAddress('TS_REQ_set_policy_id'));
+  TS_REQ_get_policy_id := TTS_REQ_get_policy_id(GetCryptoProcAddress('TS_REQ_get_policy_id'));
+  TS_REQ_set_nonce := TTS_REQ_set_nonce(GetCryptoProcAddress('TS_REQ_set_nonce'));
+  TS_REQ_get_nonce := TTS_REQ_get_nonce(GetCryptoProcAddress('TS_REQ_get_nonce'));
+  TS_REQ_set_cert_req := TTS_REQ_set_cert_req(GetCryptoProcAddress('TS_REQ_set_cert_req'));
+  TS_REQ_get_cert_req := TTS_REQ_get_cert_req(GetCryptoProcAddress('TS_REQ_get_cert_req'));
+  TS_REQ_print_bio := TTS_REQ_print_bio(GetCryptoProcAddress('TS_REQ_print_bio'));
   
   // TS_TST_INFO 函数
-  TS_TST_INFO_new := TTS_TST_INFO_new(GetOpenSSLProcAddress('TS_TST_INFO_new'));
-  TS_TST_INFO_free := TTS_TST_INFO_free(GetOpenSSLProcAddress('TS_TST_INFO_free'));
-  TS_TST_INFO_dup := TTS_TST_INFO_dup(GetOpenSSLProcAddress('TS_TST_INFO_dup'));
-  TS_TST_INFO_d2i_bio := TTS_TST_INFO_d2i_bio(GetOpenSSLProcAddress('TS_TST_INFO_d2i_bio'));
-  TS_TST_INFO_i2d_bio := TTS_TST_INFO_i2d_bio(GetOpenSSLProcAddress('TS_TST_INFO_i2d_bio'));
-  TS_TST_INFO_get_version := TTS_TST_INFO_get_version(GetOpenSSLProcAddress('TS_TST_INFO_get_version'));
-  TS_TST_INFO_get_time := TTS_TST_INFO_get_time(GetOpenSSLProcAddress('TS_TST_INFO_get_time'));
-  TS_TST_INFO_print_bio := TTS_TST_INFO_print_bio(GetOpenSSLProcAddress('TS_TST_INFO_print_bio'));
+  TS_TST_INFO_new := TTS_TST_INFO_new(GetCryptoProcAddress('TS_TST_INFO_new'));
+  TS_TST_INFO_free := TTS_TST_INFO_free(GetCryptoProcAddress('TS_TST_INFO_free'));
+  TS_TST_INFO_dup := TTS_TST_INFO_dup(GetCryptoProcAddress('TS_TST_INFO_dup'));
+  TS_TST_INFO_d2i_bio := TTS_TST_INFO_d2i_bio(GetCryptoProcAddress('TS_TST_INFO_d2i_bio'));
+  TS_TST_INFO_i2d_bio := TTS_TST_INFO_i2d_bio(GetCryptoProcAddress('TS_TST_INFO_i2d_bio'));
+  TS_TST_INFO_get_version := TTS_TST_INFO_get_version(GetCryptoProcAddress('TS_TST_INFO_get_version'));
+  TS_TST_INFO_get_time := TTS_TST_INFO_get_time(GetCryptoProcAddress('TS_TST_INFO_get_time'));
+  TS_TST_INFO_print_bio := TTS_TST_INFO_print_bio(GetCryptoProcAddress('TS_TST_INFO_print_bio'));
   
   // TS_STATUS_INFO 函数
-  TS_STATUS_INFO_new := TTS_STATUS_INFO_new(GetOpenSSLProcAddress('TS_STATUS_INFO_new'));
-  TS_STATUS_INFO_free := TTS_STATUS_INFO_free(GetOpenSSLProcAddress('TS_STATUS_INFO_free'));
-  TS_STATUS_INFO_get0_status := TTS_STATUS_INFO_get0_status(GetOpenSSLProcAddress('TS_STATUS_INFO_get0_status'));
-  TS_STATUS_INFO_print_bio := TTS_STATUS_INFO_print_bio(GetOpenSSLProcAddress('TS_STATUS_INFO_print_bio'));
+  TS_STATUS_INFO_new := TTS_STATUS_INFO_new(GetCryptoProcAddress('TS_STATUS_INFO_new'));
+  TS_STATUS_INFO_free := TTS_STATUS_INFO_free(GetCryptoProcAddress('TS_STATUS_INFO_free'));
+  TS_STATUS_INFO_get0_status := TTS_STATUS_INFO_get0_status(GetCryptoProcAddress('TS_STATUS_INFO_get0_status'));
+  TS_STATUS_INFO_print_bio := TTS_STATUS_INFO_print_bio(GetCryptoProcAddress('TS_STATUS_INFO_print_bio'));
   
   // TS_RESP 函数
-  TS_RESP_new := TTS_RESP_new(GetOpenSSLProcAddress('TS_RESP_new'));
-  TS_RESP_free := TTS_RESP_free(GetOpenSSLProcAddress('TS_RESP_free'));
-  TS_RESP_d2i_bio := TTS_RESP_d2i_bio(GetOpenSSLProcAddress('TS_RESP_d2i_bio'));
-  TS_RESP_i2d_bio := TTS_RESP_i2d_bio(GetOpenSSLProcAddress('TS_RESP_i2d_bio'));
-  TS_RESP_create_response := TTS_RESP_create_response(GetOpenSSLProcAddress('TS_RESP_create_response'));
-  TS_RESP_get_status_info := TTS_RESP_get_status_info(GetOpenSSLProcAddress('TS_RESP_get_status_info'));
-  TS_RESP_get_token := TTS_RESP_get_token(GetOpenSSLProcAddress('TS_RESP_get_token'));
-  TS_RESP_get_tst_info := TTS_RESP_get_tst_info(GetOpenSSLProcAddress('TS_RESP_get_tst_info'));
-  TS_RESP_print_bio := TTS_RESP_print_bio(GetOpenSSLProcAddress('TS_RESP_print_bio'));
-  TS_RESP_verify_signature := TTS_RESP_verify_signature(GetOpenSSLProcAddress('TS_RESP_verify_signature'));
-  TS_RESP_verify_response := TTS_RESP_verify_response(GetOpenSSLProcAddress('TS_RESP_verify_response'));
+  TS_RESP_new := TTS_RESP_new(GetCryptoProcAddress('TS_RESP_new'));
+  TS_RESP_free := TTS_RESP_free(GetCryptoProcAddress('TS_RESP_free'));
+  TS_RESP_d2i_bio := TTS_RESP_d2i_bio(GetCryptoProcAddress('TS_RESP_d2i_bio'));
+  TS_RESP_i2d_bio := TTS_RESP_i2d_bio(GetCryptoProcAddress('TS_RESP_i2d_bio'));
+  TS_RESP_create_response := TTS_RESP_create_response(GetCryptoProcAddress('TS_RESP_create_response'));
+  TS_RESP_get_status_info := TTS_RESP_get_status_info(GetCryptoProcAddress('TS_RESP_get_status_info'));
+  TS_RESP_get_token := TTS_RESP_get_token(GetCryptoProcAddress('TS_RESP_get_token'));
+  TS_RESP_get_tst_info := TTS_RESP_get_tst_info(GetCryptoProcAddress('TS_RESP_get_tst_info'));
+  TS_RESP_print_bio := TTS_RESP_print_bio(GetCryptoProcAddress('TS_RESP_print_bio'));
+  TS_RESP_verify_signature := TTS_RESP_verify_signature(GetCryptoProcAddress('TS_RESP_verify_signature'));
+  TS_RESP_verify_response := TTS_RESP_verify_response(GetCryptoProcAddress('TS_RESP_verify_response'));
   
   // TS_RESP_CTX 函数
-  TS_RESP_CTX_new := TTS_RESP_CTX_new(GetOpenSSLProcAddress('TS_RESP_CTX_new'));
-  TS_RESP_CTX_free := TTS_RESP_CTX_free(GetOpenSSLProcAddress('TS_RESP_CTX_free'));
-  TS_RESP_CTX_set_signer_cert := TTS_RESP_CTX_set_signer_cert(GetOpenSSLProcAddress('TS_RESP_CTX_set_signer_cert'));
-  TS_RESP_CTX_set_signer_key := TTS_RESP_CTX_set_signer_key(GetOpenSSLProcAddress('TS_RESP_CTX_set_signer_key'));
-  TS_RESP_CTX_set_def_policy := TTS_RESP_CTX_set_def_policy(GetOpenSSLProcAddress('TS_RESP_CTX_set_def_policy'));
+  TS_RESP_CTX_new := TTS_RESP_CTX_new(GetCryptoProcAddress('TS_RESP_CTX_new'));
+  TS_RESP_CTX_free := TTS_RESP_CTX_free(GetCryptoProcAddress('TS_RESP_CTX_free'));
+  TS_RESP_CTX_set_signer_cert := TTS_RESP_CTX_set_signer_cert(GetCryptoProcAddress('TS_RESP_CTX_set_signer_cert'));
+  TS_RESP_CTX_set_signer_key := TTS_RESP_CTX_set_signer_key(GetCryptoProcAddress('TS_RESP_CTX_set_signer_key'));
+  TS_RESP_CTX_set_def_policy := TTS_RESP_CTX_set_def_policy(GetCryptoProcAddress('TS_RESP_CTX_set_def_policy'));
   
   // TS_VERIFY_CTX 函数
-  TS_VERIFY_CTX_new := TTS_VERIFY_CTX_new(GetOpenSSLProcAddress('TS_VERIFY_CTX_new'));
-  TS_VERIFY_CTX_free := TTS_VERIFY_CTX_free(GetOpenSSLProcAddress('TS_VERIFY_CTX_free'));
-  TS_VERIFY_CTX_set_flags := TTS_VERIFY_CTX_set_flags(GetOpenSSLProcAddress('TS_VERIFY_CTX_set_flags'));
-  TS_VERIFY_CTX_set_store := TTS_VERIFY_CTX_set_store(GetOpenSSLProcAddress('TS_VERIFY_CTX_set_store'));
-  TS_VERIFY_CTX_set_certs := TTS_VERIFY_CTX_set_certs(GetOpenSSLProcAddress('TS_VERIFY_CTX_set_certs'));
+  TS_VERIFY_CTX_new := TTS_VERIFY_CTX_new(GetCryptoProcAddress('TS_VERIFY_CTX_new'));
+  TS_VERIFY_CTX_free := TTS_VERIFY_CTX_free(GetCryptoProcAddress('TS_VERIFY_CTX_free'));
+  TS_VERIFY_CTX_set_flags := TTS_VERIFY_CTX_set_flags(GetCryptoProcAddress('TS_VERIFY_CTX_set_flags'));
+  TS_VERIFY_CTX_set_store := TTS_VERIFY_CTX_set_store(GetCryptoProcAddress('TS_VERIFY_CTX_set_store'));
+  TS_VERIFY_CTX_set_certs := TTS_VERIFY_CTX_set_certs(GetCryptoProcAddress('TS_VERIFY_CTX_set_certs'));
 end;
 
 procedure UnloadTSFunctions;
 begin
-  // 重置所有函数指针
+  // 重置所有函数指�?
   TS_MSG_IMPRINT_new := nil;
   TS_MSG_IMPRINT_free := nil;
   TS_REQ_new := nil;
@@ -566,8 +572,8 @@ begin
       MsgImprint := TS_MSG_IMPRINT_new();
       if MsgImprint <> nil then
       begin
-        // TODO: 计算数据哈希并设置
-        // 这里需要 EVP 函数来计算 SHA-256
+        // TODO: 计算数据哈希并设�?
+        // 这里需�?EVP 函数来计�?SHA-256
         
         // 设置消息印记
         if Assigned(TS_REQ_set_msg_imprint) then
@@ -578,10 +584,10 @@ begin
     // 设置策略 OID（如果提供）
     if (PolicyOID <> '') and Assigned(TS_REQ_set_policy_id) then
     begin
-      // TODO: 将字符串 OID 转换为 ASN1_OBJECT
+      // TODO: 将字符串 OID 转换�?ASN1_OBJECT
     end;
     
-    // 设置 nonce（随机数）
+    // 设置 nonce（随机数�?
     // TODO: 生成随机数并设置
     
     // 请求包含证书
@@ -608,20 +614,20 @@ begin
   if not Assigned(TS_RESP_get_status_info) or not Assigned(TS_STATUS_INFO_get0_status) then
     Exit;
   
-  // 检查响应状态
+  // 检查响应状�?
   StatusInfo := TS_RESP_get_status_info(Response);
   if StatusInfo = nil then Exit;
   
   Status := TS_STATUS_INFO_get0_status(StatusInfo);
   if Status = nil then Exit;
   
-  // TODO: 获取状态值并检查
+  // TODO: 获取状态值并检�?
   // StatusValue := ASN1_INTEGER_get(Status);
   // if (StatusValue <> TS_STATUS_GRANTED) and 
   //    (StatusValue <> TS_STATUS_GRANTED_WITH_MODS) then
   //   Exit;
   
-  // 创建验证上下文
+  // 创建验证上下�?
   if not Assigned(TS_VERIFY_CTX_new) then Exit;
   
   VerifyCtx := TS_VERIFY_CTX_new();
@@ -664,7 +670,7 @@ begin
   GenTime := TS_TST_INFO_get_time(TstInfo);
   if GenTime = nil then Exit;
   
-  // TODO: 转换 ASN1_GENERALIZEDTIME 为 TDateTime
+  // TODO: 转换 ASN1_GENERALIZEDTIME �?TDateTime
   // 需要解析时间字符串格式：YYYYMMDDhhmmss[.fff]Z
 end;
 

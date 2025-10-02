@@ -569,6 +569,7 @@ function GetOpenSSLVersionString: string;
 // Helper functions for module loading
 function IsCryptoLibraryLoaded: Boolean;
 function GetCryptoProcAddress(const ProcName: string): Pointer;
+function GetSSLProcAddress(const ProcName: string): Pointer;
 
 implementation
 
@@ -807,6 +808,13 @@ begin
   Result := nil;
   if LibCryptoHandle <> NilHandle then
     Result := GetProcedureAddress(LibCryptoHandle, PChar(ProcName));
+end;
+
+function GetSSLProcAddress(const ProcName: string): Pointer;
+begin
+  Result := nil;
+  if LibSSLHandle <> NilHandle then
+    Result := GetProcedureAddress(LibSSLHandle, PChar(ProcName));
 end;
 
 function GetOpenSSLVersion: TOpenSSLVersion;

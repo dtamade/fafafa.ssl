@@ -9,7 +9,8 @@ uses
   SysUtils, Classes, dynlibs,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.consts,
-  fafafa.ssl.openssl.asn1;
+  fafafa.ssl.openssl.asn1,
+  fafafa.ssl.openssl.bio;
 
 type
   // PKCS7 类型定义
@@ -25,13 +26,20 @@ type
   PKCS7_ENVELOPE = Pointer;
   PKCS7_SIGN_ENVELOPE = Pointer;
   PKCS7_DIGEST = Pointer;
-  PKCS7_ENCRYPT = Pointer;
+  PKCS7_ENCRYPTED_TYPE = Pointer;  // Renamed to avoid conflict
   PKCS7_ATTR_SIGN = Pointer;
   PKCS7_ATTR_VERIFY = Pointer;
+  
+  // Stack types
+  PSTACK_OF_PKCS7_SIGNER_INFO = POPENSSL_STACK;
+  PSTACK_OF_X509_ATTRIBUTE = POPENSSL_STACK;
+  PSTACK_OF_PKCS12_SAFEBAG = POPENSSL_STACK;
+  PPSTACK_OF_PKCS12_SAFEBAG = ^PSTACK_OF_PKCS12_SAFEBAG;
 
   // PKCS12 类型定义
   PKCS12 = Pointer;
   PPKCS12 = ^PKCS12;
+  PPPKCS12 = ^PPKCS12;
   PKCS12_MAC_DATA = Pointer;
   PKCS12_SAFEBAG = Pointer;
   PPKCS12_SAFEBAG = ^PKCS12_SAFEBAG;
@@ -256,8 +264,8 @@ var
   PKCS7_get0_signers: TPKCS7_get0_signers = nil;
 
   // PKCS7 加密操作
-  PKCS7_encrypt: TPKCS7_encrypt = nil;
-  PKCS7_decrypt: TPKCS7_decrypt = nil;
+  PKCS7_encrypt_func: TPKCS7_encrypt = nil;
+  PKCS7_decrypt_func: TPKCS7_decrypt = nil;
 
   // PKCS7 属性操作
   PKCS7_add_certificate: TPKCS7_add_certificate = nil;
@@ -266,7 +274,7 @@ var
   PKCS7_set_type: TPKCS7_set_type = nil;
   PKCS7_set_content: TPKCS7_set_content = nil;
   PKCS7_set_cipher: TPKCS7_set_cipher = nil;
-  PKCS7_stream: TPKCS7_stream = nil;
+  PKCS7_stream_func: TPKCS7_stream = nil;
 
   // PKCS7 数据访问
   PKCS7_get_signer_info: TPKCS7_get_signer_info = nil;
@@ -403,8 +411,8 @@ begin
   PKCS7_get0_signers := GetProcAddress(ACryptoLib, 'PKCS7_get0_signers');
 
   // 加载 PKCS7 加密操作
-  PKCS7_encrypt := GetProcAddress(ACryptoLib, 'PKCS7_encrypt');
-  PKCS7_decrypt := GetProcAddress(ACryptoLib, 'PKCS7_decrypt');
+  PKCS7_encrypt_func := TPKCS7_encrypt(GetProcAddress(ACryptoLib, 'PKCS7_encrypt'));
+  PKCS7_decrypt_func := TPKCS7_decrypt(GetProcAddress(ACryptoLib, 'PKCS7_decrypt'));
 
   // 加载 PKCS7 属性操作
   PKCS7_add_certificate := GetProcAddress(ACryptoLib, 'PKCS7_add_certificate');
@@ -413,7 +421,7 @@ begin
   PKCS7_set_type := GetProcAddress(ACryptoLib, 'PKCS7_set_type');
   PKCS7_set_content := GetProcAddress(ACryptoLib, 'PKCS7_set_content');
   PKCS7_set_cipher := GetProcAddress(ACryptoLib, 'PKCS7_set_cipher');
-  PKCS7_stream := GetProcAddress(ACryptoLib, 'PKCS7_stream');
+  PKCS7_stream_func := TPKCS7_stream(GetProcAddress(ACryptoLib, 'PKCS7_stream'));
 
   // 加载 PKCS7 数据访问
   PKCS7_get_signer_info := GetProcAddress(ACryptoLib, 'PKCS7_get_signer_info');
@@ -532,8 +540,8 @@ begin
   PKCS7_get0_signers := nil;
 
   // 清理 PKCS7 加密操作
-  PKCS7_encrypt := nil;
-  PKCS7_decrypt := nil;
+  PKCS7_encrypt_func := nil;
+  PKCS7_decrypt_func := nil;
 
   // 清理 PKCS7 属性操作
   PKCS7_add_certificate := nil;
@@ -542,7 +550,7 @@ begin
   PKCS7_set_type := nil;
   PKCS7_set_content := nil;
   PKCS7_set_cipher := nil;
-  PKCS7_stream := nil;
+  PKCS7_stream_func := nil;
 
   // 清理 PKCS7 数据访问
   PKCS7_get_signer_info := nil;

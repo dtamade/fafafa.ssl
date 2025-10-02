@@ -1,7 +1,7 @@
 unit fafafa.ssl.openssl.scrypt_whirlpool;
 
 {$mode ObjFPC}{$H+}
-{$I fafafa.ssl.openssl.inc}
+// {$I fafafa.ssl.openssl.inc}  // Include file not found, commented out
 
 interface
 
@@ -69,22 +69,40 @@ uses
   fafafa.ssl.openssl.utils;
 
 procedure LoadScryptWhirlpoolFunctions(AHandle: TLibHandle);
+type
+  TEVP_PBE_scrypt = function(const pass: PAnsiChar; passlen: NativeUInt;
+    const salt: PByte; saltlen: NativeUInt;
+    N: UInt64; r: UInt64; p: UInt64; maxmem: UInt64;
+    key: PByte; keylen: NativeUInt): Integer; cdecl;
+  TPKCS5_PBKDF2_HMAC = function(const pass: PAnsiChar; passlen: Integer;
+    const salt: PByte; saltlen: Integer;
+    iter: Integer; const digest: PEVP_MD;
+    keylen: Integer; output: PByte): Integer; cdecl;
+  TWHIRLPOOL_Init = function(c: PWHIRLPOOL_CTX): Integer; cdecl;
+  TWHIRLPOOL_Update = function(c: PWHIRLPOOL_CTX; const data: Pointer; 
+    len: NativeUInt): Integer; cdecl;
+  TWHIRLPOOL_Final = function(md: PByte; c: PWHIRLPOOL_CTX): Integer; cdecl;
+  TWHIRLPOOL = function(const data: PByte; count: NativeUInt; 
+    md: PByte): PByte; cdecl;
+  TWHIRLPOOL_BitUpdate = procedure(c: PWHIRLPOOL_CTX; const data: Pointer; 
+    len: NativeUInt); cdecl;
+  TEVP_whirlpool = function(): PEVP_MD; cdecl;
 begin
   if AHandle = 0 then Exit;
   
   // SCRYPT functions
-  EVP_PBE_scrypt := GetProcedureAddress(AHandle, 'EVP_PBE_scrypt');
-  PKCS5_PBKDF2_HMAC := GetProcedureAddress(AHandle, 'PKCS5_PBKDF2_HMAC');
+  EVP_PBE_scrypt := TEVP_PBE_scrypt(GetProcedureAddress(AHandle, 'EVP_PBE_scrypt'));
+  PKCS5_PBKDF2_HMAC := TPKCS5_PBKDF2_HMAC(GetProcedureAddress(AHandle, 'PKCS5_PBKDF2_HMAC'));
   
   // WHIRLPOOL functions
-  WHIRLPOOL_Init := GetProcedureAddress(AHandle, 'WHIRLPOOL_Init');
-  WHIRLPOOL_Update := GetProcedureAddress(AHandle, 'WHIRLPOOL_Update');
-  WHIRLPOOL_Final := GetProcedureAddress(AHandle, 'WHIRLPOOL_Final');
-  WHIRLPOOL := GetProcedureAddress(AHandle, 'WHIRLPOOL');
-  WHIRLPOOL_BitUpdate := GetProcedureAddress(AHandle, 'WHIRLPOOL_BitUpdate');
+  WHIRLPOOL_Init := TWHIRLPOOL_Init(GetProcedureAddress(AHandle, 'WHIRLPOOL_Init'));
+  WHIRLPOOL_Update := TWHIRLPOOL_Update(GetProcedureAddress(AHandle, 'WHIRLPOOL_Update'));
+  WHIRLPOOL_Final := TWHIRLPOOL_Final(GetProcedureAddress(AHandle, 'WHIRLPOOL_Final'));
+  WHIRLPOOL := TWHIRLPOOL(GetProcedureAddress(AHandle, 'WHIRLPOOL'));
+  WHIRLPOOL_BitUpdate := TWHIRLPOOL_BitUpdate(GetProcedureAddress(AHandle, 'WHIRLPOOL_BitUpdate'));
   
   // EVP functions
-  EVP_whirlpool := GetProcedureAddress(AHandle, 'EVP_whirlpool');
+  EVP_whirlpool := TEVP_whirlpool(GetProcedureAddress(AHandle, 'EVP_whirlpool'));
 end;
 
 procedure UnloadScryptWhirlpoolFunctions;
@@ -102,6 +120,7 @@ end;
 function ScryptHashPassword(const Password, Salt: string; 
   N: UInt64; r: UInt64; p: UInt64; KeyLen: Integer): TBytes;
 begin
+  Result := nil;
   SetLength(Result, KeyLen);
   if Assigned(EVP_PBE_scrypt) then
   begin
@@ -116,6 +135,7 @@ end;
 
 function WhirlpoolHash(const Data: TBytes): TBytes;
 begin
+  Result := nil;
   SetLength(Result, WHIRLPOOL_DIGEST_LENGTH);
   if Assigned(WHIRLPOOL) and (Length(Data) > 0) then
     WHIRLPOOL(@Data[0], Length(Data), @Result[0])
@@ -128,12 +148,16 @@ var
   Data: TBytes;
   Hash: TBytes;
   I: Integer;
+  HexStr: AnsiString;
+  UStr: UnicodeString;
 begin
-  Data := TEncoding.UTF8.GetBytes(S);
+  UStr := UnicodeString(S);
+  Data := TEncoding.UTF8.GetBytes(UStr);
   Hash := WhirlpoolHash(Data);
-  Result := '';
+  HexStr := '';
   for I := 0 to High(Hash) do
-    Result := Result + IntToHex(Hash[I], 2);
+    HexStr := HexStr + AnsiString(IntToHex(Hash[I], 2));
+  Result := string(HexStr);
 end;
 
 end.

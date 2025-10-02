@@ -45,6 +45,11 @@ const
   PKCS7_OP_GET_DETACHED_SIGNATURE = 2;
 
 type
+  // Pointer types for X509_ALGOR and ASN1_PCTX
+  PSTACK_OF_X509_ALGOR = POPENSSL_STACK;
+  PSTACK_OF_X509_ATTRIBUTE = POPENSSL_STACK;
+  PASN1_PCTX = Pointer;
+
   // PKCS7 structures (opaque in OpenSSL 1.1.0+)
   PKCS7 = record
     opaque_data: Pointer;
@@ -71,10 +76,10 @@ type
   end;
   PPKCS7_DIGEST = ^PKCS7_DIGEST;
   
-  PKCS7_ENCRYPT = record
+  PKCS7_ENCRYPTED = record
     opaque_data: Pointer;
   end;
-  PPKCS7_ENCRYPT = ^PKCS7_ENCRYPT;
+  PPKCS7_ENCRYPTED = ^PKCS7_ENCRYPTED;
   
   PKCS7_SIGNER_INFO = record
     opaque_data: Pointer;
@@ -185,7 +190,7 @@ var
   PKCS7_add_recipient: TPKCS7_add_recipient = nil;
   PKCS7_RECIP_INFO_set: TPKCS7_RECIP_INFO_set = nil;
   PKCS7_set_cipher: TPKCS7_set_cipher = nil;
-  PKCS7_stream: TPKCS7_stream = nil;
+  PKCS7_stream_func: TPKCS7_stream = nil;
   PKCS7_dataInit: TPKCS7_dataInit = nil;
   PKCS7_dataFinal: TPKCS7_dataFinal = nil;
   PKCS7_dataDecode: TPKCS7_dataDecode = nil;

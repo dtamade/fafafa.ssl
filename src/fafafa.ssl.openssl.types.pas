@@ -88,6 +88,8 @@ type
   PX509_LOOKUP_METHOD = Pointer;
   PX509_VERIFY_PARAM = Pointer;
   PPX509_VERIFY_PARAM = ^PX509_VERIFY_PARAM;
+  PX509_ALGOR = Pointer;
+  PPX509_ALGOR = ^PX509_ALGOR;
   
   // Stack types
   OPENSSL_STACK = record end;  // Generic stack structure

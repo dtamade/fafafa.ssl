@@ -146,7 +146,7 @@ begin
     if Length(AAD) > 0 then
     begin
       OutLen := 0;
-      if EVP_EncryptUpdate(Ctx, nil, @OutLen, PByte(@AAD[0]), Integer(Length(AAD))) <> 1 then
+      if EVP_EncryptUpdate(Ctx, nil, OutLen, PByte(@AAD[0]), Integer(Length(AAD))) <> 1 then
       begin
         Result.ErrorMessage := 'Failed to set AAD';
         Exit;
@@ -160,7 +160,7 @@ begin
     
     if Length(PlainText) > 0 then
     begin
-      if EVP_EncryptUpdate(Ctx, PByte(@TempBuffer[0]), @OutLen, PByte(@PlainText[0]), Integer(Length(PlainText))) <> 1 then
+      if EVP_EncryptUpdate(Ctx, PByte(@TempBuffer[0]), OutLen, PByte(@PlainText[0]), Integer(Length(PlainText))) <> 1 then
       begin
         Result.ErrorMessage := 'Failed to encrypt data';
         Exit;
@@ -169,7 +169,7 @@ begin
     end;
     
     // 完成加密
-    if EVP_EncryptFinal_ex(Ctx, PByte(@TempBuffer[TotalLen]), @OutLen) <> 1 then
+    if EVP_EncryptFinal_ex(Ctx, PByte(@TempBuffer[TotalLen]), OutLen) <> 1 then
     begin
       Result.ErrorMessage := 'Failed to finalize encryption';
       Exit;
@@ -287,7 +287,7 @@ begin
     if Length(AAD) > 0 then
     begin
       OutLen := 0;
-      if EVP_DecryptUpdate(Ctx, nil, @OutLen, PByte(@AAD[0]), Integer(Length(AAD))) <> 1 then
+      if EVP_DecryptUpdate(Ctx, nil, OutLen, PByte(@AAD[0]), Integer(Length(AAD))) <> 1 then
       begin
         Result.ErrorMessage := 'Failed to set AAD';
         Exit;
@@ -301,7 +301,7 @@ begin
     
     if Length(CipherText) > 0 then
     begin
-      if EVP_DecryptUpdate(Ctx, PByte(@TempBuffer[0]), @OutLen, PByte(@CipherText[0]), Integer(Length(CipherText))) <> 1 then
+      if EVP_DecryptUpdate(Ctx, PByte(@TempBuffer[0]), OutLen, PByte(@CipherText[0]), Integer(Length(CipherText))) <> 1 then
       begin
         Result.ErrorMessage := 'Failed to decrypt data';
         Exit;
@@ -320,7 +320,7 @@ begin
     end;
     
     // 完成解密（验证标签）
-    if EVP_DecryptFinal_ex(Ctx, PByte(@TempBuffer[TotalLen]), @OutLen) <> 1 then
+    if EVP_DecryptFinal_ex(Ctx, PByte(@TempBuffer[TotalLen]), OutLen) <> 1 then
     begin
       Result.ErrorMessage := 'Authentication failed - data may be corrupted or tampered';
       Exit;
@@ -395,7 +395,7 @@ begin
     if Length(AAD) > 0 then
     begin
       OutLen := 0;
-      if EVP_EncryptUpdate(Ctx, nil, @OutLen, PByte(@AAD[0]), Integer(Length(AAD))) <> 1 then
+      if EVP_EncryptUpdate(Ctx, nil, OutLen, PByte(@AAD[0]), Integer(Length(AAD))) <> 1 then
       begin
         Result.ErrorMessage := 'Failed to set AAD';
         Exit;
@@ -409,7 +409,7 @@ begin
     
     if Length(PlainText) > 0 then
     begin
-      if EVP_EncryptUpdate(Ctx, PByte(@TempBuffer[0]), @OutLen, PByte(@PlainText[0]), Integer(Length(PlainText))) <> 1 then
+      if EVP_EncryptUpdate(Ctx, PByte(@TempBuffer[0]), OutLen, PByte(@PlainText[0]), Integer(Length(PlainText))) <> 1 then
       begin
         Result.ErrorMessage := 'Failed to encrypt data';
         Exit;
@@ -417,7 +417,7 @@ begin
       TotalLen := OutLen;
     end;
     
-    if EVP_EncryptFinal_ex(Ctx, PByte(@TempBuffer[TotalLen]), @OutLen) <> 1 then
+    if EVP_EncryptFinal_ex(Ctx, PByte(@TempBuffer[TotalLen]), OutLen) <> 1 then
     begin
       Result.ErrorMessage := 'Failed to finalize encryption';
       Exit;
@@ -504,7 +504,7 @@ begin
     if Length(AAD) > 0 then
     begin
       OutLen := 0;
-      if EVP_DecryptUpdate(Ctx, nil, @OutLen, PByte(@AAD[0]), Integer(Length(AAD))) <> 1 then
+      if EVP_DecryptUpdate(Ctx, nil, OutLen, PByte(@AAD[0]), Integer(Length(AAD))) <> 1 then
       begin
         Result.ErrorMessage := 'Failed to set AAD';
         Exit;
@@ -517,7 +517,7 @@ begin
     
     if Length(CipherText) > 0 then
     begin
-      if EVP_DecryptUpdate(Ctx, PByte(@TempBuffer[0]), @OutLen, PByte(@CipherText[0]), Integer(Length(CipherText))) <> 1 then
+      if EVP_DecryptUpdate(Ctx, PByte(@TempBuffer[0]), OutLen, PByte(@CipherText[0]), Integer(Length(CipherText))) <> 1 then
       begin
         Result.ErrorMessage := 'Failed to decrypt data';
         Exit;
@@ -534,7 +534,7 @@ begin
       end;
     end;
     
-    if EVP_DecryptFinal_ex(Ctx, PByte(@TempBuffer[TotalLen]), @OutLen) <> 1 then
+    if EVP_DecryptFinal_ex(Ctx, PByte(@TempBuffer[TotalLen]), OutLen) <> 1 then
     begin
       Result.ErrorMessage := 'Authentication failed';
       Exit;

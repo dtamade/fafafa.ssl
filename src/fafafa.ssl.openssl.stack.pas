@@ -82,7 +82,8 @@ type
   Tsk_X509_pop = function(st: PSTACK_OF_X509): PX509; cdecl;
   Tsk_X509_shift = function(st: PSTACK_OF_X509): PX509; cdecl;
   Tsk_X509_unshift = function(st: PSTACK_OF_X509; val: PX509): Integer; cdecl;
-  Tsk_X509_pop_free = procedure(st: PSTACK_OF_X509; func: procedure(x: PX509); cdecl); cdecl;
+  TX509_free_func = procedure(x: PX509); cdecl;
+  Tsk_X509_pop_free = procedure(st: PSTACK_OF_X509; func: TX509_free_func); cdecl;
   
   Tsk_X509_CRL_new_null = function: PSTACK_OF_X509_CRL; cdecl;
   Tsk_X509_CRL_free = procedure(st: PSTACK_OF_X509_CRL); cdecl;

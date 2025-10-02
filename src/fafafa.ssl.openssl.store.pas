@@ -130,7 +130,7 @@ type
                                ui_data: Pointer; params: Pointer;
                                post_process: TOSSL_STORE_post_process_info_fn;
                                post_process_data: Pointer): POSSL_STORE_CTX; cdecl;
-  TOSSL_STORE_ctrl = function(ctx: POSSL_STORE_CTX; cmd: Integer; ...): Integer; cdecl;
+  TOSSL_STORE_ctrl = function(ctx: POSSL_STORE_CTX; cmd: Integer): Integer; cdecl; varargs;
   TOSSL_STORE_vctrl = function(ctx: POSSL_STORE_CTX; cmd: Integer; args: Pointer): Integer; cdecl;
   TOSSL_STORE_load = function(ctx: POSSL_STORE_CTX): POSSL_STORE_INFO; cdecl;
   TOSSL_STORE_eof = function(ctx: POSSL_STORE_CTX): Integer; cdecl;
@@ -272,10 +272,10 @@ var
   OSSL_STORE_SEARCH_get0_digest: TOSSL_STORE_SEARCH_get0_digest;
   
   // OSSL_STORE_SEARCH 创建函数
-  OSSL_STORE_SEARCH_by_name: TOSSL_STORE_SEARCH_by_name;
-  OSSL_STORE_SEARCH_by_issuer_serial: TOSSL_STORE_SEARCH_by_issuer_serial;
-  OSSL_STORE_SEARCH_by_key_fingerprint: TOSSL_STORE_SEARCH_by_key_fingerprint;
-  OSSL_STORE_SEARCH_by_alias: TOSSL_STORE_SEARCH_by_alias;
+  OSSL_STORE_SEARCH_by_name_func: TOSSL_STORE_SEARCH_by_name;
+  OSSL_STORE_SEARCH_by_issuer_serial_func: TOSSL_STORE_SEARCH_by_issuer_serial;
+  OSSL_STORE_SEARCH_by_key_fingerprint_func: TOSSL_STORE_SEARCH_by_key_fingerprint;
+  OSSL_STORE_SEARCH_by_alias_func: TOSSL_STORE_SEARCH_by_alias;
   
   // OSSL_STORE_LOADER 函数
   OSSL_STORE_LOADER_new: TOSSL_STORE_LOADER_new;
@@ -313,7 +313,7 @@ uses
 
 procedure LoadSTOREFunctions;
 begin
-  if not OpenSSLLoaded then Exit;
+  if not IsOpenSSLCoreLoaded then Exit;
   
   // OSSL_STORE_CTX 函数
   OSSL_STORE_open := TOSSL_STORE_open(GetCryptoProcAddress('OSSL_STORE_open'));
@@ -369,10 +369,10 @@ begin
   OSSL_STORE_SEARCH_get0_digest := TOSSL_STORE_SEARCH_get0_digest(GetCryptoProcAddress('OSSL_STORE_SEARCH_get0_digest'));
   
   // OSSL_STORE_SEARCH 创建函数
-  OSSL_STORE_SEARCH_by_name := TOSSL_STORE_SEARCH_by_name(GetCryptoProcAddress('OSSL_STORE_SEARCH_by_name'));
-  OSSL_STORE_SEARCH_by_issuer_serial := TOSSL_STORE_SEARCH_by_issuer_serial(GetCryptoProcAddress('OSSL_STORE_SEARCH_by_issuer_serial'));
-  OSSL_STORE_SEARCH_by_key_fingerprint := TOSSL_STORE_SEARCH_by_key_fingerprint(GetCryptoProcAddress('OSSL_STORE_SEARCH_by_key_fingerprint'));
-  OSSL_STORE_SEARCH_by_alias := TOSSL_STORE_SEARCH_by_alias(GetCryptoProcAddress('OSSL_STORE_SEARCH_by_alias'));
+  OSSL_STORE_SEARCH_by_name_func := TOSSL_STORE_SEARCH_by_name(GetCryptoProcAddress('OSSL_STORE_SEARCH_by_name'));
+  OSSL_STORE_SEARCH_by_issuer_serial_func := TOSSL_STORE_SEARCH_by_issuer_serial(GetCryptoProcAddress('OSSL_STORE_SEARCH_by_issuer_serial'));
+  OSSL_STORE_SEARCH_by_key_fingerprint_func := TOSSL_STORE_SEARCH_by_key_fingerprint(GetCryptoProcAddress('OSSL_STORE_SEARCH_by_key_fingerprint'));
+  OSSL_STORE_SEARCH_by_alias_func := TOSSL_STORE_SEARCH_by_alias(GetCryptoProcAddress('OSSL_STORE_SEARCH_by_alias'));
   
   // OSSL_STORE_LOADER 函数
   OSSL_STORE_LOADER_new := TOSSL_STORE_LOADER_new(GetCryptoProcAddress('OSSL_STORE_LOADER_new'));
@@ -399,7 +399,7 @@ begin
   OSSL_STORE_INFO_get0_PKEY := nil;
   OSSL_STORE_INFO_free := nil;
   OSSL_STORE_SEARCH_free := nil;
-  OSSL_STORE_SEARCH_by_alias := nil;
+  OSSL_STORE_SEARCH_by_alias_func := nil;
   OSSL_STORE_LOADER_new := nil;
   OSSL_STORE_LOADER_free := nil;
 end;
@@ -628,9 +628,9 @@ begin
   
   try
     // 创建按别名搜索
-    if Assigned(OSSL_STORE_SEARCH_by_alias) and Assigned(OSSL_STORE_find) then
+    if Assigned(OSSL_STORE_SEARCH_by_alias_func) and Assigned(OSSL_STORE_find) then
     begin
-      Search := OSSL_STORE_SEARCH_by_alias(PAnsiChar(AliasAnsi));
+      Search := OSSL_STORE_SEARCH_by_alias_func(PAnsiChar(AliasAnsi));
       if Search <> nil then
       begin
         try

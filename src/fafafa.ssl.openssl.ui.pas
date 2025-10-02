@@ -107,7 +107,7 @@ type
   
   // UI 处理函数
   TUI_process = function(ui: PUI): Integer; cdecl;
-  TUI_ctrl = function(ui: PUI; cmd: Integer; i: Long; p: Pointer; f: Pointer): Integer; cdecl;
+  TUI_ctrl = function(ui: PUI; cmd: Integer; i: LongInt; p: Pointer; f: Pointer): Integer; cdecl;
   
   // UI 工具函数
   TUI_set_ex_data = function(ui: PUI; idx: Integer; data: Pointer): Integer; cdecl;
@@ -145,7 +145,7 @@ type
   TUI_get_input_flags = function(uis: PUI_STRING): Integer; cdecl;
   TUI_get0_output_string = function(uis: PUI_STRING): PAnsiChar; cdecl;
   TUI_get0_action_string = function(uis: PUI_STRING): PAnsiChar; cdecl;
-  TUI_get0_result_string = function(uis: PUI_STRING): PAnsiChar; cdecl;
+  TUI_get0_result_string_str = function(uis: PUI_STRING): PAnsiChar; cdecl;  // Renamed to avoid conflict
   TUI_get0_test_string = function(uis: PUI_STRING): PAnsiChar; cdecl;
   TUI_get_result_min_size = function(uis: PUI_STRING): Integer; cdecl;
   TUI_get_result_max_size = function(uis: PUI_STRING): Integer; cdecl;
@@ -229,7 +229,7 @@ var
   UI_get_input_flags: TUI_get_input_flags;
   UI_get0_output_string: TUI_get0_output_string;
   UI_get0_action_string: TUI_get0_action_string;
-  UI_get0_result_string: TUI_get0_result_string;
+  UI_get0_result_string_str: TUI_get0_result_string_str;  // Renamed variable
   UI_get0_test_string: TUI_get0_test_string;
   UI_get_result_min_size: TUI_get_result_min_size;
   UI_get_result_max_size: TUI_get_result_max_size;
@@ -260,7 +260,7 @@ var
 
 procedure LoadUIFunctions;
 begin
-  if not OpenSSLLoaded then Exit;
+  if not IsOpenSSLCoreLoaded then Exit;
   
   // UI 基本函数
   UI_new := TUI_new(GetCryptoProcAddress('UI_new'));
@@ -319,7 +319,7 @@ begin
   UI_get_input_flags := TUI_get_input_flags(GetCryptoProcAddress('UI_get_input_flags'));
   UI_get0_output_string := TUI_get0_output_string(GetCryptoProcAddress('UI_get0_output_string'));
   UI_get0_action_string := TUI_get0_action_string(GetCryptoProcAddress('UI_get0_action_string'));
-  UI_get0_result_string := TUI_get0_result_string(GetCryptoProcAddress('UI_get0_result_string'));
+  UI_get0_result_string_str := TUI_get0_result_string_str(GetCryptoProcAddress('UI_get0_result_string'));
   UI_get0_test_string := TUI_get0_test_string(GetCryptoProcAddress('UI_get0_test_string'));
   UI_get_result_min_size := TUI_get_result_min_size(GetCryptoProcAddress('UI_get_result_min_size'));
   UI_get_result_max_size := TUI_get_result_max_size(GetCryptoProcAddress('UI_get_result_max_size'));
@@ -504,6 +504,7 @@ var
   UIMethod: PUI_METHOD;
   PromptAnsi: AnsiString;
   ResultBuf: array[0..1023] of AnsiChar;
+  ResultPtr: PAnsiChar;
 begin
   Result := '';
   
@@ -542,7 +543,7 @@ begin
     // 获取结果
     if Assigned(UI_get0_result) then
     begin
-      var ResultPtr := UI_get0_result(UI, 0);
+      ResultPtr := UI_get0_result(UI, 0);
       if ResultPtr <> nil then
         Result := string(ResultPtr);
     end

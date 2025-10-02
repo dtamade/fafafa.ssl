@@ -290,10 +290,18 @@ var
   BIO_new_mem_buf: TBIO_new_mem_buf = nil;
   BIO_new_file: TBIO_new_file = nil;
   BIO_s_file: TBIO_s_file = nil;
+  BIO_s_null: TBIO_s_null = nil;
+  BIO_get_mem_data: TBIO_get_mem_data = nil;
+  BIO_new_connect: TBIO_new_connect = nil;
+  BIO_s_connect: TBIO_s_connect = nil;
   
 procedure LoadOpenSSLBIO;
 procedure UnloadOpenSSLBIO;
 function IsOpenSSLBIOLoaded: Boolean;
+
+{ Helper functions for BIO connection operations }
+function BIO_set_conn_port(b: PBIO; const port: PAnsiChar): clong;
+function BIO_do_connect(b: PBIO): clong;
 
 implementation
 
@@ -326,6 +334,10 @@ begin
   BIO_new_mem_buf := TBIO_new_mem_buf(GetProcedureAddress(LibCrypto, 'BIO_new_mem_buf'));
   BIO_new_file := TBIO_new_file(GetProcedureAddress(LibCrypto, 'BIO_new_file'));
   BIO_s_file := TBIO_s_file(GetProcedureAddress(LibCrypto, 'BIO_s_file'));
+  BIO_s_null := TBIO_s_null(GetProcedureAddress(LibCrypto, 'BIO_s_null'));
+  BIO_get_mem_data := TBIO_get_mem_data(GetProcedureAddress(LibCrypto, 'BIO_get_mem_data'));
+  BIO_new_connect := TBIO_new_connect(GetProcedureAddress(LibCrypto, 'BIO_new_connect'));
+  BIO_s_connect := TBIO_s_connect(GetProcedureAddress(LibCrypto, 'BIO_s_connect'));
 end;
 
 procedure UnloadOpenSSLBIO;
@@ -341,11 +353,36 @@ begin
   BIO_new_mem_buf := nil;
   BIO_new_file := nil;
   BIO_s_file := nil;
+  BIO_s_null := nil;
+  BIO_get_mem_data := nil;
+  BIO_new_connect := nil;
+  BIO_s_connect := nil;
 end;
 
 function IsOpenSSLBIOLoaded: Boolean;
 begin
   Result := IsOpenSSLCoreLoaded;  // Depends on core being loaded
+end;
+
+{ Helper functions for BIO connection operations }
+function BIO_set_conn_port(b: PBIO; const port: PAnsiChar): clong;
+const
+  BIO_C_SET_CONNECT = 100;
+begin
+  if Assigned(BIO_ctrl) then
+    Result := BIO_ctrl(b, BIO_C_SET_CONNECT, 1, Pointer(port))
+  else
+    Result := -1;
+end;
+
+function BIO_do_connect(b: PBIO): clong;
+const
+  BIO_C_DO_STATE_MACHINE = 101;
+begin
+  if Assigned(BIO_ctrl) then
+    Result := BIO_ctrl(b, BIO_C_DO_STATE_MACHINE, 0, nil)
+  else
+    Result := -1;
 end;
 
 end.

@@ -27,9 +27,9 @@ Systematically test all 72 OpenSSL modules based on their dependencies and impor
 
 **New Tests Added**:
 
-### Completed Tests (19 modules) - Updated
+### Completed Tests (21 modules) - Updated
 
-**Note**: Reached 26.4% coverage milestone! 🎉
+**Note**: Reached 29.2% coverage milestone! 🎉
 
 | Module | Test File | Tests | Status | Notes |
 |--------|-----------|-------|--------|-------|
@@ -39,6 +39,8 @@ Systematically test all 72 OpenSSL modules based on their dependencies and impor
 | ARIA | test_aria.lpr | 7 | ℹ️ 7/7 (N/A) | ARIA cipher (not available in OpenSSL 3.x) |
 | KDF | test_kdf.lpr | 23 | ⚠️ 20/23 | Key derivation (PBKDF2, scrypt) |
 | CMAC | test_cmac.lpr | 12 | ⚠️ 5/12 | CMAC deprecated in OpenSSL 3.x, needs EVP_MAC |
+| BLAKE2 | test_blake2.pas | 4 | ✅ PASS | BLAKE2b/BLAKE2s hash functions via EVP API |
+| SHA3 | test_sha3_simple.pas | 1 | ✅ PASS | SHA3-256 verified via EVP_MD_fetch (Phase 1 fix confirmed) |
 
 ### Tests Created - Pending Fix (1 module)
 
@@ -94,15 +96,15 @@ Systematically test all 72 OpenSSL modules based on their dependencies and impor
 33. **UI** - User interaction
 34. **CONF** - Configuration files
 
-#### Priority 4 - Chinese Crypto and Advanced Modules (12 modules)
+#### Priority 4 - Chinese Crypto and Advanced Modules (11 modules)
 35. **SM2** - SM2 elliptic curve
 36. **SM3** - SM3 hash
 37. **SM4** - SM4 block cipher
-38. **SHA3** - SHA-3/SHAKE
-39. **BLAKE2** - BLAKE2 hash
+38. ~~**SHA3** - SHA-3/SHAKE~~ (✅ Tested - verified working)
+39. ~~**BLAKE2** - BLAKE2 hash~~ (✅ Tested - 4/4 passing)
 40. **RIPEMD** - RIPEMD hash
 41. **MDC2** - MDC2 hash
-42. **KDF** - Key derivation functions
+42. ~~**KDF** - Key derivation functions~~ (✅ Tested - 20/23 passing)
 43. **SCRYPT** - SCrypt algorithm
 44. **ENGINE** - Hardware acceleration
 45. **ASYNC** - Async operations
@@ -155,9 +157,9 @@ Systematically test all 72 OpenSSL modules based on their dependencies and impor
 
 ## Current Progress
 
-- **Tested**: 19/72 (26.4%) 🎯
-- **Test Cases**: 176 total (standardized format)
-- **Pass Rate**: 93.2% (164/176)
+- **Tested**: 21/72 (29.2%) 🎯
+- **Test Cases**: 181 total (standardized format)
+- **Pass Rate**: 94.5% (171/181)
 - **Status**: Core OpenSSL modules tested and working
 - **Note**: Some modules (CMAC) deprecated in OpenSSL 3.x
 - **Tests Created**: +2 (ECDSA, Version Detection - pending OpenSSL compatibility fix)
@@ -177,6 +179,7 @@ Systematically test all 72 OpenSSL modules based on their dependencies and impor
   - ✅ DES module: DES_LONG type definition (fixed - was constant, should be type)
   - ✅ SEED module: duplicate identifiers (fixed - renamed function pointers)
   - ✅ ARIA module: duplicate identifiers and missing include (fixed)
+  - ✅ BLAKE2 module: missing EVP function loading (fixed - added to LoadEVP)
   - ⚠️ BN module: 1/36 tests failing (modular exponentiation - 97.2% pass rate)
   - ⚠️ ECDSA module: OpenSSL version compatibility (runtime access violation)
   - ⚠️ DES module: 1/8 weak key test failing (OpenSSL version compatibility)

@@ -1,4 +1,4 @@
-unit fafafa.ssl.openssl.rand;
+unit fafafa.ssl.openssl.rand_old;
 
 {$mode objfpc}{$H+}
 

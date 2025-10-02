@@ -16,6 +16,7 @@ type
   PENGINE = ^ENGINE;
   PPENGINE = ^PENGINE;
   ENGINE_CMD_DEFN = Pointer;
+  PENGINE_CMD_DEFN = ^ENGINE_CMD_DEFN;
   ENGINE_GEN_FUNC_PTR = Pointer;
   ENGINE_CTRL_FUNC_PTR = Pointer;
   ENGINE_LOAD_KEY_PTR = Pointer;
@@ -23,6 +24,12 @@ type
   ENGINE_DIGESTS_PTR = Pointer;
   ENGINE_PKEY_METHS_PTR = Pointer;
   ENGINE_PKEY_ASN1_METHS_PTR = Pointer;
+  
+  // EVP PKEY 方法类型（如果types.pas中没有）
+  EVP_PKEY_METHOD = Pointer;
+  PEVP_PKEY_METHOD = ^EVP_PKEY_METHOD;
+  EVP_PKEY_ASN1_METHOD = Pointer;
+  PEVP_PKEY_ASN1_METHOD = ^EVP_PKEY_ASN1_METHOD;
 
   // UI 类型定义
   UI = Pointer;
@@ -216,7 +223,7 @@ var
   // Engine 控制
   ENGINE_ctrl: TENGINE_ctrl = nil;
   ENGINE_ctrl_cmd: TENGINE_ctrl_cmd = nil;
-  ENGINE_ctrl_cmd_string: TENGINE_ctrl_cmd_string = nil;
+  ENGINE_ctrl_cmd_string_func: TENGINE_ctrl_cmd_string = nil;
 
   // Engine 属性获取和设置
   ENGINE_get_id: TENGINE_get_id = nil;
@@ -342,7 +349,7 @@ begin
   // 加载 Engine 控制
   ENGINE_ctrl := GetProcAddress(ACryptoLib, 'ENGINE_ctrl');
   ENGINE_ctrl_cmd := GetProcAddress(ACryptoLib, 'ENGINE_ctrl_cmd');
-  ENGINE_ctrl_cmd_string := GetProcAddress(ACryptoLib, 'ENGINE_ctrl_cmd_string');
+  ENGINE_ctrl_cmd_string_func := GetProcAddress(ACryptoLib, 'ENGINE_ctrl_cmd_string');
 
   // 加载 Engine 属性获取和设置
   ENGINE_get_id := GetProcAddress(ACryptoLib, 'ENGINE_get_id');
@@ -454,7 +461,7 @@ begin
   // 清理 Engine 控制
   ENGINE_ctrl := nil;
   ENGINE_ctrl_cmd := nil;
-  ENGINE_ctrl_cmd_string := nil;
+  ENGINE_ctrl_cmd_string_func := nil;
 
   // 清理 Engine 属性获取和设置
   ENGINE_get_id := nil;
