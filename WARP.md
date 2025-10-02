@@ -6,10 +6,12 @@
 
 ## 📋 核心规范
 
-### 1. 基本原则
+### 1. Basic Principles
 
-#### 交流语言
-- 使用中文进行所有交流和文档编写
+#### Communication Language
+- **Output Language**: English for all code, comments, and documentation
+- **Reason**: Better compatibility, no encoding issues, universal readability
+- **Exception**: User-facing messages can be localized
 
 #### 专业态度
 - ⚠️ **不要过于顺从，要有自己的专业主见**
