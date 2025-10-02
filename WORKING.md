@@ -184,6 +184,145 @@
 
 ---
 
+## 2025-10-02 (Continued) - Mock Testing Infrastructure: EVP Digest Module
+
+### 📋 Work Overview
+
+Continued expansion of Mock testing infrastructure by adding comprehensive EVP digest (hash) operations support. Created 27 new unit tests covering 17 hash algorithms including SHA family, BLAKE2, and Chinese SM3 standard.
+
+### 🎯 Major Achievements
+
+#### EVP Digest Mock Implementation
+
+**Interface Design**:
+- ✅ `IEVPDigest` - Clean interface for hash operations
+- ✅ `TEVPDigestMock` - Full mock with incremental hashing support
+- ✅ `TEVPDigestReal` - Stub for real OpenSSL integration
+
+**Supported Algorithms** (17 algorithms):
+- **MD5**: 128-bit legacy hash
+- **SHA-1**: 160-bit legacy hash
+- **SHA-2 Family**: SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224, SHA-512/256
+- **SHA-3 Family**: SHA3-224, SHA3-256, SHA3-384, SHA3-512
+- **BLAKE2**: BLAKE2b-512, BLAKE2s-256
+- **SM3**: 256-bit Chinese standard (GB/T 32905-2016)
+- **RIPEMD-160**: 160-bit ISO standard
+
+#### Test Coverage
+
+**27 New Unit Tests** covering:
+
+1. **Single-shot Digest Tests** (8 tests)
+   - SHA-256, SHA-512, MD5
+   - BLAKE2b-512, SM3, SHA3-256
+   - Multi-algorithm size verification
+   - Empty data handling
+
+2. **Incremental Digest Tests** (8 tests)
+   - DigestInit state management
+   - DigestUpdate data accumulation
+   - DigestFinal hash computation
+   - Equivalence: Incremental ≡ One-shot
+
+3. **Error Handling Tests** (3 tests)
+   - Digest failure simulation
+   - Init failure simulation
+   - Update failure simulation
+
+4. **Parameter Validation Tests** (4 tests)
+   - Digest size queries (SHA-256: 32, SHA-512: 64)
+   - Block size queries (SHA-256: 64)
+   - Algorithm name resolution
+
+5. **Statistics Tracking Tests** (3 tests)
+   - Operation counting
+   - Update counting
+   - Statistics reset
+
+6. **Custom Output Tests** (1 test)
+   - Custom hash injection
+
+### 📊 Test Results
+
+```
+ Total Tests: 72 (16 core + 29 cipher + 27 digest)
+ Pass Rate: 100% (72/72)
+ Execution Time: 0.000 seconds
+ Errors: 0
+ Failures: 0
+```
+
+**Test Suite Breakdown**:
+- `TTestOpenSSLCoreMock`: 16/16 passed ✅
+- `TTestEVPCipherMock`: 29/29 passed ✅
+- `TTestEVPDigestMock`: 27/27 passed ✅
+
+### 🔧 Technical Implementation
+
+**Mock Features**:
+1. **Incremental Hashing Support**
+   - `DigestInit` - Initialize with algorithm
+   - `DigestUpdate` - Accumulate data chunks
+   - `DigestFinal` - Compute final hash
+   - Data accumulation buffer
+
+2. **Algorithm Coverage**
+   - 17 hash algorithms
+   - Correct digest sizes (16 to 64 bytes)
+   - Correct block sizes (64 to 144 bytes)
+   - Algorithm name resolution
+
+3. **Predictable Hash Generation**
+   - Based on input data pattern
+   - Formula: `Hash[i] = (i * 17 + Data[i mod DataLen]) mod 256`
+   - Deterministic and repeatable
+   - Enables roundtrip verification
+
+**Key Test**: Incremental ≡ One-shot
+```pascal
+// Both methods produce identical hash
+Hash1 := Digest(SHA256, FullData);
+
+DigestInit(SHA256);
+DigestUpdate(Part1);
+DigestUpdate(Part2);
+Hash2 := DigestFinal();
+
+Assert(Hash1 = Hash2);  // ✅ Passes
+```
+
+### 📁 Files Created
+
+1. **tests/mocks/openssl_evp_digest_interface.pas** (507 lines)
+   - Interface definitions
+   - Mock implementation with data accumulation
+   - Real implementation stub
+
+2. **tests/unit/test_evp_digest_mock.pas** (563 lines)
+   - 27 comprehensive test cases
+   - Helper methods for test data
+   - Incremental/One-shot equivalence tests
+
+### 📊 Cumulative Statistics
+
+**Mock Testing Coverage**:
+- **Core Module**: 16 tests
+- **EVP Cipher Module**: 29 tests
+- **EVP Digest Module**: 27 tests
+- **Total**: 72 tests (100% passing)
+
+**Code Metrics**:
+- **Mock code**: ~2,350 lines (633 + 507 + ...)
+- **Test code**: ~2,380 lines (596 + 563 + ...)
+- **Total session code**: ~4,730 lines
+
+**Algorithm Coverage**:
+- **Symmetric Ciphers**: 9 algorithms (AES, ChaCha20, Camellia, SM4)
+- **Hash Functions**: 17 algorithms (SHA, BLAKE2, SM3, etc.)
+- **Total Algorithms**: 26 algorithms
+
+---
+
 ## 2025-10-02 - Mock Testing Infrastructure Expansion: EVP Cipher Module
 
 ### 📋 Work Overview
@@ -321,7 +460,7 @@ Extended the Mock testing infrastructure with comprehensive EVP cipher operation
 ### 🔄 Next Steps
 
 **Immediate** (Current Session):
-- [ ] Create EVP Digest (Hash) Mock interface and tests
+- [x] Create EVP Digest (Hash) Mock interface and tests ✅ **Completed**
 - [ ] Create HMAC Mock interface and tests
 
 **Short-term** (This Week):
