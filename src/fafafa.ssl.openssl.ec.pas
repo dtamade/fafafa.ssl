@@ -320,6 +320,7 @@ var
   EC_POINT_add: TEC_POINT_add = nil;
   EC_POINT_dbl: TEC_POINT_dbl = nil;
   EC_POINT_mul: TEC_POINT_mul = nil;
+  EC_POINT_cmp: TEC_POINT_cmp = nil;
   
   // ... declare all other function pointers
 
@@ -386,6 +387,7 @@ begin
   EC_POINT_add := GetProcAddress(ALibHandle, 'EC_POINT_add');
   EC_POINT_dbl := GetProcAddress(ALibHandle, 'EC_POINT_dbl');
   EC_POINT_mul := GetProcAddress(ALibHandle, 'EC_POINT_mul');
+  EC_POINT_cmp := GetProcAddress(ALibHandle, 'EC_POINT_cmp');
   
   // ... load all other functions
   

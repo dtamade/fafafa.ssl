@@ -345,6 +345,7 @@ var
   outlen, finlen: Integer;
   KeyPtr, IVPtr, AADPtr, PlainPtr, ResultPtr, TagPtr: PByte;
 begin
+  Result := nil;
   // Note: EVP functions are loaded automatically through fafafa.ssl.openssl.api
     
   // Select cipher based on key size
@@ -393,16 +394,16 @@ begin
     // Process AAD if provided
     if Length(AAD) > 0 then
     begin
-      if EVP_EncryptUpdate(ctx, nil, @outlen, AADPtr, Integer(Length(AAD))) <> 1 then
+      if EVP_EncryptUpdate(ctx, nil, outlen, AADPtr, Integer(Length(AAD))) <> 1 then
         raise Exception.Create('Failed to process AAD');
     end;
     
     // Encrypt plaintext
-    if EVP_EncryptUpdate(ctx, ResultPtr, @outlen, PlainPtr, Integer(Length(Plaintext))) <> 1 then
+    if EVP_EncryptUpdate(ctx, ResultPtr, outlen, PlainPtr, Integer(Length(Plaintext))) <> 1 then
       raise Exception.Create('Failed to encrypt');
       
     // Finalize
-    if EVP_EncryptFinal_ex(ctx, PByte(PtrUInt(ResultPtr) + PtrUInt(outlen)), @finlen) <> 1 then
+    if EVP_EncryptFinal_ex(ctx, PByte(PtrUInt(ResultPtr) + PtrUInt(outlen)), finlen) <> 1 then
       raise Exception.Create('Failed to finalize encryption');
       
     SetLength(Result, outlen + finlen);
@@ -423,6 +424,7 @@ var
   outlen, finlen: Integer;
   KeyPtr, IVPtr, AADPtr, CipherPtr, ResultPtr, TagPtr: PByte;
 begin
+  Result := nil;
   // Note: EVP functions are loaded automatically through fafafa.ssl.openssl.api
     
   // Select cipher based on key size
@@ -473,12 +475,12 @@ begin
     // Process AAD if provided
     if Length(AAD) > 0 then
     begin
-      if EVP_DecryptUpdate(ctx, nil, @outlen, AADPtr, Integer(Length(AAD))) <> 1 then
+      if EVP_DecryptUpdate(ctx, nil, outlen, AADPtr, Integer(Length(AAD))) <> 1 then
         raise Exception.Create('Failed to process AAD');
     end;
     
     // Decrypt ciphertext
-    if EVP_DecryptUpdate(ctx, ResultPtr, @outlen, CipherPtr, Integer(Length(Ciphertext))) <> 1 then
+    if EVP_DecryptUpdate(ctx, ResultPtr, outlen, CipherPtr, Integer(Length(Ciphertext))) <> 1 then
       raise Exception.Create('Failed to decrypt');
     
     // Set expected tag
@@ -486,7 +488,7 @@ begin
       raise Exception.Create('Failed to set tag');
       
     // Verify tag and finalize
-    if EVP_DecryptFinal_ex(ctx, PByte(PtrUInt(ResultPtr) + PtrUInt(outlen)), @finlen) <> 1 then
+    if EVP_DecryptFinal_ex(ctx, PByte(PtrUInt(ResultPtr) + PtrUInt(outlen)), finlen) <> 1 then
       raise Exception.Create('Authentication verification failed');
       
     SetLength(Result, outlen + finlen);
@@ -503,6 +505,7 @@ var
   outlen, finlen: Integer;
   KeyPtr, NoncePtr, AADPtr, PlainPtr, ResultPtr, TagPtr: PByte;
 begin
+  Result := nil;
   // Note: EVP functions are loaded automatically through fafafa.ssl.openssl.api
     
   // Select cipher based on key size
@@ -547,22 +550,22 @@ begin
       raise Exception.Create('Failed to set key and nonce');
     
     // Set message length (required for CCM)
-    if EVP_EncryptUpdate(ctx, nil, @outlen, nil, Integer(Length(Plaintext))) <> 1 then
+    if EVP_EncryptUpdate(ctx, nil, outlen, nil, Integer(Length(Plaintext))) <> 1 then
       raise Exception.Create('Failed to set message length');
     
     // Process AAD if provided
     if Length(AAD) > 0 then
     begin
-      if EVP_EncryptUpdate(ctx, nil, @outlen, AADPtr, Integer(Length(AAD))) <> 1 then
+      if EVP_EncryptUpdate(ctx, nil, outlen, AADPtr, Integer(Length(AAD))) <> 1 then
         raise Exception.Create('Failed to process AAD');
     end;
     
     // Encrypt plaintext
-    if EVP_EncryptUpdate(ctx, ResultPtr, @outlen, PlainPtr, Integer(Length(Plaintext))) <> 1 then
+    if EVP_EncryptUpdate(ctx, ResultPtr, outlen, PlainPtr, Integer(Length(Plaintext))) <> 1 then
       raise Exception.Create('Failed to encrypt');
     
     // Finalize (no output for CCM)
-    if EVP_EncryptFinal_ex(ctx, PByte(PtrUInt(ResultPtr) + PtrUInt(outlen)), @finlen) <> 1 then
+    if EVP_EncryptFinal_ex(ctx, PByte(PtrUInt(ResultPtr) + PtrUInt(outlen)), finlen) <> 1 then
       raise Exception.Create('Failed to finalize encryption');
     
     // Get tag
@@ -580,6 +583,7 @@ var
   cipher: PEVP_CIPHER;
   outlen: Integer;
 begin
+  Result := nil;
   // Note: EVP functions are loaded automatically through fafafa.ssl.openssl.api
     
   // Select cipher based on key size
@@ -612,18 +616,18 @@ begin
       raise Exception.Create('Failed to set key and nonce');
     
     // Set message length (required for CCM)
-    if EVP_DecryptUpdate(ctx, nil, @outlen, nil, Length(Ciphertext)) <> 1 then
+    if EVP_DecryptUpdate(ctx, nil, outlen, nil, Length(Ciphertext)) <> 1 then
       raise Exception.Create('Failed to set message length');
     
     // Process AAD if provided
     if Length(AAD) > 0 then
     begin
-      if EVP_DecryptUpdate(ctx, nil, @outlen, @AAD[0], Length(AAD)) <> 1 then
+      if EVP_DecryptUpdate(ctx, nil, outlen, @AAD[0], Length(AAD)) <> 1 then
         raise Exception.Create('Failed to process AAD');
     end;
     
     // Decrypt and verify
-    if EVP_DecryptUpdate(ctx, @Result[0], @outlen, @Ciphertext[0], Length(Ciphertext)) <= 0 then
+    if EVP_DecryptUpdate(ctx, @Result[0], outlen, @Ciphertext[0], Length(Ciphertext)) <= 0 then
       raise Exception.Create('Decryption or authentication failed');
       
     SetLength(Result, outlen);
@@ -640,6 +644,7 @@ var
   combined_key: TBytes;
   outlen, finlen: Integer;
 begin
+  Result := nil;
   // XTS requires two keys
   if Length(Key1) <> Length(Key2) then
     raise Exception.Create('XTS requires two keys of same size');
@@ -665,10 +670,10 @@ begin
     if EVP_EncryptInit_ex(ctx, cipher, nil, @combined_key[0], @Tweak[0]) <> 1 then
       raise Exception.Create('Failed to initialize AES-XTS');
       
-    if EVP_EncryptUpdate(ctx, @Result[0], @outlen, @Plaintext[0], Length(Plaintext)) <> 1 then
+    if EVP_EncryptUpdate(ctx, @Result[0], outlen, @Plaintext[0], Length(Plaintext)) <> 1 then
       raise Exception.Create('Failed to encrypt with AES-XTS');
       
-    if EVP_EncryptFinal_ex(ctx, @Result[outlen], @finlen) <> 1 then
+    if EVP_EncryptFinal_ex(ctx, @Result[outlen], finlen) <> 1 then
       raise Exception.Create('Failed to finalize AES-XTS encryption');
       
     SetLength(Result, outlen + finlen);
@@ -685,6 +690,7 @@ var
   combined_key: TBytes;
   outlen, finlen: Integer;
 begin
+  Result := nil;
   // XTS requires two keys
   if Length(Key1) <> Length(Key2) then
     raise Exception.Create('XTS requires two keys of same size');
@@ -710,10 +716,10 @@ begin
     if EVP_DecryptInit_ex(ctx, cipher, nil, @combined_key[0], @Tweak[0]) <> 1 then
       raise Exception.Create('Failed to initialize AES-XTS');
       
-    if EVP_DecryptUpdate(ctx, @Result[0], @outlen, @Ciphertext[0], Length(Ciphertext)) <> 1 then
+    if EVP_DecryptUpdate(ctx, @Result[0], outlen, @Ciphertext[0], Length(Ciphertext)) <> 1 then
       raise Exception.Create('Failed to decrypt with AES-XTS');
       
-    if EVP_DecryptFinal_ex(ctx, @Result[outlen], @finlen) <> 1 then
+    if EVP_DecryptFinal_ex(ctx, @Result[outlen], finlen) <> 1 then
       raise Exception.Create('Failed to finalize AES-XTS decryption');
       
     SetLength(Result, outlen + finlen);
@@ -729,6 +735,7 @@ var
   cipher: PEVP_CIPHER;
   outlen, finlen: Integer;
 begin
+  Result := nil;
   // Note: EVP functions are loaded automatically through fafafa.ssl.openssl.api
     
   // Select cipher based on key size
@@ -767,16 +774,16 @@ begin
     // Process AAD if provided
     if Length(AAD) > 0 then
     begin
-      if EVP_EncryptUpdate(ctx, nil, @outlen, @AAD[0], Length(AAD)) <> 1 then
+      if EVP_EncryptUpdate(ctx, nil, outlen, @AAD[0], Length(AAD)) <> 1 then
         raise Exception.Create('Failed to process AAD');
     end;
     
     // Encrypt plaintext
-    if EVP_EncryptUpdate(ctx, @Result[0], @outlen, @Plaintext[0], Length(Plaintext)) <> 1 then
+    if EVP_EncryptUpdate(ctx, @Result[0], outlen, @Plaintext[0], Length(Plaintext)) <> 1 then
       raise Exception.Create('Failed to encrypt');
       
     // Finalize
-    if EVP_EncryptFinal_ex(ctx, @Result[outlen], @finlen) <> 1 then
+    if EVP_EncryptFinal_ex(ctx, @Result[outlen], finlen) <> 1 then
       raise Exception.Create('Failed to finalize encryption');
       
     SetLength(Result, outlen + finlen);
@@ -796,6 +803,7 @@ var
   cipher: PEVP_CIPHER;
   outlen, finlen: Integer;
 begin
+  Result := nil;
   // Note: EVP functions are loaded automatically through fafafa.ssl.openssl.api
     
   // Select cipher based on key size
@@ -836,16 +844,16 @@ begin
     // Process AAD if provided
     if Length(AAD) > 0 then
     begin
-      if EVP_DecryptUpdate(ctx, nil, @outlen, @AAD[0], Length(AAD)) <> 1 then
+      if EVP_DecryptUpdate(ctx, nil, outlen, @AAD[0], Length(AAD)) <> 1 then
         raise Exception.Create('Failed to process AAD');
     end;
     
     // Decrypt ciphertext
-    if EVP_DecryptUpdate(ctx, @Result[0], @outlen, @Ciphertext[0], Length(Ciphertext)) <> 1 then
+    if EVP_DecryptUpdate(ctx, @Result[0], outlen, @Ciphertext[0], Length(Ciphertext)) <> 1 then
       raise Exception.Create('Failed to decrypt');
       
     // Verify tag and finalize
-    if EVP_DecryptFinal_ex(ctx, @Result[outlen], @finlen) <> 1 then
+    if EVP_DecryptFinal_ex(ctx, @Result[outlen], finlen) <> 1 then
       raise Exception.Create('Authentication verification failed');
       
     SetLength(Result, outlen + finlen);
@@ -856,6 +864,7 @@ end;
 
 function AES_WrapKey(const KEK: TBytes; const Plaintext: TBytes): TBytes;
 begin
+  Result := nil;
   if not Assigned(AES_wrap_key) then
     raise Exception.Create('AES key wrap not available');
     
@@ -870,6 +879,7 @@ end;
 
 function AES_UnwrapKey(const KEK: TBytes; const Ciphertext: TBytes): TBytes;
 begin
+  Result := nil;
   if not Assigned(AES_unwrap_key) then
     raise Exception.Create('AES key unwrap not available');
     

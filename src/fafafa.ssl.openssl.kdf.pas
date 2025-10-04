@@ -341,6 +341,7 @@ var
   PassAnsi: AnsiString;
   OutKey: TBytes;
 begin
+  Result := nil;  // Initialize result
   SetLength(Result, 0);
   
   if not Assigned(PKCS5_PBKDF2_HMAC) then Exit;
@@ -383,6 +384,7 @@ var
   PassAnsi: AnsiString;
   OutKey: TBytes;
 begin
+  Result := nil;  // Initialize result
   SetLength(Result, 0);
   
   if not Assigned(EVP_PBE_scrypt) then Exit;
@@ -405,6 +407,7 @@ var
   KdfCtx: PEVP_KDF_CTX;
   OutKey: TBytes;
 begin
+  Result := nil;  // Initialize result
   SetLength(Result, 0);
   
   // 尝试使用 OpenSSL 3.0+ API
@@ -448,6 +451,7 @@ function GenerateSalt(Len: Integer): TBytes;
 var
   I: Integer;
 begin
+  Result := nil;  // Initialize result
   SetLength(Result, Len);
   
   // 使用 RAND 模块生成随机盐

@@ -449,7 +449,6 @@ begin
   
   if (Stack <> nil) and Assigned(OPENSSL_sk_value) then
     Result := OPENSSL_sk_value(Stack, Index);
-end;
 
 initialization
   

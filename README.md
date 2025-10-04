@@ -1,6 +1,18 @@
-# fafafa.ssl - Free Pascal / Lazarus OpenSSL 绑定库
+# fafafa.ssl - Free Pascal / Lazarus SSL/TLS 框架
 
-**fafafa.ssl** 是一个完整的 OpenSSL 3.x 绑定库，为 Free Pascal 和 Lazarus 提供全面的 SSL/TLS 和加密功能支持。
+## 🚨 重要：请先阅读 [READ_ME_FIRST.md](READ_ME_FIRST.md) 和 [PROJECT_VISION.md](PROJECT_VISION.md)
+
+> **注意**: fafafa.ssl **不仅仅是 OpenSSL 绑定**！  
+> 这是一个**多后端 SSL/TLS 抽象框架**，支持 OpenSSL、Windows Schannel (WinSSL)、MbedTLS 等多个后端。  
+> 
+> **核心优势**:  
+> ✅ Windows 应用**零依赖部署**（使用 WinSSL）  
+> ✅ **统一 API**，代码一次编写，多平台运行  
+> ✅ **企业友好**，自动集成 Windows 证书存储和安全策略
+
+---
+
+**fafafa.ssl** 为 Free Pascal 和 Lazarus 提供统一的 SSL/TLS API，支持多个加密库后端。
 
 ## 🎉 项目状态
 

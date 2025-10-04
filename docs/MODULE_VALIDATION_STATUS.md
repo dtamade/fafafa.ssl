@@ -6,12 +6,11 @@
 ---
 
 ## 📊 验证概览
-
 | 状态 | 模块数 | 百分比 |
 |------|--------|--------|
-| ✅ **完全验证** | 15 | 23% |
+| ✅ **完全验证** | 19 | 29% |
 | ⚠️ **部分验证** | 10 | 15% |
-| ❌ **未验证** | 32 | 49% |
+| ❌ **未验证** | 28 | 43% |
 | 🔧 **编译问题** | 8 | 12% |
 | **总计** | **65** | **100%** |
 
@@ -32,7 +31,7 @@
 | **types** | 间接验证 | ✅ | 3.4.1 |
 | **consts** | 间接验证 | ✅ | 3.4.1 |
 
-### P1 - 加密算法 (9个)
+### P1 - 加密算法 (13个)
 
 | 模块 | 测试文件 | 状态 | 备注 |
 |------|---------|------|------|
@@ -45,6 +44,10 @@
 | **evp (AEAD)** | diagnose_aead.pas | ✅ | GCM/CCM/XTS/OCB |
 | **evp (Hash)** | test_sha3_evp.pas | ✅ | EVP 哈希 |
 | **evp (MAC)** | test_cmac_evp.pas | ✅ | EVP MAC |
+| **bn** | test_bn_simple.pas | ✅ | 大数运算 |
+| **ecdsa** | test_ecdsa_simple.pas | ✅ | ECDSA 签名 |
+| **dsa** | test_dsa_simple.pas | ✅ | DSA 签名 |
+| **rsa** | test_rsa_comprehensive.pas | ✅ | RSA 加密/签名 |
 
 ---
 
@@ -71,20 +74,16 @@
 
 这些模块尚未进行任何测试：
 
-### P1 - 高频使用 (12个)
+### P1 - 高频使用 (8个)
 
-- **rsa** - RSA 公钥加密
 - **ec** - 椭圆曲线
 - **dh** - Diffie-Hellman 密钥交换
-- **dsa** - DSA 数字签名
-- **ecdsa** - ECDSA 签名
 - **ecdh** - ECDH 密钥交换
 - **x509v3** - X.509v3 证书扩展
 - **pkcs** - PKCS 标准
 - **pkcs7** - PKCS#7
 - **pkcs12** - PKCS#12
 - **blake2** - BLAKE2 哈希
-- **legacy_ciphers** - 旧式算法
 
 ### P2 - 常用功能 (10个)
 
@@ -93,10 +92,9 @@
 - **ts** - 时间戳
 - **scrypt_whirlpool** - Scrypt/Whirlpool
 
-### P3 - 辅助功能 (10个)
+### P3 - 辅助功能 (9个)
 
 - **asn1** - ASN.1 编解码
-- **bn** - 大数运算
 - **stack** - 堆栈数据结构
 - **lhash** - 哈希表
 - **buffer** - 缓冲区
@@ -247,12 +245,19 @@ Error: (5000) Identifier not found "PPASN1_GENERALIZEDTIME"
 
 ### Week 2 (2025-10-01 - 2025-10-08) 📝
 
+已完成:
+- [x] 验证 BN (大数运算) 模块 - 35/35 测试通过
+- [x] 验证 ECDSA 模块 - 16/16 测试通过
+- [x] 验证 DSA 模块 - 22/22 测试通过
+- [x] 验证 RSA 模块 - 20/21 测试通过
+
 计划任务:
 - [ ] 修复 modes.pas 编译问题
 - [ ] 修复 provider/engine/cms 编译问题
 - [ ] 创建 P0 核心模块完整测试
 - [ ] 开始 RSA/EC 模块验证
 
+**当前进度**: 19/65 模块 (29%)  
 **目标**: 25/65 模块 (38%)
 
 ### Week 3-4 (2025-10-09 - 2025-10-22) 📝
