@@ -5,8 +5,8 @@ program test_modes_basic;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.modes;
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.modes;
 
 function BytesToHex(const data: TBytes): string;
 var

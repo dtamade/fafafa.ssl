@@ -5,7 +5,7 @@ program test_aes_simple;
 uses
   SysUtils,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.aes;
+  fafafa.ssl.openssl.api.aes;
 
 begin
   WriteLn('========================================');

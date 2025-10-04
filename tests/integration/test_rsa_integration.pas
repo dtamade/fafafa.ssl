@@ -5,11 +5,11 @@ program test_rsa_integration;
 uses
   SysUtils, Classes,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.rsa,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.bn,
-  fafafa.ssl.openssl.pem,
-  fafafa.ssl.openssl.err;
+  fafafa.ssl.openssl.api.rsa,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.api.pem,
+  fafafa.ssl.openssl.api.err;
 
 var
   TestsPassed: Integer = 0;

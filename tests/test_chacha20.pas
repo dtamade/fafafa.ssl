@@ -5,7 +5,7 @@ program test_chacha20;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.evp;
+  fafafa.ssl.openssl.api.evp;
 
 type
   TTestResult = record

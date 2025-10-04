@@ -6,18 +6,18 @@ uses
   SysUtils,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.crypto,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.ssl,
-  fafafa.ssl.openssl.bio,
-  fafafa.ssl.openssl.err,
-  fafafa.ssl.openssl.rand,
-  fafafa.ssl.openssl.rsa,
-  fafafa.ssl.openssl.dh,
-  fafafa.ssl.openssl.dsa,
-  fafafa.ssl.openssl.ecdsa,
-  fafafa.ssl.openssl.ecdh,
-  fafafa.ssl.openssl.hmac;
+  fafafa.ssl.openssl.api.crypto,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.ssl,
+  fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.err,
+  fafafa.ssl.openssl.api.rand,
+  fafafa.ssl.openssl.api.rsa,
+  fafafa.ssl.openssl.api.dh,
+  fafafa.ssl.openssl.api.dsa,
+  fafafa.ssl.openssl.api.ecdsa,
+  fafafa.ssl.openssl.api.ecdh,
+  fafafa.ssl.openssl.api.hmac;
 
 type
   TModuleStatus = (msAvailable, msPartial, msNotAvailable, msDeprecated, msError);

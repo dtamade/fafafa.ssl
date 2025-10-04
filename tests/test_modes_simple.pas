@@ -5,7 +5,7 @@ program test_modes_simple;
 uses
   SysUtils,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.modes;
+  fafafa.ssl.openssl.api.modes;
 
 begin
   WriteLn('========================================');

@@ -8,8 +8,8 @@ uses
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.consts,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.dsa,
-  fafafa.ssl.openssl.bn;
+  fafafa.ssl.openssl.api.dsa,
+  fafafa.ssl.openssl.api.bn;
 
 var
   TotalTests: Integer = 0;

@@ -7,15 +7,15 @@ uses
   SysUtils, Classes, Windows,
   // OpenSSL 模块
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.err,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.rand,
-  fafafa.ssl.openssl.rsa,
-  fafafa.ssl.openssl.sha,
-  fafafa.ssl.openssl.aes,
-  fafafa.ssl.openssl.hmac,
-  fafafa.ssl.openssl.bio,
-  fafafa.ssl.openssl.pem;
+  fafafa.ssl.openssl.api.err,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.rand,
+  fafafa.ssl.openssl.api.rsa,
+  fafafa.ssl.openssl.api.sha,
+  fafafa.ssl.openssl.api.aes,
+  fafafa.ssl.openssl.api.hmac,
+  fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.pem;
 
 var
   LibCrypto: THandle;

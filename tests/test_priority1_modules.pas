@@ -7,30 +7,30 @@ uses
   // Core Infrastructure
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.consts,
-  fafafa.ssl.openssl.utils,
+  fafafa.ssl.openssl.api.utils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.err,
+  fafafa.ssl.openssl.api.err,
   // Crypto Core
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.bn,
-  fafafa.ssl.openssl.bio,
-  fafafa.ssl.openssl.rand,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.rand,
   // Hash
-  fafafa.ssl.openssl.md,
-  fafafa.ssl.openssl.sha,
+  fafafa.ssl.openssl.api.md,
+  fafafa.ssl.openssl.api.sha,
   fafafa.ssl.openssl.blake2,
   // Cipher
-  fafafa.ssl.openssl.aes,
-  fafafa.ssl.openssl.des,
+  fafafa.ssl.openssl.api.aes,
+  fafafa.ssl.openssl.api.des,
   fafafa.ssl.openssl.chacha,
   // MAC & KDF
-  fafafa.ssl.openssl.hmac,
-  fafafa.ssl.openssl.kdf,
+  fafafa.ssl.openssl.api.hmac,
+  fafafa.ssl.openssl.api.kdf,
   // AEAD
   fafafa.ssl.openssl.aead,
   // Advanced
-  fafafa.ssl.openssl.provider,
-  fafafa.ssl.openssl.crypto;
+  fafafa.ssl.openssl.api.provider,
+  fafafa.ssl.openssl.api.crypto;
 
 type
   TModuleTest = record

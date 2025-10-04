@@ -8,15 +8,15 @@ uses
   fafafa.ssl.openssl.legacy_ciphers,
   
   // Priority 3 - Advanced Features (2 modules)
-  fafafa.ssl.openssl.async,  // Fixed!
-  fafafa.ssl.openssl.comp,  // Fixed!
+  fafafa.ssl.openssl.api.async,  // Fixed!
+  fafafa.ssl.openssl.api.comp,  // Fixed!
   
   // Priority 3 - Utilities (5 modules)
   fafafa.ssl.openssl.txt_db,
-  fafafa.ssl.openssl.ui,  // Fixed in Priority 2!
-  fafafa.ssl.openssl.dso,
+  fafafa.ssl.openssl.api.ui,  // Fixed in Priority 2!
+  fafafa.ssl.openssl.api.dso,
   fafafa.ssl.openssl.srp;
-  //fafafa.ssl.openssl.rand_old;  // Needs type conversions
+  //fafafa.ssl.openssl.api.rand_old;  // Needs type conversions
 
 var
   TotalTests, PassedTests: Integer;

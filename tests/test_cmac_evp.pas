@@ -4,7 +4,7 @@ program test_cmac_evp;
 
 uses
   SysUtils, Dynlibs,
-  fafafa.ssl.openssl.cmac.evp;
+  fafafa.ssl.openssl.api.cmac.evp;
 
 function BytesToHex(const Bytes: TBytes): string;
 var

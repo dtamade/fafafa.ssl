@@ -5,7 +5,7 @@ program test_md_simple;
 uses
   SysUtils,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.md;
+  fafafa.ssl.openssl.api.md;
 
 begin
   WriteLn('========================================');

@@ -10,54 +10,54 @@ uses
   fafafa.ssl.openssl.consts,
   
   // 基础功能
-  fafafa.ssl.openssl.bio,
-  fafafa.ssl.openssl.err,
-  fafafa.ssl.openssl.rand,
-  fafafa.ssl.openssl.buffer,
+  fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.err,
+  fafafa.ssl.openssl.api.rand,
+  fafafa.ssl.openssl.api.buffer,
   
   // Hash 算法
-  fafafa.ssl.openssl.sha,
+  fafafa.ssl.openssl.api.sha,
   fafafa.ssl.openssl.blake2,
-  fafafa.ssl.openssl.sha3,
-  fafafa.ssl.openssl.sha3.evp,
+  fafafa.ssl.openssl.api.sha3,
+  fafafa.ssl.openssl.api.sha3.evp,
   
   // 对称加密
-  fafafa.ssl.openssl.aes,
-  fafafa.ssl.openssl.des,
+  fafafa.ssl.openssl.api.aes,
+  fafafa.ssl.openssl.api.des,
   fafafa.ssl.openssl.chacha,
   
   // MAC
-  fafafa.ssl.openssl.hmac,
-  fafafa.ssl.openssl.cmac.evp,
+  fafafa.ssl.openssl.api.hmac,
+  fafafa.ssl.openssl.api.cmac.evp,
   
   // 非对称加密
-  fafafa.ssl.openssl.bn,
-  fafafa.ssl.openssl.rsa,
-  fafafa.ssl.openssl.dsa,
-  fafafa.ssl.openssl.dh,
-  fafafa.ssl.openssl.ec,
-  fafafa.ssl.openssl.ecdh,
-  fafafa.ssl.openssl.ecdsa,
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.api.rsa,
+  fafafa.ssl.openssl.api.dsa,
+  fafafa.ssl.openssl.api.dh,
+  fafafa.ssl.openssl.api.ec,
+  fafafa.ssl.openssl.api.ecdh,
+  fafafa.ssl.openssl.api.ecdsa,
   
   // PKI
-  fafafa.ssl.openssl.asn1,
-  fafafa.ssl.openssl.pem,
-  fafafa.ssl.openssl.x509,
-  fafafa.ssl.openssl.x509v3,
+  fafafa.ssl.openssl.api.asn1,
+  fafafa.ssl.openssl.api.pem,
+  fafafa.ssl.openssl.api.x509,
+  fafafa.ssl.openssl.api.x509v3,
   
   // PKCS - 跳过,依赖有问题的stack模块
-  // fafafa.ssl.openssl.pkcs,
-  // fafafa.ssl.openssl.pkcs7,
-  // fafafa.ssl.openssl.pkcs12,
+  // fafafa.ssl.openssl.api.pkcs,
+  // fafafa.ssl.openssl.api.pkcs7,
+  // fafafa.ssl.openssl.api.pkcs12,
   
   // AEAD
   fafafa.ssl.openssl.aead,
   
   // KDF
-  fafafa.ssl.openssl.kdf,
+  fafafa.ssl.openssl.api.kdf,
   
   // EVP (高级接口)
-  fafafa.ssl.openssl.evp;
+  fafafa.ssl.openssl.api.evp;
 
 var
   TestsPassed, TestsFailed, TestsTotal: Integer;

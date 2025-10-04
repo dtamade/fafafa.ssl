@@ -6,7 +6,7 @@ uses
   SysUtils,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.evp;
+  fafafa.ssl.openssl.api.evp;
 
 type
   TTestResult = record

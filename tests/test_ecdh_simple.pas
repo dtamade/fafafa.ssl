@@ -5,7 +5,7 @@ program test_ecdh_simple;
 uses
   SysUtils,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.ecdh;
+  fafafa.ssl.openssl.api.ecdh;
 
 begin
   WriteLn('========================================');

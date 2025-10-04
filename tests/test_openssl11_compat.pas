@@ -13,7 +13,7 @@ uses
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.consts,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.evp;
+  fafafa.ssl.openssl.api.evp;
 
 var
   TotalTests, PassedTests, FailedTests: Integer;

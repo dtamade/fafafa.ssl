@@ -5,7 +5,7 @@ program test_algorithm_availability;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.evp;
+  fafafa.ssl.openssl.api.evp;
 
 var
   TotalAlgs, AvailableAlgs: Integer;

@@ -5,11 +5,11 @@ program test_modules_quick_validation;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.bn,
-  fafafa.ssl.openssl.bio,
-  fafafa.ssl.openssl.rand,
-  fafafa.ssl.openssl.err;
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.rand,
+  fafafa.ssl.openssl.api.err;
 
 type
   TModuleTest = record

@@ -3,7 +3,7 @@ program test_bio_comprehensive;
 {$mode objfpc}{$H+}
 
 uses
-  SysUtils, fafafa.ssl.openssl.api, fafafa.ssl.openssl.bio;
+  SysUtils, fafafa.ssl.openssl.api, fafafa.ssl.openssl.api.bio;
 
 var
   TestsPassed, TestsFailed: Integer;

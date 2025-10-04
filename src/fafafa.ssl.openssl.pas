@@ -9,9 +9,9 @@ uses
   fafafa.ssl.types,
   fafafa.ssl.intf,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.consts,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.bio;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.bio;
 
 type
   { TOpenSSLLibrary }
@@ -229,12 +229,12 @@ uses
   {$IFDEF MSWINDOWS}WinSock2, Windows,{$ENDIF}
   {$IFDEF UNIX}Sockets,{$ENDIF}
   fafafa.ssl.factory,
-  fafafa.ssl.openssl.bio,
-  fafafa.ssl.openssl.err,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.x509,
-  fafafa.ssl.openssl.ssl,
-  fafafa.ssl.openssl.core;
+  fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.err,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.x509,
+  fafafa.ssl.openssl.api.ssl,
+  fafafa.ssl.openssl.api.core;
 
 const
   {$IFNDEF MSWINDOWS}

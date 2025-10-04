@@ -25,10 +25,10 @@ uses
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.consts,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.hmac,
-  fafafa.ssl.openssl.rand,
-  fafafa.ssl.openssl.bn;
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.hmac,
+  fafafa.ssl.openssl.api.rand,
+  fafafa.ssl.openssl.api.bn;
 
 var
   TotalTests, PassedTests, FailedTests: Integer;
@@ -324,7 +324,7 @@ begin
   len := 0;
   try
     // Load HMAC functions
-    fafafa.ssl.openssl.hmac.LoadHMAC(GetCryptoLibHandle);
+    fafafa.ssl.openssl.api.hmac.LoadHMAC(GetCryptoLibHandle);
     
     key := 'secret';
     data := 'message';
@@ -358,7 +358,7 @@ begin
   Result := False;
   try
     // Load RAND functions
-    fafafa.ssl.openssl.rand.LoadRAND(GetCryptoLibHandle);
+    fafafa.ssl.openssl.api.rand.LoadRAND(GetCryptoLibHandle);
     
     FillByte(buffer, Length(buffer), 0);
     
@@ -387,7 +387,7 @@ begin
   Result := False;
   try
     // Load BN functions
-    fafafa.ssl.openssl.bn.LoadBN(GetCryptoLibHandle);
+    fafafa.ssl.openssl.api.bn.LoadBN(GetCryptoLibHandle);
     
     a := BN_new();
     b := BN_new();

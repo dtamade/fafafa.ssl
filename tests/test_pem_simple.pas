@@ -5,7 +5,7 @@ program test_pem_simple;
 uses
   SysUtils,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.pem;
+  fafafa.ssl.openssl.api.pem;
 
 begin
   WriteLn('========================================');

@@ -5,7 +5,7 @@ program test_sha_simple;
 uses
   SysUtils,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.sha;
+  fafafa.ssl.openssl.api.sha;
 
 begin
   WriteLn('========================================');

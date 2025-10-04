@@ -5,7 +5,7 @@ program test_dh_simple;
 uses
   SysUtils,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.dh;
+  fafafa.ssl.openssl.api.dh;
 
 begin
   WriteLn('========================================');

@@ -7,7 +7,7 @@ uses
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.consts,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.buffer;
+  fafafa.ssl.openssl.api.buffer;
 
 procedure PrintTestHeader(const TestName: string);
 begin

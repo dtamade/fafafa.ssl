@@ -6,7 +6,7 @@ uses
   SysUtils,
   fafafa.ssl.openssl.core,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.evp;
+  fafafa.ssl.openssl.api.evp;
 
 // Helper function to convert bytes to hex string
 function BytesToHex(const Data: array of Byte): string;

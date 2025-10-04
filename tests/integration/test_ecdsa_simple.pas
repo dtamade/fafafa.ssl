@@ -8,9 +8,9 @@ uses
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.consts,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.ec,
-  fafafa.ssl.openssl.ecdsa,
-  fafafa.ssl.openssl.bn;
+  fafafa.ssl.openssl.api.ec,
+  fafafa.ssl.openssl.api.ecdsa,
+  fafafa.ssl.openssl.api.bn;
 
 var
   TotalTests: Integer = 0;

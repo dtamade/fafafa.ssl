@@ -12,27 +12,27 @@ uses
   fafafa.ssl.openssl.scrypt_whirlpool,  // Fixed!
   
   // Priority 2 - PKI & Certificates (7 modules)
-  fafafa.ssl.openssl.pkcs,  // Fixed!
-  fafafa.ssl.openssl.pkcs7,  // Testing with fixed stack
-  fafafa.ssl.openssl.pkcs12,  // Testing with fixed type casts
-  fafafa.ssl.openssl.cms,  // Fixed!
-  fafafa.ssl.openssl.ocsp,  // Fixed!
-  fafafa.ssl.openssl.ct,  // Fixed!
+  fafafa.ssl.openssl.api.pkcs,  // Fixed!
+  fafafa.ssl.openssl.api.pkcs7,  // Testing with fixed stack
+  fafafa.ssl.openssl.api.pkcs12,  // Testing with fixed type casts
+  fafafa.ssl.openssl.api.cms,  // Fixed!
+  fafafa.ssl.openssl.api.ocsp,  // Fixed!
+  fafafa.ssl.openssl.api.ct,  // Fixed!
   fafafa.ssl.openssl.ts,  // Fixed!
   
   // Priority 2 - SSL/TLS (1 module)
-  fafafa.ssl.openssl.ssl,  // Fixed!
+  fafafa.ssl.openssl.api.ssl,  // Fixed!
   
   // Priority 2 - Advanced Features (2 modules)
-  fafafa.ssl.openssl.engine,  // Fixed!
-  fafafa.ssl.openssl.store,  // Fixed!
+  fafafa.ssl.openssl.api.engine,  // Fixed!
+  fafafa.ssl.openssl.api.store,  // Fixed!
   
   // Priority 2 - Utilities (7 modules)
-  fafafa.ssl.openssl.buffer,
-  fafafa.ssl.openssl.stack,  // Fixed!
+  fafafa.ssl.openssl.api.buffer,
+  fafafa.ssl.openssl.api.stack,  // Fixed!
   fafafa.ssl.openssl.lhash,  // Fixed!
-  fafafa.ssl.openssl.obj,
-  fafafa.ssl.openssl.conf,  // Fixed!
+  fafafa.ssl.openssl.api.obj,
+  fafafa.ssl.openssl.api.conf,  // Fixed!
   fafafa.ssl.openssl.thread;
 
 var

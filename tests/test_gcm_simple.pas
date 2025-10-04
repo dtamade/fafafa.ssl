@@ -5,7 +5,7 @@ program test_gcm_simple;
 uses
   SysUtils,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.evp,
+  fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.consts,
   fafafa.ssl.openssl.types;
 

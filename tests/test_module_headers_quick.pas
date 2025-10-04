@@ -9,97 +9,97 @@ uses
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.consts,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.utils,
-  fafafa.ssl.openssl.crypto,
+  fafafa.ssl.openssl.api.utils,
+  fafafa.ssl.openssl.api.crypto,
   
   // I/O and error handling
-  fafafa.ssl.openssl.bio,
-  fafafa.ssl.openssl.err,
-  fafafa.ssl.openssl.rand,
-  fafafa.ssl.openssl.buffer,
+  fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.err,
+  fafafa.ssl.openssl.api.rand,
+  fafafa.ssl.openssl.api.buffer,
   
   // Hash algorithms
-  fafafa.ssl.openssl.md,
-  fafafa.ssl.openssl.sha,
+  fafafa.ssl.openssl.api.md,
+  fafafa.ssl.openssl.api.sha,
   fafafa.ssl.openssl.blake2,
-  fafafa.ssl.openssl.sha3,
-  fafafa.ssl.openssl.sha3.evp,
+  fafafa.ssl.openssl.api.sha3,
+  fafafa.ssl.openssl.api.sha3.evp,
   fafafa.ssl.openssl.sm,
   
   // Symmetric ciphers
-  fafafa.ssl.openssl.aes,
-  fafafa.ssl.openssl.des,
+  fafafa.ssl.openssl.api.aes,
+  fafafa.ssl.openssl.api.des,
   fafafa.ssl.openssl.chacha,
   fafafa.ssl.openssl.aria,
   fafafa.ssl.openssl.seed,
   
   // MAC
-  fafafa.ssl.openssl.hmac,
-  fafafa.ssl.openssl.cmac,
-  fafafa.ssl.openssl.cmac.evp,
+  fafafa.ssl.openssl.api.hmac,
+  fafafa.ssl.openssl.api.cmac,
+  fafafa.ssl.openssl.api.cmac.evp,
   
   // Asymmetric crypto
-  fafafa.ssl.openssl.bn,
-  fafafa.ssl.openssl.rsa,
-  fafafa.ssl.openssl.dsa,
-  fafafa.ssl.openssl.dh,
-  fafafa.ssl.openssl.ec,
-  fafafa.ssl.openssl.ecdh,
-  fafafa.ssl.openssl.ecdsa,
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.api.rsa,
+  fafafa.ssl.openssl.api.dsa,
+  fafafa.ssl.openssl.api.dh,
+  fafafa.ssl.openssl.api.ec,
+  fafafa.ssl.openssl.api.ecdh,
+  fafafa.ssl.openssl.api.ecdsa,
   
   // PKI
-  fafafa.ssl.openssl.asn1,
-  fafafa.ssl.openssl.pem,
-  fafafa.ssl.openssl.x509,
-  fafafa.ssl.openssl.x509v3,
+  fafafa.ssl.openssl.api.asn1,
+  fafafa.ssl.openssl.api.pem,
+  fafafa.ssl.openssl.api.x509,
+  fafafa.ssl.openssl.api.x509v3,
   
   // PKCS
-  fafafa.ssl.openssl.pkcs,
-  fafafa.ssl.openssl.pkcs7,
-  fafafa.ssl.openssl.pkcs12,
-  fafafa.ssl.openssl.cms,
+  fafafa.ssl.openssl.api.pkcs,
+  fafafa.ssl.openssl.api.pkcs7,
+  fafafa.ssl.openssl.api.pkcs12,
+  fafafa.ssl.openssl.api.cms,
   
   // SSL/TLS
-  fafafa.ssl.openssl.ssl,
+  fafafa.ssl.openssl.api.ssl,
   
   // Certificate services
-  fafafa.ssl.openssl.ocsp,
-  fafafa.ssl.openssl.ct,
+  fafafa.ssl.openssl.api.ocsp,
+  fafafa.ssl.openssl.api.ct,
   fafafa.ssl.openssl.ts,
   
   // Advanced features
-  fafafa.ssl.openssl.engine,
-  fafafa.ssl.openssl.provider,
-  fafafa.ssl.openssl.store,
-  fafafa.ssl.openssl.param,
+  fafafa.ssl.openssl.api.engine,
+  fafafa.ssl.openssl.api.provider,
+  fafafa.ssl.openssl.api.store,
+  fafafa.ssl.openssl.api.param,
   
   // AEAD and modes
   fafafa.ssl.openssl.aead,
-  // fafafa.ssl.openssl.modes,  // 暂时跳过,有编译错误
+  // fafafa.ssl.openssl.api.modes,  // 暂时跳过,有编译错误
   
   // KDF
-  fafafa.ssl.openssl.kdf,
+  fafafa.ssl.openssl.api.kdf,
   fafafa.ssl.openssl.scrypt_whirlpool,
   
   // EVP
-  fafafa.ssl.openssl.evp,
+  fafafa.ssl.openssl.api.evp,
   
   // Utilities
-  // fafafa.ssl.openssl.stack,  // 暂时跳过,有编译错误
+  // fafafa.ssl.openssl.api.stack,  // 暂时跳过,有编译错误
   fafafa.ssl.openssl.lhash,
-  // fafafa.ssl.openssl.obj,  // 暂时跳过,有语法错误
-  fafafa.ssl.openssl.conf,
+  // fafafa.ssl.openssl.api.obj,  // 暂时跳过,有语法错误
+  fafafa.ssl.openssl.api.conf,
   fafafa.ssl.openssl.txt_db,
-  fafafa.ssl.openssl.ui,
-  fafafa.ssl.openssl.dso,
+  fafafa.ssl.openssl.api.ui,
+  fafafa.ssl.openssl.api.dso,
   fafafa.ssl.openssl.srp,
   fafafa.ssl.openssl.thread;
   
   // Legacy - 暂时跳过有编译错误的模块
   // fafafa.ssl.openssl.legacy_ciphers,
-  // fafafa.ssl.openssl.async,
-  // fafafa.ssl.openssl.comp,
-  // fafafa.ssl.openssl.rand_old;
+  // fafafa.ssl.openssl.api.async,
+  // fafafa.ssl.openssl.api.comp,
+  // fafafa.ssl.openssl.api.rand_old;
 
 var
   TestsPassed, TestsFailed, TestsTotal: Integer;

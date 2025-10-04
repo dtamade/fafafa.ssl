@@ -5,7 +5,7 @@ program test_sha3_simple;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.evp;
+  fafafa.ssl.openssl.api.evp;
 
 function BytesToHex(const Data: array of Byte; Len: Integer): string;
 var

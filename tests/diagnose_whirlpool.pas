@@ -5,7 +5,7 @@ program diagnose_whirlpool;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.evp;
+  fafafa.ssl.openssl.api.evp;
 
 var
   md: PEVP_MD;

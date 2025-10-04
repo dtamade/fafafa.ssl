@@ -18,7 +18,7 @@ program test_aead_modes;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.evp,
+  fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.types;
 
 function BytesToHex(const Bytes: TBytes): string;

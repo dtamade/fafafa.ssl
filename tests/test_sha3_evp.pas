@@ -6,8 +6,8 @@ uses
   {$IFDEF WINDOWS}Windows,{$ENDIF}
   SysUtils, Dynlibs,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.sha3.evp;
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.sha3.evp;
 
 function BytesToHex(const Bytes: TBytes): string;
 var

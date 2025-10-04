@@ -5,7 +5,7 @@ program test_sm3;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.evp;
+  fafafa.ssl.openssl.api.evp;
 
 type
   TTestResult = record

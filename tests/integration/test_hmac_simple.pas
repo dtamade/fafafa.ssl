@@ -7,8 +7,8 @@ uses
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.consts,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.hmac;
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.hmac;
 
 procedure PrintTestHeader(const TestName: string);
 begin

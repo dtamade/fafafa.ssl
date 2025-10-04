@@ -5,7 +5,7 @@ program test_phase2_simple;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.evp,
+  fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.aead;
 
 var

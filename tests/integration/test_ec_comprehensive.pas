@@ -5,9 +5,9 @@ program test_ec_comprehensive;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.ec,
-  fafafa.ssl.openssl.bn,
-  fafafa.ssl.openssl.obj;
+  fafafa.ssl.openssl.api.ec,
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.api.obj;
 
 procedure PrintTestHeader(const TestName: string);
 begin

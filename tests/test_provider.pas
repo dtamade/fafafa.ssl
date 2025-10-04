@@ -6,7 +6,7 @@ uses
   SysUtils,
   fafafa.ssl.openssl.core,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.provider;
+  fafafa.ssl.openssl.api.provider;
 
 procedure TestProviderAvailability;
 begin

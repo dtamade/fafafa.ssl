@@ -5,7 +5,7 @@ program test_blake2;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.evp,
+  fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.blake2;
 
 var

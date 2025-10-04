@@ -5,7 +5,7 @@ program test_provider_simple;
 uses
   SysUtils,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.provider;
+  fafafa.ssl.openssl.api.provider;
 
 begin
   WriteLn('========================================');

@@ -3,7 +3,7 @@ program test_bn_comprehensive;
 {$mode objfpc}{$H+}
 
 uses
-  SysUtils, fafafa.ssl.openssl.api, fafafa.ssl.openssl.bn;
+  SysUtils, fafafa.ssl.openssl.api, fafafa.ssl.openssl.api.bn;
 
 var
   TestsPassed, TestsFailed: Integer;

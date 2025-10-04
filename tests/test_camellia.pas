@@ -5,7 +5,7 @@ program test_camellia;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.evp;
+  fafafa.ssl.openssl.api.evp;
 
 var
   TotalTests, PassedTests: Integer;

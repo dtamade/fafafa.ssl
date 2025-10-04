@@ -8,12 +8,12 @@ uses
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.consts,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.crypto,
-  fafafa.ssl.openssl.x509,
-  fafafa.ssl.openssl.rsa,
-  fafafa.ssl.openssl.bn,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.asn1;
+  fafafa.ssl.openssl.api.crypto,
+  fafafa.ssl.openssl.api.x509,
+  fafafa.ssl.openssl.api.rsa,
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.asn1;
 
 var
   TotalTests: Integer = 0;

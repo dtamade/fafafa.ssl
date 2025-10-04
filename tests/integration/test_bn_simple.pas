@@ -7,8 +7,8 @@ uses
   fafafa.ssl.types,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.crypto,
-  fafafa.ssl.openssl.bn;
+  fafafa.ssl.openssl.api.crypto,
+  fafafa.ssl.openssl.api.bn;
 
 var
   TotalTests: Integer = 0;

@@ -5,7 +5,7 @@ program test_des_simple;
 uses
   SysUtils,
   fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.des;
+  fafafa.ssl.openssl.api.des;
 
 begin
   WriteLn('========================================');
