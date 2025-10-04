@@ -80,13 +80,14 @@ type
   TSSLDataCallback = fafafa.ssl.abstract.types.TSSLDataCallback;
 
 const
-  // 重新导出所有常量
+  // 重新导出所有枚举常量 - TSSLLibraryType
   sslAutoDetect = fafafa.ssl.abstract.types.sslAutoDetect;
   sslOpenSSL = fafafa.ssl.abstract.types.sslOpenSSL;
   sslWolfSSL = fafafa.ssl.abstract.types.sslWolfSSL;
   sslMbedTLS = fafafa.ssl.abstract.types.sslMbedTLS;
   sslWinSSL = fafafa.ssl.abstract.types.sslWinSSL;
   
+  // TSSLProtocolVersion
   sslProtocolSSL2 = fafafa.ssl.abstract.types.sslProtocolSSL2;
   sslProtocolSSL3 = fafafa.ssl.abstract.types.sslProtocolSSL3;
   sslProtocolTLS10 = fafafa.ssl.abstract.types.sslProtocolTLS10;
@@ -95,6 +96,101 @@ const
   sslProtocolTLS13 = fafafa.ssl.abstract.types.sslProtocolTLS13;
   sslProtocolDTLS10 = fafafa.ssl.abstract.types.sslProtocolDTLS10;
   sslProtocolDTLS12 = fafafa.ssl.abstract.types.sslProtocolDTLS12;
+  
+  // TSSLVerifyMode
+  sslVerifyNone = fafafa.ssl.abstract.types.sslVerifyNone;
+  sslVerifyPeer = fafafa.ssl.abstract.types.sslVerifyPeer;
+  sslVerifyFailIfNoPeerCert = fafafa.ssl.abstract.types.sslVerifyFailIfNoPeerCert;
+  sslVerifyClientOnce = fafafa.ssl.abstract.types.sslVerifyClientOnce;
+  sslVerifyPostHandshake = fafafa.ssl.abstract.types.sslVerifyPostHandshake;
+  
+  // TSSLContextType
+  sslCtxClient = fafafa.ssl.abstract.types.sslCtxClient;
+  sslCtxServer = fafafa.ssl.abstract.types.sslCtxServer;
+  sslCtxBoth = fafafa.ssl.abstract.types.sslCtxBoth;
+  
+  // TSSLOption - 所有选项
+  ssoEnableSNI = fafafa.ssl.abstract.types.ssoEnableSNI;
+  ssoEnableALPN = fafafa.ssl.abstract.types.ssoEnableALPN;
+  ssoEnableSessionCache = fafafa.ssl.abstract.types.ssoEnableSessionCache;
+  ssoEnableSessionTickets = fafafa.ssl.abstract.types.ssoEnableSessionTickets;
+  ssoDisableCompression = fafafa.ssl.abstract.types.ssoDisableCompression;
+  ssoDisableRenegotiation = fafafa.ssl.abstract.types.ssoDisableRenegotiation;
+  ssoEnableOCSPStapling = fafafa.ssl.abstract.types.ssoEnableOCSPStapling;
+  ssoSingleDHUse = fafafa.ssl.abstract.types.ssoSingleDHUse;
+  ssoSingleECDHUse = fafafa.ssl.abstract.types.ssoSingleECDHUse;
+  ssoCipherServerPreference = fafafa.ssl.abstract.types.ssoCipherServerPreference;
+  ssoNoSSLv2 = fafafa.ssl.abstract.types.ssoNoSSLv2;
+  ssoNoSSLv3 = fafafa.ssl.abstract.types.ssoNoSSLv3;
+  ssoNoTLSv1 = fafafa.ssl.abstract.types.ssoNoTLSv1;
+  ssoNoTLSv1_1 = fafafa.ssl.abstract.types.ssoNoTLSv1_1;
+  ssoNoTLSv1_2 = fafafa.ssl.abstract.types.ssoNoTLSv1_2;
+  ssoNoTLSv1_3 = fafafa.ssl.abstract.types.ssoNoTLSv1_3;
+  
+  // TSSLHandshakeState
+  sslHsNotStarted = fafafa.ssl.abstract.types.sslHsNotStarted;
+  sslHsInProgress = fafafa.ssl.abstract.types.sslHsInProgress;
+  sslHsCompleted = fafafa.ssl.abstract.types.sslHsCompleted;
+  sslHsFailed = fafafa.ssl.abstract.types.sslHsFailed;
+  sslHsRenegotiating = fafafa.ssl.abstract.types.sslHsRenegotiating;
+  
+  // TSSLErrorCode - 所有错误码
+  sslErrNone = fafafa.ssl.abstract.types.sslErrNone;
+  sslErrGeneral = fafafa.ssl.abstract.types.sslErrGeneral;
+  sslErrMemory = fafafa.ssl.abstract.types.sslErrMemory;
+  sslErrInvalidParam = fafafa.ssl.abstract.types.sslErrInvalidParam;
+  sslErrNotInitialized = fafafa.ssl.abstract.types.sslErrNotInitialized;
+  sslErrProtocol = fafafa.ssl.abstract.types.sslErrProtocol;
+  sslErrHandshake = fafafa.ssl.abstract.types.sslErrHandshake;
+  sslErrCertificate = fafafa.ssl.abstract.types.sslErrCertificate;
+  sslErrCertificateExpired = fafafa.ssl.abstract.types.sslErrCertificateExpired;
+  sslErrCertificateRevoked = fafafa.ssl.abstract.types.sslErrCertificateRevoked;
+  sslErrCertificateUnknown = fafafa.ssl.abstract.types.sslErrCertificateUnknown;
+  sslErrConnection = fafafa.ssl.abstract.types.sslErrConnection;
+  sslErrTimeout = fafafa.ssl.abstract.types.sslErrTimeout;
+  sslErrIO = fafafa.ssl.abstract.types.sslErrIO;
+  sslErrWouldBlock = fafafa.ssl.abstract.types.sslErrWouldBlock;
+  sslErrUnsupported = fafafa.ssl.abstract.types.sslErrUnsupported;
+  sslErrLibraryNotFound = fafafa.ssl.abstract.types.sslErrLibraryNotFound;
+  sslErrFunctionNotFound = fafafa.ssl.abstract.types.sslErrFunctionNotFound;
+  sslErrVersionMismatch = fafafa.ssl.abstract.types.sslErrVersionMismatch;
+  
+  // TSSLLogLevel
+  sslLogNone = fafafa.ssl.abstract.types.sslLogNone;
+  sslLogError = fafafa.ssl.abstract.types.sslLogError;
+  sslLogWarning = fafafa.ssl.abstract.types.sslLogWarning;
+  sslLogInfo = fafafa.ssl.abstract.types.sslLogInfo;
+  sslLogDebug = fafafa.ssl.abstract.types.sslLogDebug;
+  sslLogTrace = fafafa.ssl.abstract.types.sslLogTrace;
+  
+  // TSSLKeyExchange
+  sslKexRSA = fafafa.ssl.abstract.types.sslKexRSA;
+  sslKexDHE_RSA = fafafa.ssl.abstract.types.sslKexDHE_RSA;
+  sslKexECDHE_RSA = fafafa.ssl.abstract.types.sslKexECDHE_RSA;
+  sslKexDHE_DSS = fafafa.ssl.abstract.types.sslKexDHE_DSS;
+  sslKexECDHE_ECDSA = fafafa.ssl.abstract.types.sslKexECDHE_ECDSA;
+  sslKexPSK = fafafa.ssl.abstract.types.sslKexPSK;
+  sslKexDHE_PSK = fafafa.ssl.abstract.types.sslKexDHE_PSK;
+  sslKexRSA_PSK = fafafa.ssl.abstract.types.sslKexRSA_PSK;
+  
+  // TSSLCipher
+  sslCipherNone = fafafa.ssl.abstract.types.sslCipherNone;
+  sslCipherAES128 = fafafa.ssl.abstract.types.sslCipherAES128;
+  sslCipherAES256 = fafafa.ssl.abstract.types.sslCipherAES256;
+  sslCipherAES128GCM = fafafa.ssl.abstract.types.sslCipherAES128GCM;
+  sslCipherAES256GCM = fafafa.ssl.abstract.types.sslCipherAES256GCM;
+  sslCipherCHACHA20_POLY1305 = fafafa.ssl.abstract.types.sslCipherCHACHA20_POLY1305;
+  sslCipher3DES = fafafa.ssl.abstract.types.sslCipher3DES;
+  sslCipherDES = fafafa.ssl.abstract.types.sslCipherDES;
+  sslCipherRC4 = fafafa.ssl.abstract.types.sslCipherRC4;
+  
+  // TSSLHash
+  sslHashNone = fafafa.ssl.abstract.types.sslHashNone;
+  sslHashMD5 = fafafa.ssl.abstract.types.sslHashMD5;
+  sslHashSHA1 = fafafa.ssl.abstract.types.sslHashSHA1;
+  sslHashSHA256 = fafafa.ssl.abstract.types.sslHashSHA256;
+  sslHashSHA384 = fafafa.ssl.abstract.types.sslHashSHA384;
+  sslHashSHA512 = fafafa.ssl.abstract.types.sslHashSHA512;
   
   // 注意: 数组常量无法直接重导出,请直接使用 fafafa.ssl.abstract.types 中的常量
   // SSL_LIBRARY_NAMES, SSL_PROTOCOL_NAMES, SSL_ERROR_MESSAGES
