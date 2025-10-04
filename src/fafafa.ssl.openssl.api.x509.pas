@@ -446,10 +446,40 @@ type
   TPEM_write_bio_X509_REQ_NEW = function(bp: PBIO; x: PX509_REQ): Integer; cdecl;
 
 var
-  // Function pointers will be dynamically loaded
-  // This is a partial list - complete implementation would include all functions
+  // X509 Core Functions
   X509_new: TX509_new;
   X509_free: TX509_free;
+  X509_dup: TX509_dup;
+  X509_up_ref: TX509_up_ref;
+  
+  // X509 Basic Info Functions
+  X509_get_version: TX509_get_version;
+  X509_get_serialNumber: TX509_get_serialNumber;
+  X509_get_subject_name: TX509_get_subject_name;
+  X509_get_issuer_name: TX509_get_issuer_name;
+  X509_get_notBefore: TX509_get_notBefore;
+  X509_get_notAfter: TX509_get_notAfter;
+  X509_get_pubkey: TX509_get_pubkey;
+  X509_get0_signature: TX509_get0_signature;
+  
+  // X509 Extension Functions
+  X509_get_ext_by_NID: TX509_get_ext_by_NID;
+  X509_get_ext: TX509_get_ext;
+  
+  // X509 Name Functions
+  X509_NAME_print_ex: TX509_NAME_print_ex;
+  
+  // X509 Algorithm Functions
+  X509_ALGOR_get0: TX509_ALGOR_get0;
+  
+  // X509 I/O Functions
+  d2i_X509_bio: Td2i_X509_bio;
+  i2d_X509_bio: Ti2d_X509_bio;
+  PEM_read_bio_X509: TPEM_read_bio_X509;
+  PEM_write_bio_X509: TPEM_write_bio_X509;
+  
+  // X509 Digest Function
+  X509_digest: function(const data: PX509; const &type: PEVP_MD; md: PByte; len: PCardinal): Integer; cdecl;
   
 procedure LoadOpenSSLX509;
 procedure UnloadOpenSSLX509;
@@ -461,10 +491,50 @@ uses
   fafafa.ssl.openssl.api.core;  // For shared library handles
 
 procedure LoadOpenSSLX509;
+var
+  LibHandle: TLibHandle;
 begin
-  // This function would load all the X509 function pointers
-  // Similar to LoadOpenSSLCore but for X509 functions
-  // Implementation would be similar to the core module
+  if not IsOpenSSLCoreLoaded then
+    Exit;
+    
+  LibHandle := GetCryptoLibHandle;
+  if LibHandle = NilHandle then
+    Exit;
+  
+  // Load X509 Core Functions
+  X509_new := TX509_new(GetProcedureAddress(LibHandle, 'X509_new'));
+  X509_free := TX509_free(GetProcedureAddress(LibHandle, 'X509_free'));
+  X509_dup := TX509_dup(GetProcedureAddress(LibHandle, 'X509_dup'));
+  X509_up_ref := TX509_up_ref(GetProcedureAddress(LibHandle, 'X509_up_ref'));
+  
+  // Load X509 Basic Info Functions
+  X509_get_version := TX509_get_version(GetProcedureAddress(LibHandle, 'X509_get_version'));
+  X509_get_serialNumber := TX509_get_serialNumber(GetProcedureAddress(LibHandle, 'X509_get_serialNumber'));
+  X509_get_subject_name := TX509_get_subject_name(GetProcedureAddress(LibHandle, 'X509_get_subject_name'));
+  X509_get_issuer_name := TX509_get_issuer_name(GetProcedureAddress(LibHandle, 'X509_get_issuer_name'));
+  X509_get_notBefore := TX509_get_notBefore(GetProcedureAddress(LibHandle, 'X509_get_notBefore'));
+  X509_get_notAfter := TX509_get_notAfter(GetProcedureAddress(LibHandle, 'X509_get_notAfter'));
+  X509_get_pubkey := TX509_get_pubkey(GetProcedureAddress(LibHandle, 'X509_get_pubkey'));
+  X509_get0_signature := TX509_get0_signature(GetProcedureAddress(LibHandle, 'X509_get0_signature'));
+  
+  // Load X509 Extension Functions  
+  X509_get_ext_by_NID := TX509_get_ext_by_NID(GetProcedureAddress(LibHandle, 'X509_get_ext_by_NID'));
+  X509_get_ext := TX509_get_ext(GetProcedureAddress(LibHandle, 'X509_get_ext'));
+  
+  // Load X509 Name Functions
+  X509_NAME_print_ex := TX509_NAME_print_ex(GetProcedureAddress(LibHandle, 'X509_NAME_print_ex'));
+  
+  // Load X509 Algorithm Functions
+  X509_ALGOR_get0 := TX509_ALGOR_get0(GetProcedureAddress(LibHandle, 'X509_ALGOR_get0'));
+  
+  // Load X509 I/O Functions
+  d2i_X509_bio := Td2i_X509_bio(GetProcedureAddress(LibHandle, 'd2i_X509_bio'));
+  i2d_X509_bio := Ti2d_X509_bio(GetProcedureAddress(LibHandle, 'i2d_X509_bio'));
+  PEM_read_bio_X509 := TPEM_read_bio_X509(GetProcedureAddress(LibHandle, 'PEM_read_bio_X509'));
+  PEM_write_bio_X509 := TPEM_write_bio_X509(GetProcedureAddress(LibHandle, 'PEM_write_bio_X509'));
+  
+  // Load X509 Digest Function
+  Pointer(X509_digest) := GetProcedureAddress(LibHandle, 'X509_digest');
 end;
 
 procedure UnloadOpenSSLX509;

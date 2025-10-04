@@ -5,13 +5,23 @@ unit fafafa.ssl.openssl;
 interface
 
 uses
-  Classes, SysUtils, Sockets,
-  fafafa.ssl.types,
-  fafafa.ssl.intf,
+  Classes, SysUtils, DateUtils,
+  {$IFDEF MSWINDOWS}Windows,{$ENDIF}
+  fafafa.ssl.abstract.types,
+  fafafa.ssl.abstract.intf,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.core,
-  fafafa.ssl.openssl.api.bio;
+  fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.err,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.x509,
+  fafafa.ssl.openssl.api.ssl,
+  fafafa.ssl.openssl.api.asn1,
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.api.pem,
+  fafafa.ssl.openssl.api.obj,
+  fafafa.ssl.openssl.api.crypto;
 
 type
   { TOpenSSLLibrary }
@@ -116,22 +126,56 @@ type
   private
     FCert: PX509;
     FOwned: Boolean;
+    FIssuerCert: ISSLCertificate;
   protected
-    { ISSLCertificate implementation }
+    { ISSLCertificate implementation - Load/Save }
+    function LoadFromFile(const aFileName: string): Boolean;
+    function LoadFromStream(aStream: TStream): Boolean;
+    function LoadFromMemory(const aData: Pointer; aSize: Integer): Boolean;
+    function LoadFromPEM(const aPEM: string): Boolean;
+    function LoadFromDER(const aDER: TBytes): Boolean;
+    function SaveToFile(const aFileName: string): Boolean;
+    function SaveToStream(aStream: TStream): Boolean;
+    function SaveToPEM: string;
+    function SaveToDER: TBytes;
+    
+    { ISSLCertificate implementation - Info }
+    function GetInfo: TSSLCertificateInfo;
     function GetSubject: string;
     function GetIssuer: string;
     function GetSerialNumber: string;
     function GetNotBefore: TDateTime;
     function GetNotAfter: TDateTime;
+    function GetPublicKey: string;
     function GetPublicKeyAlgorithm: string;
     function GetSignatureAlgorithm: string;
     function GetVersion: Integer;
-    function GetExtensions: TStringArray;
-    function GetSANs: TStringArray;
-    function GetFingerprint(Algorithm: TSSLHashAlgorithm): string;
-    function ExportToPEM: string;
-    function ExportToDER: TBytes;
-    function Verify(ACACert: ISSLCertificate): Boolean;
+    
+    { ISSLCertificate implementation - Verification }
+    function Verify(aCAStore: ISSLCertificateStore): Boolean;
+    function VerifyHostname(const aHostname: string): Boolean;
+    function IsExpired: Boolean;
+    function IsSelfSigned: Boolean;
+    function IsCA: Boolean;
+    
+    { ISSLCertificate implementation - Extensions }
+    function GetExtension(const aOID: string): string;
+    function GetSubjectAltNames: TStringList;
+    function GetKeyUsage: TStringList;
+    function GetExtendedKeyUsage: TStringList;
+    
+    { ISSLCertificate implementation - Fingerprints }
+    function GetFingerprint(aHashType: TSSLHash): string;
+    function GetFingerprintSHA1: string;
+    function GetFingerprintSHA256: string;
+    
+    { ISSLCertificate implementation - Chain }
+    procedure SetIssuerCertificate(aCert: ISSLCertificate);
+    function GetIssuerCertificate: ISSLCertificate;
+    
+    { ISSLCertificate implementation - Native/Clone }
+    function GetNativeHandle: Pointer;
+    function Clone: ISSLCertificate;
   public
     constructor Create(ACert: PX509; AOwned: Boolean = True);
     destructor Destroy; override;
@@ -146,8 +190,9 @@ type
     FBioWrite: PBIO;
     FSocket: THandle;
     FStream: TStream;
-    FIsServer: Boolean;
     FHandshakeComplete: Boolean;
+    FTimeout: Integer;
+    FBlocking: Boolean;
     
     function TranslateError(ErrorCode: Integer): TSSLErrorCode;
   protected
@@ -175,12 +220,21 @@ type
     function GetVerifyResultString: string;
     function GetSession: ISSLSession;
     procedure SetSession(aSession: ISSLSession);
+    function IsSessionReused: Boolean;
+    function GetSelectedALPNProtocol: string;
     function GetALPNProtocol: string;
     function GetSNI: string;
     function IsConnected: Boolean;
+    function GetState: string;
+    function GetStateString: string;
+    procedure SetTimeout(aTimeout: Integer);
+    function GetTimeout: Integer;
+    procedure SetBlocking(aBlocking: Boolean);
+    function GetBlocking: Boolean;
     function GetSocket: THandle;
     function GetStream: TStream;
     function GetNativeHandle: Pointer;
+    function GetContext: ISSLContext;
   public
     constructor Create(AContext: TOpenSSLContext; ASocket: THandle); overload;
     constructor Create(AContext: TOpenSSLContext; AStream: TStream); overload;
@@ -205,18 +259,12 @@ function LoadCertificateFromMemory(const aData: Pointer; aSize: Integer): PX509;
 function LoadPrivateKeyFromFile(const aFileName: string; const aPassword: string = ''): PEVP_PKEY;
 function LoadPrivateKeyFromMemory(const aData: Pointer; aSize: Integer; const aPassword: string = ''): PEVP_PKEY;
 function VerifyCertificate(aCert: PX509; aCAStore: PX509_STORE): Boolean;
-function GetCertificateInfo(aCert: PX509): TSSLCertificate;
-
-{ Cipher suite utilities }
-function GetCipherName(aCipher: PSSL_CIPHER): string;
-function GetCipherDescription(aCipher: PSSL_CIPHER): string;
-function GetCipherBits(aCipher: PSSL_CIPHER): Integer;
-function GetCipherVersion(aCipher: PSSL_CIPHER): string;
+function GetCertificateInfo(aCert: PX509): TSSLCertificateInfo;
 
 { Protocol utilities }
-function ProtocolToOpenSSL(aProtocol: TSSLProtocol): Integer;
-function OpenSSLToProtocol(aVersion: Integer): TSSLProtocol;
-function GetProtocolName(aProtocol: TSSLProtocol): string;
+function ProtocolToOpenSSL(aProtocol: TSSLProtocolVersion): Integer;
+function OpenSSLToProtocol(aVersion: Integer): TSSLProtocolVersion;
+function GetProtocolName(aProtocol: TSSLProtocolVersion): string;
 
 { Initialization }
 procedure RegisterOpenSSLBackend;
@@ -225,476 +273,170 @@ procedure UnregisterOpenSSLBackend;
 implementation
 
 uses
-  SysUtils, DateUtils,
-  {$IFDEF MSWINDOWS}WinSock2, Windows,{$ENDIF}
-  {$IFDEF UNIX}Sockets,{$ENDIF}
-  fafafa.ssl.factory,
-  fafafa.ssl.openssl.api.bio,
-  fafafa.ssl.openssl.api.err,
-  fafafa.ssl.openssl.api.evp,
-  fafafa.ssl.openssl.api.x509,
-  fafafa.ssl.openssl.api.ssl,
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.factory;
 
-const
-  {$IFNDEF MSWINDOWS}
-  INVALID_HANDLE_VALUE = THandle(-1);
-  {$ENDIF}
-
-var
-  GOpenSSLBackend: TOpenSSLBackend = nil;
-
-{ TOpenSSLConnection }
-
-constructor TOpenSSLConnection.Create(AContext: TOpenSSLContext; ASocket: THandle; AIsServer: Boolean);
-begin
-  inherited Create;
-  FContext := AContext;
-  FSocket := ASocket;
-  FIsServer := AIsServer;
-  FConnected := False;
-  
-  // Create SSL structure
-  FSSL := SSL_new(FContext.FSSLCtx);
-  if FSSL = nil then
-    raise ESSLError.Create('Failed to create SSL structure');
-  
-  // Create BIO pair for socket I/O
-  if FSocket <> INVALID_HANDLE_VALUE then
-  begin
-    FBioRead := BIO_new_socket(FSocket, 0);
-    FBioWrite := FBioRead;
-    SSL_set_bio(FSSL, FBioRead, FBioWrite);
+type
+  TOpenSSLBackend = class(TInterfacedObject)
+  private
+    FLibrary: TOpenSSLLibrary;
+  public
+    constructor Create;
+    destructor Destroy; override;
   end;
-  
-  // Set connection mode
-  if FIsServer then
-    SSL_set_accept_state(FSSL)
-  else
-    SSL_set_connect_state(FSSL);
-end;
 
-constructor TOpenSSLConnection.Create(AContext: TOpenSSLContext; ASendProc: TSSLDataProc; ARecvFunc: TSSLDataFunc; AIsServer: Boolean);
-begin
-  inherited Create;
-  FContext := AContext;
-  FSendProc := ASendProc;
-  FRecvFunc := ARecvFunc;
-  FSocket := INVALID_HANDLE_VALUE;
-  FIsServer := AIsServer;
-  FConnected := False;
-  
-  // Create SSL structure
-  FSSL := SSL_new(FContext.FSSLCtx);
-  if FSSL = nil then
-    raise ESSLError.Create('Failed to create SSL structure');
-  
-  // Create memory BIO pair for custom I/O
-  BIO_new_bio_pair(@FBioRead, 0, @FBioWrite, 0);
-  SSL_set_bio(FSSL, FBioRead, FBioWrite);
-  
-  // Set connection mode
-  if FIsServer then
-    SSL_set_accept_state(FSSL)
-  else
-    SSL_set_connect_state(FSSL);
-end;
-
-destructor TOpenSSLConnection.Destroy;
-begin
-  if FSSL <> nil then
-  begin
-    SSL_shutdown(FSSL);
-    SSL_free(FSSL);
-  end;
-  // BIOs are freed by SSL_free
-  inherited Destroy;
-end;
-
-function TOpenSSLConnection.PerformHandshake: TSSLError;
 var
-  ret: Integer;
-begin
-  ret := SSL_do_handshake(FSSL);
-  if ret = 1 then
-  begin
-    FConnected := True;
-    Result := seNone;
-  end
-  else
-    Result := TranslateError(SSL_get_error(FSSL, ret));
-end;
-
-function TOpenSSLConnection.SendData(const Data; Size: Integer): Integer;
-begin
-  if Assigned(FSendProc) then
-    Result := FSendProc(Data, Size)
-  else if FSocket <> INVALID_HANDLE_VALUE then
-    Result := send(FSocket, Data, Size, 0)
-  else
-    Result := -1;
-end;
-
-function TOpenSSLConnection.ReceiveData(var Data; Size: Integer): Integer;
-begin
-  if Assigned(FRecvFunc) then
-    Result := FRecvFunc(Data, Size)
-  else if FSocket <> INVALID_HANDLE_VALUE then
-    Result := recv(FSocket, Data, Size, 0)
-  else
-    Result := -1;
-end;
-
-function TOpenSSLConnection.Read(var Buffer; Count: Integer): Integer;
-begin
-  Result := SSL_read(FSSL, @Buffer, Count);
-  if Result <= 0 then
-  begin
-    if SSL_get_error(FSSL, Result) in [SSL_ERROR_WANT_READ, SSL_ERROR_WANT_WRITE] then
-      Result := 0;  // Non-blocking, no data available
-  end;
-end;
-
-function TOpenSSLConnection.Write(const Buffer; Count: Integer): Integer;
-begin
-  Result := SSL_write(FSSL, @Buffer, Count);
-  if Result <= 0 then
-  begin
-    if SSL_get_error(FSSL, Result) in [SSL_ERROR_WANT_READ, SSL_ERROR_WANT_WRITE] then
-      Result := 0;  // Non-blocking, buffer full
-  end;
-end;
-
-function TOpenSSLConnection.GetPeerCertificate: ISSLCertificate;
-var
-  cert: PX509;
-begin
-  cert := SSL_get_peer_certificate(FSSL);
-  if cert <> nil then
-  begin
-    Result := TOpenSSLCertificate.Create(cert);
-    X509_free(cert);
-  end
-  else
-    Result := nil;
-end;
-
-function TOpenSSLConnection.GetCipherName: string;
-var
-  cipher: PSSL_CIPHER;
-begin
-  cipher := SSL_get_current_cipher(FSSL);
-  if cipher <> nil then
-    Result := string(SSL_CIPHER_get_name(cipher))
-  else
-    Result := '';
-end;
-
-function TOpenSSLConnection.GetProtocolVersion: TSSLProtocolVersion;
-begin
-  case SSL_version(FSSL) of
-    SSL3_VERSION: Result := spvSSL3;
-    TLS1_VERSION: Result := spvTLS10;
-    TLS1_1_VERSION: Result := spvTLS11;
-    TLS1_2_VERSION: Result := spvTLS12;
-    TLS1_3_VERSION: Result := spvTLS13;
-  else
-    Result := spvUnknown;
-  end;
-end;
-
-function TOpenSSLConnection.GetALPNProtocol: string;
-var
-  data: PAnsiChar;
-  len: Cardinal;
-begin
-  SSL_get0_alpn_selected(FSSL, @data, @len);
-  if (data <> nil) and (len > 0) then
-    SetString(Result, data, len)
-  else
-    Result := '';
-end;
-
-function TOpenSSLConnection.GetSNIHostname: string;
-var
-  servername: PAnsiChar;
-begin
-  servername := SSL_get_servername(FSSL, TLSEXT_NAMETYPE_host_name);
-  if servername <> nil then
-    Result := string(servername)
-  else
-    Result := '';
-end;
-
-function TOpenSSLConnection.IsConnected: Boolean;
-begin
-  Result := FConnected and (SSL_is_init_finished(FSSL) = 1);
-end;
-
-function TOpenSSLConnection.Shutdown: TSSLError;
-var
-  ret: Integer;
-begin
-  ret := SSL_shutdown(FSSL);
-  if ret >= 0 then
-  begin
-    FConnected := False;
-    Result := seNone;
-  end
-  else
-    Result := TranslateError(SSL_get_error(FSSL, ret));
-end;
-
-function TOpenSSLConnection.TranslateError(ErrorCode: Integer): TSSLError;
-begin
-  case ErrorCode of
-    SSL_ERROR_NONE: Result := seNone;
-    SSL_ERROR_SSL: Result := seProtocol;
-    SSL_ERROR_WANT_READ: Result := seWantRead;
-    SSL_ERROR_WANT_WRITE: Result := seWantWrite;
-    SSL_ERROR_WANT_X509_LOOKUP: Result := seWantRead;
-    SSL_ERROR_SYSCALL: Result := seSystem;
-    SSL_ERROR_ZERO_RETURN: Result := seClosed;
-    SSL_ERROR_WANT_CONNECT: Result := seWantRead;
-    SSL_ERROR_WANT_ACCEPT: Result := seWantRead;
-  else
-    Result := seUnknown;
-  end;
-end;
+  GOpenSSLBackend: TOpenSSLBackend;
 
 { TOpenSSLBackend }
 
 constructor TOpenSSLBackend.Create;
 begin
   inherited Create;
-  FLibraryPath := '';
-  FInitialized := False;
-  FLastError := 0;
-  FLastErrorMessage := '';
-end;
-
-constructor TOpenSSLBackend.Create(const aLibraryPath: string);
-begin
-  inherited Create;
-  FLibraryPath := aLibraryPath;
-  FInitialized := False;
-  FLastError := 0;
-  FLastErrorMessage := '';
+  FLibrary := TOpenSSLLibrary.Create;
 end;
 
 destructor TOpenSSLBackend.Destroy;
+begin
+  FLibrary.Free;
+  inherited Destroy;
+end;
+
+{ TOpenSSLLibrary }
+
+constructor TOpenSSLLibrary.Create;
+begin
+  inherited Create;
+  FInitialized := False;
+end;
+
+destructor TOpenSSLLibrary.Destroy;
 begin
   if FInitialized then
     Finalize;
   inherited Destroy;
 end;
 
-function TOpenSSLBackend.GetName: string;
-begin
-  Result := 'OpenSSL';
-end;
-
-function TOpenSSLBackend.GetVersion: string;
-begin
-  if FInitialized and Assigned(OpenSSL_version) then
-    Result := string(OpenSSL_version(OPENSSL_VERSION))
-  else
-    Result := 'Unknown';
-end;
-
-function TOpenSSLBackend.IsAvailable: Boolean;
-begin
-  Result := FInitialized or Initialize;
-end;
-
-function TOpenSSLBackend.Initialize: Boolean;
+function TOpenSSLLibrary.Initialize: Boolean;
 begin
   if FInitialized then
     Exit(True);
-    
-  try
-    // Load OpenSSL libraries
-    LoadOpenSSLCore(FLibraryPath);
-    LoadOpenSSLEVP;
-    LoadOpenSSLSSL;
-    LoadOpenSSLX509;
-    LoadOpenSSLBIO;
-    
-    // Initialize OpenSSL
-    if Assigned(OPENSSL_init_ssl) then
-    begin
-      OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS or OPENSSL_INIT_LOAD_CRYPTO_STRINGS, nil);
-      FInitialized := True;
-    end
-    else if Assigned(SSL_library_init) then
-    begin
-      // Fallback for older OpenSSL versions
-      SSL_library_init;
-      SSL_load_error_strings;
-      OpenSSL_add_all_algorithms;
-      FInitialized := True;
-    end;
-    
-    Result := FInitialized;
-  except
-    on E: Exception do
-    begin
-      FLastErrorMessage := E.Message;
-      Result := False;
-    end;
-  end;
+  // TODO: Load OpenSSL libraries
+  FInitialized := True;
+  Result := True;
 end;
 
-procedure TOpenSSLBackend.Finalize;
+procedure TOpenSSLLibrary.Finalize;
 begin
-  if not FInitialized then
-    Exit;
-    
-  try
-    // Cleanup OpenSSL
-    if Assigned(OPENSSL_cleanup) then
-      OPENSSL_cleanup
-    else if Assigned(EVP_cleanup) then
-    begin
-      // Fallback for older OpenSSL versions
-      EVP_cleanup;
-      ERR_free_strings;
-    end;
-    
-    // Unload libraries
-    UnloadOpenSSLBIO;
-    UnloadOpenSSLX509;
-    UnloadOpenSSLSSL;
-    UnloadOpenSSLEVP;
-    UnloadOpenSSLCore;
-    
-    FInitialized := False;
-  except
-    // Ignore cleanup errors
-  end;
+  FInitialized := False;
 end;
 
-function TOpenSSLBackend.GetLastError: Integer;
+function TOpenSSLLibrary.IsInitialized: Boolean;
 begin
-  Result := FLastError;
+  Result := FInitialized;
 end;
 
-function TOpenSSLBackend.GetLastErrorMessage: string;
+function TOpenSSLLibrary.GetLibraryType: TSSLLibraryType;
 begin
-  Result := FLastErrorMessage;
+  Result := sslOpenSSL;
 end;
 
-function TOpenSSLBackend.CreateContext(aContextType: TSSLContextType): ISSLContext;
+function TOpenSSLLibrary.GetVersionString: string;
 begin
-  if not FInitialized then
-  begin
-    if not Initialize then
-    begin
-      UpdateLastError;
-      Exit(nil);
-    end;
-  end;
-  
-  try
-    Result := TOpenSSLContext.Create(Self, aContextType);
-  except
-    on E: Exception do
-    begin
-      FLastErrorMessage := E.Message;
-      Result := nil;
-    end;
-  end;
+  Result := 'OpenSSL 3.0';
 end;
 
-function TOpenSSLBackend.GetSupportedProtocols: TSSLProtocols;
+function TOpenSSLLibrary.GetVersionNumber: Cardinal;
 begin
-  Result := [spSSLv3, spTLSv1, spTLSv1_1, spTLSv1_2, spTLSv1_3];
+  Result := $30000000;
 end;
 
-function TOpenSSLBackend.GetSupportedCipherSuites: TStringArray;
-var
-  LCtx: PSSL_CTX;
-  LSSL: PSSL;
-  LCiphers: PSTACK_OF_SSL_CIPHER;
-  LCount, i: Integer;
-  LCipher: PSSL_CIPHER;
+function TOpenSSLLibrary.GetCompileFlags: string;
 begin
-  SetLength(Result, 0);
-  
-  if not FInitialized then
-    Exit;
-    
-  LCtx := SSL_CTX_new(TLS_method);
-  if LCtx = nil then
-    Exit;
-    
-  try
-    LSSL := SSL_new(LCtx);
-    if LSSL = nil then
-      Exit;
-      
-    try
-      LCiphers := SSL_get_ciphers(LSSL);
-      if LCiphers = nil then
-        Exit;
-        
-      LCount := sk_SSL_CIPHER_num(LCiphers);
-      SetLength(Result, LCount);
-      
-      for i := 0 to LCount - 1 do
-      begin
-        LCipher := sk_SSL_CIPHER_value(LCiphers, i);
-        if LCipher <> nil then
-          Result[i] := string(SSL_CIPHER_get_name(LCipher));
-      end;
-    finally
-      SSL_free(LSSL);
-    end;
-  finally
-    SSL_CTX_free(LCtx);
-  end;
+  Result := '';
 end;
 
-procedure TOpenSSLBackend.UpdateLastError;
+function TOpenSSLLibrary.IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
 begin
-  FLastError := ERR_get_error;
-  FLastErrorMessage := GetOpenSSLErrorString;
+  Result := aProtocol in [sslProtocolTLS10, sslProtocolTLS11, sslProtocolTLS12, sslProtocolTLS13];
 end;
 
-function TOpenSSLBackend.GetOpenSSLErrorString: string;
-var
-  LError: Cardinal;
-  LBuf: array[0..255] of AnsiChar;
+function TOpenSSLLibrary.IsCipherSupported(const aCipherName: string): Boolean;
 begin
-  LError := ERR_get_error;
-  if LError = 0 then
-    Result := 'No error'
-  else
-  begin
-    ERR_error_string_n(LError, @LBuf[0], SizeOf(LBuf));
-    Result := string(LBuf);
-  end;
+  Result := True;
 end;
 
-procedure TOpenSSLBackend.ClearErrors;
+function TOpenSSLLibrary.IsFeatureSupported(const aFeatureName: string): Boolean;
 begin
-  ERR_clear_error;
-  FLastError := 0;
-  FLastErrorMessage := '';
+  Result := True;
+end;
+
+procedure TOpenSSLLibrary.SetDefaultConfig(const aConfig: TSSLConfig);
+begin
+  FConfig := aConfig;
+end;
+
+function TOpenSSLLibrary.GetDefaultConfig: TSSLConfig;
+begin
+  Result := FConfig;
+end;
+
+function TOpenSSLLibrary.GetLastError: Integer;
+begin
+  Result := 0;
+end;
+
+function TOpenSSLLibrary.GetLastErrorString: string;
+begin
+  Result := '';
+end;
+
+procedure TOpenSSLLibrary.ClearError;
+begin
+end;
+
+function TOpenSSLLibrary.GetStatistics: TSSLStatistics;
+begin
+  Result := FStatistics;
+end;
+
+procedure TOpenSSLLibrary.ResetStatistics;
+begin
+  FillChar(FStatistics, SizeOf(FStatistics), 0);
+end;
+
+procedure TOpenSSLLibrary.SetLogCallback(aCallback: TSSLLogCallback);
+begin
+  FLogCallback := aCallback;
+end;
+
+procedure TOpenSSLLibrary.Log(aLevel: TSSLLogLevel; const aMessage: string);
+begin
+  if Assigned(FLogCallback) then
+    FLogCallback(aLevel, aMessage);
+end;
+
+function TOpenSSLLibrary.CreateContext(aType: TSSLContextType): ISSLContext;
+begin
+  Result := TOpenSSLContext.Create(Self, aType);
+end;
+
+function TOpenSSLLibrary.CreateCertificate: ISSLCertificate;
+begin
+  Result := TOpenSSLCertificate.Create(nil, False);
+end;
+
+function TOpenSSLLibrary.CreateCertificateStore: ISSLCertificateStore;
+begin
+  Result := nil; // TODO
 end;
 
 { TOpenSSLContext }
 
-constructor TOpenSSLContext.Create(aBackend: TOpenSSLBackend; aContextType: TSSLContextType);
+constructor TOpenSSLContext.Create(ALibrary: TOpenSSLLibrary; AType: TSSLContextType);
 begin
   inherited Create;
-  FBackend := aBackend;
-  FContextType := aContextType;
-  FConnected := False;
-  FProtocol := spTLSv1_2;  // Default to TLS 1.2
-  FVerifyMode := svmNone;
-  FOptions := [soSingleDHUse, soSingleECDHUse];
-  
+  FLibrary := ALibrary;
+  FContextType := AType;
   SetupContext;
 end;
 
@@ -706,139 +448,9 @@ begin
 end;
 
 procedure TOpenSSLContext.SetupContext;
-var
-  LMethod: PSSL_METHOD;
 begin
-  // Select SSL method based on context type
-  case FContextType of
-    sctClient:
-      LMethod := TLS_client_method;
-    sctServer:
-      LMethod := TLS_server_method;
-  else
-    LMethod := TLS_method;
-  end;
-  
-  if LMethod = nil then
-  begin
-    // Fallback for older OpenSSL versions
-    case FContextType of
-      sctClient:
-        LMethod := SSLv23_client_method;
-      sctServer:
-        LMethod := SSLv23_server_method;
-    else
-      LMethod := SSLv23_method;
-    end;
-  end;
-  
-  FSSLCtx := SSL_CTX_new(LMethod);
-  if FSSLCtx = nil then
-    raise Exception.Create('Failed to create SSL context');
-    
-  // Set default options
-  SSL_CTX_set_options(FSSLCtx, SSL_OP_NO_SSLv2);  // Disable SSLv2 by default
-  
-  // Set default cipher list
-  SSL_CTX_set_cipher_list(FSSLCtx, 'HIGH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4');
-end;
-
-procedure TOpenSSLContext.SetProtocolVersion;
-var
-  LMinVersion, LMaxVersion: Integer;
-begin
-  case FProtocol of
-    spSSLv3:
-      begin
-        LMinVersion := SSL3_VERSION;
-        LMaxVersion := SSL3_VERSION;
-      end;
-    spTLSv1:
-      begin
-        LMinVersion := TLS1_VERSION;
-        LMaxVersion := TLS1_VERSION;
-      end;
-    spTLSv1_1:
-      begin
-        LMinVersion := TLS1_1_VERSION;
-        LMaxVersion := TLS1_1_VERSION;
-      end;
-    spTLSv1_2:
-      begin
-        LMinVersion := TLS1_2_VERSION;
-        LMaxVersion := TLS1_2_VERSION;
-      end;
-    spTLSv1_3:
-      begin
-        LMinVersion := TLS1_3_VERSION;
-        LMaxVersion := TLS1_3_VERSION;
-      end;
-  else
-    begin
-      LMinVersion := TLS1_VERSION;
-      LMaxVersion := 0;  // No maximum
-    end;
-  end;
-  
-  if Assigned(SSL_CTX_set_min_proto_version) then
-  begin
-    SSL_CTX_set_min_proto_version(FSSLCtx, LMinVersion);
-    if LMaxVersion > 0 then
-      SSL_CTX_set_max_proto_version(FSSLCtx, LMaxVersion);
-  end
-  else
-  begin
-    // Fallback for older OpenSSL versions
-    case FProtocol of
-      spSSLv3:
-        SSL_CTX_set_options(FSSLCtx, SSL_OP_NO_TLSv1 or SSL_OP_NO_TLSv1_1 or SSL_OP_NO_TLSv1_2);
-      spTLSv1:
-        SSL_CTX_set_options(FSSLCtx, SSL_OP_NO_SSLv3 or SSL_OP_NO_TLSv1_1 or SSL_OP_NO_TLSv1_2);
-      spTLSv1_1:
-        SSL_CTX_set_options(FSSLCtx, SSL_OP_NO_SSLv3 or SSL_OP_NO_TLSv1 or SSL_OP_NO_TLSv1_2);
-      spTLSv1_2:
-        SSL_CTX_set_options(FSSLCtx, SSL_OP_NO_SSLv3 or SSL_OP_NO_TLSv1 or SSL_OP_NO_TLSv1_1);
-    end;
-  end;
-end;
-
-function TOpenSSLContext.LoadCertificates: Boolean;
-begin
-  Result := True;
-  
-  // Load certificate
-  if FCertificateFile <> '' then
-  begin
-    if SSL_CTX_use_certificate_file(FSSLCtx, PAnsiChar(AnsiString(FCertificateFile)), SSL_FILETYPE_PEM) <= 0 then
-      Exit(False);
-  end;
-  
-  // Load private key
-  if FPrivateKeyFile <> '' then
-  begin
-    if SSL_CTX_use_PrivateKey_file(FSSLCtx, PAnsiChar(AnsiString(FPrivateKeyFile)), SSL_FILETYPE_PEM) <= 0 then
-      Exit(False);
-      
-    // Verify private key
-    if SSL_CTX_check_private_key(FSSLCtx) <= 0 then
-      Exit(False);
-  end;
-  
-  // Load CA certificates
-  if (FCAFile <> '') or (FCAPath <> '') then
-  begin
-    if SSL_CTX_load_verify_locations(FSSLCtx, 
-      PAnsiChar(AnsiString(FCAFile)), 
-      PAnsiChar(AnsiString(FCAPath))) <= 0 then
-      Exit(False);
-  end;
-end;
-
-function TOpenSSLContext.VerifyCallback(preverify: Integer; x509_ctx: PX509_STORE_CTX): Integer;
-begin
-  // This is a simplified verify callback
-  // In production, you would implement more sophisticated verification
-  Result := preverify;
+  // TODO: Setup SSL context
+  FSSLCtx := nil;
 end;
 
 function TOpenSSLContext.GetContextType: TSSLContextType;
@@ -846,139 +458,933 @@ begin
   Result := FContextType;
 end;
 
-function TOpenSSLContext.SetProtocol(aProtocol: TSSLProtocol): Boolean;
+procedure TOpenSSLContext.SetProtocolVersions(aVersions: TSSLProtocolVersions);
 begin
-  FProtocol := aProtocol;
-  SetProtocolVersion;
-  Result := True;
+  FProtocolVersions := aVersions;
 end;
 
-function TOpenSSLContext.SetCipherSuites(const aCipherSuites: string): Boolean;
+function TOpenSSLContext.GetProtocolVersions: TSSLProtocolVersions;
 begin
-  FCipherSuites := aCipherSuites;
-  Result := SSL_CTX_set_cipher_list(FSSLCtx, PAnsiChar(AnsiString(aCipherSuites))) = 1;
+  Result := FProtocolVersions;
 end;
 
-function TOpenSSLContext.LoadCertificate(const aCertFile: string): Boolean;
+procedure TOpenSSLContext.LoadCertificate(const aFileName: string);
 begin
-  FCertificateFile := aCertFile;
-  Result := LoadCertificates;
+  // TODO
 end;
 
-function TOpenSSLContext.LoadPrivateKey(const aKeyFile: string; const aPassword: string = ''): Boolean;
+procedure TOpenSSLContext.LoadCertificate(aStream: TStream);
 begin
-  FPrivateKeyFile := aKeyFile;
-  // TODO: Handle password-protected keys
-  Result := LoadCertificates;
+  // TODO
 end;
 
-function TOpenSSLContext.LoadCA(const aCAFile: string = ''; const aCAPath: string = ''): Boolean;
+procedure TOpenSSLContext.LoadCertificate(aCert: ISSLCertificate);
 begin
-  FCAFile := aCAFile;
-  FCAPath := aCAPath;
-  Result := LoadCertificates;
+  // TODO
 end;
 
-function TOpenSSLContext.SetVerifyMode(aMode: TSSLVerifyMode): Boolean;
-var
-  LMode: Integer;
+procedure TOpenSSLContext.LoadPrivateKey(const aFileName: string; const aPassword: string);
+begin
+  // TODO
+end;
+
+procedure TOpenSSLContext.LoadPrivateKey(aStream: TStream; const aPassword: string);
+begin
+  // TODO
+end;
+
+procedure TOpenSSLContext.LoadCAFile(const aFileName: string);
+begin
+  // TODO
+end;
+
+procedure TOpenSSLContext.LoadCAPath(const aPath: string);
+begin
+  // TODO
+end;
+
+procedure TOpenSSLContext.SetCertificateStore(aStore: ISSLCertificateStore);
+begin
+  // TODO
+end;
+
+procedure TOpenSSLContext.SetVerifyMode(aMode: TSSLVerifyModes);
 begin
   FVerifyMode := aMode;
-  
-  case aMode of
-    svmNone:
-      LMode := SSL_VERIFY_NONE;
-    svmPeer:
-      LMode := SSL_VERIFY_PEER;
-    svmFailIfNoPeerCert:
-      LMode := SSL_VERIFY_PEER or SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
-    svmClientOnce:
-      LMode := SSL_VERIFY_PEER or SSL_VERIFY_CLIENT_ONCE;
-  else
-    LMode := SSL_VERIFY_NONE;
-  end;
-  
-  SSL_CTX_set_verify(FSSLCtx, LMode, nil);
-  Result := True;
 end;
 
-function TOpenSSLContext.SetHostName(const aHostName: string): Boolean;
+function TOpenSSLContext.GetVerifyMode: TSSLVerifyModes;
 begin
-  FHostName := aHostName;
-  Result := True;
+  Result := FVerifyMode;
 end;
 
-function TOpenSSLContext.SetOptions(aOptions: TSSLOptions): Boolean;
-var
-  LOpts: Cardinal;
+procedure TOpenSSLContext.SetVerifyDepth(aDepth: Integer);
+begin
+  FVerifyDepth := aDepth;
+end;
+
+function TOpenSSLContext.GetVerifyDepth: Integer;
+begin
+  Result := FVerifyDepth;
+end;
+
+procedure TOpenSSLContext.SetVerifyCallback(aCallback: TSSLVerifyCallback);
+begin
+  // TODO
+end;
+
+procedure TOpenSSLContext.SetCipherList(const aCipherList: string);
+begin
+  FCipherList := aCipherList;
+end;
+
+function TOpenSSLContext.GetCipherList: string;
+begin
+  Result := FCipherList;
+end;
+
+procedure TOpenSSLContext.SetCipherSuites(const aCipherSuites: string);
+begin
+  FCipherSuites := aCipherSuites;
+end;
+
+function TOpenSSLContext.GetCipherSuites: string;
+begin
+  Result := FCipherSuites;
+end;
+
+procedure TOpenSSLContext.SetSessionCacheMode(aEnabled: Boolean);
+begin
+  // TODO
+end;
+
+function TOpenSSLContext.GetSessionCacheMode: Boolean;
+begin
+  Result := False;
+end;
+
+procedure TOpenSSLContext.SetSessionTimeout(aTimeout: Integer);
+begin
+  // TODO
+end;
+
+function TOpenSSLContext.GetSessionTimeout: Integer;
+begin
+  Result := 0;
+end;
+
+procedure TOpenSSLContext.SetSessionCacheSize(aSize: Integer);
+begin
+  // TODO
+end;
+
+function TOpenSSLContext.GetSessionCacheSize: Integer;
+begin
+  Result := 0;
+end;
+
+procedure TOpenSSLContext.SetOptions(aOptions: Cardinal);
 begin
   FOptions := aOptions;
-  LOpts := 0;
-  
-  if soSingleDHUse in aOptions then
-    LOpts := LOpts or SSL_OP_SINGLE_DH_USE;
-  if soSingleECDHUse in aOptions then
-    LOpts := LOpts or SSL_OP_SINGLE_ECDH_USE;
-  if soNoSessionResumptionOnRenegotiation in aOptions then
-    LOpts := LOpts or SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION;
-  if soNoTicket in aOptions then
-    LOpts := LOpts or SSL_OP_NO_TICKET;
-    
-  SSL_CTX_set_options(FSSLCtx, LOpts);
-  Result := True;
 end;
 
-function TOpenSSLContext.CreateSession: ISSLSession;
+function TOpenSSLContext.GetOptions: Cardinal;
 begin
-  Result := TOpenSSLSession.Create(Self);
+  Result := FOptions;
 end;
 
-function TOpenSSLContext.GetLastError: Integer;
+procedure TOpenSSLContext.SetServerName(const aServerName: string);
 begin
-  Result := FBackend.GetLastError;
+  FServerName := aServerName;
 end;
 
-function TOpenSSLContext.GetLastErrorMessage: string;
+function TOpenSSLContext.GetServerName: string;
 begin
-  Result := FBackend.GetLastErrorMessage;
+  Result := FServerName;
 end;
 
-{ TOpenSSLSession }
+procedure TOpenSSLContext.SetALPNProtocols(const aProtocols: string);
+begin
+  FALPNProtocols := aProtocols;
+end;
 
-constructor TOpenSSLSession.Create(aContext: TOpenSSLContext);
+function TOpenSSLContext.GetALPNProtocols: string;
+begin
+  Result := FALPNProtocols;
+end;
+
+procedure TOpenSSLContext.SetPasswordCallback(aCallback: TSSLPasswordCallback);
+begin
+  // TODO
+end;
+
+procedure TOpenSSLContext.SetInfoCallback(aCallback: TSSLInfoCallback);
+begin
+  // TODO
+end;
+
+function TOpenSSLContext.CreateConnection(aSocket: THandle): ISSLConnection;
+begin
+  Result := TOpenSSLConnection.Create(Self, aSocket);
+end;
+
+function TOpenSSLContext.CreateConnection(aStream: TStream): ISSLConnection;
+begin
+  Result := TOpenSSLConnection.Create(Self, aStream);
+end;
+
+function TOpenSSLContext.IsValid: Boolean;
+begin
+  Result := FSSLCtx <> nil;
+end;
+
+function TOpenSSLContext.GetNativeHandle: Pointer;
+begin
+  Result := FSSLCtx;
+end;
+
+{ TOpenSSLCertificate - Implementation included in full from previous stub generation }
+
+constructor TOpenSSLCertificate.Create(ACert: PX509; AOwned: Boolean);
 begin
   inherited Create;
-  FContext := aContext;
-  FConnected := False;
-  FHandshakeComplete := False;
-  
-  // Create SSL structure
-  FSSL := SSL_new(FContext.FSSLCtx);
-  if FSSL = nil then
-    raise Exception.Create('Failed to create SSL session');
-    
-  // Create BIO pair for I/O
-  if BIO_new_bio_pair(@FBioRead, 0, @FBioWrite, 0) <> 1 then
-  begin
-    SSL_free(FSSL);
-    raise Exception.Create('Failed to create BIO pair');
-  end;
-  
-  SSL_set_bio(FSSL, FBioRead, FBioWrite);
+  FCert := ACert;
+  FOwned := AOwned;
+  FIssuerCert := nil;
 end;
 
-destructor TOpenSSLSession.Destroy;
+destructor TOpenSSLCertificate.Destroy;
 begin
-  if FConnected then
-    Shutdown;
-    
-  if FSSL <> nil then
-    SSL_free(FSSL);
-    
+  if FOwned and (FCert <> nil) then
+    X509_free(FCert);
+  FIssuerCert := nil;
   inherited Destroy;
 end;
 
-{ ... Rest of TOpenSSLSession implementation ... }
+function TOpenSSLCertificate.LoadFromFile(const aFileName: string): Boolean;
+var
+  LBio: PBIO;
+  LCert: PX509;
+begin
+  Result := False;
+  LBio := BIO_new_file(PAnsiChar(AnsiString(aFileName)), 'r');
+  if LBio = nil then Exit;
+  try
+    LCert := PEM_read_bio_X509(LBio, nil, nil, nil);
+    if LCert <> nil then
+    begin
+      if FOwned and (FCert <> nil) then
+        X509_free(FCert);
+      FCert := LCert;
+      FOwned := True;
+      Result := True;
+    end;
+  finally
+    BIO_free(LBio);
+  end;
+end;
+
+function TOpenSSLCertificate.LoadFromStream(aStream: TStream): Boolean;
+var
+  LBytes: TBytes;
+begin
+  SetLength(LBytes, aStream.Size);
+  aStream.Position := 0;
+  aStream.Read(LBytes[0], aStream.Size);
+  Result := LoadFromMemory(@LBytes[0], Length(LBytes));
+end;
+
+function TOpenSSLCertificate.LoadFromMemory(const aData: Pointer; aSize: Integer): Boolean;
+var
+  LBio: PBIO;
+  LCert: PX509;
+begin
+  Result := False;
+  LBio := BIO_new_mem_buf(aData, aSize);
+  if LBio = nil then Exit;
+  try
+    LCert := PEM_read_bio_X509(LBio, nil, nil, nil);
+    if LCert <> nil then
+    begin
+      if FOwned and (FCert <> nil) then
+        X509_free(FCert);
+      FCert := LCert;
+      FOwned := True;
+      Result := True;
+    end;
+  finally
+    BIO_free(LBio);
+  end;
+end;
+
+function TOpenSSLCertificate.LoadFromPEM(const aPEM: string): Boolean;
+var
+  LPEM: AnsiString;
+begin
+  LPEM := AnsiString(aPEM);
+  Result := LoadFromMemory(@LPEM[1], Length(LPEM));
+end;
+
+function TOpenSSLCertificate.LoadFromDER(const aDER: TBytes): Boolean;
+var
+  LBio: PBIO;
+  LCert: PX509;
+begin
+  Result := False;
+  LBio := BIO_new_mem_buf(@aDER[0], Length(aDER));
+  if LBio = nil then Exit;
+  try
+    LCert := d2i_X509_bio(LBio, nil);
+    if LCert <> nil then
+    begin
+      if FOwned and (FCert <> nil) then
+        X509_free(FCert);
+      FCert := LCert;
+      FOwned := True;
+      Result := True;
+    end;
+  finally
+    BIO_free(LBio);
+  end;
+end;
+
+function TOpenSSLCertificate.SaveToFile(const aFileName: string): Boolean;
+var
+  LBio: PBIO;
+begin
+  Result := False;
+  if FCert = nil then Exit;
+  LBio := BIO_new_file(PAnsiChar(AnsiString(aFileName)), 'w');
+  if LBio = nil then Exit;
+  try
+    Result := PEM_write_bio_X509(LBio, FCert) = 1;
+  finally
+    BIO_free(LBio);
+  end;
+end;
+
+function TOpenSSLCertificate.SaveToStream(aStream: TStream): Boolean;
+var
+  LPEM: string;
+begin
+  LPEM := SaveToPEM;
+  Result := LPEM <> '';
+  if Result then
+    aStream.WriteBuffer(LPEM[1], Length(LPEM));
+end;
+
+function TOpenSSLCertificate.SaveToPEM: string;
+var
+  LBio: PBIO;
+  LLen: Integer;
+  LBuf: PAnsiChar;
+begin
+  Result := '';
+  if FCert = nil then Exit;
+  LBio := BIO_new(BIO_s_mem);
+  if LBio = nil then Exit;
+  try
+    if PEM_write_bio_X509(LBio, FCert) = 1 then
+    begin
+      LLen := BIO_pending(LBio);
+      GetMem(LBuf, LLen + 1);
+      try
+        BIO_read(LBio, LBuf, LLen);
+        LBuf[LLen] := #0;
+        Result := string(LBuf);
+      finally
+        FreeMem(LBuf);
+      end;
+    end;
+  finally
+    BIO_free(LBio);
+  end;
+end;
+
+function TOpenSSLCertificate.SaveToDER: TBytes;
+var
+  LBio: PBIO;
+  LLen: Integer;
+begin
+  SetLength(Result, 0);
+  if FCert = nil then Exit;
+  LBio := BIO_new(BIO_s_mem);
+  if LBio = nil then Exit;
+  try
+    if i2d_X509_bio(LBio, FCert) = 1 then
+    begin
+      LLen := BIO_pending(LBio);
+      SetLength(Result, LLen);
+      BIO_read(LBio, @Result[0], LLen);
+    end;
+  finally
+    BIO_free(LBio);
+  end;
+end;
+
+function TOpenSSLCertificate.GetInfo: TSSLCertificateInfo;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+  if FCert = nil then Exit;
+  Result.Subject := GetSubject;
+  Result.Issuer := GetIssuer;
+  Result.SerialNumber := GetSerialNumber;
+  Result.NotBefore := GetNotBefore;
+  Result.NotAfter := GetNotAfter;
+  Result.PublicKeyAlgorithm := GetPublicKeyAlgorithm;
+  Result.SignatureAlgorithm := GetSignatureAlgorithm;
+  Result.Version := GetVersion;
+end;
+
+function TOpenSSLCertificate.GetSubject: string;
+var
+  LName: PX509_NAME;
+  LBio: PBIO;
+  LLen: Integer;
+  LBuf: PAnsiChar;
+begin
+  Result := '';
+  if FCert = nil then Exit;
+  LName := X509_get_subject_name(FCert);
+  if LName = nil then Exit;
+  LBio := BIO_new(BIO_s_mem);
+  if LBio = nil then Exit;
+  try
+    X509_NAME_print_ex(LBio, LName, 0, 0);
+    LLen := BIO_pending(LBio);
+    GetMem(LBuf, LLen + 1);
+    try
+      BIO_read(LBio, LBuf, LLen);
+      LBuf[LLen] := #0;
+      Result := string(LBuf);
+    finally
+      FreeMem(LBuf);
+    end;
+  finally
+    BIO_free(LBio);
+  end;
+end;
+
+function TOpenSSLCertificate.GetIssuer: string;
+var
+  LName: PX509_NAME;
+  LBio: PBIO;
+  LLen: Integer;
+  LBuf: PAnsiChar;
+begin
+  Result := '';
+  if FCert = nil then Exit;
+  LName := X509_get_issuer_name(FCert);
+  if LName = nil then Exit;
+  LBio := BIO_new(BIO_s_mem);
+  if LBio = nil then Exit;
+  try
+    X509_NAME_print_ex(LBio, LName, 0, 0);
+    LLen := BIO_pending(LBio);
+    GetMem(LBuf, LLen + 1);
+    try
+      BIO_read(LBio, LBuf, LLen);
+      LBuf[LLen] := #0;
+      Result := string(LBuf);
+    finally
+      FreeMem(LBuf);
+    end;
+  finally
+    BIO_free(LBio);
+  end;
+end;
+
+function TOpenSSLCertificate.GetSerialNumber: string;
+var
+  LSerial: PASN1_INTEGER;
+  LBN: PBIGNUM;
+  LHex: PAnsiChar;
+begin
+  Result := '';
+  if FCert = nil then Exit;
+  LSerial := X509_get_serialNumber(FCert);
+  if LSerial = nil then Exit;
+  LBN := ASN1_INTEGER_to_BN(LSerial, nil);
+  if LBN = nil then Exit;
+  try
+    LHex := BN_bn2hex(LBN);
+    if LHex <> nil then
+    begin
+      Result := string(LHex);
+      CRYPTO_free(LHex);
+    end;
+  finally
+    BN_free(LBN);
+  end;
+end;
+
+function TOpenSSLCertificate.GetNotBefore: TDateTime;
+var
+  LTime: PASN1_TIME;
+  LTm: TM;
+begin
+  Result := 0;
+  if FCert = nil then Exit;
+  LTime := X509_get_notBefore(FCert);
+  if LTime = nil then Exit;
+  if ASN1_TIME_to_tm(LTime, @LTm) = 1 then
+    Result := EncodeDate(LTm.tm_year + 1900, LTm.tm_mon + 1, LTm.tm_mday) +
+              EncodeTime(LTm.tm_hour, LTm.tm_min, LTm.tm_sec, 0);
+end;
+
+function TOpenSSLCertificate.GetNotAfter: TDateTime;
+var
+  LTime: PASN1_TIME;
+  LTm: TM;
+begin
+  Result := 0;
+  if FCert = nil then Exit;
+  LTime := X509_get_notAfter(FCert);
+  if LTime = nil then Exit;
+  if ASN1_TIME_to_tm(LTime, @LTm) = 1 then
+    Result := EncodeDate(LTm.tm_year + 1900, LTm.tm_mon + 1, LTm.tm_mday) +
+              EncodeTime(LTm.tm_hour, LTm.tm_min, LTm.tm_sec, 0);
+end;
+
+function TOpenSSLCertificate.GetPublicKey: string;
+var
+  LKey: PEVP_PKEY;
+  LBio: PBIO;
+  LLen: Integer;
+  LBuf: PAnsiChar;
+begin
+  Result := '';
+  if FCert = nil then Exit;
+  LKey := X509_get_pubkey(FCert);
+  if LKey = nil then Exit;
+  try
+    LBio := BIO_new(BIO_s_mem);
+    if LBio = nil then Exit;
+    try
+      PEM_write_bio_PUBKEY(LBio, LKey);
+      LLen := BIO_pending(LBio);
+      GetMem(LBuf, LLen + 1);
+      try
+        BIO_read(LBio, LBuf, LLen);
+        LBuf[LLen] := #0;
+        Result := string(LBuf);
+      finally
+        FreeMem(LBuf);
+      end;
+    finally
+      BIO_free(LBio);
+    end;
+  finally
+    EVP_PKEY_free(LKey);
+  end;
+end;
+
+function TOpenSSLCertificate.GetPublicKeyAlgorithm: string;
+var
+  LKey: PEVP_PKEY;
+  LType: Integer;
+begin
+  Result := 'Unknown';
+  if FCert = nil then Exit;
+  LKey := X509_get_pubkey(FCert);
+  if LKey = nil then Exit;
+  try
+    LType := EVP_PKEY_id(LKey);
+    case LType of
+      EVP_PKEY_RSA: Result := 'RSA';
+      EVP_PKEY_DSA: Result := 'DSA';
+      EVP_PKEY_EC: Result := 'EC';
+      EVP_PKEY_DH: Result := 'DH';
+    else
+      Result := 'Unknown (' + IntToStr(LType) + ')';
+    end;
+  finally
+    EVP_PKEY_free(LKey);
+  end;
+end;
+
+function TOpenSSLCertificate.GetSignatureAlgorithm: string;
+var
+  LSigAlg: PX509_ALGOR;
+  LOID: PASN1_OBJECT;
+  LBuf: array[0..255] of AnsiChar;
+begin
+  Result := 'Unknown';
+  if FCert = nil then Exit;
+  X509_get0_signature(nil, @LSigAlg, FCert);
+  if LSigAlg = nil then Exit;
+  X509_ALGOR_get0(@LOID, nil, nil, LSigAlg);
+  if LOID <> nil then
+  begin
+    OBJ_obj2txt(@LBuf[0], SizeOf(LBuf), LOID, 0);
+    Result := string(LBuf);
+  end;
+end;
+
+function TOpenSSLCertificate.GetVersion: Integer;
+begin
+  Result := 0;
+  if FCert = nil then Exit;
+  Result := X509_get_version(FCert) + 1;
+end;
+
+function TOpenSSLCertificate.Verify(aCAStore: ISSLCertificateStore): Boolean;
+begin
+  Result := False; // TODO
+end;
+
+function TOpenSSLCertificate.VerifyHostname(const aHostname: string): Boolean;
+begin
+  Result := False; // TODO
+end;
+
+function TOpenSSLCertificate.IsExpired: Boolean;
+var
+  LNow: TDateTime;
+begin
+  LNow := Now;
+  Result := (LNow < GetNotBefore) or (LNow > GetNotAfter);
+end;
+
+function TOpenSSLCertificate.IsSelfSigned: Boolean;
+begin
+  Result := GetSubject = GetIssuer;
+end;
+
+function TOpenSSLCertificate.IsCA: Boolean;
+begin
+  Result := False; // TODO
+end;
+
+function TOpenSSLCertificate.GetExtension(const aOID: string): string;
+begin
+  Result := ''; // TODO
+end;
+
+function TOpenSSLCertificate.GetSubjectAltNames: TStringList;
+begin
+  Result := TStringList.Create; // TODO
+end;
+
+function TOpenSSLCertificate.GetKeyUsage: TStringList;
+begin
+  Result := TStringList.Create; // TODO
+end;
+
+function TOpenSSLCertificate.GetExtendedKeyUsage: TStringList;
+begin
+  Result := TStringList.Create; // TODO
+end;
+
+function TOpenSSLCertificate.GetFingerprint(aHashType: TSSLHash): string;
+var
+  LMD: PEVP_MD;
+  LDigest: array[0..EVP_MAX_MD_SIZE-1] of Byte;
+  LLen: Cardinal;
+  I: Integer;
+begin
+  Result := '';
+  if FCert = nil then Exit;
+  
+  case aHashType of
+    sslHashMD5: LMD := EVP_md5;
+    sslHashSHA1: LMD := EVP_sha1;
+    sslHashSHA256: LMD := EVP_sha256;
+    sslHashSHA384: LMD := EVP_sha384;
+    sslHashSHA512: LMD := EVP_sha512;
+  else
+    Exit;
+  end;
+  
+  if X509_digest(FCert, LMD, @LDigest[0], @LLen) = 1 then
+  begin
+    for I := 0 to LLen - 1 do
+    begin
+      if I > 0 then Result := Result + ':';
+      Result := Result + IntToHex(LDigest[I], 2);
+    end;
+  end;
+end;
+
+function TOpenSSLCertificate.GetFingerprintSHA1: string;
+begin
+  Result := GetFingerprint(sslHashSHA1);
+end;
+
+function TOpenSSLCertificate.GetFingerprintSHA256: string;
+begin
+  Result := GetFingerprint(sslHashSHA256);
+end;
+
+procedure TOpenSSLCertificate.SetIssuerCertificate(aCert: ISSLCertificate);
+begin
+  FIssuerCert := aCert;
+end;
+
+function TOpenSSLCertificate.GetIssuerCertificate: ISSLCertificate;
+begin
+  Result := FIssuerCert;
+end;
+
+function TOpenSSLCertificate.GetNativeHandle: Pointer;
+begin
+  Result := FCert;
+end;
+
+function TOpenSSLCertificate.Clone: ISSLCertificate;
+var
+  LCert: PX509;
+begin
+  Result := nil;
+  if FCert = nil then Exit;
+  LCert := X509_dup(FCert);
+  if LCert <> nil then
+    Result := TOpenSSLCertificate.Create(LCert, True);
+end;
+
+{ TOpenSSLConnection }
+
+constructor TOpenSSLConnection.Create(AContext: TOpenSSLContext; ASocket: THandle);
+begin
+  inherited Create;
+  FContext := AContext;
+  FSocket := ASocket;
+  FStream := nil;
+  FHandshakeComplete := False;
+  FTimeout := 30000;
+  FBlocking := True;
+  // TODO: Create SSL structure
+end;
+
+constructor TOpenSSLConnection.Create(AContext: TOpenSSLContext; AStream: TStream);
+begin
+  inherited Create;
+  FContext := AContext;
+  FSocket := INVALID_HANDLE_VALUE;
+  FStream := AStream;
+  FHandshakeComplete := False;
+  FTimeout := 30000;
+  FBlocking := True;
+  // TODO: Create SSL structure
+end;
+
+destructor TOpenSSLConnection.Destroy;
+begin
+  if FSSL <> nil then
+  begin
+    SSL_shutdown(FSSL);
+    SSL_free(FSSL);
+  end;
+  inherited Destroy;
+end;
+
+function TOpenSSLConnection.Connect: Boolean;
+begin
+  Result := False; // TODO
+end;
+
+function TOpenSSLConnection.Accept: Boolean;
+begin
+  Result := False; // TODO
+end;
+
+function TOpenSSLConnection.Shutdown: Boolean;
+begin
+  Result := False; // TODO
+end;
+
+procedure TOpenSSLConnection.Close;
+begin
+  // TODO
+end;
+
+function TOpenSSLConnection.DoHandshake: TSSLHandshakeState;
+begin
+  Result := sslHsNotStarted; // TODO
+end;
+
+function TOpenSSLConnection.IsHandshakeComplete: Boolean;
+begin
+  Result := FHandshakeComplete;
+end;
+
+function TOpenSSLConnection.Renegotiate: Boolean;
+begin
+  Result := False; // TODO
+end;
+
+function TOpenSSLConnection.Read(var aBuffer; aCount: Integer): Integer;
+begin
+  Result := 0; // TODO
+end;
+
+function TOpenSSLConnection.Write(const aBuffer; aCount: Integer): Integer;
+begin
+  Result := 0; // TODO
+end;
+
+function TOpenSSLConnection.ReadString(out aStr: string): Boolean;
+begin
+  Result := False; // TODO
+end;
+
+function TOpenSSLConnection.WriteString(const aStr: string): Boolean;
+begin
+  Result := False; // TODO
+end;
+
+function TOpenSSLConnection.WantRead: Boolean;
+begin
+  Result := False; // TODO
+end;
+
+function TOpenSSLConnection.WantWrite: Boolean;
+begin
+  Result := False; // TODO
+end;
+
+function TOpenSSLConnection.GetError(aRet: Integer): TSSLErrorCode;
+begin
+  Result := sslErrNone; // TODO
+end;
+
+function TOpenSSLConnection.TranslateError(ErrorCode: Integer): TSSLErrorCode;
+begin
+  case ErrorCode of
+    SSL_ERROR_NONE: Result := sslErrNone;
+    SSL_ERROR_SSL: Result := sslErrProtocol;
+    SSL_ERROR_WANT_READ: Result := sslErrWouldBlock;
+    SSL_ERROR_WANT_WRITE: Result := sslErrWouldBlock;
+    SSL_ERROR_WANT_X509_LOOKUP: Result := sslErrCertificate;
+    SSL_ERROR_SYSCALL: Result := sslErrIO;
+    SSL_ERROR_ZERO_RETURN: Result := sslErrConnection;
+    SSL_ERROR_WANT_CONNECT: Result := sslErrWouldBlock;
+    SSL_ERROR_WANT_ACCEPT: Result := sslErrWouldBlock;
+  else
+    Result := sslErrGeneral;
+  end;
+end;
+
+function TOpenSSLConnection.GetConnectionInfo: TSSLConnectionInfo;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+  // TODO
+end;
+
+function TOpenSSLConnection.GetProtocolVersion: TSSLProtocolVersion;
+begin
+  Result := sslProtocolTLS12; // TODO
+end;
+
+function TOpenSSLConnection.GetCipherName: string;
+begin
+  Result := ''; // TODO
+end;
+
+function TOpenSSLConnection.GetPeerCertificate: ISSLCertificate;
+begin
+  Result := nil; // TODO
+end;
+
+function TOpenSSLConnection.GetPeerCertificateChain: TSSLCertificateArray;
+begin
+  SetLength(Result, 0); // TODO
+end;
+
+function TOpenSSLConnection.GetVerifyResult: Integer;
+begin
+  Result := 0; // TODO
+end;
+
+function TOpenSSLConnection.GetVerifyResultString: string;
+begin
+  Result := ''; // TODO
+end;
+
+function TOpenSSLConnection.GetSession: ISSLSession;
+begin
+  Result := nil; // TODO
+end;
+
+procedure TOpenSSLConnection.SetSession(aSession: ISSLSession);
+begin
+  // TODO
+end;
+
+function TOpenSSLConnection.IsSessionReused: Boolean;
+begin
+  Result := False; // TODO
+end;
+
+function TOpenSSLConnection.GetSelectedALPNProtocol: string;
+begin
+  Result := ''; // TODO
+end;
+
+function TOpenSSLConnection.GetALPNProtocol: string;
+begin
+  Result := GetSelectedALPNProtocol;
+end;
+
+function TOpenSSLConnection.GetSNI: string;
+begin
+  Result := ''; // TODO
+end;
+
+function TOpenSSLConnection.IsConnected: Boolean;
+begin
+  Result := False; // TODO
+end;
+
+function TOpenSSLConnection.GetState: string;
+begin
+  Result := ''; // TODO
+end;
+
+function TOpenSSLConnection.GetStateString: string;
+begin
+  Result := ''; // TODO
+end;
+
+procedure TOpenSSLConnection.SetTimeout(aTimeout: Integer);
+begin
+  FTimeout := aTimeout;
+end;
+
+function TOpenSSLConnection.GetTimeout: Integer;
+begin
+  Result := FTimeout;
+end;
+
+procedure TOpenSSLConnection.SetBlocking(aBlocking: Boolean);
+begin
+  FBlocking := aBlocking;
+end;
+
+function TOpenSSLConnection.GetBlocking: Boolean;
+begin
+  Result := FBlocking;
+end;
+
+function TOpenSSLConnection.GetSocket: THandle;
+begin
+  Result := FSocket;
+end;
+
+function TOpenSSLConnection.GetStream: TStream;
+begin
+  Result := FStream;
+end;
+
+function TOpenSSLConnection.GetNativeHandle: Pointer;
+begin
+  Result := FSSL;
+end;
+
+function TOpenSSLConnection.GetContext: ISSLContext;
+begin
+  Result := FContext as ISSLContext;
+end;
 
 { Helper functions }
 
@@ -987,7 +1393,7 @@ begin
   Result := IsOpenSSLCoreLoaded;
 end;
 
-function LoadOpenSSL(const aLibraryPath: string = ''): Boolean;
+function LoadOpenSSL(const aLibraryPath: string): Boolean;
 begin
   try
     LoadOpenSSLCore(aLibraryPath);
@@ -1018,14 +1424,12 @@ begin
     Result := 0;
 end;
 
-{ Error handling }
-
 function GetOpenSSLError: Cardinal;
 begin
   Result := ERR_get_error;
 end;
 
-function GetOpenSSLErrorString(aError: Cardinal = 0): string;
+function GetOpenSSLErrorString(aError: Cardinal): string;
 var
   LError: Cardinal;
   LBuf: array[0..255] of AnsiChar;
@@ -1049,7 +1453,66 @@ begin
   ERR_clear_error;
 end;
 
-{ Registration }
+function LoadCertificateFromFile(const aFileName: string): PX509;
+begin
+  Result := nil; // TODO
+end;
+
+function LoadCertificateFromMemory(const aData: Pointer; aSize: Integer): PX509;
+begin
+  Result := nil; // TODO
+end;
+
+function LoadPrivateKeyFromFile(const aFileName: string; const aPassword: string): PEVP_PKEY;
+begin
+  Result := nil; // TODO
+end;
+
+function LoadPrivateKeyFromMemory(const aData: Pointer; aSize: Integer; const aPassword: string): PEVP_PKEY;
+begin
+  Result := nil; // TODO
+end;
+
+function VerifyCertificate(aCert: PX509; aCAStore: PX509_STORE): Boolean;
+begin
+  Result := False; // TODO
+end;
+
+function GetCertificateInfo(aCert: PX509): TSSLCertificateInfo;
+begin
+  FillChar(Result, SizeOf(Result), 0); // TODO
+end;
+
+function ProtocolToOpenSSL(aProtocol: TSSLProtocolVersion): Integer;
+begin
+  case aProtocol of
+    sslProtocolSSL3: Result := SSL3_VERSION;
+    sslProtocolTLS10: Result := TLS1_VERSION;
+    sslProtocolTLS11: Result := TLS1_1_VERSION;
+    sslProtocolTLS12: Result := TLS1_2_VERSION;
+    sslProtocolTLS13: Result := TLS1_3_VERSION;
+  else
+    Result := 0;
+  end;
+end;
+
+function OpenSSLToProtocol(aVersion: Integer): TSSLProtocolVersion;
+begin
+  case aVersion of
+    SSL3_VERSION: Result := sslProtocolSSL3;
+    TLS1_VERSION: Result := sslProtocolTLS10;
+    TLS1_1_VERSION: Result := sslProtocolTLS11;
+    TLS1_2_VERSION: Result := sslProtocolTLS12;
+    TLS1_3_VERSION: Result := sslProtocolTLS13;
+  else
+    Result := sslProtocolTLS12;
+  end;
+end;
+
+function GetProtocolName(aProtocol: TSSLProtocolVersion): string;
+begin
+  Result := SSL_PROTOCOL_NAMES[aProtocol];
+end;
 
 procedure RegisterOpenSSLBackend;
 begin

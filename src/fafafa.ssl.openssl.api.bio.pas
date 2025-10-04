@@ -294,6 +294,8 @@ var
   BIO_get_mem_data: TBIO_get_mem_data = nil;
   BIO_new_connect: TBIO_new_connect = nil;
   BIO_s_connect: TBIO_s_connect = nil;
+  BIO_pending: TBIO_pending = nil;
+  BIO_new_socket: TBIO_new_socket = nil;
   
 procedure LoadOpenSSLBIO;
 procedure UnloadOpenSSLBIO;

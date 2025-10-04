@@ -16,6 +16,20 @@ type
   Psize_t = ^size_t;
   ssize_t = NativeInt;
   
+  // C tm structure for time handling
+  TM = record
+    tm_sec: cint;    // seconds after the minute [0-60]
+    tm_min: cint;    // minutes after the hour [0-59]
+    tm_hour: cint;   // hours since midnight [0-23]
+    tm_mday: cint;   // day of the month [1-31]
+    tm_mon: cint;    // months since January [0-11]
+    tm_year: cint;   // years since 1900
+    tm_wday: cint;   // days since Sunday [0-6]
+    tm_yday: cint;   // days since January 1 [0-365]
+    tm_isdst: cint;  // Daylight Saving Time flag
+  end;
+  PTM = ^TM;
+  
   // OpenSSL version info
   POPENSSL_VERSION_NUMBER = ^OPENSSL_VERSION_NUMBER;
   OPENSSL_VERSION_NUMBER = LongWord;

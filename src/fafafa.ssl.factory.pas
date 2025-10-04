@@ -22,6 +22,7 @@ interface
 
 uses
   SysUtils, Classes, SyncObjs,
+  fafafa.ssl.abstract.types,
   fafafa.ssl.types, fafafa.ssl.intf;
 
 type
