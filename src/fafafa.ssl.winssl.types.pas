@@ -154,6 +154,30 @@ type
   
   PCCERT_CHAIN_CONTEXT = Pointer;
   PPCCERT_CHAIN_CONTEXT = ^PCCERT_CHAIN_CONTEXT;
+  
+  // 证书名称 Blob
+  PCERT_NAME_BLOB = ^CERT_NAME_BLOB;
+  CERT_NAME_BLOB = record
+    cbData: DWORD;
+    pbData: PByte;
+  end;
+  
+  // Windows 证书函数类型
+  TCertNameToStr = function(
+    dwCertEncodingType: DWORD;
+    pName: Pointer;
+    dwStrType: DWORD;
+    psz: PChar;
+    csz: DWORD
+  ): DWORD; stdcall;
+  
+  // 不带 T 前缀的类型别名（保持与旧代码兼容）
+  SecHandle = TSecHandle;
+  SecBuffer = TSecBuffer;
+  SecBufferDesc = TSecBufferDesc;
+  SecPkgContext_StreamSizes = TSecPkgContext_StreamSizes;
+  SecPkgContext_ConnectionInfo = TSecPkgContext_ConnectionInfo;
+  TimeStamp = TTimeStamp;
 
 // ============================================================================
 // 常量定义
@@ -386,6 +410,44 @@ const
   CERT_FIND_SUBJECT_STR          = $00080007;
   CERT_FIND_ISSUER_STR           = $00080004;
   CERT_FIND_ANY                  = 0;
+  
+  // 数据表示
+  SECURITY_NATIVE_DREP           = $00000010;
+  SECURITY_NETWORK_DREP          = $00000000;
+  
+  // WinSock 常量
+  INVALID_HANDLE_VALUE           = THandle(-1);
+  SOCKET_ERROR                   = -1;
+  FIONREAD                       = $4004667F;
+  WSAEWOULDBLOCK                 = 10035;
+  
+  // 证书验证错误
+  CERT_E_EXPIRED                 = LONG($800B0101);
+  CERT_E_UNTRUSTEDROOT           = LONG($800B0109);
+  CERT_E_WRONG_USAGE             = LONG($800B0110);
+  CERT_E_CN_NO_MATCH             = LONG($800B010F);
+  CERT_E_REVOKED                 = LONG($800B010C);
+  
+  // 证书名称类型
+  CERT_NAME_EMAIL_TYPE           = 1;
+  CERT_NAME_RDN_TYPE             = 2;
+  CERT_NAME_ATTR_TYPE            = 3;
+  CERT_NAME_SIMPLE_DISPLAY_TYPE  = 4;
+  CERT_NAME_FRIENDLY_DISPLAY_TYPE = 5;
+  CERT_NAME_DNS_TYPE             = 6;
+  CERT_NAME_URL_TYPE             = 7;
+  CERT_NAME_UPN_TYPE             = 8;
+  
+  // 证书名称标志
+  CERT_NAME_ISSUER_FLAG          = $1;
+  CERT_NAME_STR_COMMA_FLAG       = $04000000;
+  CERT_NAME_STR_SEMICOLON_FLAG   = $40000000;
+  CERT_NAME_STR_CRLF_FLAG        = $08000000;
+  
+  // 证书获取名称字符串标志
+  CERT_SIMPLE_NAME_STR           = 1;
+  CERT_OID_NAME_STR              = 2;
+  CERT_X500_NAME_STR             = 3;
   
   // Security Package Name
   UNISP_NAME                     = 'Microsoft Unified Security Protocol Provider';

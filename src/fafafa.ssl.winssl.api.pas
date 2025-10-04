@@ -273,44 +273,7 @@ function CertCreateCertificateContext(
 // ============================================================================
 // 常量定义（补充）
 // ============================================================================
-
-const
-  // 数据表示
-  SECURITY_NATIVE_DREP = $00000010;
-  SECURITY_NETWORK_DREP = $00000000;
-  
-  // 证书名称类型
-  CERT_NAME_EMAIL_TYPE        = 1;
-  CERT_NAME_RDN_TYPE          = 2;
-  CERT_NAME_ATTR_TYPE         = 3;
-  CERT_NAME_SIMPLE_DISPLAY_TYPE = 4;
-  CERT_NAME_FRIENDLY_DISPLAY_TYPE = 5;
-  CERT_NAME_DNS_TYPE          = 6;
-  CERT_NAME_URL_TYPE          = 7;
-  CERT_NAME_UPN_TYPE          = 8;
-  
-  // 证书名称标志
-  CERT_NAME_ISSUER_FLAG       = $1;
-  CERT_NAME_STR_COMMA_FLAG    = $04000000;
-  CERT_NAME_STR_SEMICOLON_FLAG = $40000000;
-  CERT_NAME_STR_CRLF_FLAG     = $08000000;
-  
-  // 证书获取名称字符串标志
-  CERT_SIMPLE_NAME_STR        = 1;
-  CERT_OID_NAME_STR           = 2;
-  CERT_X500_NAME_STR          = 3;
-
-// ============================================================================
-// 辅助类型和函数
-// ============================================================================
-
-type
-  // 证书名称 Blob
-  PCERT_NAME_BLOB = ^CERT_NAME_BLOB;
-  CERT_NAME_BLOB = record
-    cbData: DWORD;
-    pbData: PByte;
-  end;
+// 注意: 所有常量已在 fafafa.ssl.winssl.types 中定义
 
 implementation
 
