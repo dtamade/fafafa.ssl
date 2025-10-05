@@ -58,16 +58,20 @@ end;
 
 procedure Test2_LoadBIO;
 begin
-  WriteLn('Test 2: Check BIO Functions');
+  WriteLn('Test 2: Load BIO Module');
   try
-    // BIO functions are loaded with core, just check they're available
+    // Load BIO module explicitly
+    LoadOpenSSLBIO;
+    TestResult('Load BIO module', True);
+    
+    // Check BIO functions are available
     TestResult('BIO_new available', Assigned(BIO_new));
     TestResult('BIO_new_mem_buf available', Assigned(BIO_new_mem_buf));
     TestResult('BIO_s_mem available', Assigned(BIO_s_mem));
     TestResult('BIO_free available', Assigned(BIO_free));
   except
     on E: Exception do
-      TestResult('Check BIO functions', False, E.Message);
+      TestResult('Load BIO module', False, E.Message);
   end;
   PrintSeparator;
 end;

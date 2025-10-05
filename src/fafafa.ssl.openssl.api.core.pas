@@ -610,6 +610,10 @@ function IsCryptoLibraryLoaded: Boolean;
 function GetCryptoProcAddress(const ProcName: string): Pointer;
 function GetSSLProcAddress(const ProcName: string): Pointer;
 
+{ Helper functions for SSL_want macros }
+function SSL_want_read_impl(const ssl: PSSL): Integer; cdecl;
+function SSL_want_write_impl(const ssl: PSSL): Integer; cdecl;
+
 implementation
 
 var
@@ -828,6 +832,13 @@ begin
   // Session functions
   SSL_session_reused := TSSL_session_reused(GetProcedureAddress(LibSSLHandle, 'SSL_session_reused'));
   
+  // SSL_want_read and SSL_want_write are often macros in OpenSSL headers
+  // Try to load them directly, if not available, use our helper implementations
+  if not Assigned(SSL_want_read) then
+    SSL_want_read := @SSL_want_read_impl;
+  if not Assigned(SSL_want_write) then
+    SSL_want_write := @SSL_want_write_impl;
+  
   // Continue loading all other functions...
   // This is just a partial list, the complete implementation would load all 300+ functions
 end;
@@ -909,6 +920,23 @@ begin
   
   if LoadedCryptoLibName <> '' then
     Result := Result + ' (' + LoadedCryptoLibName + ')';
+end;
+
+{ Helper functions for SSL_want macros }
+{ In OpenSSL, SSL_want_read and SSL_want_write are often macros,
+  so we implement them using SSL_want() }
+function SSL_want_read_impl(const ssl: PSSL): Integer; cdecl;
+begin
+  Result := 0;
+  if Assigned(SSL_want) then
+    Result := Ord(SSL_want(ssl) = SSL_READING);
+end;
+
+function SSL_want_write_impl(const ssl: PSSL): Integer; cdecl;
+begin
+  Result := 0;
+  if Assigned(SSL_want) then
+    Result := Ord(SSL_want(ssl) = SSL_WRITING);
 end;
 
 initialization
