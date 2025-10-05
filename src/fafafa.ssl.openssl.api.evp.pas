@@ -172,6 +172,12 @@ const
   EVP_PKEY_X448 = 1035;
   EVP_PKEY_ED448 = 1088;
   
+  // EVP digest constants
+  EVP_MAX_MD_SIZE = 64;  // Maximum digest size (SHA-512)
+  EVP_MAX_KEY_LENGTH = 64;
+  EVP_MAX_IV_LENGTH = 16;
+  EVP_MAX_BLOCK_LENGTH = 32;
+  
   // PKEY control commands
   EVP_PKEY_CTRL_MD = 1;
   EVP_PKEY_CTRL_PEER_KEY = 2;
@@ -795,6 +801,7 @@ var
   EVP_PKEY_assign: TEVP_PKEY_assign = nil;
   EVP_PKEY_set1_RSA: TEVP_PKEY_set1_RSA = nil;
   EVP_PKEY_get_id: TEVP_PKEY_get_id = nil;
+  EVP_PKEY_id: TEVP_PKEY_get_id = nil;  // Alias for compatibility
   EVP_PKEY_get_bits: TEVP_PKEY_get_bits = nil;
   EVP_PKEY_get_size: TEVP_PKEY_get_size = nil;
   
@@ -936,6 +943,7 @@ begin
   EVP_PKEY_assign := TEVP_PKEY_assign(GetProcAddress(ALibHandle, 'EVP_PKEY_assign'));
   EVP_PKEY_set1_RSA := TEVP_PKEY_set1_RSA(GetProcAddress(ALibHandle, 'EVP_PKEY_set1_RSA'));
   EVP_PKEY_get_id := TEVP_PKEY_get_id(GetProcAddress(ALibHandle, 'EVP_PKEY_get_id'));
+  EVP_PKEY_id := EVP_PKEY_get_id;  // Alias
   EVP_PKEY_get_bits := TEVP_PKEY_get_bits(GetProcAddress(ALibHandle, 'EVP_PKEY_get_bits'));
   EVP_PKEY_get_size := TEVP_PKEY_get_size(GetProcAddress(ALibHandle, 'EVP_PKEY_get_size'));
   

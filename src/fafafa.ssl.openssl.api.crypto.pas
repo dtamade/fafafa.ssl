@@ -12,6 +12,7 @@ uses
 type
   { Memory Management }
   TCRYPTO_free = procedure(ptr: Pointer; const fname: PAnsiChar; line: Integer); cdecl;
+  TOPENSSL_free = procedure(ptr: Pointer); cdecl;  // Simplified version for OpenSSL 3.x
   TCRYPTO_malloc = function(num: size_t; const fname: PAnsiChar; line: Integer): Pointer; cdecl;
   TCRYPTO_realloc = function(addr: Pointer; num: size_t; const fname: PAnsiChar; line: Integer): Pointer; cdecl;
   
@@ -499,6 +500,7 @@ var
   // Function pointers will be dynamically loaded
   // This is a partial list - complete implementation would include all functions
   CRYPTO_free: TCRYPTO_free;
+  OPENSSL_free: TOPENSSL_free;
   
   { Dynamic Library Loading }
   
@@ -517,7 +519,10 @@ begin
   // Similar to LoadOpenSSLCore but for crypto functions
   // Load CRYPTO_free from core module
   if GetCryptoLibHandle <> 0 then
+  begin
     CRYPTO_free := TCRYPTO_free(GetProcAddress(GetCryptoLibHandle, 'CRYPTO_free'));
+    OPENSSL_free := TOPENSSL_free(GetProcAddress(GetCryptoLibHandle, 'OPENSSL_free'));
+  end;
 end;
 
 procedure UnloadOpenSSLCrypto;
