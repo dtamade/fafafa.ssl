@@ -464,7 +464,26 @@ var
   
   // X509 Extension Functions
   X509_get_ext_by_NID: TX509_get_ext_by_NID;
+  X509_get_ext_by_OBJ: TX509_get_ext_by_OBJ;
   X509_get_ext: TX509_get_ext;
+  
+  // X509 Verification Functions
+  X509_check_host: TX509_check_host;
+  X509_verify_cert: TX509_verify_cert;
+  X509_verify_cert_error_string: TX509_verify_cert_error_string;
+  
+  // X509 Store Functions
+  X509_STORE_new: TX509_STORE_new;
+  X509_STORE_free: TX509_STORE_free;
+  X509_STORE_add_cert: TX509_STORE_add_cert;
+  X509_STORE_load_file: TX509_STORE_load_file;
+  X509_STORE_load_path: TX509_STORE_load_path;
+  X509_STORE_set_default_paths: TX509_STORE_set_default_paths;
+  
+  X509_STORE_CTX_new: TX509_STORE_CTX_new;
+  X509_STORE_CTX_free: TX509_STORE_CTX_free;
+  X509_STORE_CTX_init: TX509_STORE_CTX_init;
+  X509_STORE_CTX_get0_chain: TX509_STORE_CTX_get0_chain;
   
   // X509 Name Functions
   X509_NAME_print_ex: TX509_NAME_print_ex;
@@ -519,7 +538,26 @@ begin
   
   // Load X509 Extension Functions  
   X509_get_ext_by_NID := TX509_get_ext_by_NID(GetProcedureAddress(LibHandle, 'X509_get_ext_by_NID'));
+  X509_get_ext_by_OBJ := TX509_get_ext_by_OBJ(GetProcedureAddress(LibHandle, 'X509_get_ext_by_OBJ'));
   X509_get_ext := TX509_get_ext(GetProcedureAddress(LibHandle, 'X509_get_ext'));
+  
+  // Load X509 Verification Functions
+  X509_check_host := TX509_check_host(GetProcedureAddress(LibHandle, 'X509_check_host'));
+  X509_verify_cert := TX509_verify_cert(GetProcedureAddress(LibHandle, 'X509_verify_cert'));
+  X509_verify_cert_error_string := TX509_verify_cert_error_string(GetProcedureAddress(LibHandle, 'X509_verify_cert_error_string'));
+  
+  // Load X509 Store Functions
+  X509_STORE_new := TX509_STORE_new(GetProcedureAddress(LibHandle, 'X509_STORE_new'));
+  X509_STORE_free := TX509_STORE_free(GetProcedureAddress(LibHandle, 'X509_STORE_free'));
+  X509_STORE_add_cert := TX509_STORE_add_cert(GetProcedureAddress(LibHandle, 'X509_STORE_add_cert'));
+  X509_STORE_load_file := TX509_STORE_load_file(GetProcedureAddress(LibHandle, 'X509_STORE_load_file'));
+  X509_STORE_load_path := TX509_STORE_load_path(GetProcedureAddress(LibHandle, 'X509_STORE_load_path'));
+  X509_STORE_set_default_paths := TX509_STORE_set_default_paths(GetProcedureAddress(LibHandle, 'X509_STORE_set_default_paths'));
+  
+  X509_STORE_CTX_new := TX509_STORE_CTX_new(GetProcedureAddress(LibHandle, 'X509_STORE_CTX_new'));
+  X509_STORE_CTX_free := TX509_STORE_CTX_free(GetProcedureAddress(LibHandle, 'X509_STORE_CTX_free'));
+  X509_STORE_CTX_init := TX509_STORE_CTX_init(GetProcedureAddress(LibHandle, 'X509_STORE_CTX_init'));
+  X509_STORE_CTX_get0_chain := TX509_STORE_CTX_get0_chain(GetProcedureAddress(LibHandle, 'X509_STORE_CTX_get0_chain'));
   
   // Load X509 Name Functions
   X509_NAME_print_ex := TX509_NAME_print_ex(GetProcedureAddress(LibHandle, 'X509_NAME_print_ex'));

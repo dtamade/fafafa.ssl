@@ -1,5 +1,7 @@
 unit fafafa.ssl.openssl.api.obj;
 
+{$mode objfpc}{$H+}
+
 interface
 
 uses
@@ -143,8 +145,8 @@ function CreateOID(const OID, ShortName, LongName: string): Integer;
 function CompareObjects(Obj1, Obj2: PASN1_OBJECT): Boolean;
 function DuplicateObject(Obj: PASN1_OBJECT): PASN1_OBJECT;
 function GetSignatureAlgorithms(SignatureNID: Integer; 
-  out DigestNID, PublicKeyNID: Integer): Boolean;
-function FindSignatureNID(DigestNID, PublicKeyNID: Integer): Integer;
+  out ADigestNID, APublicKeyNID: Integer): Boolean;
+function FindSignatureNID(ADigestNID, APublicKeyNID: Integer): Integer;
 
 // 模块加载和卸载
 procedure LoadOBJModule(ALibCrypto: THandle);
@@ -348,23 +350,23 @@ begin
 end;
 
 function GetSignatureAlgorithms(SignatureNID: Integer; 
-  out DigestNID, PublicKeyNID: Integer): Boolean;
+  out ADigestNID, APublicKeyNID: Integer): Boolean;
 begin
   Result := False;
-  DigestNID := NID_undef;
-  PublicKeyNID := NID_undef;
+  ADigestNID := NID_undef;
+  APublicKeyNID := NID_undef;
   
   if not Assigned(OBJ_find_sigid_algs) then Exit;
   
-  Result := OBJ_find_sigid_algs(SignatureNID, DigestNID, PublicKeyNID) = 1;
+  Result := OBJ_find_sigid_algs(SignatureNID, ADigestNID, APublicKeyNID) = 1;
 end;
 
-function FindSignatureNID(DigestNID, PublicKeyNID: Integer): Integer;
+function FindSignatureNID(ADigestNID, APublicKeyNID: Integer): Integer;
 begin
   Result := NID_undef;
   if not Assigned(OBJ_find_sigid_by_algs) then Exit;
   
-  OBJ_find_sigid_by_algs(Result, DigestNID, PublicKeyNID);
+  OBJ_find_sigid_by_algs(Result, ADigestNID, APublicKeyNID);
 end;
 
 end.

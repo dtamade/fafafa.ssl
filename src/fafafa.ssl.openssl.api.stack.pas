@@ -1,4 +1,4 @@
-{$IFNDEF WINDOWS}{$MODE DELPHI}{$ENDIF}
+{$mode ObjFPC}{$H+}
 
 unit fafafa.ssl.openssl.api.stack;
 
@@ -449,6 +449,7 @@ begin
   
   if (Stack <> nil) and Assigned(OPENSSL_sk_value) then
     Result := OPENSSL_sk_value(Stack, Index);
+end;
 
 initialization
   

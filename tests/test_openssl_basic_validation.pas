@@ -15,7 +15,7 @@ program test_openssl_basic_validation;
 }
 
 uses
-  SysUtils, Classes,
+  SysUtils, Classes, TypInfo,
   fafafa.ssl.types,
   fafafa.ssl.intf,
   fafafa.ssl.factory,
@@ -61,18 +61,19 @@ begin
   WriteLn('=== 测试1: OpenSSL库加载 ===');
   
   try
-    Success := LoadOpenSSLLibrary;
-    LogTest('LoadOpenSSLLibrary', Success, 
+    LoadOpenSSLCore;
+    Success := IsOpenSSLCoreLoaded;
+    LogTest('LoadOpenSSLCore', Success, 
             '库句柄: ' + IntToStr(PtrInt(GetCryptoLibHandle)));
     
     if Success then
     begin
-      LogTest('IsCryptoLibraryLoaded', IsCryptoLibraryLoaded,
+      LogTest('IsOpenSSLCoreLoaded', IsOpenSSLCoreLoaded,
               '加密库已加载');
     end;
   except
     on E: Exception do
-      LogTest('LoadOpenSSLLibrary', False, E.Message);
+      LogTest('LoadOpenSSLCore', False, E.Message);
   end;
 end;
 
@@ -102,7 +103,8 @@ begin
   
   // 测试BIO模块
   try
-    Success := LoadOpenSSLBIO;
+    LoadOpenSSLBIO;
+    Success := True;
     LogTest('LoadOpenSSLBIO', Success);
     if Success then
       LogTest('BIO_pending已加载', Assigned(BIO_pending));
@@ -113,7 +115,8 @@ begin
   
   // 测试X509模块
   try
-    Success := LoadOpenSSLX509;
+    LoadOpenSSLX509;
+    Success := True;
     LogTest('LoadOpenSSLX509', Success);
     if Success then
     begin
@@ -129,7 +132,8 @@ begin
   
   // 测试ASN1模块
   try
-    Success := LoadOpenSSLASN1;
+    LoadOpenSSLASN1(GetCryptoLibHandle);
+    Success := True;
     LogTest('LoadOpenSSLASN1', Success);
     if Success then
     begin
@@ -157,7 +161,7 @@ begin
   
   // 测试PEM模块
   try
-    Success := LoadOpenSSLPEM;
+    Success := LoadOpenSSLPEM(GetCryptoLibHandle);
     LogTest('LoadOpenSSLPEM', Success);
     if Success then
       LogTest('PEM_write_bio_PUBKEY已加载', Assigned(PEM_write_bio_PUBKEY));
@@ -168,24 +172,29 @@ begin
   
   // 测试OBJ模块
   try
-    Success := LoadOpenSSLOBJ;
-    LogTest('LoadOpenSSLOBJ', Success);
+    LoadOBJModule(GetCryptoLibHandle);
+    Success := True;
+    LogTest('LoadOBJModule', Success);
     if Success then
       LogTest('OBJ_obj2txt已加载', Assigned(OBJ_obj2txt));
   except
     on E: Exception do
-      LogTest('LoadOpenSSLOBJ', False, E.Message);
+      LogTest('LoadOBJModule', False, E.Message);
   end;
   
   // 测试CRYPTO模块
   try
-    Success := LoadOpenSSLCRYPTO;
-    LogTest('LoadOpenSSLCRYPTO', Success);
+    LoadOpenSSLCrypto;
+    Success := True;
+    LogTest('LoadOpenSSLCrypto', Success);
     if Success then
+    begin
       LogTest('CRYPTO_free已加载', Assigned(CRYPTO_free));
+      LogTest('OPENSSL_free已加载', Assigned(OPENSSL_free));
+    end;
   except
     on E: Exception do
-      LogTest('LoadOpenSSLCRYPTO', False, E.Message);
+      LogTest('LoadOpenSSLCrypto', False, E.Message);
   end;
 end;
 
@@ -333,13 +342,18 @@ begin
 end;
 
 procedure PrintSummary;
+var
+  Percentage: Double;
 begin
   WriteLn;
   WriteLn('=====================================');
   WriteLn('测试总结:');
   WriteLn('  总测试数: ', TestsTotal);
-  WriteLn('  通过: ', TestsPassed, ' (', 
-          Format('%.1f', [TestsPassed * 100.0 / TestsTotal]), '%)');
+  if TestsTotal > 0 then
+    Percentage := TestsPassed * 100.0 / TestsTotal
+  else
+    Percentage := 0.0;
+  WriteLn('  通过: ', TestsPassed, ' (', Format('%.1f', [Percentage]), '%)');
   WriteLn('  失败: ', TestsFailed);
   WriteLn('=====================================');
   
@@ -378,12 +392,10 @@ begin
   end;
   
   WriteLn;
-  WriteLn('按Enter键退出...');
-  ReadLn;
   
   // 返回退出码
   if TestsFailed > 0 then
-    Halt(1)
+    ExitCode := 1
   else
-    Halt(0);
+    ExitCode := 0;
 end.

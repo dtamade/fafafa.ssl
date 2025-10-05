@@ -43,19 +43,19 @@ OpenSSL后端实现已经可以编译，但在创建测试程序时发现了更�
 
 ## 修复优先级
 
-### 阶段1: 基础API修复 (高优先级)
+### 阶段1: 基础API修复 (高优先级) ✅ 完成
 1. ✅ 添加缺失的API模块引用到uses子句
-2. 🔄 修复EVP_PKEY_id - 添加到EVP API
-3. 🔄 修复EVP_MAX_MD_SIZE - 添加常量定义
-4. 🔄 修复CRYPTO_free - 检查正确的签名
+2. ✅ 修复EVP_PKEY_id - 添加EVP_PKEY_id别名
+3. ✅ 修复EVP_MAX_MD_SIZE - 添加EVP digest常量定义
+4. ✅ 修复CRYPTO_free - 添加OPENSSL_free简化版本
 
-### 阶段2: 函数调用修复 (中优先级)
-5. 🔄 修复EVP哈希函数调用 - 添加括号
-6. 🔄 修复OPENSSL_version调用
-7. 🔄 修复LoadOpenSSLCore调用
+### 阶段2: 函数调用修复 (中优先级) ✅ 完成
+5. ✅ 修复EVP哈希函数调用 - 添加括号获取函数指针
+6. ✅ 修复OPENSSL_version调用 - 正确处理函数指针和参数
+7. ✅ 修复LoadOpenSSL调用 - 简化为调用LoadOpenSSLCore
 
-### 阶段3: 工厂集成修复 (低优先级)
-8. 🔄 修复RegisterBackend/UnregisterBackend
+### 阶段3: 工厂集成修复 (低优先级) ✅ 完成
+8. ✅ 修复RegisterLibrary/UnregisterLibrary - 使用正确的工厂方法
 
 ## 实施策略
 

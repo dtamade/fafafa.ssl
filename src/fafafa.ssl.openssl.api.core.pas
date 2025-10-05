@@ -174,6 +174,7 @@ type
   TSSL_CTX_set_cert_cb = procedure(ctx: PSSL_CTX; cb: TClient_cert_cb; arg: Pointer); cdecl;
   TSSL_CTX_set_read_ahead = procedure(ctx: PSSL_CTX; yes: Integer); cdecl;
   TSSL_CTX_get_read_ahead = function(const ctx: PSSL_CTX): Integer; cdecl;
+  TSSL_CTX_load_verify_locations = function(ctx: PSSL_CTX; const CAfile: PAnsiChar; const CApath: PAnsiChar): Integer; cdecl;
   TSSL_CTX_get_client_CA_list = function(const ctx: PSSL_CTX): PSTACK_OF_X509_NAME; cdecl;
   TSSL_CTX_set_client_CA_list = procedure(ctx: PSSL_CTX; name_list: PSTACK_OF_X509_NAME); cdecl;
   TSSL_set_client_CA_list = procedure(ssl: PSSL; name_list: PSTACK_OF_X509_NAME); cdecl;
@@ -198,6 +199,7 @@ type
   TSSL_has_matching_session_id = function(const ssl: PSSL; const id: PByte; id_len: Cardinal): Integer; cdecl;
   TSSL_SESSION_new = function: PSSL_SESSION; cdecl;
   TSSL_SESSION_free = procedure(sess: PSSL_SESSION); cdecl;
+  TSSL_session_reused = function(const ssl: PSSL): Integer; cdecl;
   TSSL_SESSION_up_ref = function(sess: PSSL_SESSION): Integer; cdecl;
   TSSL_SESSION_get_id = function(const s: PSSL_SESSION; len: PCardinal): PByte; cdecl;
   TSSL_SESSION_get0_id_context = function(const s: PSSL_SESSION; len: PCardinal): PByte; cdecl;
@@ -554,6 +556,43 @@ var
   SSL_want_async: TSSL_want_async = nil;
   SSL_want_async_job: TSSL_want_async_job = nil;
   SSL_want_client_hello_cb: TSSL_want_client_hello_cb = nil;
+  
+  // Context certificate and key functions
+  SSL_CTX_use_certificate: TSSL_CTX_use_certificate = nil;
+  SSL_CTX_use_certificate_file: TSSL_CTX_use_certificate_file = nil;
+  SSL_CTX_use_certificate_chain_file: TSSL_CTX_use_certificate_chain_file = nil;
+  SSL_CTX_use_PrivateKey: TSSL_CTX_use_PrivateKey = nil;
+  SSL_CTX_use_PrivateKey_file: TSSL_CTX_use_PrivateKey_file = nil;
+  SSL_CTX_check_private_key: TSSL_CTX_check_private_key = nil;
+  SSL_CTX_set_default_passwd_cb: TSSL_CTX_set_default_passwd_cb = nil;
+  SSL_CTX_set_default_passwd_cb_userdata: TSSL_CTX_set_default_passwd_cb_userdata = nil;
+  SSL_CTX_get_default_passwd_cb: TSSL_CTX_get_default_passwd_cb = nil;
+  SSL_CTX_get_default_passwd_cb_userdata: TSSL_CTX_get_default_passwd_cb_userdata = nil;
+  
+  // Context verification and options
+  SSL_CTX_set_verify: TSSL_CTX_set_verify = nil;
+  SSL_CTX_set_verify_depth: TSSL_CTX_set_verify_depth = nil;
+  SSL_CTX_get_verify_mode: TSSL_CTX_get_verify_mode = nil;
+  SSL_CTX_get_verify_depth: TSSL_CTX_get_verify_depth = nil;
+  SSL_CTX_get_verify_callback: TSSL_CTX_get_verify_callback = nil;
+  SSL_CTX_load_verify_locations: TSSL_CTX_load_verify_locations = nil;
+  SSL_CTX_set_options: TSSL_CTX_set_options = nil;
+  SSL_CTX_clear_options: TSSL_CTX_clear_options = nil;
+  SSL_CTX_get_options: TSSL_CTX_get_options = nil;
+  
+  // Connection state functions
+  SSL_set_connect_state: TSSL_set_connect_state = nil;
+  SSL_set_accept_state: TSSL_set_accept_state = nil;
+  
+  // Peer certificate functions
+  SSL_get_peer_certificate: TSSL_get_peer_certificate = nil;
+  SSL_get_peer_cert_chain: TSSL_get_peer_cert_chain = nil;
+  
+  // Verification result functions
+  SSL_get_verify_result: TSSL_get_verify_result = nil;
+  
+  // Session functions
+  SSL_session_reused: TSSL_session_reused = nil;
 
   { Dynamic Library Loading }
   
@@ -751,6 +790,43 @@ begin
   SSL_want_async := TSSL_want_async(GetProcedureAddress(LibSSLHandle, 'SSL_want_async'));
   SSL_want_async_job := TSSL_want_async_job(GetProcedureAddress(LibSSLHandle, 'SSL_want_async_job'));
   SSL_want_client_hello_cb := TSSL_want_client_hello_cb(GetProcedureAddress(LibSSLHandle, 'SSL_want_client_hello_cb'));
+  
+  // SSL Context options and verification
+  SSL_CTX_set_options := TSSL_CTX_set_options(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_set_options'));
+  SSL_CTX_clear_options := TSSL_CTX_clear_options(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_clear_options'));
+  SSL_CTX_get_options := TSSL_CTX_get_options(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_get_options'));
+  SSL_CTX_set_verify := TSSL_CTX_set_verify(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_set_verify'));
+  SSL_CTX_set_verify_depth := TSSL_CTX_set_verify_depth(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_set_verify_depth'));
+  SSL_CTX_get_verify_mode := TSSL_CTX_get_verify_mode(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_get_verify_mode'));
+  SSL_CTX_get_verify_depth := TSSL_CTX_get_verify_depth(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_get_verify_depth'));
+  SSL_CTX_get_verify_callback := TSSL_CTX_get_verify_callback(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_get_verify_callback'));
+  SSL_CTX_load_verify_locations := TSSL_CTX_load_verify_locations(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_load_verify_locations'));
+  
+  // Certificate and private key functions
+  SSL_CTX_use_certificate := TSSL_CTX_use_certificate(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_use_certificate'));
+  SSL_CTX_use_certificate_file := TSSL_CTX_use_certificate_file(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_use_certificate_file'));
+  SSL_CTX_use_certificate_chain_file := TSSL_CTX_use_certificate_chain_file(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_use_certificate_chain_file'));
+  SSL_CTX_use_PrivateKey := TSSL_CTX_use_PrivateKey(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_use_PrivateKey'));
+  SSL_CTX_use_PrivateKey_file := TSSL_CTX_use_PrivateKey_file(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_use_PrivateKey_file'));
+  SSL_CTX_check_private_key := TSSL_CTX_check_private_key(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_check_private_key'));
+  SSL_CTX_set_default_passwd_cb := TSSL_CTX_set_default_passwd_cb(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_set_default_passwd_cb'));
+  SSL_CTX_set_default_passwd_cb_userdata := TSSL_CTX_set_default_passwd_cb_userdata(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_set_default_passwd_cb_userdata'));
+  SSL_CTX_get_default_passwd_cb := TSSL_CTX_get_default_passwd_cb(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_get_default_passwd_cb'));
+  SSL_CTX_get_default_passwd_cb_userdata := TSSL_CTX_get_default_passwd_cb_userdata(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_get_default_passwd_cb_userdata'));
+  
+  // Connection state functions
+  SSL_set_connect_state := TSSL_set_connect_state(GetProcedureAddress(LibSSLHandle, 'SSL_set_connect_state'));
+  SSL_set_accept_state := TSSL_set_accept_state(GetProcedureAddress(LibSSLHandle, 'SSL_set_accept_state'));
+  
+  // Peer certificate functions
+  SSL_get_peer_certificate := TSSL_get_peer_certificate(GetProcedureAddress(LibSSLHandle, 'SSL_get_peer_certificate'));
+  SSL_get_peer_cert_chain := TSSL_get_peer_cert_chain(GetProcedureAddress(LibSSLHandle, 'SSL_get_peer_cert_chain'));
+  
+  // Verification result functions  
+  SSL_get_verify_result := TSSL_get_verify_result(GetProcedureAddress(LibSSLHandle, 'SSL_get_verify_result'));
+  
+  // Session functions
+  SSL_session_reused := TSSL_session_reused(GetProcedureAddress(LibSSLHandle, 'SSL_session_reused'));
   
   // Continue loading all other functions...
   // This is just a partial list, the complete implementation would load all 300+ functions
