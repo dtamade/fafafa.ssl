@@ -275,31 +275,7 @@ implementation
 uses
   fafafa.ssl.factory;
 
-type
-  TOpenSSLBackend = class(TInterfacedObject)
-  private
-    FLibrary: TOpenSSLLibrary;
-  public
-    constructor Create;
-    destructor Destroy; override;
-  end;
-
-var
-  GOpenSSLBackend: TOpenSSLBackend;
-
-{ TOpenSSLBackend }
-
-constructor TOpenSSLBackend.Create;
-begin
-  inherited Create;
-  FLibrary := TOpenSSLLibrary.Create;
-end;
-
-destructor TOpenSSLBackend.Destroy;
-begin
-  FLibrary.Free;
-  inherited Destroy;
-end;
+// No longer need TOpenSSLBackend class - factory will create TOpenSSLLibrary directly
 
 { TOpenSSLLibrary }
 
@@ -907,11 +883,11 @@ begin
   LBN := ASN1_INTEGER_to_BN(LSerial, nil);
   if LBN = nil then Exit;
   try
-    LHex := BN_bn2hex(LBN);
+      LHex := BN_bn2hex(LBN);
     if LHex <> nil then
     begin
       Result := string(LHex);
-      CRYPTO_free(LHex);
+      OPENSSL_free(LHex);  // Use OPENSSL_free instead of CRYPTO_free
     end;
   finally
     BN_free(LBN);
@@ -1078,24 +1054,24 @@ end;
 
 function TOpenSSLCertificate.GetFingerprint(aHashType: TSSLHash): string;
 var
+  LHash: array[0..EVP_MAX_MD_SIZE-1] of Byte;
+  LHashLen: Cardinal;
   LMD: PEVP_MD;
-  LDigest: array[0..EVP_MAX_MD_SIZE-1] of Byte;
-  LLen: Cardinal;
-  I: Integer;
+  i: Integer;
 begin
   Result := '';
   if FCert = nil then Exit;
   
+  // Select hash algorithm (call functions to get pointers)
   case aHashType of
-    sslHashMD5: LMD := EVP_md5;
-    sslHashSHA1: LMD := EVP_sha1;
-    sslHashSHA256: LMD := EVP_sha256;
-    sslHashSHA384: LMD := EVP_sha384;
-    sslHashSHA512: LMD := EVP_sha512;
+    sslHashMD5: LMD := EVP_md5();
+    sslHashSHA1: LMD := EVP_sha1();
+    sslHashSHA256: LMD := EVP_sha256();
+    sslHashSHA384: LMD := EVP_sha384();
+    sslHashSHA512: LMD := EVP_sha512();
   else
     Exit;
   end;
-  
   if X509_digest(FCert, LMD, @LDigest[0], @LLen) = 1 then
   begin
     for I := 0 to LLen - 1 do
@@ -1396,8 +1372,10 @@ end;
 function LoadOpenSSL(const aLibraryPath: string): Boolean;
 begin
   try
-    LoadOpenSSLCore(aLibraryPath);
-    Result := IsOpenSSLCoreLoaded;
+    if aLibraryPath <> '' then
+      Result := LoadOpenSSLLibrary(aLibraryPath)
+    else
+      Result := LoadOpenSSLLibrary;
   except
     Result := False;
   end;
@@ -1419,14 +1397,17 @@ end;
 function GetOpenSSLVersionNumber: Cardinal;
 begin
   if Assigned(OpenSSL_version_num) then
-    Result := OpenSSL_version_num
+    Result := OpenSSL_version_num()
   else
     Result := 0;
 end;
 
 function GetOpenSSLError: Cardinal;
 begin
-  Result := ERR_get_error;
+  if Assigned(ERR_get_error) then
+    Result := ERR_get_error()
+  else
+    Result := 0;
 end;
 
 function GetOpenSSLErrorString(aError: Cardinal): string;
@@ -1435,7 +1416,12 @@ var
   LBuf: array[0..255] of AnsiChar;
 begin
   if aError = 0 then
-    LError := ERR_get_error
+  begin
+    if Assigned(ERR_get_error) then
+      LError := ERR_get_error()
+    else
+      LError := 0;
+  end
   else
     LError := aError;
     
@@ -1443,14 +1429,20 @@ begin
     Result := 'No error'
   else
   begin
-    ERR_error_string_n(LError, @LBuf[0], SizeOf(LBuf));
-    Result := string(LBuf);
+    if Assigned(ERR_error_string_n) then
+    begin
+      ERR_error_string_n(LError, @LBuf[0], SizeOf(LBuf));
+      Result := string(LBuf);
+    end
+    else
+      Result := 'Error: ' + IntToStr(LError);
   end;
 end;
 
 procedure ClearOpenSSLErrors;
 begin
-  ERR_clear_error;
+  if Assigned(ERR_clear_error) then
+    ERR_clear_error();
 end;
 
 function LoadCertificateFromFile(const aFileName: string): PX509;
@@ -1516,21 +1508,14 @@ end;
 
 procedure RegisterOpenSSLBackend;
 begin
-  if GOpenSSLBackend = nil then
-    GOpenSSLBackend := TOpenSSLBackend.Create;
-    
-  TSSLFactory.RegisterBackend('OpenSSL', GOpenSSLBackend);
+  // Register OpenSSL library with the factory
+  TSSLFactory.RegisterLibrary(sslOpenSSL, TOpenSSLLibrary, 'OpenSSL 3.x Support', 100);
 end;
 
 procedure UnregisterOpenSSLBackend;
 begin
-  TSSLFactory.UnregisterBackend('OpenSSL');
-  
-  if GOpenSSLBackend <> nil then
-  begin
-    GOpenSSLBackend.Free;
-    GOpenSSLBackend := nil;
-  end;
+  // Unregister OpenSSL library from the factory
+  TSSLFactory.UnregisterLibrary(sslOpenSSL);
 end;
 
 initialization
