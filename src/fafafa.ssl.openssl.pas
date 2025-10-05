@@ -1072,12 +1072,12 @@ begin
   else
     Exit;
   end;
-  if X509_digest(FCert, LMD, @LDigest[0], @LLen) = 1 then
+  if X509_digest(FCert, LMD, @LHash[0], @LHashLen) = 1 then
   begin
-    for I := 0 to LLen - 1 do
+    for i := 0 to LHashLen - 1 do
     begin
-      if I > 0 then Result := Result + ':';
-      Result := Result + IntToHex(LDigest[I], 2);
+      if i > 0 then Result := Result + ':';
+      Result := Result + IntToHex(LHash[i], 2);
     end;
   end;
 end;
@@ -1372,10 +1372,10 @@ end;
 function LoadOpenSSL(const aLibraryPath: string): Boolean;
 begin
   try
-    if aLibraryPath <> '' then
-      Result := LoadOpenSSLLibrary(aLibraryPath)
-    else
-      Result := LoadOpenSSLLibrary;
+    // Note: aLibraryPath is currently ignored - LoadOpenSSLCore auto-detects
+    // TODO: Add support for custom library paths
+    LoadOpenSSLCore;
+    Result := IsOpenSSLCoreLoaded;
   except
     Result := False;
   end;
@@ -1387,9 +1387,17 @@ begin
 end;
 
 function GetOpenSSLVersion: string;
+var
+  LVersion: PAnsiChar;
 begin
   if Assigned(OpenSSL_version) then
-    Result := string(OpenSSL_version(OPENSSL_VERSION))
+  begin
+    LVersion := OpenSSL_version(0);  // 0 = OPENSSL_VERSION constant
+    if LVersion <> nil then
+      Result := string(LVersion)
+    else
+      Result := 'Unknown';
+  end
   else
     Result := 'Unknown';
 end;
