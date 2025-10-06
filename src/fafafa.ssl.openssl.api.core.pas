@@ -580,6 +580,10 @@ var
   SSL_CTX_clear_options: TSSL_CTX_clear_options = nil;
   SSL_CTX_get_options: TSSL_CTX_get_options = nil;
   
+  // Control functions
+  SSL_CTX_ctrl: TSSL_CTX_ctrl = nil;
+  SSL_ctrl: TSSL_ctrl = nil;
+  
   // Connection state functions
   SSL_set_connect_state: TSSL_set_connect_state = nil;
   SSL_set_accept_state: TSSL_set_accept_state = nil;
@@ -593,6 +597,26 @@ var
   
   // Session functions
   SSL_session_reused: TSSL_session_reused = nil;
+  
+  // State and version functions
+  SSL_get_state: TSSL_get_state = nil;
+  SSL_state: TSSL_state = nil;
+  SSL_is_init_finished: TSSL_is_init_finished = nil;
+  SSL_in_init: TSSL_in_init = nil;
+  SSL_in_before: TSSL_in_before = nil;
+  SSL_is_server: TSSL_is_server = nil;
+  SSL_version: TSSL_version = nil;
+  SSL_client_version: TSSL_client_version = nil;
+  SSL_get_version: TSSL_get_version = nil;
+  SSL_get_ssl_method: TSSL_get_ssl_method = nil;
+  SSL_set_ssl_method: TSSL_set_ssl_method = nil;
+  
+  // Cipher functions
+  SSL_get_current_cipher: TSSL_get_current_cipher = nil;
+  SSL_get_pending_cipher: TSSL_get_pending_cipher = nil;
+  SSL_CIPHER_get_name: TSSL_CIPHER_get_name = nil;
+  SSL_CIPHER_get_bits: TSSL_CIPHER_get_bits = nil;
+  SSL_CIPHER_get_version: TSSL_CIPHER_get_version = nil;
 
   { Dynamic Library Loading }
   
@@ -806,6 +830,10 @@ begin
   SSL_CTX_get_verify_callback := TSSL_CTX_get_verify_callback(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_get_verify_callback'));
   SSL_CTX_load_verify_locations := TSSL_CTX_load_verify_locations(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_load_verify_locations'));
   
+  // Control functions
+  SSL_CTX_ctrl := TSSL_CTX_ctrl(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_ctrl'));
+  SSL_ctrl := TSSL_ctrl(GetProcedureAddress(LibSSLHandle, 'SSL_ctrl'));
+  
   // Certificate and private key functions
   SSL_CTX_use_certificate := TSSL_CTX_use_certificate(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_use_certificate'));
   SSL_CTX_use_certificate_file := TSSL_CTX_use_certificate_file(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_use_certificate_file'));
@@ -831,6 +859,26 @@ begin
   
   // Session functions
   SSL_session_reused := TSSL_session_reused(GetProcedureAddress(LibSSLHandle, 'SSL_session_reused'));
+  
+  // State and version functions
+  SSL_get_state := TSSL_get_state(GetProcedureAddress(LibSSLHandle, 'SSL_get_state'));
+  SSL_state := TSSL_state(GetProcedureAddress(LibSSLHandle, 'SSL_state'));
+  SSL_is_init_finished := TSSL_is_init_finished(GetProcedureAddress(LibSSLHandle, 'SSL_is_init_finished'));
+  SSL_in_init := TSSL_in_init(GetProcedureAddress(LibSSLHandle, 'SSL_in_init'));
+  SSL_in_before := TSSL_in_before(GetProcedureAddress(LibSSLHandle, 'SSL_in_before'));
+  SSL_is_server := TSSL_is_server(GetProcedureAddress(LibSSLHandle, 'SSL_is_server'));
+  SSL_version := TSSL_version(GetProcedureAddress(LibSSLHandle, 'SSL_version'));
+  SSL_client_version := TSSL_client_version(GetProcedureAddress(LibSSLHandle, 'SSL_client_version'));
+  SSL_get_version := TSSL_get_version(GetProcedureAddress(LibSSLHandle, 'SSL_get_version'));
+  SSL_get_ssl_method := TSSL_get_ssl_method(GetProcedureAddress(LibSSLHandle, 'SSL_get_ssl_method'));
+  SSL_set_ssl_method := TSSL_set_ssl_method(GetProcedureAddress(LibSSLHandle, 'SSL_set_ssl_method'));
+  
+  // Cipher functions
+  SSL_get_current_cipher := TSSL_get_current_cipher(GetProcedureAddress(LibSSLHandle, 'SSL_get_current_cipher'));
+  SSL_get_pending_cipher := TSSL_get_pending_cipher(GetProcedureAddress(LibSSLHandle, 'SSL_get_pending_cipher'));
+  SSL_CIPHER_get_name := TSSL_CIPHER_get_name(GetProcedureAddress(LibSSLHandle, 'SSL_CIPHER_get_name'));
+  SSL_CIPHER_get_bits := TSSL_CIPHER_get_bits(GetProcedureAddress(LibSSLHandle, 'SSL_CIPHER_get_bits'));
+  SSL_CIPHER_get_version := TSSL_CIPHER_get_version(GetProcedureAddress(LibSSLHandle, 'SSL_CIPHER_get_version'));
   
   // SSL_want_read and SSL_want_write are often macros in OpenSSL headers
   // Try to load them directly, if not available, use our helper implementations

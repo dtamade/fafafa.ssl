@@ -228,14 +228,14 @@ procedure UnloadPKCS7Functions;
 function IsPKCS7Loaded: Boolean;
 
 // High-level helper functions
-function SignData(const Data: TBytes; SignCert: PX509; PrivKey: PEVP_PKEY; 
+function SignData(const AData: TBytes; SignCert: PX509; PrivKey: PEVP_PKEY; 
                   CACerts: PSTACK_OF_X509; Flags: Integer): TBytes;
 function VerifySignedData(const SignedData: TBytes; CACerts: PSTACK_OF_X509; 
-                         Store: PX509_STORE; out Data: TBytes; Flags: Integer): Boolean;
-function EncryptData(const Data: TBytes; RecipCerts: PSTACK_OF_X509; 
+                         Store: PX509_STORE; out AData: TBytes; Flags: Integer): Boolean;
+function EncryptData(const AData: TBytes; RecipCerts: PSTACK_OF_X509; 
                     Cipher: PEVP_CIPHER; Flags: Integer): TBytes;
 function DecryptData(const EncryptedData: TBytes; RecipCert: PX509; 
-                    PrivKey: PEVP_PKEY; out Data: TBytes; Flags: Integer): Boolean;
+                    PrivKey: PEVP_PKEY; out AData: TBytes; Flags: Integer): Boolean;
 
 implementation
 
@@ -367,7 +367,7 @@ end;
 
 // High-level helper function implementations
 
-function SignData(const Data: TBytes; SignCert: PX509; PrivKey: PEVP_PKEY; 
+function SignData(const AData: TBytes; SignCert: PX509; PrivKey: PEVP_PKEY; 
                   CACerts: PSTACK_OF_X509; Flags: Integer): TBytes;
 var
   bio_in, bio_out: PBIO;
@@ -381,7 +381,7 @@ begin
     raise Exception.Create('PKCS7 functions not loaded');
   
   // Create input BIO from data
-  bio_in := BIO_new_mem_buf(@Data[0], Length(Data));
+  bio_in := BIO_new_mem_buf(@AData[0], Length(AData));
   if bio_in = nil then
     raise Exception.Create('Failed to create input BIO');
     
@@ -424,7 +424,7 @@ begin
 end;
 
 function VerifySignedData(const SignedData: TBytes; CACerts: PSTACK_OF_X509; 
-                         Store: PX509_STORE; out Data: TBytes; Flags: Integer): Boolean;
+                         Store: PX509_STORE; out AData: TBytes; Flags: Integer): Boolean;
 var
   bio_in, bio_out: PBIO;
   p7: PPKCS7;
@@ -432,7 +432,7 @@ var
   len: Integer;
 begin
   Result := False;
-  Data := nil;
+  AData := nil;
   
   if not PKCS7Loaded then
     Exit;
@@ -461,13 +461,13 @@ begin
         if Result then
         begin
           // Read verified data from BIO
-          SetLength(Data, 0);
+          SetLength(AData, 0);
           repeat
             len := BIO_read(bio_out, @buf[0], SizeOf(buf));
             if len > 0 then
             begin
-              SetLength(Data, Length(Data) + len);
-              Move(buf[0], Data[Length(Data) - len], len);
+              SetLength(AData, Length(AData) + len);
+              Move(buf[0], AData[Length(AData) - len], len);
             end;
           until len <= 0;
         end;
@@ -482,7 +482,7 @@ begin
   end;
 end;
 
-function EncryptData(const Data: TBytes; RecipCerts: PSTACK_OF_X509; 
+function EncryptData(const AData: TBytes; RecipCerts: PSTACK_OF_X509; 
                     Cipher: PEVP_CIPHER; Flags: Integer): TBytes;
 var
   bio_in, bio_out: PBIO;
@@ -496,7 +496,7 @@ begin
     raise Exception.Create('PKCS7 functions not loaded');
   
   // Create input BIO from data
-  bio_in := BIO_new_mem_buf(@Data[0], Length(Data));
+  bio_in := BIO_new_mem_buf(@AData[0], Length(AData));
   if bio_in = nil then
     raise Exception.Create('Failed to create input BIO');
     
@@ -539,7 +539,7 @@ begin
 end;
 
 function DecryptData(const EncryptedData: TBytes; RecipCert: PX509; 
-                    PrivKey: PEVP_PKEY; out Data: TBytes; Flags: Integer): Boolean;
+                    PrivKey: PEVP_PKEY; out AData: TBytes; Flags: Integer): Boolean;
 var
   bio_in, bio_out: PBIO;
   p7: PPKCS7;
@@ -547,7 +547,7 @@ var
   len: Integer;
 begin
   Result := False;
-  Data := nil;
+  AData := nil;
   
   if not PKCS7Loaded then
     Exit;
@@ -576,13 +576,13 @@ begin
         if Result then
         begin
           // Read decrypted data from BIO
-          SetLength(Data, 0);
+          SetLength(AData, 0);
           repeat
             len := BIO_read(bio_out, @buf[0], SizeOf(buf));
             if len > 0 then
             begin
-              SetLength(Data, Length(Data) + len);
-              Move(buf[0], Data[Length(Data) - len], len);
+              SetLength(AData, Length(AData) + len);
+              Move(buf[0], AData[Length(AData) - len], len);
             end;
           until len <= 0;
         end;

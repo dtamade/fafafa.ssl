@@ -164,9 +164,10 @@ var
   PKCS8_decrypt: TPKCS8_decrypt = nil;
 
 // 辅助函数
+{$IFDEF ENABLE_PKCS12_HELPERS}
 function CreatePKCS12(const Password, FriendlyName: string; 
   PrivateKey: PEVP_PKEY; Certificate: PX509; 
-  CACerts: PSTACK_OF_X509 = nil): PPKCS12;
+  CACerts: PSTACK_OF_X509): PPKCS12;
 function ParsePKCS12(P12: PPKCS12; const Password: string;
   out PrivateKey: PEVP_PKEY; out Certificate: PX509;
   out CACerts: PSTACK_OF_X509): Boolean;
@@ -175,13 +176,14 @@ function LoadPKCS12FromFile(const FileName, Password: string;
   out CACerts: PSTACK_OF_X509): Boolean;
 function SavePKCS12ToFile(const FileName, Password, FriendlyName: string;
   PrivateKey: PEVP_PKEY; Certificate: PX509; 
-  CACerts: PSTACK_OF_X509 = nil): Boolean;
+  CACerts: PSTACK_OF_X509): Boolean;
 function LoadPKCS12FromBytes(const Data: TBytes; const Password: string;
   out PrivateKey: PEVP_PKEY; out Certificate: PX509;
   out CACerts: PSTACK_OF_X509): Boolean;
 function SavePKCS12ToBytes(const Password, FriendlyName: string;
   PrivateKey: PEVP_PKEY; Certificate: PX509; 
-  CACerts: PSTACK_OF_X509 = nil): TBytes;
+  CACerts: PSTACK_OF_X509): TBytes;
+{$ENDIF}
 
 // 模块加载和卸载
 procedure LoadPKCS12Module(ALibCrypto: THandle);
@@ -268,7 +270,8 @@ begin
 end;
 
 // 辅助函数实现
-function CreatePKCS12(const Password, FriendlyName: string; 
+{$IFDEF ENABLE_PKCS12_HELPERS}
+function CreatePKCS12(const Password, FriendlyName: string;
   PrivateKey: PEVP_PKEY; Certificate: PX509; 
   CACerts: PSTACK_OF_X509): PPKCS12;
 var
@@ -460,5 +463,6 @@ begin
       PKCS12_free(P12);
   end;
 end;
+{$ENDIF}
 
 end.

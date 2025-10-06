@@ -310,6 +310,12 @@ const
   // TLS name types
   TLSEXT_NAMETYPE_host_name = 0;
   
+  // TLS extension error codes
+  SSL_TLSEXT_ERR_OK = 0;
+  SSL_TLSEXT_ERR_ALERT_WARNING = 1;
+  SSL_TLSEXT_ERR_ALERT_FATAL = 2;
+  SSL_TLSEXT_ERR_NOACK = 3;
+  
   // X509 verification flags
   X509_V_OK = 0;
   X509_V_ERR_UNSPECIFIED = 1;

@@ -454,13 +454,20 @@ var
   
   // X509 Basic Info Functions
   X509_get_version: TX509_get_version;
+  X509_set_version: TX509_set_version;
   X509_get_serialNumber: TX509_get_serialNumber;
+  X509_set_serialNumber: TX509_set_serialNumber;
   X509_get_subject_name: TX509_get_subject_name;
+  X509_set_subject_name: TX509_set_subject_name;
   X509_get_issuer_name: TX509_get_issuer_name;
+  X509_set_issuer_name: TX509_set_issuer_name;
   X509_get_notBefore: TX509_get_notBefore;
   X509_get_notAfter: TX509_get_notAfter;
+  X509_set_pubkey: TX509_set_pubkey;
   X509_get_pubkey: TX509_get_pubkey;
   X509_get0_signature: TX509_get0_signature;
+  X509_sign: TX509_sign;
+  X509_gmtime_adj: TX509_gmtime_adj;
   
   // X509 Extension Functions
   X509_get_ext_by_NID: TX509_get_ext_by_NID;
@@ -486,6 +493,9 @@ var
   X509_STORE_CTX_get0_chain: TX509_STORE_CTX_get0_chain;
   
   // X509 Name Functions
+  X509_NAME_new: TX509_NAME_new;
+  X509_NAME_free: TX509_NAME_free;
+  X509_NAME_add_entry_by_txt: TX509_NAME_add_entry_by_txt;
   X509_NAME_print_ex: TX509_NAME_print_ex;
   
   // X509 Algorithm Functions
@@ -528,13 +538,25 @@ begin
   
   // Load X509 Basic Info Functions
   X509_get_version := TX509_get_version(GetProcedureAddress(LibHandle, 'X509_get_version'));
+  X509_set_version := TX509_set_version(GetProcedureAddress(LibHandle, 'X509_set_version'));
   X509_get_serialNumber := TX509_get_serialNumber(GetProcedureAddress(LibHandle, 'X509_get_serialNumber'));
+  X509_set_serialNumber := TX509_set_serialNumber(GetProcedureAddress(LibHandle, 'X509_set_serialNumber'));
   X509_get_subject_name := TX509_get_subject_name(GetProcedureAddress(LibHandle, 'X509_get_subject_name'));
+  X509_set_subject_name := TX509_set_subject_name(GetProcedureAddress(LibHandle, 'X509_set_subject_name'));
   X509_get_issuer_name := TX509_get_issuer_name(GetProcedureAddress(LibHandle, 'X509_get_issuer_name'));
-  X509_get_notBefore := TX509_get_notBefore(GetProcedureAddress(LibHandle, 'X509_get_notBefore'));
-  X509_get_notAfter := TX509_get_notAfter(GetProcedureAddress(LibHandle, 'X509_get_notAfter'));
+  X509_set_issuer_name := TX509_set_issuer_name(GetProcedureAddress(LibHandle, 'X509_set_issuer_name'));
+  // For OpenSSL 3.x, try getm variants first (mutable), fall back to get0
+  X509_get_notBefore := TX509_get_notBefore(GetProcedureAddress(LibHandle, 'X509_getm_notBefore'));
+  if not Assigned(X509_get_notBefore) then
+    X509_get_notBefore := TX509_get_notBefore(GetProcedureAddress(LibHandle, 'X509_get0_notBefore'));
+  X509_get_notAfter := TX509_get_notAfter(GetProcedureAddress(LibHandle, 'X509_getm_notAfter'));
+  if not Assigned(X509_get_notAfter) then
+    X509_get_notAfter := TX509_get_notAfter(GetProcedureAddress(LibHandle, 'X509_get0_notAfter'));
+  X509_set_pubkey := TX509_set_pubkey(GetProcedureAddress(LibHandle, 'X509_set_pubkey'));
   X509_get_pubkey := TX509_get_pubkey(GetProcedureAddress(LibHandle, 'X509_get_pubkey'));
   X509_get0_signature := TX509_get0_signature(GetProcedureAddress(LibHandle, 'X509_get0_signature'));
+  X509_sign := TX509_sign(GetProcedureAddress(LibHandle, 'X509_sign'));
+  X509_gmtime_adj := TX509_gmtime_adj(GetProcedureAddress(LibHandle, 'X509_gmtime_adj'));
   
   // Load X509 Extension Functions  
   X509_get_ext_by_NID := TX509_get_ext_by_NID(GetProcedureAddress(LibHandle, 'X509_get_ext_by_NID'));
@@ -560,6 +582,9 @@ begin
   X509_STORE_CTX_get0_chain := TX509_STORE_CTX_get0_chain(GetProcedureAddress(LibHandle, 'X509_STORE_CTX_get0_chain'));
   
   // Load X509 Name Functions
+  X509_NAME_new := TX509_NAME_new(GetProcedureAddress(LibHandle, 'X509_NAME_new'));
+  X509_NAME_free := TX509_NAME_free(GetProcedureAddress(LibHandle, 'X509_NAME_free'));
+  X509_NAME_add_entry_by_txt := TX509_NAME_add_entry_by_txt(GetProcedureAddress(LibHandle, 'X509_NAME_add_entry_by_txt'));
   X509_NAME_print_ex := TX509_NAME_print_ex(GetProcedureAddress(LibHandle, 'X509_NAME_print_ex'));
   
   // Load X509 Algorithm Functions

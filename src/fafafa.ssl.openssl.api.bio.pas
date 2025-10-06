@@ -296,6 +296,7 @@ var
   BIO_s_connect: TBIO_s_connect = nil;
   BIO_pending: TBIO_pending = nil;
   BIO_new_socket: TBIO_new_socket = nil;
+  BIO_new_bio_pair: TBIO_new_bio_pair = nil;
   
 procedure LoadOpenSSLBIO;
 procedure UnloadOpenSSLBIO;
@@ -340,6 +341,7 @@ begin
   BIO_get_mem_data := TBIO_get_mem_data(GetProcedureAddress(LibCrypto, 'BIO_get_mem_data'));
   BIO_new_connect := TBIO_new_connect(GetProcedureAddress(LibCrypto, 'BIO_new_connect'));
   BIO_s_connect := TBIO_s_connect(GetProcedureAddress(LibCrypto, 'BIO_s_connect'));
+  BIO_new_bio_pair := TBIO_new_bio_pair(GetProcedureAddress(LibCrypto, 'BIO_new_bio_pair'));
 end;
 
 procedure UnloadOpenSSLBIO;
@@ -359,6 +361,7 @@ begin
   BIO_get_mem_data := nil;
   BIO_new_connect := nil;
   BIO_s_connect := nil;
+  BIO_new_bio_pair := nil;
 end;
 
 function IsOpenSSLBIOLoaded: Boolean;
