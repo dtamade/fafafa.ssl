@@ -137,6 +137,15 @@ type
     dwExchStrength: DWORD;   // 交换强度
   end;
   
+  // ALPN 协议结构
+  PSecPkgContext_ApplicationProtocol = ^TSecPkgContext_ApplicationProtocol;
+  TSecPkgContext_ApplicationProtocol = record
+    ProtoNegoStatus: DWORD;         // 协商状态
+    ProtoNegoExt: DWORD;            // 协商扩展类型
+    ProtocolIdSize: Byte;           // 协议 ID 长度
+    ProtocolId: array[0..254] of Byte;  // 协议 ID
+  end;
+  
   // 证书链相关
   HCERTCHAINENGINE = Pointer;
   
@@ -152,7 +161,8 @@ type
     end;
   end;
   
-  PCCERT_CHAIN_CONTEXT = Pointer;
+  // 前向声明
+  PCCERT_CHAIN_CONTEXT = ^CERT_CHAIN_CONTEXT;
   PPCCERT_CHAIN_CONTEXT = ^PCCERT_CHAIN_CONTEXT;
   
   // 证书名称 Blob
@@ -160,6 +170,136 @@ type
   CERT_NAME_BLOB = record
     cbData: DWORD;
     pbData: PByte;
+  end;
+  CRYPT_INTEGER_BLOB = CERT_NAME_BLOB;
+  CRYPT_DATA_BLOB = CERT_NAME_BLOB;
+  
+  // 前向声明
+  PCERT_EXTENSION = ^CERT_EXTENSION;
+  PCERT_INFO = ^CERT_INFO;
+  
+  // 证书扩展结构
+  CERT_EXTENSION = record
+    pszObjId: LPCSTR;
+    fCritical: BOOL;
+    Value: CRYPT_DATA_BLOB;
+  end;
+  
+  // 证书信息结构
+  CERT_INFO = record
+    dwVersion: DWORD;
+    SerialNumber: CRYPT_INTEGER_BLOB;
+    SignatureAlgorithm: record
+      pszObjId: LPCSTR;
+      Parameters: CRYPT_DATA_BLOB;
+    end;
+    Issuer: CERT_NAME_BLOB;
+    NotBefore: TFileTime;
+    NotAfter: TFileTime;
+    Subject: CERT_NAME_BLOB;
+    SubjectPublicKeyInfo: record
+      Algorithm: record
+        pszObjId: LPCSTR;
+        Parameters: CRYPT_DATA_BLOB;
+      end;
+      PublicKey: record
+        cbData: DWORD;
+        pbData: PByte;
+        cUnusedBits: DWORD;
+      end;
+    end;
+    IssuerUniqueId: record
+      cbData: DWORD;
+      pbData: PByte;
+      cUnusedBits: DWORD;
+    end;
+    SubjectUniqueId: record
+      cbData: DWORD;
+      pbData: PByte;
+      cUnusedBits: DWORD;
+    end;
+    cExtension: DWORD;
+    rgExtension: PCERT_EXTENSION;
+  end;
+  
+  // 证书链结构
+  PCERT_CHAIN_ELEMENT = ^CERT_CHAIN_ELEMENT;
+  CERT_CHAIN_ELEMENT = record
+    cbSize: DWORD;
+    pCertContext: PCCERT_CONTEXT;
+    TrustStatus: record
+      dwErrorStatus: DWORD;
+      dwInfoStatus: DWORD;
+    end;
+    pRevocationInfo: Pointer;
+    pIssuanceUsage: Pointer;
+    pApplicationUsage: Pointer;
+    pwszExtendedErrorInfo: PWideChar;
+  end;
+  PPCERT_CHAIN_ELEMENT = ^PCERT_CHAIN_ELEMENT;
+  
+  PCERT_SIMPLE_CHAIN = ^CERT_SIMPLE_CHAIN;
+  CERT_SIMPLE_CHAIN = record
+    cbSize: DWORD;
+    TrustStatus: record
+      dwErrorStatus: DWORD;
+      dwInfoStatus: DWORD;
+    end;
+    cElement: DWORD;
+    rgpElement: PPCERT_CHAIN_ELEMENT;
+    pTrustListInfo: Pointer;
+    fHasRevocationFreshnessTime: BOOL;
+    dwRevocationFreshnessTime: DWORD;
+  end;
+  PPCERT_SIMPLE_CHAIN = ^PCERT_SIMPLE_CHAIN;
+  
+  CERT_CHAIN_CONTEXT = record
+    cbSize: DWORD;
+    TrustStatus: record
+      dwErrorStatus: DWORD;
+      dwInfoStatus: DWORD;
+    end;
+    cChain: DWORD;
+    rgpChain: PPCERT_SIMPLE_CHAIN;
+    cLowerQualityChainContext: DWORD;
+    rgpLowerQualityChainContext: PPCCERT_CHAIN_CONTEXT;
+    fHasRevocationFreshnessTime: BOOL;
+    dwRevocationFreshnessTime: DWORD;
+  end;
+  
+  // 证书链策略结构
+  CERT_CHAIN_POLICY_PARA = record
+    cbSize: DWORD;
+    dwFlags: DWORD;
+    pvExtraPolicyPara: Pointer;
+  end;
+  
+  CERT_CHAIN_POLICY_STATUS = record
+    cbSize: DWORD;
+    dwError: DWORD;
+    lChainIndex: LONG;
+    lElementIndex: LONG;
+    pvExtraPolicyStatus: Pointer;
+  end;
+  
+  // SAN 扩展结构
+  PCERT_ALT_NAME_ENTRY = ^CERT_ALT_NAME_ENTRY;
+  CERT_ALT_NAME_ENTRY = record
+    dwAltNameChoice: DWORD;
+    case Integer of
+      0: (pOtherName: Pointer);
+      1: (pwszRfc822Name: PWideChar);
+      2: (pwszDNSName: PWideChar);
+      3: (DirectoryName: CERT_NAME_BLOB);
+      4: (pwszURL: PWideChar);
+      5: (IPAddress: CRYPT_DATA_BLOB);
+      6: (pszRegisteredID: LPCSTR);
+  end;
+  
+  PCERT_ALT_NAME_INFO = ^CERT_ALT_NAME_INFO;
+  CERT_ALT_NAME_INFO = record
+    cAltEntry: DWORD;
+    rgAltEntry: PCERT_ALT_NAME_ENTRY;
   end;
   
   // Windows 证书函数类型
@@ -294,6 +434,33 @@ const
   ISC_REQ_RESERVED1               = $00100000;
   ISC_REQ_FRAGMENT_TO_FIT         = $00200000;
   
+  // InitializeSecurityContext 返回标志
+  ISC_RET_DELEGATE                = $00000001;
+  ISC_RET_MUTUAL_AUTH             = $00000002;
+  ISC_RET_REPLAY_DETECT           = $00000004;
+  ISC_RET_SEQUENCE_DETECT         = $00000008;
+  ISC_RET_CONFIDENTIALITY         = $00000010;
+  ISC_RET_USE_SESSION_KEY         = $00000020;
+  ISC_RET_USED_COLLECTED_CREDS    = $00000040;
+  ISC_RET_USED_SUPPLIED_CREDS     = $00000080;
+  ISC_RET_ALLOCATED_MEMORY        = $00000100;
+  ISC_RET_USED_DCE_STYLE          = $00000200;
+  ISC_RET_DATAGRAM                = $00000400;
+  ISC_RET_CONNECTION              = $00000800;
+  ISC_RET_INTERMEDIATE_RETURN     = $00001000;
+  ISC_RET_CALL_LEVEL              = $00002000;
+  ISC_RET_EXTENDED_ERROR          = $00004000;
+  ISC_RET_STREAM                  = $00008000;
+  ISC_RET_INTEGRITY               = $00010000;
+  ISC_RET_IDENTIFY                = $00020000;
+  ISC_RET_NULL_SESSION            = $00040000;
+  ISC_RET_MANUAL_CRED_VALIDATION  = $00080000;
+  ISC_RET_RESERVED1               = $00100000;
+  ISC_RET_FRAGMENT_ONLY           = $00200000;
+  
+  // Schannel 控制令牌
+  SCHANNEL_SHUTDOWN               = 1;
+  
   // AcceptSecurityContext 请求标志
   ASC_REQ_DELEGATE                = $00000001;
   ASC_REQ_MUTUAL_AUTH             = $00000002;
@@ -401,6 +568,7 @@ const
   SECPKG_ATTR_NEGOTIATED_TLS_EXTENSIONS = 36;
   SECPKG_ATTR_IS_LOOPBACK        = 37;
   SECPKG_ATTR_REMOTE_CERT_CONTEXT = 83;
+  SECPKG_ATTR_CONNECTION_INFO    = 90;
   
   // 证书编码类型
   X509_ASN_ENCODING              = $00000001;
@@ -432,6 +600,32 @@ const
   CERT_E_WRONG_USAGE             = LONG($800B0110);
   CERT_E_CN_NO_MATCH             = LONG($800B010F);
   CERT_E_REVOKED                 = LONG($800B010C);
+  CERT_E_INVALID_NAME            = LONG($800B0114);
+  TRUST_E_CERT_SIGNATURE         = LONG($80096004);
+  
+  // 证书链策略
+  CERT_CHAIN_POLICY_SSL          = LPCSTR(4);
+  
+  // 哈希算法 ID
+  CALG_MD5                       = ALG_ID($00008003);
+  CALG_SHA1                      = ALG_ID($00008004);
+  CALG_SHA_256                   = ALG_ID($0000800C);
+  CALG_SHA_384                   = ALG_ID($0000800D);
+  CALG_SHA_512                   = ALG_ID($0000800E);
+  
+  // 证书扩展 OID
+  szOID_SUBJECT_ALT_NAME2        = '2.5.29.17';
+  
+  // 证书备用名称类型
+  CERT_ALT_NAME_OTHER_NAME       = 1;
+  CERT_ALT_NAME_RFC822_NAME      = 2;
+  CERT_ALT_NAME_DNS_NAME         = 3;
+  CERT_ALT_NAME_X400_ADDRESS     = 4;
+  CERT_ALT_NAME_DIRECTORY_NAME   = 5;
+  CERT_ALT_NAME_EDI_PARTY_NAME   = 6;
+  CERT_ALT_NAME_URL              = 7;
+  CERT_ALT_NAME_IP_ADDRESS       = 8;
+  CERT_ALT_NAME_REGISTERED_ID    = 9;
   
   // 证书名称类型
   CERT_NAME_EMAIL_TYPE           = 1;

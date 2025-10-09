@@ -145,6 +145,11 @@ function CompleteAuthToken(
   pToken: PSecBufferDesc             // 令牌缓冲区
 ): SECURITY_STATUS; stdcall; external SECUR32_DLL;
 
+// 释放 SSPI 分配的缓冲区
+function FreeContextBuffer(
+  pvContextBuffer: Pointer           // 由 SSPI 分配的缓冲区指针
+): SECURITY_STATUS; stdcall; external SECUR32_DLL;
+
 // ============================================================================
 // Crypt32.dll - Windows 证书 API
 // ============================================================================
@@ -269,6 +274,39 @@ function CertCreateCertificateContext(
   pbCertEncoded: PByte;              // 证书编码数据
   cbCertEncoded: DWORD               // 数据大小
 ): PCCERT_CONTEXT; stdcall; external CRYPT32_DLL;
+
+// ----------------------------------------------------------------------------
+// 证书扩展操作
+// ----------------------------------------------------------------------------
+
+// 查找证书扩展
+function CertFindExtension(
+  pszObjId: LPCSTR;                  // 扩展 OID
+  cExtensions: DWORD;                // 扩展数量
+  rgExtensions: PCERT_EXTENSION      // 扩展数组
+): PCERT_EXTENSION; stdcall; external CRYPT32_DLL;
+
+// 解码对象
+function CryptDecodeObject(
+  dwCertEncodingType: DWORD;         // 编码类型
+  lpszStructType: LPCSTR;            // 结构类型
+  pbEncoded: PByte;                  // 编码数据
+  cbEncoded: DWORD;                  // 数据大小
+  dwFlags: DWORD;                    // 标志
+  pvStructInfo: Pointer;             // [out] 解码结构
+  pcbStructInfo: PDWORD              // [in/out] 结构大小
+): BOOL; stdcall; external CRYPT32_DLL;
+
+// 计算证书哈希
+function CryptHashCertificate(
+  hCryptProv: HCRYPTPROV;            // 加密提供者句柄（可为 0）
+  Algid: ALG_ID;                     // 哈希算法 ID
+  dwFlags: DWORD;                    // 标志（通常为 0）
+  pbEncoded: PByte;                  // 证书编码数据
+  cbEncoded: DWORD;                  // 数据大小
+  pbComputedHash: PByte;             // [out] 哈希值缓冲区
+  pcbComputedHash: PDWORD            // [in/out] 哈希值大小
+): BOOL; stdcall; external CRYPT32_DLL;
 
 // ============================================================================
 // 常量定义（补充）

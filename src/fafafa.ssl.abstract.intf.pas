@@ -18,7 +18,6 @@
 unit fafafa.ssl.abstract.intf;
 
 {$mode ObjFPC}{$H+}
-{$INTERFACES CORBA}  // 使用CORBA接口模式以避免引用计数问题
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
 interface

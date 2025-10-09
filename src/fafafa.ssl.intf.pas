@@ -23,7 +23,6 @@
 unit fafafa.ssl.intf;
 
 {$mode ObjFPC}{$H+}
-{$INTERFACES CORBA}
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
 interface

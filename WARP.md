@@ -260,12 +260,15 @@ begin
 end.
 ```
 
-#### 5. 持续验证规范
+#### 持续验证规范
 
 **每次修改后必须：**
 
 ```bash
-# 1. 编译测试
+# 1. 编译测试（推荐使用 lazbuild）
+lazbuild test_module.lpi
+
+# 或使用 fpc（简单测试）
 fpc -Mobjfpc test_module.pas
 
 # 2. 运行测试
@@ -274,6 +277,27 @@ fpc -Mobjfpc test_module.pas
 # 3. 检查结果
 # 期望: 0 failed, exit code 0
 ```
+
+**编译规范：**
+
+```bash
+# ✅ 推荐：使用 lazbuild 编译 .lpi 项目文件
+lazbuild path/to/project.lpi
+
+# ✅ 批量编译
+lazbuild project1.lpi project2.lpi project3.lpi
+
+# ✅ 仅用于简单测试：直接使用 fpc
+fpc -Fusrc -FEbin test_simple.pas
+
+# ❌ 不推荐：直接用 fpc 编译复杂项目（缺少项目配置）
+```
+
+**为什么使用 lazbuild？**
+- ✅ 包含完整项目配置（搜索路径、编译选项、依赖）
+- ✅ 统一的编译环境
+- ✅ 更好的可维护性
+- ✅ IDE 和命令行使用相同配置
 
 #### 6. 防止上下文抖动的关键措施
 
