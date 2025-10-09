@@ -590,6 +590,7 @@ var
   
   // Peer certificate functions
   SSL_get_peer_certificate: TSSL_get_peer_certificate = nil;
+  SSL_get1_peer_certificate: TSSL_get1_peer_certificate = nil;  // OpenSSL 3.x version
   SSL_get_peer_cert_chain: TSSL_get_peer_cert_chain = nil;
   
   // Verification result functions
@@ -851,7 +852,14 @@ begin
   SSL_set_accept_state := TSSL_set_accept_state(GetProcedureAddress(LibSSLHandle, 'SSL_set_accept_state'));
   
   // Peer certificate functions
+  // Try deprecated name first (OpenSSL 1.1.x), fall back to new name (OpenSSL 3.x)
   SSL_get_peer_certificate := TSSL_get_peer_certificate(GetProcedureAddress(LibSSLHandle, 'SSL_get_peer_certificate'));
+  if not Assigned(SSL_get_peer_certificate) then
+  begin
+    // In OpenSSL 3.x, SSL_get_peer_certificate was renamed to SSL_get1_peer_certificate
+    SSL_get1_peer_certificate := TSSL_get1_peer_certificate(GetProcedureAddress(LibSSLHandle, 'SSL_get1_peer_certificate'));
+    SSL_get_peer_certificate := TSSL_get_peer_certificate(SSL_get1_peer_certificate);
+  end;
   SSL_get_peer_cert_chain := TSSL_get_peer_cert_chain(GetProcedureAddress(LibSSLHandle, 'SSL_get_peer_cert_chain'));
   
   // Verification result functions  

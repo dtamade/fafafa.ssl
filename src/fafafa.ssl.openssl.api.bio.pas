@@ -306,6 +306,9 @@ function IsOpenSSLBIOLoaded: Boolean;
 function BIO_set_conn_port(b: PBIO; const port: PAnsiChar): clong;
 function BIO_do_connect(b: PBIO): clong;
 
+{ BIO_pending is a macro in OpenSSL, not a real function }
+function BIO_pending_impl(b: PBIO): Integer; cdecl;
+
 implementation
 
 uses
@@ -318,14 +321,14 @@ begin
   // Make sure core is loaded first
   if not IsOpenSSLCoreLoaded then
     LoadOpenSSLCore;
-    
+
   // Get handles from core module
   LibSSL := GetSSLLibHandle;
   LibCrypto := GetCryptoLibHandle;
-  
+
   if (LibSSL = NilHandle) or (LibCrypto = NilHandle) then
     Exit;
-    
+
   // Load function pointers - most BIO functions are in libcrypto
   BIO_new := TBIO_new(GetProcedureAddress(LibCrypto, 'BIO_new'));
   BIO_free := TBIO_free(GetProcedureAddress(LibCrypto, 'BIO_free'));
@@ -342,6 +345,9 @@ begin
   BIO_new_connect := TBIO_new_connect(GetProcedureAddress(LibCrypto, 'BIO_new_connect'));
   BIO_s_connect := TBIO_s_connect(GetProcedureAddress(LibCrypto, 'BIO_s_connect'));
   BIO_new_bio_pair := TBIO_new_bio_pair(GetProcedureAddress(LibCrypto, 'BIO_new_bio_pair'));
+
+  // BIO_pending is a macro in OpenSSL, use our helper implementation
+  BIO_pending := @BIO_pending_impl;
 end;
 
 procedure UnloadOpenSSLBIO;
@@ -388,6 +394,17 @@ begin
     Result := BIO_ctrl(b, BIO_C_DO_STATE_MACHINE, 0, nil)
   else
     Result := -1;
+end;
+
+{ BIO_pending is a macro in OpenSSL: #define BIO_pending(b) (int)BIO_ctrl(b,BIO_CTRL_PENDING,0,NULL) }
+function BIO_pending_impl(b: PBIO): Integer; cdecl;
+const
+  BIO_CTRL_PENDING = 10;
+begin
+  if Assigned(BIO_ctrl) then
+    Result := Integer(BIO_ctrl(b, BIO_CTRL_PENDING, 0, nil))
+  else
+    Result := 0;
 end;
 
 end.
