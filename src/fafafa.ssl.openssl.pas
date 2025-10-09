@@ -293,6 +293,10 @@ function GetOpenSSLError: Cardinal;
 function GetOpenSSLErrorString(aError: Cardinal = 0): string;
 procedure ClearOpenSSLErrors;
 
+{ Error classification }
+function ClassifyOpenSSLError(aError: Cardinal): TSSLErrorCode;
+function GetOpenSSLErrorCategory(aError: Cardinal): string;
+
 { Certificate utilities }
 function LoadCertificateFromFile(const aFileName: string): PX509;
 function LoadCertificateFromMemory(const aData: Pointer; aSize: Integer): PX509;
@@ -340,8 +344,9 @@ begin
   // Load OpenSSL core libraries if not already loaded
   if not IsOpenSSLCoreLoaded then
     LoadOpenSSLCore;
-    
+
   // Load all required API modules
+  LoadOpenSSLERR;      // Load error handling functions FIRST
   LoadOpenSSLX509;
   LoadOpenSSLBIO;
   LoadOpenSSLCrypto;
@@ -413,16 +418,49 @@ end;
 
 function TOpenSSLLibrary.GetLastError: Integer;
 begin
-  Result := 0;
+  // Get the last OpenSSL error code from the error queue
+  Result := Integer(GetOpenSSLError);
 end;
 
 function TOpenSSLLibrary.GetLastErrorString: string;
+var
+  LError: Cardinal;
+  LBuf: array[0..511] of AnsiChar;
+  LErrorStr: string;
+  LAllErrors: string;
 begin
-  Result := '';
+  // Get all errors from the OpenSSL error queue
+  LAllErrors := '';
+
+  if Assigned(ERR_get_error) and Assigned(ERR_error_string_n) then
+  begin
+    repeat
+      LError := ERR_get_error();
+      if LError <> 0 then
+      begin
+        // Get error string
+        ERR_error_string_n(LError, @LBuf[0], SizeOf(LBuf));
+        LErrorStr := string(LBuf);
+
+        // Append to accumulated errors
+        if LAllErrors <> '' then
+          LAllErrors := LAllErrors + ' | ';
+        LAllErrors := LAllErrors + LErrorStr;
+      end;
+    until LError = 0;
+  end;
+
+  // Return accumulated errors or default message
+  if LAllErrors <> '' then
+    Result := LAllErrors
+  else
+    Result := 'No SSL errors';
 end;
 
 procedure TOpenSSLLibrary.ClearError;
 begin
+  // Clear the entire OpenSSL error queue
+  ClearOpenSSLErrors;
 end;
 
 function TOpenSSLLibrary.GetStatistics: TSSLStatistics;
@@ -509,15 +547,21 @@ begin
   // Set default options
   if Assigned(SSL_CTX_set_options) then
     SSL_CTX_set_options(FSSLCtx, SSL_OP_NO_SSLv2 or SSL_OP_NO_SSLv3);
-  
-  // Set verify mode based on context type
-  if Assigned(SSL_CTX_set_verify) then
+
+  // Auto-load system CA certificates for client contexts
+  // This eliminates the need for manual LoadCAFile/LoadCAPath calls
+  if (FContextType = sslCtxClient) and Assigned(SSL_CTX_set_default_verify_paths) then
   begin
-    if FContextType = sslCtxClient then
-      SSL_CTX_set_verify(FSSLCtx, SSL_VERIFY_PEER, nil)
-    else
-      SSL_CTX_set_verify(FSSLCtx, SSL_VERIFY_NONE, nil);
+    // Ignore return value - user can still load CAs manually if this fails
+    SSL_CTX_set_default_verify_paths(FSSLCtx);
   end;
+
+  // Set verify mode based on context type
+  // Use SetVerifyMode() to ensure FVerifyMode field is updated
+  if FContextType = sslCtxClient then
+    SetVerifyMode([sslVerifyPeer])
+  else
+    SetVerifyMode([]);
 end;
 
 function TOpenSSLContext.GetContextType: TSSLContextType;
@@ -2998,6 +3042,169 @@ procedure ClearOpenSSLErrors;
 begin
   if Assigned(ERR_clear_error) then
     ERR_clear_error();
+end;
+
+function ClassifyOpenSSLError(aError: Cardinal): TSSLErrorCode;
+var
+  LLib, LReason: Integer;
+begin
+  // Default to general error
+  Result := sslErrGeneral;
+
+  if aError = 0 then
+  begin
+    Result := sslErrNone;
+    Exit;
+  end;
+
+  // Extract library and reason codes from error
+  LLib := ERR_GET_LIB_INLINE(aError);
+  LReason := ERR_GET_REASON_INLINE(aError);
+
+  // First check common error reasons (applicable across all libraries)
+  case LReason of
+    ERR_R_MALLOC_FAILURE:
+      begin
+        Result := sslErrMemory;
+        Exit;
+      end;
+    ERR_R_PASSED_NULL_PARAMETER,
+    ERR_R_PASSED_INVALID_ARGUMENT:
+      begin
+        Result := sslErrInvalidParam;
+        Exit;
+      end;
+    ERR_R_INIT_FAIL:
+      begin
+        Result := sslErrNotInitialized;
+        Exit;
+      end;
+    ERR_R_DISABLED:
+      begin
+        Result := sslErrUnsupported;
+        Exit;
+      end;
+    ERR_R_OPERATION_FAIL:
+      begin
+        Result := sslErrGeneral;
+        Exit;
+      end;
+  end;
+
+  // Then classify by OpenSSL library code
+  case LLib of
+    ERR_LIB_NONE:
+      Result := sslErrGeneral;
+
+    ERR_LIB_SYS:
+      Result := sslErrIO;  // System errors are usually I/O related
+
+    ERR_LIB_BUF:
+      Result := sslErrMemory;  // Buffer errors are memory issues
+
+    ERR_LIB_PEM:
+      Result := sslErrCertificate;  // PEM parsing errors are cert issues
+
+    ERR_LIB_X509,
+    ERR_LIB_X509V3,
+    ERR_LIB_PKCS7,
+    ERR_LIB_PKCS12,
+    ERR_LIB_OCSP:
+      Result := sslErrCertificate;  // All certificate-related libraries
+
+    ERR_LIB_SSL:
+      begin
+        // SSL library errors - check specific reasons
+        // Common SSL errors that indicate protocol issues
+        Result := sslErrProtocol;
+      end;
+
+    ERR_LIB_BIO:
+      Result := sslErrIO;  // BIO errors are I/O issues
+
+    ERR_LIB_RSA,
+    ERR_LIB_DSA,
+    ERR_LIB_DH,
+    ERR_LIB_EC,
+    ERR_LIB_ECDSA,
+    ERR_LIB_ECDH:
+      Result := sslErrProtocol;  // Crypto algorithm errors
+
+    ERR_LIB_EVP,
+    ERR_LIB_CRYPTO:
+      Result := sslErrProtocol;  // General crypto errors
+
+    ERR_LIB_ASN1:
+      Result := sslErrCertificate;  // ASN.1 parsing is usually cert-related
+
+    ERR_LIB_ENGINE,
+    ERR_LIB_DSO:
+      Result := sslErrLibraryNotFound;  // Engine/dynamic library loading issues
+
+    ERR_LIB_UI:
+      Result := sslErrUnsupported;  // User interface not supported
+
+  else
+    Result := sslErrGeneral;
+  end;
+end;
+
+function GetOpenSSLErrorCategory(aError: Cardinal): string;
+var
+  LLib: Integer;
+  LLibName: string;
+begin
+  if aError = 0 then
+  begin
+    Result := 'No Error';
+    Exit;
+  end;
+
+  // Get library code
+  LLib := ERR_GET_LIB_INLINE(aError);
+
+  // Translate library code to friendly name
+  case LLib of
+    ERR_LIB_NONE: LLibName := 'General';
+    ERR_LIB_SYS: LLibName := 'System';
+    ERR_LIB_BN: LLibName := 'BigNum';
+    ERR_LIB_RSA: LLibName := 'RSA';
+    ERR_LIB_DH: LLibName := 'Diffie-Hellman';
+    ERR_LIB_EVP: LLibName := 'Envelope';
+    ERR_LIB_BUF: LLibName := 'Buffer';
+    ERR_LIB_OBJ: LLibName := 'Object';
+    ERR_LIB_PEM: LLibName := 'PEM';
+    ERR_LIB_DSA: LLibName := 'DSA';
+    ERR_LIB_X509: LLibName := 'X.509';
+    ERR_LIB_ASN1: LLibName := 'ASN.1';
+    ERR_LIB_CONF: LLibName := 'Config';
+    ERR_LIB_CRYPTO: LLibName := 'Crypto';
+    ERR_LIB_EC: LLibName := 'Elliptic Curve';
+    ERR_LIB_SSL: LLibName := 'SSL/TLS';
+    ERR_LIB_BIO: LLibName := 'I/O';
+    ERR_LIB_PKCS7: LLibName := 'PKCS#7';
+    ERR_LIB_X509V3: LLibName := 'X.509v3';
+    ERR_LIB_PKCS12: LLibName := 'PKCS#12';
+    ERR_LIB_RAND: LLibName := 'Random';
+    ERR_LIB_DSO: LLibName := 'Dynamic Library';
+    ERR_LIB_ENGINE: LLibName := 'Engine';
+    ERR_LIB_OCSP: LLibName := 'OCSP';
+    ERR_LIB_UI: LLibName := 'User Interface';
+    ERR_LIB_COMP: LLibName := 'Compression';
+    ERR_LIB_ECDSA: LLibName := 'ECDSA';
+    ERR_LIB_ECDH: LLibName := 'ECDH';
+    ERR_LIB_HMAC: LLibName := 'HMAC';
+    ERR_LIB_CMS: LLibName := 'CMS';
+    ERR_LIB_TS: LLibName := 'Timestamp';
+    ERR_LIB_CT: LLibName := 'Certificate Transparency';
+    ERR_LIB_ASYNC: LLibName := 'Async';
+    ERR_LIB_KDF: LLibName := 'Key Derivation';
+    ERR_LIB_SM2: LLibName := 'SM2';
+  else
+    LLibName := Format('Library %d', [LLib]);
+  end;
+
+  Result := LLibName;
 end;
 
 function LoadCertificateFromFile(const aFileName: string): PX509;

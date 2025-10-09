@@ -175,6 +175,7 @@ type
   TSSL_CTX_set_read_ahead = procedure(ctx: PSSL_CTX; yes: Integer); cdecl;
   TSSL_CTX_get_read_ahead = function(const ctx: PSSL_CTX): Integer; cdecl;
   TSSL_CTX_load_verify_locations = function(ctx: PSSL_CTX; const CAfile: PAnsiChar; const CApath: PAnsiChar): Integer; cdecl;
+  TSSL_CTX_set_default_verify_paths = function(ctx: PSSL_CTX): Integer; cdecl;
   TSSL_CTX_get_client_CA_list = function(const ctx: PSSL_CTX): PSTACK_OF_X509_NAME; cdecl;
   TSSL_CTX_set_client_CA_list = procedure(ctx: PSSL_CTX; name_list: PSTACK_OF_X509_NAME); cdecl;
   TSSL_set_client_CA_list = procedure(ssl: PSSL; name_list: PSTACK_OF_X509_NAME); cdecl;
@@ -576,6 +577,7 @@ var
   SSL_CTX_get_verify_depth: TSSL_CTX_get_verify_depth = nil;
   SSL_CTX_get_verify_callback: TSSL_CTX_get_verify_callback = nil;
   SSL_CTX_load_verify_locations: TSSL_CTX_load_verify_locations = nil;
+  SSL_CTX_set_default_verify_paths: TSSL_CTX_set_default_verify_paths = nil;
   SSL_CTX_set_options: TSSL_CTX_set_options = nil;
   SSL_CTX_clear_options: TSSL_CTX_clear_options = nil;
   SSL_CTX_get_options: TSSL_CTX_get_options = nil;
@@ -830,7 +832,8 @@ begin
   SSL_CTX_get_verify_depth := TSSL_CTX_get_verify_depth(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_get_verify_depth'));
   SSL_CTX_get_verify_callback := TSSL_CTX_get_verify_callback(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_get_verify_callback'));
   SSL_CTX_load_verify_locations := TSSL_CTX_load_verify_locations(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_load_verify_locations'));
-  
+  SSL_CTX_set_default_verify_paths := TSSL_CTX_set_default_verify_paths(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_set_default_verify_paths'));
+
   // Control functions
   SSL_CTX_ctrl := TSSL_CTX_ctrl(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_ctrl'));
   SSL_ctrl := TSSL_ctrl(GetProcedureAddress(LibSSLHandle, 'SSL_ctrl'));
