@@ -19,6 +19,30 @@ Write-Host ""
 # 测试列表
 $tests = @(
     @{
+        Name = "WinSSL Unit Tests (Comprehensive)"
+        Lpi = "test_winssl_unit_comprehensive.lpi"
+        Exe = "bin\test_winssl_unit_comprehensive.exe"
+        Description = "全面单元测试 - 68 个测试点"
+    },
+    @{
+        Name = "WinSSL Integration Tests (Multi-Scenario)"
+        Lpi = "test_winssl_integration_multi.lpi"
+        Exe = "bin\test_winssl_integration_multi.exe"
+        Description = "多场景集成测试 - 80 个测试点"
+    },
+    @{
+        Name = "Backend Comparison Tests"
+        Lpi = "test_backend_comparison.lpi"
+        Exe = "bin\test_backend_comparison.exe"
+        Description = "WinSSL vs OpenSSL 后端对比测试"
+    },
+    @{
+        Name = "WinSSL Performance Benchmark"
+        Lpi = "test_winssl_performance.lpi"
+        Exe = "bin\test_winssl_performance.exe"
+        Description = "性能基准测试 - 握手、传输、连接速率"
+    },
+    @{
         Name = "WinSSL Handshake Debug"
         Lpi = "test_winssl_handshake_debug.lpi"
         Exe = "bin\test_winssl_handshake_debug.exe"
