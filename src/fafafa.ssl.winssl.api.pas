@@ -308,10 +308,67 @@ function CryptHashCertificate(
   pcbComputedHash: PDWORD            // [in/out] 哈希值大小
 ): BOOL; stdcall; external CRYPT32_DLL;
 
+// ----------------------------------------------------------------------------
+// 字符串编码/解码函数（用于 PEM 格式）
+// ----------------------------------------------------------------------------
+
+// 将字符串转换为二进制（例如：Base64 解码）
+function CryptStringToBinaryA(
+  pszString: PAnsiChar;              // 输入字符串
+  cchString: DWORD;                  // 字符串长度（0 表示自动计算）
+  dwFlags: DWORD;                    // 编码类型标志（CRYPT_STRING_*）
+  pbBinary: PByte;                   // [out] 二进制数据缓冲区
+  pcbBinary: PDWORD;                 // [in/out] 缓冲区大小
+  pdwSkip: PDWORD;                   // [out] 跳过的字符数（可为 nil）
+  pdwFlags: PDWORD                   // [out] 标志（可为 nil）
+): BOOL; stdcall; external CRYPT32_DLL name 'CryptStringToBinaryA';
+
+// 将二进制转换为字符串（例如：Base64 编码）
+function CryptBinaryToStringA(
+  pbBinary: PByte;                   // 二进制数据
+  cbBinary: DWORD;                   // 数据大小
+  dwFlags: DWORD;                    // 编码类型标志（CRYPT_STRING_*）
+  pszString: PAnsiChar;              // [out] 字符串缓冲区
+  pcchString: PDWORD                 // [in/out] 缓冲区大小（字符数）
+): BOOL; stdcall; external CRYPT32_DLL name 'CryptBinaryToStringA';
+
+// 编码对象
+function CryptEncodeObject(
+  dwCertEncodingType: DWORD;         // 编码类型
+  lpszStructType: LPCSTR;            // 结构类型（如 X509_PUBLIC_KEY_INFO）
+  pvStructInfo: Pointer;             // 要编码的结构
+  pbEncoded: PByte;                  // [out] 编码后的数据缓冲区
+  pcbEncoded: PDWORD                 // [in/out] 缓冲区大小
+): BOOL; stdcall; external CRYPT32_DLL;
+
 // ============================================================================
 // 常量定义（补充）
 // ============================================================================
-// 注意: 所有常量已在 fafafa.ssl.winssl.types 中定义
+
+// 字符串编码类型标志（用于 CryptStringToBinaryA/CryptBinaryToStringA）
+const
+  CRYPT_STRING_BASE64HEADER       = $00000000;  // Base64 with "-----BEGIN..." header
+  CRYPT_STRING_BASE64             = $00000001;  // Base64 without header
+  CRYPT_STRING_BINARY             = $00000002;  // Pure binary
+  CRYPT_STRING_BASE64REQUESTHEADER = $00000003; // Base64 with request header
+  CRYPT_STRING_HEX                = $00000004;  // Hex string
+  CRYPT_STRING_HEXASCII           = $00000005;  // Hex ASCII
+  CRYPT_STRING_BASE64_ANY         = $00000006;  // Base64 (any format)
+  CRYPT_STRING_ANY                = $00000007;  // Auto-detect format
+  CRYPT_STRING_HEX_ANY            = $00000008;  // Hex (any format)
+  CRYPT_STRING_BASE64X509CRLHEADER = $00000009; // Base64 with X.509 CRL header
+  CRYPT_STRING_HEXADDR            = $0000000A;  // Hex with address
+  CRYPT_STRING_HEXASCIIADDR       = $0000000B;  // Hex ASCII with address
+  CRYPT_STRING_HEXRAW             = $0000000C;  // Hex raw
+
+  CRYPT_STRING_NOCRLF             = $40000000;  // Don't include CR/LF in output
+  CRYPT_STRING_NOCR               = $80000000;  // Don't include CR in output
+
+// 结构类型常量（用于 CryptEncodeObject/CryptDecodeObject）
+const
+  X509_PUBLIC_KEY_INFO            = LPCSTR(8);   // 公钥信息结构类型
+  X509_CERT                       = LPCSTR(1);   // 证书结构类型
+  X509_CERT_TO_BE_SIGNED          = LPCSTR(2);   // 待签名证书结构
 
 implementation
 

@@ -199,45 +199,50 @@ begin
       Inc(i);
       WriteLn;
       WriteLn('  === Handshake iteration ', i, ' ===');
-      
-      // 接收服务器数据
-      if cbIoBuffer = 0 then
+
+      // 如果需要更多数据，接收服务器数据
+      if (Status = SEC_E_INCOMPLETE_MESSAGE) or (cbIoBuffer = 0) then
       begin
-        WriteLn('  Receiving server data...');
-        cbData := WinSock2.recv(Socket, IoBuffer[0], SizeOf(IoBuffer), 0);
-        
+        if cbIoBuffer > 0 then
+          WriteLn('  Incomplete message - appending more data to existing ', cbIoBuffer, ' bytes')
+        else
+          WriteLn('  Receiving server data...');
+
+        // 在现有数据后面追加新数据
+        cbData := WinSock2.recv(Socket, IoBuffer[cbIoBuffer], SizeOf(IoBuffer) - cbIoBuffer, 0);
+
         if (cbData = SOCKET_ERROR) or (cbData = 0) then
         begin
           WriteLn('  ERROR: Failed to receive data, WSA error: ', WSAGetLastError);
           Exit;
         end;
-        
-        WriteLn('  Received ', cbData, ' bytes');
-        cbIoBuffer := cbData;
+
+        WriteLn('  Received ', cbData, ' bytes (total in buffer: ', cbIoBuffer + cbData, ')');
+        cbIoBuffer := cbIoBuffer + cbData;
       end;
-      
+
       // 设置输入缓冲区
       InBuffers[0].pvBuffer := @IoBuffer[0];
       InBuffers[0].cbBuffer := cbIoBuffer;
       InBuffers[0].BufferType := SECBUFFER_TOKEN;
-      
+
       InBuffers[1].pvBuffer := nil;
       InBuffers[1].cbBuffer := 0;
       InBuffers[1].BufferType := SECBUFFER_EMPTY;
-      
+
       InBufferDesc.cBuffers := 2;
       InBufferDesc.pBuffers := @InBuffers[0];
       InBufferDesc.ulVersion := SECBUFFER_VERSION;
-      
+
       // 设置输出缓冲区
       OutBuffers[0].pvBuffer := nil;
       OutBuffers[0].BufferType := SECBUFFER_TOKEN;
       OutBuffers[0].cbBuffer := 0;
-      
+
       OutBufferDesc.cBuffers := 1;
       OutBufferDesc.pBuffers := @OutBuffers[0];
       OutBufferDesc.ulVersion := SECBUFFER_VERSION;
-      
+
       WriteLn('  Calling InitializeSecurityContextW (loop iteration ', i, ')...');
       Status := InitializeSecurityContextW(
         @CredHandle,
@@ -253,26 +258,28 @@ begin
         @dwSSPIOutFlags,
         nil
       );
-      
+
       WriteLn('  Status: 0x', IntToHex(Status, 8), ' - ', GetSchannelErrorString(Status));
-      
-      // 处理额外数据
+
+      // 处理额外数据 - 将 extra data 移到缓冲区开头
       if (InBuffers[1].BufferType = SECBUFFER_EXTRA) and (InBuffers[1].cbBuffer > 0) then
       begin
-        WriteLn('  Extra data: ', InBuffers[1].cbBuffer, ' bytes');
+        WriteLn('  Extra data: ', InBuffers[1].cbBuffer, ' bytes - moving to buffer start');
         Move(IoBuffer[cbIoBuffer - InBuffers[1].cbBuffer], IoBuffer[0], InBuffers[1].cbBuffer);
         cbIoBuffer := InBuffers[1].cbBuffer;
       end
+      else if (Status <> SEC_E_INCOMPLETE_MESSAGE) and (Status <> SEC_I_CONTINUE_NEEDED) then
+        cbIoBuffer := 0  // 握手完成或失败，清空缓冲区
       else if Status <> SEC_E_INCOMPLETE_MESSAGE then
-        cbIoBuffer := 0;  // 只有在不需要更多数据时才清空缓冲区
-      
+        cbIoBuffer := 0;  // Continue needed 但没有 extra data，清空缓冲区
+
       // 发送响应数据
       if (OutBuffers[0].cbBuffer > 0) and (OutBuffers[0].pvBuffer <> nil) then
       begin
         WriteLn('  Sending response (', OutBuffers[0].cbBuffer, ' bytes)...');
         cbData := WinSock2.send(Socket, OutBuffers[0].pvBuffer^, OutBuffers[0].cbBuffer, 0);
         FreeContextBuffer(OutBuffers[0].pvBuffer);
-        
+
         if (cbData = SOCKET_ERROR) or (cbData = 0) then
         begin
           WriteLn('  ERROR: Failed to send response, WSA error: ', WSAGetLastError);
@@ -280,11 +287,11 @@ begin
         end;
         WriteLn('  Sent ', cbData, ' bytes');
       end;
-      
+
       // 检查状态
       if Status = SEC_E_INCOMPLETE_MESSAGE then
       begin
-        WriteLn('  Incomplete message, need more data');
+        WriteLn('  Incomplete message, will receive more data in next iteration');
         Continue;  // 继续循环接收更多数据
       end;
         
