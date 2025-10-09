@@ -99,7 +99,8 @@ function CreateWinSSLLibrary: ISSLLibrary;
 implementation
 
 uses
-  fafafa.ssl.winssl.context;
+  fafafa.ssl.winssl.context,
+  fafafa.ssl.factory;  // 需要引用 factory 以调用 RegisterLibrary
 
 // ============================================================================
 // 全局工厂函数
@@ -542,5 +543,36 @@ begin
   Result := nil;
   InternalLog(sslLogWarning, 'CreateCertificateStore not yet implemented');
 end;
+
+// ============================================================================
+// 注册 WinSSL 后端到工厂
+// ============================================================================
+
+procedure RegisterWinSSLBackend;
+begin
+  {$IFDEF WINDOWS}
+  // 在 Windows 平台上注册 WinSSL 后端
+  // 优先级设为 200，高于 OpenSSL 的 100，使其成为 Windows 上的默认选择
+  TSSLFactory.RegisterLibrary(sslWinSSL, TWinSSLLibrary,
+    'Windows Schannel (Native SSL/TLS)', 200);
+  {$ENDIF}
+end;
+
+procedure UnregisterWinSSLBackend;
+begin
+  {$IFDEF WINDOWS}
+  TSSLFactory.UnregisterLibrary(sslWinSSL);
+  {$ENDIF}
+end;
+
+initialization
+  {$IFDEF WINDOWS}
+  RegisterWinSSLBackend;
+  {$ENDIF}
+
+finalization
+  {$IFDEF WINDOWS}
+  UnregisterWinSSLBackend;
+  {$ENDIF}
 
 end.

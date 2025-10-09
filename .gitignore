@@ -24,3 +24,9 @@ lib/
 
 # 临时测试结果
 test_results.txt
+
+# Claude Code 本地配置
+.claude/
+
+# 测试编译产物目录
+tests/bin/

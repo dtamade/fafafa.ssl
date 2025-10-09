@@ -133,8 +133,9 @@ type
   { 全局函数 - 便捷接口 }
   function SSLFactory: TSSLFactory;
   function SSLHelper: TSSLHelper;
-  
+
   // 快速创建函数
+  function CreateSSLLibrary(aLibType: TSSLLibraryType = sslAutoDetect): ISSLLibrary;
   function CreateSSLContext(aType: TSSLContextType = sslCtxClient): ISSLContext;
   function CreateSSLCertificate: ISSLCertificate;
   function CreateSSLConnection(aContext: ISSLContext; aSocket: THandle): ISSLConnection;
@@ -143,12 +144,15 @@ implementation
 
 uses
   {$IFDEF WINDOWS}
-  Windows, fafafa.ssl.winssl,
+  Windows,
   {$ENDIF}
   {$IFDEF UNIX}
   BaseUnix,
   {$ENDIF}
-  fafafa.ssl.openssl,  // OpenSSL 后端支持
+  fafafa.ssl.openssl,    // OpenSSL 后端支持
+  {$IFDEF WINDOWS}
+  fafafa.ssl.winssl.lib,  // WinSSL Phase 2.2 新实现（替换老的 winssl.pas）
+  {$ENDIF}
   DateUtils;
 
 var
@@ -171,6 +175,14 @@ begin
   if GSSLHelper = nil then
     GSSLHelper := TSSLHelper.Create;
   Result := GSSLHelper;
+end;
+
+function CreateSSLLibrary(aLibType: TSSLLibraryType): ISSLLibrary;
+begin
+  // 直接使用工厂获取库实例
+  // 这会自动检测最佳库（如果 aLibType = sslAutoDetect）
+  // 并自动初始化库
+  Result := TSSLFactory.GetLibraryInstance(aLibType);
 end;
 
 function CreateSSLContext(aType: TSSLContextType): ISSLContext;
