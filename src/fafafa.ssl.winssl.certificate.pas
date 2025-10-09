@@ -31,7 +31,8 @@ type
   private
     FCertContext: PCCERT_CONTEXT;
     FOwnsContext: Boolean;
-    
+    FIssuerCert: ISSLCertificate;  // 颁发者证书引用
+
     function GetCertInfo: PCERT_INFO;
     function BinaryToHexString(const aData: PByte; aSize: DWORD): string;
     function CalculateFingerprint(aHashType: TSSLHash): string;
@@ -620,15 +621,167 @@ end;
 // ============================================================================
 
 function TWinSSLCertificate.Verify(aCAStore: ISSLCertificateStore): Boolean;
+var
+  ChainPara: CERT_CHAIN_PARA;
+  ChainContext: PCCERT_CHAIN_CONTEXT;
+  PolicyPara: CERT_CHAIN_POLICY_PARA;
+  PolicyStatus: CERT_CHAIN_POLICY_STATUS;
+  StoreHandle: HCERTSTORE;
 begin
-  // TODO: 实现完整验证
   Result := False;
+
+  if FCertContext = nil then
+    Exit;
+
+  // 初始化证书链参数
+  FillChar(ChainPara, SizeOf(ChainPara), 0);
+  ChainPara.cbSize := SizeOf(ChainPara);
+
+  StoreHandle := nil;
+  if aCAStore <> nil then
+  begin
+    // 如果提供了自定义 CA 存储，使用它
+    StoreHandle := HCERTSTORE(aCAStore.GetNativeHandle);
+  end;
+
+  // 构建证书链
+  if not CertGetCertificateChain(
+    nil,                    // 使用默认链引擎
+    FCertContext,           // 要验证的证书
+    nil,                    // 使用当前时间
+    StoreHandle,            // 附加证书存储（可选）
+    @ChainPara,             // 链参数
+    0,                      // 标志
+    nil,                    // 保留
+    @ChainContext           // 输出链上下文
+  ) then
+    Exit;
+
+  try
+    // 初始化策略参数
+    FillChar(PolicyPara, SizeOf(PolicyPara), 0);
+    PolicyPara.cbSize := SizeOf(PolicyPara);
+    PolicyPara.dwFlags := 0;
+
+    // 初始化策略状态
+    FillChar(PolicyStatus, SizeOf(PolicyStatus), 0);
+    PolicyStatus.cbSize := SizeOf(PolicyStatus);
+
+    // 验证证书链策略（基本约束、密钥用途等）
+    if CertVerifyCertificateChainPolicy(
+      CERT_CHAIN_POLICY_BASE,     // 基本验证策略
+      ChainContext,               // 证书链
+      @PolicyPara,                // 策略参数
+      @PolicyStatus               // 策略状态输出
+    ) then
+    begin
+      // 检查验证结果
+      Result := (PolicyStatus.dwError = 0);
+
+      // 如果失败，可以通过 PolicyStatus.dwError 获取错误代码
+      // 常见错误码：
+      // TRUST_E_CERT_SIGNATURE: 签名无效
+      // CERT_E_EXPIRED: 证书已过期
+      // CERT_E_UNTRUSTEDROOT: 不受信任的根证书
+      // CERT_E_WRONG_USAGE: 密钥用途不正确
+    end;
+
+  finally
+    // 释放证书链上下文
+    CertFreeCertificateChain(ChainContext);
+  end;
 end;
 
 function TWinSSLCertificate.VerifyHostname(const aHostname: string): Boolean;
+var
+  SANs: TStringList;
+  i: Integer;
+  CN: string;
+
+  function MatchWildcard(const aPattern, aHostname: string): Boolean;
+  var
+    PatternParts, HostParts: TStringList;
+    j: Integer;
+  begin
+    Result := False;
+
+    // 精确匹配
+    if SameText(aPattern, aHostname) then
+    begin
+      Result := True;
+      Exit;
+    end;
+
+    // 通配符匹配 (*.example.com)
+    if (Pos('*.', aPattern) = 1) then
+    begin
+      PatternParts := TStringList.Create;
+      HostParts := TStringList.Create;
+      try
+        PatternParts.Delimiter := '.';
+        PatternParts.DelimitedText := aPattern;
+
+        HostParts.Delimiter := '.';
+        HostParts.DelimitedText := aHostname;
+
+        // 域名级数必须相同
+        if PatternParts.Count = HostParts.Count then
+        begin
+          Result := True;
+          // 从第二级开始比较（跳过通配符）
+          for j := 1 to PatternParts.Count - 1 do
+          begin
+            if not SameText(PatternParts[j], HostParts[j]) then
+            begin
+              Result := False;
+              Break;
+            end;
+          end;
+        end;
+      finally
+        PatternParts.Free;
+        HostParts.Free;
+      end;
+    end;
+  end;
+
 begin
-  // TODO: 实现主机名验证
   Result := False;
+
+  if (FCertContext = nil) or (aHostname = '') then
+    Exit;
+
+  // 首先检查 Subject Alternative Names (SAN)
+  SANs := GetSubjectAltNames;
+  try
+    for i := 0 to SANs.Count - 1 do
+    begin
+      if MatchWildcard(SANs[i], aHostname) then
+      begin
+        Result := True;
+        Exit;
+      end;
+    end;
+  finally
+    SANs.Free;
+  end;
+
+  // 如果没有 SAN 或未匹配，检查 Common Name (CN)
+  CN := GetSubject;
+
+  // 从 Subject 中提取 CN
+  // 简化处理：GetSubject 可能已返回简化的名称
+  // 如果返回的是完整 DN，需要解析
+  if Pos('CN=', CN) > 0 then
+  begin
+    CN := Copy(CN, Pos('CN=', CN) + 3, Length(CN));
+    if Pos(',', CN) > 0 then
+      CN := Copy(CN, 1, Pos(',', CN) - 1);
+    CN := Trim(CN);
+  end;
+
+  // 尝试匹配 CN
+  Result := MatchWildcard(CN, aHostname);
 end;
 
 function TWinSSLCertificate.IsExpired: Boolean;
@@ -645,9 +798,66 @@ begin
 end;
 
 function TWinSSLCertificate.IsCA: Boolean;
+var
+  ExtInfo: PCERT_EXTENSION;
+  BasicConstraints: PCERT_BASIC_CONSTRAINTS2_INFO;
+  BasicConstraintsSize: DWORD;
 begin
-  // TODO: 检查 Basic Constraints 扩展
   Result := False;
+
+  if FCertContext = nil then
+    Exit;
+
+  // 查找 Basic Constraints 扩展
+  ExtInfo := CertFindExtension(
+    szOID_BASIC_CONSTRAINTS2,
+    GetCertInfo^.cExtension,
+    GetCertInfo^.rgExtension
+  );
+
+  if ExtInfo = nil then
+  begin
+    // 尝试旧版本的 Basic Constraints (不常见)
+    ExtInfo := CertFindExtension(
+      szOID_BASIC_CONSTRAINTS,
+      GetCertInfo^.cExtension,
+      GetCertInfo^.rgExtension
+    );
+  end;
+
+  if ExtInfo = nil then
+    Exit;
+
+  // 解码 Basic Constraints 扩展
+  BasicConstraintsSize := 0;
+  if not CryptDecodeObject(
+    X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
+    szOID_BASIC_CONSTRAINTS2,
+    ExtInfo^.Value.pbData,
+    ExtInfo^.Value.cbData,
+    0,
+    nil,
+    @BasicConstraintsSize
+  ) then
+    Exit;
+
+  GetMem(BasicConstraints, BasicConstraintsSize);
+  try
+    if CryptDecodeObject(
+      X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
+      szOID_BASIC_CONSTRAINTS2,
+      ExtInfo^.Value.pbData,
+      ExtInfo^.Value.cbData,
+      0,
+      BasicConstraints,
+      @BasicConstraintsSize
+    ) then
+    begin
+      Result := BasicConstraints^.fCA;
+    end;
+  finally
+    FreeMem(BasicConstraints);
+  end;
 end;
 
 // ============================================================================
@@ -655,9 +865,30 @@ end;
 // ============================================================================
 
 function TWinSSLCertificate.GetExtension(const aOID: string): string;
+var
+  ExtInfo: PCERT_EXTENSION;
+  OIDAnsi: AnsiString;
 begin
-  // TODO: 实现扩展查询
   Result := '';
+
+  if (FCertContext = nil) or (aOID = '') then
+    Exit;
+
+  // 转换 OID 为 ANSI 字符串
+  OIDAnsi := AnsiString(aOID);
+
+  // 查找扩展
+  ExtInfo := CertFindExtension(
+    PAnsiChar(OIDAnsi),
+    GetCertInfo^.cExtension,
+    GetCertInfo^.rgExtension
+  );
+
+  if ExtInfo = nil then
+    Exit;
+
+  // 将扩展值转换为十六进制字符串
+  Result := BinaryToHexString(ExtInfo^.Value.pbData, ExtInfo^.Value.cbData);
 end;
 
 function TWinSSLCertificate.GetSubjectAltNames: TStringList;
@@ -725,15 +956,147 @@ begin
 end;
 
 function TWinSSLCertificate.GetKeyUsage: TStringList;
+var
+  ExtInfo: PCERT_EXTENSION;
+  KeyUsageInfo: PCRYPT_BIT_BLOB;
+  KeyUsageSize: DWORD;
+  KeyUsageBits: Byte;
 begin
   Result := TStringList.Create;
-  // TODO: 实现密钥用途解析
+
+  if FCertContext = nil then
+    Exit;
+
+  // 查找 Key Usage 扩展
+  ExtInfo := CertFindExtension(
+    szOID_KEY_USAGE,
+    GetCertInfo^.cExtension,
+    GetCertInfo^.rgExtension
+  );
+
+  if ExtInfo = nil then
+    Exit;
+
+  // 解码 Key Usage 扩展
+  KeyUsageSize := 0;
+  if not CryptDecodeObject(
+    X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
+    szOID_KEY_USAGE,
+    ExtInfo^.Value.pbData,
+    ExtInfo^.Value.cbData,
+    0,
+    nil,
+    @KeyUsageSize
+  ) then
+    Exit;
+
+  GetMem(KeyUsageInfo, KeyUsageSize);
+  try
+    if CryptDecodeObject(
+      X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
+      szOID_KEY_USAGE,
+      ExtInfo^.Value.pbData,
+      ExtInfo^.Value.cbData,
+      0,
+      KeyUsageInfo,
+      @KeyUsageSize
+    ) then
+    begin
+      if KeyUsageInfo^.cbData > 0 then
+      begin
+        KeyUsageBits := PByte(KeyUsageInfo^.pbData)^;
+
+        // 解析密钥用途位
+        if (KeyUsageBits and $80) <> 0 then Result.Add('digitalSignature');
+        if (KeyUsageBits and $40) <> 0 then Result.Add('nonRepudiation');
+        if (KeyUsageBits and $20) <> 0 then Result.Add('keyEncipherment');
+        if (KeyUsageBits and $10) <> 0 then Result.Add('dataEncipherment');
+        if (KeyUsageBits and $08) <> 0 then Result.Add('keyAgreement');
+        if (KeyUsageBits and $04) <> 0 then Result.Add('keyCertSign');
+        if (KeyUsageBits and $02) <> 0 then Result.Add('cRLSign');
+        if (KeyUsageBits and $01) <> 0 then Result.Add('encipherOnly');
+
+        // 第二个字节（如果存在）
+        if KeyUsageInfo^.cbData > 1 then
+        begin
+          KeyUsageBits := PByte(KeyUsageInfo^.pbData + 1)^;
+          if (KeyUsageBits and $80) <> 0 then Result.Add('decipherOnly');
+        end;
+      end;
+    end;
+  finally
+    FreeMem(KeyUsageInfo);
+  end;
 end;
 
 function TWinSSLCertificate.GetExtendedKeyUsage: TStringList;
+var
+  ExtInfo: PCERT_EXTENSION;
+  EnhKeyUsage: PCERT_ENHKEY_USAGE;
+  EnhKeyUsageSize: DWORD;
+  i: DWORD;
+  OIDStr: string;
 begin
   Result := TStringList.Create;
-  // TODO: 实现扩展密钥用途解析
+
+  if FCertContext = nil then
+    Exit;
+
+  // 查找 Extended Key Usage 扩展
+  ExtInfo := CertFindExtension(
+    szOID_ENHANCED_KEY_USAGE,
+    GetCertInfo^.cExtension,
+    GetCertInfo^.rgExtension
+  );
+
+  if ExtInfo = nil then
+    Exit;
+
+  // 解码 Extended Key Usage 扩展
+  EnhKeyUsageSize := 0;
+  if not CryptDecodeObject(
+    X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
+    szOID_ENHANCED_KEY_USAGE,
+    ExtInfo^.Value.pbData,
+    ExtInfo^.Value.cbData,
+    0,
+    nil,
+    @EnhKeyUsageSize
+  ) then
+    Exit;
+
+  GetMem(EnhKeyUsage, EnhKeyUsageSize);
+  try
+    if CryptDecodeObject(
+      X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
+      szOID_ENHANCED_KEY_USAGE,
+      ExtInfo^.Value.pbData,
+      ExtInfo^.Value.cbData,
+      0,
+      EnhKeyUsage,
+      @EnhKeyUsageSize
+    ) then
+    begin
+      // 提取每个 OID
+      for i := 0 to EnhKeyUsage^.cUsageIdentifier - 1 do
+      begin
+        OIDStr := string(EnhKeyUsage^.rgpszUsageIdentifier[i]);
+        Result.Add(OIDStr);
+
+        // 添加常见 OID 的友好名称
+        if OIDStr = szOID_PKIX_KP_SERVER_AUTH then
+          Result.Add('TLS Web Server Authentication')
+        else if OIDStr = szOID_PKIX_KP_CLIENT_AUTH then
+          Result.Add('TLS Web Client Authentication')
+        else if OIDStr = szOID_PKIX_KP_CODE_SIGNING then
+          Result.Add('Code Signing')
+        else if OIDStr = szOID_PKIX_KP_EMAIL_PROTECTION then
+          Result.Add('Email Protection');
+      end;
+    end;
+  finally
+    FreeMem(EnhKeyUsage);
+  end;
 end;
 
 // ============================================================================
@@ -761,13 +1124,12 @@ end;
 
 procedure TWinSSLCertificate.SetIssuerCertificate(aCert: ISSLCertificate);
 begin
-  // TODO: 实现颁发者证书设置
+  FIssuerCert := aCert;
 end;
 
 function TWinSSLCertificate.GetIssuerCertificate: ISSLCertificate;
 begin
-  // TODO: 实现颁发者证书获取
-  Result := nil;
+  Result := FIssuerCert;
 end;
 
 // ============================================================================

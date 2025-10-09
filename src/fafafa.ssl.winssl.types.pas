@@ -301,7 +301,39 @@ type
     cAltEntry: DWORD;
     rgAltEntry: PCERT_ALT_NAME_ENTRY;
   end;
-  
+
+  // Key Usage 扩展结构
+  PCRYPT_BIT_BLOB = ^CRYPT_BIT_BLOB;
+  CRYPT_BIT_BLOB = record
+    cbData: DWORD;
+    pbData: PByte;
+    cUnusedBits: DWORD;
+  end;
+
+  // Basic Constraints 扩展结构
+  PCERT_BASIC_CONSTRAINTS_INFO = ^CERT_BASIC_CONSTRAINTS_INFO;
+  CERT_BASIC_CONSTRAINTS_INFO = record
+    SubjectType: CRYPT_BIT_BLOB;
+    fPathLenConstraint: BOOL;
+    dwPathLenConstraint: DWORD;
+    cSubtreesConstraint: DWORD;
+    rgSubtreesConstraint: Pointer;
+  end;
+
+  PCERT_BASIC_CONSTRAINTS2_INFO = ^CERT_BASIC_CONSTRAINTS2_INFO;
+  CERT_BASIC_CONSTRAINTS2_INFO = record
+    fCA: BOOL;
+    fPathLenConstraint: BOOL;
+    dwPathLenConstraint: DWORD;
+  end;
+
+  // Enhanced Key Usage 扩展结构
+  PCERT_ENHKEY_USAGE = ^CERT_ENHKEY_USAGE;
+  CERT_ENHKEY_USAGE = record
+    cUsageIdentifier: DWORD;
+    rgpszUsageIdentifier: ^LPCSTR;
+  end;
+
   // Windows 证书函数类型
   TCertNameToStr = function(
     dwCertEncodingType: DWORD;
@@ -578,11 +610,22 @@ const
   CERT_STORE_PROV_SYSTEM         = LPCSTR(10);
   CERT_SYSTEM_STORE_CURRENT_USER = $00010000;
   CERT_SYSTEM_STORE_LOCAL_MACHINE = $00020000;
-  
+  CERT_STORE_OPEN_EXISTING_FLAG  = $00004000;
+  CERT_STORE_READONLY_FLAG       = $00008000;
+
   // 证书查找类型
   CERT_FIND_SUBJECT_STR          = $00080007;
   CERT_FIND_ISSUER_STR           = $00080004;
+  CERT_FIND_SUBJECT_STR_W        = $00080008;
+  CERT_FIND_ISSUER_STR_W         = $00080005;
+  CERT_FIND_EXISTING             = $000D0000;
   CERT_FIND_ANY                  = 0;
+
+  // 证书添加方式
+  CERT_STORE_ADD_NEW             = 1;
+  CERT_STORE_ADD_USE_EXISTING    = 2;
+  CERT_STORE_ADD_REPLACE_EXISTING = 3;
+  CERT_STORE_ADD_ALWAYS          = 4;
   
   // 数据表示
   SECURITY_NATIVE_DREP           = $00000010;
@@ -604,6 +647,7 @@ const
   TRUST_E_CERT_SIGNATURE         = LONG($80096004);
   
   // 证书链策略
+  CERT_CHAIN_POLICY_BASE         = LPCSTR(1);
   CERT_CHAIN_POLICY_SSL          = LPCSTR(4);
   
   // 哈希算法 ID
@@ -614,7 +658,18 @@ const
   CALG_SHA_512                   = ALG_ID($0000800E);
   
   // 证书扩展 OID
+  szOID_SUBJECT_ALT_NAME         = '2.5.29.7';
   szOID_SUBJECT_ALT_NAME2        = '2.5.29.17';
+  szOID_KEY_USAGE                = '2.5.29.15';
+  szOID_BASIC_CONSTRAINTS        = '2.5.29.10';
+  szOID_BASIC_CONSTRAINTS2       = '2.5.29.19';
+  szOID_ENHANCED_KEY_USAGE       = '2.5.29.37';
+
+  // Extended Key Usage OIDs (PKIX)
+  szOID_PKIX_KP_SERVER_AUTH      = '1.3.6.1.5.5.7.3.1';
+  szOID_PKIX_KP_CLIENT_AUTH      = '1.3.6.1.5.5.7.3.2';
+  szOID_PKIX_KP_CODE_SIGNING     = '1.3.6.1.5.5.7.3.3';
+  szOID_PKIX_KP_EMAIL_PROTECTION = '1.3.6.1.5.5.7.3.4';
   
   // 证书备用名称类型
   CERT_ALT_NAME_OTHER_NAME       = 1;

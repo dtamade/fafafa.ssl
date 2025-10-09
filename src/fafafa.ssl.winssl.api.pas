@@ -207,6 +207,19 @@ function CertDuplicateCertificateContext(
   pCertContext: PCCERT_CONTEXT       // 证书上下文
 ): PCCERT_CONTEXT; stdcall; external CRYPT32_DLL;
 
+// 添加证书到存储
+function CertAddCertificateContextToStore(
+  hCertStore: HCERTSTORE;            // 证书存储句柄
+  pCertContext: PCCERT_CONTEXT;      // 证书上下文
+  dwAddDisposition: DWORD;           // 添加方式（CERT_STORE_ADD_*）
+  ppStoreContext: PPCCERT_CONTEXT    // [out] 存储中的证书上下文（可为 nil）
+): BOOL; stdcall; external CRYPT32_DLL;
+
+// 从存储中删除证书
+function CertDeleteCertificateFromStore(
+  pCertContext: PCCERT_CONTEXT       // 证书上下文
+): BOOL; stdcall; external CRYPT32_DLL;
+
 // 释放证书上下文
 function CertFreeCertificateContext(
   pCertContext: PCCERT_CONTEXT       // 证书上下文

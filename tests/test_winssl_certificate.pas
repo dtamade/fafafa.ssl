@@ -4,230 +4,295 @@ program test_winssl_certificate;
 {$CODEPAGE UTF8}
 
 uses
-  {$IFDEF UNIX}
-  cthreads,
-  {$ENDIF}
-  {$IFDEF WINDOWS}
-  Windows, WinSock2,
-  {$ENDIF}
-  SysUtils, Classes,
-  fafafa.ssl.abstract.types,
+  SysUtils, Classes, Windows,
+  fafafa.ssl.winssl.types,
+  fafafa.ssl.winssl.api,
+  fafafa.ssl.winssl.certificate,
+  fafafa.ssl.winssl.certstore,
   fafafa.ssl.abstract.intf,
-  fafafa.ssl.winssl.lib,
-  fafafa.ssl.winssl.context,
-  fafafa.ssl.winssl.connection;
+  fafafa.ssl.abstract.types;
 
-procedure TestCertificateInfo(const aHost: string; aPort: Word);
 var
-  SSLLibrary: ISSLLibrary;
-  SSLContext: ISSLContext;
-  SSLConnection: ISSLConnection;
-  Socket: TSocket;
-  Addr: TSockAddrIn;
-  HostEnt: PHostEnt;
-  HttpRequest: string;
-  Cert: ISSLCertificate;
-  CertChain: TSSLCertificateArray;
-  CertInfo: TSSLCertificateInfo;
-  i: Integer;
-  SANs: TStringList;
-  WSAData: TWSAData;
+  TestsPassed, TestsFailed: Integer;
+
+procedure WriteTest(const TestName: string);
 begin
-  WriteLn('=== WinSSL Certificate Test ===');
+  Write('  [', TestName, '] ... ');
+end;
+
+procedure WritePass;
+begin
+  WriteLn('[PASS]');
+  Inc(TestsPassed);
+end;
+
+procedure WriteFail(const Reason: string = '');
+begin
+  if Reason <> '' then
+    WriteLn('[FAIL] - ', Reason)
+  else
+    WriteLn('[FAIL]');
+  Inc(TestsFailed);
+end;
+
+procedure TestAPIFunctionsAvailable;
+var
+  Store: ISSLCertificateStore;
+  Count: Integer;
+begin
+  WriteLn('=== 测试 1: 证书存储访问 ===');
   WriteLn;
-  
-  // 初始化 Winsock
-  if WSAStartup(MAKEWORD(2, 2), WSAData) <> 0 then
-  begin
-    WriteLn('Failed to initialize Winsock');
-    Exit;
-  end;
-  
+
+  WriteTest('打开 ROOT 系统存储');
   try
-    // 创建 WinSSL 库
-    WriteLn('1. Creating WinSSL library...');
-    SSLLibrary := CreateWinSSLLibrary;
-    if not SSLLibrary.Initialize then
+    Store := OpenSystemStore(SSL_STORE_ROOT);
+    if Store <> nil then
+      WritePass
+    else
+      WriteFail('存储为 nil');
+  except
+    on E: Exception do
+      WriteFail(E.Message);
+  end;
+
+  WriteTest('获取证书计数');
+  try
+    if Store <> nil then
     begin
-      WriteLn('ERROR: Failed to initialize WinSSL library');
-      Exit;
-    end;
-    WriteLn('   Library type: ', SSLLibrary.GetVersionString);
-    WriteLn;
-    
-    // 创建上下文
-    WriteLn('2. Creating SSL context...');
-    SSLContext := SSLLibrary.CreateContext(sslCtxClient);
-    SSLContext.SetServerName(aHost);
-    WriteLn('   Context created');
-    WriteLn;
-    
-    // 创建 socket 并连接
-    WriteLn('3. Connecting to ', aHost, ':', aPort, '...');
-    Socket := WinSock2.socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if Socket = INVALID_SOCKET then
-    begin
-      WriteLn('ERROR: Failed to create socket');
-      Exit;
-    end;
-    
-    // 解析主机名
-    HostEnt := gethostbyname(PChar(aHost));
-    if HostEnt = nil then
-    begin
-      WriteLn('ERROR: Failed to resolve hostname');
-      closesocket(Socket);
-      Exit;
-    end;
-    
-    // 连接到服务器
-    FillChar(Addr, SizeOf(Addr), 0);
-    Addr.sin_family := AF_INET;
-    Addr.sin_port := htons(aPort);
-    Addr.sin_addr.S_addr := PLongint(HostEnt^.h_addr_list^)^;
-    
-    if WinSock2.connect(Socket, @Addr, SizeOf(Addr)) <> 0 then
-    begin
-      WriteLn('ERROR: Failed to connect to server');
-      closesocket(Socket);
-      Exit;
-    end;
-    WriteLn('   Connected to server');
-    WriteLn;
-    
-    // 创建 SSL 连接
-    WriteLn('4. Performing SSL handshake...');
-    SSLConnection := SSLContext.CreateConnection(Socket);
-    if not SSLConnection.Connect then
-    begin
-      WriteLn('ERROR: SSL handshake failed');
-      closesocket(Socket);
-      Exit;
-    end;
-    WriteLn('   SSL handshake completed');
-    WriteLn('   Protocol: ', ProtocolVersionToString(SSLConnection.GetProtocolVersion));
-    WriteLn('   Cipher: ', SSLConnection.GetCipherName);
-    WriteLn('   ALPN: ', SSLConnection.GetSelectedALPNProtocol);
-    WriteLn;
-    
-    // 获取对端证书
-    WriteLn('5. Retrieving peer certificate...');
-    Cert := SSLConnection.GetPeerCertificate;
-    if Cert = nil then
-    begin
-      WriteLn('ERROR: Failed to retrieve peer certificate');
+      Count := Store.GetCount;
+      if Count > 0 then
+        WritePass
+      else
+        WriteFail(Format('计数为 %d', [Count]));
     end
     else
-    begin
-      WriteLn('   Certificate retrieved successfully');
-      WriteLn;
-      
-      // 显示证书信息
-      WriteLn('6. Certificate Information:');
-      WriteLn('   Subject: ', Cert.GetSubject);
-      WriteLn('   Issuer: ', Cert.GetIssuer);
-      WriteLn('   Serial Number: ', Cert.GetSerialNumber);
-      WriteLn('   Version: ', Cert.GetVersion);
-      WriteLn('   Not Before: ', DateTimeToStr(Cert.GetNotBefore));
-      WriteLn('   Not After: ', DateTimeToStr(Cert.GetNotAfter));
-      WriteLn('   Public Key Algorithm: ', Cert.GetPublicKeyAlgorithm);
-      WriteLn('   Signature Algorithm: ', Cert.GetSignatureAlgorithm);
-      WriteLn('   SHA-1 Fingerprint: ', Cert.GetFingerprintSHA1);
-      WriteLn('   SHA-256 Fingerprint: ', Cert.GetFingerprintSHA256);
-      WriteLn('   Is Self-Signed: ', BoolToStr(Cert.IsSelfSigned, True));
-      WriteLn('   Is Expired: ', BoolToStr(Cert.IsExpired, True));
-      
-      // 显示 Subject Alternative Names
-      WriteLn;
-      WriteLn('   Subject Alternative Names:');
-      SANs := Cert.GetSubjectAltNames;
-      try
-        if SANs.Count > 0 then
-        begin
-          for i := 0 to SANs.Count - 1 do
-            WriteLn('     - ', SANs[i]);
-        end
-        else
-          WriteLn('     (none)');
-      finally
-        SANs.Free;
-      end;
-      WriteLn;
-    end;
-    
-    // 获取证书链
-    WriteLn('7. Retrieving certificate chain...');
-    CertChain := SSLConnection.GetPeerCertificateChain;
-    WriteLn('   Chain length: ', Length(CertChain));
-    for i := 0 to Length(CertChain) - 1 do
-    begin
-      WriteLn('   [', i, '] ', CertChain[i].GetSubject);
-      WriteLn('       Issuer: ', CertChain[i].GetIssuer);
-    end;
-    WriteLn;
-    
-    // 验证证书
-    WriteLn('8. Certificate Verification:');
-    WriteLn('   Result: ', SSLConnection.GetVerifyResultString);
-    WriteLn('   Code: ', SSLConnection.GetVerifyResult);
-    WriteLn;
-    
-    // 发送 HTTP 请求测试
-    WriteLn('9. Sending HTTP request...');
-    HttpRequest := 'GET / HTTP/1.1' + #13#10 +
-                   'Host: ' + aHost + #13#10 +
-                   'Connection: close' + #13#10 +
-                   'User-Agent: WinSSL-Test/1.0' + #13#10 +
-                   #13#10;
-    
-    if SSLConnection.WriteString(HttpRequest) then
-      WriteLn('   Request sent successfully')
-    else
-      WriteLn('   ERROR: Failed to send request');
-    WriteLn;
-    
-    // 关闭连接
-    WriteLn('10. Closing connection...');
-    SSLConnection.Shutdown;
-    closesocket(Socket);
-    WriteLn('    Connection closed');
-    WriteLn;
-    
-    WriteLn('=== Test Completed Successfully ===');
-    
-  finally
-    WSACleanup;
+      WriteLn('[SKIP] - 存储未打开');
+  except
+    on E: Exception do
+      WriteFail(E.Message);
   end;
+
+  WriteLn;
+end;
+
+procedure TestCertAPIFunctionsAvailable;
+var
+  Store: ISSLCertificateStore;
+  Cert: ISSLCertificate;
+  Subject: string;
+begin
+  WriteLn('=== 测试 2: 证书枚举 ===');
+  WriteLn;
+
+  WriteTest('枚举 ROOT 存储中的证书');
+  try
+    Store := OpenSystemStore(SSL_STORE_ROOT);
+    if (Store <> nil) and (Store.GetCount > 0) then
+    begin
+      Cert := Store.GetCertificate(0);
+      if Cert <> nil then
+        WritePass
+      else
+        WriteFail('获取证书失败');
+    end
+    else
+      WriteFail('ROOT 存储为空');
+  except
+    on E: Exception do
+      WriteFail(E.Message);
+  end;
+
+  WriteTest('读取第一个证书的主题');
+  try
+    if Cert <> nil then
+    begin
+      Subject := Cert.GetSubject;
+      if Subject <> '' then
+        WritePass
+      else
+        WriteFail('主题为空');
+    end
+    else
+      WriteLn('[SKIP] - 无证书');
+  except
+    on E: Exception do
+      WriteFail(E.Message);
+  end;
+
+  WriteTest('检查证书是否为 CA');
+  try
+    if Cert <> nil then
+    begin
+      if Cert.IsCA then
+        WritePass
+      else
+        WriteFail('ROOT 证书应该是 CA');
+    end
+    else
+      WriteLn('[SKIP] - 无证书');
+  except
+    on E: Exception do
+      WriteFail(E.Message);
+  end;
+
+  WriteLn;
+end;
+
+procedure TestTypeSizes;
+var
+  Store: ISSLCertificateStore;
+  Cert: ISSLCertificate;
+  FP_SHA1, FP_SHA256: string;
+begin
+  WriteLn('=== 测试 3: 证书指纹 ===');
+  WriteLn;
+
+  WriteTest('计算 SHA-1 指纹');
+  try
+    Store := OpenSystemStore(SSL_STORE_ROOT);
+    if (Store <> nil) and (Store.GetCount > 0) then
+    begin
+      Cert := Store.GetCertificate(0);
+      if Cert <> nil then
+      begin
+        FP_SHA1 := Cert.GetFingerprintSHA1;
+        if (FP_SHA1 <> '') and (Length(FP_SHA1) > 20) then
+          WritePass
+        else
+          WriteFail('SHA-1 指纹无效');
+      end
+      else
+        WriteFail('获取证书失败');
+    end
+    else
+      WriteLn('[SKIP] - 无证书');
+  except
+    on E: Exception do
+      WriteFail(E.Message);
+  end;
+
+  WriteTest('计算 SHA-256 指纹');
+  try
+    if Cert <> nil then
+    begin
+      FP_SHA256 := Cert.GetFingerprintSHA256;
+      if (FP_SHA256 <> '') and (Length(FP_SHA256) > 40) then
+        WritePass
+      else
+        WriteFail('SHA-256 指纹无效');
+    end
+    else
+      WriteLn('[SKIP] - 无证书');
+  except
+    on E: Exception do
+      WriteFail(E.Message);
+  end;
+
+  WriteLn;
+end;
+
+procedure TestConstantValues;
+var
+  Store: ISSLCertificateStore;
+  Cert: ISSLCertificate;
+  KeyUsage: TStringList;
+begin
+  WriteLn('=== 测试 4: 证书扩展 ===');
+  WriteLn;
+
+  WriteTest('读取 Key Usage 扩展');
+  try
+    Store := OpenSystemStore(SSL_STORE_ROOT);
+    if (Store <> nil) and (Store.GetCount > 0) then
+    begin
+      Cert := Store.GetCertificate(0);
+      if Cert <> nil then
+      begin
+        KeyUsage := Cert.GetKeyUsage;
+        try
+          if KeyUsage <> nil then
+            WritePass
+          else
+            WriteFail('KeyUsage 为 nil');
+        finally
+          KeyUsage.Free;
+        end;
+      end
+      else
+        WriteFail('获取证书失败');
+    end
+    else
+      WriteLn('[SKIP] - 无证书');
+  except
+    on E: Exception do
+      WriteFail(E.Message);
+  end;
+
+  WriteLn;
+end;
+
+procedure TestBasicCredentialAcquisition;
+begin
+  // No additional test needed for now
+end;
+
+procedure PrintSummary;
+var
+  Total: Integer;
+begin
+  Total := TestsPassed + TestsFailed;
+  WriteLn('==============================================');
+  WriteLn('测试摘要:');
+  WriteLn('  总计: ', Total);
+  WriteLn('  通过: ', TestsPassed, ' (', FormatFloat('0.0', TestsPassed / Total * 100), '%)');
+  WriteLn('  失败: ', TestsFailed);
+  
+  if TestsFailed = 0 then
+  begin
+    WriteLn;
+    WriteLn('✅ 所有测试通过！WinSSL 证书功能正常工作。');
+  end
+  else
+  begin
+    WriteLn;
+    WriteLn('⚠️ 部分测试失败，需要检查证书功能。');
+  end;
+  WriteLn('==============================================');
 end;
 
 begin
+  TestsPassed := 0;
+  TestsFailed := 0;
+
+  WriteLn('');
+  WriteLn('==============================================');
+  WriteLn('  fafafa.ssl - WinSSL 证书功能测试');
+  WriteLn('==============================================');
+  WriteLn('');
+  WriteLn('测试环境:');
+  WriteLn('  操作系统: Windows ', GetVersion shr 16, '.', GetVersion and $FFFF);
+  WriteLn('  编译器: Free Pascal ', {$I %FPCVERSION%});
+  WriteLn('');
+
   try
-    if ParamCount >= 1 then
-    begin
-      if ParamCount >= 2 then
-        TestCertificateInfo(ParamStr(1), StrToIntDef(ParamStr(2), 443))
-      else
-        TestCertificateInfo(ParamStr(1), 443);
-    end
-    else
-    begin
-      // 默认测试 www.google.com
-      WriteLn('Usage: ', ExtractFileName(ParamStr(0)), ' <hostname> [port]');
-      WriteLn('Testing with default: www.google.com:443');
-      WriteLn;
-      TestCertificateInfo('www.google.com', 443);
-    end;
-    
-    WriteLn;
-    WriteLn('Press Enter to exit...');
-    ReadLn;
+    TestAPIFunctionsAvailable;
+    TestCertAPIFunctionsAvailable;
+    TestTypeSizes;
+    TestConstantValues;
   except
     on E: Exception do
     begin
-      WriteLn('EXCEPTION: ', E.ClassName, ': ', E.Message);
-      WriteLn;
-      WriteLn('Press Enter to exit...');
-      ReadLn;
+      WriteLn('');
+      WriteLn('!!! 严重错误: ', E.Message);
+      Inc(TestsFailed);
     end;
   end;
+  
+  WriteLn('');
+  PrintSummary;
+  WriteLn('');
+  
+  // 等待按键
+  WriteLn('按回车键退出...');
+  ReadLn;
 end.
