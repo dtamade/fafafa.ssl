@@ -350,7 +350,8 @@ begin
   LoadOpenSSLPEM(GetCryptoLibHandle);
   LoadOpenSSLBN;
   LoadX509V3Functions(GetCryptoLibHandle);
-  
+  LoadOpenSSLSSL;  // Load SSL module functions (SSL_connect, SSL_new, etc.)
+
   FInitialized := True;
   Result := True;
 end;
@@ -525,8 +526,43 @@ begin
 end;
 
 procedure TOpenSSLContext.SetProtocolVersions(aVersions: TSSLProtocolVersions);
+var
+  LMinProto, LMaxProto: TSSLProtocolVersion;
+  LMinVersion, LMaxVersion: Integer;
 begin
   FProtocolVersions := aVersions;
+
+  // Apply protocol versions to SSL_CTX immediately
+  if FSSLCtx = nil then
+    Exit;
+
+  if aVersions = [] then
+    Exit;  // Empty set, use defaults
+
+  // Find minimum and maximum protocol versions from the set
+  LMinProto := Low(TSSLProtocolVersion);
+  LMaxProto := High(TSSLProtocolVersion);
+
+  // Find actual min
+  for LMinProto := Low(TSSLProtocolVersion) to High(TSSLProtocolVersion) do
+    if LMinProto in aVersions then
+      Break;
+
+  // Find actual max
+  for LMaxProto := High(TSSLProtocolVersion) downto Low(TSSLProtocolVersion) do
+    if LMaxProto in aVersions then
+      Break;
+
+  // Convert to OpenSSL version constants
+  LMinVersion := ProtocolToOpenSSL(LMinProto);
+  LMaxVersion := ProtocolToOpenSSL(LMaxProto);
+
+  // Apply to SSL_CTX (OpenSSL 1.1.0+ API)
+  if Assigned(SSL_CTX_set_min_proto_version) then
+    SSL_CTX_set_min_proto_version(FSSLCtx, LMinVersion);
+
+  if Assigned(SSL_CTX_set_max_proto_version) then
+    SSL_CTX_set_max_proto_version(FSSLCtx, LMaxVersion);
 end;
 
 function TOpenSSLContext.GetProtocolVersions: TSSLProtocolVersions;
@@ -824,8 +860,30 @@ begin
 end;
 
 procedure TOpenSSLContext.SetVerifyMode(aMode: TSSLVerifyModes);
+var
+  LVerifyMode: Integer;
 begin
   FVerifyMode := aMode;
+
+  // Apply verify mode to SSL_CTX immediately
+  if FSSLCtx = nil then
+    Exit;
+
+  // Convert TSSLVerifyModes set to OpenSSL verify flags
+  LVerifyMode := SSL_VERIFY_NONE;
+
+  if sslVerifyPeer in aMode then
+    LVerifyMode := LVerifyMode or SSL_VERIFY_PEER;
+
+  if sslVerifyFailIfNoPeerCert in aMode then
+    LVerifyMode := LVerifyMode or SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
+
+  if sslVerifyClientOnce in aMode then
+    LVerifyMode := LVerifyMode or SSL_VERIFY_CLIENT_ONCE;
+
+  // Apply the verify mode to the context
+  if Assigned(SSL_CTX_set_verify) then
+    SSL_CTX_set_verify(FSSLCtx, LVerifyMode, nil);
 end;
 
 function TOpenSSLContext.GetVerifyMode: TSSLVerifyModes;
@@ -1096,6 +1154,11 @@ var
 begin
   Result := '';
   if FCert = nil then Exit;
+
+  // Check if BIO functions are loaded
+  if not Assigned(BIO_new) or not Assigned(BIO_s_mem) then
+    Exit;
+
   LBio := BIO_new(BIO_s_mem);
   if LBio = nil then Exit;
   try
@@ -1123,6 +1186,11 @@ var
 begin
   SetLength(Result, 0);
   if FCert = nil then Exit;
+
+  // Check if BIO functions are loaded
+  if not Assigned(BIO_new) or not Assigned(BIO_s_mem) then
+    Exit;
+
   LBio := BIO_new(BIO_s_mem);
   if LBio = nil then Exit;
   try
@@ -1157,21 +1225,74 @@ var
   LBio: PBIO;
   LLen: Integer;
   LBuf: PAnsiChar;
+  LMethod: PBIO_METHOD;
 begin
   Result := '';
   if FCert = nil then Exit;
+
+  // Check if BIO functions are loaded
+  WriteLn('[DEBUG] GetSubject: BIO_new=', Assigned(BIO_new), ' BIO_s_mem=', Assigned(BIO_s_mem));
+  if not Assigned(BIO_new) or not Assigned(BIO_s_mem) then
+  begin
+    WriteLn('[DEBUG] GetSubject: BIO functions not loaded, exiting');
+    Exit;
+  end;
+
   LName := X509_get_subject_name(FCert);
   if LName = nil then Exit;
-  LBio := BIO_new(BIO_s_mem);
+
+  WriteLn('[DEBUG] GetSubject: Calling BIO_s_mem()...');
+  LMethod := BIO_s_mem();
+  WriteLn('[DEBUG] GetSubject: BIO_s_mem() returned ', IntToHex(NativeUInt(LMethod), 16));
+
+  if LMethod = nil then
+  begin
+    WriteLn('[DEBUG] GetSubject: BIO_s_mem() returned nil');
+    Exit;
+  end;
+
+  WriteLn('[DEBUG] GetSubject: Calling BIO_new()...');
+  LBio := BIO_new(LMethod);
+  WriteLn('[DEBUG] GetSubject: BIO_new() returned ', IntToHex(NativeUInt(LBio), 16));
+
   if LBio = nil then Exit;
+
+  // Check if X509_NAME_print_ex is loaded
+  if not Assigned(X509_NAME_print_ex) then
+  begin
+    WriteLn('[DEBUG] GetSubject: X509_NAME_print_ex not loaded');
+    BIO_free(LBio);
+    Exit;
+  end;
+
   try
     X509_NAME_print_ex(LBio, LName, 0, 0);
     LLen := BIO_pending(LBio);
+    WriteLn('[DEBUG] GetSubject: BIO_pending returned LLen=', LLen);
+
+    if LLen <= 0 then
+    begin
+      WriteLn('[DEBUG] GetSubject: No data in BIO (LLen=', LLen, '), exiting');
+      Exit;
+    end;
+
     GetMem(LBuf, LLen + 1);
     try
-      BIO_read(LBio, LBuf, LLen);
-      LBuf[LLen] := #0;
-      Result := string(LBuf);
+      LLen := BIO_read(LBio, LBuf, LLen);
+      WriteLn('[DEBUG] GetSubject: BIO_read returned ', LLen, ' bytes');
+
+      if LLen > 0 then
+      begin
+        LBuf[LLen] := #0;
+        Result := string(LBuf);
+        WriteLn('[DEBUG] GetSubject: Result length = ', Length(Result));
+        if Length(Result) > 0 then
+          WriteLn('[DEBUG] GetSubject: Result = "', Result, '"')
+        else
+          WriteLn('[DEBUG] GetSubject: Result is empty after conversion');
+      end
+      else
+        WriteLn('[DEBUG] GetSubject: BIO_read returned ', LLen, ', no data read');
     finally
       FreeMem(LBuf);
     end;
@@ -1189,18 +1310,52 @@ var
 begin
   Result := '';
   if FCert = nil then Exit;
+
+  // Check if BIO functions are loaded
+  if not Assigned(BIO_new) or not Assigned(BIO_s_mem) then
+    Exit;
+
   LName := X509_get_issuer_name(FCert);
   if LName = nil then Exit;
   LBio := BIO_new(BIO_s_mem);
   if LBio = nil then Exit;
+
+  // Check if X509_NAME_print_ex is loaded
+  if not Assigned(X509_NAME_print_ex) then
+  begin
+    WriteLn('[DEBUG] GetIssuer: X509_NAME_print_ex not loaded');
+    BIO_free(LBio);
+    Exit;
+  end;
+
   try
     X509_NAME_print_ex(LBio, LName, 0, 0);
     LLen := BIO_pending(LBio);
+    WriteLn('[DEBUG] GetIssuer: BIO_pending returned LLen=', LLen);
+
+    if LLen <= 0 then
+    begin
+      WriteLn('[DEBUG] GetIssuer: No data in BIO (LLen=', LLen, '), exiting');
+      Exit;
+    end;
+
     GetMem(LBuf, LLen + 1);
     try
-      BIO_read(LBio, LBuf, LLen);
-      LBuf[LLen] := #0;
-      Result := string(LBuf);
+      LLen := BIO_read(LBio, LBuf, LLen);
+      WriteLn('[DEBUG] GetIssuer: BIO_read returned ', LLen, ' bytes');
+
+      if LLen > 0 then
+      begin
+        LBuf[LLen] := #0;
+        Result := string(LBuf);
+        WriteLn('[DEBUG] GetIssuer: Result length = ', Length(Result));
+        if Length(Result) > 0 then
+          WriteLn('[DEBUG] GetIssuer: Result = "', Result, '"')
+        else
+          WriteLn('[DEBUG] GetIssuer: Result is empty after conversion');
+      end
+      else
+        WriteLn('[DEBUG] GetIssuer: BIO_read returned ', LLen, ', no data read');
     finally
       FreeMem(LBuf);
     end;
@@ -1270,6 +1425,11 @@ var
 begin
   Result := '';
   if FCert = nil then Exit;
+
+  // Check if BIO functions are loaded
+  if not Assigned(BIO_new) or not Assigned(BIO_s_mem) then
+    Exit;
+
   LKey := X509_get_pubkey(FCert);
   if LKey = nil then Exit;
   try
@@ -1435,7 +1595,11 @@ var
 begin
   Result := '';
   if FCert = nil then Exit;
-  
+
+  // Check if BIO functions are loaded
+  if not Assigned(BIO_new) or not Assigned(BIO_s_mem) then
+    Exit;
+
   // Convert OID string to ASN1_OBJECT
   LOID := OBJ_txt2obj(PAnsiChar(AnsiString(aOID)), 0);
   if LOID = nil then Exit;
@@ -1443,10 +1607,10 @@ begin
     // Find extension by OID
     LExtIdx := X509_get_ext_by_OBJ(FCert, LOID, -1);
     if LExtIdx < 0 then Exit;
-    
+
     LExt := X509_get_ext(FCert, LExtIdx);
     if LExt = nil then Exit;
-    
+
     // Convert extension to string
     LBio := BIO_new(BIO_s_mem);
     if LBio = nil then Exit;
@@ -1484,14 +1648,18 @@ var
 begin
   Result := TStringList.Create;
   if FCert = nil then Exit;
-  
+
+  // Check if BIO functions are loaded
+  if not Assigned(BIO_new) or not Assigned(BIO_s_mem) then
+    Exit;
+
   // Get Subject Alternative Name extension
   LExtIdx := X509_get_ext_by_NID(FCert, NID_subject_alt_name, -1);
   if LExtIdx < 0 then Exit;
-  
+
   LExt := X509_get_ext(FCert, LExtIdx);
   if LExt = nil then Exit;
-  
+
   // Convert extension to string
   LBio := BIO_new(BIO_s_mem);
   if LBio = nil then Exit;
@@ -1534,14 +1702,18 @@ var
 begin
   Result := TStringList.Create;
   if FCert = nil then Exit;
-  
+
+  // Check if BIO functions are loaded
+  if not Assigned(BIO_new) or not Assigned(BIO_s_mem) then
+    Exit;
+
   // Get Key Usage extension
   LExtIdx := X509_get_ext_by_NID(FCert, NID_key_usage, -1);
   if LExtIdx < 0 then Exit;
-  
+
   LExt := X509_get_ext(FCert, LExtIdx);
   if LExt = nil then Exit;
-  
+
   // Convert extension to string
   LBio := BIO_new(BIO_s_mem);
   if LBio = nil then Exit;
@@ -1584,14 +1756,18 @@ var
 begin
   Result := TStringList.Create;
   if FCert = nil then Exit;
-  
+
+  // Check if BIO functions are loaded
+  if not Assigned(BIO_new) or not Assigned(BIO_s_mem) then
+    Exit;
+
   // Get Extended Key Usage extension
   LExtIdx := X509_get_ext_by_NID(FCert, NID_ext_key_usage, -1);
   if LExtIdx < 0 then Exit;
-  
+
   LExt := X509_get_ext(FCert, LExtIdx);
   if LExt = nil then Exit;
-  
+
   // Convert extension to string
   LBio := BIO_new(BIO_s_mem);
   if LBio = nil then Exit;
@@ -2132,12 +2308,28 @@ function TOpenSSLConnection.Connect: Boolean;
 var
   LRet: Integer;
   LError: Integer;
+  LServerName: string;
+  LServerNameAnsi: AnsiString;
 begin
   Result := False;
-  
+
   if FSSL = nil then
     Exit;
-  
+
+  // Set SNI hostname if specified by the context (required for virtual hosts)
+  if FContext <> nil then
+  begin
+    LServerName := FContext.GetServerName;
+    if LServerName <> '' then
+    begin
+      if Assigned(SSL_set_tlsext_host_name) then
+      begin
+        LServerNameAnsi := AnsiString(LServerName);
+        SSL_set_tlsext_host_name(FSSL, PAnsiChar(LServerNameAnsi));
+      end;
+    end;
+  end;
+
   // Set connect state
   if Assigned(SSL_set_connect_state) then
     SSL_set_connect_state(FSSL);

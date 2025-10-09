@@ -283,6 +283,9 @@ function LoadOpenSSLSSL: Boolean;
 procedure UnloadOpenSSLSSL;
 function IsOpenSSLSSLLoaded: Boolean;
 
+{ Helper function - SSL_set_tlsext_host_name is a macro in OpenSSL, not a real function }
+function SSL_set_tlsext_host_name_impl(ssl: PSSL; const name: PAnsiChar): Integer; cdecl;
+
 implementation
 
 uses
@@ -295,14 +298,14 @@ function LoadOpenSSLSSL: Boolean;
 begin
   if GSSLLoaded then
     Exit(True);
-    
+
   // Make sure core is loaded first
   if not IsOpenSSLCoreLoaded then
     LoadOpenSSLCore;
-    
+
   if not IsOpenSSLCoreLoaded then
     Exit(False);
-    
+
   // Load SSL protocol functions using helper function
   SSL_CTX_set_min_proto_version := TSSL_CTX_set_min_proto_version(GetSSLProcAddress('SSL_CTX_set_min_proto_version'));
   SSL_CTX_set_max_proto_version := TSSL_CTX_set_max_proto_version(GetSSLProcAddress('SSL_CTX_set_max_proto_version'));
@@ -350,6 +353,11 @@ begin
   
   // Load SNI functions
   SSL_set_tlsext_host_name := TSSL_set_tlsext_host_name(GetSSLProcAddress('SSL_set_tlsext_host_name'));
+
+  // If the function wasn't found (it's a macro), use our helper implementation
+  if not Assigned(SSL_set_tlsext_host_name) then
+    SSL_set_tlsext_host_name := @SSL_set_tlsext_host_name_impl;
+
   SSL_get_servername := TSSL_get_servername(GetSSLProcAddress('SSL_get_servername'));
   SSL_get_servername_type := TSSL_get_servername_type(GetSSLProcAddress('SSL_get_servername_type'));
   SSL_CTX_set_tlsext_servername_callback := TSSL_CTX_set_tlsext_servername_callback(GetSSLProcAddress('SSL_CTX_set_tlsext_servername_callback'));
@@ -364,7 +372,7 @@ begin
   
   // Load other extension functions...
   // Many functions are optional and may not exist in older versions
-  
+
   GSSLLoaded := True;
   Result := True;
 end;
@@ -382,6 +390,22 @@ end;
 function IsOpenSSLSSLLoaded: Boolean;
 begin
   Result := GSSLLoaded;
+end;
+
+{ SSL_set_tlsext_host_name is a macro in OpenSSL:
+  #define SSL_set_tlsext_host_name(s, name) \
+      SSL_ctrl(s, SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, (void *)name)
+}
+function SSL_set_tlsext_host_name_impl(ssl: PSSL; const name: PAnsiChar): Integer; cdecl;
+const
+  SSL_CTRL_SET_TLSEXT_HOSTNAME = 55;
+  TLSEXT_NAMETYPE_host_name = 0;
+begin
+  if Assigned(SSL_ctrl) then
+    Result := Integer(SSL_ctrl(ssl, SSL_CTRL_SET_TLSEXT_HOSTNAME,
+                               TLSEXT_NAMETYPE_host_name, Pointer(name)))
+  else
+    Result := 0;
 end;
 
 end.
