@@ -1,7 +1,6 @@
 unit fafafa.ssl.openssl.api.cms;
 
-{$mode Delphi}
-{$H+}
+{$mode objfpc}{$H+}
 
 interface
 
@@ -369,34 +368,113 @@ begin
     Exit(False);
 
   // 加载 CMS 创建和释放
-  CMS_ContentInfo_new := GetProcAddress(ACryptoLib, 'CMS_ContentInfo_new');
-  CMS_ContentInfo_free := GetProcAddress(ACryptoLib, 'CMS_ContentInfo_free');
-  d2i_CMS_ContentInfo := GetProcAddress(ACryptoLib, 'd2i_CMS_ContentInfo');
-  i2d_CMS_ContentInfo := GetProcAddress(ACryptoLib, 'i2d_CMS_ContentInfo');
-  d2i_CMS_bio := GetProcAddress(ACryptoLib, 'd2i_CMS_bio');
-  i2d_CMS_bio := GetProcAddress(ACryptoLib, 'i2d_CMS_bio');
-  i2d_CMS_bio_stream := GetProcAddress(ACryptoLib, 'i2d_CMS_bio_stream');
-  CMS_ContentInfo_print_ctx := GetProcAddress(ACryptoLib, 'CMS_ContentInfo_print_ctx');
+  CMS_ContentInfo_new := TCMS_ContentInfo_new(GetProcAddress(ACryptoLib, 'CMS_ContentInfo_new'));
+  CMS_ContentInfo_free := TCMS_ContentInfo_free(GetProcAddress(ACryptoLib, 'CMS_ContentInfo_free'));
+  d2i_CMS_ContentInfo := Td2i_CMS_ContentInfo(GetProcAddress(ACryptoLib, 'd2i_CMS_ContentInfo'));
+  i2d_CMS_ContentInfo := Ti2d_CMS_ContentInfo(GetProcAddress(ACryptoLib, 'i2d_CMS_ContentInfo'));
+  d2i_CMS_bio := Td2i_CMS_bio(GetProcAddress(ACryptoLib, 'd2i_CMS_bio'));
+  i2d_CMS_bio := Ti2d_CMS_bio(GetProcAddress(ACryptoLib, 'i2d_CMS_bio'));
+  i2d_CMS_bio_stream := Ti2d_CMS_bio_stream(GetProcAddress(ACryptoLib, 'i2d_CMS_bio_stream'));
+  CMS_ContentInfo_print_ctx := TCMS_ContentInfo_print_ctx(GetProcAddress(ACryptoLib, 'CMS_ContentInfo_print_ctx'));
 
   // 加载 CMS 签名操作
-  CMS_sign := GetProcAddress(ACryptoLib, 'CMS_sign');
-  CMS_sign_receipt := GetProcAddress(ACryptoLib, 'CMS_sign_receipt');
-  CMS_add1_signer := GetProcAddress(ACryptoLib, 'CMS_add1_signer');
-  CMS_SignerInfo_sign := GetProcAddress(ACryptoLib, 'CMS_SignerInfo_sign');
-  CMS_final := GetProcAddress(ACryptoLib, 'CMS_final');
-  CMS_verify := GetProcAddress(ACryptoLib, 'CMS_verify');
-  CMS_verify_receipt := GetProcAddress(ACryptoLib, 'CMS_verify_receipt');
-  CMS_get0_signers := GetProcAddress(ACryptoLib, 'CMS_get0_signers');
+  CMS_sign := TCMS_sign(GetProcAddress(ACryptoLib, 'CMS_sign'));
+  CMS_sign_receipt := TCMS_sign_receipt(GetProcAddress(ACryptoLib, 'CMS_sign_receipt'));
+  CMS_add1_signer := TCMS_add1_signer(GetProcAddress(ACryptoLib, 'CMS_add1_signer'));
+  CMS_SignerInfo_sign := TCMS_SignerInfo_sign(GetProcAddress(ACryptoLib, 'CMS_SignerInfo_sign'));
+  CMS_final := TCMS_final(GetProcAddress(ACryptoLib, 'CMS_final'));
+  CMS_verify := TCMS_verify(GetProcAddress(ACryptoLib, 'CMS_verify'));
+  CMS_verify_receipt := TCMS_verify_receipt(GetProcAddress(ACryptoLib, 'CMS_verify_receipt'));
+  CMS_get0_signers := TCMS_get0_signers(GetProcAddress(ACryptoLib, 'CMS_get0_signers'));
 
   // 加载 CMS 加密操作
-  CMS_encrypt := GetProcAddress(ACryptoLib, 'CMS_encrypt');
-  CMS_decrypt := GetProcAddress(ACryptoLib, 'CMS_decrypt');
-  CMS_decrypt_set1_pkey := GetProcAddress(ACryptoLib, 'CMS_decrypt_set1_pkey');
-  CMS_decrypt_set1_key := GetProcAddress(ACryptoLib, 'CMS_decrypt_set1_key');
-  CMS_decrypt_set1_password := GetProcAddress(ACryptoLib, 'CMS_decrypt_set1_password');
+  CMS_encrypt := TCMS_encrypt(GetProcAddress(ACryptoLib, 'CMS_encrypt'));
+  CMS_decrypt := TCMS_decrypt(GetProcAddress(ACryptoLib, 'CMS_decrypt'));
+  CMS_decrypt_set1_pkey := TCMS_decrypt_set1_pkey(GetProcAddress(ACryptoLib, 'CMS_decrypt_set1_pkey'));
+  CMS_decrypt_set1_key := TCMS_decrypt_set1_key(GetProcAddress(ACryptoLib, 'CMS_decrypt_set1_key'));
+  CMS_decrypt_set1_password := TCMS_decrypt_set1_password(GetProcAddress(ACryptoLib, 'CMS_decrypt_set1_password'));
 
-  // 继续加载其他函数...
-  // 由于函数太多，这里只示例部分加载
+  // 加载 CMS RecipientInfo 函数
+  CMS_add0_recipient_key := TCMS_add0_recipient_key(GetProcAddress(ACryptoLib, 'CMS_add0_recipient_key'));
+  CMS_add0_recipient_password := TCMS_add0_recipient_password(GetProcAddress(ACryptoLib, 'CMS_add0_recipient_password'));
+  CMS_add1_recipient_cert := TCMS_add1_recipient_cert(GetProcAddress(ACryptoLib, 'CMS_add1_recipient_cert'));
+  CMS_RecipientInfo_type := TCMS_RecipientInfo_type(GetProcAddress(ACryptoLib, 'CMS_RecipientInfo_type'));
+  CMS_RecipientInfo_ktri_get0_signer_id := TCMS_RecipientInfo_ktri_get0_signer_id(GetProcAddress(ACryptoLib, 'CMS_RecipientInfo_ktri_get0_signer_id'));
+  CMS_RecipientInfo_ktri_cert_cmp := TCMS_RecipientInfo_ktri_cert_cmp(GetProcAddress(ACryptoLib, 'CMS_RecipientInfo_ktri_cert_cmp'));
+  CMS_RecipientInfo_set0_pkey := TCMS_RecipientInfo_set0_pkey(GetProcAddress(ACryptoLib, 'CMS_RecipientInfo_set0_pkey'));
+  CMS_RecipientInfo_kekri_get0_id := TCMS_RecipientInfo_kekri_get0_id(GetProcAddress(ACryptoLib, 'CMS_RecipientInfo_kekri_get0_id'));
+  CMS_RecipientInfo_kekri_id_cmp := TCMS_RecipientInfo_kekri_id_cmp(GetProcAddress(ACryptoLib, 'CMS_RecipientInfo_kekri_id_cmp'));
+  CMS_RecipientInfo_set0_key := TCMS_RecipientInfo_set0_key(GetProcAddress(ACryptoLib, 'CMS_RecipientInfo_set0_key'));
+  CMS_RecipientInfo_decrypt := TCMS_RecipientInfo_decrypt(GetProcAddress(ACryptoLib, 'CMS_RecipientInfo_decrypt'));
+  CMS_RecipientInfo_encrypt := TCMS_RecipientInfo_encrypt(GetProcAddress(ACryptoLib, 'CMS_RecipientInfo_encrypt'));
+
+  // 加载 CMS SignerInfo 函数
+  CMS_get0_SignerInfos := TCMS_get0_SignerInfos(GetProcAddress(ACryptoLib, 'CMS_get0_SignerInfos'));
+  CMS_SignerInfo_get0_signer_id := TCMS_SignerInfo_get0_signer_id(GetProcAddress(ACryptoLib, 'CMS_SignerInfo_get0_signer_id'));
+  CMS_SignerInfo_get0_signature := TCMS_SignerInfo_get0_signature(GetProcAddress(ACryptoLib, 'CMS_SignerInfo_get0_signature'));
+  CMS_SignerInfo_cert_cmp := TCMS_SignerInfo_cert_cmp(GetProcAddress(ACryptoLib, 'CMS_SignerInfo_cert_cmp'));
+  CMS_set1_signer_cert := TCMS_set1_signer_cert(GetProcAddress(ACryptoLib, 'CMS_set1_signer_cert'));
+  CMS_SignerInfo_get0_algs := TCMS_SignerInfo_get0_algs(GetProcAddress(ACryptoLib, 'CMS_SignerInfo_get0_algs'));
+  CMS_SignerInfo_get0_md_ctx := TCMS_SignerInfo_get0_md_ctx(GetProcAddress(ACryptoLib, 'CMS_SignerInfo_get0_md_ctx'));
+  CMS_SignerInfo_verify := TCMS_SignerInfo_verify(GetProcAddress(ACryptoLib, 'CMS_SignerInfo_verify'));
+  CMS_SignerInfo_verify_content := TCMS_SignerInfo_verify_content(GetProcAddress(ACryptoLib, 'CMS_SignerInfo_verify_content'));
+
+  // 加载 CMS 属性操作函数
+  CMS_signed_get_attr_count := TCMS_signed_get_attr_count(GetProcAddress(ACryptoLib, 'CMS_signed_get_attr_count'));
+  CMS_signed_get_attr_by_NID := TCMS_signed_get_attr_by_NID(GetProcAddress(ACryptoLib, 'CMS_signed_get_attr_by_NID'));
+  CMS_signed_get_attr_by_OBJ := TCMS_signed_get_attr_by_OBJ(GetProcAddress(ACryptoLib, 'CMS_signed_get_attr_by_OBJ'));
+  CMS_signed_get_attr := TCMS_signed_get_attr(GetProcAddress(ACryptoLib, 'CMS_signed_get_attr'));
+  CMS_signed_delete_attr := TCMS_signed_delete_attr(GetProcAddress(ACryptoLib, 'CMS_signed_delete_attr'));
+  CMS_signed_add1_attr := TCMS_signed_add1_attr(GetProcAddress(ACryptoLib, 'CMS_signed_add1_attr'));
+  CMS_signed_add1_attr_by_OBJ := TCMS_signed_add1_attr_by_OBJ(GetProcAddress(ACryptoLib, 'CMS_signed_add1_attr_by_OBJ'));
+  CMS_signed_add1_attr_by_NID := TCMS_signed_add1_attr_by_NID(GetProcAddress(ACryptoLib, 'CMS_signed_add1_attr_by_NID'));
+  CMS_signed_add1_attr_by_txt := TCMS_signed_add1_attr_by_txt(GetProcAddress(ACryptoLib, 'CMS_signed_add1_attr_by_txt'));
+  CMS_signed_get0_data_by_OBJ := TCMS_signed_get0_data_by_OBJ(GetProcAddress(ACryptoLib, 'CMS_signed_get0_data_by_OBJ'));
+
+  // 加载 CMS 未签名属性函数
+  CMS_unsigned_get_attr_count := TCMS_unsigned_get_attr_count(GetProcAddress(ACryptoLib, 'CMS_unsigned_get_attr_count'));
+  CMS_unsigned_get_attr_by_NID := TCMS_unsigned_get_attr_by_NID(GetProcAddress(ACryptoLib, 'CMS_unsigned_get_attr_by_NID'));
+  CMS_unsigned_get_attr_by_OBJ := TCMS_unsigned_get_attr_by_OBJ(GetProcAddress(ACryptoLib, 'CMS_unsigned_get_attr_by_OBJ'));
+  CMS_unsigned_get_attr := TCMS_unsigned_get_attr(GetProcAddress(ACryptoLib, 'CMS_unsigned_get_attr'));
+  CMS_unsigned_delete_attr := TCMS_unsigned_delete_attr(GetProcAddress(ACryptoLib, 'CMS_unsigned_delete_attr'));
+  CMS_unsigned_add1_attr := TCMS_unsigned_add1_attr(GetProcAddress(ACryptoLib, 'CMS_unsigned_add1_attr'));
+  CMS_unsigned_add1_attr_by_OBJ := TCMS_unsigned_add1_attr_by_OBJ(GetProcAddress(ACryptoLib, 'CMS_unsigned_add1_attr_by_OBJ'));
+  CMS_unsigned_add1_attr_by_NID := TCMS_unsigned_add1_attr_by_NID(GetProcAddress(ACryptoLib, 'CMS_unsigned_add1_attr_by_NID'));
+  CMS_unsigned_add1_attr_by_txt := TCMS_unsigned_add1_attr_by_txt(GetProcAddress(ACryptoLib, 'CMS_unsigned_add1_attr_by_txt'));
+  CMS_unsigned_get0_data_by_OBJ := TCMS_unsigned_get0_data_by_OBJ(GetProcAddress(ACryptoLib, 'CMS_unsigned_get0_data_by_OBJ'));
+
+  // 加载 CMS 实用功能函数
+  CMS_get0_type := TCMS_get0_type(GetProcAddress(ACryptoLib, 'CMS_get0_type'));
+  CMS_set1_eContentType := TCMS_set1_eContentType(GetProcAddress(ACryptoLib, 'CMS_set1_eContentType'));
+  CMS_get0_eContentType := TCMS_get0_eContentType(GetProcAddress(ACryptoLib, 'CMS_get0_eContentType'));
+  CMS_get0_content := TCMS_get0_content(GetProcAddress(ACryptoLib, 'CMS_get0_content'));
+  CMS_is_detached := TCMS_is_detached(GetProcAddress(ACryptoLib, 'CMS_is_detached'));
+  CMS_set_detached := TCMS_set_detached(GetProcAddress(ACryptoLib, 'CMS_set_detached'));
+  CMS_stream_func := TCMS_stream(GetProcAddress(ACryptoLib, 'CMS_stream'));
+  CMS_dataInit := TCMS_dataInit(GetProcAddress(ACryptoLib, 'CMS_dataInit'));
+  CMS_dataFinal := TCMS_dataFinal(GetProcAddress(ACryptoLib, 'CMS_dataFinal'));
+  CMS_data := TCMS_data(GetProcAddress(ACryptoLib, 'CMS_data'));
+  CMS_data_create := TCMS_data_create(GetProcAddress(ACryptoLib, 'CMS_data_create'));
+  CMS_digest_verify := TCMS_digest_verify(GetProcAddress(ACryptoLib, 'CMS_digest_verify'));
+  CMS_digest_create := TCMS_digest_create(GetProcAddress(ACryptoLib, 'CMS_digest_create'));
+  CMS_EncryptedData_decrypt := TCMS_EncryptedData_decrypt(GetProcAddress(ACryptoLib, 'CMS_EncryptedData_decrypt'));
+  CMS_EncryptedData_encrypt := TCMS_EncryptedData_encrypt(GetProcAddress(ACryptoLib, 'CMS_EncryptedData_encrypt'));
+  CMS_EncryptedData_set1_key := TCMS_EncryptedData_set1_key(GetProcAddress(ACryptoLib, 'CMS_EncryptedData_set1_key'));
+
+  // 加载 CMS 压缩函数
+  CMS_uncompress := TCMS_uncompress(GetProcAddress(ACryptoLib, 'CMS_uncompress'));
+  CMS_compress := TCMS_compress(GetProcAddress(ACryptoLib, 'CMS_compress'));
+
+  // 加载 CMS 收据函数
+  CMS_add1_ReceiptRequest := TCMS_add1_ReceiptRequest(GetProcAddress(ACryptoLib, 'CMS_add1_ReceiptRequest'));
+  CMS_get1_ReceiptRequest := TCMS_get1_ReceiptRequest(GetProcAddress(ACryptoLib, 'CMS_get1_ReceiptRequest'));
+  CMS_ReceiptRequest_create0 := TCMS_ReceiptRequest_create0(GetProcAddress(ACryptoLib, 'CMS_ReceiptRequest_create0'));
+  CMS_add1_Receipt := TCMS_add1_Receipt(GetProcAddress(ACryptoLib, 'CMS_add1_Receipt'));
+  CMS_get1_Receipt := TCMS_get1_Receipt(GetProcAddress(ACryptoLib, 'CMS_get1_Receipt'));
+  CMS_RecipientInfo_kari_get0_alg := TCMS_RecipientInfo_kari_get0_alg(GetProcAddress(ACryptoLib, 'CMS_RecipientInfo_kari_get0_alg'));
+  CMS_RecipientInfo_kari_get0_reks := TCMS_RecipientInfo_kari_get0_reks(GetProcAddress(ACryptoLib, 'CMS_RecipientInfo_kari_get0_reks'));
+  CMS_RecipientInfo_kari_get0_orig_id := TCMS_RecipientInfo_kari_get0_orig_id(GetProcAddress(ACryptoLib, 'CMS_RecipientInfo_kari_get0_orig_id'));
+  CMS_RecipientInfo_kari_orig_id_cmp := TCMS_RecipientInfo_kari_orig_id_cmp(GetProcAddress(ACryptoLib, 'CMS_RecipientInfo_kari_orig_id_cmp'));
 
   FCMSLoaded := Assigned(CMS_sign) and Assigned(CMS_verify);
   Result := FCMSLoaded;

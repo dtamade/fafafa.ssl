@@ -67,6 +67,8 @@ type
     
     { ISSLCertificate - 证书验证 }
     function Verify(aCAStore: ISSLCertificateStore): Boolean;
+    function VerifyEx(aCAStore: ISSLCertificateStore; 
+      aFlags: TSSLCertVerifyFlags; out aResult: TSSLCertVerifyResult): Boolean;
     function VerifyHostname(const aHostname: string): Boolean;
     function IsExpired: Boolean;
     function IsSelfSigned: Boolean;
@@ -689,6 +691,138 @@ begin
   finally
     // 释放证书链上下文
     CertFreeCertificateChain(ChainContext);
+  end;
+end;
+
+function TWinSSLCertificate.VerifyEx(aCAStore: ISSLCertificateStore; 
+  aFlags: TSSLCertVerifyFlags; out aResult: TSSLCertVerifyResult): Boolean;
+var
+  LChainPara: CERT_CHAIN_PARA;
+  LChainContext: PCCERT_CHAIN_CONTEXT;
+  LPolicyPara: CERT_CHAIN_POLICY_PARA;
+  LPolicyStatus: CERT_CHAIN_POLICY_STATUS;
+  LStoreHandle: HCERTSTORE;
+  LChainFlags: DWORD;
+begin
+  // 初始化返回值
+  FillChar(aResult, SizeOf(aResult), 0);
+  aResult.Success := False;
+  Result := False;
+
+  if FCertContext = nil then
+  begin
+    aResult.ErrorCode := ERROR_INVALID_PARAMETER;
+    aResult.ErrorMessage := 'Certificate context is nil';
+    Exit;
+  end;
+
+  // 初始化证书链参数
+  FillChar(LChainPara, SizeOf(LChainPara), 0);
+  LChainPara.cbSize := SizeOf(LChainPara);
+
+  LStoreHandle := nil;
+  if aCAStore <> nil then
+    LStoreHandle := HCERTSTORE(aCAStore.GetNativeHandle);
+
+  // 根据标志配置链验证
+  LChainFlags := 0;
+  
+  if sslCertVerifyCheckRevocation in aFlags then
+    LChainFlags := LChainFlags or CERT_CHAIN_REVOCATION_CHECK_CHAIN;
+    
+  if sslCertVerifyCheckCRL in aFlags then
+    LChainFlags := LChainFlags or CERT_CHAIN_REVOCATION_CHECK_END_CERT;
+
+  // 构建证书链
+  if not CertGetCertificateChain(
+    nil,                    // 使用默认链引擎
+    FCertContext,           // 要验证的证书
+    nil,                    // 使用当前时间
+    LStoreHandle,           // 附加证书存储（可选）
+    @LChainPara,            // 链参数
+    LChainFlags,            // 验证标志
+    nil,                    // 保留
+    @LChainContext          // 输出链上下文
+  ) then
+  begin
+    aResult.ErrorCode := GetLastError;
+    aResult.ErrorMessage := 'Failed to build certificate chain';
+    Exit;
+  end;
+
+  try
+    // 记录链状态
+    if LChainContext <> nil then
+      aResult.ChainStatus := LChainContext^.TrustStatus.dwErrorStatus;
+
+    // 初始化策略参数
+    FillChar(LPolicyPara, SizeOf(LPolicyPara), 0);
+    LPolicyPara.cbSize := SizeOf(LPolicyPara);
+    LPolicyPara.dwFlags := 0;
+
+    // 初始化策略状态
+    FillChar(LPolicyStatus, SizeOf(LPolicyStatus), 0);
+    LPolicyStatus.cbSize := SizeOf(LPolicyStatus);
+
+    // 验证证书链策略
+    if CertVerifyCertificateChainPolicy(
+      CERT_CHAIN_POLICY_BASE,     // 基本验证策略
+      LChainContext,               // 证书链
+      @LPolicyPara,                // 策略参数
+      @LPolicyStatus               // 策略状态输出
+    ) then
+    begin
+      aResult.ErrorCode := LPolicyStatus.dwError;
+      aResult.ChainStatus := LPolicyStatus.dwError;
+      
+      // 检查验证结果
+      if LPolicyStatus.dwError = 0 then
+      begin
+        aResult.Success := True;
+        aResult.ErrorMessage := 'Certificate verified successfully';
+        Result := True;
+      end
+      else
+      begin
+        // 生成友好的错误消息
+        case LPolicyStatus.dwError of
+          CERT_E_EXPIRED:
+            aResult.ErrorMessage := 'Certificate has expired';
+          CERT_E_UNTRUSTEDROOT:
+            aResult.ErrorMessage := 'Certificate chain to untrusted root';
+          CERT_E_WRONG_USAGE:
+            aResult.ErrorMessage := 'Certificate has wrong usage';
+          CERT_E_REVOKED:
+            begin
+              aResult.ErrorMessage := 'Certificate has been revoked';
+              aResult.RevocationStatus := 1;
+            end;
+          CERT_E_REVOCATION_FAILURE:
+            begin
+              aResult.ErrorMessage := 'Revocation check failed';
+              aResult.RevocationStatus := 2;
+            end;
+          TRUST_E_CERT_SIGNATURE:
+            aResult.ErrorMessage := 'Certificate signature is invalid';
+          CERT_E_CN_NO_MATCH:
+            aResult.ErrorMessage := 'Certificate common name does not match';
+          CERT_E_INVALID_NAME:
+            aResult.ErrorMessage := 'Certificate name is invalid';
+        else
+          aResult.ErrorMessage := Format('Certificate verification failed (Error: 0x%x)', 
+            [LPolicyStatus.dwError]);
+        end;
+      end;
+    end
+    else
+    begin
+      aResult.ErrorCode := GetLastError;
+      aResult.ErrorMessage := 'Certificate chain policy verification failed';
+    end;
+
+  finally
+    // 释放证书链上下文
+    CertFreeCertificateChain(LChainContext);
   end;
 end;
 

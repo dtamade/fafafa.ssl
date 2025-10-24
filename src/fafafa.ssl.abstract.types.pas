@@ -99,6 +99,19 @@ type
   );
   TSSLOptions = set of TSSLOption;
 
+  { 证书验证标志 }
+  TSSLCertVerifyFlag = (
+    sslCertVerifyDefault,         // 默认验证
+    sslCertVerifyCheckRevocation, // 检查吊销状态（CRL）
+    sslCertVerifyCheckOCSP,       // 使用 OCSP 检查吊销
+    sslCertVerifyIgnoreExpiry,    // 忽略过期
+    sslCertVerifyIgnoreHostname,  // 忽略主机名验证
+    sslCertVerifyAllowSelfSigned, // 允许自签名证书
+    sslCertVerifyStrictChain,     // 严格证书链验证
+    sslCertVerifyCheckCRL         // 检查 CRL 列表
+  );
+  TSSLCertVerifyFlags = set of TSSLCertVerifyFlag;
+
   { SSL 握手状态 }
   TSSLHandshakeState = (
     sslHsNotStarted,      // 未开始
@@ -165,6 +178,16 @@ type
     sslCipherDES,
     sslCipherRC4
   );
+
+  { 证书验证结果 }
+  TSSLCertVerifyResult = record
+    Success: Boolean;               // 验证是否成功
+    ErrorCode: Cardinal;            // 错误代码（平台相关）
+    ErrorMessage: string;           // 友好的错误消息
+    ChainStatus: Cardinal;          // 证书链状态
+    RevocationStatus: Cardinal;     // 吊销状态
+    DetailedInfo: string;           // 详细信息（可选）
+  end;
 
   { 哈希算法 }
   TSSLHash = (

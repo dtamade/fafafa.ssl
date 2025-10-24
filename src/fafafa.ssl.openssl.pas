@@ -296,6 +296,7 @@ procedure ClearOpenSSLErrors;
 { Error classification }
 function ClassifyOpenSSLError(aError: Cardinal): TSSLErrorCode;
 function GetOpenSSLErrorCategory(aError: Cardinal): string;
+function GetFriendlyErrorMessage(aError: Cardinal): string;
 
 { Certificate utilities }
 function LoadCertificateFromFile(const aFileName: string): PX509;
@@ -1269,42 +1270,22 @@ var
   LBio: PBIO;
   LLen: Integer;
   LBuf: PAnsiChar;
-  LMethod: PBIO_METHOD;
 begin
   Result := '';
   if FCert = nil then Exit;
 
   // Check if BIO functions are loaded
-  WriteLn('[DEBUG] GetSubject: BIO_new=', Assigned(BIO_new), ' BIO_s_mem=', Assigned(BIO_s_mem));
   if not Assigned(BIO_new) or not Assigned(BIO_s_mem) then
-  begin
-    WriteLn('[DEBUG] GetSubject: BIO functions not loaded, exiting');
     Exit;
-  end;
 
   LName := X509_get_subject_name(FCert);
   if LName = nil then Exit;
-
-  WriteLn('[DEBUG] GetSubject: Calling BIO_s_mem()...');
-  LMethod := BIO_s_mem();
-  WriteLn('[DEBUG] GetSubject: BIO_s_mem() returned ', IntToHex(NativeUInt(LMethod), 16));
-
-  if LMethod = nil then
-  begin
-    WriteLn('[DEBUG] GetSubject: BIO_s_mem() returned nil');
-    Exit;
-  end;
-
-  WriteLn('[DEBUG] GetSubject: Calling BIO_new()...');
-  LBio := BIO_new(LMethod);
-  WriteLn('[DEBUG] GetSubject: BIO_new() returned ', IntToHex(NativeUInt(LBio), 16));
-
+  LBio := BIO_new(BIO_s_mem());
   if LBio = nil then Exit;
 
   // Check if X509_NAME_print_ex is loaded
   if not Assigned(X509_NAME_print_ex) then
   begin
-    WriteLn('[DEBUG] GetSubject: X509_NAME_print_ex not loaded');
     BIO_free(LBio);
     Exit;
   end;
@@ -1312,33 +1293,16 @@ begin
   try
     X509_NAME_print_ex(LBio, LName, 0, 0);
     LLen := BIO_pending(LBio);
-    WriteLn('[DEBUG] GetSubject: BIO_pending returned LLen=', LLen);
-
-    if LLen <= 0 then
+    if LLen > 0 then
     begin
-      WriteLn('[DEBUG] GetSubject: No data in BIO (LLen=', LLen, '), exiting');
-      Exit;
-    end;
-
-    GetMem(LBuf, LLen + 1);
-    try
-      LLen := BIO_read(LBio, LBuf, LLen);
-      WriteLn('[DEBUG] GetSubject: BIO_read returned ', LLen, ' bytes');
-
-      if LLen > 0 then
-      begin
+      GetMem(LBuf, LLen + 1);
+      try
+        BIO_read(LBio, LBuf, LLen);
         LBuf[LLen] := #0;
         Result := string(LBuf);
-        WriteLn('[DEBUG] GetSubject: Result length = ', Length(Result));
-        if Length(Result) > 0 then
-          WriteLn('[DEBUG] GetSubject: Result = "', Result, '"')
-        else
-          WriteLn('[DEBUG] GetSubject: Result is empty after conversion');
-      end
-      else
-        WriteLn('[DEBUG] GetSubject: BIO_read returned ', LLen, ', no data read');
-    finally
-      FreeMem(LBuf);
+      finally
+        FreeMem(LBuf);
+      end;
     end;
   finally
     BIO_free(LBio);
@@ -1361,13 +1325,12 @@ begin
 
   LName := X509_get_issuer_name(FCert);
   if LName = nil then Exit;
-  LBio := BIO_new(BIO_s_mem);
+  LBio := BIO_new(BIO_s_mem());
   if LBio = nil then Exit;
 
   // Check if X509_NAME_print_ex is loaded
   if not Assigned(X509_NAME_print_ex) then
   begin
-    WriteLn('[DEBUG] GetIssuer: X509_NAME_print_ex not loaded');
     BIO_free(LBio);
     Exit;
   end;
@@ -1375,33 +1338,16 @@ begin
   try
     X509_NAME_print_ex(LBio, LName, 0, 0);
     LLen := BIO_pending(LBio);
-    WriteLn('[DEBUG] GetIssuer: BIO_pending returned LLen=', LLen);
-
-    if LLen <= 0 then
+    if LLen > 0 then
     begin
-      WriteLn('[DEBUG] GetIssuer: No data in BIO (LLen=', LLen, '), exiting');
-      Exit;
-    end;
-
-    GetMem(LBuf, LLen + 1);
-    try
-      LLen := BIO_read(LBio, LBuf, LLen);
-      WriteLn('[DEBUG] GetIssuer: BIO_read returned ', LLen, ' bytes');
-
-      if LLen > 0 then
-      begin
+      GetMem(LBuf, LLen + 1);
+      try
+        BIO_read(LBio, LBuf, LLen);
         LBuf[LLen] := #0;
         Result := string(LBuf);
-        WriteLn('[DEBUG] GetIssuer: Result length = ', Length(Result));
-        if Length(Result) > 0 then
-          WriteLn('[DEBUG] GetIssuer: Result = "', Result, '"')
-        else
-          WriteLn('[DEBUG] GetIssuer: Result is empty after conversion');
-      end
-      else
-        WriteLn('[DEBUG] GetIssuer: BIO_read returned ', LLen, ', no data read');
-    finally
-      FreeMem(LBuf);
+      finally
+        FreeMem(LBuf);
+      end;
     end;
   finally
     BIO_free(LBio);
@@ -1416,19 +1362,27 @@ var
 begin
   Result := '';
   if FCert = nil then Exit;
+
+  // Check if required functions are loaded
+  if not Assigned(BN_bn2hex) or not Assigned(ASN1_INTEGER_to_BN) then
+    Exit;
+
   LSerial := X509_get_serialNumber(FCert);
   if LSerial = nil then Exit;
   LBN := ASN1_INTEGER_to_BN(LSerial, nil);
   if LBN = nil then Exit;
   try
-      LHex := BN_bn2hex(LBN);
+    LHex := BN_bn2hex(LBN);
     if LHex <> nil then
     begin
       Result := string(LHex);
-      OPENSSL_free(LHex);  // Use OPENSSL_free instead of CRYPTO_free
+      // Free hex string - check if OPENSSL_free is available
+      if Assigned(OPENSSL_free) then
+        OPENSSL_free(LHex);
     end;
   finally
-    BN_free(LBN);
+    if Assigned(BN_free) then
+      BN_free(LBN);
   end;
 end;
 
@@ -1439,6 +1393,11 @@ var
 begin
   Result := 0;
   if FCert = nil then Exit;
+
+  // Check if required functions are loaded
+  if not Assigned(X509_get_notBefore) or not Assigned(ASN1_TIME_to_tm) then
+    Exit;
+
   LTime := X509_get_notBefore(FCert);
   if LTime = nil then Exit;
   if ASN1_TIME_to_tm(LTime, @LTm) = 1 then
@@ -1453,6 +1412,11 @@ var
 begin
   Result := 0;
   if FCert = nil then Exit;
+
+  // Check if required functions are loaded
+  if not Assigned(X509_get_notAfter) or not Assigned(ASN1_TIME_to_tm) then
+    Exit;
+
   LTime := X509_get_notAfter(FCert);
   if LTime = nil then Exit;
   if ASN1_TIME_to_tm(LTime, @LTm) = 1 then
@@ -1505,6 +1469,11 @@ var
 begin
   Result := 'Unknown';
   if FCert = nil then Exit;
+
+  // Check if required functions are loaded
+  if not Assigned(X509_get_pubkey) or not Assigned(EVP_PKEY_id) or not Assigned(EVP_PKEY_free) then
+    Exit;
+
   LKey := X509_get_pubkey(FCert);
   if LKey = nil then Exit;
   try
@@ -1530,6 +1499,11 @@ var
 begin
   Result := 'Unknown';
   if FCert = nil then Exit;
+
+  // Check if required functions are loaded
+  if not Assigned(X509_get0_signature) or not Assigned(X509_ALGOR_get0) or not Assigned(OBJ_obj2txt) then
+    Exit;
+
   X509_get0_signature(nil, @LSigAlg, FCert);
   if LSigAlg = nil then Exit;
   X509_ALGOR_get0(@LOID, nil, nil, LSigAlg);
@@ -3207,34 +3181,248 @@ begin
   Result := LLibName;
 end;
 
-function LoadCertificateFromFile(const aFileName: string): PX509;
+function GetFriendlyErrorMessage(aError: Cardinal): string;
+var
+  LClassified: TSSLErrorCode;
+  LCategory: string;
+  LRawError: string;
+  LSuggestion: string;
 begin
-  Result := nil; // TODO
+  if aError = 0 then
+  begin
+    Result := 'No error';
+    Exit;
+  end;
+
+  // Classify the error
+  LClassified := ClassifyOpenSSLError(aError);
+
+  // Get category name
+  LCategory := GetOpenSSLErrorCategory(aError);
+
+  // Get raw OpenSSL error string
+  LRawError := GetOpenSSLErrorString(aError);
+
+  // Build context-specific suggestion based on error type
+  case LClassified of
+    sslErrCertificate:
+      LSuggestion := 'Check certificate validity, CA trust, and certificate chain';
+    sslErrCertificateExpired:
+      LSuggestion := 'Certificate has expired - obtain a new certificate';
+    sslErrCertificateRevoked:
+      LSuggestion := 'Certificate has been revoked - contact certificate authority';
+    sslErrMemory:
+      LSuggestion := 'Check system memory and free up resources';
+    sslErrInvalidParam:
+      LSuggestion := 'Verify function parameters are correct and non-null';
+    sslErrNotInitialized:
+      LSuggestion := 'Ensure SSL library is properly initialized before use';
+    sslErrProtocol:
+      LSuggestion := 'Check TLS protocol version compatibility and cipher suite support';
+    sslErrHandshake:
+      LSuggestion := 'Verify server is accessible and supports required TLS protocols';
+    sslErrIO:
+      LSuggestion := 'Check network connectivity and firewall settings';
+    sslErrConnection:
+      LSuggestion := 'Verify server address and port are correct';
+    sslErrTimeout:
+      LSuggestion := 'Increase timeout value or check network latency';
+    sslErrUnsupported:
+      LSuggestion := 'Feature not available - check OpenSSL version or build options';
+    sslErrLibraryNotFound:
+      LSuggestion := 'Ensure OpenSSL libraries are installed and accessible';
+    sslErrVersionMismatch:
+      LSuggestion := 'Check OpenSSL library version compatibility';
+  else
+    LSuggestion := 'Review error details and consult OpenSSL documentation';
+  end;
+
+  // Build formatted message
+  Result := Format('[%s] %s:'#13#10 +
+                   '  Problem: %s'#13#10 +
+                   '  Details: %s'#13#10 +
+                   '  Suggestion: %s',
+                   [LCategory,
+                    SSL_ERROR_MESSAGES[LClassified],
+                    SSL_ERROR_MESSAGES[LClassified],
+                    LRawError,
+                    LSuggestion]);
+end;
+
+function LoadCertificateFromFile(const aFileName: string): PX509;
+var
+  LBio: PBIO;
+begin
+  Result := nil;
+
+  // Check if required functions are loaded
+  if not Assigned(BIO_new_file) or not Assigned(PEM_read_bio_X509) then
+    Exit;
+
+  // Open file and create BIO
+  LBio := BIO_new_file(PAnsiChar(AnsiString(aFileName)), 'r');
+  if LBio = nil then
+    Exit;
+
+  try
+    // Read certificate from BIO
+    Result := PEM_read_bio_X509(LBio, nil, nil, nil);
+  finally
+    BIO_free(LBio);
+  end;
 end;
 
 function LoadCertificateFromMemory(const aData: Pointer; aSize: Integer): PX509;
+var
+  LBio: PBIO;
 begin
-  Result := nil; // TODO
+  Result := nil;
+
+  // Check parameters
+  if (aData = nil) or (aSize <= 0) then
+    Exit;
+
+  // Check if required functions are loaded
+  if not Assigned(BIO_new_mem_buf) or not Assigned(PEM_read_bio_X509) then
+    Exit;
+
+  // Create BIO from memory buffer
+  LBio := BIO_new_mem_buf(aData, aSize);
+  if LBio = nil then
+    Exit;
+
+  try
+    // Read certificate from BIO
+    Result := PEM_read_bio_X509(LBio, nil, nil, nil);
+  finally
+    BIO_free(LBio);
+  end;
 end;
 
 function LoadPrivateKeyFromFile(const aFileName: string; const aPassword: string): PEVP_PKEY;
+var
+  LBio: PBIO;
+  LPasswordAnsi: AnsiString;
+  LPasswordPtr: Pointer;
 begin
-  Result := nil; // TODO
+  Result := nil;
+
+  // Check if required functions are loaded
+  if not Assigned(BIO_new_file) or not Assigned(PEM_read_bio_PrivateKey) then
+    Exit;
+
+  // Open file and create BIO
+  LBio := BIO_new_file(PAnsiChar(AnsiString(aFileName)), 'r');
+  if LBio = nil then
+    Exit;
+
+  try
+    // Prepare password pointer
+    if aPassword <> '' then
+    begin
+      LPasswordAnsi := AnsiString(aPassword);
+      LPasswordPtr := PAnsiChar(LPasswordAnsi);
+    end
+    else
+      LPasswordPtr := nil;
+
+    // Read private key from BIO
+    Result := PEM_read_bio_PrivateKey(LBio, nil, nil, LPasswordPtr);
+  finally
+    BIO_free(LBio);
+  end;
 end;
 
 function LoadPrivateKeyFromMemory(const aData: Pointer; aSize: Integer; const aPassword: string): PEVP_PKEY;
+var
+  LBio: PBIO;
+  LPasswordAnsi: AnsiString;
+  LPasswordPtr: Pointer;
 begin
-  Result := nil; // TODO
+  Result := nil;
+
+  // Check parameters
+  if (aData = nil) or (aSize <= 0) then
+    Exit;
+
+  // Check if required functions are loaded
+  if not Assigned(BIO_new_mem_buf) or not Assigned(PEM_read_bio_PrivateKey) then
+    Exit;
+
+  // Create BIO from memory buffer
+  LBio := BIO_new_mem_buf(aData, aSize);
+  if LBio = nil then
+    Exit;
+
+  try
+    // Prepare password pointer
+    if aPassword <> '' then
+    begin
+      LPasswordAnsi := AnsiString(aPassword);
+      LPasswordPtr := PAnsiChar(LPasswordAnsi);
+    end
+    else
+      LPasswordPtr := nil;
+
+    // Read private key from BIO
+    Result := PEM_read_bio_PrivateKey(LBio, nil, nil, LPasswordPtr);
+  finally
+    BIO_free(LBio);
+  end;
 end;
 
 function VerifyCertificate(aCert: PX509; aCAStore: PX509_STORE): Boolean;
+var
+  LCtx: PX509_STORE_CTX;
+  LRet: Integer;
 begin
-  Result := False; // TODO
+  Result := False;
+
+  // Check parameters
+  if (aCert = nil) or (aCAStore = nil) then
+    Exit;
+
+  // Check if required functions are loaded
+  if not Assigned(X509_STORE_CTX_new) or not Assigned(X509_STORE_CTX_init) or
+     not Assigned(X509_verify_cert) or not Assigned(X509_STORE_CTX_free) then
+    Exit;
+
+  // Create store context
+  LCtx := X509_STORE_CTX_new();
+  if LCtx = nil then
+    Exit;
+
+  try
+    // Initialize context with store and certificate
+    if X509_STORE_CTX_init(LCtx, aCAStore, aCert, nil) = 1 then
+    begin
+      // Perform verification
+      LRet := X509_verify_cert(LCtx);
+      Result := LRet = 1;
+    end;
+  finally
+    X509_STORE_CTX_free(LCtx);
+  end;
 end;
 
 function GetCertificateInfo(aCert: PX509): TSSLCertificateInfo;
+var
+  LCertObj: TOpenSSLCertificate;
 begin
-  FillChar(Result, SizeOf(Result), 0); // TODO
+  FillChar(Result, SizeOf(Result), 0);
+
+  // Check parameter
+  if aCert = nil then
+    Exit;
+
+  // Create temporary certificate object (not owned, so it won't free aCert)
+  LCertObj := TOpenSSLCertificate.Create(aCert, False);
+  try
+    // Extract certificate information using the class method
+    Result := LCertObj.GetInfo;
+  finally
+    LCertObj.Free;
+  end;
 end;
 
 function ProtocolToOpenSSL(aProtocol: TSSLProtocolVersion): Integer;

@@ -260,6 +260,8 @@ type
     
     // 证书验证
     function Verify(aCAStore: ISSLCertificateStore): Boolean;
+    function VerifyEx(aCAStore: ISSLCertificateStore; 
+      aFlags: TSSLCertVerifyFlags; out aResult: TSSLCertVerifyResult): Boolean;
     function VerifyHostname(const aHostname: string): Boolean;
     function IsExpired: Boolean;
     function IsSelfSigned: Boolean;

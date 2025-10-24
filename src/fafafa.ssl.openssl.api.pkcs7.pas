@@ -1,4 +1,4 @@
-{$IFNDEF WINDOWS}{$MODE DELPHI}{$ENDIF}
+{$mode objfpc}{$H+}
 
 unit fafafa.ssl.openssl.api.pkcs7;
 
@@ -228,14 +228,14 @@ procedure UnloadPKCS7Functions;
 function IsPKCS7Loaded: Boolean;
 
 // High-level helper functions
-function SignData(const AData: TBytes; SignCert: PX509; PrivKey: PEVP_PKEY; 
-                  CACerts: PSTACK_OF_X509; Flags: Integer): TBytes;
-function VerifySignedData(const SignedData: TBytes; CACerts: PSTACK_OF_X509; 
-                         Store: PX509_STORE; out AData: TBytes; Flags: Integer): Boolean;
-function EncryptData(const AData: TBytes; RecipCerts: PSTACK_OF_X509; 
-                    Cipher: PEVP_CIPHER; Flags: Integer): TBytes;
-function DecryptData(const EncryptedData: TBytes; RecipCert: PX509; 
-                    PrivKey: PEVP_PKEY; out AData: TBytes; Flags: Integer): Boolean;
+function SignData(const aData: TBytes; aSignCert: PX509; aPrivKey: PEVP_PKEY; 
+                  aCACerts: PSTACK_OF_X509; aFlags: Integer): TBytes;
+function VerifySignedData(const aSignedData: TBytes; aCACerts: PSTACK_OF_X509; 
+                         aStore: PX509_STORE; out aOutData: TBytes; aFlags: Integer): Boolean;
+function EncryptData(const aData: TBytes; aRecipCerts: PSTACK_OF_X509; 
+                    aCipher: PEVP_CIPHER; aFlags: Integer): TBytes;
+function DecryptData(const aEncryptedData: TBytes; aRecipCert: PX509; 
+                    aPrivKey: PEVP_PKEY; out aOutData: TBytes; aFlags: Integer): Boolean;
 
 implementation
 
@@ -367,10 +367,10 @@ end;
 
 // High-level helper function implementations
 
-function SignData(const AData: TBytes; SignCert: PX509; PrivKey: PEVP_PKEY; 
-                  CACerts: PSTACK_OF_X509; Flags: Integer): TBytes;
+function SignData(const aData: TBytes; aSignCert: PX509; aPrivKey: PEVP_PKEY; 
+                  aCACerts: PSTACK_OF_X509; aFlags: Integer): TBytes;
 var
-  bio_in, bio_out: PBIO;
+  LBioIn, LBioOut: PBIO;
   p7: PPKCS7;
   buf: array[0..4095] of Byte;
   len: Integer;
@@ -381,31 +381,31 @@ begin
     raise Exception.Create('PKCS7 functions not loaded');
   
   // Create input BIO from data
-  bio_in := BIO_new_mem_buf(@AData[0], Length(AData));
-  if bio_in = nil then
+  LBioIn := BIO_new_mem_buf(@aData[0], Length(aData));
+  if LBioIn = nil then
     raise Exception.Create('Failed to create input BIO');
     
   try
     // Sign data
-    p7 := PKCS7_sign(SignCert, PrivKey, CACerts, bio_in, Flags);
+    p7 := PKCS7_sign(aSignCert, aPrivKey, aCACerts, LBioIn, aFlags);
     if p7 = nil then
       raise Exception.Create('Failed to sign data');
       
     try
       // Create output BIO
-      bio_out := BIO_new(BIO_s_mem());
-      if bio_out = nil then
+      LBioOut := BIO_new(BIO_s_mem());
+      if LBioOut = nil then
         raise Exception.Create('Failed to create output BIO');
         
       try
         // Write PKCS7 to output BIO
-        if i2d_PKCS7_bio(bio_out, p7) <= 0 then
+        if i2d_PKCS7_bio(LBioOut, p7) <= 0 then
           raise Exception.Create('Failed to write PKCS7');
           
         // Read data from BIO
         SetLength(Result, 0);
         repeat
-          len := BIO_read(bio_out, @buf[0], SizeOf(buf));
+          len := BIO_read(LBioOut, @buf[0], SizeOf(buf));
           if len > 0 then
           begin
             SetLength(Result, Length(Result) + len);
@@ -413,79 +413,79 @@ begin
           end;
         until len <= 0;
       finally
-        BIO_free(bio_out);
+        BIO_free(LBioOut);
       end;
     finally
       PKCS7_free(p7);
     end;
   finally
-    BIO_free(bio_in);
+    BIO_free(LBioIn);
   end;
 end;
 
-function VerifySignedData(const SignedData: TBytes; CACerts: PSTACK_OF_X509; 
-                         Store: PX509_STORE; out AData: TBytes; Flags: Integer): Boolean;
+function VerifySignedData(const aSignedData: TBytes; aCACerts: PSTACK_OF_X509; 
+                         aStore: PX509_STORE; out aOutData: TBytes; aFlags: Integer): Boolean;
 var
-  bio_in, bio_out: PBIO;
+  LBioIn, LBioOut: PBIO;
   p7: PPKCS7;
   buf: array[0..4095] of Byte;
   len: Integer;
 begin
   Result := False;
-  AData := nil;
+  aOutData := nil;
   
   if not PKCS7Loaded then
     Exit;
   
   // Create input BIO from signed data
-  bio_in := BIO_new_mem_buf(@SignedData[0], Length(SignedData));
-  if bio_in = nil then
+  LBioIn := BIO_new_mem_buf(@aSignedData[0], Length(aSignedData));
+  if LBioIn = nil then
     Exit;
     
   try
     // Read PKCS7 from BIO
-    p7 := d2i_PKCS7_bio(bio_in, nil);
+    p7 := d2i_PKCS7_bio(LBioIn, nil);
     if p7 = nil then
       Exit;
       
     try
       // Create output BIO for verified data
-      bio_out := BIO_new(BIO_s_mem());
-      if bio_out = nil then
+      LBioOut := BIO_new(BIO_s_mem());
+      if LBioOut = nil then
         Exit;
         
       try
         // Verify signature
-        Result := PKCS7_verify(p7, CACerts, Store, nil, bio_out, Flags) = 1;
+        Result := PKCS7_verify(p7, aCACerts, aStore, nil, LBioOut, aFlags) = 1;
         
         if Result then
         begin
           // Read verified data from BIO
-          SetLength(AData, 0);
+          SetLength(aOutData, 0);
           repeat
-            len := BIO_read(bio_out, @buf[0], SizeOf(buf));
+            len := BIO_read(LBioOut, @buf[0], SizeOf(buf));
             if len > 0 then
             begin
-              SetLength(AData, Length(AData) + len);
-              Move(buf[0], AData[Length(AData) - len], len);
+              SetLength(aOutData, Length(aOutData) + len);
+              Move(buf[0], aOutData[Length(aOutData) - len], len);
             end;
           until len <= 0;
         end;
       finally
-        BIO_free(bio_out);
+        BIO_free(LBioOut);
       end;
     finally
       PKCS7_free(p7);
     end;
   finally
-    BIO_free(bio_in);
+    BIO_free(LBioIn);
   end;
 end;
 
-function EncryptData(const AData: TBytes; RecipCerts: PSTACK_OF_X509; 
-                    Cipher: PEVP_CIPHER; Flags: Integer): TBytes;
+function EncryptData(const aData: TBytes; aRecipCerts: PSTACK_OF_X509; 
+                    aCipher: PEVP_CIPHER; aFlags: Integer): TBytes;
 var
-  bio_in, bio_out: PBIO;
+  LBioIn, LBioOut: PBIO;
   p7: PPKCS7;
   buf: array[0..4095] of Byte;
   len: Integer;
@@ -496,31 +496,31 @@ begin
     raise Exception.Create('PKCS7 functions not loaded');
   
   // Create input BIO from data
-  bio_in := BIO_new_mem_buf(@AData[0], Length(AData));
-  if bio_in = nil then
+  LBioIn := BIO_new_mem_buf(@aData[0], Length(aData));
+  if LBioIn = nil then
     raise Exception.Create('Failed to create input BIO');
     
   try
     // Encrypt data
-    p7 := PKCS7_encrypt(RecipCerts, bio_in, Cipher, Flags);
+    p7 := PKCS7_encrypt(aRecipCerts, LBioIn, aCipher, aFlags);
     if p7 = nil then
       raise Exception.Create('Failed to encrypt data');
       
     try
       // Create output BIO
-      bio_out := BIO_new(BIO_s_mem());
-      if bio_out = nil then
+      LBioOut := BIO_new(BIO_s_mem());
+      if LBioOut = nil then
         raise Exception.Create('Failed to create output BIO');
         
       try
         // Write PKCS7 to output BIO
-        if i2d_PKCS7_bio(bio_out, p7) <= 0 then
+        if i2d_PKCS7_bio(LBioOut, p7) <= 0 then
           raise Exception.Create('Failed to write PKCS7');
           
         // Read data from BIO
         SetLength(Result, 0);
         repeat
-          len := BIO_read(bio_out, @buf[0], SizeOf(buf));
+          len := BIO_read(LBioOut, @buf[0], SizeOf(buf));
           if len > 0 then
           begin
             SetLength(Result, Length(Result) + len);
@@ -528,72 +528,72 @@ begin
           end;
         until len <= 0;
       finally
-        BIO_free(bio_out);
+        BIO_free(LBioOut);
       end;
     finally
       PKCS7_free(p7);
     end;
   finally
-    BIO_free(bio_in);
+    BIO_free(LBioIn);
   end;
 end;
 
-function DecryptData(const EncryptedData: TBytes; RecipCert: PX509; 
-                    PrivKey: PEVP_PKEY; out AData: TBytes; Flags: Integer): Boolean;
+function DecryptData(const aEncryptedData: TBytes; aRecipCert: PX509; 
+                    aPrivKey: PEVP_PKEY; out aOutData: TBytes; aFlags: Integer): Boolean;
 var
-  bio_in, bio_out: PBIO;
+  LBioIn, LBioOut: PBIO;
   p7: PPKCS7;
   buf: array[0..4095] of Byte;
   len: Integer;
 begin
   Result := False;
-  AData := nil;
+  aOutData := nil;
   
   if not PKCS7Loaded then
     Exit;
   
   // Create input BIO from encrypted data
-  bio_in := BIO_new_mem_buf(@EncryptedData[0], Length(EncryptedData));
-  if bio_in = nil then
+  LBioIn := BIO_new_mem_buf(@aEncryptedData[0], Length(aEncryptedData));
+  if LBioIn = nil then
     Exit;
     
   try
     // Read PKCS7 from BIO
-    p7 := d2i_PKCS7_bio(bio_in, nil);
+    p7 := d2i_PKCS7_bio(LBioIn, nil);
     if p7 = nil then
       Exit;
       
     try
       // Create output BIO for decrypted data
-      bio_out := BIO_new(BIO_s_mem());
-      if bio_out = nil then
+      LBioOut := BIO_new(BIO_s_mem());
+      if LBioOut = nil then
         Exit;
         
       try
         // Decrypt data
-        Result := PKCS7_decrypt(p7, PrivKey, RecipCert, bio_out, Flags) = 1;
+        Result := PKCS7_decrypt(p7, aPrivKey, aRecipCert, LBioOut, aFlags) = 1;
         
         if Result then
         begin
           // Read decrypted data from BIO
-          SetLength(AData, 0);
+          SetLength(aOutData, 0);
           repeat
-            len := BIO_read(bio_out, @buf[0], SizeOf(buf));
+            len := BIO_read(LBioOut, @buf[0], SizeOf(buf));
             if len > 0 then
             begin
-              SetLength(AData, Length(AData) + len);
-              Move(buf[0], AData[Length(AData) - len], len);
+              SetLength(aOutData, Length(aOutData) + len);
+              Move(buf[0], aOutData[Length(aOutData) - len], len);
             end;
           until len <= 0;
         end;
       finally
-        BIO_free(bio_out);
+        BIO_free(LBioOut);
       end;
     finally
       PKCS7_free(p7);
     end;
   finally
-    BIO_free(bio_in);
+    BIO_free(LBioIn);
   end;
 end;
 
