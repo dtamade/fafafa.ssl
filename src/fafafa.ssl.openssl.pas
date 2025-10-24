@@ -155,6 +155,8 @@ type
     
     { ISSLCertificate implementation - Verification }
     function Verify(aCAStore: ISSLCertificateStore): Boolean;
+    function VerifyEx(aCAStore: ISSLCertificateStore; 
+      aFlags: TSSLCertVerifyFlags; out aResult: TSSLCertVerifyResult): Boolean;
     function VerifyHostname(const aHostname: string): Boolean;
     function IsExpired: Boolean;
     function IsSelfSigned: Boolean;
@@ -1545,6 +1547,109 @@ begin
       // Perform verification
       LRet := X509_verify_cert(LCtx);
       Result := LRet = 1;
+    end;
+  finally
+    X509_STORE_CTX_free(LCtx);
+  end;
+end;
+
+function TOpenSSLCertificate.VerifyEx(aCAStore: ISSLCertificateStore; 
+  aFlags: TSSLCertVerifyFlags; out aResult: TSSLCertVerifyResult): Boolean;
+var
+  LStore: PX509_STORE;
+  LCtx: PX509_STORE_CTX;
+  LRet: Integer;
+  LErrorCode: Integer;
+  LErrorStr: string;
+begin
+  // 初始化结果
+  FillChar(aResult, SizeOf(aResult), 0);
+  aResult.Success := False;
+  Result := False;
+  
+  if FCert = nil then
+  begin
+    aResult.ErrorMessage := 'Certificate is nil';
+    Exit;
+  end;
+  
+  if aCAStore = nil then
+  begin
+    aResult.ErrorMessage := 'CA store is nil';
+    Exit;
+  end;
+  
+  // Get native store handle
+  LStore := PX509_STORE(aCAStore.GetNativeHandle);
+  if LStore = nil then
+  begin
+    aResult.ErrorMessage := 'Invalid CA store handle';
+    Exit;
+  end;
+  
+  // 处理特殊标志
+  if sslCertVerifyIgnoreExpiry in aFlags then
+  begin
+    // OpenSSL: 设置不检查时间
+    X509_STORE_set_flags(LStore, X509_V_FLAG_NO_CHECK_TIME);
+  end;
+  
+  if sslCertVerifyAllowSelfSigned in aFlags then
+  begin
+    // OpenSSL: 允许自签名证书
+    X509_STORE_set_flags(LStore, X509_V_FLAG_PARTIAL_CHAIN);
+  end;
+  
+  // Create store context
+  LCtx := X509_STORE_CTX_new();
+  if LCtx = nil then
+  begin
+    aResult.ErrorMessage := 'Failed to create store context';
+    Exit;
+  end;
+  
+  try
+    // Initialize context with store and certificate
+    if X509_STORE_CTX_init(LCtx, LStore, FCert, nil) = 1 then
+    begin
+      // 如果需要检查吊销状态
+      if (sslCertVerifyCheckRevocation in aFlags) or 
+         (sslCertVerifyCheckCRL in aFlags) then
+      begin
+        // OpenSSL: 启用 CRL 检查
+        X509_VERIFY_PARAM_set_flags(
+          X509_STORE_CTX_get0_param(LCtx),
+          X509_V_FLAG_CRL_CHECK or X509_V_FLAG_CRL_CHECK_ALL
+        );
+      end;
+      
+      // Perform verification
+      LRet := X509_verify_cert(LCtx);
+      
+      if LRet = 1 then
+      begin
+        // 验证成功
+        aResult.Success := True;
+        aResult.ErrorCode := 0;
+        aResult.ErrorMessage := 'Certificate verification successful';
+        aResult.DetailedInfo := 'OpenSSL verification passed';
+        Result := True;
+      end
+      else
+      begin
+        // 验证失败 - 获取错误信息
+        LErrorCode := X509_STORE_CTX_get_error(LCtx);
+        LErrorStr := string(X509_verify_cert_error_string(LErrorCode));
+        
+        aResult.Success := False;
+        aResult.ErrorCode := LErrorCode;
+        aResult.ErrorMessage := LErrorStr;
+        aResult.DetailedInfo := Format('OpenSSL error: %d - %s', [LErrorCode, LErrorStr]);
+      end;
+    end
+    else
+    begin
+      aResult.ErrorMessage := 'Failed to initialize verification context';
     end;
   finally
     X509_STORE_CTX_free(LCtx);

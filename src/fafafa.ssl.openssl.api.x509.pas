@@ -486,11 +486,17 @@ var
   X509_STORE_load_file: TX509_STORE_load_file;
   X509_STORE_load_path: TX509_STORE_load_path;
   X509_STORE_set_default_paths: TX509_STORE_set_default_paths;
+  X509_STORE_set_flags: TX509_STORE_set_flags;
   
   X509_STORE_CTX_new: TX509_STORE_CTX_new;
   X509_STORE_CTX_free: TX509_STORE_CTX_free;
   X509_STORE_CTX_init: TX509_STORE_CTX_init;
   X509_STORE_CTX_get0_chain: TX509_STORE_CTX_get0_chain;
+  X509_STORE_CTX_get_error: TX509_STORE_CTX_get_error;
+  X509_STORE_CTX_get0_param: TX509_STORE_CTX_get0_param;
+  
+  // X509 Verify Param Functions
+  X509_VERIFY_PARAM_set_flags: TX509_VERIFY_PARAM_set_flags;
   
   // X509 Name Functions
   X509_NAME_new: TX509_NAME_new;
@@ -575,11 +581,17 @@ begin
   X509_STORE_load_file := TX509_STORE_load_file(GetProcedureAddress(LibHandle, 'X509_STORE_load_file'));
   X509_STORE_load_path := TX509_STORE_load_path(GetProcedureAddress(LibHandle, 'X509_STORE_load_path'));
   X509_STORE_set_default_paths := TX509_STORE_set_default_paths(GetProcedureAddress(LibHandle, 'X509_STORE_set_default_paths'));
+  X509_STORE_set_flags := TX509_STORE_set_flags(GetProcedureAddress(LibHandle, 'X509_STORE_set_flags'));
   
   X509_STORE_CTX_new := TX509_STORE_CTX_new(GetProcedureAddress(LibHandle, 'X509_STORE_CTX_new'));
   X509_STORE_CTX_free := TX509_STORE_CTX_free(GetProcedureAddress(LibHandle, 'X509_STORE_CTX_free'));
   X509_STORE_CTX_init := TX509_STORE_CTX_init(GetProcedureAddress(LibHandle, 'X509_STORE_CTX_init'));
   X509_STORE_CTX_get0_chain := TX509_STORE_CTX_get0_chain(GetProcedureAddress(LibHandle, 'X509_STORE_CTX_get0_chain'));
+  X509_STORE_CTX_get_error := TX509_STORE_CTX_get_error(GetProcedureAddress(LibHandle, 'X509_STORE_CTX_get_error'));
+  X509_STORE_CTX_get0_param := TX509_STORE_CTX_get0_param(GetProcedureAddress(LibHandle, 'X509_STORE_CTX_get0_param'));
+  
+  // Load X509 Verify Param Functions
+  X509_VERIFY_PARAM_set_flags := TX509_VERIFY_PARAM_set_flags(GetProcedureAddress(LibHandle, 'X509_VERIFY_PARAM_set_flags'));
   
   // Load X509 Name Functions
   X509_NAME_new := TX509_NAME_new(GetProcedureAddress(LibHandle, 'X509_NAME_new'));
