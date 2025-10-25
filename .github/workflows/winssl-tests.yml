@@ -27,11 +27,11 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🚀 Setup Lazarus + FPC
-        uses: lazarus-ide/setup-lazarus@v1
-        with:
-          lazarus-version: 2.2.6
-          fpc-version: 3.2.2
+      - name: 🚀 Setup FPC
+        run: |
+          # 在 Windows 上使用 chocolatey 安装 FPC
+          choco install freepascal
+          fpc -iV
 
       - name: 📦 Cache FPC packages
         uses: actions/cache@v4

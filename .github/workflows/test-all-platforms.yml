@@ -32,11 +32,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🚀 Setup Lazarus + FPC
-        uses: lazarus-ide/setup-lazarus@v1
-        with:
-          lazarus-version: 2.2.6
-          fpc-version: ${{ matrix.fpc-version }}
+      - name: 🚀 Setup FPC
+        run: |
+          # 下载并安装 FPC
+          wget https://sourceforge.net/projects/freepascal/files/Linux/3.2.2/fpc-3.2.2.x86_64-linux.tar -O fpc.tar
+          sudo tar -xJf fpc.tar -C /usr/local
+          export PATH=/usr/local/fpc-3.2.2/bin:$PATH
+          echo "PATH=/usr/local/fpc-3.2.2/bin:$PATH" >> $env:GITHUB_PATH
+          fpc -iV
 
       - name: 📦 Cache FPC packages
         uses: actions/cache@v4
@@ -160,9 +163,11 @@ jobs:
           fetch-depth: 0
 
       - name: 🔧 Setup Free Pascal
-        uses: pascalfpc/setup-fpascal@v1
-        with:
-          fpc-version: ${{ matrix.fpc-version }}
+        run: |
+          # 使用 apt 安装 FPC
+          sudo apt-get update
+          sudo apt-get install -y fpc
+          fpc -iV
 
       - name: 📦 Install dependencies
         run: |
@@ -235,9 +240,10 @@ jobs:
           fetch-depth: 0
 
       - name: 🔧 Setup Free Pascal
-        uses: pascalfpc/setup-fpascal@v1
-        with:
-          fpc-version: ${{ matrix.fpc-version }}
+        run: |
+          # 使用 brew 安装 FPC
+          brew install freepascal
+          fpc -iV
 
       - name: 📦 Install dependencies
         run: |

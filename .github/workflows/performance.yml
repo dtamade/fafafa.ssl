@@ -36,16 +36,16 @@ jobs:
 
       - name: 🔧 Setup FPC (Linux)
         if: matrix.os == 'ubuntu-latest'
-        uses: pascalfpc/setup-fpascal@v1
-        with:
-          fpc-version: ${{ matrix.fpc }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fpc
+          fpc -iV
 
       - name: 🔧 Setup FPC (Windows)
         if: matrix.os == 'windows-latest'
-        uses: lazarus-ide/setup-lazarus@v1
-        with:
-          lazarus-version: 2.2.6
-          fpc-version: ${{ matrix.fpc }}
+        run: |
+          choco install freepascal
+          fpc -iV
 
       - name: 📦 Install dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
