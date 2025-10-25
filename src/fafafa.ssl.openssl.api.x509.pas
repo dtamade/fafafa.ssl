@@ -1,6 +1,6 @@
 unit fafafa.ssl.openssl.api.x509;
 
-{$mode objfpc}{$H+}
+{$mode ObjFPC}{$H+}
 
 interface
 

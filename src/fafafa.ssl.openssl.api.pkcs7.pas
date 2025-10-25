@@ -1,4 +1,4 @@
-{$mode objfpc}{$H+}
+{$mode ObjFPC}{$H+}
 
 unit fafafa.ssl.openssl.api.pkcs7;
 

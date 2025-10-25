@@ -4,7 +4,7 @@
 }
 unit fafafa.ssl.openssl.api.store;
 
-{$mode objfpc}{$H+}
+{$mode ObjFPC}{$H+}
 
 interface
 

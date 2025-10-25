@@ -1,6 +1,6 @@
 unit fafafa.ssl.openssl.api.asn1;
 
-{$mode Delphi}
+{$mode ObjFPC}{$H+}
 {$H+}
 
 interface

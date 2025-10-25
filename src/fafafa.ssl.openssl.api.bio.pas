@@ -1,6 +1,6 @@
 unit fafafa.ssl.openssl.api.bio;
 
-{$mode objfpc}{$H+}
+{$mode ObjFPC}{$H+}
 
 interface
 

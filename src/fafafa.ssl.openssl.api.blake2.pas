@@ -8,7 +8,7 @@
 
 unit fafafa.ssl.openssl.api.blake2;
 
-{$mode Delphi}
+{$mode ObjFPC}{$H+}
 {$H+}
 
 interface

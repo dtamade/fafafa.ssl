@@ -1,6 +1,7 @@
 unit fafafa.ssl.winssl.optimized;
 
 {$mode ObjFPC}{$H+}
+{$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
 interface
 

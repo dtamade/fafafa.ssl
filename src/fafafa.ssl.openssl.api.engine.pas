@@ -1,6 +1,6 @@
 unit fafafa.ssl.openssl.api.engine;
 
-{$mode Delphi}
+{$mode ObjFPC}{$H+}
 {$H+}
 
 interface

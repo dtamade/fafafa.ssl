@@ -8,7 +8,7 @@
 
 unit fafafa.ssl.openssl.api.md;
 
-{$mode Delphi}
+{$mode ObjFPC}{$H+}
 {$H+}
 
 interface

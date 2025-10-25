@@ -5,7 +5,7 @@
 
 unit fafafa.ssl.openssl.api.cmac.evp;
 
-{$mode Delphi}
+{$mode ObjFPC}{$H+}
 {$H+}
 
 interface

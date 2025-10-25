@@ -1,6 +1,7 @@
 unit fafafa.ssl.winssl.enterprise;
 
-{$mode objfpc}{$H+}
+{$mode ObjFPC}{$H+}
+{$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
 interface
 

@@ -23,7 +23,7 @@ uses
   {$ELSE}
   Sockets,
   {$ENDIF}
-  SysUtils, Classes,
+  SysUtils, Classes, DateUtils, SyncObjs,
   fafafa.ssl.abstract.types,
   fafafa.ssl.abstract.intf,
   fafafa.ssl.winssl.types,
@@ -32,7 +32,60 @@ uses
   fafafa.ssl.winssl.certificate;
 
 type
-  { TWinSSLConnection - Windows Schannel 连接类 }
+  { TWinSSLSession - Windows Schannel 会话实现 }
+  TWinSSLSession = class(TInterfacedObject, ISSLSession)
+  private
+    FID: string;
+    FCreationTime: TDateTime;
+    FTimeout: Integer;
+    FProtocolVersion: TSSLProtocolVersion;
+    FCipherName: string;
+    FSessionData: TBytes;
+    FSessionHandle: CtxtHandle;
+    FHasHandle: Boolean;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    { ISSLSession 实现 }
+    function GetID: string;
+    function GetCreationTime: TDateTime;
+    function GetTimeout: Integer;
+    procedure SetTimeout(aTimeout: Integer);
+    function IsValid: Boolean;
+    function IsResumable: Boolean;
+
+    function GetProtocolVersion: TSSLProtocolVersion;
+    function GetCipherName: string;
+    function GetPeerCertificate: ISSLCertificate;
+
+    function Serialize: TBytes;
+    function Deserialize(const aData: TBytes): Boolean;
+
+    function GetNativeHandle: Pointer;
+    function Clone: ISSLSession;
+
+    { 内部方法 }
+    procedure SetSessionHandle(const aHandle: CtxtHandle);
+    function HasSessionHandle: Boolean;
+  end;
+
+  { TWinSSLSessionManager - 会话缓存管理器 }
+  TWinSSLSessionManager = class
+  private
+    FSessions: TStringList;
+    FLock: TCriticalSection;
+    FMaxSessions: Integer;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    procedure AddSession(const aID: string; aSession: ISSLSession);
+    function GetSession(const aID: string): ISSLSession;
+    procedure RemoveSession(const aID: string);
+    procedure CleanupExpired;
+    procedure SetMaxSessions(aMax: Integer);
+  end;
   TWinSSLConnection = class(TInterfacedObject, ISSLConnection)
   private
     FContext: ISSLContext;
@@ -51,7 +104,11 @@ type
     FDecryptedBufferUsed: Integer;
     FExtraData: array[0..16384-1] of Byte;
     FExtraDataSize: Integer;
-    
+
+    // 会话管理
+    FCurrentSession: ISSLSession;
+    FSessionReused: Boolean;
+
     // 内部方法
     function PerformHandshake: TSSLHandshakeState;
     function ClientHandshake: Boolean;
@@ -122,6 +179,215 @@ type
 implementation
 
 // ============================================================================
+// TWinSSLSession - 会话实现
+// ============================================================================
+
+constructor TWinSSLSession.Create;
+begin
+  inherited Create;
+  FID := '';
+  FCreationTime := Now;
+  FTimeout := 300; // 5 分钟
+  FProtocolVersion := sslProtocolTLS12;
+  FCipherName := '';
+  SetLength(FSessionData, 0);
+  InitSecHandle(FSessionHandle);
+  FHasHandle := False;
+end;
+
+destructor TWinSSLSession.Destroy;
+begin
+  if FHasHandle then
+    DeleteSecurityContext(@FSessionHandle);
+  inherited Destroy;
+end;
+
+function TWinSSLSession.GetID: string;
+begin
+  Result := FID;
+end;
+
+function TWinSSLSession.GetCreationTime: TDateTime;
+begin
+  Result := FCreationTime;
+end;
+
+function TWinSSLSession.GetTimeout: Integer;
+begin
+  Result := FTimeout;
+end;
+
+procedure TWinSSLSession.SetTimeout(aTimeout: Integer);
+begin
+  FTimeout := aTimeout;
+end;
+
+function TWinSSLSession.IsValid: Boolean;
+begin
+  Result := (FID <> '') and (SecondsBetween(Now, FCreationTime) < FTimeout);
+end;
+
+function TWinSSLSession.IsResumable: Boolean;
+begin
+  Result := IsValid;
+end;
+
+function TWinSSLSession.GetProtocolVersion: TSSLProtocolVersion;
+begin
+  Result := FProtocolVersion;
+end;
+
+function TWinSSLSession.GetCipherName: string;
+begin
+  Result := FCipherName;
+end;
+
+function TWinSSLSession.GetPeerCertificate: ISSLCertificate;
+begin
+  Result := nil; // TODO: 可扩展以支持证书存储
+end;
+
+function TWinSSLSession.Serialize: TBytes;
+begin
+  Result := FSessionData;
+end;
+
+function TWinSSLSession.Deserialize(const aData: TBytes): Boolean;
+begin
+  FSessionData := aData;
+  Result := Length(FSessionData) > 0;
+end;
+
+function TWinSSLSession.GetNativeHandle: Pointer;
+begin
+  if FHasHandle then
+    Result := @FSessionHandle
+  else
+    Result := nil;
+end;
+
+function TWinSSLSession.Clone: ISSLSession;
+var
+  LSession: TWinSSLSession;
+begin
+  LSession := TWinSSLSession.Create;
+  LSession.FID := FID;
+  LSession.FCreationTime := FCreationTime;
+  LSession.FTimeout := FTimeout;
+  LSession.FProtocolVersion := FProtocolVersion;
+  LSession.FCipherName := FCipherName;
+  LSession.FSessionData := FSessionData;
+  Result := LSession;
+end;
+
+procedure TWinSSLSession.SetSessionHandle(const aHandle: CtxtHandle);
+begin
+  if FHasHandle then
+    DeleteSecurityContext(@FSessionHandle);
+  FSessionHandle := aHandle;
+  FHasHandle := True;
+end;
+
+function TWinSSLSession.HasSessionHandle: Boolean;
+begin
+  Result := FHasHandle and IsValidSecHandle(FSessionHandle);
+end;
+
+// ============================================================================
+// TWinSSLSessionManager - 会话缓存管理器
+// ============================================================================
+
+constructor TWinSSLSessionManager.Create;
+begin
+  inherited Create;
+  FSessions := TStringList.Create;
+  FSessions.Duplicates := dupIgnore;
+  FSessions.Sorted := True;
+  FLock := TCriticalSection.Create;
+  FMaxSessions := 100;
+end;
+
+destructor TWinSSLSessionManager.Destroy;
+begin
+  FSessions.Free;
+  FLock.Free;
+  inherited Destroy;
+end;
+
+procedure TWinSSLSessionManager.AddSession(const aID: string; aSession: ISSLSession);
+begin
+  FLock.Enter;
+  try
+    FSessions.AddObject(aID, TObject(aSession));
+    // 限制最大会话数
+    while FSessions.Count > FMaxSessions do
+      FSessions.Delete(0);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TWinSSLSessionManager.GetSession(const aID: string): ISSLSession;
+var
+  LIndex: Integer;
+begin
+  FLock.Enter;
+  try
+    LIndex := FSessions.IndexOf(aID);
+    if LIndex >= 0 then
+    begin
+      Result := ISSLSession(FSessions.Objects[LIndex]);
+      // 检查会话是否仍然有效
+      if not Result.IsValid then
+      begin
+        FSessions.Delete(LIndex);
+        Result := nil;
+      end;
+    end
+    else
+      Result := nil;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TWinSSLSessionManager.RemoveSession(const aID: string);
+var
+  LIndex: Integer;
+begin
+  FLock.Enter;
+  try
+    LIndex := FSessions.IndexOf(aID);
+    if LIndex >= 0 then
+      FSessions.Delete(LIndex);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TWinSSLSessionManager.CleanupExpired;
+var
+  i: Integer;
+begin
+  FLock.Enter;
+  try
+    for i := FSessions.Count - 1 downto 0 do
+    begin
+      if not ISSLSession(FSessions.Objects[i]).IsValid then
+        FSessions.Delete(i);
+    end;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TWinSSLSessionManager.SetMaxSessions(aMax: Integer);
+begin
+  if aMax > 0 then
+    FMaxSessions := aMax;
+end;
+
+// ============================================================================
 // TWinSSLConnection - 构造和析构
 // ============================================================================
 
@@ -138,7 +404,11 @@ begin
   FRecvBufferUsed := 0;
   FDecryptedBufferUsed := 0;
   FExtraDataSize := 0;
-  
+
+  // 初始化会话字段
+  FCurrentSession := nil;
+  FSessionReused := False;
+
   InitSecHandle(FCtxtHandle);
 end;
 
@@ -155,7 +425,11 @@ begin
   FRecvBufferUsed := 0;
   FDecryptedBufferUsed := 0;
   FExtraDataSize := 0;
-  
+
+  // 初始化会话字段
+  FCurrentSession := nil;
+  FSessionReused := False;
+
   InitSecHandle(FCtxtHandle);
 end;
 
@@ -480,9 +754,123 @@ end;
 // ============================================================================
 
 function TWinSSLConnection.ServerHandshake: Boolean;
+var
+  OutBuffers: array[0..0] of TSecBuffer;
+  OutBufferDesc: TSecBufferDesc;
+  InBuffers: array[0..1] of TSecBuffer;
+  InBufferDesc: TSecBufferDesc;
+  Status: SECURITY_STATUS;
+  dwSSPIPackageFlags, dwSSPIOutFlags: DWORD;
+  cbData, cbIoBuffer: DWORD;
+  IoBuffer: array[0..16384-1] of Byte;
 begin
-  // TODO: 实现服务器端握手
   Result := False;
+
+  // 设置服务器端标志
+  dwSSPIPackageFlags := ASC_REQ_SEQUENCE_DETECT or
+                        ASC_REQ_REPLAY_DETECT or
+                        ASC_REQ_CONFIDENTIALITY or
+                        ASC_RET_EXTENDED_ERROR or
+                        ASC_REQ_ALLOCATE_MEMORY or
+                        ASC_REQ_STREAM;
+
+  // 初始化输出缓冲区
+  OutBuffers[0].pvBuffer := nil;
+  OutBuffers[0].BufferType := SECBUFFER_TOKEN;
+  OutBuffers[0].cbBuffer := 0;
+
+  OutBufferDesc.cBuffers := 1;
+  OutBufferDesc.pBuffers := @OutBuffers[0];
+  OutBufferDesc.ulVersion := SECBUFFER_VERSION;
+
+  cbIoBuffer := 0;
+
+  // 握手主循环
+  while True do
+  begin
+    // 接收客户端数据
+    if (cbIoBuffer = 0) or (Status = SEC_E_INCOMPLETE_MESSAGE) then
+    begin
+      cbData := RecvData(IoBuffer[cbIoBuffer], SizeOf(IoBuffer) - cbIoBuffer);
+      if cbData <= 0 then
+      begin
+        FHandshakeState := sslHsFailed;
+        Exit;
+      end;
+      Inc(cbIoBuffer, cbData);
+    end;
+
+    // 设置输入缓冲区
+    InBuffers[0].pvBuffer := @IoBuffer[0];
+    InBuffers[0].cbBuffer := cbIoBuffer;
+    InBuffers[0].BufferType := SECBUFFER_TOKEN;
+
+    InBuffers[1].pvBuffer := nil;
+    InBuffers[1].cbBuffer := 0;
+    InBuffers[1].BufferType := SECBUFFER_EMPTY;
+
+    InBufferDesc.cBuffers := 2;
+    InBufferDesc.pBuffers := @InBuffers[0];
+    InBufferDesc.ulVersion := SECBUFFER_VERSION;
+
+    // 调用 AcceptSecurityContext
+    Status := AcceptSecurityContextW(
+      PCredHandle(FContext.GetNativeHandle),
+      nil,
+      @InBufferDesc,
+      dwSSPIPackageFlags,
+      0,
+      @FCtxtHandle,
+      @OutBufferDesc,
+      @dwSSPIOutFlags,
+      nil
+    );
+
+    // 处理额外数据
+    if (InBuffers[1].BufferType = SECBUFFER_EXTRA) and (InBuffers[1].cbBuffer > 0) then
+    begin
+      Move(IoBuffer[cbIoBuffer - InBuffers[1].cbBuffer], IoBuffer[0], InBuffers[1].cbBuffer);
+      cbIoBuffer := InBuffers[1].cbBuffer;
+    end
+    else if Status <> SEC_E_INCOMPLETE_MESSAGE then
+      cbIoBuffer := 0;
+
+    // 发送响应数据
+    if (OutBuffers[0].cbBuffer > 0) and (OutBuffers[0].pvBuffer <> nil) then
+    begin
+      cbData := SendData(OutBuffers[0].pvBuffer^, OutBuffers[0].cbBuffer);
+      FreeContextBuffer(OutBuffers[0].pvBuffer);
+      if cbData <= 0 then
+      begin
+        FHandshakeState := sslHsFailed;
+        Exit;
+      end;
+    end;
+
+    // 检查握手状态
+    if Status = SEC_E_INCOMPLETE_MESSAGE then
+      Continue  // 需要更多数据，继续循环
+
+    if IsSuccess(Status) then
+    begin
+      // 握手成功
+      FHandshakeState := sslHsCompleted;
+      FConnected := True;
+      Result := True;
+      Break;
+    end
+    else if Status = SEC_I_CONTINUE_NEEDED then
+    begin
+      // 需要继续握手
+      Continue;
+    end
+    else
+    begin
+      // 握手失败
+      FHandshakeState := sslHsFailed;
+      Break;
+    end;
+  end;
 end;
 
 // ============================================================================
@@ -920,17 +1308,24 @@ end;
 
 function TWinSSLConnection.GetSession: ISSLSession;
 begin
-  Result := nil; // TODO
+  Result := FCurrentSession;
 end;
 
 procedure TWinSSLConnection.SetSession(aSession: ISSLSession);
 begin
-  // TODO
+  FCurrentSession := aSession;
+  if aSession <> nil then
+  begin
+    FSessionReused := True;
+    // 如果有上下文句柄，存储到会话中
+    if IsValidSecHandle(FCtxtHandle) and (aSession is TWinSSLSession) then
+      TWinSSLSession(aSession).SetSessionHandle(FCtxtHandle);
+  end;
 end;
 
 function TWinSSLConnection.IsSessionReused: Boolean;
 begin
-  Result := False; // TODO
+  Result := FSessionReused;
 end;
 
 // ============================================================================

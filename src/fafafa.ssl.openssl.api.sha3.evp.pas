@@ -11,7 +11,7 @@
 
 unit fafafa.ssl.openssl.api.sha3.evp;
 
-{$mode Delphi}
+{$mode ObjFPC}{$H+}
 {$H+}
 
 interface
