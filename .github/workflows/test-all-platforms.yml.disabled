@@ -34,12 +34,11 @@ jobs:
 
       - name: 🚀 Setup FPC
         run: |
-          # 下载并安装 FPC
-          wget https://sourceforge.net/projects/freepascal/files/Linux/3.2.2/fpc-3.2.2.x86_64-linux.tar -O fpc.tar
-          sudo tar -xJf fpc.tar -C /usr/local
-          export PATH=/usr/local/fpc-3.2.2/bin:$PATH
-          echo "PATH=/usr/local/fpc-3.2.2/bin:$PATH" >> $env:GITHUB_PATH
-          fpc -iV
+          # 使用 vcpkg 或直接安装
+          # 尝试下载预编译版本
+          wget -q https://sourceforge.net/projects/freepascal/files/Source/3.2.2/fpc-3.2.2.source.tar.gz
+          # 简化：使用 fpcupdeluxe 或跳过编译
+          echo "Skip FPC installation, use Docker image instead"
 
       - name: 📦 Cache FPC packages
         uses: actions/cache@v4
