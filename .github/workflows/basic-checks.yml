@@ -29,8 +29,8 @@ jobs:
           REQUIRED_FILES=(
             "README.md"
             "CLAUDE.md"
-            "src/fafafa.ssl.abstract.intf"
-            "src/fafafa.ssl.factory"
+            "src/fafafa.ssl.abstract.intf.pas"
+            "src/fafafa.ssl.factory.pas"
           )
           
           for file in "${REQUIRED_FILES[@]}"; do
