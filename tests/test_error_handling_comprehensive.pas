@@ -8,7 +8,7 @@ uses
   fafafa.ssl.factory,
   fafafa.ssl.abstract.intf,
   fafafa.ssl.abstract.types,
-  fafafa.ssl.openssl,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.err;
 
 var

@@ -14,7 +14,7 @@ program test_p2_ts_comprehensive;
   功能级别：生产级测试
 
   依赖模块：
-  - fafafa.ssl.openssl.core (OpenSSL 加载)
+  - fafafa.ssl.openssl.api.core (OpenSSL 加载)
   - fafafa.ssl.openssl.api.ts (TS API)
   - fafafa.ssl.openssl.api.asn1 (ASN.1)
   - fafafa.ssl.openssl.api.bio (BIO I/O)
@@ -22,7 +22,7 @@ program test_p2_ts_comprehensive;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ts,
   fafafa.ssl.openssl.api.asn1,
   fafafa.ssl.openssl.api.bio;

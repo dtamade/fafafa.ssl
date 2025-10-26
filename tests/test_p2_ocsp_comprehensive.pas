@@ -15,7 +15,7 @@ program test_p2_ocsp_comprehensive;
   功能级别：生产级测试
 
   依赖模块：
-  - fafafa.ssl.openssl.core (OpenSSL 加载)
+  - fafafa.ssl.openssl.api.core (OpenSSL 加载)
   - fafafa.ssl.openssl.api.ocsp (OCSP API)
   - fafafa.ssl.openssl.api.x509 (X.509 证书)
   - fafafa.ssl.openssl.api.bio (BIO I/O)
@@ -23,7 +23,7 @@ program test_p2_ocsp_comprehensive;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ocsp,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.bio,

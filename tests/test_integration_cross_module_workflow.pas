@@ -27,8 +27,8 @@ program test_integration_cross_module_workflow;
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
 uses
-  SysUtils, Classes, DateUtils,
-  fafafa.ssl.openssl.core,
+  SysUtils, Classes,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.pkcs7,
   fafafa.ssl.openssl.api.cms,

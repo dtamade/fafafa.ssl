@@ -16,7 +16,7 @@ program test_p2_pkcs7_comprehensive;
   功能级别：生产级测试
 
   依赖模块：
-  - fafafa.ssl.openssl.core (OpenSSL 加载)
+  - fafafa.ssl.openssl.api.core (OpenSSL 加载)
   - fafafa.ssl.openssl.api.pkcs7 (PKCS7 API)
   - fafafa.ssl.openssl.api.x509 (X.509 证书)
   - fafafa.ssl.openssl.api.evp (EVP 加密)
@@ -25,7 +25,7 @@ program test_p2_pkcs7_comprehensive;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.pkcs7,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.evp,

@@ -266,96 +266,96 @@ begin
     Exit(False);
 
   // 加载基础 PEM 函数
-  PEM_read_bio := GetProcAddress(ACryptoLib, 'PEM_read_bio');
-  PEM_read_bio_ex := GetProcAddress(ACryptoLib, 'PEM_read_bio_ex');
-  PEM_write_bio := GetProcAddress(ACryptoLib, 'PEM_write_bio');
-  PEM_bytes_read_bio := GetProcAddress(ACryptoLib, 'PEM_bytes_read_bio');
-  PEM_bytes_read_bio_secmem := GetProcAddress(ACryptoLib, 'PEM_bytes_read_bio_secmem');
+  PEM_read_bio := TPEM_read_bio(GetProcAddress(ACryptoLib, 'PEM_read_bio'));
+  PEM_read_bio_ex := TPEM_read_bio_ex(GetProcAddress(ACryptoLib, 'PEM_read_bio_ex'));
+  PEM_write_bio := TPEM_write_bio(GetProcAddress(ACryptoLib, 'PEM_write_bio'));
+  PEM_bytes_read_bio := TPEM_bytes_read_bio(GetProcAddress(ACryptoLib, 'PEM_bytes_read_bio'));
+  PEM_bytes_read_bio_secmem := TPEM_bytes_read_bio_secmem(GetProcAddress(ACryptoLib, 'PEM_bytes_read_bio_secmem'));
 
   // 加载 X509 证书 PEM 函数
-  PEM_read_bio_X509 := GetProcAddress(ACryptoLib, 'PEM_read_bio_X509');
-  PEM_write_bio_X509 := GetProcAddress(ACryptoLib, 'PEM_write_bio_X509');
-  PEM_read_bio_X509_AUX := GetProcAddress(ACryptoLib, 'PEM_read_bio_X509_AUX');
-  PEM_write_bio_X509_AUX := GetProcAddress(ACryptoLib, 'PEM_write_bio_X509_AUX');
-  PEM_read_bio_X509_REQ := GetProcAddress(ACryptoLib, 'PEM_read_bio_X509_REQ');
-  PEM_write_bio_X509_REQ := GetProcAddress(ACryptoLib, 'PEM_write_bio_X509_REQ');
-  PEM_write_bio_X509_REQ_NEW := GetProcAddress(ACryptoLib, 'PEM_write_bio_X509_REQ_NEW');
-  PEM_read_bio_X509_CRL := GetProcAddress(ACryptoLib, 'PEM_read_bio_X509_CRL');
-  PEM_write_bio_X509_CRL := GetProcAddress(ACryptoLib, 'PEM_write_bio_X509_CRL');
+  PEM_read_bio_X509 := TPEM_read_bio_X509(GetProcAddress(ACryptoLib, 'PEM_read_bio_X509'));
+  PEM_write_bio_X509 := TPEM_write_bio_X509(GetProcAddress(ACryptoLib, 'PEM_write_bio_X509'));
+  PEM_read_bio_X509_AUX := TPEM_read_bio_X509_AUX(GetProcAddress(ACryptoLib, 'PEM_read_bio_X509_AUX'));
+  PEM_write_bio_X509_AUX := TPEM_write_bio_X509_AUX(GetProcAddress(ACryptoLib, 'PEM_write_bio_X509_AUX'));
+  PEM_read_bio_X509_REQ := TPEM_read_bio_X509_REQ(GetProcAddress(ACryptoLib, 'PEM_read_bio_X509_REQ'));
+  PEM_write_bio_X509_REQ := TPEM_write_bio_X509_REQ(GetProcAddress(ACryptoLib, 'PEM_write_bio_X509_REQ'));
+  PEM_write_bio_X509_REQ_NEW := TPEM_write_bio_X509_REQ_NEW(GetProcAddress(ACryptoLib, 'PEM_write_bio_X509_REQ_NEW'));
+  PEM_read_bio_X509_CRL := TPEM_read_bio_X509_CRL(GetProcAddress(ACryptoLib, 'PEM_read_bio_X509_CRL'));
+  PEM_write_bio_X509_CRL := TPEM_write_bio_X509_CRL(GetProcAddress(ACryptoLib, 'PEM_write_bio_X509_CRL'));
 
   // 加载私钥 PEM 函数
-  PEM_read_bio_PrivateKey := GetProcAddress(ACryptoLib, 'PEM_read_bio_PrivateKey');
-  PEM_write_bio_PrivateKey := GetProcAddress(ACryptoLib, 'PEM_write_bio_PrivateKey');
-  PEM_write_bio_PrivateKey_traditional := GetProcAddress(ACryptoLib, 'PEM_write_bio_PrivateKey_traditional');
-  PEM_write_bio_PKCS8PrivateKey := GetProcAddress(ACryptoLib, 'PEM_write_bio_PKCS8PrivateKey');
-  PEM_write_bio_PKCS8PrivateKey_nid := GetProcAddress(ACryptoLib, 'PEM_write_bio_PKCS8PrivateKey_nid');
+  PEM_read_bio_PrivateKey := TPEM_read_bio_PrivateKey(GetProcAddress(ACryptoLib, 'PEM_read_bio_PrivateKey'));
+  PEM_write_bio_PrivateKey := TPEM_write_bio_PrivateKey(GetProcAddress(ACryptoLib, 'PEM_write_bio_PrivateKey'));
+  PEM_write_bio_PrivateKey_traditional := TPEM_write_bio_PrivateKey_traditional(GetProcAddress(ACryptoLib, 'PEM_write_bio_PrivateKey_traditional'));
+  PEM_write_bio_PKCS8PrivateKey := TPEM_write_bio_PKCS8PrivateKey(GetProcAddress(ACryptoLib, 'PEM_write_bio_PKCS8PrivateKey'));
+  PEM_write_bio_PKCS8PrivateKey_nid := TPEM_write_bio_PKCS8PrivateKey_nid(GetProcAddress(ACryptoLib, 'PEM_write_bio_PKCS8PrivateKey_nid'));
 
   // 加载公钥 PEM 函数
-  PEM_read_bio_PUBKEY := GetProcAddress(ACryptoLib, 'PEM_read_bio_PUBKEY');
-  PEM_write_bio_PUBKEY := GetProcAddress(ACryptoLib, 'PEM_write_bio_PUBKEY');
+  PEM_read_bio_PUBKEY := TPEM_read_bio_PUBKEY(GetProcAddress(ACryptoLib, 'PEM_read_bio_PUBKEY'));
+  PEM_write_bio_PUBKEY := TPEM_write_bio_PUBKEY(GetProcAddress(ACryptoLib, 'PEM_write_bio_PUBKEY'));
 
   // 加载 RSA 密钥 PEM 函数
-  PEM_read_bio_RSAPrivateKey := GetProcAddress(ACryptoLib, 'PEM_read_bio_RSAPrivateKey');
-  PEM_write_bio_RSAPrivateKey := GetProcAddress(ACryptoLib, 'PEM_write_bio_RSAPrivateKey');
-  PEM_read_bio_RSAPublicKey := GetProcAddress(ACryptoLib, 'PEM_read_bio_RSAPublicKey');
-  PEM_write_bio_RSAPublicKey := GetProcAddress(ACryptoLib, 'PEM_write_bio_RSAPublicKey');
-  PEM_read_bio_RSA_PUBKEY := GetProcAddress(ACryptoLib, 'PEM_read_bio_RSA_PUBKEY');
-  PEM_write_bio_RSA_PUBKEY := GetProcAddress(ACryptoLib, 'PEM_write_bio_RSA_PUBKEY');
+  PEM_read_bio_RSAPrivateKey := TPEM_read_bio_RSAPrivateKey(GetProcAddress(ACryptoLib, 'PEM_read_bio_RSAPrivateKey'));
+  PEM_write_bio_RSAPrivateKey := TPEM_write_bio_RSAPrivateKey(GetProcAddress(ACryptoLib, 'PEM_write_bio_RSAPrivateKey'));
+  PEM_read_bio_RSAPublicKey := TPEM_read_bio_RSAPublicKey(GetProcAddress(ACryptoLib, 'PEM_read_bio_RSAPublicKey'));
+  PEM_write_bio_RSAPublicKey := TPEM_write_bio_RSAPublicKey(GetProcAddress(ACryptoLib, 'PEM_write_bio_RSAPublicKey'));
+  PEM_read_bio_RSA_PUBKEY := TPEM_read_bio_RSA_PUBKEY(GetProcAddress(ACryptoLib, 'PEM_read_bio_RSA_PUBKEY'));
+  PEM_write_bio_RSA_PUBKEY := TPEM_write_bio_RSA_PUBKEY(GetProcAddress(ACryptoLib, 'PEM_write_bio_RSA_PUBKEY'));
 
   // 加载 DSA 密钥 PEM 函数
-  PEM_read_bio_DSAPrivateKey := GetProcAddress(ACryptoLib, 'PEM_read_bio_DSAPrivateKey');
-  PEM_write_bio_DSAPrivateKey := GetProcAddress(ACryptoLib, 'PEM_write_bio_DSAPrivateKey');
-  PEM_read_bio_DSA_PUBKEY := GetProcAddress(ACryptoLib, 'PEM_read_bio_DSA_PUBKEY');
-  PEM_write_bio_DSA_PUBKEY := GetProcAddress(ACryptoLib, 'PEM_write_bio_DSA_PUBKEY');
-  PEM_read_bio_DSAparams := GetProcAddress(ACryptoLib, 'PEM_read_bio_DSAparams');
-  PEM_write_bio_DSAparams := GetProcAddress(ACryptoLib, 'PEM_write_bio_DSAparams');
+  PEM_read_bio_DSAPrivateKey := TPEM_read_bio_DSAPrivateKey(GetProcAddress(ACryptoLib, 'PEM_read_bio_DSAPrivateKey'));
+  PEM_write_bio_DSAPrivateKey := TPEM_write_bio_DSAPrivateKey(GetProcAddress(ACryptoLib, 'PEM_write_bio_DSAPrivateKey'));
+  PEM_read_bio_DSA_PUBKEY := TPEM_read_bio_DSA_PUBKEY(GetProcAddress(ACryptoLib, 'PEM_read_bio_DSA_PUBKEY'));
+  PEM_write_bio_DSA_PUBKEY := TPEM_write_bio_DSA_PUBKEY(GetProcAddress(ACryptoLib, 'PEM_write_bio_DSA_PUBKEY'));
+  PEM_read_bio_DSAparams := TPEM_read_bio_DSAparams(GetProcAddress(ACryptoLib, 'PEM_read_bio_DSAparams'));
+  PEM_write_bio_DSAparams := TPEM_write_bio_DSAparams(GetProcAddress(ACryptoLib, 'PEM_write_bio_DSAparams'));
 
   // 加载 DH 参数 PEM 函数
-  PEM_read_bio_DHparams := GetProcAddress(ACryptoLib, 'PEM_read_bio_DHparams');
-  PEM_write_bio_DHparams := GetProcAddress(ACryptoLib, 'PEM_write_bio_DHparams');
-  PEM_write_bio_DHxparams := GetProcAddress(ACryptoLib, 'PEM_write_bio_DHxparams');
+  PEM_read_bio_DHparams := TPEM_read_bio_DHparams(GetProcAddress(ACryptoLib, 'PEM_read_bio_DHparams'));
+  PEM_write_bio_DHparams := TPEM_write_bio_DHparams(GetProcAddress(ACryptoLib, 'PEM_write_bio_DHparams'));
+  PEM_write_bio_DHxparams := TPEM_write_bio_DHxparams(GetProcAddress(ACryptoLib, 'PEM_write_bio_DHxparams'));
 
   // 加载 EC 密钥 PEM 函数
-  PEM_read_bio_ECPrivateKey := GetProcAddress(ACryptoLib, 'PEM_read_bio_ECPrivateKey');
-  PEM_write_bio_ECPrivateKey := GetProcAddress(ACryptoLib, 'PEM_write_bio_ECPrivateKey');
-  PEM_read_bio_EC_PUBKEY := GetProcAddress(ACryptoLib, 'PEM_read_bio_EC_PUBKEY');
-  PEM_write_bio_EC_PUBKEY := GetProcAddress(ACryptoLib, 'PEM_write_bio_EC_PUBKEY');
-  PEM_read_bio_ECPKParameters := GetProcAddress(ACryptoLib, 'PEM_read_bio_ECPKParameters');
-  PEM_write_bio_ECPKParameters := GetProcAddress(ACryptoLib, 'PEM_write_bio_ECPKParameters');
+  PEM_read_bio_ECPrivateKey := TPEM_read_bio_ECPrivateKey(GetProcAddress(ACryptoLib, 'PEM_read_bio_ECPrivateKey'));
+  PEM_write_bio_ECPrivateKey := TPEM_write_bio_ECPrivateKey(GetProcAddress(ACryptoLib, 'PEM_write_bio_ECPrivateKey'));
+  PEM_read_bio_EC_PUBKEY := TPEM_read_bio_EC_PUBKEY(GetProcAddress(ACryptoLib, 'PEM_read_bio_EC_PUBKEY'));
+  PEM_write_bio_EC_PUBKEY := TPEM_write_bio_EC_PUBKEY(GetProcAddress(ACryptoLib, 'PEM_write_bio_EC_PUBKEY'));
+  PEM_read_bio_ECPKParameters := TPEM_read_bio_ECPKParameters(GetProcAddress(ACryptoLib, 'PEM_read_bio_ECPKParameters'));
+  PEM_write_bio_ECPKParameters := TPEM_write_bio_ECPKParameters(GetProcAddress(ACryptoLib, 'PEM_write_bio_ECPKParameters'));
 
   // 加载 PKCS7 PEM 函数
-  PEM_read_bio_PKCS7 := GetProcAddress(ACryptoLib, 'PEM_read_bio_PKCS7');
-  PEM_write_bio_PKCS7 := GetProcAddress(ACryptoLib, 'PEM_write_bio_PKCS7');
-  PEM_write_bio_PKCS7_stream := GetProcAddress(ACryptoLib, 'PEM_write_bio_PKCS7_stream');
+  PEM_read_bio_PKCS7 := TPEM_read_bio_PKCS7(GetProcAddress(ACryptoLib, 'PEM_read_bio_PKCS7'));
+  PEM_write_bio_PKCS7 := TPEM_write_bio_PKCS7(GetProcAddress(ACryptoLib, 'PEM_write_bio_PKCS7'));
+  PEM_write_bio_PKCS7_stream := TPEM_write_bio_PKCS7_stream(GetProcAddress(ACryptoLib, 'PEM_write_bio_PKCS7_stream'));
 
   // 加载 PKCS8 函数
-  PEM_read_bio_PKCS8 := GetProcAddress(ACryptoLib, 'PEM_read_bio_PKCS8');
-  PEM_write_bio_PKCS8 := GetProcAddress(ACryptoLib, 'PEM_write_bio_PKCS8');
-  PEM_read_bio_PKCS8_PRIV_KEY_INFO := GetProcAddress(ACryptoLib, 'PEM_read_bio_PKCS8_PRIV_KEY_INFO');
-  PEM_write_bio_PKCS8_PRIV_KEY_INFO := GetProcAddress(ACryptoLib, 'PEM_write_bio_PKCS8_PRIV_KEY_INFO');
+  PEM_read_bio_PKCS8 := TPEM_read_bio_PKCS8(GetProcAddress(ACryptoLib, 'PEM_read_bio_PKCS8'));
+  PEM_write_bio_PKCS8 := TPEM_write_bio_PKCS8(GetProcAddress(ACryptoLib, 'PEM_write_bio_PKCS8'));
+  PEM_read_bio_PKCS8_PRIV_KEY_INFO := TPEM_read_bio_PKCS8_PRIV_KEY_INFO(GetProcAddress(ACryptoLib, 'PEM_read_bio_PKCS8_PRIV_KEY_INFO'));
+  PEM_write_bio_PKCS8_PRIV_KEY_INFO := TPEM_write_bio_PKCS8_PRIV_KEY_INFO(GetProcAddress(ACryptoLib, 'PEM_write_bio_PKCS8_PRIV_KEY_INFO'));
 
   // 加载 Parameters 函数
-  PEM_read_bio_Parameters := GetProcAddress(ACryptoLib, 'PEM_read_bio_Parameters');
-  PEM_write_bio_Parameters := GetProcAddress(ACryptoLib, 'PEM_write_bio_Parameters');
+  PEM_read_bio_Parameters := TPEM_read_bio_Parameters(GetProcAddress(ACryptoLib, 'PEM_read_bio_Parameters'));
+  PEM_write_bio_Parameters := TPEM_write_bio_Parameters(GetProcAddress(ACryptoLib, 'PEM_write_bio_Parameters'));
 
   // 加载 CMS 函数
-  PEM_read_bio_CMS := GetProcAddress(ACryptoLib, 'PEM_read_bio_CMS');
-  PEM_write_bio_CMS := GetProcAddress(ACryptoLib, 'PEM_write_bio_CMS');
-  PEM_write_bio_CMS_stream := GetProcAddress(ACryptoLib, 'PEM_write_bio_CMS_stream');
+  PEM_read_bio_CMS := TPEM_read_bio_CMS(GetProcAddress(ACryptoLib, 'PEM_read_bio_CMS'));
+  PEM_write_bio_CMS := TPEM_write_bio_CMS(GetProcAddress(ACryptoLib, 'PEM_write_bio_CMS'));
+  PEM_write_bio_CMS_stream := TPEM_write_bio_CMS_stream(GetProcAddress(ACryptoLib, 'PEM_write_bio_CMS_stream'));
 
   // 加载 SSL Session PEM 函数
-  PEM_read_bio_SSL_SESSION := GetProcAddress(ACryptoLib, 'PEM_read_bio_SSL_SESSION');
-  PEM_write_bio_SSL_SESSION := GetProcAddress(ACryptoLib, 'PEM_write_bio_SSL_SESSION');
+  PEM_read_bio_SSL_SESSION := TPEM_read_bio_SSL_SESSION(GetProcAddress(ACryptoLib, 'PEM_read_bio_SSL_SESSION'));
+  PEM_write_bio_SSL_SESSION := TPEM_write_bio_SSL_SESSION(GetProcAddress(ACryptoLib, 'PEM_write_bio_SSL_SESSION'));
 
   // 加载文件版本的 PEM 函数
-  PEM_read_X509 := GetProcAddress(ACryptoLib, 'PEM_read_X509');
-  PEM_write_X509 := GetProcAddress(ACryptoLib, 'PEM_write_X509');
-  PEM_read_PrivateKey := GetProcAddress(ACryptoLib, 'PEM_read_PrivateKey');
-  PEM_write_PrivateKey := GetProcAddress(ACryptoLib, 'PEM_write_PrivateKey');
+  PEM_read_X509 := TPEM_read_X509(GetProcAddress(ACryptoLib, 'PEM_read_X509'));
+  PEM_write_X509 := TPEM_write_X509(GetProcAddress(ACryptoLib, 'PEM_write_X509'));
+  PEM_read_PrivateKey := TPEM_read_PrivateKey(GetProcAddress(ACryptoLib, 'PEM_read_PrivateKey'));
+  PEM_write_PrivateKey := TPEM_write_PrivateKey(GetProcAddress(ACryptoLib, 'PEM_write_PrivateKey'));
 
   // 加载实用函数
-  PEM_def_callback := GetProcAddress(ACryptoLib, 'PEM_def_callback');
-  PEM_dek_info := GetProcAddress(ACryptoLib, 'PEM_dek_info');
+  PEM_def_callback := TPEM_def_callback(GetProcAddress(ACryptoLib, 'PEM_def_callback'));
+  PEM_dek_info := TPEM_dek_info(GetProcAddress(ACryptoLib, 'PEM_dek_info'));
 
   FPEMLoaded := Assigned(PEM_read_bio_X509) and Assigned(PEM_write_bio_X509);
   Result := FPEMLoaded;

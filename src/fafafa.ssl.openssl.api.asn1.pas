@@ -325,11 +325,51 @@ function DateTimeToASN1Time(const ADateTime: TDateTime): ASN1_TIME;
 
 implementation
 
-uses
-  DateUtils;
+// 辅助函数 - 将 TDateTime 转换为 Unix 时间戳
+function DateTimeToUnixCustom(ADateTime: TDateTime): time_t;
+const
+  UnixEpoch: TDateTime = 25569; // 1970-01-01 在 TDateTime 中的值
+begin
+  Result := time_t(Trunc((ADateTime - UnixEpoch) * 86400));
+end;
 
 var
   FASNLoaded: Boolean = False;
+
+// 辅助函数 - 手动计算 TDateTime 不依赖 DateUtils
+function EncodeDateTimeCustom(Year, Month, Day, Hour, Min, Sec, MSec: Word): TDateTime;
+const
+  DaysInMonth: array[1..12] of Word = (31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31);
+var
+  i: Integer;
+  Days: Double;
+begin
+  // 计算从公元 1 年 1 月 1 日开始的天数
+  Days := 0;
+
+  // 加上前几年的天数
+  for i := 1 to Year - 1 do
+  begin
+    if IsLeapYear(i) then
+      Days := Days + 366
+    else
+      Days := Days + 365;
+  end;
+
+  // 加上今年前几个月的天数
+  for i := 1 to Month - 1 do
+  begin
+    Days := Days + DaysInMonth[i];
+    if (i = 2) and IsLeapYear(Year) then
+      Days := Days + 1; // 闰年 2 月
+  end;
+
+  // 加上本月天数
+  Days := Days + (Day - 1);
+
+  // 转换为 TDateTime（天的小数部分）
+  Result := Trunc(Days) + ((Hour * 3600 + Min * 60 + Sec) / 86400.0);
+end;
 
 function LoadOpenSSLASN1(const ACryptoLib: THandle): Boolean;
 begin
@@ -340,117 +380,117 @@ begin
     Exit(False);
 
   // 加载对象函数
-  ASN1_OBJECT_new := GetProcAddress(ACryptoLib, 'ASN1_OBJECT_new');
-  ASN1_OBJECT_free := GetProcAddress(ACryptoLib, 'ASN1_OBJECT_free');
-  ASN1_OBJECT_create := GetProcAddress(ACryptoLib, 'ASN1_OBJECT_create');
-  d2i_ASN1_OBJECT := GetProcAddress(ACryptoLib, 'd2i_ASN1_OBJECT');
-  i2d_ASN1_OBJECT := GetProcAddress(ACryptoLib, 'i2d_ASN1_OBJECT');
+  ASN1_OBJECT_new := TASN1_OBJECT_new(GetProcAddress(ACryptoLib, 'ASN1_OBJECT_new'));
+  ASN1_OBJECT_free := TASN1_OBJECT_free(GetProcAddress(ACryptoLib, 'ASN1_OBJECT_free'));
+  ASN1_OBJECT_create := TASN1_OBJECT_create(GetProcAddress(ACryptoLib, 'ASN1_OBJECT_create'));
+  d2i_ASN1_OBJECT := Td2i_ASN1_OBJECT(GetProcAddress(ACryptoLib, 'd2i_ASN1_OBJECT'));
+  i2d_ASN1_OBJECT := Ti2d_ASN1_OBJECT(GetProcAddress(ACryptoLib, 'i2d_ASN1_OBJECT'));
 
   // 加载字符串函数
-  ASN1_STRING_new := GetProcAddress(ACryptoLib, 'ASN1_STRING_new');
-  ASN1_STRING_free := GetProcAddress(ACryptoLib, 'ASN1_STRING_free');
-  ASN1_STRING_type_new := GetProcAddress(ACryptoLib, 'ASN1_STRING_type_new');
-  ASN1_STRING_set := GetProcAddress(ACryptoLib, 'ASN1_STRING_set');
-  ASN1_STRING_set0 := GetProcAddress(ACryptoLib, 'ASN1_STRING_set0');
-  ASN1_STRING_length := GetProcAddress(ACryptoLib, 'ASN1_STRING_length');
-  ASN1_STRING_get0_data := GetProcAddress(ACryptoLib, 'ASN1_STRING_get0_data');
+  ASN1_STRING_new := TASN1_STRING_new(GetProcAddress(ACryptoLib, 'ASN1_STRING_new'));
+  ASN1_STRING_free := TASN1_STRING_free(GetProcAddress(ACryptoLib, 'ASN1_STRING_free'));
+  ASN1_STRING_type_new := TASN1_STRING_type_new(GetProcAddress(ACryptoLib, 'ASN1_STRING_type_new'));
+  ASN1_STRING_set := TASN1_STRING_set(GetProcAddress(ACryptoLib, 'ASN1_STRING_set'));
+  ASN1_STRING_set0 := TASN1_STRING_set0(GetProcAddress(ACryptoLib, 'ASN1_STRING_set0'));
+  ASN1_STRING_length := TASN1_STRING_length(GetProcAddress(ACryptoLib, 'ASN1_STRING_length'));
+  ASN1_STRING_get0_data := TASN1_STRING_get0_data(GetProcAddress(ACryptoLib, 'ASN1_STRING_get0_data'));
   if not Assigned(ASN1_STRING_get0_data) then
-    ASN1_STRING_data := GetProcAddress(ACryptoLib, 'ASN1_STRING_data'); // 旧版本兼容
-  ASN1_STRING_type := GetProcAddress(ACryptoLib, 'ASN1_STRING_type');
-  ASN1_STRING_copy := GetProcAddress(ACryptoLib, 'ASN1_STRING_copy');
-  ASN1_STRING_dup := GetProcAddress(ACryptoLib, 'ASN1_STRING_dup');
-  ASN1_STRING_cmp := GetProcAddress(ACryptoLib, 'ASN1_STRING_cmp');
-  ASN1_STRING_print_ex := GetProcAddress(ACryptoLib, 'ASN1_STRING_print_ex');
-  ASN1_STRING_print_ex_fp := GetProcAddress(ACryptoLib, 'ASN1_STRING_print_ex_fp');
+    ASN1_STRING_data := TASN1_STRING_data(GetProcAddress(ACryptoLib, 'ASN1_STRING_data')); // 旧版本兼容
+  ASN1_STRING_type := TASN1_STRING_type(GetProcAddress(ACryptoLib, 'ASN1_STRING_type'));
+  ASN1_STRING_copy := TASN1_STRING_copy(GetProcAddress(ACryptoLib, 'ASN1_STRING_copy'));
+  ASN1_STRING_dup := TASN1_STRING_dup(GetProcAddress(ACryptoLib, 'ASN1_STRING_dup'));
+  ASN1_STRING_cmp := TASN1_STRING_cmp(GetProcAddress(ACryptoLib, 'ASN1_STRING_cmp'));
+  ASN1_STRING_print_ex := TASN1_STRING_print_ex(GetProcAddress(ACryptoLib, 'ASN1_STRING_print_ex'));
+  ASN1_STRING_print_ex_fp := TASN1_STRING_print_ex_fp(GetProcAddress(ACryptoLib, 'ASN1_STRING_print_ex_fp'));
 
   // 加载整数函数
-  ASN1_INTEGER_new := GetProcAddress(ACryptoLib, 'ASN1_INTEGER_new');
-  ASN1_INTEGER_free := GetProcAddress(ACryptoLib, 'ASN1_INTEGER_free');
-  ASN1_INTEGER_get := GetProcAddress(ACryptoLib, 'ASN1_INTEGER_get');
-  ASN1_INTEGER_set := GetProcAddress(ACryptoLib, 'ASN1_INTEGER_set');
-  ASN1_INTEGER_get_int64 := GetProcAddress(ACryptoLib, 'ASN1_INTEGER_get_int64');
-  ASN1_INTEGER_set_int64 := GetProcAddress(ACryptoLib, 'ASN1_INTEGER_set_int64');
-  ASN1_INTEGER_get_uint64 := GetProcAddress(ACryptoLib, 'ASN1_INTEGER_get_uint64');
-  ASN1_INTEGER_set_uint64 := GetProcAddress(ACryptoLib, 'ASN1_INTEGER_set_uint64');
-  ASN1_INTEGER_dup := GetProcAddress(ACryptoLib, 'ASN1_INTEGER_dup');
-  ASN1_INTEGER_cmp := GetProcAddress(ACryptoLib, 'ASN1_INTEGER_cmp');
-  BN_to_ASN1_INTEGER := GetProcAddress(ACryptoLib, 'BN_to_ASN1_INTEGER');
-  ASN1_INTEGER_to_BN := GetProcAddress(ACryptoLib, 'ASN1_INTEGER_to_BN');
+  ASN1_INTEGER_new := TASN1_INTEGER_new(GetProcAddress(ACryptoLib, 'ASN1_INTEGER_new'));
+  ASN1_INTEGER_free := TASN1_INTEGER_free(GetProcAddress(ACryptoLib, 'ASN1_INTEGER_free'));
+  ASN1_INTEGER_get := TASN1_INTEGER_get(GetProcAddress(ACryptoLib, 'ASN1_INTEGER_get'));
+  ASN1_INTEGER_set := TASN1_INTEGER_set(GetProcAddress(ACryptoLib, 'ASN1_INTEGER_set'));
+  ASN1_INTEGER_get_int64 := TASN1_INTEGER_get_int64(GetProcAddress(ACryptoLib, 'ASN1_INTEGER_get_int64'));
+  ASN1_INTEGER_set_int64 := TASN1_INTEGER_set_int64(GetProcAddress(ACryptoLib, 'ASN1_INTEGER_set_int64'));
+  ASN1_INTEGER_get_uint64 := TASN1_INTEGER_get_uint64(GetProcAddress(ACryptoLib, 'ASN1_INTEGER_get_uint64'));
+  ASN1_INTEGER_set_uint64 := TASN1_INTEGER_set_uint64(GetProcAddress(ACryptoLib, 'ASN1_INTEGER_set_uint64'));
+  ASN1_INTEGER_dup := TASN1_INTEGER_dup(GetProcAddress(ACryptoLib, 'ASN1_INTEGER_dup'));
+  ASN1_INTEGER_cmp := TASN1_INTEGER_cmp(GetProcAddress(ACryptoLib, 'ASN1_INTEGER_cmp'));
+  BN_to_ASN1_INTEGER := TBN_to_ASN1_INTEGER(GetProcAddress(ACryptoLib, 'BN_to_ASN1_INTEGER'));
+  ASN1_INTEGER_to_BN := TASN1_INTEGER_to_BN(GetProcAddress(ACryptoLib, 'ASN1_INTEGER_to_BN'));
 
   // 加载时间函数
-  ASN1_TIME_new := GetProcAddress(ACryptoLib, 'ASN1_TIME_new');
-  ASN1_TIME_free := GetProcAddress(ACryptoLib, 'ASN1_TIME_free');
-  ASN1_TIME_set := GetProcAddress(ACryptoLib, 'ASN1_TIME_set');
-  ASN1_TIME_set_string := GetProcAddress(ACryptoLib, 'ASN1_TIME_set_string');
-  ASN1_TIME_check := GetProcAddress(ACryptoLib, 'ASN1_TIME_check');
-  ASN1_TIME_print := GetProcAddress(ACryptoLib, 'ASN1_TIME_print');
-  ASN1_TIME_to_tm := GetProcAddress(ACryptoLib, 'ASN1_TIME_to_tm');
-  ASN1_TIME_normalize := GetProcAddress(ACryptoLib, 'ASN1_TIME_normalize');
-  ASN1_TIME_cmp_time_t := GetProcAddress(ACryptoLib, 'ASN1_TIME_cmp_time_t');
-  ASN1_TIME_compare := GetProcAddress(ACryptoLib, 'ASN1_TIME_compare');
+  ASN1_TIME_new := TASN1_TIME_new(GetProcAddress(ACryptoLib, 'ASN1_TIME_new'));
+  ASN1_TIME_free := TASN1_TIME_free(GetProcAddress(ACryptoLib, 'ASN1_TIME_free'));
+  ASN1_TIME_set := TASN1_TIME_set(GetProcAddress(ACryptoLib, 'ASN1_TIME_set'));
+  ASN1_TIME_set_string := TASN1_TIME_set_string(GetProcAddress(ACryptoLib, 'ASN1_TIME_set_string'));
+  ASN1_TIME_check := TASN1_TIME_check(GetProcAddress(ACryptoLib, 'ASN1_TIME_check'));
+  ASN1_TIME_print := TASN1_TIME_print(GetProcAddress(ACryptoLib, 'ASN1_TIME_print'));
+  ASN1_TIME_to_tm := TASN1_TIME_to_tm(GetProcAddress(ACryptoLib, 'ASN1_TIME_to_tm'));
+  ASN1_TIME_normalize := TASN1_TIME_normalize(GetProcAddress(ACryptoLib, 'ASN1_TIME_normalize'));
+  ASN1_TIME_cmp_time_t := TASN1_TIME_cmp_time_t(GetProcAddress(ACryptoLib, 'ASN1_TIME_cmp_time_t'));
+  ASN1_TIME_compare := TASN1_TIME_compare(GetProcAddress(ACryptoLib, 'ASN1_TIME_compare'));
 
   // 加载 UTCTIME 函数
-  ASN1_UTCTIME_new := GetProcAddress(ACryptoLib, 'ASN1_UTCTIME_new');
-  ASN1_UTCTIME_free := GetProcAddress(ACryptoLib, 'ASN1_UTCTIME_free');
-  ASN1_UTCTIME_set := GetProcAddress(ACryptoLib, 'ASN1_UTCTIME_set');
-  ASN1_UTCTIME_set_string := GetProcAddress(ACryptoLib, 'ASN1_UTCTIME_set_string');
-  ASN1_UTCTIME_check := GetProcAddress(ACryptoLib, 'ASN1_UTCTIME_check');
-  ASN1_UTCTIME_print := GetProcAddress(ACryptoLib, 'ASN1_UTCTIME_print');
+  ASN1_UTCTIME_new := TASN1_UTCTIME_new(GetProcAddress(ACryptoLib, 'ASN1_UTCTIME_new'));
+  ASN1_UTCTIME_free := TASN1_UTCTIME_free(GetProcAddress(ACryptoLib, 'ASN1_UTCTIME_free'));
+  ASN1_UTCTIME_set := TASN1_UTCTIME_set(GetProcAddress(ACryptoLib, 'ASN1_UTCTIME_set'));
+  ASN1_UTCTIME_set_string := TASN1_UTCTIME_set_string(GetProcAddress(ACryptoLib, 'ASN1_UTCTIME_set_string'));
+  ASN1_UTCTIME_check := TASN1_UTCTIME_check(GetProcAddress(ACryptoLib, 'ASN1_UTCTIME_check'));
+  ASN1_UTCTIME_print := TASN1_UTCTIME_print(GetProcAddress(ACryptoLib, 'ASN1_UTCTIME_print'));
 
   // 加载 GENERALIZEDTIME 函数
-  ASN1_GENERALIZEDTIME_new := GetProcAddress(ACryptoLib, 'ASN1_GENERALIZEDTIME_new');
-  ASN1_GENERALIZEDTIME_free := GetProcAddress(ACryptoLib, 'ASN1_GENERALIZEDTIME_free');
-  ASN1_GENERALIZEDTIME_set := GetProcAddress(ACryptoLib, 'ASN1_GENERALIZEDTIME_set');
-  ASN1_GENERALIZEDTIME_set_string := GetProcAddress(ACryptoLib, 'ASN1_GENERALIZEDTIME_set_string');
-  ASN1_GENERALIZEDTIME_check := GetProcAddress(ACryptoLib, 'ASN1_GENERALIZEDTIME_check');
-  ASN1_GENERALIZEDTIME_print := GetProcAddress(ACryptoLib, 'ASN1_GENERALIZEDTIME_print');
+  ASN1_GENERALIZEDTIME_new := TASN1_GENERALIZEDTIME_new(GetProcAddress(ACryptoLib, 'ASN1_GENERALIZEDTIME_new'));
+  ASN1_GENERALIZEDTIME_free := TASN1_GENERALIZEDTIME_free(GetProcAddress(ACryptoLib, 'ASN1_GENERALIZEDTIME_free'));
+  ASN1_GENERALIZEDTIME_set := TASN1_GENERALIZEDTIME_set(GetProcAddress(ACryptoLib, 'ASN1_GENERALIZEDTIME_set'));
+  ASN1_GENERALIZEDTIME_set_string := TASN1_GENERALIZEDTIME_set_string(GetProcAddress(ACryptoLib, 'ASN1_GENERALIZEDTIME_set_string'));
+  ASN1_GENERALIZEDTIME_check := TASN1_GENERALIZEDTIME_check(GetProcAddress(ACryptoLib, 'ASN1_GENERALIZEDTIME_check'));
+  ASN1_GENERALIZEDTIME_print := TASN1_GENERALIZEDTIME_print(GetProcAddress(ACryptoLib, 'ASN1_GENERALIZEDTIME_print'));
 
   // 加载 OCTET STRING 函数
-  ASN1_OCTET_STRING_new := GetProcAddress(ACryptoLib, 'ASN1_OCTET_STRING_new');
-  ASN1_OCTET_STRING_free := GetProcAddress(ACryptoLib, 'ASN1_OCTET_STRING_free');
-  ASN1_OCTET_STRING_set := GetProcAddress(ACryptoLib, 'ASN1_OCTET_STRING_set');
-  ASN1_OCTET_STRING_dup := GetProcAddress(ACryptoLib, 'ASN1_OCTET_STRING_dup');
-  ASN1_OCTET_STRING_cmp := GetProcAddress(ACryptoLib, 'ASN1_OCTET_STRING_cmp');
+  ASN1_OCTET_STRING_new := TASN1_OCTET_STRING_new(GetProcAddress(ACryptoLib, 'ASN1_OCTET_STRING_new'));
+  ASN1_OCTET_STRING_free := TASN1_OCTET_STRING_free(GetProcAddress(ACryptoLib, 'ASN1_OCTET_STRING_free'));
+  ASN1_OCTET_STRING_set := TASN1_OCTET_STRING_set(GetProcAddress(ACryptoLib, 'ASN1_OCTET_STRING_set'));
+  ASN1_OCTET_STRING_dup := TASN1_OCTET_STRING_dup(GetProcAddress(ACryptoLib, 'ASN1_OCTET_STRING_dup'));
+  ASN1_OCTET_STRING_cmp := TASN1_OCTET_STRING_cmp(GetProcAddress(ACryptoLib, 'ASN1_OCTET_STRING_cmp'));
 
   // 加载 BIT STRING 函数
-  ASN1_BIT_STRING_new := GetProcAddress(ACryptoLib, 'ASN1_BIT_STRING_new');
-  ASN1_BIT_STRING_free := GetProcAddress(ACryptoLib, 'ASN1_BIT_STRING_free');
-  ASN1_BIT_STRING_set := GetProcAddress(ACryptoLib, 'ASN1_BIT_STRING_set');
-  ASN1_BIT_STRING_set_bit := GetProcAddress(ACryptoLib, 'ASN1_BIT_STRING_set_bit');
-  ASN1_BIT_STRING_get_bit := GetProcAddress(ACryptoLib, 'ASN1_BIT_STRING_get_bit');
-  ASN1_BIT_STRING_check := GetProcAddress(ACryptoLib, 'ASN1_BIT_STRING_check');
+  ASN1_BIT_STRING_new := TASN1_BIT_STRING_new(GetProcAddress(ACryptoLib, 'ASN1_BIT_STRING_new'));
+  ASN1_BIT_STRING_free := TASN1_BIT_STRING_free(GetProcAddress(ACryptoLib, 'ASN1_BIT_STRING_free'));
+  ASN1_BIT_STRING_set := TASN1_BIT_STRING_set(GetProcAddress(ACryptoLib, 'ASN1_BIT_STRING_set'));
+  ASN1_BIT_STRING_set_bit := TASN1_BIT_STRING_set_bit(GetProcAddress(ACryptoLib, 'ASN1_BIT_STRING_set_bit'));
+  ASN1_BIT_STRING_get_bit := TASN1_BIT_STRING_get_bit(GetProcAddress(ACryptoLib, 'ASN1_BIT_STRING_get_bit'));
+  ASN1_BIT_STRING_check := TASN1_BIT_STRING_check(GetProcAddress(ACryptoLib, 'ASN1_BIT_STRING_check'));
 
   // 加载类型函数
-  ASN1_TYPE_new := GetProcAddress(ACryptoLib, 'ASN1_TYPE_new');
-  ASN1_TYPE_free := GetProcAddress(ACryptoLib, 'ASN1_TYPE_free');
-  ASN1_TYPE_get := GetProcAddress(ACryptoLib, 'ASN1_TYPE_get');
-  ASN1_TYPE_set := GetProcAddress(ACryptoLib, 'ASN1_TYPE_set');
-  ASN1_TYPE_set1 := GetProcAddress(ACryptoLib, 'ASN1_TYPE_set1');
-  ASN1_TYPE_cmp := GetProcAddress(ACryptoLib, 'ASN1_TYPE_cmp');
-  ASN1_TYPE_pack_sequence := GetProcAddress(ACryptoLib, 'ASN1_TYPE_pack_sequence');
-  ASN1_TYPE_unpack_sequence := GetProcAddress(ACryptoLib, 'ASN1_TYPE_unpack_sequence');
+  ASN1_TYPE_new := TASN1_TYPE_new(GetProcAddress(ACryptoLib, 'ASN1_TYPE_new'));
+  ASN1_TYPE_free := TASN1_TYPE_free(GetProcAddress(ACryptoLib, 'ASN1_TYPE_free'));
+  ASN1_TYPE_get := TASN1_TYPE_get(GetProcAddress(ACryptoLib, 'ASN1_TYPE_get'));
+  ASN1_TYPE_set := TASN1_TYPE_set(GetProcAddress(ACryptoLib, 'ASN1_TYPE_set'));
+  ASN1_TYPE_set1 := TASN1_TYPE_set1(GetProcAddress(ACryptoLib, 'ASN1_TYPE_set1'));
+  ASN1_TYPE_cmp := TASN1_TYPE_cmp(GetProcAddress(ACryptoLib, 'ASN1_TYPE_cmp'));
+  ASN1_TYPE_pack_sequence := TASN1_TYPE_pack_sequence(GetProcAddress(ACryptoLib, 'ASN1_TYPE_pack_sequence'));
+  ASN1_TYPE_unpack_sequence := TASN1_TYPE_unpack_sequence(GetProcAddress(ACryptoLib, 'ASN1_TYPE_unpack_sequence'));
 
   // 加载 DER/PEM 编解码
-  d2i_ASN1_TYPE := GetProcAddress(ACryptoLib, 'd2i_ASN1_TYPE');
-  i2d_ASN1_TYPE := GetProcAddress(ACryptoLib, 'i2d_ASN1_TYPE');
-  ASN1_item_d2i := GetProcAddress(ACryptoLib, 'ASN1_item_d2i');
-  ASN1_item_i2d := GetProcAddress(ACryptoLib, 'ASN1_item_i2d');
-  ASN1_item_new := GetProcAddress(ACryptoLib, 'ASN1_item_new');
-  ASN1_item_free := GetProcAddress(ACryptoLib, 'ASN1_item_free');
-  ASN1_item_dup := GetProcAddress(ACryptoLib, 'ASN1_item_dup');
+  d2i_ASN1_TYPE := Td2i_ASN1_TYPE(GetProcAddress(ACryptoLib, 'd2i_ASN1_TYPE'));
+  i2d_ASN1_TYPE := Ti2d_ASN1_TYPE(GetProcAddress(ACryptoLib, 'i2d_ASN1_TYPE'));
+  ASN1_item_d2i := TASN1_item_d2i(GetProcAddress(ACryptoLib, 'ASN1_item_d2i'));
+  ASN1_item_i2d := TASN1_item_i2d(GetProcAddress(ACryptoLib, 'ASN1_item_i2d'));
+  ASN1_item_new := TASN1_item_new(GetProcAddress(ACryptoLib, 'ASN1_item_new'));
+  ASN1_item_free := TASN1_item_free(GetProcAddress(ACryptoLib, 'ASN1_item_free'));
+  ASN1_item_dup := TASN1_item_dup(GetProcAddress(ACryptoLib, 'ASN1_item_dup'));
 
   // 加载打印和调试函数
-  ASN1_item_print := GetProcAddress(ACryptoLib, 'ASN1_item_print');
-  ASN1_parse := GetProcAddress(ACryptoLib, 'ASN1_parse');
-  ASN1_parse_dump := GetProcAddress(ACryptoLib, 'ASN1_parse_dump');
+  ASN1_item_print := TASN1_item_print(GetProcAddress(ACryptoLib, 'ASN1_item_print'));
+  ASN1_parse := TASN1_parse(GetProcAddress(ACryptoLib, 'ASN1_parse'));
+  ASN1_parse_dump := TASN1_parse_dump(GetProcAddress(ACryptoLib, 'ASN1_parse_dump'));
 
   // 加载标签和长度函数
-  ASN1_get_object := GetProcAddress(ACryptoLib, 'ASN1_get_object');
-  ASN1_check_infinite_end := GetProcAddress(ACryptoLib, 'ASN1_check_infinite_end');
-  ASN1_const_check_infinite_end := GetProcAddress(ACryptoLib, 'ASN1_const_check_infinite_end');
-  ASN1_put_object := GetProcAddress(ACryptoLib, 'ASN1_put_object');
-  ASN1_put_eoc := GetProcAddress(ACryptoLib, 'ASN1_put_eoc');
-  ASN1_object_size := GetProcAddress(ACryptoLib, 'ASN1_object_size');
+  ASN1_get_object := TASN1_get_object(GetProcAddress(ACryptoLib, 'ASN1_get_object'));
+  ASN1_check_infinite_end := TASN1_check_infinite_end(GetProcAddress(ACryptoLib, 'ASN1_check_infinite_end'));
+  ASN1_const_check_infinite_end := TASN1_const_check_infinite_end(GetProcAddress(ACryptoLib, 'ASN1_const_check_infinite_end'));
+  ASN1_put_object := TASN1_put_object(GetProcAddress(ACryptoLib, 'ASN1_put_object'));
+  ASN1_put_eoc := TASN1_put_eoc(GetProcAddress(ACryptoLib, 'ASN1_put_eoc'));
+  ASN1_object_size := TASN1_object_size(GetProcAddress(ACryptoLib, 'ASN1_object_size'));
 
   FASNLoaded := Assigned(ASN1_STRING_new) and Assigned(ASN1_STRING_free);
   Result := FASNLoaded;
@@ -640,7 +680,7 @@ begin
       Hour := StrToIntDef(Copy(TimeStr, 7, 2), 0);
       Min := StrToIntDef(Copy(TimeStr, 9, 2), 0);
       Sec := StrToIntDef(Copy(TimeStr, 11, 2), 0);
-      Result := EncodeDateTime(Year, Month, Day, Hour, Min, Sec, 0);
+      Result := EncodeDateTimeCustom(Year, Month, Day, Hour, Min, Sec, 0);
     end;
   end
   else if TimeType = V_ASN1_GENERALIZEDTIME then
@@ -654,7 +694,7 @@ begin
       Hour := StrToIntDef(Copy(TimeStr, 9, 2), 0);
       Min := StrToIntDef(Copy(TimeStr, 11, 2), 0);
       Sec := StrToIntDef(Copy(TimeStr, 13, 2), 0);
-      Result := EncodeDateTime(Year, Month, Day, Hour, Min, Sec, 0);
+      Result := EncodeDateTimeCustom(Year, Month, Day, Hour, Min, Sec, 0);
     end;
   end;
 end;
@@ -663,7 +703,7 @@ function DateTimeToASN1Time(const ADateTime: TDateTime): ASN1_TIME;
 var
   UnixTime: time_t;
 begin
-  UnixTime := DateTimeToUnix(ADateTime);
+  UnixTime := DateTimeToUnixCustom(ADateTime);
   Result := ASN1_TIME_set(nil, UnixTime);
 end;
 

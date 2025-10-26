@@ -13,14 +13,14 @@ program test_p2_ct_comprehensive;
   功能级别：生产级测试
 
   依赖模块：
-  - fafafa.ssl.openssl.core (OpenSSL 加载)
+  - fafafa.ssl.openssl.api.core (OpenSSL 加载)
   - fafafa.ssl.openssl.api.ct (CT API)
   - fafafa.ssl.openssl.api.bio (BIO I/O)
 }
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ct,
   fafafa.ssl.openssl.api.bio;
 

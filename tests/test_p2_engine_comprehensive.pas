@@ -14,14 +14,14 @@ program test_p2_engine_comprehensive;
   功能级别：生产级测试
 
   依赖模块：
-  - fafafa.ssl.openssl.core (OpenSSL 加载)
+  - fafafa.ssl.openssl.api.core (OpenSSL 加载)
   - fafafa.ssl.openssl.api.engine (Engine API)
   - fafafa.ssl.openssl.api.evp (EVP 加密)
 }
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.engine,
   fafafa.ssl.openssl.api.evp;
 
