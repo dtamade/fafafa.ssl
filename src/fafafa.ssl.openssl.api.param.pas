@@ -7,7 +7,7 @@
 {******************************************************************************}
 unit fafafa.ssl.openssl.api.param;
 
-{$MODE OBJFPC}{$H+}
+{$mode ObjFPC}{$H+}
 
 interface
 
@@ -51,7 +51,7 @@ type
   { OSSL_PARAM construction functions }
   TOSSLPARAMInit = function(key: PChar): OSSL_PARAM; cdecl;
   TOSSLPARAMConstruct = function(key: PChar; data_type: TOpenSSLUInt;
-                                 data: Pointer; data_size: TOpenSSLSizeT): OSSL_PARAM; cdecl;
+                                data: Pointer; data_size: TOpenSSLSizeT): OSSL_PARAM; cdecl;
   TOSSLPARAMConstructInt = function(key: PChar; val: POpenSSLInt): OSSL_PARAM; cdecl;
   TOSSLPARAMConstructUInt = function(key: PChar; val: POpenSSLUInt): OSSL_PARAM; cdecl;
   TOSSLPARAMConstructLong = function(key: PChar; val: POpenSSLLong): OSSL_PARAM; cdecl;

@@ -97,7 +97,7 @@ type
 implementation
 
 uses
-  fafafa.ssl.openssl.core;
+  fafafa.ssl.openssl.api.core;
 
 { TOpenSSLCoreReal }
 

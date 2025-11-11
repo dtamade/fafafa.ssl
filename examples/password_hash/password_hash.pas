@@ -18,9 +18,9 @@ program password_hash;
 uses
   SysUtils, Classes, Base64,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.rand,
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.rand,
   fafafa.ssl.openssl.kdf;
 
 const

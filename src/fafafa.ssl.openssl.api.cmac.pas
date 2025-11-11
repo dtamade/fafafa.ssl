@@ -1,6 +1,6 @@
-{$IFNDEF WINDOWS}{$MODE DELPHI}{$ENDIF}
-
 unit fafafa.ssl.openssl.api.cmac;
+
+{$mode ObjFPC}{$H+}
 
 interface
 
@@ -30,7 +30,7 @@ type
   TCMAC_CTX_get0_cipher_ctx = function(ctx: PCMAC_CTX): PEVP_CIPHER_CTX; cdecl;
   
   TCMAC_Init = function(ctx: PCMAC_CTX; const key: PByte; keylen: size_t;
-                       const cipher: PEVP_CIPHER; impl: PENGINE): Integer; cdecl;
+                      const cipher: PEVP_CIPHER; impl: PENGINE): Integer; cdecl;
   TCMAC_Update = function(ctx: PCMAC_CTX; const data: PByte; datalen: size_t): Integer; cdecl;
   TCMAC_Final = function(ctx: PCMAC_CTX; out_mac: PByte; maclen: Psize_t): Integer; cdecl;
   TCMAC_Resume = function(ctx: PCMAC_CTX): Integer; cdecl;
@@ -38,9 +38,9 @@ type
   // EVP PKEY method for CMAC
   TEVP_PKEY_CTX_new_id = function(id: Integer; e: PENGINE): PEVP_PKEY_CTX; cdecl;
   TEVP_PKEY_CTX_ctrl = function(ctx: PEVP_PKEY_CTX; keytype: Integer; optype: Integer;
-                               cmd: Integer; p1: Integer; p2: Pointer): Integer; cdecl;
+                              cmd: Integer; p1: Integer; p2: Pointer): Integer; cdecl;
   TEVP_PKEY_new_CMAC_key = function(e: PENGINE; const priv: PByte; len: size_t;
-                                   const cipher: PEVP_CIPHER): PEVP_PKEY; cdecl;
+                                  const cipher: PEVP_CIPHER): PEVP_PKEY; cdecl;
   TEVP_PKEY_new_mac_key = function(typ: Integer; e: PENGINE; const key: PByte; 
                                   keylen: Integer): PEVP_PKEY; cdecl;
   
@@ -53,7 +53,7 @@ type
   TEVP_MAC_CTX_mac = function(ctx: PEVP_MAC_CTX): PEVP_MAC; cdecl;
   
   TEVP_MAC_init = function(ctx: PEVP_MAC_CTX; const key: PByte; keylen: size_t;
-                         const params: POSSL_PARAM): Integer; cdecl;
+                        const params: POSSL_PARAM): Integer; cdecl;
   TEVP_MAC_update = function(ctx: PEVP_MAC_CTX; const data: PByte; datalen: size_t): Integer; cdecl;
   TEVP_MAC_final = function(ctx: PEVP_MAC_CTX; out_mac: PByte; outl: Psize_t; outsize: size_t): Integer; cdecl;
   TEVP_MAC_finalXOF = function(ctx: PEVP_MAC_CTX; out_mac: PByte; outsize: size_t): Integer; cdecl;
@@ -132,7 +132,7 @@ function ComputeCMAC(const Cipher: PEVP_CIPHER; const Key: TBytes; const Data: T
 
 // Generic MAC computation (supports CMAC, HMAC, Poly1305, etc.)
 function ComputeMAC(const MacType: string; const Key: TBytes; const Data: TBytes;
-                   const CipherName: string = ''): TBytes;
+                  const CipherName: string = ''): TBytes;
 
 implementation
 
@@ -329,7 +329,7 @@ begin
 end;
 
 function ComputeMAC(const MacType: string; const Key: TBytes; const Data: TBytes;
-                   const CipherName: string = ''): TBytes;
+                  const CipherName: string = ''): TBytes;
 var
   mac: PEVP_MAC;
   ctx: PEVP_MAC_CTX;

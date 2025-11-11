@@ -106,6 +106,10 @@ type
   TBIO_dgram_sctp_wait_for_dry = function(b: PBIO): Integer; cdecl;
   TBIO_dgram_sctp_msg_waiting = function(b: PBIO): Integer; cdecl;
   
+  { SSL_SESSION BIO Functions }
+  Ti2d_SSL_SESSION_bio = function(bp: PBIO; x: PSSL_SESSION): Integer; cdecl;
+  Td2i_SSL_SESSION_bio = function(bp: PBIO; x: PPSSL_SESSION): PSSL_SESSION; cdecl;
+  
   { BIO Socket Functions }
   TBIO_sock_should_retry = function(i: Integer): Integer; cdecl;
   TBIO_sock_non_fatal_error = function(error: Integer): Integer; cdecl;
@@ -298,6 +302,10 @@ var
   BIO_new_socket: TBIO_new_socket = nil;
   BIO_new_bio_pair: TBIO_new_bio_pair = nil;
   
+  // SSL_SESSION BIO functions  
+  i2d_SSL_SESSION_bio: Ti2d_SSL_SESSION_bio = nil;
+  d2i_SSL_SESSION_bio: Td2i_SSL_SESSION_bio = nil;
+  
 procedure LoadOpenSSLBIO;
 procedure UnloadOpenSSLBIO;
 function IsOpenSSLBIOLoaded: Boolean;
@@ -348,6 +356,10 @@ begin
 
   // BIO_pending is a macro in OpenSSL, use our helper implementation
   BIO_pending := @BIO_pending_impl;
+  
+  // SSL_SESSION BIO functions (in libssl, not libcrypto)
+  i2d_SSL_SESSION_bio := Ti2d_SSL_SESSION_bio(GetProcedureAddress(LibSSL, 'i2d_SSL_SESSION_bio'));
+  d2i_SSL_SESSION_bio := Td2i_SSL_SESSION_bio(GetProcedureAddress(LibSSL, 'd2i_SSL_SESSION_bio'));
 end;
 
 procedure UnloadOpenSSLBIO;

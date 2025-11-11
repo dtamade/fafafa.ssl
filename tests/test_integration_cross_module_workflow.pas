@@ -35,7 +35,7 @@ uses
   fafafa.ssl.openssl.api.pkcs12,
   fafafa.ssl.openssl.api.ocsp,
   fafafa.ssl.openssl.api.ts,
-  fafafa.ssl.abstract.intf;
+  fafafa.ssl.base;
 
 type
   TWorkflowTest = record

@@ -133,7 +133,7 @@ type
   TSCT_get_validation_status = function(sct: PSCT): Integer; cdecl;
   TSCT_print = procedure(sct: PSCT; outf: PBIO; indent: Integer; logs: PCTLOG_STORE); cdecl;
   TSCT_LIST_print = procedure(scts: PSCT_LIST; outf: PBIO; indent: Integer;
-                             separator: PAnsiChar; logs: PCTLOG_STORE); cdecl;
+                            separator: PAnsiChar; logs: PCTLOG_STORE); cdecl;
   
   // CTLOG 函数
   TCTLOG_new = function(public_key: PEVP_PKEY; name: PAnsiChar): PCTLOG; cdecl;
@@ -142,8 +142,8 @@ type
   TCTLOG_new_from_base64 = function(public_key: PCTLOG; name: PAnsiChar;
                                     key_base64: PAnsiChar): Integer; cdecl;
   TCTLOG_new_from_base64_ex = function(public_key: PCTLOG; name: PAnsiChar;
-                                       key_base64: PAnsiChar; libctx: Pointer;
-                                       propq: PAnsiChar): Integer; cdecl;
+                                      key_base64: PAnsiChar; libctx: Pointer;
+                                      propq: PAnsiChar): Integer; cdecl;
   TCTLOG_free = procedure(log: PCTLOG); cdecl;
   TCTLOG_get0_name = function(log: PCTLOG): PAnsiChar; cdecl;
   TCTLOG_get0_log_id = procedure(log: PCTLOG; log_id: PPByte; log_id_len: PNativeUInt); cdecl;
@@ -154,7 +154,7 @@ type
   TCTLOG_STORE_new_ex = function(libctx: Pointer; propq: PAnsiChar): PCTLOG_STORE; cdecl;
   TCTLOG_STORE_free = procedure(store: PCTLOG_STORE); cdecl;
   TCTLOG_STORE_get0_log_by_id = function(store: PCTLOG_STORE; log_id: PByte;
-                                         log_id_len: NativeUInt): PCTLOG; cdecl;
+                                        log_id_len: NativeUInt): PCTLOG; cdecl;
   TCTLOG_STORE_load_file = function(store: PCTLOG_STORE; filename: PAnsiChar): Integer; cdecl;
   TCTLOG_STORE_load_default_file = function(store: PCTLOG_STORE): Integer; cdecl;
   
@@ -171,7 +171,7 @@ type
   TX509_get_ext_d2i_SCT_LIST = function(x: PX509; nid: Integer; crit: PInteger;
                                         idx: PInteger): PSCT_LIST; cdecl;
   TX509_add1_ext_i2d_SCT_LIST = function(x: PX509; nid: Integer; value: PSCT_LIST;
-                                         crit: Integer; flags: LongWord): Integer; cdecl;
+                                        crit: Integer; flags: LongWord): Integer; cdecl;
   TX509_get_SCT_LIST = function(x: PX509): PSCT_LIST; cdecl;
   
   // SSL CT 函数
@@ -184,14 +184,14 @@ type
   TSSL_CTX_set_ct_validation_callback = procedure(ctx: PSSL_CTX; callback: TCT_VERIFY_CB;
                                                   arg: Pointer); cdecl;
   TSSL_ct_set_validation_callback = procedure(s: PSSL; callback: TCT_VERIFY_CB;
-                                             arg: Pointer); cdecl;
+                                            arg: Pointer); cdecl;
   TSSL_CTX_get0_ctlog_store = function(ctx: PSSL_CTX): PCTLOG_STORE; cdecl;
   TSSL_CTX_set0_ctlog_store = procedure(ctx: PSSL_CTX; logs: PCTLOG_STORE); cdecl;
   TSSL_get0_peer_scts = function(s: PSSL): PSCT_LIST; cdecl;
   
   // CT 策略函数
   TCT_POLICY_EVAL_CTX_set0_log_store = procedure(ctx: PCT_POLICY_EVAL_CTX;
-                                                 log_store: PCTLOG_STORE); cdecl;
+                                                log_store: PCTLOG_STORE); cdecl;
 
 var
   // CT_POLICY_EVAL_CTX 函数
@@ -438,8 +438,8 @@ begin
   if Cert = nil then Exit;
   
   if not Assigned(CT_POLICY_EVAL_CTX_new) or
-     not Assigned(SCT_LIST_validate) or
-     not Assigned(CT_POLICY_EVAL_CTX_free) then Exit;
+    not Assigned(SCT_LIST_validate) or
+    not Assigned(CT_POLICY_EVAL_CTX_free) then Exit;
   
   EvalCtx := CT_POLICY_EVAL_CTX_new();
   if EvalCtx = nil then Exit;

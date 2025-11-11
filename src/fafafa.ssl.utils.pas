@@ -22,8 +22,8 @@ unit fafafa.ssl.utils;
 interface
 
 uses
-  SysUtils, Classes, StrUtils,
-  fafafa.ssl.types, fafafa.ssl.intf;
+  SysUtils, Classes,
+  fafafa.ssl.base;
 
 type
   { TSSLUtils - SSL 工具类 }
@@ -57,7 +57,7 @@ type
     class function IsIPv6Address(const aStr: string): Boolean;
     class function IsValidHostname(const aHost: string): Boolean;
     class function ParseURL(const aURL: string; out aProtocol, aHost: string; 
-                           out aPort: Integer; out aPath: string): Boolean;
+                          out aPort: Integer; out aPath: string): Boolean;
     class function NormalizeHostname(const aHost: string): string;
     
     // 错误处理
@@ -73,7 +73,7 @@ type
     // 版本比较
     class function CompareVersions(const aVer1, aVer2: string): Integer;
     class function IsVersionSupported(const aVersion: string; 
-                                     const aMinVersion: string = ''): Boolean;
+                                    const aMinVersion: string = ''): Boolean;
   end;
 
   { TSSLMemoryStream - 带位置跟踪的内存流 }
@@ -164,10 +164,85 @@ const
   PEM_PUBLIC_KEY = 'PUBLIC KEY';
   PEM_CERTIFICATE_REQUEST = 'CERTIFICATE REQUEST';
 
+// 辅助函数
+function ComputeDigest(const Algorithm: AnsiString; const Bytes: TBytes): string;
+
 implementation
 
 uses
-  Base64, Math;
+  base64, Math,
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.crypto;
+
+function ComputeDigest(const Algorithm: AnsiString; const Bytes: TBytes): string;
+var
+  Ctx: PEVP_MD_CTX;
+  MD: PEVP_MD;
+  Digest: array[0..EVP_MAX_MD_SIZE - 1] of Byte;
+  DigestLen: Cardinal;
+  I: Integer;
+  Hex: string;
+  Fetched: Boolean;
+begin
+  Result := '';
+
+  if not IsOpenSSLCoreLoaded then
+    LoadOpenSSLCore;
+  LoadOpenSSLCrypto;
+  LoadEVP(GetCryptoLibHandle);
+
+  if not Assigned(EVP_MD_CTX_new) then
+    raise ESSLException.Create('EVP interface not available', sslErrUnsupported);
+
+  Fetched := False;
+  if Assigned(EVP_MD_fetch) then
+  begin
+    MD := EVP_MD_fetch(nil, PAnsiChar(Algorithm), nil);
+    Fetched := MD <> nil;
+  end
+  else
+    MD := nil;
+
+  if (MD = nil) and Assigned(EVP_get_digestbyname) then
+    MD := EVP_get_digestbyname(PAnsiChar(Algorithm));
+
+  if MD = nil then
+    raise ESSLException.Create(Format('Digest algorithm %s is not supported by OpenSSL', [string(Algorithm)]), sslErrUnsupported);
+
+  Ctx := EVP_MD_CTX_new();
+  if Ctx = nil then
+  begin
+    if Fetched and Assigned(EVP_MD_free) then
+      EVP_MD_free(MD);
+    raise ESSLException.Create('Unable to allocate digest context', sslErrMemory);
+  end;
+
+  try
+    if EVP_DigestInit_ex(Ctx, MD, nil) <> 1 then
+      raise ESSLException.Create('EVP_DigestInit_ex failed', sslErrGeneral);
+
+    if (Length(Bytes) > 0) and (EVP_DigestUpdate(Ctx, @Bytes[0], Length(Bytes)) <> 1) then
+      raise ESSLException.Create('EVP_DigestUpdate failed', sslErrGeneral);
+
+    DigestLen := 0;
+    if EVP_DigestFinal_ex(Ctx, @Digest[0], DigestLen) <> 1 then
+      raise ESSLException.Create('EVP_DigestFinal_ex failed', sslErrGeneral);
+
+    SetLength(Result, DigestLen * 2);
+    for I := 0 to Integer(DigestLen) - 1 do
+    begin
+      Hex := IntToHex(Digest[I], 2);
+      Result[(I * 2) + 1] := Hex[1];
+      Result[(I * 2) + 2] := Hex[2];
+    end;
+  finally
+    EVP_MD_CTX_free(Ctx);
+    if Fetched and Assigned(EVP_MD_free) then
+      EVP_MD_free(MD);
+  end;
+end;
 
 { TSSLUtils }
 
@@ -377,9 +452,11 @@ begin
   if LBeginPos = 0 then
     Exit;
   
-  LEndPos := PosEx(LEndMarker, aPEM, LBeginPos);
+  // 从LBeginPos之后查找LEndMarker
+  LEndPos := Pos(LEndMarker, Copy(aPEM, LBeginPos, Length(aPEM)));
   if LEndPos = 0 then
     Exit;
+  LEndPos := LEndPos + LBeginPos - 1;
   
   Result := Copy(aPEM, LBeginPos, LEndPos - LBeginPos + Length(LEndMarker));
 end;
@@ -421,20 +498,17 @@ end;
 
 class function TSSLUtils.CalculateSHA1(const aData: TBytes): string;
 begin
-  // TODO: 实现 SHA1 计算
-  Result := 'SHA1_NOT_IMPLEMENTED';
+  Result := ComputeDigest('SHA1', aData);
 end;
 
 class function TSSLUtils.CalculateSHA256(const aData: TBytes): string;
 begin
-  // TODO: 实现 SHA256 计算
-  Result := 'SHA256_NOT_IMPLEMENTED';
+  Result := ComputeDigest('SHA256', aData);
 end;
 
 class function TSSLUtils.CalculateMD5(const aData: TBytes): string;
 begin
-  // TODO: 实现 MD5 计算
-  Result := 'MD5_NOT_IMPLEMENTED';
+  Result := ComputeDigest('MD5', aData);
 end;
 
 class function TSSLUtils.IsIPAddress(const aStr: string): Boolean;
@@ -556,11 +630,14 @@ begin
 end;
 
 class function TSSLUtils.FormatSSLError(aError: TSSLErrorCode; const aContext: string): string;
+var
+  LContext: string;
 begin
-  Result := Format('[%s] %s', [
-    SSL_ERROR_MESSAGES[aError],
-    IfThen(aContext <> '', ' - ' + aContext, '')
-  ]);
+  if aContext <> '' then
+    LContext := ' - ' + aContext
+  else
+    LContext := '';
+  Result := Format('[%s]%s', [SSL_ERROR_MESSAGES[aError], LContext]);
 end;
 
 class function TSSLUtils.GetErrorDetails(aException: ESSLException): string;

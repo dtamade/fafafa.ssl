@@ -21,7 +21,7 @@ interface
 
 uses
   Windows, WinSock2, SysUtils, Classes, SyncObjs, Math,
-  fafafa.ssl.types, fafafa.ssl.intf, fafafa.ssl.ringbuffer,
+  fafafa.ssl.base, fafafa.ssl.ringbuffer,
   fafafa.ssl.winssl.types, fafafa.ssl.winssl.api;
 
 // 所有常量已移至 fafafa.ssl.winssl.types 模块
@@ -626,7 +626,7 @@ begin
   GetVersionEx(LVersionInfo);
   Result := Format('Windows Schannel (Windows %d.%d Build %d)',
     [LVersionInfo.dwMajorVersion, LVersionInfo.dwMinorVersion,
-     LVersionInfo.dwBuildNumber]);
+    LVersionInfo.dwBuildNumber]);
 end;
 
 function TWinSSLLibrary.GetVersionNumber: Cardinal;
@@ -1136,20 +1136,20 @@ begin
   if aIsServer then
   begin
     dwSSPIFlags := ASC_REQ_SEQUENCE_DETECT or
-                   ASC_REQ_REPLAY_DETECT or
-                   ASC_REQ_CONFIDENTIALITY or
-                   ASC_REQ_EXTENDED_ERROR or
-                   ASC_REQ_STREAM;
+                  ASC_REQ_REPLAY_DETECT or
+                  ASC_REQ_CONFIDENTIALITY or
+                  ASC_REQ_EXTENDED_ERROR or
+                  ASC_REQ_STREAM;
   end
   else
   begin
     dwSSPIFlags := ISC_REQ_SEQUENCE_DETECT or
-                   ISC_REQ_REPLAY_DETECT or
-                   ISC_REQ_CONFIDENTIALITY or
-                   ISC_REQ_EXTENDED_ERROR or
-                   ISC_REQ_STREAM or
-                   ISC_REQ_MANUAL_CRED_VALIDATION or
-                   ISC_REQ_USE_SUPPLIED_CREDS;
+                  ISC_REQ_REPLAY_DETECT or
+                  ISC_REQ_CONFIDENTIALITY or
+                  ISC_REQ_EXTENDED_ERROR or
+                  ISC_REQ_STREAM or
+                  ISC_REQ_MANUAL_CRED_VALIDATION or
+                  ISC_REQ_USE_SUPPLIED_CREDS;
                    
     // 设置目标服务器名称
     if FContext.FServerName <> '' then
@@ -1309,7 +1309,7 @@ begin
             // 保存额外数据
             SetLength(ExtraData, InputBuffers[1].cbBuffer);
             Move(PByte(FInputBuffer)[cbIoBufferLength - InputBuffers[1].cbBuffer],
-                 ExtraData[0], InputBuffers[1].cbBuffer);
+                ExtraData[0], InputBuffers[1].cbBuffer);
             cbIoBufferLength := InputBuffers[1].cbBuffer;
             Move(ExtraData[0], FInputBuffer[0], cbIoBufferLength);
           end
@@ -2413,7 +2413,7 @@ end;
 function TWinSSLSession.IsValid: Boolean;
 begin
   Result := (FID <> '') and 
-           (SecondsBetween(Now, FCreationTime) < FTimeout);
+          (SecondsBetween(Now, FCreationTime) < FTimeout);
 end;
 
 function TWinSSLSession.IsResumable: Boolean;

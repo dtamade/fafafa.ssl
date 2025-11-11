@@ -1,5 +1,7 @@
 unit fafafa.ssl.openssl.api.pkcs12;
 
+{$mode ObjFPC}{$H+}
+
 interface
 
 uses
@@ -102,19 +104,44 @@ type
   TPKCS12_pbe_crypt = function(algor: PX509_ALGOR; pass: PAnsiChar; 
     passlen: Integer; data_in: PByte; datalen: Integer;
     var data_out: PByte; var datalen_out: Integer; en_de: Integer): PByte; cdecl;
+  TPKCS12_crypt = function(const pass: PAnsiChar; passlen: Integer; salt: PByte; 
+    saltlen: Integer; iter: Integer; const cipher: PEVP_CIPHER; 
+    const in_: PByte; inlen: Integer; out_: PPByte; outlen: PInteger; 
+    en_de: Integer): Integer; cdecl;
   TPKCS12_key_gen_asc = function(pass: PAnsiChar; passlen: Integer;
     salt: PByte; saltlen: Integer; id: Integer; iter: Integer;
     n: Integer; key_out: PByte; md_type: PEVP_MD): Integer; cdecl;
   TPKCS12_key_gen_uni = function(pass: PByte; passlen: Integer;
     salt: PByte; saltlen: Integer; id: Integer; iter: Integer;
     n: Integer; key_out: PByte; md_type: PEVP_MD): Integer; cdecl;
+  TPKCS12_key_gen_utf8 = function(const pass: PAnsiChar; passlen: Integer; salt: PByte; 
+    saltlen: Integer; id: Integer; iter: Integer; n: Integer; out_: PByte; 
+    const md_type: PEVP_MD): Integer; cdecl;
+  TPKCS12_key_gen_utf8_ex = function(const pass: PAnsiChar; passlen: Integer; salt: PByte; 
+    saltlen: Integer; id: Integer; iter: Integer; n: Integer; out_: PByte; 
+    const md_type: PEVP_MD; ctx: POPENSSL_CTX; const propq: PAnsiChar): Integer; cdecl;
 
   // SafeBag accessors
+  TPKCS12_SAFEBAG_new = function(): PPKCS12_SAFEBAG; cdecl;
+  TPKCS12_SAFEBAG_free = procedure(bag: PPKCS12_SAFEBAG); cdecl;
   TPKCS12_SAFEBAG_get_nid = function(bag: PPKCS12_SAFEBAG): Integer; cdecl;
+  TPKCS12_SAFEBAG_get_bag_type = function(bag: PPKCS12_SAFEBAG): Pointer; cdecl;
   TPKCS12_SAFEBAG_get0_p8inf = function(bag: PPKCS12_SAFEBAG): PPKCS8_PRIV_KEY_INFO; cdecl;
+  TPKCS12_SAFEBAG_get0_pkcs8 = function(bag: PPKCS12_SAFEBAG): PPKCS8_PRIV_KEY_INFO; cdecl;
+  TPKCS12_SAFEBAG_get0_certs = function(bag: PPKCS12_SAFEBAG): PSTACK_OF_X509; cdecl;
   TPKCS12_SAFEBAG_get0_safes = function(bag: PPKCS12_SAFEBAG): PSTACK_OF_PKCS12_SAFEBAG; cdecl;
   TPKCS12_SAFEBAG_get1_cert = function(bag: PPKCS12_SAFEBAG): PX509; cdecl;
   TPKCS12_SAFEBAG_get1_crl = function(bag: PPKCS12_SAFEBAG): PX509_CRL; cdecl;
+  TPKCS12_get_cert = function(p12: PPKCS12; const pass: PAnsiChar): PX509; cdecl;
+  TPKCS12_get_pkey = function(p12: PPKCS12; const pass: PAnsiChar): PEVP_PKEY; cdecl;
+  TPKCS12_get_private_key = function(p12: PPKCS12; const pass: PAnsiChar; passlen: Integer): PEVP_PKEY; cdecl;
+  TPKCS12_get1_certs = function(p12: PPKCS12; const pass: PAnsiChar): PSTACK_OF_X509; cdecl;
+  TPKCS12_keybag = function(pkey: PEVP_PKEY): PPKCS12_SAFEBAG; cdecl;
+  TPKCS12_certbag = function(cert: PX509): PPKCS12_SAFEBAG; cdecl;
+  TPKCS12_secretbag = function(nid: Integer; data: PByte; len: Integer): PPKCS12_SAFEBAG; cdecl;
+  TPKCS12_add_key_bag = function(safes: PSTACK_OF_PKCS12_SAFEBAG; pkey: PEVP_PKEY): Integer; cdecl;
+  TPKCS12_add_key_ex = function(safes: PSTACK_OF_PKCS12_SAFEBAG; pkey: PEVP_PKEY; key_usage: Integer; 
+    iter: Integer; key_nid: Integer; const pass: PAnsiChar; ctx: POPENSSL_CTX; const propq: PAnsiChar): PPKCS12_SAFEBAG; cdecl;
   
   // PKCS8 函数
   TPKCS8_PRIV_KEY_INFO_new = function(): PPKCS8_PRIV_KEY_INFO; cdecl;
@@ -149,9 +176,26 @@ var
   PKCS12_add_friendlyname_asc: TPKCS12_add_friendlyname_asc = nil;
   PKCS12_add_friendlyname_uni: TPKCS12_add_friendlyname_uni = nil;
   PKCS12_pbe_crypt: TPKCS12_pbe_crypt = nil;
+  PKCS12_crypt: TPKCS12_crypt = nil;
   PKCS12_key_gen_asc: TPKCS12_key_gen_asc = nil;
   PKCS12_key_gen_uni: TPKCS12_key_gen_uni = nil;
+  PKCS12_key_gen_utf8: TPKCS12_key_gen_utf8 = nil;
+  PKCS12_key_gen_utf8_ex: TPKCS12_key_gen_utf8_ex = nil;
+  PKCS12_SAFEBAG_new: TPKCS12_SAFEBAG_new = nil;
+  PKCS12_SAFEBAG_free: TPKCS12_SAFEBAG_free = nil;
   PKCS12_SAFEBAG_get_nid: TPKCS12_SAFEBAG_get_nid = nil;
+  PKCS12_SAFEBAG_get_bag_type: TPKCS12_SAFEBAG_get_bag_type = nil;
+  PKCS12_SAFEBAG_get0_pkcs8: TPKCS12_SAFEBAG_get0_pkcs8 = nil;
+  PKCS12_SAFEBAG_get0_certs: TPKCS12_SAFEBAG_get0_certs = nil;
+  PKCS12_get_cert: TPKCS12_get_cert = nil;
+  PKCS12_get_pkey: TPKCS12_get_pkey = nil;
+  PKCS12_get_private_key: TPKCS12_get_private_key = nil;
+  PKCS12_get1_certs: TPKCS12_get1_certs = nil;
+  PKCS12_keybag: TPKCS12_keybag = nil;
+  PKCS12_certbag: TPKCS12_certbag = nil;
+  PKCS12_secretbag: TPKCS12_secretbag = nil;
+  PKCS12_add_key_bag: TPKCS12_add_key_bag = nil;
+  PKCS12_add_key_ex: TPKCS12_add_key_ex = nil;
   PKCS12_SAFEBAG_get0_p8inf: TPKCS12_SAFEBAG_get0_p8inf = nil;
   PKCS12_SAFEBAG_get0_safes: TPKCS12_SAFEBAG_get0_safes = nil;
   PKCS12_SAFEBAG_get1_cert: TPKCS12_SAFEBAG_get1_cert = nil;
@@ -217,9 +261,26 @@ begin
   PKCS12_add_friendlyname_asc := TPKCS12_add_friendlyname_asc(GetProcAddress(ALibCrypto, 'PKCS12_add_friendlyname_asc'));
   PKCS12_add_friendlyname_uni := TPKCS12_add_friendlyname_uni(GetProcAddress(ALibCrypto, 'PKCS12_add_friendlyname_uni'));
   PKCS12_pbe_crypt := TPKCS12_pbe_crypt(GetProcAddress(ALibCrypto, 'PKCS12_pbe_crypt'));
+  PKCS12_crypt := TPKCS12_crypt(GetProcAddress(ALibCrypto, 'PKCS12_crypt'));
   PKCS12_key_gen_asc := TPKCS12_key_gen_asc(GetProcAddress(ALibCrypto, 'PKCS12_key_gen_asc'));
   PKCS12_key_gen_uni := TPKCS12_key_gen_uni(GetProcAddress(ALibCrypto, 'PKCS12_key_gen_uni'));
+  PKCS12_key_gen_utf8 := TPKCS12_key_gen_utf8(GetProcAddress(ALibCrypto, 'PKCS12_key_gen_utf8'));
+  PKCS12_key_gen_utf8_ex := TPKCS12_key_gen_utf8_ex(GetProcAddress(ALibCrypto, 'PKCS12_key_gen_utf8_ex'));
+  PKCS12_SAFEBAG_new := TPKCS12_SAFEBAG_new(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_new'));
+  PKCS12_SAFEBAG_free := TPKCS12_SAFEBAG_free(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_free'));
   PKCS12_SAFEBAG_get_nid := TPKCS12_SAFEBAG_get_nid(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get_nid'));
+  PKCS12_SAFEBAG_get_bag_type := TPKCS12_SAFEBAG_get_bag_type(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get_bag_type'));
+  PKCS12_SAFEBAG_get0_pkcs8 := TPKCS12_SAFEBAG_get0_pkcs8(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get0_pkcs8'));
+  PKCS12_SAFEBAG_get0_certs := TPKCS12_SAFEBAG_get0_certs(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get0_certs'));
+  PKCS12_get_cert := TPKCS12_get_cert(GetProcAddress(ALibCrypto, 'PKCS12_get_cert'));
+  PKCS12_get_pkey := TPKCS12_get_pkey(GetProcAddress(ALibCrypto, 'PKCS12_get_pkey'));
+  PKCS12_get_private_key := TPKCS12_get_private_key(GetProcAddress(ALibCrypto, 'PKCS12_get_private_key'));
+  PKCS12_get1_certs := TPKCS12_get1_certs(GetProcAddress(ALibCrypto, 'PKCS12_get1_certs'));
+  PKCS12_keybag := TPKCS12_keybag(GetProcAddress(ALibCrypto, 'PKCS12_keybag'));
+  PKCS12_certbag := TPKCS12_certbag(GetProcAddress(ALibCrypto, 'PKCS12_certbag'));
+  PKCS12_secretbag := TPKCS12_secretbag(GetProcAddress(ALibCrypto, 'PKCS12_secretbag'));
+  PKCS12_add_key_bag := TPKCS12_add_key_bag(GetProcAddress(ALibCrypto, 'PKCS12_add_key_bag'));
+  PKCS12_add_key_ex := TPKCS12_add_key_ex(GetProcAddress(ALibCrypto, 'PKCS12_add_key_ex'));
   PKCS12_SAFEBAG_get0_p8inf := TPKCS12_SAFEBAG_get0_p8inf(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get0_p8inf'));
   PKCS12_SAFEBAG_get0_safes := TPKCS12_SAFEBAG_get0_safes(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get0_safes'));
   PKCS12_SAFEBAG_get1_cert := TPKCS12_SAFEBAG_get1_cert(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get1_cert'));
@@ -435,7 +496,7 @@ begin
   SetLength(Result, 0);
   
   if not Assigned(i2d_PKCS12_bio) or not Assigned(BIO_new) or 
-     not Assigned(BIO_s_mem) then Exit;
+    not Assigned(BIO_s_mem) then Exit;
   
   P12 := CreatePKCS12(Password, FriendlyName, PrivateKey, Certificate, CACerts);
   if not Assigned(P12) then Exit;

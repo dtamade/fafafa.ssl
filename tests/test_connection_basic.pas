@@ -5,8 +5,8 @@ program test_connection_basic;
 uses
   SysUtils, Classes,
   fafafa.ssl.factory,
-  fafafa.ssl.abstract.intf,
-  fafafa.ssl.abstract.types,
+  
+  fafafa.ssl.base,
   fafafa.ssl.openssl.api.core;
 
 var

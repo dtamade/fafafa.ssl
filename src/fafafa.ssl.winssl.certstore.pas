@@ -19,8 +19,7 @@ interface
 
 uses
   Windows, SysUtils, Classes,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf,
+  fafafa.ssl.base,
   fafafa.ssl.winssl.types,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.certificate;
@@ -552,7 +551,7 @@ begin
   begin
     Cert := ISSLCertificate(FCertificates[i]);
     if SameText(Cert.GetFingerprintSHA256, aFingerprint) or
-       SameText(Cert.GetFingerprintSHA1, aFingerprint) then
+      SameText(Cert.GetFingerprintSHA1, aFingerprint) then
     begin
       Result := Cert;
       Exit;

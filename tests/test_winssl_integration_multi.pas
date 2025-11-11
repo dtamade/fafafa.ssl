@@ -5,8 +5,8 @@ program test_winssl_integration_multi;
 
 uses
   Windows, SysUtils, Classes, WinSock2,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf,
+  
+  fafafa.ssl.base,
   fafafa.ssl.winssl.lib;
 
 var

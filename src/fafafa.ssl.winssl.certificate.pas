@@ -19,8 +19,7 @@ interface
 
 uses
   Windows, SysUtils, Classes,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf,
+  fafafa.ssl.base,
   fafafa.ssl.winssl.types,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.utils;

@@ -7,7 +7,7 @@
 {******************************************************************************}
 unit fafafa.ssl.openssl.api.dso;
 
-{$MODE OBJFPC}{$H+}
+{$mode ObjFPC}{$H+}
 
 interface
 

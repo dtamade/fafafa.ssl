@@ -1,6 +1,6 @@
 unit fafafa.ssl.openssl.types;
 
-{$mode objfpc}{$H+}
+{$mode ObjFPC}{$H+}
 
 interface
 
@@ -64,6 +64,9 @@ type
   TOpenSSLSizeT = TOpenSSL_Size;
   
   // Basic OpenSSL types
+  OPENSSL_CTX = Pointer;
+  POPENSSL_CTX = ^OPENSSL_CTX;
+  
   PBIO = Pointer;
   PPBIO = ^PBIO;
   PBIO_METHOD = Pointer;

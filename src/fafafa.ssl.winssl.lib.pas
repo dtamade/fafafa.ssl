@@ -19,8 +19,7 @@ interface
 
 uses
   Windows, SysUtils, Classes, StrUtils,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf,
+  fafafa.ssl.base,
   fafafa.ssl.winssl.types,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.utils;
@@ -62,6 +61,7 @@ type
     { ISSLLibrary - 版本信息 }
     function GetLibraryType: TSSLLibraryType;
     function GetVersionString: string;
+    function GetVersion: string;
     function GetVersionNumber: Cardinal;
     function GetCompileFlags: string;
     
@@ -192,7 +192,7 @@ begin
     
     InternalLog(sslLogInfo, Format('Windows version detected: %d.%d Build %d (%s)',
       [FWindowsVersion.Major, FWindowsVersion.Minor, FWindowsVersion.Build,
-       IfThen(FWindowsVersion.IsServer, 'Server', 'Workstation')]));
+      IfThen(FWindowsVersion.IsServer, 'Server', 'Workstation')]));
   end
   else
   begin
@@ -331,6 +331,11 @@ begin
       [FWindowsVersion.Major, FWindowsVersion.Minor, FWindowsVersion.Build])
   else
     Result := 'Windows Schannel (not initialized)';
+end;
+
+function TWinSSLLibrary.GetVersion: string;
+begin
+  Result := GetVersionString;
 end;
 
 function TWinSSLLibrary.GetVersionNumber: Cardinal;

@@ -9,8 +9,8 @@ uses
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.certificate,
   fafafa.ssl.winssl.certstore,
-  fafafa.ssl.abstract.intf,
-  fafafa.ssl.abstract.types;
+  
+  fafafa.ssl.base;
 
 var
   TestsPassed, TestsFailed: Integer;

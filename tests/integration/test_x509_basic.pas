@@ -5,9 +5,9 @@ program test_x509_basic;
 uses
   SysUtils, DateUtils,
   fafafa.ssl.types,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.consts,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.crypto,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.rsa,

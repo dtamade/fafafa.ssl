@@ -7,7 +7,7 @@
 {******************************************************************************}
 unit fafafa.ssl.openssl.api.txt_db;
 
-{$MODE OBJFPC}{$H+}
+{$mode ObjFPC}{$H+}
 
 interface
 

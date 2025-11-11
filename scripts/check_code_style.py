@@ -46,12 +46,16 @@ class CodeStyleChecker:
         has_mode = False
         has_delphi_mode = False
 
-        for i, line in enumerate(lines[:5], 1):
+        # 检查前50行（考虑可能有较长的注释头）
+        for i, line in enumerate(lines[:50], 1):
+            # 首先检查是否包含编译模式声明
             if '{$mode' in line.lower():
                 has_mode = True
                 if '{$mode Delphi}' in line or '{$mode delphi}' in line.lower():
                     has_delphi_mode = True
                     self.errors.append(f'{filepath}:{i} 使用了过时的 {{$mode Delphi}}，应使用 {{$mode ObjFPC}}')
+                # 找到 mode 声明后就停止检查
+                break
 
         if not has_mode:
             self.errors.append(f'{filepath}:1 缺少编译模式声明')

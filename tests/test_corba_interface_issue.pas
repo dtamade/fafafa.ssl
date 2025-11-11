@@ -5,8 +5,8 @@ program test_corba_interface_issue;
 
 uses
   SysUtils,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf;
+  
+  fafafa.ssl.base;
 
 type
   { 测试实现 }

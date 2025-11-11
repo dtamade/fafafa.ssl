@@ -4,7 +4,7 @@ program test_winssl_cert_verify_ex;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.abstract.types,
+  fafafa.ssl.base,
   fafafa.ssl.winssl.types;
 
 type

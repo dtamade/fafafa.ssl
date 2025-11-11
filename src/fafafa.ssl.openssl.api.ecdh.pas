@@ -20,7 +20,7 @@ type
   
   { ECDH compute_key function type }
   TECDH_compute_key_method = function(key: PByte; outlen: size_t; const pub_key: PEC_POINT; 
-                                       const ecdh: PEC_KEY; KDF: TECDH_KDF): Integer; cdecl;
+                                      const ecdh: PEC_KEY; KDF: TECDH_KDF): Integer; cdecl;
   
   { ECDH_METHOD structure }
   ECDH_METHOD = record
@@ -80,7 +80,7 @@ function IsOpenSSLECDHLoaded: Boolean;
 
 { Helper functions for ECDH operations }
 function ECDH_ComputeSharedSecret(const APrivateKey: PEC_KEY; const APeerPublicKey: PEC_POINT; 
-                                   out ASharedSecret: TBytes): Boolean;
+                                  out ASharedSecret: TBytes): Boolean;
 function ECDH_ComputeSharedSecretWithKDF(const APrivateKey: PEC_KEY; const APeerPublicKey: PEC_POINT;
                                           AKDF: TECDH_KDF; out ASharedSecret: TBytes): Boolean;
 function ECDH_SetCofactorMode(AKey: PEC_KEY; AUseCofactor: Boolean): Boolean;
@@ -136,7 +136,7 @@ begin
   // Note: In OpenSSL 1.1.0+, ECDH_compute_key might not exist as a separate function
   // The functionality is integrated into EC_KEY operations
   GECDHLoaded := Assigned(ECDH_compute_key) or 
-                 (Assigned(EC_KEY_get_flags) and Assigned(EC_KEY_set_flags));
+                (Assigned(EC_KEY_get_flags) and Assigned(EC_KEY_set_flags));
   Result := GECDHLoaded;
 end;
 
@@ -174,7 +174,7 @@ end;
 { Helper functions }
 
 function ECDH_ComputeSharedSecret(const APrivateKey: PEC_KEY; const APeerPublicKey: PEC_POINT; 
-                                   out ASharedSecret: TBytes): Boolean;
+                                  out ASharedSecret: TBytes): Boolean;
 var
   LFieldSize: Integer;
   LOutLen: Integer;
@@ -259,7 +259,7 @@ var
 begin
   Result := False;
   if not Assigned(EC_KEY_get_flags) or not Assigned(EC_KEY_set_flags) or 
-     not Assigned(EC_KEY_clear_flags) then
+    not Assigned(EC_KEY_clear_flags) then
     Exit;
     
   if not Assigned(AKey) then

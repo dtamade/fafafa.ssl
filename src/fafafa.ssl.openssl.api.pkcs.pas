@@ -1,7 +1,6 @@
 unit fafafa.ssl.openssl.api.pkcs;
 
 {$mode ObjFPC}{$H+}
-{$H+}
 
 interface
 
@@ -193,6 +192,9 @@ type
     TPKCS12_key_gen_utf8 = function(const pass: PAnsiChar; passlen: Integer; salt: PByte; 
       saltlen: Integer; id: Integer; iter: Integer; n: Integer; out_: PByte; 
       const md_type: PEVP_MD): Integer; cdecl;
+    TPKCS12_key_gen_utf8_ex = function(const pass: PAnsiChar; passlen: Integer; salt: PByte; 
+      saltlen: Integer; id: Integer; iter: Integer; n: Integer; out_: PByte; 
+      const md_type: PEVP_MD; ctx: POPENSSL_CTX; const propq: PAnsiChar): Integer; cdecl;
     TPKCS12_gen_mac = function(p12: PPKCS12; const pass: PAnsiChar; passlen: Integer; 
       mac: PByte; maclen: PCardinal): Integer; cdecl;
 
@@ -203,6 +205,10 @@ type
     TPKCS12_pbe_crypt = function(const algor: PX509_ALGOR; const pass: PAnsiChar; 
       passlen: Integer; const in_: PByte; inlen: Integer; data: PPByte; 
       datalen: PInteger; en_de: Integer): Integer; cdecl;
+    TPKCS12_crypt = function(const pass: PAnsiChar; passlen: Integer; salt: PByte; 
+      saltlen: Integer; iter: Integer; const cipher: PEVP_CIPHER; 
+      const in_: PByte; inlen: Integer; out_: PPByte; outlen: PInteger; 
+      en_de: Integer): Integer; cdecl;
     TPKCS12_decrypt_skey = function(const bag: PKCS12_SAFEBAG; const pass: PAnsiChar; 
       passlen: Integer): PPKCS8_PRIV_KEY_INFO; cdecl;
 
@@ -326,11 +332,13 @@ var
   PKCS12_key_gen_asc: TPKCS12_key_gen_asc = nil;
   PKCS12_key_gen_uni: TPKCS12_key_gen_uni = nil;
   PKCS12_key_gen_utf8: TPKCS12_key_gen_utf8 = nil;
+  PKCS12_key_gen_utf8_ex: TPKCS12_key_gen_utf8_ex = nil;
   PKCS12_gen_mac: TPKCS12_gen_mac = nil;
 
   // PKCS12 PBE
   PKCS12_PBE_keyivgen: TPKCS12_PBE_keyivgen = nil;
   PKCS12_pbe_crypt: TPKCS12_pbe_crypt = nil;
+  PKCS12_crypt: TPKCS12_crypt = nil;
   PKCS12_decrypt_skey: TPKCS12_decrypt_skey = nil;
 
   // PKCS12 SafeBag
@@ -473,11 +481,13 @@ begin
   PKCS12_key_gen_asc := GetProcAddress(ACryptoLib, 'PKCS12_key_gen_asc');
   PKCS12_key_gen_uni := GetProcAddress(ACryptoLib, 'PKCS12_key_gen_uni');
   PKCS12_key_gen_utf8 := GetProcAddress(ACryptoLib, 'PKCS12_key_gen_utf8');
+  PKCS12_key_gen_utf8_ex := TPKCS12_key_gen_utf8_ex(GetProcAddress(ACryptoLib, 'PKCS12_key_gen_utf8_ex'));
   PKCS12_gen_mac := GetProcAddress(ACryptoLib, 'PKCS12_gen_mac');
 
   // 加载 PKCS12 PBE
   PKCS12_PBE_keyivgen := GetProcAddress(ACryptoLib, 'PKCS12_PBE_keyivgen');
   PKCS12_pbe_crypt := GetProcAddress(ACryptoLib, 'PKCS12_pbe_crypt');
+  PKCS12_crypt := TPKCS12_crypt(GetProcAddress(ACryptoLib, 'PKCS12_crypt'));
   PKCS12_decrypt_skey := GetProcAddress(ACryptoLib, 'PKCS12_decrypt_skey');
 
   // 加载 PKCS12 SafeBag

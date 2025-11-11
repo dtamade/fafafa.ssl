@@ -25,8 +25,7 @@ program test_integration_tls_end_to_end;
 uses
   SysUtils, Classes, DateUtils, Math,
   fafafa.ssl.factory,
-  fafafa.ssl.abstract.intf,
-  fafafa.ssl.abstract.types;
+  fafafa.ssl.base;
 
 type
   { 简化的 TLS 测试服务器 }

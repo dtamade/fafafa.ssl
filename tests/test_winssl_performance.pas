@@ -5,8 +5,8 @@ program test_winssl_performance;
 
 uses
   Windows, SysUtils, Classes, WinSock2, Math,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf,
+  
+  fafafa.ssl.base,
   fafafa.ssl.winssl.lib;
 
 type

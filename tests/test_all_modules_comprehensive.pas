@@ -38,9 +38,9 @@ procedure InitializeModules;
 begin
   // Core Infrastructure (Priority 1)
   AddModule('types', 'fafafa.ssl.openssl.types', 'Core', 1);
-  AddModule('consts', 'fafafa.ssl.openssl.consts', 'Core', 1);
+  AddModule('consts', 'fafafa.ssl.openssl.api.consts', 'Core', 1);
   AddModule('utils', 'fafafa.ssl.openssl.api.utils', 'Core', 1);
-  AddModule('core', 'fafafa.ssl.openssl.core', 'Core', 1);
+  AddModule('core', 'fafafa.ssl.openssl.api.core', 'Core', 1);
   AddModule('api', 'fafafa.ssl.openssl.api', 'Core', 1);
   AddModule('err', 'fafafa.ssl.openssl.api.err', 'Core', 1);
   

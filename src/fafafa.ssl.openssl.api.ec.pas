@@ -9,13 +9,12 @@
 unit fafafa.ssl.openssl.api.ec;
 
 {$mode ObjFPC}{$H+}
-{$H+}
 
 interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.consts;
 
@@ -351,43 +350,43 @@ begin
   if ALibHandle = 0 then Exit;
   
   // Load EC_KEY functions
-  EC_KEY_new := GetProcAddress(ALibHandle, 'EC_KEY_new');
-  EC_KEY_new_by_curve_name := GetProcAddress(ALibHandle, 'EC_KEY_new_by_curve_name');
-  EC_KEY_free := GetProcAddress(ALibHandle, 'EC_KEY_free');
-  EC_KEY_copy := GetProcAddress(ALibHandle, 'EC_KEY_copy');
-  EC_KEY_dup := GetProcAddress(ALibHandle, 'EC_KEY_dup');
-  EC_KEY_up_ref := GetProcAddress(ALibHandle, 'EC_KEY_up_ref');
-  EC_KEY_get0_engine := GetProcAddress(ALibHandle, 'EC_KEY_get0_engine');
-  EC_KEY_get0_group := GetProcAddress(ALibHandle, 'EC_KEY_get0_group');
-  EC_KEY_set_group := GetProcAddress(ALibHandle, 'EC_KEY_set_group');
-  EC_KEY_get0_private_key := GetProcAddress(ALibHandle, 'EC_KEY_get0_private_key');
-  EC_KEY_set_private_key := GetProcAddress(ALibHandle, 'EC_KEY_set_private_key');
-  EC_KEY_get0_public_key := GetProcAddress(ALibHandle, 'EC_KEY_get0_public_key');
-  EC_KEY_set_public_key := GetProcAddress(ALibHandle, 'EC_KEY_set_public_key');
-  EC_KEY_generate_key := GetProcAddress(ALibHandle, 'EC_KEY_generate_key');
-  EC_KEY_check_key := GetProcAddress(ALibHandle, 'EC_KEY_check_key');
+  EC_KEY_new := TEC_KEY_new(GetProcAddress(ALibHandle, 'EC_KEY_new'));
+  EC_KEY_new_by_curve_name := TEC_KEY_new_by_curve_name(GetProcAddress(ALibHandle, 'EC_KEY_new_by_curve_name'));
+  EC_KEY_free := TEC_KEY_free(GetProcAddress(ALibHandle, 'EC_KEY_free'));
+  EC_KEY_copy := TEC_KEY_copy(GetProcAddress(ALibHandle, 'EC_KEY_copy'));
+  EC_KEY_dup := TEC_KEY_dup(GetProcAddress(ALibHandle, 'EC_KEY_dup'));
+  EC_KEY_up_ref := TEC_KEY_up_ref(GetProcAddress(ALibHandle, 'EC_KEY_up_ref'));
+  EC_KEY_get0_engine := TEC_KEY_get0_engine(GetProcAddress(ALibHandle, 'EC_KEY_get0_engine'));
+  EC_KEY_get0_group := TEC_KEY_get0_group(GetProcAddress(ALibHandle, 'EC_KEY_get0_group'));
+  EC_KEY_set_group := TEC_KEY_set_group(GetProcAddress(ALibHandle, 'EC_KEY_set_group'));
+  EC_KEY_get0_private_key := TEC_KEY_get0_private_key(GetProcAddress(ALibHandle, 'EC_KEY_get0_private_key'));
+  EC_KEY_set_private_key := TEC_KEY_set_private_key(GetProcAddress(ALibHandle, 'EC_KEY_set_private_key'));
+  EC_KEY_get0_public_key := TEC_KEY_get0_public_key(GetProcAddress(ALibHandle, 'EC_KEY_get0_public_key'));
+  EC_KEY_set_public_key := TEC_KEY_set_public_key(GetProcAddress(ALibHandle, 'EC_KEY_set_public_key'));
+  EC_KEY_generate_key := TEC_KEY_generate_key(GetProcAddress(ALibHandle, 'EC_KEY_generate_key'));
+  EC_KEY_check_key := TEC_KEY_check_key(GetProcAddress(ALibHandle, 'EC_KEY_check_key'));
   
   // Load EC_GROUP functions
-  EC_GROUP_new_by_curve_name := GetProcAddress(ALibHandle, 'EC_GROUP_new_by_curve_name');
-  EC_GROUP_free := GetProcAddress(ALibHandle, 'EC_GROUP_free');
-  EC_GROUP_get_curve_name := GetProcAddress(ALibHandle, 'EC_GROUP_get_curve_name');
-  EC_GROUP_get_order := GetProcAddress(ALibHandle, 'EC_GROUP_get_order');
-  EC_GROUP_get_cofactor := GetProcAddress(ALibHandle, 'EC_GROUP_get_cofactor');
-  EC_GROUP_get_degree := GetProcAddress(ALibHandle, 'EC_GROUP_get_degree');
+  EC_GROUP_new_by_curve_name := TEC_GROUP_new_by_curve_name(GetProcAddress(ALibHandle, 'EC_GROUP_new_by_curve_name'));
+  EC_GROUP_free := TEC_GROUP_free(GetProcAddress(ALibHandle, 'EC_GROUP_free'));
+  EC_GROUP_get_curve_name := TEC_GROUP_get_curve_name(GetProcAddress(ALibHandle, 'EC_GROUP_get_curve_name'));
+  EC_GROUP_get_order := TEC_GROUP_get_order(GetProcAddress(ALibHandle, 'EC_GROUP_get_order'));
+  EC_GROUP_get_cofactor := TEC_GROUP_get_cofactor(GetProcAddress(ALibHandle, 'EC_GROUP_get_cofactor'));
+  EC_GROUP_get_degree := TEC_GROUP_get_degree(GetProcAddress(ALibHandle, 'EC_GROUP_get_degree'));
   
   // Load EC_POINT functions
-  EC_POINT_new := GetProcAddress(ALibHandle, 'EC_POINT_new');
-  EC_POINT_free := GetProcAddress(ALibHandle, 'EC_POINT_free');
-  EC_POINT_copy := GetProcAddress(ALibHandle, 'EC_POINT_copy');
-  EC_POINT_dup := GetProcAddress(ALibHandle, 'EC_POINT_dup');
-  EC_POINT_set_affine_coordinates := GetProcAddress(ALibHandle, 'EC_POINT_set_affine_coordinates');
-  EC_POINT_get_affine_coordinates := GetProcAddress(ALibHandle, 'EC_POINT_get_affine_coordinates');
-  EC_POINT_point2oct := GetProcAddress(ALibHandle, 'EC_POINT_point2oct');
-  EC_POINT_oct2point := GetProcAddress(ALibHandle, 'EC_POINT_oct2point');
-  EC_POINT_add := GetProcAddress(ALibHandle, 'EC_POINT_add');
-  EC_POINT_dbl := GetProcAddress(ALibHandle, 'EC_POINT_dbl');
-  EC_POINT_mul := GetProcAddress(ALibHandle, 'EC_POINT_mul');
-  EC_POINT_cmp := GetProcAddress(ALibHandle, 'EC_POINT_cmp');
+  EC_POINT_new := TEC_POINT_new(GetProcAddress(ALibHandle, 'EC_POINT_new'));
+  EC_POINT_free := TEC_POINT_free(GetProcAddress(ALibHandle, 'EC_POINT_free'));
+  EC_POINT_copy := TEC_POINT_copy(GetProcAddress(ALibHandle, 'EC_POINT_copy'));
+  EC_POINT_dup := TEC_POINT_dup(GetProcAddress(ALibHandle, 'EC_POINT_dup'));
+  EC_POINT_set_affine_coordinates := TEC_POINT_set_affine_coordinates(GetProcAddress(ALibHandle, 'EC_POINT_set_affine_coordinates'));
+  EC_POINT_get_affine_coordinates := TEC_POINT_get_affine_coordinates(GetProcAddress(ALibHandle, 'EC_POINT_get_affine_coordinates'));
+  EC_POINT_point2oct := TEC_POINT_point2oct(GetProcAddress(ALibHandle, 'EC_POINT_point2oct'));
+  EC_POINT_oct2point := TEC_POINT_oct2point(GetProcAddress(ALibHandle, 'EC_POINT_oct2point'));
+  EC_POINT_add := TEC_POINT_add(GetProcAddress(ALibHandle, 'EC_POINT_add'));
+  EC_POINT_dbl := TEC_POINT_dbl(GetProcAddress(ALibHandle, 'EC_POINT_dbl'));
+  EC_POINT_mul := TEC_POINT_mul(GetProcAddress(ALibHandle, 'EC_POINT_mul'));
+  EC_POINT_cmp := TEC_POINT_cmp(GetProcAddress(ALibHandle, 'EC_POINT_cmp'));
   
   // ... load all other functions
   

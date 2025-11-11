@@ -12,13 +12,12 @@
 unit fafafa.ssl.openssl.api.sha3.evp;
 
 {$mode ObjFPC}{$H+}
-{$H+}
 
 interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.evp;
 

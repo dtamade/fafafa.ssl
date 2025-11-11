@@ -4,9 +4,9 @@ program test_openssl_rand;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.rand,
-  fafafa.ssl.openssl.err;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.rand,
+  fafafa.ssl.openssl.api.err;
 
 procedure PrintBytes(const Buf: array of Byte);
 var

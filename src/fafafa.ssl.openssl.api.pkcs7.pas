@@ -231,7 +231,7 @@ function IsPKCS7Loaded: Boolean;
 function SignData(const aData: TBytes; aSignCert: PX509; aPrivKey: PEVP_PKEY; 
                   aCACerts: PSTACK_OF_X509; aFlags: Integer): TBytes;
 function VerifySignedData(const aSignedData: TBytes; aCACerts: PSTACK_OF_X509; 
-                         aStore: PX509_STORE; out aOutData: TBytes; aFlags: Integer): Boolean;
+                        aStore: PX509_STORE; out aOutData: TBytes; aFlags: Integer): Boolean;
 function EncryptData(const aData: TBytes; aRecipCerts: PSTACK_OF_X509; 
                     aCipher: PEVP_CIPHER; aFlags: Integer): TBytes;
 function DecryptData(const aEncryptedData: TBytes; aRecipCert: PX509; 
@@ -424,7 +424,7 @@ begin
 end;
 
 function VerifySignedData(const aSignedData: TBytes; aCACerts: PSTACK_OF_X509; 
-                         aStore: PX509_STORE; out aOutData: TBytes; aFlags: Integer): Boolean;
+                        aStore: PX509_STORE; out aOutData: TBytes; aFlags: Integer): Boolean;
 var
   LBioIn, LBioOut: PBIO;
   p7: PPKCS7;

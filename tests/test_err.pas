@@ -4,7 +4,7 @@ program test_err;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.err,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.crypto;

@@ -9,13 +9,12 @@
 unit fafafa.ssl.openssl.api.sha3;
 
 {$mode ObjFPC}{$H+}
-{$H+}
 
 interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.consts;
 
@@ -338,7 +337,7 @@ var
 begin
   SetLength(Result, OutLen);
   if Assigned(SHAKE128_Init) and Assigned(SHAKE128_Update) and 
-     Assigned(SHAKE128_FinalXOF) and Assigned(SHAKE128_Squeeze) then
+    Assigned(SHAKE128_FinalXOF) and Assigned(SHAKE128_Squeeze) then
   begin
     SHAKE128_Init(@ctx);
     if Length(Data) > 0 then
@@ -356,7 +355,7 @@ var
 begin
   SetLength(Result, OutLen);
   if Assigned(SHAKE256_Init) and Assigned(SHAKE256_Update) and 
-     Assigned(SHAKE256_FinalXOF) and Assigned(SHAKE256_Squeeze) then
+    Assigned(SHAKE256_FinalXOF) and Assigned(SHAKE256_Squeeze) then
   begin
     SHAKE256_Init(@ctx);
     if Length(Data) > 0 then

@@ -5,9 +5,9 @@ program test_ecdsa_simple;
 uses
   SysUtils,
   fafafa.ssl.types,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.api.types,
   fafafa.ssl.openssl.consts,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ec,
   fafafa.ssl.openssl.api.ecdsa,
   fafafa.ssl.openssl.api.bn;

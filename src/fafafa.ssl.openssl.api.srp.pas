@@ -7,7 +7,7 @@
 {******************************************************************************}
 unit fafafa.ssl.openssl.api.srp;
 
-{$MODE OBJFPC}{$H+}
+{$mode ObjFPC}{$H+}
 
 interface
 

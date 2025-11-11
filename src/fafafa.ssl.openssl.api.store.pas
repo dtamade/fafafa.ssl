@@ -84,32 +84,32 @@ type
   
   // 回调函数类型
   TOSSL_STORE_post_process_info_fn = function(store_info: POSSL_STORE_INFO;
-                                               ui_method: PUI_METHOD;
-                                               ui_data: Pointer): Integer; cdecl;
+                                              ui_method: PUI_METHOD;
+                                              ui_data: Pointer): Integer; cdecl;
   Tpem_password_cb = function(buf: PAnsiChar; size: Integer; rwflag: Integer;
                               userdata: Pointer): Integer; cdecl;
   
   // STORE 加载器函数类型
   TOSSL_STORE_open_fn = function(loader: POSSL_STORE_LOADER;
-                                 uri: PAnsiChar; ui_method: PUI_METHOD;
-                                 ui_data: Pointer): POSSL_STORE_LOADER_CTX; cdecl;
+                                uri: PAnsiChar; ui_method: PUI_METHOD;
+                                ui_data: Pointer): POSSL_STORE_LOADER_CTX; cdecl;
   TOSSL_STORE_open_ex_fn = function(loader: POSSL_STORE_LOADER;
                                     uri: PAnsiChar; libctx: Pointer;
                                     propq: PAnsiChar; ui_method: PUI_METHOD;
                                     ui_data: Pointer): POSSL_STORE_LOADER_CTX; cdecl;
   TOSSL_STORE_attach_fn = function(loader: POSSL_STORE_LOADER; bio: PBIO;
-                                   libctx: Pointer; propq: PAnsiChar;
-                                   ui_method: PUI_METHOD;
-                                   ui_data: Pointer): POSSL_STORE_LOADER_CTX; cdecl;
+                                  libctx: Pointer; propq: PAnsiChar;
+                                  ui_method: PUI_METHOD;
+                                  ui_data: Pointer): POSSL_STORE_LOADER_CTX; cdecl;
   TOSSL_STORE_ctrl_fn = function(ctx: POSSL_STORE_LOADER_CTX; cmd: Integer;
-                                 args: Pointer): Integer; cdecl;
+                                args: Pointer): Integer; cdecl;
   TOSSL_STORE_expect_fn = function(ctx: POSSL_STORE_LOADER_CTX;
-                                   expected: Integer): Integer; cdecl;
+                                  expected: Integer): Integer; cdecl;
   TOSSL_STORE_find_fn = function(ctx: POSSL_STORE_LOADER_CTX;
-                                 search: POSSL_STORE_SEARCH): Integer; cdecl;
+                                search: POSSL_STORE_SEARCH): Integer; cdecl;
   TOSSL_STORE_load_fn = function(ctx: POSSL_STORE_LOADER_CTX;
-                                 ui_method: PUI_METHOD;
-                                 ui_data: Pointer): POSSL_STORE_INFO; cdecl;
+                                ui_method: PUI_METHOD;
+                                ui_data: Pointer): POSSL_STORE_INFO; cdecl;
   TOSSL_STORE_eof_fn = function(ctx: POSSL_STORE_LOADER_CTX): Integer; cdecl;
   TOSSL_STORE_error_fn = function(ctx: POSSL_STORE_LOADER_CTX): Integer; cdecl;
   TOSSL_STORE_close_fn = function(ctx: POSSL_STORE_LOADER_CTX): Integer; cdecl;
@@ -118,18 +118,18 @@ type
   
   // OSSL_STORE_CTX 函数
   TOSSL_STORE_open = function(uri: PAnsiChar; ui_method: PUI_METHOD;
-                             ui_data: Pointer; post_process: TOSSL_STORE_post_process_info_fn;
-                             post_process_data: Pointer): POSSL_STORE_CTX; cdecl;
+                            ui_data: Pointer; post_process: TOSSL_STORE_post_process_info_fn;
+                            post_process_data: Pointer): POSSL_STORE_CTX; cdecl;
   TOSSL_STORE_open_ex = function(uri: PAnsiChar; libctx: Pointer;
                                 propq: PAnsiChar; ui_method: PUI_METHOD;
                                 ui_data: Pointer; params: Pointer;
                                 post_process: TOSSL_STORE_post_process_info_fn;
                                 post_process_data: Pointer): POSSL_STORE_CTX; cdecl;
   TOSSL_STORE_attach = function(bio: PBIO; scheme: PAnsiChar; libctx: Pointer;
-                               propq: PAnsiChar; ui_method: PUI_METHOD;
-                               ui_data: Pointer; params: Pointer;
-                               post_process: TOSSL_STORE_post_process_info_fn;
-                               post_process_data: Pointer): POSSL_STORE_CTX; cdecl;
+                              propq: PAnsiChar; ui_method: PUI_METHOD;
+                              ui_data: Pointer; params: Pointer;
+                              post_process: TOSSL_STORE_post_process_info_fn;
+                              post_process_data: Pointer): POSSL_STORE_CTX; cdecl;
   TOSSL_STORE_ctrl = function(ctx: POSSL_STORE_CTX; cmd: Integer): Integer; cdecl; varargs;
   TOSSL_STORE_vctrl = function(ctx: POSSL_STORE_CTX; cmd: Integer; args: Pointer): Integer; cdecl;
   TOSSL_STORE_load = function(ctx: POSSL_STORE_CTX): POSSL_STORE_INFO; cdecl;
@@ -183,9 +183,9 @@ type
   // OSSL_STORE_SEARCH 创建函数
   TOSSL_STORE_SEARCH_by_name = function(name: PX509_NAME): POSSL_STORE_SEARCH; cdecl;
   TOSSL_STORE_SEARCH_by_issuer_serial = function(name: PX509_NAME;
-                                                 serial: PASN1_INTEGER): POSSL_STORE_SEARCH; cdecl;
+                                                serial: PASN1_INTEGER): POSSL_STORE_SEARCH; cdecl;
   TOSSL_STORE_SEARCH_by_key_fingerprint = function(digest: PEVP_MD; bytes: PByte;
-                                                   len: NativeUInt): POSSL_STORE_SEARCH; cdecl;
+                                                  len: NativeUInt): POSSL_STORE_SEARCH; cdecl;
   TOSSL_STORE_SEARCH_by_alias = function(alias: PAnsiChar): POSSL_STORE_SEARCH; cdecl;
   
   // OSSL_STORE_LOADER 函数
@@ -193,19 +193,19 @@ type
   TOSSL_STORE_LOADER_get0_engine = function(loader: POSSL_STORE_LOADER): PENGINE; cdecl;
   TOSSL_STORE_LOADER_get0_scheme = function(loader: POSSL_STORE_LOADER): PAnsiChar; cdecl;
   TOSSL_STORE_LOADER_set_open = function(loader: POSSL_STORE_LOADER;
-                                         open_function: TOSSL_STORE_open_fn): Integer; cdecl;
+                                        open_function: TOSSL_STORE_open_fn): Integer; cdecl;
   TOSSL_STORE_LOADER_set_open_ex = function(loader: POSSL_STORE_LOADER;
                                             open_ex_function: TOSSL_STORE_open_ex_fn): Integer; cdecl;
   TOSSL_STORE_LOADER_set_attach = function(loader: POSSL_STORE_LOADER;
-                                           attach_function: TOSSL_STORE_attach_fn): Integer; cdecl;
+                                          attach_function: TOSSL_STORE_attach_fn): Integer; cdecl;
   TOSSL_STORE_LOADER_set_ctrl = function(loader: POSSL_STORE_LOADER;
-                                         ctrl_function: TOSSL_STORE_ctrl_fn): Integer; cdecl;
+                                        ctrl_function: TOSSL_STORE_ctrl_fn): Integer; cdecl;
   TOSSL_STORE_LOADER_set_expect = function(loader: POSSL_STORE_LOADER;
-                                           expect_function: TOSSL_STORE_expect_fn): Integer; cdecl;
+                                          expect_function: TOSSL_STORE_expect_fn): Integer; cdecl;
   TOSSL_STORE_LOADER_set_find = function(loader: POSSL_STORE_LOADER;
-                                         find_function: TOSSL_STORE_find_fn): Integer; cdecl;
+                                        find_function: TOSSL_STORE_find_fn): Integer; cdecl;
   TOSSL_STORE_LOADER_set_load = function(loader: POSSL_STORE_LOADER;
-                                         load_function: TOSSL_STORE_load_fn): Integer; cdecl;
+                                        load_function: TOSSL_STORE_load_fn): Integer; cdecl;
   TOSSL_STORE_LOADER_set_eof = function(loader: POSSL_STORE_LOADER;
                                         eof_function: TOSSL_STORE_eof_fn): Integer; cdecl;
   TOSSL_STORE_LOADER_set_error = function(loader: POSSL_STORE_LOADER;
@@ -415,7 +415,7 @@ var
   UIMethod: PUI_METHOD;
   
   function PasswordCallback(buf: PAnsiChar; size: Integer; rwflag: Integer;
-                           userdata: Pointer): Integer; cdecl;
+                          userdata: Pointer): Integer; cdecl;
   var
     Pass: PAnsiChar;
     Len: Integer;
@@ -440,7 +440,7 @@ begin
   Result := nil;
   
   if not Assigned(OSSL_STORE_open) or not Assigned(OSSL_STORE_load) or
-     not Assigned(OSSL_STORE_eof) or not Assigned(OSSL_STORE_close) then
+    not Assigned(OSSL_STORE_eof) or not Assigned(OSSL_STORE_close) then
     Exit;
   
   URIAnsi := AnsiString(URI);
@@ -503,7 +503,7 @@ begin
   Result := nil;
   
   if not Assigned(OSSL_STORE_open) or not Assigned(OSSL_STORE_load) or
-     not Assigned(OSSL_STORE_eof) or not Assigned(OSSL_STORE_close) then
+    not Assigned(OSSL_STORE_eof) or not Assigned(OSSL_STORE_close) then
     Exit;
   
   URIAnsi := AnsiString(URI);
@@ -559,7 +559,7 @@ begin
   Result := TList.Create;
   
   if not Assigned(OSSL_STORE_open) or not Assigned(OSSL_STORE_load) or
-     not Assigned(OSSL_STORE_eof) or not Assigned(OSSL_STORE_close) then
+    not Assigned(OSSL_STORE_eof) or not Assigned(OSSL_STORE_close) then
     Exit;
   
   URIAnsi := AnsiString(URI);
@@ -616,7 +616,7 @@ begin
   Result := nil;
   
   if not Assigned(OSSL_STORE_open) or not Assigned(OSSL_STORE_load) or
-     not Assigned(OSSL_STORE_close) then
+    not Assigned(OSSL_STORE_close) then
     Exit;
   
   URIAnsi := AnsiString(URI);

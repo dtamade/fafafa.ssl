@@ -10,8 +10,8 @@ uses
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.x509,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf;
+  
+  fafafa.ssl.base;
 
 const
   TEST_HOST = 'www.google.com';

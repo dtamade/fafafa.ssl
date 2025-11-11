@@ -8,12 +8,12 @@ uses
   {$ENDIF}
   SysUtils, Classes,
   // Core units
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.consts,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.err,
-  fafafa.ssl.openssl.rand;
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.err,
+  fafafa.ssl.openssl.api.rand;
 
 procedure TestOpenSSLInitialization;
 begin

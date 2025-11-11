@@ -6,8 +6,7 @@ program test_error_handling_comprehensive;
 uses
   SysUtils, Classes,
   fafafa.ssl.factory,
-  fafafa.ssl.abstract.intf,
-  fafafa.ssl.abstract.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.err;
 

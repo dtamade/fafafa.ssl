@@ -4,7 +4,7 @@ program test_aead_simple;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.aead;
 

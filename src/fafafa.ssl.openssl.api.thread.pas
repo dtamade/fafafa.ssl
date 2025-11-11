@@ -7,7 +7,7 @@
 {******************************************************************************}
 unit fafafa.ssl.openssl.api.thread;
 
-{$MODE OBJFPC}{$H+}
+{$mode ObjFPC}{$H+}
 
 interface
 

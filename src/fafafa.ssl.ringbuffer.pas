@@ -1,6 +1,6 @@
 unit fafafa.ssl.ringbuffer;
 
-{$mode objfpc}{$H+}
+{$mode ObjFPC}{$H+}
 
 interface
 

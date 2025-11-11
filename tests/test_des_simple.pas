@@ -4,7 +4,7 @@ program test_des_simple;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.des;
 
 begin

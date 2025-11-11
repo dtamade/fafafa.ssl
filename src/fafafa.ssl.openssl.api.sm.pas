@@ -56,15 +56,15 @@ type
   
   // Function pointer types for SM2
   TSM2_sign = function(dtype: TOpenSSL_Int; const dgst: PByte; dgst_len: TOpenSSL_Size;
-                       sig: PByte; sig_len: POpenSSL_Size; eckey: PEC_KEY): TOpenSSL_Int; cdecl;
+                      sig: PByte; sig_len: POpenSSL_Size; eckey: PEC_KEY): TOpenSSL_Int; cdecl;
   TSM2_verify = function(dtype: TOpenSSL_Int; const dgst: PByte; dgst_len: TOpenSSL_Size;
-                         const sig: PByte; sig_len: TOpenSSL_Size; eckey: PEC_KEY): TOpenSSL_Int; cdecl;
+                        const sig: PByte; sig_len: TOpenSSL_Size; eckey: PEC_KEY): TOpenSSL_Int; cdecl;
   TSM2_encrypt = function(const eckey: PEC_KEY; const plaintext: PByte; plaintext_len: TOpenSSL_Size;
                           ciphertext: PByte; ciphertext_len: POpenSSL_Size): TOpenSSL_Int; cdecl;
   TSM2_decrypt = function(const eckey: PEC_KEY; const ciphertext: PByte; ciphertext_len: TOpenSSL_Size;
                           plaintext: PByte; plaintext_len: POpenSSL_Size): TOpenSSL_Int; cdecl;
   TSM2_compute_z_digest = function(md: PEVP_MD_CTX; const id: PByte; id_len: TOpenSSL_Size;
-                                   const id_md: PEVP_MD; const eckey: PEC_KEY): TOpenSSL_Int; cdecl;
+                                  const id_md: PEVP_MD; const eckey: PEC_KEY): TOpenSSL_Int; cdecl;
   
   // Function pointer types for SM3
   TSM3_Init = function(c: PSM3_CTX): TOpenSSL_Int; cdecl;
@@ -82,12 +82,12 @@ type
   TSM4_cbc_encrypt = procedure(const in_data: PByte; out_data: PByte; length: TOpenSSL_Size;
                                 const key: PSM4_CTX; ivec: PByte; const enc: TOpenSSL_Int); cdecl;
   TSM4_cfb128_encrypt = procedure(const in_data: PByte; out_data: PByte; length: TOpenSSL_Size;
-                                   const key: PSM4_CTX; ivec: PByte; num: POpenSSL_Int;
-                                   const enc: TOpenSSL_Int); cdecl;
+                                  const key: PSM4_CTX; ivec: PByte; num: POpenSSL_Int;
+                                  const enc: TOpenSSL_Int); cdecl;
   TSM4_ofb128_encrypt = procedure(const in_data: PByte; out_data: PByte; length: TOpenSSL_Size;
-                                   const key: PSM4_CTX; ivec: PByte; num: POpenSSL_Int); cdecl;
+                                  const key: PSM4_CTX; ivec: PByte; num: POpenSSL_Int); cdecl;
   TSM4_ctr128_encrypt = procedure(const in_data: PByte; out_data: PByte; length: TOpenSSL_Size;
-                                   const key: PSM4_CTX; ivec: PByte; ctr: PByte; num: PCardinal); cdecl;
+                                  const key: PSM4_CTX; ivec: PByte; ctr: PByte; num: PCardinal); cdecl;
   
   // EVP interface for SM algorithms
   TEVP_sm2 = function: PEC_KEY_METHOD; cdecl;

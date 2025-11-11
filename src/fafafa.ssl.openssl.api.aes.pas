@@ -14,7 +14,7 @@ interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.consts;
 
@@ -56,33 +56,33 @@ type
   
   // AES CFB mode
   TAES_cfb128_encrypt = procedure(const in_: PByte; out_: PByte; length: NativeUInt;
-                                   const key: PAES_KEY; ivec: PByte; num: PInteger; const enc: Integer); cdecl;
+                                  const key: PAES_KEY; ivec: PByte; num: PInteger; const enc: Integer); cdecl;
   TAES_cfb1_encrypt = procedure(const in_: PByte; out_: PByte; length: NativeUInt;
-                                 const key: PAES_KEY; ivec: PByte; num: PInteger; const enc: Integer); cdecl;
+                                const key: PAES_KEY; ivec: PByte; num: PInteger; const enc: Integer); cdecl;
   TAES_cfb8_encrypt = procedure(const in_: PByte; out_: PByte; length: NativeUInt;
-                                 const key: PAES_KEY; ivec: PByte; num: PInteger; const enc: Integer); cdecl;
+                                const key: PAES_KEY; ivec: PByte; num: PInteger; const enc: Integer); cdecl;
   
   // AES OFB mode
   TAES_ofb128_encrypt = procedure(const in_: PByte; out_: PByte; length: NativeUInt;
-                                   const key: PAES_KEY; ivec: PByte; num: PInteger); cdecl;
+                                  const key: PAES_KEY; ivec: PByte; num: PInteger); cdecl;
   
   // AES CTR mode
   TAES_ctr128_encrypt = procedure(const in_: PByte; out_: PByte; length: NativeUInt;
-                                   const key: PAES_KEY; ivec: PByte; ecount_buf: PByte; 
-                                   num: PCardinal); cdecl;
+                                  const key: PAES_KEY; ivec: PByte; ecount_buf: PByte; 
+                                  num: PCardinal); cdecl;
   
   // AES IGE mode
   TAES_ige_encrypt = procedure(const in_: PByte; out_: PByte; length: NativeUInt;
                                 const key: PAES_KEY; ivec: PByte; const enc: Integer); cdecl;
   TAES_bi_ige_encrypt = procedure(const in_: PByte; out_: PByte; length: NativeUInt;
-                                   const key: PAES_KEY; const key2: PAES_KEY; 
-                                   const ivec: PByte; const enc: Integer); cdecl;
+                                  const key: PAES_KEY; const key2: PAES_KEY; 
+                                  const ivec: PByte; const enc: Integer); cdecl;
   
   // AES Wrap mode
   TAES_wrap_key = function(key: PAES_KEY; const iv: PByte; out_: PByte; 
-                           const in_: PByte; inlen: Cardinal): Integer; cdecl;
+                          const in_: PByte; inlen: Cardinal): Integer; cdecl;
   TAES_unwrap_key = function(key: PAES_KEY; const iv: PByte; out_: PByte;
-                             const in_: PByte; inlen: Cardinal): Integer; cdecl;
+                            const in_: PByte; inlen: Cardinal): Integer; cdecl;
   
   // AES hardware acceleration options
   TAES_options = function: PAnsiChar; cdecl;
@@ -235,7 +235,7 @@ begin
   Result := nil;
   bits := GetAESKeyBits(Key);
   if (bits = 0) or (Length(Data) mod AES_BLOCK_SIZE <> 0) or
-     not Assigned(AES_set_decrypt_key) or not Assigned(AES_ecb_encrypt) then Exit;
+    not Assigned(AES_set_decrypt_key) or not Assigned(AES_ecb_encrypt) then Exit;
   
   if AES_set_decrypt_key(@Key[0], bits, @aesKey) <> 0 then Exit;
   
@@ -259,7 +259,7 @@ begin
   Result := nil;
   bits := GetAESKeyBits(Key);
   if (bits = 0) or (Length(IV) <> AES_BLOCK_SIZE) or 
-     not Assigned(AES_set_encrypt_key) or not Assigned(AES_cbc_encrypt) then Exit;
+    not Assigned(AES_set_encrypt_key) or not Assigned(AES_cbc_encrypt) then Exit;
   
   if AES_set_encrypt_key(@Key[0], bits, @aesKey) <> 0 then Exit;
   
@@ -283,7 +283,7 @@ begin
   Result := nil;
   bits := GetAESKeyBits(Key);
   if (bits = 0) or (Length(IV) <> AES_BLOCK_SIZE) or (Length(Data) mod AES_BLOCK_SIZE <> 0) or
-     not Assigned(AES_set_decrypt_key) or not Assigned(AES_cbc_encrypt) then Exit;
+    not Assigned(AES_set_decrypt_key) or not Assigned(AES_cbc_encrypt) then Exit;
   
   if AES_set_decrypt_key(@Key[0], bits, @aesKey) <> 0 then Exit;
   
@@ -313,7 +313,7 @@ begin
   Result := nil;
   bits := GetAESKeyBits(Key);
   if (bits = 0) or (Length(IV) <> AES_BLOCK_SIZE) or 
-     not Assigned(AES_set_encrypt_key) or not Assigned(AES_ctr128_encrypt) then Exit;
+    not Assigned(AES_set_encrypt_key) or not Assigned(AES_ctr128_encrypt) then Exit;
   
   if AES_set_encrypt_key(@Key[0], bits, @aesKey) <> 0 then Exit;
   

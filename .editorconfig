@@ -1,0 +1,60 @@
+# EditorConfig for fafafa.ssl project
+# https://editorconfig.org
+
+root = true
+
+# 所有文件
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Pascal/Delphi源代码
+[*.{pas,pp,inc}]
+indent_style = space
+indent_size = 2
+max_line_length = 120
+
+# Lazarus项目文件
+[*.{lpi,lpk,lpr,lfm,lrs}]
+indent_style = space
+indent_size = 2
+
+# 配置文件
+[*.{ini,cfg,conf}]
+indent_style = space
+indent_size = 2
+
+# Markdown文档
+[*.md]
+indent_style = space
+indent_size = 2
+max_line_length = 100
+trim_trailing_whitespace = false
+
+# YAML文件
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# JSON文件
+[*.json]
+indent_style = space
+indent_size = 2
+
+# Makefile
+[{Makefile,makefile}]
+indent_style = tab
+
+# Shell脚本
+[*.sh]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+
+# Batch脚本
+[*.{bat,cmd}]
+end_of_line = crlf
+
+

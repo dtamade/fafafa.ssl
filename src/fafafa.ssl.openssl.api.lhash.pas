@@ -1,6 +1,6 @@
-{$IFNDEF WINDOWS}{$MODE DELPHI}{$ENDIF}
-
 unit fafafa.ssl.openssl.api.lhash;
+
+{$mode ObjFPC}{$H+}
 
 interface
 

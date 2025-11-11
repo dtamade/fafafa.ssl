@@ -8,8 +8,8 @@ uses
   Windows,
   {$ENDIF}
   SysUtils, Classes,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf,
+  
+  fafafa.ssl.base,
   fafafa.ssl.winssl.lib,
   fafafa.ssl.winssl.types,
   fafafa.ssl.winssl.utils,

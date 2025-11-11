@@ -22,7 +22,7 @@ type
 
   { HMAC function types }
   THMAC = function(const evp_md: PEVP_MD; const key: Pointer; key_len: Integer;
-                   const d: PByte; n: size_t; md: PByte; md_len: PCardinal): PByte; cdecl;
+                  const d: PByte; n: size_t; md: PByte; md_len: PCardinal): PByte; cdecl;
   THMAC_CTX_new = function: PHMAC_CTX; cdecl;
   THMAC_CTX_reset = function(ctx: PHMAC_CTX): Integer; cdecl;
   THMAC_CTX_free = procedure(ctx: PHMAC_CTX); cdecl;

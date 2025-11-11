@@ -4,8 +4,8 @@ program test_cert_verify;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf,
+  
+  fafafa.ssl.base,
   fafafa.ssl.openssl;
 
 procedure TestCertificateVerification;

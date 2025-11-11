@@ -4,10 +4,10 @@ program test_openssl_dsa;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.dsa,
-  fafafa.ssl.openssl.bn;
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.dsa,
+  fafafa.ssl.openssl.api.bn;
 
 var
   TestsPassed, TestsFailed: Integer;

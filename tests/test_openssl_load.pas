@@ -7,7 +7,7 @@ uses
   SysUtils, Classes, Windows,
   // OpenSSL 类型和常量
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.consts,
+  fafafa.ssl.openssl.api.consts,
   // 核心模块
   fafafa.ssl.openssl.api.err,
   fafafa.ssl.openssl.api.bio,

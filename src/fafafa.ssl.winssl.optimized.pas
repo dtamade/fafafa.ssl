@@ -7,7 +7,7 @@ interface
 
 uses
   Windows, WinSock2, SysUtils, Classes, Math,
-  fafafa.ssl.types, fafafa.ssl.intf, fafafa.ssl.ringbuffer;
+  fafafa.ssl.base, fafafa.ssl.ringbuffer;
 
 type
   { TWinSSLConnectionOptimized - 使用环形缓冲区的高性能实现 }

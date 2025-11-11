@@ -5,8 +5,8 @@ program test_ssl_connection_local;
 uses
   SysUtils, Classes,
   fafafa.ssl.openssl,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf;
+  
+  fafafa.ssl.base;
 
 var
   TestsPassed: Integer = 0;

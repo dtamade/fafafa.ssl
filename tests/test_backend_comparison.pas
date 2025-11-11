@@ -5,8 +5,8 @@ program test_backend_comparison;
 
 uses
   Windows, SysUtils, Classes, WinSock2, md5,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf,
+  
+  fafafa.ssl.base,
   fafafa.ssl.factory;
 
 var

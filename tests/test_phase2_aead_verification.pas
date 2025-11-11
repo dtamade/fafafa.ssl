@@ -5,7 +5,7 @@ program test_phase2_aead_verification;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp;
 
 type

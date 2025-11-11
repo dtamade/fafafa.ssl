@@ -9,13 +9,12 @@
 unit fafafa.ssl.openssl.api.blake2;
 
 {$mode ObjFPC}{$H+}
-{$H+}
 
 interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.consts;
 
@@ -95,7 +94,7 @@ type
   // BLAKE2b functions
   TBLAKE2b_Init = function(ctx: PBLAKE2B_CTX; outlen: NativeUInt): Integer; cdecl;
   TBLAKE2b_Init_key = function(ctx: PBLAKE2B_CTX; outlen: NativeUInt; 
-                               const key: Pointer; keylen: NativeUInt): Integer; cdecl;
+                              const key: Pointer; keylen: NativeUInt): Integer; cdecl;
   TBLAKE2b_Init_param = function(ctx: PBLAKE2B_CTX; const P: PBLAKE2B_PARAM): Integer; cdecl;
   TBLAKE2b_Update = function(ctx: PBLAKE2B_CTX; const data: Pointer; datalen: NativeUInt): Integer; cdecl;
   TBLAKE2b_Final = function(ctx: PBLAKE2B_CTX; out_: Pointer; outlen: NativeUInt): Integer; cdecl;
@@ -105,7 +104,7 @@ type
   // BLAKE2s functions
   TBLAKE2s_Init = function(ctx: PBLAKE2S_CTX; outlen: NativeUInt): Integer; cdecl;
   TBLAKE2s_Init_key = function(ctx: PBLAKE2S_CTX; outlen: NativeUInt; 
-                               const key: Pointer; keylen: NativeUInt): Integer; cdecl;
+                              const key: Pointer; keylen: NativeUInt): Integer; cdecl;
   TBLAKE2s_Init_param = function(ctx: PBLAKE2S_CTX; const P: PBLAKE2S_PARAM): Integer; cdecl;
   TBLAKE2s_Update = function(ctx: PBLAKE2S_CTX; const data: Pointer; datalen: NativeUInt): Integer; cdecl;
   TBLAKE2s_Final = function(ctx: PBLAKE2S_CTX; out_: Pointer; outlen: NativeUInt): Integer; cdecl;

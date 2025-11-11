@@ -4,9 +4,9 @@ program test_x509_simple;
 
 uses
   SysUtils, DynLibs, ctypes,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.api.types,
   fafafa.ssl.openssl.consts,
-  fafafa.ssl.openssl.core;
+  fafafa.ssl.openssl.api.core;
 
 type
   { X.509 Basic Function Types }

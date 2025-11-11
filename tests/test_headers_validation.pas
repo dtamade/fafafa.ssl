@@ -6,7 +6,7 @@ uses
   SysUtils,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.consts,
+  fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.err,
   fafafa.ssl.openssl.api.rand,

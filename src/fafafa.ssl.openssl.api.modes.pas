@@ -1,6 +1,6 @@
-{$IFNDEF WINDOWS}{$MODE DELPHI}{$ENDIF}
-
 unit fafafa.ssl.openssl.api.modes;
+
+{$mode ObjFPC}{$H+}
 
 interface
 
@@ -78,9 +78,9 @@ type
   // Block cipher function types
   Tblock128_f = procedure(const inp: PByte; outp: PByte; const key: Pointer); cdecl;
   Tctr128_f = procedure(const inp: PByte; outp: PByte; blocks: size_t; 
-                       const key: Pointer; ivec: PByte); cdecl;
+                      const key: Pointer; ivec: PByte); cdecl;
   Tccm128_f = procedure(const inp: PByte; outp: PByte; blocks: size_t;
-                       const key: Pointer; ivec: PByte; cmac: PByte); cdecl;
+                      const key: Pointer; ivec: PByte; cmac: PByte); cdecl;
   
   // GCM function pointer types
   TGCM128_new = function(key: Pointer; block: Tblock128_f): PGCM128_CONTEXT; cdecl;
@@ -113,7 +113,7 @@ type
                         decrypt_block: Tblock128_f): POCB128_CONTEXT; cdecl;
   TOCB128_free = procedure(ctx: POCB128_CONTEXT); cdecl;
   TOCB128_init = function(ctx: POCB128_CONTEXT; keyenc: Pointer; keydec: Pointer;
-                         encrypt_block: Tblock128_f; decrypt_block: Tblock128_f): Integer; cdecl;
+                        encrypt_block: Tblock128_f; decrypt_block: Tblock128_f): Integer; cdecl;
   TOCB128_setiv = function(ctx: POCB128_CONTEXT; const iv: PByte; len: size_t; taglen: size_t): Integer; cdecl;
   TOCB128_aad = function(ctx: POCB128_CONTEXT; const aad: PByte; len: size_t): Integer; cdecl;
   TOCB128_encrypt = function(ctx: POCB128_CONTEXT; const inp: PByte; outp: PByte; len: size_t): Integer; cdecl;

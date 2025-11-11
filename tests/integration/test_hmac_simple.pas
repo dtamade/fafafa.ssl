@@ -4,9 +4,9 @@ program test_hmac_simple;
 
 uses
   SysUtils, ctypes,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.consts,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.hmac;
 

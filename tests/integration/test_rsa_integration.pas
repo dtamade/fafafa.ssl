@@ -4,7 +4,7 @@ program test_rsa_integration;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.rsa,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.bn,

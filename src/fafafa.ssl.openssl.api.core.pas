@@ -581,7 +581,12 @@ var
   SSL_CTX_set_options: TSSL_CTX_set_options = nil;
   SSL_CTX_clear_options: TSSL_CTX_clear_options = nil;
   SSL_CTX_get_options: TSSL_CTX_get_options = nil;
-  
+  SSL_CTX_set_session_cache_mode: TSSL_CTX_set_session_cache_mode = nil;
+  SSL_CTX_get_session_cache_mode: TSSL_CTX_get_session_cache_mode = nil;
+  SSL_CTX_sess_set_cache_size: TSSL_CTX_sess_set_cache_size = nil;
+  SSL_CTX_sess_get_cache_size: TSSL_CTX_sess_get_cache_size = nil;
+  SSL_CTX_set_cert_verify_callback: TSSL_CTX_set_cert_verify_callback = nil;
+
   // Control functions
   SSL_CTX_ctrl: TSSL_CTX_ctrl = nil;
   SSL_ctrl: TSSL_ctrl = nil;
@@ -600,6 +605,23 @@ var
   
   // Session functions
   SSL_session_reused: TSSL_session_reused = nil;
+  SSL_get_session: TSSL_get_session = nil;
+  SSL_get1_session: TSSL_get1_session = nil;
+  SSL_get0_session: TSSL_get0_session = nil;
+  SSL_set_session: TSSL_set_session = nil;
+  
+  // SSL_SESSION functions
+  SSL_SESSION_new: TSSL_SESSION_new = nil;
+  SSL_SESSION_free: TSSL_SESSION_free = nil;
+  SSL_SESSION_up_ref: TSSL_SESSION_up_ref = nil;
+  SSL_SESSION_get_id: TSSL_SESSION_get_id = nil;
+  SSL_SESSION_get_time: TSSL_SESSION_get_time = nil;
+  SSL_SESSION_set_time: TSSL_SESSION_set_time = nil;
+  SSL_SESSION_get_timeout: TSSL_SESSION_get_timeout = nil;
+  SSL_SESSION_set_timeout: TSSL_SESSION_set_timeout = nil;
+  SSL_SESSION_get_protocol_version: TSSL_SESSION_get_protocol_version = nil;
+  SSL_SESSION_get0_cipher: TSSL_SESSION_get0_cipher = nil;
+  SSL_SESSION_get0_peer: TSSL_SESSION_get0_peer = nil;
   
   // State and version functions
   SSL_get_state: TSSL_get_state = nil;
@@ -833,6 +855,11 @@ begin
   SSL_CTX_get_verify_callback := TSSL_CTX_get_verify_callback(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_get_verify_callback'));
   SSL_CTX_load_verify_locations := TSSL_CTX_load_verify_locations(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_load_verify_locations'));
   SSL_CTX_set_default_verify_paths := TSSL_CTX_set_default_verify_paths(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_set_default_verify_paths'));
+  SSL_CTX_set_session_cache_mode := TSSL_CTX_set_session_cache_mode(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_set_session_cache_mode'));
+  SSL_CTX_get_session_cache_mode := TSSL_CTX_get_session_cache_mode(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_get_session_cache_mode'));
+  SSL_CTX_sess_set_cache_size := TSSL_CTX_sess_set_cache_size(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_sess_set_cache_size'));
+  SSL_CTX_sess_get_cache_size := TSSL_CTX_sess_get_cache_size(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_sess_get_cache_size'));
+  SSL_CTX_set_cert_verify_callback := TSSL_CTX_set_cert_verify_callback(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_set_cert_verify_callback'));
 
   // Control functions
   SSL_CTX_ctrl := TSSL_CTX_ctrl(GetProcedureAddress(LibSSLHandle, 'SSL_CTX_ctrl'));
@@ -870,6 +897,23 @@ begin
   
   // Session functions
   SSL_session_reused := TSSL_session_reused(GetProcedureAddress(LibSSLHandle, 'SSL_session_reused'));
+  SSL_get_session := TSSL_get_session(GetProcedureAddress(LibSSLHandle, 'SSL_get_session'));
+  SSL_get1_session := TSSL_get1_session(GetProcedureAddress(LibSSLHandle, 'SSL_get1_session'));
+  SSL_get0_session := TSSL_get0_session(GetProcedureAddress(LibSSLHandle, 'SSL_get0_session'));
+  SSL_set_session := TSSL_set_session(GetProcedureAddress(LibSSLHandle, 'SSL_set_session'));
+  
+  // SSL_SESSION functions
+  SSL_SESSION_new := TSSL_SESSION_new(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_new'));
+  SSL_SESSION_free := TSSL_SESSION_free(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_free'));
+  SSL_SESSION_up_ref := TSSL_SESSION_up_ref(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_up_ref'));
+  SSL_SESSION_get_id := TSSL_SESSION_get_id(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_get_id'));
+  SSL_SESSION_get_time := TSSL_SESSION_get_time(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_get_time'));
+  SSL_SESSION_set_time := TSSL_SESSION_set_time(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_set_time'));
+  SSL_SESSION_get_timeout := TSSL_SESSION_get_timeout(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_get_timeout'));
+  SSL_SESSION_set_timeout := TSSL_SESSION_set_timeout(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_set_timeout'));
+  SSL_SESSION_get_protocol_version := TSSL_SESSION_get_protocol_version(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_get_protocol_version'));
+  SSL_SESSION_get0_cipher := TSSL_SESSION_get0_cipher(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_get0_cipher'));
+  SSL_SESSION_get0_peer := TSSL_SESSION_get0_peer(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_get0_peer'));
   
   // State and version functions
   SSL_get_state := TSSL_get_state(GetProcedureAddress(LibSSLHandle, 'SSL_get_state'));

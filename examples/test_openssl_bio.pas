@@ -4,9 +4,9 @@ program test_openssl_bio;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.bio;
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.bio;
 
 var
   TestsPassed: Integer = 0;

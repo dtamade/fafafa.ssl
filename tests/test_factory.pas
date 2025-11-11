@@ -5,7 +5,7 @@ program test_factory;
 uses
   SysUtils, Classes,
   fafafa.ssl.types,
-  fafafa.ssl.abstract.types,
+  fafafa.ssl.base,
   fafafa.ssl.intf,
   fafafa.ssl.factory;
 

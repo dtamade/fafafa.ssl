@@ -7,8 +7,8 @@ uses
   Windows, WinSock2,
   {$ENDIF}
   SysUtils, Classes,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf,
+  
+  fafafa.ssl.base,
   fafafa.ssl.winssl.lib,
   fafafa.ssl.winssl.types,
   fafafa.ssl.winssl.api,

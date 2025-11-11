@@ -4,7 +4,7 @@ program diagnose_version;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core;
+  fafafa.ssl.openssl.api.core;
 
 var
   Version: string;

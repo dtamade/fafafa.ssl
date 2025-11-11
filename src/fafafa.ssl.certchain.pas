@@ -9,13 +9,13 @@
 {******************************************************************************}
 unit fafafa.ssl.certchain;
 
-{$mode objfpc}{$H+}
+{$mode ObjFPC}{$H+}
 
 interface
 
 uses
   Classes, SysUtils, DateUtils, Math,
-  fafafa.ssl.types, fafafa.ssl.intf;
+  fafafa.ssl.base;
 
 type
   { 证书链验证选项 }
@@ -67,7 +67,7 @@ type
     
     // 验证单个证书
     function VerifyCertificate(aCert: ISSLCertificate; 
-                               const aHostname: string = ''): TChainVerifyResult;
+                              const aHostname: string = ''): TChainVerifyResult;
     
     // 验证证书链
     function VerifyChain(const aChain: TSSLCertificateArray;
@@ -75,14 +75,14 @@ type
     
     // 构建证书链（从叶证书开始）
     function BuildChain(aLeafCert: ISSLCertificate;
-                       out aChain: TSSLCertificateArray): Boolean;
+                      out aChain: TSSLCertificateArray): Boolean;
     
     // 检查特定的验证项
     function CheckCertificateTime(aCert: ISSLCertificate): Boolean;
     function CheckCertificateSignature(aCert: ISSLCertificate; 
                                       aIssuer: ISSLCertificate): Boolean;
     function CheckCertificateKeyUsage(aCert: ISSLCertificate;
-                                     aIsCA: Boolean): Boolean;
+                                    aIsCA: Boolean): Boolean;
     function CheckCertificateRevocation(aCert: ISSLCertificate): Boolean;
     function CheckHostname(aCert: ISSLCertificate; 
                           const aHostname: string): Boolean;
@@ -120,19 +120,19 @@ type
     function GetCRLStore: TStringList;
     
     function VerifyCertificate(aCert: ISSLCertificate;
-                               const aHostname: string = ''): TChainVerifyResult;
+                              const aHostname: string = ''): TChainVerifyResult;
     
     function VerifyChain(const aChain: TSSLCertificateArray;
                         const aHostname: string = ''): TChainVerifyResult;
     
     function BuildChain(aLeafCert: ISSLCertificate;
-                       out aChain: TSSLCertificateArray): Boolean;
+                      out aChain: TSSLCertificateArray): Boolean;
     
     function CheckCertificateTime(aCert: ISSLCertificate): Boolean;
     function CheckCertificateSignature(aCert: ISSLCertificate;
                                       aIssuer: ISSLCertificate): Boolean;
     function CheckCertificateKeyUsage(aCert: ISSLCertificate;
-                                     aIsCA: Boolean): Boolean;
+                                    aIsCA: Boolean): Boolean;
     function CheckCertificateRevocation(aCert: ISSLCertificate): Boolean;
     function CheckHostname(aCert: ISSLCertificate;
                           const aHostname: string): Boolean;

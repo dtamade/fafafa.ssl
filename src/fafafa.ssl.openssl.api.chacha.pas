@@ -1,6 +1,6 @@
-{$MODE DELPHI}{$H+}
-
 unit fafafa.ssl.openssl.api.chacha;
+
+{$mode ObjFPC}{$H+}
 
 interface
 
@@ -57,14 +57,14 @@ type
 
   // AEAD helper functions
   TChaCha20Poly1305_encrypt = function(const plaintext: PByte; plaintext_len: size_t;
-                                       const aad: PByte; aad_len: size_t;
-                                       const key: PByte; const iv: PByte;
-                                       ciphertext: PByte; tag: PByte): Integer; cdecl;
+                                      const aad: PByte; aad_len: size_t;
+                                      const key: PByte; const iv: PByte;
+                                      ciphertext: PByte; tag: PByte): Integer; cdecl;
                                        
   TChaCha20Poly1305_decrypt = function(const ciphertext: PByte; ciphertext_len: size_t;
-                                       const aad: PByte; aad_len: size_t;
-                                       const tag: PByte; const key: PByte; const iv: PByte;
-                                       plaintext: PByte): Integer; cdecl;
+                                      const aad: PByte; aad_len: size_t;
+                                      const tag: PByte; const key: PByte; const iv: PByte;
+                                      plaintext: PByte): Integer; cdecl;
 
 var
   // ChaCha20 functions

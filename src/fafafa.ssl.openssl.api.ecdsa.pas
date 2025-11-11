@@ -53,19 +53,19 @@ type
   
   { ECDSA method functions }
   TEC_KEY_METHOD_get_sign = procedure(const meth: PEC_KEY_METHOD; 
-                                       psign: Pointer;
-                                       psign_setup: Pointer;
-                                       psign_sig: Pointer); cdecl;
+                                      psign: Pointer;
+                                      psign_setup: Pointer;
+                                      psign_sig: Pointer); cdecl;
   TEC_KEY_METHOD_set_sign = procedure(meth: PEC_KEY_METHOD;
-                                       sign: Pointer;
-                                       sign_setup: Pointer;
-                                       sign_sig: Pointer); cdecl;
+                                      sign: Pointer;
+                                      sign_setup: Pointer;
+                                      sign_sig: Pointer); cdecl;
   TEC_KEY_METHOD_get_verify = procedure(const meth: PEC_KEY_METHOD;
-                                         pverify: Pointer;
-                                         pverify_sig: Pointer); cdecl;
+                                        pverify: Pointer;
+                                        pverify_sig: Pointer); cdecl;
   TEC_KEY_METHOD_set_verify = procedure(meth: PEC_KEY_METHOD;
-                                         verify: Pointer;
-                                         verify_sig: Pointer); cdecl;
+                                        verify: Pointer;
+                                        verify_sig: Pointer); cdecl;
   
   { Old compatibility functions }
   TECDSA_get_default_method = function: PECDSA_METHOD; cdecl;
@@ -274,8 +274,8 @@ begin
     Exit;
     
   if not Assigned(AData) or (ADataLen <= 0) or 
-     not Assigned(ASignature) or (ASignatureLen <= 0) or
-     not Assigned(AKey) then
+    not Assigned(ASignature) or (ASignatureLen <= 0) or
+    not Assigned(AKey) then
     Exit;
     
   Result := ECDSA_verify(0, AData, ADataLen, ASignature, ASignatureLen, AKey) = 1;

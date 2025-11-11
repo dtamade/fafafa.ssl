@@ -15,6 +15,7 @@ uses
   fafafa.ssl.openssl.api.rsa,
   fafafa.ssl.openssl.api.dh,
   fafafa.ssl.openssl.api.dsa,
+  fafafa.ssl.openssl.api.ec,
   fafafa.ssl.openssl.api.ecdsa,
   fafafa.ssl.openssl.api.ecdh,
   fafafa.ssl.openssl.api.hmac;

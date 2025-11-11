@@ -1,0 +1,96 @@
+name: fafafa.ssl CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install FPC
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fpc
+      - name: Run Linux tests
+        run: |
+          chmod +x ./run_tests_linux.sh
+          ./run_tests_linux.sh | tee linux-tests-output.txt
+      - name: Upload Linux test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-tests-artifacts
+          path: |
+            tests/bin
+            linux-tests-output.txt
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install FPC (FreePascal)
+        shell: pwsh
+        run: |
+          choco install -y fpc
+      - name: Enable PowerShell scripts
+        run: Set-ExecutionPolicy Bypass -Scope Process -Force
+        shell: pwsh
+      - name: Run Windows tests (unit; network off)
+        shell: pwsh
+        run: |
+          $env:Path += ";C:\ProgramData\chocolatey\bin"
+          if (Test-Path 'scripts/run_tests_windows.ps1') {
+            ./scripts/run_tests_windows.ps1 -IncludePerf:$false -RunNetwork:$false | Tee-Object -FilePath windows-tests-output.txt
+          } elseif (Test-Path './run_all_tests.ps1') {
+            ./run_all_tests.ps1 -NonInteractive:$true
+          } else {
+            Write-Host 'No Windows test runner present; skipping'
+          }
+      - name: Upload Windows unit test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-tests-artifacts
+          path: |
+            tests/bin-win
+            windows-tests-output.txt
+
+  windows-network:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install FPC (FreePascal)
+        shell: pwsh
+        run: |
+          choco install -y fpc
+      - name: Enable PowerShell scripts
+        run: Set-ExecutionPolicy Bypass -Scope Process -Force
+        shell: pwsh
+      - name: Run Windows network tests (opt-in)
+        shell: pwsh
+        env:
+          FAFAFA_RUN_NETWORK_TESTS: '1'
+          FAFAFA_WINSSL_REVOCATION_TEST: '1'
+        run: |
+          $env:Path += ";C:\ProgramData\chocolatey\bin"
+          if (Test-Path 'scripts/run_tests_windows.ps1') {
+            ./scripts/run_tests_windows.ps1 -IncludePerf:$false -RunNetwork:$true | Tee-Object -FilePath windows-network-tests-output.txt
+          } else {
+            Write-Host 'scripts/run_tests_windows.ps1 not found; skipping network tests'
+          }
+      - name: Upload Windows network test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-network-tests-artifacts
+          path: |
+            tests/bin-win
+            windows-network-tests-output.txt
+
+

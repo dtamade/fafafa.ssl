@@ -1,7 +1,6 @@
 unit fafafa.ssl.openssl.api.asn1;
 
 {$mode ObjFPC}{$H+}
-{$H+}
 
 interface
 

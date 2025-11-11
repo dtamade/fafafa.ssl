@@ -54,7 +54,7 @@ type
   TOPENSSL_sk_free = procedure(st: POPENSSL_STACK); cdecl;
   TOPENSSL_sk_pop_free = procedure(st: POPENSSL_STACK; func: Tstack_free_func); cdecl;
   TOPENSSL_sk_deep_copy = function(st: POPENSSL_STACK; c: Tstack_copy_func; 
-                                   f: Tstack_free_func): POPENSSL_STACK; cdecl;
+                                  f: Tstack_free_func): POPENSSL_STACK; cdecl;
   TOPENSSL_sk_insert = function(sk: POPENSSL_STACK; data: Pointer; where: Integer): Integer; cdecl;
   TOPENSSL_sk_delete = function(st: POPENSSL_STACK; loc: Integer): Pointer; cdecl;
   TOPENSSL_sk_delete_ptr = function(st: POPENSSL_STACK; p: Pointer): Pointer; cdecl;

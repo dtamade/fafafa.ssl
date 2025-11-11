@@ -1,5 +1,7 @@
 unit fafafa.ssl.openssl.api.provider;
 
+{$mode ObjFPC}{$H+}
+
 interface
 
 uses

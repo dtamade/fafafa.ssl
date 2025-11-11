@@ -4,8 +4,8 @@ program test_winssl_library_basic;
 
 uses
   SysUtils,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf,
+  
+  fafafa.ssl.base,
   fafafa.ssl.winssl.lib;
 
 var

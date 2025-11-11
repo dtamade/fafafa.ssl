@@ -324,7 +324,7 @@ begin
   
   // Check if critical functions are loaded
   GDHLoaded := Assigned(DH_new) and Assigned(DH_free) and
-               Assigned(DH_generate_key) and Assigned(DH_compute_key);
+              Assigned(DH_generate_key) and Assigned(DH_compute_key);
   Result := GDHLoaded;
 end;
 

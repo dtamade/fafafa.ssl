@@ -21,9 +21,8 @@ unit fafafa.ssl.factory;
 interface
 
 uses
-  SysUtils, Classes, SyncObjs,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.types, fafafa.ssl.intf;
+  SysUtils, Classes,
+  fafafa.ssl.base;
 
 type
   { SSL库类类型 }
@@ -49,15 +48,16 @@ type
       
     class procedure Initialize;
     class procedure Finalize;
-    class function GetLibrary(aLibType: TSSLLibraryType): ISSLLibrary;
     class function CreateLibraryInstance(aLibType: TSSLLibraryType): ISSLLibrary;
     class procedure CheckInitialized;
   public
+    // Direct library access (for advanced usage)
+    class function GetLibrary(aLibType: TSSLLibraryType): ISSLLibrary;
     // 库注册（供各个后端实现调用）
     class procedure RegisterLibrary(aLibType: TSSLLibraryType; 
-                                   aLibraryClass: TSSLLibraryClass;
-                                   const aDescription: string = '';
-                                   aPriority: Integer = 0);
+                                  aLibraryClass: TSSLLibraryClass;
+                                  const aDescription: string = '';
+                                  aPriority: Integer = 0);
     class procedure UnregisterLibrary(aLibType: TSSLLibraryType);
     
     // 库可用性检测
@@ -77,12 +77,6 @@ type
     
     class function CreateCertificate(aLibType: TSSLLibraryType = sslAutoDetect): ISSLCertificate;
     class function CreateCertificateStore(aLibType: TSSLLibraryType = sslAutoDetect): ISSLCertificateStore;
-    
-    // 快捷方法 - 简化的客户端连接
-    class function CreateClientConnection(const aHost: string; 
-                                         aPort: Integer;
-                                         aVerifyMode: TSSLVerifyModes = [sslVerifyPeer];
-                                         aLibType: TSSLLibraryType = sslAutoDetect): ISSLConnection;
     
     // 快捷方法 - 简化的服务端上下文
     class function CreateServerContext(const aCertFile, aKeyFile: string;
@@ -110,20 +104,9 @@ type
   { TSSLHelper - SSL辅助类，提供更简单的API }
   TSSLHelper = class
   public
-    // HTTPS 客户端快捷方法
-    class function HTTPSGet(const aURL: string; out aResponse: string;
-                           aVerifyMode: TSSLVerifyModes = [sslVerifyPeer]): Boolean;
-    class function HTTPSPost(const aURL, aData: string; out aResponse: string;
-                            aVerifyMode: TSSLVerifyModes = [sslVerifyPeer]): Boolean;
-    
     // 证书验证
     class function VerifyCertificateFile(const aFileName: string): Boolean;
     class function GetCertificateInfo(const aFileName: string): TSSLCertificateInfo;
-    
-    // 测试连接
-    class function TestSSLConnection(const aHost: string; aPort: Integer;
-                                    out aInfo: TSSLConnectionInfo;
-                                    aTimeout: Integer = 10000): Boolean;
     
     // 工具方法
     class function GenerateRandomBytes(aCount: Integer): TBytes;
@@ -149,11 +132,11 @@ uses
   {$IFDEF UNIX}
   BaseUnix,
   {$ENDIF}
-  fafafa.ssl.openssl,    // OpenSSL 后端支持
+  fafafa.ssl.openssl.lib,    // OpenSSL 后端支持 (新实现)
   {$IFDEF WINDOWS}
   fafafa.ssl.winssl.lib,  // WinSSL Phase 2.2 新实现（替换老的 winssl.pas）
   {$ENDIF}
-  DateUtils;
+  fafafa.ssl.utils;      // 工具函数
 
 var
   GSSLFactory: TSSLFactory;
@@ -418,7 +401,7 @@ begin
   for LIndex := 0 to High(LCandidates) do
   begin
     if (LCandidates[LIndex].Priority > LBestPriority) and
-       IsLibraryAvailable(LCandidates[LIndex].LibraryType) then
+      IsLibraryAvailable(LCandidates[LIndex].LibraryType) then
     begin
       LBestPriority := LCandidates[LIndex].Priority;
       LBestType := LCandidates[LIndex].LibraryType;
@@ -604,33 +587,6 @@ begin
   Result := LLib.CreateCertificateStore;
 end;
 
-class function TSSLFactory.CreateClientConnection(const aHost: string;
-  aPort: Integer; aVerifyMode: TSSLVerifyModes;
-  aLibType: TSSLLibraryType): ISSLConnection;
-var
-  LContext: ISSLContext;
-  LSocket: THandle;
-begin
-  // 创建客户端上下文
-  LContext := CreateContext(sslCtxClient, aLibType);
-  LContext.SetVerifyMode(aVerifyMode);
-  LContext.SetServerName(aHost); // SNI
-  
-  // TODO: 创建socket并连接到服务器
-  // 这里需要实现socket连接逻辑
-  LSocket := 0; // 临时占位
-  
-  // 创建SSL连接
-  Result := LContext.CreateConnection(LSocket);
-  
-  // 执行握手
-  if not Result.Connect then
-    raise ESSLHandshakeException.Create(
-      Format('连接到 %s:%d 失败', [aHost, aPort]),
-      sslErrHandshake,
-      aLibType
-    );
-end;
 
 class function TSSLFactory.CreateServerContext(const aCertFile, aKeyFile: string;
   aLibType: TSSLLibraryType): ISSLContext;
@@ -737,22 +693,6 @@ end;
 
 { TSSLHelper }
 
-class function TSSLHelper.HTTPSGet(const aURL: string; out aResponse: string;
-  aVerifyMode: TSSLVerifyModes): Boolean;
-begin
-  // TODO: 实现HTTPS GET请求
-  Result := False;
-  aResponse := '';
-end;
-
-class function TSSLHelper.HTTPSPost(const aURL, aData: string;
-  out aResponse: string; aVerifyMode: TSSLVerifyModes): Boolean;
-begin
-  // TODO: 实现HTTPS POST请求
-  Result := False;
-  aResponse := '';
-end;
-
 class function TSSLHelper.VerifyCertificateFile(const aFileName: string): Boolean;
 var
   LCert: ISSLCertificate;
@@ -780,19 +720,6 @@ begin
   Result := LCert.GetInfo;
 end;
 
-class function TSSLHelper.TestSSLConnection(const aHost: string;
-  aPort: Integer; out aInfo: TSSLConnectionInfo; aTimeout: Integer): Boolean;
-var
-  LConn: ISSLConnection;
-begin
-  try
-    LConn := TSSLFactory.CreateClientConnection(aHost, aPort, [sslVerifyPeer]);
-    aInfo := LConn.GetConnectionInfo;
-    Result := True;
-  except
-    Result := False;
-  end;
-end;
 
 class function TSSLHelper.GenerateRandomBytes(aCount: Integer): TBytes;
 var
@@ -805,9 +732,28 @@ end;
 
 class function TSSLHelper.HashData(const aData: TBytes;
   aHashType: TSSLHash): string;
+const
+  HASH_ALGORITHMS: array[TSSLHash] of AnsiString = (
+    'md5',      // sslHashMD5
+    'sha1',     // sslHashSHA1
+    'sha224',   // sslHashSHA224
+    'sha256',   // sslHashSHA256
+    'sha384',   // sslHashSHA384
+    'sha512',   // sslHashSHA512
+    'sha3-256', // sslHashSHA3_256
+    'sha3-512', // sslHashSHA3_512
+    'blake2b512'// sslHashBLAKE2b
+  );
 begin
-  // TODO: 实现哈希计算
+  try
+    Result := fafafa.ssl.utils.ComputeDigest(HASH_ALGORITHMS[aHashType], aData);
+  except
+    on E: Exception do
+    begin
+      // 如果失败，返回空字符串
   Result := '';
+    end;
+  end;
 end;
 
 initialization

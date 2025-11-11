@@ -18,12 +18,12 @@ program digital_signature;
 uses
   SysUtils, Classes,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.rsa,
-  fafafa.ssl.openssl.pem,
-  fafafa.ssl.openssl.err,
-  fafafa.ssl.openssl.bio;
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.rsa,
+  fafafa.ssl.openssl.api.pem,
+  fafafa.ssl.openssl.api.err,
+  fafafa.ssl.openssl.api.bio;
 
 const
   VERSION = '1.0.0';

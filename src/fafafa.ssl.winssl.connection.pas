@@ -24,8 +24,7 @@ uses
   Sockets,
   {$ENDIF}
   SysUtils, Classes, DateUtils, SyncObjs,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf,
+  fafafa.ssl.base,
   fafafa.ssl.winssl.types,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.utils,
@@ -566,7 +565,9 @@ end;
 
 function TWinSSLConnection.Renegotiate: Boolean;
 begin
-  // TODO: 实现重新协商
+  // Windows Schannel 不完全支持 TLS 重协商
+  // RFC 5746 要求的安全重协商在 Schannel 中实现有限
+  // 建议：需要重协商时，关闭当前连接并建立新连接
   Result := False;
 end;
 
@@ -618,11 +619,11 @@ begin
   
   // 设置标志
   dwSSPIFlags := ISC_REQ_SEQUENCE_DETECT or
-                 ISC_REQ_REPLAY_DETECT or
-                 ISC_REQ_CONFIDENTIALITY or
-                 ISC_RET_EXTENDED_ERROR or
-                 ISC_REQ_ALLOCATE_MEMORY or
-                 ISC_REQ_STREAM;
+                ISC_REQ_REPLAY_DETECT or
+                ISC_REQ_CONFIDENTIALITY or
+                ISC_RET_EXTENDED_ERROR or
+                ISC_REQ_ALLOCATE_MEMORY or
+                ISC_REQ_STREAM;
   
   ServerName := StringToPWideChar(FContext.GetServerName);
   try
@@ -1047,8 +1048,38 @@ begin
 end;
 
 function TWinSSLConnection.GetError(aRet: Integer): TSSLErrorCode;
+var
+  LastErr: DWORD;
 begin
-  Result := sslErrNone; // TODO
+  // 成功或非错误情况
+  if aRet >= 0 then
+  begin
+    Result := sslErrNone;
+    Exit;
+  end;
+  
+  // 获取Windows最后错误码
+  LastErr := GetLastError;
+  
+  // 映射到SSL错误码
+  case LastErr of
+    WSAEWOULDBLOCK,
+    ERROR_IO_PENDING:
+      Result := sslErrWantRead;  // 非阻塞操作需要等待
+    
+    WSAENOTCONN,
+    ERROR_NOT_CONNECTED:
+      Result := sslErrConnectionLost;
+    
+    SEC_E_INCOMPLETE_MESSAGE:
+      Result := sslErrWantRead;  // 需要更多数据
+    
+    SEC_I_CONTINUE_NEEDED,
+    SEC_I_INCOMPLETE_CREDENTIALS:
+      Result := sslErrWantWrite;  // 需要发送更多数据
+  else
+    Result := sslErrOther;
+  end;
 end;
 
 // ============================================================================

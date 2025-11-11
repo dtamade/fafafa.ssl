@@ -4,7 +4,7 @@ program test_evp_cipher;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.evp;
 
@@ -71,7 +71,7 @@ begin
       
       // Encrypt
       outlen := 0;
-      if EVP_EncryptUpdate(ctx, @ciphertext[0], PInteger(@outlen), 
+      if EVP_EncryptUpdate(ctx, @ciphertext[0], outlen, 
          PByte(TestPlaintext), Length(TestPlaintext)) <> 1 then
       begin
         WriteLn('  [-] Failed to encrypt data');
@@ -80,7 +80,7 @@ begin
       
       // Finalize encryption
       tmplen := 0;
-      if EVP_EncryptFinal_ex(ctx, @ciphertext[outlen], PInteger(@tmplen)) <> 1 then
+      if EVP_EncryptFinal_ex(ctx, @ciphertext[outlen], tmplen) <> 1 then
       begin
         WriteLn('  [-] Failed to finalize encryption');
         Exit;
@@ -116,7 +116,7 @@ begin
       
       // Decrypt
       outlen := 0;
-      if EVP_DecryptUpdate(ctx, @plaintext[0], PInteger(@outlen),
+      if EVP_DecryptUpdate(ctx, @plaintext[0], outlen,
          @ciphertext[0], Length(ciphertext)) <> 1 then
       begin
         WriteLn('  [-] Failed to decrypt data');
@@ -125,7 +125,7 @@ begin
       
       // Finalize decryption
       tmplen := 0;
-      if EVP_DecryptFinal_ex(ctx, @plaintext[outlen], PInteger(@tmplen)) <> 1 then
+      if EVP_DecryptFinal_ex(ctx, @plaintext[outlen], tmplen) <> 1 then
       begin
         WriteLn('  [-] Failed to finalize decryption');
         Exit;
@@ -177,7 +177,6 @@ var
   plaintext: array of Byte;
   tag: array[0..15] of Byte;
   outlen, tmplen: Integer;
-  pOutlen, pTmplen: PInteger;
   success: Boolean;
 begin
   WriteLn('Testing AES-256-GCM Encryption/Decryption...');
@@ -185,8 +184,6 @@ begin
   
   success := False;
   try
-    pOutlen := @outlen;
-    pTmplen := @tmplen;
     
     // Get cipher
     cipher := EVP_aes_256_gcm();
@@ -214,7 +211,7 @@ begin
       end;
       
       // Set AAD
-      if EVP_EncryptUpdate(ctx, nil, pOutlen, PByte(TestAAD), Length(TestAAD)) <> 1 then
+      if EVP_EncryptUpdate(ctx, nil, outlen, PByte(TestAAD), Length(TestAAD)) <> 1 then
       begin
         WriteLn('  [-] Failed to set AAD');
         Exit;
@@ -224,7 +221,7 @@ begin
       SetLength(ciphertext, Length(TestPlaintext) + 16);
       
       // Encrypt
-      if EVP_EncryptUpdate(ctx, @ciphertext[0], pOutlen,
+      if EVP_EncryptUpdate(ctx, @ciphertext[0], outlen,
          PByte(TestPlaintext), Length(TestPlaintext)) <> 1 then
       begin
         WriteLn('  [-] Failed to encrypt data');
@@ -232,7 +229,7 @@ begin
       end;
       
       // Finalize encryption
-      if EVP_EncryptFinal_ex(ctx, @ciphertext[outlen], pTmplen) <> 1 then
+      if EVP_EncryptFinal_ex(ctx, @ciphertext[outlen], tmplen) <> 1 then
       begin
         WriteLn('  [-] Failed to finalize encryption');
         Exit;
@@ -273,7 +270,7 @@ begin
       end;
       
       // Set AAD
-      if EVP_DecryptUpdate(ctx, nil, pOutlen, PByte(TestAAD), Length(TestAAD)) <> 1 then
+      if EVP_DecryptUpdate(ctx, nil, outlen, PByte(TestAAD), Length(TestAAD)) <> 1 then
       begin
         WriteLn('  [-] Failed to set AAD for decryption');
         Exit;
@@ -283,7 +280,7 @@ begin
       SetLength(plaintext, Length(ciphertext) + 16);
       
       // Decrypt
-      if EVP_DecryptUpdate(ctx, @plaintext[0], pOutlen,
+      if EVP_DecryptUpdate(ctx, @plaintext[0], outlen,
          @ciphertext[0], Length(ciphertext)) <> 1 then
       begin
         WriteLn('  [-] Failed to decrypt data');
@@ -298,7 +295,7 @@ begin
       end;
       
       // Finalize decryption (verifies tag)
-      if EVP_DecryptFinal_ex(ctx, @plaintext[outlen], pTmplen) <> 1 then
+      if EVP_DecryptFinal_ex(ctx, @plaintext[outlen], tmplen) <> 1 then
       begin
         WriteLn('  [-] Failed to finalize decryption (tag verification failed)');
         Exit;
@@ -350,7 +347,6 @@ var
   plaintext: array of Byte;
   tag: array[0..15] of Byte;
   outlen, tmplen: Integer;
-  pOutlen, pTmplen: PInteger;
   success: Boolean;
 begin
   WriteLn('Testing ChaCha20-Poly1305 Encryption/Decryption...');
@@ -358,8 +354,6 @@ begin
   
   success := False;
   try
-    pOutlen := @outlen;
-    pTmplen := @tmplen;
     
     // Get cipher
     cipher := EVP_chacha20_poly1305();
@@ -392,7 +386,7 @@ begin
       SetLength(ciphertext, Length(TestPlaintext) + 16);
       
       // Encrypt
-      if EVP_EncryptUpdate(ctx, @ciphertext[0], pOutlen,
+      if EVP_EncryptUpdate(ctx, @ciphertext[0], outlen,
          PByte(TestPlaintext), Length(TestPlaintext)) <> 1 then
       begin
         WriteLn('  [-] Failed to encrypt data');
@@ -400,7 +394,7 @@ begin
       end;
       
       // Finalize encryption
-      if EVP_EncryptFinal_ex(ctx, @ciphertext[outlen], pTmplen) <> 1 then
+      if EVP_EncryptFinal_ex(ctx, @ciphertext[outlen], tmplen) <> 1 then
       begin
         WriteLn('  [-] Failed to finalize encryption');
         Exit;
@@ -444,7 +438,7 @@ begin
       SetLength(plaintext, Length(ciphertext) + 16);
       
       // Decrypt
-      if EVP_DecryptUpdate(ctx, @plaintext[0], pOutlen,
+      if EVP_DecryptUpdate(ctx, @plaintext[0], outlen,
          @ciphertext[0], Length(ciphertext)) <> 1 then
       begin
         WriteLn('  [-] Failed to decrypt data');
@@ -459,7 +453,7 @@ begin
       end;
       
       // Finalize decryption (verifies tag)
-      if EVP_DecryptFinal_ex(ctx, @plaintext[outlen], pTmplen) <> 1 then
+      if EVP_DecryptFinal_ex(ctx, @plaintext[outlen], tmplen) <> 1 then
       begin
         WriteLn('  [-] Failed to finalize decryption (tag verification failed)');
         Exit;

@@ -5,7 +5,7 @@ program test_openssl_load;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core;
+  fafafa.ssl.openssl.api.core;
 
 begin
   WriteLn('Testing OpenSSL library loading...');

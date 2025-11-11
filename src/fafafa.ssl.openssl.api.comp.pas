@@ -89,7 +89,7 @@ type
   TCOMP_compress_block = function(ctx: PCOMP_CTX; outdata: PByte; olen: Integer;
                                   indata: PByte; ilen: Integer): Integer; cdecl;
   TCOMP_expand_block = function(ctx: PCOMP_CTX; outdata: PByte; olen: Integer;
-                               indata: PByte; ilen: Integer): Integer; cdecl;
+                              indata: PByte; ilen: Integer): Integer; cdecl;
   
   // 压缩方法获取函数
   TCOMP_zlib = function(): PCOMP_METHOD; cdecl;
@@ -127,9 +127,9 @@ type
   
   // 一次性压缩/解压函数
   TCOMP_compress = function(meth: PCOMP_METHOD; outdata: PByte; outlen: PLongWord;
-                           indata: PByte; inlen: LongWord): Integer; cdecl;
+                          indata: PByte; inlen: LongWord): Integer; cdecl;
   TCOMP_expand = function(meth: PCOMP_METHOD; outdata: PByte; outlen: PLongWord;
-                         indata: PByte; inlen: LongWord): Integer; cdecl;
+                        indata: PByte; inlen: LongWord): Integer; cdecl;
 
 var
   // COMP_METHOD 函数

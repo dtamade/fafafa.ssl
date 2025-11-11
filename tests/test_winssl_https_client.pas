@@ -9,8 +9,8 @@ uses
   Sockets,
   {$ENDIF}
   SysUtils, Classes,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf,
+  
+  fafafa.ssl.base,
   fafafa.ssl.winssl.lib;
 
 var

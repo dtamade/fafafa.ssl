@@ -5,7 +5,7 @@ program test_friendly_error_messages;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.abstract.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.err,
   fafafa.ssl.openssl;

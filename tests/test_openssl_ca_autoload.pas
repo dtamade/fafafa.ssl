@@ -6,8 +6,8 @@ program test_openssl_ca_autoload;
 uses
   SysUtils, Classes,
   fafafa.ssl.factory,
-  fafafa.ssl.abstract.intf,
-  fafafa.ssl.abstract.types;
+  
+  fafafa.ssl.base;
 
 var
   TotalTests, PassedTests, FailedTests: Integer;

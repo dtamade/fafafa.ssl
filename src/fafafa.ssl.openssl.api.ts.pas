@@ -57,7 +57,7 @@ const
   TS_VFY_SIGNATURE = $80;
   TS_VFY_ALL_IMPRINT = (TS_VFY_IMPRINT or TS_VFY_DATA);
   TS_VFY_ALL_DATA = (TS_VFY_VERSION or TS_VFY_POLICY or TS_VFY_IMPRINT or 
-                     TS_VFY_DATA or TS_VFY_NONCE or TS_VFY_TSA_NAME);
+                    TS_VFY_DATA or TS_VFY_NONCE or TS_VFY_TSA_NAME);
 
 type
   // 前向声明
@@ -127,7 +127,7 @@ type
   TTS_REQ_get_ext_by_critical = function(a: PTS_REQ; crit: Integer; lastpos: Integer): Integer; cdecl;
   TTS_REQ_ext_free = procedure(a: PTS_REQ); cdecl;
   TTS_REQ_get_ext_d2i = function(a: PTS_REQ; nid: Integer; crit: PInteger; 
-                                 idx: PInteger): Pointer; cdecl;
+                                idx: PInteger): Pointer; cdecl;
   TTS_REQ_add_ext = function(a: PTS_REQ; ex: PX509_EXTENSION; loc: Integer): Integer; cdecl;
   TTS_REQ_add1_ext_i2d = function(a: PTS_REQ; nid: Integer; value: Pointer; 
                                   crit: Integer; flags: LongWord): Integer; cdecl;
@@ -183,10 +183,10 @@ type
   TTS_RESP_get_token = function(a: PTS_RESP): PPKCS7; cdecl;
   TTS_RESP_get_tst_info = function(a: PTS_RESP): PTS_TST_INFO; cdecl;
   TTS_RESP_set_gentime_with_precision = function(info: PTS_TST_INFO; sec: Int64; 
-                                                 usec: Int64; precision: LongWord): Integer; cdecl;
+                                                usec: Int64; precision: LongWord): Integer; cdecl;
   TTS_RESP_print_bio = function(bio: PBIO; resp: PTS_RESP): Integer; cdecl;
   TTS_RESP_verify_signature = function(token: PPKCS7; certs: PSTACK_OF_X509; 
-                                       store: PX509_STORE; signer: PPX509): Integer; cdecl;
+                                      store: PX509_STORE; signer: PPX509): Integer; cdecl;
   TTS_RESP_verify_token = function(ctx: PTS_VERIFY_CTX; token: PPKCS7): Integer; cdecl;
   TTS_RESP_verify_response = function(ctx: PTS_VERIFY_CTX; resp: PTS_RESP): Integer; cdecl;
   
@@ -201,7 +201,7 @@ type
   TTS_RESP_CTX_add_policy = function(ctx: PTS_RESP_CTX; policy: PASN1_OBJECT): Integer; cdecl;
   TTS_RESP_CTX_add_md = function(ctx: PTS_RESP_CTX; md: PEVP_MD): Integer; cdecl;
   TTS_RESP_CTX_set_accuracy = function(ctx: PTS_RESP_CTX; secs: Integer; 
-                                       millis: Integer; micros: Integer): Integer; cdecl;
+                                      millis: Integer; micros: Integer): Integer; cdecl;
   TTS_RESP_CTX_set_clock_precision_digits = function(ctx: PTS_RESP_CTX; digits: LongWord): Integer; cdecl;
   TTS_RESP_CTX_add_flags = procedure(ctx: PTS_RESP_CTX; flags: Integer); cdecl;
   TTS_RESP_CTX_set_serial_cb = procedure(ctx: PTS_RESP_CTX; cb: TS_serial_cb; data: Pointer); cdecl;
@@ -210,7 +210,7 @@ type
   TTS_RESP_CTX_set_status_info = function(ctx: PTS_RESP_CTX; status: Integer; 
                                           text: PAnsiChar): Integer; cdecl;
   TTS_RESP_CTX_set_status_info_cond = function(ctx: PTS_RESP_CTX; status: Integer; 
-                                               text: PAnsiChar): Integer; cdecl;
+                                              text: PAnsiChar): Integer; cdecl;
   TTS_RESP_CTX_add_failure_info = function(ctx: PTS_RESP_CTX; failure: Integer): Integer; cdecl;
   TTS_RESP_CTX_get_request = function(ctx: PTS_RESP_CTX): PTS_REQ; cdecl;
   TTS_RESP_CTX_get_tst_info = function(ctx: PTS_RESP_CTX): PTS_TST_INFO; cdecl;
@@ -245,7 +245,7 @@ type
   TTS_CONF_load_cert = function(file_name: PAnsiChar): PX509; cdecl;
   TTS_CONF_load_key = function(file_name: PAnsiChar; pass: PAnsiChar): PEVP_PKEY; cdecl;
   TTS_CONF_set_serial = function(conf: Pointer; section: PAnsiChar; 
-                                 cb: TS_serial_cb; ctx: PTS_RESP_CTX): Integer; cdecl;
+                                cb: TS_serial_cb; ctx: PTS_RESP_CTX): Integer; cdecl;
   TTS_CONF_get_tsa_section = function(conf: Pointer; section: PAnsiChar): PAnsiChar; cdecl;
   TTS_CONF_set_crypto_device = function(conf: Pointer; section: PAnsiChar; device: PAnsiChar): Integer; cdecl;
   TTS_CONF_set_default_engine = function(name: PAnsiChar): Integer; cdecl;
@@ -254,22 +254,22 @@ type
   TTS_CONF_set_certs = function(conf: Pointer; section: PAnsiChar; 
                                 certs: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
   TTS_CONF_set_signer_key = function(conf: Pointer; section: PAnsiChar; 
-                                     key: PAnsiChar; pass: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
+                                    key: PAnsiChar; pass: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
   TTS_CONF_set_signer_digest = function(conf: Pointer; section: PAnsiChar; 
                                         md: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
   TTS_CONF_set_def_policy = function(conf: Pointer; section: PAnsiChar; 
-                                     policy: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
+                                    policy: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
   TTS_CONF_set_policies = function(conf: Pointer; section: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
   TTS_CONF_set_digests = function(conf: Pointer; section: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
   TTS_CONF_set_accuracy = function(conf: Pointer; section: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
   TTS_CONF_set_clock_precision_digits = function(conf: Pointer; section: PAnsiChar; 
-                                                 ctx: PTS_RESP_CTX): Integer; cdecl;
+                                                ctx: PTS_RESP_CTX): Integer; cdecl;
   TTS_CONF_set_ordering = function(conf: Pointer; section: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
   TTS_CONF_set_tsa_name = function(conf: Pointer; section: PAnsiChar; ctx: PTS_RESP_CTX): Integer; cdecl;
   TTS_CONF_set_ess_cert_id_chain = function(conf: Pointer; section: PAnsiChar; 
                                             ctx: PTS_RESP_CTX): Integer; cdecl;
   TTS_CONF_set_ess_cert_id_digest = function(conf: Pointer; section: PAnsiChar; 
-                                             ctx: PTS_RESP_CTX): Integer; cdecl;
+                                            ctx: PTS_RESP_CTX): Integer; cdecl;
 
 var
   // TS_MSG_IMPRINT 函数
@@ -438,7 +438,7 @@ procedure UnloadTSFunctions;
 // 辅助函数
 function CreateTimestampRequest(const Data: TBytes; const PolicyOID: string = ''): PTS_REQ;
 function VerifyTimestampResponse(Response: PTS_RESP; Request: PTS_REQ; 
-                                 Store: PX509_STORE = nil): Boolean;
+                                Store: PX509_STORE = nil): Boolean;
 function GetTimestampTime(Response: PTS_RESP): TDateTime;
 
 implementation

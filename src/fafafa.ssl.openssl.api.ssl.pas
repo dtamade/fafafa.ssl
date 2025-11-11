@@ -403,7 +403,7 @@ const
 begin
   if Assigned(SSL_ctrl) then
     Result := Integer(SSL_ctrl(ssl, SSL_CTRL_SET_TLSEXT_HOSTNAME,
-                               TLSEXT_NAMETYPE_host_name, Pointer(name)))
+                              TLSEXT_NAMETYPE_host_name, Pointer(name)))
   else
     Result := 0;
 end;

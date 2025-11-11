@@ -22,7 +22,7 @@ interface
 
 uses
   Windows, SysUtils, 
-  fafafa.ssl.abstract.types,
+  fafafa.ssl.base,
   fafafa.ssl.winssl.types;
 
 // ============================================================================
@@ -63,15 +63,15 @@ function IsSuccess(dwError: SECURITY_STATUS): Boolean; inline;
 // ============================================================================
 // 协议版本映射
 // ============================================================================
-// Note: Using TSSLProtocolVersion and TSSLProtocolVersions from fafafa.ssl.abstract.types
+// Note: Using TSSLProtocolVersion and TSSLProtocolVersions from fafafa.ssl.base
 
 { 将协议版本集合转换为 Schannel 协议标志（客户端）}
 function ProtocolVersionsToSchannelFlags(aVersions: TSSLProtocolVersions; 
-                                         aIsServer: Boolean = False): DWORD;
+                                        aIsServer: Boolean = False): DWORD;
 
 { 从 Schannel 协议标志解析版本集合 }
 function SchannelFlagsToProtocolVersions(dwFlags: DWORD; 
-                                         aIsServer: Boolean = False): TSSLProtocolVersions;
+                                        aIsServer: Boolean = False): TSSLProtocolVersions;
 
 { 获取协议版本的可读名称 }
 function GetProtocolVersionName(aVersion: TSSLProtocolVersion): string;
@@ -153,8 +153,8 @@ begin
     
   // 需要继续
   if (dwError = SEC_I_CONTINUE_NEEDED) or 
-     (dwError = SEC_I_COMPLETE_NEEDED) or
-     (dwError = SEC_I_COMPLETE_AND_CONTINUE) then
+    (dwError = SEC_I_COMPLETE_NEEDED) or
+    (dwError = SEC_I_COMPLETE_AND_CONTINUE) then
     Exit(secContinue);
     
   // 消息不完整
@@ -163,27 +163,27 @@ begin
     
   // 证书错误
   if (dwError = SEC_E_CERT_EXPIRED) or 
-     (dwError = SEC_E_CERT_UNKNOWN) or
-     (dwError = SEC_E_UNTRUSTED_ROOT) or
-     (dwError = SEC_E_WRONG_PRINCIPAL) then
+    (dwError = SEC_E_CERT_UNKNOWN) or
+    (dwError = SEC_E_UNTRUSTED_ROOT) or
+    (dwError = SEC_E_WRONG_PRINCIPAL) then
     Exit(secCertificateError);
     
   // 认证错误
   if (dwError = SEC_E_LOGON_DENIED) or
-     (dwError = SEC_E_NO_CREDENTIALS) or
-     (dwError = SEC_E_UNKNOWN_CREDENTIALS) then
+    (dwError = SEC_E_NO_CREDENTIALS) or
+    (dwError = SEC_E_UNKNOWN_CREDENTIALS) then
     Exit(secAuthError);
     
   // 连接错误
   if (dwError = SEC_E_ILLEGAL_MESSAGE) or
-     (dwError = SEC_E_MESSAGE_ALTERED) or
-     (dwError = SEC_E_OUT_OF_SEQUENCE) or
-     (dwError = SEC_E_DECRYPT_FAILURE) then
+    (dwError = SEC_E_MESSAGE_ALTERED) or
+    (dwError = SEC_E_OUT_OF_SEQUENCE) or
+    (dwError = SEC_E_DECRYPT_FAILURE) then
     Exit(secConnectionError);
     
   // 内部错误
   if (dwError = SEC_E_INTERNAL_ERROR) or
-     (dwError = SEC_E_INSUFFICIENT_MEMORY) then
+    (dwError = SEC_E_INSUFFICIENT_MEMORY) then
     Exit(secInternalError);
     
   Result := secUnknownError;
@@ -320,7 +320,7 @@ end;
 // ============================================================================
 
 function ProtocolVersionsToSchannelFlags(aVersions: TSSLProtocolVersions; 
-                                         aIsServer: Boolean): DWORD;
+                                        aIsServer: Boolean): DWORD;
 begin
   Result := 0;
   
@@ -367,7 +367,7 @@ begin
 end;
 
 function SchannelFlagsToProtocolVersions(dwFlags: DWORD; 
-                                         aIsServer: Boolean): TSSLProtocolVersions;
+                                        aIsServer: Boolean): TSSLProtocolVersions;
 begin
   Result := [];
   

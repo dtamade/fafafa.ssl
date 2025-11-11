@@ -22,7 +22,7 @@ interface
 
 uses
   SysUtils, Classes, SyncObjs,
-  fafafa.ssl.types, fafafa.ssl.utils;
+  fafafa.ssl.base, fafafa.ssl.utils;
 
 type
   { 日志级别 }
@@ -1018,7 +1018,7 @@ begin
         
         LSB.AppendFormat('%-30s %10d %10d %10.2f %10d %10d',
           [LEntryPtr^.Name, LEntryPtr^.Count, LEntryPtr^.TotalTime,
-           LAvg, LEntryPtr^.MinTime, LEntryPtr^.MaxTime]);
+          LAvg, LEntryPtr^.MinTime, LEntryPtr^.MaxTime]);
       end;
     finally
       FLock.Leave;

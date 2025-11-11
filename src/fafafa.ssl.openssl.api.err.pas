@@ -6,6 +6,7 @@ interface
 
 uses
   SysUtils, DynLibs, ctypes,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.core;
 
@@ -309,6 +310,11 @@ function LoadOpenSSLERR: Boolean;
 procedure UnloadOpenSSLERR;
 function IsOpenSSLERRLoaded: Boolean;
 
+// Error helper functions
+function GetFriendlyErrorMessage(AErrorCode: Cardinal): string;
+function ClassifyOpenSSLError(AErrorCode: Cardinal): TSSLErrorCode;
+function GetOpenSSLErrorCategory(AErrorCode: Cardinal): string;
+
 implementation
 
 var
@@ -539,6 +545,92 @@ end;
 function IsOpenSSLERRLoaded: Boolean;
 begin
   Result := GERRLoaded;
+end;
+
+function GetOpenSSLErrorCategory(AErrorCode: Cardinal): string;
+var
+  LibCode: Integer;
+begin
+  LibCode := ERR_GET_LIB_INLINE(AErrorCode);
+  case LibCode of
+    ERR_LIB_SSL: Result := 'SSL';
+    ERR_LIB_X509: Result := 'X509';
+    ERR_LIB_PEM: Result := 'PEM';
+    ERR_LIB_ASN1: Result := 'ASN1';
+    ERR_LIB_EVP: Result := 'EVP';
+    ERR_LIB_BIO: Result := 'BIO';
+    ERR_LIB_RSA: Result := 'RSA';
+    ERR_LIB_EC: Result := 'EC';
+    ERR_LIB_PKCS12: Result := 'PKCS12';
+    ERR_LIB_PKCS7: Result := 'PKCS7';
+    ERR_LIB_SYS: Result := 'SYSTEM';
+  else
+    Result := Format('LIB_%d', [LibCode]);
+  end;
+end;
+
+function ClassifyOpenSSLError(AErrorCode: Cardinal): TSSLErrorCode;
+var
+  LibCode, ReasonCode: Integer;
+begin
+  LibCode := ERR_GET_LIB_INLINE(AErrorCode);
+  ReasonCode := ERR_GET_REASON_INLINE(AErrorCode);
+  
+  // Classify by library and reason
+  case LibCode of
+    ERR_LIB_SSL:
+      Result := sslErrProtocol;
+    ERR_LIB_X509:
+      Result := sslErrCertificate;
+    ERR_LIB_PEM:
+      Result := sslErrGeneral;  // PEM format errors
+    ERR_LIB_SYS:
+      Result := sslErrIO;  // System errors typically I/O related
+    ERR_LIB_BIO:
+      Result := sslErrIO;
+    ERR_LIB_RSA, ERR_LIB_DSA, ERR_LIB_EC, ERR_LIB_DH, ERR_LIB_EVP:
+      Result := sslErrGeneral;  // Crypto errors
+    ERR_LIB_NONE:
+      Result := sslErrNone;
+  else
+    Result := sslErrOther;
+  end;
+end;
+
+function GetFriendlyErrorMessage(AErrorCode: Cardinal): string;
+var
+  Category: string;
+  Classification: TSSLErrorCode;
+  LibCode, ReasonCode: Integer;
+  ErrorString: PAnsiChar;
+begin
+  if AErrorCode = 0 then
+  begin
+    Result := 'No error';
+    Exit;
+  end;
+  
+  Category := GetOpenSSLErrorCategory(AErrorCode);
+  Classification := ClassifyOpenSSLError(AErrorCode);
+  LibCode := ERR_GET_LIB_INLINE(AErrorCode);
+  ReasonCode := ERR_GET_REASON_INLINE(AErrorCode);
+  
+  // Get error string from OpenSSL
+  if Assigned(ERR_error_string) then
+  begin
+    ErrorString := ERR_error_string(AErrorCode);
+    if ErrorString <> nil then
+      Result := Format('[%s] Error Type: %d (Lib:%d, Reason:%d)'#13#10'Details: %s'#13#10'Suggestion: Check OpenSSL error documentation for code 0x%x',
+        [Category, Ord(Classification), LibCode, ReasonCode, string(ErrorString), AErrorCode])
+    else
+      Result := Format('[%s] Error Type: %d (Lib:%d, Reason:%d)'#13#10'Error Code: 0x%x',
+        [Category, Ord(Classification), LibCode, ReasonCode, AErrorCode]);
+  end
+  else
+  begin
+    Result := Format('[%s] Error Type: %d (Lib:%d, Reason:%d)'#13#10'Error Code: 0x%x',
+      [Category, Ord(Classification), LibCode, ReasonCode, AErrorCode]);
+  end;
 end;
 
 end.

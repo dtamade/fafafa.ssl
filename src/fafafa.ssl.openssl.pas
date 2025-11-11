@@ -1,14 +1,13 @@
 unit fafafa.ssl.openssl;
 
-{$mode objfpc}{$H+}
+{$mode ObjFPC}{$H+}
 
 interface
 
 uses
   Classes, SysUtils, DateUtils,
   {$IFDEF MSWINDOWS}Windows,{$ENDIF}
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.core,
@@ -40,6 +39,7 @@ type
     function IsInitialized: Boolean;
     function GetLibraryType: TSSLLibraryType;
     function GetVersionString: string;
+    function GetVersion: string;  // 便捷方法
     function GetVersionNumber: Cardinal;
     function GetCompileFlags: string;
     function IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
@@ -74,8 +74,15 @@ type
     FOptions: Cardinal;
     FServerName: string;
     FALPNProtocols: string;
+    FALPNWireData: TBytes;
     FCipherList: string;
     FCipherSuites: string;
+    FSessionCacheEnabled: Boolean;
+    FSessionTimeout: Integer;
+    FSessionCacheSize: Integer;
+    FVerifyCallback: TSSLVerifyCallback;
+    FPasswordCallback: TSSLPasswordCallback;
+    FInfoCallback: TSSLInfoCallback;
     
     procedure SetupContext;
   protected
@@ -120,6 +127,34 @@ type
     function GetNativeHandle: Pointer;
   public
     constructor Create(ALibrary: TOpenSSLLibrary; AType: TSSLContextType);
+    destructor Destroy; override;
+  end;
+
+  { TOpenSSLSession }
+  TOpenSSLSession = class(TInterfacedObject, ISSLSession)
+  private
+    FSession: PSSL_SESSION;
+    FOwned: Boolean;
+    function EnsureSession: Boolean;
+    class function SecondsSinceUnixEpochToDateTime(const ASeconds: LongInt): TDateTime; static;
+    function FetchCipher: PSSL_CIPHER;
+  protected
+    { ISSLSession implementation }
+    function GetID: string;
+    function GetCreationTime: TDateTime;
+    function GetTimeout: Integer;
+    procedure SetTimeout(aTimeout: Integer);
+    function IsValid: Boolean;
+    function IsResumable: Boolean;
+    function GetProtocolVersion: TSSLProtocolVersion;
+    function GetCipherName: string;
+    function GetPeerCertificate: ISSLCertificate;
+    function Serialize: TBytes;
+    function Deserialize(const aData: TBytes): Boolean;
+    function GetNativeHandle: Pointer;
+    function Clone: ISSLSession;
+  public
+    constructor Create(ASession: PSSL_SESSION; AOwned: Boolean);
     destructor Destroy; override;
   end;
 
@@ -313,6 +348,18 @@ function ProtocolToOpenSSL(aProtocol: TSSLProtocolVersion): Integer;
 function OpenSSLToProtocol(aVersion: Integer): TSSLProtocolVersion;
 function GetProtocolName(aProtocol: TSSLProtocolVersion): string;
 
+{ Context registry helpers }
+procedure RegisterContextInstance(const AContext: TOpenSSLContext);
+procedure UnregisterContextInstance(const AContext: TOpenSSLContext);
+function LookupContext(AHandle: PSSL_CTX): TOpenSSLContext;
+
+{ Callback bridges }
+function ALPNSelectCallback(ssl: PSSL; const out_proto: PPByte; out_proto_len: PByte;
+  const in_proto: PByte; in_proto_len: Cardinal; arg: Pointer): Integer; cdecl;
+function VerifyCertificateCallback(ctx: PX509_STORE_CTX; arg: Pointer): Integer; cdecl;
+function PasswordCallbackThunk(buf: PAnsiChar; size: Integer; rwflag: Integer; userdata: Pointer): Integer; cdecl;
+procedure InfoCallbackThunk(ssl: PSSL; where: Integer; ret: Integer); cdecl;
+
 { Initialization }
 procedure RegisterOpenSSLBackend;
 procedure UnregisterOpenSSLBackend;
@@ -320,7 +367,266 @@ procedure UnregisterOpenSSLBackend;
 implementation
 
 uses
+  Contnrs,
+  Math,
   fafafa.ssl.factory;
+
+var
+  GContextRegistry: TFPHashObjectList = nil;
+
+const
+  OPENSSL_NPN_NEGOTIATED = 1;
+  OPENSSL_NPN_NO_OVERLAP = 2;
+
+function ContextRegistryKey(AHandle: PSSL_CTX): string;
+begin
+  Result := IntToHex(PtrUInt(AHandle), SizeOf(Pointer) * 2);
+end;
+
+procedure EnsureContextRegistry;
+begin
+  if GContextRegistry = nil then
+  begin
+    GContextRegistry := TFPHashObjectList.Create(False);
+    // Note: TFPHashObjectList doesn't have CaseSensitive property
+  end;
+end;
+
+procedure RegisterContextInstance(const AContext: TOpenSSLContext);
+var
+  Key: string;
+  Index: Integer;
+begin
+  if (AContext = nil) or (AContext.FSSLCtx = nil) then
+    Exit;
+
+  EnsureContextRegistry;
+  Key := ContextRegistryKey(AContext.FSSLCtx);
+  Index := GContextRegistry.FindIndexOf(Key);
+  if Index <> -1 then
+    GContextRegistry.Items[Index] := AContext
+  else
+    GContextRegistry.Add(Key, AContext);
+end;
+
+procedure UnregisterContextInstance(const AContext: TOpenSSLContext);
+var
+  Key: string;
+  Index: Integer;
+begin
+  if (GContextRegistry = nil) or (AContext = nil) or (AContext.FSSLCtx = nil) then
+    Exit;
+
+  Key := ContextRegistryKey(AContext.FSSLCtx);
+  Index := GContextRegistry.FindIndexOf(Key);
+  if Index <> -1 then
+    GContextRegistry.Delete(Index);
+
+  if GContextRegistry.Count = 0 then
+  begin
+    GContextRegistry.Free;
+    GContextRegistry := nil;
+  end;
+end;
+
+function LookupContext(AHandle: PSSL_CTX): TOpenSSLContext;
+var
+  Key: string;
+  Index: Integer;
+begin
+  Result := nil;
+  if (GContextRegistry = nil) or (AHandle = nil) then
+    Exit;
+
+  Key := ContextRegistryKey(AHandle);
+  Index := GContextRegistry.FindIndexOf(Key);
+  if Index <> -1 then
+    Result := TOpenSSLContext(GContextRegistry.Items[Index]);
+end;
+
+function BuildALPNWireData(const aProtocols: string): TBytes;
+var
+  ProtoList: TStringArray;
+  Proto: string;
+  TrimmedProto: string;
+  TotalLen: Integer;
+  Offset: Integer;
+  AnsiProto: AnsiString;
+begin
+  TotalLen := 0;
+  ProtoList := aProtocols.Split([',']);
+  for Proto in ProtoList do
+  begin
+    TrimmedProto := Trim(Proto);
+    if TrimmedProto = '' then
+      Continue;
+    if Length(TrimmedProto) > 255 then
+      raise ESSLException.Create('ALPN protocol name too long', sslErrInvalidParam);
+    Inc(TotalLen, 1 + Length(TrimmedProto));
+  end;
+
+  SetLength(Result, TotalLen);
+  Offset := 0;
+  if TotalLen = 0 then
+    Exit;
+
+  for Proto in ProtoList do
+  begin
+    TrimmedProto := Trim(Proto);
+    if TrimmedProto = '' then
+      Continue;
+    Result[Offset] := Length(TrimmedProto);
+    Inc(Offset);
+    AnsiProto := AnsiString(TrimmedProto);
+    if Length(TrimmedProto) > 0 then
+    begin
+      Move(AnsiProto[1], Result[Offset], Length(TrimmedProto));
+      Inc(Offset, Length(TrimmedProto));
+    end;
+  end;
+end;
+
+function ALPNSelectCallback(ssl: PSSL; const out_proto: PPByte; out_proto_len: PByte;
+  const in_proto: PByte; in_proto_len: Cardinal; arg: Pointer): Integer; cdecl;
+var
+  Context: TOpenSSLContext;
+  Wire: TBytes;
+  ResultCode: Integer;
+begin
+  Result := SSL_TLSEXT_ERR_NOACK;
+  if (ssl = nil) or (out_proto = nil) or (out_proto_len = nil) then
+    Exit;
+
+  Context := TOpenSSLContext(arg);
+  if Context = nil then
+    Exit;
+
+  Wire := Context.FALPNWireData;
+  if (Length(Wire) = 0) or not Assigned(SSL_select_next_proto) then
+    Exit;
+
+  ResultCode := SSL_select_next_proto(out_proto, out_proto_len, @Wire[0], Length(Wire), in_proto, in_proto_len);
+  case ResultCode of
+    OPENSSL_NPN_NEGOTIATED:
+      Result := SSL_TLSEXT_ERR_OK;
+    OPENSSL_NPN_NO_OVERLAP:
+      Result := SSL_TLSEXT_ERR_NOACK;
+  else
+    Result := SSL_TLSEXT_ERR_ALERT_FATAL;
+  end;
+end;
+
+function VerifyCertificateCallback(ctx: PX509_STORE_CTX; arg: Pointer): Integer; cdecl;
+var
+  Context: TOpenSSLContext;
+  DefaultResult: Integer;
+  Cert: PX509;
+  Info: TSSLCertificateInfo;
+  ErrorCode: Integer;
+  ErrorMsg: string;
+begin
+  Context := TOpenSSLContext(arg);
+  if not Assigned(X509_verify_cert) then
+  begin
+    Result := 1;
+    Exit;
+  end;
+
+  DefaultResult := X509_verify_cert(ctx);
+
+  if (Context = nil) or not Assigned(Context.FVerifyCallback) then
+  begin
+    Result := DefaultResult;
+    Exit;
+  end;
+
+  FillChar(Info, SizeOf(Info), 0);
+  if Assigned(X509_STORE_CTX_get_current_cert) then
+  begin
+    Cert := X509_STORE_CTX_get_current_cert(ctx);
+    if Cert <> nil then
+      Info := GetCertificateInfo(Cert);
+  end;
+
+  ErrorCode := 0;
+  if Assigned(X509_STORE_CTX_get_error) then
+    ErrorCode := X509_STORE_CTX_get_error(ctx);
+
+  if Assigned(X509_verify_cert_error_string) then
+    ErrorMsg := string(X509_verify_cert_error_string(ErrorCode))
+  else
+    ErrorMsg := '';
+
+  if Context.FVerifyCallback(Info, ErrorCode, ErrorMsg) then
+  begin
+    Result := DefaultResult;
+    if (Result = 0) and Assigned(X509_STORE_CTX_set_error) then
+      X509_STORE_CTX_set_error(ctx, X509_V_OK);
+  end
+  else
+  begin
+    Result := 0;
+    if Assigned(X509_STORE_CTX_set_error) then
+      X509_STORE_CTX_set_error(ctx, X509_V_ERR_APPLICATION_VERIFICATION);
+  end;
+end;
+
+function PasswordCallbackThunk(buf: PAnsiChar; size: Integer; rwflag: Integer; userdata: Pointer): Integer; cdecl;
+var
+  Context: TOpenSSLContext;
+  Password: string;
+  AnsiPwd: AnsiString;
+begin
+  Result := 0;
+  if (buf = nil) or (size <= 0) then
+    Exit;
+
+  Context := TOpenSSLContext(userdata);
+  if (Context = nil) or not Assigned(Context.FPasswordCallback) then
+    Exit;
+
+  Password := '';
+  if not Context.FPasswordCallback(Password, rwflag <> 0) then
+    Exit;
+
+  AnsiPwd := AnsiString(Password);
+  if Length(AnsiPwd) >= size then
+    Exit;
+
+  if Length(AnsiPwd) > 0 then
+    Move(AnsiPwd[1], buf^, Length(AnsiPwd));
+  buf[Length(AnsiPwd)] := #0;
+  Result := Length(AnsiPwd);
+end;
+
+procedure InfoCallbackThunk(ssl: PSSL; where: Integer; ret: Integer); cdecl;
+var
+  CtxHandle: PSSL_CTX;
+  Context: TOpenSSLContext;
+  StatePtr: PAnsiChar;
+  StateStr: string;
+begin
+  if ssl = nil then
+    Exit;
+
+  if not Assigned(SSL_get_SSL_CTX) then
+    Exit;
+
+  CtxHandle := SSL_get_SSL_CTX(ssl);
+  Context := LookupContext(CtxHandle);
+  if (Context = nil) or not Assigned(Context.FInfoCallback) then
+    Exit;
+
+  StateStr := '';
+  if Assigned(SSL_state_string_long) then
+  begin
+    StatePtr := SSL_state_string_long(ssl);
+    if StatePtr <> nil then
+      StateStr := string(StatePtr);
+  end;
+
+  Context.FInfoCallback(where, ret, StateStr);
+end;
 
 // No longer need TOpenSSLBackend class - factory will create TOpenSSLLibrary directly
 
@@ -381,8 +687,15 @@ end;
 
 function TOpenSSLLibrary.GetVersionString: string;
 begin
-  Result := 'OpenSSL 3.0';
+  // Delegate to runtime OpenSSL version if available
+  Result := GetOpenSSLVersion;
 end;
+
+function TOpenSSLLibrary.GetVersion: string;
+begin
+  Result := GetOpenSSLVersion;
+end;
+
 
 function TOpenSSLLibrary.GetVersionNumber: Cardinal;
 begin
@@ -390,8 +703,29 @@ begin
 end;
 
 function TOpenSSLLibrary.GetCompileFlags: string;
+var
+  Flags, Platform: string;
 begin
   Result := '';
+
+  if not IsOpenSSLCoreLoaded then
+    LoadOpenSSLCore;
+
+  if Assigned(OpenSSL_version) then
+  begin
+    Flags := string(OpenSSL_version(OPENSSL_CFLAGS));
+    Platform := string(OpenSSL_version(OPENSSL_PLATFORM));
+
+    if Flags <> '' then
+      Result := 'cflags=' + Flags;
+
+    if Platform <> '' then
+    begin
+      if Result <> '' then
+        Result := Result + '; ';
+      Result := Result + 'platform=' + Platform;
+    end;
+  end;
 end;
 
 function TOpenSSLLibrary.IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
@@ -400,13 +734,91 @@ begin
 end;
 
 function TOpenSSLLibrary.IsCipherSupported(const aCipherName: string): Boolean;
+var
+  Method: PSSL_METHOD;
+  Ctx: PSSL_CTX;
+  Cipher: AnsiString;
 begin
-  Result := True;
+  Result := False;
+
+  if Trim(aCipherName) = '' then
+    Exit;
+
+  if not FInitialized then
+    Initialize;
+
+  if not Assigned(TLS_method) or not Assigned(SSL_CTX_new) or not Assigned(SSL_CTX_free) then
+    Exit;
+
+  Method := TLS_method();
+  if Method = nil then
+    Exit;
+
+  Ctx := SSL_CTX_new(Method);
+  if Ctx = nil then
+    Exit;
+  try
+    Cipher := AnsiString(Trim(aCipherName));
+    if Cipher = '' then
+      Exit(False);
+
+    if Assigned(SSL_CTX_set_ciphersuites) then
+      if SSL_CTX_set_ciphersuites(Ctx, PAnsiChar(Cipher)) = 1 then
+        Exit(True);
+
+    if Assigned(SSL_CTX_set_cipher_list) then
+      if SSL_CTX_set_cipher_list(Ctx, PAnsiChar(Cipher)) = 1 then
+        Exit(True);
+  finally
+    SSL_CTX_free(Ctx);
+  end;
 end;
 
 function TOpenSSLLibrary.IsFeatureSupported(const aFeatureName: string): Boolean;
+var
+  Name: string;
 begin
-  Result := True;
+  Name := LowerCase(Trim(aFeatureName));
+  if Name = '' then
+    Exit(False);
+
+  if not FInitialized then
+    Initialize;
+
+  if Name = 'alpn' then
+    Exit(Assigned(SSL_CTX_set_alpn_protos) and Assigned(SSL_CTX_set_alpn_select_cb));
+
+  if Name = 'session_cache' then
+    Exit(Assigned(SSL_CTX_set_session_cache_mode));
+
+  if Name = 'session_ticket' then
+    Exit(Assigned(SSL_CTX_set_tlsext_ticket_key_cb));
+
+  if Name = 'ocsp' then
+    Exit(Assigned(SSL_CTX_set_tlsext_status_cb));
+
+  if Name = 'tls13' then
+    Exit(Assigned(SSL_CTX_set_ciphersuites));
+
+  if Name = 'verify_callback' then
+    Exit(Assigned(SSL_CTX_set_cert_verify_callback));
+
+  if Name = 'password_callback' then
+    Exit(Assigned(SSL_CTX_set_default_passwd_cb));
+
+  if Name = 'info_callback' then
+    Exit(Assigned(SSL_CTX_set_info_callback));
+
+  if Name = 'psk' then
+    Exit(Assigned(SSL_CTX_set_psk_client_callback) or Assigned(SSL_CTX_set_psk_server_callback));
+
+  if Name = 'keylog' then
+    Exit(Assigned(SSL_CTX_set_keylog_callback));
+
+  if Name = 'quic' then
+    Exit(Assigned(SSL_get_stream_id));
+
+  Result := False;
 end;
 
 procedure TOpenSSLLibrary.SetDefaultConfig(const aConfig: TSSLConfig);
@@ -516,13 +928,23 @@ begin
   inherited Create;
   FLibrary := ALibrary;
   FContextType := AType;
+  FSessionCacheEnabled := False;
+  FSessionTimeout := 0;
+  FSessionCacheSize := 0;
+  FVerifyCallback := nil;
+  FPasswordCallback := nil;
+  FInfoCallback := nil;
+  SetLength(FALPNWireData, 0);
   SetupContext;
 end;
 
 destructor TOpenSSLContext.Destroy;
 begin
   if FSSLCtx <> nil then
+  begin
+    UnregisterContextInstance(Self);
     SSL_CTX_free(FSSLCtx);
+  end;
   inherited Destroy;
 end;
 
@@ -546,7 +968,8 @@ begin
   FSSLCtx := SSL_CTX_new(LMethod);
   if FSSLCtx = nil then
     Exit;
-    
+  RegisterContextInstance(Self);
+
   // Set default options
   if Assigned(SSL_CTX_set_options) then
     SSL_CTX_set_options(FSSLCtx, SSL_OP_NO_SSLv2 or SSL_OP_NO_SSLv3);
@@ -565,6 +988,11 @@ begin
     SetVerifyMode([sslVerifyPeer])
   else
     SetVerifyMode([]);
+
+  // Cache initial session parameters
+  FSessionCacheEnabled := GetSessionCacheMode;
+  FSessionTimeout := GetSessionTimeout;
+  FSessionCacheSize := GetSessionCacheSize;
 end;
 
 function TOpenSSLContext.GetContextType: TSSLContextType;
@@ -950,12 +1378,39 @@ end;
 
 procedure TOpenSSLContext.SetVerifyCallback(aCallback: TSSLVerifyCallback);
 begin
-  // TODO
+  FVerifyCallback := aCallback;
+
+  if FSSLCtx = nil then
+    Exit;
+
+  if not Assigned(SSL_CTX_set_cert_verify_callback) then
+    raise ESSLException.Create('Verify callback not supported by OpenSSL', sslErrUnsupported);
+
+  if Assigned(FVerifyCallback) then
+    SSL_CTX_set_cert_verify_callback(FSSLCtx, @VerifyCertificateCallback, Self)
+  else
+    SSL_CTX_set_cert_verify_callback(FSSLCtx, nil, nil);
 end;
 
 procedure TOpenSSLContext.SetCipherList(const aCipherList: string);
+var
+  LCipherList: AnsiString;
 begin
   FCipherList := aCipherList;
+
+  if (FSSLCtx = nil) or (aCipherList = '') then
+    Exit;
+
+  if not Assigned(SSL_CTX_set_cipher_list) then
+    raise ESSLException.Create('OpenSSL does not support SSL_CTX_set_cipher_list', sslErrUnsupported);
+
+  LCipherList := AnsiString(aCipherList);
+  if SSL_CTX_set_cipher_list(FSSLCtx, PAnsiChar(LCipherList)) <> 1 then
+  begin
+    if FLibrary <> nil then
+      FLibrary.Log(sslLogWarning, Format('Failed to apply cipher list: %s', [aCipherList]));
+    raise ESSLException.Create('Failed to set cipher list', sslErrConfiguration);
+  end;
 end;
 
 function TOpenSSLContext.GetCipherList: string;
@@ -964,8 +1419,24 @@ begin
 end;
 
 procedure TOpenSSLContext.SetCipherSuites(const aCipherSuites: string);
+var
+  LCipherSuites: AnsiString;
 begin
   FCipherSuites := aCipherSuites;
+
+  if (FSSLCtx = nil) or (aCipherSuites = '') then
+    Exit;
+
+  if not Assigned(SSL_CTX_set_ciphersuites) then
+    raise ESSLException.Create('OpenSSL does not support TLS 1.3 cipher configuration', sslErrUnsupported);
+
+  LCipherSuites := AnsiString(aCipherSuites);
+  if SSL_CTX_set_ciphersuites(FSSLCtx, PAnsiChar(LCipherSuites)) <> 1 then
+  begin
+    if FLibrary <> nil then
+      FLibrary.Log(sslLogWarning, Format('Failed to apply TLS 1.3 cipher suites: %s', [aCipherSuites]));
+    raise ESSLException.Create('Failed to set TLS 1.3 cipher suites', sslErrConfiguration);
+  end;
 end;
 
 function TOpenSSLContext.GetCipherSuites: string;
@@ -974,33 +1445,101 @@ begin
 end;
 
 procedure TOpenSSLContext.SetSessionCacheMode(aEnabled: Boolean);
+var
+  Mode: Integer;
 begin
-  // TODO
+  FSessionCacheEnabled := aEnabled;
+
+  if FSSLCtx = nil then
+    Exit;
+
+  if not Assigned(SSL_CTX_set_session_cache_mode) then
+    raise ESSLException.Create('OpenSSL does not support session cache control', sslErrUnsupported);
+
+  if aEnabled then
+  begin
+    case FContextType of
+      sslCtxServer: Mode := SSL_SESS_CACHE_SERVER;
+      sslCtxBoth: Mode := SSL_SESS_CACHE_BOTH;
+    else
+      Mode := SSL_SESS_CACHE_CLIENT;
+    end;
+  end
+  else
+    Mode := SSL_SESS_CACHE_OFF;
+
+  SSL_CTX_set_session_cache_mode(FSSLCtx, Mode);
 end;
 
 function TOpenSSLContext.GetSessionCacheMode: Boolean;
+var
+  Mode: Integer;
 begin
-  Result := False;
+  if FSSLCtx = nil then
+    Exit(FSessionCacheEnabled);
+
+  if Assigned(SSL_CTX_get_session_cache_mode) then
+  begin
+    Mode := SSL_CTX_get_session_cache_mode(FSSLCtx);
+    Result := (Mode and SSL_SESS_CACHE_OFF) = 0;
+    FSessionCacheEnabled := Result;
+  end
+  else
+    Result := FSessionCacheEnabled;
 end;
 
 procedure TOpenSSLContext.SetSessionTimeout(aTimeout: Integer);
 begin
-  // TODO
+  FSessionTimeout := aTimeout;
+
+  if (FSSLCtx = nil) or (aTimeout <= 0) then
+    Exit;
+
+  if not Assigned(SSL_CTX_set_timeout) then
+    raise ESSLException.Create('OpenSSL does not support session timeout configuration', sslErrUnsupported);
+
+  SSL_CTX_set_timeout(FSSLCtx, aTimeout);
 end;
 
 function TOpenSSLContext.GetSessionTimeout: Integer;
 begin
-  Result := 0;
+  if FSSLCtx = nil then
+    Exit(FSessionTimeout);
+
+  if Assigned(SSL_CTX_get_timeout) then
+  begin
+    Result := SSL_CTX_get_timeout(FSSLCtx);
+    FSessionTimeout := Result;
+  end
+  else
+    Result := FSessionTimeout;
 end;
 
 procedure TOpenSSLContext.SetSessionCacheSize(aSize: Integer);
 begin
-  // TODO
+  FSessionCacheSize := aSize;
+
+  if (FSSLCtx = nil) or (aSize <= 0) then
+    Exit;
+
+  if not Assigned(SSL_CTX_sess_set_cache_size) then
+    raise ESSLException.Create('OpenSSL does not support session cache sizing', sslErrUnsupported);
+
+  SSL_CTX_sess_set_cache_size(FSSLCtx, aSize);
 end;
 
 function TOpenSSLContext.GetSessionCacheSize: Integer;
 begin
-  Result := 0;
+  if FSSLCtx = nil then
+    Exit(FSessionCacheSize);
+
+  if Assigned(SSL_CTX_sess_get_cache_size) then
+  begin
+    Result := SSL_CTX_sess_get_cache_size(FSSLCtx);
+    FSessionCacheSize := Result;
+  end
+  else
+    Result := FSessionCacheSize;
 end;
 
 procedure TOpenSSLContext.SetOptions(aOptions: Cardinal);
@@ -1025,7 +1564,32 @@ end;
 
 procedure TOpenSSLContext.SetALPNProtocols(const aProtocols: string);
 begin
-  FALPNProtocols := aProtocols;
+  FALPNProtocols := Trim(aProtocols);
+  FALPNWireData := BuildALPNWireData(FALPNProtocols);
+
+  if FSSLCtx = nil then
+    Exit;
+
+  if FALPNProtocols = '' then
+  begin
+    if Assigned(SSL_CTX_set_alpn_select_cb) then
+      SSL_CTX_set_alpn_select_cb(FSSLCtx, nil, nil);
+    Exit;
+  end;
+
+  if not Assigned(SSL_CTX_set_alpn_protos) then
+    raise ESSLException.Create('ALPN is not supported by the current OpenSSL build', sslErrUnsupported);
+
+  if (Length(FALPNWireData) = 0) or
+    (SSL_CTX_set_alpn_protos(FSSLCtx, @FALPNWireData[0], Length(FALPNWireData)) <> 0) then
+  begin
+    if FLibrary <> nil then
+      FLibrary.Log(sslLogWarning, Format('Failed to configure ALPN protocols: %s', [FALPNProtocols]));
+    raise ESSLException.Create('Failed to configure ALPN protocols', sslErrConfiguration);
+  end;
+
+  if (FContextType <> sslCtxClient) and Assigned(SSL_CTX_set_alpn_select_cb) then
+    SSL_CTX_set_alpn_select_cb(FSSLCtx, @ALPNSelectCallback, Self);
 end;
 
 function TOpenSSLContext.GetALPNProtocols: string;
@@ -1035,12 +1599,42 @@ end;
 
 procedure TOpenSSLContext.SetPasswordCallback(aCallback: TSSLPasswordCallback);
 begin
-  // TODO
+  FPasswordCallback := aCallback;
+
+  if FSSLCtx = nil then
+    Exit;
+
+  if not Assigned(SSL_CTX_set_default_passwd_cb) then
+    raise ESSLException.Create('Password callback not supported by OpenSSL', sslErrUnsupported);
+
+  if Assigned(FPasswordCallback) then
+  begin
+    SSL_CTX_set_default_passwd_cb(FSSLCtx, @PasswordCallbackThunk);
+    if Assigned(SSL_CTX_set_default_passwd_cb_userdata) then
+      SSL_CTX_set_default_passwd_cb_userdata(FSSLCtx, Self);
+  end
+  else
+  begin
+    SSL_CTX_set_default_passwd_cb(FSSLCtx, nil);
+    if Assigned(SSL_CTX_set_default_passwd_cb_userdata) then
+      SSL_CTX_set_default_passwd_cb_userdata(FSSLCtx, nil);
+  end;
 end;
 
 procedure TOpenSSLContext.SetInfoCallback(aCallback: TSSLInfoCallback);
 begin
-  // TODO
+  FInfoCallback := aCallback;
+
+  if FSSLCtx = nil then
+    Exit;
+
+  if not Assigned(SSL_CTX_set_info_callback) then
+    raise ESSLException.Create('Info callback not supported by OpenSSL', sslErrUnsupported);
+
+  if Assigned(FInfoCallback) then
+    SSL_CTX_set_info_callback(FSSLCtx, @InfoCallbackThunk)
+  else
+    SSL_CTX_set_info_callback(FSSLCtx, nil);
 end;
 
 function TOpenSSLContext.CreateConnection(aSocket: THandle): ISSLConnection;
@@ -1061,6 +1655,269 @@ end;
 function TOpenSSLContext.GetNativeHandle: Pointer;
 begin
   Result := FSSLCtx;
+end;
+
+{ TOpenSSLSession }
+
+constructor TOpenSSLSession.Create(ASession: PSSL_SESSION; AOwned: Boolean);
+begin
+  inherited Create;
+  FSession := ASession;
+  FOwned := AOwned;
+
+  if (FSession <> nil) and not FOwned and Assigned(SSL_SESSION_up_ref) then
+  begin
+    if SSL_SESSION_up_ref(FSession) = 1 then
+      FOwned := True;
+  end;
+end;
+
+destructor TOpenSSLSession.Destroy;
+begin
+  if FOwned and (FSession <> nil) and Assigned(SSL_SESSION_free) then
+    SSL_SESSION_free(FSession);
+  FSession := nil;
+  inherited Destroy;
+end;
+
+function TOpenSSLSession.EnsureSession: Boolean;
+begin
+  Result := FSession <> nil;
+end;
+
+class function TOpenSSLSession.SecondsSinceUnixEpochToDateTime(const ASeconds: LongInt): TDateTime;
+const
+  SecondsPerDay = 24 * 60 * 60;
+begin
+  if ASeconds <= 0 then
+    Exit(0);
+  Result := EncodeDate(1970, 1, 1) + (ASeconds / SecondsPerDay);
+end;
+
+function TOpenSSLSession.FetchCipher: PSSL_CIPHER;
+begin
+  Result := nil;
+  if not EnsureSession then
+    Exit;
+
+  if not Assigned(SSL_SESSION_get0_cipher) then
+    Exit;
+
+  Result := SSL_SESSION_get0_cipher(FSession);
+end;
+
+function TOpenSSLSession.GetID: string;
+var
+  LLen: Cardinal;
+  LPtr: PByte;
+  I: Cardinal;
+  HexStr: string;
+begin
+  Result := '';
+  if not EnsureSession then
+    Exit;
+
+  if not Assigned(SSL_SESSION_get_id) then
+    Exit;
+
+  LPtr := SSL_SESSION_get_id(FSession, @LLen);
+  if (LPtr = nil) or (LLen = 0) then
+    Exit;
+
+  SetLength(Result, LLen * 2);
+  for I := 0 to LLen - 1 do
+  begin
+    HexStr := IntToHex(LPtr^, 2);
+    Result[(I * 2) + 1] := HexStr[1];
+    Result[(I * 2) + 2] := HexStr[2];
+    Inc(LPtr);
+  end;
+end;
+
+function TOpenSSLSession.GetCreationTime: TDateTime;
+var
+  LSeconds: LongInt;
+begin
+  Result := 0;
+  if not EnsureSession then
+    Exit;
+
+  if not Assigned(SSL_SESSION_get_time) then
+    Exit;
+
+  LSeconds := SSL_SESSION_get_time(FSession);
+  if LSeconds > 0 then
+    Result := SecondsSinceUnixEpochToDateTime(LSeconds);
+end;
+
+function TOpenSSLSession.GetTimeout: Integer;
+begin
+  Result := 0;
+  if not EnsureSession then
+    Exit;
+
+  if Assigned(SSL_SESSION_get_timeout) then
+    Result := SSL_SESSION_get_timeout(FSession);
+end;
+
+procedure TOpenSSLSession.SetTimeout(aTimeout: Integer);
+begin
+  if not EnsureSession then
+    Exit;
+
+  if Assigned(SSL_SESSION_set_timeout) then
+    SSL_SESSION_set_timeout(FSession, aTimeout);
+end;
+
+function TOpenSSLSession.IsValid: Boolean;
+begin
+  Result := EnsureSession;
+end;
+
+function TOpenSSLSession.IsResumable: Boolean;
+begin
+  Result := False;
+  if not EnsureSession then
+    Exit;
+
+  if Assigned(SSL_SESSION_is_resumable) then
+    Result := SSL_SESSION_is_resumable(FSession) = 1;
+end;
+
+function TOpenSSLSession.GetProtocolVersion: TSSLProtocolVersion;
+var
+  LVersion: Integer;
+begin
+  Result := sslProtocolUnknown;
+  if not EnsureSession then
+    Exit;
+
+  if Assigned(SSL_SESSION_get_protocol_version) then
+  begin
+    LVersion := SSL_SESSION_get_protocol_version(FSession);
+    Result := OpenSSLToProtocol(LVersion);
+  end;
+end;
+
+function TOpenSSLSession.GetCipherName: string;
+var
+  LCipher: PSSL_CIPHER;
+  LPtr: PAnsiChar;
+begin
+  Result := '';
+  LCipher := FetchCipher;
+  if LCipher = nil then
+    Exit;
+
+  if Assigned(SSL_CIPHER_get_name) then
+  begin
+    LPtr := SSL_CIPHER_get_name(LCipher);
+    if LPtr <> nil then
+      Result := string(LPtr);
+  end;
+end;
+
+function TOpenSSLSession.GetPeerCertificate: ISSLCertificate;
+var
+  LPeer: PX509;
+begin
+  Result := nil;
+  if not EnsureSession then
+    Exit;
+
+  if not Assigned(SSL_SESSION_get0_peer) then
+    Exit;
+
+  LPeer := SSL_SESSION_get0_peer(FSession);
+  if LPeer <> nil then
+    Result := TOpenSSLCertificate.Create(LPeer, False);
+end;
+
+function TOpenSSLSession.Serialize: TBytes;
+var
+  LBio: PBIO;
+  LPending: Integer;
+begin
+  SetLength(Result, 0);
+  if not EnsureSession then
+    Exit;
+
+  if not Assigned(BIO_new) then
+    LoadOpenSSLBIO;
+
+  if not Assigned(BIO_new) or not Assigned(BIO_s_mem) or
+    not Assigned(BIO_pending) or not Assigned(BIO_read) or
+    not Assigned(PEM_write_bio_SSL_SESSION) then
+    Exit;
+
+  LBio := BIO_new(BIO_s_mem);
+  if LBio = nil then
+    Exit;
+  try
+    if PEM_write_bio_SSL_SESSION(LBio, FSession) = 1 then
+    begin
+      LPending := BIO_pending(LBio);
+      if LPending > 0 then
+      begin
+        SetLength(Result, LPending);
+        if BIO_read(LBio, @Result[0], LPending) <> LPending then
+          SetLength(Result, 0);
+      end;
+    end;
+  finally
+    BIO_free(LBio);
+  end;
+end;
+
+function TOpenSSLSession.Deserialize(const aData: TBytes): Boolean;
+var
+  LBio: PBIO;
+  LSession: PSSL_SESSION;
+begin
+  Result := False;
+  if Length(aData) = 0 then
+    Exit;
+
+  if not Assigned(BIO_new_mem_buf) then
+    LoadOpenSSLBIO;
+
+  if not Assigned(BIO_new_mem_buf) or not Assigned(PEM_read_bio_SSL_SESSION) then
+    Exit;
+
+  LBio := BIO_new_mem_buf(@aData[0], Length(aData));
+  if LBio = nil then
+    Exit;
+  try
+    LSession := PEM_read_bio_SSL_SESSION(LBio, nil, nil, nil);
+    if LSession <> nil then
+    begin
+      if FOwned and (FSession <> nil) and Assigned(SSL_SESSION_free) then
+        SSL_SESSION_free(FSession);
+      FSession := LSession;
+      FOwned := True;
+      Result := True;
+    end;
+  finally
+    BIO_free(LBio);
+  end;
+end;
+
+function TOpenSSLSession.GetNativeHandle: Pointer;
+begin
+  Result := FSession;
+end;
+
+function TOpenSSLSession.Clone: ISSLSession;
+begin
+  Result := nil;
+  if not EnsureSession then
+    Exit;
+
+  if Assigned(SSL_SESSION_up_ref) then
+  begin
+    if SSL_SESSION_up_ref(FSession) = 1 then
+      Result := TOpenSSLSession.Create(FSession, True);
+  end;
 end;
 
 { TOpenSSLCertificate - Implementation included in full from previous stub generation }
@@ -1614,7 +2471,7 @@ begin
     begin
       // 如果需要检查吊销状态
       if (sslCertVerifyCheckRevocation in aFlags) or 
-         (sslCertVerifyCheckCRL in aFlags) then
+        (sslCertVerifyCheckCRL in aFlags) then
       begin
         // OpenSSL: 启用 CRL 检查
         X509_VERIFY_PARAM_set_flags(
@@ -2263,7 +3120,7 @@ begin
     begin
       LCert := TOpenSSLCertificate.Create(LX509, False);
       if (LCert.GetFingerprintSHA1 = aFingerprint) or 
-         (LCert.GetFingerprintSHA256 = aFingerprint) then
+        (LCert.GetFingerprintSHA256 = aFingerprint) then
       begin
         X509_up_ref(LX509);
         Result := TOpenSSLCertificate.Create(LX509, True);
@@ -2903,16 +3760,44 @@ begin
 end;
 
 function TOpenSSLConnection.GetSession: ISSLSession;
+var
+  LSession: PSSL_SESSION;
 begin
   Result := nil;
-  // Session management is complex and may require additional implementation
-  // For now, return nil as sessions are not fully implemented yet
+  if FSSL = nil then
+    Exit;
+
+  if Assigned(SSL_get1_session) then
+    LSession := SSL_get1_session(FSSL)
+  else if Assigned(SSL_get_session) then
+  begin
+    LSession := SSL_get_session(FSSL);
+    if (LSession <> nil) and Assigned(SSL_SESSION_up_ref) then
+      SSL_SESSION_up_ref(LSession);
+  end
+  else
+    LSession := nil;
+
+  if LSession <> nil then
+    Result := TOpenSSLSession.Create(LSession, True);
 end;
 
 procedure TOpenSSLConnection.SetSession(aSession: ISSLSession);
+var
+  LHandle: PSSL_SESSION;
 begin
-  // Session management is complex and may require additional implementation
-  // For now, this is a no-op
+  if FSSL = nil then
+    Exit;
+
+  if not Assigned(SSL_set_session) then
+    raise ESSLException.Create('OpenSSL does not support session assignment', sslErrUnsupported);
+
+  if aSession <> nil then
+    LHandle := PSSL_SESSION(aSession.GetNativeHandle)
+  else
+    LHandle := nil;
+
+  SSL_set_session(FSSL, LHandle);
 end;
 
 function TOpenSSLConnection.IsSessionReused: Boolean;
@@ -3344,10 +4229,10 @@ begin
 
   // Build formatted message
   Result := Format('[%s] %s:'#13#10 +
-                   '  Problem: %s'#13#10 +
-                   '  Details: %s'#13#10 +
-                   '  Suggestion: %s',
-                   [LCategory,
+                  '  Problem: %s'#13#10 +
+                  '  Details: %s'#13#10 +
+                  '  Suggestion: %s',
+                  [LCategory,
                     SSL_ERROR_MESSAGES[LClassified],
                     SSL_ERROR_MESSAGES[LClassified],
                     LRawError,
@@ -3489,7 +4374,7 @@ begin
 
   // Check if required functions are loaded
   if not Assigned(X509_STORE_CTX_new) or not Assigned(X509_STORE_CTX_init) or
-     not Assigned(X509_verify_cert) or not Assigned(X509_STORE_CTX_free) then
+    not Assigned(X509_verify_cert) or not Assigned(X509_STORE_CTX_free) then
     Exit;
 
   // Create store context
@@ -3577,6 +4462,8 @@ initialization
   RegisterOpenSSLBackend;
   
 finalization
+  if GContextRegistry <> nil then
+    FreeAndNil(GContextRegistry);
   UnregisterOpenSSLBackend;
 
 end.

@@ -9,13 +9,12 @@
 unit fafafa.ssl.openssl.api.evp;
 
 {$mode ObjFPC}{$H+}
-{$H+}
 
 interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.consts;
 
@@ -548,7 +547,7 @@ type
   
   TEVP_PKEY_encapsulate_init = function(ctx: PEVP_PKEY_CTX; const params: POSSL_PARAM): Integer; cdecl;
   TEVP_PKEY_encapsulate = function(ctx: PEVP_PKEY_CTX; wrappedkey: PByte; var wrappedkeylen: NativeUInt; 
-                                   genkey: PByte; var genkeylen: NativeUInt): Integer; cdecl;
+                                  genkey: PByte; var genkeylen: NativeUInt): Integer; cdecl;
   TEVP_PKEY_decapsulate_init = function(ctx: PEVP_PKEY_CTX; const params: POSSL_PARAM): Integer; cdecl;
   TEVP_PKEY_decapsulate = function(ctx: PEVP_PKEY_CTX; unwrapped: PByte; var unwrappedlen: NativeUInt;
                                     const wrapped: PByte; wrappedlen: NativeUInt): Integer; cdecl;
@@ -587,7 +586,7 @@ type
   TEVP_RAND_CTX_free = procedure(ctx: PEVP_RAND_CTX); cdecl;
   TEVP_RAND_CTX_get0_rand = function(ctx: PEVP_RAND_CTX): PEVP_RAND; cdecl;
   TEVP_RAND_instantiate = function(ctx: PEVP_RAND_CTX; strength: Cardinal; prediction_resistance: Integer;
-                                   const addin: PByte; addin_len: NativeUInt; const params: POSSL_PARAM): Integer; cdecl;
+                                  const addin: PByte; addin_len: NativeUInt; const params: POSSL_PARAM): Integer; cdecl;
   TEVP_RAND_uninstantiate = function(ctx: PEVP_RAND_CTX): Integer; cdecl;
   TEVP_RAND_generate = function(ctx: PEVP_RAND_CTX; out_: PByte; outlen: NativeUInt; strength: Cardinal;
                                 prediction_resistance: Integer; const addin: PByte; addin_len: NativeUInt): Integer; cdecl;
@@ -623,13 +622,13 @@ type
   // Encode/Decode functions
   TEVP_EncodeInit = procedure(ctx: PEVP_ENCODE_CTX); cdecl;
   TEVP_EncodeUpdate = function(ctx: PEVP_ENCODE_CTX; out_: PByte; var outl: Integer; 
-                               const in_: PByte; inl: Integer): Integer; cdecl;
+                              const in_: PByte; inl: Integer): Integer; cdecl;
   TEVP_EncodeFinal = procedure(ctx: PEVP_ENCODE_CTX; out_: PByte; var outl: Integer); cdecl;
   TEVP_EncodeBlock = function(t: PByte; const f: PByte; n: Integer): Integer; cdecl;
   
   TEVP_DecodeInit = procedure(ctx: PEVP_ENCODE_CTX); cdecl;
   TEVP_DecodeUpdate = function(ctx: PEVP_ENCODE_CTX; out_: PByte; var outl: Integer; 
-                               const in_: PByte; inl: Integer): Integer; cdecl;
+                              const in_: PByte; inl: Integer): Integer; cdecl;
   TEVP_DecodeFinal = function(ctx: PEVP_ENCODE_CTX; out_: PByte; var outl: Integer): Integer; cdecl;
   TEVP_DecodeBlock = function(t: PByte; const f: PByte; n: Integer): Integer; cdecl;
   
@@ -724,6 +723,7 @@ var
   EVP_DigestUpdate: TEVP_DigestUpdate = nil;
   EVP_DigestFinal_ex: TEVP_DigestFinal_ex = nil;
   EVP_DigestFinalXOF: TEVP_DigestFinalXOF = nil;
+  EVP_Digest: TEVP_Digest = nil;
   
   // MD info functions
   EVP_MD_get_size: TEVP_MD_get_size = nil;
@@ -866,6 +866,7 @@ begin
   EVP_DigestUpdate := TEVP_DigestUpdate(GetProcAddress(ALibHandle, 'EVP_DigestUpdate'));
   EVP_DigestFinal_ex := TEVP_DigestFinal_ex(GetProcAddress(ALibHandle, 'EVP_DigestFinal_ex'));
   EVP_DigestFinalXOF := TEVP_DigestFinalXOF(GetProcAddress(ALibHandle, 'EVP_DigestFinalXOF'));
+  EVP_Digest := TEVP_Digest(GetProcAddress(ALibHandle, 'EVP_Digest'));
   
   // Load MD info functions
   EVP_MD_get_size := TEVP_MD_get_size(GetProcAddress(ALibHandle, 'EVP_MD_get_size'));
@@ -989,6 +990,7 @@ begin
   EVP_DigestUpdate := nil;
   EVP_DigestFinal_ex := nil;
   EVP_DigestFinalXOF := nil;
+  EVP_Digest := nil;
   
   // Clear MD info functions
   EVP_MD_get_size := nil;

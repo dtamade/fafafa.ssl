@@ -4,10 +4,10 @@ program test_openssl_bn;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.crypto,
-  fafafa.ssl.openssl.bn;
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.crypto,
+  fafafa.ssl.openssl.api.bn;
 
 var
   TestsPassed: Integer = 0;

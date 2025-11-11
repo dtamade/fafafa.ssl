@@ -110,9 +110,9 @@ type
   
   // PBKDF2 函数
   TPKCS5_PBKDF2_HMAC = function(pass: PAnsiChar; passlen: Integer;
-                                 salt: PByte; saltlen: Integer;
-                                 iter: Integer; digest: PEVP_MD;
-                                 keylen: Integer; outkey: PByte): Integer; cdecl;
+                                salt: PByte; saltlen: Integer;
+                                iter: Integer; digest: PEVP_MD;
+                                keylen: Integer; outkey: PByte): Integer; cdecl;
   TPKCS5_PBKDF2_HMAC_SHA1 = function(pass: PAnsiChar; passlen: Integer;
                                       salt: PByte; saltlen: Integer;
                                       iter: Integer; keylen: Integer;
@@ -131,7 +131,7 @@ type
   TEVP_PKEY_CTX_set1_hkdf_salt = function(ctx: PEVP_PKEY_CTX; salt: PByte;
                                           saltlen: Integer): Integer; cdecl;
   TEVP_PKEY_CTX_set1_hkdf_key = function(ctx: PEVP_PKEY_CTX; key: PByte;
-                                         keylen: Integer): Integer; cdecl;
+                                        keylen: Integer): Integer; cdecl;
   TEVP_PKEY_CTX_add1_hkdf_info = function(ctx: PEVP_PKEY_CTX; info: PByte;
                                           infolen: Integer): Integer; cdecl;
   
@@ -144,7 +144,7 @@ type
   
   // EVP KDF 函数 (OpenSSL 3.0+)
   TEVP_KDF_fetch = function(libctx: POSSL_LIB_CTX; algorithm: PAnsiChar;
-                           properties: PAnsiChar): PEVP_KDF; cdecl;
+                          properties: PAnsiChar): PEVP_KDF; cdecl;
   TEVP_KDF_free = procedure(kdf: PEVP_KDF); cdecl;
   TEVP_KDF_up_ref = function(kdf: PEVP_KDF): Integer; cdecl;
   TEVP_KDF_CTX_new = function(kdf: PEVP_KDF): PEVP_KDF_CTX; cdecl;
@@ -163,7 +163,7 @@ type
   TEVP_KDF_get0_description = function(kdf: PEVP_KDF): PAnsiChar; cdecl;
   TEVP_KDF_is_a = function(kdf: PEVP_KDF; name: PAnsiChar): Integer; cdecl;
   TEVP_KDF_do_all_provided = procedure(libctx: POSSL_LIB_CTX;
-                                       fn: Pointer; arg: Pointer); cdecl;
+                                      fn: Pointer; arg: Pointer); cdecl;
   TEVP_KDF_names_do_all = procedure(kdf: PEVP_KDF; fn: Pointer; data: Pointer); cdecl;
   
   // 旧版 PKCS5 函数
@@ -171,9 +171,9 @@ type
                             salt: PByte; data: PByte; datal: Integer;
                             count: Integer; key: PByte; iv: PByte): Integer; cdecl;
   TPKCS5_v2_PBE_keyivgen = function(ctx: PEVP_CIPHER_CTX; pass: PAnsiChar;
-                                   passlen: Integer; param: PASN1_TYPE;
-                                   cipher: PEVP_CIPHER; md: PEVP_MD;
-                                   en_de: Integer): Integer; cdecl;
+                                  passlen: Integer; param: PASN1_TYPE;
+                                  cipher: PEVP_CIPHER; md: PEVP_MD;
+                                  en_de: Integer): Integer; cdecl;
   TPKCS5_v2_PBKDF2_keyivgen = function(ctx: PEVP_CIPHER_CTX; pass: PAnsiChar;
                                       passlen: Integer; param: PASN1_TYPE;
                                       cipher: PEVP_CIPHER; md: PEVP_MD;
@@ -372,8 +372,8 @@ begin
   
   // 使用指定的摘要算法
   if PKCS5_PBKDF2_HMAC(PAnsiChar(PassAnsi), Length(PassAnsi),
-                       @Salt[0], Length(Salt),
-                       Iterations, MD, KeyLen, @OutKey[0]) = 1 then
+                      @Salt[0], Length(Salt),
+                      Iterations, MD, KeyLen, @OutKey[0]) = 1 then
     Result := OutKey;
 end;
 
@@ -412,7 +412,7 @@ begin
   
   // 尝试使用 OpenSSL 3.0+ API
   if Assigned(EVP_KDF_fetch) and Assigned(EVP_KDF_CTX_new) and
-     Assigned(EVP_KDF_derive) and Assigned(EVP_KDF_CTX_free) then
+    Assigned(EVP_KDF_derive) and Assigned(EVP_KDF_CTX_free) then
   begin
     Kdf := EVP_KDF_fetch(nil, 'HKDF', nil);
     if Kdf = nil then Exit;

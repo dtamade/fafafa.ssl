@@ -5,9 +5,9 @@ program test_dsa_simple;
 uses
   SysUtils,
   fafafa.ssl.types,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.api.types,
   fafafa.ssl.openssl.consts,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.dsa,
   fafafa.ssl.openssl.api.bn;
 

@@ -4,9 +4,9 @@ program test_aead_gcm;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
-  fafafa.ssl.openssl.consts,
+  fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.types;
 
 const
@@ -89,14 +89,14 @@ begin
     
     // 提供 AAD
     OutLen := 0;
-    if EVP_EncryptUpdate(Ctx, nil, @OutLen, @AAD[0], Length(AAD)) <> 1 then
+    if EVP_EncryptUpdate(Ctx, nil, OutLen, @AAD[0], Length(AAD)) <> 1 then
     begin
       WriteLn('  错误: 提供 AAD 失败');
       Exit;
     end;
     
     // 加密明文
-    if EVP_EncryptUpdate(Ctx, @CipherText[0], @OutLen, @PlainText[0], Length(PlainText)) <> 1 then
+    if EVP_EncryptUpdate(Ctx, @CipherText[0], OutLen, @PlainText[0], Length(PlainText)) <> 1 then
     begin
       WriteLn('  错误: 加密失败');
       Exit;
@@ -104,7 +104,7 @@ begin
     TotalLen := OutLen;
     
     // 完成加密
-    if EVP_EncryptFinal_ex(Ctx, @CipherText[TotalLen], @OutLen) <> 1 then
+    if EVP_EncryptFinal_ex(Ctx, @CipherText[TotalLen], OutLen) <> 1 then
     begin
       WriteLn('  错误: 完成加密失败');
       Exit;
@@ -162,10 +162,10 @@ begin
     EVP_CIPHER_CTX_ctrl(CtxEnc, EVP_CTRL_GCM_SET_IVLEN, Length(IV), nil);
     EVP_EncryptInit_ex(CtxEnc, nil, nil, @Key[0], @IV[0]);
     OutLen := 0;
-    EVP_EncryptUpdate(CtxEnc, nil, @OutLen, @AAD[0], Length(AAD));
-    EVP_EncryptUpdate(CtxEnc, @CipherText[0], @OutLen, @PlainText[0], Length(PlainText));
+    EVP_EncryptUpdate(CtxEnc, nil, OutLen, @AAD[0], Length(AAD));
+    EVP_EncryptUpdate(CtxEnc, @CipherText[0], OutLen, @PlainText[0], Length(PlainText));
     TotalLen := OutLen;
-    EVP_EncryptFinal_ex(CtxEnc, @CipherText[TotalLen], @OutLen);
+    EVP_EncryptFinal_ex(CtxEnc, @CipherText[TotalLen], OutLen);
     Inc(TotalLen, OutLen);
     EVP_CIPHER_CTX_ctrl(CtxEnc, EVP_CTRL_GCM_GET_TAG, GCM_TAG_SIZE, @Tag[0]);
   finally
@@ -184,17 +184,17 @@ begin
     
     // 提供 AAD
     DecLen := 0;
-    if EVP_DecryptUpdate(CtxDec, nil, @DecLen, @AAD[0], Length(AAD)) <> 1 then Exit;
+    if EVP_DecryptUpdate(CtxDec, nil, DecLen, @AAD[0], Length(AAD)) <> 1 then Exit;
     
     // 解密密文
-    if EVP_DecryptUpdate(CtxDec, @DecryptedText[0], @DecLen, @CipherText[0], TotalLen) <> 1 then Exit;
+    if EVP_DecryptUpdate(CtxDec, @DecryptedText[0], DecLen, @CipherText[0], TotalLen) <> 1 then Exit;
     TotalLen := DecLen;
     
     // 设置预期的标签
     if EVP_CIPHER_CTX_ctrl(CtxDec, EVP_CTRL_GCM_SET_TAG, GCM_TAG_SIZE, @Tag[0]) <> 1 then Exit;
     
     // 完成解密（验证标签）
-    if EVP_DecryptFinal_ex(CtxDec, @DecryptedText[TotalLen], @DecLen) <> 1 then
+    if EVP_DecryptFinal_ex(CtxDec, @DecryptedText[TotalLen], DecLen) <> 1 then
     begin
       WriteLn('  错误: 认证标签验证失败');
       Exit;
@@ -254,9 +254,9 @@ begin
     if EVP_EncryptInit_ex(Ctx, Cipher, nil, nil, nil) <> 1 then Exit;
     if EVP_CIPHER_CTX_ctrl(Ctx, EVP_CTRL_GCM_SET_IVLEN, Length(IV), nil) <> 1 then Exit;
     if EVP_EncryptInit_ex(Ctx, nil, nil, @Key[0], @IV[0]) <> 1 then Exit;
-    if EVP_EncryptUpdate(Ctx, @CipherText[0], @OutLen, @PlainText[0], Length(PlainText)) <> 1 then Exit;
+    if EVP_EncryptUpdate(Ctx, @CipherText[0], OutLen, @PlainText[0], Length(PlainText)) <> 1 then Exit;
     TotalLen := OutLen;
-    if EVP_EncryptFinal_ex(Ctx, @CipherText[TotalLen], @OutLen) <> 1 then Exit;
+    if EVP_EncryptFinal_ex(Ctx, @CipherText[TotalLen], OutLen) <> 1 then Exit;
     Inc(TotalLen, OutLen);
     if EVP_CIPHER_CTX_ctrl(Ctx, EVP_CTRL_GCM_GET_TAG, GCM_TAG_SIZE, @Tag[0]) <> 1 then Exit;
     
@@ -298,9 +298,9 @@ begin
     EVP_EncryptInit_ex(CtxEnc, Cipher, nil, nil, nil);
     EVP_CIPHER_CTX_ctrl(CtxEnc, EVP_CTRL_GCM_SET_IVLEN, Length(IV), nil);
     EVP_EncryptInit_ex(CtxEnc, nil, nil, @Key[0], @IV[0]);
-    EVP_EncryptUpdate(CtxEnc, @CipherText[0], @OutLen, @PlainText[0], Length(PlainText));
+    EVP_EncryptUpdate(CtxEnc, @CipherText[0], OutLen, @PlainText[0], Length(PlainText));
     TotalLen := OutLen;
-    EVP_EncryptFinal_ex(CtxEnc, @CipherText[TotalLen], @OutLen);
+    EVP_EncryptFinal_ex(CtxEnc, @CipherText[TotalLen], OutLen);
     Inc(TotalLen, OutLen);
     EVP_CIPHER_CTX_ctrl(CtxEnc, EVP_CTRL_GCM_GET_TAG, GCM_TAG_SIZE, @Tag[0]);
   finally
@@ -319,11 +319,11 @@ begin
     EVP_CIPHER_CTX_ctrl(CtxDec, EVP_CTRL_GCM_SET_IVLEN, Length(IV), nil);
     EVP_DecryptInit_ex(CtxDec, nil, nil, @Key[0], @IV[0]);
     DecLen := 0;
-    EVP_DecryptUpdate(CtxDec, @DecryptedText[0], @DecLen, @CipherText[0], TotalLen);
+    EVP_DecryptUpdate(CtxDec, @DecryptedText[0], DecLen, @CipherText[0], TotalLen);
     EVP_CIPHER_CTX_ctrl(CtxDec, EVP_CTRL_GCM_SET_TAG, GCM_TAG_SIZE, @Tag[0]);
     
     // 应该在这里失败
-    if EVP_DecryptFinal_ex(CtxDec, @DecryptedText[DecLen], @OutLen) = 1 then
+    if EVP_DecryptFinal_ex(CtxDec, @DecryptedText[DecLen], OutLen) = 1 then
     begin
       WriteLn('  错误: 篡改的标签未被检测到！');
       Result := False;
@@ -354,7 +354,8 @@ begin
   
   // 加载 OpenSSL
   Write('加载 OpenSSL 库... ');
-  LoadSuccess := LoadOpenSSLCore;
+  LoadOpenSSLCore;
+  LoadSuccess := IsOpenSSLCoreLoaded;
   if not LoadSuccess then
   begin
     WriteLn('失败');
@@ -362,10 +363,7 @@ begin
     Halt(1);
   end;
   WriteLn('成功');
-  if Assigned(OpenSSL_version) then
-    WriteLn('OpenSSL 版本: ', OpenSSL_version(0))
-  else
-    WriteLn('OpenSSL 版本: 未知');
+  WriteLn('OpenSSL 版本: ', GetOpenSSLVersionString);
   WriteLn;
   
   // 加载 EVP 函数

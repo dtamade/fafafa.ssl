@@ -5,8 +5,8 @@ program test_cert_store;
 uses
   Classes, SysUtils,
   fafafa.ssl,
-  fafafa.ssl.abstract.intf,
-  fafafa.ssl.abstract.types,
+  
+  fafafa.ssl.base,
   fafafa.ssl.factory;
 
 var
