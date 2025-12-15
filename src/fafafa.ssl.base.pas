@@ -21,6 +21,7 @@
 unit fafafa.ssl.base;
 
 {$mode ObjFPC}{$H+}
+{$modeswitch advancedrecords}
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
 interface
@@ -32,11 +33,58 @@ type
   // ============================================================================
   // 基础类型定义
   // ============================================================================
-  
+
   { 通用过程类型 }
   TSSLProc = procedure of object;
   TSSLProcString = procedure(const aValue: string) of object;
-  
+
+  { Result 类型回调函数类型 - 使用 of object 以支持嵌套函数 }
+  TProcedureOfConstTBytes = procedure(const AData: TBytes) of object;
+  TProcedureOfConstString = procedure(const AValue: string) of object;
+  TPredicateTBytes = function(const AData: TBytes): Boolean of object;
+  TPredicateString = function(const AValue: string): Boolean of object;
+
+  { TBytesView - 零拷贝字节视图 (Phase 2.3.2)
+
+    类似 Rust 的 &[u8] 借用语义，提供对现有 TBytes 的只读视图，
+    避免不必要的内存拷贝。适用于：
+    - 加密操作的输入参数（零拷贝读取）
+    - 哈希计算（避免输入拷贝）
+    - 大数据处理（减少内存分配）
+
+    注意：TBytesView 不拥有数据，只是引用。调用者必须确保
+    源数据在视图使用期间保持有效。
+  }
+  TBytesView = record
+    Data: PByte;      // 指向数据的指针
+    Length: Integer;  // 数据长度（字节数）
+
+    { 从 TBytes 创建视图（零拷贝）
+      注意：使用 var 参数避免复制，确保指针指向调用者的数据 }
+    class function FromBytes(var ABytes: TBytes): TBytesView; static;
+
+    { 从指针和长度创建视图 }
+    class function FromPtr(AData: PByte; ALength: Integer): TBytesView; static;
+
+    { 创建空视图 }
+    class function Empty: TBytesView; static;
+
+    { 转换为 TBytes（需要拷贝） }
+    function AsBytes: TBytes;
+
+    { 创建子视图（切片） }
+    function Slice(AStart, ALength: Integer): TBytesView;
+
+    { 检查视图是否为空 }
+    function IsEmpty: Boolean;
+
+    { 检查视图是否有效（指针非空） }
+    function IsValid: Boolean;
+
+    { 获取指定索引的字节（无边界检查，使用时需谨慎） }
+    function GetByte(AIndex: Integer): Byte; inline;
+  end;
+
   // ============================================================================
   // 枚举类型定义
   // ============================================================================
@@ -149,6 +197,17 @@ type
     sslErrFunctionNotFound,  // 函数未找到
     sslErrVersionMismatch,   // 版本不匹配
     sslErrConfiguration,     // 配置错误
+    // 新增错误码 - Phase 4
+    sslErrInvalidData,       // 数据格式错误
+    sslErrDecryptionFailed,  // 解密失败
+    sslErrEncryptionFailed,  // 加密失败
+    sslErrParseFailed,       // 解析失败
+    sslErrLoadFailed,        // 加载失败
+    sslErrVerificationFailed,// 验证失败
+    sslErrKeyDerivationFailed,// 密钥派生失败
+    sslErrInvalidFormat,     // 格式无效
+    sslErrBufferTooSmall,    // 缓冲区太小
+    sslErrResourceExhausted, // 资源耗尽
     sslErrOther              // 其他错误
   );
 
@@ -200,6 +259,9 @@ type
     sslHashBLAKE2b
   );
 
+  { 通用字符串数组，用于只读字段传递 }
+  TSSLStringArray = array of string;
+
   // ============================================================================
   // 记录类型定义
   // ============================================================================
@@ -227,7 +289,7 @@ type
     PublicKeySize: Integer;       // 公钥长度（位）
     SignatureAlgorithm: string;   // 签名算法
     Version: Integer;             // 证书版本
-    SubjectAltNames: TStringList; // 主题备用名称
+    SubjectAltNames: TSSLStringArray; // 主题备用名称（只读快照）
     IsCA: Boolean;                // 是否为CA证书
     PathLength: Integer;          // 证书路径长度限制
     PathLenConstraint: Integer;   // 路径长度约束 (-1表示无限制)
@@ -270,6 +332,7 @@ type
     // 证书配置
     CertificateFile: string;                 // 证书文件路径
     PrivateKeyFile: string;                  // 私钥文件路径
+    PrivateKeyPassword: string;              // 私钥口令（可选）
     CAFile: string;                          // CA证书文件路径
     CAPath: string;                          // CA证书目录路径
     VerifyMode: TSSLVerifyModes;            // 证书验证模式
@@ -316,6 +379,83 @@ type
     AlertsReceived: Int64;          // 接收的警报数
   end;
   PSSLStatistics = ^TSSLStatistics;
+
+  // ============================================================================
+  // Result 类型定义（借鉴 Rust Result<T, E> 模式）
+  // ============================================================================
+
+  { SSL 操作结果 - 类似 Rust Result<(), E> }
+  TSSLOperationResult = record
+    Success: Boolean;
+    ErrorCode: TSSLErrorCode;
+    ErrorMessage: string;
+
+    class function Ok: TSSLOperationResult; static;
+    class function Err(ACode: TSSLErrorCode; const AMsg: string): TSSLOperationResult; static;
+
+    function IsOk: Boolean;
+    function IsErr: Boolean;
+    procedure Expect(const AMsg: string);  // 失败时抛出带自定义消息的异常
+    function UnwrapErr: TSSLErrorCode;  // 返回错误码（成功时抛异常）
+  end;
+
+  { SSL 数据结果 - 类似 Rust Result<TBytes, E> }
+  TSSLDataResult = record
+    Success: Boolean;
+    Data: TBytes;
+    ErrorCode: TSSLErrorCode;
+    ErrorMessage: string;
+
+    class function Ok(const AData: TBytes): TSSLDataResult; static;
+    class function Err(ACode: TSSLErrorCode; const AMsg: string): TSSLDataResult; static;
+
+    function IsOk: Boolean;
+    function IsErr: Boolean;
+    function Unwrap: TBytes;  // 失败时抛异常
+    function UnwrapOr(const ADefault: TBytes): TBytes;  // 失败时返回默认值
+    function Expect(const AMsg: string): TBytes;  // 失败时抛出带自定义消息的异常
+    function UnwrapErr: TSSLErrorCode;  // 返回错误码（成功时抛异常）
+    function IsOkAnd(APredicate: TPredicateTBytes): Boolean;  // 检查是否Ok且满足条件
+    function Inspect(ACallback: TProcedureOfConstTBytes): TSSLDataResult;  // 检查但不消耗值
+  end;
+
+  { SSL 字符串结果 - 类似 Rust Result<String, E> }
+  TSSLStringResult = record
+    Success: Boolean;
+    Value: string;
+    ErrorCode: TSSLErrorCode;
+    ErrorMessage: string;
+
+    class function Ok(const AValue: string): TSSLStringResult; static;
+    class function Err(ACode: TSSLErrorCode; const AMsg: string): TSSLStringResult; static;
+
+    function IsOk: Boolean;
+    function IsErr: Boolean;
+    function Unwrap: string;  // 失败时抛异常
+    function UnwrapOr(const ADefault: string): string;  // 失败时返回默认值
+    function Expect(const AMsg: string): string;  // 失败时抛出带自定义消息的异常
+    function UnwrapErr: TSSLErrorCode;  // 返回错误码（成功时抛异常）
+    function IsOkAnd(APredicate: TPredicateString): Boolean;  // 检查是否Ok且满足条件
+    function Inspect(ACallback: TProcedureOfConstString): TSSLStringResult;  // 检查但不消耗值
+  end;
+
+  { Builder 配置验证结果 - Phase 2.1.2 }
+  TBuildValidationResult = record
+    IsValid: Boolean;          // 是否有效（无错误）
+    Warnings: array of string; // 警告消息（不阻止构建）
+    Errors: array of string;   // 错误消息（阻止构建）
+
+    class function Ok: TBuildValidationResult; static;
+    class function WithWarnings(const AWarn: array of string): TBuildValidationResult; static;
+    class function WithErrors(const AErrs: array of string): TBuildValidationResult; static;
+
+    procedure AddWarning(const AMessage: string);
+    procedure AddError(const AMessage: string);
+    function HasWarnings: Boolean;
+    function HasErrors: Boolean;
+    function WarningCount: Integer;
+    function ErrorCount: Integer;
+  end;
 
   // ============================================================================
   // 异常类定义
@@ -452,6 +592,10 @@ type
     procedure LoadPrivateKey(const aFileName: string; const aPassword: string = ''); overload;
     procedure LoadPrivateKey(aStream: TStream; const aPassword: string = ''); overload;
     
+    // PEM 字符串直接加载（企业级接口增强）
+    procedure LoadCertificatePEM(const aPEM: string);
+    procedure LoadPrivateKeyPEM(const aPEM: string; const aPassword: string = '');
+    
     procedure LoadCAFile(const aFileName: string);
     procedure LoadCAPath(const aPath: string);
     procedure SetCertificateStore(aStore: ISSLCertificateStore);
@@ -478,8 +622,8 @@ type
     function GetSessionCacheSize: Integer;
     
     // 高级选项
-    procedure SetOptions(aOptions: Cardinal);
-    function GetOptions: Cardinal;
+    procedure SetOptions(const aOptions: TSSLOptions);
+    function GetOptions: TSSLOptions;
     procedure SetServerName(const aServerName: string); // SNI
     function GetServerName: string;
     procedure SetALPNProtocols(const aProtocols: string);
@@ -703,7 +847,7 @@ const
     'DTLS 1.2'
   );
 
-  // 错误代码描述
+  // 错误代码描述（中文）
   SSL_ERROR_MESSAGES: array[TSSLErrorCode] of string = (
     '无错误',
     '一般错误',
@@ -727,7 +871,56 @@ const
     '函数未找到',
     '版本不匹配',
     '配置错误',
+    // 新增错误消息 - Phase 4
+    '数据格式错误',
+    '解密失败',
+    '加密失败',
+    '解析失败',
+    '加载失败',
+    '验证失败',
+    '密钥派生失败',
+    '格式无效',
+    '缓冲区太小',
+    '资源耗尽',
     '其他错误'
+  );
+
+  // 错误代码描述（英文）
+  SSL_ERROR_MESSAGES_EN: array[TSSLErrorCode] of string = (
+    'No error',
+    'General error',
+    'Memory allocation failed',
+    'Invalid parameter',
+    'Not initialized',
+    'Protocol error',
+    'Handshake error',
+    'Certificate error',
+    'Certificate expired',
+    'Certificate revoked',
+    'Unknown certificate',
+    'Connection error',
+    'Timeout',
+    'I/O error',
+    'Operation would block',
+    'SSL needs read',
+    'SSL needs write',
+    'Unsupported feature',
+    'Library file not found',
+    'Function not found',
+    'Version mismatch',
+    'Configuration error',
+    // New error messages - Phase 4
+    'Invalid data format',
+    'Decryption failed',
+    'Encryption failed',
+    'Parse failed',
+    'Load failed',
+    'Verification failed',
+    'Key derivation failed',
+    'Invalid format',
+    'Buffer too small',
+    'Resource exhausted',
+    'Other error'
   );
 
   // 默认配置值
@@ -752,6 +945,80 @@ function ProtocolVersionToString(aVersion: TSSLProtocolVersion): string;
 function LibraryTypeToString(aLibType: TSSLLibraryType): string;
 
 implementation
+
+{ TBytesView - 零拷贝字节视图实现 (Phase 2.3.2) }
+
+class function TBytesView.FromBytes(var ABytes: TBytes): TBytesView;
+begin
+  Result.Length := System.Length(ABytes);
+  if Result.Length > 0 then
+    Result.Data := @ABytes[0]  // 获取第一个元素的地址（指向调用者的数据）
+  else
+    Result.Data := nil;
+end;
+
+class function TBytesView.FromPtr(AData: PByte; ALength: Integer): TBytesView;
+begin
+  Result.Data := AData;
+  Result.Length := ALength;
+end;
+
+class function TBytesView.Empty: TBytesView;
+begin
+  Result.Data := nil;
+  Result.Length := 0;
+end;
+
+function TBytesView.AsBytes: TBytes;
+var
+  I: Integer;
+begin
+  SetLength(Result, Length);
+  if (Length > 0) and (Data <> nil) then
+  begin
+    for I := 0 to Length - 1 do
+      Result[I] := Data[I];
+  end;
+end;
+
+function TBytesView.Slice(AStart, ALength: Integer): TBytesView;
+begin
+  // 边界检查
+  if (AStart < 0) or (AStart >= Length) then
+  begin
+    Result := TBytesView.Empty;
+    Exit;
+  end;
+
+  // 调整长度
+  if AStart + ALength > Length then
+    ALength := Length - AStart;
+
+  if ALength <= 0 then
+  begin
+    Result := TBytesView.Empty;
+    Exit;
+  end;
+
+  // 创建子视图
+  Result.Data := Data + AStart;
+  Result.Length := ALength;
+end;
+
+function TBytesView.IsEmpty: Boolean;
+begin
+  Result := (Length = 0) or (Data = nil);
+end;
+
+function TBytesView.IsValid: Boolean;
+begin
+  Result := (Data <> nil) and (Length > 0);
+end;
+
+function TBytesView.GetByte(AIndex: Integer): Byte;
+begin
+  Result := Data[AIndex];
+end;
 
 { ESSLException }
 
@@ -796,7 +1063,252 @@ begin
   Result := SSL_LIBRARY_NAMES[aLibType];
 end;
 
+{ TSSLOperationResult }
+
+class function TSSLOperationResult.Ok: TSSLOperationResult;
+begin
+  Result.Success := True;
+  Result.ErrorCode := sslErrNone;
+  Result.ErrorMessage := '';
+end;
+
+class function TSSLOperationResult.Err(ACode: TSSLErrorCode; const AMsg: string): TSSLOperationResult;
+begin
+  Result.Success := False;
+  Result.ErrorCode := ACode;
+  Result.ErrorMessage := AMsg;
+end;
+
+function TSSLOperationResult.IsOk: Boolean;
+begin
+  Result := Success;
+end;
+
+function TSSLOperationResult.IsErr: Boolean;
+begin
+  Result := not Success;
+end;
+
+procedure TSSLOperationResult.Expect(const AMsg: string);
+begin
+  if not Success then
+    raise ESSLException.Create(AMsg + ': ' + ErrorMessage, ErrorCode);
+end;
+
+function TSSLOperationResult.UnwrapErr: TSSLErrorCode;
+begin
+  if Success then
+    raise ESSLException.Create('Called UnwrapErr on Ok value', sslErrGeneral);
+  Result := ErrorCode;
+end;
+
+{ TSSLDataResult }
+
+class function TSSLDataResult.Ok(const AData: TBytes): TSSLDataResult;
+begin
+  Result.Success := True;
+  Result.Data := AData;
+  Result.ErrorCode := sslErrNone;
+  Result.ErrorMessage := '';
+end;
+
+class function TSSLDataResult.Err(ACode: TSSLErrorCode; const AMsg: string): TSSLDataResult;
+begin
+  Result.Success := False;
+  Result.Data := nil;
+  Result.ErrorCode := ACode;
+  Result.ErrorMessage := AMsg;
+end;
+
+function TSSLDataResult.IsOk: Boolean;
+begin
+  Result := Success;
+end;
+
+function TSSLDataResult.IsErr: Boolean;
+begin
+  Result := not Success;
+end;
+
+function TSSLDataResult.Unwrap: TBytes;
+begin
+  if not Success then
+    raise ESSLException.Create(ErrorMessage, ErrorCode);
+  Result := Data;
+end;
+
+function TSSLDataResult.UnwrapOr(const ADefault: TBytes): TBytes;
+begin
+  if Success then
+    Result := Data
+  else
+    Result := ADefault;
+end;
+
+function TSSLDataResult.Expect(const AMsg: string): TBytes;
+begin
+  if not Success then
+    raise ESSLException.Create(AMsg + ': ' + ErrorMessage, ErrorCode);
+  Result := Data;
+end;
+
+function TSSLDataResult.UnwrapErr: TSSLErrorCode;
+begin
+  if Success then
+    raise ESSLException.Create('Called UnwrapErr on Ok value', sslErrGeneral);
+  Result := ErrorCode;
+end;
+
+function TSSLDataResult.IsOkAnd(APredicate: TPredicateTBytes): Boolean;
+begin
+  Result := Success and APredicate(Data);
+end;
+
+function TSSLDataResult.Inspect(ACallback: TProcedureOfConstTBytes): TSSLDataResult;
+begin
+  if Success then
+    ACallback(Data);
+  Result := Self;
+end;
+
+{ TSSLStringResult }
+
+class function TSSLStringResult.Ok(const AValue: string): TSSLStringResult;
+begin
+  Result.Success := True;
+  Result.Value := AValue;
+  Result.ErrorCode := sslErrNone;
+  Result.ErrorMessage := '';
+end;
+
+class function TSSLStringResult.Err(ACode: TSSLErrorCode; const AMsg: string): TSSLStringResult;
+begin
+  Result.Success := False;
+  Result.Value := '';
+  Result.ErrorCode := ACode;
+  Result.ErrorMessage := AMsg;
+end;
+
+function TSSLStringResult.IsOk: Boolean;
+begin
+  Result := Success;
+end;
+
+function TSSLStringResult.IsErr: Boolean;
+begin
+  Result := not Success;
+end;
+
+function TSSLStringResult.Unwrap: string;
+begin
+  if not Success then
+    raise ESSLException.Create(ErrorMessage, ErrorCode);
+  Result := Value;
+end;
+
+function TSSLStringResult.UnwrapOr(const ADefault: string): string;
+begin
+  if Success then
+    Result := Value
+  else
+    Result := ADefault;
+end;
+
+function TSSLStringResult.Expect(const AMsg: string): string;
+begin
+  if not Success then
+    raise ESSLException.Create(AMsg + ': ' + ErrorMessage, ErrorCode);
+  Result := Value;
+end;
+
+function TSSLStringResult.UnwrapErr: TSSLErrorCode;
+begin
+  if Success then
+    raise ESSLException.Create('Called UnwrapErr on Ok value', sslErrGeneral);
+  Result := ErrorCode;
+end;
+
+function TSSLStringResult.IsOkAnd(APredicate: TPredicateString): Boolean;
+begin
+  Result := Success and APredicate(Value);
+end;
+
+function TSSLStringResult.Inspect(ACallback: TProcedureOfConstString): TSSLStringResult;
+begin
+  if Success then
+    ACallback(Value);
+  Result := Self;
+end;
+
+{ TBuildValidationResult - Phase 2.1.2 }
+
+class function TBuildValidationResult.Ok: TBuildValidationResult;
+begin
+  Result.IsValid := True;
+  SetLength(Result.Warnings, 0);
+  SetLength(Result.Errors, 0);
+end;
+
+class function TBuildValidationResult.WithWarnings(const AWarn: array of string): TBuildValidationResult;
+var
+  I: Integer;
+begin
+  Result.IsValid := True;
+  SetLength(Result.Warnings, Length(AWarn));
+  for I := 0 to High(AWarn) do
+    Result.Warnings[I] := AWarn[I];
+  SetLength(Result.Errors, 0);
+end;
+
+class function TBuildValidationResult.WithErrors(const AErrs: array of string): TBuildValidationResult;
+var
+  I: Integer;
+begin
+  Result.IsValid := False;
+  SetLength(Result.Warnings, 0);
+  SetLength(Result.Errors, Length(AErrs));
+  for I := 0 to High(AErrs) do
+    Result.Errors[I] := AErrs[I];
+end;
+
+procedure TBuildValidationResult.AddWarning(const AMessage: string);
+var
+  L: Integer;
+begin
+  L := Length(Warnings);
+  SetLength(Warnings, L + 1);
+  Warnings[L] := AMessage;
+end;
+
+procedure TBuildValidationResult.AddError(const AMessage: string);
+var
+  L: Integer;
+begin
+  IsValid := False;
+  L := Length(Errors);
+  SetLength(Errors, L + 1);
+  Errors[L] := AMessage;
+end;
+
+function TBuildValidationResult.HasWarnings: Boolean;
+begin
+  Result := Length(Warnings) > 0;
+end;
+
+function TBuildValidationResult.HasErrors: Boolean;
+begin
+  Result := Length(Errors) > 0;
+end;
+
+function TBuildValidationResult.WarningCount: Integer;
+begin
+  Result := Length(Warnings);
+end;
+
+function TBuildValidationResult.ErrorCount: Integer;
+begin
+  Result := Length(Errors);
+end;
+
 end.
-
-
 
