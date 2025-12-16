@@ -47,7 +47,8 @@ type
     function GetCompileFlags: string;
     function IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
     function IsCipherSupported(const aCipherName: string): Boolean;
-    function IsFeatureSupported(const aFeatureName: string): Boolean;
+    function IsFeatureSupported(const aFeatureName: string): Boolean; // 废弃：使用TSSLFeature重载
+    function IsFeatureSupported(aFeature: TSSLFeature): Boolean; overload; // Phase 1.3 - 类型安全
     procedure SetDefaultConfig(const aConfig: TSSLConfig);
     function GetDefaultConfig: TSSLConfig;
     function GetLastError: Integer;
@@ -851,6 +852,39 @@ begin
     Exit(Assigned(SSL_get_stream_id));
 
   Result := False;
+end;
+
+{ Phase 1.3 - 类型安全特性检查（Rust质量标准：消除stringly-typed）}
+function TOpenSSLLibrary.IsFeatureSupported(aFeature: TSSLFeature): Boolean;
+begin
+  if not FInitialized then
+    Initialize;
+
+  case aFeature of
+    sslFeatSNI:
+      Result := Assigned(SSL_CTX_set_tlsext_servername_callback);
+
+    sslFeatALPN:
+      Result := Assigned(SSL_CTX_set_alpn_protos) and
+                Assigned(SSL_CTX_set_alpn_select_cb);
+
+    sslFeatSessionCache:
+      Result := Assigned(SSL_CTX_set_session_cache_mode);
+
+    sslFeatSessionTickets:
+      Result := Assigned(SSL_CTX_set_tlsext_ticket_key_cb);
+
+    sslFeatRenegotiation:
+      Result := True;  // OpenSSL 总是支持重新协商（可配置禁用）
+
+    sslFeatOCSPStapling:
+      Result := Assigned(SSL_CTX_set_tlsext_status_cb);
+
+    sslFeatCertificateTransparency:
+      Result := False;  // 需要专门配置 CT 支持
+  else
+    Result := False;
+  end;
 end;
 
 procedure TOpenSSLLibrary.SetDefaultConfig(const aConfig: TSSLConfig);
