@@ -15,6 +15,7 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.exceptions,  // 新增：类型化异常
+  fafafa.ssl.errors,      // Phase 2.1 - Standardized error handling
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl,
@@ -101,11 +102,7 @@ begin
   
   Ctx := PSSL_CTX(aContext.GetNativeHandle);
   if Ctx = nil then
-    raise ESSLInvalidArgument.CreateWithContext(
-      'Invalid SSL context (GetNativeHandle returned nil)',
-      sslErrInvalidParam,
-      'TOpenSSLConnection.Create'
-    );
+    RaiseInvalidParameter('SSL context (GetNativeHandle returned nil)');
   
   FSSL := SSL_new(Ctx);
   if FSSL = nil then
@@ -137,11 +134,7 @@ begin
   
   Ctx := PSSL_CTX(aContext.GetNativeHandle);
   if Ctx = nil then
-    raise ESSLInvalidArgument.CreateWithContext(
-      'Invalid SSL context (GetNativeHandle returned nil)',
-      sslErrInvalidParam,
-      'TOpenSSLConnection.Create'
-    );
+    RaiseInvalidParameter('SSL context (GetNativeHandle returned nil)');
   
   FSSL := SSL_new(Ctx);
   if FSSL = nil then
@@ -160,31 +153,19 @@ begin
 
   if (not Assigned(BIO_new)) or (not Assigned(BIO_s_mem)) or
      (not Assigned(SSL_set_bio)) then
-    raise ESSLInitializationException.CreateWithContext(
-      'OpenSSL BIO API not available (functions not loaded)',
-      sslErrFunctionNotFound,
-      'TOpenSSLConnection.Create'
-    );
+    RaiseFunctionNotAvailable('OpenSSL BIO API (BIO_new/BIO_s_mem/SSL_set_bio)');
 
   // Create separate memory BIOs for incoming and outgoing encrypted data
   FBioRead := BIO_new(BIO_s_mem());
   if FBioRead = nil then
-    raise ESSLResourceException.CreateWithContext(
-      'Failed to create read BIO for TLS connection',
-      sslErrMemory,
-      'TOpenSSLConnection.Create'
-    );
+    RaiseMemoryError('create read BIO');
 
   FBioWrite := BIO_new(BIO_s_mem());
   if FBioWrite = nil then
   begin
     BIO_free(FBioRead);
     FBioRead := nil;
-    raise ESSLResourceException.CreateWithContext(
-      'Failed to create write BIO for TLS connection',
-      sslErrMemory,
-      'TOpenSSLConnection.Create'
-    );
+    RaiseMemoryError('create write BIO');
   end;
 
   // Attach BIOs to SSL; SSL takes ownership and will free them in SSL_free

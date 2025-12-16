@@ -613,11 +613,7 @@ begin
     );
   
   if aCert = nil then
-    raise ESSLInvalidArgument.CreateWithContext(
-      'Certificate parameter is nil',
-      sslErrInvalidParam,
-      'TOpenSSLContext.LoadCertificate'
-    );
+    RaiseInvalidParameter('Certificate');
   
   Cert := PX509(aCert.GetNativeHandle);
   if Cert = nil then
@@ -686,11 +682,7 @@ begin
     );
 
   if aStream = nil then
-    raise ESSLInvalidArgument.CreateWithContext(
-      'Stream parameter is nil',
-      sslErrInvalidParam,
-      'TOpenSSLContext.LoadPrivateKey'
-    );
+    RaiseInvalidParameter('Stream');
 
   Size := aStream.Size - aStream.Position;
   SetLength(Data, Size);
@@ -698,11 +690,7 @@ begin
 
   BIO := BIO_new_mem_buf(@Data[0], Size);
   if BIO = nil then
-    raise ESSLResourceException.CreateWithContext(
-      'Failed to create BIO for private key',
-      sslErrMemory,
-      'TOpenSSLContext.LoadPrivateKey'
-    );
+    RaiseMemoryError('create BIO for private key');
   try
     // 若提供密码，通过userdata传递
     if aPassword <> '' then
@@ -760,20 +748,12 @@ begin
     );
   
   if aPEM = '' then
-    raise ESSLInvalidArgument.CreateWithContext(
-      'PEM string is empty',
-      sslErrInvalidParam,
-      'TOpenSSLContext.LoadCertificatePEM'
-    );
+    RaiseInvalidParameter('Certificate PEM');
   
   PemA := AnsiString(aPEM);
   BIO := BIO_new_mem_buf(PAnsiChar(PemA), Length(PemA));
   if BIO = nil then
-    raise ESSLResourceException.CreateWithContext(
-      'Failed to create BIO for PEM certificate',
-      sslErrMemory,
-      'TOpenSSLContext.LoadCertificatePEM'
-    );
+    RaiseMemoryError('create BIO for PEM certificate');
   
   try
     Cert := PEM_read_bio_X509(BIO, nil, nil, nil);
@@ -813,20 +793,12 @@ begin
     );
   
   if aPEM = '' then
-    raise ESSLInvalidArgument.CreateWithContext(
-      'PEM string is empty',
-      sslErrInvalidParam,
-      'TOpenSSLContext.LoadPrivateKeyPEM'
-    );
+    RaiseInvalidParameter('Private key PEM');
   
   PemA := AnsiString(aPEM);
   BIO := BIO_new_mem_buf(PAnsiChar(PemA), Length(PemA));
   if BIO = nil then
-    raise ESSLResourceException.CreateWithContext(
-      'Failed to create BIO for PEM private key',
-      sslErrMemory,
-      'TOpenSSLContext.LoadPrivateKeyPEM'
-    );
+    RaiseMemoryError('create BIO for PEM private key');
   
   try
     PassPtr := nil;
@@ -908,11 +880,7 @@ begin
     );
   
   if not DirectoryExists(aPath) then
-    raise ESSLFileNotFoundException.CreateWithContext(
-      Format('CA certificates directory not found: %s', [aPath]),
-      sslErrLoadFailed,
-      'TOpenSSLContext.LoadCAPath'
-    );
+    RaiseLoadError(aPath);
   
   PathA := AnsiString(aPath);
   if SSL_CTX_load_verify_locations(FSSLContext, nil, PAnsiChar(PathA)) <> 1 then
@@ -936,11 +904,7 @@ begin
       'TOpenSSLContext.SetCertificateStore'
     );
   if aStore = nil then
-    raise ESSLInvalidArgument.CreateWithContext(
-      'Certificate store parameter is nil',
-      sslErrInvalidParam,
-      'TOpenSSLContext.SetCertificateStore'
-    );
+    RaiseInvalidParameter('Certificate store');
 
   Store := PX509_STORE(aStore.GetNativeHandle);
   if Store = nil then
@@ -1184,11 +1148,11 @@ begin
   end;
 
   if not Assigned(SSL_CTX_set_alpn_protos) then
-    raise ESSLConfigurationException.Create('ALPN is not supported by the current OpenSSL build');
+    RaiseUnsupported('ALPN');
 
   if (Length(FALPNWireData) = 0) or
      (SSL_CTX_set_alpn_protos(FSSLContext, @FALPNWireData[0], Length(FALPNWireData)) <> 0) then
-    raise ESSLConfigurationException.CreateFmt('Failed to configure ALPN protocols: %s', [FALPNProtocols]);
+    RaiseConfigurationError('ALPN protocols', Format('failed to configure: %s', [FALPNProtocols]));
 
   // 仅在服务端设置选择回调，客户端只发送候选列表
   if (FContextType <> sslCtxClient) and Assigned(SSL_CTX_set_alpn_select_cb) then
@@ -1209,7 +1173,7 @@ begin
   FPasswordCallback := aCallback;
   if FSSLContext = nil then Exit;
   if not Assigned(SSL_CTX_set_default_passwd_cb) then
-    raise ESSLConfigurationException.Create('Password callback not supported by OpenSSL');
+    RaiseUnsupported('Password callback');
   if Assigned(FPasswordCallback) then
   begin
     SSL_CTX_set_default_passwd_cb(FSSLContext, @PasswordCallbackThunk);
@@ -1229,7 +1193,7 @@ begin
   FInfoCallback := aCallback;
   if FSSLContext = nil then Exit;
   if not Assigned(SSL_CTX_set_info_callback) then
-    raise ESSLConfigurationException.Create('Info callback not supported by OpenSSL');
+    RaiseUnsupported('Info callback');
   if Assigned(FInfoCallback) then
     SSL_CTX_set_info_callback(FSSLContext, @InfoCallbackThunk)
   else
