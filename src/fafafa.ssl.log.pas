@@ -21,10 +21,11 @@ unit fafafa.ssl.log;
 interface
 
 uses
+  SysUtils, Classes, SyncObjs,
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
-  SysUtils, Classes, SyncObjs,
-  fafafa.ssl.base, fafafa.ssl.utils;
+  fafafa.ssl.utils,        // Phase 2.3.5 - SSL工具（GetErrorDetails）
+  fafafa.ssl.debug.utils;  // Phase 2.3.5 - 调试工具（Dump函数）
 
 type
   { 日志级别 }
@@ -874,7 +875,7 @@ var
 begin
   if FEnabled and FHexDumpEnabled and Assigned(FLogger) then
   begin
-    LDump := TSSLUtils.DumpBytes(aData);
+    LDump := TSSLDebugUtils.DumpBytes(aData);
     if aLabel <> '' then
       FLogger.LogDebug('HexDump [' + aLabel + ']:', LDump)
     else
@@ -885,19 +886,19 @@ end;
 class procedure TSSLDebugger.DumpConfig(const aConfig: TSSLConfig);
 begin
   if FEnabled and Assigned(FLogger) then
-    FLogger.LogDebug('Config', TSSLUtils.DumpSSLConfig(aConfig));
+    FLogger.LogDebug('Config', TSSLDebugUtils.DumpSSLConfig(aConfig));
 end;
 
 class procedure TSSLDebugger.DumpCertificate(const aInfo: TSSLCertificateInfo);
 begin
   if FEnabled and Assigned(FLogger) then
-    FLogger.LogDebug('Certificate', TSSLUtils.DumpCertificateInfo(aInfo));
+    FLogger.LogDebug('Certificate', TSSLDebugUtils.DumpCertificateInfo(aInfo));
 end;
 
 class procedure TSSLDebugger.DumpConnection(const aInfo: TSSLConnectionInfo);
 begin
   if FEnabled and Assigned(FLogger) then
-    FLogger.LogDebug('Connection', TSSLUtils.DumpConnectionInfo(aInfo));
+    FLogger.LogDebug('Connection', TSSLDebugUtils.DumpConnectionInfo(aInfo));
 end;
 
 class procedure TSSLDebugger.DumpException(E: Exception);

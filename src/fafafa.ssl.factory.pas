@@ -137,7 +137,8 @@ uses
   {$IFDEF WINDOWS}
   fafafa.ssl.winssl.lib,  // WinSSL Phase 2.2 新实现（替换老的 winssl.pas）
   {$ENDIF}
-  fafafa.ssl.utils,      // 工具函数
+  fafafa.ssl.crypto.utils,   // Phase 2.3.5 - 加密工具（哈希计算）
+  fafafa.ssl.encoding,       // Phase 2.3.5 - 编码工具（Hex转换）
   fafafa.ssl.errors;
 
 var
@@ -797,26 +798,33 @@ end;
 
 class function TSSLHelper.HashData(const aData: TBytes;
   aHashType: TSSLHash): string;
-const
-  HASH_ALGORITHMS: array[TSSLHash] of AnsiString = (
-    'md5',      // sslHashMD5
-    'sha1',     // sslHashSHA1
-    'sha224',   // sslHashSHA224
-    'sha256',   // sslHashSHA256
-    'sha384',   // sslHashSHA384
-    'sha512',   // sslHashSHA512
-    'sha3-256', // sslHashSHA3_256
-    'sha3-512', // sslHashSHA3_512
-    'blake2b512'// sslHashBLAKE2b
-  );
+var
+  LHashAlg: THashAlgorithm;
+  LHashBytes: TBytes;
 begin
+  // Phase 2.3.5: 迁移至 crypto.utils
+  // 映射 TSSLHash 到 THashAlgorithm
+  case aHashType of
+    sslHashMD5: LHashAlg := HASH_MD5;
+    sslHashSHA1: LHashAlg := HASH_SHA1;
+    sslHashSHA256: LHashAlg := HASH_SHA256;
+    sslHashSHA512: LHashAlg := HASH_SHA512;
+  else
+    // SHA224, SHA384, SHA3-*, BLAKE2b 尚未实现
+    raise ESSLInvalidArgument.CreateFmt(
+      'Hash algorithm %d not yet supported',
+      [Ord(aHashType)]
+    );
+  end;
+
   try
-    Result := fafafa.ssl.utils.ComputeDigest(HASH_ALGORITHMS[aHashType], aData);
+    LHashBytes := TCryptoUtils.CalculateHash(aData, LHashAlg);
+    Result := TEncodingUtils.BytesToHex(LHashBytes, False);
   except
     on E: Exception do
     begin
       // 如果失败，返回空字符串
-  Result := '';
+      Result := '';
     end;
   end;
 end;
