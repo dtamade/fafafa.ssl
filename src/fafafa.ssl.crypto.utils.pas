@@ -41,13 +41,12 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
   fafafa.ssl.errors,           // Phase 2.1 - Standardized error handling
+  fafafa.ssl.encoding,         // Phase 2.3.3 - Use unified encoding utilities
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.core,
-  fafafa.ssl.openssl.api.bio, // Added for Base64
   fafafa.ssl.openssl.api.evp,
-  fafafa.ssl.openssl.api.rand,
-  fafafa.ssl.openssl.api.err; // Added for Base64 error handling
+  fafafa.ssl.openssl.api.rand;
 
 type
   {**
@@ -393,13 +392,7 @@ type
      *}
     class function SHA256Hex(const AData: TBytes): string; overload; static;
     class function SHA256Hex(const AData: string): string; overload; static;
-    
-    { Base64编码/解码 }
-    class function Base64Encode(const AInput: TBytes): string; overload; static;
-    class function Base64Encode(const AInput: string): string; overload; static;
-    class function Base64Decode(const AInput: string): TBytes; overload; static;
-    class function Base64DecodeString(const AInput: string): string; overload; static;
-    
+
     { SHA-256 (Base64) }
     class function SHA256Base64(const AData: TBytes): string; overload; static;
     class function SHA256Base64(const AData: string): string; overload; static;
@@ -473,14 +466,6 @@ type
       const ACiphertextView, AKeyView, AIVView, ATagView: TBytesView;
       out AResult: TBytes
     ): Boolean; static;
-
-    {**
-     * Base64 编码（零拷贝版本）
-     *
-     * @param AInputView 输入数据视图（零拷贝）
-     * @return Base64编码字符串
-     *}
-    class function Base64EncodeView(const AInputView: TBytesView): string; static;
 
     { ==================== 就地操作 (Phase 2.3.3) ==================== }
 
@@ -562,27 +547,9 @@ type
      * @param ALength IV字节数（GCM推荐12，CBC推荐16）
      *}
     class function GenerateIV(ALength: Integer = 12): TBytes; static;
-    
+
     { ==================== 工具函数 ==================== }
-    
-    {**
-     * 字节数组转十六进制字符串
-     * @param ABytes 输入字节数组
-     * @param AUpperCase True=大写，False=小写（默认）
-     * @return 十六进制字符串
-     *}
-    class function BytesToHex(
-      const ABytes: TBytes;
-      AUpperCase: Boolean = False
-    ): string; static;
-    
-    {**
-     * 十六进制字符串转字节数组
-     * @param AHex 十六进制字符串（忽略大小写）
-     * @raises ESSLInvalidArgument 字符串长度不是偶数或包含非法字符
-     *}
-    class function HexToBytes(const AHex: string): TBytes; static;
-    
+
     {**
      * 安全比较两个字节数组（防时序攻击）
      * 
@@ -652,15 +619,6 @@ begin
 
   if not IsOpenSSLCoreLoaded then
     RaiseInitializationError('OpenSSL core', 'library not available');
-
-  // 加载BIO (用于Base64)
-  try
-    if not Assigned(BIO_new) or not Assigned(BIO_f_base64) then
-      LoadOpenSSLBIO();
-  except
-    on E: Exception do
-      RaiseInitializationError('BIO module', E.Message);
-  end;
 
   // 加载EVP模块
   try
@@ -1233,125 +1191,22 @@ end;
 
 class function TCryptoUtils.SHA256Hex(const AData: TBytes): string;
 begin
-  Result := BytesToHex(SHA256(AData), False);
+  Result := TEncodingUtils.BytesToHex(SHA256(AData), False);
 end;
 
 class function TCryptoUtils.SHA256Hex(const AData: string): string;
 begin
-  Result := BytesToHex(SHA256(AData), False);
-end;
-
-class function TCryptoUtils.Base64Encode(const AInput: TBytes): string;
-var
-  LBIO, LB64, LMem: PBIO;
-  LPtr: PAnsiChar;
-  LLen: Integer;
-begin
-  Result := '';
-  if Length(AInput) = 0 then Exit;
-  
-  EnsureInitialized;
-  
-  LMem := BIO_new(BIO_s_mem());
-  LB64 := BIO_new(BIO_f_base64());  
-  LBIO := BIO_push(LB64, LMem);
-  
-  try
-    // Don't use NO_NL flag - let it add newlines, we'll strip later
-    // BIO_set_flags(LBIO, BIO_FLAGS_BASE64_NO_NL);
-    
-    if BIO_write(LBIO, @AInput[0], Length(AInput)) <= 0 then
-      raise ESSLCryptoError.Create('Failed to write data to Base64 BIO');
-      
-    if BIO_flush(LBIO) <= 0 then
-      raise ESSLCryptoError.Create('Failed to flush Base64 BIO');
-      
-    // 获取数据 - 从内存BIO获取
-    LLen := BIO_get_mem_data(LMem, @LPtr);
-    
-    if LLen > 0 then
-    begin
-      SetString(Result, LPtr, LLen);
-      // 移除所有换行符
-      Result := StringReplace(Result, #10, '', [rfReplaceAll]);
-      Result := StringReplace(Result, #13, '', [rfReplaceAll]);
-    end;
-  finally
-    BIO_free_all(LBIO);
-  end;
-end;
-
-class function TCryptoUtils.Base64Encode(const AInput: string): string;
-begin
-  Result := Base64Encode(TEncoding.UTF8.GetBytes(AInput));
-end;
-
-class function TCryptoUtils.Base64Decode(const AInput: string): TBytes;
-var
-  LBIO, LB64, LMem: PBIO;
-  LLen, I, LInputLen, LWithNLLen, LPos: Integer;
-  LBuffer: array of Byte;
-  LInputWithNewlines: AnsiString;
-begin
-  Result := nil;
-  SetLength(Result, 0);
-  if AInput = '' then Exit;
-
-  EnsureInitialized;
-
-  // Optimized: Pre-calculate size and allocate once
-  LInputLen := Length(AInput);
-  // Calculate required size: input + newlines (every 64 chars) + trailing newline
-  LWithNLLen := LInputLen + (LInputLen div 64) + 1;
-  SetLength(LInputWithNewlines, LWithNLLen);
-
-  // Optimized: Direct character copying with newline insertion
-  LPos := 1;
-  for I := 1 to LInputLen do
-  begin
-    LInputWithNewlines[LPos] := AInput[I];
-    Inc(LPos);
-    if (I mod 64 = 0) and (I < LInputLen) then
-    begin
-      LInputWithNewlines[LPos] := #10;
-      Inc(LPos);
-    end;
-  end;
-  // Add trailing newline
-  LInputWithNewlines[LPos] := #10;
-  SetLength(LInputWithNewlines, LPos); // Adjust to actual length
-
-  SetLength(LBuffer, LInputLen); // Output is always smaller than input
-
-  LMem := BIO_new_mem_buf(PAnsiChar(LInputWithNewlines), Length(LInputWithNewlines));
-  LB64 := BIO_new(BIO_f_base64());
-  LBIO := BIO_push(LB64, LMem);
-
-  try
-    LLen := BIO_read(LBIO, @LBuffer[0], Length(LBuffer));
-    if LLen > 0 then
-    begin
-      SetLength(Result, LLen);
-      Move(LBuffer[0], Result[0], LLen);
-    end;
-  finally
-    BIO_free_all(LBIO);
-  end;
-end;
-
-class function TCryptoUtils.Base64DecodeString(const AInput: string): string;
-begin
-  Result := TEncoding.UTF8.GetString(Base64Decode(AInput));
+  Result := TEncodingUtils.BytesToHex(SHA256(AData), False);
 end;
 
 class function TCryptoUtils.SHA256Base64(const AData: TBytes): string;
 begin
-  Result := Base64Encode(SHA256(AData));
+  Result := TEncodingUtils.Base64Encode(SHA256(AData));
 end;
 
 class function TCryptoUtils.SHA256Base64(const AData: string): string;
 begin
-  Result := Base64Encode(SHA256(AData));
+  Result := TEncodingUtils.Base64Encode(SHA256(AData));
 end;
 
 { SHA-512实现 - 与SHA-256相同模式 }
@@ -1423,12 +1278,12 @@ end;
 
 class function TCryptoUtils.SHA512Hex(const AData: TBytes): string;
 begin
-  Result := BytesToHex(SHA512(AData), False);
+  Result := TEncodingUtils.BytesToHex(SHA512(AData), False);
 end;
 
 class function TCryptoUtils.SHA512Hex(const AData: string): string;
 begin
-  Result := BytesToHex(SHA512(AData), False);
+  Result := TEncodingUtils.BytesToHex(SHA512(AData), False);
 end;
 
 { 通用哈希 }
@@ -1689,50 +1544,6 @@ begin
   end;
 end;
 
-class function TCryptoUtils.Base64EncodeView(const AInputView: TBytesView): string;
-var
-  LBIO, LB64, LMem: PBIO;
-  LPtr: PAnsiChar;
-  LLen: Integer;
-begin
-  EnsureInitialized;
-
-  if not AInputView.IsValid then
-  begin
-    Result := '';
-    Exit;
-  end;
-
-  // Same BIO structure as normal Base64Encode
-  LMem := BIO_new(BIO_s_mem());
-  LB64 := BIO_new(BIO_f_base64());
-  LBIO := BIO_push(LB64, LMem);
-
-  try
-    // 零拷贝：直接使用视图的指针
-    if BIO_write(LBIO, AInputView.Data, AInputView.Length) <= 0 then
-      raise ESSLCryptoError.Create('Failed to write to BIO');
-
-    if BIO_flush(LBIO) <= 0 then
-      raise ESSLCryptoError.Create('Failed to flush BIO');
-
-    // 获取数据 - 从内存BIO获取
-    LLen := BIO_get_mem_data(LMem, @LPtr);
-
-    if LLen > 0 then
-    begin
-      SetString(Result, LPtr, LLen);
-      // 移除所有换行符
-      Result := StringReplace(Result, #10, '', [rfReplaceAll]);
-      Result := StringReplace(Result, #13, '', [rfReplaceAll]);
-    end
-    else
-      Result := '';
-  finally
-    BIO_free_all(LBIO);
-  end;
-end;
-
 { ==================== 就地操作实现 (Phase 2.3.3) ==================== }
 
 class function TCryptoUtils.AES_GCM_EncryptInPlace(
@@ -1912,57 +1723,6 @@ begin
 end;
 
 { 工具函数实现 }
-
-class function TCryptoUtils.BytesToHex(
-  const ABytes: TBytes;
-  AUpperCase: Boolean
-): string;
-var
-  I: Integer;
-begin
-  Result := '';
-  for I := 0 to High(ABytes) do
-  begin
-    if AUpperCase then
-      Result := Result + IntToHex(ABytes[I], 2)
-    else
-      Result := Result + LowerCase(IntToHex(ABytes[I], 2));
-  end;
-end;
-
-class function TCryptoUtils.HexToBytes(const AHex: string): TBytes;
-var
-  I: Integer;
-  LHex: string;
-begin
-  if (Length(AHex) mod 2) <> 0 then
-    RaiseInvalidParameter('hex string length (must be even)');
-    
-  Result := nil;
-  SetLength(Result, Length(AHex) div 2);
-  
-  LHex := UpperCase(AHex);
-  I := 0;
-  while I < Length(LHex) do
-  begin
-    try
-      Result[I div 2] := StrToInt('$' + Copy(LHex, I + 1, 2));
-    except
-      on E: Exception do
-        RaiseInvalidData('hex string');
-    end;
-    Inc(I, 2);
-  end;
-end;
-
-{
-  Note: Base64 encoding/decoding is implemented via OpenSSL BIO functions.
-  See fafafa.ssl.openssl.api.bio for BIO-based Base64 operations:
-  - BIO_f_base64() for Base64 filter BIO
-  - Use in combination with memory BIOs for encoding/decoding
-  
-  Example usage can be found in existing SSL certificate handling code.
-}
 
 class function TCryptoUtils.SecureCompare(
   const ABytes1, ABytes2: TBytes
