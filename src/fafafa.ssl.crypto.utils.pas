@@ -1315,35 +1315,44 @@ end;
 class function TCryptoUtils.Base64Decode(const AInput: string): TBytes;
 var
   LBIO, LB64, LMem: PBIO;
-  LLen, I, LPos: Integer;
+  LLen, I, LInputLen, LWithNLLen, LPos: Integer;
   LBuffer: array of Byte;
   LInputWithNewlines: AnsiString;
 begin
   Result := nil;
   SetLength(Result, 0);
   if AInput = '' then Exit;
-  
+
   EnsureInitialized;
-  
-  // OpenSSL BIO Base64 decoder expects newlines every 64 chars
-  // Add them if not present
-  LInputWithNewlines := '';
+
+  // Optimized: Pre-calculate size and allocate once
+  LInputLen := Length(AInput);
+  // Calculate required size: input + newlines (every 64 chars) + trailing newline
+  LWithNLLen := LInputLen + (LInputLen div 64) + 1;
+  SetLength(LInputWithNewlines, LWithNLLen);
+
+  // Optimized: Direct character copying with newline insertion
   LPos := 1;
-  for I := 1 to Length(AInput) do
+  for I := 1 to LInputLen do
   begin
-    LInputWithNewlines := LInputWithNewlines + AInput[I];
-    if (I mod 64 = 0) and (I < Length(AInput)) then
-      LInputWithNewlines := LInputWithNewlines + #10;
+    LInputWithNewlines[LPos] := AInput[I];
+    Inc(LPos);
+    if (I mod 64 = 0) and (I < LInputLen) then
+    begin
+      LInputWithNewlines[LPos] := #10;
+      Inc(LPos);
+    end;
   end;
-  // Always add trailing newline
-  LInputWithNewlines := LInputWithNewlines + #10;
-  
-  SetLength(LBuffer, Length(AInput)); // 输出肯定小于输入
-  
+  // Add trailing newline
+  LInputWithNewlines[LPos] := #10;
+  SetLength(LInputWithNewlines, LPos); // Adjust to actual length
+
+  SetLength(LBuffer, LInputLen); // Output is always smaller than input
+
   LMem := BIO_new_mem_buf(PAnsiChar(LInputWithNewlines), Length(LInputWithNewlines));
   LB64 := BIO_new(BIO_f_base64());
   LBIO := BIO_push(LB64, LMem);
-  
+
   try
     LLen := BIO_read(LBIO, @LBuffer[0], Length(LBuffer));
     if LLen > 0 then

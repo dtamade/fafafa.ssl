@@ -323,7 +323,11 @@ type
   TEVP_CIPHER_CTX_get_mode = function(const ctx: PEVP_CIPHER_CTX): Integer; cdecl;
   TEVP_CIPHER_CTX_get_type = function(const ctx: PEVP_CIPHER_CTX): Integer; cdecl;
   TEVP_CIPHER_CTX_get_nid = function(const ctx: PEVP_CIPHER_CTX): Integer; cdecl;
-  
+
+  // OpenSSL 3.x EVP_CIPHER fetch API
+  TEVP_CIPHER_fetch = function(ctx: POSSL_LIB_CTX; const algorithm: PAnsiChar; const properties: PAnsiChar): PEVP_CIPHER; cdecl;
+  TEVP_CIPHER_free = procedure(cipher: PEVP_CIPHER); cdecl;
+
   // Cipher algorithms
   TEVP_enc_null = function: PEVP_CIPHER; cdecl;
   TEVP_des_ecb = function: PEVP_CIPHER; cdecl;
@@ -797,7 +801,11 @@ var
   EVP_camellia_256_cbc: TEVP_camellia_256_cbc = nil;
   
   EVP_get_cipherbyname: TEVP_get_cipherbyname = nil;
-  
+
+  // OpenSSL 3.x EVP_CIPHER fetch API
+  EVP_CIPHER_fetch: TEVP_CIPHER_fetch = nil;
+  EVP_CIPHER_free: TEVP_CIPHER_free = nil;
+
   // PKEY functions
   EVP_PKEY_new: TEVP_PKEY_new = nil;
   EVP_PKEY_new_mac_key: TEVP_PKEY_new_mac_key = nil;
@@ -945,7 +953,19 @@ begin
   EVP_camellia_256_cbc := TEVP_camellia_256_cbc(GetProcAddress(ALibHandle, 'EVP_camellia_256_cbc'));
   
   EVP_get_cipherbyname := TEVP_get_cipherbyname(GetProcAddress(ALibHandle, 'EVP_get_cipherbyname'));
-  
+
+  // Load OpenSSL 3.x EVP_CIPHER fetch API
+  EVP_CIPHER_fetch := TEVP_CIPHER_fetch(GetProcAddress(ALibHandle, 'EVP_CIPHER_fetch'));
+  EVP_CIPHER_free := TEVP_CIPHER_free(GetProcAddress(ALibHandle, 'EVP_CIPHER_free'));
+
+  // Fallback for GCM ciphers using EVP_CIPHER_fetch if GetProcAddress fails
+  if not Assigned(EVP_aes_128_gcm) and Assigned(EVP_CIPHER_fetch) then
+    EVP_aes_128_gcm := TEVP_aes_128_gcm(EVP_CIPHER_fetch(nil, 'AES-128-GCM', nil));
+  if not Assigned(EVP_aes_192_gcm) and Assigned(EVP_CIPHER_fetch) then
+    EVP_aes_192_gcm := TEVP_aes_192_gcm(EVP_CIPHER_fetch(nil, 'AES-192-GCM', nil));
+  if not Assigned(EVP_aes_256_gcm) and Assigned(EVP_CIPHER_fetch) then
+    EVP_aes_256_gcm := TEVP_aes_256_gcm(EVP_CIPHER_fetch(nil, 'AES-256-GCM', nil));
+
   // Load PKEY functions
   EVP_PKEY_new := TEVP_PKEY_new(GetProcAddress(ALibHandle, 'EVP_PKEY_new'));
   EVP_PKEY_new_mac_key := TEVP_PKEY_new_mac_key(GetProcAddress(ALibHandle, 'EVP_PKEY_new_mac_key'));
