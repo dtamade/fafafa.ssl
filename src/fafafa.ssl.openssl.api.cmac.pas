@@ -1,6 +1,20 @@
 unit fafafa.ssl.openssl.api.cmac;
 
+{******************************************************************************}
+{                                                                              }
+{  ⚠️  DEPRECATED: This module uses legacy CMAC_CTX API                       }
+{                                                                              }
+{  Recommendation: Use fafafa.ssl.openssl.api.cmac.evp instead                }
+{                                                                              }
+{  Reason: OpenSSL 3.x prefers EVP_MAC API over low-level CMAC_CTX            }
+{  Migration: Replace ComputeCMAC_AES128 with CMAC_AES128_EVP                 }
+{                                                                              }
+{  This module will be removed in a future release (Phase 3)                  }
+{                                                                              }
+{******************************************************************************}
+
 {$mode ObjFPC}{$H+}
+{$MESSAGE WARN 'cmac.pas is deprecated. Use cmac.evp.pas for EVP_MAC API (OpenSSL 3.x compatible)'}
 
 interface
 
