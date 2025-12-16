@@ -113,6 +113,22 @@ type
   );
   TSSLProtocolVersions = set of TSSLProtocolVersion;
 
+  { SSL 特性枚举（Phase 1.3 - 消除字符串类型状态）
+
+    类型安全的SSL特性标识符，替代stringly-typed模式。
+    符合Rust质量标准 - 编译时类型检查，避免拼写错误。
+  }
+  TSSLFeature = (
+    sslFeatSNI,                    // Server Name Indication (服务器名称指示)
+    sslFeatALPN,                   // Application-Layer Protocol Negotiation (应用层协议协商)
+    sslFeatSessionCache,           // Session Cache (会话缓存)
+    sslFeatSessionTickets,         // Session Tickets (会话票据)
+    sslFeatRenegotiation,          // Renegotiation (重新协商)
+    sslFeatOCSPStapling,          // OCSP Stapling (OCSP装订)
+    sslFeatCertificateTransparency // Certificate Transparency (证书透明度)
+  );
+  TSSLFeatures = set of TSSLFeature;
+
   { 证书验证模式 }
   TSSLVerifyMode = (
     sslVerifyNone,            // 不验证证书
@@ -550,7 +566,8 @@ type
     // 功能支持查询
     function IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
     function IsCipherSupported(const aCipherName: string): Boolean;
-    function IsFeatureSupported(const aFeatureName: string): Boolean;
+    function IsFeatureSupported(const aFeatureName: string): Boolean; // 已废弃：使用TSSLFeature重载版本
+    function IsFeatureSupported(aFeature: TSSLFeature): Boolean; overload; // 类型安全版本（Phase 1.3）
     
     // 库配置
     procedure SetDefaultConfig(const aConfig: TSSLConfig);
@@ -946,6 +963,9 @@ function LibraryTypeToString(aLibType: TSSLLibraryType): string;
 
 implementation
 
+uses
+  fafafa.ssl.errors;  // Stage 2.1 P2 - Standardized error handling
+
 { TBytesView - 零拷贝字节视图实现 (Phase 2.3.2) }
 
 class function TBytesView.FromBytes(var ABytes: TBytes): TBytesView;
@@ -1098,7 +1118,7 @@ end;
 function TSSLOperationResult.UnwrapErr: TSSLErrorCode;
 begin
   if Success then
-    raise ESSLException.Create('Called UnwrapErr on Ok value', sslErrGeneral);
+    RaiseInvalidData('UnwrapErr on Ok value');
   Result := ErrorCode;
 end;
 
@@ -1155,7 +1175,7 @@ end;
 function TSSLDataResult.UnwrapErr: TSSLErrorCode;
 begin
   if Success then
-    raise ESSLException.Create('Called UnwrapErr on Ok value', sslErrGeneral);
+    RaiseInvalidData('UnwrapErr on Ok value');
   Result := ErrorCode;
 end;
 
@@ -1224,7 +1244,7 @@ end;
 function TSSLStringResult.UnwrapErr: TSSLErrorCode;
 begin
   if Success then
-    raise ESSLException.Create('Called UnwrapErr on Ok value', sslErrGeneral);
+    RaiseInvalidData('UnwrapErr on Ok value');
   Result := ErrorCode;
 end;
 
