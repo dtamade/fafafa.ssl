@@ -94,6 +94,22 @@ procedure RaiseConnectionError(const ADetails: string);
 procedure RaiseInvalidFormat(const AContext: string);
 
 // ============================================================================
+// Extended Error Helpers (Phase 2.1 - Coverage Enhancement)
+// ============================================================================
+
+{ Raise initialization error }
+procedure RaiseInitializationError(const AComponent, ADetails: string);
+
+{ Raise configuration error }
+procedure RaiseConfigurationError(const AOption, AReason: string);
+
+{ Raise resource exhausted error }
+procedure RaiseResourceExhausted(const AResource: string);
+
+{ Raise buffer error }
+procedure RaiseBufferError(const AOperation, AReason: string);
+
+// ============================================================================
 // Utility Functions
 // ============================================================================
 
@@ -261,6 +277,42 @@ begin
   raise ESSLException.Create(
     Format('Invalid format: %s', [AContext]),
     sslErrInvalidFormat
+  );
+end;
+
+// ============================================================================
+// Extended Error Helpers Implementation (Phase 2.1)
+// ============================================================================
+
+procedure RaiseInitializationError(const AComponent, ADetails: string);
+begin
+  raise ESSLException.Create(
+    Format('%s initialization failed: %s', [AComponent, ADetails]),
+    sslErrNotInitialized
+  );
+end;
+
+procedure RaiseConfigurationError(const AOption, AReason: string);
+begin
+  raise ESSLException.Create(
+    Format('Configuration error for %s: %s', [AOption, AReason]),
+    sslErrConfiguration
+  );
+end;
+
+procedure RaiseResourceExhausted(const AResource: string);
+begin
+  raise ESSLException.Create(
+    Format('Resource exhausted: %s', [AResource]),
+    sslErrResourceExhausted
+  );
+end;
+
+procedure RaiseBufferError(const AOperation, AReason: string);
+begin
+  raise ESSLException.Create(
+    Format('Buffer error during %s: %s', [AOperation, AReason]),
+    sslErrBufferTooSmall
   );
 end;
 

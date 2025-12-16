@@ -266,11 +266,28 @@ begin
     
     Result := TSSLOperationResult.Ok;
   except
-    on E: Exception do
+    // 细化异常处理：捕获具体异常类型（Rust标准）
+    on E: ESSLHandshakeException do
     begin
       AConnection := nil;
-      Result := TSSLOperationResult.Err(sslErrConnection, E.Message);
+      Result := TSSLOperationResult.Err(sslErrHandshake, 'Handshake failed: ' + E.Message);
     end;
+    on E: ESSLCertificateVerificationException do
+    begin
+      AConnection := nil;
+      Result := TSSLOperationResult.Err(sslErrVerificationFailed, 'Certificate verification failed: ' + E.Message);
+    end;
+    on E: ESSLConnectionException do
+    begin
+      AConnection := nil;
+      Result := TSSLOperationResult.Err(sslErrConnection, 'Connection error: ' + E.Message);
+    end;
+    on E: ESSLException do  // 其他SSL异常
+    begin
+      AConnection := nil;
+      Result := TSSLOperationResult.Err(E.ErrorCode, 'SSL error: ' + E.Message);
+    end;
+    // 注意：不再捕获通用 Exception，让未知错误向上传播
   end;
 end;
 
@@ -324,11 +341,28 @@ begin
     
     Result := TSSLOperationResult.Ok;
   except
-    on E: Exception do
+    // 细化异常处理：捕获具体异常类型（Rust标准）
+    on E: ESSLHandshakeException do
     begin
       AConnection := nil;
-      Result := TSSLOperationResult.Err(sslErrConnection, E.Message);
+      Result := TSSLOperationResult.Err(sslErrHandshake, 'Server accept failed: ' + E.Message);
     end;
+    on E: ESSLCertificateVerificationException do
+    begin
+      AConnection := nil;
+      Result := TSSLOperationResult.Err(sslErrVerificationFailed, 'Client certificate verification failed: ' + E.Message);
+    end;
+    on E: ESSLConnectionException do
+    begin
+      AConnection := nil;
+      Result := TSSLOperationResult.Err(sslErrConnection, 'Connection error: ' + E.Message);
+    end;
+    on E: ESSLException do  // 其他SSL异常
+    begin
+      AConnection := nil;
+      Result := TSSLOperationResult.Err(E.ErrorCode, 'SSL error: ' + E.Message);
+    end;
+    // 注意：不再捕获通用 Exception，让未知错误向上传播
   end;
 end;
 

@@ -68,7 +68,8 @@ type
     { ISSLLibrary - 功能支持查询 }
     function IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
     function IsCipherSupported(const aCipherName: string): Boolean;
-    function IsFeatureSupported(const aFeatureName: string): Boolean;
+    function IsFeatureSupported(const aFeatureName: string): Boolean; // 已废弃
+    function IsFeatureSupported(aFeature: TSSLFeature): Boolean; overload; // 类型安全版本（Phase 1.3）
     
     { ISSLLibrary - 库配置 }
     procedure SetDefaultConfig(const aConfig: TSSLConfig);
@@ -417,10 +418,10 @@ var
   Feature: string;
 begin
   Feature := LowerCase(aFeatureName);
-  
+
   // 支持的功能列表
   Result := False;
-  
+
   if Feature = 'sni' then
     Result := True
   else if Feature = 'alpn' then
@@ -436,9 +437,37 @@ begin
     Result := False  // 需要手动实现
   else if Feature = 'certificate_transparency' then
     Result := False;
-    
-    InternalLog(sslLogDebug, Format('Feature support check: %s = %s', 
+
+    InternalLog(sslLogDebug, Format('Feature support check: %s = %s',
     [aFeatureName, 'supported'])); // Simplified log
+end;
+
+{ 类型安全版本（Phase 1.3 - Rust质量标准） }
+function TWinSSLLibrary.IsFeatureSupported(aFeature: TSSLFeature): Boolean;
+begin
+  case aFeature of
+    sslFeatSNI:
+      Result := True;  // Windows Schannel原生支持SNI
+    sslFeatALPN:
+      // ALPN需要Windows 8+或Windows 10+
+      Result := (FWindowsVersion.Major >= 10) or
+                ((FWindowsVersion.Major = 6) and (FWindowsVersion.Minor >= 2));
+    sslFeatSessionCache:
+      Result := True;  // Windows Schannel原生支持会话缓存
+    sslFeatSessionTickets:
+      Result := True;  // Windows Schannel原生支持会话票据
+    sslFeatRenegotiation:
+      Result := True;  // Windows Schannel原生支持重新协商
+    sslFeatOCSPStapling:
+      Result := False;  // 需要手动实现OCSP装订
+    sslFeatCertificateTransparency:
+      Result := False;  // Windows Schannel不原生支持证书透明度
+  else
+    Result := False;
+  end;
+
+  InternalLog(sslLogDebug, Format('Feature support check (type-safe): %d = %s',
+    [Ord(aFeature), BoolToStr(Result, True)]));
 end;
 
 // ============================================================================

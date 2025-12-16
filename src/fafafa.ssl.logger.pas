@@ -130,18 +130,32 @@ begin
   if (LDir <> '') and not DirectoryExists(LDir) then
     ForceDirectories(LDir);
   
-  // 打开日志文件
+  // 打开日志文件（RAII合规：使用临时变量避免泄漏）
+  var LNewStream: TFileStream;
+  LNewStream := nil;
   try
     if FileExists(FLogFile) then
     begin
-      FStream := TFileStream.Create(FLogFile, fmOpenReadWrite or fmShareDenyWrite);
-      FStream.Seek(0, soEnd);
-      FCurrentSize := FStream.Size;
+      LNewStream := TFileStream.Create(FLogFile, fmOpenReadWrite or fmShareDenyWrite);
+      try
+        LNewStream.Seek(0, soEnd);
+        FCurrentSize := LNewStream.Size;
+        FStream := LNewStream;  // 成功后赋值
+        LNewStream := nil;  // 转移所有权，防止finally释放
+      finally
+        FreeAndNil(LNewStream);  // 失败时释放临时流
+      end;
     end
     else
     begin
-      FStream := TFileStream.Create(FLogFile, fmCreate or fmShareDenyWrite);
-      FCurrentSize := 0;
+      LNewStream := TFileStream.Create(FLogFile, fmCreate or fmShareDenyWrite);
+      try
+        FCurrentSize := 0;
+        FStream := LNewStream;  // 成功后赋值
+        LNewStream := nil;  // 转移所有权
+      finally
+        FreeAndNil(LNewStream);
+      end;
     end;
   except
     on E: Exception do
@@ -224,10 +238,18 @@ begin
       RenameFile(FLogFile, FLogFile + '.1');
   end;
   
-  // 创建新日志文件
+  // 创建新日志文件（RAII合规：使用临时变量避免泄漏）
+  var LNewStream: TFileStream;
+  LNewStream := nil;
   try
-    FStream := TFileStream.Create(FLogFile, fmCreate or fmShareDenyWrite);
-    FCurrentSize := 0;
+    LNewStream := TFileStream.Create(FLogFile, fmCreate or fmShareDenyWrite);
+    try
+      FCurrentSize := 0;
+      FStream := LNewStream;  // 成功后赋值
+      LNewStream := nil;  // 转移所有权
+    finally
+      FreeAndNil(LNewStream);
+    end;
   except
     FStream := nil;
   end;

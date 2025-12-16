@@ -84,7 +84,8 @@ type
     { ISSLLibrary - 功能支持查询 }
     function IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
     function IsCipherSupported(const aCipherName: string): Boolean;
-    function IsFeatureSupported(const aFeatureName: string): Boolean;
+    function IsFeatureSupported(const aFeatureName: string): Boolean; // 已废弃
+    function IsFeatureSupported(aFeature: TSSLFeature): Boolean; overload; // 类型安全版本（Phase 1.3）
     
     { ISSLLibrary - 库配置 }
     procedure SetDefaultConfig(const aConfig: TSSLConfig);
@@ -588,9 +589,9 @@ var
   Feature: string;
 begin
   Feature := LowerCase(aFeatureName);
-  
+
   Result := False;
-  
+
   if Feature = 'sni' then
     Result := True
   else if Feature = 'alpn' then
@@ -605,9 +606,36 @@ begin
     Result := True
   else if Feature = 'certificate_transparency' then
     Result := (FVersionNumber >= $1010000F);  // OpenSSL 1.1.0+
-    
-  InternalLog(sslLogDebug, Format('Feature support check: %s = %s', 
+
+  InternalLog(sslLogDebug, Format('Feature support check: %s = %s',
     [aFeatureName, BoolToStr(Result, True)]));
+end;
+
+{ 类型安全版本（Phase 1.3 - Rust质量标准） }
+function TOpenSSLLibrary.IsFeatureSupported(aFeature: TSSLFeature): Boolean;
+begin
+  case aFeature of
+    sslFeatSNI:
+      Result := True;  // OpenSSL原生支持SNI
+    sslFeatALPN:
+      Result := True;  // OpenSSL原生支持ALPN
+    sslFeatSessionCache:
+      Result := True;  // OpenSSL原生支持会话缓存
+    sslFeatSessionTickets:
+      Result := True;  // OpenSSL原生支持会话票据
+    sslFeatRenegotiation:
+      Result := True;  // OpenSSL原生支持重新协商
+    sslFeatOCSPStapling:
+      Result := True;  // OpenSSL原生支持OCSP装订
+    sslFeatCertificateTransparency:
+      // Certificate Transparency需要OpenSSL 1.1.0+
+      Result := (FVersionNumber >= $1010000F);
+  else
+    Result := False;
+  end;
+
+  InternalLog(sslLogDebug, Format('Feature support check (type-safe): %d = %s',
+    [Ord(aFeature), BoolToStr(Result, True)]));
 end;
 
 // ============================================================================
