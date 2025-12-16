@@ -57,7 +57,7 @@ uses
   fafafa.ssl.openssl.api.engine,
   fafafa.ssl.openssl.api.comp,
   fafafa.ssl.openssl.api.modes,
-  fafafa.ssl.openssl.api.cmac,
+  fafafa.ssl.openssl.api.cmac.evp,  // Phase 2.2: 使用EVP API替代废弃的cmac.pas
   // 国密算法
   fafafa.ssl.openssl.sm;
 

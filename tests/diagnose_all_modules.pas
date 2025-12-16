@@ -18,7 +18,7 @@ uses
   fafafa.ssl.openssl.api.ecdsa,
   fafafa.ssl.openssl.api.ecdh,
   fafafa.ssl.openssl.api.hmac,
-  fafafa.ssl.openssl.api.cmac,
+  fafafa.ssl.openssl.api.cmac.evp,  // Phase 2.2: 使用EVP API替代废弃的cmac.pas
   fafafa.ssl.openssl.api.pkcs,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.x509v3,

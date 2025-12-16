@@ -76,7 +76,7 @@ begin
   
   // MAC & KDF (Priority 1)
   AddModule('hmac', 'fafafa.ssl.openssl.api.hmac', 'MAC', 1);
-  AddModule('cmac', 'fafafa.ssl.openssl.api.cmac', 'MAC', 1);
+  // AddModule('cmac', 'fafafa.ssl.openssl.api.cmac', 'MAC', 1);  // Phase 2.2: 废弃，使用cmac.evp
   AddModule('cmac.evp', 'fafafa.ssl.openssl.api.cmac.evp', 'MAC', 1);
   AddModule('kdf', 'fafafa.ssl.openssl.api.kdf', 'KDF', 1);
   AddModule('scrypt_whirlpool', 'fafafa.ssl.openssl.scrypt_whirlpool', 'KDF', 2);
