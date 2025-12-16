@@ -8,6 +8,7 @@ uses
   SysUtils,
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
+  fafafa.ssl.errors,           // Phase 2.1 - Standardized error handling
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.evp;
 
@@ -356,7 +357,7 @@ begin
     24: cipher := EVP_aes_192_gcm();
     32: cipher := EVP_aes_256_gcm();
   else
-    raise ESSLInvalidArgument.Create('Invalid key size for AES-GCM');
+    RaiseInvalidParameter('AES-GCM key size');
   end;
   
   SetLength(Result, Length(Plaintext));
@@ -435,11 +436,11 @@ begin
     24: cipher := EVP_aes_192_gcm();
     32: cipher := EVP_aes_256_gcm();
   else
-    raise ESSLInvalidArgument.Create('Invalid key size for AES-GCM');
+    RaiseInvalidParameter('AES-GCM key size');
   end;
   
   if Length(Tag) <> GCM_TAG_SIZE then
-    raise ESSLInvalidArgument.Create('Invalid tag size');
+    RaiseInvalidParameter('GCM tag size');
   
   SetLength(Result, Length(Ciphertext));
   
@@ -516,11 +517,11 @@ begin
     24: cipher := EVP_aes_192_ccm();
     32: cipher := EVP_aes_256_ccm();
   else
-    raise ESSLInvalidArgument.Create('Invalid key size for AES-CCM');
+    RaiseInvalidParameter('AES-CCM key size');
   end;
   
   if (TagSize < CCM_MIN_TAG_SIZE) or (TagSize > CCM_MAX_TAG_SIZE) then
-    raise ESSLInvalidArgument.Create('Invalid tag size for CCM');
+    RaiseInvalidParameter('CCM tag size');
   
   SetLength(Result, Length(Plaintext));
   SetLength(Tag, TagSize);
@@ -594,7 +595,7 @@ begin
     24: cipher := EVP_aes_192_ccm();
     32: cipher := EVP_aes_256_ccm();
   else
-    raise ESSLInvalidArgument.Create('Invalid key size for AES-CCM');
+    RaiseInvalidParameter('AES-CCM key size');
   end;
   
   SetLength(Result, Length(Ciphertext));
@@ -649,7 +650,7 @@ begin
   Result := nil;
   // XTS requires two keys
   if Length(Key1) <> Length(Key2) then
-    raise ESSLInvalidArgument.Create('XTS requires two keys of same size');
+    RaiseInvalidParameter('XTS key pair size');
     
   // Combine keys for XTS
   SetLength(combined_key, Length(Key1) + Length(Key2));
@@ -662,7 +663,7 @@ begin
     16: cipher := EVP_aes_128_xts();  // Total key = 256 bits
     32: cipher := EVP_aes_256_xts();  // Total key = 512 bits
   else
-    raise ESSLInvalidArgument.Create('Invalid key size for AES-XTS');
+    RaiseInvalidParameter('AES-XTS key size');
   end;
   
   SetLength(Result, Length(Plaintext));
@@ -695,7 +696,7 @@ begin
   Result := nil;
   // XTS requires two keys
   if Length(Key1) <> Length(Key2) then
-    raise ESSLInvalidArgument.Create('XTS requires two keys of same size');
+    RaiseInvalidParameter('XTS key pair size');
     
   // Combine keys for XTS
   SetLength(combined_key, Length(Key1) + Length(Key2));
@@ -708,7 +709,7 @@ begin
     16: cipher := EVP_aes_128_xts();  // Total key = 256 bits
     32: cipher := EVP_aes_256_xts();  // Total key = 512 bits
   else
-    raise ESSLInvalidArgument.Create('Invalid key size for AES-XTS');
+    RaiseInvalidParameter('AES-XTS key size');
   end;
   
   SetLength(Result, Length(Ciphertext));
@@ -746,7 +747,7 @@ begin
     24: cipher := EVP_aes_192_ocb();
     32: cipher := EVP_aes_256_ocb();
   else
-    raise ESSLInvalidArgument.Create('Invalid key size for AES-OCB');
+    RaiseInvalidParameter('AES-OCB key size');
   end;
   
   SetLength(Result, Length(Plaintext) + OCB_TAG_SIZE); // OCB may expand
@@ -814,11 +815,11 @@ begin
     24: cipher := EVP_aes_192_ocb();
     32: cipher := EVP_aes_256_ocb();
   else
-    raise ESSLInvalidArgument.Create('Invalid key size for AES-OCB');
+    RaiseInvalidParameter('AES-OCB key size');
   end;
   
   if Length(Tag) <> OCB_TAG_SIZE then
-    raise ESSLInvalidArgument.Create('Invalid tag size');
+    RaiseInvalidParameter('OCB tag size');
   
   SetLength(Result, Length(Ciphertext));
   
@@ -868,10 +869,10 @@ function AES_WrapKey(const KEK: TBytes; const Plaintext: TBytes): TBytes;
 begin
   Result := nil;
   if not Assigned(AES_wrap_key) then
-    raise ESSLCryptoError.Create('AES key wrap not available');
+    RaiseFunctionNotAvailable('AES_wrap_key');
     
   if Length(Plaintext) mod 8 <> 0 then
-    raise ESSLInvalidArgument.Create('Plaintext must be multiple of 8 bytes');
+    RaiseInvalidParameter('plaintext length (must be multiple of 8)');
     
   SetLength(Result, Length(Plaintext) + 8); // Wrapped key is 8 bytes larger
   
@@ -883,13 +884,13 @@ function AES_UnwrapKey(const KEK: TBytes; const Ciphertext: TBytes): TBytes;
 begin
   Result := nil;
   if not Assigned(AES_unwrap_key) then
-    raise ESSLCryptoError.Create('AES key unwrap not available');
+    RaiseFunctionNotAvailable('AES_unwrap_key');
     
   if Length(Ciphertext) mod 8 <> 0 then
-    raise ESSLInvalidArgument.Create('Ciphertext must be multiple of 8 bytes');
+    RaiseInvalidParameter('ciphertext length (must be multiple of 8)');
     
   if Length(Ciphertext) < 16 then
-    raise ESSLInvalidArgument.Create('Ciphertext too short');
+    RaiseInvalidParameter('ciphertext length (minimum 16 bytes)');
     
   SetLength(Result, Length(Ciphertext) - 8); // Unwrapped key is 8 bytes smaller
   

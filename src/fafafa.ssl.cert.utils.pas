@@ -40,7 +40,8 @@ uses
   fafafa.ssl.openssl.api.pem,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.obj,
-  fafafa.ssl.exceptions;
+  fafafa.ssl.exceptions,
+  fafafa.ssl.errors;           // Phase 2.1 - Standardized error handling
 
 const
   // 证书默认值
@@ -310,12 +311,12 @@ begin
       LoadOpenSSLCore();
     except
       on E: Exception do
-        raise ESSLInitError.Create('Failed to load OpenSSL core: ' + E.Message);
+        RaiseInitializationError('OpenSSL core', E.Message);
     end;
   end;
   
   if not IsOpenSSLCoreLoaded then
-    raise ESSLInitError.Create('OpenSSL core library not available');
+    RaiseInitializationError('OpenSSL core', 'library not available');
   
   // 加载证书相关模块
   try
@@ -357,7 +358,7 @@ begin
       
   except
     on E: Exception do
-      raise ESSLInitError.Create('Failed to load certificate modules: ' + E.Message);
+      RaiseInitializationError('Certificate modules', E.Message);
   end;
   
   GInitialized := True;
@@ -401,10 +402,7 @@ begin
   
   // 验证参数
   if (ABits < 1024) or (ABits > 8192) then
-    raise ESSLInvalidArgument.CreateFmt(
-      'Invalid RSA key size: %d (valid range: 1024-8192)',
-      [ABits]
-    );
+    RaiseInvalidParameter('RSA key size (valid range: 1024-8192)');
   
   LKey := RSA_new();
   if LKey = nil then
@@ -466,15 +464,12 @@ begin
   
   // 验证参数
   if ACurve = '' then
-    raise ESSLInvalidArgument.Create('EC curve name cannot be empty');
+    RaiseInvalidParameter('EC curve name');
   
   // 获取曲线NID
   LNID := OBJ_txt2nid(PAnsiChar(AnsiString(ACurve)));
   if LNID = NID_undef then
-    raise ESSLInvalidArgument.CreateFmt(
-      'Unknown EC curve: %s (try prime256v1 or secp384r1)',
-      [ACurve]
-    );
+    RaiseInvalidParameter('EC curve name (unknown curve)');
   
   LKey := EC_KEY_new_by_curve_name(LNID);
   if LKey = nil then
@@ -593,22 +588,16 @@ begin
   
   // 验证参数
   if AOptions.CommonName = '' then
-    raise ESSLInvalidArgument.Create('CommonName cannot be empty');
+    RaiseInvalidParameter('CommonName');
   if AOptions.ValidDays <= 0 then
-    raise ESSLInvalidArgument.CreateFmt(
-      'ValidDays must be positive, got %d',
-      [AOptions.ValidDays]
-    );
+    RaiseInvalidParameter('ValidDays (must be positive)');
   
   // 生成密钥
   case AOptions.KeyType of
     ktRSA: LKey := GenerateRSAKey(AOptions.KeyBits);
     ktECDSA: LKey := GenerateECKey(AOptions.ECCurve);
     else
-      raise ESSLInvalidArgument.CreateFmt(
-        'Unsupported key type: %d',
-        [Ord(AOptions.KeyType)]
-      );
+      RaiseUnsupported('key type');
   end;
   
   if LKey = nil then
@@ -817,7 +806,7 @@ begin
         ktRSA: LKey := GenerateRSAKey(AOptions.KeyBits);
         ktECDSA: LKey := GenerateECKey(AOptions.ECCurve);
         else
-          raise ESSLInvalidArgument.CreateFmt('Unsupported key type: %d', [Ord(AOptions.KeyType)]);
+          RaiseUnsupported('key type');
       end;
       if LKey = nil then 
         raise ESSLCertError.Create('Failed to generate key pair');
@@ -1342,7 +1331,7 @@ begin
   EnsureInitialized;
   
   if ACertPEM = '' then
-    raise ESSLInvalidArgument.Create('Certificate PEM cannot be empty');
+    RaiseInvalidParameter('Certificate PEM');
   
   LBIO := BIO_new_mem_buf(PAnsiChar(AnsiString(ACertPEM)), Length(ACertPEM));
   if LBIO = nil then

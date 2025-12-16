@@ -40,6 +40,7 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
+  fafafa.ssl.errors,           // Phase 2.1 - Standardized error handling
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.core,
@@ -645,20 +646,20 @@ begin
       LoadOpenSSLCore();
     except
       on E: Exception do
-        raise ESSLInitError.Create('Failed to load OpenSSL core: ' + E.Message);
+        RaiseInitializationError('OpenSSL core', E.Message);
     end;
   end;
-  
+
   if not IsOpenSSLCoreLoaded then
-    raise ESSLInitError.Create('OpenSSL core library not available');
-  
+    RaiseInitializationError('OpenSSL core', 'library not available');
+
   // 加载BIO (用于Base64)
   try
     if not Assigned(BIO_new) or not Assigned(BIO_f_base64) then
       LoadOpenSSLBIO();
   except
     on E: Exception do
-      raise ESSLInitError.Create('Failed to load BIO module: ' + E.Message);
+      RaiseInitializationError('BIO module', E.Message);
   end;
 
   // 加载EVP模块
@@ -666,7 +667,7 @@ begin
     LoadEVP(GetCryptoLibHandle);
   except
     on E: Exception do
-      raise ESSLInitError.Create('Failed to load EVP module: ' + E.Message);
+      RaiseInitializationError('EVP module', E.Message);
   end;
   
   // 检测RAND可用性
@@ -753,16 +754,10 @@ begin
   
   // 参数验证
   if Length(AKey) <> AES_256_KEY_SIZE then
-    raise ESSLInvalidArgument.CreateFmt(
-      'AES-256-GCM requires %d-byte key, got %d bytes',
-      [AES_256_KEY_SIZE, Length(AKey)]
-    );
-    
+    RaiseInvalidParameter('AES key size');
+
   if Length(AIV) <> AES_GCM_IV_SIZE then
-    raise ESSLInvalidArgument.CreateFmt(
-      'AES-GCM requires %d-byte IV, got %d bytes',
-      [AES_GCM_IV_SIZE, Length(AIV)]
-    );
+    RaiseInvalidParameter('AES IV size');
   
   LCipher := GetEVPCipher(ENCRYPT_AES_256_GCM);
   if LCipher = nil then
@@ -915,22 +910,13 @@ begin
   EnsureInitialized;
   
   if Length(AKey) <> AES_256_KEY_SIZE then
-    raise ESSLInvalidArgument.CreateFmt(
-      'AES-256-GCM requires %d-byte key, got %d bytes',
-      [AES_256_KEY_SIZE, Length(AKey)]
-    );
-    
+    RaiseInvalidParameter('AES key size');
+
   if Length(AIV) <> AES_GCM_IV_SIZE then
-    raise ESSLInvalidArgument.CreateFmt(
-      'AES-GCM requires %d-byte IV, got %d bytes',
-      [AES_GCM_IV_SIZE, Length(AIV)]
-    );
+    RaiseInvalidParameter('AES IV size');
 
   if Length(ACiphertext) < GCM_TAG_SIZE then
-    raise ESSLInvalidArgument.CreateFmt(
-      'Ciphertext too short (minimum %d bytes for tag)',
-      [GCM_TAG_SIZE]
-    );
+    RaiseInvalidParameter('ciphertext length');
   
   LCiphertextLen := Length(ACiphertext) - GCM_TAG_SIZE;
   Move(ACiphertext[LCiphertextLen], LTag[0], GCM_TAG_SIZE);
@@ -944,11 +930,11 @@ begin
     raise ESSLCryptoError.Create('Failed to create cipher context');
   
   if not Assigned(EVP_DecryptInit_ex) then
-    raise ESSLCryptoError.Create('EVP_DecryptInit_ex not loaded');
+    RaiseFunctionNotAvailable('EVP_DecryptInit_ex');
   if not Assigned(EVP_DecryptUpdate) then
-    raise ESSLCryptoError.Create('EVP_DecryptUpdate not loaded');
+    RaiseFunctionNotAvailable('EVP_DecryptUpdate');
   if not Assigned(EVP_DecryptFinal_ex) then
-    raise ESSLCryptoError.Create('EVP_DecryptFinal_ex not loaded');
+    RaiseFunctionNotAvailable('EVP_DecryptFinal_ex');
     
   try
     if EVP_DecryptInit_ex(LCtx, LCipher, nil, @AKey[0], @AIV[0]) <> 1 then
@@ -1024,16 +1010,10 @@ begin
   EnsureInitialized;
   
   if Length(AKey) <> AES_256_KEY_SIZE then
-    raise ESSLInvalidArgument.CreateFmt(
-      'AES-256-CBC requires %d-byte key, got %d bytes',
-      [AES_256_KEY_SIZE, Length(AKey)]
-    );
-    
+    RaiseInvalidParameter('AES key size');
+
   if Length(AIV) <> AES_CBC_IV_SIZE then
-    raise ESSLInvalidArgument.CreateFmt(
-      'AES-CBC requires %d-byte IV, got %d bytes',
-      [AES_CBC_IV_SIZE, Length(AIV)]
-    );
+    RaiseInvalidParameter('AES IV size');
 
   LCtx := EVP_CIPHER_CTX_new();
   if LCtx = nil then
@@ -1080,16 +1060,10 @@ begin
   EnsureInitialized;
 
   if Length(AKey) <> AES_256_KEY_SIZE then
-    raise ESSLInvalidArgument.CreateFmt(
-      'AES-256-CBC requires %d-byte key, got %d bytes',
-      [AES_256_KEY_SIZE, Length(AKey)]
-    );
-    
+    RaiseInvalidParameter('AES key size');
+
   if Length(AIV) <> AES_CBC_IV_SIZE then
-    raise ESSLInvalidArgument.CreateFmt(
-      'AES-CBC requires %d-byte IV, got %d bytes',
-      [AES_CBC_IV_SIZE, Length(AIV)]
-    );
+    RaiseInvalidParameter('AES IV size');
   
   LCtx := EVP_CIPHER_CTX_new();
   if LCtx = nil then
@@ -1209,7 +1183,7 @@ begin
   EnsureInitialized;
   
   if AStream = nil then
-    raise ESSLInvalidArgument.Create('Stream cannot be nil');
+    RaiseInvalidParameter('Stream');
   
   LCtx := EVP_MD_CTX_new();
   if LCtx = nil then
@@ -1247,7 +1221,7 @@ var
   LStream: TFileStream;
 begin
   if not FileExists(AFileName) then
-    raise ESSLInvalidArgument.CreateFmt('File not found: %s', [AFileName]);
+    RaiseLoadError(AFileName);
     
   LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try
@@ -1468,10 +1442,7 @@ begin
     HASH_SHA256: Result := SHA256(AData);
     HASH_SHA512: Result := SHA512(AData);
   else
-    raise ESSLInvalidArgument.CreateFmt(
-      'Unsupported hash algorithm: %d',
-      [Ord(AAlgorithm)]
-    );
+    RaiseUnsupported('hash algorithm');
   end;
 end;
 
@@ -1532,7 +1503,7 @@ begin
   EnsureInitialized;
 
   if not ADataView.IsValid then
-    raise ESSLInvalidArgument.Create('Invalid TBytesView: data is nil or length is 0');
+    RaiseInvalidData('TBytesView');
 
   LCtx := EVP_MD_CTX_new();
   if LCtx = nil then
@@ -1569,7 +1540,7 @@ begin
   EnsureInitialized;
 
   if not ADataView.IsValid then
-    raise ESSLInvalidArgument.Create('Invalid TBytesView: data is nil or length is 0');
+    RaiseInvalidData('TBytesView');
 
   LCtx := EVP_MD_CTX_new();
   if LCtx = nil then
@@ -1906,10 +1877,7 @@ end;
 class function TCryptoUtils.SecureRandom(ALength: Integer): TBytes;
 begin
   if ALength <= 0 then
-    raise ESSLInvalidArgument.CreateFmt(
-      'Random length must be positive, got %d',
-      [ALength]
-    );
+    RaiseInvalidParameter('random length');
     
   EnsureInitialized;
   
@@ -1930,13 +1898,10 @@ end;
 class function TCryptoUtils.GenerateKey(ABits: Integer): TBytes;
 begin
   if (ABits mod 8) <> 0 then
-    raise ESSLInvalidArgument.CreateFmt(
-      'Key size must be multiple of 8 bits, got %d',
-      [ABits]
-    );
-    
+    RaiseInvalidParameter('key size (must be multiple of 8)');
+
   if ABits <= 0 then
-    raise ESSLInvalidArgument.Create('Key size must be positive');
+    RaiseInvalidParameter('key size (must be positive)');
     
   Result := SecureRandom(ABits div 8);
 end;
@@ -1971,10 +1936,7 @@ var
   LHex: string;
 begin
   if (Length(AHex) mod 2) <> 0 then
-    raise ESSLInvalidArgument.CreateFmt(
-      'Hex string length must be even, got %d',
-      [Length(AHex)]
-    );
+    RaiseInvalidParameter('hex string length (must be even)');
     
   Result := nil;
   SetLength(Result, Length(AHex) div 2);
@@ -1987,10 +1949,7 @@ begin
       Result[I div 2] := StrToInt('$' + Copy(LHex, I + 1, 2));
     except
       on E: Exception do
-        raise ESSLInvalidArgument.CreateFmt(
-          'Invalid hex character at position %d: %s',
-          [I + 1, E.Message]
-        );
+        RaiseInvalidData('hex string');
     end;
     Inc(I, 2);
   end;
@@ -2043,7 +2002,7 @@ begin
     HASH_SHA1: FHashSize := 20;
     HASH_MD5: FHashSize := 16;
   else
-    raise ESSLInvalidArgument.CreateFmt('Unsupported hash algorithm: %d', [Ord(AAlgorithm)]);
+    RaiseUnsupported('hash algorithm');
   end;
 
   FCtx := EVP_MD_CTX_new();
@@ -2070,7 +2029,7 @@ end;
 procedure TStreamingHasher.CheckNotFinalized;
 begin
   if FFinalized then
-    raise ESSLInvalidArgument.Create('Hasher already finalized. Call Reset to reuse.');
+    RaiseInvalidData('hasher state (already finalized)');
 end;
 
 procedure TStreamingHasher.Update(const AData: TBytes);
@@ -2089,7 +2048,7 @@ begin
   CheckNotFinalized;
 
   if not ADataView.IsValid then
-    raise ESSLInvalidArgument.Create('Invalid TBytesView');
+    RaiseInvalidData('TBytesView');
 
   if ADataView.Length = 0 then
     Exit;
@@ -2160,14 +2119,14 @@ begin
       LIVSize := 16;
     end;
   else
-    raise ESSLInvalidArgument.CreateFmt('Unsupported algorithm: %d', [Ord(AAlgorithm)]);
+    RaiseUnsupported('encryption algorithm');
   end;
 
   if Length(AKey) <> LKeySize then
-    raise ESSLInvalidArgument.CreateFmt('Invalid key size: expected %d, got %d', [LKeySize, Length(AKey)]);
+    RaiseInvalidParameter('key size');
 
   if Length(AIV) <> LIVSize then
-    raise ESSLInvalidArgument.CreateFmt('Invalid IV size: expected %d, got %d', [LIVSize, Length(AIV)]);
+    RaiseInvalidParameter('IV size');
 
   Result.FCtx := EVP_CIPHER_CTX_new();
   if Result.FCtx = nil then
@@ -2227,14 +2186,14 @@ begin
       LIVSize := 16;
     end;
   else
-    raise ESSLInvalidArgument.CreateFmt('Unsupported algorithm: %d', [Ord(AAlgorithm)]);
+    RaiseUnsupported('encryption algorithm');
   end;
 
   if Length(AKey) <> LKeySize then
-    raise ESSLInvalidArgument.CreateFmt('Invalid key size: expected %d, got %d', [LKeySize, Length(AKey)]);
+    RaiseInvalidParameter('key size');
 
   if Length(AIV) <> LIVSize then
-    raise ESSLInvalidArgument.CreateFmt('Invalid IV size: expected %d, got %d', [LIVSize, Length(AIV)]);
+    RaiseInvalidParameter('IV size');
 
   Result.FCtx := EVP_CIPHER_CTX_new();
   if Result.FCtx = nil then
@@ -2266,7 +2225,7 @@ end;
 procedure TStreamingCipher.CheckNotFinalized;
 begin
   if FFinalized then
-    raise ESSLInvalidArgument.Create('Cipher already finalized');
+    RaiseInvalidData('cipher state (already finalized)');
 end;
 
 function TStreamingCipher.Update(const AData: TBytes; out AResult: TBytes): Boolean;
@@ -2424,7 +2383,7 @@ begin
   else if LName = 'MD5' then
     Result := HASH_MD5
   else
-    raise ESSLInvalidArgument.CreateFmt('Unknown hash algorithm: %s', [AName]);
+    RaiseInvalidParameter('hash algorithm name');
 end;
 
 end.
