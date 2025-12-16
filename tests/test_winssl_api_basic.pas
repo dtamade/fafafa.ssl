@@ -58,8 +58,8 @@ begin
   else
     WriteFail('函数未找到');
     
-  WriteTest('AcceptSecurityContext 可用');
-  if Assigned(@AcceptSecurityContext) then
+  WriteTest('AcceptSecurityContextW 可用');
+  if Assigned(@AcceptSecurityContextW) then
     WritePass
   else
     WriteFail('函数未找到');

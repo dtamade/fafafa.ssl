@@ -753,6 +753,11 @@ var
   EVP_EncryptUpdate: TEVP_EncryptUpdate = nil;
   EVP_EncryptFinal_ex: TEVP_EncryptFinal_ex = nil;
   
+  // Generic Cipher functions
+  EVP_CipherInit_ex: TEVP_CipherInit_ex = nil;
+  EVP_CipherUpdate: TEVP_CipherUpdate = nil;
+  EVP_CipherFinal_ex: TEVP_CipherFinal_ex = nil;
+  
   // Decryption functions
   EVP_DecryptInit_ex: TEVP_DecryptInit_ex = nil;
   EVP_DecryptUpdate: TEVP_DecryptUpdate = nil;
@@ -896,6 +901,11 @@ begin
   EVP_EncryptUpdate := TEVP_EncryptUpdate(GetProcAddress(ALibHandle, 'EVP_EncryptUpdate'));
   EVP_EncryptFinal_ex := TEVP_EncryptFinal_ex(GetProcAddress(ALibHandle, 'EVP_EncryptFinal_ex'));
   
+  // Load Generic Cipher functions
+  EVP_CipherInit_ex := TEVP_CipherInit_ex(GetProcAddress(ALibHandle, 'EVP_CipherInit_ex'));
+  EVP_CipherUpdate := TEVP_CipherUpdate(GetProcAddress(ALibHandle, 'EVP_CipherUpdate'));
+  EVP_CipherFinal_ex := TEVP_CipherFinal_ex(GetProcAddress(ALibHandle, 'EVP_CipherFinal_ex'));
+  
   // Load Decryption functions
   EVP_DecryptInit_ex := TEVP_DecryptInit_ex(GetProcAddress(ALibHandle, 'EVP_DecryptInit_ex'));
   EVP_DecryptUpdate := TEVP_DecryptUpdate(GetProcAddress(ALibHandle, 'EVP_DecryptUpdate'));
@@ -1019,6 +1029,11 @@ begin
   EVP_EncryptInit_ex := nil;
   EVP_EncryptUpdate := nil;
   EVP_EncryptFinal_ex := nil;
+  
+  // Clear Generic Cipher functions
+  EVP_CipherInit_ex := nil;
+  EVP_CipherUpdate := nil;
+  EVP_CipherFinal_ex := nil;
   
   // Clear Decryption functions
   EVP_DecryptInit_ex := nil;

@@ -5,7 +5,9 @@ unit fafafa.ssl.openssl.api;
 interface
 
 uses
-  SysUtils, Classes;
+  SysUtils, Classes,
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions;
 
 const
   {$IFDEF MSWINDOWS}
@@ -813,8 +815,17 @@ function LoadOpenSSLLibrary: Boolean;
   begin
     P := GetProcedureAddress(AHandle, AName);
     if P = nil then
-      raise Exception.CreateFmt('Failed to load function: %s', [AName]);
+      raise ESSLInitializationException.CreateFmt('Failed to load function: %s', [AName]);
     Pointer(AFunc) := P;
+  end;
+
+  procedure TryLoadFunc(AHandle: TLibHandle; const AName: string; var AFunc);
+  var
+    P: Pointer;
+  begin
+    P := GetProcedureAddress(AHandle, AName);
+    if P <> nil then
+      Pointer(AFunc) := P;
   end;
   
 begin
@@ -833,7 +844,7 @@ begin
   if FCryptoLibHandle = NilHandle then
     FCryptoLibHandle := LoadLibrary('libcrypto.dll');
   if FCryptoLibHandle = NilHandle then
-    raise Exception.Create('Failed to load crypto library. Tried: libcrypto-3.dll, libcrypto-3-x64.dll, libcrypto.dll');
+    raise ESSLInitializationException.Create('Failed to load crypto library. Tried: libcrypto-3.dll, libcrypto-3-x64.dll, libcrypto.dll');
     
   FSSLLibHandle := LoadLibrary(OPENSSL_LIB);
   if FSSLLibHandle = NilHandle then
@@ -844,7 +855,7 @@ begin
   begin
     FreeLibrary(FCryptoLibHandle);
     FCryptoLibHandle := NilHandle;
-    raise Exception.Create('Failed to load SSL library. Tried: libssl-3.dll, libssl-3-x64.dll, libssl.dll');
+    raise ESSLInitializationException.Create('Failed to load SSL library. Tried: libssl-3.dll, libssl-3-x64.dll, libssl.dll');
   end;
   
   try
@@ -867,28 +878,28 @@ begin
     LoadFunc(FSSLLibHandle, 'SSL_CTX_use_PrivateKey_file', SSL_CTX_use_PrivateKey_file);
     LoadFunc(FSSLLibHandle, 'SSL_CTX_check_private_key', SSL_CTX_check_private_key);
     LoadFunc(FSSLLibHandle, 'SSL_CTX_set_cipher_list', SSL_CTX_set_cipher_list);
-    try LoadFunc(FSSLLibHandle, 'SSL_CTX_set_ciphersuites', SSL_CTX_set_ciphersuites); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CTX_set_min_proto_version', SSL_CTX_set_min_proto_version); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CTX_set_max_proto_version', SSL_CTX_set_max_proto_version); except end;
+    TryLoadFunc(FSSLLibHandle, 'SSL_CTX_set_ciphersuites', SSL_CTX_set_ciphersuites);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CTX_set_min_proto_version', SSL_CTX_set_min_proto_version);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CTX_set_max_proto_version', SSL_CTX_set_max_proto_version);
     LoadFunc(FSSLLibHandle, 'SSL_CTX_get_cert_store', SSL_CTX_get_cert_store);
     LoadFunc(FSSLLibHandle, 'SSL_CTX_set_alpn_protos', SSL_CTX_set_alpn_protos);
     LoadFunc(FSSLLibHandle, 'SSL_CTX_set_alpn_select_cb', SSL_CTX_set_alpn_select_cb);
     LoadFunc(FSSLLibHandle, 'SSL_CTX_set_psk_client_callback', SSL_CTX_set_psk_client_callback);
     LoadFunc(FSSLLibHandle, 'SSL_CTX_set_psk_server_callback', SSL_CTX_set_psk_server_callback);
     // 加载新增的 SSL_CTX 函数
-    try LoadFunc(FSSLLibHandle, 'SSL_CTX_set_info_callback', SSL_CTX_set_info_callback); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CTX_get_info_callback', SSL_CTX_get_info_callback); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CTX_set_msg_callback', SSL_CTX_set_msg_callback); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CTX_set_default_passwd_cb', SSL_CTX_set_default_passwd_cb); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CTX_set_default_passwd_cb_userdata', SSL_CTX_set_default_passwd_cb_userdata); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CTX_set_session_id_context', SSL_CTX_set_session_id_context); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CTX_set_session_cache_mode', SSL_CTX_set_session_cache_mode); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CTX_get_session_cache_mode', SSL_CTX_get_session_cache_mode); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CTX_set_timeout', SSL_CTX_set_timeout); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CTX_get_timeout', SSL_CTX_get_timeout); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CTX_sess_set_new_cb', SSL_CTX_sess_set_new_cb); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CTX_sess_set_remove_cb', SSL_CTX_sess_set_remove_cb); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CTX_sess_set_get_cb', SSL_CTX_sess_set_get_cb); except end;
+    TryLoadFunc(FSSLLibHandle, 'SSL_CTX_set_info_callback', SSL_CTX_set_info_callback);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CTX_get_info_callback', SSL_CTX_get_info_callback);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CTX_set_msg_callback', SSL_CTX_set_msg_callback);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CTX_set_default_passwd_cb', SSL_CTX_set_default_passwd_cb);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CTX_set_default_passwd_cb_userdata', SSL_CTX_set_default_passwd_cb_userdata);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CTX_set_session_id_context', SSL_CTX_set_session_id_context);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CTX_set_session_cache_mode', SSL_CTX_set_session_cache_mode);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CTX_get_session_cache_mode', SSL_CTX_get_session_cache_mode);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CTX_set_timeout', SSL_CTX_set_timeout);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CTX_get_timeout', SSL_CTX_get_timeout);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CTX_sess_set_new_cb', SSL_CTX_sess_set_new_cb);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CTX_sess_set_remove_cb', SSL_CTX_sess_set_remove_cb);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CTX_sess_set_get_cb', SSL_CTX_sess_set_get_cb);
     
     // SSL 函数
     LoadFunc(FSSLLibHandle, 'SSL_new', SSL_new);
@@ -908,10 +919,9 @@ begin
     LoadFunc(FSSLLibHandle, 'SSL_shutdown', SSL_shutdown);
     LoadFunc(FSSLLibHandle, 'SSL_get_error', SSL_get_error);
     // SSL_get_peer_certificate 在 OpenSSL 3.0 中改名为 SSL_get1_peer_certificate
-    try LoadFunc(FSSLLibHandle, 'SSL_get_peer_certificate', SSL_get_peer_certificate); except
-      try LoadFunc(FSSLLibHandle, 'SSL_get1_peer_certificate', SSL_get_peer_certificate); except end;
-    end;
-    try LoadFunc(FSSLLibHandle, 'SSL_get_peer_cert_chain', SSL_get_peer_cert_chain); except end;
+    TryLoadFunc(FSSLLibHandle, 'SSL_get_peer_certificate', SSL_get_peer_certificate);
+    TryLoadFunc(FSSLLibHandle, 'SSL_get1_peer_certificate', SSL_get_peer_certificate);
+    TryLoadFunc(FSSLLibHandle, 'SSL_get_peer_cert_chain', SSL_get_peer_cert_chain);
     LoadFunc(FSSLLibHandle, 'SSL_get_verify_result', SSL_get_verify_result);
     LoadFunc(FSSLLibHandle, 'SSL_ctrl', SSL_ctrl);
     LoadFunc(FSSLLibHandle, 'SSL_get_servername', SSL_get_servername);
@@ -923,20 +933,20 @@ begin
     LoadFunc(FSSLLibHandle, 'SSL_in_before', SSL_in_before);
     LoadFunc(FSSLLibHandle, 'SSL_is_server', SSL_is_server);
     // 加载新增的 SSL 函数
-    try LoadFunc(FSSLLibHandle, 'SSL_set_info_callback', SSL_set_info_callback); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_get_info_callback', SSL_get_info_callback); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_set_msg_callback', SSL_set_msg_callback); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_set_msg_callback_arg', SSL_set_msg_callback_arg); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_session_reused', SSL_session_reused); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_get_session', SSL_get_session); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_set_session', SSL_set_session); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_get_SSL_CTX', SSL_get_SSL_CTX); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_set_SSL_CTX', SSL_set_SSL_CTX); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_set_verify', SSL_set_verify); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_set_verify_depth', SSL_set_verify_depth); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_get_verify_mode', SSL_get_verify_mode); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_get_verify_depth', SSL_get_verify_depth); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_get_verify_callback', SSL_get_verify_callback); except end;
+    TryLoadFunc(FSSLLibHandle, 'SSL_set_info_callback', SSL_set_info_callback);
+    TryLoadFunc(FSSLLibHandle, 'SSL_get_info_callback', SSL_get_info_callback);
+    TryLoadFunc(FSSLLibHandle, 'SSL_set_msg_callback', SSL_set_msg_callback);
+    TryLoadFunc(FSSLLibHandle, 'SSL_set_msg_callback_arg', SSL_set_msg_callback_arg);
+    TryLoadFunc(FSSLLibHandle, 'SSL_session_reused', SSL_session_reused);
+    TryLoadFunc(FSSLLibHandle, 'SSL_get_session', SSL_get_session);
+    TryLoadFunc(FSSLLibHandle, 'SSL_set_session', SSL_set_session);
+    TryLoadFunc(FSSLLibHandle, 'SSL_get_SSL_CTX', SSL_get_SSL_CTX);
+    TryLoadFunc(FSSLLibHandle, 'SSL_set_SSL_CTX', SSL_set_SSL_CTX);
+    TryLoadFunc(FSSLLibHandle, 'SSL_set_verify', SSL_set_verify);
+    TryLoadFunc(FSSLLibHandle, 'SSL_set_verify_depth', SSL_set_verify_depth);
+    TryLoadFunc(FSSLLibHandle, 'SSL_get_verify_mode', SSL_get_verify_mode);
+    TryLoadFunc(FSSLLibHandle, 'SSL_get_verify_depth', SSL_get_verify_depth);
+    TryLoadFunc(FSSLLibHandle, 'SSL_get_verify_callback', SSL_get_verify_callback);
     
     // SSL_METHOD 函数
     LoadFunc(FSSLLibHandle, 'TLS_method', TLS_method);
@@ -969,20 +979,20 @@ begin
     LoadFunc(FCryptoLibHandle, 'BIO_s_connect', BIO_s_connect);
     LoadFunc(FCryptoLibHandle, 'BIO_s_socket', BIO_s_socket);
     // 加载新增的 BIO 函数
-    try LoadFunc(FCryptoLibHandle, 'BIO_push', BIO_push); except end;
-    try LoadFunc(FCryptoLibHandle, 'BIO_pop', BIO_pop); except end;
-    try LoadFunc(FCryptoLibHandle, 'BIO_flush', BIO_flush); except end;
-    try LoadFunc(FCryptoLibHandle, 'BIO_get_retry_BIO', BIO_get_retry_BIO); except end;
-    try LoadFunc(FCryptoLibHandle, 'BIO_get_retry_reason', BIO_get_retry_reason); except end;
-    try LoadFunc(FCryptoLibHandle, 'BIO_should_retry', BIO_should_retry); except end;
-    try LoadFunc(FCryptoLibHandle, 'BIO_should_read', BIO_should_read); except end;
-    try LoadFunc(FCryptoLibHandle, 'BIO_should_write', BIO_should_write); except end;
-    try LoadFunc(FCryptoLibHandle, 'BIO_should_io_special', BIO_should_io_special); except end;
-    try LoadFunc(FCryptoLibHandle, 'BIO_retry_type', BIO_retry_type); except end;
-    try LoadFunc(FCryptoLibHandle, 'BIO_get_fd', BIO_get_fd); except end;
-    try LoadFunc(FCryptoLibHandle, 'BIO_set_fd', BIO_set_fd); except end;
-    try LoadFunc(FCryptoLibHandle, 'BIO_get_close', BIO_get_close); except end;
-    try LoadFunc(FCryptoLibHandle, 'BIO_set_close', BIO_set_close); except end;
+    TryLoadFunc(FCryptoLibHandle, 'BIO_push', BIO_push);
+    TryLoadFunc(FCryptoLibHandle, 'BIO_pop', BIO_pop);
+    TryLoadFunc(FCryptoLibHandle, 'BIO_flush', BIO_flush);
+    TryLoadFunc(FCryptoLibHandle, 'BIO_get_retry_BIO', BIO_get_retry_BIO);
+    TryLoadFunc(FCryptoLibHandle, 'BIO_get_retry_reason', BIO_get_retry_reason);
+    TryLoadFunc(FCryptoLibHandle, 'BIO_should_retry', BIO_should_retry);
+    TryLoadFunc(FCryptoLibHandle, 'BIO_should_read', BIO_should_read);
+    TryLoadFunc(FCryptoLibHandle, 'BIO_should_write', BIO_should_write);
+    TryLoadFunc(FCryptoLibHandle, 'BIO_should_io_special', BIO_should_io_special);
+    TryLoadFunc(FCryptoLibHandle, 'BIO_retry_type', BIO_retry_type);
+    TryLoadFunc(FCryptoLibHandle, 'BIO_get_fd', BIO_get_fd);
+    TryLoadFunc(FCryptoLibHandle, 'BIO_set_fd', BIO_set_fd);
+    TryLoadFunc(FCryptoLibHandle, 'BIO_get_close', BIO_get_close);
+    TryLoadFunc(FCryptoLibHandle, 'BIO_set_close', BIO_set_close);
     
     // X509 证书函数
     LoadFunc(FCryptoLibHandle, 'X509_free', X509_free);
@@ -1004,71 +1014,71 @@ begin
     LoadFunc(FCryptoLibHandle, 'X509_STORE_set_flags', X509_STORE_set_flags);
     
     // EVP_PKEY 函数
-    try LoadFunc(FCryptoLibHandle, 'EVP_PKEY_free', EVP_PKEY_free); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_PKEY_bits', EVP_PKEY_bits); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_PKEY_id', EVP_PKEY_id); except end;
+    TryLoadFunc(FCryptoLibHandle, 'EVP_PKEY_free', EVP_PKEY_free);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_PKEY_bits', EVP_PKEY_bits);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_PKEY_id', EVP_PKEY_id);
     
     // EVP 摘要函数
-    try LoadFunc(FCryptoLibHandle, 'EVP_MD_CTX_new', EVP_MD_CTX_new); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_MD_CTX_free', EVP_MD_CTX_free); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_MD_CTX_reset', EVP_MD_CTX_reset); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_DigestInit_ex', EVP_DigestInit_ex); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_DigestUpdate', EVP_DigestUpdate); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_DigestFinal_ex', EVP_DigestFinal_ex); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_get_digestbyname', EVP_get_digestbyname); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_md5', EVP_md5); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_sha1', EVP_sha1); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_sha224', EVP_sha224); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_sha256', EVP_sha256); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_sha384', EVP_sha384); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_sha512', EVP_sha512); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_sha512_224', EVP_sha512_224); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_sha512_256', EVP_sha512_256); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_ripemd160', EVP_ripemd160); except end;
+    TryLoadFunc(FCryptoLibHandle, 'EVP_MD_CTX_new', EVP_MD_CTX_new);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_MD_CTX_free', EVP_MD_CTX_free);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_MD_CTX_reset', EVP_MD_CTX_reset);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_DigestInit_ex', EVP_DigestInit_ex);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_DigestUpdate', EVP_DigestUpdate);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_DigestFinal_ex', EVP_DigestFinal_ex);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_get_digestbyname', EVP_get_digestbyname);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_md5', EVP_md5);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_sha1', EVP_sha1);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_sha224', EVP_sha224);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_sha256', EVP_sha256);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_sha384', EVP_sha384);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_sha512', EVP_sha512);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_sha512_224', EVP_sha512_224);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_sha512_256', EVP_sha512_256);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_ripemd160', EVP_ripemd160);
     
     // EVP 密码函数 - 核心操作
-    try LoadFunc(FCryptoLibHandle, 'EVP_CIPHER_CTX_new', EVP_CIPHER_CTX_new); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_CIPHER_CTX_free', EVP_CIPHER_CTX_free); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_CIPHER_CTX_reset', EVP_CIPHER_CTX_reset); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_CIPHER_CTX_ctrl', EVP_CIPHER_CTX_ctrl); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_EncryptInit_ex', EVP_EncryptInit_ex); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_EncryptUpdate', EVP_EncryptUpdate); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_EncryptFinal_ex', EVP_EncryptFinal_ex); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_DecryptInit_ex', EVP_DecryptInit_ex); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_DecryptUpdate', EVP_DecryptUpdate); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_DecryptFinal_ex', EVP_DecryptFinal_ex); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_CipherInit_ex', EVP_CipherInit_ex); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_CipherUpdate', EVP_CipherUpdate); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_CipherFinal_ex', EVP_CipherFinal_ex); except end;
+    TryLoadFunc(FCryptoLibHandle, 'EVP_CIPHER_CTX_new', EVP_CIPHER_CTX_new);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_CIPHER_CTX_free', EVP_CIPHER_CTX_free);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_CIPHER_CTX_reset', EVP_CIPHER_CTX_reset);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_CIPHER_CTX_ctrl', EVP_CIPHER_CTX_ctrl);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_EncryptInit_ex', EVP_EncryptInit_ex);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_EncryptUpdate', EVP_EncryptUpdate);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_EncryptFinal_ex', EVP_EncryptFinal_ex);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_DecryptInit_ex', EVP_DecryptInit_ex);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_DecryptUpdate', EVP_DecryptUpdate);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_DecryptFinal_ex', EVP_DecryptFinal_ex);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_CipherInit_ex', EVP_CipherInit_ex);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_CipherUpdate', EVP_CipherUpdate);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_CipherFinal_ex', EVP_CipherFinal_ex);
     
     // EVP 密码算法 - AES
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_128_ecb', EVP_aes_128_ecb); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_128_cbc', EVP_aes_128_cbc); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_128_cfb128', EVP_aes_128_cfb128); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_128_ofb', EVP_aes_128_ofb); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_128_ctr', EVP_aes_128_ctr); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_128_gcm', EVP_aes_128_gcm); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_128_ccm', EVP_aes_128_ccm); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_128_xts', EVP_aes_128_xts); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_192_ecb', EVP_aes_192_ecb); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_192_cbc', EVP_aes_192_cbc); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_192_cfb128', EVP_aes_192_cfb128); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_192_ofb', EVP_aes_192_ofb); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_192_ctr', EVP_aes_192_ctr); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_192_gcm', EVP_aes_192_gcm); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_192_ccm', EVP_aes_192_ccm); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_256_ecb', EVP_aes_256_ecb); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_256_cbc', EVP_aes_256_cbc); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_256_cfb128', EVP_aes_256_cfb128); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_256_ofb', EVP_aes_256_ofb); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_256_ctr', EVP_aes_256_ctr); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_256_gcm', EVP_aes_256_gcm); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_256_ccm', EVP_aes_256_ccm); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_aes_256_xts', EVP_aes_256_xts); except end;
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_128_ecb', EVP_aes_128_ecb);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_128_cbc', EVP_aes_128_cbc);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_128_cfb128', EVP_aes_128_cfb128);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_128_ofb', EVP_aes_128_ofb);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_128_ctr', EVP_aes_128_ctr);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_128_gcm', EVP_aes_128_gcm);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_128_ccm', EVP_aes_128_ccm);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_128_xts', EVP_aes_128_xts);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_192_ecb', EVP_aes_192_ecb);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_192_cbc', EVP_aes_192_cbc);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_192_cfb128', EVP_aes_192_cfb128);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_192_ofb', EVP_aes_192_ofb);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_192_ctr', EVP_aes_192_ctr);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_192_gcm', EVP_aes_192_gcm);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_192_ccm', EVP_aes_192_ccm);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_256_ecb', EVP_aes_256_ecb);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_256_cbc', EVP_aes_256_cbc);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_256_cfb128', EVP_aes_256_cfb128);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_256_ofb', EVP_aes_256_ofb);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_256_ctr', EVP_aes_256_ctr);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_256_gcm', EVP_aes_256_gcm);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_256_ccm', EVP_aes_256_ccm);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_aes_256_xts', EVP_aes_256_xts);
     
     // EVP 密码算法 - ChaCha20
-    try LoadFunc(FCryptoLibHandle, 'EVP_chacha20', EVP_chacha20); except end;
-    try LoadFunc(FCryptoLibHandle, 'EVP_chacha20_poly1305', EVP_chacha20_poly1305); except end;
+    TryLoadFunc(FCryptoLibHandle, 'EVP_chacha20', EVP_chacha20);
+    TryLoadFunc(FCryptoLibHandle, 'EVP_chacha20_poly1305', EVP_chacha20_poly1305);
     
     // 错误处理函数
     LoadFunc(FCryptoLibHandle, 'ERR_get_error', ERR_get_error);
@@ -1079,36 +1089,34 @@ begin
     LoadFunc(FCryptoLibHandle, 'ERR_print_errors_fp', ERR_print_errors_fp);
     
     // Crypto 函数 - 旧版本线程锁函数（OpenSSL 1.1.0+ 已移除）
-    try LoadFunc(FCryptoLibHandle, 'CRYPTO_num_locks', CRYPTO_num_locks); except end;
-    try LoadFunc(FCryptoLibHandle, 'CRYPTO_set_locking_callback', CRYPTO_set_locking_callback); except end;
-    try LoadFunc(FCryptoLibHandle, 'CRYPTO_set_id_callback', CRYPTO_set_id_callback); except end;
-    // OPENSSL_version_num 在 OpenSSL 3.0 中改名为 OpenSSL_version_num
-    try LoadFunc(FCryptoLibHandle, 'OPENSSL_version_num', OPENSSL_version_num); except
-      try LoadFunc(FCryptoLibHandle, 'OpenSSL_version_num', OPENSSL_version_num); except end;
-    end;
-    // OPENSSL_version 在 OpenSSL 3.0 中改名为 OpenSSL_version
-    try LoadFunc(FCryptoLibHandle, 'OPENSSL_version', OPENSSL_version); except
-      try LoadFunc(FCryptoLibHandle, 'OpenSSL_version', OPENSSL_version); except end;
-    end;
+    TryLoadFunc(FCryptoLibHandle, 'CRYPTO_num_locks', CRYPTO_num_locks);
+    TryLoadFunc(FCryptoLibHandle, 'CRYPTO_set_locking_callback', CRYPTO_set_locking_callback);
+    TryLoadFunc(FCryptoLibHandle, 'CRYPTO_set_id_callback', CRYPTO_set_id_callback);
+    // OPENSSL_version_num
+    TryLoadFunc(FCryptoLibHandle, 'OPENSSL_version_num', OPENSSL_version_num);
+    TryLoadFunc(FCryptoLibHandle, 'OpenSSL_version_num', OPENSSL_version_num);
+    // OPENSSL_version
+    TryLoadFunc(FCryptoLibHandle, 'OPENSSL_version', OPENSSL_version);
+    TryLoadFunc(FCryptoLibHandle, 'OpenSSL_version', OPENSSL_version);
     
     // SSL_SESSION 函数
-    try LoadFunc(FSSLLibHandle, 'SSL_SESSION_new', SSL_SESSION_new); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_SESSION_free', SSL_SESSION_free); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_SESSION_up_ref', SSL_SESSION_up_ref); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_SESSION_get_id', SSL_SESSION_get_id); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_SESSION_get_time', SSL_SESSION_get_time); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_SESSION_set_time', SSL_SESSION_set_time); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_SESSION_get_timeout', SSL_SESSION_get_timeout); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_SESSION_set_timeout', SSL_SESSION_set_timeout); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_SESSION_has_ticket', SSL_SESSION_has_ticket); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_SESSION_get_ticket_lifetime_hint', SSL_SESSION_get_ticket_lifetime_hint); except end;
+    TryLoadFunc(FSSLLibHandle, 'SSL_SESSION_new', SSL_SESSION_new);
+    TryLoadFunc(FSSLLibHandle, 'SSL_SESSION_free', SSL_SESSION_free);
+    TryLoadFunc(FSSLLibHandle, 'SSL_SESSION_up_ref', SSL_SESSION_up_ref);
+    TryLoadFunc(FSSLLibHandle, 'SSL_SESSION_get_id', SSL_SESSION_get_id);
+    TryLoadFunc(FSSLLibHandle, 'SSL_SESSION_get_time', SSL_SESSION_get_time);
+    TryLoadFunc(FSSLLibHandle, 'SSL_SESSION_set_time', SSL_SESSION_set_time);
+    TryLoadFunc(FSSLLibHandle, 'SSL_SESSION_get_timeout', SSL_SESSION_get_timeout);
+    TryLoadFunc(FSSLLibHandle, 'SSL_SESSION_set_timeout', SSL_SESSION_set_timeout);
+    TryLoadFunc(FSSLLibHandle, 'SSL_SESSION_has_ticket', SSL_SESSION_has_ticket);
+    TryLoadFunc(FSSLLibHandle, 'SSL_SESSION_get_ticket_lifetime_hint', SSL_SESSION_get_ticket_lifetime_hint);
     
     // SSL_CIPHER 函数
-    try LoadFunc(FSSLLibHandle, 'SSL_CIPHER_get_name', SSL_CIPHER_get_name); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CIPHER_get_bits', SSL_CIPHER_get_bits); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CIPHER_get_version', SSL_CIPHER_get_version); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CIPHER_description', SSL_CIPHER_description); except end;
-    try LoadFunc(FSSLLibHandle, 'SSL_CIPHER_get_id', SSL_CIPHER_get_id); except end;
+    TryLoadFunc(FSSLLibHandle, 'SSL_CIPHER_get_name', SSL_CIPHER_get_name);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CIPHER_get_bits', SSL_CIPHER_get_bits);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CIPHER_get_version', SSL_CIPHER_get_version);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CIPHER_description', SSL_CIPHER_description);
+    TryLoadFunc(FSSLLibHandle, 'SSL_CIPHER_get_id', SSL_CIPHER_get_id);
     
     // 初始化 OpenSSL
     if Assigned(OPENSSL_init_ssl) then

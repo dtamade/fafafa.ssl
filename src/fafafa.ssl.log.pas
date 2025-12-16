@@ -21,6 +21,8 @@ unit fafafa.ssl.log;
 interface
 
 uses
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   SysUtils, Classes, SyncObjs,
   fafafa.ssl.base, fafafa.ssl.utils;
 
@@ -74,6 +76,8 @@ type
     procedure SetLevel(aLevel: TSSLLogLevel);
     function GetEnabled: Boolean;
     procedure SetEnabled(aEnabled: Boolean);
+    procedure SetTargets(aTargets: TSSLLogTargets);
+    procedure SetLogFile(const aFileName: string);
     
     property Level: TSSLLogLevel read GetLevel write SetLevel;
     property Enabled: Boolean read GetEnabled write SetEnabled;
@@ -144,16 +148,21 @@ type
     property IncludeThreadId: Boolean read FIncludeThreadId write FIncludeThreadId;
   end;
 
+  TSSLLoggerEntry = class
+  public
+    Logger: ISSLLogger;
+  end;
+
   { TSSLLogManager - 全局日志管理器 }
   TSSLLogManager = class
   private
-    class var FInstance: TSSLLogManager;
     FLoggers: TStringList;
     FGlobalLogger: ISSLLogger;
     FDefaultLevel: TSSLLogLevel;
     FDefaultTargets: TSSLLogTargets;
     
     constructor CreateInstance;
+    class var FInstance: TSSLLogManager;
   public
     class function Instance: TSSLLogManager;
     class procedure FreeInstance;
@@ -187,9 +196,12 @@ type
     class var FLogger: ISSLLogger;
   public
     class procedure Initialize;
-    class procedure SetEnabled(aEnabled: Boolean);
-    class procedure SetTraceEnabled(aEnabled: Boolean);
-    class procedure SetHexDumpEnabled(aEnabled: Boolean);
+    class function GetEnabled: Boolean; static;
+    class procedure SetEnabled(aEnabled: Boolean); static;
+    class function GetTraceEnabled: Boolean; static;
+    class procedure SetTraceEnabled(aEnabled: Boolean); static;
+    class function GetHexDumpEnabled: Boolean; static;
+    class procedure SetHexDumpEnabled(aEnabled: Boolean); static;
     
     // 调试输出
     class procedure Debug(const aMessage: string);
@@ -213,9 +225,9 @@ type
     class procedure AssertNotNil(aObject: TObject; const aName: string);
     
     // 属性
-    class property Enabled: Boolean read FEnabled write SetEnabled;
-    class property TraceEnabled: Boolean read FTraceEnabled write SetTraceEnabled;
-    class property HexDumpEnabled: Boolean read FHexDumpEnabled write SetHexDumpEnabled;
+    class property Enabled: Boolean read GetEnabled write SetEnabled;
+    class property TraceEnabled: Boolean read GetTraceEnabled write SetTraceEnabled;
+    class property HexDumpEnabled: Boolean read GetHexDumpEnabled write SetHexDumpEnabled;
   end;
 
   { TSSLProfiler - 性能分析器 }
@@ -233,7 +245,6 @@ type
       end;
     
   private
-    class var FInstance: TSSLProfiler;
     FEntries: TStringList;
     FLock: TCriticalSection;
     FEnabled: Boolean;
@@ -241,6 +252,7 @@ type
     constructor CreateInstance;
     function GetEntry(const aName: string): TProfileEntry;
     procedure UpdateEntry(const aName: string; aElapsed: Int64);
+    class var FInstance: TSSLProfiler;
   public
     class function Instance: TSSLProfiler;
     class procedure FreeInstance;
@@ -291,6 +303,8 @@ procedure SSLStopTimer(aStartTime: Int64; const aLabel: string);
 implementation
 
 uses
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   DateUtils, fpjson, jsonparser;
 
 { TSSLLogger }
@@ -525,26 +539,37 @@ procedure TSSLLogger.CheckRotateLogFile;
 var
   LFileSize: Int64;
   LNewFileName: string;
+  LStream: TFileStream;
 begin
   // 检查文件大小，如果超过 10MB 则轮转
   if not FLogToFile then
     Exit;
   
-  LFileSize := FileSize(FLogFile) * SizeOf(Char);
-  if LFileSize > 10 * 1024 * 1024 then
-  begin
-    CloseFile(FLogFile);
-    
-    // 生成新文件名
-    LNewFileName := ChangeFileExt(FLogFileName, 
-      '.' + FormatDateTime('yyyymmdd_hhnnss', Now) + DEFAULT_LOG_FILE_EXT);
-    RenameFile(FLogFileName, LNewFileName);
-    
-    // 重新打开日志文件
-    AssignFile(FLogFile, FLogFileName);
-    Rewrite(FLogFile);
-    FLogToFile := True;
+  Flush(FLogFile);
+  if not FileExists(FLogFileName) then
+    Exit;
+  
+  LStream := TFileStream.Create(FLogFileName, fmOpenRead or fmShareDenyNone);
+  try
+    LFileSize := LStream.Size;
+  finally
+    LStream.Free;
   end;
+  
+  if LFileSize <= 10 * 1024 * 1024 then
+    Exit;
+  
+  CloseFile(FLogFile);
+  
+  // 生成新文件名
+  LNewFileName := ChangeFileExt(FLogFileName, 
+    '.' + FormatDateTime('yyyymmdd_hhnnss', Now) + DEFAULT_LOG_FILE_EXT);
+  RenameFile(FLogFileName, LNewFileName);
+  
+  // 重新打开日志文件
+  AssignFile(FLogFile, FLogFileName);
+  Rewrite(FLogFile);
+  FLogToFile := True;
 end;
 
 procedure TSSLLogger.SetTargets(aTargets: TSSLLogTargets);
@@ -650,10 +675,12 @@ constructor TSSLLogManager.CreateInstance;
 begin
   inherited Create;
   FLoggers := TStringList.Create;
-  FLoggers.OwnsObjects := False;
+  FLoggers.OwnsObjects := True;
   FGlobalLogger := TSSLLogger.Create('GLOBAL');
   FDefaultLevel := sllInfo;
   FDefaultTargets := [sltConsole];
+  FGlobalLogger.Level := FDefaultLevel;
+  FGlobalLogger.SetTargets(FDefaultTargets);
 end;
 
 destructor TSSLLogManager.Destroy;
@@ -687,19 +714,23 @@ begin
   
   LIndex := FLoggers.IndexOf(aModule);
   if LIndex >= 0 then
-    Result := ISSLLogger(FLoggers.Objects[LIndex])
+    Result := TSSLLoggerEntry(FLoggers.Objects[LIndex]).Logger
   else
   begin
     Result := TSSLLogger.Create(aModule);
     Result.Level := FDefaultLevel;
-    TSSLLogger(Result).Targets := FDefaultTargets;
+    Result.SetTargets(FDefaultTargets);
     RegisterLogger(aModule, Result);
   end;
 end;
 
 procedure TSSLLogManager.RegisterLogger(const aModule: string; aLogger: ISSLLogger);
+var
+  LEntry: TSSLLoggerEntry;
 begin
-  FLoggers.AddObject(aModule, TObject(aLogger));
+  LEntry := TSSLLoggerEntry.Create;
+  LEntry.Logger := aLogger;
+  FLoggers.AddObject(aModule, LEntry);
 end;
 
 procedure TSSLLogManager.UnregisterLogger(const aModule: string);
@@ -714,48 +745,64 @@ end;
 procedure TSSLLogManager.SetGlobalLevel(aLevel: TSSLLogLevel);
 var
   I: Integer;
+  LLogger: ISSLLogger;
 begin
   FDefaultLevel := aLevel;
   FGlobalLogger.Level := aLevel;
   
   for I := 0 to FLoggers.Count - 1 do
-    ISSLLogger(FLoggers.Objects[I]).Level := aLevel;
+  begin
+    LLogger := TSSLLoggerEntry(FLoggers.Objects[I]).Logger;
+    LLogger.Level := aLevel;
+  end;
 end;
 
 procedure TSSLLogManager.SetGlobalTargets(aTargets: TSSLLogTargets);
 var
   I: Integer;
+  LLogger: ISSLLogger;
 begin
   FDefaultTargets := aTargets;
-  TSSLLogger(FGlobalLogger).Targets := aTargets;
+  FGlobalLogger.SetTargets(aTargets);
   
   for I := 0 to FLoggers.Count - 1 do
-    TSSLLogger(ISSLLogger(FLoggers.Objects[I])).Targets := aTargets;
+  begin
+    LLogger := TSSLLoggerEntry(FLoggers.Objects[I]).Logger;
+    LLogger.SetTargets(aTargets);
+  end;
 end;
 
 procedure TSSLLogManager.SetGlobalLogFile(const aFileName: string);
 begin
-  TSSLLogger(FGlobalLogger).SetLogFile(aFileName);
+  FGlobalLogger.SetLogFile(aFileName);
 end;
 
 procedure TSSLLogManager.EnableAll;
 var
   I: Integer;
+  LLogger: ISSLLogger;
 begin
   FGlobalLogger.Enabled := True;
   
   for I := 0 to FLoggers.Count - 1 do
-    ISSLLogger(FLoggers.Objects[I]).Enabled := True;
+  begin
+    LLogger := TSSLLoggerEntry(FLoggers.Objects[I]).Logger;
+    LLogger.Enabled := True;
+  end;
 end;
 
 procedure TSSLLogManager.DisableAll;
 var
   I: Integer;
+  LLogger: ISSLLogger;
 begin
   FGlobalLogger.Enabled := False;
   
   for I := 0 to FLoggers.Count - 1 do
-    ISSLLogger(FLoggers.Objects[I]).Enabled := False;
+  begin
+    LLogger := TSSLLoggerEntry(FLoggers.Objects[I]).Logger;
+    LLogger.Enabled := False;
+  end;
 end;
 
 { TSSLDebugger }
@@ -769,14 +816,29 @@ begin
   FHexDumpEnabled := False;
 end;
 
+class function TSSLDebugger.GetEnabled: Boolean;
+begin
+  Result := FEnabled;
+end;
+
 class procedure TSSLDebugger.SetEnabled(aEnabled: Boolean);
 begin
   FEnabled := aEnabled;
 end;
 
+class function TSSLDebugger.GetTraceEnabled: Boolean;
+begin
+  Result := FTraceEnabled;
+end;
+
 class procedure TSSLDebugger.SetTraceEnabled(aEnabled: Boolean);
 begin
   FTraceEnabled := aEnabled;
+end;
+
+class function TSSLDebugger.GetHexDumpEnabled: Boolean;
+begin
+  Result := FHexDumpEnabled;
 end;
 
 class procedure TSSLDebugger.SetHexDumpEnabled(aEnabled: Boolean);
@@ -872,7 +934,7 @@ begin
   begin
     if FEnabled and Assigned(FLogger) then
       FLogger.LogFatal('Assertion Failed: ' + aMessage);
-    raise Exception.Create('Assertion Failed: ' + aMessage);
+    raise ESSLException.Create('Assertion Failed: ' + aMessage);
   end;
 end;
 
@@ -1001,10 +1063,10 @@ begin
   LSB := TSSLStringBuilder.Create;
   try
     LSB.AppendLine('性能分析报告');
-    LSB.AppendLine('=' * 80);
+    LSB.AppendLine(StringOfChar('=', 80));
     LSB.AppendFormat('%-30s %10s %10s %10s %10s %10s', 
       ['名称', '次数', '总计(ms)', '平均(ms)', '最小(ms)', '最大(ms)']);
-    LSB.AppendLine('-' * 80);
+    LSB.AppendLine(StringOfChar('-', 80));
     
     FLock.Enter;
     try
@@ -1024,7 +1086,7 @@ begin
       FLock.Leave;
     end;
     
-    LSB.AppendLine('=' * 80);
+    LSB.AppendLine(StringOfChar('=', 80));
     Result := LSB.ToString;
   finally
     LSB.Free;
@@ -1074,11 +1136,15 @@ end;
 procedure TSSLProfiler.Clear;
 var
   I: Integer;
+  LEntryPtr: ^TProfileEntry;
 begin
   FLock.Enter;
   try
     for I := 0 to FEntries.Count - 1 do
-      Dispose(Pointer(FEntries.Objects[I]));
+    begin
+      LEntryPtr := Pointer(FEntries.Objects[I]);
+      Dispose(LEntryPtr);
+    end;
     FEntries.Clear;
   finally
     FLock.Leave;

@@ -137,22 +137,22 @@ begin
   
   if ALibHandle = 0 then Exit;
   
-  AES_set_encrypt_key := GetProcAddress(ALibHandle, 'AES_set_encrypt_key');
-  AES_set_decrypt_key := GetProcAddress(ALibHandle, 'AES_set_decrypt_key');
-  AES_ecb_encrypt := GetProcAddress(ALibHandle, 'AES_ecb_encrypt');
-  AES_cbc_encrypt := GetProcAddress(ALibHandle, 'AES_cbc_encrypt');
-  AES_cfb128_encrypt := GetProcAddress(ALibHandle, 'AES_cfb128_encrypt');
-  AES_cfb1_encrypt := GetProcAddress(ALibHandle, 'AES_cfb1_encrypt');
-  AES_cfb8_encrypt := GetProcAddress(ALibHandle, 'AES_cfb8_encrypt');
-  AES_ofb128_encrypt := GetProcAddress(ALibHandle, 'AES_ofb128_encrypt');
-  AES_ctr128_encrypt := GetProcAddress(ALibHandle, 'AES_ctr128_encrypt');
-  AES_ige_encrypt := GetProcAddress(ALibHandle, 'AES_ige_encrypt');
-  AES_bi_ige_encrypt := GetProcAddress(ALibHandle, 'AES_bi_ige_encrypt');
-  AES_wrap_key := GetProcAddress(ALibHandle, 'AES_wrap_key');
-  AES_unwrap_key := GetProcAddress(ALibHandle, 'AES_unwrap_key');
-  AES_options := GetProcAddress(ALibHandle, 'AES_options');
-  AES_encrypt := GetProcAddress(ALibHandle, 'AES_encrypt');
-  AES_decrypt := GetProcAddress(ALibHandle, 'AES_decrypt');
+  Pointer(AES_set_encrypt_key) := GetProcAddress(ALibHandle, 'AES_set_encrypt_key');
+  Pointer(AES_set_decrypt_key) := GetProcAddress(ALibHandle, 'AES_set_decrypt_key');
+  Pointer(AES_ecb_encrypt) := GetProcAddress(ALibHandle, 'AES_ecb_encrypt');
+  Pointer(AES_cbc_encrypt) := GetProcAddress(ALibHandle, 'AES_cbc_encrypt');
+  Pointer(AES_cfb128_encrypt) := GetProcAddress(ALibHandle, 'AES_cfb128_encrypt');
+  Pointer(AES_cfb1_encrypt) := GetProcAddress(ALibHandle, 'AES_cfb1_encrypt');
+  Pointer(AES_cfb8_encrypt) := GetProcAddress(ALibHandle, 'AES_cfb8_encrypt');
+  Pointer(AES_ofb128_encrypt) := GetProcAddress(ALibHandle, 'AES_ofb128_encrypt');
+  Pointer(AES_ctr128_encrypt) := GetProcAddress(ALibHandle, 'AES_ctr128_encrypt');
+  Pointer(AES_ige_encrypt) := GetProcAddress(ALibHandle, 'AES_ige_encrypt');
+  Pointer(AES_bi_ige_encrypt) := GetProcAddress(ALibHandle, 'AES_bi_ige_encrypt');
+  Pointer(AES_wrap_key) := GetProcAddress(ALibHandle, 'AES_wrap_key');
+  Pointer(AES_unwrap_key) := GetProcAddress(ALibHandle, 'AES_unwrap_key');
+  Pointer(AES_options) := GetProcAddress(ALibHandle, 'AES_options');
+  Pointer(AES_encrypt) := GetProcAddress(ALibHandle, 'AES_encrypt');
+  Pointer(AES_decrypt) := GetProcAddress(ALibHandle, 'AES_decrypt');
   
   GAESLoaded := True;
   Result := True;

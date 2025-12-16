@@ -22,7 +22,8 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.winssl.types,
   fafafa.ssl.winssl.api,
-  fafafa.ssl.winssl.utils;
+  fafafa.ssl.winssl.utils,
+  fafafa.ssl.utils;
 
 type
   { TWinSSLCertificate - Windows 证书类 }
@@ -97,6 +98,19 @@ type
 function CreateWinSSLCertificateFromContext(aCertContext: PCCERT_CONTEXT; aOwnsContext: Boolean = True): ISSLCertificate;
 
 implementation
+
+function StringsToArray(aStrings: TStrings): TSSLStringArray;
+var
+  I: Integer;
+begin
+  SetLength(Result, 0);
+  if (aStrings = nil) or (aStrings.Count = 0) then
+    Exit;
+
+  SetLength(Result, aStrings.Count);
+  for I := 0 to aStrings.Count - 1 do
+    Result[I] := Trim(aStrings[I]);
+end;
 
 // ============================================================================
 // 工厂函数
@@ -393,6 +407,8 @@ end;
 // ============================================================================
 
 function TWinSSLCertificate.GetInfo: TSSLCertificateInfo;
+var
+  SANs: TStringList;
 begin
   FillChar(Result, SizeOf(Result), 0);
   
@@ -409,8 +425,14 @@ begin
   Result.PublicKeyAlgorithm := GetPublicKeyAlgorithm;
   Result.SignatureAlgorithm := GetSignatureAlgorithm;
   Result.Version := GetVersion;
-  Result.SubjectAltNames := GetSubjectAltNames;
   Result.IsCA := IsCA;
+
+  SANs := GetSubjectAltNames;
+  try
+    Result.SubjectAltNames := StringsToArray(SANs);
+  finally
+    SANs.Free;
+  end;
 end;
 
 function TWinSSLCertificate.GetSubject: string;
@@ -726,7 +748,8 @@ begin
   // 根据标志配置链验证
   LChainFlags := 0;
   
-  if sslCertVerifyCheckRevocation in aFlags then
+  if (sslCertVerifyCheckRevocation in aFlags) or
+     (sslCertVerifyCheckOCSP in aFlags) then
     LChainFlags := LChainFlags or CERT_CHAIN_REVOCATION_CHECK_CHAIN;
     
   if sslCertVerifyCheckCRL in aFlags then
@@ -829,7 +852,8 @@ function TWinSSLCertificate.VerifyHostname(const aHostname: string): Boolean;
 var
   SANs: TStringList;
   i: Integer;
-  CN: string;
+  CN, Entry: string;
+  HostIsIP, EntryIsIP: Boolean;
 
   function MatchWildcard(const aPattern, aHostname: string): Boolean;
   var
@@ -884,12 +908,36 @@ begin
   if (FCertContext = nil) or (aHostname = '') then
     Exit;
 
+  HostIsIP := TSSLUtils.IsIPAddress(aHostname);
+
   // 首先检查 Subject Alternative Names (SAN)
   SANs := GetSubjectAltNames;
   try
     for i := 0 to SANs.Count - 1 do
     begin
-      if MatchWildcard(SANs[i], aHostname) then
+      Entry := Trim(SANs[i]);
+      if Entry = '' then
+        Continue;
+
+      EntryIsIP := TSSLUtils.IsIPAddress(Entry);
+
+      if HostIsIP then
+      begin
+        if EntryIsIP and SameText(Entry, aHostname) then
+        begin
+          Result := True;
+          Exit;
+        end;
+        Continue;
+      end;
+
+      // 只针对域名进行通配符匹配，忽略 IP 及其他条目（email/URI 等）
+      if EntryIsIP then
+        Continue;
+      if not TSSLUtils.IsValidHostname(Entry) then
+        Continue;
+
+      if MatchWildcard(Entry, aHostname) then
       begin
         Result := True;
         Exit;
@@ -914,6 +962,15 @@ begin
   end;
 
   // 尝试匹配 CN
+  if HostIsIP then
+  begin
+    Result := SameText(CN, aHostname);
+    Exit;
+  end;
+
+  if not TSSLUtils.IsValidHostname(CN) then
+    Exit;
+
   Result := MatchWildcard(CN, aHostname);
 end;
 
@@ -1032,6 +1089,10 @@ var
   AltNameInfoSize: DWORD;
   j: DWORD;
   AltName: PCERT_ALT_NAME_ENTRY;
+  Addr4, Addr6: PByte;
+  SegValue: Word;
+  IpStr: string;
+  k: Integer;
 begin
   Result := TStringList.Create;
   
@@ -1060,7 +1121,7 @@ begin
     @AltNameInfoSize
   ) then
     Exit;
-  
+
   GetMem(AltNameInfo, AltNameInfoSize);
   try
     if CryptDecodeObject(
@@ -1080,6 +1141,32 @@ begin
         if AltName^.dwAltNameChoice = CERT_ALT_NAME_DNS_NAME then
         begin
           Result.Add(WideCharToString(AltName^.pwszDNSName));
+        end
+        else if AltName^.dwAltNameChoice = CERT_ALT_NAME_IP_ADDRESS then
+        begin
+          if AltName^.IPAddress.cbData = 4 then
+          begin
+            Addr4 := AltName^.IPAddress.pbData;
+            if Addr4 <> nil then
+              Result.Add(Format('%d.%d.%d.%d', [Addr4[0], Addr4[1], Addr4[2], Addr4[3]]));
+          end
+          else if AltName^.IPAddress.cbData = 16 then
+          begin
+            Addr6 := AltName^.IPAddress.pbData;
+            if Addr6 <> nil then
+            begin
+              IpStr := '';
+              for k := 0 to 7 do
+              begin
+                SegValue := (Word(Addr6[k * 2]) shl 8) or Word(Addr6[k * 2 + 1]);
+                if k > 0 then
+                  IpStr := IpStr + ':';
+                IpStr := IpStr + IntToHex(SegValue, 1);
+              end;
+              if IpStr <> '' then
+                Result.Add(IpStr);
+            end;
+          end;
         end;
       end;
     end;

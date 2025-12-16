@@ -12,7 +12,9 @@ uses
   SysUtils, Classes,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.evp;
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.hmac, 
+  fafafa.ssl.openssl.api.crypto;
 
 const
   // KDF 算法 NID
@@ -30,6 +32,9 @@ const
   EVP_PKEY_CTRL_SCRYPT_R = $100B;
   EVP_PKEY_CTRL_SCRYPT_P = $100C;
   EVP_PKEY_CTRL_SCRYPT_MAXMEM_BYTES = $100D;
+  
+  // NID for HKDF (needed for EVP_PKEY_CTX_new_id)
+  NID_hkdf = 1036;  // OpenSSL NID for HKDF
   
   // HKDF 模式
   EVP_PKEY_HKDEF_MODE_EXTRACT_AND_EXPAND = 0;
@@ -403,48 +408,108 @@ end;
 function DeriveKeyHKDF(const Key: TBytes; const Salt: TBytes; const Info: TBytes;
                       KeyLen: Integer; MD: PEVP_MD): TBytes;
 var
-  Kdf: PEVP_KDF;
-  KdfCtx: PEVP_KDF_CTX;
+  PRK: array[0..EVP_MAX_MD_SIZE-1] of Byte;
+  PRKLen: Cardinal;
+  OKM: TBytes;
+  N, I, Offset: Integer;
+  T: TBytes;
+  Counter: Byte;
+  HMACResult: PByte;
+  HMACLen: Cardinal;
+  MDSize: Integer;
   OutKey: TBytes;
+  KeyPtr, SaltPtr, InfoPtr, TPtr: PByte;
 begin
   Result := nil;  // Initialize result
   SetLength(Result, 0);
   
-  // 尝试使用 OpenSSL 3.0+ API
-  if Assigned(EVP_KDF_fetch) and Assigned(EVP_KDF_CTX_new) and
-    Assigned(EVP_KDF_derive) and Assigned(EVP_KDF_CTX_free) then
+  if KeyLen <= 0 then
+    Exit;
+  
+  if Length(Key) = 0 then
+    Exit;
+  
+  // Use SHA-256 as default if not specified
+  if MD = nil then
   begin
-    Kdf := EVP_KDF_fetch(nil, 'HKDF', nil);
-    if Kdf = nil then Exit;
-    
-    KdfCtx := EVP_KDF_CTX_new(Kdf);
-    if KdfCtx = nil then
-    begin
-      if Assigned(EVP_KDF_free) then
-        EVP_KDF_free(Kdf);
+    if Assigned(EVP_sha256) then
+      MD := EVP_sha256()
+    else
       Exit;
-    end;
-    
-    try
-      SetLength(OutKey, KeyLen);
-      
-      // TODO: 设置 HKDF 参数
-      // 需要 OSSL_PARAM 结构和相关函数
-      
-      if EVP_KDF_derive(KdfCtx, @OutKey[0], KeyLen, nil) = 1 then
-        Result := OutKey;
-        
-    finally
-      EVP_KDF_CTX_free(KdfCtx);
-      if Assigned(EVP_KDF_free) then
-        EVP_KDF_free(Kdf);
-    end;
+  end;
+  
+  // Manual HKDF implementation using HMAC (RFC 5869)
+  // This works across all OpenSSL versions
+  if not Assigned(HMAC) then
+    Exit;
+  
+  MDSize := EVP_MD_size(MD);
+  if MDSize <= 0 then
+    Exit;
+  
+  // HKDF-Extract: PRK = HMAC-Hash(salt, IKM)
+  PRKLen := 0;
+  KeyPtr := @Key[0];
+  
+  if Length(Salt) > 0 then
+  begin
+    SaltPtr := @Salt[0];
+    HMACResult := HMAC(MD, SaltPtr, Length(Salt), KeyPtr, Length(Key), @PRK[0], @PRKLen);
   end
   else
   begin
-    // TODO: 使用旧版 API 或手动实现 HKDF
-    // HKDF 包含 Extract 和 Expand 两个步骤
+    // If salt is not provided, use a string of HashLen zeros
+    SetLength(T, MDSize);
+    FillChar(T[0], MDSize, 0);
+    HMACResult := HMAC(MD, @T[0], MDSize, KeyPtr, Length(Key), @PRK[0], @PRKLen);
   end;
+  
+  if (HMACResult = nil) or (PRKLen = 0) then
+    Exit;
+  
+  // HKDF-Expand: OKM = T(1) | T(2) | ... | T(N)
+  // T(0) = empty string
+  // T(i) = HMAC-Hash(PRK, T(i-1) | info | 0x<i>)
+  N := (KeyLen + MDSize - 1) div MDSize;  // Ceiling division
+  SetLength(OKM, 0);
+  SetLength(T, 0);
+  
+  for I := 1 to N do
+  begin
+    Counter := I;
+    
+    // Build input: T(i-1) | info | counter
+    Offset := Length(T);
+    SetLength(T, Offset + Length(Info) + 1);
+    if Length(Info) > 0 then
+      Move(Info[0], T[Offset], Length(Info));
+    T[Length(T) - 1] := Counter;
+    
+    // Compute HMAC
+    HMACLen := 0;
+    SetLength(OutKey, MDSize);
+    TPtr := @T[0];
+    HMACResult := HMAC(MD, @PRK[0], PRKLen, TPtr, Length(T), @OutKey[0], @HMACLen);
+    
+    if (HMACResult = nil) or (HMACLen = 0) then
+    begin
+      SetLength(Result, 0);
+      Exit;
+    end;
+    
+    // T = HMAC result for next iteration
+    SetLength(T, HMACLen);
+    Move(OutKey[0], T[0], HMACLen);
+    
+    // Append to OKM
+    Offset := Length(OKM);
+    SetLength(OKM, Offset + HMACLen);
+    Move(OutKey[0], OKM[Offset], HMACLen);
+  end;
+  
+  // Return first KeyLen bytes
+  SetLength(Result, KeyLen);
+  Move(OKM[0], Result[0], KeyLen);
 end;
 
 function GenerateSalt(Len: Integer): TBytes;

@@ -67,6 +67,11 @@ type
   TSSLStatistics = fafafa.ssl.base.TSSLStatistics;
   PSSLStatistics = fafafa.ssl.base.PSSLStatistics;
   
+  // Result types (Rust-like error handling)
+  TSSLOperationResult = fafafa.ssl.base.TSSLOperationResult;
+  TSSLDataResult = fafafa.ssl.base.TSSLDataResult;
+  TSSLStringResult = fafafa.ssl.base.TSSLStringResult;
+  
   ESSLException = fafafa.ssl.base.ESSLException;
   ESSLHandshakeException = fafafa.ssl.base.ESSLHandshakeException;
   ESSLCertificateException = fafafa.ssl.base.ESSLCertificateException;

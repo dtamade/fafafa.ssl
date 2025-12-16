@@ -40,6 +40,7 @@ procedure Test2_WinSSLContext;
 var
   LContext: ISSLContext;
   LLib: ISSLLibrary;
+  LOptions: TSSLOptions;
 begin
   WriteLn('=== Test 2: WinSSL Context 创建和配置 ===');
   
@@ -82,8 +83,12 @@ begin
       WriteLn('✅ 会话缓存大小设置成功: ', LContext.GetSessionCacheSize, ' bytes');
       
       // 测试选项
-      LContext.SetOptions($00000001);
-      WriteLn('✅ 选项设置成功: $', IntToHex(LContext.GetOptions, 8));
+      LContext.SetOptions([ssoEnableSessionCache, ssoEnableSessionTickets]);
+      LOptions := LContext.GetOptions;
+      if (ssoEnableSessionCache in LOptions) and (ssoEnableSessionTickets in LOptions) then
+        WriteLn('✅ 选项设置成功: 会话缓存 + 会话票据')
+      else
+        WriteLn('❌ 选项设置失败');
       
       // 测试服务器名称
       LContext.SetServerName('example.com');
@@ -271,4 +276,3 @@ begin
   ReadLn;
 end.
 {$ENDIF}
-

@@ -173,6 +173,7 @@ type
   end;
   CRYPT_INTEGER_BLOB = CERT_NAME_BLOB;
   CRYPT_DATA_BLOB = CERT_NAME_BLOB;
+  PCRYPT_DATA_BLOB = ^CRYPT_DATA_BLOB;
   
   // 前向声明
   PCERT_EXTENSION = ^CERT_EXTENSION;
@@ -629,6 +630,7 @@ const
   PKCS_7_ASN_ENCODING            = $00010000;
   
   // 证书存储标志
+  CERT_STORE_PROV_MEMORY         = LPCSTR(2);
   CERT_STORE_PROV_SYSTEM         = LPCSTR(10);
   CERT_SYSTEM_STORE_CURRENT_USER = $00010000;
   CERT_SYSTEM_STORE_LOCAL_MACHINE = $00020000;
@@ -685,6 +687,19 @@ const
   CALG_SHA_256                   = ALG_ID($0000800C);
   CALG_SHA_384                   = ALG_ID($0000800D);
   CALG_SHA_512                   = ALG_ID($0000800E);
+  
+  // 密钥交换算法 ID
+  CALG_RSA_KEYX                  = ALG_ID($0000A400);
+  CALG_RSA_SIGN                  = ALG_ID($00002400);
+  CALG_DH_EPHEM                  = ALG_ID($0000AA02);
+  
+  // 加密算法 ID
+  CALG_RC4                       = ALG_ID($00006801);
+  CALG_DES                       = ALG_ID($00006601);
+  CALG_3DES                      = ALG_ID($00006603);
+  CALG_AES_128                   = ALG_ID($0000660E);
+  CALG_AES_192                   = ALG_ID($0000660F);
+  CALG_AES_256                   = ALG_ID($00006610);
   
   // 证书扩展 OID
   szOID_SUBJECT_ALT_NAME         = '2.5.29.7';

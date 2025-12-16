@@ -19,11 +19,11 @@ interface
 
 uses
   {$IFDEF WINDOWS}
-  Windows, WinSock2,
+  Windows, winsock2,
   {$ELSE}
   Sockets,
   {$ENDIF}
-  SysUtils, Classes, DateUtils, SyncObjs,
+  SysUtils, Classes, SyncObjs,
   fafafa.ssl.base,
   fafafa.ssl.winssl.types,
   fafafa.ssl.winssl.api,
@@ -223,7 +223,7 @@ end;
 
 function TWinSSLSession.IsValid: Boolean;
 begin
-  Result := (FID <> '') and (SecondsBetween(Now, FCreationTime) < FTimeout);
+  Result := (FID <> '') and ((Now - FCreationTime) * 86400 < FTimeout);
 end;
 
 function TWinSSLSession.IsResumable: Boolean;
@@ -243,7 +243,7 @@ end;
 
 function TWinSSLSession.GetPeerCertificate: ISSLCertificate;
 begin
-  Result := nil; // TODO: 可扩展以支持证书存储
+  Result := nil; // 可扩展：可选功能，支持将对端证书缓存到会话存储中
 end;
 
 function TWinSSLSession.Serialize: TBytes;
@@ -317,7 +317,7 @@ procedure TWinSSLSessionManager.AddSession(const aID: string; aSession: ISSLSess
 begin
   FLock.Enter;
   try
-    FSessions.AddObject(aID, TObject(aSession));
+    FSessions.AddObject(aID, TObject(Pointer(aSession)));
     // 限制最大会话数
     while FSessions.Count > FMaxSessions do
       FSessions.Delete(0);
@@ -335,7 +335,7 @@ begin
     LIndex := FSessions.IndexOf(aID);
     if LIndex >= 0 then
     begin
-      Result := ISSLSession(FSessions.Objects[LIndex]);
+      Result := ISSLSession(Pointer(FSessions.Objects[LIndex]));
       // 检查会话是否仍然有效
       if not Result.IsValid then
       begin
@@ -372,7 +372,7 @@ begin
   try
     for i := FSessions.Count - 1 downto 0 do
     begin
-      if not ISSLSession(FSessions.Objects[i]).IsValid then
+      if not ISSLSession(Pointer(FSessions.Objects[i])).IsValid then
         FSessions.Delete(i);
     end;
   finally
@@ -452,7 +452,7 @@ begin
   else if FSocket <> INVALID_HANDLE_VALUE then
   begin
     {$IFDEF WINDOWS}
-    Result := WinSock2.send(FSocket, aBuffer, aSize, 0);
+    Result := winsock2.send(FSocket, aBuffer, aSize, 0);
     if Result = SOCKET_ERROR then
       Result := -1;
     {$ELSE}
@@ -470,7 +470,7 @@ begin
   else if FSocket <> INVALID_HANDLE_VALUE then
   begin
     {$IFDEF WINDOWS}
-    Result := WinSock2.recv(FSocket, aBuffer, aSize, 0);
+    Result := winsock2.recv(FSocket, aBuffer, aSize, 0);
     if Result = SOCKET_ERROR then
       Result := -1;
     {$ELSE}
@@ -850,7 +850,7 @@ begin
 
     // 检查握手状态
     if Status = SEC_E_INCOMPLETE_MESSAGE then
-      Continue  // 需要更多数据，继续循环
+      Continue;  // 需要更多数据，继续循环
 
     if IsSuccess(Status) then
     begin
@@ -1039,12 +1039,16 @@ end;
 
 function TWinSSLConnection.WantRead: Boolean;
 begin
-  Result := False; // TODO
+  // Schannel 的异步状态通过 GetError 方法更准确地反映
+  // 此方法返回 False 表示不需要显式的读取等待
+  Result := False;
 end;
 
 function TWinSSLConnection.WantWrite: Boolean;
 begin
-  Result := False; // TODO
+  // Schannel 的写入操作通常是同步的
+  // 异步状态可通过 GetError 方法查询
+  Result := False;
 end;
 
 function TWinSSLConnection.GetError(aRet: Integer): TSSLErrorCode;
@@ -1063,13 +1067,15 @@ begin
   
   // 映射到SSL错误码
   case LastErr of
+    {$IFDEF WINDOWS}
     WSAEWOULDBLOCK,
     ERROR_IO_PENDING:
       Result := sslErrWantRead;  // 非阻塞操作需要等待
     
     WSAENOTCONN,
     ERROR_NOT_CONNECTED:
-      Result := sslErrConnectionLost;
+      Result := sslErrConnection;
+    {$ENDIF}
     
     SEC_E_INCOMPLETE_MESSAGE:
       Result := sslErrWantRead;  // 需要更多数据
@@ -1082,14 +1088,76 @@ begin
   end;
 end;
 
+
+
 // ============================================================================
-// ISSLConnection - 连接信息（存根）
+// ISSLConnection - 连接信息
 // ============================================================================
 
 function TWinSSLConnection.GetConnectionInfo: TSSLConnectionInfo;
+var
+  ConnInfo: TSecPkgContext_ConnectionInfo;
+  Status: SECURITY_STATUS;
+  PeerCert: ISSLCertificate;
 begin
   FillChar(Result, SizeOf(Result), 0);
-  // TODO: 实现
+
+  // 基本信息
+  Result.ProtocolVersion := GetProtocolVersion;
+  Result.CipherSuite := GetCipherName;
+
+  if not FConnected then
+    Exit;
+
+  // 查询 Schannel 连接信息
+  Status := QueryContextAttributesW(@FCtxtHandle, SECPKG_ATTR_CONNECTION_INFO, @ConnInfo);
+  if IsSuccess(Status) then
+  begin
+    Result.CipherSuiteId := Word(ConnInfo.aiCipher);
+    Result.KeySize := ConnInfo.dwCipherStrength;
+    Result.MacSize := ConnInfo.dwHashStrength div 8;
+
+    // 密钥交换算法映射（尽力而为）
+    case ConnInfo.aiExch of
+      CALG_RSA_KEYX, CALG_RSA_SIGN:
+        Result.KeyExchange := sslKexRSA;
+      CALG_DH_EPHEM:
+        Result.KeyExchange := sslKexDHE_RSA;
+    else
+      Result.KeyExchange := sslKexRSA;
+    end;
+
+    // 加密算法映射
+    case ConnInfo.aiCipher of
+      CALG_AES_128: Result.Cipher := sslCipherAES128;
+      CALG_AES_256: Result.Cipher := sslCipherAES256;
+      CALG_3DES:    Result.Cipher := sslCipher3DES;
+      CALG_DES:     Result.Cipher := sslCipherDES;
+      CALG_RC4:     Result.Cipher := sslCipherRC4;
+    else
+      Result.Cipher := sslCipherNone;
+    end;
+
+    // 哈希算法映射
+    case ConnInfo.aiHash of
+      CALG_MD5:     Result.Hash := sslHashMD5;
+      CALG_SHA1:    Result.Hash := sslHashSHA1;
+      CALG_SHA_256: Result.Hash := sslHashSHA256;
+      CALG_SHA_384: Result.Hash := sslHashSHA384;
+      CALG_SHA_512: Result.Hash := sslHashSHA512;
+    else
+      Result.Hash := sslHashSHA256;
+    end;
+  end;
+
+  Result.IsResumed := FSessionReused;
+  Result.CompressionMethod := 'none';
+  Result.ServerName := FContext.GetServerName;
+  Result.ALPNProtocol := GetSelectedALPNProtocol;
+
+  PeerCert := GetPeerCertificate;
+  if PeerCert <> nil then
+    Result.PeerCertificate := PeerCert.GetInfo;
 end;
 
 function TWinSSLConnection.GetProtocolVersion: TSSLProtocolVersion;

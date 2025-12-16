@@ -22,7 +22,7 @@ var
   ctx: PEVP_CIPHER_CTX;
   cipher: PEVP_CIPHER;
   ct: array of Byte;
-  pt: array of Byte;
+  PlainTextBuf: array of Byte;
   tag: array[0..15] of Byte;
   outlen, tmplen, ret: Integer;
   failedAsExpected: Boolean;
@@ -43,10 +43,10 @@ begin
     if not Assigned(ctx) then Exit;
     try
       if EVP_EncryptInit_ex(ctx, cipher, nil, @Key[0], @IV[0]) <> 1 then begin failedAsExpected := True; Exit; end;
-      if (Length(AAD) > 0) and (EVP_EncryptUpdate(ctx, nil, outlen, PByte(@AAD[1]), Length(AAD)) <> 1) then begin failedAsExpected := True; Exit; end;
+      if (Length(AAD) > 0) and (EVP_EncryptUpdate(ctx, nil, @outlen, PByte(@AAD[1]), Length(AAD)) <> 1) then begin failedAsExpected := True; Exit; end;
       SetLength(ct, Length(PT) + 16);
-      if EVP_EncryptUpdate(ctx, @ct[0], outlen, PByte(@PT[1]), Length(PT)) <> 1 then begin failedAsExpected := True; Exit; end;
-      if EVP_EncryptFinal_ex(ctx, @ct[outlen], tmplen) <> 1 then begin failedAsExpected := True; Exit; end;
+      if EVP_EncryptUpdate(ctx, @ct[0], @outlen, PByte(@PT[1]), Length(PT)) <> 1 then begin failedAsExpected := True; Exit; end;
+      if EVP_EncryptFinal_ex(ctx, @ct[outlen], @tmplen) <> 1 then begin failedAsExpected := True; Exit; end;
       outlen := outlen + tmplen; SetLength(ct, outlen);
       if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, @tag[0]) <> 1 then begin failedAsExpected := True; Exit; end;
     finally
@@ -61,11 +61,11 @@ begin
     if not Assigned(ctx) then begin failedAsExpected := True; Exit; end;
     try
       if EVP_DecryptInit_ex(ctx, cipher, nil, @Key[0], @IV[0]) <> 1 then begin failedAsExpected := True; Exit; end;
-      if (Length(AAD) > 0) and (EVP_DecryptUpdate(ctx, nil, tmplen, PByte(@AAD[1]), Length(AAD)) <> 1) then begin failedAsExpected := True; Exit; end;
-      SetLength(pt, Length(ct) + 16);
-      if (Length(ct) = 0) or (EVP_DecryptUpdate(ctx, @pt[0], outlen, @ct[0], Length(ct)) <> 1) then begin failedAsExpected := True; Exit; end;
+      if (Length(AAD) > 0) and (EVP_DecryptUpdate(ctx, nil, @tmplen, PByte(@AAD[1]), Length(AAD)) <> 1) then begin failedAsExpected := True; Exit; end;
+      SetLength(PlainTextBuf, Length(ct) + 16);
+      if (Length(ct) = 0) or (EVP_DecryptUpdate(ctx, @PlainTextBuf[0], @outlen, @ct[0], Length(ct)) <> 1) then begin failedAsExpected := True; Exit; end;
       if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16, @tag[0]) <> 1 then begin failedAsExpected := True; Exit; end;
-      ret := EVP_DecryptFinal_ex(ctx, @pt[outlen], tmplen);
+      ret := EVP_DecryptFinal_ex(ctx, @PlainTextBuf[outlen], @tmplen);
       if ret <> 1 then
       begin
         WriteLn('  [+] Tag verification failed as expected');

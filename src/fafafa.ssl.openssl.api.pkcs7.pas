@@ -5,6 +5,8 @@ unit fafafa.ssl.openssl.api.pkcs7;
 interface
 
 uses
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   SysUtils,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.bio,
@@ -378,29 +380,29 @@ begin
   Result := nil;
   
   if not PKCS7Loaded then
-    raise Exception.Create('PKCS7 functions not loaded');
+    raise ESSLException.Create('PKCS7 functions not loaded');
   
   // Create input BIO from data
   LBioIn := BIO_new_mem_buf(@aData[0], Length(aData));
   if LBioIn = nil then
-    raise Exception.Create('Failed to create input BIO');
+    raise ESSLException.Create('Failed to create input BIO');
     
   try
     // Sign data
     p7 := PKCS7_sign(aSignCert, aPrivKey, aCACerts, LBioIn, aFlags);
     if p7 = nil then
-      raise Exception.Create('Failed to sign data');
+      raise ESSLException.Create('Failed to sign data');
       
     try
       // Create output BIO
       LBioOut := BIO_new(BIO_s_mem());
       if LBioOut = nil then
-        raise Exception.Create('Failed to create output BIO');
+        raise ESSLException.Create('Failed to create output BIO');
         
       try
         // Write PKCS7 to output BIO
         if i2d_PKCS7_bio(LBioOut, p7) <= 0 then
-          raise Exception.Create('Failed to write PKCS7');
+          raise ESSLException.Create('Failed to write PKCS7');
           
         // Read data from BIO
         SetLength(Result, 0);
@@ -493,29 +495,29 @@ begin
   Result := nil;
   
   if not PKCS7Loaded then
-    raise Exception.Create('PKCS7 functions not loaded');
+    raise ESSLException.Create('PKCS7 functions not loaded');
   
   // Create input BIO from data
   LBioIn := BIO_new_mem_buf(@aData[0], Length(aData));
   if LBioIn = nil then
-    raise Exception.Create('Failed to create input BIO');
+    raise ESSLException.Create('Failed to create input BIO');
     
   try
     // Encrypt data
     p7 := PKCS7_encrypt(aRecipCerts, LBioIn, aCipher, aFlags);
     if p7 = nil then
-      raise Exception.Create('Failed to encrypt data');
+      raise ESSLException.Create('Failed to encrypt data');
       
     try
       // Create output BIO
       LBioOut := BIO_new(BIO_s_mem());
       if LBioOut = nil then
-        raise Exception.Create('Failed to create output BIO');
+        raise ESSLException.Create('Failed to create output BIO');
         
       try
         // Write PKCS7 to output BIO
         if i2d_PKCS7_bio(LBioOut, p7) <= 0 then
-          raise Exception.Create('Failed to write PKCS7');
+          raise ESSLException.Create('Failed to write PKCS7');
           
         // Read data from BIO
         SetLength(Result, 0);

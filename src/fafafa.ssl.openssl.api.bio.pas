@@ -9,6 +9,9 @@ uses
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.consts;
 
+const
+  BIO_FLAGS_BASE64_NO_NL = $100;
+
 type
   { BIO Core Functions }
   TBIO_new = function(const &type: PBIO_METHOD): PBIO; cdecl;
@@ -245,10 +248,14 @@ type
   TBIO_shutdown_wr = function(b: PBIO): Integer; cdecl;
   
   TBIO_set_write_buf_size = function(b: PBIO; size: clong): Integer; cdecl;
+  
+  { BIO Socket Helper Functions }
+  TBIO_new_accept = function(host_port: PAnsiChar): PBIO; cdecl;
+  TBIO_new_connect = function(host_port: PAnsiChar): PBIO; cdecl;
+  TBIO_do_accept = function(b: PBIO): Integer; cdecl;
+  TBIO_do_connect = function(b: PBIO): Integer; cdecl;
   TBIO_get_write_buf_size = function(b: PBIO; size: Pclong): Integer; cdecl;
   TBIO_new_fd = function(fd: Integer; close_flag: Integer): PBIO; cdecl;
-  TBIO_new_connect = function(const host_port: PAnsiChar): PBIO; cdecl;
-  TBIO_new_accept = function(const host_port: PAnsiChar; sock: PAnsiChar): PBIO; cdecl;
   TBIO_new_socket = function(sock: Integer; close_flag: Integer): PBIO; cdecl;
   
   TBIO_tell = function(b: PBIO): Integer; cdecl;
@@ -286,21 +293,34 @@ var
   // This is a partial list - complete implementation would include all functions
   BIO_new: TBIO_new = nil;
   BIO_free: TBIO_free = nil;
-  BIO_free_all: TBIO_free_all = nil;
-  BIO_read: TBIO_read = nil;
-  BIO_write: TBIO_write = nil;
+  BIO_set_fd: TBIO_set_fd = nil;
+  // BIO_get_fd is implemented as a function wrapper
+  
+  BIO_new_accept: TBIO_new_accept = nil;
+  BIO_new_connect: TBIO_new_connect = nil;
+  // BIO_do_accept and BIO_do_connect are helpers
+  
+  BIO_reset: TBIO_reset = nil;
   BIO_ctrl: TBIO_ctrl = nil;
   BIO_s_mem: TBIO_s_mem = nil;
   BIO_new_mem_buf: TBIO_new_mem_buf = nil;
   BIO_new_file: TBIO_new_file = nil;
   BIO_s_file: TBIO_s_file = nil;
   BIO_s_null: TBIO_s_null = nil;
-  BIO_get_mem_data: TBIO_get_mem_data = nil;
-  BIO_new_connect: TBIO_new_connect = nil;
+  // BIO_get_mem_data is a macro implemented as helper
   BIO_s_connect: TBIO_s_connect = nil;
   BIO_pending: TBIO_pending = nil;
+  BIO_push: TBIO_push = nil;
+  BIO_f_base64: TBIO_f_base64 = nil;
   BIO_new_socket: TBIO_new_socket = nil;
   BIO_new_bio_pair: TBIO_new_bio_pair = nil;
+  
+  // Missing variables
+  BIO_free_all: TBIO_free_all = nil;
+  BIO_read: TBIO_read = nil;
+  BIO_write: TBIO_write = nil;
+  BIO_pop: TBIO_pop = nil;
+  BIO_s_accept: TBIO_s_accept = nil;
   
   // SSL_SESSION BIO functions  
   i2d_SSL_SESSION_bio: Ti2d_SSL_SESSION_bio = nil;
@@ -316,6 +336,15 @@ function BIO_do_connect(b: PBIO): clong;
 
 { BIO_pending is a macro in OpenSSL, not a real function }
 function BIO_pending_impl(b: PBIO): Integer; cdecl;
+
+{ BIO_set_flags is a macro in OpenSSL }
+procedure BIO_set_flags(b: PBIO; flags: Integer); cdecl;
+
+{ BIO_flush is a macro in OpenSSL }
+function BIO_flush(b: PBIO): Integer; cdecl;
+
+{ BIO_get_mem_data is a macro in OpenSSL }
+function BIO_get_mem_data(b: PBIO; pp: PPAnsiChar): Integer; cdecl;
 
 implementation
 
@@ -349,9 +378,14 @@ begin
   BIO_new_file := TBIO_new_file(GetProcedureAddress(LibCrypto, 'BIO_new_file'));
   BIO_s_file := TBIO_s_file(GetProcedureAddress(LibCrypto, 'BIO_s_file'));
   BIO_s_null := TBIO_s_null(GetProcedureAddress(LibCrypto, 'BIO_s_null'));
-  BIO_get_mem_data := TBIO_get_mem_data(GetProcedureAddress(LibCrypto, 'BIO_get_mem_data'));
+  // BIO_get_mem_data is a macro
   BIO_new_connect := TBIO_new_connect(GetProcedureAddress(LibCrypto, 'BIO_new_connect'));
+  BIO_new_accept := TBIO_new_accept(GetProcedureAddress(LibCrypto, 'BIO_new_accept'));
   BIO_s_connect := TBIO_s_connect(GetProcedureAddress(LibCrypto, 'BIO_s_connect'));
+  BIO_s_accept := TBIO_s_accept(GetProcedureAddress(LibCrypto, 'BIO_s_accept'));
+  BIO_push := TBIO_push(GetProcedureAddress(LibCrypto, 'BIO_push'));
+  BIO_pop := TBIO_pop(GetProcedureAddress(LibCrypto, 'BIO_pop'));
+  BIO_f_base64 := TBIO_f_base64(GetProcedureAddress(LibCrypto, 'BIO_f_base64'));
   BIO_new_bio_pair := TBIO_new_bio_pair(GetProcedureAddress(LibCrypto, 'BIO_new_bio_pair'));
 
   // BIO_pending is a macro in OpenSSL, use our helper implementation
@@ -376,9 +410,14 @@ begin
   BIO_new_file := nil;
   BIO_s_file := nil;
   BIO_s_null := nil;
-  BIO_get_mem_data := nil;
+  // BIO_get_mem_data := nil;
   BIO_new_connect := nil;
+  BIO_new_accept := nil;
   BIO_s_connect := nil;
+  BIO_s_accept := nil;
+  BIO_push := nil;
+  BIO_pop := nil;
+  BIO_f_base64 := nil;
   BIO_new_bio_pair := nil;
 end;
 
@@ -417,6 +456,59 @@ begin
     Result := Integer(BIO_ctrl(b, BIO_CTRL_PENDING, 0, nil))
   else
     Result := 0;
+end;
+
+{ BIO_set_flags is a macro in OpenSSL: #define BIO_set_flags(b,f) BIO_ctrl(b,BIO_CTRL_SET,f,NULL) }
+procedure BIO_set_flags(b: PBIO; flags: Integer); cdecl;
+const
+  BIO_CTRL_SET = 104; // From bio.h
+begin
+  if Assigned(BIO_ctrl) then
+    BIO_ctrl(b, BIO_CTRL_SET, flags, nil);
+end;
+
+{ BIO_flush is a macro in OpenSSL: #define BIO_flush(b) (int)BIO_ctrl(b,BIO_CTRL_FLUSH,0,NULL) }
+function BIO_flush(b: PBIO): Integer; cdecl;
+const
+  BIO_CTRL_FLUSH = 11;
+begin
+  if Assigned(BIO_ctrl) then
+    Result := Integer(BIO_ctrl(b, BIO_CTRL_FLUSH, 0, nil))
+  else
+    Result := 0;
+end;
+
+{ BIO_get_mem_data is a macro in OpenSSL: #define BIO_get_mem_data(b,pp) BIO_ctrl(b,BIO_CTRL_INFO,0,(char *)pp) }
+function BIO_get_mem_data(b: PBIO; pp: PPAnsiChar): Integer; cdecl;
+const
+  BIO_CTRL_INFO = 3;
+begin
+  if Assigned(BIO_ctrl) then
+    Result := Integer(BIO_ctrl(b, BIO_CTRL_INFO, 0, Pointer(pp)))
+  else
+    Result := 0;
+end;
+
+{ BIO_get_fd is a macro in OpenSSL: #define BIO_get_fd(b,c) BIO_ctrl(b,BIO_C_GET_FD,0,(char *)c) }
+function BIO_get_fd(b: PBIO; c: PInteger): Integer; cdecl;
+const
+  BIO_C_GET_FD = 105;
+begin
+  if Assigned(BIO_ctrl) then
+    Result := Integer(BIO_ctrl(b, BIO_C_GET_FD, 0, Pointer(c)))
+  else
+    Result := -1;
+end;
+
+{ BIO_do_accept is a macro in OpenSSL: #define BIO_do_accept(b) BIO_ctrl(b,BIO_C_DO_STATE_MACHINE,0,NULL) }
+function BIO_do_accept(b: PBIO): Integer; cdecl;
+const
+  BIO_C_DO_STATE_MACHINE = 101;
+begin
+  if Assigned(BIO_ctrl) then
+    Result := Integer(BIO_ctrl(b, BIO_C_DO_STATE_MACHINE, 0, nil))
+  else
+    Result := -1;
 end;
 
 end.

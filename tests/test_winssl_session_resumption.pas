@@ -53,6 +53,7 @@ procedure TestSessionResumptionBaseline(const Host: string);
 var
   Lib: ISSLLibrary; Ctx1, Ctx2: ISSLContext; Conn: ISSLConnection; S: TSocket;
   t1s, t1e, t2s, t2e: Int64; runNet: Boolean; ok: Boolean;
+  thresh, dt1, dt2, thresh2, dt1b, dt2b: Integer;
 begin
   BeginSection('会话复用（基线：连续两次握手）');
 
@@ -104,19 +105,15 @@ begin
   // 可选阈值断言（启用时若二次握手耗时显著降低则视为通过，不满足也不失败）
   if GetEnvironmentVariable('FAFAFA_WINSSL_SESSION_THRESHOLD_MS') <> '' then
   begin
-    try
-      var thresh := StrToIntDef(GetEnvironmentVariable('FAFAFA_WINSSL_SESSION_THRESHOLD_MS'), 0);
-      if (thresh > 0) and (t1e - t1s >= 0) and (t2e - t2s >= 0) then
-      begin
-        var dt1 := t1e - t1s;
-        var dt2 := t2e - t2s;
-        if dt2 <= dt1 - thresh then
-          Check(Format('二次握手加速 (≥%d ms)', [thresh]), True, Format('t1=%d, t2=%d', [dt1, dt2]))
-        else
-          Check(Format('二次握手未达加速阈值 (≥%d ms, 不判失败)', [thresh]), True, Format('t1=%d, t2=%d', [dt1, dt2]));
-      end;
-    except
-      // 忽略阈值解析异常
+    thresh := StrToIntDef(GetEnvironmentVariable('FAFAFA_WINSSL_SESSION_THRESHOLD_MS'), 0);
+    if (thresh > 0) and (t1e - t1s >= 0) and (t2e - t2s >= 0) then
+    begin
+      dt1 := t1e - t1s;
+      dt2 := t2e - t2s;
+      if dt2 <= dt1 - thresh then
+        Check(Format('二次握手加速 (≥%d ms)', [thresh]), True, Format('t1=%d, t2=%d', [dt1, dt2]))
+      else
+        Check(Format('二次握手未达加速阈值 (≥%d ms, 不判失败)', [thresh]), True, Format('t1=%d, t2=%d', [dt1, dt2]));
     end;
   end;
 
@@ -147,18 +144,15 @@ begin
   end;
   if GetEnvironmentVariable('FAFAFA_WINSSL_SESSION_THRESHOLD_MS') <> '' then
   begin
-    try
-      var thresh2 := StrToIntDef(GetEnvironmentVariable('FAFAFA_WINSSL_SESSION_THRESHOLD_MS'), 0);
-      if (thresh2 > 0) and (t1e - t1s >= 0) and (t2e - t2s >= 0) then
-      begin
-        var dt1b := t1e - t1s;
-        var dt2b := t2e - t2s;
-        if dt2b <= dt1b - thresh2 then
-          Check(Format('同上下文二次握手加速 (≥%d ms)', [thresh2]), True, Format('t1=%d, t2=%d', [dt1b, dt2b]))
-        else
-          Check(Format('同上下文未达加速阈值 (≥%d ms, 不判失败)', [thresh2]), True, Format('t1=%d, t2=%d', [dt1b, dt2b]));
-      end;
-    except
+    thresh2 := StrToIntDef(GetEnvironmentVariable('FAFAFA_WINSSL_SESSION_THRESHOLD_MS'), 0);
+    if (thresh2 > 0) and (t1e - t1s >= 0) and (t2e - t2s >= 0) then
+    begin
+      dt1b := t1e - t1s;
+      dt2b := t2e - t2s;
+      if dt2b <= dt1b - thresh2 then
+        Check(Format('同上下文二次握手加速 (≥%d ms)', [thresh2]), True, Format('t1=%d, t2=%d', [dt1b, dt2b]))
+      else
+        Check(Format('同上下文未达加速阈值 (≥%d ms, 不判失败)', [thresh2]), True, Format('t1=%d, t2=%d', [dt1b, dt2b]));
     end;
   end;
   finally

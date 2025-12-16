@@ -22,7 +22,8 @@ interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.base;
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions;  // 新增：类型化异常
 
 type
   { SSL库类类型 }
@@ -136,13 +137,37 @@ uses
   {$IFDEF WINDOWS}
   fafafa.ssl.winssl.lib,  // WinSSL Phase 2.2 新实现（替换老的 winssl.pas）
   {$ENDIF}
-  fafafa.ssl.utils;      // 工具函数
+  fafafa.ssl.utils,      // 工具函数
+  fafafa.ssl.errors;
 
 var
   GSSLFactory: TSSLFactory;
   GSSLHelper: TSSLHelper;
   GFactoryLock: TRTLCriticalSection;  // 工厂类的全局锁
   GFactoryLockInitialized: Boolean = False;
+
+procedure NormalizeConfigOptions(var aConfig: TSSLConfig);
+begin
+  if aConfig.EnableCompression then
+    Exclude(aConfig.Options, ssoDisableCompression)
+  else
+    Include(aConfig.Options, ssoDisableCompression);
+
+  if aConfig.EnableSessionTickets then
+    Include(aConfig.Options, ssoEnableSessionTickets)
+  else
+    Exclude(aConfig.Options, ssoEnableSessionTickets);
+
+  if aConfig.EnableOCSPStapling then
+    Include(aConfig.Options, ssoEnableOCSPStapling)
+  else
+    Exclude(aConfig.Options, ssoEnableOCSPStapling);
+
+  if aConfig.SessionCacheSize > 0 then
+    Include(aConfig.Options, ssoEnableSessionCache)
+  else
+    Exclude(aConfig.Options, ssoEnableSessionCache);
+end;
 
 { 全局函数实现 }
 
@@ -183,7 +208,7 @@ begin
   if Assigned(aContext) then
     Result := aContext.CreateConnection(aSocket)
   else
-    raise ESSLException.Create('SSL上下文未初始化', sslErrNotInitialized);
+    RaiseNotInitialized('SSL context');
 end;
 
 { TSSLFactory }
@@ -226,7 +251,7 @@ begin
   if not FInitialized then
     Initialize;
   if not GFactoryLockInitialized then
-    raise ESSLException.Create('内部错误: 锁未初始化', sslErrGeneral);
+    RaiseSSLError('Internal error: Lock not initialized', sslErrGeneral);
 end;
 
 class procedure TSSLFactory.RegisterLibrary(aLibType: TSSLLibraryType;
@@ -234,9 +259,6 @@ class procedure TSSLFactory.RegisterLibrary(aLibType: TSSLLibraryType;
 var
   LIndex: Integer;
 begin
-  {$IFDEF DEBUG}
-  WriteLn('[DEBUG] RegisterLibrary: 开始注册 ', SSL_LIBRARY_NAMES[aLibType]);
-  {$ENDIF}
   CheckInitialized;
   EnterCriticalSection(GFactoryLock);
   try
@@ -434,9 +456,11 @@ begin
   CheckInitialized;
   
   if (aLibType <> sslAutoDetect) and not IsLibraryAvailable(aLibType) then
-    raise ESSLException.Create(
-      Format('SSL库 %s 不可用', [SSL_LIBRARY_NAMES[aLibType]]),
+    raise ESSLConfigurationException.CreateWithContext(
+      Format('SSL library %s is not available on this system', [SSL_LIBRARY_NAMES[aLibType]]),
       sslErrLibraryNotFound,
+      'TSSLFactory.SetDefaultLibrary',
+      0,
       aLibType
     );
   
@@ -473,13 +497,30 @@ begin
     
     sslWolfSSL:
     begin
-      // TODO: Result := TWolfSSLLibrary.Create;
+      // Future: WolfSSL backend support (not currently implemented)
+      raise ESSLConfigurationException.CreateWithContext(
+        'WolfSSL backend is planned but not yet implemented',
+        sslErrUnsupported,
+        'TSSLFactory.CreateLibraryInstance'
+      );
     end;
     
     sslMbedTLS:
     begin
-      // TODO: Result := TMbedTLSLibrary.Create;
+      // Future: MbedTLS backend support (not currently implemented)
+      raise ESSLConfigurationException.CreateWithContext(
+        'MbedTLS backend is planned but not yet implemented',
+        sslErrUnsupported,
+        'TSSLFactory.CreateLibraryInstance'
+      );
     end;
+  else
+    // sslAutoDetect and any other values - should not reach here
+    raise ESSLConfigurationException.CreateWithContext(
+      'Invalid library type for direct instantiation',
+      sslErrUnsupported,
+      'TSSLFactory.CreateLibraryInstance'
+    );
   end;
 end;
 
@@ -494,7 +535,10 @@ begin
     LType := GetDefaultLibrary;
   
   if LType = sslAutoDetect then
-    raise ESSLException.Create('没有可用的SSL库', sslErrLibraryNotFound);
+    RaiseSSLConfigError(
+      'No SSL library available - could not detect OpenSSL or WinSSL',
+      'TSSLFactory.GetLibrary'
+    );
   
   EnterCriticalSection(GFactoryLock);
   try
@@ -508,18 +552,22 @@ begin
         if FAutoInitialize then
         begin
           if not Result.Initialize then
-            raise ESSLException.Create(
-              Format('初始化SSL库 %s 失败', [SSL_LIBRARY_NAMES[LType]]),
+            raise ESSLInitializationException.CreateWithContext(
+              Format('Failed to initialize SSL library: %s', [SSL_LIBRARY_NAMES[LType]]),
               sslErrNotInitialized,
+              'TSSLFactory.GetLibrary',
+              0,
               LType
             );
         end;
         FLibraries[LType] := Result;
       end
       else
-        raise ESSLException.Create(
-          Format('创建SSL库 %s 实例失败', [SSL_LIBRARY_NAMES[LType]]),
+        raise ESSLInitializationException.CreateWithContext(
+          Format('Failed to create SSL library instance for %s', [SSL_LIBRARY_NAMES[LType]]),
           sslErrLibraryNotFound,
+          'TSSLFactory.GetLibrary',
+          0,
           LType
         );
     end;
@@ -532,43 +580,59 @@ class function TSSLFactory.CreateContext(aContextType: TSSLContextType;
   aLibType: TSSLLibraryType): ISSLContext;
 var
   LLib: ISSLLibrary;
+  LConfig: TSSLConfig;
 begin
   LLib := GetLibrary(aLibType);
   Result := LLib.CreateContext(aContextType);
+  if Result <> nil then
+  begin
+    LConfig := LLib.GetDefaultConfig;
+    NormalizeConfigOptions(LConfig);
+    if LConfig.Options <> [] then
+      Result.SetOptions(LConfig.Options);
+  end;
 end;
 
 class function TSSLFactory.CreateContext(const aConfig: TSSLConfig): ISSLContext;
 var
   LLib: ISSLLibrary;
+  LConfig: TSSLConfig;
 begin
-  LLib := GetLibrary(aConfig.LibraryType);
-  LLib.SetDefaultConfig(aConfig);
-  Result := LLib.CreateContext(aConfig.ContextType);
+  LConfig := aConfig;
+  NormalizeConfigOptions(LConfig);
+
+  LLib := GetLibrary(LConfig.LibraryType);
+  LLib.SetDefaultConfig(LConfig);
+  Result := LLib.CreateContext(LConfig.ContextType);
+  if Result = nil then
+    Exit;
+
+  Result.SetOptions(LConfig.Options);
   
   // 应用配置
-  if aConfig.ProtocolVersions <> [] then
-    Result.SetProtocolVersions(aConfig.ProtocolVersions);
+  if LConfig.ProtocolVersions <> [] then
+    Result.SetProtocolVersions(LConfig.ProtocolVersions);
     
-  if aConfig.CertificateFile <> '' then
-    Result.LoadCertificate(aConfig.CertificateFile);
+  if LConfig.CertificateFile <> '' then
+    Result.LoadCertificate(LConfig.CertificateFile);
     
-  if aConfig.PrivateKeyFile <> '' then
-    Result.LoadPrivateKey(aConfig.PrivateKeyFile);
+  if LConfig.PrivateKeyFile <> '' then
+    Result.LoadPrivateKey(LConfig.PrivateKeyFile, LConfig.PrivateKeyPassword);
     
-  if aConfig.CAFile <> '' then
-    Result.LoadCAFile(aConfig.CAFile);
+  if LConfig.CAFile <> '' then
+    Result.LoadCAFile(LConfig.CAFile);
     
-  if aConfig.VerifyMode <> [] then
-    Result.SetVerifyMode(aConfig.VerifyMode);
+  if LConfig.VerifyMode <> [] then
+    Result.SetVerifyMode(LConfig.VerifyMode);
     
-  if aConfig.CipherList <> '' then
-    Result.SetCipherList(aConfig.CipherList);
+  if LConfig.CipherList <> '' then
+    Result.SetCipherList(LConfig.CipherList);
     
-  if aConfig.ServerName <> '' then
-    Result.SetServerName(aConfig.ServerName);
+  if LConfig.ServerName <> '' then
+    Result.SetServerName(LConfig.ServerName);
     
-  if aConfig.ALPNProtocols <> '' then
-    Result.SetALPNProtocols(aConfig.ALPNProtocols);
+  if LConfig.ALPNProtocols <> '' then
+    Result.SetALPNProtocols(LConfig.ALPNProtocols);
 end;
 
 class function TSSLFactory.CreateCertificate(aLibType: TSSLLibraryType): ISSLCertificate;
@@ -725,6 +789,7 @@ class function TSSLHelper.GenerateRandomBytes(aCount: Integer): TBytes;
 var
   LIndex: Integer;
 begin
+  Result := nil;
   SetLength(Result, aCount);
   for LIndex := 0 to aCount - 1 do
     Result[LIndex] := Random(256);

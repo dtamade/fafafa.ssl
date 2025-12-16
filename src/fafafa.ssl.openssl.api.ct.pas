@@ -58,6 +58,9 @@ const
   TLSEXT_hash_sha384 = 5;
   TLSEXT_hash_sha512 = 6;
 
+  // CT NIDs
+  NID_ct_precert_scts = 951;
+
 type
   // 前向声明
   PCT_POLICY_EVAL_CTX = ^CT_POLICY_EVAL_CTX;
@@ -159,12 +162,9 @@ type
   TCTLOG_STORE_load_default_file = function(store: PCTLOG_STORE): Integer; cdecl;
   
   // i2d/d2i 函数
-  Ti2d_SCT_LIST = function(a: PSCT_LIST; pp: PPByte): Integer; cdecl;
-  Td2i_SCT_LIST = function(a: PPSCT_LIST; pp: PPByte; len: LongInt): PSCT_LIST; cdecl;
   Ti2o_SCT_LIST = function(scts: PSCT_LIST; ext: PPByte): Integer; cdecl;
   To2i_SCT_LIST = function(scts: PPSCT_LIST; ext: PPByte; len: NativeUInt): PSCT_LIST; cdecl;
-  Ti2d_SCT = function(sct: PSCT; pp: PPByte): Integer; cdecl;
-  Td2i_SCT = function(sct: PPSCT; pp: PPByte; len: LongInt): PSCT; cdecl;
+  Ti2o_SCT = function(sct: PSCT; ext: PPByte): Integer; cdecl;
   To2i_SCT = function(sct: PPSCT; pp: PPByte; len: NativeUInt): PSCT; cdecl;
   
   // X509 扩展函数
@@ -172,7 +172,7 @@ type
                                         idx: PInteger): PSCT_LIST; cdecl;
   TX509_add1_ext_i2d_SCT_LIST = function(x: PX509; nid: Integer; value: PSCT_LIST;
                                         crit: Integer; flags: LongWord): Integer; cdecl;
-  TX509_get_SCT_LIST = function(x: PX509): PSCT_LIST; cdecl;
+  // TX509_get_SCT_LIST is a macro, implemented as a helper function
   
   // SSL CT 函数
   TSSL_CTX_enable_ct = function(ctx: PSSL_CTX; validation_mode: Integer): Integer; cdecl;
@@ -256,18 +256,15 @@ var
   CTLOG_STORE_load_default_file: TCTLOG_STORE_load_default_file;
   
   // i2d/d2i 函数
-  i2d_SCT_LIST: Ti2d_SCT_LIST;
-  d2i_SCT_LIST: Td2i_SCT_LIST;
+  // i2d/d2i 函数 (SCT use i2o/o2i)
   i2o_SCT_LIST: Ti2o_SCT_LIST;
   o2i_SCT_LIST: To2i_SCT_LIST;
-  i2d_SCT: Ti2d_SCT;
-  d2i_SCT: Td2i_SCT;
+  i2o_SCT: Ti2o_SCT;
   o2i_SCT: To2i_SCT;
   
   // X509 扩展函数
   X509_get_ext_d2i_SCT_LIST: TX509_get_ext_d2i_SCT_LIST;
   X509_add1_ext_i2d_SCT_LIST: TX509_add1_ext_i2d_SCT_LIST;
-  X509_get_SCT_LIST: TX509_get_SCT_LIST;
   
   // SSL CT 函数
   SSL_CTX_enable_ct: TSSL_CTX_enable_ct;
@@ -294,6 +291,7 @@ function ValidateSCTList(SCTs: PSCT_LIST; Cert: PX509; Issuer: PX509 = nil): Boo
 function GetSCTValidationStatusString(Status: Integer): string;
 function LoadCTLogStore(const FileName: string = ''): PCTLOG_STORE;
 function PrintSCTInfo(SCT: PSCT): string;
+function X509_get_SCT_LIST(x: PX509): PSCT_LIST;
 
 implementation
 
@@ -366,12 +364,9 @@ begin
   CTLOG_STORE_load_default_file := TCTLOG_STORE_load_default_file(GetCryptoProcAddress('CTLOG_STORE_load_default_file'));
   
   // i2d/d2i 函数
-  i2d_SCT_LIST := Ti2d_SCT_LIST(GetCryptoProcAddress('i2d_SCT_LIST'));
-  d2i_SCT_LIST := Td2i_SCT_LIST(GetCryptoProcAddress('d2i_SCT_LIST'));
   i2o_SCT_LIST := Ti2o_SCT_LIST(GetCryptoProcAddress('i2o_SCT_LIST'));
   o2i_SCT_LIST := To2i_SCT_LIST(GetCryptoProcAddress('o2i_SCT_LIST'));
-  i2d_SCT := Ti2d_SCT(GetCryptoProcAddress('i2d_SCT'));
-  d2i_SCT := Td2i_SCT(GetCryptoProcAddress('d2i_SCT'));
+  i2o_SCT := Ti2o_SCT(GetCryptoProcAddress('i2o_SCT'));
   o2i_SCT := To2i_SCT(GetCryptoProcAddress('o2i_SCT'));
   
   // SSL CT 函数
@@ -389,6 +384,10 @@ begin
   
   // CT 策略函数
   CT_POLICY_EVAL_CTX_set0_log_store := TCT_POLICY_EVAL_CTX_set0_log_store(GetCryptoProcAddress('CT_POLICY_EVAL_CTX_set0_log_store'));
+  
+  // X509 扩展函数
+  X509_get_ext_d2i_SCT_LIST := TX509_get_ext_d2i_SCT_LIST(GetCryptoProcAddress('X509_get_ext_d2i_SCT_LIST'));
+  X509_add1_ext_i2d_SCT_LIST := TX509_add1_ext_i2d_SCT_LIST(GetCryptoProcAddress('X509_add1_ext_i2d_SCT_LIST'));
 end;
 
 procedure UnloadCTFunctions;
@@ -406,6 +405,10 @@ begin
   CTLOG_STORE_free := nil;
   SSL_CTX_enable_ct := nil;
   SSL_enable_ct := nil;
+  i2o_SCT := nil;
+  o2i_SCT := nil;
+  i2o_SCT_LIST := nil;
+  o2i_SCT_LIST := nil;
 end;
 
 function EnableCertificateTransparency(SSLCtx: PSSL_CTX): Boolean;
@@ -598,6 +601,13 @@ begin
       Result := Result + sLineBreak;
     end;
   end;
+end;
+
+function X509_get_SCT_LIST(x: PX509): PSCT_LIST;
+begin
+  Result := nil;
+  if (x <> nil) and Assigned(X509_get_ext_d2i) then
+    Result := PSCT_LIST(X509_get_ext_d2i(x, NID_ct_precert_scts, nil, nil));
 end;
 
 initialization

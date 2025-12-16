@@ -15,6 +15,7 @@ uses
 var
   TestsPassed: Integer = 0;
   TestsFailed: Integer = 0;
+  EnableSystemStoreDebug: Boolean = False;
 
 procedure AssertTrue(const TestName: string; Condition: Boolean);
 begin
@@ -89,6 +90,119 @@ begin
   end
   else
     AssertTrue('Store creation works', True);
+end;
+
+procedure TestCertificateInfoFromSystemStore;
+var
+  SSLLib: ISSLLibrary;
+  Store: ISSLCertificateStore;
+  Cert: ISSLCertificate;
+  Info: TSSLCertificateInfo;
+  KeyUsageList: TStringList;
+  TmpStr: string;
+begin
+  WriteLn;
+  WriteLn('=== Certificate GetInfo/System Store Tests ===');
+  
+  SSLLib := CreateOpenSSLLibrary;
+  SSLLib.Initialize;
+  
+  Store := SSLLib.CreateCertificateStore;
+  AssertNotNil('System store can be created', Pointer(Store));
+  
+  if not Store.LoadSystemStore then
+  begin
+    WriteLn('  Note: System store not available, skipping GetInfo tests');
+    AssertTrue('LoadSystemStore failed but did not crash', True);
+    Exit;
+  end;
+  
+  if Store.GetCount <= 0 then
+  begin
+    WriteLn('  Note: System store is empty, skipping GetInfo tests');
+    AssertTrue('Empty system store handled gracefully', True);
+    Exit;
+  end;
+  
+  Cert := Store.GetCertificate(0);
+  AssertNotNil('Can retrieve first certificate from system store', Pointer(Cert));
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 1: GetSubject');
+  TmpStr := Cert.GetSubject;
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 1 OK');
+
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 2: GetIssuer');
+  TmpStr := Cert.GetIssuer;
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 2 OK');
+
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 3: GetSerialNumber');
+  TmpStr := Cert.GetSerialNumber;
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 3 OK');
+
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 4: GetNotBefore');
+  Info.NotBefore := Cert.GetNotBefore;
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 4 OK');
+
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 5: GetNotAfter');
+  Info.NotAfter := Cert.GetNotAfter;
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 5 OK');
+
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 6: IsCA');
+  Info.IsCA := Cert.IsCA;
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 6 OK, IsCA = ', BoolToStr(Info.IsCA, True));
+
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 7: GetKeyUsage');
+  KeyUsageList := Cert.GetKeyUsage;
+  try
+    if EnableSystemStoreDebug then
+      WriteLn('  [DEBUG] Step 7 OK, KeyUsage count = ', KeyUsageList.Count);
+  finally
+    KeyUsageList.Free;
+  end;
+
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 8: GetSubjectAltNames');
+  with Cert.GetSubjectAltNames do
+  try
+    if EnableSystemStoreDebug then
+      WriteLn('  [DEBUG] Step 8 OK, SAN count = ', Count);
+  finally
+    Free;
+  end;
+
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 9: GetInfo');
+  Info := Cert.GetInfo;
+  if EnableSystemStoreDebug then
+    WriteLn('  [DEBUG] Step 9 OK');
+  
+  // IsCA 标志在 Info 与接口层之间应保持一致
+  AssertTrue('Info.IsCA matches IsCA', Info.IsCA = Cert.IsCA);
+  
+  // KeyUsage 位字段与文本列表之间的基本关系：
+  // 如果位字段非零，则文本列表应至少包含一个条目
+  KeyUsageList := Cert.GetKeyUsage;
+  try
+    if Info.KeyUsage <> 0 then
+      AssertTrue('Non-zero KeyUsage bitfield implies textual list not empty',
+        (KeyUsageList <> nil) and (KeyUsageList.Count > 0))
+    else
+      AssertTrue('Zero KeyUsage bitfield is allowed', True);
+  finally
+    KeyUsageList.Free;
+  end;
 end;
 
 procedure TestCertificateFingerprints;
@@ -382,6 +496,140 @@ begin
   AssertTrue('Multiple cert creation/destruction succeeds', True);
 end;
 
+procedure TestCertificateSAN;
+var
+  SSLLib: ISSLLibrary;
+  Store: ISSLCertificateStore;
+  Cert: ISSLCertificate;
+  SANs: TStringList;
+  HasSanTest, HasExample, HasIp: Boolean;
+  Info: TSSLCertificateInfo;
+  I: Integer;
+  InInfo: Boolean;
+begin
+  WriteLn;
+  WriteLn('=== Certificate SAN Parsing Tests ===');
+  
+  SSLLib := CreateOpenSSLLibrary;
+  AssertNotNil('OpenSSL library created for SAN tests', Pointer(SSLLib));
+  if not SSLLib.Initialize then
+  begin
+    WriteLn('  Note: OpenSSL library initialization failed, skipping SAN tests');
+    AssertTrue('Initialize OpenSSL library for SAN tests', False);
+    Exit;
+  end;
+
+  Store := SSLLib.CreateCertificateStore;
+  if Store = nil then
+  begin
+    WriteLn('  Note: Failed to create certificate store for SAN tests, skipping');
+    AssertTrue('CreateCertificateStore returns nil', True);
+    Exit;
+  end;
+  
+  if not Store.LoadFromFile('tests/certs/san-test.pem') then
+  begin
+    WriteLn('  Note: SAN test certificate not available, skipping');
+    AssertTrue('LoadFromFile failed but did not crash', True);
+    Exit;
+  end;
+
+  if Store.GetCount <= 0 then
+  begin
+    WriteLn('  Note: SAN store is empty after loading test certificate, skipping');
+    AssertTrue('SAN store is empty but handled gracefully', True);
+    Exit;
+  end;
+
+  Cert := Store.GetCertificate(0);
+  if Cert = nil then
+  begin
+    WriteLn('  Note: Failed to retrieve SAN test certificate from store, skipping');
+    AssertTrue('GetCertificate(0) returned nil', True);
+    Exit;
+  end;
+  
+  SANs := Cert.GetSubjectAltNames;
+  try
+    AssertNotNil('GetSubjectAltNames returns non-nil list for SAN cert', Pointer(SANs));
+    HasSanTest := SANs.IndexOf('san-test.local') <> -1;
+    HasExample := SANs.IndexOf('example.test') <> -1;
+    HasIp := SANs.IndexOf('127.0.0.1') <> -1;
+    AssertTrue('SANs contain DNS:san-test.local', HasSanTest);
+    AssertTrue('SANs contain DNS:example.test', HasExample);
+    AssertTrue('SANs contain IP:127.0.0.1', HasIp);
+  finally
+    SANs.Free;
+  end;
+  
+  Info := Cert.GetInfo;
+  InInfo := False;
+  for I := 0 to High(Info.SubjectAltNames) do
+  begin
+    if Info.SubjectAltNames[I] = 'san-test.local' then
+    begin
+      InInfo := True;
+      Break;
+    end;
+  end;
+  AssertTrue('Info.SubjectAltNames contains DNS:san-test.local', InInfo);
+end;
+
+procedure TestCertificateVerifyHostnameSAN;
+var
+  SSLLib: ISSLLibrary;
+  Store: ISSLCertificateStore;
+  Cert: ISSLCertificate;
+begin
+  WriteLn;
+  WriteLn('=== Certificate Hostname Verification (SAN) ===');
+
+  SSLLib := CreateOpenSSLLibrary;
+  AssertNotNil('OpenSSL library created for VerifyHostname SAN tests', Pointer(SSLLib));
+  if not SSLLib.Initialize then
+  begin
+    WriteLn('  Note: OpenSSL library initialization failed, skipping VerifyHostname SAN tests');
+    AssertTrue('Initialize OpenSSL library for VerifyHostname SAN tests', False);
+    Exit;
+  end;
+
+  Store := SSLLib.CreateCertificateStore;
+  if Store = nil then
+  begin
+    WriteLn('  Note: Failed to create certificate store for VerifyHostname SAN tests, skipping');
+    AssertTrue('CreateCertificateStore returns nil for VerifyHostname SAN tests', True);
+    Exit;
+  end;
+
+  if not Store.LoadFromFile('tests/certs/san-test.pem') then
+  begin
+    WriteLn('  Note: SAN test certificate not available, skipping VerifyHostname SAN tests');
+    AssertTrue('LoadFromFile failed but did not crash (VerifyHostname SAN)', True);
+    Exit;
+  end;
+
+  if Store.GetCount <= 0 then
+  begin
+    WriteLn('  Note: SAN store is empty after loading test certificate, skipping VerifyHostname SAN tests');
+    AssertTrue('SAN store empty but handled gracefully (VerifyHostname SAN)', True);
+    Exit;
+  end;
+
+  Cert := Store.GetCertificate(0);
+  if Cert = nil then
+  begin
+    WriteLn('  Note: Failed to retrieve SAN test certificate from store, skipping VerifyHostname SAN tests');
+    AssertTrue('GetCertificate(0) returned nil (VerifyHostname SAN)', True);
+    Exit;
+  end;
+
+  AssertTrue('VerifyHostname accepts DNS:san-test.local', Cert.VerifyHostname('san-test.local'));
+  AssertTrue('VerifyHostname accepts DNS:example.test', Cert.VerifyHostname('example.test'));
+  AssertTrue('VerifyHostname accepts IP:127.0.0.1', Cert.VerifyHostname('127.0.0.1'));
+  AssertFalse('VerifyHostname rejects unrelated hostname', Cert.VerifyHostname('invalid.test'));
+  AssertFalse('VerifyHostname rejects mismatched IP', Cert.VerifyHostname('192.0.2.1'));
+end;
+
 procedure PrintSummary;
 begin
   WriteLn;
@@ -414,6 +662,7 @@ begin
   try
     TestCertificateCreation;
     TestCertificateInfo;
+    TestCertificateInfoFromSystemStore;
     TestCertificateFingerprints;
     TestCertificateStatus;
     TestCertificatePublicKey;
@@ -423,6 +672,8 @@ begin
     TestCertificateSerializationPEM;
     TestCertificateSerializationDER;
     TestCertificateMemoryLeaks;
+    TestCertificateSAN;
+    TestCertificateVerifyHostnameSAN;
     
     PrintSummary;
   except

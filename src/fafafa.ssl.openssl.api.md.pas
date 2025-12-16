@@ -160,31 +160,31 @@ begin
   if ALibHandle = 0 then Exit;
   
   // Load MD4 functions
-  MD4_Init := GetProcAddress(ALibHandle, 'MD4_Init');
-  MD4_Update := GetProcAddress(ALibHandle, 'MD4_Update');
-  MD4_Final := GetProcAddress(ALibHandle, 'MD4_Final');
-  MD4 := GetProcAddress(ALibHandle, 'MD4');
-  MD4_Transform := GetProcAddress(ALibHandle, 'MD4_Transform');
+  Pointer(MD4_Init) := GetProcAddress(ALibHandle, 'MD4_Init');
+  Pointer(MD4_Update) := GetProcAddress(ALibHandle, 'MD4_Update');
+  Pointer(MD4_Final) := GetProcAddress(ALibHandle, 'MD4_Final');
+  Pointer(MD4) := GetProcAddress(ALibHandle, 'MD4');
+  Pointer(MD4_Transform) := GetProcAddress(ALibHandle, 'MD4_Transform');
   
   // Load MD5 functions
-  MD5_Init := GetProcAddress(ALibHandle, 'MD5_Init');
-  MD5_Update := GetProcAddress(ALibHandle, 'MD5_Update');
-  MD5_Final := GetProcAddress(ALibHandle, 'MD5_Final');
-  MD5 := GetProcAddress(ALibHandle, 'MD5');
-  MD5_Transform := GetProcAddress(ALibHandle, 'MD5_Transform');
+  Pointer(MD5_Init) := GetProcAddress(ALibHandle, 'MD5_Init');
+  Pointer(MD5_Update) := GetProcAddress(ALibHandle, 'MD5_Update');
+  Pointer(MD5_Final) := GetProcAddress(ALibHandle, 'MD5_Final');
+  Pointer(MD5) := GetProcAddress(ALibHandle, 'MD5');
+  Pointer(MD5_Transform) := GetProcAddress(ALibHandle, 'MD5_Transform');
   
   // Load MDC2 functions
-  MDC2_Init := GetProcAddress(ALibHandle, 'MDC2_Init');
-  MDC2_Update := GetProcAddress(ALibHandle, 'MDC2_Update');
-  MDC2_Final := GetProcAddress(ALibHandle, 'MDC2_Final');
-  MDC2 := GetProcAddress(ALibHandle, 'MDC2');
+  Pointer(MDC2_Init) := GetProcAddress(ALibHandle, 'MDC2_Init');
+  Pointer(MDC2_Update) := GetProcAddress(ALibHandle, 'MDC2_Update');
+  Pointer(MDC2_Final) := GetProcAddress(ALibHandle, 'MDC2_Final');
+  Pointer(MDC2) := GetProcAddress(ALibHandle, 'MDC2');
   
   // Load RIPEMD160 functions
-  RIPEMD160_Init := GetProcAddress(ALibHandle, 'RIPEMD160_Init');
-  RIPEMD160_Update := GetProcAddress(ALibHandle, 'RIPEMD160_Update');
-  RIPEMD160_Final := GetProcAddress(ALibHandle, 'RIPEMD160_Final');
-  RIPEMD160 := GetProcAddress(ALibHandle, 'RIPEMD160');
-  RIPEMD160_Transform := GetProcAddress(ALibHandle, 'RIPEMD160_Transform');
+  Pointer(RIPEMD160_Init) := GetProcAddress(ALibHandle, 'RIPEMD160_Init');
+  Pointer(RIPEMD160_Update) := GetProcAddress(ALibHandle, 'RIPEMD160_Update');
+  Pointer(RIPEMD160_Final) := GetProcAddress(ALibHandle, 'RIPEMD160_Final');
+  Pointer(RIPEMD160) := GetProcAddress(ALibHandle, 'RIPEMD160');
+  Pointer(RIPEMD160_Transform) := GetProcAddress(ALibHandle, 'RIPEMD160_Transform');
   
   GMDLoaded := True;
   Result := True;

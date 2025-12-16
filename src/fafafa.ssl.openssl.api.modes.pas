@@ -6,6 +6,8 @@ interface
 
 uses
   SysUtils,
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.evp;
 
@@ -354,7 +356,7 @@ begin
     24: cipher := EVP_aes_192_gcm();
     32: cipher := EVP_aes_256_gcm();
   else
-    raise Exception.Create('Invalid key size for AES-GCM');
+    raise ESSLInvalidArgument.Create('Invalid key size for AES-GCM');
   end;
   
   SetLength(Result, Length(Plaintext));
@@ -378,39 +380,39 @@ begin
   try
     // Initialize encryption
     if EVP_EncryptInit_ex(ctx, cipher, nil, nil, nil) <> 1 then
-      raise Exception.Create('Failed to initialize AES-GCM');
+      raise ESSLCryptoError.Create('Failed to initialize AES-GCM');
       
     // Set IV length if not default
     if Length(IV) <> 12 then
     begin
       if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, Integer(Length(IV)), nil) <> 1 then
-        raise Exception.Create('Failed to set IV length');
+        raise ESSLCryptoError.Create('Failed to set IV length');
     end;
     
     // Initialize with key and IV
     if EVP_EncryptInit_ex(ctx, nil, nil, KeyPtr, IVPtr) <> 1 then
-      raise Exception.Create('Failed to set key and IV');
+      raise ESSLCryptoError.Create('Failed to set key and IV');
       
     // Process AAD if provided
     if Length(AAD) > 0 then
     begin
       if EVP_EncryptUpdate(ctx, nil, outlen, AADPtr, Integer(Length(AAD))) <> 1 then
-        raise Exception.Create('Failed to process AAD');
+        raise ESSLCryptoError.Create('Failed to process AAD');
     end;
     
     // Encrypt plaintext
     if EVP_EncryptUpdate(ctx, ResultPtr, outlen, PlainPtr, Integer(Length(Plaintext))) <> 1 then
-      raise Exception.Create('Failed to encrypt');
+      raise ESSLEncryptionException.Create('Failed to encrypt');
       
     // Finalize
     if EVP_EncryptFinal_ex(ctx, PByte(PtrUInt(ResultPtr) + PtrUInt(outlen)), finlen) <> 1 then
-      raise Exception.Create('Failed to finalize encryption');
+      raise ESSLCryptoError.Create('Failed to finalize encryption');
       
     SetLength(Result, outlen + finlen);
     
     // Get tag
     if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, GCM_TAG_SIZE, TagPtr) <> 1 then
-      raise Exception.Create('Failed to get tag');
+      raise ESSLCryptoError.Create('Failed to get tag');
   finally
     EVP_CIPHER_CTX_free(ctx);
   end;
@@ -433,11 +435,11 @@ begin
     24: cipher := EVP_aes_192_gcm();
     32: cipher := EVP_aes_256_gcm();
   else
-    raise Exception.Create('Invalid key size for AES-GCM');
+    raise ESSLInvalidArgument.Create('Invalid key size for AES-GCM');
   end;
   
   if Length(Tag) <> GCM_TAG_SIZE then
-    raise Exception.Create('Invalid tag size');
+    raise ESSLInvalidArgument.Create('Invalid tag size');
   
   SetLength(Result, Length(Ciphertext));
   
@@ -459,37 +461,37 @@ begin
   try
     // Initialize decryption
     if EVP_DecryptInit_ex(ctx, cipher, nil, nil, nil) <> 1 then
-      raise Exception.Create('Failed to initialize AES-GCM');
+      raise ESSLCryptoError.Create('Failed to initialize AES-GCM');
       
     // Set IV length if not default
     if Length(IV) <> 12 then
     begin
       if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, Integer(Length(IV)), nil) <> 1 then
-        raise Exception.Create('Failed to set IV length');
+        raise ESSLCryptoError.Create('Failed to set IV length');
     end;
     
     // Initialize with key and IV
     if EVP_DecryptInit_ex(ctx, nil, nil, KeyPtr, IVPtr) <> 1 then
-      raise Exception.Create('Failed to set key and IV');
+      raise ESSLCryptoError.Create('Failed to set key and IV');
       
     // Process AAD if provided
     if Length(AAD) > 0 then
     begin
       if EVP_DecryptUpdate(ctx, nil, outlen, AADPtr, Integer(Length(AAD))) <> 1 then
-        raise Exception.Create('Failed to process AAD');
+        raise ESSLCryptoError.Create('Failed to process AAD');
     end;
     
     // Decrypt ciphertext
     if EVP_DecryptUpdate(ctx, ResultPtr, outlen, CipherPtr, Integer(Length(Ciphertext))) <> 1 then
-      raise Exception.Create('Failed to decrypt');
+      raise ESSLDecryptionException.Create('Failed to decrypt');
     
     // Set expected tag
     if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, GCM_TAG_SIZE, TagPtr) <> 1 then
-      raise Exception.Create('Failed to set tag');
+      raise ESSLCryptoError.Create('Failed to set tag');
       
     // Verify tag and finalize
     if EVP_DecryptFinal_ex(ctx, PByte(PtrUInt(ResultPtr) + PtrUInt(outlen)), finlen) <> 1 then
-      raise Exception.Create('Authentication verification failed');
+      raise ESSLDecryptionException.Create('Authentication verification failed');
       
     SetLength(Result, outlen + finlen);
   finally
@@ -514,11 +516,11 @@ begin
     24: cipher := EVP_aes_192_ccm();
     32: cipher := EVP_aes_256_ccm();
   else
-    raise Exception.Create('Invalid key size for AES-CCM');
+    raise ESSLInvalidArgument.Create('Invalid key size for AES-CCM');
   end;
   
   if (TagSize < CCM_MIN_TAG_SIZE) or (TagSize > CCM_MAX_TAG_SIZE) then
-    raise Exception.Create('Invalid tag size for CCM');
+    raise ESSLInvalidArgument.Create('Invalid tag size for CCM');
   
   SetLength(Result, Length(Plaintext));
   SetLength(Tag, TagSize);
@@ -535,42 +537,42 @@ begin
   try
     // Initialize encryption
     if EVP_EncryptInit_ex(ctx, cipher, nil, nil, nil) <> 1 then
-      raise Exception.Create('Failed to initialize AES-CCM');
+      raise ESSLCryptoError.Create('Failed to initialize AES-CCM');
     
     // Set nonce length
     if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, Integer(Length(Nonce)), nil) <> 1 then
-      raise Exception.Create('Failed to set nonce length');
+      raise ESSLCryptoError.Create('Failed to set nonce length');
     
     // Set tag length
     if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG, TagSize, nil) <> 1 then
-      raise Exception.Create('Failed to set tag length');
+      raise ESSLCryptoError.Create('Failed to set tag length');
     
     // Initialize with key and nonce
     if EVP_EncryptInit_ex(ctx, nil, nil, KeyPtr, NoncePtr) <> 1 then
-      raise Exception.Create('Failed to set key and nonce');
+      raise ESSLCryptoError.Create('Failed to set key and nonce');
     
     // Set message length (required for CCM)
     if EVP_EncryptUpdate(ctx, nil, outlen, nil, Integer(Length(Plaintext))) <> 1 then
-      raise Exception.Create('Failed to set message length');
+      raise ESSLCryptoError.Create('Failed to set message length');
     
     // Process AAD if provided
     if Length(AAD) > 0 then
     begin
       if EVP_EncryptUpdate(ctx, nil, outlen, AADPtr, Integer(Length(AAD))) <> 1 then
-        raise Exception.Create('Failed to process AAD');
+        raise ESSLCryptoError.Create('Failed to process AAD');
     end;
     
     // Encrypt plaintext
     if EVP_EncryptUpdate(ctx, ResultPtr, outlen, PlainPtr, Integer(Length(Plaintext))) <> 1 then
-      raise Exception.Create('Failed to encrypt');
+      raise ESSLEncryptionException.Create('Failed to encrypt');
     
     // Finalize (no output for CCM)
     if EVP_EncryptFinal_ex(ctx, PByte(PtrUInt(ResultPtr) + PtrUInt(outlen)), finlen) <> 1 then
-      raise Exception.Create('Failed to finalize encryption');
+      raise ESSLCryptoError.Create('Failed to finalize encryption');
     
     // Get tag
     if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_GET_TAG, TagSize, TagPtr) <> 1 then
-      raise Exception.Create('Failed to get tag');
+      raise ESSLCryptoError.Create('Failed to get tag');
   finally
     EVP_CIPHER_CTX_free(ctx);
   end;
@@ -592,7 +594,7 @@ begin
     24: cipher := EVP_aes_192_ccm();
     32: cipher := EVP_aes_256_ccm();
   else
-    raise Exception.Create('Invalid key size for AES-CCM');
+    raise ESSLInvalidArgument.Create('Invalid key size for AES-CCM');
   end;
   
   SetLength(Result, Length(Ciphertext));
@@ -601,34 +603,34 @@ begin
   try
     // Initialize decryption
     if EVP_DecryptInit_ex(ctx, cipher, nil, nil, nil) <> 1 then
-      raise Exception.Create('Failed to initialize AES-CCM');
+      raise ESSLCryptoError.Create('Failed to initialize AES-CCM');
     
     // Set nonce length
     if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, Integer(Length(Nonce)), nil) <> 1 then
-      raise Exception.Create('Failed to set nonce length');
+      raise ESSLCryptoError.Create('Failed to set nonce length');
     
     // Set tag
     if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG, Integer(Length(Tag)), @Tag[0]) <> 1 then
-      raise Exception.Create('Failed to set tag');
+      raise ESSLCryptoError.Create('Failed to set tag');
     
     // Initialize with key and nonce
     if EVP_DecryptInit_ex(ctx, nil, nil, @Key[0], @Nonce[0]) <> 1 then
-      raise Exception.Create('Failed to set key and nonce');
+      raise ESSLCryptoError.Create('Failed to set key and nonce');
     
     // Set message length (required for CCM)
     if EVP_DecryptUpdate(ctx, nil, outlen, nil, Length(Ciphertext)) <> 1 then
-      raise Exception.Create('Failed to set message length');
+      raise ESSLCryptoError.Create('Failed to set message length');
     
     // Process AAD if provided
     if Length(AAD) > 0 then
     begin
       if EVP_DecryptUpdate(ctx, nil, outlen, @AAD[0], Length(AAD)) <> 1 then
-        raise Exception.Create('Failed to process AAD');
+        raise ESSLCryptoError.Create('Failed to process AAD');
     end;
     
     // Decrypt and verify
     if EVP_DecryptUpdate(ctx, @Result[0], outlen, @Ciphertext[0], Length(Ciphertext)) <= 0 then
-      raise Exception.Create('Decryption or authentication failed');
+      raise ESSLDecryptionException.Create('Decryption or authentication failed');
       
     SetLength(Result, outlen);
   finally
@@ -647,7 +649,7 @@ begin
   Result := nil;
   // XTS requires two keys
   if Length(Key1) <> Length(Key2) then
-    raise Exception.Create('XTS requires two keys of same size');
+    raise ESSLInvalidArgument.Create('XTS requires two keys of same size');
     
   // Combine keys for XTS
   SetLength(combined_key, Length(Key1) + Length(Key2));
@@ -660,7 +662,7 @@ begin
     16: cipher := EVP_aes_128_xts();  // Total key = 256 bits
     32: cipher := EVP_aes_256_xts();  // Total key = 512 bits
   else
-    raise Exception.Create('Invalid key size for AES-XTS');
+    raise ESSLInvalidArgument.Create('Invalid key size for AES-XTS');
   end;
   
   SetLength(Result, Length(Plaintext));
@@ -668,13 +670,13 @@ begin
   ctx := EVP_CIPHER_CTX_new();
   try
     if EVP_EncryptInit_ex(ctx, cipher, nil, @combined_key[0], @Tweak[0]) <> 1 then
-      raise Exception.Create('Failed to initialize AES-XTS');
+      raise ESSLCryptoError.Create('Failed to initialize AES-XTS');
       
     if EVP_EncryptUpdate(ctx, @Result[0], outlen, @Plaintext[0], Length(Plaintext)) <> 1 then
-      raise Exception.Create('Failed to encrypt with AES-XTS');
+      raise ESSLEncryptionException.Create('Failed to encrypt with AES-XTS');
       
     if EVP_EncryptFinal_ex(ctx, @Result[outlen], finlen) <> 1 then
-      raise Exception.Create('Failed to finalize AES-XTS encryption');
+      raise ESSLCryptoError.Create('Failed to finalize AES-XTS encryption');
       
     SetLength(Result, outlen + finlen);
   finally
@@ -693,7 +695,7 @@ begin
   Result := nil;
   // XTS requires two keys
   if Length(Key1) <> Length(Key2) then
-    raise Exception.Create('XTS requires two keys of same size');
+    raise ESSLInvalidArgument.Create('XTS requires two keys of same size');
     
   // Combine keys for XTS
   SetLength(combined_key, Length(Key1) + Length(Key2));
@@ -706,7 +708,7 @@ begin
     16: cipher := EVP_aes_128_xts();  // Total key = 256 bits
     32: cipher := EVP_aes_256_xts();  // Total key = 512 bits
   else
-    raise Exception.Create('Invalid key size for AES-XTS');
+    raise ESSLInvalidArgument.Create('Invalid key size for AES-XTS');
   end;
   
   SetLength(Result, Length(Ciphertext));
@@ -714,13 +716,13 @@ begin
   ctx := EVP_CIPHER_CTX_new();
   try
     if EVP_DecryptInit_ex(ctx, cipher, nil, @combined_key[0], @Tweak[0]) <> 1 then
-      raise Exception.Create('Failed to initialize AES-XTS');
+      raise ESSLCryptoError.Create('Failed to initialize AES-XTS');
       
     if EVP_DecryptUpdate(ctx, @Result[0], outlen, @Ciphertext[0], Length(Ciphertext)) <> 1 then
-      raise Exception.Create('Failed to decrypt with AES-XTS');
+      raise ESSLDecryptionException.Create('Failed to decrypt with AES-XTS');
       
     if EVP_DecryptFinal_ex(ctx, @Result[outlen], finlen) <> 1 then
-      raise Exception.Create('Failed to finalize AES-XTS decryption');
+      raise ESSLCryptoError.Create('Failed to finalize AES-XTS decryption');
       
     SetLength(Result, outlen + finlen);
   finally
@@ -744,7 +746,7 @@ begin
     24: cipher := EVP_aes_192_ocb();
     32: cipher := EVP_aes_256_ocb();
   else
-    raise Exception.Create('Invalid key size for AES-OCB');
+    raise ESSLInvalidArgument.Create('Invalid key size for AES-OCB');
   end;
   
   SetLength(Result, Length(Plaintext) + OCB_TAG_SIZE); // OCB may expand
@@ -754,43 +756,43 @@ begin
   try
     // Initialize encryption
     if EVP_EncryptInit_ex(ctx, cipher, nil, nil, nil) <> 1 then
-      raise Exception.Create('Failed to initialize AES-OCB');
+      raise ESSLCryptoError.Create('Failed to initialize AES-OCB');
       
     // Set nonce length if not default
     if Length(Nonce) <> 12 then
     begin
       if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IVLEN, Integer(Length(Nonce)), nil) <> 1 then
-        raise Exception.Create('Failed to set nonce length');
+        raise ESSLCryptoError.Create('Failed to set nonce length');
     end;
     
     // Set tag length
     if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_OCB_SET_TAGLEN, OCB_TAG_SIZE, nil) <> 1 then
-      raise Exception.Create('Failed to set tag length');
+      raise ESSLCryptoError.Create('Failed to set tag length');
     
     // Initialize with key and nonce
     if EVP_EncryptInit_ex(ctx, nil, nil, @Key[0], @Nonce[0]) <> 1 then
-      raise Exception.Create('Failed to set key and nonce');
+      raise ESSLCryptoError.Create('Failed to set key and nonce');
       
     // Process AAD if provided
     if Length(AAD) > 0 then
     begin
       if EVP_EncryptUpdate(ctx, nil, outlen, @AAD[0], Length(AAD)) <> 1 then
-        raise Exception.Create('Failed to process AAD');
+        raise ESSLCryptoError.Create('Failed to process AAD');
     end;
     
     // Encrypt plaintext
     if EVP_EncryptUpdate(ctx, @Result[0], outlen, @Plaintext[0], Length(Plaintext)) <> 1 then
-      raise Exception.Create('Failed to encrypt');
+      raise ESSLEncryptionException.Create('Failed to encrypt');
       
     // Finalize
     if EVP_EncryptFinal_ex(ctx, @Result[outlen], finlen) <> 1 then
-      raise Exception.Create('Failed to finalize encryption');
+      raise ESSLCryptoError.Create('Failed to finalize encryption');
       
     SetLength(Result, outlen + finlen);
     
     // Get tag
     if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, OCB_TAG_SIZE, @Tag[0]) <> 1 then
-      raise Exception.Create('Failed to get tag');
+      raise ESSLCryptoError.Create('Failed to get tag');
   finally
     EVP_CIPHER_CTX_free(ctx);
   end;
@@ -812,11 +814,11 @@ begin
     24: cipher := EVP_aes_192_ocb();
     32: cipher := EVP_aes_256_ocb();
   else
-    raise Exception.Create('Invalid key size for AES-OCB');
+    raise ESSLInvalidArgument.Create('Invalid key size for AES-OCB');
   end;
   
   if Length(Tag) <> OCB_TAG_SIZE then
-    raise Exception.Create('Invalid tag size');
+    raise ESSLInvalidArgument.Create('Invalid tag size');
   
   SetLength(Result, Length(Ciphertext));
   
@@ -824,37 +826,37 @@ begin
   try
     // Initialize decryption
     if EVP_DecryptInit_ex(ctx, cipher, nil, nil, nil) <> 1 then
-      raise Exception.Create('Failed to initialize AES-OCB');
+      raise ESSLCryptoError.Create('Failed to initialize AES-OCB');
       
     // Set nonce length if not default
     if Length(Nonce) <> 12 then
     begin
       if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IVLEN, Integer(Length(Nonce)), nil) <> 1 then
-        raise Exception.Create('Failed to set nonce length');
+        raise ESSLCryptoError.Create('Failed to set nonce length');
     end;
     
     // Initialize with key and nonce
     if EVP_DecryptInit_ex(ctx, nil, nil, @Key[0], @Nonce[0]) <> 1 then
-      raise Exception.Create('Failed to set key and nonce');
+      raise ESSLCryptoError.Create('Failed to set key and nonce');
       
     // Set expected tag
     if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, OCB_TAG_SIZE, @Tag[0]) <> 1 then
-      raise Exception.Create('Failed to set tag');
+      raise ESSLCryptoError.Create('Failed to set tag');
       
     // Process AAD if provided
     if Length(AAD) > 0 then
     begin
       if EVP_DecryptUpdate(ctx, nil, outlen, @AAD[0], Length(AAD)) <> 1 then
-        raise Exception.Create('Failed to process AAD');
+        raise ESSLCryptoError.Create('Failed to process AAD');
     end;
     
     // Decrypt ciphertext
     if EVP_DecryptUpdate(ctx, @Result[0], outlen, @Ciphertext[0], Length(Ciphertext)) <> 1 then
-      raise Exception.Create('Failed to decrypt');
+      raise ESSLDecryptionException.Create('Failed to decrypt');
       
     // Verify tag and finalize
     if EVP_DecryptFinal_ex(ctx, @Result[outlen], finlen) <> 1 then
-      raise Exception.Create('Authentication verification failed');
+      raise ESSLDecryptionException.Create('Authentication verification failed');
       
     SetLength(Result, outlen + finlen);
   finally
@@ -866,33 +868,33 @@ function AES_WrapKey(const KEK: TBytes; const Plaintext: TBytes): TBytes;
 begin
   Result := nil;
   if not Assigned(AES_wrap_key) then
-    raise Exception.Create('AES key wrap not available');
+    raise ESSLCryptoError.Create('AES key wrap not available');
     
   if Length(Plaintext) mod 8 <> 0 then
-    raise Exception.Create('Plaintext must be multiple of 8 bytes');
+    raise ESSLInvalidArgument.Create('Plaintext must be multiple of 8 bytes');
     
   SetLength(Result, Length(Plaintext) + 8); // Wrapped key is 8 bytes larger
   
   if AES_wrap_key(@KEK[0], nil, @Result[0], @Plaintext[0], Length(Plaintext)) <= 0 then
-    raise Exception.Create('AES key wrap failed');
+    raise ESSLCryptoError.Create('AES key wrap failed');
 end;
 
 function AES_UnwrapKey(const KEK: TBytes; const Ciphertext: TBytes): TBytes;
 begin
   Result := nil;
   if not Assigned(AES_unwrap_key) then
-    raise Exception.Create('AES key unwrap not available');
+    raise ESSLCryptoError.Create('AES key unwrap not available');
     
   if Length(Ciphertext) mod 8 <> 0 then
-    raise Exception.Create('Ciphertext must be multiple of 8 bytes');
+    raise ESSLInvalidArgument.Create('Ciphertext must be multiple of 8 bytes');
     
   if Length(Ciphertext) < 16 then
-    raise Exception.Create('Ciphertext too short');
+    raise ESSLInvalidArgument.Create('Ciphertext too short');
     
   SetLength(Result, Length(Ciphertext) - 8); // Unwrapped key is 8 bytes smaller
   
   if AES_unwrap_key(@KEK[0], nil, @Result[0], @Ciphertext[0], Length(Ciphertext)) <= 0 then
-    raise Exception.Create('AES key unwrap failed or authentication failed');
+    raise ESSLCryptoError.Create('AES key unwrap failed or authentication failed');
 end;
 
 initialization

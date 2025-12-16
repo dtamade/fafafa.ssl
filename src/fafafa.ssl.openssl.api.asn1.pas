@@ -679,7 +679,11 @@ begin
       Hour := StrToIntDef(Copy(TimeStr, 7, 2), 0);
       Min := StrToIntDef(Copy(TimeStr, 9, 2), 0);
       Sec := StrToIntDef(Copy(TimeStr, 11, 2), 0);
-      Result := EncodeDateTimeCustom(Year, Month, Day, Hour, Min, Sec, 0);
+      try
+        Result := EncodeDate(Year, Month, Day) + EncodeTime(Hour, Min, Sec, 0);
+      except
+        Result := 0;
+      end;
     end;
   end
   else if TimeType = V_ASN1_GENERALIZEDTIME then
@@ -693,7 +697,11 @@ begin
       Hour := StrToIntDef(Copy(TimeStr, 9, 2), 0);
       Min := StrToIntDef(Copy(TimeStr, 11, 2), 0);
       Sec := StrToIntDef(Copy(TimeStr, 13, 2), 0);
-      Result := EncodeDateTimeCustom(Year, Month, Day, Hour, Min, Sec, 0);
+      try
+        Result := EncodeDate(Year, Month, Day) + EncodeTime(Hour, Min, Sec, 0);
+      except
+        Result := 0;
+      end;
     end;
   end;
 end;

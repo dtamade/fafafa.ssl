@@ -15,7 +15,12 @@ unit fafafa.ssl.http.simple;
 interface
 
 uses
-  SysUtils, Classes, DateUtils,
+  SysUtils, Classes,
+  {$IFDEF WINDOWS}
+  WinSock2,
+  {$ELSE}
+  fafafa.ssl.sockets,
+  {$ENDIF}
   fafafa.ssl, fafafa.ssl.base;
 
 const
@@ -335,6 +340,13 @@ var
   LResponse: TMemoryStream;
   LRawResponse: string;
   LStartTime: TDateTime;
+  LSocket: THandle;
+  {$IFDEF WINDOWS}
+  LWSAData: TWSAData;
+  {$ENDIF}
+  LAddr: TSockAddrIn;
+  LHostEnt: PHostEnt;
+
 begin
   FillChar(Result, SizeOf(Result), 0);
   Result.Headers := TStringList.Create;
@@ -350,8 +362,82 @@ begin
   try
     LStartTime := Now;
     
-    // 创建SSL上下文
-    LContext := TSSLFactory.CreateContext(sslOpenSSL, sslCtxClient);
+    // 创建TCP Socket
+    {$IFDEF WINDOWS}
+    if WSAStartup($0202, LWSAData) <> 0 then
+    begin
+      Result.ErrorMessage := '初始化WinSock失败';
+      Exit;
+    end;
+    
+    LSocket := socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if LSocket = THandle(INVALID_SOCKET) then
+    begin
+      Result.ErrorMessage := '创建Socket失败';
+      WSACleanup;
+      Exit;
+    end;
+    
+    FillChar(LAddr, SizeOf(LAddr), 0);
+    LAddr.sin_family := AF_INET;
+    LAddr.sin_port := htons(LPort);
+    LAddr.sin_addr.S_addr := inet_addr(PAnsiChar(AnsiString(LHost)));
+    if LAddr.sin_addr.S_addr = INADDR_NONE then
+    begin
+      LHostEnt := gethostbyname(PAnsiChar(AnsiString(LHost)));
+      if LHostEnt = nil then
+      begin
+        closesocket(LSocket);
+        WSACleanup;
+        Result.ErrorMessage := '无法解析主机名: ' + LHost;
+        Exit;
+      end;
+      LAddr.sin_addr := PInAddr(LHostEnt^.h_addr_list^)^;
+    end;
+    
+    if WinSock2.connect(LSocket, @LAddr, SizeOf(LAddr)) = SOCKET_ERROR then
+    begin
+      closesocket(LSocket);
+      WSACleanup;
+      Result.ErrorMessage := '连接服务器失败';
+      Exit;
+    end;
+    {$ELSE}
+    LSocket := socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if LSocket = INVALID_SOCKET then
+    begin
+      Result.ErrorMessage := '创建Socket失败';
+      Exit;
+    end;
+    
+    FillChar(LAddr, SizeOf(LAddr), 0);
+    LAddr.sin_family := AF_INET;
+    LAddr.sin_port := htons(LPort);
+    LAddr.sin_addr.s_addr := inet_addr(PAnsiChar(AnsiString(LHost)));
+    
+    if LAddr.sin_addr.s_addr = INADDR_NONE then
+    begin
+      LHostEnt := gethostbyname(PAnsiChar(AnsiString(LHost)));
+      if LHostEnt = nil then
+      begin
+        close(LSocket);
+        Result.ErrorMessage := '无法解析主机名: ' + LHost;
+        Exit;
+      end;
+      LAddr.sin_addr := PInAddr(LHostEnt^.h_addr_list^)^;
+    end;
+    
+    if connect(LSocket, @LAddr, SizeOf(LAddr)) = SOCKET_ERROR then
+    begin
+      close(LSocket);
+      Result.ErrorMessage := '连接服务器失败';
+      Exit;
+    end;
+    {$ENDIF}
+    
+    try
+    // 创建SSL上下文 (正确参数顺序: ContextType, LibraryType)
+    LContext := TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL);
     if LContext = nil then
     begin
       Result.ErrorMessage := '创建SSL上下文失败';
@@ -376,16 +462,23 @@ begin
         LContext.LoadPrivateKey(AOptions.ClientKey);
     end;
     
-    // 创建连接
-    LConnection := LContext.CreateConnection;
+    // 设置SNI
+    LContext.SetServerName(LHost);
+    
+    // 创建连接 (传入socket句柄)
+    LConnection := LContext.CreateConnection(LSocket);
     if LConnection = nil then
     begin
-      Result.ErrorMessage := '创建连接失败';
+      Result.ErrorMessage := '创建SSL连接失败';
       Exit;
     end;
     
-    // 连接到服务器
-    LConnection.Connect(LHost, LPort);
+    // SSL握手 (无参数)
+    if not LConnection.Connect then
+    begin
+      Result.ErrorMessage := 'SSL握手失败';
+      Exit;
+    end;
     
     // 构建请求
     LRequest := BuildRequest(AMethod, LHost, LPath, ABody, AOptions.Headers);
@@ -425,6 +518,19 @@ begin
       end;
     finally
       LResponse.Free;
+    end;
+    
+    finally
+      // 关闭SSL连接
+      if LConnection <> nil then
+        LConnection.Close;
+      // 关闭Socket
+      {$IFDEF WINDOWS}
+      closesocket(LSocket);
+      WSACleanup;
+      {$ELSE}
+      close(LSocket);
+      {$ENDIF}
     end;
     
   except
@@ -565,5 +671,4 @@ begin
 end;
 
 end.
-
 

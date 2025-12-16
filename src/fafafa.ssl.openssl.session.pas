@@ -10,7 +10,7 @@ unit fafafa.ssl.openssl.session;
 interface
 
 uses
-  SysUtils, DateUtils, ctypes,
+  SysUtils, ctypes,
   fafafa.ssl.base,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.core,
@@ -103,7 +103,8 @@ begin
   
   UnixTime := SSL_SESSION_get_time(FSession);
   if UnixTime > 0 then
-    Result := UnixToDateTime(UnixTime);
+    // 25569 = Days between 1899-12-30 and 1970-01-01
+    Result := 25569 + (UnixTime / 86400);
 end;
 
 function TOpenSSLSession.GetTimeout: Integer;

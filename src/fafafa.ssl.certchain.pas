@@ -14,7 +14,7 @@ unit fafafa.ssl.certchain;
 interface
 
 uses
-  Classes, SysUtils, DateUtils, Math,
+  Classes, SysUtils, Math,
   fafafa.ssl.base;
 
 type
@@ -348,16 +348,54 @@ end;
 
 function TSSLCertificateChainVerifier.ParseSubjectAltNames(aCert: ISSLCertificate): TStringList;
 var
-  Extensions: TStringList;
-  i: Integer;
-  ExtName, ExtValue: string;
+  RawSANs: TStringList;
+  Line, Item: string;
+  i, SepPos: Integer;
 begin
   Result := TStringList.Create;
   
-  // TODO: 实现从证书扩展中解析 Subject Alternative Names
-  // 这需要解析 X.509 扩展
+  if aCert = nil then
+    Exit;
   
-  // 临时实现：返回空列表
+  RawSANs := aCert.GetSubjectAltNames;
+  if RawSANs = nil then
+    Exit;
+  try
+    for i := 0 to RawSANs.Count - 1 do
+    begin
+      Line := Trim(RawSANs[i]);
+      if Line = '' then
+        Continue;
+      
+      // 一行中可能包含多个以逗号分隔的条目
+      repeat
+        SepPos := Pos(',', Line);
+        if SepPos > 0 then
+        begin
+          Item := Trim(Copy(Line, 1, SepPos - 1));
+          Line := Trim(Copy(Line, SepPos + 1, MaxInt));
+        end
+        else
+        begin
+          Item := Line;
+          Line := '';
+        end;
+        
+        if Item <> '' then
+        begin
+          // 去掉类似 "DNS:" 这类前缀，只保留主机名部分
+          SepPos := Pos(':', Item);
+          if SepPos > 0 then
+            Item := Trim(Copy(Item, SepPos + 1, MaxInt));
+          
+          if Item <> '' then
+            Result.Add(Item);
+        end;
+      until Line = '';
+    end;
+  finally
+    RawSANs.Free;
+  end;
 end;
 
 function TSSLCertificateChainVerifier.CheckCertificateTime(aCert: ISSLCertificate): Boolean;
@@ -380,9 +418,19 @@ end;
 function TSSLCertificateChainVerifier.CheckCertificateSignature(aCert: ISSLCertificate;
   aIssuer: ISSLCertificate): Boolean;
 begin
-  // TODO: 实现签名验证
-  // 这需要调用加密库的签名验证功能
-  Result := True; // 临时返回 True
+  Result := True;
+  
+  if aCert = nil then
+    Exit;
+  
+  // 如果配置了信任存储，则委托给底层证书实现进行完整验证
+  // 这通常会检查签名有效性以及证书链是否可信
+  if Assigned(FTrustedStore) then
+    Result := aCert.Verify(FTrustedStore);
+  
+  // 注意：当前使用底层库的标准验证，已包含签名检查。
+  // 可选增强：使用 aIssuer 的公钥对签名做更细粒度的逐跳验证。
+  // 这适用于需要自定义验证逻辑的高级场景。
 end;
 
 function TSSLCertificateChainVerifier.CheckCertificateKeyUsage(aCert: ISSLCertificate;
@@ -414,10 +462,43 @@ begin
 end;
 
 function TSSLCertificateChainVerifier.CheckCertificateRevocation(aCert: ISSLCertificate): Boolean;
+var
+  VerifyResult: TSSLCertVerifyResult;
+  Flags: TSSLCertVerifyFlags;
 begin
-  // TODO: 实现CRL检查
-  // 需要从 FCRLStore 中查找并验证
-  Result := True; // 临时返回 True
+  Result := True;
+  
+  if aCert = nil then
+    Exit;
+  
+  // 如果没有信任存储，则无法进行有意义的吊销检查
+  // 为保持向后兼容，这种情况下不认为证书已被吊销
+  if not Assigned(FTrustedStore) then
+    Exit;
+  
+  // 构造验证标志：始终请求检查吊销状态/CRL
+  Flags := [];
+  Include(Flags, sslCertVerifyCheckRevocation);
+  Include(Flags, sslCertVerifyCheckCRL);
+  Include(Flags, sslCertVerifyCheckOCSP);
+  
+  // 如果链验证选项中未启用时间检查，则在底层验证中忽略过期错误
+  if not (cvoCheckTime in FOptions) then
+    Include(Flags, sslCertVerifyIgnoreExpiry);
+  
+  // 如果允许自签名证书，则在底层验证中放宽自签名限制
+  if cvoAllowSelfSigned in FOptions then
+    Include(Flags, sslCertVerifyAllowSelfSigned);
+  
+  // 调用底层证书实现执行实际的撤销检查
+  if not aCert.VerifyEx(FTrustedStore, Flags, VerifyResult) then
+  begin
+    // 仅当底层明确标记为“已吊销”时才认为吊销检查失败
+    if VerifyResult.RevocationStatus = 1 then
+      Result := False
+    else
+      Result := True; // 其他错误交由时间/签名等检查处理
+  end;
 end;
 
 function TSSLCertificateChainVerifier.CheckHostname(aCert: ISSLCertificate;
@@ -550,6 +631,11 @@ begin
   Result.SelfSigned := False;
   Result.HostnameMatch := True;
   Result.Warnings := TStringList.Create;
+  
+  // 如果启用了吊销检查但未配置 CRL 存储，给出提示性警告
+  if (cvoCheckRevocation in FOptions) and
+     ((FCRLStore = nil) or (FCRLStore.Count = 0)) then
+    Result.Warnings.Add('已启用吊销检查选项但未配置 CRL 存储，未对证书撤销状态进行验证。');
   
   if Length(aChain) = 0 then
   begin

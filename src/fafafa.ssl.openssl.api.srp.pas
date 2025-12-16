@@ -271,7 +271,9 @@ end;
 function SRPVerifyUser(vbase: PSRP_VBASE; const Username, Password: string): Boolean;
 var
   User: PSRP_user_pwd;
-  X, V: PBIGNUM;
+  Salt, StoredVerifier, ComputedX: PBIGNUM;
+  gN: PSRP_gN;
+  ComputedVerifier: PBIGNUM;
 begin
   Result := False;
   if (vbase = nil) or not Assigned(SRP_VBASE_get_by_user) then Exit;
@@ -279,9 +281,54 @@ begin
   User := SRP_VBASE_get_by_user(vbase, PChar(Username));
   if User = nil then Exit;
   
-  // TODO: Implement actual verification using password
-  // This is a simplified implementation
-  Result := User <> nil;
+  // Get stored salt and verifier from user record
+  if not Assigned(SRP_user_pwd_get0_salt) or not Assigned(SRP_user_pwd_get0_verifier) then
+    Exit;
+    
+  Salt := SRP_user_pwd_get0_salt(User);
+  StoredVerifier := SRP_user_pwd_get0_verifier(User);
+  
+  if (Salt = nil) or (StoredVerifier = nil) then
+    Exit;
+  
+  // Compute x = H(salt | H(username | ':' | password))
+  if Assigned(SRP_Calc_x) then
+  begin
+    ComputedX := SRP_Calc_x(Salt, PChar(Username), PChar(Password));
+    if ComputedX = nil then Exit;
+    
+    try
+      // Get default gN parameters (typically use same as stored user)
+      if Assigned(SRP_get_default_gN) then
+      begin
+        gN := SRP_get_default_gN('1024');
+        if gN <> nil then
+        begin
+          // Compute v = g^x mod N
+          ComputedVerifier := BN_new();
+          if ComputedVerifier <> nil then
+          begin
+            try
+              // Use BN_mod_exp to compute g^x mod N
+              if Assigned(BN_mod_exp) then
+              begin
+                if BN_mod_exp(ComputedVerifier, gN^.g, ComputedX, gN^.N, nil) = 1 then
+                begin
+                  // Compare computed verifier with stored verifier
+                  if Assigned(BN_cmp) then
+                    Result := BN_cmp(ComputedVerifier, StoredVerifier) = 0;
+                end;
+              end;
+            finally
+              BN_free(ComputedVerifier);
+            end;
+          end;
+        end;
+      end;
+    finally
+      BN_free(ComputedX);
+    end;
+  end;
 end;
 
 function SRPGenerateVerifier(const Username, Password: string; out Salt, Verifier: string; const gN_id: string): Boolean;

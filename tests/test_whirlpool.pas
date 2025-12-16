@@ -6,6 +6,7 @@ uses
   SysUtils,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp;
 
 type
@@ -274,20 +275,24 @@ begin
   WriteLn;
   
   try
-    if not LoadOpenSSLLibrary then
+    WriteLn('========================================');
+    WriteLn('NOTE: Whirlpool requires legacy provider in OpenSSL 3.0');
+    WriteLn('      This test may fail if legacy provider is not enabled.');
+   WriteLn('      To enable: export OPENSSL_CONF=/path/to/openssl.cnf');
+    WriteLn('========================================');
+    WriteLn;
+    
+    // Use modern API loading
+    LoadOpenSSLCore();
+    
+    if not IsOpenSSLCoreLoaded then
     begin
       WriteLn('ERROR: Failed to load OpenSSL library');
       Halt(1);
     end;
     
-    // Load EVP functions
-    if not LoadEVP(GetCryptoLibHandle) then
-    begin
-      WriteLn('ERROR: Failed to load EVP functions');
-      Halt(1);
-    end;
-    
     WriteLn('OpenSSL loaded successfully');
+    WriteLn('OpenSSL Version: ', GetOpenSSLVersionString);
     WriteLn;
     
     // Run tests

@@ -64,6 +64,10 @@ type
     pathlen: PASN1_INTEGER;
   end;
 
+  // GENERAL_NAME helpers
+  TGENERAL_NAME_get0_value = function(const gen: PGENERAL_NAME; ptype: PInteger): Pointer; cdecl;
+  TGENERAL_NAMES_free = procedure(names: PGENERAL_NAMES); cdecl;
+
 const
   // X509V3 extension flags
   X509V3_EXT_DYNAMIC      = $1;
@@ -150,6 +154,8 @@ var
     crit: Integer; flags: LongWord): Integer; cdecl = nil;
   X509V3_get_d2i: function(const x: Pointer; nid: Integer; 
     var crit: Integer; var idx: Integer): Pointer; cdecl = nil;
+  GENERAL_NAME_get0_value: TGENERAL_NAME_get0_value = nil;
+  GENERAL_NAMES_free: TGENERAL_NAMES_free = nil;
     
   // Specific extension functions
   BASIC_CONSTRAINTS_new: function(): PBASIC_CONSTRAINTS; cdecl = nil;
@@ -180,6 +186,9 @@ var
   X509_policy_tree_level_count: function(const tree: Pointer): Integer; cdecl = nil;
   X509_policy_tree_get0_level: function(const tree: Pointer; 
     i: Integer): Pointer; cdecl = nil;
+    
+  // Purpose functions
+  X509_check_purpose: function(x: PX509; id: Integer; ca: Integer): Integer; cdecl = nil;
 
 procedure LoadX509V3Functions(AHandle: TLibHandle);
 procedure UnloadX509V3Functions;
@@ -235,6 +244,8 @@ begin
   Pointer(X509V3_EXT_i2d) := GetProcAddress(AHandle, 'X509V3_EXT_i2d');
   Pointer(X509V3_add1_i2d) := GetProcAddress(AHandle, 'X509V3_add1_i2d');
   Pointer(X509V3_get_d2i) := GetProcAddress(AHandle, 'X509V3_get_d2i');
+  GENERAL_NAME_get0_value := TGENERAL_NAME_get0_value(GetProcAddress(AHandle, 'GENERAL_NAME_get0_value'));
+  GENERAL_NAMES_free := TGENERAL_NAMES_free(GetProcAddress(AHandle, 'GENERAL_NAMES_free'));
   
   // Basic constraints functions
   Pointer(BASIC_CONSTRAINTS_new) := GetProcAddress(AHandle, 'BASIC_CONSTRAINTS_new');
@@ -261,6 +272,9 @@ begin
   Pointer(X509_policy_tree_free) := GetProcAddress(AHandle, 'X509_policy_tree_free');
   Pointer(X509_policy_tree_level_count) := GetProcAddress(AHandle, 'X509_policy_tree_level_count');
   Pointer(X509_policy_tree_get0_level) := GetProcAddress(AHandle, 'X509_policy_tree_get0_level');
+  
+  // Purpose functions
+  Pointer(X509_check_purpose) := GetProcAddress(AHandle, 'X509_check_purpose');
 end;
 
 procedure UnloadX509V3Functions;
@@ -290,6 +304,8 @@ begin
   X509V3_EXT_i2d := nil;
   X509V3_add1_i2d := nil;
   X509V3_get_d2i := nil;
+  GENERAL_NAME_get0_value := nil;
+  GENERAL_NAMES_free := nil;
   BASIC_CONSTRAINTS_new := nil;
   BASIC_CONSTRAINTS_free := nil;
   d2i_BASIC_CONSTRAINTS := nil;
@@ -306,6 +322,7 @@ begin
   X509_policy_tree_free := nil;
   X509_policy_tree_level_count := nil;
   X509_policy_tree_get0_level := nil;
+  X509_check_purpose := nil;
 end;
 
 function X509AddBasicConstraints(Cert: PX509; CA: Boolean; PathLen: Integer): Boolean;

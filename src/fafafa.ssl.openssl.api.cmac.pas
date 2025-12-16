@@ -5,6 +5,8 @@ unit fafafa.ssl.openssl.api.cmac;
 interface
 
 uses
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   SysUtils,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.evp;
@@ -137,6 +139,8 @@ function ComputeMAC(const MacType: string; const Key: TBytes; const Data: TBytes
 implementation
 
 uses
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   {$IFDEF WINDOWS}Windows{$ELSE}dynlibs{$ENDIF},
   fafafa.ssl.openssl.api.aes;
 
@@ -292,25 +296,25 @@ var
   mac_len: size_t;
 begin
   if not Assigned(CMAC_CTX_new) then
-    raise Exception.Create('CMAC not available');
+    raise ESSLCryptoError.Create('CMAC not available');
     
   if not Assigned(Cipher) then
-    raise Exception.Create('Cipher not specified');
+    raise ESSLInvalidArgument.Create('Cipher not specified');
     
   ctx := CMAC_CTX_new();
   if ctx = nil then
-    raise Exception.Create('Failed to create CMAC context');
+    raise ESSLCryptoError.Create('Failed to create CMAC context');
     
   try
     // Initialize CMAC with key and cipher
     if CMAC_Init(ctx, @Key[0], Length(Key), Cipher, nil) <> 1 then
-      raise Exception.Create('Failed to initialize CMAC');
+      raise ESSLCryptoError.Create('Failed to initialize CMAC');
     
     // Update with data
     if Length(Data) > 0 then
     begin
       if CMAC_Update(ctx, @Data[0], Length(Data)) <> 1 then
-        raise Exception.Create('Failed to update CMAC');
+        raise ESSLCryptoError.Create('Failed to update CMAC');
     end;
     
     // Get the MAC size first
@@ -319,7 +323,7 @@ begin
     
     // Finalize and get MAC
     if CMAC_Final(ctx, @Result[0], @mac_len) <> 1 then
-      raise Exception.Create('Failed to finalize CMAC');
+      raise ESSLCryptoError.Create('Failed to finalize CMAC');
       
     // Adjust result size to actual MAC length
     SetLength(Result, mac_len);
@@ -345,11 +349,11 @@ begin
   begin
     mac := EVP_MAC_fetch(nil, PAnsiChar(AnsiString(MacType)), nil);
     if mac = nil then
-      raise Exception.Create('MAC algorithm not available: ' + MacType);
+      raise ESSLCryptoError.Create('MAC algorithm not available: ' + MacType);
       
     ctx := EVP_MAC_CTX_new(mac);
     if ctx = nil then
-      raise Exception.Create('Failed to create MAC context');
+      raise ESSLCryptoError.Create('Failed to create MAC context');
       
     try
       // Set cipher parameter for CMAC if needed
@@ -363,13 +367,13 @@ begin
       
       // Initialize MAC
       if EVP_MAC_init(ctx, @Key[0], Length(Key), nil) <> 1 then
-        raise Exception.Create('Failed to initialize MAC');
+        raise ESSLCryptoError.Create('Failed to initialize MAC');
         
       // Update with data
       if Length(Data) > 0 then
       begin
         if EVP_MAC_update(ctx, @Data[0], Length(Data)) <> 1 then
-          raise Exception.Create('Failed to update MAC');
+          raise ESSLCryptoError.Create('Failed to update MAC');
       end;
       
       // Get MAC size
@@ -378,7 +382,7 @@ begin
       
       // Finalize and get MAC
       if EVP_MAC_final(ctx, @Result[0], @outlen, outlen) <> 1 then
-        raise Exception.Create('Failed to finalize MAC');
+        raise ESSLCryptoError.Create('Failed to finalize MAC');
         
       SetLength(Result, outlen);
     finally
@@ -393,12 +397,12 @@ begin
     else if CipherName = 'AES-256-CBC' then
       cipher := EVP_aes_256_cbc()
     else
-      raise Exception.Create('Unsupported cipher for CMAC: ' + CipherName);
+      raise ESSLInvalidArgument.Create('Unsupported cipher for CMAC: ' + CipherName);
       
     Result := ComputeCMAC(cipher, Key, Data);
   end
   else
-    raise Exception.Create('MAC computation not available');
+    raise ESSLCryptoError.Create('MAC computation not available');
 end;
 
 initialization

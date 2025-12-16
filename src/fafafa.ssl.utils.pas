@@ -23,7 +23,8 @@ interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.base;
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions;
 
 type
   { TSSLUtils - SSL 工具类 }
@@ -170,11 +171,12 @@ function ComputeDigest(const Algorithm: AnsiString; const Bytes: TBytes): string
 implementation
 
 uses
-  base64, Math,
+  Math,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
-  fafafa.ssl.openssl.api.crypto;
+  fafafa.ssl.openssl.api.crypto,
+  fafafa.ssl.errors;
 
 function ComputeDigest(const Algorithm: AnsiString; const Bytes: TBytes): string;
 var
@@ -194,7 +196,7 @@ begin
   LoadEVP(GetCryptoLibHandle);
 
   if not Assigned(EVP_MD_CTX_new) then
-    raise ESSLException.Create('EVP interface not available', sslErrUnsupported);
+    RaiseFunctionNotAvailable('EVP interface');
 
   Fetched := False;
   if Assigned(EVP_MD_fetch) then
@@ -209,26 +211,26 @@ begin
     MD := EVP_get_digestbyname(PAnsiChar(Algorithm));
 
   if MD = nil then
-    raise ESSLException.Create(Format('Digest algorithm %s is not supported by OpenSSL', [string(Algorithm)]), sslErrUnsupported);
+    raise ESSLCryptoError.Create(Format('Digest algorithm %s is not supported by OpenSSL', [string(Algorithm)]));
 
   Ctx := EVP_MD_CTX_new();
   if Ctx = nil then
   begin
     if Fetched and Assigned(EVP_MD_free) then
       EVP_MD_free(MD);
-    raise ESSLException.Create('Unable to allocate digest context', sslErrMemory);
+    RaiseMemoryError('digest context allocation');
   end;
 
   try
     if EVP_DigestInit_ex(Ctx, MD, nil) <> 1 then
-      raise ESSLException.Create('EVP_DigestInit_ex failed', sslErrGeneral);
+      RaiseSSLError('EVP_DigestInit_ex failed', sslErrGeneral);
 
     if (Length(Bytes) > 0) and (EVP_DigestUpdate(Ctx, @Bytes[0], Length(Bytes)) <> 1) then
-      raise ESSLException.Create('EVP_DigestUpdate failed', sslErrGeneral);
+      RaiseSSLError('EVP_DigestUpdate failed', sslErrGeneral);
 
     DigestLen := 0;
     if EVP_DigestFinal_ex(Ctx, @Digest[0], DigestLen) <> 1 then
-      raise ESSLException.Create('EVP_DigestFinal_ex failed', sslErrGeneral);
+      RaiseSSLError('EVP_DigestFinal_ex failed', sslErrGeneral);
 
     SetLength(Result, DigestLen * 2);
     for I := 0 to Integer(DigestLen) - 1 do
@@ -265,76 +267,118 @@ begin
   LHex := StringReplace(LHex, ':', '', [rfReplaceAll]);
   
   LLen := Length(LHex) div 2;
+  Result := nil;
   SetLength(Result, LLen);
   
   for I := 0 to LLen - 1 do
     Result[I] := StrToInt('$' + Copy(LHex, I * 2 + 1, 2));
 end;
 
+const
+  B64: array[0..63] of Char = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
 class function TSSLUtils.BytesToBase64(const aBytes: TBytes): string;
 var
-  LStream: TMemoryStream;
-  LEncoder: TBase64EncodingStream;
-  LOutput: TStringStream;
+  i, j, k, len: Integer;
+  b: array[0..2] of Byte;
+  c: array[0..3] of Char;
 begin
-  if Length(aBytes) = 0 then
+  Result := '';
+  len := Length(aBytes);
+  if len = 0 then Exit;
+
+  i := 0;
+  while i < len do
   begin
-    Result := '';
-    Exit;
-  end;
-  
-  LStream := TMemoryStream.Create;
-  LOutput := TStringStream.Create('');
-  try
-    LStream.Write(aBytes[0], Length(aBytes));
-    LStream.Position := 0;
-    
-    LEncoder := TBase64EncodingStream.Create(LOutput);
-    try
-      LEncoder.CopyFrom(LStream, LStream.Size);
-    finally
-      LEncoder.Free;
-    end;
-    
-    Result := LOutput.DataString;
-  finally
-    LOutput.Free;
-    LStream.Free;
+    b[0] := aBytes[i];
+    if i + 1 < len then b[1] := aBytes[i + 1] else b[1] := 0;
+    if i + 2 < len then b[2] := aBytes[i + 2] else b[2] := 0;
+
+    c[0] := B64[b[0] shr 2];
+    c[1] := B64[((b[0] and 3) shl 4) or (b[1] shr 4)];
+    c[2] := B64[((b[1] and 15) shl 2) or (b[2] shr 6)];
+    c[3] := B64[b[2] and 63];
+
+    if i + 1 >= len then c[2] := '=';
+    if i + 2 >= len then c[3] := '=';
+
+    Result := Result + c[0] + c[1] + c[2] + c[3];
+    Inc(i, 3);
   end;
 end;
 
 class function TSSLUtils.Base64ToBytes(const aBase64: string): TBytes;
 var
-  LInput: TStringStream;
-  LDecoder: TBase64DecodingStream;
-  LOutput: TMemoryStream;
+  i, j, len: Integer;
+  v: Integer;
+  c: Char;
+  decodeTable: array[0..255] of Integer;
 begin
-  if aBase64 = '' then
+  Result := nil;
+  SetLength(Result, 0);
+  len := Length(aBase64);
+  if len = 0 then Exit;
+
+  // Init decode table
+  for i := 0 to 255 do decodeTable[i] := -1;
+  for i := 0 to 63 do decodeTable[Ord(B64[i])] := i;
+
+  Result := nil;
+  SetLength(Result, (len div 4) * 3);
+  j := 0;
+  i := 1;
+  while i <= len do
   begin
-    SetLength(Result, 0);
-    Exit;
-  end;
-  
-  LInput := TStringStream.Create(aBase64);
-  LOutput := TMemoryStream.Create;
-  try
-    LInput.Position := 0;
+    // Skip whitespace
+    while (i <= len) and (aBase64[i] <= ' ') do Inc(i);
+    if i > len then Break;
+
+    // Read 4 chars
+    v := 0;
+    // Char 1
+    if decodeTable[Ord(aBase64[i])] = -1 then Break;
+    v := v or (decodeTable[Ord(aBase64[i])] shl 18);
+    Inc(i);
     
-    LDecoder := TBase64DecodingStream.Create(LInput);
-    try
-      LOutput.CopyFrom(LDecoder, 0);
-    finally
-      LDecoder.Free;
+    // Char 2
+    if (i > len) or (decodeTable[Ord(aBase64[i])] = -1) then Break;
+    v := v or (decodeTable[Ord(aBase64[i])] shl 12);
+    Inc(i);
+    
+    // Char 3
+    if i > len then Break;
+    if aBase64[i] = '=' then
+    begin
+      Result[j] := Byte((v shr 16) and $FF);
+      Inc(j);
+      Break;
     end;
+    if decodeTable[Ord(aBase64[i])] = -1 then Break;
+    v := v or (decodeTable[Ord(aBase64[i])] shl 6);
+    Inc(i);
     
-    SetLength(Result, LOutput.Size);
-    if LOutput.Size > 0 then
-      LOutput.Position := 0;
-      LOutput.Read(Result[0], LOutput.Size);
-  finally
-    LOutput.Free;
-    LInput.Free;
+    // Char 4
+    if i > len then Break;
+    if aBase64[i] = '=' then
+    begin
+      Result[j] := Byte((v shr 16) and $FF);
+      Inc(j);
+      Result[j] := Byte((v shr 8) and $FF);
+      Inc(j);
+      Break;
+    end;
+    if decodeTable[Ord(aBase64[i])] = -1 then Break;
+    v := v or decodeTable[Ord(aBase64[i])];
+    Inc(i);
+
+    Result[j] := Byte((v shr 16) and $FF);
+    Inc(j);
+    Result[j] := Byte((v shr 8) and $FF);
+    Inc(j);
+    Result[j] := Byte(v and $FF);
+    Inc(j);
   end;
+  SetLength(Result, j);
 end;
 
 class function TSSLUtils.StringToHex(const aStr: string): string;
@@ -372,6 +416,7 @@ var
   LInBlock: Boolean;
   LBase64: string;
 begin
+  Result := nil;
   SetLength(Result, 0);
   
   LLines := TStringList.Create;
@@ -654,9 +699,6 @@ begin
     if aException.NativeError <> 0 then
       LSB.AppendFormat('原生错误码: 0x%x', [aException.NativeError]);
     
-    if aException.NativeErrorMessage <> '' then
-      LSB.AppendFormat('原生错误消息: %s', [aException.NativeErrorMessage]);
-    
     if aException.Context <> '' then
       LSB.AppendFormat('上下文: %s', [aException.Context]);
     
@@ -724,6 +766,9 @@ begin
     LSB.AppendFormat('上下文类型: %d', [Ord(aConfig.ContextType)]);
     LSB.AppendFormat('证书文件: %s', [aConfig.CertificateFile]);
     LSB.AppendFormat('私钥文件: %s', [aConfig.PrivateKeyFile]);
+    LSB.AppendFormat('私钥口令: %s', [
+      BoolToStr(aConfig.PrivateKeyPassword <> '', '已设置', '未设置')
+    ]);
     LSB.AppendFormat('CA文件: %s', [aConfig.CAFile]);
     LSB.AppendFormat('缓冲区大小: %d', [aConfig.BufferSize]);
     LSB.AppendFormat('握手超时: %d ms', [aConfig.HandshakeTimeout]);
@@ -735,9 +780,11 @@ begin
   end;
 end;
 
-class function TSSLUtils.DumpCertificateInfo(const aInfo: TSSLCertificateInfo): string;
+class function TSSLUtils.DumpCertificateInfo(
+  const aInfo: TSSLCertificateInfo): string;
 var
   LSB: TSSLStringBuilder;
+  SAN: string;
 begin
   LSB := TSSLStringBuilder.Create;
   try
@@ -753,6 +800,15 @@ begin
     LSB.AppendFormat('签名算法: %s', [aInfo.SignatureAlgorithm]);
     LSB.AppendFormat('SHA256指纹: %s', [aInfo.FingerprintSHA256]);
     LSB.AppendFormat('是否CA证书: %s', [BoolToStr(aInfo.IsCA, '是', '否')]);
+
+    if Length(aInfo.SubjectAltNames) > 0 then
+    begin
+      LSB.AppendLine('主题备用名称:');
+      LSB.Indent;
+      for SAN in aInfo.SubjectAltNames do
+        LSB.AppendFormat('- %s', [SAN]);
+      LSB.Unindent;
+    end;
     
     Result := LSB.ToString;
   finally
@@ -832,28 +888,29 @@ end;
 function TSSLMemoryStream.ReadByte: Byte;
 begin
   if Read(Result, 1) <> 1 then
-    raise Exception.Create('读取字节失败');
+    raise ESSLException.Create('读取字节失败');
 end;
 
 function TSSLMemoryStream.ReadWord: Word;
 begin
   if Read(Result, 2) <> 2 then
-    raise Exception.Create('读取字失败');
+    raise ESSLException.Create('读取字失败');
 end;
 
 function TSSLMemoryStream.ReadDWord: DWord;
 begin
   if Read(Result, 4) <> 4 then
-    raise Exception.Create('读取双字失败');
+    raise ESSLException.Create('读取双字失败');
 end;
 
 function TSSLMemoryStream.ReadBytes(aCount: Integer): TBytes;
 begin
+  Result := nil;
   SetLength(Result, aCount);
   if aCount > 0 then
   begin
     if Read(Result[0], aCount) <> aCount then
-      raise Exception.Create('读取字节数组失败');
+      raise ESSLException.Create('读取字节数组失败');
   end;
 end;
 
@@ -1015,7 +1072,7 @@ end;
 function TSSLBitSet.GetBit(aIndex: Integer): Boolean;
 begin
   if (aIndex < 0) or (aIndex >= FSize) then
-    raise Exception.Create('位索引超出范围');
+    raise ESSLException.Create('位索引超出范围');
   
   Result := (FBits[aIndex div 8] and (1 shl (aIndex mod 8))) <> 0;
 end;
@@ -1023,7 +1080,7 @@ end;
 procedure TSSLBitSet.SetBit(aIndex: Integer; aValue: Boolean);
 begin
   if (aIndex < 0) or (aIndex >= FSize) then
-    raise Exception.Create('位索引超出范围');
+    raise ESSLException.Create('位索引超出范围');
   
   if aValue then
     FBits[aIndex div 8] := FBits[aIndex div 8] or (1 shl (aIndex mod 8))
@@ -1087,6 +1144,7 @@ end;
 
 function TSSLBitSet.ToBytes: TBytes;
 begin
+  Result := nil;
   SetLength(Result, Length(FBits));
   if Length(FBits) > 0 then
     Move(FBits[0], Result[0], Length(FBits));

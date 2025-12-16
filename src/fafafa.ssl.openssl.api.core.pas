@@ -5,6 +5,8 @@ unit fafafa.ssl.openssl.api.core;
 interface
 
 uses
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   SysUtils, DynLibs, ctypes,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.consts;
@@ -622,6 +624,7 @@ var
   SSL_SESSION_get_protocol_version: TSSL_SESSION_get_protocol_version = nil;
   SSL_SESSION_get0_cipher: TSSL_SESSION_get0_cipher = nil;
   SSL_SESSION_get0_peer: TSSL_SESSION_get0_peer = nil;
+  SSL_SESSION_is_resumable: TSSL_SESSION_is_resumable = nil;
   
   // State and version functions
   SSL_get_state: TSSL_get_state = nil;
@@ -717,12 +720,12 @@ begin
       LoadedOpenSSLVersion := sslVersion_1_1;
     end;
   else
-    raise Exception.Create('Unknown OpenSSL version requested');
+    raise ESSLException.Create('Unknown OpenSSL version requested');
   end;
   
   // Try to load the specified version
   if not TryLoadOpenSSLLibraries(CryptoLib, SSLLib) then
-    raise Exception.CreateFmt('Failed to load OpenSSL %s libraries: %s and %s', 
+    raise ESSLException.CreateFmt('Failed to load OpenSSL %s libraries: %s and %s', 
       [GetOpenSSLVersionString, CryptoLib, SSLLib]);
 end;
 
@@ -735,18 +738,16 @@ begin
   if TryLoadOpenSSLLibraries(LIBCRYPTO_3, LIBSSL_3) then
   begin
     LoadedOpenSSLVersion := sslVersion_3_0;
-    WriteLn('Loaded OpenSSL 3.x');
   end
   // Fall back to OpenSSL 1.1.x
   else if TryLoadOpenSSLLibraries(LIBCRYPTO_1_1, LIBSSL_1_1) then
   begin
     LoadedOpenSSLVersion := sslVersion_1_1;
-    WriteLn('Loaded OpenSSL 1.1.x (fallback)');
   end
   else
   begin
     // Both versions failed
-    raise Exception.Create(
+    raise ESSLException.Create(
       'Failed to load any OpenSSL library. Tried:' + sLineBreak +
       '  - OpenSSL 3.x: ' + LIBCRYPTO_3 + ', ' + LIBSSL_3 + sLineBreak +
       '  - OpenSSL 1.1.x: ' + LIBCRYPTO_1_1 + ', ' + LIBSSL_1_1
@@ -914,6 +915,7 @@ begin
   SSL_SESSION_get_protocol_version := TSSL_SESSION_get_protocol_version(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_get_protocol_version'));
   SSL_SESSION_get0_cipher := TSSL_SESSION_get0_cipher(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_get0_cipher'));
   SSL_SESSION_get0_peer := TSSL_SESSION_get0_peer(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_get0_peer'));
+  SSL_SESSION_is_resumable := TSSL_SESSION_is_resumable(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_is_resumable'));
   
   // State and version functions
   SSL_get_state := TSSL_get_state(GetProcedureAddress(LibSSLHandle, 'SSL_get_state'));

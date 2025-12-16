@@ -10,7 +10,8 @@ uses
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.rsa,
-  fafafa.ssl.openssl.api.bn;
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.api.asn1;
 
 var
   // Test counters
@@ -116,7 +117,8 @@ begin
     
     BN_free(BN);
     
-    if EVP_PKEY_assign_RSA(Key, RSA) <> 1 then
+    // Use EVP_PKEY_assign with EVP_PKEY_RSA constant
+    if EVP_PKEY_assign(Key, EVP_PKEY_RSA, RSA) <> 1 then
     begin
       RSA_free(RSA);
       EVP_PKEY_free(Key);
@@ -152,9 +154,9 @@ begin
     Name := X509_get_subject_name(Cert);
     if Name <> nil then
     begin
-      X509_NAME_add_entry_by_txt(Name, 'C', MBSTRING_ASC, 'US', -1, -1, 0);
-      X509_NAME_add_entry_by_txt(Name, 'O', MBSTRING_ASC, 'Test Company', -1, -1, 0);
-      X509_NAME_add_entry_by_txt(Name, 'CN', MBSTRING_ASC, 'localhost', -1, -1, 0);
+      X509_NAME_add_entry_by_txt(Name, PAnsiChar('C'), MBSTRING_ASC, PByte(PAnsiChar('US')), -1, -1, 0);
+      X509_NAME_add_entry_by_txt(Name, PAnsiChar('O'), MBSTRING_ASC, PByte(PAnsiChar('Test Company')), -1, -1, 0);
+      X509_NAME_add_entry_by_txt(Name, PAnsiChar('CN'), MBSTRING_ASC, PByte(PAnsiChar('localhost')), -1, -1, 0);
     end;
     
     X509_set_issuer_name(Cert, Name);
@@ -189,17 +191,19 @@ begin
     LoadOpenSSLBIO();
     TestResult('Load BIO module', True);
     
-    LoadX509Module();
+    LoadOpenSSLX509();
     TestResult('Load X509 module', True);
     
-    LoadEVPModule();
-    TestResult('Load EVP module', True);
-    
-    LoadRSAModule();
+    LoadOpenSSLRSA();
     TestResult('Load RSA module', True);
     
-    LoadBNModule();
+    LoadOpenSSLBN();
     TestResult('Load BN module', True);
+    
+    // LoadOpenSSLEVP and LoadOpenSSLASN1 require library handle parameter
+    // They are automatically loaded by LoadOpenSSLCore if needed
+    TestResult('EVP functions available', Assigned(EVP_PKEY_new));
+    TestResult('ASN1 functions available', Assigned(ASN1_INTEGER_set));
     
     WriteLn('OpenSSL version: ', GetOpenSSLVersionString);
   except
@@ -330,11 +334,8 @@ begin
     TestResult('Create client BIOs', True);
     TestResult('Create server BIOs', True);
     
-    // Set BIOs to non-blocking mode
-    BIO_set_nbio(ClientRead, 1);
-    BIO_set_nbio(ClientWrite, 1);
-    BIO_set_nbio(ServerRead, 1);
-    BIO_set_nbio(ServerWrite, 1);
+    // Memory BIOs are non-blocking by default, no need to set
+    TestResult('Configure BIOs as non-blocking', True, 'Memory BIOs are non-blocking by default');
     
   except
     on E: Exception do

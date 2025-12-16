@@ -244,11 +244,12 @@ begin
   
   // 加载 PKCS12 函数
   PKCS12_new := TPKCS12_new(GetProcAddress(ALibCrypto, 'PKCS12_new'));
-  PKCS12_free := TPKCS12_free(GetProcAddress(ALibCrypto, 'PKCS12_free'));
   PKCS12_create := TPKCS12_create(GetProcAddress(ALibCrypto, 'PKCS12_create'));
   PKCS12_parse := TPKCS12_parse(GetProcAddress(ALibCrypto, 'PKCS12_parse'));
   d2i_PKCS12_bio := Td2i_PKCS12_bio(GetProcAddress(ALibCrypto, 'd2i_PKCS12_bio'));
   i2d_PKCS12_bio := Ti2d_PKCS12_bio(GetProcAddress(ALibCrypto, 'i2d_PKCS12_bio'));
+  PKCS12_free := TPKCS12_free(GetProcAddress(ALibCrypto, 'PKCS12_free'));
+  
   d2i_PKCS12_fp := Td2i_PKCS12_fp(GetProcAddress(ALibCrypto, 'd2i_PKCS12_fp'));
   i2d_PKCS12_fp := Ti2d_PKCS12_fp(GetProcAddress(ALibCrypto, 'i2d_PKCS12_fp'));
   PKCS12_gen_mac := TPKCS12_gen_mac(GetProcAddress(ALibCrypto, 'PKCS12_gen_mac'));

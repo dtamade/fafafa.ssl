@@ -206,49 +206,49 @@ begin
   if ALibHandle = 0 then Exit;
   
   // Load SHA-1 functions
-  SHA1_Init := GetProcAddress(ALibHandle, 'SHA1_Init');
-  SHA1_Update := GetProcAddress(ALibHandle, 'SHA1_Update');
-  SHA1_Final := GetProcAddress(ALibHandle, 'SHA1_Final');
-  SHA1 := GetProcAddress(ALibHandle, 'SHA1');
-  SHA1_Transform := GetProcAddress(ALibHandle, 'SHA1_Transform');
+  Pointer(SHA1_Init) := GetProcAddress(ALibHandle, 'SHA1_Init');
+  Pointer(SHA1_Update) := GetProcAddress(ALibHandle, 'SHA1_Update');
+  Pointer(SHA1_Final) := GetProcAddress(ALibHandle, 'SHA1_Final');
+  Pointer(SHA1) := GetProcAddress(ALibHandle, 'SHA1');
+  Pointer(SHA1_Transform) := GetProcAddress(ALibHandle, 'SHA1_Transform');
   
   // Load SHA-224 functions
-  SHA224_Init := GetProcAddress(ALibHandle, 'SHA224_Init');
-  SHA224_Update := GetProcAddress(ALibHandle, 'SHA224_Update');
-  SHA224_Final := GetProcAddress(ALibHandle, 'SHA224_Final');
-  SHA224 := GetProcAddress(ALibHandle, 'SHA224');
+  Pointer(SHA224_Init) := GetProcAddress(ALibHandle, 'SHA224_Init');
+  Pointer(SHA224_Update) := GetProcAddress(ALibHandle, 'SHA224_Update');
+  Pointer(SHA224_Final) := GetProcAddress(ALibHandle, 'SHA224_Final');
+  Pointer(SHA224) := GetProcAddress(ALibHandle, 'SHA224');
   
   // Load SHA-256 functions
-  SHA256_Init := GetProcAddress(ALibHandle, 'SHA256_Init');
-  SHA256_Update := GetProcAddress(ALibHandle, 'SHA256_Update');
-  SHA256_Final := GetProcAddress(ALibHandle, 'SHA256_Final');
-  SHA256 := GetProcAddress(ALibHandle, 'SHA256');
-  SHA256_Transform := GetProcAddress(ALibHandle, 'SHA256_Transform');
+  Pointer(SHA256_Init) := GetProcAddress(ALibHandle, 'SHA256_Init');
+  Pointer(SHA256_Update) := GetProcAddress(ALibHandle, 'SHA256_Update');
+  Pointer(SHA256_Final) := GetProcAddress(ALibHandle, 'SHA256_Final');
+  Pointer(SHA256) := GetProcAddress(ALibHandle, 'SHA256');
+  Pointer(SHA256_Transform) := GetProcAddress(ALibHandle, 'SHA256_Transform');
   
   // Load SHA-384 functions
-  SHA384_Init := GetProcAddress(ALibHandle, 'SHA384_Init');
-  SHA384_Update := GetProcAddress(ALibHandle, 'SHA384_Update');
-  SHA384_Final := GetProcAddress(ALibHandle, 'SHA384_Final');
-  SHA384 := GetProcAddress(ALibHandle, 'SHA384');
+  Pointer(SHA384_Init) := GetProcAddress(ALibHandle, 'SHA384_Init');
+  Pointer(SHA384_Update) := GetProcAddress(ALibHandle, 'SHA384_Update');
+  Pointer(SHA384_Final) := GetProcAddress(ALibHandle, 'SHA384_Final');
+  Pointer(SHA384) := GetProcAddress(ALibHandle, 'SHA384');
   
   // Load SHA-512 functions
-  SHA512_Init := GetProcAddress(ALibHandle, 'SHA512_Init');
-  SHA512_Update := GetProcAddress(ALibHandle, 'SHA512_Update');
-  SHA512_Final := GetProcAddress(ALibHandle, 'SHA512_Final');
-  SHA512 := GetProcAddress(ALibHandle, 'SHA512');
-  SHA512_Transform := GetProcAddress(ALibHandle, 'SHA512_Transform');
+  Pointer(SHA512_Init) := GetProcAddress(ALibHandle, 'SHA512_Init');
+  Pointer(SHA512_Update) := GetProcAddress(ALibHandle, 'SHA512_Update');
+  Pointer(SHA512_Final) := GetProcAddress(ALibHandle, 'SHA512_Final');
+  Pointer(SHA512) := GetProcAddress(ALibHandle, 'SHA512');
+  Pointer(SHA512_Transform) := GetProcAddress(ALibHandle, 'SHA512_Transform');
   
   // Load SHA-512/224 functions
-  SHA512_224_Init := GetProcAddress(ALibHandle, 'SHA512_224_Init');
-  SHA512_224_Update := GetProcAddress(ALibHandle, 'SHA512_224_Update');
-  SHA512_224_Final := GetProcAddress(ALibHandle, 'SHA512_224_Final');
-  SHA512_224 := GetProcAddress(ALibHandle, 'SHA512_224');
+  Pointer(SHA512_224_Init) := GetProcAddress(ALibHandle, 'SHA512_224_Init');
+  Pointer(SHA512_224_Update) := GetProcAddress(ALibHandle, 'SHA512_224_Update');
+  Pointer(SHA512_224_Final) := GetProcAddress(ALibHandle, 'SHA512_224_Final');
+  Pointer(SHA512_224) := GetProcAddress(ALibHandle, 'SHA512_224');
   
   // Load SHA-512/256 functions
-  SHA512_256_Init := GetProcAddress(ALibHandle, 'SHA512_256_Init');
-  SHA512_256_Update := GetProcAddress(ALibHandle, 'SHA512_256_Update');
-  SHA512_256_Final := GetProcAddress(ALibHandle, 'SHA512_256_Final');
-  SHA512_256 := GetProcAddress(ALibHandle, 'SHA512_256');
+  Pointer(SHA512_256_Init) := GetProcAddress(ALibHandle, 'SHA512_256_Init');
+  Pointer(SHA512_256_Update) := GetProcAddress(ALibHandle, 'SHA512_256_Update');
+  Pointer(SHA512_256_Final) := GetProcAddress(ALibHandle, 'SHA512_256_Final');
+  Pointer(SHA512_256) := GetProcAddress(ALibHandle, 'SHA512_256');
   
   GSHALoaded := True;
   Result := True;

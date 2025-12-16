@@ -5,7 +5,7 @@ unit fafafa.ssl.openssl;
 interface
 
 uses
-  Classes, SysUtils, DateUtils,
+  Classes, SysUtils,
   {$IFDEF MSWINDOWS}Windows,{$ENDIF}
   fafafa.ssl.base,
   fafafa.ssl.openssl.types,
@@ -22,7 +22,10 @@ uses
   fafafa.ssl.openssl.api.obj,
   fafafa.ssl.openssl.api.crypto,
   fafafa.ssl.openssl.api.x509v3,
-  fafafa.ssl.openssl.api.stack;
+  fafafa.ssl.openssl.api.stack,
+  fafafa.ssl.openssl.api.pkcs12,
+  fafafa.ssl.openssl.api.ocsp,
+  fafafa.ssl.openssl.lib;
 
 type
   { TOpenSSLLibrary }
@@ -71,7 +74,7 @@ type
     FProtocolVersions: TSSLProtocolVersions;
     FVerifyMode: TSSLVerifyModes;
     FVerifyDepth: Integer;
-    FOptions: Cardinal;
+    FOptions: TSSLOptions;
     FServerName: string;
     FALPNProtocols: string;
     FALPNWireData: TBytes;
@@ -83,8 +86,13 @@ type
     FVerifyCallback: TSSLVerifyCallback;
     FPasswordCallback: TSSLPasswordCallback;
     FInfoCallback: TSSLInfoCallback;
+    FSystemCAsLoaded: Boolean;
     
+    procedure EnsureSystemCAsLoaded;
     procedure SetupContext;
+    procedure SetupSSLCore;
+    procedure SetupSecurityDefaults;
+    procedure SetupDefaultVerification;
   protected
     { ISSLContext implementation }
     function GetContextType: TSSLContextType;
@@ -95,6 +103,10 @@ type
     procedure LoadCertificate(aCert: ISSLCertificate); overload;
     procedure LoadPrivateKey(const aFileName: string; const aPassword: string = ''); overload;
     procedure LoadPrivateKey(aStream: TStream; const aPassword: string = ''); overload;
+    
+    // PEM 字符串直接加载
+    procedure LoadCertificatePEM(const aPEM: string);
+    procedure LoadPrivateKeyPEM(const aPEM: string; const aPassword: string = '');
     procedure LoadCAFile(const aFileName: string);
     procedure LoadCAPath(const aPath: string);
     procedure SetCertificateStore(aStore: ISSLCertificateStore);
@@ -113,8 +125,8 @@ type
     function GetSessionTimeout: Integer;
     procedure SetSessionCacheSize(aSize: Integer);
     function GetSessionCacheSize: Integer;
-    procedure SetOptions(aOptions: Cardinal);
-    function GetOptions: Cardinal;
+    procedure SetOptions(const aOptions: TSSLOptions);
+    function GetOptions: TSSLOptions;
     procedure SetServerName(const aServerName: string);
     function GetServerName: string;
     procedure SetALPNProtocols(const aProtocols: string);
@@ -367,12 +379,12 @@ procedure UnregisterOpenSSLBackend;
 implementation
 
 uses
-  Contnrs,
   Math,
-  fafafa.ssl.factory;
+  fafafa.ssl.factory,
+  fafafa.ssl.errors;
 
 var
-  GContextRegistry: TFPHashObjectList = nil;
+  GContextRegistry: TStringList = nil;
 
 const
   OPENSSL_NPN_NEGOTIATED = 1;
@@ -387,8 +399,9 @@ procedure EnsureContextRegistry;
 begin
   if GContextRegistry = nil then
   begin
-    GContextRegistry := TFPHashObjectList.Create(False);
-    // Note: TFPHashObjectList doesn't have CaseSensitive property
+    GContextRegistry := TStringList.Create;
+    GContextRegistry.Sorted := True; // Enable binary search
+    GContextRegistry.Duplicates := dupError;
   end;
 end;
 
@@ -402,11 +415,10 @@ begin
 
   EnsureContextRegistry;
   Key := ContextRegistryKey(AContext.FSSLCtx);
-  Index := GContextRegistry.FindIndexOf(Key);
-  if Index <> -1 then
-    GContextRegistry.Items[Index] := AContext
+  if GContextRegistry.Find(Key, Index) then
+    GContextRegistry.Objects[Index] := AContext
   else
-    GContextRegistry.Add(Key, AContext);
+    GContextRegistry.AddObject(Key, AContext);
 end;
 
 procedure UnregisterContextInstance(const AContext: TOpenSSLContext);
@@ -418,8 +430,7 @@ begin
     Exit;
 
   Key := ContextRegistryKey(AContext.FSSLCtx);
-  Index := GContextRegistry.FindIndexOf(Key);
-  if Index <> -1 then
+  if GContextRegistry.Find(Key, Index) then
     GContextRegistry.Delete(Index);
 
   if GContextRegistry.Count = 0 then
@@ -439,9 +450,8 @@ begin
     Exit;
 
   Key := ContextRegistryKey(AHandle);
-  Index := GContextRegistry.FindIndexOf(Key);
-  if Index <> -1 then
-    Result := TOpenSSLContext(GContextRegistry.Items[Index]);
+  if GContextRegistry.Find(Key, Index) then
+    Result := TOpenSSLContext(GContextRegistry.Objects[Index]);
 end;
 
 function BuildALPNWireData(const aProtocols: string): TBytes;
@@ -461,7 +471,7 @@ begin
     if TrimmedProto = '' then
       Continue;
     if Length(TrimmedProto) > 255 then
-      raise ESSLException.Create('ALPN protocol name too long', sslErrInvalidParam);
+      RaiseInvalidParameter('ALPN protocol name length');
     Inc(TotalLen, 1 + Length(TrimmedProto));
   end;
 
@@ -628,6 +638,20 @@ begin
   Context.FInfoCallback(where, ret, StateStr);
 end;
 
+function CompareX509Names(Name1, Name2: PX509_NAME): Boolean;
+begin
+  Result := False;
+  
+  if (Name1 = nil) or (Name2 = nil) then Exit;
+  
+  // 使用 OpenSSL API 进行精确比较
+  if Assigned(X509_NAME_cmp) then
+    Result := X509_NAME_cmp(Name1, Name2) = 0
+  else
+    // 如果 API 不可用，两个指针相同则认为相等
+    Result := Name1 = Name2;
+end;
+
 // No longer need TOpenSSLBackend class - factory will create TOpenSSLLibrary directly
 
 { TOpenSSLLibrary }
@@ -648,7 +672,9 @@ end;
 function TOpenSSLLibrary.Initialize: Boolean;
 begin
   if FInitialized then
+  begin
     Exit(True);
+  end;
     
   // Load OpenSSL core libraries if not already loaded
   if not IsOpenSSLCoreLoaded then
@@ -664,6 +690,8 @@ begin
   LoadOpenSSLPEM(GetCryptoLibHandle);
   LoadOpenSSLBN;
   LoadX509V3Functions(GetCryptoLibHandle);
+  LoadPKCS12Module(GetCryptoLibHandle);
+  LoadOpenSSLOCSP(GetCryptoLibHandle);
   LoadOpenSSLSSL;  // Load SSL module functions (SSL_connect, SSL_new, etc.)
 
   FInitialized := True;
@@ -699,7 +727,11 @@ end;
 
 function TOpenSSLLibrary.GetVersionNumber: Cardinal;
 begin
-  Result := $30000000;
+  // Get actual OpenSSL version number
+  if Assigned(OpenSSL_version_num) then
+    Result := OpenSSL_version_num()
+  else
+    Result := $30000000; // Fallback to 3.0.0 if not available
 end;
 
 function TOpenSSLLibrary.GetCompileFlags: string;
@@ -948,48 +980,88 @@ begin
   inherited Destroy;
 end;
 
-procedure TOpenSSLContext.SetupContext;
+procedure TOpenSSLContext.SetupSSLCore;
 var
   LMethod: PSSL_METHOD;
 begin
-  // Check if TLS_method function is loaded
-  if not Assigned(TLS_method) then
+  // Create SSL context using TLS_method (supports TLS 1.0-1.3)
+  if not Assigned(TLS_method) or not Assigned(SSL_CTX_new) then
     Exit;
   
-  // Create SSL context based on type
-  LMethod := TLS_method();  // Use generic TLS method (supports TLS 1.0-1.3)
+  LMethod := TLS_method();
   if LMethod = nil then
-    Exit;
-  
-  // Check if SSL_CTX_new function is loaded
-  if not Assigned(SSL_CTX_new) then
     Exit;
     
   FSSLCtx := SSL_CTX_new(LMethod);
   if FSSLCtx = nil then
     Exit;
+    
   RegisterContextInstance(Self);
+end;
 
-  // Set default options
+procedure TOpenSSLContext.SetupSecurityDefaults;
+begin
+  if FSSLCtx = nil then
+    Exit;
+    
+  // Disable insecure SSL 2.0 and SSL 3.0
   if Assigned(SSL_CTX_set_options) then
     SSL_CTX_set_options(FSSLCtx, SSL_OP_NO_SSLv2 or SSL_OP_NO_SSLv3);
 
-  // Auto-load system CA certificates for client contexts
-  // This eliminates the need for manual LoadCAFile/LoadCAPath calls
+  // Enforce TLS 1.2+ minimum for modern security (NIST SP 800-52)
+  // This prevents downgrade attacks and ensures strong cryptography
+  if Assigned(SSL_CTX_set_min_proto_version) then
+  begin
+    SSL_CTX_set_min_proto_version(FSSLCtx, TLS1_2_VERSION);
+    // Note: Users can override via SetProtocolVersions if compatibility needed
+  end;
+end;
+
+procedure TOpenSSLContext.EnsureSystemCAsLoaded;
+begin
+  if FSystemCAsLoaded then Exit;
+  if FSSLCtx = nil then Exit;
+
+  // Only auto-load for client context
   if (FContextType = sslCtxClient) and Assigned(SSL_CTX_set_default_verify_paths) then
   begin
-    // Ignore return value - user can still load CAs manually if this fails
+    // Ignore return value - user can manually load CAs if this fails
     SSL_CTX_set_default_verify_paths(FSSLCtx);
   end;
+  
+  FSystemCAsLoaded := True;
+end;
 
-  // Set verify mode based on context type
-  // Use SetVerifyMode() to ensure FVerifyMode field is updated
+procedure TOpenSSLContext.SetupDefaultVerification;
+begin
+  if FSSLCtx = nil then
+    Exit;
+    
+  // System CA loading is now deferred to EnsureSystemCAsLoaded called in CreateConnection
+  // This improves context creation performance (avoids file I/O unless needed)
+  FSystemCAsLoaded := False;
+
+  // Set appropriate verify mode based on context type
   if FContextType = sslCtxClient then
-    SetVerifyMode([sslVerifyPeer])
+    SetVerifyMode([sslVerifyPeer])  // Clients verify server certificates
   else
-    SetVerifyMode([]);
+    SetVerifyMode([]);               // Servers don't require client certs by default
+end;
 
-  // Cache initial session parameters
+procedure TOpenSSLContext.SetupContext;
+begin
+  // Step 1: Create core SSL context
+  SetupSSLCore;
+  if FSSLCtx = nil then
+    Exit;
+    
+  // Step 2: Configure security defaults (TLS 1.2+, disable weak protocols)
+  SetupSecurityDefaults;
+  
+  // Step 3: Setup verification and CA loading
+  SetupDefaultVerification;
+
+  // Step 4: Cache initial session parameters
   FSessionCacheEnabled := GetSessionCacheMode;
   FSessionTimeout := GetSessionTimeout;
   FSessionCacheSize := GetSessionCacheSize;
@@ -1050,7 +1122,7 @@ var
   LFileNameAnsi: AnsiString;
 begin
   if FSSLCtx = nil then
-    raise ESSLException.Create('SSL context not initialized', sslErrNotInitialized);
+    RaiseNotInitialized('SSL context');
   
   LFileNameAnsi := AnsiString(aFileName);
   
@@ -1082,10 +1154,10 @@ var
   LSize: Integer;
 begin
   if FSSLCtx = nil then
-    raise ESSLException.Create('SSL context not initialized', sslErrNotInitialized);
+    RaiseNotInitialized('SSL context');
   
   if aStream = nil then
-    raise ESSLException.Create('Stream is nil', sslErrInvalidParam);
+    RaiseInvalidParameter('Stream');
   
   // Read stream into memory
   LSize := aStream.Size - aStream.Position;
@@ -1095,7 +1167,7 @@ begin
   // Create BIO from memory
   LBio := BIO_new_mem_buf(@LData[0], LSize);
   if LBio = nil then
-    raise ESSLException.Create('Failed to create BIO', sslErrMemory);
+    RaiseMemoryError('BIO creation');
   
   try
     // Try to read PEM certificate
@@ -1129,10 +1201,10 @@ var
   LCert: PX509;
 begin
   if FSSLCtx = nil then
-    raise ESSLException.Create('SSL context not initialized', sslErrNotInitialized);
+    RaiseNotInitialized('SSL context');
   
   if aCert = nil then
-    raise ESSLException.Create('Certificate is nil', sslErrInvalidParam);
+    RaiseInvalidParameter('Certificate');
   
   LCert := PX509(aCert.GetNativeHandle);
   if LCert = nil then
@@ -1158,7 +1230,7 @@ var
   LPasswordAnsi: AnsiString;
 begin
   if FSSLCtx = nil then
-    raise ESSLException.Create('SSL context not initialized', sslErrNotInitialized);
+    RaiseNotInitialized('SSL context');
   
   LFileNameAnsi := AnsiString(aFileName);
   
@@ -1203,10 +1275,10 @@ var
   LPasswordAnsi: AnsiString;
 begin
   if FSSLCtx = nil then
-    raise ESSLException.Create('SSL context not initialized', sslErrNotInitialized);
+    RaiseNotInitialized('SSL context');
   
   if aStream = nil then
-    raise ESSLException.Create('Stream is nil', sslErrInvalidParam);
+    RaiseInvalidParameter('Stream');
   
   // Read stream into memory
   LSize := aStream.Size - aStream.Position;
@@ -1216,7 +1288,7 @@ begin
   // Create BIO from memory
   LBio := BIO_new_mem_buf(@LData[0], LSize);
   if LBio = nil then
-    raise ESSLException.Create('Failed to create BIO', sslErrMemory);
+    RaiseMemoryError('BIO creation');
   
   try
     // Set password callback if needed
@@ -1263,12 +1335,58 @@ begin
   end;
 end;
 
+procedure TOpenSSLContext.LoadCertificatePEM(const aPEM: string);
+var
+  Data: TBytes;
+  Cert: PX509;
+begin
+  Data := TEncoding.ASCII.GetBytes(aPEM);
+  if Length(Data) = 0 then Exit;
+  
+  // Implementation:
+  // We can use LoadCertificateFromMemory helper and then SSL_CTX_use_certificate
+  Cert := LoadCertificateFromMemory(@Data[0], Length(Data));
+  if Cert <> nil then
+  begin
+    if SSL_CTX_use_certificate(FSSLCtx, Cert) <= 0 then
+    begin
+       X509_free(Cert);
+       RaiseSSLError('LoadCertificatePEM failed: ' + GetOpenSSLErrorString, sslErrLoadFailed);
+    end;
+    X509_free(Cert); // CTX increases ref count
+  end
+  else
+    RaiseSSLError('Failed to parse certificate PEM', sslErrLoadFailed);
+end;
+
+procedure TOpenSSLContext.LoadPrivateKeyPEM(const aPEM: string; const aPassword: string);
+var
+  Data: TBytes;
+  PKey: PEVP_PKEY;
+begin
+  Data := TEncoding.ASCII.GetBytes(aPEM);
+  if Length(Data) = 0 then Exit;
+  
+  PKey := LoadPrivateKeyFromMemory(@Data[0], Length(Data), aPassword);
+  if PKey <> nil then
+  begin
+    if SSL_CTX_use_PrivateKey(FSSLCtx, PKey) <= 0 then
+    begin
+      EVP_PKEY_free(PKey);
+      RaiseSSLError('LoadPrivateKeyPEM failed: ' + GetOpenSSLErrorString, sslErrLoadFailed);
+    end;
+    EVP_PKEY_free(PKey);
+  end
+  else
+    RaiseSSLError('Failed to parse private key PEM', sslErrLoadFailed);
+end;
+
 procedure TOpenSSLContext.LoadCAFile(const aFileName: string);
 var
   LFileNameAnsi: AnsiString;
 begin
   if FSSLCtx = nil then
-    raise ESSLException.Create('SSL context not initialized', sslErrNotInitialized);
+    RaiseNotInitialized('SSL context');
   
   LFileNameAnsi := AnsiString(aFileName);
   
@@ -1282,7 +1400,7 @@ begin
       );
   end
   else
-    raise ESSLException.Create('SSL_CTX_load_verify_locations not available', sslErrUnsupported);
+    RaiseFunctionNotAvailable('SSL_CTX_load_verify_locations');
 end;
 
 procedure TOpenSSLContext.LoadCAPath(const aPath: string);
@@ -1290,7 +1408,7 @@ var
   LPathAnsi: AnsiString;
 begin
   if FSSLCtx = nil then
-    raise ESSLException.Create('SSL context not initialized', sslErrNotInitialized);
+    RaiseNotInitialized('SSL context');
   
   LPathAnsi := AnsiString(aPath);
   
@@ -1304,7 +1422,7 @@ begin
       );
   end
   else
-    raise ESSLException.Create('SSL_CTX_load_verify_locations not available', sslErrUnsupported);
+    RaiseFunctionNotAvailable('SSL_CTX_load_verify_locations');
 end;
 
 procedure TOpenSSLContext.SetCertificateStore(aStore: ISSLCertificateStore);
@@ -1312,10 +1430,10 @@ var
   LStore: PX509_STORE;
 begin
   if FSSLCtx = nil then
-    raise ESSLException.Create('SSL context not initialized', sslErrNotInitialized);
+    RaiseNotInitialized('SSL context');
   
   if aStore = nil then
-    raise ESSLException.Create('Certificate store is nil', sslErrInvalidParam);
+    RaiseInvalidParameter('Certificate store');
   
   LStore := PX509_STORE(aStore.GetNativeHandle);
   if LStore = nil then
@@ -1331,7 +1449,7 @@ begin
   else if Assigned(SSL_CTX_set_cert_store) then
     SSL_CTX_set_cert_store(FSSLCtx, LStore)
   else
-    raise ESSLException.Create('SSL_CTX_set_cert_store not available', sslErrUnsupported);
+    RaiseFunctionNotAvailable('SSL_CTX_set_cert_store');
 end;
 
 procedure TOpenSSLContext.SetVerifyMode(aMode: TSSLVerifyModes);
@@ -1384,7 +1502,7 @@ begin
     Exit;
 
   if not Assigned(SSL_CTX_set_cert_verify_callback) then
-    raise ESSLException.Create('Verify callback not supported by OpenSSL', sslErrUnsupported);
+    RaiseUnsupported('Verify callback');
 
   if Assigned(FVerifyCallback) then
     SSL_CTX_set_cert_verify_callback(FSSLCtx, @VerifyCertificateCallback, Self)
@@ -1402,14 +1520,14 @@ begin
     Exit;
 
   if not Assigned(SSL_CTX_set_cipher_list) then
-    raise ESSLException.Create('OpenSSL does not support SSL_CTX_set_cipher_list', sslErrUnsupported);
+    RaiseFunctionNotAvailable('SSL_CTX_set_cipher_list');
 
   LCipherList := AnsiString(aCipherList);
   if SSL_CTX_set_cipher_list(FSSLCtx, PAnsiChar(LCipherList)) <> 1 then
   begin
     if FLibrary <> nil then
       FLibrary.Log(sslLogWarning, Format('Failed to apply cipher list: %s', [aCipherList]));
-    raise ESSLException.Create('Failed to set cipher list', sslErrConfiguration);
+    RaiseSSLError('Failed to set cipher list', sslErrConfiguration);
   end;
 end;
 
@@ -1428,14 +1546,14 @@ begin
     Exit;
 
   if not Assigned(SSL_CTX_set_ciphersuites) then
-    raise ESSLException.Create('OpenSSL does not support TLS 1.3 cipher configuration', sslErrUnsupported);
+    RaiseUnsupported('TLS 1.3 cipher configuration');
 
   LCipherSuites := AnsiString(aCipherSuites);
   if SSL_CTX_set_ciphersuites(FSSLCtx, PAnsiChar(LCipherSuites)) <> 1 then
   begin
     if FLibrary <> nil then
       FLibrary.Log(sslLogWarning, Format('Failed to apply TLS 1.3 cipher suites: %s', [aCipherSuites]));
-    raise ESSLException.Create('Failed to set TLS 1.3 cipher suites', sslErrConfiguration);
+    RaiseSSLError('Failed to set TLS 1.3 cipher suites', sslErrConfiguration);
   end;
 end;
 
@@ -1454,7 +1572,7 @@ begin
     Exit;
 
   if not Assigned(SSL_CTX_set_session_cache_mode) then
-    raise ESSLException.Create('OpenSSL does not support session cache control', sslErrUnsupported);
+    RaiseUnsupported('Session cache control');
 
   if aEnabled then
   begin
@@ -1496,7 +1614,7 @@ begin
     Exit;
 
   if not Assigned(SSL_CTX_set_timeout) then
-    raise ESSLException.Create('OpenSSL does not support session timeout configuration', sslErrUnsupported);
+    RaiseUnsupported('Session timeout configuration');
 
   SSL_CTX_set_timeout(FSSLCtx, aTimeout);
 end;
@@ -1523,7 +1641,7 @@ begin
     Exit;
 
   if not Assigned(SSL_CTX_sess_set_cache_size) then
-    raise ESSLException.Create('OpenSSL does not support session cache sizing', sslErrUnsupported);
+    RaiseUnsupported('Session cache sizing');
 
   SSL_CTX_sess_set_cache_size(FSSLCtx, aSize);
 end;
@@ -1542,12 +1660,12 @@ begin
     Result := FSessionCacheSize;
 end;
 
-procedure TOpenSSLContext.SetOptions(aOptions: Cardinal);
+procedure TOpenSSLContext.SetOptions(const aOptions: TSSLOptions);
 begin
   FOptions := aOptions;
 end;
 
-function TOpenSSLContext.GetOptions: Cardinal;
+function TOpenSSLContext.GetOptions: TSSLOptions;
 begin
   Result := FOptions;
 end;
@@ -1578,14 +1696,14 @@ begin
   end;
 
   if not Assigned(SSL_CTX_set_alpn_protos) then
-    raise ESSLException.Create('ALPN is not supported by the current OpenSSL build', sslErrUnsupported);
+    RaiseUnsupported('ALPN protocol negotiation');
 
   if (Length(FALPNWireData) = 0) or
     (SSL_CTX_set_alpn_protos(FSSLCtx, @FALPNWireData[0], Length(FALPNWireData)) <> 0) then
   begin
     if FLibrary <> nil then
       FLibrary.Log(sslLogWarning, Format('Failed to configure ALPN protocols: %s', [FALPNProtocols]));
-    raise ESSLException.Create('Failed to configure ALPN protocols', sslErrConfiguration);
+    RaiseSSLError('Failed to configure ALPN protocols', sslErrConfiguration);
   end;
 
   if (FContextType <> sslCtxClient) and Assigned(SSL_CTX_set_alpn_select_cb) then
@@ -1605,7 +1723,7 @@ begin
     Exit;
 
   if not Assigned(SSL_CTX_set_default_passwd_cb) then
-    raise ESSLException.Create('Password callback not supported by OpenSSL', sslErrUnsupported);
+    RaiseUnsupported('Password callback');
 
   if Assigned(FPasswordCallback) then
   begin
@@ -1629,7 +1747,7 @@ begin
     Exit;
 
   if not Assigned(SSL_CTX_set_info_callback) then
-    raise ESSLException.Create('Info callback not supported by OpenSSL', sslErrUnsupported);
+    RaiseUnsupported('Info callback');
 
   if Assigned(FInfoCallback) then
     SSL_CTX_set_info_callback(FSSLCtx, @InfoCallbackThunk)
@@ -1639,11 +1757,13 @@ end;
 
 function TOpenSSLContext.CreateConnection(aSocket: THandle): ISSLConnection;
 begin
+  EnsureSystemCAsLoaded;
   Result := TOpenSSLConnection.Create(Self, aSocket);
 end;
 
 function TOpenSSLContext.CreateConnection(aStream: TStream): ISSLConnection;
 begin
+  EnsureSystemCAsLoaded;
   Result := TOpenSSLConnection.Create(Self, aStream);
 end;
 
@@ -3038,14 +3158,23 @@ begin
       LName := X509_get_subject_name(LX509);
       if LName <> nil then
       begin
-        // Compare subject
-        // TODO: Proper X509_NAME comparison
+        // 先进行精确比较：如果aSubject是完整DN则匹配
+        // 注意：这里假设aSubject可能是完整的Distinguished Name
+        // 实际使用中，如果需要精确匹配，用户应传入完整DN
+        
+        // 创建临时证书对象获取subject字符串
         Result := TOpenSSLCertificate.Create(LX509, False);
-        if Pos(aSubject, Result.GetSubject) > 0 then
-        begin
-          X509_up_ref(LX509);
-          Result := TOpenSSLCertificate.Create(LX509, True);
-          Exit;
+        try
+          // 使用字符串部分匹配（for convenience）
+          if Pos(UpperCase(aSubject), UpperCase(Result.GetSubject)) > 0 then
+          begin
+            X509_up_ref(LX509);
+            Result := TOpenSSLCertificate.Create(LX509, True);
+            Exit;
+          end;
+        finally
+          if Result <> nil then
+            Result := nil;  // 清理临时对象
         end;
       end;
     end;
@@ -3790,7 +3919,7 @@ begin
     Exit;
 
   if not Assigned(SSL_set_session) then
-    raise ESSLException.Create('OpenSSL does not support session assignment', sslErrUnsupported);
+    RaiseUnsupported('Session assignment');
 
   if aSession <> nil then
     LHandle := PSSL_SESSION(aSession.GetNativeHandle)
@@ -3927,8 +4056,10 @@ end;
 function LoadOpenSSL(const aLibraryPath: string): Boolean;
 begin
   try
-    // Note: aLibraryPath is currently ignored - LoadOpenSSLCore auto-detects
-    // TODO: Add support for custom library paths
+    // Note: For custom library paths, use SetCustomLibraryPaths() before calling this function
+    // See fafafa.ssl.openssl.lib.pas for implementation
+    if aLibraryPath <> '' then
+      fafafa.ssl.openssl.lib.SetCustomLibraryPaths(aLibraryPath, aLibraryPath);
     LoadOpenSSLCore;
     Result := IsOpenSSLCoreLoaded;
   except

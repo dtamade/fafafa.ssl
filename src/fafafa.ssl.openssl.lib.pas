@@ -25,9 +25,23 @@ uses
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl,
   fafafa.ssl.openssl.api.err,
-  fafafa.ssl.openssl.api.x509;
+  fafafa.ssl.openssl.api.x509,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.asn1,
+  fafafa.ssl.openssl.api.x509v3,
+  fafafa.ssl.openssl.api.hmac,
+  fafafa.ssl.openssl.api.ts,
+  fafafa.ssl.openssl.api.pkcs12,
+  fafafa.ssl.openssl.api.ocsp,
+  fafafa.ssl.openssl.certificate;
 
 type
+  { TOpenSSLLibraryPaths - 自定义库路径配置 }
+  TOpenSSLLibraryPaths = record
+    CryptoLibPath: string;  // 自定义 libcrypto 路径
+    SSLLibPath: string;     // 自定义 libssl 路径
+  end;
+
   { TOpenSSLLibrary - OpenSSL 库管理类 }
   TOpenSSLLibrary = class(TInterfacedObject, ISSLLibrary)
   private
@@ -95,6 +109,17 @@ type
     function CreateCertificateStore: ISSLCertificateStore;
   end;
 
+{ 全局变量 - 自定义库路径配置 }
+var
+  CustomLibraryPaths: TOpenSSLLibraryPaths;
+  UseCustomPaths: Boolean = False;
+
+{ 全局函数 - 库路径配置 }
+procedure SetCustomLibraryPaths(const ACryptoPath, ASSLPath: string);
+function GetCustomLibraryPaths: TOpenSSLLibraryPaths;
+function IsUsingCustomPaths: Boolean;
+procedure ClearCustomLibraryPaths;
+
 { 全局工厂函数 }
 function CreateOpenSSLLibrary: ISSLLibrary;
 
@@ -102,11 +127,38 @@ implementation
 
 uses
   fafafa.ssl.openssl.context,
-  fafafa.ssl.openssl.certificate,
   fafafa.ssl.openssl.certstore,
-  //fafafa.ssl.openssl.session,  // TODO: 需要完整的 API 声明
+  fafafa.ssl.openssl.session,     // Session API fully implemented
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.factory;
+
+// ============================================================================
+// 全局函数 - 库路径配置
+// ============================================================================
+
+procedure SetCustomLibraryPaths(const ACryptoPath, ASSLPath: string);
+begin
+  CustomLibraryPaths.CryptoLibPath := ACryptoPath;
+  CustomLibraryPaths.SSLLibPath := ASSLPath;
+  UseCustomPaths := (ACryptoPath <> '') or (ASSLPath <> '');
+end;
+
+function GetCustomLibraryPaths: TOpenSSLLibraryPaths;
+begin
+  Result := CustomLibraryPaths;
+end;
+
+function IsUsingCustomPaths: Boolean;
+begin
+  Result := UseCustomPaths;
+end;
+
+procedure ClearCustomLibraryPaths;
+begin
+  CustomLibraryPaths.CryptoLibPath := '';
+  CustomLibraryPaths.SSLLibPath := '';
+  UseCustomPaths := False;
+end;
 
 // ============================================================================
 // 全局工厂函数
@@ -220,6 +272,16 @@ const
     'libcrypto.so.1.1'
   );
   {$ENDIF}
+  {$IFDEF WINDOWS}
+  SSL_LIB_NAMES: array[0..1] of string = (
+    'libssl-3-x64.dll',
+    'libssl-1_1-x64.dll'
+  );
+  CRYPTO_LIB_NAMES: array[0..1] of string = (
+    'libcrypto-3-x64.dll',
+    'libcrypto-1_1-x64.dll'
+  );
+  {$ENDIF}
 var
   i: Integer;
   LibLoaded: Boolean;
@@ -229,15 +291,32 @@ begin
   
   InternalLog(sslLogInfo, 'Loading OpenSSL libraries...');
   
-  // 尝试加载 libcrypto
-  for i := Low(CRYPTO_LIB_NAMES) to High(CRYPTO_LIB_NAMES) do
+  // 1. 尝试使用自定义路径加载 libcrypto
+  if UseCustomPaths and (CustomLibraryPaths.CryptoLibPath <> '') then
   begin
-    FLibCryptoHandle := LoadLibrary(CRYPTO_LIB_NAMES[i]);
+    InternalLog(sslLogInfo, Format('Trying custom libcrypto path: %s', [CustomLibraryPaths.CryptoLibPath]));
+    FLibCryptoHandle := LoadLibrary(CustomLibraryPaths.CryptoLibPath);
     if FLibCryptoHandle <> NilHandle then
     begin
-      InternalLog(sslLogInfo, Format('Loaded %s', [CRYPTO_LIB_NAMES[i]]));
+      InternalLog(sslLogInfo, Format('Loaded libcrypto from custom path: %s', [CustomLibraryPaths.CryptoLibPath]));
       LibLoaded := True;
-      Break;
+    end
+    else
+      InternalLog(sslLogWarning, Format('Failed to load from custom path: %s, falling back to system libraries', [CustomLibraryPaths.CryptoLibPath]));
+  end;
+  
+  // 2. 回退：尝试标准库名称
+  if not LibLoaded then
+  begin
+    for i := Low(CRYPTO_LIB_NAMES) to High(CRYPTO_LIB_NAMES) do
+    begin
+      FLibCryptoHandle := LoadLibrary(CRYPTO_LIB_NAMES[i]);
+      if FLibCryptoHandle <> NilHandle then
+      begin
+        InternalLog(sslLogInfo, Format('Loaded %s', [CRYPTO_LIB_NAMES[i]]));
+        LibLoaded := True;
+        Break;
+      end;
     end;
   end;
   
@@ -248,16 +327,33 @@ begin
     Exit;
   end;
   
-  // 尝试加载 libssl
+  // 3. 尝试使用自定义路径加载 libssl
   LibLoaded := False;
-  for i := Low(SSL_LIB_NAMES) to High(SSL_LIB_NAMES) do
+  if UseCustomPaths and (CustomLibraryPaths.SSLLibPath <> '') then
   begin
-    FLibSSLHandle := LoadLibrary(SSL_LIB_NAMES[i]);
+    InternalLog(sslLogInfo, Format('Trying custom libssl path: %s', [CustomLibraryPaths.SSLLibPath]));
+    FLibSSLHandle := LoadLibrary(CustomLibraryPaths.SSLLibPath);
     if FLibSSLHandle <> NilHandle then
     begin
-      InternalLog(sslLogInfo, Format('Loaded %s', [SSL_LIB_NAMES[i]]));
+      InternalLog(sslLogInfo, Format('Loaded libssl from custom path: %s', [CustomLibraryPaths.SSLLibPath]));
       LibLoaded := True;
-      Break;
+    end
+    else
+      InternalLog(sslLogWarning, Format('Failed to load from custom path: %s, falling back to system libraries', [CustomLibraryPaths.SSLLibPath]));
+  end;
+  
+  // 4. 回退：尝试标准库名称
+  if not LibLoaded then
+  begin
+    for i := Low(SSL_LIB_NAMES) to High(SSL_LIB_NAMES) do
+    begin
+      FLibSSLHandle := LoadLibrary(SSL_LIB_NAMES[i]);
+      if FLibSSLHandle <> NilHandle then
+      begin
+        InternalLog(sslLogInfo, Format('Loaded %s', [SSL_LIB_NAMES[i]]));
+        LibLoaded := True;
+        Break;
+      end;
     end;
   end;
   
@@ -348,6 +444,15 @@ begin
     InternalLog(sslLogInfo, 'Loading OpenSSL API modules...');
     LoadOpenSSLBIO;    // 加载 BIO API (I/O 操作需要)
     LoadOpenSSLX509;   // 加载 X509 API (证书操作需要)
+    LoadEVP(GetCryptoLibHandle);          // 加载 EVP 摘要/加密 API（指纹等功能需要）
+    LoadOpenSSLASN1(GetCryptoLibHandle);  // 加载 ASN1 API（时间与字符串解析需要）
+    LoadX509V3Functions(GetCryptoLibHandle);
+    LoadOpenSSLSSL;    // 加载 SSL 高层 API (状态、ALPN、Cipher 列表等)
+    LoadOpenSSLERR;    // 加载错误处理 API (ERR_get_error 等)
+    LoadOpenSSLHMAC;   // 加载 HMAC API (HKDF 等密钥派生功能需要)
+    LoadTSFunctions;   // 加载 TSA API (时间戳功能需要)
+    LoadPKCS12Module(GetCryptoLibHandle); // 加载 PKCS#12 API
+    LoadOpenSSLOCSP(GetCryptoLibHandle);  // 加载 OCSP API
     
     FInitialized := True;
     InternalLog(sslLogInfo, 'OpenSSL library initialized successfully');
@@ -532,8 +637,38 @@ begin
 end;
 
 function TOpenSSLLibrary.GetLastErrorString: string;
+var
+  ErrCode: Cardinal;
+  ErrBuf: array[0..255] of AnsiChar;
+  OpenSSLErrors: string;
 begin
   Result := FLastErrorString;
+  
+  // Check OpenSSL error queue
+  OpenSSLErrors := '';
+  if Assigned(ERR_get_error) and Assigned(ERR_error_string_n) then
+  begin
+    ErrCode := ERR_get_error();
+    while ErrCode <> 0 do
+    begin
+      ERR_error_string_n(ErrCode, @ErrBuf[0], SizeOf(ErrBuf));
+      if OpenSSLErrors <> '' then
+        OpenSSLErrors := OpenSSLErrors + ' | ';
+      OpenSSLErrors := OpenSSLErrors + StrPas(@ErrBuf[0]);
+      ErrCode := ERR_get_error();
+    end;
+  end;
+  
+  if OpenSSLErrors <> '' then
+  begin
+    if Result <> '' then
+      Result := Result + ' | ' + OpenSSLErrors
+    else
+      Result := OpenSSLErrors;
+  end;
+  
+  if Result = '' then
+    Result := 'No SSL errors';
 end;
 
 procedure TOpenSSLLibrary.ClearError;
@@ -588,6 +723,8 @@ begin
   
   try
     Result := TOpenSSLContext.Create(Self, aType);
+    if (Result <> nil) and (FDefaultConfig.Options <> []) then
+      Result.SetOptions(FDefaultConfig.Options);
     Inc(FStatistics.ConnectionsTotal);
     if aType = sslCtxClient then
       InternalLog(sslLogInfo, 'Created client context')
@@ -604,6 +741,8 @@ begin
 end;
 
 function TOpenSSLLibrary.CreateCertificate: ISSLCertificate;
+var
+  LCert: PX509;
 begin
   if not FInitialized then
   begin
@@ -612,11 +751,12 @@ begin
     Exit;
   end;
   
-  // 注意：直接创建空证书不是有效的用例
-  // 证书应该从文件、内存、或 DER/PEM 数据加载
-  // 返回 nil 表示不支持空证书创建
-  InternalLog(sslLogWarning, 'CreateCertificate: Empty certificate creation not supported. Use LoadFromFile/LoadFromPEM/LoadFromDER instead.');
-  Result := nil;
+  // Create a new empty X509 certificate
+  LCert := X509_new();
+  if LCert <> nil then
+    Result := TOpenSSLCertificate.Create(LCert, True)
+  else
+    Result := TOpenSSLCertificate.Create(nil, False);
 end;
 
 function TOpenSSLLibrary.CreateCertificateStore: ISSLCertificateStore;
@@ -671,4 +811,3 @@ finalization
   {$ENDIF}
 
 end.
-

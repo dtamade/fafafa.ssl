@@ -402,126 +402,126 @@ begin
     Exit(False);
 
   // 加载 PKCS7 函数
-  PKCS7_new := GetProcAddress(ACryptoLib, 'PKCS7_new');
-  PKCS7_free := GetProcAddress(ACryptoLib, 'PKCS7_free');
-  PKCS7_dup := GetProcAddress(ACryptoLib, 'PKCS7_dup');
-  d2i_PKCS7 := GetProcAddress(ACryptoLib, 'd2i_PKCS7');
-  i2d_PKCS7 := GetProcAddress(ACryptoLib, 'i2d_PKCS7');
-  d2i_PKCS7_bio := GetProcAddress(ACryptoLib, 'd2i_PKCS7_bio');
-  i2d_PKCS7_bio := GetProcAddress(ACryptoLib, 'i2d_PKCS7_bio');
-  PKCS7_bio_add_digest := GetProcAddress(ACryptoLib, 'PKCS7_bio_add_digest');
+  Pointer(PKCS7_new) := GetProcAddress(ACryptoLib, 'PKCS7_new');
+  Pointer(PKCS7_free) := GetProcAddress(ACryptoLib, 'PKCS7_free');
+  Pointer(PKCS7_dup) := GetProcAddress(ACryptoLib, 'PKCS7_dup');
+  Pointer(d2i_PKCS7) := GetProcAddress(ACryptoLib, 'd2i_PKCS7');
+  Pointer(i2d_PKCS7) := GetProcAddress(ACryptoLib, 'i2d_PKCS7');
+  Pointer(d2i_PKCS7_bio) := GetProcAddress(ACryptoLib, 'd2i_PKCS7_bio');
+  Pointer(i2d_PKCS7_bio) := GetProcAddress(ACryptoLib, 'i2d_PKCS7_bio');
+  Pointer(PKCS7_bio_add_digest) := GetProcAddress(ACryptoLib, 'PKCS7_bio_add_digest');
 
   // 加载 PKCS7 签名操作
-  PKCS7_sign := GetProcAddress(ACryptoLib, 'PKCS7_sign');
-  PKCS7_sign_add_signer := GetProcAddress(ACryptoLib, 'PKCS7_sign_add_signer');
-  PKCS7_final := GetProcAddress(ACryptoLib, 'PKCS7_final');
-  PKCS7_verify := GetProcAddress(ACryptoLib, 'PKCS7_verify');
-  PKCS7_get0_signers := GetProcAddress(ACryptoLib, 'PKCS7_get0_signers');
+  Pointer(PKCS7_sign) := GetProcAddress(ACryptoLib, 'PKCS7_sign');
+  Pointer(PKCS7_sign_add_signer) := GetProcAddress(ACryptoLib, 'PKCS7_sign_add_signer');
+  Pointer(PKCS7_final) := GetProcAddress(ACryptoLib, 'PKCS7_final');
+  Pointer(PKCS7_verify) := GetProcAddress(ACryptoLib, 'PKCS7_verify');
+  Pointer(PKCS7_get0_signers) := GetProcAddress(ACryptoLib, 'PKCS7_get0_signers');
 
   // 加载 PKCS7 加密操作
   PKCS7_encrypt_func := TPKCS7_encrypt(GetProcAddress(ACryptoLib, 'PKCS7_encrypt'));
   PKCS7_decrypt_func := TPKCS7_decrypt(GetProcAddress(ACryptoLib, 'PKCS7_decrypt'));
 
   // 加载 PKCS7 属性操作
-  PKCS7_add_certificate := GetProcAddress(ACryptoLib, 'PKCS7_add_certificate');
-  PKCS7_add_crl := GetProcAddress(ACryptoLib, 'PKCS7_add_crl');
-  PKCS7_content_new := GetProcAddress(ACryptoLib, 'PKCS7_content_new');
-  PKCS7_set_type := GetProcAddress(ACryptoLib, 'PKCS7_set_type');
-  PKCS7_set_content := GetProcAddress(ACryptoLib, 'PKCS7_set_content');
-  PKCS7_set_cipher := GetProcAddress(ACryptoLib, 'PKCS7_set_cipher');
+  Pointer(PKCS7_add_certificate) := GetProcAddress(ACryptoLib, 'PKCS7_add_certificate');
+  Pointer(PKCS7_add_crl) := GetProcAddress(ACryptoLib, 'PKCS7_add_crl');
+  Pointer(PKCS7_content_new) := GetProcAddress(ACryptoLib, 'PKCS7_content_new');
+  Pointer(PKCS7_set_type) := GetProcAddress(ACryptoLib, 'PKCS7_set_type');
+  Pointer(PKCS7_set_content) := GetProcAddress(ACryptoLib, 'PKCS7_set_content');
+  Pointer(PKCS7_set_cipher) := GetProcAddress(ACryptoLib, 'PKCS7_set_cipher');
   PKCS7_stream_func := TPKCS7_stream(GetProcAddress(ACryptoLib, 'PKCS7_stream'));
 
   // 加载 PKCS7 数据访问
-  PKCS7_get_signer_info := GetProcAddress(ACryptoLib, 'PKCS7_get_signer_info');
-  PKCS7_dataInit := GetProcAddress(ACryptoLib, 'PKCS7_dataInit');
-  PKCS7_dataFinal := GetProcAddress(ACryptoLib, 'PKCS7_dataFinal');
-  PKCS7_dataDecode := GetProcAddress(ACryptoLib, 'PKCS7_dataDecode');
-  PKCS7_dataVerify := GetProcAddress(ACryptoLib, 'PKCS7_dataVerify');
+  Pointer(PKCS7_get_signer_info) := GetProcAddress(ACryptoLib, 'PKCS7_get_signer_info');
+  Pointer(PKCS7_dataInit) := GetProcAddress(ACryptoLib, 'PKCS7_dataInit');
+  Pointer(PKCS7_dataFinal) := GetProcAddress(ACryptoLib, 'PKCS7_dataFinal');
+  Pointer(PKCS7_dataDecode) := GetProcAddress(ACryptoLib, 'PKCS7_dataDecode');
+  Pointer(PKCS7_dataVerify) := GetProcAddress(ACryptoLib, 'PKCS7_dataVerify');
 
   // 加载 PKCS7 签名信息
-  PKCS7_SIGNER_INFO_new := GetProcAddress(ACryptoLib, 'PKCS7_SIGNER_INFO_new');
-  PKCS7_SIGNER_INFO_free := GetProcAddress(ACryptoLib, 'PKCS7_SIGNER_INFO_free');
-  PKCS7_SIGNER_INFO_set := GetProcAddress(ACryptoLib, 'PKCS7_SIGNER_INFO_set');
-  PKCS7_SIGNER_INFO_sign := GetProcAddress(ACryptoLib, 'PKCS7_SIGNER_INFO_sign');
-  PKCS7_add_signature := GetProcAddress(ACryptoLib, 'PKCS7_add_signature');
-  PKCS7_set_signed_attributes := GetProcAddress(ACryptoLib, 'PKCS7_set_signed_attributes');
-  PKCS7_set_attributes := GetProcAddress(ACryptoLib, 'PKCS7_set_attributes');
-  PKCS7_get_signed_attributes := GetProcAddress(ACryptoLib, 'PKCS7_get_signed_attributes');
-  PKCS7_get_attributes := GetProcAddress(ACryptoLib, 'PKCS7_get_attributes');
+  Pointer(PKCS7_SIGNER_INFO_new) := GetProcAddress(ACryptoLib, 'PKCS7_SIGNER_INFO_new');
+  Pointer(PKCS7_SIGNER_INFO_free) := GetProcAddress(ACryptoLib, 'PKCS7_SIGNER_INFO_free');
+  Pointer(PKCS7_SIGNER_INFO_set) := GetProcAddress(ACryptoLib, 'PKCS7_SIGNER_INFO_set');
+  Pointer(PKCS7_SIGNER_INFO_sign) := GetProcAddress(ACryptoLib, 'PKCS7_SIGNER_INFO_sign');
+  Pointer(PKCS7_add_signature) := GetProcAddress(ACryptoLib, 'PKCS7_add_signature');
+  Pointer(PKCS7_set_signed_attributes) := GetProcAddress(ACryptoLib, 'PKCS7_set_signed_attributes');
+  Pointer(PKCS7_set_attributes) := GetProcAddress(ACryptoLib, 'PKCS7_set_attributes');
+  Pointer(PKCS7_get_signed_attributes) := GetProcAddress(ACryptoLib, 'PKCS7_get_signed_attributes');
+  Pointer(PKCS7_get_attributes) := GetProcAddress(ACryptoLib, 'PKCS7_get_attributes');
 
   // 加载 PKCS7 接收者信息
-  PKCS7_RECIP_INFO_new := GetProcAddress(ACryptoLib, 'PKCS7_RECIP_INFO_new');
-  PKCS7_RECIP_INFO_free := GetProcAddress(ACryptoLib, 'PKCS7_RECIP_INFO_free');
-  PKCS7_RECIP_INFO_set := GetProcAddress(ACryptoLib, 'PKCS7_RECIP_INFO_set');
-  PKCS7_set_recipient_info := GetProcAddress(ACryptoLib, 'PKCS7_set_recipient_info');
-  PKCS7_add_recipient := GetProcAddress(ACryptoLib, 'PKCS7_add_recipient');
-  PKCS7_add_recipient_info := GetProcAddress(ACryptoLib, 'PKCS7_add_recipient_info');
+  Pointer(PKCS7_RECIP_INFO_new) := GetProcAddress(ACryptoLib, 'PKCS7_RECIP_INFO_new');
+  Pointer(PKCS7_RECIP_INFO_free) := GetProcAddress(ACryptoLib, 'PKCS7_RECIP_INFO_free');
+  Pointer(PKCS7_RECIP_INFO_set) := GetProcAddress(ACryptoLib, 'PKCS7_RECIP_INFO_set');
+  Pointer(PKCS7_set_recipient_info) := GetProcAddress(ACryptoLib, 'PKCS7_set_recipient_info');
+  Pointer(PKCS7_add_recipient) := GetProcAddress(ACryptoLib, 'PKCS7_add_recipient');
+  Pointer(PKCS7_add_recipient_info) := GetProcAddress(ACryptoLib, 'PKCS7_add_recipient_info');
 
   // 加载 PKCS12 函数
-  PKCS12_new := GetProcAddress(ACryptoLib, 'PKCS12_new');
-  PKCS12_free := GetProcAddress(ACryptoLib, 'PKCS12_free');
-  d2i_PKCS12 := GetProcAddress(ACryptoLib, 'd2i_PKCS12');
-  i2d_PKCS12 := GetProcAddress(ACryptoLib, 'i2d_PKCS12');
-  d2i_PKCS12_bio := GetProcAddress(ACryptoLib, 'd2i_PKCS12_bio');
-  i2d_PKCS12_bio := GetProcAddress(ACryptoLib, 'i2d_PKCS12_bio');
+  Pointer(PKCS12_new) := GetProcAddress(ACryptoLib, 'PKCS12_new');
+  Pointer(PKCS12_free) := GetProcAddress(ACryptoLib, 'PKCS12_free');
+  Pointer(d2i_PKCS12) := GetProcAddress(ACryptoLib, 'd2i_PKCS12');
+  Pointer(i2d_PKCS12) := GetProcAddress(ACryptoLib, 'i2d_PKCS12');
+  Pointer(d2i_PKCS12_bio) := GetProcAddress(ACryptoLib, 'd2i_PKCS12_bio');
+  Pointer(i2d_PKCS12_bio) := GetProcAddress(ACryptoLib, 'i2d_PKCS12_bio');
 
   // 加载 PKCS12 创建
-  PKCS12_create := GetProcAddress(ACryptoLib, 'PKCS12_create');
-  PKCS12_add_cert := GetProcAddress(ACryptoLib, 'PKCS12_add_cert');
-  PKCS12_add_key := GetProcAddress(ACryptoLib, 'PKCS12_add_key');
-  PKCS12_add_secret := GetProcAddress(ACryptoLib, 'PKCS12_add_secret');
+  Pointer(PKCS12_create) := GetProcAddress(ACryptoLib, 'PKCS12_create');
+  Pointer(PKCS12_add_cert) := GetProcAddress(ACryptoLib, 'PKCS12_add_cert');
+  Pointer(PKCS12_add_key) := GetProcAddress(ACryptoLib, 'PKCS12_add_key');
+  Pointer(PKCS12_add_secret) := GetProcAddress(ACryptoLib, 'PKCS12_add_secret');
 
   // 加载 PKCS12 解析
-  PKCS12_parse := GetProcAddress(ACryptoLib, 'PKCS12_parse');
-  PKCS12_verify_mac := GetProcAddress(ACryptoLib, 'PKCS12_verify_mac');
-  PKCS12_set_mac := GetProcAddress(ACryptoLib, 'PKCS12_set_mac');
-  PKCS12_setup_mac := GetProcAddress(ACryptoLib, 'PKCS12_setup_mac');
+  Pointer(PKCS12_parse) := GetProcAddress(ACryptoLib, 'PKCS12_parse');
+  Pointer(PKCS12_verify_mac) := GetProcAddress(ACryptoLib, 'PKCS12_verify_mac');
+  Pointer(PKCS12_set_mac) := GetProcAddress(ACryptoLib, 'PKCS12_set_mac');
+  Pointer(PKCS12_setup_mac) := GetProcAddress(ACryptoLib, 'PKCS12_setup_mac');
 
   // 加载 PKCS12 密钥派生
-  PKCS12_key_gen_asc := GetProcAddress(ACryptoLib, 'PKCS12_key_gen_asc');
-  PKCS12_key_gen_uni := GetProcAddress(ACryptoLib, 'PKCS12_key_gen_uni');
-  PKCS12_key_gen_utf8 := GetProcAddress(ACryptoLib, 'PKCS12_key_gen_utf8');
+  Pointer(PKCS12_key_gen_asc) := GetProcAddress(ACryptoLib, 'PKCS12_key_gen_asc');
+  Pointer(PKCS12_key_gen_uni) := GetProcAddress(ACryptoLib, 'PKCS12_key_gen_uni');
+  Pointer(PKCS12_key_gen_utf8) := GetProcAddress(ACryptoLib, 'PKCS12_key_gen_utf8');
   PKCS12_key_gen_utf8_ex := TPKCS12_key_gen_utf8_ex(GetProcAddress(ACryptoLib, 'PKCS12_key_gen_utf8_ex'));
-  PKCS12_gen_mac := GetProcAddress(ACryptoLib, 'PKCS12_gen_mac');
+  Pointer(PKCS12_gen_mac) := GetProcAddress(ACryptoLib, 'PKCS12_gen_mac');
 
   // 加载 PKCS12 PBE
-  PKCS12_PBE_keyivgen := GetProcAddress(ACryptoLib, 'PKCS12_PBE_keyivgen');
-  PKCS12_pbe_crypt := GetProcAddress(ACryptoLib, 'PKCS12_pbe_crypt');
+  Pointer(PKCS12_PBE_keyivgen) := GetProcAddress(ACryptoLib, 'PKCS12_PBE_keyivgen');
+  Pointer(PKCS12_pbe_crypt) := GetProcAddress(ACryptoLib, 'PKCS12_pbe_crypt');
   PKCS12_crypt := TPKCS12_crypt(GetProcAddress(ACryptoLib, 'PKCS12_crypt'));
-  PKCS12_decrypt_skey := GetProcAddress(ACryptoLib, 'PKCS12_decrypt_skey');
+  Pointer(PKCS12_decrypt_skey) := GetProcAddress(ACryptoLib, 'PKCS12_decrypt_skey');
 
   // 加载 PKCS12 SafeBag
-  PKCS12_SAFEBAG_new := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_new');
-  PKCS12_SAFEBAG_free := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_free');
-  PKCS12_SAFEBAG_get_nid := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get_nid');
-  PKCS12_SAFEBAG_get_bag_nid := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get_bag_nid');
-  PKCS12_SAFEBAG_get0_bag_type := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get0_bag_type');
-  PKCS12_SAFEBAG_get0_bag_obj := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get0_bag_obj');
-  PKCS12_SAFEBAG_get0_attrs := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get0_attrs');
-  PKCS12_SAFEBAG_set0_attrs := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_set0_attrs');
-  PKCS12_SAFEBAG_get0_pkcs8 := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get0_pkcs8');
-  PKCS12_SAFEBAG_get0_safes := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get0_safes');
+  Pointer(PKCS12_SAFEBAG_new) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_new');
+  Pointer(PKCS12_SAFEBAG_free) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_free');
+  Pointer(PKCS12_SAFEBAG_get_nid) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get_nid');
+  Pointer(PKCS12_SAFEBAG_get_bag_nid) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get_bag_nid');
+  Pointer(PKCS12_SAFEBAG_get0_bag_type) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get0_bag_type');
+  Pointer(PKCS12_SAFEBAG_get0_bag_obj) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get0_bag_obj');
+  Pointer(PKCS12_SAFEBAG_get0_attrs) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get0_attrs');
+  Pointer(PKCS12_SAFEBAG_set0_attrs) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_set0_attrs');
+  Pointer(PKCS12_SAFEBAG_get0_pkcs8) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get0_pkcs8');
+  Pointer(PKCS12_SAFEBAG_get0_safes) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get0_safes');
 
   // 加载 PKCS8 函数
-  PKCS8_PRIV_KEY_INFO_new := GetProcAddress(ACryptoLib, 'PKCS8_PRIV_KEY_INFO_new');
-  PKCS8_PRIV_KEY_INFO_free := GetProcAddress(ACryptoLib, 'PKCS8_PRIV_KEY_INFO_free');
-  d2i_PKCS8_PRIV_KEY_INFO := GetProcAddress(ACryptoLib, 'd2i_PKCS8_PRIV_KEY_INFO');
-  i2d_PKCS8_PRIV_KEY_INFO := GetProcAddress(ACryptoLib, 'i2d_PKCS8_PRIV_KEY_INFO');
-  PKCS8_pkey_set0 := GetProcAddress(ACryptoLib, 'PKCS8_pkey_set0');
-  PKCS8_pkey_get0 := GetProcAddress(ACryptoLib, 'PKCS8_pkey_get0');
-  PKCS8_pkey_add1_attr_by_NID := GetProcAddress(ACryptoLib, 'PKCS8_pkey_add1_attr_by_NID');
+  Pointer(PKCS8_PRIV_KEY_INFO_new) := GetProcAddress(ACryptoLib, 'PKCS8_PRIV_KEY_INFO_new');
+  Pointer(PKCS8_PRIV_KEY_INFO_free) := GetProcAddress(ACryptoLib, 'PKCS8_PRIV_KEY_INFO_free');
+  Pointer(d2i_PKCS8_PRIV_KEY_INFO) := GetProcAddress(ACryptoLib, 'd2i_PKCS8_PRIV_KEY_INFO');
+  Pointer(i2d_PKCS8_PRIV_KEY_INFO) := GetProcAddress(ACryptoLib, 'i2d_PKCS8_PRIV_KEY_INFO');
+  Pointer(PKCS8_pkey_set0) := GetProcAddress(ACryptoLib, 'PKCS8_pkey_set0');
+  Pointer(PKCS8_pkey_get0) := GetProcAddress(ACryptoLib, 'PKCS8_pkey_get0');
+  Pointer(PKCS8_pkey_add1_attr_by_NID) := GetProcAddress(ACryptoLib, 'PKCS8_pkey_add1_attr_by_NID');
 
   // 加载 EVP_PKEY 转换
-  EVP_PKCS82PKEY := GetProcAddress(ACryptoLib, 'EVP_PKCS82PKEY');
-  EVP_PKEY2PKCS8 := GetProcAddress(ACryptoLib, 'EVP_PKEY2PKCS8');
+  Pointer(EVP_PKCS82PKEY) := GetProcAddress(ACryptoLib, 'EVP_PKCS82PKEY');
+  Pointer(EVP_PKEY2PKCS8) := GetProcAddress(ACryptoLib, 'EVP_PKEY2PKCS8');
 
   // 加载 X509_SIG 函数
-  X509_SIG_new := GetProcAddress(ACryptoLib, 'X509_SIG_new');
-  X509_SIG_free := GetProcAddress(ACryptoLib, 'X509_SIG_free');
-  d2i_X509_SIG := GetProcAddress(ACryptoLib, 'd2i_X509_SIG');
-  i2d_X509_SIG := GetProcAddress(ACryptoLib, 'i2d_X509_SIG');
-  X509_SIG_get0 := GetProcAddress(ACryptoLib, 'X509_SIG_get0');
-  X509_SIG_getm := GetProcAddress(ACryptoLib, 'X509_SIG_getm');
+  Pointer(X509_SIG_new) := GetProcAddress(ACryptoLib, 'X509_SIG_new');
+  Pointer(X509_SIG_free) := GetProcAddress(ACryptoLib, 'X509_SIG_free');
+  Pointer(d2i_X509_SIG) := GetProcAddress(ACryptoLib, 'd2i_X509_SIG');
+  Pointer(i2d_X509_SIG) := GetProcAddress(ACryptoLib, 'i2d_X509_SIG');
+  Pointer(X509_SIG_get0) := GetProcAddress(ACryptoLib, 'X509_SIG_get0');
+  Pointer(X509_SIG_getm) := GetProcAddress(ACryptoLib, 'X509_SIG_getm');
 
   FPKCSLoaded := Assigned(PKCS7_new) and Assigned(PKCS12_new);
   Result := FPKCSLoaded;

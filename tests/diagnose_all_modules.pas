@@ -4,7 +4,6 @@ program diagnose_all_modules;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.crypto,
   fafafa.ssl.openssl.api.evp,
@@ -18,7 +17,20 @@ uses
   fafafa.ssl.openssl.api.ec,
   fafafa.ssl.openssl.api.ecdsa,
   fafafa.ssl.openssl.api.ecdh,
-  fafafa.ssl.openssl.api.hmac;
+  fafafa.ssl.openssl.api.hmac,
+  fafafa.ssl.openssl.api.cmac,
+  fafafa.ssl.openssl.api.pkcs,
+  fafafa.ssl.openssl.api.x509,
+  fafafa.ssl.openssl.api.x509v3,
+  fafafa.ssl.openssl.api.pem,
+  fafafa.ssl.openssl.api.pkcs7,
+  fafafa.ssl.openssl.api.pkcs12,
+  fafafa.ssl.openssl.api.ocsp,
+  fafafa.ssl.openssl.api.cms,
+  fafafa.ssl.openssl.api.asn1,
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.api.kdf,
+  fafafa.ssl.openssl.api.core;
 
 type
   TModuleStatus = (msAvailable, msPartial, msNotAvailable, msDeprecated, msError);
@@ -492,7 +504,8 @@ begin
   
   // 初始化 OpenSSL
   try
-    if not LoadOpenSSL then
+    LoadOpenSSLCore;
+    if not IsOpenSSLCoreLoaded then
     begin
       WriteLn('ERROR: Failed to load OpenSSL library!');
       WriteLn('Make sure OpenSSL 1.1.x or 3.x is installed and accessible.');

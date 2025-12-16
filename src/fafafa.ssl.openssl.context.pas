@@ -18,14 +18,19 @@ unit fafafa.ssl.openssl.context;
 interface
 
 uses
-  SysUtils, Classes, Contnrs,
+  SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.errors,
+  fafafa.ssl.exceptions,  // 新增：类型化异常
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.bio,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.api.pem,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.logging;
 
 type
   { TOpenSSLContext - OpenSSL 上下文类 }
@@ -45,7 +50,7 @@ type
     FSessionCacheEnabled: Boolean;
     FSessionTimeout: Integer;
     FSessionCacheSize: Integer;
-    FOptions: Cardinal;
+    FOptions: TSSLOptions;
     
     // 回调
     FVerifyCallback: TSSLVerifyCallback;
@@ -54,6 +59,7 @@ type
     
     procedure ApplyProtocolVersions;
     procedure ApplyVerifyMode;
+    procedure ApplyOptions;
     function GetSSLMethod: PSSL_METHOD;
     
   public
@@ -71,6 +77,8 @@ type
     procedure LoadCertificate(aCert: ISSLCertificate); overload;
     procedure LoadPrivateKey(const aFileName: string; const aPassword: string = ''); overload;
     procedure LoadPrivateKey(aStream: TStream; const aPassword: string = ''); overload;
+    procedure LoadCertificatePEM(const aPEM: string);
+    procedure LoadPrivateKeyPEM(const aPEM: string; const aPassword: string = '');
     procedure LoadCAFile(const aFileName: string);
     procedure LoadCAPath(const aPath: string);
     procedure SetCertificateStore(aStore: ISSLCertificateStore);
@@ -97,8 +105,8 @@ type
     function GetSessionCacheSize: Integer;
     
     { ISSLContext - 高级选项 }
-    procedure SetOptions(aOptions: Cardinal);
-    function GetOptions: Cardinal;
+    procedure SetOptions(const aOptions: TSSLOptions);
+    function GetOptions: TSSLOptions;
     procedure SetServerName(const aServerName: string);
     function GetServerName: string;
     procedure SetALPNProtocols(const aProtocols: string);
@@ -123,45 +131,27 @@ uses
   fafafa.ssl.openssl.connection;
 
 var
-  GContextRegistry: TFPHashObjectList = nil;
-
-function ContextRegistryKey(AHandle: PSSL_CTX): string;
-begin
-  Result := IntToHex(PtrUInt(AHandle), SizeOf(Pointer) * 2);
-end;
+  GContextRegistry: TList = nil;
 
 procedure EnsureContextRegistry;
 begin
   if GContextRegistry = nil then
-    GContextRegistry := TFPHashObjectList.Create(False);
+    GContextRegistry := TList.Create;
 end;
 
 procedure RegisterContextInstance(const AContext: TOpenSSLContext);
-var
-  Key: string;
-  Index: Integer;
 begin
   if (AContext = nil) or (AContext.FSSLContext = nil) then Exit;
   EnsureContextRegistry;
-  Key := ContextRegistryKey(AContext.FSSLContext);
-  Index := GContextRegistry.FindIndexOf(Key);
-  if Index <> -1 then
-    GContextRegistry.Items[Index] := AContext
-  else
-    GContextRegistry.Add(Key, AContext);
+  if GContextRegistry.IndexOf(AContext) = -1 then
+    GContextRegistry.Add(AContext);
 end;
 
 procedure UnregisterContextInstance(const AContext: TOpenSSLContext);
-var
-  Key: string;
-  Index: Integer;
 begin
-  if (GContextRegistry = nil) or (AContext = nil) or (AContext.FSSLContext = nil) then Exit;
-  Key := ContextRegistryKey(AContext.FSSLContext);
-  Index := GContextRegistry.FindIndexOf(Key);
-  if Index <> -1 then
-    GContextRegistry.Delete(Index);
-  if (GContextRegistry <> nil) and (GContextRegistry.Count = 0) then
+  if (GContextRegistry = nil) or (AContext = nil) then Exit;
+  GContextRegistry.Remove(AContext);
+  if GContextRegistry.Count = 0 then
   begin
     GContextRegistry.Free;
     GContextRegistry := nil;
@@ -170,15 +160,21 @@ end;
 
 function LookupContext(AHandle: PSSL_CTX): TOpenSSLContext;
 var
-  Key: string;
-  Index: Integer;
+  i: Integer;
+  Ctx: TOpenSSLContext;
 begin
   Result := nil;
   if (GContextRegistry = nil) or (AHandle = nil) then Exit;
-  Key := ContextRegistryKey(AHandle);
-  Index := GContextRegistry.FindIndexOf(Key);
-  if Index <> -1 then
-    Result := TOpenSSLContext(GContextRegistry.Items[Index]);
+  
+  for i := 0 to GContextRegistry.Count - 1 do
+  begin
+    Ctx := TOpenSSLContext(GContextRegistry[i]);
+    if Ctx.FSSLContext = AHandle then
+    begin
+      Result := Ctx;
+      Exit;
+    end;
+  end;
 end;
 
 function BuildALPNWireData(const aProtocols: string): TBytes;
@@ -196,7 +192,7 @@ begin
     Trimmed := Trim(Proto);
     if Trimmed = '' then Continue;
     if Length(Trimmed) > 255 then
-      raise ESSLException.Create('ALPN protocol name too long', sslErrInvalidParam);
+      RaiseInvalidParameter('ALPN protocol name length');
     Inc(TotalLen, 1 + Length(Trimmed));
   end;
 
@@ -307,7 +303,7 @@ function PasswordCallbackThunk(buf: PAnsiChar; size: Integer; rwflag: Integer; u
 var
   Context: TOpenSSLContext;
   Password: string;
-  AS: AnsiString;
+  PasswordAnsi: AnsiString;
 begin
   Result := 0;
   if (buf = nil) or (size <= 0) then Exit;
@@ -315,11 +311,11 @@ begin
   if (Context = nil) or not Assigned(Context.FPasswordCallback) then Exit;
   Password := '';
   if not Context.FPasswordCallback(Password, rwflag <> 0) then Exit;
-  AS := AnsiString(Password);
-  if Length(AS) >= size then Exit;
-  if Length(AS) > 0 then Move(AS[1], buf^, Length(AS));
-  buf[Length(AS)] := #0;
-  Result := Length(AS);
+  PasswordAnsi := AnsiString(Password);
+  if Length(PasswordAnsi) >= size then Exit;
+  if Length(PasswordAnsi) > 0 then Move(PasswordAnsi[1], buf^, Length(PasswordAnsi));
+  buf[Length(PasswordAnsi)] := #0;
+  Result := Length(PasswordAnsi);
 end;
 
 procedure InfoCallbackThunk(ssl: PSSL; where: Integer; ret: Integer); cdecl;
@@ -364,7 +360,9 @@ begin
   FSessionCacheEnabled := True;
   FSessionTimeout := 300;
   FSessionCacheSize := 20480;
-  FOptions := 0;
+  FOptions := [ssoEnableSessionCache, ssoEnableSessionTickets,
+               ssoDisableCompression, ssoDisableRenegotiation,
+               ssoNoSSLv2, ssoNoSSLv3];
   
   FVerifyCallback := nil;
   FPasswordCallback := nil;
@@ -373,14 +371,25 @@ begin
   // 创建 SSL_CTX
   Method := GetSSLMethod;
   if Method = nil then
-    raise Exception.Create('Failed to get SSL method');
+    raise ESSLInitializationException.CreateWithContext(
+      'Failed to get SSL method',
+      sslErrNotInitialized,
+      'TOpenSSLContext.Create'
+    );
   
   if not Assigned(SSL_CTX_new) then
-    raise Exception.Create('SSL_CTX_new not loaded');
+    raise ESSLInitializationException.CreateWithContext(
+      'SSL_CTX_new not loaded from OpenSSL library',
+      sslErrFunctionNotFound,
+      'TOpenSSLContext.Create'
+    );
   
   FSSLContext := SSL_CTX_new(Method);
   if FSSLContext = nil then
-    raise Exception.Create('Failed to create SSL_CTX');
+    RaiseSSLInitError(
+      'Failed to create SSL_CTX',
+      'TOpenSSLContext.Create'
+    );
 
   // 注册上下文以便回调反查
   RegisterContextInstance(Self);
@@ -394,6 +403,10 @@ begin
     SetCipherList(FCipherList);
   if FCipherSuites <> '' then
     SetCipherSuites(FCipherSuites);
+
+  ApplyOptions;
+  
+  TSecurityLog.Info('OpenSSL', Format('SSL Context created (Type: %d)', [Ord(FContextType)]));
 end;
 
 destructor TOpenSSLContext.Destroy;
@@ -421,7 +434,11 @@ begin
     else if Assigned(SSLv23_server_method) then
       Result := SSLv23_server_method()
     else
-      raise Exception.Create('No suitable SSL server method available');
+      raise ESSLInitializationException.CreateWithContext(
+        'No suitable SSL server method available in OpenSSL library',
+        sslErrFunctionNotFound,
+        'TOpenSSLContext.GetSSLMethod'
+      );
   end
   else
   begin
@@ -430,7 +447,11 @@ begin
     else if Assigned(SSLv23_client_method) then
       Result := SSLv23_client_method()
     else
-      raise Exception.Create('No suitable SSL client method available');
+      raise ESSLInitializationException.CreateWithContext(
+        'No suitable SSL client method available in OpenSSL library',
+        sslErrFunctionNotFound,
+        'TOpenSSLContext.GetSSLMethod'
+      );
   end;
 end;
 
@@ -486,8 +507,10 @@ begin
   if sslVerifyClientOnce in FVerifyMode then
     Mode := Mode or SSL_VERIFY_CLIENT_ONCE;
   
-  SSL_CTX_set_verify(FSSLContext, Mode, nil);
-  SSL_CTX_set_verify_depth(FSSLContext, FVerifyDepth);
+  if Assigned(SSL_CTX_set_verify) then
+    SSL_CTX_set_verify(FSSLContext, Mode, nil);
+  if Assigned(SSL_CTX_set_verify_depth) then
+    SSL_CTX_set_verify_depth(FSSLContext, FVerifyDepth);
 end;
 
 // ============================================================================
@@ -519,14 +542,22 @@ var
   FileNameA: AnsiString;
 begin
   if FSSLContext = nil then
-    raise Exception.Create('SSL context not initialized');
-  
-  if not FileExists(aFileName) then
-    raise Exception.CreateFmt('Certificate file not found: %s', [aFileName]);
+    raise ESSLInitializationException.CreateWithContext(
+      'SSL context not initialized',
+      sslErrNotInitialized,
+      'TOpenSSLContext.LoadCertificate'
+    );
   
   FileNameA := AnsiString(aFileName);
   if SSL_CTX_use_certificate_file(FSSLContext, PAnsiChar(FileNameA), SSL_FILETYPE_PEM) <> 1 then
-    raise Exception.CreateFmt('Failed to load certificate: %s', [aFileName]);
+  begin
+    TSecurityLog.Error('OpenSSL', Format('Failed to load certificate: %s', [aFileName]));
+    RaiseSSLCertError(
+      Format('Failed to load certificate from file: %s', [aFileName]),
+      'TOpenSSLContext.LoadCertificate'
+    );
+  end;
+  TSecurityLog.Info('OpenSSL', Format('Loaded certificate from file: %s', [aFileName]));
 end;
 
 procedure TOpenSSLContext.LoadCertificate(aStream: TStream);
@@ -537,7 +568,11 @@ var
   Cert: PX509;
 begin
   if FSSLContext = nil then
-    raise Exception.Create('SSL context not initialized');
+    raise ESSLInitializationException.CreateWithContext(
+      'SSL context not initialized',
+      sslErrNotInitialized,
+      'TOpenSSLContext.LoadCertificate'
+    );
   
   Size := aStream.Size - aStream.Position;
   SetLength(Data, Size);
@@ -547,11 +582,17 @@ begin
   try
     Cert := PEM_read_bio_X509(BIO, nil, nil, nil);
     if Cert = nil then
-      raise Exception.Create('Failed to parse certificate from stream');
+      RaiseSSLCertError(
+        'Failed to parse certificate from stream',
+        'TOpenSSLContext.LoadCertificate'
+      );
     
     try
       if SSL_CTX_use_certificate(FSSLContext, Cert) <> 1 then
-        raise Exception.Create('Failed to use certificate');
+        RaiseSSLCertError(
+          'Failed to use certificate in context',
+          'TOpenSSLContext.LoadCertificate'
+        );
     finally
       X509_free(Cert);
     end;
@@ -565,17 +606,32 @@ var
   Cert: PX509;
 begin
   if FSSLContext = nil then
-    raise Exception.Create('SSL context not initialized');
+    raise ESSLInitializationException.CreateWithContext(
+      'SSL context not initialized',
+      sslErrNotInitialized,
+      'TOpenSSLContext.LoadCertificate'
+    );
   
   if aCert = nil then
-    raise Exception.Create('Certificate is nil');
+    raise ESSLInvalidArgument.CreateWithContext(
+      'Certificate parameter is nil',
+      sslErrInvalidParam,
+      'TOpenSSLContext.LoadCertificate'
+    );
   
   Cert := PX509(aCert.GetNativeHandle);
   if Cert = nil then
-    raise Exception.Create('Invalid certificate handle');
+    raise ESSLCertificateException.CreateWithContext(
+      'Invalid certificate handle (GetNativeHandle returned nil)',
+      sslErrCertificate,
+      'TOpenSSLContext.LoadCertificate'
+    );
   
   if SSL_CTX_use_certificate(FSSLContext, Cert) <> 1 then
-    raise Exception.Create('Failed to use certificate');
+    RaiseSSLCertError(
+      'Failed to use certificate in SSL context',
+      'TOpenSSLContext.LoadCertificate'
+    );
 end;
 
 procedure TOpenSSLContext.LoadPrivateKey(const aFileName: string; const aPassword: string = '');
@@ -583,18 +639,35 @@ var
   FileNameA: AnsiString;
 begin
   if FSSLContext = nil then
-    raise Exception.Create('SSL context not initialized');
-  
-  if not FileExists(aFileName) then
-    raise Exception.CreateFmt('Private key file not found: %s', [aFileName]);
+    raise ESSLInitializationException.CreateWithContext(
+      'SSL context not initialized',
+      sslErrNotInitialized,
+      'TOpenSSLContext.LoadPrivateKey'
+    );
   
   FileNameA := AnsiString(aFileName);
   if SSL_CTX_use_PrivateKey_file(FSSLContext, PAnsiChar(FileNameA), SSL_FILETYPE_PEM) <> 1 then
-    raise Exception.CreateFmt('Failed to load private key: %s', [aFileName]);
+    raise ESSLKeyException.CreateWithContext(
+      Format('Failed to load private key from file: %s', [aFileName]),
+      sslErrLoadFailed,
+      'TOpenSSLContext.LoadPrivateKey',
+      Integer(GetLastOpenSSLError),
+      sslOpenSSL
+    );
   
   // 验证私钥和证书是否匹配
   if SSL_CTX_check_private_key(FSSLContext) <> 1 then
-    raise Exception.Create('Private key does not match certificate');
+  begin
+    TSecurityLog.Error('OpenSSL', 'Private key does not match certificate');
+    raise ESSLKeyException.CreateWithContext(
+      'Private key does not match the loaded certificate',
+      sslErrCertificate,
+      'TOpenSSLContext.LoadPrivateKey',
+      Integer(GetLastOpenSSLError),
+      sslOpenSSL
+    );
+  end;
+  TSecurityLog.Audit('OpenSSL', 'LoadPrivateKey', 'System', 'Private key loaded from file');
 end;
 
 procedure TOpenSSLContext.LoadPrivateKey(aStream: TStream; const aPassword: string = '');
@@ -606,10 +679,18 @@ var
   PassA: AnsiString;
 begin
   if FSSLContext = nil then
-    raise Exception.Create('SSL context not initialized');
+    raise ESSLInitializationException.CreateWithContext(
+      'SSL context not initialized',
+      sslErrNotInitialized,
+      'TOpenSSLContext.LoadPrivateKey'
+    );
 
   if aStream = nil then
-    raise Exception.Create('Stream is nil');
+    raise ESSLInvalidArgument.CreateWithContext(
+      'Stream parameter is nil',
+      sslErrInvalidParam,
+      'TOpenSSLContext.LoadPrivateKey'
+    );
 
   Size := aStream.Size - aStream.Position;
   SetLength(Data, Size);
@@ -617,7 +698,11 @@ begin
 
   BIO := BIO_new_mem_buf(@Data[0], Size);
   if BIO = nil then
-    raise Exception.Create('Failed to create BIO');
+    raise ESSLResourceException.CreateWithContext(
+      'Failed to create BIO for private key',
+      sslErrMemory,
+      'TOpenSSLContext.LoadPrivateKey'
+    );
   try
     // 若提供密码，通过userdata传递
     if aPassword <> '' then
@@ -629,12 +714,158 @@ begin
 
     PKey := PEM_read_bio_PrivateKey(BIO, nil, nil, nil);
     if PKey = nil then
-      raise Exception.Create('Failed to parse private key');
+      raise ESSLKeyException.CreateWithContext(
+        'Failed to parse private key from stream',
+        sslErrParseFailed,
+        'TOpenSSLContext.LoadPrivateKey',
+        Integer(GetLastOpenSSLError),
+        sslOpenSSL
+      );
     try
       if SSL_CTX_use_PrivateKey(FSSLContext, PKey) <> 1 then
-        raise Exception.Create('Failed to use private key in context');
+        raise ESSLKeyException.CreateWithContext(
+          'Failed to use private key in context',
+          sslErrLoadFailed,
+          'TOpenSSLContext.LoadPrivateKey',
+          Integer(GetLastOpenSSLError),
+          sslOpenSSL
+        );
       if SSL_CTX_check_private_key(FSSLContext) <> 1 then
-        raise Exception.Create('Private key does not match certificate');
+        raise ESSLKeyException.CreateWithContext(
+          'Private key does not match the loaded certificate',
+          sslErrCertificate,
+          'TOpenSSLContext.LoadPrivateKey',
+          Integer(GetLastOpenSSLError),
+          sslOpenSSL
+        );
+    finally
+      EVP_PKEY_free(PKey);
+    end;
+  finally
+    BIO_free(BIO);
+  end;
+end;
+
+procedure TOpenSSLContext.LoadCertificatePEM(const aPEM: string);
+var
+  BIO: PBIO;
+  Cert: PX509;
+  PemA: AnsiString;
+begin
+  if FSSLContext = nil then
+    raise ESSLInitializationException.CreateWithContext(
+      'SSL context not initialized',
+      sslErrNotInitialized,
+      'TOpenSSLContext.LoadCertificatePEM'
+    );
+  
+  if aPEM = '' then
+    raise ESSLInvalidArgument.CreateWithContext(
+      'PEM string is empty',
+      sslErrInvalidParam,
+      'TOpenSSLContext.LoadCertificatePEM'
+    );
+  
+  PemA := AnsiString(aPEM);
+  BIO := BIO_new_mem_buf(PAnsiChar(PemA), Length(PemA));
+  if BIO = nil then
+    raise ESSLResourceException.CreateWithContext(
+      'Failed to create BIO for PEM certificate',
+      sslErrMemory,
+      'TOpenSSLContext.LoadCertificatePEM'
+    );
+  
+  try
+    Cert := PEM_read_bio_X509(BIO, nil, nil, nil);
+    if Cert = nil then
+      RaiseSSLCertError(
+        'Failed to parse certificate from PEM string',
+        'TOpenSSLContext.LoadCertificatePEM'
+      );
+    
+    try
+      if SSL_CTX_use_certificate(FSSLContext, Cert) <> 1 then
+        RaiseSSLCertError(
+          'Failed to use certificate in context',
+          'TOpenSSLContext.LoadCertificatePEM'
+        );
+      TSecurityLog.Info('OpenSSL', 'Loaded certificate from PEM string');
+    finally
+      X509_free(Cert);
+    end;
+  finally
+    BIO_free(BIO);
+  end;
+end;
+
+procedure TOpenSSLContext.LoadPrivateKeyPEM(const aPEM: string; const aPassword: string = '');
+var
+  BIO: PBIO;
+  PKey: PEVP_PKEY;
+  PemA, PassA: AnsiString;
+  PassPtr: PAnsiChar;
+begin
+  if FSSLContext = nil then
+    raise ESSLInitializationException.CreateWithContext(
+      'SSL context not initialized',
+      sslErrNotInitialized,
+      'TOpenSSLContext.LoadPrivateKeyPEM'
+    );
+  
+  if aPEM = '' then
+    raise ESSLInvalidArgument.CreateWithContext(
+      'PEM string is empty',
+      sslErrInvalidParam,
+      'TOpenSSLContext.LoadPrivateKeyPEM'
+    );
+  
+  PemA := AnsiString(aPEM);
+  BIO := BIO_new_mem_buf(PAnsiChar(PemA), Length(PemA));
+  if BIO = nil then
+    raise ESSLResourceException.CreateWithContext(
+      'Failed to create BIO for PEM private key',
+      sslErrMemory,
+      'TOpenSSLContext.LoadPrivateKeyPEM'
+    );
+  
+  try
+    PassPtr := nil;
+    if aPassword <> '' then
+    begin
+      PassA := AnsiString(aPassword);
+      PassPtr := PAnsiChar(PassA);
+    end;
+    
+    PKey := PEM_read_bio_PrivateKey(BIO, nil, nil, PassPtr);
+    if PKey = nil then
+      raise ESSLKeyException.CreateWithContext(
+        'Failed to parse private key from PEM string',
+        sslErrParseFailed,
+        'TOpenSSLContext.LoadPrivateKeyPEM',
+        Integer(GetLastOpenSSLError),
+        sslOpenSSL
+      );
+    
+    try
+      if SSL_CTX_use_PrivateKey(FSSLContext, PKey) <> 1 then
+        raise ESSLKeyException.CreateWithContext(
+          'Failed to use private key in context',
+          sslErrLoadFailed,
+          'TOpenSSLContext.LoadPrivateKeyPEM',
+          Integer(GetLastOpenSSLError),
+          sslOpenSSL
+        );
+      
+      if SSL_CTX_check_private_key(FSSLContext) <> 1 then
+        raise ESSLKeyException.CreateWithContext(
+          'Private key does not match the loaded certificate',
+          sslErrCertificate,
+          'TOpenSSLContext.LoadPrivateKeyPEM',
+          Integer(GetLastOpenSSLError),
+          sslOpenSSL
+        );
+      
+      TSecurityLog.Audit('OpenSSL', 'LoadPrivateKeyPEM', 'System', 'Private key loaded from PEM string');
     finally
       EVP_PKEY_free(PKey);
     end;
@@ -648,14 +879,21 @@ var
   FileNameA: AnsiString;
 begin
   if FSSLContext = nil then
-    raise Exception.Create('SSL context not initialized');
-  
-  if not FileExists(aFileName) then
-    raise Exception.CreateFmt('CA file not found: %s', [aFileName]);
+    raise ESSLInitializationException.CreateWithContext(
+      'SSL context not initialized',
+      sslErrNotInitialized,
+      'TOpenSSLContext.LoadCAFile'
+    );
   
   FileNameA := AnsiString(aFileName);
   if SSL_CTX_load_verify_locations(FSSLContext, PAnsiChar(FileNameA), nil) <> 1 then
-    raise Exception.CreateFmt('Failed to load CA file: %s', [aFileName]);
+    raise ESSLCertificateLoadException.CreateWithContext(
+      Format('Failed to load CA certificates from file: %s', [aFileName]),
+      sslErrLoadFailed,
+      'TOpenSSLContext.LoadCAFile',
+      Integer(GetLastOpenSSLError),
+      sslOpenSSL
+    );
 end;
 
 procedure TOpenSSLContext.LoadCAPath(const aPath: string);
@@ -663,14 +901,28 @@ var
   PathA: AnsiString;
 begin
   if FSSLContext = nil then
-    raise Exception.Create('SSL context not initialized');
+    raise ESSLInitializationException.CreateWithContext(
+      'SSL context not initialized',
+      sslErrNotInitialized,
+      'TOpenSSLContext.LoadCAPath'
+    );
   
   if not DirectoryExists(aPath) then
-    raise Exception.CreateFmt('CA path not found: %s', [aPath]);
+    raise ESSLFileNotFoundException.CreateWithContext(
+      Format('CA certificates directory not found: %s', [aPath]),
+      sslErrLoadFailed,
+      'TOpenSSLContext.LoadCAPath'
+    );
   
   PathA := AnsiString(aPath);
   if SSL_CTX_load_verify_locations(FSSLContext, nil, PAnsiChar(PathA)) <> 1 then
-    raise Exception.CreateFmt('Failed to load CA path: %s', [aPath]);
+    raise ESSLCertificateLoadException.CreateWithContext(
+      Format('Failed to load CA certificates from directory: %s', [aPath]),
+      sslErrLoadFailed,
+      'TOpenSSLContext.LoadCAPath',
+      Integer(GetLastOpenSSLError),
+      sslOpenSSL
+    );
 end;
 
 procedure TOpenSSLContext.SetCertificateStore(aStore: ISSLCertificateStore);
@@ -678,20 +930,36 @@ var
   Store: PX509_STORE;
 begin
   if FSSLContext = nil then
-    raise Exception.Create('SSL context not initialized');
+    raise ESSLInitializationException.CreateWithContext(
+      'SSL context not initialized',
+      sslErrNotInitialized,
+      'TOpenSSLContext.SetCertificateStore'
+    );
   if aStore = nil then
-    raise Exception.Create('Certificate store is nil');
+    raise ESSLInvalidArgument.CreateWithContext(
+      'Certificate store parameter is nil',
+      sslErrInvalidParam,
+      'TOpenSSLContext.SetCertificateStore'
+    );
 
   Store := PX509_STORE(aStore.GetNativeHandle);
   if Store = nil then
-    raise Exception.Create('Invalid certificate store handle');
+    raise ESSLCertificateException.CreateWithContext(
+      'Invalid certificate store handle (GetNativeHandle returned nil)',
+      sslErrCertificate,
+      'TOpenSSLContext.SetCertificateStore'
+    );
 
   if Assigned(SSL_CTX_set1_cert_store) then
     SSL_CTX_set1_cert_store(FSSLContext, Store)
   else if Assigned(SSL_CTX_set_cert_store) then
     SSL_CTX_set_cert_store(FSSLContext, Store)
   else
-    raise Exception.Create('Setting certificate store is not supported by this OpenSSL build');
+    raise ESSLInitializationException.CreateWithContext(
+      'Setting certificate store is not supported by this OpenSSL build',
+      sslErrUnsupported,
+      'TOpenSSLContext.SetCertificateStore'
+    );
 end;
 
 // ============================================================================
@@ -713,7 +981,8 @@ procedure TOpenSSLContext.SetVerifyDepth(aDepth: Integer);
 begin
   FVerifyDepth := aDepth;
   if FSSLContext <> nil then
-    SSL_CTX_set_verify_depth(FSSLContext, aDepth);
+    if Assigned(SSL_CTX_set_verify_depth) then
+      SSL_CTX_set_verify_depth(FSSLContext, aDepth);
 end;
 
 function TOpenSSLContext.GetVerifyDepth: Integer;
@@ -726,7 +995,11 @@ begin
   FVerifyCallback := aCallback;
   if FSSLContext = nil then Exit;
   if not Assigned(SSL_CTX_set_cert_verify_callback) then
-    raise Exception.Create('Verify callback not supported by OpenSSL');
+    raise ESSLInitializationException.CreateWithContext(
+      'Verify callback not supported by this OpenSSL build',
+      sslErrUnsupported,
+      'TOpenSSLContext.SetVerifyCallback'
+    );
   if Assigned(FVerifyCallback) then
     SSL_CTX_set_cert_verify_callback(FSSLContext, @VerifyCertificateCallback, Self)
   else
@@ -783,7 +1056,7 @@ var
 begin
   FSessionCacheEnabled := aEnabled;
   
-  if FSSLContext <> nil then
+  if (FSSLContext <> nil) and Assigned(SSL_CTX_set_session_cache_mode) then
   begin
     if aEnabled then
       Mode := SSL_SESS_CACHE_BOTH
@@ -823,18 +1096,65 @@ begin
   Result := FSessionCacheSize;
 end;
 
+procedure TOpenSSLContext.ApplyOptions;
+const
+  CONTROLLED_SSL_OPS: UInt64 =
+    SSL_OP_NO_SSL_MASK or SSL_OP_NO_COMPRESSION or SSL_OP_NO_RENEGOTIATION or
+    SSL_OP_NO_TICKET or SSL_OP_SINGLE_DH_USE or SSL_OP_SINGLE_ECDH_USE or
+    SSL_OP_CIPHER_SERVER_PREFERENCE;
+var
+  Mask: UInt64;
+begin
+  SetSessionCacheMode(ssoEnableSessionCache in FOptions);
+
+  if FSSLContext = nil then
+    Exit;
+
+  Mask := 0;
+
+  if ssoNoSSLv2 in FOptions then
+    Mask := Mask or SSL_OP_NO_SSLv2;
+  if ssoNoSSLv3 in FOptions then
+    Mask := Mask or SSL_OP_NO_SSLv3;
+  if ssoNoTLSv1 in FOptions then
+    Mask := Mask or SSL_OP_NO_TLSv1;
+  if ssoNoTLSv1_1 in FOptions then
+    Mask := Mask or SSL_OP_NO_TLSv1_1;
+  if ssoNoTLSv1_2 in FOptions then
+    Mask := Mask or SSL_OP_NO_TLSv1_2;
+  if ssoNoTLSv1_3 in FOptions then
+    Mask := Mask or SSL_OP_NO_TLSv1_3;
+  if ssoDisableCompression in FOptions then
+    Mask := Mask or SSL_OP_NO_COMPRESSION;
+  if ssoDisableRenegotiation in FOptions then
+    Mask := Mask or SSL_OP_NO_RENEGOTIATION;
+  if not (ssoEnableSessionTickets in FOptions) then
+    Mask := Mask or SSL_OP_NO_TICKET;
+  if ssoSingleDHUse in FOptions then
+    Mask := Mask or SSL_OP_SINGLE_DH_USE;
+  if ssoSingleECDHUse in FOptions then
+    Mask := Mask or SSL_OP_SINGLE_ECDH_USE;
+  if ssoCipherServerPreference in FOptions then
+    Mask := Mask or SSL_OP_CIPHER_SERVER_PREFERENCE;
+
+  if Assigned(SSL_CTX_clear_options) then
+    SSL_CTX_clear_options(FSSLContext, CONTROLLED_SSL_OPS);
+
+  if (Mask <> 0) and Assigned(SSL_CTX_set_options) then
+    SSL_CTX_set_options(FSSLContext, Mask);
+end;
+
 // ============================================================================
 // ISSLContext - 高级选项
 // ============================================================================
 
-procedure TOpenSSLContext.SetOptions(aOptions: Cardinal);
+procedure TOpenSSLContext.SetOptions(const aOptions: TSSLOptions);
 begin
   FOptions := aOptions;
-  if FSSLContext <> nil then
-    SSL_CTX_set_options(FSSLContext, aOptions);
+  ApplyOptions;
 end;
 
-function TOpenSSLContext.GetOptions: Cardinal;
+function TOpenSSLContext.GetOptions: TSSLOptions;
 begin
   Result := FOptions;
 end;
@@ -864,11 +1184,11 @@ begin
   end;
 
   if not Assigned(SSL_CTX_set_alpn_protos) then
-    raise Exception.Create('ALPN is not supported by the current OpenSSL build');
+    raise ESSLConfigurationException.Create('ALPN is not supported by the current OpenSSL build');
 
   if (Length(FALPNWireData) = 0) or
      (SSL_CTX_set_alpn_protos(FSSLContext, @FALPNWireData[0], Length(FALPNWireData)) <> 0) then
-    raise Exception.CreateFmt('Failed to configure ALPN protocols: %s', [FALPNProtocols]);
+    raise ESSLConfigurationException.CreateFmt('Failed to configure ALPN protocols: %s', [FALPNProtocols]);
 
   // 仅在服务端设置选择回调，客户端只发送候选列表
   if (FContextType <> sslCtxClient) and Assigned(SSL_CTX_set_alpn_select_cb) then
@@ -889,7 +1209,7 @@ begin
   FPasswordCallback := aCallback;
   if FSSLContext = nil then Exit;
   if not Assigned(SSL_CTX_set_default_passwd_cb) then
-    raise Exception.Create('Password callback not supported by OpenSSL');
+    raise ESSLConfigurationException.Create('Password callback not supported by OpenSSL');
   if Assigned(FPasswordCallback) then
   begin
     SSL_CTX_set_default_passwd_cb(FSSLContext, @PasswordCallbackThunk);
@@ -909,7 +1229,7 @@ begin
   FInfoCallback := aCallback;
   if FSSLContext = nil then Exit;
   if not Assigned(SSL_CTX_set_info_callback) then
-    raise Exception.Create('Info callback not supported by OpenSSL');
+    raise ESSLConfigurationException.Create('Info callback not supported by OpenSSL');
   if Assigned(FInfoCallback) then
     SSL_CTX_set_info_callback(FSSLContext, @InfoCallbackThunk)
   else
@@ -965,4 +1285,3 @@ begin
 end;
 
 end.
-

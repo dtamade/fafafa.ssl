@@ -5,7 +5,6 @@ program test_evp_cipher;
 uses
   SysUtils,
   fafafa.ssl.openssl.api.core,
-  fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.evp;
 
 // Helper function to convert bytes to hex string
@@ -498,7 +497,7 @@ begin
   // Initialize OpenSSL
   try
     LoadOpenSSLCore;
-    // EVP functions are loaded through api module automatically
+    LoadEVP(GetCryptoLibHandle);
   except
     on E: Exception do
     begin

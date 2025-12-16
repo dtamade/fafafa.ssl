@@ -30,13 +30,13 @@ type
 
   { 日志接口 }
   ILogger = interface
-    ['{8F4A1B2C-3D5E-6F7G-8H9I-0J1K2L3M4N5O}']
+    ['{8F4A1B2C-3D5E-4F7A-8B9C-0D1E2F3A4B5C}']
     procedure Debug(const AMsg: string);
     procedure Info(const AMsg: string);
     procedure Warning(const AMsg: string);
     procedure Error(const AMsg: string);
     procedure Critical(const AMsg: string);
-    procedure Log(ALevel: TLogLevel; const AMsg: string);
+    procedure Log(ALevel: TLogLevel; const AMsg: string); virtual;
     procedure SetMinLevel(ALevel: TLogLevel);
     function GetMinLevel: TLogLevel;
     procedure Flush;
@@ -69,7 +69,7 @@ type
     procedure Warning(const AMsg: string);
     procedure Error(const AMsg: string);
     procedure Critical(const AMsg: string);
-    procedure Log(ALevel: TLogLevel; const AMsg: string);
+    procedure Log(ALevel: TLogLevel; const AMsg: string); virtual;
     procedure SetMinLevel(ALevel: TLogLevel);
     function GetMinLevel: TLogLevel;
     procedure Flush;
@@ -90,7 +90,9 @@ type
 implementation
 
 uses
-  DateUtils;
+  DateUtils
+  {$IFDEF UNIX}, Unix{$ENDIF}
+  {$IFDEF WINDOWS}, Windows{$ENDIF};
 
 var
   FGlobalLogger: ILogger = nil;
@@ -323,5 +325,3 @@ begin
 end;
 
 end.
-
-

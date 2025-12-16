@@ -161,22 +161,22 @@ begin
   if ALibHandle = 0 then Exit;
   
   // Load BLAKE2b functions
-  BLAKE2b_Init := GetProcAddress(ALibHandle, 'BLAKE2b_Init');
-  BLAKE2b_Init_key := GetProcAddress(ALibHandle, 'BLAKE2b_Init_key');
-  BLAKE2b_Init_param := GetProcAddress(ALibHandle, 'BLAKE2b_Init_param');
-  BLAKE2b_Update := GetProcAddress(ALibHandle, 'BLAKE2b_Update');
-  BLAKE2b_Final := GetProcAddress(ALibHandle, 'BLAKE2b_Final');
-  BLAKE2b := GetProcAddress(ALibHandle, 'BLAKE2b');
-  BLAKE2b_mac_Init := GetProcAddress(ALibHandle, 'BLAKE2b_mac_Init');
+  Pointer(BLAKE2b_Init) := GetProcAddress(ALibHandle, 'BLAKE2b_Init');
+  Pointer(BLAKE2b_Init_key) := GetProcAddress(ALibHandle, 'BLAKE2b_Init_key');
+  Pointer(BLAKE2b_Init_param) := GetProcAddress(ALibHandle, 'BLAKE2b_Init_param');
+  Pointer(BLAKE2b_Update) := GetProcAddress(ALibHandle, 'BLAKE2b_Update');
+  Pointer(BLAKE2b_Final) := GetProcAddress(ALibHandle, 'BLAKE2b_Final');
+  Pointer(BLAKE2b) := GetProcAddress(ALibHandle, 'BLAKE2b');
+  Pointer(BLAKE2b_mac_Init) := GetProcAddress(ALibHandle, 'BLAKE2b_mac_Init');
   
   // Load BLAKE2s functions
-  BLAKE2s_Init := GetProcAddress(ALibHandle, 'BLAKE2s_Init');
-  BLAKE2s_Init_key := GetProcAddress(ALibHandle, 'BLAKE2s_Init_key');
-  BLAKE2s_Init_param := GetProcAddress(ALibHandle, 'BLAKE2s_Init_param');
-  BLAKE2s_Update := GetProcAddress(ALibHandle, 'BLAKE2s_Update');
-  BLAKE2s_Final := GetProcAddress(ALibHandle, 'BLAKE2s_Final');
-  BLAKE2s := GetProcAddress(ALibHandle, 'BLAKE2s');
-  BLAKE2s_mac_Init := GetProcAddress(ALibHandle, 'BLAKE2s_mac_Init');
+  Pointer(BLAKE2s_Init) := GetProcAddress(ALibHandle, 'BLAKE2s_Init');
+  Pointer(BLAKE2s_Init_key) := GetProcAddress(ALibHandle, 'BLAKE2s_Init_key');
+  Pointer(BLAKE2s_Init_param) := GetProcAddress(ALibHandle, 'BLAKE2s_Init_param');
+  Pointer(BLAKE2s_Update) := GetProcAddress(ALibHandle, 'BLAKE2s_Update');
+  Pointer(BLAKE2s_Final) := GetProcAddress(ALibHandle, 'BLAKE2s_Final');
+  Pointer(BLAKE2s) := GetProcAddress(ALibHandle, 'BLAKE2s');
+  Pointer(BLAKE2s_mac_Init) := GetProcAddress(ALibHandle, 'BLAKE2s_mac_Init');
   
   GBLAKE2Loaded := True;
   Result := True;

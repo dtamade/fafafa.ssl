@@ -5,6 +5,8 @@ unit fafafa.ssl.openssl.api.stack;
 interface
 
 uses
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   SysUtils,
   fafafa.ssl.openssl.types;
 
@@ -348,11 +350,11 @@ var
   str: PAnsiChar;
 begin
   if not Assigned(OPENSSL_sk_new_null) then
-    raise Exception.Create('Stack functions not loaded');
+    raise ESSLException.Create('Stack functions not loaded');
     
   Result := PSTACK_OF_OPENSSL_STRING(OPENSSL_sk_new_null());
   if Result = nil then
-    raise Exception.Create('Failed to create string stack');
+    raise ESSLException.Create('Failed to create string stack');
     
   try
     for i := Low(Strings) to High(Strings) do
@@ -360,7 +362,7 @@ begin
       GetMem(str, Length(Strings[i]) + 1);
       StrPCopy(str, AnsiString(Strings[i]));
       if OPENSSL_sk_push(POPENSSL_STACK(Result), str) = 0 then
-        raise Exception.Create('Failed to push string to stack');
+        raise ESSLException.Create('Failed to push string to stack');
     end;
   except
     FreeStringStack(Result);
@@ -416,7 +418,7 @@ end;
 function CreateStack: POPENSSL_STACK;
 begin
   if not Assigned(OPENSSL_sk_new_null) then
-    raise Exception.Create('Stack functions not loaded');
+    raise ESSLException.Create('Stack functions not loaded');
     
   Result := OPENSSL_sk_new_null();
 end;

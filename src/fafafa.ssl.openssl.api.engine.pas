@@ -327,106 +327,106 @@ begin
     Exit(False);
 
   // 加载 Engine 管理函数
-  ENGINE_new := GetProcAddress(ACryptoLib, 'ENGINE_new');
-  ENGINE_free := GetProcAddress(ACryptoLib, 'ENGINE_free');
-  ENGINE_up_ref := GetProcAddress(ACryptoLib, 'ENGINE_up_ref');
-  ENGINE_by_id := GetProcAddress(ACryptoLib, 'ENGINE_by_id');
-  ENGINE_by_dso := GetProcAddress(ACryptoLib, 'ENGINE_by_dso');
-  ENGINE_add := GetProcAddress(ACryptoLib, 'ENGINE_add');
-  ENGINE_remove := GetProcAddress(ACryptoLib, 'ENGINE_remove');
-  ENGINE_get_first := GetProcAddress(ACryptoLib, 'ENGINE_get_first');
-  ENGINE_get_last := GetProcAddress(ACryptoLib, 'ENGINE_get_last');
-  ENGINE_get_next := GetProcAddress(ACryptoLib, 'ENGINE_get_next');
-  ENGINE_get_prev := GetProcAddress(ACryptoLib, 'ENGINE_get_prev');
+  Pointer(ENGINE_new) := GetProcAddress(ACryptoLib, 'ENGINE_new');
+  Pointer(ENGINE_free) := GetProcAddress(ACryptoLib, 'ENGINE_free');
+  Pointer(ENGINE_up_ref) := GetProcAddress(ACryptoLib, 'ENGINE_up_ref');
+  Pointer(ENGINE_by_id) := GetProcAddress(ACryptoLib, 'ENGINE_by_id');
+  Pointer(ENGINE_by_dso) := GetProcAddress(ACryptoLib, 'ENGINE_by_dso');
+  Pointer(ENGINE_add) := GetProcAddress(ACryptoLib, 'ENGINE_add');
+  Pointer(ENGINE_remove) := GetProcAddress(ACryptoLib, 'ENGINE_remove');
+  Pointer(ENGINE_get_first) := GetProcAddress(ACryptoLib, 'ENGINE_get_first');
+  Pointer(ENGINE_get_last) := GetProcAddress(ACryptoLib, 'ENGINE_get_last');
+  Pointer(ENGINE_get_next) := GetProcAddress(ACryptoLib, 'ENGINE_get_next');
+  Pointer(ENGINE_get_prev) := GetProcAddress(ACryptoLib, 'ENGINE_get_prev');
 
   // 加载 Engine 初始化和完成
-  ENGINE_init := GetProcAddress(ACryptoLib, 'ENGINE_init');
-  ENGINE_finish := GetProcAddress(ACryptoLib, 'ENGINE_finish');
-  ENGINE_load_builtin_engines := GetProcAddress(ACryptoLib, 'ENGINE_load_builtin_engines');
-  ENGINE_cleanup := GetProcAddress(ACryptoLib, 'ENGINE_cleanup');
+  Pointer(ENGINE_init) := GetProcAddress(ACryptoLib, 'ENGINE_init');
+  Pointer(ENGINE_finish) := GetProcAddress(ACryptoLib, 'ENGINE_finish');
+  Pointer(ENGINE_load_builtin_engines) := GetProcAddress(ACryptoLib, 'ENGINE_load_builtin_engines');
+  Pointer(ENGINE_cleanup) := GetProcAddress(ACryptoLib, 'ENGINE_cleanup');
 
   // 加载 Engine 控制
-  ENGINE_ctrl := GetProcAddress(ACryptoLib, 'ENGINE_ctrl');
-  ENGINE_ctrl_cmd := GetProcAddress(ACryptoLib, 'ENGINE_ctrl_cmd');
-  ENGINE_ctrl_cmd_string_func := GetProcAddress(ACryptoLib, 'ENGINE_ctrl_cmd_string');
+  Pointer(ENGINE_ctrl) := GetProcAddress(ACryptoLib, 'ENGINE_ctrl');
+  Pointer(ENGINE_ctrl_cmd) := GetProcAddress(ACryptoLib, 'ENGINE_ctrl_cmd');
+  Pointer(ENGINE_ctrl_cmd_string_func) := GetProcAddress(ACryptoLib, 'ENGINE_ctrl_cmd_string');
 
   // 加载 Engine 属性获取和设置
-  ENGINE_get_id := GetProcAddress(ACryptoLib, 'ENGINE_get_id');
-  ENGINE_get_name := GetProcAddress(ACryptoLib, 'ENGINE_get_name');
-  ENGINE_set_id := GetProcAddress(ACryptoLib, 'ENGINE_set_id');
-  ENGINE_set_name := GetProcAddress(ACryptoLib, 'ENGINE_set_name');
-  ENGINE_get_flags := GetProcAddress(ACryptoLib, 'ENGINE_get_flags');
-  ENGINE_set_flags := GetProcAddress(ACryptoLib, 'ENGINE_set_flags');
-  ENGINE_get_cmd_defns := GetProcAddress(ACryptoLib, 'ENGINE_get_cmd_defns');
-  ENGINE_set_cmd_defns := GetProcAddress(ACryptoLib, 'ENGINE_set_cmd_defns');
+  Pointer(ENGINE_get_id) := GetProcAddress(ACryptoLib, 'ENGINE_get_id');
+  Pointer(ENGINE_get_name) := GetProcAddress(ACryptoLib, 'ENGINE_get_name');
+  Pointer(ENGINE_set_id) := GetProcAddress(ACryptoLib, 'ENGINE_set_id');
+  Pointer(ENGINE_set_name) := GetProcAddress(ACryptoLib, 'ENGINE_set_name');
+  Pointer(ENGINE_get_flags) := GetProcAddress(ACryptoLib, 'ENGINE_get_flags');
+  Pointer(ENGINE_set_flags) := GetProcAddress(ACryptoLib, 'ENGINE_set_flags');
+  Pointer(ENGINE_get_cmd_defns) := GetProcAddress(ACryptoLib, 'ENGINE_get_cmd_defns');
+  Pointer(ENGINE_set_cmd_defns) := GetProcAddress(ACryptoLib, 'ENGINE_set_cmd_defns');
 
   // 加载 Engine 算法方法
-  ENGINE_get_RSA := GetProcAddress(ACryptoLib, 'ENGINE_get_RSA');
-  ENGINE_set_RSA := GetProcAddress(ACryptoLib, 'ENGINE_set_RSA');
-  ENGINE_get_DSA := GetProcAddress(ACryptoLib, 'ENGINE_get_DSA');
-  ENGINE_set_DSA := GetProcAddress(ACryptoLib, 'ENGINE_set_DSA');
-  ENGINE_get_DH := GetProcAddress(ACryptoLib, 'ENGINE_get_DH');
-  ENGINE_set_DH := GetProcAddress(ACryptoLib, 'ENGINE_set_DH');
-  ENGINE_get_EC := GetProcAddress(ACryptoLib, 'ENGINE_get_EC');
-  ENGINE_set_EC := GetProcAddress(ACryptoLib, 'ENGINE_set_EC');
-  ENGINE_get_RAND := GetProcAddress(ACryptoLib, 'ENGINE_get_RAND');
-  ENGINE_set_RAND := GetProcAddress(ACryptoLib, 'ENGINE_set_RAND');
+  Pointer(ENGINE_get_RSA) := GetProcAddress(ACryptoLib, 'ENGINE_get_RSA');
+  Pointer(ENGINE_set_RSA) := GetProcAddress(ACryptoLib, 'ENGINE_set_RSA');
+  Pointer(ENGINE_get_DSA) := GetProcAddress(ACryptoLib, 'ENGINE_get_DSA');
+  Pointer(ENGINE_set_DSA) := GetProcAddress(ACryptoLib, 'ENGINE_set_DSA');
+  Pointer(ENGINE_get_DH) := GetProcAddress(ACryptoLib, 'ENGINE_get_DH');
+  Pointer(ENGINE_set_DH) := GetProcAddress(ACryptoLib, 'ENGINE_set_DH');
+  Pointer(ENGINE_get_EC) := GetProcAddress(ACryptoLib, 'ENGINE_get_EC');
+  Pointer(ENGINE_set_EC) := GetProcAddress(ACryptoLib, 'ENGINE_set_EC');
+  Pointer(ENGINE_get_RAND) := GetProcAddress(ACryptoLib, 'ENGINE_get_RAND');
+  Pointer(ENGINE_set_RAND) := GetProcAddress(ACryptoLib, 'ENGINE_set_RAND');
 
   // 加载 Engine 密码和摘要
-  ENGINE_get_cipher := GetProcAddress(ACryptoLib, 'ENGINE_get_cipher');
-  ENGINE_get_digest := GetProcAddress(ACryptoLib, 'ENGINE_get_digest');
-  ENGINE_get_cipher_engine := GetProcAddress(ACryptoLib, 'ENGINE_get_cipher_engine');
-  ENGINE_get_digest_engine := GetProcAddress(ACryptoLib, 'ENGINE_get_digest_engine');
-  ENGINE_get_pkey_meth_engine := GetProcAddress(ACryptoLib, 'ENGINE_get_pkey_meth_engine');
-  ENGINE_get_pkey_asn1_meth_engine := GetProcAddress(ACryptoLib, 'ENGINE_get_pkey_asn1_meth_engine');
-  ENGINE_get_pkey_meth := GetProcAddress(ACryptoLib, 'ENGINE_get_pkey_meth');
-  ENGINE_get_pkey_asn1_meth := GetProcAddress(ACryptoLib, 'ENGINE_get_pkey_asn1_meth');
-  ENGINE_get_pkey_asn1_meth_str := GetProcAddress(ACryptoLib, 'ENGINE_get_pkey_asn1_meth_str');
+  Pointer(ENGINE_get_cipher) := GetProcAddress(ACryptoLib, 'ENGINE_get_cipher');
+  Pointer(ENGINE_get_digest) := GetProcAddress(ACryptoLib, 'ENGINE_get_digest');
+  Pointer(ENGINE_get_cipher_engine) := GetProcAddress(ACryptoLib, 'ENGINE_get_cipher_engine');
+  Pointer(ENGINE_get_digest_engine) := GetProcAddress(ACryptoLib, 'ENGINE_get_digest_engine');
+  Pointer(ENGINE_get_pkey_meth_engine) := GetProcAddress(ACryptoLib, 'ENGINE_get_pkey_meth_engine');
+  Pointer(ENGINE_get_pkey_asn1_meth_engine) := GetProcAddress(ACryptoLib, 'ENGINE_get_pkey_asn1_meth_engine');
+  Pointer(ENGINE_get_pkey_meth) := GetProcAddress(ACryptoLib, 'ENGINE_get_pkey_meth');
+  Pointer(ENGINE_get_pkey_asn1_meth) := GetProcAddress(ACryptoLib, 'ENGINE_get_pkey_asn1_meth');
+  Pointer(ENGINE_get_pkey_asn1_meth_str) := GetProcAddress(ACryptoLib, 'ENGINE_get_pkey_asn1_meth_str');
 
   // 加载 Engine 默认设置
-  ENGINE_get_default_RSA := GetProcAddress(ACryptoLib, 'ENGINE_get_default_RSA');
-  ENGINE_get_default_DSA := GetProcAddress(ACryptoLib, 'ENGINE_get_default_DSA');
-  ENGINE_get_default_DH := GetProcAddress(ACryptoLib, 'ENGINE_get_default_DH');
-  ENGINE_get_default_RAND := GetProcAddress(ACryptoLib, 'ENGINE_get_default_RAND');
-  ENGINE_set_default_RSA := GetProcAddress(ACryptoLib, 'ENGINE_set_default_RSA');
-  ENGINE_set_default_DSA := GetProcAddress(ACryptoLib, 'ENGINE_set_default_DSA');
-  ENGINE_set_default_DH := GetProcAddress(ACryptoLib, 'ENGINE_set_default_DH');
-  ENGINE_set_default_RAND := GetProcAddress(ACryptoLib, 'ENGINE_set_default_RAND');
-  ENGINE_set_default := GetProcAddress(ACryptoLib, 'ENGINE_set_default');
-  ENGINE_set_default_ciphers := GetProcAddress(ACryptoLib, 'ENGINE_set_default_ciphers');
-  ENGINE_set_default_digests := GetProcAddress(ACryptoLib, 'ENGINE_set_default_digests');
-  ENGINE_set_default_string := GetProcAddress(ACryptoLib, 'ENGINE_set_default_string');
+  Pointer(ENGINE_get_default_RSA) := GetProcAddress(ACryptoLib, 'ENGINE_get_default_RSA');
+  Pointer(ENGINE_get_default_DSA) := GetProcAddress(ACryptoLib, 'ENGINE_get_default_DSA');
+  Pointer(ENGINE_get_default_DH) := GetProcAddress(ACryptoLib, 'ENGINE_get_default_DH');
+  Pointer(ENGINE_get_default_RAND) := GetProcAddress(ACryptoLib, 'ENGINE_get_default_RAND');
+  Pointer(ENGINE_set_default_RSA) := GetProcAddress(ACryptoLib, 'ENGINE_set_default_RSA');
+  Pointer(ENGINE_set_default_DSA) := GetProcAddress(ACryptoLib, 'ENGINE_set_default_DSA');
+  Pointer(ENGINE_set_default_DH) := GetProcAddress(ACryptoLib, 'ENGINE_set_default_DH');
+  Pointer(ENGINE_set_default_RAND) := GetProcAddress(ACryptoLib, 'ENGINE_set_default_RAND');
+  Pointer(ENGINE_set_default) := GetProcAddress(ACryptoLib, 'ENGINE_set_default');
+  Pointer(ENGINE_set_default_ciphers) := GetProcAddress(ACryptoLib, 'ENGINE_set_default_ciphers');
+  Pointer(ENGINE_set_default_digests) := GetProcAddress(ACryptoLib, 'ENGINE_set_default_digests');
+  Pointer(ENGINE_set_default_string) := GetProcAddress(ACryptoLib, 'ENGINE_set_default_string');
 
   // 加载 Engine 密钥加载
-  ENGINE_load_private_key := GetProcAddress(ACryptoLib, 'ENGINE_load_private_key');
-  ENGINE_load_public_key := GetProcAddress(ACryptoLib, 'ENGINE_load_public_key');
-  ENGINE_load_ssl_client_cert := GetProcAddress(ACryptoLib, 'ENGINE_load_ssl_client_cert');
+  Pointer(ENGINE_load_private_key) := GetProcAddress(ACryptoLib, 'ENGINE_load_private_key');
+  Pointer(ENGINE_load_public_key) := GetProcAddress(ACryptoLib, 'ENGINE_load_public_key');
+  Pointer(ENGINE_load_ssl_client_cert) := GetProcAddress(ACryptoLib, 'ENGINE_load_ssl_client_cert');
 
   // 加载 Engine 表和注册
-  ENGINE_get_table_flags := GetProcAddress(ACryptoLib, 'ENGINE_get_table_flags');
-  ENGINE_set_table_flags := GetProcAddress(ACryptoLib, 'ENGINE_set_table_flags');
-  ENGINE_register_RSA := GetProcAddress(ACryptoLib, 'ENGINE_register_RSA');
-  ENGINE_unregister_RSA := GetProcAddress(ACryptoLib, 'ENGINE_unregister_RSA');
-  ENGINE_register_all_RSA := GetProcAddress(ACryptoLib, 'ENGINE_register_all_RSA');
-  ENGINE_register_DSA := GetProcAddress(ACryptoLib, 'ENGINE_register_DSA');
-  ENGINE_unregister_DSA := GetProcAddress(ACryptoLib, 'ENGINE_unregister_DSA');
-  ENGINE_register_all_DSA := GetProcAddress(ACryptoLib, 'ENGINE_register_all_DSA');
-  ENGINE_register_DH := GetProcAddress(ACryptoLib, 'ENGINE_register_DH');
-  ENGINE_unregister_DH := GetProcAddress(ACryptoLib, 'ENGINE_unregister_DH');
-  ENGINE_register_all_DH := GetProcAddress(ACryptoLib, 'ENGINE_register_all_DH');
-  ENGINE_register_RAND := GetProcAddress(ACryptoLib, 'ENGINE_register_RAND');
-  ENGINE_unregister_RAND := GetProcAddress(ACryptoLib, 'ENGINE_unregister_RAND');
-  ENGINE_register_all_RAND := GetProcAddress(ACryptoLib, 'ENGINE_register_all_RAND');
-  ENGINE_register_all_ciphers := GetProcAddress(ACryptoLib, 'ENGINE_register_all_ciphers');
-  ENGINE_register_all_digests := GetProcAddress(ACryptoLib, 'ENGINE_register_all_digests');
-  ENGINE_register_all_pkey_meths := GetProcAddress(ACryptoLib, 'ENGINE_register_all_pkey_meths');
-  ENGINE_register_all_pkey_asn1_meths := GetProcAddress(ACryptoLib, 'ENGINE_register_all_pkey_asn1_meths');
+  Pointer(ENGINE_get_table_flags) := GetProcAddress(ACryptoLib, 'ENGINE_get_table_flags');
+  Pointer(ENGINE_set_table_flags) := GetProcAddress(ACryptoLib, 'ENGINE_set_table_flags');
+  Pointer(ENGINE_register_RSA) := GetProcAddress(ACryptoLib, 'ENGINE_register_RSA');
+  Pointer(ENGINE_unregister_RSA) := GetProcAddress(ACryptoLib, 'ENGINE_unregister_RSA');
+  Pointer(ENGINE_register_all_RSA) := GetProcAddress(ACryptoLib, 'ENGINE_register_all_RSA');
+  Pointer(ENGINE_register_DSA) := GetProcAddress(ACryptoLib, 'ENGINE_register_DSA');
+  Pointer(ENGINE_unregister_DSA) := GetProcAddress(ACryptoLib, 'ENGINE_unregister_DSA');
+  Pointer(ENGINE_register_all_DSA) := GetProcAddress(ACryptoLib, 'ENGINE_register_all_DSA');
+  Pointer(ENGINE_register_DH) := GetProcAddress(ACryptoLib, 'ENGINE_register_DH');
+  Pointer(ENGINE_unregister_DH) := GetProcAddress(ACryptoLib, 'ENGINE_unregister_DH');
+  Pointer(ENGINE_register_all_DH) := GetProcAddress(ACryptoLib, 'ENGINE_register_all_DH');
+  Pointer(ENGINE_register_RAND) := GetProcAddress(ACryptoLib, 'ENGINE_register_RAND');
+  Pointer(ENGINE_unregister_RAND) := GetProcAddress(ACryptoLib, 'ENGINE_unregister_RAND');
+  Pointer(ENGINE_register_all_RAND) := GetProcAddress(ACryptoLib, 'ENGINE_register_all_RAND');
+  Pointer(ENGINE_register_all_ciphers) := GetProcAddress(ACryptoLib, 'ENGINE_register_all_ciphers');
+  Pointer(ENGINE_register_all_digests) := GetProcAddress(ACryptoLib, 'ENGINE_register_all_digests');
+  Pointer(ENGINE_register_all_pkey_meths) := GetProcAddress(ACryptoLib, 'ENGINE_register_all_pkey_meths');
+  Pointer(ENGINE_register_all_pkey_asn1_meths) := GetProcAddress(ACryptoLib, 'ENGINE_register_all_pkey_asn1_meths');
 
   // 加载动态引擎
-  ENGINE_load_dynamic := GetProcAddress(ACryptoLib, 'ENGINE_load_dynamic');
-  ENGINE_load_openssl := GetProcAddress(ACryptoLib, 'ENGINE_load_openssl');
-  ENGINE_load_cryptodev := GetProcAddress(ACryptoLib, 'ENGINE_load_cryptodev');
-  ENGINE_load_rdrand := GetProcAddress(ACryptoLib, 'ENGINE_load_rdrand');
+  Pointer(ENGINE_load_dynamic) := GetProcAddress(ACryptoLib, 'ENGINE_load_dynamic');
+  Pointer(ENGINE_load_openssl) := GetProcAddress(ACryptoLib, 'ENGINE_load_openssl');
+  Pointer(ENGINE_load_cryptodev) := GetProcAddress(ACryptoLib, 'ENGINE_load_cryptodev');
+  Pointer(ENGINE_load_rdrand) := GetProcAddress(ACryptoLib, 'ENGINE_load_rdrand');
 
   // 注意: ENGINE 功能在某些 OpenSSL 版本中可能不存在
   FEngineLoaded := Assigned(ENGINE_by_id);

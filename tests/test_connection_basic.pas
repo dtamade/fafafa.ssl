@@ -10,7 +10,7 @@ uses
   fafafa.ssl.openssl.api.core;
 
 var
-  LFactory: ISSLLibraryFactory;
+  LFactory: TSSLFactory;
   LContext: ISSLContext;
   LConnection: ISSLConnection;
   LConfig: TSSLConfig;
@@ -38,7 +38,7 @@ procedure Test1_FactoryCreation;
 begin
   WriteLn('Test 1: Factory Creation');
   try
-    LFactory := GetSSLLibraryFactory(sslOpenSSL);
+    LFactory := SSLFactory;
     if LFactory <> nil then
       TestPassed('Factory creation')
     else
@@ -51,6 +51,9 @@ begin
 end;
 
 procedure Test2_ContextCreation;
+var
+  LLib: ISSLLibrary;
+  LErr: string;
 begin
   WriteLn('Test 2: Context Creation');
   try
@@ -61,11 +64,12 @@ begin
     end;
     
     FillChar(LConfig, SizeOf(LConfig), 0);
+    LConfig.LibraryType := sslOpenSSL;
     LConfig.ContextType := sslCtxClient;
     LConfig.ProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
     LConfig.VerifyMode := [sslVerifyNone]; // No verification for basic test
     
-    LContext := LFactory.CreateContext(LConfig);
+    LContext := TSSLFactory.CreateContext(LConfig);
     if LContext <> nil then
     begin
       if LContext.IsValid then
@@ -74,7 +78,18 @@ begin
         TestFailed('Context creation', 'Context is invalid');
     end
     else
-      TestFailed('Context creation', 'Context is nil');
+    begin
+      // Try to obtain more diagnostics from the library
+      LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
+      if LLib <> nil then
+        LErr := LLib.GetLastErrorString
+      else
+        LErr := '';
+      if LErr <> '' then
+        TestFailed('Context creation', 'Context is nil; LastError=' + LErr)
+      else
+        TestFailed('Context creation', 'Context is nil');
+    end;
   except
     on E: Exception do
       TestFailed('Context creation', E.Message);

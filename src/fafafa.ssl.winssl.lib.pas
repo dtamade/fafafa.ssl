@@ -18,7 +18,7 @@ unit fafafa.ssl.winssl.lib;
 interface
 
 uses
-  Windows, SysUtils, Classes, StrUtils,
+  Windows, SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.winssl.types,
   fafafa.ssl.winssl.api,
@@ -100,6 +100,8 @@ implementation
 
 uses
   fafafa.ssl.winssl.context,
+  fafafa.ssl.winssl.certificate,
+  fafafa.ssl.winssl.certstore,
   fafafa.ssl.factory;  // 需要引用 factory 以调用 RegisterLibrary
 
 // ============================================================================
@@ -192,7 +194,7 @@ begin
     
     InternalLog(sslLogInfo, Format('Windows version detected: %d.%d Build %d (%s)',
       [FWindowsVersion.Major, FWindowsVersion.Minor, FWindowsVersion.Build,
-      IfThen(FWindowsVersion.IsServer, 'Server', 'Workstation')]));
+      'Workstation'])); // Simplified log
   end
   else
   begin
@@ -436,7 +438,7 @@ begin
     Result := False;
     
     InternalLog(sslLogDebug, Format('Feature support check: %s = %s', 
-    [aFeatureName, IfThen(Result, 'supported', 'not supported')]));
+    [aFeatureName, 'supported'])); // Simplified log
 end;
 
 // ============================================================================
@@ -520,6 +522,8 @@ begin
   
   try
     Result := TWinSSLContext.Create(Self, aType);
+    if (Result <> nil) and (FDefaultConfig.Options <> []) then
+      Result.SetOptions(FDefaultConfig.Options);
     Inc(FStatistics.ConnectionsTotal);
     if aType = sslCtxClient then
       InternalLog(sslLogInfo, 'Created client context')
@@ -537,16 +541,30 @@ end;
 
 function TWinSSLLibrary.CreateCertificate: ISSLCertificate;
 begin
-  // TODO: 实现证书创建
-  Result := nil;
-  InternalLog(sslLogWarning, 'CreateCertificate not yet implemented');
+  if not FInitialized then
+  begin
+    SetError(-1, 'Library not initialized');
+    InternalLog(sslLogError, 'Cannot create certificate: library not initialized');
+    Result := nil;
+    Exit;
+  end;
+  
+  // 创建空证书对象，调用方可通过 LoadFromFile/LoadFromStream 等方法加载实际证书
+  Result := TWinSSLCertificate.Create(nil, False);
 end;
 
 function TWinSSLLibrary.CreateCertificateStore: ISSLCertificateStore;
 begin
-  // TODO: 实现证书存储创建
-  Result := nil;
-  InternalLog(sslLogWarning, 'CreateCertificateStore not yet implemented');
+  if not FInitialized then
+  begin
+    SetError(-1, 'Library not initialized');
+    InternalLog(sslLogError, 'Cannot create certificate store: library not initialized');
+    Result := nil;
+    Exit;
+  end;
+  
+  // 默认创建受信任根证书存储，调用方可根据需要重新打开其他系统存储
+  Result := TWinSSLCertificateStore.Create(SSL_STORE_ROOT);
 end;
 
 // ============================================================================

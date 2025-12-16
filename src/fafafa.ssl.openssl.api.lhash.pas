@@ -5,6 +5,8 @@ unit fafafa.ssl.openssl.api.lhash;
 interface
 
 uses
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   SysUtils,
   fafafa.ssl.openssl.types;
 
@@ -147,6 +149,8 @@ function ComparePointers(const a, b: Pointer): Integer; cdecl;
 implementation
 
 uses
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   {$IFDEF WINDOWS}Windows{$ELSE}dynlibs{$ENDIF};
 
 var
@@ -324,11 +328,11 @@ end;
 function CreateStringHashTable: POPENSSL_LHASH;
 begin
   if not Assigned(OPENSSL_LH_new) then
-    raise Exception.Create('LHASH functions not loaded');
+    raise ESSLException.Create('LHASH functions not loaded');
     
   Result := OPENSSL_LH_new(TOPENSSL_LH_HASHFUNC(@HashStringWrapper), TOPENSSL_LH_COMPFUNC(@CompareStrings));
   if Result = nil then
-    raise Exception.Create('Failed to create hash table');
+    raise ESSLException.Create('Failed to create hash table');
 end;
 
 procedure FreeHashTable(Hash: POPENSSL_LHASH);

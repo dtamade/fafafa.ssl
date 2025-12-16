@@ -398,14 +398,14 @@ procedure TestSCTSerializationFunctions;
 begin
   StartTest('SCT serialization functions availability');
   try
-    if not Assigned(i2d_SCT) then
-      FailTest('i2d_SCT not loaded')
-    else if not Assigned(d2i_SCT) then
-      FailTest('d2i_SCT not loaded')
-    else if not Assigned(i2d_SCT_LIST) then
-      FailTest('i2d_SCT_LIST not loaded')
-    else if not Assigned(d2i_SCT_LIST) then
-      FailTest('d2i_SCT_LIST not loaded')
+    if not Assigned(i2o_SCT) then
+      FailTest('i2o_SCT not loaded')
+    else if not Assigned(o2i_SCT) then
+      FailTest('o2i_SCT not loaded')
+    else if not Assigned(i2o_SCT_LIST) then
+      FailTest('i2o_SCT_LIST not loaded')
+    else if not Assigned(o2i_SCT_LIST) then
+      FailTest('o2i_SCT_LIST not loaded')
     else
       PassTest;
   except
@@ -418,8 +418,8 @@ procedure TestX509CTExtensionFunctions;
 begin
   StartTest('X509 CT extension functions availability');
   try
-    if not Assigned(X509_get_SCT_LIST) then
-      FailTest('X509_get_SCT_LIST not loaded')
+    if not Assigned(X509_get_ext_d2i) then
+      FailTest('X509_get_ext_d2i (required for X509_get_SCT_LIST) not loaded')
     else
       PassTest;
   except

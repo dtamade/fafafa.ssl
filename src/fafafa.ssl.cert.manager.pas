@@ -15,7 +15,7 @@ unit fafafa.ssl.cert.manager;
 interface
 
 uses
-  SysUtils, Classes, DateUtils,
+  SysUtils, Classes, DateUtils, StrUtils,
   fafafa.ssl, fafafa.ssl.base;
 
 type
@@ -208,7 +208,7 @@ begin
     Exit;
     
   try
-    LContext := TSSLFactory.CreateContext(sslOpenSSL, sslCtxClient);
+    LContext := TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL);
     LContext.LoadCertificate(APath);
     // 注意：这里需要实际的获取证书方法，简化实现
   except
@@ -265,8 +265,8 @@ begin
     Exit;
     
   try
-    Result.Subject := ACert.GetSubjectName;
-    Result.Issuer := ACert.GetIssuerName;
+    Result.Subject := ACert.GetSubject;
+    Result.Issuer := ACert.GetIssuer;
     Result.SerialNumber := ACert.GetSerialNumber;
     Result.NotBefore := ACert.GetNotBefore;
     Result.NotAfter := ACert.GetNotAfter;
@@ -329,8 +329,8 @@ begin
     
   try
     Result := (ACert1.GetSerialNumber = ACert2.GetSerialNumber) and
-              (ACert1.GetSubjectName = ACert2.GetSubjectName) and
-              (ACert1.GetIssuerName = ACert2.GetIssuerName);
+              (ACert1.GetSubject = ACert2.GetSubject) and
+              (ACert1.GetIssuer = ACert2.GetIssuer);
   except
     Result := False;
   end;
@@ -444,5 +444,3 @@ begin
 end;
 
 end.
-
-

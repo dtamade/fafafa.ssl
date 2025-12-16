@@ -386,116 +386,116 @@ begin
     Exit(False);
 
   // 加载 OCSP 请求函数
-  OCSP_REQUEST_new := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_new');
-  OCSP_REQUEST_free := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_free');
-  d2i_OCSP_REQUEST := GetProcAddress(ACryptoLib, 'd2i_OCSP_REQUEST');
-  i2d_OCSP_REQUEST := GetProcAddress(ACryptoLib, 'i2d_OCSP_REQUEST');
-  OCSP_REQUEST_add_ext := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_add_ext');
-  OCSP_REQUEST_get_ext := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_get_ext');
-  OCSP_REQUEST_get_ext_by_NID := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_get_ext_by_NID');
-  OCSP_REQUEST_get_ext_by_OBJ := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_get_ext_by_OBJ');
-  OCSP_REQUEST_get_ext_by_critical := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_get_ext_by_critical');
-  OCSP_REQUEST_get_ext_count := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_get_ext_count');
-  OCSP_REQUEST_delete_ext := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_delete_ext');
-  OCSP_REQUEST_print := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_print');
-  OCSP_REQUEST_sign := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_sign');
+  Pointer(OCSP_REQUEST_new) := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_new');
+  Pointer(OCSP_REQUEST_free) := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_free');
+  Pointer(d2i_OCSP_REQUEST) := GetProcAddress(ACryptoLib, 'd2i_OCSP_REQUEST');
+  Pointer(i2d_OCSP_REQUEST) := GetProcAddress(ACryptoLib, 'i2d_OCSP_REQUEST');
+  Pointer(OCSP_REQUEST_add_ext) := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_add_ext');
+  Pointer(OCSP_REQUEST_get_ext) := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_get_ext');
+  Pointer(OCSP_REQUEST_get_ext_by_NID) := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_get_ext_by_NID');
+  Pointer(OCSP_REQUEST_get_ext_by_OBJ) := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_get_ext_by_OBJ');
+  Pointer(OCSP_REQUEST_get_ext_by_critical) := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_get_ext_by_critical');
+  Pointer(OCSP_REQUEST_get_ext_count) := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_get_ext_count');
+  Pointer(OCSP_REQUEST_delete_ext) := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_delete_ext');
+  Pointer(OCSP_REQUEST_print) := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_print');
+  Pointer(OCSP_REQUEST_sign) := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_sign');
 
   // 加载 OCSP 响应函数
-  OCSP_RESPONSE_new := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_new');
-  OCSP_RESPONSE_free := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_free');
-  d2i_OCSP_RESPONSE := GetProcAddress(ACryptoLib, 'd2i_OCSP_RESPONSE');
-  i2d_OCSP_RESPONSE := GetProcAddress(ACryptoLib, 'i2d_OCSP_RESPONSE');
-  OCSP_RESPONSE_create := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_create');
-  OCSP_RESPONSE_status := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_status');
-  OCSP_RESPONSE_get1_basic := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_get1_basic');
-  OCSP_RESPONSE_print := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_print');
+  Pointer(OCSP_RESPONSE_new) := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_new');
+  Pointer(OCSP_RESPONSE_free) := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_free');
+  Pointer(d2i_OCSP_RESPONSE) := GetProcAddress(ACryptoLib, 'd2i_OCSP_RESPONSE');
+  Pointer(i2d_OCSP_RESPONSE) := GetProcAddress(ACryptoLib, 'i2d_OCSP_RESPONSE');
+  Pointer(OCSP_RESPONSE_create) := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_create');
+  Pointer(OCSP_RESPONSE_status) := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_status');
+  Pointer(OCSP_RESPONSE_get1_basic) := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_get1_basic');
+  Pointer(OCSP_RESPONSE_print) := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_print');
 
   // 加载 OCSP 基本响应函数
-  OCSP_BASICRESP_new := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_new');
-  OCSP_BASICRESP_free := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_free');
-  d2i_OCSP_BASICRESP := GetProcAddress(ACryptoLib, 'd2i_OCSP_BASICRESP');
-  i2d_OCSP_BASICRESP := GetProcAddress(ACryptoLib, 'i2d_OCSP_BASICRESP');
-  OCSP_BASICRESP_add_ext := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_add_ext');
-  OCSP_BASICRESP_get_ext := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_get_ext');
-  OCSP_BASICRESP_get_ext_by_NID := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_get_ext_by_NID');
-  OCSP_BASICRESP_get_ext_by_OBJ := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_get_ext_by_OBJ');
-  OCSP_BASICRESP_get_ext_by_critical := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_get_ext_by_critical');
-  OCSP_BASICRESP_get_ext_count := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_get_ext_count');
-  OCSP_BASICRESP_delete_ext := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_delete_ext');
-  OCSP_BASICRESP_sign := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_sign');
-  OCSP_BASICRESP_sign_ctx := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_sign_ctx');
-  OCSP_BASICRESP_verify := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_verify');
+  Pointer(OCSP_BASICRESP_new) := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_new');
+  Pointer(OCSP_BASICRESP_free) := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_free');
+  Pointer(d2i_OCSP_BASICRESP) := GetProcAddress(ACryptoLib, 'd2i_OCSP_BASICRESP');
+  Pointer(i2d_OCSP_BASICRESP) := GetProcAddress(ACryptoLib, 'i2d_OCSP_BASICRESP');
+  Pointer(OCSP_BASICRESP_add_ext) := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_add_ext');
+  Pointer(OCSP_BASICRESP_get_ext) := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_get_ext');
+  Pointer(OCSP_BASICRESP_get_ext_by_NID) := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_get_ext_by_NID');
+  Pointer(OCSP_BASICRESP_get_ext_by_OBJ) := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_get_ext_by_OBJ');
+  Pointer(OCSP_BASICRESP_get_ext_by_critical) := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_get_ext_by_critical');
+  Pointer(OCSP_BASICRESP_get_ext_count) := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_get_ext_count');
+  Pointer(OCSP_BASICRESP_delete_ext) := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_delete_ext');
+  Pointer(OCSP_BASICRESP_sign) := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_sign');
+  Pointer(OCSP_BASICRESP_sign_ctx) := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_sign_ctx');
+  Pointer(OCSP_BASICRESP_verify) := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_verify');
 
   // 加载 OCSP 证书 ID 函数
-  OCSP_CERTID_new := GetProcAddress(ACryptoLib, 'OCSP_CERTID_new');
-  OCSP_CERTID_free := GetProcAddress(ACryptoLib, 'OCSP_CERTID_free');
-  OCSP_CERTID_dup := GetProcAddress(ACryptoLib, 'OCSP_CERTID_dup');
-  OCSP_cert_to_id := GetProcAddress(ACryptoLib, 'OCSP_cert_to_id');
-  OCSP_cert_id_new := GetProcAddress(ACryptoLib, 'OCSP_cert_id_new');
-  OCSP_id_issuer_cmp := GetProcAddress(ACryptoLib, 'OCSP_id_issuer_cmp');
-  OCSP_id_cmp := GetProcAddress(ACryptoLib, 'OCSP_id_cmp');
-  OCSP_id_get0_info := GetProcAddress(ACryptoLib, 'OCSP_id_get0_info');
+  Pointer(OCSP_CERTID_new) := GetProcAddress(ACryptoLib, 'OCSP_CERTID_new');
+  Pointer(OCSP_CERTID_free) := GetProcAddress(ACryptoLib, 'OCSP_CERTID_free');
+  Pointer(OCSP_CERTID_dup) := GetProcAddress(ACryptoLib, 'OCSP_CERTID_dup');
+  Pointer(OCSP_cert_to_id) := GetProcAddress(ACryptoLib, 'OCSP_cert_to_id');
+  Pointer(OCSP_cert_id_new) := GetProcAddress(ACryptoLib, 'OCSP_cert_id_new');
+  Pointer(OCSP_id_issuer_cmp) := GetProcAddress(ACryptoLib, 'OCSP_id_issuer_cmp');
+  Pointer(OCSP_id_cmp) := GetProcAddress(ACryptoLib, 'OCSP_id_cmp');
+  Pointer(OCSP_id_get0_info) := GetProcAddress(ACryptoLib, 'OCSP_id_get0_info');
 
   // 加载 OCSP 请求操作
-  OCSP_request_add0_id := GetProcAddress(ACryptoLib, 'OCSP_request_add0_id');
-  OCSP_request_add1_nonce := GetProcAddress(ACryptoLib, 'OCSP_request_add1_nonce');
-  OCSP_check_nonce := GetProcAddress(ACryptoLib, 'OCSP_check_nonce');
-  OCSP_copy_nonce := GetProcAddress(ACryptoLib, 'OCSP_copy_nonce');
-  OCSP_request_add1_cert := GetProcAddress(ACryptoLib, 'OCSP_request_add1_cert');
-  OCSP_request_onereq_count := GetProcAddress(ACryptoLib, 'OCSP_request_onereq_count');
-  OCSP_request_onereq_get0 := GetProcAddress(ACryptoLib, 'OCSP_request_onereq_get0');
-  OCSP_onereq_get0_id := GetProcAddress(ACryptoLib, 'OCSP_onereq_get0_id');
-  OCSP_single_get0_status := GetProcAddress(ACryptoLib, 'OCSP_single_get0_status');
+  Pointer(OCSP_request_add0_id) := GetProcAddress(ACryptoLib, 'OCSP_request_add0_id');
+  Pointer(OCSP_request_add1_nonce) := GetProcAddress(ACryptoLib, 'OCSP_request_add1_nonce');
+  Pointer(OCSP_check_nonce) := GetProcAddress(ACryptoLib, 'OCSP_check_nonce');
+  Pointer(OCSP_copy_nonce) := GetProcAddress(ACryptoLib, 'OCSP_copy_nonce');
+  Pointer(OCSP_request_add1_cert) := GetProcAddress(ACryptoLib, 'OCSP_request_add1_cert');
+  Pointer(OCSP_request_onereq_count) := GetProcAddress(ACryptoLib, 'OCSP_request_onereq_count');
+  Pointer(OCSP_request_onereq_get0) := GetProcAddress(ACryptoLib, 'OCSP_request_onereq_get0');
+  Pointer(OCSP_onereq_get0_id) := GetProcAddress(ACryptoLib, 'OCSP_onereq_get0_id');
+  Pointer(OCSP_single_get0_status) := GetProcAddress(ACryptoLib, 'OCSP_single_get0_status');
 
   // 加载 OCSP 响应操作
-  OCSP_resp_count := GetProcAddress(ACryptoLib, 'OCSP_resp_count');
-  OCSP_resp_get0 := GetProcAddress(ACryptoLib, 'OCSP_resp_get0');
-  OCSP_resp_get0_respdata := GetProcAddress(ACryptoLib, 'OCSP_resp_get0_respdata');
-  OCSP_resp_get0_produced_at := GetProcAddress(ACryptoLib, 'OCSP_resp_get0_produced_at');
-  OCSP_resp_get0_signature := GetProcAddress(ACryptoLib, 'OCSP_resp_get0_signature');
-  OCSP_resp_get1_id := GetProcAddress(ACryptoLib, 'OCSP_resp_get1_id');
-  OCSP_resp_get0_id := GetProcAddress(ACryptoLib, 'OCSP_resp_get0_id');
-  OCSP_resp_get0_certs := GetProcAddress(ACryptoLib, 'OCSP_resp_get0_certs');
-  OCSP_resp_find := GetProcAddress(ACryptoLib, 'OCSP_resp_find');
-  OCSP_resp_find_status := GetProcAddress(ACryptoLib, 'OCSP_resp_find_status');
+  Pointer(OCSP_resp_count) := GetProcAddress(ACryptoLib, 'OCSP_resp_count');
+  Pointer(OCSP_resp_get0) := GetProcAddress(ACryptoLib, 'OCSP_resp_get0');
+  Pointer(OCSP_resp_get0_respdata) := GetProcAddress(ACryptoLib, 'OCSP_resp_get0_respdata');
+  Pointer(OCSP_resp_get0_produced_at) := GetProcAddress(ACryptoLib, 'OCSP_resp_get0_produced_at');
+  Pointer(OCSP_resp_get0_signature) := GetProcAddress(ACryptoLib, 'OCSP_resp_get0_signature');
+  Pointer(OCSP_resp_get1_id) := GetProcAddress(ACryptoLib, 'OCSP_resp_get1_id');
+  Pointer(OCSP_resp_get0_id) := GetProcAddress(ACryptoLib, 'OCSP_resp_get0_id');
+  Pointer(OCSP_resp_get0_certs) := GetProcAddress(ACryptoLib, 'OCSP_resp_get0_certs');
+  Pointer(OCSP_resp_find) := GetProcAddress(ACryptoLib, 'OCSP_resp_find');
+  Pointer(OCSP_resp_find_status) := GetProcAddress(ACryptoLib, 'OCSP_resp_find_status');
 
   // 加载 OCSP 基本响应添加
-  OCSP_basic_add1_status := GetProcAddress(ACryptoLib, 'OCSP_basic_add1_status');
-  OCSP_basic_add1_nonce := GetProcAddress(ACryptoLib, 'OCSP_basic_add1_nonce');
-  OCSP_basic_add1_cert := GetProcAddress(ACryptoLib, 'OCSP_basic_add1_cert');
+  Pointer(OCSP_basic_add1_status) := GetProcAddress(ACryptoLib, 'OCSP_basic_add1_status');
+  Pointer(OCSP_basic_add1_nonce) := GetProcAddress(ACryptoLib, 'OCSP_basic_add1_nonce');
+  Pointer(OCSP_basic_add1_cert) := GetProcAddress(ACryptoLib, 'OCSP_basic_add1_cert');
 
   // 加载 OCSP 检查函数
-  OCSP_check_validity := GetProcAddress(ACryptoLib, 'OCSP_check_validity');
+  Pointer(OCSP_check_validity) := GetProcAddress(ACryptoLib, 'OCSP_check_validity');
 
   // 加载 OCSP HTTP 函数
-  OCSP_sendreq_new := GetProcAddress(ACryptoLib, 'OCSP_sendreq_new');
-  OCSP_sendreq_nbio := GetProcAddress(ACryptoLib, 'OCSP_sendreq_nbio');
-  OCSP_REQ_CTX_free := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_free');
-  OCSP_REQ_CTX_http := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_http');
-  OCSP_REQ_CTX_set1_req := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_set1_req');
-  OCSP_REQ_CTX_add1_header := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_add1_header');
-  OCSP_REQ_CTX_i2d := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_i2d');
-  OCSP_REQ_CTX_nbio_d2i := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_nbio_d2i');
-  OCSP_REQ_CTX_get0_mem_bio := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_get0_mem_bio');
-  OCSP_REQ_CTX_nbio := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_nbio');
+  Pointer(OCSP_sendreq_new) := GetProcAddress(ACryptoLib, 'OCSP_sendreq_new');
+  Pointer(OCSP_sendreq_nbio) := GetProcAddress(ACryptoLib, 'OCSP_sendreq_nbio');
+  Pointer(OCSP_REQ_CTX_free) := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_free');
+  Pointer(OCSP_REQ_CTX_http) := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_http');
+  Pointer(OCSP_REQ_CTX_set1_req) := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_set1_req');
+  Pointer(OCSP_REQ_CTX_add1_header) := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_add1_header');
+  Pointer(OCSP_REQ_CTX_i2d) := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_i2d');
+  Pointer(OCSP_REQ_CTX_nbio_d2i) := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_nbio_d2i');
+  Pointer(OCSP_REQ_CTX_get0_mem_bio) := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_get0_mem_bio');
+  Pointer(OCSP_REQ_CTX_nbio) := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_nbio');
 
   // 加载 OCSP 服务定位器
-  OCSP_url_svcloc_new := GetProcAddress(ACryptoLib, 'OCSP_url_svcloc_new');
-  OCSP_parse_url := GetProcAddress(ACryptoLib, 'OCSP_parse_url');
+  Pointer(OCSP_url_svcloc_new) := GetProcAddress(ACryptoLib, 'OCSP_url_svcloc_new');
+  Pointer(OCSP_parse_url) := GetProcAddress(ACryptoLib, 'OCSP_parse_url');
 
   // 加载 OCSP 响应者 ID
-  OCSP_RESPID_set_by_name := GetProcAddress(ACryptoLib, 'OCSP_RESPID_set_by_name');
-  OCSP_RESPID_set_by_key := GetProcAddress(ACryptoLib, 'OCSP_RESPID_set_by_key');
-  OCSP_RESPID_match := GetProcAddress(ACryptoLib, 'OCSP_RESPID_match');
+  Pointer(OCSP_RESPID_set_by_name) := GetProcAddress(ACryptoLib, 'OCSP_RESPID_set_by_name');
+  Pointer(OCSP_RESPID_set_by_key) := GetProcAddress(ACryptoLib, 'OCSP_RESPID_set_by_key');
+  Pointer(OCSP_RESPID_match) := GetProcAddress(ACryptoLib, 'OCSP_RESPID_match');
 
   // 加载 OCSP CRL ID
-  OCSP_crlID_new := GetProcAddress(ACryptoLib, 'OCSP_crlID_new');
+  Pointer(OCSP_crlID_new) := GetProcAddress(ACryptoLib, 'OCSP_crlID_new');
 
   // 加载 OCSP 存档截止
-  OCSP_archive_cutoff_new := GetProcAddress(ACryptoLib, 'OCSP_archive_cutoff_new');
+  Pointer(OCSP_archive_cutoff_new) := GetProcAddress(ACryptoLib, 'OCSP_archive_cutoff_new');
 
   // 加载 OCSP 接受语言
-  OCSP_accept_responses_new := GetProcAddress(ACryptoLib, 'OCSP_accept_responses_new');
+  Pointer(OCSP_accept_responses_new) := GetProcAddress(ACryptoLib, 'OCSP_accept_responses_new');
 
   FOCSPLoaded := Assigned(OCSP_REQUEST_new) and Assigned(OCSP_RESPONSE_new);
   Result := FOCSPLoaded;

@@ -74,7 +74,8 @@ function InitializeSecurityContextW(
 // ----------------------------------------------------------------------------
 
 // 接受安全上下文（服务器端握手）
-function AcceptSecurityContext(
+// 接受安全上下文（服务器端握手）
+function AcceptSecurityContextW(
   phCredential: PCredHandle;         // 凭据句柄
   phContext: PCtxtHandle;            // [in/out] 上下文句柄（首次调用为 nil）
   pInput: PSecBufferDesc;            // [in] 输入缓冲区（客户端请求）
@@ -84,7 +85,7 @@ function AcceptSecurityContext(
   pOutput: PSecBufferDesc;           // [out] 输出缓冲区（发送给客户端）
   pfContextAttr: PULONG;             // [out] 上下文属性
   ptsExpiry: PTimeStamp              // [out] 过期时间
-): SECURITY_STATUS; stdcall; external SECUR32_DLL;
+): SECURITY_STATUS; stdcall; external SECUR32_DLL name 'AcceptSecurityContextW';
 
 // ----------------------------------------------------------------------------
 // 上下文操作函数
@@ -220,6 +221,16 @@ function CertDeleteCertificateFromStore(
   pCertContext: PCCERT_CONTEXT       // 证书上下文
 ): BOOL; stdcall; external CRYPT32_DLL;
 
+// 添加编码证书到存储
+function CertAddEncodedCertificateToStore(
+  hCertStore: HCERTSTORE;            // 证书存储句柄
+  dwCertEncodingType: DWORD;         // 编码类型
+  pbCertEncoded: PByte;              // 编码的证书数据
+  cbCertEncoded: DWORD;              // 数据大小
+  dwAddDisposition: DWORD;           // 添加方式
+  ppCertContext: PPCCERT_CONTEXT     // [out] 证书上下文（可为 nil）
+): BOOL; stdcall; external CRYPT32_DLL;
+
 // 释放证书上下文
 function CertFreeCertificateContext(
   pCertContext: PCCERT_CONTEXT       // 证书上下文
@@ -321,6 +332,13 @@ function CryptHashCertificate(
   pcbComputedHash: PDWORD            // [in/out] 哈希值大小
 ): BOOL; stdcall; external CRYPT32_DLL;
 
+// PFX 导入
+function PFXImportCertStore(
+  pPFX: PCRYPT_DATA_BLOB;            // PFX 数据 Blob
+  szPassword: LPCWSTR;               // 密码
+  dwFlags: DWORD                     // 标志
+): HCERTSTORE; stdcall; external CRYPT32_DLL;
+
 // ----------------------------------------------------------------------------
 // 字符串编码/解码函数（用于 PEM 格式）
 // ----------------------------------------------------------------------------
@@ -376,6 +394,18 @@ const
 
   CRYPT_STRING_NOCRLF             = $40000000;  // Don't include CR/LF in output
   CRYPT_STRING_NOCR               = $80000000;  // Don't include CR in output
+
+  // PFX 导入标志
+  CRYPT_EXPORTABLE                = $00000001;
+  CRYPT_USER_PROTECTED            = $00000002;
+  CRYPT_MACHINE_KEYSET            = $00000020;
+  CRYPT_USER_KEYSET               = $00001000;
+  PKCS12_IMPORT_RESERVED_MASK     = $FFFF0000;
+  PKCS12_PREFER_CN_KSP            = $00000100;
+  PKCS12_ALWAYS_CN_KSP            = $00000200;
+  PKCS12_ALLOW_OVERWRITE_KEY      = $00004000;
+  PKCS12_NO_PERSIST_KEY           = $00008000;
+  PKCS12_INCLUDE_EXTENDED_PROPERTIES = $00000010;
 
 // 结构类型常量（用于 CryptEncodeObject/CryptDecodeObject）
 const

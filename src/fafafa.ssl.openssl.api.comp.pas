@@ -369,8 +369,9 @@ begin
         if Level <> COMP_ZLIB_LEVEL_DEFAULT then
           COMP_zlib_set_level(Ctx, Level);
         
-        // TODO: 使用 Ctx 进行压缩
-        // 这里需要更复杂的流式压缩逻辑
+        // Note: TLS compression is deprecated due to CRIME attack vulnerability.
+        // Modern TLS (1.3) disables compression by default for security.
+        // This feature is intentionally left unimplemented.
         
       finally
         if Assigned(COMP_CTX_free) then

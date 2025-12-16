@@ -18,15 +18,39 @@ lib/
 # IDE 配置文件
 *.lps
 *.layout
+.vscode/
+.idea/
 
 # 日志文件
 *.log
 
 # 临时测试结果
 test_results.txt
+compile_results.txt
 
 # Claude Code 本地配置
 .claude/
 
-# 测试编译产物目录
+# GNU Global 标签文件
+GPATH
+GRTAGS
+GTAGS
+
+# 编译产物目录
+bin/
 tests/bin/
+tests/unit/bin/
+tests/benchmarks/bin/
+tests/performance/bin/
+examples/bin/
+
+# 临时证书文件
+examples/temp_certs/
+*.crt
+*.key
+*.p12
+*.pem
+!tests/certs/*.pem
+!tests/certs/*.crt
+!examples/*.crt
+!examples/*.key

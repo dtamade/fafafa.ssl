@@ -139,6 +139,8 @@ const
 var
   StartTime, EndTime: TDateTime;
   Duration: Double;
+  DurationMs: Double;
+  PerformanceRate: Double;
   LResult: Boolean;
   i: Integer;
 begin
@@ -154,12 +156,19 @@ begin
   end;
   EndTime := Now;
   
-  Duration := (EndTime - StartTime) * 24 * 60 * 60 * 1000; // 转换为毫秒
-  WriteLn(Format('处理 %d 个证书耗时: %.2f ms', [ITERATIONS, Duration]));
-  WriteLn(Format('平均性能: %.2f 证书/秒', [ITERATIONS / (Duration / 1000)]));
+  DurationMs := (EndTime - StartTime) * 24 * 60 * 60 * 1000; // 转换为毫秒
+  
+  // Calculate rate, handling division by zero
+  if DurationMs > 0 then
+    PerformanceRate := (ITERATIONS * 1000) / DurationMs // Certificates per second
+  else
+    PerformanceRate := ITERATIONS * 1000000; // Assume very fast if 0ms (e.g., 1 million certs/sec)
+    
+  WriteLn(Format('处理 %d 个证书耗时: %.2f ms', [ITERATIONS, DurationMs]));
+  WriteLn(Format('平均性能: %.2f 证书/秒', [PerformanceRate]));
   
   // 企业级要求：1000证书/秒
-  Test('性能基准达标 (>= 1000 证书/秒)', (ITERATIONS / (Duration / 1000)) >= 1000);
+  Test('性能基准达标 (>= 1000 证书/秒)', PerformanceRate >= 1000);
 end;
 
 procedure TestX509_MemorySafety;

@@ -1,0 +1,284 @@
+{
+  fafafa.ssl.errors - SSL Error Handling Helpers
+  
+  Purpose:
+    Provides helper functions for consistent error raising across the fafafa.ssl library.
+    Centralizes error message formatting and error code selection.
+    
+  VersionStep: Phase 4 - Professional Error Handling Refactor
+}
+
+unit fafafa.ssl.errors;
+
+{$mode ObjFPC}{$H+}
+
+interface
+
+uses
+  SysUtils,
+  fafafa.ssl.base;
+
+// ============================================================================
+// General Error Raising Functions
+// ============================================================================
+
+{ Raise SSL exception with specified error code }
+procedure RaiseSSLError(const AMessage: string; ACode: TSSLErrorCode); inline;
+
+{ Raise SSL exception with formatted message }
+procedure RaiseSSLErrorFmt(const ATemplate: string; const AArgs: array of const; 
+  ACode: TSSLErrorCode);
+
+// ============================================================================
+// Common Error Helpers
+// ============================================================================
+
+{ Raise function not available error }
+procedure RaiseFunctionNotAvailable(const AFuncName: string);
+
+{ Raise invalid parameter error }
+procedure RaiseInvalidParameter(const AParamName: string);
+
+{ Raise invalid data error  }
+procedure RaiseInvalidData(const AContext: string);
+
+{ Raise not initialized error }
+procedure RaiseNotInitialized(const AComponent: string);
+
+{ Raise memory allocation error }
+procedure RaiseMemoryError(const AOperation: string);
+
+{ Raise unsupported feature error }
+procedure RaiseUnsupported(const AFeature: string);
+
+// ============================================================================
+// Cryptography Error Helpers
+// ============================================================================
+
+{ Raise encryption error }
+procedure RaiseEncryptionError(const ADetails: string);
+
+{ Raise decryption error }
+procedure RaiseDecryptionError(const ADetails: string);
+
+{ Raise key derivation error }
+procedure RaiseKeyDerivationError(const ADetails: string);
+
+// ============================================================================
+// Certificate Error Helpers
+// ============================================================================
+
+{ Raise certificate error }
+procedure RaiseCertificateError(const ADetails: string);
+
+{ Raise certificate expired error }
+procedure RaiseCertificateExpired(const ACertName: string);
+
+{ Raise certificate verification error }
+procedure RaiseCertificateVerifyError(const ADetails: string);
+
+// ============================================================================
+// I/O Error Helpers
+// ============================================================================
+
+{ Raise load error }
+procedure RaiseLoadError(const AFileName: string);
+
+{ Raise parse error }
+procedure RaiseParseError(const AContext: string);
+
+{ Raise connection error }
+procedure RaiseConnectionError(const ADetails: string);
+
+{ Raise invalid format error }
+procedure RaiseInvalidFormat(const AContext: string);
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
+{ Format error message template with arguments }
+function FormatErrorMessage(const ATemplate: string; const AArgs: array of const): string;
+
+{ Get error message in specified language }
+function GetErrorMessage(ACode: TSSLErrorCode; const ALang: string = 'zh'): string;
+
+implementation
+
+// ============================================================================
+// General Error Raising Functions
+// ============================================================================
+
+procedure RaiseSSLError(const AMessage: string; ACode: TSSLErrorCode);
+begin
+  raise ESSLException.Create(AMessage, ACode);
+end;
+
+procedure RaiseSSLErrorFmt(const ATemplate: string; const AArgs: array of const;
+  ACode: TSSLErrorCode);
+begin
+  raise ESSLException.Create(Format(ATemplate, AArgs), ACode);
+end;
+
+// ============================================================================
+// Common Error Helpers
+// ============================================================================
+
+procedure RaiseFunctionNotAvailable(const AFuncName: string);
+begin
+  raise ESSLException.Create(
+    Format('%s is not available. Required OpenSSL function not loaded.', [AFuncName]),
+    sslErrFunctionNotFound
+  );
+end;
+
+procedure RaiseInvalidParameter(const AParamName: string);
+begin
+  raise ESSLException.Create(
+    Format('Invalid parameter: %s', [AParamName]),
+    sslErrInvalidParam
+  );
+end;
+
+procedure RaiseInvalidData(const AContext: string);
+begin
+  raise ESSLException.Create(
+    Format('Invalid data in %s', [AContext]),
+    sslErrInvalidData
+  );
+end;
+
+procedure RaiseNotInitialized(const AComponent: string);
+begin
+  raise ESSLException.Create(
+    Format('%s not initialized', [AComponent]),
+    sslErrNotInitialized
+  );
+end;
+
+procedure RaiseMemoryError(const AOperation: string);
+begin
+  raise ESSLException.Create(
+    Format('Memory allocation failed during %s', [AOperation]),
+    sslErrMemory
+  );
+end;
+
+procedure RaiseUnsupported(const AFeature: string);
+begin
+  raise ESSLException.Create(
+    Format('%s is not supported', [AFeature]),
+    sslErrUnsupported
+  );
+end;
+
+// ============================================================================
+// Cryptography Error Helpers
+// ============================================================================
+
+procedure RaiseEncryptionError(const ADetails: string);
+begin
+  raise ESSLException.Create(
+    Format('Encryption failed: %s', [ADetails]),
+    sslErrEncryptionFailed
+  );
+end;
+
+procedure RaiseDecryptionError(const ADetails: string);
+begin
+  raise ESSLException.Create(
+    Format('Decryption failed: %s', [ADetails]),
+    sslErrDecryptionFailed
+  );
+end;
+
+procedure RaiseKeyDerivationError(const ADetails: string);
+begin
+  raise ESSLException.Create(
+    Format('Key derivation failed: %s', [ADetails]),
+    sslErrKeyDerivationFailed
+  );
+end;
+
+// ============================================================================
+// Certificate Error Helpers
+// ============================================================================
+
+procedure RaiseCertificateError(const ADetails: string);
+begin
+  raise ESSLException.Create(
+    Format('Certificate error: %s', [ADetails]),
+    sslErrCertificate
+  );
+end;
+
+procedure RaiseCertificateExpired(const ACertName: string);
+begin
+  raise ESSLException.Create(
+    Format('Certificate expired: %s', [ACertName]),
+    sslErrCertificateExpired
+  );
+end;
+
+procedure RaiseCertificateVerifyError(const ADetails: string);
+begin
+  raise ESSLException.Create(
+    Format('Certificate verification failed: %s', [ADetails]),
+    sslErrVerificationFailed
+  );
+end;
+
+// ============================================================================
+// I/O Error Helpers
+// ============================================================================
+
+procedure RaiseLoadError(const AFileName: string);
+begin
+  raise ESSLException.Create(
+    Format('Failed to load: %s', [AFileName]),
+    sslErrLoadFailed
+  );
+end;
+
+procedure RaiseParseError(const AContext: string);
+begin
+  raise ESSLException.Create(
+    Format('Parse failed: %s', [AContext]),
+    sslErrParseFailed
+  );
+end;
+
+procedure RaiseConnectionError(const ADetails: string);
+begin
+  raise ESSLException.Create(
+    Format('Connection error: %s', [ADetails]),
+    sslErrConnection
+  );
+end;
+
+procedure RaiseInvalidFormat(const AContext: string);
+begin
+  raise ESSLException.Create(
+    Format('Invalid format: %s', [AContext]),
+    sslErrInvalidFormat
+  );
+end;
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
+function FormatErrorMessage(const ATemplate: string; const AArgs: array of const): string;
+begin
+  Result := Format(ATemplate, AArgs);
+end;
+
+function GetErrorMessage(ACode: TSSLErrorCode; const ALang: string): string;
+begin
+  if (ALang = 'en') or (ALang = 'EN') then
+    Result := SSL_ERROR_MESSAGES_EN[ACode]
+  else
+    Result := SSL_ERROR_MESSAGES[ACode];
+end;
+
+end.

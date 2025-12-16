@@ -173,48 +173,48 @@ begin
   if ALibHandle = 0 then Exit;
   
   // Load SHA3-224 functions
-  SHA3_224_Init := GetProcAddress(ALibHandle, 'SHA3_224_Init');
-  SHA3_224_Update := GetProcAddress(ALibHandle, 'SHA3_224_Update');
-  SHA3_224_Final := GetProcAddress(ALibHandle, 'SHA3_224_Final');
-  SHA3_224 := GetProcAddress(ALibHandle, 'SHA3_224');
+  Pointer(SHA3_224_Init) := GetProcAddress(ALibHandle, 'SHA3_224_Init');
+  Pointer(SHA3_224_Update) := GetProcAddress(ALibHandle, 'SHA3_224_Update');
+  Pointer(SHA3_224_Final) := GetProcAddress(ALibHandle, 'SHA3_224_Final');
+  Pointer(SHA3_224) := GetProcAddress(ALibHandle, 'SHA3_224');
   
   // Load SHA3-256 functions
-  SHA3_256_Init := GetProcAddress(ALibHandle, 'SHA3_256_Init');
-  SHA3_256_Update := GetProcAddress(ALibHandle, 'SHA3_256_Update');
-  SHA3_256_Final := GetProcAddress(ALibHandle, 'SHA3_256_Final');
-  SHA3_256 := GetProcAddress(ALibHandle, 'SHA3_256');
+  Pointer(SHA3_256_Init) := GetProcAddress(ALibHandle, 'SHA3_256_Init');
+  Pointer(SHA3_256_Update) := GetProcAddress(ALibHandle, 'SHA3_256_Update');
+  Pointer(SHA3_256_Final) := GetProcAddress(ALibHandle, 'SHA3_256_Final');
+  Pointer(SHA3_256) := GetProcAddress(ALibHandle, 'SHA3_256');
   
   // Load SHA3-384 functions
-  SHA3_384_Init := GetProcAddress(ALibHandle, 'SHA3_384_Init');
-  SHA3_384_Update := GetProcAddress(ALibHandle, 'SHA3_384_Update');
-  SHA3_384_Final := GetProcAddress(ALibHandle, 'SHA3_384_Final');
-  SHA3_384 := GetProcAddress(ALibHandle, 'SHA3_384');
+  Pointer(SHA3_384_Init) := GetProcAddress(ALibHandle, 'SHA3_384_Init');
+  Pointer(SHA3_384_Update) := GetProcAddress(ALibHandle, 'SHA3_384_Update');
+  Pointer(SHA3_384_Final) := GetProcAddress(ALibHandle, 'SHA3_384_Final');
+  Pointer(SHA3_384) := GetProcAddress(ALibHandle, 'SHA3_384');
   
   // Load SHA3-512 functions
-  SHA3_512_Init := GetProcAddress(ALibHandle, 'SHA3_512_Init');
-  SHA3_512_Update := GetProcAddress(ALibHandle, 'SHA3_512_Update');
-  SHA3_512_Final := GetProcAddress(ALibHandle, 'SHA3_512_Final');
-  SHA3_512 := GetProcAddress(ALibHandle, 'SHA3_512');
+  Pointer(SHA3_512_Init) := GetProcAddress(ALibHandle, 'SHA3_512_Init');
+  Pointer(SHA3_512_Update) := GetProcAddress(ALibHandle, 'SHA3_512_Update');
+  Pointer(SHA3_512_Final) := GetProcAddress(ALibHandle, 'SHA3_512_Final');
+  Pointer(SHA3_512) := GetProcAddress(ALibHandle, 'SHA3_512');
   
   // Load SHAKE128 functions
-  SHAKE128_Init := GetProcAddress(ALibHandle, 'SHAKE128_Init');
-  SHAKE128_Update := GetProcAddress(ALibHandle, 'SHAKE128_Update');
-  SHAKE128_Final := GetProcAddress(ALibHandle, 'SHAKE128_Final');
-  SHAKE128_FinalXOF := GetProcAddress(ALibHandle, 'SHAKE128_FinalXOF');
-  SHAKE128_Squeeze := GetProcAddress(ALibHandle, 'SHAKE128_Squeeze');
-  SHAKE128 := GetProcAddress(ALibHandle, 'SHAKE128');
+  Pointer(SHAKE128_Init) := GetProcAddress(ALibHandle, 'SHAKE128_Init');
+  Pointer(SHAKE128_Update) := GetProcAddress(ALibHandle, 'SHAKE128_Update');
+  Pointer(SHAKE128_Final) := GetProcAddress(ALibHandle, 'SHAKE128_Final');
+  Pointer(SHAKE128_FinalXOF) := GetProcAddress(ALibHandle, 'SHAKE128_FinalXOF');
+  Pointer(SHAKE128_Squeeze) := GetProcAddress(ALibHandle, 'SHAKE128_Squeeze');
+  Pointer(SHAKE128) := GetProcAddress(ALibHandle, 'SHAKE128');
   
   // Load SHAKE256 functions
-  SHAKE256_Init := GetProcAddress(ALibHandle, 'SHAKE256_Init');
-  SHAKE256_Update := GetProcAddress(ALibHandle, 'SHAKE256_Update');
-  SHAKE256_Final := GetProcAddress(ALibHandle, 'SHAKE256_Final');
-  SHAKE256_FinalXOF := GetProcAddress(ALibHandle, 'SHAKE256_FinalXOF');
-  SHAKE256_Squeeze := GetProcAddress(ALibHandle, 'SHAKE256_Squeeze');
-  SHAKE256 := GetProcAddress(ALibHandle, 'SHAKE256');
+  Pointer(SHAKE256_Init) := GetProcAddress(ALibHandle, 'SHAKE256_Init');
+  Pointer(SHAKE256_Update) := GetProcAddress(ALibHandle, 'SHAKE256_Update');
+  Pointer(SHAKE256_Final) := GetProcAddress(ALibHandle, 'SHAKE256_Final');
+  Pointer(SHAKE256_FinalXOF) := GetProcAddress(ALibHandle, 'SHAKE256_FinalXOF');
+  Pointer(SHAKE256_Squeeze) := GetProcAddress(ALibHandle, 'SHAKE256_Squeeze');
+  Pointer(SHAKE256) := GetProcAddress(ALibHandle, 'SHAKE256');
   
   // Load KMAC functions
-  KMAC128 := GetProcAddress(ALibHandle, 'KMAC128');
-  KMAC256 := GetProcAddress(ALibHandle, 'KMAC256');
+  Pointer(KMAC128) := GetProcAddress(ALibHandle, 'KMAC128');
+  Pointer(KMAC256) := GetProcAddress(ALibHandle, 'KMAC256');
   
   GSHA3Loaded := True;
   Result := True;

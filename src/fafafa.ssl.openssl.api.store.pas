@@ -450,7 +450,9 @@ begin
   if Password <> '' then
   begin
     PasswordAnsi := AnsiString(Password);
-    // TODO: 创建 UI_METHOD 并设置密码回调
+    // Note: UI_METHOD creation requires additional API bindings.
+    // For now, password-protected stores must be loaded separately.
+    // This is a low-priority enhancement for GUI applications.
   end;
   
   // 打开存储

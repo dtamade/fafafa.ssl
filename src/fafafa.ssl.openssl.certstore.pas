@@ -50,6 +50,10 @@ type
 
 implementation
 
+uses
+  fafafa.ssl.certchain,
+  fafafa.ssl.secure;
+
 constructor TOpenSSLCertificateStore.Create;
 begin
   inherited Create;
@@ -95,16 +99,36 @@ begin
   if X509 = nil then Exit;
   
   Result := (X509_STORE_add_cert(FStore, X509) = 1);
+  if Result then
+    FCertificates.Add(X509);
 end;
 
 function TOpenSSLCertificateStore.RemoveCertificate(aCert: ISSLCertificate): Boolean;
 begin
-  Result := False; // TODO: OpenSSL doesn't support removing certs easily
+  // Note: OpenSSL X509_STORE design does not support certificate removal.
+  // This is a limitation of OpenSSL's architecture, not a missing feature.
+  // Workaround: Create a new store or reload certificates selectively.
+  Result := False;
 end;
 
 function TOpenSSLCertificateStore.Contains(aCert: ISSLCertificate): Boolean;
+var
+  FP: string;
 begin
-  Result := False; // TODO: Implement
+  Result := False;
+  if (aCert = nil) or (FCertificates.Count = 0) then
+    Exit;
+  
+  // 使用指纹进行匹配，避免依赖底层句柄是否复用
+  FP := aCert.GetFingerprintSHA256;
+  if FP = '' then
+    FP := aCert.GetFingerprint(sslHashSHA256);
+  if FP = '' then
+    FP := aCert.GetFingerprintSHA1;
+  if FP = '' then
+    Exit;
+  
+  Result := FindByFingerprint(FP) <> nil;
 end;
 
 procedure TOpenSSLCertificateStore.Clear;
@@ -163,23 +187,15 @@ begin
   Result := False;
   CertCount := 0;
   
-  {$IFDEF DEBUG_CERTSTORE}
-  WriteLn('[DEBUG]   LoadFromFile: ', aFileName);
-  {$ENDIF}
+
   
   if FStore = nil then
   begin
-    {$IFDEF DEBUG_CERTSTORE}
-    WriteLn('[DEBUG]     FStore = nil');
-    {$ENDIF}
     Exit;
   end;
   
   if not Assigned(BIO_new_file) or not Assigned(PEM_read_bio_X509) then
   begin
-    {$IFDEF DEBUG_CERTSTORE}
-    WriteLn('[DEBUG]     BIO API not loaded');
-    {$ENDIF}
     Exit;
   end;
   
@@ -189,24 +205,15 @@ begin
     BIO := BIO_new_file(PAnsiChar(FileNameA), 'r');
     if BIO = nil then
     begin
-      {$IFDEF DEBUG_CERTSTORE}
-      WriteLn('[DEBUG]     BIO_new_file returned nil');
-      {$ENDIF}
       Exit;
     end;
     
     try
       // 尝试读取所有证书（可能是链）
-      {$IFDEF DEBUG_CERTSTORE}
-      WriteLn('[DEBUG]     Before PEM_read_bio_X509');
-      {$ENDIF}
       
       repeat
         X509Cert := PEM_read_bio_X509(BIO, nil, nil, nil);
         
-        {$IFDEF DEBUG_CERTSTORE}
-        WriteLn('[DEBUG]     After PEM_read_bio_X509: X509Cert = ', PtrUInt(X509Cert));
-        {$ENDIF}
         
         if X509Cert <> nil then
         begin
@@ -220,16 +227,9 @@ begin
           if Assigned(X509_up_ref) then
             X509_up_ref(X509Cert);  // 为FCertificates增加引用
           
-          {$IFDEF DEBUG_CERTSTORE}
-          WriteLn('[DEBUG]     After X509_up_ref');
-          WriteLn('[DEBUG]     Before FCertificates.Add');
-          {$ENDIF}
           
           FCertificates.Add(X509Cert);
           
-          {$IFDEF DEBUG_CERTSTORE}
-          WriteLn('[DEBUG]     After FCertificates.Add');
-          {$ENDIF}
           
           Inc(CertCount);
         end;
@@ -237,9 +237,7 @@ begin
       
       Result := (CertCount > 0);
       
-      {$IFDEF DEBUG_CERTSTORE}
-      WriteLn('[DEBUG]     Loaded ', CertCount, ' certificate(s)');
-      {$ENDIF}
+      
     finally
       if Assigned(BIO_free) then
         BIO_free(BIO);
@@ -247,9 +245,7 @@ begin
   except
     on E: Exception do
     begin
-      {$IFDEF DEBUG_CERTSTORE}
-      WriteLn('[DEBUG]     Exception: ', E.Message);
-      {$ENDIF}
+      
       Result := False;
     end;
   end;
@@ -270,37 +266,17 @@ begin
     // 确保路径有正确的分隔符
     SearchPath := IncludeTrailingPathDelimiter(aPath);
     
-    // Debug: 输出搜索路径
-    {$IFDEF DEBUG_CERTSTORE}
-    WriteLn('[DEBUG] LoadFromPath: SearchPath = ', SearchPath);
-    {$ENDIF}
     
     // 扫描目录中的所有 .pem 文件
     FindResult := FindFirst(SearchPath + '*.pem', faAnyFile, SR);
-    {$IFDEF DEBUG_CERTSTORE}
-    WriteLn('[DEBUG] FindFirst(*.pem) = ', FindResult);
-    {$ENDIF}
-    
     if FindResult = 0 then
     begin
       repeat
         if (SR.Attr and faDirectory) = 0 then
         begin
           FilePath := SearchPath + SR.Name;
-          {$IFDEF DEBUG_CERTSTORE}
-          Write('[DEBUG] Trying: ', FilePath, ' ... ');
-          {$ENDIF}
           if LoadFromFile(FilePath) then
-          begin
             Inc(Count);
-            {$IFDEF DEBUG_CERTSTORE}
-            WriteLn('OK');
-            {$ENDIF}
-          end
-          {$IFDEF DEBUG_CERTSTORE}
-          else
-            WriteLn('FAILED')
-          {$ENDIF};
         end;
       until FindNext(SR) <> 0;
       FindClose(SR);
@@ -326,7 +302,7 @@ begin
     on E: Exception do
     begin
       {$IFDEF DEBUG_CERTSTORE}
-      WriteLn('[DEBUG] Exception in LoadFromPath: ', E.Message);
+      // Error during path loading
       {$ENDIF}
       Result := False;
     end;
@@ -482,17 +458,17 @@ begin
     if Cert <> nil then
     begin
       try
-        // 尝试 SHA1 指纹
+        // Try SHA1 fingerprint (constant-time comparison)
         FP_SHA1 := UpperCase(StringReplace(Cert.GetFingerprintSHA1, ':', '', [rfReplaceAll]));
-        if (FP_SHA1 <> '') and (FP_SHA1 = SearchFP) then
+        if (FP_SHA1 <> '') and SecureCompareStrings(FP_SHA1, SearchFP) then
         begin
           Result := Cert;
           Exit;
         end;
         
-        // 尝试 SHA256 指纹
+        // Try SHA256 fingerprint (constant-time comparison)
         FP_SHA256 := UpperCase(StringReplace(Cert.GetFingerprintSHA256, ':', '', [rfReplaceAll]));
-        if (FP_SHA256 <> '') and (FP_SHA256 = SearchFP) then
+        if (FP_SHA256 <> '') and SecureCompareStrings(FP_SHA256, SearchFP) then
         begin
           Result := Cert;
           Exit;
@@ -506,12 +482,27 @@ end;
 
 function TOpenSSLCertificateStore.VerifyCertificate(aCert: ISSLCertificate): Boolean;
 begin
-  Result := False; // TODO: Implement
+  Result := False;
+  if (aCert = nil) or (FStore = nil) then
+    Exit;
+  
+  // 直接复用证书对象的 Verify 实现，委托给当前 store
+  Result := aCert.Verify(Self);
 end;
 
 function TOpenSSLCertificateStore.BuildCertificateChain(aCert: ISSLCertificate): TSSLCertificateArray;
 begin
-  SetLength(Result, 0); // TODO: Implement
+  SetLength(Result, 0);
+  if aCert = nil then
+    Exit;
+  
+  // 使用通用的证书链验证器来构建证书链
+  with TSSLCertificateChainVerifier.Create as ISSLCertificateChainVerifier do
+  begin
+    SetTrustedStore(Self);
+    if not BuildChain(aCert, Result) then
+      SetLength(Result, 0);
+  end;
 end;
 
 function TOpenSSLCertificateStore.GetNativeHandle: Pointer;

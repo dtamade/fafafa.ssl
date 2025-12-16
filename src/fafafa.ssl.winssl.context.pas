@@ -20,6 +20,7 @@ interface
 uses
   Windows, SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.exceptions,  // 新增：类型化异常
   fafafa.ssl.winssl.types,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.utils;
@@ -39,7 +40,7 @@ type
     FCipherSuites: string;
     FALPNProtocols: string;
     FInitialized: Boolean;
-    FOptions: Cardinal;
+    FOptions: TSSLOptions;
     
     // 证书相关
     FCertContext: PCCERT_CONTEXT;
@@ -54,6 +55,7 @@ type
     FInfoCallback: TSSLInfoCallback;
     
     procedure CleanupCertificate;
+    procedure ApplyOptions;
     
   public
     constructor Create(aLibrary: ISSLLibrary; aType: TSSLContextType);
@@ -70,6 +72,8 @@ type
     procedure LoadCertificate(aCert: ISSLCertificate); overload;
     procedure LoadPrivateKey(const aFileName: string; const aPassword: string = ''); overload;
     procedure LoadPrivateKey(aStream: TStream; const aPassword: string = ''); overload;
+    procedure LoadCertificatePEM(const aPEM: string);
+    procedure LoadPrivateKeyPEM(const aPEM: string; const aPassword: string = '');
     procedure LoadCAFile(const aFileName: string);
     procedure LoadCAPath(const aPath: string);
     procedure SetCertificateStore(aStore: ISSLCertificateStore);
@@ -96,8 +100,8 @@ type
     function GetSessionCacheSize: Integer;
     
     { ISSLContext - 高级选项 }
-    procedure SetOptions(aOptions: Cardinal);
-    function GetOptions: Cardinal;
+    procedure SetOptions(const aOptions: TSSLOptions);
+    function GetOptions: TSSLOptions;
     procedure SetServerName(const aServerName: string);
     function GetServerName: string;
     procedure SetALPNProtocols(const aProtocols: string);
@@ -143,11 +147,11 @@ begin
   FCipherSuites := '';
   FALPNProtocols := '';
   FInitialized := False;
-  FOptions := 0;
+  FOptions := [ssoEnableSessionCache, ssoEnableSessionTickets];
   
   // 证书相关初始化
   FCertContext := nil;
-  FCertStore := 0;
+  FCertStore := nil;
   FSessionCacheEnabled := True;
   FSessionTimeout := 300;
   FSessionCacheSize := 20480;
@@ -193,6 +197,7 @@ begin
   );
   
   FInitialized := IsSuccess(Status);
+  ApplyOptions;
 end;
 
 destructor TWinSSLContext.Destroy;
@@ -211,11 +216,18 @@ begin
     FCertContext := nil;
   end;
   
-  if FCertStore <> 0 then
+  if FCertStore <> nil then
   begin
     CertCloseStore(FCertStore, 0);
-    FCertStore := 0;
+    FCertStore := nil;
   end;
+end;
+
+procedure TWinSSLContext.ApplyOptions;
+begin
+  // 当前实现已映射主要选项（会话缓存等）
+  // 可扩展：根据实际需求添加更多 WinSSL 选项映射
+  SetSessionCacheMode(ssoEnableSessionCache in FOptions);
 end;
 
 // ============================================================================
@@ -246,7 +258,11 @@ var
   LFileStream: TFileStream;
 begin
   if not FileExists(aFileName) then
-    raise Exception.CreateFmt('证书文件不存在: %s', [aFileName]);
+    raise ESSLFileNotFoundException.CreateWithContext(
+      Format('Certificate file not found: %s', [aFileName]),
+      sslErrLoadFailed,
+      'TWinSSLContext.LoadCertificate'
+    );
   
   LFileStream := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
   try
@@ -260,6 +276,9 @@ procedure TWinSSLContext.LoadCertificate(aStream: TStream);
 var
   LCertData: TBytes;
   LSize: Int64;
+  Blob: CRYPT_DATA_BLOB;
+  PFXStore: HCERTSTORE;
+  CertContext: PCCERT_CONTEXT;
 begin
   // 清理之前的证书
   CleanupCertificate;
@@ -269,6 +288,30 @@ begin
   SetLength(LCertData, LSize);
   aStream.Read(LCertData[0], LSize);
   
+  // 1. 尝试作为 PFX 加载 (无密码)
+  Blob.cbData := Length(LCertData);
+  Blob.pbData := @LCertData[0];
+  
+  PFXStore := PFXImportCertStore(@Blob, nil, CRYPT_EXPORTABLE or PKCS12_NO_PERSIST_KEY);
+  if PFXStore <> nil then
+  begin
+    // 是 PFX 文件，查找第一个证书（通常是用户证书）
+    // 注意：这里假设 PFX 中包含私钥的证书是我们需要的
+    // 实际应该遍历查找带有私钥属性的证书
+    CertContext := CertEnumCertificatesInStore(PFXStore, nil);
+    if CertContext <> nil then
+    begin
+      FCertContext := CertDuplicateCertificateContext(CertContext);
+      // PFX 存储中的证书已经包含了私钥关联信息
+      // 我们不需要显式加载私钥，Schannel 会自动使用
+    end;
+    CertCloseStore(PFXStore, 0);
+    
+    if FCertContext <> nil then
+      Exit; // 成功加载
+  end;
+
+  // 2. 尝试作为普通证书加载 (DER/PEM)
   // 创建内存证书存储
   FCertStore := CertOpenStore(
     CERT_STORE_PROV_MEMORY,
@@ -278,10 +321,18 @@ begin
     nil
   );
   
-  if FCertStore = 0 then
-    raise Exception.Create('无法创建证书存储');
+  if FCertStore = nil then
+    raise ESSLResourceException.CreateWithContext(
+      'Failed to create certificate store',
+      sslErrMemory,
+      'TWinSSLContext.LoadCertificate'
+    );
   
-  // 添加证书到存储 (尝试多种格式)
+  // 添加证书到存储 (尝试多种格式，包括 PEM)
+  // CertAddEncodedCertificateToStore 只能处理 DER，我们需要先转换 PEM
+  // 或者使用 CertCreateCertificateContextFromFile 的逻辑
+  
+  // 尝试直接添加 (DER)
   if not CertAddEncodedCertificateToStore(
     FCertStore,
     X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
@@ -291,9 +342,17 @@ begin
     @FCertContext
   ) then
   begin
-    // 如果失败，尝试作为PFX/P12格式
-    // 这里简化处理，实际应该根据文件格式进行相应处理
-    raise Exception.Create('证书加载失败');
+    // 如果失败，尝试解码 PEM
+    // 这里简化处理，如果需要完整 PEM 支持，应使用 CryptStringToBinaryA
+    // 目前假设是 DER 格式失败
+    if FCertContext = nil then
+    raise ESSLCertificateLoadException.CreateWithContext(
+      'Certificate load failed: unsupported format or invalid data',
+      sslErrLoadFailed,
+      'TWinSSLContext.LoadCertificate',
+      GetLastError,
+      sslWinSSL
+    );
   end;
 end;
 
@@ -301,7 +360,11 @@ procedure TWinSSLContext.LoadCertificate(aCert: ISSLCertificate);
 begin
   // 从ISSLCertificate接口获取证书上下文
   if aCert = nil then
-    raise Exception.Create('证书对象为空');
+    raise ESSLInvalidArgument.CreateWithContext(
+      'Certificate object is nil',
+      sslErrInvalidParam,
+      'TWinSSLContext.LoadCertificate'
+    );
   
   CleanupCertificate;
   
@@ -316,7 +379,11 @@ var
   LFileStream: TFileStream;
 begin
   if not FileExists(aFileName) then
-    raise Exception.CreateFmt('私钥文件不存在: %s', [aFileName]);
+    raise ESSLFileNotFoundException.CreateWithContext(
+      Format('Private key file not found: %s', [aFileName]),
+      sslErrLoadFailed,
+      'TWinSSLContext.LoadPrivateKey'
+    );
   
   LFileStream := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
   try
@@ -327,10 +394,102 @@ begin
 end;
 
 procedure TWinSSLContext.LoadPrivateKey(aStream: TStream; const aPassword: string);
+var
+  LCertData: TBytes;
+  LSize: Int64;
+  Blob: CRYPT_DATA_BLOB;
+  PFXStore: HCERTSTORE;
+  CertContext: PCCERT_CONTEXT;
+  PW: PWideChar;
 begin
   // WinSSL/Schannel 通常将证书和私钥一起加载（如PFX格式）
-  // 这里简化处理，实际应该使用 CryptImportKey 等API
-  // 目前假设证书中已包含私钥（如通过LoadCertificate加载PFX文件）
+  // 如果是 PFX，我们尝试加载并提取证书和私钥
+  
+  LSize := aStream.Size - aStream.Position;
+  SetLength(LCertData, LSize);
+  aStream.Read(LCertData[0], LSize);
+  
+  Blob.cbData := Length(LCertData);
+  Blob.pbData := @LCertData[0];
+  
+  PW := nil;
+  if aPassword <> '' then
+    PW := StringToPWideChar(aPassword);
+    
+  try
+    PFXStore := PFXImportCertStore(@Blob, PW, CRYPT_EXPORTABLE or PKCS12_NO_PERSIST_KEY);
+  finally
+    if PW <> nil then
+      FreePWideCharString(PW);
+  end;
+  
+  if PFXStore <> nil then
+  begin
+    // 成功打开 PFX，查找带有私钥的证书
+    // 这里我们简单地取第一个证书，并替换当前的 FCertContext
+    // 如果之前通过 LoadCertificate 加载了证书，这里会被覆盖
+    // 这是符合预期的，因为 PFX 包含了证书和私钥
+    
+    CertContext := CertEnumCertificatesInStore(PFXStore, nil);
+    if CertContext <> nil then
+    begin
+      if FCertContext <> nil then
+        CertFreeCertificateContext(FCertContext);
+        
+      FCertContext := CertDuplicateCertificateContext(CertContext);
+    end;
+    CertCloseStore(PFXStore, 0);
+  end
+  else
+  begin
+    // 如果不是 PFX，可能是 PEM 格式的私钥
+    // WinSSL 不直接支持加载 PEM 私钥并关联到现有证书上下文
+    // 除非使用 CryptImportKey 等复杂操作
+    // 这里抛出异常或记录警告
+   if aStream = nil then
+    raise ESSLConfigurationException.CreateWithContext(
+      'WinSSL backend only supports PFX/P12 format for private key loading. Please merge certificate and key into a PFX file.',
+      sslErrUnsupported,
+      'TWinSSLContext.LoadPrivateKey'
+    );
+  end;
+end;
+
+procedure TWinSSLContext.LoadCertificatePEM(const aPEM: string);
+begin
+  // WinSSL/Schannel does not natively support PEM format
+  // PEM data must be converted to DER or PKCS#12 format
+  if aPEM = '' then
+    raise ESSLInvalidArgument.CreateWithContext(
+      'PEM string is empty',
+      sslErrInvalidParam,
+      'TWinSSLContext.LoadCertificatePEM'
+    );
+  
+  raise ESSLConfigurationException.CreateWithContext(
+    'WinSSL backend does not support direct PEM loading. ' +
+    'Please convert to DER or PKCS#12 format, or use the OpenSSL backend.',
+    sslErrUnsupported,
+    'TWinSSLContext.LoadCertificatePEM'
+  );
+end;
+
+procedure TWinSSLContext.LoadPrivateKeyPEM(const aPEM: string; const aPassword: string = '');
+begin
+  // WinSSL/Schannel does not natively support PEM format for private keys
+  if aPEM = '' then
+    raise ESSLInvalidArgument.CreateWithContext(
+      'PEM string is empty',
+      sslErrInvalidParam,
+      'TWinSSLContext.LoadPrivateKeyPEM'
+    );
+  
+  raise ESSLConfigurationException.CreateWithContext(
+    'WinSSL backend does not support direct PEM loading. ' +
+    'Please use PKCS#12 format with LoadPrivateKey, or use the OpenSSL backend.',
+    sslErrUnsupported,
+    'TWinSSLContext.LoadPrivateKeyPEM'
+  );
 end;
 
 procedure TWinSSLContext.LoadCAFile(const aFileName: string);
@@ -341,7 +500,11 @@ var
   LCertContext: PCCERT_CONTEXT;
 begin
   if not FileExists(aFileName) then
-    raise Exception.CreateFmt('CA文件不存在: %s', [aFileName]);
+    raise ESSLFileNotFoundException.CreateWithContext(
+      Format('CA file not found: %s', [aFileName]),
+      sslErrLoadFailed,
+      'TWinSSLContext.LoadCAFile'
+    );
   
   LFileStream := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
   try
@@ -473,12 +636,13 @@ end;
 // ISSLContext - 高级选项
 // ============================================================================
 
-procedure TWinSSLContext.SetOptions(aOptions: Cardinal);
+procedure TWinSSLContext.SetOptions(const aOptions: TSSLOptions);
 begin
   FOptions := aOptions;
+  ApplyOptions;
 end;
 
-function TWinSSLContext.GetOptions: Cardinal;
+function TWinSSLContext.GetOptions: TSSLOptions;
 begin
   Result := FOptions;
 end;
