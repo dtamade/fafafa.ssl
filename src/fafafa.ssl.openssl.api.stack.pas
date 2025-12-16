@@ -185,83 +185,68 @@ function GetFromStack(Stack: POPENSSL_STACK; Index: Integer): Pointer;
 implementation
 
 uses
-  {$IFDEF WINDOWS}Windows{$ELSE}dynlibs{$ENDIF};
+  fafafa.ssl.openssl.loader;  // Phase 3.3 P0+ - 统一动态库加载
 
 var
-  hCrypto: {$IFDEF WINDOWS}HMODULE{$ELSE}THandle{$ENDIF} = 0;
   StackLoaded: Boolean = False;
 
 function LoadStackFunctions: Boolean;
+var
+  LHandle: TLibHandle;
 begin
   Result := False;
-  
-  // Load crypto library if not already loaded
-  if hCrypto = 0 then
-  begin
-    {$IFDEF WINDOWS}
-    hCrypto := LoadLibrary('libcrypto-3-x64.dll');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto-1_1-x64.dll');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libeay32.dll');
-    {$ELSE}
-    hCrypto := LoadLibrary('libcrypto.so.3');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto.so.1.1');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto.so');
-    {$ENDIF}
-  end;
-  
-  if hCrypto = 0 then
+
+  // Phase 3.3 P0+ - 使用统一的动态库加载器（替换 ~25 行重复代码）
+  LHandle := TOpenSSLLoader.GetLibraryHandle(osslLibCrypto);
+  if LHandle = 0 then
     Exit;
-    
+
   // Load generic stack functions
-  OPENSSL_sk_new := TOPENSSL_sk_new(GetProcAddress(hCrypto, 'OPENSSL_sk_new'));
-  OPENSSL_sk_new_null := TOPENSSL_sk_new_null(GetProcAddress(hCrypto, 'OPENSSL_sk_new_null'));
-  OPENSSL_sk_new_reserve := TOPENSSL_sk_new_reserve(GetProcAddress(hCrypto, 'OPENSSL_sk_new_reserve'));
-  OPENSSL_sk_reserve := TOPENSSL_sk_reserve(GetProcAddress(hCrypto, 'OPENSSL_sk_reserve'));
-  OPENSSL_sk_free := TOPENSSL_sk_free(GetProcAddress(hCrypto, 'OPENSSL_sk_free'));
-  OPENSSL_sk_pop_free := TOPENSSL_sk_pop_free(GetProcAddress(hCrypto, 'OPENSSL_sk_pop_free'));
-  OPENSSL_sk_deep_copy := TOPENSSL_sk_deep_copy(GetProcAddress(hCrypto, 'OPENSSL_sk_deep_copy'));
-  OPENSSL_sk_insert := TOPENSSL_sk_insert(GetProcAddress(hCrypto, 'OPENSSL_sk_insert'));
-  OPENSSL_sk_delete := TOPENSSL_sk_delete(GetProcAddress(hCrypto, 'OPENSSL_sk_delete'));
-  OPENSSL_sk_delete_ptr := TOPENSSL_sk_delete_ptr(GetProcAddress(hCrypto, 'OPENSSL_sk_delete_ptr'));
-  OPENSSL_sk_find := TOPENSSL_sk_find(GetProcAddress(hCrypto, 'OPENSSL_sk_find'));
-  OPENSSL_sk_find_ex := TOPENSSL_sk_find_ex(GetProcAddress(hCrypto, 'OPENSSL_sk_find_ex'));
-  OPENSSL_sk_push := TOPENSSL_sk_push(GetProcAddress(hCrypto, 'OPENSSL_sk_push'));
-  OPENSSL_sk_unshift := TOPENSSL_sk_unshift(GetProcAddress(hCrypto, 'OPENSSL_sk_unshift'));
-  OPENSSL_sk_shift := TOPENSSL_sk_shift(GetProcAddress(hCrypto, 'OPENSSL_sk_shift'));
-  OPENSSL_sk_pop := TOPENSSL_sk_pop(GetProcAddress(hCrypto, 'OPENSSL_sk_pop'));
-  OPENSSL_sk_zero := TOPENSSL_sk_zero(GetProcAddress(hCrypto, 'OPENSSL_sk_zero'));
-  OPENSSL_sk_set_cmp_func := TOPENSSL_sk_set_cmp_func(GetProcAddress(hCrypto, 'OPENSSL_sk_set_cmp_func'));
-  OPENSSL_sk_dup := TOPENSSL_sk_dup(GetProcAddress(hCrypto, 'OPENSSL_sk_dup'));
-  OPENSSL_sk_sort := TOPENSSL_sk_sort(GetProcAddress(hCrypto, 'OPENSSL_sk_sort'));
-  OPENSSL_sk_is_sorted := TOPENSSL_sk_is_sorted(GetProcAddress(hCrypto, 'OPENSSL_sk_is_sorted'));
-  OPENSSL_sk_num := TOPENSSL_sk_num(GetProcAddress(hCrypto, 'OPENSSL_sk_num'));
-  OPENSSL_sk_value := TOPENSSL_sk_value(GetProcAddress(hCrypto, 'OPENSSL_sk_value'));
-  OPENSSL_sk_set := TOPENSSL_sk_set(GetProcAddress(hCrypto, 'OPENSSL_sk_set'));
+  OPENSSL_sk_new := TOPENSSL_sk_new(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_new'));
+  OPENSSL_sk_new_null := TOPENSSL_sk_new_null(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_new_null'));
+  OPENSSL_sk_new_reserve := TOPENSSL_sk_new_reserve(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_new_reserve'));
+  OPENSSL_sk_reserve := TOPENSSL_sk_reserve(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_reserve'));
+  OPENSSL_sk_free := TOPENSSL_sk_free(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_free'));
+  OPENSSL_sk_pop_free := TOPENSSL_sk_pop_free(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_pop_free'));
+  OPENSSL_sk_deep_copy := TOPENSSL_sk_deep_copy(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_deep_copy'));
+  OPENSSL_sk_insert := TOPENSSL_sk_insert(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_insert'));
+  OPENSSL_sk_delete := TOPENSSL_sk_delete(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_delete'));
+  OPENSSL_sk_delete_ptr := TOPENSSL_sk_delete_ptr(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_delete_ptr'));
+  OPENSSL_sk_find := TOPENSSL_sk_find(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_find'));
+  OPENSSL_sk_find_ex := TOPENSSL_sk_find_ex(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_find_ex'));
+  OPENSSL_sk_push := TOPENSSL_sk_push(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_push'));
+  OPENSSL_sk_unshift := TOPENSSL_sk_unshift(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_unshift'));
+  OPENSSL_sk_shift := TOPENSSL_sk_shift(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_shift'));
+  OPENSSL_sk_pop := TOPENSSL_sk_pop(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_pop'));
+  OPENSSL_sk_zero := TOPENSSL_sk_zero(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_zero'));
+  OPENSSL_sk_set_cmp_func := TOPENSSL_sk_set_cmp_func(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_set_cmp_func'));
+  OPENSSL_sk_dup := TOPENSSL_sk_dup(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_dup'));
+  OPENSSL_sk_sort := TOPENSSL_sk_sort(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_sort'));
+  OPENSSL_sk_is_sorted := TOPENSSL_sk_is_sorted(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_is_sorted'));
+  OPENSSL_sk_num := TOPENSSL_sk_num(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_num'));
+  OPENSSL_sk_value := TOPENSSL_sk_value(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_value'));
+  OPENSSL_sk_set := TOPENSSL_sk_set(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_sk_set'));
   
   // Try older sk_* functions for compatibility
   if not Assigned(OPENSSL_sk_new) then
   begin
-    OPENSSL_sk_new := TOPENSSL_sk_new(GetProcAddress(hCrypto, 'sk_new'));
-    OPENSSL_sk_new_null := TOPENSSL_sk_new_null(GetProcAddress(hCrypto, 'sk_new_null'));
-    OPENSSL_sk_free := TOPENSSL_sk_free(GetProcAddress(hCrypto, 'sk_free'));
-    OPENSSL_sk_pop_free := TOPENSSL_sk_pop_free(GetProcAddress(hCrypto, 'sk_pop_free'));
-    OPENSSL_sk_num := TOPENSSL_sk_num(GetProcAddress(hCrypto, 'sk_num'));
-    OPENSSL_sk_value := TOPENSSL_sk_value(GetProcAddress(hCrypto, 'sk_value'));
-    OPENSSL_sk_push := TOPENSSL_sk_push(GetProcAddress(hCrypto, 'sk_push'));
-    OPENSSL_sk_pop := TOPENSSL_sk_pop(GetProcAddress(hCrypto, 'sk_pop'));
-    OPENSSL_sk_shift := TOPENSSL_sk_shift(GetProcAddress(hCrypto, 'sk_shift'));
-    OPENSSL_sk_unshift := TOPENSSL_sk_unshift(GetProcAddress(hCrypto, 'sk_unshift'));
-    OPENSSL_sk_insert := TOPENSSL_sk_insert(GetProcAddress(hCrypto, 'sk_insert'));
-    OPENSSL_sk_delete := TOPENSSL_sk_delete(GetProcAddress(hCrypto, 'sk_delete'));
-    OPENSSL_sk_find := TOPENSSL_sk_find(GetProcAddress(hCrypto, 'sk_find'));
-    OPENSSL_sk_sort := TOPENSSL_sk_sort(GetProcAddress(hCrypto, 'sk_sort'));
-    OPENSSL_sk_dup := TOPENSSL_sk_dup(GetProcAddress(hCrypto, 'sk_dup'));
-    OPENSSL_sk_zero := TOPENSSL_sk_zero(GetProcAddress(hCrypto, 'sk_zero'));
-    OPENSSL_sk_set := TOPENSSL_sk_set(GetProcAddress(hCrypto, 'sk_set'));
+    OPENSSL_sk_new := TOPENSSL_sk_new(TOpenSSLLoader.GetFunction(LHandle, 'sk_new'));
+    OPENSSL_sk_new_null := TOPENSSL_sk_new_null(TOpenSSLLoader.GetFunction(LHandle, 'sk_new_null'));
+    OPENSSL_sk_free := TOPENSSL_sk_free(TOpenSSLLoader.GetFunction(LHandle, 'sk_free'));
+    OPENSSL_sk_pop_free := TOPENSSL_sk_pop_free(TOpenSSLLoader.GetFunction(LHandle, 'sk_pop_free'));
+    OPENSSL_sk_num := TOPENSSL_sk_num(TOpenSSLLoader.GetFunction(LHandle, 'sk_num'));
+    OPENSSL_sk_value := TOPENSSL_sk_value(TOpenSSLLoader.GetFunction(LHandle, 'sk_value'));
+    OPENSSL_sk_push := TOPENSSL_sk_push(TOpenSSLLoader.GetFunction(LHandle, 'sk_push'));
+    OPENSSL_sk_pop := TOPENSSL_sk_pop(TOpenSSLLoader.GetFunction(LHandle, 'sk_pop'));
+    OPENSSL_sk_shift := TOPENSSL_sk_shift(TOpenSSLLoader.GetFunction(LHandle, 'sk_shift'));
+    OPENSSL_sk_unshift := TOPENSSL_sk_unshift(TOpenSSLLoader.GetFunction(LHandle, 'sk_unshift'));
+    OPENSSL_sk_insert := TOPENSSL_sk_insert(TOpenSSLLoader.GetFunction(LHandle, 'sk_insert'));
+    OPENSSL_sk_delete := TOPENSSL_sk_delete(TOpenSSLLoader.GetFunction(LHandle, 'sk_delete'));
+    OPENSSL_sk_find := TOPENSSL_sk_find(TOpenSSLLoader.GetFunction(LHandle, 'sk_find'));
+    OPENSSL_sk_sort := TOPENSSL_sk_sort(TOpenSSLLoader.GetFunction(LHandle, 'sk_sort'));
+    OPENSSL_sk_dup := TOPENSSL_sk_dup(TOpenSSLLoader.GetFunction(LHandle, 'sk_dup'));
+    OPENSSL_sk_zero := TOPENSSL_sk_zero(TOpenSSLLoader.GetFunction(LHandle, 'sk_zero'));
+    OPENSSL_sk_set := TOPENSSL_sk_set(TOpenSSLLoader.GetFunction(LHandle, 'sk_set'));
   end;
   
   // Load typed stack functions (these are typically inline/macros in C)
@@ -329,12 +314,8 @@ begin
   sk_OPENSSL_STRING_push := nil;
   
   StackLoaded := False;
-  
-  if hCrypto <> 0 then
-  begin
-    FreeLibrary(hCrypto);
-    hCrypto := 0;
-  end;
+
+  // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
 end;
 
 function IsStackLoaded: Boolean;

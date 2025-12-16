@@ -33,9 +33,11 @@ type
     FComponent: string;  // 保留向后兼容
   public
     constructor Create(const AMessage: string); overload;
-    constructor CreateWithCode(const AMessage: string; AErrorCode: Cardinal); overload;  // 向后兼容
+    constructor Create(const AMessage: string; AErrorCode: TSSLErrorCode); overload;  // Phase 3.3 P0 - 向后兼容 base.pas
+    constructor Create(const AMessage: string; AErrorCode: TSSLErrorCode; const AContext: string); overload;  // Phase 3.3 P0 - 向后兼容
+    constructor CreateWithCode(const AMessage: string; AErrorCode: Cardinal); overload;  // 向后兼容 OpenSSL 错误码
     constructor CreateFmt(const AMessage: string; const AArgs: array of const); overload;
-    
+
     {** 新的构造函数 - 提供完整上下文 *}
     constructor CreateWithContext(
       const AMessage: string;
@@ -159,6 +161,26 @@ begin
   FErrorCode := sslErrNone;
   FNativeError := 0;
   FContext := '';
+  FComponent := '';
+  FLibraryType := sslAutoDetect;
+end;
+
+constructor ESSLException.Create(const AMessage: string; AErrorCode: TSSLErrorCode);
+begin
+  inherited Create(AMessage);
+  FErrorCode := AErrorCode;
+  FNativeError := 0;
+  FContext := '';
+  FComponent := '';
+  FLibraryType := sslAutoDetect;
+end;
+
+constructor ESSLException.Create(const AMessage: string; AErrorCode: TSSLErrorCode; const AContext: string);
+begin
+  inherited Create(AMessage);
+  FErrorCode := AErrorCode;
+  FNativeError := 0;
+  FContext := AContext;
   FComponent := '';
   FLibraryType := sslAutoDetect;
 end;

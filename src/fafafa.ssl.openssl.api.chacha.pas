@@ -107,57 +107,42 @@ function Poly1305MAC(const Key: TBytes; const Message: TBytes): TBytes;
 implementation
 
 uses
-  {$IFDEF WINDOWS}Windows{$ELSE}dynlibs{$ENDIF},
+  fafafa.ssl.openssl.loader,  // Phase 3.3 P0+ - 统一动态库加载
   fafafa.ssl.openssl.api, fafafa.ssl.openssl.api.consts;
 
 var
-  hCrypto: {$IFDEF WINDOWS}HMODULE{$ELSE}THandle{$ENDIF} = 0;
   ChaChaLoaded: Boolean = False;
 
 function LoadChaChaFunctions: Boolean;
+var
+  LHandle: TLibHandle;
 begin
   Result := False;
-  
-  // Load crypto library if not already loaded
-  if hCrypto = 0 then
-  begin
-    {$IFDEF WINDOWS}
-    hCrypto := LoadLibrary('libcrypto-3-x64.dll');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto-1_1-x64.dll');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libeay32.dll');
-    {$ELSE}
-    hCrypto := LoadLibrary('libcrypto.so.3');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto.so.1.1');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto.so');
-    {$ENDIF}
-  end;
-  
-  if hCrypto = 0 then
+
+  // Phase 3.3 P0+ - 使用统一的动态库加载器（替换 ~20 行重复代码）
+  LHandle := TOpenSSLLoader.GetLibraryHandle(osslLibCrypto);
+  if LHandle = 0 then
     Exit;
     
   // Load ChaCha20 functions (may not be available in older OpenSSL)
-  ChaCha_set_key := TChaCha_set_key(GetProcAddress(hCrypto, 'ChaCha_set_key'));
-  ChaCha_set_iv := TChaCha_set_iv(GetProcAddress(hCrypto, 'ChaCha_set_iv'));
-  ChaCha_cipher := TChaCha_cipher(GetProcAddress(hCrypto, 'ChaCha_cipher'));
-  ChaCha20_cbc_encrypt := TChaCha20_cbc_encrypt(GetProcAddress(hCrypto, 'ChaCha20_cbc_encrypt'));
+  ChaCha_set_key := TChaCha_set_key(TOpenSSLLoader.GetFunction(LHandle, 'ChaCha_set_key'));
+  ChaCha_set_iv := TChaCha_set_iv(TOpenSSLLoader.GetFunction(LHandle, 'ChaCha_set_iv'));
+  ChaCha_cipher := TChaCha_cipher(TOpenSSLLoader.GetFunction(LHandle, 'ChaCha_cipher'));
+  ChaCha20_cbc_encrypt := TChaCha20_cbc_encrypt(TOpenSSLLoader.GetFunction(LHandle, 'ChaCha20_cbc_encrypt'));
   
   // Load Poly1305 functions
-  Poly1305_Init := TPoly1305_Init(GetProcAddress(hCrypto, 'Poly1305_Init'));
-  Poly1305_Update := TPoly1305_Update(GetProcAddress(hCrypto, 'Poly1305_Update'));
-  Poly1305_Final := TPoly1305_Final(GetProcAddress(hCrypto, 'Poly1305_Final'));
-  Poly1305 := TPoly1305(GetProcAddress(hCrypto, 'Poly1305'));
+  Poly1305_Init := TPoly1305_Init(TOpenSSLLoader.GetFunction(LHandle, 'Poly1305_Init'));
+  Poly1305_Update := TPoly1305_Update(TOpenSSLLoader.GetFunction(LHandle, 'Poly1305_Update'));
+  Poly1305_Final := TPoly1305_Final(TOpenSSLLoader.GetFunction(LHandle, 'Poly1305_Final'));
+  Poly1305 := TPoly1305(TOpenSSLLoader.GetFunction(LHandle, 'Poly1305'));
   
   // Load EVP ChaCha20/Poly1305 (preferred method)
-  EVP_chacha20 := TEVP_chacha20(GetProcAddress(hCrypto, 'EVP_chacha20'));
-  EVP_chacha20_poly1305 := TEVP_chacha20_poly1305(GetProcAddress(hCrypto, 'EVP_chacha20_poly1305'));
+  EVP_chacha20 := TEVP_chacha20(TOpenSSLLoader.GetFunction(LHandle, 'EVP_chacha20'));
+  EVP_chacha20_poly1305 := TEVP_chacha20_poly1305(TOpenSSLLoader.GetFunction(LHandle, 'EVP_chacha20_poly1305'));
   
   // Note: High-level AEAD helpers may not exist as direct exports
-  ChaCha20Poly1305_encrypt := TChaCha20Poly1305_encrypt(GetProcAddress(hCrypto, 'ChaCha20Poly1305_encrypt'));
-  ChaCha20Poly1305_decrypt := TChaCha20Poly1305_decrypt(GetProcAddress(hCrypto, 'ChaCha20Poly1305_decrypt'));
+  ChaCha20Poly1305_encrypt := TChaCha20Poly1305_encrypt(TOpenSSLLoader.GetFunction(LHandle, 'ChaCha20Poly1305_encrypt'));
+  ChaCha20Poly1305_decrypt := TChaCha20Poly1305_decrypt(TOpenSSLLoader.GetFunction(LHandle, 'ChaCha20Poly1305_decrypt'));
   
   // Check if at least EVP functions are available
   ChaChaLoaded := Assigned(EVP_chacha20) or Assigned(ChaCha_cipher);
@@ -180,14 +165,10 @@ begin
   EVP_chacha20_poly1305 := nil;
   ChaCha20Poly1305_encrypt := nil;
   ChaCha20Poly1305_decrypt := nil;
-  
+
   ChaChaLoaded := False;
-  
-  if hCrypto <> 0 then
-  begin
-    FreeLibrary(hCrypto);
-    hCrypto := 0;
-  end;
+
+  // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
 end;
 
 function IsChaChaLoaded: Boolean;

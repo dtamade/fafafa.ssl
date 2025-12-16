@@ -206,76 +206,61 @@ function AES_UnwrapKey(const KEK: TBytes; const Ciphertext: TBytes): TBytes;
 implementation
 
 uses
-  {$IFDEF WINDOWS}Windows{$ELSE}dynlibs{$ENDIF},
+  fafafa.ssl.openssl.loader,  // Phase 3.3 P0+ - 统一动态库加载
   fafafa.ssl.openssl.api.aes;
 
 var
-  hCrypto: {$IFDEF WINDOWS}HMODULE{$ELSE}THandle{$ENDIF} = 0;
   ModesLoaded: Boolean = False;
 
 function LoadModesFunctions: Boolean;
+var
+  LHandle: TLibHandle;
 begin
   Result := False;
-  
-  // Load crypto library if not already loaded
-  if hCrypto = 0 then
-  begin
-    {$IFDEF WINDOWS}
-    hCrypto := LoadLibrary('libcrypto-3-x64.dll');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto-1_1-x64.dll');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libeay32.dll');
-    {$ELSE}
-    hCrypto := LoadLibrary('libcrypto.so.3');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto.so.1.1');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto.so');
-    {$ENDIF}
-  end;
-  
-  if hCrypto = 0 then
+
+  // Phase 3.3 P0+ - 使用统一的动态库加载器（替换 ~25 行重复代码）
+  LHandle := TOpenSSLLoader.GetLibraryHandle(osslLibCrypto);
+  if LHandle = 0 then
     Exit;
     
   // Load GCM mode functions
-  GCM128_new := TGCM128_new(GetProcAddress(hCrypto, 'CRYPTO_gcm128_new'));
-  GCM128_free := TGCM128_free(GetProcAddress(hCrypto, 'CRYPTO_gcm128_release'));
-  GCM128_setiv := TGCM128_setiv(GetProcAddress(hCrypto, 'CRYPTO_gcm128_setiv'));
-  GCM128_aad := TGCM128_aad(GetProcAddress(hCrypto, 'CRYPTO_gcm128_aad'));
-  GCM128_encrypt := TGCM128_encrypt(GetProcAddress(hCrypto, 'CRYPTO_gcm128_encrypt'));
-  GCM128_decrypt := TGCM128_decrypt(GetProcAddress(hCrypto, 'CRYPTO_gcm128_decrypt'));
-  GCM128_finish := TGCM128_finish(GetProcAddress(hCrypto, 'CRYPTO_gcm128_finish'));
-  GCM128_tag := TGCM128_tag(GetProcAddress(hCrypto, 'CRYPTO_gcm128_tag'));
+  GCM128_new := TGCM128_new(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_gcm128_new'));
+  GCM128_free := TGCM128_free(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_gcm128_release'));
+  GCM128_setiv := TGCM128_setiv(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_gcm128_setiv'));
+  GCM128_aad := TGCM128_aad(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_gcm128_aad'));
+  GCM128_encrypt := TGCM128_encrypt(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_gcm128_encrypt'));
+  GCM128_decrypt := TGCM128_decrypt(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_gcm128_decrypt'));
+  GCM128_finish := TGCM128_finish(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_gcm128_finish'));
+  GCM128_tag := TGCM128_tag(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_gcm128_tag'));
   
   // Load CCM mode functions
-  CCM128_new := TCCM128_new(GetProcAddress(hCrypto, 'CRYPTO_ccm128_new'));
-  CCM128_free := TCCM128_free(GetProcAddress(hCrypto, 'CRYPTO_ccm128_release'));
-  CCM128_init := TCCM128_init(GetProcAddress(hCrypto, 'CRYPTO_ccm128_init'));
-  CCM128_setiv := TCCM128_setiv(GetProcAddress(hCrypto, 'CRYPTO_ccm128_setiv'));
-  CCM128_aad := TCCM128_aad(GetProcAddress(hCrypto, 'CRYPTO_ccm128_aad'));
-  CCM128_encrypt := TCCM128_encrypt(GetProcAddress(hCrypto, 'CRYPTO_ccm128_encrypt'));
-  CCM128_decrypt := TCCM128_decrypt(GetProcAddress(hCrypto, 'CRYPTO_ccm128_decrypt'));
-  CCM128_tag := TCCM128_tag(GetProcAddress(hCrypto, 'CRYPTO_ccm128_tag'));
+  CCM128_new := TCCM128_new(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ccm128_new'));
+  CCM128_free := TCCM128_free(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ccm128_release'));
+  CCM128_init := TCCM128_init(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ccm128_init'));
+  CCM128_setiv := TCCM128_setiv(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ccm128_setiv'));
+  CCM128_aad := TCCM128_aad(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ccm128_aad'));
+  CCM128_encrypt := TCCM128_encrypt(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ccm128_encrypt'));
+  CCM128_decrypt := TCCM128_decrypt(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ccm128_decrypt'));
+  CCM128_tag := TCCM128_tag(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ccm128_tag'));
   
   // Load XTS mode functions
-  XTS128_encrypt := TXTS128_encrypt(GetProcAddress(hCrypto, 'CRYPTO_xts128_encrypt'));
-  XTS128_decrypt := TXTS128_decrypt(GetProcAddress(hCrypto, 'CRYPTO_xts128_decrypt'));
+  XTS128_encrypt := TXTS128_encrypt(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_xts128_encrypt'));
+  XTS128_decrypt := TXTS128_decrypt(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_xts128_decrypt'));
   
   // Load OCB mode functions  
-  OCB128_new := TOCB128_new(GetProcAddress(hCrypto, 'CRYPTO_ocb128_new'));
-  OCB128_free := TOCB128_free(GetProcAddress(hCrypto, 'CRYPTO_ocb128_release'));
-  OCB128_init := TOCB128_init(GetProcAddress(hCrypto, 'CRYPTO_ocb128_init'));
-  OCB128_setiv := TOCB128_setiv(GetProcAddress(hCrypto, 'CRYPTO_ocb128_setiv'));
-  OCB128_aad := TOCB128_aad(GetProcAddress(hCrypto, 'CRYPTO_ocb128_aad'));
-  OCB128_encrypt := TOCB128_encrypt(GetProcAddress(hCrypto, 'CRYPTO_ocb128_encrypt'));
-  OCB128_decrypt := TOCB128_decrypt(GetProcAddress(hCrypto, 'CRYPTO_ocb128_decrypt'));
-  OCB128_finish := TOCB128_finish(GetProcAddress(hCrypto, 'CRYPTO_ocb128_finish'));
-  OCB128_tag := TOCB128_tag(GetProcAddress(hCrypto, 'CRYPTO_ocb128_tag'));
+  OCB128_new := TOCB128_new(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ocb128_new'));
+  OCB128_free := TOCB128_free(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ocb128_release'));
+  OCB128_init := TOCB128_init(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ocb128_init'));
+  OCB128_setiv := TOCB128_setiv(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ocb128_setiv'));
+  OCB128_aad := TOCB128_aad(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ocb128_aad'));
+  OCB128_encrypt := TOCB128_encrypt(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ocb128_encrypt'));
+  OCB128_decrypt := TOCB128_decrypt(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ocb128_decrypt'));
+  OCB128_finish := TOCB128_finish(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ocb128_finish'));
+  OCB128_tag := TOCB128_tag(TOpenSSLLoader.GetFunction(LHandle, 'CRYPTO_ocb128_tag'));
   
   // Load key wrapping functions
-  AES_wrap_key := TAES_wrap_key(GetProcAddress(hCrypto, 'AES_wrap_key'));
-  AES_unwrap_key := TAES_unwrap_key(GetProcAddress(hCrypto, 'AES_unwrap_key'));
+  AES_wrap_key := TAES_wrap_key(TOpenSSLLoader.GetFunction(LHandle, 'AES_wrap_key'));
+  AES_unwrap_key := TAES_unwrap_key(TOpenSSLLoader.GetFunction(LHandle, 'AES_unwrap_key'));
   
   // Note: Most mode operations are typically done through EVP interface
   // Direct mode functions may not be exported in all OpenSSL versions
@@ -323,14 +308,10 @@ begin
   // Clear wrap functions
   AES_wrap_key := nil;
   AES_unwrap_key := nil;
-  
+
   ModesLoaded := False;
-  
-  if hCrypto <> 0 then
-  begin
-    FreeLibrary(hCrypto);
-    hCrypto := 0;
-  end;
+
+  // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
 end;
 
 function IsModesLoaded: Boolean;

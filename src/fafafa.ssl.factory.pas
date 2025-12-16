@@ -1,17 +1,33 @@
-{
-  fafafa.ssl.factory - SSL/TLS 库工厂模式实现
-  
-  版本: 1.0
-  作者: fafafa.ssl 开发团队
-  创建: 2025-09-28
-  
-  描述:
-    工厂模式实现，负责：
-    1. 自动检测可用的SSL库
-    2. 创建合适的SSL实现实例
-    3. 管理库的全局状态
-    4. 提供简化的API接口
-}
+{**
+ * Unit: fafafa.ssl.factory
+ * Purpose: SSL/TLS 库工厂模式 - 统一创建和管理SSL对象
+ *
+ * Features:
+ * - 自动检测可用的SSL后端（OpenSSL、WinSSL等）
+ * - 工厂模式创建SSL对象（Context、Certificate、Store等）
+ * - 多后端支持与自动切换
+ * - 简化的单一入口API
+ *
+ * Thread Safety: 所有类方法线程安全
+ *
+ * @author fafafa.ssl team
+ * @version 1.0.0
+ * @since 2025-09-28
+ *
+ * @example
+ * <code>
+ *   // 自动检测并创建SSL Context
+ *   LCtx := TSSLFactory.CreateContext(sslClient);
+ *
+ *   // 指定使用OpenSSL后端
+ *   LCtx := TSSLFactory.CreateContext(sslClient, sslOpenSSL);
+ *
+ *   // 使用配置对象创建
+ *   LConfig := TSSLConfig.Create;
+ *   LConfig.ContextType := sslClient;
+ *   LCtx := TSSLFactory.CreateContext(LConfig);
+ * </code>
+ *}
 
 unit fafafa.ssl.factory;
 
@@ -26,18 +42,44 @@ uses
   fafafa.ssl.exceptions;  // 新增：类型化异常
 
 type
-  { SSL库类类型 }
+  {** SSL库类类型 (用于内部注册) *}
   TSSLLibraryClass = class of TInterfacedObject;
-  
-  { SSL库注册信息 }
+
+  {**
+   * SSL库注册信息
+   *
+   * 用于后端库的注册和管理
+   *}
   TSSLLibraryRegistration = record
-    LibraryType: TSSLLibraryType;
-    LibraryClass: TSSLLibraryClass;  // 必须实现 ISSLLibrary
-    Description: string;
-    Priority: Integer;      // 优先级，数字越大优先级越高
+    LibraryType: TSSLLibraryType;      // 库类型标识
+    LibraryClass: TSSLLibraryClass;    // 库类（必须实现 ISSLLibrary）
+    Description: string;                // 库描述
+    Priority: Integer;                  // 优先级（数字越大越优先）
   end;
 
-  { TSSLFactory - SSL工厂类 }
+  {**
+   * TSSLFactory - SSL工厂类
+   *
+   * 提供统一的SSL对象创建接口，支持多后端自动选择。
+   *
+   * 主要功能:
+   * - 创建SSL Context (客户端/服务器)
+   * - 创建证书和证书存储对象
+   * - 后端库检测和切换
+   * - 库注册和管理
+   *
+   * 使用模式:
+   * <code>
+   *   // 最简单：自动检测后端
+   *   LCtx := TSSLFactory.CreateContext(sslClient);
+   *
+   *   // 指定后端
+   *   LCtx := TSSLFactory.CreateContext(sslClient, sslOpenSSL);
+   *
+   *   // 高级：使用配置
+   *   LCtx := TSSLFactory.CreateContext(LConfig);
+   * </code>
+   *}
   TSSLFactory = class
   private
     class var
@@ -52,31 +94,172 @@ type
     class function CreateLibraryInstance(aLibType: TSSLLibraryType): ISSLLibrary;
     class procedure CheckInitialized;
   public
-    // Direct library access (for advanced usage)
+    { ==================== 库访问（高级用法） ==================== }
+
+    {**
+     * 获取指定类型的库实例
+     *
+     * @param aLibType 库类型（sslOpenSSL, sslWinSSL等）
+     * @return 库实例接口
+     * @raises ESSLConfigurationException 库不可用时
+     *
+     * 注意: 普通用户通常不需要直接使用此方法
+     *}
     class function GetLibrary(aLibType: TSSLLibraryType): ISSLLibrary;
-    // 库注册（供各个后端实现调用）
-    class procedure RegisterLibrary(aLibType: TSSLLibraryType; 
-                                  aLibraryClass: TSSLLibraryClass;
-                                  const aDescription: string = '';
-                                  aPriority: Integer = 0);
+
+    { ==================== 库注册（后端开发者使用） ==================== }
+
+    {**
+     * 注册SSL后端库
+     *
+     * @param aLibType 库类型标识
+     * @param aLibraryClass 库类（必须实现 ISSLLibrary）
+     * @param aDescription 库描述（可选）
+     * @param aPriority 优先级（默认0，数字越大越优先）
+     *
+     * 注意: 此方法供后端实现的初始化代码调用
+     *}
+    class procedure RegisterLibrary(
+      aLibType: TSSLLibraryType;
+      aLibraryClass: TSSLLibraryClass;
+      const aDescription: string = '';
+      aPriority: Integer = 0
+    );
+
+    {**
+     * 取消注册SSL后端库
+     *
+     * @param aLibType 库类型标识
+     *}
     class procedure UnregisterLibrary(aLibType: TSSLLibraryType);
-    
-    // 库可用性检测
+
+    { ==================== 库检测与查询 ==================== }
+
+    {**
+     * 检查指定库是否可用
+     *
+     * @param aLibType 库类型
+     * @return True=可用，False=不可用
+     *
+     * @example
+     * <code>
+     *   if TSSLFactory.IsLibraryAvailable(sslOpenSSL) then
+     *     WriteLn('OpenSSL is available');
+     * </code>
+     *}
     class function IsLibraryAvailable(aLibType: TSSLLibraryType): Boolean;
+
+    {**
+     * 获取所有可用的库列表
+     *
+     * @return 可用库类型集合
+     *
+     * @example
+     * <code>
+     *   LLibs := TSSLFactory.GetAvailableLibraries;
+     *   for LLib in LLibs do
+     *     WriteLn(TSSLFactory.GetLibraryDescription(LLib));
+     * </code>
+     *}
     class function GetAvailableLibraries: TSSLLibraryTypes;
+
+    {**
+     * 获取库的描述信息
+     *
+     * @param aLibType 库类型
+     * @return 库描述字符串
+     *}
     class function GetLibraryDescription(aLibType: TSSLLibraryType): string;
+
+    {**
+     * 自动检测最佳可用库
+     *
+     * 根据平台和可用性选择最适合的库:
+     * - Windows: WinSSL（如果可用）> OpenSSL
+     * - Linux/macOS: OpenSSL
+     *
+     * @return 最佳库类型
+     * @raises ESSLConfigurationException 无可用库时
+     *}
     class function DetectBestLibrary: TSSLLibraryType;
-    
-    // 默认库设置
+
+    { ==================== 默认库管理 ==================== }
+
+    {**
+     * 设置默认使用的SSL库
+     *
+     * @param aLibType 库类型
+     * @raises ESSLConfigurationException 库不可用时
+     *
+     * @example
+     * <code>
+     *   TSSLFactory.SetDefaultLibrary(sslOpenSSL);
+     * </code>
+     *}
     class procedure SetDefaultLibrary(aLibType: TSSLLibraryType);
+
+    {**
+     * 获取当前默认库
+     *
+     * @return 默认库类型
+     *}
     class function GetDefaultLibrary: TSSLLibraryType;
-    
-    // 创建实例 - 主要接口
-    class function CreateContext(aContextType: TSSLContextType;
-                                aLibType: TSSLLibraryType = sslAutoDetect): ISSLContext; overload;
+
+    { ==================== 对象创建（主要API） ==================== }
+
+    {**
+     * 创建SSL Context
+     *
+     * @param aContextType 上下文类型（sslClient或sslServer）
+     * @param aLibType 库类型（默认sslAutoDetect自动选择）
+     * @return SSL Context接口
+     * @raises ESSLInitializationException 初始化失败时
+     *
+     * @example
+     * <code>
+     *   // 自动检测库
+     *   LCtx := TSSLFactory.CreateContext(sslClient);
+     *
+     *   // 指定使用OpenSSL
+     *   LCtx := TSSLFactory.CreateContext(sslServer, sslOpenSSL);
+     * </code>
+     *}
+    class function CreateContext(
+      aContextType: TSSLContextType;
+      aLibType: TSSLLibraryType = sslAutoDetect
+    ): ISSLContext; overload;
+
+    {**
+     * 使用配置对象创建SSL Context
+     *
+     * @param aConfig SSL配置对象
+     * @return SSL Context接口
+     * @raises ESSLInitializationException 初始化失败时
+     *
+     * @example
+     * <code>
+     *   LConfig := TSSLConfig.Create;
+     *   LConfig.ContextType := sslClient;
+     *   LConfig.ProtocolVersions := [sslTLS12, sslTLS13];
+     *   LCtx := TSSLFactory.CreateContext(LConfig);
+     * </code>
+     *}
     class function CreateContext(const aConfig: TSSLConfig): ISSLContext; overload;
-    
+
+    {**
+     * 创建证书对象
+     *
+     * @param aLibType 库类型（默认自动检测）
+     * @return 证书接口
+     *}
     class function CreateCertificate(aLibType: TSSLLibraryType = sslAutoDetect): ISSLCertificate;
+
+    {**
+     * 创建证书存储对象
+     *
+     * @param aLibType 库类型（默认自动检测）
+     * @return 证书存储接口
+     *}
     class function CreateCertificateStore(aLibType: TSSLLibraryType = sslAutoDetect): ISSLCertificateStore;
     
     // 快捷方法 - 简化的服务端上下文
@@ -139,7 +322,8 @@ uses
   {$ENDIF}
   fafafa.ssl.crypto.utils,   // Phase 2.3.5 - 加密工具（哈希计算）
   fafafa.ssl.encoding,       // Phase 2.3.5 - 编码工具（Hex转换）
-  fafafa.ssl.errors;
+  fafafa.ssl.errors,
+  fafafa.ssl.openssl.api.rand;  // Phase 3.3 P0 - 加密安全随机数生成
 
 var
   GSSLFactory: TSSLFactory;
@@ -787,13 +971,27 @@ end;
 
 
 class function TSSLHelper.GenerateRandomBytes(aCount: Integer): TBytes;
-var
-  LIndex: Integer;
 begin
+  // Phase 3.3 P0: 修复安全漏洞 - 使用加密安全的随机数生成器
+  // 原实现使用 Random(256) 是不安全的，不适合加密场景
+  // 现使用 OpenSSL 的 RAND_bytes 提供加密安全的随机数
+
   Result := nil;
+
+  if aCount <= 0 then
+    raise ESSLInvalidArgument.CreateFmt('Invalid random bytes count: %d', [aCount]);
+
   SetLength(Result, aCount);
-  for LIndex := 0 to aCount - 1 do
-    Result[LIndex] := Random(256);
+
+  // 使用 OpenSSL RAND_bytes 生成加密安全的随机数
+  if RAND_bytes(@Result[0], aCount) <> 1 then
+    raise ESSLCryptoError.CreateWithContext(
+      'Failed to generate cryptographically secure random bytes',
+      sslErrOther,
+      'TSSLHelper.GenerateRandomBytes',
+      0,
+      sslOpenSSL
+    );
 end;
 
 class function TSSLHelper.HashData(const aData: TBytes;

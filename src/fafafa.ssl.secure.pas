@@ -101,6 +101,7 @@ function CreateSecureKeyStore: ISecureKeyStore;
 implementation
 
 uses
+  fafafa.ssl.exceptions,  // Phase 3.3 P0 - 统一异常定义
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.rand,
   fafafa.ssl.openssl.api.evp,

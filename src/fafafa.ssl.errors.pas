@@ -121,6 +121,9 @@ function GetErrorMessage(ACode: TSSLErrorCode; const ALang: string = 'zh'): stri
 
 implementation
 
+uses
+  fafafa.ssl.exceptions;  // Phase 3.3 P0 - 统一异常定义（修复重复定义问题）
+
 // ============================================================================
 // General Error Raising Functions
 // ============================================================================

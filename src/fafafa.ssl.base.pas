@@ -474,40 +474,9 @@ type
   end;
 
   // ============================================================================
-  // 异常类定义
+  // 异常类定义已移至 fafafa.ssl.exceptions.pas
+  // 所有模块应使用 fafafa.ssl.exceptions 中定义的异常类
   // ============================================================================
-
-  { SSL 异常基类 }
-  ESSLException = class(Exception)
-  private
-    FErrorCode: TSSLErrorCode;
-    FLibraryType: TSSLLibraryType;
-    FNativeError: Integer;
-    FNativeErrorMessage: string;
-    FContext: string;
-  public
-    constructor Create(const aMessage: string; aErrorCode: TSSLErrorCode;
-                      aLibraryType: TSSLLibraryType = sslAutoDetect;
-                      aNativeError: Integer = 0); overload;
-    constructor Create(const aMessage: string; aErrorCode: TSSLErrorCode;
-                      const aContext: string;
-                      aLibraryType: TSSLLibraryType = sslAutoDetect;
-                      aNativeError: Integer = 0); overload;
-    
-    property ErrorCode: TSSLErrorCode read FErrorCode;
-    property LibraryType: TSSLLibraryType read FLibraryType;
-    property NativeError: Integer read FNativeError;
-    property NativeErrorMessage: string read FNativeErrorMessage write FNativeErrorMessage;
-    property Context: string read FContext;
-  end;
-
-  { 特定异常类 }
-  ESSLHandshakeException = class(ESSLException);
-  ESSLCertificateException = class(ESSLException);
-  ESSLProtocolException = class(ESSLException);
-  ESSLConnectionException = class(ESSLException);
-  ESSLTimeoutException = class(ESSLException);
-  ESSLLibraryException = class(ESSLException);
 
   // ============================================================================
   // 回调类型定义
@@ -964,7 +933,8 @@ function LibraryTypeToString(aLibType: TSSLLibraryType): string;
 implementation
 
 uses
-  fafafa.ssl.errors;  // Stage 2.1 P2 - Standardized error handling
+  fafafa.ssl.errors,      // Stage 2.1 P2 - Standardized error handling
+  fafafa.ssl.exceptions;  // Phase 3.3 P0 - 统一异常定义（修复重复定义问题）
 
 { TBytesView - 零拷贝字节视图实现 (Phase 2.3.2) }
 
@@ -993,6 +963,7 @@ function TBytesView.AsBytes: TBytes;
 var
   I: Integer;
 begin
+  Result := nil;  // Phase 3.3 P0 - 初始化 Result，避免编译器警告
   SetLength(Result, Length);
   if (Length > 0) and (Data <> nil) then
   begin
@@ -1040,31 +1011,7 @@ begin
   Result := Data[AIndex];
 end;
 
-{ ESSLException }
-
-constructor ESSLException.Create(const aMessage: string;
-  aErrorCode: TSSLErrorCode; aLibraryType: TSSLLibraryType;
-  aNativeError: Integer);
-begin
-  inherited Create(aMessage);
-  FErrorCode := aErrorCode;
-  FLibraryType := aLibraryType;
-  FNativeError := aNativeError;
-  FContext := '';
-  FNativeErrorMessage := '';
-end;
-
-constructor ESSLException.Create(const aMessage: string;
-  aErrorCode: TSSLErrorCode; const aContext: string;
-  aLibraryType: TSSLLibraryType; aNativeError: Integer);
-begin
-  inherited Create(aMessage);
-  FErrorCode := aErrorCode;
-  FLibraryType := aLibraryType;
-  FNativeError := aNativeError;
-  FContext := aContext;
-  FNativeErrorMessage := '';
-end;
+{ 异常类实现已移至 fafafa.ssl.exceptions.pas }
 
 { 辅助函数实现 }
 
