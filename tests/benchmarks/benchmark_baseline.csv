@@ -1,0 +1,8 @@
+# Performance Benchmark Results
+# Generated: 2025-12-02 22:22:06
+Name,Duration(ms),Throughput(ops/s),Success
+TLS_100_Handshakes,28,3571.43,True
+TLS_500_Handshakes,136,3676.47,True
+AES_Encrypt_1KBx1000,0,3676.47,False
+AES_Encrypt_10KBx100,0,3676.47,False
+AES_Encrypt_100KBx10,0,3676.47,False

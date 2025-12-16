@@ -107,8 +107,6 @@ function Poly1305MAC(const Key: TBytes; const Message: TBytes): TBytes;
 implementation
 
 uses
-  fafafa.ssl.base,
-  fafafa.ssl.exceptions,
   {$IFDEF WINDOWS}Windows{$ELSE}dynlibs{$ENDIF},
   fafafa.ssl.openssl.api, fafafa.ssl.openssl.api.consts;
 

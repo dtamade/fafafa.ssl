@@ -139,8 +139,6 @@ function ComputeMAC(const MacType: string; const Key: TBytes; const Data: TBytes
 implementation
 
 uses
-  fafafa.ssl.base,
-  fafafa.ssl.exceptions,
   {$IFDEF WINDOWS}Windows{$ELSE}dynlibs{$ENDIF},
   fafafa.ssl.openssl.api.aes;
 

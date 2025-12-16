@@ -149,8 +149,6 @@ function ComparePointers(const a, b: Pointer): Integer; cdecl;
 implementation
 
 uses
-  fafafa.ssl.base,
-  fafafa.ssl.exceptions,
   {$IFDEF WINDOWS}Windows{$ELSE}dynlibs{$ENDIF};
 
 var
