@@ -436,7 +436,7 @@ procedure Test_Options;
 var
   LLib: ISSLLibrary;
   LContext: ISSLContext;
-  LOptions: Cardinal;
+  LOptions: TSSLOptions;
 begin
   WriteLn('Test 11: Options Configuration');
   
@@ -444,21 +444,23 @@ begin
     LLib := TSSLFactory.GetLibraryInstance(sslWinSSL);
     LContext := LLib.CreateContext(sslCtxClient);
     
-    // Test 11.1: Set options
-    LContext.SetOptions($00000001);
+    // Test 11.1: Enable session cache only
+    LContext.SetOptions([ssoEnableSessionCache]);
     LOptions := LContext.GetOptions;
-    if LOptions = $00000001 then
-      Pass('Options: $00000001')
+    if (ssoEnableSessionCache in LOptions) and
+       not (ssoEnableSessionTickets in LOptions) then
+      Pass('Options: session cache only')
     else
-      Fail('Options', 'Expected $00000001, got $' + IntToHex(LOptions, 8));
+      Fail('Options', 'Expected only session cache flag');
     
-    // Test 11.2: Set multiple options
-    LContext.SetOptions($00000003);
+    // Test 11.2: Enable cache + tickets
+    LContext.SetOptions([ssoEnableSessionCache, ssoEnableSessionTickets]);
     LOptions := LContext.GetOptions;
-    if LOptions = $00000003 then
-      Pass('Options: $00000003')
+    if (ssoEnableSessionCache in LOptions) and
+       (ssoEnableSessionTickets in LOptions) then
+      Pass('Options: cache + tickets')
     else
-      Fail('Options', 'Expected $00000003, got $' + IntToHex(LOptions, 8));
+      Fail('Options', 'Expected cache + tickets flags');
     
   except
     on E: Exception do
@@ -675,4 +677,3 @@ begin
   ReadLn;
 end.
 {$ENDIF}
-

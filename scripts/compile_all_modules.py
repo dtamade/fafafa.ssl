@@ -17,8 +17,13 @@ SRC_DIR = PROJECT_ROOT / "src"
 FPC_BASE = Path.home() / "freePascal" / "fpc" / "units" / "x86_64-linux"
 UNIT_PATHS = [
     FPC_BASE / "rtl-objpas",
+    FPC_BASE / "rtl",
+    FPC_BASE / "rtl-unix",
+    FPC_BASE / "rtl-extra",
     FPC_BASE / "fcl-base",
     FPC_BASE / "fcl-json",
+    FPC_BASE / "fcl-process",
+    FPC_BASE / "pthreads",
     PROJECT_ROOT / "src",
 ]
 
@@ -26,6 +31,7 @@ UNIT_PATHS = [
 EXCLUDE_PATTERNS = [
     "fafafa.ssl.winssl",  # Windows专用
     "rand_old.pas",        # 已废弃
+    "fafafa.ssl.http.simple",  # 依赖 socket/HTTP 示例，非核心单元
 ]
 
 def should_compile(file_path):
@@ -148,4 +154,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-

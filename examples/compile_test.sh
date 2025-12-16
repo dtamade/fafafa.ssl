@@ -6,6 +6,9 @@
 
 set -e  # 遇到错误立即退出
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 echo "=========================================="
 echo "fafafa.ssl 示例编译测试"
 echo "=========================================="
@@ -30,7 +33,7 @@ compile_example() {
     TOTAL=$((TOTAL + 1))
     echo -n "编译 $NAME... "
     
-    if fpc -Fu../../src -Fu../../src/openssl -Mobjfpc "$FILE" > /tmp/compile_${NAME}.log 2>&1; then
+    if fpc $FPC_FLAGS "$FILE" > /tmp/compile_${NAME}.log 2>&1; then
         echo -e "${GREEN}✓ 成功${NC}"
         PASSED=$((PASSED + 1))
         return 0
@@ -58,13 +61,15 @@ fpc -iV
 echo
 
 # 检查源代码目录
-if [ ! -d "../../src" ]; then
+if [ ! -d "${REPO_ROOT}/src" ]; then
     echo -e "${RED}错误: 未找到 src 目录${NC}"
     exit 1
 fi
 
+FPC_FLAGS="-Fu${REPO_ROOT}/src -Fu${REPO_ROOT}/src/openssl -Mobjfpc"
+
 # 切换到示例目录
-cd "$(dirname "$0")"
+cd "${SCRIPT_DIR}"
 
 echo "=========================================="
 echo "1. 编译生产级示例"
@@ -96,7 +101,48 @@ cd ..
 
 echo
 echo "=========================================="
-echo "2. 编译验证示例"
+echo "2. 编译HTTPS客户端示例"
+echo "=========================================="
+echo
+
+if [ -d "https_client" ]; then
+    cd https_client
+    for file in https_client_simple.pas \
+                https_client_post.pas \
+                https_client_auth.pas \
+                https_client_session.pas; do
+        if [ -f "$file" ]; then
+            compile_example "$file"
+        fi
+    done
+    cd ..
+else
+    echo "找不到 https_client 目录，跳过"
+fi
+
+echo
+echo "=========================================="
+echo "3. 编译HTTPS服务器示例"
+echo "=========================================="
+echo
+
+if [ -d "https_server" ]; then
+    cd https_server
+    for file in https_server_simple.pas \
+                https_server_mtls.pas \
+                https_server_alpn.pas; do
+        if [ -f "$file" ]; then
+            compile_example "$file"
+        fi
+    done
+    cd ..
+else
+    echo "找不到 https_server 目录，跳过"
+fi
+
+echo
+echo "=========================================="
+echo "4. 编译验证示例"
 echo "=========================================="
 echo
 
@@ -108,7 +154,7 @@ cd ..
 
 echo
 echo "=========================================="
-echo "3. 编译演示示例"
+echo "5. 编译演示示例"
 echo "=========================================="
 echo
 

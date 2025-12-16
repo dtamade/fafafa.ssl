@@ -22,6 +22,23 @@
 | 6 | 数字签名 | `06_digital_signature.pas` | 文件签名和验证 | ⭐⭐ |
 | 7 | 证书验证 | `07_certificate_validation.pas` | 完整的证书链验证 | ⭐⭐⭐ |
 
+### HTTPS 客户端套件（新增）
+
+| # | 示例名称 | 文件 | 描述 | 难度 |
+|---|---------|------|------|------|
+| C1 | 简单 GET | `https_client/https_client_simple.pas` | 三行代码完成 HTTPS 请求 | ⭐ |
+| C2 | JSON/Form POST | `https_client/https_client_post.pas` | 发送 POST 并打印响应 | ⭐⭐ |
+| C3 | 客户端证书 | `https_client/https_client_auth.pas` | 双向 TLS / mTLS 示例 | ⭐⭐⭐ |
+| C4 | 会话复用 | `https_client/https_client_session.pas` | 比较冷启动与复用性能 | ⭐⭐⭐ |
+
+### HTTPS 服务器套件（新增）
+
+| # | 示例名称 | 文件 | 描述 | 难度 |
+|---|---------|------|------|------|
+| S1 | 简单服务器 | `https_server/https_server_simple.pas` | 最小 HTTPS 服务器 | ⭐⭐ |
+| S2 | 双向 TLS | `https_server/https_server_mtls.pas` | 强制客户端证书 | ⭐⭐⭐ |
+| S3 | ALPN 演示 | `https_server/https_server_alpn.pas` | 显示协商协议 | ⭐⭐⭐ |
+
 ### 企业场景（计划中）
 
 | # | 示例名称 | 文件 | 描述 | 难度 |

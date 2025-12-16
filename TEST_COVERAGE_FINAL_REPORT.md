@@ -166,8 +166,8 @@
 ✅ GetCipherSuites
 
 // 选项测试（2个方法）
-✅ SetOptions($00000001)
-✅ SetOptions($00000003)
+✅ SetOptions([ssoEnableSessionCache])
+✅ SetOptions([ssoEnableSessionCache, ssoEnableSessionTickets])
 ✅ GetOptions
 
 // 服务器名称测试（1个方法）
@@ -344,4 +344,3 @@
 
 *报告生成时间: 2025-11-01*  
 *状态: ✅✅✅ 代码和测试都实打实完成！*
-

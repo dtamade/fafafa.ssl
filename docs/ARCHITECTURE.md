@@ -80,10 +80,9 @@ end;
 ```
 
 ### 3.4 后端实现模块
-- `fafafa.ssl.openssl` - OpenSSL 实现
-- `fafafa.ssl.wolfssl` - WolfSSL 实现  
-- `fafafa.ssl.mbedtls` - MbedTLS 实现
-- `fafafa.ssl.winssl` - Windows Schannel 实现
+- `fafafa.ssl.openssl` - OpenSSL 实现（Linux/macOS 默认）
+- `fafafa.ssl.winssl` - Windows Schannel 实现（Windows 默认）
+- `fafafa.ssl.wolfssl` / `fafafa.ssl.mbedtls` - 规划中的后端，目前尚未落地；如调用这些库类型，工厂会抛出 `ESSLException` 提醒“暂未实现”。
 
 每个后端模块包含：
 ```pascal
@@ -92,6 +91,28 @@ TXXXSSLConnection = class(TInterfacedObject, ISSLConnection)
 TXXXSSLCertificate = class(TInterfacedObject, ISSLCertificate)
 TXXXSSLLibrary = class(TInterfacedObject, ISSLLibrary)
 ```
+
+### 3.5 证书时间与扩展解析策略
+
+为保证不同后端在证书语义上的一致性，时间字段和常用扩展（尤其是 `subjectAltName`）做了统一约定：
+
+- **有效期时间（NotBefore/NotAfter）**  
+  - OpenSSL 后端通过 `X509_get_notBefore/After` 取得 `PASN1_TIME`，再委托统一的 `ASN1TimeToDateTime` 工具函数完成解析，避免直接手写 `TM` 结构解析曾经引发的 AV 问题。  
+  - WinSSL 后端使用 `FileTimeToSystemTime` → `SystemTimeToDateTime` 解析 `CERT_INFO.NotBefore/NotAfter`，两端最终都返回正常的 `TDateTime`，并在 `TSSLCertificateInfo.NotBefore/NotAfter` 中对齐语义。
+
+- **subjectAltName（SAN）扩展**  
+  - OpenSSL 简化后端（`fafafa.ssl.openssl.certificate`）优先通过 `X509_get_ext_d2i(..., NID_subject_alt_name, ...)` 解码为 `GENERAL_NAMES`，再枚举 `GENERAL_NAME` 条目：
+  - `GEN_DNS`/`GEN_EMAIL`/`GEN_URI` → 使用 ASN1 字符串工具转换为纯文本域名、邮箱、URI；
+  - `GEN_IPADD` → 按字节解析为 IPv4/IPv6 文本（如 `127.0.0.1`、`2001:db8::1`）。
+  - 如果运行环境缺少相关 X509v3/stack API，则回退到 `X509V3_EXT_print` 的文本输出并做简单字符串解析（兼容旧实现）。
+  - WinSSL 后端（`fafafa.ssl.winssl.certificate`）使用 `CertFindExtension(szOID_SUBJECT_ALT_NAME2, ...)` + `CryptDecodeObject` 解码为 `CERT_ALT_NAME_INFO`，当前已枚举 `CERT_ALT_NAME_DNS_NAME`、`CERT_ALT_NAME_IP_ADDRESS`、`CERT_ALT_NAME_RFC822_NAME`、`CERT_ALT_NAME_URL`，输出纯域名/IP/邮箱/URI，与 OpenSSL 一致。
+- 抽象层约定：
+  - `ISSLCertificate.GetSubjectAltNames` 始终返回 **不带前缀** 的主机名/IP/邮箱/URI 字符串（例如 `san-test.local`、`example.test`、`127.0.0.1`、`admin@example.test`、`spiffe://mesh/node`），不暴露 `DNS:` / `IP Address:` 等后端格式细节；
+  - `TSSLCertificateInfo.SubjectAltNames` 为上述结果的只读快照，两后端语义保持一致，方便上层做主机名匹配或调试输出。
+
+此外，主机名验证统一遵循以下策略：
+- OpenSSL 后端直接调用 `X509_check_host`，自动处理 SAN/CN、通配符及 IP/DNS 区分；
+- WinSSL 后端在 `VerifyHostname` 中复用 `TSSLUtils.IsIPAddress/IsValidHostname`，遍历 SAN 时将 IP 与域名通配逻辑分离，忽略 Email/URI 条目并在 SAN 未命中时回退到 CN，与 OpenSSL 语义对齐。
 
 ## 4. 错误处理架构
 

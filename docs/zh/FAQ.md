@@ -78,8 +78,8 @@ end;
 LContext.LoadCertificate('client.pem');
 LContext.LoadPrivateKey('client.key');
 
-// 如果私钥有密码
-LContext.SetPrivateKeyPassword('your-password');
+// 如果私钥有密码，使用带口令的重载
+LContext.LoadPrivateKey('client.key', 'your-password');
 
 // 连接时会自动发送客户端证书
 LConnection := LContext.CreateConnection;
@@ -586,5 +586,4 @@ fpc handshake_benchmark.pas
 ---
 
 **上一篇**：[← 安装配置](安装配置.md) | **返回首页**：[快速入门](快速入门.md)
-
 
