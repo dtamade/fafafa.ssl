@@ -4,9 +4,9 @@ program test_bn_simple;
 
 uses
   SysUtils,
-  fafafa.ssl.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.crypto,
   fafafa.ssl.openssl.api.bn;
 

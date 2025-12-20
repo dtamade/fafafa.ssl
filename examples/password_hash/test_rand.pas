@@ -5,7 +5,7 @@ program test_rand;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.rand;
+  fafafa.ssl.openssl.api.rand;
 
 var
   P: Pointer;

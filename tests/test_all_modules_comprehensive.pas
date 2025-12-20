@@ -38,9 +38,9 @@ procedure InitializeModules;
 begin
   // Core Infrastructure (Priority 1)
   AddModule('types', 'fafafa.ssl.openssl.types', 'Core', 1);
-  AddModule('consts', 'fafafa.ssl.openssl.consts', 'Core', 1);
+  AddModule('consts', 'fafafa.ssl.openssl.api.consts', 'Core', 1);
   AddModule('utils', 'fafafa.ssl.openssl.api.utils', 'Core', 1);
-  AddModule('core', 'fafafa.ssl.openssl.core', 'Core', 1);
+  AddModule('core', 'fafafa.ssl.openssl.api.core', 'Core', 1);
   AddModule('api', 'fafafa.ssl.openssl.api', 'Core', 1);
   AddModule('err', 'fafafa.ssl.openssl.api.err', 'Core', 1);
   
@@ -76,7 +76,7 @@ begin
   
   // MAC & KDF (Priority 1)
   AddModule('hmac', 'fafafa.ssl.openssl.api.hmac', 'MAC', 1);
-  AddModule('cmac', 'fafafa.ssl.openssl.api.cmac', 'MAC', 1);
+  // AddModule('cmac', 'fafafa.ssl.openssl.api.cmac', 'MAC', 1);  // Phase 2.2: 废弃，使用cmac.evp
   AddModule('cmac.evp', 'fafafa.ssl.openssl.api.cmac.evp', 'MAC', 1);
   AddModule('kdf', 'fafafa.ssl.openssl.api.kdf', 'KDF', 1);
   AddModule('scrypt_whirlpool', 'fafafa.ssl.openssl.scrypt_whirlpool', 'KDF', 2);

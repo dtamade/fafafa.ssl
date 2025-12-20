@@ -7,7 +7,7 @@ uses
   // Core - 这些肯定能编译
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.consts,
+  fafafa.ssl.openssl.api.consts,
   
   // 基础功能
   fafafa.ssl.openssl.api.bio,

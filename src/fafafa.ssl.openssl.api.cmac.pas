@@ -1,12 +1,29 @@
-{$IFNDEF WINDOWS}{$MODE DELPHI}{$ENDIF}
-
 unit fafafa.ssl.openssl.api.cmac;
+
+{******************************************************************************}
+{                                                                              }
+{  ⚠️  DEPRECATED: This module uses legacy CMAC_CTX API                       }
+{                                                                              }
+{  Recommendation: Use fafafa.ssl.openssl.api.cmac.evp instead                }
+{                                                                              }
+{  Reason: OpenSSL 3.x prefers EVP_MAC API over low-level CMAC_CTX            }
+{  Migration: Replace ComputeCMAC_AES128 with CMAC_AES128_EVP                 }
+{                                                                              }
+{  This module will be removed in a future release (Phase 3)                  }
+{                                                                              }
+{******************************************************************************}
+
+{$mode ObjFPC}{$H+}
+{$MESSAGE WARN 'cmac.pas is deprecated. Use cmac.evp.pas for EVP_MAC API (OpenSSL 3.x compatible)'}
 
 interface
 
 uses
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   SysUtils,
   fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.evp;
 
 const
@@ -30,7 +47,7 @@ type
   TCMAC_CTX_get0_cipher_ctx = function(ctx: PCMAC_CTX): PEVP_CIPHER_CTX; cdecl;
   
   TCMAC_Init = function(ctx: PCMAC_CTX; const key: PByte; keylen: size_t;
-                       const cipher: PEVP_CIPHER; impl: PENGINE): Integer; cdecl;
+                      const cipher: PEVP_CIPHER; impl: PENGINE): Integer; cdecl;
   TCMAC_Update = function(ctx: PCMAC_CTX; const data: PByte; datalen: size_t): Integer; cdecl;
   TCMAC_Final = function(ctx: PCMAC_CTX; out_mac: PByte; maclen: Psize_t): Integer; cdecl;
   TCMAC_Resume = function(ctx: PCMAC_CTX): Integer; cdecl;
@@ -38,9 +55,9 @@ type
   // EVP PKEY method for CMAC
   TEVP_PKEY_CTX_new_id = function(id: Integer; e: PENGINE): PEVP_PKEY_CTX; cdecl;
   TEVP_PKEY_CTX_ctrl = function(ctx: PEVP_PKEY_CTX; keytype: Integer; optype: Integer;
-                               cmd: Integer; p1: Integer; p2: Pointer): Integer; cdecl;
+                              cmd: Integer; p1: Integer; p2: Pointer): Integer; cdecl;
   TEVP_PKEY_new_CMAC_key = function(e: PENGINE; const priv: PByte; len: size_t;
-                                   const cipher: PEVP_CIPHER): PEVP_PKEY; cdecl;
+                                  const cipher: PEVP_CIPHER): PEVP_PKEY; cdecl;
   TEVP_PKEY_new_mac_key = function(typ: Integer; e: PENGINE; const key: PByte; 
                                   keylen: Integer): PEVP_PKEY; cdecl;
   
@@ -53,7 +70,7 @@ type
   TEVP_MAC_CTX_mac = function(ctx: PEVP_MAC_CTX): PEVP_MAC; cdecl;
   
   TEVP_MAC_init = function(ctx: PEVP_MAC_CTX; const key: PByte; keylen: size_t;
-                         const params: POSSL_PARAM): Integer; cdecl;
+                        const params: POSSL_PARAM): Integer; cdecl;
   TEVP_MAC_update = function(ctx: PEVP_MAC_CTX; const data: PByte; datalen: size_t): Integer; cdecl;
   TEVP_MAC_final = function(ctx: PEVP_MAC_CTX; out_mac: PByte; outl: Psize_t; outsize: size_t): Integer; cdecl;
   TEVP_MAC_finalXOF = function(ctx: PEVP_MAC_CTX; out_mac: PByte; outsize: size_t): Integer; cdecl;
@@ -132,140 +149,119 @@ function ComputeCMAC(const Cipher: PEVP_CIPHER; const Key: TBytes; const Data: T
 
 // Generic MAC computation (supports CMAC, HMAC, Poly1305, etc.)
 function ComputeMAC(const MacType: string; const Key: TBytes; const Data: TBytes;
-                   const CipherName: string = ''): TBytes;
+                  const CipherName: string = ''): TBytes;
 
 implementation
 
 uses
-  {$IFDEF WINDOWS}Windows{$ELSE}dynlibs{$ENDIF},
   fafafa.ssl.openssl.api.aes;
 
-var
-  hCrypto: {$IFDEF WINDOWS}HMODULE{$ELSE}THandle{$ENDIF} = 0;
-  CMACLoaded: Boolean = False;
-
 function LoadCMACFunctions: Boolean;
+var
+  LHandle: TLibHandle;
 begin
   Result := False;
-  
-  // Load crypto library if not already loaded
-  if hCrypto = 0 then
-  begin
-    {$IFDEF WINDOWS}
-    hCrypto := LoadLibrary('libcrypto-3-x64.dll');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto-1_1-x64.dll');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libeay32.dll');
-    {$ELSE}
-    hCrypto := LoadLibrary('libcrypto.so.3');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto.so.1.1');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto.so');
-    {$ENDIF}
-  end;
-  
-  if hCrypto = 0 then
+
+  // Phase 3.3 P0+ - 使用统一的动态库加载器（替换 ~70 行重复代码）
+  LHandle := TOpenSSLLoader.GetLibraryHandle(osslLibCrypto);
+  if LHandle = 0 then
     Exit;
-    
+
   // Load CMAC functions (OpenSSL 1.0.1+)
-  CMAC_CTX_new := TCMAC_CTX_new(GetProcAddress(hCrypto, 'CMAC_CTX_new'));
-  CMAC_CTX_free := TCMAC_CTX_free(GetProcAddress(hCrypto, 'CMAC_CTX_free'));
-  CMAC_CTX_cleanup := TCMAC_CTX_cleanup(GetProcAddress(hCrypto, 'CMAC_CTX_cleanup'));
-  CMAC_CTX_copy := TCMAC_CTX_copy(GetProcAddress(hCrypto, 'CMAC_CTX_copy'));
-  CMAC_CTX_get0_cipher_ctx := TCMAC_CTX_get0_cipher_ctx(GetProcAddress(hCrypto, 'CMAC_CTX_get0_cipher_ctx'));
-  
-  CMAC_Init := TCMAC_Init(GetProcAddress(hCrypto, 'CMAC_Init'));
-  CMAC_Update := TCMAC_Update(GetProcAddress(hCrypto, 'CMAC_Update'));
-  CMAC_Final := TCMAC_Final(GetProcAddress(hCrypto, 'CMAC_Final'));
-  CMAC_Resume := TCMAC_Resume(GetProcAddress(hCrypto, 'CMAC_Resume'));
-  
+  CMAC_CTX_new := TCMAC_CTX_new(TOpenSSLLoader.GetFunction(LHandle, 'CMAC_CTX_new'));
+  CMAC_CTX_free := TCMAC_CTX_free(TOpenSSLLoader.GetFunction(LHandle, 'CMAC_CTX_free'));
+  CMAC_CTX_cleanup := TCMAC_CTX_cleanup(TOpenSSLLoader.GetFunction(LHandle, 'CMAC_CTX_cleanup'));
+  CMAC_CTX_copy := TCMAC_CTX_copy(TOpenSSLLoader.GetFunction(LHandle, 'CMAC_CTX_copy'));
+  CMAC_CTX_get0_cipher_ctx := TCMAC_CTX_get0_cipher_ctx(TOpenSSLLoader.GetFunction(LHandle, 'CMAC_CTX_get0_cipher_ctx'));
+
+  CMAC_Init := TCMAC_Init(TOpenSSLLoader.GetFunction(LHandle, 'CMAC_Init'));
+  CMAC_Update := TCMAC_Update(TOpenSSLLoader.GetFunction(LHandle, 'CMAC_Update'));
+  CMAC_Final := TCMAC_Final(TOpenSSLLoader.GetFunction(LHandle, 'CMAC_Final'));
+  CMAC_Resume := TCMAC_Resume(TOpenSSLLoader.GetFunction(LHandle, 'CMAC_Resume'));
+
   // Load EVP PKEY functions for MAC
-  EVP_PKEY_CTX_new_id := TEVP_PKEY_CTX_new_id(GetProcAddress(hCrypto, 'EVP_PKEY_CTX_new_id'));
-  EVP_PKEY_CTX_ctrl := TEVP_PKEY_CTX_ctrl(GetProcAddress(hCrypto, 'EVP_PKEY_CTX_ctrl'));
-  EVP_PKEY_new_CMAC_key := TEVP_PKEY_new_CMAC_key(GetProcAddress(hCrypto, 'EVP_PKEY_new_CMAC_key'));
-  EVP_PKEY_new_mac_key := TEVP_PKEY_new_mac_key(GetProcAddress(hCrypto, 'EVP_PKEY_new_mac_key'));
-  
+  EVP_PKEY_CTX_new_id := TEVP_PKEY_CTX_new_id(TOpenSSLLoader.GetFunction(LHandle, 'EVP_PKEY_CTX_new_id'));
+  EVP_PKEY_CTX_ctrl := TEVP_PKEY_CTX_ctrl(TOpenSSLLoader.GetFunction(LHandle, 'EVP_PKEY_CTX_ctrl'));
+  EVP_PKEY_new_CMAC_key := TEVP_PKEY_new_CMAC_key(TOpenSSLLoader.GetFunction(LHandle, 'EVP_PKEY_new_CMAC_key'));
+  EVP_PKEY_new_mac_key := TEVP_PKEY_new_mac_key(TOpenSSLLoader.GetFunction(LHandle, 'EVP_PKEY_new_mac_key'));
+
   // Load EVP MAC functions (OpenSSL 3.0+)
-  EVP_MAC_fetch := TEVP_MAC_fetch(GetProcAddress(hCrypto, 'EVP_MAC_fetch'));
-  EVP_MAC_CTX_new := TEVP_MAC_CTX_new(GetProcAddress(hCrypto, 'EVP_MAC_CTX_new'));
-  EVP_MAC_CTX_free := TEVP_MAC_CTX_free(GetProcAddress(hCrypto, 'EVP_MAC_CTX_free'));
-  EVP_MAC_CTX_dup := TEVP_MAC_CTX_dup(GetProcAddress(hCrypto, 'EVP_MAC_CTX_dup'));
-  EVP_MAC_CTX_mac := TEVP_MAC_CTX_mac(GetProcAddress(hCrypto, 'EVP_MAC_CTX_mac'));
-  
-  EVP_MAC_init := TEVP_MAC_init(GetProcAddress(hCrypto, 'EVP_MAC_init'));
-  EVP_MAC_update := TEVP_MAC_update(GetProcAddress(hCrypto, 'EVP_MAC_update'));
-  EVP_MAC_final := TEVP_MAC_final(GetProcAddress(hCrypto, 'EVP_MAC_final'));
-  EVP_MAC_finalXOF := TEVP_MAC_finalXOF(GetProcAddress(hCrypto, 'EVP_MAC_finalXOF'));
-  
-  EVP_MAC_get_params := TEVP_MAC_get_params(GetProcAddress(hCrypto, 'EVP_MAC_get_params'));
-  EVP_MAC_CTX_get_params := TEVP_MAC_CTX_get_params(GetProcAddress(hCrypto, 'EVP_MAC_CTX_get_params'));
-  EVP_MAC_CTX_set_params := TEVP_MAC_CTX_set_params(GetProcAddress(hCrypto, 'EVP_MAC_CTX_set_params'));
-  
-  EVP_MAC_size := TEVP_MAC_size(GetProcAddress(hCrypto, 'EVP_MAC_size'));
-  EVP_MAC_block_size := TEVP_MAC_block_size(GetProcAddress(hCrypto, 'EVP_MAC_block_size'));
-  EVP_MAC_is_a := TEVP_MAC_is_a(GetProcAddress(hCrypto, 'EVP_MAC_is_a'));
-  EVP_MAC_name := TEVP_MAC_name(GetProcAddress(hCrypto, 'EVP_MAC_name'));
-  
+  EVP_MAC_fetch := TEVP_MAC_fetch(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_fetch'));
+  EVP_MAC_CTX_new := TEVP_MAC_CTX_new(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_CTX_new'));
+  EVP_MAC_CTX_free := TEVP_MAC_CTX_free(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_CTX_free'));
+  EVP_MAC_CTX_dup := TEVP_MAC_CTX_dup(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_CTX_dup'));
+  EVP_MAC_CTX_mac := TEVP_MAC_CTX_mac(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_CTX_mac'));
+
+  EVP_MAC_init := TEVP_MAC_init(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_init'));
+  EVP_MAC_update := TEVP_MAC_update(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_update'));
+  EVP_MAC_final := TEVP_MAC_final(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_final'));
+  EVP_MAC_finalXOF := TEVP_MAC_finalXOF(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_finalXOF'));
+
+  EVP_MAC_get_params := TEVP_MAC_get_params(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_get_params'));
+  EVP_MAC_CTX_get_params := TEVP_MAC_CTX_get_params(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_CTX_get_params'));
+  EVP_MAC_CTX_set_params := TEVP_MAC_CTX_set_params(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_CTX_set_params'));
+
+  EVP_MAC_size := TEVP_MAC_size(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_size'));
+  EVP_MAC_block_size := TEVP_MAC_block_size(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_block_size'));
+  EVP_MAC_is_a := TEVP_MAC_is_a(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_is_a'));
+  EVP_MAC_name := TEVP_MAC_name(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_name'));
+
   // Check if at least basic CMAC functions are available
-  CMACLoaded := Assigned(CMAC_CTX_new) or Assigned(EVP_MAC_fetch);
-  Result := CMACLoaded;
+  Result := Assigned(CMAC_CTX_new) or Assigned(EVP_MAC_fetch);
+  TOpenSSLLoader.SetModuleLoaded(osmCMAC, Result);
 end;
 
 procedure UnloadCMACFunctions;
 begin
+  // Phase 3.3 P0+ - 库生命周期由 TOpenSSLLoader 统一管理，此处仅清除函数指针
+
   // Clear CMAC functions
   CMAC_CTX_new := nil;
   CMAC_CTX_free := nil;
   CMAC_CTX_cleanup := nil;
   CMAC_CTX_copy := nil;
   CMAC_CTX_get0_cipher_ctx := nil;
-  
+
   CMAC_Init := nil;
   CMAC_Update := nil;
   CMAC_Final := nil;
   CMAC_Resume := nil;
-  
+
   // Clear EVP PKEY functions
   EVP_PKEY_CTX_new_id := nil;
   EVP_PKEY_CTX_ctrl := nil;
   EVP_PKEY_new_CMAC_key := nil;
   EVP_PKEY_new_mac_key := nil;
-  
+
   // Clear EVP MAC functions
   EVP_MAC_fetch := nil;
   EVP_MAC_CTX_new := nil;
   EVP_MAC_CTX_free := nil;
   EVP_MAC_CTX_dup := nil;
   EVP_MAC_CTX_mac := nil;
-  
+
   EVP_MAC_init := nil;
   EVP_MAC_update := nil;
   EVP_MAC_final := nil;
   EVP_MAC_finalXOF := nil;
-  
+
   EVP_MAC_get_params := nil;
   EVP_MAC_CTX_get_params := nil;
   EVP_MAC_CTX_set_params := nil;
-  
+
   EVP_MAC_size := nil;
   EVP_MAC_block_size := nil;
   EVP_MAC_is_a := nil;
   EVP_MAC_name := nil;
-  
-  CMACLoaded := False;
-  
-  if hCrypto <> 0 then
-  begin
-    FreeLibrary(hCrypto);
-    hCrypto := 0;
-  end;
+
+  TOpenSSLLoader.SetModuleLoaded(osmCMAC, False);
+
+  // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
 end;
 
 function IsCMACLoaded: Boolean;
 begin
-  Result := CMACLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmCMAC);
 end;
 
 // High-level helper functions implementation
@@ -273,16 +269,16 @@ end;
 function ComputeCMAC_AES128(const Key: TBytes; const Data: TBytes): TBytes;
 begin
   if not Assigned(EVP_aes_128_cbc) then
-    LoadAESFunctions(hCrypto);
-    
+    LoadAESFunctions(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto));
+
   Result := ComputeCMAC(EVP_aes_128_cbc(), Key, Data);
 end;
 
 function ComputeCMAC_AES256(const Key: TBytes; const Data: TBytes): TBytes;
 begin
   if not Assigned(EVP_aes_256_cbc) then
-    LoadAESFunctions(hCrypto);
-    
+    LoadAESFunctions(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto));
+
   Result := ComputeCMAC(EVP_aes_256_cbc(), Key, Data);
 end;
 
@@ -292,25 +288,25 @@ var
   mac_len: size_t;
 begin
   if not Assigned(CMAC_CTX_new) then
-    raise Exception.Create('CMAC not available');
+    raise ESSLCryptoError.Create('CMAC not available');
     
   if not Assigned(Cipher) then
-    raise Exception.Create('Cipher not specified');
+    raise ESSLInvalidArgument.Create('Cipher not specified');
     
   ctx := CMAC_CTX_new();
   if ctx = nil then
-    raise Exception.Create('Failed to create CMAC context');
+    raise ESSLCryptoError.Create('Failed to create CMAC context');
     
   try
     // Initialize CMAC with key and cipher
     if CMAC_Init(ctx, @Key[0], Length(Key), Cipher, nil) <> 1 then
-      raise Exception.Create('Failed to initialize CMAC');
+      raise ESSLCryptoError.Create('Failed to initialize CMAC');
     
     // Update with data
     if Length(Data) > 0 then
     begin
       if CMAC_Update(ctx, @Data[0], Length(Data)) <> 1 then
-        raise Exception.Create('Failed to update CMAC');
+        raise ESSLCryptoError.Create('Failed to update CMAC');
     end;
     
     // Get the MAC size first
@@ -319,7 +315,7 @@ begin
     
     // Finalize and get MAC
     if CMAC_Final(ctx, @Result[0], @mac_len) <> 1 then
-      raise Exception.Create('Failed to finalize CMAC');
+      raise ESSLCryptoError.Create('Failed to finalize CMAC');
       
     // Adjust result size to actual MAC length
     SetLength(Result, mac_len);
@@ -329,7 +325,7 @@ begin
 end;
 
 function ComputeMAC(const MacType: string; const Key: TBytes; const Data: TBytes;
-                   const CipherName: string = ''): TBytes;
+                  const CipherName: string = ''): TBytes;
 var
   mac: PEVP_MAC;
   ctx: PEVP_MAC_CTX;
@@ -345,11 +341,11 @@ begin
   begin
     mac := EVP_MAC_fetch(nil, PAnsiChar(AnsiString(MacType)), nil);
     if mac = nil then
-      raise Exception.Create('MAC algorithm not available: ' + MacType);
+      raise ESSLCryptoError.Create('MAC algorithm not available: ' + MacType);
       
     ctx := EVP_MAC_CTX_new(mac);
     if ctx = nil then
-      raise Exception.Create('Failed to create MAC context');
+      raise ESSLCryptoError.Create('Failed to create MAC context');
       
     try
       // Set cipher parameter for CMAC if needed
@@ -363,13 +359,13 @@ begin
       
       // Initialize MAC
       if EVP_MAC_init(ctx, @Key[0], Length(Key), nil) <> 1 then
-        raise Exception.Create('Failed to initialize MAC');
+        raise ESSLCryptoError.Create('Failed to initialize MAC');
         
       // Update with data
       if Length(Data) > 0 then
       begin
         if EVP_MAC_update(ctx, @Data[0], Length(Data)) <> 1 then
-          raise Exception.Create('Failed to update MAC');
+          raise ESSLCryptoError.Create('Failed to update MAC');
       end;
       
       // Get MAC size
@@ -378,7 +374,7 @@ begin
       
       // Finalize and get MAC
       if EVP_MAC_final(ctx, @Result[0], @outlen, outlen) <> 1 then
-        raise Exception.Create('Failed to finalize MAC');
+        raise ESSLCryptoError.Create('Failed to finalize MAC');
         
       SetLength(Result, outlen);
     finally
@@ -393,12 +389,12 @@ begin
     else if CipherName = 'AES-256-CBC' then
       cipher := EVP_aes_256_cbc()
     else
-      raise Exception.Create('Unsupported cipher for CMAC: ' + CipherName);
+      raise ESSLInvalidArgument.Create('Unsupported cipher for CMAC: ' + CipherName);
       
     Result := ComputeCMAC(cipher, Key, Data);
   end
   else
-    raise Exception.Create('MAC computation not available');
+    raise ESSLCryptoError.Create('MAC computation not available');
 end;
 
 initialization

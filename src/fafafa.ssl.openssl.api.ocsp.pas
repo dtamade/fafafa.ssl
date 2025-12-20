@@ -1,13 +1,13 @@
 unit fafafa.ssl.openssl.api.ocsp;
 
 {$mode ObjFPC}{$H+}
-{$H+}
 
 interface
 
 uses
   SysUtils, Classes, dynlibs,
   fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.asn1,
   fafafa.ssl.openssl.api.bio,
@@ -375,251 +375,133 @@ function VerifyOCSPResponse(AResponse: POCSP_RESPONSE; ACert: PX509;
 
 implementation
 
-var
-  FOCSPLoaded: Boolean = False;
+const
+  { OCSP 函数绑定数组 }
+  OCSPBindings: array[0..83] of TFunctionBinding = (
+    // OCSP 请求函数
+    (Name: 'OCSP_REQUEST_new'; FuncPtr: @OCSP_REQUEST_new; Required: True),
+    (Name: 'OCSP_REQUEST_free'; FuncPtr: @OCSP_REQUEST_free; Required: True),
+    (Name: 'd2i_OCSP_REQUEST'; FuncPtr: @d2i_OCSP_REQUEST; Required: False),
+    (Name: 'i2d_OCSP_REQUEST'; FuncPtr: @i2d_OCSP_REQUEST; Required: False),
+    (Name: 'OCSP_REQUEST_add_ext'; FuncPtr: @OCSP_REQUEST_add_ext; Required: False),
+    (Name: 'OCSP_REQUEST_get_ext'; FuncPtr: @OCSP_REQUEST_get_ext; Required: False),
+    (Name: 'OCSP_REQUEST_get_ext_by_NID'; FuncPtr: @OCSP_REQUEST_get_ext_by_NID; Required: False),
+    (Name: 'OCSP_REQUEST_get_ext_by_OBJ'; FuncPtr: @OCSP_REQUEST_get_ext_by_OBJ; Required: False),
+    (Name: 'OCSP_REQUEST_get_ext_by_critical'; FuncPtr: @OCSP_REQUEST_get_ext_by_critical; Required: False),
+    (Name: 'OCSP_REQUEST_get_ext_count'; FuncPtr: @OCSP_REQUEST_get_ext_count; Required: False),
+    (Name: 'OCSP_REQUEST_delete_ext'; FuncPtr: @OCSP_REQUEST_delete_ext; Required: False),
+    (Name: 'OCSP_REQUEST_print'; FuncPtr: @OCSP_REQUEST_print; Required: False),
+    (Name: 'OCSP_REQUEST_sign'; FuncPtr: @OCSP_REQUEST_sign; Required: False),
+    // OCSP 响应函数
+    (Name: 'OCSP_RESPONSE_new'; FuncPtr: @OCSP_RESPONSE_new; Required: True),
+    (Name: 'OCSP_RESPONSE_free'; FuncPtr: @OCSP_RESPONSE_free; Required: True),
+    (Name: 'd2i_OCSP_RESPONSE'; FuncPtr: @d2i_OCSP_RESPONSE; Required: False),
+    (Name: 'i2d_OCSP_RESPONSE'; FuncPtr: @i2d_OCSP_RESPONSE; Required: False),
+    (Name: 'OCSP_RESPONSE_create'; FuncPtr: @OCSP_RESPONSE_create; Required: False),
+    (Name: 'OCSP_RESPONSE_status'; FuncPtr: @OCSP_RESPONSE_status; Required: False),
+    (Name: 'OCSP_RESPONSE_get1_basic'; FuncPtr: @OCSP_RESPONSE_get1_basic; Required: False),
+    (Name: 'OCSP_RESPONSE_print'; FuncPtr: @OCSP_RESPONSE_print; Required: False),
+    // OCSP 基本响应函数
+    (Name: 'OCSP_BASICRESP_new'; FuncPtr: @OCSP_BASICRESP_new; Required: False),
+    (Name: 'OCSP_BASICRESP_free'; FuncPtr: @OCSP_BASICRESP_free; Required: False),
+    (Name: 'd2i_OCSP_BASICRESP'; FuncPtr: @d2i_OCSP_BASICRESP; Required: False),
+    (Name: 'i2d_OCSP_BASICRESP'; FuncPtr: @i2d_OCSP_BASICRESP; Required: False),
+    (Name: 'OCSP_BASICRESP_add_ext'; FuncPtr: @OCSP_BASICRESP_add_ext; Required: False),
+    (Name: 'OCSP_BASICRESP_get_ext'; FuncPtr: @OCSP_BASICRESP_get_ext; Required: False),
+    (Name: 'OCSP_BASICRESP_get_ext_by_NID'; FuncPtr: @OCSP_BASICRESP_get_ext_by_NID; Required: False),
+    (Name: 'OCSP_BASICRESP_get_ext_by_OBJ'; FuncPtr: @OCSP_BASICRESP_get_ext_by_OBJ; Required: False),
+    (Name: 'OCSP_BASICRESP_get_ext_by_critical'; FuncPtr: @OCSP_BASICRESP_get_ext_by_critical; Required: False),
+    (Name: 'OCSP_BASICRESP_get_ext_count'; FuncPtr: @OCSP_BASICRESP_get_ext_count; Required: False),
+    (Name: 'OCSP_BASICRESP_delete_ext'; FuncPtr: @OCSP_BASICRESP_delete_ext; Required: False),
+    (Name: 'OCSP_BASICRESP_sign'; FuncPtr: @OCSP_BASICRESP_sign; Required: False),
+    (Name: 'OCSP_BASICRESP_sign_ctx'; FuncPtr: @OCSP_BASICRESP_sign_ctx; Required: False),
+    (Name: 'OCSP_BASICRESP_verify'; FuncPtr: @OCSP_BASICRESP_verify; Required: False),
+    // OCSP 证书 ID 函数
+    (Name: 'OCSP_CERTID_new'; FuncPtr: @OCSP_CERTID_new; Required: False),
+    (Name: 'OCSP_CERTID_free'; FuncPtr: @OCSP_CERTID_free; Required: False),
+    (Name: 'OCSP_CERTID_dup'; FuncPtr: @OCSP_CERTID_dup; Required: False),
+    (Name: 'OCSP_cert_to_id'; FuncPtr: @OCSP_cert_to_id; Required: False),
+    (Name: 'OCSP_cert_id_new'; FuncPtr: @OCSP_cert_id_new; Required: False),
+    (Name: 'OCSP_id_issuer_cmp'; FuncPtr: @OCSP_id_issuer_cmp; Required: False),
+    (Name: 'OCSP_id_cmp'; FuncPtr: @OCSP_id_cmp; Required: False),
+    (Name: 'OCSP_id_get0_info'; FuncPtr: @OCSP_id_get0_info; Required: False),
+    // OCSP 请求操作
+    (Name: 'OCSP_request_add0_id'; FuncPtr: @OCSP_request_add0_id; Required: False),
+    (Name: 'OCSP_request_add1_nonce'; FuncPtr: @OCSP_request_add1_nonce; Required: False),
+    (Name: 'OCSP_check_nonce'; FuncPtr: @OCSP_check_nonce; Required: False),
+    (Name: 'OCSP_copy_nonce'; FuncPtr: @OCSP_copy_nonce; Required: False),
+    (Name: 'OCSP_request_add1_cert'; FuncPtr: @OCSP_request_add1_cert; Required: False),
+    (Name: 'OCSP_request_onereq_count'; FuncPtr: @OCSP_request_onereq_count; Required: False),
+    (Name: 'OCSP_request_onereq_get0'; FuncPtr: @OCSP_request_onereq_get0; Required: False),
+    (Name: 'OCSP_onereq_get0_id'; FuncPtr: @OCSP_onereq_get0_id; Required: False),
+    (Name: 'OCSP_single_get0_status'; FuncPtr: @OCSP_single_get0_status; Required: False),
+    // OCSP 响应操作
+    (Name: 'OCSP_resp_count'; FuncPtr: @OCSP_resp_count; Required: False),
+    (Name: 'OCSP_resp_get0'; FuncPtr: @OCSP_resp_get0; Required: False),
+    (Name: 'OCSP_resp_get0_respdata'; FuncPtr: @OCSP_resp_get0_respdata; Required: False),
+    (Name: 'OCSP_resp_get0_produced_at'; FuncPtr: @OCSP_resp_get0_produced_at; Required: False),
+    (Name: 'OCSP_resp_get0_signature'; FuncPtr: @OCSP_resp_get0_signature; Required: False),
+    (Name: 'OCSP_resp_get1_id'; FuncPtr: @OCSP_resp_get1_id; Required: False),
+    (Name: 'OCSP_resp_get0_id'; FuncPtr: @OCSP_resp_get0_id; Required: False),
+    (Name: 'OCSP_resp_get0_certs'; FuncPtr: @OCSP_resp_get0_certs; Required: False),
+    (Name: 'OCSP_resp_find'; FuncPtr: @OCSP_resp_find; Required: False),
+    (Name: 'OCSP_resp_find_status'; FuncPtr: @OCSP_resp_find_status; Required: False),
+    // OCSP 基本响应添加
+    (Name: 'OCSP_basic_add1_status'; FuncPtr: @OCSP_basic_add1_status; Required: False),
+    (Name: 'OCSP_basic_add1_nonce'; FuncPtr: @OCSP_basic_add1_nonce; Required: False),
+    (Name: 'OCSP_basic_add1_cert'; FuncPtr: @OCSP_basic_add1_cert; Required: False),
+    // OCSP 检查函数
+    (Name: 'OCSP_check_validity'; FuncPtr: @OCSP_check_validity; Required: False),
+    // OCSP HTTP 函数
+    (Name: 'OCSP_sendreq_new'; FuncPtr: @OCSP_sendreq_new; Required: False),
+    (Name: 'OCSP_sendreq_nbio'; FuncPtr: @OCSP_sendreq_nbio; Required: False),
+    (Name: 'OCSP_REQ_CTX_free'; FuncPtr: @OCSP_REQ_CTX_free; Required: False),
+    (Name: 'OCSP_REQ_CTX_http'; FuncPtr: @OCSP_REQ_CTX_http; Required: False),
+    (Name: 'OCSP_REQ_CTX_set1_req'; FuncPtr: @OCSP_REQ_CTX_set1_req; Required: False),
+    (Name: 'OCSP_REQ_CTX_add1_header'; FuncPtr: @OCSP_REQ_CTX_add1_header; Required: False),
+    (Name: 'OCSP_REQ_CTX_i2d'; FuncPtr: @OCSP_REQ_CTX_i2d; Required: False),
+    (Name: 'OCSP_REQ_CTX_nbio_d2i'; FuncPtr: @OCSP_REQ_CTX_nbio_d2i; Required: False),
+    (Name: 'OCSP_REQ_CTX_get0_mem_bio'; FuncPtr: @OCSP_REQ_CTX_get0_mem_bio; Required: False),
+    (Name: 'OCSP_REQ_CTX_nbio'; FuncPtr: @OCSP_REQ_CTX_nbio; Required: False),
+    // OCSP 服务定位器
+    (Name: 'OCSP_url_svcloc_new'; FuncPtr: @OCSP_url_svcloc_new; Required: False),
+    (Name: 'OCSP_parse_url'; FuncPtr: @OCSP_parse_url; Required: False),
+    // OCSP 响应者 ID
+    (Name: 'OCSP_RESPID_set_by_name'; FuncPtr: @OCSP_RESPID_set_by_name; Required: False),
+    (Name: 'OCSP_RESPID_set_by_key'; FuncPtr: @OCSP_RESPID_set_by_key; Required: False),
+    (Name: 'OCSP_RESPID_match'; FuncPtr: @OCSP_RESPID_match; Required: False),
+    // OCSP CRL ID
+    (Name: 'OCSP_crlID_new'; FuncPtr: @OCSP_crlID_new; Required: False),
+    // OCSP 存档截止
+    (Name: 'OCSP_archive_cutoff_new'; FuncPtr: @OCSP_archive_cutoff_new; Required: False),
+    // OCSP 接受语言
+    (Name: 'OCSP_accept_responses_new'; FuncPtr: @OCSP_accept_responses_new; Required: False)
+  );
 
 function LoadOpenSSLOCSP(const ACryptoLib: THandle): Boolean;
 begin
-  if FOCSPLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmOCSP) then
     Exit(True);
 
   if ACryptoLib = 0 then
     Exit(False);
 
-  // 加载 OCSP 请求函数
-  OCSP_REQUEST_new := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_new');
-  OCSP_REQUEST_free := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_free');
-  d2i_OCSP_REQUEST := GetProcAddress(ACryptoLib, 'd2i_OCSP_REQUEST');
-  i2d_OCSP_REQUEST := GetProcAddress(ACryptoLib, 'i2d_OCSP_REQUEST');
-  OCSP_REQUEST_add_ext := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_add_ext');
-  OCSP_REQUEST_get_ext := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_get_ext');
-  OCSP_REQUEST_get_ext_by_NID := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_get_ext_by_NID');
-  OCSP_REQUEST_get_ext_by_OBJ := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_get_ext_by_OBJ');
-  OCSP_REQUEST_get_ext_by_critical := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_get_ext_by_critical');
-  OCSP_REQUEST_get_ext_count := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_get_ext_count');
-  OCSP_REQUEST_delete_ext := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_delete_ext');
-  OCSP_REQUEST_print := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_print');
-  OCSP_REQUEST_sign := GetProcAddress(ACryptoLib, 'OCSP_REQUEST_sign');
+  // 使用批量加载模式
+  TOpenSSLLoader.LoadFunctions(ACryptoLib, OCSPBindings);
 
-  // 加载 OCSP 响应函数
-  OCSP_RESPONSE_new := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_new');
-  OCSP_RESPONSE_free := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_free');
-  d2i_OCSP_RESPONSE := GetProcAddress(ACryptoLib, 'd2i_OCSP_RESPONSE');
-  i2d_OCSP_RESPONSE := GetProcAddress(ACryptoLib, 'i2d_OCSP_RESPONSE');
-  OCSP_RESPONSE_create := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_create');
-  OCSP_RESPONSE_status := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_status');
-  OCSP_RESPONSE_get1_basic := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_get1_basic');
-  OCSP_RESPONSE_print := GetProcAddress(ACryptoLib, 'OCSP_RESPONSE_print');
-
-  // 加载 OCSP 基本响应函数
-  OCSP_BASICRESP_new := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_new');
-  OCSP_BASICRESP_free := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_free');
-  d2i_OCSP_BASICRESP := GetProcAddress(ACryptoLib, 'd2i_OCSP_BASICRESP');
-  i2d_OCSP_BASICRESP := GetProcAddress(ACryptoLib, 'i2d_OCSP_BASICRESP');
-  OCSP_BASICRESP_add_ext := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_add_ext');
-  OCSP_BASICRESP_get_ext := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_get_ext');
-  OCSP_BASICRESP_get_ext_by_NID := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_get_ext_by_NID');
-  OCSP_BASICRESP_get_ext_by_OBJ := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_get_ext_by_OBJ');
-  OCSP_BASICRESP_get_ext_by_critical := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_get_ext_by_critical');
-  OCSP_BASICRESP_get_ext_count := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_get_ext_count');
-  OCSP_BASICRESP_delete_ext := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_delete_ext');
-  OCSP_BASICRESP_sign := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_sign');
-  OCSP_BASICRESP_sign_ctx := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_sign_ctx');
-  OCSP_BASICRESP_verify := GetProcAddress(ACryptoLib, 'OCSP_BASICRESP_verify');
-
-  // 加载 OCSP 证书 ID 函数
-  OCSP_CERTID_new := GetProcAddress(ACryptoLib, 'OCSP_CERTID_new');
-  OCSP_CERTID_free := GetProcAddress(ACryptoLib, 'OCSP_CERTID_free');
-  OCSP_CERTID_dup := GetProcAddress(ACryptoLib, 'OCSP_CERTID_dup');
-  OCSP_cert_to_id := GetProcAddress(ACryptoLib, 'OCSP_cert_to_id');
-  OCSP_cert_id_new := GetProcAddress(ACryptoLib, 'OCSP_cert_id_new');
-  OCSP_id_issuer_cmp := GetProcAddress(ACryptoLib, 'OCSP_id_issuer_cmp');
-  OCSP_id_cmp := GetProcAddress(ACryptoLib, 'OCSP_id_cmp');
-  OCSP_id_get0_info := GetProcAddress(ACryptoLib, 'OCSP_id_get0_info');
-
-  // 加载 OCSP 请求操作
-  OCSP_request_add0_id := GetProcAddress(ACryptoLib, 'OCSP_request_add0_id');
-  OCSP_request_add1_nonce := GetProcAddress(ACryptoLib, 'OCSP_request_add1_nonce');
-  OCSP_check_nonce := GetProcAddress(ACryptoLib, 'OCSP_check_nonce');
-  OCSP_copy_nonce := GetProcAddress(ACryptoLib, 'OCSP_copy_nonce');
-  OCSP_request_add1_cert := GetProcAddress(ACryptoLib, 'OCSP_request_add1_cert');
-  OCSP_request_onereq_count := GetProcAddress(ACryptoLib, 'OCSP_request_onereq_count');
-  OCSP_request_onereq_get0 := GetProcAddress(ACryptoLib, 'OCSP_request_onereq_get0');
-  OCSP_onereq_get0_id := GetProcAddress(ACryptoLib, 'OCSP_onereq_get0_id');
-  OCSP_single_get0_status := GetProcAddress(ACryptoLib, 'OCSP_single_get0_status');
-
-  // 加载 OCSP 响应操作
-  OCSP_resp_count := GetProcAddress(ACryptoLib, 'OCSP_resp_count');
-  OCSP_resp_get0 := GetProcAddress(ACryptoLib, 'OCSP_resp_get0');
-  OCSP_resp_get0_respdata := GetProcAddress(ACryptoLib, 'OCSP_resp_get0_respdata');
-  OCSP_resp_get0_produced_at := GetProcAddress(ACryptoLib, 'OCSP_resp_get0_produced_at');
-  OCSP_resp_get0_signature := GetProcAddress(ACryptoLib, 'OCSP_resp_get0_signature');
-  OCSP_resp_get1_id := GetProcAddress(ACryptoLib, 'OCSP_resp_get1_id');
-  OCSP_resp_get0_id := GetProcAddress(ACryptoLib, 'OCSP_resp_get0_id');
-  OCSP_resp_get0_certs := GetProcAddress(ACryptoLib, 'OCSP_resp_get0_certs');
-  OCSP_resp_find := GetProcAddress(ACryptoLib, 'OCSP_resp_find');
-  OCSP_resp_find_status := GetProcAddress(ACryptoLib, 'OCSP_resp_find_status');
-
-  // 加载 OCSP 基本响应添加
-  OCSP_basic_add1_status := GetProcAddress(ACryptoLib, 'OCSP_basic_add1_status');
-  OCSP_basic_add1_nonce := GetProcAddress(ACryptoLib, 'OCSP_basic_add1_nonce');
-  OCSP_basic_add1_cert := GetProcAddress(ACryptoLib, 'OCSP_basic_add1_cert');
-
-  // 加载 OCSP 检查函数
-  OCSP_check_validity := GetProcAddress(ACryptoLib, 'OCSP_check_validity');
-
-  // 加载 OCSP HTTP 函数
-  OCSP_sendreq_new := GetProcAddress(ACryptoLib, 'OCSP_sendreq_new');
-  OCSP_sendreq_nbio := GetProcAddress(ACryptoLib, 'OCSP_sendreq_nbio');
-  OCSP_REQ_CTX_free := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_free');
-  OCSP_REQ_CTX_http := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_http');
-  OCSP_REQ_CTX_set1_req := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_set1_req');
-  OCSP_REQ_CTX_add1_header := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_add1_header');
-  OCSP_REQ_CTX_i2d := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_i2d');
-  OCSP_REQ_CTX_nbio_d2i := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_nbio_d2i');
-  OCSP_REQ_CTX_get0_mem_bio := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_get0_mem_bio');
-  OCSP_REQ_CTX_nbio := GetProcAddress(ACryptoLib, 'OCSP_REQ_CTX_nbio');
-
-  // 加载 OCSP 服务定位器
-  OCSP_url_svcloc_new := GetProcAddress(ACryptoLib, 'OCSP_url_svcloc_new');
-  OCSP_parse_url := GetProcAddress(ACryptoLib, 'OCSP_parse_url');
-
-  // 加载 OCSP 响应者 ID
-  OCSP_RESPID_set_by_name := GetProcAddress(ACryptoLib, 'OCSP_RESPID_set_by_name');
-  OCSP_RESPID_set_by_key := GetProcAddress(ACryptoLib, 'OCSP_RESPID_set_by_key');
-  OCSP_RESPID_match := GetProcAddress(ACryptoLib, 'OCSP_RESPID_match');
-
-  // 加载 OCSP CRL ID
-  OCSP_crlID_new := GetProcAddress(ACryptoLib, 'OCSP_crlID_new');
-
-  // 加载 OCSP 存档截止
-  OCSP_archive_cutoff_new := GetProcAddress(ACryptoLib, 'OCSP_archive_cutoff_new');
-
-  // 加载 OCSP 接受语言
-  OCSP_accept_responses_new := GetProcAddress(ACryptoLib, 'OCSP_accept_responses_new');
-
-  FOCSPLoaded := Assigned(OCSP_REQUEST_new) and Assigned(OCSP_RESPONSE_new);
-  Result := FOCSPLoaded;
+  TOpenSSLLoader.SetModuleLoaded(osmOCSP, Assigned(OCSP_REQUEST_new) and Assigned(OCSP_RESPONSE_new));
+  Result := TOpenSSLLoader.IsModuleLoaded(osmOCSP);
 end;
 
 procedure UnloadOpenSSLOCSP;
 begin
-  if not FOCSPLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) then
     Exit;
 
-  // 清理 OCSP 请求函数
-  OCSP_REQUEST_new := nil;
-  OCSP_REQUEST_free := nil;
-  d2i_OCSP_REQUEST := nil;
-  i2d_OCSP_REQUEST := nil;
-  OCSP_REQUEST_add_ext := nil;
-  OCSP_REQUEST_get_ext := nil;
-  OCSP_REQUEST_get_ext_by_NID := nil;
-  OCSP_REQUEST_get_ext_by_OBJ := nil;
-  OCSP_REQUEST_get_ext_by_critical := nil;
-  OCSP_REQUEST_get_ext_count := nil;
-  OCSP_REQUEST_delete_ext := nil;
-  OCSP_REQUEST_print := nil;
-  OCSP_REQUEST_sign := nil;
+  // 使用批量清理模式
+  TOpenSSLLoader.ClearFunctions(OCSPBindings);
 
-  // 清理 OCSP 响应函数
-  OCSP_RESPONSE_new := nil;
-  OCSP_RESPONSE_free := nil;
-  d2i_OCSP_RESPONSE := nil;
-  i2d_OCSP_RESPONSE := nil;
-  OCSP_RESPONSE_create := nil;
-  OCSP_RESPONSE_status := nil;
-  OCSP_RESPONSE_get1_basic := nil;
-  OCSP_RESPONSE_print := nil;
-
-  // 清理 OCSP 基本响应函数
-  OCSP_BASICRESP_new := nil;
-  OCSP_BASICRESP_free := nil;
-  d2i_OCSP_BASICRESP := nil;
-  i2d_OCSP_BASICRESP := nil;
-  OCSP_BASICRESP_add_ext := nil;
-  OCSP_BASICRESP_get_ext := nil;
-  OCSP_BASICRESP_get_ext_by_NID := nil;
-  OCSP_BASICRESP_get_ext_by_OBJ := nil;
-  OCSP_BASICRESP_get_ext_by_critical := nil;
-  OCSP_BASICRESP_get_ext_count := nil;
-  OCSP_BASICRESP_delete_ext := nil;
-  OCSP_BASICRESP_sign := nil;
-  OCSP_BASICRESP_sign_ctx := nil;
-  OCSP_BASICRESP_verify := nil;
-
-  // 清理 OCSP 证书 ID 函数
-  OCSP_CERTID_new := nil;
-  OCSP_CERTID_free := nil;
-  OCSP_CERTID_dup := nil;
-  OCSP_cert_to_id := nil;
-  OCSP_cert_id_new := nil;
-  OCSP_id_issuer_cmp := nil;
-  OCSP_id_cmp := nil;
-  OCSP_id_get0_info := nil;
-
-  // 清理 OCSP 请求操作
-  OCSP_request_add0_id := nil;
-  OCSP_request_add1_nonce := nil;
-  OCSP_check_nonce := nil;
-  OCSP_copy_nonce := nil;
-  OCSP_request_add1_cert := nil;
-  OCSP_request_onereq_count := nil;
-  OCSP_request_onereq_get0 := nil;
-  OCSP_onereq_get0_id := nil;
-  OCSP_single_get0_status := nil;
-
-  // 清理 OCSP 响应操作
-  OCSP_resp_count := nil;
-  OCSP_resp_get0 := nil;
-  OCSP_resp_get0_respdata := nil;
-  OCSP_resp_get0_produced_at := nil;
-  OCSP_resp_get0_signature := nil;
-  OCSP_resp_get1_id := nil;
-  OCSP_resp_get0_id := nil;
-  OCSP_resp_get0_certs := nil;
-  OCSP_resp_find := nil;
-  OCSP_resp_find_status := nil;
-
-  // 清理 OCSP 基本响应添加
-  OCSP_basic_add1_status := nil;
-  OCSP_basic_add1_nonce := nil;
-  OCSP_basic_add1_cert := nil;
-
-  // 清理 OCSP 检查函数
-  OCSP_check_validity := nil;
-
-  // 清理 OCSP HTTP 函数
-  OCSP_sendreq_new := nil;
-  OCSP_sendreq_nbio := nil;
-  OCSP_REQ_CTX_free := nil;
-  OCSP_REQ_CTX_http := nil;
-  OCSP_REQ_CTX_set1_req := nil;
-  OCSP_REQ_CTX_add1_header := nil;
-  OCSP_REQ_CTX_i2d := nil;
-  OCSP_REQ_CTX_nbio_d2i := nil;
-  OCSP_REQ_CTX_get0_mem_bio := nil;
-  OCSP_REQ_CTX_nbio := nil;
-
-  // 清理 OCSP 服务定位器
-  OCSP_url_svcloc_new := nil;
-  OCSP_parse_url := nil;
-
-  // 清理 OCSP 响应者 ID
-  OCSP_RESPID_set_by_name := nil;
-  OCSP_RESPID_set_by_key := nil;
-  OCSP_RESPID_match := nil;
-
-  // 清理 OCSP CRL ID
-  OCSP_crlID_new := nil;
-
-  // 清理 OCSP 存档截止
-  OCSP_archive_cutoff_new := nil;
-
-  // 清理 OCSP 接受语言
-  OCSP_accept_responses_new := nil;
-
-  FOCSPLoaded := False;
+  TOpenSSLLoader.SetModuleLoaded(osmOCSP, False);
 end;
 
 // 辅助函数实现
@@ -634,7 +516,7 @@ var
   RevTime, ThisUpd, NextUpd: PASN1_GENERALIZEDTIME;
 begin
   Result := V_OCSP_CERTSTATUS_UNKNOWN;
-  if not FOCSPLoaded or (ACert = nil) or (AIssuer = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) or (ACert = nil) or (AIssuer = nil) then
     Exit;
 
   // 创建 OCSP 请求
@@ -692,7 +574,7 @@ var
   CertID: POCSP_CERTID;
 begin
   Result := nil;
-  if not FOCSPLoaded or (ACert = nil) or (AIssuer = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) or (ACert = nil) or (AIssuer = nil) then
     Exit;
 
   Result := OCSP_REQUEST_new();
@@ -731,7 +613,7 @@ var
   Resp: POCSP_RESPONSE;
 begin
   Result := nil;
-  if not FOCSPLoaded or (ARequest = nil) or (AOCSPUrl = '') then
+  if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) or (ARequest = nil) or (AOCSPUrl = '') then
     Exit;
 
   // 解析 URL
@@ -778,7 +660,7 @@ var
   Certs: PSTACK_OF_X509;
 begin
   Result := False;
-  if not FOCSPLoaded or (AResponse = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) or (AResponse = nil) then
     Exit;
 
   // 检查响应状态

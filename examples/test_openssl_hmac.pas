@@ -4,10 +4,10 @@ program test_openssl_hmac;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.hmac,
-  fafafa.ssl.openssl.evp;
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.hmac,
+  fafafa.ssl.openssl.api.evp;
 
 var
   TestsPassed: Integer = 0;

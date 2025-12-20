@@ -5,10 +5,9 @@ program test_winssl_init;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
-  fafafa.ssl.intf,
+  fafafa.ssl.base,
   fafafa.ssl.factory,
-  fafafa.ssl.winssl;
+  fafafa.ssl.winssl.lib;
 
 procedure TestWinSSLInit;
 var

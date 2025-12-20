@@ -1,6 +1,6 @@
 unit fafafa.ssl.openssl.types;
 
-{$mode objfpc}{$H+}
+{$mode ObjFPC}{$H+}
 
 interface
 
@@ -64,6 +64,9 @@ type
   TOpenSSLSizeT = TOpenSSL_Size;
   
   // Basic OpenSSL types
+  OPENSSL_CTX = Pointer;
+  POPENSSL_CTX = ^OPENSSL_CTX;
+  
   PBIO = Pointer;
   PPBIO = ^PBIO;
   PBIO_METHOD = Pointer;
@@ -372,7 +375,7 @@ type
     const pctx: Pointer): Integer; cdecl;
     
   // X509 callbacks
-  TX509_STORE_CTX_verify_cb = function(ctx: PX509_STORE_CTX): Integer; cdecl;
+  TX509_STORE_CTX_verify_cb = function(ctx: PX509_STORE_CTX; arg: Pointer): Integer; cdecl;
   TX509_STORE_CTX_verify_fn = function(ctx: PX509_STORE_CTX): Integer; cdecl;
   TX509_STORE_CTX_get_issuer_fn = function(issuer: PPX509; ctx: PX509_STORE_CTX;
     x: PX509): Integer; cdecl;

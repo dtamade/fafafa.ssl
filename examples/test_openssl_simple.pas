@@ -4,9 +4,8 @@ program test_openssl_simple;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.bio,
-  fafafa.ssl.openssl.types;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.bio;
 
 procedure TestOpenSSLLoading;
 var

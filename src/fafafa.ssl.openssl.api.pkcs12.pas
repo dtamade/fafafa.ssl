@@ -1,5 +1,7 @@
 unit fafafa.ssl.openssl.api.pkcs12;
 
+{$mode ObjFPC}{$H+}
+
 interface
 
 uses
@@ -102,19 +104,44 @@ type
   TPKCS12_pbe_crypt = function(algor: PX509_ALGOR; pass: PAnsiChar; 
     passlen: Integer; data_in: PByte; datalen: Integer;
     var data_out: PByte; var datalen_out: Integer; en_de: Integer): PByte; cdecl;
+  TPKCS12_crypt = function(const pass: PAnsiChar; passlen: Integer; salt: PByte; 
+    saltlen: Integer; iter: Integer; const cipher: PEVP_CIPHER; 
+    const in_: PByte; inlen: Integer; out_: PPByte; outlen: PInteger; 
+    en_de: Integer): Integer; cdecl;
   TPKCS12_key_gen_asc = function(pass: PAnsiChar; passlen: Integer;
     salt: PByte; saltlen: Integer; id: Integer; iter: Integer;
     n: Integer; key_out: PByte; md_type: PEVP_MD): Integer; cdecl;
   TPKCS12_key_gen_uni = function(pass: PByte; passlen: Integer;
     salt: PByte; saltlen: Integer; id: Integer; iter: Integer;
     n: Integer; key_out: PByte; md_type: PEVP_MD): Integer; cdecl;
+  TPKCS12_key_gen_utf8 = function(const pass: PAnsiChar; passlen: Integer; salt: PByte; 
+    saltlen: Integer; id: Integer; iter: Integer; n: Integer; out_: PByte; 
+    const md_type: PEVP_MD): Integer; cdecl;
+  TPKCS12_key_gen_utf8_ex = function(const pass: PAnsiChar; passlen: Integer; salt: PByte; 
+    saltlen: Integer; id: Integer; iter: Integer; n: Integer; out_: PByte; 
+    const md_type: PEVP_MD; ctx: POPENSSL_CTX; const propq: PAnsiChar): Integer; cdecl;
 
   // SafeBag accessors
+  TPKCS12_SAFEBAG_new = function(): PPKCS12_SAFEBAG; cdecl;
+  TPKCS12_SAFEBAG_free = procedure(bag: PPKCS12_SAFEBAG); cdecl;
   TPKCS12_SAFEBAG_get_nid = function(bag: PPKCS12_SAFEBAG): Integer; cdecl;
+  TPKCS12_SAFEBAG_get_bag_type = function(bag: PPKCS12_SAFEBAG): Pointer; cdecl;
   TPKCS12_SAFEBAG_get0_p8inf = function(bag: PPKCS12_SAFEBAG): PPKCS8_PRIV_KEY_INFO; cdecl;
+  TPKCS12_SAFEBAG_get0_pkcs8 = function(bag: PPKCS12_SAFEBAG): PPKCS8_PRIV_KEY_INFO; cdecl;
+  TPKCS12_SAFEBAG_get0_certs = function(bag: PPKCS12_SAFEBAG): PSTACK_OF_X509; cdecl;
   TPKCS12_SAFEBAG_get0_safes = function(bag: PPKCS12_SAFEBAG): PSTACK_OF_PKCS12_SAFEBAG; cdecl;
   TPKCS12_SAFEBAG_get1_cert = function(bag: PPKCS12_SAFEBAG): PX509; cdecl;
   TPKCS12_SAFEBAG_get1_crl = function(bag: PPKCS12_SAFEBAG): PX509_CRL; cdecl;
+  TPKCS12_get_cert = function(p12: PPKCS12; const pass: PAnsiChar): PX509; cdecl;
+  TPKCS12_get_pkey = function(p12: PPKCS12; const pass: PAnsiChar): PEVP_PKEY; cdecl;
+  TPKCS12_get_private_key = function(p12: PPKCS12; const pass: PAnsiChar; passlen: Integer): PEVP_PKEY; cdecl;
+  TPKCS12_get1_certs = function(p12: PPKCS12; const pass: PAnsiChar): PSTACK_OF_X509; cdecl;
+  TPKCS12_keybag = function(pkey: PEVP_PKEY): PPKCS12_SAFEBAG; cdecl;
+  TPKCS12_certbag = function(cert: PX509): PPKCS12_SAFEBAG; cdecl;
+  TPKCS12_secretbag = function(nid: Integer; data: PByte; len: Integer): PPKCS12_SAFEBAG; cdecl;
+  TPKCS12_add_key_bag = function(safes: PSTACK_OF_PKCS12_SAFEBAG; pkey: PEVP_PKEY): Integer; cdecl;
+  TPKCS12_add_key_ex = function(safes: PSTACK_OF_PKCS12_SAFEBAG; pkey: PEVP_PKEY; key_usage: Integer; 
+    iter: Integer; key_nid: Integer; const pass: PAnsiChar; ctx: POPENSSL_CTX; const propq: PAnsiChar): PPKCS12_SAFEBAG; cdecl;
   
   // PKCS8 函数
   TPKCS8_PRIV_KEY_INFO_new = function(): PPKCS8_PRIV_KEY_INFO; cdecl;
@@ -149,9 +176,26 @@ var
   PKCS12_add_friendlyname_asc: TPKCS12_add_friendlyname_asc = nil;
   PKCS12_add_friendlyname_uni: TPKCS12_add_friendlyname_uni = nil;
   PKCS12_pbe_crypt: TPKCS12_pbe_crypt = nil;
+  PKCS12_crypt: TPKCS12_crypt = nil;
   PKCS12_key_gen_asc: TPKCS12_key_gen_asc = nil;
   PKCS12_key_gen_uni: TPKCS12_key_gen_uni = nil;
+  PKCS12_key_gen_utf8: TPKCS12_key_gen_utf8 = nil;
+  PKCS12_key_gen_utf8_ex: TPKCS12_key_gen_utf8_ex = nil;
+  PKCS12_SAFEBAG_new: TPKCS12_SAFEBAG_new = nil;
+  PKCS12_SAFEBAG_free: TPKCS12_SAFEBAG_free = nil;
   PKCS12_SAFEBAG_get_nid: TPKCS12_SAFEBAG_get_nid = nil;
+  PKCS12_SAFEBAG_get_bag_type: TPKCS12_SAFEBAG_get_bag_type = nil;
+  PKCS12_SAFEBAG_get0_pkcs8: TPKCS12_SAFEBAG_get0_pkcs8 = nil;
+  PKCS12_SAFEBAG_get0_certs: TPKCS12_SAFEBAG_get0_certs = nil;
+  PKCS12_get_cert: TPKCS12_get_cert = nil;
+  PKCS12_get_pkey: TPKCS12_get_pkey = nil;
+  PKCS12_get_private_key: TPKCS12_get_private_key = nil;
+  PKCS12_get1_certs: TPKCS12_get1_certs = nil;
+  PKCS12_keybag: TPKCS12_keybag = nil;
+  PKCS12_certbag: TPKCS12_certbag = nil;
+  PKCS12_secretbag: TPKCS12_secretbag = nil;
+  PKCS12_add_key_bag: TPKCS12_add_key_bag = nil;
+  PKCS12_add_key_ex: TPKCS12_add_key_ex = nil;
   PKCS12_SAFEBAG_get0_p8inf: TPKCS12_SAFEBAG_get0_p8inf = nil;
   PKCS12_SAFEBAG_get0_safes: TPKCS12_SAFEBAG_get0_safes = nil;
   PKCS12_SAFEBAG_get1_cert: TPKCS12_SAFEBAG_get1_cert = nil;
@@ -192,81 +236,84 @@ procedure UnloadPKCS12Module;
 implementation
 
 uses
-  fafafa.ssl.openssl.api.err;
+  fafafa.ssl.openssl.api.err,
+  fafafa.ssl.openssl.loader;
+
+const
+  { PKCS12 函数绑定数组 }
+  PKCS12_BINDINGS: array[0..47] of TFunctionBinding = (
+    // 基本 PKCS12 函数
+    (Name: 'PKCS12_new'; FuncPtr: @PKCS12_new; Required: False),
+    (Name: 'PKCS12_free'; FuncPtr: @PKCS12_free; Required: False),
+    (Name: 'PKCS12_create'; FuncPtr: @PKCS12_create; Required: False),
+    (Name: 'PKCS12_parse'; FuncPtr: @PKCS12_parse; Required: False),
+    // I/O 函数
+    (Name: 'd2i_PKCS12_bio'; FuncPtr: @d2i_PKCS12_bio; Required: False),
+    (Name: 'i2d_PKCS12_bio'; FuncPtr: @i2d_PKCS12_bio; Required: False),
+    (Name: 'd2i_PKCS12_fp'; FuncPtr: @d2i_PKCS12_fp; Required: False),
+    (Name: 'i2d_PKCS12_fp'; FuncPtr: @i2d_PKCS12_fp; Required: False),
+    // MAC 函数
+    (Name: 'PKCS12_gen_mac'; FuncPtr: @PKCS12_gen_mac; Required: False),
+    (Name: 'PKCS12_verify_mac'; FuncPtr: @PKCS12_verify_mac; Required: False),
+    (Name: 'PKCS12_set_mac'; FuncPtr: @PKCS12_set_mac; Required: False),
+    // SafeBag 函数
+    (Name: 'PKCS12_add_cert'; FuncPtr: @PKCS12_add_cert; Required: False),
+    (Name: 'PKCS12_add_key'; FuncPtr: @PKCS12_add_key; Required: False),
+    (Name: 'PKCS12_add_safe'; FuncPtr: @PKCS12_add_safe; Required: False),
+    // Utility 函数
+    (Name: 'PKCS12_add_localkeyid'; FuncPtr: @PKCS12_add_localkeyid; Required: False),
+    (Name: 'PKCS12_add_friendlyname_asc'; FuncPtr: @PKCS12_add_friendlyname_asc; Required: False),
+    (Name: 'PKCS12_add_friendlyname_uni'; FuncPtr: @PKCS12_add_friendlyname_uni; Required: False),
+    // PBE 函数
+    (Name: 'PKCS12_pbe_crypt'; FuncPtr: @PKCS12_pbe_crypt; Required: False),
+    (Name: 'PKCS12_crypt'; FuncPtr: @PKCS12_crypt; Required: False),
+    (Name: 'PKCS12_key_gen_asc'; FuncPtr: @PKCS12_key_gen_asc; Required: False),
+    (Name: 'PKCS12_key_gen_uni'; FuncPtr: @PKCS12_key_gen_uni; Required: False),
+    (Name: 'PKCS12_key_gen_utf8'; FuncPtr: @PKCS12_key_gen_utf8; Required: False),
+    (Name: 'PKCS12_key_gen_utf8_ex'; FuncPtr: @PKCS12_key_gen_utf8_ex; Required: False),
+    // SafeBag accessors
+    (Name: 'PKCS12_SAFEBAG_new'; FuncPtr: @PKCS12_SAFEBAG_new; Required: False),
+    (Name: 'PKCS12_SAFEBAG_free'; FuncPtr: @PKCS12_SAFEBAG_free; Required: False),
+    (Name: 'PKCS12_SAFEBAG_get_nid'; FuncPtr: @PKCS12_SAFEBAG_get_nid; Required: False),
+    (Name: 'PKCS12_SAFEBAG_get_bag_type'; FuncPtr: @PKCS12_SAFEBAG_get_bag_type; Required: False),
+    (Name: 'PKCS12_SAFEBAG_get0_p8inf'; FuncPtr: @PKCS12_SAFEBAG_get0_p8inf; Required: False),
+    (Name: 'PKCS12_SAFEBAG_get0_pkcs8'; FuncPtr: @PKCS12_SAFEBAG_get0_pkcs8; Required: False),
+    (Name: 'PKCS12_SAFEBAG_get0_certs'; FuncPtr: @PKCS12_SAFEBAG_get0_certs; Required: False),
+    (Name: 'PKCS12_SAFEBAG_get0_safes'; FuncPtr: @PKCS12_SAFEBAG_get0_safes; Required: False),
+    (Name: 'PKCS12_SAFEBAG_get1_cert'; FuncPtr: @PKCS12_SAFEBAG_get1_cert; Required: False),
+    (Name: 'PKCS12_SAFEBAG_get1_crl'; FuncPtr: @PKCS12_SAFEBAG_get1_crl; Required: False),
+    // PKCS12 getter 函数
+    (Name: 'PKCS12_get_cert'; FuncPtr: @PKCS12_get_cert; Required: False),
+    (Name: 'PKCS12_get_pkey'; FuncPtr: @PKCS12_get_pkey; Required: False),
+    (Name: 'PKCS12_get_private_key'; FuncPtr: @PKCS12_get_private_key; Required: False),
+    (Name: 'PKCS12_get1_certs'; FuncPtr: @PKCS12_get1_certs; Required: False),
+    // PKCS12 bag 创建函数
+    (Name: 'PKCS12_keybag'; FuncPtr: @PKCS12_keybag; Required: False),
+    (Name: 'PKCS12_certbag'; FuncPtr: @PKCS12_certbag; Required: False),
+    (Name: 'PKCS12_secretbag'; FuncPtr: @PKCS12_secretbag; Required: False),
+    (Name: 'PKCS12_add_key_bag'; FuncPtr: @PKCS12_add_key_bag; Required: False),
+    (Name: 'PKCS12_add_key_ex'; FuncPtr: @PKCS12_add_key_ex; Required: False),
+    // PKCS8 函数
+    (Name: 'PKCS8_PRIV_KEY_INFO_new'; FuncPtr: @PKCS8_PRIV_KEY_INFO_new; Required: False),
+    (Name: 'PKCS8_PRIV_KEY_INFO_free'; FuncPtr: @PKCS8_PRIV_KEY_INFO_free; Required: False),
+    (Name: 'EVP_PKCS82PKEY'; FuncPtr: @EVP_PKCS82PKEY; Required: False),
+    (Name: 'EVP_PKEY2PKCS8'; FuncPtr: @EVP_PKEY2PKCS8; Required: False),
+    (Name: 'PKCS8_encrypt'; FuncPtr: @PKCS8_encrypt; Required: False),
+    (Name: 'PKCS8_decrypt'; FuncPtr: @PKCS8_decrypt; Required: False)
+  );
 
 procedure LoadPKCS12Module(ALibCrypto: THandle);
 begin
   if ALibCrypto = 0 then Exit;
-  
-  // 加载 PKCS12 函数
-  PKCS12_new := TPKCS12_new(GetProcAddress(ALibCrypto, 'PKCS12_new'));
-  PKCS12_free := TPKCS12_free(GetProcAddress(ALibCrypto, 'PKCS12_free'));
-  PKCS12_create := TPKCS12_create(GetProcAddress(ALibCrypto, 'PKCS12_create'));
-  PKCS12_parse := TPKCS12_parse(GetProcAddress(ALibCrypto, 'PKCS12_parse'));
-  d2i_PKCS12_bio := Td2i_PKCS12_bio(GetProcAddress(ALibCrypto, 'd2i_PKCS12_bio'));
-  i2d_PKCS12_bio := Ti2d_PKCS12_bio(GetProcAddress(ALibCrypto, 'i2d_PKCS12_bio'));
-  d2i_PKCS12_fp := Td2i_PKCS12_fp(GetProcAddress(ALibCrypto, 'd2i_PKCS12_fp'));
-  i2d_PKCS12_fp := Ti2d_PKCS12_fp(GetProcAddress(ALibCrypto, 'i2d_PKCS12_fp'));
-  PKCS12_gen_mac := TPKCS12_gen_mac(GetProcAddress(ALibCrypto, 'PKCS12_gen_mac'));
-  PKCS12_verify_mac := TPKCS12_verify_mac(GetProcAddress(ALibCrypto, 'PKCS12_verify_mac'));
-  PKCS12_set_mac := TPKCS12_set_mac(GetProcAddress(ALibCrypto, 'PKCS12_set_mac'));
-  PKCS12_add_cert := TPKCS12_add_cert(GetProcAddress(ALibCrypto, 'PKCS12_add_cert'));
-  PKCS12_add_key := TPKCS12_add_key(GetProcAddress(ALibCrypto, 'PKCS12_add_key'));
-  PKCS12_add_safe := TPKCS12_add_safe(GetProcAddress(ALibCrypto, 'PKCS12_add_safe'));
-  PKCS12_add_localkeyid := TPKCS12_add_localkeyid(GetProcAddress(ALibCrypto, 'PKCS12_add_localkeyid'));
-  PKCS12_add_friendlyname_asc := TPKCS12_add_friendlyname_asc(GetProcAddress(ALibCrypto, 'PKCS12_add_friendlyname_asc'));
-  PKCS12_add_friendlyname_uni := TPKCS12_add_friendlyname_uni(GetProcAddress(ALibCrypto, 'PKCS12_add_friendlyname_uni'));
-  PKCS12_pbe_crypt := TPKCS12_pbe_crypt(GetProcAddress(ALibCrypto, 'PKCS12_pbe_crypt'));
-  PKCS12_key_gen_asc := TPKCS12_key_gen_asc(GetProcAddress(ALibCrypto, 'PKCS12_key_gen_asc'));
-  PKCS12_key_gen_uni := TPKCS12_key_gen_uni(GetProcAddress(ALibCrypto, 'PKCS12_key_gen_uni'));
-  PKCS12_SAFEBAG_get_nid := TPKCS12_SAFEBAG_get_nid(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get_nid'));
-  PKCS12_SAFEBAG_get0_p8inf := TPKCS12_SAFEBAG_get0_p8inf(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get0_p8inf'));
-  PKCS12_SAFEBAG_get0_safes := TPKCS12_SAFEBAG_get0_safes(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get0_safes'));
-  PKCS12_SAFEBAG_get1_cert := TPKCS12_SAFEBAG_get1_cert(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get1_cert'));
-  PKCS12_SAFEBAG_get1_crl := TPKCS12_SAFEBAG_get1_crl(GetProcAddress(ALibCrypto, 'PKCS12_SAFEBAG_get1_crl'));
-  
-  // PKCS8 函数
-  PKCS8_PRIV_KEY_INFO_new := TPKCS8_PRIV_KEY_INFO_new(GetProcAddress(ALibCrypto, 'PKCS8_PRIV_KEY_INFO_new'));
-  PKCS8_PRIV_KEY_INFO_free := TPKCS8_PRIV_KEY_INFO_free(GetProcAddress(ALibCrypto, 'PKCS8_PRIV_KEY_INFO_free'));
-  EVP_PKCS82PKEY := TEVP_PKCS82PKEY(GetProcAddress(ALibCrypto, 'EVP_PKCS82PKEY'));
-  EVP_PKEY2PKCS8 := TEVP_PKEY2PKCS8(GetProcAddress(ALibCrypto, 'EVP_PKEY2PKCS8'));
-  PKCS8_encrypt := TPKCS8_encrypt(GetProcAddress(ALibCrypto, 'PKCS8_encrypt'));
-  PKCS8_decrypt := TPKCS8_decrypt(GetProcAddress(ALibCrypto, 'PKCS8_decrypt'));
+
+  // 使用批量加载模式
+  TOpenSSLLoader.LoadFunctions(ALibCrypto, PKCS12_BINDINGS);
 end;
 
 procedure UnloadPKCS12Module;
 begin
-  PKCS12_new := nil;
-  PKCS12_free := nil;
-  PKCS12_create := nil;
-  PKCS12_parse := nil;
-  d2i_PKCS12_bio := nil;
-  i2d_PKCS12_bio := nil;
-  d2i_PKCS12_fp := nil;
-  i2d_PKCS12_fp := nil;
-  PKCS12_gen_mac := nil;
-  PKCS12_verify_mac := nil;
-  PKCS12_set_mac := nil;
-  PKCS12_add_cert := nil;
-  PKCS12_add_key := nil;
-  PKCS12_add_safe := nil;
-  PKCS12_add_localkeyid := nil;
-  PKCS12_add_friendlyname_asc := nil;
-  PKCS12_add_friendlyname_uni := nil;
-  PKCS12_pbe_crypt := nil;
-  PKCS12_key_gen_asc := nil;
-  PKCS12_key_gen_uni := nil;
-  PKCS12_SAFEBAG_get_nid := nil;
-  PKCS12_SAFEBAG_get0_p8inf := nil;
-  PKCS12_SAFEBAG_get0_safes := nil;
-  PKCS12_SAFEBAG_get1_cert := nil;
-  PKCS12_SAFEBAG_get1_crl := nil;
-  PKCS8_PRIV_KEY_INFO_new := nil;
-  PKCS8_PRIV_KEY_INFO_free := nil;
-  EVP_PKCS82PKEY := nil;
-  EVP_PKEY2PKCS8 := nil;
-  PKCS8_encrypt := nil;
-  PKCS8_decrypt := nil;
+  // 使用批量清除模式
+  TOpenSSLLoader.ClearFunctions(PKCS12_BINDINGS);
 end;
 
 // 辅助函数实现
@@ -435,7 +482,7 @@ begin
   SetLength(Result, 0);
   
   if not Assigned(i2d_PKCS12_bio) or not Assigned(BIO_new) or 
-     not Assigned(BIO_s_mem) then Exit;
+    not Assigned(BIO_s_mem) then Exit;
   
   P12 := CreatePKCS12(Password, FriendlyName, PrivateKey, Certificate, CACerts);
   if not Assigned(P12) then Exit;

@@ -9,8 +9,7 @@ uses
   {$ENDIF}
   SysUtils, Classes, DateUtils,
   fafafa.ssl.factory,
-  fafafa.ssl.abstract.intf,
-  fafafa.ssl.abstract.types;
+  fafafa.ssl.base;
 
 type
   THTTPMethod = (hmGET, hmPOST, hmPUT, hmDELETE, hmPATCH);

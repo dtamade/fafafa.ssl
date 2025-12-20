@@ -1,0 +1,155 @@
+{
+  fafafa.ssl.cert.builder - Fluent Certificate Builder Interface
+  
+  Provides a modern, fluent API for certificate generation with:
+  - Method chaining for readable code
+  - Automatic resource management via interfaces
+  - Type-safe configuration
+  - Scenario-based convenience methods
+}
+
+unit fafafa.ssl.cert.builder;
+
+{$mode objfpc}{$H+}
+{$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
+
+interface
+
+uses
+  SysUtils, Classes,
+  fafafa.ssl.base;
+
+type
+  { Forward declarations }
+  ICertificate = interface;
+  IPrivateKey = interface;
+  IKeyPairWithCertificate = interface;
+  ICertificateBuilder = interface;
+  ICertificateEx = interface; // Added forward declaration
+  IPrivateKeyEx = interface; // Added forward declaration
+
+  { Certificate interface - fully encapsulates X509 certificate }
+  ICertificate = interface
+    ['{A1B2C3D4-E5F6-4789-0123-456789ABCDEF}'] // GUID changed
+    
+    // Basic information
+    function GetSubject: string;
+    function GetIssuer: string;
+    function GetSerialNumber: string;
+    function GetNotBefore: TDateTime;
+    function GetNotAfter: TDateTime;
+    
+    // Extensions
+    function GetSubjectAltNames: TStringArray;
+    function IsCA: Boolean;
+    
+    // Validation
+    function IsValidAt(ATime: TDateTime): Boolean;
+    function IsExpired: Boolean;
+    
+    // Export
+    function ToPEM: string;
+    function ToDER: TBytes;
+    procedure SaveToFile(const AFile: string);
+    
+    // Properties
+    property Subject: string read GetSubject;
+    property Issuer: string read GetIssuer;
+    property SerialNumber: string read GetSerialNumber;
+    property NotBefore: TDateTime read GetNotBefore;
+    property NotAfter: TDateTime read GetNotAfter;
+    property SubjectAltNames: TStringArray read GetSubjectAltNames; // Added property
+  end;
+
+  { Extended certificate interface - with OpenSSL handle access }
+  ICertificateEx = interface(ICertificate)
+    ['{B2C3D4E5-F607-4890-1234-567890ABCDEF}']
+    
+    function GetX509Handle: Pointer;  // Returns PX509
+    property X509Handle: Pointer read GetX509Handle;
+  end;
+
+  { Private key interface }
+  IPrivateKey = interface
+    ['{C3D4E5F6-0718-4901-2345-67890ABCDEF1}']
+    
+    function ToPEM: string;
+    procedure SaveToFile(const AFile: string);
+  end;
+
+  { Extended private key interface - with OpenSSL handle access }
+  IPrivateKeyEx = interface(IPrivateKey)
+    ['{D4E5F607-1819-4012-3456-7890ABCDEF12}']
+    
+    function GetEVP_PKEYHandle: Pointer; // Returns PEVP_PKEY
+    property EVP_PKEYHandle: Pointer read GetEVP_PKEYHandle;
+  end;
+
+  { Certificate + Private Key pair }
+  IKeyPairWithCertificate = interface
+    ['{C3D4E5F6-0708-4012-CDEF-123456789012}']
+    
+    function GetCertificate: ICertificate;
+    function GetPrivateKey: IPrivateKey;
+    
+    // Quick save methods
+    procedure SaveToFiles(const ACertFile, AKeyFile: string);
+    procedure SaveToPEM(out ACertPEM, AKeyPEM: string);
+    
+    property Certificate: ICertificate read GetCertificate;
+    property PrivateKey: IPrivateKey read GetPrivateKey;
+  end;
+
+  { Fluent certificate builder }
+  ICertificateBuilder = interface
+    ['{D4E5F607-0809-4123-0234-567890123456}']
+    
+    // Subject configuration
+    function WithCommonName(const AName: string): ICertificateBuilder;
+    function WithOrganization(const AOrg: string): ICertificateBuilder;
+    function WithOrganizationalUnit(const AOU: string): ICertificateBuilder;
+    function WithCountry(const ACountry: string): ICertificateBuilder;
+    function WithState(const AState: string): ICertificateBuilder;
+    function WithLocality(const ALocality: string): ICertificateBuilder;
+    
+    // Validity period
+    function ValidFor(ADays: Integer): ICertificateBuilder;
+    function ValidFrom(AStart: TDateTime): ICertificateBuilder;
+    function ValidUntil(AEnd: TDateTime): ICertificateBuilder;
+    
+    // Key configuration
+    function WithRSAKey(ABits: Integer = 2048): ICertificateBuilder;
+    function WithECDSAKey(const ACurve: string = 'prime256v1'): ICertificateBuilder;
+    function WithEd25519Key: ICertificateBuilder;
+    
+    // Extensions
+    function AddSubjectAltName(const ASAN: string): ICertificateBuilder;
+    function AsCA: ICertificateBuilder;
+    function AsServerCert: ICertificateBuilder;
+    function AsClientCert: ICertificateBuilder;
+    
+    // Serial number
+    function WithSerialNumber(ASerial: Int64): ICertificateBuilder;
+    
+    // Signing
+    function SelfSigned: IKeyPairWithCertificate;
+    function SignedBy(const ACA: ICertificate; const AKey: IPrivateKey): IKeyPairWithCertificate;
+  end;
+
+  { Factory class for creating builders }
+  TCertificateBuilder = class
+  public
+    class function Create: ICertificateBuilder; static;
+  end;
+
+implementation
+
+uses
+  fafafa.ssl.cert.builder.impl;
+
+class function TCertificateBuilder.Create: ICertificateBuilder;
+begin
+  Result := TCertificateBuilderImpl.Create;
+end;
+
+end.

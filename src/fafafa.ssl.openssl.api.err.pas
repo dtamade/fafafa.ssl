@@ -6,8 +6,10 @@ interface
 
 uses
   SysUtils, DynLibs, ctypes,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader;
 
 const
   { Error library codes }
@@ -309,10 +311,12 @@ function LoadOpenSSLERR: Boolean;
 procedure UnloadOpenSSLERR;
 function IsOpenSSLERRLoaded: Boolean;
 
-implementation
+// Error helper functions
+function GetFriendlyErrorMessage(AErrorCode: Cardinal): string;
+function ClassifyOpenSSLError(AErrorCode: Cardinal): TSSLErrorCode;
+function GetOpenSSLErrorCategory(AErrorCode: Cardinal): string;
 
-var
-  GERRLoaded: Boolean = False;
+implementation
 
 { Helper functions }
 
@@ -345,7 +349,7 @@ end;
 
 function LoadOpenSSLERR: Boolean;
 begin
-  if GERRLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmERR) then
     Exit(True);
     
   // Check if crypto library is loaded
@@ -440,8 +444,8 @@ begin
   ERR_FATAL_ERROR := TERR_FATAL_ERROR(GetCryptoProcAddress('ERR_FATAL_ERROR'));
   
   // The basic error functions should be available
-  GERRLoaded := Assigned(ERR_get_error) and Assigned(ERR_clear_error);
-  Result := GERRLoaded;
+  TOpenSSLLoader.SetModuleLoaded(osmERR, Assigned(ERR_get_error) and Assigned(ERR_clear_error));
+  Result := TOpenSSLLoader.IsModuleLoaded(osmERR);
 end;
 
 procedure UnloadOpenSSLERR;
@@ -532,13 +536,160 @@ begin
   ERR_GET_FUNC := nil;
   ERR_GET_REASON := nil;
   ERR_FATAL_ERROR := nil;
-  
-  GERRLoaded := False;
+
+  TOpenSSLLoader.SetModuleLoaded(osmERR, False);
 end;
 
 function IsOpenSSLERRLoaded: Boolean;
 begin
-  Result := GERRLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmERR);
+end;
+
+function GetOpenSSLErrorCategory(AErrorCode: Cardinal): string;
+var
+  LibCode: Integer;
+begin
+  LibCode := ERR_GET_LIB_INLINE(AErrorCode);
+  case LibCode of
+    ERR_LIB_SSL: Result := 'SSL';
+    ERR_LIB_X509: Result := 'X.509';
+    ERR_LIB_PEM: Result := 'PEM';
+    ERR_LIB_ASN1: Result := 'ASN1';
+    ERR_LIB_EVP: Result := 'EVP';
+    ERR_LIB_BIO: Result := 'BIO';
+    ERR_LIB_RSA: Result := 'RSA';
+    ERR_LIB_EC: Result := 'EC';
+    ERR_LIB_PKCS12: Result := 'PKCS12';
+    ERR_LIB_PKCS7: Result := 'PKCS7';
+    ERR_LIB_SYS: Result := 'SYSTEM';
+  else
+    Result := Format('LIB_%d', [LibCode]);
+  end;
+end;
+
+function ClassifyOpenSSLError(AErrorCode: Cardinal): TSSLErrorCode;
+var
+  LibCode, ReasonCode: Integer;
+begin
+  LibCode := ERR_GET_LIB_INLINE(AErrorCode);
+  ReasonCode := ERR_GET_REASON_INLINE(AErrorCode);
+
+  case ReasonCode of
+    ERR_R_MALLOC_FAILURE:
+      Exit(sslErrMemory);
+    ERR_R_PASSED_NULL_PARAMETER,
+    ERR_R_PASSED_INVALID_ARGUMENT:
+      Exit(sslErrInvalidParam);
+    ERR_R_INIT_FAIL:
+      Exit(sslErrNotInitialized);
+  end;
+  
+  // Classify by library and reason
+  case LibCode of
+    ERR_LIB_SSL:
+      Result := sslErrProtocol;
+    ERR_LIB_X509:
+      Result := sslErrCertificate;
+    ERR_LIB_PEM:
+      Result := sslErrGeneral;  // PEM format errors
+    ERR_LIB_SYS:
+      Result := sslErrIO;  // System errors typically I/O related
+    ERR_LIB_BIO:
+      Result := sslErrIO;
+    ERR_LIB_RSA, ERR_LIB_DSA, ERR_LIB_EC, ERR_LIB_DH, ERR_LIB_EVP:
+      Result := sslErrGeneral;  // Crypto errors
+    ERR_LIB_NONE:
+      Result := sslErrNone;
+  else
+    Result := sslErrOther;
+  end;
+end;
+
+function GetFriendlyErrorMessage(AErrorCode: Cardinal): string;
+var
+  Category: string;
+  Classification: TSSLErrorCode;
+  LibCode, ReasonCode: Integer;
+  ErrorString: string;
+  ProblemText: string;
+  DetailsText: string;
+  SuggestionText: string;
+  LErrorCStr: PAnsiChar;
+begin
+  if AErrorCode = 0 then
+  begin
+    Result := 'No error';
+    Exit;
+  end;
+
+  if not IsOpenSSLERRLoaded then
+    LoadOpenSSLERR;
+  
+  Category := GetOpenSSLErrorCategory(AErrorCode);
+  Classification := ClassifyOpenSSLError(AErrorCode);
+  LibCode := ERR_GET_LIB_INLINE(AErrorCode);
+  ReasonCode := ERR_GET_REASON_INLINE(AErrorCode);
+
+  case Classification of
+    sslErrProtocol:
+      ProblemText := 'TLS/SSL protocol error';
+    sslErrCertificate:
+      ProblemText := 'Certificate error';
+    sslErrIO:
+      ProblemText := 'I/O error';
+    sslErrMemory:
+      ProblemText := 'Out of memory';
+    sslErrInvalidParam:
+      ProblemText := 'Invalid parameter';
+    sslErrNotInitialized:
+      ProblemText := 'Library not initialized';
+  else
+    ProblemText := 'OpenSSL error';
+  end;
+
+  case Classification of
+    sslErrProtocol:
+      SuggestionText := 'Check protocol versions, cipher suites, and peer compatibility';
+    sslErrCertificate:
+      SuggestionText := 'Check certificate format, trust chain, and validity period';
+    sslErrIO:
+      SuggestionText := 'Check file path and permissions';
+    sslErrMemory:
+      SuggestionText := 'Check system memory availability';
+    sslErrInvalidParam:
+      SuggestionText := 'Check function parameters';
+    sslErrNotInitialized:
+      SuggestionText := 'Ensure the SSL library is initialized before use';
+  else
+    SuggestionText := 'Check OpenSSL error documentation and logs';
+  end;
+
+  ErrorString := '';
+  if Assigned(ERR_error_string) then
+  begin
+    try
+      LErrorCStr := ERR_error_string(AErrorCode);
+      if LErrorCStr <> nil then
+        ErrorString := string(LErrorCStr);
+    except
+      ErrorString := '';
+    end;
+  end;
+
+  if ErrorString <> '' then
+    DetailsText := ErrorString
+  else
+    DetailsText := 'Error details not available';
+
+  DetailsText := DetailsText +
+    ' (Lib:' + IntToStr(LibCode) +
+    ', Reason:' + IntToStr(ReasonCode) +
+    ', Code:0x' + IntToHex(AErrorCode, 8) + ')';
+
+  Result := '[' + Category + ']' + LineEnding +
+    'Problem: ' + ProblemText + LineEnding +
+    'Details: ' + DetailsText + LineEnding +
+    'Suggestion: ' + SuggestionText;
 end;
 
 end.

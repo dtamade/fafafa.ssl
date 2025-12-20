@@ -7,14 +7,15 @@
 {******************************************************************************}
 unit fafafa.ssl.openssl.api.dso;
 
-{$MODE OBJFPC}{$H+}
+{$mode ObjFPC}{$H+}
 
 interface
 
 uses
   SysUtils, Classes,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;
 
 type
   { DSO types }
@@ -106,81 +107,60 @@ implementation
 uses
   fafafa.ssl.openssl.api.utils;
 
-var
-  DSOLoaded: Boolean = False;
+const
+  { DSO function bindings for batch loading }
+  DSO_BINDINGS: array[0..22] of TFunctionBinding = (
+    { Basic functions }
+    (Name: 'DSO_new';               FuncPtr: @DSO_new;               Required: True),
+    (Name: 'DSO_free';              FuncPtr: @DSO_free;              Required: True),
+    (Name: 'DSO_up_ref';            FuncPtr: @DSO_up_ref;            Required: False),
+    (Name: 'DSO_load';              FuncPtr: @DSO_load;              Required: False),
+    { Binding functions }
+    (Name: 'DSO_bind_var';          FuncPtr: @DSO_bind_var;          Required: False),
+    (Name: 'DSO_bind_func';         FuncPtr: @DSO_bind_func;         Required: False),
+    (Name: 'DSO_unbind_var';        FuncPtr: @DSO_unbind_var;        Required: False),
+    (Name: 'DSO_unbind_func';       FuncPtr: @DSO_unbind_func;       Required: False),
+    { Control and info functions }
+    (Name: 'DSO_ctrl';              FuncPtr: @DSO_ctrl;              Required: False),
+    (Name: 'DSO_get_filename';      FuncPtr: @DSO_get_filename;      Required: False),
+    (Name: 'DSO_set_filename';      FuncPtr: @DSO_set_filename;      Required: False),
+    (Name: 'DSO_convert_filename';  FuncPtr: @DSO_convert_filename;  Required: False),
+    (Name: 'DSO_get_loaded_filename'; FuncPtr: @DSO_get_loaded_filename; Required: False),
+    { Method functions }
+    (Name: 'DSO_set_default_method'; FuncPtr: @DSO_set_default_method; Required: False),
+    (Name: 'DSO_get_default_method'; FuncPtr: @DSO_get_default_method; Required: False),
+    (Name: 'DSO_get_method';        FuncPtr: @DSO_get_method;        Required: False),
+    (Name: 'DSO_set_method';        FuncPtr: @DSO_set_method;        Required: False),
+    (Name: 'DSO_new_method';        FuncPtr: @DSO_new_method;        Required: False),
+    (Name: 'DSO_METHOD_free';       FuncPtr: @DSO_free_method;       Required: False),
+    { Platform specific functions }
+    (Name: 'DSO_pathbyaddr';        FuncPtr: @DSO_pathbyaddr;        Required: False),
+    (Name: 'DSO_METHOD_dlfcn';      FuncPtr: @DSO_dlfcn;             Required: False),
+    (Name: 'DSO_METHOD_win32';      FuncPtr: @DSO_METHOD_win32;      Required: False),
+    (Name: 'DSO_METHOD_vms';        FuncPtr: @DSO_METHOD_vms;        Required: False)
+  );
 
 function LoadDSO(const ALibCrypto: THandle): Boolean;
 begin
   Result := False;
-  if DSOLoaded then Exit(True);
+  if TOpenSSLLoader.IsModuleLoaded(osmDSO) then Exit(True);
   if ALibCrypto = 0 then Exit;
 
-  { Load basic functions }
-  DSO_new := TDSONew(GetProcAddress(ALibCrypto, 'DSO_new'));
-  DSO_free := TDSOFree(GetProcAddress(ALibCrypto, 'DSO_free'));
-  DSO_up_ref := TDSOUpRef(GetProcAddress(ALibCrypto, 'DSO_up_ref'));
-  DSO_load := TDSOLoad(GetProcAddress(ALibCrypto, 'DSO_load'));
-  
-  { Load binding functions }
-  DSO_bind_var := TDSOBind(GetProcAddress(ALibCrypto, 'DSO_bind_var'));
-  DSO_bind_func := TDSOBind(GetProcAddress(ALibCrypto, 'DSO_bind_func'));
-  DSO_unbind_var := TDSOUnbind(GetProcAddress(ALibCrypto, 'DSO_unbind_var'));
-  DSO_unbind_func := TDSOUnbind(GetProcAddress(ALibCrypto, 'DSO_unbind_func'));
-  
-  { Load control and info functions }
-  DSO_ctrl := TDSOCtrl(GetProcAddress(ALibCrypto, 'DSO_ctrl'));
-  DSO_get_filename := TDSOGetFilename(GetProcAddress(ALibCrypto, 'DSO_get_filename'));
-  DSO_set_filename := TDSOSetFilename(GetProcAddress(ALibCrypto, 'DSO_set_filename'));
-  DSO_convert_filename := TDSOConvertFilename(GetProcAddress(ALibCrypto, 'DSO_convert_filename'));
-  DSO_get_loaded_filename := TDSOGetLoadedFilename(GetProcAddress(ALibCrypto, 'DSO_get_loaded_filename'));
-  
-  { Load method functions }
-  DSO_set_default_method := TDSOSetDefaultMethod(GetProcAddress(ALibCrypto, 'DSO_set_default_method'));
-  DSO_get_default_method := TDSOGetDefaultMethod(GetProcAddress(ALibCrypto, 'DSO_get_default_method'));
-  DSO_get_method := TDSOGetMethod(GetProcAddress(ALibCrypto, 'DSO_get_method'));
-  DSO_set_method := TDSOSetMethod(GetProcAddress(ALibCrypto, 'DSO_set_method'));
-  DSO_new_method := TDSONewMethod(GetProcAddress(ALibCrypto, 'DSO_new_method'));
-  DSO_free_method := TDSOFreeMethod(GetProcAddress(ALibCrypto, 'DSO_METHOD_free'));
-  
-  { Load platform specific functions }
-  DSO_pathbyaddr := TDSOPathcheck(GetProcAddress(ALibCrypto, 'DSO_pathbyaddr'));
-  DSO_dlfcn := TDSODlfcn(GetProcAddress(ALibCrypto, 'DSO_METHOD_dlfcn'));
-  DSO_METHOD_win32 := TDSOWin32(GetProcAddress(ALibCrypto, 'DSO_METHOD_win32'));
-  DSO_METHOD_vms := TDSOVms(GetProcAddress(ALibCrypto, 'DSO_METHOD_vms'));
+  { Batch load all DSO functions }
+  TOpenSSLLoader.LoadFunctions(ALibCrypto, DSO_BINDINGS);
 
   Result := Assigned(DSO_new) and Assigned(DSO_free);
-  DSOLoaded := Result;
+  TOpenSSLLoader.SetModuleLoaded(osmDSO, Result);
 end;
 
 procedure UnloadDSO;
 begin
-  if not DSOLoaded then Exit;
+  if not TOpenSSLLoader.IsModuleLoaded(osmDSO) then Exit;
 
-  DSO_new := nil;
-  DSO_free := nil;
-  DSO_up_ref := nil;
-  DSO_load := nil;
-  DSO_bind_var := nil;
-  DSO_bind_func := nil;
-  DSO_unbind_var := nil;
-  DSO_unbind_func := nil;
-  DSO_ctrl := nil;
-  DSO_get_filename := nil;
-  DSO_set_filename := nil;
-  DSO_convert_filename := nil;
-  DSO_get_loaded_filename := nil;
-  DSO_set_default_method := nil;
-  DSO_get_default_method := nil;
-  DSO_get_method := nil;
-  DSO_set_method := nil;
-  DSO_new_method := nil;
-  DSO_free_method := nil;
-  DSO_pathbyaddr := nil;
-  DSO_dlfcn := nil;
-  DSO_METHOD_win32 := nil;
-  DSO_METHOD_vms := nil;
+  { Clear all function pointers }
+  TOpenSSLLoader.ClearFunctions(DSO_BINDINGS);
 
-  DSOLoaded := False;
+  TOpenSSLLoader.SetModuleLoaded(osmDSO, False);
 end;
 
 { Helper functions }

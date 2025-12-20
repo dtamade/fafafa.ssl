@@ -8,7 +8,7 @@ uses
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.consts,
-  fafafa.ssl.openssl.core,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.utils,
   fafafa.ssl.openssl.api.crypto,
   
@@ -35,8 +35,7 @@ uses
   
   // MAC
   fafafa.ssl.openssl.api.hmac,
-  fafafa.ssl.openssl.api.cmac,
-  fafafa.ssl.openssl.api.cmac.evp,
+  fafafa.ssl.openssl.api.cmac.evp,  // Phase 2.2: 移除废弃的cmac.pas
   
   // Asymmetric crypto
   fafafa.ssl.openssl.api.bn,

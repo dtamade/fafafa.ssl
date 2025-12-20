@@ -4,10 +4,10 @@ program test_openssl_ec;
 
 uses
   SysUtils, Classes, DynLibs,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.bn,
-  fafafa.ssl.openssl.ec;
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.api.ec;
 
 var
   TestsPassed: Integer = 0;

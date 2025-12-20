@@ -7,6 +7,7 @@ interface
 uses
   SysUtils, DynLibs, ctypes,
   fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.bn,
   fafafa.ssl.openssl.api.core;
 
@@ -316,23 +317,20 @@ function IsOpenSSLRSALoaded: Boolean;
 
 implementation
 
-var
-  GRSALoaded: Boolean = False;
-
 function LoadOpenSSLRSA: Boolean;
 var
   LLib: TLibHandle;
 begin
-  if GRSALoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmRSA) then
     Exit(True);
-    
+
   if not IsCryptoLibraryLoaded then
     Exit(False);
-    
+
   LLib := GetCryptoLibHandle;
   if LLib = NilHandle then
     Exit(False);
-    
+
   // Load RSA functions
   RSA_new := TRSA_new(GetCryptoProcAddress('RSA_new'));
   RSA_free := TRSA_free(GetCryptoProcAddress('RSA_free'));
@@ -340,20 +338,20 @@ begin
   RSA_bits := TRSA_bits(GetCryptoProcAddress('RSA_bits'));
   RSA_size := TRSA_size(GetCryptoProcAddress('RSA_size'));
   RSA_security_bits := TRSA_security_bits(GetCryptoProcAddress('RSA_security_bits'));
-  
+
   // Key generation
   RSA_generate_key_ex := TRSA_generate_key_ex(GetCryptoProcAddress('RSA_generate_key_ex'));
-  
+
   // Encryption/Decryption
   RSA_public_encrypt := TRSA_public_encrypt(GetCryptoProcAddress('RSA_public_encrypt'));
   RSA_private_encrypt := TRSA_private_encrypt(GetCryptoProcAddress('RSA_private_encrypt'));
   RSA_public_decrypt := TRSA_public_decrypt(GetCryptoProcAddress('RSA_public_decrypt'));
   RSA_private_decrypt := TRSA_private_decrypt(GetCryptoProcAddress('RSA_private_decrypt'));
-  
+
   // Sign/Verify
   RSA_sign := TRSA_sign(GetCryptoProcAddress('RSA_sign'));
   RSA_verify := TRSA_verify(GetCryptoProcAddress('RSA_verify'));
-  
+
   // Key manipulation
   RSA_set0_key := TRSA_set0_key(GetCryptoProcAddress('RSA_set0_key'));
   RSA_set0_factors := TRSA_set0_factors(GetCryptoProcAddress('RSA_set0_factors'));
@@ -361,13 +359,13 @@ begin
   RSA_get0_key := TRSA_get0_key(GetCryptoProcAddress('RSA_get0_key'));
   RSA_get0_factors := TRSA_get0_factors(GetCryptoProcAddress('RSA_get0_factors'));
   RSA_get0_crt_params := TRSA_get0_crt_params(GetCryptoProcAddress('RSA_get0_crt_params'));
-  
+
   // Utility functions
   RSA_check_key := TRSA_check_key(GetCryptoProcAddress('RSA_check_key'));
   RSA_check_key_ex := TRSA_check_key_ex(GetCryptoProcAddress('RSA_check_key_ex'));
-  
-  GRSALoaded := Assigned(RSA_new) and Assigned(RSA_free);
-  Result := GRSALoaded;
+
+  Result := Assigned(RSA_new) and Assigned(RSA_free);
+  TOpenSSLLoader.SetModuleLoaded(osmRSA, Result);
 end;
 
 procedure UnloadOpenSSLRSA;
@@ -385,7 +383,7 @@ begin
   RSA_private_decrypt := nil;
   RSA_sign := nil;
   RSA_verify := nil;
-  
+
   // Key manipulation
   RSA_set0_key := nil;
   RSA_set0_factors := nil;
@@ -393,17 +391,17 @@ begin
   RSA_get0_key := nil;
   RSA_get0_factors := nil;
   RSA_get0_crt_params := nil;
-  
+
   // Utility functions
   RSA_check_key := nil;
   RSA_check_key_ex := nil;
-  
-  GRSALoaded := False;
+
+  TOpenSSLLoader.SetModuleLoaded(osmRSA, False);
 end;
 
 function IsOpenSSLRSALoaded: Boolean;
 begin
-  Result := GRSALoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmRSA);
 end;
 
 end.

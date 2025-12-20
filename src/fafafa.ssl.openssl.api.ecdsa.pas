@@ -8,7 +8,8 @@ uses
   SysUtils, DynLibs, ctypes,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.bn,
-  fafafa.ssl.openssl.api.ec;
+  fafafa.ssl.openssl.api.ec,
+  fafafa.ssl.openssl.loader;
 
 type
   { ECDSA_SIG structure for signature }
@@ -53,19 +54,19 @@ type
   
   { ECDSA method functions }
   TEC_KEY_METHOD_get_sign = procedure(const meth: PEC_KEY_METHOD; 
-                                       psign: Pointer;
-                                       psign_setup: Pointer;
-                                       psign_sig: Pointer); cdecl;
+                                      psign: Pointer;
+                                      psign_setup: Pointer;
+                                      psign_sig: Pointer); cdecl;
   TEC_KEY_METHOD_set_sign = procedure(meth: PEC_KEY_METHOD;
-                                       sign: Pointer;
-                                       sign_setup: Pointer;
-                                       sign_sig: Pointer); cdecl;
+                                      sign: Pointer;
+                                      sign_setup: Pointer;
+                                      sign_sig: Pointer); cdecl;
   TEC_KEY_METHOD_get_verify = procedure(const meth: PEC_KEY_METHOD;
-                                         pverify: Pointer;
-                                         pverify_sig: Pointer); cdecl;
+                                        pverify: Pointer;
+                                        pverify_sig: Pointer); cdecl;
   TEC_KEY_METHOD_set_verify = procedure(meth: PEC_KEY_METHOD;
-                                         verify: Pointer;
-                                         verify_sig: Pointer); cdecl;
+                                        verify: Pointer;
+                                        verify_sig: Pointer); cdecl;
   
   { Old compatibility functions }
   TECDSA_get_default_method = function: PECDSA_METHOD; cdecl;
@@ -130,16 +131,49 @@ implementation
 uses
   fafafa.ssl.openssl.api.core;
 
-var
-  GECDSALoaded: Boolean = False;
+const
+  { Function bindings for batch loading }
+  ECDSA_FUNCTION_BINDINGS: array[0..26] of TFunctionBinding = (
+    // ECDSA signature functions
+    (Name: 'ECDSA_SIG_new';           FuncPtr: @ECDSA_SIG_new;           Required: True),
+    (Name: 'ECDSA_SIG_free';          FuncPtr: @ECDSA_SIG_free;          Required: True),
+    (Name: 'i2d_ECDSA_SIG';           FuncPtr: @i2d_ECDSA_SIG;           Required: False),
+    (Name: 'd2i_ECDSA_SIG';           FuncPtr: @d2i_ECDSA_SIG;           Required: False),
+    (Name: 'ECDSA_SIG_get0';          FuncPtr: @ECDSA_SIG_get0;          Required: False),
+    (Name: 'ECDSA_SIG_get0_r';        FuncPtr: @ECDSA_SIG_get0_r;        Required: False),
+    (Name: 'ECDSA_SIG_get0_s';        FuncPtr: @ECDSA_SIG_get0_s;        Required: False),
+    (Name: 'ECDSA_SIG_set0';          FuncPtr: @ECDSA_SIG_set0;          Required: False),
+    // ECDSA signing and verification functions
+    (Name: 'ECDSA_do_sign';           FuncPtr: @ECDSA_do_sign;           Required: False),
+    (Name: 'ECDSA_do_sign_ex';        FuncPtr: @ECDSA_do_sign_ex;        Required: False),
+    (Name: 'ECDSA_do_verify';         FuncPtr: @ECDSA_do_verify;         Required: False),
+    (Name: 'ECDSA_sign';              FuncPtr: @ECDSA_sign;              Required: True),
+    (Name: 'ECDSA_sign_ex';           FuncPtr: @ECDSA_sign_ex;           Required: False),
+    (Name: 'ECDSA_sign_setup';        FuncPtr: @ECDSA_sign_setup;        Required: False),
+    (Name: 'ECDSA_verify';            FuncPtr: @ECDSA_verify;            Required: True),
+    (Name: 'ECDSA_size';              FuncPtr: @ECDSA_size;              Required: False),
+    // ECDSA method functions
+    (Name: 'EC_KEY_METHOD_get_sign';  FuncPtr: @EC_KEY_METHOD_get_sign;  Required: False),
+    (Name: 'EC_KEY_METHOD_set_sign';  FuncPtr: @EC_KEY_METHOD_set_sign;  Required: False),
+    (Name: 'EC_KEY_METHOD_get_verify';FuncPtr: @EC_KEY_METHOD_get_verify;Required: False),
+    (Name: 'EC_KEY_METHOD_set_verify';FuncPtr: @EC_KEY_METHOD_set_verify;Required: False),
+    // Old compatibility functions (may not exist in newer versions)
+    (Name: 'ECDSA_get_default_method';FuncPtr: @ECDSA_get_default_method;Required: False),
+    (Name: 'ECDSA_set_default_method';FuncPtr: @ECDSA_set_default_method;Required: False),
+    (Name: 'ECDSA_get_ex_data';       FuncPtr: @ECDSA_get_ex_data;       Required: False),
+    (Name: 'ECDSA_set_ex_data';       FuncPtr: @ECDSA_set_ex_data;       Required: False),
+    (Name: 'ECDSA_get_ex_new_index';  FuncPtr: @ECDSA_get_ex_new_index;  Required: False),
+    (Name: 'ECDSA_set_method';        FuncPtr: @ECDSA_set_method;        Required: False),
+    (Name: 'ECDSA_get0_method';       FuncPtr: @ECDSA_get0_method;       Required: False)
+  );
 
 function LoadOpenSSLECDSA: Boolean;
 var
   LLib: TLibHandle;
 begin
-  if GECDSALoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmECDSA) then
     Exit(True);
-    
+
   // Use the crypto library handle from core module
   LLib := GetCryptoLibHandle;
   if LLib = NilHandle then
@@ -147,94 +181,29 @@ begin
     LoadOpenSSLCore;
     LLib := GetCryptoLibHandle;
   end;
-    
+
   if LLib = NilHandle then
     Exit(False);
-    
-  // Load ECDSA signature functions with proper type casting
-  ECDSA_SIG_new := TECDSA_SIG_new(GetProcAddress(LLib, 'ECDSA_SIG_new'));
-  ECDSA_SIG_free := TECDSA_SIG_free(GetProcAddress(LLib, 'ECDSA_SIG_free'));
-  i2d_ECDSA_SIG := Ti2d_ECDSA_SIG(GetProcAddress(LLib, 'i2d_ECDSA_SIG'));
-  d2i_ECDSA_SIG := Td2i_ECDSA_SIG(GetProcAddress(LLib, 'd2i_ECDSA_SIG'));
-  ECDSA_SIG_get0 := TECDSA_SIG_get0(GetProcAddress(LLib, 'ECDSA_SIG_get0'));
-  ECDSA_SIG_get0_r := TECDSA_SIG_get0_r(GetProcAddress(LLib, 'ECDSA_SIG_get0_r'));
-  ECDSA_SIG_get0_s := TECDSA_SIG_get0_s(GetProcAddress(LLib, 'ECDSA_SIG_get0_s'));
-  ECDSA_SIG_set0 := TECDSA_SIG_set0(GetProcAddress(LLib, 'ECDSA_SIG_set0'));
-  
-  // Load ECDSA signing and verification functions
-  ECDSA_do_sign := TECDSA_do_sign(GetProcAddress(LLib, 'ECDSA_do_sign'));
-  ECDSA_do_sign_ex := TECDSA_do_sign_ex(GetProcAddress(LLib, 'ECDSA_do_sign_ex'));
-  ECDSA_do_verify := TECDSA_do_verify(GetProcAddress(LLib, 'ECDSA_do_verify'));
-  ECDSA_sign := TECDSA_sign(GetProcAddress(LLib, 'ECDSA_sign'));
-  ECDSA_sign_ex := TECDSA_sign_ex(GetProcAddress(LLib, 'ECDSA_sign_ex'));
-  ECDSA_sign_setup := TECDSA_sign_setup(GetProcAddress(LLib, 'ECDSA_sign_setup'));
-  ECDSA_verify := TECDSA_verify(GetProcAddress(LLib, 'ECDSA_verify'));
-  ECDSA_size := TECDSA_size(GetProcAddress(LLib, 'ECDSA_size'));
-  
-  // Load ECDSA method functions
-  EC_KEY_METHOD_get_sign := TEC_KEY_METHOD_get_sign(GetProcAddress(LLib, 'EC_KEY_METHOD_get_sign'));
-  EC_KEY_METHOD_set_sign := TEC_KEY_METHOD_set_sign(GetProcAddress(LLib, 'EC_KEY_METHOD_set_sign'));
-  EC_KEY_METHOD_get_verify := TEC_KEY_METHOD_get_verify(GetProcAddress(LLib, 'EC_KEY_METHOD_get_verify'));
-  EC_KEY_METHOD_set_verify := TEC_KEY_METHOD_set_verify(GetProcAddress(LLib, 'EC_KEY_METHOD_set_verify'));
-  
-  // Load old compatibility functions (may not exist in newer versions)
-  ECDSA_get_default_method := TECDSA_get_default_method(GetProcAddress(LLib, 'ECDSA_get_default_method'));
-  ECDSA_set_default_method := TECDSA_set_default_method(GetProcAddress(LLib, 'ECDSA_set_default_method'));
-  ECDSA_get_ex_data := TECDSA_get_ex_data(GetProcAddress(LLib, 'ECDSA_get_ex_data'));
-  ECDSA_set_ex_data := TECDSA_set_ex_data(GetProcAddress(LLib, 'ECDSA_set_ex_data'));
-  ECDSA_get_ex_new_index := TECDSA_get_ex_new_index(GetProcAddress(LLib, 'ECDSA_get_ex_new_index'));
-  ECDSA_set_method := TECDSA_set_method(GetProcAddress(LLib, 'ECDSA_set_method'));
-  ECDSA_get0_method := TECDSA_get0_method(GetProcAddress(LLib, 'ECDSA_get0_method'));
-  
+
+  // Batch load all ECDSA functions
+  TOpenSSLLoader.LoadFunctions(LLib, ECDSA_FUNCTION_BINDINGS);
+
   // Check if critical functions are loaded
-  GECDSALoaded := Assigned(ECDSA_SIG_new) and Assigned(ECDSA_SIG_free) and
-                  Assigned(ECDSA_sign) and Assigned(ECDSA_verify);
-  Result := GECDSALoaded;
+  Result := Assigned(ECDSA_SIG_new) and Assigned(ECDSA_SIG_free) and
+            Assigned(ECDSA_sign) and Assigned(ECDSA_verify);
+  TOpenSSLLoader.SetModuleLoaded(osmECDSA, Result);
 end;
 
 procedure UnloadOpenSSLECDSA;
 begin
-  // Clear ECDSA signature function pointers
-  ECDSA_SIG_new := nil;
-  ECDSA_SIG_free := nil;
-  i2d_ECDSA_SIG := nil;
-  d2i_ECDSA_SIG := nil;
-  ECDSA_SIG_get0 := nil;
-  ECDSA_SIG_get0_r := nil;
-  ECDSA_SIG_get0_s := nil;
-  ECDSA_SIG_set0 := nil;
-  
-  // Clear ECDSA signing and verification function pointers
-  ECDSA_do_sign := nil;
-  ECDSA_do_sign_ex := nil;
-  ECDSA_do_verify := nil;
-  ECDSA_sign := nil;
-  ECDSA_sign_ex := nil;
-  ECDSA_sign_setup := nil;
-  ECDSA_verify := nil;
-  ECDSA_size := nil;
-  
-  // Clear ECDSA method function pointers
-  EC_KEY_METHOD_get_sign := nil;
-  EC_KEY_METHOD_set_sign := nil;
-  EC_KEY_METHOD_get_verify := nil;
-  EC_KEY_METHOD_set_verify := nil;
-  
-  // Clear old compatibility function pointers
-  ECDSA_get_default_method := nil;
-  ECDSA_set_default_method := nil;
-  ECDSA_get_ex_data := nil;
-  ECDSA_set_ex_data := nil;
-  ECDSA_get_ex_new_index := nil;
-  ECDSA_set_method := nil;
-  ECDSA_get0_method := nil;
-  
-  GECDSALoaded := False;
+  // Clear all function pointers
+  TOpenSSLLoader.ClearFunctions(ECDSA_FUNCTION_BINDINGS);
+  TOpenSSLLoader.SetModuleLoaded(osmECDSA, False);
 end;
 
 function IsOpenSSLECDSALoaded: Boolean;
 begin
-  Result := GECDSALoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmECDSA);
 end;
 
 { Helper functions }
@@ -274,8 +243,8 @@ begin
     Exit;
     
   if not Assigned(AData) or (ADataLen <= 0) or 
-     not Assigned(ASignature) or (ASignatureLen <= 0) or
-     not Assigned(AKey) then
+    not Assigned(ASignature) or (ASignatureLen <= 0) or
+    not Assigned(AKey) then
     Exit;
     
   Result := ECDSA_verify(0, AData, ADataLen, ASignature, ASignatureLen, AKey) = 1;

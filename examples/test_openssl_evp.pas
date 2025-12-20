@@ -4,9 +4,9 @@ program test_openssl_evp;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.err;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.err;
 
 var
   TestsPassed, TestsFailed: Integer;

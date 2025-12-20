@@ -64,6 +64,10 @@ type
     pathlen: PASN1_INTEGER;
   end;
 
+  // GENERAL_NAME helpers
+  TGENERAL_NAME_get0_value = function(const gen: PGENERAL_NAME; ptype: PInteger): Pointer; cdecl;
+  TGENERAL_NAMES_free = procedure(names: PGENERAL_NAMES); cdecl;
+
 const
   // X509V3 extension flags
   X509V3_EXT_DYNAMIC      = $1;
@@ -150,6 +154,8 @@ var
     crit: Integer; flags: LongWord): Integer; cdecl = nil;
   X509V3_get_d2i: function(const x: Pointer; nid: Integer; 
     var crit: Integer; var idx: Integer): Pointer; cdecl = nil;
+  GENERAL_NAME_get0_value: TGENERAL_NAME_get0_value = nil;
+  GENERAL_NAMES_free: TGENERAL_NAMES_free = nil;
     
   // Specific extension functions
   BASIC_CONSTRAINTS_new: function(): PBASIC_CONSTRAINTS; cdecl = nil;
@@ -180,6 +186,9 @@ var
   X509_policy_tree_level_count: function(const tree: Pointer): Integer; cdecl = nil;
   X509_policy_tree_get0_level: function(const tree: Pointer; 
     i: Integer): Pointer; cdecl = nil;
+    
+  // Purpose functions
+  X509_check_purpose: function(x: PX509; id: Integer; ca: Integer): Integer; cdecl = nil;
 
 procedure LoadX509V3Functions(AHandle: TLibHandle);
 procedure UnloadX509V3Functions;
@@ -193,119 +202,82 @@ function X509AddSubjectAltName(Cert: PX509; const DNS: string): Boolean;
 implementation
 
 uses
-  fafafa.ssl.openssl.api.utils, fafafa.ssl.openssl.api.x509;
+  fafafa.ssl.openssl.api.utils, fafafa.ssl.openssl.api.x509, fafafa.ssl.openssl.loader;
+
+const
+  { X509V3 函数绑定数组 - 用于批量加载 }
+  X509V3_FUNCTION_COUNT = 44;
+
+var
+  X509V3FunctionBindings: array[0..X509V3_FUNCTION_COUNT - 1] of TFunctionBinding = (
+    // Context functions
+    (Name: 'X509V3_set_ctx';              FuncPtr: @X509V3_set_ctx;              Required: False),
+    (Name: 'X509V3_set_ctx_test';         FuncPtr: @X509V3_set_ctx_test;         Required: False),
+    (Name: 'X509V3_set_ctx_nodb';         FuncPtr: @X509V3_set_ctx_nodb;         Required: False),
+    // Extension creation functions
+    (Name: 'X509V3_EXT_conf';             FuncPtr: @X509V3_EXT_conf;             Required: False),
+    (Name: 'X509V3_EXT_conf_nid';         FuncPtr: @X509V3_EXT_conf_nid;         Required: False),
+    (Name: 'X509V3_EXT_nconf';            FuncPtr: @X509V3_EXT_nconf;            Required: False),
+    (Name: 'X509V3_EXT_nconf_nid';        FuncPtr: @X509V3_EXT_nconf_nid;        Required: False),
+    // Extension add functions
+    (Name: 'X509V3_EXT_add_conf';         FuncPtr: @X509V3_EXT_add_conf;         Required: False),
+    (Name: 'X509V3_EXT_add_nconf';        FuncPtr: @X509V3_EXT_add_nconf;        Required: False),
+    (Name: 'X509V3_EXT_CRL_add_conf';     FuncPtr: @X509V3_EXT_CRL_add_conf;     Required: False),
+    (Name: 'X509V3_EXT_CRL_add_nconf';    FuncPtr: @X509V3_EXT_CRL_add_nconf;    Required: False),
+    (Name: 'X509V3_EXT_REQ_add_conf';     FuncPtr: @X509V3_EXT_REQ_add_conf;     Required: False),
+    (Name: 'X509V3_EXT_REQ_add_nconf';    FuncPtr: @X509V3_EXT_REQ_add_nconf;    Required: False),
+    // Extension print functions
+    (Name: 'X509V3_EXT_print';            FuncPtr: @X509V3_EXT_print;            Required: False),
+    (Name: 'X509V3_EXT_print_fp';         FuncPtr: @X509V3_EXT_print_fp;         Required: False),
+    (Name: 'X509V3_extensions_print';     FuncPtr: @X509V3_extensions_print;     Required: False),
+    // Extension get/add functions
+    (Name: 'X509V3_EXT_get';              FuncPtr: @X509V3_EXT_get;              Required: False),
+    (Name: 'X509V3_EXT_get_nid';          FuncPtr: @X509V3_EXT_get_nid;          Required: False),
+    (Name: 'X509V3_EXT_add';              FuncPtr: @X509V3_EXT_add;              Required: False),
+    (Name: 'X509V3_EXT_add_alias';        FuncPtr: @X509V3_EXT_add_alias;        Required: False),
+    (Name: 'X509V3_EXT_cleanup';          FuncPtr: @X509V3_EXT_cleanup;          Required: False),
+    // Extension data functions
+    (Name: 'X509V3_EXT_d2i';              FuncPtr: @X509V3_EXT_d2i;              Required: False),
+    (Name: 'X509V3_EXT_i2d';              FuncPtr: @X509V3_EXT_i2d;              Required: False),
+    (Name: 'X509V3_add1_i2d';             FuncPtr: @X509V3_add1_i2d;             Required: False),
+    (Name: 'X509V3_get_d2i';              FuncPtr: @X509V3_get_d2i;              Required: False),
+    (Name: 'GENERAL_NAME_get0_value';     FuncPtr: @GENERAL_NAME_get0_value;     Required: False),
+    (Name: 'GENERAL_NAMES_free';          FuncPtr: @GENERAL_NAMES_free;          Required: False),
+    // Basic constraints functions
+    (Name: 'BASIC_CONSTRAINTS_new';       FuncPtr: @BASIC_CONSTRAINTS_new;       Required: False),
+    (Name: 'BASIC_CONSTRAINTS_free';      FuncPtr: @BASIC_CONSTRAINTS_free;      Required: False),
+    (Name: 'd2i_BASIC_CONSTRAINTS';       FuncPtr: @d2i_BASIC_CONSTRAINTS;       Required: False),
+    (Name: 'i2d_BASIC_CONSTRAINTS';       FuncPtr: @i2d_BASIC_CONSTRAINTS;       Required: False),
+    // Authority key ID functions
+    (Name: 'AUTHORITY_KEYID_new';         FuncPtr: @AUTHORITY_KEYID_new;         Required: False),
+    (Name: 'AUTHORITY_KEYID_free';        FuncPtr: @AUTHORITY_KEYID_free;        Required: False),
+    (Name: 'd2i_AUTHORITY_KEYID';         FuncPtr: @d2i_AUTHORITY_KEYID;         Required: False),
+    (Name: 'i2d_AUTHORITY_KEYID';         FuncPtr: @i2d_AUTHORITY_KEYID;         Required: False),
+    // Authority info access functions
+    (Name: 'AUTHORITY_INFO_ACCESS_new';   FuncPtr: @AUTHORITY_INFO_ACCESS_new;   Required: False),
+    (Name: 'AUTHORITY_INFO_ACCESS_free';  FuncPtr: @AUTHORITY_INFO_ACCESS_free;  Required: False),
+    // Name constraint functions
+    (Name: 'NAME_CONSTRAINTS_check';      FuncPtr: @NAME_CONSTRAINTS_check;      Required: False),
+    (Name: 'NAME_CONSTRAINTS_check_CN';   FuncPtr: @NAME_CONSTRAINTS_check_CN;   Required: False),
+    // Policy functions
+    (Name: 'X509_policy_check';           FuncPtr: @X509_policy_check;           Required: False),
+    (Name: 'X509_policy_tree_free';       FuncPtr: @X509_policy_tree_free;       Required: False),
+    (Name: 'X509_policy_tree_level_count'; FuncPtr: @X509_policy_tree_level_count; Required: False),
+    (Name: 'X509_policy_tree_get0_level'; FuncPtr: @X509_policy_tree_get0_level; Required: False),
+    // Purpose functions
+    (Name: 'X509_check_purpose';          FuncPtr: @X509_check_purpose;          Required: False)
+  );
 
 procedure LoadX509V3Functions(AHandle: TLibHandle);
 begin
   if AHandle = 0 then Exit;
-  
-  // Context functions
-  Pointer(X509V3_set_ctx) := GetProcAddress(AHandle, 'X509V3_set_ctx');
-  Pointer(X509V3_set_ctx_test) := GetProcAddress(AHandle, 'X509V3_set_ctx_test');
-  Pointer(X509V3_set_ctx_nodb) := GetProcAddress(AHandle, 'X509V3_set_ctx_nodb');
-  
-  // Extension creation functions
-  Pointer(X509V3_EXT_conf) := GetProcAddress(AHandle, 'X509V3_EXT_conf');
-  Pointer(X509V3_EXT_conf_nid) := GetProcAddress(AHandle, 'X509V3_EXT_conf_nid');
-  Pointer(X509V3_EXT_nconf) := GetProcAddress(AHandle, 'X509V3_EXT_nconf');
-  Pointer(X509V3_EXT_nconf_nid) := GetProcAddress(AHandle, 'X509V3_EXT_nconf_nid');
-  
-  // Extension add functions
-  Pointer(X509V3_EXT_add_conf) := GetProcAddress(AHandle, 'X509V3_EXT_add_conf');
-  Pointer(X509V3_EXT_add_nconf) := GetProcAddress(AHandle, 'X509V3_EXT_add_nconf');
-  Pointer(X509V3_EXT_CRL_add_conf) := GetProcAddress(AHandle, 'X509V3_EXT_CRL_add_conf');
-  Pointer(X509V3_EXT_CRL_add_nconf) := GetProcAddress(AHandle, 'X509V3_EXT_CRL_add_nconf');
-  Pointer(X509V3_EXT_REQ_add_conf) := GetProcAddress(AHandle, 'X509V3_EXT_REQ_add_conf');
-  Pointer(X509V3_EXT_REQ_add_nconf) := GetProcAddress(AHandle, 'X509V3_EXT_REQ_add_nconf');
-  
-  // Extension print functions
-  Pointer(X509V3_EXT_print) := GetProcAddress(AHandle, 'X509V3_EXT_print');
-  Pointer(X509V3_EXT_print_fp) := GetProcAddress(AHandle, 'X509V3_EXT_print_fp');
-  Pointer(X509V3_extensions_print) := GetProcAddress(AHandle, 'X509V3_extensions_print');
-  
-  // Extension get/add functions
-  Pointer(X509V3_EXT_get) := GetProcAddress(AHandle, 'X509V3_EXT_get');
-  Pointer(X509V3_EXT_get_nid) := GetProcAddress(AHandle, 'X509V3_EXT_get_nid');
-  Pointer(X509V3_EXT_add) := GetProcAddress(AHandle, 'X509V3_EXT_add');
-  Pointer(X509V3_EXT_add_alias) := GetProcAddress(AHandle, 'X509V3_EXT_add_alias');
-  Pointer(X509V3_EXT_cleanup) := GetProcAddress(AHandle, 'X509V3_EXT_cleanup');
-  
-  // Extension data functions
-  Pointer(X509V3_EXT_d2i) := GetProcAddress(AHandle, 'X509V3_EXT_d2i');
-  Pointer(X509V3_EXT_i2d) := GetProcAddress(AHandle, 'X509V3_EXT_i2d');
-  Pointer(X509V3_add1_i2d) := GetProcAddress(AHandle, 'X509V3_add1_i2d');
-  Pointer(X509V3_get_d2i) := GetProcAddress(AHandle, 'X509V3_get_d2i');
-  
-  // Basic constraints functions
-  Pointer(BASIC_CONSTRAINTS_new) := GetProcAddress(AHandle, 'BASIC_CONSTRAINTS_new');
-  Pointer(BASIC_CONSTRAINTS_free) := GetProcAddress(AHandle, 'BASIC_CONSTRAINTS_free');
-  Pointer(d2i_BASIC_CONSTRAINTS) := GetProcAddress(AHandle, 'd2i_BASIC_CONSTRAINTS');
-  Pointer(i2d_BASIC_CONSTRAINTS) := GetProcAddress(AHandle, 'i2d_BASIC_CONSTRAINTS');
-  
-  // Authority key ID functions
-  Pointer(AUTHORITY_KEYID_new) := GetProcAddress(AHandle, 'AUTHORITY_KEYID_new');
-  Pointer(AUTHORITY_KEYID_free) := GetProcAddress(AHandle, 'AUTHORITY_KEYID_free');
-  Pointer(d2i_AUTHORITY_KEYID) := GetProcAddress(AHandle, 'd2i_AUTHORITY_KEYID');
-  Pointer(i2d_AUTHORITY_KEYID) := GetProcAddress(AHandle, 'i2d_AUTHORITY_KEYID');
-  
-  // Authority info access functions
-  Pointer(AUTHORITY_INFO_ACCESS_new) := GetProcAddress(AHandle, 'AUTHORITY_INFO_ACCESS_new');
-  Pointer(AUTHORITY_INFO_ACCESS_free) := GetProcAddress(AHandle, 'AUTHORITY_INFO_ACCESS_free');
-  
-  // Name constraint functions
-  Pointer(NAME_CONSTRAINTS_check) := GetProcAddress(AHandle, 'NAME_CONSTRAINTS_check');
-  Pointer(NAME_CONSTRAINTS_check_CN) := GetProcAddress(AHandle, 'NAME_CONSTRAINTS_check_CN');
-  
-  // Policy functions
-  Pointer(X509_policy_check) := GetProcAddress(AHandle, 'X509_policy_check');
-  Pointer(X509_policy_tree_free) := GetProcAddress(AHandle, 'X509_policy_tree_free');
-  Pointer(X509_policy_tree_level_count) := GetProcAddress(AHandle, 'X509_policy_tree_level_count');
-  Pointer(X509_policy_tree_get0_level) := GetProcAddress(AHandle, 'X509_policy_tree_get0_level');
+
+  TOpenSSLLoader.LoadFunctions(AHandle, X509V3FunctionBindings);
 end;
 
 procedure UnloadX509V3Functions;
 begin
-  X509V3_set_ctx := nil;
-  X509V3_set_ctx_test := nil;
-  X509V3_set_ctx_nodb := nil;
-  X509V3_EXT_conf := nil;
-  X509V3_EXT_conf_nid := nil;
-  X509V3_EXT_nconf := nil;
-  X509V3_EXT_nconf_nid := nil;
-  X509V3_EXT_add_conf := nil;
-  X509V3_EXT_add_nconf := nil;
-  X509V3_EXT_CRL_add_conf := nil;
-  X509V3_EXT_CRL_add_nconf := nil;
-  X509V3_EXT_REQ_add_conf := nil;
-  X509V3_EXT_REQ_add_nconf := nil;
-  X509V3_EXT_print := nil;
-  X509V3_EXT_print_fp := nil;
-  X509V3_extensions_print := nil;
-  X509V3_EXT_get := nil;
-  X509V3_EXT_get_nid := nil;
-  X509V3_EXT_add := nil;
-  X509V3_EXT_add_alias := nil;
-  X509V3_EXT_cleanup := nil;
-  X509V3_EXT_d2i := nil;
-  X509V3_EXT_i2d := nil;
-  X509V3_add1_i2d := nil;
-  X509V3_get_d2i := nil;
-  BASIC_CONSTRAINTS_new := nil;
-  BASIC_CONSTRAINTS_free := nil;
-  d2i_BASIC_CONSTRAINTS := nil;
-  i2d_BASIC_CONSTRAINTS := nil;
-  AUTHORITY_KEYID_new := nil;
-  AUTHORITY_KEYID_free := nil;
-  d2i_AUTHORITY_KEYID := nil;
-  i2d_AUTHORITY_KEYID := nil;
-  AUTHORITY_INFO_ACCESS_new := nil;
-  AUTHORITY_INFO_ACCESS_free := nil;
-  NAME_CONSTRAINTS_check := nil;
-  NAME_CONSTRAINTS_check_CN := nil;
-  X509_policy_check := nil;
-  X509_policy_tree_free := nil;
-  X509_policy_tree_level_count := nil;
-  X509_policy_tree_get0_level := nil;
+  TOpenSSLLoader.ClearFunctions(X509V3FunctionBindings);
 end;
 
 function X509AddBasicConstraints(Cert: PX509; CA: Boolean; PathLen: Integer): Boolean;

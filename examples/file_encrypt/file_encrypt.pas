@@ -6,7 +6,7 @@ program file_encrypt;
 uses
   SysUtils, Classes, DynLibs,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.evp;
+  fafafa.ssl.openssl.api.evp;
 
 const
   PROGRAM_VERSION = '1.0.0';

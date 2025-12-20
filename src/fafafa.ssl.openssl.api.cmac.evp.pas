@@ -6,14 +6,14 @@
 unit fafafa.ssl.openssl.api.cmac.evp;
 
 {$mode ObjFPC}{$H+}
-{$H+}
 
 interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.evp;
 
 const
@@ -50,7 +50,7 @@ function IsEVPCMACAvailable: Boolean;
 implementation
 
 uses
-  {$IFDEF WINDOWS}Windows{$ELSE}dynlibs{$ENDIF};
+  fafafa.ssl.openssl.api.core;
 
 type
   TEVP_MAC_fetch = function(ctx: POSSL_LIB_CTX; const algorithm: PAnsiChar; const properties: PAnsiChar): PEVP_MAC; cdecl;
@@ -75,47 +75,49 @@ var
   EVP_MAC_CTX_get_mac_size: TEVP_MAC_CTX_get_mac_size = nil;
   OSSL_PARAM_construct_utf8_string: TOSSL_PARAM_construct_utf8_string = nil;
   OSSL_PARAM_construct_end: TOSSL_PARAM_construct_end = nil;
-  FunctionsLoaded: Boolean = False;
-  LibHandle: TLibHandle = 0;
+
+const
+  { CMAC EVP function bindings for batch loading }
+  CMAC_EVP_BINDINGS: array[0..9] of TFunctionBinding = (
+    (Name: 'EVP_MAC_fetch';                  FuncPtr: @EVP_MAC_fetch;                  Required: True),
+    (Name: 'EVP_MAC_free';                   FuncPtr: @EVP_MAC_free;                   Required: False),
+    (Name: 'EVP_MAC_CTX_new';                FuncPtr: @EVP_MAC_CTX_new;                Required: True),
+    (Name: 'EVP_MAC_CTX_free';               FuncPtr: @EVP_MAC_CTX_free;               Required: False),
+    (Name: 'EVP_MAC_init';                   FuncPtr: @EVP_MAC_init;                   Required: True),
+    (Name: 'EVP_MAC_update';                 FuncPtr: @EVP_MAC_update;                 Required: True),
+    (Name: 'EVP_MAC_final';                  FuncPtr: @EVP_MAC_final;                  Required: True),
+    (Name: 'EVP_MAC_CTX_get_mac_size';       FuncPtr: @EVP_MAC_CTX_get_mac_size;       Required: False),
+    (Name: 'OSSL_PARAM_construct_utf8_string'; FuncPtr: @OSSL_PARAM_construct_utf8_string; Required: False),
+    (Name: 'OSSL_PARAM_construct_end';       FuncPtr: @OSSL_PARAM_construct_end;       Required: False)
+  );
 
 procedure LoadFunctions;
 var
-  dllNames: array[0..2] of string;
-  i: Integer;
+  LLib: TLibHandle;
 begin
-  if FunctionsLoaded then Exit;
-  
-  {$IFDEF WINDOWS}
-  dllNames[0] := 'libcrypto-3-x64.dll';
-  dllNames[1] := 'libcrypto-3.dll';
-  dllNames[2] := 'libcrypto-1_1-x64.dll';
-  {$ELSE}
-  dllNames[0] := 'libcrypto.so.3';
-  dllNames[1] := 'libcrypto.so';
-  dllNames[2] := '';
-  {$ENDIF}
-  
-  for i := 0 to High(dllNames) do
+  if TOpenSSLLoader.IsModuleLoaded(osmCMAC) then Exit;
+
+  // Use the crypto library handle from core module
+  LLib := GetCryptoLibHandle;
+  if LLib = NilHandle then
   begin
-    if dllNames[i] = '' then Continue;
-    LibHandle := LoadLibrary(PChar(dllNames[i]));
-    if LibHandle <> 0 then Break;
+    // Try to load core first
+    LoadOpenSSLCore;
+    LLib := GetCryptoLibHandle;
   end;
-  
-  if LibHandle = 0 then Exit;
-  
-  EVP_MAC_fetch := TEVP_MAC_fetch(GetProcAddress(LibHandle, 'EVP_MAC_fetch'));
-  EVP_MAC_free := TEVP_MAC_free(GetProcAddress(LibHandle, 'EVP_MAC_free'));
-  EVP_MAC_CTX_new := TEVP_MAC_CTX_new(GetProcAddress(LibHandle, 'EVP_MAC_CTX_new'));
-  EVP_MAC_CTX_free := TEVP_MAC_CTX_free(GetProcAddress(LibHandle, 'EVP_MAC_CTX_free'));
-  EVP_MAC_init := TEVP_MAC_init(GetProcAddress(LibHandle, 'EVP_MAC_init'));
-  EVP_MAC_update := TEVP_MAC_update(GetProcAddress(LibHandle, 'EVP_MAC_update'));
-  EVP_MAC_final := TEVP_MAC_final(GetProcAddress(LibHandle, 'EVP_MAC_final'));
-  EVP_MAC_CTX_get_mac_size := TEVP_MAC_CTX_get_mac_size(GetProcAddress(LibHandle, 'EVP_MAC_CTX_get_mac_size'));
-  OSSL_PARAM_construct_utf8_string := TOSSL_PARAM_construct_utf8_string(GetProcAddress(LibHandle, 'OSSL_PARAM_construct_utf8_string'));
-  OSSL_PARAM_construct_end := TOSSL_PARAM_construct_end(GetProcAddress(LibHandle, 'OSSL_PARAM_construct_end'));
-  
-  FunctionsLoaded := Assigned(EVP_MAC_fetch) and Assigned(EVP_MAC_CTX_new);
+
+  if LLib = NilHandle then Exit;
+
+  // Load CMAC EVP functions using batch loading
+  TOpenSSLLoader.LoadFunctions(LLib, CMAC_EVP_BINDINGS);
+
+  TOpenSSLLoader.SetModuleLoaded(osmCMAC, Assigned(EVP_MAC_fetch) and Assigned(EVP_MAC_CTX_new));
+end;
+
+procedure UnloadFunctions;
+begin
+  TOpenSSLLoader.ClearFunctions(CMAC_EVP_BINDINGS);
+  TOpenSSLLoader.SetModuleLoaded(osmCMAC, False);
 end;
 
 { TCMACEVPContext }
@@ -272,6 +274,6 @@ initialization
   LoadFunctions;
 
 finalization
-  if LibHandle <> 0 then FreeLibrary(LibHandle);
+  UnloadFunctions;
 
 end.

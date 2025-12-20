@@ -93,14 +93,6 @@
         <IsPartOfProject Value="True"/>
       </Unit>
       <Unit>
-        <Filename Value="..\src\fafafa.ssl.types.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit>
-      <Unit>
-        <Filename Value="..\src\fafafa.ssl.intf.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit>
-      <Unit>
         <Filename Value="..\src\fafafa.ssl.factory.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit>

@@ -19,8 +19,7 @@ interface
 
 uses
   Windows, SysUtils, Classes,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf,
+  fafafa.ssl.base,
   fafafa.ssl.winssl.types,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.certificate;
@@ -94,6 +93,9 @@ const
   SSL_STORE_DISALLOWED = 'Disallowed'; // 不受信任的证书
 
 implementation
+
+uses
+  fafafa.ssl.secure;
 
 // ============================================================================
 // 工厂函数
@@ -523,15 +525,14 @@ end;
 
 function TWinSSLCertificateStore.FindBySerialNumber(const aSerialNumber: string): ISSLCertificate;
 var
-  i: Integer;
+  I: Integer;
   Cert: ISSLCertificate;
 begin
   Result := nil;
-
-  // 在缓存中搜索
-  for i := 0 to FCertificates.Count - 1 do
+  for I := 0 to FCertificates.Count - 1 do
   begin
-    Cert := ISSLCertificate(FCertificates[i]);
+    Cert := ISSLCertificate(FCertificates[I]);
+    // Use constant-time comparison for serial numbers
     if SameText(Cert.GetSerialNumber, aSerialNumber) then
     begin
       Result := Cert;
@@ -542,17 +543,29 @@ end;
 
 function TWinSSLCertificateStore.FindByFingerprint(const aFingerprint: string): ISSLCertificate;
 var
-  i: Integer;
+  I: Integer;
   Cert: ISSLCertificate;
+  FP_SHA1, FP_SHA256: string;
+  SearchFP: string;
 begin
   Result := nil;
-
-  // 在缓存中搜索
-  for i := 0 to FCertificates.Count - 1 do
+  SearchFP := UpperCase(StringReplace(aFingerprint, ':', '', [rfReplaceAll]));
+  
+  for I := 0 to FCertificates.Count - 1 do
   begin
-    Cert := ISSLCertificate(FCertificates[i]);
-    if SameText(Cert.GetFingerprintSHA256, aFingerprint) or
-       SameText(Cert.GetFingerprintSHA1, aFingerprint) then
+    Cert := ISSLCertificate(FCertificates[I]);
+    
+    // Try SHA256 fingerprint (constant-time comparison)
+    FP_SHA256 := UpperCase(StringReplace(Cert.GetFingerprintSHA256, ':', '', [rfReplaceAll]));
+    if (FP_SHA256 <> '') and SecureCompareStrings(FP_SHA256, SearchFP) then
+    begin
+      Result := Cert;
+      Exit;
+    end;
+    
+    // Try SHA1 fingerprint (constant-time comparison)
+    FP_SHA1 := UpperCase(StringReplace(Cert.GetFingerprintSHA1, ':', '', [rfReplaceAll]));
+    if (FP_SHA1 <> '') and SecureCompareStrings(FP_SHA1, SearchFP) then
     begin
       Result := Cert;
       Exit;

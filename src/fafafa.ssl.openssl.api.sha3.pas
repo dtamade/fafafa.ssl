@@ -9,15 +9,15 @@
 unit fafafa.ssl.openssl.api.sha3;
 
 {$mode ObjFPC}{$H+}
-{$H+}
 
 interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;
 
 const
   SHA3_224_DIGEST_LENGTH = 28;
@@ -164,108 +164,77 @@ implementation
 uses
   fafafa.ssl.openssl.api;
 
-var
-  GSHA3Loaded: Boolean = False;
+const
+  { SHA3 函数绑定数组 }
+  SHA3_FUNCTION_BINDINGS: array[0..27] of TFunctionBinding = (
+    // SHA3-224 functions
+    (Name: 'SHA3_224_Init';    FuncPtr: @SHA3_224_Init;    Required: False),
+    (Name: 'SHA3_224_Update';  FuncPtr: @SHA3_224_Update;  Required: False),
+    (Name: 'SHA3_224_Final';   FuncPtr: @SHA3_224_Final;   Required: False),
+    (Name: 'SHA3_224';         FuncPtr: @SHA3_224;         Required: False),
+    // SHA3-256 functions
+    (Name: 'SHA3_256_Init';    FuncPtr: @SHA3_256_Init;    Required: False),
+    (Name: 'SHA3_256_Update';  FuncPtr: @SHA3_256_Update;  Required: False),
+    (Name: 'SHA3_256_Final';   FuncPtr: @SHA3_256_Final;   Required: False),
+    (Name: 'SHA3_256';         FuncPtr: @SHA3_256;         Required: False),
+    // SHA3-384 functions
+    (Name: 'SHA3_384_Init';    FuncPtr: @SHA3_384_Init;    Required: False),
+    (Name: 'SHA3_384_Update';  FuncPtr: @SHA3_384_Update;  Required: False),
+    (Name: 'SHA3_384_Final';   FuncPtr: @SHA3_384_Final;   Required: False),
+    (Name: 'SHA3_384';         FuncPtr: @SHA3_384;         Required: False),
+    // SHA3-512 functions
+    (Name: 'SHA3_512_Init';    FuncPtr: @SHA3_512_Init;    Required: False),
+    (Name: 'SHA3_512_Update';  FuncPtr: @SHA3_512_Update;  Required: False),
+    (Name: 'SHA3_512_Final';   FuncPtr: @SHA3_512_Final;   Required: False),
+    (Name: 'SHA3_512';         FuncPtr: @SHA3_512;         Required: False),
+    // SHAKE128 functions
+    (Name: 'SHAKE128_Init';     FuncPtr: @SHAKE128_Init;     Required: False),
+    (Name: 'SHAKE128_Update';   FuncPtr: @SHAKE128_Update;   Required: False),
+    (Name: 'SHAKE128_Final';    FuncPtr: @SHAKE128_Final;    Required: False),
+    (Name: 'SHAKE128_FinalXOF'; FuncPtr: @SHAKE128_FinalXOF; Required: False),
+    (Name: 'SHAKE128_Squeeze';  FuncPtr: @SHAKE128_Squeeze;  Required: False),
+    (Name: 'SHAKE128';          FuncPtr: @SHAKE128;          Required: False),
+    // SHAKE256 functions
+    (Name: 'SHAKE256_Init';     FuncPtr: @SHAKE256_Init;     Required: False),
+    (Name: 'SHAKE256_Update';   FuncPtr: @SHAKE256_Update;   Required: False),
+    (Name: 'SHAKE256_Final';    FuncPtr: @SHAKE256_Final;    Required: False),
+    (Name: 'SHAKE256_FinalXOF'; FuncPtr: @SHAKE256_FinalXOF; Required: False),
+    (Name: 'SHAKE256_Squeeze';  FuncPtr: @SHAKE256_Squeeze;  Required: False),
+    (Name: 'SHAKE256';          FuncPtr: @SHAKE256;          Required: False)
+  );
+
+  { KMAC 函数绑定数组 }
+  KMAC_FUNCTION_BINDINGS: array[0..1] of TFunctionBinding = (
+    (Name: 'KMAC128'; FuncPtr: @KMAC128; Required: False),
+    (Name: 'KMAC256'; FuncPtr: @KMAC256; Required: False)
+  );
 
 function LoadSHA3Functions(ALibHandle: THandle): Boolean;
 begin
   Result := False;
-  
+
   if ALibHandle = 0 then Exit;
-  
-  // Load SHA3-224 functions
-  SHA3_224_Init := GetProcAddress(ALibHandle, 'SHA3_224_Init');
-  SHA3_224_Update := GetProcAddress(ALibHandle, 'SHA3_224_Update');
-  SHA3_224_Final := GetProcAddress(ALibHandle, 'SHA3_224_Final');
-  SHA3_224 := GetProcAddress(ALibHandle, 'SHA3_224');
-  
-  // Load SHA3-256 functions
-  SHA3_256_Init := GetProcAddress(ALibHandle, 'SHA3_256_Init');
-  SHA3_256_Update := GetProcAddress(ALibHandle, 'SHA3_256_Update');
-  SHA3_256_Final := GetProcAddress(ALibHandle, 'SHA3_256_Final');
-  SHA3_256 := GetProcAddress(ALibHandle, 'SHA3_256');
-  
-  // Load SHA3-384 functions
-  SHA3_384_Init := GetProcAddress(ALibHandle, 'SHA3_384_Init');
-  SHA3_384_Update := GetProcAddress(ALibHandle, 'SHA3_384_Update');
-  SHA3_384_Final := GetProcAddress(ALibHandle, 'SHA3_384_Final');
-  SHA3_384 := GetProcAddress(ALibHandle, 'SHA3_384');
-  
-  // Load SHA3-512 functions
-  SHA3_512_Init := GetProcAddress(ALibHandle, 'SHA3_512_Init');
-  SHA3_512_Update := GetProcAddress(ALibHandle, 'SHA3_512_Update');
-  SHA3_512_Final := GetProcAddress(ALibHandle, 'SHA3_512_Final');
-  SHA3_512 := GetProcAddress(ALibHandle, 'SHA3_512');
-  
-  // Load SHAKE128 functions
-  SHAKE128_Init := GetProcAddress(ALibHandle, 'SHAKE128_Init');
-  SHAKE128_Update := GetProcAddress(ALibHandle, 'SHAKE128_Update');
-  SHAKE128_Final := GetProcAddress(ALibHandle, 'SHAKE128_Final');
-  SHAKE128_FinalXOF := GetProcAddress(ALibHandle, 'SHAKE128_FinalXOF');
-  SHAKE128_Squeeze := GetProcAddress(ALibHandle, 'SHAKE128_Squeeze');
-  SHAKE128 := GetProcAddress(ALibHandle, 'SHAKE128');
-  
-  // Load SHAKE256 functions
-  SHAKE256_Init := GetProcAddress(ALibHandle, 'SHAKE256_Init');
-  SHAKE256_Update := GetProcAddress(ALibHandle, 'SHAKE256_Update');
-  SHAKE256_Final := GetProcAddress(ALibHandle, 'SHAKE256_Final');
-  SHAKE256_FinalXOF := GetProcAddress(ALibHandle, 'SHAKE256_FinalXOF');
-  SHAKE256_Squeeze := GetProcAddress(ALibHandle, 'SHAKE256_Squeeze');
-  SHAKE256 := GetProcAddress(ALibHandle, 'SHAKE256');
-  
-  // Load KMAC functions
-  KMAC128 := GetProcAddress(ALibHandle, 'KMAC128');
-  KMAC256 := GetProcAddress(ALibHandle, 'KMAC256');
-  
-  GSHA3Loaded := True;
+
+  // 使用 TOpenSSLLoader.LoadFunctions 批量加载
+  TOpenSSLLoader.LoadFunctions(ALibHandle, SHA3_FUNCTION_BINDINGS);
+  TOpenSSLLoader.LoadFunctions(ALibHandle, KMAC_FUNCTION_BINDINGS);
+
+  TOpenSSLLoader.SetModuleLoaded(osmSHA3, True);
   Result := True;
 end;
 
 procedure UnloadSHA3Functions;
 begin
-  SHA3_224_Init := nil;
-  SHA3_224_Update := nil;
-  SHA3_224_Final := nil;
-  SHA3_224 := nil;
-  
-  SHA3_256_Init := nil;
-  SHA3_256_Update := nil;
-  SHA3_256_Final := nil;
-  SHA3_256 := nil;
-  
-  SHA3_384_Init := nil;
-  SHA3_384_Update := nil;
-  SHA3_384_Final := nil;
-  SHA3_384 := nil;
-  
-  SHA3_512_Init := nil;
-  SHA3_512_Update := nil;
-  SHA3_512_Final := nil;
-  SHA3_512 := nil;
-  
-  SHAKE128_Init := nil;
-  SHAKE128_Update := nil;
-  SHAKE128_Final := nil;
-  SHAKE128_FinalXOF := nil;
-  SHAKE128_Squeeze := nil;
-  SHAKE128 := nil;
-  
-  SHAKE256_Init := nil;
-  SHAKE256_Update := nil;
-  SHAKE256_Final := nil;
-  SHAKE256_FinalXOF := nil;
-  SHAKE256_Squeeze := nil;
-  SHAKE256 := nil;
-  
-  KMAC128 := nil;
-  KMAC256 := nil;
-  
-  GSHA3Loaded := False;
+  // 使用 TOpenSSLLoader.ClearFunctions 批量清除
+  TOpenSSLLoader.ClearFunctions(SHA3_FUNCTION_BINDINGS);
+  TOpenSSLLoader.ClearFunctions(KMAC_FUNCTION_BINDINGS);
+
+  TOpenSSLLoader.SetModuleLoaded(osmSHA3, False);
 end;
 
 function IsSHA3Loaded: Boolean;
 begin
-  Result := GSHA3Loaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmSHA3);
 end;
 
 function SHA3_224Hash(const Data: TBytes): TBytes;
@@ -338,7 +307,7 @@ var
 begin
   SetLength(Result, OutLen);
   if Assigned(SHAKE128_Init) and Assigned(SHAKE128_Update) and 
-     Assigned(SHAKE128_FinalXOF) and Assigned(SHAKE128_Squeeze) then
+    Assigned(SHAKE128_FinalXOF) and Assigned(SHAKE128_Squeeze) then
   begin
     SHAKE128_Init(@ctx);
     if Length(Data) > 0 then
@@ -356,7 +325,7 @@ var
 begin
   SetLength(Result, OutLen);
   if Assigned(SHAKE256_Init) and Assigned(SHAKE256_Update) and 
-     Assigned(SHAKE256_FinalXOF) and Assigned(SHAKE256_Squeeze) then
+    Assigned(SHAKE256_FinalXOF) and Assigned(SHAKE256_Squeeze) then
   begin
     SHAKE256_Init(@ctx);
     if Length(Data) > 0 then

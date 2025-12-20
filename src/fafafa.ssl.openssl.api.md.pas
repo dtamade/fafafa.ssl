@@ -9,15 +9,15 @@
 unit fafafa.ssl.openssl.api.md;
 
 {$mode ObjFPC}{$H+}
-{$H+}
 
 interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;
 
 const
   MD4_DIGEST_LENGTH = 16;
@@ -151,77 +151,53 @@ implementation
 uses
   fafafa.ssl.openssl.api;
 
-var
-  GMDLoaded: Boolean = False;
+const
+  { Function bindings for batch loading }
+  MDBindings: array[0..18] of TFunctionBinding = (
+    // MD4 functions
+    (Name: 'MD4_Init';      FuncPtr: @MD4_Init;      Required: False),
+    (Name: 'MD4_Update';    FuncPtr: @MD4_Update;    Required: False),
+    (Name: 'MD4_Final';     FuncPtr: @MD4_Final;     Required: False),
+    (Name: 'MD4';           FuncPtr: @MD4;           Required: False),
+    (Name: 'MD4_Transform'; FuncPtr: @MD4_Transform; Required: False),
+    // MD5 functions
+    (Name: 'MD5_Init';      FuncPtr: @MD5_Init;      Required: False),
+    (Name: 'MD5_Update';    FuncPtr: @MD5_Update;    Required: False),
+    (Name: 'MD5_Final';     FuncPtr: @MD5_Final;     Required: False),
+    (Name: 'MD5';           FuncPtr: @MD5;           Required: False),
+    (Name: 'MD5_Transform'; FuncPtr: @MD5_Transform; Required: False),
+    // MDC2 functions
+    (Name: 'MDC2_Init';     FuncPtr: @MDC2_Init;     Required: False),
+    (Name: 'MDC2_Update';   FuncPtr: @MDC2_Update;   Required: False),
+    (Name: 'MDC2_Final';    FuncPtr: @MDC2_Final;    Required: False),
+    (Name: 'MDC2';          FuncPtr: @MDC2;          Required: False),
+    // RIPEMD160 functions
+    (Name: 'RIPEMD160_Init';      FuncPtr: @RIPEMD160_Init;      Required: False),
+    (Name: 'RIPEMD160_Update';    FuncPtr: @RIPEMD160_Update;    Required: False),
+    (Name: 'RIPEMD160_Final';     FuncPtr: @RIPEMD160_Final;     Required: False),
+    (Name: 'RIPEMD160';           FuncPtr: @RIPEMD160;           Required: False),
+    (Name: 'RIPEMD160_Transform'; FuncPtr: @RIPEMD160_Transform; Required: False)
+  );
 
 function LoadMDFunctions(ALibHandle: THandle): Boolean;
 begin
   Result := False;
-  
   if ALibHandle = 0 then Exit;
-  
-  // Load MD4 functions
-  MD4_Init := GetProcAddress(ALibHandle, 'MD4_Init');
-  MD4_Update := GetProcAddress(ALibHandle, 'MD4_Update');
-  MD4_Final := GetProcAddress(ALibHandle, 'MD4_Final');
-  MD4 := GetProcAddress(ALibHandle, 'MD4');
-  MD4_Transform := GetProcAddress(ALibHandle, 'MD4_Transform');
-  
-  // Load MD5 functions
-  MD5_Init := GetProcAddress(ALibHandle, 'MD5_Init');
-  MD5_Update := GetProcAddress(ALibHandle, 'MD5_Update');
-  MD5_Final := GetProcAddress(ALibHandle, 'MD5_Final');
-  MD5 := GetProcAddress(ALibHandle, 'MD5');
-  MD5_Transform := GetProcAddress(ALibHandle, 'MD5_Transform');
-  
-  // Load MDC2 functions
-  MDC2_Init := GetProcAddress(ALibHandle, 'MDC2_Init');
-  MDC2_Update := GetProcAddress(ALibHandle, 'MDC2_Update');
-  MDC2_Final := GetProcAddress(ALibHandle, 'MDC2_Final');
-  MDC2 := GetProcAddress(ALibHandle, 'MDC2');
-  
-  // Load RIPEMD160 functions
-  RIPEMD160_Init := GetProcAddress(ALibHandle, 'RIPEMD160_Init');
-  RIPEMD160_Update := GetProcAddress(ALibHandle, 'RIPEMD160_Update');
-  RIPEMD160_Final := GetProcAddress(ALibHandle, 'RIPEMD160_Final');
-  RIPEMD160 := GetProcAddress(ALibHandle, 'RIPEMD160');
-  RIPEMD160_Transform := GetProcAddress(ALibHandle, 'RIPEMD160_Transform');
-  
-  GMDLoaded := True;
+
+  TOpenSSLLoader.LoadFunctions(ALibHandle, MDBindings);
+  TOpenSSLLoader.SetModuleLoaded(osmMD, True);
   Result := True;
 end;
 
 procedure UnloadMDFunctions;
 begin
-  MD4_Init := nil;
-  MD4_Update := nil;
-  MD4_Final := nil;
-  MD4 := nil;
-  MD4_Transform := nil;
-  
-  MD5_Init := nil;
-  MD5_Update := nil;
-  MD5_Final := nil;
-  MD5 := nil;
-  MD5_Transform := nil;
-  
-  MDC2_Init := nil;
-  MDC2_Update := nil;
-  MDC2_Final := nil;
-  MDC2 := nil;
-  
-  RIPEMD160_Init := nil;
-  RIPEMD160_Update := nil;
-  RIPEMD160_Final := nil;
-  RIPEMD160 := nil;
-  RIPEMD160_Transform := nil;
-  
-  GMDLoaded := False;
+  TOpenSSLLoader.ClearFunctions(MDBindings);
+  TOpenSSLLoader.SetModuleLoaded(osmMD, False);
 end;
 
 function IsMDLoaded: Boolean;
 begin
-  Result := GMDLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmMD);
 end;
 
 // Helper function implementations

@@ -4,9 +4,9 @@ program test_openssl_md;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.md;
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.md;
 
 var
   TestsPassed: Integer = 0;

@@ -20,9 +20,9 @@ program practical_examples;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.err;
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.err;
 
 var
   TotalExamples, SuccessExamples: Integer;

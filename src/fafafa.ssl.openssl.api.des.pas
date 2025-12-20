@@ -9,15 +9,15 @@
 unit fafafa.ssl.openssl.api.des;
 
 {$mode ObjFPC}{$H+}
-{$H+}
 
 interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;
 
 const
   DES_ENCRYPT = 1;
@@ -54,8 +54,8 @@ type
   // DES functions
   TDES_options = function: PAnsiChar; cdecl;
   TDES_ecb3_encrypt = procedure(const input: Pconst_DES_cblock; output: PDES_cblock;
-                                 ks1: PDES_key_schedule; ks2: PDES_key_schedule;
-                                 ks3: PDES_key_schedule; enc: Integer); cdecl;
+                                ks1: PDES_key_schedule; ks2: PDES_key_schedule;
+                                ks3: PDES_key_schedule; enc: Integer); cdecl;
                                  
   TDES_crypt = function(buf: PAnsiChar; salt: PAnsiChar): PAnsiChar; cdecl;
   TDES_fcrypt = function(buf: PAnsiChar; salt: PAnsiChar; ret: PAnsiChar): PAnsiChar; cdecl;
@@ -64,54 +64,54 @@ type
                                 ks: PDES_key_schedule; enc: Integer); cdecl;
                                 
   TDES_ncbc_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
-                                 schedule: PDES_key_schedule; ivec: PDES_cblock; enc: Integer); cdecl;
+                                schedule: PDES_key_schedule; ivec: PDES_cblock; enc: Integer); cdecl;
                                  
   TDES_xcbc_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
-                                 schedule: PDES_key_schedule; ivec: PDES_cblock;
-                                 const inw: Pconst_DES_cblock; const outw: Pconst_DES_cblock;
-                                 enc: Integer); cdecl;
+                                schedule: PDES_key_schedule; ivec: PDES_cblock;
+                                const inw: Pconst_DES_cblock; const outw: Pconst_DES_cblock;
+                                enc: Integer); cdecl;
                                  
   TDES_cfb_encrypt = procedure(const in_: PByte; out_: PByte; numbits: Integer;
                                 length: LongInt; schedule: PDES_key_schedule;
                                 ivec: PDES_cblock; enc: Integer); cdecl;
                                 
   TDES_ecb2_encrypt = procedure(const input: Pconst_DES_cblock; output: PDES_cblock;
-                                 ks1: PDES_key_schedule; ks2: PDES_key_schedule;
-                                 enc: Integer); cdecl;
+                                ks1: PDES_key_schedule; ks2: PDES_key_schedule;
+                                enc: Integer); cdecl;
                                  
   TDES_ede2_cbc_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
-                                     ks1: PDES_key_schedule; ks2: PDES_key_schedule;
-                                     ivec: PDES_cblock; enc: Integer); cdecl;
+                                    ks1: PDES_key_schedule; ks2: PDES_key_schedule;
+                                    ivec: PDES_cblock; enc: Integer); cdecl;
                                      
   TDES_ede2_cfb64_encrypt = procedure(const in_: PByte; out_: PByte; length: LongInt;
-                                       ks1: PDES_key_schedule; ks2: PDES_key_schedule;
-                                       ivec: PDES_cblock; num: PInteger; enc: Integer); cdecl;
+                                      ks1: PDES_key_schedule; ks2: PDES_key_schedule;
+                                      ivec: PDES_cblock; num: PInteger; enc: Integer); cdecl;
                                        
   TDES_ede2_ofb64_encrypt = procedure(const in_: PByte; out_: PByte; length: LongInt;
-                                       ks1: PDES_key_schedule; ks2: PDES_key_schedule;
-                                       ivec: PDES_cblock; num: PInteger); cdecl;
+                                      ks1: PDES_key_schedule; ks2: PDES_key_schedule;
+                                      ivec: PDES_cblock; num: PInteger); cdecl;
                                        
   TDES_ede3_cbc_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
-                                     ks1: PDES_key_schedule; ks2: PDES_key_schedule;
-                                     ks3: PDES_key_schedule; ivec: PDES_cblock; enc: Integer); cdecl;
+                                    ks1: PDES_key_schedule; ks2: PDES_key_schedule;
+                                    ks3: PDES_key_schedule; ivec: PDES_cblock; enc: Integer); cdecl;
                                      
   TDES_ede3_cfb64_encrypt = procedure(const in_: PByte; out_: PByte; length: LongInt;
-                                       ks1: PDES_key_schedule; ks2: PDES_key_schedule;
-                                       ks3: PDES_key_schedule; ivec: PDES_cblock;
-                                       num: PInteger; enc: Integer); cdecl;
+                                      ks1: PDES_key_schedule; ks2: PDES_key_schedule;
+                                      ks3: PDES_key_schedule; ivec: PDES_cblock;
+                                      num: PInteger; enc: Integer); cdecl;
                                        
   TDES_ede3_cfb_encrypt = procedure(const in_: PByte; out_: PByte; numbits: Integer;
-                                     length: LongInt; ks1: PDES_key_schedule;
-                                     ks2: PDES_key_schedule; ks3: PDES_key_schedule;
-                                     ivec: PDES_cblock; enc: Integer); cdecl;
+                                    length: LongInt; ks1: PDES_key_schedule;
+                                    ks2: PDES_key_schedule; ks3: PDES_key_schedule;
+                                    ivec: PDES_cblock; enc: Integer); cdecl;
                                      
   TDES_ede3_ofb64_encrypt = procedure(const in_: PByte; out_: PByte; length: LongInt;
-                                       ks1: PDES_key_schedule; ks2: PDES_key_schedule;
-                                       ks3: PDES_key_schedule; ivec: PDES_cblock;
-                                       num: PInteger); cdecl;
+                                      ks1: PDES_key_schedule; ks2: PDES_key_schedule;
+                                      ks3: PDES_key_schedule; ivec: PDES_cblock;
+                                      num: PInteger); cdecl;
                                        
   TDES_enc_read = function(fd: Integer; buf: Pointer; len: Integer;
-                           sched: PDES_key_schedule; iv: PDES_cblock): Integer; cdecl;
+                          sched: PDES_key_schedule; iv: PDES_cblock): Integer; cdecl;
                            
   TDES_enc_write = function(fd: Integer; const buf: Pointer; len: Integer;
                             sched: PDES_key_schedule; iv: PDES_cblock): Integer; cdecl;
@@ -137,19 +137,19 @@ type
                                   num: PInteger); cdecl;
                                   
   TDES_pcbc_encrypt = procedure(const input: PByte; output: PByte; length: LongInt;
-                                 schedule: PDES_key_schedule; ivec: PDES_cblock; enc: Integer); cdecl;
+                                schedule: PDES_key_schedule; ivec: PDES_cblock; enc: Integer); cdecl;
                                  
   TDES_quad_cksum = function(const input: PByte; output: PDES_cblock; length: LongInt;
-                             out_count: Integer; seed: PDES_cblock): DES_LONG; cdecl;
+                            out_count: Integer; seed: PDES_cblock): DES_LONG; cdecl;
                              
   TDES_random_key = function(ret: PDES_cblock): Integer; cdecl;
   
   TDES_encrypt1 = procedure(data: PDES_LONG; ks: PDES_key_schedule; enc: Integer); cdecl;
   TDES_encrypt2 = procedure(data: PDES_LONG; ks: PDES_key_schedule; enc: Integer); cdecl;
   TDES_encrypt3 = procedure(data: PDES_LONG; ks1: PDES_key_schedule;
-                           ks2: PDES_key_schedule; ks3: PDES_key_schedule); cdecl;
+                          ks2: PDES_key_schedule; ks3: PDES_key_schedule); cdecl;
   TDES_decrypt3 = procedure(data: PDES_LONG; ks1: PDES_key_schedule;
-                           ks2: PDES_key_schedule; ks3: PDES_key_schedule); cdecl;
+                          ks2: PDES_key_schedule; ks3: PDES_key_schedule); cdecl;
 
 var
   // DES function pointers
@@ -206,101 +206,67 @@ implementation
 uses
   fafafa.ssl.openssl.api;
 
-var
-  GDESLoaded: Boolean = False;
+const
+  { DES function bindings for batch loading }
+  DES_FUNCTION_BINDINGS: array[0..35] of TFunctionBinding = (
+    (Name: 'DES_options';           FuncPtr: @DES_options;           Required: False),
+    (Name: 'DES_ecb3_encrypt';      FuncPtr: @DES_ecb3_encrypt;      Required: False),
+    (Name: 'DES_crypt';             FuncPtr: @DES_crypt;             Required: False),
+    (Name: 'DES_fcrypt';            FuncPtr: @DES_fcrypt;            Required: False),
+    (Name: 'DES_ecb_encrypt';       FuncPtr: @DES_ecb_encrypt;       Required: False),
+    (Name: 'DES_ncbc_encrypt';      FuncPtr: @DES_ncbc_encrypt;      Required: False),
+    (Name: 'DES_xcbc_encrypt';      FuncPtr: @DES_xcbc_encrypt;      Required: False),
+    (Name: 'DES_cfb_encrypt';       FuncPtr: @DES_cfb_encrypt;       Required: False),
+    (Name: 'DES_ecb2_encrypt';      FuncPtr: @DES_ecb2_encrypt;      Required: False),
+    (Name: 'DES_ede2_cbc_encrypt';  FuncPtr: @DES_ede2_cbc_encrypt;  Required: False),
+    (Name: 'DES_ede2_cfb64_encrypt'; FuncPtr: @DES_ede2_cfb64_encrypt; Required: False),
+    (Name: 'DES_ede2_ofb64_encrypt'; FuncPtr: @DES_ede2_ofb64_encrypt; Required: False),
+    (Name: 'DES_ede3_cbc_encrypt';  FuncPtr: @DES_ede3_cbc_encrypt;  Required: False),
+    (Name: 'DES_ede3_cfb64_encrypt'; FuncPtr: @DES_ede3_cfb64_encrypt; Required: False),
+    (Name: 'DES_ede3_cfb_encrypt';  FuncPtr: @DES_ede3_cfb_encrypt;  Required: False),
+    (Name: 'DES_ede3_ofb64_encrypt'; FuncPtr: @DES_ede3_ofb64_encrypt; Required: False),
+    (Name: 'DES_enc_read';          FuncPtr: @DES_enc_read;          Required: False),
+    (Name: 'DES_enc_write';         FuncPtr: @DES_enc_write;         Required: False),
+    (Name: 'DES_set_odd_parity';    FuncPtr: @DES_set_odd_parity;    Required: False),
+    (Name: 'DES_check_key_parity';  FuncPtr: @DES_check_key_parity;  Required: False),
+    (Name: 'DES_is_weak_key';       FuncPtr: @DES_is_weak_key;       Required: False),
+    (Name: 'DES_set_key';           FuncPtr: @DES_set_key;           Required: False),
+    (Name: 'DES_key_sched';         FuncPtr: @DES_key_sched;         Required: False),
+    (Name: 'DES_set_key_checked';   FuncPtr: @DES_set_key_checked;   Required: False),
+    (Name: 'DES_set_key_unchecked'; FuncPtr: @DES_set_key_unchecked; Required: False),
+    (Name: 'DES_string_to_key';     FuncPtr: @DES_string_to_key;     Required: False),
+    (Name: 'DES_string_to_2keys';   FuncPtr: @DES_string_to_2keys;   Required: False),
+    (Name: 'DES_cfb64_encrypt';     FuncPtr: @DES_cfb64_encrypt;     Required: False),
+    (Name: 'DES_ofb64_encrypt';     FuncPtr: @DES_ofb64_encrypt;     Required: False),
+    (Name: 'DES_pcbc_encrypt';      FuncPtr: @DES_pcbc_encrypt;      Required: False),
+    (Name: 'DES_quad_cksum';        FuncPtr: @DES_quad_cksum;        Required: False),
+    (Name: 'DES_random_key';        FuncPtr: @DES_random_key;        Required: False),
+    (Name: 'DES_encrypt1';          FuncPtr: @DES_encrypt1;          Required: False),
+    (Name: 'DES_encrypt2';          FuncPtr: @DES_encrypt2;          Required: False),
+    (Name: 'DES_encrypt3';          FuncPtr: @DES_encrypt3;          Required: False),
+    (Name: 'DES_decrypt3';          FuncPtr: @DES_decrypt3;          Required: False)
+  );
 
 function LoadDESFunctions(ALibHandle: THandle): Boolean;
 begin
   Result := False;
-  
+
   if ALibHandle = 0 then Exit;
-  
-  DES_options := GetProcAddress(ALibHandle, 'DES_options');
-  DES_ecb3_encrypt := GetProcAddress(ALibHandle, 'DES_ecb3_encrypt');
-  DES_crypt := GetProcAddress(ALibHandle, 'DES_crypt');
-  DES_fcrypt := GetProcAddress(ALibHandle, 'DES_fcrypt');
-  DES_ecb_encrypt := GetProcAddress(ALibHandle, 'DES_ecb_encrypt');
-  DES_ncbc_encrypt := GetProcAddress(ALibHandle, 'DES_ncbc_encrypt');
-  DES_xcbc_encrypt := GetProcAddress(ALibHandle, 'DES_xcbc_encrypt');
-  DES_cfb_encrypt := GetProcAddress(ALibHandle, 'DES_cfb_encrypt');
-  DES_ecb2_encrypt := GetProcAddress(ALibHandle, 'DES_ecb2_encrypt');
-  DES_ede2_cbc_encrypt := GetProcAddress(ALibHandle, 'DES_ede2_cbc_encrypt');
-  DES_ede2_cfb64_encrypt := GetProcAddress(ALibHandle, 'DES_ede2_cfb64_encrypt');
-  DES_ede2_ofb64_encrypt := GetProcAddress(ALibHandle, 'DES_ede2_ofb64_encrypt');
-  DES_ede3_cbc_encrypt := GetProcAddress(ALibHandle, 'DES_ede3_cbc_encrypt');
-  DES_ede3_cfb64_encrypt := GetProcAddress(ALibHandle, 'DES_ede3_cfb64_encrypt');
-  DES_ede3_cfb_encrypt := GetProcAddress(ALibHandle, 'DES_ede3_cfb_encrypt');
-  DES_ede3_ofb64_encrypt := GetProcAddress(ALibHandle, 'DES_ede3_ofb64_encrypt');
-  DES_enc_read := GetProcAddress(ALibHandle, 'DES_enc_read');
-  DES_enc_write := GetProcAddress(ALibHandle, 'DES_enc_write');
-  DES_set_odd_parity := GetProcAddress(ALibHandle, 'DES_set_odd_parity');
-  DES_check_key_parity := GetProcAddress(ALibHandle, 'DES_check_key_parity');
-  DES_is_weak_key := GetProcAddress(ALibHandle, 'DES_is_weak_key');
-  DES_set_key := GetProcAddress(ALibHandle, 'DES_set_key');
-  DES_key_sched := GetProcAddress(ALibHandle, 'DES_key_sched');
-  DES_set_key_checked := GetProcAddress(ALibHandle, 'DES_set_key_checked');
-  DES_set_key_unchecked := GetProcAddress(ALibHandle, 'DES_set_key_unchecked');
-  DES_string_to_key := GetProcAddress(ALibHandle, 'DES_string_to_key');
-  DES_string_to_2keys := GetProcAddress(ALibHandle, 'DES_string_to_2keys');
-  DES_cfb64_encrypt := GetProcAddress(ALibHandle, 'DES_cfb64_encrypt');
-  DES_ofb64_encrypt := GetProcAddress(ALibHandle, 'DES_ofb64_encrypt');
-  DES_pcbc_encrypt := GetProcAddress(ALibHandle, 'DES_pcbc_encrypt');
-  DES_quad_cksum := GetProcAddress(ALibHandle, 'DES_quad_cksum');
-  DES_random_key := GetProcAddress(ALibHandle, 'DES_random_key');
-  DES_encrypt1 := GetProcAddress(ALibHandle, 'DES_encrypt1');
-  DES_encrypt2 := GetProcAddress(ALibHandle, 'DES_encrypt2');
-  DES_encrypt3 := GetProcAddress(ALibHandle, 'DES_encrypt3');
-  DES_decrypt3 := GetProcAddress(ALibHandle, 'DES_decrypt3');
-  
-  GDESLoaded := True;
+
+  TOpenSSLLoader.LoadFunctions(ALibHandle, DES_FUNCTION_BINDINGS);
+  TOpenSSLLoader.SetModuleLoaded(osmDES, True);
   Result := True;
 end;
 
 procedure UnloadDESFunctions;
 begin
-  DES_options := nil;
-  DES_ecb3_encrypt := nil;
-  DES_crypt := nil;
-  DES_fcrypt := nil;
-  DES_ecb_encrypt := nil;
-  DES_ncbc_encrypt := nil;
-  DES_xcbc_encrypt := nil;
-  DES_cfb_encrypt := nil;
-  DES_ecb2_encrypt := nil;
-  DES_ede2_cbc_encrypt := nil;
-  DES_ede2_cfb64_encrypt := nil;
-  DES_ede2_ofb64_encrypt := nil;
-  DES_ede3_cbc_encrypt := nil;
-  DES_ede3_cfb64_encrypt := nil;
-  DES_ede3_cfb_encrypt := nil;
-  DES_ede3_ofb64_encrypt := nil;
-  DES_enc_read := nil;
-  DES_enc_write := nil;
-  DES_set_odd_parity := nil;
-  DES_check_key_parity := nil;
-  DES_is_weak_key := nil;
-  DES_set_key := nil;
-  DES_key_sched := nil;
-  DES_set_key_checked := nil;
-  DES_set_key_unchecked := nil;
-  DES_string_to_key := nil;
-  DES_string_to_2keys := nil;
-  DES_cfb64_encrypt := nil;
-  DES_ofb64_encrypt := nil;
-  DES_pcbc_encrypt := nil;
-  DES_quad_cksum := nil;
-  DES_random_key := nil;
-  DES_encrypt1 := nil;
-  DES_encrypt2 := nil;
-  DES_encrypt3 := nil;
-  DES_decrypt3 := nil;
-  
-  GDESLoaded := False;
+  TOpenSSLLoader.ClearFunctions(DES_FUNCTION_BINDINGS);
+  TOpenSSLLoader.SetModuleLoaded(osmDES, False);
 end;
 
 function IsDESLoaded: Boolean;
 begin
-  Result := GDESLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmDES);
 end;
 
 function DESEncrypt(const Data: TBytes; const Key: TBytes): TBytes;
@@ -312,7 +278,7 @@ var
 begin
   Result := nil;
   if (Length(Key) < 8) or not Assigned(DES_set_key_unchecked) or 
-     not Assigned(DES_ecb_encrypt) then Exit;
+    not Assigned(DES_ecb_encrypt) then Exit;
   
   Move(Key[0], cblock[0], 8);
   DES_set_key_unchecked(@cblock, @ks);
@@ -342,7 +308,7 @@ var
 begin
   Result := nil;
   if (Length(Key) < 8) or (Length(Data) mod 8 <> 0) or 
-     not Assigned(DES_set_key_unchecked) or not Assigned(DES_ecb_encrypt) then Exit;
+    not Assigned(DES_set_key_unchecked) or not Assigned(DES_ecb_encrypt) then Exit;
   
   Move(Key[0], cblock[0], 8);
   DES_set_key_unchecked(@cblock, @ks);
@@ -367,7 +333,7 @@ var
 begin
   Result := nil;
   if (Length(Key1) < 8) or (Length(Key2) < 8) or (Length(Key3) < 8) or
-     not Assigned(DES_set_key_unchecked) or not Assigned(DES_ecb3_encrypt) then Exit;
+    not Assigned(DES_set_key_unchecked) or not Assigned(DES_ecb3_encrypt) then Exit;
   
   Move(Key1[0], cblock1[0], 8);
   Move(Key2[0], cblock2[0], 8);
@@ -402,8 +368,8 @@ var
 begin
   Result := nil;
   if (Length(Key1) < 8) or (Length(Key2) < 8) or (Length(Key3) < 8) or
-     (Length(Data) mod 8 <> 0) or not Assigned(DES_set_key_unchecked) or 
-     not Assigned(DES_ecb3_encrypt) then Exit;
+    (Length(Data) mod 8 <> 0) or not Assigned(DES_set_key_unchecked) or 
+    not Assigned(DES_ecb3_encrypt) then Exit;
   
   Move(Key1[0], cblock1[0], 8);
   Move(Key2[0], cblock2[0], 8);

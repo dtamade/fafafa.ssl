@@ -5,9 +5,8 @@ program test_winssl_direct;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
-  fafafa.ssl.intf,
-  fafafa.ssl.winssl;
+  fafafa.ssl.base,
+  fafafa.ssl.winssl.lib;
 
 procedure TestWinSSLDirect;
 var

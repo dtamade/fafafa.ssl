@@ -89,7 +89,7 @@ type
   TCOMP_compress_block = function(ctx: PCOMP_CTX; outdata: PByte; olen: Integer;
                                   indata: PByte; ilen: Integer): Integer; cdecl;
   TCOMP_expand_block = function(ctx: PCOMP_CTX; outdata: PByte; olen: Integer;
-                               indata: PByte; ilen: Integer): Integer; cdecl;
+                              indata: PByte; ilen: Integer): Integer; cdecl;
   
   // 压缩方法获取函数
   TCOMP_zlib = function(): PCOMP_METHOD; cdecl;
@@ -127,9 +127,9 @@ type
   
   // 一次性压缩/解压函数
   TCOMP_compress = function(meth: PCOMP_METHOD; outdata: PByte; outlen: PLongWord;
-                           indata: PByte; inlen: LongWord): Integer; cdecl;
+                          indata: PByte; inlen: LongWord): Integer; cdecl;
   TCOMP_expand = function(meth: PCOMP_METHOD; outdata: PByte; outlen: PLongWord;
-                         indata: PByte; inlen: LongWord): Integer; cdecl;
+                        indata: PByte; inlen: LongWord): Integer; cdecl;
 
 var
   // COMP_METHOD 函数
@@ -369,8 +369,9 @@ begin
         if Level <> COMP_ZLIB_LEVEL_DEFAULT then
           COMP_zlib_set_level(Ctx, Level);
         
-        // TODO: 使用 Ctx 进行压缩
-        // 这里需要更复杂的流式压缩逻辑
+        // Note: TLS compression is deprecated due to CRIME attack vulnerability.
+        // Modern TLS (1.3) disables compression by default for security.
+        // This feature is intentionally left unimplemented.
         
       finally
         if Assigned(COMP_CTX_free) then

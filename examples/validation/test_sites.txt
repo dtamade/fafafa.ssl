@@ -1,0 +1,25 @@
+# fafafa.ssl 真实网站测试列表
+# 格式：URL [描述]
+
+https://www.google.com Google主页
+https://www.github.com GitHub主页
+https://api.github.com GitHub API
+https://www.cloudflare.com Cloudflare
+https://www.amazon.com Amazon
+https://www.microsoft.com Microsoft
+https://www.apple.com Apple
+https://www.mozilla.org Mozilla
+https://www.wikipedia.org Wikipedia
+https://www.reddit.com Reddit
+https://www.stackoverflow.com StackOverflow
+https://www.twitter.com Twitter
+https://www.facebook.com Facebook
+https://www.youtube.com YouTube
+https://www.linkedin.com LinkedIn
+https://www.netflix.com Netflix
+https://www.paypal.com PayPal
+https://www.spotify.com Spotify
+https://www.zoom.us Zoom
+https://www.slack.com Slack
+
+

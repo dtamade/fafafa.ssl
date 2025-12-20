@@ -68,14 +68,14 @@ type
   TUI_new_method = function(method: PUI_METHOD): PUI; cdecl;
   TUI_free = procedure(ui: PUI); cdecl;
   TUI_add_input_string = function(ui: PUI; prompt: PAnsiChar; flags: Integer;
-                                 result_buf: PAnsiChar; minsize: Integer; 
-                                 maxsize: Integer): Integer; cdecl;
+                                result_buf: PAnsiChar; minsize: Integer; 
+                                maxsize: Integer): Integer; cdecl;
   TUI_dup_input_string = function(ui: PUI; prompt: PAnsiChar; flags: Integer;
                                   result_buf: PAnsiChar; minsize: Integer;
                                   maxsize: Integer): Integer; cdecl;
   TUI_add_verify_string = function(ui: PUI; prompt: PAnsiChar; flags: Integer;
-                                   result_buf: PAnsiChar; minsize: Integer; 
-                                   maxsize: Integer; test_buf: PAnsiChar): Integer; cdecl;
+                                  result_buf: PAnsiChar; minsize: Integer; 
+                                  maxsize: Integer; test_buf: PAnsiChar): Integer; cdecl;
   TUI_dup_verify_string = function(ui: PUI; prompt: PAnsiChar; flags: Integer;
                                   result_buf: PAnsiChar; minsize: Integer;
                                   maxsize: Integer; test_buf: PAnsiChar): Integer; cdecl;
@@ -92,7 +92,7 @@ type
   
   // UI 构造函数
   TUI_construct_prompt = function(ui_method: PUI_METHOD; object_desc: PAnsiChar;
-                                 object_name: PAnsiChar): PAnsiChar; cdecl;
+                                object_name: PAnsiChar): PAnsiChar; cdecl;
   
   // UI 用户数据函数
   TUI_add_user_data = function(ui: PUI; user_data: Pointer): Pointer; cdecl;
@@ -124,12 +124,12 @@ type
   TUI_METHOD_set_reader = function(method: PUI_METHOD; reader: TUI_reader): Integer; cdecl;
   TUI_METHOD_set_closer = function(method: PUI_METHOD; closer: TUI_closer): Integer; cdecl;
   TUI_METHOD_set_data_duplicator = function(method: PUI_METHOD; 
-                                           duplicator: TUI_duplicator;
-                                           destructor_: TUI_destructor): Integer; cdecl;
+                                          duplicator: TUI_duplicator;
+                                          destructor_: TUI_destructor): Integer; cdecl;
   TUI_METHOD_set_prompt_constructor = function(method: PUI_METHOD;
                                               prompt_constructor: TUI_prompt_constructor): Integer; cdecl;
   TUI_METHOD_set_ex_data = function(method: PUI_METHOD; idx: Integer; 
-                                   data: Pointer): Integer; cdecl;
+                                  data: Pointer): Integer; cdecl;
   TUI_METHOD_get_ex_data = function(method: PUI_METHOD; idx: Integer): Pointer; cdecl;
   TUI_METHOD_get_opener = function(method: PUI_METHOD): TUI_opener; cdecl;
   TUI_METHOD_get_writer = function(method: PUI_METHOD): TUI_writer; cdecl;
@@ -150,7 +150,7 @@ type
   TUI_get_result_min_size = function(uis: PUI_STRING): Integer; cdecl;
   TUI_get_result_max_size = function(uis: PUI_STRING): Integer; cdecl;
   TUI_set_result = function(ui: PUI; uis: PUI_STRING; 
-                           const result_: PAnsiChar): Integer; cdecl;
+                          const result_: PAnsiChar): Integer; cdecl;
   TUI_set_result_ex = function(ui: PUI; uis: PUI_STRING;
                               const result_: PAnsiChar; len: Integer): Integer; cdecl;
   
@@ -159,8 +159,8 @@ type
                                     const prompt: PAnsiChar;
                                     verify: Integer): Integer; cdecl;
   TUI_UTIL_read_pw = function(buf: PAnsiChar; buff: PAnsiChar;
-                             size: Integer; const prompt: PAnsiChar;
-                             verify: Integer): Integer; cdecl;
+                            size: Integer; const prompt: PAnsiChar;
+                            verify: Integer): Integer; cdecl;
   TUI_UTIL_wrap_read_pem_callback = function(cb: Pointer; rwflag: Integer): PUI_METHOD; cdecl;
 
 var
@@ -509,7 +509,7 @@ begin
   Result := '';
   
   if not Assigned(UI_new_method) or not Assigned(UI_add_input_string) or
-     not Assigned(UI_process) or not Assigned(UI_free) then
+    not Assigned(UI_process) or not Assigned(UI_free) then
     Exit;
   
   // 获取或创建 UI 方法
@@ -533,7 +533,7 @@ begin
     
     // 添加输入字符串
     if UI_add_input_string(UI, PAnsiChar(PromptAnsi), UI_INPUT_FLAG_DEFAULT_PWD,
-                           @ResultBuf[0], MinLen, MaxLen) <> 0 then
+                          @ResultBuf[0], MinLen, MaxLen) <> 0 then
       Exit;
     
     // 处理 UI

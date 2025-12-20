@@ -9,15 +9,15 @@
 unit fafafa.ssl.openssl.api.evp;
 
 {$mode ObjFPC}{$H+}
-{$H+}
 
 interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;
 
 type
   // EVP structures
@@ -324,7 +324,11 @@ type
   TEVP_CIPHER_CTX_get_mode = function(const ctx: PEVP_CIPHER_CTX): Integer; cdecl;
   TEVP_CIPHER_CTX_get_type = function(const ctx: PEVP_CIPHER_CTX): Integer; cdecl;
   TEVP_CIPHER_CTX_get_nid = function(const ctx: PEVP_CIPHER_CTX): Integer; cdecl;
-  
+
+  // OpenSSL 3.x EVP_CIPHER fetch API
+  TEVP_CIPHER_fetch = function(ctx: POSSL_LIB_CTX; const algorithm: PAnsiChar; const properties: PAnsiChar): PEVP_CIPHER; cdecl;
+  TEVP_CIPHER_free = procedure(cipher: PEVP_CIPHER); cdecl;
+
   // Cipher algorithms
   TEVP_enc_null = function: PEVP_CIPHER; cdecl;
   TEVP_des_ecb = function: PEVP_CIPHER; cdecl;
@@ -548,7 +552,7 @@ type
   
   TEVP_PKEY_encapsulate_init = function(ctx: PEVP_PKEY_CTX; const params: POSSL_PARAM): Integer; cdecl;
   TEVP_PKEY_encapsulate = function(ctx: PEVP_PKEY_CTX; wrappedkey: PByte; var wrappedkeylen: NativeUInt; 
-                                   genkey: PByte; var genkeylen: NativeUInt): Integer; cdecl;
+                                  genkey: PByte; var genkeylen: NativeUInt): Integer; cdecl;
   TEVP_PKEY_decapsulate_init = function(ctx: PEVP_PKEY_CTX; const params: POSSL_PARAM): Integer; cdecl;
   TEVP_PKEY_decapsulate = function(ctx: PEVP_PKEY_CTX; unwrapped: PByte; var unwrappedlen: NativeUInt;
                                     const wrapped: PByte; wrappedlen: NativeUInt): Integer; cdecl;
@@ -587,7 +591,7 @@ type
   TEVP_RAND_CTX_free = procedure(ctx: PEVP_RAND_CTX); cdecl;
   TEVP_RAND_CTX_get0_rand = function(ctx: PEVP_RAND_CTX): PEVP_RAND; cdecl;
   TEVP_RAND_instantiate = function(ctx: PEVP_RAND_CTX; strength: Cardinal; prediction_resistance: Integer;
-                                   const addin: PByte; addin_len: NativeUInt; const params: POSSL_PARAM): Integer; cdecl;
+                                  const addin: PByte; addin_len: NativeUInt; const params: POSSL_PARAM): Integer; cdecl;
   TEVP_RAND_uninstantiate = function(ctx: PEVP_RAND_CTX): Integer; cdecl;
   TEVP_RAND_generate = function(ctx: PEVP_RAND_CTX; out_: PByte; outlen: NativeUInt; strength: Cardinal;
                                 prediction_resistance: Integer; const addin: PByte; addin_len: NativeUInt): Integer; cdecl;
@@ -623,13 +627,13 @@ type
   // Encode/Decode functions
   TEVP_EncodeInit = procedure(ctx: PEVP_ENCODE_CTX); cdecl;
   TEVP_EncodeUpdate = function(ctx: PEVP_ENCODE_CTX; out_: PByte; var outl: Integer; 
-                               const in_: PByte; inl: Integer): Integer; cdecl;
+                              const in_: PByte; inl: Integer): Integer; cdecl;
   TEVP_EncodeFinal = procedure(ctx: PEVP_ENCODE_CTX; out_: PByte; var outl: Integer); cdecl;
   TEVP_EncodeBlock = function(t: PByte; const f: PByte; n: Integer): Integer; cdecl;
   
   TEVP_DecodeInit = procedure(ctx: PEVP_ENCODE_CTX); cdecl;
   TEVP_DecodeUpdate = function(ctx: PEVP_ENCODE_CTX; out_: PByte; var outl: Integer; 
-                               const in_: PByte; inl: Integer): Integer; cdecl;
+                              const in_: PByte; inl: Integer): Integer; cdecl;
   TEVP_DecodeFinal = function(ctx: PEVP_ENCODE_CTX; out_: PByte; var outl: Integer): Integer; cdecl;
   TEVP_DecodeBlock = function(t: PByte; const f: PByte; n: Integer): Integer; cdecl;
   
@@ -724,6 +728,7 @@ var
   EVP_DigestUpdate: TEVP_DigestUpdate = nil;
   EVP_DigestFinal_ex: TEVP_DigestFinal_ex = nil;
   EVP_DigestFinalXOF: TEVP_DigestFinalXOF = nil;
+  EVP_Digest: TEVP_Digest = nil;
   
   // MD info functions
   EVP_MD_get_size: TEVP_MD_get_size = nil;
@@ -752,6 +757,11 @@ var
   EVP_EncryptInit_ex: TEVP_EncryptInit_ex = nil;
   EVP_EncryptUpdate: TEVP_EncryptUpdate = nil;
   EVP_EncryptFinal_ex: TEVP_EncryptFinal_ex = nil;
+  
+  // Generic Cipher functions
+  EVP_CipherInit_ex: TEVP_CipherInit_ex = nil;
+  EVP_CipherUpdate: TEVP_CipherUpdate = nil;
+  EVP_CipherFinal_ex: TEVP_CipherFinal_ex = nil;
   
   // Decryption functions
   EVP_DecryptInit_ex: TEVP_DecryptInit_ex = nil;
@@ -792,7 +802,11 @@ var
   EVP_camellia_256_cbc: TEVP_camellia_256_cbc = nil;
   
   EVP_get_cipherbyname: TEVP_get_cipherbyname = nil;
-  
+
+  // OpenSSL 3.x EVP_CIPHER fetch API
+  EVP_CIPHER_fetch: TEVP_CIPHER_fetch = nil;
+  EVP_CIPHER_free: TEVP_CIPHER_free = nil;
+
   // PKEY functions
   EVP_PKEY_new: TEVP_PKEY_new = nil;
   EVP_PKEY_new_mac_key: TEVP_PKEY_new_mac_key = nil;
@@ -846,238 +860,157 @@ implementation
 uses
   fafafa.ssl.openssl.api;
 
-var
-  GEVPLoaded: Boolean = False;
+const
+  // EVP function bindings for batch loading
+  EVP_BINDINGS: array[0..84] of TFunctionBinding = (
+    // MD Context functions
+    (Name: 'EVP_MD_CTX_new'; FuncPtr: @EVP_MD_CTX_new; Required: True),
+    (Name: 'EVP_MD_CTX_free'; FuncPtr: @EVP_MD_CTX_free; Required: True),
+    (Name: 'EVP_MD_CTX_reset'; FuncPtr: @EVP_MD_CTX_reset; Required: False),
+    // Digest functions
+    (Name: 'EVP_DigestInit_ex'; FuncPtr: @EVP_DigestInit_ex; Required: True),
+    (Name: 'EVP_DigestUpdate'; FuncPtr: @EVP_DigestUpdate; Required: True),
+    (Name: 'EVP_DigestFinal_ex'; FuncPtr: @EVP_DigestFinal_ex; Required: True),
+    (Name: 'EVP_DigestFinalXOF'; FuncPtr: @EVP_DigestFinalXOF; Required: False),
+    (Name: 'EVP_Digest'; FuncPtr: @EVP_Digest; Required: False),
+    // MD info functions
+    (Name: 'EVP_MD_get_size'; FuncPtr: @EVP_MD_get_size; Required: False),
+    (Name: 'EVP_MD_get_block_size'; FuncPtr: @EVP_MD_get_block_size; Required: False),
+    // MD algorithms
+    (Name: 'EVP_md5'; FuncPtr: @EVP_md5; Required: False),
+    (Name: 'EVP_sha1'; FuncPtr: @EVP_sha1; Required: False),
+    (Name: 'EVP_sha256'; FuncPtr: @EVP_sha256; Required: False),
+    (Name: 'EVP_sha384'; FuncPtr: @EVP_sha384; Required: False),
+    (Name: 'EVP_sha512'; FuncPtr: @EVP_sha512; Required: False),
+    (Name: 'EVP_blake2b512'; FuncPtr: @EVP_blake2b512; Required: False),
+    (Name: 'EVP_blake2s256'; FuncPtr: @EVP_blake2s256; Required: False),
+    (Name: 'EVP_get_digestbyname'; FuncPtr: @EVP_get_digestbyname; Required: False),
+    // OpenSSL 3.x EVP_MD fetch API
+    (Name: 'EVP_MD_fetch'; FuncPtr: @EVP_MD_fetch; Required: False),
+    (Name: 'EVP_MD_free'; FuncPtr: @EVP_MD_free; Required: False),
+    // Cipher Context functions
+    (Name: 'EVP_CIPHER_CTX_new'; FuncPtr: @EVP_CIPHER_CTX_new; Required: True),
+    (Name: 'EVP_CIPHER_CTX_free'; FuncPtr: @EVP_CIPHER_CTX_free; Required: True),
+    (Name: 'EVP_CIPHER_CTX_reset'; FuncPtr: @EVP_CIPHER_CTX_reset; Required: False),
+    // Encryption functions
+    (Name: 'EVP_EncryptInit_ex'; FuncPtr: @EVP_EncryptInit_ex; Required: False),
+    (Name: 'EVP_EncryptUpdate'; FuncPtr: @EVP_EncryptUpdate; Required: False),
+    (Name: 'EVP_EncryptFinal_ex'; FuncPtr: @EVP_EncryptFinal_ex; Required: False),
+    // Generic Cipher functions
+    (Name: 'EVP_CipherInit_ex'; FuncPtr: @EVP_CipherInit_ex; Required: False),
+    (Name: 'EVP_CipherUpdate'; FuncPtr: @EVP_CipherUpdate; Required: False),
+    (Name: 'EVP_CipherFinal_ex'; FuncPtr: @EVP_CipherFinal_ex; Required: False),
+    // Decryption functions
+    (Name: 'EVP_DecryptInit_ex'; FuncPtr: @EVP_DecryptInit_ex; Required: False),
+    (Name: 'EVP_DecryptUpdate'; FuncPtr: @EVP_DecryptUpdate; Required: False),
+    (Name: 'EVP_DecryptFinal_ex'; FuncPtr: @EVP_DecryptFinal_ex; Required: False),
+    // Cipher info functions
+    (Name: 'EVP_CIPHER_get_key_length'; FuncPtr: @EVP_CIPHER_get_key_length; Required: False),
+    (Name: 'EVP_CIPHER_get_iv_length'; FuncPtr: @EVP_CIPHER_get_iv_length; Required: False),
+    (Name: 'EVP_CIPHER_get_block_size'; FuncPtr: @EVP_CIPHER_get_block_size; Required: False),
+    // Cipher control functions
+    (Name: 'EVP_CIPHER_CTX_ctrl'; FuncPtr: @EVP_CIPHER_CTX_ctrl; Required: False),
+    (Name: 'EVP_CIPHER_CTX_set_key_length'; FuncPtr: @EVP_CIPHER_CTX_set_key_length; Required: False),
+    (Name: 'EVP_CIPHER_CTX_set_padding'; FuncPtr: @EVP_CIPHER_CTX_set_padding; Required: False),
+    // Cipher algorithms - AES
+    (Name: 'EVP_aes_128_cbc'; FuncPtr: @EVP_aes_128_cbc; Required: False),
+    (Name: 'EVP_aes_128_gcm'; FuncPtr: @EVP_aes_128_gcm; Required: False),
+    (Name: 'EVP_aes_192_gcm'; FuncPtr: @EVP_aes_192_gcm; Required: False),
+    (Name: 'EVP_aes_256_cbc'; FuncPtr: @EVP_aes_256_cbc; Required: False),
+    (Name: 'EVP_aes_256_gcm'; FuncPtr: @EVP_aes_256_gcm; Required: False),
+    (Name: 'EVP_aes_128_ccm'; FuncPtr: @EVP_aes_128_ccm; Required: False),
+    (Name: 'EVP_aes_192_ccm'; FuncPtr: @EVP_aes_192_ccm; Required: False),
+    (Name: 'EVP_aes_256_ccm'; FuncPtr: @EVP_aes_256_ccm; Required: False),
+    (Name: 'EVP_aes_128_xts'; FuncPtr: @EVP_aes_128_xts; Required: False),
+    (Name: 'EVP_aes_256_xts'; FuncPtr: @EVP_aes_256_xts; Required: False),
+    (Name: 'EVP_aes_128_ocb'; FuncPtr: @EVP_aes_128_ocb; Required: False),
+    (Name: 'EVP_aes_192_ocb'; FuncPtr: @EVP_aes_192_ocb; Required: False),
+    (Name: 'EVP_aes_256_ocb'; FuncPtr: @EVP_aes_256_ocb; Required: False),
+    // Cipher algorithms - ChaCha
+    (Name: 'EVP_chacha20'; FuncPtr: @EVP_chacha20; Required: False),
+    (Name: 'EVP_chacha20_poly1305'; FuncPtr: @EVP_chacha20_poly1305; Required: False),
+    // Cipher algorithms - Camellia
+    (Name: 'EVP_camellia_128_ecb'; FuncPtr: @EVP_camellia_128_ecb; Required: False),
+    (Name: 'EVP_camellia_128_cbc'; FuncPtr: @EVP_camellia_128_cbc; Required: False),
+    (Name: 'EVP_camellia_256_ecb'; FuncPtr: @EVP_camellia_256_ecb; Required: False),
+    (Name: 'EVP_camellia_256_cbc'; FuncPtr: @EVP_camellia_256_cbc; Required: False),
+    (Name: 'EVP_get_cipherbyname'; FuncPtr: @EVP_get_cipherbyname; Required: False),
+    // OpenSSL 3.x EVP_CIPHER fetch API
+    (Name: 'EVP_CIPHER_fetch'; FuncPtr: @EVP_CIPHER_fetch; Required: False),
+    (Name: 'EVP_CIPHER_free'; FuncPtr: @EVP_CIPHER_free; Required: False),
+    // PKEY functions
+    (Name: 'EVP_PKEY_new'; FuncPtr: @EVP_PKEY_new; Required: False),
+    (Name: 'EVP_PKEY_new_mac_key'; FuncPtr: @EVP_PKEY_new_mac_key; Required: False),
+    (Name: 'EVP_PKEY_free'; FuncPtr: @EVP_PKEY_free; Required: False),
+    (Name: 'EVP_PKEY_up_ref'; FuncPtr: @EVP_PKEY_up_ref; Required: False),
+    (Name: 'EVP_PKEY_assign'; FuncPtr: @EVP_PKEY_assign; Required: False),
+    (Name: 'EVP_PKEY_set1_RSA'; FuncPtr: @EVP_PKEY_set1_RSA; Required: False),
+    (Name: 'EVP_PKEY_get_id'; FuncPtr: @EVP_PKEY_get_id; Required: False),
+    (Name: 'EVP_PKEY_get_bits'; FuncPtr: @EVP_PKEY_get_bits; Required: False),
+    (Name: 'EVP_PKEY_get_size'; FuncPtr: @EVP_PKEY_get_size; Required: False),
+    // PKEY context functions
+    (Name: 'EVP_PKEY_CTX_new'; FuncPtr: @EVP_PKEY_CTX_new; Required: False),
+    (Name: 'EVP_PKEY_CTX_new_id'; FuncPtr: @EVP_PKEY_CTX_new_id; Required: False),
+    (Name: 'EVP_PKEY_CTX_free'; FuncPtr: @EVP_PKEY_CTX_free; Required: False),
+    (Name: 'EVP_PKEY_CTX_ctrl'; FuncPtr: @EVP_PKEY_CTX_ctrl; Required: False),
+    // PKEY key generation
+    (Name: 'EVP_PKEY_keygen_init'; FuncPtr: @EVP_PKEY_keygen_init; Required: False),
+    (Name: 'EVP_PKEY_keygen'; FuncPtr: @EVP_PKEY_keygen; Required: False),
+    // PKEY signing
+    (Name: 'EVP_PKEY_sign_init'; FuncPtr: @EVP_PKEY_sign_init; Required: False),
+    (Name: 'EVP_PKEY_sign'; FuncPtr: @EVP_PKEY_sign; Required: False),
+    (Name: 'EVP_PKEY_verify_init'; FuncPtr: @EVP_PKEY_verify_init; Required: False),
+    (Name: 'EVP_PKEY_verify'; FuncPtr: @EVP_PKEY_verify; Required: False),
+    // Digest signing/verification
+    (Name: 'EVP_DigestSignInit'; FuncPtr: @EVP_DigestSignInit; Required: False),
+    (Name: 'EVP_DigestSignUpdate'; FuncPtr: @EVP_DigestSignUpdate; Required: False),
+    (Name: 'EVP_DigestSignFinal'; FuncPtr: @EVP_DigestSignFinal; Required: False),
+    (Name: 'EVP_DigestVerifyInit'; FuncPtr: @EVP_DigestVerifyInit; Required: False),
+    (Name: 'EVP_DigestVerifyUpdate'; FuncPtr: @EVP_DigestVerifyUpdate; Required: False),
+    (Name: 'EVP_DigestVerifyFinal'; FuncPtr: @EVP_DigestVerifyFinal; Required: False)
+  );
 
 function LoadEVP(ALibHandle: THandle): Boolean;
 begin
   Result := False;
-  
+
   if ALibHandle = 0 then Exit;
-  if GEVPLoaded then Exit(True);
-  
-  // Load MD Context functions
-  EVP_MD_CTX_new := TEVP_MD_CTX_new(GetProcAddress(ALibHandle, 'EVP_MD_CTX_new'));
-  EVP_MD_CTX_free := TEVP_MD_CTX_free(GetProcAddress(ALibHandle, 'EVP_MD_CTX_free'));
-  EVP_MD_CTX_reset := TEVP_MD_CTX_reset(GetProcAddress(ALibHandle, 'EVP_MD_CTX_reset'));
-  
-  // Load Digest functions
-  EVP_DigestInit_ex := TEVP_DigestInit_ex(GetProcAddress(ALibHandle, 'EVP_DigestInit_ex'));
-  EVP_DigestUpdate := TEVP_DigestUpdate(GetProcAddress(ALibHandle, 'EVP_DigestUpdate'));
-  EVP_DigestFinal_ex := TEVP_DigestFinal_ex(GetProcAddress(ALibHandle, 'EVP_DigestFinal_ex'));
-  EVP_DigestFinalXOF := TEVP_DigestFinalXOF(GetProcAddress(ALibHandle, 'EVP_DigestFinalXOF'));
-  
-  // Load MD info functions
-  EVP_MD_get_size := TEVP_MD_get_size(GetProcAddress(ALibHandle, 'EVP_MD_get_size'));
-  EVP_MD_get_block_size := TEVP_MD_get_block_size(GetProcAddress(ALibHandle, 'EVP_MD_get_block_size'));
-  
-  // Load MD algorithms
-  EVP_md5 := TEVP_md5(GetProcAddress(ALibHandle, 'EVP_md5'));
-  EVP_sha1 := TEVP_sha1(GetProcAddress(ALibHandle, 'EVP_sha1'));
-  EVP_sha256 := TEVP_sha256(GetProcAddress(ALibHandle, 'EVP_sha256'));
-  EVP_sha384 := TEVP_sha384(GetProcAddress(ALibHandle, 'EVP_sha384'));
-  EVP_sha512 := TEVP_sha512(GetProcAddress(ALibHandle, 'EVP_sha512'));
-  EVP_blake2b512 := TEVP_blake2b512(GetProcAddress(ALibHandle, 'EVP_blake2b512'));
-  EVP_blake2s256 := TEVP_blake2s256(GetProcAddress(ALibHandle, 'EVP_blake2s256'));
-  EVP_get_digestbyname := TEVP_get_digestbyname(GetProcAddress(ALibHandle, 'EVP_get_digestbyname'));
-  
-  // Load OpenSSL 3.x EVP_MD fetch API (optional for 3.x compatibility)
-  EVP_MD_fetch := TEVP_MD_fetch(GetProcAddress(ALibHandle, 'EVP_MD_fetch'));
-  EVP_MD_free := TEVP_MD_free(GetProcAddress(ALibHandle, 'EVP_MD_free'));
-  
-  // Load Cipher Context functions
-  EVP_CIPHER_CTX_new := TEVP_CIPHER_CTX_new(GetProcAddress(ALibHandle, 'EVP_CIPHER_CTX_new'));
-  EVP_CIPHER_CTX_free := TEVP_CIPHER_CTX_free(GetProcAddress(ALibHandle, 'EVP_CIPHER_CTX_free'));
-  EVP_CIPHER_CTX_reset := TEVP_CIPHER_CTX_reset(GetProcAddress(ALibHandle, 'EVP_CIPHER_CTX_reset'));
-  
-  // Load Encryption functions
-  EVP_EncryptInit_ex := TEVP_EncryptInit_ex(GetProcAddress(ALibHandle, 'EVP_EncryptInit_ex'));
-  EVP_EncryptUpdate := TEVP_EncryptUpdate(GetProcAddress(ALibHandle, 'EVP_EncryptUpdate'));
-  EVP_EncryptFinal_ex := TEVP_EncryptFinal_ex(GetProcAddress(ALibHandle, 'EVP_EncryptFinal_ex'));
-  
-  // Load Decryption functions
-  EVP_DecryptInit_ex := TEVP_DecryptInit_ex(GetProcAddress(ALibHandle, 'EVP_DecryptInit_ex'));
-  EVP_DecryptUpdate := TEVP_DecryptUpdate(GetProcAddress(ALibHandle, 'EVP_DecryptUpdate'));
-  EVP_DecryptFinal_ex := TEVP_DecryptFinal_ex(GetProcAddress(ALibHandle, 'EVP_DecryptFinal_ex'));
-  
-  // Load Cipher info functions
-  EVP_CIPHER_get_key_length := TEVP_CIPHER_get_key_length(GetProcAddress(ALibHandle, 'EVP_CIPHER_get_key_length'));
-  EVP_CIPHER_get_iv_length := TEVP_CIPHER_get_iv_length(GetProcAddress(ALibHandle, 'EVP_CIPHER_get_iv_length'));
-  EVP_CIPHER_get_block_size := TEVP_CIPHER_get_block_size(GetProcAddress(ALibHandle, 'EVP_CIPHER_get_block_size'));
-  
-  // Load Cipher control functions
-  EVP_CIPHER_CTX_ctrl := TEVP_CIPHER_CTX_ctrl(GetProcAddress(ALibHandle, 'EVP_CIPHER_CTX_ctrl'));
-  EVP_CIPHER_CTX_set_key_length := TEVP_CIPHER_CTX_set_key_length(GetProcAddress(ALibHandle, 'EVP_CIPHER_CTX_set_key_length'));
-  EVP_CIPHER_CTX_set_padding := TEVP_CIPHER_CTX_set_padding(GetProcAddress(ALibHandle, 'EVP_CIPHER_CTX_set_padding'));
-  
-  // Load Cipher algorithms
-  EVP_aes_128_cbc := TEVP_aes_128_cbc(GetProcAddress(ALibHandle, 'EVP_aes_128_cbc'));
-  EVP_aes_128_gcm := TEVP_aes_128_gcm(GetProcAddress(ALibHandle, 'EVP_aes_128_gcm'));
-  EVP_aes_192_gcm := TEVP_aes_192_gcm(GetProcAddress(ALibHandle, 'EVP_aes_192_gcm'));
-  EVP_aes_256_cbc := TEVP_aes_256_cbc(GetProcAddress(ALibHandle, 'EVP_aes_256_cbc'));
-  EVP_aes_256_gcm := TEVP_aes_256_gcm(GetProcAddress(ALibHandle, 'EVP_aes_256_gcm'));
-  EVP_aes_128_ccm := TEVP_aes_128_ccm(GetProcAddress(ALibHandle, 'EVP_aes_128_ccm'));
-  EVP_aes_192_ccm := TEVP_aes_192_ccm(GetProcAddress(ALibHandle, 'EVP_aes_192_ccm'));
-  EVP_aes_256_ccm := TEVP_aes_256_ccm(GetProcAddress(ALibHandle, 'EVP_aes_256_ccm'));
-  EVP_aes_128_xts := TEVP_aes_128_xts(GetProcAddress(ALibHandle, 'EVP_aes_128_xts'));
-  EVP_aes_256_xts := TEVP_aes_256_xts(GetProcAddress(ALibHandle, 'EVP_aes_256_xts'));
-  EVP_aes_128_ocb := TEVP_aes_128_ocb(GetProcAddress(ALibHandle, 'EVP_aes_128_ocb'));
-  EVP_aes_192_ocb := TEVP_aes_192_ocb(GetProcAddress(ALibHandle, 'EVP_aes_192_ocb'));
-  EVP_aes_256_ocb := TEVP_aes_256_ocb(GetProcAddress(ALibHandle, 'EVP_aes_256_ocb'));
-  EVP_chacha20 := TEVP_chacha20(GetProcAddress(ALibHandle, 'EVP_chacha20'));
-  EVP_chacha20_poly1305 := TEVP_chacha20_poly1305(GetProcAddress(ALibHandle, 'EVP_chacha20_poly1305'));
-  
-  // Load Camellia algorithms
-  EVP_camellia_128_ecb := TEVP_camellia_128_ecb(GetProcAddress(ALibHandle, 'EVP_camellia_128_ecb'));
-  EVP_camellia_128_cbc := TEVP_camellia_128_cbc(GetProcAddress(ALibHandle, 'EVP_camellia_128_cbc'));
-  EVP_camellia_256_ecb := TEVP_camellia_256_ecb(GetProcAddress(ALibHandle, 'EVP_camellia_256_ecb'));
-  EVP_camellia_256_cbc := TEVP_camellia_256_cbc(GetProcAddress(ALibHandle, 'EVP_camellia_256_cbc'));
-  
-  EVP_get_cipherbyname := TEVP_get_cipherbyname(GetProcAddress(ALibHandle, 'EVP_get_cipherbyname'));
-  
-  // Load PKEY functions
-  EVP_PKEY_new := TEVP_PKEY_new(GetProcAddress(ALibHandle, 'EVP_PKEY_new'));
-  EVP_PKEY_new_mac_key := TEVP_PKEY_new_mac_key(GetProcAddress(ALibHandle, 'EVP_PKEY_new_mac_key'));
-  EVP_PKEY_free := TEVP_PKEY_free(GetProcAddress(ALibHandle, 'EVP_PKEY_free'));
-  EVP_PKEY_up_ref := TEVP_PKEY_up_ref(GetProcAddress(ALibHandle, 'EVP_PKEY_up_ref'));
-  EVP_PKEY_assign := TEVP_PKEY_assign(GetProcAddress(ALibHandle, 'EVP_PKEY_assign'));
-  EVP_PKEY_set1_RSA := TEVP_PKEY_set1_RSA(GetProcAddress(ALibHandle, 'EVP_PKEY_set1_RSA'));
-  EVP_PKEY_get_id := TEVP_PKEY_get_id(GetProcAddress(ALibHandle, 'EVP_PKEY_get_id'));
-  EVP_PKEY_id := EVP_PKEY_get_id;  // Alias
-  EVP_PKEY_get_bits := TEVP_PKEY_get_bits(GetProcAddress(ALibHandle, 'EVP_PKEY_get_bits'));
-  EVP_PKEY_get_size := TEVP_PKEY_get_size(GetProcAddress(ALibHandle, 'EVP_PKEY_get_size'));
-  
-  // Load PKEY context functions
-  EVP_PKEY_CTX_new := TEVP_PKEY_CTX_new(GetProcAddress(ALibHandle, 'EVP_PKEY_CTX_new'));
-  EVP_PKEY_CTX_new_id := TEVP_PKEY_CTX_new_id(GetProcAddress(ALibHandle, 'EVP_PKEY_CTX_new_id'));
-  EVP_PKEY_CTX_free := TEVP_PKEY_CTX_free(GetProcAddress(ALibHandle, 'EVP_PKEY_CTX_free'));
-  EVP_PKEY_CTX_ctrl := TEVP_PKEY_CTX_ctrl(GetProcAddress(ALibHandle, 'EVP_PKEY_CTX_ctrl'));
-  
-  // Load PKEY key generation
-  EVP_PKEY_keygen_init := TEVP_PKEY_keygen_init(GetProcAddress(ALibHandle, 'EVP_PKEY_keygen_init'));
-  EVP_PKEY_keygen := TEVP_PKEY_keygen(GetProcAddress(ALibHandle, 'EVP_PKEY_keygen'));
-  
-  // Load PKEY signing
-  EVP_PKEY_sign_init := TEVP_PKEY_sign_init(GetProcAddress(ALibHandle, 'EVP_PKEY_sign_init'));
-  EVP_PKEY_sign := TEVP_PKEY_sign(GetProcAddress(ALibHandle, 'EVP_PKEY_sign'));
-  EVP_PKEY_verify_init := TEVP_PKEY_verify_init(GetProcAddress(ALibHandle, 'EVP_PKEY_verify_init'));
-  EVP_PKEY_verify := TEVP_PKEY_verify(GetProcAddress(ALibHandle, 'EVP_PKEY_verify'));
-  
-  // Load Digest signing/verification
-  EVP_DigestSignInit := TEVP_DigestSignInit(GetProcAddress(ALibHandle, 'EVP_DigestSignInit'));
-  EVP_DigestSignUpdate := TEVP_DigestSignUpdate(GetProcAddress(ALibHandle, 'EVP_DigestSignUpdate'));
-  EVP_DigestSignFinal := TEVP_DigestSignFinal(GetProcAddress(ALibHandle, 'EVP_DigestSignFinal'));
-  EVP_DigestVerifyInit := TEVP_DigestVerifyInit(GetProcAddress(ALibHandle, 'EVP_DigestVerifyInit'));
-  EVP_DigestVerifyUpdate := TEVP_DigestVerifyUpdate(GetProcAddress(ALibHandle, 'EVP_DigestVerifyUpdate'));
-  EVP_DigestVerifyFinal := TEVP_DigestVerifyFinal(GetProcAddress(ALibHandle, 'EVP_DigestVerifyFinal'));
-  
-  GEVPLoaded := Assigned(EVP_MD_CTX_new) and Assigned(EVP_CIPHER_CTX_new);
-  Result := GEVPLoaded;
+  if TOpenSSLLoader.IsModuleLoaded(osmEVP) then Exit(True);
+
+  // Batch load all EVP functions
+  TOpenSSLLoader.LoadFunctions(ALibHandle, EVP_BINDINGS);
+
+  // Set EVP_PKEY_id alias
+  EVP_PKEY_id := EVP_PKEY_get_id;
+
+  // Fallback for GCM ciphers using EVP_CIPHER_fetch if direct load fails
+  if not Assigned(EVP_aes_128_gcm) and Assigned(EVP_CIPHER_fetch) then
+    EVP_aes_128_gcm := TEVP_aes_128_gcm(EVP_CIPHER_fetch(nil, 'AES-128-GCM', nil));
+  if not Assigned(EVP_aes_192_gcm) and Assigned(EVP_CIPHER_fetch) then
+    EVP_aes_192_gcm := TEVP_aes_192_gcm(EVP_CIPHER_fetch(nil, 'AES-192-GCM', nil));
+  if not Assigned(EVP_aes_256_gcm) and Assigned(EVP_CIPHER_fetch) then
+    EVP_aes_256_gcm := TEVP_aes_256_gcm(EVP_CIPHER_fetch(nil, 'AES-256-GCM', nil));
+
+  TOpenSSLLoader.SetModuleLoaded(osmEVP, Assigned(EVP_MD_CTX_new) and Assigned(EVP_CIPHER_CTX_new));
+  Result := TOpenSSLLoader.IsModuleLoaded(osmEVP);
 end;
 
 procedure UnloadEVP;
 begin
-  if not GEVPLoaded then Exit;
-  
-  // Clear MD Context functions
-  EVP_MD_CTX_new := nil;
-  EVP_MD_CTX_free := nil;
-  EVP_MD_CTX_reset := nil;
-  
-  // Clear Digest functions
-  EVP_DigestInit_ex := nil;
-  EVP_DigestUpdate := nil;
-  EVP_DigestFinal_ex := nil;
-  EVP_DigestFinalXOF := nil;
-  
-  // Clear MD info functions
-  EVP_MD_get_size := nil;
-  EVP_MD_get_block_size := nil;
-  
-  // Clear MD algorithms
-  EVP_md5 := nil;
-  EVP_sha1 := nil;
-  EVP_sha256 := nil;
-  EVP_sha384 := nil;
-  EVP_sha512 := nil;
-  EVP_blake2b512 := nil;
-  EVP_blake2s256 := nil;
-  EVP_get_digestbyname := nil;
-  
-  // Clear OpenSSL 3.x EVP_MD fetch API
-  EVP_MD_fetch := nil;
-  EVP_MD_free := nil;
-  
-  // Clear Cipher Context functions
-  EVP_CIPHER_CTX_new := nil;
-  EVP_CIPHER_CTX_free := nil;
-  EVP_CIPHER_CTX_reset := nil;
-  
-  // Clear Encryption functions
-  EVP_EncryptInit_ex := nil;
-  EVP_EncryptUpdate := nil;
-  EVP_EncryptFinal_ex := nil;
-  
-  // Clear Decryption functions
-  EVP_DecryptInit_ex := nil;
-  EVP_DecryptUpdate := nil;
-  EVP_DecryptFinal_ex := nil;
-  
-  // Clear Cipher info functions
-  EVP_CIPHER_get_key_length := nil;
-  EVP_CIPHER_get_iv_length := nil;
-  EVP_CIPHER_get_block_size := nil;
-  
-  // Clear Cipher algorithms
-  EVP_aes_128_cbc := nil;
-  EVP_aes_256_cbc := nil;
-  EVP_camellia_128_ecb := nil;
-  EVP_camellia_128_cbc := nil;
-  EVP_camellia_256_ecb := nil;
-  EVP_camellia_256_cbc := nil;
-  EVP_get_cipherbyname := nil;
-  
-  // Clear PKEY functions
-  EVP_PKEY_new := nil;
-  EVP_PKEY_new_mac_key := nil;
-  EVP_PKEY_free := nil;
-  EVP_PKEY_up_ref := nil;
-  EVP_PKEY_assign := nil;
-  EVP_PKEY_set1_RSA := nil;
-  EVP_PKEY_get_id := nil;
-  EVP_PKEY_get_bits := nil;
-  EVP_PKEY_get_size := nil;
-  
-  // Clear PKEY context functions
-  EVP_PKEY_CTX_new := nil;
-  EVP_PKEY_CTX_new_id := nil;
-  EVP_PKEY_CTX_free := nil;
-  EVP_PKEY_CTX_ctrl := nil;
-  
-  // Clear PKEY key generation
-  EVP_PKEY_keygen_init := nil;
-  EVP_PKEY_keygen := nil;
-  
-  // Clear PKEY signing
-  EVP_PKEY_sign_init := nil;
-  EVP_PKEY_sign := nil;
-  EVP_PKEY_verify_init := nil;
-  EVP_PKEY_verify := nil;
-  
-  // Clear Digest signing/verification
-  EVP_DigestSignInit := nil;
-  EVP_DigestSignUpdate := nil;
-  EVP_DigestSignFinal := nil;
-  EVP_DigestVerifyInit := nil;
-  EVP_DigestVerifyUpdate := nil;
-  EVP_DigestVerifyFinal := nil;
-  
-  GEVPLoaded := False;
+  if not TOpenSSLLoader.IsModuleLoaded(osmEVP) then Exit;
+
+  // Batch clear all EVP functions
+  TOpenSSLLoader.ClearFunctions(EVP_BINDINGS);
+
+  // Clear alias
+  EVP_PKEY_id := nil;
+
+  TOpenSSLLoader.SetModuleLoaded(osmEVP, False);
 end;
 
 function IsEVPLoaded: Boolean;
 begin
-  Result := GEVPLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmEVP);
 end;
 
 function EVP_MD_size(const md: PEVP_MD): Integer;

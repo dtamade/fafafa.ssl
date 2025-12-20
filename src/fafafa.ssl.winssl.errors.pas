@@ -287,10 +287,10 @@ const
 begin
   Result := Format('[%s] %s | %s | Code: 0x%x | %s',
     [FormatDateTime('yyyy-mm-dd hh:nn:ss', aErrorInfo.Timestamp),
-     LEVEL_STR[aErrorInfo.Level],
-     aErrorInfo.Context,
-     aErrorInfo.Code,
-     aErrorInfo.Message]);
+    LEVEL_STR[aErrorInfo.Level],
+    aErrorInfo.Context,
+    aErrorInfo.Code,
+    aErrorInfo.Message]);
 end;
 
 { 全局错误日志函数 }

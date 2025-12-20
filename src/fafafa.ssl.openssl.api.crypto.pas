@@ -511,23 +511,40 @@ function IsOpenSSLCryptoLoaded: Boolean;
 implementation
 
 uses
-  fafafa.ssl.openssl.api.core;  // For shared library handles
+  fafafa.ssl.openssl.api.core,  // For shared library handles
+  fafafa.ssl.openssl.loader;    // For TOpenSSLLoader batch loading
+
+const
+  { Crypto function bindings for batch loading }
+  CRYPTO_BINDINGS: array[0..1] of TFunctionBinding = (
+    (Name: 'CRYPTO_free';   FuncPtr: @CRYPTO_free;   Required: False),
+    (Name: 'OPENSSL_free';  FuncPtr: @OPENSSL_free;  Required: False)
+  );
 
 procedure LoadOpenSSLCrypto;
+var
+  LLib: TLibHandle;
 begin
-  // This function would load all the EVP function pointers
-  // Similar to LoadOpenSSLCore but for crypto functions
-  // Load CRYPTO_free from core module
-  if GetCryptoLibHandle <> 0 then
+  // Use the crypto library handle from core module
+  LLib := GetCryptoLibHandle;
+  if LLib = NilHandle then
   begin
-    CRYPTO_free := TCRYPTO_free(GetProcAddress(GetCryptoLibHandle, 'CRYPTO_free'));
-    OPENSSL_free := TOPENSSL_free(GetProcAddress(GetCryptoLibHandle, 'OPENSSL_free'));
+    // Try to load core first
+    LoadOpenSSLCore;
+    LLib := GetCryptoLibHandle;
   end;
+
+  if LLib = NilHandle then
+    Exit;
+
+  // Load crypto functions using batch loading
+  TOpenSSLLoader.LoadFunctions(LLib, CRYPTO_BINDINGS);
 end;
 
 procedure UnloadOpenSSLCrypto;
 begin
-  // Reset all function pointers
+  // Clear all function pointers using batch unloading
+  TOpenSSLLoader.ClearFunctions(CRYPTO_BINDINGS);
 end;
 
 function IsOpenSSLCryptoLoaded: Boolean;

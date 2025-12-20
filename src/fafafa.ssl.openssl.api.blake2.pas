@@ -9,15 +9,15 @@
 unit fafafa.ssl.openssl.api.blake2;
 
 {$mode ObjFPC}{$H+}
-{$H+}
 
 interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;
 
 const
   BLAKE2B_BLOCKBYTES = 128;
@@ -95,7 +95,7 @@ type
   // BLAKE2b functions
   TBLAKE2b_Init = function(ctx: PBLAKE2B_CTX; outlen: NativeUInt): Integer; cdecl;
   TBLAKE2b_Init_key = function(ctx: PBLAKE2B_CTX; outlen: NativeUInt; 
-                               const key: Pointer; keylen: NativeUInt): Integer; cdecl;
+                              const key: Pointer; keylen: NativeUInt): Integer; cdecl;
   TBLAKE2b_Init_param = function(ctx: PBLAKE2B_CTX; const P: PBLAKE2B_PARAM): Integer; cdecl;
   TBLAKE2b_Update = function(ctx: PBLAKE2B_CTX; const data: Pointer; datalen: NativeUInt): Integer; cdecl;
   TBLAKE2b_Final = function(ctx: PBLAKE2B_CTX; out_: Pointer; outlen: NativeUInt): Integer; cdecl;
@@ -105,7 +105,7 @@ type
   // BLAKE2s functions
   TBLAKE2s_Init = function(ctx: PBLAKE2S_CTX; outlen: NativeUInt): Integer; cdecl;
   TBLAKE2s_Init_key = function(ctx: PBLAKE2S_CTX; outlen: NativeUInt; 
-                               const key: Pointer; keylen: NativeUInt): Integer; cdecl;
+                              const key: Pointer; keylen: NativeUInt): Integer; cdecl;
   TBLAKE2s_Init_param = function(ctx: PBLAKE2S_CTX; const P: PBLAKE2S_PARAM): Integer; cdecl;
   TBLAKE2s_Update = function(ctx: PBLAKE2S_CTX; const data: Pointer; datalen: NativeUInt): Integer; cdecl;
   TBLAKE2s_Final = function(ctx: PBLAKE2S_CTX; out_: Pointer; outlen: NativeUInt): Integer; cdecl;
@@ -152,61 +152,51 @@ implementation
 uses
   fafafa.ssl.openssl.api;
 
-var
-  GBLAKE2Loaded: Boolean = False;
+const
+  { BLAKE2 函数绑定数组 }
+  BLAKE2_BINDINGS: array[0..13] of TFunctionBinding = (
+    // BLAKE2b functions
+    (Name: 'BLAKE2b_Init';       FuncPtr: @BLAKE2b_Init;       Required: False),
+    (Name: 'BLAKE2b_Init_key';   FuncPtr: @BLAKE2b_Init_key;   Required: False),
+    (Name: 'BLAKE2b_Init_param'; FuncPtr: @BLAKE2b_Init_param; Required: False),
+    (Name: 'BLAKE2b_Update';     FuncPtr: @BLAKE2b_Update;     Required: False),
+    (Name: 'BLAKE2b_Final';      FuncPtr: @BLAKE2b_Final;      Required: False),
+    (Name: 'BLAKE2b';            FuncPtr: @BLAKE2b;            Required: False),
+    (Name: 'BLAKE2b_mac_Init';   FuncPtr: @BLAKE2b_mac_Init;   Required: False),
+    // BLAKE2s functions
+    (Name: 'BLAKE2s_Init';       FuncPtr: @BLAKE2s_Init;       Required: False),
+    (Name: 'BLAKE2s_Init_key';   FuncPtr: @BLAKE2s_Init_key;   Required: False),
+    (Name: 'BLAKE2s_Init_param'; FuncPtr: @BLAKE2s_Init_param; Required: False),
+    (Name: 'BLAKE2s_Update';     FuncPtr: @BLAKE2s_Update;     Required: False),
+    (Name: 'BLAKE2s_Final';      FuncPtr: @BLAKE2s_Final;      Required: False),
+    (Name: 'BLAKE2s';            FuncPtr: @BLAKE2s;            Required: False),
+    (Name: 'BLAKE2s_mac_Init';   FuncPtr: @BLAKE2s_mac_Init;   Required: False)
+  );
 
 function LoadBLAKE2Functions(ALibHandle: THandle): Boolean;
 begin
   Result := False;
-  
+
   if ALibHandle = 0 then Exit;
-  
-  // Load BLAKE2b functions
-  BLAKE2b_Init := GetProcAddress(ALibHandle, 'BLAKE2b_Init');
-  BLAKE2b_Init_key := GetProcAddress(ALibHandle, 'BLAKE2b_Init_key');
-  BLAKE2b_Init_param := GetProcAddress(ALibHandle, 'BLAKE2b_Init_param');
-  BLAKE2b_Update := GetProcAddress(ALibHandle, 'BLAKE2b_Update');
-  BLAKE2b_Final := GetProcAddress(ALibHandle, 'BLAKE2b_Final');
-  BLAKE2b := GetProcAddress(ALibHandle, 'BLAKE2b');
-  BLAKE2b_mac_Init := GetProcAddress(ALibHandle, 'BLAKE2b_mac_Init');
-  
-  // Load BLAKE2s functions
-  BLAKE2s_Init := GetProcAddress(ALibHandle, 'BLAKE2s_Init');
-  BLAKE2s_Init_key := GetProcAddress(ALibHandle, 'BLAKE2s_Init_key');
-  BLAKE2s_Init_param := GetProcAddress(ALibHandle, 'BLAKE2s_Init_param');
-  BLAKE2s_Update := GetProcAddress(ALibHandle, 'BLAKE2s_Update');
-  BLAKE2s_Final := GetProcAddress(ALibHandle, 'BLAKE2s_Final');
-  BLAKE2s := GetProcAddress(ALibHandle, 'BLAKE2s');
-  BLAKE2s_mac_Init := GetProcAddress(ALibHandle, 'BLAKE2s_mac_Init');
-  
-  GBLAKE2Loaded := True;
+
+  // 使用批量加载模式
+  TOpenSSLLoader.LoadFunctions(ALibHandle, BLAKE2_BINDINGS);
+
+  TOpenSSLLoader.SetModuleLoaded(osmBLAKE2, True);
   Result := True;
 end;
 
 procedure UnloadBLAKE2Functions;
 begin
-  BLAKE2b_Init := nil;
-  BLAKE2b_Init_key := nil;
-  BLAKE2b_Init_param := nil;
-  BLAKE2b_Update := nil;
-  BLAKE2b_Final := nil;
-  BLAKE2b := nil;
-  BLAKE2b_mac_Init := nil;
-  
-  BLAKE2s_Init := nil;
-  BLAKE2s_Init_key := nil;
-  BLAKE2s_Init_param := nil;
-  BLAKE2s_Update := nil;
-  BLAKE2s_Final := nil;
-  BLAKE2s := nil;
-  BLAKE2s_mac_Init := nil;
-  
-  GBLAKE2Loaded := False;
+  // 使用批量清除模式
+  TOpenSSLLoader.ClearFunctions(BLAKE2_BINDINGS);
+
+  TOpenSSLLoader.SetModuleLoaded(osmBLAKE2, False);
 end;
 
 function IsBLAKE2Loaded: Boolean;
 begin
-  Result := GBLAKE2Loaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmBLAKE2);
 end;
 
 function BLAKE2b256Hash(const Data: TBytes): TBytes;

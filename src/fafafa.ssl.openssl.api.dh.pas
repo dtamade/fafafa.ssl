@@ -7,7 +7,8 @@ interface
 uses
   SysUtils, DynLibs, ctypes,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.bn;
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.loader;
 
 const
   { DH flags }
@@ -134,83 +135,83 @@ type
 
 var
   { DH functions }
-  DH_new: TDH_new;
-  DH_new_method: TDH_new_method;
-  DH_free: TDH_free;
-  DH_up_ref: TDH_up_ref;
-  DH_bits: TDH_bits;
-  DH_size: TDH_size;
-  DH_security_bits: TDH_security_bits;
-  
+  DH_new: TDH_new = nil;
+  DH_new_method: TDH_new_method = nil;
+  DH_free: TDH_free = nil;
+  DH_up_ref: TDH_up_ref = nil;
+  DH_bits: TDH_bits = nil;
+  DH_size: TDH_size = nil;
+  DH_security_bits: TDH_security_bits = nil;
+
   { DH parameter/key manipulation }
-  DH_set0_pqg: TDH_set0_pqg;
-  DH_get0_pqg: TDH_get0_pqg;
-  DH_set0_key: TDH_set0_key;
-  DH_get0_key: TDH_get0_key;
-  DH_get0_p: TDH_get0_p;
-  DH_get0_q: TDH_get0_q;
-  DH_get0_g: TDH_get0_g;
-  DH_get0_priv_key: TDH_get0_priv_key;
-  DH_get0_pub_key: TDH_get0_pub_key;
-  DH_clear_flags: TDH_clear_flags;
-  DH_test_flags: TDH_test_flags;
-  DH_set_flags: TDH_set_flags;
-  DH_get0_engine: TDH_get0_engine;
-  DH_get_length: TDH_get_length;
-  DH_set_length: TDH_set_length;
-  
+  DH_set0_pqg: TDH_set0_pqg = nil;
+  DH_get0_pqg: TDH_get0_pqg = nil;
+  DH_set0_key: TDH_set0_key = nil;
+  DH_get0_key: TDH_get0_key = nil;
+  DH_get0_p: TDH_get0_p = nil;
+  DH_get0_q: TDH_get0_q = nil;
+  DH_get0_g: TDH_get0_g = nil;
+  DH_get0_priv_key: TDH_get0_priv_key = nil;
+  DH_get0_pub_key: TDH_get0_pub_key = nil;
+  DH_clear_flags: TDH_clear_flags = nil;
+  DH_test_flags: TDH_test_flags = nil;
+  DH_set_flags: TDH_set_flags = nil;
+  DH_get0_engine: TDH_get0_engine = nil;
+  DH_get_length: TDH_get_length = nil;
+  DH_set_length: TDH_set_length = nil;
+
   { DH parameter generation }
-  DH_generate_parameters: TDH_generate_parameters;
-  DH_generate_parameters_ex: TDH_generate_parameters_ex;
-  
+  DH_generate_parameters: TDH_generate_parameters = nil;
+  DH_generate_parameters_ex: TDH_generate_parameters_ex = nil;
+
   { DH key generation and computation }
-  DH_generate_key: TDH_generate_key;
-  DH_compute_key: TDH_compute_key;
-  DH_compute_key_padded: TDH_compute_key_padded;
-  
+  DH_generate_key: TDH_generate_key = nil;
+  DH_compute_key: TDH_compute_key = nil;
+  DH_compute_key_padded: TDH_compute_key_padded = nil;
+
   { DH checking }
-  DH_check: TDH_check;
-  DH_check_ex: TDH_check_ex;
-  DH_check_pub_key: TDH_check_pub_key;
-  DH_check_pub_key_ex: TDH_check_pub_key_ex;
-  DH_check_params: TDH_check_params;
-  DH_check_params_ex: TDH_check_params_ex;
-  
+  DH_check: TDH_check = nil;
+  DH_check_ex: TDH_check_ex = nil;
+  DH_check_pub_key: TDH_check_pub_key = nil;
+  DH_check_pub_key_ex: TDH_check_pub_key_ex = nil;
+  DH_check_params: TDH_check_params = nil;
+  DH_check_params_ex: TDH_check_params_ex = nil;
+
   { DH standard parameters }
-  DH_get_1024_160: TDH_get_1024_160;
-  DH_get_2048_224: TDH_get_2048_224;
-  DH_get_2048_256: TDH_get_2048_256;
-  
+  DH_get_1024_160: TDH_get_1024_160 = nil;
+  DH_get_2048_224: TDH_get_2048_224 = nil;
+  DH_get_2048_256: TDH_get_2048_256 = nil;
+
   { DH KDF functions }
-  DH_KDF_X9_42: TDH_KDF_X9_42;
-  
+  DH_KDF_X9_42: TDH_KDF_X9_42 = nil;
+
   { DH ASN1 functions }
-  DHparams_dup: TDHparams_dup;
-  i2d_DHparams: Ti2d_DHparams;
-  d2i_DHparams: Td2i_DHparams;
-  i2d_DHxparams: Ti2d_DHxparams;
-  d2i_DHxparams: Td2i_DHxparams;
-  
+  DHparams_dup: TDHparams_dup = nil;
+  i2d_DHparams: Ti2d_DHparams = nil;
+  d2i_DHparams: Td2i_DHparams = nil;
+  i2d_DHxparams: Ti2d_DHxparams = nil;
+  d2i_DHxparams: Td2i_DHxparams = nil;
+
   { DH print functions }
-  DHparams_print_fp: TDHparams_print_fp;
-  DHparams_print: TDHparams_print;
-  
+  DHparams_print_fp: TDHparams_print_fp = nil;
+  DHparams_print: TDHparams_print = nil;
+
   { DH method functions }
-  DH_meth_new: TDH_meth_new;
-  DH_meth_free: TDH_meth_free;
-  DH_meth_dup: TDH_meth_dup;
-  DH_meth_get0_name: TDH_meth_get0_name;
-  DH_meth_set1_name: TDH_meth_set1_name;
-  DH_meth_get_flags: TDH_meth_get_flags;
-  DH_meth_set_flags: TDH_meth_set_flags;
-  DH_meth_get0_app_data: TDH_meth_get0_app_data;
-  DH_meth_set0_app_data: TDH_meth_set0_app_data;
-  DH_get_default_method: TDH_get_default_method;
-  DH_set_default_method: TDH_set_default_method;
-  DH_OpenSSL: TDH_OpenSSL;
-  DH_set_method: TDH_set_method;
-  DH_new_by_nid: TDH_new_by_nid;
-  DH_get_nid: TDH_get_nid;
+  DH_meth_new: TDH_meth_new = nil;
+  DH_meth_free: TDH_meth_free = nil;
+  DH_meth_dup: TDH_meth_dup = nil;
+  DH_meth_get0_name: TDH_meth_get0_name = nil;
+  DH_meth_set1_name: TDH_meth_set1_name = nil;
+  DH_meth_get_flags: TDH_meth_get_flags = nil;
+  DH_meth_set_flags: TDH_meth_set_flags = nil;
+  DH_meth_get0_app_data: TDH_meth_get0_app_data = nil;
+  DH_meth_set0_app_data: TDH_meth_set0_app_data = nil;
+  DH_get_default_method: TDH_get_default_method = nil;
+  DH_set_default_method: TDH_set_default_method = nil;
+  DH_OpenSSL: TDH_OpenSSL = nil;
+  DH_set_method: TDH_set_method = nil;
+  DH_new_by_nid: TDH_new_by_nid = nil;
+  DH_get_nid: TDH_get_nid = nil;
 
 function LoadOpenSSLDH: Boolean;
 procedure UnloadOpenSSLDH;
@@ -221,16 +222,49 @@ implementation
 uses
   fafafa.ssl.openssl.api.core;
 
-var
-  GDHLoaded: Boolean = False;
+const
+  { DH function bindings for batch loading }
+  DH_FUNCTION_BINDINGS: array[0..27] of TFunctionBinding = (
+    // DH basic functions
+    (Name: 'DH_new';              FuncPtr: @DH_new;              Required: True),
+    (Name: 'DH_new_method';       FuncPtr: @DH_new_method;       Required: False),
+    (Name: 'DH_free';             FuncPtr: @DH_free;             Required: True),
+    (Name: 'DH_up_ref';           FuncPtr: @DH_up_ref;           Required: False),
+    (Name: 'DH_bits';             FuncPtr: @DH_bits;             Required: False),
+    (Name: 'DH_size';             FuncPtr: @DH_size;             Required: False),
+    (Name: 'DH_security_bits';    FuncPtr: @DH_security_bits;    Required: False),
+    // DH parameter/key manipulation functions
+    (Name: 'DH_set0_pqg';         FuncPtr: @DH_set0_pqg;         Required: False),
+    (Name: 'DH_get0_pqg';         FuncPtr: @DH_get0_pqg;         Required: False),
+    (Name: 'DH_set0_key';         FuncPtr: @DH_set0_key;         Required: False),
+    (Name: 'DH_get0_key';         FuncPtr: @DH_get0_key;         Required: False),
+    (Name: 'DH_get0_p';           FuncPtr: @DH_get0_p;           Required: False),
+    (Name: 'DH_get0_q';           FuncPtr: @DH_get0_q;           Required: False),
+    (Name: 'DH_get0_g';           FuncPtr: @DH_get0_g;           Required: False),
+    (Name: 'DH_get0_priv_key';    FuncPtr: @DH_get0_priv_key;    Required: False),
+    (Name: 'DH_get0_pub_key';     FuncPtr: @DH_get0_pub_key;     Required: False),
+    (Name: 'DH_clear_flags';      FuncPtr: @DH_clear_flags;      Required: False),
+    (Name: 'DH_test_flags';       FuncPtr: @DH_test_flags;       Required: False),
+    (Name: 'DH_set_flags';        FuncPtr: @DH_set_flags;        Required: False),
+    (Name: 'DH_get0_engine';      FuncPtr: @DH_get0_engine;      Required: False),
+    (Name: 'DH_get_length';       FuncPtr: @DH_get_length;       Required: False),
+    (Name: 'DH_set_length';       FuncPtr: @DH_set_length;       Required: False),
+    // DH parameter generation functions
+    (Name: 'DH_generate_parameters';    FuncPtr: @DH_generate_parameters;    Required: False),
+    (Name: 'DH_generate_parameters_ex'; FuncPtr: @DH_generate_parameters_ex; Required: False),
+    // DH key generation and computation functions
+    (Name: 'DH_generate_key';     FuncPtr: @DH_generate_key;     Required: True),
+    (Name: 'DH_compute_key';      FuncPtr: @DH_compute_key;      Required: True),
+    (Name: 'DH_compute_key_padded'; FuncPtr: @DH_compute_key_padded; Required: False)
+  );
 
 function LoadOpenSSLDH: Boolean;
 var
   LLib: TLibHandle;
 begin
-  if GDHLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmDH) then
     Exit(True);
-    
+
   // Use the crypto library handle from core module
   LLib := GetCryptoLibHandle;
   if LLib = NilHandle then
@@ -239,182 +273,29 @@ begin
     LoadOpenSSLCore;
     LLib := GetCryptoLibHandle;
   end;
-    
+
   if LLib = NilHandle then
     Exit(False);
-    
-  // Load DH basic functions
-  DH_new := TDH_new(GetProcAddress(LLib, 'DH_new'));
-  DH_new_method := TDH_new_method(GetProcAddress(LLib, 'DH_new_method'));
-  DH_free := TDH_free(GetProcAddress(LLib, 'DH_free'));
-  DH_up_ref := TDH_up_ref(GetProcAddress(LLib, 'DH_up_ref'));
-  DH_bits := TDH_bits(GetProcAddress(LLib, 'DH_bits'));
-  DH_size := TDH_size(GetProcAddress(LLib, 'DH_size'));
-  DH_security_bits := TDH_security_bits(GetProcAddress(LLib, 'DH_security_bits'));
-  
-  // Load DH parameter/key manipulation functions
-  DH_set0_pqg := TDH_set0_pqg(GetProcAddress(LLib, 'DH_set0_pqg'));
-  DH_get0_pqg := TDH_get0_pqg(GetProcAddress(LLib, 'DH_get0_pqg'));
-  DH_set0_key := TDH_set0_key(GetProcAddress(LLib, 'DH_set0_key'));
-  DH_get0_key := TDH_get0_key(GetProcAddress(LLib, 'DH_get0_key'));
-  DH_get0_p := TDH_get0_p(GetProcAddress(LLib, 'DH_get0_p'));
-  DH_get0_q := TDH_get0_q(GetProcAddress(LLib, 'DH_get0_q'));
-  DH_get0_g := TDH_get0_g(GetProcAddress(LLib, 'DH_get0_g'));
-  DH_get0_priv_key := TDH_get0_priv_key(GetProcAddress(LLib, 'DH_get0_priv_key'));
-  DH_get0_pub_key := TDH_get0_pub_key(GetProcAddress(LLib, 'DH_get0_pub_key'));
-  DH_clear_flags := TDH_clear_flags(GetProcAddress(LLib, 'DH_clear_flags'));
-  DH_test_flags := TDH_test_flags(GetProcAddress(LLib, 'DH_test_flags'));
-  DH_set_flags := TDH_set_flags(GetProcAddress(LLib, 'DH_set_flags'));
-  DH_get0_engine := TDH_get0_engine(GetProcAddress(LLib, 'DH_get0_engine'));
-  DH_get_length := TDH_get_length(GetProcAddress(LLib, 'DH_get_length'));
-  DH_set_length := TDH_set_length(GetProcAddress(LLib, 'DH_set_length'));
-  
-  // Load DH parameter generation functions
-  DH_generate_parameters := TDH_generate_parameters(GetProcAddress(LLib, 'DH_generate_parameters'));
-  DH_generate_parameters_ex := TDH_generate_parameters_ex(GetProcAddress(LLib, 'DH_generate_parameters_ex'));
-  
-  // Load DH key generation and computation functions
-  DH_generate_key := TDH_generate_key(GetProcAddress(LLib, 'DH_generate_key'));
-  DH_compute_key := TDH_compute_key(GetProcAddress(LLib, 'DH_compute_key'));
-  DH_compute_key_padded := TDH_compute_key_padded(GetProcAddress(LLib, 'DH_compute_key_padded'));
-  
-  // Load DH checking functions
-  DH_check := TDH_check(GetProcAddress(LLib, 'DH_check'));
-  DH_check_ex := TDH_check_ex(GetProcAddress(LLib, 'DH_check_ex'));
-  DH_check_pub_key := TDH_check_pub_key(GetProcAddress(LLib, 'DH_check_pub_key'));
-  DH_check_pub_key_ex := TDH_check_pub_key_ex(GetProcAddress(LLib, 'DH_check_pub_key_ex'));
-  DH_check_params := TDH_check_params(GetProcAddress(LLib, 'DH_check_params'));
-  DH_check_params_ex := TDH_check_params_ex(GetProcAddress(LLib, 'DH_check_params_ex'));
-  
-  // Load DH standard parameters functions
-  DH_get_1024_160 := TDH_get_1024_160(GetProcAddress(LLib, 'DH_get_1024_160'));
-  DH_get_2048_224 := TDH_get_2048_224(GetProcAddress(LLib, 'DH_get_2048_224'));
-  DH_get_2048_256 := TDH_get_2048_256(GetProcAddress(LLib, 'DH_get_2048_256'));
-  
-  // Load DH KDF functions
-  DH_KDF_X9_42 := TDH_KDF_X9_42(GetProcAddress(LLib, 'DH_KDF_X9_42'));
-  
-  // Load DH ASN1 functions
-  DHparams_dup := TDHparams_dup(GetProcAddress(LLib, 'DHparams_dup'));
-  i2d_DHparams := Ti2d_DHparams(GetProcAddress(LLib, 'i2d_DHparams'));
-  d2i_DHparams := Td2i_DHparams(GetProcAddress(LLib, 'd2i_DHparams'));
-  i2d_DHxparams := Ti2d_DHxparams(GetProcAddress(LLib, 'i2d_DHxparams'));
-  d2i_DHxparams := Td2i_DHxparams(GetProcAddress(LLib, 'd2i_DHxparams'));
-  
-  // Load DH print functions
-  DHparams_print_fp := TDHparams_print_fp(GetProcAddress(LLib, 'DHparams_print_fp'));
-  DHparams_print := TDHparams_print(GetProcAddress(LLib, 'DHparams_print'));
-  
-  // Load DH method functions
-  DH_meth_new := TDH_meth_new(GetProcAddress(LLib, 'DH_meth_new'));
-  DH_meth_free := TDH_meth_free(GetProcAddress(LLib, 'DH_meth_free'));
-  DH_meth_dup := TDH_meth_dup(GetProcAddress(LLib, 'DH_meth_dup'));
-  DH_meth_get0_name := TDH_meth_get0_name(GetProcAddress(LLib, 'DH_meth_get0_name'));
-  DH_meth_set1_name := TDH_meth_set1_name(GetProcAddress(LLib, 'DH_meth_set1_name'));
-  DH_meth_get_flags := TDH_meth_get_flags(GetProcAddress(LLib, 'DH_meth_get_flags'));
-  DH_meth_set_flags := TDH_meth_set_flags(GetProcAddress(LLib, 'DH_meth_set_flags'));
-  DH_meth_get0_app_data := TDH_meth_get0_app_data(GetProcAddress(LLib, 'DH_meth_get0_app_data'));
-  DH_meth_set0_app_data := TDH_meth_set0_app_data(GetProcAddress(LLib, 'DH_meth_set0_app_data'));
-  DH_get_default_method := TDH_get_default_method(GetProcAddress(LLib, 'DH_get_default_method'));
-  DH_set_default_method := TDH_set_default_method(GetProcAddress(LLib, 'DH_set_default_method'));
-  DH_OpenSSL := TDH_OpenSSL(GetProcAddress(LLib, 'DH_OpenSSL'));
-  DH_set_method := TDH_set_method(GetProcAddress(LLib, 'DH_set_method'));
-  DH_new_by_nid := TDH_new_by_nid(GetProcAddress(LLib, 'DH_new_by_nid'));
-  DH_get_nid := TDH_get_nid(GetProcAddress(LLib, 'DH_get_nid'));
-  
+
+  // Batch load all DH functions
+  TOpenSSLLoader.LoadFunctions(LLib, DH_FUNCTION_BINDINGS);
+
   // Check if critical functions are loaded
-  GDHLoaded := Assigned(DH_new) and Assigned(DH_free) and
-               Assigned(DH_generate_key) and Assigned(DH_compute_key);
-  Result := GDHLoaded;
+  TOpenSSLLoader.SetModuleLoaded(osmDH, Assigned(DH_new) and Assigned(DH_free) and
+              Assigned(DH_generate_key) and Assigned(DH_compute_key));
+  Result := TOpenSSLLoader.IsModuleLoaded(osmDH);
 end;
 
 procedure UnloadOpenSSLDH;
 begin
-  // Clear DH basic function pointers
-  DH_new := nil;
-  DH_new_method := nil;
-  DH_free := nil;
-  DH_up_ref := nil;
-  DH_bits := nil;
-  DH_size := nil;
-  DH_security_bits := nil;
-  
-  // Clear DH parameter/key manipulation function pointers
-  DH_set0_pqg := nil;
-  DH_get0_pqg := nil;
-  DH_set0_key := nil;
-  DH_get0_key := nil;
-  DH_get0_p := nil;
-  DH_get0_q := nil;
-  DH_get0_g := nil;
-  DH_get0_priv_key := nil;
-  DH_get0_pub_key := nil;
-  DH_clear_flags := nil;
-  DH_test_flags := nil;
-  DH_set_flags := nil;
-  DH_get0_engine := nil;
-  DH_get_length := nil;
-  DH_set_length := nil;
-  
-  // Clear DH parameter generation function pointers
-  DH_generate_parameters := nil;
-  DH_generate_parameters_ex := nil;
-  
-  // Clear DH key generation and computation function pointers
-  DH_generate_key := nil;
-  DH_compute_key := nil;
-  DH_compute_key_padded := nil;
-  
-  // Clear DH checking function pointers
-  DH_check := nil;
-  DH_check_ex := nil;
-  DH_check_pub_key := nil;
-  DH_check_pub_key_ex := nil;
-  DH_check_params := nil;
-  DH_check_params_ex := nil;
-  
-  // Clear DH standard parameters function pointers
-  DH_get_1024_160 := nil;
-  DH_get_2048_224 := nil;
-  DH_get_2048_256 := nil;
-  
-  // Clear DH KDF function pointers
-  DH_KDF_X9_42 := nil;
-  
-  // Clear DH ASN1 function pointers
-  DHparams_dup := nil;
-  i2d_DHparams := nil;
-  d2i_DHparams := nil;
-  i2d_DHxparams := nil;
-  d2i_DHxparams := nil;
-  
-  // Clear DH print function pointers
-  DHparams_print_fp := nil;
-  DHparams_print := nil;
-  
-  // Clear DH method function pointers
-  DH_meth_new := nil;
-  DH_meth_free := nil;
-  DH_meth_dup := nil;
-  DH_meth_get0_name := nil;
-  DH_meth_set1_name := nil;
-  DH_meth_get_flags := nil;
-  DH_meth_set_flags := nil;
-  DH_meth_get0_app_data := nil;
-  DH_meth_set0_app_data := nil;
-  DH_get_default_method := nil;
-  DH_set_default_method := nil;
-  DH_OpenSSL := nil;
-  DH_set_method := nil;
-  DH_new_by_nid := nil;
-  DH_get_nid := nil;
-  
-  GDHLoaded := False;
+  // Clear all DH function pointers
+  TOpenSSLLoader.ClearFunctions(DH_FUNCTION_BINDINGS);
+  TOpenSSLLoader.SetModuleLoaded(osmDH, False);
 end;
 
 function IsOpenSSLDHLoaded: Boolean;
 begin
-  Result := GDHLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmDH);
 end;
 
 end.

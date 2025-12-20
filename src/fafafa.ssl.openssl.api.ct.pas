@@ -58,6 +58,9 @@ const
   TLSEXT_hash_sha384 = 5;
   TLSEXT_hash_sha512 = 6;
 
+  // CT NIDs
+  NID_ct_precert_scts = 951;
+
 type
   // 前向声明
   PCT_POLICY_EVAL_CTX = ^CT_POLICY_EVAL_CTX;
@@ -133,7 +136,7 @@ type
   TSCT_get_validation_status = function(sct: PSCT): Integer; cdecl;
   TSCT_print = procedure(sct: PSCT; outf: PBIO; indent: Integer; logs: PCTLOG_STORE); cdecl;
   TSCT_LIST_print = procedure(scts: PSCT_LIST; outf: PBIO; indent: Integer;
-                             separator: PAnsiChar; logs: PCTLOG_STORE); cdecl;
+                            separator: PAnsiChar; logs: PCTLOG_STORE); cdecl;
   
   // CTLOG 函数
   TCTLOG_new = function(public_key: PEVP_PKEY; name: PAnsiChar): PCTLOG; cdecl;
@@ -142,8 +145,8 @@ type
   TCTLOG_new_from_base64 = function(public_key: PCTLOG; name: PAnsiChar;
                                     key_base64: PAnsiChar): Integer; cdecl;
   TCTLOG_new_from_base64_ex = function(public_key: PCTLOG; name: PAnsiChar;
-                                       key_base64: PAnsiChar; libctx: Pointer;
-                                       propq: PAnsiChar): Integer; cdecl;
+                                      key_base64: PAnsiChar; libctx: Pointer;
+                                      propq: PAnsiChar): Integer; cdecl;
   TCTLOG_free = procedure(log: PCTLOG); cdecl;
   TCTLOG_get0_name = function(log: PCTLOG): PAnsiChar; cdecl;
   TCTLOG_get0_log_id = procedure(log: PCTLOG; log_id: PPByte; log_id_len: PNativeUInt); cdecl;
@@ -154,25 +157,22 @@ type
   TCTLOG_STORE_new_ex = function(libctx: Pointer; propq: PAnsiChar): PCTLOG_STORE; cdecl;
   TCTLOG_STORE_free = procedure(store: PCTLOG_STORE); cdecl;
   TCTLOG_STORE_get0_log_by_id = function(store: PCTLOG_STORE; log_id: PByte;
-                                         log_id_len: NativeUInt): PCTLOG; cdecl;
+                                        log_id_len: NativeUInt): PCTLOG; cdecl;
   TCTLOG_STORE_load_file = function(store: PCTLOG_STORE; filename: PAnsiChar): Integer; cdecl;
   TCTLOG_STORE_load_default_file = function(store: PCTLOG_STORE): Integer; cdecl;
   
   // i2d/d2i 函数
-  Ti2d_SCT_LIST = function(a: PSCT_LIST; pp: PPByte): Integer; cdecl;
-  Td2i_SCT_LIST = function(a: PPSCT_LIST; pp: PPByte; len: LongInt): PSCT_LIST; cdecl;
   Ti2o_SCT_LIST = function(scts: PSCT_LIST; ext: PPByte): Integer; cdecl;
   To2i_SCT_LIST = function(scts: PPSCT_LIST; ext: PPByte; len: NativeUInt): PSCT_LIST; cdecl;
-  Ti2d_SCT = function(sct: PSCT; pp: PPByte): Integer; cdecl;
-  Td2i_SCT = function(sct: PPSCT; pp: PPByte; len: LongInt): PSCT; cdecl;
+  Ti2o_SCT = function(sct: PSCT; ext: PPByte): Integer; cdecl;
   To2i_SCT = function(sct: PPSCT; pp: PPByte; len: NativeUInt): PSCT; cdecl;
   
   // X509 扩展函数
   TX509_get_ext_d2i_SCT_LIST = function(x: PX509; nid: Integer; crit: PInteger;
                                         idx: PInteger): PSCT_LIST; cdecl;
   TX509_add1_ext_i2d_SCT_LIST = function(x: PX509; nid: Integer; value: PSCT_LIST;
-                                         crit: Integer; flags: LongWord): Integer; cdecl;
-  TX509_get_SCT_LIST = function(x: PX509): PSCT_LIST; cdecl;
+                                        crit: Integer; flags: LongWord): Integer; cdecl;
+  // TX509_get_SCT_LIST is a macro, implemented as a helper function
   
   // SSL CT 函数
   TSSL_CTX_enable_ct = function(ctx: PSSL_CTX; validation_mode: Integer): Integer; cdecl;
@@ -184,14 +184,14 @@ type
   TSSL_CTX_set_ct_validation_callback = procedure(ctx: PSSL_CTX; callback: TCT_VERIFY_CB;
                                                   arg: Pointer); cdecl;
   TSSL_ct_set_validation_callback = procedure(s: PSSL; callback: TCT_VERIFY_CB;
-                                             arg: Pointer); cdecl;
+                                            arg: Pointer); cdecl;
   TSSL_CTX_get0_ctlog_store = function(ctx: PSSL_CTX): PCTLOG_STORE; cdecl;
   TSSL_CTX_set0_ctlog_store = procedure(ctx: PSSL_CTX; logs: PCTLOG_STORE); cdecl;
   TSSL_get0_peer_scts = function(s: PSSL): PSCT_LIST; cdecl;
   
   // CT 策略函数
   TCT_POLICY_EVAL_CTX_set0_log_store = procedure(ctx: PCT_POLICY_EVAL_CTX;
-                                                 log_store: PCTLOG_STORE); cdecl;
+                                                log_store: PCTLOG_STORE); cdecl;
 
 var
   // CT_POLICY_EVAL_CTX 函数
@@ -256,18 +256,15 @@ var
   CTLOG_STORE_load_default_file: TCTLOG_STORE_load_default_file;
   
   // i2d/d2i 函数
-  i2d_SCT_LIST: Ti2d_SCT_LIST;
-  d2i_SCT_LIST: Td2i_SCT_LIST;
+  // i2d/d2i 函数 (SCT use i2o/o2i)
   i2o_SCT_LIST: Ti2o_SCT_LIST;
   o2i_SCT_LIST: To2i_SCT_LIST;
-  i2d_SCT: Ti2d_SCT;
-  d2i_SCT: Td2i_SCT;
+  i2o_SCT: Ti2o_SCT;
   o2i_SCT: To2i_SCT;
   
   // X509 扩展函数
   X509_get_ext_d2i_SCT_LIST: TX509_get_ext_d2i_SCT_LIST;
   X509_add1_ext_i2d_SCT_LIST: TX509_add1_ext_i2d_SCT_LIST;
-  X509_get_SCT_LIST: TX509_get_SCT_LIST;
   
   // SSL CT 函数
   SSL_CTX_enable_ct: TSSL_CTX_enable_ct;
@@ -294,6 +291,7 @@ function ValidateSCTList(SCTs: PSCT_LIST; Cert: PX509; Issuer: PX509 = nil): Boo
 function GetSCTValidationStatusString(Status: Integer): string;
 function LoadCTLogStore(const FileName: string = ''): PCTLOG_STORE;
 function PrintSCTInfo(SCT: PSCT): string;
+function X509_get_SCT_LIST(x: PX509): PSCT_LIST;
 
 implementation
 
@@ -366,12 +364,9 @@ begin
   CTLOG_STORE_load_default_file := TCTLOG_STORE_load_default_file(GetCryptoProcAddress('CTLOG_STORE_load_default_file'));
   
   // i2d/d2i 函数
-  i2d_SCT_LIST := Ti2d_SCT_LIST(GetCryptoProcAddress('i2d_SCT_LIST'));
-  d2i_SCT_LIST := Td2i_SCT_LIST(GetCryptoProcAddress('d2i_SCT_LIST'));
   i2o_SCT_LIST := Ti2o_SCT_LIST(GetCryptoProcAddress('i2o_SCT_LIST'));
   o2i_SCT_LIST := To2i_SCT_LIST(GetCryptoProcAddress('o2i_SCT_LIST'));
-  i2d_SCT := Ti2d_SCT(GetCryptoProcAddress('i2d_SCT'));
-  d2i_SCT := Td2i_SCT(GetCryptoProcAddress('d2i_SCT'));
+  i2o_SCT := Ti2o_SCT(GetCryptoProcAddress('i2o_SCT'));
   o2i_SCT := To2i_SCT(GetCryptoProcAddress('o2i_SCT'));
   
   // SSL CT 函数
@@ -389,6 +384,10 @@ begin
   
   // CT 策略函数
   CT_POLICY_EVAL_CTX_set0_log_store := TCT_POLICY_EVAL_CTX_set0_log_store(GetCryptoProcAddress('CT_POLICY_EVAL_CTX_set0_log_store'));
+  
+  // X509 扩展函数
+  X509_get_ext_d2i_SCT_LIST := TX509_get_ext_d2i_SCT_LIST(GetCryptoProcAddress('X509_get_ext_d2i_SCT_LIST'));
+  X509_add1_ext_i2d_SCT_LIST := TX509_add1_ext_i2d_SCT_LIST(GetCryptoProcAddress('X509_add1_ext_i2d_SCT_LIST'));
 end;
 
 procedure UnloadCTFunctions;
@@ -406,6 +405,10 @@ begin
   CTLOG_STORE_free := nil;
   SSL_CTX_enable_ct := nil;
   SSL_enable_ct := nil;
+  i2o_SCT := nil;
+  o2i_SCT := nil;
+  i2o_SCT_LIST := nil;
+  o2i_SCT_LIST := nil;
 end;
 
 function EnableCertificateTransparency(SSLCtx: PSSL_CTX): Boolean;
@@ -438,8 +441,8 @@ begin
   if Cert = nil then Exit;
   
   if not Assigned(CT_POLICY_EVAL_CTX_new) or
-     not Assigned(SCT_LIST_validate) or
-     not Assigned(CT_POLICY_EVAL_CTX_free) then Exit;
+    not Assigned(SCT_LIST_validate) or
+    not Assigned(CT_POLICY_EVAL_CTX_free) then Exit;
   
   EvalCtx := CT_POLICY_EVAL_CTX_new();
   if EvalCtx = nil then Exit;
@@ -598,6 +601,13 @@ begin
       Result := Result + sLineBreak;
     end;
   end;
+end;
+
+function X509_get_SCT_LIST(x: PX509): PSCT_LIST;
+begin
+  Result := nil;
+  if (x <> nil) and Assigned(X509_get_ext_d2i) then
+    Result := PSCT_LIST(X509_get_ext_d2i(x, NID_ct_precert_scts, nil, nil));
 end;
 
 initialization

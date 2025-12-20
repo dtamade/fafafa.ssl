@@ -4,8 +4,8 @@ program ExampleAESGCMAEAD;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.evp;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.evp;
 
 const
   // 测试数据

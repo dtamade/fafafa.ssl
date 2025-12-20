@@ -1,12 +1,15 @@
-{$IFNDEF WINDOWS}{$MODE DELPHI}{$ENDIF}
-
 unit fafafa.ssl.openssl.api.lhash;
+
+{$mode ObjFPC}{$H+}
 
 interface
 
 uses
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   SysUtils,
-  fafafa.ssl.openssl.types;
+  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader;
 
 type
   // LHASH node structure (opaque)
@@ -146,70 +149,51 @@ function ComparePointers(const a, b: Pointer): Integer; cdecl;
 
 implementation
 
-uses
-  {$IFDEF WINDOWS}Windows{$ELSE}dynlibs{$ENDIF};
-
-var
-  hCrypto: {$IFDEF WINDOWS}HMODULE{$ELSE}THandle{$ENDIF} = 0;
-  LHashLoaded: Boolean = False;
+// Phase 3.3 P0+ - fafafa.ssl.openssl.loader 已移至 interface uses 子句
 
 function LoadLHashFunctions: Boolean;
+var
+  LHandle: TLibHandle;
 begin
   Result := False;
-  
-  // Load crypto library if not already loaded
-  if hCrypto = 0 then
-  begin
-    {$IFDEF WINDOWS}
-    hCrypto := LoadLibrary('libcrypto-3-x64.dll');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto-1_1-x64.dll');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libeay32.dll');
-    {$ELSE}
-    hCrypto := LoadLibrary('libcrypto.so.3');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto.so.1.1');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto.so');
-    {$ENDIF}
-  end;
-  
-  if hCrypto = 0 then
+
+  // Phase 3.3 P0+ - 使用统一的动态库加载器（替换 ~25 行重复代码）
+  LHandle := TOpenSSLLoader.GetLibraryHandle(osslLibCrypto);
+  if LHandle = 0 then
     Exit;
     
   // Load LHASH functions (OpenSSL 1.1.0+)
-  OPENSSL_LH_new := TOPENSSL_LH_new(GetProcAddress(hCrypto, 'OPENSSL_LH_new'));
-  OPENSSL_LH_free := TOPENSSL_LH_free(GetProcAddress(hCrypto, 'OPENSSL_LH_free'));
-  OPENSSL_LH_flush := TOPENSSL_LH_flush(GetProcAddress(hCrypto, 'OPENSSL_LH_flush'));
-  OPENSSL_LH_insert := TOPENSSL_LH_insert(GetProcAddress(hCrypto, 'OPENSSL_LH_insert'));
-  OPENSSL_LH_delete := TOPENSSL_LH_delete(GetProcAddress(hCrypto, 'OPENSSL_LH_delete'));
-  OPENSSL_LH_retrieve := TOPENSSL_LH_retrieve(GetProcAddress(hCrypto, 'OPENSSL_LH_retrieve'));
-  OPENSSL_LH_doall := TOPENSSL_LH_doall(GetProcAddress(hCrypto, 'OPENSSL_LH_doall'));
-  OPENSSL_LH_doall_arg := TOPENSSL_LH_doall_arg(GetProcAddress(hCrypto, 'OPENSSL_LH_doall_arg'));
-  OPENSSL_LH_strhash := TOPENSSL_LH_strhash(GetProcAddress(hCrypto, 'OPENSSL_LH_strhash'));
-  OPENSSL_LH_num_items := TOPENSSL_LH_num_items(GetProcAddress(hCrypto, 'OPENSSL_LH_num_items'));
-  OPENSSL_LH_get_down_load := TOPENSSL_LH_get_down_load(GetProcAddress(hCrypto, 'OPENSSL_LH_get_down_load'));
-  OPENSSL_LH_set_down_load := TOPENSSL_LH_set_down_load(GetProcAddress(hCrypto, 'OPENSSL_LH_set_down_load'));
-  OPENSSL_LH_stats := TOPENSSL_LH_stats(GetProcAddress(hCrypto, 'OPENSSL_LH_stats'));
-  OPENSSL_LH_node_stats := TOPENSSL_LH_node_stats(GetProcAddress(hCrypto, 'OPENSSL_LH_node_stats'));
-  OPENSSL_LH_node_usage_stats := TOPENSSL_LH_node_usage_stats(GetProcAddress(hCrypto, 'OPENSSL_LH_node_usage_stats'));
-  OPENSSL_LH_stats_bio := TOPENSSL_LH_stats_bio(GetProcAddress(hCrypto, 'OPENSSL_LH_stats_bio'));
-  OPENSSL_LH_node_stats_bio := TOPENSSL_LH_node_stats_bio(GetProcAddress(hCrypto, 'OPENSSL_LH_node_stats_bio'));
-  OPENSSL_LH_node_usage_stats_bio := TOPENSSL_LH_node_usage_stats_bio(GetProcAddress(hCrypto, 'OPENSSL_LH_node_usage_stats_bio'));
+  OPENSSL_LH_new := TOPENSSL_LH_new(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_new'));
+  OPENSSL_LH_free := TOPENSSL_LH_free(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_free'));
+  OPENSSL_LH_flush := TOPENSSL_LH_flush(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_flush'));
+  OPENSSL_LH_insert := TOPENSSL_LH_insert(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_insert'));
+  OPENSSL_LH_delete := TOPENSSL_LH_delete(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_delete'));
+  OPENSSL_LH_retrieve := TOPENSSL_LH_retrieve(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_retrieve'));
+  OPENSSL_LH_doall := TOPENSSL_LH_doall(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_doall'));
+  OPENSSL_LH_doall_arg := TOPENSSL_LH_doall_arg(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_doall_arg'));
+  OPENSSL_LH_strhash := TOPENSSL_LH_strhash(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_strhash'));
+  OPENSSL_LH_num_items := TOPENSSL_LH_num_items(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_num_items'));
+  OPENSSL_LH_get_down_load := TOPENSSL_LH_get_down_load(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_get_down_load'));
+  OPENSSL_LH_set_down_load := TOPENSSL_LH_set_down_load(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_set_down_load'));
+  OPENSSL_LH_stats := TOPENSSL_LH_stats(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_stats'));
+  OPENSSL_LH_node_stats := TOPENSSL_LH_node_stats(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_node_stats'));
+  OPENSSL_LH_node_usage_stats := TOPENSSL_LH_node_usage_stats(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_node_usage_stats'));
+  OPENSSL_LH_stats_bio := TOPENSSL_LH_stats_bio(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_stats_bio'));
+  OPENSSL_LH_node_stats_bio := TOPENSSL_LH_node_stats_bio(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_node_stats_bio'));
+  OPENSSL_LH_node_usage_stats_bio := TOPENSSL_LH_node_usage_stats_bio(TOpenSSLLoader.GetFunction(LHandle, 'OPENSSL_LH_node_usage_stats_bio'));
   
   // Try legacy lh_* functions for compatibility (pre-1.1.0)
   if not Assigned(OPENSSL_LH_new) then
   begin
-    lh_new := Tlh_new(GetProcAddress(hCrypto, 'lh_new'));
-    lh_free := Tlh_free(GetProcAddress(hCrypto, 'lh_free'));
-    lh_insert := Tlh_insert(GetProcAddress(hCrypto, 'lh_insert'));
-    lh_delete := Tlh_delete(GetProcAddress(hCrypto, 'lh_delete'));
-    lh_retrieve := Tlh_retrieve(GetProcAddress(hCrypto, 'lh_retrieve'));
-    lh_doall := Tlh_doall(GetProcAddress(hCrypto, 'lh_doall'));
-    lh_doall_arg := Tlh_doall_arg(GetProcAddress(hCrypto, 'lh_doall_arg'));
-    lh_strhash := Tlh_strhash(GetProcAddress(hCrypto, 'lh_strhash'));
-    lh_num_items := Tlh_num_items(GetProcAddress(hCrypto, 'lh_num_items'));
+    lh_new := Tlh_new(TOpenSSLLoader.GetFunction(LHandle, 'lh_new'));
+    lh_free := Tlh_free(TOpenSSLLoader.GetFunction(LHandle, 'lh_free'));
+    lh_insert := Tlh_insert(TOpenSSLLoader.GetFunction(LHandle, 'lh_insert'));
+    lh_delete := Tlh_delete(TOpenSSLLoader.GetFunction(LHandle, 'lh_delete'));
+    lh_retrieve := Tlh_retrieve(TOpenSSLLoader.GetFunction(LHandle, 'lh_retrieve'));
+    lh_doall := Tlh_doall(TOpenSSLLoader.GetFunction(LHandle, 'lh_doall'));
+    lh_doall_arg := Tlh_doall_arg(TOpenSSLLoader.GetFunction(LHandle, 'lh_doall_arg'));
+    lh_strhash := Tlh_strhash(TOpenSSLLoader.GetFunction(LHandle, 'lh_strhash'));
+    lh_num_items := Tlh_num_items(TOpenSSLLoader.GetFunction(LHandle, 'lh_num_items'));
     
     // Map legacy functions to modern ones
     if Assigned(lh_new) then
@@ -238,9 +222,9 @@ begin
     lh_strhash := OPENSSL_LH_strhash;
     lh_num_items := OPENSSL_LH_num_items;
   end;
-  
-  LHashLoaded := Assigned(OPENSSL_LH_new) or Assigned(lh_new);
-  Result := LHashLoaded;
+
+  Result := Assigned(OPENSSL_LH_new) or Assigned(lh_new);
+  TOpenSSLLoader.SetModuleLoaded(osmLHash, Result);
 end;
 
 procedure UnloadLHashFunctions;
@@ -275,19 +259,15 @@ begin
   lh_doall_arg := nil;
   lh_strhash := nil;
   lh_num_items := nil;
-  
-  LHashLoaded := False;
-  
-  if hCrypto <> 0 then
-  begin
-    FreeLibrary(hCrypto);
-    hCrypto := 0;
-  end;
+
+  TOpenSSLLoader.SetModuleLoaded(osmLHash, False);
+
+  // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
 end;
 
 function IsLHashLoaded: Boolean;
 begin
-  Result := LHashLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmLHash);
 end;
 
 // Callback functions
@@ -324,11 +304,11 @@ end;
 function CreateStringHashTable: POPENSSL_LHASH;
 begin
   if not Assigned(OPENSSL_LH_new) then
-    raise Exception.Create('LHASH functions not loaded');
+    raise ESSLException.Create('LHASH functions not loaded');
     
   Result := OPENSSL_LH_new(TOPENSSL_LH_HASHFUNC(@HashStringWrapper), TOPENSSL_LH_COMPFUNC(@CompareStrings));
   if Result = nil then
-    raise Exception.Create('Failed to create hash table');
+    raise ESSLException.Create('Failed to create hash table');
 end;
 
 procedure FreeHashTable(Hash: POPENSSL_LHASH);

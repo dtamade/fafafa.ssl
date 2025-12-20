@@ -7,13 +7,14 @@
 {******************************************************************************}
 unit fafafa.ssl.openssl.api.srp;
 
-{$MODE OBJFPC}{$H+}
+{$mode ObjFPC}{$H+}
 
 interface
 
 uses
   SysUtils, Classes,
   fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.bn,
   fafafa.ssl.openssl.api.consts;
 
@@ -137,96 +138,67 @@ implementation
 uses
   fafafa.ssl.openssl.api.utils;
 
-var
-  SRPLoaded: Boolean = False;
+const
+  { SRP function bindings for batch loading }
+  SRP_FUNCTION_COUNT = 28;
+  SRPFunctionBindings: array[0..SRP_FUNCTION_COUNT - 1] of TFunctionBinding = (
+    { Calculation functions }
+    (Name: 'SRP_Calc_server_key';     FuncPtr: @SRP_Calc_server_key;     Required: False),
+    (Name: 'SRP_Calc_u';              FuncPtr: @SRP_Calc_u;              Required: False),
+    (Name: 'SRP_Calc_client_key';     FuncPtr: @SRP_Calc_client_key;     Required: False),
+    (Name: 'SRP_Calc_x';              FuncPtr: @SRP_Calc_x;              Required: False),
+    (Name: 'SRP_Calc_B';              FuncPtr: @SRP_Calc_B;              Required: False),
+    (Name: 'SRP_Calc_A';              FuncPtr: @SRP_Calc_A;              Required: False),
+    (Name: 'SRP_Verify_A_mod_N';      FuncPtr: @SRP_Verify_A_mod_N;      Required: False),
+    (Name: 'SRP_Verify_B_mod_N';      FuncPtr: @SRP_Verify_B_mod_N;      Required: False),
+    { VBASE functions }
+    (Name: 'SRP_VBASE_new';           FuncPtr: @SRP_VBASE_new;           Required: False),
+    (Name: 'SRP_VBASE_free';          FuncPtr: @SRP_VBASE_free;          Required: False),
+    (Name: 'SRP_VBASE_init';          FuncPtr: @SRP_VBASE_init;          Required: False),
+    (Name: 'SRP_VBASE_add0_user';     FuncPtr: @SRP_VBASE_add0_user;     Required: False),
+    (Name: 'SRP_VBASE_get_by_user';   FuncPtr: @SRP_VBASE_get_by_user;   Required: False),
+    (Name: 'SRP_VBASE_get1_by_user';  FuncPtr: @SRP_VBASE_get1_by_user;  Required: False),
+    { User management functions }
+    (Name: 'SRP_user_pwd_new';        FuncPtr: @SRP_user_pwd_new;        Required: False),
+    (Name: 'SRP_user_pwd_free';       FuncPtr: @SRP_user_pwd_free;       Required: False),
+    (Name: 'SRP_user_pwd_set_salt';   FuncPtr: @SRP_user_pwd_set_salt;   Required: False),
+    (Name: 'SRP_user_pwd_set_verifier'; FuncPtr: @SRP_user_pwd_set_verifier; Required: False),
+    (Name: 'SRP_user_pwd_set_info';   FuncPtr: @SRP_user_pwd_set_info;   Required: False),
+    (Name: 'SRP_user_pwd_set_gN';     FuncPtr: @SRP_user_pwd_set_gN;     Required: False),
+    (Name: 'SRP_user_pwd_get0_salt';  FuncPtr: @SRP_user_pwd_get0_salt;  Required: False),
+    (Name: 'SRP_user_pwd_get0_verifier'; FuncPtr: @SRP_user_pwd_get0_verifier; Required: False),
+    (Name: 'SRP_user_pwd_get0_name';  FuncPtr: @SRP_user_pwd_get0_name;  Required: False),
+    { gN functions }
+    (Name: 'SRP_get_default_gN';      FuncPtr: @SRP_get_default_gN;      Required: False),
+    (Name: 'SRP_check_known_gN_param'; FuncPtr: @SRP_check_known_gN_param; Required: False),
+    (Name: 'SRP_get_1_by_id';         FuncPtr: @SRP_get_1_by_id;         Required: False),
+    { Password functions }
+    (Name: 'SRP_create_verifier';     FuncPtr: @SRP_create_verifier;     Required: False),
+    (Name: 'SRP_create_verifier_BN';  FuncPtr: @SRP_create_verifier_BN;  Required: False)
+  );
 
 function LoadSRP(const ALibCrypto: THandle): Boolean;
 begin
   Result := False;
-  if SRPLoaded then Exit(True);
+  if TOpenSSLLoader.IsModuleLoaded(osmSRP) then Exit(True);
   if ALibCrypto = 0 then Exit;
 
-  { Load calculation functions }
-  SRP_Calc_server_key := TSRPCalcServerKey(GetProcAddress(ALibCrypto, 'SRP_Calc_server_key'));
-  SRP_Calc_u := TSRPCalcU(GetProcAddress(ALibCrypto, 'SRP_Calc_u'));
-  SRP_Calc_client_key := TSRPCalcClientKey(GetProcAddress(ALibCrypto, 'SRP_Calc_client_key'));
-  SRP_Calc_x := TSRPCalcX(GetProcAddress(ALibCrypto, 'SRP_Calc_x'));
-  SRP_Calc_B := TSRPCalcB(GetProcAddress(ALibCrypto, 'SRP_Calc_B'));
-  SRP_Calc_A := TSRPCalcClient(GetProcAddress(ALibCrypto, 'SRP_Calc_A'));
-  SRP_Verify_A_mod_N := TSRPVerifyAPubKey(GetProcAddress(ALibCrypto, 'SRP_Verify_A_mod_N'));
-  SRP_Verify_B_mod_N := TSRPVerifyBPubKey(GetProcAddress(ALibCrypto, 'SRP_Verify_B_mod_N'));
-  
-  { Load VBASE functions }
-  SRP_VBASE_new := TSRPVBASEG(GetProcAddress(ALibCrypto, 'SRP_VBASE_new'));
-  SRP_VBASE_free := TSRPVBASEFree(GetProcAddress(ALibCrypto, 'SRP_VBASE_free'));
-  SRP_VBASE_init := TSRPVBASEInit(GetProcAddress(ALibCrypto, 'SRP_VBASE_init'));
-  SRP_VBASE_add0_user := TSRPVBASEAdd(GetProcAddress(ALibCrypto, 'SRP_VBASE_add0_user'));
-  SRP_VBASE_get_by_user := TSRPVBASEGetByUser(GetProcAddress(ALibCrypto, 'SRP_VBASE_get_by_user'));
-  SRP_VBASE_get1_by_user := TSRPVBASEGet1ByUser(GetProcAddress(ALibCrypto, 'SRP_VBASE_get1_by_user'));
-  
-  { Load user management functions }
-  SRP_user_pwd_new := TSRPUserPwdNew(GetProcAddress(ALibCrypto, 'SRP_user_pwd_new'));
-  SRP_user_pwd_free := TSRPUserPwdFree(GetProcAddress(ALibCrypto, 'SRP_user_pwd_free'));
-  SRP_user_pwd_set_salt := TSRPUserPwdSetSalt(GetProcAddress(ALibCrypto, 'SRP_user_pwd_set_salt'));
-  SRP_user_pwd_set_verifier := TSRPUserPwdSetVerifier(GetProcAddress(ALibCrypto, 'SRP_user_pwd_set_verifier'));
-  SRP_user_pwd_set_info := TSRPUserPwdSetInfo(GetProcAddress(ALibCrypto, 'SRP_user_pwd_set_info'));
-  SRP_user_pwd_set_gN := TSRPUserPwdSetGN(GetProcAddress(ALibCrypto, 'SRP_user_pwd_set_gN'));
-  SRP_user_pwd_get0_salt := TSRPUserPwdGet0Salt(GetProcAddress(ALibCrypto, 'SRP_user_pwd_get0_salt'));
-  SRP_user_pwd_get0_verifier := TSRPUserPwdGet0Verifier(GetProcAddress(ALibCrypto, 'SRP_user_pwd_get0_verifier'));
-  SRP_user_pwd_get0_name := TSRPUserPwdGet0Username(GetProcAddress(ALibCrypto, 'SRP_user_pwd_get0_name'));
-  
-  { Load gN functions }
-  SRP_get_default_gN := TSRPGetDefaultGN(GetProcAddress(ALibCrypto, 'SRP_get_default_gN'));
-  SRP_check_known_gN_param := TSRPCheckKnownGNParam(GetProcAddress(ALibCrypto, 'SRP_check_known_gN_param'));
-  SRP_get_1_by_id := TSRPGet1KnownGN(GetProcAddress(ALibCrypto, 'SRP_get_1_by_id'));
-  
-  { Load password functions }
-  SRP_create_verifier := TSRPCreateVerifier(GetProcAddress(ALibCrypto, 'SRP_create_verifier'));
-  SRP_create_verifier_BN := TSRPCreateVerifierBN(GetProcAddress(ALibCrypto, 'SRP_create_verifier_BN'));
+  { Batch load all SRP functions }
+  TOpenSSLLoader.LoadFunctions(ALibCrypto, SRPFunctionBindings);
 
   { Basic functions are enough to consider the module loaded }
   Result := Assigned(SRP_VBASE_new);
-  SRPLoaded := Result;
+  TOpenSSLLoader.SetModuleLoaded(osmSRP, Result);
 end;
 
 procedure UnloadSRP;
 begin
-  if not SRPLoaded then Exit;
+  if not TOpenSSLLoader.IsModuleLoaded(osmSRP) then Exit;
 
-  SRP_Calc_server_key := nil;
-  SRP_Calc_u := nil;
-  SRP_Calc_client_key := nil;
-  SRP_Calc_x := nil;
-  SRP_Calc_B := nil;
-  SRP_Calc_A := nil;
-  SRP_Verify_A_mod_N := nil;
-  SRP_Verify_B_mod_N := nil;
-  
-  SRP_VBASE_new := nil;
-  SRP_VBASE_free := nil;
-  SRP_VBASE_init := nil;
-  SRP_VBASE_add0_user := nil;
-  SRP_VBASE_get_by_user := nil;
-  SRP_VBASE_get1_by_user := nil;
-  
-  SRP_user_pwd_new := nil;
-  SRP_user_pwd_free := nil;
-  SRP_user_pwd_set_salt := nil;
-  SRP_user_pwd_set_verifier := nil;
-  SRP_user_pwd_set_info := nil;
-  SRP_user_pwd_set_gN := nil;
-  SRP_user_pwd_get0_salt := nil;
-  SRP_user_pwd_get0_verifier := nil;
-  SRP_user_pwd_get0_name := nil;
-  
-  SRP_get_default_gN := nil;
-  SRP_check_known_gN_param := nil;
-  SRP_get_1_by_id := nil;
-  
-  SRP_create_verifier := nil;
-  SRP_create_verifier_BN := nil;
+  { Clear all function pointers }
+  TOpenSSLLoader.ClearFunctions(SRPFunctionBindings);
 
-  SRPLoaded := False;
+  TOpenSSLLoader.SetModuleLoaded(osmSRP, False);
 end;
 
 { Helper functions }
@@ -271,7 +243,9 @@ end;
 function SRPVerifyUser(vbase: PSRP_VBASE; const Username, Password: string): Boolean;
 var
   User: PSRP_user_pwd;
-  X, V: PBIGNUM;
+  Salt, StoredVerifier, ComputedX: PBIGNUM;
+  gN: PSRP_gN;
+  ComputedVerifier: PBIGNUM;
 begin
   Result := False;
   if (vbase = nil) or not Assigned(SRP_VBASE_get_by_user) then Exit;
@@ -279,9 +253,54 @@ begin
   User := SRP_VBASE_get_by_user(vbase, PChar(Username));
   if User = nil then Exit;
   
-  // TODO: Implement actual verification using password
-  // This is a simplified implementation
-  Result := User <> nil;
+  // Get stored salt and verifier from user record
+  if not Assigned(SRP_user_pwd_get0_salt) or not Assigned(SRP_user_pwd_get0_verifier) then
+    Exit;
+    
+  Salt := SRP_user_pwd_get0_salt(User);
+  StoredVerifier := SRP_user_pwd_get0_verifier(User);
+  
+  if (Salt = nil) or (StoredVerifier = nil) then
+    Exit;
+  
+  // Compute x = H(salt | H(username | ':' | password))
+  if Assigned(SRP_Calc_x) then
+  begin
+    ComputedX := SRP_Calc_x(Salt, PChar(Username), PChar(Password));
+    if ComputedX = nil then Exit;
+    
+    try
+      // Get default gN parameters (typically use same as stored user)
+      if Assigned(SRP_get_default_gN) then
+      begin
+        gN := SRP_get_default_gN('1024');
+        if gN <> nil then
+        begin
+          // Compute v = g^x mod N
+          ComputedVerifier := BN_new();
+          if ComputedVerifier <> nil then
+          begin
+            try
+              // Use BN_mod_exp to compute g^x mod N
+              if Assigned(BN_mod_exp) then
+              begin
+                if BN_mod_exp(ComputedVerifier, gN^.g, ComputedX, gN^.N, nil) = 1 then
+                begin
+                  // Compare computed verifier with stored verifier
+                  if Assigned(BN_cmp) then
+                    Result := BN_cmp(ComputedVerifier, StoredVerifier) = 0;
+                end;
+              end;
+            finally
+              BN_free(ComputedVerifier);
+            end;
+          end;
+        end;
+      end;
+    finally
+      BN_free(ComputedX);
+    end;
+  end;
 end;
 
 function SRPGenerateVerifier(const Username, Password: string; out Salt, Verifier: string; const gN_id: string): Boolean;

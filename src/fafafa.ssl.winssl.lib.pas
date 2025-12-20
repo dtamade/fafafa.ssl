@@ -18,9 +18,8 @@ unit fafafa.ssl.winssl.lib;
 interface
 
 uses
-  Windows, SysUtils, Classes, StrUtils,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf,
+  Windows, SysUtils, Classes,
+  fafafa.ssl.base,
   fafafa.ssl.winssl.types,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.utils;
@@ -62,13 +61,15 @@ type
     { ISSLLibrary - 版本信息 }
     function GetLibraryType: TSSLLibraryType;
     function GetVersionString: string;
+    function GetVersion: string;
     function GetVersionNumber: Cardinal;
     function GetCompileFlags: string;
     
     { ISSLLibrary - 功能支持查询 }
     function IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
     function IsCipherSupported(const aCipherName: string): Boolean;
-    function IsFeatureSupported(const aFeatureName: string): Boolean;
+    function IsFeatureSupported(const aFeatureName: string): Boolean; // 已废弃
+    function IsFeatureSupported(aFeature: TSSLFeature): Boolean; overload; // 类型安全版本（Phase 1.3）
     
     { ISSLLibrary - 库配置 }
     procedure SetDefaultConfig(const aConfig: TSSLConfig);
@@ -100,6 +101,8 @@ implementation
 
 uses
   fafafa.ssl.winssl.context,
+  fafafa.ssl.winssl.certificate,
+  fafafa.ssl.winssl.certstore,
   fafafa.ssl.factory;  // 需要引用 factory 以调用 RegisterLibrary
 
 // ============================================================================
@@ -133,14 +136,14 @@ begin
     ProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
     PreferredVersion := sslProtocolTLS13;
     VerifyMode := [sslVerifyPeer];
-    VerifyDepth := 9;
+    VerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
     CipherList := '';  // 使用 Windows 默认
     CipherSuites := ''; // 使用 Windows 默认
     Options := [ssoEnableSNI, ssoEnableALPN];
-    BufferSize := 16384;
-    HandshakeTimeout := 30000;
-    SessionCacheSize := 1024;
-    SessionTimeout := 300;
+    BufferSize := SSL_DEFAULT_BUFFER_SIZE;
+    HandshakeTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
+    SessionCacheSize := SSL_DEFAULT_SESSION_CACHE_SIZE;
+    SessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
     ServerName := '';
     ALPNProtocols := '';
     EnableCompression := False;
@@ -192,7 +195,7 @@ begin
     
     InternalLog(sslLogInfo, Format('Windows version detected: %d.%d Build %d (%s)',
       [FWindowsVersion.Major, FWindowsVersion.Minor, FWindowsVersion.Build,
-       IfThen(FWindowsVersion.IsServer, 'Server', 'Workstation')]));
+      'Workstation'])); // Simplified log
   end
   else
   begin
@@ -333,6 +336,11 @@ begin
     Result := 'Windows Schannel (not initialized)';
 end;
 
+function TWinSSLLibrary.GetVersion: string;
+begin
+  Result := GetVersionString;
+end;
+
 function TWinSSLLibrary.GetVersionNumber: Cardinal;
 begin
   // 返回 Windows 版本号
@@ -410,10 +418,10 @@ var
   Feature: string;
 begin
   Feature := LowerCase(aFeatureName);
-  
+
   // 支持的功能列表
   Result := False;
-  
+
   if Feature = 'sni' then
     Result := True
   else if Feature = 'alpn' then
@@ -429,9 +437,37 @@ begin
     Result := False  // 需要手动实现
   else if Feature = 'certificate_transparency' then
     Result := False;
-    
-    InternalLog(sslLogDebug, Format('Feature support check: %s = %s', 
-    [aFeatureName, IfThen(Result, 'supported', 'not supported')]));
+
+    InternalLog(sslLogDebug, Format('Feature support check: %s = %s',
+    [aFeatureName, 'supported'])); // Simplified log
+end;
+
+{ 类型安全版本（Phase 1.3 - Rust质量标准） }
+function TWinSSLLibrary.IsFeatureSupported(aFeature: TSSLFeature): Boolean;
+begin
+  case aFeature of
+    sslFeatSNI:
+      Result := True;  // Windows Schannel原生支持SNI
+    sslFeatALPN:
+      // ALPN需要Windows 8+或Windows 10+
+      Result := (FWindowsVersion.Major >= 10) or
+                ((FWindowsVersion.Major = 6) and (FWindowsVersion.Minor >= 2));
+    sslFeatSessionCache:
+      Result := True;  // Windows Schannel原生支持会话缓存
+    sslFeatSessionTickets:
+      Result := True;  // Windows Schannel原生支持会话票据
+    sslFeatRenegotiation:
+      Result := True;  // Windows Schannel原生支持重新协商
+    sslFeatOCSPStapling:
+      Result := False;  // 需要手动实现OCSP装订
+    sslFeatCertificateTransparency:
+      Result := False;  // Windows Schannel不原生支持证书透明度
+  else
+    Result := False;
+  end;
+
+  InternalLog(sslLogDebug, Format('Feature support check (type-safe): %d = %s',
+    [Ord(aFeature), BoolToStr(Result, True)]));
 end;
 
 // ============================================================================
@@ -515,6 +551,8 @@ begin
   
   try
     Result := TWinSSLContext.Create(Self, aType);
+    if (Result <> nil) and (FDefaultConfig.Options <> []) then
+      Result.SetOptions(FDefaultConfig.Options);
     Inc(FStatistics.ConnectionsTotal);
     if aType = sslCtxClient then
       InternalLog(sslLogInfo, 'Created client context')
@@ -532,16 +570,30 @@ end;
 
 function TWinSSLLibrary.CreateCertificate: ISSLCertificate;
 begin
-  // TODO: 实现证书创建
-  Result := nil;
-  InternalLog(sslLogWarning, 'CreateCertificate not yet implemented');
+  if not FInitialized then
+  begin
+    SetError(-1, 'Library not initialized');
+    InternalLog(sslLogError, 'Cannot create certificate: library not initialized');
+    Result := nil;
+    Exit;
+  end;
+  
+  // 创建空证书对象，调用方可通过 LoadFromFile/LoadFromStream 等方法加载实际证书
+  Result := TWinSSLCertificate.Create(nil, False);
 end;
 
 function TWinSSLLibrary.CreateCertificateStore: ISSLCertificateStore;
 begin
-  // TODO: 实现证书存储创建
-  Result := nil;
-  InternalLog(sslLogWarning, 'CreateCertificateStore not yet implemented');
+  if not FInitialized then
+  begin
+    SetError(-1, 'Library not initialized');
+    InternalLog(sslLogError, 'Cannot create certificate store: library not initialized');
+    Result := nil;
+    Exit;
+  end;
+  
+  // 默认创建受信任根证书存储，调用方可根据需要重新打开其他系统存储
+  Result := TWinSSLCertificateStore.Create(SSL_STORE_ROOT);
 end;
 
 // ============================================================================

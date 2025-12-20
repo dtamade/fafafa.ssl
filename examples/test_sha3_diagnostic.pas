@@ -3,7 +3,7 @@ program test_sha3_diagnostic;
 {$mode objfpc}{$H+}
 
 uses
-  SysUtils, fafafa.ssl.openssl.core, fafafa.ssl.openssl.evp, fafafa.ssl.openssl.sha3;
+  SysUtils, fafafa.ssl.openssl.api.core, fafafa.ssl.openssl.api.evp, fafafa.ssl.openssl.api.sha3;
 
 procedure PrintBytes(const Title: string; const Data: array of Byte);
 var

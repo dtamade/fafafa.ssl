@@ -1,36 +1,19 @@
 # Repository Guidelines
 
 ## 项目结构与模块组织
-- `src/` 存放全部 Pascal 单元（`fafafa.ssl.*`），按提供方（`openssl`、`winssl`）与共享抽象分层；新增单元时需延续现有命名并按后端归类。
-- `tests/` 保存自动化套件：`unit/` 进行模块级验证，`integration/` 覆盖端到端场景，`performance/` 聚焦性能，`bin/` 存放构建产物；新增夹具应与目标功能相邻。
-- `examples/` 提供文档配套示例程序；扩展核心 API 时同步更新相关示例。
-- `scripts/` 收录 PowerShell 维护脚本（模块校验、`uses` 归并等）；`build/` 与 `out/` 仅用于临时输出，禁止将新增目录纳入版本控制。
-- `docs/` 汇总阶段报告与技术说明；功能成熟后请在此编写深入文档，而非直接修改根目录 README。
+核心 Pascal 源码位于 `src/`，按后端拆分为 `fafafa.ssl.openssl.*` 与 `fafafa.ssl.winssl.*`，公共抽象在 `fafafa.ssl.base`，日志与工具集中在 `fafafa.ssl.utils`。 `bin/` 中包含可复现的示例可执行文件，`lib/x86_64-{linux,win64}` 保存可直接引用的单元输出，除非必要不要手动改写。示例与复现脚本放在 `examples/`（生产示例使用 `examples/production`）。测试集中在 `tests/`，按诊断、集成、性能、单元分类，文件命名保持 `test_<领域>_<场景>.pas`，以便脚本检索。规范、审计和架构说明位于 `docs/` 或根目录报告，自动化脚本和工具分别放在 `scripts/`、`tools/`。
 
 ## 构建、测试与开发命令
-- `lazbuild --build-mode=Release fafafa_ssl.lpk` 构建 Lazarus 包；调试阶段可改用 `--build-mode=Debug`。
-- `fpc -Fu%PROJECT_ROOT%\src -Fu%PROJECT_ROOT%\src\openssl your_program.pas` 编译临时诊断程序；若依赖特定后端，请追加对应 `-Fu` 路径。
-- `powershell -ExecutionPolicy Bypass -File run_all_tests.ps1` 运行端到端回归并刷新 `tests\bin` 内的摘要。
-- `pwsh scripts\validate_all_modules.ps1` 在提交前校验 `uses` 列表与接口导出是否一致。
+在仓库根目录执行 `chmod +x build_linux.sh && ./build_linux.sh`，即可用统一的 FPC 选项编译所有 Lazarus 包并检查依赖。修改核心单元后先运行 `python3 scripts/compile_all_modules.py` 做快速构建门禁，评审前执行 `python3 scripts/check_code_style.py src` 捕捉模式或缩进问题。Windows 贡献者可通过 `powershell -ExecutionPolicy Bypass -File run_all_tests.ps1` 自动编译运行每个 `test_openssl_*.pas`；Linux 开发者可用 `fpc -Fu./src -Fu./src/openssl tests/test_<name>.pas` 或自定义脚本逐个执行。
 
-## 代码风格与命名规范
-- 统一使用 `{$mode objfpc}{$H+}` 与两个空格缩进；避免制表符，确保 `begin`/`end` 垂直对齐。
-- 类型命名采用 PascalCase，并为类/记录添加 `T` 前缀（如 `TOpenSSLVersion`），接口以 `I` 开头，常量使用全大写加下划线，过程/函数保持 PascalCase 动词。
-- 单元命名遵循 `fafafa.ssl.<层级>.<功能>`；后端适配层分别位于 `fafafa.ssl.openssl.*` 与 `fafafa.ssl.winssl.*`。
-- `uses` 子句按标准库、共享抽象、后端单元的顺序分组，各组之间留出空行。
+## 代码风格与命名约定
+所有 Pascal 单元须以 `{$mode ObjFPC}{$H+}` 开头，面向 Windows 的单元（`winssl`、`factory`、`abstract` 等）还需 `{$CODEPAGE UTF8}`。统一使用两个空格缩进、禁止 Tab，单行不超过 120 个字符。命名遵循 T/I/L/A/F 前缀：`TMyClass`、`IMyInterface`、局部 `LValue`、参数 `AValue`、字段 `FValue`；常量使用全大写下划线（如 `MAX_BUFFER_SIZE`）。对外 API 需要块注释说明用途，`scripts/check_code_style.py` 会验证这些规则。
 
-## 测试指南
-- 优先使用 PowerShell 驱动脚本 (`run_all_tests.ps1`) 执行全量测试；脚本会在 `tests\bin` 生成可执行文件并输出汇总结果。
-- 单模块测试遵循 `test_<领域>.pas` 命名；新建测试可复制 `test_openssl_1_1_compatibility.pas` 作为模板。
-- 涉及多层交互的诊断用例放入 `tests\integration`，后端特有场景集中在 `tests\unit\lib`。
-- 失败日志需保持精炼，缺失依赖库时应在初始化阶段安全退出。
+## 测试指引
+功能和诊断测试紧邻对应模块（如 `tests/test_ssl_handshake.pas`、`tests/diagnose_*`、`tests/integration`），共用的日志与统计例程位于 `tests/framework`，新增测试应复用这些工具并保持文件名与被测模块一致。目标是维持 `TEST_COVERAGE_FINAL_REPORT.md` 中 ≥95% 的场景覆盖，新功能需同时提供成功与失败路径，必要时补充 WinSSL/OpenSSL 对照。若新增长时间测试，请放入 `tests/performance` 并在相关 PowerShell 运行脚本中标注。
 
-## 提交与合并请求规范
-- 遵循 Conventional Commits（如 `feat:`、`fix:`、`docs:`），范围标签需匹配受影响的子系统（示例：`feat(winssl): ...`）。
-- 每个 Pull Request 须概述功能改动、列出受影响的单元与测试、附上 `run_all_tests.ps1` 输出，并关联相关 issue 或 `docs/` 设计记录。
-- 当行为发生变化时，请同步更新对应文档（`docs/` 或 `examples/`），确保使用者掌握最新信息。
+## 提交与 Pull Request 规范
+分支命名遵循 `feature/<topic>`、`fix/<bug>`、`docs/<section>` 等格式。提交信息使用 `type: 简要说明`（`feat`、`fix`、`docs`、`test`、`refactor`、`perf`、`chore`、`style`），正文可补充细节与 Issue 关联（如 `Fixes #123`）。创建 PR 前确认：可编译、测试通过、文档/CHANGELOG 已更新，并完成 CONTRIBUTING 中的核对单。提交流程需要填写 PR 模板（说明、变更类型、测试证明、检查清单），若触及诊断或工具，请附日志、截图或命令输出摘要。
 
 ## 安全与配置提示
-- 禁止提交 OpenSSL 库文件或私钥；依赖系统安装并在文档中说明所需路径。
-- 在新增代码中使用 `LoadOpenSSLCoreWithVersion` 验证目标版本，并通过显式能力探测处理平台特性。
-- 针对环境差异请使用本地 Lazarus/FPC 配置文件，不要将个性化设置写入仓库源代码。
+不要硬编码私密材料；证书与密钥请放在 `examples/production` 或本地忽略路径，并通过 `fafafa.ssl.openssl.certstore.pas`、`fafafa.ssl.winssl.certstore.pas` 指向 `/etc/ssl/certs` 或 `%ProgramData%\Microsoft\Crypto\RSA`。需要临时 TLS 端点时优先使用 `scripts/local_tls_server.sh`，避免暴露真实服务。若调整加密默认值或系统库行为，请在 `ARCHITECTURE.md` 或独立说明中记录原因，确保后续贡献者了解安全边界。

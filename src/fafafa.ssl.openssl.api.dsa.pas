@@ -7,7 +7,8 @@ interface
 uses
   SysUtils, DynLibs, ctypes,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.bn;
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.loader;
 
 const
   { DSA flags }
@@ -215,16 +216,53 @@ implementation
 uses
   fafafa.ssl.openssl.api.core;
 
-var
-  GDSALoaded: Boolean = False;
+const
+  { DSA 函数绑定数组 - 用于批量加载 }
+  DSA_FUNCTION_BINDINGS: array[0..27] of TFunctionBinding = (
+    // DSA basic functions
+    (Name: 'DSA_new';              FuncPtr: @DSA_new;              Required: True),
+    (Name: 'DSA_new_method';       FuncPtr: @DSA_new_method;       Required: False),
+    (Name: 'DSA_free';             FuncPtr: @DSA_free;             Required: True),
+    (Name: 'DSA_up_ref';           FuncPtr: @DSA_up_ref;           Required: False),
+    (Name: 'DSA_bits';             FuncPtr: @DSA_bits;             Required: False),
+    (Name: 'DSA_size';             FuncPtr: @DSA_size;             Required: False),
+    (Name: 'DSA_security_bits';    FuncPtr: @DSA_security_bits;    Required: False),
+    // DSA parameter/key manipulation
+    (Name: 'DSA_set0_pqg';         FuncPtr: @DSA_set0_pqg;         Required: False),
+    (Name: 'DSA_get0_pqg';         FuncPtr: @DSA_get0_pqg;         Required: False),
+    (Name: 'DSA_set0_key';         FuncPtr: @DSA_set0_key;         Required: False),
+    (Name: 'DSA_get0_key';         FuncPtr: @DSA_get0_key;         Required: False),
+    (Name: 'DSA_get0_p';           FuncPtr: @DSA_get0_p;           Required: False),
+    (Name: 'DSA_get0_q';           FuncPtr: @DSA_get0_q;           Required: False),
+    (Name: 'DSA_get0_g';           FuncPtr: @DSA_get0_g;           Required: False),
+    (Name: 'DSA_get0_pub_key';     FuncPtr: @DSA_get0_pub_key;     Required: False),
+    (Name: 'DSA_get0_priv_key';    FuncPtr: @DSA_get0_priv_key;    Required: False),
+    // DSA parameter generation
+    (Name: 'DSA_generate_parameters';    FuncPtr: @DSA_generate_parameters;    Required: False),
+    (Name: 'DSA_generate_parameters_ex'; FuncPtr: @DSA_generate_parameters_ex; Required: False),
+    // DSA key generation
+    (Name: 'DSA_generate_key';     FuncPtr: @DSA_generate_key;     Required: True),
+    // DSA signing
+    (Name: 'DSA_sign';             FuncPtr: @DSA_sign;             Required: True),
+    (Name: 'DSA_sign_setup';       FuncPtr: @DSA_sign_setup;       Required: False),
+    (Name: 'DSA_do_sign';          FuncPtr: @DSA_do_sign;          Required: False),
+    // DSA verification
+    (Name: 'DSA_verify';           FuncPtr: @DSA_verify;           Required: False),
+    (Name: 'DSA_do_verify';        FuncPtr: @DSA_do_verify;        Required: False),
+    // DSA_SIG functions
+    (Name: 'DSA_SIG_new';          FuncPtr: @DSA_SIG_new;          Required: False),
+    (Name: 'DSA_SIG_free';         FuncPtr: @DSA_SIG_free;         Required: False),
+    (Name: 'DSA_SIG_get0';         FuncPtr: @DSA_SIG_get0;         Required: False),
+    (Name: 'DSA_SIG_set0';         FuncPtr: @DSA_SIG_set0;         Required: False)
+  );
 
 function LoadOpenSSLDSA: Boolean;
 var
   LLib: TLibHandle;
 begin
-  if GDSALoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmDSA) then
     Exit(True);
-    
+
   // Use the crypto library handle from core module
   LLib := GetCryptoLibHandle;
   if LLib = NilHandle then
@@ -232,98 +270,29 @@ begin
     LoadOpenSSLCore;
     LLib := GetCryptoLibHandle;
   end;
-    
+
   if LLib = NilHandle then
     Exit(False);
-    
-  // Load DSA functions with proper type casting
-  DSA_new := TDSA_new(GetProcAddress(LLib, 'DSA_new'));
-  DSA_new_method := TDSA_new_method(GetProcAddress(LLib, 'DSA_new_method'));
-  DSA_free := TDSA_free(GetProcAddress(LLib, 'DSA_free'));
-  DSA_up_ref := TDSA_up_ref(GetProcAddress(LLib, 'DSA_up_ref'));
-  DSA_bits := TDSA_bits(GetProcAddress(LLib, 'DSA_bits'));
-  DSA_size := TDSA_size(GetProcAddress(LLib, 'DSA_size'));
-  DSA_security_bits := TDSA_security_bits(GetProcAddress(LLib, 'DSA_security_bits'));
-  
-  // DSA parameter/key manipulation
-  DSA_set0_pqg := TDSA_set0_pqg(GetProcAddress(LLib, 'DSA_set0_pqg'));
-  DSA_get0_pqg := TDSA_get0_pqg(GetProcAddress(LLib, 'DSA_get0_pqg'));
-  DSA_set0_key := TDSA_set0_key(GetProcAddress(LLib, 'DSA_set0_key'));
-  DSA_get0_key := TDSA_get0_key(GetProcAddress(LLib, 'DSA_get0_key'));
-  DSA_get0_p := TDSA_get0_p(GetProcAddress(LLib, 'DSA_get0_p'));
-  DSA_get0_q := TDSA_get0_q(GetProcAddress(LLib, 'DSA_get0_q'));
-  DSA_get0_g := TDSA_get0_g(GetProcAddress(LLib, 'DSA_get0_g'));
-  DSA_get0_pub_key := TDSA_get0_pub_key(GetProcAddress(LLib, 'DSA_get0_pub_key'));
-  DSA_get0_priv_key := TDSA_get0_priv_key(GetProcAddress(LLib, 'DSA_get0_priv_key'));
-  
-  // DSA parameter generation
-  DSA_generate_parameters := TDSA_generate_parameters(GetProcAddress(LLib, 'DSA_generate_parameters'));
-  DSA_generate_parameters_ex := TDSA_generate_parameters_ex(GetProcAddress(LLib, 'DSA_generate_parameters_ex'));
-  
-  // DSA key generation
-  DSA_generate_key := TDSA_generate_key(GetProcAddress(LLib, 'DSA_generate_key'));
-  
-  // DSA signing
-  DSA_sign := TDSA_sign(GetProcAddress(LLib, 'DSA_sign'));
-  DSA_sign_setup := TDSA_sign_setup(GetProcAddress(LLib, 'DSA_sign_setup'));
-  DSA_do_sign := TDSA_do_sign(GetProcAddress(LLib, 'DSA_do_sign'));
-  
-  // DSA verification
-  DSA_verify := TDSA_verify(GetProcAddress(LLib, 'DSA_verify'));
-  DSA_do_verify := TDSA_do_verify(GetProcAddress(LLib, 'DSA_do_verify'));
-  
-  // DSA_SIG functions
-  DSA_SIG_new := TDSA_SIG_new(GetProcAddress(LLib, 'DSA_SIG_new'));
-  DSA_SIG_free := TDSA_SIG_free(GetProcAddress(LLib, 'DSA_SIG_free'));
-  DSA_SIG_get0 := TDSA_SIG_get0(GetProcAddress(LLib, 'DSA_SIG_get0'));
-  DSA_SIG_set0 := TDSA_SIG_set0(GetProcAddress(LLib, 'DSA_SIG_set0'));
-  
-  GDSALoaded := Assigned(DSA_new) and Assigned(DSA_free) and
-                Assigned(DSA_generate_key) and Assigned(DSA_sign);
-  Result := GDSALoaded;
+
+  // 使用批量加载模式
+  TOpenSSLLoader.LoadFunctions(LLib, DSA_FUNCTION_BINDINGS);
+
+  TOpenSSLLoader.SetModuleLoaded(osmDSA, Assigned(DSA_new) and Assigned(DSA_free) and
+                Assigned(DSA_generate_key) and Assigned(DSA_sign));
+  Result := TOpenSSLLoader.IsModuleLoaded(osmDSA);
 end;
 
 procedure UnloadOpenSSLDSA;
 begin
-  DSA_new := nil;
-  DSA_new_method := nil;
-  DSA_free := nil;
-  DSA_up_ref := nil;
-  DSA_bits := nil;
-  DSA_size := nil;
-  DSA_security_bits := nil;
-  
-  DSA_set0_pqg := nil;
-  DSA_get0_pqg := nil;
-  DSA_set0_key := nil;
-  DSA_get0_key := nil;
-  DSA_get0_p := nil;
-  DSA_get0_q := nil;
-  DSA_get0_g := nil;
-  DSA_get0_pub_key := nil;
-  DSA_get0_priv_key := nil;
-  
-  DSA_generate_parameters := nil;
-  DSA_generate_parameters_ex := nil;
-  DSA_generate_key := nil;
-  
-  DSA_sign := nil;
-  DSA_sign_setup := nil;
-  DSA_do_sign := nil;
-  DSA_verify := nil;
-  DSA_do_verify := nil;
-  
-  DSA_SIG_new := nil;
-  DSA_SIG_free := nil;
-  DSA_SIG_get0 := nil;
-  DSA_SIG_set0 := nil;
-  
-  GDSALoaded := False;
+  // 使用批量清除模式
+  TOpenSSLLoader.ClearFunctions(DSA_FUNCTION_BINDINGS);
+
+  TOpenSSLLoader.SetModuleLoaded(osmDSA, False);
 end;
 
 function IsOpenSSLDSALoaded: Boolean;
 begin
-  Result := GDSALoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmDSA);
 end;
 
 end.

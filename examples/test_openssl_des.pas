@@ -4,9 +4,9 @@ program test_openssl_des;
 
 uses
   SysUtils, Classes, DynLibs,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.des;
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.des;
 
 var
   TestsPassed: Integer = 0;

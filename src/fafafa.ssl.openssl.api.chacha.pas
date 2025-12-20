@@ -1,13 +1,16 @@
-{$MODE DELPHI}{$H+}
-
 unit fafafa.ssl.openssl.api.chacha;
+
+{$mode ObjFPC}{$H+}
 
 interface
 
 uses
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   SysUtils,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.evp;
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.loader;
 
 const
   CHACHA20_KEY_SIZE = 32;
@@ -57,14 +60,14 @@ type
 
   // AEAD helper functions
   TChaCha20Poly1305_encrypt = function(const plaintext: PByte; plaintext_len: size_t;
-                                       const aad: PByte; aad_len: size_t;
-                                       const key: PByte; const iv: PByte;
-                                       ciphertext: PByte; tag: PByte): Integer; cdecl;
+                                      const aad: PByte; aad_len: size_t;
+                                      const key: PByte; const iv: PByte;
+                                      ciphertext: PByte; tag: PByte): Integer; cdecl;
                                        
   TChaCha20Poly1305_decrypt = function(const ciphertext: PByte; ciphertext_len: size_t;
-                                       const aad: PByte; aad_len: size_t;
-                                       const tag: PByte; const key: PByte; const iv: PByte;
-                                       plaintext: PByte): Integer; cdecl;
+                                      const aad: PByte; aad_len: size_t;
+                                      const tag: PByte; const key: PByte; const iv: PByte;
+                                      plaintext: PByte): Integer; cdecl;
 
 var
   // ChaCha20 functions
@@ -105,61 +108,42 @@ function Poly1305MAC(const Key: TBytes; const Message: TBytes): TBytes;
 implementation
 
 uses
-  {$IFDEF WINDOWS}Windows{$ELSE}dynlibs{$ENDIF},
   fafafa.ssl.openssl.api, fafafa.ssl.openssl.api.consts;
 
-var
-  hCrypto: {$IFDEF WINDOWS}HMODULE{$ELSE}THandle{$ENDIF} = 0;
-  ChaChaLoaded: Boolean = False;
-
 function LoadChaChaFunctions: Boolean;
+var
+  LHandle: TLibHandle;
 begin
   Result := False;
-  
-  // Load crypto library if not already loaded
-  if hCrypto = 0 then
-  begin
-    {$IFDEF WINDOWS}
-    hCrypto := LoadLibrary('libcrypto-3-x64.dll');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto-1_1-x64.dll');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libeay32.dll');
-    {$ELSE}
-    hCrypto := LoadLibrary('libcrypto.so.3');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto.so.1.1');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto.so');
-    {$ENDIF}
-  end;
-  
-  if hCrypto = 0 then
+
+  // Phase 3.3 P0+ - 使用统一的动态库加载器（替换 ~20 行重复代码）
+  LHandle := TOpenSSLLoader.GetLibraryHandle(osslLibCrypto);
+  if LHandle = 0 then
     Exit;
     
   // Load ChaCha20 functions (may not be available in older OpenSSL)
-  ChaCha_set_key := TChaCha_set_key(GetProcAddress(hCrypto, 'ChaCha_set_key'));
-  ChaCha_set_iv := TChaCha_set_iv(GetProcAddress(hCrypto, 'ChaCha_set_iv'));
-  ChaCha_cipher := TChaCha_cipher(GetProcAddress(hCrypto, 'ChaCha_cipher'));
-  ChaCha20_cbc_encrypt := TChaCha20_cbc_encrypt(GetProcAddress(hCrypto, 'ChaCha20_cbc_encrypt'));
+  ChaCha_set_key := TChaCha_set_key(TOpenSSLLoader.GetFunction(LHandle, 'ChaCha_set_key'));
+  ChaCha_set_iv := TChaCha_set_iv(TOpenSSLLoader.GetFunction(LHandle, 'ChaCha_set_iv'));
+  ChaCha_cipher := TChaCha_cipher(TOpenSSLLoader.GetFunction(LHandle, 'ChaCha_cipher'));
+  ChaCha20_cbc_encrypt := TChaCha20_cbc_encrypt(TOpenSSLLoader.GetFunction(LHandle, 'ChaCha20_cbc_encrypt'));
   
   // Load Poly1305 functions
-  Poly1305_Init := TPoly1305_Init(GetProcAddress(hCrypto, 'Poly1305_Init'));
-  Poly1305_Update := TPoly1305_Update(GetProcAddress(hCrypto, 'Poly1305_Update'));
-  Poly1305_Final := TPoly1305_Final(GetProcAddress(hCrypto, 'Poly1305_Final'));
-  Poly1305 := TPoly1305(GetProcAddress(hCrypto, 'Poly1305'));
+  Poly1305_Init := TPoly1305_Init(TOpenSSLLoader.GetFunction(LHandle, 'Poly1305_Init'));
+  Poly1305_Update := TPoly1305_Update(TOpenSSLLoader.GetFunction(LHandle, 'Poly1305_Update'));
+  Poly1305_Final := TPoly1305_Final(TOpenSSLLoader.GetFunction(LHandle, 'Poly1305_Final'));
+  Poly1305 := TPoly1305(TOpenSSLLoader.GetFunction(LHandle, 'Poly1305'));
   
   // Load EVP ChaCha20/Poly1305 (preferred method)
-  EVP_chacha20 := TEVP_chacha20(GetProcAddress(hCrypto, 'EVP_chacha20'));
-  EVP_chacha20_poly1305 := TEVP_chacha20_poly1305(GetProcAddress(hCrypto, 'EVP_chacha20_poly1305'));
+  EVP_chacha20 := TEVP_chacha20(TOpenSSLLoader.GetFunction(LHandle, 'EVP_chacha20'));
+  EVP_chacha20_poly1305 := TEVP_chacha20_poly1305(TOpenSSLLoader.GetFunction(LHandle, 'EVP_chacha20_poly1305'));
   
   // Note: High-level AEAD helpers may not exist as direct exports
-  ChaCha20Poly1305_encrypt := TChaCha20Poly1305_encrypt(GetProcAddress(hCrypto, 'ChaCha20Poly1305_encrypt'));
-  ChaCha20Poly1305_decrypt := TChaCha20Poly1305_decrypt(GetProcAddress(hCrypto, 'ChaCha20Poly1305_decrypt'));
+  ChaCha20Poly1305_encrypt := TChaCha20Poly1305_encrypt(TOpenSSLLoader.GetFunction(LHandle, 'ChaCha20Poly1305_encrypt'));
+  ChaCha20Poly1305_decrypt := TChaCha20Poly1305_decrypt(TOpenSSLLoader.GetFunction(LHandle, 'ChaCha20Poly1305_decrypt'));
   
   // Check if at least EVP functions are available
-  ChaChaLoaded := Assigned(EVP_chacha20) or Assigned(ChaCha_cipher);
-  Result := ChaChaLoaded;
+  TOpenSSLLoader.SetModuleLoaded(osmChaCha, Assigned(EVP_chacha20) or Assigned(ChaCha_cipher));
+  Result := TOpenSSLLoader.IsModuleLoaded(osmChaCha);
 end;
 
 procedure UnloadChaChaFunctions;
@@ -178,19 +162,15 @@ begin
   EVP_chacha20_poly1305 := nil;
   ChaCha20Poly1305_encrypt := nil;
   ChaCha20Poly1305_decrypt := nil;
-  
-  ChaChaLoaded := False;
-  
-  if hCrypto <> 0 then
-  begin
-    FreeLibrary(hCrypto);
-    hCrypto := 0;
-  end;
+
+  TOpenSSLLoader.SetModuleLoaded(osmChaCha, False);
+
+  // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
 end;
 
 function IsChaChaLoaded: Boolean;
 begin
-  Result := ChaChaLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmChaCha);
 end;
 
 // High-level helper functions implementation
@@ -201,26 +181,26 @@ var
   outlen, finlen: Integer;
 begin
   if not Assigned(EVP_chacha20) then
-    raise Exception.Create('ChaCha20 not available');
+    raise ESSLCryptoError.Create('ChaCha20 not available');
     
   if Length(Key) <> CHACHA20_KEY_SIZE then
-    raise Exception.Create('Invalid key size for ChaCha20');
+    raise ESSLInvalidArgument.Create('Invalid key size for ChaCha20');
     
   if Length(IV) <> CHACHA20_IV_SIZE then
-    raise Exception.Create('Invalid IV size for ChaCha20');
+    raise ESSLInvalidArgument.Create('Invalid IV size for ChaCha20');
   
   SetLength(Result, Length(Plaintext));
   
   ctx := EVP_CIPHER_CTX_new();
   try
     if EVP_EncryptInit_ex(ctx, EVP_chacha20(), nil, @Key[0], @IV[0]) <> 1 then
-      raise Exception.Create('Failed to initialize ChaCha20 encryption');
+      raise ESSLCryptoError.Create('Failed to initialize ChaCha20 encryption');
       
     if EVP_EncryptUpdate(ctx, @Result[0], @outlen, @Plaintext[0], Length(Plaintext)) <> 1 then
-      raise Exception.Create('Failed to encrypt with ChaCha20');
+      raise ESSLEncryptionException.Create('Failed to encrypt with ChaCha20');
       
     if EVP_EncryptFinal_ex(ctx, @Result[outlen], @finlen) <> 1 then
-      raise Exception.Create('Failed to finalize ChaCha20 encryption');
+      raise ESSLCryptoError.Create('Failed to finalize ChaCha20 encryption');
       
     SetLength(Result, outlen + finlen);
   finally
@@ -234,26 +214,26 @@ var
   outlen, finlen: Integer;
 begin
   if not Assigned(EVP_chacha20) then
-    raise Exception.Create('ChaCha20 not available');
+    raise ESSLCryptoError.Create('ChaCha20 not available');
     
   if Length(Key) <> CHACHA20_KEY_SIZE then
-    raise Exception.Create('Invalid key size for ChaCha20');
+    raise ESSLInvalidArgument.Create('Invalid key size for ChaCha20');
     
   if Length(IV) <> CHACHA20_IV_SIZE then
-    raise Exception.Create('Invalid IV size for ChaCha20');
+    raise ESSLInvalidArgument.Create('Invalid IV size for ChaCha20');
   
   SetLength(Result, Length(Ciphertext));
   
   ctx := EVP_CIPHER_CTX_new();
   try
     if EVP_DecryptInit_ex(ctx, EVP_chacha20(), nil, @Key[0], @IV[0]) <> 1 then
-      raise Exception.Create('Failed to initialize ChaCha20 decryption');
+      raise ESSLCryptoError.Create('Failed to initialize ChaCha20 decryption');
       
     if EVP_DecryptUpdate(ctx, @Result[0], @outlen, @Ciphertext[0], Length(Ciphertext)) <> 1 then
-      raise Exception.Create('Failed to decrypt with ChaCha20');
+      raise ESSLDecryptionException.Create('Failed to decrypt with ChaCha20');
       
     if EVP_DecryptFinal_ex(ctx, @Result[outlen], @finlen) <> 1 then
-      raise Exception.Create('Failed to finalize ChaCha20 decryption');
+      raise ESSLCryptoError.Create('Failed to finalize ChaCha20 decryption');
       
     SetLength(Result, outlen + finlen);
   finally
@@ -267,13 +247,13 @@ var
   outlen, finlen: Integer;
 begin
   if not Assigned(EVP_chacha20_poly1305) then
-    raise Exception.Create('ChaCha20-Poly1305 not available');
+    raise ESSLCryptoError.Create('ChaCha20-Poly1305 not available');
     
   if Length(Key) <> CHACHA20_KEY_SIZE then
-    raise Exception.Create('Invalid key size for ChaCha20-Poly1305');
+    raise ESSLInvalidArgument.Create('Invalid key size for ChaCha20-Poly1305');
     
   if Length(Nonce) <> CHACHA20_IV_SIZE then
-    raise Exception.Create('Invalid nonce size for ChaCha20-Poly1305');
+    raise ESSLInvalidArgument.Create('Invalid nonce size for ChaCha20-Poly1305');
   
   SetLength(Result, Length(Plaintext));
   FillChar(AuthTag, SizeOf(AuthTag), 0);
@@ -281,27 +261,27 @@ begin
   ctx := EVP_CIPHER_CTX_new();
   try
     if EVP_EncryptInit_ex(ctx, EVP_chacha20_poly1305(), nil, @Key[0], @Nonce[0]) <> 1 then
-      raise Exception.Create('Failed to initialize ChaCha20-Poly1305 encryption');
+      raise ESSLCryptoError.Create('Failed to initialize ChaCha20-Poly1305 encryption');
     
     // Set AAD if provided
     if Length(AAD) > 0 then
     begin
       if EVP_EncryptUpdate(ctx, nil, @outlen, @AAD[0], Length(AAD)) <> 1 then
-        raise Exception.Create('Failed to set AAD');
+        raise ESSLCryptoError.Create('Failed to set AAD');
     end;
     
     // Encrypt plaintext
     if EVP_EncryptUpdate(ctx, @Result[0], @outlen, @Plaintext[0], Length(Plaintext)) <> 1 then
-      raise Exception.Create('Failed to encrypt with ChaCha20-Poly1305');
+      raise ESSLEncryptionException.Create('Failed to encrypt with ChaCha20-Poly1305');
       
     if EVP_EncryptFinal_ex(ctx, @Result[outlen], @finlen) <> 1 then
-      raise Exception.Create('Failed to finalize ChaCha20-Poly1305 encryption');
+      raise ESSLCryptoError.Create('Failed to finalize ChaCha20-Poly1305 encryption');
       
     SetLength(Result, outlen + finlen);
     
     // Get tag
     if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, POLY1305_TAG_SIZE, @AuthTag) <> 1 then
-      raise Exception.Create('Failed to get authentication tag');
+      raise ESSLCryptoError.Create('Failed to get authentication tag');
   finally
     EVP_CIPHER_CTX_free(ctx);
   end;
@@ -313,39 +293,39 @@ var
   outlen, finlen: Integer;
 begin
   if not Assigned(EVP_chacha20_poly1305) then
-    raise Exception.Create('ChaCha20-Poly1305 not available');
+    raise ESSLCryptoError.Create('ChaCha20-Poly1305 not available');
     
   if Length(Key) <> CHACHA20_KEY_SIZE then
-    raise Exception.Create('Invalid key size for ChaCha20-Poly1305');
+    raise ESSLInvalidArgument.Create('Invalid key size for ChaCha20-Poly1305');
     
   if Length(Nonce) <> CHACHA20_IV_SIZE then
-    raise Exception.Create('Invalid nonce size for ChaCha20-Poly1305');
+    raise ESSLInvalidArgument.Create('Invalid nonce size for ChaCha20-Poly1305');
   
   SetLength(Result, Length(Ciphertext));
   
   ctx := EVP_CIPHER_CTX_new();
   try
     if EVP_DecryptInit_ex(ctx, EVP_chacha20_poly1305(), nil, @Key[0], @Nonce[0]) <> 1 then
-      raise Exception.Create('Failed to initialize ChaCha20-Poly1305 decryption');
+      raise ESSLCryptoError.Create('Failed to initialize ChaCha20-Poly1305 decryption');
     
     // Set AAD if provided
     if Length(AAD) > 0 then
     begin
       if EVP_DecryptUpdate(ctx, nil, @outlen, @AAD[0], Length(AAD)) <> 1 then
-        raise Exception.Create('Failed to set AAD');
+        raise ESSLCryptoError.Create('Failed to set AAD');
     end;
     
     // Decrypt ciphertext
     if EVP_DecryptUpdate(ctx, @Result[0], @outlen, @Ciphertext[0], Length(Ciphertext)) <> 1 then
-      raise Exception.Create('Failed to decrypt with ChaCha20-Poly1305');
+      raise ESSLDecryptionException.Create('Failed to decrypt with ChaCha20-Poly1305');
     
     // Set expected tag
     if EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, POLY1305_TAG_SIZE, @AuthTag) <> 1 then
-      raise Exception.Create('Failed to set authentication tag');
+      raise ESSLCryptoError.Create('Failed to set authentication tag');
       
     // Verify tag and finalize
     if EVP_DecryptFinal_ex(ctx, @Result[outlen], @finlen) <> 1 then
-      raise Exception.Create('Authentication verification failed');
+      raise ESSLDecryptionException.Create('Authentication verification failed');
       
     SetLength(Result, outlen + finlen);
   finally
@@ -358,15 +338,15 @@ var
   ctx: poly1305_state;
 begin
   if not Assigned(Poly1305) then
-    raise Exception.Create('Poly1305 not available');
+    raise ESSLCryptoError.Create('Poly1305 not available');
     
   if Length(Key) <> POLY1305_KEY_SIZE then
-    raise Exception.Create('Invalid key size for Poly1305');
+    raise ESSLInvalidArgument.Create('Invalid key size for Poly1305');
   
   SetLength(Result, POLY1305_TAG_SIZE);
   
   if Poly1305(@Result[0], @Message[0], Length(Message), @Key[0]) <> 1 then
-    raise Exception.Create('Poly1305 MAC computation failed');
+    raise ESSLCryptoError.Create('Poly1305 MAC computation failed');
 end;
 
 initialization

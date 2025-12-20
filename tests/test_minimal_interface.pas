@@ -4,8 +4,8 @@ program test_minimal_interface;
 
 uses
   SysUtils,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf;
+  
+  fafafa.ssl.base;
 
 type
   TMinimalLib = class(TInterfacedObject, ISSLLibrary)

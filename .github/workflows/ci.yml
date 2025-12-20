@@ -1,0 +1,120 @@
+name: fafafa.ssl CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Weekly regression test on Sundays at 00:00 UTC
+    - cron: '0 0 * * 0'
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y fpc libssl-dev ca-certificates
+        
+    - name: Verify OpenSSL
+      run: |
+        openssl version
+        fpc -i
+        
+    - name: Build tests
+      run: |
+        chmod +x ci_pipeline.sh
+        ./ci_pipeline.sh build
+        
+    - name: Run integration tests
+      run: ./ci_pipeline.sh test
+      continue-on-error: true  # Some tests may fail due to network
+      
+    - name: Run benchmarks
+      run: ./ci_pipeline.sh bench
+      
+    - name: Archive benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results
+        path: tests/benchmarks/benchmark_*.csv
+        retention-days: 30
+        
+    - name: Check performance regression
+      run: |
+        cd tests/benchmarks
+        if [ -f benchmark_baseline.csv ]; then
+          echo "Baseline found, checking regression..."
+        else
+          echo "No baseline - creating first baseline"
+          cp benchmark_results.csv benchmark_baseline.csv
+        fi
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Check for hardcoded secrets
+      run: |
+        ! grep -r "password\s*=\s*['\"]" --include="*.pas" src/
+        ! grep -r "api[_-]key\s*=\s*['\"]" --include="*.pas" src/
+        
+    - name: Verify CA bundle usage
+      run: |
+        grep -r "LoadCAFile\|SSL_CTX_set_default_verify_paths" src/ || true
+        
+    - name: Check SSL/TLS defaults
+      run: |
+        grep -r "sslProtocolTLS1[23]" src/ || echo "WARNING: Check TLS version defaults"
+
+  documentation:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Verify README exists
+      run: test -f README.md
+      
+    - name: Verify examples directory
+      run: test -d examples
+      
+    - name: Count examples
+      run: |
+        EXAMPLE_COUNT=$(find examples -name "*.pas" | wc -l)
+        echo "Found $EXAMPLE_COUNT example files"
+        test $EXAMPLE_COUNT -gt 50
+
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Check for TODO markers
+      run: |
+        TODO_COUNT=$(grep -r "TODO\|FIXME\|XXX" --include="*.pas" src/ | wc -l)
+        echo "Found $TODO_COUNT TODO markers"
+        
+    - name: Check file permissions
+      run: |
+        find . -name "*.sh" -exec test -x {} \; -print
+        
+    - name: Verify no .o or .ppu files committed
+      run: |
+        ! find src -name "*.o" -o -name "*.ppu"

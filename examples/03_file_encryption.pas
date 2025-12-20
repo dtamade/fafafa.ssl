@@ -15,7 +15,6 @@ program file_encryption;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.evp.cipher,

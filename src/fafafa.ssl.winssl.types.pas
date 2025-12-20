@@ -173,6 +173,7 @@ type
   end;
   CRYPT_INTEGER_BLOB = CERT_NAME_BLOB;
   CRYPT_DATA_BLOB = CERT_NAME_BLOB;
+  PCRYPT_DATA_BLOB = ^CRYPT_DATA_BLOB;
   
   // 前向声明
   PCERT_EXTENSION = ^CERT_EXTENSION;
@@ -516,6 +517,28 @@ const
   ASC_REQ_FRAGMENT_TO_FIT         = $00800000;
   ASC_REQ_FRAGMENT_SUPPLIED       = $00002000;
   
+  // AcceptSecurityContext 返回标志
+  ASC_RET_DELEGATE                = $00000001;
+  ASC_RET_MUTUAL_AUTH             = $00000002;
+  ASC_RET_REPLAY_DETECT           = $00000004;
+  ASC_RET_SEQUENCE_DETECT         = $00000008;
+  ASC_RET_CONFIDENTIALITY         = $00000010;
+  ASC_RET_USE_SESSION_KEY         = $00000020;
+  ASC_RET_ALLOCATED_MEMORY        = $00000100;
+  ASC_RET_USED_DCE_STYLE          = $00000200;
+  ASC_RET_DATAGRAM                = $00000400;
+  ASC_RET_CONNECTION              = $00000800;
+  ASC_RET_CALL_LEVEL              = $00002000;
+  ASC_RET_THIRD_LEG_FAILED        = $00004000;
+  ASC_RET_EXTENDED_ERROR          = $00008000;
+  ASC_RET_STREAM                  = $00010000;
+  ASC_RET_INTEGRITY               = $00020000;
+  ASC_RET_LICENSING               = $00040000;
+  ASC_RET_IDENTIFY                = $00080000;
+  ASC_RET_NULL_SESSION            = $00100000;
+  ASC_RET_ALLOW_NON_USER_LOGONS   = $00200000;
+  ASC_RET_FRAGMENT_ONLY           = $00800000;
+  
   // Security Status 返回值
   SEC_E_OK                        = SECURITY_STATUS(0);
   SEC_I_CONTINUE_NEEDED          = SECURITY_STATUS($00090312);
@@ -607,6 +630,7 @@ const
   PKCS_7_ASN_ENCODING            = $00010000;
   
   // 证书存储标志
+  CERT_STORE_PROV_MEMORY         = LPCSTR(2);
   CERT_STORE_PROV_SYSTEM         = LPCSTR(10);
   CERT_SYSTEM_STORE_CURRENT_USER = $00010000;
   CERT_SYSTEM_STORE_LOCAL_MACHINE = $00020000;
@@ -664,6 +688,19 @@ const
   CALG_SHA_384                   = ALG_ID($0000800D);
   CALG_SHA_512                   = ALG_ID($0000800E);
   
+  // 密钥交换算法 ID
+  CALG_RSA_KEYX                  = ALG_ID($0000A400);
+  CALG_RSA_SIGN                  = ALG_ID($00002400);
+  CALG_DH_EPHEM                  = ALG_ID($0000AA02);
+  
+  // 加密算法 ID
+  CALG_RC4                       = ALG_ID($00006801);
+  CALG_DES                       = ALG_ID($00006601);
+  CALG_3DES                      = ALG_ID($00006603);
+  CALG_AES_128                   = ALG_ID($0000660E);
+  CALG_AES_192                   = ALG_ID($0000660F);
+  CALG_AES_256                   = ALG_ID($00006610);
+  
   // 证书扩展 OID
   szOID_SUBJECT_ALT_NAME         = '2.5.29.7';
   szOID_SUBJECT_ALT_NAME2        = '2.5.29.17';
@@ -671,6 +708,9 @@ const
   szOID_BASIC_CONSTRAINTS        = '2.5.29.10';
   szOID_BASIC_CONSTRAINTS2       = '2.5.29.19';
   szOID_ENHANCED_KEY_USAGE       = '2.5.29.37';
+
+  // X.500 属性 OID
+  szOID_COMMON_NAME              = '2.5.4.3';
 
   // Extended Key Usage OIDs (PKIX)
   szOID_PKIX_KP_SERVER_AUTH      = '1.3.6.1.5.5.7.3.1';

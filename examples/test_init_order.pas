@@ -6,9 +6,9 @@ program test_init_order;
 uses
   SysUtils,
   // 引用顺序很重要：先引用 winssl，让它注册
-  fafafa.ssl.winssl,
+  fafafa.ssl.winssl.lib,
   fafafa.ssl.factory,
-  fafafa.ssl.types;
+  fafafa.ssl.base;
 
 var
   libs: TSSLLibraryTypes;

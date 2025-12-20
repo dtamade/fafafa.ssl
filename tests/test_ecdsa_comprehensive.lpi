@@ -33,22 +33,25 @@
   <CompilerOptions>
     <Version Value="11"/>
     <Target>
-      <Filename Value="../bin/test_ecdsa_comprehensive"/>
+      <Filename Value="test_ecdsa_comprehensive"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
       <OtherUnitFiles Value="../src"/>
-      <UnitOutputDirectory Value="../lib/$(TargetCPU)-$(TargetOS)"/>
+      <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
-    <CodeGeneration>
-      <Optimizations>
-        <OptimizationLevel Value="2"/>
-      </Optimizations>
-    </CodeGeneration>
-    <Linking>
-      <Debugging>
-        <DebugInfoType Value="dsDwarf3"/>
-      </Debugging>
-    </Linking>
   </CompilerOptions>
+  <Debugging>
+    <Exceptions>
+      <Item>
+        <Name Value="EAbort"/>
+      </Item>
+      <Item>
+        <Name Value="ECodetoolError"/>
+      </Item>
+      <Item>
+        <Name Value="EFOpenError"/>
+      </Item>
+    </Exceptions>
+  </Debugging>
 </CONFIG>

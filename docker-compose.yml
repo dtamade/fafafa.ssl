@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  fafafa-ssl-builder:
+    build: .
+    image: fafafa-ssl:latest
+    container_name: fafafa-ssl-builder
+    volumes:
+      - ./tests/benchmarks:/opt/fafafa.ssl/tests/benchmarks
+      - ./build-output:/opt/fafafa.ssl/output
+    environment:
+      - SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+    command: ["./ci_pipeline.sh", "all"]
+    
+  fafafa-ssl-bench:
+    build: .
+    image: fafafa-ssl:latest
+    container_name: fafafa-ssl-benchmark
+    volumes:
+      - ./tests/benchmarks:/opt/fafafa.ssl/tests/benchmarks
+    command: ["./ci_pipeline.sh", "bench"]
+    
+  fafafa-ssl-dev:
+    build: .
+    image: fafafa-ssl:latest
+    container_name: fafafa-ssl-dev
+    volumes:
+      - .:/opt/fafafa.ssl
+    working_dir: /opt/fafafa.ssl
+    stdin_open: true
+    tty: true
+    command: ["/bin/bash"]
+
+# Usage:
+# docker-compose up fafafa-ssl-builder    # Full CI/CD
+# docker-compose up fafafa-ssl-bench      # Benchmarks only
+# docker-compose run fafafa-ssl-dev       # Interactive development

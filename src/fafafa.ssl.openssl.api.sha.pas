@@ -9,15 +9,15 @@
 unit fafafa.ssl.openssl.api.sha;
 
 {$mode ObjFPC}{$H+}
-{$H+}
 
 interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;
 
 const
   SHA_DIGEST_LENGTH = 20;
@@ -197,110 +197,72 @@ implementation
 uses
   fafafa.ssl.openssl.api;
 
-var
-  GSHALoaded: Boolean = False;
+const
+  { SHA 函数绑定数组 - 用于批量加载 }
+  SHA_FUNCTION_BINDINGS: array[0..29] of TFunctionBinding = (
+    // SHA-1 functions
+    (Name: 'SHA1_Init';       FuncPtr: @SHA1_Init;       Required: False),
+    (Name: 'SHA1_Update';     FuncPtr: @SHA1_Update;     Required: False),
+    (Name: 'SHA1_Final';      FuncPtr: @SHA1_Final;      Required: False),
+    (Name: 'SHA1';            FuncPtr: @SHA1;            Required: False),
+    (Name: 'SHA1_Transform';  FuncPtr: @SHA1_Transform;  Required: False),
+    // SHA-224 functions
+    (Name: 'SHA224_Init';     FuncPtr: @SHA224_Init;     Required: False),
+    (Name: 'SHA224_Update';   FuncPtr: @SHA224_Update;   Required: False),
+    (Name: 'SHA224_Final';    FuncPtr: @SHA224_Final;    Required: False),
+    (Name: 'SHA224';          FuncPtr: @SHA224;          Required: False),
+    // SHA-256 functions
+    (Name: 'SHA256_Init';     FuncPtr: @SHA256_Init;     Required: False),
+    (Name: 'SHA256_Update';   FuncPtr: @SHA256_Update;   Required: False),
+    (Name: 'SHA256_Final';    FuncPtr: @SHA256_Final;    Required: False),
+    (Name: 'SHA256';          FuncPtr: @SHA256;          Required: False),
+    (Name: 'SHA256_Transform'; FuncPtr: @SHA256_Transform; Required: False),
+    // SHA-384 functions
+    (Name: 'SHA384_Init';     FuncPtr: @SHA384_Init;     Required: False),
+    (Name: 'SHA384_Update';   FuncPtr: @SHA384_Update;   Required: False),
+    (Name: 'SHA384_Final';    FuncPtr: @SHA384_Final;    Required: False),
+    (Name: 'SHA384';          FuncPtr: @SHA384;          Required: False),
+    // SHA-512 functions
+    (Name: 'SHA512_Init';     FuncPtr: @SHA512_Init;     Required: False),
+    (Name: 'SHA512_Update';   FuncPtr: @SHA512_Update;   Required: False),
+    (Name: 'SHA512_Final';    FuncPtr: @SHA512_Final;    Required: False),
+    (Name: 'SHA512';          FuncPtr: @SHA512;          Required: False),
+    (Name: 'SHA512_Transform'; FuncPtr: @SHA512_Transform; Required: False),
+    // SHA-512/224 functions
+    (Name: 'SHA512_224_Init';   FuncPtr: @SHA512_224_Init;   Required: False),
+    (Name: 'SHA512_224_Update'; FuncPtr: @SHA512_224_Update; Required: False),
+    (Name: 'SHA512_224_Final';  FuncPtr: @SHA512_224_Final;  Required: False),
+    (Name: 'SHA512_224';        FuncPtr: @SHA512_224;        Required: False),
+    // SHA-512/256 functions
+    (Name: 'SHA512_256_Init';   FuncPtr: @SHA512_256_Init;   Required: False),
+    (Name: 'SHA512_256_Update'; FuncPtr: @SHA512_256_Update; Required: False),
+    (Name: 'SHA512_256_Final';  FuncPtr: @SHA512_256_Final;  Required: False)
+  );
 
 function LoadSHAFunctions(ALibHandle: THandle): Boolean;
 begin
   Result := False;
-  
+
   if ALibHandle = 0 then Exit;
-  
-  // Load SHA-1 functions
-  SHA1_Init := GetProcAddress(ALibHandle, 'SHA1_Init');
-  SHA1_Update := GetProcAddress(ALibHandle, 'SHA1_Update');
-  SHA1_Final := GetProcAddress(ALibHandle, 'SHA1_Final');
-  SHA1 := GetProcAddress(ALibHandle, 'SHA1');
-  SHA1_Transform := GetProcAddress(ALibHandle, 'SHA1_Transform');
-  
-  // Load SHA-224 functions
-  SHA224_Init := GetProcAddress(ALibHandle, 'SHA224_Init');
-  SHA224_Update := GetProcAddress(ALibHandle, 'SHA224_Update');
-  SHA224_Final := GetProcAddress(ALibHandle, 'SHA224_Final');
-  SHA224 := GetProcAddress(ALibHandle, 'SHA224');
-  
-  // Load SHA-256 functions
-  SHA256_Init := GetProcAddress(ALibHandle, 'SHA256_Init');
-  SHA256_Update := GetProcAddress(ALibHandle, 'SHA256_Update');
-  SHA256_Final := GetProcAddress(ALibHandle, 'SHA256_Final');
-  SHA256 := GetProcAddress(ALibHandle, 'SHA256');
-  SHA256_Transform := GetProcAddress(ALibHandle, 'SHA256_Transform');
-  
-  // Load SHA-384 functions
-  SHA384_Init := GetProcAddress(ALibHandle, 'SHA384_Init');
-  SHA384_Update := GetProcAddress(ALibHandle, 'SHA384_Update');
-  SHA384_Final := GetProcAddress(ALibHandle, 'SHA384_Final');
-  SHA384 := GetProcAddress(ALibHandle, 'SHA384');
-  
-  // Load SHA-512 functions
-  SHA512_Init := GetProcAddress(ALibHandle, 'SHA512_Init');
-  SHA512_Update := GetProcAddress(ALibHandle, 'SHA512_Update');
-  SHA512_Final := GetProcAddress(ALibHandle, 'SHA512_Final');
-  SHA512 := GetProcAddress(ALibHandle, 'SHA512');
-  SHA512_Transform := GetProcAddress(ALibHandle, 'SHA512_Transform');
-  
-  // Load SHA-512/224 functions
-  SHA512_224_Init := GetProcAddress(ALibHandle, 'SHA512_224_Init');
-  SHA512_224_Update := GetProcAddress(ALibHandle, 'SHA512_224_Update');
-  SHA512_224_Final := GetProcAddress(ALibHandle, 'SHA512_224_Final');
-  SHA512_224 := GetProcAddress(ALibHandle, 'SHA512_224');
-  
-  // Load SHA-512/256 functions
-  SHA512_256_Init := GetProcAddress(ALibHandle, 'SHA512_256_Init');
-  SHA512_256_Update := GetProcAddress(ALibHandle, 'SHA512_256_Update');
-  SHA512_256_Final := GetProcAddress(ALibHandle, 'SHA512_256_Final');
-  SHA512_256 := GetProcAddress(ALibHandle, 'SHA512_256');
-  
-  GSHALoaded := True;
+
+  // 使用批量加载模式
+  TOpenSSLLoader.LoadFunctions(ALibHandle, SHA_FUNCTION_BINDINGS);
+
+  TOpenSSLLoader.SetModuleLoaded(osmSHA, True);
   Result := True;
 end;
 
 procedure UnloadSHAFunctions;
 begin
-  SHA1_Init := nil;
-  SHA1_Update := nil;
-  SHA1_Final := nil;
-  SHA1 := nil;
-  SHA1_Transform := nil;
-  
-  SHA224_Init := nil;
-  SHA224_Update := nil;
-  SHA224_Final := nil;
-  SHA224 := nil;
-  
-  SHA256_Init := nil;
-  SHA256_Update := nil;
-  SHA256_Final := nil;
-  SHA256 := nil;
-  SHA256_Transform := nil;
-  
-  SHA384_Init := nil;
-  SHA384_Update := nil;
-  SHA384_Final := nil;
-  SHA384 := nil;
-  
-  SHA512_Init := nil;
-  SHA512_Update := nil;
-  SHA512_Final := nil;
-  SHA512 := nil;
-  SHA512_Transform := nil;
-  
-  SHA512_224_Init := nil;
-  SHA512_224_Update := nil;
-  SHA512_224_Final := nil;
-  SHA512_224 := nil;
-  
-  SHA512_256_Init := nil;
-  SHA512_256_Update := nil;
-  SHA512_256_Final := nil;
-  SHA512_256 := nil;
-  
-  GSHALoaded := False;
+  // 使用批量清除模式
+  TOpenSSLLoader.ClearFunctions(SHA_FUNCTION_BINDINGS);
+
+  TOpenSSLLoader.SetModuleLoaded(osmSHA, False);
 end;
 
 function IsSHALoaded: Boolean;
 begin
-  Result := GSHALoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmSHA);
 end;
 
 // Helper function implementations

@@ -5,10 +5,10 @@ program test_core_modules;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.rand,
-  fafafa.ssl.openssl.bn;
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.rand,
+  fafafa.ssl.openssl.api.bn;
 
 procedure TestCore;
 begin

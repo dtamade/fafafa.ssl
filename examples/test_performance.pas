@@ -4,7 +4,7 @@ program test_performance;
 
 uses
   SysUtils, Classes, Windows, WinSock2, DateUtils,
-  fafafa.ssl.types, fafafa.ssl.intf, fafafa.ssl.winssl;
+  fafafa.ssl.base, fafafa.ssl.winssl.lib;
 
 const
   TEST_HOST = 'www.google.com';

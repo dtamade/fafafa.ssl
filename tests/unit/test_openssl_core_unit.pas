@@ -19,7 +19,7 @@ interface
 uses
   Classes, SysUtils, fpcunit, testregistry,
   test_base,
-  fafafa.ssl.openssl.core;
+  fafafa.ssl.openssl.api.core;
 
 type
   { TTestOpenSSLCore - OpenSSL Core 模块单元测试 }

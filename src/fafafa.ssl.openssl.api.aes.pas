@@ -14,7 +14,7 @@ interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.consts;
 
@@ -56,33 +56,33 @@ type
   
   // AES CFB mode
   TAES_cfb128_encrypt = procedure(const in_: PByte; out_: PByte; length: NativeUInt;
-                                   const key: PAES_KEY; ivec: PByte; num: PInteger; const enc: Integer); cdecl;
+                                  const key: PAES_KEY; ivec: PByte; num: PInteger; const enc: Integer); cdecl;
   TAES_cfb1_encrypt = procedure(const in_: PByte; out_: PByte; length: NativeUInt;
-                                 const key: PAES_KEY; ivec: PByte; num: PInteger; const enc: Integer); cdecl;
+                                const key: PAES_KEY; ivec: PByte; num: PInteger; const enc: Integer); cdecl;
   TAES_cfb8_encrypt = procedure(const in_: PByte; out_: PByte; length: NativeUInt;
-                                 const key: PAES_KEY; ivec: PByte; num: PInteger; const enc: Integer); cdecl;
+                                const key: PAES_KEY; ivec: PByte; num: PInteger; const enc: Integer); cdecl;
   
   // AES OFB mode
   TAES_ofb128_encrypt = procedure(const in_: PByte; out_: PByte; length: NativeUInt;
-                                   const key: PAES_KEY; ivec: PByte; num: PInteger); cdecl;
+                                  const key: PAES_KEY; ivec: PByte; num: PInteger); cdecl;
   
   // AES CTR mode
   TAES_ctr128_encrypt = procedure(const in_: PByte; out_: PByte; length: NativeUInt;
-                                   const key: PAES_KEY; ivec: PByte; ecount_buf: PByte; 
-                                   num: PCardinal); cdecl;
+                                  const key: PAES_KEY; ivec: PByte; ecount_buf: PByte; 
+                                  num: PCardinal); cdecl;
   
   // AES IGE mode
   TAES_ige_encrypt = procedure(const in_: PByte; out_: PByte; length: NativeUInt;
                                 const key: PAES_KEY; ivec: PByte; const enc: Integer); cdecl;
   TAES_bi_ige_encrypt = procedure(const in_: PByte; out_: PByte; length: NativeUInt;
-                                   const key: PAES_KEY; const key2: PAES_KEY; 
-                                   const ivec: PByte; const enc: Integer); cdecl;
+                                  const key: PAES_KEY; const key2: PAES_KEY; 
+                                  const ivec: PByte; const enc: Integer); cdecl;
   
   // AES Wrap mode
   TAES_wrap_key = function(key: PAES_KEY; const iv: PByte; out_: PByte; 
-                           const in_: PByte; inlen: Cardinal): Integer; cdecl;
+                          const in_: PByte; inlen: Cardinal): Integer; cdecl;
   TAES_unwrap_key = function(key: PAES_KEY; const iv: PByte; out_: PByte;
-                             const in_: PByte; inlen: Cardinal): Integer; cdecl;
+                            const in_: PByte; inlen: Cardinal): Integer; cdecl;
   
   // AES hardware acceleration options
   TAES_options = function: PAnsiChar; cdecl;
@@ -126,63 +126,53 @@ function AESDecryptCTR(const Data: TBytes; const Key: TBytes; const IV: TBytes):
 implementation
 
 uses
-  fafafa.ssl.openssl.api;
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.loader;
+
+const
+  { AES 函数绑定数组 - 用于批量加载 }
+  AES_FUNCTION_COUNT = 16;
 
 var
-  GAESLoaded: Boolean = False;
+  AESFunctionBindings: array[0..AES_FUNCTION_COUNT-1] of TFunctionBinding = (
+    (Name: 'AES_set_encrypt_key'; FuncPtr: @AES_set_encrypt_key; Required: False),
+    (Name: 'AES_set_decrypt_key'; FuncPtr: @AES_set_decrypt_key; Required: False),
+    (Name: 'AES_ecb_encrypt';     FuncPtr: @AES_ecb_encrypt;     Required: False),
+    (Name: 'AES_cbc_encrypt';     FuncPtr: @AES_cbc_encrypt;     Required: False),
+    (Name: 'AES_cfb128_encrypt';  FuncPtr: @AES_cfb128_encrypt;  Required: False),
+    (Name: 'AES_cfb1_encrypt';    FuncPtr: @AES_cfb1_encrypt;    Required: False),
+    (Name: 'AES_cfb8_encrypt';    FuncPtr: @AES_cfb8_encrypt;    Required: False),
+    (Name: 'AES_ofb128_encrypt';  FuncPtr: @AES_ofb128_encrypt;  Required: False),
+    (Name: 'AES_ctr128_encrypt';  FuncPtr: @AES_ctr128_encrypt;  Required: False),
+    (Name: 'AES_ige_encrypt';     FuncPtr: @AES_ige_encrypt;     Required: False),
+    (Name: 'AES_bi_ige_encrypt';  FuncPtr: @AES_bi_ige_encrypt;  Required: False),
+    (Name: 'AES_wrap_key';        FuncPtr: @AES_wrap_key;        Required: False),
+    (Name: 'AES_unwrap_key';      FuncPtr: @AES_unwrap_key;      Required: False),
+    (Name: 'AES_options';         FuncPtr: @AES_options;         Required: False),
+    (Name: 'AES_encrypt';         FuncPtr: @AES_encrypt;         Required: False),
+    (Name: 'AES_decrypt';         FuncPtr: @AES_decrypt;         Required: False)
+  );
 
 function LoadAESFunctions(ALibHandle: THandle): Boolean;
 begin
   Result := False;
-  
+
   if ALibHandle = 0 then Exit;
-  
-  AES_set_encrypt_key := GetProcAddress(ALibHandle, 'AES_set_encrypt_key');
-  AES_set_decrypt_key := GetProcAddress(ALibHandle, 'AES_set_decrypt_key');
-  AES_ecb_encrypt := GetProcAddress(ALibHandle, 'AES_ecb_encrypt');
-  AES_cbc_encrypt := GetProcAddress(ALibHandle, 'AES_cbc_encrypt');
-  AES_cfb128_encrypt := GetProcAddress(ALibHandle, 'AES_cfb128_encrypt');
-  AES_cfb1_encrypt := GetProcAddress(ALibHandle, 'AES_cfb1_encrypt');
-  AES_cfb8_encrypt := GetProcAddress(ALibHandle, 'AES_cfb8_encrypt');
-  AES_ofb128_encrypt := GetProcAddress(ALibHandle, 'AES_ofb128_encrypt');
-  AES_ctr128_encrypt := GetProcAddress(ALibHandle, 'AES_ctr128_encrypt');
-  AES_ige_encrypt := GetProcAddress(ALibHandle, 'AES_ige_encrypt');
-  AES_bi_ige_encrypt := GetProcAddress(ALibHandle, 'AES_bi_ige_encrypt');
-  AES_wrap_key := GetProcAddress(ALibHandle, 'AES_wrap_key');
-  AES_unwrap_key := GetProcAddress(ALibHandle, 'AES_unwrap_key');
-  AES_options := GetProcAddress(ALibHandle, 'AES_options');
-  AES_encrypt := GetProcAddress(ALibHandle, 'AES_encrypt');
-  AES_decrypt := GetProcAddress(ALibHandle, 'AES_decrypt');
-  
-  GAESLoaded := True;
+
+  TOpenSSLLoader.LoadFunctions(ALibHandle, AESFunctionBindings);
+  TOpenSSLLoader.SetModuleLoaded(osmAES, True);
   Result := True;
 end;
 
 procedure UnloadAESFunctions;
 begin
-  AES_set_encrypt_key := nil;
-  AES_set_decrypt_key := nil;
-  AES_ecb_encrypt := nil;
-  AES_cbc_encrypt := nil;
-  AES_cfb128_encrypt := nil;
-  AES_cfb1_encrypt := nil;
-  AES_cfb8_encrypt := nil;
-  AES_ofb128_encrypt := nil;
-  AES_ctr128_encrypt := nil;
-  AES_ige_encrypt := nil;
-  AES_bi_ige_encrypt := nil;
-  AES_wrap_key := nil;
-  AES_unwrap_key := nil;
-  AES_options := nil;
-  AES_encrypt := nil;
-  AES_decrypt := nil;
-  
-  GAESLoaded := False;
+  TOpenSSLLoader.ClearFunctions(AESFunctionBindings);
+  TOpenSSLLoader.SetModuleLoaded(osmAES, False);
 end;
 
 function IsAESLoaded: Boolean;
 begin
-  Result := GAESLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmAES);
 end;
 
 function GetAESKeyBits(const Key: TBytes): Integer;
@@ -235,7 +225,7 @@ begin
   Result := nil;
   bits := GetAESKeyBits(Key);
   if (bits = 0) or (Length(Data) mod AES_BLOCK_SIZE <> 0) or
-     not Assigned(AES_set_decrypt_key) or not Assigned(AES_ecb_encrypt) then Exit;
+    not Assigned(AES_set_decrypt_key) or not Assigned(AES_ecb_encrypt) then Exit;
   
   if AES_set_decrypt_key(@Key[0], bits, @aesKey) <> 0 then Exit;
   
@@ -259,7 +249,7 @@ begin
   Result := nil;
   bits := GetAESKeyBits(Key);
   if (bits = 0) or (Length(IV) <> AES_BLOCK_SIZE) or 
-     not Assigned(AES_set_encrypt_key) or not Assigned(AES_cbc_encrypt) then Exit;
+    not Assigned(AES_set_encrypt_key) or not Assigned(AES_cbc_encrypt) then Exit;
   
   if AES_set_encrypt_key(@Key[0], bits, @aesKey) <> 0 then Exit;
   
@@ -283,7 +273,7 @@ begin
   Result := nil;
   bits := GetAESKeyBits(Key);
   if (bits = 0) or (Length(IV) <> AES_BLOCK_SIZE) or (Length(Data) mod AES_BLOCK_SIZE <> 0) or
-     not Assigned(AES_set_decrypt_key) or not Assigned(AES_cbc_encrypt) then Exit;
+    not Assigned(AES_set_decrypt_key) or not Assigned(AES_cbc_encrypt) then Exit;
   
   if AES_set_decrypt_key(@Key[0], bits, @aesKey) <> 0 then Exit;
   
@@ -313,7 +303,7 @@ begin
   Result := nil;
   bits := GetAESKeyBits(Key);
   if (bits = 0) or (Length(IV) <> AES_BLOCK_SIZE) or 
-     not Assigned(AES_set_encrypt_key) or not Assigned(AES_ctr128_encrypt) then Exit;
+    not Assigned(AES_set_encrypt_key) or not Assigned(AES_ctr128_encrypt) then Exit;
   
   if AES_set_encrypt_key(@Key[0], bits, @aesKey) <> 0 then Exit;
   

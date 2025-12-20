@@ -7,7 +7,8 @@ interface
 uses
   SysUtils, DynLibs, ctypes,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader;
 
 const
   { BN flags }
@@ -415,12 +416,9 @@ function IsOpenSSLBNLoaded: Boolean;
 
 implementation
 
-var
-  GBNLoaded: Boolean = False;
-
 function LoadOpenSSLBN: Boolean;
 begin
-  if GBNLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmBN) then
     Exit(True);
     
   if not IsCryptoLibraryLoaded then
@@ -523,8 +521,8 @@ begin
   BN_rand_range := TBN_rand_range(GetCryptoProcAddress('BN_rand_range'));
   
   // The basic BN functions should be available
-  GBNLoaded := Assigned(BN_new) and Assigned(BN_free);
-  Result := GBNLoaded;
+  Result := Assigned(BN_new) and Assigned(BN_free);
+  TOpenSSLLoader.SetModuleLoaded(osmBN, Result);
 end;
 
 procedure UnloadOpenSSLBN;
@@ -533,13 +531,13 @@ begin
   BN_new := nil;
   BN_free := nil;
   // ... clear all other function pointers ...
-  
-  GBNLoaded := False;
+
+  TOpenSSLLoader.SetModuleLoaded(osmBN, False);
 end;
 
 function IsOpenSSLBNLoaded: Boolean;
 begin
-  Result := GBNLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmBN);
 end;
 
 end.

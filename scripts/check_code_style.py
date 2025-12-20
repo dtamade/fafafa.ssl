@@ -46,12 +46,16 @@ class CodeStyleChecker:
         has_mode = False
         has_delphi_mode = False
 
-        for i, line in enumerate(lines[:5], 1):
+        # 检查前50行（考虑可能有较长的注释头）
+        for i, line in enumerate(lines[:50], 1):
+            # 首先检查是否包含编译模式声明
             if '{$mode' in line.lower():
                 has_mode = True
                 if '{$mode Delphi}' in line or '{$mode delphi}' in line.lower():
                     has_delphi_mode = True
                     self.errors.append(f'{filepath}:{i} 使用了过时的 {{$mode Delphi}}，应使用 {{$mode ObjFPC}}')
+                # 找到 mode 声明后就停止检查
+                break
 
         if not has_mode:
             self.errors.append(f'{filepath}:1 缺少编译模式声明')
@@ -70,21 +74,49 @@ class CodeStyleChecker:
 
     def _check_indentation(self, filepath, lines):
         """检查缩进"""
-        for i, line in enumerate(lines, 1):
-            # 跳过空行和注释行
-            if not line.strip() or line.strip().startswith('//'):
-                continue
+        in_block_comment = False
+        block_comment_end = None  # '}' or '*)'
 
-            # 检查是否包含 Tab 字符
+        for i, line in enumerate(lines, 1):
+            # 全局禁止 Tab（无论是否注释都检查）
             if '\t' in line:
                 self.errors.append(f'{filepath}:{i} 包含 Tab 字符，应使用 2 个空格缩进')
 
-            # 检查缩进是否使用空格（简单检查）
+            stripped_full = line.strip()
+            if not stripped_full:
+                continue
+
+            # 位于块注释中：不检查“2 空格倍数”缩进
+            if in_block_comment:
+                if block_comment_end and (block_comment_end in line):
+                    in_block_comment = False
+                    block_comment_end = None
+                continue
+
             stripped = line.lstrip()
-            if stripped:
-                indent_len = len(line) - len(stripped)
-                if indent_len % 2 != 0:
-                    self.errors.append(f'{filepath}:{i} 缩进不是 2 空格倍数')
+
+            # 跳过 // 单行注释
+            if stripped.startswith('//'):
+                continue
+
+            # 跳过 { ... } 块注释（但不跳过编译指令 {$...}）
+            if stripped.startswith('{') and not stripped.startswith('{$'):
+                if '}' not in stripped:
+                    in_block_comment = True
+                    block_comment_end = '}'
+                continue
+
+            # 跳过 (* ... *) 块注释（但不跳过编译指令 (*$...*)）
+            if stripped.startswith('(*') and not stripped.startswith('(*$'):
+                if '*)' not in stripped:
+                    in_block_comment = True
+                    block_comment_end = '*)'
+                continue
+
+            # 仅对非注释/非空行检查缩进是否为 2 空格倍数
+            indent_len = len(line) - len(stripped)
+            if indent_len % 2 != 0:
+                self.errors.append(f'{filepath}:{i} 缩进不是 2 空格倍数')
 
     def _check_naming(self, filepath, lines):
         """检查命名约定"""

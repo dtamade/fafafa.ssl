@@ -14,9 +14,7 @@ program example_factory_usage;
 
 uses
   SysUtils, Classes, StrUtils,
-  fafafa.ssl.types,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.intf,
+  fafafa.ssl.base,
   fafafa.ssl.factory;
 
 procedure PrintSeparator(const Title: string = '');

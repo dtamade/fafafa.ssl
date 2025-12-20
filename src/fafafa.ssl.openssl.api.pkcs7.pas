@@ -5,8 +5,11 @@ unit fafafa.ssl.openssl.api.pkcs7;
 interface
 
 uses
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   SysUtils,
   fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.evp,
@@ -231,7 +234,7 @@ function IsPKCS7Loaded: Boolean;
 function SignData(const aData: TBytes; aSignCert: PX509; aPrivKey: PEVP_PKEY; 
                   aCACerts: PSTACK_OF_X509; aFlags: Integer): TBytes;
 function VerifySignedData(const aSignedData: TBytes; aCACerts: PSTACK_OF_X509; 
-                         aStore: PX509_STORE; out aOutData: TBytes; aFlags: Integer): Boolean;
+                        aStore: PX509_STORE; out aOutData: TBytes; aFlags: Integer): Boolean;
 function EncryptData(const aData: TBytes; aRecipCerts: PSTACK_OF_X509; 
                     aCipher: PEVP_CIPHER; aFlags: Integer): TBytes;
 function DecryptData(const aEncryptedData: TBytes; aRecipCert: PX509; 
@@ -239,78 +242,57 @@ function DecryptData(const aEncryptedData: TBytes; aRecipCert: PX509;
 
 implementation
 
-uses
-  {$IFDEF WINDOWS}Windows{$ELSE}dynlibs{$ENDIF};
-
-var
-  hCrypto: {$IFDEF WINDOWS}HMODULE{$ELSE}THandle{$ENDIF} = 0;
-  PKCS7Loaded: Boolean = False;
-
 function LoadPKCS7Functions: Boolean;
+var
+  LHandle: TLibHandle;
 begin
   Result := False;
-  
-  // Load crypto library if not already loaded
-  if hCrypto = 0 then
-  begin
-    {$IFDEF WINDOWS}
-    hCrypto := LoadLibrary('libcrypto-3-x64.dll');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto-1_1-x64.dll');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libeay32.dll');
-    {$ELSE}
-    hCrypto := LoadLibrary('libcrypto.so.3');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto.so.1.1');
-    if hCrypto = 0 then
-      hCrypto := LoadLibrary('libcrypto.so');
-    {$ENDIF}
-  end;
-  
-  if hCrypto = 0 then
+
+  // Phase 3.3 P0+ - 使用统一的动态库加载器（替换 ~25 行重复代码）
+  LHandle := TOpenSSLLoader.GetLibraryHandle(osslLibCrypto);
+  if LHandle = 0 then
     Exit;
     
   // Load PKCS7 functions
-  PKCS7_new := TPKCS7_new(GetProcAddress(hCrypto, 'PKCS7_new'));
-  PKCS7_free := TPKCS7_free(GetProcAddress(hCrypto, 'PKCS7_free'));
-  PKCS7_content_new := TPKCS7_content_new(GetProcAddress(hCrypto, 'PKCS7_content_new'));
-  PKCS7_set_type := TPKCS7_set_type(GetProcAddress(hCrypto, 'PKCS7_set_type'));
-  PKCS7_set0_type_other := TPKCS7_set0_type_other(GetProcAddress(hCrypto, 'PKCS7_set0_type_other'));
-  PKCS7_set_content := TPKCS7_set_content(GetProcAddress(hCrypto, 'PKCS7_set_content'));
-  PKCS7_SIGNER_INFO_new := TPKCS7_SIGNER_INFO_new(GetProcAddress(hCrypto, 'PKCS7_SIGNER_INFO_new'));
-  PKCS7_SIGNER_INFO_free := TPKCS7_SIGNER_INFO_free(GetProcAddress(hCrypto, 'PKCS7_SIGNER_INFO_free'));
-  PKCS7_RECIP_INFO_new := TPKCS7_RECIP_INFO_new(GetProcAddress(hCrypto, 'PKCS7_RECIP_INFO_new'));
-  PKCS7_RECIP_INFO_free := TPKCS7_RECIP_INFO_free(GetProcAddress(hCrypto, 'PKCS7_RECIP_INFO_free'));
-  PKCS7_add_signer := TPKCS7_add_signer(GetProcAddress(hCrypto, 'PKCS7_add_signer'));
-  PKCS7_add_certificate := TPKCS7_add_certificate(GetProcAddress(hCrypto, 'PKCS7_add_certificate'));
-  PKCS7_add_crl := TPKCS7_add_crl(GetProcAddress(hCrypto, 'PKCS7_add_crl'));
-  PKCS7_sign := TPKCS7_sign(GetProcAddress(hCrypto, 'PKCS7_sign'));
-  PKCS7_sign_add_signer := TPKCS7_sign_add_signer(GetProcAddress(hCrypto, 'PKCS7_sign_add_signer'));
-  PKCS7_final := TPKCS7_final(GetProcAddress(hCrypto, 'PKCS7_final'));
-  PKCS7_verify := TPKCS7_verify(GetProcAddress(hCrypto, 'PKCS7_verify'));
-  PKCS7_get0_signers := TPKCS7_get0_signers(GetProcAddress(hCrypto, 'PKCS7_get0_signers'));
-  PKCS7_encrypt := TPKCS7_encrypt(GetProcAddress(hCrypto, 'PKCS7_encrypt'));
-  PKCS7_decrypt := TPKCS7_decrypt(GetProcAddress(hCrypto, 'PKCS7_decrypt'));
-  PKCS7_add_recipient := TPKCS7_add_recipient(GetProcAddress(hCrypto, 'PKCS7_add_recipient'));
-  PKCS7_RECIP_INFO_set := TPKCS7_RECIP_INFO_set(GetProcAddress(hCrypto, 'PKCS7_RECIP_INFO_set'));
-  PKCS7_set_cipher := TPKCS7_set_cipher(GetProcAddress(hCrypto, 'PKCS7_set_cipher'));
+  PKCS7_new := TPKCS7_new(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_new'));
+  PKCS7_free := TPKCS7_free(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_free'));
+  PKCS7_content_new := TPKCS7_content_new(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_content_new'));
+  PKCS7_set_type := TPKCS7_set_type(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_set_type'));
+  PKCS7_set0_type_other := TPKCS7_set0_type_other(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_set0_type_other'));
+  PKCS7_set_content := TPKCS7_set_content(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_set_content'));
+  PKCS7_SIGNER_INFO_new := TPKCS7_SIGNER_INFO_new(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_SIGNER_INFO_new'));
+  PKCS7_SIGNER_INFO_free := TPKCS7_SIGNER_INFO_free(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_SIGNER_INFO_free'));
+  PKCS7_RECIP_INFO_new := TPKCS7_RECIP_INFO_new(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_RECIP_INFO_new'));
+  PKCS7_RECIP_INFO_free := TPKCS7_RECIP_INFO_free(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_RECIP_INFO_free'));
+  PKCS7_add_signer := TPKCS7_add_signer(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_add_signer'));
+  PKCS7_add_certificate := TPKCS7_add_certificate(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_add_certificate'));
+  PKCS7_add_crl := TPKCS7_add_crl(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_add_crl'));
+  PKCS7_sign := TPKCS7_sign(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_sign'));
+  PKCS7_sign_add_signer := TPKCS7_sign_add_signer(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_sign_add_signer'));
+  PKCS7_final := TPKCS7_final(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_final'));
+  PKCS7_verify := TPKCS7_verify(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_verify'));
+  PKCS7_get0_signers := TPKCS7_get0_signers(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_get0_signers'));
+  PKCS7_encrypt := TPKCS7_encrypt(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_encrypt'));
+  PKCS7_decrypt := TPKCS7_decrypt(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_decrypt'));
+  PKCS7_add_recipient := TPKCS7_add_recipient(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_add_recipient'));
+  PKCS7_RECIP_INFO_set := TPKCS7_RECIP_INFO_set(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_RECIP_INFO_set'));
+  PKCS7_set_cipher := TPKCS7_set_cipher(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_set_cipher'));
   
   // Load I/O functions
-  i2d_PKCS7 := Ti2d_PKCS7(GetProcAddress(hCrypto, 'i2d_PKCS7'));
-  d2i_PKCS7 := Td2i_PKCS7(GetProcAddress(hCrypto, 'd2i_PKCS7'));
-  i2d_PKCS7_bio := Ti2d_PKCS7_bio(GetProcAddress(hCrypto, 'i2d_PKCS7_bio'));
-  d2i_PKCS7_bio := Td2i_PKCS7_bio(GetProcAddress(hCrypto, 'd2i_PKCS7_bio'));
-  PEM_read_bio_PKCS7 := TPEM_read_bio_PKCS7(GetProcAddress(hCrypto, 'PEM_read_bio_PKCS7'));
-  PEM_write_bio_PKCS7 := TPEM_write_bio_PKCS7(GetProcAddress(hCrypto, 'PEM_write_bio_PKCS7'));
+  i2d_PKCS7 := Ti2d_PKCS7(TOpenSSLLoader.GetFunction(LHandle, 'i2d_PKCS7'));
+  d2i_PKCS7 := Td2i_PKCS7(TOpenSSLLoader.GetFunction(LHandle, 'd2i_PKCS7'));
+  i2d_PKCS7_bio := Ti2d_PKCS7_bio(TOpenSSLLoader.GetFunction(LHandle, 'i2d_PKCS7_bio'));
+  d2i_PKCS7_bio := Td2i_PKCS7_bio(TOpenSSLLoader.GetFunction(LHandle, 'd2i_PKCS7_bio'));
+  PEM_read_bio_PKCS7 := TPEM_read_bio_PKCS7(TOpenSSLLoader.GetFunction(LHandle, 'PEM_read_bio_PKCS7'));
+  PEM_write_bio_PKCS7 := TPEM_write_bio_PKCS7(TOpenSSLLoader.GetFunction(LHandle, 'PEM_write_bio_PKCS7'));
   
   // Load SMIME functions
-  SMIME_write_PKCS7 := TSMIME_write_PKCS7(GetProcAddress(hCrypto, 'SMIME_write_PKCS7'));
-  SMIME_read_PKCS7 := TSMIME_read_PKCS7(GetProcAddress(hCrypto, 'SMIME_read_PKCS7'));
-  SMIME_text := TSMIME_text(GetProcAddress(hCrypto, 'SMIME_text'));
-  
-  PKCS7Loaded := Assigned(PKCS7_new) and Assigned(PKCS7_sign) and Assigned(PKCS7_verify);
-  Result := PKCS7Loaded;
+  SMIME_write_PKCS7 := TSMIME_write_PKCS7(TOpenSSLLoader.GetFunction(LHandle, 'SMIME_write_PKCS7'));
+  SMIME_read_PKCS7 := TSMIME_read_PKCS7(TOpenSSLLoader.GetFunction(LHandle, 'SMIME_read_PKCS7'));
+  SMIME_text := TSMIME_text(TOpenSSLLoader.GetFunction(LHandle, 'SMIME_text'));
+
+  Result := Assigned(PKCS7_new) and Assigned(PKCS7_sign) and Assigned(PKCS7_verify);
+  TOpenSSLLoader.SetModuleLoaded(osmPKCS7, Result);
 end;
 
 procedure UnloadPKCS7Functions;
@@ -350,19 +332,15 @@ begin
   SMIME_write_PKCS7 := nil;
   SMIME_read_PKCS7 := nil;
   SMIME_text := nil;
-  
-  PKCS7Loaded := False;
-  
-  if hCrypto <> 0 then
-  begin
-    FreeLibrary(hCrypto);
-    hCrypto := 0;
-  end;
+
+  TOpenSSLLoader.SetModuleLoaded(osmPKCS7, False);
+
+  // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
 end;
 
 function IsPKCS7Loaded: Boolean;
 begin
-  Result := PKCS7Loaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmPKCS7);
 end;
 
 // High-level helper function implementations
@@ -376,31 +354,31 @@ var
   len: Integer;
 begin
   Result := nil;
-  
-  if not PKCS7Loaded then
-    raise Exception.Create('PKCS7 functions not loaded');
+
+  if not IsPKCS7Loaded then
+    raise ESSLException.Create('PKCS7 functions not loaded');
   
   // Create input BIO from data
   LBioIn := BIO_new_mem_buf(@aData[0], Length(aData));
   if LBioIn = nil then
-    raise Exception.Create('Failed to create input BIO');
+    raise ESSLException.Create('Failed to create input BIO');
     
   try
     // Sign data
     p7 := PKCS7_sign(aSignCert, aPrivKey, aCACerts, LBioIn, aFlags);
     if p7 = nil then
-      raise Exception.Create('Failed to sign data');
+      raise ESSLException.Create('Failed to sign data');
       
     try
       // Create output BIO
       LBioOut := BIO_new(BIO_s_mem());
       if LBioOut = nil then
-        raise Exception.Create('Failed to create output BIO');
+        raise ESSLException.Create('Failed to create output BIO');
         
       try
         // Write PKCS7 to output BIO
         if i2d_PKCS7_bio(LBioOut, p7) <= 0 then
-          raise Exception.Create('Failed to write PKCS7');
+          raise ESSLException.Create('Failed to write PKCS7');
           
         // Read data from BIO
         SetLength(Result, 0);
@@ -424,7 +402,7 @@ begin
 end;
 
 function VerifySignedData(const aSignedData: TBytes; aCACerts: PSTACK_OF_X509; 
-                         aStore: PX509_STORE; out aOutData: TBytes; aFlags: Integer): Boolean;
+                        aStore: PX509_STORE; out aOutData: TBytes; aFlags: Integer): Boolean;
 var
   LBioIn, LBioOut: PBIO;
   p7: PPKCS7;
@@ -433,8 +411,8 @@ var
 begin
   Result := False;
   aOutData := nil;
-  
-  if not PKCS7Loaded then
+
+  if not IsPKCS7Loaded then
     Exit;
   
   // Create input BIO from signed data
@@ -491,31 +469,31 @@ var
   len: Integer;
 begin
   Result := nil;
-  
-  if not PKCS7Loaded then
-    raise Exception.Create('PKCS7 functions not loaded');
+
+  if not IsPKCS7Loaded then
+    raise ESSLException.Create('PKCS7 functions not loaded');
   
   // Create input BIO from data
   LBioIn := BIO_new_mem_buf(@aData[0], Length(aData));
   if LBioIn = nil then
-    raise Exception.Create('Failed to create input BIO');
+    raise ESSLException.Create('Failed to create input BIO');
     
   try
     // Encrypt data
     p7 := PKCS7_encrypt(aRecipCerts, LBioIn, aCipher, aFlags);
     if p7 = nil then
-      raise Exception.Create('Failed to encrypt data');
+      raise ESSLException.Create('Failed to encrypt data');
       
     try
       // Create output BIO
       LBioOut := BIO_new(BIO_s_mem());
       if LBioOut = nil then
-        raise Exception.Create('Failed to create output BIO');
+        raise ESSLException.Create('Failed to create output BIO');
         
       try
         // Write PKCS7 to output BIO
         if i2d_PKCS7_bio(LBioOut, p7) <= 0 then
-          raise Exception.Create('Failed to write PKCS7');
+          raise ESSLException.Create('Failed to write PKCS7');
           
         // Read data from BIO
         SetLength(Result, 0);
@@ -548,8 +526,8 @@ var
 begin
   Result := False;
   aOutData := nil;
-  
-  if not PKCS7Loaded then
+
+  if not IsPKCS7Loaded then
     Exit;
   
   // Create input BIO from encrypted data

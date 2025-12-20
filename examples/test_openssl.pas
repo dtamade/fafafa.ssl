@@ -9,8 +9,7 @@ uses
   Windows, WinSock2,
   {$ENDIF}
   fafafa.ssl.factory,
-  fafafa.ssl.intf,
-  fafafa.ssl.types;
+  fafafa.ssl.base;
 
 procedure TestOpenSSLConnection;
 var
