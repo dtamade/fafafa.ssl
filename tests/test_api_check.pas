@@ -2,7 +2,7 @@ program test_api_check;
 {$mode objfpc}{$H+}
 uses
   SysUtils,
-  fafafa.ssl.openssl.lib,
+  fafafa.ssl.openssl.backed,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.x509;
 var

@@ -21,7 +21,8 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.crypto.utils,
   fafafa.ssl.secure,
-  fafafa.ssl.cert.builder;
+  fafafa.ssl.cert.builder,
+  fafafa.ssl;
 
 type
   TBenchmarkResult = record

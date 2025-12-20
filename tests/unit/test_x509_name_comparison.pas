@@ -5,7 +5,8 @@ program test_x509_name_comparison;
 uses
   SysUtils,
   fafafa.ssl.cert.utils,
-  fafafa.ssl.factory;
+  fafafa.ssl.factory,
+  fafafa.ssl;
 
 var
   GPassed, GFailed: Integer;

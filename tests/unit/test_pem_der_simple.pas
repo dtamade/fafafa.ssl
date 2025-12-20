@@ -5,7 +5,8 @@ program test_pem_der_simple;
 uses
   SysUtils,
   fafafa.ssl.cert.utils,
-  fafafa.ssl.factory;
+  fafafa.ssl.factory,
+  fafafa.ssl;
 
 var
   LRootCert, LRootKey: string;

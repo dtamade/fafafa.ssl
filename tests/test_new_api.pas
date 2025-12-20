@@ -16,7 +16,8 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.crypto.utils,
   fafafa.ssl.factory,
-  fafafa.ssl.connection.builder;
+  fafafa.ssl.connection.builder,
+  fafafa.ssl;
 
 var
   TestsPassed: Integer = 0;

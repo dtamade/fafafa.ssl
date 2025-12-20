@@ -5,7 +5,7 @@ program test_real_usage;
 uses
   SysUtils,
   fafafa.ssl.base,
-  fafafa.ssl.openssl.lib;
+  fafafa.ssl.openssl.backed;
 
 var
   SSLLib: ISSLLibrary;

@@ -5,7 +5,7 @@ program test_p1_fixes;
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
-  fafafa.ssl.openssl.lib,
+  fafafa.ssl.openssl.backed,
   fafafa.ssl.openssl.certificate,
   fafafa.ssl.openssl.types;
 

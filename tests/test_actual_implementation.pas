@@ -5,7 +5,6 @@ program test_actual_implementation;
 uses
   SysUtils, Classes,
   fafafa.ssl,
-  fafafa.ssl.types,
   fafafa.ssl.utils;
 
 procedure TestHashData;

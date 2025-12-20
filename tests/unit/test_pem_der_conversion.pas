@@ -5,7 +5,8 @@ program test_pem_der_conversion;
 uses
   SysUtils, Classes,
   fafafa.ssl.cert.utils,
-  fafafa.ssl.factory;
+  fafafa.ssl.factory,
+  fafafa.ssl;
 
 const
   // 测试用自签名证书PEM

@@ -13,7 +13,7 @@ uses
   SysUtils, Classes,
   fafafa.ssl.factory,
   fafafa.ssl.base,
-  fafafa.ssl.openssl;
+  fafafa.ssl;
 
 type
   TBenchmarkResult = record

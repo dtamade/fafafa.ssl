@@ -5,7 +5,8 @@ program benchmark_simple;
 uses
   SysUtils, DateUtils,
   fafafa.ssl.factory,
-  fafafa.ssl.utils;
+  fafafa.ssl.utils,
+  fafafa.ssl;
 
 const
   ITERATIONS = 10000;

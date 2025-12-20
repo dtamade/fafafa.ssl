@@ -8,7 +8,8 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.factory,
   fafafa.ssl.secure,
-  fafafa.ssl.crypto.utils;
+  fafafa.ssl.crypto.utils,
+  fafafa.ssl;
 
 const
   ITERATIONS = 10000;

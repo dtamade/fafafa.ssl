@@ -11,7 +11,8 @@ uses
   fafafa.ssl.cert,
   fafafa.ssl.cert.builder,
   fafafa.ssl.openssl.api.bio,
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl;
 
 const
   PORT = '8443'; // BIO uses string port

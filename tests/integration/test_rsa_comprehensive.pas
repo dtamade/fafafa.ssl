@@ -4,8 +4,8 @@ program test_rsa_comprehensive;
 
 uses
   SysUtils, Math,
-  fafafa.ssl.types,
-  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.base,
+  fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.crypto,

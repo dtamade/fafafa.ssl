@@ -7,7 +7,8 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.quick,
   fafafa.ssl.factory,
-  fafafa.ssl.cert.builder;
+  fafafa.ssl.cert.builder,
+  fafafa.ssl;
 
 procedure Check(ACondition: Boolean; const AMessage: string);
 begin

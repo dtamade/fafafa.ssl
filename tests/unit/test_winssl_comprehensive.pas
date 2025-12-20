@@ -7,7 +7,6 @@ program test_winssl_comprehensive;
 uses
   SysUtils, Classes,
   fafafa.ssl,
-  fafafa.ssl.types,
   fafafa.ssl.winssl.lib;
 
 var

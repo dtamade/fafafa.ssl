@@ -18,7 +18,8 @@ uses
   fafafa.examples.sockets,
   {$ENDIF}
   fafafa.ssl.factory,
-  fafafa.ssl.base;
+  fafafa.ssl.base,
+  fafafa.ssl;
 
 const
   TEST_LEVELS: array[1..3] of Integer = (100, 500, 1000);

@@ -5,7 +5,8 @@ program test_cert_info_extraction;
 uses
   SysUtils, Classes,
   fafafa.ssl.cert.utils,
-  fafafa.ssl.factory;
+  fafafa.ssl.factory,
+  fafafa.ssl;
 
 var
   GPassed, GFailed: Integer;

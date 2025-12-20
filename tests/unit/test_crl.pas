@@ -8,7 +8,8 @@ uses
   fafafa.ssl.factory,
   fafafa.ssl.cert,
   fafafa.ssl.cert.advanced,
-  fafafa.ssl.cert.builder;
+  fafafa.ssl.cert.builder,
+  fafafa.ssl;
 
 const
   // Sample empty CRL in PEM format
