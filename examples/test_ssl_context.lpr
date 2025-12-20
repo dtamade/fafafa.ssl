@@ -4,9 +4,8 @@ program test_ssl_context;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.abstract.intf,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.openssl,
+  fafafa.ssl.base,
+  fafafa.ssl.openssl.backed,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.bio,

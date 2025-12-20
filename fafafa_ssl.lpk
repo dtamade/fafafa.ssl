@@ -46,27 +46,19 @@ Supports OpenSSL, WolfSSL, MbedTLS and Windows Schannel
 Provides a consistent interface across all SSL/TLS backends"/>
     <License Value="MIT License"/>
     <Version Major="1" Minor="0" Release="0" Build="0"/>
-    <Files Count="5">
+    <Files Count="3">
       <Item1>
-        <Filename Value="src\fafafa.ssl.types.pas"/>
-        <UnitName Value="fafafa.ssl.types"/>
+        <Filename Value="src\fafafa.ssl.base.pas"/>
+        <UnitName Value="fafafa.ssl.base"/>
       </Item1>
       <Item2>
-        <Filename Value="src\fafafa.ssl.intf.pas"/>
-        <UnitName Value="fafafa.ssl.intf"/>
-      </Item2>
-      <Item3>
         <Filename Value="src\fafafa.ssl.factory.pas"/>
         <UnitName Value="fafafa.ssl.factory"/>
-      </Item3>
-      <Item4>
-        <Filename Value="src\fafafa.ssl.winssl.pas"/>
-        <UnitName Value="fafafa.ssl.winssl"/>
-      </Item4>
-      <Item5>
+      </Item2>
+      <Item3>
         <Filename Value="src\fafafa.ssl.pas"/>
         <UnitName Value="fafafa.ssl"/>
-      </Item5>
+      </Item3>
     </Files>
     <CompatibilityMode Value="True"/>
     <RequiredPkgs Count="1">

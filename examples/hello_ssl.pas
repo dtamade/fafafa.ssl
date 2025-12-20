@@ -11,7 +11,6 @@ program hello_ssl;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl,
   fafafa.ssl.openssl.api;
 
 var

@@ -10,7 +10,7 @@ program session_reuse_example;
 uses
   SysUtils, Classes,
   fafafa.ssl.factory,
-  fafafa.ssl.types;
+  fafafa.ssl.base;
 
 procedure SaveSessionExample(const Hostname: string; Port: Word);
 var

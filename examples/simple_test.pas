@@ -8,7 +8,6 @@ uses
   cthreads,
   {$ENDIF}
   fafafa.ssl,
-  fafafa.ssl.types,
   fafafa.ssl.utils;
 
 var

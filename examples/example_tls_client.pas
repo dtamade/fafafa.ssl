@@ -6,8 +6,7 @@ program example_tls_client;
 uses
   SysUtils, Classes, WinSock2,
   // SSL 库接口
-  fafafa.ssl.intf,
-  fafafa.ssl.types,
+  fafafa.ssl.base,
   fafafa.ssl.factory;
 
 var

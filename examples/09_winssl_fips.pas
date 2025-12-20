@@ -251,7 +251,7 @@ begin
   WriteLn;
   WriteLn('  uses');
   WriteLn('    fafafa.ssl.factory,');
-  WriteLn('    fafafa.ssl.types;');
+  WriteLn('    fafafa.ssl.base;');
   WriteLn;
   WriteLn('  var');
   WriteLn('    LLib: ISSLLibrary;');

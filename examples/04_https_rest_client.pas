@@ -23,10 +23,8 @@ program https_rest_client;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.types,
-  fafafa.ssl.factory,
-  fafafa.ssl.abstract.intf,
-  fafafa.ssl.abstract.types;
+  fafafa.ssl.base,
+  fafafa.ssl.factory;
 
 type
   { HTTP 方法枚举 }

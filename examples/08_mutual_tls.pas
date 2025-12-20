@@ -25,10 +25,8 @@ program mutual_tls;
 
 uses
   SysUtils,
-  fafafa.ssl.types,
-  fafafa.ssl.factory,
-  fafafa.ssl.abstract.intf,
-  fafafa.ssl.abstract.types;
+  fafafa.ssl.base,
+  fafafa.ssl.factory;
 
 { 解释 mTLS 的概念 }
 procedure ExplainMutualTLS;

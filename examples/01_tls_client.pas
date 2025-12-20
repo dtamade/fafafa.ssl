@@ -13,11 +13,10 @@ program tls_client;
   ============================================================================ }
 
 uses
-  SysUtils, Classes,
+  SysUtils, Classes, Math,
   {$IFDEF MSWINDOWS}WinSock2{$ELSE}Sockets{$ENDIF},
-  fafafa.ssl.openssl,
-  fafafa.ssl.abstract.intf,
-  fafafa.ssl.abstract.types;
+  fafafa.ssl.openssl.backed,
+  fafafa.ssl.base;
 
 const
   SERVER_HOST = 'www.example.com';
@@ -108,9 +107,11 @@ begin
       if LConn.Connect then
       begin
         WriteLn('      ✓ TLS 握手成功');
-        WriteLn('      协议: ', GetProtocolName(LConn.GetProtocolVersion));
+        WriteLn('      协议: ', ProtocolVersionToString(LConn.GetProtocolVersion));
         WriteLn('      密码套件: ', LConn.GetCipherName);
-        WriteLn('      密钥强度: ', LConn.GetCipherBits, ' bits');
+        var LInfo: TSSLConnectionInfo;
+        LInfo := LConn.GetConnectionInfo;
+        WriteLn('      密钥强度: ', LInfo.KeySize, ' bits');
         WriteLn;
         
         // 验证服务器证书
@@ -143,7 +144,8 @@ begin
         
         // 接收响应
         WriteLn('      接收响应...');
-        LResponse := LConn.ReadString;
+        if not LConn.ReadString(LResponse) then
+          LResponse := '';
         
         if Length(LResponse) > 0 then
         begin

@@ -56,7 +56,7 @@ start() {
   : "${FAFAFA_TLS_CERT:?FAFAFA_TLS_CERT is required}"
   : "${FAFAFA_TLS_KEY:?FAFAFA_TLS_KEY is required}"
 
-  local args=(s_server -quiet -www -nocache -accept "$port" -cert "$FAFAFA_TLS_CERT" -key "$FAFAFA_TLS_KEY")
+  local args=(s_server -quiet -www -accept "$port" -cert "$FAFAFA_TLS_CERT" -key "$FAFAFA_TLS_KEY")
 
   if [[ -n "${FAFAFA_TLS_ALPN:-}" ]]; then
     args+=( -alpn "$FAFAFA_TLS_ALPN" )
@@ -68,9 +68,9 @@ start() {
     args+=( -Verify 1 )
   fi
 
-  # Best effort: prefer TLS1.2/1.3
-  args+=( -tls1_2 )
-  if openssl ciphers -v | grep -q TLSv1.3; then args+=( -tls1_3 ); fi
+  if openssl s_server -help 2>&1 | grep -q -- "-min_protocol"; then
+    args+=( -min_protocol TLSv1.2 -max_protocol TLSv1.3 )
+  fi
 
   # Stop any existing first
   stop >/dev/null 2>&1 || true
@@ -79,6 +79,15 @@ start() {
   nohup openssl "${args[@]}" >"$LOG_FILE" 2>&1 &
   echo $! > "$PID_FILE"
   sleep 0.3
+
+  pid=$(cat "$PID_FILE" || true)
+  if [[ -z "$pid" ]] || ! ps -p "$pid" >/dev/null 2>&1; then
+    echo "failed to start" >&2
+    echo "--- s_server log (tail) ---" >&2
+    tail -n 50 "$LOG_FILE" >&2 || true
+    exit 1
+  fi
+
   status
 }
 

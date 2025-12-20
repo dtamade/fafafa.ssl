@@ -8,7 +8,7 @@ unit fafafa_ssl;
 interface
 
 uses
-  fafafa.ssl.types, fafafa.ssl.intf, fafafa.ssl.factory, fafafa.ssl.winssl, 
+  fafafa.ssl.factory,
   fafafa.ssl;
 
 implementation

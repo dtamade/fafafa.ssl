@@ -10,8 +10,7 @@ uses
   BaseUnix, Unix, Sockets,
   {$ENDIF}
   fafafa.ssl.factory,
-  fafafa.ssl.abstract.types,
-  fafafa.ssl.abstract.intf;
+  fafafa.ssl.base;
 
 {
   这个示例展示 fafafa.ssl 的正确使用方式：

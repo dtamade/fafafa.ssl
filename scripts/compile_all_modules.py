@@ -5,6 +5,7 @@
 """
 
 import os
+import argparse
 import subprocess
 import sys
 from pathlib import Path
@@ -46,10 +47,13 @@ def should_compile(file_path):
     # 只编译.pas文件
     return file_path.suffix == ".pas"
 
-def compile_module(pas_file):
+def compile_module(pas_file, rebuild):
     """编译单个模块"""
     # 构建FPC命令
     cmd = ["fpc"]
+
+    if rebuild:
+        cmd.append("-B")
     
     # 添加单元路径
     for unit_path in UNIT_PATHS:
@@ -83,6 +87,14 @@ def compile_module(pas_file):
 
 def main():
     """主函数"""
+    parser = argparse.ArgumentParser(description="批量编译 fafafa.ssl 核心模块")
+    parser.add_argument(
+        "--rebuild",
+        action="store_true",
+        help="使用 fpc -B 强制全量重编译（用于规避增量产物导致的链接/调试符号不一致）",
+    )
+    args = parser.parse_args()
+
     print("=" * 60)
     print("fafafa.ssl 批量编译测试 - Linux环境")
     print("=" * 60)
@@ -107,7 +119,7 @@ def main():
         rel_path = pas_file.relative_to(SRC_DIR)
         print(f"[{i}/{len(compile_files)}] 编译 {rel_path}...", end=" ")
         
-        success, stdout, stderr = compile_module(pas_file)
+        success, stdout, stderr = compile_module(pas_file, args.rebuild)
         
         if success:
             print("✓ 成功")

@@ -4,7 +4,7 @@ program test_winssl_simple;
 
 uses
   SysUtils, Classes, Windows, WinSock2,
-  fafafa.ssl.types, fafafa.ssl.intf, fafafa.ssl.winssl;
+  fafafa.ssl.base, fafafa.ssl.winssl.lib;
 
 const
   TEST_HOST = 'www.google.com';

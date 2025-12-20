@@ -76,7 +76,7 @@ FPC_OPTIONS="-Mobjfpc -Scgi -O2 -g -gl -vewnhi"
 
 # 编译测试
 echo "运行批量编译验证..."
-if python3 scripts/compile_all_modules.py; then
+if python3 scripts/compile_all_modules.py --rebuild; then
     echo -e "${GREEN}✓ 所有核心模块编译成功${NC}"
 else
     echo -e "${RED}✗ 部分模块编译失败${NC}"

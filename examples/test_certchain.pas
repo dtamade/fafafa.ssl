@@ -6,8 +6,7 @@ program test_certchain;
 uses
   SysUtils, Classes,
   WinSock2,
-  fafafa.ssl.types,
-  fafafa.ssl.intf,
+  fafafa.ssl.base,
   fafafa.ssl.factory,
   fafafa.ssl.certchain,
   fafafa.ssl;

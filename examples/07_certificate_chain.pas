@@ -21,10 +21,8 @@ program certificate_chain;
 
 uses
   SysUtils,
-  fafafa.ssl.types,
-  fafafa.ssl.factory,
-  fafafa.ssl.abstract.intf,
-  fafafa.ssl.abstract.types;
+  fafafa.ssl.base,
+  fafafa.ssl.factory;
 
 procedure ExplainCertificateChain;
 begin

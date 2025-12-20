@@ -23,6 +23,7 @@ lib/
 
 # 日志文件
 *.log
+scripts/.local_tls_server.pid
 
 # 临时测试结果
 test_results.txt

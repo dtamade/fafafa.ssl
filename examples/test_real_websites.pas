@@ -11,9 +11,8 @@ program test_real_websites;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl,
-  fafafa.ssl.abstract.intf,
-  fafafa.ssl.abstract.types;
+  fafafa.ssl.openssl.backed,
+  fafafa.ssl.base;
 
 type
   TWebsiteTest = record
