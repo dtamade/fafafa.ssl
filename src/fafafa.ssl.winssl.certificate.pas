@@ -73,7 +73,11 @@ type
     function IsExpired: Boolean;
     function IsSelfSigned: Boolean;
     function IsCA: Boolean;
-    
+
+    { ISSLCertificate - 便利方法 }
+    function GetDaysUntilExpiry: Integer;
+    function GetSubjectCN: string;
+
     { ISSLCertificate - 证书扩展 }
     function GetExtension(const aOID: string): string;
     function GetSubjectAltNames: TStringList;
@@ -1048,6 +1052,58 @@ begin
   finally
     FreeMem(BasicConstraints);
   end;
+end;
+
+// ============================================================================
+// ISSLCertificate - 便利方法
+// ============================================================================
+
+function TWinSSLCertificate.GetDaysUntilExpiry: Integer;
+var
+  ExpiryDate: TDateTime;
+begin
+  // 返回证书到期天数，已过期返回负数
+  if FCertContext = nil then
+  begin
+    Result := -MaxInt;  // 无效证书返回极小值
+    Exit;
+  end;
+
+  ExpiryDate := GetNotAfter;
+  if ExpiryDate = 0 then
+  begin
+    Result := -MaxInt;  // 无法获取到期日期
+    Exit;
+  end;
+
+  Result := Trunc(ExpiryDate - Now);
+end;
+
+function TWinSSLCertificate.GetSubjectCN: string;
+var
+  Buffer: array[0..255] of WideChar;
+  Size: DWORD;
+  OID: PAnsiChar;
+begin
+  Result := '';
+
+  if FCertContext = nil then
+    Exit;
+
+  // 使用 CERT_NAME_ATTR_TYPE 配合 szOID_COMMON_NAME 直接获取 CN
+  // 这比解析 Subject 字符串更可靠
+  OID := szOID_COMMON_NAME;
+  Size := CertGetNameStringW(
+    FCertContext,
+    CERT_NAME_ATTR_TYPE,
+    0,
+    @OID,
+    @Buffer[0],
+    Length(Buffer)
+  );
+
+  if Size > 1 then
+    Result := WideCharToString(@Buffer[0]);
 end;
 
 // ============================================================================

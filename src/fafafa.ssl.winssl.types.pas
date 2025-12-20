@@ -709,6 +709,9 @@ const
   szOID_BASIC_CONSTRAINTS2       = '2.5.29.19';
   szOID_ENHANCED_KEY_USAGE       = '2.5.29.37';
 
+  // X.500 属性 OID
+  szOID_COMMON_NAME              = '2.5.4.3';
+
   // Extended Key Usage OIDs (PKIX)
   szOID_PKIX_KP_SERVER_AUTH      = '1.3.6.1.5.5.7.3.1';
   szOID_PKIX_KP_CLIENT_AUTH      = '1.3.6.1.5.5.7.3.2';
