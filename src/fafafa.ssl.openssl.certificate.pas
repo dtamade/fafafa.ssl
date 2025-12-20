@@ -13,6 +13,7 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.logging,  // P3-8: 添加日志支持
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.x509,
@@ -32,6 +33,8 @@ type
     FX509: PX509;
     FOwnsHandle: Boolean;
     FIssuerCert: ISSLCertificate;  // Store issuer certificate for chain building
+    // P3-10/15: Extract common fingerprint computation
+    function ComputeFingerprint(MD: PEVP_MD): string;
   public
     constructor Create(aX509: PX509; aOwnsHandle: Boolean = True);
     destructor Destroy; override;
@@ -62,6 +65,8 @@ type
     function IsExpired: Boolean;
     function IsSelfSigned: Boolean;
     function IsCA: Boolean;
+    function GetDaysUntilExpiry: Integer;
+    function GetSubjectCN: string;
     function GetExtension(const aOID: string): string;
     function GetSubjectAltNames: TStringList;
     function GetKeyUsage: TStringList;
@@ -83,6 +88,56 @@ const
   XN_FLAG_DN_REV = 1 shl 20;
   XN_FLAG_FN_SN = 0; // Short name
   XN_FLAG_ONELINE = XN_FLAG_SEP_COMMA_PLUS or XN_FLAG_DN_REV or XN_FLAG_FN_SN;
+
+{ X509NameToString - 将 X509_NAME 转换为字符串
+
+  此辅助函数统一处理 X509_NAME 到字符串的转换逻辑，
+  避免 GetSubject 和 GetIssuer 中的代码重复。
+
+  优先使用 X509_NAME_print_ex (RFC 2253 格式)，
+  若不可用则回退到 X509_NAME_oneline。
+}
+function X509NameToString(AName: PX509_NAME): string;
+var
+  BIO: PBIO;
+  Len: Integer;
+  Buf: PAnsiChar;
+begin
+  Result := '';
+
+  if AName = nil then
+    Exit;
+
+  // 优先使用 X509_NAME_print_ex (RFC 2253 风格)
+  if Assigned(X509_NAME_print_ex) and Assigned(BIO_new) and
+     Assigned(BIO_s_mem) and Assigned(BIO_free) then
+  begin
+    BIO := BIO_new(BIO_s_mem());
+    if BIO <> nil then
+    try
+      if X509_NAME_print_ex(BIO, AName, 0, XN_FLAG_ONELINE) > 0 then
+      begin
+        Len := BIO_get_mem_data(BIO, PPAnsiChar(@Buf));
+        if Len > 0 then
+          SetString(Result, Buf, Len);
+      end;
+    finally
+      BIO_free(BIO);
+    end;
+  end;
+
+  // 后备方案：使用旧的 X509_NAME_oneline
+  if (Result = '') and Assigned(X509_NAME_oneline) then
+  begin
+    Buf := X509_NAME_oneline(AName, nil, 0);
+    if Buf <> nil then
+    begin
+      Result := string(Buf);
+      if Assigned(OPENSSL_free) then
+        OPENSSL_free(Buf);
+    end;
+  end;
+end;
 
 function IpBytesToString(AData: PByte; ALength: Integer): string;
 var
@@ -141,9 +196,9 @@ begin
       try
         X509_free(FX509);
       except
-        // 如果在程序退出时 OpenSSL 已被卸载，忽略错误
+        // P3-8: 记录异常而不是静默忽略
         on E: Exception do
-          ; // 静默忽略
+          TSecurityLog.Warning('OpenSSL', Format('Exception in TOpenSSLCertificate.Destroy: %s', [E.Message]));
       end;
     end;
   end;
@@ -181,19 +236,32 @@ var
   Size: Int64;
   BIO: PBIO;
 begin
+  Result := False;
+
+  // Validate stream
+  if aStream = nil then
+    Exit;
+
   Size := aStream.Size - aStream.Position;
+  if Size <= 0 then
+    Exit;
+
   SetLength(Data, Size);
-  aStream.Read(Data[0], Size);
-  
+  if aStream.Read(Data[0], Size) <> Size then
+    Exit;
+
   BIO := BIO_new_mem_buf(@Data[0], Size);
+  if BIO = nil then
+    Exit;
+
   try
     if FOwnsHandle and (FX509 <> nil) then
       X509_free(FX509);
-    
+
     FX509 := PEM_read_bio_X509(BIO, nil, nil, nil);
     if FX509 = nil then
       FX509 := d2i_X509_bio(BIO, nil);
-    
+
     FOwnsHandle := True;
     Result := (FX509 <> nil);
   finally
@@ -205,17 +273,42 @@ function TOpenSSLCertificate.LoadFromMemory(const aData: Pointer; aSize: Integer
 var
   BIO: PBIO;
 begin
+  Result := False;
+  if (aData = nil) or (aSize <= 0) then
+    Exit;
+
+  // Free existing certificate if we own it
+  if FOwnsHandle and (FX509 <> nil) then
+  begin
+    X509_free(FX509);
+    FX509 := nil;
+  end;
+
+  // Try PEM format first
   BIO := BIO_new_mem_buf(aData, aSize);
+  if BIO = nil then
+    Exit;
   try
-    if FOwnsHandle and (FX509 <> nil) then
-      X509_free(FX509);
-    
-    FX509 := d2i_X509_bio(BIO, nil);
-    FOwnsHandle := True;
-    Result := (FX509 <> nil);
+    FX509 := PEM_read_bio_X509(BIO, nil, nil, nil);
   finally
     BIO_free(BIO);
   end;
+
+  // If PEM failed, try DER format
+  if FX509 = nil then
+  begin
+    BIO := BIO_new_mem_buf(aData, aSize);
+    if BIO = nil then
+      Exit;
+    try
+      FX509 := d2i_X509_bio(BIO, nil);
+    finally
+      BIO_free(BIO);
+    end;
+  end;
+
+  FOwnsHandle := True;
+  Result := (FX509 <> nil);
 end;
 
 function TOpenSSLCertificate.LoadFromPEM(const aPEM: string): Boolean;
@@ -405,48 +498,16 @@ end;
 function TOpenSSLCertificate.GetSubject: string;
 var
   Name: PX509_NAME;
-  BIO: PBIO;
-  Len: Integer;
-  Buf: PAnsiChar;
 begin
   Result := '';
   if FX509 = nil then Exit;
-  
+
   // 检查基本API是否加载
   if not Assigned(X509_get_subject_name) then Exit;
-  
+
   try
     Name := X509_get_subject_name(FX509);
-    if Name = nil then Exit;
-    
-    // 尝试使用 X509_NAME_print_ex (RFC 2253 风格)
-    if Assigned(X509_NAME_print_ex) and Assigned(BIO_new) and Assigned(BIO_s_mem) and Assigned(BIO_free) then
-    begin
-      BIO := BIO_new(BIO_s_mem());
-      if BIO <> nil then
-      try
-        if X509_NAME_print_ex(BIO, Name, 0, XN_FLAG_ONELINE) > 0 then
-        begin
-          Len := BIO_get_mem_data(BIO, PPAnsiChar(@Buf));
-          if Len > 0 then
-            SetString(Result, Buf, Len);
-        end;
-      finally
-        BIO_free(BIO);
-      end;
-    end;
-
-    // 如果结果为空，尝试使用旧的 X509_NAME_oneline 作为后备
-    if (Result = '') and Assigned(X509_NAME_oneline) then
-    begin
-      Buf := X509_NAME_oneline(Name, nil, 0);
-      if Buf <> nil then
-      begin
-        Result := string(Buf);
-        if Assigned(OPENSSL_free) then
-          OPENSSL_free(Buf);
-      end;
-    end;
+    Result := X509NameToString(Name);
   except
     Result := '';
   end;
@@ -455,46 +516,16 @@ end;
 function TOpenSSLCertificate.GetIssuer: string;
 var
   Name: PX509_NAME;
-  BIO: PBIO;
-  Len: Integer;
-  Buf: PAnsiChar;
 begin
   Result := '';
   if FX509 = nil then Exit;
-  
+
   // 检查基本API是否加载
   if not Assigned(X509_get_issuer_name) then Exit;
-  
+
   try
     Name := X509_get_issuer_name(FX509);
-    if Name = nil then Exit;
-    
-    // 尝试使用 X509_NAME_print_ex
-    if Assigned(X509_NAME_print_ex) and Assigned(BIO_new) and Assigned(BIO_s_mem) and Assigned(BIO_free) then
-    begin
-      BIO := BIO_new(BIO_s_mem());
-      if BIO <> nil then
-      try
-        X509_NAME_print_ex(BIO, Name, 0, XN_FLAG_ONELINE);
-        Len := BIO_get_mem_data(BIO, PPAnsiChar(@Buf));
-        if Len > 0 then
-          SetString(Result, Buf, Len);
-      finally
-        BIO_free(BIO);
-      end;
-    end;
-
-    // 后备方案
-    if (Result = '') and Assigned(X509_NAME_oneline) then
-    begin
-      Buf := X509_NAME_oneline(Name, nil, 0);
-      if Buf <> nil then
-      begin
-        Result := string(Buf);
-        if Assigned(OPENSSL_free) then
-          OPENSSL_free(Buf);
-      end;
-    end;
+    Result := X509NameToString(Name);
   except
     Result := '';
   end;
@@ -513,8 +544,8 @@ begin
   
   // 检查必要的API是否已加载
   if not Assigned(X509_get_serialNumber) or 
-     not Assigned(ASN1_INTEGER_to_BN) or 
-     not Assigned(BN_bn2hex) then
+    not Assigned(ASN1_INTEGER_to_BN) or 
+    not Assigned(BN_bn2hex) then
     Exit;
   
   // 获取序列号
@@ -674,20 +705,48 @@ begin
   
   if (FX509 = nil) or (aCAStore = nil) then
     Exit;
+
+  if (not Assigned(X509_STORE_CTX_new)) or
+    (not Assigned(X509_STORE_CTX_init)) or
+    (not Assigned(X509_verify_cert)) or
+    (not Assigned(X509_STORE_CTX_free)) then
+  begin
+    LoadOpenSSLX509;
+    if (not Assigned(X509_STORE_CTX_new)) or
+      (not Assigned(X509_STORE_CTX_init)) or
+      (not Assigned(X509_verify_cert)) or
+      (not Assigned(X509_STORE_CTX_free)) then
+      Exit;
+  end;
   
   Store := PX509_STORE(aCAStore.GetNativeHandle);
   if Store = nil then
     Exit;
-  
-  Ctx := X509_STORE_CTX_new;
-  if Ctx = nil then
-    Exit;
-  
+
+  Ctx := nil;
   try
-    if X509_STORE_CTX_init(Ctx, Store, FX509, nil) = 1 then
-      Result := (X509_verify_cert(Ctx) = 1);
+    try
+      Ctx := X509_STORE_CTX_new;
+    except
+      Exit;
+    end;
+    if Ctx = nil then
+      Exit;
+
+    try
+      if X509_STORE_CTX_init(Ctx, Store, FX509, nil) = 1 then
+        Result := (X509_verify_cert(Ctx) = 1);
+    except
+      Result := False;
+    end;
   finally
-    X509_STORE_CTX_free(Ctx);
+    if Ctx <> nil then
+    begin
+      try
+        X509_STORE_CTX_free(Ctx);
+      except
+      end;
+    end;
   end;
 end;
 
@@ -722,6 +781,26 @@ begin
     aResult.ErrorMessage := 'Invalid CA store handle';
     Exit;
   end;
+
+  if (not Assigned(X509_STORE_CTX_new)) or
+    (not Assigned(X509_STORE_CTX_init)) or
+    (not Assigned(X509_verify_cert)) or
+    (not Assigned(X509_STORE_CTX_free)) or
+    (not Assigned(X509_STORE_CTX_get_error)) or
+    (not Assigned(X509_verify_cert_error_string)) then
+  begin
+    LoadOpenSSLX509;
+    if (not Assigned(X509_STORE_CTX_new)) or
+      (not Assigned(X509_STORE_CTX_init)) or
+      (not Assigned(X509_verify_cert)) or
+      (not Assigned(X509_STORE_CTX_free)) or
+      (not Assigned(X509_STORE_CTX_get_error)) or
+      (not Assigned(X509_verify_cert_error_string)) then
+    begin
+      aResult.ErrorMessage := 'OpenSSL X509 verification API not loaded';
+      Exit;
+    end;
+  end;
   
   // 处理与时间、自签名相关的标志（与旧实现保持一致）
   if (sslCertVerifyIgnoreExpiry in aFlags) and Assigned(X509_STORE_set_flags) then
@@ -730,14 +809,20 @@ begin
   if (sslCertVerifyAllowSelfSigned in aFlags) and Assigned(X509_STORE_set_flags) then
     X509_STORE_set_flags(Store, X509_V_FLAG_PARTIAL_CHAIN);
   
-  Ctx := X509_STORE_CTX_new;
-  if Ctx = nil then
-  begin
-    aResult.ErrorMessage := 'Failed to create store context';
-    Exit;
-  end;
-  
+  Ctx := nil;
   try
+    try
+      Ctx := X509_STORE_CTX_new;
+    except
+      aResult.ErrorMessage := 'Failed to create store context';
+      Exit;
+    end;
+    if Ctx = nil then
+    begin
+      aResult.ErrorMessage := 'Failed to create store context';
+      Exit;
+    end;
+
     if X509_STORE_CTX_init(Ctx, Store, FX509, nil) = 1 then
     begin
       // CRL吊销检查已在下方实现（使用X509_V_FLAG_CRL_CHECK标志）
@@ -745,8 +830,8 @@ begin
       // 如果需要检查吊销状态，则在验证参数上启用 CRL 检查
       if ((sslCertVerifyCheckRevocation in aFlags) or
           (sslCertVerifyCheckCRL in aFlags)) and
-         Assigned(X509_STORE_CTX_get0_param) and
-         Assigned(X509_VERIFY_PARAM_set_flags) then
+        Assigned(X509_STORE_CTX_get0_param) and
+        Assigned(X509_VERIFY_PARAM_set_flags) then
       begin
         X509_VERIFY_PARAM_set_flags(
           X509_STORE_CTX_get0_param(Ctx),
@@ -797,7 +882,13 @@ begin
     else
       aResult.ErrorMessage := 'Failed to initialize verification context';
   finally
-    X509_STORE_CTX_free(Ctx);
+    if Ctx <> nil then
+    begin
+      try
+        X509_STORE_CTX_free(Ctx);
+      except
+      end;
+    end;
   end;
 end;
 
@@ -839,7 +930,7 @@ begin
   // Use proper X509_NAME comparison instead of string comparison
   // String comparison is unreliable due to encoding differences and ordering
   if Assigned(X509_get_subject_name) and Assigned(X509_get_issuer_name) and 
-     Assigned(X509_NAME_cmp) then
+    Assigned(X509_NAME_cmp) then
   begin
     SubjectName := X509_get_subject_name(FX509);
     IssuerName := X509_get_issuer_name(FX509);
@@ -885,6 +976,84 @@ begin
   end;
 end;
 
+function TOpenSSLCertificate.GetDaysUntilExpiry: Integer;
+var
+  ExpiryDate: TDateTime;
+begin
+  // 返回证书到期天数，已过期返回负数
+  if FX509 = nil then
+  begin
+    Result := -MaxInt;  // 无效证书返回极小值
+    Exit;
+  end;
+
+  ExpiryDate := GetNotAfter;
+  if ExpiryDate = 0 then
+  begin
+    Result := -MaxInt;  // 无法获取到期日期
+    Exit;
+  end;
+
+  Result := Trunc(ExpiryDate - Now);
+end;
+
+function TOpenSSLCertificate.GetSubjectCN: string;
+var
+  Subject: string;
+  P, PEnd: Integer;
+begin
+  // 从 Subject DN 中提取 Common Name (CN)
+  Result := '';
+
+  if FX509 = nil then
+    Exit;
+
+  Subject := GetSubject;
+  if Subject = '' then
+    Exit;
+
+  // 尝试解析 RFC 2253 格式: "CN=Example, O=Org, ..."
+  // 或 OpenSSL oneline 格式: "/CN=Example/O=Org/..."
+
+  // 格式1: "CN=" 开头或 ", CN=" 分隔
+  P := Pos('CN=', Subject);
+  if P = 0 then
+    P := Pos('cn=', Subject);  // 小写兼容
+
+  if P > 0 then
+  begin
+    // 跳过 "CN="
+    Inc(P, 3);
+
+    // 查找分隔符（逗号或斜杠）
+    PEnd := P;
+    while (PEnd <= Length(Subject)) do
+    begin
+      if Subject[PEnd] in [',', '/', '+'] then
+        Break;
+      Inc(PEnd);
+    end;
+
+    Result := Trim(Copy(Subject, P, PEnd - P));
+    Exit;
+  end;
+
+  // 格式2: "/CN=" 格式
+  P := Pos('/CN=', Subject);
+  if P = 0 then
+    P := Pos('/cn=', Subject);
+
+  if P > 0 then
+  begin
+    Inc(P, 4);
+    PEnd := P;
+    while (PEnd <= Length(Subject)) and (Subject[PEnd] <> '/') do
+      Inc(PEnd);
+
+    Result := Trim(Copy(Subject, P, PEnd - P));
+  end;
+end;
+
 function TOpenSSLCertificate.GetExtension(const aOID: string): string;
 var
   LNID: Integer;
@@ -906,11 +1075,11 @@ begin
   
   // 检查必要的 API 是否已加载
   if (not Assigned(X509_get_ext_by_NID)) or
-     (not Assigned(X509_get_ext)) or
-     (not Assigned(X509V3_EXT_print)) or
-     (not Assigned(BIO_new)) or
-     (not Assigned(BIO_s_mem)) or
-     (not Assigned(BIO_free)) then
+    (not Assigned(X509_get_ext)) or
+    (not Assigned(X509V3_EXT_print)) or
+    (not Assigned(BIO_new)) or
+    (not Assigned(BIO_s_mem)) or
+    (not Assigned(BIO_free)) then
     Exit;
   
   // 定位扩展
@@ -959,11 +1128,11 @@ begin
     Exit;
 
   if Assigned(X509_get_ext_d2i) and
-     LoadStackFunctions and
-     Assigned(OPENSSL_sk_num) and Assigned(OPENSSL_sk_value) and
-     Assigned(GENERAL_NAME_get0_value) and Assigned(GENERAL_NAMES_free) and
-     Assigned(ASN1_STRING_length) and
-     (Assigned(ASN1_STRING_get0_data) or Assigned(ASN1_STRING_data)) then
+    LoadStackFunctions and
+    Assigned(OPENSSL_sk_num) and Assigned(OPENSSL_sk_value) and
+    Assigned(GENERAL_NAME_get0_value) and Assigned(GENERAL_NAMES_free) and
+    Assigned(ASN1_STRING_length) and
+    (Assigned(ASN1_STRING_get0_data) or Assigned(ASN1_STRING_data)) then
   begin
     Crit := 0;
     Idx := -1;
@@ -1048,7 +1217,7 @@ begin
         end;
         // 邮箱地址，例如 "email:user@example.com" 或 "Email:user@example.com"
         if (Length(Item) > 6) and
-           (SameText(Copy(Item, 1, 6), 'email:') or SameText(Copy(Item, 1, 6), 'e-mail:')) then
+          (SameText(Copy(Item, 1, 6), 'email:') or SameText(Copy(Item, 1, 6), 'e-mail:')) then
         begin
           Name := Trim(Copy(Item, 7, MaxInt));
           if Name <> '' then
@@ -1201,39 +1370,49 @@ begin
   end;
 end;
 
-function TOpenSSLCertificate.GetFingerprintSHA1: string;
+// P3-10/15: Extracted common fingerprint computation with optimized string building
+function TOpenSSLCertificate.ComputeFingerprint(MD: PEVP_MD): string;
 var
   Digest: array[0..EVP_MAX_MD_SIZE-1] of Byte;
   DigestLen: Cardinal;
-  I: Integer;
+  I, Pos: Integer;
   DER, P: PByte;
   DERLen: Integer;
+const
+  HexChars: array[0..15] of Char = '0123456789ABCDEF';
 begin
   Result := '';
-  
+
   if FX509 = nil then
     Exit;
-  
-  // 获取DER编码长度
+
+  // Get DER encoding length
   DERLen := i2d_X509(FX509, nil);
   if DERLen <= 0 then
     Exit;
-  
+
   GetMem(DER, DERLen);
   try
-    // i2d_X509 会推进指针，因此使用临时变量保存当前位置
     P := DER;
     i2d_X509(FX509, @P);
-    
-    // 计算SHA1
+
+    // Compute digest
     DigestLen := 0;
-    if EVP_Digest(DER, NativeUInt(DERLen), @Digest[0], DigestLen, EVP_sha1(), nil) = 1 then
+    if EVP_Digest(DER, NativeUInt(DERLen), @Digest[0], DigestLen, MD, nil) = 1 then
     begin
+      // P3-10: Pre-allocate string for better performance (XX:XX:XX format)
+      SetLength(Result, DigestLen * 3 - 1);
+      Pos := 1;
       for I := 0 to DigestLen - 1 do
       begin
         if I > 0 then
-          Result := Result + ':';
-        Result := Result + IntToHex(Digest[I], 2);
+        begin
+          Result[Pos] := ':';
+          Inc(Pos);
+        end;
+        Result[Pos] := HexChars[Digest[I] shr 4];
+        Result[Pos + 1] := HexChars[Digest[I] and $0F];
+        Inc(Pos, 2);
       end;
     end;
   finally
@@ -1241,44 +1420,14 @@ begin
   end;
 end;
 
-function TOpenSSLCertificate.GetFingerprintSHA256: string;
-var
-  Digest: array[0..EVP_MAX_MD_SIZE-1] of Byte;
-  DigestLen: Cardinal;
-  I: Integer;
-  DER, P: PByte;
-  DERLen: Integer;
+function TOpenSSLCertificate.GetFingerprintSHA1: string;
 begin
-  Result := '';
-  
-  if FX509 = nil then
-    Exit;
-  
-  // 获取DER编码长度
-  DERLen := i2d_X509(FX509, nil);
-  if DERLen <= 0 then
-    Exit;
-  
-  GetMem(DER, DERLen);
-  try
-    // i2d_X509 会推进指针，因此使用临时变量保存当前位置
-    P := DER;
-    i2d_X509(FX509, @P);
-    
-    // 计算SHA256
-    DigestLen := 0;
-    if EVP_Digest(DER, NativeUInt(DERLen), @Digest[0], DigestLen, EVP_sha256(), nil) = 1 then
-    begin
-      for I := 0 to DigestLen - 1 do
-      begin
-        if I > 0 then
-          Result := Result + ':';
-        Result := Result + IntToHex(Digest[I], 2);
-      end;
-    end;
-  finally
-    FreeMem(DER);
-  end;
+  Result := ComputeFingerprint(EVP_sha1());
+end;
+
+function TOpenSSLCertificate.GetFingerprintSHA256: string;
+begin
+  Result := ComputeFingerprint(EVP_sha256());
 end;
 
 procedure TOpenSSLCertificate.SetIssuerCertificate(aCert: ISSLCertificate);
@@ -1298,13 +1447,21 @@ end;
 
 function TOpenSSLCertificate.Clone: ISSLCertificate;
 begin
-  if FX509 <> nil then
-  begin
-    X509_up_ref(FX509);
+  Result := nil;
+  if FX509 = nil then
+    Exit;
+
+  // Increment reference count first
+  X509_up_ref(FX509);
+  try
+    // Create new certificate wrapper - if this fails, we must decrement ref
     Result := TOpenSSLCertificate.Create(FX509, True);
-  end
-  else
-    Result := nil;
+  except
+    // Decrement reference count on failure to prevent leak
+    if Assigned(X509_free) then
+      X509_free(FX509);
+    raise;
+  end;
 end;
 
 end.

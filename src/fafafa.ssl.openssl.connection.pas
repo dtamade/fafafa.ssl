@@ -86,6 +86,11 @@ type
 
 implementation
 
+const
+  // P3-2: 统一定义缓冲区大小常量
+  SSL_STRING_BUFFER_SIZE = 4096;   // ReadString 缓冲区大小
+  SSL_IO_BUFFER_SIZE = 8192;       // PumpStreamToBIO/PumpBIOToStream 缓冲区大小
+
 constructor TOpenSSLConnection.Create(aContext: ISSLContext; aSocket: THandle);
 var
   Ctx: PSSL_CTX;
@@ -98,23 +103,23 @@ begin
   FBioWrite := nil;
   FConnected := False;
   FBlocking := True;
-  FTimeout := 30000;
-  
+  FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;  // P3-1: 使用常量替代魔法数字
+
   Ctx := PSSL_CTX(aContext.GetNativeHandle);
   if Ctx = nil then
     RaiseInvalidParameter('SSL context (GetNativeHandle returned nil)');
-  
+
   FSSL := SSL_new(Ctx);
   if FSSL = nil then
     RaiseSSLInitError(
       'Failed to create SSL object',
       'TOpenSSLConnection.Create'
     );
-  
+
   // Apply SNI if configured
   if (aContext.GetServerName <> '') and Assigned(SSL_set_tlsext_host_name) then
     SSL_set_tlsext_host_name(FSSL, PAnsiChar(aContext.GetServerName));
-    
+
   SSL_set_fd(FSSL, aSocket);
 end;
 
@@ -130,7 +135,7 @@ begin
   FBioWrite := nil;
   FConnected := False;
   FBlocking := True;
-  FTimeout := 30000;
+  FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;  // P3-1: 使用常量替代魔法数字
   
   Ctx := PSSL_CTX(aContext.GetNativeHandle);
   if Ctx = nil then
@@ -152,7 +157,7 @@ begin
     LoadOpenSSLBIO;
 
   if (not Assigned(BIO_new)) or (not Assigned(BIO_s_mem)) or
-     (not Assigned(SSL_set_bio)) then
+    (not Assigned(SSL_set_bio)) then
     RaiseFunctionNotAvailable('OpenSSL BIO API (BIO_new/BIO_s_mem/SSL_set_bio)');
 
   // Create separate memory BIOs for incoming and outgoing encrypted data
@@ -430,7 +435,7 @@ end;
 
 function TOpenSSLConnection.ReadString(out aStr: string): Boolean;
 var
-  Buffer: array[0..4095] of Char;
+  Buffer: array[0..SSL_STRING_BUFFER_SIZE - 1] of Char;  // P3-2: 使用常量
   BytesRead: Integer;
 begin
   BytesRead := Read(Buffer, SizeOf(Buffer));
@@ -544,11 +549,16 @@ begin
   if FSSL = nil then Exit;
   
   Ver := SSL_version(FSSL);
+  // P3-19: 添加完整的协议版本处理以保持与 WinSSL 一致
   case Ver of
+    SSL2_VERSION: Result := sslProtocolSSL2;
+    SSL3_VERSION: Result := sslProtocolSSL3;
     TLS1_VERSION: Result := sslProtocolTLS10;
     TLS1_1_VERSION: Result := sslProtocolTLS11;
     TLS1_2_VERSION: Result := sslProtocolTLS12;
     TLS1_3_VERSION: Result := sslProtocolTLS13;
+  else
+    Result := sslProtocolTLS12;  // 未知版本时使用安全默认值
   end;
 end;
 
@@ -750,20 +760,18 @@ begin
 end;
 
 function TOpenSSLConnection.PumpStreamToBIO: Integer;
-const
-  BUF_SIZE = 8192;
 var
-  LBuffer: array[0..BUF_SIZE - 1] of Byte;
+  LBuffer: array[0..SSL_IO_BUFFER_SIZE - 1] of Byte;  // P3-2: 使用模块级常量
   LRead, LOffset, LWritten: Integer;
 begin
   Result := 0;
 
   if (not HasStreamTransport) or (FBioRead = nil) or
-     (not Assigned(BIO_write)) or (FStream = nil) then
+    (not Assigned(BIO_write)) or (FStream = nil) then
     Exit;
 
   // Blocking read from underlying stream (encrypted data from peer)
-  LRead := FStream.Read(LBuffer[0], BUF_SIZE);
+  LRead := FStream.Read(LBuffer[0], SSL_IO_BUFFER_SIZE);
   if LRead <= 0 then
     Exit;
 
@@ -780,17 +788,15 @@ begin
 end;
 
 function TOpenSSLConnection.PumpBIOToStream: Integer;
-const
-  BUF_SIZE = 8192;
 var
-  LBuffer: array[0..BUF_SIZE - 1] of Byte;
+  LBuffer: array[0..SSL_IO_BUFFER_SIZE - 1] of Byte;  // P3-2: 使用模块级常量
   LPending, LToRead, LRead: Integer;
 begin
   Result := 0;
 
   if (not HasStreamTransport) or (FBioWrite = nil) or
-     (not Assigned(BIO_pending)) or (not Assigned(BIO_read)) or
-     (FStream = nil) then
+    (not Assigned(BIO_pending)) or (not Assigned(BIO_read)) or
+    (FStream = nil) then
     Exit;
 
   // Drain all pending encrypted data from SSL's write BIO to the underlying stream
@@ -800,8 +806,8 @@ begin
     if LPending <= 0 then
       Break;
 
-    if LPending > BUF_SIZE then
-      LToRead := BUF_SIZE
+    if LPending > SSL_IO_BUFFER_SIZE then
+      LToRead := SSL_IO_BUFFER_SIZE
     else
       LToRead := LPending;
 

@@ -13,6 +13,7 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.logging,  // P3-8: 添加日志支持
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.x509,
@@ -77,10 +78,9 @@ begin
       try
         X509_STORE_free(FStore);
       except
-        // 如果在程序退出时 OpenSSL 已被卸载，忽略错误
-        // 操作系统会清理所有内存
+        // P3-8: 记录异常而不是静默忽略
         on E: Exception do
-          ; // 静默忽略
+          TSecurityLog.Warning('OpenSSL', Format('Exception in TOpenSSLCertificateStore.Destroy: %s', [E.Message]));
       end;
     end;
   end;

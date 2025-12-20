@@ -18,7 +18,7 @@ unit fafafa.ssl.openssl.context;
 interface
 
 uses
-  SysUtils, Classes,
+  SysUtils, Classes, SyncObjs,
   fafafa.ssl.base,
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,  // 新增：类型化异常
@@ -123,6 +123,9 @@ type
     { ISSLContext - 状态查询 }
     function IsValid: Boolean;
     function GetNativeHandle: Pointer;
+
+    { 便利方法 - 一键配置安全默认值 }
+    procedure ConfigureSecureDefaults;
   end;
 
 implementation
@@ -132,29 +135,47 @@ uses
 
 var
   GContextRegistry: TList = nil;
+  GContextLock: TCriticalSection = nil;
 
 procedure EnsureContextRegistry;
 begin
+  // Double-checked locking pattern for thread-safe lazy initialization
   if GContextRegistry = nil then
-    GContextRegistry := TList.Create;
+  begin
+    GContextLock.Enter;
+    try
+      if GContextRegistry = nil then
+        GContextRegistry := TList.Create;
+    finally
+      GContextLock.Leave;
+    end;
+  end;
 end;
 
 procedure RegisterContextInstance(const AContext: TOpenSSLContext);
 begin
   if (AContext = nil) or (AContext.FSSLContext = nil) then Exit;
   EnsureContextRegistry;
-  if GContextRegistry.IndexOf(AContext) = -1 then
-    GContextRegistry.Add(AContext);
+  GContextLock.Enter;
+  try
+    if GContextRegistry.IndexOf(AContext) = -1 then
+      GContextRegistry.Add(AContext);
+  finally
+    GContextLock.Leave;
+  end;
 end;
 
 procedure UnregisterContextInstance(const AContext: TOpenSSLContext);
 begin
-  if (GContextRegistry = nil) or (AContext = nil) then Exit;
-  GContextRegistry.Remove(AContext);
-  if GContextRegistry.Count = 0 then
-  begin
-    GContextRegistry.Free;
-    GContextRegistry := nil;
+  if (GContextLock = nil) or (AContext = nil) then Exit;
+  GContextLock.Enter;
+  try
+    if GContextRegistry = nil then Exit;
+    GContextRegistry.Remove(AContext);
+    // Note: Don't destroy registry here to avoid race conditions
+    // It will be cleaned up in finalization
+  finally
+    GContextLock.Leave;
   end;
 end;
 
@@ -164,16 +185,21 @@ var
   Ctx: TOpenSSLContext;
 begin
   Result := nil;
-  if (GContextRegistry = nil) or (AHandle = nil) then Exit;
-  
-  for i := 0 to GContextRegistry.Count - 1 do
-  begin
-    Ctx := TOpenSSLContext(GContextRegistry[i]);
-    if Ctx.FSSLContext = AHandle then
+  if (GContextLock = nil) or (AHandle = nil) then Exit;
+  GContextLock.Enter;
+  try
+    if GContextRegistry = nil then Exit;
+    for i := 0 to GContextRegistry.Count - 1 do
     begin
-      Result := Ctx;
-      Exit;
+      Ctx := TOpenSSLContext(GContextRegistry[i]);
+      if Ctx.FSSLContext = AHandle then
+      begin
+        Result := Ctx;
+        Exit;
+      end;
     end;
+  finally
+    GContextLock.Leave;
   end;
 end;
 
@@ -216,7 +242,8 @@ begin
 end;
 
 function ALPNSelectCallback(ssl: PSSL; const out_proto: PPByte; out_proto_len: PByte;
-  const in_proto: PByte; in_proto_len: Cardinal; arg: Pointer): Integer; cdecl;
+  const in_proto: PByte; in_proto_len: Cardinal; {%H-}arg: Pointer): Integer; cdecl;
+  // P3-3: arg 是 OpenSSL API 签名要求的参数，当前实现不使用（通过 SSL_get_SSL_CTX 获取上下文）
 var
   Ctx: PSSL_CTX;
   Context: TOpenSSLContext;
@@ -251,6 +278,10 @@ var
   ErrorCode: Integer;
   ErrorMsg: string;
 begin
+  // P3-4: 显式初始化管理类型变量
+  Info := Default(TSSLCertificateInfo);
+  ErrorMsg := '';
+
   // 先执行 OpenSSL 默认验证逻辑
   if Assigned(X509_verify_cert) then
     DefaultResult := X509_verify_cert(ctx)
@@ -264,7 +295,7 @@ begin
     Exit;
   end;
 
-  FillChar(Info, SizeOf(Info), 0);
+  // P3-4: 已在函数开始处使用 Default() 初始化，无需 FillChar
   if Assigned(X509_STORE_CTX_get_current_cert) then
   begin
     Cert := X509_STORE_CTX_get_current_cert(ctx);
@@ -351,18 +382,18 @@ begin
   FContextType := aType;
   FProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
   FVerifyMode := [sslVerifyPeer];
-  FVerifyDepth := 9;
+  FVerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
   FServerName := '';
-  FCipherList := 'HIGH:!aNULL:!MD5:!RC4';
-  FCipherSuites := 'TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256';
+  FCipherList := SSL_DEFAULT_CIPHER_LIST;
+  FCipherSuites := SSL_DEFAULT_TLS13_CIPHERSUITES;
   FALPNProtocols := '';
   SetLength(FALPNWireData, 0);
   FSessionCacheEnabled := True;
-  FSessionTimeout := 300;
-  FSessionCacheSize := 20480;
+  FSessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
+  FSessionCacheSize := SSL_DEFAULT_SESSION_CACHE_SIZE;
   FOptions := [ssoEnableSessionCache, ssoEnableSessionTickets,
-               ssoDisableCompression, ssoDisableRenegotiation,
-               ssoNoSSLv2, ssoNoSSLv3];
+              ssoDisableCompression, ssoDisableRenegotiation,
+              ssoNoSSLv2, ssoNoSSLv3, ssoNoTLSv1, ssoNoTLSv1_1];
   
   FVerifyCallback := nil;
   FPasswordCallback := nil;
@@ -414,7 +445,8 @@ begin
   if FSSLContext <> nil then
   begin
     UnregisterContextInstance(Self);
-    SSL_CTX_free(FSSLContext);
+    if Assigned(SSL_CTX_free) then
+      SSL_CTX_free(FSSLContext);
     FSSLContext := nil;
   end;
   inherited Destroy;
@@ -547,6 +579,27 @@ begin
       sslErrNotInitialized,
       'TOpenSSLContext.LoadCertificate'
     );
+
+  if not Assigned(SSL_CTX_use_certificate_file) then
+  begin
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+        raise ESSLInitializationException.CreateWithContext(
+          Format('OpenSSL core not available: %s', [E.Message]),
+          sslErrNotInitialized,
+          'TOpenSSLContext.LoadCertificate'
+        );
+    end;
+
+    if not Assigned(SSL_CTX_use_certificate_file) then
+      raise ESSLInitializationException.CreateWithContext(
+        'SSL_CTX_use_certificate_file not loaded from OpenSSL library',
+        sslErrFunctionNotFound,
+        'TOpenSSLContext.LoadCertificate'
+      );
+  end;
   
   FileNameA := AnsiString(aFileName);
   if SSL_CTX_use_certificate_file(FSSLContext, PAnsiChar(FileNameA), SSL_FILETYPE_PEM) <> 1 then
@@ -567,6 +620,7 @@ var
   BIO: PBIO;
   Cert: PX509;
 begin
+  Data := nil;  // P3-4: 显式初始化管理类型
   if FSSLContext = nil then
     raise ESSLInitializationException.CreateWithContext(
       'SSL context not initialized',
@@ -630,9 +684,12 @@ begin
     );
 end;
 
-procedure TOpenSSLContext.LoadPrivateKey(const aFileName: string; const aPassword: string = '');
+procedure TOpenSSLContext.LoadPrivateKey(const aFileName: string; const {%H-}aPassword: string = '');
+  // P3-3: aPassword 目前未使用 - SSL_CTX_use_PrivateKey_file 不支持密码回调
+  // TODO: 如需支持加密私钥文件，应改用 PEM_read_bio_PrivateKey + 密码回调
 var
   FileNameA: AnsiString;
+  HasCert: Boolean;
 begin
   if FSSLContext = nil then
     raise ESSLInitializationException.CreateWithContext(
@@ -650,18 +707,22 @@ begin
       Integer(GetLastOpenSSLError),
       sslOpenSSL
     );
-  
-  // 验证私钥和证书是否匹配
-  if SSL_CTX_check_private_key(FSSLContext) <> 1 then
+
+  HasCert := Assigned(SSL_CTX_get0_certificate) and (SSL_CTX_get0_certificate(FSSLContext) <> nil);
+  if HasCert then
   begin
-    TSecurityLog.Error('OpenSSL', 'Private key does not match certificate');
-    raise ESSLKeyException.CreateWithContext(
-      'Private key does not match the loaded certificate',
-      sslErrCertificate,
-      'TOpenSSLContext.LoadPrivateKey',
-      Integer(GetLastOpenSSLError),
-      sslOpenSSL
-    );
+    // 验证私钥和证书是否匹配
+    if SSL_CTX_check_private_key(FSSLContext) <> 1 then
+    begin
+      TSecurityLog.Error('OpenSSL', 'Private key does not match certificate');
+      raise ESSLKeyException.CreateWithContext(
+        'Private key does not match the loaded certificate',
+        sslErrCertificate,
+        'TOpenSSLContext.LoadPrivateKey',
+        Integer(GetLastOpenSSLError),
+        sslOpenSSL
+      );
+    end;
   end;
   TSecurityLog.Audit('OpenSSL', 'LoadPrivateKey', 'System', 'Private key loaded from file');
 end;
@@ -673,7 +734,9 @@ var
   BIO: PBIO;
   PKey: PEVP_PKEY;
   PassA: AnsiString;
+  HasCert: Boolean;
 begin
+  Data := nil;  // P3-4: 显式初始化管理类型
   if FSSLContext = nil then
     raise ESSLInitializationException.CreateWithContext(
       'SSL context not initialized',
@@ -692,6 +755,17 @@ begin
   if BIO = nil then
     RaiseMemoryError('create BIO for private key');
   try
+    if not Assigned(PEM_read_bio_PrivateKey) then
+      LoadOpenSSLPEM(GetCryptoLibHandle);
+    if not Assigned(PEM_read_bio_PrivateKey) then
+      raise ESSLKeyException.CreateWithContext(
+        'OpenSSL PEM API not loaded (PEM_read_bio_PrivateKey is nil)',
+        sslErrFunctionNotFound,
+        'TOpenSSLContext.LoadPrivateKey',
+        0,
+        sslOpenSSL
+      );
+
     // 若提供密码，通过userdata传递
     if aPassword <> '' then
     begin
@@ -718,14 +792,19 @@ begin
           Integer(GetLastOpenSSLError),
           sslOpenSSL
         );
-      if SSL_CTX_check_private_key(FSSLContext) <> 1 then
-        raise ESSLKeyException.CreateWithContext(
-          'Private key does not match the loaded certificate',
-          sslErrCertificate,
-          'TOpenSSLContext.LoadPrivateKey',
-          Integer(GetLastOpenSSLError),
-          sslOpenSSL
-        );
+
+      HasCert := Assigned(SSL_CTX_get0_certificate) and (SSL_CTX_get0_certificate(FSSLContext) <> nil);
+      if HasCert then
+      begin
+        if SSL_CTX_check_private_key(FSSLContext) <> 1 then
+          raise ESSLKeyException.CreateWithContext(
+            'Private key does not match the loaded certificate',
+            sslErrCertificate,
+            'TOpenSSLContext.LoadPrivateKey',
+            Integer(GetLastOpenSSLError),
+            sslOpenSSL
+          );
+      end;
     finally
       EVP_PKEY_free(PKey);
     end;
@@ -784,6 +863,7 @@ var
   PKey: PEVP_PKEY;
   PemA, PassA: AnsiString;
   PassPtr: PAnsiChar;
+  HasCert: Boolean;
 begin
   if FSSLContext = nil then
     raise ESSLInitializationException.CreateWithContext(
@@ -801,6 +881,17 @@ begin
     RaiseMemoryError('create BIO for PEM private key');
   
   try
+    if not Assigned(PEM_read_bio_PrivateKey) then
+      LoadOpenSSLPEM(GetCryptoLibHandle);
+    if not Assigned(PEM_read_bio_PrivateKey) then
+      raise ESSLKeyException.CreateWithContext(
+        'OpenSSL PEM API not loaded (PEM_read_bio_PrivateKey is nil)',
+        sslErrFunctionNotFound,
+        'TOpenSSLContext.LoadPrivateKeyPEM',
+        0,
+        sslOpenSSL
+      );
+
     PassPtr := nil;
     if aPassword <> '' then
     begin
@@ -827,15 +918,19 @@ begin
           Integer(GetLastOpenSSLError),
           sslOpenSSL
         );
-      
-      if SSL_CTX_check_private_key(FSSLContext) <> 1 then
-        raise ESSLKeyException.CreateWithContext(
-          'Private key does not match the loaded certificate',
-          sslErrCertificate,
-          'TOpenSSLContext.LoadPrivateKeyPEM',
-          Integer(GetLastOpenSSLError),
-          sslOpenSSL
-        );
+
+      HasCert := Assigned(SSL_CTX_get0_certificate) and (SSL_CTX_get0_certificate(FSSLContext) <> nil);
+      if HasCert then
+      begin
+        if SSL_CTX_check_private_key(FSSLContext) <> 1 then
+          raise ESSLKeyException.CreateWithContext(
+            'Private key does not match the loaded certificate',
+            sslErrCertificate,
+            'TOpenSSLContext.LoadPrivateKeyPEM',
+            Integer(GetLastOpenSSLError),
+            sslOpenSSL
+          );
+      end;
       
       TSecurityLog.Audit('OpenSSL', 'LoadPrivateKeyPEM', 'System', 'Private key loaded from PEM string');
     finally
@@ -856,6 +951,27 @@ begin
       sslErrNotInitialized,
       'TOpenSSLContext.LoadCAFile'
     );
+
+  if not Assigned(SSL_CTX_load_verify_locations) then
+  begin
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+        raise ESSLInitializationException.CreateWithContext(
+          Format('OpenSSL core not available: %s', [E.Message]),
+          sslErrNotInitialized,
+          'TOpenSSLContext.LoadCAFile'
+        );
+    end;
+
+    if not Assigned(SSL_CTX_load_verify_locations) then
+      raise ESSLInitializationException.CreateWithContext(
+        'SSL_CTX_load_verify_locations not loaded from OpenSSL library',
+        sslErrFunctionNotFound,
+        'TOpenSSLContext.LoadCAFile'
+      );
+  end;
   
   FileNameA := AnsiString(aFileName);
   if SSL_CTX_load_verify_locations(FSSLContext, PAnsiChar(FileNameA), nil) <> 1 then
@@ -878,6 +994,27 @@ begin
       sslErrNotInitialized,
       'TOpenSSLContext.LoadCAPath'
     );
+
+  if not Assigned(SSL_CTX_load_verify_locations) then
+  begin
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+        raise ESSLInitializationException.CreateWithContext(
+          Format('OpenSSL core not available: %s', [E.Message]),
+          sslErrNotInitialized,
+          'TOpenSSLContext.LoadCAPath'
+        );
+    end;
+
+    if not Assigned(SSL_CTX_load_verify_locations) then
+      raise ESSLInitializationException.CreateWithContext(
+        'SSL_CTX_load_verify_locations not loaded from OpenSSL library',
+        sslErrFunctionNotFound,
+        'TOpenSSLContext.LoadCAPath'
+      );
+  end;
   
   if not DirectoryExists(aPath) then
     RaiseLoadError(aPath);
@@ -1151,7 +1288,7 @@ begin
     RaiseUnsupported('ALPN');
 
   if (Length(FALPNWireData) = 0) or
-     (SSL_CTX_set_alpn_protos(FSSLContext, @FALPNWireData[0], Length(FALPNWireData)) <> 0) then
+    (SSL_CTX_set_alpn_protos(FSSLContext, @FALPNWireData[0], Length(FALPNWireData)) <> 0) then
     RaiseConfigurationError('ALPN protocols', Format('failed to configure: %s', [FALPNProtocols]));
 
   // 仅在服务端设置选择回调，客户端只发送候选列表
@@ -1207,30 +1344,52 @@ end;
 function TOpenSSLContext.CreateConnection(aSocket: THandle): ISSLConnection;
 begin
   if FSSLContext = nil then
-  begin
-    Result := nil;
-    Exit;
-  end;
-  
+    raise ESSLInitializationException.CreateWithContext(
+      'Cannot create connection: SSL context not initialized',
+      sslErrNotInitialized,
+      'TOpenSSLContext.CreateConnection'
+    );
+
   try
     Result := TOpenSSLConnection.Create(Self, aSocket);
   except
-    Result := nil;
+    on E: ESSLException do
+      raise;  // Re-raise SSL exceptions as-is
+    on E: Exception do
+      raise ESSLConnectionException.CreateWithContext(
+        Format('Failed to create SSL connection: %s', [E.Message]),
+        sslErrConnection,
+        'TOpenSSLContext.CreateConnection'
+      );
   end;
 end;
 
 function TOpenSSLContext.CreateConnection(aStream: TStream): ISSLConnection;
 begin
   if FSSLContext = nil then
-  begin
-    Result := nil;
-    Exit;
-  end;
-  
+    raise ESSLInitializationException.CreateWithContext(
+      'Cannot create connection: SSL context not initialized',
+      sslErrNotInitialized,
+      'TOpenSSLContext.CreateConnection'
+    );
+
+  if aStream = nil then
+    raise ESSLInvalidArgument.Create(
+      'Cannot create connection: stream is nil',
+      sslErrInvalidParam
+    );
+
   try
     Result := TOpenSSLConnection.Create(Self, aStream);
   except
-    Result := nil;
+    on E: ESSLException do
+      raise;  // Re-raise SSL exceptions as-is
+    on E: Exception do
+      raise ESSLConnectionException.CreateWithContext(
+        Format('Failed to create SSL connection: %s', [E.Message]),
+        sslErrConnection,
+        'TOpenSSLContext.CreateConnection'
+      );
   end;
 end;
 
@@ -1247,5 +1406,71 @@ function TOpenSSLContext.GetNativeHandle: Pointer;
 begin
   Result := FSSLContext;
 end;
+
+procedure TOpenSSLContext.ConfigureSecureDefaults;
+begin
+  { 配置现代 TLS 安全最佳实践
+
+    此方法一键设置：
+    - 仅启用 TLS 1.2 和 TLS 1.3
+    - 禁用所有已废弃的协议（SSLv2/3, TLS 1.0/1.1）
+    - 使用强密码套件（优先 ECDHE + AES-GCM）
+    - 启用证书验证
+    - 禁用压缩（防止 CRIME 攻击）
+    - 禁用不安全的重新协商
+  }
+
+  // 1. 协议版本：仅 TLS 1.2 和 1.3
+  SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
+
+  // 2. 安全选项
+  SetOptions([
+    ssoEnableSessionCache,      // 启用会话缓存（性能优化）
+    ssoEnableSessionTickets,    // 启用会话票据
+    ssoDisableCompression,      // 禁用压缩（防止 CRIME 攻击）
+    ssoDisableRenegotiation,    // 禁用重新协商
+    ssoNoSSLv2,                 // 禁用 SSLv2
+    ssoNoSSLv3,                 // 禁用 SSLv3
+    ssoNoTLSv1,                 // 禁用 TLS 1.0
+    ssoNoTLSv1_1,               // 禁用 TLS 1.1
+    ssoCipherServerPreference,  // 服务端密码优先
+    ssoSingleECDHUse            // 单次 ECDH 密钥交换
+  ]);
+
+  // 3. 强密码套件（TLS 1.2 及以下）
+  // 优先使用 ECDHE 密钥交换和 AES-GCM 模式
+  SetCipherList('ECDHE+AESGCM:ECDHE+CHACHA20:ECDHE+AES256:DHE+AESGCM:DHE+AES256:!aNULL:!MD5:!DSS:!RC4:!3DES');
+
+  // 4. TLS 1.3 密码套件
+  SetCipherSuites('TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256');
+
+  // 5. 启用证书验证
+  SetVerifyMode([sslVerifyPeer]);
+  SetVerifyDepth(SSL_DEFAULT_VERIFY_DEPTH);  // P3-17: 使用常量
+
+  // 6. 会话配置
+  SetSessionCacheMode(True);
+  SetSessionTimeout(3600);  // 1小时会话超时（比默认值更长，适合安全场景）
+  SetSessionCacheSize(SSL_DEFAULT_SESSION_CACHE_SIZE);  // P3-17: 使用常量
+
+  TSecurityLog.Info('OpenSSL', 'Configured secure defaults for TLS 1.2/1.3');
+end;
+
+initialization
+  // Create critical section for thread-safe context registry access
+  GContextLock := TCriticalSection.Create;
+
+finalization
+  // Clean up context registry and critical section
+  if GContextRegistry <> nil then
+  begin
+    GContextRegistry.Free;
+    GContextRegistry := nil;
+  end;
+  if GContextLock <> nil then
+  begin
+    GContextLock.Free;
+    GContextLock := nil;
+  end;
 
 end.

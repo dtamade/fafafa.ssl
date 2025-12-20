@@ -142,8 +142,11 @@ begin
     Exit;
   
   Version := SSL_SESSION_get_protocol_version(FSession);
-  
+
+  // P3-19: 添加完整的协议版本处理以保持与 WinSSL 一致
   case Version of
+    SSL2_VERSION: Result := sslProtocolSSL2;
+    SSL3_VERSION: Result := sslProtocolSSL3;
     TLS1_VERSION: Result := sslProtocolTLS10;
     TLS1_1_VERSION: Result := sslProtocolTLS11;
     TLS1_2_VERSION: Result := sslProtocolTLS12;
