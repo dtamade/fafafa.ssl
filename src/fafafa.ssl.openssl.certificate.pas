@@ -420,8 +420,8 @@ end;
 
 function TOpenSSLCertificate.GetInfo: TSSLCertificateInfo;
 var
-  SANs: TStringList;
-  KUList: TStringList;
+  SANs: TSSLStringArray;
+  KUList: TSSLStringArray;
   I: Integer;
   Item: string;
   PathLen: LongInt;
@@ -456,43 +456,35 @@ begin
   // KeyUsage 位掩码：从字符串列表映射到 X509v3_KU_* 常量
   Result.KeyUsage := 0;
   KUList := GetKeyUsage;
-  try
-    for I := 0 to KUList.Count - 1 do
-    begin
-      Item := Trim(KUList[I]);
-      if Item = '' then
-        Continue;
+  for I := 0 to Length(KUList) - 1 do
+  begin
+    Item := Trim(KUList[I]);
+    if Item = '' then
+      Continue;
 
-      if SameText(Item, 'digitalSignature') or SameText(Item, 'Digital Signature') then
-        Result.KeyUsage := Result.KeyUsage or X509v3_KU_DIGITAL_SIGNATURE
-      else if SameText(Item, 'nonRepudiation') or SameText(Item, 'Non Repudiation') or
-              SameText(Item, 'contentCommitment') then
-        Result.KeyUsage := Result.KeyUsage or X509v3_KU_NON_REPUDIATION
-      else if SameText(Item, 'keyEncipherment') or SameText(Item, 'Key Encipherment') then
-        Result.KeyUsage := Result.KeyUsage or X509v3_KU_KEY_ENCIPHERMENT
-      else if SameText(Item, 'dataEncipherment') or SameText(Item, 'Data Encipherment') then
-        Result.KeyUsage := Result.KeyUsage or X509v3_KU_DATA_ENCIPHERMENT
-      else if SameText(Item, 'keyAgreement') or SameText(Item, 'Key Agreement') then
-        Result.KeyUsage := Result.KeyUsage or X509v3_KU_KEY_AGREEMENT
-      else if SameText(Item, 'keyCertSign') or SameText(Item, 'Key Cert Sign') then
-        Result.KeyUsage := Result.KeyUsage or X509v3_KU_KEY_CERT_SIGN
-      else if SameText(Item, 'cRLSign') or SameText(Item, 'CRL Sign') then
-        Result.KeyUsage := Result.KeyUsage or X509v3_KU_CRL_SIGN
-      else if SameText(Item, 'encipherOnly') or SameText(Item, 'Encipher Only') then
-        Result.KeyUsage := Result.KeyUsage or X509v3_KU_ENCIPHER_ONLY
-      else if SameText(Item, 'decipherOnly') or SameText(Item, 'Decipher Only') then
-        Result.KeyUsage := Result.KeyUsage or X509v3_KU_DECIPHER_ONLY;
-    end;
-  finally
-    KUList.Free;
+    if SameText(Item, 'digitalSignature') or SameText(Item, 'Digital Signature') then
+      Result.KeyUsage := Result.KeyUsage or X509v3_KU_DIGITAL_SIGNATURE
+    else if SameText(Item, 'nonRepudiation') or SameText(Item, 'Non Repudiation') or
+            SameText(Item, 'contentCommitment') then
+      Result.KeyUsage := Result.KeyUsage or X509v3_KU_NON_REPUDIATION
+    else if SameText(Item, 'keyEncipherment') or SameText(Item, 'Key Encipherment') then
+      Result.KeyUsage := Result.KeyUsage or X509v3_KU_KEY_ENCIPHERMENT
+    else if SameText(Item, 'dataEncipherment') or SameText(Item, 'Data Encipherment') then
+      Result.KeyUsage := Result.KeyUsage or X509v3_KU_DATA_ENCIPHERMENT
+    else if SameText(Item, 'keyAgreement') or SameText(Item, 'Key Agreement') then
+      Result.KeyUsage := Result.KeyUsage or X509v3_KU_KEY_AGREEMENT
+    else if SameText(Item, 'keyCertSign') or SameText(Item, 'Key Cert Sign') then
+      Result.KeyUsage := Result.KeyUsage or X509v3_KU_KEY_CERT_SIGN
+    else if SameText(Item, 'cRLSign') or SameText(Item, 'CRL Sign') then
+      Result.KeyUsage := Result.KeyUsage or X509v3_KU_CRL_SIGN
+    else if SameText(Item, 'encipherOnly') or SameText(Item, 'Encipher Only') then
+      Result.KeyUsage := Result.KeyUsage or X509v3_KU_ENCIPHER_ONLY
+    else if SameText(Item, 'decipherOnly') or SameText(Item, 'Decipher Only') then
+      Result.KeyUsage := Result.KeyUsage or X509v3_KU_DECIPHER_ONLY;
   end;
 
   SANs := GetSubjectAltNames;
-  try
-    Result.SubjectAltNames := StringsToArray(SANs);
-  finally
-    SANs.Free;
-  end;
+  Result.SubjectAltNames := SANs;
 end;
 
 function TOpenSSLCertificate.GetSubject: string;

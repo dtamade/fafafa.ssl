@@ -348,53 +348,50 @@ end;
 
 function TSSLCertificateChainVerifier.ParseSubjectAltNames(aCert: ISSLCertificate): TStringList;
 var
-  RawSANs: TStringList;
+  RawSANs: TSSLStringArray;
   Line, Item: string;
   i, SepPos: Integer;
 begin
   Result := TStringList.Create;
-  
+
   if aCert = nil then
     Exit;
-  
+
   RawSANs := aCert.GetSubjectAltNames;
-  if RawSANs = nil then
+  if Length(RawSANs) = 0 then
     Exit;
-  try
-    for i := 0 to RawSANs.Count - 1 do
-    begin
-      Line := Trim(RawSANs[i]);
-      if Line = '' then
-        Continue;
-      
-      // 一行中可能包含多个以逗号分隔的条目
-      repeat
-        SepPos := Pos(',', Line);
+
+  for i := 0 to Length(RawSANs) - 1 do
+  begin
+    Line := Trim(RawSANs[i]);
+    if Line = '' then
+      Continue;
+
+    // 一行中可能包含多个以逗号分隔的条目
+    repeat
+      SepPos := Pos(',', Line);
+      if SepPos > 0 then
+      begin
+        Item := Trim(Copy(Line, 1, SepPos - 1));
+        Line := Trim(Copy(Line, SepPos + 1, MaxInt));
+      end
+      else
+      begin
+        Item := Line;
+        Line := '';
+      end;
+
+      if Item <> '' then
+      begin
+        // 去掉类似 "DNS:" 这类前缀，只保留主机名部分
+        SepPos := Pos(':', Item);
         if SepPos > 0 then
-        begin
-          Item := Trim(Copy(Line, 1, SepPos - 1));
-          Line := Trim(Copy(Line, SepPos + 1, MaxInt));
-        end
-        else
-        begin
-          Item := Line;
-          Line := '';
-        end;
-        
+          Item := Trim(Copy(Item, SepPos + 1, MaxInt));
+
         if Item <> '' then
-        begin
-          // 去掉类似 "DNS:" 这类前缀，只保留主机名部分
-          SepPos := Pos(':', Item);
-          if SepPos > 0 then
-            Item := Trim(Copy(Item, SepPos + 1, MaxInt));
-          
-          if Item <> '' then
-            Result.Add(Item);
-        end;
-      until Line = '';
-    end;
-  finally
-    RawSANs.Free;
+          Result.Add(Item);
+      end;
+    until Line = '';
   end;
 end;
 

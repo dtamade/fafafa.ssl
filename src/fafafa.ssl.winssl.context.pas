@@ -250,7 +250,7 @@ begin
 end;
 
 // ============================================================================
-// ISSLContext - 证书和密钥管理（存根实现）
+// ISSLContext - 证书和密钥管理
 // ============================================================================
 
 procedure TWinSSLContext.LoadCertificate(const aFileName: string);
@@ -612,7 +612,7 @@ begin
 end;
 
 // ============================================================================
-// ISSLContext - 会话管理（存根实现）
+// ISSLContext - 会话管理（Schannel 自动管理）
 // ============================================================================
 
 procedure TWinSSLContext.SetSessionCacheMode(aEnabled: Boolean);
@@ -684,7 +684,7 @@ begin
 end;
 
 // ============================================================================
-// ISSLContext - 回调设置（存根实现）
+// ISSLContext - 回调设置（Schannel 模型限制）
 // ============================================================================
 
 procedure TWinSSLContext.SetPasswordCallback(aCallback: TSSLPasswordCallback);

@@ -1052,7 +1052,7 @@ begin
 end;
 
 // ============================================================================
-// ISSLConnection - 异步操作支持（存根）
+// ISSLConnection - 异步操作支持
 // ============================================================================
 
 function TWinSSLConnection.WantRead: Boolean;
@@ -1448,7 +1448,7 @@ begin
 end;
 
 // ============================================================================
-// ISSLConnection - 会话管理（存根）
+// ISSLConnection - 会话管理
 // ============================================================================
 
 function TWinSSLConnection.GetSession: ISSLSession;
@@ -1474,7 +1474,7 @@ begin
 end;
 
 // ============================================================================
-// ISSLConnection - ALPN/NPN（存根）
+// ISSLConnection - ALPN/NPN
 // ============================================================================
 
 function TWinSSLConnection.GetSelectedALPNProtocol: string;
