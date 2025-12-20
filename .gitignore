@@ -10,6 +10,9 @@
 *.lps
 *.bak
 *.~*
+*.res
+*.s
+ppas.sh
 
 # 备份目录
 backup/
