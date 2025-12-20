@@ -80,9 +80,9 @@ type
 
     { ISSLCertificate - 证书扩展 }
     function GetExtension(const aOID: string): string;
-    function GetSubjectAltNames: TStringList;
-    function GetKeyUsage: TStringList;
-    function GetExtendedKeyUsage: TStringList;
+    function GetSubjectAltNames: TSSLStringArray;
+    function GetKeyUsage: TSSLStringArray;
+    function GetExtendedKeyUsage: TSSLStringArray;
     
     { ISSLCertificate - 指纹 }
     function GetFingerprint(aHashType: TSSLHash): string;
@@ -1137,10 +1137,9 @@ begin
   Result := BinaryToHexString(ExtInfo^.Value.pbData, ExtInfo^.Value.cbData);
 end;
 
-function TWinSSLCertificate.GetSubjectAltNames: TStringList;
+function TWinSSLCertificate.GetSubjectAltNames: TSSLStringArray;
 var
   ExtInfo: PCERT_EXTENSION;
-  i: DWORD;
   AltNameInfo: PCERT_ALT_NAME_INFO;
   AltNameInfoSize: DWORD;
   j: DWORD;
@@ -1149,22 +1148,29 @@ var
   SegValue: Word;
   IpStr: string;
   k: Integer;
+
+  procedure AddToResult(const S: string);
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := S;
+  end;
+
 begin
-  Result := TStringList.Create;
-  
+  SetLength(Result, 0);
+
   if FCertContext = nil then
     Exit;
-  
+
   // 查找 Subject Alternative Name 扩展
   ExtInfo := CertFindExtension(
     szOID_SUBJECT_ALT_NAME2,
     GetCertInfo^.cExtension,
     GetCertInfo^.rgExtension
   );
-  
+
   if ExtInfo = nil then
     Exit;
-  
+
   // 解码扩展
   AltNameInfoSize := 0;
   if not CryptDecodeObject(
@@ -1196,7 +1202,7 @@ begin
         AltName := @AltNameInfo^.rgAltEntry[j];
         if AltName^.dwAltNameChoice = CERT_ALT_NAME_DNS_NAME then
         begin
-          Result.Add(WideCharToString(AltName^.pwszDNSName));
+          AddToResult(WideCharToString(AltName^.pwszDNSName));
         end
         else if AltName^.dwAltNameChoice = CERT_ALT_NAME_IP_ADDRESS then
         begin
@@ -1204,7 +1210,7 @@ begin
           begin
             Addr4 := AltName^.IPAddress.pbData;
             if Addr4 <> nil then
-              Result.Add(Format('%d.%d.%d.%d', [Addr4[0], Addr4[1], Addr4[2], Addr4[3]]));
+              AddToResult(Format('%d.%d.%d.%d', [Addr4[0], Addr4[1], Addr4[2], Addr4[3]]));
           end
           else if AltName^.IPAddress.cbData = 16 then
           begin
@@ -1220,7 +1226,7 @@ begin
                 IpStr := IpStr + IntToHex(SegValue, 1);
               end;
               if IpStr <> '' then
-                Result.Add(IpStr);
+                AddToResult(IpStr);
             end;
           end;
         end;
@@ -1231,14 +1237,21 @@ begin
   end;
 end;
 
-function TWinSSLCertificate.GetKeyUsage: TStringList;
+function TWinSSLCertificate.GetKeyUsage: TSSLStringArray;
 var
   ExtInfo: PCERT_EXTENSION;
   KeyUsageInfo: PCRYPT_BIT_BLOB;
   KeyUsageSize: DWORD;
   KeyUsageBits: Byte;
+
+  procedure AddToResult(const S: string);
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := S;
+  end;
+
 begin
-  Result := TStringList.Create;
+  SetLength(Result, 0);
 
   if FCertContext = nil then
     Exit;
@@ -1283,20 +1296,20 @@ begin
         KeyUsageBits := PByte(KeyUsageInfo^.pbData)^;
 
         // 解析密钥用途位
-        if (KeyUsageBits and $80) <> 0 then Result.Add('digitalSignature');
-        if (KeyUsageBits and $40) <> 0 then Result.Add('nonRepudiation');
-        if (KeyUsageBits and $20) <> 0 then Result.Add('keyEncipherment');
-        if (KeyUsageBits and $10) <> 0 then Result.Add('dataEncipherment');
-        if (KeyUsageBits and $08) <> 0 then Result.Add('keyAgreement');
-        if (KeyUsageBits and $04) <> 0 then Result.Add('keyCertSign');
-        if (KeyUsageBits and $02) <> 0 then Result.Add('cRLSign');
-        if (KeyUsageBits and $01) <> 0 then Result.Add('encipherOnly');
+        if (KeyUsageBits and $80) <> 0 then AddToResult('digitalSignature');
+        if (KeyUsageBits and $40) <> 0 then AddToResult('nonRepudiation');
+        if (KeyUsageBits and $20) <> 0 then AddToResult('keyEncipherment');
+        if (KeyUsageBits and $10) <> 0 then AddToResult('dataEncipherment');
+        if (KeyUsageBits and $08) <> 0 then AddToResult('keyAgreement');
+        if (KeyUsageBits and $04) <> 0 then AddToResult('keyCertSign');
+        if (KeyUsageBits and $02) <> 0 then AddToResult('cRLSign');
+        if (KeyUsageBits and $01) <> 0 then AddToResult('encipherOnly');
 
         // 第二个字节（如果存在）
         if KeyUsageInfo^.cbData > 1 then
         begin
           KeyUsageBits := PByte(KeyUsageInfo^.pbData + 1)^;
-          if (KeyUsageBits and $80) <> 0 then Result.Add('decipherOnly');
+          if (KeyUsageBits and $80) <> 0 then AddToResult('decipherOnly');
         end;
       end;
     end;
@@ -1305,15 +1318,22 @@ begin
   end;
 end;
 
-function TWinSSLCertificate.GetExtendedKeyUsage: TStringList;
+function TWinSSLCertificate.GetExtendedKeyUsage: TSSLStringArray;
 var
   ExtInfo: PCERT_EXTENSION;
   EnhKeyUsage: PCERT_ENHKEY_USAGE;
   EnhKeyUsageSize: DWORD;
   i: DWORD;
   OIDStr: string;
+
+  procedure AddToResult(const S: string);
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := S;
+  end;
+
 begin
-  Result := TStringList.Create;
+  SetLength(Result, 0);
 
   if FCertContext = nil then
     Exit;
@@ -1357,17 +1377,17 @@ begin
       for i := 0 to EnhKeyUsage^.cUsageIdentifier - 1 do
       begin
         OIDStr := string(EnhKeyUsage^.rgpszUsageIdentifier[i]);
-        Result.Add(OIDStr);
+        AddToResult(OIDStr);
 
         // 添加常见 OID 的友好名称
         if OIDStr = szOID_PKIX_KP_SERVER_AUTH then
-          Result.Add('TLS Web Server Authentication')
+          AddToResult('TLS Web Server Authentication')
         else if OIDStr = szOID_PKIX_KP_CLIENT_AUTH then
-          Result.Add('TLS Web Client Authentication')
+          AddToResult('TLS Web Client Authentication')
         else if OIDStr = szOID_PKIX_KP_CODE_SIGNING then
-          Result.Add('Code Signing')
+          AddToResult('Code Signing')
         else if OIDStr = szOID_PKIX_KP_EMAIL_PROTECTION then
-          Result.Add('Email Protection');
+          AddToResult('Email Protection');
       end;
     end;
   finally

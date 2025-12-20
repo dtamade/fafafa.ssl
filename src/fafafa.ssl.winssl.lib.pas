@@ -68,8 +68,8 @@ type
     { ISSLLibrary - 功能支持查询 }
     function IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
     function IsCipherSupported(const aCipherName: string): Boolean;
-    function IsFeatureSupported(const aFeatureName: string): Boolean; // 已废弃
-    function IsFeatureSupported(aFeature: TSSLFeature): Boolean; overload; // 类型安全版本（Phase 1.3）
+    function IsFeatureSupported(const aFeatureName: string): Boolean; deprecated 'Use IsFeatureSupported(TSSLFeature) instead';
+    function IsFeatureSupported(aFeature: TSSLFeature): Boolean; overload;
     
     { ISSLLibrary - 库配置 }
     procedure SetDefaultConfig(const aConfig: TSSLConfig);
@@ -417,29 +417,28 @@ function TWinSSLLibrary.IsFeatureSupported(const aFeatureName: string): Boolean;
 var
   Feature: string;
 begin
+  // 废弃方法：将字符串映射到枚举类型，调用类型安全版本
   Feature := LowerCase(aFeatureName);
 
-  // 支持的功能列表
-  Result := False;
-
   if Feature = 'sni' then
-    Result := True
+    Result := IsFeatureSupported(sslFeatSNI)
   else if Feature = 'alpn' then
-    Result := (FWindowsVersion.Major >= 10) or  // Windows 10+
-              ((FWindowsVersion.Major = 6) and (FWindowsVersion.Minor >= 2))  // Windows 8+
+    Result := IsFeatureSupported(sslFeatALPN)
   else if Feature = 'session_cache' then
-    Result := True
+    Result := IsFeatureSupported(sslFeatSessionCache)
   else if Feature = 'session_tickets' then
-    Result := True
+    Result := IsFeatureSupported(sslFeatSessionTickets)
   else if Feature = 'renegotiation' then
-    Result := True
+    Result := IsFeatureSupported(sslFeatRenegotiation)
   else if Feature = 'ocsp_stapling' then
-    Result := False  // 需要手动实现
+    Result := IsFeatureSupported(sslFeatOCSPStapling)
   else if Feature = 'certificate_transparency' then
+    Result := IsFeatureSupported(sslFeatCertificateTransparency)
+  else
     Result := False;
 
-    InternalLog(sslLogDebug, Format('Feature support check: %s = %s',
-    [aFeatureName, 'supported'])); // Simplified log
+  InternalLog(sslLogDebug, Format('Feature support check (deprecated): %s = %s',
+    [aFeatureName, BoolToStr(Result, True)]));
 end;
 
 { 类型安全版本（Phase 1.3 - Rust质量标准） }

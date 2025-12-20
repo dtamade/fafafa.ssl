@@ -528,18 +528,32 @@ end;
 
 procedure TWinSSLContext.LoadCAPath(const aPath: string);
 begin
-  // Windows 使用系统证书存储，不需要指定CA路径
-  // 这个方法在WinSSL中作为空操作
+  // Windows 使用系统证书存储，不支持指定CA路径
+  // 如果调用者传入了路径，说明期望此功能工作，应该抛出异常
+  if aPath <> '' then
+    raise ESSLPlatformNotSupportedException.CreateWithContext(
+      'LoadCAPath is not supported on Windows. ' +
+      'Windows uses the system certificate store for CA verification.',
+      sslErrOther,
+      'TWinSSLContext.LoadCAPath',
+      0,
+      sslWinSSL
+    );
+  // 空路径视为无操作（兼容跨平台代码）
 end;
 
 procedure TWinSSLContext.SetCertificateStore(aStore: ISSLCertificateStore);
 begin
   // WinSSL使用系统证书存储或自定义HCERTSTORE
-  // 这里可以从ISSLCertificateStore获取原生句柄
   if aStore <> nil then
-  begin
-    // 实现根据具体需求
-  end;
+    raise ESSLPlatformNotSupportedException.CreateWithContext(
+      'SetCertificateStore with ISSLCertificateStore is not implemented for WinSSL. ' +
+      'Use Windows certificate store APIs directly.',
+      sslErrOther,
+      'TWinSSLContext.SetCertificateStore',
+      0,
+      sslWinSSL
+    );
 end;
 
 // ============================================================================

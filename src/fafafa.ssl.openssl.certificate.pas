@@ -68,9 +68,9 @@ type
     function GetDaysUntilExpiry: Integer;
     function GetSubjectCN: string;
     function GetExtension(const aOID: string): string;
-    function GetSubjectAltNames: TStringList;
-    function GetKeyUsage: TStringList;
-    function GetExtendedKeyUsage: TStringList;
+    function GetSubjectAltNames: TSSLStringArray;
+    function GetKeyUsage: TSSLStringArray;
+    function GetExtendedKeyUsage: TSSLStringArray;
     function GetFingerprint(aHashType: TSSLHash): string;
     function GetFingerprintSHA1: string;
     function GetFingerprintSHA256: string;
@@ -1107,7 +1107,7 @@ begin
   end;
 end;
 
-function TOpenSSLCertificate.GetSubjectAltNames: TStringList;
+function TOpenSSLCertificate.GetSubjectAltNames: TSSLStringArray;
 var
   ExtStr: string;
   Parts: TStringList;
@@ -1121,9 +1121,16 @@ var
   Data: PByte;
   Len: Integer;
   Crit, Idx: Integer;
+
+  procedure AddToResult(const S: string);
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := S;
+  end;
+
 begin
-  Result := TStringList.Create;
-  
+  SetLength(Result, 0);
+
   if FX509 = nil then
     Exit;
 
@@ -1155,19 +1162,19 @@ begin
           begin
             ExtStr := ASN1StringToString(ASN1_STRING(Val));
             if ExtStr <> '' then
-              Result.Add(ExtStr);
+              AddToResult(ExtStr);
           end
           else if LType = GEN_EMAIL then
           begin
             ExtStr := ASN1StringToString(ASN1_STRING(Val));
             if ExtStr <> '' then
-              Result.Add(ExtStr);
+              AddToResult(ExtStr);
           end
           else if LType = GEN_URI then
           begin
             ExtStr := ASN1StringToString(ASN1_STRING(Val));
             if ExtStr <> '' then
-              Result.Add(ExtStr);
+              AddToResult(ExtStr);
           end
           else if LType = GEN_IPADD then
           begin
@@ -1182,7 +1189,7 @@ begin
               Continue;
             Name := IpBytesToString(Data, Len);
             if Name <> '' then
-              Result.Add(Name);
+              AddToResult(Name);
           end;
         end;
       finally
@@ -1191,7 +1198,7 @@ begin
       Exit;
     end;
   end;
-  
+
   // 简化实现：从扩展字符串中解析
   ExtStr := GetExtension('2.5.29.17'); // subjectAltName OID
   if ExtStr <> '' then
@@ -1213,7 +1220,7 @@ begin
         begin
           Name := Trim(Copy(Item, 5, MaxInt));
           if Name <> '' then
-            Result.Add(Name);
+            AddToResult(Name);
         end;
         // 邮箱地址，例如 "email:user@example.com" 或 "Email:user@example.com"
         if (Length(Item) > 6) and
@@ -1221,21 +1228,21 @@ begin
         begin
           Name := Trim(Copy(Item, 7, MaxInt));
           if Name <> '' then
-            Result.Add(Name);
+            AddToResult(Name);
         end;
         // URI 条目，例如 "URI:https://example.test"
         if (Length(Item) > 4) and SameText(Copy(Item, 1, 4), 'URI:') then
         begin
           Name := Trim(Copy(Item, 5, MaxInt));
           if Name <> '' then
-            Result.Add(Name);
+            AddToResult(Name);
         end;
         // 额外支持 IP 地址条目，例如 "IP Address:192.168.0.1"
         if (Length(Item) > 11) and SameText(Copy(Item, 1, 11), 'IP Address:') then
         begin
           Name := Trim(Copy(Item, 12, MaxInt));
           if Name <> '' then
-            Result.Add(Name);
+            AddToResult(Name);
         end;
       end;
     finally
@@ -1244,49 +1251,56 @@ begin
   end;
 end;
 
-function TOpenSSLCertificate.GetKeyUsage: TStringList;
+function TOpenSSLCertificate.GetKeyUsage: TSSLStringArray;
 var
   ExtStr: string;
   Parts: TStringList;
   I: Integer;
   Item: string;
   KUFlags: UInt32;
+
+  procedure AddToResult(const S: string);
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := S;
+  end;
+
 begin
-  Result := TStringList.Create;
-  
+  SetLength(Result, 0);
+
   if FX509 = nil then
     Exit;
-  
+
   // 优先使用位标志接口（OpenSSL 1.1+ 提供）
   if Assigned(X509_get_key_usage) then
   begin
     KUFlags := X509_get_key_usage(FX509);
     if (KUFlags and X509v3_KU_DIGITAL_SIGNATURE) <> 0 then
-      Result.Add('digitalSignature');
+      AddToResult('digitalSignature');
     if (KUFlags and X509v3_KU_NON_REPUDIATION) <> 0 then
-      Result.Add('nonRepudiation');
+      AddToResult('nonRepudiation');
     if (KUFlags and X509v3_KU_KEY_ENCIPHERMENT) <> 0 then
-      Result.Add('keyEncipherment');
+      AddToResult('keyEncipherment');
     if (KUFlags and X509v3_KU_DATA_ENCIPHERMENT) <> 0 then
-      Result.Add('dataEncipherment');
+      AddToResult('dataEncipherment');
     if (KUFlags and X509v3_KU_KEY_AGREEMENT) <> 0 then
-      Result.Add('keyAgreement');
+      AddToResult('keyAgreement');
     if (KUFlags and X509v3_KU_KEY_CERT_SIGN) <> 0 then
-      Result.Add('keyCertSign');
+      AddToResult('keyCertSign');
     if (KUFlags and X509v3_KU_CRL_SIGN) <> 0 then
-      Result.Add('cRLSign');
+      AddToResult('cRLSign');
     if (KUFlags and X509v3_KU_ENCIPHER_ONLY) <> 0 then
-      Result.Add('encipherOnly');
+      AddToResult('encipherOnly');
     if (KUFlags and X509v3_KU_DECIPHER_ONLY) <> 0 then
-      Result.Add('decipherOnly');
+      AddToResult('decipherOnly');
     Exit;
   end;
-  
+
   // 回退：从扩展文本解析
   ExtStr := GetExtension('2.5.29.15'); // keyUsage OID
   if ExtStr = '' then
     Exit;
-  
+
   ExtStr := StringReplace(ExtStr, LineEnding, ', ', [rfReplaceAll]);
   Parts := TStringList.Create;
   try
@@ -1297,52 +1311,59 @@ begin
     begin
       Item := Trim(Parts[I]);
       if Item <> '' then
-        Result.Add(Item);
+        AddToResult(Item);
     end;
   finally
     Parts.Free;
   end;
 end;
 
-function TOpenSSLCertificate.GetExtendedKeyUsage: TStringList;
+function TOpenSSLCertificate.GetExtendedKeyUsage: TSSLStringArray;
 var
   ExtStr: string;
   Parts: TStringList;
   I: Integer;
   Item: string;
   EKUFlags: UInt32;
+
+  procedure AddToResult(const S: string);
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := S;
+  end;
+
 begin
-  Result := TStringList.Create;
-  
+  SetLength(Result, 0);
+
   if FX509 = nil then
     Exit;
-  
+
   // 优先使用位标志接口（XKU_*），然后再回退到文本解析
   if Assigned(X509_get_extended_key_usage) then
   begin
     EKUFlags := X509_get_extended_key_usage(FX509);
     if (EKUFlags and XKU_SSL_SERVER) <> 0 then
-      Result.Add('serverAuth');
+      AddToResult('serverAuth');
     if (EKUFlags and XKU_SSL_CLIENT) <> 0 then
-      Result.Add('clientAuth');
+      AddToResult('clientAuth');
     if (EKUFlags and XKU_SMIME) <> 0 then
-      Result.Add('emailProtection');
+      AddToResult('emailProtection');
     if (EKUFlags and XKU_CODE_SIGN) <> 0 then
-      Result.Add('codeSigning');
+      AddToResult('codeSigning');
     if (EKUFlags and XKU_OCSP_SIGN) <> 0 then
-      Result.Add('OCSPSigning');
+      AddToResult('OCSPSigning');
     if (EKUFlags and XKU_TIMESTAMP) <> 0 then
-      Result.Add('timeStamping');
+      AddToResult('timeStamping');
     if (EKUFlags and XKU_ANYEKU) <> 0 then
-      Result.Add('anyExtendedKeyUsage');
+      AddToResult('anyExtendedKeyUsage');
     Exit;
   end;
-  
+
   // 回退：返回从扩展中读取的原始文本
   ExtStr := GetExtension('2.5.29.37'); // extKeyUsage OID
   if ExtStr = '' then
     Exit;
-  
+
   ExtStr := StringReplace(ExtStr, LineEnding, ', ', [rfReplaceAll]);
   Parts := TStringList.Create;
   try
@@ -1353,7 +1374,7 @@ begin
     begin
       Item := Trim(Parts[I]);
       if Item <> '' then
-        Result.Add(Item);
+        AddToResult(Item);
     end;
   finally
     Parts.Free;

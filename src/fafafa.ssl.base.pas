@@ -535,8 +535,8 @@ type
     // 功能支持查询
     function IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
     function IsCipherSupported(const aCipherName: string): Boolean;
-    function IsFeatureSupported(const aFeatureName: string): Boolean; // 已废弃：使用TSSLFeature重载版本
-    function IsFeatureSupported(aFeature: TSSLFeature): Boolean; overload; // 类型安全版本（Phase 1.3）
+    function IsFeatureSupported(const aFeatureName: string): Boolean; deprecated 'Use IsFeatureSupported(TSSLFeature) instead';
+    function IsFeatureSupported(aFeature: TSSLFeature): Boolean; overload;
     
     // 库配置
     procedure SetDefaultConfig(const aConfig: TSSLConfig);
@@ -730,9 +730,9 @@ type
 
     // 证书扩展
     function GetExtension(const aOID: string): string;
-    function GetSubjectAltNames: TStringList;
-    function GetKeyUsage: TStringList;
-    function GetExtendedKeyUsage: TStringList;
+    function GetSubjectAltNames: TSSLStringArray;
+    function GetKeyUsage: TSSLStringArray;
+    function GetExtendedKeyUsage: TSSLStringArray;
     
     // 指纹
     function GetFingerprint(aHashType: TSSLHash): string;

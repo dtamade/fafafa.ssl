@@ -25,6 +25,7 @@ uses
   {$ENDIF}
   SysUtils, Classes, SyncObjs,
   fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   fafafa.ssl.winssl.types,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.utils,
@@ -107,6 +108,9 @@ type
     // 会话管理
     FCurrentSession: ISSLSession;
     FSessionReused: Boolean;
+
+    // 最后一次操作状态（用于 WantRead/WantWrite）
+    FLastError: TSSLErrorCode;
 
     // 内部方法
     function PerformHandshake: TSSLHandshakeState;
@@ -408,6 +412,9 @@ begin
   FCurrentSession := nil;
   FSessionReused := False;
 
+  // 初始化错误状态
+  FLastError := sslErrNone;
+
   InitSecHandle(FCtxtHandle);
 end;
 
@@ -428,6 +435,9 @@ begin
   // 初始化会话字段
   FCurrentSession := nil;
   FSessionReused := False;
+
+  // 初始化错误状态
+  FLastError := sslErrNone;
 
   InitSecHandle(FCtxtHandle);
 end;
@@ -568,7 +578,15 @@ begin
   // Windows Schannel 不完全支持 TLS 重协商
   // RFC 5746 要求的安全重协商在 Schannel 中实现有限
   // 建议：需要重协商时，关闭当前连接并建立新连接
-  Result := False;
+  raise ESSLPlatformNotSupportedException.CreateWithContext(
+    'TLS renegotiation is not supported by Windows Schannel. ' +
+    'Close the connection and establish a new one instead.',
+    sslErrOther,
+    'TWinSSLConnection.Renegotiate',
+    0,
+    sslWinSSL
+  );
+  Result := False;  // 不会执行到这里
 end;
 
 function TWinSSLConnection.PerformHandshake: TSSLHandshakeState;
@@ -1039,16 +1057,16 @@ end;
 
 function TWinSSLConnection.WantRead: Boolean;
 begin
-  // Schannel 的异步状态通过 GetError 方法更准确地反映
-  // 此方法返回 False 表示不需要显式的读取等待
-  Result := False;
+  // 返回最后一次操作是否需要读取更多数据
+  // 与 OpenSSL 的 SSL_want() 行为一致
+  Result := (FLastError = sslErrWantRead);
 end;
 
 function TWinSSLConnection.WantWrite: Boolean;
 begin
-  // Schannel 的写入操作通常是同步的
-  // 异步状态可通过 GetError 方法查询
-  Result := False;
+  // 返回最后一次操作是否需要写入更多数据
+  // 与 OpenSSL 的 SSL_want() 行为一致
+  Result := (FLastError = sslErrWantWrite);
 end;
 
 function TWinSSLConnection.GetError(aRet: Integer): TSSLErrorCode;
@@ -1058,34 +1076,38 @@ begin
   // 成功或非错误情况
   if aRet >= 0 then
   begin
+    FLastError := sslErrNone;
     Result := sslErrNone;
     Exit;
   end;
-  
+
   // 获取Windows最后错误码
   LastErr := GetLastError;
-  
+
   // 映射到SSL错误码
   case LastErr of
     {$IFDEF WINDOWS}
     WSAEWOULDBLOCK,
     ERROR_IO_PENDING:
       Result := sslErrWantRead;  // 非阻塞操作需要等待
-    
+
     WSAENOTCONN,
     ERROR_NOT_CONNECTED:
       Result := sslErrConnection;
     {$ENDIF}
-    
+
     SEC_E_INCOMPLETE_MESSAGE:
       Result := sslErrWantRead;  // 需要更多数据
-    
+
     SEC_I_CONTINUE_NEEDED,
     SEC_I_INCOMPLETE_CREDENTIALS:
       Result := sslErrWantWrite;  // 需要发送更多数据
   else
     Result := sslErrOther;
   end;
+
+  // 保存最后错误状态，供 WantRead/WantWrite 使用
+  FLastError := Result;
 end;
 
 
@@ -1194,22 +1216,46 @@ function TWinSSLConnection.GetCipherName: string;
 var
   ConnInfo: TSecPkgContext_ConnectionInfo;
   Status: SECURITY_STATUS;
+  CipherName, HashName: string;
 begin
   Result := '';
-  
+
   if not FConnected then
     Exit;
-  
+
   // 查询连接信息
   Status := QueryContextAttributesW(@FCtxtHandle, SECPKG_ATTR_CONNECTION_INFO, @ConnInfo);
   if not IsSuccess(Status) then
     Exit;
-  
-  // 构建加密套件描述
-  Result := Format('0x%x (Strength: %d bits)', [
-    ConnInfo.aiCipher,
-    ConnInfo.dwCipherStrength
-  ]);
+
+  // 将 ALG_ID 映射到标准密码套件名称
+  case ConnInfo.aiCipher of
+    CALG_AES_256: CipherName := 'AES_256';
+    CALG_AES_192: CipherName := 'AES_192';
+    CALG_AES_128: CipherName := 'AES_128';
+    CALG_3DES:    CipherName := '3DES';
+    CALG_DES:     CipherName := 'DES';
+    CALG_RC4:     CipherName := 'RC4';
+  else
+    CipherName := Format('0x%x', [ConnInfo.aiCipher]);
+  end;
+
+  // 映射哈希算法
+  case ConnInfo.aiHash of
+    CALG_SHA_512: HashName := 'SHA512';
+    CALG_SHA_384: HashName := 'SHA384';
+    CALG_SHA_256: HashName := 'SHA256';
+    CALG_SHA1:    HashName := 'SHA';
+    CALG_MD5:     HashName := 'MD5';
+  else
+    HashName := '';
+  end;
+
+  // 构建类似 OpenSSL 的格式
+  if HashName <> '' then
+    Result := Format('%s_%s (%d bits)', [CipherName, HashName, ConnInfo.dwCipherStrength])
+  else
+    Result := Format('%s (%d bits)', [CipherName, ConnInfo.dwCipherStrength]);
 end;
 
 function TWinSSLConnection.GetPeerCertificate: ISSLCertificate;
