@@ -14,6 +14,7 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.bn,
   fafafa.ssl.openssl.api.consts;
 
@@ -224,175 +225,111 @@ implementation
 uses
   fafafa.ssl.openssl.api.utils;
 
-var
-  OSSLPARAMLoaded: Boolean = False;
+const
+  { Function bindings for batch loading }
+  OSSL_PARAM_BINDINGS: array[0..53] of TFunctionBinding = (
+    { Construction functions }
+    (Name: 'OSSL_PARAM_construct_int'; FuncPtr: @OSSL_PARAM_construct_int; Required: False),
+    (Name: 'OSSL_PARAM_construct_uint'; FuncPtr: @OSSL_PARAM_construct_uint; Required: False),
+    (Name: 'OSSL_PARAM_construct_long'; FuncPtr: @OSSL_PARAM_construct_long; Required: False),
+    (Name: 'OSSL_PARAM_construct_ulong'; FuncPtr: @OSSL_PARAM_construct_ulong; Required: False),
+    (Name: 'OSSL_PARAM_construct_int32'; FuncPtr: @OSSL_PARAM_construct_int32; Required: False),
+    (Name: 'OSSL_PARAM_construct_uint32'; FuncPtr: @OSSL_PARAM_construct_uint32; Required: False),
+    (Name: 'OSSL_PARAM_construct_int64'; FuncPtr: @OSSL_PARAM_construct_int64; Required: False),
+    (Name: 'OSSL_PARAM_construct_uint64'; FuncPtr: @OSSL_PARAM_construct_uint64; Required: False),
+    (Name: 'OSSL_PARAM_construct_size_t'; FuncPtr: @OSSL_PARAM_construct_size_t; Required: False),
+    (Name: 'OSSL_PARAM_construct_BN'; FuncPtr: @OSSL_PARAM_construct_BN; Required: False),
+    (Name: 'OSSL_PARAM_construct_double'; FuncPtr: @OSSL_PARAM_construct_double; Required: False),
+    (Name: 'OSSL_PARAM_construct_utf8_string'; FuncPtr: @OSSL_PARAM_construct_utf8_string; Required: False),
+    (Name: 'OSSL_PARAM_construct_utf8_ptr'; FuncPtr: @OSSL_PARAM_construct_utf8_ptr; Required: False),
+    (Name: 'OSSL_PARAM_construct_octet_string'; FuncPtr: @OSSL_PARAM_construct_octet_string; Required: False),
+    (Name: 'OSSL_PARAM_construct_octet_ptr'; FuncPtr: @OSSL_PARAM_construct_octet_ptr; Required: False),
+    (Name: 'OSSL_PARAM_construct_end'; FuncPtr: @OSSL_PARAM_construct_end; Required: False),
+    { Get functions }
+    (Name: 'OSSL_PARAM_get_int'; FuncPtr: @OSSL_PARAM_get_int; Required: False),
+    (Name: 'OSSL_PARAM_get_uint'; FuncPtr: @OSSL_PARAM_get_uint; Required: False),
+    (Name: 'OSSL_PARAM_get_long'; FuncPtr: @OSSL_PARAM_get_long; Required: False),
+    (Name: 'OSSL_PARAM_get_ulong'; FuncPtr: @OSSL_PARAM_get_ulong; Required: False),
+    (Name: 'OSSL_PARAM_get_int32'; FuncPtr: @OSSL_PARAM_get_int32; Required: False),
+    (Name: 'OSSL_PARAM_get_uint32'; FuncPtr: @OSSL_PARAM_get_uint32; Required: False),
+    (Name: 'OSSL_PARAM_get_int64'; FuncPtr: @OSSL_PARAM_get_int64; Required: False),
+    (Name: 'OSSL_PARAM_get_uint64'; FuncPtr: @OSSL_PARAM_get_uint64; Required: False),
+    (Name: 'OSSL_PARAM_get_size_t'; FuncPtr: @OSSL_PARAM_get_size_t; Required: False),
+    (Name: 'OSSL_PARAM_get_BN'; FuncPtr: @OSSL_PARAM_get_BN; Required: False),
+    (Name: 'OSSL_PARAM_get_double'; FuncPtr: @OSSL_PARAM_get_double; Required: False),
+    (Name: 'OSSL_PARAM_get_utf8_string'; FuncPtr: @OSSL_PARAM_get_utf8_string; Required: False),
+    (Name: 'OSSL_PARAM_get_utf8_string_ptr'; FuncPtr: @OSSL_PARAM_get_utf8_string_ptr; Required: False),
+    (Name: 'OSSL_PARAM_get_octet_string'; FuncPtr: @OSSL_PARAM_get_octet_string; Required: False),
+    (Name: 'OSSL_PARAM_get_octet_string_ptr'; FuncPtr: @OSSL_PARAM_get_octet_string_ptr; Required: False),
+    { Set functions }
+    (Name: 'OSSL_PARAM_set_int'; FuncPtr: @OSSL_PARAM_set_int; Required: False),
+    (Name: 'OSSL_PARAM_set_uint'; FuncPtr: @OSSL_PARAM_set_uint; Required: False),
+    (Name: 'OSSL_PARAM_set_long'; FuncPtr: @OSSL_PARAM_set_long; Required: False),
+    (Name: 'OSSL_PARAM_set_ulong'; FuncPtr: @OSSL_PARAM_set_ulong; Required: False),
+    (Name: 'OSSL_PARAM_set_int32'; FuncPtr: @OSSL_PARAM_set_int32; Required: False),
+    (Name: 'OSSL_PARAM_set_uint32'; FuncPtr: @OSSL_PARAM_set_uint32; Required: False),
+    (Name: 'OSSL_PARAM_set_int64'; FuncPtr: @OSSL_PARAM_set_int64; Required: False),
+    (Name: 'OSSL_PARAM_set_uint64'; FuncPtr: @OSSL_PARAM_set_uint64; Required: False),
+    (Name: 'OSSL_PARAM_set_size_t'; FuncPtr: @OSSL_PARAM_set_size_t; Required: False),
+    (Name: 'OSSL_PARAM_set_BN'; FuncPtr: @OSSL_PARAM_set_BN; Required: False),
+    (Name: 'OSSL_PARAM_set_double'; FuncPtr: @OSSL_PARAM_set_double; Required: False),
+    (Name: 'OSSL_PARAM_set_utf8_string'; FuncPtr: @OSSL_PARAM_set_utf8_string; Required: False),
+    (Name: 'OSSL_PARAM_set_octet_string'; FuncPtr: @OSSL_PARAM_set_octet_string; Required: False),
+    { Utility functions }
+    (Name: 'OSSL_PARAM_allocate_from_text'; FuncPtr: @OSSL_PARAM_allocate_from_text; Required: False),
+    (Name: 'OSSL_PARAM_dup'; FuncPtr: @OSSL_PARAM_dup; Required: False),
+    (Name: 'OSSL_PARAM_merge'; FuncPtr: @OSSL_PARAM_merge; Required: False),
+    (Name: 'OSSL_PARAM_free'; FuncPtr: @OSSL_PARAM_free; Required: False),
+    { Builder functions }
+    (Name: 'OSSL_PARAM_BLD_new'; FuncPtr: @OSSL_PARAM_BLD_new; Required: False),
+    (Name: 'OSSL_PARAM_BLD_to_param'; FuncPtr: @OSSL_PARAM_BLD_to_param; Required: False),
+    (Name: 'OSSL_PARAM_BLD_free'; FuncPtr: @OSSL_PARAM_BLD_free; Required: False),
+    (Name: 'OSSL_PARAM_BLD_push_int'; FuncPtr: @OSSL_PARAM_BLD_push_int; Required: False),
+    (Name: 'OSSL_PARAM_BLD_push_uint'; FuncPtr: @OSSL_PARAM_BLD_push_uint; Required: False),
+    (Name: 'OSSL_PARAM_BLD_push_long'; FuncPtr: @OSSL_PARAM_BLD_push_long; Required: False)
+  );
+
+  OSSL_PARAM_BINDINGS_EXT: array[0..13] of TFunctionBinding = (
+    (Name: 'OSSL_PARAM_BLD_push_ulong'; FuncPtr: @OSSL_PARAM_BLD_push_ulong; Required: False),
+    (Name: 'OSSL_PARAM_BLD_push_int32'; FuncPtr: @OSSL_PARAM_BLD_push_int32; Required: False),
+    (Name: 'OSSL_PARAM_BLD_push_uint32'; FuncPtr: @OSSL_PARAM_BLD_push_uint32; Required: False),
+    (Name: 'OSSL_PARAM_BLD_push_int64'; FuncPtr: @OSSL_PARAM_BLD_push_int64; Required: False),
+    (Name: 'OSSL_PARAM_BLD_push_uint64'; FuncPtr: @OSSL_PARAM_BLD_push_uint64; Required: False),
+    (Name: 'OSSL_PARAM_BLD_push_size_t'; FuncPtr: @OSSL_PARAM_BLD_push_size_t; Required: False),
+    (Name: 'OSSL_PARAM_BLD_push_double'; FuncPtr: @OSSL_PARAM_BLD_push_double; Required: False),
+    (Name: 'OSSL_PARAM_BLD_push_BN'; FuncPtr: @OSSL_PARAM_BLD_push_BN; Required: False),
+    (Name: 'OSSL_PARAM_BLD_push_BN_pad'; FuncPtr: @OSSL_PARAM_BLD_push_BN_pad; Required: False),
+    (Name: 'OSSL_PARAM_BLD_push_utf8_string'; FuncPtr: @OSSL_PARAM_BLD_push_utf8_string; Required: False),
+    (Name: 'OSSL_PARAM_BLD_push_utf8_ptr'; FuncPtr: @OSSL_PARAM_BLD_push_utf8_ptr; Required: False),
+    (Name: 'OSSL_PARAM_BLD_push_octet_string'; FuncPtr: @OSSL_PARAM_BLD_push_octet_string; Required: False),
+    (Name: 'OSSL_PARAM_BLD_push_octet_ptr'; FuncPtr: @OSSL_PARAM_BLD_push_octet_ptr; Required: False),
+    (Name: nil; FuncPtr: nil; Required: False)  { Terminator }
+  );
 
 function LoadOSSLPARAM(const ALibCrypto: THandle): Boolean;
 begin
   Result := False;
-  if OSSLPARAMLoaded then Exit(True);
+  if TOpenSSLLoader.IsModuleLoaded(osmParam) then Exit(True);
   if ALibCrypto = 0 then Exit;
 
-  { Load construction functions }
-  OSSL_PARAM_construct_int := TOSSLPARAMConstructInt(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_int'));
-  OSSL_PARAM_construct_uint := TOSSLPARAMConstructUInt(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_uint'));
-  OSSL_PARAM_construct_long := TOSSLPARAMConstructLong(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_long'));
-  OSSL_PARAM_construct_ulong := TOSSLPARAMConstructULong(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_ulong'));
-  OSSL_PARAM_construct_int32 := TOSSLPARAMConstructInt32(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_int32'));
-  OSSL_PARAM_construct_uint32 := TOSSLPARAMConstructUInt32(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_uint32'));
-  OSSL_PARAM_construct_int64 := TOSSLPARAMConstructInt64(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_int64'));
-  OSSL_PARAM_construct_uint64 := TOSSLPARAMConstructUInt64(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_uint64'));
-  OSSL_PARAM_construct_size_t := TOSSLPARAMConstructSizeT(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_size_t'));
-  OSSL_PARAM_construct_BN := TOSSLPARAMConstructBN(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_BN'));
-  OSSL_PARAM_construct_double := TOSSLPARAMConstructDouble(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_double'));
-  OSSL_PARAM_construct_utf8_string := TOSSLPARAMConstructUtf8String(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_utf8_string'));
-  OSSL_PARAM_construct_utf8_ptr := TOSSLPARAMConstructUtf8Ptr(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_utf8_ptr'));
-  OSSL_PARAM_construct_octet_string := TOSSLPARAMConstructOctetString(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_octet_string'));
-  OSSL_PARAM_construct_octet_ptr := TOSSLPARAMConstructOctetPtr(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_octet_ptr'));
-  OSSL_PARAM_construct_end := TOSSLPARAMConstructEnd(GetProcAddress(ALibCrypto, 'OSSL_PARAM_construct_end'));
-  
-  { Load get functions }
-  OSSL_PARAM_get_int := TOSSLPARAMGetInt(GetProcAddress(ALibCrypto, 'OSSL_PARAM_get_int'));
-  OSSL_PARAM_get_uint := TOSSLPARAMGetUInt(GetProcAddress(ALibCrypto, 'OSSL_PARAM_get_uint'));
-  OSSL_PARAM_get_long := TOSSLPARAMGetLong(GetProcAddress(ALibCrypto, 'OSSL_PARAM_get_long'));
-  OSSL_PARAM_get_ulong := TOSSLPARAMGetULong(GetProcAddress(ALibCrypto, 'OSSL_PARAM_get_ulong'));
-  OSSL_PARAM_get_int32 := TOSSLPARAMGetInt32(GetProcAddress(ALibCrypto, 'OSSL_PARAM_get_int32'));
-  OSSL_PARAM_get_uint32 := TOSSLPARAMGetUInt32(GetProcAddress(ALibCrypto, 'OSSL_PARAM_get_uint32'));
-  OSSL_PARAM_get_int64 := TOSSLPARAMGetInt64(GetProcAddress(ALibCrypto, 'OSSL_PARAM_get_int64'));
-  OSSL_PARAM_get_uint64 := TOSSLPARAMGetUInt64(GetProcAddress(ALibCrypto, 'OSSL_PARAM_get_uint64'));
-  OSSL_PARAM_get_size_t := TOSSLPARAMGetSizeT(GetProcAddress(ALibCrypto, 'OSSL_PARAM_get_size_t'));
-  OSSL_PARAM_get_BN := TOSSLPARAMGetBN(GetProcAddress(ALibCrypto, 'OSSL_PARAM_get_BN'));
-  OSSL_PARAM_get_double := TOSSLPARAMGetDouble(GetProcAddress(ALibCrypto, 'OSSL_PARAM_get_double'));
-  OSSL_PARAM_get_utf8_string := TOSSLPARAMGetUtf8String(GetProcAddress(ALibCrypto, 'OSSL_PARAM_get_utf8_string'));
-  OSSL_PARAM_get_utf8_string_ptr := TOSSLPARAMGetUtf8StringPtr(GetProcAddress(ALibCrypto, 'OSSL_PARAM_get_utf8_string_ptr'));
-  OSSL_PARAM_get_octet_string := TOSSLPARAMGetOctetString(GetProcAddress(ALibCrypto, 'OSSL_PARAM_get_octet_string'));
-  OSSL_PARAM_get_octet_string_ptr := TOSSLPARAMGetOctetStringPtr(GetProcAddress(ALibCrypto, 'OSSL_PARAM_get_octet_string_ptr'));
-  
-  { Load set functions }
-  OSSL_PARAM_set_int := TOSSLPARAMSetInt(GetProcAddress(ALibCrypto, 'OSSL_PARAM_set_int'));
-  OSSL_PARAM_set_uint := TOSSLPARAMSetUInt(GetProcAddress(ALibCrypto, 'OSSL_PARAM_set_uint'));
-  OSSL_PARAM_set_long := TOSSLPARAMSetLong(GetProcAddress(ALibCrypto, 'OSSL_PARAM_set_long'));
-  OSSL_PARAM_set_ulong := TOSSLPARAMSetULong(GetProcAddress(ALibCrypto, 'OSSL_PARAM_set_ulong'));
-  OSSL_PARAM_set_int32 := TOSSLPARAMSetInt32(GetProcAddress(ALibCrypto, 'OSSL_PARAM_set_int32'));
-  OSSL_PARAM_set_uint32 := TOSSLPARAMSetUInt32(GetProcAddress(ALibCrypto, 'OSSL_PARAM_set_uint32'));
-  OSSL_PARAM_set_int64 := TOSSLPARAMSetInt64(GetProcAddress(ALibCrypto, 'OSSL_PARAM_set_int64'));
-  OSSL_PARAM_set_uint64 := TOSSLPARAMSetUInt64(GetProcAddress(ALibCrypto, 'OSSL_PARAM_set_uint64'));
-  OSSL_PARAM_set_size_t := TOSSLPARAMSetSizeT(GetProcAddress(ALibCrypto, 'OSSL_PARAM_set_size_t'));
-  OSSL_PARAM_set_BN := TOSSLPARAMSetBN(GetProcAddress(ALibCrypto, 'OSSL_PARAM_set_BN'));
-  OSSL_PARAM_set_double := TOSSLPARAMSetDouble(GetProcAddress(ALibCrypto, 'OSSL_PARAM_set_double'));
-  OSSL_PARAM_set_utf8_string := TOSSLPARAMSetUtf8String(GetProcAddress(ALibCrypto, 'OSSL_PARAM_set_utf8_string'));
-  OSSL_PARAM_set_octet_string := TOSSLPARAMSetOctetString(GetProcAddress(ALibCrypto, 'OSSL_PARAM_set_octet_string'));
-  
-  { Load utility functions }
-  OSSL_PARAM_allocate_from_text := TOSSLPARAMAllocateFromText(GetProcAddress(ALibCrypto, 'OSSL_PARAM_allocate_from_text'));
-  OSSL_PARAM_dup := TOSSLPARAMDup(GetProcAddress(ALibCrypto, 'OSSL_PARAM_dup'));
-  OSSL_PARAM_merge := TOSSLPARAMMerge(GetProcAddress(ALibCrypto, 'OSSL_PARAM_merge'));
-  OSSL_PARAM_free := TOSSLPARAMFree(GetProcAddress(ALibCrypto, 'OSSL_PARAM_free'));
-  
-  { Load builder functions }
-  OSSL_PARAM_BLD_new := TOSSLPARAMB(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_new'));
-  OSSL_PARAM_BLD_to_param := TOSSLPARAMBLDToParam(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_to_param'));
-  OSSL_PARAM_BLD_free := TOSSLPARAMBLDFree(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_free'));
-  OSSL_PARAM_BLD_push_int := TOSSLPARAMBLDPushInt(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_push_int'));
-  OSSL_PARAM_BLD_push_uint := TOSSLPARAMBLDPushUInt(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_push_uint'));
-  OSSL_PARAM_BLD_push_long := TOSSLPARAMBLDPushLong(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_push_long'));
-  OSSL_PARAM_BLD_push_ulong := TOSSLPARAMBLDPushULong(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_push_ulong'));
-  OSSL_PARAM_BLD_push_int32 := TOSSLPARAMBLDPushInt32(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_push_int32'));
-  OSSL_PARAM_BLD_push_uint32 := TOSSLPARAMBLDPushUInt32(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_push_uint32'));
-  OSSL_PARAM_BLD_push_int64 := TOSSLPARAMBLDPushInt64(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_push_int64'));
-  OSSL_PARAM_BLD_push_uint64 := TOSSLPARAMBLDPushUInt64(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_push_uint64'));
-  OSSL_PARAM_BLD_push_size_t := TOSSLPARAMBLDPushSizeT(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_push_size_t'));
-  OSSL_PARAM_BLD_push_double := TOSSLPARAMBLDPushDouble(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_push_double'));
-  OSSL_PARAM_BLD_push_BN := TOSSLPARAMBLDPushBN(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_push_BN'));
-  OSSL_PARAM_BLD_push_BN_pad := TOSSLPARAMBLDPushBNPad(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_push_BN_pad'));
-  OSSL_PARAM_BLD_push_utf8_string := TOSSLPARAMBLDPushUtf8String(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_push_utf8_string'));
-  OSSL_PARAM_BLD_push_utf8_ptr := TOSSLPARAMBLDPushUtf8Ptr(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_push_utf8_ptr'));
-  OSSL_PARAM_BLD_push_octet_string := TOSSLPARAMBLDPushOctetString(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_push_octet_string'));
-  OSSL_PARAM_BLD_push_octet_ptr := TOSSLPARAMBLDPushOctetPtr(GetProcAddress(ALibCrypto, 'OSSL_PARAM_BLD_push_octet_ptr'));
+  { Batch load all functions }
+  TOpenSSLLoader.LoadFunctions(ALibCrypto, OSSL_PARAM_BINDINGS);
+  TOpenSSLLoader.LoadFunctions(ALibCrypto, OSSL_PARAM_BINDINGS_EXT);
 
   { Check for OpenSSL 3.0+ }
   Result := Assigned(OSSL_PARAM_BLD_new);
-  OSSLPARAMLoaded := Result;
+  TOpenSSLLoader.SetModuleLoaded(osmParam, Result);
 end;
 
 procedure UnloadOSSLPARAM;
 begin
-  if not OSSLPARAMLoaded then Exit;
+  if not TOpenSSLLoader.IsModuleLoaded(osmParam) then Exit;
 
   { Clear all function pointers }
-  OSSL_PARAM_construct_int := nil;
-  OSSL_PARAM_construct_uint := nil;
-  OSSL_PARAM_construct_long := nil;
-  OSSL_PARAM_construct_ulong := nil;
-  OSSL_PARAM_construct_int32 := nil;
-  OSSL_PARAM_construct_uint32 := nil;
-  OSSL_PARAM_construct_int64 := nil;
-  OSSL_PARAM_construct_uint64 := nil;
-  OSSL_PARAM_construct_size_t := nil;
-  OSSL_PARAM_construct_BN := nil;
-  OSSL_PARAM_construct_double := nil;
-  OSSL_PARAM_construct_utf8_string := nil;
-  OSSL_PARAM_construct_utf8_ptr := nil;
-  OSSL_PARAM_construct_octet_string := nil;
-  OSSL_PARAM_construct_octet_ptr := nil;
-  OSSL_PARAM_construct_end := nil;
-  
-  OSSL_PARAM_get_int := nil;
-  OSSL_PARAM_get_uint := nil;
-  OSSL_PARAM_get_long := nil;
-  OSSL_PARAM_get_ulong := nil;
-  OSSL_PARAM_get_int32 := nil;
-  OSSL_PARAM_get_uint32 := nil;
-  OSSL_PARAM_get_int64 := nil;
-  OSSL_PARAM_get_uint64 := nil;
-  OSSL_PARAM_get_size_t := nil;
-  OSSL_PARAM_get_BN := nil;
-  OSSL_PARAM_get_double := nil;
-  OSSL_PARAM_get_utf8_string := nil;
-  OSSL_PARAM_get_utf8_string_ptr := nil;
-  OSSL_PARAM_get_octet_string := nil;
-  OSSL_PARAM_get_octet_string_ptr := nil;
-  
-  OSSL_PARAM_set_int := nil;
-  OSSL_PARAM_set_uint := nil;
-  OSSL_PARAM_set_long := nil;
-  OSSL_PARAM_set_ulong := nil;
-  OSSL_PARAM_set_int32 := nil;
-  OSSL_PARAM_set_uint32 := nil;
-  OSSL_PARAM_set_int64 := nil;
-  OSSL_PARAM_set_uint64 := nil;
-  OSSL_PARAM_set_size_t := nil;
-  OSSL_PARAM_set_BN := nil;
-  OSSL_PARAM_set_double := nil;
-  OSSL_PARAM_set_utf8_string := nil;
-  OSSL_PARAM_set_octet_string := nil;
-  
-  OSSL_PARAM_allocate_from_text := nil;
-  OSSL_PARAM_dup := nil;
-  OSSL_PARAM_merge := nil;
-  OSSL_PARAM_free := nil;
-  
-  OSSL_PARAM_BLD_new := nil;
-  OSSL_PARAM_BLD_to_param := nil;
-  OSSL_PARAM_BLD_free := nil;
-  OSSL_PARAM_BLD_push_int := nil;
-  OSSL_PARAM_BLD_push_uint := nil;
-  OSSL_PARAM_BLD_push_long := nil;
-  OSSL_PARAM_BLD_push_ulong := nil;
-  OSSL_PARAM_BLD_push_int32 := nil;
-  OSSL_PARAM_BLD_push_uint32 := nil;
-  OSSL_PARAM_BLD_push_int64 := nil;
-  OSSL_PARAM_BLD_push_uint64 := nil;
-  OSSL_PARAM_BLD_push_size_t := nil;
-  OSSL_PARAM_BLD_push_double := nil;
-  OSSL_PARAM_BLD_push_BN := nil;
-  OSSL_PARAM_BLD_push_BN_pad := nil;
-  OSSL_PARAM_BLD_push_utf8_string := nil;
-  OSSL_PARAM_BLD_push_utf8_ptr := nil;
-  OSSL_PARAM_BLD_push_octet_string := nil;
-  OSSL_PARAM_BLD_push_octet_ptr := nil;
+  TOpenSSLLoader.ClearFunctions(OSSL_PARAM_BINDINGS);
+  TOpenSSLLoader.ClearFunctions(OSSL_PARAM_BINDINGS_EXT);
 
-  OSSLPARAMLoaded := False;
+  TOpenSSLLoader.SetModuleLoaded(osmParam, False);
 end;
 
 { Helper functions }

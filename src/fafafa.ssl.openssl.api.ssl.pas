@@ -7,7 +7,8 @@ interface
 uses
   SysUtils, DynLibs, ctypes,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;
 
 type
   { SSL Version and Protocol Functions }
@@ -291,12 +292,9 @@ implementation
 uses
   fafafa.ssl.openssl.api.core;
 
-var
-  GSSLLoaded: Boolean = False;
-
 function LoadOpenSSLSSL: Boolean;
 begin
-  if GSSLLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmSSL) then
     Exit(True);
 
   // Make sure core is loaded first
@@ -373,7 +371,7 @@ begin
   // Load other extension functions...
   // Many functions are optional and may not exist in older versions
 
-  GSSLLoaded := True;
+  TOpenSSLLoader.SetModuleLoaded(osmSSL, True);
   Result := True;
 end;
 
@@ -383,13 +381,13 @@ begin
   SSL_CTX_set_min_proto_version := nil;
   SSL_CTX_set_max_proto_version := nil;
   // ... clear all other function pointers ...
-  
-  GSSLLoaded := False;
+
+  TOpenSSLLoader.SetModuleLoaded(osmSSL, False);
 end;
 
 function IsOpenSSLSSLLoaded: Boolean;
 begin
-  Result := GSSLLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmSSL);
 end;
 
 { SSL_set_tlsext_host_name is a macro in OpenSSL:

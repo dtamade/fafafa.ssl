@@ -9,7 +9,8 @@ uses
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.asn1,
-  fafafa.ssl.openssl.api.bio;
+  fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.loader;
 
 type
   // PKCS7 类型定义
@@ -390,269 +391,141 @@ function VerifyPKCS7SignedData(AData: TBytes; ASignature: PPKCS7;
 
 implementation
 
-var
-  FPKCSLoaded: Boolean = False;
+const
+  { PKCS 函数绑定数组 - 用于批量加载 }
+  PKCSBindings: array[0..89] of TFunctionBinding = (
+    // PKCS7 基本函数
+    (Name: 'PKCS7_new'; FuncPtr: @PKCS7_new; Required: True),
+    (Name: 'PKCS7_free'; FuncPtr: @PKCS7_free; Required: True),
+    (Name: 'PKCS7_dup'; FuncPtr: @PKCS7_dup; Required: False),
+    (Name: 'd2i_PKCS7'; FuncPtr: @d2i_PKCS7; Required: False),
+    (Name: 'i2d_PKCS7'; FuncPtr: @i2d_PKCS7; Required: False),
+    (Name: 'd2i_PKCS7_bio'; FuncPtr: @d2i_PKCS7_bio; Required: False),
+    (Name: 'i2d_PKCS7_bio'; FuncPtr: @i2d_PKCS7_bio; Required: False),
+    (Name: 'PKCS7_bio_add_digest'; FuncPtr: @PKCS7_bio_add_digest; Required: False),
+    // PKCS7 签名操作
+    (Name: 'PKCS7_sign'; FuncPtr: @PKCS7_sign; Required: False),
+    (Name: 'PKCS7_sign_add_signer'; FuncPtr: @PKCS7_sign_add_signer; Required: False),
+    (Name: 'PKCS7_final'; FuncPtr: @PKCS7_final; Required: False),
+    (Name: 'PKCS7_verify'; FuncPtr: @PKCS7_verify; Required: False),
+    (Name: 'PKCS7_get0_signers'; FuncPtr: @PKCS7_get0_signers; Required: False),
+    // PKCS7 加密操作
+    (Name: 'PKCS7_encrypt'; FuncPtr: @PKCS7_encrypt_func; Required: False),
+    (Name: 'PKCS7_decrypt'; FuncPtr: @PKCS7_decrypt_func; Required: False),
+    // PKCS7 属性操作
+    (Name: 'PKCS7_add_certificate'; FuncPtr: @PKCS7_add_certificate; Required: False),
+    (Name: 'PKCS7_add_crl'; FuncPtr: @PKCS7_add_crl; Required: False),
+    (Name: 'PKCS7_content_new'; FuncPtr: @PKCS7_content_new; Required: False),
+    (Name: 'PKCS7_set_type'; FuncPtr: @PKCS7_set_type; Required: False),
+    (Name: 'PKCS7_set_content'; FuncPtr: @PKCS7_set_content; Required: False),
+    (Name: 'PKCS7_set_cipher'; FuncPtr: @PKCS7_set_cipher; Required: False),
+    (Name: 'PKCS7_stream'; FuncPtr: @PKCS7_stream_func; Required: False),
+    // PKCS7 数据访问
+    (Name: 'PKCS7_get_signer_info'; FuncPtr: @PKCS7_get_signer_info; Required: False),
+    (Name: 'PKCS7_dataInit'; FuncPtr: @PKCS7_dataInit; Required: False),
+    (Name: 'PKCS7_dataFinal'; FuncPtr: @PKCS7_dataFinal; Required: False),
+    (Name: 'PKCS7_dataDecode'; FuncPtr: @PKCS7_dataDecode; Required: False),
+    (Name: 'PKCS7_dataVerify'; FuncPtr: @PKCS7_dataVerify; Required: False),
+    // PKCS7 签名信息
+    (Name: 'PKCS7_SIGNER_INFO_new'; FuncPtr: @PKCS7_SIGNER_INFO_new; Required: False),
+    (Name: 'PKCS7_SIGNER_INFO_free'; FuncPtr: @PKCS7_SIGNER_INFO_free; Required: False),
+    (Name: 'PKCS7_SIGNER_INFO_set'; FuncPtr: @PKCS7_SIGNER_INFO_set; Required: False),
+    (Name: 'PKCS7_SIGNER_INFO_sign'; FuncPtr: @PKCS7_SIGNER_INFO_sign; Required: False),
+    (Name: 'PKCS7_add_signature'; FuncPtr: @PKCS7_add_signature; Required: False),
+    (Name: 'PKCS7_set_signed_attributes'; FuncPtr: @PKCS7_set_signed_attributes; Required: False),
+    (Name: 'PKCS7_set_attributes'; FuncPtr: @PKCS7_set_attributes; Required: False),
+    (Name: 'PKCS7_get_signed_attributes'; FuncPtr: @PKCS7_get_signed_attributes; Required: False),
+    (Name: 'PKCS7_get_attributes'; FuncPtr: @PKCS7_get_attributes; Required: False),
+    // PKCS7 接收者信息
+    (Name: 'PKCS7_RECIP_INFO_new'; FuncPtr: @PKCS7_RECIP_INFO_new; Required: False),
+    (Name: 'PKCS7_RECIP_INFO_free'; FuncPtr: @PKCS7_RECIP_INFO_free; Required: False),
+    (Name: 'PKCS7_RECIP_INFO_set'; FuncPtr: @PKCS7_RECIP_INFO_set; Required: False),
+    (Name: 'PKCS7_set_recipient_info'; FuncPtr: @PKCS7_set_recipient_info; Required: False),
+    (Name: 'PKCS7_add_recipient'; FuncPtr: @PKCS7_add_recipient; Required: False),
+    (Name: 'PKCS7_add_recipient_info'; FuncPtr: @PKCS7_add_recipient_info; Required: False),
+    // PKCS12 基本函数
+    (Name: 'PKCS12_new'; FuncPtr: @PKCS12_new; Required: True),
+    (Name: 'PKCS12_free'; FuncPtr: @PKCS12_free; Required: True),
+    (Name: 'd2i_PKCS12'; FuncPtr: @d2i_PKCS12; Required: False),
+    (Name: 'i2d_PKCS12'; FuncPtr: @i2d_PKCS12; Required: False),
+    (Name: 'd2i_PKCS12_bio'; FuncPtr: @d2i_PKCS12_bio; Required: False),
+    (Name: 'i2d_PKCS12_bio'; FuncPtr: @i2d_PKCS12_bio; Required: False),
+    // PKCS12 创建
+    (Name: 'PKCS12_create'; FuncPtr: @PKCS12_create; Required: False),
+    (Name: 'PKCS12_add_cert'; FuncPtr: @PKCS12_add_cert; Required: False),
+    (Name: 'PKCS12_add_key'; FuncPtr: @PKCS12_add_key; Required: False),
+    (Name: 'PKCS12_add_secret'; FuncPtr: @PKCS12_add_secret; Required: False),
+    // PKCS12 解析
+    (Name: 'PKCS12_parse'; FuncPtr: @PKCS12_parse; Required: False),
+    (Name: 'PKCS12_verify_mac'; FuncPtr: @PKCS12_verify_mac; Required: False),
+    (Name: 'PKCS12_set_mac'; FuncPtr: @PKCS12_set_mac; Required: False),
+    (Name: 'PKCS12_setup_mac'; FuncPtr: @PKCS12_setup_mac; Required: False),
+    // PKCS12 密钥派生
+    (Name: 'PKCS12_key_gen_asc'; FuncPtr: @PKCS12_key_gen_asc; Required: False),
+    (Name: 'PKCS12_key_gen_uni'; FuncPtr: @PKCS12_key_gen_uni; Required: False),
+    (Name: 'PKCS12_key_gen_utf8'; FuncPtr: @PKCS12_key_gen_utf8; Required: False),
+    (Name: 'PKCS12_key_gen_utf8_ex'; FuncPtr: @PKCS12_key_gen_utf8_ex; Required: False),
+    (Name: 'PKCS12_gen_mac'; FuncPtr: @PKCS12_gen_mac; Required: False),
+    // PKCS12 PBE
+    (Name: 'PKCS12_PBE_keyivgen'; FuncPtr: @PKCS12_PBE_keyivgen; Required: False),
+    (Name: 'PKCS12_pbe_crypt'; FuncPtr: @PKCS12_pbe_crypt; Required: False),
+    (Name: 'PKCS12_crypt'; FuncPtr: @PKCS12_crypt; Required: False),
+    (Name: 'PKCS12_decrypt_skey'; FuncPtr: @PKCS12_decrypt_skey; Required: False),
+    // PKCS12 SafeBag
+    (Name: 'PKCS12_SAFEBAG_new'; FuncPtr: @PKCS12_SAFEBAG_new; Required: False),
+    (Name: 'PKCS12_SAFEBAG_free'; FuncPtr: @PKCS12_SAFEBAG_free; Required: False),
+    (Name: 'PKCS12_SAFEBAG_get_nid'; FuncPtr: @PKCS12_SAFEBAG_get_nid; Required: False),
+    (Name: 'PKCS12_SAFEBAG_get_bag_nid'; FuncPtr: @PKCS12_SAFEBAG_get_bag_nid; Required: False),
+    (Name: 'PKCS12_SAFEBAG_get0_bag_type'; FuncPtr: @PKCS12_SAFEBAG_get0_bag_type; Required: False),
+    (Name: 'PKCS12_SAFEBAG_get0_bag_obj'; FuncPtr: @PKCS12_SAFEBAG_get0_bag_obj; Required: False),
+    (Name: 'PKCS12_SAFEBAG_get0_attrs'; FuncPtr: @PKCS12_SAFEBAG_get0_attrs; Required: False),
+    (Name: 'PKCS12_SAFEBAG_set0_attrs'; FuncPtr: @PKCS12_SAFEBAG_set0_attrs; Required: False),
+    (Name: 'PKCS12_SAFEBAG_get0_pkcs8'; FuncPtr: @PKCS12_SAFEBAG_get0_pkcs8; Required: False),
+    (Name: 'PKCS12_SAFEBAG_get0_safes'; FuncPtr: @PKCS12_SAFEBAG_get0_safes; Required: False),
+    // PKCS8 函数
+    (Name: 'PKCS8_PRIV_KEY_INFO_new'; FuncPtr: @PKCS8_PRIV_KEY_INFO_new; Required: False),
+    (Name: 'PKCS8_PRIV_KEY_INFO_free'; FuncPtr: @PKCS8_PRIV_KEY_INFO_free; Required: False),
+    (Name: 'd2i_PKCS8_PRIV_KEY_INFO'; FuncPtr: @d2i_PKCS8_PRIV_KEY_INFO; Required: False),
+    (Name: 'i2d_PKCS8_PRIV_KEY_INFO'; FuncPtr: @i2d_PKCS8_PRIV_KEY_INFO; Required: False),
+    (Name: 'PKCS8_pkey_set0'; FuncPtr: @PKCS8_pkey_set0; Required: False),
+    (Name: 'PKCS8_pkey_get0'; FuncPtr: @PKCS8_pkey_get0; Required: False),
+    (Name: 'PKCS8_pkey_add1_attr_by_NID'; FuncPtr: @PKCS8_pkey_add1_attr_by_NID; Required: False),
+    // EVP_PKEY 转换
+    (Name: 'EVP_PKCS82PKEY'; FuncPtr: @EVP_PKCS82PKEY; Required: False),
+    (Name: 'EVP_PKEY2PKCS8'; FuncPtr: @EVP_PKEY2PKCS8; Required: False),
+    // X509_SIG 函数
+    (Name: 'X509_SIG_new'; FuncPtr: @X509_SIG_new; Required: False),
+    (Name: 'X509_SIG_free'; FuncPtr: @X509_SIG_free; Required: False),
+    (Name: 'd2i_X509_SIG'; FuncPtr: @d2i_X509_SIG; Required: False),
+    (Name: 'i2d_X509_SIG'; FuncPtr: @i2d_X509_SIG; Required: False),
+    (Name: 'X509_SIG_get0'; FuncPtr: @X509_SIG_get0; Required: False),
+    (Name: 'X509_SIG_getm'; FuncPtr: @X509_SIG_getm; Required: False)
+  );
 
 function LoadOpenSSLPKCS(const ACryptoLib: THandle): Boolean;
 begin
-  if FPKCSLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmPKCS) then
     Exit(True);
 
   if ACryptoLib = 0 then
     Exit(False);
 
-  // 加载 PKCS7 函数
-  Pointer(PKCS7_new) := GetProcAddress(ACryptoLib, 'PKCS7_new');
-  Pointer(PKCS7_free) := GetProcAddress(ACryptoLib, 'PKCS7_free');
-  Pointer(PKCS7_dup) := GetProcAddress(ACryptoLib, 'PKCS7_dup');
-  Pointer(d2i_PKCS7) := GetProcAddress(ACryptoLib, 'd2i_PKCS7');
-  Pointer(i2d_PKCS7) := GetProcAddress(ACryptoLib, 'i2d_PKCS7');
-  Pointer(d2i_PKCS7_bio) := GetProcAddress(ACryptoLib, 'd2i_PKCS7_bio');
-  Pointer(i2d_PKCS7_bio) := GetProcAddress(ACryptoLib, 'i2d_PKCS7_bio');
-  Pointer(PKCS7_bio_add_digest) := GetProcAddress(ACryptoLib, 'PKCS7_bio_add_digest');
+  // 使用批量加载模式
+  TOpenSSLLoader.LoadFunctions(ACryptoLib, PKCSBindings);
 
-  // 加载 PKCS7 签名操作
-  Pointer(PKCS7_sign) := GetProcAddress(ACryptoLib, 'PKCS7_sign');
-  Pointer(PKCS7_sign_add_signer) := GetProcAddress(ACryptoLib, 'PKCS7_sign_add_signer');
-  Pointer(PKCS7_final) := GetProcAddress(ACryptoLib, 'PKCS7_final');
-  Pointer(PKCS7_verify) := GetProcAddress(ACryptoLib, 'PKCS7_verify');
-  Pointer(PKCS7_get0_signers) := GetProcAddress(ACryptoLib, 'PKCS7_get0_signers');
-
-  // 加载 PKCS7 加密操作
-  PKCS7_encrypt_func := TPKCS7_encrypt(GetProcAddress(ACryptoLib, 'PKCS7_encrypt'));
-  PKCS7_decrypt_func := TPKCS7_decrypt(GetProcAddress(ACryptoLib, 'PKCS7_decrypt'));
-
-  // 加载 PKCS7 属性操作
-  Pointer(PKCS7_add_certificate) := GetProcAddress(ACryptoLib, 'PKCS7_add_certificate');
-  Pointer(PKCS7_add_crl) := GetProcAddress(ACryptoLib, 'PKCS7_add_crl');
-  Pointer(PKCS7_content_new) := GetProcAddress(ACryptoLib, 'PKCS7_content_new');
-  Pointer(PKCS7_set_type) := GetProcAddress(ACryptoLib, 'PKCS7_set_type');
-  Pointer(PKCS7_set_content) := GetProcAddress(ACryptoLib, 'PKCS7_set_content');
-  Pointer(PKCS7_set_cipher) := GetProcAddress(ACryptoLib, 'PKCS7_set_cipher');
-  PKCS7_stream_func := TPKCS7_stream(GetProcAddress(ACryptoLib, 'PKCS7_stream'));
-
-  // 加载 PKCS7 数据访问
-  Pointer(PKCS7_get_signer_info) := GetProcAddress(ACryptoLib, 'PKCS7_get_signer_info');
-  Pointer(PKCS7_dataInit) := GetProcAddress(ACryptoLib, 'PKCS7_dataInit');
-  Pointer(PKCS7_dataFinal) := GetProcAddress(ACryptoLib, 'PKCS7_dataFinal');
-  Pointer(PKCS7_dataDecode) := GetProcAddress(ACryptoLib, 'PKCS7_dataDecode');
-  Pointer(PKCS7_dataVerify) := GetProcAddress(ACryptoLib, 'PKCS7_dataVerify');
-
-  // 加载 PKCS7 签名信息
-  Pointer(PKCS7_SIGNER_INFO_new) := GetProcAddress(ACryptoLib, 'PKCS7_SIGNER_INFO_new');
-  Pointer(PKCS7_SIGNER_INFO_free) := GetProcAddress(ACryptoLib, 'PKCS7_SIGNER_INFO_free');
-  Pointer(PKCS7_SIGNER_INFO_set) := GetProcAddress(ACryptoLib, 'PKCS7_SIGNER_INFO_set');
-  Pointer(PKCS7_SIGNER_INFO_sign) := GetProcAddress(ACryptoLib, 'PKCS7_SIGNER_INFO_sign');
-  Pointer(PKCS7_add_signature) := GetProcAddress(ACryptoLib, 'PKCS7_add_signature');
-  Pointer(PKCS7_set_signed_attributes) := GetProcAddress(ACryptoLib, 'PKCS7_set_signed_attributes');
-  Pointer(PKCS7_set_attributes) := GetProcAddress(ACryptoLib, 'PKCS7_set_attributes');
-  Pointer(PKCS7_get_signed_attributes) := GetProcAddress(ACryptoLib, 'PKCS7_get_signed_attributes');
-  Pointer(PKCS7_get_attributes) := GetProcAddress(ACryptoLib, 'PKCS7_get_attributes');
-
-  // 加载 PKCS7 接收者信息
-  Pointer(PKCS7_RECIP_INFO_new) := GetProcAddress(ACryptoLib, 'PKCS7_RECIP_INFO_new');
-  Pointer(PKCS7_RECIP_INFO_free) := GetProcAddress(ACryptoLib, 'PKCS7_RECIP_INFO_free');
-  Pointer(PKCS7_RECIP_INFO_set) := GetProcAddress(ACryptoLib, 'PKCS7_RECIP_INFO_set');
-  Pointer(PKCS7_set_recipient_info) := GetProcAddress(ACryptoLib, 'PKCS7_set_recipient_info');
-  Pointer(PKCS7_add_recipient) := GetProcAddress(ACryptoLib, 'PKCS7_add_recipient');
-  Pointer(PKCS7_add_recipient_info) := GetProcAddress(ACryptoLib, 'PKCS7_add_recipient_info');
-
-  // 加载 PKCS12 函数
-  Pointer(PKCS12_new) := GetProcAddress(ACryptoLib, 'PKCS12_new');
-  Pointer(PKCS12_free) := GetProcAddress(ACryptoLib, 'PKCS12_free');
-  Pointer(d2i_PKCS12) := GetProcAddress(ACryptoLib, 'd2i_PKCS12');
-  Pointer(i2d_PKCS12) := GetProcAddress(ACryptoLib, 'i2d_PKCS12');
-  Pointer(d2i_PKCS12_bio) := GetProcAddress(ACryptoLib, 'd2i_PKCS12_bio');
-  Pointer(i2d_PKCS12_bio) := GetProcAddress(ACryptoLib, 'i2d_PKCS12_bio');
-
-  // 加载 PKCS12 创建
-  Pointer(PKCS12_create) := GetProcAddress(ACryptoLib, 'PKCS12_create');
-  Pointer(PKCS12_add_cert) := GetProcAddress(ACryptoLib, 'PKCS12_add_cert');
-  Pointer(PKCS12_add_key) := GetProcAddress(ACryptoLib, 'PKCS12_add_key');
-  Pointer(PKCS12_add_secret) := GetProcAddress(ACryptoLib, 'PKCS12_add_secret');
-
-  // 加载 PKCS12 解析
-  Pointer(PKCS12_parse) := GetProcAddress(ACryptoLib, 'PKCS12_parse');
-  Pointer(PKCS12_verify_mac) := GetProcAddress(ACryptoLib, 'PKCS12_verify_mac');
-  Pointer(PKCS12_set_mac) := GetProcAddress(ACryptoLib, 'PKCS12_set_mac');
-  Pointer(PKCS12_setup_mac) := GetProcAddress(ACryptoLib, 'PKCS12_setup_mac');
-
-  // 加载 PKCS12 密钥派生
-  Pointer(PKCS12_key_gen_asc) := GetProcAddress(ACryptoLib, 'PKCS12_key_gen_asc');
-  Pointer(PKCS12_key_gen_uni) := GetProcAddress(ACryptoLib, 'PKCS12_key_gen_uni');
-  Pointer(PKCS12_key_gen_utf8) := GetProcAddress(ACryptoLib, 'PKCS12_key_gen_utf8');
-  PKCS12_key_gen_utf8_ex := TPKCS12_key_gen_utf8_ex(GetProcAddress(ACryptoLib, 'PKCS12_key_gen_utf8_ex'));
-  Pointer(PKCS12_gen_mac) := GetProcAddress(ACryptoLib, 'PKCS12_gen_mac');
-
-  // 加载 PKCS12 PBE
-  Pointer(PKCS12_PBE_keyivgen) := GetProcAddress(ACryptoLib, 'PKCS12_PBE_keyivgen');
-  Pointer(PKCS12_pbe_crypt) := GetProcAddress(ACryptoLib, 'PKCS12_pbe_crypt');
-  PKCS12_crypt := TPKCS12_crypt(GetProcAddress(ACryptoLib, 'PKCS12_crypt'));
-  Pointer(PKCS12_decrypt_skey) := GetProcAddress(ACryptoLib, 'PKCS12_decrypt_skey');
-
-  // 加载 PKCS12 SafeBag
-  Pointer(PKCS12_SAFEBAG_new) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_new');
-  Pointer(PKCS12_SAFEBAG_free) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_free');
-  Pointer(PKCS12_SAFEBAG_get_nid) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get_nid');
-  Pointer(PKCS12_SAFEBAG_get_bag_nid) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get_bag_nid');
-  Pointer(PKCS12_SAFEBAG_get0_bag_type) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get0_bag_type');
-  Pointer(PKCS12_SAFEBAG_get0_bag_obj) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get0_bag_obj');
-  Pointer(PKCS12_SAFEBAG_get0_attrs) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get0_attrs');
-  Pointer(PKCS12_SAFEBAG_set0_attrs) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_set0_attrs');
-  Pointer(PKCS12_SAFEBAG_get0_pkcs8) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get0_pkcs8');
-  Pointer(PKCS12_SAFEBAG_get0_safes) := GetProcAddress(ACryptoLib, 'PKCS12_SAFEBAG_get0_safes');
-
-  // 加载 PKCS8 函数
-  Pointer(PKCS8_PRIV_KEY_INFO_new) := GetProcAddress(ACryptoLib, 'PKCS8_PRIV_KEY_INFO_new');
-  Pointer(PKCS8_PRIV_KEY_INFO_free) := GetProcAddress(ACryptoLib, 'PKCS8_PRIV_KEY_INFO_free');
-  Pointer(d2i_PKCS8_PRIV_KEY_INFO) := GetProcAddress(ACryptoLib, 'd2i_PKCS8_PRIV_KEY_INFO');
-  Pointer(i2d_PKCS8_PRIV_KEY_INFO) := GetProcAddress(ACryptoLib, 'i2d_PKCS8_PRIV_KEY_INFO');
-  Pointer(PKCS8_pkey_set0) := GetProcAddress(ACryptoLib, 'PKCS8_pkey_set0');
-  Pointer(PKCS8_pkey_get0) := GetProcAddress(ACryptoLib, 'PKCS8_pkey_get0');
-  Pointer(PKCS8_pkey_add1_attr_by_NID) := GetProcAddress(ACryptoLib, 'PKCS8_pkey_add1_attr_by_NID');
-
-  // 加载 EVP_PKEY 转换
-  Pointer(EVP_PKCS82PKEY) := GetProcAddress(ACryptoLib, 'EVP_PKCS82PKEY');
-  Pointer(EVP_PKEY2PKCS8) := GetProcAddress(ACryptoLib, 'EVP_PKEY2PKCS8');
-
-  // 加载 X509_SIG 函数
-  Pointer(X509_SIG_new) := GetProcAddress(ACryptoLib, 'X509_SIG_new');
-  Pointer(X509_SIG_free) := GetProcAddress(ACryptoLib, 'X509_SIG_free');
-  Pointer(d2i_X509_SIG) := GetProcAddress(ACryptoLib, 'd2i_X509_SIG');
-  Pointer(i2d_X509_SIG) := GetProcAddress(ACryptoLib, 'i2d_X509_SIG');
-  Pointer(X509_SIG_get0) := GetProcAddress(ACryptoLib, 'X509_SIG_get0');
-  Pointer(X509_SIG_getm) := GetProcAddress(ACryptoLib, 'X509_SIG_getm');
-
-  FPKCSLoaded := Assigned(PKCS7_new) and Assigned(PKCS12_new);
-  Result := FPKCSLoaded;
+  TOpenSSLLoader.SetModuleLoaded(osmPKCS, Assigned(PKCS7_new) and Assigned(PKCS12_new));
+  Result := TOpenSSLLoader.IsModuleLoaded(osmPKCS);
 end;
 
 procedure UnloadOpenSSLPKCS;
 begin
-  if not FPKCSLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS) then
     Exit;
 
-  // 清理 PKCS7 函数
-  PKCS7_new := nil;
-  PKCS7_free := nil;
-  PKCS7_dup := nil;
-  d2i_PKCS7 := nil;
-  i2d_PKCS7 := nil;
-  d2i_PKCS7_bio := nil;
-  i2d_PKCS7_bio := nil;
-  PKCS7_bio_add_digest := nil;
+  // 使用批量清理模式
+  TOpenSSLLoader.ClearFunctions(PKCSBindings);
 
-  // 清理 PKCS7 签名操作
-  PKCS7_sign := nil;
-  PKCS7_sign_add_signer := nil;
-  PKCS7_final := nil;
-  PKCS7_verify := nil;
-  PKCS7_get0_signers := nil;
-
-  // 清理 PKCS7 加密操作
-  PKCS7_encrypt_func := nil;
-  PKCS7_decrypt_func := nil;
-
-  // 清理 PKCS7 属性操作
-  PKCS7_add_certificate := nil;
-  PKCS7_add_crl := nil;
-  PKCS7_content_new := nil;
-  PKCS7_set_type := nil;
-  PKCS7_set_content := nil;
-  PKCS7_set_cipher := nil;
-  PKCS7_stream_func := nil;
-
-  // 清理 PKCS7 数据访问
-  PKCS7_get_signer_info := nil;
-  PKCS7_dataInit := nil;
-  PKCS7_dataFinal := nil;
-  PKCS7_dataDecode := nil;
-  PKCS7_dataVerify := nil;
-
-  // 清理 PKCS7 签名信息
-  PKCS7_SIGNER_INFO_new := nil;
-  PKCS7_SIGNER_INFO_free := nil;
-  PKCS7_SIGNER_INFO_set := nil;
-  PKCS7_SIGNER_INFO_sign := nil;
-  PKCS7_add_signature := nil;
-  PKCS7_set_signed_attributes := nil;
-  PKCS7_set_attributes := nil;
-  PKCS7_get_signed_attributes := nil;
-  PKCS7_get_attributes := nil;
-
-  // 清理 PKCS7 接收者信息
-  PKCS7_RECIP_INFO_new := nil;
-  PKCS7_RECIP_INFO_free := nil;
-  PKCS7_RECIP_INFO_set := nil;
-  PKCS7_set_recipient_info := nil;
-  PKCS7_add_recipient := nil;
-  PKCS7_add_recipient_info := nil;
-
-  // 清理 PKCS12 函数
-  PKCS12_new := nil;
-  PKCS12_free := nil;
-  d2i_PKCS12 := nil;
-  i2d_PKCS12 := nil;
-  d2i_PKCS12_bio := nil;
-  i2d_PKCS12_bio := nil;
-
-  // 清理 PKCS12 创建
-  PKCS12_create := nil;
-  PKCS12_add_cert := nil;
-  PKCS12_add_key := nil;
-  PKCS12_add_secret := nil;
-
-  // 清理 PKCS12 解析
-  PKCS12_parse := nil;
-  PKCS12_verify_mac := nil;
-  PKCS12_set_mac := nil;
-  PKCS12_setup_mac := nil;
-
-  // 清理 PKCS12 密钥派生
-  PKCS12_key_gen_asc := nil;
-  PKCS12_key_gen_uni := nil;
-  PKCS12_key_gen_utf8 := nil;
-  PKCS12_gen_mac := nil;
-
-  // 清理 PKCS12 PBE
-  PKCS12_PBE_keyivgen := nil;
-  PKCS12_pbe_crypt := nil;
-  PKCS12_decrypt_skey := nil;
-
-  // 清理 PKCS12 SafeBag
-  PKCS12_SAFEBAG_new := nil;
-  PKCS12_SAFEBAG_free := nil;
-  PKCS12_SAFEBAG_get_nid := nil;
-  PKCS12_SAFEBAG_get_bag_nid := nil;
-  PKCS12_SAFEBAG_get0_bag_type := nil;
-  PKCS12_SAFEBAG_get0_bag_obj := nil;
-  PKCS12_SAFEBAG_get0_attrs := nil;
-  PKCS12_SAFEBAG_set0_attrs := nil;
-  PKCS12_SAFEBAG_get0_pkcs8 := nil;
-  PKCS12_SAFEBAG_get0_safes := nil;
-
-  // 清理 PKCS8 函数
-  PKCS8_PRIV_KEY_INFO_new := nil;
-  PKCS8_PRIV_KEY_INFO_free := nil;
-  d2i_PKCS8_PRIV_KEY_INFO := nil;
-  i2d_PKCS8_PRIV_KEY_INFO := nil;
-  PKCS8_pkey_set0 := nil;
-  PKCS8_pkey_get0 := nil;
-  PKCS8_pkey_add1_attr_by_NID := nil;
-
-  // 清理 EVP_PKEY 转换
-  EVP_PKCS82PKEY := nil;
-  EVP_PKEY2PKCS8 := nil;
-
-  // 清理 X509_SIG 函数
-  X509_SIG_new := nil;
-  X509_SIG_free := nil;
-  d2i_X509_SIG := nil;
-  i2d_X509_SIG := nil;
-  X509_SIG_get0 := nil;
-  X509_SIG_getm := nil;
-
-  FPKCSLoaded := False;
+  TOpenSSLLoader.SetModuleLoaded(osmPKCS, False);
 end;
 
 // 辅助函数实现
@@ -667,7 +540,7 @@ begin
   ACert := nil;
   ACAs := nil;
 
-  if not FPKCSLoaded or not FileExists(AFileName) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS) or not FileExists(AFileName) then
     Exit;
 
   Bio := BIO_new_file(PAnsiChar(AnsiString(AFileName)), 'rb');
@@ -697,7 +570,7 @@ var
   P12: PPKCS12;
 begin
   Result := False;
-  if not FPKCSLoaded or (AKey = nil) or (ACert = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS) or (AKey = nil) or (ACert = nil) then
     Exit;
 
   P12 := PKCS12_create(PAnsiChar(AnsiString(APassword)), nil, AKey, ACert, ACAs, 
@@ -726,7 +599,7 @@ var
   Bio: PBIO;
 begin
   Result := nil;
-  if not FPKCSLoaded or (Length(AData) = 0) or (ACert = nil) or (AKey = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS) or (Length(AData) = 0) or (ACert = nil) or (AKey = nil) then
     Exit;
 
   Bio := BIO_new_mem_buf(@AData[0], Length(AData));
@@ -746,7 +619,7 @@ var
   DataBio, OutBio: PBIO;
 begin
   Result := False;
-  if not FPKCSLoaded or (Length(AData) = 0) or (ASignature = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS) or (Length(AData) = 0) or (ASignature = nil) then
     Exit;
 
   DataBio := BIO_new_mem_buf(@AData[0], Length(AData));

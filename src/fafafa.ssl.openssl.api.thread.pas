@@ -16,7 +16,8 @@ uses
   {$IFDEF WINDOWS}Windows,{$ENDIF}
   {$IFDEF UNIX}cthreads,{$ENDIF}
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;
 
 type
   { Thread types }
@@ -138,92 +139,64 @@ implementation
 uses
   fafafa.ssl.openssl.api.utils;
 
-var
-  ThreadLoaded: Boolean = False;
+const
+  { Function bindings for batch loading }
+  ThreadBindings: array[0..25] of TFunctionBinding = (
+    { Thread functions }
+    (Name: 'CRYPTO_thread_setup';              FuncPtr: @CRYPTO_thread_setup;              Required: False),
+    (Name: 'CRYPTO_thread_cleanup';            FuncPtr: @CRYPTO_thread_cleanup;            Required: False),
+    (Name: 'CRYPTO_THREAD_run_once';           FuncPtr: @CRYPTO_THREAD_run_once;           Required: False),
+    (Name: 'CRYPTO_THREAD_get_current_id';     FuncPtr: @CRYPTO_THREAD_get_current_id;     Required: False),
+    (Name: 'CRYPTO_THREAD_compare_id';         FuncPtr: @CRYPTO_THREAD_compare_id;         Required: False),
+    { RW Lock functions }
+    (Name: 'CRYPTO_THREAD_lock_new';           FuncPtr: @CRYPTO_THREAD_lock_new;           Required: False),
+    (Name: 'CRYPTO_THREAD_read_lock';          FuncPtr: @CRYPTO_THREAD_read_lock;          Required: False),
+    (Name: 'CRYPTO_THREAD_write_lock';         FuncPtr: @CRYPTO_THREAD_write_lock;         Required: False),
+    (Name: 'CRYPTO_THREAD_unlock';             FuncPtr: @CRYPTO_THREAD_unlock;             Required: False),
+    (Name: 'CRYPTO_THREAD_lock_free';          FuncPtr: @CRYPTO_THREAD_lock_free;          Required: False),
+    { Thread local storage }
+    (Name: 'CRYPTO_THREAD_local_new';          FuncPtr: @CRYPTO_THREAD_local_new;          Required: False),
+    (Name: 'CRYPTO_THREAD_set_local';          FuncPtr: @CRYPTO_THREAD_set_local;          Required: False),
+    (Name: 'CRYPTO_THREAD_get_local';          FuncPtr: @CRYPTO_THREAD_get_local;          Required: False),
+    (Name: 'CRYPTO_THREAD_cleanup_local';      FuncPtr: @CRYPTO_THREAD_cleanup_local;      Required: False),
+    { Atomic operations }
+    (Name: 'CRYPTO_atomic_add';                FuncPtr: @CRYPTO_atomic_add;                Required: False),
+    (Name: 'CRYPTO_atomic_or';                 FuncPtr: @CRYPTO_atomic_or;                 Required: False),
+    (Name: 'CRYPTO_atomic_load';               FuncPtr: @CRYPTO_atomic_load;               Required: False),
+    { Legacy functions }
+    (Name: 'CRYPTO_set_locking_callback';      FuncPtr: @CRYPTO_set_locking_callback;      Required: False),
+    (Name: 'CRYPTO_set_id_callback';           FuncPtr: @CRYPTO_set_id_callback;           Required: False),
+    (Name: 'CRYPTO_num_locks';                 FuncPtr: @CRYPTO_num_locks;                 Required: False),
+    (Name: 'CRYPTO_set_dynlock_create_callback';  FuncPtr: @CRYPTO_set_dynlock_create_callback;  Required: False),
+    (Name: 'CRYPTO_set_dynlock_lock_callback';    FuncPtr: @CRYPTO_set_dynlock_lock_callback;    Required: False),
+    (Name: 'CRYPTO_set_dynlock_destroy_callback'; FuncPtr: @CRYPTO_set_dynlock_destroy_callback; Required: False),
+    (Name: 'CRYPTO_lock';                      FuncPtr: @CRYPTO_lock;                      Required: False),
+    (Name: 'CRYPTO_unlock';                    FuncPtr: @CRYPTO_unlock;                    Required: False),
+    (Name: 'CRYPTO_thread_id';                 FuncPtr: @CRYPTO_thread_id_func;            Required: False)
+  );
 
 function LoadThread(const ALibCrypto: THandle): Boolean;
 begin
   Result := False;
-  if ThreadLoaded then Exit(True);
+  if TOpenSSLLoader.IsModuleLoaded(osmThread) then Exit(True);
   if ALibCrypto = 0 then Exit;
 
-  { Load thread functions }
-  CRYPTO_thread_setup := TCRYPTOThreadSetup(GetProcAddress(ALibCrypto, 'CRYPTO_thread_setup'));
-  CRYPTO_thread_cleanup := TCRYPTOThreadCleanup(GetProcAddress(ALibCrypto, 'CRYPTO_thread_cleanup'));
-  CRYPTO_THREAD_run_once := TCRYPTOThreadRunOnce(GetProcAddress(ALibCrypto, 'CRYPTO_THREAD_run_once'));
-  CRYPTO_THREAD_get_current_id := TCRYPTOThreadGetCurrentID(GetProcAddress(ALibCrypto, 'CRYPTO_THREAD_get_current_id'));
-  CRYPTO_THREAD_compare_id := TCRYPTOThreadCompareID(GetProcAddress(ALibCrypto, 'CRYPTO_THREAD_compare_id'));
-  
-  { Load RW Lock functions }
-  CRYPTO_THREAD_lock_new := TCRYPTOThreadRWLockNew(GetProcAddress(ALibCrypto, 'CRYPTO_THREAD_lock_new'));
-  CRYPTO_THREAD_read_lock := TCRYPTOThreadReadLock(GetProcAddress(ALibCrypto, 'CRYPTO_THREAD_read_lock'));
-  CRYPTO_THREAD_write_lock := TCRYPTOThreadWriteLock(GetProcAddress(ALibCrypto, 'CRYPTO_THREAD_write_lock'));
-  CRYPTO_THREAD_unlock := TCRYPTOThreadUnlock(GetProcAddress(ALibCrypto, 'CRYPTO_THREAD_unlock'));
-  CRYPTO_THREAD_lock_free := TCRYPTOThreadRWLockFree(GetProcAddress(ALibCrypto, 'CRYPTO_THREAD_lock_free'));
-  
-  { Load thread local storage }
-  CRYPTO_THREAD_local_new := TCRYPTOThreadLocalNew(GetProcAddress(ALibCrypto, 'CRYPTO_THREAD_local_new'));
-  CRYPTO_THREAD_set_local := TCRYPTOThreadLocalSet(GetProcAddress(ALibCrypto, 'CRYPTO_THREAD_set_local'));
-  CRYPTO_THREAD_get_local := TCRYPTOThreadLocalGet(GetProcAddress(ALibCrypto, 'CRYPTO_THREAD_get_local'));
-  CRYPTO_THREAD_cleanup_local := TCRYPTOThreadLocalFree(GetProcAddress(ALibCrypto, 'CRYPTO_THREAD_cleanup_local'));
-  
-  { Load atomic operations }
-  CRYPTO_atomic_add := TCRYPTOAtomicAdd(GetProcAddress(ALibCrypto, 'CRYPTO_atomic_add'));
-  CRYPTO_atomic_or := TCRYPTOAtomicOr(GetProcAddress(ALibCrypto, 'CRYPTO_atomic_or'));
-  CRYPTO_atomic_load := TCRYPTOAtomicLoad(GetProcAddress(ALibCrypto, 'CRYPTO_atomic_load'));
-  
-  { Load legacy functions }
-  CRYPTO_set_locking_callback := TCRYPTOSetLockingCallback(GetProcAddress(ALibCrypto, 'CRYPTO_set_locking_callback'));
-  CRYPTO_set_id_callback := TCRYPTOSetIDCallback(GetProcAddress(ALibCrypto, 'CRYPTO_set_id_callback'));
-  CRYPTO_num_locks := TCRYPTONumLocks(GetProcAddress(ALibCrypto, 'CRYPTO_num_locks'));
-  CRYPTO_set_dynlock_create_callback := TCRYPTOSetDynlockCreateCallback(GetProcAddress(ALibCrypto, 'CRYPTO_set_dynlock_create_callback'));
-  CRYPTO_set_dynlock_lock_callback := TCRYPTOSetDynlockLockCallback(GetProcAddress(ALibCrypto, 'CRYPTO_set_dynlock_lock_callback'));
-  CRYPTO_set_dynlock_destroy_callback := TCRYPTOSetDynlockDestroyCallback(GetProcAddress(ALibCrypto, 'CRYPTO_set_dynlock_destroy_callback'));
-  CRYPTO_lock := TCRYPTOLock(GetProcAddress(ALibCrypto, 'CRYPTO_lock'));
-  CRYPTO_unlock := TCRYPTOUnlock(GetProcAddress(ALibCrypto, 'CRYPTO_unlock'));
-  CRYPTO_thread_id_func := TCRYPTOThreadID(GetProcAddress(ALibCrypto, 'CRYPTO_thread_id'));
+  { Batch load all thread functions }
+  TOpenSSLLoader.LoadFunctions(ALibCrypto, ThreadBindings);
 
   { Thread functions are optional, so we consider it loaded even if some are missing }
   Result := True;
-  ThreadLoaded := Result;
+  TOpenSSLLoader.SetModuleLoaded(osmThread, Result);
 end;
 
 procedure UnloadThread;
 begin
-  if not ThreadLoaded then Exit;
+  if not TOpenSSLLoader.IsModuleLoaded(osmThread) then Exit;
 
-  CRYPTO_thread_setup := nil;
-  CRYPTO_thread_cleanup := nil;
-  CRYPTO_THREAD_run_once := nil;
-  CRYPTO_THREAD_get_current_id := nil;
-  CRYPTO_THREAD_compare_id := nil;
-  
-  CRYPTO_THREAD_lock_new := nil;
-  CRYPTO_THREAD_read_lock := nil;
-  CRYPTO_THREAD_write_lock := nil;
-  CRYPTO_THREAD_unlock := nil;
-  CRYPTO_THREAD_lock_free := nil;
-  
-  CRYPTO_THREAD_local_new := nil;
-  CRYPTO_THREAD_set_local := nil;
-  CRYPTO_THREAD_get_local := nil;
-  CRYPTO_THREAD_cleanup_local := nil;
-  
-  CRYPTO_atomic_add := nil;
-  CRYPTO_atomic_or := nil;
-  CRYPTO_atomic_load := nil;
-  
-  CRYPTO_set_locking_callback := nil;
-  CRYPTO_set_id_callback := nil;
-  CRYPTO_num_locks := nil;
-  CRYPTO_set_dynlock_create_callback := nil;
-  CRYPTO_set_dynlock_lock_callback := nil;
-  CRYPTO_set_dynlock_destroy_callback := nil;
-  CRYPTO_lock := nil;
-  CRYPTO_unlock := nil;
-  CRYPTO_thread_id_func := nil;
+  { Clear all function pointers }
+  TOpenSSLLoader.ClearFunctions(ThreadBindings);
 
-  ThreadLoaded := False;
+  TOpenSSLLoader.SetModuleLoaded(osmThread, False);
 end;
 
 { Helper functions }

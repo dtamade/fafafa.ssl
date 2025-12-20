@@ -8,7 +8,8 @@ uses
   SysUtils, DynLibs, ctypes,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.consts,
-  fafafa.ssl.openssl.api;
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.loader;
 
 type
   { RAND types }
@@ -175,12 +176,9 @@ function RAND_generate_base64(len: Integer): string;
 
 implementation
 
-var
-  GRANDLoaded: Boolean = False;
-
 function LoadOpenSSLRAND: Boolean;
 begin
-  if GRANDLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmRAND) then
     Exit(True);
     
   // Check if crypto library is loaded
@@ -258,8 +256,8 @@ begin
   // For OpenSSL 3.0+, only RAND_bytes is essential. RAND_seed is deprecated.
   // For OpenSSL 1.1.1, both RAND_bytes and RAND_seed should be present.
   // We'll be lenient and only require RAND_bytes.
-  GRANDLoaded := Assigned(RAND_bytes);
-  Result := GRANDLoaded;
+  TOpenSSLLoader.SetModuleLoaded(osmRAND, Assigned(RAND_bytes));
+  Result := TOpenSSLLoader.IsModuleLoaded(osmRAND);
 end;
 
 procedure UnloadOpenSSLRAND;
@@ -326,13 +324,13 @@ begin
   RAND_POOL_add_begin := nil;
   RAND_POOL_add_end := nil;
   RAND_POOL_acquire_entropy := nil;
-  
-  GRANDLoaded := False;
+
+  TOpenSSLLoader.SetModuleLoaded(osmRAND, False);
 end;
 
 function IsOpenSSLRANDLoaded: Boolean;
 begin
-  Result := GRANDLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmRAND);
 end;
 
 { Helper functions }

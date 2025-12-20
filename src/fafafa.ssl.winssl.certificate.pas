@@ -749,7 +749,7 @@ begin
   LChainFlags := 0;
   
   if (sslCertVerifyCheckRevocation in aFlags) or
-     (sslCertVerifyCheckOCSP in aFlags) then
+    (sslCertVerifyCheckOCSP in aFlags) then
     LChainFlags := LChainFlags or CERT_CHAIN_REVOCATION_CHECK_CHAIN;
     
   if sslCertVerifyCheckCRL in aFlags then

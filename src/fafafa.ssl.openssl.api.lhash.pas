@@ -8,7 +8,8 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
   SysUtils,
-  fafafa.ssl.openssl.types;
+  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader;
 
 type
   // LHASH node structure (opaque)
@@ -148,11 +149,7 @@ function ComparePointers(const a, b: Pointer): Integer; cdecl;
 
 implementation
 
-uses
-  fafafa.ssl.openssl.loader;  // Phase 3.3 P0+ - 统一动态库加载
-
-var
-  LHashLoaded: Boolean = False;
+// Phase 3.3 P0+ - fafafa.ssl.openssl.loader 已移至 interface uses 子句
 
 function LoadLHashFunctions: Boolean;
 var
@@ -225,9 +222,9 @@ begin
     lh_strhash := OPENSSL_LH_strhash;
     lh_num_items := OPENSSL_LH_num_items;
   end;
-  
-  LHashLoaded := Assigned(OPENSSL_LH_new) or Assigned(lh_new);
-  Result := LHashLoaded;
+
+  Result := Assigned(OPENSSL_LH_new) or Assigned(lh_new);
+  TOpenSSLLoader.SetModuleLoaded(osmLHash, Result);
 end;
 
 procedure UnloadLHashFunctions;
@@ -263,14 +260,14 @@ begin
   lh_strhash := nil;
   lh_num_items := nil;
 
-  LHashLoaded := False;
+  TOpenSSLLoader.SetModuleLoaded(osmLHash, False);
 
   // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
 end;
 
 function IsLHashLoaded: Boolean;
 begin
-  Result := LHashLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmLHash);
 end;
 
 // Callback functions

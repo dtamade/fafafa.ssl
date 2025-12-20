@@ -22,6 +22,7 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   fafafa.ssl.cert.builder,
   fafafa.ssl.context.builder,
   {$IFDEF WINDOWS}

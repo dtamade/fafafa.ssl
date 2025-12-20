@@ -9,6 +9,7 @@ uses
   fafafa.ssl.exceptions,
   SysUtils,
   fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.evp,
@@ -241,12 +242,6 @@ function DecryptData(const aEncryptedData: TBytes; aRecipCert: PX509;
 
 implementation
 
-uses
-  fafafa.ssl.openssl.loader;  // Phase 3.3 P0+ - 统一动态库加载
-
-var
-  PKCS7Loaded: Boolean = False;
-
 function LoadPKCS7Functions: Boolean;
 var
   LHandle: TLibHandle;
@@ -295,9 +290,9 @@ begin
   SMIME_write_PKCS7 := TSMIME_write_PKCS7(TOpenSSLLoader.GetFunction(LHandle, 'SMIME_write_PKCS7'));
   SMIME_read_PKCS7 := TSMIME_read_PKCS7(TOpenSSLLoader.GetFunction(LHandle, 'SMIME_read_PKCS7'));
   SMIME_text := TSMIME_text(TOpenSSLLoader.GetFunction(LHandle, 'SMIME_text'));
-  
-  PKCS7Loaded := Assigned(PKCS7_new) and Assigned(PKCS7_sign) and Assigned(PKCS7_verify);
-  Result := PKCS7Loaded;
+
+  Result := Assigned(PKCS7_new) and Assigned(PKCS7_sign) and Assigned(PKCS7_verify);
+  TOpenSSLLoader.SetModuleLoaded(osmPKCS7, Result);
 end;
 
 procedure UnloadPKCS7Functions;
@@ -338,14 +333,14 @@ begin
   SMIME_read_PKCS7 := nil;
   SMIME_text := nil;
 
-  PKCS7Loaded := False;
+  TOpenSSLLoader.SetModuleLoaded(osmPKCS7, False);
 
   // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
 end;
 
 function IsPKCS7Loaded: Boolean;
 begin
-  Result := PKCS7Loaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmPKCS7);
 end;
 
 // High-level helper function implementations
@@ -359,8 +354,8 @@ var
   len: Integer;
 begin
   Result := nil;
-  
-  if not PKCS7Loaded then
+
+  if not IsPKCS7Loaded then
     raise ESSLException.Create('PKCS7 functions not loaded');
   
   // Create input BIO from data
@@ -416,8 +411,8 @@ var
 begin
   Result := False;
   aOutData := nil;
-  
-  if not PKCS7Loaded then
+
+  if not IsPKCS7Loaded then
     Exit;
   
   // Create input BIO from signed data
@@ -474,8 +469,8 @@ var
   len: Integer;
 begin
   Result := nil;
-  
-  if not PKCS7Loaded then
+
+  if not IsPKCS7Loaded then
     raise ESSLException.Create('PKCS7 functions not loaded');
   
   // Create input BIO from data
@@ -531,8 +526,8 @@ var
 begin
   Result := False;
   aOutData := nil;
-  
-  if not PKCS7Loaded then
+
+  if not IsPKCS7Loaded then
     Exit;
   
   // Create input BIO from encrypted data

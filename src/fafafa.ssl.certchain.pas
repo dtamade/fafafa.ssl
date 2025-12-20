@@ -634,7 +634,7 @@ begin
   
   // 如果启用了吊销检查但未配置 CRL 存储，给出提示性警告
   if (cvoCheckRevocation in FOptions) and
-     ((FCRLStore = nil) or (FCRLStore.Count = 0)) then
+    ((FCRLStore = nil) or (FCRLStore.Count = 0)) then
     Result.Warnings.Add('已启用吊销检查选项但未配置 CRL 存储，未对证书撤销状态进行验证。');
   
   if Length(aChain) = 0 then

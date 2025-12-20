@@ -730,17 +730,17 @@ begin
 
   // Check CA configuration when verification is enabled
   if (sslVerifyPeer in FVerifyMode) and
-     (FCAFile = '') and (FCAPath = '') and (not FUseSystemRoots) then
+    (FCAFile = '') and (FCAPath = '') and (not FUseSystemRoots) then
     Result.AddWarning('Peer verification enabled but no CA certificates configured');
 
   // Check cipher configuration
   if (FCipherList <> '') and (Pos('NULL-', UpperCase(FCipherList)) > 0) then
     Result.AddError('NULL cipher detected in cipher list - provides no encryption');
   if (FCipherList <> '') and (Pos('EXPORT', UpperCase(FCipherList)) > 0) and
-     (Pos('!EXPORT', UpperCase(FCipherList)) = 0) then
+    (Pos('!EXPORT', UpperCase(FCipherList)) = 0) then
     Result.AddWarning('EXPORT cipher detected - uses weak encryption');
   if (FCipherList <> '') and (Pos('RC4', UpperCase(FCipherList)) > 0) and
-     (Pos('!RC4', UpperCase(FCipherList)) = 0) then
+    (Pos('!RC4', UpperCase(FCipherList)) = 0) then
     Result.AddWarning('RC4 cipher detected - considered insecure');
 
   // Check session configuration
@@ -774,7 +774,7 @@ begin
 
   // Warn if client verification is enabled without CA
   if (sslVerifyPeer in FVerifyMode) and
-     (FCAFile = '') and (FCAPath = '') then
+    (FCAFile = '') and (FCAPath = '') then
     Result.AddWarning('Client verification enabled but no CA certificates configured');
 end;
 

@@ -8,7 +8,8 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
   SysUtils,
-  fafafa.ssl.openssl.types;
+  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader;
 
 type
   // Stack comparison function
@@ -184,11 +185,7 @@ function GetFromStack(Stack: POPENSSL_STACK; Index: Integer): Pointer;
 
 implementation
 
-uses
-  fafafa.ssl.openssl.loader;  // Phase 3.3 P0+ - 统一动态库加载
-
-var
-  StackLoaded: Boolean = False;
+// Phase 3.3 P0+ - 使用 TOpenSSLLoader 统一管理模块加载状态（已移除 StackLoaded 全局变量）
 
 function LoadStackFunctions: Boolean;
 var
@@ -251,9 +248,9 @@ begin
   
   // Load typed stack functions (these are typically inline/macros in C)
   // They may not exist as symbols, so we'll use the generic functions
-  
-  StackLoaded := Assigned(OPENSSL_sk_new_null) or Assigned(OPENSSL_sk_new);
-  Result := StackLoaded;
+
+  Result := Assigned(OPENSSL_sk_new_null) or Assigned(OPENSSL_sk_new);
+  TOpenSSLLoader.SetModuleLoaded(osmStack, Result);
 end;
 
 procedure UnloadStackFunctions;
@@ -312,15 +309,15 @@ begin
   sk_OPENSSL_STRING_num := nil;
   sk_OPENSSL_STRING_value := nil;
   sk_OPENSSL_STRING_push := nil;
-  
-  StackLoaded := False;
+
+  TOpenSSLLoader.SetModuleLoaded(osmStack, False);
 
   // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
 end;
 
 function IsStackLoaded: Boolean;
 begin
-  Result := StackLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmStack);
 end;
 
 // High-level helper function implementations

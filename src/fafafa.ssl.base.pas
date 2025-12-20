@@ -717,13 +717,17 @@ type
     
     // 证书验证
     function Verify(aCAStore: ISSLCertificateStore): Boolean;
-    function VerifyEx(aCAStore: ISSLCertificateStore; 
+    function VerifyEx(aCAStore: ISSLCertificateStore;
       aFlags: TSSLCertVerifyFlags; out aResult: TSSLCertVerifyResult): Boolean;
     function VerifyHostname(const aHostname: string): Boolean;
     function IsExpired: Boolean;
     function IsSelfSigned: Boolean;
     function IsCA: Boolean;
-    
+
+    // 便利方法 (P2 增强)
+    function GetDaysUntilExpiry: Integer;  // 返回证书到期天数，已过期返回负数
+    function GetSubjectCN: string;         // 直接获取 Subject 中的 Common Name
+
     // 证书扩展
     function GetExtension(const aOID: string): string;
     function GetSubjectAltNames: TStringList;
@@ -737,11 +741,11 @@ type
     
     // 证书链
     procedure SetIssuerCertificate(aCert: ISSLCertificate);
-    function GetIssuerCertificate: ISSLCertificate;
-    
+    function GetIssuerCertificate: ISSLCertificate;  // 返回内部引用，不转移所有权
+
     // 原生句柄
-    function GetNativeHandle: Pointer;
-    function Clone: ISSLCertificate;
+    function GetNativeHandle: Pointer;  // 返回原生句柄，不转移所有权
+    function Clone: ISSLCertificate;    // P3-21: 创建新实例，调用者拥有所有权
   end;
 
   { ISSLCertificateStore - 证书存储接口 }

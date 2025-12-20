@@ -578,14 +578,14 @@ begin
         // Calculate hash
         MD := EVP_sha256();
         if Assigned(EVP_MD_CTX_new) and Assigned(EVP_DigestInit_ex) and 
-           Assigned(EVP_DigestUpdate) and Assigned(EVP_DigestFinal_ex) then
+          Assigned(EVP_DigestUpdate) and Assigned(EVP_DigestFinal_ex) then
         begin
           MDCtx := EVP_MD_CTX_new();
           if MDCtx <> nil then
           begin
             try
               if (EVP_DigestInit_ex(MDCtx, MD, nil) = 1) and
-                 (EVP_DigestUpdate(MDCtx, @Data[0], Cardinal(Length(Data))) = 1) then
+                (EVP_DigestUpdate(MDCtx, @Data[0], Cardinal(Length(Data))) = 1) then
               begin
                 HashLen := 0;
                 if EVP_DigestFinal_ex(MDCtx, @Hash[0], HashLen) = 1 then

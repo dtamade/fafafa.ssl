@@ -246,6 +246,8 @@ type
      *}
     class function CreateContext(const aConfig: TSSLConfig): ISSLContext; overload;
 
+    class procedure NormalizeConfig(var aConfig: TSSLConfig);
+
     {**
      * 创建证书对象
      *
@@ -316,10 +318,6 @@ uses
   {$IFDEF UNIX}
   BaseUnix,
   {$ENDIF}
-  fafafa.ssl.openssl.lib,    // OpenSSL 后端支持 (新实现)
-  {$IFDEF WINDOWS}
-  fafafa.ssl.winssl.lib,  // WinSSL Phase 2.2 新实现（替换老的 winssl.pas）
-  {$ENDIF}
   fafafa.ssl.crypto.utils,   // Phase 2.3.5 - 加密工具（哈希计算）
   fafafa.ssl.encoding,       // Phase 2.3.5 - 编码工具（Hex转换）
   fafafa.ssl.errors,
@@ -338,6 +336,46 @@ begin
   else
     Include(aConfig.Options, ssoDisableCompression);
 
+  Include(aConfig.Options, ssoDisableRenegotiation);
+
+  Include(aConfig.Options, ssoNoSSLv2);
+  Include(aConfig.Options, ssoNoSSLv3);
+  Include(aConfig.Options, ssoNoTLSv1);
+  Include(aConfig.Options, ssoNoTLSv1_1);
+
+  if aConfig.ProtocolVersions <> [] then
+  begin
+    if sslProtocolSSL2 in aConfig.ProtocolVersions then
+      Exclude(aConfig.Options, ssoNoSSLv2)
+    else
+      Include(aConfig.Options, ssoNoSSLv2);
+
+    if sslProtocolSSL3 in aConfig.ProtocolVersions then
+      Exclude(aConfig.Options, ssoNoSSLv3)
+    else
+      Include(aConfig.Options, ssoNoSSLv3);
+
+    if sslProtocolTLS10 in aConfig.ProtocolVersions then
+      Exclude(aConfig.Options, ssoNoTLSv1)
+    else
+      Include(aConfig.Options, ssoNoTLSv1);
+
+    if sslProtocolTLS11 in aConfig.ProtocolVersions then
+      Exclude(aConfig.Options, ssoNoTLSv1_1)
+    else
+      Include(aConfig.Options, ssoNoTLSv1_1);
+
+    if sslProtocolTLS12 in aConfig.ProtocolVersions then
+      Exclude(aConfig.Options, ssoNoTLSv1_2)
+    else
+      Include(aConfig.Options, ssoNoTLSv1_2);
+
+    if sslProtocolTLS13 in aConfig.ProtocolVersions then
+      Exclude(aConfig.Options, ssoNoTLSv1_3)
+    else
+      Include(aConfig.Options, ssoNoTLSv1_3);
+  end;
+
   if aConfig.EnableSessionTickets then
     Include(aConfig.Options, ssoEnableSessionTickets)
   else
@@ -352,6 +390,20 @@ begin
     Include(aConfig.Options, ssoEnableSessionCache)
   else
     Exclude(aConfig.Options, ssoEnableSessionCache);
+
+  if aConfig.VerifyDepth <= 0 then
+    aConfig.VerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
+
+  if aConfig.CipherList = '' then
+    aConfig.CipherList := SSL_DEFAULT_CIPHER_LIST;
+
+  if aConfig.CipherSuites = '' then
+    aConfig.CipherSuites := SSL_DEFAULT_TLS13_CIPHERSUITES;
+end;
+
+class procedure TSSLFactory.NormalizeConfig(var aConfig: TSSLConfig);
+begin
+  NormalizeConfigOptions(aConfig);
 end;
 
 { 全局函数实现 }
@@ -663,23 +715,36 @@ begin
 end;
 
 class function TSSLFactory.CreateLibraryInstance(aLibType: TSSLLibraryType): ISSLLibrary;
+var
+  LIndex: Integer;
+  LClass: TSSLLibraryClass;
 begin
   Result := nil;
-  
-  // 直接根据类型创建相应的库实例
+
+  LClass := nil;
+  for LIndex := 0 to High(FRegistrations) do
+  begin
+    if FRegistrations[LIndex].LibraryType = aLibType then
+    begin
+      LClass := FRegistrations[LIndex].LibraryClass;
+      Break;
+    end;
+  end;
+
+  if Assigned(LClass) then
+  begin
+    try
+      Result := LClass.Create as ISSLLibrary;
+    except
+      Result := nil;
+    end;
+    if Assigned(Result) then
+      Exit;
+
+    Exit;
+  end;
+
   case aLibType of
-    sslWinSSL:
-    begin
-      {$IFDEF WINDOWS}
-      Result := TWinSSLLibrary.Create;
-      {$ENDIF}
-    end;
-    
-    sslOpenSSL:
-    begin
-      Result := TOpenSSLLibrary.Create;
-    end;
-    
     sslWolfSSL:
     begin
       // Future: WolfSSL backend support (not currently implemented)
@@ -700,11 +765,12 @@ begin
       );
     end;
   else
-    // sslAutoDetect and any other values - should not reach here
     raise ESSLConfigurationException.CreateWithContext(
-      'Invalid library type for direct instantiation',
-      sslErrUnsupported,
-      'TSSLFactory.CreateLibraryInstance'
+      Format('SSL backend %s is not registered', [SSL_LIBRARY_NAMES[aLibType]]),
+      sslErrLibraryNotFound,
+      'TSSLFactory.CreateLibraryInstance',
+      0,
+      aLibType
     );
   end;
 end;
@@ -712,6 +778,8 @@ end;
 class function TSSLFactory.GetLibrary(aLibType: TSSLLibraryType): ISSLLibrary;
 var
   LType: TSSLLibraryType;
+  LInitError: Integer;
+  LInitErrorString: string;
 begin
   CheckInitialized;
   
@@ -737,13 +805,18 @@ begin
         if FAutoInitialize then
         begin
           if not Result.Initialize then
+          begin
+            LInitError := Result.GetLastError;
+            LInitErrorString := Result.GetLastErrorString;
             raise ESSLInitializationException.CreateWithContext(
-              Format('Failed to initialize SSL library: %s', [SSL_LIBRARY_NAMES[LType]]),
+              Format('Failed to initialize SSL library: %s (LastError=%d, Details=%s)',
+                [SSL_LIBRARY_NAMES[LType], LInitError, LInitErrorString]),
               sslErrNotInitialized,
               'TSSLFactory.GetLibrary',
-              0,
+              LInitError,
               LType
             );
+          end;
         end;
         FLibraries[LType] := Result;
       end
@@ -775,6 +848,31 @@ begin
     NormalizeConfigOptions(LConfig);
     if LConfig.Options <> [] then
       Result.SetOptions(LConfig.Options);
+
+    if LConfig.ProtocolVersions <> [] then
+      Result.SetProtocolVersions(LConfig.ProtocolVersions);
+
+    if LConfig.VerifyMode <> [] then
+      Result.SetVerifyMode(LConfig.VerifyMode);
+
+    if LConfig.VerifyDepth > 0 then
+      Result.SetVerifyDepth(LConfig.VerifyDepth);
+
+    if LConfig.CipherList <> '' then
+      Result.SetCipherList(LConfig.CipherList);
+
+    if LConfig.CipherSuites <> '' then
+      Result.SetCipherSuites(LConfig.CipherSuites);
+
+    Result.SetSessionCacheSize(LConfig.SessionCacheSize);
+    Result.SetSessionTimeout(LConfig.SessionTimeout);
+    Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
+
+    if LConfig.ServerName <> '' then
+      Result.SetServerName(LConfig.ServerName);
+
+    if LConfig.ALPNProtocols <> '' then
+      Result.SetALPNProtocols(LConfig.ALPNProtocols);
   end;
 end;
 
@@ -793,6 +891,9 @@ begin
     Exit;
 
   Result.SetOptions(LConfig.Options);
+  Result.SetSessionCacheSize(LConfig.SessionCacheSize);
+  Result.SetSessionTimeout(LConfig.SessionTimeout);
+  Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
   
   // 应用配置
   if LConfig.ProtocolVersions <> [] then
@@ -809,9 +910,15 @@ begin
     
   if LConfig.VerifyMode <> [] then
     Result.SetVerifyMode(LConfig.VerifyMode);
+
+  if LConfig.VerifyDepth > 0 then
+    Result.SetVerifyDepth(LConfig.VerifyDepth);
     
   if LConfig.CipherList <> '' then
     Result.SetCipherList(LConfig.CipherList);
+
+  if LConfig.CipherSuites <> '' then
+    Result.SetCipherSuites(LConfig.CipherSuites);
     
   if LConfig.ServerName <> '' then
     Result.SetServerName(LConfig.ServerName);

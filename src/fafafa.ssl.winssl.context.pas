@@ -141,7 +141,7 @@ begin
   FContextType := aType;
   FProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
   FVerifyMode := [sslVerifyPeer];
-  FVerifyDepth := 9;
+  FVerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
   FServerName := '';
   FCipherList := '';
   FCipherSuites := '';
@@ -153,8 +153,8 @@ begin
   FCertContext := nil;
   FCertStore := nil;
   FSessionCacheEnabled := True;
-  FSessionTimeout := 300;
-  FSessionCacheSize := 20480;
+  FSessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
+  FSessionCacheSize := SSL_DEFAULT_SESSION_CACHE_SIZE;
   
   // 回调初始化
   FVerifyCallback := nil;
@@ -446,7 +446,7 @@ begin
     // WinSSL 不直接支持加载 PEM 私钥并关联到现有证书上下文
     // 除非使用 CryptImportKey 等复杂操作
     // 这里抛出异常或记录警告
-   if aStream = nil then
+    if aStream = nil then
     raise ESSLConfigurationException.CreateWithContext(
       'WinSSL backend only supports PFX/P12 format for private key loading. Please merge certificate and key into a PFX file.',
       sslErrUnsupported,

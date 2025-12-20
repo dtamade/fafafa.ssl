@@ -14,6 +14,7 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.consts;
 
@@ -88,49 +89,41 @@ implementation
 uses
   fafafa.ssl.openssl.api.utils;
 
-var
-  TXTDBLoaded: Boolean = False;
+const
+  { TXT_DB function bindings for batch loading }
+  TXTDB_BINDINGS: array[0..8] of TFunctionBinding = (
+    (Name: 'TXT_DB_new';          FuncPtr: @TXT_DB_new;          Required: True),
+    (Name: 'TXT_DB_free';         FuncPtr: @TXT_DB_free;         Required: True),
+    (Name: 'TXT_DB_read';         FuncPtr: @TXT_DB_read;         Required: False),
+    (Name: 'TXT_DB_write';        FuncPtr: @TXT_DB_write;        Required: False),
+    (Name: 'TXT_DB_insert';       FuncPtr: @TXT_DB_insert;       Required: False),
+    (Name: 'TXT_DB_delete';       FuncPtr: @TXT_DB_delete;       Required: False),
+    (Name: 'TXT_DB_update';       FuncPtr: @TXT_DB_update;       Required: False),
+    (Name: 'TXT_DB_get_by_index'; FuncPtr: @TXT_DB_get_by_index; Required: False),
+    (Name: 'TXT_DB_create_index'; FuncPtr: @TXT_DB_create_index; Required: False)
+  );
 
 function LoadTXTDB(const ALibCrypto: THandle): Boolean;
 begin
   Result := False;
-  if TXTDBLoaded then Exit(True);
+  if TOpenSSLLoader.IsModuleLoaded(osmTXTDB) then Exit(True);
   if ALibCrypto = 0 then Exit;
 
-  { Load basic functions }
-  TXT_DB_new := TTXTDBNew(GetProcAddress(ALibCrypto, 'TXT_DB_new'));
-  TXT_DB_free := TTXTDBFree(GetProcAddress(ALibCrypto, 'TXT_DB_free'));
-  TXT_DB_read := TTXTDBRead(GetProcAddress(ALibCrypto, 'TXT_DB_read'));
-  TXT_DB_write := TTXTDBWrite(GetProcAddress(ALibCrypto, 'TXT_DB_write'));
-  
-  { Load manipulation functions }
-  TXT_DB_insert := TTXTDBInsert(GetProcAddress(ALibCrypto, 'TXT_DB_insert'));
-  TXT_DB_delete := TTXTDBDelete(GetProcAddress(ALibCrypto, 'TXT_DB_delete'));
-  TXT_DB_update := TTXTDBUpdate(GetProcAddress(ALibCrypto, 'TXT_DB_update'));
-  
-  { Load index functions }
-  TXT_DB_get_by_index := TTXTDBGetByIndex(GetProcAddress(ALibCrypto, 'TXT_DB_get_by_index'));
-  TXT_DB_create_index := TTXTDBCreateIndex(GetProcAddress(ALibCrypto, 'TXT_DB_create_index'));
+  { Batch load all TXT_DB functions }
+  TOpenSSLLoader.LoadFunctions(ALibCrypto, TXTDB_BINDINGS);
 
   Result := Assigned(TXT_DB_new) and Assigned(TXT_DB_free);
-  TXTDBLoaded := Result;
+  TOpenSSLLoader.SetModuleLoaded(osmTXTDB, Result);
 end;
 
 procedure UnloadTXTDB;
 begin
-  if not TXTDBLoaded then Exit;
+  if not TOpenSSLLoader.IsModuleLoaded(osmTXTDB) then Exit;
 
-  TXT_DB_new := nil;
-  TXT_DB_free := nil;
-  TXT_DB_read := nil;
-  TXT_DB_write := nil;
-  TXT_DB_insert := nil;
-  TXT_DB_delete := nil;
-  TXT_DB_update := nil;
-  TXT_DB_get_by_index := nil;
-  TXT_DB_create_index := nil;
+  { Clear all function pointers }
+  TOpenSSLLoader.ClearFunctions(TXTDB_BINDINGS);
 
-  TXTDBLoaded := False;
+  TOpenSSLLoader.SetModuleLoaded(osmTXTDB, False);
 end;
 
 { Helper functions }

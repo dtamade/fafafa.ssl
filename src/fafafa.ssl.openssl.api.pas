@@ -7,7 +7,8 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
-  fafafa.ssl.exceptions;
+  fafafa.ssl.exceptions,
+  fafafa.ssl.openssl.loader;
 
 const
   {$IFDEF MSWINDOWS}
@@ -796,12 +797,6 @@ function SSL_set_tlsext_host_name(ssl: PSSL; const name: PAnsiChar): Integer;
 
 implementation
 
-uses
-  fafafa.ssl.openssl.loader;  // Phase 3.3 P0+ - 统一动态库加载
-
-var
-  FOpenSSLLoaded: Boolean = False;
-
 function LoadOpenSSLLibrary: Boolean;
 var
   LCryptoHandle, LSSLHandle: TLibHandle;
@@ -828,7 +823,7 @@ var
 begin
   Result := False;
 
-  if FOpenSSLLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     Result := True;
     Exit;
@@ -1106,8 +1101,8 @@ begin
     // 初始化 OpenSSL
     if Assigned(OPENSSL_init_ssl) then
       OPENSSL_init_ssl(0, nil);
-    
-    FOpenSSLLoaded := True;
+
+    TOpenSSLLoader.SetModuleLoaded(osmCore, True);
     Result := True;
     
   except
@@ -1121,19 +1116,19 @@ end;
 
 procedure UnloadOpenSSLLibrary;
 begin
-  if FOpenSSLLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     if Assigned(OPENSSL_cleanup) then
       OPENSSL_cleanup;
   end;
 
   // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
-  FOpenSSLLoaded := False;
+  TOpenSSLLoader.SetModuleLoaded(osmCore, False);
 end;
 
 function IsOpenSSLLoaded: Boolean;
 begin
-  Result := FOpenSSLLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmCore);
 end;
 
 function GetOpenSSLVersion: string;
@@ -1142,7 +1137,7 @@ var
   VerStr: PAnsiChar;
 begin
   Result := '';
-  if not FOpenSSLLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     Exit;
     
   if Assigned(OPENSSL_version_num) then
@@ -1169,7 +1164,7 @@ var
   Buffer: array[0..255] of AnsiChar;
 begin
   Result := '';
-  if not FOpenSSLLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     Exit;
     
   if Assigned(ERR_get_error) and Assigned(ERR_error_string_n) then

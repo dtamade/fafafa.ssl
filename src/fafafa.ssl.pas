@@ -36,6 +36,7 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   fafafa.ssl.factory;
 
 // ============================================================================
@@ -43,7 +44,7 @@ uses
 // ============================================================================
 
 type
-  // 从 fafafa.ssl.types 导出
+  // 从 fafafa.ssl.base 导出
   TSSLLibraryType = fafafa.ssl.base.TSSLLibraryType;
   TSSLLibraryTypes = fafafa.ssl.base.TSSLLibraryTypes;
   TSSLProtocolVersion = fafafa.ssl.base.TSSLProtocolVersion;
@@ -72,20 +73,20 @@ type
   TSSLDataResult = fafafa.ssl.base.TSSLDataResult;
   TSSLStringResult = fafafa.ssl.base.TSSLStringResult;
   
-  ESSLException = fafafa.ssl.base.ESSLException;
-  ESSLHandshakeException = fafafa.ssl.base.ESSLHandshakeException;
-  ESSLCertificateException = fafafa.ssl.base.ESSLCertificateException;
-  ESSLProtocolException = fafafa.ssl.base.ESSLProtocolException;
-  ESSLConnectionException = fafafa.ssl.base.ESSLConnectionException;
-  ESSLTimeoutException = fafafa.ssl.base.ESSLTimeoutException;
-  ESSLLibraryException = fafafa.ssl.base.ESSLLibraryException;
+  ESSLException = fafafa.ssl.exceptions.ESSLException;
+  ESSLHandshakeException = fafafa.ssl.exceptions.ESSLHandshakeException;
+  ESSLCertificateException = fafafa.ssl.exceptions.ESSLCertificateException;
+  ESSLProtocolException = fafafa.ssl.exceptions.ESSLProtocolException;
+  ESSLConnectionException = fafafa.ssl.exceptions.ESSLConnectionException;
+  ESSLTimeoutException = fafafa.ssl.exceptions.ESSLTimeoutException;
+  ESSLLibraryException = fafafa.ssl.exceptions.ESSLLibraryException;
   
   TSSLVerifyCallback = fafafa.ssl.base.TSSLVerifyCallback;
   TSSLPasswordCallback = fafafa.ssl.base.TSSLPasswordCallback;
   TSSLInfoCallback = fafafa.ssl.base.TSSLInfoCallback;
   TSSLDataCallback = fafafa.ssl.base.TSSLDataCallback;
   
-  // 从 fafafa.ssl.intf 导出
+  // 从 fafafa.ssl.base 导出
   ISSLLibrary = fafafa.ssl.base.ISSLLibrary;
   ISSLContext = fafafa.ssl.base.ISSLContext;
   ISSLConnection = fafafa.ssl.base.ISSLConnection;
@@ -166,6 +167,7 @@ function SSLFactory: TSSLFactory;
 function SSLHelper: TSSLHelper;
 
 // 快速创建函数
+function CreateSSLLibrary(aLibType: TSSLLibraryType = sslAutoDetect): ISSLLibrary;
 function CreateSSLContext(aType: TSSLContextType = sslCtxClient): ISSLContext;
 function CreateSSLCertificate: ISSLCertificate;
 function CreateSSLConnection(aContext: ISSLContext; aSocket: THandle): ISSLConnection;
@@ -197,6 +199,13 @@ function GetCertificateDetails(const aFileName: string): TSSLCertificateInfo;
 
 implementation
 
+uses
+  fafafa.ssl.openssl.backed
+  {$IFDEF WINDOWS}
+  , fafafa.ssl.winssl.lib
+  {$ENDIF}
+  ;
+
 // 从 fafafa.ssl.factory 导入实现
 function SSLFactory: TSSLFactory;
 begin
@@ -206,6 +215,11 @@ end;
 function SSLHelper: TSSLHelper;
 begin
   Result := fafafa.ssl.factory.SSLHelper;
+end;
+
+function CreateSSLLibrary(aLibType: TSSLLibraryType): ISSLLibrary;
+begin
+  Result := fafafa.ssl.factory.CreateSSLLibrary(aLibType);
 end;
 
 function CreateSSLContext(aType: TSSLContextType): ISSLContext;
@@ -223,7 +237,7 @@ begin
   Result := fafafa.ssl.factory.CreateSSLConnection(aContext, aSocket);
 end;
 
-// 从 fafafa.ssl.intf 导入实现
+// 从 fafafa.ssl.base 导入实现
 function SSLErrorToString(aError: TSSLErrorCode): string;
 begin
   Result := fafafa.ssl.base.SSLErrorToString(aError);
@@ -241,21 +255,34 @@ end;
 
 // 便捷API实现
 function CreateDefaultConfig(aContextType: TSSLContextType): TSSLConfig;
+var
+  LLib: ISSLLibrary;
+  LConfig: TSSLConfig;
 begin
-  FillChar(Result, SizeOf(Result), 0);
-  Result.LibraryType := sslAutoDetect;
-  Result.ContextType := aContextType;
-  Result.ProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
-  Result.VerifyMode := [sslVerifyPeer];
-  Result.VerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
-  Result.BufferSize := SSL_DEFAULT_BUFFER_SIZE;
-  Result.HandshakeTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
-  Result.SessionCacheSize := SSL_DEFAULT_SESSION_CACHE_SIZE;
-  Result.SessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
-  Result.CipherList := SSL_DEFAULT_CIPHER_LIST;
-  Result.CipherSuites := SSL_DEFAULT_TLS13_CIPHERSUITES;
-  Result.EnableSessionTickets := True;
-  Result.LogLevel := sslLogError;
+  try
+    LLib := TSSLFactory.GetLibrary(sslAutoDetect);
+    LConfig := LLib.GetDefaultConfig;
+    Result := LConfig;
+    Result.LibraryType := sslAutoDetect;
+    Result.ContextType := aContextType;
+    TSSLFactory.NormalizeConfig(Result);
+  except
+    FillChar(Result, SizeOf(Result), 0);
+    Result.LibraryType := sslAutoDetect;
+    Result.ContextType := aContextType;
+    Result.ProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
+    Result.VerifyMode := [sslVerifyPeer];
+    Result.VerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
+    Result.BufferSize := SSL_DEFAULT_BUFFER_SIZE;
+    Result.HandshakeTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
+    Result.SessionCacheSize := SSL_DEFAULT_SESSION_CACHE_SIZE;
+    Result.SessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
+    Result.CipherList := SSL_DEFAULT_CIPHER_LIST;
+    Result.CipherSuites := SSL_DEFAULT_TLS13_CIPHERSUITES;
+    Result.EnableSessionTickets := True;
+    Result.LogLevel := sslLogError;
+    TSSLFactory.NormalizeConfig(Result);
+  end;
 end;
 
 

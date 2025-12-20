@@ -97,6 +97,12 @@ type
   ESSLConnectionException = class(ESSLNetworkError);  // 新增别名
   ESSLHandshakeException = class(ESSLConnectionException);
   ESSLProtocolException = class(ESSLConnectionException);
+  ESSLTimeoutException = class(ESSLConnectionException);
+
+  {**
+   * 底层库相关错误
+   *}
+  ESSLLibraryException = class(ESSLException);
 
   {**
    * 参数和资源错误
@@ -263,6 +269,22 @@ var
   LErrorBuf: array[0..255] of AnsiChar;
 begin
   Result := '';
+
+  if not IsOpenSSLLoaded then
+  begin
+    try
+      LoadOpenSSLLibrary;
+    except
+      // ignore
+    end;
+  end;
+
+  if not Assigned(ERR_get_error) or not Assigned(ERR_error_string_n) then
+  begin
+    Result := 'Unknown OpenSSL error';
+    Exit;
+  end;
+
   LErrorCode := ERR_get_error();
   
   while LErrorCode <> 0 do
@@ -280,8 +302,21 @@ end;
 
 function GetLastOpenSSLError: Cardinal;
 begin
-  Result := ERR_peek_error();  // 查看但不清除错误队列
-  if Result = 0 then
+  Result := 0;
+
+  if not IsOpenSSLLoaded then
+  begin
+    try
+      LoadOpenSSLLibrary;
+    except
+      // ignore
+    end;
+  end;
+
+  if Assigned(ERR_peek_error) then
+    Result := ERR_peek_error();  // 查看但不清除错误队列
+
+  if (Result = 0) and Assigned(ERR_get_error) then
     Result := ERR_get_error();  // 如果没有peek到，则获取并清除
 end;
 

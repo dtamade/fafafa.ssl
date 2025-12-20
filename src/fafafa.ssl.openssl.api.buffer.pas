@@ -6,7 +6,8 @@ interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.types;
+  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader;
 
 type
   // Buffer 结构体
@@ -70,36 +71,31 @@ procedure UnloadBufferModule;
 
 implementation
 
+const
+  { 函数绑定数组 - 用于批量加载 Buffer API 函数 }
+  BufferBindings: array[0..10] of TFunctionBinding = (
+    (Name: 'BUF_MEM_new';       FuncPtr: @BUF_MEM_new;       Required: False),
+    (Name: 'BUF_MEM_new_ex';    FuncPtr: @BUF_MEM_new_ex;    Required: False),
+    (Name: 'BUF_MEM_free';      FuncPtr: @BUF_MEM_free;      Required: False),
+    (Name: 'BUF_MEM_grow';      FuncPtr: @BUF_MEM_grow;      Required: False),
+    (Name: 'BUF_MEM_grow_clean'; FuncPtr: @BUF_MEM_grow_clean; Required: False),
+    (Name: 'BUF_strdup';        FuncPtr: @BUF_strdup;        Required: False),
+    (Name: 'BUF_strndup';       FuncPtr: @BUF_strndup;       Required: False),
+    (Name: 'BUF_memdup';        FuncPtr: @BUF_memdup;        Required: False),
+    (Name: 'BUF_reverse';       FuncPtr: @BUF_reverse;       Required: False),
+    (Name: 'BUF_strlcpy';       FuncPtr: @BUF_strlcpy;       Required: False),
+    (Name: 'BUF_strlcat';       FuncPtr: @BUF_strlcat;       Required: False)
+  );
+
 procedure LoadBufferModule(ALibCrypto: THandle);
 begin
   if ALibCrypto = 0 then Exit;
-  
-  BUF_MEM_new := TBUF_MEM_new(GetProcAddress(ALibCrypto, 'BUF_MEM_new'));
-  BUF_MEM_new_ex := TBUF_MEM_new_ex(GetProcAddress(ALibCrypto, 'BUF_MEM_new_ex'));
-  BUF_MEM_free := TBUF_MEM_free(GetProcAddress(ALibCrypto, 'BUF_MEM_free'));
-  BUF_MEM_grow := TBUF_MEM_grow(GetProcAddress(ALibCrypto, 'BUF_MEM_grow'));
-  BUF_MEM_grow_clean := TBUF_MEM_grow_clean(GetProcAddress(ALibCrypto, 'BUF_MEM_grow_clean'));
-  BUF_strdup := TBUF_strdup(GetProcAddress(ALibCrypto, 'BUF_strdup'));
-  BUF_strndup := TBUF_strndup(GetProcAddress(ALibCrypto, 'BUF_strndup'));
-  BUF_memdup := TBUF_memdup(GetProcAddress(ALibCrypto, 'BUF_memdup'));
-  BUF_reverse := TBUF_reverse(GetProcAddress(ALibCrypto, 'BUF_reverse'));
-  BUF_strlcpy := TBUF_strlcpy(GetProcAddress(ALibCrypto, 'BUF_strlcpy'));
-  BUF_strlcat := TBUF_strlcat(GetProcAddress(ALibCrypto, 'BUF_strlcat'));
+  TOpenSSLLoader.LoadFunctions(ALibCrypto, BufferBindings);
 end;
 
 procedure UnloadBufferModule;
 begin
-  BUF_MEM_new := nil;
-  BUF_MEM_new_ex := nil;
-  BUF_MEM_free := nil;
-  BUF_MEM_grow := nil;
-  BUF_MEM_grow_clean := nil;
-  BUF_strdup := nil;
-  BUF_strndup := nil;
-  BUF_memdup := nil;
-  BUF_reverse := nil;
-  BUF_strlcpy := nil;
-  BUF_strlcat := nil;
+  TOpenSSLLoader.ClearFunctions(BufferBindings);
 end;
 
 // 辅助函数实现

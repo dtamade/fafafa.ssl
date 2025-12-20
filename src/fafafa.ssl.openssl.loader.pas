@@ -43,6 +43,81 @@ type
   );
 
   {**
+   * OpenSSL API 模块枚举
+   * 用于统一管理各模块的加载状态
+   *}
+  TOpenSSLModule = (
+    osmCore,      // 核心库函数
+    osmSSL,       // SSL/TLS 函数
+    osmEVP,       // EVP 高级加密接口
+    osmRSA,       // RSA 非对称加密
+    osmDSA,       // DSA 数字签名
+    osmDH,        // DH 密钥交换
+    osmEC,        // 椭圆曲线
+    osmECDSA,     // ECDSA 签名
+    osmECDH,      // ECDH 密钥交换
+    osmBN,        // 大数运算
+    osmAES,       // AES 对称加密
+    osmDES,       // DES 加密
+    osmSHA,       // SHA 哈希
+    osmSHA3,      // SHA-3 哈希
+    osmMD,        // 消息摘要
+    osmHMAC,      // HMAC
+    osmCMAC,      // CMAC
+    osmRAND,      // 随机数
+    osmERR,       // 错误处理
+    osmBIO,       // BIO I/O
+    osmPEM,       // PEM 格式
+    osmASN1,      // ASN.1 编解码
+    osmX509,      // X.509 证书
+    osmPKCS,      // PKCS 标准
+    osmPKCS7,     // PKCS#7
+    osmPKCS12,    // PKCS#12
+    osmCMS,       // CMS
+    osmOCSP,      // OCSP
+    osmBLAKE2,    // BLAKE2 哈希
+    osmChaCha,    // ChaCha20 流加密
+    osmModes,     // 加密模式
+    osmEngine,    // Engine 接口
+    osmProvider,  // OpenSSL 3.0 Provider
+    osmStack,     // STACK 数据结构
+    osmLHash,     // LHASH 哈希表
+    osmConf,      // 配置
+    osmThread,    // 线程支持
+    osmSRP,       // SRP 协议
+    osmDSO,       // 动态库加载
+    osmTS,        // 时间戳
+    osmCT,        // 证书透明度
+    osmStore,     // 证书存储
+    osmParam,     // OSSL_PARAM
+    osmTXTDB,     // TXT_DB 数据库
+    // 高层工具类初始化状态
+    osmInitGlobal,    // fafafa.ssl.init 全局初始化
+    osmInitEncoding,  // TEncodingUtils 初始化
+    osmInitCrypto,    // TCryptoUtils 初始化
+    osmInitCert       // TCertificateUtils 初始化
+  );
+
+  {**
+   * OpenSSL 模块集合
+   *}
+  TOpenSSLModuleSet = set of TOpenSSLModule;
+
+  {**
+   * 函数绑定记录 - 用于批量加载函数指针
+   *}
+  TFunctionBinding = record
+    Name: PAnsiChar;      // 函数名称
+    FuncPtr: PPointer;    // 指向函数指针变量的指针
+    Required: Boolean;    // 是否必须（可选，默认 False）
+  end;
+
+  {**
+   * 函数绑定数组类型
+   *}
+  TFunctionBindings = array of TFunctionBinding;
+
+  {**
    * OpenSSL 库版本信息
    *}
   TOpenSSLVersionInfo = record
@@ -79,10 +154,13 @@ type
       FLibSSL: {$IFDEF WINDOWS}HMODULE{$ELSE}TLibHandle{$ENDIF};
       FInitialized: Boolean;
       FVersionInfo: TOpenSSLVersionInfo;
+      FLoadedModules: TOpenSSLModuleSet;  // 已加载的模块集合
 
     class procedure DetectVersion;
     class function TryLoadLibrary(const ANames: array of string): {$IFDEF WINDOWS}HMODULE{$ELSE}TLibHandle{$ENDIF};
   public
+    // ========== 库加载 ==========
+
     {**
      * 获取指定类型的库句柄
      *
@@ -105,6 +183,33 @@ type
     class function GetFunction(AHandle: {$IFDEF WINDOWS}HMODULE{$ELSE}TLibHandle{$ENDIF}; const AFunctionName: string): Pointer;
 
     {**
+     * 批量加载函数指针
+     *
+     * @param AHandle 库句柄
+     * @param ABindings 函数绑定数组
+     * @return 加载的函数数量
+     *
+     * 使用示例:
+     * <code>
+     *   var Bindings: array[0..2] of TFunctionBinding = (
+     *     (Name: 'RSA_new';  FuncPtr: @RSA_new;  Required: True),
+     *     (Name: 'RSA_free'; FuncPtr: @RSA_free; Required: True),
+     *     (Name: 'RSA_size'; FuncPtr: @RSA_size; Required: False)
+     *   );
+     *   LoadedCount := TOpenSSLLoader.LoadFunctions(Handle, Bindings);
+     * </code>
+     *}
+    class function LoadFunctions(AHandle: {$IFDEF WINDOWS}HMODULE{$ELSE}TLibHandle{$ENDIF};
+      const ABindings: array of TFunctionBinding): Integer;
+
+    {**
+     * 清除函数指针（设置为 nil）
+     *
+     * @param ABindings 函数绑定数组
+     *}
+    class procedure ClearFunctions(const ABindings: array of TFunctionBinding);
+
+    {**
      * 检查函数是否可用
      *
      * @param AHandle 库句柄
@@ -112,6 +217,38 @@ type
      * @return True=函数存在，False=不存在
      *}
     class function IsFunctionAvailable(AHandle: {$IFDEF WINDOWS}HMODULE{$ELSE}TLibHandle{$ENDIF}; const AFunctionName: string): Boolean;
+
+    // ========== 模块状态管理 ==========
+
+    {**
+     * 检查模块是否已加载
+     *
+     * @param AModule 模块类型
+     * @return True=已加载，False=未加载
+     *}
+    class function IsModuleLoaded(AModule: TOpenSSLModule): Boolean;
+
+    {**
+     * 设置模块加载状态
+     *
+     * @param AModule 模块类型
+     * @param ALoaded 是否已加载
+     *}
+    class procedure SetModuleLoaded(AModule: TOpenSSLModule; ALoaded: Boolean);
+
+    {**
+     * 获取所有已加载的模块
+     *
+     * @return 已加载模块的集合
+     *}
+    class function GetLoadedModules: TOpenSSLModuleSet;
+
+    {**
+     * 重置所有模块状态
+     *}
+    class procedure ResetModuleStates;
+
+    // ========== 版本信息 ==========
 
     {**
      * 获取 OpenSSL 版本信息
@@ -249,6 +386,62 @@ begin
   Result := GetFunction(AHandle, AFunctionName) <> nil;
 end;
 
+class function TOpenSSLLoader.LoadFunctions(AHandle: {$IFDEF WINDOWS}HMODULE{$ELSE}TLibHandle{$ENDIF};
+  const ABindings: array of TFunctionBinding): Integer;
+var
+  I: Integer;
+  LFunc: Pointer;
+begin
+  Result := 0;
+  if AHandle = 0 then
+    Exit;
+
+  for I := Low(ABindings) to High(ABindings) do
+  begin
+    if ABindings[I].FuncPtr <> nil then
+    begin
+      LFunc := GetFunction(AHandle, string(ABindings[I].Name));
+      ABindings[I].FuncPtr^ := LFunc;
+      if LFunc <> nil then
+        Inc(Result);
+    end;
+  end;
+end;
+
+class procedure TOpenSSLLoader.ClearFunctions(const ABindings: array of TFunctionBinding);
+var
+  I: Integer;
+begin
+  for I := Low(ABindings) to High(ABindings) do
+  begin
+    if ABindings[I].FuncPtr <> nil then
+      ABindings[I].FuncPtr^ := nil;
+  end;
+end;
+
+class function TOpenSSLLoader.IsModuleLoaded(AModule: TOpenSSLModule): Boolean;
+begin
+  Result := AModule in FLoadedModules;
+end;
+
+class procedure TOpenSSLLoader.SetModuleLoaded(AModule: TOpenSSLModule; ALoaded: Boolean);
+begin
+  if ALoaded then
+    Include(FLoadedModules, AModule)
+  else
+    Exclude(FLoadedModules, AModule);
+end;
+
+class function TOpenSSLLoader.GetLoadedModules: TOpenSSLModuleSet;
+begin
+  Result := FLoadedModules;
+end;
+
+class procedure TOpenSSLLoader.ResetModuleStates;
+begin
+  FLoadedModules := [];
+end;
+
 class procedure TOpenSSLLoader.DetectVersion;
 type
   TOpenSSL_version_num = function: culong; cdecl;
@@ -318,6 +511,7 @@ begin
   end;
 
   FInitialized := False;
+  FLoadedModules := [];
   FillChar(FVersionInfo, SizeOf(FVersionInfo), 0);
 end;
 
@@ -335,6 +529,7 @@ initialization
   TOpenSSLLoader.FLibCrypto := 0;
   TOpenSSLLoader.FLibSSL := 0;
   TOpenSSLLoader.FInitialized := False;
+  TOpenSSLLoader.FLoadedModules := [];
 
 finalization
   TOpenSSLLoader.UnloadLibraries;

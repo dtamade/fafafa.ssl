@@ -16,7 +16,8 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;
 
 type
   // EC structures
@@ -340,75 +341,81 @@ implementation
 uses
   fafafa.ssl.openssl.api;
 
-var
-  GECLoaded: Boolean = False;
+const
+  { EC Function Bindings - 批量加载函数绑定定义 }
+  EC_FUNCTION_BINDINGS: array[0..36] of TFunctionBinding = (
+    // EC_KEY functions
+    (Name: 'EC_KEY_new'; FuncPtr: @EC_KEY_new; Required: False),
+    (Name: 'EC_KEY_new_by_curve_name'; FuncPtr: @EC_KEY_new_by_curve_name; Required: False),
+    (Name: 'EC_KEY_free'; FuncPtr: @EC_KEY_free; Required: False),
+    (Name: 'EC_KEY_copy'; FuncPtr: @EC_KEY_copy; Required: False),
+    (Name: 'EC_KEY_dup'; FuncPtr: @EC_KEY_dup; Required: False),
+    (Name: 'EC_KEY_up_ref'; FuncPtr: @EC_KEY_up_ref; Required: False),
+    (Name: 'EC_KEY_get0_engine'; FuncPtr: @EC_KEY_get0_engine; Required: False),
+    (Name: 'EC_KEY_get0_group'; FuncPtr: @EC_KEY_get0_group; Required: False),
+    (Name: 'EC_KEY_set_group'; FuncPtr: @EC_KEY_set_group; Required: False),
+    (Name: 'EC_KEY_get0_private_key'; FuncPtr: @EC_KEY_get0_private_key; Required: False),
+    (Name: 'EC_KEY_set_private_key'; FuncPtr: @EC_KEY_set_private_key; Required: False),
+    (Name: 'EC_KEY_get0_public_key'; FuncPtr: @EC_KEY_get0_public_key; Required: False),
+    (Name: 'EC_KEY_set_public_key'; FuncPtr: @EC_KEY_set_public_key; Required: False),
+    (Name: 'EC_KEY_generate_key'; FuncPtr: @EC_KEY_generate_key; Required: False),
+    (Name: 'EC_KEY_check_key'; FuncPtr: @EC_KEY_check_key; Required: False),
+    // EC_GROUP functions
+    (Name: 'EC_GROUP_new_by_curve_name'; FuncPtr: @EC_GROUP_new_by_curve_name; Required: False),
+    (Name: 'EC_GROUP_free'; FuncPtr: @EC_GROUP_free; Required: False),
+    (Name: 'EC_GROUP_get_curve_name'; FuncPtr: @EC_GROUP_get_curve_name; Required: False),
+    (Name: 'EC_GROUP_get_order'; FuncPtr: @EC_GROUP_get_order; Required: False),
+    (Name: 'EC_GROUP_get_cofactor'; FuncPtr: @EC_GROUP_get_cofactor; Required: False),
+    (Name: 'EC_GROUP_get_degree'; FuncPtr: @EC_GROUP_get_degree; Required: False),
+    // EC_POINT functions
+    (Name: 'EC_POINT_new'; FuncPtr: @EC_POINT_new; Required: False),
+    (Name: 'EC_POINT_free'; FuncPtr: @EC_POINT_free; Required: False),
+    (Name: 'EC_POINT_copy'; FuncPtr: @EC_POINT_copy; Required: False),
+    (Name: 'EC_POINT_dup'; FuncPtr: @EC_POINT_dup; Required: False),
+    (Name: 'EC_POINT_set_affine_coordinates'; FuncPtr: @EC_POINT_set_affine_coordinates; Required: False),
+    (Name: 'EC_POINT_get_affine_coordinates'; FuncPtr: @EC_POINT_get_affine_coordinates; Required: False),
+    (Name: 'EC_POINT_point2oct'; FuncPtr: @EC_POINT_point2oct; Required: False),
+    (Name: 'EC_POINT_oct2point'; FuncPtr: @EC_POINT_oct2point; Required: False),
+    (Name: 'EC_POINT_add'; FuncPtr: @EC_POINT_add; Required: False),
+    (Name: 'EC_POINT_dbl'; FuncPtr: @EC_POINT_dbl; Required: False),
+    (Name: 'EC_POINT_mul'; FuncPtr: @EC_POINT_mul; Required: False),
+    (Name: 'EC_POINT_cmp'; FuncPtr: @EC_POINT_cmp; Required: False),
+    // Legacy GFp/GF2m coordinate functions (fallback for older OpenSSL)
+    (Name: 'EC_POINT_set_affine_coordinates_GFp'; FuncPtr: @EC_POINT_set_affine_coordinates; Required: False),
+    (Name: 'EC_POINT_get_affine_coordinates_GFp'; FuncPtr: @EC_POINT_get_affine_coordinates; Required: False),
+    (Name: 'EC_POINT_set_affine_coordinates_GF2m'; FuncPtr: @EC_POINT_set_affine_coordinates; Required: False),
+    (Name: 'EC_POINT_get_affine_coordinates_GF2m'; FuncPtr: @EC_POINT_get_affine_coordinates; Required: False)
+  );
 
 function LoadECFunctions(ALibHandle: THandle): Boolean;
+var
+  LLoadedCount: Integer;
 begin
   Result := False;
-  
+
   if ALibHandle = 0 then Exit;
-  
-  // Load EC_KEY functions
-  EC_KEY_new := TEC_KEY_new(GetProcAddress(ALibHandle, 'EC_KEY_new'));
-  EC_KEY_new_by_curve_name := TEC_KEY_new_by_curve_name(GetProcAddress(ALibHandle, 'EC_KEY_new_by_curve_name'));
-  EC_KEY_free := TEC_KEY_free(GetProcAddress(ALibHandle, 'EC_KEY_free'));
-  EC_KEY_copy := TEC_KEY_copy(GetProcAddress(ALibHandle, 'EC_KEY_copy'));
-  EC_KEY_dup := TEC_KEY_dup(GetProcAddress(ALibHandle, 'EC_KEY_dup'));
-  EC_KEY_up_ref := TEC_KEY_up_ref(GetProcAddress(ALibHandle, 'EC_KEY_up_ref'));
-  EC_KEY_get0_engine := TEC_KEY_get0_engine(GetProcAddress(ALibHandle, 'EC_KEY_get0_engine'));
-  EC_KEY_get0_group := TEC_KEY_get0_group(GetProcAddress(ALibHandle, 'EC_KEY_get0_group'));
-  EC_KEY_set_group := TEC_KEY_set_group(GetProcAddress(ALibHandle, 'EC_KEY_set_group'));
-  EC_KEY_get0_private_key := TEC_KEY_get0_private_key(GetProcAddress(ALibHandle, 'EC_KEY_get0_private_key'));
-  EC_KEY_set_private_key := TEC_KEY_set_private_key(GetProcAddress(ALibHandle, 'EC_KEY_set_private_key'));
-  EC_KEY_get0_public_key := TEC_KEY_get0_public_key(GetProcAddress(ALibHandle, 'EC_KEY_get0_public_key'));
-  EC_KEY_set_public_key := TEC_KEY_set_public_key(GetProcAddress(ALibHandle, 'EC_KEY_set_public_key'));
-  EC_KEY_generate_key := TEC_KEY_generate_key(GetProcAddress(ALibHandle, 'EC_KEY_generate_key'));
-  EC_KEY_check_key := TEC_KEY_check_key(GetProcAddress(ALibHandle, 'EC_KEY_check_key'));
-  
-  // Load EC_GROUP functions
-  EC_GROUP_new_by_curve_name := TEC_GROUP_new_by_curve_name(GetProcAddress(ALibHandle, 'EC_GROUP_new_by_curve_name'));
-  EC_GROUP_free := TEC_GROUP_free(GetProcAddress(ALibHandle, 'EC_GROUP_free'));
-  EC_GROUP_get_curve_name := TEC_GROUP_get_curve_name(GetProcAddress(ALibHandle, 'EC_GROUP_get_curve_name'));
-  EC_GROUP_get_order := TEC_GROUP_get_order(GetProcAddress(ALibHandle, 'EC_GROUP_get_order'));
-  EC_GROUP_get_cofactor := TEC_GROUP_get_cofactor(GetProcAddress(ALibHandle, 'EC_GROUP_get_cofactor'));
-  EC_GROUP_get_degree := TEC_GROUP_get_degree(GetProcAddress(ALibHandle, 'EC_GROUP_get_degree'));
-  
-  // Load EC_POINT functions
-  EC_POINT_new := TEC_POINT_new(GetProcAddress(ALibHandle, 'EC_POINT_new'));
-  EC_POINT_free := TEC_POINT_free(GetProcAddress(ALibHandle, 'EC_POINT_free'));
-  EC_POINT_copy := TEC_POINT_copy(GetProcAddress(ALibHandle, 'EC_POINT_copy'));
-  EC_POINT_dup := TEC_POINT_dup(GetProcAddress(ALibHandle, 'EC_POINT_dup'));
-  EC_POINT_set_affine_coordinates := TEC_POINT_set_affine_coordinates(GetProcAddress(ALibHandle, 'EC_POINT_set_affine_coordinates'));
-  EC_POINT_get_affine_coordinates := TEC_POINT_get_affine_coordinates(GetProcAddress(ALibHandle, 'EC_POINT_get_affine_coordinates'));
-  EC_POINT_point2oct := TEC_POINT_point2oct(GetProcAddress(ALibHandle, 'EC_POINT_point2oct'));
-  EC_POINT_oct2point := TEC_POINT_oct2point(GetProcAddress(ALibHandle, 'EC_POINT_oct2point'));
-  EC_POINT_add := TEC_POINT_add(GetProcAddress(ALibHandle, 'EC_POINT_add'));
-  EC_POINT_dbl := TEC_POINT_dbl(GetProcAddress(ALibHandle, 'EC_POINT_dbl'));
-  EC_POINT_mul := TEC_POINT_mul(GetProcAddress(ALibHandle, 'EC_POINT_mul'));
-  EC_POINT_cmp := TEC_POINT_cmp(GetProcAddress(ALibHandle, 'EC_POINT_cmp'));
-  
-  // ... load all other functions
-  
-  GECLoaded := True;
-  Result := True;
+
+  // 使用 TOpenSSLLoader.LoadFunctions 批量加载
+  LLoadedCount := TOpenSSLLoader.LoadFunctions(ALibHandle, EC_FUNCTION_BINDINGS);
+
+  // 至少加载了一些核心函数才算成功
+  Result := LLoadedCount > 0;
+
+  if Result then
+    TOpenSSLLoader.SetModuleLoaded(osmEC, True);
 end;
 
 procedure UnloadECFunctions;
 begin
-  EC_KEY_new := nil;
-  EC_KEY_new_by_curve_name := nil;
-  EC_KEY_free := nil;
-  EC_KEY_copy := nil;
-  EC_KEY_dup := nil;
-  // ... clear all other function pointers
-  
-  GECLoaded := False;
+  // 使用 TOpenSSLLoader.ClearFunctions 批量清除
+  TOpenSSLLoader.ClearFunctions(EC_FUNCTION_BINDINGS);
+
+  TOpenSSLLoader.SetModuleLoaded(osmEC, False);
 end;
 
 function IsECLoaded: Boolean;
 begin
-  Result := GECLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmEC);
 end;
 
 // Helper functions

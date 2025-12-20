@@ -9,7 +9,8 @@ uses
   fafafa.ssl.exceptions,
   SysUtils,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.evp;
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.loader;
 
 const
   CHACHA20_KEY_SIZE = 32;
@@ -107,11 +108,7 @@ function Poly1305MAC(const Key: TBytes; const Message: TBytes): TBytes;
 implementation
 
 uses
-  fafafa.ssl.openssl.loader,  // Phase 3.3 P0+ - 统一动态库加载
   fafafa.ssl.openssl.api, fafafa.ssl.openssl.api.consts;
-
-var
-  ChaChaLoaded: Boolean = False;
 
 function LoadChaChaFunctions: Boolean;
 var
@@ -145,8 +142,8 @@ begin
   ChaCha20Poly1305_decrypt := TChaCha20Poly1305_decrypt(TOpenSSLLoader.GetFunction(LHandle, 'ChaCha20Poly1305_decrypt'));
   
   // Check if at least EVP functions are available
-  ChaChaLoaded := Assigned(EVP_chacha20) or Assigned(ChaCha_cipher);
-  Result := ChaChaLoaded;
+  TOpenSSLLoader.SetModuleLoaded(osmChaCha, Assigned(EVP_chacha20) or Assigned(ChaCha_cipher));
+  Result := TOpenSSLLoader.IsModuleLoaded(osmChaCha);
 end;
 
 procedure UnloadChaChaFunctions;
@@ -166,14 +163,14 @@ begin
   ChaCha20Poly1305_encrypt := nil;
   ChaCha20Poly1305_decrypt := nil;
 
-  ChaChaLoaded := False;
+  TOpenSSLLoader.SetModuleLoaded(osmChaCha, False);
 
   // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
 end;
 
 function IsChaChaLoaded: Boolean;
 begin
-  Result := ChaChaLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmChaCha);
 end;
 
 // High-level helper functions implementation

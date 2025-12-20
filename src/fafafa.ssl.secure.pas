@@ -313,7 +313,7 @@ begin
   {$ELSE}
   // In debug mode, allow fallback with strong warning
   TSecurityLog.Error('SecureRandom', 'CRITICAL: Falling back to non-cryptographic random number generator. ' +
-                     'This is NOT secure for production use!');
+                    'This is NOT secure for production use!');
   WriteLn('');
   WriteLn('╔════════════════════════════════════════════════════════════╗');
   WriteLn('║ SECURITY WARNING: Non-cryptographic RNG in use!           ║');

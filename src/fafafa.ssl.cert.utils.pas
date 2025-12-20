@@ -31,6 +31,7 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.evp,
@@ -288,22 +289,19 @@ uses
   fafafa.ssl.factory,
   fafafa.ssl.certchain;
 
-var
-  GInitialized: Boolean = False;
-
 { TCertificateUtils }
 
 {**
  * 确保OpenSSL已正确初始化
  * 加载所有证书操作需要的OpenSSL模块
- * 
+ *
  * @raises ESSLInitError 初始化失败
  *}
 class procedure TCertificateUtils.EnsureInitialized;
 begin
-  if GInitialized then
+  if TOpenSSLLoader.IsModuleLoaded(osmInitCert) then
     Exit;
-    
+
   // 加载OpenSSL核心
   if not IsOpenSSLCoreLoaded then
   begin
@@ -314,54 +312,54 @@ begin
         RaiseInitializationError('OpenSSL core', E.Message);
     end;
   end;
-  
+
   if not IsOpenSSLCoreLoaded then
     RaiseInitializationError('OpenSSL core', 'library not available');
-  
+
   // 加载证书相关模块
   try
     // X509证书操作
     if not Assigned(X509_new) then
       LoadOpenSSLX509();
-      
+
     // PEM格式支持
     if not Assigned(PEM_write_bio_X509) then
       LoadOpenSSLPEM(GetCryptoLibHandle);
-      
+
     // BIO输入/输出
     if not Assigned(BIO_new) then
       LoadOpenSSLBIO();
-      
+
     // EVP高级接口
     LoadEVP(GetCryptoLibHandle);
-    
+
     // RSA密钥（按需）
     if not Assigned(RSA_new) then
       LoadOpenSSLRSA();
-      
+
     // 大数运算
     if not Assigned(BN_new) then
       LoadOpenSSLBN();
-      
+
     // ASN1编码 (ASN1_INTEGER_set等)
     LoadOpenSSLASN1(GetCryptoLibHandle);
-      
+
     // EC密钥（按需）
     if not IsECLoaded then
       LoadECFunctions(GetCryptoLibHandle);
-      
+
     // OBJ对象识别 (OBJ_txt2nid等)
     LoadOBJModule(GetCryptoLibHandle);
-    
+
     // X509V3扩展支持
     LoadX509V3Functions(GetCryptoLibHandle);
-      
+
   except
     on E: Exception do
       RaiseInitializationError('Certificate modules', E.Message);
   end;
-  
-  GInitialized := True;
+
+  TOpenSSLLoader.SetModuleLoaded(osmInitCert, True);
 end;
 
 class function TCertificateUtils.DefaultGenOptions: TCertGenOptions;
@@ -661,7 +659,7 @@ begin
       if AOptions.IsCA then
       begin
         if not AddExtension(LCert, LCert, NID_basic_constraints, 'critical,CA:TRUE') then
-           ;
+        ;
       end
       else
         AddExtension(LCert, LCert, NID_basic_constraints, 'CA:FALSE');
@@ -670,7 +668,7 @@ begin
       if AOptions.IsCA then
       begin
         if not AddExtension(LCert, LCert, NID_key_usage, 'critical,keyCertSign,cRLSign') then
-           ;
+        ;
       end
       else
         AddExtension(LCert, LCert, NID_key_usage, 'digitalSignature,keyEncipherment');
@@ -1020,8 +1018,8 @@ begin
               LVal := GENERAL_NAME_get0_value(LGenName, @LType);
               if (LType = 2) and (LVal <> nil) then // 2 = GEN_DNS
               begin
-                 // LVal is ASN1_STRING (implicitly).
-                 Result.SubjectAltNames.Add('DNS:' + ASN1StringToString(ASN1_STRING(LVal)));
+                // LVal is ASN1_STRING (implicitly).
+                Result.SubjectAltNames.Add('DNS:' + ASN1StringToString(ASN1_STRING(LVal)));
               end;
             end;
           end;

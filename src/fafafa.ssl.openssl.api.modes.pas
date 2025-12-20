@@ -9,6 +9,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
   fafafa.ssl.errors,           // Phase 2.1 - Standardized error handling
+  fafafa.ssl.openssl.loader,   // Phase 3.3 P0+ - Unified module loading state
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.evp;
 
@@ -206,11 +207,7 @@ function AES_UnwrapKey(const KEK: TBytes; const Ciphertext: TBytes): TBytes;
 implementation
 
 uses
-  fafafa.ssl.openssl.loader,  // Phase 3.3 P0+ - 统一动态库加载
   fafafa.ssl.openssl.api.aes;
-
-var
-  ModesLoaded: Boolean = False;
 
 function LoadModesFunctions: Boolean;
 var
@@ -264,8 +261,8 @@ begin
   
   // Note: Most mode operations are typically done through EVP interface
   // Direct mode functions may not be exported in all OpenSSL versions
-  ModesLoaded := True; // Even if individual functions are nil
-  Result := ModesLoaded;
+  TOpenSSLLoader.SetModuleLoaded(osmModes, True); // Even if individual functions are nil
+  Result := True;
 end;
 
 procedure UnloadModesFunctions;
@@ -309,14 +306,14 @@ begin
   AES_wrap_key := nil;
   AES_unwrap_key := nil;
 
-  ModesLoaded := False;
+  TOpenSSLLoader.SetModuleLoaded(osmModes, False);
 
   // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
 end;
 
 function IsModesLoaded: Boolean;
 begin
-  Result := ModesLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmModes);
 end;
 
 // High-level helper function implementations

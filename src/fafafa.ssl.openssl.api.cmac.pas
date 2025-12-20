@@ -23,6 +23,7 @@ uses
   fafafa.ssl.exceptions,
   SysUtils,
   fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.evp;
 
 const
@@ -153,11 +154,7 @@ function ComputeMAC(const MacType: string; const Key: TBytes; const Data: TBytes
 implementation
 
 uses
-  fafafa.ssl.openssl.loader,  // Phase 3.3 P0+ - 统一动态库加载
   fafafa.ssl.openssl.api.aes;
-
-var
-  CMACLoaded: Boolean = False;
 
 function LoadCMACFunctions: Boolean;
 var
@@ -210,8 +207,8 @@ begin
   EVP_MAC_name := TEVP_MAC_name(TOpenSSLLoader.GetFunction(LHandle, 'EVP_MAC_name'));
 
   // Check if at least basic CMAC functions are available
-  CMACLoaded := Assigned(CMAC_CTX_new) or Assigned(EVP_MAC_fetch);
-  Result := CMACLoaded;
+  Result := Assigned(CMAC_CTX_new) or Assigned(EVP_MAC_fetch);
+  TOpenSSLLoader.SetModuleLoaded(osmCMAC, Result);
 end;
 
 procedure UnloadCMACFunctions;
@@ -257,14 +254,14 @@ begin
   EVP_MAC_is_a := nil;
   EVP_MAC_name := nil;
 
-  CMACLoaded := False;
+  TOpenSSLLoader.SetModuleLoaded(osmCMAC, False);
 
   // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
 end;
 
 function IsCMACLoaded: Boolean;
 begin
-  Result := CMACLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmCMAC);
 end;
 
 // High-level helper functions implementation

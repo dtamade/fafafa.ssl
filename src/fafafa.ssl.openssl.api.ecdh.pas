@@ -8,7 +8,8 @@ uses
   SysUtils, DynLibs, ctypes,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.bn,
-  fafafa.ssl.openssl.api.ec;
+  fafafa.ssl.openssl.api.ec,
+  fafafa.ssl.openssl.loader;
 
 const
   { ECDH flags }
@@ -90,16 +91,37 @@ implementation
 uses
   fafafa.ssl.openssl.api.core;
 
-var
-  GECDHLoaded: Boolean = False;
+const
+  { ECDH function bindings for batch loading }
+  ECDH_FUNCTION_COUNT = 13;
+  ECDHFunctionBindings: array[0..ECDH_FUNCTION_COUNT - 1] of TFunctionBinding = (
+    // ECDH core functions
+    (Name: 'ECDH_compute_key';              FuncPtr: @ECDH_compute_key;              Required: False),
+    (Name: 'ECDH_get_default_method';       FuncPtr: @ECDH_get_default_method;       Required: False),
+    (Name: 'ECDH_set_default_method';       FuncPtr: @ECDH_set_default_method;       Required: False),
+    (Name: 'ECDH_set_method';               FuncPtr: @ECDH_set_method;               Required: False),
+    (Name: 'ECDH_get_ex_data';              FuncPtr: @ECDH_get_ex_data;              Required: False),
+    (Name: 'ECDH_set_ex_data';              FuncPtr: @ECDH_set_ex_data;              Required: False),
+    (Name: 'ECDH_get_ex_new_index';         FuncPtr: @ECDH_get_ex_new_index;         Required: False),
+    // ECDH KDF functions
+    (Name: 'ECDH_KDF_X9_63';                FuncPtr: @ECDH_KDF_X9_63;                Required: False),
+    // EC_KEY method functions
+    (Name: 'EC_KEY_METHOD_get_compute_key'; FuncPtr: @EC_KEY_METHOD_get_compute_key; Required: False),
+    (Name: 'EC_KEY_METHOD_set_compute_key'; FuncPtr: @EC_KEY_METHOD_set_compute_key; Required: False),
+    // EC_KEY flag functions
+    (Name: 'EC_KEY_get_flags';              FuncPtr: @EC_KEY_get_flags;              Required: False),
+    (Name: 'EC_KEY_set_flags';              FuncPtr: @EC_KEY_set_flags;              Required: False),
+    (Name: 'EC_KEY_clear_flags';            FuncPtr: @EC_KEY_clear_flags;            Required: False)
+  );
 
 function LoadOpenSSLECDH: Boolean;
 var
   LLib: TLibHandle;
+  LLoaded: Boolean;
 begin
-  if GECDHLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmECDH) then
     Exit(True);
-    
+
   // Use the crypto library handle from core module
   LLib := GetCryptoLibHandle;
   if LLib = NilHandle then
@@ -107,68 +129,32 @@ begin
     LoadOpenSSLCore;
     LLib := GetCryptoLibHandle;
   end;
-    
+
   if LLib = NilHandle then
     Exit(False);
-    
-  // Load ECDH functions with proper type casting
-  ECDH_compute_key := TECDH_compute_key(GetProcAddress(LLib, 'ECDH_compute_key'));
-  ECDH_get_default_method := TECDH_get_default_method(GetProcAddress(LLib, 'ECDH_get_default_method'));
-  ECDH_set_default_method := TECDH_set_default_method(GetProcAddress(LLib, 'ECDH_set_default_method'));
-  ECDH_set_method := TECDH_set_method(GetProcAddress(LLib, 'ECDH_set_method'));
-  ECDH_get_ex_data := TECDH_get_ex_data(GetProcAddress(LLib, 'ECDH_get_ex_data'));
-  ECDH_set_ex_data := TECDH_set_ex_data(GetProcAddress(LLib, 'ECDH_set_ex_data'));
-  ECDH_get_ex_new_index := TECDH_get_ex_new_index(GetProcAddress(LLib, 'ECDH_get_ex_new_index'));
-  
-  // Load ECDH KDF functions
-  ECDH_KDF_X9_63 := TECDH_KDF_X9_63(GetProcAddress(LLib, 'ECDH_KDF_X9_63'));
-  
-  // Load EC_KEY method functions
-  EC_KEY_METHOD_get_compute_key := TEC_KEY_METHOD_get_compute_key(GetProcAddress(LLib, 'EC_KEY_METHOD_get_compute_key'));
-  EC_KEY_METHOD_set_compute_key := TEC_KEY_METHOD_set_compute_key(GetProcAddress(LLib, 'EC_KEY_METHOD_set_compute_key'));
-  
-  // Load EC_KEY flag functions
-  EC_KEY_get_flags := TEC_KEY_get_flags(GetProcAddress(LLib, 'EC_KEY_get_flags'));
-  EC_KEY_set_flags := TEC_KEY_set_flags(GetProcAddress(LLib, 'EC_KEY_set_flags'));
-  EC_KEY_clear_flags := TEC_KEY_clear_flags(GetProcAddress(LLib, 'EC_KEY_clear_flags'));
-  
+
+  // Batch load all ECDH functions
+  TOpenSSLLoader.LoadFunctions(LLib, ECDHFunctionBindings);
+
   // Check if critical functions are loaded
   // Note: In OpenSSL 1.1.0+, ECDH_compute_key might not exist as a separate function
   // The functionality is integrated into EC_KEY operations
-  GECDHLoaded := Assigned(ECDH_compute_key) or 
-                (Assigned(EC_KEY_get_flags) and Assigned(EC_KEY_set_flags));
-  Result := GECDHLoaded;
+  LLoaded := Assigned(ECDH_compute_key) or
+             (Assigned(EC_KEY_get_flags) and Assigned(EC_KEY_set_flags));
+  TOpenSSLLoader.SetModuleLoaded(osmECDH, LLoaded);
+  Result := LLoaded;
 end;
 
 procedure UnloadOpenSSLECDH;
 begin
-  // Clear ECDH function pointers
-  ECDH_compute_key := nil;
-  ECDH_get_default_method := nil;
-  ECDH_set_default_method := nil;
-  ECDH_set_method := nil;
-  ECDH_get_ex_data := nil;
-  ECDH_set_ex_data := nil;
-  ECDH_get_ex_new_index := nil;
-  
-  // Clear ECDH KDF function pointers
-  ECDH_KDF_X9_63 := nil;
-  
-  // Clear EC_KEY method function pointers
-  EC_KEY_METHOD_get_compute_key := nil;
-  EC_KEY_METHOD_set_compute_key := nil;
-  
-  // Clear EC_KEY flag function pointers
-  EC_KEY_get_flags := nil;
-  EC_KEY_set_flags := nil;
-  EC_KEY_clear_flags := nil;
-  
-  GECDHLoaded := False;
+  // Clear all ECDH function pointers using batch clear
+  TOpenSSLLoader.ClearFunctions(ECDHFunctionBindings);
+  TOpenSSLLoader.SetModuleLoaded(osmECDH, False);
 end;
 
 function IsOpenSSLECDHLoaded: Boolean;
 begin
-  Result := GECDHLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmECDH);
 end;
 
 { Helper functions }

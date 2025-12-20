@@ -126,63 +126,53 @@ function AESDecryptCTR(const Data: TBytes; const Key: TBytes; const IV: TBytes):
 implementation
 
 uses
-  fafafa.ssl.openssl.api;
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.loader;
+
+const
+  { AES 函数绑定数组 - 用于批量加载 }
+  AES_FUNCTION_COUNT = 16;
 
 var
-  GAESLoaded: Boolean = False;
+  AESFunctionBindings: array[0..AES_FUNCTION_COUNT-1] of TFunctionBinding = (
+    (Name: 'AES_set_encrypt_key'; FuncPtr: @AES_set_encrypt_key; Required: False),
+    (Name: 'AES_set_decrypt_key'; FuncPtr: @AES_set_decrypt_key; Required: False),
+    (Name: 'AES_ecb_encrypt';     FuncPtr: @AES_ecb_encrypt;     Required: False),
+    (Name: 'AES_cbc_encrypt';     FuncPtr: @AES_cbc_encrypt;     Required: False),
+    (Name: 'AES_cfb128_encrypt';  FuncPtr: @AES_cfb128_encrypt;  Required: False),
+    (Name: 'AES_cfb1_encrypt';    FuncPtr: @AES_cfb1_encrypt;    Required: False),
+    (Name: 'AES_cfb8_encrypt';    FuncPtr: @AES_cfb8_encrypt;    Required: False),
+    (Name: 'AES_ofb128_encrypt';  FuncPtr: @AES_ofb128_encrypt;  Required: False),
+    (Name: 'AES_ctr128_encrypt';  FuncPtr: @AES_ctr128_encrypt;  Required: False),
+    (Name: 'AES_ige_encrypt';     FuncPtr: @AES_ige_encrypt;     Required: False),
+    (Name: 'AES_bi_ige_encrypt';  FuncPtr: @AES_bi_ige_encrypt;  Required: False),
+    (Name: 'AES_wrap_key';        FuncPtr: @AES_wrap_key;        Required: False),
+    (Name: 'AES_unwrap_key';      FuncPtr: @AES_unwrap_key;      Required: False),
+    (Name: 'AES_options';         FuncPtr: @AES_options;         Required: False),
+    (Name: 'AES_encrypt';         FuncPtr: @AES_encrypt;         Required: False),
+    (Name: 'AES_decrypt';         FuncPtr: @AES_decrypt;         Required: False)
+  );
 
 function LoadAESFunctions(ALibHandle: THandle): Boolean;
 begin
   Result := False;
-  
+
   if ALibHandle = 0 then Exit;
-  
-  Pointer(AES_set_encrypt_key) := GetProcAddress(ALibHandle, 'AES_set_encrypt_key');
-  Pointer(AES_set_decrypt_key) := GetProcAddress(ALibHandle, 'AES_set_decrypt_key');
-  Pointer(AES_ecb_encrypt) := GetProcAddress(ALibHandle, 'AES_ecb_encrypt');
-  Pointer(AES_cbc_encrypt) := GetProcAddress(ALibHandle, 'AES_cbc_encrypt');
-  Pointer(AES_cfb128_encrypt) := GetProcAddress(ALibHandle, 'AES_cfb128_encrypt');
-  Pointer(AES_cfb1_encrypt) := GetProcAddress(ALibHandle, 'AES_cfb1_encrypt');
-  Pointer(AES_cfb8_encrypt) := GetProcAddress(ALibHandle, 'AES_cfb8_encrypt');
-  Pointer(AES_ofb128_encrypt) := GetProcAddress(ALibHandle, 'AES_ofb128_encrypt');
-  Pointer(AES_ctr128_encrypt) := GetProcAddress(ALibHandle, 'AES_ctr128_encrypt');
-  Pointer(AES_ige_encrypt) := GetProcAddress(ALibHandle, 'AES_ige_encrypt');
-  Pointer(AES_bi_ige_encrypt) := GetProcAddress(ALibHandle, 'AES_bi_ige_encrypt');
-  Pointer(AES_wrap_key) := GetProcAddress(ALibHandle, 'AES_wrap_key');
-  Pointer(AES_unwrap_key) := GetProcAddress(ALibHandle, 'AES_unwrap_key');
-  Pointer(AES_options) := GetProcAddress(ALibHandle, 'AES_options');
-  Pointer(AES_encrypt) := GetProcAddress(ALibHandle, 'AES_encrypt');
-  Pointer(AES_decrypt) := GetProcAddress(ALibHandle, 'AES_decrypt');
-  
-  GAESLoaded := True;
+
+  TOpenSSLLoader.LoadFunctions(ALibHandle, AESFunctionBindings);
+  TOpenSSLLoader.SetModuleLoaded(osmAES, True);
   Result := True;
 end;
 
 procedure UnloadAESFunctions;
 begin
-  AES_set_encrypt_key := nil;
-  AES_set_decrypt_key := nil;
-  AES_ecb_encrypt := nil;
-  AES_cbc_encrypt := nil;
-  AES_cfb128_encrypt := nil;
-  AES_cfb1_encrypt := nil;
-  AES_cfb8_encrypt := nil;
-  AES_ofb128_encrypt := nil;
-  AES_ctr128_encrypt := nil;
-  AES_ige_encrypt := nil;
-  AES_bi_ige_encrypt := nil;
-  AES_wrap_key := nil;
-  AES_unwrap_key := nil;
-  AES_options := nil;
-  AES_encrypt := nil;
-  AES_decrypt := nil;
-  
-  GAESLoaded := False;
+  TOpenSSLLoader.ClearFunctions(AESFunctionBindings);
+  TOpenSSLLoader.SetModuleLoaded(osmAES, False);
 end;
 
 function IsAESLoaded: Boolean;
 begin
-  Result := GAESLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmAES);
 end;
 
 function GetAESKeyBits(const Key: TBytes): Integer;

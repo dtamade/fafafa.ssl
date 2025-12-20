@@ -16,7 +16,8 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;
 
 const
   DES_ENCRYPT = 1;
@@ -205,101 +206,67 @@ implementation
 uses
   fafafa.ssl.openssl.api;
 
-var
-  GDESLoaded: Boolean = False;
+const
+  { DES function bindings for batch loading }
+  DES_FUNCTION_BINDINGS: array[0..35] of TFunctionBinding = (
+    (Name: 'DES_options';           FuncPtr: @DES_options;           Required: False),
+    (Name: 'DES_ecb3_encrypt';      FuncPtr: @DES_ecb3_encrypt;      Required: False),
+    (Name: 'DES_crypt';             FuncPtr: @DES_crypt;             Required: False),
+    (Name: 'DES_fcrypt';            FuncPtr: @DES_fcrypt;            Required: False),
+    (Name: 'DES_ecb_encrypt';       FuncPtr: @DES_ecb_encrypt;       Required: False),
+    (Name: 'DES_ncbc_encrypt';      FuncPtr: @DES_ncbc_encrypt;      Required: False),
+    (Name: 'DES_xcbc_encrypt';      FuncPtr: @DES_xcbc_encrypt;      Required: False),
+    (Name: 'DES_cfb_encrypt';       FuncPtr: @DES_cfb_encrypt;       Required: False),
+    (Name: 'DES_ecb2_encrypt';      FuncPtr: @DES_ecb2_encrypt;      Required: False),
+    (Name: 'DES_ede2_cbc_encrypt';  FuncPtr: @DES_ede2_cbc_encrypt;  Required: False),
+    (Name: 'DES_ede2_cfb64_encrypt'; FuncPtr: @DES_ede2_cfb64_encrypt; Required: False),
+    (Name: 'DES_ede2_ofb64_encrypt'; FuncPtr: @DES_ede2_ofb64_encrypt; Required: False),
+    (Name: 'DES_ede3_cbc_encrypt';  FuncPtr: @DES_ede3_cbc_encrypt;  Required: False),
+    (Name: 'DES_ede3_cfb64_encrypt'; FuncPtr: @DES_ede3_cfb64_encrypt; Required: False),
+    (Name: 'DES_ede3_cfb_encrypt';  FuncPtr: @DES_ede3_cfb_encrypt;  Required: False),
+    (Name: 'DES_ede3_ofb64_encrypt'; FuncPtr: @DES_ede3_ofb64_encrypt; Required: False),
+    (Name: 'DES_enc_read';          FuncPtr: @DES_enc_read;          Required: False),
+    (Name: 'DES_enc_write';         FuncPtr: @DES_enc_write;         Required: False),
+    (Name: 'DES_set_odd_parity';    FuncPtr: @DES_set_odd_parity;    Required: False),
+    (Name: 'DES_check_key_parity';  FuncPtr: @DES_check_key_parity;  Required: False),
+    (Name: 'DES_is_weak_key';       FuncPtr: @DES_is_weak_key;       Required: False),
+    (Name: 'DES_set_key';           FuncPtr: @DES_set_key;           Required: False),
+    (Name: 'DES_key_sched';         FuncPtr: @DES_key_sched;         Required: False),
+    (Name: 'DES_set_key_checked';   FuncPtr: @DES_set_key_checked;   Required: False),
+    (Name: 'DES_set_key_unchecked'; FuncPtr: @DES_set_key_unchecked; Required: False),
+    (Name: 'DES_string_to_key';     FuncPtr: @DES_string_to_key;     Required: False),
+    (Name: 'DES_string_to_2keys';   FuncPtr: @DES_string_to_2keys;   Required: False),
+    (Name: 'DES_cfb64_encrypt';     FuncPtr: @DES_cfb64_encrypt;     Required: False),
+    (Name: 'DES_ofb64_encrypt';     FuncPtr: @DES_ofb64_encrypt;     Required: False),
+    (Name: 'DES_pcbc_encrypt';      FuncPtr: @DES_pcbc_encrypt;      Required: False),
+    (Name: 'DES_quad_cksum';        FuncPtr: @DES_quad_cksum;        Required: False),
+    (Name: 'DES_random_key';        FuncPtr: @DES_random_key;        Required: False),
+    (Name: 'DES_encrypt1';          FuncPtr: @DES_encrypt1;          Required: False),
+    (Name: 'DES_encrypt2';          FuncPtr: @DES_encrypt2;          Required: False),
+    (Name: 'DES_encrypt3';          FuncPtr: @DES_encrypt3;          Required: False),
+    (Name: 'DES_decrypt3';          FuncPtr: @DES_decrypt3;          Required: False)
+  );
 
 function LoadDESFunctions(ALibHandle: THandle): Boolean;
 begin
   Result := False;
-  
+
   if ALibHandle = 0 then Exit;
-  
-  Pointer(DES_options) := GetProcAddress(ALibHandle, 'DES_options');
-  Pointer(DES_ecb3_encrypt) := GetProcAddress(ALibHandle, 'DES_ecb3_encrypt');
-  Pointer(DES_crypt) := GetProcAddress(ALibHandle, 'DES_crypt');
-  Pointer(DES_fcrypt) := GetProcAddress(ALibHandle, 'DES_fcrypt');
-  Pointer(DES_ecb_encrypt) := GetProcAddress(ALibHandle, 'DES_ecb_encrypt');
-  Pointer(DES_ncbc_encrypt) := GetProcAddress(ALibHandle, 'DES_ncbc_encrypt');
-  Pointer(DES_xcbc_encrypt) := GetProcAddress(ALibHandle, 'DES_xcbc_encrypt');
-  Pointer(DES_cfb_encrypt) := GetProcAddress(ALibHandle, 'DES_cfb_encrypt');
-  Pointer(DES_ecb2_encrypt) := GetProcAddress(ALibHandle, 'DES_ecb2_encrypt');
-  Pointer(DES_ede2_cbc_encrypt) := GetProcAddress(ALibHandle, 'DES_ede2_cbc_encrypt');
-  Pointer(DES_ede2_cfb64_encrypt) := GetProcAddress(ALibHandle, 'DES_ede2_cfb64_encrypt');
-  Pointer(DES_ede2_ofb64_encrypt) := GetProcAddress(ALibHandle, 'DES_ede2_ofb64_encrypt');
-  Pointer(DES_ede3_cbc_encrypt) := GetProcAddress(ALibHandle, 'DES_ede3_cbc_encrypt');
-  Pointer(DES_ede3_cfb64_encrypt) := GetProcAddress(ALibHandle, 'DES_ede3_cfb64_encrypt');
-  Pointer(DES_ede3_cfb_encrypt) := GetProcAddress(ALibHandle, 'DES_ede3_cfb_encrypt');
-  Pointer(DES_ede3_ofb64_encrypt) := GetProcAddress(ALibHandle, 'DES_ede3_ofb64_encrypt');
-  Pointer(DES_enc_read) := GetProcAddress(ALibHandle, 'DES_enc_read');
-  Pointer(DES_enc_write) := GetProcAddress(ALibHandle, 'DES_enc_write');
-  Pointer(DES_set_odd_parity) := GetProcAddress(ALibHandle, 'DES_set_odd_parity');
-  Pointer(DES_check_key_parity) := GetProcAddress(ALibHandle, 'DES_check_key_parity');
-  Pointer(DES_is_weak_key) := GetProcAddress(ALibHandle, 'DES_is_weak_key');
-  Pointer(DES_set_key) := GetProcAddress(ALibHandle, 'DES_set_key');
-  Pointer(DES_key_sched) := GetProcAddress(ALibHandle, 'DES_key_sched');
-  Pointer(DES_set_key_checked) := GetProcAddress(ALibHandle, 'DES_set_key_checked');
-  Pointer(DES_set_key_unchecked) := GetProcAddress(ALibHandle, 'DES_set_key_unchecked');
-  Pointer(DES_string_to_key) := GetProcAddress(ALibHandle, 'DES_string_to_key');
-  Pointer(DES_string_to_2keys) := GetProcAddress(ALibHandle, 'DES_string_to_2keys');
-  Pointer(DES_cfb64_encrypt) := GetProcAddress(ALibHandle, 'DES_cfb64_encrypt');
-  Pointer(DES_ofb64_encrypt) := GetProcAddress(ALibHandle, 'DES_ofb64_encrypt');
-  Pointer(DES_pcbc_encrypt) := GetProcAddress(ALibHandle, 'DES_pcbc_encrypt');
-  Pointer(DES_quad_cksum) := GetProcAddress(ALibHandle, 'DES_quad_cksum');
-  Pointer(DES_random_key) := GetProcAddress(ALibHandle, 'DES_random_key');
-  Pointer(DES_encrypt1) := GetProcAddress(ALibHandle, 'DES_encrypt1');
-  Pointer(DES_encrypt2) := GetProcAddress(ALibHandle, 'DES_encrypt2');
-  Pointer(DES_encrypt3) := GetProcAddress(ALibHandle, 'DES_encrypt3');
-  Pointer(DES_decrypt3) := GetProcAddress(ALibHandle, 'DES_decrypt3');
-  
-  GDESLoaded := True;
+
+  TOpenSSLLoader.LoadFunctions(ALibHandle, DES_FUNCTION_BINDINGS);
+  TOpenSSLLoader.SetModuleLoaded(osmDES, True);
   Result := True;
 end;
 
 procedure UnloadDESFunctions;
 begin
-  DES_options := nil;
-  DES_ecb3_encrypt := nil;
-  DES_crypt := nil;
-  DES_fcrypt := nil;
-  DES_ecb_encrypt := nil;
-  DES_ncbc_encrypt := nil;
-  DES_xcbc_encrypt := nil;
-  DES_cfb_encrypt := nil;
-  DES_ecb2_encrypt := nil;
-  DES_ede2_cbc_encrypt := nil;
-  DES_ede2_cfb64_encrypt := nil;
-  DES_ede2_ofb64_encrypt := nil;
-  DES_ede3_cbc_encrypt := nil;
-  DES_ede3_cfb64_encrypt := nil;
-  DES_ede3_cfb_encrypt := nil;
-  DES_ede3_ofb64_encrypt := nil;
-  DES_enc_read := nil;
-  DES_enc_write := nil;
-  DES_set_odd_parity := nil;
-  DES_check_key_parity := nil;
-  DES_is_weak_key := nil;
-  DES_set_key := nil;
-  DES_key_sched := nil;
-  DES_set_key_checked := nil;
-  DES_set_key_unchecked := nil;
-  DES_string_to_key := nil;
-  DES_string_to_2keys := nil;
-  DES_cfb64_encrypt := nil;
-  DES_ofb64_encrypt := nil;
-  DES_pcbc_encrypt := nil;
-  DES_quad_cksum := nil;
-  DES_random_key := nil;
-  DES_encrypt1 := nil;
-  DES_encrypt2 := nil;
-  DES_encrypt3 := nil;
-  DES_decrypt3 := nil;
-  
-  GDESLoaded := False;
+  TOpenSSLLoader.ClearFunctions(DES_FUNCTION_BINDINGS);
+  TOpenSSLLoader.SetModuleLoaded(osmDES, False);
 end;
 
 function IsDESLoaded: Boolean;
 begin
-  Result := GDESLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmDES);
 end;
 
 function DESEncrypt(const Data: TBytes; const Key: TBytes): TBytes;

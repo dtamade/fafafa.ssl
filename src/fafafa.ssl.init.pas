@@ -23,6 +23,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
   SysUtils,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.rand,
@@ -46,24 +47,21 @@ function GetOpenSSLVersion: string;
 
 implementation
 
-var
-  GInitialized: Boolean = False;
-
 procedure InitializeOpenSSL;
 begin
-  if GInitialized then
+  if TOpenSSLLoader.IsModuleLoaded(osmInitGlobal) then
     Exit;
-    
+
   // 加载核心库
   if not IsOpenSSLCoreLoaded then
     LoadOpenSSLCore();
-  
+
   if not IsOpenSSLCoreLoaded then
     raise ESSLException.Create('Failed to load OpenSSL core library');
-  
+
   // 加载EVP模块（加密/解密/哈希）
   LoadEVP(GetCryptoLibHandle);
-  
+
   // 加载RAND模块（随机数生成）
   // 注意：在某些环境中LoadOpenSSLRAND可能因为依赖检查失败
   // 但RAND_bytes通常已经通过核心库可用
@@ -72,13 +70,13 @@ begin
   except
     // 忽略错误，RAND函数通常已可用
   end;
-  
-  GInitialized := True;
+
+  TOpenSSLLoader.SetModuleLoaded(osmInitGlobal, True);
 end;
 
 function IsOpenSSLInitialized: Boolean;
 begin
-  Result := GInitialized and IsOpenSSLCoreLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmInitGlobal) and IsOpenSSLCoreLoaded;
 end;
 
 function GetOpenSSLVersion: string;

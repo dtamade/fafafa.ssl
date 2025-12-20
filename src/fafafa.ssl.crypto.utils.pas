@@ -43,6 +43,7 @@ uses
   fafafa.ssl.errors,           // Phase 2.1 - Standardized error handling
   fafafa.ssl.encoding,         // Phase 2.3.3 - Use unified encoding utilities
   fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
@@ -580,6 +581,21 @@ implementation
 uses
   BaseUnix;
 {$ENDIF}
+{$IFDEF WINDOWS}
+uses
+  Windows;
+
+const
+  BCRYPT_USE_SYSTEM_PREFERRED_RNG = $00000002;
+
+// BCryptGenRandom - Windows Vista+ secure random number generator
+function BCryptGenRandom(
+  hAlgorithm: THandle;
+  pbBuffer: PByte;
+  cbBuffer: ULONG;
+  dwFlags: ULONG
+): LONG; stdcall; external 'bcrypt.dll' name 'BCryptGenRandom';
+{$ENDIF}
 
 const
   // 缓冲区大小常量
@@ -596,16 +612,15 @@ const
   SHA512_HASH_SIZE = 64;
 
 var
-  GInitialized: Boolean = False;
   GRANDAvailable: Boolean = False;
 
 { TCryptoUtils }
 
 class procedure TCryptoUtils.EnsureInitialized;
 begin
-  if GInitialized then
+  if TOpenSSLLoader.IsModuleLoaded(osmInitCrypto) then
     Exit;
-    
+
   // 加载OpenSSL核心
   if not IsOpenSSLCoreLoaded then
   begin
@@ -627,11 +642,11 @@ begin
     on E: Exception do
       RaiseInitializationError('EVP module', E.Message);
   end;
-  
+
   // 检测RAND可用性
   GRANDAvailable := Assigned(RAND_bytes);
-  
-  GInitialized := True;
+
+  TOpenSSLLoader.SetModuleLoaded(osmInitCrypto, True);
 end;
 
 class procedure TCryptoUtils.SystemRandom(ABuffer: PByte; ASize: Integer);
@@ -639,6 +654,10 @@ class procedure TCryptoUtils.SystemRandom(ABuffer: PByte; ASize: Integer);
 var
   LFile: File;
   LBytesRead: Integer;
+{$ENDIF}
+{$IFDEF WINDOWS}
+var
+  LStatus: LONG;
 {$ENDIF}
 begin
   {$IFDEF UNIX}
@@ -657,11 +676,11 @@ begin
       raise ESSLCryptoError.Create('System random source failed: ' + E.Message);
   end;
   {$ELSE}
-  // Windows降级（临时方案）
-  Randomize;
-  var I: Integer;
-  for I := 0 to ASize - 1 do
-    PByte(PtrUInt(ABuffer) + PtrUInt(I))^ := Byte(Random(256));
+  // Windows: Use BCryptGenRandom (cryptographically secure, Vista+)
+  LStatus := BCryptGenRandom(0, ABuffer, ULONG(ASize), BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+  if LStatus <> 0 then
+    raise ESSLCryptoError.CreateFmt(
+      'BCryptGenRandom failed with NTSTATUS: 0x%x', [LStatus]);
   {$ENDIF}
 end;
 

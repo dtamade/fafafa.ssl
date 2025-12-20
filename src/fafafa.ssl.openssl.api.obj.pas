@@ -154,66 +154,49 @@ procedure UnloadOBJModule;
 
 implementation
 
+uses
+  fafafa.ssl.openssl.loader;
+
+const
+  { OBJ 模块函数绑定表 }
+  OBJ_FUNCTION_BINDINGS: array[0..25] of TFunctionBinding = (
+    (Name: 'OBJ_nid2obj';           FuncPtr: @OBJ_nid2obj;           Required: False),
+    (Name: 'OBJ_nid2ln';            FuncPtr: @OBJ_nid2ln;            Required: False),
+    (Name: 'OBJ_nid2sn';            FuncPtr: @OBJ_nid2sn;            Required: False),
+    (Name: 'OBJ_obj2nid';           FuncPtr: @OBJ_obj2nid;           Required: False),
+    (Name: 'OBJ_obj2txt';           FuncPtr: @OBJ_obj2txt;           Required: False),
+    (Name: 'OBJ_txt2obj';           FuncPtr: @OBJ_txt2obj;           Required: False),
+    (Name: 'OBJ_txt2nid';           FuncPtr: @OBJ_txt2nid;           Required: False),
+    (Name: 'OBJ_ln2nid';            FuncPtr: @OBJ_ln2nid;            Required: False),
+    (Name: 'OBJ_sn2nid';            FuncPtr: @OBJ_sn2nid;            Required: False),
+    (Name: 'OBJ_cmp';               FuncPtr: @OBJ_cmp;               Required: False),
+    (Name: 'OBJ_dup';               FuncPtr: @OBJ_dup;               Required: False),
+    (Name: 'OBJ_create';            FuncPtr: @OBJ_create;            Required: False),
+    (Name: 'OBJ_create_objects';    FuncPtr: @OBJ_create_objects;    Required: False),
+    (Name: 'OBJ_cleanup';           FuncPtr: @OBJ_cleanup;           Required: False),
+    (Name: 'OBJ_find_sigid_algs';   FuncPtr: @OBJ_find_sigid_algs;   Required: False),
+    (Name: 'OBJ_find_sigid_by_algs'; FuncPtr: @OBJ_find_sigid_by_algs; Required: False),
+    (Name: 'OBJ_add_sigid';         FuncPtr: @OBJ_add_sigid;         Required: False),
+    (Name: 'OBJ_sigid_free';        FuncPtr: @OBJ_sigid_free;        Required: False),
+    (Name: 'OBJ_NAME_init';         FuncPtr: @OBJ_NAME_init;         Required: False),
+    (Name: 'OBJ_NAME_get';          FuncPtr: @OBJ_NAME_get;          Required: False),
+    (Name: 'OBJ_NAME_add';          FuncPtr: @OBJ_NAME_add;          Required: False),
+    (Name: 'OBJ_NAME_remove';       FuncPtr: @OBJ_NAME_remove;       Required: False),
+    (Name: 'OBJ_NAME_cleanup';      FuncPtr: @OBJ_NAME_cleanup;      Required: False),
+    (Name: 'OBJ_NAME_do_all';       FuncPtr: @OBJ_NAME_do_all;       Required: False),
+    (Name: 'OBJ_NAME_do_all_sorted'; FuncPtr: @OBJ_NAME_do_all_sorted; Required: False),
+    (Name: 'OBJ_NAME_new_index';    FuncPtr: @OBJ_NAME_new_index;    Required: False)
+  );
+
 procedure LoadOBJModule(ALibCrypto: THandle);
 begin
   if ALibCrypto = 0 then Exit;
-  
-  OBJ_nid2obj := TOBJ_nid2obj(GetProcAddress(ALibCrypto, 'OBJ_nid2obj'));
-  OBJ_nid2ln := TOBJ_nid2ln(GetProcAddress(ALibCrypto, 'OBJ_nid2ln'));
-  OBJ_nid2sn := TOBJ_nid2sn(GetProcAddress(ALibCrypto, 'OBJ_nid2sn'));
-  OBJ_obj2nid := TOBJ_obj2nid(GetProcAddress(ALibCrypto, 'OBJ_obj2nid'));
-  OBJ_obj2txt := TOBJ_obj2txt(GetProcAddress(ALibCrypto, 'OBJ_obj2txt'));
-  OBJ_txt2obj := TOBJ_txt2obj(GetProcAddress(ALibCrypto, 'OBJ_txt2obj'));
-  OBJ_txt2nid := TOBJ_txt2nid(GetProcAddress(ALibCrypto, 'OBJ_txt2nid'));
-  OBJ_ln2nid := TOBJ_ln2nid(GetProcAddress(ALibCrypto, 'OBJ_ln2nid'));
-  OBJ_sn2nid := TOBJ_sn2nid(GetProcAddress(ALibCrypto, 'OBJ_sn2nid'));
-  OBJ_cmp := TOBJ_cmp(GetProcAddress(ALibCrypto, 'OBJ_cmp'));
-  OBJ_dup := TOBJ_dup(GetProcAddress(ALibCrypto, 'OBJ_dup'));
-  OBJ_create := TOBJ_create(GetProcAddress(ALibCrypto, 'OBJ_create'));
-  OBJ_create_objects := TOBJ_create_objects(GetProcAddress(ALibCrypto, 'OBJ_create_objects'));
-  OBJ_cleanup := TOBJ_cleanup(GetProcAddress(ALibCrypto, 'OBJ_cleanup'));
-  OBJ_find_sigid_algs := TOBJ_find_sigid_algs(GetProcAddress(ALibCrypto, 'OBJ_find_sigid_algs'));
-  OBJ_find_sigid_by_algs := TOBJ_find_sigid_by_algs(GetProcAddress(ALibCrypto, 'OBJ_find_sigid_by_algs'));
-  OBJ_add_sigid := TOBJ_add_sigid(GetProcAddress(ALibCrypto, 'OBJ_add_sigid'));
-  OBJ_sigid_free := TOBJ_sigid_free(GetProcAddress(ALibCrypto, 'OBJ_sigid_free'));
-  OBJ_NAME_init := TOBJ_NAME_init(GetProcAddress(ALibCrypto, 'OBJ_NAME_init'));
-  OBJ_NAME_get := TOBJ_NAME_get(GetProcAddress(ALibCrypto, 'OBJ_NAME_get'));
-  OBJ_NAME_add := TOBJ_NAME_add(GetProcAddress(ALibCrypto, 'OBJ_NAME_add'));
-  OBJ_NAME_remove := TOBJ_NAME_remove(GetProcAddress(ALibCrypto, 'OBJ_NAME_remove'));
-  OBJ_NAME_cleanup := TOBJ_NAME_cleanup(GetProcAddress(ALibCrypto, 'OBJ_NAME_cleanup'));
-  OBJ_NAME_do_all := TOBJ_NAME_do_all(GetProcAddress(ALibCrypto, 'OBJ_NAME_do_all'));
-  OBJ_NAME_do_all_sorted := TOBJ_NAME_do_all_sorted(GetProcAddress(ALibCrypto, 'OBJ_NAME_do_all_sorted'));
-  OBJ_NAME_new_index := TOBJ_NAME_new_index(GetProcAddress(ALibCrypto, 'OBJ_NAME_new_index'));
+  TOpenSSLLoader.LoadFunctions(ALibCrypto, OBJ_FUNCTION_BINDINGS);
 end;
 
 procedure UnloadOBJModule;
 begin
-  OBJ_nid2obj := nil;
-  OBJ_nid2ln := nil;
-  OBJ_nid2sn := nil;
-  OBJ_obj2nid := nil;
-  OBJ_obj2txt := nil;
-  OBJ_txt2obj := nil;
-  OBJ_txt2nid := nil;
-  OBJ_ln2nid := nil;
-  OBJ_sn2nid := nil;
-  OBJ_cmp := nil;
-  OBJ_dup := nil;
-  OBJ_create := nil;
-  OBJ_create_objects := nil;
-  OBJ_cleanup := nil;
-  OBJ_find_sigid_algs := nil;
-  OBJ_find_sigid_by_algs := nil;
-  OBJ_add_sigid := nil;
-  OBJ_sigid_free := nil;
-  OBJ_NAME_init := nil;
-  OBJ_NAME_get := nil;
-  OBJ_NAME_add := nil;
-  OBJ_NAME_remove := nil;
-  OBJ_NAME_cleanup := nil;
-  OBJ_NAME_do_all := nil;
-  OBJ_NAME_do_all_sorted := nil;
-  OBJ_NAME_new_index := nil;
+  TOpenSSLLoader.ClearFunctions(OBJ_FUNCTION_BINDINGS);
 end;
 
 // 辅助函数实现

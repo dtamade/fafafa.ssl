@@ -48,6 +48,7 @@ uses
   fafafa.ssl.exceptions,
   fafafa.ssl.errors,
   fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.bio;
 
@@ -215,14 +216,11 @@ type
 
 implementation
 
-var
-  GInitialized: Boolean = False;
-
 { TEncodingUtils }
 
 class procedure TEncodingUtils.EnsureInitialized;
 begin
-  if GInitialized then
+  if TOpenSSLLoader.IsModuleLoaded(osmInitEncoding) then
     Exit;
 
   // 加载OpenSSL核心
@@ -248,7 +246,7 @@ begin
       RaiseInitializationError('BIO module', E.Message);
   end;
 
-  GInitialized := True;
+  TOpenSSLLoader.SetModuleLoaded(osmInitEncoding, True);
 end;
 
 { ==================== Hex 编码/解码实现 ==================== }

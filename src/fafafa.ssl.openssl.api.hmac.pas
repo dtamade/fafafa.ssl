@@ -6,7 +6,8 @@ interface
 
 uses
   SysUtils, DynLibs, ctypes,
-  fafafa.ssl.openssl.types;
+  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.loader;
 
 const
   { HMAC constants }
@@ -74,16 +75,33 @@ uses
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp;
 
-var
-  GHMACLoaded: Boolean = False;
+const
+  { HMAC function bindings for batch loading }
+  HMAC_BINDINGS: array[0..13] of TFunctionBinding = (
+    (Name: 'HMAC';              FuncPtr: @HMAC;              Required: True),
+    (Name: 'HMAC_CTX_new';      FuncPtr: @HMAC_CTX_new;      Required: False),
+    (Name: 'HMAC_CTX_reset';    FuncPtr: @HMAC_CTX_reset;    Required: False),
+    (Name: 'HMAC_CTX_free';     FuncPtr: @HMAC_CTX_free;     Required: False),
+    (Name: 'HMAC_Init';         FuncPtr: @HMAC_Init;         Required: False),
+    (Name: 'HMAC_Init_ex';      FuncPtr: @HMAC_Init_ex;      Required: False),
+    (Name: 'HMAC_Update';       FuncPtr: @HMAC_Update;       Required: False),
+    (Name: 'HMAC_Final';        FuncPtr: @HMAC_Final;        Required: False),
+    (Name: 'HMAC_CTX_copy';     FuncPtr: @HMAC_CTX_copy;     Required: False),
+    (Name: 'HMAC_CTX_set_flags'; FuncPtr: @HMAC_CTX_set_flags; Required: False),
+    (Name: 'HMAC_CTX_get_md';   FuncPtr: @HMAC_CTX_get_md;   Required: False),
+    (Name: 'HMAC_size';         FuncPtr: @HMAC_size;         Required: False),
+    { Legacy functions (may not exist in newer versions) }
+    (Name: 'HMAC_CTX_init';     FuncPtr: @HMAC_CTX_init;     Required: False),
+    (Name: 'HMAC_CTX_cleanup';  FuncPtr: @HMAC_CTX_cleanup;  Required: False)
+  );
 
 function LoadOpenSSLHMAC: Boolean;
 var
   LLib: TLibHandle;
 begin
-  if GHMACLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmHMAC) then
     Exit(True);
-    
+
   // Use the crypto library handle from core module
   LLib := GetCryptoLibHandle;
   if LLib = NilHandle then
@@ -92,59 +110,30 @@ begin
     LoadOpenSSLCore;
     LLib := GetCryptoLibHandle;
   end;
-    
+
   if LLib = NilHandle then
     Exit(False);
-    
+
   // Ensure EVP module is loaded (needed for digest algorithms)
   if not IsEVPLoaded then
     LoadEVP(LLib);
-    
-  // Load HMAC functions
-  HMAC := THMAC(GetProcAddress(LLib, 'HMAC'));
-  HMAC_CTX_new := THMAC_CTX_new(GetProcAddress(LLib, 'HMAC_CTX_new'));
-  HMAC_CTX_reset := THMAC_CTX_reset(GetProcAddress(LLib, 'HMAC_CTX_reset'));
-  HMAC_CTX_free := THMAC_CTX_free(GetProcAddress(LLib, 'HMAC_CTX_free'));
-  HMAC_Init := THMAC_Init(GetProcAddress(LLib, 'HMAC_Init'));
-  HMAC_Init_ex := THMAC_Init_ex(GetProcAddress(LLib, 'HMAC_Init_ex'));
-  HMAC_Update := THMAC_Update(GetProcAddress(LLib, 'HMAC_Update'));
-  HMAC_Final := THMAC_Final(GetProcAddress(LLib, 'HMAC_Final'));
-  HMAC_CTX_copy := THMAC_CTX_copy(GetProcAddress(LLib, 'HMAC_CTX_copy'));
-  HMAC_CTX_set_flags := THMAC_CTX_set_flags(GetProcAddress(LLib, 'HMAC_CTX_set_flags'));
-  HMAC_CTX_get_md := THMAC_CTX_get_md(GetProcAddress(LLib, 'HMAC_CTX_get_md'));
-  HMAC_size := THMAC_size(GetProcAddress(LLib, 'HMAC_size'));
-  
-  // Load legacy functions (may not exist in newer versions)
-  HMAC_CTX_init := THMAC_CTX_init(GetProcAddress(LLib, 'HMAC_CTX_init'));
-  HMAC_CTX_cleanup := THMAC_CTX_cleanup(GetProcAddress(LLib, 'HMAC_CTX_cleanup'));
-  
-  GHMACLoaded := Assigned(HMAC);
-  Result := GHMACLoaded;
+
+  // Load HMAC functions using batch loading
+  TOpenSSLLoader.LoadFunctions(LLib, HMAC_BINDINGS);
+
+  TOpenSSLLoader.SetModuleLoaded(osmHMAC, Assigned(HMAC));
+  Result := TOpenSSLLoader.IsModuleLoaded(osmHMAC);
 end;
 
 procedure UnloadOpenSSLHMAC;
 begin
-  HMAC := nil;
-  HMAC_CTX_new := nil;
-  HMAC_CTX_reset := nil;
-  HMAC_CTX_free := nil;
-  HMAC_Init := nil;
-  HMAC_Init_ex := nil;
-  HMAC_Update := nil;
-  HMAC_Final := nil;
-  HMAC_CTX_copy := nil;
-  HMAC_CTX_set_flags := nil;
-  HMAC_CTX_get_md := nil;
-  HMAC_size := nil;
-  HMAC_CTX_init := nil;
-  HMAC_CTX_cleanup := nil;
-  
-  GHMACLoaded := False;
+  TOpenSSLLoader.ClearFunctions(HMAC_BINDINGS);
+  TOpenSSLLoader.SetModuleLoaded(osmHMAC, False);
 end;
 
 function IsOpenSSLHMACLoaded: Boolean;
 begin
-  Result := GHMACLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmHMAC);
 end;
 
 { Helper functions }
