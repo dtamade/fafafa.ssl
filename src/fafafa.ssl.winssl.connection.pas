@@ -418,7 +418,7 @@ begin
   FHandshakeState := sslHsNotStarted;
   FConnected := False;
   FBlocking := True;
-  FTimeout := 30000; // 30 秒
+  FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT; // Rust-quality: 使用常量替代魔数
   FRecvBufferUsed := 0;
   FDecryptedBufferUsed := 0;
   FExtraDataSize := 0;
@@ -442,7 +442,7 @@ begin
   FHandshakeState := sslHsNotStarted;
   FConnected := False;
   FBlocking := True;
-  FTimeout := 30000;
+  FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
   FRecvBufferUsed := 0;
   FDecryptedBufferUsed := 0;
   FExtraDataSize := 0;
@@ -601,7 +601,7 @@ begin
     0,
     sslWinSSL
   );
-  Result := False;  // 不会执行到这里
+  // Rust-quality: 删除了 raise 后不可达的 Result := False
 end;
 
 function TWinSSLConnection.PerformHandshake: TSSLHandshakeState;

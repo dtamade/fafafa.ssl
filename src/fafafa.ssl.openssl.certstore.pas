@@ -145,7 +145,8 @@ begin
         X509_STORE_free(FStore);
       except
         on E: Exception do
-          ; // 静默忽略
+          // Rust-quality: 记录错误而非静默忽略
+          TSecurityLog.Warning('OpenSSL', Format('X509_STORE_free failed in Clear: %s', [E.Message]));
       end;
     end;
   end;
@@ -268,9 +269,10 @@ begin
     
     
     // 扫描目录中的所有 .pem 文件
+    // Rust-quality: 使用 try-finally 确保 FindClose 在异常路径也被调用
     FindResult := FindFirst(SearchPath + '*.pem', faAnyFile, SR);
     if FindResult = 0 then
-    begin
+    try
       repeat
         if (SR.Attr and faDirectory) = 0 then
         begin
@@ -279,13 +281,14 @@ begin
             Inc(Count);
         end;
       until FindNext(SR) <> 0;
+    finally
       FindClose(SR);
     end;
-    
+
     // 扫描目录中的所有 .crt 文件
     FindResult := FindFirst(SearchPath + '*.crt', faAnyFile, SR);
     if FindResult = 0 then
-    begin
+    try
       repeat
         if (SR.Attr and faDirectory) = 0 then
         begin
@@ -294,6 +297,7 @@ begin
             Inc(Count);
         end;
       until FindNext(SR) <> 0;
+    finally
       FindClose(SR);
     end;
     
