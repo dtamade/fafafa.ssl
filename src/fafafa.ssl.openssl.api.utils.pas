@@ -5,7 +5,7 @@ unit fafafa.ssl.openssl.api.utils;
 interface
 
 uses
-  Classes, SysUtils, fafafa.ssl.openssl.types;
+  Classes, SysUtils;
 
 { Library handle management }
 function GetLibHandle: HMODULE;

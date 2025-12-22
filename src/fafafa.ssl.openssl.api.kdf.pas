@@ -13,8 +13,7 @@ uses
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.evp,
-  fafafa.ssl.openssl.api.hmac, 
-  fafafa.ssl.openssl.api.crypto;
+  fafafa.ssl.openssl.api.hmac;
 
 const
   // KDF 算法 NID

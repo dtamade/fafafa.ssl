@@ -5,7 +5,6 @@ unit fafafa.ssl.openssl.api.core;
 interface
 
 uses
-  fafafa.ssl.base,
   fafafa.ssl.exceptions,
   SysUtils, DynLibs, ctypes,
   fafafa.ssl.openssl.types,

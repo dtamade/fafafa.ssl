@@ -202,7 +202,7 @@ function X509AddSubjectAltName(Cert: PX509; const DNS: string): Boolean;
 implementation
 
 uses
-  fafafa.ssl.openssl.api.utils, fafafa.ssl.openssl.api.x509, fafafa.ssl.openssl.loader;
+  fafafa.ssl.openssl.api.utils, fafafa.ssl.openssl.loader;
 
 const
   { X509V3 函数绑定数组 - 用于批量加载 }

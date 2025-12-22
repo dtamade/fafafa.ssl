@@ -5,7 +5,6 @@ unit fafafa.ssl.openssl.api.stack;
 interface
 
 uses
-  fafafa.ssl.base,
   fafafa.ssl.exceptions,
   SysUtils,
   fafafa.ssl.openssl.types,

@@ -130,7 +130,6 @@ implementation
 uses
   fafafa.ssl.openssl.context,
   fafafa.ssl.openssl.certstore,
-  fafafa.ssl.openssl.session,     // Session API fully implemented
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.factory;
 

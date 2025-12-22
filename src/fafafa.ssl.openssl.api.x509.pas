@@ -6,8 +6,7 @@ interface
 
 uses
   SysUtils, DynLibs, ctypes,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.types;
 
 type
   { X509 Certificate Functions }

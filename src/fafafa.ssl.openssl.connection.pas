@@ -14,7 +14,6 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
-  fafafa.ssl.exceptions,
   fafafa.ssl.errors,
   fafafa.ssl.openssl.errors,  // Phase 3.1 - OpenSSL-specific error handling
   fafafa.ssl.openssl.types,

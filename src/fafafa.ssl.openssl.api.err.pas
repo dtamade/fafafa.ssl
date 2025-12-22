@@ -5,7 +5,7 @@ unit fafafa.ssl.openssl.api.err;
 interface
 
 uses
-  SysUtils, DynLibs, ctypes,
+  SysUtils, DynLibs,
   fafafa.ssl.base,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.core,

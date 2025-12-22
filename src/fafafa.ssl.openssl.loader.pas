@@ -282,10 +282,6 @@ type
 
 implementation
 
-uses
-  fafafa.ssl.base,
-  fafafa.ssl.exceptions;
-
 { TOpenSSLLoader }
 
 class function TOpenSSLLoader.TryLoadLibrary(const ANames: array of string): {$IFDEF WINDOWS}HMODULE{$ELSE}TLibHandle{$ENDIF};
@@ -520,8 +516,6 @@ begin
   case ALibType of
     osslLibCrypto: Result := FLibCrypto <> 0;
     osslLibSSL: Result := FLibSSL <> 0;
-  else
-    Result := False;
   end;
 end;
 

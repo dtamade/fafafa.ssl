@@ -8,7 +8,6 @@ uses
   SysUtils, Classes, dynlibs,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.loader,
-  fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.asn1,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.evp,

@@ -5,9 +5,8 @@ unit fafafa.ssl.openssl.api.crypto;
 interface
 
 uses
-  SysUtils, DynLibs, ctypes,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.consts;
+  SysUtils, DynLibs,
+  fafafa.ssl.openssl.types;
 
 type
   { Memory Management }

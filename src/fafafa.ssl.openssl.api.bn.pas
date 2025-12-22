@@ -5,7 +5,7 @@ unit fafafa.ssl.openssl.api.bn;
 interface
 
 uses
-  SysUtils, DynLibs, ctypes,
+  SysUtils, DynLibs,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.loader;

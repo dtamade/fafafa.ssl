@@ -5,7 +5,7 @@ unit fafafa.ssl.openssl.api.obj;
 interface
 
 uses
-  SysUtils, Classes,
+  SysUtils,
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.asn1;
 
@@ -218,14 +218,11 @@ begin
 end;
 
 function OIDToNID(const OID: string): Integer;
-var
-  OIDBytes: TBytes;
 begin
   Result := NID_undef;
   if not Assigned(OBJ_txt2nid) then Exit;
-  
-  OIDBytes := TEncoding.UTF8.GetBytes(OID);
-  Result := OBJ_txt2nid(PAnsiChar(OIDBytes));
+
+  Result := OBJ_txt2nid(PAnsiChar(AnsiString(OID)));
 end;
 
 function NIDToLongName(NID: Integer): string;
@@ -253,25 +250,19 @@ begin
 end;
 
 function LongNameToNID(const Name: string): Integer;
-var
-  NameBytes: TBytes;
 begin
   Result := NID_undef;
   if not Assigned(OBJ_ln2nid) then Exit;
-  
-  NameBytes := TEncoding.UTF8.GetBytes(Name);
-  Result := OBJ_ln2nid(PAnsiChar(NameBytes));
+
+  Result := OBJ_ln2nid(PAnsiChar(AnsiString(Name)));
 end;
 
 function ShortNameToNID(const Name: string): Integer;
-var
-  NameBytes: TBytes;
 begin
   Result := NID_undef;
   if not Assigned(OBJ_sn2nid) then Exit;
-  
-  NameBytes := TEncoding.UTF8.GetBytes(Name);
-  Result := OBJ_sn2nid(PAnsiChar(NameBytes));
+
+  Result := OBJ_sn2nid(PAnsiChar(AnsiString(Name)));
 end;
 
 function ObjectToString(Obj: PASN1_OBJECT): string;
@@ -288,31 +279,22 @@ begin
 end;
 
 function StringToObject(const OID: string): PASN1_OBJECT;
-var
-  OIDBytes: TBytes;
 begin
   Result := nil;
   if not Assigned(OBJ_txt2obj) then Exit;
-  
-  OIDBytes := TEncoding.UTF8.GetBytes(OID);
-  Result := OBJ_txt2obj(PAnsiChar(OIDBytes), 1);
+
+  Result := OBJ_txt2obj(PAnsiChar(AnsiString(OID)), 1);
 end;
 
 function CreateOID(const OID, ShortName, LongName: string): Integer;
-var
-  OIDBytes, SNBytes, LNBytes: TBytes;
 begin
   Result := NID_undef;
   if not Assigned(OBJ_create) then Exit;
-  
-  OIDBytes := TEncoding.UTF8.GetBytes(OID);
-  SNBytes := TEncoding.UTF8.GetBytes(ShortName);
-  LNBytes := TEncoding.UTF8.GetBytes(LongName);
-  
+
   Result := OBJ_create(
-    PAnsiChar(OIDBytes),
-    PAnsiChar(SNBytes),
-    PAnsiChar(LNBytes)
+    PAnsiChar(AnsiString(OID)),
+    PAnsiChar(AnsiString(ShortName)),
+    PAnsiChar(AnsiString(LongName))
   );
 end;
 

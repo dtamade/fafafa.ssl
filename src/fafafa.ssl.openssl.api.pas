@@ -6,7 +6,6 @@ interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.base,
   fafafa.ssl.exceptions,
   fafafa.ssl.openssl.loader;
 

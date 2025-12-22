@@ -7,7 +7,6 @@ interface
 uses
   SysUtils, Classes, dynlibs,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.loader;
 
 type

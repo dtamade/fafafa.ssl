@@ -16,7 +16,6 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.loader;
 
 type
