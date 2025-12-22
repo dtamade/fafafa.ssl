@@ -21,6 +21,9 @@ interface
 uses
   SysUtils, Classes, DynLibs,
   fafafa.ssl.base,
+  fafafa.ssl.errors,            // Rust-quality: Raise helpers
+  fafafa.ssl.exceptions,        // Rust-quality: Typed exceptions
+  fafafa.ssl.openssl.errors,    // OpenSSL-specific raise helpers
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl,
@@ -741,70 +744,54 @@ end;
 
 function TOpenSSLLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
 begin
+  // Rust-quality: Explicit error handling instead of returning nil
   if not FInitialized then
-  begin
-    SetError(-1, 'Library not initialized');
-    InternalLog(sslLogError, 'Cannot create context: library not initialized');
-    Result := nil;
-    Exit;
-  end;
-  
-  try
-    Result := TOpenSSLContext.Create(Self, AType);
-    if (Result <> nil) and (FDefaultConfig.Options <> []) then
-      Result.SetOptions(FDefaultConfig.Options);
-    Inc(FStatistics.ConnectionsTotal);
-    if AType = sslCtxClient then
-      InternalLog(sslLogInfo, 'Created client context')
-    else
-      InternalLog(sslLogInfo, 'Created server context');
-  except
-    on E: Exception do
-    begin
-      SetError(-1, E.Message);
-      InternalLog(sslLogError, Format('Failed to create context: %s', [E.Message]));
-      Result := nil;
-    end;
-  end;
+    RaiseSSLInitError(
+      'Cannot create context: OpenSSL library not initialized',
+      'TOpenSSLLibrary.CreateContext'
+    );
+
+  // Let exceptions propagate - caller must handle errors explicitly
+  Result := TOpenSSLContext.Create(Self, AType);
+  if (Result <> nil) and (FDefaultConfig.Options <> []) then
+    Result.SetOptions(FDefaultConfig.Options);
+  Inc(FStatistics.ConnectionsTotal);
+  if AType = sslCtxClient then
+    InternalLog(sslLogInfo, 'Created client context')
+  else
+    InternalLog(sslLogInfo, 'Created server context');
 end;
 
 function TOpenSSLLibrary.CreateCertificate: ISSLCertificate;
 var
   LCert: PX509;
 begin
+  // Rust-quality: Explicit error handling
   if not FInitialized then
-  begin
-    InternalLog(sslLogError, 'CreateCertificate: Library not initialized');
-    Result := nil;
-    Exit;
-  end;
-  
+    RaiseSSLInitError(
+      'Cannot create certificate: OpenSSL library not initialized',
+      'TOpenSSLLibrary.CreateCertificate'
+    );
+
   // Create a new empty X509 certificate
   LCert := X509_new();
-  if LCert <> nil then
-    Result := TOpenSSLCertificate.Create(LCert, True)
-  else
-    Result := TOpenSSLCertificate.Create(nil, False);
+  if LCert = nil then
+    RaiseMemoryError('create X509 certificate');
+
+  Result := TOpenSSLCertificate.Create(LCert, True);
 end;
 
 function TOpenSSLLibrary.CreateCertificateStore: ISSLCertificateStore;
 begin
+  // Rust-quality: Explicit error handling
   if not FInitialized then
-  begin
-    InternalLog(sslLogError, 'CreateCertificateStore: Library not initialized');
-    Result := nil;
-    Exit;
-  end;
-  
-  try
-    Result := TOpenSSLCertificateStore.Create;
-  except
-    on E: Exception do
-    begin
-      InternalLog(sslLogError, 'CreateCertificateStore failed: ' + E.Message);
-      Result := nil;
-    end;
-  end;
+    RaiseSSLInitError(
+      'Cannot create certificate store: OpenSSL library not initialized',
+      'TOpenSSLLibrary.CreateCertificateStore'
+    );
+
+  // Let exceptions propagate - caller must handle errors explicitly
+  Result := TOpenSSLCertificateStore.Create;
 end;
 
 // ============================================================================
