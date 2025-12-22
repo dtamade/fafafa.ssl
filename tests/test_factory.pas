@@ -25,14 +25,12 @@ type
 
     function GetLibraryType: TSSLLibraryType; virtual;
     function GetVersionString: string; virtual;
-    function GetVersion: string;
     function GetVersionNumber: Cardinal;
     function GetCompileFlags: string;
 
     function IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
     function IsCipherSupported(const aCipherName: string): Boolean;
-    function IsFeatureSupported(const aFeatureName: string): Boolean;
-    function IsFeatureSupported(aFeature: TSSLFeature): Boolean; overload;
+    function IsFeatureSupported(aFeature: TSSLFeature): Boolean;
 
     procedure SetDefaultConfig(const aConfig: TSSLConfig);
     function GetDefaultConfig: TSSLConfig;
@@ -160,11 +158,6 @@ begin
   Result := 'TestMbedTLS';
 end;
 
-function TFailingSSLLibrary.GetVersion: string;
-begin
-  Result := GetVersionString;
-end;
-
 function TFailingSSLLibrary.GetVersionNumber: Cardinal;
 begin
   Result := 0;
@@ -181,11 +174,6 @@ begin
 end;
 
 function TFailingSSLLibrary.IsCipherSupported(const aCipherName: string): Boolean;
-begin
-  Result := False;
-end;
-
-function TFailingSSLLibrary.IsFeatureSupported(const aFeatureName: string): Boolean;
 begin
   Result := False;
 end;
@@ -552,9 +540,9 @@ begin
     Lib := CreateSSLLibrary;
     if Assigned(Lib) then
     begin
-      WriteLn('    SNI: ', Lib.IsFeatureSupported('SNI'));
-      WriteLn('    ALPN: ', Lib.IsFeatureSupported('ALPN'));
-      WriteLn('    Session Cache: ', Lib.IsFeatureSupported('session_cache'));
+      WriteLn('    SNI: ', Lib.IsFeatureSupported(sslFeatSNI));
+      WriteLn('    ALPN: ', Lib.IsFeatureSupported(sslFeatALPN));
+      WriteLn('    Session Cache: ', Lib.IsFeatureSupported(sslFeatSessionCache));
       Pass('Feature support check');
     end
     else

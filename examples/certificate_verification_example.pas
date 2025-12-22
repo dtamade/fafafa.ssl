@@ -33,7 +33,7 @@ begin
   end;
   
   WriteLn('✓ SSL Library: ', LibraryTypeToString(SSLLib.GetLibraryType));
-  WriteLn('✓ Version: ', SSLLib.GetVersion);
+  WriteLn('✓ Version: ', SSLLib.GetVersionString);
   WriteLn;
   
   // 2. 创建证书存储并加载系统证书

@@ -528,17 +528,13 @@ type
     // 版本信息
     function GetLibraryType: TSSLLibraryType;
     function GetVersionString: string;
-    {** @deprecated Will be removed in v2.0.0. Use GetVersionString instead. *}
-    function GetVersion: string; deprecated 'Use GetVersionString instead - will be removed in v2.0.0';
     function GetVersionNumber: Cardinal;
     function GetCompileFlags: string;
     
     // 功能支持查询
     function IsProtocolSupported(AProtocol: TSSLProtocolVersion): Boolean;
     function IsCipherSupported(const ACipherName: string): Boolean;
-    {** @deprecated Will be removed in v2.0.0. Use IsFeatureSupported(TSSLFeature) instead. *}
-    function IsFeatureSupported(const AFeatureName: string): Boolean; deprecated 'Use IsFeatureSupported(TSSLFeature) instead - will be removed in v2.0.0';
-    function IsFeatureSupported(AFeature: TSSLFeature): Boolean; overload;
+    function IsFeatureSupported(AFeature: TSSLFeature): Boolean;
     
     // 库配置
     procedure SetDefaultConfig(const AConfig: TSSLConfig);

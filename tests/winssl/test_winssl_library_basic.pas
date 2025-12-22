@@ -163,22 +163,22 @@ end;
 procedure TestFeatureSupport;
 begin
   TestSection('Feature Support Tests');
-  
+
   // Test 1: SNI support
-  if Library.IsFeatureSupported('sni') then
+  if Library.IsFeatureSupported(sslFeatSNI) then
     TestPass('SNI supported')
   else
     TestFail('SNI supported', 'Should be supported');
-    
+
   // Test 2: Session cache support
-  if Library.IsFeatureSupported('session_cache') then
+  if Library.IsFeatureSupported(sslFeatSessionCache) then
     TestPass('Session cache supported')
   else
     TestFail('Session cache supported', 'Should be supported');
 end;
 
 // ============================================================================
-// 测试上下文创�?
+// 测试上下文创�?
 // ============================================================================
 
 procedure TestContextCreation;
@@ -273,7 +273,7 @@ begin
   // Test 1: Get statistics
   try
     Stats := Library.GetStatistics;
-    // 至少应该有一个上下文被创�?
+    // 至少应该有一个上下文被创�?
     if Stats.ConnectionsTotal > 0 then
       TestPass('GetStatistics (ConnectionsTotal > 0)')
     else
@@ -298,7 +298,7 @@ begin
 end;
 
 // ============================================================================
-// 测试库清�?
+// 测试库清�?
 // ============================================================================
 
 procedure TestLibraryFinalization;
@@ -319,7 +319,7 @@ begin
 end;
 
 // ============================================================================
-// 主程�?
+// 主程�?
 // ============================================================================
 
 begin
@@ -347,13 +347,13 @@ begin
     if TestsFailed = 0 then
     begin
       WriteLn;
-      WriteLn('�?All tests passed!');
+      WriteLn('�?All tests passed!');
       ExitCode := 0;
     end
     else
     begin
       WriteLn;
-      WriteLn('�?Some tests failed!');
+      WriteLn('�?Some tests failed!');
       ExitCode := 1;
     end;
     

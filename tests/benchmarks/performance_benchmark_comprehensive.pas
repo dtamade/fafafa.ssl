@@ -272,7 +272,7 @@ begin
       Halt(1);
     end;
     
-    WriteLn('OpenSSL Version: ', GLib.GetVersion);
+    WriteLn('OpenSSL Version: ', GLib.GetVersionString);
     WriteLn('Running benchmarks...');
     WriteLn;
     

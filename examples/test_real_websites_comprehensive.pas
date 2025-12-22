@@ -268,7 +268,7 @@ begin
     if not GLib.Initialize then
       raise Exception.Create('Failed to initialize SSL library');
 
-    WriteLn('Library: OpenSSL ', GLib.GetVersion);
+    WriteLn('Library: OpenSSL ', GLib.GetVersionString);
     WriteLn('----------------------------------------------------------------');
 
     for I := Low(TEST_SITES) to High(TEST_SITES) do

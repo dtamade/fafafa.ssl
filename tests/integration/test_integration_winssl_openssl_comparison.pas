@@ -76,7 +76,7 @@ begin
       OpenSSLType := OpenSSLLib.GetLibraryType;
       WriteLn('✅ OpenSSL: 初始化成功');
       WriteLn('   类型: ', OpenSSLType);
-      WriteLn('   版本: ', OpenSSLLib.GetVersion);
+      WriteLn('   版本: ', OpenSSLLib.GetVersionString);
       WriteLn('   时间: ', Duration:0:2, ' ms');
       AddResult('库初始化', OpenSSLType, 'N/A (Linux)', 'PASS', Duration);
     end
@@ -106,7 +106,7 @@ begin
       WinSSLType := WinSSLLib.GetLibraryType;
       WriteLn('✅ WinSSL: 初始化成功');
       WriteLn('   类型: ', WinSSLType);
-      WriteLn('   版本: ', WinSSLLib.GetVersion);
+      WriteLn('   版本: ', WinSSLLib.GetVersionString);
       WriteLn('   时间: ', Duration:0:2, ' ms');
       AddResult('库初始化', 'N/A (Windows only)', WinSSLType, 'PASS', Duration);
     end

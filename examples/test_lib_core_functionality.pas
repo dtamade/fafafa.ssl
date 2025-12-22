@@ -61,7 +61,7 @@ begin
     
     AddResult('Library Initialization', True);
     WriteLn('✓');
-    WriteLn('    Version: ', LLib.GetVersion);
+    WriteLn('    Version: ', LLib.GetVersionString);
     
     LLib.Finalize;
   except

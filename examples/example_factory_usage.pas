@@ -62,8 +62,8 @@ begin
         WriteLn('    编译标志: ', Lib.GetCompileFlags);
         WriteLn('    支持 TLS 1.2: ', Lib.IsProtocolSupported(sslProtocolTLS12));
         WriteLn('    支持 TLS 1.3: ', Lib.IsProtocolSupported(sslProtocolTLS13));
-        WriteLn('    支持 SNI: ', Lib.IsFeatureSupported('SNI'));
-        WriteLn('    支持 ALPN: ', Lib.IsFeatureSupported('ALPN'));
+        WriteLn('    支持 SNI: ', Lib.IsFeatureSupported(sslFeatSNI));
+        WriteLn('    支持 ALPN: ', Lib.IsFeatureSupported(sslFeatALPN));
       except
         on E: Exception do
           WriteLn('    错误: ', E.Message);

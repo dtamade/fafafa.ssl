@@ -104,7 +104,7 @@ begin
     end;
 
     WriteLn('✅ 使用 SSL 库: ', Lib.GetLibraryType);
-    WriteLn('   版本: ', Lib.GetVersion);
+    WriteLn('   版本: ', Lib.GetVersionString);
 
     // 创建服务器上下文
     FContext := Lib.CreateContext(sslContextServer);
@@ -212,7 +212,7 @@ begin
     end;
 
     WriteLn('✅ 使用 SSL 库: ', Lib.GetLibraryType);
-    WriteLn('   版本: ', Lib.GetVersion);
+    WriteLn('   版本: ', Lib.GetVersionString);
 
     // 创建客户端上下文
     FContext := Lib.CreateContext(sslContextClient);

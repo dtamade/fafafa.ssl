@@ -46,7 +46,7 @@ begin
     end;
     
     WriteLn('Library Name: ', Lib.GetName);
-    WriteLn('Library Version: ', Lib.GetVersion);
+    WriteLn('Library Version: ', Lib.GetVersionString);
     WriteLn;
     
     // 创建 SSL 上下文

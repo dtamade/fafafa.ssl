@@ -234,12 +234,12 @@ begin
   var LLib := TSSLFactory.GetLibraryInstance;
   if Assigned(LLib) then
   begin
-    WriteLn('  SNI (Server Name Indication): ', 
-      BoolToStr(LLib.IsFeatureSupported('SNI'), '支持', '不支持'));
-    WriteLn('  ALPN (Application Layer Protocol Negotiation): ', 
-      BoolToStr(LLib.IsFeatureSupported('ALPN'), '支持', '不支持'));
-    WriteLn('  Session Resumption: ', 
-      BoolToStr(LLib.IsFeatureSupported('SessionResumption'), '支持', '不支持'));
+    WriteLn('  SNI (Server Name Indication): ',
+      BoolToStr(LLib.IsFeatureSupported(sslFeatSNI), '支持', '不支持'));
+    WriteLn('  ALPN (Application Layer Protocol Negotiation): ',
+      BoolToStr(LLib.IsFeatureSupported(sslFeatALPN), '支持', '不支持'));
+    WriteLn('  Session Resumption: ',
+      BoolToStr(LLib.IsFeatureSupported(sslFeatSessionResumption), '支持', '不支持'));
     
     // 协议版本支持
     WriteLn;

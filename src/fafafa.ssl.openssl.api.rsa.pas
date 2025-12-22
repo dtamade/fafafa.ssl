@@ -33,7 +33,6 @@ const
   RSA_FLAG_EXT_PKEY          = $0020;
   RSA_FLAG_NO_BLINDING       = $0080;
   RSA_FLAG_NO_CONSTTIME      = $0100;
-  RSA_FLAG_NO_EXP_CONSTTIME  = RSA_FLAG_NO_CONSTTIME; // deprecated
   
   { RSA method flags }
   RSA_METHOD_FLAG_NO_CHECK   = $0001;

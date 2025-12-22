@@ -61,17 +61,13 @@ type
     { ISSLLibrary - 版本信息 }
     function GetLibraryType: TSSLLibraryType;
     function GetVersionString: string;
-    {** @deprecated Will be removed in v2.0.0. Use GetVersionString instead. *}
-    function GetVersion: string; deprecated 'Use GetVersionString instead - will be removed in v2.0.0';
     function GetVersionNumber: Cardinal;
     function GetCompileFlags: string;
     
     { ISSLLibrary - 功能支持查询 }
     function IsProtocolSupported(AProtocol: TSSLProtocolVersion): Boolean;
     function IsCipherSupported(const ACipherName: string): Boolean;
-    {** @deprecated Will be removed in v2.0.0. Use IsFeatureSupported(TSSLFeature) instead. *}
-    function IsFeatureSupported(const AFeatureName: string): Boolean; deprecated 'Use IsFeatureSupported(TSSLFeature) instead - will be removed in v2.0.0';
-    function IsFeatureSupported(AFeature: TSSLFeature): Boolean; overload;
+    function IsFeatureSupported(AFeature: TSSLFeature): Boolean;
     
     { ISSLLibrary - 库配置 }
     procedure SetDefaultConfig(const AConfig: TSSLConfig);
@@ -338,11 +334,6 @@ begin
     Result := 'Windows Schannel (not initialized)';
 end;
 
-function TWinSSLLibrary.GetVersion: string;
-begin
-  Result := GetVersionString;
-end;
-
 function TWinSSLLibrary.GetVersionNumber: Cardinal;
 begin
   // 返回 Windows 版本号
@@ -413,34 +404,6 @@ begin
   // 这里简单返回 True，实际支持在握手时由系统确定
   Result := True;
   InternalLog(sslLogDebug, Format('Cipher support check: %s (deferred to system)', [ACipherName]));
-end;
-
-function TWinSSLLibrary.IsFeatureSupported(const AFeatureName: string): Boolean;
-var
-  Feature: string;
-begin
-  // 废弃方法：将字符串映射到枚举类型，调用类型安全版本
-  Feature := LowerCase(AFeatureName);
-
-  if Feature = 'sni' then
-    Result := IsFeatureSupported(sslFeatSNI)
-  else if Feature = 'alpn' then
-    Result := IsFeatureSupported(sslFeatALPN)
-  else if Feature = 'session_cache' then
-    Result := IsFeatureSupported(sslFeatSessionCache)
-  else if Feature = 'session_tickets' then
-    Result := IsFeatureSupported(sslFeatSessionTickets)
-  else if Feature = 'renegotiation' then
-    Result := IsFeatureSupported(sslFeatRenegotiation)
-  else if Feature = 'ocsp_stapling' then
-    Result := IsFeatureSupported(sslFeatOCSPStapling)
-  else if Feature = 'certificate_transparency' then
-    Result := IsFeatureSupported(sslFeatCertificateTransparency)
-  else
-    Result := False;
-
-  InternalLog(sslLogDebug, Format('Feature support check (deprecated): %s = %s',
-    [AFeatureName, BoolToStr(Result, True)]));
 end;
 
 { 类型安全版本（Phase 1.3 - Rust质量标准） }

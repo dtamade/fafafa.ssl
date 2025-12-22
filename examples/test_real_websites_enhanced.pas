@@ -297,7 +297,7 @@ begin
     if not GLib.Initialize then
       raise Exception.Create('Failed to initialize SSL library');
 
-    WriteLn('✓ OpenSSL ', GLib.GetVersion);
+    WriteLn('✓ OpenSSL ', GLib.GetVersionString);
     WriteLn;
     WriteLn('Starting tests...');
     WriteLn('----------------------------------------------------------------');
