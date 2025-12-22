@@ -121,7 +121,7 @@ implementation
 
 uses
   fafafa.ssl.cert.builder.impl,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.asn1,
   fafafa.ssl.openssl.api.pkcs12,

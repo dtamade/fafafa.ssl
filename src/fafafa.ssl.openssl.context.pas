@@ -23,7 +23,7 @@ uses
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
   fafafa.ssl.openssl.errors,  // Phase 3.1 - OpenSSL-specific error handling
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl,
   fafafa.ssl.openssl.api.x509,

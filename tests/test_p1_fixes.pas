@@ -7,7 +7,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.openssl.backed,
   fafafa.ssl.openssl.certificate,
-  fafafa.ssl.openssl.types;
+  fafafa.ssl.openssl.base;
 
 var
   Lib: TOpenSSLLibrary;

@@ -4,7 +4,7 @@ program test_ssl_handshake;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.consts;

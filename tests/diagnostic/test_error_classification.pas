@@ -6,7 +6,7 @@ program test_error_classification;
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.err;
 
 var

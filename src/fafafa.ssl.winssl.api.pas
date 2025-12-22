@@ -18,7 +18,7 @@ unit fafafa.ssl.winssl.api;
 interface
 
 uses
-  Windows, SysUtils, fafafa.ssl.winssl.types;
+  Windows, SysUtils, fafafa.ssl.winssl.base;
 
 // ============================================================================
 // Secur32.dll - Security Support Provider Interface (SSPI)

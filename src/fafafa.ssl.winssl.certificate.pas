@@ -20,7 +20,7 @@ interface
 uses
   Windows, SysUtils, Classes,
   fafafa.ssl.base,
-  fafafa.ssl.winssl.types,
+  fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.utils,
   fafafa.ssl.utils;

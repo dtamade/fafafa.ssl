@@ -4,7 +4,7 @@ program diagnose_all_modules;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.crypto,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.ssl,

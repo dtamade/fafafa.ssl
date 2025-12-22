@@ -14,7 +14,7 @@ uses
   fafafa.ssl.openssl.api.bn,
   fafafa.ssl.openssl.api.pem,
   fafafa.ssl.openssl.api.err,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.consts;
 
 var

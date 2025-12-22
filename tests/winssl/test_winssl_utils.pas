@@ -4,7 +4,7 @@ program test_winssl_utils;
 
 uses
   SysUtils,
-  fafafa.ssl.winssl.types,
+  fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.utils;
 
 var

@@ -3,7 +3,7 @@ program test_tls_method;
 uses
   SysUtils,
   fafafa.ssl.openssl.api.core,
-  fafafa.ssl.openssl.types;
+  fafafa.ssl.openssl.base;
 var
   Method: PSSL_METHOD;
 begin

@@ -4,7 +4,7 @@ program test_phase8_fixes_comprehensive;
 
 uses
   SysUtils, DateUtils, DynLibs,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.crypto.utils;
 

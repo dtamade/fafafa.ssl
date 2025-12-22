@@ -6,7 +6,7 @@ interface
 
 uses
   SysUtils, DynLibs,
-  fafafa.ssl.openssl.types;
+  fafafa.ssl.openssl.base;
 
 type
   { Memory Management }

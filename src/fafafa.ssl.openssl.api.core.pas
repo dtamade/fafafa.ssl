@@ -7,7 +7,7 @@ interface
 uses
   fafafa.ssl.exceptions,
   SysUtils, DynLibs, ctypes,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.consts;
 
 type

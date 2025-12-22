@@ -7,7 +7,7 @@ uses
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.srp,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.consts;
 
 var

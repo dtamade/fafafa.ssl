@@ -6,7 +6,7 @@ interface
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.asn1;
 
 type

@@ -22,7 +22,7 @@ program test_openssl_1_1_compatibility;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.consts,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,

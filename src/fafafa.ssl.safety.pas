@@ -1,4 +1,4 @@
-unit fafafa.ssl.types.safe;
+unit fafafa.ssl.safety;
 
 {$mode objfpc}{$H+}
 {$modeswitch advancedrecords}

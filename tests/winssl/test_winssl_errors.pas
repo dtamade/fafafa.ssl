@@ -3,7 +3,7 @@ program test_winssl_errors;
 {$mode objfpc}{$H+}
 
 uses
-  SysUtils, fafafa.ssl.winssl.errors, fafafa.ssl.winssl.types;
+  SysUtils, fafafa.ssl.winssl.errors, fafafa.ssl.winssl.base;
 
 var
   GTestCount: Integer = 0;

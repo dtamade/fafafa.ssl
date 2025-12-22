@@ -13,7 +13,7 @@ interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.bn,
   fafafa.ssl.openssl.api.consts;

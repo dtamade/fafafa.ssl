@@ -4,7 +4,7 @@ program test_whirlpool;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp;

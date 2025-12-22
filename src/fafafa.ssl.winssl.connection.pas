@@ -26,7 +26,7 @@ uses
   SysUtils, Classes, SyncObjs,
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
-  fafafa.ssl.winssl.types,
+  fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.utils,
   fafafa.ssl.winssl.certificate;

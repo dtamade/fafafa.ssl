@@ -5,7 +5,7 @@ unit fafafa.ssl.openssl.api.aria;
 interface
 
 uses
-  Classes, SysUtils, fafafa.ssl.openssl.types;
+  Classes, SysUtils, fafafa.ssl.openssl.base;
 
 type
   // ARIA types

@@ -7,7 +7,7 @@ uses
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.consts,
-  fafafa.ssl.openssl.types;
+  fafafa.ssl.openssl.base;
 
 const
   GCM_TAG_SIZE = 16;  // 128-bit authentication tag

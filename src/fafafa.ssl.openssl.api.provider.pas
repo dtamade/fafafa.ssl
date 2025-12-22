@@ -6,7 +6,7 @@ interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.types;
+  fafafa.ssl.openssl.base;
 
 type
   // Provider 类型定义

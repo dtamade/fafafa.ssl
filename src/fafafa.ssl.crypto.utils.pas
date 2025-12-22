@@ -43,7 +43,7 @@ uses
   fafafa.ssl.errors,
   fafafa.ssl.openssl.errors,  // Phase 3.1 - OpenSSL-specific error handling
   fafafa.ssl.encoding,         // Phase 2.3.3 - Use unified encoding utilities
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.core,

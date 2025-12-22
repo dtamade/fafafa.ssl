@@ -7,7 +7,7 @@ interface
 uses
   fafafa.ssl.exceptions,
   SysUtils,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.loader;
 
 type

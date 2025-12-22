@@ -7,7 +7,7 @@ interface
 
 uses
   SysUtils, Classes, Windows,
-  fafafa.ssl.winssl.types;
+  fafafa.ssl.winssl.base;
 
 type
   { 错误级别 }

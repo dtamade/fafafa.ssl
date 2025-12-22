@@ -29,7 +29,7 @@ uses
   
   fafafa.ssl.base,
   fafafa.ssl.winssl.lib,
-  fafafa.ssl.winssl.types,
+  fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.certstore,
   fafafa.ssl.winssl.certificate;
 

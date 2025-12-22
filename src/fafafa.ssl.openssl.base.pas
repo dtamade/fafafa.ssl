@@ -1,4 +1,4 @@
-unit fafafa.ssl.openssl.types;
+unit fafafa.ssl.openssl.base;
 
 {$mode ObjFPC}{$H+}
 

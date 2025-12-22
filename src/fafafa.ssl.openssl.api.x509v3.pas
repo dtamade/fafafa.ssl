@@ -5,7 +5,7 @@ unit fafafa.ssl.openssl.api.x509v3;
 interface
 
 uses
-  Classes, SysUtils, DynLibs, fafafa.ssl.openssl.types, fafafa.ssl.openssl.api.consts;
+  Classes, SysUtils, DynLibs, fafafa.ssl.openssl.base, fafafa.ssl.openssl.api.consts;
 
 type
   // Forward declarations for missing types

@@ -10,7 +10,7 @@ uses
   fafafa.ssl.exceptions,
   fafafa.ssl.errors,           // Phase 2.1 - Standardized error handling
   fafafa.ssl.openssl.loader,   // Phase 3.3 P0+ - Unified module loading state
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.evp;
 
 const

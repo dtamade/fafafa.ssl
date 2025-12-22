@@ -5,7 +5,7 @@ program test_winssl_api_basic;
 
 uses
   SysUtils, Windows,
-  fafafa.ssl.winssl.types,
+  fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api;
 
 var

@@ -30,7 +30,7 @@ interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.x509,

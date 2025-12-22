@@ -24,7 +24,7 @@ uses
   fafafa.ssl.errors,            // Rust-quality: Raise helpers
   fafafa.ssl.exceptions,        // Rust-quality: Typed exceptions
   fafafa.ssl.openssl.errors,    // OpenSSL-specific raise helpers
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl,
   fafafa.ssl.openssl.api.err,

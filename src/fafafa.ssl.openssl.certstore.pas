@@ -14,7 +14,7 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.logging,  // P3-8: 添加日志支持
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.bio,

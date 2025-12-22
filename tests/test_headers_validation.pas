@@ -5,7 +5,7 @@ program test_headers_validation;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.err,

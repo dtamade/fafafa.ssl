@@ -3,7 +3,7 @@ program test_cert_load_debug;
 uses
   SysUtils,
   fafafa.ssl.openssl.backed,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.base;

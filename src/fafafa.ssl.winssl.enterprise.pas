@@ -7,7 +7,7 @@ interface
 
 uses
   SysUtils, Classes, Windows, Registry,
-  fafafa.ssl.winssl.types,
+  fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api;
 
 type

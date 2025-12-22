@@ -12,7 +12,7 @@ uses
   SysUtils,
   {$IFDEF WINDOWS}Windows{$ELSE}dynlibs{$ENDIF},
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.types;
+  fafafa.ssl.openssl.base;
 
 type
   TEVP_aes_128_gcm = function: Pointer; cdecl;

@@ -9,7 +9,7 @@ uses
   fafafa.ssl.openssl.api.ct,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.bio,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.consts;
 
 var

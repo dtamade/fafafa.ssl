@@ -4,7 +4,7 @@ program test_p2_pkcs7;
 
 uses
   SysUtils, ctypes,  // For clong type
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api,  // For MBSTRING_ASC constant
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.bio,

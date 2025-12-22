@@ -5,7 +5,7 @@ program test_winssl_certificate;
 
 uses
   SysUtils, Classes, Windows,
-  fafafa.ssl.winssl.types,
+  fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.certificate,
   fafafa.ssl.winssl.certstore,

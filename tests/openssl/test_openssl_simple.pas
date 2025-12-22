@@ -4,7 +4,7 @@ program test_openssl_simple;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core;
 
 var

@@ -11,7 +11,7 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.types;
+  fafafa.ssl.openssl.base;
 
 const
   // UI 字符串类型

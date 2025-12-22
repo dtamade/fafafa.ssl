@@ -7,7 +7,7 @@ uses
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.bio,
-  fafafa.ssl.openssl.types;
+  fafafa.ssl.openssl.base;
 
 type
   PPKCS12 = ^PKCS12;

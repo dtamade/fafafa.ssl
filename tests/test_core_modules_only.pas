@@ -6,7 +6,7 @@ uses
   SysUtils,
   // Core - 这些肯定能编译
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.consts,
   
   // 基础功能

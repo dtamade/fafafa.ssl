@@ -23,7 +23,7 @@ interface
 uses
   Windows, SysUtils, 
   fafafa.ssl.base,
-  fafafa.ssl.winssl.types;
+  fafafa.ssl.winssl.base;
 
 // ============================================================================
 // 错误码处理

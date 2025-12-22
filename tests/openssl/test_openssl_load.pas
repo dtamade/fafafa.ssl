@@ -6,7 +6,7 @@ program test_openssl_load;
 uses
   SysUtils, Classes, Windows,
   // OpenSSL 类型和常量
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.consts,
   // 核心模块
   fafafa.ssl.openssl.api.err,

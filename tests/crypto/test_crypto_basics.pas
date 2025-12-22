@@ -6,7 +6,7 @@ program test_crypto_basics;
 uses
   SysUtils, Classes, Windows,
   // OpenSSL 模块
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.err,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.rand,

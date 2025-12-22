@@ -6,7 +6,7 @@ unit fafafa.ssl.openssl.api.async;
 interface
 
 uses
-  Classes, SysUtils, fafafa.ssl.openssl.types;
+  Classes, SysUtils, fafafa.ssl.openssl.base;
 
 type
   // ASYNC types

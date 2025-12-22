@@ -10,7 +10,7 @@ uses
   
   fafafa.ssl.base,
   fafafa.ssl.winssl.lib,
-  fafafa.ssl.winssl.types,
+  fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.utils;
 

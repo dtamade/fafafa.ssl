@@ -47,7 +47,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
   fafafa.ssl.errors,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.bio;

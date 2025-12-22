@@ -5,7 +5,7 @@ unit fafafa.ssl.openssl.api.seed;
 interface
 
 uses
-  Classes, SysUtils, fafafa.ssl.openssl.types;
+  Classes, SysUtils, fafafa.ssl.openssl.base;
 
 type
   // SEED types

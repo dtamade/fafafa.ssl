@@ -21,7 +21,7 @@ uses
   Windows, SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.exceptions,  // 新增：类型化异常
-  fafafa.ssl.winssl.types,
+  fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.utils;
 

@@ -1,5 +1,5 @@
 {
-  fafafa.ssl.winssl.types - Windows Schannel API 类型定义
+  fafafa.ssl.winssl.base - Windows Schannel API 类型定义
   
   版本: 1.0
   作者: fafafa.ssl 开发团队
@@ -10,7 +10,7 @@
     这些定义来自 Windows SDK 的 Schannel.h, Sspi.h 和 Wincrypt.h。
 }
 
-unit fafafa.ssl.winssl.types;
+unit fafafa.ssl.winssl.base;
 
 {$mode ObjFPC}{$H+}
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}

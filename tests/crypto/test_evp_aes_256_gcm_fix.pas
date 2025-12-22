@@ -4,7 +4,7 @@ program test_evp_aes_256_gcm_fix;
 
 uses
   SysUtils, DynLibs,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.evp;
 
 var

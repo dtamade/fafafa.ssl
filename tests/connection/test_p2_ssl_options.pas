@@ -4,7 +4,7 @@ program test_p2_ssl_options;
 
 uses
   SysUtils, ctypes,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl,
   fafafa.ssl.openssl.api.consts,

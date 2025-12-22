@@ -19,7 +19,7 @@ uses
   SysUtils,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.evp,
-  fafafa.ssl.openssl.types;
+  fafafa.ssl.openssl.base;
 
 function BytesToHex(const Bytes: TBytes): string;
 var

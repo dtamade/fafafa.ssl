@@ -18,7 +18,7 @@ uses
   fafafa.ssl.exceptions,
   fafafa.ssl.cert.builder,
   fafafa.ssl.cert.utils,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.evp,

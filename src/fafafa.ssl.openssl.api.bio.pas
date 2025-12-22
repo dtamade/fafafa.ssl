@@ -6,7 +6,7 @@ interface
 
 uses
   SysUtils, DynLibs, ctypes,
-  fafafa.ssl.openssl.types;
+  fafafa.ssl.openssl.base;
 
 const
   BIO_FLAGS_BASE64_NO_NL = $100;

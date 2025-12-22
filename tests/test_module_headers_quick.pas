@@ -6,7 +6,7 @@ uses
   SysUtils,
   // Core modules
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.consts,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.utils,

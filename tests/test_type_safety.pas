@@ -13,7 +13,7 @@ program test_type_safety;
 
 uses
   SysUtils,
-  fafafa.ssl.types.safe;
+  fafafa.ssl.safety;
 
 type
   TIntSecureData = specialize TSecureData<Integer>;

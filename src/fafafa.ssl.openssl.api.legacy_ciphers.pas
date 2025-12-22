@@ -5,7 +5,7 @@ unit fafafa.ssl.openssl.api.legacy_ciphers;
 interface
 
 uses
-  Classes, SysUtils, fafafa.ssl.openssl.types;
+  Classes, SysUtils, fafafa.ssl.openssl.base;
 
 type
   // RC2 types

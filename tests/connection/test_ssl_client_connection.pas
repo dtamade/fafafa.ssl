@@ -5,7 +5,7 @@ program test_ssl_client_connection;
 uses
   SysUtils, Classes, Sockets,
   fafafa.ssl.openssl.backed,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.evp,

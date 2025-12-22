@@ -27,7 +27,7 @@ program test_x509_enterprise;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.x509v3,
