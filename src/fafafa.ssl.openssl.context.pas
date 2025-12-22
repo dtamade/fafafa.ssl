@@ -52,7 +52,8 @@ type
     FSessionTimeout: Integer;
     FSessionCacheSize: Integer;
     FOptions: TSSLOptions;
-    
+    FCertVerifyFlags: TSSLCertVerifyFlags;
+
     // 回调
     FVerifyCallback: TSSLVerifyCallback;
     FPasswordCallback: TSSLPasswordCallback;
@@ -112,7 +113,11 @@ type
     function GetServerName: string;
     procedure SetALPNProtocols(const AProtocols: string);
     function GetALPNProtocols: string;
-    
+
+    { ISSLContext - 证书验证标志 }
+    procedure SetCertVerifyFlags(AFlags: TSSLCertVerifyFlags);
+    function GetCertVerifyFlags: TSSLCertVerifyFlags;
+
     { ISSLContext - 回调设置 }
     procedure SetPasswordCallback(ACallback: TSSLPasswordCallback);
     procedure SetInfoCallback(ACallback: TSSLInfoCallback);
@@ -395,7 +400,8 @@ begin
   FOptions := [ssoEnableSessionCache, ssoEnableSessionTickets,
               ssoDisableCompression, ssoDisableRenegotiation,
               ssoNoSSLv2, ssoNoSSLv3, ssoNoTLSv1, ssoNoTLSv1_1];
-  
+  FCertVerifyFlags := [sslCertVerifyDefault];
+
   FVerifyCallback := nil;
   FPasswordCallback := nil;
   FInfoCallback := nil;
@@ -1358,6 +1364,48 @@ end;
 function TOpenSSLContext.GetALPNProtocols: string;
 begin
   Result := FALPNProtocols;
+end;
+
+// ============================================================================
+// ISSLContext - 证书验证标志
+// ============================================================================
+
+procedure TOpenSSLContext.SetCertVerifyFlags(AFlags: TSSLCertVerifyFlags);
+var
+  X509VerifyFlags: Cardinal;
+  Store: PX509_STORE;
+begin
+  FCertVerifyFlags := AFlags;
+  if FSSLContext = nil then Exit;
+
+  // 获取证书存储
+  if not Assigned(SSL_CTX_get_cert_store) then Exit;
+  Store := SSL_CTX_get_cert_store(FSSLContext);
+  if Store = nil then Exit;
+
+  // 设置 X509 验证标志
+  X509VerifyFlags := 0;
+
+  if sslCertVerifyCheckCRL in AFlags then
+    X509VerifyFlags := X509VerifyFlags or X509_V_FLAG_CRL_CHECK;
+
+  if sslCertVerifyCheckRevocation in AFlags then
+    X509VerifyFlags := X509VerifyFlags or X509_V_FLAG_CRL_CHECK or X509_V_FLAG_CRL_CHECK_ALL;
+
+  if sslCertVerifyStrictChain in AFlags then
+    X509VerifyFlags := X509VerifyFlags or X509_V_FLAG_X509_STRICT;
+
+  // 应用标志到证书存储
+  if Assigned(X509_STORE_set_flags) and (X509VerifyFlags <> 0) then
+    X509_STORE_set_flags(Store, X509VerifyFlags);
+
+  // Note: OCSP 检查需要在验证回调中实现，因为 OpenSSL 不自动执行 OCSP
+  // sslCertVerifyCheckOCSP 标志将在 VerifyCertificateCallback 中处理
+end;
+
+function TOpenSSLContext.GetCertVerifyFlags: TSSLCertVerifyFlags;
+begin
+  Result := FCertVerifyFlags;
 end;
 
 // ============================================================================

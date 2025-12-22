@@ -616,7 +616,11 @@ type
     function GetServerName: string;
     procedure SetALPNProtocols(const AProtocols: string);
     function GetALPNProtocols: string;
-    
+
+    // 证书验证标志（OCSP/CRL 等）
+    procedure SetCertVerifyFlags(AFlags: TSSLCertVerifyFlags);
+    function GetCertVerifyFlags: TSSLCertVerifyFlags;
+
     // 回调设置
     procedure SetPasswordCallback(ACallback: TSSLPasswordCallback);
     procedure SetInfoCallback(ACallback: TSSLInfoCallback);

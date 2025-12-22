@@ -41,7 +41,8 @@ type
     FALPNProtocols: string;
     FInitialized: Boolean;
     FOptions: TSSLOptions;
-    
+    FCertVerifyFlags: TSSLCertVerifyFlags;
+
     // 证书相关
     FCertContext: PCCERT_CONTEXT;
     FCertStore: HCERTSTORE;
@@ -107,7 +108,11 @@ type
     function GetServerName: string;
     procedure SetALPNProtocols(const AProtocols: string);
     function GetALPNProtocols: string;
-    
+
+    { ISSLContext - 证书验证标志 }
+    procedure SetCertVerifyFlags(AFlags: TSSLCertVerifyFlags);
+    function GetCertVerifyFlags: TSSLCertVerifyFlags;
+
     { ISSLContext - 回调设置 }
     procedure SetPasswordCallback(ACallback: TSSLPasswordCallback);
     procedure SetInfoCallback(ACallback: TSSLInfoCallback);
@@ -149,7 +154,8 @@ begin
   FALPNProtocols := '';
   FInitialized := False;
   FOptions := [ssoEnableSessionCache, ssoEnableSessionTickets];
-  
+  FCertVerifyFlags := [sslCertVerifyDefault];
+
   // 证书相关初始化
   FCertContext := nil;
   FCertStore := nil;
@@ -704,6 +710,24 @@ end;
 function TWinSSLContext.GetALPNProtocols: string;
 begin
   Result := FALPNProtocols;
+end;
+
+// ============================================================================
+// ISSLContext - 证书验证标志
+// ============================================================================
+
+procedure TWinSSLContext.SetCertVerifyFlags(AFlags: TSSLCertVerifyFlags);
+begin
+  FCertVerifyFlags := AFlags;
+  // WinSSL/Schannel 说明:
+  // Schannel 使用系统证书验证策略。CRL/OCSP 检查由 Windows 证书链引擎自动处理。
+  // 可通过 CERT_CHAIN_REVOCATION_CHECK_* 标志在验证时控制。
+  // 此处保存标志，实际应用将在 TWinSSLConnection.GetVerifyResult 中处理。
+end;
+
+function TWinSSLContext.GetCertVerifyFlags: TSSLCertVerifyFlags;
+begin
+  Result := FCertVerifyFlags;
 end;
 
 // ============================================================================

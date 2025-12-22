@@ -37,7 +37,8 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
-  fafafa.ssl.factory;
+  fafafa.ssl.factory,
+  fafafa.ssl.cert.advanced;
 
 // ============================================================================
 // 重新导出所有公共类型
@@ -97,6 +98,18 @@ type
   // 从 fafafa.ssl.factory 导出
   TSSLFactory = fafafa.ssl.factory.TSSLFactory;
   TSSLHelper = fafafa.ssl.factory.TSSLHelper;
+
+  // 从 fafafa.ssl.base 导出 - 证书验证标志
+  TSSLCertVerifyFlag = fafafa.ssl.base.TSSLCertVerifyFlag;
+  TSSLCertVerifyFlags = fafafa.ssl.base.TSSLCertVerifyFlags;
+
+  // 从 fafafa.ssl.cert.advanced 导出 - OCSP/CRL 接口
+  TOCSPStatus = fafafa.ssl.cert.advanced.TOCSPStatus;
+  TOCSPResponse = fafafa.ssl.cert.advanced.TOCSPResponse;
+  IOCSPClient = fafafa.ssl.cert.advanced.IOCSPClient;
+  ICRLManager = fafafa.ssl.cert.advanced.ICRLManager;
+  TPKCS12Options = fafafa.ssl.cert.advanced.TPKCS12Options;
+  TPKCS12Manager = fafafa.ssl.cert.advanced.TPKCS12Manager;
 
 const
   // 库类型常量
@@ -158,6 +171,22 @@ const
   SSL_DEFAULT_TLS13_CIPHERSUITES = fafafa.ssl.base.SSL_DEFAULT_TLS13_CIPHERSUITES;
   SSL_DEFAULT_CIPHER_LIST = fafafa.ssl.base.SSL_DEFAULT_CIPHER_LIST;
 
+  // 证书验证标志常量
+  sslCertVerifyDefault = fafafa.ssl.base.sslCertVerifyDefault;
+  sslCertVerifyCheckRevocation = fafafa.ssl.base.sslCertVerifyCheckRevocation;
+  sslCertVerifyCheckOCSP = fafafa.ssl.base.sslCertVerifyCheckOCSP;
+  sslCertVerifyCheckCRL = fafafa.ssl.base.sslCertVerifyCheckCRL;
+  sslCertVerifyIgnoreExpiry = fafafa.ssl.base.sslCertVerifyIgnoreExpiry;
+  sslCertVerifyIgnoreHostname = fafafa.ssl.base.sslCertVerifyIgnoreHostname;
+  sslCertVerifyAllowSelfSigned = fafafa.ssl.base.sslCertVerifyAllowSelfSigned;
+  sslCertVerifyStrictChain = fafafa.ssl.base.sslCertVerifyStrictChain;
+
+  // OCSP 状态常量
+  ocspGood = fafafa.ssl.cert.advanced.ocspGood;
+  ocspRevoked = fafafa.ssl.cert.advanced.ocspRevoked;
+  ocspUnknown = fafafa.ssl.cert.advanced.ocspUnknown;
+  ocspError = fafafa.ssl.cert.advanced.ocspError;
+
 // ============================================================================
 // 重新导出全局函数
 // ============================================================================
@@ -196,6 +225,11 @@ function GetSSLSupportInfo: string;
 function LoadCertificate(const AFileName: string): ISSLCertificate;
 function ValidateCertificate(const AFileName: string): Boolean;
 function GetCertificateDetails(const AFileName: string): TSSLCertificateInfo;
+
+{ OCSP/CRL 验证工具 }
+function CreateOCSPClient: IOCSPClient;
+function CreateCRLManager: ICRLManager;
+function DefaultPKCS12Options: TPKCS12Options;
 
 implementation
 
@@ -327,6 +361,21 @@ end;
 function GetCertificateDetails(const AFileName: string): TSSLCertificateInfo;
 begin
   Result := TSSLHelper.GetCertificateInfo(AFileName);
+end;
+
+function CreateOCSPClient: IOCSPClient;
+begin
+  Result := fafafa.ssl.cert.advanced.CreateOCSPClient;
+end;
+
+function CreateCRLManager: ICRLManager;
+begin
+  Result := fafafa.ssl.cert.advanced.CreateCRLManager;
+end;
+
+function DefaultPKCS12Options: TPKCS12Options;
+begin
+  Result := fafafa.ssl.cert.advanced.DefaultPKCS12Options;
 end;
 
 end.
