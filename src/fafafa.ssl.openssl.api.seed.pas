@@ -116,6 +116,7 @@ function SEEDEncryptBlock(const Key, Input: TBytes): TBytes;
 var
   ks: SEED_KEY_SCHEDULE;
 begin
+  Result := nil;
   SetLength(Result, SEED_BLOCK_SIZE);
   if (Length(Key) <> SEED_KEY_LENGTH) or (Length(Input) <> SEED_BLOCK_SIZE) then
     Exit;
@@ -131,6 +132,7 @@ function SEEDDecryptBlock(const Key, Input: TBytes): TBytes;
 var
   ks: SEED_KEY_SCHEDULE;
 begin
+  Result := nil;
   SetLength(Result, SEED_BLOCK_SIZE);
   if (Length(Key) <> SEED_KEY_LENGTH) or (Length(Input) <> SEED_BLOCK_SIZE) then
     Exit;
@@ -147,6 +149,7 @@ var
   ks: SEED_KEY_SCHEDULE;
   IVCopy: array[0..SEED_BLOCK_SIZE-1] of Byte;
 begin
+  Result := nil;
   if (Length(Key) <> SEED_KEY_LENGTH) or (Length(IV) <> SEED_BLOCK_SIZE) then
   begin
     SetLength(Result, 0);
@@ -168,6 +171,7 @@ var
   ks: SEED_KEY_SCHEDULE;
   IVCopy: array[0..SEED_BLOCK_SIZE-1] of Byte;
 begin
+  Result := nil;
   if (Length(Key) <> SEED_KEY_LENGTH) or (Length(IV) <> SEED_BLOCK_SIZE) then
   begin
     SetLength(Result, 0);

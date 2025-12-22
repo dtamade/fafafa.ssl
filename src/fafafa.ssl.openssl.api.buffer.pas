@@ -195,7 +195,7 @@ end;
 
 function BufferToBytes(Buffer: PBUF_MEM): TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   if not Assigned(Buffer) or (Buffer^.length = 0) then Exit;
   
   SetLength(Result, Buffer^.length);

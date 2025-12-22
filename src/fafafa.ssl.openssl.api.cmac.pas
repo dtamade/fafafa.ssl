@@ -287,6 +287,7 @@ var
   ctx: PCMAC_CTX;
   mac_len: size_t;
 begin
+  Result := nil;
   if not Assigned(CMAC_CTX_new) then
     raise ESSLCryptoError.Create('CMAC not available');
     

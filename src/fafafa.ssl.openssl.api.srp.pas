@@ -136,7 +136,8 @@ function SRPGenerateVerifier(const Username, Password: string; out Salt, Verifie
 implementation
 
 uses
-  fafafa.ssl.openssl.api.utils;
+  fafafa.ssl.openssl.api.utils,
+  fafafa.ssl.openssl.api.crypto;
 
 const
   { SRP function bindings for batch loading }
@@ -328,18 +329,24 @@ begin
       if SaltStr <> nil then
       begin
         Salt := string(SaltStr);
-        // Note: BN_bn2hex returns a string allocated with OPENSSL_malloc
-        // which should be freed with OPENSSL_free, but we use FreeMem as fallback
-        FreeMem(SaltStr);
+        // BN_bn2hex returns a string allocated with OPENSSL_malloc
+        // Must use OPENSSL_free to release it properly
+        // Note: Never use FreeMem - it would cause heap corruption
+        if Assigned(OPENSSL_free) then
+          OPENSSL_free(SaltStr);
+        // If OPENSSL_free unavailable, accept small leak over corruption
       end;
-      
+
       VerifierStr := BN_bn2hex(VerifierBN);
       if VerifierStr <> nil then
       begin
         Verifier := string(VerifierStr);
-        // Note: BN_bn2hex returns a string allocated with OPENSSL_malloc
-        // which should be freed with OPENSSL_free, but we use FreeMem as fallback
-        FreeMem(VerifierStr);
+        // BN_bn2hex returns a string allocated with OPENSSL_malloc
+        // Must use OPENSSL_free to release it properly
+        // Note: Never use FreeMem - it would cause heap corruption
+        if Assigned(OPENSSL_free) then
+          OPENSSL_free(VerifierStr);
+        // If OPENSSL_free unavailable, accept small leak over corruption
       end;
       
       Result := (Salt <> '') and (Verifier <> '');

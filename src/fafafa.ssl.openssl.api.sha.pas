@@ -270,6 +270,7 @@ function SHA1Hash(const Data: TBytes): TBytes;
 var
   ctx: SHA_CTX;
 begin
+  Result := nil;
   SetLength(Result, SHA_DIGEST_LENGTH);
   if Assigned(SHA1_Init) and Assigned(SHA1_Update) and Assigned(SHA1_Final) then
   begin
@@ -286,6 +287,7 @@ function SHA256Hash(const Data: TBytes): TBytes;
 var
   ctx: SHA256_CTX;
 begin
+  Result := nil;
   SetLength(Result, SHA256_DIGEST_LENGTH);
   if Assigned(SHA256_Init) and Assigned(SHA256_Update) and Assigned(SHA256_Final) then
   begin
@@ -302,6 +304,7 @@ function SHA384Hash(const Data: TBytes): TBytes;
 var
   ctx: SHA512_CTX;
 begin
+  Result := nil;
   SetLength(Result, SHA384_DIGEST_LENGTH);
   if Assigned(SHA384_Init) and Assigned(SHA384_Update) and Assigned(SHA384_Final) then
   begin
@@ -318,6 +321,7 @@ function SHA512Hash(const Data: TBytes): TBytes;
 var
   ctx: SHA512_CTX;
 begin
+  Result := nil;
   SetLength(Result, SHA512_DIGEST_LENGTH);
   if Assigned(SHA512_Init) and Assigned(SHA512_Update) and Assigned(SHA512_Final) then
   begin

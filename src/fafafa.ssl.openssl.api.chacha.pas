@@ -180,6 +180,7 @@ var
   ctx: PEVP_CIPHER_CTX;
   outlen, finlen: Integer;
 begin
+  Result := nil;
   if not Assigned(EVP_chacha20) then
     raise ESSLCryptoError.Create('ChaCha20 not available');
     
@@ -213,6 +214,7 @@ var
   ctx: PEVP_CIPHER_CTX;
   outlen, finlen: Integer;
 begin
+  Result := nil;
   if not Assigned(EVP_chacha20) then
     raise ESSLCryptoError.Create('ChaCha20 not available');
     
@@ -246,6 +248,7 @@ var
   ctx: PEVP_CIPHER_CTX;
   outlen, finlen: Integer;
 begin
+  Result := nil;
   if not Assigned(EVP_chacha20_poly1305) then
     raise ESSLCryptoError.Create('ChaCha20-Poly1305 not available');
     
@@ -292,6 +295,7 @@ var
   ctx: PEVP_CIPHER_CTX;
   outlen, finlen: Integer;
 begin
+  Result := nil;
   if not Assigned(EVP_chacha20_poly1305) then
     raise ESSLCryptoError.Create('ChaCha20-Poly1305 not available');
     
@@ -337,6 +341,7 @@ function Poly1305MAC(const Key: TBytes; const Message: TBytes): TBytes;
 var
   ctx: poly1305_state;
 begin
+  Result := nil;
   if not Assigned(Poly1305) then
     raise ESSLCryptoError.Create('Poly1305 not available');
     

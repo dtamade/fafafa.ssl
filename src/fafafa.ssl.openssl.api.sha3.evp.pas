@@ -189,6 +189,7 @@ var
   ctx: TSHA3EVPContext;
   len: Cardinal;
 begin
+  Result := nil;
   SetLength(Result, SHA3_224_DIGEST_LENGTH);
   
   ctx := TSHA3EVPContext.Create('SHA3-224', False);
@@ -214,6 +215,7 @@ var
   ctx: TSHA3EVPContext;
   len: Cardinal;
 begin
+  Result := nil;
   SetLength(Result, SHA3_256_DIGEST_LENGTH);
   
   ctx := TSHA3EVPContext.Create('SHA3-256', False);
@@ -239,6 +241,7 @@ var
   ctx: TSHA3EVPContext;
   len: Cardinal;
 begin
+  Result := nil;
   SetLength(Result, SHA3_384_DIGEST_LENGTH);
   
   ctx := TSHA3EVPContext.Create('SHA3-384', False);
@@ -264,6 +267,7 @@ var
   ctx: TSHA3EVPContext;
   len: Cardinal;
 begin
+  Result := nil;
   SetLength(Result, SHA3_512_DIGEST_LENGTH);
   
   ctx := TSHA3EVPContext.Create('SHA3-512', False);
@@ -288,6 +292,7 @@ function SHAKE128Hash_EVP(const Data: TBytes; OutLen: Integer): TBytes;
 var
   ctx: TSHA3EVPContext;
 begin
+  Result := nil;
   SetLength(Result, OutLen);
   
   ctx := TSHA3EVPContext.Create('SHAKE128', True);
@@ -311,6 +316,7 @@ function SHAKE256Hash_EVP(const Data: TBytes; OutLen: Integer): TBytes;
 var
   ctx: TSHA3EVPContext;
 begin
+  Result := nil;
   SetLength(Result, OutLen);
   
   ctx := TSHA3EVPContext.Create('SHAKE256', True);

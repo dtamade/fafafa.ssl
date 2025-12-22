@@ -205,6 +205,7 @@ function MD4Hash(const Data: TBytes): TBytes;
 var
   ctx: MD4_CTX;
 begin
+  Result := nil;
   SetLength(Result, MD4_DIGEST_LENGTH);
   if Assigned(MD4_Init) and Assigned(MD4_Update) and Assigned(MD4_Final) then
   begin
@@ -221,6 +222,7 @@ function MD5Hash(const Data: TBytes): TBytes;
 var
   ctx: MD5_CTX;
 begin
+  Result := nil;
   SetLength(Result, MD5_DIGEST_LENGTH);
   if Assigned(MD5_Init) and Assigned(MD5_Update) and Assigned(MD5_Final) then
   begin
@@ -237,6 +239,7 @@ function MDC2Hash(const Data: TBytes): TBytes;
 var
   ctx: MDC2_CTX;
 begin
+  Result := nil;
   SetLength(Result, MDC2_DIGEST_LENGTH);
   if Assigned(MDC2_Init) and Assigned(MDC2_Update) and Assigned(MDC2_Final) then
   begin
@@ -253,6 +256,7 @@ function RIPEMD160Hash(const Data: TBytes): TBytes;
 var
   ctx: RIPEMD160_CTX;
 begin
+  Result := nil;
   SetLength(Result, RIPEMD160_DIGEST_LENGTH);
   if Assigned(RIPEMD160_Init) and Assigned(RIPEMD160_Update) and Assigned(RIPEMD160_Final) then
   begin

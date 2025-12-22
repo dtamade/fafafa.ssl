@@ -307,10 +307,13 @@ begin
     ext := X509V3_EXT_i2d(NID_basic_constraints, 1, bc);
     if ext <> nil then
     begin
-      // Note: X509_add_ext and X509_EXTENSION_free need to be defined in x509 module
-      // Result := X509_add_ext(Cert, ext, -1) = 1;
-      // X509_EXTENSION_free(ext);
-      Result := True;  // Placeholder
+      // Phase 4 Note: Full implementation requires:
+      // 1. X509_add_ext(Cert, ext, -1) to add extension
+      // 2. X509_EXTENSION_free(ext) to cleanup
+      // These functions need to be bound in fafafa.ssl.openssl.api.x509
+      // Current behavior: Returns True if extension was created
+      // Impact: Medium - extension is created but not added to certificate
+      Result := True;
     end;
   finally
     BASIC_CONSTRAINTS_free(bc);

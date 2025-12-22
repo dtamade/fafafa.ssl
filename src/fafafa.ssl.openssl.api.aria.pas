@@ -239,6 +239,7 @@ function ARIAEncryptBlock(const Key: TBytes; KeyBits: Integer; const Input: TByt
 var
   key_struct: ARIA_KEY;
 begin
+  Result := nil;
   SetLength(Result, ARIA_BLOCK_SIZE);
   if (Length(Input) <> ARIA_BLOCK_SIZE) then
     Exit;
@@ -254,6 +255,7 @@ function ARIADecryptBlock(const Key: TBytes; KeyBits: Integer; const Input: TByt
 var
   key_struct: ARIA_KEY;
 begin
+  Result := nil;
   SetLength(Result, ARIA_BLOCK_SIZE);
   if (Length(Input) <> ARIA_BLOCK_SIZE) then
     Exit;
@@ -270,6 +272,7 @@ var
   key_struct: ARIA_KEY;
   IVCopy: array[0..ARIA_BLOCK_SIZE-1] of Byte;
 begin
+  Result := nil;
   if Length(IV) <> ARIA_BLOCK_SIZE then
   begin
     SetLength(Result, 0);
@@ -291,6 +294,7 @@ var
   key_struct: ARIA_KEY;
   IVCopy: array[0..ARIA_BLOCK_SIZE-1] of Byte;
 begin
+  Result := nil;
   if Length(IV) <> ARIA_BLOCK_SIZE then
   begin
     SetLength(Result, 0);

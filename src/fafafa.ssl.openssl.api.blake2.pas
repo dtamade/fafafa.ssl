@@ -203,6 +203,7 @@ function BLAKE2b256Hash(const Data: TBytes): TBytes;
 var
   ctx: BLAKE2B_CTX;
 begin
+  Result := nil;
   SetLength(Result, 32);
   if Assigned(BLAKE2b_Init) and Assigned(BLAKE2b_Update) and Assigned(BLAKE2b_Final) then
   begin
@@ -226,6 +227,7 @@ function BLAKE2b512Hash(const Data: TBytes): TBytes;
 var
   ctx: BLAKE2B_CTX;
 begin
+  Result := nil;
   SetLength(Result, BLAKE2B_OUTBYTES);
   if Assigned(BLAKE2b_Init) and Assigned(BLAKE2b_Update) and Assigned(BLAKE2b_Final) then
   begin
@@ -249,6 +251,7 @@ function BLAKE2s256Hash(const Data: TBytes): TBytes;
 var
   ctx: BLAKE2S_CTX;
 begin
+  Result := nil;
   SetLength(Result, BLAKE2S_OUTBYTES);
   if Assigned(BLAKE2s_Init) and Assigned(BLAKE2s_Update) and Assigned(BLAKE2s_Final) then
   begin
@@ -272,6 +275,7 @@ function BLAKE2bMAC(const Data: TBytes; const Key: TBytes; OutLen: Integer): TBy
 var
   ctx: BLAKE2B_CTX;
 begin
+  Result := nil;
   if OutLen > BLAKE2B_OUTBYTES then
     OutLen := BLAKE2B_OUTBYTES;
   
@@ -304,6 +308,7 @@ function BLAKE2sMAC(const Data: TBytes; const Key: TBytes; OutLen: Integer): TBy
 var
   ctx: BLAKE2S_CTX;
 begin
+  Result := nil;
   if OutLen > BLAKE2S_OUTBYTES then
     OutLen := BLAKE2S_OUTBYTES;
   

@@ -241,6 +241,7 @@ function SHA3_224Hash(const Data: TBytes): TBytes;
 var
   ctx: SHA3_CTX;
 begin
+  Result := nil;
   SetLength(Result, SHA3_224_DIGEST_LENGTH);
   if Assigned(SHA3_224_Init) and Assigned(SHA3_224_Update) and Assigned(SHA3_224_Final) then
   begin
@@ -257,6 +258,7 @@ function SHA3_256Hash(const Data: TBytes): TBytes;
 var
   ctx: SHA3_CTX;
 begin
+  Result := nil;
   SetLength(Result, SHA3_256_DIGEST_LENGTH);
   if Assigned(SHA3_256_Init) and Assigned(SHA3_256_Update) and Assigned(SHA3_256_Final) then
   begin
@@ -273,6 +275,7 @@ function SHA3_384Hash(const Data: TBytes): TBytes;
 var
   ctx: SHA3_CTX;
 begin
+  Result := nil;
   SetLength(Result, SHA3_384_DIGEST_LENGTH);
   if Assigned(SHA3_384_Init) and Assigned(SHA3_384_Update) and Assigned(SHA3_384_Final) then
   begin
@@ -289,6 +292,7 @@ function SHA3_512Hash(const Data: TBytes): TBytes;
 var
   ctx: SHA3_CTX;
 begin
+  Result := nil;
   SetLength(Result, SHA3_512_DIGEST_LENGTH);
   if Assigned(SHA3_512_Init) and Assigned(SHA3_512_Update) and Assigned(SHA3_512_Final) then
   begin
@@ -305,6 +309,7 @@ function SHAKE128Hash(const Data: TBytes; OutLen: Integer): TBytes;
 var
   ctx: SHAKE_CTX;
 begin
+  Result := nil;
   SetLength(Result, OutLen);
   if Assigned(SHAKE128_Init) and Assigned(SHAKE128_Update) and 
     Assigned(SHAKE128_FinalXOF) and Assigned(SHAKE128_Squeeze) then
@@ -323,6 +328,7 @@ function SHAKE256Hash(const Data: TBytes; OutLen: Integer): TBytes;
 var
   ctx: SHAKE_CTX;
 begin
+  Result := nil;
   SetLength(Result, OutLen);
   if Assigned(SHAKE256_Init) and Assigned(SHAKE256_Update) and 
     Assigned(SHAKE256_FinalXOF) and Assigned(SHAKE256_Squeeze) then

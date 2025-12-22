@@ -211,6 +211,7 @@ function TCMACEVPContext.FinalBytes: TBytes;
 var
   mac_size: NativeUInt;
 begin
+  Result := nil;
   if Assigned(EVP_MAC_CTX_get_mac_size) and (FCtx <> nil) then
     mac_size := EVP_MAC_CTX_get_mac_size(FCtx)
   else
@@ -241,7 +242,7 @@ function ComputeCMAC_EVP(const CipherName: string; const Key: TBytes; const Data
 var
   ctx: TCMACEVPContext;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   ctx := TCMACEVPContext.Create(CipherName);
   try
     if not ctx.Init(Key) then Exit;

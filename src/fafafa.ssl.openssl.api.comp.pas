@@ -283,7 +283,7 @@ var
   OutLen: LongWord;
   TempOut: TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   
   if Length(Data) = 0 then Exit;
   
@@ -314,7 +314,7 @@ var
   TempOut: TBytes;
   Factor: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   
   if Length(CompressedData) = 0 then Exit;
   
@@ -352,7 +352,7 @@ var
   Method: PCOMP_METHOD;
   Ctx: PCOMP_CTX;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   
   if not Assigned(COMP_zlib) then Exit;
   
