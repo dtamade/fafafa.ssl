@@ -31,7 +31,7 @@ type
   { 错误处理器接口 }
   ISSLErrorHandler = interface
     ['{F4B2C8E6-9A3D-4F2E-8B5C-1E7F9D4A6B2C}']
-    procedure HandleError(const aErrorInfo: TSSLErrorInfo);
+    procedure HandleError(const AErrorInfo: TSSLErrorInfo);
   end;
   
   { 默认错误处理器 - 输出到日志文件 }
@@ -42,44 +42,44 @@ type
     FEnabled: Boolean;
     
   public
-    constructor Create(const aLogFileName: string);
+    constructor Create(const ALogFileName: string);
     destructor Destroy; override;
     
-    procedure HandleError(const aErrorInfo: TSSLErrorInfo);
-    procedure SetEnabled(aEnabled: Boolean);
+    procedure HandleError(const AErrorInfo: TSSLErrorInfo);
+    procedure SetEnabled(AEnabled: Boolean);
   end;
   
   { 控制台错误处理器 }
   TSSLConsoleErrorHandler = class(TInterfacedObject, ISSLErrorHandler)
   public
-    procedure HandleError(const aErrorInfo: TSSLErrorInfo);
+    procedure HandleError(const AErrorInfo: TSSLErrorInfo);
   end;
 
 { 错误码映射函数 }
 
 { 获取友好的错误消息 (中文) }
-function GetFriendlyErrorMessageCN(aErrorCode: DWORD): string;
+function GetFriendlyErrorMessageCN(AErrorCode: DWORD): string;
 
 { 获取友好的错误消息 (英文) }
-function GetFriendlyErrorMessageEN(aErrorCode: DWORD): string;
+function GetFriendlyErrorMessageEN(AErrorCode: DWORD): string;
 
 { 获取系统错误消息 }
-function GetSystemErrorMessage(aErrorCode: DWORD): string;
+function GetSystemErrorMessage(AErrorCode: DWORD): string;
 
 { 格式化错误信息 }
-function FormatErrorInfo(const aErrorInfo: TSSLErrorInfo): string;
+function FormatErrorInfo(const AErrorInfo: TSSLErrorInfo): string;
 
 { 全局错误日志函数 }
 
 { 记录错误 }
-procedure LogError(aLevel: TSSLErrorLevel; aCode: DWORD; 
-  const aMessage, aContext: string);
+procedure LogError(ALevel: TSSLErrorLevel; ACode: DWORD; 
+  const AMessage, AContext: string);
 
 { 设置全局错误处理器 }
-procedure SetGlobalErrorHandler(aHandler: ISSLErrorHandler);
+procedure SetGlobalErrorHandler(AHandler: ISSLErrorHandler);
 
 { 启用/禁用错误日志 }
-procedure EnableErrorLogging(aEnabled: Boolean);
+procedure EnableErrorLogging(AEnabled: Boolean);
 
 implementation
 
@@ -89,10 +89,10 @@ var
 
 { TSSLFileErrorHandler }
 
-constructor TSSLFileErrorHandler.Create(const aLogFileName: string);
+constructor TSSLFileErrorHandler.Create(const ALogFileName: string);
 begin
   inherited Create;
-  FLogFileName := aLogFileName;
+  FLogFileName := ALogFileName;
   FEnabled := True;
   
   try
@@ -119,36 +119,36 @@ begin
   inherited Destroy;
 end;
 
-procedure TSSLFileErrorHandler.HandleError(const aErrorInfo: TSSLErrorInfo);
+procedure TSSLFileErrorHandler.HandleError(const AErrorInfo: TSSLErrorInfo);
 begin
   if not FEnabled then
     Exit;
     
   try
-    WriteLn(FLogFile, FormatErrorInfo(aErrorInfo));
+    WriteLn(FLogFile, FormatErrorInfo(AErrorInfo));
     Flush(FLogFile);
   except
     FEnabled := False;
   end;
 end;
 
-procedure TSSLFileErrorHandler.SetEnabled(aEnabled: Boolean);
+procedure TSSLFileErrorHandler.SetEnabled(AEnabled: Boolean);
 begin
-  FEnabled := aEnabled;
+  FEnabled := AEnabled;
 end;
 
 { TSSLConsoleErrorHandler }
 
-procedure TSSLConsoleErrorHandler.HandleError(const aErrorInfo: TSSLErrorInfo);
+procedure TSSLConsoleErrorHandler.HandleError(const AErrorInfo: TSSLErrorInfo);
 begin
-  WriteLn(ErrOutput, FormatErrorInfo(aErrorInfo));
+  WriteLn(ErrOutput, FormatErrorInfo(AErrorInfo));
 end;
 
 { 错误码映射函数 }
 
-function GetFriendlyErrorMessageCN(aErrorCode: DWORD): string;
+function GetFriendlyErrorMessageCN(AErrorCode: DWORD): string;
 begin
-  case LONG(aErrorCode) of
+  case LONG(AErrorCode) of
     // Security 错误 (常用)
     LONG(SEC_E_OK):
       Result := '操作成功';
@@ -198,13 +198,13 @@ begin
       Result := '访问被拒绝';
       
   else
-    Result := Format('未知错误 (0x%x)', [aErrorCode]);
+    Result := Format('未知错误 (0x%x)', [AErrorCode]);
   end;
 end;
 
-function GetFriendlyErrorMessageEN(aErrorCode: DWORD): string;
+function GetFriendlyErrorMessageEN(AErrorCode: DWORD): string;
 begin
-  case LONG(aErrorCode) of
+  case LONG(AErrorCode) of
     LONG(SEC_E_OK):
       Result := 'Operation successful';
     LONG(SEC_I_CONTINUE_NEEDED):
@@ -251,11 +251,11 @@ begin
       Result := 'Access denied';
       
   else
-    Result := Format('Unknown error (0x%x)', [aErrorCode]);
+    Result := Format('Unknown error (0x%x)', [AErrorCode]);
   end;
 end;
 
-function GetSystemErrorMessage(aErrorCode: DWORD): string;
+function GetSystemErrorMessage(AErrorCode: DWORD): string;
 var
   LBuffer: array[0..1023] of Char;
   LSize: DWORD;
@@ -263,7 +263,7 @@ begin
   LSize := FormatMessage(
     FORMAT_MESSAGE_FROM_SYSTEM or FORMAT_MESSAGE_IGNORE_INSERTS,
     nil,
-    aErrorCode,
+    AErrorCode,
     0,
     @LBuffer[0],
     SizeOf(LBuffer),
@@ -276,27 +276,27 @@ begin
     Result := Trim(Result);
   end
   else
-    Result := Format('Error code: 0x%x', [aErrorCode]);
+    Result := Format('Error code: 0x%x', [AErrorCode]);
 end;
 
-function FormatErrorInfo(const aErrorInfo: TSSLErrorInfo): string;
+function FormatErrorInfo(const AErrorInfo: TSSLErrorInfo): string;
 const
   LEVEL_STR: array[TSSLErrorLevel] of string = (
     'DEBUG', 'INFO', 'WARNING', 'ERROR', 'FATAL'
   );
 begin
   Result := Format('[%s] %s | %s | Code: 0x%x | %s',
-    [FormatDateTime('yyyy-mm-dd hh:nn:ss', aErrorInfo.Timestamp),
-    LEVEL_STR[aErrorInfo.Level],
-    aErrorInfo.Context,
-    aErrorInfo.Code,
-    aErrorInfo.Message]);
+    [FormatDateTime('yyyy-mm-dd hh:nn:ss', AErrorInfo.Timestamp),
+    LEVEL_STR[AErrorInfo.Level],
+    AErrorInfo.Context,
+    AErrorInfo.Code,
+    AErrorInfo.Message]);
 end;
 
 { 全局错误日志函数 }
 
-procedure LogError(aLevel: TSSLErrorLevel; aCode: DWORD; 
-  const aMessage, aContext: string);
+procedure LogError(ALevel: TSSLErrorLevel; ACode: DWORD; 
+  const AMessage, AContext: string);
 var
   LErrorInfo: TSSLErrorInfo;
 begin
@@ -306,23 +306,23 @@ begin
   if GErrorHandler = nil then
     Exit;
     
-  LErrorInfo.Level := aLevel;
-  LErrorInfo.Code := aCode;
-  LErrorInfo.Message := aMessage;
-  LErrorInfo.Context := aContext;
+  LErrorInfo.Level := ALevel;
+  LErrorInfo.Code := ACode;
+  LErrorInfo.Message := AMessage;
+  LErrorInfo.Context := AContext;
   LErrorInfo.Timestamp := Now;
   
   GErrorHandler.HandleError(LErrorInfo);
 end;
 
-procedure SetGlobalErrorHandler(aHandler: ISSLErrorHandler);
+procedure SetGlobalErrorHandler(AHandler: ISSLErrorHandler);
 begin
-  GErrorHandler := aHandler;
+  GErrorHandler := AHandler;
 end;
 
-procedure EnableErrorLogging(aEnabled: Boolean);
+procedure EnableErrorLogging(AEnabled: Boolean);
 begin
-  GErrorLoggingEnabled := aEnabled;
+  GErrorLoggingEnabled := AEnabled;
 end;
 
 initialization

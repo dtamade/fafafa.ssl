@@ -43,10 +43,10 @@ type
     end;
     
     { 内部方法 }
-    procedure InternalLog(aLevel: TSSLLogLevel; const aMessage: string);
+    procedure InternalLog(ALevel: TSSLLogLevel; const AMessage: string);
     function DetectWindowsVersion: Boolean;
     function CheckSchannelSupport: Boolean;
-    procedure SetError(aError: Integer; const aErrorMsg: string);
+    procedure SetError(AError: Integer; const AErrorMsg: string);
     procedure ClearInternalError;
     
   public
@@ -61,18 +61,20 @@ type
     { ISSLLibrary - 版本信息 }
     function GetLibraryType: TSSLLibraryType;
     function GetVersionString: string;
-    function GetVersion: string;
+    {** @deprecated Will be removed in v2.0.0. Use GetVersionString instead. *}
+    function GetVersion: string; deprecated 'Use GetVersionString instead - will be removed in v2.0.0';
     function GetVersionNumber: Cardinal;
     function GetCompileFlags: string;
     
     { ISSLLibrary - 功能支持查询 }
-    function IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
-    function IsCipherSupported(const aCipherName: string): Boolean;
-    function IsFeatureSupported(const aFeatureName: string): Boolean; deprecated 'Use IsFeatureSupported(TSSLFeature) instead';
-    function IsFeatureSupported(aFeature: TSSLFeature): Boolean; overload;
+    function IsProtocolSupported(AProtocol: TSSLProtocolVersion): Boolean;
+    function IsCipherSupported(const ACipherName: string): Boolean;
+    {** @deprecated Will be removed in v2.0.0. Use IsFeatureSupported(TSSLFeature) instead. *}
+    function IsFeatureSupported(const AFeatureName: string): Boolean; deprecated 'Use IsFeatureSupported(TSSLFeature) instead - will be removed in v2.0.0';
+    function IsFeatureSupported(AFeature: TSSLFeature): Boolean; overload;
     
     { ISSLLibrary - 库配置 }
-    procedure SetDefaultConfig(const aConfig: TSSLConfig);
+    procedure SetDefaultConfig(const AConfig: TSSLConfig);
     function GetDefaultConfig: TSSLConfig;
     
     { ISSLLibrary - 错误处理 }
@@ -85,11 +87,11 @@ type
     procedure ResetStatistics;
     
     { ISSLLibrary - 日志 }
-    procedure SetLogCallback(aCallback: TSSLLogCallback);
-    procedure Log(aLevel: TSSLLogLevel; const aMessage: string);
+    procedure SetLogCallback(ACallback: TSSLLogCallback);
+    procedure Log(ALevel: TSSLLogLevel; const AMessage: string);
     
     { ISSLLibrary - 工厂方法 }
-    function CreateContext(aType: TSSLContextType): ISSLContext;
+    function CreateContext(AType: TSSLContextType): ISSLContext;
     function CreateCertificate: ISSLCertificate;
     function CreateCertificateStore: ISSLCertificateStore;
   end;
@@ -171,10 +173,10 @@ end;
 // 内部方法实现
 // ============================================================================
 
-procedure TWinSSLLibrary.InternalLog(aLevel: TSSLLogLevel; const aMessage: string);
+procedure TWinSSLLibrary.InternalLog(ALevel: TSSLLogLevel; const AMessage: string);
 begin
-  if Assigned(FLogCallback) and (aLevel <= FLogLevel) then
-    FLogCallback(aLevel, aMessage);
+  if Assigned(FLogCallback) and (ALevel <= FLogLevel) then
+    FLogCallback(ALevel, AMessage);
 end;
 
 function TWinSSLLibrary.DetectWindowsVersion: Boolean;
@@ -247,10 +249,10 @@ begin
   end;
 end;
 
-procedure TWinSSLLibrary.SetError(aError: Integer; const aErrorMsg: string);
+procedure TWinSSLLibrary.SetError(AError: Integer; const AErrorMsg: string);
 begin
-  FLastError := aError;
-  FLastErrorString := aErrorMsg;
+  FLastError := AError;
+  FLastErrorString := AErrorMsg;
 end;
 
 procedure TWinSSLLibrary.ClearInternalError;
@@ -371,7 +373,7 @@ end;
 // ISSLLibrary - 功能支持查询
 // ============================================================================
 
-function TWinSSLLibrary.IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
+function TWinSSLLibrary.IsProtocolSupported(AProtocol: TSSLProtocolVersion): Boolean;
 begin
   Result := False;
   
@@ -379,7 +381,7 @@ begin
     Exit;
   
   // Windows 版本与 TLS 支持对应关系
-  case aProtocol of
+  case AProtocol of
     sslProtocolSSL2,
     sslProtocolSSL3:
       Result := False;  // SSL 2.0/3.0 已废弃
@@ -405,20 +407,20 @@ begin
   end;
 end;
 
-function TWinSSLLibrary.IsCipherSupported(const aCipherName: string): Boolean;
+function TWinSSLLibrary.IsCipherSupported(const ACipherName: string): Boolean;
 begin
   // Windows Schannel 的密码套件支持由系统策略决定
   // 这里简单返回 True，实际支持在握手时由系统确定
   Result := True;
-  InternalLog(sslLogDebug, Format('Cipher support check: %s (deferred to system)', [aCipherName]));
+  InternalLog(sslLogDebug, Format('Cipher support check: %s (deferred to system)', [ACipherName]));
 end;
 
-function TWinSSLLibrary.IsFeatureSupported(const aFeatureName: string): Boolean;
+function TWinSSLLibrary.IsFeatureSupported(const AFeatureName: string): Boolean;
 var
   Feature: string;
 begin
   // 废弃方法：将字符串映射到枚举类型，调用类型安全版本
-  Feature := LowerCase(aFeatureName);
+  Feature := LowerCase(AFeatureName);
 
   if Feature = 'sni' then
     Result := IsFeatureSupported(sslFeatSNI)
@@ -438,13 +440,13 @@ begin
     Result := False;
 
   InternalLog(sslLogDebug, Format('Feature support check (deprecated): %s = %s',
-    [aFeatureName, BoolToStr(Result, True)]));
+    [AFeatureName, BoolToStr(Result, True)]));
 end;
 
 { 类型安全版本（Phase 1.3 - Rust质量标准） }
-function TWinSSLLibrary.IsFeatureSupported(aFeature: TSSLFeature): Boolean;
+function TWinSSLLibrary.IsFeatureSupported(AFeature: TSSLFeature): Boolean;
 begin
-  case aFeature of
+  case AFeature of
     sslFeatSNI:
       Result := True;  // Windows Schannel原生支持SNI
     sslFeatALPN:
@@ -466,18 +468,18 @@ begin
   end;
 
   InternalLog(sslLogDebug, Format('Feature support check (type-safe): %d = %s',
-    [Ord(aFeature), BoolToStr(Result, True)]));
+    [Ord(AFeature), BoolToStr(Result, True)]));
 end;
 
 // ============================================================================
 // ISSLLibrary - 库配置
 // ============================================================================
 
-procedure TWinSSLLibrary.SetDefaultConfig(const aConfig: TSSLConfig);
+procedure TWinSSLLibrary.SetDefaultConfig(const AConfig: TSSLConfig);
 begin
-  FDefaultConfig := aConfig;
-  FLogLevel := aConfig.LogLevel;
-  FLogCallback := aConfig.LogCallback;
+  FDefaultConfig := AConfig;
+  FLogLevel := AConfig.LogLevel;
+  FLogCallback := AConfig.LogCallback;
   InternalLog(sslLogInfo, 'Default configuration updated');
 end;
 
@@ -524,21 +526,21 @@ end;
 // ISSLLibrary - 日志
 // ============================================================================
 
-procedure TWinSSLLibrary.SetLogCallback(aCallback: TSSLLogCallback);
+procedure TWinSSLLibrary.SetLogCallback(ACallback: TSSLLogCallback);
 begin
-  FLogCallback := aCallback;
+  FLogCallback := ACallback;
 end;
 
-procedure TWinSSLLibrary.Log(aLevel: TSSLLogLevel; const aMessage: string);
+procedure TWinSSLLibrary.Log(ALevel: TSSLLogLevel; const AMessage: string);
 begin
-  InternalLog(aLevel, aMessage);
+  InternalLog(ALevel, AMessage);
 end;
 
 // ============================================================================
 // ISSLLibrary - 工厂方法
 // ============================================================================
 
-function TWinSSLLibrary.CreateContext(aType: TSSLContextType): ISSLContext;
+function TWinSSLLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
 begin
   if not FInitialized then
   begin
@@ -549,11 +551,11 @@ begin
   end;
   
   try
-    Result := TWinSSLContext.Create(Self, aType);
+    Result := TWinSSLContext.Create(Self, AType);
     if (Result <> nil) and (FDefaultConfig.Options <> []) then
       Result.SetOptions(FDefaultConfig.Options);
     Inc(FStatistics.ConnectionsTotal);
-    if aType = sslCtxClient then
+    if AType = sslCtxClient then
       InternalLog(sslLogInfo, 'Created client context')
     else
       InternalLog(sslLogInfo, 'Created server context');

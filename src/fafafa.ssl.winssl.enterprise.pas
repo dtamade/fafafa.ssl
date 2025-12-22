@@ -37,7 +37,7 @@ type
     function GetTrustedRoots: TStringArray;
     
     { 读取特定组策略 }
-    function ReadGroupPolicy(const aPolicyName: string): string;
+    function ReadGroupPolicy(const APolicyName: string): string;
     
     { 检查企业 CA 是否自动信任 }
     function IsEnterpriseCATrusted: Boolean;
@@ -52,7 +52,7 @@ type
 { 全局辅助函数 }
 
 { 读取组策略值 }
-function ReadGroupPolicy(const aPolicyName: string): string;
+function ReadGroupPolicy(const APolicyName: string): string;
 
 { 检查 FIPS 模式是否启用 }
 function IsFIPSModeEnabled: Boolean;
@@ -252,9 +252,9 @@ begin
     Result[i] := FTrustedRoots[i];
 end;
 
-function TSSLEnterpriseConfig.ReadGroupPolicy(const aPolicyName: string): string;
+function TSSLEnterpriseConfig.ReadGroupPolicy(const APolicyName: string): string;
 begin
-  Result := FGroupPolicies.Values[aPolicyName];
+  Result := FGroupPolicies.Values[APolicyName];
 end;
 
 function TSSLEnterpriseConfig.IsEnterpriseCATrusted: Boolean;
@@ -298,7 +298,7 @@ end;
 
 { 全局辅助函数实现 }
 
-function ReadGroupPolicy(const aPolicyName: string): string;
+function ReadGroupPolicy(const APolicyName: string): string;
 var
   LReg: TRegistry;
 begin
@@ -310,8 +310,8 @@ begin
     if LReg.OpenKeyReadOnly(GP_CRYPTO_PATH) then
     begin
       try
-        if LReg.ValueExists(aPolicyName) then
-          Result := LReg.ReadString(aPolicyName);
+        if LReg.ValueExists(APolicyName) then
+          Result := LReg.ReadString(APolicyName);
       finally
         LReg.CloseKey;
       end;

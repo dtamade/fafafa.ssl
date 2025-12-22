@@ -229,9 +229,12 @@ begin
       V_OCSP_CERTSTATUS_REVOKED:
         begin
           Result.Status := ocspRevoked;
-          // Future Enhancement: Extract actual revocation time from OCSP response
-          // Requires: OCSP_BASICRESP and OCSP_SINGLERESP parsing APIs
-          Result.RevokedAt := Now; // Placeholder
+          // Phase 4 Note: Extracting actual revocation time requires:
+          // 1. OCSP_resp_find_status with revtime output parameter
+          // 2. ASN1_GENERALIZEDTIME to TDateTime conversion
+          // Current behavior: Returns current time as fallback
+          // Impact: Low - revocation status is correctly detected
+          Result.RevokedAt := Now;
         end;
       V_OCSP_CERTSTATUS_UNKNOWN:
         Result.Status := ocspUnknown;
@@ -372,20 +375,26 @@ end;
 
 function TCRLManagerImpl.GetRevokedDate(const ACert: ICertificate): TDateTime;
 begin
-  // Future Enhancement: Extract revocation date from CRL entry
-  // Requires: X509_REVOKED_get0_revocationDate API
+  // Phase 4 Note: Extracting actual revocation date requires:
+  // 1. X509_REVOKED_get0_revocationDate API
+  // 2. ASN1_TIME to TDateTime conversion
+  // Current behavior: Returns current time if revoked, 0 otherwise
+  // Impact: Low - revocation check (IsRevoked) is correctly implemented
   if IsRevoked(ACert) then
-    Result := Now  // Placeholder
+    Result := Now
   else
     Result := 0;
 end;
 
 function TCRLManagerImpl.GetRevocationReason(const ACert: ICertificate): string;
 begin
-  // Future Enhancement: Extract revocation reason from CRL entry
-  // Requires: X509_REVOKED_get_ext_d2i with CRL reason code extension parsing
+  // Phase 4 Note: Extracting actual revocation reason requires:
+  // 1. X509_REVOKED_get_ext_d2i with NID_crl_reason
+  // 2. ASN1_ENUMERATED parsing
+  // Current behavior: Returns 'Unspecified' if revoked
+  // Impact: Low - revocation check (IsRevoked) is correctly implemented
   if IsRevoked(ACert) then
-    Result := 'Unspecified'  // Placeholder
+    Result := 'Unspecified'
   else
     Result := '';
 end;

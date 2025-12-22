@@ -36,7 +36,7 @@ type
 
   { 通用过程类型 }
   TSSLProc = procedure of object;
-  TSSLProcString = procedure(const aValue: string) of object;
+  TSSLProcString = procedure(const AValue: string) of object;
 
   { Result 类型回调函数类型 - 使用 of object 以支持嵌套函数 }
   TProcedureOfConstTBytes = procedure(const AData: TBytes) of object;
@@ -333,7 +333,7 @@ type
   PSSLConnectionInfo = ^TSSLConnectionInfo;
 
   { 日志回调类型 }
-  TSSLLogCallback = procedure(aLevel: TSSLLogLevel; const aMessage: string) of object;
+  TSSLLogCallback = procedure(ALevel: TSSLLogLevel; const AMessage: string) of object;
 
   { SSL 配置 }
   TSSLConfig = record
@@ -483,23 +483,23 @@ type
   // ============================================================================
 
   { 证书验证回调 }
-  TSSLVerifyCallback = function(const aCertificate: TSSLCertificateInfo;
-                                const aErrorCode: Integer;
-                                const aErrorMessage: string): Boolean of object;
+  TSSLVerifyCallback = function(const ACertificate: TSSLCertificateInfo;
+                                const AErrorCode: Integer;
+                                const AErrorMessage: string): Boolean of object;
 
   { 密码回调 }
-  TSSLPasswordCallback = function(var aPassword: string;
-                                const aIsRetry: Boolean): Boolean of object;
+  TSSLPasswordCallback = function(var APassword: string;
+                                const AIsRetry: Boolean): Boolean of object;
 
   { 信息回调 }
-  TSSLInfoCallback = procedure(const aWhere: Integer;
-                              const aRet: Integer;
-                              const aState: string) of object;
+  TSSLInfoCallback = procedure(const AWhere: Integer;
+                              const ARet: Integer;
+                              const AState: string) of object;
 
   { 数据传输回调 }
-  TSSLDataCallback = procedure(const aData: Pointer;
-                              const aSize: Integer;
-                              const aIsOutgoing: Boolean) of object;
+  TSSLDataCallback = procedure(const AData: Pointer;
+                              const ASize: Integer;
+                              const AIsOutgoing: Boolean) of object;
 
   // ============================================================================
   // 接口定义
@@ -528,18 +528,20 @@ type
     // 版本信息
     function GetLibraryType: TSSLLibraryType;
     function GetVersionString: string;
-    function GetVersion: string;  // 便捷方法，等同于 GetVersionString
+    {** @deprecated Will be removed in v2.0.0. Use GetVersionString instead. *}
+    function GetVersion: string; deprecated 'Use GetVersionString instead - will be removed in v2.0.0';
     function GetVersionNumber: Cardinal;
     function GetCompileFlags: string;
     
     // 功能支持查询
-    function IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
-    function IsCipherSupported(const aCipherName: string): Boolean;
-    function IsFeatureSupported(const aFeatureName: string): Boolean; deprecated 'Use IsFeatureSupported(TSSLFeature) instead';
-    function IsFeatureSupported(aFeature: TSSLFeature): Boolean; overload;
+    function IsProtocolSupported(AProtocol: TSSLProtocolVersion): Boolean;
+    function IsCipherSupported(const ACipherName: string): Boolean;
+    {** @deprecated Will be removed in v2.0.0. Use IsFeatureSupported(TSSLFeature) instead. *}
+    function IsFeatureSupported(const AFeatureName: string): Boolean; deprecated 'Use IsFeatureSupported(TSSLFeature) instead - will be removed in v2.0.0';
+    function IsFeatureSupported(AFeature: TSSLFeature): Boolean; overload;
     
     // 库配置
-    procedure SetDefaultConfig(const aConfig: TSSLConfig);
+    procedure SetDefaultConfig(const AConfig: TSSLConfig);
     function GetDefaultConfig: TSSLConfig;
     
     // 错误处理
@@ -552,11 +554,11 @@ type
     procedure ResetStatistics;
     
     // 日志
-    procedure SetLogCallback(aCallback: TSSLLogCallback);
-    procedure Log(aLevel: TSSLLogLevel; const aMessage: string);
+    procedure SetLogCallback(ACallback: TSSLLogCallback);
+    procedure Log(ALevel: TSSLLogLevel; const AMessage: string);
     
     // 工厂方法
-    function CreateContext(aType: TSSLContextType): ISSLContext;
+    function CreateContext(AType: TSSLContextType): ISSLContext;
     function CreateCertificate: ISSLCertificate;
     function CreateCertificateStore: ISSLCertificateStore;
   end;
@@ -567,61 +569,61 @@ type
     
     // 基本配置
     function GetContextType: TSSLContextType;
-    procedure SetProtocolVersions(aVersions: TSSLProtocolVersions);
+    procedure SetProtocolVersions(AVersions: TSSLProtocolVersions);
     function GetProtocolVersions: TSSLProtocolVersions;
     
     // 证书和密钥管理
-    procedure LoadCertificate(const aFileName: string); overload;
-    procedure LoadCertificate(aStream: TStream); overload;
-    procedure LoadCertificate(aCert: ISSLCertificate); overload;
+    procedure LoadCertificate(const AFileName: string); overload;
+    procedure LoadCertificate(AStream: TStream); overload;
+    procedure LoadCertificate(ACert: ISSLCertificate); overload;
     
-    procedure LoadPrivateKey(const aFileName: string; const aPassword: string = ''); overload;
-    procedure LoadPrivateKey(aStream: TStream; const aPassword: string = ''); overload;
+    procedure LoadPrivateKey(const AFileName: string; const APassword: string = ''); overload;
+    procedure LoadPrivateKey(AStream: TStream; const APassword: string = ''); overload;
     
     // PEM 字符串直接加载（企业级接口增强）
-    procedure LoadCertificatePEM(const aPEM: string);
-    procedure LoadPrivateKeyPEM(const aPEM: string; const aPassword: string = '');
+    procedure LoadCertificatePEM(const APEM: string);
+    procedure LoadPrivateKeyPEM(const APEM: string; const APassword: string = '');
     
-    procedure LoadCAFile(const aFileName: string);
-    procedure LoadCAPath(const aPath: string);
-    procedure SetCertificateStore(aStore: ISSLCertificateStore);
+    procedure LoadCAFile(const AFileName: string);
+    procedure LoadCAPath(const APath: string);
+    procedure SetCertificateStore(AStore: ISSLCertificateStore);
     
     // 验证配置
-    procedure SetVerifyMode(aMode: TSSLVerifyModes);
+    procedure SetVerifyMode(AMode: TSSLVerifyModes);
     function GetVerifyMode: TSSLVerifyModes;
-    procedure SetVerifyDepth(aDepth: Integer);
+    procedure SetVerifyDepth(ADepth: Integer);
     function GetVerifyDepth: Integer;
-    procedure SetVerifyCallback(aCallback: TSSLVerifyCallback);
+    procedure SetVerifyCallback(ACallback: TSSLVerifyCallback);
     
     // 密码套件配置
-    procedure SetCipherList(const aCipherList: string);
+    procedure SetCipherList(const ACipherList: string);
     function GetCipherList: string;
-    procedure SetCipherSuites(const aCipherSuites: string); // TLS 1.3
+    procedure SetCipherSuites(const ACipherSuites: string); // TLS 1.3
     function GetCipherSuites: string;
     
     // 会话管理
-    procedure SetSessionCacheMode(aEnabled: Boolean);
+    procedure SetSessionCacheMode(AEnabled: Boolean);
     function GetSessionCacheMode: Boolean;
-    procedure SetSessionTimeout(aTimeout: Integer);
+    procedure SetSessionTimeout(ATimeout: Integer);
     function GetSessionTimeout: Integer;
-    procedure SetSessionCacheSize(aSize: Integer);
+    procedure SetSessionCacheSize(ASize: Integer);
     function GetSessionCacheSize: Integer;
     
     // 高级选项
-    procedure SetOptions(const aOptions: TSSLOptions);
+    procedure SetOptions(const AOptions: TSSLOptions);
     function GetOptions: TSSLOptions;
-    procedure SetServerName(const aServerName: string); // SNI
+    procedure SetServerName(const AServerName: string); // SNI
     function GetServerName: string;
-    procedure SetALPNProtocols(const aProtocols: string);
+    procedure SetALPNProtocols(const AProtocols: string);
     function GetALPNProtocols: string;
     
     // 回调设置
-    procedure SetPasswordCallback(aCallback: TSSLPasswordCallback);
-    procedure SetInfoCallback(aCallback: TSSLInfoCallback);
+    procedure SetPasswordCallback(ACallback: TSSLPasswordCallback);
+    procedure SetInfoCallback(ACallback: TSSLInfoCallback);
     
     // 创建连接
-    function CreateConnection(aSocket: THandle): ISSLConnection; overload;
-    function CreateConnection(aStream: TStream): ISSLConnection; overload;
+    function CreateConnection(ASocket: THandle): ISSLConnection; overload;
+    function CreateConnection(AStream: TStream): ISSLConnection; overload;
     
     // 状态查询
     function IsValid: Boolean;
@@ -644,15 +646,15 @@ type
     function Renegotiate: Boolean;
     
     // 数据传输
-    function Read(var aBuffer; aCount: Integer): Integer;
-    function Write(const aBuffer; aCount: Integer): Integer;
-    function ReadString(out aStr: string): Boolean;
-    function WriteString(const aStr: string): Boolean;
+    function Read(var ABuffer; ACount: Integer): Integer;
+    function Write(const ABuffer; ACount: Integer): Integer;
+    function ReadString(out AStr: string): Boolean;
+    function WriteString(const AStr: string): Boolean;
     
     // 异步操作支持
     function WantRead: Boolean;
     function WantWrite: Boolean;
-    function GetError(aRet: Integer): TSSLErrorCode;
+    function GetError(ARet: Integer): TSSLErrorCode;
     
     // 连接信息
     function GetConnectionInfo: TSSLConnectionInfo;
@@ -665,7 +667,7 @@ type
     
     // 会话管理
     function GetSession: ISSLSession;
-    procedure SetSession(aSession: ISSLSession);
+    procedure SetSession(ASession: ISSLSession);
     function IsSessionReused: Boolean;
     
     // ALPN/NPN
@@ -677,9 +679,9 @@ type
     function GetStateString: string;
     
     // 选项设置
-    procedure SetTimeout(aTimeout: Integer);
+    procedure SetTimeout(ATimeout: Integer);
     function GetTimeout: Integer;
-    procedure SetBlocking(aBlocking: Boolean);
+    procedure SetBlocking(ABlocking: Boolean);
     function GetBlocking: Boolean;
     
     // 原生句柄
@@ -687,19 +689,33 @@ type
     function GetContext: ISSLContext;
   end;
 
-  { ISSLCertificate - 证书接口 }
+  {**
+   * ISSLCertificate - Full-featured certificate interface for SSL operations
+   *
+   * This interface provides comprehensive certificate management capabilities:
+   * - Loading from various sources (file, stream, PEM, DER)
+   * - Certificate validation and verification
+   * - Certificate chain management
+   * - Extension and fingerprint access
+   *
+   * @note This is DIFFERENT from ICertificate in fafafa.ssl.cert.builder:
+   *   - ISSLCertificate: Full-featured, for SSL operations (load, verify, chains)
+   *   - ICertificate: Lightweight, for builder output, read-only
+   *
+   * @see ICertificate for builder-generated certificates
+   *}
   ISSLCertificate = interface
     ['{D3B0A7E4-AF6D-7051-C28E-BF0A213C5D6F}']
     
     // 加载和保存
-    function LoadFromFile(const aFileName: string): Boolean;
-    function LoadFromStream(aStream: TStream): Boolean;
-    function LoadFromMemory(const aData: Pointer; aSize: Integer): Boolean;
-    function LoadFromPEM(const aPEM: string): Boolean;
-    function LoadFromDER(const aDER: TBytes): Boolean;
+    function LoadFromFile(const AFileName: string): Boolean;
+    function LoadFromStream(AStream: TStream): Boolean;
+    function LoadFromMemory(const AData: Pointer; ASize: Integer): Boolean;
+    function LoadFromPEM(const APEM: string): Boolean;
+    function LoadFromDER(const ADER: TBytes): Boolean;
     
-    function SaveToFile(const aFileName: string): Boolean;
-    function SaveToStream(aStream: TStream): Boolean;
+    function SaveToFile(const AFileName: string): Boolean;
+    function SaveToStream(AStream: TStream): Boolean;
     function SaveToPEM: string;
     function SaveToDER: TBytes;
     
@@ -716,10 +732,10 @@ type
     function GetVersion: Integer;
     
     // 证书验证
-    function Verify(aCAStore: ISSLCertificateStore): Boolean;
-    function VerifyEx(aCAStore: ISSLCertificateStore;
-      aFlags: TSSLCertVerifyFlags; out aResult: TSSLCertVerifyResult): Boolean;
-    function VerifyHostname(const aHostname: string): Boolean;
+    function Verify(ACAStore: ISSLCertificateStore): Boolean;
+    function VerifyEx(ACAStore: ISSLCertificateStore;
+      AFlags: TSSLCertVerifyFlags; out AResult: TSSLCertVerifyResult): Boolean;
+    function VerifyHostname(const AHostname: string): Boolean;
     function IsExpired: Boolean;
     function IsSelfSigned: Boolean;
     function IsCA: Boolean;
@@ -729,18 +745,18 @@ type
     function GetSubjectCN: string;         // 直接获取 Subject 中的 Common Name
 
     // 证书扩展
-    function GetExtension(const aOID: string): string;
+    function GetExtension(const AOID: string): string;
     function GetSubjectAltNames: TSSLStringArray;
     function GetKeyUsage: TSSLStringArray;
     function GetExtendedKeyUsage: TSSLStringArray;
     
     // 指纹
-    function GetFingerprint(aHashType: TSSLHash): string;
+    function GetFingerprint(AHashType: TSSLHash): string;
     function GetFingerprintSHA1: string;
     function GetFingerprintSHA256: string;
     
     // 证书链
-    procedure SetIssuerCertificate(aCert: ISSLCertificate);
+    procedure SetIssuerCertificate(ACert: ISSLCertificate);
     function GetIssuerCertificate: ISSLCertificate;  // 返回内部引用，不转移所有权
 
     // 原生句柄
@@ -753,27 +769,27 @@ type
     ['{E4C1B8F5-B07E-8162-D39F-C10B324D6E70}']
     
     // 证书管理
-    function AddCertificate(aCert: ISSLCertificate): Boolean;
-    function RemoveCertificate(aCert: ISSLCertificate): Boolean;
-    function Contains(aCert: ISSLCertificate): Boolean;
+    function AddCertificate(ACert: ISSLCertificate): Boolean;
+    function RemoveCertificate(ACert: ISSLCertificate): Boolean;
+    function Contains(ACert: ISSLCertificate): Boolean;
     procedure Clear;
     function GetCount: Integer;
-    function GetCertificate(aIndex: Integer): ISSLCertificate;
+    function GetCertificate(AIndex: Integer): ISSLCertificate;
     
     // 加载证书
-    function LoadFromFile(const aFileName: string): Boolean;
-    function LoadFromPath(const aPath: string): Boolean;
+    function LoadFromFile(const AFileName: string): Boolean;
+    function LoadFromPath(const APath: string): Boolean;
     function LoadSystemStore: Boolean; // 加载系统证书存储
     
     // 查找证书
-    function FindBySubject(const aSubject: string): ISSLCertificate;
-    function FindByIssuer(const aIssuer: string): ISSLCertificate;
-    function FindBySerialNumber(const aSerialNumber: string): ISSLCertificate;
-    function FindByFingerprint(const aFingerprint: string): ISSLCertificate;
+    function FindBySubject(const ASubject: string): ISSLCertificate;
+    function FindByIssuer(const AIssuer: string): ISSLCertificate;
+    function FindBySerialNumber(const ASerialNumber: string): ISSLCertificate;
+    function FindByFingerprint(const AFingerprint: string): ISSLCertificate;
     
     // 验证
-    function VerifyCertificate(aCert: ISSLCertificate): Boolean;
-    function BuildCertificateChain(aCert: ISSLCertificate): TSSLCertificateArray;
+    function VerifyCertificate(ACert: ISSLCertificate): Boolean;
+    function BuildCertificateChain(ACert: ISSLCertificate): TSSLCertificateArray;
     
     // 原生句柄
     function GetNativeHandle: Pointer;
@@ -787,7 +803,7 @@ type
     function GetID: string;
     function GetCreationTime: TDateTime;
     function GetTimeout: Integer;
-    procedure SetTimeout(aTimeout: Integer);
+    procedure SetTimeout(ATimeout: Integer);
     function IsValid: Boolean;
     function IsResumable: Boolean;
     
@@ -798,7 +814,7 @@ type
     
     // 序列化
     function Serialize: TBytes;
-    function Deserialize(const aData: TBytes): Boolean;
+    function Deserialize(const AData: TBytes): Boolean;
     
     // 原生句柄
     function GetNativeHandle: Pointer;
@@ -924,15 +940,15 @@ const
   SSL_DEFAULT_TLS13_CIPHERSUITES = 'TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256';
   
   // TLS 1.2 及以下默认密码套件
-  SSL_DEFAULT_CIPHER_LIST = 'ECDHE+AESGCM:ECDHE+AES256:!aNULL:!MD5:!DSS';
+  SSL_DEFAULT_CIPHER_LIST = 'ECDHE+AESGCM:ECDHE+AES256:!ANULL:!MD5:!DSS';
 
 // ============================================================================
 // 辅助函数
 // ============================================================================
 
-function SSLErrorToString(aError: TSSLErrorCode): string;
-function ProtocolVersionToString(aVersion: TSSLProtocolVersion): string;
-function LibraryTypeToString(aLibType: TSSLLibraryType): string;
+function SSLErrorToString(AError: TSSLErrorCode): string;
+function ProtocolVersionToString(AVersion: TSSLProtocolVersion): string;
+function LibraryTypeToString(ALibType: TSSLLibraryType): string;
 
 implementation
 
@@ -1019,19 +1035,19 @@ end;
 
 { 辅助函数实现 }
 
-function SSLErrorToString(aError: TSSLErrorCode): string;
+function SSLErrorToString(AError: TSSLErrorCode): string;
 begin
-  Result := SSL_ERROR_MESSAGES[aError];
+  Result := SSL_ERROR_MESSAGES[AError];
 end;
 
-function ProtocolVersionToString(aVersion: TSSLProtocolVersion): string;
+function ProtocolVersionToString(AVersion: TSSLProtocolVersion): string;
 begin
-  Result := SSL_PROTOCOL_NAMES[aVersion];
+  Result := SSL_PROTOCOL_NAMES[AVersion];
 end;
 
-function LibraryTypeToString(aLibType: TSSLLibraryType): string;
+function LibraryTypeToString(ALibType: TSSLLibraryType): string;
 begin
-  Result := SSL_LIBRARY_NAMES[aLibType];
+  Result := SSL_LIBRARY_NAMES[ALibType];
 end;
 
 { TSSLOperationResult }

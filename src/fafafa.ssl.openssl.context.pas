@@ -21,7 +21,8 @@ uses
   SysUtils, Classes, SyncObjs,
   fafafa.ssl.base,
   fafafa.ssl.errors,
-  fafafa.ssl.exceptions,  // 新增：类型化异常
+  fafafa.ssl.exceptions,
+  fafafa.ssl.openssl.errors,  // Phase 3.1 - OpenSSL-specific error handling
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl,
@@ -63,62 +64,62 @@ type
     function GetSSLMethod: PSSL_METHOD;
     
   public
-    constructor Create(aLibrary: ISSLLibrary; aType: TSSLContextType);
+    constructor Create(ALibrary: ISSLLibrary; AType: TSSLContextType);
     destructor Destroy; override;
     
     { ISSLContext - 基本配置 }
     function GetContextType: TSSLContextType;
-    procedure SetProtocolVersions(aVersions: TSSLProtocolVersions);
+    procedure SetProtocolVersions(AVersions: TSSLProtocolVersions);
     function GetProtocolVersions: TSSLProtocolVersions;
     
     { ISSLContext - 证书和密钥管理 }
-    procedure LoadCertificate(const aFileName: string); overload;
-    procedure LoadCertificate(aStream: TStream); overload;
-    procedure LoadCertificate(aCert: ISSLCertificate); overload;
-    procedure LoadPrivateKey(const aFileName: string; const aPassword: string = ''); overload;
-    procedure LoadPrivateKey(aStream: TStream; const aPassword: string = ''); overload;
-    procedure LoadCertificatePEM(const aPEM: string);
-    procedure LoadPrivateKeyPEM(const aPEM: string; const aPassword: string = '');
-    procedure LoadCAFile(const aFileName: string);
-    procedure LoadCAPath(const aPath: string);
-    procedure SetCertificateStore(aStore: ISSLCertificateStore);
+    procedure LoadCertificate(const AFileName: string); overload;
+    procedure LoadCertificate(AStream: TStream); overload;
+    procedure LoadCertificate(ACert: ISSLCertificate); overload;
+    procedure LoadPrivateKey(const AFileName: string; const APassword: string = ''); overload;
+    procedure LoadPrivateKey(AStream: TStream; const APassword: string = ''); overload;
+    procedure LoadCertificatePEM(const APEM: string);
+    procedure LoadPrivateKeyPEM(const APEM: string; const APassword: string = '');
+    procedure LoadCAFile(const AFileName: string);
+    procedure LoadCAPath(const APath: string);
+    procedure SetCertificateStore(AStore: ISSLCertificateStore);
     
     { ISSLContext - 验证配置 }
-    procedure SetVerifyMode(aMode: TSSLVerifyModes);
+    procedure SetVerifyMode(AMode: TSSLVerifyModes);
     function GetVerifyMode: TSSLVerifyModes;
-    procedure SetVerifyDepth(aDepth: Integer);
+    procedure SetVerifyDepth(ADepth: Integer);
     function GetVerifyDepth: Integer;
-    procedure SetVerifyCallback(aCallback: TSSLVerifyCallback);
+    procedure SetVerifyCallback(ACallback: TSSLVerifyCallback);
     
     { ISSLContext - 密码套件配置 }
-    procedure SetCipherList(const aCipherList: string);
+    procedure SetCipherList(const ACipherList: string);
     function GetCipherList: string;
-    procedure SetCipherSuites(const aCipherSuites: string);
+    procedure SetCipherSuites(const ACipherSuites: string);
     function GetCipherSuites: string;
     
     { ISSLContext - 会话管理 }
-    procedure SetSessionCacheMode(aEnabled: Boolean);
+    procedure SetSessionCacheMode(AEnabled: Boolean);
     function GetSessionCacheMode: Boolean;
-    procedure SetSessionTimeout(aTimeout: Integer);
+    procedure SetSessionTimeout(ATimeout: Integer);
     function GetSessionTimeout: Integer;
-    procedure SetSessionCacheSize(aSize: Integer);
+    procedure SetSessionCacheSize(ASize: Integer);
     function GetSessionCacheSize: Integer;
     
     { ISSLContext - 高级选项 }
-    procedure SetOptions(const aOptions: TSSLOptions);
+    procedure SetOptions(const AOptions: TSSLOptions);
     function GetOptions: TSSLOptions;
-    procedure SetServerName(const aServerName: string);
+    procedure SetServerName(const AServerName: string);
     function GetServerName: string;
-    procedure SetALPNProtocols(const aProtocols: string);
+    procedure SetALPNProtocols(const AProtocols: string);
     function GetALPNProtocols: string;
     
     { ISSLContext - 回调设置 }
-    procedure SetPasswordCallback(aCallback: TSSLPasswordCallback);
-    procedure SetInfoCallback(aCallback: TSSLInfoCallback);
+    procedure SetPasswordCallback(ACallback: TSSLPasswordCallback);
+    procedure SetInfoCallback(ACallback: TSSLInfoCallback);
     
     { ISSLContext - 创建连接 }
-    function CreateConnection(aSocket: THandle): ISSLConnection; overload;
-    function CreateConnection(aStream: TStream): ISSLConnection; overload;
+    function CreateConnection(ASocket: THandle): ISSLConnection; overload;
+    function CreateConnection(AStream: TStream): ISSLConnection; overload;
     
     { ISSLContext - 状态查询 }
     function IsValid: Boolean;
@@ -203,7 +204,7 @@ begin
   end;
 end;
 
-function BuildALPNWireData(const aProtocols: string): TBytes;
+function BuildALPNWireData(const AProtocols: string): TBytes;
 var
   ProtoList: TStringArray;
   Proto: string;
@@ -212,7 +213,7 @@ var
   AnsiProto: AnsiString;
 begin
   TotalLen := 0;
-  ProtoList := aProtocols.Split([',']);
+  ProtoList := AProtocols.Split([',']);
   for Proto in ProtoList do
   begin
     Trimmed := Trim(Proto);
@@ -373,13 +374,13 @@ end;
 // TOpenSSLContext - 构造和析构
 // ============================================================================
 
-constructor TOpenSSLContext.Create(aLibrary: ISSLLibrary; aType: TSSLContextType);
+constructor TOpenSSLContext.Create(ALibrary: ISSLLibrary; AType: TSSLContextType);
 var
   Method: PSSL_METHOD;
 begin
   inherited Create;
-  FLibrary := aLibrary;
-  FContextType := aType;
+  FLibrary := ALibrary;
+  FContextType := AType;
   FProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
   FVerifyMode := [sslVerifyPeer];
   FVerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
@@ -554,9 +555,9 @@ begin
   Result := FContextType;
 end;
 
-procedure TOpenSSLContext.SetProtocolVersions(aVersions: TSSLProtocolVersions);
+procedure TOpenSSLContext.SetProtocolVersions(AVersions: TSSLProtocolVersions);
 begin
-  FProtocolVersions := aVersions;
+  FProtocolVersions := AVersions;
   ApplyProtocolVersions;
 end;
 
@@ -569,7 +570,7 @@ end;
 // ISSLContext - 证书和密钥管理
 // ============================================================================
 
-procedure TOpenSSLContext.LoadCertificate(const aFileName: string);
+procedure TOpenSSLContext.LoadCertificate(const AFileName: string);
 var
   FileNameA: AnsiString;
 begin
@@ -601,19 +602,19 @@ begin
       );
   end;
   
-  FileNameA := AnsiString(aFileName);
+  FileNameA := AnsiString(AFileName);
   if SSL_CTX_use_certificate_file(FSSLContext, PAnsiChar(FileNameA), SSL_FILETYPE_PEM) <> 1 then
   begin
-    TSecurityLog.Error('OpenSSL', Format('Failed to load certificate: %s', [aFileName]));
+    TSecurityLog.Error('OpenSSL', Format('Failed to load certificate: %s', [AFileName]));
     RaiseSSLCertError(
-      Format('Failed to load certificate from file: %s', [aFileName]),
+      Format('Failed to load certificate from file: %s', [AFileName]),
       'TOpenSSLContext.LoadCertificate'
     );
   end;
-  TSecurityLog.Info('OpenSSL', Format('Loaded certificate from file: %s', [aFileName]));
+  TSecurityLog.Info('OpenSSL', Format('Loaded certificate from file: %s', [AFileName]));
 end;
 
-procedure TOpenSSLContext.LoadCertificate(aStream: TStream);
+procedure TOpenSSLContext.LoadCertificate(AStream: TStream);
 var
   Data: TBytes;
   Size: Int64;
@@ -628,9 +629,9 @@ begin
       'TOpenSSLContext.LoadCertificate'
     );
   
-  Size := aStream.Size - aStream.Position;
+  Size := AStream.Size - AStream.Position;
   SetLength(Data, Size);
-  aStream.Read(Data[0], Size);
+  AStream.Read(Data[0], Size);
   
   BIO := BIO_new_mem_buf(@Data[0], Size);
   try
@@ -655,7 +656,7 @@ begin
   end;
 end;
 
-procedure TOpenSSLContext.LoadCertificate(aCert: ISSLCertificate);
+procedure TOpenSSLContext.LoadCertificate(ACert: ISSLCertificate);
 var
   Cert: PX509;
 begin
@@ -666,10 +667,10 @@ begin
       'TOpenSSLContext.LoadCertificate'
     );
   
-  if aCert = nil then
+  if ACert = nil then
     RaiseInvalidParameter('Certificate');
   
-  Cert := PX509(aCert.GetNativeHandle);
+  Cert := PX509(ACert.GetNativeHandle);
   if Cert = nil then
     raise ESSLCertificateException.CreateWithContext(
       'Invalid certificate handle (GetNativeHandle returned nil)',
@@ -684,12 +685,13 @@ begin
     );
 end;
 
-procedure TOpenSSLContext.LoadPrivateKey(const aFileName: string; const {%H-}aPassword: string = '');
-  // P3-3: aPassword 目前未使用 - SSL_CTX_use_PrivateKey_file 不支持密码回调
-  // TODO: 如需支持加密私钥文件，应改用 PEM_read_bio_PrivateKey + 密码回调
+procedure TOpenSSLContext.LoadPrivateKey(const AFileName: string; const APassword: string = '');
 var
   FileNameA: AnsiString;
+  PassA: AnsiString;
   HasCert: Boolean;
+  BIO: PBIO;
+  PKey: PEVP_PKEY;
 begin
   if FSSLContext = nil then
     raise ESSLInitializationException.CreateWithContext(
@@ -697,16 +699,73 @@ begin
       sslErrNotInitialized,
       'TOpenSSLContext.LoadPrivateKey'
     );
-  
-  FileNameA := AnsiString(aFileName);
-  if SSL_CTX_use_PrivateKey_file(FSSLContext, PAnsiChar(FileNameA), SSL_FILETYPE_PEM) <> 1 then
-    raise ESSLKeyException.CreateWithContext(
-      Format('Failed to load private key from file: %s', [aFileName]),
-      sslErrLoadFailed,
-      'TOpenSSLContext.LoadPrivateKey',
-      Integer(GetLastOpenSSLError),
-      sslOpenSSL
-    );
+
+  FileNameA := AnsiString(AFileName);
+
+  // 使用 PEM_read_bio_PrivateKey 支持加密私钥
+  if APassword <> '' then
+  begin
+    // 加密私钥：使用 BIO + PEM_read_bio_PrivateKey + 密码回调
+    BIO := BIO_new_file(PAnsiChar(FileNameA), 'r');
+    if BIO = nil then
+      raise ESSLKeyException.CreateWithContext(
+        Format('Failed to open private key file: %s', [AFileName]),
+        sslErrLoadFailed,
+        'TOpenSSLContext.LoadPrivateKey',
+        Integer(GetLastOpenSSLError),
+        sslOpenSSL
+      );
+    try
+      if not Assigned(PEM_read_bio_PrivateKey) then
+        LoadOpenSSLPEM(GetCryptoLibHandle);
+      if not Assigned(PEM_read_bio_PrivateKey) then
+        raise ESSLKeyException.CreateWithContext(
+          'OpenSSL PEM API not loaded',
+          sslErrFunctionNotFound,
+          'TOpenSSLContext.LoadPrivateKey',
+          0,
+          sslOpenSSL
+        );
+
+      PassA := AnsiString(APassword);
+      // 使用密码回调加载加密私钥
+      PKey := PEM_read_bio_PrivateKey(BIO, nil, nil, PAnsiChar(PassA));
+      if PKey = nil then
+        raise ESSLKeyException.CreateWithContext(
+          Format('Failed to parse encrypted private key from file: %s', [AFileName]),
+          sslErrParseFailed,
+          'TOpenSSLContext.LoadPrivateKey',
+          Integer(GetLastOpenSSLError),
+          sslOpenSSL
+        );
+      try
+        if SSL_CTX_use_PrivateKey(FSSLContext, PKey) <> 1 then
+          raise ESSLKeyException.CreateWithContext(
+            Format('Failed to use private key from file: %s', [AFileName]),
+            sslErrLoadFailed,
+            'TOpenSSLContext.LoadPrivateKey',
+            Integer(GetLastOpenSSLError),
+            sslOpenSSL
+          );
+      finally
+        EVP_PKEY_free(PKey);
+      end;
+    finally
+      BIO_free(BIO);
+    end;
+  end
+  else
+  begin
+    // 非加密私钥：使用更快的 SSL_CTX_use_PrivateKey_file
+    if SSL_CTX_use_PrivateKey_file(FSSLContext, PAnsiChar(FileNameA), SSL_FILETYPE_PEM) <> 1 then
+      raise ESSLKeyException.CreateWithContext(
+        Format('Failed to load private key from file: %s', [AFileName]),
+        sslErrLoadFailed,
+        'TOpenSSLContext.LoadPrivateKey',
+        Integer(GetLastOpenSSLError),
+        sslOpenSSL
+      );
+  end;
 
   HasCert := Assigned(SSL_CTX_get0_certificate) and (SSL_CTX_get0_certificate(FSSLContext) <> nil);
   if HasCert then
@@ -727,7 +786,7 @@ begin
   TSecurityLog.Audit('OpenSSL', 'LoadPrivateKey', 'System', 'Private key loaded from file');
 end;
 
-procedure TOpenSSLContext.LoadPrivateKey(aStream: TStream; const aPassword: string = '');
+procedure TOpenSSLContext.LoadPrivateKey(AStream: TStream; const APassword: string = '');
 var
   Data: TBytes;
   Size: Int64;
@@ -744,12 +803,12 @@ begin
       'TOpenSSLContext.LoadPrivateKey'
     );
 
-  if aStream = nil then
+  if AStream = nil then
     RaiseInvalidParameter('Stream');
 
-  Size := aStream.Size - aStream.Position;
+  Size := AStream.Size - AStream.Position;
   SetLength(Data, Size);
-  aStream.Read(Data[0], Size);
+  AStream.Read(Data[0], Size);
 
   BIO := BIO_new_mem_buf(@Data[0], Size);
   if BIO = nil then
@@ -767,9 +826,9 @@ begin
       );
 
     // 若提供密码，通过userdata传递
-    if aPassword <> '' then
+    if APassword <> '' then
     begin
-      PassA := AnsiString(aPassword);
+      PassA := AnsiString(APassword);
       if Assigned(SSL_CTX_set_default_passwd_cb_userdata) then
         SSL_CTX_set_default_passwd_cb_userdata(FSSLContext, PAnsiChar(PassA));
     end;
@@ -813,7 +872,7 @@ begin
   end;
 end;
 
-procedure TOpenSSLContext.LoadCertificatePEM(const aPEM: string);
+procedure TOpenSSLContext.LoadCertificatePEM(const APEM: string);
 var
   BIO: PBIO;
   Cert: PX509;
@@ -826,10 +885,10 @@ begin
       'TOpenSSLContext.LoadCertificatePEM'
     );
   
-  if aPEM = '' then
+  if APEM = '' then
     RaiseInvalidParameter('Certificate PEM');
   
-  PemA := AnsiString(aPEM);
+  PemA := AnsiString(APEM);
   BIO := BIO_new_mem_buf(PAnsiChar(PemA), Length(PemA));
   if BIO = nil then
     RaiseMemoryError('create BIO for PEM certificate');
@@ -857,7 +916,7 @@ begin
   end;
 end;
 
-procedure TOpenSSLContext.LoadPrivateKeyPEM(const aPEM: string; const aPassword: string = '');
+procedure TOpenSSLContext.LoadPrivateKeyPEM(const APEM: string; const APassword: string = '');
 var
   BIO: PBIO;
   PKey: PEVP_PKEY;
@@ -872,10 +931,10 @@ begin
       'TOpenSSLContext.LoadPrivateKeyPEM'
     );
   
-  if aPEM = '' then
+  if APEM = '' then
     RaiseInvalidParameter('Private key PEM');
   
-  PemA := AnsiString(aPEM);
+  PemA := AnsiString(APEM);
   BIO := BIO_new_mem_buf(PAnsiChar(PemA), Length(PemA));
   if BIO = nil then
     RaiseMemoryError('create BIO for PEM private key');
@@ -893,9 +952,9 @@ begin
       );
 
     PassPtr := nil;
-    if aPassword <> '' then
+    if APassword <> '' then
     begin
-      PassA := AnsiString(aPassword);
+      PassA := AnsiString(APassword);
       PassPtr := PAnsiChar(PassA);
     end;
     
@@ -941,7 +1000,7 @@ begin
   end;
 end;
 
-procedure TOpenSSLContext.LoadCAFile(const aFileName: string);
+procedure TOpenSSLContext.LoadCAFile(const AFileName: string);
 var
   FileNameA: AnsiString;
 begin
@@ -973,10 +1032,10 @@ begin
       );
   end;
   
-  FileNameA := AnsiString(aFileName);
+  FileNameA := AnsiString(AFileName);
   if SSL_CTX_load_verify_locations(FSSLContext, PAnsiChar(FileNameA), nil) <> 1 then
     raise ESSLCertificateLoadException.CreateWithContext(
-      Format('Failed to load CA certificates from file: %s', [aFileName]),
+      Format('Failed to load CA certificates from file: %s', [AFileName]),
       sslErrLoadFailed,
       'TOpenSSLContext.LoadCAFile',
       Integer(GetLastOpenSSLError),
@@ -984,7 +1043,7 @@ begin
     );
 end;
 
-procedure TOpenSSLContext.LoadCAPath(const aPath: string);
+procedure TOpenSSLContext.LoadCAPath(const APath: string);
 var
   PathA: AnsiString;
 begin
@@ -1016,13 +1075,13 @@ begin
       );
   end;
   
-  if not DirectoryExists(aPath) then
-    RaiseLoadError(aPath);
+  if not DirectoryExists(APath) then
+    RaiseLoadError(APath);
   
-  PathA := AnsiString(aPath);
+  PathA := AnsiString(APath);
   if SSL_CTX_load_verify_locations(FSSLContext, nil, PAnsiChar(PathA)) <> 1 then
     raise ESSLCertificateLoadException.CreateWithContext(
-      Format('Failed to load CA certificates from directory: %s', [aPath]),
+      Format('Failed to load CA certificates from directory: %s', [APath]),
       sslErrLoadFailed,
       'TOpenSSLContext.LoadCAPath',
       Integer(GetLastOpenSSLError),
@@ -1030,7 +1089,7 @@ begin
     );
 end;
 
-procedure TOpenSSLContext.SetCertificateStore(aStore: ISSLCertificateStore);
+procedure TOpenSSLContext.SetCertificateStore(AStore: ISSLCertificateStore);
 var
   Store: PX509_STORE;
 begin
@@ -1040,10 +1099,10 @@ begin
       sslErrNotInitialized,
       'TOpenSSLContext.SetCertificateStore'
     );
-  if aStore = nil then
+  if AStore = nil then
     RaiseInvalidParameter('Certificate store');
 
-  Store := PX509_STORE(aStore.GetNativeHandle);
+  Store := PX509_STORE(AStore.GetNativeHandle);
   if Store = nil then
     raise ESSLCertificateException.CreateWithContext(
       'Invalid certificate store handle (GetNativeHandle returned nil)',
@@ -1067,9 +1126,9 @@ end;
 // ISSLContext - 验证配置
 // ============================================================================
 
-procedure TOpenSSLContext.SetVerifyMode(aMode: TSSLVerifyModes);
+procedure TOpenSSLContext.SetVerifyMode(AMode: TSSLVerifyModes);
 begin
-  FVerifyMode := aMode;
+  FVerifyMode := AMode;
   ApplyVerifyMode;
 end;
 
@@ -1078,12 +1137,12 @@ begin
   Result := FVerifyMode;
 end;
 
-procedure TOpenSSLContext.SetVerifyDepth(aDepth: Integer);
+procedure TOpenSSLContext.SetVerifyDepth(ADepth: Integer);
 begin
-  FVerifyDepth := aDepth;
+  FVerifyDepth := ADepth;
   if FSSLContext <> nil then
     if Assigned(SSL_CTX_set_verify_depth) then
-      SSL_CTX_set_verify_depth(FSSLContext, aDepth);
+      SSL_CTX_set_verify_depth(FSSLContext, ADepth);
 end;
 
 function TOpenSSLContext.GetVerifyDepth: Integer;
@@ -1091,9 +1150,9 @@ begin
   Result := FVerifyDepth;
 end;
 
-procedure TOpenSSLContext.SetVerifyCallback(aCallback: TSSLVerifyCallback);
+procedure TOpenSSLContext.SetVerifyCallback(ACallback: TSSLVerifyCallback);
 begin
-  FVerifyCallback := aCallback;
+  FVerifyCallback := ACallback;
   if FSSLContext = nil then Exit;
   if not Assigned(SSL_CTX_set_cert_verify_callback) then
     raise ESSLInitializationException.CreateWithContext(
@@ -1111,15 +1170,15 @@ end;
 // ISSLContext - 密码套件配置
 // ============================================================================
 
-procedure TOpenSSLContext.SetCipherList(const aCipherList: string);
+procedure TOpenSSLContext.SetCipherList(const ACipherList: string);
 var
   CipherListA: AnsiString;
 begin
-  FCipherList := aCipherList;
+  FCipherList := ACipherList;
   
   if (FSSLContext <> nil) and Assigned(SSL_CTX_set_cipher_list) then
   begin
-    CipherListA := AnsiString(aCipherList);
+    CipherListA := AnsiString(ACipherList);
     SSL_CTX_set_cipher_list(FSSLContext, PAnsiChar(CipherListA));
   end;
 end;
@@ -1129,15 +1188,15 @@ begin
   Result := FCipherList;
 end;
 
-procedure TOpenSSLContext.SetCipherSuites(const aCipherSuites: string);
+procedure TOpenSSLContext.SetCipherSuites(const ACipherSuites: string);
 var
   CipherSuitesA: AnsiString;
 begin
-  FCipherSuites := aCipherSuites;
+  FCipherSuites := ACipherSuites;
   
   if (FSSLContext <> nil) and Assigned(SSL_CTX_set_ciphersuites) then
   begin
-    CipherSuitesA := AnsiString(aCipherSuites);
+    CipherSuitesA := AnsiString(ACipherSuites);
     SSL_CTX_set_ciphersuites(FSSLContext, PAnsiChar(CipherSuitesA));
   end;
 end;
@@ -1151,15 +1210,15 @@ end;
 // ISSLContext - 会话管理
 // ============================================================================
 
-procedure TOpenSSLContext.SetSessionCacheMode(aEnabled: Boolean);
+procedure TOpenSSLContext.SetSessionCacheMode(AEnabled: Boolean);
 var
   Mode: Int64;
 begin
-  FSessionCacheEnabled := aEnabled;
+  FSessionCacheEnabled := AEnabled;
   
   if (FSSLContext <> nil) and Assigned(SSL_CTX_set_session_cache_mode) then
   begin
-    if aEnabled then
+    if AEnabled then
       Mode := SSL_SESS_CACHE_BOTH
     else
       Mode := SSL_SESS_CACHE_OFF;
@@ -1173,11 +1232,11 @@ begin
   Result := FSessionCacheEnabled;
 end;
 
-procedure TOpenSSLContext.SetSessionTimeout(aTimeout: Integer);
+procedure TOpenSSLContext.SetSessionTimeout(ATimeout: Integer);
 begin
-  FSessionTimeout := aTimeout;
+  FSessionTimeout := ATimeout;
   if FSSLContext <> nil then
-    SSL_CTX_set_timeout(FSSLContext, aTimeout);
+    SSL_CTX_set_timeout(FSSLContext, ATimeout);
 end;
 
 function TOpenSSLContext.GetSessionTimeout: Integer;
@@ -1185,11 +1244,11 @@ begin
   Result := FSessionTimeout;
 end;
 
-procedure TOpenSSLContext.SetSessionCacheSize(aSize: Integer);
+procedure TOpenSSLContext.SetSessionCacheSize(ASize: Integer);
 begin
-  FSessionCacheSize := aSize;
-  if (FSSLContext <> nil) and Assigned(SSL_CTX_sess_set_cache_size) and (aSize > 0) then
-    SSL_CTX_sess_set_cache_size(FSSLContext, aSize);
+  FSessionCacheSize := ASize;
+  if (FSSLContext <> nil) and Assigned(SSL_CTX_sess_set_cache_size) and (ASize > 0) then
+    SSL_CTX_sess_set_cache_size(FSSLContext, ASize);
 end;
 
 function TOpenSSLContext.GetSessionCacheSize: Integer;
@@ -1249,9 +1308,9 @@ end;
 // ISSLContext - 高级选项
 // ============================================================================
 
-procedure TOpenSSLContext.SetOptions(const aOptions: TSSLOptions);
+procedure TOpenSSLContext.SetOptions(const AOptions: TSSLOptions);
 begin
-  FOptions := aOptions;
+  FOptions := AOptions;
   ApplyOptions;
 end;
 
@@ -1260,9 +1319,9 @@ begin
   Result := FOptions;
 end;
 
-procedure TOpenSSLContext.SetServerName(const aServerName: string);
+procedure TOpenSSLContext.SetServerName(const AServerName: string);
 begin
-  FServerName := aServerName;
+  FServerName := AServerName;
 end;
 
 function TOpenSSLContext.GetServerName: string;
@@ -1270,9 +1329,9 @@ begin
   Result := FServerName;
 end;
 
-procedure TOpenSSLContext.SetALPNProtocols(const aProtocols: string);
+procedure TOpenSSLContext.SetALPNProtocols(const AProtocols: string);
 begin
-  FALPNProtocols := Trim(aProtocols);
+  FALPNProtocols := Trim(AProtocols);
   FALPNWireData := BuildALPNWireData(FALPNProtocols);
 
   if FSSLContext = nil then Exit;
@@ -1305,9 +1364,9 @@ end;
 // ISSLContext - 回调设置
 // ============================================================================
 
-procedure TOpenSSLContext.SetPasswordCallback(aCallback: TSSLPasswordCallback);
+procedure TOpenSSLContext.SetPasswordCallback(ACallback: TSSLPasswordCallback);
 begin
-  FPasswordCallback := aCallback;
+  FPasswordCallback := ACallback;
   if FSSLContext = nil then Exit;
   if not Assigned(SSL_CTX_set_default_passwd_cb) then
     RaiseUnsupported('Password callback');
@@ -1325,9 +1384,9 @@ begin
   end;
 end;
 
-procedure TOpenSSLContext.SetInfoCallback(aCallback: TSSLInfoCallback);
+procedure TOpenSSLContext.SetInfoCallback(ACallback: TSSLInfoCallback);
 begin
-  FInfoCallback := aCallback;
+  FInfoCallback := ACallback;
   if FSSLContext = nil then Exit;
   if not Assigned(SSL_CTX_set_info_callback) then
     RaiseUnsupported('Info callback');
@@ -1341,7 +1400,7 @@ end;
 // ISSLContext - 创建连接
 // ============================================================================
 
-function TOpenSSLContext.CreateConnection(aSocket: THandle): ISSLConnection;
+function TOpenSSLContext.CreateConnection(ASocket: THandle): ISSLConnection;
 begin
   if FSSLContext = nil then
     raise ESSLInitializationException.CreateWithContext(
@@ -1351,7 +1410,7 @@ begin
     );
 
   try
-    Result := TOpenSSLConnection.Create(Self, aSocket);
+    Result := TOpenSSLConnection.Create(Self, ASocket);
   except
     on E: ESSLException do
       raise;  // Re-raise SSL exceptions as-is
@@ -1364,7 +1423,7 @@ begin
   end;
 end;
 
-function TOpenSSLContext.CreateConnection(aStream: TStream): ISSLConnection;
+function TOpenSSLContext.CreateConnection(AStream: TStream): ISSLConnection;
 begin
   if FSSLContext = nil then
     raise ESSLInitializationException.CreateWithContext(
@@ -1373,14 +1432,14 @@ begin
       'TOpenSSLContext.CreateConnection'
     );
 
-  if aStream = nil then
+  if AStream = nil then
     raise ESSLInvalidArgument.Create(
       'Cannot create connection: stream is nil',
       sslErrInvalidParam
     );
 
   try
-    Result := TOpenSSLConnection.Create(Self, aStream);
+    Result := TOpenSSLConnection.Create(Self, AStream);
   except
     on E: ESSLException do
       raise;  // Re-raise SSL exceptions as-is
@@ -1439,7 +1498,7 @@ begin
 
   // 3. 强密码套件（TLS 1.2 及以下）
   // 优先使用 ECDHE 密钥交换和 AES-GCM 模式
-  SetCipherList('ECDHE+AESGCM:ECDHE+CHACHA20:ECDHE+AES256:DHE+AESGCM:DHE+AES256:!aNULL:!MD5:!DSS:!RC4:!3DES');
+  SetCipherList('ECDHE+AESGCM:ECDHE+CHACHA20:ECDHE+AES256:DHE+AESGCM:DHE+AES256:!ANULL:!MD5:!DSS:!RC4:!3DES');
 
   // 4. TLS 1.3 密码套件
   SetCipherSuites('TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256');

@@ -40,7 +40,8 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
-  fafafa.ssl.errors,           // Phase 2.1 - Standardized error handling
+  fafafa.ssl.errors,
+  fafafa.ssl.openssl.errors,  // Phase 3.1 - OpenSSL-specific error handling
   fafafa.ssl.encoding,         // Phase 2.3.3 - Use unified encoding utilities
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.loader,

@@ -126,38 +126,18 @@ type
   end;
 
 {**
- * 从OpenSSL错误队列获取错误信息
- * @return 格式化的错误消息字符串
+ * OpenSSL-specific error functions have been moved to fafafa.ssl.openssl.errors
+ * to resolve circular dependency (Phase 3.1).
+ *
+ * For OpenSSL error handling, use:
+ *   - GetOpenSSLErrorString
+ *   - GetLastOpenSSLError
+ *   - CheckOpenSSLResult
+ *   - RaiseSSLInitError, RaiseSSLCertError, etc.
+ * from fafafa.ssl.openssl.errors unit.
  *}
-function GetOpenSSLErrorString: string;
-
-{**
- * 获取最后一个OpenSSL错误码
- * @return OpenSSL错误码（如果没有则返回0）
- *}
-function GetLastOpenSSLError: Cardinal;
-
-{**
- * 检查OpenSSL操作结果并在失败时抛出异常
- * @param AResult OpenSSL函数返回值（通常1表示成功）
- * @param AOperation 操作名称（用于错误消息）
- * @raises ESSLCryptoError 如果操作失败
- *}
-procedure CheckOpenSSLResult(AResult: Integer; const AOperation: string);
-
-{**
- * 便捷的异常抛出函数（自动获取OpenSSL错误）
- *}
-procedure RaiseSSLInitError(const AMessage: string; const AContext: string = '');
-procedure RaiseSSLCertError(const AMessage: string; const AContext: string = '');
-procedure RaiseSSLConnectionError(const AMessage: string; const AContext: string = '');
-procedure RaiseSSLCryptoError(const AMessage: string; const AContext: string = '');
-procedure RaiseSSLConfigError(const AMessage: string; const AContext: string = '');
 
 implementation
-
-uses
-  fafafa.ssl.openssl.api;
 
 { ESSLException }
 
@@ -259,153 +239,6 @@ constructor ESSLSystemError.CreateWithSysCode(const AMessage: string; ASystemErr
 begin
   inherited CreateFmt('%s (System error: %d)', [AMessage, ASystemErrorCode]);
   FSystemErrorCode := ASystemErrorCode;
-end;
-
-{ Helper functions }
-
-function GetOpenSSLErrorString: string;
-var
-  LErrorCode: Cardinal;
-  LErrorBuf: array[0..255] of AnsiChar;
-begin
-  Result := '';
-
-  if not IsOpenSSLLoaded then
-  begin
-    try
-      LoadOpenSSLLibrary;
-    except
-      // ignore
-    end;
-  end;
-
-  if not Assigned(ERR_get_error) or not Assigned(ERR_error_string_n) then
-  begin
-    Result := 'Unknown OpenSSL error';
-    Exit;
-  end;
-
-  LErrorCode := ERR_get_error();
-  
-  while LErrorCode <> 0 do
-  begin
-    ERR_error_string_n(LErrorCode, @LErrorBuf[0], SizeOf(LErrorBuf));
-    if Result <> '' then
-      Result := Result + '; ';
-    Result := Result + string(LErrorBuf);
-    LErrorCode := ERR_get_error();
-  end;
-  
-  if Result = '' then
-    Result := 'Unknown OpenSSL error';
-end;
-
-function GetLastOpenSSLError: Cardinal;
-begin
-  Result := 0;
-
-  if not IsOpenSSLLoaded then
-  begin
-    try
-      LoadOpenSSLLibrary;
-    except
-      // ignore
-    end;
-  end;
-
-  if Assigned(ERR_peek_error) then
-    Result := ERR_peek_error();  // 查看但不清除错误队列
-
-  if (Result = 0) and Assigned(ERR_get_error) then
-    Result := ERR_get_error();  // 如果没有peek到，则获取并清除
-end;
-
-procedure CheckOpenSSLResult(AResult: Integer; const AOperation: string);
-var
-  LErrorMsg: string;
-  LErrorCode: Cardinal;
-begin
-  if AResult <> 1 then
-  begin
-    LErrorCode := GetLastOpenSSLError;
-    LErrorMsg := GetOpenSSLErrorString;
-    raise ESSLCryptoError.CreateWithContext(
-      Format('%s failed: %s', [AOperation, LErrorMsg]),
-      sslErrOther,  // 使用通用错误码
-      AOperation,
-      Integer(LErrorCode),
-      sslOpenSSL
-    );
-  end;
-end;
-
-{ 便捷异常抛出函数 }
-
-procedure RaiseSSLInitError(const AMessage: string; const AContext: string);
-var
-  LNativeError: Cardinal;
-begin
-  LNativeError := GetLastOpenSSLError;
-  raise ESSLInitializationException.CreateWithContext(
-    AMessage,
-    sslErrNotInitialized,  // base.pas中已有
-    AContext,
-    Integer(LNativeError),
-    sslOpenSSL
-  );
-end;
-
-procedure RaiseSSLCertError(const AMessage: string; const AContext: string);
-var
-  LNativeError: Cardinal;
-begin
-  LNativeError := GetLastOpenSSLError;
-  raise ESSLCertificateLoadException.CreateWithContext(
-    AMessage,
-    sslErrLoadFailed,  // base.pas中已有
-    AContext,
-    Integer(LNativeError),
-    sslOpenSSL
-  );
-end;
-
-procedure RaiseSSLConnectionError(const AMessage: string; const AContext: string);
-var
-  LNativeError: Cardinal;
-begin
-  LNativeError := GetLastOpenSSLError;
-  raise ESSLConnectionException.CreateWithContext(
-    AMessage,
-    sslErrConnection,  // base.pas中已有
-    AContext,
-    Integer(LNativeError),
-    sslOpenSSL
-  );
-end;
-
-procedure RaiseSSLCryptoError(const AMessage: string; const AContext: string);
-var
-  LNativeError: Cardinal;
-begin
-  LNativeError := GetLastOpenSSLError;
-  raise ESSLCryptoError.CreateWithContext(
-    AMessage,
-    sslErrOther,  // 使用通用错误码
-    AContext,
-    Integer(LNativeError),
-    sslOpenSSL
-  );
-end;
-
-procedure RaiseSSLConfigError(const AMessage: string; const AContext: string);
-begin
-  raise ESSLConfigurationException.CreateWithContext(
-    AMessage,
-    sslErrConfiguration,  // base.pas中已有
-    AContext,
-    0,
-    sslAutoDetect
-  );
 end;
 
 end.

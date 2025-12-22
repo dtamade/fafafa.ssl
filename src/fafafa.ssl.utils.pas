@@ -39,26 +39,26 @@ type
   TSSLUtils = class
   public
     // 证书工具
-    class function IsPEMFormat(const aData: string): Boolean;
-    class function IsDERFormat(const aData: TBytes): Boolean;
-    class function PEMToDER(const aPEM: string): TBytes;
-    class function DERToPEM(const aDER: TBytes; const aType: string = 'CERTIFICATE'): string;
-    class function ExtractPEMBlock(const aPEM: string; const aType: string = 'CERTIFICATE'): string;
-    class function FormatCertificateSubject(const aSubject: string): string;
-    class function ParseDistinguishedName(const aDN: string): TStringList;
+    class function IsPEMFormat(const AData: string): Boolean;
+    class function IsDERFormat(const AData: TBytes): Boolean;
+    class function PEMToDER(const APEM: string): TBytes;
+    class function DERToPEM(const ADER: TBytes; const AType: string = 'CERTIFICATE'): string;
+    class function ExtractPEMBlock(const APEM: string; const AType: string = 'CERTIFICATE'): string;
+    class function FormatCertificateSubject(const ASubject: string): string;
+    class function ParseDistinguishedName(const ADN: string): TStringList;
 
     // 网络工具
-    class function IsIPAddress(const aStr: string): Boolean;
-    class function IsIPv4Address(const aStr: string): Boolean;
-    class function IsIPv6Address(const aStr: string): Boolean;
-    class function IsValidHostname(const aHost: string): Boolean;
-    class function ParseURL(const aURL: string; out aProtocol, aHost: string; 
-                          out aPort: Integer; out aPath: string): Boolean;
-    class function NormalizeHostname(const aHost: string): string;
+    class function IsIPAddress(const AStr: string): Boolean;
+    class function IsIPv4Address(const AStr: string): Boolean;
+    class function IsIPv6Address(const AStr: string): Boolean;
+    class function IsValidHostname(const AHost: string): Boolean;
+    class function ParseURL(const AURL: string; out AProtocol, AHost: string; 
+                          out APort: Integer; out APath: string): Boolean;
+    class function NormalizeHostname(const AHost: string): string;
     
     // 错误处理
-    class function FormatSSLError(aError: TSSLErrorCode; const aContext: string = ''): string;
-    class function GetErrorDetails(aException: ESSLException): string;
+    class function FormatSSLError(AError: TSSLErrorCode; const AContext: string = ''): string;
+    class function GetErrorDetails(AException: ESSLException): string;
   end;
 
 const
@@ -73,6 +73,9 @@ const
 
 // 辅助函数
 
+{ 将 TStrings 转换为 TSSLStringArray - Phase 3.2 统一实现 }
+function StringsToArray(AStrings: TStrings): TSSLStringArray;
+
 implementation
 
 uses
@@ -83,23 +86,37 @@ uses
   fafafa.ssl.openssl.api.crypto,
   fafafa.ssl.errors;
 
+{ StringsToArray - Phase 3.2 统一实现 }
+function StringsToArray(AStrings: TStrings): TSSLStringArray;
+var
+  I: Integer;
+begin
+  SetLength(Result, 0);
+  if (AStrings = nil) or (AStrings.Count = 0) then
+    Exit;
+
+  SetLength(Result, AStrings.Count);
+  for I := 0 to AStrings.Count - 1 do
+    Result[I] := Trim(AStrings[I]);
+end;
+
 
 { TSSLUtils }
 
 
-class function TSSLUtils.IsPEMFormat(const aData: string): Boolean;
+class function TSSLUtils.IsPEMFormat(const AData: string): Boolean;
 begin
-  Result := (Pos(PEM_BEGIN_MARKER, aData) > 0) and 
-            (Pos(PEM_END_MARKER, aData) > 0);
+  Result := (Pos(PEM_BEGIN_MARKER, AData) > 0) and 
+            (Pos(PEM_END_MARKER, AData) > 0);
 end;
 
-class function TSSLUtils.IsDERFormat(const aData: TBytes): Boolean;
+class function TSSLUtils.IsDERFormat(const AData: TBytes): Boolean;
 begin
   // DER 格式通常以 0x30 (SEQUENCE) 开始
-  Result := (Length(aData) > 0) and (aData[0] = $30);
+  Result := (Length(AData) > 0) and (AData[0] = $30);
 end;
 
-class function TSSLUtils.PEMToDER(const aPEM: string): TBytes;
+class function TSSLUtils.PEMToDER(const APEM: string): TBytes;
 var
   LLines: TStringList;
   I: Integer;
@@ -111,7 +128,7 @@ begin
   
   LLines := TStringList.Create;
   try
-    LLines.Text := aPEM;
+    LLines.Text := APEM;
     LInBlock := False;
     LBase64 := '';
     
@@ -140,7 +157,7 @@ begin
   end;
 end;
 
-class function TSSLUtils.DERToPEM(const aDER: TBytes; const aType: string): string;
+class function TSSLUtils.DERToPEM(const ADER: TBytes; const AType: string): string;
 var
   LBase64: string;
   LLines: TStringList;
@@ -148,14 +165,14 @@ var
 begin
   Result := '';
   
-  if Length(aDER) = 0 then
+  if Length(ADER) = 0 then
     Exit;
 
-  LBase64 := TEncodingUtils.Base64Encode(aDER);
+  LBase64 := TEncodingUtils.Base64Encode(ADER);
   
   LLines := TStringList.Create;
   try
-    LLines.Add(PEM_BEGIN_MARKER + aType + '-----');
+    LLines.Add(PEM_BEGIN_MARKER + AType + '-----');
     
     // 每64个字符换行
     I := 1;
@@ -165,7 +182,7 @@ begin
       Inc(I, 64);
     end;
     
-    LLines.Add(PEM_END_MARKER + aType + '-----');
+    LLines.Add(PEM_END_MARKER + AType + '-----');
     
     Result := LLines.Text;
   finally
@@ -173,35 +190,35 @@ begin
   end;
 end;
 
-class function TSSLUtils.ExtractPEMBlock(const aPEM: string; const aType: string): string;
+class function TSSLUtils.ExtractPEMBlock(const APEM: string; const AType: string): string;
 var
   LBeginMarker, LEndMarker: string;
   LBeginPos, LEndPos: Integer;
 begin
   Result := '';
   
-  LBeginMarker := PEM_BEGIN_MARKER + aType + '-----';
-  LEndMarker := PEM_END_MARKER + aType + '-----';
+  LBeginMarker := PEM_BEGIN_MARKER + AType + '-----';
+  LEndMarker := PEM_END_MARKER + AType + '-----';
   
-  LBeginPos := Pos(LBeginMarker, aPEM);
+  LBeginPos := Pos(LBeginMarker, APEM);
   if LBeginPos = 0 then
     Exit;
   
   // 从LBeginPos之后查找LEndMarker
-  LEndPos := Pos(LEndMarker, Copy(aPEM, LBeginPos, Length(aPEM)));
+  LEndPos := Pos(LEndMarker, Copy(APEM, LBeginPos, Length(APEM)));
   if LEndPos = 0 then
     Exit;
   LEndPos := LEndPos + LBeginPos - 1;
   
-  Result := Copy(aPEM, LBeginPos, LEndPos - LBeginPos + Length(LEndMarker));
+  Result := Copy(APEM, LBeginPos, LEndPos - LBeginPos + Length(LEndMarker));
 end;
 
-class function TSSLUtils.FormatCertificateSubject(const aSubject: string): string;
+class function TSSLUtils.FormatCertificateSubject(const ASubject: string): string;
 var
   LParts: TStringList;
   I: Integer;
 begin
-  LParts := ParseDistinguishedName(aSubject);
+  LParts := ParseDistinguishedName(ASubject);
   try
     Result := '';
     for I := 0 to LParts.Count - 1 do
@@ -215,7 +232,7 @@ begin
   end;
 end;
 
-class function TSSLUtils.ParseDistinguishedName(const aDN: string): TStringList;
+class function TSSLUtils.ParseDistinguishedName(const ADN: string): TStringList;
 var
   LParts: TStringArray;
   I: Integer;
@@ -223,7 +240,7 @@ begin
   Result := TStringList.Create;
   
   // 简单解析，实际应该更复杂
-  LParts := aDN.Split([',', '/']);
+  LParts := ADN.Split([',', '/']);
   for I := 0 to High(LParts) do
   begin
     if Trim(LParts[I]) <> '' then
@@ -232,19 +249,19 @@ begin
 end;
 
 
-class function TSSLUtils.IsIPAddress(const aStr: string): Boolean;
+class function TSSLUtils.IsIPAddress(const AStr: string): Boolean;
 begin
-  Result := IsIPv4Address(aStr) or IsIPv6Address(aStr);
+  Result := IsIPv4Address(AStr) or IsIPv6Address(AStr);
 end;
 
-class function TSSLUtils.IsIPv4Address(const aStr: string): Boolean;
+class function TSSLUtils.IsIPv4Address(const AStr: string): Boolean;
 var
   LParts: TStringArray;
   I, LNum: Integer;
 begin
   Result := False;
   
-  LParts := aStr.Split(['.']);
+  LParts := AStr.Split(['.']);
   if Length(LParts) <> 4 then
     Exit;
   
@@ -259,69 +276,69 @@ begin
   Result := True;
 end;
 
-class function TSSLUtils.IsIPv6Address(const aStr: string): Boolean;
+class function TSSLUtils.IsIPv6Address(const AStr: string): Boolean;
 var
   I, Count: Integer;
 begin
   // 简单的 IPv6 检查
   Count := 0;
-  for I := 1 to Length(aStr) do
-    if aStr[I] = ':' then
+  for I := 1 to Length(AStr) do
+    if AStr[I] = ':' then
       Inc(Count);
   
-  Result := (Pos(':', aStr) > 0) and 
-            ((Count >= 2) or (Pos('::', aStr) > 0));
+  Result := (Pos(':', AStr) > 0) and 
+            ((Count >= 2) or (Pos('::', AStr) > 0));
 end;
 
-class function TSSLUtils.IsValidHostname(const aHost: string): Boolean;
+class function TSSLUtils.IsValidHostname(const AHost: string): Boolean;
 var
   I: Integer;
 begin
   Result := False;
   
-  if (aHost = '') or (Length(aHost) > 253) then
+  if (AHost = '') or (Length(AHost) > 253) then
     Exit;
   
   // 简单验证
-  for I := 1 to Length(aHost) do
+  for I := 1 to Length(AHost) do
   begin
-    if not (aHost[I] in ['a'..'z', 'A'..'Z', '0'..'9', '.', '-']) then
+    if not (AHost[I] in ['a'..'z', 'A'..'Z', '0'..'9', '.', '-']) then
       Exit;
   end;
   
   Result := True;
 end;
 
-class function TSSLUtils.ParseURL(const aURL: string; out aProtocol, aHost: string;
-  out aPort: Integer; out aPath: string): Boolean;
+class function TSSLUtils.ParseURL(const AURL: string; out AProtocol, AHost: string;
+  out APort: Integer; out APath: string): Boolean;
 var
   LPos, LSlashPos, LColonPos: Integer;
   LHostPort: string;
 begin
   Result := False;
-  aProtocol := '';
-  aHost := '';
-  aPort := 0;
-  aPath := '/';
+  AProtocol := '';
+  AHost := '';
+  APort := 0;
+  APath := '/';
   
   // 提取协议
-  LPos := Pos('://', aURL);
+  LPos := Pos('://', AURL);
   if LPos > 0 then
   begin
-    aProtocol := LowerCase(Copy(aURL, 1, LPos - 1));
-    LHostPort := Copy(aURL, LPos + 3, MaxInt);
+    AProtocol := LowerCase(Copy(AURL, 1, LPos - 1));
+    LHostPort := Copy(AURL, LPos + 3, MaxInt);
   end
   else
   begin
-    aProtocol := 'https';
-    LHostPort := aURL;
+    AProtocol := 'https';
+    LHostPort := AURL;
   end;
   
   // 提取路径
   LSlashPos := Pos('/', LHostPort);
   if LSlashPos > 0 then
   begin
-    aPath := Copy(LHostPort, LSlashPos, MaxInt);
+    APath := Copy(LHostPort, LSlashPos, MaxInt);
     LHostPort := Copy(LHostPort, 1, LSlashPos - 1);
   end;
   
@@ -329,39 +346,39 @@ begin
   LColonPos := Pos(':', LHostPort);
   if LColonPos > 0 then
   begin
-    aHost := Copy(LHostPort, 1, LColonPos - 1);
-    if not TryStrToInt(Copy(LHostPort, LColonPos + 1, MaxInt), aPort) then
+    AHost := Copy(LHostPort, 1, LColonPos - 1);
+    if not TryStrToInt(Copy(LHostPort, LColonPos + 1, MaxInt), APort) then
       Exit;
   end
   else
   begin
-    aHost := LHostPort;
-    if aProtocol = 'https' then
-      aPort := 443
-    else if aProtocol = 'http' then
-      aPort := 80;
+    AHost := LHostPort;
+    if AProtocol = 'https' then
+      APort := 443
+    else if AProtocol = 'http' then
+      APort := 80;
   end;
   
-  Result := (aHost <> '') and (aPort > 0);
+  Result := (AHost <> '') and (APort > 0);
 end;
 
-class function TSSLUtils.NormalizeHostname(const aHost: string): string;
+class function TSSLUtils.NormalizeHostname(const AHost: string): string;
 begin
-  Result := LowerCase(Trim(aHost));
+  Result := LowerCase(Trim(AHost));
 end;
 
-class function TSSLUtils.FormatSSLError(aError: TSSLErrorCode; const aContext: string): string;
+class function TSSLUtils.FormatSSLError(AError: TSSLErrorCode; const AContext: string): string;
 var
   LContext: string;
 begin
-  if aContext <> '' then
-    LContext := ' - ' + aContext
+  if AContext <> '' then
+    LContext := ' - ' + AContext
   else
     LContext := '';
-  Result := Format('[%s]%s', [SSL_ERROR_MESSAGES[aError], LContext]);
+  Result := Format('[%s]%s', [SSL_ERROR_MESSAGES[AError], LContext]);
 end;
 
-class function TSSLUtils.GetErrorDetails(aException: ESSLException): string;
+class function TSSLUtils.GetErrorDetails(AException: ESSLException): string;
 var
   LSB: TSSLStringBuilder;
 begin
@@ -369,16 +386,16 @@ begin
   try
     LSB.AppendLine('SSL 错误详情:');
     LSB.Indent;
-    LSB.AppendFormat('错误代码: %s', [SSL_ERROR_MESSAGES[aException.ErrorCode]]);
-    LSB.AppendFormat('库类型: %s', [SSL_LIBRARY_NAMES[aException.LibraryType]]);
+    LSB.AppendFormat('错误代码: %s', [SSL_ERROR_MESSAGES[AException.ErrorCode]]);
+    LSB.AppendFormat('库类型: %s', [SSL_LIBRARY_NAMES[AException.LibraryType]]);
     
-    if aException.NativeError <> 0 then
-      LSB.AppendFormat('原生错误码: 0x%x', [aException.NativeError]);
+    if AException.NativeError <> 0 then
+      LSB.AppendFormat('原生错误码: 0x%x', [AException.NativeError]);
     
-    if aException.Context <> '' then
-      LSB.AppendFormat('上下文: %s', [aException.Context]);
+    if AException.Context <> '' then
+      LSB.AppendFormat('上下文: %s', [AException.Context]);
     
-    LSB.AppendFormat('异常消息: %s', [aException.Message]);
+    LSB.AppendFormat('异常消息: %s', [AException.Message]);
     
     Result := LSB.ToString;
   finally

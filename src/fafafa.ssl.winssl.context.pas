@@ -45,6 +45,7 @@ type
     // 证书相关
     FCertContext: PCCERT_CONTEXT;
     FCertStore: HCERTSTORE;
+    FExternalCertStore: ISSLCertificateStore;  // 保持外部证书存储的引用
     FSessionCacheEnabled: Boolean;
     FSessionTimeout: Integer;
     FSessionCacheSize: Integer;
@@ -58,62 +59,62 @@ type
     procedure ApplyOptions;
     
   public
-    constructor Create(aLibrary: ISSLLibrary; aType: TSSLContextType);
+    constructor Create(ALibrary: ISSLLibrary; AType: TSSLContextType);
     destructor Destroy; override;
     
     { ISSLContext - 基本配置 }
     function GetContextType: TSSLContextType;
-    procedure SetProtocolVersions(aVersions: TSSLProtocolVersions);
+    procedure SetProtocolVersions(AVersions: TSSLProtocolVersions);
     function GetProtocolVersions: TSSLProtocolVersions;
     
     { ISSLContext - 证书和密钥管理 }
-    procedure LoadCertificate(const aFileName: string); overload;
-    procedure LoadCertificate(aStream: TStream); overload;
-    procedure LoadCertificate(aCert: ISSLCertificate); overload;
-    procedure LoadPrivateKey(const aFileName: string; const aPassword: string = ''); overload;
-    procedure LoadPrivateKey(aStream: TStream; const aPassword: string = ''); overload;
-    procedure LoadCertificatePEM(const aPEM: string);
-    procedure LoadPrivateKeyPEM(const aPEM: string; const aPassword: string = '');
-    procedure LoadCAFile(const aFileName: string);
-    procedure LoadCAPath(const aPath: string);
-    procedure SetCertificateStore(aStore: ISSLCertificateStore);
+    procedure LoadCertificate(const AFileName: string); overload;
+    procedure LoadCertificate(AStream: TStream); overload;
+    procedure LoadCertificate(ACert: ISSLCertificate); overload;
+    procedure LoadPrivateKey(const AFileName: string; const APassword: string = ''); overload;
+    procedure LoadPrivateKey(AStream: TStream; const APassword: string = ''); overload;
+    procedure LoadCertificatePEM(const APEM: string);
+    procedure LoadPrivateKeyPEM(const APEM: string; const APassword: string = '');
+    procedure LoadCAFile(const AFileName: string);
+    procedure LoadCAPath(const APath: string);
+    procedure SetCertificateStore(AStore: ISSLCertificateStore);
     
     { ISSLContext - 验证配置 }
-    procedure SetVerifyMode(aMode: TSSLVerifyModes);
+    procedure SetVerifyMode(AMode: TSSLVerifyModes);
     function GetVerifyMode: TSSLVerifyModes;
-    procedure SetVerifyDepth(aDepth: Integer);
+    procedure SetVerifyDepth(ADepth: Integer);
     function GetVerifyDepth: Integer;
-    procedure SetVerifyCallback(aCallback: TSSLVerifyCallback);
+    procedure SetVerifyCallback(ACallback: TSSLVerifyCallback);
     
     { ISSLContext - 密码套件配置 }
-    procedure SetCipherList(const aCipherList: string);
+    procedure SetCipherList(const ACipherList: string);
     function GetCipherList: string;
-    procedure SetCipherSuites(const aCipherSuites: string);
+    procedure SetCipherSuites(const ACipherSuites: string);
     function GetCipherSuites: string;
     
     { ISSLContext - 会话管理 }
-    procedure SetSessionCacheMode(aEnabled: Boolean);
+    procedure SetSessionCacheMode(AEnabled: Boolean);
     function GetSessionCacheMode: Boolean;
-    procedure SetSessionTimeout(aTimeout: Integer);
+    procedure SetSessionTimeout(ATimeout: Integer);
     function GetSessionTimeout: Integer;
-    procedure SetSessionCacheSize(aSize: Integer);
+    procedure SetSessionCacheSize(ASize: Integer);
     function GetSessionCacheSize: Integer;
     
     { ISSLContext - 高级选项 }
-    procedure SetOptions(const aOptions: TSSLOptions);
+    procedure SetOptions(const AOptions: TSSLOptions);
     function GetOptions: TSSLOptions;
-    procedure SetServerName(const aServerName: string);
+    procedure SetServerName(const AServerName: string);
     function GetServerName: string;
-    procedure SetALPNProtocols(const aProtocols: string);
+    procedure SetALPNProtocols(const AProtocols: string);
     function GetALPNProtocols: string;
     
     { ISSLContext - 回调设置 }
-    procedure SetPasswordCallback(aCallback: TSSLPasswordCallback);
-    procedure SetInfoCallback(aCallback: TSSLInfoCallback);
+    procedure SetPasswordCallback(ACallback: TSSLPasswordCallback);
+    procedure SetInfoCallback(ACallback: TSSLInfoCallback);
     
     { ISSLContext - 创建连接 }
-    function CreateConnection(aSocket: THandle): ISSLConnection; overload;
-    function CreateConnection(aStream: TStream): ISSLConnection; overload;
+    function CreateConnection(ASocket: THandle): ISSLConnection; overload;
+    function CreateConnection(AStream: TStream): ISSLConnection; overload;
     
     { ISSLContext - 状态查询 }
     function IsValid: Boolean;
@@ -129,7 +130,7 @@ uses
 // TWinSSLContext - 构造和析构
 // ============================================================================
 
-constructor TWinSSLContext.Create(aLibrary: ISSLLibrary; aType: TSSLContextType);
+constructor TWinSSLContext.Create(ALibrary: ISSLLibrary; AType: TSSLContextType);
 var
   SchannelCred: SCHANNEL_CRED;
   Status: SECURITY_STATUS;
@@ -137,8 +138,8 @@ var
   dwDirection: DWORD;
 begin
   inherited Create;
-  FLibrary := aLibrary;
-  FContextType := aType;
+  FLibrary := ALibrary;
+  FContextType := AType;
   FProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
   FVerifyMode := [sslVerifyPeer];
   FVerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
@@ -152,6 +153,7 @@ begin
   // 证书相关初始化
   FCertContext := nil;
   FCertStore := nil;
+  FExternalCertStore := nil;
   FSessionCacheEnabled := True;
   FSessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
   FSessionCacheSize := SSL_DEFAULT_SESSION_CACHE_SIZE;
@@ -215,12 +217,15 @@ begin
     CertFreeCertificateContext(FCertContext);
     FCertContext := nil;
   end;
-  
+
   if FCertStore <> nil then
   begin
     CertCloseStore(FCertStore, 0);
     FCertStore := nil;
   end;
+
+  // 清理外部证书存储引用
+  FExternalCertStore := nil;
 end;
 
 procedure TWinSSLContext.ApplyOptions;
@@ -239,9 +244,9 @@ begin
   Result := FContextType;
 end;
 
-procedure TWinSSLContext.SetProtocolVersions(aVersions: TSSLProtocolVersions);
+procedure TWinSSLContext.SetProtocolVersions(AVersions: TSSLProtocolVersions);
 begin
-  FProtocolVersions := aVersions;
+  FProtocolVersions := AVersions;
 end;
 
 function TWinSSLContext.GetProtocolVersions: TSSLProtocolVersions;
@@ -253,18 +258,18 @@ end;
 // ISSLContext - 证书和密钥管理
 // ============================================================================
 
-procedure TWinSSLContext.LoadCertificate(const aFileName: string);
+procedure TWinSSLContext.LoadCertificate(const AFileName: string);
 var
   LFileStream: TFileStream;
 begin
-  if not FileExists(aFileName) then
+  if not FileExists(AFileName) then
     raise ESSLFileNotFoundException.CreateWithContext(
-      Format('Certificate file not found: %s', [aFileName]),
+      Format('Certificate file not found: %s', [AFileName]),
       sslErrLoadFailed,
       'TWinSSLContext.LoadCertificate'
     );
   
-  LFileStream := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
+  LFileStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try
     LoadCertificate(LFileStream);
   finally
@@ -272,7 +277,7 @@ begin
   end;
 end;
 
-procedure TWinSSLContext.LoadCertificate(aStream: TStream);
+procedure TWinSSLContext.LoadCertificate(AStream: TStream);
 var
   LCertData: TBytes;
   LSize: Int64;
@@ -284,9 +289,9 @@ begin
   CleanupCertificate;
   
   // 读取证书数据
-  LSize := aStream.Size - aStream.Position;
+  LSize := AStream.Size - AStream.Position;
   SetLength(LCertData, LSize);
-  aStream.Read(LCertData[0], LSize);
+  AStream.Read(LCertData[0], LSize);
   
   // 1. 尝试作为 PFX 加载 (无密码)
   Blob.cbData := Length(LCertData);
@@ -356,10 +361,10 @@ begin
   end;
 end;
 
-procedure TWinSSLContext.LoadCertificate(aCert: ISSLCertificate);
+procedure TWinSSLContext.LoadCertificate(ACert: ISSLCertificate);
 begin
   // 从ISSLCertificate接口获取证书上下文
-  if aCert = nil then
+  if ACert = nil then
     raise ESSLInvalidArgument.CreateWithContext(
       'Certificate object is nil',
       sslErrInvalidParam,
@@ -369,31 +374,31 @@ begin
   CleanupCertificate;
   
   // 获取证书的原生句柄
-  FCertContext := PCCERT_CONTEXT(aCert.GetNativeHandle);
+  FCertContext := PCCERT_CONTEXT(ACert.GetNativeHandle);
   if FCertContext <> nil then
     FCertContext := CertDuplicateCertificateContext(FCertContext);
 end;
 
-procedure TWinSSLContext.LoadPrivateKey(const aFileName: string; const aPassword: string);
+procedure TWinSSLContext.LoadPrivateKey(const AFileName: string; const APassword: string);
 var
   LFileStream: TFileStream;
 begin
-  if not FileExists(aFileName) then
+  if not FileExists(AFileName) then
     raise ESSLFileNotFoundException.CreateWithContext(
-      Format('Private key file not found: %s', [aFileName]),
+      Format('Private key file not found: %s', [AFileName]),
       sslErrLoadFailed,
       'TWinSSLContext.LoadPrivateKey'
     );
   
-  LFileStream := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
+  LFileStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try
-    LoadPrivateKey(LFileStream, aPassword);
+    LoadPrivateKey(LFileStream, APassword);
   finally
     LFileStream.Free;
   end;
 end;
 
-procedure TWinSSLContext.LoadPrivateKey(aStream: TStream; const aPassword: string);
+procedure TWinSSLContext.LoadPrivateKey(AStream: TStream; const APassword: string);
 var
   LCertData: TBytes;
   LSize: Int64;
@@ -405,16 +410,16 @@ begin
   // WinSSL/Schannel 通常将证书和私钥一起加载（如PFX格式）
   // 如果是 PFX，我们尝试加载并提取证书和私钥
   
-  LSize := aStream.Size - aStream.Position;
+  LSize := AStream.Size - AStream.Position;
   SetLength(LCertData, LSize);
-  aStream.Read(LCertData[0], LSize);
+  AStream.Read(LCertData[0], LSize);
   
   Blob.cbData := Length(LCertData);
   Blob.pbData := @LCertData[0];
   
   PW := nil;
-  if aPassword <> '' then
-    PW := StringToPWideChar(aPassword);
+  if APassword <> '' then
+    PW := StringToPWideChar(APassword);
     
   try
     PFXStore := PFXImportCertStore(@Blob, PW, CRYPT_EXPORTABLE or PKCS12_NO_PERSIST_KEY);
@@ -446,7 +451,7 @@ begin
     // WinSSL 不直接支持加载 PEM 私钥并关联到现有证书上下文
     // 除非使用 CryptImportKey 等复杂操作
     // 这里抛出异常或记录警告
-    if aStream = nil then
+    if AStream = nil then
     raise ESSLConfigurationException.CreateWithContext(
       'WinSSL backend only supports PFX/P12 format for private key loading. Please merge certificate and key into a PFX file.',
       sslErrUnsupported,
@@ -455,11 +460,11 @@ begin
   end;
 end;
 
-procedure TWinSSLContext.LoadCertificatePEM(const aPEM: string);
+procedure TWinSSLContext.LoadCertificatePEM(const APEM: string);
 begin
   // WinSSL/Schannel does not natively support PEM format
   // PEM data must be converted to DER or PKCS#12 format
-  if aPEM = '' then
+  if APEM = '' then
     raise ESSLInvalidArgument.CreateWithContext(
       'PEM string is empty',
       sslErrInvalidParam,
@@ -474,10 +479,10 @@ begin
   );
 end;
 
-procedure TWinSSLContext.LoadPrivateKeyPEM(const aPEM: string; const aPassword: string = '');
+procedure TWinSSLContext.LoadPrivateKeyPEM(const APEM: string; const APassword: string = '');
 begin
   // WinSSL/Schannel does not natively support PEM format for private keys
-  if aPEM = '' then
+  if APEM = '' then
     raise ESSLInvalidArgument.CreateWithContext(
       'PEM string is empty',
       sslErrInvalidParam,
@@ -492,21 +497,21 @@ begin
   );
 end;
 
-procedure TWinSSLContext.LoadCAFile(const aFileName: string);
+procedure TWinSSLContext.LoadCAFile(const AFileName: string);
 var
   LFileStream: TFileStream;
   LCertData: TBytes;
   LSize: Int64;
   LCertContext: PCCERT_CONTEXT;
 begin
-  if not FileExists(aFileName) then
+  if not FileExists(AFileName) then
     raise ESSLFileNotFoundException.CreateWithContext(
-      Format('CA file not found: %s', [aFileName]),
+      Format('CA file not found: %s', [AFileName]),
       sslErrLoadFailed,
       'TWinSSLContext.LoadCAFile'
     );
   
-  LFileStream := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
+  LFileStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try
     LSize := LFileStream.Size;
     SetLength(LCertData, LSize);
@@ -526,11 +531,11 @@ begin
   end;
 end;
 
-procedure TWinSSLContext.LoadCAPath(const aPath: string);
+procedure TWinSSLContext.LoadCAPath(const APath: string);
 begin
   // Windows 使用系统证书存储，不支持指定CA路径
   // 如果调用者传入了路径，说明期望此功能工作，应该抛出异常
-  if aPath <> '' then
+  if APath <> '' then
     raise ESSLPlatformNotSupportedException.CreateWithContext(
       'LoadCAPath is not supported on Windows. ' +
       'Windows uses the system certificate store for CA verification.',
@@ -542,27 +547,45 @@ begin
   // 空路径视为无操作（兼容跨平台代码）
 end;
 
-procedure TWinSSLContext.SetCertificateStore(aStore: ISSLCertificateStore);
+procedure TWinSSLContext.SetCertificateStore(AStore: ISSLCertificateStore);
 begin
-  // WinSSL使用系统证书存储或自定义HCERTSTORE
-  if aStore <> nil then
-    raise ESSLPlatformNotSupportedException.CreateWithContext(
-      'SetCertificateStore with ISSLCertificateStore is not implemented for WinSSL. ' +
-      'Use Windows certificate store APIs directly.',
-      sslErrOther,
+  { WinSSL/Schannel 说明：
+    与 OpenSSL 不同，Schannel 不直接使用自定义证书存储进行 CA 验证。
+    Schannel 主要使用系统证书存储（ROOT、CA 等）进行证书链验证。
+
+    此方法保存传入的证书存储接口引用，用于：
+    1. 保持证书存储对象的生命周期
+    2. 可在证书链验证时使用其原生句柄
+
+    对于 CA 验证，建议使用 LoadCAFile 或直接将证书导入系统存储。
+  }
+
+  // 清理之前的外部存储引用
+  FExternalCertStore := nil;
+
+  if AStore = nil then
+    Exit;  // nil 表示清除存储
+
+  if AStore.GetNativeHandle = nil then
+    raise ESSLCertificateException.CreateWithContext(
+      'Invalid certificate store handle (GetNativeHandle returned nil)',
+      sslErrCertificate,
       'TWinSSLContext.SetCertificateStore',
       0,
       sslWinSSL
     );
+
+  // 保存接口引用（通过引用计数保持存储活跃）
+  FExternalCertStore := AStore;
 end;
 
 // ============================================================================
 // ISSLContext - 验证配置
 // ============================================================================
 
-procedure TWinSSLContext.SetVerifyMode(aMode: TSSLVerifyModes);
+procedure TWinSSLContext.SetVerifyMode(AMode: TSSLVerifyModes);
 begin
-  FVerifyMode := aMode;
+  FVerifyMode := AMode;
 end;
 
 function TWinSSLContext.GetVerifyMode: TSSLVerifyModes;
@@ -570,9 +593,9 @@ begin
   Result := FVerifyMode;
 end;
 
-procedure TWinSSLContext.SetVerifyDepth(aDepth: Integer);
+procedure TWinSSLContext.SetVerifyDepth(ADepth: Integer);
 begin
-  FVerifyDepth := aDepth;
+  FVerifyDepth := ADepth;
 end;
 
 function TWinSSLContext.GetVerifyDepth: Integer;
@@ -580,18 +603,18 @@ begin
   Result := FVerifyDepth;
 end;
 
-procedure TWinSSLContext.SetVerifyCallback(aCallback: TSSLVerifyCallback);
+procedure TWinSSLContext.SetVerifyCallback(ACallback: TSSLVerifyCallback);
 begin
-  FVerifyCallback := aCallback;
+  FVerifyCallback := ACallback;
 end;
 
 // ============================================================================
 // ISSLContext - 密码套件配置
 // ============================================================================
 
-procedure TWinSSLContext.SetCipherList(const aCipherList: string);
+procedure TWinSSLContext.SetCipherList(const ACipherList: string);
 begin
-  FCipherList := aCipherList;
+  FCipherList := ACipherList;
 end;
 
 function TWinSSLContext.GetCipherList: string;
@@ -599,9 +622,9 @@ begin
   Result := FCipherList;
 end;
 
-procedure TWinSSLContext.SetCipherSuites(const aCipherSuites: string);
+procedure TWinSSLContext.SetCipherSuites(const ACipherSuites: string);
 begin
-  FCipherSuites := aCipherSuites;
+  FCipherSuites := ACipherSuites;
   // TLS 1.3 密码套件在Windows 10/Server 2019+支持
   // Schannel会自动选择合适的密码套件
 end;
@@ -615,9 +638,9 @@ end;
 // ISSLContext - 会话管理（Schannel 自动管理）
 // ============================================================================
 
-procedure TWinSSLContext.SetSessionCacheMode(aEnabled: Boolean);
+procedure TWinSSLContext.SetSessionCacheMode(AEnabled: Boolean);
 begin
-  FSessionCacheEnabled := aEnabled;
+  FSessionCacheEnabled := AEnabled;
   // Schannel自动管理会话缓存
 end;
 
@@ -626,9 +649,9 @@ begin
   Result := FSessionCacheEnabled;
 end;
 
-procedure TWinSSLContext.SetSessionTimeout(aTimeout: Integer);
+procedure TWinSSLContext.SetSessionTimeout(ATimeout: Integer);
 begin
-  FSessionTimeout := aTimeout;
+  FSessionTimeout := ATimeout;
 end;
 
 function TWinSSLContext.GetSessionTimeout: Integer;
@@ -636,9 +659,9 @@ begin
   Result := FSessionTimeout;
 end;
 
-procedure TWinSSLContext.SetSessionCacheSize(aSize: Integer);
+procedure TWinSSLContext.SetSessionCacheSize(ASize: Integer);
 begin
-  FSessionCacheSize := aSize;
+  FSessionCacheSize := ASize;
 end;
 
 function TWinSSLContext.GetSessionCacheSize: Integer;
@@ -650,9 +673,9 @@ end;
 // ISSLContext - 高级选项
 // ============================================================================
 
-procedure TWinSSLContext.SetOptions(const aOptions: TSSLOptions);
+procedure TWinSSLContext.SetOptions(const AOptions: TSSLOptions);
 begin
-  FOptions := aOptions;
+  FOptions := AOptions;
   ApplyOptions;
 end;
 
@@ -661,9 +684,9 @@ begin
   Result := FOptions;
 end;
 
-procedure TWinSSLContext.SetServerName(const aServerName: string);
+procedure TWinSSLContext.SetServerName(const AServerName: string);
 begin
-  FServerName := aServerName;
+  FServerName := AServerName;
 end;
 
 function TWinSSLContext.GetServerName: string;
@@ -671,9 +694,9 @@ begin
   Result := FServerName;
 end;
 
-procedure TWinSSLContext.SetALPNProtocols(const aProtocols: string);
+procedure TWinSSLContext.SetALPNProtocols(const AProtocols: string);
 begin
-  FALPNProtocols := aProtocols;
+  FALPNProtocols := AProtocols;
   // ALPN在Windows 8.1/Server 2012 R2+支持
   // 实际协商在连接时进行
 end;
@@ -687,21 +710,21 @@ end;
 // ISSLContext - 回调设置（Schannel 模型限制）
 // ============================================================================
 
-procedure TWinSSLContext.SetPasswordCallback(aCallback: TSSLPasswordCallback);
+procedure TWinSSLContext.SetPasswordCallback(ACallback: TSSLPasswordCallback);
 begin
-  FPasswordCallback := aCallback;
+  FPasswordCallback := ACallback;
 end;
 
-procedure TWinSSLContext.SetInfoCallback(aCallback: TSSLInfoCallback);
+procedure TWinSSLContext.SetInfoCallback(ACallback: TSSLInfoCallback);
 begin
-  FInfoCallback := aCallback;
+  FInfoCallback := ACallback;
 end;
 
 // ============================================================================
 // ISSLContext - 创建连接
 // ============================================================================
 
-function TWinSSLContext.CreateConnection(aSocket: THandle): ISSLConnection;
+function TWinSSLContext.CreateConnection(ASocket: THandle): ISSLConnection;
 begin
   if not FInitialized then
   begin
@@ -710,13 +733,13 @@ begin
   end;
   
   try
-    Result := TWinSSLConnection.Create(Self, aSocket);
+    Result := TWinSSLConnection.Create(Self, ASocket);
   except
     Result := nil;
   end;
 end;
 
-function TWinSSLContext.CreateConnection(aStream: TStream): ISSLConnection;
+function TWinSSLContext.CreateConnection(AStream: TStream): ISSLConnection;
 begin
   if not FInitialized then
   begin
@@ -725,7 +748,7 @@ begin
   end;
   
   try
-    Result := TWinSSLConnection.Create(Self, aStream);
+    Result := TWinSSLConnection.Create(Self, AStream);
   except
     Result := nil;
   end;

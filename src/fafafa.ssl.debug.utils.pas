@@ -44,8 +44,8 @@ type
     {**
      * 将字节数组转储为十六进制+ASCII格式
      *
-     * @param aBytes 要转储的字节数组
-     * @param aBytesPerLine 每行显示的字节数（默认16）
+     * @param ABytes 要转储的字节数组
+     * @param ABytesPerLine 每行显示的字节数（默认16）
      * @return 格式化的十六进制转储字符串
      *
      * @example
@@ -55,22 +55,22 @@ type
      *   // 00000000  48 65 6C 6C 6F 20 57 6F 72 6C 64 21 00 00 00 00  Hello World!....
      * </code>
      *}
-    class function DumpBytes(const aBytes: TBytes; aBytesPerLine: Integer = 16): string;
+    class function DumpBytes(const ABytes: TBytes; ABytesPerLine: Integer = 16): string;
 
     {**
      * 转储 SSL 配置信息
      *}
-    class function DumpSSLConfig(const aConfig: TSSLConfig): string;
+    class function DumpSSLConfig(const AConfig: TSSLConfig): string;
 
     {**
      * 转储证书信息
      *}
-    class function DumpCertificateInfo(const aInfo: TSSLCertificateInfo): string;
+    class function DumpCertificateInfo(const AInfo: TSSLCertificateInfo): string;
 
     {**
      * 转储连接信息
      *}
-    class function DumpConnectionInfo(const aInfo: TSSLConnectionInfo): string;
+    class function DumpConnectionInfo(const AInfo: TSSLConnectionInfo): string;
   end;
 
   {**
@@ -84,21 +84,21 @@ type
     FName: string;
     FDebug: Boolean;
   public
-    constructor Create(const aName: string = ''; aDebug: Boolean = False);
+    constructor Create(const AName: string = ''; ADebug: Boolean = False);
 
     { 二进制读取 }
     function ReadByte: Byte;
     function ReadWord: Word;
     function ReadDWord: DWord;
-    function ReadBytes(aCount: Integer): TBytes;
-    function ReadString(aLength: Integer): string;
+    function ReadBytes(ACount: Integer): TBytes;
+    function ReadString(ALength: Integer): string;
 
     { 二进制写入 }
-    procedure WriteByte(aValue: Byte);
-    procedure WriteWord(aValue: Word);
-    procedure WriteDWord(aValue: DWord);
-    procedure WriteBytes(const aBytes: TBytes);
-    procedure WriteString(const aStr: string);
+    procedure WriteByte(AValue: Byte);
+    procedure WriteWord(AValue: Word);
+    procedure WriteDWord(AValue: DWord);
+    procedure WriteBytes(const ABytes: TBytes);
+    procedure WriteString(const AStr: string);
 
     { 调试工具 }
     function PeekByte: Byte;
@@ -123,13 +123,13 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    procedure Append(const aStr: string);
-    procedure AppendLine(const aStr: string = '');
-    procedure AppendFormat(const aFormat: string; const aArgs: array of const);
+    procedure Append(const AStr: string);
+    procedure AppendLine(const AStr: string = '');
+    procedure AppendFormat(const AFormat: string; const AArgs: array of const);
 
     procedure Indent;
     procedure Unindent;
-    procedure SetIndentStr(const aStr: string);
+    procedure SetIndentStr(const AStr: string);
 
     procedure Clear;
     function ToString: string; override;
@@ -146,24 +146,24 @@ type
   private
     FBits: array of Byte;
     FSize: Integer;
-    function GetBit(aIndex: Integer): Boolean;
-    procedure SetBit(aIndex: Integer; aValue: Boolean);
+    function GetBit(AIndex: Integer): Boolean;
+    procedure SetBit(AIndex: Integer; AValue: Boolean);
   public
-    constructor Create(aSize: Integer);
+    constructor Create(ASize: Integer);
     destructor Destroy; override;
 
     procedure Clear;
     procedure SetAll;
-    procedure Toggle(aIndex: Integer);
+    procedure Toggle(AIndex: Integer);
 
     function Count: Integer;  // 返回设置为1的位数
     function IsEmpty: Boolean;
     function IsFull: Boolean;
 
     function ToBytes: TBytes;
-    procedure FromBytes(const aBytes: TBytes);
+    procedure FromBytes(const ABytes: TBytes);
 
-    property Bits[aIndex: Integer]: Boolean read GetBit write SetBit; default;
+    property Bits[AIndex: Integer]: Boolean read GetBit write SetBit; default;
     property Size: Integer read FSize;
   end;
 
@@ -171,7 +171,7 @@ implementation
 
 { TSSLDebugUtils }
 
-class function TSSLDebugUtils.DumpBytes(const aBytes: TBytes; aBytesPerLine: Integer): string;
+class function TSSLDebugUtils.DumpBytes(const ABytes: TBytes; ABytesPerLine: Integer): string;
 var
   I, J: Integer;
   LHex, LAscii: string;
@@ -179,18 +179,18 @@ var
 begin
   LSB := TSSLStringBuilder.Create;
   try
-    for I := 0 to (Length(aBytes) - 1) div aBytesPerLine do
+    for I := 0 to (Length(ABytes) - 1) div ABytesPerLine do
     begin
       LHex := '';
       LAscii := '';
 
-      for J := 0 to aBytesPerLine - 1 do
+      for J := 0 to ABytesPerLine - 1 do
       begin
-        if I * aBytesPerLine + J < Length(aBytes) then
+        if I * ABytesPerLine + J < Length(ABytes) then
         begin
-          LHex := LHex + IntToHex(aBytes[I * aBytesPerLine + J], 2) + ' ';
-          if aBytes[I * aBytesPerLine + J] in [32..126] then
-            LAscii := LAscii + Chr(aBytes[I * aBytesPerLine + J])
+          LHex := LHex + IntToHex(ABytes[I * ABytesPerLine + J], 2) + ' ';
+          if ABytes[I * ABytesPerLine + J] in [32..126] then
+            LAscii := LAscii + Chr(ABytes[I * ABytesPerLine + J])
           else
             LAscii := LAscii + '.';
         end
@@ -202,8 +202,8 @@ begin
       end;
 
       LSB.AppendFormat('%8.8x  %-*s  %s', [
-        I * aBytesPerLine,
-        aBytesPerLine * 3,
+        I * ABytesPerLine,
+        ABytesPerLine * 3,
         LHex,
         LAscii
       ]);
@@ -215,7 +215,7 @@ begin
   end;
 end;
 
-class function TSSLDebugUtils.DumpSSLConfig(const aConfig: TSSLConfig): string;
+class function TSSLDebugUtils.DumpSSLConfig(const AConfig: TSSLConfig): string;
 var
   LSB: TSSLStringBuilder;
 begin
@@ -223,17 +223,17 @@ begin
   try
     LSB.AppendLine('SSL 配置:');
     LSB.Indent;
-    LSB.AppendFormat('库类型: %s', [SSL_LIBRARY_NAMES[aConfig.LibraryType]]);
-    LSB.AppendFormat('上下文类型: %d', [Ord(aConfig.ContextType)]);
-    LSB.AppendFormat('证书文件: %s', [aConfig.CertificateFile]);
-    LSB.AppendFormat('私钥文件: %s', [aConfig.PrivateKeyFile]);
+    LSB.AppendFormat('库类型: %s', [SSL_LIBRARY_NAMES[AConfig.LibraryType]]);
+    LSB.AppendFormat('上下文类型: %d', [Ord(AConfig.ContextType)]);
+    LSB.AppendFormat('证书文件: %s', [AConfig.CertificateFile]);
+    LSB.AppendFormat('私钥文件: %s', [AConfig.PrivateKeyFile]);
     LSB.AppendFormat('私钥口令: %s', [
-      BoolToStr(aConfig.PrivateKeyPassword <> '', '已设置', '未设置')
+      BoolToStr(AConfig.PrivateKeyPassword <> '', '已设置', '未设置')
     ]);
-    LSB.AppendFormat('CA文件: %s', [aConfig.CAFile]);
-    LSB.AppendFormat('缓冲区大小: %d', [aConfig.BufferSize]);
-    LSB.AppendFormat('握手超时: %d ms', [aConfig.HandshakeTimeout]);
-    LSB.AppendFormat('服务器名称: %s', [aConfig.ServerName]);
+    LSB.AppendFormat('CA文件: %s', [AConfig.CAFile]);
+    LSB.AppendFormat('缓冲区大小: %d', [AConfig.BufferSize]);
+    LSB.AppendFormat('握手超时: %d ms', [AConfig.HandshakeTimeout]);
+    LSB.AppendFormat('服务器名称: %s', [AConfig.ServerName]);
 
     Result := LSB.ToString;
   finally
@@ -242,7 +242,7 @@ begin
 end;
 
 class function TSSLDebugUtils.DumpCertificateInfo(
-  const aInfo: TSSLCertificateInfo): string;
+  const AInfo: TSSLCertificateInfo): string;
 var
   LSB: TSSLStringBuilder;
   SAN: string;
@@ -251,22 +251,22 @@ begin
   try
     LSB.AppendLine('证书信息:');
     LSB.Indent;
-    LSB.AppendFormat('主题: %s', [aInfo.Subject]);
-    LSB.AppendFormat('颁发者: %s', [aInfo.Issuer]);
-    LSB.AppendFormat('序列号: %s', [aInfo.SerialNumber]);
-    LSB.AppendFormat('有效期开始: %s', [DateTimeToStr(aInfo.NotBefore)]);
-    LSB.AppendFormat('有效期结束: %s', [DateTimeToStr(aInfo.NotAfter)]);
-    LSB.AppendFormat('公钥算法: %s', [aInfo.PublicKeyAlgorithm]);
-    LSB.AppendFormat('公钥长度: %d 位', [aInfo.PublicKeySize]);
-    LSB.AppendFormat('签名算法: %s', [aInfo.SignatureAlgorithm]);
-    LSB.AppendFormat('SHA256指纹: %s', [aInfo.FingerprintSHA256]);
-    LSB.AppendFormat('是否CA证书: %s', [BoolToStr(aInfo.IsCA, '是', '否')]);
+    LSB.AppendFormat('主题: %s', [AInfo.Subject]);
+    LSB.AppendFormat('颁发者: %s', [AInfo.Issuer]);
+    LSB.AppendFormat('序列号: %s', [AInfo.SerialNumber]);
+    LSB.AppendFormat('有效期开始: %s', [DateTimeToStr(AInfo.NotBefore)]);
+    LSB.AppendFormat('有效期结束: %s', [DateTimeToStr(AInfo.NotAfter)]);
+    LSB.AppendFormat('公钥算法: %s', [AInfo.PublicKeyAlgorithm]);
+    LSB.AppendFormat('公钥长度: %d 位', [AInfo.PublicKeySize]);
+    LSB.AppendFormat('签名算法: %s', [AInfo.SignatureAlgorithm]);
+    LSB.AppendFormat('SHA256指纹: %s', [AInfo.FingerprintSHA256]);
+    LSB.AppendFormat('是否CA证书: %s', [BoolToStr(AInfo.IsCA, '是', '否')]);
 
-    if Length(aInfo.SubjectAltNames) > 0 then
+    if Length(AInfo.SubjectAltNames) > 0 then
     begin
       LSB.AppendLine('主题备用名称:');
       LSB.Indent;
-      for SAN in aInfo.SubjectAltNames do
+      for SAN in AInfo.SubjectAltNames do
         LSB.AppendFormat('- %s', [SAN]);
       LSB.Unindent;
     end;
@@ -277,7 +277,7 @@ begin
   end;
 end;
 
-class function TSSLDebugUtils.DumpConnectionInfo(const aInfo: TSSLConnectionInfo): string;
+class function TSSLDebugUtils.DumpConnectionInfo(const AInfo: TSSLConnectionInfo): string;
 var
   LSB: TSSLStringBuilder;
 begin
@@ -285,13 +285,13 @@ begin
   try
     LSB.AppendLine('连接信息:');
     LSB.Indent;
-    LSB.AppendFormat('协议版本: %s', [SSL_PROTOCOL_NAMES[aInfo.ProtocolVersion]]);
-    LSB.AppendFormat('密码套件: %s', [aInfo.CipherSuite]);
-    LSB.AppendFormat('密钥长度: %d 位', [aInfo.KeySize]);
-    LSB.AppendFormat('会话ID: %s', [aInfo.SessionId]);
-    LSB.AppendFormat('会话复用: %s', [BoolToStr(aInfo.IsResumed, '是', '否')]);
-    LSB.AppendFormat('服务器名称: %s', [aInfo.ServerName]);
-    LSB.AppendFormat('ALPN协议: %s', [aInfo.ALPNProtocol]);
+    LSB.AppendFormat('协议版本: %s', [SSL_PROTOCOL_NAMES[AInfo.ProtocolVersion]]);
+    LSB.AppendFormat('密码套件: %s', [AInfo.CipherSuite]);
+    LSB.AppendFormat('密钥长度: %d 位', [AInfo.KeySize]);
+    LSB.AppendFormat('会话ID: %s', [AInfo.SessionId]);
+    LSB.AppendFormat('会话复用: %s', [BoolToStr(AInfo.IsResumed, '是', '否')]);
+    LSB.AppendFormat('服务器名称: %s', [AInfo.ServerName]);
+    LSB.AppendFormat('ALPN协议: %s', [AInfo.ALPNProtocol]);
 
     Result := LSB.ToString;
   finally
@@ -301,11 +301,11 @@ end;
 
 { TSSLMemoryStream }
 
-constructor TSSLMemoryStream.Create(const aName: string; aDebug: Boolean);
+constructor TSSLMemoryStream.Create(const AName: string; ADebug: Boolean);
 begin
   inherited Create;
-  FName := aName;
-  FDebug := aDebug;
+  FName := AName;
+  FDebug := ADebug;
 end;
 
 function TSSLMemoryStream.ReadByte: Byte;
@@ -338,55 +338,55 @@ begin
     );
 end;
 
-function TSSLMemoryStream.ReadBytes(aCount: Integer): TBytes;
+function TSSLMemoryStream.ReadBytes(ACount: Integer): TBytes;
 begin
   Result := nil;
-  SetLength(Result, aCount);
-  if aCount > 0 then
+  SetLength(Result, ACount);
+  if ACount > 0 then
   begin
-    if Read(Result[0], aCount) <> aCount then
+    if Read(Result[0], ACount) <> ACount then
       raise ESSLResourceException.CreateWithContext(
-        Format('Failed to read %d bytes from stream', [aCount]),
+        Format('Failed to read %d bytes from stream', [ACount]),
         sslErrInvalidData,
         'TSSLMemoryStream.ReadBytes'
       );
   end;
 end;
 
-function TSSLMemoryStream.ReadString(aLength: Integer): string;
+function TSSLMemoryStream.ReadString(ALength: Integer): string;
 var
   LBytes: TBytes;
 begin
-  LBytes := ReadBytes(aLength);
+  LBytes := ReadBytes(ALength);
   Result := TEncoding.UTF8.GetString(LBytes);
 end;
 
-procedure TSSLMemoryStream.WriteByte(aValue: Byte);
+procedure TSSLMemoryStream.WriteByte(AValue: Byte);
 begin
-  Write(aValue, 1);
+  Write(AValue, 1);
 end;
 
-procedure TSSLMemoryStream.WriteWord(aValue: Word);
+procedure TSSLMemoryStream.WriteWord(AValue: Word);
 begin
-  Write(aValue, 2);
+  Write(AValue, 2);
 end;
 
-procedure TSSLMemoryStream.WriteDWord(aValue: DWord);
+procedure TSSLMemoryStream.WriteDWord(AValue: DWord);
 begin
-  Write(aValue, 4);
+  Write(AValue, 4);
 end;
 
-procedure TSSLMemoryStream.WriteBytes(const aBytes: TBytes);
+procedure TSSLMemoryStream.WriteBytes(const ABytes: TBytes);
 begin
-  if Length(aBytes) > 0 then
-    Write(aBytes[0], Length(aBytes));
+  if Length(ABytes) > 0 then
+    Write(ABytes[0], Length(ABytes));
 end;
 
-procedure TSSLMemoryStream.WriteString(const aStr: string);
+procedure TSSLMemoryStream.WriteString(const AStr: string);
 var
   LBytes: TBytes;
 begin
-  LBytes := TEncoding.UTF8.GetBytes(aStr);
+  LBytes := TEncoding.UTF8.GetBytes(AStr);
   WriteBytes(LBytes);
 end;
 
@@ -440,15 +440,15 @@ begin
   inherited;
 end;
 
-procedure TSSLStringBuilder.Append(const aStr: string);
+procedure TSSLStringBuilder.Append(const AStr: string);
 begin
   if FBuffer.Count = 0 then
     FBuffer.Add('');
 
-  FBuffer[FBuffer.Count - 1] := FBuffer[FBuffer.Count - 1] + aStr;
+  FBuffer[FBuffer.Count - 1] := FBuffer[FBuffer.Count - 1] + AStr;
 end;
 
-procedure TSSLStringBuilder.AppendLine(const aStr: string);
+procedure TSSLStringBuilder.AppendLine(const AStr: string);
 var
   LIndent: string;
 begin
@@ -457,12 +457,12 @@ begin
   else
     LIndent := '';
 
-  FBuffer.Add(LIndent + aStr);
+  FBuffer.Add(LIndent + AStr);
 end;
 
-procedure TSSLStringBuilder.AppendFormat(const aFormat: string; const aArgs: array of const);
+procedure TSSLStringBuilder.AppendFormat(const AFormat: string; const AArgs: array of const);
 begin
-  AppendLine(Format(aFormat, aArgs));
+  AppendLine(Format(AFormat, AArgs));
 end;
 
 procedure TSSLStringBuilder.Indent;
@@ -476,9 +476,9 @@ begin
     Dec(FIndentLevel);
 end;
 
-procedure TSSLStringBuilder.SetIndentStr(const aStr: string);
+procedure TSSLStringBuilder.SetIndentStr(const AStr: string);
 begin
-  FIndentStr := aStr;
+  FIndentStr := AStr;
 end;
 
 procedure TSSLStringBuilder.Clear;
@@ -494,11 +494,11 @@ end;
 
 { TSSLBitSet }
 
-constructor TSSLBitSet.Create(aSize: Integer);
+constructor TSSLBitSet.Create(ASize: Integer);
 begin
   inherited Create;
-  FSize := aSize;
-  SetLength(FBits, (aSize + 7) div 8);
+  FSize := ASize;
+  SetLength(FBits, (ASize + 7) div 8);
   Clear;
 end;
 
@@ -508,31 +508,31 @@ begin
   inherited;
 end;
 
-function TSSLBitSet.GetBit(aIndex: Integer): Boolean;
+function TSSLBitSet.GetBit(AIndex: Integer): Boolean;
 begin
-  if (aIndex < 0) or (aIndex >= FSize) then
+  if (AIndex < 0) or (AIndex >= FSize) then
     raise ESSLInvalidArgument.CreateWithContext(
-      Format('Bit index %d out of range [0..%d)', [aIndex, FSize]),
+      Format('Bit index %d out of range [0..%d)', [AIndex, FSize]),
       sslErrInvalidParam,
       'TSSLBitSet.GetBit'
     );
 
-  Result := (FBits[aIndex div 8] and (1 shl (aIndex mod 8))) <> 0;
+  Result := (FBits[AIndex div 8] and (1 shl (AIndex mod 8))) <> 0;
 end;
 
-procedure TSSLBitSet.SetBit(aIndex: Integer; aValue: Boolean);
+procedure TSSLBitSet.SetBit(AIndex: Integer; AValue: Boolean);
 begin
-  if (aIndex < 0) or (aIndex >= FSize) then
+  if (AIndex < 0) or (AIndex >= FSize) then
     raise ESSLInvalidArgument.CreateWithContext(
-      Format('Bit index %d out of range [0..%d)', [aIndex, FSize]),
+      Format('Bit index %d out of range [0..%d)', [AIndex, FSize]),
       sslErrInvalidParam,
       'TSSLBitSet.SetBit'
     );
 
-  if aValue then
-    FBits[aIndex div 8] := FBits[aIndex div 8] or (1 shl (aIndex mod 8))
+  if AValue then
+    FBits[AIndex div 8] := FBits[AIndex div 8] or (1 shl (AIndex mod 8))
   else
-    FBits[aIndex div 8] := FBits[aIndex div 8] and not (1 shl (aIndex mod 8));
+    FBits[AIndex div 8] := FBits[AIndex div 8] and not (1 shl (AIndex mod 8));
 end;
 
 procedure TSSLBitSet.Clear;
@@ -549,9 +549,9 @@ begin
     FBits[High(FBits)] := FBits[High(FBits)] and ((1 shl (FSize mod 8)) - 1);
 end;
 
-procedure TSSLBitSet.Toggle(aIndex: Integer);
+procedure TSSLBitSet.Toggle(AIndex: Integer);
 begin
-  SetBit(aIndex, not GetBit(aIndex));
+  SetBit(AIndex, not GetBit(AIndex));
 end;
 
 function TSSLBitSet.Count: Integer;
@@ -597,13 +597,13 @@ begin
     Move(FBits[0], Result[0], Length(FBits));
 end;
 
-procedure TSSLBitSet.FromBytes(const aBytes: TBytes);
+procedure TSSLBitSet.FromBytes(const ABytes: TBytes);
 var
   LLen: Integer;
 begin
-  LLen := Min(Length(aBytes), Length(FBits));
+  LLen := Min(Length(ABytes), Length(FBits));
   if LLen > 0 then
-    Move(aBytes[0], FBits[0], LLen);
+    Move(ABytes[0], FBits[0], LLen);
 end;
 
 end.

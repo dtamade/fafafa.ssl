@@ -28,7 +28,20 @@ type
   ICertificateEx = interface; // Added forward declaration
   IPrivateKeyEx = interface; // Added forward declaration
 
-  { Certificate interface - fully encapsulates X509 certificate }
+  {**
+   * ICertificate - Certificate interface for builder-generated certificates
+   *
+   * This interface is specifically for certificates created by ICertificateBuilder.
+   * It provides read-only access to certificate properties and export capabilities.
+   *
+   * @note This is DIFFERENT from ISSLCertificate in fafafa.ssl.base:
+   *   - ICertificate: Lightweight, for builder output, read-only
+   *   - ISSLCertificate: Full-featured, for SSL operations (load, verify, chains)
+   *
+   * To convert ICertificate to ISSLCertificate, use:
+   *   LSSLCert := TSSLFactory.CreateCertificate;
+   *   LSSLCert.LoadFromPEM(LCert.ToPEM);
+   *}
   ICertificate = interface
     ['{A1B2C3D4-E5F6-4789-0123-456789ABCDEF}'] // GUID changed
     

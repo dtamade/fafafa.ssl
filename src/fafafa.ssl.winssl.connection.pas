@@ -43,6 +43,7 @@ type
     FSessionData: TBytes;
     FSessionHandle: CtxtHandle;
     FHasHandle: Boolean;
+    FPeerCertificate: ISSLCertificate;  // P1.2: 缓存对端证书以匹配 OpenSSL 行为
   public
     constructor Create;
     destructor Destroy; override;
@@ -51,7 +52,7 @@ type
     function GetID: string;
     function GetCreationTime: TDateTime;
     function GetTimeout: Integer;
-    procedure SetTimeout(aTimeout: Integer);
+    procedure SetTimeout(ATimeout: Integer);
     function IsValid: Boolean;
     function IsResumable: Boolean;
 
@@ -60,13 +61,16 @@ type
     function GetPeerCertificate: ISSLCertificate;
 
     function Serialize: TBytes;
-    function Deserialize(const aData: TBytes): Boolean;
+    function Deserialize(const AData: TBytes): Boolean;
 
     function GetNativeHandle: Pointer;
     function Clone: ISSLSession;
 
+    { P1.2: 设置对端证书（供 Connection 调用） }
+    procedure SetPeerCertificate(ACert: ISSLCertificate);
+
     { 内部方法 }
-    procedure SetSessionHandle(const aHandle: CtxtHandle);
+    procedure SetSessionHandle(const AHandle: CtxtHandle);
     function HasSessionHandle: Boolean;
   end;
 
@@ -80,11 +84,11 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    procedure AddSession(const aID: string; aSession: ISSLSession);
-    function GetSession(const aID: string): ISSLSession;
-    procedure RemoveSession(const aID: string);
+    procedure AddSession(const AID: string; ASession: ISSLSession);
+    function GetSession(const AID: string): ISSLSession;
+    procedure RemoveSession(const AID: string);
     procedure CleanupExpired;
-    procedure SetMaxSessions(aMax: Integer);
+    procedure SetMaxSessions(AMax: Integer);
   end;
   TWinSSLConnection = class(TInterfacedObject, ISSLConnection)
   private
@@ -116,12 +120,12 @@ type
     function PerformHandshake: TSSLHandshakeState;
     function ClientHandshake: Boolean;
     function ServerHandshake: Boolean;
-    function SendData(const aBuffer; aSize: Integer): Integer;
-    function RecvData(var aBuffer; aSize: Integer): Integer;
+    function SendData(const ABuffer; ASize: Integer): Integer;
+    function RecvData(var ABuffer; ASize: Integer): Integer;
     
   public
-    constructor Create(aContext: ISSLContext; aSocket: THandle); overload;
-    constructor Create(aContext: ISSLContext; aStream: TStream); overload;
+    constructor Create(AContext: ISSLContext; ASocket: THandle); overload;
+    constructor Create(AContext: ISSLContext; AStream: TStream); overload;
     destructor Destroy; override;
     
     { ISSLConnection - 连接管理 }
@@ -136,15 +140,15 @@ type
     function Renegotiate: Boolean;
     
     { ISSLConnection - 数据传输 }
-    function Read(var aBuffer; aCount: Integer): Integer;
-    function Write(const aBuffer; aCount: Integer): Integer;
-    function ReadString(out aStr: string): Boolean;
-    function WriteString(const aStr: string): Boolean;
+    function Read(var ABuffer; ACount: Integer): Integer;
+    function Write(const ABuffer; ACount: Integer): Integer;
+    function ReadString(out AStr: string): Boolean;
+    function WriteString(const AStr: string): Boolean;
     
     { ISSLConnection - 异步操作支持 }
     function WantRead: Boolean;
     function WantWrite: Boolean;
-    function GetError(aRet: Integer): TSSLErrorCode;
+    function GetError(ARet: Integer): TSSLErrorCode;
     
     { ISSLConnection - 连接信息 }
     function GetConnectionInfo: TSSLConnectionInfo;
@@ -157,7 +161,7 @@ type
     
     { ISSLConnection - 会话管理 }
     function GetSession: ISSLSession;
-    procedure SetSession(aSession: ISSLSession);
+    procedure SetSession(ASession: ISSLSession);
     function IsSessionReused: Boolean;
     
     { ISSLConnection - ALPN/NPN }
@@ -169,9 +173,9 @@ type
     function GetStateString: string;
     
     { ISSLConnection - 选项设置 }
-    procedure SetTimeout(aTimeout: Integer);
+    procedure SetTimeout(ATimeout: Integer);
     function GetTimeout: Integer;
-    procedure SetBlocking(aBlocking: Boolean);
+    procedure SetBlocking(ABlocking: Boolean);
     function GetBlocking: Boolean;
     
     { ISSLConnection - 原生句柄 }
@@ -196,6 +200,7 @@ begin
   SetLength(FSessionData, 0);
   InitSecHandle(FSessionHandle);
   FHasHandle := False;
+  FPeerCertificate := nil;
 end;
 
 destructor TWinSSLSession.Destroy;
@@ -220,9 +225,9 @@ begin
   Result := FTimeout;
 end;
 
-procedure TWinSSLSession.SetTimeout(aTimeout: Integer);
+procedure TWinSSLSession.SetTimeout(ATimeout: Integer);
 begin
-  FTimeout := aTimeout;
+  FTimeout := ATimeout;
 end;
 
 function TWinSSLSession.IsValid: Boolean;
@@ -247,7 +252,12 @@ end;
 
 function TWinSSLSession.GetPeerCertificate: ISSLCertificate;
 begin
-  Result := nil; // 可扩展：可选功能，支持将对端证书缓存到会话存储中
+  Result := FPeerCertificate;
+end;
+
+procedure TWinSSLSession.SetPeerCertificate(ACert: ISSLCertificate);
+begin
+  FPeerCertificate := ACert;
 end;
 
 function TWinSSLSession.Serialize: TBytes;
@@ -255,9 +265,9 @@ begin
   Result := FSessionData;
 end;
 
-function TWinSSLSession.Deserialize(const aData: TBytes): Boolean;
+function TWinSSLSession.Deserialize(const AData: TBytes): Boolean;
 begin
-  FSessionData := aData;
+  FSessionData := AData;
   Result := Length(FSessionData) > 0;
 end;
 
@@ -280,14 +290,19 @@ begin
   LSession.FProtocolVersion := FProtocolVersion;
   LSession.FCipherName := FCipherName;
   LSession.FSessionData := FSessionData;
+  // P1.2: 克隆对端证书
+  if FPeerCertificate <> nil then
+    LSession.FPeerCertificate := FPeerCertificate.Clone
+  else
+    LSession.FPeerCertificate := nil;
   Result := LSession;
 end;
 
-procedure TWinSSLSession.SetSessionHandle(const aHandle: CtxtHandle);
+procedure TWinSSLSession.SetSessionHandle(const AHandle: CtxtHandle);
 begin
   if FHasHandle then
     DeleteSecurityContext(@FSessionHandle);
-  FSessionHandle := aHandle;
+  FSessionHandle := AHandle;
   FHasHandle := True;
 end;
 
@@ -317,11 +332,11 @@ begin
   inherited Destroy;
 end;
 
-procedure TWinSSLSessionManager.AddSession(const aID: string; aSession: ISSLSession);
+procedure TWinSSLSessionManager.AddSession(const AID: string; ASession: ISSLSession);
 begin
   FLock.Enter;
   try
-    FSessions.AddObject(aID, TObject(Pointer(aSession)));
+    FSessions.AddObject(AID, TObject(Pointer(ASession)));
     // 限制最大会话数
     while FSessions.Count > FMaxSessions do
       FSessions.Delete(0);
@@ -330,13 +345,13 @@ begin
   end;
 end;
 
-function TWinSSLSessionManager.GetSession(const aID: string): ISSLSession;
+function TWinSSLSessionManager.GetSession(const AID: string): ISSLSession;
 var
   LIndex: Integer;
 begin
   FLock.Enter;
   try
-    LIndex := FSessions.IndexOf(aID);
+    LIndex := FSessions.IndexOf(AID);
     if LIndex >= 0 then
     begin
       Result := ISSLSession(Pointer(FSessions.Objects[LIndex]));
@@ -354,13 +369,13 @@ begin
   end;
 end;
 
-procedure TWinSSLSessionManager.RemoveSession(const aID: string);
+procedure TWinSSLSessionManager.RemoveSession(const AID: string);
 var
   LIndex: Integer;
 begin
   FLock.Enter;
   try
-    LIndex := FSessions.IndexOf(aID);
+    LIndex := FSessions.IndexOf(AID);
     if LIndex >= 0 then
       FSessions.Delete(LIndex);
   finally
@@ -384,21 +399,21 @@ begin
   end;
 end;
 
-procedure TWinSSLSessionManager.SetMaxSessions(aMax: Integer);
+procedure TWinSSLSessionManager.SetMaxSessions(AMax: Integer);
 begin
-  if aMax > 0 then
-    FMaxSessions := aMax;
+  if AMax > 0 then
+    FMaxSessions := AMax;
 end;
 
 // ============================================================================
 // TWinSSLConnection - 构造和析构
 // ============================================================================
 
-constructor TWinSSLConnection.Create(aContext: ISSLContext; aSocket: THandle);
+constructor TWinSSLConnection.Create(AContext: ISSLContext; ASocket: THandle);
 begin
   inherited Create;
-  FContext := aContext;
-  FSocket := aSocket;
+  FContext := AContext;
+  FSocket := ASocket;
   FStream := nil;
   FHandshakeState := sslHsNotStarted;
   FConnected := False;
@@ -418,12 +433,12 @@ begin
   InitSecHandle(FCtxtHandle);
 end;
 
-constructor TWinSSLConnection.Create(aContext: ISSLContext; aStream: TStream);
+constructor TWinSSLConnection.Create(AContext: ISSLContext; AStream: TStream);
 begin
   inherited Create;
-  FContext := aContext;
+  FContext := AContext;
   FSocket := INVALID_HANDLE_VALUE;
-  FStream := aStream;
+  FStream := AStream;
   FHandshakeState := sslHsNotStarted;
   FConnected := False;
   FBlocking := True;
@@ -455,36 +470,36 @@ end;
 // 内部方法 - 数据收发
 // ============================================================================
 
-function TWinSSLConnection.SendData(const aBuffer; aSize: Integer): Integer;
+function TWinSSLConnection.SendData(const ABuffer; ASize: Integer): Integer;
 begin
   if FStream <> nil then
-    Result := FStream.Write(aBuffer, aSize)
+    Result := FStream.Write(ABuffer, ASize)
   else if FSocket <> INVALID_HANDLE_VALUE then
   begin
     {$IFDEF WINDOWS}
-    Result := winsock2.send(FSocket, aBuffer, aSize, 0);
+    Result := winsock2.send(FSocket, ABuffer, ASize, 0);
     if Result = SOCKET_ERROR then
       Result := -1;
     {$ELSE}
-    Result := fpSend(FSocket, @aBuffer, aSize, 0);
+    Result := fpSend(FSocket, @ABuffer, ASize, 0);
     {$ENDIF}
   end
   else
     Result := -1;
 end;
 
-function TWinSSLConnection.RecvData(var aBuffer; aSize: Integer): Integer;
+function TWinSSLConnection.RecvData(var ABuffer; ASize: Integer): Integer;
 begin
   if FStream <> nil then
-    Result := FStream.Read(aBuffer, aSize)
+    Result := FStream.Read(ABuffer, ASize)
   else if FSocket <> INVALID_HANDLE_VALUE then
   begin
     {$IFDEF WINDOWS}
-    Result := winsock2.recv(FSocket, aBuffer, aSize, 0);
+    Result := winsock2.recv(FSocket, ABuffer, ASize, 0);
     if Result = SOCKET_ERROR then
       Result := -1;
     {$ELSE}
-    Result := fpRecv(FSocket, @aBuffer, aSize, 0);
+    Result := fpRecv(FSocket, @ABuffer, ASize, 0);
     {$ENDIF}
   end
   else
@@ -896,7 +911,7 @@ end;
 // ISSLConnection - 数据传输
 // ============================================================================
 
-function TWinSSLConnection.Read(var aBuffer; aCount: Integer): Integer;
+function TWinSSLConnection.Read(var ABuffer; ACount: Integer): Integer;
 var
   InBuffers: array[0..3] of TSecBuffer;
   InBufferDesc: TSecBufferDesc;
@@ -911,8 +926,8 @@ begin
   // 如果有已解密的数据，直接返回
   if FDecryptedBufferUsed > 0 then
   begin
-    Result := Min(aCount, FDecryptedBufferUsed);
-    Move(FDecryptedBuffer[0], aBuffer, Result);
+    Result := Min(ACount, FDecryptedBufferUsed);
+    Move(FDecryptedBuffer[0], ABuffer, Result);
     Dec(FDecryptedBufferUsed, Result);
     if FDecryptedBufferUsed > 0 then
       Move(FDecryptedBuffer[Result], FDecryptedBuffer[0], FDecryptedBufferUsed);
@@ -954,8 +969,8 @@ begin
   begin
     if InBuffers[i].BufferType = SECBUFFER_DATA then
     begin
-      Result := Min(aCount, Integer(InBuffers[i].cbBuffer));
-      Move(InBuffers[i].pvBuffer^, aBuffer, Result);
+      Result := Min(ACount, Integer(InBuffers[i].cbBuffer));
+      Move(InBuffers[i].pvBuffer^, ABuffer, Result);
       
       // 保存剩余数据
       if Integer(InBuffers[i].cbBuffer) > Result then
@@ -981,7 +996,7 @@ begin
   FRecvBufferUsed := 0;
 end;
 
-function TWinSSLConnection.Write(const aBuffer; aCount: Integer): Integer;
+function TWinSSLConnection.Write(const ABuffer; ACount: Integer): Integer;
 var
   OutBuffers: array[0..3] of TSecBuffer;
   OutBufferDesc: TSecBufferDesc;
@@ -1001,7 +1016,7 @@ begin
     Exit;
   
   // 分配消息缓冲区
-  cbMessage := StreamSizes.cbHeader + aCount + StreamSizes.cbTrailer;
+  cbMessage := StreamSizes.cbHeader + ACount + StreamSizes.cbTrailer;
   SetLength(Message, cbMessage);
   
   // 设置缓冲区
@@ -1010,11 +1025,11 @@ begin
   OutBuffers[0].BufferType := SECBUFFER_STREAM_HEADER;
   
   OutBuffers[1].pvBuffer := @Message[StreamSizes.cbHeader];
-  OutBuffers[1].cbBuffer := aCount;
+  OutBuffers[1].cbBuffer := ACount;
   OutBuffers[1].BufferType := SECBUFFER_DATA;
-  Move(aBuffer, OutBuffers[1].pvBuffer^, aCount);
+  Move(ABuffer, OutBuffers[1].pvBuffer^, ACount);
   
-  OutBuffers[2].pvBuffer := @Message[StreamSizes.cbHeader + aCount];
+  OutBuffers[2].pvBuffer := @Message[StreamSizes.cbHeader + ACount];
   OutBuffers[2].cbBuffer := StreamSizes.cbTrailer;
   OutBuffers[2].BufferType := SECBUFFER_STREAM_TRAILER;
   
@@ -1032,10 +1047,10 @@ begin
   // 发送加密数据
   cbData := SendData(Message[0], OutBuffers[0].cbBuffer + OutBuffers[1].cbBuffer + OutBuffers[2].cbBuffer);
   if cbData > 0 then
-    Result := aCount;
+    Result := ACount;
 end;
 
-function TWinSSLConnection.ReadString(out aStr: string): Boolean;
+function TWinSSLConnection.ReadString(out AStr: string): Boolean;
 var
   Buffer: array[0..4095] of Char;
   BytesRead: Integer;
@@ -1043,12 +1058,12 @@ begin
   BytesRead := Read(Buffer, SizeOf(Buffer));
   Result := BytesRead > 0;
   if Result then
-    SetString(aStr, PChar(@Buffer[0]), BytesRead);
+    SetString(AStr, PChar(@Buffer[0]), BytesRead);
 end;
 
-function TWinSSLConnection.WriteString(const aStr: string): Boolean;
+function TWinSSLConnection.WriteString(const AStr: string): Boolean;
 begin
-  Result := Write(PChar(aStr)^, Length(aStr)) = Length(aStr);
+  Result := Write(PChar(AStr)^, Length(AStr)) = Length(AStr);
 end;
 
 // ============================================================================
@@ -1069,12 +1084,12 @@ begin
   Result := (FLastError = sslErrWantWrite);
 end;
 
-function TWinSSLConnection.GetError(aRet: Integer): TSSLErrorCode;
+function TWinSSLConnection.GetError(ARet: Integer): TSSLErrorCode;
 var
   LastErr: DWORD;
 begin
   // 成功或非错误情况
-  if aRet >= 0 then
+  if ARet >= 0 then
   begin
     FLastError := sslErrNone;
     Result := sslErrNone;
@@ -1452,19 +1467,54 @@ end;
 // ============================================================================
 
 function TWinSSLConnection.GetSession: ISSLSession;
+var
+  LSession: TWinSSLSession;
+  LPeerCert: ISSLCertificate;
 begin
-  Result := FCurrentSession;
+  // 如果已有缓存的会话，直接返回
+  if FCurrentSession <> nil then
+  begin
+    Result := FCurrentSession;
+    Exit;
+  end;
+
+  // 如果未连接，无法获取会话
+  if not FConnected then
+  begin
+    Result := nil;
+    Exit;
+  end;
+
+  // P1.2: 动态创建会话（类似 OpenSSL 的 SSL_get1_session）
+  LSession := TWinSSLSession.Create;
+  LSession.FID := FormatDateTime('yyyymmddhhnnsszzz', Now);  // 唯一标识符
+  LSession.FCreationTime := Now;
+  LSession.FTimeout := 300;  // 默认 5 分钟
+  LSession.FProtocolVersion := GetProtocolVersion;
+  LSession.FCipherName := GetCipherName;
+
+  // 保存上下文句柄
+  if IsValidSecHandle(FCtxtHandle) then
+    LSession.SetSessionHandle(FCtxtHandle);
+
+  // P1.2: 缓存对端证书
+  LPeerCert := GetPeerCertificate;
+  if LPeerCert <> nil then
+    LSession.SetPeerCertificate(LPeerCert);
+
+  FCurrentSession := LSession;
+  Result := LSession;
 end;
 
-procedure TWinSSLConnection.SetSession(aSession: ISSLSession);
+procedure TWinSSLConnection.SetSession(ASession: ISSLSession);
 begin
-  FCurrentSession := aSession;
-  if aSession <> nil then
+  FCurrentSession := ASession;
+  if ASession <> nil then
   begin
     FSessionReused := True;
     // 如果有上下文句柄，存储到会话中
-    if IsValidSecHandle(FCtxtHandle) and (aSession is TWinSSLSession) then
-      TWinSSLSession(aSession).SetSessionHandle(FCtxtHandle);
+    if IsValidSecHandle(FCtxtHandle) and (ASession is TWinSSLSession) then
+      TWinSSLSession(ASession).SetSessionHandle(FCtxtHandle);
   end;
 end;
 
@@ -1529,9 +1579,9 @@ end;
 // ISSLConnection - 选项设置
 // ============================================================================
 
-procedure TWinSSLConnection.SetTimeout(aTimeout: Integer);
+procedure TWinSSLConnection.SetTimeout(ATimeout: Integer);
 begin
-  FTimeout := aTimeout;
+  FTimeout := ATimeout;
 end;
 
 function TWinSSLConnection.GetTimeout: Integer;
@@ -1539,9 +1589,9 @@ begin
   Result := FTimeout;
 end;
 
-procedure TWinSSLConnection.SetBlocking(aBlocking: Boolean);
+procedure TWinSSLConnection.SetBlocking(ABlocking: Boolean);
 begin
-  FBlocking := aBlocking;
+  FBlocking := ABlocking;
 end;
 
 function TWinSSLConnection.GetBlocking: Boolean;

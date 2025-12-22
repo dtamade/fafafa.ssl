@@ -34,22 +34,22 @@ type
     FIssuerCert: ISSLCertificate;  // 颁发者证书引用
 
     function GetCertInfo: PCERT_INFO;
-    function BinaryToHexString(const aData: PByte; aSize: DWORD): string;
-    function CalculateFingerprint(aHashType: TSSLHash): string;
+    function BinaryToHexString(const AData: PByte; ASize: DWORD): string;
+    function CalculateFingerprint(AHashType: TSSLHash): string;
     
   public
-    constructor Create(aCertContext: PCCERT_CONTEXT; aOwnsContext: Boolean = True);
+    constructor Create(ACertContext: PCCERT_CONTEXT; AOwnsContext: Boolean = True);
     destructor Destroy; override;
     
     { ISSLCertificate - 加载和保存 }
-    function LoadFromFile(const aFileName: string): Boolean;
-    function LoadFromStream(aStream: TStream): Boolean;
-    function LoadFromMemory(const aData: Pointer; aSize: Integer): Boolean;
-    function LoadFromPEM(const aPEM: string): Boolean;
-    function LoadFromDER(const aDER: TBytes): Boolean;
+    function LoadFromFile(const AFileName: string): Boolean;
+    function LoadFromStream(AStream: TStream): Boolean;
+    function LoadFromMemory(const AData: Pointer; ASize: Integer): Boolean;
+    function LoadFromPEM(const APEM: string): Boolean;
+    function LoadFromDER(const ADER: TBytes): Boolean;
     
-    function SaveToFile(const aFileName: string): Boolean;
-    function SaveToStream(aStream: TStream): Boolean;
+    function SaveToFile(const AFileName: string): Boolean;
+    function SaveToStream(AStream: TStream): Boolean;
     function SaveToPEM: string;
     function SaveToDER: TBytes;
     
@@ -66,10 +66,10 @@ type
     function GetVersion: Integer;
     
     { ISSLCertificate - 证书验证 }
-    function Verify(aCAStore: ISSLCertificateStore): Boolean;
-    function VerifyEx(aCAStore: ISSLCertificateStore; 
-      aFlags: TSSLCertVerifyFlags; out aResult: TSSLCertVerifyResult): Boolean;
-    function VerifyHostname(const aHostname: string): Boolean;
+    function Verify(ACAStore: ISSLCertificateStore): Boolean;
+    function VerifyEx(ACAStore: ISSLCertificateStore; 
+      AFlags: TSSLCertVerifyFlags; out AResult: TSSLCertVerifyResult): Boolean;
+    function VerifyHostname(const AHostname: string): Boolean;
     function IsExpired: Boolean;
     function IsSelfSigned: Boolean;
     function IsCA: Boolean;
@@ -79,18 +79,18 @@ type
     function GetSubjectCN: string;
 
     { ISSLCertificate - 证书扩展 }
-    function GetExtension(const aOID: string): string;
+    function GetExtension(const AOID: string): string;
     function GetSubjectAltNames: TSSLStringArray;
     function GetKeyUsage: TSSLStringArray;
     function GetExtendedKeyUsage: TSSLStringArray;
     
     { ISSLCertificate - 指纹 }
-    function GetFingerprint(aHashType: TSSLHash): string;
+    function GetFingerprint(AHashType: TSSLHash): string;
     function GetFingerprintSHA1: string;
     function GetFingerprintSHA256: string;
     
     { ISSLCertificate - 证书链 }
-    procedure SetIssuerCertificate(aCert: ISSLCertificate);
+    procedure SetIssuerCertificate(ACert: ISSLCertificate);
     function GetIssuerCertificate: ISSLCertificate;
     
     { ISSLCertificate - 原生句柄 }
@@ -99,41 +99,30 @@ type
   end;
 
 { 工厂函数 }
-function CreateWinSSLCertificateFromContext(aCertContext: PCCERT_CONTEXT; aOwnsContext: Boolean = True): ISSLCertificate;
+function CreateWinSSLCertificateFromContext(ACertContext: PCCERT_CONTEXT; AOwnsContext: Boolean = True): ISSLCertificate;
 
 implementation
 
-function StringsToArray(aStrings: TStrings): TSSLStringArray;
-var
-  I: Integer;
-begin
-  SetLength(Result, 0);
-  if (aStrings = nil) or (aStrings.Count = 0) then
-    Exit;
-
-  SetLength(Result, aStrings.Count);
-  for I := 0 to aStrings.Count - 1 do
-    Result[I] := Trim(aStrings[I]);
-end;
+// StringsToArray 已移至 fafafa.ssl.utils（Phase 3.2）
 
 // ============================================================================
 // 工厂函数
 // ============================================================================
 
-function CreateWinSSLCertificateFromContext(aCertContext: PCCERT_CONTEXT; aOwnsContext: Boolean = True): ISSLCertificate;
+function CreateWinSSLCertificateFromContext(ACertContext: PCCERT_CONTEXT; AOwnsContext: Boolean = True): ISSLCertificate;
 begin
-  Result := TWinSSLCertificate.Create(aCertContext, aOwnsContext);
+  Result := TWinSSLCertificate.Create(ACertContext, AOwnsContext);
 end;
 
 // ============================================================================
 // TWinSSLCertificate - 构造和析构
 // ============================================================================
 
-constructor TWinSSLCertificate.Create(aCertContext: PCCERT_CONTEXT; aOwnsContext: Boolean = True);
+constructor TWinSSLCertificate.Create(ACertContext: PCCERT_CONTEXT; AOwnsContext: Boolean = True);
 begin
   inherited Create;
-  FCertContext := aCertContext;
-  FOwnsContext := aOwnsContext;
+  FCertContext := ACertContext;
+  FOwnsContext := AOwnsContext;
 end;
 
 destructor TWinSSLCertificate.Destroy;
@@ -155,17 +144,17 @@ begin
     Result := nil;
 end;
 
-function TWinSSLCertificate.BinaryToHexString(const aData: PByte; aSize: DWORD): string;
+function TWinSSLCertificate.BinaryToHexString(const AData: PByte; ASize: DWORD): string;
 var
   i: Integer;
   p: PByte;
 begin
   Result := '';
-  if (aData = nil) or (aSize = 0) then
+  if (AData = nil) or (ASize = 0) then
     Exit;
   
-  p := aData;
-  for i := 0 to aSize - 1 do
+  p := AData;
+  for i := 0 to ASize - 1 do
   begin
     if i > 0 then
       Result := Result + ':';
@@ -174,7 +163,7 @@ begin
   end;
 end;
 
-function TWinSSLCertificate.CalculateFingerprint(aHashType: TSSLHash): string;
+function TWinSSLCertificate.CalculateFingerprint(AHashType: TSSLHash): string;
 var
   HashAlg: ALG_ID;
   Hash: array[0..63] of Byte;
@@ -186,7 +175,7 @@ begin
     Exit;
   
   // 选择哈希算法
-  case aHashType of
+  case AHashType of
     sslHashSHA1: HashAlg := CALG_SHA1;
     sslHashSHA256: HashAlg := CALG_SHA_256;
     sslHashSHA384: HashAlg := CALG_SHA_384;
@@ -212,12 +201,12 @@ end;
 // ISSLCertificate - 加载和保存
 // ============================================================================
 
-function TWinSSLCertificate.LoadFromFile(const aFileName: string): Boolean;
+function TWinSSLCertificate.LoadFromFile(const AFileName: string): Boolean;
 var
   FileStream: TFileStream;
 begin
   try
-    FileStream := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
+    FileStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
     try
       Result := LoadFromStream(FileStream);
     finally
@@ -228,34 +217,34 @@ begin
   end;
 end;
 
-function TWinSSLCertificate.LoadFromStream(aStream: TStream): Boolean;
+function TWinSSLCertificate.LoadFromStream(AStream: TStream): Boolean;
 var
   Data: TBytes;
   Size: Int64;
 begin
   Result := False;
-  Size := aStream.Size - aStream.Position;
+  Size := AStream.Size - AStream.Position;
   if Size <= 0 then
     Exit;
   
   SetLength(Data, Size);
-  aStream.Read(Data[0], Size);
+  AStream.Read(Data[0], Size);
   Result := LoadFromDER(Data);
 end;
 
-function TWinSSLCertificate.LoadFromMemory(const aData: Pointer; aSize: Integer): Boolean;
+function TWinSSLCertificate.LoadFromMemory(const AData: Pointer; ASize: Integer): Boolean;
 var
   NewContext: PCCERT_CONTEXT;
 begin
   Result := False;
   
-  if (aData = nil) or (aSize <= 0) then
+  if (AData = nil) or (ASize <= 0) then
     Exit;
   
   NewContext := CertCreateCertificateContext(
     X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
-    aData,
-    aSize
+    AData,
+    ASize
   );
   
   if NewContext <> nil then
@@ -269,7 +258,7 @@ begin
   end;
 end;
 
-function TWinSSLCertificate.LoadFromPEM(const aPEM: string): Boolean;
+function TWinSSLCertificate.LoadFromPEM(const APEM: string): Boolean;
 var
   DERData: TBytes;
   DERSize: DWORD;
@@ -277,11 +266,11 @@ var
 begin
   Result := False;
 
-  if aPEM = '' then
+  if APEM = '' then
     Exit;
 
   // Convert PEM string to AnsiString for CryptStringToBinaryA
-  PEMStr := UTF8Encode(aPEM);
+  PEMStr := UTF8Encode(APEM);
 
   // First call to get the size
   if not CryptStringToBinaryA(
@@ -312,20 +301,20 @@ begin
   end;
 end;
 
-function TWinSSLCertificate.LoadFromDER(const aDER: TBytes): Boolean;
+function TWinSSLCertificate.LoadFromDER(const ADER: TBytes): Boolean;
 begin
-  if Length(aDER) > 0 then
-    Result := LoadFromMemory(@aDER[0], Length(aDER))
+  if Length(ADER) > 0 then
+    Result := LoadFromMemory(@ADER[0], Length(ADER))
   else
     Result := False;
 end;
 
-function TWinSSLCertificate.SaveToFile(const aFileName: string): Boolean;
+function TWinSSLCertificate.SaveToFile(const AFileName: string): Boolean;
 var
   FileStream: TFileStream;
 begin
   try
-    FileStream := TFileStream.Create(aFileName, fmCreate);
+    FileStream := TFileStream.Create(AFileName, fmCreate);
     try
       Result := SaveToStream(FileStream);
     finally
@@ -336,14 +325,14 @@ begin
   end;
 end;
 
-function TWinSSLCertificate.SaveToStream(aStream: TStream): Boolean;
+function TWinSSLCertificate.SaveToStream(AStream: TStream): Boolean;
 var
   Data: TBytes;
 begin
   Data := SaveToDER;
   if Length(Data) > 0 then
   begin
-    aStream.Write(Data[0], Length(Data));
+    AStream.Write(Data[0], Length(Data));
     Result := True;
   end
   else
@@ -647,7 +636,7 @@ end;
 // ISSLCertificate - 证书验证
 // ============================================================================
 
-function TWinSSLCertificate.Verify(aCAStore: ISSLCertificateStore): Boolean;
+function TWinSSLCertificate.Verify(ACAStore: ISSLCertificateStore): Boolean;
 var
   ChainPara: CERT_CHAIN_PARA;
   ChainContext: PCCERT_CHAIN_CONTEXT;
@@ -665,10 +654,10 @@ begin
   ChainPara.cbSize := SizeOf(ChainPara);
 
   StoreHandle := nil;
-  if aCAStore <> nil then
+  if ACAStore <> nil then
   begin
     // 如果提供了自定义 CA 存储，使用它
-    StoreHandle := HCERTSTORE(aCAStore.GetNativeHandle);
+    StoreHandle := HCERTSTORE(ACAStore.GetNativeHandle);
   end;
 
   // 构建证书链
@@ -719,8 +708,8 @@ begin
   end;
 end;
 
-function TWinSSLCertificate.VerifyEx(aCAStore: ISSLCertificateStore; 
-  aFlags: TSSLCertVerifyFlags; out aResult: TSSLCertVerifyResult): Boolean;
+function TWinSSLCertificate.VerifyEx(ACAStore: ISSLCertificateStore; 
+  AFlags: TSSLCertVerifyFlags; out AResult: TSSLCertVerifyResult): Boolean;
 var
   LChainPara: CERT_CHAIN_PARA;
   LChainContext: PCCERT_CHAIN_CONTEXT;
@@ -730,14 +719,14 @@ var
   LChainFlags: DWORD;
 begin
   // 初始化返回值
-  FillChar(aResult, SizeOf(aResult), 0);
-  aResult.Success := False;
+  FillChar(AResult, SizeOf(AResult), 0);
+  AResult.Success := False;
   Result := False;
 
   if FCertContext = nil then
   begin
-    aResult.ErrorCode := ERROR_INVALID_PARAMETER;
-    aResult.ErrorMessage := 'Certificate context is nil';
+    AResult.ErrorCode := ERROR_INVALID_PARAMETER;
+    AResult.ErrorMessage := 'Certificate context is nil';
     Exit;
   end;
 
@@ -746,17 +735,17 @@ begin
   LChainPara.cbSize := SizeOf(LChainPara);
 
   LStoreHandle := nil;
-  if aCAStore <> nil then
-    LStoreHandle := HCERTSTORE(aCAStore.GetNativeHandle);
+  if ACAStore <> nil then
+    LStoreHandle := HCERTSTORE(ACAStore.GetNativeHandle);
 
   // 根据标志配置链验证
   LChainFlags := 0;
   
-  if (sslCertVerifyCheckRevocation in aFlags) or
-    (sslCertVerifyCheckOCSP in aFlags) then
+  if (sslCertVerifyCheckRevocation in AFlags) or
+    (sslCertVerifyCheckOCSP in AFlags) then
     LChainFlags := LChainFlags or CERT_CHAIN_REVOCATION_CHECK_CHAIN;
     
-  if sslCertVerifyCheckCRL in aFlags then
+  if sslCertVerifyCheckCRL in AFlags then
     LChainFlags := LChainFlags or CERT_CHAIN_REVOCATION_CHECK_END_CERT;
 
   // 构建证书链
@@ -771,15 +760,15 @@ begin
     @LChainContext          // 输出链上下文
   ) then
   begin
-    aResult.ErrorCode := GetLastError;
-    aResult.ErrorMessage := 'Failed to build certificate chain';
+    AResult.ErrorCode := GetLastError;
+    AResult.ErrorMessage := 'Failed to build certificate chain';
     Exit;
   end;
 
   try
     // 记录链状态
     if LChainContext <> nil then
-      aResult.ChainStatus := LChainContext^.TrustStatus.dwErrorStatus;
+      AResult.ChainStatus := LChainContext^.TrustStatus.dwErrorStatus;
 
     // 初始化策略参数
     FillChar(LPolicyPara, SizeOf(LPolicyPara), 0);
@@ -798,14 +787,14 @@ begin
       @LPolicyStatus               // 策略状态输出
     ) then
     begin
-      aResult.ErrorCode := LPolicyStatus.dwError;
-      aResult.ChainStatus := LPolicyStatus.dwError;
+      AResult.ErrorCode := LPolicyStatus.dwError;
+      AResult.ChainStatus := LPolicyStatus.dwError;
       
       // 检查验证结果
       if LPolicyStatus.dwError = 0 then
       begin
-        aResult.Success := True;
-        aResult.ErrorMessage := 'Certificate verified successfully';
+        AResult.Success := True;
+        AResult.ErrorMessage := 'Certificate verified successfully';
         Result := True;
       end
       else
@@ -813,37 +802,37 @@ begin
         // 生成友好的错误消息
         case LPolicyStatus.dwError of
           CERT_E_EXPIRED:
-            aResult.ErrorMessage := 'Certificate has expired';
+            AResult.ErrorMessage := 'Certificate has expired';
           CERT_E_UNTRUSTEDROOT:
-            aResult.ErrorMessage := 'Certificate chain to untrusted root';
+            AResult.ErrorMessage := 'Certificate chain to untrusted root';
           CERT_E_WRONG_USAGE:
-            aResult.ErrorMessage := 'Certificate has wrong usage';
+            AResult.ErrorMessage := 'Certificate has wrong usage';
           CERT_E_REVOKED:
             begin
-              aResult.ErrorMessage := 'Certificate has been revoked';
-              aResult.RevocationStatus := 1;
+              AResult.ErrorMessage := 'Certificate has been revoked';
+              AResult.RevocationStatus := 1;
             end;
           CERT_E_REVOCATION_FAILURE:
             begin
-              aResult.ErrorMessage := 'Revocation check failed';
-              aResult.RevocationStatus := 2;
+              AResult.ErrorMessage := 'Revocation check failed';
+              AResult.RevocationStatus := 2;
             end;
           TRUST_E_CERT_SIGNATURE:
-            aResult.ErrorMessage := 'Certificate signature is invalid';
+            AResult.ErrorMessage := 'Certificate signature is invalid';
           CERT_E_CN_NO_MATCH:
-            aResult.ErrorMessage := 'Certificate common name does not match';
+            AResult.ErrorMessage := 'Certificate common name does not match';
           CERT_E_INVALID_NAME:
-            aResult.ErrorMessage := 'Certificate name is invalid';
+            AResult.ErrorMessage := 'Certificate name is invalid';
         else
-          aResult.ErrorMessage := Format('Certificate verification failed (Error: 0x%x)', 
+          AResult.ErrorMessage := Format('Certificate verification failed (Error: 0x%x)', 
             [LPolicyStatus.dwError]);
         end;
       end;
     end
     else
     begin
-      aResult.ErrorCode := GetLastError;
-      aResult.ErrorMessage := 'Certificate chain policy verification failed';
+      AResult.ErrorCode := GetLastError;
+      AResult.ErrorMessage := 'Certificate chain policy verification failed';
     end;
 
   finally
@@ -852,14 +841,14 @@ begin
   end;
 end;
 
-function TWinSSLCertificate.VerifyHostname(const aHostname: string): Boolean;
+function TWinSSLCertificate.VerifyHostname(const AHostname: string): Boolean;
 var
   SANs: TStringList;
   i: Integer;
   CN, Entry: string;
   HostIsIP, EntryIsIP: Boolean;
 
-  function MatchWildcard(const aPattern, aHostname: string): Boolean;
+  function MatchWildcard(const APattern, AHostname: string): Boolean;
   var
     PatternParts, HostParts: TStringList;
     j: Integer;
@@ -867,23 +856,23 @@ var
     Result := False;
 
     // 精确匹配
-    if SameText(aPattern, aHostname) then
+    if SameText(APattern, AHostname) then
     begin
       Result := True;
       Exit;
     end;
 
     // 通配符匹配 (*.example.com)
-    if (Pos('*.', aPattern) = 1) then
+    if (Pos('*.', APattern) = 1) then
     begin
       PatternParts := TStringList.Create;
       HostParts := TStringList.Create;
       try
         PatternParts.Delimiter := '.';
-        PatternParts.DelimitedText := aPattern;
+        PatternParts.DelimitedText := APattern;
 
         HostParts.Delimiter := '.';
-        HostParts.DelimitedText := aHostname;
+        HostParts.DelimitedText := AHostname;
 
         // 域名级数必须相同
         if PatternParts.Count = HostParts.Count then
@@ -909,10 +898,10 @@ var
 begin
   Result := False;
 
-  if (FCertContext = nil) or (aHostname = '') then
+  if (FCertContext = nil) or (AHostname = '') then
     Exit;
 
-  HostIsIP := TSSLUtils.IsIPAddress(aHostname);
+  HostIsIP := TSSLUtils.IsIPAddress(AHostname);
 
   // 首先检查 Subject Alternative Names (SAN)
   SANs := GetSubjectAltNames;
@@ -927,7 +916,7 @@ begin
 
       if HostIsIP then
       begin
-        if EntryIsIP and SameText(Entry, aHostname) then
+        if EntryIsIP and SameText(Entry, AHostname) then
         begin
           Result := True;
           Exit;
@@ -941,7 +930,7 @@ begin
       if not TSSLUtils.IsValidHostname(Entry) then
         Continue;
 
-      if MatchWildcard(Entry, aHostname) then
+      if MatchWildcard(Entry, AHostname) then
       begin
         Result := True;
         Exit;
@@ -968,14 +957,14 @@ begin
   // 尝试匹配 CN
   if HostIsIP then
   begin
-    Result := SameText(CN, aHostname);
+    Result := SameText(CN, AHostname);
     Exit;
   end;
 
   if not TSSLUtils.IsValidHostname(CN) then
     Exit;
 
-  Result := MatchWildcard(CN, aHostname);
+  Result := MatchWildcard(CN, AHostname);
 end;
 
 function TWinSSLCertificate.IsExpired: Boolean;
@@ -1110,18 +1099,18 @@ end;
 // ISSLCertificate - 证书扩展
 // ============================================================================
 
-function TWinSSLCertificate.GetExtension(const aOID: string): string;
+function TWinSSLCertificate.GetExtension(const AOID: string): string;
 var
   ExtInfo: PCERT_EXTENSION;
   OIDAnsi: AnsiString;
 begin
   Result := '';
 
-  if (FCertContext = nil) or (aOID = '') then
+  if (FCertContext = nil) or (AOID = '') then
     Exit;
 
   // 转换 OID 为 ANSI 字符串
-  OIDAnsi := AnsiString(aOID);
+  OIDAnsi := AnsiString(AOID);
 
   // 查找扩展
   ExtInfo := CertFindExtension(
@@ -1399,9 +1388,9 @@ end;
 // ISSLCertificate - 指纹
 // ============================================================================
 
-function TWinSSLCertificate.GetFingerprint(aHashType: TSSLHash): string;
+function TWinSSLCertificate.GetFingerprint(AHashType: TSSLHash): string;
 begin
-  Result := CalculateFingerprint(aHashType);
+  Result := CalculateFingerprint(AHashType);
 end;
 
 function TWinSSLCertificate.GetFingerprintSHA1: string;
@@ -1418,9 +1407,9 @@ end;
 // ISSLCertificate - 证书链
 // ============================================================================
 
-procedure TWinSSLCertificate.SetIssuerCertificate(aCert: ISSLCertificate);
+procedure TWinSSLCertificate.SetIssuerCertificate(ACert: ISSLCertificate);
 begin
-  FIssuerCert := aCert;
+  FIssuerCert := ACert;
 end;
 
 function TWinSSLCertificate.GetIssuerCertificate: ISSLCertificate;

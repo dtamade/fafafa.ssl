@@ -31,21 +31,21 @@ type
     constructor Create;
     destructor Destroy; override;
     
-    function AddCertificate(aCert: ISSLCertificate): Boolean;
-    function RemoveCertificate(aCert: ISSLCertificate): Boolean;
-    function Contains(aCert: ISSLCertificate): Boolean;
+    function AddCertificate(ACert: ISSLCertificate): Boolean;
+    function RemoveCertificate(ACert: ISSLCertificate): Boolean;
+    function Contains(ACert: ISSLCertificate): Boolean;
     procedure Clear;
     function GetCount: Integer;
-    function GetCertificate(aIndex: Integer): ISSLCertificate;
-    function LoadFromFile(const aFileName: string): Boolean;
-    function LoadFromPath(const aPath: string): Boolean;
+    function GetCertificate(AIndex: Integer): ISSLCertificate;
+    function LoadFromFile(const AFileName: string): Boolean;
+    function LoadFromPath(const APath: string): Boolean;
     function LoadSystemStore: Boolean;
-    function FindBySubject(const aSubject: string): ISSLCertificate;
-    function FindByIssuer(const aIssuer: string): ISSLCertificate;
-    function FindBySerialNumber(const aSerialNumber: string): ISSLCertificate;
-    function FindByFingerprint(const aFingerprint: string): ISSLCertificate;
-    function VerifyCertificate(aCert: ISSLCertificate): Boolean;
-    function BuildCertificateChain(aCert: ISSLCertificate): TSSLCertificateArray;
+    function FindBySubject(const ASubject: string): ISSLCertificate;
+    function FindByIssuer(const AIssuer: string): ISSLCertificate;
+    function FindBySerialNumber(const ASerialNumber: string): ISSLCertificate;
+    function FindByFingerprint(const AFingerprint: string): ISSLCertificate;
+    function VerifyCertificate(ACert: ISSLCertificate): Boolean;
+    function BuildCertificateChain(ACert: ISSLCertificate): TSSLCertificateArray;
     function GetNativeHandle: Pointer;
   end;
 
@@ -88,14 +88,14 @@ begin
   inherited;
 end;
 
-function TOpenSSLCertificateStore.AddCertificate(aCert: ISSLCertificate): Boolean;
+function TOpenSSLCertificateStore.AddCertificate(ACert: ISSLCertificate): Boolean;
 var
   X509: PX509;
 begin
   Result := False;
-  if (FStore = nil) or (aCert = nil) then Exit;
+  if (FStore = nil) or (ACert = nil) then Exit;
   
-  X509 := PX509(aCert.GetNativeHandle);
+  X509 := PX509(ACert.GetNativeHandle);
   if X509 = nil then Exit;
   
   Result := (X509_STORE_add_cert(FStore, X509) = 1);
@@ -103,7 +103,7 @@ begin
     FCertificates.Add(X509);
 end;
 
-function TOpenSSLCertificateStore.RemoveCertificate(aCert: ISSLCertificate): Boolean;
+function TOpenSSLCertificateStore.RemoveCertificate(ACert: ISSLCertificate): Boolean;
 begin
   // Note: OpenSSL X509_STORE design does not support certificate removal.
   // This is a limitation of OpenSSL's architecture, not a missing feature.
@@ -111,20 +111,20 @@ begin
   Result := False;
 end;
 
-function TOpenSSLCertificateStore.Contains(aCert: ISSLCertificate): Boolean;
+function TOpenSSLCertificateStore.Contains(ACert: ISSLCertificate): Boolean;
 var
   FP: string;
 begin
   Result := False;
-  if (aCert = nil) or (FCertificates.Count = 0) then
+  if (ACert = nil) or (FCertificates.Count = 0) then
     Exit;
   
   // 使用指纹进行匹配，避免依赖底层句柄是否复用
-  FP := aCert.GetFingerprintSHA256;
+  FP := ACert.GetFingerprintSHA256;
   if FP = '' then
-    FP := aCert.GetFingerprint(sslHashSHA256);
+    FP := ACert.GetFingerprint(sslHashSHA256);
   if FP = '' then
-    FP := aCert.GetFingerprintSHA1;
+    FP := ACert.GetFingerprintSHA1;
   if FP = '' then
     Exit;
   
@@ -159,16 +159,16 @@ begin
   Result := FCertificates.Count;
 end;
 
-function TOpenSSLCertificateStore.GetCertificate(aIndex: Integer): ISSLCertificate;
+function TOpenSSLCertificateStore.GetCertificate(AIndex: Integer): ISSLCertificate;
 var
   X509Cert: PX509;
 begin
   Result := nil;
   
-  if (aIndex < 0) or (aIndex >= FCertificates.Count) then
+  if (AIndex < 0) or (AIndex >= FCertificates.Count) then
     Exit;
   
-  X509Cert := PX509(FCertificates[aIndex]);
+  X509Cert := PX509(FCertificates[AIndex]);
   if X509Cert = nil then
     Exit;
   
@@ -176,7 +176,7 @@ begin
   Result := TOpenSSLCertificate.Create(X509Cert, True);
 end;
 
-function TOpenSSLCertificateStore.LoadFromFile(const aFileName: string): Boolean;
+function TOpenSSLCertificateStore.LoadFromFile(const AFileName: string): Boolean;
 var
   FileNameA: AnsiString;
   BIO: PBIO;
@@ -201,7 +201,7 @@ begin
   
   try
     // 读取证书文件
-    FileNameA := AnsiString(aFileName);
+    FileNameA := AnsiString(AFileName);
     BIO := BIO_new_file(PAnsiChar(FileNameA), 'r');
     if BIO = nil then
     begin
@@ -251,7 +251,7 @@ begin
   end;
 end;
 
-function TOpenSSLCertificateStore.LoadFromPath(const aPath: string): Boolean;
+function TOpenSSLCertificateStore.LoadFromPath(const APath: string): Boolean;
 var
   SR: TSearchRec;
   FilePath: string;
@@ -264,7 +264,7 @@ begin
   
   try
     // 确保路径有正确的分隔符
-    SearchPath := IncludeTrailingPathDelimiter(aPath);
+    SearchPath := IncludeTrailingPathDelimiter(APath);
     
     
     // 扫描目录中的所有 .pem 文件
@@ -357,7 +357,7 @@ begin
   Result := LoadedAny or (GetCount > 0);
 end;
 
-function TOpenSSLCertificateStore.FindBySubject(const aSubject: string): ISSLCertificate;
+function TOpenSSLCertificateStore.FindBySubject(const ASubject: string): ISSLCertificate;
 var
   I: Integer;
   Cert: ISSLCertificate;
@@ -373,7 +373,7 @@ begin
       try
         Subject := Cert.GetSubject;
         // 部分匹配：检查 subject 中是否包含搜索字符串
-        if (Subject <> '') and (Pos(UpperCase(aSubject), UpperCase(Subject)) > 0) then
+        if (Subject <> '') and (Pos(UpperCase(ASubject), UpperCase(Subject)) > 0) then
         begin
           Result := Cert;
           Exit;
@@ -386,7 +386,7 @@ begin
   end;
 end;
 
-function TOpenSSLCertificateStore.FindByIssuer(const aIssuer: string): ISSLCertificate;
+function TOpenSSLCertificateStore.FindByIssuer(const AIssuer: string): ISSLCertificate;
 var
   I: Integer;
   Cert: ISSLCertificate;
@@ -402,7 +402,7 @@ begin
       try
         Issuer := Cert.GetIssuer;
         // 部分匹配：检查 issuer 中是否包含搜索字符串
-        if (Issuer <> '') and (Pos(UpperCase(aIssuer), UpperCase(Issuer)) > 0) then
+        if (Issuer <> '') and (Pos(UpperCase(AIssuer), UpperCase(Issuer)) > 0) then
         begin
           Result := Cert;
           Exit;
@@ -414,7 +414,7 @@ begin
   end;
 end;
 
-function TOpenSSLCertificateStore.FindBySerialNumber(const aSerialNumber: string): ISSLCertificate;
+function TOpenSSLCertificateStore.FindBySerialNumber(const ASerialNumber: string): ISSLCertificate;
 var
   I: Integer;
   Cert: ISSLCertificate;
@@ -430,7 +430,7 @@ begin
       try
         Serial := Cert.GetSerialNumber;
         // 精确匹配（不区分大小写）
-        if (Serial <> '') and (UpperCase(Serial) = UpperCase(aSerialNumber)) then
+        if (Serial <> '') and (UpperCase(Serial) = UpperCase(ASerialNumber)) then
         begin
           Result := Cert;
           Exit;
@@ -442,7 +442,7 @@ begin
   end;
 end;
 
-function TOpenSSLCertificateStore.FindByFingerprint(const aFingerprint: string): ISSLCertificate;
+function TOpenSSLCertificateStore.FindByFingerprint(const AFingerprint: string): ISSLCertificate;
 var
   I: Integer;
   Cert: ISSLCertificate;
@@ -450,7 +450,7 @@ var
   SearchFP: string;
 begin
   Result := nil;
-  SearchFP := UpperCase(StringReplace(aFingerprint, ':', '', [rfReplaceAll]));
+  SearchFP := UpperCase(StringReplace(AFingerprint, ':', '', [rfReplaceAll]));
   
   for I := 0 to FCertificates.Count - 1 do
   begin
@@ -480,27 +480,27 @@ begin
   end;
 end;
 
-function TOpenSSLCertificateStore.VerifyCertificate(aCert: ISSLCertificate): Boolean;
+function TOpenSSLCertificateStore.VerifyCertificate(ACert: ISSLCertificate): Boolean;
 begin
   Result := False;
-  if (aCert = nil) or (FStore = nil) then
+  if (ACert = nil) or (FStore = nil) then
     Exit;
   
   // 直接复用证书对象的 Verify 实现，委托给当前 store
-  Result := aCert.Verify(Self);
+  Result := ACert.Verify(Self);
 end;
 
-function TOpenSSLCertificateStore.BuildCertificateChain(aCert: ISSLCertificate): TSSLCertificateArray;
+function TOpenSSLCertificateStore.BuildCertificateChain(ACert: ISSLCertificate): TSSLCertificateArray;
 begin
   SetLength(Result, 0);
-  if aCert = nil then
+  if ACert = nil then
     Exit;
   
   // 使用通用的证书链验证器来构建证书链
   with TSSLCertificateChainVerifier.Create as ISSLCertificateChainVerifier do
   begin
     SetTrustedStore(Self);
-    if not BuildChain(aCert, Result) then
+    if not BuildChain(ACert, Result) then
       SetLength(Result, 0);
   end;
 end;

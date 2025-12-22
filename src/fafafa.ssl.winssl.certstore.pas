@@ -37,52 +37,52 @@ type
     procedure LoadCertificates;
 
   public
-    constructor Create(const aStoreName: string); overload;
-    constructor Create(aStoreHandle: HCERTSTORE; aOwnsHandle: Boolean = False); overload;
+    constructor Create(const AStoreName: string); overload;
+    constructor Create(AStoreHandle: HCERTSTORE; AOwnsHandle: Boolean = False); overload;
     destructor Destroy; override;
 
     { ISSLCertificateStore - 存储管理 }
-    function Open(const aName: string; aWritable: Boolean = False): Boolean;
+    function Open(const AName: string; AWritable: Boolean = False): Boolean;
     procedure Close;
     function IsOpen: Boolean;
 
     { ISSLCertificateStore - 证书操作 }
-    function AddCertificate(aCert: ISSLCertificate): Boolean;
-    function RemoveCertificate(aCert: ISSLCertificate): Boolean;
-    function Contains(aCert: ISSLCertificate): Boolean;
+    function AddCertificate(ACert: ISSLCertificate): Boolean;
+    function RemoveCertificate(ACert: ISSLCertificate): Boolean;
+    function Contains(ACert: ISSLCertificate): Boolean;
     procedure Clear;
 
     { ISSLCertificateStore - 证书查询 }
     function GetCount: Integer;
-    function GetCertificate(aIndex: Integer): ISSLCertificate;
+    function GetCertificate(AIndex: Integer): ISSLCertificate;
     function GetAllCertificates: TSSLCertificateArray;
 
     { ISSLCertificateStore - 证书加载 }
-    function LoadFromFile(const aFileName: string): Boolean;
-    function LoadFromPath(const aPath: string): Boolean;
+    function LoadFromFile(const AFileName: string): Boolean;
+    function LoadFromPath(const APath: string): Boolean;
     function LoadSystemStore: Boolean;
 
     { ISSLCertificateStore - 证书搜索 }
-    function FindBySubject(const aSubject: string): ISSLCertificate;
-    function FindByIssuer(const aIssuer: string): ISSLCertificate;
-    function FindBySerialNumber(const aSerialNumber: string): ISSLCertificate;
-    function FindByFingerprint(const aFingerprint: string): ISSLCertificate;
+    function FindBySubject(const ASubject: string): ISSLCertificate;
+    function FindByIssuer(const AIssuer: string): ISSLCertificate;
+    function FindBySerialNumber(const ASerialNumber: string): ISSLCertificate;
+    function FindByFingerprint(const AFingerprint: string): ISSLCertificate;
 
     { ISSLCertificateStore - 证书验证 }
-    function VerifyCertificate(aCert: ISSLCertificate): Boolean;
-    function BuildCertificateChain(aCert: ISSLCertificate): TSSLCertificateArray;
+    function VerifyCertificate(ACert: ISSLCertificate): Boolean;
+    function BuildCertificateChain(ACert: ISSLCertificate): TSSLCertificateArray;
 
     { ISSLCertificateStore - 原生句柄 }
     function GetNativeHandle: Pointer;
 
     { 额外的辅助方法（不在接口中） }
-    function OpenSystemStore(const aStoreName: string): Boolean;
+    function OpenSystemStore(const AStoreName: string): Boolean;
     function GetSystemStoreNames: TStringList;
   end;
 
 { 工厂函数 }
-function CreateWinSSLCertificateStore(const aStoreName: string): ISSLCertificateStore;
-function OpenSystemStore(const aStoreName: string): ISSLCertificateStore;
+function CreateWinSSLCertificateStore(const AStoreName: string): ISSLCertificateStore;
+function OpenSystemStore(const AStoreName: string): ISSLCertificateStore;
 
 { 常见系统存储名称 }
 const
@@ -101,17 +101,17 @@ uses
 // 工厂函数
 // ============================================================================
 
-function CreateWinSSLCertificateStore(const aStoreName: string): ISSLCertificateStore;
+function CreateWinSSLCertificateStore(const AStoreName: string): ISSLCertificateStore;
 begin
-  Result := TWinSSLCertificateStore.Create(aStoreName);
+  Result := TWinSSLCertificateStore.Create(AStoreName);
 end;
 
-function OpenSystemStore(const aStoreName: string): ISSLCertificateStore;
+function OpenSystemStore(const AStoreName: string): ISSLCertificateStore;
 var
   Store: TWinSSLCertificateStore;
 begin
   Store := TWinSSLCertificateStore.Create('');
-  if Store.OpenSystemStore(aStoreName) then
+  if Store.OpenSystemStore(AStoreName) then
     Result := Store
   else
   begin
@@ -124,27 +124,27 @@ end;
 // TWinSSLCertificateStore - 构造和析构
 // ============================================================================
 
-constructor TWinSSLCertificateStore.Create(const aStoreName: string);
+constructor TWinSSLCertificateStore.Create(const AStoreName: string);
 begin
   inherited Create;
   FStoreHandle := nil;
-  FStoreName := aStoreName;
+  FStoreName := AStoreName;
   FOwnsHandle := True;
   FCertificates := TList.Create;
 
-  if aStoreName <> '' then
-    OpenSystemStore(aStoreName);
+  if AStoreName <> '' then
+    OpenSystemStore(AStoreName);
 end;
 
-constructor TWinSSLCertificateStore.Create(aStoreHandle: HCERTSTORE; aOwnsHandle: Boolean = False);
+constructor TWinSSLCertificateStore.Create(AStoreHandle: HCERTSTORE; AOwnsHandle: Boolean = False);
 begin
   inherited Create;
-  FStoreHandle := aStoreHandle;
+  FStoreHandle := AStoreHandle;
   FStoreName := '';
-  FOwnsHandle := aOwnsHandle;
+  FOwnsHandle := AOwnsHandle;
   FCertificates := TList.Create;
 
-  if aStoreHandle <> nil then
+  if AStoreHandle <> nil then
     LoadCertificates;
 end;
 
@@ -203,7 +203,7 @@ end;
 // ISSLCertificateStore - 存储管理
 // ============================================================================
 
-function TWinSSLCertificateStore.Open(const aName: string; aWritable: Boolean = False): Boolean;
+function TWinSSLCertificateStore.Open(const AName: string; AWritable: Boolean = False): Boolean;
 var
   Flags: DWORD;
 begin
@@ -214,15 +214,15 @@ begin
 
   // 设置打开标志
   Flags := CERT_STORE_OPEN_EXISTING_FLAG;
-  if not aWritable then
+  if not AWritable then
     Flags := Flags or CERT_STORE_READONLY_FLAG;
 
   // 打开系统存储
-  FStoreHandle := CertOpenSystemStoreW(0, PWideChar(WideString(aName)));
+  FStoreHandle := CertOpenSystemStoreW(0, PWideChar(WideString(AName)));
 
   if FStoreHandle <> nil then
   begin
-    FStoreName := aName;
+    FStoreName := AName;
     FOwnsHandle := True;
     LoadCertificates;
     Result := True;
@@ -251,17 +251,17 @@ end;
 // ISSLCertificateStore - 证书操作
 // ============================================================================
 
-function TWinSSLCertificateStore.AddCertificate(aCert: ISSLCertificate): Boolean;
+function TWinSSLCertificateStore.AddCertificate(ACert: ISSLCertificate): Boolean;
 var
   CertContext: PCCERT_CONTEXT;
 begin
   Result := False;
 
-  if (FStoreHandle = nil) or (aCert = nil) then
+  if (FStoreHandle = nil) or (ACert = nil) then
     Exit;
 
   // 获取证书的原生上下文
-  CertContext := PCCERT_CONTEXT(aCert.GetNativeHandle);
+  CertContext := PCCERT_CONTEXT(ACert.GetNativeHandle);
   if CertContext = nil then
     Exit;
 
@@ -280,17 +280,17 @@ begin
   end;
 end;
 
-function TWinSSLCertificateStore.RemoveCertificate(aCert: ISSLCertificate): Boolean;
+function TWinSSLCertificateStore.RemoveCertificate(ACert: ISSLCertificate): Boolean;
 var
   CertContext, FoundContext: PCCERT_CONTEXT;
 begin
   Result := False;
 
-  if (FStoreHandle = nil) or (aCert = nil) then
+  if (FStoreHandle = nil) or (ACert = nil) then
     Exit;
 
   // 获取证书的原生上下文
-  CertContext := PCCERT_CONTEXT(aCert.GetNativeHandle);
+  CertContext := PCCERT_CONTEXT(ACert.GetNativeHandle);
   if CertContext = nil then
     Exit;
 
@@ -317,17 +317,17 @@ begin
   end;
 end;
 
-function TWinSSLCertificateStore.Contains(aCert: ISSLCertificate): Boolean;
+function TWinSSLCertificateStore.Contains(ACert: ISSLCertificate): Boolean;
 var
   CertContext, FoundContext: PCCERT_CONTEXT;
 begin
   Result := False;
 
-  if (FStoreHandle = nil) or (aCert = nil) then
+  if (FStoreHandle = nil) or (ACert = nil) then
     Exit;
 
   // 获取证书的原生上下文
-  CertContext := PCCERT_CONTEXT(aCert.GetNativeHandle);
+  CertContext := PCCERT_CONTEXT(ACert.GetNativeHandle);
   if CertContext = nil then
     Exit;
 
@@ -359,27 +359,27 @@ end;
 // ISSLCertificateStore - 证书加载
 // ============================================================================
 
-function TWinSSLCertificateStore.LoadFromFile(const aFileName: string): Boolean;
+function TWinSSLCertificateStore.LoadFromFile(const AFileName: string): Boolean;
 var
   Cert: ISSLCertificate;
   CertImpl: TWinSSLCertificate;
 begin
   Result := False;
 
-  if not FileExists(aFileName) then
+  if not FileExists(AFileName) then
     Exit;
 
   // 创建证书对象并加载文件
   CertImpl := TWinSSLCertificate.Create(nil, False);
   Cert := CertImpl;
 
-  if Cert.LoadFromFile(aFileName) then
+  if Cert.LoadFromFile(AFileName) then
   begin
     Result := AddCertificate(Cert);
   end;
 end;
 
-function TWinSSLCertificateStore.LoadFromPath(const aPath: string): Boolean;
+function TWinSSLCertificateStore.LoadFromPath(const APath: string): Boolean;
 var
   SearchRec: TSearchRec;
   FilePath: string;
@@ -388,16 +388,16 @@ begin
   Result := False;
   LoadedCount := 0;
 
-  if not DirectoryExists(aPath) then
+  if not DirectoryExists(APath) then
     Exit;
 
   // 搜索路径中的证书文件
-  if FindFirst(IncludeTrailingPathDelimiter(aPath) + '*.cer', faAnyFile, SearchRec) = 0 then
+  if FindFirst(IncludeTrailingPathDelimiter(APath) + '*.cer', faAnyFile, SearchRec) = 0 then
   begin
     repeat
       if (SearchRec.Attr and faDirectory) = 0 then
       begin
-        FilePath := IncludeTrailingPathDelimiter(aPath) + SearchRec.Name;
+        FilePath := IncludeTrailingPathDelimiter(APath) + SearchRec.Name;
         if LoadFromFile(FilePath) then
           Inc(LoadedCount);
       end;
@@ -406,12 +406,12 @@ begin
   end;
 
   // 也搜索 .pem 和 .crt 文件
-  if FindFirst(IncludeTrailingPathDelimiter(aPath) + '*.pem', faAnyFile, SearchRec) = 0 then
+  if FindFirst(IncludeTrailingPathDelimiter(APath) + '*.pem', faAnyFile, SearchRec) = 0 then
   begin
     repeat
       if (SearchRec.Attr and faDirectory) = 0 then
       begin
-        FilePath := IncludeTrailingPathDelimiter(aPath) + SearchRec.Name;
+        FilePath := IncludeTrailingPathDelimiter(APath) + SearchRec.Name;
         if LoadFromFile(FilePath) then
           Inc(LoadedCount);
       end;
@@ -419,12 +419,12 @@ begin
     FindClose(SearchRec);
   end;
 
-  if FindFirst(IncludeTrailingPathDelimiter(aPath) + '*.crt', faAnyFile, SearchRec) = 0 then
+  if FindFirst(IncludeTrailingPathDelimiter(APath) + '*.crt', faAnyFile, SearchRec) = 0 then
   begin
     repeat
       if (SearchRec.Attr and faDirectory) = 0 then
       begin
-        FilePath := IncludeTrailingPathDelimiter(aPath) + SearchRec.Name;
+        FilePath := IncludeTrailingPathDelimiter(APath) + SearchRec.Name;
         if LoadFromFile(FilePath) then
           Inc(LoadedCount);
       end;
@@ -450,10 +450,10 @@ begin
   Result := FCertificates.Count;
 end;
 
-function TWinSSLCertificateStore.GetCertificate(aIndex: Integer): ISSLCertificate;
+function TWinSSLCertificateStore.GetCertificate(AIndex: Integer): ISSLCertificate;
 begin
-  if (aIndex >= 0) and (aIndex < FCertificates.Count) then
-    Result := ISSLCertificate(FCertificates[aIndex])
+  if (AIndex >= 0) and (AIndex < FCertificates.Count) then
+    Result := ISSLCertificate(FCertificates[AIndex])
   else
     Result := nil;
 end;
@@ -471,17 +471,17 @@ end;
 // ISSLCertificateStore - 证书搜索
 // ============================================================================
 
-function TWinSSLCertificateStore.FindBySubject(const aSubject: string): ISSLCertificate;
+function TWinSSLCertificateStore.FindBySubject(const ASubject: string): ISSLCertificate;
 var
   CertContext: PCCERT_CONTEXT;
   SubjectW: WideString;
 begin
   Result := nil;
 
-  if (FStoreHandle = nil) or (aSubject = '') then
+  if (FStoreHandle = nil) or (ASubject = '') then
     Exit;
 
-  SubjectW := WideString(aSubject);
+  SubjectW := WideString(ASubject);
 
   // 搜索主题包含指定字符串的证书
   CertContext := CertFindCertificateInStore(
@@ -497,17 +497,17 @@ begin
     Result := CreateWinSSLCertificateFromContext(CertContext, True);
 end;
 
-function TWinSSLCertificateStore.FindByIssuer(const aIssuer: string): ISSLCertificate;
+function TWinSSLCertificateStore.FindByIssuer(const AIssuer: string): ISSLCertificate;
 var
   CertContext: PCCERT_CONTEXT;
   IssuerW: WideString;
 begin
   Result := nil;
 
-  if (FStoreHandle = nil) or (aIssuer = '') then
+  if (FStoreHandle = nil) or (AIssuer = '') then
     Exit;
 
-  IssuerW := WideString(aIssuer);
+  IssuerW := WideString(AIssuer);
 
   // 搜索颁发者包含指定字符串的证书
   CertContext := CertFindCertificateInStore(
@@ -523,7 +523,7 @@ begin
     Result := CreateWinSSLCertificateFromContext(CertContext, True);
 end;
 
-function TWinSSLCertificateStore.FindBySerialNumber(const aSerialNumber: string): ISSLCertificate;
+function TWinSSLCertificateStore.FindBySerialNumber(const ASerialNumber: string): ISSLCertificate;
 var
   I: Integer;
   Cert: ISSLCertificate;
@@ -533,7 +533,7 @@ begin
   begin
     Cert := ISSLCertificate(FCertificates[I]);
     // Use constant-time comparison for serial numbers
-    if SameText(Cert.GetSerialNumber, aSerialNumber) then
+    if SameText(Cert.GetSerialNumber, ASerialNumber) then
     begin
       Result := Cert;
       Exit;
@@ -541,7 +541,7 @@ begin
   end;
 end;
 
-function TWinSSLCertificateStore.FindByFingerprint(const aFingerprint: string): ISSLCertificate;
+function TWinSSLCertificateStore.FindByFingerprint(const AFingerprint: string): ISSLCertificate;
 var
   I: Integer;
   Cert: ISSLCertificate;
@@ -549,7 +549,7 @@ var
   SearchFP: string;
 begin
   Result := nil;
-  SearchFP := UpperCase(StringReplace(aFingerprint, ':', '', [rfReplaceAll]));
+  SearchFP := UpperCase(StringReplace(AFingerprint, ':', '', [rfReplaceAll]));
   
   for I := 0 to FCertificates.Count - 1 do
   begin
@@ -577,19 +577,19 @@ end;
 // ISSLCertificateStore - 证书验证
 // ============================================================================
 
-function TWinSSLCertificateStore.VerifyCertificate(aCert: ISSLCertificate): Boolean;
+function TWinSSLCertificateStore.VerifyCertificate(ACert: ISSLCertificate): Boolean;
 begin
-  if aCert = nil then
+  if ACert = nil then
   begin
     Result := False;
     Exit;
   end;
 
   // 使用证书自身的 Verify 方法，传入当前存储作为 CA 存储
-  Result := aCert.Verify(Self);
+  Result := ACert.Verify(Self);
 end;
 
-function TWinSSLCertificateStore.BuildCertificateChain(aCert: ISSLCertificate): TSSLCertificateArray;
+function TWinSSLCertificateStore.BuildCertificateChain(ACert: ISSLCertificate): TSSLCertificateArray;
 var
   ChainPara: CERT_CHAIN_PARA;
   ChainContext: PCCERT_CHAIN_CONTEXT;
@@ -601,10 +601,10 @@ var
 begin
   SetLength(Result, 0);
 
-  if (aCert = nil) then
+  if (ACert = nil) then
     Exit;
 
-  CertContext := PCCERT_CONTEXT(aCert.GetNativeHandle);
+  CertContext := PCCERT_CONTEXT(ACert.GetNativeHandle);
   if CertContext = nil then
     Exit;
 
@@ -663,9 +663,9 @@ end;
 // 额外的辅助方法
 // ============================================================================
 
-function TWinSSLCertificateStore.OpenSystemStore(const aStoreName: string): Boolean;
+function TWinSSLCertificateStore.OpenSystemStore(const AStoreName: string): Boolean;
 begin
-  Result := Open(aStoreName, False);
+  Result := Open(AStoreName, False);
 end;
 
 function TWinSSLCertificateStore.GetSystemStoreNames: TStringList;

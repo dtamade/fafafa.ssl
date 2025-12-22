@@ -14,8 +14,9 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
-  fafafa.ssl.exceptions,  // 新增：类型化异常
-  fafafa.ssl.errors,      // Phase 2.1 - Standardized error handling
+  fafafa.ssl.exceptions,
+  fafafa.ssl.errors,
+  fafafa.ssl.openssl.errors,  // Phase 3.1 - OpenSSL-specific error handling
   fafafa.ssl.openssl.types,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl,
@@ -42,10 +43,10 @@ type
     function HasStreamTransport: Boolean;
     function PumpStreamToBIO: Integer;
     function PumpBIOToStream: Integer;
-    function InternalHandshake(aIsClient: Boolean): Boolean;
+    function InternalHandshake(AIsClient: Boolean): Boolean;
   public
-    constructor Create(aContext: ISSLContext; aSocket: THandle); overload;
-    constructor Create(aContext: ISSLContext; aStream: TStream); overload;
+    constructor Create(AContext: ISSLContext; ASocket: THandle); overload;
+    constructor Create(AContext: ISSLContext; AStream: TStream); overload;
     destructor Destroy; override;
     
     function Connect: Boolean;
@@ -55,13 +56,13 @@ type
     function DoHandshake: TSSLHandshakeState;
     function IsHandshakeComplete: Boolean;
     function Renegotiate: Boolean;
-    function Read(var aBuffer; aCount: Integer): Integer;
-    function Write(const aBuffer; aCount: Integer): Integer;
-    function ReadString(out aStr: string): Boolean;
-    function WriteString(const aStr: string): Boolean;
+    function Read(var ABuffer; ACount: Integer): Integer;
+    function Write(const ABuffer; ACount: Integer): Integer;
+    function ReadString(out AStr: string): Boolean;
+    function WriteString(const AStr: string): Boolean;
     function WantRead: Boolean;
     function WantWrite: Boolean;
-    function GetError(aRet: Integer): TSSLErrorCode;
+    function GetError(ARet: Integer): TSSLErrorCode;
     function GetConnectionInfo: TSSLConnectionInfo;
     function GetProtocolVersion: TSSLProtocolVersion;
     function GetCipherName: string;
@@ -70,15 +71,15 @@ type
     function GetVerifyResult: Integer;
     function GetVerifyResultString: string;
     function GetSession: ISSLSession;
-    procedure SetSession(aSession: ISSLSession);
+    procedure SetSession(ASession: ISSLSession);
     function IsSessionReused: Boolean;
     function GetSelectedALPNProtocol: string;
     function IsConnected: Boolean;
     function GetState: string;
     function GetStateString: string;
-    procedure SetTimeout(aTimeout: Integer);
+    procedure SetTimeout(ATimeout: Integer);
     function GetTimeout: Integer;
-    procedure SetBlocking(aBlocking: Boolean);
+    procedure SetBlocking(ABlocking: Boolean);
     function GetBlocking: Boolean;
     function GetNativeHandle: Pointer;
     function GetContext: ISSLContext;
@@ -91,13 +92,13 @@ const
   SSL_STRING_BUFFER_SIZE = 4096;   // ReadString 缓冲区大小
   SSL_IO_BUFFER_SIZE = 8192;       // PumpStreamToBIO/PumpBIOToStream 缓冲区大小
 
-constructor TOpenSSLConnection.Create(aContext: ISSLContext; aSocket: THandle);
+constructor TOpenSSLConnection.Create(AContext: ISSLContext; ASocket: THandle);
 var
   Ctx: PSSL_CTX;
 begin
   inherited Create;
-  FContext := aContext;
-  FSocket := aSocket;
+  FContext := AContext;
+  FSocket := ASocket;
   FStream := nil;
   FBioRead := nil;
   FBioWrite := nil;
@@ -105,7 +106,7 @@ begin
   FBlocking := True;
   FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;  // P3-1: 使用常量替代魔法数字
 
-  Ctx := PSSL_CTX(aContext.GetNativeHandle);
+  Ctx := PSSL_CTX(AContext.GetNativeHandle);
   if Ctx = nil then
     RaiseInvalidParameter('SSL context (GetNativeHandle returned nil)');
 
@@ -117,27 +118,27 @@ begin
     );
 
   // Apply SNI if configured
-  if (aContext.GetServerName <> '') and Assigned(SSL_set_tlsext_host_name) then
-    SSL_set_tlsext_host_name(FSSL, PAnsiChar(aContext.GetServerName));
+  if (AContext.GetServerName <> '') and Assigned(SSL_set_tlsext_host_name) then
+    SSL_set_tlsext_host_name(FSSL, PAnsiChar(AContext.GetServerName));
 
-  SSL_set_fd(FSSL, aSocket);
+  SSL_set_fd(FSSL, ASocket);
 end;
 
-constructor TOpenSSLConnection.Create(aContext: ISSLContext; aStream: TStream);
+constructor TOpenSSLConnection.Create(AContext: ISSLContext; AStream: TStream);
 var
   Ctx: PSSL_CTX;
 begin
   inherited Create;
-  FContext := aContext;
+  FContext := AContext;
   FSocket := THandle(-1);
-  FStream := aStream;
+  FStream := AStream;
   FBioRead := nil;
   FBioWrite := nil;
   FConnected := False;
   FBlocking := True;
   FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;  // P3-1: 使用常量替代魔法数字
   
-  Ctx := PSSL_CTX(aContext.GetNativeHandle);
+  Ctx := PSSL_CTX(AContext.GetNativeHandle);
   if Ctx = nil then
     RaiseInvalidParameter('SSL context (GetNativeHandle returned nil)');
   
@@ -149,8 +150,8 @@ begin
     );
 
   // Apply SNI if configured
-  if (aContext.GetServerName <> '') and Assigned(SSL_set_tlsext_host_name) then
-    SSL_set_tlsext_host_name(FSSL, PAnsiChar(aContext.GetServerName));
+  if (AContext.GetServerName <> '') and Assigned(SSL_set_tlsext_host_name) then
+    SSL_set_tlsext_host_name(FSSL, PAnsiChar(AContext.GetServerName));
 
   // Ensure BIO API is available
   if not IsOpenSSLBIOLoaded then
@@ -301,7 +302,7 @@ begin
   Result := (Ret = 1);
 end;
 
-function TOpenSSLConnection.Read(var aBuffer; aCount: Integer): Integer;
+function TOpenSSLConnection.Read(var ABuffer; ACount: Integer): Integer;
 var
   LRet, LErr: Integer;
 begin
@@ -320,7 +321,7 @@ begin
 
     while True do
     begin
-      LRet := SSL_read(FSSL, @aBuffer, aCount);
+      LRet := SSL_read(FSSL, @ABuffer, ACount);
       if LRet > 0 then
       begin
         Result := LRet;
@@ -362,11 +363,11 @@ begin
   else
   begin
     if not FConnected then Exit(-1);
-    Result := SSL_read(FSSL, @aBuffer, aCount);
+    Result := SSL_read(FSSL, @ABuffer, ACount);
   end;
 end;
 
-function TOpenSSLConnection.Write(const aBuffer; aCount: Integer): Integer;
+function TOpenSSLConnection.Write(const ABuffer; ACount: Integer): Integer;
 var
   LRet, LErr: Integer;
 begin
@@ -385,7 +386,7 @@ begin
 
     while True do
     begin
-      LRet := SSL_write(FSSL, @aBuffer, aCount);
+      LRet := SSL_write(FSSL, @ABuffer, ACount);
       if LRet > 0 then
       begin
         // Flush any pending encrypted data to the underlying stream
@@ -429,11 +430,11 @@ begin
   else
   begin
     if not FConnected then Exit(-1);
-    Result := SSL_write(FSSL, @aBuffer, aCount);
+    Result := SSL_write(FSSL, @ABuffer, ACount);
   end;
 end;
 
-function TOpenSSLConnection.ReadString(out aStr: string): Boolean;
+function TOpenSSLConnection.ReadString(out AStr: string): Boolean;
 var
   Buffer: array[0..SSL_STRING_BUFFER_SIZE - 1] of Char;  // P3-2: 使用常量
   BytesRead: Integer;
@@ -441,12 +442,12 @@ begin
   BytesRead := Read(Buffer, SizeOf(Buffer));
   Result := BytesRead > 0;
   if Result then
-    SetString(aStr, PChar(@Buffer[0]), BytesRead);
+    SetString(AStr, PChar(@Buffer[0]), BytesRead);
 end;
 
-function TOpenSSLConnection.WriteString(const aStr: string): Boolean;
+function TOpenSSLConnection.WriteString(const AStr: string): Boolean;
 begin
-  Result := Write(PChar(aStr)^, Length(aStr)) = Length(aStr);
+  Result := Write(PChar(AStr)^, Length(AStr)) = Length(AStr);
 end;
 
 function TOpenSSLConnection.WantRead: Boolean;
@@ -461,7 +462,7 @@ begin
   Result := (SSL_want(FSSL) = SSL_WRITING);
 end;
 
-function TOpenSSLConnection.GetError(aRet: Integer): TSSLErrorCode;
+function TOpenSSLConnection.GetError(ARet: Integer): TSSLErrorCode;
 var
   Err: Integer;
 begin
@@ -472,7 +473,7 @@ begin
   end;
   
   // 与 WinSSL 路径保持一致：非负返回值一律视为无错误
-  if aRet >= 0 then
+  if ARet >= 0 then
   begin
     Result := sslErrNone;
     Exit;
@@ -484,7 +485,7 @@ begin
     Exit;
   end;
   
-  Err := SSL_get_error(FSSL, aRet);
+  Err := SSL_get_error(FSSL, ARet);
   case Err of
     SSL_ERROR_NONE: Result := sslErrNone;
     SSL_ERROR_WANT_READ: Result := sslErrWantRead;
@@ -665,17 +666,17 @@ begin
   Result := TOpenSSLSession.Create(Sess, True);
 end;
 
-procedure TOpenSSLConnection.SetSession(aSession: ISSLSession);
+procedure TOpenSSLConnection.SetSession(ASession: ISSLSession);
 var
   Sess: PSSL_SESSION;
 begin
-  if (FSSL = nil) or (aSession = nil) then
+  if (FSSL = nil) or (ASession = nil) then
     Exit;
   
   if not Assigned(SSL_set_session) then
     Exit;
   
-  Sess := PSSL_SESSION(aSession.GetNativeHandle);
+  Sess := PSSL_SESSION(ASession.GetNativeHandle);
   if Sess = nil then
     Exit;
   
@@ -724,9 +725,9 @@ begin
   Result := string(SSL_state_string_long(FSSL));
 end;
 
-procedure TOpenSSLConnection.SetTimeout(aTimeout: Integer);
+procedure TOpenSSLConnection.SetTimeout(ATimeout: Integer);
 begin
-  FTimeout := aTimeout;
+  FTimeout := ATimeout;
 end;
 
 function TOpenSSLConnection.GetTimeout: Integer;
@@ -734,9 +735,9 @@ begin
   Result := FTimeout;
 end;
 
-procedure TOpenSSLConnection.SetBlocking(aBlocking: Boolean);
+procedure TOpenSSLConnection.SetBlocking(ABlocking: Boolean);
 begin
-  FBlocking := aBlocking;
+  FBlocking := ABlocking;
 end;
 
 function TOpenSSLConnection.GetBlocking: Boolean;
@@ -820,7 +821,7 @@ begin
   end;
 end;
 
-function TOpenSSLConnection.InternalHandshake(aIsClient: Boolean): Boolean;
+function TOpenSSLConnection.InternalHandshake(AIsClient: Boolean): Boolean;
 var
   LRet, LErr: Integer;
 begin
@@ -830,7 +831,7 @@ begin
     Exit;
 
   // Set initial handshake state explicitly for stream-based connections
-  if aIsClient then
+  if AIsClient then
   begin
     if Assigned(SSL_set_connect_state) then
       SSL_set_connect_state(FSSL);

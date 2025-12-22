@@ -28,31 +28,31 @@ type
     FSession: PSSL_SESSION;
     FOwnsHandle: Boolean;
   public
-    constructor Create(aSession: PSSL_SESSION; aOwnsHandle: Boolean = True);
+    constructor Create(ASession: PSSL_SESSION; AOwnsHandle: Boolean = True);
     destructor Destroy; override;
     
     function GetID: string;
     function GetCreationTime: TDateTime;
     function GetTimeout: Integer;
-    procedure SetTimeout(aTimeout: Integer);
+    procedure SetTimeout(ATimeout: Integer);
     function IsValid: Boolean;
     function IsResumable: Boolean;
     function GetProtocolVersion: TSSLProtocolVersion;
     function GetCipherName: string;
     function GetPeerCertificate: ISSLCertificate;
     function Serialize: TBytes;
-    function Deserialize(const aData: TBytes): Boolean;
+    function Deserialize(const AData: TBytes): Boolean;
     function GetNativeHandle: Pointer;
     function Clone: ISSLSession;
   end;
 
 implementation
 
-constructor TOpenSSLSession.Create(aSession: PSSL_SESSION; aOwnsHandle: Boolean = True);
+constructor TOpenSSLSession.Create(ASession: PSSL_SESSION; AOwnsHandle: Boolean = True);
 begin
   inherited Create;
-  FSession := aSession;
-  FOwnsHandle := aOwnsHandle;
+  FSession := ASession;
+  FOwnsHandle := AOwnsHandle;
 end;
 
 destructor TOpenSSLSession.Destroy;
@@ -113,10 +113,10 @@ begin
   Result := SSL_SESSION_get_timeout(FSession);
 end;
 
-procedure TOpenSSLSession.SetTimeout(aTimeout: Integer);
+procedure TOpenSSLSession.SetTimeout(ATimeout: Integer);
 begin
   if FSession = nil then Exit;
-  SSL_SESSION_set_timeout(FSession, aTimeout);
+  SSL_SESSION_set_timeout(FSession, ATimeout);
 end;
 
 function TOpenSSLSession.IsValid: Boolean;
@@ -228,17 +228,17 @@ begin
   end;
 end;
 
-function TOpenSSLSession.Deserialize(const aData: TBytes): Boolean;
+function TOpenSSLSession.Deserialize(const AData: TBytes): Boolean;
 var
   BIO: PBIO;
   NewSession: PSSL_SESSION;
 begin
   Result := False;
   
-  if Length(aData) = 0 then
+  if Length(AData) = 0 then
     Exit;
   
-  BIO := BIO_new_mem_buf(@aData[0], Length(aData));
+  BIO := BIO_new_mem_buf(@AData[0], Length(AData));
   if BIO = nil then
     Exit;
   

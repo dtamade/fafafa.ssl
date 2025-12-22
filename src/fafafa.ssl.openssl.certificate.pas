@@ -36,16 +36,16 @@ type
     // P3-10/15: Extract common fingerprint computation
     function ComputeFingerprint(MD: PEVP_MD): string;
   public
-    constructor Create(aX509: PX509; aOwnsHandle: Boolean = True);
+    constructor Create(AX509: PX509; AOwnsHandle: Boolean = True);
     destructor Destroy; override;
     
-    function LoadFromFile(const aFileName: string): Boolean;
-    function LoadFromStream(aStream: TStream): Boolean;
-    function LoadFromMemory(const aData: Pointer; aSize: Integer): Boolean;
-    function LoadFromPEM(const aPEM: string): Boolean;
-    function LoadFromDER(const aDER: TBytes): Boolean;
-    function SaveToFile(const aFileName: string): Boolean;
-    function SaveToStream(aStream: TStream): Boolean;
+    function LoadFromFile(const AFileName: string): Boolean;
+    function LoadFromStream(AStream: TStream): Boolean;
+    function LoadFromMemory(const AData: Pointer; ASize: Integer): Boolean;
+    function LoadFromPEM(const APEM: string): Boolean;
+    function LoadFromDER(const ADER: TBytes): Boolean;
+    function SaveToFile(const AFileName: string): Boolean;
+    function SaveToStream(AStream: TStream): Boolean;
     function SaveToPEM: string;
     function SaveToDER: TBytes;
     function GetInfo: TSSLCertificateInfo;
@@ -58,29 +58,32 @@ type
     function GetPublicKeyAlgorithm: string;
     function GetSignatureAlgorithm: string;
     function GetVersion: Integer;
-    function Verify(aCAStore: ISSLCertificateStore): Boolean;
-    function VerifyEx(aCAStore: ISSLCertificateStore; 
-      aFlags: TSSLCertVerifyFlags; out aResult: TSSLCertVerifyResult): Boolean;
-    function VerifyHostname(const aHostname: string): Boolean;
+    function Verify(ACAStore: ISSLCertificateStore): Boolean;
+    function VerifyEx(ACAStore: ISSLCertificateStore; 
+      AFlags: TSSLCertVerifyFlags; out AResult: TSSLCertVerifyResult): Boolean;
+    function VerifyHostname(const AHostname: string): Boolean;
     function IsExpired: Boolean;
     function IsSelfSigned: Boolean;
     function IsCA: Boolean;
     function GetDaysUntilExpiry: Integer;
     function GetSubjectCN: string;
-    function GetExtension(const aOID: string): string;
+    function GetExtension(const AOID: string): string;
     function GetSubjectAltNames: TSSLStringArray;
     function GetKeyUsage: TSSLStringArray;
     function GetExtendedKeyUsage: TSSLStringArray;
-    function GetFingerprint(aHashType: TSSLHash): string;
+    function GetFingerprint(AHashType: TSSLHash): string;
     function GetFingerprintSHA1: string;
     function GetFingerprintSHA256: string;
-    procedure SetIssuerCertificate(aCert: ISSLCertificate);
+    procedure SetIssuerCertificate(ACert: ISSLCertificate);
     function GetIssuerCertificate: ISSLCertificate;
     function GetNativeHandle: Pointer;
     function Clone: ISSLCertificate;
   end;
 
 implementation
+
+uses
+  fafafa.ssl.utils;  // Phase 3.2 - StringsToArray 统一实现
 
 const
   // X509_NAME print flags
@@ -167,24 +170,13 @@ begin
   end;
 end;
 
-function StringsToArray(aStrings: TStrings): TSSLStringArray;
-var
-  I: Integer;
-begin
-  SetLength(Result, 0);
-  if (aStrings = nil) or (aStrings.Count = 0) then
-    Exit;
+// StringsToArray 已移至 fafafa.ssl.utils（Phase 3.2）
 
-  SetLength(Result, aStrings.Count);
-  for I := 0 to aStrings.Count - 1 do
-    Result[I] := Trim(aStrings[I]);
-end;
-
-constructor TOpenSSLCertificate.Create(aX509: PX509; aOwnsHandle: Boolean = True);
+constructor TOpenSSLCertificate.Create(AX509: PX509; AOwnsHandle: Boolean = True);
 begin
   inherited Create;
-  FX509 := aX509;
-  FOwnsHandle := aOwnsHandle;
+  FX509 := AX509;
+  FOwnsHandle := AOwnsHandle;
 end;
 
 destructor TOpenSSLCertificate.Destroy;
@@ -205,16 +197,16 @@ begin
   inherited;
 end;
 
-function TOpenSSLCertificate.LoadFromFile(const aFileName: string): Boolean;
+function TOpenSSLCertificate.LoadFromFile(const AFileName: string): Boolean;
 var
   F: File;
   BIO: PBIO;
   FileNameA: AnsiString;
 begin
   Result := False;
-  if not FileExists(aFileName) then Exit;
+  if not FileExists(AFileName) then Exit;
   
-  FileNameA := AnsiString(aFileName);
+  FileNameA := AnsiString(AFileName);
   BIO := BIO_new_file(PAnsiChar(FileNameA), 'r');
   if BIO = nil then Exit;
   
@@ -230,7 +222,7 @@ begin
   end;
 end;
 
-function TOpenSSLCertificate.LoadFromStream(aStream: TStream): Boolean;
+function TOpenSSLCertificate.LoadFromStream(AStream: TStream): Boolean;
 var
   Data: TBytes;
   Size: Int64;
@@ -239,15 +231,15 @@ begin
   Result := False;
 
   // Validate stream
-  if aStream = nil then
+  if AStream = nil then
     Exit;
 
-  Size := aStream.Size - aStream.Position;
+  Size := AStream.Size - AStream.Position;
   if Size <= 0 then
     Exit;
 
   SetLength(Data, Size);
-  if aStream.Read(Data[0], Size) <> Size then
+  if AStream.Read(Data[0], Size) <> Size then
     Exit;
 
   BIO := BIO_new_mem_buf(@Data[0], Size);
@@ -269,12 +261,12 @@ begin
   end;
 end;
 
-function TOpenSSLCertificate.LoadFromMemory(const aData: Pointer; aSize: Integer): Boolean;
+function TOpenSSLCertificate.LoadFromMemory(const AData: Pointer; ASize: Integer): Boolean;
 var
   BIO: PBIO;
 begin
   Result := False;
-  if (aData = nil) or (aSize <= 0) then
+  if (AData = nil) or (ASize <= 0) then
     Exit;
 
   // Free existing certificate if we own it
@@ -285,7 +277,7 @@ begin
   end;
 
   // Try PEM format first
-  BIO := BIO_new_mem_buf(aData, aSize);
+  BIO := BIO_new_mem_buf(AData, ASize);
   if BIO = nil then
     Exit;
   try
@@ -297,7 +289,7 @@ begin
   // If PEM failed, try DER format
   if FX509 = nil then
   begin
-    BIO := BIO_new_mem_buf(aData, aSize);
+    BIO := BIO_new_mem_buf(AData, ASize);
     if BIO = nil then
       Exit;
     try
@@ -311,12 +303,12 @@ begin
   Result := (FX509 <> nil);
 end;
 
-function TOpenSSLCertificate.LoadFromPEM(const aPEM: string): Boolean;
+function TOpenSSLCertificate.LoadFromPEM(const APEM: string): Boolean;
 var
   PEMData: AnsiString;
   BIO: PBIO;
 begin
-  PEMData := AnsiString(aPEM);
+  PEMData := AnsiString(APEM);
   BIO := BIO_new_mem_buf(PAnsiChar(PEMData), Length(PEMData));
   try
     if FOwnsHandle and (FX509 <> nil) then
@@ -330,15 +322,15 @@ begin
   end;
 end;
 
-function TOpenSSLCertificate.LoadFromDER(const aDER: TBytes): Boolean;
+function TOpenSSLCertificate.LoadFromDER(const ADER: TBytes): Boolean;
 begin
-  if Length(aDER) > 0 then
-    Result := LoadFromMemory(@aDER[0], Length(aDER))
+  if Length(ADER) > 0 then
+    Result := LoadFromMemory(@ADER[0], Length(ADER))
   else
     Result := False;
 end;
 
-function TOpenSSLCertificate.SaveToFile(const aFileName: string): Boolean;
+function TOpenSSLCertificate.SaveToFile(const AFileName: string): Boolean;
 var
   BIO: PBIO;
   FileNameA: AnsiString;
@@ -346,7 +338,7 @@ begin
   Result := False;
   if FX509 = nil then Exit;
   
-  FileNameA := AnsiString(aFileName);
+  FileNameA := AnsiString(AFileName);
   BIO := BIO_new_file(PAnsiChar(FileNameA), 'w');
   if BIO = nil then Exit;
   
@@ -357,14 +349,14 @@ begin
   end;
 end;
 
-function TOpenSSLCertificate.SaveToStream(aStream: TStream): Boolean;
+function TOpenSSLCertificate.SaveToStream(AStream: TStream): Boolean;
 var
   Data: TBytes;
 begin
   Data := SaveToDER;
   if Length(Data) > 0 then
   begin
-    aStream.Write(Data[0], Length(Data));
+    AStream.Write(Data[0], Length(Data));
     Result := True;
   end
   else
@@ -688,14 +680,14 @@ begin
     Result := 0;
 end;
 
-function TOpenSSLCertificate.Verify(aCAStore: ISSLCertificateStore): Boolean;
+function TOpenSSLCertificate.Verify(ACAStore: ISSLCertificateStore): Boolean;
 var
   Store: PX509_STORE;
   Ctx: PX509_STORE_CTX;
 begin
   Result := False;
   
-  if (FX509 = nil) or (aCAStore = nil) then
+  if (FX509 = nil) or (ACAStore = nil) then
     Exit;
 
   if (not Assigned(X509_STORE_CTX_new)) or
@@ -711,7 +703,7 @@ begin
       Exit;
   end;
   
-  Store := PX509_STORE(aCAStore.GetNativeHandle);
+  Store := PX509_STORE(ACAStore.GetNativeHandle);
   if Store = nil then
     Exit;
 
@@ -742,8 +734,8 @@ begin
   end;
 end;
 
-function TOpenSSLCertificate.VerifyEx(aCAStore: ISSLCertificateStore; 
-  aFlags: TSSLCertVerifyFlags; out aResult: TSSLCertVerifyResult): Boolean;
+function TOpenSSLCertificate.VerifyEx(ACAStore: ISSLCertificateStore; 
+  AFlags: TSSLCertVerifyFlags; out AResult: TSSLCertVerifyResult): Boolean;
 var
   Store: PX509_STORE;
   Ctx: PX509_STORE_CTX;
@@ -751,26 +743,26 @@ var
   ErrorCode: Integer;
   ErrorStr: PAnsiChar;
 begin
-  FillChar(aResult, SizeOf(aResult), 0);
-  aResult.Success := False;
+  FillChar(AResult, SizeOf(AResult), 0);
+  AResult.Success := False;
   Result := False;
   
   if FX509 = nil then
   begin
-    aResult.ErrorMessage := 'Certificate is nil';
+    AResult.ErrorMessage := 'Certificate is nil';
     Exit;
   end;
   
-  if aCAStore = nil then
+  if ACAStore = nil then
   begin
-    aResult.ErrorMessage := 'CA store is nil';
+    AResult.ErrorMessage := 'CA store is nil';
     Exit;
   end;
   
-  Store := PX509_STORE(aCAStore.GetNativeHandle);
+  Store := PX509_STORE(ACAStore.GetNativeHandle);
   if Store = nil then
   begin
-    aResult.ErrorMessage := 'Invalid CA store handle';
+    AResult.ErrorMessage := 'Invalid CA store handle';
     Exit;
   end;
 
@@ -789,16 +781,16 @@ begin
       (not Assigned(X509_STORE_CTX_get_error)) or
       (not Assigned(X509_verify_cert_error_string)) then
     begin
-      aResult.ErrorMessage := 'OpenSSL X509 verification API not loaded';
+      AResult.ErrorMessage := 'OpenSSL X509 verification API not loaded';
       Exit;
     end;
   end;
   
   // 处理与时间、自签名相关的标志（与旧实现保持一致）
-  if (sslCertVerifyIgnoreExpiry in aFlags) and Assigned(X509_STORE_set_flags) then
+  if (sslCertVerifyIgnoreExpiry in AFlags) and Assigned(X509_STORE_set_flags) then
     X509_STORE_set_flags(Store, X509_V_FLAG_NO_CHECK_TIME);
   
-  if (sslCertVerifyAllowSelfSigned in aFlags) and Assigned(X509_STORE_set_flags) then
+  if (sslCertVerifyAllowSelfSigned in AFlags) and Assigned(X509_STORE_set_flags) then
     X509_STORE_set_flags(Store, X509_V_FLAG_PARTIAL_CHAIN);
   
   Ctx := nil;
@@ -806,12 +798,12 @@ begin
     try
       Ctx := X509_STORE_CTX_new;
     except
-      aResult.ErrorMessage := 'Failed to create store context';
+      AResult.ErrorMessage := 'Failed to create store context';
       Exit;
     end;
     if Ctx = nil then
     begin
-      aResult.ErrorMessage := 'Failed to create store context';
+      AResult.ErrorMessage := 'Failed to create store context';
       Exit;
     end;
 
@@ -820,8 +812,8 @@ begin
       // CRL吊销检查已在下方实现（使用X509_V_FLAG_CRL_CHECK标志）
       
       // 如果需要检查吊销状态，则在验证参数上启用 CRL 检查
-      if ((sslCertVerifyCheckRevocation in aFlags) or
-          (sslCertVerifyCheckCRL in aFlags)) and
+      if ((sslCertVerifyCheckRevocation in AFlags) or
+          (sslCertVerifyCheckCRL in AFlags)) and
         Assigned(X509_STORE_CTX_get0_param) and
         Assigned(X509_VERIFY_PARAM_set_flags) then
       begin
@@ -835,11 +827,11 @@ begin
       
       if Ret = 1 then
       begin
-        aResult.Success := True;
-        aResult.ErrorCode := 0;
-        aResult.ErrorMessage := 'Certificate verification successful';
-        aResult.DetailedInfo := 'OpenSSL verification passed';
-        aResult.RevocationStatus := 0;
+        AResult.Success := True;
+        AResult.ErrorCode := 0;
+        AResult.ErrorMessage := 'Certificate verification successful';
+        AResult.DetailedInfo := 'OpenSSL verification passed';
+        AResult.RevocationStatus := 0;
         Result := True;
       end
       else
@@ -847,18 +839,18 @@ begin
         ErrorCode := X509_STORE_CTX_get_error(Ctx);
         ErrorStr := X509_verify_cert_error_string(ErrorCode);
         
-        aResult.Success := False;
-        aResult.ErrorCode := ErrorCode;
+        AResult.Success := False;
+        AResult.ErrorCode := ErrorCode;
         if ErrorStr <> nil then
-          aResult.ErrorMessage := string(ErrorStr)
+          AResult.ErrorMessage := string(ErrorStr)
         else
-          aResult.ErrorMessage := 'Certificate verification failed';
-        aResult.DetailedInfo := Format('OpenSSL error: %d - %s',
-          [ErrorCode, aResult.ErrorMessage]);
+          AResult.ErrorMessage := 'Certificate verification failed';
+        AResult.DetailedInfo := Format('OpenSSL error: %d - %s',
+          [ErrorCode, AResult.ErrorMessage]);
         
         // 映射常见的吊销相关错误到 RevocationStatus
         if ErrorCode = X509_V_ERR_CERT_REVOKED then
-          aResult.RevocationStatus := 1
+          AResult.RevocationStatus := 1
         else if (ErrorCode = X509_V_ERR_UNABLE_TO_GET_CRL) or
                 (ErrorCode = X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER) or
                 (ErrorCode = X509_V_ERR_CRL_NOT_YET_VALID) or
@@ -866,13 +858,13 @@ begin
                 (ErrorCode = X509_V_ERR_OCSP_VERIFY_NEEDED) or
                 (ErrorCode = X509_V_ERR_OCSP_VERIFY_FAILED) or
                 (ErrorCode = X509_V_ERR_OCSP_CERT_UNKNOWN) then
-          aResult.RevocationStatus := 2
+          AResult.RevocationStatus := 2
         else
-          aResult.RevocationStatus := 0;
+          AResult.RevocationStatus := 0;
       end;
     end
     else
-      aResult.ErrorMessage := 'Failed to initialize verification context';
+      AResult.ErrorMessage := 'Failed to initialize verification context';
   finally
     if Ctx <> nil then
     begin
@@ -884,16 +876,16 @@ begin
   end;
 end;
 
-function TOpenSSLCertificate.VerifyHostname(const aHostname: string): Boolean;
+function TOpenSSLCertificate.VerifyHostname(const AHostname: string): Boolean;
 var
   HostnameA: AnsiString;
 begin
   Result := False;
   
-  if (FX509 = nil) or (aHostname = '') then
+  if (FX509 = nil) or (AHostname = '') then
     Exit;
   
-  HostnameA := AnsiString(aHostname);
+  HostnameA := AnsiString(AHostname);
   Result := (X509_check_host(FX509, PAnsiChar(HostnameA), Length(HostnameA), 0, nil) = 1);
 end;
 
@@ -1046,7 +1038,7 @@ begin
   end;
 end;
 
-function TOpenSSLCertificate.GetExtension(const aOID: string): string;
+function TOpenSSLCertificate.GetExtension(const AOID: string): string;
 var
   LNID: Integer;
   LIndex: Integer;
@@ -1057,11 +1049,11 @@ var
 begin
   Result := '';
   
-  if (FX509 = nil) or (aOID = '') then
+  if (FX509 = nil) or (AOID = '') then
     Exit;
   
   // 将 OID 字符串转换为 NID
-  LNID := OIDToNID(aOID);
+  LNID := OIDToNID(AOID);
   if (LNID = NID_undef) then
     Exit;
   
@@ -1373,9 +1365,9 @@ begin
   end;
 end;
 
-function TOpenSSLCertificate.GetFingerprint(aHashType: TSSLHash): string;
+function TOpenSSLCertificate.GetFingerprint(AHashType: TSSLHash): string;
 begin
-  case aHashType of
+  case AHashType of
     sslHashSHA1:   Result := GetFingerprintSHA1;
     sslHashSHA256: Result := GetFingerprintSHA256;
   else
@@ -1443,9 +1435,9 @@ begin
   Result := ComputeFingerprint(EVP_sha256());
 end;
 
-procedure TOpenSSLCertificate.SetIssuerCertificate(aCert: ISSLCertificate);
+procedure TOpenSSLCertificate.SetIssuerCertificate(ACert: ISSLCertificate);
 begin
-  FIssuerCert := aCert;
+  FIssuerCert := ACert;
 end;
 
 function TOpenSSLCertificate.GetIssuerCertificate: ISSLCertificate;

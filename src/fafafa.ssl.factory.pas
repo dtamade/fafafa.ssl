@@ -91,7 +91,7 @@ type
       
     class procedure Initialize;
     class procedure Finalize;
-    class function CreateLibraryInstance(aLibType: TSSLLibraryType): ISSLLibrary;
+    class function CreateLibraryInstance(ALibType: TSSLLibraryType): ISSLLibrary;
     class procedure CheckInitialized;
   public
     { ==================== 库访问（高级用法） ==================== }
@@ -99,46 +99,46 @@ type
     {**
      * 获取指定类型的库实例
      *
-     * @param aLibType 库类型（sslOpenSSL, sslWinSSL等）
+     * @param ALibType 库类型（sslOpenSSL, sslWinSSL等）
      * @return 库实例接口
      * @raises ESSLConfigurationException 库不可用时
      *
      * 注意: 普通用户通常不需要直接使用此方法
      *}
-    class function GetLibrary(aLibType: TSSLLibraryType): ISSLLibrary;
+    class function GetLibrary(ALibType: TSSLLibraryType): ISSLLibrary;
 
     { ==================== 库注册（后端开发者使用） ==================== }
 
     {**
      * 注册SSL后端库
      *
-     * @param aLibType 库类型标识
-     * @param aLibraryClass 库类（必须实现 ISSLLibrary）
-     * @param aDescription 库描述（可选）
-     * @param aPriority 优先级（默认0，数字越大越优先）
+     * @param ALibType 库类型标识
+     * @param ALibraryClass 库类（必须实现 ISSLLibrary）
+     * @param ADescription 库描述（可选）
+     * @param APriority 优先级（默认0，数字越大越优先）
      *
      * 注意: 此方法供后端实现的初始化代码调用
      *}
     class procedure RegisterLibrary(
-      aLibType: TSSLLibraryType;
-      aLibraryClass: TSSLLibraryClass;
-      const aDescription: string = '';
-      aPriority: Integer = 0
+      ALibType: TSSLLibraryType;
+      ALibraryClass: TSSLLibraryClass;
+      const ADescription: string = '';
+      APriority: Integer = 0
     );
 
     {**
      * 取消注册SSL后端库
      *
-     * @param aLibType 库类型标识
+     * @param ALibType 库类型标识
      *}
-    class procedure UnregisterLibrary(aLibType: TSSLLibraryType);
+    class procedure UnregisterLibrary(ALibType: TSSLLibraryType);
 
     { ==================== 库检测与查询 ==================== }
 
     {**
      * 检查指定库是否可用
      *
-     * @param aLibType 库类型
+     * @param ALibType 库类型
      * @return True=可用，False=不可用
      *
      * @example
@@ -147,7 +147,7 @@ type
      *     WriteLn('OpenSSL is available');
      * </code>
      *}
-    class function IsLibraryAvailable(aLibType: TSSLLibraryType): Boolean;
+    class function IsLibraryAvailable(ALibType: TSSLLibraryType): Boolean;
 
     {**
      * 获取所有可用的库列表
@@ -166,10 +166,10 @@ type
     {**
      * 获取库的描述信息
      *
-     * @param aLibType 库类型
+     * @param ALibType 库类型
      * @return 库描述字符串
      *}
-    class function GetLibraryDescription(aLibType: TSSLLibraryType): string;
+    class function GetLibraryDescription(ALibType: TSSLLibraryType): string;
 
     {**
      * 自动检测最佳可用库
@@ -188,7 +188,7 @@ type
     {**
      * 设置默认使用的SSL库
      *
-     * @param aLibType 库类型
+     * @param ALibType 库类型
      * @raises ESSLConfigurationException 库不可用时
      *
      * @example
@@ -196,7 +196,7 @@ type
      *   TSSLFactory.SetDefaultLibrary(sslOpenSSL);
      * </code>
      *}
-    class procedure SetDefaultLibrary(aLibType: TSSLLibraryType);
+    class procedure SetDefaultLibrary(ALibType: TSSLLibraryType);
 
     {**
      * 获取当前默认库
@@ -210,8 +210,8 @@ type
     {**
      * 创建SSL Context
      *
-     * @param aContextType 上下文类型（sslClient或sslServer）
-     * @param aLibType 库类型（默认sslAutoDetect自动选择）
+     * @param AContextType 上下文类型（sslClient或sslServer）
+     * @param ALibType 库类型（默认sslAutoDetect自动选择）
      * @return SSL Context接口
      * @raises ESSLInitializationException 初始化失败时
      *
@@ -225,14 +225,14 @@ type
      * </code>
      *}
     class function CreateContext(
-      aContextType: TSSLContextType;
-      aLibType: TSSLLibraryType = sslAutoDetect
+      AContextType: TSSLContextType;
+      ALibType: TSSLLibraryType = sslAutoDetect
     ): ISSLContext; overload;
 
     {**
      * 使用配置对象创建SSL Context
      *
-     * @param aConfig SSL配置对象
+     * @param AConfig SSL配置对象
      * @return SSL Context接口
      * @raises ESSLInitializationException 初始化失败时
      *
@@ -244,37 +244,37 @@ type
      *   LCtx := TSSLFactory.CreateContext(LConfig);
      * </code>
      *}
-    class function CreateContext(const aConfig: TSSLConfig): ISSLContext; overload;
+    class function CreateContext(const AConfig: TSSLConfig): ISSLContext; overload;
 
-    class procedure NormalizeConfig(var aConfig: TSSLConfig);
+    class procedure NormalizeConfig(var AConfig: TSSLConfig);
 
     {**
      * 创建证书对象
      *
-     * @param aLibType 库类型（默认自动检测）
+     * @param ALibType 库类型（默认自动检测）
      * @return 证书接口
      *}
-    class function CreateCertificate(aLibType: TSSLLibraryType = sslAutoDetect): ISSLCertificate;
+    class function CreateCertificate(ALibType: TSSLLibraryType = sslAutoDetect): ISSLCertificate;
 
     {**
      * 创建证书存储对象
      *
-     * @param aLibType 库类型（默认自动检测）
+     * @param ALibType 库类型（默认自动检测）
      * @return 证书存储接口
      *}
-    class function CreateCertificateStore(aLibType: TSSLLibraryType = sslAutoDetect): ISSLCertificateStore;
+    class function CreateCertificateStore(ALibType: TSSLLibraryType = sslAutoDetect): ISSLCertificateStore;
     
     // 快捷方法 - 简化的服务端上下文
-    class function CreateServerContext(const aCertFile, aKeyFile: string;
-                                      aLibType: TSSLLibraryType = sslAutoDetect): ISSLContext;
+    class function CreateServerContext(const ACertFile, AKeyFile: string;
+                                      ALibType: TSSLLibraryType = sslAutoDetect): ISSLContext;
     
     // 库管理
-    class function GetLibraryInstance(aLibType: TSSLLibraryType = sslAutoDetect): ISSLLibrary;
-    class procedure ReleaseLibrary(aLibType: TSSLLibraryType);
+    class function GetLibraryInstance(ALibType: TSSLLibraryType = sslAutoDetect): ISSLLibrary;
+    class procedure ReleaseLibrary(ALibType: TSSLLibraryType);
     class procedure ReleaseAllLibraries;
     
     // 全局配置
-    class procedure SetAutoInitialize(aValue: Boolean);
+    class procedure SetAutoInitialize(AValue: Boolean);
     class function GetAutoInitialize: Boolean;
     
     // 版本和信息
@@ -291,12 +291,12 @@ type
   TSSLHelper = class
   public
     // 证书验证
-    class function VerifyCertificateFile(const aFileName: string): Boolean;
-    class function GetCertificateInfo(const aFileName: string): TSSLCertificateInfo;
+    class function VerifyCertificateFile(const AFileName: string): Boolean;
+    class function GetCertificateInfo(const AFileName: string): TSSLCertificateInfo;
     
     // 工具方法
-    class function GenerateRandomBytes(aCount: Integer): TBytes;
-    class function HashData(const aData: TBytes; aHashType: TSSLHash): string;
+    class function GenerateRandomBytes(ACount: Integer): TBytes;
+    class function HashData(const AData: TBytes; AHashType: TSSLHash): string;
   end;
 
   { 全局函数 - 便捷接口 }
@@ -304,10 +304,10 @@ type
   function SSLHelper: TSSLHelper;
 
   // 快速创建函数
-  function CreateSSLLibrary(aLibType: TSSLLibraryType = sslAutoDetect): ISSLLibrary;
-  function CreateSSLContext(aType: TSSLContextType = sslCtxClient): ISSLContext;
+  function CreateSSLLibrary(ALibType: TSSLLibraryType = sslAutoDetect): ISSLLibrary;
+  function CreateSSLContext(AType: TSSLContextType = sslCtxClient): ISSLContext;
   function CreateSSLCertificate: ISSLCertificate;
-  function CreateSSLConnection(aContext: ISSLContext; aSocket: THandle): ISSLConnection;
+  function CreateSSLConnection(AContext: ISSLContext; ASocket: THandle): ISSLConnection;
 
 implementation
 
@@ -321,6 +321,7 @@ uses
   fafafa.ssl.crypto.utils,   // Phase 2.3.5 - 加密工具（哈希计算）
   fafafa.ssl.encoding,       // Phase 2.3.5 - 编码工具（Hex转换）
   fafafa.ssl.errors,
+  fafafa.ssl.openssl.errors, // Fix: RaiseSSLConfigError
   fafafa.ssl.openssl.api.rand;  // Phase 3.3 P0 - 加密安全随机数生成
 
 var
@@ -329,81 +330,81 @@ var
   GFactoryLock: TRTLCriticalSection;  // 工厂类的全局锁
   GFactoryLockInitialized: Boolean = False;
 
-procedure NormalizeConfigOptions(var aConfig: TSSLConfig);
+procedure NormalizeConfigOptions(var AConfig: TSSLConfig);
 begin
-  if aConfig.EnableCompression then
-    Exclude(aConfig.Options, ssoDisableCompression)
+  if AConfig.EnableCompression then
+    Exclude(AConfig.Options, ssoDisableCompression)
   else
-    Include(aConfig.Options, ssoDisableCompression);
+    Include(AConfig.Options, ssoDisableCompression);
 
-  Include(aConfig.Options, ssoDisableRenegotiation);
+  Include(AConfig.Options, ssoDisableRenegotiation);
 
-  Include(aConfig.Options, ssoNoSSLv2);
-  Include(aConfig.Options, ssoNoSSLv3);
-  Include(aConfig.Options, ssoNoTLSv1);
-  Include(aConfig.Options, ssoNoTLSv1_1);
+  Include(AConfig.Options, ssoNoSSLv2);
+  Include(AConfig.Options, ssoNoSSLv3);
+  Include(AConfig.Options, ssoNoTLSv1);
+  Include(AConfig.Options, ssoNoTLSv1_1);
 
-  if aConfig.ProtocolVersions <> [] then
+  if AConfig.ProtocolVersions <> [] then
   begin
-    if sslProtocolSSL2 in aConfig.ProtocolVersions then
-      Exclude(aConfig.Options, ssoNoSSLv2)
+    if sslProtocolSSL2 in AConfig.ProtocolVersions then
+      Exclude(AConfig.Options, ssoNoSSLv2)
     else
-      Include(aConfig.Options, ssoNoSSLv2);
+      Include(AConfig.Options, ssoNoSSLv2);
 
-    if sslProtocolSSL3 in aConfig.ProtocolVersions then
-      Exclude(aConfig.Options, ssoNoSSLv3)
+    if sslProtocolSSL3 in AConfig.ProtocolVersions then
+      Exclude(AConfig.Options, ssoNoSSLv3)
     else
-      Include(aConfig.Options, ssoNoSSLv3);
+      Include(AConfig.Options, ssoNoSSLv3);
 
-    if sslProtocolTLS10 in aConfig.ProtocolVersions then
-      Exclude(aConfig.Options, ssoNoTLSv1)
+    if sslProtocolTLS10 in AConfig.ProtocolVersions then
+      Exclude(AConfig.Options, ssoNoTLSv1)
     else
-      Include(aConfig.Options, ssoNoTLSv1);
+      Include(AConfig.Options, ssoNoTLSv1);
 
-    if sslProtocolTLS11 in aConfig.ProtocolVersions then
-      Exclude(aConfig.Options, ssoNoTLSv1_1)
+    if sslProtocolTLS11 in AConfig.ProtocolVersions then
+      Exclude(AConfig.Options, ssoNoTLSv1_1)
     else
-      Include(aConfig.Options, ssoNoTLSv1_1);
+      Include(AConfig.Options, ssoNoTLSv1_1);
 
-    if sslProtocolTLS12 in aConfig.ProtocolVersions then
-      Exclude(aConfig.Options, ssoNoTLSv1_2)
+    if sslProtocolTLS12 in AConfig.ProtocolVersions then
+      Exclude(AConfig.Options, ssoNoTLSv1_2)
     else
-      Include(aConfig.Options, ssoNoTLSv1_2);
+      Include(AConfig.Options, ssoNoTLSv1_2);
 
-    if sslProtocolTLS13 in aConfig.ProtocolVersions then
-      Exclude(aConfig.Options, ssoNoTLSv1_3)
+    if sslProtocolTLS13 in AConfig.ProtocolVersions then
+      Exclude(AConfig.Options, ssoNoTLSv1_3)
     else
-      Include(aConfig.Options, ssoNoTLSv1_3);
+      Include(AConfig.Options, ssoNoTLSv1_3);
   end;
 
-  if aConfig.EnableSessionTickets then
-    Include(aConfig.Options, ssoEnableSessionTickets)
+  if AConfig.EnableSessionTickets then
+    Include(AConfig.Options, ssoEnableSessionTickets)
   else
-    Exclude(aConfig.Options, ssoEnableSessionTickets);
+    Exclude(AConfig.Options, ssoEnableSessionTickets);
 
-  if aConfig.EnableOCSPStapling then
-    Include(aConfig.Options, ssoEnableOCSPStapling)
+  if AConfig.EnableOCSPStapling then
+    Include(AConfig.Options, ssoEnableOCSPStapling)
   else
-    Exclude(aConfig.Options, ssoEnableOCSPStapling);
+    Exclude(AConfig.Options, ssoEnableOCSPStapling);
 
-  if aConfig.SessionCacheSize > 0 then
-    Include(aConfig.Options, ssoEnableSessionCache)
+  if AConfig.SessionCacheSize > 0 then
+    Include(AConfig.Options, ssoEnableSessionCache)
   else
-    Exclude(aConfig.Options, ssoEnableSessionCache);
+    Exclude(AConfig.Options, ssoEnableSessionCache);
 
-  if aConfig.VerifyDepth <= 0 then
-    aConfig.VerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
+  if AConfig.VerifyDepth <= 0 then
+    AConfig.VerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
 
-  if aConfig.CipherList = '' then
-    aConfig.CipherList := SSL_DEFAULT_CIPHER_LIST;
+  if AConfig.CipherList = '' then
+    AConfig.CipherList := SSL_DEFAULT_CIPHER_LIST;
 
-  if aConfig.CipherSuites = '' then
-    aConfig.CipherSuites := SSL_DEFAULT_TLS13_CIPHERSUITES;
+  if AConfig.CipherSuites = '' then
+    AConfig.CipherSuites := SSL_DEFAULT_TLS13_CIPHERSUITES;
 end;
 
-class procedure TSSLFactory.NormalizeConfig(var aConfig: TSSLConfig);
+class procedure TSSLFactory.NormalizeConfig(var AConfig: TSSLConfig);
 begin
-  NormalizeConfigOptions(aConfig);
+  NormalizeConfigOptions(AConfig);
 end;
 
 { 全局函数实现 }
@@ -422,17 +423,17 @@ begin
   Result := GSSLHelper;
 end;
 
-function CreateSSLLibrary(aLibType: TSSLLibraryType): ISSLLibrary;
+function CreateSSLLibrary(ALibType: TSSLLibraryType): ISSLLibrary;
 begin
   // 直接使用工厂获取库实例
-  // 这会自动检测最佳库（如果 aLibType = sslAutoDetect）
+  // 这会自动检测最佳库（如果 ALibType = sslAutoDetect）
   // 并自动初始化库
-  Result := TSSLFactory.GetLibraryInstance(aLibType);
+  Result := TSSLFactory.GetLibraryInstance(ALibType);
 end;
 
-function CreateSSLContext(aType: TSSLContextType): ISSLContext;
+function CreateSSLContext(AType: TSSLContextType): ISSLContext;
 begin
-  Result := TSSLFactory.CreateContext(aType);
+  Result := TSSLFactory.CreateContext(AType);
 end;
 
 function CreateSSLCertificate: ISSLCertificate;
@@ -440,10 +441,10 @@ begin
   Result := TSSLFactory.CreateCertificate;
 end;
 
-function CreateSSLConnection(aContext: ISSLContext; aSocket: THandle): ISSLConnection;
+function CreateSSLConnection(AContext: ISSLContext; ASocket: THandle): ISSLConnection;
 begin
-  if Assigned(aContext) then
-    Result := aContext.CreateConnection(aSocket)
+  if Assigned(AContext) then
+    Result := AContext.CreateConnection(ASocket)
   else
     RaiseNotInitialized('SSL context');
 end;
@@ -491,8 +492,8 @@ begin
     RaiseSSLError('Internal error: Lock not initialized', sslErrGeneral);
 end;
 
-class procedure TSSLFactory.RegisterLibrary(aLibType: TSSLLibraryType;
-  aLibraryClass: TSSLLibraryClass; const aDescription: string; aPriority: Integer);
+class procedure TSSLFactory.RegisterLibrary(ALibType: TSSLLibraryType;
+  ALibraryClass: TSSLLibraryClass; const ADescription: string; APriority: Integer);
 var
   LIndex: Integer;
 begin
@@ -502,12 +503,12 @@ begin
     // 检查是否已注册
     for LIndex := 0 to High(FRegistrations) do
     begin
-      if FRegistrations[LIndex].LibraryType = aLibType then
+      if FRegistrations[LIndex].LibraryType = ALibType then
       begin
         // 更新现有注册
-        FRegistrations[LIndex].LibraryClass := aLibraryClass;
-        FRegistrations[LIndex].Description := aDescription;
-        FRegistrations[LIndex].Priority := aPriority;
+        FRegistrations[LIndex].LibraryClass := ALibraryClass;
+        FRegistrations[LIndex].Description := ADescription;
+        FRegistrations[LIndex].Priority := APriority;
         Exit;
       end;
     end;
@@ -516,17 +517,17 @@ begin
     SetLength(FRegistrations, Length(FRegistrations) + 1);
     with FRegistrations[High(FRegistrations)] do
     begin
-      LibraryType := aLibType;
-      LibraryClass := aLibraryClass;
-      Description := aDescription;
-      Priority := aPriority;
+      LibraryType := ALibType;
+      LibraryClass := ALibraryClass;
+      Description := ADescription;
+      Priority := APriority;
     end;
   finally
     LeaveCriticalSection(GFactoryLock);
   end;
 end;
 
-class procedure TSSLFactory.UnregisterLibrary(aLibType: TSSLLibraryType);
+class procedure TSSLFactory.UnregisterLibrary(ALibType: TSSLLibraryType);
 var
   LIndex, LPos: Integer;
 begin
@@ -536,7 +537,7 @@ begin
     LPos := -1;
     for LIndex := 0 to High(FRegistrations) do
     begin
-      if FRegistrations[LIndex].LibraryType = aLibType then
+      if FRegistrations[LIndex].LibraryType = ALibType then
       begin
         LPos := LIndex;
         Break;
@@ -546,7 +547,7 @@ begin
     if LPos >= 0 then
     begin
       // 释放库实例
-      ReleaseLibrary(aLibType);
+      ReleaseLibrary(ALibType);
       
       // 从数组中删除
       for LIndex := LPos to High(FRegistrations) - 1 do
@@ -558,7 +559,7 @@ begin
   end;
 end;
 
-class function TSSLFactory.IsLibraryAvailable(aLibType: TSSLLibraryType): Boolean;
+class function TSSLFactory.IsLibraryAvailable(ALibType: TSSLLibraryType): Boolean;
 var
   LIndex: Integer;
   LLib: ISSLLibrary;
@@ -566,7 +567,7 @@ begin
   Result := False;
   CheckInitialized;
   
-  if aLibType = sslAutoDetect then
+  if ALibType = sslAutoDetect then
   begin
     Result := Length(FRegistrations) > 0;
     Exit;
@@ -577,14 +578,14 @@ begin
     // 检查是否已注册
     for LIndex := 0 to High(FRegistrations) do
     begin
-      if FRegistrations[LIndex].LibraryType = aLibType then
+      if FRegistrations[LIndex].LibraryType = ALibType then
       begin
         // 尝试创建实例以验证可用性
         try
-          LLib := CreateLibraryInstance(aLibType);
+          LLib := CreateLibraryInstance(ALibType);
           Result := Assigned(LLib) and LLib.Initialize;
-          if Result and not Assigned(FLibraries[aLibType]) then
-            FLibraries[aLibType] := LLib;
+          if Result and not Assigned(FLibraries[ALibType]) then
+            FLibraries[ALibType] := LLib;
         except
           Result := False;
         end;
@@ -610,7 +611,7 @@ begin
   end;
 end;
 
-class function TSSLFactory.GetLibraryDescription(aLibType: TSSLLibraryType): string;
+class function TSSLFactory.GetLibraryDescription(ALibType: TSSLLibraryType): string;
 var
   LIndex: Integer;
 begin
@@ -621,11 +622,11 @@ begin
   try
     for LIndex := 0 to High(FRegistrations) do
     begin
-      if FRegistrations[LIndex].LibraryType = aLibType then
+      if FRegistrations[LIndex].LibraryType = ALibType then
       begin
         Result := FRegistrations[LIndex].Description;
         if Result = '' then
-          Result := SSL_LIBRARY_NAMES[aLibType];
+          Result := SSL_LIBRARY_NAMES[ALibType];
         Break;
       end;
     end;
@@ -688,20 +689,20 @@ begin
   Result := LBestType;
 end;
 
-class procedure TSSLFactory.SetDefaultLibrary(aLibType: TSSLLibraryType);
+class procedure TSSLFactory.SetDefaultLibrary(ALibType: TSSLLibraryType);
 begin
   CheckInitialized;
   
-  if (aLibType <> sslAutoDetect) and not IsLibraryAvailable(aLibType) then
+  if (ALibType <> sslAutoDetect) and not IsLibraryAvailable(ALibType) then
     raise ESSLConfigurationException.CreateWithContext(
-      Format('SSL library %s is not available on this system', [SSL_LIBRARY_NAMES[aLibType]]),
+      Format('SSL library %s is not available on this system', [SSL_LIBRARY_NAMES[ALibType]]),
       sslErrLibraryNotFound,
       'TSSLFactory.SetDefaultLibrary',
       0,
-      aLibType
+      ALibType
     );
   
-  FDefaultLibraryType := aLibType;
+  FDefaultLibraryType := ALibType;
 end;
 
 class function TSSLFactory.GetDefaultLibrary: TSSLLibraryType;
@@ -714,7 +715,7 @@ begin
   Result := FDefaultLibraryType;
 end;
 
-class function TSSLFactory.CreateLibraryInstance(aLibType: TSSLLibraryType): ISSLLibrary;
+class function TSSLFactory.CreateLibraryInstance(ALibType: TSSLLibraryType): ISSLLibrary;
 var
   LIndex: Integer;
   LClass: TSSLLibraryClass;
@@ -724,7 +725,7 @@ begin
   LClass := nil;
   for LIndex := 0 to High(FRegistrations) do
   begin
-    if FRegistrations[LIndex].LibraryType = aLibType then
+    if FRegistrations[LIndex].LibraryType = ALibType then
     begin
       LClass := FRegistrations[LIndex].LibraryClass;
       Break;
@@ -744,7 +745,7 @@ begin
     Exit;
   end;
 
-  case aLibType of
+  case ALibType of
     sslWolfSSL:
     begin
       // Future: WolfSSL backend support (not currently implemented)
@@ -766,16 +767,16 @@ begin
     end;
   else
     raise ESSLConfigurationException.CreateWithContext(
-      Format('SSL backend %s is not registered', [SSL_LIBRARY_NAMES[aLibType]]),
+      Format('SSL backend %s is not registered', [SSL_LIBRARY_NAMES[ALibType]]),
       sslErrLibraryNotFound,
       'TSSLFactory.CreateLibraryInstance',
       0,
-      aLibType
+      ALibType
     );
   end;
 end;
 
-class function TSSLFactory.GetLibrary(aLibType: TSSLLibraryType): ISSLLibrary;
+class function TSSLFactory.GetLibrary(ALibType: TSSLLibraryType): ISSLLibrary;
 var
   LType: TSSLLibraryType;
   LInitError: Integer;
@@ -783,7 +784,7 @@ var
 begin
   CheckInitialized;
   
-  LType := aLibType;
+  LType := ALibType;
   if LType = sslAutoDetect then
     LType := GetDefaultLibrary;
   
@@ -834,14 +835,14 @@ begin
   end;
 end;
 
-class function TSSLFactory.CreateContext(aContextType: TSSLContextType;
-  aLibType: TSSLLibraryType): ISSLContext;
+class function TSSLFactory.CreateContext(AContextType: TSSLContextType;
+  ALibType: TSSLLibraryType): ISSLContext;
 var
   LLib: ISSLLibrary;
   LConfig: TSSLConfig;
 begin
-  LLib := GetLibrary(aLibType);
-  Result := LLib.CreateContext(aContextType);
+  LLib := GetLibrary(ALibType);
+  Result := LLib.CreateContext(AContextType);
   if Result <> nil then
   begin
     LConfig := LLib.GetDefaultConfig;
@@ -876,12 +877,12 @@ begin
   end;
 end;
 
-class function TSSLFactory.CreateContext(const aConfig: TSSLConfig): ISSLContext;
+class function TSSLFactory.CreateContext(const AConfig: TSSLConfig): ISSLContext;
 var
   LLib: ISSLLibrary;
   LConfig: TSSLConfig;
 begin
-  LConfig := aConfig;
+  LConfig := AConfig;
   NormalizeConfigOptions(LConfig);
 
   LLib := GetLibrary(LConfig.LibraryType);
@@ -927,46 +928,46 @@ begin
     Result.SetALPNProtocols(LConfig.ALPNProtocols);
 end;
 
-class function TSSLFactory.CreateCertificate(aLibType: TSSLLibraryType): ISSLCertificate;
+class function TSSLFactory.CreateCertificate(ALibType: TSSLLibraryType): ISSLCertificate;
 var
   LLib: ISSLLibrary;
 begin
-  LLib := GetLibrary(aLibType);
+  LLib := GetLibrary(ALibType);
   Result := LLib.CreateCertificate;
 end;
 
-class function TSSLFactory.CreateCertificateStore(aLibType: TSSLLibraryType): ISSLCertificateStore;
+class function TSSLFactory.CreateCertificateStore(ALibType: TSSLLibraryType): ISSLCertificateStore;
 var
   LLib: ISSLLibrary;
 begin
-  LLib := GetLibrary(aLibType);
+  LLib := GetLibrary(ALibType);
   Result := LLib.CreateCertificateStore;
 end;
 
 
-class function TSSLFactory.CreateServerContext(const aCertFile, aKeyFile: string;
-  aLibType: TSSLLibraryType): ISSLContext;
+class function TSSLFactory.CreateServerContext(const ACertFile, AKeyFile: string;
+  ALibType: TSSLLibraryType): ISSLContext;
 begin
-  Result := CreateContext(sslCtxServer, aLibType);
-  Result.LoadCertificate(aCertFile);
-  Result.LoadPrivateKey(aKeyFile);
+  Result := CreateContext(sslCtxServer, ALibType);
+  Result.LoadCertificate(ACertFile);
+  Result.LoadPrivateKey(AKeyFile);
   Result.SetVerifyMode([sslVerifyNone]); // 服务端默认不验证客户端
 end;
 
-class function TSSLFactory.GetLibraryInstance(aLibType: TSSLLibraryType): ISSLLibrary;
+class function TSSLFactory.GetLibraryInstance(ALibType: TSSLLibraryType): ISSLLibrary;
 begin
-  Result := GetLibrary(aLibType);
+  Result := GetLibrary(ALibType);
 end;
 
-class procedure TSSLFactory.ReleaseLibrary(aLibType: TSSLLibraryType);
+class procedure TSSLFactory.ReleaseLibrary(ALibType: TSSLLibraryType);
 begin
   CheckInitialized;
   EnterCriticalSection(GFactoryLock);
   try
-    if Assigned(FLibraries[aLibType]) then
+    if Assigned(FLibraries[ALibType]) then
     begin
-      FLibraries[aLibType].Finalize;
-      FLibraries[aLibType] := nil;
+      FLibraries[ALibType].Finalize;
+      FLibraries[ALibType] := nil;
     end;
   finally
     LeaveCriticalSection(GFactoryLock);
@@ -993,10 +994,10 @@ begin
   end;
 end;
 
-class procedure TSSLFactory.SetAutoInitialize(aValue: Boolean);
+class procedure TSSLFactory.SetAutoInitialize(AValue: Boolean);
 begin
   CheckInitialized;
-  FAutoInitialize := aValue;
+  FAutoInitialize := AValue;
 end;
 
 class function TSSLFactory.GetAutoInitialize: Boolean;
@@ -1049,14 +1050,14 @@ end;
 
 { TSSLHelper }
 
-class function TSSLHelper.VerifyCertificateFile(const aFileName: string): Boolean;
+class function TSSLHelper.VerifyCertificateFile(const AFileName: string): Boolean;
 var
   LCert: ISSLCertificate;
   LStore: ISSLCertificateStore;
 begin
   try
     LCert := TSSLFactory.CreateCertificate;
-    LCert.LoadFromFile(aFileName);
+    LCert.LoadFromFile(AFileName);
     
     LStore := TSSLFactory.CreateCertificateStore;
     LStore.LoadSystemStore;
@@ -1067,17 +1068,17 @@ begin
   end;
 end;
 
-class function TSSLHelper.GetCertificateInfo(const aFileName: string): TSSLCertificateInfo;
+class function TSSLHelper.GetCertificateInfo(const AFileName: string): TSSLCertificateInfo;
 var
   LCert: ISSLCertificate;
 begin
   LCert := TSSLFactory.CreateCertificate;
-  LCert.LoadFromFile(aFileName);
+  LCert.LoadFromFile(AFileName);
   Result := LCert.GetInfo;
 end;
 
 
-class function TSSLHelper.GenerateRandomBytes(aCount: Integer): TBytes;
+class function TSSLHelper.GenerateRandomBytes(ACount: Integer): TBytes;
 begin
   // Phase 3.3 P0: 修复安全漏洞 - 使用加密安全的随机数生成器
   // 原实现使用 Random(256) 是不安全的，不适合加密场景
@@ -1085,13 +1086,13 @@ begin
 
   Result := nil;
 
-  if aCount <= 0 then
-    raise ESSLInvalidArgument.CreateFmt('Invalid random bytes count: %d', [aCount]);
+  if ACount <= 0 then
+    raise ESSLInvalidArgument.CreateFmt('Invalid random bytes count: %d', [ACount]);
 
-  SetLength(Result, aCount);
+  SetLength(Result, ACount);
 
   // 使用 OpenSSL RAND_bytes 生成加密安全的随机数
-  if RAND_bytes(@Result[0], aCount) <> 1 then
+  if RAND_bytes(@Result[0], ACount) <> 1 then
     raise ESSLCryptoError.CreateWithContext(
       'Failed to generate cryptographically secure random bytes',
       sslErrOther,
@@ -1101,15 +1102,15 @@ begin
     );
 end;
 
-class function TSSLHelper.HashData(const aData: TBytes;
-  aHashType: TSSLHash): string;
+class function TSSLHelper.HashData(const AData: TBytes;
+  AHashType: TSSLHash): string;
 var
   LHashAlg: THashAlgorithm;
   LHashBytes: TBytes;
 begin
   // Phase 2.3.5: 迁移至 crypto.utils
   // 映射 TSSLHash 到 THashAlgorithm
-  case aHashType of
+  case AHashType of
     sslHashMD5: LHashAlg := HASH_MD5;
     sslHashSHA1: LHashAlg := HASH_SHA1;
     sslHashSHA256: LHashAlg := HASH_SHA256;
@@ -1118,12 +1119,12 @@ begin
     // SHA224, SHA384, SHA3-*, BLAKE2b 尚未实现
     raise ESSLInvalidArgument.CreateFmt(
       'Hash algorithm %d not yet supported',
-      [Ord(aHashType)]
+      [Ord(AHashType)]
     );
   end;
 
   try
-    LHashBytes := TCryptoUtils.CalculateHash(aData, LHashAlg);
+    LHashBytes := TCryptoUtils.CalculateHash(AData, LHashAlg);
     Result := TEncodingUtils.BytesToHex(LHashBytes, False);
   except
     on E: Exception do
