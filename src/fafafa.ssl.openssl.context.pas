@@ -137,7 +137,8 @@ type
 implementation
 
 uses
-  fafafa.ssl.openssl.connection;
+  fafafa.ssl.openssl.connection,
+  fafafa.ssl.memutils;  // Rust-quality: Secure memory handling
 
 var
   GContextRegistry: TList = nil;
@@ -734,27 +735,32 @@ begin
         );
 
       PassA := AnsiString(APassword);
-      // 使用密码回调加载加密私钥
-      PKey := PEM_read_bio_PrivateKey(BIO, nil, nil, PAnsiChar(PassA));
-      if PKey = nil then
-        raise ESSLKeyException.CreateWithContext(
-          Format('Failed to parse encrypted private key from file: %s', [AFileName]),
-          sslErrParseFailed,
-          'TOpenSSLContext.LoadPrivateKey',
-          Integer(GetLastOpenSSLError),
-          sslOpenSSL
-        );
       try
-        if SSL_CTX_use_PrivateKey(FSSLContext, PKey) <> 1 then
+        // 使用密码回调加载加密私钥
+        PKey := PEM_read_bio_PrivateKey(BIO, nil, nil, PAnsiChar(PassA));
+        if PKey = nil then
           raise ESSLKeyException.CreateWithContext(
-            Format('Failed to use private key from file: %s', [AFileName]),
-            sslErrLoadFailed,
+            Format('Failed to parse encrypted private key from file: %s', [AFileName]),
+            sslErrParseFailed,
             'TOpenSSLContext.LoadPrivateKey',
             Integer(GetLastOpenSSLError),
             sslOpenSSL
           );
+        try
+          if SSL_CTX_use_PrivateKey(FSSLContext, PKey) <> 1 then
+            raise ESSLKeyException.CreateWithContext(
+              Format('Failed to use private key from file: %s', [AFileName]),
+              sslErrLoadFailed,
+              'TOpenSSLContext.LoadPrivateKey',
+              Integer(GetLastOpenSSLError),
+              sslOpenSSL
+            );
+        finally
+          EVP_PKEY_free(PKey);
+        end;
       finally
-        EVP_PKEY_free(PKey);
+        // Rust-quality: Always securely zero password after use
+        SecureZeroString(PassA);
       end;
     finally
       BIO_free(BIO);
@@ -839,39 +845,45 @@ begin
         SSL_CTX_set_default_passwd_cb_userdata(FSSLContext, PAnsiChar(PassA));
     end;
 
-    PKey := PEM_read_bio_PrivateKey(BIO, nil, nil, nil);
-    if PKey = nil then
-      raise ESSLKeyException.CreateWithContext(
-        'Failed to parse private key from stream',
-        sslErrParseFailed,
-        'TOpenSSLContext.LoadPrivateKey',
-        Integer(GetLastOpenSSLError),
-        sslOpenSSL
-      );
     try
-      if SSL_CTX_use_PrivateKey(FSSLContext, PKey) <> 1 then
+      PKey := PEM_read_bio_PrivateKey(BIO, nil, nil, nil);
+      if PKey = nil then
         raise ESSLKeyException.CreateWithContext(
-          'Failed to use private key in context',
-          sslErrLoadFailed,
+          'Failed to parse private key from stream',
+          sslErrParseFailed,
           'TOpenSSLContext.LoadPrivateKey',
           Integer(GetLastOpenSSLError),
           sslOpenSSL
         );
-
-      HasCert := Assigned(SSL_CTX_get0_certificate) and (SSL_CTX_get0_certificate(FSSLContext) <> nil);
-      if HasCert then
-      begin
-        if SSL_CTX_check_private_key(FSSLContext) <> 1 then
+      try
+        if SSL_CTX_use_PrivateKey(FSSLContext, PKey) <> 1 then
           raise ESSLKeyException.CreateWithContext(
-            'Private key does not match the loaded certificate',
-            sslErrCertificate,
+            'Failed to use private key in context',
+            sslErrLoadFailed,
             'TOpenSSLContext.LoadPrivateKey',
             Integer(GetLastOpenSSLError),
             sslOpenSSL
           );
+
+        HasCert := Assigned(SSL_CTX_get0_certificate) and (SSL_CTX_get0_certificate(FSSLContext) <> nil);
+        if HasCert then
+        begin
+          if SSL_CTX_check_private_key(FSSLContext) <> 1 then
+            raise ESSLKeyException.CreateWithContext(
+              'Private key does not match the loaded certificate',
+              sslErrCertificate,
+              'TOpenSSLContext.LoadPrivateKey',
+              Integer(GetLastOpenSSLError),
+              sslOpenSSL
+            );
+        end;
+      finally
+        EVP_PKEY_free(PKey);
       end;
     finally
-      EVP_PKEY_free(PKey);
+      // Rust-quality: Always securely zero password after use
+      if APassword <> '' then
+        SecureZeroString(PassA);
     end;
   finally
     BIO_free(BIO);
@@ -963,43 +975,50 @@ begin
       PassA := AnsiString(APassword);
       PassPtr := PAnsiChar(PassA);
     end;
-    
-    PKey := PEM_read_bio_PrivateKey(BIO, nil, nil, PassPtr);
-    if PKey = nil then
-      raise ESSLKeyException.CreateWithContext(
-        'Failed to parse private key from PEM string',
-        sslErrParseFailed,
-        'TOpenSSLContext.LoadPrivateKeyPEM',
-        Integer(GetLastOpenSSLError),
-        sslOpenSSL
-      );
-    
+
     try
-      if SSL_CTX_use_PrivateKey(FSSLContext, PKey) <> 1 then
+      PKey := PEM_read_bio_PrivateKey(BIO, nil, nil, PassPtr);
+      if PKey = nil then
         raise ESSLKeyException.CreateWithContext(
-          'Failed to use private key in context',
-          sslErrLoadFailed,
+          'Failed to parse private key from PEM string',
+          sslErrParseFailed,
           'TOpenSSLContext.LoadPrivateKeyPEM',
           Integer(GetLastOpenSSLError),
           sslOpenSSL
         );
 
-      HasCert := Assigned(SSL_CTX_get0_certificate) and (SSL_CTX_get0_certificate(FSSLContext) <> nil);
-      if HasCert then
-      begin
-        if SSL_CTX_check_private_key(FSSLContext) <> 1 then
+      try
+        if SSL_CTX_use_PrivateKey(FSSLContext, PKey) <> 1 then
           raise ESSLKeyException.CreateWithContext(
-            'Private key does not match the loaded certificate',
-            sslErrCertificate,
+            'Failed to use private key in context',
+            sslErrLoadFailed,
             'TOpenSSLContext.LoadPrivateKeyPEM',
             Integer(GetLastOpenSSLError),
             sslOpenSSL
           );
+
+        HasCert := Assigned(SSL_CTX_get0_certificate) and (SSL_CTX_get0_certificate(FSSLContext) <> nil);
+        if HasCert then
+        begin
+          if SSL_CTX_check_private_key(FSSLContext) <> 1 then
+            raise ESSLKeyException.CreateWithContext(
+              'Private key does not match the loaded certificate',
+              sslErrCertificate,
+              'TOpenSSLContext.LoadPrivateKeyPEM',
+              Integer(GetLastOpenSSLError),
+              sslOpenSSL
+            );
+        end;
+
+        TSecurityLog.Audit('OpenSSL', 'LoadPrivateKeyPEM', 'System', 'Private key loaded from PEM string');
+      finally
+        EVP_PKEY_free(PKey);
       end;
-      
-      TSecurityLog.Audit('OpenSSL', 'LoadPrivateKeyPEM', 'System', 'Private key loaded from PEM string');
     finally
-      EVP_PKEY_free(PKey);
+      // Rust-quality: Always securely zero sensitive data after use
+      if APassword <> '' then
+        SecureZeroString(PassA);
+      SecureZeroString(PemA);  // PEM may contain unencrypted key
     end;
   finally
     BIO_free(BIO);

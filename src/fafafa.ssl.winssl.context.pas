@@ -291,11 +291,18 @@ var
   PFXStore: HCERTSTORE;
   CertContext: PCCERT_CONTEXT;
 begin
+  // Rust-quality: Validate parameters upfront
+  if AStream = nil then
+    RaiseInvalidParameter('AStream cannot be nil');
+
   // 清理之前的证书
   CleanupCertificate;
-  
+
   // 读取证书数据
   LSize := AStream.Size - AStream.Position;
+  if LSize <= 0 then
+    RaiseInvalidParameter('Stream is empty or at end position');
+
   SetLength(LCertData, LSize);
   AStream.Read(LCertData[0], LSize);
   
@@ -750,32 +757,32 @@ end;
 
 function TWinSSLContext.CreateConnection(ASocket: THandle): ISSLConnection;
 begin
+  // Rust-quality: Explicit error handling instead of silent nil return
   if not FInitialized then
-  begin
-    Result := nil;
-    Exit;
-  end;
-  
-  try
-    Result := TWinSSLConnection.Create(Self, ASocket);
-  except
-    Result := nil;
-  end;
+    RaiseSSLInitError(
+      'Cannot create connection: WinSSL context not initialized',
+      'TWinSSLContext.CreateConnection'
+    );
+
+  // Let exceptions propagate - caller must handle errors explicitly
+  Result := TWinSSLConnection.Create(Self, ASocket);
 end;
 
 function TWinSSLContext.CreateConnection(AStream: TStream): ISSLConnection;
 begin
+  // Rust-quality: Explicit error handling instead of silent nil return
   if not FInitialized then
-  begin
-    Result := nil;
-    Exit;
-  end;
-  
-  try
-    Result := TWinSSLConnection.Create(Self, AStream);
-  except
-    Result := nil;
-  end;
+    RaiseSSLInitError(
+      'Cannot create connection: WinSSL context not initialized',
+      'TWinSSLContext.CreateConnection'
+    );
+
+  // Rust-quality: Validate parameters upfront
+  if AStream = nil then
+    RaiseInvalidParameter('AStream cannot be nil');
+
+  // Let exceptions propagate - caller must handle errors explicitly
+  Result := TWinSSLConnection.Create(Self, AStream);
 end;
 
 // ============================================================================

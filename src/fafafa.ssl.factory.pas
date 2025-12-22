@@ -1127,11 +1127,16 @@ begin
     LHashBytes := TCryptoUtils.CalculateHash(AData, LHashAlg);
     Result := TEncodingUtils.BytesToHex(LHashBytes, False);
   except
+    on E: ESSLException do
+      raise;  // Rust-quality: Re-raise SSL exceptions
     on E: Exception do
-    begin
-      // 如果失败，返回空字符串
-      Result := '';
-    end;
+      raise ESSLCryptoError.CreateWithContext(
+        Format('HashData failed: %s', [E.Message]),
+        sslErrOther,
+        'TSSLHelper.HashData',
+        0,
+        sslAutoDetect
+      );
   end;
 end;
 

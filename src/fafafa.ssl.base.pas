@@ -81,8 +81,11 @@ type
     { 检查视图是否有效（指针非空） }
     function IsValid: Boolean;
 
-    { 获取指定索引的字节（无边界检查，使用时需谨慎） }
-    function GetByte(AIndex: Integer): Byte; inline;
+    { 获取指定索引的字节（带边界检查，Rust-quality 安全访问） }
+    function GetByte(AIndex: Integer): Byte;
+
+    { 获取指定索引的字节（无边界检查，性能关键代码使用） }
+    function GetByteUnchecked(AIndex: Integer): Byte; inline;
   end;
 
   // ============================================================================
@@ -1028,6 +1031,16 @@ end;
 
 function TBytesView.GetByte(AIndex: Integer): Byte;
 begin
+  // Rust-quality: Bounds checking like Rust's [] operator
+  if (AIndex < 0) or (AIndex >= Length) then
+    raise ERangeError.CreateFmt('TBytesView index %d out of bounds [0..%d)', [AIndex, Length]);
+  Result := Data[AIndex];
+end;
+
+function TBytesView.GetByteUnchecked(AIndex: Integer): Byte;
+begin
+  // Rust-quality: Unchecked access like Rust's get_unchecked()
+  // Use only when bounds are already verified
   Result := Data[AIndex];
 end;
 
