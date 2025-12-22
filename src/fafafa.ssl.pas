@@ -167,35 +167,35 @@ function SSLFactory: TSSLFactory;
 function SSLHelper: TSSLHelper;
 
 // 快速创建函数
-function CreateSSLLibrary(aLibType: TSSLLibraryType = sslAutoDetect): ISSLLibrary;
-function CreateSSLContext(aType: TSSLContextType = sslCtxClient): ISSLContext;
+function CreateSSLLibrary(ALibType: TSSLLibraryType = sslAutoDetect): ISSLLibrary;
+function CreateSSLContext(AType: TSSLContextType = sslCtxClient): ISSLContext;
 function CreateSSLCertificate: ISSLCertificate;
-function CreateSSLConnection(aContext: ISSLContext; aSocket: THandle): ISSLConnection;
+function CreateSSLConnection(AContext: ISSLContext; ASocket: THandle): ISSLConnection;
 
 // 辅助函数
-function SSLErrorToString(aError: TSSLErrorCode): string;
-function ProtocolVersionToString(aVersion: TSSLProtocolVersion): string;
-function LibraryTypeToString(aLibType: TSSLLibraryType): string;
+function SSLErrorToString(AError: TSSLErrorCode): string;
+function ProtocolVersionToString(AVersion: TSSLProtocolVersion): string;
+function LibraryTypeToString(ALibType: TSSLLibraryType): string;
 
 // ============================================================================
 // 便捷API
 // ============================================================================
 
 { 初始化默认配置 }
-function CreateDefaultConfig(aContextType: TSSLContextType = sslCtxClient): TSSLConfig;
+function CreateDefaultConfig(AContextType: TSSLContextType = sslCtxClient): TSSLConfig;
 
 { 快速创建服务端 }
-function QuickServer(const aCertFile, aKeyFile: string;
-  aPort: Integer = 443): ISSLContext;
+function QuickServer(const ACertFile, AKeyFile: string;
+  APort: Integer = 443): ISSLContext;
 
 { 检查SSL支持 }
 function CheckSSLSupport: Boolean;
 function GetSSLSupportInfo: string;
 
 { 证书工具 }
-function LoadCertificate(const aFileName: string): ISSLCertificate;
-function ValidateCertificate(const aFileName: string): Boolean;
-function GetCertificateDetails(const aFileName: string): TSSLCertificateInfo;
+function LoadCertificate(const AFileName: string): ISSLCertificate;
+function ValidateCertificate(const AFileName: string): Boolean;
+function GetCertificateDetails(const AFileName: string): TSSLCertificateInfo;
 
 implementation
 
@@ -217,14 +217,14 @@ begin
   Result := fafafa.ssl.factory.SSLHelper;
 end;
 
-function CreateSSLLibrary(aLibType: TSSLLibraryType): ISSLLibrary;
+function CreateSSLLibrary(ALibType: TSSLLibraryType): ISSLLibrary;
 begin
-  Result := fafafa.ssl.factory.CreateSSLLibrary(aLibType);
+  Result := fafafa.ssl.factory.CreateSSLLibrary(ALibType);
 end;
 
-function CreateSSLContext(aType: TSSLContextType): ISSLContext;
+function CreateSSLContext(AType: TSSLContextType): ISSLContext;
 begin
-  Result := fafafa.ssl.factory.CreateSSLContext(aType);
+  Result := fafafa.ssl.factory.CreateSSLContext(AType);
 end;
 
 function CreateSSLCertificate: ISSLCertificate;
@@ -232,29 +232,29 @@ begin
   Result := fafafa.ssl.factory.CreateSSLCertificate;
 end;
 
-function CreateSSLConnection(aContext: ISSLContext; aSocket: THandle): ISSLConnection;
+function CreateSSLConnection(AContext: ISSLContext; ASocket: THandle): ISSLConnection;
 begin
-  Result := fafafa.ssl.factory.CreateSSLConnection(aContext, aSocket);
+  Result := fafafa.ssl.factory.CreateSSLConnection(AContext, ASocket);
 end;
 
 // 从 fafafa.ssl.base 导入实现
-function SSLErrorToString(aError: TSSLErrorCode): string;
+function SSLErrorToString(AError: TSSLErrorCode): string;
 begin
-  Result := fafafa.ssl.base.SSLErrorToString(aError);
+  Result := fafafa.ssl.base.SSLErrorToString(AError);
 end;
 
-function ProtocolVersionToString(aVersion: TSSLProtocolVersion): string;
+function ProtocolVersionToString(AVersion: TSSLProtocolVersion): string;
 begin
-  Result := fafafa.ssl.base.ProtocolVersionToString(aVersion);
+  Result := fafafa.ssl.base.ProtocolVersionToString(AVersion);
 end;
 
-function LibraryTypeToString(aLibType: TSSLLibraryType): string;
+function LibraryTypeToString(ALibType: TSSLLibraryType): string;
 begin
-  Result := fafafa.ssl.base.LibraryTypeToString(aLibType);
+  Result := fafafa.ssl.base.LibraryTypeToString(ALibType);
 end;
 
 // 便捷API实现
-function CreateDefaultConfig(aContextType: TSSLContextType): TSSLConfig;
+function CreateDefaultConfig(AContextType: TSSLContextType): TSSLConfig;
 var
   LLib: ISSLLibrary;
   LConfig: TSSLConfig;
@@ -264,12 +264,12 @@ begin
     LConfig := LLib.GetDefaultConfig;
     Result := LConfig;
     Result.LibraryType := sslAutoDetect;
-    Result.ContextType := aContextType;
+    Result.ContextType := AContextType;
     TSSLFactory.NormalizeConfig(Result);
   except
     FillChar(Result, SizeOf(Result), 0);
     Result.LibraryType := sslAutoDetect;
-    Result.ContextType := aContextType;
+    Result.ContextType := AContextType;
     Result.ProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
     Result.VerifyMode := [sslVerifyPeer];
     Result.VerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
@@ -286,10 +286,10 @@ begin
 end;
 
 
-function QuickServer(const aCertFile, aKeyFile: string;
-  aPort: Integer): ISSLContext;
+function QuickServer(const ACertFile, AKeyFile: string;
+  APort: Integer): ISSLContext;
 begin
-  Result := TSSLFactory.CreateServerContext(aCertFile, aKeyFile);
+  Result := TSSLFactory.CreateServerContext(ACertFile, AKeyFile);
   // 注意: Socket绑定和监听需要在应用层实现
   // 这个函数只创建配置好的SSL上下文
   // 使用者需要自己创建服务端socket，然后用Result.CreateConnection创建连接
@@ -309,24 +309,24 @@ begin
             TSSLFactory.GetSystemInfo;
 end;
 
-function LoadCertificate(const aFileName: string): ISSLCertificate;
+function LoadCertificate(const AFileName: string): ISSLCertificate;
 begin
   Result := TSSLFactory.CreateCertificate;
-  if not Result.LoadFromFile(aFileName) then
+  if not Result.LoadFromFile(AFileName) then
     raise ESSLCertificateException.Create(
-      Format('无法加载证书文件: %s', [aFileName]),
+      Format('无法加载证书文件: %s', [AFileName]),
       sslErrCertificate
     );
 end;
 
-function ValidateCertificate(const aFileName: string): Boolean;
+function ValidateCertificate(const AFileName: string): Boolean;
 begin
-  Result := TSSLHelper.VerifyCertificateFile(aFileName);
+  Result := TSSLHelper.VerifyCertificateFile(AFileName);
 end;
 
-function GetCertificateDetails(const aFileName: string): TSSLCertificateInfo;
+function GetCertificateDetails(const AFileName: string): TSSLCertificateInfo;
 begin
-  Result := TSSLHelper.GetCertificateInfo(aFileName);
+  Result := TSSLHelper.GetCertificateInfo(AFileName);
 end;
 
 end.
