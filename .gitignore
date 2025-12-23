@@ -31,6 +31,12 @@ scripts/.local_tls_server.pid
 # 临时测试结果
 test_results.txt
 compile_results.txt
+fuzz_results.txt
+fuzz_parsers_results.txt
+tests/benchmarks/current_results.json
+
+# 覆盖率报告
+coverage/
 
 # Claude Code 本地配置
 .claude/
