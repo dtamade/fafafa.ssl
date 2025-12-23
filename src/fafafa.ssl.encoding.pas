@@ -351,6 +351,10 @@ begin
     raise ESSLCryptoError.Create('Failed to create Base64 BIO');
   end;
 
+  // 性能优化 (Phase 2.3.6): 使用 BIO_FLAGS_BASE64_NO_NL 标志
+  // 告诉 OpenSSL 不要在输出中插入换行符，避免后续 StringReplace 调用
+  BIO_set_flags(LB64, BIO_FLAGS_BASE64_NO_NL);
+
   LBIO := BIO_push(LB64, LMem);
 
   try
@@ -361,15 +365,15 @@ begin
     if BIO_flush(LBIO) <= 0 then
       raise ESSLCryptoError.Create('Failed to flush Base64 BIO');
 
-    // 获取编码后的数据
+    // 获取编码后的数据（无换行符）
     LLen := BIO_get_mem_data(LMem, @LPtr);
 
     if LLen > 0 then
     begin
+      // 跳过任何尾随空白字符（有些 OpenSSL 版本可能仍添加尾随换行）
+      while (LLen > 0) and (LPtr[LLen - 1] in [#10, #13, #0, ' ']) do
+        Dec(LLen);
       SetString(Result, LPtr, LLen);
-      // 移除所有换行符（OpenSSL BIO默认会插入换行）
-      Result := StringReplace(Result, #10, '', [rfReplaceAll]);
-      Result := StringReplace(Result, #13, '', [rfReplaceAll]);
     end;
   finally
     BIO_free_all(LBIO);
@@ -384,9 +388,9 @@ end;
 class function TEncodingUtils.Base64Decode(const AInput: string): TBytes;
 var
   LBIO, LB64, LMem: PBIO;
-  LLen, I, LInputLen, LWithNLLen, LPos: Integer;
+  LLen, LInputLen: Integer;
   LBuffer: array of Byte;
-  LInputWithNewlines: AnsiString;
+  LInputA: AnsiString;
 begin
   Result := nil;
   SetLength(Result, 0);
@@ -394,31 +398,15 @@ begin
 
   EnsureInitialized;
 
-  // OpenSSL BIO 需要每64字符插入换行符
-  // 优化：预计算大小并一次性分配
-  LInputLen := Length(AInput);
-  LWithNLLen := LInputLen + (LInputLen div 64) + 1;
-  SetLength(LInputWithNewlines, LWithNLLen);
+  // 性能优化 (Phase 2.3.6): 使用 BIO_FLAGS_BASE64_NO_NL 标志
+  // 避免慢速的换行符预处理循环
+  // 注意：OpenSSL 仍需要尾随换行符来触发最终块解码
+  LInputA := AnsiString(AInput) + #10;
+  LInputLen := Length(LInputA);
 
-  // 优化：直接字符拷贝 + 换行符插入
-  LPos := 1;
-  for I := 1 to LInputLen do
-  begin
-    LInputWithNewlines[LPos] := AInput[I];
-    Inc(LPos);
-    if (I mod 64 = 0) and (I < LInputLen) then
-    begin
-      LInputWithNewlines[LPos] := #10;
-      Inc(LPos);
-    end;
-  end;
-  // 添加尾部换行符
-  LInputWithNewlines[LPos] := #10;
-  SetLength(LInputWithNewlines, LPos);
+  SetLength(LBuffer, Length(AInput)); // 输出总是小于原始输入
 
-  SetLength(LBuffer, LInputLen); // 输出总是小于输入
-
-  LMem := BIO_new_mem_buf(PAnsiChar(LInputWithNewlines), Length(LInputWithNewlines));
+  LMem := BIO_new_mem_buf(PAnsiChar(LInputA), LInputLen);
   if LMem = nil then
     raise ESSLCryptoError.Create('Failed to create memory BIO');
 
@@ -428,6 +416,10 @@ begin
     BIO_free(LMem);
     raise ESSLCryptoError.Create('Failed to create Base64 BIO');
   end;
+
+  // 设置 NO_NL 标志：告诉 OpenSSL 输入中不包含每 64 字符换行
+  // 这消除了 O(n) 的换行符插入循环，显著提升性能
+  BIO_set_flags(LB64, BIO_FLAGS_BASE64_NO_NL);
 
   LBIO := BIO_push(LB64, LMem);
 
@@ -533,6 +525,9 @@ begin
     raise ESSLCryptoError.Create('Failed to create Base64 BIO');
   end;
 
+  // 性能优化 (Phase 2.3.6): 使用 BIO_FLAGS_BASE64_NO_NL 标志
+  BIO_set_flags(LB64, BIO_FLAGS_BASE64_NO_NL);
+
   LBIO := BIO_push(LB64, LMem);
 
   try
@@ -543,15 +538,15 @@ begin
     if BIO_flush(LBIO) <= 0 then
       raise ESSLCryptoError.Create('Failed to flush BIO');
 
-    // 获取数据
+    // 获取数据（无换行符）
     LLen := BIO_get_mem_data(LMem, @LPtr);
 
     if LLen > 0 then
     begin
+      // 跳过任何尾随空白字符
+      while (LLen > 0) and (LPtr[LLen - 1] in [#10, #13, #0, ' ']) do
+        Dec(LLen);
       SetString(Result, LPtr, LLen);
-      // 移除所有换行符
-      Result := StringReplace(Result, #10, '', [rfReplaceAll]);
-      Result := StringReplace(Result, #13, '', [rfReplaceAll]);
     end
     else
       Result := '';

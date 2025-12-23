@@ -9,6 +9,7 @@ uses
   fafafa.ssl.factory,
   fafafa.ssl.secure,
   fafafa.ssl.crypto.utils,
+  fafafa.ssl.encoding,  // Phase 2.3.6: Base64 functions moved here
   fafafa.ssl;
 
 const
@@ -117,28 +118,28 @@ var
   LDecoded: TBytes;
 begin
   PrintHeader('Base64 Encode/Decode Performance');
-  
+
   // Encode
   LBench := TBenchmark.Create('Base64 Encode (1 KB x 10000)');
   LBench.SetDataSize(Int64(DATA_SIZE_1KB) * B64_ITERATIONS);
   LBench.Start;
   for I := 1 to B64_ITERATIONS do
-    LEncoded := TCryptoUtils.Base64Encode(LData1KB);
+    LEncoded := TEncodingUtils.Base64Encode(LData1KB);
   LBench.Stop;
   LBench.ReportThroughput;
   LBench.Free;
-  
+
   // Decode
-  LEncoded := TCryptoUtils.Base64Encode(LData1KB);
+  LEncoded := TEncodingUtils.Base64Encode(LData1KB);
   LBench := TBenchmark.Create('Base64 Decode (1 KB x 10000)');
   LBench.SetDataSize(Int64(DATA_SIZE_1KB) * B64_ITERATIONS);
   LBench.Start;
   for I := 1 to B64_ITERATIONS do
-    LDecoded := TCryptoUtils.Base64Decode(LEncoded);
+    LDecoded := TEncodingUtils.Base64Decode(LEncoded);
   LBench.Stop;
   LBench.ReportThroughput;
   LBench.Free;
-  
+
   WriteLn;
 end;
 
