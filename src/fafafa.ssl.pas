@@ -323,6 +323,8 @@ end;
 function QuickServer(const ACertFile, AKeyFile: string;
   APort: Integer): ISSLContext;
 begin
+  // APort is provided for API consistency but socket binding is done at app layer
+  if APort < 0 then; // Suppress unused parameter hint
   Result := TSSLFactory.CreateServerContext(ACertFile, AKeyFile);
   // 注意: Socket绑定和监听需要在应用层实现
   // 这个函数只创建配置好的SSL上下文
