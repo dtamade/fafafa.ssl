@@ -263,15 +263,23 @@ begin
 
     // 模拟中断：直接关闭服务端
     SSL_shutdown(ServerSSL);
+
+    // 传输服务端关闭通知到客户端
+    repeat
+      Len := BIO_read(ServerWrite, @Buffer[0], SizeOf(Buffer));
+      if Len > 0 then BIO_write(ClientRead, @Buffer[0], Len);
+    until Len <= 0;
+
     SSL_free(ServerSSL);
     TestResult('服务端中断', True);
 
-    // 客户端尝试继续操作
-    Ret := SSL_do_handshake(ClientSSL);
+    // 客户端尝试读取数据（应该检测到关闭）
+    // 注意：SSL_do_handshake 在握手完成后会返回 1，应使用 SSL_read 检测连接关闭
+    Ret := SSL_read(ClientSSL, @Buffer[0], SizeOf(Buffer));
     Err := SSL_get_error(ClientSSL, Ret);
 
-    // 应该返回错误
-    TestResult('客户端检测到中断', Ret <> 1,
+    // 应该返回 0 (正常关闭) 或负值 (错误)，SSL_ERROR_ZERO_RETURN 表示对端关闭
+    TestResult('客户端检测到中断', (Ret <= 0) or (Err = SSL_ERROR_ZERO_RETURN),
               '返回值: ' + IntToStr(Ret) + ', 错误: ' + IntToStr(Err));
 
     // 清理客户端

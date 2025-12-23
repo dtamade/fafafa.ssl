@@ -122,7 +122,16 @@ type
     function ServerHandshake: Boolean;
     function SendData(const ABuffer; ASize: Integer): Integer;
     function RecvData(var ABuffer; ASize: Integer): Integer;
-    
+
+    // P1-1: 提取的握手辅助方法
+    procedure PrepareInputBufferDesc(var AInBuffers: array of TSecBuffer;
+      var AInBufferDesc: TSecBufferDesc; AData: Pointer; ADataSize: DWORD);
+    procedure PrepareOutputBufferDesc(var AOutBuffers: array of TSecBuffer;
+      var AOutBufferDesc: TSecBufferDesc);
+    procedure HandleExtraData(var AExtraBuffer: array of TSecBuffer;
+      var AIoBuffer: array of Byte; var AIoBufferSize: DWORD; AStatus: SECURITY_STATUS);
+    function SendOutputBuffer(const AOutBuffer: TSecBuffer): Boolean;
+
   public
     constructor Create(AContext: ISSLContext; ASocket: THandle); overload;
     constructor Create(AContext: ISSLContext; AStream: TStream); overload;
@@ -633,6 +642,77 @@ begin
 end;
 
 // ============================================================================
+// P1-1: 握手辅助方法
+// ============================================================================
+
+procedure TWinSSLConnection.PrepareInputBufferDesc(var AInBuffers: array of TSecBuffer;
+  var AInBufferDesc: TSecBufferDesc; AData: Pointer; ADataSize: DWORD);
+begin
+  // 第一个缓冲区：实际数据
+  AInBuffers[0].pvBuffer := AData;
+  AInBuffers[0].cbBuffer := ADataSize;
+  AInBuffers[0].BufferType := SECBUFFER_TOKEN;
+
+  // 第二个缓冲区：用于接收额外数据
+  if Length(AInBuffers) > 1 then
+  begin
+    AInBuffers[1].pvBuffer := nil;
+    AInBuffers[1].cbBuffer := 0;
+    AInBuffers[1].BufferType := SECBUFFER_EMPTY;
+  end;
+
+  // 设置描述符
+  AInBufferDesc.cBuffers := Length(AInBuffers);
+  AInBufferDesc.pBuffers := @AInBuffers[0];
+  AInBufferDesc.ulVersion := SECBUFFER_VERSION;
+end;
+
+procedure TWinSSLConnection.PrepareOutputBufferDesc(var AOutBuffers: array of TSecBuffer;
+  var AOutBufferDesc: TSecBufferDesc);
+begin
+  AOutBuffers[0].pvBuffer := nil;
+  AOutBuffers[0].BufferType := SECBUFFER_TOKEN;
+  AOutBuffers[0].cbBuffer := 0;
+
+  AOutBufferDesc.cBuffers := 1;
+  AOutBufferDesc.pBuffers := @AOutBuffers[0];
+  AOutBufferDesc.ulVersion := SECBUFFER_VERSION;
+end;
+
+procedure TWinSSLConnection.HandleExtraData(var AExtraBuffer: array of TSecBuffer;
+  var AIoBuffer: array of Byte; var AIoBufferSize: DWORD; AStatus: SECURITY_STATUS);
+begin
+  // AExtraBuffer[1] 包含未处理的额外数据
+  if Length(AExtraBuffer) > 1 then
+  begin
+    if (AExtraBuffer[1].BufferType = SECBUFFER_EXTRA) and (AExtraBuffer[1].cbBuffer > 0) then
+    begin
+      // 将额外数据移动到缓冲区开始位置
+      Move(AIoBuffer[AIoBufferSize - AExtraBuffer[1].cbBuffer], AIoBuffer[0], AExtraBuffer[1].cbBuffer);
+      AIoBufferSize := AExtraBuffer[1].cbBuffer;
+    end
+    else if AStatus <> SEC_E_INCOMPLETE_MESSAGE then
+      AIoBufferSize := 0;  // 只有在不需要更多数据时才清空缓冲区
+  end
+  else if AStatus <> SEC_E_INCOMPLETE_MESSAGE then
+    AIoBufferSize := 0;
+end;
+
+function TWinSSLConnection.SendOutputBuffer(const AOutBuffer: TSecBuffer): Boolean;
+var
+  cbData: DWORD;
+begin
+  Result := True;
+  if (AOutBuffer.cbBuffer > 0) and (AOutBuffer.pvBuffer <> nil) then
+  begin
+    cbData := SendData(AOutBuffer.pvBuffer^, AOutBuffer.cbBuffer);
+    FreeContextBuffer(AOutBuffer.pvBuffer);
+    if cbData <= 0 then
+      Result := False;
+  end;
+end;
+
+// ============================================================================
 // 握手实现 - 客户端
 // ============================================================================
 
@@ -649,7 +729,7 @@ var
   IoBuffer: array[0..16384-1] of Byte;
 begin
   Result := False;
-  
+
   // 设置标志
   dwSSPIFlags := ISC_REQ_SEQUENCE_DETECT or
                 ISC_REQ_REPLAY_DETECT or
@@ -657,18 +737,12 @@ begin
                 ISC_RET_EXTENDED_ERROR or
                 ISC_REQ_ALLOCATE_MEMORY or
                 ISC_REQ_STREAM;
-  
+
   ServerName := StringToPWideChar(FContext.GetServerName);
   try
-    // 初始化输出缓冲区
-    OutBuffers[0].pvBuffer := nil;
-    OutBuffers[0].BufferType := SECBUFFER_TOKEN;
-    OutBuffers[0].cbBuffer := 0;
-    
-    OutBufferDesc.cBuffers := 1;
-    OutBufferDesc.pBuffers := @OutBuffers[0];
-    OutBufferDesc.ulVersion := SECBUFFER_VERSION;
-    
+    // P1-1: 使用辅助方法初始化输出缓冲区
+    PrepareOutputBufferDesc(OutBuffers, OutBufferDesc);
+
     // 第一次调用 InitializeSecurityContext
     Status := InitializeSecurityContextW(
       PCredHandle(FContext.GetNativeHandle),
@@ -684,56 +758,33 @@ begin
       @dwSSPIOutFlags,
       nil
     );
-    
+
     if not ((Status = SEC_I_CONTINUE_NEEDED) or IsSuccess(Status)) then
       Exit;
-    
-    // 发送客户端 hello
-    if (OutBuffers[0].cbBuffer > 0) and (OutBuffers[0].pvBuffer <> nil) then
-    begin
-      cbData := SendData(OutBuffers[0].pvBuffer^, OutBuffers[0].cbBuffer);
-      FreeContextBuffer(OutBuffers[0].pvBuffer);
-      if cbData <= 0 then
-        Exit;
-    end;
-    
+
+    // P1-1: 使用辅助方法发送客户端 hello
+    if not SendOutputBuffer(OutBuffers[0]) then
+      Exit;
+
     // 继续握手循环
     cbIoBuffer := 0;
     while (Status = SEC_I_CONTINUE_NEEDED) or (Status = SEC_E_INCOMPLETE_MESSAGE) do
     begin
       // 接收服务器数据
-      // 当状态为 SEC_E_INCOMPLETE_MESSAGE 时，即使缓冲区有数据也需要接收更多数据
       if (cbIoBuffer = 0) or (Status = SEC_E_INCOMPLETE_MESSAGE) then
       begin
-        // 如果缓冲区已有数据，追加新数据；否则从头开始接收
         cbData := RecvData(IoBuffer[cbIoBuffer], SizeOf(IoBuffer) - cbIoBuffer);
         if cbData <= 0 then
           Exit;
         Inc(cbIoBuffer, cbData);
       end;
-      
-      // 设置输入缓冲区
-      InBuffers[0].pvBuffer := @IoBuffer[0];
-      InBuffers[0].cbBuffer := cbIoBuffer;
-      InBuffers[0].BufferType := SECBUFFER_TOKEN;
-      
-      InBuffers[1].pvBuffer := nil;
-      InBuffers[1].cbBuffer := 0;
-      InBuffers[1].BufferType := SECBUFFER_EMPTY;
-      
-      InBufferDesc.cBuffers := 2;
-      InBufferDesc.pBuffers := @InBuffers[0];
-      InBufferDesc.ulVersion := SECBUFFER_VERSION;
-      
-      // 设置输出缓冲区
-      OutBuffers[0].pvBuffer := nil;
-      OutBuffers[0].BufferType := SECBUFFER_TOKEN;
-      OutBuffers[0].cbBuffer := 0;
-      
-      OutBufferDesc.cBuffers := 1;
-      OutBufferDesc.pBuffers := @OutBuffers[0];
-      OutBufferDesc.ulVersion := SECBUFFER_VERSION;
-      
+
+      // P1-1: 使用辅助方法设置输入缓冲区
+      PrepareInputBufferDesc(InBuffers, InBufferDesc, @IoBuffer[0], cbIoBuffer);
+
+      // P1-1: 使用辅助方法设置输出缓冲区
+      PrepareOutputBufferDesc(OutBuffers, OutBufferDesc);
+
       // 调用 InitializeSecurityContext
       Status := InitializeSecurityContextW(
         PCredHandle(FContext.GetNativeHandle),
@@ -749,34 +800,23 @@ begin
         @dwSSPIOutFlags,
         nil
       );
-      
-      // 处理额外数据
-      if (InBuffers[1].BufferType = SECBUFFER_EXTRA) and (InBuffers[1].cbBuffer > 0) then
-      begin
-        Move(IoBuffer[cbIoBuffer - InBuffers[1].cbBuffer], IoBuffer[0], InBuffers[1].cbBuffer);
-        cbIoBuffer := InBuffers[1].cbBuffer;
-      end
-      else if Status <> SEC_E_INCOMPLETE_MESSAGE then
-        cbIoBuffer := 0;  // 只有在不需要更多数据时才清空缓冲区
-      
-      // 发送响应数据
-      if (OutBuffers[0].cbBuffer > 0) and (OutBuffers[0].pvBuffer <> nil) then
-      begin
-        cbData := SendData(OutBuffers[0].pvBuffer^, OutBuffers[0].cbBuffer);
-        FreeContextBuffer(OutBuffers[0].pvBuffer);
-        if cbData <= 0 then
-          Exit;
-      end;
-      
+
+      // P1-1: 使用辅助方法处理额外数据
+      HandleExtraData(InBuffers, IoBuffer, cbIoBuffer, Status);
+
+      // P1-1: 使用辅助方法发送响应数据
+      if not SendOutputBuffer(OutBuffers[0]) then
+        Exit;
+
       // 检查状态
       if Status = SEC_E_INCOMPLETE_MESSAGE then
         Continue;  // 需要更多数据，继续循环
       if not ((Status = SEC_I_CONTINUE_NEEDED) or IsSuccess(Status)) then
         Exit;
     end;
-    
+
     Result := IsSuccess(Status);
-    
+
   finally
     if ServerName <> nil then
       FreePWideCharString(ServerName);
@@ -808,16 +848,11 @@ begin
                         ASC_REQ_ALLOCATE_MEMORY or
                         ASC_REQ_STREAM;
 
-  // 初始化输出缓冲区
-  OutBuffers[0].pvBuffer := nil;
-  OutBuffers[0].BufferType := SECBUFFER_TOKEN;
-  OutBuffers[0].cbBuffer := 0;
-
-  OutBufferDesc.cBuffers := 1;
-  OutBufferDesc.pBuffers := @OutBuffers[0];
-  OutBufferDesc.ulVersion := SECBUFFER_VERSION;
+  // P1-1: 使用辅助方法初始化输出缓冲区
+  PrepareOutputBufferDesc(OutBuffers, OutBufferDesc);
 
   cbIoBuffer := 0;
+  Status := SEC_I_CONTINUE_NEEDED;  // 初始化状态以便第一次迭代工作
 
   // 握手主循环
   while True do
@@ -834,18 +869,8 @@ begin
       Inc(cbIoBuffer, cbData);
     end;
 
-    // 设置输入缓冲区
-    InBuffers[0].pvBuffer := @IoBuffer[0];
-    InBuffers[0].cbBuffer := cbIoBuffer;
-    InBuffers[0].BufferType := SECBUFFER_TOKEN;
-
-    InBuffers[1].pvBuffer := nil;
-    InBuffers[1].cbBuffer := 0;
-    InBuffers[1].BufferType := SECBUFFER_EMPTY;
-
-    InBufferDesc.cBuffers := 2;
-    InBufferDesc.pBuffers := @InBuffers[0];
-    InBufferDesc.ulVersion := SECBUFFER_VERSION;
+    // P1-1: 使用辅助方法设置输入缓冲区
+    PrepareInputBufferDesc(InBuffers, InBufferDesc, @IoBuffer[0], cbIoBuffer);
 
     // 调用 AcceptSecurityContext
     Status := AcceptSecurityContextW(
@@ -860,25 +885,14 @@ begin
       nil
     );
 
-    // 处理额外数据
-    if (InBuffers[1].BufferType = SECBUFFER_EXTRA) and (InBuffers[1].cbBuffer > 0) then
-    begin
-      Move(IoBuffer[cbIoBuffer - InBuffers[1].cbBuffer], IoBuffer[0], InBuffers[1].cbBuffer);
-      cbIoBuffer := InBuffers[1].cbBuffer;
-    end
-    else if Status <> SEC_E_INCOMPLETE_MESSAGE then
-      cbIoBuffer := 0;
+    // P1-1: 使用辅助方法处理额外数据
+    HandleExtraData(InBuffers, IoBuffer, cbIoBuffer, Status);
 
-    // 发送响应数据
-    if (OutBuffers[0].cbBuffer > 0) and (OutBuffers[0].pvBuffer <> nil) then
+    // P1-1: 使用辅助方法发送响应数据
+    if not SendOutputBuffer(OutBuffers[0]) then
     begin
-      cbData := SendData(OutBuffers[0].pvBuffer^, OutBuffers[0].cbBuffer);
-      FreeContextBuffer(OutBuffers[0].pvBuffer);
-      if cbData <= 0 then
-      begin
-        FHandshakeState := sslHsFailed;
-        Exit;
-      end;
+      FHandshakeState := sslHsFailed;
+      Exit;
     end;
 
     // 检查握手状态

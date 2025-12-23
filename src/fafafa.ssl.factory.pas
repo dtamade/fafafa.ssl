@@ -39,7 +39,8 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
-  fafafa.ssl.exceptions;  // 新增：类型化异常
+  fafafa.ssl.exceptions,  // 新增：类型化异常
+  fafafa.ssl.logging;
 
 type
   {** SSL库类类型 (用于内部注册) *}
@@ -1020,7 +1021,8 @@ begin
         Result := Result + Format('  - %s: %s' + LineEnding,
           [SSL_LIBRARY_NAMES[LType], LLib.GetVersionString]);
       except
-        // 忽略错误
+        on E: Exception do
+          TSecurityLog.Debug('Factory', Format('GetLibrary failed for %s: %s', [SSL_LIBRARY_NAMES[LType], E.Message]));
       end;
     end;
   end;

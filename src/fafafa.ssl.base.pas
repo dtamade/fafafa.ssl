@@ -519,6 +519,20 @@ type
   // 数组类型
   TSSLCertificateArray = array of ISSLCertificate;
 
+  { TSSLBackendCapabilities - 后端能力矩阵 (P2-2) }
+  TSSLBackendCapabilities = record
+    SupportsTLS13: Boolean;           // TLS 1.3 支持
+    SupportsALPN: Boolean;            // 应用层协议协商
+    SupportsSNI: Boolean;             // 服务器名称指示
+    SupportsOCSPStapling: Boolean;    // OCSP 装订
+    SupportsCertificateTransparency: Boolean;  // 证书透明度
+    SupportsSessionTickets: Boolean;  // 会话票据
+    SupportsECDHE: Boolean;           // ECDHE 密钥交换
+    SupportsChaChaPoly: Boolean;      // ChaCha20-Poly1305 加密
+    MinTLSVersion: TSSLProtocolVersion;  // 支持的最低 TLS 版本
+    MaxTLSVersion: TSSLProtocolVersion;  // 支持的最高 TLS 版本
+  end;
+
   { ISSLLibrary - SSL库管理接口 }
   ISSLLibrary = interface
     ['{A0E8F4B1-7C3A-4D2E-9F5B-8C6D7E9A0B1C}']
@@ -538,7 +552,8 @@ type
     function IsProtocolSupported(AProtocol: TSSLProtocolVersion): Boolean;
     function IsCipherSupported(const ACipherName: string): Boolean;
     function IsFeatureSupported(AFeature: TSSLFeature): Boolean;
-    
+    function GetCapabilities: TSSLBackendCapabilities;  // P2-2: 后端能力矩阵
+
     // 库配置
     procedure SetDefaultConfig(const AConfig: TSSLConfig);
     function GetDefaultConfig: TSSLConfig;
@@ -942,8 +957,23 @@ const
   // TLS 1.3 默认密码套件
   SSL_DEFAULT_TLS13_CIPHERSUITES = 'TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256';
   
-  // TLS 1.2 及以下默认密码套件
-  SSL_DEFAULT_CIPHER_LIST = 'ECDHE+AESGCM:ECDHE+AES256:!ANULL:!MD5:!DSS';
+  // TLS 1.2 及以下默认密码套件（排除不安全算法）
+  SSL_DEFAULT_CIPHER_LIST = 'ECDHE+AESGCM:ECDHE+AES256:DHE+AESGCM:DHE+AES256:' +
+                            '!aNULL:!eNULL:!NULL:!MD5:!DSS:!RC4:!3DES:!EXPORT';
+
+  // Phase 3.8 P2-1: 网络端口常量
+  SSL_DEFAULT_HTTPS_PORT = 443;
+  SSL_DEFAULT_HTTP_PORT = 80;
+
+  // HTTP 配置常量
+  SSL_DEFAULT_MAX_REDIRECTS = 5;
+
+  // I/O 缓冲区大小常量
+  SSL_IO_STRING_BUFFER_SIZE = 4096;
+  SSL_IO_STREAM_BUFFER_SIZE = 8192;
+
+  // 环形缓冲区默认容量幂次 (2^16 = 65536)
+  SSL_RINGBUFFER_DEFAULT_CAPACITY_POW2 = 16;
 
 // ============================================================================
 // 辅助函数

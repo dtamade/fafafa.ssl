@@ -633,6 +633,27 @@ begin
     RaiseInvalidParameter('AES-CBC IV size (expected 16 bytes)');
 end;
 
+{ P0-2: 提取的 TEncryptionResult 辅助函数 - 消除 Ex 方法代码重复 }
+
+function MakeSuccessResult(const AData: TBytes): TEncryptionResult;
+begin
+  Result.Success := True;
+  Result.Data := AData;
+  Result.ErrorCode := 0;
+  Result.ErrorMessage := '';
+end;
+
+function MakeErrorResult(E: Exception): TEncryptionResult;
+begin
+  Result.Success := False;
+  Result.Data := nil;
+  if E is ESSLException then
+    Result.ErrorCode := Integer(ESSLException(E).ErrorCode)
+  else
+    Result.ErrorCode := -1;
+  Result.ErrorMessage := E.Message;
+end;
+
 { TCryptoUtils }
 
 class procedure TCryptoUtils.EnsureInitialized;
@@ -833,25 +854,12 @@ class function TCryptoUtils.AES_GCM_EncryptEx(
   const AAAD: TBytes
 ): TEncryptionResult;
 begin
-  Result.Success := False;
-  Result.Data := nil;
-  Result.ErrorCode := 0;
-  Result.ErrorMessage := '';
-  
+  { P0-2: 使用提取的辅助函数简化异常处理 }
   try
-    Result.Data := AES_GCM_Encrypt(AData, AKey, AIV, AAAD);
-    Result.Success := True;
+    Result := MakeSuccessResult(AES_GCM_Encrypt(AData, AKey, AIV, AAAD));
   except
-    on E: ESSLException do
-    begin
-      Result.ErrorMessage := E.Message;
-      Result.ErrorCode := Integer(E.ErrorCode);
-    end;
     on E: Exception do
-    begin
-      Result.ErrorMessage := E.Message;
-      Result.ErrorCode := -1;
-    end;
+      Result := MakeErrorResult(E);
   end;
 end;
 
@@ -860,25 +868,12 @@ class function TCryptoUtils.AES_GCM_DecryptEx(
   const AAAD: TBytes
 ): TEncryptionResult;
 begin
-  Result.Success := False;
-  Result.Data := nil;
-  Result.ErrorCode := 0;
-  Result.ErrorMessage := '';
-  
+  { P0-2: 使用提取的辅助函数简化异常处理 }
   try
-    Result.Data := AES_GCM_Decrypt(ACiphertext, AKey, AIV, AAAD);
-    Result.Success := True;
+    Result := MakeSuccessResult(AES_GCM_Decrypt(ACiphertext, AKey, AIV, AAAD));
   except
-    on E: ESSLException do
-    begin
-      Result.ErrorMessage := E.Message;
-      Result.ErrorCode := Integer(E.ErrorCode);
-    end;
     on E: Exception do
-    begin
-      Result.ErrorMessage := E.Message;
-      Result.ErrorCode := -1;
-    end;
+      Result := MakeErrorResult(E);
   end;
 end;
 

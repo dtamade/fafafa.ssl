@@ -3,10 +3,23 @@ unit fafafa.ssl.http.simple;
 {$mode objfpc}{$H+}
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
-{ fafafa.ssl 简化HTTP客户端
-  
-  目标：让HTTPS请求只需一行代码
-  
+{
+  fafafa.ssl 简化HTTP客户端
+
+  ============================================================================
+  !! 内部测试模块 - 非核心功能 !!
+  ============================================================================
+
+  此模块仅用于 fafafa.ssl 库的内部测试和演示目的。
+  不属于 fafafa.ssl 核心功能的一部分。
+
+  如需完整的 HTTP/HTTPS 客户端功能，请使用基于 fafafa.ssl 的
+  独立网络库（计划中）。
+
+  ============================================================================
+
+  目标：让HTTPS请求只需一行代码（测试用）
+
   示例：
     LResponse := TSimpleHTTPSClient.Get('https://api.example.com/data');
     LResponse := TSimpleHTTPSClient.Post('https://api.example.com/data', '{"key":"value"}');
@@ -21,14 +34,26 @@ uses
   {$ELSE}
   fafafa.ssl.sockets,
   {$ENDIF}
-  fafafa.ssl, fafafa.ssl.base;
+  fafafa.ssl, fafafa.ssl.base,
+  fafafa.ssl.logging;  // P3-8: 添加日志支持
 
 const
   DEFAULT_TIMEOUT = 30000;        // 30秒
   DEFAULT_MAX_REDIRECTS = 5;
   DEFAULT_BUFFER_SIZE = 16384;    // 16KB
-  
+
   USER_AGENT = 'fafafa.ssl-simple/1.0';
+
+  // 系统 CA 证书路径（Linux）
+  {$IFDEF LINUX}
+  SYSTEM_CA_PATHS: array[0..4] of string = (
+    '/etc/ssl/certs/ca-certificates.crt',     // Debian/Ubuntu
+    '/etc/pki/tls/certs/ca-bundle.crt',       // RHEL/CentOS
+    '/etc/ssl/ca-bundle.pem',                  // OpenSUSE
+    '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem', // Fedora
+    '/etc/ssl/cert.pem'                        // Alpine/FreeBSD
+  );
+  {$ENDIF}
 
 type
   { HTTP方法 }
@@ -72,16 +97,19 @@ type
   { 简化HTTPS客户端 }
   TSimpleHTTPSClient = class
   private
-    class function ParseURL(const AURL: string; 
-      out AProtocol, AHost, APath: string; 
+    class function ParseURL(const AURL: string;
+      out AProtocol, AHost, APath: string;
       out APort: Word): Boolean;
-    class function BuildRequest(AMethod: THTTPMethod; 
+    class function BuildRequest(AMethod: THTTPMethod;
       const AHost, APath, ABody: string;
       AHeaders: TStringList): RawByteString;
     class function ParseResponse(const ARawResponse: string): THTTPResponse;
     class function DoRequest(AMethod: THTTPMethod;
       const AURL, ABody: string;
       const AOptions: THTTPSOptions): THTTPResponse;
+    {$IFDEF LINUX}
+    class function FindSystemCAFile: string;
+    {$ENDIF}
   public
     { 创建默认选项 }
     class function DefaultOptions: THTTPSOptions;
@@ -127,6 +155,25 @@ end;
 
 { TSimpleHTTPSClient }
 
+{$IFDEF LINUX}
+class function TSimpleHTTPSClient.FindSystemCAFile: string;
+var
+  I: Integer;
+begin
+  Result := '';
+  for I := Low(SYSTEM_CA_PATHS) to High(SYSTEM_CA_PATHS) do
+  begin
+    if FileExists(SYSTEM_CA_PATHS[I]) then
+    begin
+      Result := SYSTEM_CA_PATHS[I];
+      TSecurityLog.Debug('HTTP', Format('Found system CA: %s', [Result]));
+      Exit;
+    end;
+  end;
+  TSecurityLog.Debug('HTTP', 'No system CA file found');
+end;
+{$ENDIF}
+
 class function TSimpleHTTPSClient.DefaultOptions: THTTPSOptions;
 begin
   Result.Timeout := DEFAULT_TIMEOUT;
@@ -149,22 +196,22 @@ var
 begin
   Result := False;
   AProtocol := 'https';
-  APort := 443;
-  
+  APort := SSL_DEFAULT_HTTPS_PORT;
+
   LTemp := AURL;
-  
+
   // 解析协议
   if Pos('https://', LowerCase(LTemp)) = 1 then
   begin
     Delete(LTemp, 1, 8);
     AProtocol := 'https';
-    APort := 443;
+    APort := SSL_DEFAULT_HTTPS_PORT;
   end
   else if Pos('http://', LowerCase(LTemp)) = 1 then
   begin
     Delete(LTemp, 1, 7);
     AProtocol := 'http';
-    APort := 80;
+    APort := SSL_DEFAULT_HTTP_PORT;
   end;
   
   // 查找路径
@@ -188,7 +235,11 @@ begin
       APort := StrToInt(Copy(AHost, LPortPos + 1, Length(AHost)));
       AHost := Copy(AHost, 1, LPortPos - 1);
     except
-      Exit;
+      on E: Exception do
+      begin
+        TSecurityLog.Debug('HTTP', Format('Invalid port in URL: %s', [E.Message]));
+        Exit;
+      end;
     end;
   end;
   
@@ -288,7 +339,11 @@ begin
           Result.StatusCode := StrToInt(Copy(LLine, 1, LPos - 1));
           Result.StatusText := Copy(LLine, LPos + 1, Length(LLine));
         except
-          Result.StatusCode := 0;
+          on E: Exception do
+          begin
+            TSecurityLog.Debug('HTTP', Format('Invalid status code: %s', [E.Message]));
+            Result.StatusCode := 0;
+          end;
         end;
       end;
     end;
@@ -308,7 +363,11 @@ begin
             Result.ContentLength := StrToInt64(
               Trim(Copy(LLine, 16, Length(LLine))));
           except
-            Result.ContentLength := 0;
+            on E: Exception do
+            begin
+              TSecurityLog.Debug('HTTP', Format('Invalid Content-Length: %s', [E.Message]));
+              Result.ContentLength := 0;
+            end;
           end;
         end;
       end;
@@ -343,6 +402,9 @@ var
   LSocket: THandle;
   {$IFDEF WINDOWS}
   LWSAData: TWSAData;
+  {$ENDIF}
+  {$IFDEF LINUX}
+  LSystemCAFile: string;
   {$ENDIF}
   LAddr: TSockAddrIn;
   LHostEnt: PHostEnt;
@@ -449,10 +511,22 @@ begin
       LContext.SetVerifyMode([sslVerifyPeer])
     else
       LContext.SetVerifyMode([sslVerifyNone]);
-    
+
     // 加载CA证书
     if AOptions.CAFile <> '' then
-      LContext.LoadCAFile(AOptions.CAFile);
+      LContext.LoadCAFile(AOptions.CAFile)
+    else if AOptions.VerifyPeer then
+    begin
+      // 尝试加载系统 CA 证书
+      {$IFDEF LINUX}
+      LSystemCAFile := FindSystemCAFile;
+      if LSystemCAFile <> '' then
+        LContext.LoadCAFile(LSystemCAFile);
+      {$ENDIF}
+      {$IFDEF WINDOWS}
+      // Windows 使用系统证书存储，无需手动加载
+      {$ENDIF}
+    end;
     
     // 加载客户端证书
     if AOptions.ClientCert <> '' then

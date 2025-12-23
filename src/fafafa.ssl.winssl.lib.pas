@@ -68,7 +68,8 @@ type
     function IsProtocolSupported(AProtocol: TSSLProtocolVersion): Boolean;
     function IsCipherSupported(const ACipherName: string): Boolean;
     function IsFeatureSupported(AFeature: TSSLFeature): Boolean;
-    
+    function GetCapabilities: TSSLBackendCapabilities;  // P2-2
+
     { ISSLLibrary - 库配置 }
     procedure SetDefaultConfig(const AConfig: TSSLConfig);
     function GetDefaultConfig: TSSLConfig;
@@ -432,6 +433,52 @@ begin
 
   InternalLog(sslLogDebug, Format('Feature support check (type-safe): %d = %s',
     [Ord(AFeature), BoolToStr(Result, True)]));
+end;
+
+function TWinSSLLibrary.GetCapabilities: TSSLBackendCapabilities;
+begin
+  // P2-2: 返回 WinSSL (Schannel) 后端能力矩阵
+  FillChar(Result, SizeOf(Result), 0);
+
+  // TLS 1.3 支持需要 Windows 10 版本 1903+ 或 Windows Server 2022+
+  Result.SupportsTLS13 := (FWindowsVersion.Major >= 10) and (FWindowsVersion.Build >= 18362);
+
+  // ALPN 需要 Windows 8+ (版本 6.2+) 或 Windows 10+
+  Result.SupportsALPN := (FWindowsVersion.Major >= 10) or
+                         ((FWindowsVersion.Major = 6) and (FWindowsVersion.Minor >= 2));
+
+  // SNI 是 Schannel 原生支持的
+  Result.SupportsSNI := True;
+
+  // OCSP 装订需要手动实现，Schannel 不原生支持
+  Result.SupportsOCSPStapling := False;
+
+  // Certificate Transparency Schannel 不原生支持
+  Result.SupportsCertificateTransparency := False;
+
+  // 会话票据是 Schannel 原生支持的
+  Result.SupportsSessionTickets := True;
+
+  // ECDHE 需要 Windows Vista+ (版本 6.0+)
+  Result.SupportsECDHE := (FWindowsVersion.Major >= 6);
+
+  // ChaCha20-Poly1305 需要 Windows 10 版本 1903+
+  Result.SupportsChaChaPoly := (FWindowsVersion.Major >= 10) and (FWindowsVersion.Build >= 18362);
+
+  // 支持的协议版本范围
+  Result.MinTLSVersion := sslProtocolTLS10;  // Windows Vista+
+  if Result.SupportsTLS13 then
+    Result.MaxTLSVersion := sslProtocolTLS13
+  else
+    Result.MaxTLSVersion := sslProtocolTLS12;
+
+  InternalLog(sslLogDebug, Format('GetCapabilities: TLS1.3=%s, ALPN=%s, SNI=%s (Win %d.%d.%d)',
+    [BoolToStr(Result.SupportsTLS13, True),
+     BoolToStr(Result.SupportsALPN, True),
+     BoolToStr(Result.SupportsSNI, True),
+     FWindowsVersion.Major,
+     FWindowsVersion.Minor,
+     FWindowsVersion.Build]));
 end;
 
 // ============================================================================

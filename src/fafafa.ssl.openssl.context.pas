@@ -63,7 +63,13 @@ type
     procedure ApplyVerifyMode;
     procedure ApplyOptions;
     function GetSSLMethod: PSSL_METHOD;
-    
+
+    { P0-1: 上下文验证守卫方法 - 消除代码重复 }
+    procedure RequireValidContext(const AMethodName: string);
+
+    { P1-2: 私钥-证书匹配检查辅助方法 }
+    procedure CheckPrivateKeyMatchesCertificate(const AMethodName: string);
+
   public
     constructor Create(ALibrary: ISSLLibrary; AType: TSSLContextType);
     destructor Destroy; override;
@@ -499,6 +505,39 @@ begin
   end;
 end;
 
+{ P0-1: 上下文验证守卫方法 - 消除代码重复 }
+procedure TOpenSSLContext.RequireValidContext(const AMethodName: string);
+begin
+  if FSSLContext = nil then
+    raise ESSLInitializationException.CreateWithContext(
+      'SSL context not initialized',
+      sslErrNotInitialized,
+      AMethodName
+    );
+end;
+
+{ P1-2: 私钥-证书匹配检查辅助方法 - 消除代码重复 }
+procedure TOpenSSLContext.CheckPrivateKeyMatchesCertificate(const AMethodName: string);
+var
+  HasCert: Boolean;
+begin
+  HasCert := Assigned(SSL_CTX_get0_certificate) and (SSL_CTX_get0_certificate(FSSLContext) <> nil);
+  if HasCert then
+  begin
+    if SSL_CTX_check_private_key(FSSLContext) <> 1 then
+    begin
+      TSecurityLog.Error('OpenSSL', 'Private key does not match certificate');
+      raise ESSLKeyException.CreateWithContext(
+        'Private key does not match the loaded certificate',
+        sslErrCertificate,
+        AMethodName,
+        Integer(GetLastOpenSSLError),
+        sslOpenSSL
+      );
+    end;
+  end;
+end;
+
 procedure TOpenSSLContext.ApplyProtocolVersions;
 var
   MinVersion, MaxVersion: Integer;
@@ -585,12 +624,7 @@ procedure TOpenSSLContext.LoadCertificate(const AFileName: string);
 var
   FileNameA: AnsiString;
 begin
-  if FSSLContext = nil then
-    raise ESSLInitializationException.CreateWithContext(
-      'SSL context not initialized',
-      sslErrNotInitialized,
-      'TOpenSSLContext.LoadCertificate'
-    );
+  RequireValidContext('TOpenSSLContext.LoadCertificate');
 
   if not Assigned(SSL_CTX_use_certificate_file) then
   begin
@@ -633,13 +667,8 @@ var
   Cert: PX509;
 begin
   Data := nil;  // P3-4: 显式初始化管理类型
-  if FSSLContext = nil then
-    raise ESSLInitializationException.CreateWithContext(
-      'SSL context not initialized',
-      sslErrNotInitialized,
-      'TOpenSSLContext.LoadCertificate'
-    );
-  
+  RequireValidContext('TOpenSSLContext.LoadCertificate');
+
   Size := AStream.Size - AStream.Position;
   SetLength(Data, Size);
   AStream.Read(Data[0], Size);
@@ -671,13 +700,8 @@ procedure TOpenSSLContext.LoadCertificate(ACert: ISSLCertificate);
 var
   Cert: PX509;
 begin
-  if FSSLContext = nil then
-    raise ESSLInitializationException.CreateWithContext(
-      'SSL context not initialized',
-      sslErrNotInitialized,
-      'TOpenSSLContext.LoadCertificate'
-    );
-  
+  RequireValidContext('TOpenSSLContext.LoadCertificate');
+
   if ACert = nil then
     RaiseInvalidParameter('Certificate');
   
@@ -700,16 +724,10 @@ procedure TOpenSSLContext.LoadPrivateKey(const AFileName: string; const APasswor
 var
   FileNameA: AnsiString;
   PassA: AnsiString;
-  HasCert: Boolean;
   BIO: PBIO;
   PKey: PEVP_PKEY;
 begin
-  if FSSLContext = nil then
-    raise ESSLInitializationException.CreateWithContext(
-      'SSL context not initialized',
-      sslErrNotInitialized,
-      'TOpenSSLContext.LoadPrivateKey'
-    );
+  RequireValidContext('TOpenSSLContext.LoadPrivateKey');
 
   FileNameA := AnsiString(AFileName);
 
@@ -783,22 +801,7 @@ begin
       );
   end;
 
-  HasCert := Assigned(SSL_CTX_get0_certificate) and (SSL_CTX_get0_certificate(FSSLContext) <> nil);
-  if HasCert then
-  begin
-    // 验证私钥和证书是否匹配
-    if SSL_CTX_check_private_key(FSSLContext) <> 1 then
-    begin
-      TSecurityLog.Error('OpenSSL', 'Private key does not match certificate');
-      raise ESSLKeyException.CreateWithContext(
-        'Private key does not match the loaded certificate',
-        sslErrCertificate,
-        'TOpenSSLContext.LoadPrivateKey',
-        Integer(GetLastOpenSSLError),
-        sslOpenSSL
-      );
-    end;
-  end;
+  CheckPrivateKeyMatchesCertificate('TOpenSSLContext.LoadPrivateKey');
   TSecurityLog.Audit('OpenSSL', 'LoadPrivateKey', 'System', 'Private key loaded from file');
 end;
 
@@ -809,15 +812,9 @@ var
   BIO: PBIO;
   PKey: PEVP_PKEY;
   PassA: AnsiString;
-  HasCert: Boolean;
 begin
   Data := nil;  // P3-4: 显式初始化管理类型
-  if FSSLContext = nil then
-    raise ESSLInitializationException.CreateWithContext(
-      'SSL context not initialized',
-      sslErrNotInitialized,
-      'TOpenSSLContext.LoadPrivateKey'
-    );
+  RequireValidContext('TOpenSSLContext.LoadPrivateKey');
 
   if AStream = nil then
     RaiseInvalidParameter('Stream');
@@ -869,18 +866,7 @@ begin
             sslOpenSSL
           );
 
-        HasCert := Assigned(SSL_CTX_get0_certificate) and (SSL_CTX_get0_certificate(FSSLContext) <> nil);
-        if HasCert then
-        begin
-          if SSL_CTX_check_private_key(FSSLContext) <> 1 then
-            raise ESSLKeyException.CreateWithContext(
-              'Private key does not match the loaded certificate',
-              sslErrCertificate,
-              'TOpenSSLContext.LoadPrivateKey',
-              Integer(GetLastOpenSSLError),
-              sslOpenSSL
-            );
-        end;
+        CheckPrivateKeyMatchesCertificate('TOpenSSLContext.LoadPrivateKey');
       finally
         EVP_PKEY_free(PKey);
       end;
@@ -900,13 +886,8 @@ var
   Cert: PX509;
   PemA: AnsiString;
 begin
-  if FSSLContext = nil then
-    raise ESSLInitializationException.CreateWithContext(
-      'SSL context not initialized',
-      sslErrNotInitialized,
-      'TOpenSSLContext.LoadCertificatePEM'
-    );
-  
+  RequireValidContext('TOpenSSLContext.LoadCertificatePEM');
+
   if APEM = '' then
     RaiseInvalidParameter('Certificate PEM');
   
@@ -944,15 +925,9 @@ var
   PKey: PEVP_PKEY;
   PemA, PassA: AnsiString;
   PassPtr: PAnsiChar;
-  HasCert: Boolean;
 begin
-  if FSSLContext = nil then
-    raise ESSLInitializationException.CreateWithContext(
-      'SSL context not initialized',
-      sslErrNotInitialized,
-      'TOpenSSLContext.LoadPrivateKeyPEM'
-    );
-  
+  RequireValidContext('TOpenSSLContext.LoadPrivateKeyPEM');
+
   if APEM = '' then
     RaiseInvalidParameter('Private key PEM');
   
@@ -1001,18 +976,7 @@ begin
             sslOpenSSL
           );
 
-        HasCert := Assigned(SSL_CTX_get0_certificate) and (SSL_CTX_get0_certificate(FSSLContext) <> nil);
-        if HasCert then
-        begin
-          if SSL_CTX_check_private_key(FSSLContext) <> 1 then
-            raise ESSLKeyException.CreateWithContext(
-              'Private key does not match the loaded certificate',
-              sslErrCertificate,
-              'TOpenSSLContext.LoadPrivateKeyPEM',
-              Integer(GetLastOpenSSLError),
-              sslOpenSSL
-            );
-        end;
+        CheckPrivateKeyMatchesCertificate('TOpenSSLContext.LoadPrivateKeyPEM');
 
         TSecurityLog.Audit('OpenSSL', 'LoadPrivateKeyPEM', 'System', 'Private key loaded from PEM string');
       finally
@@ -1033,12 +997,7 @@ procedure TOpenSSLContext.LoadCAFile(const AFileName: string);
 var
   FileNameA: AnsiString;
 begin
-  if FSSLContext = nil then
-    raise ESSLInitializationException.CreateWithContext(
-      'SSL context not initialized',
-      sslErrNotInitialized,
-      'TOpenSSLContext.LoadCAFile'
-    );
+  RequireValidContext('TOpenSSLContext.LoadCAFile');
 
   if not Assigned(SSL_CTX_load_verify_locations) then
   begin
@@ -1076,12 +1035,7 @@ procedure TOpenSSLContext.LoadCAPath(const APath: string);
 var
   PathA: AnsiString;
 begin
-  if FSSLContext = nil then
-    raise ESSLInitializationException.CreateWithContext(
-      'SSL context not initialized',
-      sslErrNotInitialized,
-      'TOpenSSLContext.LoadCAPath'
-    );
+  RequireValidContext('TOpenSSLContext.LoadCAPath');
 
   if not Assigned(SSL_CTX_load_verify_locations) then
   begin
@@ -1122,12 +1076,7 @@ procedure TOpenSSLContext.SetCertificateStore(AStore: ISSLCertificateStore);
 var
   Store: PX509_STORE;
 begin
-  if FSSLContext = nil then
-    raise ESSLInitializationException.CreateWithContext(
-      'SSL context not initialized',
-      sslErrNotInitialized,
-      'TOpenSSLContext.SetCertificateStore'
-    );
+  RequireValidContext('TOpenSSLContext.SetCertificateStore');
   if AStore = nil then
     RaiseInvalidParameter('Certificate store');
 
@@ -1473,12 +1422,7 @@ end;
 
 function TOpenSSLContext.CreateConnection(ASocket: THandle): ISSLConnection;
 begin
-  if FSSLContext = nil then
-    raise ESSLInitializationException.CreateWithContext(
-      'Cannot create connection: SSL context not initialized',
-      sslErrNotInitialized,
-      'TOpenSSLContext.CreateConnection'
-    );
+  RequireValidContext('TOpenSSLContext.CreateConnection');
 
   try
     Result := TOpenSSLConnection.Create(Self, ASocket);
@@ -1496,12 +1440,7 @@ end;
 
 function TOpenSSLContext.CreateConnection(AStream: TStream): ISSLConnection;
 begin
-  if FSSLContext = nil then
-    raise ESSLInitializationException.CreateWithContext(
-      'Cannot create connection: SSL context not initialized',
-      sslErrNotInitialized,
-      'TOpenSSLContext.CreateConnection'
-    );
+  RequireValidContext('TOpenSSLContext.CreateConnection');
 
   if AStream = nil then
     raise ESSLInvalidArgument.Create(

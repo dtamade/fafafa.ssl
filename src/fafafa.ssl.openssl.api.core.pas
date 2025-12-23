@@ -665,6 +665,10 @@ function GetSSLProcAddress(const ProcName: string): Pointer;
 function SSL_want_read_impl(const ssl: PSSL): Integer; cdecl;
 function SSL_want_write_impl(const ssl: PSSL): Integer; cdecl;
 
+{ Helper functions for SSL_CTX session cache mode (OpenSSL 3.x compatibility) }
+function SSL_CTX_set_session_cache_mode_impl(ctx: PSSL_CTX; mode: clong): clong;
+function SSL_CTX_get_session_cache_mode_impl(ctx: PSSL_CTX): clong;
+
 implementation
 
 var
@@ -1041,6 +1045,30 @@ begin
   Result := 0;
   if Assigned(SSL_want) then
     Result := Ord(SSL_want(ssl) = SSL_WRITING);
+end;
+
+{ Helper functions for SSL_CTX session cache mode }
+{ In OpenSSL 3.x, these are macros that call SSL_CTX_ctrl }
+function SSL_CTX_set_session_cache_mode_impl(ctx: PSSL_CTX; mode: clong): clong;
+begin
+  Result := 0;
+  // 首先尝试直接函数调用
+  if Assigned(SSL_CTX_set_session_cache_mode) then
+    Result := SSL_CTX_set_session_cache_mode(ctx, mode)
+  // 回退到 SSL_CTX_ctrl
+  else if Assigned(SSL_CTX_ctrl) then
+    Result := SSL_CTX_ctrl(ctx, SSL_CTRL_SET_SESS_CACHE_MODE, mode, nil);
+end;
+
+function SSL_CTX_get_session_cache_mode_impl(ctx: PSSL_CTX): clong;
+begin
+  Result := 0;
+  // 首先尝试直接函数调用
+  if Assigned(SSL_CTX_get_session_cache_mode) then
+    Result := SSL_CTX_get_session_cache_mode(ctx)
+  // 回退到 SSL_CTX_ctrl
+  else if Assigned(SSL_CTX_ctrl) then
+    Result := SSL_CTX_ctrl(ctx, SSL_CTRL_GET_SESS_CACHE_MODE, 0, nil);
 end;
 
 initialization

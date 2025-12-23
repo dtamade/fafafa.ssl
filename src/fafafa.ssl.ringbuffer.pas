@@ -5,7 +5,7 @@ unit fafafa.ssl.ringbuffer;
 interface
 
 uses
-  SysUtils, Classes, SyncObjs;
+  SysUtils, Classes, SyncObjs, fafafa.ssl.base;
 
 type
   { TRingBuffer - 高性能环形缓冲区实现 }
@@ -22,7 +22,7 @@ type
     function GetAvailable: Integer;
     function GetFreeSpace: Integer;
   public
-    constructor Create(ACapacityPowerOf2: Integer = 16); // 2^16 = 65536 bytes
+    constructor Create(ACapacityPowerOf2: Integer = SSL_RINGBUFFER_DEFAULT_CAPACITY_POW2);
     destructor Destroy; override;
     
     // 写入数据到缓冲区

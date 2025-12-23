@@ -23,7 +23,8 @@ interface
 uses
   SysUtils,
   fafafa.ssl.base,
-  fafafa.ssl.exceptions;
+  fafafa.ssl.exceptions,
+  fafafa.ssl.logging;
 
 {**
  * Get error message from OpenSSL error queue
@@ -81,7 +82,8 @@ begin
     try
       LoadOpenSSLLibrary;
     except
-      // ignore
+      on E: Exception do
+        TSecurityLog.Debug('OpenSSL', Format('LoadOpenSSLLibrary failed in GetOpenSSLErrorString: %s', [E.Message]));
     end;
   end;
 
@@ -115,7 +117,8 @@ begin
     try
       LoadOpenSSLLibrary;
     except
-      // ignore
+      on E: Exception do
+        TSecurityLog.Debug('OpenSSL', Format('LoadOpenSSLLibrary failed in GetLastOpenSSLError: %s', [E.Message]));
     end;
   end;
 

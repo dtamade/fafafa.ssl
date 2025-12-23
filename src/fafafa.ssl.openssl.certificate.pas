@@ -492,7 +492,11 @@ begin
     Name := X509_get_subject_name(FX509);
     Result := X509NameToString(Name);
   except
-    Result := '';
+    on E: Exception do
+    begin
+      TSecurityLog.Debug('OpenSSL', Format('GetSubject failed: %s', [E.Message]));
+      Result := '';
+    end;
   end;
 end;
 
@@ -510,7 +514,11 @@ begin
     Name := X509_get_issuer_name(FX509);
     Result := X509NameToString(Name);
   except
-    Result := '';
+    on E: Exception do
+    begin
+      TSecurityLog.Debug('OpenSSL', Format('GetIssuer failed: %s', [E.Message]));
+      Result := '';
+    end;
   end;
 end;
 
@@ -709,7 +717,11 @@ begin
     try
       Ctx := X509_STORE_CTX_new;
     except
-      Exit;
+      on E: Exception do
+      begin
+        TSecurityLog.Debug('OpenSSL', Format('X509_STORE_CTX_new failed: %s', [E.Message]));
+        Exit;
+      end;
     end;
     if Ctx = nil then
       Exit;
@@ -718,7 +730,11 @@ begin
       if X509_STORE_CTX_init(Ctx, Store, FX509, nil) = 1 then
         Result := (X509_verify_cert(Ctx) = 1);
     except
-      Result := False;
+      on E: Exception do
+      begin
+        TSecurityLog.Debug('OpenSSL', Format('X509_verify_cert failed: %s', [E.Message]));
+        Result := False;
+      end;
     end;
   finally
     if Ctx <> nil then

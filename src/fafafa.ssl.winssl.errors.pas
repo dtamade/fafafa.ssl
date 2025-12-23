@@ -113,7 +113,7 @@ begin
     try
       CloseFile(FLogFile);
     except
-      // 忽略关闭错误
+      // CloseFile failure is non-critical; file will be closed by OS on process exit
     end;
   end;
   inherited Destroy;

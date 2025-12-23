@@ -87,7 +87,8 @@ type
     function IsProtocolSupported(AProtocol: TSSLProtocolVersion): Boolean;
     function IsCipherSupported(const ACipherName: string): Boolean;
     function IsFeatureSupported(AFeature: TSSLFeature): Boolean;
-    
+    function GetCapabilities: TSSLBackendCapabilities;  // P2-2
+
     { ISSLLibrary - 库配置 }
     procedure SetDefaultConfig(const AConfig: TSSLConfig);
     function GetDefaultConfig: TSSLConfig;
@@ -618,6 +619,42 @@ begin
 
   InternalLog(sslLogDebug, Format('Feature support check (type-safe): %d = %s',
     [Ord(AFeature), BoolToStr(Result, True)]));
+end;
+
+function TOpenSSLLibrary.GetCapabilities: TSSLBackendCapabilities;
+begin
+  // P2-2: 返回 OpenSSL 后端能力矩阵
+  FillChar(Result, SizeOf(Result), 0);
+
+  // 检测 TLS 1.3 支持 (OpenSSL 1.1.1+)
+  Result.SupportsTLS13 := (FVersionNumber >= $1010100F);
+
+  // OpenSSL 原生支持的特性
+  Result.SupportsALPN := True;
+  Result.SupportsSNI := True;
+  Result.SupportsSessionTickets := True;
+  Result.SupportsECDHE := True;
+
+  // OCSP 装订支持
+  Result.SupportsOCSPStapling := True;
+
+  // Certificate Transparency 需要 OpenSSL 1.1.0+
+  Result.SupportsCertificateTransparency := (FVersionNumber >= $1010000F);
+
+  // ChaCha20-Poly1305 需要 OpenSSL 1.1.0+
+  Result.SupportsChaChaPoly := (FVersionNumber >= $1010000F);
+
+  // 支持的协议版本范围
+  Result.MinTLSVersion := sslProtocolTLS10;  // 可通过配置禁用
+  if Result.SupportsTLS13 then
+    Result.MaxTLSVersion := sslProtocolTLS13
+  else
+    Result.MaxTLSVersion := sslProtocolTLS12;
+
+  InternalLog(sslLogDebug, Format('GetCapabilities: TLS1.3=%s, ALPN=%s, SNI=%s',
+    [BoolToStr(Result.SupportsTLS13, True),
+     BoolToStr(Result.SupportsALPN, True),
+     BoolToStr(Result.SupportsSNI, True)]));
 end;
 
 // ============================================================================

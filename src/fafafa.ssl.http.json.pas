@@ -5,10 +5,22 @@ unit fafafa.ssl.http.json;
 
 {
   JSON HTTP 客户端
-  
+
+  ============================================================================
+  !! 内部测试模块 - 非核心功能 !!
+  ============================================================================
+
+  此模块仅用于 fafafa.ssl 库的内部测试和演示目的。
+  不属于 fafafa.ssl 核心功能的一部分。
+
+  如需完整的 HTTP/HTTPS 客户端功能，请使用基于 fafafa.ssl 的
+  独立网络库（计划中）。
+
+  ============================================================================
+
   基于 TSimpleHTTPSClient 的 JSON API 扩展
-  让 REST API 调用变得简单
-  
+  让 REST API 调用变得简单（测试用）
+
   示例：
     var LData: TJSONObject;
     LData := TJSONHTTPClient.GetJSON('https://api.example.com/users');
@@ -85,7 +97,7 @@ begin
       if LHTTPResponse.Body = '' then
         raise ESSLException.Create('Empty response body');
       
-      LJSONData := GetJSON(LHTTPResponse.Body);
+      LJSONData := fpjson.GetJSON(LHTTPResponse.Body);
       if LJSONData is TJSONObject then
         Result := TJSONObject(LJSONData)
       else
@@ -93,7 +105,7 @@ begin
         LJSONData.Free;
         raise ESSLException.Create('Response is not a JSON object');
       end;
-      
+
     finally
       LHTTPResponse.Headers.Free;
     end;
@@ -139,8 +151,8 @@ begin
       
       if LHTTPResponse.Body = '' then
         Exit; // 某些API可能返回空响应
-      
-      LJSONData := GetJSON(LHTTPResponse.Body);
+
+      LJSONData := fpjson.GetJSON(LHTTPResponse.Body);
       if LJSONData is TJSONObject then
         Result := TJSONObject(LJSONData)
       else
@@ -184,8 +196,8 @@ begin
       
       if LHTTPResponse.Body = '' then
         Exit;
-      
-      LJSONData := GetJSON(LHTTPResponse.Body);
+
+      LJSONData := fpjson.GetJSON(LHTTPResponse.Body);
       if LJSONData is TJSONObject then
         Result := TJSONObject(LJSONData)
       else
@@ -193,7 +205,7 @@ begin
         LJSONData.Free;
         raise ESSLException.Create('Response is not a JSON object');
       end;
-      
+
     finally
       LHTTPResponse.Headers.Free;
     end;
@@ -222,8 +234,8 @@ begin
       
       if LHTTPResponse.Body = '' then
         Exit;
-      
-      LJSONData := GetJSON(LHTTPResponse.Body);
+
+      LJSONData := fpjson.GetJSON(LHTTPResponse.Body);
       if LJSONData is TJSONObject then
         Result := TJSONObject(LJSONData)
       else
@@ -231,7 +243,7 @@ begin
         LJSONData.Free;
         raise ESSLException.Create('Response is not a JSON object');
       end;
-      
+
     finally
       LHTTPResponse.Headers.Free;
     end;
@@ -261,8 +273,8 @@ begin
       
       if LHTTPResponse.Body = '' then
         raise ESSLException.Create('Empty response body');
-      
-      LJSONData := GetJSON(LHTTPResponse.Body);
+
+      LJSONData := fpjson.GetJSON(LHTTPResponse.Body);
       if LJSONData is TJSONArray then
         Result := TJSONArray(LJSONData)
       else
@@ -281,7 +293,7 @@ end;
 
 class function TJSONHTTPClient.ParseJSON(const AJSONString: string): TJSONData;
 begin
-  Result := GetJSON(AJSONString);
+  Result := fpjson.GetJSON(AJSONString);
 end;
 
 class function TJSONHTTPClient.JSONToString(AData: TJSONData): string;

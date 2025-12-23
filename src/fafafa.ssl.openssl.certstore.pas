@@ -427,7 +427,8 @@ begin
       try
         X509_STORE_set_default_paths(FStore);
       except
-        // 继续尝试其他方法
+        on E: Exception do
+          TSecurityLog.Debug('CertStore', Format('X509_STORE_set_default_paths failed: %s', [E.Message]));
       end;
     end;
   end;

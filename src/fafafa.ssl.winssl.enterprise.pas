@@ -7,6 +7,7 @@ interface
 
 uses
   SysUtils, Classes, Windows, Registry,
+  fafafa.ssl.logging,
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api;
 
@@ -147,7 +148,8 @@ begin
             LValue := LReg.ReadString(LKeys[i]);
             FGroupPolicies.Values[LKeys[i]] := LValue;
           except
-            // 忽略读取失败的值
+            on E: Exception do
+              TSecurityLog.Debug('Enterprise', Format('Failed to read group policy value %s: %s', [LKeys[i], E.Message]));
           end;
         end;
         Result := True;

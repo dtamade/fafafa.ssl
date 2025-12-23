@@ -91,10 +91,17 @@ begin
 end;
 
 procedure SecureZeroString(var Str: AnsiString);
+var
+  Len: Integer;
 begin
-  if Length(Str) > 0 then
+  Len := Length(Str);
+  if Len > 0 then
   begin
-    SecureZeroMemory(@Str[1], Length(Str));
+    // 确保字符串可写（处理常量字符串引用）
+    UniqueString(Str);
+    // 再次检查长度（UniqueString 可能改变引用）
+    if Length(Str) > 0 then
+      SecureZeroMemory(@Str[1], Len);
     Str := '';
   end;
 end;

@@ -23,6 +23,7 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
+  fafafa.ssl.logging,
   fafafa.ssl.cert.builder,
   fafafa.ssl.context.builder,
   {$IFDEF WINDOWS}
@@ -450,7 +451,8 @@ begin
     
     Result := True;
   except
-    // Failed to generate or write files
+    on E: Exception do
+      TSecurityLog.Warning('Quick', Format('GenerateSelfSignedToFiles failed: %s', [E.Message]));
   end;
 end;
 
