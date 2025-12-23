@@ -113,14 +113,19 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install Free Pascal
-      run: choco install freepascal -y
-
-    - name: Add FPC to PATH
-      run: echo "C:\FPC\3.2.2\bin\i386-win32" >> $env:GITHUB_PATH
+      shell: pwsh
+      run: |
+        choco install freepascal -y --no-progress
+        # Find and add FPC to path
+        $fpcExe = Get-ChildItem -Path "C:\" -Recurse -Filter "fpc.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($fpcExe) {
+          $fpcDir = Split-Path $fpcExe.FullName -Parent
+          echo "$fpcDir" >> $env:GITHUB_PATH
+          Write-Host "Found FPC at: $fpcDir"
+        }
 
     - name: Show FPC version
       run: fpc -iV
-      shell: cmd
 
     - name: Create output directories
       run: |

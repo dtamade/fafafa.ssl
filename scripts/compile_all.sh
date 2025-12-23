@@ -45,10 +45,10 @@ for file in "$SRC_DIR"/*.pas; do
         echo -n "  Compiling $basename... "
         if $FPC $FPC_FLAGS "$file" > /dev/null 2>&1; then
             echo "OK"
-            ((COMPILED++))
+            COMPILED=$((COMPILED + 1))
         else
             echo "FAILED"
-            ((FAILED++))
+            FAILED=$((FAILED + 1))
         fi
     fi
 done
@@ -65,10 +65,10 @@ for file in "$TESTS_DIR"/*.pas "$TESTS_DIR"/security/*.pas; do
         echo -n "  Compiling $basename... "
         if $FPC -Fusrc -Fu"$OUTPUT_DIR" -FE"$outdir" -O2 "$file" > /dev/null 2>&1; then
             echo "OK"
-            ((COMPILED++))
+            COMPILED=$((COMPILED + 1))
         else
             echo "FAILED"
-            ((FAILED++))
+            FAILED=$((FAILED + 1))
         fi
     fi
 done
