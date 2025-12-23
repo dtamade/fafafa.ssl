@@ -615,6 +615,24 @@ const
 var
   GRANDAvailable: Boolean = False;
 
+{ Phase 2.6: 提取的参数验证辅助函数 }
+
+procedure ValidateAES256GCMParams(const AKey, AIV: TBytes);
+begin
+  if Length(AKey) <> AES_256_KEY_SIZE then
+    RaiseInvalidParameter('AES-256 key size (expected 32 bytes)');
+  if Length(AIV) <> AES_GCM_IV_SIZE then
+    RaiseInvalidParameter('AES-GCM IV size (expected 12 bytes)');
+end;
+
+procedure ValidateAES256CBCParams(const AKey, AIV: TBytes);
+begin
+  if Length(AKey) <> AES_256_KEY_SIZE then
+    RaiseInvalidParameter('AES-256 key size (expected 32 bytes)');
+  if Length(AIV) <> AES_CBC_IV_SIZE then
+    RaiseInvalidParameter('AES-CBC IV size (expected 16 bytes)');
+end;
+
 { TCryptoUtils }
 
 class procedure TCryptoUtils.EnsureInitialized;
@@ -728,14 +746,10 @@ begin
   LTotalLen := 0;
 
   EnsureInitialized;
-  
-  // 参数验证
-  if Length(AKey) <> AES_256_KEY_SIZE then
-    RaiseInvalidParameter('AES key size');
 
-  if Length(AIV) <> AES_GCM_IV_SIZE then
-    RaiseInvalidParameter('AES IV size');
-  
+  // Phase 2.6: 使用提取的验证辅助函数
+  ValidateAES256GCMParams(AKey, AIV);
+
   LCipher := GetEVPCipher(ENCRYPT_AES_256_GCM);
   if LCipher = nil then
     raise ESSLCryptoError.Create('Failed to get AES-256-GCM cipher');
@@ -886,16 +900,13 @@ begin
   FillChar(LTag, SizeOf(LTag), 0);
 
   EnsureInitialized;
-  
-  if Length(AKey) <> AES_256_KEY_SIZE then
-    RaiseInvalidParameter('AES key size');
 
-  if Length(AIV) <> AES_GCM_IV_SIZE then
-    RaiseInvalidParameter('AES IV size');
+  // Phase 2.6: 使用提取的验证辅助函数
+  ValidateAES256GCMParams(AKey, AIV);
 
   if Length(ACiphertext) < GCM_TAG_SIZE then
     RaiseInvalidParameter('ciphertext length');
-  
+
   LCiphertextLen := Length(ACiphertext) - GCM_TAG_SIZE;
   Move(ACiphertext[LCiphertextLen], LTag[0], GCM_TAG_SIZE);
   
@@ -988,12 +999,9 @@ begin
   LOutLen := 0;
   LTotalLen := 0;
   EnsureInitialized;
-  
-  if Length(AKey) <> AES_256_KEY_SIZE then
-    RaiseInvalidParameter('AES key size');
 
-  if Length(AIV) <> AES_CBC_IV_SIZE then
-    RaiseInvalidParameter('AES IV size');
+  // Phase 2.6: 使用提取的验证辅助函数
+  ValidateAES256CBCParams(AKey, AIV);
 
   LCtx := EVP_CIPHER_CTX_new();
   if LCtx = nil then
@@ -1041,12 +1049,9 @@ begin
   LTotalLen := 0;
   EnsureInitialized;
 
-  if Length(AKey) <> AES_256_KEY_SIZE then
-    RaiseInvalidParameter('AES key size');
+  // Phase 2.6: 使用提取的验证辅助函数
+  ValidateAES256CBCParams(AKey, AIV);
 
-  if Length(AIV) <> AES_CBC_IV_SIZE then
-    RaiseInvalidParameter('AES IV size');
-  
   LCtx := EVP_CIPHER_CTX_new();
   if LCtx = nil then
     raise ESSLCryptoError.Create('Failed to create cipher context');

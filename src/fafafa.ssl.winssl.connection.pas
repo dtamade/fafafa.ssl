@@ -101,12 +101,12 @@ type
     FBlocking: Boolean;
     FTimeout: Integer;
     
-    // 缓冲区
-    FRecvBuffer: array[0..16384-1] of Byte;
+    // 缓冲区 - 使用常量而非魔法数字
+    FRecvBuffer: array[0..SSL_DEFAULT_BUFFER_SIZE-1] of Byte;
     FRecvBufferUsed: Integer;
-    FDecryptedBuffer: array[0..16384-1] of Byte;
+    FDecryptedBuffer: array[0..SSL_DEFAULT_BUFFER_SIZE-1] of Byte;
     FDecryptedBufferUsed: Integer;
-    FExtraData: array[0..16384-1] of Byte;
+    FExtraData: array[0..SSL_DEFAULT_BUFFER_SIZE-1] of Byte;
     FExtraDataSize: Integer;
 
     // 会话管理
@@ -194,7 +194,7 @@ begin
   inherited Create;
   FID := '';
   FCreationTime := Now;
-  FTimeout := 300; // 5 分钟
+  FTimeout := SSL_DEFAULT_SESSION_TIMEOUT; // 使用常量而非魔法数字
   FProtocolVersion := sslProtocolTLS12;
   FCipherName := '';
   SetLength(FSessionData, 0);
