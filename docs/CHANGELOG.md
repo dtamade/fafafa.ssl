@@ -9,12 +9,30 @@
 
 ## [未发布]
 
-### 计划中
-- 大文件拆分（`fafafa.ssl.openssl.pas` 3,261行 → 7个模块）
-- 10+ 示例应用程序
-- Linux/macOS 跨平台测试
-- 性能优化与基准测试
-- CI/CD 集成
+### 新增 🎉
+
+#### 测试基础设施
+- 模糊测试框架 `tests/fuzz/fuzz_framework.pas`
+  - TFuzzer 类支持随机输入生成和变异
+  - 7 个模糊测试目标（Base64、Hex、PEM、DER、ASN.1、DN、URL）
+- 性能基线框架 `tests/benchmarks/benchmark_framework.pas`
+  - 统计分析（mean、stddev、P50/P95/P99）
+  - JSON 基线导出
+  - 回归检测（15% 阈值）
+
+#### CI 工具
+- `scripts/ci_benchmark.sh` - 性能回归检测
+- `scripts/coverage_report.sh` - 代码覆盖率报告
+
+### 修复 🐛
+- 移除 `crypto.utils.pas` 中 6 处不可达代码
+- 初始化 3 个函数的 Result 变量
+- 修复 `QuickServer` 未使用参数提示
+
+### 文档 📚
+- `docs/RUST_ALIGNMENT_ROADMAP.md` - Rust 架构对齐评估
+  - 诚实分析：不盲目追求 Rust 模式
+  - 记录已完成的高价值改进
 
 ---
 
