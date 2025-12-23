@@ -113,7 +113,7 @@ begin
 
   // 优先使用 X509_NAME_print_ex (RFC 2253 风格)
   if Assigned(X509_NAME_print_ex) and Assigned(BIO_new) and
-     Assigned(BIO_s_mem) and Assigned(BIO_free) then
+    Assigned(BIO_s_mem) and Assigned(BIO_free) then
   begin
     BIO := BIO_new(BIO_s_mem());
     if BIO <> nil then

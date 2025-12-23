@@ -224,7 +224,7 @@ uses
 
 const
   { DH function bindings for batch loading }
-  DH_FUNCTION_BINDINGS: array[0..27] of TFunctionBinding = (
+  DH_FUNCTION_BINDINGS: array[0..26] of TFunctionBinding = (
     // DH basic functions
     (Name: 'DH_new';              FuncPtr: @DH_new;              Required: True),
     (Name: 'DH_new_method';       FuncPtr: @DH_new_method;       Required: False),

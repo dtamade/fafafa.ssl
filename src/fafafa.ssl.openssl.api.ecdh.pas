@@ -140,7 +140,7 @@ begin
   // Note: In OpenSSL 1.1.0+, ECDH_compute_key might not exist as a separate function
   // The functionality is integrated into EC_KEY operations
   LLoaded := Assigned(ECDH_compute_key) or
-             (Assigned(EC_KEY_get_flags) and Assigned(EC_KEY_set_flags));
+    (Assigned(EC_KEY_get_flags) and Assigned(EC_KEY_set_flags));
   TOpenSSLLoader.SetModuleLoaded(osmECDH, LLoaded);
   Result := LLoaded;
 end;

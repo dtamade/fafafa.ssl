@@ -147,7 +147,7 @@ procedure RaiseFunctionNotAvailable(const AFuncName: string);
 begin
   raise ESSLException.Create(
     Format('%s is not available. Ensure OpenSSL library is properly loaded ' +
-           'and the function exists in your OpenSSL version.', [AFuncName]),
+      'and the function exists in your OpenSSL version.', [AFuncName]),
     sslErrFunctionNotFound
   );
 end;

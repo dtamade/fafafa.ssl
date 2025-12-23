@@ -122,6 +122,7 @@ class CodeStyleChecker:
         """检查命名约定"""
         # 检查 Pascal 文件的标准结构
         has_unit = False
+        has_program = False
         has_interface = False
         has_implementation = False
 
@@ -129,10 +130,16 @@ class CodeStyleChecker:
             line = line.strip()
             if line.startswith('unit '):
                 has_unit = True
+            elif line.startswith('program '):
+                has_program = True
             elif line.startswith('interface'):
                 has_interface = True
             elif line.startswith('implementation'):
                 has_implementation = True
+
+        # program 文件不需要 unit/interface/implementation 结构
+        if has_program:
+            return
 
         if not has_unit:
             self.errors.append(f'{filepath} 缺少 unit 声明')

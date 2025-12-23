@@ -223,8 +223,8 @@ begin
       Symbol.Dependencies := nil;
       
       // Skip certain patterns
-      if (Pos('typedef', Symbol.Declaration) = 0) and 
-         (Pos('#define', Symbol.Declaration) = 0) then
+      if (Pos('typedef', Symbol.Declaration) = 0) and
+        (Pos('#define', Symbol.Declaration) = 0) then
       begin
         if not FSymbols.Find(Symbol.Name, Symbol) then
           FSymbols.Add(Symbol.Name, Symbol);

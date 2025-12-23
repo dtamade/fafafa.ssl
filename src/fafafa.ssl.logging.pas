@@ -680,7 +680,7 @@ begin
 
         LResult.Add(Format('%-30s %8d %10d %10.2f %10d %10d',
           [LEntry^.Name, LEntry^.Count, LEntry^.TotalTimeMs,
-           LAvg, LEntry^.MinTimeMs, LEntry^.MaxTimeMs]));
+          LAvg, LEntry^.MinTimeMs, LEntry^.MaxTimeMs]));
       end;
     finally
       LeaveCriticalSection(FLock);

@@ -65,10 +65,10 @@ begin
     LResult := GResults[I];
     WriteLn(Format('%-30s %9db %10d %12.2f %12.2f',
       [LResult.OperationName,
-       LResult.DataSize,
-       LResult.Iterations,
-       LResult.AvgTimeUS,
-       LResult.ThroughputMBps]));
+      LResult.DataSize,
+      LResult.Iterations,
+      LResult.AvgTimeUS,
+      LResult.ThroughputMBps]));
   end;
 
   WriteLn('═══════════════════════════════════════════════════════════════════════════');

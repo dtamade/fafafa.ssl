@@ -4,6 +4,7 @@
 
 unit fafafa_ssl;
 
+{$mode objfpc}{$H+}
 {$warn 5023 off : no warning about unused units}
 interface
 
