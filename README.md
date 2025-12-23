@@ -252,7 +252,20 @@ end;
 | 单元测试 | 235个测试 | `tests/unit/` |
 | 集成测试 | 70+网站 | `examples/test_real_websites_*.pas` |
 | E2E场景 | 6场景, 83%通过 | `tests/test_e2e_scenarios.pas` |
-| 性能基准 | 8项指标 | `tests/benchmarks/performance_*.pas` |
+| 模糊测试 | 7个目标 | `tests/fuzz/` |
+| 性能基准 | 10项指标 | `tests/benchmarks/` |
+
+### 模糊测试
+
+```bash
+# 运行编码器模糊测试
+./tests/fuzz/bin/fuzz_ssl 5000
+
+# 运行解析器模糊测试
+./tests/fuzz/bin/fuzz_parsers 5000
+```
+
+模糊测试目标：Base64、Hex、PEM证书、DER证书、ASN.1、DN解析、URL解析
 
 ### CI/CD结果示例
 
@@ -303,10 +316,14 @@ fafafa.ssl/
 ├── examples/                 # 95+示例程序
 ├── tests/                    # 测试套件
 │   ├── unit/                # 单元测试
+│   ├── fuzz/                # 模糊测试
 │   ├── benchmarks/          # 性能测试
-│   └── test_e2e_scenarios.pas
+│   └── integration/         # 集成测试
+├── scripts/                  # CI/CD工具
+│   ├── ci_benchmark.sh      # 性能回归检测
+│   └── coverage_report.sh   # 覆盖率报告
 ├── docs/                     # 文档
-└── ci_pipeline.sh           # CI/CD脚本
+└── ci_pipeline.sh           # CI/CD主脚本
 ```
 
 ## 🤝 贡献指南
