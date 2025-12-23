@@ -726,6 +726,8 @@ begin
       try
         X509_STORE_CTX_free(Ctx);
       except
+        on E: Exception do
+          TSecurityLog.Warning('OpenSSL', Format('Exception freeing X509_STORE_CTX in Verify: %s', [E.Message]));
       end;
     end;
   end;
@@ -868,6 +870,8 @@ begin
       try
         X509_STORE_CTX_free(Ctx);
       except
+        on E: Exception do
+          TSecurityLog.Warning('OpenSSL', Format('Exception freeing X509_STORE_CTX in VerifyEx: %s', [E.Message]));
       end;
     end;
   end;

@@ -662,6 +662,8 @@ begin
           Result := FLastError;
         end;
       except
+        on E: Exception do
+          InternalLog(sslLogWarning, Format('Exception in GetLastError: %s', [E.Message]));
       end;
     end;
   end;
