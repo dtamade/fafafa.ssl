@@ -315,9 +315,6 @@ uses
   {$IFDEF WINDOWS}
   Windows,
   {$ENDIF}
-  {$IFDEF UNIX}
-  BaseUnix,
-  {$ENDIF}
   fafafa.ssl.crypto.utils,   // Phase 2.3.5 - 加密工具（哈希计算）
   fafafa.ssl.encoding,       // Phase 2.3.5 - 编码工具（Hex转换）
   fafafa.ssl.errors,

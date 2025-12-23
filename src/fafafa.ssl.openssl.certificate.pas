@@ -199,7 +199,6 @@ end;
 
 function TOpenSSLCertificate.LoadFromFile(const AFileName: string): Boolean;
 var
-  F: File;
   BIO: PBIO;
   FileNameA: AnsiString;
 begin
@@ -562,8 +561,6 @@ end;
 function TOpenSSLCertificate.GetNotBefore: TDateTime;
 var
   ASN1Time: PASN1_TIME;
-  Year, Month, Day, Hour, Min, Sec: Word;
-  TimeStr: AnsiString;
 begin
   Result := 0;
   

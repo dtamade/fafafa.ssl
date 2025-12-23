@@ -662,6 +662,7 @@ var
 {$ENDIF}
 begin
   {$IFDEF UNIX}
+  LBytesRead := 0;
   AssignFile(LFile, '/dev/urandom');
   try
     Reset(LFile, 1);
@@ -723,7 +724,9 @@ var
 begin
   Result := nil;
   SetLength(Result, 0);
-  
+  LOutLen := 0;
+  LTotalLen := 0;
+
   EnsureInitialized;
   
   // 参数验证
@@ -880,7 +883,8 @@ begin
   Result := nil;
   SetLength(Result, 0);
   LOutLen := 0;
-  
+  FillChar(LTag, SizeOf(LTag), 0);
+
   EnsureInitialized;
   
   if Length(AKey) <> AES_256_KEY_SIZE then
@@ -981,6 +985,8 @@ var
   LCtx: PEVP_CIPHER_CTX;
   LOutLen, LTotalLen: Integer;
 begin
+  LOutLen := 0;
+  LTotalLen := 0;
   EnsureInitialized;
   
   if Length(AKey) <> AES_256_KEY_SIZE then
@@ -1031,6 +1037,8 @@ var
   LCtx: PEVP_CIPHER_CTX;
   LOutLen, LTotalLen: Integer;
 begin
+  LOutLen := 0;
+  LTotalLen := 0;
   EnsureInitialized;
 
   if Length(AKey) <> AES_256_KEY_SIZE then
@@ -1113,6 +1121,7 @@ var
   LCtx: PEVP_MD_CTX;
   LLen: Cardinal;
 begin
+  LLen := 0;
   EnsureInitialized;
   
   LCtx := EVP_MD_CTX_new();
@@ -1154,6 +1163,8 @@ var
   LBytesRead: Integer;
   LLen: Cardinal;
 begin
+  LLen := 0;
+  LBytesRead := 0;
   EnsureInitialized;
   
   if AStream = nil then
@@ -1232,6 +1243,7 @@ var
   LCtx: PEVP_MD_CTX;
   LLen: Cardinal;
 begin
+  LLen := 0;
   EnsureInitialized;
   
   LCtx := EVP_MD_CTX_new();
@@ -1262,6 +1274,8 @@ var
   LBytesRead: Integer;
   LLen: Cardinal;
 begin
+  LLen := 0;
+  LBytesRead := 0;
   EnsureInitialized;
   
   LCtx := EVP_MD_CTX_new();
@@ -1372,6 +1386,7 @@ var
   LOutLen: Cardinal;
 begin
   Result := nil;
+  LOutLen := 0;
   EnsureInitialized;
 
   if not ADataView.IsValid then
