@@ -688,16 +688,14 @@ end;
 class function TCryptoUtils.GetEVPCipher(AAlgorithm: TEncryptionAlgorithm): PEVP_CIPHER;
 begin
   case AAlgorithm of
-    ENCRYPT_AES_256_GCM: 
+    ENCRYPT_AES_256_GCM:
       if Assigned(EVP_aes_256_gcm) then Result := EVP_aes_256_gcm() else Result := nil;
-    ENCRYPT_AES_256_CBC: 
+    ENCRYPT_AES_256_CBC:
       if Assigned(EVP_aes_256_cbc) then Result := EVP_aes_256_cbc() else Result := nil;
-    ENCRYPT_AES_128_GCM: 
+    ENCRYPT_AES_128_GCM:
       if Assigned(EVP_aes_128_gcm) then Result := EVP_aes_128_gcm() else Result := nil;
-    ENCRYPT_AES_128_CBC: 
+    ENCRYPT_AES_128_CBC:
       if Assigned(EVP_aes_128_cbc) then Result := EVP_aes_128_cbc() else Result := nil;
-  else
-    Result := nil;
   end;
 end;
 
@@ -708,8 +706,6 @@ begin
     HASH_SHA512: Result := EVP_sha512();
     HASH_SHA1: Result := EVP_sha1();
     HASH_MD5: Result := EVP_md5();
-  else
-    Result := nil;
   end;
 end;
 
@@ -1375,6 +1371,7 @@ var
   LMD: PEVP_MD;
   LOutLen: Cardinal;
 begin
+  Result := nil;
   EnsureInitialized;
 
   if not ADataView.IsValid then
@@ -1412,6 +1409,7 @@ var
   LMD: PEVP_MD;
   LOutLen: Cardinal;
 begin
+  Result := nil;
   EnsureInitialized;
 
   if not ADataView.IsValid then
@@ -1781,8 +1779,6 @@ begin
     HASH_SHA512: FHashSize := 64;
     HASH_SHA1: FHashSize := 20;
     HASH_MD5: FHashSize := 16;
-  else
-    RaiseUnsupported('hash algorithm');
   end;
 
   FCtx := EVP_MD_CTX_new();
@@ -1841,6 +1837,7 @@ function TStreamingHasher.Finalize: TBytes;
 var
   LLen: Cardinal;
 begin
+  Result := nil;
   CheckNotFinalized;
 
   SetLength(Result, FHashSize);
@@ -1898,8 +1895,6 @@ begin
       LKeySize := 16;
       LIVSize := 16;
     end;
-  else
-    RaiseUnsupported('encryption algorithm');
   end;
 
   if Length(AKey) <> LKeySize then
@@ -1965,8 +1960,6 @@ begin
       LKeySize := 16;
       LIVSize := 16;
     end;
-  else
-    RaiseUnsupported('encryption algorithm');
   end;
 
   if Length(AKey) <> LKeySize then
@@ -2144,8 +2137,6 @@ begin
     HASH_SHA512: Result := 'SHA-512';
     HASH_SHA1: Result := 'SHA-1';
     HASH_MD5: Result := 'MD5';
-  else
-    Result := 'Unknown';
   end;
 end;
 
