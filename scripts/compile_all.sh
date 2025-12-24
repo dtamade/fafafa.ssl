@@ -17,6 +17,11 @@ OUTPUT_DIR="$TESTS_DIR/bin"
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$TESTS_DIR/security/bin"
 mkdir -p "$TESTS_DIR/integration/bin"
+mkdir -p "$TESTS_DIR/http/bin"
+mkdir -p "$TESTS_DIR/framework/bin"
+
+# Verbose mode
+VERBOSE=${VERBOSE:-0}
 
 # Find FPC
 FPC=$(which fpc 2>/dev/null || echo "/home/dtamade/freePascal/fpc/bin/x86_64-linux/fpc")
@@ -30,8 +35,17 @@ echo "Using FPC: $FPC"
 echo "FPC Version: $($FPC -iV)"
 echo ""
 
-# Compiler flags
-FPC_FLAGS="-Fusrc -Fu$OUTPUT_DIR -FE$OUTPUT_DIR -O2"
+# FPC unit paths
+FPC_UNITS="/home/dtamade/freePascal/fpc/units/x86_64-linux"
+
+# Compiler flags with full unit paths
+FPC_FLAGS="-Fu$SRC_DIR -Fu$OUTPUT_DIR"
+FPC_FLAGS="$FPC_FLAGS -Fi$FPC_UNITS -Fi$FPC_UNITS/rtl -Fi$FPC_UNITS/rtl-objpas"
+FPC_FLAGS="$FPC_FLAGS -Fu$FPC_UNITS -Fu$FPC_UNITS/rtl -Fu$FPC_UNITS/rtl-objpas"
+FPC_FLAGS="$FPC_FLAGS -Fu$FPC_UNITS/fcl-base -Fu$FPC_UNITS/rtl-console -Fu$FPC_UNITS/rtl-extra"
+FPC_FLAGS="$FPC_FLAGS -Fu$FPC_UNITS/pthreads -Fu$FPC_UNITS/fcl-json -Fu$FPC_UNITS/fcl-fpcunit"
+FPC_FLAGS="$FPC_FLAGS -Fu$FPC_UNITS/rtl-generics -Fu$FPC_UNITS/hash"
+FPC_FLAGS="$FPC_FLAGS -FE$OUTPUT_DIR -O2"
 
 # Track results
 COMPILED=0
@@ -53,17 +67,31 @@ for file in "$SRC_DIR"/*.pas; do
     fi
 done
 
-# Compile test files
-echo ""
-echo "=== Compiling test files ==="
-for file in "$TESTS_DIR"/*.pas "$TESTS_DIR"/security/*.pas; do
-    if [ -f "$file" ]; then
-        basename=$(basename "$file")
-        dirname=$(dirname "$file")
-        outdir="$dirname/bin"
-        mkdir -p "$outdir"
-        echo -n "  Compiling $basename... "
-        if $FPC -Fusrc -Fu"$OUTPUT_DIR" -FE"$outdir" -O2 "$file" > /dev/null 2>&1; then
+# Function to compile a test file
+compile_test() {
+    local file="$1"
+    local outdir="$2"
+    local basename=$(basename "$file")
+    local TEST_FLAGS="-Fu$SRC_DIR -Fu$OUTPUT_DIR -Fu$TESTS_DIR/framework -Fu$TESTS_DIR/framework/bin"
+    TEST_FLAGS="$TEST_FLAGS -Fi$FPC_UNITS -Fi$FPC_UNITS/rtl -Fi$FPC_UNITS/rtl-objpas"
+    TEST_FLAGS="$TEST_FLAGS -Fu$FPC_UNITS -Fu$FPC_UNITS/rtl -Fu$FPC_UNITS/rtl-objpas"
+    TEST_FLAGS="$TEST_FLAGS -Fu$FPC_UNITS/fcl-base -Fu$FPC_UNITS/rtl-console -Fu$FPC_UNITS/rtl-extra"
+    TEST_FLAGS="$TEST_FLAGS -Fu$FPC_UNITS/pthreads -Fu$FPC_UNITS/fcl-json -Fu$FPC_UNITS/fcl-fpcunit"
+    TEST_FLAGS="$TEST_FLAGS -Fu$FPC_UNITS/rtl-generics -Fu$FPC_UNITS/hash"
+    TEST_FLAGS="$TEST_FLAGS -FE$outdir -O2"
+
+    mkdir -p "$outdir"
+    echo -n "  Compiling $basename... "
+    if [ "$VERBOSE" = "1" ]; then
+        if $FPC $TEST_FLAGS "$file"; then
+            echo "OK"
+            COMPILED=$((COMPILED + 1))
+        else
+            echo "FAILED"
+            FAILED=$((FAILED + 1))
+        fi
+    else
+        if $FPC $TEST_FLAGS "$file" > /dev/null 2>&1; then
             echo "OK"
             COMPILED=$((COMPILED + 1))
         else
@@ -71,6 +99,41 @@ for file in "$TESTS_DIR"/*.pas "$TESTS_DIR"/security/*.pas; do
             FAILED=$((FAILED + 1))
         fi
     fi
+}
+
+# Compile test framework first
+echo ""
+echo "=== Compiling test framework ==="
+for file in "$TESTS_DIR"/framework/*.pas; do
+    [ -f "$file" ] && compile_test "$file" "$TESTS_DIR/framework/bin"
+done
+
+# Compile test files
+echo ""
+echo "=== Compiling test files ==="
+for file in "$TESTS_DIR"/*.pas; do
+    [ -f "$file" ] && compile_test "$file" "$OUTPUT_DIR"
+done
+
+# Compile security tests
+echo ""
+echo "=== Compiling security tests ==="
+for file in "$TESTS_DIR"/security/*.pas; do
+    [ -f "$file" ] && compile_test "$file" "$TESTS_DIR/security/bin"
+done
+
+# Compile integration tests
+echo ""
+echo "=== Compiling integration tests ==="
+for file in "$TESTS_DIR"/integration/*.pas; do
+    [ -f "$file" ] && compile_test "$file" "$TESTS_DIR/integration/bin"
+done
+
+# Compile HTTP tests
+echo ""
+echo "=== Compiling HTTP tests ==="
+for file in "$TESTS_DIR"/http/*.pas; do
+    [ -f "$file" ] && compile_test "$file" "$TESTS_DIR/http/bin"
 done
 
 # Summary
