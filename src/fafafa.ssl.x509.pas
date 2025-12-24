@@ -618,9 +618,17 @@ begin
   SigAlgNode := ARoot.GetChild(1);
   SigNode := ARoot.GetChild(2);
 
-  // 保存原始 TBS 用于签名验证
-  // 需要从原始数据中提取
-  // TODO: 实现 TBS 数据提取
+  // 提取原始 TBS 数据用于签名验证
+  // TBS 数据包括标签、长度和内容
+  if (Length(FRawCertificate) > 0) and (TBSNode.TotalLength > 0) then
+  begin
+    // TBS 起始位置 = 内容偏移 - 头部长度
+    // TBS 长度 = 头部长度 + 内容长度
+    SetLength(FRawTBSCertificate, TBSNode.TotalLength);
+    Move(FRawCertificate[TBSNode.ContentOffset - TBSNode.HeaderLength],
+         FRawTBSCertificate[0],
+         TBSNode.TotalLength);
+  end;
 
   // 解析 TBSCertificate
   ParseTBSCertificate(TBSNode);

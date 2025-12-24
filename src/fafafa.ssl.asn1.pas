@@ -234,10 +234,14 @@ type
   TASN1Writer = class
   private
     FStream: TMemoryStream;
+    FPositionStack: array of Int64;  // 用于跟踪序列/集合的起始位置
+    FTagStack: array of Byte;        // 保存对应的标签
 
     procedure WriteTag(ATag: Byte);
     procedure WriteLength(ALength: Int64);
     procedure WriteBytes(const AData: TBytes);
+    procedure PushPosition(ATag: Byte);
+    procedure PopAndWriteLength;
   public
     constructor Create;
     destructor Destroy; override;
@@ -1059,6 +1063,98 @@ begin
     FStream.WriteBuffer(AData[0], Length(AData));
 end;
 
+procedure TASN1Writer.PushPosition(ATag: Byte);
+var
+  Len: Integer;
+begin
+  // 写入标签
+  WriteTag(ATag);
+  // 保存当前位置（长度字段开始的位置）
+  Len := Length(FPositionStack);
+  SetLength(FPositionStack, Len + 1);
+  SetLength(FTagStack, Len + 1);
+  FPositionStack[Len] := FStream.Position;
+  FTagStack[Len] := ATag;
+  // 写入占位符（最多支持 4 字节长度，即最大 2^32 字节内容）
+  FStream.WriteBuffer(#0#0#0#0#0, 5);  // 1字节长度类型 + 4字节长度值
+end;
+
+procedure TASN1Writer.PopAndWriteLength;
+var
+  Len, StackLen: Integer;
+  StartPos, EndPos, ContentLen: Int64;
+  LengthBytes: array[0..4] of Byte;
+  LengthSize: Integer;
+  TempData: TBytes;
+begin
+  StackLen := Length(FPositionStack);
+  if StackLen = 0 then
+    Exit;
+
+  // 弹出栈顶位置
+  StartPos := FPositionStack[StackLen - 1];
+  SetLength(FPositionStack, StackLen - 1);
+  SetLength(FTagStack, StackLen - 1);
+
+  // 计算内容长度
+  EndPos := FStream.Position;
+  ContentLen := EndPos - StartPos - 5;  // 减去占位符长度
+
+  // 编码长度
+  if ContentLen < 128 then
+  begin
+    LengthBytes[0] := Byte(ContentLen);
+    LengthSize := 1;
+  end
+  else if ContentLen <= $FF then
+  begin
+    LengthBytes[0] := $81;
+    LengthBytes[1] := Byte(ContentLen);
+    LengthSize := 2;
+  end
+  else if ContentLen <= $FFFF then
+  begin
+    LengthBytes[0] := $82;
+    LengthBytes[1] := Byte(ContentLen shr 8);
+    LengthBytes[2] := Byte(ContentLen);
+    LengthSize := 3;
+  end
+  else if ContentLen <= $FFFFFF then
+  begin
+    LengthBytes[0] := $83;
+    LengthBytes[1] := Byte(ContentLen shr 16);
+    LengthBytes[2] := Byte(ContentLen shr 8);
+    LengthBytes[3] := Byte(ContentLen);
+    LengthSize := 4;
+  end
+  else
+  begin
+    LengthBytes[0] := $84;
+    LengthBytes[1] := Byte(ContentLen shr 24);
+    LengthBytes[2] := Byte(ContentLen shr 16);
+    LengthBytes[3] := Byte(ContentLen shr 8);
+    LengthBytes[4] := Byte(ContentLen);
+    LengthSize := 5;
+  end;
+
+  // 读取内容
+  SetLength(TempData, ContentLen);
+  if ContentLen > 0 then
+  begin
+    FStream.Position := StartPos + 5;
+    FStream.ReadBuffer(TempData[0], ContentLen);
+  end;
+
+  // 回到长度字段位置，重写长度和内容
+  FStream.Position := StartPos;
+  FStream.WriteBuffer(LengthBytes[0], LengthSize);
+  if ContentLen > 0 then
+    FStream.WriteBuffer(TempData[0], ContentLen);
+
+  // 调整流大小（如果长度字段变短了）
+  FStream.Size := FStream.Position;
+end;
+
 procedure TASN1Writer.WriteNull;
 begin
   WriteTag(ASN1_TAG_NULL);
@@ -1243,27 +1339,22 @@ end;
 
 procedure TASN1Writer.BeginSequence;
 begin
-  // 占位符，需要后处理
-  WriteTag(ASN1_TAG_SEQUENCE_OF);
-  // 临时写入一个标记
-  FStream.WriteByte($FF);  // 标记需要后处理
+  PushPosition(ASN1_TAG_SEQUENCE_OF);
 end;
 
 procedure TASN1Writer.EndSequence;
 begin
-  // TODO: 实现后处理机制
-  // 目前简化处理
+  PopAndWriteLength;
 end;
 
 procedure TASN1Writer.BeginSet;
 begin
-  WriteTag(ASN1_TAG_SET_OF);
-  FStream.WriteByte($FF);
+  PushPosition(ASN1_TAG_SET_OF);
 end;
 
 procedure TASN1Writer.EndSet;
 begin
-  // TODO: 实现后处理机制
+  PopAndWriteLength;
 end;
 
 procedure TASN1Writer.BeginContextTag(ANumber: Integer; AConstructed: Boolean);
@@ -1273,13 +1364,12 @@ begin
   Tag := ASN1_CLASS_CONTEXT or Byte(ANumber and $1F);
   if AConstructed then
     Tag := Tag or ASN1_CONSTRUCTED;
-  WriteTag(Tag);
-  FStream.WriteByte($FF);
+  PushPosition(Tag);
 end;
 
 procedure TASN1Writer.EndContextTag;
 begin
-  // TODO: 实现后处理机制
+  PopAndWriteLength;
 end;
 
 procedure TASN1Writer.WriteRaw(const AData: TBytes);
