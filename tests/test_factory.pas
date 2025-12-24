@@ -31,6 +31,7 @@ type
     function IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
     function IsCipherSupported(const aCipherName: string): Boolean;
     function IsFeatureSupported(aFeature: TSSLFeature): Boolean;
+    function GetCapabilities: TSSLBackendCapabilities;
 
     procedure SetDefaultConfig(const aConfig: TSSLConfig);
     function GetDefaultConfig: TSSLConfig;
@@ -181,6 +182,13 @@ end;
 function TFailingSSLLibrary.IsFeatureSupported(aFeature: TSSLFeature): Boolean;
 begin
   Result := False;
+end;
+
+function TFailingSSLLibrary.GetCapabilities: TSSLBackendCapabilities;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+  Result.MinTLSVersion := sslProtocolTLS10;
+  Result.MaxTLSVersion := sslProtocolTLS12;
 end;
 
 procedure TFailingSSLLibrary.SetDefaultConfig(const aConfig: TSSLConfig);
