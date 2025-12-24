@@ -46,7 +46,12 @@ type
   { Alias for backward compatibility }
   TLogLevel = TSecurityEventLevel;
   
-  { Security Logger Interface }
+  {**
+   * ISecurityLogger - Security Logger Interface
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   ISecurityLogger = interface
     ['{A1B2C3D4-E5F6-4789-0123-456789ABCDEF}']
 

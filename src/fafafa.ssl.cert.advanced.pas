@@ -41,7 +41,12 @@ type
     ErrorMessage: string;
   end;
 
-  { OCSP Client interface }
+  {**
+   * IOCSPClient - OCSP Client interface
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   IOCSPClient = interface
     ['{F6071819-1011-4345-6789-012345678901}']
     
@@ -50,7 +55,12 @@ type
     procedure SetTimeout(ASeconds: Integer);
   end;
 
-  { CRL Manager interface }
+  {**
+   * ICRLManager - CRL Manager interface
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   ICRLManager = interface
     ['{07182019-2021-4567-8901-234567890123}']
     

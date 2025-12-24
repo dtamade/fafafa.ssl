@@ -32,7 +32,12 @@ type
   { Callback type for transformation (Phase 2.2.4) }
   TBuilderTransformFunc = function(ABuilder: ISSLContextBuilder): ISSLContextBuilder;
 
-  { SSL Context Builder Interface - Fluent API for context configuration }
+  {**
+   * ISSLContextBuilder - Fluent API for SSL context configuration
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   ISSLContextBuilder = interface
     ['{F6A7B8C9-D0E1-4F23-4567-890ABCDEF012}']
 

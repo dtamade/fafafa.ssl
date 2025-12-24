@@ -55,10 +55,12 @@ type
     FVerifyCallback: TSSLVerifyCallback;
     FPasswordCallback: TSSLPasswordCallback;
     FInfoCallback: TSSLInfoCallback;
-    
+
     procedure CleanupCertificate;
     procedure ApplyOptions;
-    
+    { P1: 统一上下文验证模式 - 与 OpenSSL 保持一致 }
+    procedure RequireValidContext(const AMethodName: string);
+
   public
     constructor Create(ALibrary: ISSLLibrary; AType: TSSLContextType);
     destructor Destroy; override;
@@ -239,6 +241,17 @@ begin
   // 当前实现已映射主要选项（会话缓存等）
   // 可扩展：根据实际需求添加更多 WinSSL 选项映射
   SetSessionCacheMode(ssoEnableSessionCache in FOptions);
+end;
+
+{ P1: 统一上下文验证模式 - 与 OpenSSL 保持一致 }
+procedure TWinSSLContext.RequireValidContext(const AMethodName: string);
+begin
+  if not FInitialized then
+    raise ESSLInitializationException.CreateWithContext(
+      'WinSSL context not initialized',
+      sslErrNotInitialized,
+      AMethodName
+    );
 end;
 
 // ============================================================================
@@ -757,12 +770,8 @@ end;
 
 function TWinSSLContext.CreateConnection(ASocket: THandle): ISSLConnection;
 begin
-  // Rust-quality: Explicit error handling instead of silent nil return
-  if not FInitialized then
-    RaiseSSLInitError(
-      'Cannot create connection: WinSSL context not initialized',
-      'TWinSSLContext.CreateConnection'
-    );
+  // P1: 统一上下文验证模式 - 与 OpenSSL RequireValidContext 模式一致
+  RequireValidContext('TWinSSLContext.CreateConnection');
 
   // Let exceptions propagate - caller must handle errors explicitly
   Result := TWinSSLConnection.Create(Self, ASocket);
@@ -770,12 +779,8 @@ end;
 
 function TWinSSLContext.CreateConnection(AStream: TStream): ISSLConnection;
 begin
-  // Rust-quality: Explicit error handling instead of silent nil return
-  if not FInitialized then
-    RaiseSSLInitError(
-      'Cannot create connection: WinSSL context not initialized',
-      'TWinSSLContext.CreateConnection'
-    );
+  // P1: 统一上下文验证模式 - 与 OpenSSL RequireValidContext 模式一致
+  RequireValidContext('TWinSSLContext.CreateConnection');
 
   // Rust-quality: Validate parameters upfront
   if AStream = nil then

@@ -28,7 +28,12 @@ type
     Timestamp: TDateTime;
   end;
   
-  { 错误处理器接口 }
+  {**
+   * ISSLErrorHandler - 错误处理器接口
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   ISSLErrorHandler = interface
     ['{F4B2C8E6-9A3D-4F2E-8B5C-1E7F9D4A6B2C}']
     procedure HandleError(const AErrorInfo: TSSLErrorInfo);

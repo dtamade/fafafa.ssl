@@ -45,7 +45,12 @@ type
     Warnings: TStringList;
   end;
   
-  { 证书链验证器接口 }
+  {**
+   * ISSLCertificateChainVerifier - 证书链验证器接口
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   ISSLCertificateChainVerifier = interface
     ['{A8B3C4D5-E6F7-4829-9ABC-DEF012345678}']
     

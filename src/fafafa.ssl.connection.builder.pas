@@ -29,7 +29,12 @@ type
   { Forward declarations }
   ISSLConnectionBuilder = interface;
 
-  { SSL Connection Builder Interface - Fluent API for connection configuration }
+  {**
+   * ISSLConnectionBuilder - Fluent API for SSL connection configuration
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   ISSLConnectionBuilder = interface
     ['{A8B9C0D1-E2F3-4567-8901-23456789ABCD}']
     

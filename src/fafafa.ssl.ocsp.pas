@@ -168,33 +168,361 @@ const
   OID_OCSP = '1.3.6.1.5.5.7.48.1';          // OCSP access method
 
 // ========================================================================
+// 辅助函数: DER 编码
+// ========================================================================
+
+{ 将 TBytes 包装为 DER SEQUENCE }
+function WrapInSequence(const AContent: TBytes): TBytes;
+var
+  LenBytes: TBytes;
+  ContentLen, TotalLen: Integer;
+  I, Offset: Integer;
+begin
+  ContentLen := Length(AContent);
+
+  // 计算长度字段
+  if ContentLen < 128 then
+  begin
+    SetLength(LenBytes, 1);
+    LenBytes[0] := Byte(ContentLen);
+  end
+  else if ContentLen < 256 then
+  begin
+    SetLength(LenBytes, 2);
+    LenBytes[0] := $81;
+    LenBytes[1] := Byte(ContentLen);
+  end
+  else if ContentLen < 65536 then
+  begin
+    SetLength(LenBytes, 3);
+    LenBytes[0] := $82;
+    LenBytes[1] := Byte(ContentLen shr 8);
+    LenBytes[2] := Byte(ContentLen and $FF);
+  end
+  else
+  begin
+    SetLength(LenBytes, 4);
+    LenBytes[0] := $83;
+    LenBytes[1] := Byte(ContentLen shr 16);
+    LenBytes[2] := Byte((ContentLen shr 8) and $FF);
+    LenBytes[3] := Byte(ContentLen and $FF);
+  end;
+
+  TotalLen := 1 + Length(LenBytes) + ContentLen;
+  SetLength(Result, TotalLen);
+
+  Result[0] := $30;  // SEQUENCE tag
+  Move(LenBytes[0], Result[1], Length(LenBytes));
+  Offset := 1 + Length(LenBytes);
+  if ContentLen > 0 then
+    Move(AContent[0], Result[Offset], ContentLen);
+end;
+
+{ 将 TBytes 包装为 DER OCTET STRING }
+function WrapInOctetString(const AContent: TBytes): TBytes;
+var
+  LenBytes: TBytes;
+  ContentLen, TotalLen: Integer;
+  Offset: Integer;
+begin
+  ContentLen := Length(AContent);
+
+  if ContentLen < 128 then
+  begin
+    SetLength(LenBytes, 1);
+    LenBytes[0] := Byte(ContentLen);
+  end
+  else if ContentLen < 256 then
+  begin
+    SetLength(LenBytes, 2);
+    LenBytes[0] := $81;
+    LenBytes[1] := Byte(ContentLen);
+  end
+  else
+  begin
+    SetLength(LenBytes, 3);
+    LenBytes[0] := $82;
+    LenBytes[1] := Byte(ContentLen shr 8);
+    LenBytes[2] := Byte(ContentLen and $FF);
+  end;
+
+  TotalLen := 1 + Length(LenBytes) + ContentLen;
+  SetLength(Result, TotalLen);
+
+  Result[0] := $04;  // OCTET STRING tag
+  Move(LenBytes[0], Result[1], Length(LenBytes));
+  Offset := 1 + Length(LenBytes);
+  if ContentLen > 0 then
+    Move(AContent[0], Result[Offset], ContentLen);
+end;
+
+{ 将 TBytes 包装为 DER context tag }
+function WrapInContextTag(ATagNumber: Integer; const AContent: TBytes;
+  AConstructed: Boolean = True): TBytes;
+var
+  Tag: Byte;
+  LenBytes: TBytes;
+  ContentLen, TotalLen: Integer;
+  Offset: Integer;
+begin
+  ContentLen := Length(AContent);
+
+  Tag := $80 or Byte(ATagNumber and $1F);  // Context class
+  if AConstructed then
+    Tag := Tag or $20;  // Constructed
+
+  if ContentLen < 128 then
+  begin
+    SetLength(LenBytes, 1);
+    LenBytes[0] := Byte(ContentLen);
+  end
+  else if ContentLen < 256 then
+  begin
+    SetLength(LenBytes, 2);
+    LenBytes[0] := $81;
+    LenBytes[1] := Byte(ContentLen);
+  end
+  else
+  begin
+    SetLength(LenBytes, 3);
+    LenBytes[0] := $82;
+    LenBytes[1] := Byte(ContentLen shr 8);
+    LenBytes[2] := Byte(ContentLen and $FF);
+  end;
+
+  TotalLen := 1 + Length(LenBytes) + ContentLen;
+  SetLength(Result, TotalLen);
+
+  Result[0] := Tag;
+  Move(LenBytes[0], Result[1], Length(LenBytes));
+  Offset := 1 + Length(LenBytes);
+  if ContentLen > 0 then
+    Move(AContent[0], Result[Offset], ContentLen);
+end;
+
+{ 连接多个 TBytes 数组 }
+function ConcatBytes(const AArrays: array of TBytes): TBytes;
+var
+  TotalLen, Offset, I: Integer;
+begin
+  TotalLen := 0;
+  for I := Low(AArrays) to High(AArrays) do
+    Inc(TotalLen, Length(AArrays[I]));
+
+  SetLength(Result, TotalLen);
+  Offset := 0;
+  for I := Low(AArrays) to High(AArrays) do
+  begin
+    if Length(AArrays[I]) > 0 then
+    begin
+      Move(AArrays[I][0], Result[Offset], Length(AArrays[I]));
+      Inc(Offset, Length(AArrays[I]));
+    end;
+  end;
+end;
+
+{ 编码 AlgorithmIdentifier }
+function EncodeAlgorithmIdentifier(const AOID: string): TBytes;
+var
+  OIDBytes, NullBytes, Content: TBytes;
+begin
+  // AlgorithmIdentifier ::= SEQUENCE {
+  //   algorithm   OBJECT IDENTIFIER,
+  //   parameters  ANY DEFINED BY algorithm OPTIONAL }
+
+  OIDBytes := EncodeOID(AOID);
+
+  // 为 OID 添加标签
+  SetLength(Result, 2 + Length(OIDBytes));
+  Result[0] := $06;  // OBJECT IDENTIFIER tag
+  Result[1] := Length(OIDBytes);
+  Move(OIDBytes[0], Result[2], Length(OIDBytes));
+  OIDBytes := Result;
+
+  // NULL 参数
+  SetLength(NullBytes, 2);
+  NullBytes[0] := $05;
+  NullBytes[1] := $00;
+
+  Content := ConcatBytes([OIDBytes, NullBytes]);
+  Result := WrapInSequence(Content);
+end;
+
+{ 编码 INTEGER (大整数) }
+function EncodeBigInteger(const AValue: TBytes): TBytes;
+var
+  NeedPadding: Boolean;
+  DataLen: Integer;
+begin
+  if Length(AValue) = 0 then
+  begin
+    SetLength(Result, 3);
+    Result[0] := $02;  // INTEGER tag
+    Result[1] := $01;  // Length
+    Result[2] := $00;  // Value
+    Exit;
+  end;
+
+  // 检查是否需要前导零（避免被解释为负数）
+  NeedPadding := (AValue[0] and $80) <> 0;
+
+  DataLen := Length(AValue);
+  if NeedPadding then
+    Inc(DataLen);
+
+  if DataLen < 128 then
+  begin
+    SetLength(Result, 2 + DataLen);
+    Result[0] := $02;
+    Result[1] := DataLen;
+    if NeedPadding then
+    begin
+      Result[2] := $00;
+      Move(AValue[0], Result[3], Length(AValue));
+    end
+    else
+      Move(AValue[0], Result[2], Length(AValue));
+  end
+  else if DataLen < 256 then
+  begin
+    SetLength(Result, 3 + DataLen);
+    Result[0] := $02;
+    Result[1] := $81;
+    Result[2] := DataLen;
+    if NeedPadding then
+    begin
+      Result[3] := $00;
+      Move(AValue[0], Result[4], Length(AValue));
+    end
+    else
+      Move(AValue[0], Result[3], Length(AValue));
+  end
+  else
+  begin
+    SetLength(Result, 4 + DataLen);
+    Result[0] := $02;
+    Result[1] := $82;
+    Result[2] := Byte(DataLen shr 8);
+    Result[3] := Byte(DataLen and $FF);
+    if NeedPadding then
+    begin
+      Result[4] := $00;
+      Move(AValue[0], Result[5], Length(AValue));
+    end
+    else
+      Move(AValue[0], Result[4], Length(AValue));
+  end;
+end;
+
+{ 编码 TX509Name 为 DER 格式的 Name }
+function EncodeName(const AName: TX509Name): TBytes;
+var
+  I: Integer;
+  RDNs: array of TBytes;
+  AttrValue, AttrType, AttrSeq, RDNSet: TBytes;
+  OIDBytes, ValueBytes: TBytes;
+  StringTag: Byte;
+begin
+  // Name ::= SEQUENCE OF RelativeDistinguishedName
+  // RelativeDistinguishedName ::= SET OF AttributeTypeAndValue
+  // AttributeTypeAndValue ::= SEQUENCE {
+  //   type   AttributeType,
+  //   value  AttributeValue }
+
+  SetLength(RDNs, Length(AName.Attributes));
+
+  for I := 0 to High(AName.Attributes) do
+  begin
+    // 编码 OID
+    OIDBytes := EncodeOID(AName.Attributes[I].OID);
+    SetLength(AttrType, 2 + Length(OIDBytes));
+    AttrType[0] := $06;
+    AttrType[1] := Length(OIDBytes);
+    Move(OIDBytes[0], AttrType[2], Length(OIDBytes));
+
+    // 编码值 (使用 UTF8String)
+    ValueBytes := TEncoding.UTF8.GetBytes(AName.Attributes[I].Value);
+    StringTag := $0C;  // UTF8String
+
+    if Length(ValueBytes) < 128 then
+    begin
+      SetLength(AttrValue, 2 + Length(ValueBytes));
+      AttrValue[0] := StringTag;
+      AttrValue[1] := Length(ValueBytes);
+      if Length(ValueBytes) > 0 then
+        Move(ValueBytes[0], AttrValue[2], Length(ValueBytes));
+    end
+    else
+    begin
+      SetLength(AttrValue, 3 + Length(ValueBytes));
+      AttrValue[0] := StringTag;
+      AttrValue[1] := $81;
+      AttrValue[2] := Length(ValueBytes);
+      if Length(ValueBytes) > 0 then
+        Move(ValueBytes[0], AttrValue[3], Length(ValueBytes));
+    end;
+
+    // AttributeTypeAndValue SEQUENCE
+    AttrSeq := WrapInSequence(ConcatBytes([AttrType, AttrValue]));
+
+    // RDN SET
+    RDNSet := AttrSeq;
+    SetLength(RDNs[I], 1 + 1 + Length(RDNSet));
+    RDNs[I][0] := $31;  // SET tag
+    RDNs[I][1] := Length(RDNSet);
+    Move(RDNSet[0], RDNs[I][2], Length(RDNSet));
+  end;
+
+  // Name SEQUENCE
+  Result := WrapInSequence(ConcatBytes(RDNs));
+end;
+
+{ 将字节数组转换为十六进制字符串 }
+function BytesToHex(const ABytes: TBytes): string;
+const
+  HexChars: array[0..15] of Char = '0123456789abcdef';
+var
+  I: Integer;
+begin
+  SetLength(Result, Length(ABytes) * 2);
+  for I := 0 to High(ABytes) do
+  begin
+    Result[I * 2 + 1] := HexChars[(ABytes[I] shr 4) and $0F];
+    Result[I * 2 + 2] := HexChars[ABytes[I] and $0F];
+  end;
+end;
+
+// ========================================================================
 // TOCSPCertID
 // ========================================================================
 
 function TOCSPCertID.Encode: TBytes;
 var
-  Writer: TASN1Writer;
-  AlgOID, AlgParams: TBytes;
+  AlgIdBytes, IssuerNameHashBytes, IssuerKeyHashBytes, SerialBytes: TBytes;
+  Content: TBytes;
 begin
-  Writer := TASN1Writer.Create;
-  try
-    // CertID ::= SEQUENCE {
-    //   hashAlgorithm       AlgorithmIdentifier,
-    //   issuerNameHash      OCTET STRING,
-    //   issuerKeyHash       OCTET STRING,
-    //   serialNumber        CertificateSerialNumber }
+  // CertID ::= SEQUENCE {
+  //   hashAlgorithm       AlgorithmIdentifier,
+  //   issuerNameHash      OCTET STRING,
+  //   issuerKeyHash       OCTET STRING,
+  //   serialNumber        CertificateSerialNumber }
 
-    // 简化实现：直接构建 DER
-    // AlgorithmIdentifier
-    AlgOID := EncodeOID(HashAlgorithm);
+  // 编码 AlgorithmIdentifier
+  AlgIdBytes := EncodeAlgorithmIdentifier(HashAlgorithm);
 
-    // 构建完整结构
-    // TODO: 完整实现
+  // 编码 issuerNameHash (OCTET STRING)
+  IssuerNameHashBytes := WrapInOctetString(IssuerNameHash);
 
-    Result := Writer.GetData;
-  finally
-    Writer.Free;
-  end;
+  // 编码 issuerKeyHash (OCTET STRING)
+  IssuerKeyHashBytes := WrapInOctetString(IssuerKeyHash);
+
+  // 编码 serialNumber (INTEGER)
+  SerialBytes := EncodeBigInteger(SerialNumber);
+
+  // 组合为 SEQUENCE
+  Content := ConcatBytes([AlgIdBytes, IssuerNameHashBytes,
+                          IssuerKeyHashBytes, SerialBytes]);
+  Result := WrapInSequence(Content);
 end;
 
 class function TOCSPCertID.Decode(ANode: TASN1Node): TOCSPCertID;
@@ -244,9 +572,8 @@ begin
   end;
 
   // 计算颁发者名称哈希
-  // 注意：需要使用 DER 编码的颁发者名称
-  // 这里简化处理，使用证书中的原始数据
-  // TODO: 从 AIssuerCert 提取 Subject 的 DER 编码
+  // RFC 6960: 使用颁发者证书 Subject 的 DER 编码
+  IssuerNameDER := EncodeName(AIssuerCert.Subject);
 
   // 计算颁发者公钥哈希
   // 需要使用 SubjectPublicKeyInfo 中的公钥位串
@@ -255,16 +582,26 @@ begin
   case AHashAlg of
     haSHA1:
     begin
-      Result.IssuerNameHash := SHA1(TEncoding.UTF8.GetBytes(AIssuerCert.Subject.ToString));
+      Result.IssuerNameHash := SHA1(IssuerNameDER);
       Result.IssuerKeyHash := SHA1(IssuerKeyDER);
     end;
     haSHA256:
     begin
-      Result.IssuerNameHash := SHA256(TEncoding.UTF8.GetBytes(AIssuerCert.Subject.ToString));
+      Result.IssuerNameHash := SHA256(IssuerNameDER);
       Result.IssuerKeyHash := SHA256(IssuerKeyDER);
     end;
+    haSHA384:
+    begin
+      Result.IssuerNameHash := SHA384(IssuerNameDER);
+      Result.IssuerKeyHash := SHA384(IssuerKeyDER);
+    end;
+    haSHA512:
+    begin
+      Result.IssuerNameHash := SHA512(IssuerNameDER);
+      Result.IssuerKeyHash := SHA512(IssuerKeyDER);
+    end;
   else
-    Result.IssuerNameHash := SHA1(TEncoding.UTF8.GetBytes(AIssuerCert.Subject.ToString));
+    Result.IssuerNameHash := SHA1(IssuerNameDER);
     Result.IssuerKeyHash := SHA1(IssuerKeyDER);
   end;
 
@@ -311,8 +648,11 @@ end;
 
 function TOCSPRequest.Encode: TBytes;
 var
-  Writer: TASN1Writer;
   I: Integer;
+  RequestList, TBSRequest, OCSPRequestBytes: TBytes;
+  SingleRequest, CertIDBytes: TBytes;
+  Requests: array of TBytes;
+  NonceExt, NonceOID, NonceValue, ExtContent, Extensions: TBytes;
 begin
   // OCSPRequest ::= SEQUENCE {
   //   tbsRequest     TBSRequest,
@@ -328,22 +668,62 @@ begin
   //   reqCert     CertID,
   //   singleRequestExtensions [0] EXPLICIT Extensions OPTIONAL }
 
-  Writer := TASN1Writer.Create;
-  try
-    // 简化实现：只包含基本请求
-    // 完整实现需要手动构建 DER 结构
+  // 生成 nonce
+  if FUseNonce and (Length(FNonce) = 0) then
+    GenerateNonce;
 
-    // 生成 nonce
-    if FUseNonce and (Length(FNonce) = 0) then
-      GenerateNonce;
-
-    // TODO: 完整的 DER 编码
-    // 这里返回空数据，实际使用时需要完整实现
-
-    Result := Writer.GetData;
-  finally
-    Writer.Free;
+  // 编码每个请求
+  SetLength(Requests, Length(FCertIDs));
+  for I := 0 to High(FCertIDs) do
+  begin
+    // Request ::= SEQUENCE { reqCert CertID }
+    CertIDBytes := FCertIDs[I].Encode;
+    Requests[I] := WrapInSequence(CertIDBytes);
   end;
+
+  // requestList: SEQUENCE OF Request
+  RequestList := WrapInSequence(ConcatBytes(Requests));
+
+  // 构建 TBSRequest
+  if FUseNonce and (Length(FNonce) > 0) then
+  begin
+    // 编码 nonce 扩展
+    // Extension ::= SEQUENCE {
+    //   extnID      OBJECT IDENTIFIER,
+    //   critical    BOOLEAN DEFAULT FALSE,
+    //   extnValue   OCTET STRING }
+
+    // OID for nonce
+    NonceOID := EncodeOID(OID_OCSP_NONCE);
+    SetLength(Result, 2 + Length(NonceOID));
+    Result[0] := $06;  // OBJECT IDENTIFIER tag
+    Result[1] := Length(NonceOID);
+    Move(NonceOID[0], Result[2], Length(NonceOID));
+    NonceOID := Result;
+
+    // nonce value wrapped in OCTET STRING (twice - for extension value)
+    NonceValue := WrapInOctetString(WrapInOctetString(FNonce));
+
+    // Extension SEQUENCE
+    NonceExt := WrapInSequence(ConcatBytes([NonceOID, NonceValue]));
+
+    // Extensions SEQUENCE
+    ExtContent := WrapInSequence(NonceExt);
+
+    // [2] EXPLICIT Extensions
+    Extensions := WrapInContextTag(2, ExtContent, True);
+
+    // TBSRequest: requestList + requestExtensions
+    TBSRequest := WrapInSequence(ConcatBytes([RequestList, Extensions]));
+  end
+  else
+  begin
+    // TBSRequest: requestList only
+    TBSRequest := WrapInSequence(RequestList);
+  end;
+
+  // OCSPRequest: TBSRequest (no signature)
+  Result := WrapInSequence(TBSRequest);
 end;
 
 // ========================================================================
@@ -475,9 +855,12 @@ end;
 
 procedure TOCSPResponse.ParseResponseData(ANode: TASN1Node);
 var
-  I, Index: Integer;
-  Child, ResponsesNode, SingleNode: TASN1Node;
+  I, J, Index: Integer;
+  Child, ResponsesNode, SingleNode, ExtSeqNode, ExtNode: TASN1Node;
   SingleResp: TOCSPSingleResponse;
+  NameNode, RDNNode, AVNode: TASN1Node;
+  NameStr: string;
+  ExtOID: string;
 begin
   // ResponseData ::= SEQUENCE {
   //   version            [0] EXPLICIT Version DEFAULT v1,
@@ -496,19 +879,51 @@ begin
     Inc(Index);
 
   // responderID
+  // ResponderID ::= CHOICE {
+  //   byName   [1] Name,
+  //   byKey    [2] KeyHash }
   if ANode.ChildCount > Index then
   begin
     Child := ANode.GetChild(Index);
     if Child.IsContextTag(1) then
     begin
-      // byName
+      // byName - 解析 Name (DN)
+      FResponderID := 'byName:';
+      // Name 是 SEQUENCE OF RelativeDistinguishedName
       if Child.ChildCount > 0 then
-        FResponderID := 'byName'; // TODO: 解析名称
+      begin
+        NameNode := Child.GetChild(0);
+        if NameNode.IsSequence then
+        begin
+          NameStr := '';
+          for I := 0 to NameNode.ChildCount - 1 do
+          begin
+            RDNNode := NameNode.GetChild(I);
+            // RDN 是 SET OF AttributeTypeAndValue
+            if RDNNode.ChildCount > 0 then
+            begin
+              AVNode := RDNNode.GetChild(0);
+              // AttributeTypeAndValue 是 SEQUENCE { type, value }
+              if AVNode.IsSequence and (AVNode.ChildCount >= 2) then
+              begin
+                if NameStr <> '' then
+                  NameStr := NameStr + ',';
+                NameStr := NameStr + OIDToName(AVNode.GetChild(0).AsOID) +
+                           '=' + AVNode.GetChild(1).AsString;
+              end;
+            end;
+          end;
+          FResponderID := 'byName:' + NameStr;
+        end;
+      end;
     end
     else if Child.IsContextTag(2) then
     begin
-      // byKey
-      FResponderID := 'byKey';
+      // byKey - 解析 KeyHash (OCTET STRING)
+      if Child.ChildCount > 0 then
+        FResponderID := 'byKey:' + BytesToHex(Child.GetChild(0).AsOctetString)
+      else
+        FResponderID := 'byKey';
     end;
     Inc(Index);
   end;
@@ -537,11 +952,52 @@ begin
   end;
 
   // responseExtensions (可选)
+  // [1] EXPLICIT Extensions
   if (ANode.ChildCount > Index) and ANode.GetChild(Index).IsContextTag(1) then
   begin
-    // 解析扩展 (如 nonce)
     Child := ANode.GetChild(Index);
-    // TODO: 解析 nonce 扩展
+    // Extensions ::= SEQUENCE OF Extension
+    if Child.ChildCount > 0 then
+    begin
+      ExtSeqNode := Child.GetChild(0);
+      if ExtSeqNode.IsSequence then
+      begin
+        for I := 0 to ExtSeqNode.ChildCount - 1 do
+        begin
+          ExtNode := ExtSeqNode.GetChild(I);
+          // Extension ::= SEQUENCE {
+          //   extnID      OBJECT IDENTIFIER,
+          //   critical    BOOLEAN DEFAULT FALSE,
+          //   extnValue   OCTET STRING }
+          if ExtNode.IsSequence and (ExtNode.ChildCount >= 2) then
+          begin
+            ExtOID := ExtNode.GetChild(0).AsOID;
+            if ExtOID = OID_OCSP_NONCE then
+            begin
+              // 提取 nonce 值
+              // extnValue 是 OCTET STRING 包含另一个 OCTET STRING
+              J := 1;
+              // 跳过可选的 critical BOOLEAN
+              if (ExtNode.ChildCount > 2) and ExtNode.GetChild(1).IsBoolean then
+                J := 2;
+              if ExtNode.ChildCount > J then
+              begin
+                FNonce := ExtNode.GetChild(J).AsOctetString;
+                // 如果 nonce 仍然是 OCTET STRING 包装的，需要再解析一次
+                if (Length(FNonce) > 2) and (FNonce[0] = $04) then
+                begin
+                  // 跳过 OCTET STRING 标签和长度
+                  if FNonce[1] < 128 then
+                    FNonce := Copy(FNonce, 2, FNonce[1])
+                  else if FNonce[1] = $81 then
+                    FNonce := Copy(FNonce, 3, FNonce[2]);
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
   end;
 end;
 

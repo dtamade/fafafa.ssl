@@ -26,6 +26,7 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.crypto.utils,
+  fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.backed,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.kdf;
@@ -153,21 +154,23 @@ end;
 
 procedure TestCryptoUtilsKDF;
 var
-  LPassword, LSalt: TBytes;
+  LPassword: string;
+  LSalt: TBytes;
   LDerivedKey: TBytes;
+  LEmptyInfo: TBytes;
 begin
   BeginSection('CryptoUtils KDF');
 
   // 准备测试数据
-  SetLength(LPassword, 16);
-  FillChar(LPassword[0], 16, $AA);
+  LPassword := 'test_password_1234';
 
   SetLength(LSalt, 16);
   FillChar(LSalt[0], 16, $BB);
 
   // 测试 PBKDF2 派生
   try
-    LDerivedKey := TCryptoUtils.PBKDF2(LPassword, LSalt, 100000, 32, HASH_SHA256);
+    // 使用 DeriveKeyPBKDF2 (MD=nil 默认使用 SHA-256)
+    LDerivedKey := DeriveKeyPBKDF2(LPassword, LSalt, 100000, 32, nil);
     Check('PBKDF2 derives 32-byte key', Length(LDerivedKey) = 32);
     Check('PBKDF2 output not zero', (Length(LDerivedKey) > 0) and (LDerivedKey[0] <> 0));
   except
@@ -176,8 +179,11 @@ begin
   end;
 
   // 测试 HKDF 派生（如果可用）
+  SetLength(LEmptyInfo, 0);
   try
-    LDerivedKey := TCryptoUtils.HKDF(LPassword, LSalt, nil, 32, HASH_SHA256);
+    // DeriveKeyHKDF 需要密钥作为 TBytes
+    SetLength(LDerivedKey, 0);
+    LDerivedKey := DeriveKeyHKDF(LSalt, LSalt, LEmptyInfo, 32, nil);
     Check('HKDF derives 32-byte key', Length(LDerivedKey) = 32);
   except
     on E: Exception do
@@ -193,23 +199,23 @@ end;
 
 procedure TestKDFDeterminism;
 var
-  LPassword, LSalt: TBytes;
+  LPassword: string;
+  LSalt: TBytes;
   LKey1, LKey2: TBytes;
   I: Integer;
   AllSame: Boolean;
 begin
   BeginSection('KDF Determinism');
 
-  SetLength(LPassword, 16);
-  FillChar(LPassword[0], 16, $CC);
+  LPassword := 'determinism_test_password';
 
   SetLength(LSalt, 16);
   FillChar(LSalt[0], 16, $DD);
 
   try
     // 派生两次，结果应该相同
-    LKey1 := TCryptoUtils.PBKDF2(LPassword, LSalt, 100000, 32, HASH_SHA256);
-    LKey2 := TCryptoUtils.PBKDF2(LPassword, LSalt, 100000, 32, HASH_SHA256);
+    LKey1 := DeriveKeyPBKDF2(LPassword, LSalt, 100000, 32, nil);
+    LKey2 := DeriveKeyPBKDF2(LPassword, LSalt, 100000, 32, nil);
 
     Check('PBKDF2 same length', Length(LKey1) = Length(LKey2));
 
@@ -237,15 +243,15 @@ end;
 
 procedure TestKDFSaltVariation;
 var
-  LPassword, LSalt1, LSalt2: TBytes;
+  LPassword: string;
+  LSalt1, LSalt2: TBytes;
   LKey1, LKey2: TBytes;
   I: Integer;
   AllSame: Boolean;
 begin
   BeginSection('KDF Salt Variation');
 
-  SetLength(LPassword, 16);
-  FillChar(LPassword[0], 16, $EE);
+  LPassword := 'salt_variation_test_password';
 
   SetLength(LSalt1, 16);
   FillChar(LSalt1[0], 16, $11);
@@ -254,8 +260,8 @@ begin
   FillChar(LSalt2[0], 16, $22);
 
   try
-    LKey1 := TCryptoUtils.PBKDF2(LPassword, LSalt1, 100000, 32, HASH_SHA256);
-    LKey2 := TCryptoUtils.PBKDF2(LPassword, LSalt2, 100000, 32, HASH_SHA256);
+    LKey1 := DeriveKeyPBKDF2(LPassword, LSalt1, 100000, 32, nil);
+    LKey2 := DeriveKeyPBKDF2(LPassword, LSalt2, 100000, 32, nil);
 
     // 不同的盐应该产生不同的密钥
     AllSame := True;
@@ -292,7 +298,14 @@ begin
 
   try
     // 初始化 OpenSSL
-    TOpenSSLLibrary.LoadSSL;
+    if not LoadOpenSSLLibrary then
+    begin
+      WriteLn('ERROR: Failed to load OpenSSL library');
+      Halt(1);
+    end;
+
+    // 加载 KDF 函数
+    LoadKDFFunctions;
 
     TestPBKDF2Iterations;
     TestSaltLength;

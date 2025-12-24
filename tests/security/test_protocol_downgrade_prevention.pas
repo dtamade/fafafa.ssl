@@ -27,6 +27,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.factory,
   fafafa.ssl.context.builder,
+  fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.backed;
 
 var
@@ -170,8 +171,8 @@ begin
     LContext := LBuilder.BuildClient;
     Check('TLS 1.2+1.3 context created', LContext <> nil);
 
-    // 测试 WithTLS13Only 方法
-    LBuilder := TSSLContextBuilder.Create.WithTLS13Only;
+    // 测试 WithTLS13 方法 (TLS 1.3 only)
+    LBuilder := TSSLContextBuilder.Create.WithTLS13;
     Check('WithTLS13Only builder created', LBuilder <> nil);
 
     LContext := LBuilder.BuildClient;
@@ -258,7 +259,11 @@ begin
 
   try
     // 初始化 OpenSSL
-    TOpenSSLLibrary.LoadSSL;
+    if not LoadOpenSSLLibrary then
+    begin
+      WriteLn('ERROR: Failed to load OpenSSL library');
+      Halt(1);
+    end;
 
     TestProtocolSecurityLevels;
     TestDowngradeDetection;

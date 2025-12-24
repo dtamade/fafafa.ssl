@@ -68,7 +68,12 @@ type
     property Data: PByte read FData;
   end;
 
-  { Secure key storage interface }
+  {**
+   * ISecureKeyStore - Secure key storage interface
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   ISecureKeyStore = interface
     ['{E5F607A8-0910-4234-5678-901234567890}']
     

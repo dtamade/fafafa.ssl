@@ -533,7 +533,12 @@ type
     MaxTLSVersion: TSSLProtocolVersion;  // 支持的最高 TLS 版本
   end;
 
-  { ISSLLibrary - SSL库管理接口 }
+  {**
+   * ISSLLibrary - SSL库管理接口
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   ISSLLibrary = interface
     ['{A0E8F4B1-7C3A-4D2E-9F5B-8C6D7E9A0B1C}']
     
@@ -577,7 +582,12 @@ type
     function CreateCertificateStore: ISSLCertificateStore;
   end;
 
-  { ISSLContext - SSL上下文接口 }
+  {**
+   * ISSLContext - SSL上下文接口
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   ISSLContext = interface
     ['{B1F9E5C2-8D4B-5E3F-A06C-9D8E0F1A2B3D}']
     
@@ -648,7 +658,12 @@ type
     function GetNativeHandle: Pointer;
   end;
 
-  { ISSLConnection - SSL连接接口 }
+  {**
+   * ISSLConnection - SSL连接接口
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   ISSLConnection = interface
     ['{C2A9F6D3-9E5C-6F40-B17D-AE9F102B4C5E}']
     
@@ -720,6 +735,9 @@ type
    *   - ISSLCertificate: Full-featured, for SSL operations (load, verify, chains)
    *   - ICertificate: Lightweight, for builder output, read-only
    *
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
    * @see ICertificate for builder-generated certificates
    *}
   ISSLCertificate = interface
@@ -782,7 +800,12 @@ type
     function Clone: ISSLCertificate;    // P3-21: 创建新实例，调用者拥有所有权
   end;
 
-  { ISSLCertificateStore - 证书存储接口 }
+  {**
+   * ISSLCertificateStore - 证书存储接口
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   ISSLCertificateStore = interface
     ['{E4C1B8F5-B07E-8162-D39F-C10B324D6E70}']
     
@@ -813,7 +836,12 @@ type
     function GetNativeHandle: Pointer;
   end;
 
-  { ISSLSession - 会话接口 }
+  {**
+   * ISSLSession - 会话接口
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   ISSLSession = interface
     ['{F5D2C9F6-C18F-9273-E40A-D21C435E7F81}']
     

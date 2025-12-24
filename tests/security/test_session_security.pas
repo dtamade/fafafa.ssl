@@ -30,6 +30,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.factory,
   fafafa.ssl.context.builder,
+  fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.backed;
 
 const
@@ -344,7 +345,11 @@ begin
 
   try
     // 初始化 OpenSSL
-    TOpenSSLLibrary.LoadSSL;
+    if not LoadOpenSSLLibrary then
+    begin
+      WriteLn('ERROR: Failed to load OpenSSL library');
+      Halt(1);
+    end;
 
     TestSessionTimeoutValidation;
     TestSessionCacheSizeValidation;

@@ -41,9 +41,13 @@ type
    * To convert ICertificate to ISSLCertificate, use:
    *   LSSLCert := TSSLFactory.CreateCertificate;
    *   LSSLCert.LoadFromPEM(LCert.ToPEM);
+   *
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
    *}
   ICertificate = interface
-    ['{A1B2C3D4-E5F6-4789-0123-456789ABCDEF}'] // GUID changed
+    ['{A1B2C3D4-E5F6-4789-0123-456789ABCDEF}']
     
     // Basic information
     function GetSubject: string;
@@ -74,7 +78,12 @@ type
     property SubjectAltNames: TStringArray read GetSubjectAltNames; // Added property
   end;
 
-  { Extended certificate interface - with OpenSSL handle access }
+  {**
+   * ICertificateEx - Extended certificate interface with OpenSSL handle access
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   ICertificateEx = interface(ICertificate)
     ['{B2C3D4E5-F607-4890-1234-567890ABCDEF}']
     
@@ -82,7 +91,12 @@ type
     property X509Handle: Pointer read GetX509Handle;
   end;
 
-  { Private key interface }
+  {**
+   * IPrivateKey - Private key interface
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   IPrivateKey = interface
     ['{C3D4E5F6-0718-4901-2345-67890ABCDEF1}']
     
@@ -90,7 +104,12 @@ type
     procedure SaveToFile(const AFile: string);
   end;
 
-  { Extended private key interface - with OpenSSL handle access }
+  {**
+   * IPrivateKeyEx - Extended private key interface with OpenSSL handle access
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   IPrivateKeyEx = interface(IPrivateKey)
     ['{D4E5F607-1819-4012-3456-7890ABCDEF12}']
     
@@ -98,7 +117,12 @@ type
     property EVP_PKEYHandle: Pointer read GetEVP_PKEYHandle;
   end;
 
-  { Certificate + Private Key pair }
+  {**
+   * IKeyPairWithCertificate - Certificate + Private Key pair
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   IKeyPairWithCertificate = interface
     ['{C3D4E5F6-0708-4012-CDEF-123456789012}']
     
@@ -113,7 +137,12 @@ type
     property PrivateKey: IPrivateKey read GetPrivateKey;
   end;
 
-  { Fluent certificate builder }
+  {**
+   * ICertificateBuilder - Fluent certificate builder
+   * @stable 1.0
+   * @locked 2025-12-24
+   * @breaking-change-policy Requires major version bump
+   *}
   ICertificateBuilder = interface
     ['{D4E5F607-0809-4123-0234-567890123456}']
     
