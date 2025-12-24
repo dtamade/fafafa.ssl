@@ -31,6 +31,7 @@ uses
   fafafa.ssl.factory,
   fafafa.ssl.context.builder,
   fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.rand,
   fafafa.ssl.openssl.backed;
 
 const
@@ -350,6 +351,9 @@ begin
       WriteLn('ERROR: Failed to load OpenSSL library');
       Halt(1);
     end;
+
+    // 加载 RAND 函数（用于 TSSLHelper.GenerateRandomBytes）
+    LoadOpenSSLRAND;
 
     TestSessionTimeoutValidation;
     TestSessionCacheSizeValidation;

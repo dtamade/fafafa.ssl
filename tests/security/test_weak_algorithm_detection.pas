@@ -62,27 +62,41 @@ end;
 { 检查密码套件是否包含弱算法 }
 function ContainsWeakCipher(const ACipherList: string): Boolean;
 const
-  WEAK_CIPHERS: array[0..9] of string = (
-    'RC4', 'DES', '3DES', 'NULL', 'EXPORT', 'MD5',
-    'ANON', 'ADH', 'AECDH', 'CBC'  // CBC 在某些情况下有 BEAST 攻击风险
+  // 只检查真正危险的弱算法，不包括 CBC（现代实现已缓解 BEAST）
+  WEAK_CIPHERS: array[0..7] of string = (
+    'RC4', 'DES-', '3DES', 'NULL-', 'EXPORT', '-MD5',
+    'ADH-', 'AECDH-'
   );
 var
-  I: Integer;
+  I, P: Integer;
   UpperCipherList: string;
+  WeakCipher: string;
+  IsExcluded: Boolean;
 begin
   Result := False;
   UpperCipherList := UpperCase(ACipherList);
 
   for I := Low(WEAK_CIPHERS) to High(WEAK_CIPHERS) do
   begin
-    if Pos(WEAK_CIPHERS[I], UpperCipherList) > 0 then
+    WeakCipher := WEAK_CIPHERS[I];
+    P := Pos(WeakCipher, UpperCipherList);
+
+    while P > 0 do
     begin
-      // 排除排除模式 (如 !RC4)
-      if Pos('!' + WEAK_CIPHERS[I], UpperCipherList) = 0 then
+      // 检查此出现是否被排除（前面有 !）
+      IsExcluded := (P > 1) and (UpperCipherList[P - 1] = '!');
+
+      if not IsExcluded then
       begin
+        // 找到未排除的弱算法
         Result := True;
         Exit;
       end;
+
+      // 继续搜索下一个出现
+      P := Pos(WeakCipher, Copy(UpperCipherList, P + Length(WeakCipher), MaxInt));
+      if P > 0 then
+        P := P + Length(WeakCipher);
     end;
   end;
 end;

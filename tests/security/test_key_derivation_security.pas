@@ -29,6 +29,7 @@ uses
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.backed,
   fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.hmac,
   fafafa.ssl.openssl.api.kdf;
 
 const
@@ -306,6 +307,9 @@ begin
 
     // 加载 KDF 函数
     LoadKDFFunctions;
+
+    // 加载 HMAC 函数（HKDF 依赖 HMAC）
+    LoadOpenSSLHMAC;
 
     TestPBKDF2Iterations;
     TestSaltLength;

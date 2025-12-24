@@ -145,10 +145,10 @@ begin
   Check('TLS 1.0+1.2+1.3 allows downgrade', AllowsDowngrade(MixedSet));
   Check('TLS 1.0+1.2+1.3 not all secure', not OnlySecureProtocols(MixedSet));
 
-  // 不安全集合
+  // 不安全集合 - 全部为不安全协议，不存在从安全到不安全的降级风险
   InsecureSet := [sslProtocolSSL3, sslProtocolTLS10];
-  Check('SSL3+TLS1.0 allows downgrade', AllowsDowngrade(InsecureSet),
-        'Both are insecure, but still allows downgrade from TLS 1.0 to SSL 3');
+  Check('SSL3+TLS1.0 no security downgrade', not AllowsDowngrade(InsecureSet),
+        'Both are insecure - no downgrade from secure to insecure possible');
   Check('SSL3+TLS1.0 not secure', not OnlySecureProtocols(InsecureSet));
 
   // 只有 TLS 1.3

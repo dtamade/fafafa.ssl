@@ -385,6 +385,14 @@ begin
   else
     Exclude(AConfig.Options, ssoEnableOCSPStapling);
 
+  // 设置会话超时默认值
+  if AConfig.SessionTimeout <= 0 then
+    AConfig.SessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
+
+  // 设置会话缓存大小默认值
+  if AConfig.SessionCacheSize <= 0 then
+    AConfig.SessionCacheSize := SSL_DEFAULT_SESSION_CACHE_SIZE;
+
   if AConfig.SessionCacheSize > 0 then
     Include(AConfig.Options, ssoEnableSessionCache)
   else
