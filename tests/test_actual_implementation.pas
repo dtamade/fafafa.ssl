@@ -5,7 +5,9 @@ program test_actual_implementation;
 uses
   SysUtils, Classes,
   fafafa.ssl,
-  fafafa.ssl.utils;
+  fafafa.ssl.base,
+  fafafa.ssl.utils,
+  fafafa.ssl.encoding;
 
 procedure TestHashData;
 var
@@ -48,11 +50,11 @@ begin
   LData := TEncoding.UTF8.GetBytes('Test Data');
   
   // Encode
-  LBase64 := TSSLUtils.BytesToBase64(LData);
+  LBase64 := TEncodingUtils.Base64Encode(LData);
   WriteLn('Base64 Encoded: ', LBase64);
   
   // Decode
-  LDecoded := TSSLUtils.Base64ToBytes(LBase64);
+  LDecoded := TEncodingUtils.Base64Decode(LBase64);
   WriteLn('Decoded: ', TEncoding.UTF8.GetString(LDecoded));
   
   if TEncoding.UTF8.GetString(LDecoded) = 'Test Data' then
@@ -78,11 +80,11 @@ begin
   LData[3] := $EF;
   
   // Encode
-  LHex := TSSLUtils.BytesToHex(LData);
+  LHex := TEncodingUtils.BytesToHex(LData);
   WriteLn('Hex Encoded: ', LHex);
   
   // Decode
-  LDecoded := TSSLUtils.HexToBytes(LHex);
+  LDecoded := TEncodingUtils.HexToBytes(LHex);
   
   if (Length(LDecoded) = 4) and 
      (LDecoded[0] = $DE) and 
@@ -136,7 +138,7 @@ begin
   
   LBytes := TSSLHelper.GenerateRandomBytes(16);
   
-  WriteLn('Random Bytes (16): ', TSSLUtils.BytesToHex(LBytes));
+  WriteLn('Random Bytes (16): ', TEncodingUtils.BytesToHex(LBytes));
   
   if Length(LBytes) = 16 then
     WriteLn('[PASS] Random bytes generation is implemented')

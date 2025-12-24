@@ -30,7 +30,7 @@ uses
   // 对称加密模块
   fafafa.ssl.openssl.api.aes,
   fafafa.ssl.openssl.api.des,
-  fafafa.ssl.openssl.chacha,
+  fafafa.ssl.openssl.api.chacha,
   // 证书和编码模块
   fafafa.ssl.openssl.api.pem,
   fafafa.ssl.openssl.api.asn1,
@@ -43,10 +43,10 @@ uses
   fafafa.ssl.openssl.api.obj,
   fafafa.ssl.openssl.api.buffer,
   fafafa.ssl.openssl.api.stack,
-  fafafa.ssl.openssl.lhash,
+  fafafa.ssl.openssl.api.lhash,
   // 扩展模块
   fafafa.ssl.openssl.api.cms,
-  fafafa.ssl.openssl.ts,
+  fafafa.ssl.openssl.api.ts,
   fafafa.ssl.openssl.api.ct,
   fafafa.ssl.openssl.api.ocsp,
   fafafa.ssl.openssl.api.kdf,
@@ -59,7 +59,7 @@ uses
   fafafa.ssl.openssl.api.modes,
   fafafa.ssl.openssl.api.cmac.evp,  // Phase 2.2: 使用EVP API替代废弃的cmac.pas
   // 国密算法
-  fafafa.ssl.openssl.sm;
+  fafafa.ssl.openssl.api.sm;
 
 type
   TModuleTest = record

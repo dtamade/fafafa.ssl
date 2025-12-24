@@ -6,7 +6,7 @@ uses
   SysUtils,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
-  fafafa.ssl.openssl.aead;
+  fafafa.ssl.openssl.api.aead;
 
 procedure TestAESGCM;
 var

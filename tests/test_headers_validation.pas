@@ -12,12 +12,12 @@ uses
   fafafa.ssl.openssl.api.rand,
   fafafa.ssl.openssl.api.buffer,
   fafafa.ssl.openssl.api.sha,
-  fafafa.ssl.openssl.blake2,
+  fafafa.ssl.openssl.api.blake2,
   fafafa.ssl.openssl.api.sha3,
   fafafa.ssl.openssl.api.sha3.evp,
   fafafa.ssl.openssl.api.aes,
   fafafa.ssl.openssl.api.des,
-  fafafa.ssl.openssl.chacha,
+  fafafa.ssl.openssl.api.chacha,
   fafafa.ssl.openssl.api.hmac,
   fafafa.ssl.openssl.api.cmac.evp,
   fafafa.ssl.openssl.api.bn,
@@ -31,7 +31,7 @@ uses
   fafafa.ssl.openssl.api.pem,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.x509v3,
-  fafafa.ssl.openssl.aead,
+  fafafa.ssl.openssl.api.aead,
   fafafa.ssl.openssl.api.kdf,
   fafafa.ssl.openssl.api.evp;
 

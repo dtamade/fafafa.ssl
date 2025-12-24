@@ -55,15 +55,15 @@ begin
   AddModule('sha', 'fafafa.ssl.openssl.api.sha', 'Hash', 1);
   AddModule('sha3', 'fafafa.ssl.openssl.api.sha3', 'Hash', 1);
   AddModule('sha3.evp', 'fafafa.ssl.openssl.api.sha3.evp', 'Hash', 1);
-  AddModule('blake2', 'fafafa.ssl.openssl.blake2', 'Hash', 1);
-  AddModule('sm', 'fafafa.ssl.openssl.sm', 'Hash', 1);
+  AddModule('blake2', 'fafafa.ssl.openssl.api.blake2', 'Hash', 1);
+  AddModule('sm', 'fafafa.ssl.openssl.api.sm', 'Hash', 1);
   
   // Symmetric Ciphers (Priority 1)
   AddModule('aes', 'fafafa.ssl.openssl.api.aes', 'Cipher', 1);
   AddModule('des', 'fafafa.ssl.openssl.api.des', 'Cipher', 1);
-  AddModule('chacha', 'fafafa.ssl.openssl.chacha', 'Cipher', 1);
-  AddModule('aria', 'fafafa.ssl.openssl.aria', 'Cipher', 2);
-  AddModule('seed', 'fafafa.ssl.openssl.seed', 'Cipher', 2);
+  AddModule('chacha', 'fafafa.ssl.openssl.api.chacha', 'Cipher', 1);
+  AddModule('aria', 'fafafa.ssl.openssl.api.aria', 'Cipher', 2);
+  AddModule('seed', 'fafafa.ssl.openssl.api.seed', 'Cipher', 2);
   AddModule('legacy_ciphers', 'fafafa.ssl.openssl.legacy_ciphers', 'Cipher', 3);
   
   // Asymmetric Crypto (Priority 1)
@@ -79,10 +79,10 @@ begin
   // AddModule('cmac', 'fafafa.ssl.openssl.api.cmac', 'MAC', 1);  // Phase 2.2: 废弃，使用cmac.evp
   AddModule('cmac.evp', 'fafafa.ssl.openssl.api.cmac.evp', 'MAC', 1);
   AddModule('kdf', 'fafafa.ssl.openssl.api.kdf', 'KDF', 1);
-  AddModule('scrypt_whirlpool', 'fafafa.ssl.openssl.scrypt_whirlpool', 'KDF', 2);
+  AddModule('scrypt_whirlpool', 'fafafa.ssl.openssl.api.scrypt_whirlpool', 'KDF', 2);
   
   // AEAD & Modes (Priority 1)
-  AddModule('aead', 'fafafa.ssl.openssl.aead', 'AEAD', 1);
+  AddModule('aead', 'fafafa.ssl.openssl.api.aead', 'AEAD', 1);
   AddModule('modes', 'fafafa.ssl.openssl.api.modes', 'Modes', 1);
   
   // X.509 & PKI (Priority 1)
@@ -103,7 +103,7 @@ begin
   // Certificate Services (Priority 2)
   AddModule('ocsp', 'fafafa.ssl.openssl.api.ocsp', 'Certificate', 2);
   AddModule('ct', 'fafafa.ssl.openssl.api.ct', 'Certificate', 2);
-  AddModule('ts', 'fafafa.ssl.openssl.ts', 'Certificate', 2);
+  AddModule('ts', 'fafafa.ssl.openssl.api.ts', 'Certificate', 2);
   
   // Advanced Features (Priority 2-3)
   AddModule('engine', 'fafafa.ssl.openssl.api.engine', 'Advanced', 2);
@@ -116,14 +116,14 @@ begin
   // Utilities (Priority 2-3)
   AddModule('buffer', 'fafafa.ssl.openssl.api.buffer', 'Utility', 2);
   AddModule('stack', 'fafafa.ssl.openssl.api.stack', 'Utility', 2);
-  AddModule('lhash', 'fafafa.ssl.openssl.lhash', 'Utility', 2);
+  AddModule('lhash', 'fafafa.ssl.openssl.api.lhash', 'Utility', 2);
   AddModule('obj', 'fafafa.ssl.openssl.api.obj', 'Utility', 2);
   AddModule('conf', 'fafafa.ssl.openssl.api.conf', 'Utility', 2);
-  AddModule('txt_db', 'fafafa.ssl.openssl.txt_db', 'Utility', 3);
+  AddModule('txt_db', 'fafafa.ssl.openssl.api.txt_db', 'Utility', 3);
   AddModule('ui', 'fafafa.ssl.openssl.api.ui', 'Utility', 3);
   AddModule('dso', 'fafafa.ssl.openssl.api.dso', 'Utility', 3);
-  AddModule('srp', 'fafafa.ssl.openssl.srp', 'Utility', 3);
-  AddModule('thread', 'fafafa.ssl.openssl.thread', 'Utility', 2);
+  AddModule('srp', 'fafafa.ssl.openssl.api.srp', 'Utility', 3);
+  AddModule('thread', 'fafafa.ssl.openssl.api.thread', 'Utility', 2);
   AddModule('crypto', 'fafafa.ssl.openssl.api.crypto', 'Utility', 1);
   AddModule('rand_old', 'fafafa.ssl.openssl.api.rand_old', 'Utility', 3);
 end;

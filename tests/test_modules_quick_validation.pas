@@ -184,14 +184,11 @@ begin
     end;
     WriteLn('OpenSSL loaded successfully');
     WriteLn;
-    
-    // Load module functions
+
+    // Load module functions - handled automatically by LoadOpenSSLLibrary
     LoadEVP(GetCryptoLibHandle);
-    LoadBN(GetCryptoLibHandle);
-    LoadBIO(GetCryptoLibHandle);
-    LoadRANDFunctions(GetCryptoLibHandle);
-    LoadERRFunctions(GetCryptoLibHandle);
-    
+    // LoadBN, LoadBIO, LoadRANDFunctions, LoadERRFunctions are deprecated
+
     RunAllTests;
     PrintSummary;
     

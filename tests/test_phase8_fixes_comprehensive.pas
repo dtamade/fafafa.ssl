@@ -6,7 +6,8 @@ uses
   SysUtils, DateUtils, DynLibs,
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.evp,
-  fafafa.ssl.crypto.utils;
+  fafafa.ssl.crypto.utils,
+  fafafa.ssl.encoding;
 
 var
   LTestsPassed, LTestsFailed: Integer;
@@ -113,15 +114,15 @@ begin
   // Test correctness first
   WriteLn('[Correctness Tests]');
   LEncoded := 'SGVsbG8gV29ybGQ=';
-  LDecoded := TCryptoUtils.Base64Decode(LEncoded);
+  LDecoded := TEncodingUtils.Base64Decode(LEncoded);
   RunTest('Decode "Hello World"',
     (Length(LDecoded) = 11) and (TEncoding.UTF8.GetString(LDecoded) = 'Hello World'));
 
   SetLength(LData, 256);
   for I := 0 to 255 do
     LData[I] := I;
-  LEncoded := TCryptoUtils.Base64Encode(LData);
-  LDecoded := TCryptoUtils.Base64Decode(LEncoded);
+  LEncoded := TEncodingUtils.Base64Encode(LData);
+  LDecoded := TEncodingUtils.Base64Decode(LEncoded);
   RunTest('Binary roundtrip (0..255)', CompareMem(@LData[0], @LDecoded[0], 256));
 
   WriteLn;
@@ -133,11 +134,11 @@ begin
   for I := 0 to LDataSize - 1 do
     LData[I] := Byte(I mod 256);
 
-  LEncoded := TCryptoUtils.Base64Encode(LData);
+  LEncoded := TEncodingUtils.Base64Encode(LData);
 
   LStartTime := Now;
   for I := 1 to 5 do
-    LDecoded := TCryptoUtils.Base64Decode(LEncoded);
+    LDecoded := TEncodingUtils.Base64Decode(LEncoded);
   LEndTime := Now;
 
   LDecodeTime := MilliSecondsBetween(LEndTime, LStartTime);

@@ -17,14 +17,14 @@ uses
   
   // Hash 算法
   fafafa.ssl.openssl.api.sha,
-  fafafa.ssl.openssl.blake2,
+  fafafa.ssl.openssl.api.blake2,
   fafafa.ssl.openssl.api.sha3,
   fafafa.ssl.openssl.api.sha3.evp,
   
   // 对称加密
   fafafa.ssl.openssl.api.aes,
   fafafa.ssl.openssl.api.des,
-  fafafa.ssl.openssl.chacha,
+  fafafa.ssl.openssl.api.chacha,
   
   // MAC
   fafafa.ssl.openssl.api.hmac,
@@ -51,7 +51,7 @@ uses
   // fafafa.ssl.openssl.api.pkcs12,
   
   // AEAD
-  fafafa.ssl.openssl.aead,
+  fafafa.ssl.openssl.api.aead,
   
   // KDF
   fafafa.ssl.openssl.api.kdf,

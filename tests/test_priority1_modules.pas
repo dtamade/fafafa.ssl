@@ -18,16 +18,16 @@ uses
   // Hash
   fafafa.ssl.openssl.api.md,
   fafafa.ssl.openssl.api.sha,
-  fafafa.ssl.openssl.blake2,
+  fafafa.ssl.openssl.api.blake2,
   // Cipher
   fafafa.ssl.openssl.api.aes,
   fafafa.ssl.openssl.api.des,
-  fafafa.ssl.openssl.chacha,
+  fafafa.ssl.openssl.api.chacha,
   // MAC & KDF
   fafafa.ssl.openssl.api.hmac,
   fafafa.ssl.openssl.api.kdf,
   // AEAD
-  fafafa.ssl.openssl.aead,
+  fafafa.ssl.openssl.api.aead,
   // Advanced
   fafafa.ssl.openssl.api.provider,
   fafafa.ssl.openssl.api.crypto;

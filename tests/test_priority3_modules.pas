@@ -5,17 +5,17 @@ program test_priority3_modules;
 uses
   SysUtils,
   // Priority 3 - Symmetric Ciphers (1 module)
-  fafafa.ssl.openssl.legacy_ciphers,
+  fafafa.ssl.openssl.api.legacy_ciphers,
   
   // Priority 3 - Advanced Features (2 modules)
   fafafa.ssl.openssl.api.async,  // Fixed!
   fafafa.ssl.openssl.api.comp,  // Fixed!
   
   // Priority 3 - Utilities (5 modules)
-  fafafa.ssl.openssl.txt_db,
+  fafafa.ssl.openssl.api.txt_db,
   fafafa.ssl.openssl.api.ui,  // Fixed in Priority 2!
   fafafa.ssl.openssl.api.dso,
-  fafafa.ssl.openssl.srp;
+  fafafa.ssl.openssl.api.srp;
   //fafafa.ssl.openssl.api.rand_old;  // Needs type conversions
 
 var

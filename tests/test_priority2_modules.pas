@@ -5,11 +5,11 @@ program test_priority2_modules;
 uses
   SysUtils,
   // Priority 2 - Symmetric Ciphers (2 modules)
-  fafafa.ssl.openssl.aria,
-  fafafa.ssl.openssl.seed,
+  fafafa.ssl.openssl.api.aria,
+  fafafa.ssl.openssl.api.seed,
   
   // Priority 2 - MAC & KDF (1 module)
-  fafafa.ssl.openssl.scrypt_whirlpool,  // Fixed!
+  fafafa.ssl.openssl.api.scrypt_whirlpool,  // Fixed!
   
   // Priority 2 - PKI & Certificates (7 modules)
   fafafa.ssl.openssl.api.pkcs,  // Fixed!
@@ -18,7 +18,7 @@ uses
   fafafa.ssl.openssl.api.cms,  // Fixed!
   fafafa.ssl.openssl.api.ocsp,  // Fixed!
   fafafa.ssl.openssl.api.ct,  // Fixed!
-  fafafa.ssl.openssl.ts,  // Fixed!
+  fafafa.ssl.openssl.api.ts,  // Fixed!
   
   // Priority 2 - SSL/TLS (1 module)
   fafafa.ssl.openssl.api.ssl,  // Fixed!
@@ -30,10 +30,10 @@ uses
   // Priority 2 - Utilities (7 modules)
   fafafa.ssl.openssl.api.buffer,
   fafafa.ssl.openssl.api.stack,  // Fixed!
-  fafafa.ssl.openssl.lhash,  // Fixed!
+  fafafa.ssl.openssl.api.lhash,  // Fixed!
   fafafa.ssl.openssl.api.obj,
   fafafa.ssl.openssl.api.conf,  // Fixed!
-  fafafa.ssl.openssl.thread;
+  fafafa.ssl.openssl.api.thread;
 
 var
   TotalTests, PassedTests: Integer;

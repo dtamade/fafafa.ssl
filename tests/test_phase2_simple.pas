@@ -6,7 +6,7 @@ uses
   SysUtils,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.evp,
-  fafafa.ssl.openssl.aead;
+  fafafa.ssl.openssl.api.aead;
 
 var
   TotalTests, PassedTests: Integer;
