@@ -10,8 +10,8 @@ program test_result_types;
 
 uses
   SysUtils,
-  fafafa.ssl.base;
-  // 不导入 fafafa.ssl.exceptions，只使用 base 中的定义
+  fafafa.ssl.base,
+  fafafa.ssl.exceptions;
 
 var
   GTestsPassed: Integer = 0;

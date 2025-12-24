@@ -5,7 +5,7 @@ program benchmark_crypto;
 
 uses
   SysUtils, DateUtils,
-  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.rsa,

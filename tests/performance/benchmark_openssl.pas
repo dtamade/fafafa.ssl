@@ -4,7 +4,7 @@ program benchmark_openssl;
 
 uses
   SysUtils, DateUtils,
-  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core;
 
 var

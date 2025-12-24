@@ -11,7 +11,7 @@ program test_openssl11_compat;
 uses
   SysUtils,
   fafafa.ssl.openssl.base,
-  fafafa.ssl.openssl.consts,
+  fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp;
 

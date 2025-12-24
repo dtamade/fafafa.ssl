@@ -4,7 +4,7 @@ program test_asn1_module;
 
 uses
   SysUtils, DateUtils, ctypes,
-  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.asn1;

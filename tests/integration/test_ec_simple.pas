@@ -4,7 +4,7 @@ program test_ec_simple;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ec,

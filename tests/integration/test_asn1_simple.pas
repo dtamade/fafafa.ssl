@@ -4,8 +4,8 @@ program test_asn1_simple;
 
 uses
   SysUtils, DynLibs, ctypes,
-  fafafa.ssl.openssl.api.types,
-  fafafa.ssl.openssl.consts,
+  fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.core;
 
 type

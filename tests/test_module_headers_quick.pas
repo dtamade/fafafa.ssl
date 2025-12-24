@@ -7,7 +7,7 @@ uses
   // Core modules
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.base,
-  fafafa.ssl.openssl.consts,
+  fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.utils,
   fafafa.ssl.openssl.api.crypto,
@@ -21,17 +21,17 @@ uses
   // Hash algorithms
   fafafa.ssl.openssl.api.md,
   fafafa.ssl.openssl.api.sha,
-  fafafa.ssl.openssl.blake2,
+  fafafa.ssl.openssl.api.blake2,
   fafafa.ssl.openssl.api.sha3,
   fafafa.ssl.openssl.api.sha3.evp,
-  fafafa.ssl.openssl.sm,
-  
+  fafafa.ssl.openssl.api.sm,
+
   // Symmetric ciphers
   fafafa.ssl.openssl.api.aes,
   fafafa.ssl.openssl.api.des,
-  fafafa.ssl.openssl.chacha,
-  fafafa.ssl.openssl.aria,
-  fafafa.ssl.openssl.seed,
+  fafafa.ssl.openssl.api.chacha,
+  fafafa.ssl.openssl.api.aria,
+  fafafa.ssl.openssl.api.seed,
   
   // MAC
   fafafa.ssl.openssl.api.hmac,
@@ -64,35 +64,35 @@ uses
   // Certificate services
   fafafa.ssl.openssl.api.ocsp,
   fafafa.ssl.openssl.api.ct,
-  fafafa.ssl.openssl.ts,
-  
+  fafafa.ssl.openssl.api.ts,
+
   // Advanced features
   fafafa.ssl.openssl.api.engine,
   fafafa.ssl.openssl.api.provider,
   fafafa.ssl.openssl.api.store,
   fafafa.ssl.openssl.api.param,
-  
+
   // AEAD and modes
-  fafafa.ssl.openssl.aead,
+  fafafa.ssl.openssl.api.aead,
   // fafafa.ssl.openssl.api.modes,  // 暂时跳过,有编译错误
-  
+
   // KDF
   fafafa.ssl.openssl.api.kdf,
-  fafafa.ssl.openssl.scrypt_whirlpool,
-  
+  fafafa.ssl.openssl.api.scrypt_whirlpool,
+
   // EVP
   fafafa.ssl.openssl.api.evp,
-  
+
   // Utilities
   // fafafa.ssl.openssl.api.stack,  // 暂时跳过,有编译错误
-  fafafa.ssl.openssl.lhash,
+  fafafa.ssl.openssl.api.lhash,
   // fafafa.ssl.openssl.api.obj,  // 暂时跳过,有语法错误
   fafafa.ssl.openssl.api.conf,
-  fafafa.ssl.openssl.txt_db,
+  fafafa.ssl.openssl.api.txt_db,
   fafafa.ssl.openssl.api.ui,
   fafafa.ssl.openssl.api.dso,
-  fafafa.ssl.openssl.srp,
-  fafafa.ssl.openssl.thread;
+  fafafa.ssl.openssl.api.srp,
+  fafafa.ssl.openssl.api.thread;
   
   // Legacy - 暂时跳过有编译错误的模块
   // fafafa.ssl.openssl.legacy_ciphers,
