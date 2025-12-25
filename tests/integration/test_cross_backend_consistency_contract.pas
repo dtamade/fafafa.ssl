@@ -5,15 +5,39 @@ program test_cross_backend_consistency_contract;
 
 uses
   SysUtils, Classes, DateUtils,
-  
+
   fafafa.ssl.base,
-  {$IFNDEF WINDOWS}sockets, BaseUnix, Unix,{$ENDIF}
-  {$IFNDEF WINDOWS}fafafa.ssl.openssl.backed,{$ENDIF}
-  {$IFDEF WINDOWS}Windows, WinSock2,{$ENDIF}
-  fafafa.ssl.winssl.lib;
+  {$IFNDEF WINDOWS}
+  sockets,  // FPC sockets unit
+  BaseUnix, Unix,
+  fafafa.ssl.openssl.backed,
+  {$ENDIF}
+  {$IFDEF WINDOWS}Windows, WinSock2, fafafa.ssl.winssl.lib,{$ENDIF}
+  fafafa.ssl.openssl.api;
 
 type
   TSide = (SideOpenSSL, SideWinSSL);
+
+{$IFNDEF WINDOWS}
+type
+  TInetSockAddr = record
+    sin_family: cushort;
+    sin_port: cushort;
+    sin_addr: in_addr;
+    sin_zero: array[0..7] of char;
+  end;
+
+  PHostEnt = ^THostEnt;
+  THostEnt = record
+    h_name: PChar;
+    h_aliases: PPChar;
+    h_addrtype: cint;
+    h_length: cint;
+    h_addr_list: PPChar;
+  end;
+
+function gethostbyname(name: PChar): PHostEnt; cdecl; external 'c';
+{$ENDIF}
 
 var
   Total, Passed, Failed: Integer;
@@ -34,7 +58,11 @@ function CreateLib(aSide: TSide): ISSLLibrary;
 begin
   Result := nil;
   case aSide of
+    {$IFDEF WINDOWS}
     SideWinSSL: Result := CreateWinSSLLibrary;
+    {$ELSE}
+    SideWinSSL: Result := nil;  // WinSSL not available on non-Windows
+    {$ENDIF}
     {$IFNDEF WINDOWS}
     SideOpenSSL: Result := TOpenSSLLibrary.Create;
     {$ELSE}

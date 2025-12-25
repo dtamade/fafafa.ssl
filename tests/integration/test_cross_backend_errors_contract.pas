@@ -5,11 +5,46 @@ program test_cross_backend_errors_contract;
 
 uses
   SysUtils, Classes,
-  
+
   fafafa.ssl.base,
-  {$IFNDEF WINDOWS}sockets, BaseUnix, Unix,{$ENDIF}
-  {$IFNDEF WINDOWS}fafafa.ssl.openssl.backed,{$ENDIF}
-  fafafa.ssl.winssl.lib;
+  {$IFNDEF WINDOWS}
+  sockets,
+  BaseUnix, Unix,
+  fafafa.ssl.openssl.backed,
+  {$ENDIF}
+  {$IFDEF WINDOWS}fafafa.ssl.winssl.lib,{$ENDIF}
+  fafafa.ssl.openssl.api;
+
+{$IFDEF WINDOWS}
+const
+  CERT_E_EXPIRED = $800B0101;
+  CERT_E_CN_NO_MATCH = $800B010F;
+  CERT_E_INVALID_NAME = $800B0114;
+{$ELSE}
+const
+  CERT_E_EXPIRED = $800B0101;
+  CERT_E_CN_NO_MATCH = $800B010F;
+  CERT_E_INVALID_NAME = $800B0114;
+
+type
+  TInetSockAddr = record
+    sin_family: cushort;
+    sin_port: cushort;
+    sin_addr: in_addr;
+    sin_zero: array[0..7] of char;
+  end;
+
+  PHostEnt = ^THostEnt;
+  THostEnt = record
+    h_name: PChar;
+    h_aliases: PPChar;
+    h_addrtype: cint;
+    h_length: cint;
+    h_addr_list: PPChar;
+  end;
+
+function gethostbyname(name: PChar): PHostEnt; cdecl; external 'c';
+{$ENDIF}
 
 type
   TErrorKind = (ErrNone, ErrExpired, ErrHostname, ErrOther);
@@ -36,24 +71,24 @@ begin
   if ok then WriteLn('[PASS] ', Name) else begin WriteLn('[FAIL] ', Name); if details <> '' then WriteLn('       ', details); Halt(1); end;
 end;
 
-procedure Probe(const Host: string; out Code: Integer; out Str: string; SideIsWin: Boolean);
-var Lib: ISSLLibrary; Ctx: ISSLContext; Conn: ISSLConnection; S: THandle; ok: Boolean;
-{$IFDEF WINDOWS}function ConnectTCP(const H: string; Port: Word; out Sock: THandle): Boolean;
-var A: TSockAddrIn; WSA: TWSAData; HE: PHostEnt; InA: TInAddr; Tm: Integer; begin
+{$IFDEF WINDOWS}
+function ConnectTCP(const H: string; Port: Word; out Sock: THandle): Boolean;
+var A: TSockAddrIn; WSA: TWSAData; HE: PHostEnt; InA: TInAddr; Tm: Integer;
+begin
   Result := False; Sock := INVALID_HANDLE_VALUE; if WSAStartup(MAKEWORD(2,2), WSA) <> 0 then Exit;
   Sock := socket(AF_INET, SOCK_STREAM, IPPROTO_TCP); if Sock = INVALID_SOCKET then Exit;
   Tm := 10000; setsockopt(Sock, SOL_SOCKET, SO_RCVTIMEO, @Tm, SizeOf(Tm)); setsockopt(Sock, SOL_SOCKET, SO_SNDTIMEO, @Tm, SizeOf(Tm));
   HE := gethostbyname(PAnsiChar(AnsiString(H))); if HE = nil then begin closesocket(Sock); Sock := INVALID_SOCKET; Exit; end;
   FillChar(A, SizeOf(A), 0); A.sin_family := AF_INET; A.sin_port := htons(Port); Move(HE^.h_addr_list^^, InA, SizeOf(InA)); A.sin_addr := InA;
   Result := connect(Sock, @A, SizeOf(A)) = 0; if not Result then begin closesocket(Sock); Sock := INVALID_SOCKET; end;
-end;{$ELSE}
+end;
+{$ELSE}
 function ConnectTCP(const H: string; Port: Word; out Sock: THandle): Boolean;
-var A: TInetSockAddr; HE: PHostEnt; Sfd: cint; Tm: LongInt;
+var A: TInetSockAddr; HE: PHostEnt; Sfd: cint;
 begin
   Result := False; Sock := THandle(-1);
   Sfd := fpSocket(AF_INET, SOCK_STREAM, 0);
   if Sfd < 0 then Exit;
-  Tm := 10; // seconds -> timeval via SO_RCVTIMEO not portable; keep default
   HE := gethostbyname(PChar(H));
   if HE = nil then begin fpClose(Sfd); Exit; end;
   FillChar(A, SizeOf(A), 0);
@@ -66,7 +101,11 @@ begin
   end
   else
     fpClose(Sfd);
-end;{$ENDIF}
+end;
+{$ENDIF}
+
+procedure Probe(const Host: string; out Code: Integer; out Str: string; SideIsWin: Boolean);
+var Lib: ISSLLibrary; Ctx: ISSLContext; Conn: ISSLConnection; S: THandle; ok: Boolean;
 begin
   Code := 0; Str := '';
   Lib := {$IFDEF WINDOWS}CreateWinSSLLibrary{$ELSE}TOpenSSLLibrary.Create{$ENDIF};
@@ -91,6 +130,9 @@ end;
 
 var
   c: Integer; s: string; k: TErrorKind;
+  failCode: Integer; failStr: string;
+  Lib: ISSLLibrary; Ctx: ISSLContext; Conn: ISSLConnection;
+  Sfd, SockRefused, SockNX: THandle; ok: Boolean;
 begin
   if GetEnvironmentVariable('FAFAFA_RUN_NETWORK_TESTS') <> '1' then
   begin
@@ -111,7 +153,6 @@ begin
   Check('hostname 归一化为 ErrHostname', k = ErrHostname, s);
 
   // 错误端口（HTTP 80）— 握手应失败
-  var failCode: Integer; var failStr: string; var Lib: ISSLLibrary; var Ctx: ISSLContext; var Conn: ISSLConnection; var Sfd: THandle; var ok: Boolean;
   Lib := {$IFDEF WINDOWS}CreateWinSSLLibrary{$ELSE}TOpenSSLLibrary.Create{$ENDIF};
   if (Lib <> nil) and Lib.Initialize then
   begin
@@ -134,7 +175,6 @@ begin
   end;
 
   // 连接拒绝（本地环回：端口1通常拒绝）
-  var SockRefused: THandle;
   if ConnectTCP('127.0.0.1', 1, SockRefused) then
   begin
     {$IFDEF WINDOWS} closesocket(SockRefused) {$ELSE} fpClose(SockRefused) {$ENDIF};
@@ -144,7 +184,6 @@ begin
     Check('127.0.0.1:1 连接被拒绝（预期）', True);
 
   // 不存在的域名（NXDOMAIN）
-  var SockNX: THandle;
   if ConnectTCP('nonexistent.invalid', 443, SockNX) then
   begin
     {$IFDEF WINDOWS} closesocket(SockNX) {$ELSE} fpClose(SockNX) {$ENDIF};

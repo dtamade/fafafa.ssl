@@ -610,13 +610,13 @@ type
   TEVP_VerifyUpdate = function(ctx: PEVP_MD_CTX; const d: Pointer; cnt: Cardinal): Integer; cdecl;
   TEVP_VerifyFinal = function(ctx: PEVP_MD_CTX; const sigbuf: PByte; siglen: Cardinal; pkey: PEVP_PKEY): Integer; cdecl;
   
-  TEVP_DigestSignInit = function(ctx: PEVP_MD_CTX; var pctx: PEVP_PKEY_CTX; const type_: PEVP_MD; e: PENGINE; pkey: PEVP_PKEY): Integer; cdecl;
+  TEVP_DigestSignInit = function(ctx: PEVP_MD_CTX; pctx: PPEVP_PKEY_CTX; const type_: PEVP_MD; e: PENGINE; pkey: PEVP_PKEY): Integer; cdecl;
   TEVP_DigestSignUpdate = function(ctx: PEVP_MD_CTX; const data: Pointer; dsize: NativeUInt): Integer; cdecl;
   TEVP_DigestSignFinal = function(ctx: PEVP_MD_CTX; sigret: PByte; var siglen: NativeUInt): Integer; cdecl;
   TEVP_DigestSign = function(ctx: PEVP_MD_CTX; sigret: PByte; var siglen: NativeUInt; 
                               const tbs: PByte; tbslen: NativeUInt): Integer; cdecl;
   
-  TEVP_DigestVerifyInit = function(ctx: PEVP_MD_CTX; var pctx: PEVP_PKEY_CTX; const type_: PEVP_MD; e: PENGINE; pkey: PEVP_PKEY): Integer; cdecl;
+  TEVP_DigestVerifyInit = function(ctx: PEVP_MD_CTX; pctx: PPEVP_PKEY_CTX; const type_: PEVP_MD; e: PENGINE; pkey: PEVP_PKEY): Integer; cdecl;
   TEVP_DigestVerifyUpdate = function(ctx: PEVP_MD_CTX; const data: Pointer; dsize: NativeUInt): Integer; cdecl;
   TEVP_DigestVerifyFinal = function(ctx: PEVP_MD_CTX; const sig: PByte; siglen: NativeUInt): Integer; cdecl;
   TEVP_DigestVerify = function(ctx: PEVP_MD_CTX; const sigret: PByte; siglen: NativeUInt; 
@@ -832,7 +832,13 @@ var
   EVP_PKEY_sign: TEVP_PKEY_sign = nil;
   EVP_PKEY_verify_init: TEVP_PKEY_verify_init = nil;
   EVP_PKEY_verify: TEVP_PKEY_verify = nil;
-  
+
+  // PKEY encryption/decryption
+  EVP_PKEY_encrypt_init: TEVP_PKEY_encrypt_init = nil;
+  EVP_PKEY_encrypt: TEVP_PKEY_encrypt = nil;
+  EVP_PKEY_decrypt_init: TEVP_PKEY_decrypt_init = nil;
+  EVP_PKEY_decrypt: TEVP_PKEY_decrypt = nil;
+
   // Digest signing/verification
   EVP_DigestSignInit: TEVP_DigestSignInit = nil;
   EVP_DigestSignUpdate: TEVP_DigestSignUpdate = nil;
@@ -853,6 +859,10 @@ function EVP_CIPHER_key_length(const cipher: PEVP_CIPHER): Integer;
 function EVP_CIPHER_iv_length(const cipher: PEVP_CIPHER): Integer;
 function EVP_CIPHER_block_size(const cipher: PEVP_CIPHER): Integer;
 
+// RSA PKEY context helper functions (OpenSSL macro equivalents)
+function EVP_PKEY_CTX_set_rsa_keygen_bits(ctx: PEVP_PKEY_CTX; bits: Integer): Integer;
+function EVP_PKEY_CTX_set_rsa_padding(ctx: PEVP_PKEY_CTX; pad: Integer): Integer;
+
 implementation
 
 uses
@@ -860,7 +870,7 @@ uses
 
 const
   // EVP function bindings for batch loading
-  EVP_BINDINGS: array[0..84] of TFunctionBinding = (
+  EVP_BINDINGS: array[0..88] of TFunctionBinding = (
     // MD Context functions
     (Name: 'EVP_MD_CTX_new'; FuncPtr: @EVP_MD_CTX_new; Required: True),
     (Name: 'EVP_MD_CTX_free'; FuncPtr: @EVP_MD_CTX_free; Required: True),
@@ -959,6 +969,11 @@ const
     (Name: 'EVP_PKEY_sign'; FuncPtr: @EVP_PKEY_sign; Required: False),
     (Name: 'EVP_PKEY_verify_init'; FuncPtr: @EVP_PKEY_verify_init; Required: False),
     (Name: 'EVP_PKEY_verify'; FuncPtr: @EVP_PKEY_verify; Required: False),
+    // PKEY encryption/decryption
+    (Name: 'EVP_PKEY_encrypt_init'; FuncPtr: @EVP_PKEY_encrypt_init; Required: False),
+    (Name: 'EVP_PKEY_encrypt'; FuncPtr: @EVP_PKEY_encrypt; Required: False),
+    (Name: 'EVP_PKEY_decrypt_init'; FuncPtr: @EVP_PKEY_decrypt_init; Required: False),
+    (Name: 'EVP_PKEY_decrypt'; FuncPtr: @EVP_PKEY_decrypt; Required: False),
     // Digest signing/verification
     (Name: 'EVP_DigestSignInit'; FuncPtr: @EVP_DigestSignInit; Required: False),
     (Name: 'EVP_DigestSignUpdate'; FuncPtr: @EVP_DigestSignUpdate; Required: False),
@@ -1047,6 +1062,26 @@ function EVP_CIPHER_block_size(const cipher: PEVP_CIPHER): Integer;
 begin
   if Assigned(EVP_CIPHER_get_block_size) then
     Result := EVP_CIPHER_get_block_size(cipher)
+  else
+    Result := -1;
+end;
+
+function EVP_PKEY_CTX_set_rsa_keygen_bits(ctx: PEVP_PKEY_CTX; bits: Integer): Integer;
+begin
+  // Equivalent to OpenSSL macro:
+  // EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, EVP_PKEY_OP_KEYGEN, EVP_PKEY_CTRL_RSA_KEYGEN_BITS, bits, NULL)
+  if Assigned(EVP_PKEY_CTX_ctrl) then
+    Result := EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, EVP_PKEY_OP_KEYGEN, EVP_PKEY_CTRL_RSA_KEYGEN_BITS, bits, nil)
+  else
+    Result := -1;
+end;
+
+function EVP_PKEY_CTX_set_rsa_padding(ctx: PEVP_PKEY_CTX; pad: Integer): Integer;
+begin
+  // Equivalent to OpenSSL macro:
+  // EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, -1, EVP_PKEY_CTRL_RSA_PADDING, pad, NULL)
+  if Assigned(EVP_PKEY_CTX_ctrl) then
+    Result := EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, -1, EVP_PKEY_CTRL_RSA_PADDING, pad, nil)
   else
     Result := -1;
 end;

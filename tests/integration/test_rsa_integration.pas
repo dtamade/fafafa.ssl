@@ -4,12 +4,16 @@ program test_rsa_integration;
 
 uses
   SysUtils, Classes,
+  fafafa.ssl.init,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.rsa,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.bn,
   fafafa.ssl.openssl.api.pem,
   fafafa.ssl.openssl.api.err;
+
+type
+  size_t = NativeUInt;
 
 var
   TestsPassed: Integer = 0;
@@ -68,7 +72,7 @@ begin
     end;
     
     Key := nil;
-    if EVP_PKEY_keygen(Ctx, @Key) <= 0 then
+    if EVP_PKEY_keygen(Ctx, Key) <= 0 then
     begin
       WriteLn('  ERROR: Failed to generate key');
       Exit;
@@ -109,7 +113,7 @@ begin
       Exit;
       
     Key := nil;
-    if EVP_PKEY_keygen(Ctx, @Key) <= 0 then Exit;
+    if EVP_PKEY_keygen(Ctx, Key) <= 0 then Exit;
     if Key = nil then Exit;
     
     try
@@ -135,7 +139,7 @@ begin
         end;
         
         SigLen := 0;
-        if EVP_DigestSignFinal(SignCtx, nil, @SigLen) <= 0 then
+        if EVP_DigestSignFinal(SignCtx, nil, SigLen) <= 0 then
         begin
           WriteLn('  ERROR: Failed to get signature length');
           Exit;
@@ -147,7 +151,7 @@ begin
           Exit;
         end;
         
-        if EVP_DigestSignFinal(SignCtx, @Signature[0], @SigLen) <= 0 then
+        if EVP_DigestSignFinal(SignCtx, @Signature[0], SigLen) <= 0 then
         begin
           WriteLn('  ERROR: Failed to finalize signature');
           Exit;
@@ -215,7 +219,7 @@ begin
       Exit;
       
     Key := nil;
-    if EVP_PKEY_keygen(Ctx, @Key) <= 0 then Exit;
+    if EVP_PKEY_keygen(Ctx, Key) <= 0 then Exit;
     if Key = nil then Exit;
     
     try
@@ -239,7 +243,7 @@ begin
         end;
         
         CipherLen := 0;
-        if EVP_PKEY_encrypt(EncCtx, nil, @CipherLen, @Plaintext[1], Length(Plaintext)) <= 0 then
+        if EVP_PKEY_encrypt(EncCtx, nil, CipherLen, @Plaintext[1], Length(Plaintext)) <= 0 then
         begin
           WriteLn('  ERROR: Failed to get ciphertext length');
           Exit;
@@ -251,7 +255,7 @@ begin
           Exit;
         end;
         
-        if EVP_PKEY_encrypt(EncCtx, @Ciphertext[0], @CipherLen, @Plaintext[1], Length(Plaintext)) <= 0 then
+        if EVP_PKEY_encrypt(EncCtx, @Ciphertext[0], CipherLen, @Plaintext[1], Length(Plaintext)) <= 0 then
         begin
           WriteLn('  ERROR: Failed to encrypt');
           Exit;
@@ -277,7 +281,7 @@ begin
           end;
           
           DecryptLen := 0;
-          if EVP_PKEY_decrypt(DecCtx, nil, @DecryptLen, @Ciphertext[0], CipherLen) <= 0 then
+          if EVP_PKEY_decrypt(DecCtx, nil, DecryptLen, @Ciphertext[0], CipherLen) <= 0 then
           begin
             WriteLn('  ERROR: Failed to get decrypted length');
             Exit;
@@ -289,7 +293,7 @@ begin
             Exit;
           end;
           
-          if EVP_PKEY_decrypt(DecCtx, @Decrypted[0], @DecryptLen, @Ciphertext[0], CipherLen) <= 0 then
+          if EVP_PKEY_decrypt(DecCtx, @Decrypted[0], DecryptLen, @Ciphertext[0], CipherLen) <= 0 then
           begin
             WriteLn('  ERROR: Failed to decrypt');
             Exit;
@@ -330,10 +334,14 @@ begin
   WriteLn;
   
   // Initialize OpenSSL
-  if not InitializeOpenSSL then
-  begin
-    WriteLn('ERROR: Failed to initialize OpenSSL');
-    Halt(1);
+  try
+    InitializeOpenSSL;
+  except
+    on E: Exception do
+    begin
+      WriteLn('ERROR: Failed to initialize OpenSSL: ', E.Message);
+      Halt(1);
+    end;
   end;
   
   WriteLn('OpenSSL initialized successfully');
@@ -360,10 +368,7 @@ begin
   else
     WriteLn('  Status: SOME TESTS FAILED ✗');
   WriteLn('========================================');
-  
-  // Cleanup
-  FinalizeOpenSSL;
-  
+
   if TestsFailed > 0 then
     Halt(1);
 end;

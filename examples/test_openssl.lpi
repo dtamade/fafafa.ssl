@@ -128,7 +128,7 @@
     </Parsing>
     <CodeGeneration>
       <TargetCPU Value="x86_64"/>
-      <TargetOS Value="win64"/>
+      <TargetOS Value="linux"/>
     </CodeGeneration>
   </CompilerOptions>
   <Debugging>

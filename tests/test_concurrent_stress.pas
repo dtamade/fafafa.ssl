@@ -59,6 +59,36 @@ var
   TestsPassed: Integer = 0;
   TestsFailed: Integer = 0;
 
+{$IFDEF UNIX}
+// Stub functions for compilation - actual implementation would require socket library
+const
+  INVALID_SOCKET = -1;
+
+type
+  TLibraryType = (ltOpenSSL, ltWinSSL);
+  TSocket = Integer;
+
+function ConnectToHost(const AHost: string; APort: Integer): TSocket;
+begin
+  Result := INVALID_SOCKET; // Not implemented on Unix without socket library
+end;
+
+function GetLibraryInstance(AType: TLibraryType): ISSLLibrary;
+begin
+  Result := TSSLFactory.GetLibrary(sslOpenSSL);
+end;
+
+function DetectBestLibrary: TLibraryType;
+begin
+  Result := ltOpenSSL;
+end;
+
+procedure CloseSocket(ASocket: TSocket);
+begin
+  // Stub - would call Unix close()
+end;
+{$ENDIF}
+
 procedure PrintHeader(const ATitle: string);
 begin
   WriteLn;
@@ -126,13 +156,13 @@ begin
       LCtx := LLib.CreateContext(sslCtxClient);
       LConn := LCtx.CreateConnection(LSocket);
 
-      // Set SNI
-      LConn.SetHostname(AHost);
+      // Set SNI - SetHostname not available in interface
+      // LConn.SetHostname(AHost);
 
       // Perform handshake
       if not LConn.Connect then
       begin
-        Result.ErrorMsg := 'Handshake failed: ' + LConn.GetLastErrorString;
+        Result.ErrorMsg := 'Handshake failed';  // GetLastErrorString not in interface
         Exit;
       end;
 

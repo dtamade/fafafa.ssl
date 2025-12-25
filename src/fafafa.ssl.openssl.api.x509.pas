@@ -468,6 +468,8 @@ var
   X509_set_issuer_name: TX509_set_issuer_name;
   X509_get_notBefore: TX509_get_notBefore;
   X509_get_notAfter: TX509_get_notAfter;
+  X509_set1_notBefore: TX509_set1_notBefore;
+  X509_set1_notAfter: TX509_set1_notAfter;
   X509_set_pubkey: TX509_set_pubkey;
   X509_get_pubkey: TX509_get_pubkey;
   X509_get0_signature: TX509_get0_signature;
@@ -498,6 +500,7 @@ var
   // X509 Verification Functions
   X509_verify: TX509_verify;
   X509_check_host: TX509_check_host;
+  X509_check_private_key: TX509_check_private_key;
   X509_verify_cert: TX509_verify_cert;
   X509_verify_cert_error_string: TX509_verify_cert_error_string;
   
@@ -531,6 +534,9 @@ var
   X509_NAME_oneline: TX509_NAME_oneline;
   X509_NAME_print_ex: TX509_NAME_print_ex;
   X509_NAME_cmp: TX509_NAME_cmp;
+  X509_NAME_entry_count: TX509_NAME_entry_count;
+  X509_NAME_get_entry: TX509_NAME_get_entry;
+  X509_NAME_get_text_by_NID: TX509_NAME_get_text_by_NID;
   
   // X509 Algorithm Functions
   X509_ALGOR_get0: TX509_ALGOR_get0;
@@ -588,6 +594,8 @@ begin
   X509_get_notAfter := TX509_get_notAfter(GetProcedureAddress(LibHandle, 'X509_getm_notAfter'));
   if not Assigned(X509_get_notAfter) then
     X509_get_notAfter := TX509_get_notAfter(GetProcedureAddress(LibHandle, 'X509_get0_notAfter'));
+  X509_set1_notBefore := TX509_set1_notBefore(GetProcedureAddress(LibHandle, 'X509_set1_notBefore'));
+  X509_set1_notAfter := TX509_set1_notAfter(GetProcedureAddress(LibHandle, 'X509_set1_notAfter'));
   X509_set_pubkey := TX509_set_pubkey(GetProcedureAddress(LibHandle, 'X509_set_pubkey'));
   X509_get_pubkey := TX509_get_pubkey(GetProcedureAddress(LibHandle, 'X509_get_pubkey'));
   X509_get0_signature := TX509_get0_signature(GetProcedureAddress(LibHandle, 'X509_get0_signature'));
@@ -618,6 +626,7 @@ begin
   // Load X509 Verification Functions
   X509_verify := TX509_verify(GetProcedureAddress(LibHandle, 'X509_verify'));
   X509_check_host := TX509_check_host(GetProcedureAddress(LibHandle, 'X509_check_host'));
+  X509_check_private_key := TX509_check_private_key(GetProcedureAddress(LibHandle, 'X509_check_private_key'));
   X509_verify_cert := TX509_verify_cert(GetProcedureAddress(LibHandle, 'X509_verify_cert'));
   X509_verify_cert_error_string := TX509_verify_cert_error_string(GetProcedureAddress(LibHandle, 'X509_verify_cert_error_string'));
   
@@ -651,6 +660,9 @@ begin
   X509_NAME_oneline := TX509_NAME_oneline(GetProcedureAddress(LibHandle, 'X509_NAME_oneline'));
   X509_NAME_print_ex := TX509_NAME_print_ex(GetProcedureAddress(LibHandle, 'X509_NAME_print_ex'));
   X509_NAME_cmp := TX509_NAME_cmp(GetProcedureAddress(LibHandle, 'X509_NAME_cmp'));
+  X509_NAME_entry_count := TX509_NAME_entry_count(GetProcedureAddress(LibHandle, 'X509_NAME_entry_count'));
+  X509_NAME_get_entry := TX509_NAME_get_entry(GetProcedureAddress(LibHandle, 'X509_NAME_get_entry'));
+  X509_NAME_get_text_by_NID := TX509_NAME_get_text_by_NID(GetProcedureAddress(LibHandle, 'X509_NAME_get_text_by_NID'));
   
   // Load X509 Algorithm Functions
   X509_ALGOR_get0 := TX509_ALGOR_get0(GetProcedureAddress(LibHandle, 'X509_ALGOR_get0'));

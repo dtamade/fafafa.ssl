@@ -624,7 +624,7 @@ begin
   
   // Initialize OpenSSL
   Write('Initializing OpenSSL... ');
-  if not InitOpenSSL then
+  if not LoadOpenSSLLibrary then
   begin
     WriteLn('FAILED');
     WriteLn('Error: Could not initialize OpenSSL library');
@@ -639,7 +639,7 @@ begin
   begin
     WriteLn('FAILED');
     WriteLn('Error: Could not load EC functions');
-    CleanupOpenSSL;
+    UnloadOpenSSLLibrary;
     ExitCode := 1;
     Exit;
   end;
@@ -647,11 +647,11 @@ begin
   
   // Load BN functions
   Write('Loading BN functions... ');
-  if not LoadBNFunctions(GetCryptoLibHandle) then
+  if not LoadOpenSSLBN then
   begin
     WriteLn('FAILED');
     WriteLn('Error: Could not load BN functions');
-    CleanupOpenSSL;
+    UnloadOpenSSLLibrary;
     ExitCode := 1;
     Exit;
   end;
@@ -701,5 +701,5 @@ begin
     ExitCode := 1;
   end;
   
-  CleanupOpenSSL;
+  UnloadOpenSSLLibrary;
 end.

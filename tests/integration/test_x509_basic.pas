@@ -3,9 +3,10 @@ program test_x509_basic;
 {$mode objfpc}{$H+}
 
 uses
-  SysUtils, DateUtils,
+  SysUtils, DateUtils, ctypes,
   fafafa.ssl.base,
   fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.crypto,
@@ -13,7 +14,8 @@ uses
   fafafa.ssl.openssl.api.rsa,
   fafafa.ssl.openssl.api.bn,
   fafafa.ssl.openssl.api.evp,
-  fafafa.ssl.openssl.api.asn1;
+  fafafa.ssl.openssl.api.asn1,
+  DynLibs;
 
 var
   TotalTests: Integer = 0;
@@ -63,7 +65,7 @@ begin
         pkey := EVP_PKEY_new();
         if pkey <> nil then
         begin
-          if EVP_PKEY_assign_RSA(pkey, rsa) = 1 then
+          if EVP_PKEY_assign(pkey, EVP_PKEY_RSA, rsa) = 1 then
             Result := pkey
           else
             EVP_PKEY_free(pkey);
@@ -121,17 +123,17 @@ begin
     // Test 4: Add Country Name
     LogTest('Add Country Name (C)',
             X509_NAME_add_entry_by_txt(name, 'C', MBSTRING_ASC,
-                                       PByte('US'), 2, -1, 0) = 1);
+                                       PByte(PAnsiChar('US')), 2, -1, 0) = 1);
     
     // Test 5: Add Organization Name
     LogTest('Add Organization (O)',
             X509_NAME_add_entry_by_txt(name, 'O', MBSTRING_ASC,
-                                       PByte('Test Org'), 8, -1, 0) = 1);
+                                       PByte(PAnsiChar('Test Org')), 8, -1, 0) = 1);
     
     // Test 6: Add Common Name
     LogTest('Add Common Name (CN)',
             X509_NAME_add_entry_by_txt(name, 'CN', MBSTRING_ASC,
-                                       PByte('test.example.com'), 16, -1, 0) = 1);
+                                       PByte(PAnsiChar('test.example.com')), 16, -1, 0) = 1);
     
     // Test 7: Check entry count
     entry_count := X509_NAME_entry_count(name);
@@ -195,7 +197,7 @@ begin
     if name <> nil then
     begin
       X509_NAME_add_entry_by_txt(name, 'CN', MBSTRING_ASC,
-                                 PByte('Test Subject'), 12, -1, 0);
+                                 PByte(PAnsiChar('Test Subject')), 12, -1, 0);
       LogTest('Set subject name', X509_set_subject_name(cert, name) = 1);
       X509_NAME_free(name);
     end;
@@ -205,7 +207,7 @@ begin
     if name <> nil then
     begin
       X509_NAME_add_entry_by_txt(name, 'CN', MBSTRING_ASC,
-                                 PByte('Test Issuer'), 11, -1, 0);
+                                 PByte(PAnsiChar('Test Issuer')), 11, -1, 0);
       LogTest('Set issuer name', X509_set_issuer_name(cert, name) = 1);
       X509_NAME_free(name);
     end;
@@ -311,10 +313,10 @@ begin
     ASN1_INTEGER_free(serial);
     
     name := X509_NAME_new();
-    X509_NAME_add_entry_by_txt(name, 'C', MBSTRING_ASC, PByte('US'), 2, -1, 0);
-    X509_NAME_add_entry_by_txt(name, 'O', MBSTRING_ASC, PByte('Test'), 4, -1, 0);
+    X509_NAME_add_entry_by_txt(name, 'C', MBSTRING_ASC, PByte(PAnsiChar('US')), 2, -1, 0);
+    X509_NAME_add_entry_by_txt(name, 'O', MBSTRING_ASC, PByte(PAnsiChar('Test')), 4, -1, 0);
     X509_NAME_add_entry_by_txt(name, 'CN', MBSTRING_ASC,
-                               PByte('test.example.com'), 16, -1, 0);
+                               PByte(PAnsiChar('test.example.com')), 16, -1, 0);
     
     X509_set_issuer_name(cert, name);
     X509_set_subject_name(cert, name);
@@ -357,40 +359,23 @@ begin
   WriteLn('X.509 Certificate Basic Tests');
   WriteLn('==============================');
   WriteLn;
-  
-  // Load OpenSSL
+
+  // Load OpenSSL core first
   LoadOpenSSLCore;
-  
-  if not LoadOpenSSLX509 then
+  if not IsOpenSSLCoreLoaded then
   begin
-    WriteLn('ERROR: Failed to load X.509 module');
+    WriteLn('ERROR: Failed to load OpenSSL core library');
     Halt(1);
   end;
-  
-  if not LoadOpenSSLRSA then
-  begin
-    WriteLn('ERROR: Failed to load RSA module');
-    Halt(1);
-  end;
-  
-  if not LoadOpenSSLBN then
-  begin
-    WriteLn('ERROR: Failed to load BN module');
-    Halt(1);
-  end;
-  
-  if not LoadOpenSSLEVP then
-  begin
-    WriteLn('ERROR: Failed to load EVP module');
-    Halt(1);
-  end;
-  
-  if not LoadOpenSSLASN1 then
-  begin
-    WriteLn('ERROR: Failed to load ASN1 module');
-    Halt(1);
-  end;
-  
+
+  // Load required modules
+  LoadOpenSSLX509;
+  LoadOpenSSLASN1(GetCryptoLibHandle);
+  LoadEVP(GetCryptoLibHandle);
+  LoadOpenSSLRSA;
+  LoadOpenSSLBN;
+  LoadOpenSSLCrypto;
+
   try
     // Run test suites
     TestX509Creation;         // Tests 1-2

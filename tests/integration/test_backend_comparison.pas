@@ -4,10 +4,13 @@ program test_backend_comparison;
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
 uses
-  Windows, SysUtils, Classes, WinSock2, md5,
-  
+  {$IFDEF WINDOWS}Windows, WinSock2, md5,{$ENDIF}
+  {$IFNDEF WINDOWS}BaseUnix,{$ENDIF}
+  SysUtils, Classes,
+
   fafafa.ssl.base,
   fafafa.ssl.factory,
+  fafafa.ssl.openssl.api,
   fafafa.ssl;
 
 var
@@ -40,6 +43,7 @@ begin
   end;
 end;
 
+{$IFDEF WINDOWS}
 function InitWinsock: Boolean;
 var
   LWSAData: TWSAData;
@@ -91,6 +95,41 @@ begin
     aSocket := INVALID_SOCKET;
   end;
 end;
+
+procedure CloseSSLSocket(aSocket: TSocket);
+begin
+  if aSocket <> INVALID_SOCKET then
+    closesocket(aSocket);
+end;
+{$ELSE}
+// Linux stubs - this test is Windows-only
+type
+  TSocket = Integer;
+const
+  INVALID_SOCKET = -1;
+
+function InitWinsock: Boolean;
+begin
+  Result := True;  // No-op on Linux
+end;
+
+procedure CleanupWinsock;
+begin
+  // No-op on Linux
+end;
+
+function ConnectToHost(const aHost: string; aPort: Word; out aSocket: TSocket): Boolean;
+begin
+  Result := False;  // Not implemented on Linux
+  aSocket := INVALID_SOCKET;
+end;
+
+procedure CloseSSLSocket(aSocket: TSocket);
+begin
+  if aSocket <> INVALID_SOCKET then
+    fpClose(aSocket);
+end;
+{$ENDIF}
 
 function FetchHTTPS(aLibType: TSSLLibraryType; const aHost, aPath: string;
   out aResponse: string): Boolean;
@@ -153,10 +192,11 @@ begin
 
   finally
     if LSocket <> INVALID_SOCKET then
-      closesocket(LSocket);
+      {$IFDEF WINDOWS}CloseSSLSocket(LSocket){$ELSE}fpClose(LSocket){$ENDIF};
   end;
 end;
 
+{$IFDEF WINDOWS}
 function CalculateMD5(const aData: string): string;
 var
   LDigest: TMD5Digest;
@@ -168,6 +208,12 @@ begin
     Result := Result + IntToHex(LDigest[i], 2);
   Result := LowerCase(Result);
 end;
+{$ELSE}
+function CalculateMD5(const aData: string): string;
+begin
+  Result := ''; // MD5 not available on Linux without additional unit
+end;
+{$ENDIF}
 
 procedure TestBasicFunctionality;
 var
@@ -249,7 +295,7 @@ begin
           LWinSSLConn.Shutdown;
         end;
 
-        closesocket(LWinSSLSocket);
+        CloseSSLSocket(LWinSSLSocket);
         LWinSSLSocket := INVALID_SOCKET;
       end;
     end;
@@ -278,7 +324,7 @@ begin
           LOpenSSLConn.Shutdown;
         end;
 
-        closesocket(LOpenSSLSocket);
+        CloseSSLSocket(LOpenSSLSocket);
         LOpenSSLSocket := INVALID_SOCKET;
       end;
     end;
@@ -295,9 +341,9 @@ begin
 
   finally
     if LWinSSLSocket <> INVALID_SOCKET then
-      closesocket(LWinSSLSocket);
+      CloseSSLSocket(LWinSSLSocket);
     if LOpenSSLSocket <> INVALID_SOCKET then
-      closesocket(LOpenSSLSocket);
+      CloseSSLSocket(LOpenSSLSocket);
   end;
 end;
 
@@ -395,7 +441,7 @@ begin
           LWinSSLConn.Shutdown;
         end;
 
-        closesocket(LWinSSLSocket);
+        CloseSSLSocket(LWinSSLSocket);
         LWinSSLSocket := INVALID_SOCKET;
       end;
     end;
@@ -429,7 +475,7 @@ begin
           LOpenSSLConn.Shutdown;
         end;
 
-        closesocket(LOpenSSLSocket);
+        CloseSSLSocket(LOpenSSLSocket);
         LOpenSSLSocket := INVALID_SOCKET;
       end;
     end;
@@ -441,9 +487,9 @@ begin
 
   finally
     if LWinSSLSocket <> INVALID_SOCKET then
-      closesocket(LWinSSLSocket);
+      CloseSSLSocket(LWinSSLSocket);
     if LOpenSSLSocket <> INVALID_SOCKET then
-      closesocket(LOpenSSLSocket);
+      CloseSSLSocket(LOpenSSLSocket);
   end;
 end;
 
@@ -473,7 +519,7 @@ begin
       begin
         LWinSSLConn := LWinSSLCtx.CreateConnection(LWinSSLSocket);
         Test('WinSSL HTTP 端口握手失败（预期）', not LWinSSLConn.Connect);
-        closesocket(LWinSSLSocket);
+        CloseSSLSocket(LWinSSLSocket);
         LWinSSLSocket := INVALID_SOCKET;
       end;
     end;
@@ -490,7 +536,7 @@ begin
       begin
         LOpenSSLConn := LOpenSSLCtx.CreateConnection(LOpenSSLSocket);
         Test('OpenSSL HTTP 端口握手失败（预期）', not LOpenSSLConn.Connect);
-        closesocket(LOpenSSLSocket);
+        CloseSSLSocket(LOpenSSLSocket);
         LOpenSSLSocket := INVALID_SOCKET;
       end;
     end;
@@ -505,7 +551,7 @@ begin
     begin
       LWinSSLConn := LWinSSLCtx.CreateConnection(LWinSSLSocket);
       Test('WinSSL SSL3 握手失败（预期）', not LWinSSLConn.Connect);
-      closesocket(LWinSSLSocket);
+      CloseSSLSocket(LWinSSLSocket);
       LWinSSLSocket := INVALID_SOCKET;
     end;
 
@@ -518,15 +564,15 @@ begin
     begin
       LOpenSSLConn := LOpenSSLCtx.CreateConnection(LOpenSSLSocket);
       Test('OpenSSL SSL3 握手失败（预期）', not LOpenSSLConn.Connect);
-      closesocket(LOpenSSLSocket);
+      CloseSSLSocket(LOpenSSLSocket);
       LOpenSSLSocket := INVALID_SOCKET;
     end;
 
   finally
     if LWinSSLSocket <> INVALID_SOCKET then
-      closesocket(LWinSSLSocket);
+      CloseSSLSocket(LWinSSLSocket);
     if LOpenSSLSocket <> INVALID_SOCKET then
-      closesocket(LOpenSSLSocket);
+      CloseSSLSocket(LOpenSSLSocket);
   end;
 end;
 

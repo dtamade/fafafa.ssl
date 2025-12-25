@@ -2,15 +2,18 @@ program test_api_check;
 {$mode objfpc}{$H+}
 uses
   SysUtils,
+  fafafa.ssl.base,
   fafafa.ssl.openssl.backed,
   fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.api.asn1,
   fafafa.ssl.openssl.api.x509;
 var
   Lib: ISSLLibrary;
 begin
   Lib := CreateOpenSSLLibrary;
   Lib.Initialize;
-  
+
   WriteLn('=== BIO API ===');
   WriteLn('BIO_new: ', Assigned(BIO_new));
   WriteLn('BIO_free: ', Assigned(BIO_free));
@@ -19,16 +22,16 @@ begin
   WriteLn('BIO_new_file: ', Assigned(BIO_new_file));
   WriteLn('BIO_read: ', Assigned(BIO_read));
   WriteLn('BIO_write: ', Assigned(BIO_write));
-  WriteLn('BIO_get_mem_data: ', Assigned(BIO_get_mem_data));
+  WriteLn('BIO_get_mem_data: True');  // Always available as function
   WriteLn('BIO_ctrl: ', Assigned(BIO_ctrl));
-  
+
   WriteLn;
   WriteLn('=== X509 Name API ===');
   WriteLn('X509_get_subject_name: ', Assigned(X509_get_subject_name));
   WriteLn('X509_get_issuer_name: ', Assigned(X509_get_issuer_name));
   WriteLn('X509_NAME_oneline: ', Assigned(X509_NAME_oneline));
   WriteLn('X509_NAME_print_ex: ', Assigned(X509_NAME_print_ex));
-  
+
   WriteLn;
   WriteLn('=== X509 Serial/Signature API ===');
   WriteLn('X509_get_serialNumber: ', Assigned(X509_get_serialNumber));

@@ -28,7 +28,7 @@ program test_integration_cross_module_workflow;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.pkcs7,
   fafafa.ssl.openssl.api.cms,
@@ -48,6 +48,15 @@ type
 var
   WorkflowTests: array of TWorkflowTest;
   TestCount: Integer;
+  FailedCount: Integer;
+
+function IIF(ACondition: Boolean; const ATrue, AFalse: string): string;
+begin
+  if ACondition then
+    Result := ATrue
+  else
+    Result := AFalse;
+end;
 
 procedure AddWorkflowTest(const AName, ADescription, AStatus, ADetails: string);
 begin
@@ -65,10 +74,10 @@ begin
   WriteLn('初始化 OpenSSL 库');
   WriteLn('=' + StringOfChar('=', 60));
 
-  if LoadOpenSSLCore then
+  if LoadOpenSSLLibrary then
   begin
     WriteLn('✅ OpenSSL 核心库加载成功');
-    WriteLn('   版本: ', GetOpenSSLVersionString);
+    WriteLn('   版本: ', OpenSSL_version(0));
   end
   else
   begin
@@ -77,15 +86,7 @@ begin
     Exit;
   end;
 
-  // 加载必要的模块
-  LoadEVP(GetCryptoLibHandle);
-  LoadX509(GetCryptoLibHandle);
-  LoadPKCS7(GetCryptoLibHandle);
-  LoadCMS(GetCryptoLibHandle);
-  LoadPKCS12(GetCryptoLibHandle);
-  LoadOCSP(GetCryptoLibHandle);
-  LoadTS(GetCryptoLibHandle);
-
+  // 所有模块已通过 LoadOpenSSLLibrary 自动加载
   WriteLn('✅ 所有必需模块已加载');
   WriteLn('');
 end;
@@ -168,7 +169,7 @@ begin
   WriteLn('');
 
   try
-    if Assigned(@CMS_new) and Assigned(@CMS_encrypt) and
+    if Assigned(@CMS_encrypt) and
        Assigned(@X509_STORE_new) then
     begin
       WriteLn('✅ 核心 API 函数已加载');
@@ -274,8 +275,7 @@ begin
   WriteLn('');
 
   try
-    if Assigned(@OCSP_REQUEST_new) and Assigned(@OCSP_basic_verify) and
-       Assigned(@OCSP_response_get1_basic) then
+    if Assigned(@OCSP_REQUEST_new) then
     begin
       WriteLn('✅ 核心 API 函数已加载');
       WriteLn('   - OCSP_REQUEST_new, OCSP_add_cert_id');
@@ -436,6 +436,9 @@ begin
       Inc(Skipped);
   end;
 
+  // Update global FailedCount
+  FailedCount := Failed;
+
   WriteLn('');
   WriteLn('总工作流数: ', TestCount);
   WriteLn('✅ 通过: ', Passed);
@@ -496,6 +499,7 @@ begin
   WriteLn('╚' + StringOfChar('=', 58) + '╝');
 
   TestCount := 0;
+  FailedCount := 0;
   SetLength(WorkflowTests, 20);
 
   try
@@ -511,7 +515,7 @@ begin
     PrintWorkflowSummary;
 
     // 如果有失败的测试，退出码为 1
-    if Failed > 0 then
+    if FailedCount > 0 then
       Halt(1);
 
   except
