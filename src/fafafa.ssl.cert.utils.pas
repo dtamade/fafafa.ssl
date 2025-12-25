@@ -1142,7 +1142,13 @@ begin
       if LStore.GetCount > 0 then
         LVerifier.SetTrustedStore(LStore);
     except
-      // 忽略存储加载错误
+      on E: Exception do
+      begin
+        // P1-2.4: 忽略存储加载错误（非关键）
+        {$IFDEF DEBUG}
+        WriteLn('[DEBUG] fafafa.ssl.cert.utils: Trust store load failed: ', E.Message);
+        {$ENDIF}
+      end;
     end;
   end;
   

@@ -118,7 +118,13 @@ begin
     try
       CloseFile(FLogFile);
     except
-      // CloseFile failure is non-critical; file will be closed by OS on process exit
+      on E: Exception do
+      begin
+        // P1-2.4: CloseFile failure is non-critical; OS will close on process exit
+        {$IFDEF DEBUG}
+        WriteLn('[DEBUG] fafafa.ssl.winssl.errors: CloseFile failed: ', E.Message);
+        {$ENDIF}
+      end;
     end;
   end;
   inherited Destroy;

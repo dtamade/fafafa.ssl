@@ -68,7 +68,14 @@ begin
   try
     LoadOpenSSLRAND();
   except
-    // 忽略错误，RAND函数通常已可用
+    on E: Exception do
+    begin
+      // P1-2.4: 忽略错误，RAND函数通常已可用
+      // 调试模式下输出警告
+      {$IFDEF DEBUG}
+      WriteLn('[DEBUG] fafafa.ssl.init: LoadOpenSSLRAND failed: ', E.Message);
+      {$ENDIF}
+    end;
   end;
 
   TOpenSSLLoader.SetModuleLoaded(osmInitGlobal, True);
