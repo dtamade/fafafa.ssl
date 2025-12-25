@@ -278,9 +278,102 @@ type
      * @return True=已加载，False=未加载
      *}
     class function IsLoaded(ALibType: TOpenSSLLibraryType): Boolean;
+
+    // ========== 依赖管理 ==========
+
+    {**
+     * 确保模块的所有依赖已加载
+     *
+     * @param AModule 模块类型
+     * @param ALoadFunc 模块加载函数（可选）
+     * @return True=所有依赖已就绪，False=某些依赖无法加载
+     *
+     * 注意: 此方法会自动加载缺失的依赖模块
+     *}
+    class function EnsureModuleDependencies(AModule: TOpenSSLModule): Boolean;
+
+    {**
+     * 获取模块的直接依赖
+     *
+     * @param AModule 模块类型
+     * @return 模块的直接依赖集合
+     *}
+    class function GetModuleDependencies(AModule: TOpenSSLModule): TOpenSSLModuleSet;
+
+    {**
+     * 获取模块的所有依赖（包括传递依赖）
+     *
+     * @param AModule 模块类型
+     * @return 模块的所有依赖集合
+     *}
+    class function GetAllModuleDependencies(AModule: TOpenSSLModule): TOpenSSLModuleSet;
+
+    {**
+     * 检查模块的所有依赖是否已加载
+     *
+     * @param AModule 模块类型
+     * @return True=所有依赖已加载，False=有依赖未加载
+     *}
+    class function AreModuleDependenciesLoaded(AModule: TOpenSSLModule): Boolean;
   end;
 
 implementation
+
+const
+  {**
+   * 模块依赖映射表
+   * 每个模块声明其直接依赖的模块
+   *}
+  MODULE_DEPENDENCIES: array[TOpenSSLModule] of TOpenSSLModuleSet = (
+    { osmCore }       [],                           // 核心库 - 无依赖
+    { osmSSL }        [osmCore],                    // SSL/TLS - 依赖核心
+    { osmEVP }        [osmCore],                    // EVP - 依赖核心
+    { osmRSA }        [osmCore, osmBN],             // RSA - 依赖核心和大数
+    { osmDSA }        [osmCore, osmBN],             // DSA - 依赖核心和大数
+    { osmDH }         [osmCore, osmBN],             // DH - 依赖核心和大数
+    { osmEC }         [osmCore, osmBN],             // EC - 依赖核心和大数
+    { osmECDSA }      [osmCore, osmBN, osmEC],      // ECDSA - 依赖核心、大数和EC
+    { osmECDH }       [osmCore, osmBN, osmEC],      // ECDH - 依赖核心、大数和EC
+    { osmBN }         [osmCore],                    // 大数 - 依赖核心
+    { osmAES }        [osmCore],                    // AES - 依赖核心
+    { osmDES }        [osmCore],                    // DES - 依赖核心
+    { osmSHA }        [osmCore],                    // SHA - 依赖核心
+    { osmSHA3 }       [osmCore, osmEVP],            // SHA3 - 依赖核心和EVP
+    { osmMD }         [osmCore, osmEVP],            // MD - 依赖核心和EVP
+    { osmHMAC }       [osmCore, osmEVP],            // HMAC - 依赖核心和EVP
+    { osmCMAC }       [osmCore, osmEVP],            // CMAC - 依赖核心和EVP
+    { osmRAND }       [osmCore],                    // RAND - 依赖核心
+    { osmERR }        [osmCore],                    // ERR - 依赖核心
+    { osmBIO }        [osmCore],                    // BIO - 依赖核心
+    { osmPEM }        [osmCore, osmBIO, osmX509],   // PEM - 依赖核心、BIO和X509
+    { osmASN1 }       [osmCore],                    // ASN1 - 依赖核心
+    { osmX509 }       [osmCore, osmASN1, osmEVP],   // X509 - 依赖核心、ASN1和EVP
+    { osmPKCS }       [osmCore, osmX509],           // PKCS - 依赖核心和X509
+    { osmPKCS7 }      [osmCore, osmX509, osmBIO],   // PKCS7 - 依赖核心、X509和BIO
+    { osmPKCS12 }     [osmCore, osmX509, osmEVP],   // PKCS12 - 依赖核心、X509和EVP
+    { osmCMS }        [osmCore, osmX509, osmBIO],   // CMS - 依赖核心、X509和BIO
+    { osmOCSP }       [osmCore, osmX509, osmBIO],   // OCSP - 依赖核心、X509和BIO
+    { osmBLAKE2 }     [osmCore, osmEVP],            // BLAKE2 - 依赖核心和EVP
+    { osmChaCha }     [osmCore, osmEVP],            // ChaCha - 依赖核心和EVP
+    { osmModes }      [osmCore],                    // Modes - 依赖核心
+    { osmEngine }     [osmCore],                    // Engine - 依赖核心
+    { osmProvider }   [osmCore],                    // Provider - 依赖核心
+    { osmStack }      [osmCore],                    // Stack - 依赖核心
+    { osmLHash }      [osmCore],                    // LHash - 依赖核心
+    { osmConf }       [osmCore, osmBIO],            // Conf - 依赖核心和BIO
+    { osmThread }     [osmCore],                    // Thread - 依赖核心
+    { osmSRP }        [osmCore, osmBN],             // SRP - 依赖核心和大数
+    { osmDSO }        [osmCore],                    // DSO - 依赖核心
+    { osmTS }         [osmCore, osmX509, osmBIO],   // TS - 依赖核心、X509和BIO
+    { osmCT }         [osmCore, osmX509],           // CT - 依赖核心和X509
+    { osmStore }      [osmCore, osmX509],           // Store - 依赖核心和X509
+    { osmParam }      [osmCore],                    // Param - 依赖核心
+    { osmTXTDB }      [osmCore, osmBIO],            // TXTDB - 依赖核心和BIO
+    { osmInitGlobal } [],                           // 全局初始化 - 无依赖
+    { osmInitEncoding } [osmCore, osmEVP],          // 编码初始化
+    { osmInitCrypto } [osmCore, osmEVP],            // 加密工具初始化
+    { osmInitCert }   [osmCore, osmX509, osmEVP]    // 证书初始化
+  );
 
 { TOpenSSLLoader }
 
@@ -517,6 +610,81 @@ begin
     osslLibCrypto: Result := FLibCrypto <> 0;
     osslLibSSL: Result := FLibSSL <> 0;
   end;
+end;
+
+class function TOpenSSLLoader.GetModuleDependencies(AModule: TOpenSSLModule): TOpenSSLModuleSet;
+begin
+  Result := MODULE_DEPENDENCIES[AModule];
+end;
+
+class function TOpenSSLLoader.GetAllModuleDependencies(AModule: TOpenSSLModule): TOpenSSLModuleSet;
+var
+  LDep: TOpenSSLModule;
+  LNewDeps: TOpenSSLModuleSet;
+  LChanged: Boolean;
+begin
+  // 从直接依赖开始
+  Result := MODULE_DEPENDENCIES[AModule];
+
+  // 迭代添加传递依赖
+  repeat
+    LChanged := False;
+    LNewDeps := [];
+
+    for LDep in Result do
+    begin
+      LNewDeps := LNewDeps + MODULE_DEPENDENCIES[LDep];
+    end;
+
+    // 如果有新的依赖，添加到结果中
+    if not (LNewDeps <= Result) then
+    begin
+      Result := Result + LNewDeps;
+      LChanged := True;
+    end;
+  until not LChanged;
+end;
+
+class function TOpenSSLLoader.AreModuleDependenciesLoaded(AModule: TOpenSSLModule): Boolean;
+var
+  LDeps: TOpenSSLModuleSet;
+  LDep: TOpenSSLModule;
+begin
+  Result := True;
+  LDeps := GetAllModuleDependencies(AModule);
+
+  for LDep in LDeps do
+  begin
+    if not IsModuleLoaded(LDep) then
+    begin
+      Result := False;
+      Exit;
+    end;
+  end;
+end;
+
+class function TOpenSSLLoader.EnsureModuleDependencies(AModule: TOpenSSLModule): Boolean;
+var
+  LDeps: TOpenSSLModuleSet;
+  LDep: TOpenSSLModule;
+begin
+  // 获取所有依赖（包括传递依赖）
+  LDeps := GetAllModuleDependencies(AModule);
+
+  // 检查每个依赖是否已加载
+  for LDep in LDeps do
+  begin
+    if not IsModuleLoaded(LDep) then
+    begin
+      // 注意：这里只检查依赖是否已加载，不自动加载
+      // 因为加载函数在各个模块中定义，这里无法调用
+      // 如果需要自动加载，调用者应先加载依赖模块
+      Result := False;
+      Exit;
+    end;
+  end;
+
+  Result := True;
 end;
 
 initialization

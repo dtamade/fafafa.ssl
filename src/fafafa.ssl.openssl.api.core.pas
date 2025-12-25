@@ -8,7 +8,8 @@ uses
   fafafa.ssl.exceptions,
   SysUtils, DynLibs, ctypes,
   fafafa.ssl.openssl.base,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;  // P0-1.1: 使用统一的加载器
 
 type
   { SSL Library Management }
@@ -650,14 +651,14 @@ var
 procedure LoadOpenSSLCore;
 procedure LoadOpenSSLCoreWithVersion(AVersion: TOpenSSLVersion);
 procedure UnloadOpenSSLCore;
-function IsOpenSSLCoreLoaded: Boolean;
+function IsOpenSSLCoreLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmCore) instead';
 function GetSSLLibHandle: TLibHandle;
 function GetCryptoLibHandle: TLibHandle;
 function GetOpenSSLVersion: TOpenSSLVersion;
 function GetOpenSSLVersionString: string;
 
 // Helper functions for module loading
-function IsCryptoLibraryLoaded: Boolean;
+function IsCryptoLibraryLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmCore) instead';
 function GetCryptoProcAddress(const ProcName: string): Pointer;
 function GetSSLProcAddress(const ProcName: string): Pointer;
 
@@ -672,42 +673,52 @@ function SSL_CTX_get_session_cache_mode_impl(ctx: PSSL_CTX): clong;
 implementation
 
 var
-  LibSSLHandle: TLibHandle = NilHandle;
-  LibCryptoHandle: TLibHandle = NilHandle;
+  // P0-1.1: 不再在本单元存储库句柄，改为委托给 TOpenSSLLoader
+  // LibSSLHandle 和 LibCryptoHandle 现在通过 TOpenSSLLoader 获取
   LoadedOpenSSLVersion: TOpenSSLVersion = sslUnknown;
   LoadedCryptoLibName: string = '';
   LoadedSSLLibName: string = '';
 
+// P0-1.1: 委托函数，用于向后兼容
+function LibCryptoHandle: TLibHandle; inline;
+begin
+  Result := TOpenSSLLoader.GetLibraryHandle(osslLibCrypto);
+end;
+
+function LibSSLHandle: TLibHandle; inline;
+begin
+  Result := TOpenSSLLoader.GetLibraryHandle(osslLibSSL);
+end;
+
 function TryLoadOpenSSLLibraries(const ACryptoLib, ASSLLib: string): Boolean;
 begin
-  Result := False;
-  
-  // Try to load crypto library
-  LibCryptoHandle := LoadLibrary(ACryptoLib);
-  if LibCryptoHandle = NilHandle then
-    Exit;
-  
-  // Try to load SSL library
-  LibSSLHandle := LoadLibrary(ASSLLib);
-  if LibSSLHandle = NilHandle then
+  // P0-1.1: 委托给 TOpenSSLLoader 进行加载
+  // 注意: TOpenSSLLoader 使用自己的库名列表，这里的参数仅用于记录
+  Result := TOpenSSLLoader.IsLoaded(osslLibCrypto) and TOpenSSLLoader.IsLoaded(osslLibSSL);
+
+  if not Result then
   begin
-    UnloadLibrary(LibCryptoHandle);
-    LibCryptoHandle := NilHandle;
-    Exit;
+    // 触发加载
+    TOpenSSLLoader.GetLibraryHandle(osslLibCrypto);
+    TOpenSSLLoader.GetLibraryHandle(osslLibSSL);
+    Result := TOpenSSLLoader.IsLoaded(osslLibCrypto) and TOpenSSLLoader.IsLoaded(osslLibSSL);
   end;
-  
-  LoadedCryptoLibName := ACryptoLib;
-  LoadedSSLLibName := ASSLLib;
-  Result := True;
+
+  if Result then
+  begin
+    LoadedCryptoLibName := ACryptoLib;
+    LoadedSSLLibName := ASSLLib;
+  end;
 end;
 
 procedure LoadOpenSSLCoreWithVersion(AVersion: TOpenSSLVersion);
 var
   CryptoLib, SSLLib: string;
 begin
-  if LibSSLHandle <> NilHandle then
+  // P0-1.1: 检查是否已通过 TOpenSSLLoader 加载
+  if TOpenSSLLoader.IsLoaded(osslLibSSL) then
     Exit;
-  
+
   // Set library names based on requested version
   case AVersion of
     sslVersion_3_0:
@@ -725,16 +736,17 @@ begin
   else
     raise ESSLException.Create('Unknown OpenSSL version requested');
   end;
-  
+
   // Try to load the specified version
   if not TryLoadOpenSSLLibraries(CryptoLib, SSLLib) then
-    raise ESSLException.CreateFmt('Failed to load OpenSSL %s libraries: %s and %s', 
+    raise ESSLException.CreateFmt('Failed to load OpenSSL %s libraries: %s and %s',
       [GetOpenSSLVersionString, CryptoLib, SSLLib]);
 end;
 
 procedure LoadOpenSSLCore;
 begin
-  if LibSSLHandle <> NilHandle then
+  // P0-1.1: 检查是否已通过 TOpenSSLLoader 加载
+  if TOpenSSLLoader.IsLoaded(osslLibSSL) then
     Exit;
   
   // Try OpenSSL 3.x first (recommended version)
@@ -946,70 +958,74 @@ begin
     SSL_want_read := @SSL_want_read_impl;
   if not Assigned(SSL_want_write) then
     SSL_want_write := @SSL_want_write_impl;
-  
+
   // Continue loading all other functions...
   // This is just a partial list, the complete implementation would load all 300+ functions
+
+  // P1-2.1: Mark core module as loaded for test framework
+  TOpenSSLLoader.SetModuleLoaded(osmCore, True);
 end;
 
 procedure UnloadOpenSSLCore;
 begin
-  if LibSSLHandle <> NilHandle then
-  begin
-    UnloadLibrary(LibSSLHandle);
-    LibSSLHandle := NilHandle;
-  end;
-  
-  if LibCryptoHandle <> NilHandle then
-  begin
-    UnloadLibrary(LibCryptoHandle);
-    LibCryptoHandle := NilHandle;
-  end;
-  
+  // P0-1.1: 委托给 TOpenSSLLoader 卸载库
+  TOpenSSLLoader.UnloadLibraries;
+
   LoadedOpenSSLVersion := sslUnknown;
   LoadedCryptoLibName := '';
   LoadedSSLLibName := '';
-  
+
   // Reset all function pointers
   OPENSSL_init_ssl := nil;
   OPENSSL_cleanup := nil;
   OpenSSL_version_num := nil;
   OpenSSL_version := nil;
-  
+
   // Continue resetting all function pointers...
 end;
 
 function IsOpenSSLCoreLoaded: Boolean;
 begin
-  Result := (LibSSLHandle <> NilHandle) and (LibCryptoHandle <> NilHandle);
+  // P0-1.1: 委托给 TOpenSSLLoader 检查状态
+  Result := TOpenSSLLoader.IsLoaded(osslLibSSL) and TOpenSSLLoader.IsLoaded(osslLibCrypto);
 end;
 
 function GetSSLLibHandle: TLibHandle;
 begin
-  Result := LibSSLHandle;
+  // P0-1.1: 委托给 TOpenSSLLoader
+  Result := TOpenSSLLoader.GetLibraryHandle(osslLibSSL);
 end;
 
 function GetCryptoLibHandle: TLibHandle;
 begin
-  Result := LibCryptoHandle;
+  // P0-1.1: 委托给 TOpenSSLLoader
+  Result := TOpenSSLLoader.GetLibraryHandle(osslLibCrypto);
 end;
 
 function IsCryptoLibraryLoaded: Boolean;
 begin
-  Result := LibCryptoHandle <> NilHandle;
+  // P0-1.1: 委托给 TOpenSSLLoader
+  Result := TOpenSSLLoader.IsLoaded(osslLibCrypto);
 end;
 
 function GetCryptoProcAddress(const ProcName: string): Pointer;
+var
+  LHandle: TLibHandle;
 begin
   Result := nil;
-  if LibCryptoHandle <> NilHandle then
-    Result := GetProcedureAddress(LibCryptoHandle, PChar(ProcName));
+  LHandle := TOpenSSLLoader.GetLibraryHandle(osslLibCrypto);
+  if LHandle <> NilHandle then
+    Result := GetProcedureAddress(LHandle, PChar(ProcName));
 end;
 
 function GetSSLProcAddress(const ProcName: string): Pointer;
+var
+  LHandle: TLibHandle;
 begin
   Result := nil;
-  if LibSSLHandle <> NilHandle then
-    Result := GetProcedureAddress(LibSSLHandle, PChar(ProcName));
+  LHandle := TOpenSSLLoader.GetLibraryHandle(osslLibSSL);
+  if LHandle <> NilHandle then
+    Result := GetProcedureAddress(LHandle, PChar(ProcName));
 end;
 
 function GetOpenSSLVersion: TOpenSSLVersion;
