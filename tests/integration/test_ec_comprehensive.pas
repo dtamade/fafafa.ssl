@@ -3,8 +3,11 @@ program test_ec_comprehensive;
 {$mode objfpc}{$H+}
 
 uses
-  SysUtils,
+  SysUtils, DynLibs,
+  fafafa.ssl.base,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ec,
   fafafa.ssl.openssl.api.bn,
   fafafa.ssl.openssl.api.obj;
@@ -621,37 +624,36 @@ begin
   WriteLn('EC Module Comprehensive Integration Test');
   WriteLn('=========================================');
   WriteLn('');
-  
-  // Initialize OpenSSL
-  Write('Initializing OpenSSL... ');
-  if not LoadOpenSSLLibrary then
+
+  // Initialize OpenSSL core library
+  Write('Initializing OpenSSL core... ');
+  LoadOpenSSLCore;
+  if not IsOpenSSLCoreLoaded then
   begin
     WriteLn('FAILED');
-    WriteLn('Error: Could not initialize OpenSSL library');
+    WriteLn('Error: Could not initialize OpenSSL core library');
     ExitCode := 1;
     Exit;
   end;
   WriteLn('OK');
-  
+
+  // Load BN functions first (required by EC)
+  Write('Loading BN functions... ');
+  if not LoadOpenSSLBN then
+  begin
+    WriteLn('FAILED');
+    WriteLn('Error: Could not load BN functions');
+    ExitCode := 1;
+    Exit;
+  end;
+  WriteLn('OK');
+
   // Load EC functions
   Write('Loading EC functions... ');
   if not LoadECFunctions(GetCryptoLibHandle) then
   begin
     WriteLn('FAILED');
     WriteLn('Error: Could not load EC functions');
-    UnloadOpenSSLLibrary;
-    ExitCode := 1;
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  // Load BN functions
-  Write('Loading BN functions... ');
-  if not LoadOpenSSLBN then
-  begin
-    WriteLn('FAILED');
-    WriteLn('Error: Could not load BN functions');
-    UnloadOpenSSLLibrary;
     ExitCode := 1;
     Exit;
   end;
@@ -687,7 +689,7 @@ begin
   WriteLn('Passed: ', PassedTests);
   WriteLn('Failed: ', TotalTests - PassedTests);
   WriteLn('Success rate: ', (PassedTests * 100) div TotalTests, '%');
-  
+
   if PassedTests = TotalTests then
   begin
     WriteLn('');
@@ -700,6 +702,6 @@ begin
     WriteLn('SOME TESTS FAILED!');
     ExitCode := 1;
   end;
-  
-  UnloadOpenSSLLibrary;
+
+  // Cleanup is handled by unit finalization
 end.

@@ -359,6 +359,16 @@ begin
   RSA_get0_factors := TRSA_get0_factors(GetCryptoProcAddress('RSA_get0_factors'));
   RSA_get0_crt_params := TRSA_get0_crt_params(GetCryptoProcAddress('RSA_get0_crt_params'));
 
+  // Individual parameter accessors (OpenSSL 1.1.0+)
+  RSA_get0_n := TRSA_get0_n(GetCryptoProcAddress('RSA_get0_n'));
+  RSA_get0_e := TRSA_get0_e(GetCryptoProcAddress('RSA_get0_e'));
+  RSA_get0_d := TRSA_get0_d(GetCryptoProcAddress('RSA_get0_d'));
+  RSA_get0_p := TRSA_get0_p(GetCryptoProcAddress('RSA_get0_p'));
+  RSA_get0_q := TRSA_get0_q(GetCryptoProcAddress('RSA_get0_q'));
+  RSA_get0_dmp1 := TRSA_get0_dmp1(GetCryptoProcAddress('RSA_get0_dmp1'));
+  RSA_get0_dmq1 := TRSA_get0_dmq1(GetCryptoProcAddress('RSA_get0_dmq1'));
+  RSA_get0_iqmp := TRSA_get0_iqmp(GetCryptoProcAddress('RSA_get0_iqmp'));
+
   // Utility functions
   RSA_check_key := TRSA_check_key(GetCryptoProcAddress('RSA_check_key'));
   RSA_check_key_ex := TRSA_check_key_ex(GetCryptoProcAddress('RSA_check_key_ex'));
@@ -390,6 +400,16 @@ begin
   RSA_get0_key := nil;
   RSA_get0_factors := nil;
   RSA_get0_crt_params := nil;
+
+  // Individual parameter accessors
+  RSA_get0_n := nil;
+  RSA_get0_e := nil;
+  RSA_get0_d := nil;
+  RSA_get0_p := nil;
+  RSA_get0_q := nil;
+  RSA_get0_dmp1 := nil;
+  RSA_get0_dmq1 := nil;
+  RSA_get0_iqmp := nil;
 
   // Utility functions
   RSA_check_key := nil;
