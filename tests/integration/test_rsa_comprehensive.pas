@@ -1,5 +1,10 @@
 program test_rsa_comprehensive;
 
+{******************************************************************************}
+{  RSA Comprehensive Integration Tests                                         }
+{  Migrated to use TSimpleTestRunner framework (P1-2.2)                        }
+{******************************************************************************}
+
 {$mode objfpc}{$H+}
 
 uses
@@ -10,30 +15,12 @@ uses
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.crypto,
   fafafa.ssl.openssl.api.rsa,
-  fafafa.ssl.openssl.api.bn;
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.loader,
+  test_openssl_base;
 
 var
-  TotalTests: Integer = 0;
-  PassedTests: Integer = 0;
-  FailedTests: Integer = 0;
-
-procedure LogTest(const TestName: string; Passed: Boolean; const Details: string = '');
-begin
-  Inc(TotalTests);
-  if Passed then
-  begin
-    Inc(PassedTests);
-    Write('[PASS] ');
-  end
-  else
-  begin
-    Inc(FailedTests);
-    Write('[FAIL] ');
-  end;
-  WriteLn(TestName);
-  if Details <> '' then
-    WriteLn('  ', Details);
-end;
+  Runner: TSimpleTestRunner;
 
 // Simple fake hash function for testing
 function CreateTestHash(const Data: PByte; Len: Integer): TBytes;
@@ -60,8 +47,7 @@ var
 begin
   WriteLn;
   WriteLn('=== RSA Key Generation Tests ===');
-  WriteLn;
-  
+
   // Test 1: 1024-bit key (for compatibility testing only)
   Rsa := RSA_new();
   if Rsa <> nil then
@@ -73,16 +59,16 @@ begin
       begin
         KeySize := RSA_size(Rsa);
         Bits := RSA_bits(Rsa);
-        LogTest('Generate 1024-bit RSA key', (KeySize = 128) and (Bits = 1024),
+        Runner.Check('Generate 1024-bit RSA key', (KeySize = 128) and (Bits = 1024),
                 Format('Key size: %d bytes (%d bits)', [KeySize, Bits]));
       end
       else
-        LogTest('Generate 1024-bit RSA key', False, 'Key generation failed');
+        Runner.Check('Generate 1024-bit RSA key', False, 'Key generation failed');
     end;
     BN_free(Exponent);
     RSA_free(Rsa);
   end;
-  
+
   // Test 2: 2048-bit key (recommended)
   Rsa := RSA_new();
   if Rsa <> nil then
@@ -94,16 +80,16 @@ begin
       begin
         KeySize := RSA_size(Rsa);
         Bits := RSA_bits(Rsa);
-        LogTest('Generate 2048-bit RSA key', (KeySize = 256) and (Bits = 2048),
+        Runner.Check('Generate 2048-bit RSA key', (KeySize = 256) and (Bits = 2048),
                 Format('Key size: %d bytes (%d bits)', [KeySize, Bits]));
       end
       else
-        LogTest('Generate 2048-bit RSA key', False, 'Key generation failed');
+        Runner.Check('Generate 2048-bit RSA key', False, 'Key generation failed');
     end;
     BN_free(Exponent);
     RSA_free(Rsa);
   end;
-  
+
   // Test 3: 4096-bit key (high security)
   Rsa := RSA_new();
   if Rsa <> nil then
@@ -116,16 +102,16 @@ begin
       begin
         KeySize := RSA_size(Rsa);
         Bits := RSA_bits(Rsa);
-        LogTest('Generate 4096-bit RSA key', (KeySize = 512) and (Bits = 4096),
+        Runner.Check('Generate 4096-bit RSA key', (KeySize = 512) and (Bits = 4096),
                 Format('Key size: %d bytes (%d bits)', [KeySize, Bits]));
       end
       else
-        LogTest('Generate 4096-bit RSA key', False, 'Key generation failed');
+        Runner.Check('Generate 4096-bit RSA key', False, 'Key generation failed');
     end;
     BN_free(Exponent);
     RSA_free(Rsa);
   end;
-  
+
   // Test 4: Key validation
   Rsa := RSA_new();
   if Rsa <> nil then
@@ -135,7 +121,7 @@ begin
     begin
       if RSA_generate_key_ex(Rsa, 2048, Exponent, nil) = 1 then
       begin
-        LogTest('Validate RSA key', RSA_check_key(Rsa) = 1,
+        Runner.Check('Validate RSA key', RSA_check_key(Rsa) = 1,
                 'RSA_check_key validation');
       end;
     end;
@@ -150,19 +136,18 @@ var
   Exponent: PBIGNUM;
   n, e, d: PBIGNUM;
   p, q: PBIGNUM;
-  n_bits, e_bits, d_bits: Integer;
+  n_bits, e_bits: Integer;
 begin
   WriteLn;
   WriteLn('=== RSA Parameter Access Tests ===');
-  WriteLn;
-  
+
   Rsa := RSA_new();
   if Rsa = nil then
   begin
-    LogTest('Create RSA for parameter test', False);
+    Runner.Check('Create RSA for parameter test', False);
     Exit;
   end;
-  
+
   Exponent := BN_new();
   if BN_set_word(Exponent, RSA_F4) = 1 then
   begin
@@ -173,48 +158,48 @@ begin
       e := nil;
       d := nil;
       RSA_get0_key(Rsa, @n, @e, @d);
-      LogTest('Access RSA key components', (n <> nil) and (e <> nil) and (d <> nil),
+      Runner.Check('Access RSA key components', (n <> nil) and (e <> nil) and (d <> nil),
               'n, e, d pointers retrieved');
-      
+
       if (n <> nil) and (e <> nil) then
       begin
         n_bits := BN_num_bits(n);
         e_bits := BN_num_bits(e);
-        LogTest('Verify modulus size', n_bits = 2048,
+        Runner.Check('Verify modulus size', n_bits = 2048,
                 Format('Modulus: %d bits', [n_bits]));
-        LogTest('Verify exponent', e_bits = 17,
+        Runner.Check('Verify exponent', e_bits = 17,
                 Format('Exponent: %d bits (65537 = 2^16+1)', [e_bits]));
       end;
-      
+
       // Test 6: Access private key factors (p, q)
       p := nil;
       q := nil;
       RSA_get0_factors(Rsa, @p, @q);
-      LogTest('Access RSA factors', (p <> nil) and (q <> nil),
+      Runner.Check('Access RSA factors', (p <> nil) and (q <> nil),
               'p, q factors retrieved');
-      
+
       if (p <> nil) and (q <> nil) then
       begin
-        LogTest('Verify factor sizes', 
+        Runner.Check('Verify factor sizes',
                 (BN_num_bits(p) > 1000) and (BN_num_bits(q) > 1000),
                 Format('p: %d bits, q: %d bits', [BN_num_bits(p), BN_num_bits(q)]));
       end;
-      
+
       // Test 7: Individual accessors
       if Assigned(RSA_get0_n) and Assigned(RSA_get0_e) and Assigned(RSA_get0_d) then
       begin
         n := RSA_get0_n(Rsa);
         e := RSA_get0_e(Rsa);
         d := RSA_get0_d(Rsa);
-        LogTest('Individual parameter accessors', 
+        Runner.Check('Individual parameter accessors',
                 (n <> nil) and (e <> nil) and (d <> nil),
                 'RSA_get0_n/e/d functions work');
       end
       else
-        LogTest('Individual parameter accessors', False, 'Functions not available');
+        Runner.Check('Individual parameter accessors', False, 'Functions not available');
     end;
   end;
-  
+
   BN_free(Exponent);
   RSA_free(Rsa);
 end;
@@ -230,12 +215,11 @@ var
 begin
   WriteLn;
   WriteLn('=== RSA Sign/Verify Tests ===');
-  WriteLn;
-  
+
   // Generate key
   Rsa := RSA_new();
   if Rsa = nil then Exit;
-  
+
   Exponent := BN_new();
   if BN_set_word(Exponent, RSA_F4) <> 1 then
   begin
@@ -243,48 +227,48 @@ begin
     RSA_free(Rsa);
     Exit;
   end;
-  
+
   if RSA_generate_key_ex(Rsa, 2048, Exponent, nil) <> 1 then
   begin
     BN_free(Exponent);
     RSA_free(Rsa);
     Exit;
   end;
-  
+
   try
     // Test 8: Basic signing
     SetLength(data, 100);
     FillChar(data[0], 100, $AA);
     hash := CreateTestHash(@data[0], Length(data));
-    
+
     siglen := RSA_size(Rsa);
     if RSA_sign(NID_sha256, @hash[0], Length(hash), @sig[0], @siglen, Rsa) = 1 then
     begin
-      LogTest('RSA sign operation', True,
+      Runner.Check('RSA sign operation', True,
               Format('Signature: %d bytes', [siglen]));
-      
+
       // Test 9: Verify correct signature
-      LogTest('RSA verify correct signature',
+      Runner.Check('RSA verify correct signature',
               RSA_verify(NID_sha256, @hash[0], Length(hash), @sig[0], siglen, Rsa) = 1);
-      
+
       // Test 10: Detect data tampering
       tampered_data := Copy(data);
       tampered_data[0] := tampered_data[0] xor $FF;
       tampered_hash := CreateTestHash(@tampered_data[0], Length(tampered_data));
-      LogTest('Detect data tampering',
-              RSA_verify(NID_sha256, @tampered_hash[0], Length(tampered_hash), 
+      Runner.Check('Detect data tampering',
+              RSA_verify(NID_sha256, @tampered_hash[0], Length(tampered_hash),
                         @sig[0], siglen, Rsa) <> 1,
               'Tampered data correctly rejected');
-      
+
       // Test 11: Detect signature tampering
       sig[10] := sig[10] xor $FF;
-      LogTest('Detect signature tampering',
+      Runner.Check('Detect signature tampering',
               RSA_verify(NID_sha256, @hash[0], Length(hash), @sig[0], siglen, Rsa) <> 1,
               'Tampered signature correctly rejected');
     end
     else
-      LogTest('RSA sign operation', False);
-      
+      Runner.Check('RSA sign operation', False);
+
   finally
     BN_free(Exponent);
     RSA_free(Rsa);
@@ -303,12 +287,11 @@ var
 begin
   WriteLn;
   WriteLn('=== RSA Encrypt/Decrypt Tests ===');
-  WriteLn;
-  
+
   // Generate key
   Rsa := RSA_new();
   if Rsa = nil then Exit;
-  
+
   Exponent := BN_new();
   if BN_set_word(Exponent, RSA_F4) <> 1 then
   begin
@@ -316,70 +299,70 @@ begin
     RSA_free(Rsa);
     Exit;
   end;
-  
+
   if RSA_generate_key_ex(Rsa, 2048, Exponent, nil) <> 1 then
   begin
     BN_free(Exponent);
     RSA_free(Rsa);
     Exit;
   end;
-  
+
   try
     // Test 12: PKCS#1 v1.5 padding encryption
     plaintext := 'Hello RSA with PKCS1 padding!';
     ct_len := RSA_public_encrypt(Length(plaintext), @plaintext[1],
                                   @ciphertext[0], Rsa, RSA_PKCS1_PADDING);
-    
+
     if ct_len > 0 then
     begin
-      LogTest('RSA PKCS#1 encrypt', True,
+      Runner.Check('RSA PKCS#1 encrypt', True,
               Format('Encrypted %d bytes to %d bytes', [Length(plaintext), ct_len]));
-      
+
       dec_len := RSA_private_decrypt(ct_len, @ciphertext[0],
                                      @decrypted[0], Rsa, RSA_PKCS1_PADDING);
-      
+
       if dec_len > 0 then
       begin
         SetString(recovered, PAnsiChar(@decrypted[0]), dec_len);
-        LogTest('RSA PKCS#1 decrypt', recovered = plaintext,
+        Runner.Check('RSA PKCS#1 decrypt', recovered = plaintext,
                 Format('Recovered: "%s"', [recovered]));
       end
       else
-        LogTest('RSA PKCS#1 decrypt', False);
+        Runner.Check('RSA PKCS#1 decrypt', False);
     end
     else
-      LogTest('RSA PKCS#1 encrypt', False);
-    
+      Runner.Check('RSA PKCS#1 encrypt', False);
+
     // Test 13: OAEP padding encryption
     plaintext := 'Hello RSA with OAEP!';
     ct_len := RSA_public_encrypt(Length(plaintext), @plaintext[1],
                                   @ciphertext[0], Rsa, RSA_PKCS1_OAEP_PADDING);
-    
+
     if ct_len > 0 then
     begin
-      LogTest('RSA OAEP encrypt', True,
+      Runner.Check('RSA OAEP encrypt', True,
               Format('Encrypted %d bytes to %d bytes', [Length(plaintext), ct_len]));
-      
+
       dec_len := RSA_private_decrypt(ct_len, @ciphertext[0],
                                      @decrypted[0], Rsa, RSA_PKCS1_OAEP_PADDING);
-      
+
       if dec_len > 0 then
       begin
         SetString(recovered, PAnsiChar(@decrypted[0]), dec_len);
-        LogTest('RSA OAEP decrypt', recovered = plaintext,
+        Runner.Check('RSA OAEP decrypt', recovered = plaintext,
                 Format('Recovered: "%s"', [recovered]));
       end
       else
-        LogTest('RSA OAEP decrypt', False);
+        Runner.Check('RSA OAEP decrypt', False);
     end
     else
-      LogTest('RSA OAEP encrypt', False);
-    
+      Runner.Check('RSA OAEP encrypt', False);
+
     // Test 14: Maximum plaintext size for PKCS#1
     plaintext := StringOfChar('X', RSA_size(Rsa) - RSA_PKCS1_PADDING_SIZE);
     ct_len := RSA_public_encrypt(Length(plaintext), @plaintext[1],
                                   @ciphertext[0], Rsa, RSA_PKCS1_PADDING);
-    
+
     if ct_len > 0 then
     begin
       dec_len := RSA_private_decrypt(ct_len, @ciphertext[0],
@@ -387,14 +370,14 @@ begin
       if dec_len > 0 then
       begin
         SetString(recovered, PAnsiChar(@decrypted[0]), dec_len);
-        LogTest('RSA max plaintext size (PKCS#1)', 
+        Runner.Check('RSA max plaintext size (PKCS#1)',
                 Length(recovered) = Length(plaintext),
                 Format('Max size: %d bytes', [Length(plaintext)]));
       end;
     end
     else
-      LogTest('RSA max plaintext size (PKCS#1)', False);
-      
+      Runner.Check('RSA max plaintext size (PKCS#1)', False);
+
   finally
     BN_free(Exponent);
     RSA_free(Rsa);
@@ -413,12 +396,11 @@ var
 begin
   WriteLn;
   WriteLn('=== RSA Private Encrypt Tests ===');
-  WriteLn;
-  
+
   // Generate key
   Rsa := RSA_new();
   if Rsa = nil then Exit;
-  
+
   Exponent := BN_new();
   if BN_set_word(Exponent, RSA_F4) <> 1 then
   begin
@@ -426,40 +408,40 @@ begin
     RSA_free(Rsa);
     Exit;
   end;
-  
+
   if RSA_generate_key_ex(Rsa, 2048, Exponent, nil) <> 1 then
   begin
     BN_free(Exponent);
     RSA_free(Rsa);
     Exit;
   end;
-  
+
   try
     // Test 15: Private encrypt / Public decrypt (for signing simulation)
     plaintext := 'Test private encryption';
     ct_len := RSA_private_encrypt(Length(plaintext), @plaintext[1],
                                    @ciphertext[0], Rsa, RSA_PKCS1_PADDING);
-    
+
     if ct_len > 0 then
     begin
-      LogTest('RSA private encrypt', True,
+      Runner.Check('RSA private encrypt', True,
               Format('Encrypted %d bytes', [ct_len]));
-      
+
       dec_len := RSA_public_decrypt(ct_len, @ciphertext[0],
                                     @decrypted[0], Rsa, RSA_PKCS1_PADDING);
-      
+
       if dec_len > 0 then
       begin
         SetString(recovered, PAnsiChar(@decrypted[0]), dec_len);
-        LogTest('RSA public decrypt', recovered = plaintext,
+        Runner.Check('RSA public decrypt', recovered = plaintext,
                 Format('Recovered: "%s"', [recovered]));
       end
       else
-        LogTest('RSA public decrypt', False);
+        Runner.Check('RSA public decrypt', False);
     end
     else
-      LogTest('RSA private encrypt', False);
-      
+      Runner.Check('RSA private encrypt', False);
+
   finally
     BN_free(Exponent);
     RSA_free(Rsa);
@@ -470,54 +452,29 @@ begin
   WriteLn('RSA Comprehensive Integration Tests');
   WriteLn('====================================');
   WriteLn;
-  
-  // Load OpenSSL
-  LoadOpenSSLCore;
-  
-  if not LoadOpenSSLRSA then
-  begin
-    WriteLn('ERROR: Failed to load RSA module');
-    Halt(1);
-  end;
-  
-  if not LoadOpenSSLBN then
-  begin
-    WriteLn('ERROR: Failed to load BN module');
-    Halt(1);
-  end;
-  
+
+  Runner := TSimpleTestRunner.Create;
   try
+    Runner.RequireModules([osmCore, osmBN, osmRSA]);
+
+    if not Runner.Initialize then
+    begin
+      WriteLn('ERROR: Failed to initialize test environment');
+      Halt(1);
+    end;
+
+    WriteLn('OpenSSL Version: ', GetOpenSSLVersionString);
+
     // Run test suites
     TestRSAKeyGeneration;         // Tests 1-4
     TestRSAParameterAccess;       // Tests 5-7
     TestRSASignVerify;            // Tests 8-11
     TestRSAEncryptDecrypt;        // Tests 12-14
     TestRSAPrivateEncrypt;        // Tests 15-16
-    
-    // Print summary
-    WriteLn;
-    WriteLn('=== Test Summary ===');
-    WriteLn(Format('Total:  %d', [TotalTests]));
-    WriteLn(Format('Passed: %d', [PassedTests]));
-    WriteLn(Format('Failed: %d', [FailedTests]));
-    WriteLn;
-    
-    if FailedTests > 0 then
-    begin
-      WriteLn('RESULT: FAILED');
-      Halt(1);
-    end
-    else
-    begin
-      WriteLn('RESULT: ALL TESTS PASSED');
-      Halt(0);
-    end;
-    
-  except
-    on E: Exception do
-    begin
-      WriteLn('EXCEPTION: ', E.Message);
-      Halt(1);
-    end;
+
+    Runner.PrintSummary;
+    Halt(Runner.FailCount);
+  finally
+    Runner.Free;
   end;
 end.

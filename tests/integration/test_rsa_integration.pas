@@ -1,5 +1,10 @@
 program test_rsa_integration;
 
+{******************************************************************************}
+{  RSA Integration Tests                                                       }
+{  Migrated to use TSimpleTestRunner framework (P1-2.2)                        }
+{******************************************************************************}
+
 {$mode objfpc}{$H+}
 
 uses
@@ -10,87 +15,50 @@ uses
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.bn,
   fafafa.ssl.openssl.api.pem,
-  fafafa.ssl.openssl.api.err;
+  fafafa.ssl.openssl.api.err,
+  fafafa.ssl.openssl.loader,
+  test_openssl_base;
 
 type
   size_t = NativeUInt;
 
 var
-  TestsPassed: Integer = 0;
-  TestsFailed: Integer = 0;
+  Runner: TSimpleTestRunner;
 
-procedure LogTest(const TestName: string; Passed: Boolean; const Details: string = '');
-begin
-  if Passed then
-  begin
-    Inc(TestsPassed);
-    WriteLn('[PASS] ', TestName);
-    if Details <> '' then
-      WriteLn('       ', Details);
-  end
-  else
-  begin
-    Inc(TestsFailed);
-    WriteLn('[FAIL] ', TestName);
-    if Details <> '' then
-      WriteLn('       ', Details);
-  end;
-end;
-
-function Test_RSA_KeyGen_2048: Boolean;
+procedure TestRSAKeyGen2048;
 var
   Key: PEVP_PKEY;
   Ctx: PEVP_PKEY_CTX;
 begin
-  Result := False;
-  WriteLn('Testing RSA 2048-bit key generation...');
-  
+  WriteLn;
+  WriteLn('=== RSA 2048-bit Key Generation ===');
+
   if not Assigned(EVP_PKEY_CTX_new_id) then
   begin
-    WriteLn('  ERROR: EVP_PKEY_CTX_new_id not loaded');
+    Runner.Check('EVP_PKEY_CTX_new_id available', False);
     Exit;
   end;
-  
+
   Ctx := EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nil);
-  if Ctx = nil then
-  begin
-    WriteLn('  ERROR: Failed to create PKEY context');
-    Exit;
-  end;
-  
+  Runner.Check('Create PKEY context', Ctx <> nil);
+  if Ctx = nil then Exit;
+
   try
-    if EVP_PKEY_keygen_init(Ctx) <= 0 then
-    begin
-      WriteLn('  ERROR: Failed to initialize keygen');
-      Exit;
-    end;
-    
-    if EVP_PKEY_CTX_set_rsa_keygen_bits(Ctx, 2048) <= 0 then
-    begin
-      WriteLn('  ERROR: Failed to set key size to 2048');
-      Exit;
-    end;
-    
+    Runner.Check('Initialize keygen', EVP_PKEY_keygen_init(Ctx) > 0);
+    Runner.Check('Set key size to 2048', EVP_PKEY_CTX_set_rsa_keygen_bits(Ctx, 2048) > 0);
+
     Key := nil;
-    if EVP_PKEY_keygen(Ctx, Key) <= 0 then
-    begin
-      WriteLn('  ERROR: Failed to generate key');
-      Exit;
-    end;
-    
+    Runner.Check('Generate key', EVP_PKEY_keygen(Ctx, Key) > 0);
+    Runner.Check('Key is valid', Key <> nil);
+
     if Key <> nil then
-    begin
-      WriteLn('  SUCCESS: Generated 2048-bit RSA key');
       EVP_PKEY_free(Key);
-      Result := True;
-    end;
-    
   finally
     EVP_PKEY_CTX_free(Ctx);
   end;
 end;
 
-function Test_RSA_Sign_Verify: Boolean;
+procedure TestRSASignVerify;
 var
   Key: PEVP_PKEY;
   Ctx: PEVP_PKEY_CTX;
@@ -100,103 +68,80 @@ var
   Data: AnsiString;
   MD: PEVP_MD;
 begin
-  Result := False;
-  WriteLn('Testing RSA signature and verification...');
-  
-  // Generate key first
+  WriteLn;
+  WriteLn('=== RSA Sign/Verify ===');
+
   Ctx := EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nil);
-  if Ctx = nil then Exit;
-  
+  if Ctx = nil then
+  begin
+    Runner.Check('Create context', False);
+    Exit;
+  end;
+
   try
     if (EVP_PKEY_keygen_init(Ctx) <= 0) or
        (EVP_PKEY_CTX_set_rsa_keygen_bits(Ctx, 2048) <= 0) then
+    begin
+      Runner.Check('Initialize keygen', False);
       Exit;
-      
+    end;
+
     Key := nil;
-    if EVP_PKEY_keygen(Ctx, Key) <= 0 then Exit;
-    if Key = nil then Exit;
-    
+    if EVP_PKEY_keygen(Ctx, Key) <= 0 then
+    begin
+      Runner.Check('Generate key', False);
+      Exit;
+    end;
+
     try
-      // Get SHA-256
       MD := EVP_sha256();
-      if MD = nil then
-      begin
-        WriteLn('  ERROR: Failed to get SHA-256');
-        Exit;
-      end;
-      
-      // Sign data
+      Runner.Check('Get SHA-256', MD <> nil);
+      if MD = nil then Exit;
+
       Data := 'Test data for RSA signature';
       SignCtx := EVP_MD_CTX_new();
+      Runner.Check('Create sign context', SignCtx <> nil);
       if SignCtx = nil then Exit;
-      
+
       try
-        if (EVP_DigestSignInit(SignCtx, nil, MD, nil, Key) <= 0) or
-           (EVP_DigestSignUpdate(SignCtx, @Data[1], Length(Data)) <= 0) then
-        begin
-          WriteLn('  ERROR: Failed to sign data');
-          Exit;
-        end;
-        
+        Runner.Check('DigestSignInit', EVP_DigestSignInit(SignCtx, nil, MD, nil, Key) > 0);
+        Runner.Check('DigestSignUpdate', EVP_DigestSignUpdate(SignCtx, @Data[1], Length(Data)) > 0);
+
         SigLen := 0;
-        if EVP_DigestSignFinal(SignCtx, nil, SigLen) <= 0 then
-        begin
-          WriteLn('  ERROR: Failed to get signature length');
-          Exit;
-        end;
-        
+        Runner.Check('Get signature length', EVP_DigestSignFinal(SignCtx, nil, SigLen) > 0);
+
         if SigLen > SizeOf(Signature) then
         begin
-          WriteLn('  ERROR: Signature too large');
+          Runner.Check('Signature fits buffer', False);
           Exit;
         end;
-        
-        if EVP_DigestSignFinal(SignCtx, @Signature[0], SigLen) <= 0 then
-        begin
-          WriteLn('  ERROR: Failed to finalize signature');
-          Exit;
-        end;
-        
+
+        Runner.Check('DigestSignFinal', EVP_DigestSignFinal(SignCtx, @Signature[0], SigLen) > 0);
         WriteLn('  Signature length: ', SigLen, ' bytes');
-        
-        // Verify signature
+
         VerifyCtx := EVP_MD_CTX_new();
-        if VerifyCtx = nil then Exit;
-        
-        try
-          if (EVP_DigestVerifyInit(VerifyCtx, nil, MD, nil, Key) <= 0) or
-             (EVP_DigestVerifyUpdate(VerifyCtx, @Data[1], Length(Data)) <= 0) then
-          begin
-            WriteLn('  ERROR: Failed to initialize verification');
-            Exit;
+        if VerifyCtx <> nil then
+        begin
+          try
+            Runner.Check('DigestVerifyInit', EVP_DigestVerifyInit(VerifyCtx, nil, MD, nil, Key) > 0);
+            Runner.Check('DigestVerifyUpdate', EVP_DigestVerifyUpdate(VerifyCtx, @Data[1], Length(Data)) > 0);
+            Runner.Check('DigestVerifyFinal', EVP_DigestVerifyFinal(VerifyCtx, @Signature[0], SigLen) = 1);
+          finally
+            EVP_MD_CTX_free(VerifyCtx);
           end;
-          
-          if EVP_DigestVerifyFinal(VerifyCtx, @Signature[0], SigLen) = 1 then
-          begin
-            WriteLn('  SUCCESS: Signature verified correctly');
-            Result := True;
-          end
-          else
-            WriteLn('  ERROR: Signature verification failed');
-            
-        finally
-          EVP_MD_CTX_free(VerifyCtx);
         end;
-        
       finally
         EVP_MD_CTX_free(SignCtx);
       end;
-      
     finally
       EVP_PKEY_free(Key);
     end;
-    
   finally
     EVP_PKEY_CTX_free(Ctx);
   end;
 end;
 
-function Test_RSA_Encrypt_Decrypt: Boolean;
+procedure TestRSAEncryptDecrypt;
 var
   Key: PEVP_PKEY;
   Ctx: PEVP_PKEY_CTX;
@@ -206,181 +151,116 @@ var
   Decrypted: array[0..511] of Byte;
   CipherLen, DecryptLen: size_t;
 begin
-  Result := False;
-  WriteLn('Testing RSA encryption and decryption...');
-  
-  // Generate key
+  WriteLn;
+  WriteLn('=== RSA Encrypt/Decrypt ===');
+
   Ctx := EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nil);
-  if Ctx = nil then Exit;
-  
+  if Ctx = nil then
+  begin
+    Runner.Check('Create context', False);
+    Exit;
+  end;
+
   try
     if (EVP_PKEY_keygen_init(Ctx) <= 0) or
        (EVP_PKEY_CTX_set_rsa_keygen_bits(Ctx, 2048) <= 0) then
       Exit;
-      
+
     Key := nil;
     if EVP_PKEY_keygen(Ctx, Key) <= 0 then Exit;
     if Key = nil then Exit;
-    
+
     try
       Plaintext := 'Test data for RSA encryption';
-      
-      // Encrypt
+
       EncCtx := EVP_PKEY_CTX_new(Key, nil);
+      Runner.Check('Create encrypt context', EncCtx <> nil);
       if EncCtx = nil then Exit;
-      
+
       try
-        if EVP_PKEY_encrypt_init(EncCtx) <= 0 then
-        begin
-          WriteLn('  ERROR: Failed to initialize encryption');
-          Exit;
-        end;
-        
-        if EVP_PKEY_CTX_set_rsa_padding(EncCtx, RSA_PKCS1_OAEP_PADDING) <= 0 then
-        begin
-          WriteLn('  ERROR: Failed to set padding');
-          Exit;
-        end;
-        
+        Runner.Check('Encrypt init', EVP_PKEY_encrypt_init(EncCtx) > 0);
+        Runner.Check('Set OAEP padding', EVP_PKEY_CTX_set_rsa_padding(EncCtx, RSA_PKCS1_OAEP_PADDING) > 0);
+
         CipherLen := 0;
-        if EVP_PKEY_encrypt(EncCtx, nil, CipherLen, @Plaintext[1], Length(Plaintext)) <= 0 then
-        begin
-          WriteLn('  ERROR: Failed to get ciphertext length');
-          Exit;
-        end;
-        
+        Runner.Check('Get ciphertext length', EVP_PKEY_encrypt(EncCtx, nil, CipherLen, @Plaintext[1], Length(Plaintext)) > 0);
+
         if CipherLen > SizeOf(Ciphertext) then
         begin
-          WriteLn('  ERROR: Ciphertext too large');
+          Runner.Check('Ciphertext fits buffer', False);
           Exit;
         end;
-        
-        if EVP_PKEY_encrypt(EncCtx, @Ciphertext[0], CipherLen, @Plaintext[1], Length(Plaintext)) <= 0 then
-        begin
-          WriteLn('  ERROR: Failed to encrypt');
-          Exit;
-        end;
-        
+
+        Runner.Check('Encrypt', EVP_PKEY_encrypt(EncCtx, @Ciphertext[0], CipherLen, @Plaintext[1], Length(Plaintext)) > 0);
         WriteLn('  Encrypted ', Length(Plaintext), ' bytes -> ', CipherLen, ' bytes');
-        
-        // Decrypt
+
         DecCtx := EVP_PKEY_CTX_new(Key, nil);
-        if DecCtx = nil then Exit;
-        
-        try
-          if EVP_PKEY_decrypt_init(DecCtx) <= 0 then
-          begin
-            WriteLn('  ERROR: Failed to initialize decryption');
-            Exit;
+        if DecCtx <> nil then
+        begin
+          try
+            Runner.Check('Decrypt init', EVP_PKEY_decrypt_init(DecCtx) > 0);
+            Runner.Check('Set OAEP padding for decrypt', EVP_PKEY_CTX_set_rsa_padding(DecCtx, RSA_PKCS1_OAEP_PADDING) > 0);
+
+            DecryptLen := 0;
+            Runner.Check('Get decrypted length', EVP_PKEY_decrypt(DecCtx, nil, DecryptLen, @Ciphertext[0], CipherLen) > 0);
+
+            if DecryptLen > SizeOf(Decrypted) then
+            begin
+              Runner.Check('Decrypted fits buffer', False);
+              Exit;
+            end;
+
+            Runner.Check('Decrypt', EVP_PKEY_decrypt(DecCtx, @Decrypted[0], DecryptLen, @Ciphertext[0], CipherLen) > 0);
+            Runner.Check('Decrypted matches original',
+                    (DecryptLen = size_t(Length(Plaintext))) and CompareMem(@Decrypted[0], @Plaintext[1], DecryptLen));
+          finally
+            EVP_PKEY_CTX_free(DecCtx);
           end;
-          
-          if EVP_PKEY_CTX_set_rsa_padding(DecCtx, RSA_PKCS1_OAEP_PADDING) <= 0 then
-          begin
-            WriteLn('  ERROR: Failed to set padding for decryption');
-            Exit;
-          end;
-          
-          DecryptLen := 0;
-          if EVP_PKEY_decrypt(DecCtx, nil, DecryptLen, @Ciphertext[0], CipherLen) <= 0 then
-          begin
-            WriteLn('  ERROR: Failed to get decrypted length');
-            Exit;
-          end;
-          
-          if DecryptLen > SizeOf(Decrypted) then
-          begin
-            WriteLn('  ERROR: Decrypted data too large');
-            Exit;
-          end;
-          
-          if EVP_PKEY_decrypt(DecCtx, @Decrypted[0], DecryptLen, @Ciphertext[0], CipherLen) <= 0 then
-          begin
-            WriteLn('  ERROR: Failed to decrypt');
-            Exit;
-          end;
-          
-          // Compare
-          if (DecryptLen = size_t(Length(Plaintext))) and
-             (CompareMem(@Decrypted[0], @Plaintext[1], DecryptLen)) then
-          begin
-            WriteLn('  SUCCESS: Decrypted data matches original');
-            Result := True;
-          end
-          else
-            WriteLn('  ERROR: Decrypted data does not match');
-            
-        finally
-          EVP_PKEY_CTX_free(DecCtx);
         end;
-        
       finally
         EVP_PKEY_CTX_free(EncCtx);
       end;
-      
     finally
       EVP_PKEY_free(Key);
     end;
-    
   finally
     EVP_PKEY_CTX_free(Ctx);
   end;
 end;
 
-procedure RunTests;
 begin
-  WriteLn('========================================');
   WriteLn('RSA Integration Tests');
-  WriteLn('========================================');
+  WriteLn('=====================');
   WriteLn;
-  
-  // Initialize OpenSSL
+
+  Runner := TSimpleTestRunner.Create;
   try
-    InitializeOpenSSL;
-  except
-    on E: Exception do
+    Runner.RequireModules([osmCore, osmBN, osmRSA, osmEVP]);
+
+    if not Runner.Initialize then
     begin
-      WriteLn('ERROR: Failed to initialize OpenSSL: ', E.Message);
+      WriteLn('ERROR: Failed to initialize test environment');
       Halt(1);
     end;
-  end;
-  
-  WriteLn('OpenSSL initialized successfully');
-  WriteLn;
-  
-  // Run tests
-  LogTest('RSA 2048-bit Key Generation', Test_RSA_KeyGen_2048);
-  WriteLn;
-  
-  LogTest('RSA Sign/Verify', Test_RSA_Sign_Verify);
-  WriteLn;
-  
-  LogTest('RSA Encrypt/Decrypt', Test_RSA_Encrypt_Decrypt);
-  WriteLn;
-  
-  // Summary
-  WriteLn('========================================');
-  WriteLn('Test Results:');
-  WriteLn('  Passed: ', TestsPassed);
-  WriteLn('  Failed: ', TestsFailed);
-  WriteLn('  Total:  ', TestsPassed + TestsFailed);
-  if TestsFailed = 0 then
-    WriteLn('  Status: ALL TESTS PASSED ✓')
-  else
-    WriteLn('  Status: SOME TESTS FAILED ✗');
-  WriteLn('========================================');
 
-  if TestsFailed > 0 then
-    Halt(1);
-end;
-
-begin
-  try
-    RunTests;
-  except
-    on E: Exception do
-    begin
-      WriteLn('EXCEPTION: ', E.ClassName, ': ', E.Message);
-      Halt(1);
+    try
+      InitializeOpenSSL;
+    except
+      on E: Exception do
+      begin
+        WriteLn('ERROR: Failed to initialize OpenSSL: ', E.Message);
+        Halt(1);
+      end;
     end;
+
+    WriteLn('OpenSSL Version: ', GetOpenSSLVersionString);
+
+    TestRSAKeyGen2048;
+    TestRSASignVerify;
+    TestRSAEncryptDecrypt;
+
+    Runner.PrintSummary;
+    Halt(Runner.FailCount);
+  finally
+    Runner.Free;
   end;
 end.
