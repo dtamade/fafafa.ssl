@@ -180,7 +180,7 @@ var
 // Helper functions
 function LoadSHAFunctions(ALibHandle: THandle): Boolean;
 procedure UnloadSHAFunctions;
-function IsSHALoaded: Boolean;
+function IsSHALoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmSHA) instead';
 
 // High-level helper functions
 function SHA1Hash(const Data: TBytes): TBytes;

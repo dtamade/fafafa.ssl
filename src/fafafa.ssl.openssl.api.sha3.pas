@@ -149,7 +149,7 @@ var
 // Helper functions
 function LoadSHA3Functions(ALibHandle: THandle): Boolean;
 procedure UnloadSHA3Functions;
-function IsSHA3Loaded: Boolean;
+function IsSHA3Loaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmSHA3) instead';
 
 // High-level helper functions
 function SHA3_224Hash(const Data: TBytes): TBytes;

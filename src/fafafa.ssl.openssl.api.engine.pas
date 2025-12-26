@@ -122,7 +122,7 @@ var
 // Module loading functions
 function LoadOpenSSLEngine(const ACryptoLib: THandle): Boolean;
 procedure UnloadOpenSSLEngine;
-function IsOpenSSLEngineLoaded: Boolean;
+function IsOpenSSLEngineLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmEngine) instead';
 
 // Helper functions
 function InitializeEngine(const AEngineID: string): PENGINE;

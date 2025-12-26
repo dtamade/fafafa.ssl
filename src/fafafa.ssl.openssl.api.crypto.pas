@@ -505,7 +505,7 @@ var
   
 procedure LoadOpenSSLCrypto;
 procedure UnloadOpenSSLCrypto;
-function IsOpenSSLCryptoLoaded: Boolean;
+function IsOpenSSLCryptoLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmCore) instead';
 
 implementation
 

@@ -215,7 +215,7 @@ var
 
 function LoadOpenSSLDH: Boolean;
 procedure UnloadOpenSSLDH;
-function IsOpenSSLDHLoaded: Boolean;
+function IsOpenSSLDHLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmDH) instead';
 
 implementation
 

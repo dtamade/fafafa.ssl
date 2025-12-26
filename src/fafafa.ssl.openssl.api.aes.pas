@@ -113,7 +113,7 @@ var
 // Helper functions
 function LoadAESFunctions(ALibHandle: THandle): Boolean;
 procedure UnloadAESFunctions;
-function IsAESLoaded: Boolean;
+function IsAESLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmAES) instead';
 
 // High-level helper functions
 function AESEncryptECB(const Data: TBytes; const Key: TBytes): TBytes;

@@ -282,7 +282,7 @@ var
 
 function LoadOpenSSLSSL: Boolean;
 procedure UnloadOpenSSLSSL;
-function IsOpenSSLSSLLoaded: Boolean;
+function IsOpenSSLSSLLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmSSL) instead';
 
 { Helper function - SSL_set_tlsext_host_name is a macro in OpenSSL, not a real function }
 function SSL_set_tlsext_host_name_impl(ssl: PSSL; const name: PAnsiChar): Integer; cdecl;

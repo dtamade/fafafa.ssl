@@ -93,7 +93,7 @@ var
 // Load and unload functions
 function LoadChaChaFunctions: Boolean;
 procedure UnloadChaChaFunctions;
-function IsChaChaLoaded: Boolean;
+function IsChaChaLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmChaCha) instead';
 
 // High-level helper functions
 function ChaCha20Encrypt(const Key: TBytes; const IV: TBytes; const Plaintext: TBytes): TBytes;

@@ -77,7 +77,7 @@ var
 
 function LoadOpenSSLECDH: Boolean;
 procedure UnloadOpenSSLECDH;
-function IsOpenSSLECDHLoaded: Boolean;
+function IsOpenSSLECDHLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmECDH) instead';
 
 { Helper functions for ECDH operations }
 function ECDH_ComputeSharedSecret(const APrivateKey: PEC_KEY; const APeerPublicKey: PEC_POINT; 

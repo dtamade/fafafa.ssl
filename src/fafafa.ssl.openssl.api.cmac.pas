@@ -140,7 +140,7 @@ var
 // Load and unload functions
 function LoadCMACFunctions: Boolean;
 procedure UnloadCMACFunctions;
-function IsCMACLoaded: Boolean;
+function IsCMACLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmCMAC) instead';
 
 // High-level helper functions
 function ComputeCMAC_AES128(const Key: TBytes; const Data: TBytes): TBytes;

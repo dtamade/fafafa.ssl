@@ -850,7 +850,7 @@ var
 // Public load/unload functions
 function LoadEVP(ALibHandle: THandle): Boolean;
 procedure UnloadEVP;
-function IsEVPLoaded: Boolean;
+function IsEVPLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmEVP) instead';
 
 // High-level helper functions
 function EVP_MD_size(const md: PEVP_MD): Integer;

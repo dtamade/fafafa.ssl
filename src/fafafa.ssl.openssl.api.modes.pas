@@ -174,7 +174,7 @@ var
 // Load and unload functions
 function LoadModesFunctions: Boolean;
 procedure UnloadModesFunctions;
-function IsModesLoaded: Boolean;
+function IsModesLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmModes) instead';
 
 // High-level helper functions for GCM
 function AES_GCM_Encrypt(const Key: TBytes; const IV: TBytes; const AAD: TBytes;

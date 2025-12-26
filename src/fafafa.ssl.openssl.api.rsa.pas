@@ -312,7 +312,7 @@ var
 
 function LoadOpenSSLRSA: Boolean;
 procedure UnloadOpenSSLRSA;
-function IsOpenSSLRSALoaded: Boolean;
+function IsOpenSSLRSALoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmRSA) instead';
 
 implementation
 

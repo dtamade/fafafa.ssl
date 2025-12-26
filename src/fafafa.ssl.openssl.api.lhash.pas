@@ -130,7 +130,7 @@ var
 // Load and unload functions
 function LoadLHashFunctions: Boolean;
 procedure UnloadLHashFunctions;
-function IsLHashLoaded: Boolean;
+function IsLHashLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmLHash) instead';
 
 // High-level helper functions
 function CreateStringHashTable: POPENSSL_LHASH;

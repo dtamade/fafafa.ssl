@@ -119,7 +119,7 @@ var
 
 function LoadOpenSSLECDSA: Boolean;
 procedure UnloadOpenSSLECDSA;
-function IsOpenSSLECDSALoaded: Boolean;
+function IsOpenSSLECDSALoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmECDSA) instead';
 
 { Helper functions for ECDSA operations }
 function ECDSA_SignData(const AData: PByte; ADataLen: Integer; AKey: PEC_KEY; out ASignature: TBytes): Boolean;

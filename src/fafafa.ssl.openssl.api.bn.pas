@@ -412,7 +412,7 @@ var
 
 function LoadOpenSSLBN: Boolean;
 procedure UnloadOpenSSLBN;
-function IsOpenSSLBNLoaded: Boolean;
+function IsOpenSSLBNLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmBN) instead';
 
 implementation
 

@@ -209,7 +209,7 @@ var
 
 function LoadOpenSSLDSA: Boolean;
 procedure UnloadOpenSSLDSA;
-function IsOpenSSLDSALoaded: Boolean;
+function IsOpenSSLDSALoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmDSA) instead';
 
 implementation
 

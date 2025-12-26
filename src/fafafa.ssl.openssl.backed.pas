@@ -25,6 +25,7 @@ uses
   fafafa.ssl.exceptions,        // Rust-quality: Typed exceptions
   fafafa.ssl.openssl.errors,    // OpenSSL-specific raise helpers
   fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.loader,    // P0-1.1: 使用统一的加载器
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl,
   fafafa.ssl.openssl.api.err,
@@ -55,11 +56,11 @@ type
     FLastErrorString: string;
     FLogCallback: TSSLLogCallback;
     FLogLevel: TSSLLogLevel;
-    FLibSSLHandle: TLibHandle;
-    FLibCryptoHandle: TLibHandle;
+    // P0-1.1: 移除 FLibSSLHandle 和 FLibCryptoHandle
+    // 现在通过 TOpenSSLLoader 获取
     FVersionString: string;
     FVersionNumber: Cardinal;
-    
+
     { 内部方法 }
     procedure InternalLog(ALevel: TSSLLogLevel; const AMessage: string);
     function LoadOpenSSLLibraries: Boolean;
@@ -186,8 +187,8 @@ begin
   FLastErrorString := '';
   FLogCallback := nil;
   FLogLevel := sslLogError;
-  FLibSSLHandle := NilHandle;
-  FLibCryptoHandle := NilHandle;
+  // P0-1.1: 移除 FLibSSLHandle 和 FLibCryptoHandle 初始化
+  // 现在通过 TOpenSSLLoader 管理
   FVersionString := '';
   FVersionNumber := 0;
   
@@ -240,156 +241,46 @@ begin
 end;
 
 function TOpenSSLLibrary.LoadOpenSSLLibraries: Boolean;
-const
-  {$IFDEF LINUX}
-  SSL_LIB_NAMES: array[0..3] of string = (
-    'libssl.so.3',      // OpenSSL 3.x
-    'libssl.so.1.1',    // OpenSSL 1.1.x
-    'libssl.so.1.0.0',  // OpenSSL 1.0.x
-    'libssl.so'         // 通用
-  );
-  CRYPTO_LIB_NAMES: array[0..3] of string = (
-    'libcrypto.so.3',
-    'libcrypto.so.1.1',
-    'libcrypto.so.1.0.0',
-    'libcrypto.so'
-  );
-  {$ENDIF}
-  {$IFDEF DARWIN}
-  SSL_LIB_NAMES: array[0..2] of string = (
-    'libssl.3.dylib',
-    'libssl.1.1.dylib',
-    'libssl.dylib'
-  );
-  CRYPTO_LIB_NAMES: array[0..2] of string = (
-    'libcrypto.3.dylib',
-    'libcrypto.1.1.dylib',
-    'libcrypto.dylib'
-  );
-  {$ENDIF}
-  {$IFDEF ANDROID}
-  SSL_LIB_NAMES: array[0..1] of string = (
-    'libssl.so',
-    'libssl.so.1.1'
-  );
-  CRYPTO_LIB_NAMES: array[0..1] of string = (
-    'libcrypto.so',
-    'libcrypto.so.1.1'
-  );
-  {$ENDIF}
-  {$IFDEF WINDOWS}
-  SSL_LIB_NAMES: array[0..1] of string = (
-    'libssl-3-x64.dll',
-    'libssl-1_1-x64.dll'
-  );
-  CRYPTO_LIB_NAMES: array[0..1] of string = (
-    'libcrypto-3-x64.dll',
-    'libcrypto-1_1-x64.dll'
-  );
-  {$ENDIF}
 var
-  i: Integer;
-  LibLoaded: Boolean;
+  CryptoHandle, SSLHandle: TLibHandle;
 begin
+  // P0-1.1: 委托给 TOpenSSLLoader 进行加载
   Result := False;
-  LibLoaded := False;
-  
-  InternalLog(sslLogInfo, 'Loading OpenSSL libraries...');
-  
-  // 1. 尝试使用自定义路径加载 libcrypto
-  if UseCustomPaths and (CustomLibraryPaths.CryptoLibPath <> '') then
+
+  InternalLog(sslLogInfo, 'Loading OpenSSL libraries via TOpenSSLLoader...');
+
+  // 触发 TOpenSSLLoader 加载库
+  CryptoHandle := TOpenSSLLoader.GetLibraryHandle(osslLibCrypto);
+  SSLHandle := TOpenSSLLoader.GetLibraryHandle(osslLibSSL);
+
+  if CryptoHandle = 0 then
   begin
-    InternalLog(sslLogInfo, Format('Trying custom libcrypto path: %s', [CustomLibraryPaths.CryptoLibPath]));
-    FLibCryptoHandle := LoadLibrary(CustomLibraryPaths.CryptoLibPath);
-    if FLibCryptoHandle <> NilHandle then
-    begin
-      InternalLog(sslLogInfo, Format('Loaded libcrypto from custom path: %s', [CustomLibraryPaths.CryptoLibPath]));
-      LibLoaded := True;
-    end
-    else
-      InternalLog(sslLogWarning, Format('Failed to load from custom path: %s, falling back to system libraries', [CustomLibraryPaths.CryptoLibPath]));
-  end;
-  
-  // 2. 回退：尝试标准库名称
-  if not LibLoaded then
-  begin
-    for i := Low(CRYPTO_LIB_NAMES) to High(CRYPTO_LIB_NAMES) do
-    begin
-      FLibCryptoHandle := LoadLibrary(CRYPTO_LIB_NAMES[i]);
-      if FLibCryptoHandle <> NilHandle then
-      begin
-        InternalLog(sslLogInfo, Format('Loaded %s', [CRYPTO_LIB_NAMES[i]]));
-        LibLoaded := True;
-        Break;
-      end;
-    end;
-  end;
-  
-  if not LibLoaded then
-  begin
-    SetError(-1, 'Failed to load libcrypto');
+    SetError(-1, 'Failed to load libcrypto via TOpenSSLLoader');
     InternalLog(sslLogError, FLastErrorString);
     Exit;
   end;
-  
-  // 3. 尝试使用自定义路径加载 libssl
-  LibLoaded := False;
-  if UseCustomPaths and (CustomLibraryPaths.SSLLibPath <> '') then
+
+  if SSLHandle = 0 then
   begin
-    InternalLog(sslLogInfo, Format('Trying custom libssl path: %s', [CustomLibraryPaths.SSLLibPath]));
-    FLibSSLHandle := LoadLibrary(CustomLibraryPaths.SSLLibPath);
-    if FLibSSLHandle <> NilHandle then
-    begin
-      InternalLog(sslLogInfo, Format('Loaded libssl from custom path: %s', [CustomLibraryPaths.SSLLibPath]));
-      LibLoaded := True;
-    end
-    else
-      InternalLog(sslLogWarning, Format('Failed to load from custom path: %s, falling back to system libraries', [CustomLibraryPaths.SSLLibPath]));
-  end;
-  
-  // 4. 回退：尝试标准库名称
-  if not LibLoaded then
-  begin
-    for i := Low(SSL_LIB_NAMES) to High(SSL_LIB_NAMES) do
-    begin
-      FLibSSLHandle := LoadLibrary(SSL_LIB_NAMES[i]);
-      if FLibSSLHandle <> NilHandle then
-      begin
-        InternalLog(sslLogInfo, Format('Loaded %s', [SSL_LIB_NAMES[i]]));
-        LibLoaded := True;
-        Break;
-      end;
-    end;
-  end;
-  
-  if not LibLoaded then
-  begin
-    SetError(-1, 'Failed to load libssl');
+    SetError(-1, 'Failed to load libssl via TOpenSSLLoader');
     InternalLog(sslLogError, FLastErrorString);
-    UnloadLibrary(FLibCryptoHandle);
-    FLibCryptoHandle := NilHandle;
     Exit;
   end;
-  
+
+  InternalLog(sslLogInfo, 'OpenSSL libraries loaded successfully via TOpenSSLLoader');
+
   // Note: API functions will be loaded on-demand by the api modules
   // No need to explicitly load all functions here
-  
+
   Result := True;
 end;
 
 procedure TOpenSSLLibrary.UnloadOpenSSLLibraries;
 begin
-  if FLibSSLHandle <> NilHandle then
-  begin
-    UnloadLibrary(FLibSSLHandle);
-    FLibSSLHandle := NilHandle;
-  end;
-  
-  if FLibCryptoHandle <> NilHandle then
-  begin
-    UnloadLibrary(FLibCryptoHandle);
-    FLibCryptoHandle := NilHandle;
-  end;
+  // P0-1.1: 委托给 TOpenSSLLoader 卸载库
+  // 注意: 不在此处卸载，因为 TOpenSSLLoader 是全局共享的
+  // 卸载应该由 TOpenSSLLoader.UnloadLibraries 处理
+  InternalLog(sslLogInfo, 'UnloadOpenSSLLibraries called (delegated to TOpenSSLLoader)');
 end;
 
 function TOpenSSLLibrary.DetectOpenSSLVersion: Boolean;

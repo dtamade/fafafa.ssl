@@ -228,7 +228,7 @@ var
 // Load and unload functions
 function LoadPKCS7Functions: Boolean;
 procedure UnloadPKCS7Functions;
-function IsPKCS7Loaded: Boolean;
+function IsPKCS7Loaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmPKCS7) instead';
 
 // High-level helper functions
 function SignData(const AData: TBytes; ASignCert: PX509; APrivKey: PEVP_PKEY; 

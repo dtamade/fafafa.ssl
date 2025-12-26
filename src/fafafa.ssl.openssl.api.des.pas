@@ -193,7 +193,7 @@ var
 // Helper functions
 function LoadDESFunctions(ALibHandle: THandle): Boolean;
 procedure UnloadDESFunctions;
-function IsDESLoaded: Boolean;
+function IsDESLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmDES) instead';
 
 // High-level helper functions
 function DESEncrypt(const Data: TBytes; const Key: TBytes): TBytes;

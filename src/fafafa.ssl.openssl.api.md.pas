@@ -134,7 +134,7 @@ var
 // Helper functions
 function LoadMDFunctions(ALibHandle: THandle): Boolean;
 procedure UnloadMDFunctions;
-function IsMDLoaded: Boolean;
+function IsMDLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmMD) instead';
 
 // High-level helper functions
 function MD4Hash(const Data: TBytes): TBytes;

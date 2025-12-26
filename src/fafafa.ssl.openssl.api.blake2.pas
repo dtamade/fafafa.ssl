@@ -138,7 +138,7 @@ var
 // Helper functions
 function LoadBLAKE2Functions(ALibHandle: THandle): Boolean;
 procedure UnloadBLAKE2Functions;
-function IsBLAKE2Loaded: Boolean;
+function IsBLAKE2Loaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmBLAKE2) instead';
 
 // High-level helper functions
 function BLAKE2b256Hash(const Data: TBytes): TBytes;

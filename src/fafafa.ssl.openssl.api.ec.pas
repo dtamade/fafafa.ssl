@@ -326,7 +326,7 @@ var
 // Helper functions
 function LoadECFunctions(ALibHandle: THandle): Boolean;
 procedure UnloadECFunctions;
-function IsECLoaded: Boolean;
+function IsECLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmEC) instead';
 
 // High-level helper functions
 function EC_KEY_new_secp256k1: PEC_KEY;
