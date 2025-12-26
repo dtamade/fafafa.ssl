@@ -1,3 +1,8 @@
+{******************************************************************************}
+{  Cross-Backend Error Contract Tests                                          }
+{  Migrated to use TSimpleTestRunner framework (P1-2.2)                        }
+{******************************************************************************}
+
 program test_cross_backend_errors_contract;
 
 {$mode objfpc}{$H+}{$J-}
@@ -13,7 +18,10 @@ uses
   fafafa.ssl.openssl.backed,
   {$ENDIF}
   {$IFDEF WINDOWS}fafafa.ssl.winssl.lib,{$ENDIF}
-  fafafa.ssl.openssl.api;
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.api.core,
+  test_openssl_base;
 
 {$IFDEF WINDOWS}
 const
@@ -49,6 +57,9 @@ function gethostbyname(name: PChar): PHostEnt; cdecl; external 'c';
 type
   TErrorKind = (ErrNone, ErrExpired, ErrHostname, ErrOther);
 
+var
+  Runner: TSimpleTestRunner;
+
 function NormalizeError(aSideIsWin: Boolean; aCode: Integer; const aStr: string): TErrorKind;
 begin
   Result := ErrOther;
@@ -68,7 +79,7 @@ end;
 
 procedure Check(const Name: string; ok: Boolean; const details: string = '');
 begin
-  if ok then WriteLn('[PASS] ', Name) else begin WriteLn('[FAIL] ', Name); if details <> '' then WriteLn('       ', details); Halt(1); end;
+  Runner.Check(Name, ok, details);
 end;
 
 {$IFDEF WINDOWS}
@@ -133,13 +144,9 @@ var
   failCode: Integer; failStr: string;
   Lib: ISSLLibrary; Ctx: ISSLContext; Conn: ISSLConnection;
   Sfd, SockRefused, SockNX: THandle; ok: Boolean;
-begin
-  if GetEnvironmentVariable('FAFAFA_RUN_NETWORK_TESTS') <> '1' then
-  begin
-    WriteLn('SKIPPED (FAFAFA_RUN_NETWORK_TESTS!=1)');
-    Halt(0);
-  end;
 
+procedure RunErrorTests;
+begin
   // 过期证书
   Probe('expired.badssl.com', c, s, {$IFDEF WINDOWS}True{$ELSE}False{$ENDIF});
   Check('expired.badssl.com 非零校验结果', c <> 0, s);
@@ -191,6 +198,35 @@ begin
   end
   else
     Check('nonexistent.invalid 解析/连接失败（预期）', True);
+end;
+
+begin
+  WriteLn('Cross-Backend Error Contract Tests');
+  WriteLn('===================================');
+
+  Runner := TSimpleTestRunner.Create;
+  try
+    Runner.RequireModules([osmCore]);
+
+    if not Runner.Initialize then
+    begin
+      WriteLn('ERROR: Failed to initialize test environment');
+      Halt(1);
+    end;
+
+    WriteLn('OpenSSL Version: ', GetOpenSSLVersionString);
+
+    if GetEnvironmentVariable('FAFAFA_RUN_NETWORK_TESTS') <> '1' then
+    begin
+      WriteLn('[SKIP] Network tests disabled (FAFAFA_RUN_NETWORK_TESTS!=1)');
+      Runner.Check('Tests skipped (no network)', True);
+    end
+    else
+      RunErrorTests;
+
+    Runner.PrintSummary;
+    Halt(Runner.FailCount);
+  finally
+    Runner.Free;
+  end;
 end.
-
-

@@ -1,15 +1,7 @@
-{
-  test_session_resumption.pas - TLS Session Resumption Integration Tests
-
-  测试 TLS 会话恢复功能：
-  1. 会话创建和缓存
-  2. 会话恢复验证
-  3. 会话超时处理
-  4. 高层 API 测试
-
-  作者: fafafa.ssl 开发团队
-  创建: 2025-12-22
-}
+{******************************************************************************}
+{  TLS Session Resumption Integration Tests                                    }
+{  Migrated to use TSimpleTestRunner framework (P1-2.2)                        }
+{******************************************************************************}
 
 program test_session_resumption;
 
@@ -30,61 +22,18 @@ uses
   fafafa.ssl.openssl.api.bn,
   fafafa.ssl.openssl.api.asn1,
   fafafa.ssl.openssl.api.crypto,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader,
+  test_openssl_base;
 
 const
-  // X509 名称常量
   MBSTRING_ASC_VALUE = $1001;
 
 var
-  TotalTests: Integer = 0;
-  PassedTests: Integer = 0;
-  FailedTests: Integer = 0;
-
-  // SSL 资源
+  Runner: TSimpleTestRunner;
   ServerCert: PX509;
   ServerKey: PEVP_PKEY;
   ClientCtx, ServerCtx: PSSL_CTX;
-
-procedure TestResult(const TestName: string; Success: Boolean; const Details: string = '');
-begin
-  Inc(TotalTests);
-  if Success then
-  begin
-    Inc(PassedTests);
-    WriteLn('[PASS] ', TestName);
-    if Details <> '' then
-      WriteLn('       ', Details);
-  end
-  else
-  begin
-    Inc(FailedTests);
-    WriteLn('[FAIL] ', TestName);
-    if Details <> '' then
-      WriteLn('       原因: ', Details);
-  end;
-end;
-
-procedure PrintHeader(const Title: string);
-begin
-  WriteLn;
-  WriteLn('测试: ', Title);
-  WriteLn('----------------------------------------');
-end;
-
-procedure PrintSummary;
-begin
-  WriteLn;
-  WriteLn('========================================');
-  WriteLn('测试摘要');
-  WriteLn('========================================');
-  WriteLn('总测试数: ', TotalTests);
-  WriteLn('通过: ', PassedTests);
-  WriteLn('失败: ', FailedTests);
-  if TotalTests > 0 then
-    WriteLn('通过率: ', (PassedTests * 100) div TotalTests, '%');
-  WriteLn('========================================');
-end;
 
 function GenerateSelfSignedCert(out Cert: PX509; out Key: PEVP_PKEY): Boolean;
 var
@@ -224,7 +173,7 @@ begin
   end;
 end;
 
-procedure Test1_SessionCreation;
+procedure TestSessionCreation;
 var
   ClientSSL, ServerSSL: PSSL;
   ClientRead, ClientWrite, ServerRead, ServerWrite: PBIO;
@@ -232,10 +181,10 @@ var
   SessionID: PByte;
   SessionIDLen: Cardinal;
 begin
-  PrintHeader('1. 会话创建测试');
+  WriteLn;
+  WriteLn('=== Session Creation ===');
 
   try
-    // 创建 BIO 和 SSL 对象
     ClientRead := BIO_new(BIO_s_mem());
     ClientWrite := BIO_new(BIO_s_mem());
     ServerRead := BIO_new(BIO_s_mem());
@@ -250,40 +199,33 @@ begin
     SSL_set_connect_state(ClientSSL);
     SSL_set_accept_state(ServerSSL);
 
-    // 执行握手
     if DoFullHandshake(ClientSSL, ServerSSL, ClientWrite, ServerRead, ServerWrite, ClientRead) then
     begin
-      TestResult('TLS 握手完成', True);
+      Runner.Check('TLS handshake complete', True);
 
-      // 获取会话
       Session := SSL_get1_session(ClientSSL);
-      TestResult('获取会话对象', Session <> nil);
+      Runner.Check('Get session object', Session <> nil);
 
       if Session <> nil then
       begin
-        // 获取会话 ID（注意：TLS 1.3 可能不使用传统会话 ID，使用会话票据代替）
         if Assigned(SSL_SESSION_get_id) then
         begin
           SessionID := SSL_SESSION_get_id(Session, @SessionIDLen);
-          // TLS 1.3 中会话 ID 可能为空，这是正常行为
-          TestResult('获取会话 ID', (SessionID <> nil) or (SessionIDLen = 0),
-                    '会话 ID 长度: ' + IntToStr(SessionIDLen) + ' 字节 (TLS 1.3 可能为 0)');
+          Runner.Check('Get session ID', (SessionID <> nil) or (SessionIDLen = 0),
+                    Format('Session ID length: %d bytes (TLS 1.3 may be 0)', [SessionIDLen]));
         end
         else
-          TestResult('获取会话 ID', False, 'SSL_SESSION_get_id 未加载');
+          Runner.Check('Get session ID', False, 'SSL_SESSION_get_id not loaded');
 
-        // 检查会话有效性
         if Assigned(SSL_SESSION_get_timeout) then
-        begin
-          TestResult('会话超时时间', SSL_SESSION_get_timeout(Session) > 0,
-                    IntToStr(SSL_SESSION_get_timeout(Session)) + ' 秒');
-        end;
+          Runner.Check('Session timeout', SSL_SESSION_get_timeout(Session) > 0,
+                    Format('%d seconds', [SSL_SESSION_get_timeout(Session)]));
 
         SSL_SESSION_free(Session);
       end;
     end
     else
-      TestResult('TLS 握手', False, '握手失败');
+      Runner.Check('TLS handshake', False, 'Handshake failed');
 
     SSL_shutdown(ClientSSL);
     SSL_shutdown(ServerSSL);
@@ -292,11 +234,11 @@ begin
 
   except
     on E: Exception do
-      TestResult('会话创建', False, E.Message);
+      Runner.Check('Session creation', False, E.Message);
   end;
 end;
 
-procedure Test2_SessionResumption;
+procedure TestSessionResumption;
 var
   ClientSSL1, ServerSSL1: PSSL;
   ClientSSL2, ServerSSL2: PSSL;
@@ -305,11 +247,11 @@ var
   OrigSession: PSSL_SESSION;
   Reused: Integer;
 begin
-  PrintHeader('2. 会话恢复测试');
+  WriteLn;
+  WriteLn('=== Session Resumption ===');
 
   try
-    // === 第一次连接 ===
-    WriteLn('       建立初始连接...');
+    WriteLn('       Establishing initial connection...');
 
     ClientRead1 := BIO_new(BIO_s_mem());
     ClientWrite1 := BIO_new(BIO_s_mem());
@@ -327,11 +269,10 @@ begin
 
     if DoFullHandshake(ClientSSL1, ServerSSL1, ClientWrite1, ServerRead1, ServerWrite1, ClientRead1) then
     begin
-      TestResult('初始连接建立', True);
+      Runner.Check('Initial connection established', True);
 
-      // 保存会话
       OrigSession := SSL_get1_session(ClientSSL1);
-      TestResult('保存原始会话', OrigSession <> nil);
+      Runner.Check('Save original session', OrigSession <> nil);
 
       SSL_shutdown(ClientSSL1);
       SSL_shutdown(ServerSSL1);
@@ -340,8 +281,7 @@ begin
 
       if OrigSession <> nil then
       begin
-        // === 第二次连接（尝试恢复） ===
-        WriteLn('       尝试恢复连接...');
+        WriteLn('       Attempting to resume connection...');
 
         ClientRead2 := BIO_new(BIO_s_mem());
         ClientWrite2 := BIO_new(BIO_s_mem());
@@ -354,31 +294,29 @@ begin
         SSL_set_bio(ClientSSL2, ClientRead2, ClientWrite2);
         SSL_set_bio(ServerSSL2, ServerRead2, ServerWrite2);
 
-        // 设置要恢复的会话
         SSL_set_session(ClientSSL2, OrigSession);
-        TestResult('设置恢复会话', True);
+        Runner.Check('Set resume session', True);
 
         SSL_set_connect_state(ClientSSL2);
         SSL_set_accept_state(ServerSSL2);
 
         if DoFullHandshake(ClientSSL2, ServerSSL2, ClientWrite2, ServerRead2, ServerWrite2, ClientRead2) then
         begin
-          TestResult('恢复连接握手', True);
+          Runner.Check('Resume connection handshake', True);
 
-          // 检查会话是否被重用
           if Assigned(SSL_session_reused) then
           begin
             Reused := SSL_session_reused(ClientSSL2);
             if Reused = 1 then
-              TestResult('会话恢复成功', True, '会话被重用')
+              Runner.Check('Session resumed', True, 'Session was reused')
             else
-              TestResult('会话恢复检查', True, '新会话建立（可能是服务端缓存配置）');
+              Runner.Check('Session resume check', True, 'New session (server cache config)');
           end
           else
-            TestResult('检查会话恢复', False, 'SSL_session_reused 未加载');
+            Runner.Check('Check session resume', False, 'SSL_session_reused not loaded');
         end
         else
-          TestResult('恢复连接握手', False);
+          Runner.Check('Resume connection handshake', False);
 
         SSL_shutdown(ClientSSL2);
         SSL_shutdown(ServerSSL2);
@@ -390,25 +328,26 @@ begin
     end
     else
     begin
-      TestResult('初始连接', False);
+      Runner.Check('Initial connection', False);
       SSL_free(ClientSSL1);
       SSL_free(ServerSSL1);
     end;
 
   except
     on E: Exception do
-      TestResult('会话恢复', False, E.Message);
+      Runner.Check('Session resumption', False, E.Message);
   end;
 end;
 
-procedure Test3_SessionTimeout;
+procedure TestSessionTimeout;
 var
   ClientSSL, ServerSSL: PSSL;
   ClientRead, ClientWrite, ServerRead, ServerWrite: PBIO;
   Session: PSSL_SESSION;
   OrigTimeout, NewTimeout: LongInt;
 begin
-  PrintHeader('3. 会话超时处理测试');
+  WriteLn;
+  WriteLn('=== Session Timeout Handling ===');
 
   try
     ClientRead := BIO_new(BIO_s_mem());
@@ -433,34 +372,30 @@ begin
       begin
         if Assigned(SSL_SESSION_get_timeout) and Assigned(SSL_SESSION_set_timeout) then
         begin
-          // 获取原始超时
           OrigTimeout := SSL_SESSION_get_timeout(Session);
-          TestResult('获取原始超时', OrigTimeout > 0,
-                    IntToStr(OrigTimeout) + ' 秒');
+          Runner.Check('Get original timeout', OrigTimeout > 0,
+                    Format('%d seconds', [OrigTimeout]));
 
-          // 设置新超时
-          NewTimeout := 600; // 10 分钟
+          NewTimeout := 600;
           SSL_SESSION_set_timeout(Session, NewTimeout);
 
-          // 验证新超时
-          TestResult('设置新超时', SSL_SESSION_get_timeout(Session) = NewTimeout,
-                    '新超时: ' + IntToStr(SSL_SESSION_get_timeout(Session)) + ' 秒');
+          Runner.Check('Set new timeout', SSL_SESSION_get_timeout(Session) = NewTimeout,
+                    Format('New timeout: %d seconds', [SSL_SESSION_get_timeout(Session)]));
 
-          // 测试极端值
           SSL_SESSION_set_timeout(Session, 0);
-          TestResult('设置零超时', SSL_SESSION_get_timeout(Session) = 0);
+          Runner.Check('Set zero timeout', SSL_SESSION_get_timeout(Session) = 0);
 
-          SSL_SESSION_set_timeout(Session, 86400); // 24 小时
-          TestResult('设置 24 小时超时', SSL_SESSION_get_timeout(Session) = 86400);
+          SSL_SESSION_set_timeout(Session, 86400);
+          Runner.Check('Set 24h timeout', SSL_SESSION_get_timeout(Session) = 86400);
         end
         else
-          TestResult('超时函数', False, '函数未加载');
+          Runner.Check('Timeout functions', False, 'Functions not loaded');
 
         SSL_SESSION_free(Session);
       end;
     end
     else
-      TestResult('握手', False);
+      Runner.Check('Handshake', False);
 
     SSL_shutdown(ClientSSL);
     SSL_shutdown(ServerSSL);
@@ -469,39 +404,39 @@ begin
 
   except
     on E: Exception do
-      TestResult('会话超时', False, E.Message);
+      Runner.Check('Session timeout', False, E.Message);
   end;
 end;
 
-procedure Test4_HighLevelSessionAPI;
+procedure TestHighLevelSessionAPI;
 var
   SSLLib: ISSLLibrary;
   Context: ISSLContext;
 begin
-  PrintHeader('4. 高层会话 API 测试');
+  WriteLn;
+  WriteLn('=== High-Level Session API ===');
 
   try
     SSLLib := CreateOpenSSLLibrary;
-    TestResult('创建 OpenSSL 库', SSLLib <> nil);
+    Runner.Check('Create OpenSSL library', SSLLib <> nil);
 
     if SSLLib <> nil then
     begin
-      TestResult('初始化库', SSLLib.Initialize);
+      Runner.Check('Initialize library', SSLLib.Initialize);
 
       Context := SSLLib.CreateContext(sslCtxClient);
-      TestResult('创建上下文', Context <> nil);
+      Runner.Check('Create context', Context <> nil);
 
       if Context <> nil then
       begin
-        // 测试会话缓存配置
         Context.SetSessionCacheMode(True);
-        TestResult('启用会话缓存', Context.GetSessionCacheMode);
+        Runner.Check('Enable session cache', Context.GetSessionCacheMode);
 
         Context.SetSessionTimeout(300);
-        TestResult('设置会话超时', Context.GetSessionTimeout = 300);
+        Runner.Check('Set session timeout', Context.GetSessionTimeout = 300);
 
         Context.SetSessionCacheSize(100);
-        TestResult('设置缓存大小', Context.GetSessionCacheSize = 100);
+        Runner.Check('Set cache size', Context.GetSessionCacheSize = 100);
       end;
 
       SSLLib.Finalize;
@@ -509,44 +444,37 @@ begin
 
   except
     on E: Exception do
-      TestResult('高层 API', False, E.Message);
+      Runner.Check('High-level API', False, E.Message);
   end;
 end;
 
-procedure Test5_SessionAPICoverage;
+procedure TestSessionAPICoverage;
 begin
-  PrintHeader('5. 会话 API 覆盖率测试');
+  WriteLn;
+  WriteLn('=== Session API Coverage ===');
 
-  // 测试所有会话相关的 API 函数是否已加载
-  TestResult('SSL_get1_session', Assigned(SSL_get1_session));
-  TestResult('SSL_get_session', Assigned(SSL_get_session));
-  TestResult('SSL_set_session', Assigned(SSL_set_session));
-  TestResult('SSL_session_reused', Assigned(SSL_session_reused));
-  TestResult('SSL_SESSION_get_id', Assigned(SSL_SESSION_get_id));
-  TestResult('SSL_SESSION_get_time', Assigned(SSL_SESSION_get_time));
-  TestResult('SSL_SESSION_get_timeout', Assigned(SSL_SESSION_get_timeout));
-  TestResult('SSL_SESSION_set_timeout', Assigned(SSL_SESSION_set_timeout));
-  TestResult('SSL_SESSION_get_protocol_version', Assigned(SSL_SESSION_get_protocol_version));
-  TestResult('SSL_SESSION_get0_cipher', Assigned(SSL_SESSION_get0_cipher));
-  TestResult('SSL_SESSION_get0_peer', Assigned(SSL_SESSION_get0_peer));
-  TestResult('SSL_SESSION_up_ref', Assigned(SSL_SESSION_up_ref));
-  TestResult('SSL_SESSION_free', Assigned(SSL_SESSION_free));
-  // OpenSSL 3.x: 这些是宏，使用 SSL_CTX_ctrl 替代
-  TestResult('SSL_CTX_set_session_cache_mode', Assigned(SSL_CTX_set_session_cache_mode) or Assigned(SSL_CTX_ctrl));
-  TestResult('SSL_CTX_get_session_cache_mode', Assigned(SSL_CTX_get_session_cache_mode) or Assigned(SSL_CTX_ctrl));
+  Runner.Check('SSL_get1_session', Assigned(SSL_get1_session));
+  Runner.Check('SSL_get_session', Assigned(SSL_get_session));
+  Runner.Check('SSL_set_session', Assigned(SSL_set_session));
+  Runner.Check('SSL_session_reused', Assigned(SSL_session_reused));
+  Runner.Check('SSL_SESSION_get_id', Assigned(SSL_SESSION_get_id));
+  Runner.Check('SSL_SESSION_get_time', Assigned(SSL_SESSION_get_time));
+  Runner.Check('SSL_SESSION_get_timeout', Assigned(SSL_SESSION_get_timeout));
+  Runner.Check('SSL_SESSION_set_timeout', Assigned(SSL_SESSION_set_timeout));
+  Runner.Check('SSL_SESSION_get_protocol_version', Assigned(SSL_SESSION_get_protocol_version));
+  Runner.Check('SSL_SESSION_get0_cipher', Assigned(SSL_SESSION_get0_cipher));
+  Runner.Check('SSL_SESSION_get0_peer', Assigned(SSL_SESSION_get0_peer));
+  Runner.Check('SSL_SESSION_up_ref', Assigned(SSL_SESSION_up_ref));
+  Runner.Check('SSL_SESSION_free', Assigned(SSL_SESSION_free));
+  Runner.Check('SSL_CTX_set_session_cache_mode', Assigned(SSL_CTX_set_session_cache_mode) or Assigned(SSL_CTX_ctrl));
+  Runner.Check('SSL_CTX_get_session_cache_mode', Assigned(SSL_CTX_get_session_cache_mode) or Assigned(SSL_CTX_ctrl));
 end;
 
 procedure InitializeTests;
 var
   Method: PSSL_METHOD;
 begin
-  WriteLn('========================================');
-  WriteLn('TLS 会话恢复集成测试');
-  WriteLn('========================================');
-  WriteLn;
-
-  // 加载模块
-  WriteLn('加载 OpenSSL 模块...');
+  WriteLn('Loading OpenSSL modules...');
   LoadOpenSSLCore();
   LoadOpenSSLBIO();
   LoadOpenSSLX509();
@@ -556,71 +484,68 @@ begin
   LoadOpenSSLASN1(GetCryptoLibHandle);
   LoadOpenSSLSSL;
 
-  WriteLn('OpenSSL 版本: ', GetOpenSSLVersionString);
+  WriteLn('OpenSSL Version: ', GetOpenSSLVersionString);
   WriteLn;
 
-  // 生成测试证书
-  WriteLn('生成测试证书...');
+  WriteLn('Generating test certificate...');
   if not GenerateSelfSignedCert(ServerCert, ServerKey) then
   begin
-    WriteLn('错误: 无法生成测试证书');
+    WriteLn('ERROR: Could not generate test certificate');
     Halt(1);
   end;
-  WriteLn('证书生成成功');
+  WriteLn('Certificate generated successfully');
   WriteLn;
 
-  // 创建 SSL 上下文
-  WriteLn('创建 SSL 上下文...');
+  WriteLn('Creating SSL contexts...');
 
   if not Assigned(TLS_client_method) then
   begin
-    WriteLn('错误: TLS_client_method 未加载');
+    WriteLn('ERROR: TLS_client_method not loaded');
     Halt(1);
   end;
 
   Method := TLS_client_method();
   if Method = nil then
   begin
-    WriteLn('错误: TLS_client_method 返回 nil');
+    WriteLn('ERROR: TLS_client_method returned nil');
     Halt(1);
   end;
 
   if not Assigned(SSL_CTX_new) then
   begin
-    WriteLn('错误: SSL_CTX_new 未加载');
+    WriteLn('ERROR: SSL_CTX_new not loaded');
     Halt(1);
   end;
 
   ClientCtx := SSL_CTX_new(Method);
   if ClientCtx = nil then
   begin
-    WriteLn('错误: 无法创建客户端 SSL 上下文');
+    WriteLn('ERROR: Could not create client SSL context');
     Halt(1);
   end;
 
   if Assigned(SSL_CTX_set_verify) then
     SSL_CTX_set_verify(ClientCtx, SSL_VERIFY_NONE, nil);
 
-  // 启用会话缓存 (使用兼容 OpenSSL 3.x 的辅助函数)
   SSL_CTX_set_session_cache_mode_impl(ClientCtx, SSL_SESS_CACHE_CLIENT);
 
   if not Assigned(TLS_server_method) then
   begin
-    WriteLn('错误: TLS_server_method 未加载');
+    WriteLn('ERROR: TLS_server_method not loaded');
     Halt(1);
   end;
 
   Method := TLS_server_method();
   if Method = nil then
   begin
-    WriteLn('错误: TLS_server_method 返回 nil');
+    WriteLn('ERROR: TLS_server_method returned nil');
     Halt(1);
   end;
 
   ServerCtx := SSL_CTX_new(Method);
   if ServerCtx = nil then
   begin
-    WriteLn('错误: 无法创建服务端 SSL 上下文');
+    WriteLn('ERROR: Could not create server SSL context');
     Halt(1);
   end;
 
@@ -629,10 +554,9 @@ begin
   if Assigned(SSL_CTX_use_PrivateKey) then
     SSL_CTX_use_PrivateKey(ServerCtx, ServerKey);
 
-  // 启用服务端会话缓存 (使用兼容 OpenSSL 3.x 的辅助函数)
   SSL_CTX_set_session_cache_mode_impl(ServerCtx, SSL_SESS_CACHE_SERVER);
 
-  WriteLn('SSL 上下文创建成功');
+  WriteLn('SSL contexts created successfully');
 end;
 
 procedure CleanupTests;
@@ -644,35 +568,33 @@ begin
 end;
 
 begin
+  WriteLn('TLS Session Resumption Integration Tests');
+  WriteLn('========================================');
+  WriteLn;
+
+  Runner := TSimpleTestRunner.Create;
   try
+    Runner.RequireModules([osmCore, osmBN, osmRSA, osmEVP, osmX509]);
+
+    if not Runner.Initialize then
+    begin
+      WriteLn('ERROR: Failed to initialize test environment');
+      Halt(1);
+    end;
+
     InitializeTests;
 
-    Test1_SessionCreation;
-    Test2_SessionResumption;
-    Test3_SessionTimeout;
-    Test4_HighLevelSessionAPI;
-    Test5_SessionAPICoverage;
+    TestSessionCreation;
+    TestSessionResumption;
+    TestSessionTimeout;
+    TestHighLevelSessionAPI;
+    TestSessionAPICoverage;
 
     CleanupTests;
-    PrintSummary;
 
-    WriteLn;
-    if FailedTests > 0 then
-    begin
-      WriteLn('结果: ', FailedTests, ' 个测试失败');
-      Halt(1);
-    end
-    else
-    begin
-      WriteLn('✅ 所有测试通过!');
-      Halt(0);
-    end;
-
-  except
-    on E: Exception do
-    begin
-      WriteLn('致命错误: ', E.Message);
-      Halt(1);
-    end;
+    Runner.PrintSummary;
+    Halt(Runner.FailCount);
+  finally
+    Runner.Free;
   end;
 end.

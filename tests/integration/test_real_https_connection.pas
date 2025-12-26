@@ -1,26 +1,11 @@
+{******************************************************************************}
+{  Real Network HTTPS Connection Tests                                         }
+{  Migrated to use TSimpleTestRunner framework (P1-2.2)                        }
+{******************************************************************************}
+
 program test_real_https_connection;
 
 {$mode objfpc}{$H+}{$J-}
-
-{**
- * 真实网络 HTTPS 连接测试
- *
- * P1-1: 真实网络集成测试
- *
- * 测试内容:
- * - 连接真实 HTTPS 服务器
- * - TLS 握手验证
- * - 证书验证
- * - HTTP/1.1 请求/响应
- * - TLS 1.2/1.3 协议测试
- * - SNI 和 ALPN 功能
- *
- * 注意: 此测试需要网络连接
- *
- * @author fafafa.ssl team
- * @version 1.0.0
- * @since 2025-12-23
- *}
 
 uses
   {$IFDEF UNIX}
@@ -29,52 +14,21 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.sockets,
-  fafafa.ssl.openssl.backed;
+  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.api.core,
+  test_openssl_base;
 
 var
-  Total, Passed, Failed, Skipped: Integer;
-  Section: string;
+  Runner: TSimpleTestRunner;
 
-procedure BeginSection(const aName: string);
-begin
-  Section := aName;
-  WriteLn;
-  WriteLn('=== ', aName, ' ===');
-end;
-
-procedure Check(const aName: string; ok: Boolean; const details: string = '');
-begin
-  Inc(Total);
-  Write('  [', Section, '] ', aName, ': ');
-  if ok then
-  begin
-    Inc(Passed);
-    WriteLn('PASS');
-  end
-  else
-  begin
-    Inc(Failed);
-    WriteLn('FAIL');
-    if details <> '' then
-      WriteLn('    ', details);
-  end;
-end;
-
-procedure Skip(const aName: string; const reason: string);
-begin
-  Inc(Total);
-  Inc(Skipped);
-  WriteLn('  [', Section, '] ', aName, ': SKIP');
-  WriteLn('    ', reason);
-end;
-
-{ 创建 TCP 连接 }
+{ Create TCP socket }
 function CreateTCPSocket: TSocket;
 begin
   Result := socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 end;
 
-{ 解析主机名 }
+{ Resolve hostname }
 function ResolveHostname(const AHostname: string): Cardinal;
 var
   HostEnt: PHostEnt;
@@ -83,19 +37,17 @@ begin
   Result := INADDR_NONE;
   HostnameA := AnsiString(AHostname);
 
-  // 首先尝试作为 IP 地址解析
   Result := inet_addr(PAnsiChar(HostnameA));
   if Result <> INADDR_NONE then
     Exit;
 
-  // 通过 DNS 解析
   HostEnt := gethostbyname(PAnsiChar(HostnameA));
   if (HostEnt <> nil) and (HostEnt^.h_addr_list <> nil) and
      (HostEnt^.h_addr_list^ <> nil) then
     Result := PCardinal(HostEnt^.h_addr_list^)^;
 end;
 
-{ 连接到服务器 }
+{ Connect to server }
 function ConnectToHost(ASocket: TSocket; const AHostname: string; APort: Word): Boolean;
 var
   Addr: TSockAddrIn;
@@ -115,7 +67,7 @@ begin
   Result := connect(ASocket, @Addr, SizeOf(Addr)) = 0;
 end;
 
-{ 设置 socket 超时 }
+{ Set socket timeout }
 procedure SetSocketTimeout(ASocket: TSocket; ATimeoutMs: Integer);
 var
   Timeout: TTimeVal;
@@ -126,14 +78,14 @@ begin
   setsockopt(ASocket, SOL_SOCKET, SO_SNDTIMEO, @Timeout, SizeOf(Timeout));
 end;
 
-{ 测试连接单个 HTTPS 站点 }
+{ Test single HTTPS site connection }
 function TestHTTPSConnection(const AHostname: string; APort: Word = 443): Boolean;
 var
   Lib: ISSLLibrary;
   Ctx: ISSLContext;
   Conn: ISSLConnection;
   Sock: TSocket;
-  Request, Response: string;
+  Request: string;
   Buffer: array[0..4095] of Byte;
   BytesRead, BytesWritten: Integer;
   ResponseStr: AnsiString;
@@ -143,69 +95,59 @@ begin
   Sock := INVALID_SOCKET;
 
   try
-    // 1. 创建 TCP socket
     Sock := CreateTCPSocket;
     if Sock = INVALID_SOCKET then
     begin
-      WriteLn('    无法创建 socket');
+      WriteLn('    Cannot create socket');
       Exit;
     end;
 
-    // 设置超时 (10秒)
     SetSocketTimeout(Sock, 10000);
 
-    // 2. TCP 连接
     if not ConnectToHost(Sock, AHostname, APort) then
     begin
-      WriteLn('    TCP 连接失败: ', AHostname);
+      WriteLn('    TCP connect failed: ', AHostname);
       Exit;
     end;
 
-    // 3. 初始化 SSL
     Lib := TOpenSSLLibrary.Create;
     if not Lib.Initialize then
     begin
-      WriteLn('    OpenSSL 初始化失败');
+      WriteLn('    OpenSSL init failed');
       Exit;
     end;
 
-    // 4. 创建 SSL 上下文
     Ctx := Lib.CreateContext(sslCtxClient);
     if Ctx = nil then
     begin
-      WriteLn('    创建 SSL 上下文失败');
+      WriteLn('    Create SSL context failed');
       Exit;
     end;
 
-    // 配置 TLS
     Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     Ctx.SetServerName(AHostname);
-    // 使用系统 CA 证书进行验证，如果不可用则跳过
     if FileExists('/etc/ssl/certs/ca-certificates.crt') then
     begin
       Ctx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
       Ctx.SetVerifyMode([sslVerifyPeer]);
     end
     else
-      Ctx.SetVerifyMode([]);  // 跳过验证
+      Ctx.SetVerifyMode([]);
     Ctx.SetALPNProtocols('http/1.1');
 
-    // 5. 创建 SSL 连接
     Conn := Ctx.CreateConnection(Sock);
     if Conn = nil then
     begin
-      WriteLn('    创建 SSL 连接失败');
+      WriteLn('    Create SSL connection failed');
       Exit;
     end;
 
-    // 6. TLS 握手
     if not Conn.Connect then
     begin
-      WriteLn('    TLS 握手失败: ', Conn.GetStateString);
+      WriteLn('    TLS handshake failed: ', Conn.GetStateString);
       Exit;
     end;
 
-    // 7. 发送 HTTP 请求
     Request := 'GET / HTTP/1.1' + #13#10 +
                'Host: ' + AHostname + #13#10 +
                'User-Agent: fafafa.ssl-test/1.0' + #13#10 +
@@ -216,57 +158,51 @@ begin
     BytesWritten := Conn.Write(RequestBytes[0], Length(RequestBytes));
     if BytesWritten <= 0 then
     begin
-      WriteLn('    发送请求失败');
+      WriteLn('    Send request failed');
       Exit;
     end;
 
-    // 8. 读取响应
     BytesRead := Conn.Read(Buffer, SizeOf(Buffer));
     if BytesRead <= 0 then
     begin
-      WriteLn('    读取响应失败');
+      WriteLn('    Read response failed');
       Exit;
     end;
 
     SetString(ResponseStr, PAnsiChar(@Buffer[0]), BytesRead);
-    Response := string(ResponseStr);
 
-    // 9. 验证响应
-    Result := (Pos('HTTP/', Response) = 1);
+    Result := (Pos('HTTP/', string(ResponseStr)) = 1);
 
     if Result then
     begin
-      // 提取状态码
-      if Pos('200', Response) > 0 then
-        WriteLn('    状态: 200 OK')
-      else if Pos('301', Response) > 0 then
-        WriteLn('    状态: 301 Redirect')
-      else if Pos('302', Response) > 0 then
-        WriteLn('    状态: 302 Redirect')
-      else if Pos('403', Response) > 0 then
-        WriteLn('    状态: 403 Forbidden (但 TLS 成功)')
+      if Pos('200', string(ResponseStr)) > 0 then
+        WriteLn('    Status: 200 OK')
+      else if Pos('301', string(ResponseStr)) > 0 then
+        WriteLn('    Status: 301 Redirect')
+      else if Pos('302', string(ResponseStr)) > 0 then
+        WriteLn('    Status: 302 Redirect')
+      else if Pos('403', string(ResponseStr)) > 0 then
+        WriteLn('    Status: 403 Forbidden (TLS success)')
       else
-        WriteLn('    状态: 其他 HTTP 响应');
+        WriteLn('    Status: Other HTTP response');
 
-      // 显示协议信息
-      WriteLn('    协议: ', ProtocolVersionToString(Conn.GetProtocolVersion));
-      WriteLn('    密码: ', Conn.GetCipherName);
+      WriteLn('    Protocol: ', ProtocolVersionToString(Conn.GetProtocolVersion));
+      WriteLn('    Cipher: ', Conn.GetCipherName);
     end;
 
   except
     on E: Exception do
     begin
-      WriteLn('    异常: ', E.Message);
+      WriteLn('    Exception: ', E.Message);
       Result := False;
     end;
   end;
 
-  // 清理
   if Sock <> INVALID_SOCKET then
     close(Sock);
 end;
 
-{ 测试 TLS 版本协商 }
+{ Test TLS version negotiation }
 procedure TestTLSVersionNegotiation;
 var
   Lib: ISSLLibrary;
@@ -276,12 +212,13 @@ var
   Protocol: string;
   ProtoVer: TSSLProtocolVersion;
 begin
-  BeginSection('TLS 版本协商');
+  WriteLn;
+  WriteLn('=== TLS Version Negotiation ===');
 
   Sock := CreateTCPSocket;
   if Sock = INVALID_SOCKET then
   begin
-    Skip('TLS 1.3 协商', '无法创建 socket');
+    WriteLn('[SKIP] TLS 1.3 negotiation - Cannot create socket');
     Exit;
   end;
 
@@ -290,7 +227,7 @@ begin
   if not ConnectToHost(Sock, 'www.google.com', 443) then
   begin
     close(Sock);
-    Skip('TLS 1.3 协商', 'TCP 连接失败');
+    WriteLn('[SKIP] TLS 1.3 negotiation - TCP connect failed');
     Exit;
   end;
 
@@ -298,34 +235,34 @@ begin
     Lib := TOpenSSLLibrary.Create;
     if not Lib.Initialize then
     begin
-      Skip('TLS 1.3 协商', 'OpenSSL 初始化失败');
+      WriteLn('[SKIP] TLS 1.3 negotiation - OpenSSL init failed');
       Exit;
     end;
 
     Ctx := Lib.CreateContext(sslCtxClient);
-    Ctx.SetProtocolVersions([sslProtocolTLS13]);  // 仅 TLS 1.3
+    Ctx.SetProtocolVersions([sslProtocolTLS13]);
     Ctx.SetServerName('www.google.com');
-    Ctx.SetVerifyMode([]);  // 跳过证书验证以简化测试
+    Ctx.SetVerifyMode([]);
 
     Conn := Ctx.CreateConnection(Sock);
     if Conn.Connect then
     begin
       ProtoVer := Conn.GetProtocolVersion;
       Protocol := ProtocolVersionToString(ProtoVer);
-      Check('TLS 1.3 协商', ProtoVer = sslProtocolTLS13, '实际协议: ' + Protocol);
+      Runner.Check('TLS 1.3 negotiation', ProtoVer = sslProtocolTLS13, 'Actual: ' + Protocol);
     end
     else
-      Check('TLS 1.3 协商', False, 'TLS 握手失败');
+      Runner.Check('TLS 1.3 negotiation', False, 'TLS handshake failed');
 
   except
     on E: Exception do
-      Check('TLS 1.3 协商', False, E.Message);
+      Runner.Check('TLS 1.3 negotiation', False, E.Message);
   end;
 
   close(Sock);
 end;
 
-{ 测试证书验证 }
+{ Test certificate verification }
 procedure TestCertificateVerification;
 var
   Lib: ISSLLibrary;
@@ -335,12 +272,13 @@ var
   CertInfo: TSSLCertificateInfo;
   PeerCert: ISSLCertificate;
 begin
-  BeginSection('证书验证');
+  WriteLn;
+  WriteLn('=== Certificate Verification ===');
 
   Sock := CreateTCPSocket;
   if Sock = INVALID_SOCKET then
   begin
-    Skip('获取服务器证书', '无法创建 socket');
+    WriteLn('[SKIP] Get server certificate - Cannot create socket');
     Exit;
   end;
 
@@ -349,7 +287,7 @@ begin
   if not ConnectToHost(Sock, 'www.github.com', 443) then
   begin
     close(Sock);
-    Skip('获取服务器证书', 'TCP 连接失败');
+    WriteLn('[SKIP] Get server certificate - TCP connect failed');
     Exit;
   end;
 
@@ -360,36 +298,36 @@ begin
     Ctx := Lib.CreateContext(sslCtxClient);
     Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     Ctx.SetServerName('www.github.com');
-    Ctx.SetVerifyMode([]);  // 先不验证，只获取证书
+    Ctx.SetVerifyMode([]);
 
     Conn := Ctx.CreateConnection(Sock);
     if Conn.Connect then
     begin
-      Check('TLS 握手成功', True);
+      Runner.Check('TLS handshake success', True);
 
       PeerCert := Conn.GetPeerCertificate;
       if PeerCert <> nil then
       begin
         CertInfo := PeerCert.GetInfo;
-        Check('获取证书主题', CertInfo.Subject <> '', '主题: ' + CertInfo.Subject);
-        Check('获取证书颁发者', CertInfo.Issuer <> '', '颁发者: ' + CertInfo.Issuer);
-        Check('证书有效期', CertInfo.NotAfter > Now, '有效至: ' + DateTimeToStr(CertInfo.NotAfter));
+        Runner.Check('Get certificate subject', CertInfo.Subject <> '', 'Subject: ' + CertInfo.Subject);
+        Runner.Check('Get certificate issuer', CertInfo.Issuer <> '', 'Issuer: ' + CertInfo.Issuer);
+        Runner.Check('Certificate validity', CertInfo.NotAfter > Now, 'Valid until: ' + DateTimeToStr(CertInfo.NotAfter));
       end
       else
-        Check('获取服务器证书', False, '无法获取对端证书');
+        Runner.Check('Get server certificate', False, 'Cannot get peer certificate');
     end
     else
-      Check('TLS 握手成功', False, Conn.GetStateString);
+      Runner.Check('TLS handshake success', False, Conn.GetStateString);
 
   except
     on E: Exception do
-      Check('获取服务器证书', False, E.Message);
+      Runner.Check('Get server certificate', False, E.Message);
   end;
 
   close(Sock);
 end;
 
-{ 测试多个知名网站 }
+{ Test multiple known websites }
 procedure TestKnownWebsites;
 const
   Websites: array[0..4] of string = (
@@ -403,27 +341,27 @@ var
   I: Integer;
   SuccessCount: Integer;
 begin
-  BeginSection('知名网站连接测试');
+  WriteLn;
+  WriteLn('=== Known Website Connection Tests ===');
 
   SuccessCount := 0;
   for I := Low(Websites) to High(Websites) do
   begin
-    Write('  测试 ', Websites[I], '... ');
+    Write('  Testing ', Websites[I], '... ');
     if TestHTTPSConnection(Websites[I]) then
     begin
       Inc(SuccessCount);
-      Inc(Passed);
+      Runner.Check(Websites[I], True);
     end
     else
-      Inc(Failed);
-    Inc(Total);
+      Runner.Check(Websites[I], False, 'Connection failed');
   end;
 
   WriteLn;
-  WriteLn('  成功连接: ', SuccessCount, '/', Length(Websites));
+  WriteLn('  Successful: ', SuccessCount, '/', Length(Websites));
 end;
 
-{ 测试 SNI (Server Name Indication) }
+{ Test SNI (Server Name Indication) }
 procedure TestSNI;
 var
   Lib: ISSLLibrary;
@@ -431,22 +369,22 @@ var
   Conn: ISSLConnection;
   Sock: TSocket;
 begin
-  BeginSection('SNI 功能测试');
+  WriteLn;
+  WriteLn('=== SNI Function Tests ===');
 
   Sock := CreateTCPSocket;
   if Sock = INVALID_SOCKET then
   begin
-    Skip('SNI 设置', '无法创建 socket');
+    WriteLn('[SKIP] SNI setup - Cannot create socket');
     Exit;
   end;
 
   SetSocketTimeout(Sock, 10000);
 
-  // Cloudflare 使用 SNI
   if not ConnectToHost(Sock, 'www.cloudflare.com', 443) then
   begin
     close(Sock);
-    Skip('SNI 设置', 'TCP 连接失败');
+    WriteLn('[SKIP] SNI setup - TCP connect failed');
     Exit;
   end;
 
@@ -456,26 +394,26 @@ begin
 
     Ctx := Lib.CreateContext(sslCtxClient);
     Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
-    Ctx.SetServerName('www.cloudflare.com');  // SNI
+    Ctx.SetServerName('www.cloudflare.com');
     Ctx.SetVerifyMode([]);
 
-    Check('设置 SNI', Ctx.GetServerName = 'www.cloudflare.com');
+    Runner.Check('Set SNI', Ctx.GetServerName = 'www.cloudflare.com');
 
     Conn := Ctx.CreateConnection(Sock);
     if Conn.Connect then
-      Check('SNI 握手成功', True)
+      Runner.Check('SNI handshake success', True)
     else
-      Check('SNI 握手成功', False, Conn.GetStateString);
+      Runner.Check('SNI handshake success', False, Conn.GetStateString);
 
   except
     on E: Exception do
-      Check('SNI 功能', False, E.Message);
+      Runner.Check('SNI function', False, E.Message);
   end;
 
   close(Sock);
 end;
 
-{ 测试 ALPN }
+{ Test ALPN }
 procedure TestALPN;
 var
   Lib: ISSLLibrary;
@@ -484,12 +422,13 @@ var
   Sock: TSocket;
   NegotiatedProtocol: string;
 begin
-  BeginSection('ALPN 协议协商');
+  WriteLn;
+  WriteLn('=== ALPN Protocol Negotiation ===');
 
   Sock := CreateTCPSocket;
   if Sock = INVALID_SOCKET then
   begin
-    Skip('ALPN 协商', '无法创建 socket');
+    WriteLn('[SKIP] ALPN negotiation - Cannot create socket');
     Exit;
   end;
 
@@ -498,7 +437,7 @@ begin
   if not ConnectToHost(Sock, 'www.google.com', 443) then
   begin
     close(Sock);
-    Skip('ALPN 协商', 'TCP 连接失败');
+    WriteLn('[SKIP] ALPN negotiation - TCP connect failed');
     Exit;
   end;
 
@@ -509,80 +448,57 @@ begin
     Ctx := Lib.CreateContext(sslCtxClient);
     Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     Ctx.SetServerName('www.google.com');
-    Ctx.SetALPNProtocols('h2,http/1.1');  // 优先 HTTP/2
+    Ctx.SetALPNProtocols('h2,http/1.1');
     Ctx.SetVerifyMode([]);
 
-    Check('设置 ALPN 协议', Ctx.GetALPNProtocols = 'h2,http/1.1');
+    Runner.Check('Set ALPN protocols', Ctx.GetALPNProtocols = 'h2,http/1.1');
 
     Conn := Ctx.CreateConnection(Sock);
     if Conn.Connect then
     begin
-      Check('ALPN 握手成功', True);
+      Runner.Check('ALPN handshake success', True);
       NegotiatedProtocol := Conn.GetSelectedALPNProtocol;
-      Check('ALPN 协商结果', NegotiatedProtocol <> '', '协商协议: ' + NegotiatedProtocol);
+      Runner.Check('ALPN negotiation result', NegotiatedProtocol <> '', 'Protocol: ' + NegotiatedProtocol);
     end
     else
-      Check('ALPN 握手成功', False, Conn.GetStateString);
+      Runner.Check('ALPN handshake success', False, Conn.GetStateString);
 
   except
     on E: Exception do
-      Check('ALPN 功能', False, E.Message);
+      Runner.Check('ALPN function', False, E.Message);
   end;
 
   close(Sock);
 end;
 
-procedure PrintSummary;
 begin
+  WriteLn('Real Network HTTPS Connection Test Suite');
+  WriteLn('========================================');
   WriteLn;
-  WriteLn('================================================================');
-  WriteLn('真实网络 HTTPS 测试摘要');
-  WriteLn('================================================================');
-  WriteLn('总计: ', Total);
-  WriteLn('通过: ', Passed);
-  WriteLn('失败: ', Failed);
-  WriteLn('跳过: ', Skipped);
+  WriteLn('Note: This test requires network connectivity.');
   WriteLn;
 
-  if Failed = 0 then
-    WriteLn('结果: 全部测试通过')
-  else
-    WriteLn('结果: 存在失败的测试');
-
-  WriteLn('================================================================');
-end;
-
-begin
-  Total := 0;
-  Passed := 0;
-  Failed := 0;
-  Skipped := 0;
-
-  WriteLn('================================================================');
-  WriteLn('真实网络 HTTPS 连接测试套件');
-  WriteLn('================================================================');
-  WriteLn;
-  WriteLn('说明:');
-  WriteLn('  测试真实 HTTPS 网站连接，验证 TLS 握手、证书和协议功能。');
-  WriteLn('  注意: 此测试需要网络连接。');
-  WriteLn;
-
+  Runner := TSimpleTestRunner.Create;
   try
+    Runner.RequireModules([osmCore]);
+
+    if not Runner.Initialize then
+    begin
+      WriteLn('ERROR: Failed to initialize test environment');
+      Halt(1);
+    end;
+
+    WriteLn('OpenSSL Version: ', GetOpenSSLVersionString);
+
     TestKnownWebsites;
     TestTLSVersionNegotiation;
     TestCertificateVerification;
     TestSNI;
     TestALPN;
 
-    PrintSummary;
-
-    if Failed > 0 then
-      Halt(1);
-  except
-    on E: Exception do
-    begin
-      WriteLn('CRITICAL ERROR: ', E.Message);
-      Halt(2);
-    end;
+    Runner.PrintSummary;
+    Halt(Runner.FailCount);
+  finally
+    Runner.Free;
   end;
 end.

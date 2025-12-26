@@ -1,3 +1,8 @@
+{******************************************************************************}
+{  WinSSL vs OpenSSL Backend Comparison Tests                                  }
+{  Migrated to use TSimpleTestRunner framework (P1-2.2)                        }
+{******************************************************************************}
+
 program test_backend_comparison;
 
 {$mode objfpc}{$H+}{$J-}
@@ -11,10 +16,13 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.factory,
   fafafa.ssl.openssl.api,
-  fafafa.ssl;
+  fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl,
+  test_openssl_base;
 
 var
-  TotalTests, PassedTests, FailedTests: Integer;
+  Runner: TSimpleTestRunner;
   CurrentSection: string;
 
 procedure BeginSection(const aName: string);
@@ -26,21 +34,7 @@ end;
 
 procedure Test(const aName: string; aCondition: Boolean; const aDetails: string = '');
 begin
-  Inc(TotalTests);
-  Write('  [', CurrentSection, '] ', aName, ': ');
-
-  if aCondition then
-  begin
-    WriteLn('PASS');
-    Inc(PassedTests);
-  end
-  else
-  begin
-    WriteLn('FAIL');
-    Inc(FailedTests);
-    if aDetails <> '' then
-      WriteLn('    原因: ', aDetails);
-  end;
+  Runner.Check('[' + CurrentSection + '] ' + aName, aCondition, aDetails);
 end;
 
 {$IFDEF WINDOWS}
@@ -576,42 +570,72 @@ begin
   end;
 end;
 
+{$IFNDEF WINDOWS}
+procedure TestOpenSSLOnLinux;
+var
+  LLib: ISSLLibrary;
+  LCtx: ISSLContext;
 begin
-  TotalTests := 0;
-  PassedTests := 0;
-  FailedTests := 0;
+  Runner.Check('OpenSSL library creation', CreateSSLLibrary(sslOpenSSL) <> nil);
+  LLib := CreateSSLLibrary(sslOpenSSL);
+  Runner.Check('OpenSSL initialization', LLib.Initialize);
+  Runner.Check('OpenSSL type correct', LLib.GetLibraryType = sslOpenSSL);
+  Runner.Check('OpenSSL version string', Length(LLib.GetVersionString) > 0);
+  Runner.Check('OpenSSL supports TLS 1.2', LLib.IsProtocolSupported(sslProtocolTLS12));
+  LCtx := LLib.CreateContext(sslCtxClient);
+  Runner.Check('OpenSSL create client context', LCtx <> nil);
+end;
+{$ENDIF}
 
+begin
   WriteLn('=========================================');
-  WriteLn('WinSSL vs OpenSSL 后端对比测试');
-  WriteLn('测试日期: ', FormatDateTime('yyyy-mm-dd hh:nn:ss', Now));
+  WriteLn('WinSSL vs OpenSSL Backend Comparison Tests');
   WriteLn('=========================================');
 
-  if not InitWinsock then
-  begin
-    WriteLn('错误: 无法初始化 Winsock');
-    Halt(1);
-  end;
-
+  Runner := TSimpleTestRunner.Create;
   try
-    TestBasicFunctionality;
-    TestTLSHandshakeComparison;
-    TestDataTransferComparison;
-    TestCertificateHandling;
-    TestErrorHandling;
+    Runner.RequireModules([osmCore]);
 
+    if not Runner.Initialize then
+    begin
+      WriteLn('ERROR: Failed to initialize test environment');
+      Halt(1);
+    end;
+
+    WriteLn('OpenSSL Version: ', GetOpenSSLVersionString);
+    WriteLn('Test Date: ', FormatDateTime('yyyy-mm-dd hh:nn:ss', Now));
+
+    {$IFDEF WINDOWS}
+    if not InitWinsock then
+    begin
+      WriteLn('ERROR: Winsock init failed');
+      Halt(1);
+    end;
+
+    try
+      TestBasicFunctionality;
+      TestTLSHandshakeComparison;
+      TestDataTransferComparison;
+      TestCertificateHandling;
+      TestErrorHandling;
+    finally
+      CleanupWinsock;
+    end;
+    {$ELSE}
+    WriteLn('');
+    WriteLn('Note: Full backend comparison requires Windows platform');
+    WriteLn('Running OpenSSL-only tests on Linux...');
+    WriteLn('');
+
+    // Test OpenSSL functionality only on Linux
+    TestOpenSSLOnLinux;
+
+    Runner.Check('WinSSL tests skipped (Linux)', True, 'Full comparison requires Windows');
+    {$ENDIF}
+
+    Runner.PrintSummary;
+    Halt(Runner.FailCount);
   finally
-    CleanupWinsock;
+    Runner.Free;
   end;
-
-  WriteLn;
-  WriteLn('=========================================');
-  WriteLn('测试摘要');
-  WriteLn('=========================================');
-  WriteLn(Format('总计: %d 个测试', [TotalTests]));
-  WriteLn(Format('通过: %d 个 (%.1f%%)', [PassedTests, PassedTests * 100.0 / TotalTests]));
-  WriteLn(Format('失败: %d 个', [FailedTests]));
-  WriteLn('=========================================');
-
-  if FailedTests > 0 then
-    Halt(1);
 end.

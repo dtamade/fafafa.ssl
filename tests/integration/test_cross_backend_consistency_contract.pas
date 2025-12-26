@@ -1,3 +1,8 @@
+{******************************************************************************}
+{  Cross-Backend Consistency Contract Tests                                    }
+{  Migrated to use TSimpleTestRunner framework (P1-2.2)                        }
+{******************************************************************************}
+
 program test_cross_backend_consistency_contract;
 
 {$mode objfpc}{$H+}{$J-}
@@ -13,7 +18,10 @@ uses
   fafafa.ssl.openssl.backed,
   {$ENDIF}
   {$IFDEF WINDOWS}Windows, WinSock2, fafafa.ssl.winssl.lib,{$ENDIF}
-  fafafa.ssl.openssl.api;
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.api.core,
+  test_openssl_base;
 
 type
   TSide = (SideOpenSSL, SideWinSSL);
@@ -40,13 +48,11 @@ function gethostbyname(name: PChar): PHostEnt; cdecl; external 'c';
 {$ENDIF}
 
 var
-  Total, Passed, Failed: Integer;
+  Runner: TSimpleTestRunner;
 
 procedure Check(const Name: string; ok: Boolean; const details: string = '');
 begin
-  Inc(Total);
-  if ok then begin Inc(Passed); WriteLn('[PASS] ', Name); end
-  else begin Inc(Failed); WriteLn('[FAIL] ', Name); if details <> '' then WriteLn('       ', details); end;
+  Runner.Check(Name, ok, details);
 end;
 
 function EnvEnabled(const VarName: string): Boolean;
@@ -199,11 +205,28 @@ begin
 end;
 
 begin
-  Total := 0; Passed := 0; Failed := 0;
-  WriteLn('跨后端一致性（合同）测试');
-  TestNormalizedContract;
-  WriteLn; WriteLn('总计: ', Total, ' 通过: ', Passed, ' 失败: ', Failed);
-  if Failed > 0 then Halt(1);
+  WriteLn('Cross-Backend Consistency Contract Tests');
+  WriteLn('========================================');
+
+  Runner := TSimpleTestRunner.Create;
+  try
+    Runner.RequireModules([osmCore]);
+
+    if not Runner.Initialize then
+    begin
+      WriteLn('ERROR: Failed to initialize test environment');
+      Halt(1);
+    end;
+
+    WriteLn('OpenSSL Version: ', GetOpenSSLVersionString);
+
+    TestNormalizedContract;
+
+    Runner.PrintSummary;
+    Halt(Runner.FailCount);
+  finally
+    Runner.Free;
+  end;
 end.
 
 

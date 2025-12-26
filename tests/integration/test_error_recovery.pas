@@ -1,18 +1,9 @@
-{
-  test_error_recovery.pas - TLS Error Recovery Integration Tests
-
-  测试 TLS 错误恢复路径：
-  1. 握手失败恢复
-  2. 连接中断恢复
-  3. 证书验证失败处理
-  4. 超时处理
-  5. 资源清理验证
-
-  作者: fafafa.ssl 开发团队
-  创建: 2025-12-22
-}
-
 program test_error_recovery;
+
+{******************************************************************************}
+{  TLS Error Recovery Integration Tests                                        }
+{  Migrated to use TSimpleTestRunner framework (P1-2.2)                        }
+{******************************************************************************}
 
 {$mode objfpc}{$H+}
 
@@ -32,60 +23,17 @@ uses
   fafafa.ssl.openssl.api.asn1,
   fafafa.ssl.openssl.api.crypto,
   fafafa.ssl.openssl.api.consts,
-  fafafa.ssl.openssl.api.err;
+  fafafa.ssl.openssl.api.err,
+  fafafa.ssl.openssl.loader,
+  test_openssl_base;
 
 const
-  // X509 名称常量
   MBSTRING_ASC = $1001;
 
 var
-  TotalTests: Integer = 0;
-  PassedTests: Integer = 0;
-  FailedTests: Integer = 0;
-
-  // SSL 资源
+  Runner: TSimpleTestRunner;
   ServerCert: PX509;
   ServerKey: PEVP_PKEY;
-
-procedure TestResult(const TestName: string; Success: Boolean; const Details: string = '');
-begin
-  Inc(TotalTests);
-  if Success then
-  begin
-    Inc(PassedTests);
-    WriteLn('[PASS] ', TestName);
-    if Details <> '' then
-      WriteLn('       ', Details);
-  end
-  else
-  begin
-    Inc(FailedTests);
-    WriteLn('[FAIL] ', TestName);
-    if Details <> '' then
-      WriteLn('       原因: ', Details);
-  end;
-end;
-
-procedure PrintHeader(const Title: string);
-begin
-  WriteLn;
-  WriteLn('测试: ', Title);
-  WriteLn('----------------------------------------');
-end;
-
-procedure PrintSummary;
-begin
-  WriteLn;
-  WriteLn('========================================');
-  WriteLn('测试摘要');
-  WriteLn('========================================');
-  WriteLn('总测试数: ', TotalTests);
-  WriteLn('通过: ', PassedTests);
-  WriteLn('失败: ', FailedTests);
-  if TotalTests > 0 then
-    WriteLn('通过率: ', (PassedTests * 100) div TotalTests, '%');
-  WriteLn('========================================');
-end;
 
 function GenerateSelfSignedCert(out Cert: PX509; out Key: PEVP_PKEY): Boolean;
 var
@@ -147,7 +95,7 @@ begin
   end;
 end;
 
-procedure Test1_HandshakeFailureRecovery;
+procedure TestHandshakeFailureRecovery;
 var
   ClientCtx: PSSL_CTX;
   ClientSSL: PSSL;
@@ -155,54 +103,53 @@ var
   Method: PSSL_METHOD;
   Ret, Err: Integer;
 begin
-  PrintHeader('1. 握手失败恢复测试');
+  WriteLn;
+  WriteLn('=== Handshake Failure Recovery ===');
 
   try
-    // 创建客户端上下文
     Method := TLS_client_method();
     ClientCtx := SSL_CTX_new(Method);
-    TestResult('创建客户端上下文', ClientCtx <> nil);
+    Runner.Check('Create client context', ClientCtx <> nil);
 
     if ClientCtx <> nil then
     begin
-      // 创建 SSL 对象
       ClientSSL := SSL_new(ClientCtx);
-      TestResult('创建 SSL 对象', ClientSSL <> nil);
+      Runner.Check('Create SSL object', ClientSSL <> nil);
 
       if ClientSSL <> nil then
       begin
-        // 创建空的 BIO（模拟无响应的服务器）
+        // Create empty BIOs (simulate no server response)
         ClientRead := BIO_new(BIO_s_mem());
         ClientWrite := BIO_new(BIO_s_mem());
         SSL_set_bio(ClientSSL, ClientRead, ClientWrite);
 
         SSL_set_connect_state(ClientSSL);
 
-        // 尝试握手（应该失败，因为没有服务器响应）
+        // Attempt handshake (should fail - no server response)
         Ret := SSL_do_handshake(ClientSSL);
         Err := SSL_get_error(ClientSSL, Ret);
 
-        // 期望 WANT_READ 错误（等待服务器响应）
-        TestResult('握手返回 WANT_READ', Err = SSL_ERROR_WANT_READ,
-                  '错误码: ' + IntToStr(Err));
+        // Expect WANT_READ (waiting for server response)
+        Runner.Check('Handshake returns WANT_READ', Err = SSL_ERROR_WANT_READ,
+                  Format('Error code: %d', [Err]));
 
-        // 验证可以正确清理资源
+        // Verify cleanup works
         SSL_shutdown(ClientSSL);
         SSL_free(ClientSSL);
-        TestResult('清理 SSL 对象', True);
+        Runner.Check('Cleanup SSL object', True);
       end;
 
       SSL_CTX_free(ClientCtx);
-      TestResult('清理上下文', True);
+      Runner.Check('Cleanup context', True);
     end;
 
   except
     on E: Exception do
-      TestResult('握手失败恢复', False, E.Message);
+      Runner.Check('Handshake failure recovery', False, E.Message);
   end;
 end;
 
-procedure Test2_ConnectionInterruptRecovery;
+procedure TestConnectionInterruptRecovery;
 var
   ClientCtx, ServerCtx: PSSL_CTX;
   ClientSSL, ServerSSL: PSSL;
@@ -212,25 +159,22 @@ var
   Len, Ret, Err: Integer;
   i: Integer;
 begin
-  PrintHeader('2. 连接中断恢复测试');
+  WriteLn;
+  WriteLn('=== Connection Interrupt Recovery ===');
 
   try
-    // 创建客户端上下文
     Method := TLS_client_method();
     ClientCtx := SSL_CTX_new(Method);
     SSL_CTX_set_verify(ClientCtx, SSL_VERIFY_NONE, nil);
 
-    // 创建服务端上下文
     Method := TLS_server_method();
     ServerCtx := SSL_CTX_new(Method);
     SSL_CTX_use_certificate(ServerCtx, ServerCert);
     SSL_CTX_use_PrivateKey(ServerCtx, ServerKey);
 
-    // 创建 SSL 对象
     ClientSSL := SSL_new(ClientCtx);
     ServerSSL := SSL_new(ServerCtx);
 
-    // 创建 BIO
     ClientRead := BIO_new(BIO_s_mem());
     ClientWrite := BIO_new(BIO_s_mem());
     ServerRead := BIO_new(BIO_s_mem());
@@ -242,12 +186,11 @@ begin
     SSL_set_connect_state(ClientSSL);
     SSL_set_accept_state(ServerSSL);
 
-    // 开始握手但中途中断
+    // Start handshake but interrupt midway
     for i := 1 to 3 do
     begin
       Ret := SSL_do_handshake(ClientSSL);
 
-      // 传输数据
       repeat
         Len := BIO_read(ClientWrite, @Buffer[0], SizeOf(Buffer));
         if Len > 0 then BIO_write(ServerRead, @Buffer[0], Len);
@@ -261,43 +204,40 @@ begin
       until Len <= 0;
     end;
 
-    // 模拟中断：直接关闭服务端
+    // Simulate interrupt: close server
     SSL_shutdown(ServerSSL);
 
-    // 传输服务端关闭通知到客户端
+    // Transfer close notify to client
     repeat
       Len := BIO_read(ServerWrite, @Buffer[0], SizeOf(Buffer));
       if Len > 0 then BIO_write(ClientRead, @Buffer[0], Len);
     until Len <= 0;
 
     SSL_free(ServerSSL);
-    TestResult('服务端中断', True);
+    Runner.Check('Server interrupt', True);
 
-    // 客户端尝试读取数据（应该检测到关闭）
-    // 注意：SSL_do_handshake 在握手完成后会返回 1，应使用 SSL_read 检测连接关闭
+    // Client tries to read (should detect closure)
     Ret := SSL_read(ClientSSL, @Buffer[0], SizeOf(Buffer));
     Err := SSL_get_error(ClientSSL, Ret);
 
-    // 应该返回 0 (正常关闭) 或负值 (错误)，SSL_ERROR_ZERO_RETURN 表示对端关闭
-    TestResult('客户端检测到中断', (Ret <= 0) or (Err = SSL_ERROR_ZERO_RETURN),
-              '返回值: ' + IntToStr(Ret) + ', 错误: ' + IntToStr(Err));
+    Runner.Check('Client detects interrupt', (Ret <= 0) or (Err = SSL_ERROR_ZERO_RETURN),
+              Format('Return: %d, Error: %d', [Ret, Err]));
 
-    // 清理客户端
     SSL_shutdown(ClientSSL);
     SSL_free(ClientSSL);
-    TestResult('客户端清理', True);
+    Runner.Check('Client cleanup', True);
 
     SSL_CTX_free(ClientCtx);
     SSL_CTX_free(ServerCtx);
-    TestResult('上下文清理', True);
+    Runner.Check('Context cleanup', True);
 
   except
     on E: Exception do
-      TestResult('连接中断恢复', False, E.Message);
+      Runner.Check('Connection interrupt recovery', False, E.Message);
   end;
 end;
 
-procedure Test3_CertificateVerificationFailure;
+procedure TestCertificateVerificationFailure;
 var
   ClientCtx, ServerCtx: PSSL_CTX;
   ClientSSL, ServerSSL: PSSL;
@@ -308,26 +248,23 @@ var
   i: Integer;
   VerifyResult: LongInt;
 begin
-  PrintHeader('3. 证书验证失败处理测试');
+  WriteLn;
+  WriteLn('=== Certificate Verification Failure ===');
 
   try
-    // 创建客户端上下文（启用严格验证）
     Method := TLS_client_method();
     ClientCtx := SSL_CTX_new(Method);
     SSL_CTX_set_verify(ClientCtx, SSL_VERIFY_PEER, nil);
-    TestResult('创建严格验证客户端', ClientCtx <> nil);
+    Runner.Check('Create strict verification client', ClientCtx <> nil);
 
-    // 创建服务端上下文
     Method := TLS_server_method();
     ServerCtx := SSL_CTX_new(Method);
     SSL_CTX_use_certificate(ServerCtx, ServerCert);
     SSL_CTX_use_PrivateKey(ServerCtx, ServerKey);
 
-    // 创建 SSL 对象
     ClientSSL := SSL_new(ClientCtx);
     ServerSSL := SSL_new(ServerCtx);
 
-    // 创建 BIO
     ClientRead := BIO_new(BIO_s_mem());
     ClientWrite := BIO_new(BIO_s_mem());
     ServerRead := BIO_new(BIO_s_mem());
@@ -339,7 +276,7 @@ begin
     SSL_set_connect_state(ClientSSL);
     SSL_set_accept_state(ServerSSL);
 
-    // 尝试握手
+    // Attempt handshake
     for i := 1 to 10 do
     begin
       Ret := SSL_do_handshake(ClientSSL);
@@ -362,59 +299,55 @@ begin
       until Len <= 0;
     end;
 
-    // 检查验证结果
+    // Check verification result
     if Assigned(SSL_get_verify_result) then
     begin
       VerifyResult := SSL_get_verify_result(ClientSSL);
-      // 自签名证书应该验证失败（除非已添加到信任存储）
       if VerifyResult <> 0 then
-        TestResult('证书验证失败（预期）', True,
-                  '验证结果: ' + IntToStr(VerifyResult))
+        Runner.Check('Certificate verification failed (expected)', True,
+                  Format('Verify result: %d', [VerifyResult]))
       else
-        TestResult('证书验证通过', True, '可能已添加到信任存储');
+        Runner.Check('Certificate verification passed', True, 'May be in trust store');
     end
     else
-      TestResult('获取验证结果', False, '函数未加载');
+      Runner.Check('Get verification result', False, 'Function not loaded');
 
-    // 清理
+    // Cleanup
     SSL_shutdown(ClientSSL);
     SSL_shutdown(ServerSSL);
     SSL_free(ClientSSL);
     SSL_free(ServerSSL);
     SSL_CTX_free(ClientCtx);
     SSL_CTX_free(ServerCtx);
-    TestResult('资源清理', True);
+    Runner.Check('Resource cleanup', True);
 
   except
     on E: Exception do
-      TestResult('证书验证失败处理', False, E.Message);
+      Runner.Check('Certificate verification failure', False, E.Message);
   end;
 end;
 
-procedure Test4_ErrorQueueHandling;
+procedure TestErrorQueueHandling;
 var
   ErrCode: Cardinal;
   ErrBuf: array[0..255] of AnsiChar;
   ErrCount: Integer;
 begin
-  PrintHeader('4. 错误队列处理测试');
+  WriteLn;
+  WriteLn('=== Error Queue Handling ===');
 
   try
-    // 清空错误队列
     if Assigned(ERR_clear_error) then
     begin
       ERR_clear_error();
-      TestResult('清空错误队列', True);
+      Runner.Check('Clear error queue', True);
     end;
 
-    // 故意产生一个错误（尝试使用无效参数）
-    // 这里我们只是检查错误队列 API 是否可用
-    TestResult('ERR_get_error 可用', Assigned(ERR_get_error));
-    TestResult('ERR_error_string_n 可用', Assigned(ERR_error_string_n));
-    TestResult('ERR_peek_error 可用', Assigned(ERR_peek_error));
-    TestResult('ERR_clear_error 可用', Assigned(ERR_clear_error));
+    Runner.Check('ERR_get_error available', Assigned(ERR_get_error));
+    Runner.Check('ERR_error_string_n available', Assigned(ERR_error_string_n));
+    Runner.Check('ERR_peek_error available', Assigned(ERR_peek_error));
+    Runner.Check('ERR_clear_error available', Assigned(ERR_clear_error));
 
-    // 测试错误队列迭代
     if Assigned(ERR_get_error) and Assigned(ERR_error_string_n) then
     begin
       ErrCount := 0;
@@ -426,26 +359,27 @@ begin
         ErrCode := ERR_get_error();
       end;
 
-      TestResult('错误队列迭代', True, '处理了 ' + IntToStr(ErrCount) + ' 个错误');
+      Runner.Check('Error queue iteration', True, Format('Processed %d errors', [ErrCount]));
     end;
 
   except
     on E: Exception do
-      TestResult('错误队列处理', False, E.Message);
+      Runner.Check('Error queue handling', False, E.Message);
   end;
 end;
 
-procedure Test5_ResourceCleanupVerification;
+procedure TestResourceCleanupVerification;
 var
   ClientCtx: PSSL_CTX;
   ClientSSL: PSSL;
   Method: PSSL_METHOD;
   i: Integer;
 begin
-  PrintHeader('5. 资源清理验证测试');
+  WriteLn;
+  WriteLn('=== Resource Cleanup Verification ===');
 
   try
-    // 测试多次创建和销毁资源
+    // Test multiple create/destroy cycles
     for i := 1 to 10 do
     begin
       Method := TLS_client_method();
@@ -457,10 +391,7 @@ begin
 
         if ClientSSL <> nil then
         begin
-          // 设置一些状态
           SSL_set_connect_state(ClientSSL);
-
-          // 清理
           SSL_free(ClientSSL);
         end;
 
@@ -468,56 +399,53 @@ begin
       end;
     end;
 
-    TestResult('10 次创建/销毁循环', True, '无内存泄漏（需要外部工具验证）');
+    Runner.Check('10 create/destroy cycles', True, 'No memory leak (external verification needed)');
 
-    // 测试异常情况下的清理
+    // Test exception cleanup
     try
       Method := TLS_client_method();
       ClientCtx := SSL_CTX_new(Method);
 
       if ClientCtx <> nil then
-      begin
-        // 故意在使用中抛出异常
-        raise Exception.Create('测试异常');
-      end;
+        raise Exception.Create('Test exception');
     except
       on E: Exception do
       begin
-        // 确保清理
         if ClientCtx <> nil then
           SSL_CTX_free(ClientCtx);
-        TestResult('异常情况下资源清理', True, '异常: ' + E.Message);
+        Runner.Check('Exception resource cleanup', True, 'Exception: ' + E.Message);
       end;
     end;
 
   except
     on E: Exception do
-      TestResult('资源清理验证', False, E.Message);
+      Runner.Check('Resource cleanup verification', False, E.Message);
   end;
 end;
 
-procedure Test6_HighLevelExceptionHandling;
+procedure TestHighLevelExceptionHandling;
 var
   SSLLib: ISSLLibrary;
   Context: ISSLContext;
   ExceptionCaught: Boolean;
 begin
-  PrintHeader('6. 高层异常处理测试');
+  WriteLn;
+  WriteLn('=== High-Level Exception Handling ===');
 
   try
     SSLLib := CreateOpenSSLLibrary;
-    TestResult('创建库实例', SSLLib <> nil);
+    Runner.Check('Create library instance', SSLLib <> nil);
 
     if SSLLib <> nil then
     begin
-      TestResult('初始化库', SSLLib.Initialize);
+      Runner.Check('Initialize library', SSLLib.Initialize);
 
       Context := SSLLib.CreateContext(sslCtxClient);
-      TestResult('创建上下文', Context <> nil);
+      Runner.Check('Create context', Context <> nil);
 
       if Context <> nil then
       begin
-        // 测试加载不存在的证书
+        // Test loading nonexistent certificate
         ExceptionCaught := False;
         try
           Context.LoadCertificate('/nonexistent/path/cert.pem');
@@ -525,19 +453,19 @@ begin
           on E: ESSLException do
           begin
             ExceptionCaught := True;
-            TestResult('文件不存在异常', True, E.Message);
+            Runner.Check('File not found exception', True, E.Message);
           end;
           on E: Exception do
           begin
             ExceptionCaught := True;
-            TestResult('通用异常', True, E.Message);
+            Runner.Check('General exception', True, E.Message);
           end;
         end;
 
         if not ExceptionCaught then
-          TestResult('文件不存在异常', False, '未捕获异常');
+          Runner.Check('File not found exception', False, 'No exception caught');
 
-        // 测试加载无效的 PEM 数据
+        // Test loading invalid PEM data
         ExceptionCaught := False;
         try
           Context.LoadCertificatePEM('invalid pem data');
@@ -545,63 +473,25 @@ begin
           on E: Exception do
           begin
             ExceptionCaught := True;
-            TestResult('无效 PEM 异常', True, E.Message);
+            Runner.Check('Invalid PEM exception', True, E.Message);
           end;
         end;
 
         if not ExceptionCaught then
-          TestResult('无效 PEM 异常', False, '未捕获异常');
+          Runner.Check('Invalid PEM exception', False, 'No exception caught');
       end;
 
       SSLLib.Finalize;
-      TestResult('库终结', True);
+      Runner.Check('Library finalize', True);
     end;
 
   except
     on E: Exception do
-      TestResult('高层异常处理', False, E.Message);
+      Runner.Check('High-level exception handling', False, E.Message);
   end;
 end;
 
-procedure Test7_ErrorCodeTranslation;
-var
-  SSLLib: ISSLLibrary;
-  ErrorCode: Integer;
-  ErrorStr: string;
-begin
-  PrintHeader('7. 错误码翻译测试');
-
-  try
-    SSLLib := CreateOpenSSLLibrary;
-
-    if SSLLib <> nil then
-    begin
-      SSLLib.Initialize;
-
-      // 测试错误码获取
-      ErrorCode := SSLLib.GetLastError;
-      TestResult('获取错误码', True, '错误码: ' + IntToStr(ErrorCode));
-
-      ErrorStr := SSLLib.GetLastErrorString;
-      TestResult('获取错误字符串', True, '错误: ' + ErrorStr);
-
-      // 测试清除错误
-      SSLLib.ClearError;
-      ErrorCode := SSLLib.GetLastError;
-      TestResult('清除错误后', ErrorCode = 0, '错误码: ' + IntToStr(ErrorCode));
-
-      SSLLib.Finalize;
-    end
-    else
-      TestResult('创建库实例', False);
-
-  except
-    on E: Exception do
-      TestResult('错误码翻译', False, E.Message);
-  end;
-end;
-
-procedure Test8_GracefulShutdown;
+procedure TestGracefulShutdown;
 var
   ClientCtx, ServerCtx: PSSL_CTX;
   ClientSSL, ServerSSL: PSSL;
@@ -612,7 +502,8 @@ var
   i: Integer;
   ShutdownComplete: Boolean;
 begin
-  PrintHeader('8. 优雅关闭测试');
+  WriteLn;
+  WriteLn('=== Graceful Shutdown ===');
 
   try
     Method := TLS_client_method();
@@ -638,7 +529,7 @@ begin
     SSL_set_connect_state(ClientSSL);
     SSL_set_accept_state(ServerSSL);
 
-    // 完成握手
+    // Complete handshake
     ShutdownComplete := False;
     for i := 1 to 20 do
     begin
@@ -661,55 +552,46 @@ begin
       end;
     end;
 
-    TestResult('握手完成', ShutdownComplete);
+    Runner.Check('Handshake complete', ShutdownComplete);
 
     if ShutdownComplete then
     begin
-      // 测试双向关闭
-      // 客户端发起关闭
+      // Test bidirectional shutdown
       Ret := SSL_shutdown(ClientSSL);
-      TestResult('客户端关闭发起', True, '返回值: ' + IntToStr(Ret));
+      Runner.Check('Client shutdown initiate', True, Format('Return: %d', [Ret]));
 
-      // 传输关闭通知
       repeat
         Len := BIO_read(ClientWrite, @Buffer[0], SizeOf(Buffer));
         if Len > 0 then BIO_write(ServerRead, @Buffer[0], Len);
       until Len <= 0;
 
-      // 服务端响应关闭
       Ret := SSL_shutdown(ServerSSL);
-      TestResult('服务端关闭响应', True, '返回值: ' + IntToStr(Ret));
+      Runner.Check('Server shutdown response', True, Format('Return: %d', [Ret]));
 
       repeat
         Len := BIO_read(ServerWrite, @Buffer[0], SizeOf(Buffer));
         if Len > 0 then BIO_write(ClientRead, @Buffer[0], Len);
       until Len <= 0;
 
-      // 客户端完成关闭
       Ret := SSL_shutdown(ClientSSL);
-      TestResult('客户端关闭完成', Ret >= 0, '返回值: ' + IntToStr(Ret));
+      Runner.Check('Client shutdown complete', Ret >= 0, Format('Return: %d', [Ret]));
     end;
 
     SSL_free(ClientSSL);
     SSL_free(ServerSSL);
     SSL_CTX_free(ClientCtx);
     SSL_CTX_free(ServerCtx);
-    TestResult('资源释放', True);
+    Runner.Check('Resource release', True);
 
   except
     on E: Exception do
-      TestResult('优雅关闭', False, E.Message);
+      Runner.Check('Graceful shutdown', False, E.Message);
   end;
 end;
 
 procedure InitializeTests;
 begin
-  WriteLn('========================================');
-  WriteLn('TLS 错误恢复路径集成测试');
-  WriteLn('========================================');
-  WriteLn;
-
-  WriteLn('加载 OpenSSL 模块...');
+  WriteLn('Loading OpenSSL modules...');
   LoadOpenSSLCore();
   LoadOpenSSLBIO();
   LoadOpenSSLX509();
@@ -720,16 +602,14 @@ begin
   LoadOpenSSLSSL;
   LoadOpenSSLERR;
 
-  WriteLn('OpenSSL 版本: ', GetOpenSSLVersionString);
   WriteLn;
-
-  WriteLn('生成测试证书...');
+  WriteLn('Generating test certificate...');
   if not GenerateSelfSignedCert(ServerCert, ServerKey) then
   begin
-    WriteLn('错误: 无法生成测试证书');
+    WriteLn('ERROR: Could not generate test certificate');
     Halt(1);
   end;
-  WriteLn('证书生成成功');
+  WriteLn('Certificate generated successfully');
   WriteLn;
 end;
 
@@ -740,38 +620,37 @@ begin
 end;
 
 begin
+  WriteLn('TLS Error Recovery Integration Tests');
+  WriteLn('=====================================');
+  WriteLn;
+
+  Runner := TSimpleTestRunner.Create;
   try
+    Runner.RequireModules([osmCore, osmBN, osmRSA, osmEVP, osmX509]);
+
+    if not Runner.Initialize then
+    begin
+      WriteLn('ERROR: Failed to initialize test environment');
+      Halt(1);
+    end;
+
+    WriteLn('OpenSSL Version: ', GetOpenSSLVersionString);
+
     InitializeTests;
 
-    Test1_HandshakeFailureRecovery;
-    Test2_ConnectionInterruptRecovery;
-    Test3_CertificateVerificationFailure;
-    Test4_ErrorQueueHandling;
-    Test5_ResourceCleanupVerification;
-    Test6_HighLevelExceptionHandling;
-    Test7_ErrorCodeTranslation;
-    Test8_GracefulShutdown;
+    TestHandshakeFailureRecovery;
+    TestConnectionInterruptRecovery;
+    TestCertificateVerificationFailure;
+    TestErrorQueueHandling;
+    TestResourceCleanupVerification;
+    TestHighLevelExceptionHandling;
+    TestGracefulShutdown;
 
     CleanupTests;
-    PrintSummary;
 
-    WriteLn;
-    if FailedTests > 0 then
-    begin
-      WriteLn('结果: ', FailedTests, ' 个测试失败');
-      Halt(1);
-    end
-    else
-    begin
-      WriteLn('✅ 所有测试通过!');
-      Halt(0);
-    end;
-
-  except
-    on E: Exception do
-    begin
-      WriteLn('致命错误: ', E.Message);
-      Halt(1);
-    end;
+    Runner.PrintSummary;
+    Halt(Runner.FailCount);
+  finally
+    Runner.Free;
   end;
 end.
