@@ -1,5 +1,10 @@
 program test_ec_simple;
 
+{******************************************************************************}
+{  EC Simple Integration Tests                                                 }
+{  Migrated to use TSimpleTestRunner framework (P1-2.2)                        }
+{******************************************************************************}
+
 {$mode objfpc}{$H+}
 
 uses
@@ -8,521 +13,239 @@ uses
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ec,
-  fafafa.ssl.openssl.api.bn;
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.loader,
+  test_openssl_base;
 
-procedure PrintTestHeader(const TestName: string);
-begin
-  WriteLn('');
-  WriteLn('========================================');
-  WriteLn('Test: ', TestName);
-  WriteLn('========================================');
-end;
+var
+  Runner: TSimpleTestRunner;
 
-procedure PrintTestResult(const TestName: string; Success: Boolean);
-begin
-  if Success then
-    WriteLn('[PASS] ', TestName)
-  else
-    WriteLn('[FAIL] ', TestName);
-end;
-
-// Test 1: EC Key Generation for Different Curves
-function Test_EC_KeyGeneration: Boolean;
+procedure TestECKeyGeneration;
 var
   key256, key384, key521: PEC_KEY;
 begin
-  PrintTestHeader('EC Key Generation');
-  Result := False;
-  
+  WriteLn;
+  WriteLn('=== EC Key Generation Tests ===');
+
   // Test secp256r1 (P-256)
-  Write('Testing secp256r1 key generation... ');
   key256 := EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-  if key256 = nil then
+  Runner.Check('Create P-256 key structure', key256 <> nil);
+
+  if key256 <> nil then
   begin
-    WriteLn('FAILED to create key');
-    Exit;
-  end;
-  
-  if EC_KEY_generate_key(key256) <> 1 then
-  begin
-    WriteLn('FAILED to generate key');
+    Runner.Check('Generate P-256 key', EC_KEY_generate_key(key256) = 1);
+    Runner.Check('Verify P-256 key', EC_KEY_check_key(key256) = 1);
     EC_KEY_free(key256);
-    Exit;
   end;
-  WriteLn('OK');
-  
-  // Verify key
-  Write('Verifying generated key... ');
-  if EC_KEY_check_key(key256) <> 1 then
-  begin
-    WriteLn('FAILED');
-    EC_KEY_free(key256);
-    Exit;
-  end;
-  WriteLn('OK');
-  EC_KEY_free(key256);
-  
+
   // Test secp384r1 (P-384)
-  Write('Testing secp384r1 key generation... ');
   key384 := EC_KEY_new_by_curve_name(NID_secp384r1);
-  if key384 = nil then
+  Runner.Check('Create P-384 key structure', key384 <> nil);
+
+  if key384 <> nil then
   begin
-    WriteLn('FAILED to create key');
-    Exit;
-  end;
-  
-  if EC_KEY_generate_key(key384) <> 1 then
-  begin
-    WriteLn('FAILED to generate key');
+    Runner.Check('Generate P-384 key', EC_KEY_generate_key(key384) = 1);
     EC_KEY_free(key384);
-    Exit;
   end;
-  WriteLn('OK');
-  EC_KEY_free(key384);
-  
+
   // Test secp521r1 (P-521)
-  Write('Testing secp521r1 key generation... ');
   key521 := EC_KEY_new_by_curve_name(NID_secp521r1);
-  if key521 = nil then
+  Runner.Check('Create P-521 key structure', key521 <> nil);
+
+  if key521 <> nil then
   begin
-    WriteLn('FAILED to create key');
-    Exit;
-  end;
-  
-  if EC_KEY_generate_key(key521) <> 1 then
-  begin
-    WriteLn('FAILED to generate key');
+    Runner.Check('Generate P-521 key', EC_KEY_generate_key(key521) = 1);
     EC_KEY_free(key521);
-    Exit;
   end;
-  WriteLn('OK');
-  EC_KEY_free(key521);
-  
-  Result := True;
-  PrintTestResult('EC Key Generation', Result);
 end;
 
-// Test 2: EC Key Copy and Duplication
-function Test_EC_KeyCopyDup: Boolean;
+procedure TestECKeyCopyDup;
 var
   key1, key2, key3: PEC_KEY;
 begin
-  PrintTestHeader('EC Key Copy and Duplication');
-  Result := False;
-  
-  // Create and generate key
-  Write('Creating original key... ');
+  WriteLn;
+  WriteLn('=== EC Key Copy/Dup Tests ===');
+
   key1 := EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-  if key1 = nil then
-  begin
-    WriteLn('FAILED');
-    Exit;
-  end;
-  
-  if EC_KEY_generate_key(key1) <> 1 then
-  begin
-    WriteLn('FAILED to generate');
-    EC_KEY_free(key1);
-    Exit;
-  end;
-  WriteLn('OK');
-  
+  if key1 = nil then begin Runner.Check('Create original key', False); Exit; end;
+  if EC_KEY_generate_key(key1) <> 1 then begin Runner.Check('Generate original key', False); EC_KEY_free(key1); Exit; end;
+  Runner.Check('Create and generate original key', True);
+
   // Test dup
-  Write('Testing EC_KEY_dup... ');
   key2 := EC_KEY_dup(key1);
-  if key2 = nil then
+  Runner.Check('EC_KEY_dup', key2 <> nil);
+  if key2 <> nil then
   begin
-    WriteLn('FAILED');
-    EC_KEY_free(key1);
-    Exit;
-  end;
-  
-  if EC_KEY_check_key(key2) <> 1 then
-  begin
-    WriteLn('FAILED verification');
-    EC_KEY_free(key1);
+    Runner.Check('Verify duplicated key', EC_KEY_check_key(key2) = 1);
     EC_KEY_free(key2);
-    Exit;
   end;
-  WriteLn('OK');
-  
+
   // Test copy
-  Write('Testing EC_KEY_copy... ');
   key3 := EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-  if key3 = nil then
+  Runner.Check('Create destination key', key3 <> nil);
+  if key3 <> nil then
   begin
-    WriteLn('FAILED to create destination');
-    EC_KEY_free(key1);
-    EC_KEY_free(key2);
-    Exit;
-  end;
-  
-  if EC_KEY_copy(key3, key1) = nil then
-  begin
-    WriteLn('FAILED copy');
-    EC_KEY_free(key1);
-    EC_KEY_free(key2);
+    Runner.Check('EC_KEY_copy', EC_KEY_copy(key3, key1) <> nil);
+    Runner.Check('Verify copied key', EC_KEY_check_key(key3) = 1);
     EC_KEY_free(key3);
-    Exit;
   end;
-  
-  if EC_KEY_check_key(key3) <> 1 then
-  begin
-    WriteLn('FAILED verification after copy');
-    EC_KEY_free(key1);
-    EC_KEY_free(key2);
-    EC_KEY_free(key3);
-    Exit;
-  end;
-  WriteLn('OK');
-  
+
   EC_KEY_free(key1);
-  EC_KEY_free(key2);
-  EC_KEY_free(key3);
-  
-  Result := True;
-  PrintTestResult('EC Key Copy and Duplication', Result);
 end;
 
-// Test 3: EC Group Operations
-function Test_EC_GroupOperations: Boolean;
+procedure TestECGroupOperations;
 var
   group: PEC_GROUP;
-  nid: Integer;
-  degree: Integer;
+  nid, degree: Integer;
   order, cofactor: PBIGNUM;
   ctx: PBN_CTX;
 begin
-  PrintTestHeader('EC Group Operations');
-  Result := False;
-  
-  // Create group
-  Write('Creating EC group (P-256)... ');
+  WriteLn;
+  WriteLn('=== EC Group Operations ===');
+
   group := EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
-  if group = nil then
-  begin
-    WriteLn('FAILED');
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  // Get curve name
-  Write('Getting curve NID... ');
+  Runner.Check('Create P-256 group', group <> nil);
+  if group = nil then Exit;
+
   nid := EC_GROUP_get_curve_name(group);
-  if nid <> NID_X9_62_prime256v1 then
-  begin
-    WriteLn('FAILED (expected ', NID_X9_62_prime256v1, ', got ', nid, ')');
-    EC_GROUP_free(group);
-    Exit;
-  end;
-  WriteLn('OK (NID=', nid, ')');
-  
-  // Get degree
-  Write('Getting curve degree... ');
+  Runner.Check('Get curve NID', nid = NID_X9_62_prime256v1, Format('NID=%d', [nid]));
+
   degree := EC_GROUP_get_degree(group);
-  if degree <= 0 then
+  Runner.Check('Get curve degree', degree > 0, Format('degree=%d bits', [degree]));
+
+  // 检查 BN 函数是否可用
+  if not Assigned(BN_CTX_new) or not Assigned(BN_new) then
   begin
-    WriteLn('FAILED');
+    Runner.Check('BN functions available', False, 'BN_CTX_new or BN_new not loaded');
     EC_GROUP_free(group);
     Exit;
   end;
-  WriteLn('OK (degree=', degree, ' bits)');
-  
-  // Get order
-  Write('Getting curve order... ');
+
   ctx := BN_CTX_new();
-  if ctx = nil then
-  begin
-    WriteLn('FAILED to create BN_CTX');
-    EC_GROUP_free(group);
-    Exit;
-  end;
-  
   order := BN_new();
-  if order = nil then
-  begin
-    WriteLn('FAILED to create BIGNUM for order');
-    BN_CTX_free(ctx);
-    EC_GROUP_free(group);
-    Exit;
-  end;
-  
-  if EC_GROUP_get_order(group, order, ctx) <> 1 then
-  begin
-    WriteLn('FAILED to get order');
-    BN_free(order);
-    BN_CTX_free(ctx);
-    EC_GROUP_free(group);
-    Exit;
-  end;
-  WriteLn('OK (order bits=', BN_num_bits(order), ')');
-  
-  // Get cofactor
-  Write('Getting curve cofactor... ');
   cofactor := BN_new();
-  if cofactor = nil then
+
+  if (ctx <> nil) and (order <> nil) and (cofactor <> nil) then
   begin
-    WriteLn('FAILED to create BIGNUM for cofactor');
-    BN_free(order);
-    BN_CTX_free(ctx);
-    EC_GROUP_free(group);
-    Exit;
-  end;
-  
-  if EC_GROUP_get_cofactor(group, cofactor, ctx) <> 1 then
-  begin
-    WriteLn('FAILED to get cofactor');
+    // 检查函数是否可用
+    if Assigned(EC_GROUP_get_order) then
+      Runner.Check('Get curve order', EC_GROUP_get_order(group, order, ctx) = 1,
+              Format('order bits=%d', [BN_num_bits(order)]))
+    else
+      Runner.Check('Get curve order', False, 'EC_GROUP_get_order not available');
+
+    if Assigned(EC_GROUP_get_cofactor) then
+      Runner.Check('Get curve cofactor', EC_GROUP_get_cofactor(group, cofactor, ctx) = 1,
+              Format('cofactor=%d', [BN_get_word(cofactor)]))
+    else
+      Runner.Check('Get curve cofactor', False, 'EC_GROUP_get_cofactor not available');
+
     BN_free(order);
     BN_free(cofactor);
     BN_CTX_free(ctx);
-    EC_GROUP_free(group);
-    Exit;
   end;
-  WriteLn('OK (cofactor=', BN_get_word(cofactor), ')');
-  
-  BN_free(order);
-  BN_free(cofactor);
-  BN_CTX_free(ctx);
+
   EC_GROUP_free(group);
-  
-  Result := True;
-  PrintTestResult('EC Group Operations', Result);
 end;
 
-// Test 4: EC Point Operations
-function Test_EC_PointOperations: Boolean;
+procedure TestECPointOperations;
 var
   group: PEC_GROUP;
   point1, point2, point3: PEC_POINT;
   ctx: PBN_CTX;
 begin
-  PrintTestHeader('EC Point Operations');
-  Result := False;
-  
-  // Create group and context
-  Write('Creating EC group and context... ');
+  WriteLn;
+  WriteLn('=== EC Point Operations ===');
+
   group := EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
-  if group = nil then
-  begin
-    WriteLn('FAILED to create group');
-    Exit;
-  end;
-  
   ctx := BN_CTX_new();
-  if ctx = nil then
+  if (group = nil) or (ctx = nil) then
   begin
-    WriteLn('FAILED to create context');
-    EC_GROUP_free(group);
+    Runner.Check('Create group and context', False);
+    if group <> nil then EC_GROUP_free(group);
+    if ctx <> nil then BN_CTX_free(ctx);
     Exit;
   end;
-  WriteLn('OK');
-  
-  // Create points
-  Write('Creating EC points... ');
+  Runner.Check('Create group and context', True);
+
   point1 := EC_POINT_new(group);
   point2 := EC_POINT_new(group);
   point3 := EC_POINT_new(group);
-  if (point1 = nil) or (point2 = nil) or (point3 = nil) then
+
+  Runner.Check('Create EC points', (point1 <> nil) and (point2 <> nil) and (point3 <> nil));
+
+  if (point1 <> nil) and (point2 <> nil) and (point3 <> nil) then
   begin
-    WriteLn('FAILED');
-    if point1 <> nil then EC_POINT_free(point1);
-    if point2 <> nil then EC_POINT_free(point2);
-    if point3 <> nil then EC_POINT_free(point3);
-    BN_CTX_free(ctx);
-    EC_GROUP_free(group);
-    Exit;
+    Runner.Check('EC_POINT_copy', EC_POINT_copy(point2, point1) = 1);
+    Runner.Check('EC_POINT_add', EC_POINT_add(group, point3, point1, point2, ctx) = 1);
+    Runner.Check('EC_POINT_dbl', EC_POINT_dbl(group, point3, point1, ctx) = 1);
   end;
-  WriteLn('OK');
-  
-  // Test point copy
-  Write('Testing EC_POINT_copy... ');
-  if EC_POINT_copy(point2, point1) <> 1 then
-  begin
-    WriteLn('FAILED');
-    EC_POINT_free(point1);
-    EC_POINT_free(point2);
-    EC_POINT_free(point3);
-    BN_CTX_free(ctx);
-    EC_GROUP_free(group);
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  // Test point addition
-  Write('Testing EC_POINT_add... ');
-  if EC_POINT_add(group, point3, point1, point2, ctx) <> 1 then
-  begin
-    WriteLn('FAILED');
-    EC_POINT_free(point1);
-    EC_POINT_free(point2);
-    EC_POINT_free(point3);
-    BN_CTX_free(ctx);
-    EC_GROUP_free(group);
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  // Test point doubling
-  Write('Testing EC_POINT_dbl... ');
-  if EC_POINT_dbl(group, point3, point1, ctx) <> 1 then
-  begin
-    WriteLn('FAILED');
-    EC_POINT_free(point1);
-    EC_POINT_free(point2);
-    EC_POINT_free(point3);
-    BN_CTX_free(ctx);
-    EC_GROUP_free(group);
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  EC_POINT_free(point1);
-  EC_POINT_free(point2);
-  EC_POINT_free(point3);
+
+  if point1 <> nil then EC_POINT_free(point1);
+  if point2 <> nil then EC_POINT_free(point2);
+  if point3 <> nil then EC_POINT_free(point3);
   BN_CTX_free(ctx);
   EC_GROUP_free(group);
-  
-  Result := True;
-  PrintTestResult('EC Point Operations', Result);
 end;
 
-// Test 5: EC Key Component Access
-function Test_EC_KeyComponentAccess: Boolean;
+procedure TestECKeyComponentAccess;
 var
   key: PEC_KEY;
   group: PEC_GROUP;
   priv_key: PBIGNUM;
   pub_key: PEC_POINT;
 begin
-  PrintTestHeader('EC Key Component Access');
-  Result := False;
-  
-  // Create and generate key
-  Write('Creating and generating key... ');
+  WriteLn;
+  WriteLn('=== EC Key Component Access ===');
+
   key := EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-  if key = nil then
-  begin
-    WriteLn('FAILED to create key');
-    Exit;
-  end;
-  
-  if EC_KEY_generate_key(key) <> 1 then
-  begin
-    WriteLn('FAILED to generate key');
-    EC_KEY_free(key);
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  // Access group
-  Write('Accessing EC group... ');
+  if key = nil then begin Runner.Check('Create key', False); Exit; end;
+  if EC_KEY_generate_key(key) <> 1 then begin Runner.Check('Generate key', False); EC_KEY_free(key); Exit; end;
+  Runner.Check('Create and generate key', True);
+
   group := EC_KEY_get0_group(key);
-  if group = nil then
-  begin
-    WriteLn('FAILED');
-    EC_KEY_free(key);
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  // Access private key
-  Write('Accessing private key... ');
+  Runner.Check('Access EC group', group <> nil);
+
   priv_key := EC_KEY_get0_private_key(key);
-  if priv_key = nil then
-  begin
-    WriteLn('FAILED');
-    EC_KEY_free(key);
-    Exit;
-  end;
-  WriteLn('OK (', BN_num_bits(priv_key), ' bits)');
-  
-  // Access public key
-  Write('Accessing public key... ');
+  Runner.Check('Access private key', priv_key <> nil, Format('%d bits', [BN_num_bits(priv_key)]));
+
   pub_key := EC_KEY_get0_public_key(key);
-  if pub_key = nil then
-  begin
-    WriteLn('FAILED');
-    EC_KEY_free(key);
-    Exit;
-  end;
-  WriteLn('OK');
-  
+  Runner.Check('Access public key', pub_key <> nil);
+
   EC_KEY_free(key);
-  
-  Result := True;
-  PrintTestResult('EC Key Component Access', Result);
 end;
 
-// Test 6: Multiple Curve Types
-function Test_EC_MultipleCurves: Boolean;
+procedure TestECMultipleCurves;
 var
   key: PEC_KEY;
   group: PEC_GROUP;
   nid: Integer;
-  
+
   procedure TestCurve(CurveNID: Integer; const CurveName: string);
   begin
-    Write('Testing curve ', CurveName, '... ');
     key := EC_KEY_new_by_curve_name(CurveNID);
-    if key = nil then
-    begin
-      WriteLn('FAILED to create key');
-      Exit;
-    end;
-    
-    if EC_KEY_generate_key(key) <> 1 then
-    begin
-      WriteLn('FAILED to generate key');
-      EC_KEY_free(key);
-      Exit;
-    end;
-    
-    if EC_KEY_check_key(key) <> 1 then
-    begin
-      WriteLn('FAILED validation');
-      EC_KEY_free(key);
-      Exit;
-    end;
-    
+    if key = nil then begin Runner.Check(CurveName + ' create', False); Exit; end;
+    if EC_KEY_generate_key(key) <> 1 then begin Runner.Check(CurveName + ' generate', False); EC_KEY_free(key); Exit; end;
+    if EC_KEY_check_key(key) <> 1 then begin Runner.Check(CurveName + ' validate', False); EC_KEY_free(key); Exit; end;
     group := EC_KEY_get0_group(key);
-    if group = nil then
-    begin
-      WriteLn('FAILED to get group');
-      EC_KEY_free(key);
-      Exit;
-    end;
-    
+    if group = nil then begin Runner.Check(CurveName + ' get group', False); EC_KEY_free(key); Exit; end;
     nid := EC_GROUP_get_curve_name(group);
-    if nid <> CurveNID then
-    begin
-      WriteLn('FAILED curve mismatch');
-      EC_KEY_free(key);
-      Exit;
-    end;
-    
-    WriteLn('OK');
+    Runner.Check(CurveName, nid = CurveNID);
     EC_KEY_free(key);
   end;
-  
+
 begin
-  PrintTestHeader('Multiple Curve Types');
-  Result := False;
-  
-  // NIST/SECG curves
+  WriteLn;
+  WriteLn('=== Multiple Curve Types ===');
+
   TestCurve(NID_X9_62_prime256v1, 'P-256 (prime256v1)');
   TestCurve(NID_secp384r1, 'P-384 (secp384r1)');
   TestCurve(NID_secp521r1, 'P-521 (secp521r1)');
   TestCurve(NID_secp256k1, 'secp256k1 (Bitcoin)');
-  
-  // Additional SECG curves
   TestCurve(NID_secp224r1, 'P-224 (secp224r1)');
-  
-  Result := True;
-  PrintTestResult('Multiple Curve Types', Result);
 end;
 
-// Test 7: EC Point Serialization
-function Test_EC_PointSerialization: Boolean;
+procedure TestECPointSerialization;
 var
   key: PEC_KEY;
   group: PEC_GROUP;
@@ -531,180 +254,74 @@ var
   buf_len: NativeUInt;
   ctx: PBN_CTX;
 begin
-  PrintTestHeader('EC Point Serialization');
-  Result := False;
-  
-  // Create and generate key
-  Write('Creating and generating key... ');
+  WriteLn;
+  WriteLn('=== EC Point Serialization ===');
+
   key := EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-  if key = nil then
-  begin
-    WriteLn('FAILED to create key');
-    Exit;
-  end;
-  
-  if EC_KEY_generate_key(key) <> 1 then
-  begin
-    WriteLn('FAILED to generate key');
-    EC_KEY_free(key);
-    Exit;
-  end;
-  WriteLn('OK');
-  
+  if key = nil then begin Runner.Check('Create key', False); Exit; end;
+  if EC_KEY_generate_key(key) <> 1 then begin Runner.Check('Generate key', False); EC_KEY_free(key); Exit; end;
+  Runner.Check('Create and generate key', True);
+
   group := EC_KEY_get0_group(key);
   pub_key := EC_KEY_get0_public_key(key);
-  
   ctx := BN_CTX_new();
-  if ctx = nil then
-  begin
-    WriteLn('FAILED to create context');
-    EC_KEY_free(key);
-    Exit;
-  end;
-  
-  // Serialize point to octet string
-  Write('Serializing public key point... ');
+
+  if ctx = nil then begin Runner.Check('Create context', False); EC_KEY_free(key); Exit; end;
+
+  // Serialize point
   buf_len := EC_POINT_point2oct(group, pub_key, POINT_CONVERSION_UNCOMPRESSED, @buf[0], SizeOf(buf), ctx);
-  if buf_len = 0 then
+  Runner.Check('Serialize public key point', buf_len > 0, Format('%d bytes', [buf_len]));
+
+  if buf_len > 0 then
   begin
-    WriteLn('FAILED');
-    BN_CTX_free(ctx);
-    EC_KEY_free(key);
-    Exit;
+    // Deserialize point
+    restored_point := EC_POINT_new(group);
+    if restored_point <> nil then
+    begin
+      Runner.Check('Deserialize public key point',
+              EC_POINT_oct2point(group, restored_point, @buf[0], buf_len, ctx) = 1);
+      Runner.Check('Compare original and restored points',
+              EC_POINT_cmp(group, pub_key, restored_point, ctx) = 0);
+      EC_POINT_free(restored_point);
+    end;
   end;
-  WriteLn('OK (', buf_len, ' bytes)');
-  
-  // Deserialize point from octet string
-  Write('Deserializing public key point... ');
-  restored_point := EC_POINT_new(group);
-  if restored_point = nil then
-  begin
-    WriteLn('FAILED to create point');
-    BN_CTX_free(ctx);
-    EC_KEY_free(key);
-    Exit;
-  end;
-  
-  if EC_POINT_oct2point(group, restored_point, @buf[0], buf_len, ctx) <> 1 then
-  begin
-    WriteLn('FAILED');
-    EC_POINT_free(restored_point);
-    BN_CTX_free(ctx);
-    EC_KEY_free(key);
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  // Compare points
-  Write('Comparing original and restored points... ');
-  if EC_POINT_cmp(group, pub_key, restored_point, ctx) <> 0 then
-  begin
-    WriteLn('FAILED (points differ)');
-    EC_POINT_free(restored_point);
-    BN_CTX_free(ctx);
-    EC_KEY_free(key);
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  EC_POINT_free(restored_point);
+
   BN_CTX_free(ctx);
   EC_KEY_free(key);
-  
-  Result := True;
-  PrintTestResult('EC Point Serialization', Result);
 end;
 
-var
-  PassedTests, TotalTests: Integer;
-  
 begin
   WriteLn('EC Module Integration Test');
   WriteLn('==========================');
-  WriteLn('');
-  
-  // Initialize OpenSSL Core
-  Write('Initializing OpenSSL Core... ');
+  WriteLn;
+
+  Runner := TSimpleTestRunner.Create;
   try
-    LoadOpenSSLCore;
-    WriteLn('OK (', GetOpenSSLVersionString, ')');
-  except
-    on E: Exception do
+    Runner.RequireModules([osmCore, osmBN, osmEC]);
+
+    if not Runner.Initialize then
     begin
-      WriteLn('FAILED');
-      WriteLn('Error: ', E.Message);
-      ExitCode := 1;
-      Exit;
+      WriteLn('ERROR: Failed to initialize test environment');
+      Halt(1);
     end;
+
+    // 确保 BN 和 EC 函数已加载
+    LoadOpenSSLBN;
+    LoadECFunctions(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto));
+
+    WriteLn('OpenSSL Version: ', GetOpenSSLVersionString);
+
+    TestECKeyGeneration;
+    TestECKeyCopyDup;
+    TestECGroupOperations;
+    TestECPointOperations;
+    TestECKeyComponentAccess;
+    TestECMultipleCurves;
+    TestECPointSerialization;
+
+    Runner.PrintSummary;
+    Halt(Runner.FailCount);
+  finally
+    Runner.Free;
   end;
-  
-  // Load EC functions
-  Write('Loading EC functions... ');
-  if not LoadECFunctions(GetCryptoLibHandle) then
-  begin
-    WriteLn('FAILED');
-    WriteLn('Error: Could not load EC functions');
-    UnloadOpenSSLCore;
-    ExitCode := 1;
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  // Load BN functions
-  Write('Loading BN functions... ');
-  if not LoadOpenSSLBN then
-  begin
-    WriteLn('FAILED');
-    WriteLn('Error: Could not load BN functions');
-    UnloadOpenSSLCore;
-    ExitCode := 1;
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  PassedTests := 0;
-  TotalTests := 7;
-  
-  try
-    // Run all tests
-    if Test_EC_KeyGeneration then Inc(PassedTests);
-    if Test_EC_KeyCopyDup then Inc(PassedTests);
-    if Test_EC_GroupOperations then Inc(PassedTests);
-    if Test_EC_PointOperations then Inc(PassedTests);
-    if Test_EC_KeyComponentAccess then Inc(PassedTests);
-    if Test_EC_MultipleCurves then Inc(PassedTests);
-    if Test_EC_PointSerialization then Inc(PassedTests);
-    
-  except
-    on E: Exception do
-    begin
-      WriteLn('');
-      WriteLn('EXCEPTION: ', E.ClassName, ': ', E.Message);
-    end;
-  end;
-  
-  // Summary
-  WriteLn('');
-  WriteLn('========================================');
-  WriteLn('Test Summary');
-  WriteLn('========================================');
-  WriteLn('Total tests: ', TotalTests);
-  WriteLn('Passed: ', PassedTests);
-  WriteLn('Failed: ', TotalTests - PassedTests);
-  WriteLn('Success rate: ', (PassedTests * 100) div TotalTests, '%');
-  
-  if PassedTests = TotalTests then
-  begin
-    WriteLn('');
-    WriteLn('ALL TESTS PASSED!');
-    ExitCode := 0;
-  end
-  else
-  begin
-    WriteLn('');
-    WriteLn('SOME TESTS FAILED!');
-    ExitCode := 1;
-  end;
-  
-  UnloadOpenSSLCore;
 end.

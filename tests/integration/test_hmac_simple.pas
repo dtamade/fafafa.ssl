@@ -1,5 +1,10 @@
 program test_hmac_simple;
 
+{******************************************************************************}
+{  HMAC Simple Integration Tests                                               }
+{  Migrated to use TSimpleTestRunner framework (P1-2.2)                        }
+{******************************************************************************}
+
 {$mode objfpc}{$H+}
 
 uses
@@ -8,23 +13,12 @@ uses
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
-  fafafa.ssl.openssl.api.hmac;
+  fafafa.ssl.openssl.api.hmac,
+  fafafa.ssl.openssl.loader,
+  test_openssl_base;
 
-procedure PrintTestHeader(const TestName: string);
-begin
-  WriteLn('');
-  WriteLn('========================================');
-  WriteLn('Test: ', TestName);
-  WriteLn('========================================');
-end;
-
-procedure PrintTestResult(const TestName: string; Success: Boolean);
-begin
-  if Success then
-    WriteLn('[PASS] ', TestName)
-  else
-    WriteLn('[FAIL] ', TestName);
-end;
+var
+  Runner: TSimpleTestRunner;
 
 function BytesToHex(const data: array of Byte; len: Integer): string;
 var
@@ -35,521 +29,274 @@ begin
     Result := Result + LowerCase(IntToHex(data[i], 2));
 end;
 
-// Test 1: HMAC-SHA1 One-Shot
-function Test_HMAC_SHA1_OneShot: Boolean;
+procedure TestHMACSHA1OneShot;
 var
-  key: AnsiString;
-  data: AnsiString;
-  digest: array[0..19] of Byte; // SHA1 = 20 bytes
+  key, data: AnsiString;
+  digest: array[0..19] of Byte;
   result_ptr: PByte;
-  hex_digest: string;
-  expected: string;
+  hex_digest, expected: string;
 begin
-  PrintTestHeader('HMAC-SHA1 One-Shot');
-  Result := False;
-  
+  WriteLn;
+  WriteLn('=== HMAC-SHA1 One-Shot ===');
+
   key := 'secret';
   data := 'Hello World!';
-  expected := '5efed98b0787c83f9cb0135ba283c390ca49320e'; // Calculated by OpenSSL
-  
-  Write('Computing HMAC-SHA1... ');
+  expected := '5efed98b0787c83f9cb0135ba283c390ca49320e';
+
   FillChar(digest, SizeOf(digest), 0);
   result_ptr := HMAC_SHA1(@key[1], Length(key), @data[1], Length(data), @digest[0]);
-  if result_ptr = nil then
+  Runner.Check('Compute HMAC-SHA1', result_ptr <> nil);
+
+  if result_ptr <> nil then
   begin
-    WriteLn('FAILED (HMAC returned nil)');
-    Exit;
+    hex_digest := BytesToHex(digest, 20);
+    Runner.Check('Verify HMAC-SHA1 digest', hex_digest = expected,
+            Format('got: %s', [hex_digest]));
   end;
-  WriteLn('OK');
-  
-  hex_digest := BytesToHex(digest, 20);
-  WriteLn('HMAC-SHA1 digest: ', hex_digest);
-  WriteLn('Expected:         ', expected);
-  
-  Write('Verifying digest... ');
-  if hex_digest = expected then
-  begin
-    WriteLn('OK (match)');
-    Result := True;
-  end
-  else
-  begin
-    WriteLn('FAILED (mismatch)');
-  end;
-  
-  PrintTestResult('HMAC-SHA1 One-Shot', Result);
 end;
 
-// Test 2: HMAC-SHA256 One-Shot
-function Test_HMAC_SHA256_OneShot: Boolean;
+procedure TestHMACSHA256OneShot;
 var
-  key: AnsiString;
-  data: AnsiString;
-  digest: array[0..31] of Byte; // SHA256 = 32 bytes
+  key, data: AnsiString;
+  digest: array[0..31] of Byte;
   result_ptr: PByte;
-  hex_digest: string;
-  expected: string;
+  hex_digest, expected: string;
 begin
-  PrintTestHeader('HMAC-SHA256 One-Shot');
-  Result := False;
-  
+  WriteLn;
+  WriteLn('=== HMAC-SHA256 One-Shot ===');
+
   key := 'secret';
   data := 'Hello World!';
-  expected := '6fa7b4dea28ee348df10f9bb595ad985ff150a4adfd6131cca677d9acee07dc6'; // Calculated by OpenSSL
-  
-  Write('Computing HMAC-SHA256... ');
+  expected := '6fa7b4dea28ee348df10f9bb595ad985ff150a4adfd6131cca677d9acee07dc6';
+
   FillChar(digest, SizeOf(digest), 0);
   result_ptr := HMAC_SHA256(@key[1], Length(key), @data[1], Length(data), @digest[0]);
-  if result_ptr = nil then
+  Runner.Check('Compute HMAC-SHA256', result_ptr <> nil);
+
+  if result_ptr <> nil then
   begin
-    WriteLn('FAILED (HMAC returned nil)');
-    Exit;
+    hex_digest := BytesToHex(digest, 32);
+    Runner.Check('Verify HMAC-SHA256 digest', hex_digest = expected,
+            Format('got: %s', [hex_digest]));
   end;
-  WriteLn('OK');
-  
-  hex_digest := BytesToHex(digest, 32);
-  WriteLn('HMAC-SHA256 digest: ', hex_digest);
-  WriteLn('Expected:           ', expected);
-  
-  Write('Verifying digest... ');
-  if hex_digest = expected then
-  begin
-    WriteLn('OK (match)');
-    Result := True;
-  end
-  else
-  begin
-    WriteLn('FAILED (mismatch)');
-  end;
-  
-  PrintTestResult('HMAC-SHA256 One-Shot', Result);
 end;
 
-// Test 3: HMAC-SHA512 One-Shot
-function Test_HMAC_SHA512_OneShot: Boolean;
+procedure TestHMACSHA512OneShot;
 var
-  key: AnsiString;
-  data: AnsiString;
-  digest: array[0..63] of Byte; // SHA512 = 64 bytes
+  key, data: AnsiString;
+  digest: array[0..63] of Byte;
   result_ptr: PByte;
   hex_digest: string;
 begin
-  PrintTestHeader('HMAC-SHA512 One-Shot');
-  Result := False;
-  
+  WriteLn;
+  WriteLn('=== HMAC-SHA512 One-Shot ===');
+
   key := 'secret';
   data := 'Hello World!';
-  
-  Write('Computing HMAC-SHA512... ');
+
   FillChar(digest, SizeOf(digest), 0);
   result_ptr := HMAC_SHA512(@key[1], Length(key), @data[1], Length(data), @digest[0]);
-  if result_ptr = nil then
+  Runner.Check('Compute HMAC-SHA512', result_ptr <> nil);
+
+  if result_ptr <> nil then
   begin
-    WriteLn('FAILED (HMAC returned nil)');
-    Exit;
+    hex_digest := BytesToHex(digest, 64);
+    Runner.Check('Verify HMAC-SHA512 length', Length(hex_digest) = 128,
+            Format('%d bytes', [Length(hex_digest) div 2]));
   end;
-  WriteLn('OK');
-  
-  hex_digest := BytesToHex(digest, 64);
-  WriteLn('HMAC-SHA512 digest: ', Copy(hex_digest, 1, 64), '...');
-  WriteLn('                    (', Length(hex_digest), ' hex chars = ', Length(hex_digest) div 2, ' bytes)');
-  
-  Write('Verifying digest length... ');
-  if Length(hex_digest) = 128 then // 64 bytes * 2 hex chars
-  begin
-    WriteLn('OK (64 bytes)');
-    Result := True;
-  end
-  else
-  begin
-    WriteLn('FAILED (expected 64 bytes, got ', Length(hex_digest) div 2, ')');
-  end;
-  
-  PrintTestResult('HMAC-SHA512 One-Shot', Result);
 end;
 
-// Test 4: HMAC Context-Based (Init, Update, Final)
-function Test_HMAC_Context_Based: Boolean;
+procedure TestHMACContextBased;
 var
   ctx: PHMAC_CTX;
-  key: AnsiString;
-  data1, data2, data3: AnsiString;
-  digest: array[0..31] of Byte; // SHA256
+  key, data1, data2, data3: AnsiString;
+  digest: array[0..31] of Byte;
   digest_len: Cardinal;
   hex_digest: string;
 begin
-  PrintTestHeader('HMAC Context-Based (Init, Update, Final)');
-  Result := False;
-  
+  WriteLn;
+  WriteLn('=== HMAC Context-Based ===');
+
   key := 'secret';
   data1 := 'Hello ';
   data2 := 'World';
   data3 := '!';
-  
-  Write('Creating HMAC context... ');
+
   ctx := HMAC_CTX_new();
-  if ctx = nil then
-  begin
-    WriteLn('FAILED');
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  Write('Initializing HMAC-SHA256... ');
-  if HMAC_Init_ex(ctx, @key[1], Length(key), EVP_sha256(), nil) <> 1 then
-  begin
-    WriteLn('FAILED');
-    HMAC_CTX_free(ctx);
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  Write('Updating HMAC (part 1)... ');
-  if HMAC_Update(ctx, @data1[1], Length(data1)) <> 1 then
-  begin
-    WriteLn('FAILED');
-    HMAC_CTX_free(ctx);
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  Write('Updating HMAC (part 2)... ');
-  if HMAC_Update(ctx, @data2[1], Length(data2)) <> 1 then
-  begin
-    WriteLn('FAILED');
-    HMAC_CTX_free(ctx);
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  Write('Updating HMAC (part 3)... ');
-  if HMAC_Update(ctx, @data3[1], Length(data3)) <> 1 then
-  begin
-    WriteLn('FAILED');
-    HMAC_CTX_free(ctx);
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  Write('Finalizing HMAC... ');
+  Runner.Check('Create HMAC context', ctx <> nil);
+  if ctx = nil then Exit;
+
+  Runner.Check('Initialize HMAC-SHA256',
+          HMAC_Init_ex(ctx, @key[1], Length(key), EVP_sha256(), nil) = 1);
+
+  Runner.Check('Update HMAC (part 1)', HMAC_Update(ctx, @data1[1], Length(data1)) = 1);
+  Runner.Check('Update HMAC (part 2)', HMAC_Update(ctx, @data2[1], Length(data2)) = 1);
+  Runner.Check('Update HMAC (part 3)', HMAC_Update(ctx, @data3[1], Length(data3)) = 1);
+
   FillChar(digest, SizeOf(digest), 0);
   digest_len := 0;
-  if HMAC_Final(ctx, @digest[0], @digest_len) <> 1 then
-  begin
-    WriteLn('FAILED');
-    HMAC_CTX_free(ctx);
-    Exit;
-  end;
-  WriteLn('OK (digest length: ', digest_len, ' bytes)');
-  
+  Runner.Check('Finalize HMAC', HMAC_Final(ctx, @digest[0], @digest_len) = 1);
+  Runner.Check('Digest length', digest_len = 32, Format('%d bytes', [digest_len]));
+
   hex_digest := BytesToHex(digest, digest_len);
-  WriteLn('HMAC-SHA256 digest: ', hex_digest);
-  
-  // Should match the one-shot version with "Hello World!"
-  Write('Comparing with one-shot version... ');
-  if hex_digest = '6fa7b4dea28ee348df10f9bb595ad985ff150a4adfd6131cca677d9acee07dc6' then
-  begin
-    WriteLn('OK (match)');
-    Result := True;
-  end
-  else
-  begin
-    WriteLn('FAILED (mismatch)');
-  end;
-  
+  Runner.Check('Compare with one-shot',
+          hex_digest = '6fa7b4dea28ee348df10f9bb595ad985ff150a4adfd6131cca677d9acee07dc6');
+
   HMAC_CTX_free(ctx);
-  PrintTestResult('HMAC Context-Based', Result);
 end;
 
-// Test 5: HMAC Context Reset
-function Test_HMAC_Context_Reset: Boolean;
+procedure TestHMACContextReset;
 var
   ctx: PHMAC_CTX;
-  key: AnsiString;
-  data: AnsiString;
+  key, data: AnsiString;
   digest1, digest2: array[0..31] of Byte;
   digest_len: Cardinal;
   hex1, hex2: string;
 begin
-  PrintTestHeader('HMAC Context Reset');
-  Result := False;
-  
+  WriteLn;
+  WriteLn('=== HMAC Context Reset ===');
+
   key := 'secret';
   data := 'Test Data';
-  
-  Write('Creating HMAC context... ');
+
   ctx := HMAC_CTX_new();
-  if ctx = nil then
-  begin
-    WriteLn('FAILED');
-    Exit;
-  end;
-  WriteLn('OK');
-  
+  Runner.Check('Create HMAC context', ctx <> nil);
+  if ctx = nil then Exit;
+
   // First computation
-  Write('First HMAC computation... ');
   HMAC_Init_ex(ctx, @key[1], Length(key), EVP_sha256(), nil);
   HMAC_Update(ctx, @data[1], Length(data));
   FillChar(digest1, SizeOf(digest1), 0);
   digest_len := 0;
   HMAC_Final(ctx, @digest1[0], @digest_len);
   hex1 := BytesToHex(digest1, digest_len);
-  WriteLn('OK');
-  WriteLn('First digest:  ', hex1);
-  
+  Runner.Check('First HMAC computation', True);
+
   // Reset context
-  Write('Resetting HMAC context... ');
-  if HMAC_CTX_reset(ctx) <> 1 then
-  begin
-    WriteLn('FAILED');
-    HMAC_CTX_free(ctx);
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  // Second computation (should produce the same result)
-  Write('Second HMAC computation... ');
+  Runner.Check('Reset HMAC context', HMAC_CTX_reset(ctx) = 1);
+
+  // Second computation
   HMAC_Init_ex(ctx, @key[1], Length(key), EVP_sha256(), nil);
   HMAC_Update(ctx, @data[1], Length(data));
   FillChar(digest2, SizeOf(digest2), 0);
   digest_len := 0;
   HMAC_Final(ctx, @digest2[0], @digest_len);
   hex2 := BytesToHex(digest2, digest_len);
-  WriteLn('OK');
-  WriteLn('Second digest: ', hex2);
-  
-  Write('Comparing digests... ');
-  if hex1 = hex2 then
-  begin
-    WriteLn('OK (match)');
-    Result := True;
-  end
-  else
-  begin
-    WriteLn('FAILED (mismatch)');
-  end;
-  
+  Runner.Check('Second HMAC computation', True);
+
+  Runner.Check('Digests match after reset', hex1 = hex2);
+
   HMAC_CTX_free(ctx);
-  PrintTestResult('HMAC Context Reset', Result);
 end;
 
-// Test 6: HMAC Context Copy
-function Test_HMAC_Context_Copy: Boolean;
+procedure TestHMACContextCopy;
 var
   ctx1, ctx2: PHMAC_CTX;
-  key: AnsiString;
-  data1, data2: AnsiString;
+  key, data1, data2: AnsiString;
   digest1, digest2: array[0..31] of Byte;
   digest_len: Cardinal;
   hex1, hex2: string;
 begin
-  PrintTestHeader('HMAC Context Copy');
-  Result := False;
-  
+  WriteLn;
+  WriteLn('=== HMAC Context Copy ===');
+
   key := 'secret';
   data1 := 'Part 1 ';
   data2 := 'Part 2';
-  
-  Write('Creating HMAC contexts... ');
+
   ctx1 := HMAC_CTX_new();
   ctx2 := HMAC_CTX_new();
+  Runner.Check('Create HMAC contexts', (ctx1 <> nil) and (ctx2 <> nil));
   if (ctx1 = nil) or (ctx2 = nil) then
   begin
-    WriteLn('FAILED');
     if ctx1 <> nil then HMAC_CTX_free(ctx1);
     if ctx2 <> nil then HMAC_CTX_free(ctx2);
     Exit;
   end;
-  WriteLn('OK');
-  
-  Write('Initializing and updating first context... ');
+
   HMAC_Init_ex(ctx1, @key[1], Length(key), EVP_sha256(), nil);
   HMAC_Update(ctx1, @data1[1], Length(data1));
-  WriteLn('OK');
-  
-  Write('Copying context... ');
-  if HMAC_CTX_copy(ctx2, ctx1) <> 1 then
-  begin
-    WriteLn('FAILED');
-    HMAC_CTX_free(ctx1);
-    HMAC_CTX_free(ctx2);
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  // Complete both contexts with the same data
-  Write('Completing both contexts... ');
+  Runner.Check('Initialize and update first context', True);
+
+  Runner.Check('Copy context', HMAC_CTX_copy(ctx2, ctx1) = 1);
+
+  // Complete both contexts
   HMAC_Update(ctx1, @data2[1], Length(data2));
   HMAC_Update(ctx2, @data2[1], Length(data2));
-  
+
   FillChar(digest1, SizeOf(digest1), 0);
   FillChar(digest2, SizeOf(digest2), 0);
   digest_len := 0;
-  
+
   HMAC_Final(ctx1, @digest1[0], @digest_len);
   hex1 := BytesToHex(digest1, digest_len);
-  
   digest_len := 0;
   HMAC_Final(ctx2, @digest2[0], @digest_len);
   hex2 := BytesToHex(digest2, digest_len);
-  WriteLn('OK');
-  
-  WriteLn('First context digest:  ', hex1);
-  WriteLn('Second context digest: ', hex2);
-  
-  Write('Comparing digests... ');
-  if hex1 = hex2 then
-  begin
-    WriteLn('OK (match)');
-    Result := True;
-  end
-  else
-  begin
-    WriteLn('FAILED (mismatch)');
-  end;
-  
+
+  Runner.Check('Digests match after copy', hex1 = hex2);
+
   HMAC_CTX_free(ctx1);
   HMAC_CTX_free(ctx2);
-  PrintTestResult('HMAC Context Copy', Result);
 end;
 
-// Test 7: HMAC Size Query
-function Test_HMAC_Size: Boolean;
+procedure TestHMACSize;
 var
   ctx: PHMAC_CTX;
   key: AnsiString;
   size: size_t;
 begin
-  PrintTestHeader('HMAC Size Query');
-  Result := False;
-  
+  WriteLn;
+  WriteLn('=== HMAC Size Query ===');
+
   key := 'secret';
-  
-  Write('Creating HMAC context... ');
+
   ctx := HMAC_CTX_new();
-  if ctx = nil then
-  begin
-    WriteLn('FAILED');
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  Write('Initializing with SHA256... ');
+  Runner.Check('Create HMAC context', ctx <> nil);
+  if ctx = nil then Exit;
+
   HMAC_Init_ex(ctx, @key[1], Length(key), EVP_sha256(), nil);
-  WriteLn('OK');
-  
-  Write('Querying HMAC size... ');
   size := HMAC_size(ctx);
-  WriteLn('OK (size: ', size, ' bytes)');
-  
-  Write('Verifying size... ');
-  if size = 32 then // SHA256 = 32 bytes
-  begin
-    WriteLn('OK (32 bytes for SHA256)');
-    Result := True;
-  end
-  else
-  begin
-    WriteLn('FAILED (expected 32, got ', size, ')');
-  end;
-  
+  Runner.Check('Query HMAC size', size = 32, Format('%d bytes for SHA256', [size]));
+
   HMAC_CTX_free(ctx);
-  PrintTestResult('HMAC Size Query', Result);
 end;
 
-var
-  PassedTests, TotalTests: Integer;
-  
 begin
   WriteLn('HMAC Module Integration Test');
   WriteLn('=============================');
-  WriteLn('');
-  
-  // Initialize OpenSSL Core
-  Write('Initializing OpenSSL Core... ');
+  WriteLn;
+
+  Runner := TSimpleTestRunner.Create;
   try
-    LoadOpenSSLCore;
-    WriteLn('OK (', GetOpenSSLVersionString, ')');
-  except
-    on E: Exception do
+    Runner.RequireModules([osmCore, osmEVP]);
+
+    if not Runner.Initialize then
     begin
-      WriteLn('FAILED');
-      WriteLn('Error: ', E.Message);
-      ExitCode := 1;
-      Exit;
+      WriteLn('ERROR: Failed to initialize test environment');
+      Halt(1);
     end;
-  end;
-  
-  // Load EVP functions (required for hash algorithms)
-  Write('Loading EVP functions... ');
-  if not LoadEVP(GetCryptoLibHandle) then
-  begin
-    WriteLn('FAILED');
-    WriteLn('Error: Could not load EVP functions');
-    UnloadOpenSSLCore;
-    ExitCode := 1;
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  // Load HMAC functions
-  Write('Loading HMAC functions... ');
-  if not LoadOpenSSLHMAC then
-  begin
-    WriteLn('FAILED');
-    WriteLn('Error: Could not load HMAC functions');
-    UnloadEVP;
-    UnloadOpenSSLCore;
-    ExitCode := 1;
-    Exit;
-  end;
-  WriteLn('OK');
-  
-  PassedTests := 0;
-  TotalTests := 7;
-  
-  try
-    // Run all tests
-    if Test_HMAC_SHA1_OneShot then Inc(PassedTests);
-    if Test_HMAC_SHA256_OneShot then Inc(PassedTests);
-    if Test_HMAC_SHA512_OneShot then Inc(PassedTests);
-    if Test_HMAC_Context_Based then Inc(PassedTests);
-    if Test_HMAC_Context_Reset then Inc(PassedTests);
-    if Test_HMAC_Context_Copy then Inc(PassedTests);
-    if Test_HMAC_Size then Inc(PassedTests);
-    
-  except
-    on E: Exception do
+
+    // Load HMAC functions
+    if not LoadOpenSSLHMAC then
     begin
-      WriteLn('');
-      WriteLn('EXCEPTION: ', E.ClassName, ': ', E.Message);
+      WriteLn('ERROR: Failed to load HMAC functions');
+      Halt(1);
     end;
+
+    WriteLn('OpenSSL Version: ', GetOpenSSLVersionString);
+
+    TestHMACSHA1OneShot;
+    TestHMACSHA256OneShot;
+    TestHMACSHA512OneShot;
+    TestHMACContextBased;
+    TestHMACContextReset;
+    TestHMACContextCopy;
+    TestHMACSize;
+
+    Runner.PrintSummary;
+    Halt(Runner.FailCount);
+  finally
+    Runner.Free;
   end;
-  
-  // Summary
-  WriteLn('');
-  WriteLn('========================================');
-  WriteLn('Test Summary');
-  WriteLn('========================================');
-  WriteLn('Total tests: ', TotalTests);
-  WriteLn('Passed: ', PassedTests);
-  WriteLn('Failed: ', TotalTests - PassedTests);
-  WriteLn('Success rate: ', (PassedTests * 100) div TotalTests, '%');
-  
-  if PassedTests = TotalTests then
-  begin
-    WriteLn('');
-    WriteLn('ALL TESTS PASSED!');
-    ExitCode := 0;
-  end
-  else
-  begin
-    WriteLn('');
-    WriteLn('SOME TESTS FAILED!');
-    ExitCode := 1;
-  end;
-  
-  UnloadOpenSSLHMAC;
-  UnloadEVP;
-  UnloadOpenSSLCore;
 end.

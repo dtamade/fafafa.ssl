@@ -451,27 +451,24 @@ begin
     Exit;
   end;
 
-  // 尝试加载所需模块
+  // 尝试加载所需模块 - 始终调用加载函数，让模块自己检查是否已加载
   for M in FRequiredModules do
   begin
-    if not TOpenSSLLoader.IsModuleLoaded(M) then
-    begin
-      // 尝试加载模块
-      case M of
-        osmCore: LoadOpenSSLCore;
-        osmBN: LoadOpenSSLBN;
-        osmRSA: LoadOpenSSLRSA;
-        osmDSA: LoadOpenSSLDSA;
-        osmEVP: LoadEVP(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto));
-        osmSSL: LoadOpenSSLSSL;
-        osmX509: LoadOpenSSLX509;
-        osmPEM: LoadOpenSSLPEM(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto));
-        osmBIO: LoadOpenSSLBIO;
-        osmASN1: LoadOpenSSLASN1(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto));
-        osmEC: LoadECFunctions(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto));
-        osmRAND: LoadOpenSSLRAND;
-        // 其他模块可以根据需要添加
-      end;
+    // 每个模块的加载函数会自己检查是否已加载，所以这里直接调用
+    case M of
+      osmCore: LoadOpenSSLCore;
+      osmBN: LoadOpenSSLBN;
+      osmRSA: LoadOpenSSLRSA;
+      osmDSA: LoadOpenSSLDSA;
+      osmEVP: LoadEVP(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto));
+      osmSSL: LoadOpenSSLSSL;
+      osmX509: LoadOpenSSLX509;
+      osmPEM: LoadOpenSSLPEM(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto));
+      osmBIO: LoadOpenSSLBIO;
+      osmASN1: LoadOpenSSLASN1(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto));
+      osmEC: LoadECFunctions(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto));
+      osmRAND: LoadOpenSSLRAND;
+      // 其他模块可以根据需要添加
     end;
   end;
 
