@@ -20,7 +20,8 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.errors,
-  fafafa.ssl.logging;
+  fafafa.ssl.logging,
+  fafafa.ssl.memutils;  // P0 安全修复：使用安全内存清零
 
 type
   { Secure string - automatically zeroes memory on destruction }
@@ -165,8 +166,9 @@ end;
 
 procedure TSecureString.ZeroMemory;
 begin
+  // P0 安全修复：使用安全内存清零，防止编译器优化掉清零操作
   if (FData <> nil) and (FLength > 0) then
-    FillChar(FData^, FLength, 0);
+    SecureZeroMemory(FData, FLength);
 end;
 
 function TSecureString.ToString: string;
@@ -206,8 +208,9 @@ var
 begin
   LRandom := TSecureRandom.Generate(ASize);
   Result := TSecureBytes.Create(LRandom);
-  // Zero the temporary array
-  FillChar(LRandom[0], System.Length(LRandom), 0);
+  // P0 安全修复：使用安全内存清零
+  if System.Length(LRandom) > 0 then
+    SecureZeroMemory(@LRandom[0], System.Length(LRandom));
 end;
 
 class operator TSecureBytes.Initialize(var ARecord: TSecureBytes);
@@ -254,8 +257,9 @@ end;
 
 procedure TSecureBytes.ZeroMemory;
 begin
+  // P0 安全修复：使用安全内存清零，防止编译器优化掉清零操作
   if (FData <> nil) and (FLength > 0) then
-    FillChar(FData^, FLength, 0);
+    SecureZeroMemory(FData, FLength);
 end;
 
 function TSecureBytes.ToBytes: TBytes;
@@ -347,7 +351,8 @@ begin
   try
     Result := AMin + Integer((PCardinal(@LRandom[0])^ mod (LRange + 1)));
   finally
-    FillChar(LRandom[0], 4, 0);
+    // P0 安全修复：使用安全内存清零
+    SecureZeroMemory(@LRandom[0], 4);
   end;
 end;
 
@@ -358,26 +363,44 @@ end;
 
 { Constant-time operations }
 
+{ P1 安全修复：常量时间字节数组比较
+  修复时序攻击漏洞：
+  1. 始终迭代最大长度，避免提前退出泄露长度信息
+  2. 使用 XOR 累积差异，确保时间与数据无关
+}
 function SecureCompare(const A, B: TBytes): Boolean;
 var
-  I, LMinLen: Integer;
+  I, LMaxLen: Integer;
   LDiff: Byte;
+  ByteA, ByteB: Byte;
 begin
   LDiff := 0;
-  
-  // Compare lengths in constant time
-  LDiff := LDiff or Byte(System.Length(A) xor System.Length(B));
-  
-  // Use minimum length for comparison
-  if System.Length(A) < System.Length(B) then
-    LMinLen := System.Length(A)
+
+  // 获取最大长度 - 始终迭代最大长度防止时序泄露
+  if System.Length(A) > System.Length(B) then
+    LMaxLen := System.Length(A)
   else
-    LMinLen := System.Length(B);
-  
-  // Constant-time byte comparison
-  for I := 0 to LMinLen - 1 do
-    LDiff := LDiff or (A[I] xor B[I]);
-  
+    LMaxLen := System.Length(B);
+
+  // 常量时间比较：对超出边界的位置使用 0
+  for I := 0 to LMaxLen - 1 do
+  begin
+    // 获取字节或 0（如果超出范围）- 常量时间选择
+    if I < System.Length(A) then
+      ByteA := A[I]
+    else
+      ByteA := 0;
+
+    if I < System.Length(B) then
+      ByteB := B[I]
+    else
+      ByteB := 0;
+
+    // XOR 并累积差异
+    LDiff := LDiff or (ByteA xor ByteB);
+  end;
+
+  // 长度差异需要单独检查（因为 0 xor 0 = 0）
   Result := (LDiff = 0) and (System.Length(A) = System.Length(B));
 end;
 
@@ -419,23 +442,37 @@ begin
   Result := (LDiff = 0);
 end;
 
+{ P1 安全修复：常量时间 TSecureBytes 比较 }
 function SecureCompareSecure(const A, B: TSecureBytes): Boolean;
 var
-  I, LMinLen: Integer;
+  I, LMaxLen: Integer;
   LDiff: Byte;
+  ByteA, ByteB: Byte;
 begin
   LDiff := 0;
-  
-  LDiff := LDiff or Byte(A.Size xor B.Size);
-  
-  if A.Size < B.Size then
-    LMinLen := A.Size
+
+  // 获取最大长度 - 始终迭代最大长度防止时序泄露
+  if A.Size > B.Size then
+    LMaxLen := A.Size
   else
-    LMinLen := B.Size;
-  
-  for I := 0 to LMinLen - 1 do
-    LDiff := LDiff or (A.Data[I] xor B.Data[I]);
-  
+    LMaxLen := B.Size;
+
+  // 常量时间比较
+  for I := 0 to LMaxLen - 1 do
+  begin
+    if I < A.Size then
+      ByteA := A.Data[I]
+    else
+      ByteA := 0;
+
+    if I < B.Size then
+      ByteB := B.Data[I]
+    else
+      ByteB := 0;
+
+    LDiff := LDiff or (ByteA xor ByteB);
+  end;
+
   Result := (LDiff = 0) and (A.Size = B.Size);
 end;
 
@@ -476,13 +513,14 @@ var
   I: Integer;
   LBytes: TBytes;
 begin
-  // Securely clear all stored keys
+  // P0 安全修复：使用安全内存清零
   for I := 0 to FKeys.Count - 1 do
   begin
     if FKeys.Objects[I] <> nil then
     begin
       LBytes := TBytes(FKeys.Objects[I]);
-      FillChar(LBytes[0], System.Length(LBytes), 0);
+      if System.Length(LBytes) > 0 then
+        SecureZeroMemory(@LBytes[0], System.Length(LBytes));
     end;
   end;
   FKeys.Free;
@@ -567,17 +605,17 @@ begin
     
   finally
     EVP_CIPHER_CTX_free(LCtx);
-    
-    // Securely zero all sensitive key material
+
+    // P0 安全修复：使用安全内存清零
     if Length(LKey) > 0 then
-      FillChar(LKey[0], Length(LKey), 0);
+      SecureZeroMemory(@LKey[0], Length(LKey));
     if Length(LIV) > 0 then
-      FillChar(LIV[0], Length(LIV), 0);
+      SecureZeroMemory(@LIV[0], Length(LIV));
     if Length(LTag) > 0 then
-      FillChar(LTag[0], Length(LTag), 0);
+      SecureZeroMemory(@LTag[0], Length(LTag));
     if Length(LCipherText) > 0 then
-      FillChar(LCipherText[0], Length(LCipherText), 0);
-    
+      SecureZeroMemory(@LCipherText[0], Length(LCipherText));
+
     SetLength(LKey, 0);
     SetLength(LIV, 0);
     SetLength(LTag, 0);
@@ -673,17 +711,17 @@ begin
     
   finally
     EVP_CIPHER_CTX_free(LCtx);
-    
-    // Securely zero all sensitive key material
+
+    // P0 安全修复：使用安全内存清零
     if Length(LKey) > 0 then
-      FillChar(LKey[0], Length(LKey), 0);
+      SecureZeroMemory(@LKey[0], Length(LKey));
     if Length(LIV) > 0 then
-      FillChar(LIV[0], Length(LIV), 0);
+      SecureZeroMemory(@LIV[0], Length(LIV));
     if Length(LTag) > 0 then
-      FillChar(LTag[0], Length(LTag), 0);
+      SecureZeroMemory(@LTag[0], Length(LTag));
     if Length(LPlainText) > 0 then
-      FillChar(LPlainText[0], Length(LPlainText), 0);
-    
+      SecureZeroMemory(@LPlainText[0], Length(LPlainText));
+
     SetLength(LKey, 0);
     SetLength(LIV, 0);
     SetLength(LTag, 0);
@@ -742,12 +780,14 @@ var
 begin
   if FLocked then
     raise ESSLException.Create('Key store is locked', sslErrConfiguration);
-    
+
   LIndex := FKeys.IndexOf(AKeyID);
   if LIndex >= 0 then
   begin
     LBytes := TBytes(FKeys.Objects[LIndex]);
-    FillChar(LBytes[0], System.Length(LBytes), 0);
+    // P0 安全修复：使用安全内存清零
+    if System.Length(LBytes) > 0 then
+      SecureZeroMemory(@LBytes[0], System.Length(LBytes));
     FKeys.Delete(LIndex);
     TSecurityLog.Audit('SecureKeyStore', 'DeleteKey', 'System', Format('Key deleted: %s', [AKeyID]));
   end;
