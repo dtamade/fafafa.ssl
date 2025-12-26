@@ -327,7 +327,7 @@ var
   
 procedure LoadOpenSSLBIO;
 procedure UnloadOpenSSLBIO;
-function IsOpenSSLBIOLoaded: Boolean;
+function IsOpenSSLBIOLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmBIO) instead';
 
 { Helper functions for BIO connection operations }
 function BIO_set_conn_port(b: PBIO; const port: PAnsiChar): clong;
@@ -348,7 +348,8 @@ function BIO_get_mem_data(b: PBIO; pp: PPAnsiChar): Integer; cdecl;
 implementation
 
 uses
-  fafafa.ssl.openssl.api.core;  // For shared library handles
+  fafafa.ssl.openssl.api.core,  // For shared library handles
+  fafafa.ssl.openssl.loader;    // For SetModuleLoaded
 
 procedure LoadOpenSSLBIO;
 var
@@ -389,10 +390,13 @@ begin
 
   // BIO_pending is a macro in OpenSSL, use our helper implementation
   BIO_pending := @BIO_pending_impl;
-  
+
   // SSL_SESSION BIO functions (in libssl, not libcrypto)
   i2d_SSL_SESSION_bio := Ti2d_SSL_SESSION_bio(GetProcedureAddress(LibSSL, 'i2d_SSL_SESSION_bio'));
   d2i_SSL_SESSION_bio := Td2i_SSL_SESSION_bio(GetProcedureAddress(LibSSL, 'd2i_SSL_SESSION_bio'));
+
+  // Mark module as loaded
+  TOpenSSLLoader.SetModuleLoaded(osmBIO, Assigned(BIO_new) and Assigned(BIO_free));
 end;
 
 procedure UnloadOpenSSLBIO;
@@ -418,11 +422,14 @@ begin
   BIO_pop := nil;
   BIO_f_base64 := nil;
   BIO_new_bio_pair := nil;
+
+  // Mark module as unloaded
+  TOpenSSLLoader.SetModuleLoaded(osmBIO, False);
 end;
 
 function IsOpenSSLBIOLoaded: Boolean;
 begin
-  Result := IsOpenSSLCoreLoaded;  // Depends on core being loaded
+  Result := TOpenSSLLoader.IsModuleLoaded(osmBIO);
 end;
 
 { Helper functions for BIO connection operations }
