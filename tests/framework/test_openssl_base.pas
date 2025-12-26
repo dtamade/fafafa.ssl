@@ -289,21 +289,12 @@ var
   I: Integer;
   M: TOpenSSLModule;
 begin
+  // Simply add modules to the required set
+  // Dependency checking and loading is done in Initialize
   for I := Low(Modules) to High(Modules) do
   begin
     M := Modules[I];
     Include(FRequiredModules, M);
-
-    // 检查模块是否已加载
-    if not TOpenSSLLoader.IsModuleLoaded(M) then
-    begin
-      // 尝试确保依赖已加载
-      if not TOpenSSLLoader.AreModuleDependenciesLoaded(M) then
-      begin
-        SkipTest(Format('Module %s dependencies not loaded', [GetModuleName(M)]));
-        Exit;
-      end;
-    end;
   end;
 end;
 

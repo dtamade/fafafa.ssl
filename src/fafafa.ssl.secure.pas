@@ -479,19 +479,29 @@ end;
 { Secure key store implementation }
 
 type
+  { Wrapper class to safely store TBytes in TStringList.Objects }
+  TBytesWrapper = class
+  private
+    FData: TBytes;
+  public
+    constructor Create(const AData: TBytes);
+    destructor Destroy; override;
+    property Data: TBytes read FData;
+  end;
+
   TSecureKeyStoreImpl = class(TInterfacedObject, ISecureKeyStore)
   private
     FKeys: TStringList;
     FLocked: Boolean;
     FMasterPassword: TSecureString;
-    
+
     function EncryptKey(const AKey: TSecureBytes; const APassword: string): TBytes;
     function DecryptKey(const AEncrypted: TBytes; const APassword: string): TSecureBytes;
   public
     constructor Create;
     destructor Destroy; override;
-    
-    procedure StoreKey(const AKeyID: string; const AKey: TSecureBytes; 
+
+    procedure StoreKey(const AKeyID: string; const AKey: TSecureBytes;
       const APassword: string);
     function LoadKey(const AKeyID: string; const APassword: string): TSecureBytes;
     function HasKey(const AKeyID: string): Boolean;
@@ -501,28 +511,34 @@ type
     function IsLocked: Boolean;
   end;
 
+{ TBytesWrapper }
+
+constructor TBytesWrapper.Create(const AData: TBytes);
+begin
+  inherited Create;
+  FData := Copy(AData, 0, Length(AData));
+end;
+
+destructor TBytesWrapper.Destroy;
+begin
+  // Secure zero memory before freeing
+  if Length(FData) > 0 then
+    SecureZeroMemory(@FData[0], Length(FData));
+  SetLength(FData, 0);
+  inherited;
+end;
+
 constructor TSecureKeyStoreImpl.Create;
 begin
   inherited;
   FKeys := TStringList.Create;
+  FKeys.OwnsObjects := True; // Automatically free wrapper objects
   FLocked := False;
 end;
 
 destructor TSecureKeyStoreImpl.Destroy;
-var
-  I: Integer;
-  LBytes: TBytes;
 begin
-  // P0 安全修复：使用安全内存清零
-  for I := 0 to FKeys.Count - 1 do
-  begin
-    if FKeys.Objects[I] <> nil then
-    begin
-      LBytes := TBytes(FKeys.Objects[I]);
-      if System.Length(LBytes) > 0 then
-        SecureZeroMemory(@LBytes[0], System.Length(LBytes));
-    end;
-  end;
+  // Objects are automatically freed due to OwnsObjects
   FKeys.Free;
   FMasterPassword.Clear;
   inherited;
@@ -729,42 +745,51 @@ begin
   end;
 end;
 
-procedure TSecureKeyStoreImpl.StoreKey(const AKeyID: string; 
+procedure TSecureKeyStoreImpl.StoreKey(const AKeyID: string;
   const AKey: TSecureBytes; const APassword: string);
 var
   LEncrypted: TBytes;
   LIndex: Integer;
+  LWrapper: TBytesWrapper;
 begin
   if FLocked then
     raise ESSLException.Create('Key store is locked', sslErrConfiguration);
-    
+
   LEncrypted := EncryptKey(AKey, APassword);
-  
+  LWrapper := TBytesWrapper.Create(LEncrypted);
+
+  // Secure zero the temporary array
+  if Length(LEncrypted) > 0 then
+    SecureZeroMemory(@LEncrypted[0], Length(LEncrypted));
+
   LIndex := FKeys.IndexOf(AKeyID);
   if LIndex >= 0 then
-    FKeys.Objects[LIndex] := TObject(LEncrypted)
+  begin
+    FKeys.Objects[LIndex].Free; // Free old wrapper
+    FKeys.Objects[LIndex] := LWrapper;
+  end
   else
-    FKeys.AddObject(AKeyID, TObject(LEncrypted));
-    
+    FKeys.AddObject(AKeyID, LWrapper);
+
   TSecurityLog.Audit('SecureKeyStore', 'StoreKey', 'System', Format('Key stored: %s', [AKeyID]));
 end;
 
-function TSecureKeyStoreImpl.LoadKey(const AKeyID: string; 
+function TSecureKeyStoreImpl.LoadKey(const AKeyID: string;
   const APassword: string): TSecureBytes;
 var
   LIndex: Integer;
-  LEncrypted: TBytes;
+  LWrapper: TBytesWrapper;
 begin
   if FLocked then
     raise ESSLException.Create('Key store is locked', sslErrConfiguration);
-    
+
   LIndex := FKeys.IndexOf(AKeyID);
   if LIndex < 0 then
     raise ESSLException.Create('Key not found: ' + AKeyID, sslErrConfiguration);
-    
-  LEncrypted := TBytes(FKeys.Objects[LIndex]);
-  Result := DecryptKey(LEncrypted, APassword);
-  
+
+  LWrapper := TBytesWrapper(FKeys.Objects[LIndex]);
+  Result := DecryptKey(LWrapper.Data, APassword);
+
   TSecurityLog.Audit('SecureKeyStore', 'LoadKey', 'System', Format('Key accessed: %s', [AKeyID]));
 end;
 
@@ -776,7 +801,6 @@ end;
 procedure TSecureKeyStoreImpl.DeleteKey(const AKeyID: string);
 var
   LIndex: Integer;
-  LBytes: TBytes;
 begin
   if FLocked then
     raise ESSLException.Create('Key store is locked', sslErrConfiguration);
@@ -784,10 +808,7 @@ begin
   LIndex := FKeys.IndexOf(AKeyID);
   if LIndex >= 0 then
   begin
-    LBytes := TBytes(FKeys.Objects[LIndex]);
-    // P0 安全修复：使用安全内存清零
-    if System.Length(LBytes) > 0 then
-      SecureZeroMemory(@LBytes[0], System.Length(LBytes));
+    // Wrapper's destructor will secure-zero the data
     FKeys.Delete(LIndex);
     TSecurityLog.Audit('SecureKeyStore', 'DeleteKey', 'System', Format('Key deleted: %s', [AKeyID]));
   end;
