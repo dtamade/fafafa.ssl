@@ -5,7 +5,7 @@ program test_key_derivation_security;
 {**
  * Key Derivation Security Test Suite
  *
- * P3-8 P0-2: 密钥派生安全测试
+ * P3-8 P0-2: 密钥派生安全测试 (已迁移到 TSimpleTestRunner)
  *
  * 测试内容:
  * - HKDF 参数验证
@@ -13,12 +13,8 @@ program test_key_derivation_security;
  * - 盐值长度验证
  * - 密钥派生函数输出长度验证
  *
- * 安全说明:
- * 密钥派生函数的安全性取决于正确的参数选择。
- * 迭代次数过低或盐值过短都会降低安全性。
- *
  * @author fafafa.ssl team
- * @version 1.0.0
+ * @version 1.1.0 - P1-2.3 迁移到统一测试框架
  * @since 2025-12-23
  *}
 
@@ -27,10 +23,13 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.crypto.utils,
   fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.backed,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.hmac,
-  fafafa.ssl.openssl.api.kdf;
+  fafafa.ssl.openssl.api.kdf,
+  fafafa.ssl.openssl.loader,
+  test_openssl_base;
 
 const
   // NIST 推荐的最小参数
@@ -44,33 +43,7 @@ const
   MIN_HKDF_INFO_LENGTH = 0;  // Info 可以为空
 
 var
-  Total, Passed, Failed: Integer;
-  Section: string;
-
-procedure BeginSection(const AName: string);
-begin
-  Section := AName;
-  WriteLn;
-  WriteLn('=== ', AName, ' ===');
-end;
-
-procedure Check(const AName: string; AOk: Boolean; const ADetails: string = '');
-begin
-  Inc(Total);
-  Write('  [', Section, '] ', AName, ': ');
-  if AOk then
-  begin
-    Inc(Passed);
-    WriteLn('PASS');
-  end
-  else
-  begin
-    Inc(Failed);
-    WriteLn('FAIL');
-    if ADetails <> '' then
-      WriteLn('    ', ADetails);
-  end;
-end;
+  Runner: TSimpleTestRunner;
 
 { 验证 PBKDF2 迭代次数是否安全 }
 function IsPBKDF2IterationsSecure(AIterations: Integer): Boolean;
@@ -99,58 +72,62 @@ end;
 
 procedure TestPBKDF2Iterations;
 begin
-  BeginSection('PBKDF2 Iterations');
+  WriteLn;
+  WriteLn('=== PBKDF2 Iterations ===');
 
   // 测试不安全的迭代次数
-  Check('1000 iterations insecure', not IsPBKDF2IterationsSecure(1000));
-  Check('10000 iterations insecure', not IsPBKDF2IterationsSecure(10000));
-  Check('50000 iterations insecure', not IsPBKDF2IterationsSecure(50000));
+  Runner.Check('1000 iterations insecure', not IsPBKDF2IterationsSecure(1000));
+  Runner.Check('10000 iterations insecure', not IsPBKDF2IterationsSecure(10000));
+  Runner.Check('50000 iterations insecure', not IsPBKDF2IterationsSecure(50000));
 
   // 测试安全的迭代次数
-  Check('100000 iterations secure', IsPBKDF2IterationsSecure(100000));
-  Check('150000 iterations secure', IsPBKDF2IterationsSecure(150000));
-  Check('310000 iterations secure', IsPBKDF2IterationsSecure(310000));  // OWASP 2023 推荐
+  Runner.Check('100000 iterations secure', IsPBKDF2IterationsSecure(100000));
+  Runner.Check('150000 iterations secure', IsPBKDF2IterationsSecure(150000));
+  Runner.Check('310000 iterations secure', IsPBKDF2IterationsSecure(310000));  // OWASP 2023 推荐
 end;
 
 procedure TestSaltLength;
 begin
-  BeginSection('Salt Length');
+  WriteLn;
+  WriteLn('=== Salt Length ===');
 
   // 测试不安全的盐值长度
-  Check('4 bytes salt insecure', not IsSaltLengthSecure(4));
-  Check('8 bytes salt insecure', not IsSaltLengthSecure(8));
+  Runner.Check('4 bytes salt insecure', not IsSaltLengthSecure(4));
+  Runner.Check('8 bytes salt insecure', not IsSaltLengthSecure(8));
 
   // 测试安全的盐值长度
-  Check('16 bytes salt secure', IsSaltLengthSecure(16));
-  Check('32 bytes salt secure', IsSaltLengthSecure(32));
-  Check('64 bytes salt secure', IsSaltLengthSecure(64));
+  Runner.Check('16 bytes salt secure', IsSaltLengthSecure(16));
+  Runner.Check('32 bytes salt secure', IsSaltLengthSecure(32));
+  Runner.Check('64 bytes salt secure', IsSaltLengthSecure(64));
 end;
 
 procedure TestKeyLength;
 begin
-  BeginSection('Key Length');
+  WriteLn;
+  WriteLn('=== Key Length ===');
 
   // 测试不安全的密钥长度
-  Check('8 bytes key insecure', not IsKeyLengthSecure(8));
+  Runner.Check('8 bytes key insecure', not IsKeyLengthSecure(8));
 
   // 测试安全的密钥长度
-  Check('16 bytes key secure (AES-128)', IsKeyLengthSecure(16));
-  Check('24 bytes key secure (AES-192)', IsKeyLengthSecure(24));
-  Check('32 bytes key secure (AES-256)', IsKeyLengthSecure(32));
+  Runner.Check('16 bytes key secure (AES-128)', IsKeyLengthSecure(16));
+  Runner.Check('24 bytes key secure (AES-192)', IsKeyLengthSecure(24));
+  Runner.Check('32 bytes key secure (AES-256)', IsKeyLengthSecure(32));
 end;
 
 procedure TestHKDFParameters;
 begin
-  BeginSection('HKDF Parameters');
+  WriteLn;
+  WriteLn('=== HKDF Parameters ===');
 
   // 测试不安全的 HKDF 参数
-  Check('Short salt (8) insecure', not IsHKDFParametersSecure(8, 32));
-  Check('Short output (8) insecure', not IsHKDFParametersSecure(16, 8));
+  Runner.Check('Short salt (8) insecure', not IsHKDFParametersSecure(8, 32));
+  Runner.Check('Short output (8) insecure', not IsHKDFParametersSecure(16, 8));
 
   // 测试安全的 HKDF 参数
-  Check('16 salt + 32 output secure', IsHKDFParametersSecure(16, 32));
-  Check('32 salt + 32 output secure', IsHKDFParametersSecure(32, 32));
-  Check('16 salt + 16 output secure', IsHKDFParametersSecure(16, 16));
+  Runner.Check('16 salt + 32 output secure', IsHKDFParametersSecure(16, 32));
+  Runner.Check('32 salt + 32 output secure', IsHKDFParametersSecure(32, 32));
+  Runner.Check('16 salt + 16 output secure', IsHKDFParametersSecure(16, 16));
 end;
 
 procedure TestCryptoUtilsKDF;
@@ -160,7 +137,8 @@ var
   LDerivedKey: TBytes;
   LEmptyInfo: TBytes;
 begin
-  BeginSection('CryptoUtils KDF');
+  WriteLn;
+  WriteLn('=== CryptoUtils KDF ===');
 
   // 准备测试数据
   LPassword := 'test_password_1234';
@@ -172,11 +150,11 @@ begin
   try
     // 使用 DeriveKeyPBKDF2 (MD=nil 默认使用 SHA-256)
     LDerivedKey := DeriveKeyPBKDF2(LPassword, LSalt, 100000, 32, nil);
-    Check('PBKDF2 derives 32-byte key', Length(LDerivedKey) = 32);
-    Check('PBKDF2 output not zero', (Length(LDerivedKey) > 0) and (LDerivedKey[0] <> 0));
+    Runner.Check('PBKDF2 derives 32-byte key', Length(LDerivedKey) = 32);
+    Runner.Check('PBKDF2 output not zero', (Length(LDerivedKey) > 0) and (LDerivedKey[0] <> 0));
   except
     on E: Exception do
-      Check('PBKDF2 execution', False, E.Message);
+      Runner.Check('PBKDF2 execution', False, E.Message);
   end;
 
   // 测试 HKDF 派生（如果可用）
@@ -185,15 +163,15 @@ begin
     // DeriveKeyHKDF 需要密钥作为 TBytes
     SetLength(LDerivedKey, 0);
     LDerivedKey := DeriveKeyHKDF(LSalt, LSalt, LEmptyInfo, 32, nil);
-    Check('HKDF derives 32-byte key', Length(LDerivedKey) = 32);
+    Runner.Check('HKDF derives 32-byte key', Length(LDerivedKey) = 32);
   except
     on E: Exception do
     begin
       // HKDF 可能不可用于某些 OpenSSL 版本
       if Pos('not available', LowerCase(E.Message)) > 0 then
-        Check('HKDF not available (expected)', True)
+        Runner.Check('HKDF not available (expected)', True)
       else
-        Check('HKDF execution', False, E.Message);
+        Runner.Check('HKDF execution', False, E.Message);
     end;
   end;
 end;
@@ -206,7 +184,8 @@ var
   I: Integer;
   AllSame: Boolean;
 begin
-  BeginSection('KDF Determinism');
+  WriteLn;
+  WriteLn('=== KDF Determinism ===');
 
   LPassword := 'determinism_test_password';
 
@@ -218,7 +197,7 @@ begin
     LKey1 := DeriveKeyPBKDF2(LPassword, LSalt, 100000, 32, nil);
     LKey2 := DeriveKeyPBKDF2(LPassword, LSalt, 100000, 32, nil);
 
-    Check('PBKDF2 same length', Length(LKey1) = Length(LKey2));
+    Runner.Check('PBKDF2 same length', Length(LKey1) = Length(LKey2));
 
     if Length(LKey1) = Length(LKey2) then
     begin
@@ -231,14 +210,14 @@ begin
           Break;
         end;
       end;
-      Check('PBKDF2 deterministic', AllSame);
+      Runner.Check('PBKDF2 deterministic', AllSame);
     end
     else
-      Check('PBKDF2 deterministic', False, 'Length mismatch');
+      Runner.Check('PBKDF2 deterministic', False, 'Length mismatch');
 
   except
     on E: Exception do
-      Check('KDF determinism test', False, E.Message);
+      Runner.Check('KDF determinism test', False, E.Message);
   end;
 end;
 
@@ -250,7 +229,8 @@ var
   I: Integer;
   AllSame: Boolean;
 begin
-  BeginSection('KDF Salt Variation');
+  WriteLn;
+  WriteLn('=== KDF Salt Variation ===');
 
   LPassword := 'salt_variation_test_password';
 
@@ -280,34 +260,32 @@ begin
     else
       AllSame := False;
 
-    Check('Different salts produce different keys', not AllSame);
+    Runner.Check('Different salts produce different keys', not AllSame);
 
   except
     on E: Exception do
-      Check('Salt variation test', False, E.Message);
+      Runner.Check('Salt variation test', False, E.Message);
   end;
 end;
 
 begin
-  Total := 0;
-  Passed := 0;
-  Failed := 0;
-
   WriteLn('======================================');
   WriteLn('  Key Derivation Security Tests');
   WriteLn('======================================');
 
+  Runner := TSimpleTestRunner.Create;
   try
-    // 初始化 OpenSSL
-    if not LoadOpenSSLLibrary then
+    Runner.RequireModules([osmCore, osmEVP]);
+    if not Runner.Initialize then
     begin
-      WriteLn('ERROR: Failed to load OpenSSL library');
+      WriteLn('ERROR: Failed to initialize test environment');
       Halt(1);
     end;
 
+    WriteLn('OpenSSL Version: ', GetOpenSSLVersionString);
+
     // 加载 KDF 函数
     LoadKDFFunctions;
-
     // 加载 HMAC 函数（HKDF 依赖 HMAC）
     LoadOpenSSLHMAC;
 
@@ -319,20 +297,9 @@ begin
     TestKDFDeterminism;
     TestKDFSaltVariation;
 
-  except
-    on E: Exception do
-    begin
-      WriteLn;
-      WriteLn('ERROR: ', E.Message);
-      Inc(Failed);
-    end;
+    Runner.PrintSummary;
+    Halt(Runner.FailCount);
+  finally
+    Runner.Free;
   end;
-
-  WriteLn;
-  WriteLn('======================================');
-  WriteLn(Format('Total: %d  Passed: %d  Failed: %d', [Total, Passed, Failed]));
-  WriteLn('======================================');
-
-  if Failed > 0 then
-    Halt(1);
 end.

@@ -6,6 +6,7 @@ program test_weak_algorithm_detection;
  * Weak Algorithm Detection Test Suite
  *
  * P3-8 P0-2: 弱算法检测测试
+ * P1-2.3: 迁移到 TSimpleTestRunner 框架
  *
  * 测试内容:
  * - 弱密码套件检测 (RC4, 3DES, NULL, EXPORT)
@@ -13,12 +14,8 @@ program test_weak_algorithm_detection;
  * - 短密钥检测 (RSA < 2048, ECDSA < 256)
  * - 过时协议检测 (SSL 2.0, SSL 3.0, TLS 1.0, TLS 1.1)
  *
- * 安全说明:
- * 弱算法的使用是常见的安全漏洞来源。
- * 这些测试确保库正确识别和拒绝不安全的配置。
- *
  * @author fafafa.ssl team
- * @version 1.0.0
+ * @version 1.1.0
  * @since 2025-12-23
  *}
 
@@ -28,41 +25,16 @@ uses
   fafafa.ssl.factory,
   fafafa.ssl.context.builder,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.backed;
+  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.loader,
+  test_openssl_base;
 
 var
-  Total, Passed, Failed: Integer;
-  Section: string;
-
-procedure BeginSection(const AName: string);
-begin
-  Section := AName;
-  WriteLn;
-  WriteLn('=== ', AName, ' ===');
-end;
-
-procedure Check(const AName: string; AOk: Boolean; const ADetails: string = '');
-begin
-  Inc(Total);
-  Write('  [', Section, '] ', AName, ': ');
-  if AOk then
-  begin
-    Inc(Passed);
-    WriteLn('PASS');
-  end
-  else
-  begin
-    Inc(Failed);
-    WriteLn('FAIL');
-    if ADetails <> '' then
-      WriteLn('    ', ADetails);
-  end;
-end;
+  Runner: TSimpleTestRunner;
 
 { 检查密码套件是否包含弱算法 }
 function ContainsWeakCipher(const ACipherList: string): Boolean;
 const
-  // 只检查真正危险的弱算法，不包括 CBC（现代实现已缓解 BEAST）
   WEAK_CIPHERS: array[0..7] of string = (
     'RC4', 'DES-', '3DES', 'NULL-', 'EXPORT', '-MD5',
     'ADH-', 'AECDH-'
@@ -83,17 +55,14 @@ begin
 
     while P > 0 do
     begin
-      // 检查此出现是否被排除（前面有 !）
       IsExcluded := (P > 1) and (UpperCipherList[P - 1] = '!');
 
       if not IsExcluded then
       begin
-        // 找到未排除的弱算法
         Result := True;
         Exit;
       end;
 
-      // 继续搜索下一个出现
       P := Pos(WeakCipher, Copy(UpperCipherList, P + Length(WeakCipher), MaxInt));
       if P > 0 then
         P := P + Length(WeakCipher);
@@ -119,79 +88,70 @@ begin
   else if Pos('DSA', AAlgorithm) > 0 then
     Result := ABits >= 2048
   else
-    Result := ABits >= 128;  // 对称密钥
+    Result := ABits >= 128;
+end;
+
+{ 检查哈希算法是否为弱算法 }
+function IsWeakHash(const AHash: string): Boolean;
+var
+  H: string;
+begin
+  H := UpperCase(AHash);
+  Result := (H = 'MD5') or (H = 'SHA1') or (H = 'MD4') or (H = 'MD2');
 end;
 
 procedure TestWeakCipherDetection;
 const
   WEAK_CIPHER_LISTS: array[0..4] of string = (
-    'RC4-SHA',
-    'DES-CBC3-SHA',
-    'NULL-MD5',
-    'EXP-RC4-MD5',
-    'ADH-AES128-SHA'
+    'RC4-SHA', 'DES-CBC3-SHA', 'NULL-MD5', 'EXP-RC4-MD5', 'ADH-AES128-SHA'
   );
-
   STRONG_CIPHER_LISTS: array[0..3] of string = (
-    'ECDHE-RSA-AES256-GCM-SHA384',
-    'TLS_AES_256_GCM_SHA384',
-    'TLS_CHACHA20_POLY1305_SHA256',
-    'ECDHE+AESGCM:!ANULL:!MD5:!RC4'
+    'ECDHE-RSA-AES256-GCM-SHA384', 'TLS_AES_256_GCM_SHA384',
+    'TLS_CHACHA20_POLY1305_SHA256', 'ECDHE+AESGCM:!ANULL:!MD5:!RC4'
   );
 var
   I: Integer;
 begin
-  BeginSection('Weak Cipher Detection');
+  WriteLn;
+  WriteLn('=== Weak Cipher Detection ===');
 
-  // 测试弱密码套件能被检测到
   for I := Low(WEAK_CIPHER_LISTS) to High(WEAK_CIPHER_LISTS) do
-    Check('Detect weak: ' + WEAK_CIPHER_LISTS[I],
-          ContainsWeakCipher(WEAK_CIPHER_LISTS[I]),
-          'Should detect as weak');
+    Runner.Check('Detect weak: ' + WEAK_CIPHER_LISTS[I],
+          ContainsWeakCipher(WEAK_CIPHER_LISTS[I]));
 
-  // 测试强密码套件不被误判
   for I := Low(STRONG_CIPHER_LISTS) to High(STRONG_CIPHER_LISTS) do
-    Check('Accept strong: ' + Copy(STRONG_CIPHER_LISTS[I], 1, 30),
-          not ContainsWeakCipher(STRONG_CIPHER_LISTS[I]),
-          'Should not flag as weak');
+    Runner.Check('Accept strong: ' + Copy(STRONG_CIPHER_LISTS[I], 1, 30),
+          not ContainsWeakCipher(STRONG_CIPHER_LISTS[I]));
 end;
 
 procedure TestProtocolVersionSecurity;
-var
-  V: TSSLProtocolVersion;
 begin
-  BeginSection('Protocol Version Security');
+  WriteLn;
+  WriteLn('=== Protocol Version Security ===');
 
-  // SSL 2.0 和 SSL 3.0 不安全
-  Check('SSL 2.0 insecure', not IsSecureTLSVersion(sslProtocolSSL2));
-  Check('SSL 3.0 insecure', not IsSecureTLSVersion(sslProtocolSSL3));
-
-  // TLS 1.0 和 1.1 已弃用
-  Check('TLS 1.0 insecure', not IsSecureTLSVersion(sslProtocolTLS10));
-  Check('TLS 1.1 insecure', not IsSecureTLSVersion(sslProtocolTLS11));
-
-  // TLS 1.2 和 1.3 是安全的
-  Check('TLS 1.2 secure', IsSecureTLSVersion(sslProtocolTLS12));
-  Check('TLS 1.3 secure', IsSecureTLSVersion(sslProtocolTLS13));
+  Runner.Check('SSL 2.0 insecure', not IsSecureTLSVersion(sslProtocolSSL2));
+  Runner.Check('SSL 3.0 insecure', not IsSecureTLSVersion(sslProtocolSSL3));
+  Runner.Check('TLS 1.0 insecure', not IsSecureTLSVersion(sslProtocolTLS10));
+  Runner.Check('TLS 1.1 insecure', not IsSecureTLSVersion(sslProtocolTLS11));
+  Runner.Check('TLS 1.2 secure', IsSecureTLSVersion(sslProtocolTLS12));
+  Runner.Check('TLS 1.3 secure', IsSecureTLSVersion(sslProtocolTLS13));
 end;
 
 procedure TestKeyLengthValidation;
 begin
-  BeginSection('Key Length Validation');
+  WriteLn;
+  WriteLn('=== Key Length Validation ===');
 
-  // RSA 密钥长度检测
-  Check('RSA 1024-bit insecure', not IsKeyLengthSecure('RSA', 1024));
-  Check('RSA 2048-bit secure', IsKeyLengthSecure('RSA', 2048));
-  Check('RSA 4096-bit secure', IsKeyLengthSecure('RSA', 4096));
+  Runner.Check('RSA 1024-bit insecure', not IsKeyLengthSecure('RSA', 1024));
+  Runner.Check('RSA 2048-bit secure', IsKeyLengthSecure('RSA', 2048));
+  Runner.Check('RSA 4096-bit secure', IsKeyLengthSecure('RSA', 4096));
 
-  // ECDSA 密钥长度检测
-  Check('ECDSA 160-bit insecure', not IsKeyLengthSecure('ECDSA', 160));
-  Check('ECDSA 256-bit secure', IsKeyLengthSecure('ECDSA', 256));
-  Check('ECDSA 384-bit secure', IsKeyLengthSecure('ECDSA', 384));
+  Runner.Check('ECDSA 160-bit insecure', not IsKeyLengthSecure('ECDSA', 160));
+  Runner.Check('ECDSA 256-bit secure', IsKeyLengthSecure('ECDSA', 256));
+  Runner.Check('ECDSA 384-bit secure', IsKeyLengthSecure('ECDSA', 384));
 
-  // DSA 密钥长度检测
-  Check('DSA 1024-bit insecure', not IsKeyLengthSecure('DSA', 1024));
-  Check('DSA 2048-bit secure', IsKeyLengthSecure('DSA', 2048));
+  Runner.Check('DSA 1024-bit insecure', not IsKeyLengthSecure('DSA', 1024));
+  Runner.Check('DSA 2048-bit secure', IsKeyLengthSecure('DSA', 2048));
 end;
 
 procedure TestWeakHashDetection;
@@ -200,41 +160,32 @@ const
   STRONG_HASH_ALGOS: array[0..2] of string = ('SHA256', 'SHA384', 'SHA512');
 var
   I: Integer;
-
-  function IsWeakHash(const AHash: string): Boolean;
-  var
-    H: string;
-  begin
-    H := UpperCase(AHash);
-    Result := (H = 'MD5') or (H = 'SHA1') or (H = 'MD4') or (H = 'MD2');
-  end;
-
 begin
-  BeginSection('Weak Hash Detection');
+  WriteLn;
+  WriteLn('=== Weak Hash Detection ===');
 
   for I := Low(WEAK_HASH_ALGOS) to High(WEAK_HASH_ALGOS) do
-    Check(WEAK_HASH_ALGOS[I] + ' is weak', IsWeakHash(WEAK_HASH_ALGOS[I]));
+    Runner.Check(WEAK_HASH_ALGOS[I] + ' is weak', IsWeakHash(WEAK_HASH_ALGOS[I]));
 
   for I := Low(STRONG_HASH_ALGOS) to High(STRONG_HASH_ALGOS) do
-    Check(STRONG_HASH_ALGOS[I] + ' is strong', not IsWeakHash(STRONG_HASH_ALGOS[I]));
+    Runner.Check(STRONG_HASH_ALGOS[I] + ' is strong', not IsWeakHash(STRONG_HASH_ALGOS[I]));
 end;
 
 procedure TestDefaultCipherSecurity;
 var
   LConfig: TSSLConfig;
 begin
-  BeginSection('Default Cipher Security');
+  WriteLn;
+  WriteLn('=== Default Cipher Security ===');
 
-  // 获取默认配置
   LConfig := Default(TSSLConfig);
   TSSLFactory.NormalizeConfig(LConfig);
 
-  // 检查默认密码套件不包含弱算法
-  Check('Default cipher list secure',
+  Runner.Check('Default cipher list secure',
         not ContainsWeakCipher(LConfig.CipherList),
         'CipherList: ' + LConfig.CipherList);
 
-  Check('Default TLS 1.3 suites secure',
+  Runner.Check('Default TLS 1.3 suites secure',
         not ContainsWeakCipher(LConfig.CipherSuites),
         'CipherSuites: ' + LConfig.CipherSuites);
 end;
@@ -243,38 +194,36 @@ procedure TestContextBuilderSecurityDefaults;
 var
   LBuilder: ISSLContextBuilder;
 begin
-  BeginSection('Context Builder Security Defaults');
+  WriteLn;
+  WriteLn('=== Context Builder Security Defaults ===');
 
-  // CreateWithSafeDefaults 应该使用安全配置
   try
     LBuilder := TSSLContextBuilder.CreateWithSafeDefaults;
-    Check('SafeDefaults builder created', LBuilder <> nil);
-
-    // 验证安全默认值被应用
-    // (实际验证需要检查内部配置)
-    Check('SafeDefaults available', True);
+    Runner.Check('SafeDefaults builder created', LBuilder <> nil);
+    Runner.Check('SafeDefaults available', True);
   except
     on E: Exception do
-      Check('SafeDefaults creation', False, E.Message);
+      Runner.Check('SafeDefaults creation', False, E.Message);
   end;
 end;
 
 begin
-  Total := 0;
-  Passed := 0;
-  Failed := 0;
-
   WriteLn('======================================');
   WriteLn('  Weak Algorithm Detection Tests');
   WriteLn('======================================');
 
+  Runner := TSimpleTestRunner.Create;
   try
-    // 初始化 OpenSSL
-    if not LoadOpenSSLLibrary then
+    // P1-2.3: 使用统一的模块依赖管理
+    Runner.RequireModules([osmCore, osmSSL, osmEVP]);
+
+    if not Runner.Initialize then
     begin
-      WriteLn('ERROR: Failed to load OpenSSL library');
+      WriteLn('ERROR: Failed to initialize test environment');
       Halt(1);
     end;
+
+    WriteLn('OpenSSL Version: ', TOpenSSLTestBase.OpenSSLVersion.VersionString);
 
     TestWeakCipherDetection;
     TestProtocolVersionSecurity;
@@ -283,20 +232,11 @@ begin
     TestDefaultCipherSecurity;
     TestContextBuilderSecurityDefaults;
 
-  except
-    on E: Exception do
-    begin
-      WriteLn;
-      WriteLn('ERROR: ', E.Message);
-      Inc(Failed);
-    end;
+    Runner.PrintSummary;
+
+    if Runner.FailCount > 0 then
+      Halt(1);
+  finally
+    Runner.Free;
   end;
-
-  WriteLn;
-  WriteLn('======================================');
-  WriteLn(Format('Total: %d  Passed: %d  Failed: %d', [Total, Passed, Failed]));
-  WriteLn('======================================');
-
-  if Failed > 0 then
-    Halt(1);
 end.

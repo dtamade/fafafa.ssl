@@ -554,12 +554,13 @@ var
   
 procedure LoadOpenSSLX509;
 procedure UnloadOpenSSLX509;
-function IsOpenSSLX509Loaded: Boolean;
+function IsOpenSSLX509Loaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmX509) instead';
 
 implementation
 
 uses
-  fafafa.ssl.openssl.api.core;  // For shared library handles
+  fafafa.ssl.openssl.api.core,  // For shared library handles
+  fafafa.ssl.openssl.loader;    // For TOpenSSLLoader
 
 procedure LoadOpenSSLX509;
 var
@@ -677,6 +678,9 @@ begin
   
   // Load X509 Digest Function
   Pointer(X509_digest) := GetProcedureAddress(LibHandle, 'X509_digest');
+
+  // Mark module as loaded
+  TOpenSSLLoader.SetModuleLoaded(osmX509, Assigned(X509_new) and Assigned(X509_free));
 end;
 
 procedure UnloadOpenSSLX509;
@@ -700,11 +704,13 @@ begin
   X509_NAME_oneline := nil;
   X509_NAME_print_ex := nil;
   // ... 其他函数指针也设为 nil
+
+  TOpenSSLLoader.SetModuleLoaded(osmX509, False);
 end;
 
 function IsOpenSSLX509Loaded: Boolean;
 begin
-  Result := IsOpenSSLCoreLoaded;  // Depends on core being loaded
+  Result := TOpenSSLLoader.IsModuleLoaded(osmX509);
 end;
 
 end.

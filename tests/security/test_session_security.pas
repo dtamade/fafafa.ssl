@@ -5,7 +5,7 @@ program test_session_security;
 {**
  * Session Security Test Suite
  *
- * P3-8 P0-2: 会话安全测试
+ * P3-8 P0-2: 会话安全测试 (已迁移到 TSimpleTestRunner)
  *
  * 测试内容:
  * - 会话票据安全性
@@ -14,14 +14,8 @@ program test_session_security;
  * - 会话缓存安全性
  * - 会话恢复安全性
  *
- * 安全说明:
- * TLS 会话管理需要正确配置以防止：
- * - 会话固定攻击
- * - 会话重放攻击
- * - 会话泄露
- *
  * @author fafafa.ssl team
- * @version 1.0.0
+ * @version 1.1.0 - P1-2.3 迁移到统一测试框架
  * @since 2025-12-23
  *}
 
@@ -31,8 +25,11 @@ uses
   fafafa.ssl.factory,
   fafafa.ssl.context.builder,
   fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.rand,
-  fafafa.ssl.openssl.backed;
+  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.loader,
+  test_openssl_base;
 
 const
   // 会话安全参数
@@ -48,33 +45,7 @@ const
   RECOMMENDED_SESSION_ID_LENGTH = 32;  // 256 bits
 
 var
-  Total, Passed, Failed: Integer;
-  Section: string;
-
-procedure BeginSection(const AName: string);
-begin
-  Section := AName;
-  WriteLn;
-  WriteLn('=== ', AName, ' ===');
-end;
-
-procedure Check(const AName: string; AOk: Boolean; const ADetails: string = '');
-begin
-  Inc(Total);
-  Write('  [', Section, '] ', AName, ': ');
-  if AOk then
-  begin
-    Inc(Passed);
-    WriteLn('PASS');
-  end
-  else
-  begin
-    Inc(Failed);
-    WriteLn('FAIL');
-    if ADetails <> '' then
-      WriteLn('    ', ADetails);
-  end;
-end;
+  Runner: TSimpleTestRunner;
 
 { 验证会话超时是否在安全范围内 }
 function IsSessionTimeoutSecure(ATimeout: Integer): Boolean;
@@ -159,49 +130,52 @@ end;
 
 procedure TestSessionTimeoutValidation;
 begin
-  BeginSection('Session Timeout Validation');
+  WriteLn;
+  WriteLn('=== Session Timeout Validation ===');
 
   // 测试过短的超时
-  Check('0 seconds insecure', not IsSessionTimeoutSecure(0));
-  Check('30 seconds insecure', not IsSessionTimeoutSecure(30));
+  Runner.Check('0 seconds insecure', not IsSessionTimeoutSecure(0));
+  Runner.Check('30 seconds insecure', not IsSessionTimeoutSecure(30));
 
   // 测试安全的超时范围
-  Check('60 seconds secure', IsSessionTimeoutSecure(60));
-  Check('300 seconds secure', IsSessionTimeoutSecure(300));
-  Check('3600 seconds secure', IsSessionTimeoutSecure(3600));
-  Check('86400 seconds secure', IsSessionTimeoutSecure(86400));
+  Runner.Check('60 seconds secure', IsSessionTimeoutSecure(60));
+  Runner.Check('300 seconds secure', IsSessionTimeoutSecure(300));
+  Runner.Check('3600 seconds secure', IsSessionTimeoutSecure(3600));
+  Runner.Check('86400 seconds secure', IsSessionTimeoutSecure(86400));
 
   // 测试过长的超时
-  Check('100000 seconds insecure', not IsSessionTimeoutSecure(100000));
+  Runner.Check('100000 seconds insecure', not IsSessionTimeoutSecure(100000));
 end;
 
 procedure TestSessionCacheSizeValidation;
 begin
-  BeginSection('Session Cache Size Validation');
+  WriteLn;
+  WriteLn('=== Session Cache Size Validation ===');
 
   // 测试有效的缓存大小
-  Check('0 (disabled) valid', IsSessionCacheSizeSecure(0));
-  Check('100 valid', IsSessionCacheSizeSecure(100));
-  Check('1024 valid', IsSessionCacheSizeSecure(1024));
-  Check('65535 valid', IsSessionCacheSizeSecure(65535));
+  Runner.Check('0 (disabled) valid', IsSessionCacheSizeSecure(0));
+  Runner.Check('100 valid', IsSessionCacheSizeSecure(100));
+  Runner.Check('1024 valid', IsSessionCacheSizeSecure(1024));
+  Runner.Check('65535 valid', IsSessionCacheSizeSecure(65535));
 
   // 测试无效的缓存大小
-  Check('-1 invalid', not IsSessionCacheSizeSecure(-1));
-  Check('100000 invalid', not IsSessionCacheSizeSecure(100000));
+  Runner.Check('-1 invalid', not IsSessionCacheSizeSecure(-1));
+  Runner.Check('100000 invalid', not IsSessionCacheSizeSecure(100000));
 end;
 
 procedure TestSessionIdLengthValidation;
 begin
-  BeginSection('Session ID Length Validation');
+  WriteLn;
+  WriteLn('=== Session ID Length Validation ===');
 
   // 测试不安全的长度
-  Check('8 bytes insecure', not IsSessionIdLengthSecure(8));
-  Check('12 bytes insecure', not IsSessionIdLengthSecure(12));
+  Runner.Check('8 bytes insecure', not IsSessionIdLengthSecure(8));
+  Runner.Check('12 bytes insecure', not IsSessionIdLengthSecure(12));
 
   // 测试安全的长度
-  Check('16 bytes secure', IsSessionIdLengthSecure(16));
-  Check('32 bytes secure', IsSessionIdLengthSecure(32));
-  Check('48 bytes secure', IsSessionIdLengthSecure(48));
+  Runner.Check('16 bytes secure', IsSessionIdLengthSecure(16));
+  Runner.Check('32 bytes secure', IsSessionIdLengthSecure(32));
+  Runner.Check('48 bytes secure', IsSessionIdLengthSecure(48));
 end;
 
 procedure TestRandomnessValidation;
@@ -209,30 +183,31 @@ var
   LTestData: TBytes;
   LEntropy: Double;
 begin
-  BeginSection('Randomness Validation');
+  WriteLn;
+  WriteLn('=== Randomness Validation ===');
 
   // 测试全零数据
   SetLength(LTestData, 32);
   FillChar(LTestData[0], 32, 0);
-  Check('All-zero detected', IsAllZero(LTestData));
-  Check('All-zero same', IsAllSame(LTestData));
+  Runner.Check('All-zero detected', IsAllZero(LTestData));
+  Runner.Check('All-zero same', IsAllSame(LTestData));
 
   // 测试全相同数据
   FillChar(LTestData[0], 32, $AA);
-  Check('All-AA same', IsAllSame(LTestData));
+  Runner.Check('All-AA same', IsAllSame(LTestData));
 
   // 测试正常随机数据
   try
     LTestData := TSSLHelper.GenerateRandomBytes(32);
-    Check('Random not all zero', not IsAllZero(LTestData));
-    Check('Random not all same', not IsAllSame(LTestData));
+    Runner.Check('Random not all zero', not IsAllZero(LTestData));
+    Runner.Check('Random not all same', not IsAllSame(LTestData));
 
     LEntropy := EstimateEntropy(LTestData);
-    Check('Entropy > 4 bits', LEntropy > 4.0,
+    Runner.Check('Entropy > 4 bits', LEntropy > 4.0,
           Format('Entropy: %.2f bits', [LEntropy]));
   except
     on E: Exception do
-      Check('Random generation', False, E.Message);
+      Runner.Check('Random generation', False, E.Message);
   end;
 end;
 
@@ -240,19 +215,20 @@ procedure TestDefaultSessionConfig;
 var
   LConfig: TSSLConfig;
 begin
-  BeginSection('Default Session Config');
+  WriteLn;
+  WriteLn('=== Default Session Config ===');
 
   LConfig := Default(TSSLConfig);
   TSSLFactory.NormalizeConfig(LConfig);
 
-  Check('Default timeout > 0', LConfig.SessionTimeout > 0,
+  Runner.Check('Default timeout > 0', LConfig.SessionTimeout > 0,
         Format('Timeout: %d', [LConfig.SessionTimeout]));
 
-  Check('Default timeout secure',
+  Runner.Check('Default timeout secure',
         IsSessionTimeoutSecure(LConfig.SessionTimeout),
         Format('Timeout: %d', [LConfig.SessionTimeout]));
 
-  Check('Default cache size valid',
+  Runner.Check('Default cache size valid',
         IsSessionCacheSizeSecure(LConfig.SessionCacheSize),
         Format('CacheSize: %d', [LConfig.SessionCacheSize]));
 end;
@@ -261,7 +237,8 @@ procedure TestContextSessionSettings;
 var
   LContext: ISSLContext;
 begin
-  BeginSection('Context Session Settings');
+  WriteLn;
+  WriteLn('=== Context Session Settings ===');
 
   try
     LContext := TSSLContextBuilder.Create
@@ -270,28 +247,28 @@ begin
 
     if LContext = nil then
     begin
-      Check('Context creation', False, 'Context is nil');
+      Runner.Check('Context creation', False, 'Context is nil');
       Exit;
     end;
 
     // 测试会话缓存设置
     LContext.SetSessionCacheSize(1024);
-    Check('Set cache size', True);
+    Runner.Check('Set cache size', True);
 
     // 测试会话超时设置
     LContext.SetSessionTimeout(300);
-    Check('Set session timeout', True);
+    Runner.Check('Set session timeout', True);
 
     // 测试会话缓存模式
     LContext.SetSessionCacheMode(True);
-    Check('Enable session cache', True);
+    Runner.Check('Enable session cache', True);
 
     LContext.SetSessionCacheMode(False);
-    Check('Disable session cache', True);
+    Runner.Check('Disable session cache', True);
 
   except
     on E: Exception do
-      Check('Context session settings', False, E.Message);
+      Runner.Check('Context session settings', False, E.Message);
   end;
 end;
 
@@ -299,25 +276,26 @@ procedure TestSessionTicketSecurity;
 var
   LConfig: TSSLConfig;
 begin
-  BeginSection('Session Ticket Security');
+  WriteLn;
+  WriteLn('=== Session Ticket Security ===');
 
   // 检查会话票据默认设置
   LConfig := Default(TSSLConfig);
   TSSLFactory.NormalizeConfig(LConfig);
 
   // 会话票据应该可以配置
-  Check('Session tickets configurable', True);
+  Runner.Check('Session tickets configurable', True);
 
   // 测试启用会话票据
   LConfig.EnableSessionTickets := True;
   TSSLFactory.NormalizeConfig(LConfig);
-  Check('Enable session tickets option',
+  Runner.Check('Enable session tickets option',
         ssoEnableSessionTickets in LConfig.Options);
 
   // 测试禁用会话票据
   LConfig.EnableSessionTickets := False;
   TSSLFactory.NormalizeConfig(LConfig);
-  Check('Disable session tickets option',
+  Runner.Check('Disable session tickets option',
         not (ssoEnableSessionTickets in LConfig.Options));
 end;
 
@@ -325,35 +303,32 @@ procedure TestRenegotiationSecurity;
 var
   LConfig: TSSLConfig;
 begin
-  BeginSection('Renegotiation Security');
+  WriteLn;
+  WriteLn('=== Renegotiation Security ===');
 
   LConfig := Default(TSSLConfig);
   TSSLFactory.NormalizeConfig(LConfig);
 
   // 默认应该禁用重协商（防止重协商攻击）
-  Check('Renegotiation disabled by default',
+  Runner.Check('Renegotiation disabled by default',
         ssoDisableRenegotiation in LConfig.Options);
 end;
 
 begin
-  Total := 0;
-  Passed := 0;
-  Failed := 0;
-
   WriteLn('======================================');
   WriteLn('  Session Security Tests');
   WriteLn('======================================');
 
+  Runner := TSimpleTestRunner.Create;
   try
-    // 初始化 OpenSSL
-    if not LoadOpenSSLLibrary then
+    Runner.RequireModules([osmCore, osmRAND]);
+    if not Runner.Initialize then
     begin
-      WriteLn('ERROR: Failed to load OpenSSL library');
+      WriteLn('ERROR: Failed to initialize test environment');
       Halt(1);
     end;
 
-    // 加载 RAND 函数（用于 TSSLHelper.GenerateRandomBytes）
-    LoadOpenSSLRAND;
+    WriteLn('OpenSSL Version: ', GetOpenSSLVersionString);
 
     TestSessionTimeoutValidation;
     TestSessionCacheSizeValidation;
@@ -364,20 +339,9 @@ begin
     TestSessionTicketSecurity;
     TestRenegotiationSecurity;
 
-  except
-    on E: Exception do
-    begin
-      WriteLn;
-      WriteLn('ERROR: ', E.Message);
-      Inc(Failed);
-    end;
+    Runner.PrintSummary;
+    Halt(Runner.FailCount);
+  finally
+    Runner.Free;
   end;
-
-  WriteLn;
-  WriteLn('======================================');
-  WriteLn(Format('Total: %d  Passed: %d  Failed: %d', [Total, Passed, Failed]));
-  WriteLn('======================================');
-
-  if Failed > 0 then
-    Halt(1);
 end.
