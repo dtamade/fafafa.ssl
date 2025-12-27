@@ -122,6 +122,7 @@ begin
     osmHMAC:       Result := 'HMAC';
     osmCMAC:       Result := 'CMAC';
     osmRAND:       Result := 'RAND';
+    osmKDF:        Result := 'KDF';
     osmERR:        Result := 'ERR';
     osmBIO:        Result := 'BIO';
     osmPEM:        Result := 'PEM';

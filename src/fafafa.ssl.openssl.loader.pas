@@ -65,6 +65,7 @@ type
     osmHMAC,      // HMAC
     osmCMAC,      // CMAC
     osmRAND,      // 随机数
+    osmKDF,       // 密钥派生函数 (PBKDF2, HKDF, scrypt)
     osmERR,       // 错误处理
     osmBIO,       // BIO I/O
     osmPEM,       // PEM 格式
@@ -343,6 +344,7 @@ const
     { osmHMAC }       [osmCore, osmEVP],            // HMAC - 依赖核心和EVP
     { osmCMAC }       [osmCore, osmEVP],            // CMAC - 依赖核心和EVP
     { osmRAND }       [osmCore],                    // RAND - 依赖核心
+    { osmKDF }        [osmCore, osmEVP],            // KDF - 依赖核心和EVP
     { osmERR }        [osmCore],                    // ERR - 依赖核心
     { osmBIO }        [osmCore],                    // BIO - 依赖核心
     { osmPEM }        [osmCore, osmBIO, osmX509],   // PEM - 依赖核心、BIO和X509

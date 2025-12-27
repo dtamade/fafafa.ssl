@@ -15,7 +15,6 @@ uses
   fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.rand,
-  fafafa.ssl.openssl.api.kdf,
   test_openssl_base;
 
 var
@@ -401,7 +400,7 @@ begin
 
   Runner := TSimpleTestRunner.Create;
   try
-    Runner.RequireModules([osmCore, osmEVP, osmRAND]);
+    Runner.RequireModules([osmCore, osmEVP, osmRAND, osmKDF]);
 
     if not Runner.Initialize then
     begin
@@ -410,9 +409,6 @@ begin
     end;
 
     WriteLn('OpenSSL Version: ', GetOpenSSLVersionString);
-
-    // Load KDF functions for key store tests
-    LoadKDFFunctions;
 
     // TSecureString tests
     TestSecureStringCreate;

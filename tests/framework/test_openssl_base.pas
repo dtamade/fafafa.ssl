@@ -254,6 +254,7 @@ uses
   fafafa.ssl.openssl.api.asn1,
   fafafa.ssl.openssl.api.ec,
   fafafa.ssl.openssl.api.rand,
+  fafafa.ssl.openssl.api.kdf,
   fafafa.ssl.openssl.dependencies;
 
 { TOpenSSLTestBase }
@@ -459,6 +460,7 @@ begin
       osmASN1: LoadOpenSSLASN1(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto));
       osmEC: LoadECFunctions(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto));
       osmRAND: LoadOpenSSLRAND;
+      osmKDF: LoadKDFFunctions;
       // 其他模块可以根据需要添加
     end;
   end;

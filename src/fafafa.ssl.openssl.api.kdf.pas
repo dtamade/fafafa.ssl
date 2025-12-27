@@ -271,10 +271,12 @@ function GenerateSalt(Len: Integer = PKCS5_SALT_LEN): TBytes;
 implementation
 
 uses
-  fafafa.ssl.openssl.api.rand;
+  fafafa.ssl.openssl.api.rand,
+  fafafa.ssl.openssl.loader;
 
 procedure LoadKDFFunctions;
 begin
+  if TOpenSSLLoader.IsModuleLoaded(osmKDF) then Exit;
   if GetCryptoLibHandle = 0 then Exit;
   
   // PBKDF2 函数
@@ -313,6 +315,8 @@ begin
   PKCS5_v2_scrypt_keyivgen := TPKCS5_v2_scrypt_keyivgen(GetCryptoProcAddress('PKCS5_v2_scrypt_keyivgen'));
   PKCS5_PBE_keyivgen := TPKCS5_PBE_keyivgen(GetCryptoProcAddress('PKCS5_PBE_keyivgen'));
   PKCS5_PBE_add := TPKCS5_PBE_add(GetCryptoProcAddress('PKCS5_PBE_add'));
+
+  TOpenSSLLoader.SetModuleLoaded(osmKDF, True);
 end;
 
 procedure UnloadKDFFunctions;
@@ -336,6 +340,8 @@ begin
   EVP_KDF_CTX_reset := nil;
   EVP_KDF_derive := nil;
   EVP_BytesToKey := nil;
+
+  TOpenSSLLoader.SetModuleLoaded(osmKDF, False);
 end;
 
 function DeriveKeyPBKDF2(const Password: string; const Salt: TBytes;
