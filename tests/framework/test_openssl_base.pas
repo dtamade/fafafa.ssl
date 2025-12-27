@@ -246,6 +246,7 @@ uses
   fafafa.ssl.openssl.api.bn,
   fafafa.ssl.openssl.api.rsa,
   fafafa.ssl.openssl.api.dsa,
+  fafafa.ssl.openssl.api.dh,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.ssl,
   fafafa.ssl.openssl.api.x509,
@@ -253,8 +254,11 @@ uses
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.asn1,
   fafafa.ssl.openssl.api.ec,
+  fafafa.ssl.openssl.api.ecdh,
+  fafafa.ssl.openssl.api.ecdsa,
   fafafa.ssl.openssl.api.rand,
   fafafa.ssl.openssl.api.kdf,
+  fafafa.ssl.openssl.api.hmac,
   fafafa.ssl.openssl.dependencies;
 
 { TOpenSSLTestBase }
@@ -461,6 +465,10 @@ begin
       osmEC: LoadECFunctions(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto));
       osmRAND: LoadOpenSSLRAND;
       osmKDF: LoadKDFFunctions;
+      osmHMAC: LoadOpenSSLHMAC;
+      osmDH: LoadOpenSSLDH;
+      osmECDH: LoadOpenSSLECDH;
+      osmECDSA: LoadOpenSSLECDSA;
       // 其他模块可以根据需要添加
     end;
   end;

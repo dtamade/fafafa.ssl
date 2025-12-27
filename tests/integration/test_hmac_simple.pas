@@ -269,18 +269,11 @@ begin
 
   Runner := TSimpleTestRunner.Create;
   try
-    Runner.RequireModules([osmCore, osmEVP]);
+    Runner.RequireModules([osmCore, osmEVP, osmHMAC]);
 
     if not Runner.Initialize then
     begin
       WriteLn('ERROR: Failed to initialize test environment');
-      Halt(1);
-    end;
-
-    // Load HMAC functions
-    if not LoadOpenSSLHMAC then
-    begin
-      WriteLn('ERROR: Failed to load HMAC functions');
       Halt(1);
     end;
 
