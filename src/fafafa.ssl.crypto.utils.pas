@@ -43,7 +43,6 @@ uses
   fafafa.ssl.errors,
   fafafa.ssl.openssl.errors,  // Phase 3.1 - OpenSSL-specific error handling
   fafafa.ssl.encoding,         // Phase 2.3.3 - Use unified encoding utilities
-  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.core,
@@ -578,10 +577,6 @@ function StringToHashAlgorithm(const AName: string): THashAlgorithm;
 
 implementation
 
-{$IFDEF UNIX}
-uses
-  BaseUnix;
-{$ENDIF}
 {$IFDEF WINDOWS}
 uses
   Windows;
@@ -601,14 +596,13 @@ function BCryptGenRandom(
 const
   // 缓冲区大小常量
   STREAM_BUFFER_SIZE = 8192;
-  
+
   // 算法相关常量
   AES_256_KEY_SIZE = 32;
-  AES_128_KEY_SIZE = 16;
   AES_GCM_IV_SIZE = 12;
   AES_CBC_IV_SIZE = 16;
   GCM_TAG_SIZE = 16;
-  
+
   SHA256_HASH_SIZE = 32;
   SHA512_HASH_SIZE = 64;
 
@@ -662,7 +656,7 @@ begin
     Exit;
 
   // 加载OpenSSL核心
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     try
       LoadOpenSSLCore();
@@ -672,7 +666,7 @@ begin
     end;
   end;
 
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     RaiseInitializationError('OpenSSL core', 'library not available');
 
   // 加载EVP模块

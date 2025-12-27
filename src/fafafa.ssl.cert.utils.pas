@@ -281,9 +281,7 @@ implementation
 
 uses
   fafafa.ssl.openssl.api.asn1,
-  fafafa.ssl.openssl.api.err,
   fafafa.ssl.openssl.api.x509v3,
-  fafafa.ssl.openssl.api.crypto,
   fafafa.ssl.openssl.api.stack,  // Added stack support
   fafafa.ssl.base,
   fafafa.ssl.factory,
@@ -303,7 +301,7 @@ begin
     Exit;
 
   // 加载OpenSSL核心
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     try
       LoadOpenSSLCore();
@@ -313,7 +311,7 @@ begin
     end;
   end;
 
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     RaiseInitializationError('OpenSSL core', 'library not available');
 
   // 加载证书相关模块
@@ -345,7 +343,7 @@ begin
     LoadOpenSSLASN1(GetCryptoLibHandle);
 
     // EC密钥（按需）
-    if not IsECLoaded then
+    if not TOpenSSLLoader.IsModuleLoaded(osmEC) then
       LoadECFunctions(GetCryptoLibHandle);
 
     // OBJ对象识别 (OBJ_txt2nid等)
@@ -959,17 +957,17 @@ begin
   FillChar(Result, SizeOf(Result), 0);
   Result.SubjectAltNames := TStringList.Create;
   
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     LoadOpenSSLCore();
-  
+
   if not Assigned(X509_new) then
     LoadOpenSSLX509();
   if not Assigned(BIO_new) then
     LoadOpenSSLBIO();
   if not Assigned(PEM_read_bio_X509) then
     LoadOpenSSLPEM(GetCryptoLibHandle);
-    
-  if not IsStackLoaded then
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmStack) then
     LoadStackFunctions(); // Ensure stack functions are loaded for SAN extraction
   
   LBIO := BIO_new_mem_buf(PAnsiChar(AnsiString(ACertPEM)), Length(ACertPEM));
@@ -1001,7 +999,7 @@ begin
       
       
       // Extract Subject Alternative Names
-      if Assigned(X509_get_ext_d2i) and IsStackLoaded then
+      if Assigned(X509_get_ext_d2i) and TOpenSSLLoader.IsModuleLoaded(osmStack) then
       begin
         // Stack loaded
         LExtNames := POPENSSL_STACK(X509_get_ext_d2i(LCert, NID_subject_alt_name, nil, nil));
