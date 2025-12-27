@@ -40,7 +40,8 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.exceptions,  // 新增：类型化异常
-  fafafa.ssl.logging;
+  fafafa.ssl.logging,
+  fafafa.ssl.collections; // P0: 可替换的 Map 接口
 
 type
   {** SSL库类类型 (用于内部注册) *}
@@ -84,7 +85,8 @@ type
   TSSLFactory = class
   private
     class var
-      FRegistrations: array of TSSLLibraryRegistration;
+      // P0: 使用 Map 接口替代动态数组，方便后续替换为 fafafa.core 的 HashMap
+      FRegistrationMap: specialize IIntegerMap<TSSLLibraryRegistration>;
       FLibraries: array[TSSLLibraryType] of ISSLLibrary;
       FDefaultLibraryType: TSSLLibraryType;
       FInitialized: Boolean;
@@ -467,10 +469,12 @@ begin
       InitCriticalSection(GFactoryLock);
       GFactoryLockInitialized := True;
     end;
+    // P0: 创建 Map 实例（后续可替换为 fafafa.core 的 HashMap）
+    FRegistrationMap := TMapFactory.specialize CreateIntegerMap<TSSLLibraryRegistration>;
     FDefaultLibraryType := sslAutoDetect;
     FAutoInitialize := True;
     FInitialized := True;
-    
+
     // 注册清理过程
     // 在程序退出时自动清理
   end;
@@ -481,6 +485,8 @@ begin
   if FInitialized then
   begin
     ReleaseAllLibraries;
+    // P0: 清理 Map
+    FRegistrationMap := nil;
     if GFactoryLockInitialized then
     begin
       DoneCriticalSection(GFactoryLock);
@@ -501,64 +507,34 @@ end;
 class procedure TSSLFactory.RegisterLibrary(ALibType: TSSLLibraryType;
   ALibraryClass: TSSLLibraryClass; const ADescription: string; APriority: Integer);
 var
-  LIndex: Integer;
+  LReg: TSSLLibraryRegistration;
 begin
   CheckInitialized;
   EnterCriticalSection(GFactoryLock);
   try
-    // 检查是否已注册
-    for LIndex := 0 to High(FRegistrations) do
-    begin
-      if FRegistrations[LIndex].LibraryType = ALibType then
-      begin
-        // 更新现有注册
-        FRegistrations[LIndex].LibraryClass := ALibraryClass;
-        FRegistrations[LIndex].Description := ADescription;
-        FRegistrations[LIndex].Priority := APriority;
-        Exit;
-      end;
-    end;
-    
-    // 添加新注册
-    SetLength(FRegistrations, Length(FRegistrations) + 1);
-    with FRegistrations[High(FRegistrations)] do
-    begin
-      LibraryType := ALibType;
-      LibraryClass := ALibraryClass;
-      Description := ADescription;
-      Priority := APriority;
-    end;
+    // P0: 使用 Map 接口，O(1) 查找（当使用 HashMap 实现时）
+    LReg.LibraryType := ALibType;
+    LReg.LibraryClass := ALibraryClass;
+    LReg.Description := ADescription;
+    LReg.Priority := APriority;
+    FRegistrationMap.Put(Ord(ALibType), LReg);
   finally
     LeaveCriticalSection(GFactoryLock);
   end;
 end;
 
 class procedure TSSLFactory.UnregisterLibrary(ALibType: TSSLLibraryType);
-var
-  LIndex, LPos: Integer;
 begin
   CheckInitialized;
   EnterCriticalSection(GFactoryLock);
   try
-    LPos := -1;
-    for LIndex := 0 to High(FRegistrations) do
-    begin
-      if FRegistrations[LIndex].LibraryType = ALibType then
-      begin
-        LPos := LIndex;
-        Break;
-      end;
-    end;
-    
-    if LPos >= 0 then
+    // P0: 使用 Map 接口
+    if FRegistrationMap.Contains(Ord(ALibType)) then
     begin
       // 释放库实例
       ReleaseLibrary(ALibType);
-      
-      // 从数组中删除
-      for LIndex := LPos to High(FRegistrations) - 1 do
-        FRegistrations[LIndex] := FRegistrations[LIndex + 1];
-      SetLength(FRegistrations, Length(FRegistrations) - 1);
+      // 从 Map 中删除
+      FRegistrationMap.Remove(Ord(ALibType));
     end;
   finally
     LeaveCriticalSection(GFactoryLock);
@@ -567,35 +543,31 @@ end;
 
 class function TSSLFactory.IsLibraryAvailable(ALibType: TSSLLibraryType): Boolean;
 var
-  LIndex: Integer;
   LLib: ISSLLibrary;
 begin
   Result := False;
   CheckInitialized;
-  
+
   if ALibType = sslAutoDetect then
   begin
-    Result := Length(FRegistrations) > 0;
+    // P0: 使用 Map 接口
+    Result := FRegistrationMap.Count > 0;
     Exit;
   end;
-  
+
   EnterCriticalSection(GFactoryLock);
   try
-    // 检查是否已注册
-    for LIndex := 0 to High(FRegistrations) do
+    // P0: 使用 Map 接口检查是否已注册
+    if FRegistrationMap.Contains(Ord(ALibType)) then
     begin
-      if FRegistrations[LIndex].LibraryType = ALibType then
-      begin
-        // 尝试创建实例以验证可用性
-        try
-          LLib := CreateLibraryInstance(ALibType);
-          Result := Assigned(LLib) and LLib.Initialize;
-          if Result and not Assigned(FLibraries[ALibType]) then
-            FLibraries[ALibType] := LLib;
-        except
-          Result := False;
-        end;
-        Break;
+      // 尝试创建实例以验证可用性
+      try
+        LLib := CreateLibraryInstance(ALibType);
+        Result := Assigned(LLib) and LLib.Initialize;
+        if Result and not Assigned(FLibraries[ALibType]) then
+          FLibraries[ALibType] := LLib;
+      except
+        Result := False;
       end;
     end;
   finally
@@ -619,22 +591,19 @@ end;
 
 class function TSSLFactory.GetLibraryDescription(ALibType: TSSLLibraryType): string;
 var
-  LIndex: Integer;
+  LReg: TSSLLibraryRegistration;
 begin
   Result := '';
   CheckInitialized;
-  
+
   EnterCriticalSection(GFactoryLock);
   try
-    for LIndex := 0 to High(FRegistrations) do
+    // P0: 使用 Map 接口
+    if FRegistrationMap.TryGet(Ord(ALibType), LReg) then
     begin
-      if FRegistrations[LIndex].LibraryType = ALibType then
-      begin
-        Result := FRegistrations[LIndex].Description;
-        if Result = '' then
-          Result := SSL_LIBRARY_NAMES[ALibType];
-        Break;
-      end;
+      Result := LReg.Description;
+      if Result = '' then
+        Result := SSL_LIBRARY_NAMES[ALibType];
     end;
   finally
     LeaveCriticalSection(GFactoryLock);
@@ -646,23 +615,21 @@ var
   LIndex: Integer;
   LBestPriority: Integer;
   LBestType: TSSLLibraryType;
-  LCandidates: array of TSSLLibraryRegistration;
+  LCandidates: specialize TArray<TSSLLibraryRegistration>;
 begin
   CheckInitialized;
-  
+
   LBestType := sslAutoDetect;
   LBestPriority := -1;
-  
-  // 先复制注册信息，避免在持有锁时调用 IsLibraryAvailable
+
+  // P0: 使用 Map 接口获取所有注册项
   EnterCriticalSection(GFactoryLock);
   try
-    SetLength(LCandidates, Length(FRegistrations));
-    for LIndex := 0 to High(FRegistrations) do
-      LCandidates[LIndex] := FRegistrations[LIndex];
+    LCandidates := FRegistrationMap.Values;
   finally
     LeaveCriticalSection(GFactoryLock);
   end;
-  
+
   // 现在在锁外检查可用性
   for LIndex := 0 to High(LCandidates) do
   begin
@@ -673,7 +640,7 @@ begin
       LBestType := LCandidates[LIndex].LibraryType;
     end;
   end;
-  
+
   // 如果没有找到可用库，按平台默认选择
   if LBestType = sslAutoDetect then
   begin
@@ -691,7 +658,7 @@ begin
       LBestType := sslMbedTLS;
     {$ENDIF}
   end;
-  
+
   Result := LBestType;
 end;
 
@@ -723,20 +690,15 @@ end;
 
 class function TSSLFactory.CreateLibraryInstance(ALibType: TSSLLibraryType): ISSLLibrary;
 var
-  LIndex: Integer;
+  LReg: TSSLLibraryRegistration;
   LClass: TSSLLibraryClass;
 begin
   Result := nil;
 
+  // P0: 使用 Map 接口查找注册信息
   LClass := nil;
-  for LIndex := 0 to High(FRegistrations) do
-  begin
-    if FRegistrations[LIndex].LibraryType = ALibType then
-    begin
-      LClass := FRegistrations[LIndex].LibraryClass;
-      Break;
-    end;
-  end;
+  if FRegistrationMap.TryGet(Ord(ALibType), LReg) then
+    LClass := LReg.LibraryClass;
 
   if Assigned(LClass) then
   begin
@@ -761,7 +723,7 @@ begin
         'TSSLFactory.CreateLibraryInstance'
       );
     end;
-    
+
     sslMbedTLS:
     begin
       // Future: MbedTLS backend support (not currently implemented)
