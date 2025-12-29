@@ -61,6 +61,8 @@ type
     procedure ApplyOptions;
     { P1: 统一上下文验证模式 - 与 OpenSSL 保持一致 }
     procedure RequireValidContext(const AMethodName: string);
+    { P1: PEM→DER 转换 - 消除跨平台差异 }
+    function PEMToDER(const APEM: string): TBytes;
 
   public
     constructor Create(ALibrary: ISSLLibrary; AType: TSSLContextType);
@@ -253,6 +255,91 @@ begin
       sslErrNotInitialized,
       AMethodName
     );
+end;
+
+{ P1: PEM→DER 转换 - 消除跨平台差异
+  使用 Windows CryptStringToBinaryA API 解码 PEM 格式
+  支持带 header 和不带 header 的 Base64 格式 }
+function TWinSSLContext.PEMToDER(const APEM: string): TBytes;
+var
+  LPEMAnsi: AnsiString;
+  LBinarySize: DWORD;
+begin
+  Result := nil;
+  if APEM = '' then
+    Exit;
+
+  LPEMAnsi := AnsiString(APEM);
+
+  // 第一次调用：获取所需缓冲区大小
+  LBinarySize := 0;
+  if not CryptStringToBinaryA(
+    PAnsiChar(LPEMAnsi),
+    Length(LPEMAnsi),
+    CRYPT_STRING_BASE64HEADER,  // 自动处理 -----BEGIN/END----- 头
+    nil,
+    @LBinarySize,
+    nil,
+    nil
+  ) then
+  begin
+    // 尝试不带 header 的纯 Base64
+    if not CryptStringToBinaryA(
+      PAnsiChar(LPEMAnsi),
+      Length(LPEMAnsi),
+      CRYPT_STRING_BASE64,
+      nil,
+      @LBinarySize,
+      nil,
+      nil
+    ) then
+      raise ESSLCertificateLoadException.CreateWithContext(
+        'Failed to decode PEM data: invalid format',
+        sslErrLoadFailed,
+        'TWinSSLContext.PEMToDER',
+        GetLastError,
+        sslWinSSL
+      );
+  end;
+
+  // 分配缓冲区
+  SetLength(Result, LBinarySize);
+
+  // 第二次调用：实际解码
+  if not CryptStringToBinaryA(
+    PAnsiChar(LPEMAnsi),
+    Length(LPEMAnsi),
+    CRYPT_STRING_BASE64HEADER,
+    @Result[0],
+    @LBinarySize,
+    nil,
+    nil
+  ) then
+  begin
+    // 尝试不带 header 的纯 Base64
+    if not CryptStringToBinaryA(
+      PAnsiChar(LPEMAnsi),
+      Length(LPEMAnsi),
+      CRYPT_STRING_BASE64,
+      @Result[0],
+      @LBinarySize,
+      nil,
+      nil
+    ) then
+    begin
+      SetLength(Result, 0);
+      raise ESSLCertificateLoadException.CreateWithContext(
+        'Failed to decode PEM data',
+        sslErrLoadFailed,
+        'TWinSSLContext.PEMToDER',
+        GetLastError,
+        sslWinSSL
+      );
+    end;
+  end;
+
+  // 调整实际大小
+  SetLength(Result, LBinarySize);
 end;
 
 // ============================================================================
@@ -511,37 +598,85 @@ begin
 end;
 
 procedure TWinSSLContext.LoadCertificatePEM(const APEM: string);
+var
+  LDERData: TBytes;
 begin
-  // WinSSL/Schannel does not natively support PEM format
-  // PEM data must be converted to DER or PKCS#12 format
+  // P1: 实现 PEM→DER 转换，消除跨平台差异
   if APEM = '' then
     raise ESSLInvalidArgument.CreateWithContext(
       'PEM string is empty',
       sslErrInvalidParam,
       'TWinSSLContext.LoadCertificatePEM'
     );
-  
-  raise ESSLConfigurationException.CreateWithContext(
-    'WinSSL backend does not support direct PEM loading. ' +
-    'Please convert to DER or PKCS#12 format, or use the OpenSSL backend.',
-    sslErrUnsupported,
-    'TWinSSLContext.LoadCertificatePEM'
+
+  // 转换 PEM 到 DER
+  LDERData := PEMToDER(APEM);
+  if Length(LDERData) = 0 then
+    raise ESSLCertificateLoadException.CreateWithContext(
+      'Failed to decode PEM certificate data',
+      sslErrLoadFailed,
+      'TWinSSLContext.LoadCertificatePEM',
+      0,
+      sslWinSSL
+    );
+
+  // 清理之前的证书
+  CleanupCertificate;
+
+  // 创建内存证书存储
+  FCertStore := CertOpenStore(
+    CERT_STORE_PROV_MEMORY,
+    0,
+    0,
+    0,
+    nil
   );
+
+  if FCertStore = nil then
+    raise ESSLResourceException.CreateWithContext(
+      'Failed to create certificate store',
+      sslErrMemory,
+      'TWinSSLContext.LoadCertificatePEM'
+    );
+
+  // 添加 DER 编码的证书到存储
+  if not CertAddEncodedCertificateToStore(
+    FCertStore,
+    X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
+    @LDERData[0],
+    Length(LDERData),
+    CERT_STORE_ADD_ALWAYS,
+    @FCertContext
+  ) then
+    raise ESSLCertificateLoadException.CreateWithContext(
+      'Failed to add certificate to store',
+      sslErrLoadFailed,
+      'TWinSSLContext.LoadCertificatePEM',
+      GetLastError,
+      sslWinSSL
+    );
 end;
 
 procedure TWinSSLContext.LoadPrivateKeyPEM(const APEM: string; const APassword: string = '');
 begin
-  // WinSSL/Schannel does not natively support PEM format for private keys
+  // P1: 私钥 PEM 加载说明
+  // WinSSL/Schannel 不直接支持 PEM 格式私钥导入
+  // Windows CNG API 需要 PKCS#8 DER 格式，且导入过程复杂
+  // 推荐方案：将证书和私钥合并为 PFX/P12 格式
   if APEM = '' then
     raise ESSLInvalidArgument.CreateWithContext(
       'PEM string is empty',
       sslErrInvalidParam,
       'TWinSSLContext.LoadPrivateKeyPEM'
     );
-  
+
+  // 提供清晰的错误信息和解决方案
   raise ESSLConfigurationException.CreateWithContext(
-    'WinSSL backend does not support direct PEM loading. ' +
-    'Please use PKCS#12 format with LoadPrivateKey, or use the OpenSSL backend.',
+    'WinSSL backend does not support direct PEM private key loading. ' +
+    'Recommended solutions: ' +
+    '(1) Use PKCS#12/PFX format with LoadPrivateKey method, ' +
+    '(2) Use OpenSSL backend for PEM support, ' +
+    '(3) Convert PEM to PFX using: openssl pkcs12 -export -in cert.pem -inkey key.pem -out bundle.pfx',
     sslErrUnsupported,
     'TWinSSLContext.LoadPrivateKeyPEM'
   );
