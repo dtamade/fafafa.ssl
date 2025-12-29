@@ -465,6 +465,10 @@ begin
   // ChaCha20-Poly1305 需要 Windows 10 版本 1903+
   Result.SupportsChaChaPoly := (FWindowsVersion.Major >= 10) and (FWindowsVersion.Build >= 18362);
 
+  // WinSSL/Schannel 不支持直接加载 PEM 格式私钥
+  // 需要使用 PKCS#12/PFX 格式，或先转换为 DER 格式
+  Result.SupportsPEMPrivateKey := False;
+
   // 支持的协议版本范围
   Result.MinTLSVersion := sslProtocolTLS10;  // Windows Vista+
   if Result.SupportsTLS13 then

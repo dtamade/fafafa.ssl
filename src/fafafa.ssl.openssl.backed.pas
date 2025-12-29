@@ -535,6 +535,9 @@ begin
   // ChaCha20-Poly1305 需要 OpenSSL 1.1.0+
   Result.SupportsChaChaPoly := (FVersionNumber >= $1010000F);
 
+  // OpenSSL 原生支持 PEM 格式私钥
+  Result.SupportsPEMPrivateKey := True;
+
   // 支持的协议版本范围
   Result.MinTLSVersion := sslProtocolTLS10;  // 可通过配置禁用
   if Result.SupportsTLS13 then

@@ -529,6 +529,7 @@ type
     SupportsSessionTickets: Boolean;  // 会话票据
     SupportsECDHE: Boolean;           // ECDHE 密钥交换
     SupportsChaChaPoly: Boolean;      // ChaCha20-Poly1305 加密
+    SupportsPEMPrivateKey: Boolean;   // PEM 格式私钥加载支持
     MinTLSVersion: TSSLProtocolVersion;  // 支持的最低 TLS 版本
     MaxTLSVersion: TSSLProtocolVersion;  // 支持的最高 TLS 版本
   end;
