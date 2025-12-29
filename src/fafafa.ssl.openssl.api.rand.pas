@@ -181,7 +181,7 @@ begin
     Exit(True);
     
   // Check if crypto library is loaded
-  if not IsCryptoLibraryLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     Exit(False);
     
   // Load RAND method functions (deprecated in OpenSSL 3.0, optional)

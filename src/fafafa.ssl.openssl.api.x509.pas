@@ -566,7 +566,7 @@ procedure LoadOpenSSLX509;
 var
   LibHandle: TLibHandle;
 begin
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     Exit;
     
   LibHandle := GetCryptoLibHandle;

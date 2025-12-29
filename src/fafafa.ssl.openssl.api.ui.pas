@@ -260,7 +260,7 @@ var
 
 procedure LoadUIFunctions;
 begin
-  if not IsOpenSSLCoreLoaded then Exit;
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then Exit;
   
   // UI 基本函数
   UI_new := TUI_new(GetCryptoProcAddress('UI_new'));

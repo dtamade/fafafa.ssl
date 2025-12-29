@@ -353,7 +353,7 @@ begin
     Exit(True);
     
   // Check if crypto library is loaded
-  if not IsCryptoLibraryLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     Exit(False);
     
   // Load error functions
@@ -622,7 +622,7 @@ begin
     Exit;
   end;
 
-  if not IsOpenSSLERRLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmERR) then
     LoadOpenSSLERR;
   
   Category := GetOpenSSLErrorCategory(AErrorCode);

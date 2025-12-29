@@ -115,7 +115,7 @@ begin
     Exit(False);
 
   // Ensure EVP module is loaded (needed for digest algorithms)
-  if not IsEVPLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmEVP) then
     LoadEVP(LLib);
 
   // Load HMAC functions using batch loading

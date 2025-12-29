@@ -53,10 +53,10 @@ begin
     Exit;
 
   // 加载核心库
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     LoadOpenSSLCore();
 
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     raise ESSLException.Create('Failed to load OpenSSL core library');
 
   // 加载EVP模块（加密/解密/哈希）
@@ -83,12 +83,12 @@ end;
 
 function IsOpenSSLInitialized: Boolean;
 begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmInitGlobal) and IsOpenSSLCoreLoaded;
+  Result := TOpenSSLLoader.IsModuleLoaded(osmInitGlobal) and TOpenSSLLoader.IsModuleLoaded(osmCore);
 end;
 
 function GetOpenSSLVersion: string;
 begin
-  if IsOpenSSLCoreLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
     Result := GetOpenSSLVersionString
   else
     Result := 'Not loaded';

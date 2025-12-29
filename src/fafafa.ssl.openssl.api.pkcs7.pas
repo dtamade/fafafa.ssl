@@ -355,7 +355,7 @@ var
 begin
   Result := nil;
 
-  if not IsPKCS7Loaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS7) then
     raise ESSLException.Create('PKCS7 functions not loaded');
   
   // Create input BIO from data
@@ -412,7 +412,7 @@ begin
   Result := False;
   AOutData := nil;
 
-  if not IsPKCS7Loaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS7) then
     Exit;
   
   // Create input BIO from signed data
@@ -470,7 +470,7 @@ var
 begin
   Result := nil;
 
-  if not IsPKCS7Loaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS7) then
     raise ESSLException.Create('PKCS7 functions not loaded');
   
   // Create input BIO from data
@@ -527,7 +527,7 @@ begin
   Result := False;
   AOutData := nil;
 
-  if not IsPKCS7Loaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS7) then
     Exit;
   
   // Create input BIO from encrypted data

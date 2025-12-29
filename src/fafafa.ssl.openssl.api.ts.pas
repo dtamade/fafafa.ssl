@@ -452,7 +452,7 @@ uses
 
 procedure LoadTSFunctions;
 begin
-  if not IsOpenSSLCoreLoaded then Exit;
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then Exit;
   
   // TS_MSG_IMPRINT 函数
   TS_MSG_IMPRINT_new := TTS_MSG_IMPRINT_new(GetCryptoProcAddress('TS_MSG_IMPRINT_new'));

@@ -224,7 +224,7 @@ begin
     Exit;
 
   // 加载OpenSSL核心
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     try
       LoadOpenSSLCore();
@@ -234,7 +234,7 @@ begin
     end;
   end;
 
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     RaiseInitializationError('OpenSSL core', 'library not available');
 
   // 加载BIO模块（用于Base64）

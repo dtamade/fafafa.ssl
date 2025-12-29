@@ -298,10 +298,10 @@ begin
     Exit(True);
 
   // Make sure core is loaded first
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     LoadOpenSSLCore;
 
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     Exit(False);
 
   // Load SSL protocol functions using helper function

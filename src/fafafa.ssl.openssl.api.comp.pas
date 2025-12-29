@@ -201,7 +201,7 @@ uses
 
 procedure LoadCOMPFunctions;
 begin
-  if not IsOpenSSLCoreLoaded then Exit;
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then Exit;
   
   // COMP_METHOD 函数
   COMP_CTX_new := TCOMP_CTX_new(GetCryptoProcAddress('COMP_CTX_new'));

@@ -300,7 +300,7 @@ uses
 
 procedure LoadCTFunctions;
 begin
-  if not IsOpenSSLCoreLoaded then Exit;
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then Exit;
   
   // CT_POLICY_EVAL_CTX 函数
   CT_POLICY_EVAL_CTX_new := TCT_POLICY_EVAL_CTX_new(GetCryptoProcAddress('CT_POLICY_EVAL_CTX_new'));

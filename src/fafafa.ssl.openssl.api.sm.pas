@@ -146,7 +146,7 @@ end;
 
 procedure LoadOpenSSLSM;
 begin
-  if not IsCryptoLibraryLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     Exit;
     
   // SM2 functions

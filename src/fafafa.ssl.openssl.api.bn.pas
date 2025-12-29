@@ -421,7 +421,7 @@ begin
   if TOpenSSLLoader.IsModuleLoaded(osmBN) then
     Exit(True);
     
-  if not IsCryptoLibraryLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     Exit(False);
     
   // Load BIGNUM functions

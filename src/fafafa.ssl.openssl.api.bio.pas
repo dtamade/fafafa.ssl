@@ -356,7 +356,7 @@ var
   LibSSL, LibCrypto: TLibHandle;
 begin
   // Make sure core is loaded first
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     LoadOpenSSLCore;
 
   // Get handles from core module

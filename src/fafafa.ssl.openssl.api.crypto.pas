@@ -548,7 +548,7 @@ end;
 
 function IsOpenSSLCryptoLoaded: Boolean;
 begin
-  Result := IsOpenSSLCoreLoaded;  // Depends on core being loaded
+  Result := TOpenSSLLoader.IsModuleLoaded(osmCore);  // Depends on core being loaded
 end;
 
 end.

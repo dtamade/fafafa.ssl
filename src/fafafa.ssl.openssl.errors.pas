@@ -68,7 +68,8 @@ function GetOpenSSLFriendlyErrorMessageEN(AErrorCode: Cardinal): string;
 implementation
 
 uses
-  fafafa.ssl.openssl.api;
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.loader;
 
 function GetOpenSSLErrorString: string;
 var
@@ -77,7 +78,7 @@ var
 begin
   Result := '';
 
-  if not IsOpenSSLLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     try
       LoadOpenSSLLibrary;
@@ -112,7 +113,7 @@ function GetLastOpenSSLError: Cardinal;
 begin
   Result := 0;
 
-  if not IsOpenSSLLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     try
       LoadOpenSSLLibrary;

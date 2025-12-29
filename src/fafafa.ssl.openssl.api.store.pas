@@ -313,7 +313,7 @@ uses
 
 procedure LoadSTOREFunctions;
 begin
-  if not IsOpenSSLCoreLoaded then Exit;
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then Exit;
   
   // OSSL_STORE_CTX 函数
   OSSL_STORE_open := TOSSL_STORE_open(GetCryptoProcAddress('OSSL_STORE_open'));
