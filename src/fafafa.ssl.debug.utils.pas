@@ -167,6 +167,95 @@ type
     property Size: Integer read FSize;
   end;
 
+  {**
+   * TSSLResourceInfo - 资源分配信息记录
+   *
+   * 用于调试模式下跟踪资源分配。
+   *}
+  TSSLResourceInfo = record
+    ResourceType: string;     // 资源类型名称
+    ResourcePtr: Pointer;     // 资源指针
+    AllocTime: TDateTime;     // 分配时间
+    AllocLocation: string;    // 分配位置（调用者信息）
+  end;
+
+  {**
+   * TSSLResourceTracker - 资源泄漏检测器
+   *
+   * 在调试模式下跟踪 SSL 资源的分配和释放，
+   * 帮助检测资源泄漏问题。
+   *
+   * 使用方法:
+   * - 在资源创建时调用 RegisterResource
+   * - 在资源释放时调用 UnregisterResource
+   * - 在程序结束时调用 ReportLeaks 检查泄漏
+   *
+   * @example
+   * <code>
+   *   // 创建资源时
+   *   {$IFDEF DEBUG}
+   *   TSSLResourceTracker.Instance.RegisterResource('TOpenSSLContext', Self, 'CreateContext');
+   *   {$ENDIF}
+   *
+   *   // 释放资源时
+   *   {$IFDEF DEBUG}
+   *   TSSLResourceTracker.Instance.UnregisterResource(Self);
+   *   {$ENDIF}
+   *
+   *   // 程序结束时检查
+   *   {$IFDEF DEBUG}
+   *   TSSLResourceTracker.Instance.ReportLeaks;
+   *   {$ENDIF}
+   * </code>
+   *}
+  TSSLResourceTracker = class
+  private
+    class var FInstance: TSSLResourceTracker;
+    class var FLock: TRTLCriticalSection;
+    class var FInitialized: Boolean;
+  private
+    FResources: array of TSSLResourceInfo;
+    FEnabled: Boolean;
+    FReportOnDestroy: Boolean;
+    function FindResource(APtr: Pointer): Integer;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    {** 注册资源分配 *}
+    procedure RegisterResource(const AType: string; APtr: Pointer; const ALocation: string = '');
+
+    {** 注销资源释放 *}
+    procedure UnregisterResource(APtr: Pointer);
+
+    {** 获取当前跟踪的资源数量 *}
+    function GetResourceCount: Integer;
+
+    {** 获取资源列表的快照 *}
+    function GetResourceSnapshot: string;
+
+    {** 报告泄漏（如果有） *}
+    function ReportLeaks: string;
+
+    {** 检查是否有泄漏 *}
+    function HasLeaks: Boolean;
+
+    {** 清除所有跟踪记录 *}
+    procedure Clear;
+
+    {** 启用/禁用跟踪 *}
+    property Enabled: Boolean read FEnabled write FEnabled;
+
+    {** 析构时自动报告泄漏 *}
+    property ReportOnDestroy: Boolean read FReportOnDestroy write FReportOnDestroy;
+
+    {** 获取单例实例 *}
+    class function Instance: TSSLResourceTracker;
+
+    {** 释放单例 *}
+    class procedure FreeInstance; reintroduce;
+  end;
+
 implementation
 
 { TSSLDebugUtils }
@@ -604,6 +693,226 @@ begin
   LLen := Min(Length(ABytes), Length(FBits));
   if LLen > 0 then
     Move(ABytes[0], FBits[0], LLen);
+end;
+
+{ TSSLResourceTracker }
+
+constructor TSSLResourceTracker.Create;
+begin
+  inherited Create;
+  SetLength(FResources, 0);
+  FEnabled := True;
+  FReportOnDestroy := True;
+end;
+
+destructor TSSLResourceTracker.Destroy;
+var
+  LReport: string;
+begin
+  if FReportOnDestroy and HasLeaks then
+  begin
+    LReport := ReportLeaks;
+    // 输出到标准错误
+    WriteLn(StdErr, LReport);
+  end;
+  SetLength(FResources, 0);
+  inherited;
+end;
+
+function TSSLResourceTracker.FindResource(APtr: Pointer): Integer;
+var
+  I: Integer;
+begin
+  Result := -1;
+  for I := 0 to High(FResources) do
+  begin
+    if FResources[I].ResourcePtr = APtr then
+    begin
+      Result := I;
+      Exit;
+    end;
+  end;
+end;
+
+procedure TSSLResourceTracker.RegisterResource(const AType: string; APtr: Pointer; const ALocation: string);
+var
+  LInfo: TSSLResourceInfo;
+  LLen: Integer;
+begin
+  if not FEnabled then Exit;
+  if APtr = nil then Exit;
+
+  EnterCriticalSection(FLock);
+  try
+    // 检查是否已存在
+    if FindResource(APtr) >= 0 then Exit;
+
+    LInfo.ResourceType := AType;
+    LInfo.ResourcePtr := APtr;
+    LInfo.AllocTime := Now;
+    LInfo.AllocLocation := ALocation;
+
+    LLen := Length(FResources);
+    SetLength(FResources, LLen + 1);
+    FResources[LLen] := LInfo;
+  finally
+    LeaveCriticalSection(FLock);
+  end;
+end;
+
+procedure TSSLResourceTracker.UnregisterResource(APtr: Pointer);
+var
+  LIdx, LLen: Integer;
+begin
+  if not FEnabled then Exit;
+  if APtr = nil then Exit;
+
+  EnterCriticalSection(FLock);
+  try
+    LIdx := FindResource(APtr);
+    if LIdx >= 0 then
+    begin
+      LLen := Length(FResources);
+      // 移动最后一个元素到删除位置
+      if LIdx < LLen - 1 then
+        FResources[LIdx] := FResources[LLen - 1];
+      SetLength(FResources, LLen - 1);
+    end;
+  finally
+    LeaveCriticalSection(FLock);
+  end;
+end;
+
+function TSSLResourceTracker.GetResourceCount: Integer;
+begin
+  EnterCriticalSection(FLock);
+  try
+    Result := Length(FResources);
+  finally
+    LeaveCriticalSection(FLock);
+  end;
+end;
+
+function TSSLResourceTracker.GetResourceSnapshot: string;
+var
+  LSB: TSSLStringBuilder;
+  I: Integer;
+begin
+  EnterCriticalSection(FLock);
+  try
+    LSB := TSSLStringBuilder.Create;
+    try
+      LSB.AppendFormat('SSL 资源跟踪快照 (共 %d 个资源):', [Length(FResources)]);
+      LSB.Indent;
+      for I := 0 to High(FResources) do
+      begin
+        LSB.AppendFormat('[%d] %s @ %p', [I, FResources[I].ResourceType, FResources[I].ResourcePtr]);
+        LSB.Indent;
+        LSB.AppendFormat('分配时间: %s', [DateTimeToStr(FResources[I].AllocTime)]);
+        if FResources[I].AllocLocation <> '' then
+          LSB.AppendFormat('分配位置: %s', [FResources[I].AllocLocation]);
+        LSB.Unindent;
+      end;
+      Result := LSB.ToString;
+    finally
+      LSB.Free;
+    end;
+  finally
+    LeaveCriticalSection(FLock);
+  end;
+end;
+
+function TSSLResourceTracker.ReportLeaks: string;
+var
+  LSB: TSSLStringBuilder;
+  I: Integer;
+begin
+  EnterCriticalSection(FLock);
+  try
+    if Length(FResources) = 0 then
+    begin
+      Result := '';
+      Exit;
+    end;
+
+    LSB := TSSLStringBuilder.Create;
+    try
+      LSB.AppendLine('');
+      LSB.AppendLine('========================================');
+      LSB.AppendFormat('SSL 资源泄漏检测: 发现 %d 个未释放资源!', [Length(FResources)]);
+      LSB.AppendLine('========================================');
+      LSB.Indent;
+      for I := 0 to High(FResources) do
+      begin
+        LSB.AppendFormat('[泄漏 %d] %s @ %p', [I + 1, FResources[I].ResourceType, FResources[I].ResourcePtr]);
+        LSB.Indent;
+        LSB.AppendFormat('分配时间: %s', [DateTimeToStr(FResources[I].AllocTime)]);
+        if FResources[I].AllocLocation <> '' then
+          LSB.AppendFormat('分配位置: %s', [FResources[I].AllocLocation]);
+        LSB.Unindent;
+      end;
+      LSB.Unindent;
+      LSB.AppendLine('========================================');
+      Result := LSB.ToString;
+    finally
+      LSB.Free;
+    end;
+  finally
+    LeaveCriticalSection(FLock);
+  end;
+end;
+
+function TSSLResourceTracker.HasLeaks: Boolean;
+begin
+  EnterCriticalSection(FLock);
+  try
+    Result := Length(FResources) > 0;
+  finally
+    LeaveCriticalSection(FLock);
+  end;
+end;
+
+procedure TSSLResourceTracker.Clear;
+begin
+  EnterCriticalSection(FLock);
+  try
+    SetLength(FResources, 0);
+  finally
+    LeaveCriticalSection(FLock);
+  end;
+end;
+
+class function TSSLResourceTracker.Instance: TSSLResourceTracker;
+begin
+  if not FInitialized then
+  begin
+    InitCriticalSection(FLock);
+    FInitialized := True;
+  end;
+
+  EnterCriticalSection(FLock);
+  try
+    if FInstance = nil then
+      FInstance := TSSLResourceTracker.Create;
+    Result := FInstance;
+  finally
+    LeaveCriticalSection(FLock);
+  end;
+end;
+
+class procedure TSSLResourceTracker.FreeInstance;
+begin
+  if FInitialized then
+  begin
+    EnterCriticalSection(FLock);
+    try
+      FreeAndNil(FInstance);
+    finally
+      LeaveCriticalSection(FLock);
+    end;
+    DoneCriticalSection(FLock);
+    FInitialized := False;
+  end;
 end;
 
 end.
