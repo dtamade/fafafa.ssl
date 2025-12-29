@@ -535,190 +535,484 @@ type
 
   {**
    * ISSLLibrary - SSL库管理接口
+   *
+   * 提供 SSL/TLS 库的初始化、版本查询、功能检测和工厂方法。
+   * 这是使用 fafafa.ssl 的入口点接口。
+   *
    * @stable 1.0
    * @locked 2025-12-24
    * @breaking-change-policy Requires major version bump
+   *
+   * @example
+   *   var Lib: ISSLLibrary;
+   *   begin
+   *     Lib := TOpenSSLLibrary.Create;
+   *     if Lib.Initialize then
+   *       WriteLn('OpenSSL version: ', Lib.GetVersionString);
+   *   end;
    *}
   ISSLLibrary = interface
     ['{A0E8F4B1-7C3A-4D2E-9F5B-8C6D7E9A0B1C}']
-    
-    // 初始化和清理
-    function Initialize: Boolean;
-    procedure Finalize;
-    function IsInitialized: Boolean;
-    
-    // 版本信息
-    function GetLibraryType: TSSLLibraryType;
-    function GetVersionString: string;
-    function GetVersionNumber: Cardinal;
-    function GetCompileFlags: string;
-    
-    // 功能支持查询
-    function IsProtocolSupported(AProtocol: TSSLProtocolVersion): Boolean;
-    function IsCipherSupported(const ACipherName: string): Boolean;
-    function IsFeatureSupported(AFeature: TSSLFeature): Boolean;
-    function GetCapabilities: TSSLBackendCapabilities;  // P2-2: 后端能力矩阵
 
-    // 库配置
+    {** 初始化 SSL 库。必须在使用其他功能前调用。
+        @returns True 如果初始化成功，False 如果失败 *}
+    function Initialize: Boolean;
+
+    {** 清理 SSL 库资源。应在程序退出前调用 *}
+    procedure Finalize;
+
+    {** 检查库是否已初始化
+        @returns True 如果已初始化 *}
+    function IsInitialized: Boolean;
+
+    {** 获取库后端类型（OpenSSL, WinSSL 等）
+        @returns TSSLLibraryType 枚举值 *}
+    function GetLibraryType: TSSLLibraryType;
+
+    {** 获取库版本字符串（如 "OpenSSL 3.0.13"）
+        @returns 版本描述字符串 *}
+    function GetVersionString: string;
+
+    {** 获取库版本号（数值格式，便于比较）
+        @returns 版本号，格式因后端而异 *}
+    function GetVersionNumber: Cardinal;
+
+    {** 获取库编译标志
+        @returns 编译配置字符串 *}
+    function GetCompileFlags: string;
+
+    {** 检查是否支持指定协议版本
+        @param AProtocol 要检查的协议版本
+        @returns True 如果支持该协议 *}
+    function IsProtocolSupported(AProtocol: TSSLProtocolVersion): Boolean;
+
+    {** 检查是否支持指定密码套件
+        @param ACipherName 密码套件名称（如 "AES256-GCM-SHA384"）
+        @returns True 如果支持该密码套件 *}
+    function IsCipherSupported(const ACipherName: string): Boolean;
+
+    {** 检查是否支持指定特性
+        @param AFeature 要检查的特性（SNI, ALPN 等）
+        @returns True 如果支持该特性 *}
+    function IsFeatureSupported(AFeature: TSSLFeature): Boolean;
+
+    {** 获取后端能力矩阵，一次性查询所有支持的特性
+        @returns TSSLBackendCapabilities 记录 *}
+    function GetCapabilities: TSSLBackendCapabilities;
+
+    {** 设置默认配置，影响后续创建的上下文
+        @param AConfig 配置记录 *}
     procedure SetDefaultConfig(const AConfig: TSSLConfig);
+
+    {** 获取当前默认配置
+        @returns 当前配置记录的副本 *}
     function GetDefaultConfig: TSSLConfig;
-    
-    // 错误处理
+
+    {** 获取最后一个错误码
+        @returns 平台相关的错误码 *}
     function GetLastError: Integer;
+
+    {** 获取最后一个错误的描述字符串
+        @returns 错误描述 *}
     function GetLastErrorString: string;
+
+    {** 清除错误状态 *}
     procedure ClearError;
-    
-    // 统计信息
+
+    {** 获取统计信息（连接数、握手次数等）
+        @returns 统计信息记录 *}
     function GetStatistics: TSSLStatistics;
+
+    {** 重置统计计数器 *}
     procedure ResetStatistics;
-    
-    // 日志
+
+    {** 设置日志回调函数
+        @param ACallback 日志回调，nil 禁用日志 *}
     procedure SetLogCallback(ACallback: TSSLLogCallback);
+
+    {** 记录日志消息
+        @param ALevel 日志级别
+        @param AMessage 日志内容 *}
     procedure Log(ALevel: TSSLLogLevel; const AMessage: string);
-    
-    // 工厂方法
+
+    {** 创建 SSL 上下文
+        @param AType 上下文类型（客户端/服务端/双向）
+        @returns 新创建的上下文接口 *}
     function CreateContext(AType: TSSLContextType): ISSLContext;
+
+    {** 创建空证书对象
+        @returns 新创建的证书接口 *}
     function CreateCertificate: ISSLCertificate;
+
+    {** 创建证书存储
+        @returns 新创建的证书存储接口 *}
     function CreateCertificateStore: ISSLCertificateStore;
   end;
 
   {**
    * ISSLContext - SSL上下文接口
+   *
+   * 管理 SSL/TLS 连接的配置，包括协议版本、证书、密码套件等。
+   * 上下文可以创建多个连接，共享配置。
+   *
    * @stable 1.0
    * @locked 2025-12-24
    * @breaking-change-policy Requires major version bump
+   *
+   * @example
+   *   var Ctx: ISSLContext;
+   *   begin
+   *     Ctx := Lib.CreateContext(sslCtxClient);
+   *     Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
+   *     Ctx.LoadCertificate('client.crt');
+   *     Ctx.LoadPrivateKey('client.key', 'password');
+   *   end;
    *}
   ISSLContext = interface
     ['{B1F9E5C2-8D4B-5E3F-A06C-9D8E0F1A2B3D}']
-    
-    // 基本配置
+
+    {** 获取上下文类型（客户端/服务端/双向）
+        @returns TSSLContextType 枚举值 *}
     function GetContextType: TSSLContextType;
+
+    {** 设置允许的协议版本。废弃协议会触发警告日志
+        @param AVersions 协议版本集合 *}
     procedure SetProtocolVersions(AVersions: TSSLProtocolVersions);
+
+    {** 获取当前允许的协议版本
+        @returns 协议版本集合 *}
     function GetProtocolVersions: TSSLProtocolVersions;
-    
-    // 证书和密钥管理
+
+    {** 从文件加载证书
+        @param AFileName 证书文件路径（PEM 或 DER 格式）
+        @raises ESSLCertificateException 加载失败时 *}
     procedure LoadCertificate(const AFileName: string); overload;
+
+    {** 从流加载证书
+        @param AStream 包含证书数据的流
+        @raises ESSLCertificateException 加载失败时 *}
     procedure LoadCertificate(AStream: TStream); overload;
+
+    {** 从证书接口加载证书
+        @param ACert 证书接口 *}
     procedure LoadCertificate(ACert: ISSLCertificate); overload;
-    
+
+    {** 从文件加载私钥
+        @param AFileName 私钥文件路径
+        @param APassword 私钥密码（可选）
+        @raises ESSLKeyException 加载失败时 *}
     procedure LoadPrivateKey(const AFileName: string; const APassword: string = ''); overload;
+
+    {** 从流加载私钥
+        @param AStream 包含私钥数据的流
+        @param APassword 私钥密码（可选）
+        @raises ESSLKeyException 加载失败时 *}
     procedure LoadPrivateKey(AStream: TStream; const APassword: string = ''); overload;
-    
-    // PEM 字符串直接加载（企业级接口增强）
+
+    {** 从 PEM 字符串直接加载证书（无需临时文件）
+        @param APEM PEM 格式的证书字符串
+        @raises ESSLCertificateException 加载失败时 *}
     procedure LoadCertificatePEM(const APEM: string);
+
+    {** 从 PEM 字符串直接加载私钥
+        @param APEM PEM 格式的私钥字符串
+        @param APassword 私钥密码（可选）
+        @raises ESSLKeyException 加载失败时 *}
     procedure LoadPrivateKeyPEM(const APEM: string; const APassword: string = '');
-    
+
+    {** 加载 CA 证书文件（用于验证对端证书）
+        @param AFileName CA 证书文件路径 *}
     procedure LoadCAFile(const AFileName: string);
+
+    {** 加载 CA 证书目录
+        @param APath 包含 CA 证书的目录路径 *}
     procedure LoadCAPath(const APath: string);
+
+    {** 设置证书存储（用于验证）
+        @param AStore 证书存储接口 *}
     procedure SetCertificateStore(AStore: ISSLCertificateStore);
-    
-    // 验证配置
+
+    {** 设置证书验证模式
+        @param AMode 验证模式集合 *}
     procedure SetVerifyMode(AMode: TSSLVerifyModes);
+
+    {** 获取当前验证模式
+        @returns 验证模式集合 *}
     function GetVerifyMode: TSSLVerifyModes;
+
+    {** 设置证书链验证深度
+        @param ADepth 最大验证深度（默认 10） *}
     procedure SetVerifyDepth(ADepth: Integer);
+
+    {** 获取当前验证深度
+        @returns 验证深度 *}
     function GetVerifyDepth: Integer;
+
+    {** 设置自定义验证回调
+        @param ACallback 验证回调函数 *}
     procedure SetVerifyCallback(ACallback: TSSLVerifyCallback);
-    
-    // 密码套件配置
+
+    {** 设置密码套件列表（TLS 1.2 及以下）
+        @param ACipherList OpenSSL 格式的密码套件字符串 *}
     procedure SetCipherList(const ACipherList: string);
+
+    {** 获取当前密码套件列表
+        @returns 密码套件字符串 *}
     function GetCipherList: string;
-    procedure SetCipherSuites(const ACipherSuites: string); // TLS 1.3
+
+    {** 设置 TLS 1.3 密码套件
+        @param ACipherSuites TLS 1.3 密码套件字符串 *}
+    procedure SetCipherSuites(const ACipherSuites: string);
+
+    {** 获取 TLS 1.3 密码套件
+        @returns TLS 1.3 密码套件字符串 *}
     function GetCipherSuites: string;
-    
-    // 会话管理
+
+    {** 启用/禁用会话缓存
+        @param AEnabled True 启用，False 禁用 *}
     procedure SetSessionCacheMode(AEnabled: Boolean);
+
+    {** 获取会话缓存状态
+        @returns True 如果已启用 *}
     function GetSessionCacheMode: Boolean;
+
+    {** 设置会话超时时间
+        @param ATimeout 超时秒数 *}
     procedure SetSessionTimeout(ATimeout: Integer);
+
+    {** 获取会话超时时间
+        @returns 超时秒数 *}
     function GetSessionTimeout: Integer;
+
+    {** 设置会话缓存大小
+        @param ASize 最大缓存会话数 *}
     procedure SetSessionCacheSize(ASize: Integer);
+
+    {** 获取会话缓存大小
+        @returns 最大缓存会话数 *}
     function GetSessionCacheSize: Integer;
-    
-    // 高级选项
+
+    {** 设置 SSL 选项
+        @param AOptions 选项集合 *}
     procedure SetOptions(const AOptions: TSSLOptions);
+
+    {** 获取当前 SSL 选项
+        @returns 选项集合 *}
     function GetOptions: TSSLOptions;
-    procedure SetServerName(const AServerName: string); // SNI
+
+    {** 设置 SNI 服务器名称（客户端使用）
+        @param AServerName 服务器主机名 *}
+    procedure SetServerName(const AServerName: string);
+
+    {** 获取 SNI 服务器名称
+        @returns 服务器主机名 *}
     function GetServerName: string;
+
+    {** 设置 ALPN 协议列表
+        @param AProtocols 逗号分隔的协议列表（如 "h2,http/1.1"） *}
     procedure SetALPNProtocols(const AProtocols: string);
+
+    {** 获取 ALPN 协议列表
+        @returns 协议列表字符串 *}
     function GetALPNProtocols: string;
 
-    // 证书验证标志（OCSP/CRL 等）
+    {** 设置证书验证标志（OCSP、CRL 等）
+        @param AFlags 验证标志集合 *}
     procedure SetCertVerifyFlags(AFlags: TSSLCertVerifyFlags);
+
+    {** 获取证书验证标志
+        @returns 验证标志集合 *}
     function GetCertVerifyFlags: TSSLCertVerifyFlags;
 
-    // 回调设置
+    {** 设置密码回调（用于加密私钥）
+        @param ACallback 密码回调函数 *}
     procedure SetPasswordCallback(ACallback: TSSLPasswordCallback);
+
+    {** 设置信息回调（用于调试）
+        @param ACallback 信息回调函数 *}
     procedure SetInfoCallback(ACallback: TSSLInfoCallback);
-    
-    // 创建连接
+
+    {** 从套接字创建 SSL 连接
+        @param ASocket 已连接的套接字句柄
+        @returns 新创建的连接接口 *}
     function CreateConnection(ASocket: THandle): ISSLConnection; overload;
+
+    {** 从流创建 SSL 连接
+        @param AStream 底层传输流
+        @returns 新创建的连接接口 *}
     function CreateConnection(AStream: TStream): ISSLConnection; overload;
-    
-    // 状态查询
+
+    {** 检查上下文是否有效
+        @returns True 如果上下文已正确初始化 *}
     function IsValid: Boolean;
+
+    {** 获取原生句柄（用于高级操作）
+        @returns 平台相关的原生句柄指针 *}
     function GetNativeHandle: Pointer;
   end;
 
   {**
    * ISSLConnection - SSL连接接口
+   *
+   * 表示一个活动的 SSL/TLS 连接，提供握手、数据传输和状态查询功能。
+   * 连接从 ISSLContext.CreateConnection 创建。
+   *
    * @stable 1.0
    * @locked 2025-12-24
    * @breaking-change-policy Requires major version bump
+   *
+   * @example
+   *   var Conn: ISSLConnection;
+   *   begin
+   *     Conn := Ctx.CreateConnection(Socket);
+   *     Conn.SetServerName('example.com');
+   *     if Conn.Connect then
+   *       Conn.WriteString('GET / HTTP/1.1'#13#10);
+   *   end;
    *}
   ISSLConnection = interface
     ['{C2A9F6D3-9E5C-6F40-B17D-AE9F102B4C5E}']
-    
-    // 连接管理
-    function Connect: Boolean;              // 客户端连接
-    function Accept: Boolean;               // 服务端接受
-    function Shutdown: Boolean;             // 优雅关闭
-    procedure Close;                        // 强制关闭
-    
-    // 握手控制
+
+    {** 执行客户端 SSL 连接（包含握手）
+        @returns True 如果连接成功 *}
+    function Connect: Boolean;
+
+    {** 接受服务端 SSL 连接（包含握手）
+        @returns True 如果接受成功 *}
+    function Accept: Boolean;
+
+    {** 优雅关闭 SSL 连接（发送 close_notify）
+        @returns True 如果关闭成功 *}
+    function Shutdown: Boolean;
+
+    {** 强制关闭连接（不发送 close_notify） *}
+    procedure Close;
+
+    {** 执行/继续 SSL 握手
+        @returns 握手状态 *}
     function DoHandshake: TSSLHandshakeState;
+
+    {** 检查握手是否完成
+        @returns True 如果握手已完成 *}
     function IsHandshakeComplete: Boolean;
+
+    {** 发起重新协商
+        @returns True 如果重新协商成功启动 *}
     function Renegotiate: Boolean;
-    
-    // 数据传输
+
+    {** 读取解密数据
+        @param ABuffer 接收缓冲区
+        @param ACount 要读取的最大字节数
+        @returns 实际读取的字节数，-1 表示错误 *}
     function Read(var ABuffer; ACount: Integer): Integer;
+
+    {** 写入数据（将被加密发送）
+        @param ABuffer 数据缓冲区
+        @param ACount 要写入的字节数
+        @returns 实际写入的字节数，-1 表示错误 *}
     function Write(const ABuffer; ACount: Integer): Integer;
+
+    {** 读取字符串
+        @param AStr 输出字符串
+        @returns True 如果读取成功 *}
     function ReadString(out AStr: string): Boolean;
+
+    {** 写入字符串
+        @param AStr 要发送的字符串
+        @returns True 如果写入成功 *}
     function WriteString(const AStr: string): Boolean;
-    
-    // 异步操作支持
+
+    {** 检查是否需要读取更多数据（非阻塞模式）
+        @returns True 如果 SSL 层需要读取 *}
     function WantRead: Boolean;
+
+    {** 检查是否需要写入数据（非阻塞模式）
+        @returns True 如果 SSL 层需要写入 *}
     function WantWrite: Boolean;
+
+    {** 获取操作错误码
+        @param ARet 操作返回值
+        @returns 对应的错误码 *}
     function GetError(ARet: Integer): TSSLErrorCode;
-    
-    // 连接信息
+
+    {** 获取连接详细信息
+        @returns 连接信息记录 *}
     function GetConnectionInfo: TSSLConnectionInfo;
+
+    {** 获取协商的协议版本
+        @returns 协议版本枚举 *}
     function GetProtocolVersion: TSSLProtocolVersion;
+
+    {** 获取协商的密码套件名称
+        @returns 密码套件名称字符串 *}
     function GetCipherName: string;
+
+    {** 获取对端证书
+        @returns 对端证书接口，无证书时返回 nil *}
     function GetPeerCertificate: ISSLCertificate;
+
+    {** 获取对端证书链
+        @returns 证书数组，从叶证书到根证书 *}
     function GetPeerCertificateChain: TSSLCertificateArray;
+
+    {** 获取证书验证结果码
+        @returns 平台相关的验证结果码 *}
     function GetVerifyResult: Integer;
+
+    {** 获取证书验证结果描述
+        @returns 验证结果的文字描述 *}
     function GetVerifyResultString: string;
-    
-    // 会话管理
+
+    {** 获取当前会话（用于会话恢复）
+        @returns 会话接口 *}
     function GetSession: ISSLSession;
+
+    {** 设置要恢复的会话
+        @param ASession 之前保存的会话 *}
     procedure SetSession(ASession: ISSLSession);
+
+    {** 检查是否使用了会话恢复
+        @returns True 如果会话被恢复 *}
     function IsSessionReused: Boolean;
-    
-    // ALPN/NPN
+
+    {** 获取 ALPN 协商结果
+        @returns 协商的协议名称（如 "h2"），未协商返回空 *}
     function GetSelectedALPNProtocol: string;
-    
-    // 状态查询
+
+    {** 检查连接是否活动
+        @returns True 如果连接已建立且未关闭 *}
     function IsConnected: Boolean;
+
+    {** 获取内部状态（调试用）
+        @returns 状态字符串 *}
     function GetState: string;
+
+    {** 获取状态描述字符串
+        @returns 人类可读的状态描述 *}
     function GetStateString: string;
-    
-    // 选项设置
+
+    {** 设置操作超时
+        @param ATimeout 超时毫秒数 *}
     procedure SetTimeout(ATimeout: Integer);
+
+    {** 获取当前超时设置
+        @returns 超时毫秒数 *}
     function GetTimeout: Integer;
+
+    {** 设置阻塞模式
+        @param ABlocking True 为阻塞，False 为非阻塞 *}
     procedure SetBlocking(ABlocking: Boolean);
+
+    {** 获取当前阻塞模式
+        @returns True 如果是阻塞模式 *}
     function GetBlocking: Boolean;
-    
-    // 原生句柄
+
+    {** 获取原生 SSL 句柄
+        @returns 平台相关的原生句柄 *}
     function GetNativeHandle: Pointer;
+
+    {** 获取关联的上下文
+        @returns 创建此连接的上下文接口 *}
     function GetContext: ISSLContext;
   end;
 
