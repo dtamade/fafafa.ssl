@@ -21,7 +21,8 @@ unit fafafa.ssl.logging;
 interface
 
 uses
-  SysUtils, Classes;
+  SysUtils, Classes,
+  fafafa.ssl.base;  // P2: TSSLProtocolVersions for shared helpers
 
 {$IFDEF USE_SYNCOBJS}
   {$DEFINE HAS_CRITICAL_SECTION}
@@ -209,7 +210,36 @@ const
   DEFAULT_MAX_LOG_SIZE = 10 * 1024 * 1024;  // 10 MB
   DEFAULT_MAX_LOG_FILES = 5;
 
+{ P2: 共享辅助函数 - 废弃协议警告 }
+procedure LogDeprecatedProtocolWarnings(const ABackendName: string; AVersions: TSSLProtocolVersions);
+
 implementation
+
+{ P2: 共享辅助函数 - 废弃协议警告 }
+procedure LogDeprecatedProtocolWarnings(const ABackendName: string; AVersions: TSSLProtocolVersions);
+const
+  DEPRECATED_PROTOCOLS: TSSLProtocolVersions = [
+    sslProtocolSSL2, sslProtocolSSL3, sslProtocolTLS10, sslProtocolTLS11
+  ];
+var
+  LDeprecated: TSSLProtocolVersions;
+begin
+  LDeprecated := AVersions * DEPRECATED_PROTOCOLS;
+  if LDeprecated <> [] then
+  begin
+    if sslProtocolSSL2 in LDeprecated then
+      TSecurityLog.Warning(ABackendName, 'SSL 2.0 已废弃且不安全，强烈建议禁用');
+    if sslProtocolSSL3 in LDeprecated then
+      TSecurityLog.Warning(ABackendName, 'SSL 3.0 已废弃（POODLE漏洞），强烈建议禁用');
+    if sslProtocolTLS10 in LDeprecated then
+      TSecurityLog.Warning(ABackendName, 'TLS 1.0 已废弃，建议升级到 TLS 1.2 或更高版本');
+    if sslProtocolTLS11 in LDeprecated then
+      TSecurityLog.Warning(ABackendName, 'TLS 1.1 已废弃，建议升级到 TLS 1.2 或更高版本');
+
+    TSecurityLog.Warning(ABackendName,
+      '配置了废弃的协议版本。生产环境建议仅使用 TLS 1.2 和 TLS 1.3');
+  end;
+end;
 
 { TBaseLogger }
 

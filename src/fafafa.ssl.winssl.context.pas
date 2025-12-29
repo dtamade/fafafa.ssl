@@ -352,31 +352,11 @@ begin
 end;
 
 procedure TWinSSLContext.SetProtocolVersions(AVersions: TSSLProtocolVersions);
-const
-  DEPRECATED_PROTOCOLS: TSSLProtocolVersions = [
-    sslProtocolSSL2, sslProtocolSSL3, sslProtocolTLS10, sslProtocolTLS11
-  ];
-var
-  LDeprecated: TSSLProtocolVersions;
 begin
   FProtocolVersions := AVersions;
 
-  // P1 安全修复：对废弃协议发出警告
-  LDeprecated := AVersions * DEPRECATED_PROTOCOLS;
-  if LDeprecated <> [] then
-  begin
-    if sslProtocolSSL2 in LDeprecated then
-      TSecurityLog.Warning('WinSSL', 'SSL 2.0 已废弃且不安全，强烈建议禁用');
-    if sslProtocolSSL3 in LDeprecated then
-      TSecurityLog.Warning('WinSSL', 'SSL 3.0 已废弃（POODLE漏洞），强烈建议禁用');
-    if sslProtocolTLS10 in LDeprecated then
-      TSecurityLog.Warning('WinSSL', 'TLS 1.0 已废弃，建议升级到 TLS 1.2 或更高版本');
-    if sslProtocolTLS11 in LDeprecated then
-      TSecurityLog.Warning('WinSSL', 'TLS 1.1 已废弃，建议升级到 TLS 1.2 或更高版本');
-
-    TSecurityLog.Warning('WinSSL',
-      '配置了废弃的协议版本。生产环境建议仅使用 TLS 1.2 和 TLS 1.3');
-  end;
+  // P2: 使用共享辅助函数记录废弃协议警告
+  LogDeprecatedProtocolWarnings('WinSSL', AVersions);
 end;
 
 function TWinSSLContext.GetProtocolVersions: TSSLProtocolVersions;
