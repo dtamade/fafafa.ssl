@@ -1146,8 +1146,11 @@ begin
 end;
 
 class function TCryptoUtils.SHA256(const AData: string): TBytes;
+var
+  LBytes: TBytes;
 begin
-  Result := SHA256(TEncoding.UTF8.GetBytes(AData));
+  LBytes := TEncoding.UTF8.GetBytes(UnicodeString(AData));
+  Result := SHA256(LBytes);
 end;
 
 class function TCryptoUtils.SHA256(AStream: TStream): TBytes;
@@ -1257,8 +1260,11 @@ begin
 end;
 
 class function TCryptoUtils.SHA512(const AData: string): TBytes;
+var
+  LBytes: TBytes;
 begin
-  Result := SHA512(TEncoding.UTF8.GetBytes(AData));
+  LBytes := TEncoding.UTF8.GetBytes(UnicodeString(AData));
+  Result := SHA512(LBytes);
 end;
 
 class function TCryptoUtils.SHA512(AStream: TStream): TBytes;

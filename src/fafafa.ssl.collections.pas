@@ -327,6 +327,7 @@ function TSimpleStringMap.Keys: TStringArray;
 var
   I, J: Integer;
 begin
+  Result := nil;
   SetLength(Result, FCount);
   J := 0;
   for I := 0 to High(FEntries) do
@@ -343,6 +344,7 @@ function TSimpleStringMap.Values: specialize TArray<TValue>;
 var
   I, J: Integer;
 begin
+  Result := nil;
   SetLength(Result, FCount);
   J := 0;
   for I := 0 to High(FEntries) do
@@ -477,6 +479,7 @@ function TSimpleIntegerMap.Keys: specialize TArray<Integer>;
 var
   I, J: Integer;
 begin
+  Result := nil;
   SetLength(Result, FCount);
   J := 0;
   for I := 0 to High(FEntries) do
@@ -493,6 +496,7 @@ function TSimpleIntegerMap.Values: specialize TArray<TValue>;
 var
   I, J: Integer;
 begin
+  Result := nil;
   SetLength(Result, FCount);
   J := 0;
   for I := 0 to High(FEntries) do
