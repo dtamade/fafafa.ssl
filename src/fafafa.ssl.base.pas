@@ -1167,6 +1167,30 @@ const
   // 常量定义
   // ============================================================================
 
+  // ============================================================================
+  // 库版本信息 (P2: 接口版本控制)
+  // ============================================================================
+
+  {** 库主版本号 - 不兼容的 API 变更时递增 *}
+  FAFAFA_SSL_VERSION_MAJOR = 1;
+
+  {** 库次版本号 - 向后兼容的功能添加时递增 *}
+  FAFAFA_SSL_VERSION_MINOR = 0;
+
+  {** 库修订版本号 - 向后兼容的 bug 修复时递增 *}
+  FAFAFA_SSL_VERSION_PATCH = 0;
+
+  {** 库版本字符串 *}
+  FAFAFA_SSL_VERSION_STRING = '1.0.0';
+
+  {** 接口版本号 - 用于检测接口兼容性
+      格式: (Major * 10000) + (Minor * 100) + Patch
+      例如: 1.0.0 = 10000, 1.2.3 = 10203 *}
+  FAFAFA_SSL_INTERFACE_VERSION = 10000;
+
+  {** 接口锁定日期 - 接口稳定后不再修改 *}
+  FAFAFA_SSL_INTERFACE_LOCKED_DATE = '2025-12-24';
+
   // TSSLContextType 别名（兼容性）
   sslContextClient = sslCtxClient;
   sslContextServer = sslCtxServer;
@@ -1305,6 +1329,17 @@ const
 function SSLErrorToString(AError: TSSLErrorCode): string;
 function ProtocolVersionToString(AVersion: TSSLProtocolVersion): string;
 function LibraryTypeToString(ALibType: TSSLLibraryType): string;
+
+{** 获取库版本字符串 *}
+function GetFafafaSSLVersion: string;
+
+{** 获取接口版本号 *}
+function GetFafafaSSLInterfaceVersion: Integer;
+
+{** 检查接口版本兼容性
+    @param ARequiredVersion 要求的最低接口版本
+    @returns True 如果当前版本 >= 要求版本 *}
+function CheckInterfaceVersion(ARequiredVersion: Integer): Boolean;
 
 implementation
 
@@ -1661,6 +1696,25 @@ end;
 function TBuildValidationResult.ErrorCount: Integer;
 begin
   Result := Length(Errors);
+end;
+
+// ============================================================================
+// 版本函数实现 (P2: 接口版本控制)
+// ============================================================================
+
+function GetFafafaSSLVersion: string;
+begin
+  Result := FAFAFA_SSL_VERSION_STRING;
+end;
+
+function GetFafafaSSLInterfaceVersion: Integer;
+begin
+  Result := FAFAFA_SSL_INTERFACE_VERSION;
+end;
+
+function CheckInterfaceVersion(ARequiredVersion: Integer): Boolean;
+begin
+  Result := FAFAFA_SSL_INTERFACE_VERSION >= ARequiredVersion;
 end;
 
 end.
