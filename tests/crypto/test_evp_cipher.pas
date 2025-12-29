@@ -4,7 +4,7 @@ program test_evp_cipher;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.evp;
 
 // Helper function to convert bytes to hex string
@@ -37,9 +37,21 @@ var
 begin
   WriteLn('Testing AES-128-CBC Encryption/Decryption...');
   WriteLn;
-  
+
   success := False;
   try
+    // Check if EVP functions are loaded
+    if not Assigned(EVP_aes_128_cbc) then
+    begin
+      WriteLn('  [-] EVP_aes_128_cbc function not loaded');
+      Exit;
+    end;
+    if not Assigned(EVP_CIPHER_CTX_new) then
+    begin
+      WriteLn('  [-] EVP_CIPHER_CTX_new function not loaded');
+      Exit;
+    end;
+
     // Get cipher
     cipher := EVP_aes_128_cbc();
     if not Assigned(cipher) then
@@ -180,10 +192,16 @@ var
 begin
   WriteLn('Testing AES-256-GCM Encryption/Decryption...');
   WriteLn;
-  
+
   success := False;
   try
-    
+    // Check if EVP functions are loaded
+    if not Assigned(EVP_aes_256_gcm) then
+    begin
+      WriteLn('  [-] EVP_aes_256_gcm function not loaded');
+      Exit;
+    end;
+
     // Get cipher
     cipher := EVP_aes_256_gcm();
     if not Assigned(cipher) then
@@ -493,10 +511,11 @@ begin
   WriteLn('OpenSSL EVP Cipher Test Suite');
   WriteLn('========================================');
   WriteLn;
-  
+
   // Initialize OpenSSL
   try
-    LoadOpenSSLCore;
+    if not LoadOpenSSLLibrary then
+      raise Exception.Create('LoadOpenSSLLibrary returned False');
     LoadEVP(GetCryptoLibHandle);
   except
     on E: Exception do
@@ -507,20 +526,16 @@ begin
       Halt(1);
     end;
   end;
-  
+
   WriteLn('OpenSSL loaded successfully!');
   WriteLn;
-  
+
   // Run tests
   TestAES128CBC;
   TestAES256GCM;
   TestChaCha20Poly1305;
-  
+
   WriteLn('========================================');
   WriteLn('EVP Cipher tests completed!');
   WriteLn('========================================');
-  WriteLn;
-  
-  WriteLn('Press Enter to exit...');
-  ReadLn;
 end.

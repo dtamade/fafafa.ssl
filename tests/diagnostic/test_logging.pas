@@ -134,24 +134,27 @@ begin
       WriteLn('Failed to load OpenSSL library');
       Exit;
     end;
-    
+
     WriteLn('OpenSSL Version: ' + GetOpenSSLVersion);
-    
+
     // Load EVP functions
     if not LoadEVP(GetCryptoLibHandle) then
     begin
       WriteLn('Failed to load EVP functions');
       Exit;
     end;
-    
+
     // Load KDF functions (PBKDF2, HKDF, etc.)
     LoadKDFFunctions;
-    
+
     TestBasicLogging;
     TestFileLogging;
     TestSecureKeyStoreLogging;
     WriteLn('All tests passed.');
-    
+
+    // Reset logger to default before exit to avoid cleanup issues
+    TSecurityLog.Logger := nil;
+
     UnloadOpenSSLLibrary;
   except
     on E: Exception do
