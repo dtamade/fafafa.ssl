@@ -386,7 +386,7 @@ begin
   for I := 0 to High(Attributes) do
   begin
     if (Attributes[I].OID = AOIDOrName) or
-       (UpperCase(Attributes[I].Name) = UpperName) then
+      (UpperCase(Attributes[I].Name) = UpperName) then
     begin
       Result := Attributes[I].Value;
       Exit;
@@ -544,7 +544,7 @@ begin
 
   // 提取 Base64 内容
   Base64Data := Copy(APEMData, StartPos + Length(StartMarker),
-                     EndPos - StartPos - Length(StartMarker));
+    EndPos - StartPos - Length(StartMarker));
 
   // 移除空白字符
   Lines := TStringList.Create;
@@ -626,8 +626,8 @@ begin
     // TBS 长度 = 头部长度 + 内容长度
     SetLength(FRawTBSCertificate, TBSNode.TotalLength);
     Move(FRawCertificate[TBSNode.ContentOffset - TBSNode.HeaderLength],
-         FRawTBSCertificate[0],
-         TBSNode.TotalLength);
+      FRawTBSCertificate[0],
+      TBSNode.TotalLength);
   end;
 
   // 解析 TBSCertificate
@@ -663,7 +663,7 @@ begin
 
   // 版本 [0] EXPLICIT (可选)
   if (ATBSNode.ChildCount > Index) and
-     ATBSNode.GetChild(Index).IsContextTag(0) then
+    ATBSNode.GetChild(Index).IsContextTag(0) then
   begin
     Child := ATBSNode.GetChild(Index);
     if Child.ChildCount > 0 then
@@ -840,7 +840,7 @@ begin
               FPublicKeyInfo.KeySize := Length(FPublicKeyInfo.RSAModulus) * 8;
               // 调整前导零
               if (Length(FPublicKeyInfo.RSAModulus) > 0) and
-                 (FPublicKeyInfo.RSAModulus[0] = 0) then
+                (FPublicKeyInfo.RSAModulus[0] = 0) then
                 FPublicKeyInfo.KeySize := FPublicKeyInfo.KeySize - 8;
             end;
             RSAKey.Free;
@@ -1024,8 +1024,7 @@ begin
                   // 转换 IP 地址
                   if Length(Child.RawData) = 4 then
                     SAN.Value := Format('%d.%d.%d.%d',
-                      [Child.RawData[0], Child.RawData[1],
-                       Child.RawData[2], Child.RawData[3]]);
+                      [Child.RawData[0], Child.RawData[1], Child.RawData[2], Child.RawData[3]]);
                 end;
 
                 if SAN.Value <> '' then

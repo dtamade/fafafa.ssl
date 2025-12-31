@@ -35,11 +35,19 @@ fuzz_results.txt
 fuzz_parsers_results.txt
 tests/benchmarks/current_results.json
 
+# Bench/CI outputs
+tests/benchmarks/benchmark_results.csv
+tests/benchmarks/report_*.md
+tests/benchmarks/archive/benchmark_*.csv
+
 # 覆盖率报告
 coverage/
 
 # Claude Code 本地配置
 .claude/
+
+# Warp
+WARP.md
 
 # GNU Global 标签文件
 GPATH

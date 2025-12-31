@@ -7,7 +7,8 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.openssl.base,
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader;
 
 const
   // SM2 curve NID

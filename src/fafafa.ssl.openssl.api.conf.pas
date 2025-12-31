@@ -119,6 +119,9 @@ procedure UnloadOpenSSLConf;
 
 implementation
 
+uses
+  fafafa.ssl.openssl.loader;
+
 function NCONF_get_number(conf: PCONF; const group: PAnsiChar; const name: PAnsiChar): LongInt;
 var
   status: TOpenSSL_Int;

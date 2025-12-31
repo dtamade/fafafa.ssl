@@ -448,7 +448,8 @@ function GetTimestampTime(Response: PTS_RESP): TDateTime;
 implementation
 
 uses
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader;
 
 procedure LoadTSFunctions;
 begin

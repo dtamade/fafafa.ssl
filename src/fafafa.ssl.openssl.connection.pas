@@ -15,14 +15,19 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.errors,
+  fafafa.ssl.ocsp,
+  fafafa.ssl.x509,
   fafafa.ssl.openssl.errors,  // Phase 3.1 - OpenSSL-specific error handling
   fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.stack,
   fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.ocsp,
+  fafafa.ssl.openssl.x509.chain,
   fafafa.ssl.openssl.certificate,
   fafafa.ssl.openssl.session,
   fafafa.ssl.logging;
@@ -43,6 +48,7 @@ type
     function PumpStreamToBIO: Integer;
     function PumpBIOToStream: Integer;
     function InternalHandshake(AIsClient: Boolean): Boolean;
+    function ValidatePostHandshake(AIsClient: Boolean): Boolean;
   public
     constructor Create(AContext: ISSLContext; ASocket: THandle); overload;
     constructor Create(AContext: ISSLContext; AStream: TStream); overload;
@@ -201,6 +207,16 @@ begin
   
   Ret := SSL_connect(FSSL);
   FConnected := (Ret = 1);
+  if FConnected then
+  begin
+    // Strategy A: fail closed if validation fails
+    if not ValidatePostHandshake(True) then
+    begin
+      FConnected := False;
+      Result := False;
+      Exit;
+    end;
+  end;
   Result := FConnected;
 end;
 
@@ -219,7 +235,351 @@ begin
   
   Ret := SSL_accept(FSSL);
   FConnected := (Ret = 1);
+  if FConnected then
+  begin
+    // Strategy A: fail closed if validation fails
+    if not ValidatePostHandshake(False) then
+    begin
+      FConnected := False;
+      Result := False;
+      Exit;
+    end;
+  end;
   Result := FConnected;
+end;
+
+function TOpenSSLConnection.ValidatePostHandshake(AIsClient: Boolean): Boolean;
+var
+  VerifyModes: TSSLVerifyModes;
+  VerifyFlags: TSSLCertVerifyFlags;
+  RequirePeerCert: Boolean;
+  PeerCert: ISSLCertificate;
+  PeerX509: PX509;
+  VerifyRes: Integer;
+  Host: string;
+  HostNormalized: string;
+  HostA: AnsiString;
+  IsIP: Boolean;
+  OCSPUrl: string;
+  IssuerX509: PX509;
+  IssuerNeedsFree: Boolean;
+  VerifyStore: PX509_STORE;
+  OCSPStatus: Integer;
+  OCSPTimeoutSec: Integer;
+  PeerDER: TBytes;
+  ParsedCert: TX509Certificate;
+  PeerChain: PSTACK_OF_X509;
+  StoreCtx: PX509_STORE_CTX;
+  VerifiedChain: PSTACK_OF_X509;
+
+  function NormalizeHostForVerify(const S: string): string;
+  var
+    LHost: string;
+    P, PEnd: SizeInt;
+    PortPart: string;
+    I: Integer;
+  begin
+    LHost := Trim(S);
+
+    // Strip IPv6 brackets: [::1]
+    if (LHost <> '') and (LHost[1] = '[') then
+    begin
+      PEnd := Pos(']', LHost);
+      if PEnd > 0 then
+        LHost := Copy(LHost, 2, PEnd - 2);
+    end;
+
+    // Strip zone id: fe80::1%eth0
+    P := Pos('%', LHost);
+    if P > 0 then
+      LHost := Copy(LHost, 1, P - 1);
+
+    // Strip port for the host:port case (not valid for plain IPv6 without brackets)
+    if (Pos(':', LHost) > 0) and (Pos(':', LHost) = LastDelimiter(':', LHost)) then
+    begin
+      P := Pos(':', LHost);
+      PortPart := Copy(LHost, P + 1, Length(LHost) - P);
+      if PortPart <> '' then
+      begin
+        for I := 1 to Length(PortPart) do
+          if not (PortPart[I] in ['0'..'9']) then
+          begin
+            PortPart := '';
+            Break;
+          end;
+        if PortPart <> '' then
+          LHost := Copy(LHost, 1, P - 1);
+      end;
+    end;
+
+    Result := LHost;
+  end;
+
+  function IsValidIPv4(const S: string): Boolean;
+  var
+    Parts: TStringArray;
+    Part: string;
+    Value: Integer;
+    I: Integer;
+  begin
+    Result := False;
+    Parts := S.Split(['.']);
+    if Length(Parts) <> 4 then
+      Exit;
+
+    for Part in Parts do
+    begin
+      if Part = '' then
+        Exit;
+
+      for I := 1 to Length(Part) do
+        if not (Part[I] in ['0'..'9']) then
+          Exit;
+
+      if not TryStrToInt(Part, Value) then
+        Exit;
+      if (Value < 0) or (Value > 255) then
+        Exit;
+    end;
+
+    Result := True;
+  end;
+
+begin
+  Result := True;
+
+  if (FSSL = nil) or (FContext = nil) then
+    Exit(False);
+
+  VerifyModes := FContext.GetVerifyMode;
+  if not (sslVerifyPeer in VerifyModes) then
+    Exit(True);
+
+  if not Assigned(SSL_get_verify_result) then
+    Exit(False);
+
+  // Decide whether a peer certificate is required (align with WinSSL logic)
+  RequirePeerCert := AIsClient or (sslVerifyFailIfNoPeerCert in VerifyModes);
+
+  // Ensure X509 helpers are available before we materialize certificates
+  if not Assigned(X509_free) then
+    LoadOpenSSLX509;
+
+  PeerCert := GetPeerCertificate;
+  if PeerCert = nil then
+  begin
+    if RequirePeerCert then
+    begin
+      if Assigned(SSL_set_verify_result) then
+        SSL_set_verify_result(FSSL, X509_V_ERR_APPLICATION_VERIFICATION);
+      Result := False;
+    end;
+    Exit;
+  end;
+
+  PeerX509 := PX509(PeerCert.GetNativeHandle);
+  if PeerX509 = nil then
+  begin
+    if Assigned(SSL_set_verify_result) then
+      SSL_set_verify_result(FSSL, X509_V_ERR_APPLICATION_VERIFICATION);
+    Exit(False);
+  end;
+
+  VerifyRes := SSL_get_verify_result(FSSL);
+  if VerifyRes <> X509_V_OK then
+    Exit(False);
+
+  VerifyFlags := FContext.GetCertVerifyFlags;
+
+  // OCSP revocation checking (fail closed when requested)
+  if sslCertVerifyCheckOCSP in VerifyFlags then
+  begin
+    IssuerX509 := nil;
+    IssuerNeedsFree := False;
+
+    try
+      // Ensure OCSP APIs are loaded
+      if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) then
+        LoadOpenSSLOCSP(GetCryptoLibHandle);
+
+      if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) then
+      begin
+        if Assigned(SSL_set_verify_result) then
+          SSL_set_verify_result(FSSL, X509_V_ERR_OCSP_VERIFY_FAILED);
+        Exit(False);
+      end;
+
+      // Extract responder URL from certificate AIA (pure-pascal parser)
+      OCSPUrl := '';
+      try
+        PeerDER := PeerCert.SaveToDER;
+        if Length(PeerDER) > 0 then
+        begin
+          ParsedCert := TX509Certificate.Create;
+          try
+            ParsedCert.LoadFromDER(PeerDER);
+            OCSPUrl := GetOCSPURLFromCertificate(ParsedCert);
+          finally
+            ParsedCert.Free;
+          end;
+        end;
+      except
+        OCSPUrl := '';
+      end;
+
+      if OCSPUrl = '' then
+      begin
+        if Assigned(SSL_set_verify_result) then
+          SSL_set_verify_result(FSSL, X509_V_ERR_OCSP_VERIFY_NEEDED);
+        Exit(False);
+      end;
+
+      // Try to obtain issuer cert from the peer-provided chain first
+      PeerChain := nil;
+      if Assigned(SSL_get_peer_cert_chain) then
+        PeerChain := SSL_get_peer_cert_chain(FSSL);
+
+      if PeerChain <> nil then
+        IssuerX509 := FindIssuerX509InChain(PeerX509, PeerChain);
+
+      // Fall back to verified chain building via X509_STORE if needed
+      VerifyStore := nil;
+      if Assigned(SSL_CTX_get_cert_store) then
+        VerifyStore := SSL_CTX_get_cert_store(PSSL_CTX(FContext.GetNativeHandle));
+
+      if (IssuerX509 = nil) and (VerifyStore <> nil) and
+        Assigned(X509_STORE_CTX_new) and Assigned(X509_STORE_CTX_free) and
+        Assigned(X509_STORE_CTX_init) and Assigned(X509_verify_cert) and
+        Assigned(X509_STORE_CTX_get0_chain) then
+      begin
+        StoreCtx := X509_STORE_CTX_new();
+        if StoreCtx <> nil then
+        try
+          PeerChain := nil;
+          if Assigned(SSL_get_peer_cert_chain) then
+            PeerChain := SSL_get_peer_cert_chain(FSSL);
+
+          if X509_STORE_CTX_init(StoreCtx, VerifyStore, PeerX509, PeerChain) = 1 then
+          begin
+            if X509_verify_cert(StoreCtx) = 1 then
+            begin
+              VerifiedChain := X509_STORE_CTX_get0_chain(StoreCtx);
+              if VerifiedChain <> nil then
+              begin
+                IssuerX509 := FindIssuerX509InChain(PeerX509, VerifiedChain);
+                if (IssuerX509 <> nil) and Assigned(X509_up_ref) then
+                begin
+                  X509_up_ref(IssuerX509);
+                  IssuerNeedsFree := True;
+                end;
+              end;
+            end;
+          end;
+        finally
+          X509_STORE_CTX_free(StoreCtx);
+        end;
+      end;
+
+      if IssuerX509 = nil then
+      begin
+        if Assigned(SSL_set_verify_result) then
+          SSL_set_verify_result(FSSL, X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT);
+        Exit(False);
+      end;
+
+      // Map connection timeout (ms) to OCSP timeout (seconds)
+      OCSPTimeoutSec := 10;
+      if FTimeout > 0 then
+      begin
+        OCSPTimeoutSec := FTimeout div 1000;
+        if OCSPTimeoutSec <= 0 then
+          OCSPTimeoutSec := 1;
+      end;
+
+      // Perform OCSP check (supports http/https responders)
+      OCSPStatus := CheckCertificateStatus(PeerX509, IssuerX509, OCSPUrl, OCSPTimeoutSec, VerifyStore);
+      case OCSPStatus of
+        V_OCSP_CERTSTATUS_GOOD:
+          ; // OK
+        V_OCSP_CERTSTATUS_REVOKED:
+          begin
+            if Assigned(SSL_set_verify_result) then
+              SSL_set_verify_result(FSSL, X509_V_ERR_CERT_REVOKED);
+            Exit(False);
+          end;
+        V_OCSP_CERTSTATUS_UNKNOWN:
+          begin
+            if Assigned(SSL_set_verify_result) then
+              SSL_set_verify_result(FSSL, X509_V_ERR_OCSP_CERT_UNKNOWN);
+            Exit(False);
+          end;
+      else
+        if Assigned(SSL_set_verify_result) then
+          SSL_set_verify_result(FSSL, X509_V_ERR_OCSP_VERIFY_FAILED);
+        Exit(False);
+      end;
+
+    finally
+      if IssuerNeedsFree and (IssuerX509 <> nil) and Assigned(X509_free) then
+        X509_free(IssuerX509);
+    end;
+  end;
+
+  // Hostname verification: client-side only
+  if AIsClient and not (sslCertVerifyIgnoreHostname in VerifyFlags) then
+  begin
+    Host := FContext.GetServerName;
+    HostNormalized := NormalizeHostForVerify(Host);
+
+    if HostNormalized = '' then
+    begin
+      if Assigned(SSL_set_verify_result) then
+        SSL_set_verify_result(FSSL, X509_V_ERR_HOSTNAME_MISMATCH);
+      Exit(False);
+    end;
+
+    // Ensure hostname helpers are loaded
+    if (not Assigned(X509_check_host)) and (not Assigned(X509_check_ip_asc)) then
+      LoadOpenSSLX509;
+
+    IsIP := IsValidIPv4(HostNormalized) or (Pos(':', HostNormalized) > 0);
+    HostA := AnsiString(HostNormalized);
+
+    if IsIP then
+    begin
+      if not Assigned(X509_check_ip_asc) then
+      begin
+        if Assigned(SSL_set_verify_result) then
+          SSL_set_verify_result(FSSL, X509_V_ERR_APPLICATION_VERIFICATION);
+        Exit(False);
+      end;
+
+      if X509_check_ip_asc(PeerX509, PAnsiChar(HostA), 0) <> 1 then
+      begin
+        if Assigned(SSL_set_verify_result) then
+          SSL_set_verify_result(FSSL, X509_V_ERR_IP_ADDRESS_MISMATCH);
+        Exit(False);
+      end;
+    end
+    else
+    begin
+      if not Assigned(X509_check_host) then
+      begin
+        if Assigned(SSL_set_verify_result) then
+          SSL_set_verify_result(FSSL, X509_V_ERR_APPLICATION_VERIFICATION);
+        Exit(False);
+      end;
+
+      if X509_check_host(PeerX509, PAnsiChar(HostA), Length(HostA), 0, nil) <> 1 then
+      begin
+        if Assigned(SSL_set_verify_result) then
+          SSL_set_verify_result(FSSL, X509_V_ERR_HOSTNAME_MISMATCH);
+        Exit(False);
+      end;
+    end;
+  end;
+
+  Result := True;
 end;
 
 function TOpenSSLConnection.Shutdown: Boolean;
@@ -637,10 +997,27 @@ end;
 function TOpenSSLConnection.GetVerifyResultString: string;
 var
   Res: Integer;
+  ErrStr: PAnsiChar;
 begin
   Res := GetVerifyResult;
   if Res = X509_V_OK then
-    Result := 'OK'
+  begin
+    Result := 'OK';
+    Exit;
+  end;
+
+  if Res < 0 then
+  begin
+    Result := Format('Error: %d', [Res]);
+    Exit;
+  end;
+
+  ErrStr := nil;
+  if Assigned(X509_verify_cert_error_string) then
+    ErrStr := X509_verify_cert_error_string(Res);
+
+  if ErrStr <> nil then
+    Result := string(ErrStr)
   else
     Result := Format('Error: %d', [Res]);
 end;
@@ -847,9 +1224,18 @@ begin
     if LRet = 1 then
     begin
       FConnected := True;
-      Result := True;
       // Flush any handshake data still buffered
       PumpBIOToStream;
+
+      // Strategy A: fail closed if validation fails
+      if not ValidatePostHandshake(AIsClient) then
+      begin
+        FConnected := False;
+        Result := False;
+        Exit;
+      end;
+
+      Result := True;
       Exit;
     end;
 

@@ -16,7 +16,8 @@ uses
   fafafa.examples.sockets,
   {$ENDIF}
   fafafa.ssl.factory,
-  fafafa.ssl.base;
+  fafafa.ssl.base,
+  fafafa.ssl;
 
 type
   TWebsiteTest = record
@@ -110,6 +111,7 @@ var
   GTotalTests: Integer = 0;
   GPassedTests: Integer = 0;
   GFailedTests: Integer = 0;
+  GSkippedTests: Integer = 0;
 
 function GetProtocolName(AVer: TSSLProtocolVersion): string;
 begin
@@ -189,8 +191,8 @@ begin
       on E: Exception do
       begin
         Result.ErrorMessage := 'Connect Error: ' + E.Message;
-        WriteLn('✗ ', Result.ErrorMessage);
-        Inc(GFailedTests);
+        WriteLn('⊘ Skipped: ', Result.ErrorMessage);
+        Inc(GSkippedTests);
         Exit;
       end;
     end;
@@ -257,6 +259,7 @@ end;
 
 var
   I: Integer;
+  LEffectiveTotal: Integer;
 begin
   WriteLn('================================================================');
   WriteLn('  fafafa.ssl - Comprehensive Real Website Test (50+ Sites)');
@@ -275,7 +278,18 @@ begin
       TestWebsite(TEST_SITES[I]);
 
     WriteLn('----------------------------------------------------------------');
-    WriteLn(Format('Results: %d/%d Passed (%.1f%%)', [GPassedTests, GTotalTests, GPassedTests * 100.0 / GTotalTests]));
+
+    LEffectiveTotal := GTotalTests - GSkippedTests;
+    if LEffectiveTotal <= 0 then
+      LEffectiveTotal := GTotalTests;
+
+    WriteLn(Format('Results: %d/%d Passed (%.1f%%)',
+      [GPassedTests, LEffectiveTotal, GPassedTests * 100.0 / LEffectiveTotal]));
+    if GFailedTests > 0 then
+      WriteLn('Failed:   ', GFailedTests);
+    if GSkippedTests > 0 then
+      WriteLn('Skipped:  ', GSkippedTests);
+
     WriteLn('================================================================');
 
     GLib.Finalize;

@@ -110,6 +110,7 @@ type
     SubjectAltNames: TStringList; // 备用名称
     IsCA: Boolean;             // 是否CA证书
     SerialNumber: Int64;       // 序列号 (0=自动生成)
+    OCSPResponderURL: string;  // 可选：写入 AIA 的 OCSP Responder URL（http/https）
   end;
 
   {**
@@ -378,6 +379,7 @@ begin
   Result.SubjectAltNames := nil;
   Result.IsCA := False;
   Result.SerialNumber := 0;
+  Result.OCSPResponderURL := '';
 end;
 
 {**
@@ -575,6 +577,7 @@ var
   LBIO: PBIO;
   LBuffer: array[0..8191] of AnsiChar;
   LLen: Integer;
+  LNid: Integer;
 begin
   Result := False;
   ACertPEM := '';
@@ -688,6 +691,15 @@ begin
 
       end;
 
+      // Authority Information Access (OCSP)
+      if (AOptions.OCSPResponderURL <> '') and Assigned(OBJ_txt2nid) then
+      begin
+        // OID: 1.3.6.1.5.5.7.1.1 (authorityInfoAccess)
+        LNid := OBJ_txt2nid(PAnsiChar(AnsiString('1.3.6.1.5.5.7.1.1')));
+        if LNid <> NID_undef then
+          AddExtension(LCert, LCert, LNid, 'OCSP;URI:' + AOptions.OCSPResponderURL);
+      end;
+
       // 签名
       if X509_sign(LCert, LKey, EVP_sha256()) = 0 then
         raise ESSLCertError.Create('Failed to sign certificate');
@@ -765,6 +777,7 @@ var
   LBIO: PBIO;
   LBuffer: array[0..8191] of AnsiChar;
   LLen: Integer;
+  LNid: Integer;
 begin
   Result := False;
   ACertPEM := '';
@@ -865,7 +878,15 @@ begin
           if (AOptions.SubjectAltNames <> nil) and (AOptions.SubjectAltNames.Count > 0) then
             AddExtension(LCert, LCACert, NID_subject_alt_name, AOptions.SubjectAltNames.DelimitedText);
 
-          
+          // Authority Information Access (OCSP)
+          if (AOptions.OCSPResponderURL <> '') and Assigned(OBJ_txt2nid) then
+          begin
+            // OID: 1.3.6.1.5.5.7.1.1 (authorityInfoAccess)
+            LNid := OBJ_txt2nid(PAnsiChar(AnsiString('1.3.6.1.5.5.7.1.1')));
+            if LNid <> NID_undef then
+              AddExtension(LCert, LCACert, LNid, 'OCSP;URI:' + AOptions.OCSPResponderURL);
+          end;
+
           // 4. 使用CA私钥签名
           if X509_sign(LCert, LCAKey, EVP_sha256()) = 0 then
             raise ESSLCertError.Create('Failed to sign certificate with CA key');

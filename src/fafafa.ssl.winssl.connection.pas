@@ -132,6 +132,9 @@ type
       var AIoBuffer: array of Byte; var AIoBufferSize: DWORD; AStatus: SECURITY_STATUS);
     function SendOutputBuffer(const AOutBuffer: TSecBuffer): Boolean;
 
+    // Post-handshake verification (Strategy A)
+    function ValidatePeerCertificate(out AVerifyError: Integer): Boolean;
+
   public
     constructor Create(AContext: ISSLContext; ASocket: THandle); overload;
     constructor Create(AContext: ISSLContext; AStream: TStream); overload;
@@ -520,27 +523,59 @@ end;
 // ============================================================================
 
 function TWinSSLConnection.Connect: Boolean;
+var
+  LVerifyError: Integer;
 begin
   Result := ClientHandshake;
-  if Result then
+  if not Result then
   begin
-    FConnected := True;
-    FHandshakeState := sslHsCompleted;
-  end
-  else
+    FConnected := False;
     FHandshakeState := sslHsFailed;
+    Exit;
+  end;
+
+  // Handshake succeeded - mark connected first so verify routines can query peer cert
+  FConnected := True;
+
+  // Strategy A: fail closed if validation fails
+  if not ValidatePeerCertificate(LVerifyError) then
+  begin
+    FConnected := False;
+    FHandshakeState := sslHsFailed;
+    Result := False;
+    Exit;
+  end;
+
+  FHandshakeState := sslHsCompleted;
+  Result := True;
 end;
 
 function TWinSSLConnection.Accept: Boolean;
+var
+  LVerifyError: Integer;
 begin
   Result := ServerHandshake;
-  if Result then
+  if not Result then
   begin
-    FConnected := True;
-    FHandshakeState := sslHsCompleted;
-  end
-  else
+    FConnected := False;
     FHandshakeState := sslHsFailed;
+    Exit;
+  end;
+
+  // Handshake succeeded - mark connected first so verify routines can query peer cert
+  FConnected := True;
+
+  // Strategy A: fail closed if validation fails
+  if not ValidatePeerCertificate(LVerifyError) then
+  begin
+    FConnected := False;
+    FHandshakeState := sslHsFailed;
+    Result := False;
+    Exit;
+  end;
+
+  FHandshakeState := sslHsCompleted;
+  Result := True;
 end;
 
 function TWinSSLConnection.Shutdown: Boolean;
@@ -614,30 +649,42 @@ begin
 end;
 
 function TWinSSLConnection.PerformHandshake: TSSLHandshakeState;
+var
+  LHandshakeOk: Boolean;
+  LVerifyError: Integer;
 begin
   if FHandshakeState = sslHsCompleted then
     Exit(sslHsCompleted);
-    
+
   if FHandshakeState = sslHsFailed then
     Exit(sslHsFailed);
-    
+
   FHandshakeState := sslHsInProgress;
-  
+
   if FContext.GetContextType = sslCtxClient then
-  begin
-    if ClientHandshake then
-      FHandshakeState := sslHsCompleted
-    else
-      FHandshakeState := sslHsFailed;
-  end
+    LHandshakeOk := ClientHandshake
   else
+    LHandshakeOk := ServerHandshake;
+
+  if not LHandshakeOk then
   begin
-    if ServerHandshake then
-      FHandshakeState := sslHsCompleted
-    else
-      FHandshakeState := sslHsFailed;
+    FConnected := False;
+    FHandshakeState := sslHsFailed;
+    Exit(FHandshakeState);
   end;
-  
+
+  // Handshake succeeded - mark connected first so verify routines can query peer cert
+  FConnected := True;
+
+  // Strategy A: fail closed if validation fails
+  if not ValidatePeerCertificate(LVerifyError) then
+  begin
+    FConnected := False;
+    FHandshakeState := sslHsFailed;
+    Exit(FHandshakeState);
+  end;
+
+  FHandshakeState := sslHsCompleted;
   Result := FHandshakeState;
 end;
 
@@ -709,6 +756,219 @@ begin
     FreeContextBuffer(AOutBuffer.pvBuffer);
     if cbData <= 0 then
       Result := False;
+  end;
+end;
+
+function TWinSSLConnection.ValidatePeerCertificate(out AVerifyError: Integer): Boolean;
+var
+  LVerifyMode: TSSLVerifyModes;
+  LVerifyFlags: TSSLCertVerifyFlags;
+  LNeedCert: Boolean;
+  LContextType: TSSLContextType;
+
+  LCertContext: PCCERT_CONTEXT;
+  LChainPara: CERT_CHAIN_PARA;
+  LChainContext: PCCERT_CHAIN_CONTEXT;
+  LPolicyPara: CERT_CHAIN_POLICY_PARA;
+  LPolicyStatus: CERT_CHAIN_POLICY_STATUS;
+  LSSLExtra: SSL_EXTRA_CERT_CHAIN_POLICY_PARA;
+
+  LChainFlags: DWORD;
+  LHostname: string;
+  LServerNameW: PWideChar;
+  LStatus: SECURITY_STATUS;
+
+  function NormalizeHostForVerify(const S: string): string;
+  var
+    LHost: string;
+    P, PEnd: SizeInt;
+    PortPart: string;
+    I: Integer;
+  begin
+    LHost := Trim(S);
+
+    // Strip IPv6 brackets: [::1]
+    if (LHost <> '') and (LHost[1] = '[') then
+    begin
+      PEnd := Pos(']', LHost);
+      if PEnd > 0 then
+        LHost := Copy(LHost, 2, PEnd - 2);
+    end;
+
+    // Strip zone id: fe80::1%eth0
+    P := Pos('%', LHost);
+    if P > 0 then
+      LHost := Copy(LHost, 1, P - 1);
+
+    // Strip port for the host:port case (not valid for plain IPv6 without brackets)
+    if (Pos(':', LHost) > 0) and (Pos(':', LHost) = LastDelimiter(':', LHost)) then
+    begin
+      P := Pos(':', LHost);
+      PortPart := Copy(LHost, P + 1, Length(LHost) - P);
+      if PortPart <> '' then
+      begin
+        for I := 1 to Length(PortPart) do
+          if not (PortPart[I] in ['0'..'9']) then
+          begin
+            PortPart := '';
+            Break;
+          end;
+        if PortPart <> '' then
+          LHost := Copy(LHost, 1, P - 1);
+      end;
+    end;
+
+    Result := LHost;
+  end;
+
+begin
+  AVerifyError := 0;
+
+  if not IsValidSecHandle(FCtxtHandle) then
+  begin
+    AVerifyError := -1;
+    Result := False;
+    Exit;
+  end;
+
+  LVerifyMode := FContext.GetVerifyMode;
+  if not (sslVerifyPeer in LVerifyMode) then
+  begin
+    Result := True;
+    Exit;
+  end;
+
+  LContextType := FContext.GetContextType;
+  LNeedCert := (LContextType = sslCtxClient) or (sslVerifyFailIfNoPeerCert in LVerifyMode);
+
+  LCertContext := nil;
+  LStatus := QueryContextAttributesW(@FCtxtHandle, SECPKG_ATTR_REMOTE_CERT_CONTEXT, @LCertContext);
+  if (not IsSuccess(LStatus)) or (LCertContext = nil) then
+  begin
+    if not LNeedCert then
+    begin
+      Result := True;
+      Exit;
+    end;
+    AVerifyError := -1;
+    Result := False;
+    Exit;
+  end;
+
+  try
+    LVerifyFlags := FContext.GetCertVerifyFlags;
+
+    // Hostname verification is only meaningful for client contexts.
+    if (LContextType = sslCtxClient) and
+      not (sslCertVerifyIgnoreHostname in LVerifyFlags) then
+    begin
+      LHostname := NormalizeHostForVerify(FContext.GetServerName);
+      if LHostname = '' then
+      begin
+        AVerifyError := CERT_E_INVALID_NAME;
+        Result := False;
+        Exit;
+      end;
+    end;
+
+    // Chain build flags
+    LChainFlags := 0;
+    if (sslCertVerifyCheckRevocation in LVerifyFlags) or
+      (sslCertVerifyCheckOCSP in LVerifyFlags) then
+      LChainFlags := LChainFlags or CERT_CHAIN_REVOCATION_CHECK_CHAIN;
+
+    if sslCertVerifyCheckCRL in LVerifyFlags then
+      LChainFlags := LChainFlags or CERT_CHAIN_REVOCATION_CHECK_END_CERT;
+
+    // Build chain
+    FillChar(LChainPara, SizeOf(LChainPara), 0);
+    LChainPara.cbSize := SizeOf(CERT_CHAIN_PARA);
+
+    if not CertGetCertificateChain(
+      nil,
+      LCertContext,
+      nil,
+      nil,
+      @LChainPara,
+      LChainFlags,
+      nil,
+      @LChainContext
+    ) then
+    begin
+      AVerifyError := GetLastError;
+      Result := False;
+      Exit;
+    end;
+
+    try
+      // Policy parameters
+      FillChar(LPolicyPara, SizeOf(LPolicyPara), 0);
+      LPolicyPara.cbSize := SizeOf(CERT_CHAIN_POLICY_PARA);
+      LPolicyPara.dwFlags := 0;
+
+      if sslCertVerifyIgnoreExpiry in LVerifyFlags then
+        LPolicyPara.dwFlags := LPolicyPara.dwFlags or CERT_CHAIN_POLICY_IGNORE_NOT_TIME_VALID_FLAG;
+
+      if sslCertVerifyAllowSelfSigned in LVerifyFlags then
+        LPolicyPara.dwFlags := LPolicyPara.dwFlags or CERT_CHAIN_POLICY_ALLOW_UNKNOWN_CA_FLAG;
+
+      if sslCertVerifyIgnoreHostname in LVerifyFlags then
+        LPolicyPara.dwFlags := LPolicyPara.dwFlags or CERT_CHAIN_POLICY_IGNORE_INVALID_NAME_FLAG;
+
+      FillChar(LSSLExtra, SizeOf(LSSLExtra), 0);
+      LSSLExtra.cbSize := SizeOf(SSL_EXTRA_CERT_CHAIN_POLICY_PARA);
+
+      if LContextType = sslCtxServer then
+        LSSLExtra.dwAuthType := AUTHTYPE_CLIENT
+      else
+        LSSLExtra.dwAuthType := AUTHTYPE_SERVER;
+
+      LSSLExtra.fdwChecks := 0;
+      LServerNameW := nil;
+      try
+        if (LContextType = sslCtxClient) and
+          not (sslCertVerifyIgnoreHostname in LVerifyFlags) then
+        begin
+          LHostname := NormalizeHostForVerify(FContext.GetServerName);
+          if LHostname <> '' then
+            LServerNameW := StringToPWideChar(LHostname);
+        end;
+
+        LSSLExtra.pwszServerName := LServerNameW;
+        LPolicyPara.pvExtraPolicyPara := @LSSLExtra;
+
+        FillChar(LPolicyStatus, SizeOf(LPolicyStatus), 0);
+        LPolicyStatus.cbSize := SizeOf(CERT_CHAIN_POLICY_STATUS);
+
+        if not CertVerifyCertificateChainPolicy(
+          CERT_CHAIN_POLICY_SSL,
+          LChainContext,
+          @LPolicyPara,
+          @LPolicyStatus
+        ) then
+        begin
+          AVerifyError := GetLastError;
+          Result := False;
+          Exit;
+        end;
+
+        if LPolicyStatus.dwError <> 0 then
+        begin
+          AVerifyError := Integer(LPolicyStatus.dwError);
+          Result := False;
+          Exit;
+        end;
+
+        Result := True;
+      finally
+        if LServerNameW <> nil then
+          FreePWideCharString(LServerNameW);
+      end;
+    finally
+      CertFreeCertificateChain(LChainContext);
+    end;
+  finally
+    CertFreeCertificateContext(LCertContext);
   end;
 end;
 
@@ -848,6 +1108,10 @@ begin
                         ASC_REQ_ALLOCATE_MEMORY or
                         ASC_REQ_STREAM;
 
+  // Request client certificate when peer verification is enabled.
+  if sslVerifyPeer in FContext.GetVerifyMode then
+    dwSSPIPackageFlags := dwSSPIPackageFlags or ASC_REQ_MUTUAL_AUTH;
+
   // P1-1: 使用辅助方法初始化输出缓冲区
   PrepareOutputBufferDesc(OutBuffers, OutBufferDesc);
 
@@ -862,10 +1126,7 @@ begin
     begin
       cbData := RecvData(IoBuffer[cbIoBuffer], SizeOf(IoBuffer) - cbIoBuffer);
       if cbData <= 0 then
-      begin
-        FHandshakeState := sslHsFailed;
         Exit;
-      end;
       Inc(cbIoBuffer, cbData);
     end;
 
@@ -890,10 +1151,7 @@ begin
 
     // P1-1: 使用辅助方法发送响应数据
     if not SendOutputBuffer(OutBuffers[0]) then
-    begin
-      FHandshakeState := sslHsFailed;
       Exit;
-    end;
 
     // 检查握手状态
     if Status = SEC_E_INCOMPLETE_MESSAGE then
@@ -902,8 +1160,6 @@ begin
     if IsSuccess(Status) then
     begin
       // 握手成功
-      FHandshakeState := sslHsCompleted;
-      FConnected := True;
       Result := True;
       Break;
     end
@@ -915,7 +1171,6 @@ begin
     else
     begin
       // 握手失败
-      FHandshakeState := sslHsFailed;
       Break;
     end;
   end;
@@ -1390,69 +1645,12 @@ end;
 
 function TWinSSLConnection.GetVerifyResult: Integer;
 var
-  CertContext: PCCERT_CONTEXT;
-  ChainPara: CERT_CHAIN_PARA;
-  ChainContext: PCCERT_CHAIN_CONTEXT;
-  PolicyPara: CERT_CHAIN_POLICY_PARA;
-  PolicyStatus: CERT_CHAIN_POLICY_STATUS;
-  Status: SECURITY_STATUS;
+  LVerifyError: Integer;
 begin
-  Result := -1; // 默认错误
-  
-  if not FConnected then
-    Exit;
-  
-  // 获取对端证书
-  Status := QueryContextAttributesW(@FCtxtHandle, SECPKG_ATTR_REMOTE_CERT_CONTEXT, @CertContext);
-  
-  if not IsSuccess(Status) or (CertContext = nil) then
-    Exit;
-  
-  try
-    // 准备证书链参数
-    FillChar(ChainPara, SizeOf(ChainPara), 0);
-    ChainPara.cbSize := SizeOf(CERT_CHAIN_PARA);
-    
-    // 获取证书链
-    if CertGetCertificateChain(
-      nil,
-      CertContext,
-      nil,
-      nil,
-      @ChainPara,
-      0,
-      nil,
-      @ChainContext
-    ) then
-    begin
-      try
-        // 准备策略参数
-        FillChar(PolicyPara, SizeOf(PolicyPara), 0);
-        PolicyPara.cbSize := SizeOf(CERT_CHAIN_POLICY_PARA);
-        
-        FillChar(PolicyStatus, SizeOf(PolicyStatus), 0);
-        PolicyStatus.cbSize := SizeOf(CERT_CHAIN_POLICY_STATUS);
-        
-        // 验证证书链
-        if CertVerifyCertificateChainPolicy(
-          CERT_CHAIN_POLICY_SSL,
-          ChainContext,
-          @PolicyPara,
-          @PolicyStatus
-        ) then
-        begin
-          if PolicyStatus.dwError = 0 then
-            Result := 0  // 验证成功
-          else
-            Result := Integer(PolicyStatus.dwError);
-        end;
-      finally
-        CertFreeCertificateChain(ChainContext);
-      end;
-    end;
-  finally
-    CertFreeCertificateContext(CertContext);
-  end;
+  if ValidatePeerCertificate(LVerifyError) then
+    Result := 0
+  else
+    Result := LVerifyError;
 end;
 
 function TWinSSLConnection.GetVerifyResultString: string;

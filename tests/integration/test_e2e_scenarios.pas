@@ -106,25 +106,35 @@ var
   Conn1, Conn2: ISSLConnection;
   Sock1, Sock2: TSocket;
   Sess: ISSLSession;
+  Buf: array[0..1023] of Byte;
+  ReadBytes: Integer;
+  CAFile: string;
 begin
   WriteLn;
   WriteLn('=== Session Resumption Tests ===');
 
+  CAFile := '';
+  if FileExists('/etc/ssl/certs/ca-certificates.crt') then
+    CAFile := '/etc/ssl/certs/ca-certificates.crt'
+  else if FileExists('/etc/pki/tls/certs/ca-bundle.crt') then
+    CAFile := '/etc/pki/tls/certs/ca-bundle.crt';
+
+  if CAFile = '' then
+  begin
+    Runner.Skip('Session Resumption - Setup', 'No system CA bundle found');
+    Exit;
+  end;
+
   Ctx := GLib.CreateContext(sslCtxClient);
   Ctx.SetSessionCacheMode(True);
   Ctx.SetServerName('www.cloudflare.com');
-
-  // Load system CA bundle
-  if FileExists('/etc/ssl/certs/ca-certificates.crt') then
-    Ctx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt')
-  else if FileExists('/etc/pki/tls/certs/ca-bundle.crt') then
-    Ctx.LoadCAFile('/etc/pki/tls/certs/ca-bundle.crt');
+  Ctx.LoadCAFile(CAFile);
 
   // First connection
   Sock1 := ConnectSocket('www.cloudflare.com', 443);
   if Sock1 = INVALID_SOCKET then
   begin
-    Runner.Check('Session Resumption - Connect 1', False, 'Socket failed');
+    Runner.Skip('Session Resumption - Connect 1', 'Socket failed');
     Exit;
   end;
 
@@ -133,9 +143,25 @@ begin
     if Conn1.Connect then
     begin
       Runner.Check('Session Resumption - Handshake 1', True);
+
+      // For TLS 1.3, NewSessionTicket can be delivered post-handshake.
+      // Drive a small request/response so OpenSSL can process post-handshake messages
+      // before we snapshot the session.
+      try
+        Conn1.WriteString('HEAD / HTTP/1.1'#13#10 +
+          'Host: www.cloudflare.com'#13#10 +
+          'Connection: close'#13#10#13#10);
+        ReadBytes := Conn1.Read(Buf[0], SizeOf(Buf));
+        if ReadBytes < 0 then
+          ReadBytes := 0;
+      except
+        ReadBytes := 0;
+      end;
+
       // Extract session for reuse
       Sess := Conn1.GetSession;
-      Runner.Check('Session Resumption - Extract Session', Sess <> nil);
+      Runner.Check('Session Resumption - Extract Session', Sess <> nil,
+        Format('Read %d bytes before GetSession', [ReadBytes]));
     end
     else
     begin
@@ -150,7 +176,11 @@ begin
   if Sess = nil then Exit;
 
   Sock2 := ConnectSocket('www.cloudflare.com', 443);
-  if Sock2 = INVALID_SOCKET then Exit;
+  if Sock2 = INVALID_SOCKET then
+  begin
+    Runner.Skip('Session Resumption - Connect 2', 'Socket failed');
+    Exit;
+  end;
 
   try
     Conn2 := Ctx.CreateConnection(Sock2);
@@ -177,23 +207,31 @@ var
   Resp: TBytes;
   TotalRead: Integer;
   BytesRead: Integer;
+  CAFile: string;
 begin
   WriteLn;
   WriteLn('=== Large Data Transfer Tests ===');
 
+  CAFile := '';
+  if FileExists('/etc/ssl/certs/ca-certificates.crt') then
+    CAFile := '/etc/ssl/certs/ca-certificates.crt'
+  else if FileExists('/etc/pki/tls/certs/ca-bundle.crt') then
+    CAFile := '/etc/pki/tls/certs/ca-bundle.crt';
+
+  if CAFile = '' then
+  begin
+    Runner.Skip('Large Data - Setup', 'No system CA bundle found');
+    Exit;
+  end;
+
   Ctx := GLib.CreateContext(sslCtxClient);
   Ctx.SetServerName('www.cloudflare.com');
-
-  // Load system CA bundle
-  if FileExists('/etc/ssl/certs/ca-certificates.crt') then
-    Ctx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt')
-  else if FileExists('/etc/pki/tls/certs/ca-bundle.crt') then
-    Ctx.LoadCAFile('/etc/pki/tls/certs/ca-bundle.crt');
+  Ctx.LoadCAFile(CAFile);
 
   Sock := ConnectSocket('www.cloudflare.com', 443);
   if Sock = INVALID_SOCKET then
   begin
-    Runner.Check('Large Data - Connect', False);
+    Runner.Skip('Large Data - Connect', 'Socket failed');
     Exit;
   end;
 

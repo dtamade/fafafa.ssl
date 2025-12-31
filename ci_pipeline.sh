@@ -12,6 +12,27 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FPC_BIN="${FPC:-fpc}"
 DATE=$(date +%Y%m%d_%H%M%S)
 
+# Network-dependent tests are opt-in.
+# Set FAFAFA_RUN_NETWORK_TESTS=1 to enable real-website/E2E scenarios.
+RUN_NETWORK_TESTS="${FAFAFA_RUN_NETWORK_TESTS:-0}"
+
+EXAMPLES_BIN="$PROJECT_ROOT/examples/bin"
+TESTS_BIN="$PROJECT_ROOT/tests/bin"
+BENCH_BIN="$PROJECT_ROOT/tests/benchmarks/bin"
+
+# FPC unit paths (helps with custom FPC installs that may have incomplete fpc.cfg search paths)
+FPC_UNIT_PATHS=""
+FPC_BASE="$HOME/freePascal/fpc/units/x86_64-linux"
+if [ -d "$FPC_BASE" ]; then
+    for dir in rtl-objpas rtl rtl-unix rtl-extra fcl-base fcl-json fcl-process pthreads; do
+        if [ -d "$FPC_BASE/$dir" ]; then
+            FPC_UNIT_PATHS="$FPC_UNIT_PATHS -Fu$FPC_BASE/$dir"
+        fi
+    done
+fi
+
+FPC_COMMON_OPTS="$FPC_UNIT_PATHS -Fusrc -Fusrc/openssl"
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -35,41 +56,57 @@ build_tests() {
     info "Building test suites..."
     
     cd "$PROJECT_ROOT"
-    
-    # Integration tests
-    info "  Compiling integration tests..."
-    $FPC_BIN -Fusrc -Fusrc/openssl -Fuexamples examples/test_real_websites_enhanced.pas || {
-        error "Failed to compile test_real_websites_enhanced"
-        return 1
-    }
-    
-    $FPC_BIN -Fusrc -Fusrc/openssl -Fuexamples examples/test_real_websites_comprehensive.pas || {
-        error "Failed to compile test_real_websites_comprehensive"
-        return 1
-    }
-    
-    # E2E tests
-    info "  Compiling E2E tests..."
-    $FPC_BIN -Fusrc -Fusrc/openssl -Fuexamples tests/test_e2e_scenarios.pas || {
-        error "Failed to compile test_e2e_scenarios"
-        return 1
-    }
-    
+
+    mkdir -p "$EXAMPLES_BIN" "$TESTS_BIN" "$BENCH_BIN"
+    mkdir -p "$PROJECT_ROOT/tests/benchmarks/archive"
+
+    if [ "$RUN_NETWORK_TESTS" = "1" ]; then
+        info "  Compiling network integration tests..."
+        $FPC_BIN $FPC_COMMON_OPTS -Fuexamples -o"$EXAMPLES_BIN/test_real_websites_enhanced" examples/test_real_websites_enhanced.pas || {
+            error "Failed to compile test_real_websites_enhanced"
+            return 1
+        }
+
+        $FPC_BIN $FPC_COMMON_OPTS -Fuexamples -o"$EXAMPLES_BIN/test_real_websites_comprehensive" examples/test_real_websites_comprehensive.pas || {
+            error "Failed to compile test_real_websites_comprehensive"
+            return 1
+        }
+
+        info "  Compiling E2E tests..."
+        $FPC_BIN $FPC_COMMON_OPTS -Fuexamples -Futests/framework -o"$TESTS_BIN/test_e2e_scenarios" tests/integration/test_e2e_scenarios.pas || {
+            error "Failed to compile test_e2e_scenarios"
+            return 1
+        }
+    else
+        warn "Skipping network tests build (set FAFAFA_RUN_NETWORK_TESTS=1 to enable)"
+    fi
+
     # Performance tests
     info "  Compiling performance tests..."
-    $FPC_BIN -Fusrc -Fusrc/openssl tests/benchmarks/performance_regression_suite.pas || {
+    $FPC_BIN $FPC_COMMON_OPTS -o"$BENCH_BIN/performance_regression_suite" tests/benchmarks/performance_regression_suite.pas || {
         error "Failed to compile performance_regression_suite"
         return 1
     }
 
     # New API tests (v2.0 & Quick)
     info "  Compiling v2.0 & Quick API tests..."
-    $FPC_BIN -Fusrc -Fusrc/openssl tests/test_new_api.pas || {
+    $FPC_BIN $FPC_COMMON_OPTS -o"$TESTS_BIN/test_new_api" tests/test_new_api.pas || {
         error "Failed to compile test_new_api"
         return 1
     }
-    $FPC_BIN -Fusrc -Fusrc/openssl tests/test_quick_all.pas || {
+    $FPC_BIN $FPC_COMMON_OPTS -o"$TESTS_BIN/test_quick_all" tests/test_quick_all.pas || {
         error "Failed to compile test_quick_all"
+        return 1
+    }
+
+    # OpenSSL OCSP regression tests (no external network required)
+    info "  Compiling OpenSSL OCSP regression tests..."
+    $FPC_BIN $FPC_COMMON_OPTS -o"$TESTS_BIN/test_openssl_chain_issuer_selection" tests/openssl/test_openssl_chain_issuer_selection.pas || {
+        error "Failed to compile test_openssl_chain_issuer_selection"
+        return 1
+    }
+    $FPC_BIN $FPC_COMMON_OPTS -o"$TESTS_BIN/test_openssl_ocsp_fail_closed" tests/openssl/test_openssl_ocsp_fail_closed.pas || {
+        error "Failed to compile test_openssl_ocsp_fail_closed"
         return 1
     }
     
@@ -82,29 +119,42 @@ run_integration_tests() {
     info "Running integration tests..."
     
     cd "$PROJECT_ROOT"
-    
-    # Enhanced website tests
-    info "  Running enhanced website tests..."
-    ./examples/test_real_websites_enhanced || {
-        warn "Some enhanced tests failed (expected)"
+
+    if [ "$RUN_NETWORK_TESTS" = "1" ]; then
+        info "  Running network integration tests..."
+        "$EXAMPLES_BIN/test_real_websites_enhanced" || {
+            warn "Some enhanced tests failed (expected)"
+        }
+
+        "$TESTS_BIN/test_e2e_scenarios" || {
+            warn "Some E2E tests failed"
+        }
+    else
+        warn "Skipping network integration tests (set FAFAFA_RUN_NETWORK_TESTS=1 to enable)"
+    fi
+
+    # OpenSSL OCSP regression tests
+    info "  Running OpenSSL OCSP regression tests..."
+    "$TESTS_BIN/test_openssl_chain_issuer_selection" || {
+        error "OpenSSL chain issuer selection tests failed"
+        return 1
     }
-    
-    # E2E scenarios
-    info "  Running E2E scenarios..."
-    ./tests/test_e2e_scenarios || {
-        warn "Some E2E tests failed"
+
+    "$TESTS_BIN/test_openssl_ocsp_fail_closed" || {
+        error "OpenSSL OCSP fail-closed tests failed"
+        return 1
     }
 
     # v2.0 API tests
     info "  Running v2.0 API tests..."
-    ./tests/test_new_api || {
+    "$TESTS_BIN/test_new_api" || {
         error "v2.0 API tests failed"
         return 1
     }
 
     # Quick API tests
     info "  Running Quick API tests..."
-    ./tests/test_quick_all || {
+    "$TESTS_BIN/test_quick_all" || {
         error "Quick API tests failed"
         return 1
     }
@@ -115,11 +165,13 @@ run_integration_tests() {
 # Run performance benchmarks
 run_benchmarks() {
     info "Running performance benchmarks..."
-    
+
+    mkdir -p "$BENCH_BIN"
+
     cd "$PROJECT_ROOT/tests/benchmarks"
-    
+
     # Run regression suite
-    ./performance_regression_suite > "benchmark_${DATE}.log" 2>&1 || {
+    "$BENCH_BIN/performance_regression_suite" > "benchmark_${DATE}.log" 2>&1 || {
         warn "Performance regression detected or benchmark failed"
         cat "benchmark_${DATE}.log"
     }

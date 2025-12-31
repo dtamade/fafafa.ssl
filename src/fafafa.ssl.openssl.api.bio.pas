@@ -313,6 +313,14 @@ var
   BIO_f_base64: TBIO_f_base64 = nil;
   BIO_new_socket: TBIO_new_socket = nil;
   BIO_new_bio_pair: TBIO_new_bio_pair = nil;
+
+  // SSL BIO functions (libssl)
+  BIO_f_ssl: TBIO_f_ssl = nil;
+  BIO_new_ssl: TBIO_new_ssl = nil;
+  BIO_new_ssl_connect: TBIO_new_ssl_connect = nil;
+  BIO_new_buffer_ssl_connect: TBIO_new_buffer_ssl_connect = nil;
+  BIO_ssl_copy_session_id: TBIO_ssl_copy_session_id = nil;
+  BIO_ssl_shutdown: TBIO_ssl_shutdown = nil;
   
   // Missing variables
   BIO_free_all: TBIO_free_all = nil;
@@ -330,8 +338,10 @@ procedure UnloadOpenSSLBIO;
 function IsOpenSSLBIOLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmBIO) instead';
 
 { Helper functions for BIO connection operations }
+function BIO_set_conn_hostname(b: PBIO; const hostname: PAnsiChar): clong;
 function BIO_set_conn_port(b: PBIO; const port: PAnsiChar): clong;
 function BIO_do_connect(b: PBIO): clong;
+function BIO_get_ssl(b: PBIO; sslp: PPSSL): clong;
 
 { BIO_pending is a macro in OpenSSL, not a real function }
 function BIO_pending_impl(b: PBIO): Integer; cdecl;
@@ -388,6 +398,14 @@ begin
   BIO_f_base64 := TBIO_f_base64(GetProcedureAddress(LibCrypto, 'BIO_f_base64'));
   BIO_new_bio_pair := TBIO_new_bio_pair(GetProcedureAddress(LibCrypto, 'BIO_new_bio_pair'));
 
+  // SSL BIO functions (in libssl)
+  BIO_f_ssl := TBIO_f_ssl(GetProcedureAddress(LibSSL, 'BIO_f_ssl'));
+  BIO_new_ssl := TBIO_new_ssl(GetProcedureAddress(LibSSL, 'BIO_new_ssl'));
+  BIO_new_ssl_connect := TBIO_new_ssl_connect(GetProcedureAddress(LibSSL, 'BIO_new_ssl_connect'));
+  BIO_new_buffer_ssl_connect := TBIO_new_buffer_ssl_connect(GetProcedureAddress(LibSSL, 'BIO_new_buffer_ssl_connect'));
+  BIO_ssl_copy_session_id := TBIO_ssl_copy_session_id(GetProcedureAddress(LibSSL, 'BIO_ssl_copy_session_id'));
+  BIO_ssl_shutdown := TBIO_ssl_shutdown(GetProcedureAddress(LibSSL, 'BIO_ssl_shutdown'));
+
   // BIO_pending is a macro in OpenSSL, use our helper implementation
   BIO_pending := @BIO_pending_impl;
 
@@ -423,6 +441,13 @@ begin
   BIO_f_base64 := nil;
   BIO_new_bio_pair := nil;
 
+  BIO_f_ssl := nil;
+  BIO_new_ssl := nil;
+  BIO_new_ssl_connect := nil;
+  BIO_new_buffer_ssl_connect := nil;
+  BIO_ssl_copy_session_id := nil;
+  BIO_ssl_shutdown := nil;
+
   // Mark module as unloaded
   TOpenSSLLoader.SetModuleLoaded(osmBIO, False);
 end;
@@ -433,6 +458,16 @@ begin
 end;
 
 { Helper functions for BIO connection operations }
+function BIO_set_conn_hostname(b: PBIO; const hostname: PAnsiChar): clong;
+const
+  BIO_C_SET_CONNECT = 100;
+begin
+  if Assigned(BIO_ctrl) then
+    Result := BIO_ctrl(b, BIO_C_SET_CONNECT, 0, Pointer(hostname))
+  else
+    Result := -1;
+end;
+
 function BIO_set_conn_port(b: PBIO; const port: PAnsiChar): clong;
 const
   BIO_C_SET_CONNECT = 100;
@@ -449,6 +484,16 @@ const
 begin
   if Assigned(BIO_ctrl) then
     Result := BIO_ctrl(b, BIO_C_DO_STATE_MACHINE, 0, nil)
+  else
+    Result := -1;
+end;
+
+function BIO_get_ssl(b: PBIO; sslp: PPSSL): clong;
+const
+  BIO_C_GET_SSL = 110;
+begin
+  if Assigned(BIO_ctrl) then
+    Result := BIO_ctrl(b, BIO_C_GET_SSL, 0, Pointer(sslp))
   else
     Result := -1;
 end;

@@ -500,6 +500,8 @@ var
   // X509 Verification Functions
   X509_verify: TX509_verify;
   X509_check_host: TX509_check_host;
+  X509_check_ip: TX509_check_ip;
+  X509_check_ip_asc: TX509_check_ip_asc;
   X509_check_private_key: TX509_check_private_key;
   X509_verify_cert: TX509_verify_cert;
   X509_verify_cert_error_string: TX509_verify_cert_error_string;
@@ -627,6 +629,8 @@ begin
   // Load X509 Verification Functions
   X509_verify := TX509_verify(GetProcedureAddress(LibHandle, 'X509_verify'));
   X509_check_host := TX509_check_host(GetProcedureAddress(LibHandle, 'X509_check_host'));
+  X509_check_ip := TX509_check_ip(GetProcedureAddress(LibHandle, 'X509_check_ip'));
+  X509_check_ip_asc := TX509_check_ip_asc(GetProcedureAddress(LibHandle, 'X509_check_ip_asc'));
   X509_check_private_key := TX509_check_private_key(GetProcedureAddress(LibHandle, 'X509_check_private_key'));
   X509_verify_cert := TX509_verify_cert(GetProcedureAddress(LibHandle, 'X509_verify_cert'));
   X509_verify_cert_error_string := TX509_verify_cert_error_string(GetProcedureAddress(LibHandle, 'X509_verify_cert_error_string'));
@@ -694,6 +698,9 @@ begin
   X509_dup := nil;
   X509_up_ref := nil;
   X509_verify := nil;
+  X509_check_host := nil;
+  X509_check_ip := nil;
+  X509_check_ip_asc := nil;
   X509_STORE_new := nil;
   X509_STORE_free := nil;
   X509_STORE_add_cert := nil;

@@ -197,7 +197,8 @@ function IsCompressionSupported(Method: PCOMP_METHOD): Boolean;
 implementation
 
 uses
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader;
 
 procedure LoadCOMPFunctions;
 begin

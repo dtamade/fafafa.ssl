@@ -445,7 +445,7 @@ begin
 
   // ALPN 需要 Windows 8+ (版本 6.2+) 或 Windows 10+
   Result.SupportsALPN := (FWindowsVersion.Major >= 10) or
-                         ((FWindowsVersion.Major = 6) and (FWindowsVersion.Minor >= 2));
+    ((FWindowsVersion.Major = 6) and (FWindowsVersion.Minor >= 2));
 
   // SNI 是 Schannel 原生支持的
   Result.SupportsSNI := True;
@@ -477,12 +477,14 @@ begin
     Result.MaxTLSVersion := sslProtocolTLS12;
 
   InternalLog(sslLogDebug, Format('GetCapabilities: TLS1.3=%s, ALPN=%s, SNI=%s (Win %d.%d.%d)',
-    [BoolToStr(Result.SupportsTLS13, True),
-     BoolToStr(Result.SupportsALPN, True),
-     BoolToStr(Result.SupportsSNI, True),
-     FWindowsVersion.Major,
-     FWindowsVersion.Minor,
-     FWindowsVersion.Build]));
+    [
+      BoolToStr(Result.SupportsTLS13, True),
+      BoolToStr(Result.SupportsALPN, True),
+      BoolToStr(Result.SupportsSNI, True),
+      FWindowsVersion.Major,
+      FWindowsVersion.Minor,
+      FWindowsVersion.Build
+    ]));
 end;
 
 // ============================================================================

@@ -209,7 +209,7 @@ begin
   if FSession = nil then
     Exit;
   
-  BIO := BIO_new(BIO_s_mem);
+  BIO := BIO_new(BIO_s_mem());
   if BIO = nil then
     Exit;
   

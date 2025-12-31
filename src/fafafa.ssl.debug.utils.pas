@@ -179,7 +179,7 @@ type
     AllocLocation: string;    // 分配位置（调用者信息）
   end;
 
-  {**
+  (**
    * TSSLResourceTracker - 资源泄漏检测器
    *
    * 在调试模式下跟踪 SSL 资源的分配和释放，
@@ -207,7 +207,7 @@ type
    *   TSSLResourceTracker.Instance.ReportLeaks;
    *   {$ENDIF}
    * </code>
-   *}
+   *)
   TSSLResourceTracker = class
   private
     class var FInstance: TSSLResourceTracker;

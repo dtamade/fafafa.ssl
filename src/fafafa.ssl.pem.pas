@@ -290,7 +290,7 @@ begin
       // 检查是否是头部行 (格式: "Name: Value")
       // 头部只在内容开始之前，且必须包含冒号
       if InHeaders and (not HeaderEnded) and (Pos(': ', Line) > 0) and
-         (Pos(': ', Line) < 20) then  // 头部名称通常较短
+        (Pos(': ', Line) < 20) then  // 头部名称通常较短
       begin
         // 这是一个头部字段
         AHeaders.Add(Line);
@@ -554,16 +554,14 @@ var
 begin
   Count := 0;
   for I := 0 to High(FBlocks) do
-    if FBlocks[I].BlockType in [pemPrivateKey, pemRSAPrivateKey, pemECPrivateKey,
-                                 pemEncryptedPrivateKey] then
+    if FBlocks[I].BlockType in [pemPrivateKey, pemRSAPrivateKey, pemECPrivateKey, pemEncryptedPrivateKey] then
       Inc(Count);
 
   SetLength(Result, Count);
   Count := 0;
   for I := 0 to High(FBlocks) do
   begin
-    if FBlocks[I].BlockType in [pemPrivateKey, pemRSAPrivateKey, pemECPrivateKey,
-                                 pemEncryptedPrivateKey] then
+    if FBlocks[I].BlockType in [pemPrivateKey, pemRSAPrivateKey, pemECPrivateKey, pemEncryptedPrivateKey] then
     begin
       Result[Count] := FBlocks[I];
       Inc(Count);

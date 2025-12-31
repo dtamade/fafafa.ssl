@@ -16,7 +16,8 @@ uses
   fafafa.examples.sockets,
   {$ENDIF}
   fafafa.ssl.factory,
-  fafafa.ssl.base;
+  fafafa.ssl.base,
+  fafafa.ssl;
 
 type
   TWebsiteTest = record
@@ -39,7 +40,7 @@ type
 const
   TEST_SITES: array[1..12] of TWebsiteTest = (
     (Host: 'www.google.com'; Port: 443; Path: '/'; Description: 'Google'; ExpectedStatus: '200'),
-    (Host: 'www.github.com'; Port: 443; Path: '/'; Description: 'GitHub'; ExpectedStatus: '200'),
+    (Host: 'github.com'; Port: 443; Path: '/'; Description: 'GitHub'; ExpectedStatus: '200'),
     (Host: 'api.github.com'; Port: 443; Path: '/'; Description: 'GitHub API'; ExpectedStatus: '200'),
     (Host: 'www.cloudflare.com'; Port: 443; Path: '/'; Description: 'Cloudflare'; ExpectedStatus: '200'),
     (Host: 'www.mozilla.org'; Port: 443; Path: '/'; Description: 'Mozilla'; ExpectedStatus: '200'),
@@ -57,6 +58,7 @@ var
   GTotalTests: Integer = 0;
   GPassedTests: Integer = 0;
   GFailedTests: Integer = 0;
+  GSkippedTests: Integer = 0;
 
 function GetProtocolName(AVer: TSSLProtocolVersion): string;
 begin
@@ -144,9 +146,9 @@ begin
       on E: Exception do
       begin
         Result.ErrorMessage := 'TCP connection failed: ' + E.Message;
-        WriteLn('✗');
-        WriteLn('    ', Result.ErrorMessage);
-        Inc(GFailedTests);
+        WriteLn('⊘');
+        WriteLn('    Skipped: ', Result.ErrorMessage);
+        Inc(GSkippedTests);
         Exit;
       end;
     end;
@@ -276,6 +278,7 @@ var
   LResults: array of TTestResult;
   LTotalTime: Integer;
   LCount: Integer;
+  LEffectiveTotal: Integer;
 
 begin
   WriteLn('================================================================');
@@ -314,9 +317,16 @@ begin
     // Display statistics
     WriteLn('================================================================');
     WriteLn('Test Results:');
-    WriteLn('  Total:  ', GTotalTests);
-    WriteLn('  Passed: ', GPassedTests, Format('  (%.1f%%)', [GPassedTests * 100.0 / GTotalTests]));
-    WriteLn('  Failed: ', GFailedTests);
+    WriteLn('  Total:   ', GTotalTests);
+
+    LEffectiveTotal := GTotalTests - GSkippedTests;
+    if LEffectiveTotal <= 0 then
+      LEffectiveTotal := GTotalTests;
+
+    WriteLn('  Passed:  ', GPassedTests, Format('  (%.1f%%)', [GPassedTests * 100.0 / LEffectiveTotal]));
+    WriteLn('  Failed:  ', GFailedTests);
+    if GSkippedTests > 0 then
+      WriteLn('  Skipped: ', GSkippedTests);
 
     if GPassedTests > 0 then
     begin
@@ -339,7 +349,10 @@ begin
 
     if GFailedTests = 0 then
     begin
-      WriteLn('✅ All tests passed! Library works correctly in real-world scenarios.');
+      if GSkippedTests > 0 then
+        WriteLn(Format('✅ All executed tests passed (%d skipped due to network).', [GSkippedTests]))
+      else
+        WriteLn('✅ All tests passed! Library works correctly in real-world scenarios.');
       WriteLn;
       WriteLn('Next steps:');
       WriteLn('  1. Test with client certificate authentication');

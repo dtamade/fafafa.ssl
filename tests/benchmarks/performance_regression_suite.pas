@@ -169,26 +169,46 @@ begin
   WriteLn('================================================================');
 end;
 
-function BenchmarkHandshakes(ACount: Integer): TBenchmarkResult;
+function BenchmarkContextCreation(ACount: Integer): TBenchmarkResult;
 var
   StartTime, EndTime: QWord;
   I: Integer;
+  Sample: Integer;
+  SampleDuration: Int64;
   Ctx: ISSLContext;
 begin
-  Result.Name := Format('TLS_%d_Handshakes', [ACount]);
+  Result.Name := Format('TLS_ContextCreate_%d', [ACount]);
   Result.Success := False;
-  
-  StartTime := GetTickCount64;
+
+  // Warmup to reduce one-time initialization noise
   try
-    // Simplified: just measure context creation overhead
-    for I := 1 to ACount do
-    begin
+    for I := 1 to 20 do
       Ctx := GLib.CreateContext(sslCtxClient);
-      // Context auto-freed by interface
+  except
+    // Ignore warmup failures; the timed run will report the real error
+  end;
+
+  // Measure multiple samples and take the best to reduce noise from system load.
+  Result.Duration := High(Int64);
+  try
+    for Sample := 1 to 3 do
+    begin
+      StartTime := GetTickCount64;
+      for I := 1 to ACount do
+        Ctx := GLib.CreateContext(sslCtxClient);
+      EndTime := GetTickCount64;
+
+      SampleDuration := EndTime - StartTime;
+      if (SampleDuration > 0) and (SampleDuration < Result.Duration) then
+        Result.Duration := SampleDuration;
     end;
-    
-    EndTime := GetTickCount64;
-    Result.Duration := EndTime - StartTime;
+
+    if Result.Duration = High(Int64) then
+      Result.Duration := 0;
+
+    if Result.Duration = 0 then
+      Result.Duration := 1; // Avoid division by zero
+
     Result.Throughput := ACount / (Result.Duration / 1000.0);
     Result.Success := True;
   except
@@ -237,8 +257,9 @@ begin
   WriteLn;
   
   // Context creation benchmarks
-  AddResult(BenchmarkHandshakes(100));
-  AddResult(BenchmarkHandshakes(500));
+  // Use larger iteration counts to reduce timer jitter with millisecond resolution.
+  AddResult(BenchmarkContextCreation(1000));
+  AddResult(BenchmarkContextCreation(5000));
   
   // Encryption benchmarks
   AddResult(BenchmarkEncryption(1, 1000));

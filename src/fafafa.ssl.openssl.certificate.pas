@@ -14,11 +14,16 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.logging,  // P3-8: 添加日志支持
+  fafafa.ssl.ocsp,
+  fafafa.ssl.x509,
   fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.x509.chain,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.x509v3,
   fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.ocsp,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.bn,
   fafafa.ssl.openssl.api.asn1,
@@ -371,7 +376,7 @@ begin
   Result := '';
   if FX509 = nil then Exit;
   
-  BIO := BIO_new(BIO_s_mem);
+  BIO := BIO_new(BIO_s_mem());
   try
     if PEM_write_bio_X509(BIO, FX509) = 1 then
     begin
@@ -393,7 +398,7 @@ begin
   SetLength(Result, 0);
   if FX509 = nil then Exit;
   
-  BIO := BIO_new(BIO_s_mem);
+  BIO := BIO_new(BIO_s_mem());
   try
     if i2d_X509_bio(BIO, FX509) > 0 then
     begin
@@ -715,7 +720,7 @@ begin
   Ctx := nil;
   try
     try
-      Ctx := X509_STORE_CTX_new;
+      Ctx := X509_STORE_CTX_new();
     except
       on E: Exception do
       begin
@@ -757,6 +762,13 @@ var
   Ret: Integer;
   ErrorCode: Integer;
   ErrorStr: PAnsiChar;
+  OCSPUrl: string;
+  IssuerX509: PX509;
+  OCSPStatus: Integer;
+  OCSPTimeoutSec: Integer;
+  CertDER: TBytes;
+  ParsedCert: TX509Certificate;
+  Chain: PSTACK_OF_X509;
 begin
   FillChar(AResult, SizeOf(AResult), 0);
   AResult.Success := False;
@@ -780,6 +792,7 @@ begin
     AResult.ErrorMessage := 'Invalid CA store handle';
     Exit;
   end;
+
 
   if (not Assigned(X509_STORE_CTX_new)) or
     (not Assigned(X509_STORE_CTX_init)) or
@@ -811,7 +824,7 @@ begin
   Ctx := nil;
   try
     try
-      Ctx := X509_STORE_CTX_new;
+      Ctx := X509_STORE_CTX_new();
     except
       AResult.ErrorMessage := 'Failed to create store context';
       Exit;
@@ -842,6 +855,111 @@ begin
       
       if Ret = 1 then
       begin
+        // Optional OCSP revocation check (fails closed when requested)
+        if sslCertVerifyCheckOCSP in AFlags then
+        begin
+          // Ensure OCSP APIs are loaded
+          if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) then
+            LoadOpenSSLOCSP(GetCryptoLibHandle);
+
+          if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) then
+          begin
+            AResult.Success := False;
+            AResult.ErrorCode := X509_V_ERR_OCSP_VERIFY_FAILED;
+            AResult.ErrorMessage := 'OCSP verification requested but OCSP API is unavailable';
+            AResult.DetailedInfo := 'Failed to load OpenSSL OCSP module';
+            AResult.RevocationStatus := 2;
+            Exit;
+          end;
+
+          // Determine issuer certificate (required for OCSP CertID)
+          IssuerX509 := nil;
+          if FIssuerCert <> nil then
+            IssuerX509 := PX509(FIssuerCert.GetNativeHandle);
+
+          if IssuerX509 = nil then
+          begin
+            Chain := nil;
+            if Assigned(X509_STORE_CTX_get0_chain) then
+              Chain := X509_STORE_CTX_get0_chain(Ctx);
+
+            if Chain <> nil then
+              IssuerX509 := FindIssuerX509InChain(FX509, Chain);
+          end;
+
+          if IssuerX509 = nil then
+          begin
+            AResult.Success := False;
+            AResult.ErrorCode := X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT;
+            AResult.ErrorMessage := 'OCSP verification requires issuer certificate';
+            AResult.DetailedInfo := 'Could not determine issuer certificate for OCSP request';
+            AResult.RevocationStatus := 2;
+            Exit;
+          end;
+
+          // Extract responder URL from certificate AIA (pure-pascal parser)
+          OCSPUrl := '';
+          try
+            CertDER := SaveToDER;
+            if Length(CertDER) > 0 then
+            begin
+              ParsedCert := TX509Certificate.Create;
+              try
+                ParsedCert.LoadFromDER(CertDER);
+                OCSPUrl := GetOCSPURLFromCertificate(ParsedCert);
+              finally
+                ParsedCert.Free;
+              end;
+            end;
+          except
+            OCSPUrl := '';
+          end;
+
+          if OCSPUrl = '' then
+          begin
+            AResult.Success := False;
+            AResult.ErrorCode := X509_V_ERR_OCSP_VERIFY_NEEDED;
+            AResult.ErrorMessage := 'OCSP responder URL not found in certificate';
+            AResult.DetailedInfo := 'sslCertVerifyCheckOCSP requested but certificate AIA has no OCSP URL';
+            AResult.RevocationStatus := 2;
+            Exit;
+          end;
+
+          // Perform OCSP check (supports http/https responders)
+          OCSPTimeoutSec := 10;
+          OCSPStatus := CheckCertificateStatus(FX509, IssuerX509, OCSPUrl, OCSPTimeoutSec, Store);
+
+          case OCSPStatus of
+            V_OCSP_CERTSTATUS_GOOD:
+              ; // OK
+            V_OCSP_CERTSTATUS_REVOKED:
+              begin
+                AResult.Success := False;
+                AResult.ErrorCode := X509_V_ERR_CERT_REVOKED;
+                AResult.ErrorMessage := 'Certificate has been revoked (OCSP)';
+                AResult.DetailedInfo := 'OCSP responder reported certificate revoked';
+                AResult.RevocationStatus := 1;
+                Exit;
+              end;
+            V_OCSP_CERTSTATUS_UNKNOWN:
+              begin
+                AResult.Success := False;
+                AResult.ErrorCode := X509_V_ERR_OCSP_CERT_UNKNOWN;
+                AResult.ErrorMessage := 'Certificate OCSP status unknown';
+                AResult.DetailedInfo := 'OCSP responder returned unknown status';
+                AResult.RevocationStatus := 2;
+                Exit;
+              end;
+          else
+            AResult.Success := False;
+            AResult.ErrorCode := X509_V_ERR_OCSP_VERIFY_FAILED;
+            AResult.ErrorMessage := 'OCSP verification failed';
+            AResult.DetailedInfo := 'OCSP request/response validation failed';
+            AResult.RevocationStatus := 2;
+            Exit;
+          end;
+        end;
+
         AResult.Success := True;
         AResult.ErrorCode := 0;
         AResult.ErrorMessage := 'Certificate verification successful';
@@ -895,15 +1013,112 @@ end;
 
 function TOpenSSLCertificate.VerifyHostname(const AHostname: string): Boolean;
 var
+  Hostname: string;
   HostnameA: AnsiString;
+  IsIP: Boolean;
+
+  function NormalizeHostForVerify(const S: string): string;
+  var
+    LHost: string;
+    P, PEnd: SizeInt;
+    PortPart: string;
+    I: Integer;
+  begin
+    LHost := Trim(S);
+
+    // Strip IPv6 brackets: [::1]
+    if (LHost <> '') and (LHost[1] = '[') then
+    begin
+      PEnd := Pos(']', LHost);
+      if PEnd > 0 then
+        LHost := Copy(LHost, 2, PEnd - 2);
+    end;
+
+    // Strip zone id: fe80::1%eth0
+    P := Pos('%', LHost);
+    if P > 0 then
+      LHost := Copy(LHost, 1, P - 1);
+
+    // Strip port for the host:port case (not valid for plain IPv6 without brackets)
+    if (Pos(':', LHost) > 0) and (Pos(':', LHost) = LastDelimiter(':', LHost)) then
+    begin
+      P := Pos(':', LHost);
+      PortPart := Copy(LHost, P + 1, Length(LHost) - P);
+      if PortPart <> '' then
+      begin
+        for I := 1 to Length(PortPart) do
+          if not (PortPart[I] in ['0'..'9']) then
+          begin
+            PortPart := '';
+            Break;
+          end;
+        if PortPart <> '' then
+          LHost := Copy(LHost, 1, P - 1);
+      end;
+    end;
+
+    Result := LHost;
+  end;
+
+  function IsValidIPv4(const S: string): Boolean;
+  var
+    Parts: TStringArray;
+    Part: string;
+    Value: Integer;
+    I: Integer;
+  begin
+    Result := False;
+    Parts := S.Split(['.']);
+    if Length(Parts) <> 4 then
+      Exit;
+
+    for Part in Parts do
+    begin
+      if Part = '' then
+        Exit;
+
+      for I := 1 to Length(Part) do
+        if not (Part[I] in ['0'..'9']) then
+          Exit;
+
+      if not TryStrToInt(Part, Value) then
+        Exit;
+      if (Value < 0) or (Value > 255) then
+        Exit;
+    end;
+
+    Result := True;
+  end;
+
 begin
   Result := False;
-  
-  if (FX509 = nil) or (AHostname = '') then
+
+  if FX509 = nil then
     Exit;
-  
-  HostnameA := AnsiString(AHostname);
-  Result := (X509_check_host(FX509, PAnsiChar(HostnameA), Length(HostnameA), 0, nil) = 1);
+
+  Hostname := NormalizeHostForVerify(AHostname);
+  if Hostname = '' then
+    Exit;
+
+  // Ensure X509 hostname verification helpers are available
+  if (not Assigned(X509_check_host)) and (not Assigned(X509_check_ip_asc)) then
+    LoadOpenSSLX509;
+
+  IsIP := IsValidIPv4(Hostname) or (Pos(':', Hostname) > 0);
+  HostnameA := AnsiString(Hostname);
+
+  if IsIP then
+  begin
+    if not Assigned(X509_check_ip_asc) then
+      Exit(False);
+    Result := (X509_check_ip_asc(FX509, PAnsiChar(HostnameA), 0) = 1);
+  end
+  else
+  begin
+    if not Assigned(X509_check_host) then
+      Exit(False);
+    Result := (X509_check_host(FX509, PAnsiChar(HostnameA), Length(HostnameA), 0, nil) = 1);
+  end;
 end;
 
 function TOpenSSLCertificate.IsExpired: Boolean;
@@ -1093,7 +1308,7 @@ begin
     Exit;
   
   // 使用 X509V3_EXT_print 将扩展内容转为可读文本
-  LBIO := BIO_new(BIO_s_mem);
+  LBIO := BIO_new(BIO_s_mem());
   if LBIO = nil then
     Exit;
   try

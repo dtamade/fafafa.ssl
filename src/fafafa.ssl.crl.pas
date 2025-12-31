@@ -323,7 +323,7 @@ begin
   // nextUpdate (可选)
   FHasNextUpdate := False;
   if (ANode.ChildCount > Index) and
-     (ANode.GetChild(Index).IsUTCTime or ANode.GetChild(Index).IsGeneralizedTime) then
+    (ANode.GetChild(Index).IsUTCTime or ANode.GetChild(Index).IsGeneralizedTime) then
   begin
     FNextUpdate := ANode.GetChild(Index).AsDateTime;
     FHasNextUpdate := True;

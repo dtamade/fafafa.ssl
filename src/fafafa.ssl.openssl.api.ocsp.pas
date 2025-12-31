@@ -8,6 +8,11 @@ uses
   SysUtils, Classes, dynlibs,
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.ssl,
+  fafafa.ssl.openssl.api.x509,
+  fafafa.ssl.openssl.api.crypto,
   fafafa.ssl.openssl.api.asn1,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.evp,
@@ -85,6 +90,7 @@ type
     V_OCSP_CERTSTATUS_GOOD                     = 0;
     V_OCSP_CERTSTATUS_REVOKED                  = 1;
     V_OCSP_CERTSTATUS_UNKNOWN                  = 2;
+    V_OCSP_CERTSTATUS_ERROR                    = -1;
 
     // 吊销原因
     OCSP_REVOKED_STATUS_NOSTATUS               = -1;
@@ -364,13 +370,13 @@ function LoadOpenSSLOCSP(const ACryptoLib: THandle): Boolean;
 procedure UnloadOpenSSLOCSP;
 
 // 辅助函数
-function CheckCertificateStatus(ACert: PX509; AIssuer: PX509; 
-  const AOCSPUrl: string; ATimeout: Integer = 10): Integer;
+function CheckCertificateStatus(ACert: PX509; AIssuer: PX509;
+  const AOCSPUrl: string; ATimeout: Integer = 10; AStore: PX509_STORE = nil): Integer;
 function CreateOCSPRequest(ACert: PX509; AIssuer: PX509): POCSP_REQUEST;
-function SendOCSPRequest(ARequest: POCSP_REQUEST; const AOCSPUrl: string; 
-  ATimeout: Integer = 10): POCSP_RESPONSE;
-function VerifyOCSPResponse(AResponse: POCSP_RESPONSE; ACert: PX509; 
-  AIssuer: PX509; AStore: PX509_STORE): Boolean;
+function SendOCSPRequest(ARequest: POCSP_REQUEST; const AOCSPUrl: string;
+  ATimeout: Integer = 10; ATrustStore: PX509_STORE = nil): POCSP_RESPONSE;
+function VerifyOCSPResponse(AResponse: POCSP_RESPONSE; ACert: PX509;
+  AIssuer: PX509; AStore: PX509_STORE; ARequest: POCSP_REQUEST = nil): Boolean;
 
 implementation
 
@@ -504,18 +510,74 @@ begin
 end;
 
 // 辅助函数实现
-function CheckCertificateStatus(ACert: PX509; AIssuer: PX509; 
-  const AOCSPUrl: string; ATimeout: Integer): Integer;
+function CheckCertificateStatus(ACert: PX509; AIssuer: PX509;
+  const AOCSPUrl: string; ATimeout: Integer; AStore: PX509_STORE): Integer;
 var
   Req: POCSP_REQUEST;
   Resp: POCSP_RESPONSE;
   BasicResp: POCSP_BASICRESP;
   CertID: POCSP_CERTID;
+  Certs: PSTACK_OF_X509;
   Status, Reason: Integer;
   RevTime, ThisUpd, NextUpd: PASN1_GENERALIZEDTIME;
+  LVerifyStore: PX509_STORE;
+  LOwnsStore: Boolean;
+  LNonceRes: Integer;
+  LLib: THandle;
+
+  function EnsureDependenciesLoaded: Boolean;
+  begin
+    Result := True;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
+    begin
+      try
+        LoadOpenSSLCore;
+      except
+        Exit(False);
+      end;
+    end;
+
+    // BIO and Stack helpers are required for HTTP(S) transport and OCSP_BASICRESP_verify
+    if not TOpenSSLLoader.IsModuleLoaded(osmBIO) then
+      LoadOpenSSLBIO;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmStack) then
+      LoadStackFunctions;
+
+    // EVP_sha1 is used by OCSP_cert_to_id
+    if not TOpenSSLLoader.IsModuleLoaded(osmEVP) then
+    begin
+      LLib := GetCryptoLibHandle;
+      if LLib <> 0 then
+        LoadEVP(LLib);
+    end;
+
+    if not Assigned(EVP_sha1) then
+      Exit(False);
+
+    // X509 store helpers may be needed if AStore is nil
+    if not TOpenSSLLoader.IsModuleLoaded(osmX509) then
+      LoadOpenSSLX509;
+  end;
+
 begin
-  Result := V_OCSP_CERTSTATUS_UNKNOWN;
-  if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) or (ACert = nil) or (AIssuer = nil) then
+  Result := V_OCSP_CERTSTATUS_ERROR;
+
+  if (not TOpenSSLLoader.IsModuleLoaded(osmOCSP)) or
+    (ACert = nil) or (AIssuer = nil) or (AOCSPUrl = '') then
+    Exit;
+
+  if not EnsureDependenciesLoaded then
+    Exit;
+
+  // Ensure required OCSP entry points exist
+  if (not Assigned(OCSP_RESPONSE_status)) or
+    (not Assigned(OCSP_RESPONSE_get1_basic)) or
+    (not Assigned(OCSP_BASICRESP_verify)) or
+    (not Assigned(OCSP_cert_to_id)) or
+    (not Assigned(OCSP_resp_find_status)) or
+    (not Assigned(OCSP_check_validity)) then
     Exit;
 
   // 创建 OCSP 请求
@@ -524,8 +586,8 @@ begin
     Exit;
 
   try
-    // 发送 OCSP 请求
-    Resp := SendOCSPRequest(Req, AOCSPUrl, ATimeout);
+    // 发送 OCSP 请求（支持 http/https；https 时可复用验证 store）
+    Resp := SendOCSPRequest(Req, AOCSPUrl, ATimeout, AStore);
     if Resp = nil then
       Exit;
 
@@ -540,6 +602,53 @@ begin
         Exit;
 
       try
+        // Nonce mismatch must fail (no nonce is acceptable: many responders omit it)
+        if Assigned(OCSP_check_nonce) then
+        begin
+          LNonceRes := OCSP_check_nonce(Req, BasicResp);
+          if LNonceRes = -1 then
+            Exit;
+        end;
+
+        // Verify response signature
+        LVerifyStore := AStore;
+        LOwnsStore := False;
+
+        if LVerifyStore = nil then
+        begin
+          if not Assigned(X509_STORE_new) then
+            Exit;
+
+          LVerifyStore := X509_STORE_new();
+          if LVerifyStore = nil then
+            Exit;
+
+          LOwnsStore := True;
+          if Assigned(X509_STORE_set_default_paths) then
+            X509_STORE_set_default_paths(LVerifyStore);
+        end;
+
+        try
+          Certs := nil;
+          if Assigned(sk_X509_new_null) and Assigned(sk_X509_push) then
+          begin
+            Certs := sk_X509_new_null();
+            if (Certs <> nil) and (AIssuer <> nil) then
+              sk_X509_push(Certs, AIssuer);
+          end;
+
+          try
+            if OCSP_BASICRESP_verify(BasicResp, Certs, LVerifyStore, 0) <> 1 then
+              Exit;
+          finally
+            if Certs <> nil then
+              sk_X509_free(Certs);
+          end;
+        finally
+          if LOwnsStore and Assigned(X509_STORE_free) then
+            X509_STORE_free(LVerifyStore);
+        end;
+
         // 创建证书 ID
         CertID := OCSP_cert_to_id(EVP_sha1(), ACert, AIssuer);
         if CertID = nil then
@@ -547,22 +656,27 @@ begin
 
         try
           // 查找证书状态
-          if OCSP_resp_find_status(BasicResp, CertID, @Status, @Reason, 
-            @RevTime, @ThisUpd, @NextUpd) = 1 then
-          begin
-            // 检查有效期
-            if OCSP_check_validity(ThisUpd, NextUpd, 300, -1) = 1 then
-              Result := Status;
-          end;
+          if OCSP_resp_find_status(BasicResp, CertID, @Status, @Reason,
+            @RevTime, @ThisUpd, @NextUpd) <> 1 then
+            Exit;
+
+          // 检查有效期
+          if OCSP_check_validity(ThisUpd, NextUpd, 300, -1) <> 1 then
+            Exit;
+
+          Result := Status;
         finally
           OCSP_CERTID_free(CertID);
         end;
+
       finally
         OCSP_BASICRESP_free(BasicResp);
       end;
+
     finally
       OCSP_RESPONSE_free(Resp);
     end;
+
   finally
     OCSP_REQUEST_free(Req);
   end;
@@ -602,64 +716,293 @@ begin
   OCSP_request_add1_nonce(Result, nil, -1);
 end;
 
-function SendOCSPRequest(ARequest: POCSP_REQUEST; const AOCSPUrl: string; 
-  ATimeout: Integer): POCSP_RESPONSE;
+function SendOCSPRequest(ARequest: POCSP_REQUEST; const AOCSPUrl: string;
+  ATimeout: Integer; ATrustStore: PX509_STORE): POCSP_RESPONSE;
 var
   Host, Port, Path: PAnsiChar;
   UseSSL: Integer;
   Bio: PBIO;
   ReqCtx: POCSP_REQ_CTX;
   Resp: POCSP_RESPONSE;
-begin
-  Result := nil;
-  if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) or (ARequest = nil) or (AOCSPUrl = '') then
-    Exit;
+  LCtx: PSSL_CTX;
+  LSSL: PSSL;
+  LHostStr: string;
+  LHostPortA: AnsiString;
+  LPathA: AnsiString;
+  LDeadline: QWord;
+  LRet: Integer;
+  LPeer: PX509;
+  LHostA: AnsiString;
 
-  // 解析 URL
-  if OCSP_parse_url(PAnsiChar(AnsiString(AOCSPUrl)), @Host, @Port, @Path, @UseSSL) = 0 then
-    Exit;
-
-  // 创建 BIO 连接
-  Bio := BIO_new_connect(Host);
-  if Bio = nil then
-    Exit;
-
-  try
-    BIO_set_conn_port(Bio, Port);
-    if BIO_do_connect(Bio) <= 0 then
+  procedure FreeOpenSSLString(var P: PAnsiChar);
+  begin
+    if P = nil then
       Exit;
 
-    // 创建 OCSP 请求上下文
-    ReqCtx := OCSP_sendreq_new(Bio, Path, ARequest, -1);
-    if ReqCtx = nil then
+    if not Assigned(OPENSSL_free) and not Assigned(CRYPTO_free) then
+      LoadOpenSSLCrypto;
+
+    if Assigned(OPENSSL_free) then
+      OPENSSL_free(P)
+    else if Assigned(CRYPTO_free) then
+      CRYPTO_free(P, nil, 0);
+
+    P := nil;
+  end;
+
+  function IsValidIPv4(const S: string): Boolean;
+  var
+    Parts: TStringArray;
+    Part: string;
+    Value, I: Integer;
+  begin
+    Result := False;
+    Parts := S.Split(['.']);
+    if Length(Parts) <> 4 then
+      Exit;
+
+    for Part in Parts do
+    begin
+      if Part = '' then
+        Exit;
+      for I := 1 to Length(Part) do
+        if not (Part[I] in ['0'..'9']) then
+          Exit;
+
+      Value := StrToIntDef(Part, -1);
+      if (Value < 0) or (Value > 255) then
+        Exit;
+    end;
+
+    Result := True;
+  end;
+
+  function VerifyTLSHostName(const ASSL: PSSL; const AHost: string): Boolean;
+  var
+    LIsIP: Boolean;
+  begin
+    Result := False;
+
+    if (ASsl = nil) or (AHost = '') then
+      Exit;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmX509) then
+      LoadOpenSSLX509;
+
+    if not Assigned(SSL_get_verify_result) then
+      Exit;
+
+    if SSL_get_verify_result(ASsl) <> X509_V_OK then
+      Exit;
+
+    if not Assigned(SSL_get_peer_certificate) then
+      Exit;
+
+    LPeer := SSL_get_peer_certificate(ASsl);
+    if LPeer = nil then
       Exit;
 
     try
-      // 发送请求并接收响应
-      Resp := nil;
-      while OCSP_sendreq_nbio(@ReqCtx, @Resp) = -1 do
+      LIsIP := IsValidIPv4(AHost) or (Pos(':', AHost) > 0);
+      LHostA := AnsiString(AHost);
+
+      if LIsIP then
       begin
-        // 等待响应
-        Sleep(100);
+        if not Assigned(X509_check_ip_asc) then
+          Exit;
+        Result := (X509_check_ip_asc(LPeer, PAnsiChar(LHostA), 0) = 1);
+      end
+      else
+      begin
+        if not Assigned(X509_check_host) then
+          Exit;
+        Result := (X509_check_host(LPeer, PAnsiChar(LHostA), Length(LHostA), 0, nil) = 1);
       end;
-      Result := Resp;
+
     finally
-      if ReqCtx <> nil then
-        OCSP_REQ_CTX_free(ReqCtx);
+      if Assigned(X509_free) then
+        X509_free(LPeer);
+      LPeer := nil;
     end;
+  end;
+
+begin
+  Result := nil;
+  Host := nil;
+  Port := nil;
+  Path := nil;
+  Bio := nil;
+  ReqCtx := nil;
+  Resp := nil;
+  LCtx := nil;
+  LSSL := nil;
+
+  if (not TOpenSSLLoader.IsModuleLoaded(osmOCSP)) or (ARequest = nil) or (AOCSPUrl = '') then
+    Exit;
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
+    LoadOpenSSLCore;
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmBIO) then
+    LoadOpenSSLBIO;
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmSSL) then
+    LoadOpenSSLSSL;
+
+  if not Assigned(OCSP_parse_url) then
+    Exit;
+
+  // Normalize timeout
+  if ATimeout <= 0 then
+    ATimeout := 10;
+
+  // 解析 URL（Host/Port/Path 由 OpenSSL 分配，需 OPENSSL_free）
+  if OCSP_parse_url(PAnsiChar(AnsiString(AOCSPUrl)), @Host, @Port, @Path, @UseSSL) = 0 then
+    Exit;
+
+  try
+    LHostStr := '';
+    if Host <> nil then
+      LHostStr := string(Host);
+
+    if UseSSL <> 0 then
+    begin
+      if not Assigned(BIO_new_ssl_connect) or not Assigned(SSL_CTX_new) or not Assigned(TLS_client_method) then
+        Exit;
+
+      LCtx := SSL_CTX_new(TLS_client_method());
+      if LCtx = nil then
+        Exit;
+
+      if Assigned(SSL_CTX_set_verify) then
+        SSL_CTX_set_verify(LCtx, SSL_VERIFY_PEER, nil);
+
+      // Avoid side effects on caller-provided store
+      if (ATrustStore <> nil) and Assigned(SSL_CTX_set1_cert_store) then
+        SSL_CTX_set1_cert_store(LCtx, ATrustStore)
+      else if Assigned(SSL_CTX_set_default_verify_paths) then
+        SSL_CTX_set_default_verify_paths(LCtx);
+
+      Bio := BIO_new_ssl_connect(LCtx);
+      if Bio = nil then
+        Exit;
+
+      // Configure SNI before handshake
+      BIO_get_ssl(Bio, @LSSL);
+
+      if (LSSL <> nil) and (Host <> nil) and Assigned(SSL_set_tlsext_host_name) then
+        SSL_set_tlsext_host_name(LSSL, Host);
+
+      // BIO_set_conn_hostname expects host:port
+      if (Host <> nil) and (Port <> nil) then
+        LHostPortA := AnsiString(string(Host) + ':' + string(Port))
+      else if Host <> nil then
+        LHostPortA := AnsiString(string(Host))
+      else
+        Exit;
+
+      BIO_set_conn_hostname(Bio, PAnsiChar(LHostPortA));
+
+      if BIO_do_connect(Bio) <= 0 then
+        Exit;
+
+      // Hostname verification for HTTPS
+      if (LSSL <> nil) and (LHostStr <> '') then
+        if not VerifyTLSHostName(LSSL, LHostStr) then
+          Exit;
+    end
+    else
+    begin
+      if not Assigned(BIO_new_connect) then
+        Exit;
+
+      Bio := BIO_new_connect(Host);
+      if Bio = nil then
+        Exit;
+
+      BIO_set_conn_port(Bio, Port);
+      if BIO_do_connect(Bio) <= 0 then
+        Exit;
+    end;
+
+    // 创建 OCSP 请求上下文
+    if not Assigned(OCSP_sendreq_new) or not Assigned(OCSP_sendreq_nbio) or not Assigned(OCSP_REQ_CTX_free) then
+      Exit;
+
+    if (Path <> nil) and (Path[0] <> #0) then
+      LPathA := AnsiString(string(Path))
+    else
+      LPathA := '/';
+
+    ReqCtx := OCSP_sendreq_new(Bio, PAnsiChar(LPathA), ARequest, -1);
+    if ReqCtx = nil then
+      Exit;
+
+    // 发送请求并接收响应（带超时）
+    LDeadline := GetTickCount64 + QWord(ATimeout) * 1000;
+
+    while True do
+    begin
+      LRet := OCSP_sendreq_nbio(@ReqCtx, @Resp);
+      if LRet = -1 then
+      begin
+        if GetTickCount64 >= LDeadline then
+          Break;
+        Sleep(10);
+        Continue;
+      end;
+      Break;
+    end;
+
+    if LRet = 1 then
+      Result := Resp
+    else
+    begin
+      if (Resp <> nil) and Assigned(OCSP_RESPONSE_free) then
+        OCSP_RESPONSE_free(Resp);
+      Resp := nil;
+      Result := nil;
+    end;
+
   finally
-    BIO_free_all(Bio);
+    if ReqCtx <> nil then
+      OCSP_REQ_CTX_free(ReqCtx);
+
+    if Bio <> nil then
+      BIO_free_all(Bio);
+
+    if (LCtx <> nil) and Assigned(SSL_CTX_free) then
+      SSL_CTX_free(LCtx);
+
+    FreeOpenSSLString(Host);
+    FreeOpenSSLString(Port);
+    FreeOpenSSLString(Path);
   end;
 end;
 
-function VerifyOCSPResponse(AResponse: POCSP_RESPONSE; ACert: PX509; 
-  AIssuer: PX509; AStore: PX509_STORE): Boolean;
+function VerifyOCSPResponse(AResponse: POCSP_RESPONSE; ACert: PX509;
+  AIssuer: PX509; AStore: PX509_STORE; ARequest: POCSP_REQUEST): Boolean;
 var
   BasicResp: POCSP_BASICRESP;
   Certs: PSTACK_OF_X509;
+  LVerifyStore: PX509_STORE;
+  LOwnsStore: Boolean;
+  LNonceRes: Integer;
 begin
   Result := False;
-  if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) or (AResponse = nil) then
+
+  if (not TOpenSSLLoader.IsModuleLoaded(osmOCSP)) or (AResponse = nil) then
+    Exit;
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmStack) then
+    LoadStackFunctions;
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmX509) then
+    LoadOpenSSLX509;
+
+  if (not Assigned(OCSP_RESPONSE_status)) or
+    (not Assigned(OCSP_RESPONSE_get1_basic)) or
+    (not Assigned(OCSP_BASICRESP_verify)) then
     Exit;
 
   // 检查响应状态
@@ -672,19 +1015,52 @@ begin
     Exit;
 
   try
-    // 创建证书链
-    Certs := sk_X509_new_null();
-    if Certs = nil then
-      Exit;
+    // Nonce mismatch must fail (no nonce is acceptable)
+    if (ARequest <> nil) and Assigned(OCSP_check_nonce) then
+    begin
+      LNonceRes := OCSP_check_nonce(ARequest, BasicResp);
+      if LNonceRes = -1 then
+        Exit(False);
+    end;
+
+    LVerifyStore := AStore;
+    LOwnsStore := False;
+
+    if LVerifyStore = nil then
+    begin
+      if not Assigned(X509_STORE_new) then
+        Exit;
+
+      LVerifyStore := X509_STORE_new();
+      if LVerifyStore = nil then
+        Exit;
+
+      LOwnsStore := True;
+      if Assigned(X509_STORE_set_default_paths) then
+        X509_STORE_set_default_paths(LVerifyStore);
+    end;
 
     try
-      sk_X509_push(Certs, AIssuer);
-      
-      // 验证响应
-      Result := OCSP_BASICRESP_verify(BasicResp, Certs, AStore, 0) = 1;
+      Certs := nil;
+      if Assigned(sk_X509_new_null) and Assigned(sk_X509_push) then
+      begin
+        Certs := sk_X509_new_null();
+        if (Certs <> nil) and (AIssuer <> nil) then
+          sk_X509_push(Certs, AIssuer);
+      end;
+
+      try
+        Result := (OCSP_BASICRESP_verify(BasicResp, Certs, LVerifyStore, 0) = 1);
+      finally
+        if Certs <> nil then
+          sk_X509_free(Certs);
+      end;
+
     finally
-      sk_X509_free(Certs);
+      if LOwnsStore and Assigned(X509_STORE_free) then
+        X509_STORE_free(LVerifyStore);
     end;
+
   finally
     OCSP_BASICRESP_free(BasicResp);
   end;

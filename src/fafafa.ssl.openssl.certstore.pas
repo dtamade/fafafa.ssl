@@ -64,12 +64,84 @@ implementation
 
 uses
   fafafa.ssl.certchain,
+  fafafa.ssl.openssl.api.err,
   fafafa.ssl.secure;
+
+function IsDuplicateStoreCertError: Boolean;
+var
+  LErrCode: Cardinal;
+  LReason: PAnsiChar;
+  LReasonStr: string;
+begin
+  Result := False;
+  LErrCode := 0;
+
+  if Assigned(ERR_peek_last_error) then
+    LErrCode := ERR_peek_last_error()
+  else if Assigned(ERR_peek_error) then
+    LErrCode := ERR_peek_error();
+
+  if LErrCode = 0 then
+    Exit;
+
+  if not Assigned(ERR_reason_error_string) then
+    Exit;
+
+  LReason := ERR_reason_error_string(LErrCode);
+  if LReason = nil then
+    Exit;
+
+  LReasonStr := LowerCase(string(LReason));
+  // OpenSSL 常见重复证书错误："cert already in hash table"
+  Result := (Pos('already', LReasonStr) > 0) and
+            ((Pos('hash', LReasonStr) > 0) or (Pos('already in store', LReasonStr) > 0));
+end;
+
+procedure FreeCertificateListRefs(ACerts: TList);
+var
+  I: Integer;
+  LCert: PX509;
+begin
+  if (ACerts = nil) or (ACerts.Count = 0) then
+    Exit;
+
+  if OpenSSLX509_Finalizing or (not Assigned(X509_free)) then
+    Exit;
+
+  for I := 0 to ACerts.Count - 1 do
+  begin
+    LCert := PX509(ACerts[I]);
+    if LCert = nil then
+      Continue;
+
+    try
+      X509_free(LCert);
+    except
+      on E: Exception do
+        TSecurityLog.Warning('OpenSSL',
+          Format('Exception freeing X509 in cert store list: %s', [E.Message]));
+    end;
+  end;
+end;
 
 constructor TOpenSSLCertificateStore.Create;
 begin
   inherited Create;
-  FStore := X509_STORE_new;
+
+  // Ensure required OpenSSL APIs are available before calling into them.
+  FStore := nil;
+  try
+    LoadOpenSSLCore;
+  except
+    // Ignore here; callers will observe nil store handle.
+  end;
+
+  if not Assigned(X509_STORE_new) then
+    LoadOpenSSLX509;
+
+  if Assigned(X509_STORE_new) then
+    FStore := X509_STORE_new();
+
   FOwnsHandle := True;
   FCertificates := TList.Create;
 
@@ -91,6 +163,9 @@ end;
 
 destructor TOpenSSLCertificateStore.Destroy;
 begin
+  // 释放证书列表持有的引用（与 X509_STORE 的引用分离）
+  FreeCertificateListRefs(FCertificates);
+
   // 清空证书列表
   FCertificates.Clear;
   FCertificates.Free;
@@ -172,21 +247,65 @@ function TOpenSSLCertificateStore.AddCertificate(ACert: ISSLCertificate): Boolea
 var
   X509: PX509;
   CertIndex: Integer;
+  AddRet: Integer;
+  LErrCode: Cardinal;
 begin
   Result := False;
-  if (FStore = nil) or (ACert = nil) then Exit;
+  if (FStore = nil) or (ACert = nil) then
+    Exit;
+
+  if not Assigned(X509_STORE_add_cert) then
+    Exit;
 
   X509 := PX509(ACert.GetNativeHandle);
-  if X509 = nil then Exit;
+  if X509 = nil then
+    Exit;
 
-  Result := (X509_STORE_add_cert(FStore, X509) = 1);
-  if Result then
+  // 清理旧错误，避免误判
+  if Assigned(ERR_clear_error) then
+    ERR_clear_error();
+
+  AddRet := X509_STORE_add_cert(FStore, X509);
+  if AddRet = 1 then
   begin
+    // cert store 会 up_ref；这里为枚举缓存再持有一份引用
+    if Assigned(X509_up_ref) then
+      X509_up_ref(X509);
+
     CertIndex := FCertificates.Count;
     FCertificates.Add(X509);
-    // Phase 2.5: 构建索引
     BuildIndexForCertificate(CertIndex, X509);
+    Result := True;
+  end
+  else
+  begin
+    // 重复证书：按幂等语义视为成功，但不重复写入缓存
+    if IsDuplicateStoreCertError then
+    begin
+      Result := True;
+      if not Contains(ACert) then
+      begin
+        if Assigned(X509_up_ref) then
+          X509_up_ref(X509);
+
+        CertIndex := FCertificates.Count;
+        FCertificates.Add(X509);
+        BuildIndexForCertificate(CertIndex, X509);
+      end;
+    end
+    else
+    begin
+      LErrCode := 0;
+      if Assigned(ERR_peek_last_error) then
+        LErrCode := ERR_peek_last_error();
+
+      TSecurityLog.Warning('CertStore',
+        Format('X509_STORE_add_cert failed: %s', [GetFriendlyErrorMessage(LErrCode)]));
+    end;
   end;
+
+  if Assigned(ERR_clear_error) then
+    ERR_clear_error();
 end;
 
 function TOpenSSLCertificateStore.RemoveCertificate(ACert: ISSLCertificate): Boolean;
@@ -219,6 +338,9 @@ end;
 
 procedure TOpenSSLCertificateStore.Clear;
 begin
+  // 先释放枚举缓存持有的证书引用
+  FreeCertificateListRefs(FCertificates);
+
   // 清空证书缓存列表
   FCertificates.Clear;
 
@@ -240,7 +362,14 @@ begin
     end;
   end;
   
-  FStore := X509_STORE_new;
+  if not Assigned(X509_STORE_new) then
+    LoadOpenSSLX509;
+
+  if Assigned(X509_STORE_new) then
+    FStore := X509_STORE_new()
+  else
+    FStore := nil;
+
   FOwnsHandle := True;
 end;
 
@@ -271,73 +400,84 @@ var
   FileNameA: AnsiString;
   BIO: PBIO;
   X509Cert: PX509;
-  Cert: ISSLCertificate;
-  CertCount: Integer;
+  ReadCount: Integer;
+  AddedCount: Integer;
+  AddRet: Integer;
+  LErrCode: Cardinal;
 begin
   Result := False;
-  CertCount := 0;
-  
+  ReadCount := 0;
+  AddedCount := 0;
 
-  
-  if FStore = nil then
-  begin
+  if (FStore = nil) or (AFileName = '') then
     Exit;
-  end;
-  
-  if not Assigned(BIO_new_file) or not Assigned(PEM_read_bio_X509) then
-  begin
+
+  if (not Assigned(BIO_new_file)) or (not Assigned(PEM_read_bio_X509)) then
     Exit;
-  end;
-  
+
+  if not Assigned(X509_STORE_add_cert) then
+    Exit;
+
+  if not Assigned(X509_free) then
+    Exit;
+
   try
-    // 读取证书文件
     FileNameA := AnsiString(AFileName);
     BIO := BIO_new_file(PAnsiChar(FileNameA), 'r');
     if BIO = nil then
-    begin
       Exit;
-    end;
-    
+
     try
-      // 尝试读取所有证书（可能是链）
-      
       repeat
         X509Cert := PEM_read_bio_X509(BIO, nil, nil, nil);
-        
-        
         if X509Cert <> nil then
         begin
-          // NOTE: X509_STORE_add_cert causes Access Violation in some OpenSSL versions
-          // We only need FCertificates list for enumeration
-          // X509_STORE is mainly used for certificate verification (VerifyCertificate, BuildCertificateChain)
-          // if Assigned(X509_STORE_add_cert) then
-          //   X509_STORE_add_cert(FStore, X509Cert);
+          Inc(ReadCount);
 
-          // 添加到枚举列表
-          if Assigned(X509_up_ref) then
-            X509_up_ref(X509Cert);  // 为FCertificates增加引用
+          if Assigned(ERR_clear_error) then
+            ERR_clear_error();
 
-          FCertificates.Add(X509Cert);
-          // Phase 2.5: 构建索引
-          BuildIndexForCertificate(FCertificates.Count - 1, X509Cert);
+          AddRet := X509_STORE_add_cert(FStore, X509Cert);
+          if AddRet = 1 then
+          begin
+            // 保留一份引用用于枚举缓存（原始引用归 FCertificates 所有）
+            FCertificates.Add(X509Cert);
+            BuildIndexForCertificate(FCertificates.Count - 1, X509Cert);
+            Inc(AddedCount);
+          end
+          else if IsDuplicateStoreCertError then
+          begin
+            // 已在 store 中：不要重复缓存，释放这份解析出来的对象
+            X509_free(X509Cert);
+          end
+          else
+          begin
+            // 非重复错误：记录并释放
+            LErrCode := 0;
+            if Assigned(ERR_peek_last_error) then
+              LErrCode := ERR_peek_last_error();
 
-          Inc(CertCount);
+            TSecurityLog.Warning('CertStore',
+              Format('X509_STORE_add_cert failed while loading "%s": %s',
+                [AFileName, GetFriendlyErrorMessage(LErrCode)]));
+
+            X509_free(X509Cert);
+          end;
+
+          if Assigned(ERR_clear_error) then
+            ERR_clear_error();
         end;
       until X509Cert = nil;
-      
-      Result := (CertCount > 0);
-      
-      
+
+      // 只要文件里确实读取到证书，就认为 LoadFromFile 成功
+      Result := (ReadCount > 0);
     finally
       if Assigned(BIO_free) then
         BIO_free(BIO);
     end;
   except
     on E: Exception do
-    begin
-      
       Result := False;
-    end;
   end;
 end;
 
@@ -545,7 +685,7 @@ end;
 
 function TOpenSSLCertificateStore.BuildCertificateChain(ACert: ISSLCertificate): TSSLCertificateArray;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   if ACert = nil then
     Exit;
   

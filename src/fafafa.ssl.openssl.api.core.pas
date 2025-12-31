@@ -604,6 +604,7 @@ var
   
   // Verification result functions
   SSL_get_verify_result: TSSL_get_verify_result = nil;
+  SSL_set_verify_result: TSSL_set_verify_result = nil;
   
   // Session functions
   SSL_session_reused: TSSL_session_reused = nil;
@@ -715,8 +716,8 @@ procedure LoadOpenSSLCoreWithVersion(AVersion: TOpenSSLVersion);
 var
   CryptoLib, SSLLib: string;
 begin
-  // P0-1.1: 检查是否已通过 TOpenSSLLoader 加载
-  if TOpenSSLLoader.IsLoaded(osslLibSSL) then
+  // P0-1.1: 核心模块已加载则无需重复初始化
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
     Exit;
 
   // Set library names based on requested version
@@ -745,8 +746,8 @@ end;
 
 procedure LoadOpenSSLCore;
 begin
-  // P0-1.1: 检查是否已通过 TOpenSSLLoader 加载
-  if TOpenSSLLoader.IsLoaded(osslLibSSL) then
+  // P0-1.1: 核心模块已加载则无需重复初始化
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
     Exit;
   
   // Try OpenSSL 3.x first (recommended version)
@@ -908,8 +909,9 @@ begin
   end;
   SSL_get_peer_cert_chain := TSSL_get_peer_cert_chain(GetProcedureAddress(LibSSLHandle, 'SSL_get_peer_cert_chain'));
   
-  // Verification result functions  
+  // Verification result functions
   SSL_get_verify_result := TSSL_get_verify_result(GetProcedureAddress(LibSSLHandle, 'SSL_get_verify_result'));
+  SSL_set_verify_result := TSSL_set_verify_result(GetProcedureAddress(LibSSLHandle, 'SSL_set_verify_result'));
   
   // Session functions
   SSL_session_reused := TSSL_session_reused(GetProcedureAddress(LibSSLHandle, 'SSL_session_reused'));

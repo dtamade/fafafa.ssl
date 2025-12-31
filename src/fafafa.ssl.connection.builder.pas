@@ -214,6 +214,9 @@ begin
 end;
 
 function TSSLConnectionBuilderImpl.TryBuildClient(out AConnection: ISSLConnection): TSSLOperationResult;
+var
+  VerifyRes: Integer;
+  VerifyStr: string;
 begin
   AConnection := nil;
   
@@ -264,8 +267,20 @@ begin
     // Perform client handshake
     if not AConnection.Connect then
     begin
-      Result := TSSLOperationResult.Err(sslErrHandshake, 'Client handshake failed: ' + AConnection.GetVerifyResultString);
+      VerifyRes := AConnection.GetVerifyResult;
+      VerifyStr := AConnection.GetVerifyResultString;
+
+      try
+        AConnection.Close;
+      except
+        // best-effort cleanup
+      end;
+
       AConnection := nil;
+      if VerifyRes <> 0 then
+        Result := TSSLOperationResult.Err(sslErrVerificationFailed, 'Client handshake failed: ' + VerifyStr)
+      else
+        Result := TSSLOperationResult.Err(sslErrHandshake, 'Client handshake failed: ' + VerifyStr);
       Exit;
     end;
     
@@ -297,6 +312,9 @@ begin
 end;
 
 function TSSLConnectionBuilderImpl.TryBuildServer(out AConnection: ISSLConnection): TSSLOperationResult;
+var
+  VerifyRes: Integer;
+  VerifyStr: string;
 begin
   AConnection := nil;
   
@@ -339,8 +357,20 @@ begin
     // Perform server accept
     if not AConnection.Accept then
     begin
-      Result := TSSLOperationResult.Err(sslErrHandshake, 'Server accept failed: ' + AConnection.GetVerifyResultString);
+      VerifyRes := AConnection.GetVerifyResult;
+      VerifyStr := AConnection.GetVerifyResultString;
+
+      try
+        AConnection.Close;
+      except
+        // best-effort cleanup
+      end;
+
       AConnection := nil;
+      if VerifyRes <> 0 then
+        Result := TSSLOperationResult.Err(sslErrVerificationFailed, 'Server accept failed: ' + VerifyStr)
+      else
+        Result := TSSLOperationResult.Err(sslErrHandshake, 'Server accept failed: ' + VerifyStr);
       Exit;
     end;
     

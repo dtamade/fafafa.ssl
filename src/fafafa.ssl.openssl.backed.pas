@@ -217,7 +217,11 @@ begin
     LogLevel := sslLogError;
     LogCallback := nil;
   end;
-  
+
+  // Normalize options derived from booleans (EnableSessionTickets, EnableCompression, etc.)
+  // to keep ISSLLibrary.CreateContext consistent with TSSLFactory.NormalizeConfig.
+  TSSLFactory.NormalizeConfig(FDefaultConfig);
+
   // 初始化统计信息
   FillChar(FStatistics, SizeOf(FStatistics), 0);
 end;
@@ -284,14 +288,55 @@ begin
 end;
 
 function TOpenSSLLibrary.DetectOpenSSLVersion: Boolean;
+var
+  LInfo: TOpenSSLVersionInfo;
+  LVersionStr: PAnsiChar;
 begin
-  // Simplified version detection
-  // Assume OpenSSL 3.x is available (most common on modern Linux)
-  FVersionNumber := $30000000; // OpenSSL 3.0.0
-  FVersionString := 'OpenSSL 3.x (auto-detected)';
-  
-  InternalLog(sslLogInfo, Format('OpenSSL version: %s', [FVersionString]));
-  Result := True;
+  Result := False;
+  FVersionNumber := 0;
+  FVersionString := '';
+
+  try
+    // Ensure core bindings are loaded (OpenSSL_version_num/OpenSSL_version).
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
+      LoadOpenSSLCore;
+
+    // Prefer OpenSSL runtime version functions.
+    if Assigned(OpenSSL_version_num) then
+      FVersionNumber := OpenSSL_version_num();
+
+    if Assigned(OpenSSL_version) then
+    begin
+      // OPENSSL_VERSION = 0 (avoid name collision with OpenSSL_version symbol in Pascal)
+      LVersionStr := OpenSSL_version(0);
+      if LVersionStr <> nil then
+        FVersionString := string(LVersionStr);
+    end;
+
+    // Fallback to loader-detected version string when core API doesn't provide it.
+    if FVersionString = '' then
+    begin
+      LInfo := TOpenSSLLoader.GetVersionInfo;
+      FVersionString := LInfo.VersionString;
+    end;
+
+    if FVersionString = '' then
+      FVersionString := GetOpenSSLVersionString;
+
+    if FVersionNumber <> 0 then
+      InternalLog(sslLogInfo,
+        Format('OpenSSL version: %s (0x%s)', [FVersionString, IntToHex(FVersionNumber, 8)]))
+    else
+      InternalLog(sslLogInfo, Format('OpenSSL version: %s', [FVersionString]));
+
+    Result := True;
+  except
+    on E: Exception do
+    begin
+      SetError(-1, Format('OpenSSL version detection failed: %s', [E.Message]));
+      InternalLog(sslLogWarning, FLastErrorString);
+    end;
+  end;
 end;
 
 procedure TOpenSSLLibrary.SetError(AError: Integer; const AErrorMsg: string);
@@ -440,35 +485,29 @@ end;
 // ============================================================================
 
 function TOpenSSLLibrary.IsProtocolSupported(AProtocol: TSSLProtocolVersion): Boolean;
-var
-  Major, Minor: Integer;
 begin
   Result := False;
-  
+
   if not FInitialized then
     Exit;
-  
-  // 从版本号提取主版本和次版本
-  Major := (FVersionNumber shr 28) and $F;
-  Minor := (FVersionNumber shr 20) and $FF;
-  
+
   case AProtocol of
     sslProtocolSSL2,
     sslProtocolSSL3:
       Result := False;  // SSL 2.0/3.0 已废弃
-      
+
     sslProtocolTLS10,
     sslProtocolTLS11,
     sslProtocolTLS12:
-      Result := True;  // 所有现代OpenSSL都支持
-      
+      Result := True;  // 所有现代 OpenSSL 都支持
+
     sslProtocolTLS13:
       // TLS 1.3 在 OpenSSL 1.1.1+ 支持
-      Result := (Major > 1) or ((Major = 1) and (Minor >= 1));
-      
+      Result := (FVersionNumber >= $1010100F);
+
     sslProtocolDTLS10,
     sslProtocolDTLS12:
-      Result := True;  // OpenSSL支持DTLS
+      Result := True;  // OpenSSL 支持 DTLS
   end;
 end;
 
@@ -546,9 +585,11 @@ begin
     Result.MaxTLSVersion := sslProtocolTLS12;
 
   InternalLog(sslLogDebug, Format('GetCapabilities: TLS1.3=%s, ALPN=%s, SNI=%s',
-    [BoolToStr(Result.SupportsTLS13, True),
-     BoolToStr(Result.SupportsALPN, True),
-     BoolToStr(Result.SupportsSNI, True)]));
+    [
+      BoolToStr(Result.SupportsTLS13, True),
+      BoolToStr(Result.SupportsALPN, True),
+      BoolToStr(Result.SupportsSNI, True)
+    ]));
 end;
 
 // ============================================================================
@@ -556,10 +597,15 @@ end;
 // ============================================================================
 
 procedure TOpenSSLLibrary.SetDefaultConfig(const AConfig: TSSLConfig);
+var
+  LConfig: TSSLConfig;
 begin
-  FDefaultConfig := AConfig;
-  FLogLevel := AConfig.LogLevel;
-  FLogCallback := AConfig.LogCallback;
+  LConfig := AConfig;
+  TSSLFactory.NormalizeConfig(LConfig);
+
+  FDefaultConfig := LConfig;
+  FLogLevel := LConfig.LogLevel;
+  FLogCallback := LConfig.LogCallback;
   InternalLog(sslLogInfo, 'Default configuration updated');
 end;
 
@@ -676,6 +722,8 @@ end;
 // ============================================================================
 
 function TOpenSSLLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
+var
+  LConfig: TSSLConfig;
 begin
   // Rust-quality: Explicit error handling instead of returning nil
   if not FInitialized then
@@ -686,8 +734,47 @@ begin
 
   // Let exceptions propagate - caller must handle errors explicitly
   Result := TOpenSSLContext.Create(Self, AType);
-  if (Result <> nil) and (FDefaultConfig.Options <> []) then
-    Result.SetOptions(FDefaultConfig.Options);
+
+  // Apply default config (already normalized in constructor/SetDefaultConfig)
+  if Result <> nil then
+  begin
+    LConfig := FDefaultConfig;
+    LConfig.ContextType := AType;
+
+    if (LConfig.ProtocolVersions <> []) and (LConfig.ProtocolVersions <> Result.GetProtocolVersions) then
+      Result.SetProtocolVersions(LConfig.ProtocolVersions);
+
+    if (LConfig.VerifyMode <> []) and (LConfig.VerifyMode <> Result.GetVerifyMode) then
+      Result.SetVerifyMode(LConfig.VerifyMode);
+
+    if (LConfig.VerifyDepth > 0) and (LConfig.VerifyDepth <> Result.GetVerifyDepth) then
+      Result.SetVerifyDepth(LConfig.VerifyDepth);
+
+    if (LConfig.CipherList <> '') and (LConfig.CipherList <> Result.GetCipherList) then
+      Result.SetCipherList(LConfig.CipherList);
+
+    if (LConfig.CipherSuites <> '') and (LConfig.CipherSuites <> Result.GetCipherSuites) then
+      Result.SetCipherSuites(LConfig.CipherSuites);
+
+    if (LConfig.Options <> []) and (LConfig.Options <> Result.GetOptions) then
+      Result.SetOptions(LConfig.Options);
+
+    if (LConfig.SessionCacheSize > 0) and (LConfig.SessionCacheSize <> Result.GetSessionCacheSize) then
+      Result.SetSessionCacheSize(LConfig.SessionCacheSize);
+
+    if (LConfig.SessionTimeout > 0) and (LConfig.SessionTimeout <> Result.GetSessionTimeout) then
+      Result.SetSessionTimeout(LConfig.SessionTimeout);
+
+    if (ssoEnableSessionCache in LConfig.Options) <> Result.GetSessionCacheMode then
+      Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
+
+    if (LConfig.ServerName <> '') and (LConfig.ServerName <> Result.GetServerName) then
+      Result.SetServerName(LConfig.ServerName);
+
+    if (LConfig.ALPNProtocols <> '') and (LConfig.ALPNProtocols <> Result.GetALPNProtocols) then
+      Result.SetALPNProtocols(LConfig.ALPNProtocols);
+  end;
+
   Inc(FStatistics.ConnectionsTotal);
   if AType = sslCtxClient then
     InternalLog(sslLogInfo, 'Created client context')

@@ -252,7 +252,8 @@ function CreateConsoleUI: PUI_METHOD;
 implementation
 
 uses
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader;
 
 var
   SimplePasswordUIMethod: PUI_METHOD = nil;

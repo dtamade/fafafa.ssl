@@ -225,6 +225,13 @@ type
      *}
     procedure Check(const Name: string; Condition: Boolean; const Details: string = '');
 
+    {**
+     * 跳过某个检查（不会计入失败）
+     * @param Name 检查名称
+     * @param Reason 跳过原因
+     *}
+    procedure Skip(const Name: string; const Reason: string);
+
     {** 通过的测试数量 *}
     property PassCount: Integer read FStats.Passed;
 
@@ -520,6 +527,22 @@ begin
     FullName := Name;
 
   LogTest(FullName, Condition, Details);
+end;
+
+procedure TSimpleTestRunner.Skip(const Name: string; const Reason: string);
+var
+  FullName: string;
+begin
+  if FTestName <> '' then
+    FullName := FTestName + ': ' + Name
+  else
+    FullName := Name;
+
+  SkipTest(Reason);
+  LogTest(FullName, True);
+
+  // Reset skip state so subsequent checks are not affected.
+  SetUp;
 end;
 
 initialization

@@ -296,7 +296,8 @@ function X509_get_SCT_LIST(x: PX509): PSCT_LIST;
 implementation
 
 uses
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader;
 
 procedure LoadCTFunctions;
 begin

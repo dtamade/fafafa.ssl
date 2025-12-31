@@ -10,6 +10,7 @@ program test_certstore_unit;
 uses
   SysUtils, Classes, Math,
   fafafa.ssl.base,
+  fafafa.ssl.cert.utils,
   fafafa.ssl.openssl.backed;
 
 var
@@ -186,6 +187,72 @@ begin
   AssertTrue('FindByFingerprint does not crash', True);
 end;
 
+procedure TestCertStoreVerificationStoreEffect;
+var
+  SSLLib: ISSLLibrary;
+  Store: ISSLCertificateStore;
+  LeafCert: ISSLCertificate;
+  CAOptions, LeafOptions: TCertGenOptions;
+  CACertPEM, CAKeyPEM: string;
+  LeafCertPEM, LeafKeyPEM: string;
+  TempCAFile: string;
+  Verified: Boolean;
+begin
+  WriteLn;
+  WriteLn('=== CertStore Verification Store Effect Tests ===');
+
+  Randomize;
+
+  SSLLib := CreateOpenSSLLibrary;
+  SSLLib.Initialize;
+
+  // 生成一个自签名 CA
+  CAOptions := TCertificateUtils.DefaultGenOptions;
+  CAOptions.CommonName := 'fafafa.ssl Test Root CA';
+  CAOptions.Organization := 'fafafa.ssl';
+  CAOptions.IsCA := True;
+  CAOptions.ValidDays := 30;
+
+  AssertTrue('Generate CA certificate',
+    TCertificateUtils.TryGenerateSelfSigned(CAOptions, CACertPEM, CAKeyPEM));
+
+  // 生成一个由该 CA 签名的叶证书
+  LeafOptions := TCertificateUtils.DefaultGenOptions;
+  LeafOptions.CommonName := 'leaf.test';
+  LeafOptions.Organization := 'fafafa.ssl';
+  LeafOptions.IsCA := False;
+  LeafOptions.ValidDays := 30;
+
+  AssertTrue('Generate leaf certificate signed by CA',
+    TCertificateUtils.TryGenerateSigned(LeafOptions, CACertPEM, CAKeyPEM,
+      LeafCertPEM, LeafKeyPEM));
+
+  LeafCert := SSLLib.CreateCertificate;
+  AssertNotNil('Leaf cert object created', Pointer(LeafCert));
+  AssertTrue('Leaf certificate loaded from PEM', LeafCert.LoadFromPEM(LeafCertPEM));
+
+  Store := SSLLib.CreateCertificateStore;
+  AssertNotNil('CertStore object created', Pointer(Store));
+
+  // 未加载 CA 时验证应失败（但不崩溃）
+  Verified := LeafCert.Verify(Store);
+  AssertTrue('Verify fails without CA loaded', not Verified);
+
+  TempCAFile := IncludeTrailingPathDelimiter(GetTempDir(False)) +
+    Format('fafafa_ssl_test_ca_%d.pem', [Random(1000000)]);
+
+  AssertTrue('Write CA PEM to temp file', TCertificateUtils.SaveToFile(TempCAFile, CACertPEM));
+  try
+    // 关键：LoadFromFile 必须把 CA 写入 X509_STORE，否则 Verify 仍会失败
+    AssertTrue('Store.LoadFromFile(CA) succeeded', Store.LoadFromFile(TempCAFile));
+
+    Verified := LeafCert.Verify(Store);
+    AssertTrue('Verify succeeds after CA loaded into store', Verified);
+  finally
+    DeleteFile(TempCAFile);
+  end;
+end;
+
 procedure TestCertStoreMemory;
 var
   SSLLib: ISSLLibrary;
@@ -249,6 +316,7 @@ begin
     TestCertStorePathLoad;
     TestCertStoreEnumeration;
     TestCertStoreSearch;
+    TestCertStoreVerificationStoreEffect;
     TestCertStoreMemory;
     
     PrintSummary;

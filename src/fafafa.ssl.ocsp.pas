@@ -908,8 +908,7 @@ begin
               begin
                 if NameStr <> '' then
                   NameStr := NameStr + ',';
-                NameStr := NameStr + OIDToName(AVNode.GetChild(0).AsOID) +
-                           '=' + AVNode.GetChild(1).AsString;
+                NameStr := NameStr + OIDToName(AVNode.GetChild(0).AsOID) + '=' + AVNode.GetChild(1).AsString;
               end;
             end;
           end;

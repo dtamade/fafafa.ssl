@@ -282,6 +282,16 @@ type
     lElementIndex: LONG;
     pvExtraPolicyStatus: Pointer;
   end;
+
+  // SSL 证书链策略参数（用于 CERT_CHAIN_POLICY_SSL）
+  // https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/ns-wincrypt-ssl_extra_cert_chain_policy_para
+  PSSL_EXTRA_CERT_CHAIN_POLICY_PARA = ^SSL_EXTRA_CERT_CHAIN_POLICY_PARA;
+  SSL_EXTRA_CERT_CHAIN_POLICY_PARA = record
+    cbSize: DWORD;
+    dwAuthType: DWORD;
+    fdwChecks: DWORD;
+    pwszServerName: PWideChar;
+  end;
   
   // SAN 扩展结构
   PCERT_ALT_NAME_ENTRY = ^CERT_ALT_NAME_ENTRY;
@@ -674,6 +684,18 @@ const
   // 证书链策略
   CERT_CHAIN_POLICY_BASE         = LPCSTR(1);
   CERT_CHAIN_POLICY_SSL          = LPCSTR(4);
+
+  // CERT_CHAIN_POLICY_* dwFlags (CERT_CHAIN_POLICY_PARA.dwFlags)
+  CERT_CHAIN_POLICY_IGNORE_NOT_TIME_VALID_FLAG = $00000001;
+  CERT_CHAIN_POLICY_IGNORE_CTL_NOT_TIME_VALID_FLAG = $00000002;
+  CERT_CHAIN_POLICY_IGNORE_NOT_TIME_NESTED_FLAG = $00000004;
+  CERT_CHAIN_POLICY_ALLOW_UNKNOWN_CA_FLAG = $00000010;
+  CERT_CHAIN_POLICY_IGNORE_WRONG_USAGE_FLAG = $00000020;
+  CERT_CHAIN_POLICY_IGNORE_INVALID_NAME_FLAG = $00000040;
+
+  // SSL auth types for SSL_EXTRA_CERT_CHAIN_POLICY_PARA.dwAuthType
+  AUTHTYPE_CLIENT = 1;
+  AUTHTYPE_SERVER = 2;
   
   // 证书链吊销检查标志
   CERT_CHAIN_REVOCATION_CHECK_END_CERT = $10000000;

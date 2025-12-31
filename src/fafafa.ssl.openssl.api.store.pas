@@ -309,7 +309,8 @@ function StoreObjectTypeToString(ObjType: Integer): string;
 implementation
 
 uses
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader;
 
 procedure LoadSTOREFunctions;
 begin

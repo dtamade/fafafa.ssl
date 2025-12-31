@@ -478,11 +478,10 @@ begin
   if not Assigned(FTrustedStore) then
     Exit;
   
-  // 构造验证标志：始终请求检查吊销状态/CRL
+  // 构造验证标志：请求检查吊销状态/CRL
   Flags := [];
   Include(Flags, sslCertVerifyCheckRevocation);
   Include(Flags, sslCertVerifyCheckCRL);
-  Include(Flags, sslCertVerifyCheckOCSP);
   
   // 如果链验证选项中未启用时间检查，则在底层验证中忽略过期错误
   if not (cvoCheckTime in FOptions) then
