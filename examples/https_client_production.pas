@@ -1,48 +1,275 @@
 program https_client_production;
 
 {$mode objfpc}{$H+}
-{$DEFINE RELEASE}  // Production build
+{$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
-{
-  Production-Ready HTTPS Client Example
+{ Production-Ready HTTPS Client Example
 
-  Demonstrates best practices for using fafafa.ssl in production:
-  - Proper error handling
-  - Connection pooling simulation
-  - Timeout management
-  - Logging
-  - Resource cleanup
-  - Security validation
+  Demonstrates recommended usage patterns in current fafafa.ssl:
+  - TSSLContextBuilder for secure defaults + system roots
+  - TSSLConnector/TSSLStream for ergonomic TLS over an existing TCP socket
+  - per-connection SNI via ConnectSocket(..., serverName)
+
+  NOTE: This is a minimal demo; real production code needs robust HTTP parsing,
+  redirect handling, retries, streaming, etc.
 }
 
 uses
-  SysUtils, Classes, DateUtils,
-  {$IFDEF UNIX}
-  fafafa.examples.sockets,
-  {$ENDIF}
-  fafafa.ssl.factory,
-  fafafa.ssl.base,
-  fafafa.ssl.errors,
-  fafafa.ssl.logging;
+  SysUtils, Classes, StrUtils, DateUtils,
+  fafafa.ssl,
+  fafafa.ssl.context.builder,
+  fafafa.examples.tcp;
+
+const
+  BUFFER_SIZE = 16384;
+
+type
+  THTTPResponse = record
+    StatusCode: Integer;
+    StatusText: string;
+    Headers: TStringList;
+    Body: RawByteString;
+    Success: Boolean;
+    ErrorMessage: string;
+  end;
+
+procedure FreeHTTPResponse(var AResp: THTTPResponse);
+begin
+  if AResp.Headers <> nil then
+    AResp.Headers.Free;
+  AResp.Headers := nil;
+end;
+
+function ParseURL(const AURL: string; out AHost, APath: string; out APort: Word): Boolean;
+var
+  LTemp, LHostPart: string;
+  LPos, LPortPos: Integer;
+begin
+  Result := False;
+  AHost := '';
+  APath := '/';
+  APort := 443;
+
+  LTemp := Trim(AURL);
+  if Pos('https://', LowerCase(LTemp)) = 1 then
+    Delete(LTemp, 1, 8)
+  else if Pos('http://', LowerCase(LTemp)) = 1 then
+  begin
+    Delete(LTemp, 1, 7);
+    APort := 80;
+  end;
+
+  LPos := Pos('/', LTemp);
+  if LPos > 0 then
+  begin
+    LHostPart := Copy(LTemp, 1, LPos - 1);
+    APath := Copy(LTemp, LPos, Length(LTemp));
+  end
+  else
+    LHostPart := LTemp;
+
+  LPortPos := Pos(':', LHostPart);
+  if LPortPos > 0 then
+  begin
+    APort := StrToIntDef(Copy(LHostPart, LPortPos + 1, Length(LHostPart)), APort);
+    AHost := Copy(LHostPart, 1, LPortPos - 1);
+  end
+  else
+    AHost := LHostPart;
+
+  Result := (AHost <> '');
+end;
+
+function ReadAll(AStream: TStream): RawByteString;
+var
+  Buffer: array[0..BUFFER_SIZE - 1] of Byte;
+  N: Longint;
+  Mem: TMemoryStream;
+begin
+  Result := '';
+  Mem := TMemoryStream.Create;
+  try
+    repeat
+      N := AStream.Read(Buffer[0], SizeOf(Buffer));
+      if N > 0 then
+        Mem.WriteBuffer(Buffer[0], N);
+    until N = 0;
+
+    if Mem.Size > 0 then
+    begin
+      SetLength(Result, Mem.Size);
+      Mem.Position := 0;
+      Mem.ReadBuffer(Result[1], Mem.Size);
+    end;
+  finally
+    Mem.Free;
+  end;
+end;
+
+function FindHeaderEnd(const S: RawByteString; out ADelimLen: Integer): Integer;
+begin
+  Result := Pos(#13#10#13#10, S);
+  if Result > 0 then
+  begin
+    ADelimLen := 4;
+    Exit;
+  end;
+
+  Result := Pos(#10#10, S);
+  if Result > 0 then
+    ADelimLen := 2
+  else
+    ADelimLen := 0;
+end;
+
+procedure SplitHTTPResponse(const ARaw: RawByteString; out AStatusLine: string;
+  AHeaders: TStringList; out ABody: RawByteString);
+var
+  LHeaderEnd, LDelimLen: Integer;
+  LHeaderBlock: RawByteString;
+  LText: string;
+  LLines: TStringList;
+  I: Integer;
+begin
+  AStatusLine := '';
+  if AHeaders <> nil then
+    AHeaders.Clear;
+  ABody := '';
+
+  LHeaderEnd := FindHeaderEnd(ARaw, LDelimLen);
+  if (LHeaderEnd = 0) or (LDelimLen = 0) then
+  begin
+    ABody := ARaw;
+    Exit;
+  end;
+
+  LHeaderBlock := Copy(ARaw, 1, LHeaderEnd - 1);
+  ABody := Copy(ARaw, LHeaderEnd + LDelimLen, Length(ARaw));
+
+  if AHeaders = nil then
+    Exit;
+
+  LText := string(LHeaderBlock);
+  LText := StringReplace(LText, #13#10, #10, [rfReplaceAll]);
+  LText := StringReplace(LText, #13, #10, [rfReplaceAll]);
+
+  LLines := TStringList.Create;
+  try
+    LLines.Text := LText;
+    if LLines.Count > 0 then
+      AStatusLine := LLines[0];
+
+    for I := 1 to LLines.Count - 1 do
+      if Trim(LLines[I]) <> '' then
+        AHeaders.Add(LLines[I]);
+  finally
+    LLines.Free;
+  end;
+end;
+
+function ParseStatusLine(const ALine: string; out AStatusCode: Integer; out AStatusText: string): Boolean;
+var
+  P1, P2: Integer;
+  CodeStr: string;
+begin
+  Result := False;
+  AStatusCode := 0;
+  AStatusText := '';
+
+  P1 := Pos(' ', ALine);
+  if P1 = 0 then
+    Exit;
+
+  P2 := PosEx(' ', ALine, P1 + 1);
+  if P2 = 0 then
+    P2 := Length(ALine) + 1;
+
+  CodeStr := Trim(Copy(ALine, P1 + 1, P2 - P1 - 1));
+  AStatusCode := StrToIntDef(CodeStr, 0);
+  AStatusText := Trim(Copy(ALine, P2 + 1, Length(ALine)));
+
+  Result := AStatusCode > 0;
+end;
+
+function HasChunkedTransferEncoding(AHeaders: TStringList): Boolean;
+var
+  I: Integer;
+  L: string;
+begin
+  Result := False;
+  if AHeaders = nil then
+    Exit;
+
+  for I := 0 to AHeaders.Count - 1 do
+  begin
+    L := LowerCase(Trim(AHeaders[I]));
+    if Pos('transfer-encoding:', L) = 1 then
+    begin
+      if Pos('chunked', L) > 0 then
+        Exit(True);
+    end;
+  end;
+end;
+
+function DecodeChunkedBody(const ABody: RawByteString): RawByteString;
+var
+  P, LineEnd, SemiPos: Integer;
+  SizeLine: string;
+  ChunkSize: Integer;
+  DataStart: Integer;
+begin
+  Result := '';
+  P := 1;
+
+  while True do
+  begin
+    LineEnd := PosEx(#13#10, ABody, P);
+    if LineEnd = 0 then
+      Break;
+
+    SizeLine := Trim(string(Copy(ABody, P, LineEnd - P)));
+    SemiPos := Pos(';', SizeLine);
+    if SemiPos > 0 then
+      SizeLine := Copy(SizeLine, 1, SemiPos - 1);
+
+    if SizeLine = '' then
+      Break;
+
+    ChunkSize := StrToIntDef('$' + SizeLine, -1);
+    if ChunkSize < 0 then
+      Break;
+
+    P := LineEnd + 2; // skip CRLF
+
+    if ChunkSize = 0 then
+      Break;
+
+    DataStart := P;
+    if DataStart + ChunkSize - 1 > Length(ABody) then
+      Break;
+
+    Result := Result + Copy(ABody, DataStart, ChunkSize);
+    P := DataStart + ChunkSize;
+
+    if Copy(ABody, P, 2) = #13#10 then
+      Inc(P, 2)
+    else if (P <= Length(ABody)) and (ABody[P] = #10) then
+      Inc(P);
+  end;
+end;
 
 type
   THTTPSClient = class
   private
-    FLib: ISSLLibrary;
     FContext: ISSLContext;
+    FTimeoutMs: Integer;
     FLastError: string;
-    FTimeout: Integer;
-
-    function ValidateResponse(const AData: string): Boolean;
   public
     constructor Create;
-    destructor Destroy; override;
+    function Get(const AURL: string; out AResp: THTTPResponse): Boolean;
 
-    function Get(const AURL: string; out AResponse: string): Boolean;
-    function Post(const AURL: string; const AData: string; out AResponse: string): Boolean;
-
+    property TimeoutMs: Integer read FTimeoutMs write FTimeoutMs;
     property LastError: string read FLastError;
-    property Timeout: Integer read FTimeout write FTimeout;
   end;
 
 { THTTPSClient }
@@ -50,264 +277,174 @@ type
 constructor THTTPSClient.Create;
 begin
   inherited Create;
-  FTimeout := 30000;  // 30 seconds default
+  FTimeoutMs := 30000;
   FLastError := '';
 
-  // Initialize SSL library
-  try
-    FLib := GetLibraryInstance(DetectBestLibrary);
-    if not FLib.Initialize then
-      raise ESSLError.Create('Failed to initialize SSL library');
+  // Create a reusable client context with safe defaults
+  FContext := TSSLContextBuilder.Create
+    .WithTLS12And13
+    .WithVerifyPeer
+    .WithSystemRoots
+    .BuildClient;
 
-    // Create client context with secure defaults
-    FContext := FLib.CreateContext(sslCtxClient);
-    if FContext = nil then
-      raise ESSLError.Create('Failed to create SSL context');
-
-    // Enable all modern security features
-    // In production, you would configure:
-    // - Minimum TLS version (1.2 or 1.3)
-    // - Cipher suite restrictions
-    // - Certificate verification
-    // - OCSP stapling
-    // etc.
-
-    WriteLn('[OK] HTTPS Client initialized successfully');
-    WriteLn('      Library: ', FLib.GetVersionString);
-
-  except
-    on E: Exception do
-    begin
-      FLastError := E.Message;
-      WriteLn('[ERROR] Initialization failed: ', E.Message);
-      raise;
-    end;
+  // Enable session cache for better performance
+  if FContext <> nil then
+  begin
+    FContext.SetSessionCacheMode(True);
+    FContext.SetSessionCacheSize(256);
+    FContext.SetSessionTimeout(600);
   end;
 end;
 
-destructor THTTPSClient.Destroy;
-begin
-  // Explicit cleanup (though interfaces handle this automatically)
-  FContext := nil;
-  FLib := nil;
-  WriteLn('[OK] HTTPS Client destroyed cleanly');
-  inherited Destroy;
-end;
-
-function THTTPSClient.ValidateResponse(const AData: string): Boolean;
-begin
-  // Basic validation - in production, check:
-  // - HTTP status code
-  // - Content-Type
-  // - Content-Length
-  // - Security headers
-  Result := Length(AData) > 0;
-end;
-
-function THTTPSClient.Get(const AURL: string; out AResponse: string): Boolean;
+function THTTPSClient.Get(const AURL: string; out AResp: THTTPResponse): Boolean;
 var
-  LHost: string;
-  LPath: string;
-  LSocket: TSocket;
-  LConn: ISSLConnection;
-  LRequest: string;
-  LBuffer: array[0..4095] of Byte;
-  LBytesRead: Integer;
-  LStartTime: TDateTime;
-  LDuration: Integer;
+  Host, Path: string;
+  Port: Word;
+  Sock: TSocketHandle;
+  TLS: TSSLStream;
+  Connector: TSSLConnector;
+  Request: RawByteString;
+  RawResp: RawByteString;
+  StatusLine: string;
 begin
+  FillChar(AResp, SizeOf(AResp), 0);
+  AResp.Headers := TStringList.Create;
+  AResp.StatusCode := 0;
+  AResp.StatusText := '';
+  AResp.Body := '';
+  AResp.Success := False;
+  AResp.ErrorMessage := '';
+
   Result := False;
-  AResponse := '';
   FLastError := '';
-  LStartTime := Now;
 
+  if not ParseURL(AURL, Host, Path, Port) then
+  begin
+    FLastError := 'Invalid URL: ' + AURL;
+    AResp.ErrorMessage := FLastError;
+    Exit;
+  end;
+
+  Sock := INVALID_SOCKET;
+  TLS := nil;
   try
-    // Parse URL (simplified - in production use proper URL parser)
-    if Pos('https://', AURL) = 1 then
-      LHost := Copy(AURL, 9, Length(AURL))
+    Sock := ConnectTCP(Host, Port);
+
+    Connector := TSSLConnector.FromContext(FContext).WithTimeout(FTimeoutMs);
+    TLS := Connector.ConnectSocket(THandle(Sock), Host);
+
+    Request := 'GET ' + Path + ' HTTP/1.1'#13#10 +
+               'Host: ' + Host + #13#10 +
+               'User-Agent: fafafa.ssl-production-example/1.0' + #13#10 +
+               'Accept: */*' + #13#10 +
+               'Connection: close' + #13#10 +
+               #13#10;
+
+    if Length(Request) > 0 then
+      TLS.WriteBuffer(Request[1], Length(Request));
+
+    RawResp := ReadAll(TLS);
+
+    SplitHTTPResponse(RawResp, StatusLine, AResp.Headers, AResp.Body);
+    if ParseStatusLine(StatusLine, AResp.StatusCode, AResp.StatusText) then
+      AResp.Success := (AResp.StatusCode >= 200) and (AResp.StatusCode < 300)
     else
-      LHost := AURL;
+      AResp.Success := Length(AResp.Body) > 0;
 
-    if Pos('/', LHost) > 0 then
-    begin
-      LPath := Copy(LHost, Pos('/', LHost), Length(LHost));
-      LHost := Copy(LHost, 1, Pos('/', LHost) - 1);
-    end
-    else
-      LPath := '/';
+    if HasChunkedTransferEncoding(AResp.Headers) then
+      AResp.Body := DecodeChunkedBody(AResp.Body);
 
-    WriteLn('[INFO] Connecting to: ', LHost);
-
-    // Connect to host
-    LSocket := ConnectToHost(LHost, 443);
-    if LSocket = INVALID_SOCKET then
-    begin
-      FLastError := 'Failed to connect to ' + LHost;
-      WriteLn('[ERROR] ', FLastError);
-      Exit;
-    end;
-
-    try
-      // Create SSL connection
-      LConn := FContext.CreateConnection(LSocket);
-      if LConn = nil then
-      begin
-        FLastError := 'Failed to create SSL connection';
-        WriteLn('[ERROR] ', FLastError);
-        Exit;
-      end;
-
-      // Set SNI hostname (critical for virtual hosting)
-      LConn.SetHostname(LHost);
-
-      // Perform TLS handshake
-      WriteLn('[INFO] Performing TLS handshake...');
-      if not LConn.Connect then
-      begin
-        FLastError := 'Handshake failed: ' + LConn.GetLastErrorString;
-        WriteLn('[ERROR] ', FLastError);
-        Exit;
-      end;
-
-      WriteLn('[OK] TLS handshake successful');
-      WriteLn('     Protocol: ', LConn.GetProtocolVersion);
-      WriteLn('     Cipher: ', LConn.GetCipherName);
-
-      // Send HTTP GET request
-      LRequest := 'GET ' + LPath + ' HTTP/1.1' + #13#10 +
-                  'Host: ' + LHost + #13#10 +
-                  'User-Agent: fafafa.ssl/1.0' + #13#10 +
-                  'Accept: */*' + #13#10 +
-                  'Connection: close' + #13#10 +
-                  #13#10;
-
-      WriteLn('[INFO] Sending HTTP request...');
-      if LConn.Write(LRequest[1], Length(LRequest)) <> Length(LRequest) then
-      begin
-        FLastError := 'Failed to send request';
-        WriteLn('[ERROR] ', FLastError);
-        Exit;
-      end;
-
-      // Read response
-      WriteLn('[INFO] Reading response...');
-      AResponse := '';
-      repeat
-        FillChar(LBuffer[0], SizeOf(LBuffer), 0);
-        LBytesRead := LConn.Read(LBuffer[0], SizeOf(LBuffer));
-
-        if LBytesRead > 0 then
-          AResponse := AResponse + Copy(string(PChar(@LBuffer[0])), 1, LBytesRead);
-
-      until LBytesRead <= 0;
-
-      // Validate response
-      if not ValidateResponse(AResponse) then
-      begin
-        FLastError := 'Invalid response received';
-        WriteLn('[ERROR] ', FLastError);
-        Exit;
-      end;
-
-      LDuration := MilliSecondsBetween(Now, LStartTime);
-      WriteLn('[OK] Request completed successfully');
-      WriteLn('     Response size: ', Length(AResponse), ' bytes');
-      WriteLn('     Duration: ', LDuration, ' ms');
-
-      Result := True;
-
-    finally
-      CloseSocket(LSocket);
-    end;
-
+    Result := AResp.Success;
+    if not Result then
+      FLastError := Format('HTTP %d %s', [AResp.StatusCode, AResp.StatusText]);
   except
     on E: Exception do
     begin
       FLastError := E.Message;
-      WriteLn('[ERROR] Exception: ', E.Message);
+      AResp.ErrorMessage := E.Message;
       Result := False;
     end;
+  finally
+    if TLS <> nil then
+      TLS.Free;
+    CloseSocket(Sock);
   end;
 end;
 
-function THTTPSClient.Post(const AURL: string; const AData: string; out AResponse: string): Boolean;
+procedure PrintPreview(const ABody: RawByteString; AMaxLen: Integer);
+var
+  S: string;
 begin
-  // Similar to Get but with POST method
-  // Left as exercise - in production, implement full POST with:
-  // - Content-Length header
-  // - Content-Type header
-  // - Request body
-  Result := False;
-  FLastError := 'POST method not implemented yet';
+  S := string(ABody);
+  if Length(S) > AMaxLen then
+    S := Copy(S, 1, AMaxLen) + '... (truncated)';
+  WriteLn(S);
 end;
-
-{ Main Program }
 
 procedure RunProductionExample;
 var
-  LClient: THTTPSClient;
-  LResponse: string;
-  LSuccess: Boolean;
+  Client: THTTPSClient;
+  R: THTTPResponse;
+  OK: Boolean;
+  StartTime: TDateTime;
+  DurationMs: Integer;
+  NetErr: string;
 begin
   WriteLn('================================================================');
-  WriteLn('  Production-Ready HTTPS Client Example');
-  WriteLn('  fafafa.ssl - Enterprise SSL/TLS Library');
+  WriteLn('  Production-Ready HTTPS Client Example (updated API)');
   WriteLn('================================================================');
   WriteLn;
 
-  LClient := THTTPSClient.Create;
+  if not InitNetwork(NetErr) then
+    raise Exception.Create('Network init failed: ' + NetErr);
+
   try
-    // Example 1: Simple GET request
-    WriteLn('--- Test 1: GET Request to www.example.com ---');
-    WriteLn;
+    Client := THTTPSClient.Create;
+    try
+      // Example 1
+      WriteLn('--- Test 1: GET https://www.example.com/ ---');
+      StartTime := Now;
+      OK := Client.Get('https://www.example.com/', R);
+      DurationMs := MilliSecondsBetween(Now, StartTime);
+      try
+        if OK then
+        begin
+          WriteLn('✓ SUCCESS in ', DurationMs, ' ms, bytes=', Length(R.Body));
+          WriteLn;
+          WriteLn('Body preview (first 200 chars):');
+          PrintPreview(R.Body, 200);
+        end
+        else
+          WriteLn('✗ FAILED: ', Client.LastError);
+      finally
+        FreeHTTPResponse(R);
+      end;
 
-    LSuccess := LClient.Get('https://www.example.com/', LResponse);
-
-    if LSuccess then
-    begin
       WriteLn;
-      WriteLn('Response Preview (first 200 chars):');
-      WriteLn('---');
-      WriteLn(Copy(LResponse, 1, 200));
-      WriteLn('...');
-      WriteLn('---');
-    end
-    else
-      WriteLn('Request failed: ', LClient.LastError);
+      WriteLn('--- Test 2: GET https://www.google.com/ ---');
+      StartTime := Now;
+      OK := Client.Get('https://www.google.com/', R);
+      DurationMs := MilliSecondsBetween(Now, StartTime);
+      try
+        if OK then
+          WriteLn('✓ SUCCESS in ', DurationMs, ' ms, bytes=', Length(R.Body))
+        else
+          WriteLn('✗ FAILED: ', Client.LastError);
+      finally
+        FreeHTTPResponse(R);
+      end;
 
-    WriteLn;
-    WriteLn('================================================================');
-    WriteLn;
-
-    // Example 2: Another site
-    WriteLn('--- Test 2: GET Request to www.google.com ---');
-    WriteLn;
-
-    LSuccess := LClient.Get('https://www.google.com/', LResponse);
-
-    if LSuccess then
-      WriteLn('✓ SUCCESS - Received ', Length(LResponse), ' bytes')
-    else
-      WriteLn('✗ FAILED - ', LClient.LastError);
-
-    WriteLn;
-    WriteLn('================================================================');
-    WriteLn;
-    WriteLn('Example completed successfully!');
-    WriteLn;
-    WriteLn('Best Practices Demonstrated:');
-    WriteLn('  ✓ Proper SSL library initialization');
-    WriteLn('  ✓ Secure context creation');
-    WriteLn('  ✓ SNI hostname setting');
-    WriteLn('  ✓ TLS handshake with validation');
-    WriteLn('  ✓ Timeout management');
-    WriteLn('  ✓ Error handling');
-    WriteLn('  ✓ Resource cleanup');
-    WriteLn('  ✓ Logging and monitoring');
-    WriteLn;
-
+      WriteLn;
+      WriteLn('Best Practices Demonstrated:');
+      WriteLn('  ✓ VerifyPeer + System roots');
+      WriteLn('  ✓ per-connection SNI via TSSLConnector.ConnectSocket');
+      WriteLn('  ✓ Timeouts + resource cleanup');
+      WriteLn;
+    finally
+      Client.Free;
+    end;
   finally
-    LClient.Free;
+    CleanupNetwork;
   end;
 end;
 

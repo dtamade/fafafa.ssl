@@ -1,23 +1,24 @@
 program test_real_websites_comprehensive;
 
 {$mode objfpc}{$H+}
+{$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
 {
   综合真实网站连接测试 (50+ 站点)
-  
-  功能：大规模测试 HTTPS 连接兼容性
-  用途：验证库在各种服务器配置、CDN、CA 下的稳定性
-  难度：⭐⭐⭐ 高级
+
+  - 大规模测试 HTTPS 连接兼容性
+  - 使用当前公共 API：ConnectTCP + TSSLContextBuilder + TSSLConnector/TSSLStream
+  - SNI/hostname：每连接设置（ConnectSocket(..., serverName)）
+  - 证书验证：WithVerifyPeer + WithSystemRoots
+
+  注意：这是网络依赖示例。
 }
 
 uses
   SysUtils, Classes,
-  {$IFDEF UNIX}
-  fafafa.examples.sockets,
-  {$ENDIF}
-  fafafa.ssl.factory,
-  fafafa.ssl.base,
-  fafafa.ssl;
+  fafafa.ssl,
+  fafafa.ssl.context.builder,
+  fafafa.examples.tcp;
 
 type
   TWebsiteTest = record
@@ -28,9 +29,11 @@ type
 
   TTestResult = record
     Success: Boolean;
+    Skipped: Boolean;
     ErrorMessage: string;
     Protocol: string;
     Cipher: string;
+    VerifyResult: string;
     ResponseTime: Integer;
   end;
 
@@ -107,194 +110,143 @@ const
   );
 
 var
-  GLib: ISSLLibrary;
   GTotalTests: Integer = 0;
   GPassedTests: Integer = 0;
   GFailedTests: Integer = 0;
   GSkippedTests: Integer = 0;
 
-function GetProtocolName(AVer: TSSLProtocolVersion): string;
-begin
-  case AVer of
-    sslProtocolUnknown: Result := 'Unknown';
-    sslProtocolSSL2: Result := 'SSLv2';
-    sslProtocolSSL3: Result := 'SSLv3';
-    sslProtocolTLS10: Result := 'TLS 1.0';
-    sslProtocolTLS11: Result := 'TLS 1.1';
-    sslProtocolTLS12: Result := 'TLS 1.2';
-    sslProtocolTLS13: Result := 'TLS 1.3';
-    sslProtocolDTLS10: Result := 'DTLS 1.0';
-    sslProtocolDTLS12: Result := 'DTLS 1.2';
-  else
-    Result := 'Unknown';
-  end;
-end;
-
-{$IFDEF UNIX}
-function ConnectSocket(const AHost: string; APort: Word): TSocket;
+function RunTest(const ATest: TWebsiteTest; const AConnector: TSSLConnector): TTestResult;
 var
-  LAddr: tsockaddr_in;
-  LHostEntry: PHostEnt;
-begin
-  Result := socket(AF_INET, SOCK_STREAM, 0);
-  if Result < 0 then
-    raise Exception.Create('Failed to create socket');
-
-  // Resolve hostname
-  LHostEntry := gethostbyname(PChar(AHost));
-  if LHostEntry = nil then
-  begin
-    close(Result);
-    raise Exception.CreateFmt('Failed to resolve host: %s', [AHost]);
-  end;
-
-  // Connect
-  FillChar(LAddr, SizeOf(LAddr), 0);
-  LAddr.sin_family := AF_INET;
-  LAddr.sin_port := htons(APort);
-  Move(LHostEntry^.h_addr_list^^, LAddr.sin_addr, SizeOf(LAddr.sin_addr));
-
-  if connect(Result, psockaddr(@LAddr), SizeOf(LAddr)) < 0 then
-  begin
-    close(Result);
-    raise Exception.CreateFmt('Failed to connect to %s:%d', [AHost, APort]);
-  end;
-end;
-{$ENDIF}
-
-function TestWebsite(const ATest: TWebsiteTest): TTestResult;
-var
-  {$IFDEF UNIX}
-  LSocket: TSocket;
-  {$ENDIF}
-  LContext: ISSLContext;
-  LConn: ISSLConnection;
-  LRequest: string;
-  LStartTime, LEndTime: QWord;
+  Sock: TSocketHandle;
+  TLS: TSSLStream;
+  StartMs: QWord;
+  Request: RawByteString;
 begin
   Result.Success := False;
+  Result.Skipped := False;
   Result.ErrorMessage := '';
   Result.Protocol := '';
   Result.Cipher := '';
+  Result.VerifyResult := '';
   Result.ResponseTime := 0;
 
-  Inc(GTotalTests);
-  Write(Format('[%2d/%2d] %-25s ', [GTotalTests, Length(TEST_SITES), ATest.Description]));
-
-  LStartTime := GetTickCount64;
-
+  StartMs := GetTickCount64;
+  Sock := INVALID_SOCKET;
+  TLS := nil;
   try
-    {$IFDEF UNIX}
     try
-      LSocket := ConnectSocket(ATest.Host, ATest.Port);
+      Sock := ConnectTCP(ATest.Host, ATest.Port);
     except
       on E: Exception do
       begin
-        Result.ErrorMessage := 'Connect Error: ' + E.Message;
-        WriteLn('⊘ Skipped: ', Result.ErrorMessage);
-        Inc(GSkippedTests);
+        Result.Skipped := True;
+        Result.ErrorMessage := E.Message;
         Exit;
       end;
     end;
 
-    try
-      LContext := GLib.CreateContext(sslCtxClient);
-      LContext.SetServerName(ATest.Host);
+    TLS := AConnector.ConnectSocket(THandle(Sock), ATest.Host);
+    Result.Protocol := ProtocolVersionToString(TLS.Connection.GetProtocolVersion);
+    Result.Cipher := TLS.Connection.GetCipherName;
+    Result.VerifyResult := TLS.Connection.GetVerifyResultString;
 
-      // Load system CA bundle
-      if FileExists('/etc/ssl/certs/ca-certificates.crt') then
-        LContext.LoadCAFile('/etc/ssl/certs/ca-certificates.crt')
-      else if FileExists('/etc/pki/tls/certs/ca-bundle.crt') then
-        LContext.LoadCAFile('/etc/pki/tls/certs/ca-bundle.crt');
+    // 发送一个轻量 HEAD 请求（只验证加密通道可写即可）
+    Request := 'HEAD / HTTP/1.1'#13#10 +
+               'Host: ' + ATest.Host + #13#10 +
+               'User-Agent: fafafa.ssl-test_real_websites_comprehensive/1.0'#13#10 +
+               'Connection: close'#13#10 +
+               #13#10;
 
-      LConn := LContext.CreateConnection(LSocket);
-      if not LConn.Connect then
-      begin
-        Result.ErrorMessage := 'Handshake Error: ' + GLib.GetLastErrorString;
-        WriteLn('✗ ', Result.ErrorMessage);
-        Inc(GFailedTests);
-        Exit;
-      end;
+    if Length(Request) > 0 then
+      TLS.WriteBuffer(Request[1], Length(Request));
 
-      Result.Protocol := GetProtocolName(LConn.GetProtocolVersion);
-      Result.Cipher := LConn.GetCipherName;
-
-      // Send simple HEAD request to verify data transmission
-      LRequest := Format('HEAD / HTTP/1.1'#13#10'Host: %s'#13#10'Connection: close'#13#10#13#10, [ATest.Host]);
-      if LConn.Write(PChar(LRequest)^, Length(LRequest)) <> Length(LRequest) then
-      begin
-        Result.ErrorMessage := 'Send Error';
-        WriteLn('✗ ', Result.ErrorMessage);
-        Inc(GFailedTests);
-        Exit;
-      end;
-
-      // We don't strictly need to read the full response for this connectivity test,
-      // just ensuring we can write is often enough, but reading a bit confirms full duplex.
-      // Skipping read for speed in this bulk test, or maybe read 1 byte.
-      
-      LEndTime := GetTickCount64;
-      Result.ResponseTime := LEndTime - LStartTime;
-      Result.Success := True;
-      Inc(GPassedTests);
-
-      WriteLn(Format('✓ %s (%s, %dms)', [Result.Protocol, Result.Cipher, Result.ResponseTime]));
-
-    finally
-      close(LSocket);
-    end;
-    {$ELSE}
-    WriteLn('⊘ Skipped (Unix only)');
-    {$ENDIF}
-
+    Result.Success := True;
   except
     on E: Exception do
     begin
-      Result.ErrorMessage := 'Exception: ' + E.Message;
-      WriteLn('✗ ', Result.ErrorMessage);
-      Inc(GFailedTests);
+      Result.Success := False;
+      Result.ErrorMessage := E.Message;
     end;
+  finally
+    Result.ResponseTime := GetTickCount64 - StartMs;
+    if TLS <> nil then
+      TLS.Free;
+    CloseSocket(Sock);
   end;
 end;
 
 var
+  NetErr: string;
+  Ctx: ISSLContext;
+  Connector: TSSLConnector;
   I: Integer;
-  LEffectiveTotal: Integer;
+  R: TTestResult;
+  EffectiveTotal: Integer;
 begin
   WriteLn('================================================================');
-  WriteLn('  fafafa.ssl - Comprehensive Real Website Test (50+ Sites)');
+  WriteLn('fafafa.ssl - Comprehensive Real Website Test (50+ Sites)');
   WriteLn('================================================================');
   WriteLn;
 
-  try
-    GLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
-    if not GLib.Initialize then
-      raise Exception.Create('Failed to initialize SSL library');
+  if not InitNetwork(NetErr) then
+  begin
+    WriteLn('网络初始化失败: ', NetErr);
+    Halt(2);
+  end;
 
-    WriteLn('Library: OpenSSL ', GLib.GetVersionString);
+  try
+    Ctx := TSSLContextBuilder.Create
+      .WithTLS12And13
+      .WithVerifyPeer
+      .WithSystemRoots
+      .BuildClient;
+
+    Connector := TSSLConnector.FromContext(Ctx).WithTimeout(15000);
+
     WriteLn('----------------------------------------------------------------');
 
     for I := Low(TEST_SITES) to High(TEST_SITES) do
-      TestWebsite(TEST_SITES[I]);
+    begin
+      Inc(GTotalTests);
+      Write(Format('[%2d/%2d] %-20s ', [GTotalTests, Length(TEST_SITES), TEST_SITES[I].Description]));
+
+      R := RunTest(TEST_SITES[I], Connector);
+
+      if R.Skipped then
+      begin
+        Inc(GSkippedTests);
+        WriteLn('⊘ 跳过: ', R.ErrorMessage);
+        Continue;
+      end;
+
+      if R.Success then
+      begin
+        Inc(GPassedTests);
+        WriteLn(Format('✓ %s (%s, %dms) | %s',
+          [R.Protocol, R.Cipher, R.ResponseTime, R.VerifyResult]));
+      end
+      else
+      begin
+        Inc(GFailedTests);
+        WriteLn('✗ ', R.ErrorMessage);
+      end;
+    end;
 
     WriteLn('----------------------------------------------------------------');
 
-    LEffectiveTotal := GTotalTests - GSkippedTests;
-    if LEffectiveTotal <= 0 then
-      LEffectiveTotal := GTotalTests;
+    EffectiveTotal := GTotalTests - GSkippedTests;
+    if EffectiveTotal <= 0 then
+      EffectiveTotal := GTotalTests;
 
     WriteLn(Format('Results: %d/%d Passed (%.1f%%)',
-      [GPassedTests, LEffectiveTotal, GPassedTests * 100.0 / LEffectiveTotal]));
+      [GPassedTests, EffectiveTotal, GPassedTests * 100.0 / EffectiveTotal]));
     if GFailedTests > 0 then
       WriteLn('Failed:   ', GFailedTests);
     if GSkippedTests > 0 then
       WriteLn('Skipped:  ', GSkippedTests);
 
     WriteLn('================================================================');
-
-    GLib.Finalize;
-  except
-    on E: Exception do
-      WriteLn('FATAL: ', E.Message);
+  finally
+    CleanupNetwork;
   end;
 end.

@@ -304,13 +304,19 @@ type
 
   { 全局函数 - 便捷接口 }
   function SSLFactory: TSSLFactory;
+    deprecated 'Use TSSLFactory class methods directly (no instance needed)';
   function SSLHelper: TSSLHelper;
+    deprecated 'Use TSSLHelper class methods directly (no instance needed)';
 
   // 快速创建函数
   function CreateSSLLibrary(ALibType: TSSLLibraryType = sslAutoDetect): ISSLLibrary;
+    deprecated 'Use TSSLFactory.GetLibraryInstance(...)';
   function CreateSSLContext(AType: TSSLContextType = sslCtxClient): ISSLContext;
+    deprecated 'Use TSSLFactory.CreateContext(...) or fafafa.ssl.context.builder';
   function CreateSSLCertificate: ISSLCertificate;
+    deprecated 'Use TSSLFactory.CreateCertificate(...)';
   function CreateSSLConnection(AContext: ISSLContext; ASocket: THandle): ISSLConnection;
+    deprecated 'Use AContext.CreateConnection(...) and per-connection SNI via ISSLClientConnection';
 
 implementation
 

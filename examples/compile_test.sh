@@ -66,7 +66,7 @@ if [ ! -d "${REPO_ROOT}/src" ]; then
     exit 1
 fi
 
-FPC_FLAGS="-Fu${REPO_ROOT}/src -Fu${REPO_ROOT}/src/openssl -Mobjfpc"
+FPC_FLAGS="-Fu${REPO_ROOT}/src -Fu${REPO_ROOT}/src/openssl -Fu${REPO_ROOT}/examples -Mobjfpc"
 
 # 切换到示例目录
 cd "${SCRIPT_DIR}"

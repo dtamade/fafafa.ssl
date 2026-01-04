@@ -4,16 +4,23 @@ program https_client_post;
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
 { HTTPS POST 示例
-  展示如何发送JSON或表单数据并查看响应。 }
+
+  说明：
+  - 本示例不再依赖历史上的 fafafa.ssl.http.simple（已移除）。
+  - 改为使用 Rust 风格门面：TSSLConnector + TSSLStream。
+}
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.http.simple;
+  fafafa.ssl,
+  fafafa.ssl.context.builder,
+  fafafa.examples.tcp;
 
 const
   DEFAULT_URL = 'https://httpbin.org/post';
   DEFAULT_BODY = '{"message":"hello from fafafa.ssl"}';
   DEFAULT_CONTENT_TYPE = 'application/json';
+  BUFFER_SIZE = 16384;
 
 procedure PrintHeader;
 begin
@@ -27,69 +34,163 @@ begin
   WriteLn;
 end;
 
-procedure DumpResponseHeaders(AHeaders: TStringList);
+function ParseURL(const AURL: string; out AHost, APath: string; out APort: Word): Boolean;
 var
-  i: Integer;
+  LTemp, LHostPart: string;
+  LPos, LPortPos: Integer;
 begin
-  if (AHeaders = nil) or (AHeaders.Count = 0) then
-    Exit;
-  WriteLn('响应头:');
-  for i := 0 to AHeaders.Count - 1 do
-    WriteLn('  ', AHeaders[i]);
+  Result := False;
+  AHost := '';
+  APath := '/';
+  APort := 443;
+
+  LTemp := Trim(AURL);
+  if Pos('https://', LowerCase(LTemp)) = 1 then
+    Delete(LTemp, 1, 8)
+  else if Pos('http://', LowerCase(LTemp)) = 1 then
+  begin
+    Delete(LTemp, 1, 7);
+    APort := 80;
+  end;
+
+  LPos := Pos('/', LTemp);
+  if LPos > 0 then
+  begin
+    LHostPart := Copy(LTemp, 1, LPos - 1);
+    APath := Copy(LTemp, LPos, Length(LTemp));
+  end
+  else
+    LHostPart := LTemp;
+
+  LPortPos := Pos(':', LHostPart);
+  if LPortPos > 0 then
+  begin
+    APort := StrToIntDef(Copy(LHostPart, LPortPos + 1, Length(LHostPart)), APort);
+    AHost := Copy(LHostPart, 1, LPortPos - 1);
+  end
+  else
+    AHost := LHostPart;
+
+  Result := (AHost <> '');
+end;
+
+function ReadAll(AStream: TStream): string;
+var
+  Buffer: array[0..BUFFER_SIZE - 1] of Byte;
+  N: Longint;
+  Mem: TMemoryStream;
+begin
+  Result := '';
+  Mem := TMemoryStream.Create;
+  try
+    repeat
+      N := AStream.Read(Buffer[0], SizeOf(Buffer));
+      if N > 0 then
+        Mem.WriteBuffer(Buffer[0], N);
+    until N = 0;
+
+    if Mem.Size > 0 then
+    begin
+      SetLength(Result, Mem.Size);
+      Mem.Position := 0;
+      Mem.ReadBuffer(Result[1], Mem.Size);
+    end;
+  finally
+    Mem.Free;
+  end;
 end;
 
 procedure ExecuteRequest(const AURL, ABody, AContentType: string);
 var
-  LOptions: THTTPSOptions;
-  LResponse: THTTPResponse;
+  Host, Path, NetErr: string;
+  Port: Word;
+  Sock: TSocketHandle;
+  Ctx: ISSLContext;
+  Connector: TSSLConnector;
+  TLS: TSSLStream;
+  Request: RawByteString;
+  Response: string;
+  ContentLen: string;
 begin
-  LOptions := TSimpleHTTPSClient.DefaultOptions;
+  if not ParseURL(AURL, Host, Path, Port) then
+    raise Exception.Create('无法解析 URL: ' + AURL);
+
+  if Pos('https://', LowerCase(Trim(AURL))) <> 1 then
+    WriteLn('⚠ 提示: URL 不是 https://，本示例仍会尝试建立 TLS 连接。');
+
+  if not InitNetwork(NetErr) then
+    raise Exception.Create('网络初始化失败: ' + NetErr);
+
+  Sock := INVALID_SOCKET;
+  TLS := nil;
   try
-    LOptions.Headers.Add('Content-Type: ' + AContentType);
-    LOptions.Headers.Add('Accept: application/json');
-    LOptions.Headers.Add('X-Demo-Client: fafafa.ssl');
-    LResponse := TSimpleHTTPSClient.PostEx(AURL, ABody, LOptions);
-    try
-      if LResponse.Success then
-      begin
-        WriteLn('✓ 请求成功');
-        WriteLn('状态: ', LResponse.StatusCode, ' ', LResponse.StatusText);
-        DumpResponseHeaders(LResponse.Headers);
-        WriteLn;
-        WriteLn('响应体:');
-        WriteLn(LResponse.Body);
-      end
-      else
-      begin
-        WriteLn('✗ 请求失败');
-        if LResponse.StatusCode <> 0 then
-          WriteLn('HTTP 状态码: ', LResponse.StatusCode);
-        WriteLn('错误: ', LResponse.ErrorMessage);
-      end;
-    finally
-      if LResponse.Headers <> nil then
-        LResponse.Headers.Free;
-    end;
+    Sock := ConnectTCP(Host, Port);
+
+    // 启用证书验证并加载系统根证书
+    Ctx := TSSLContextBuilder.Create
+      .WithTLS12And13
+      .WithVerifyPeer
+      .WithSystemRoots
+      .BuildClient;
+
+    Connector := TSSLConnector.FromContext(Ctx).WithTimeout(15000);
+    TLS := Connector.ConnectSocket(THandle(Sock), Host);
+
+    ContentLen := IntToStr(Length(ABody));
+
+    Request := 'POST ' + Path + ' HTTP/1.1'#13#10 +
+               'Host: ' + Host + #13#10 +
+               'User-Agent: fafafa.ssl-example/1.0'#13#10 +
+               'Accept: application/json'#13#10 +
+               'Content-Type: ' + AContentType + #13#10 +
+               'Content-Length: ' + ContentLen + #13#10 +
+               'Connection: close'#13#10 +
+               #13#10 +
+               RawByteString(ABody);
+
+    if Length(Request) > 0 then
+      TLS.WriteBuffer(Request[1], Length(Request));
+
+    Response := ReadAll(TLS);
+
+    WriteLn('✓ 请求完成');
+    WriteLn('响应长度: ', Length(Response), ' 字节');
+    WriteLn;
+    WriteLn(Response);
   finally
-    LOptions.Headers.Free;
+    if TLS <> nil then
+      TLS.Free;
+    CloseSocket(Sock);
+    CleanupNetwork;
   end;
 end;
 
 var
-  LURL, LBody, LContentType: string;
+  URL, Body, ContentType: string;
 begin
   PrintHeader;
   if ParamCount >= 1 then
-    LURL := ParamStr(1)
+    URL := ParamStr(1)
   else
-    LURL := DEFAULT_URL;
+    URL := DEFAULT_URL;
+
   if ParamCount >= 2 then
-    LBody := ParamStr(2)
+    Body := ParamStr(2)
   else
-    LBody := DEFAULT_BODY;
+    Body := DEFAULT_BODY;
+
   if ParamCount >= 3 then
-    LContentType := ParamStr(3)
+    ContentType := ParamStr(3)
   else
-    LContentType := DEFAULT_CONTENT_TYPE;
-  ExecuteRequest(LURL, LBody, LContentType);
+    ContentType := DEFAULT_CONTENT_TYPE;
+
+  try
+    ExecuteRequest(URL, Body, ContentType);
+  except
+    on E: Exception do
+    begin
+      WriteLn('✗ 错误: ', E.Message);
+      Halt(1);
+    end;
+  end;
 end.

@@ -8,7 +8,8 @@ program https_client_session;
 
 uses
   SysUtils, DateUtils,
-  fafafa.ssl, fafafa.ssl.base;
+  fafafa.ssl, fafafa.ssl.base,
+  fafafa.examples.tcp;
 
 const
   DEFAULT_URL = 'https://www.google.com/';
@@ -86,16 +87,27 @@ function ExecuteRequest(AContext: ISSLContext; const AHost, APath: string;
   APort: Word; AReuseSession: Boolean; var ACachedSession: ISSLSession): TRequestResult;
 var
   LConnection: ISSLConnection;
+  LClientConn: ISSLClientConnection;
   LRequest: RawByteString;
   LSession: ISSLSession;
   LStart: TDateTime;
+  LSocket: TSocketHandle;
 begin
   Result.DurationMs := -1;
   Result.SessionReused := False;
+
+  LSocket := INVALID_SOCKET;
   try
-    LConnection := AContext.CreateConnection;
+    LSocket := ConnectTCP(AHost, APort);
+
+    LConnection := AContext.CreateConnection(THandle(LSocket));
     if LConnection = nil then
       raise Exception.Create('无法创建 SSL 连接');
+
+    // per-connection SNI/hostname
+    if Supports(LConnection, ISSLClientConnection, LClientConn) then
+      LClientConn.SetServerName(AHost);
+
     if (AReuseSession) and (ACachedSession <> nil) then
     begin
       try
@@ -105,31 +117,39 @@ begin
           WriteLn('  ⚠ 无法设置会话: ', E.Message);
       end;
     end;
+
     LStart := Now;
-    if not LConnection.Connect(AHost, APort) then
+    if not LConnection.Connect then
       raise Exception.Create('连接失败');
+
     LRequest := BuildRequest(AHost, APath);
     if LConnection.Write(LRequest[1], Length(LRequest)) <> Length(LRequest) then
       raise Exception.Create('发送请求失败');
+
     if ReadResponse(LConnection) = 0 then
       raise Exception.Create('未收到任何数据');
+
     Result.DurationMs := MilliSecondsBetween(Now, LStart);
     try
       Result.SessionReused := LConnection.IsSessionReused;
     except
       Result.SessionReused := False;
     end;
+
     if ACachedSession = nil then
     begin
       LSession := LConnection.GetSession;
       if LSession <> nil then
         ACachedSession := LSession;
     end;
+
     LConnection.Shutdown;
   except
     on E: Exception do
       WriteLn('  ✗ 请求失败: ', E.Message);
   end;
+
+  CloseSocket(LSocket);
 end;
 
 procedure RunColdRequests(const AHost, APath: string; APort: Word; ACount: Integer);
@@ -147,7 +167,7 @@ begin
   LDummySession := nil;
   for i := 1 to ACount do
   begin
-    LContext := TSSLFactory.CreateContext(sslOpenSSL, sslCtxClient);
+    LContext := TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL);
     if LContext = nil then
     begin
       WriteLn('  ✗ 无法创建 SSL 上下文');
@@ -180,7 +200,7 @@ var
   LSuccess: Integer;
 begin
   WriteLn('--- 会话复用 (共享上下文) ---');
-  LContext := TSSLFactory.CreateContext(sslOpenSSL, sslCtxClient);
+  LContext := TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL);
   if LContext = nil then
   begin
     WriteLn('  ✗ 无法创建 SSL 上下文');
@@ -216,7 +236,7 @@ begin
 end;
 
 var
-  LURL, LHost, LPath: string;
+  LURL, LHost, LPath, NetErr: string;
   LPort: Word;
   LCount: Integer;
 begin
@@ -240,6 +260,17 @@ begin
   WriteLn('请求次数: ', LCount);
   WriteLn('提示: 默认关闭证书验证，若用于生产请加载 CA 并启用校验。');
   WriteLn;
-  RunColdRequests(LHost, LPath, LPort, LCount);
-  RunWarmRequests(LHost, LPath, LPort, LCount);
+
+  if not InitNetwork(NetErr) then
+  begin
+    WriteLn('网络初始化失败: ', NetErr);
+    Halt(1);
+  end;
+
+  try
+    RunColdRequests(LHost, LPath, LPort, LCount);
+    RunWarmRequests(LHost, LPath, LPort, LCount);
+  finally
+    CleanupNetwork;
+  end;
 end.

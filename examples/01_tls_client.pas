@@ -1,228 +1,258 @@
 program tls_client;
 
 {$mode objfpc}{$H+}
+{$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
 { ============================================================================
-  示例 1: TLS 客户端连接
-  
-  功能：演示如何创建一个简单的 TLS 客户端，连接到 HTTPS 服务器
-  用途：学习基本的 TLS 连接建立和数据传输
-  
-  编译：fpc -Fusrc -Fusrc\openssl 01_tls_client.pas
-  运行：01_tls_client.exe
+  示例 1: TLS 客户端连接（当前公共 API 版本）
+
+  - 传输层：应用自己创建 TCP socket（见 examples/fafafa.examples.tcp）
+  - TLS 层：使用 Rust 风格门面：TSSLConnector + TSSLStream
+  - SNI/hostname：每连接设置（ConnectSocket(..., serverName)）
+
+  编译（示例）：
+    fpc -Mobjfpc -Fu./src -Fu./src/openssl -Fu./examples ./examples/01_tls_client.pas
+
+  运行（示例）：
+    ./01_tls_client https://www.example.com/
   ============================================================================ }
 
 uses
-  SysUtils, Classes, Math,
-  {$IFDEF MSWINDOWS}WinSock2{$ELSE}Sockets{$ENDIF},
-  fafafa.ssl.openssl.backed,
-  fafafa.ssl.base;
+  SysUtils, Classes, StrUtils,
+  fafafa.ssl,
+  fafafa.ssl.context.builder,
+  fafafa.examples.tcp;
 
 const
-  SERVER_HOST = 'www.example.com';
-  SERVER_PORT = 443;
-  
+  DEFAULT_URL = 'https://www.example.com/';
+  DEFAULT_TIMEOUT_MS = 15000;
+  BUFFER_SIZE = 16384;
+
+function ParseURL(const AURL: string; out AHost, APath: string; out APort: Word): Boolean;
 var
-  LLib: ISSLLibrary;
-  LContext: ISSLContext;
-  LConn: ISSLConnection;
-  LSocket: TSocket;
-  LRequest, LResponse: string;
-  
-function ConnectToServer(const aHost: string; aPort: Word): TSocket;
-var
-  LAddr: TSockAddr;
-  LHostEnt: PHostEnt;
+  LTemp, LHostPart: string;
+  LPos, LPortPos: Integer;
 begin
-  Result := socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if Result = INVALID_SOCKET then
-    raise Exception.Create('Failed to create socket');
-  
-  LHostEnt := gethostbyname(PAnsiChar(AnsiString(aHost)));
-  if LHostEnt = nil then
+  Result := False;
+  AHost := '';
+  APath := '/';
+  APort := 443;
+
+  LTemp := Trim(AURL);
+  if Pos('https://', LowerCase(LTemp)) = 1 then
+    Delete(LTemp, 1, 8)
+  else if Pos('http://', LowerCase(LTemp)) = 1 then
   begin
-    closesocket(Result);
-    raise Exception.CreateFmt('Failed to resolve host: %s', [aHost]);
+    Delete(LTemp, 1, 7);
+    APort := 80;
   end;
-  
-  FillChar(LAddr, SizeOf(LAddr), 0);
-  LAddr.sin_family := AF_INET;
-  LAddr.sin_port := htons(aPort);
-  LAddr.sin_addr := PInAddr(LHostEnt^.h_addr_list^)^;
-  
-  if connect(Result, LAddr, SizeOf(LAddr)) <> 0 then
+
+  LPos := Pos('/', LTemp);
+  if LPos > 0 then
   begin
-    closesocket(Result);
-    raise Exception.CreateFmt('Failed to connect to %s:%d', [aHost, aPort]);
+    LHostPart := Copy(LTemp, 1, LPos - 1);
+    APath := Copy(LTemp, LPos, Length(LTemp));
+  end
+  else
+    LHostPart := LTemp;
+
+  LPortPos := Pos(':', LHostPart);
+  if LPortPos > 0 then
+  begin
+    APort := StrToIntDef(Copy(LHostPart, LPortPos + 1, Length(LHostPart)), APort);
+    AHost := Copy(LHostPart, 1, LPortPos - 1);
+  end
+  else
+    AHost := LHostPart;
+
+  Result := (AHost <> '');
+end;
+
+function ReadAll(AStream: TStream): RawByteString;
+var
+  Buffer: array[0..BUFFER_SIZE - 1] of Byte;
+  N: Longint;
+  Mem: TMemoryStream;
+begin
+  Result := '';
+  Mem := TMemoryStream.Create;
+  try
+    repeat
+      N := AStream.Read(Buffer[0], SizeOf(Buffer));
+      if N > 0 then
+        Mem.WriteBuffer(Buffer[0], N);
+    until N = 0;
+
+    if Mem.Size > 0 then
+    begin
+      SetLength(Result, Mem.Size);
+      Mem.Position := 0;
+      Mem.ReadBuffer(Result[1], Mem.Size);
+    end;
+  finally
+    Mem.Free;
   end;
 end;
 
+function FindHeaderEnd(const S: RawByteString; out ADelimLen: Integer): Integer;
 begin
-  WriteLn('================================================================================');
-  WriteLn('  示例 1: TLS 客户端连接');
-  WriteLn('  连接到: ', SERVER_HOST, ':', SERVER_PORT);
-  WriteLn('================================================================================');
-  WriteLn;
-  
+  Result := Pos(#13#10#13#10, S);
+  if Result > 0 then
+  begin
+    ADelimLen := 4;
+    Exit;
+  end;
+
+  Result := Pos(#10#10, S);
+  if Result > 0 then
+    ADelimLen := 2
+  else
+    ADelimLen := 0;
+end;
+
+procedure PrintHeaderPreview(const ARawResp: RawByteString; AMaxLines: Integer);
+var
+  HeaderEnd, DelimLen: Integer;
+  HeaderBlock: RawByteString;
+  Text: string;
+  Lines: TStringList;
+  I: Integer;
+begin
+  DelimLen := 0;
+  HeaderEnd := FindHeaderEnd(ARawResp, DelimLen);
+  if (HeaderEnd > 0) and (DelimLen > 0) then
+    HeaderBlock := Copy(ARawResp, 1, HeaderEnd - 1)
+  else
+    HeaderBlock := ARawResp;
+
+  Text := string(HeaderBlock);
+  Text := StringReplace(Text, #13#10, #10, [rfReplaceAll]);
+  Text := StringReplace(Text, #13, #10, [rfReplaceAll]);
+
+  Lines := TStringList.Create;
   try
-    // 1. 初始化 SSL 库
-    WriteLn('[1/6] 初始化 SSL 库...');
-    LLib := CreateOpenSSLLibrary;
-    if not LLib.Initialize then
-      raise Exception.Create('Failed to initialize SSL library');
-    WriteLn('      ✓ SSL 库初始化成功');
-    WriteLn('      版本: ', LLib.GetVersionString);
-    WriteLn;
-    
-    try
-      // 2. 创建客户端上下文
-      WriteLn('[2/6] 创建 SSL 上下文...');
-      LContext := LLib.CreateContext(sslCtxClient);
-      WriteLn('      ✓ 上下文创建成功');
-      WriteLn;
-      
-      // 3. 配置 TLS 参数
-      WriteLn('[3/6] 配置 TLS 参数...');
-      LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
-      LContext.SetVerifyMode([sslVerifyPeer]);
-      WriteLn('      ✓ 协议版本: TLS 1.2 / 1.3');
-      WriteLn('      ✓ 证书验证: 已启用');
-      WriteLn;
-      
-      // 4. 建立 TCP 连接
-      WriteLn('[4/6] 建立 TCP 连接...');
-      {$IFDEF MSWINDOWS}
-      var LWSAData: TWSAData;
-      WSAStartup(MAKEWORD(2, 2), LWSAData);
-      {$ENDIF}
-      
-      LSocket := ConnectToServer(SERVER_HOST, SERVER_PORT);
-      WriteLn('      ✓ TCP 连接已建立');
-      WriteLn;
-      
-      // 5. 执行 TLS 握手
-      WriteLn('[5/6] 执行 TLS 握手...');
-      LConn := LContext.CreateConnection(LSocket);
-      
-      if LConn.Connect then
-      begin
-        WriteLn('      ✓ TLS 握手成功');
-        WriteLn('      协议: ', ProtocolVersionToString(LConn.GetProtocolVersion));
-        WriteLn('      密码套件: ', LConn.GetCipherName);
-        var LInfo: TSSLConnectionInfo;
-        LInfo := LConn.GetConnectionInfo;
-        WriteLn('      密钥强度: ', LInfo.KeySize, ' bits');
-        WriteLn;
-        
-        // 验证服务器证书
-        var LCert := LConn.GetPeerCertificate;
-        if LCert <> nil then
-        begin
-          WriteLn('      服务器证书:');
-          WriteLn('        主题: ', LCert.GetSubject);
-          WriteLn('        颁发者: ', LCert.GetIssuer);
-          WriteLn('        有效期至: ', DateTimeToStr(LCert.GetNotAfter));
-          
-          if LCert.VerifyHostname(SERVER_HOST) then
-            WriteLn('        主机名验证: ✓ 通过')
-          else
-            WriteLn('        主机名验证: ✗ 失败');
-        end;
-        WriteLn;
-        
-        // 6. 发送 HTTPS 请求
-        WriteLn('[6/6] 发送 HTTPS 请求...');
-        LRequest := 'GET / HTTP/1.1'#13#10 +
-                    'Host: ' + SERVER_HOST + #13#10 +
-                    'User-Agent: fafafa.ssl-example/1.0'#13#10 +
-                    'Connection: close'#13#10 +
-                    #13#10;
-        
-        LConn.WriteString(LRequest);
-        WriteLn('      ✓ 请求已发送 (', Length(LRequest), ' 字节)');
-        WriteLn;
-        
-        // 接收响应
-        WriteLn('      接收响应...');
-        if not LConn.ReadString(LResponse) then
-          LResponse := '';
-        
-        if Length(LResponse) > 0 then
-        begin
-          WriteLn('      ✓ 收到响应 (', Length(LResponse), ' 字节)');
-          WriteLn;
-          WriteLn('      响应头部:');
-          WriteLn('      ', '─' * 70);
-          
-          // 只显示前10行
-          var LLines := LResponse.Split([#13#10]);
-          for var i := 0 to Min(9, High(LLines)) do
-            if LLines[i] <> '' then
-              WriteLn('      ', LLines[i]);
-          
-          if Length(LLines) > 10 then
-            WriteLn('      ... (', Length(LLines) - 10, ' 行已省略)');
-          
-          WriteLn('      ', '─' * 70);
-        end;
-        WriteLn;
-        
-        // 关闭连接
-        WriteLn('      关闭连接...');
-        LConn.Shutdown;
-        WriteLn('      ✓ 连接已关闭');
-      end
-      else
-      begin
-        WriteLn('      ✗ TLS 握手失败');
-        WriteLn('      错误: ', LLib.GetLastErrorString);
-      end;
-      
-      closesocket(LSocket);
-      {$IFDEF MSWINDOWS}
-      WSACleanup;
-      {$ENDIF}
-      
-    finally
-      LLib.Finalize;
+    Lines.Text := Text;
+    for I := 0 to Lines.Count - 1 do
+    begin
+      if I >= AMaxLines then
+        Break;
+      if Trim(Lines[I]) <> '' then
+        WriteLn('  ', Lines[I]);
     end;
-    
-    WriteLn;
-    WriteLn('================================================================================');
-    WriteLn('  示例执行完成！');
-    WriteLn('================================================================================');
-    WriteLn;
-    WriteLn('💡 学到的知识：');
-    WriteLn('  1. 如何初始化 SSL 库');
-    WriteLn('  2. 如何创建和配置 SSL 上下文');
-    WriteLn('  3. 如何建立 TCP 连接');
-    WriteLn('  4. 如何执行 TLS 握手');
-    WriteLn('  5. 如何验证服务器证书');
-    WriteLn('  6. 如何通过 TLS 发送和接收数据');
-    WriteLn;
-    WriteLn('📚 下一步：');
-    WriteLn('  - 查看示例 2: TLS 服务器 (02_tls_server.pas)');
-    WriteLn('  - 阅读 docs/USER_GUIDE.md 了解更多用法');
-    WriteLn;
-    
-    ExitCode := 0;
-    
-  except
-    on E: Exception do
+  finally
+    Lines.Free;
+  end;
+end;
+
+var
+  URL: string;
+  Host, Path: string;
+  Port: Word;
+  NetErr: string;
+  Sock: TSocketHandle;
+  Ctx: ISSLContext;
+  Connector: TSSLConnector;
+  TLS: TSSLStream;
+  Request: RawByteString;
+  RawResp: RawByteString;
+  Cert: ISSLCertificate;
+  Lib: ISSLLibrary;
+  DelimLen, HeaderEnd: Integer;
+  BodyLen: Integer;
+begin
+  URL := DEFAULT_URL;
+  if ParamCount >= 1 then
+    URL := ParamStr(1);
+
+  if not ParseURL(URL, Host, Path, Port) then
+  begin
+    WriteLn('URL 解析失败: ', URL);
+    Halt(2);
+  end;
+
+  WriteLn(StringOfChar('=', 80));
+  WriteLn('示例 1: TLS 客户端连接');
+  WriteLn('URL: ', URL);
+  WriteLn(StringOfChar('=', 80));
+  WriteLn;
+
+  if not InitNetwork(NetErr) then
+  begin
+    WriteLn('网络初始化失败: ', NetErr);
+    Halt(2);
+  end;
+
+  Sock := INVALID_SOCKET;
+  TLS := nil;
+  try
+    Lib := TSSLFactory.GetLibraryInstance(sslAutoDetect);
+    if (Lib <> nil) and Lib.Initialize then
+      WriteLn('Backend: ', LibraryTypeToString(Lib.GetLibraryType), ' / ', Lib.GetVersionString);
+
+    WriteLn('连接 TCP: ', Host, ':', Port, ' ...');
+    Sock := ConnectTCP(Host, Port);
+
+    Ctx := TSSLContextBuilder.Create
+      .WithTLS12And13
+      .WithVerifyPeer
+      .WithSystemRoots
+      .BuildClient;
+
+    Connector := TSSLConnector.FromContext(Ctx)
+      .WithTimeout(DEFAULT_TIMEOUT_MS);
+
+    WriteLn('执行 TLS 握手 (SNI=', Host, ') ...');
+    TLS := Connector.ConnectSocket(THandle(Sock), Host);
+
+    WriteLn('TLS 版本: ', ProtocolVersionToString(TLS.Connection.GetProtocolVersion));
+    WriteLn('密码套件: ', TLS.Connection.GetCipherName);
+    WriteLn('证书验证: ', TLS.Connection.GetVerifyResultString);
+
+    Cert := TLS.Connection.GetPeerCertificate;
+    if Cert <> nil then
     begin
       WriteLn;
-      WriteLn('================================================================================');
-      WriteLn('  ✗ 错误: ', E.Message);
-      WriteLn('================================================================================');
-      WriteLn;
-      WriteLn('🔧 故障排除：');
-      WriteLn('  1. 确保 OpenSSL 已安装且可访问');
-      WriteLn('  2. 检查网络连接');
-      WriteLn('  3. 确认服务器地址和端口正确');
-      WriteLn('  4. 查看 docs/TROUBLESHOOTING.md 获取更多帮助');
-      WriteLn;
-      ExitCode := 1;
+      WriteLn('服务器证书:');
+      WriteLn('  主题: ', Cert.GetSubject);
+      WriteLn('  颁发者: ', Cert.GetIssuer);
+      WriteLn('  有效期至: ', DateTimeToStr(Cert.GetNotAfter));
     end;
+
+    WriteLn;
+    WriteLn('发送 HTTP/1.1 请求: GET ', Path);
+    Request := 'GET ' + Path + ' HTTP/1.1'#13#10 +
+               'Host: ' + Host + #13#10 +
+               'User-Agent: fafafa.ssl-01_tls_client/1.0'#13#10 +
+               'Accept: */*'#13#10 +
+               'Connection: close'#13#10 +
+               #13#10;
+
+    if Length(Request) > 0 then
+      TLS.WriteBuffer(Request[1], Length(Request));
+
+    RawResp := ReadAll(TLS);
+    WriteLn('收到响应: ', Length(RawResp), ' bytes');
+
+    DelimLen := 0;
+    HeaderEnd := FindHeaderEnd(RawResp, DelimLen);
+    if (HeaderEnd > 0) and (DelimLen > 0) then
+    begin
+      BodyLen := Length(RawResp) - (HeaderEnd + DelimLen) + 1;
+      if BodyLen < 0 then
+        BodyLen := 0;
+      WriteLn('响应体大小(粗略): ', BodyLen, ' bytes');
+    end;
+
+    WriteLn;
+    WriteLn('响应头预览(前 10 行)：');
+    WriteLn(StringOfChar('-', 80));
+    PrintHeaderPreview(RawResp, 10);
+    WriteLn(StringOfChar('-', 80));
+
+  finally
+    if TLS <> nil then
+      TLS.Free;
+    CloseSocket(Sock);
+    CleanupNetwork;
   end;
 end.
-

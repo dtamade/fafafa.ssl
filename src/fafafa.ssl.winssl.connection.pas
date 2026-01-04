@@ -90,7 +90,7 @@ type
     procedure CleanupExpired;
     procedure SetMaxSessions(AMax: Integer);
   end;
-  TWinSSLConnection = class(TInterfacedObject, ISSLConnection)
+  TWinSSLConnection = class(TInterfacedObject, ISSLConnection, ISSLClientConnection)
   private
     FContext: ISSLContext;
     FSocket: THandle;
@@ -100,6 +100,7 @@ type
     FConnected: Boolean;
     FBlocking: Boolean;
     FTimeout: Integer;
+    FServerName: string;
     
     // 缓冲区 - 使用常量而非魔法数字
     FRecvBuffer: array[0..SSL_DEFAULT_BUFFER_SIZE-1] of Byte;
@@ -139,6 +140,10 @@ type
     constructor Create(AContext: ISSLContext; ASocket: THandle); overload;
     constructor Create(AContext: ISSLContext; AStream: TStream); overload;
     destructor Destroy; override;
+
+    { ISSLClientConnection }
+    procedure SetServerName(const AServerName: string);
+    function GetServerName: string;
     
     { ISSLConnection - 连接管理 }
     function Connect: Boolean;
@@ -431,6 +436,12 @@ begin
   FConnected := False;
   FBlocking := True;
   FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT; // Rust-quality: 使用常量替代魔数
+
+  // Initialize per-connection server name from context default (backward compatibility)
+  FServerName := '';
+  if AContext.GetServerName <> '' then
+    FServerName := AContext.GetServerName;
+
   FRecvBufferUsed := 0;
   FDecryptedBufferUsed := 0;
   FExtraDataSize := 0;
@@ -455,6 +466,12 @@ begin
   FConnected := False;
   FBlocking := True;
   FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
+
+  // Initialize per-connection server name from context default (backward compatibility)
+  FServerName := '';
+  if AContext.GetServerName <> '' then
+    FServerName := AContext.GetServerName;
+
   FRecvBufferUsed := 0;
   FDecryptedBufferUsed := 0;
   FExtraDataSize := 0;
@@ -476,6 +493,16 @@ begin
   if IsValidSecHandle(FCtxtHandle) then
     DeleteSecurityContext(@FCtxtHandle);
   inherited Destroy;
+end;
+
+procedure TWinSSLConnection.SetServerName(const AServerName: string);
+begin
+  FServerName := AServerName;
+end;
+
+function TWinSSLConnection.GetServerName: string;
+begin
+  Result := FServerName;
 end;
 
 // ============================================================================
@@ -862,7 +889,7 @@ begin
     if (LContextType = sslCtxClient) and
       not (sslCertVerifyIgnoreHostname in LVerifyFlags) then
     begin
-      LHostname := NormalizeHostForVerify(FContext.GetServerName);
+      LHostname := NormalizeHostForVerify(FServerName);
       if LHostname = '' then
       begin
         AVerifyError := CERT_E_INVALID_NAME;
@@ -929,7 +956,7 @@ begin
         if (LContextType = sslCtxClient) and
           not (sslCertVerifyIgnoreHostname in LVerifyFlags) then
         begin
-          LHostname := NormalizeHostForVerify(FContext.GetServerName);
+          LHostname := NormalizeHostForVerify(FServerName);
           if LHostname <> '' then
             LServerNameW := StringToPWideChar(LHostname);
         end;
@@ -998,7 +1025,7 @@ begin
                 ISC_REQ_ALLOCATE_MEMORY or
                 ISC_REQ_STREAM;
 
-  ServerName := StringToPWideChar(FContext.GetServerName);
+  ServerName := StringToPWideChar(FServerName);
   try
     // P1-1: 使用辅助方法初始化输出缓冲区
     PrepareOutputBufferDesc(OutBuffers, OutBufferDesc);
@@ -1458,7 +1485,7 @@ begin
 
   Result.IsResumed := FSessionReused;
   Result.CompressionMethod := 'none';
-  Result.ServerName := FContext.GetServerName;
+  Result.ServerName := FServerName;
   Result.ALPNProtocol := GetSelectedALPNProtocol;
 
   PeerCert := GetPeerCertificate;

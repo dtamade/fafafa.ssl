@@ -13,7 +13,7 @@
 
 ```bash
 cd examples/https_client
-fpc -Fu../../src -Fu../../src/openssl https_client_simple.pas
+fpc -Mobjfpc -Fu../../src -Fu../../src/openssl -Fu../../examples https_client_simple.pas
 ./https_client_simple https://httpbin.org/get
 ```
 
@@ -41,4 +41,4 @@ fpc -Fu../../src -Fu../../src/openssl https_client_simple.pas
 - 对比「每次新建上下文」与「共享上下文 + 会话复用」的平均耗时
 - 默认关闭证书验证，运行在生产环境前请加载系统 CA 并启用校验
 
-> 📝 这些示例基于 `fafafa.ssl.http.simple` 和 `TSSLFactory` 封装，可作为你自己项目的起点。如果需要更完整的日志/重试/配置，请参见 `examples/production/` 中的生产级示例。
+> 📝 这些示例使用 `TSSLContextBuilder` + `TSSLConnector/TSSLStream`（以及 `fafafa.examples.tcp` 的 socket 辅助）来演示当前推荐用法。如果需要更完整的日志/重试/配置，请参见 `examples/production/` 中的生产级示例。

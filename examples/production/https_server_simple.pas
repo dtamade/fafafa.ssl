@@ -148,7 +148,7 @@ begin
   try
     // 创建SSL上下文
     Log('创建SSL上下文...');
-    LContext := TSSLFactory.CreateContext(sslOpenSSL, sslCtxServer);
+    LContext := TSSLFactory.CreateContext(sslCtxServer, sslOpenSSL);
     if LContext = nil then
     begin
       WriteLn('错误: 创建SSL上下文失败');

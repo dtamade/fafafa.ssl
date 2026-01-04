@@ -38,6 +38,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
   fafafa.ssl.factory,
+  fafafa.ssl.tls,
   fafafa.ssl.cert.advanced;
 
 // ============================================================================
@@ -91,6 +92,7 @@ type
   ISSLLibrary = fafafa.ssl.base.ISSLLibrary;
   ISSLContext = fafafa.ssl.base.ISSLContext;
   ISSLConnection = fafafa.ssl.base.ISSLConnection;
+  ISSLClientConnection = fafafa.ssl.base.ISSLClientConnection;
   ISSLCertificate = fafafa.ssl.base.ISSLCertificate;
   ISSLCertificateStore = fafafa.ssl.base.ISSLCertificateStore;
   ISSLSession = fafafa.ssl.base.ISSLSession;
@@ -98,6 +100,11 @@ type
   // 从 fafafa.ssl.factory 导出
   TSSLFactory = fafafa.ssl.factory.TSSLFactory;
   TSSLHelper = fafafa.ssl.factory.TSSLHelper;
+
+  // Rust 风格门面（Connector/Acceptor + Stream）
+  TSSLConnector = fafafa.ssl.tls.TSSLConnector;
+  TSSLAcceptor = fafafa.ssl.tls.TSSLAcceptor;
+  TSSLStream = fafafa.ssl.tls.TSSLStream;
 
   // 从 fafafa.ssl.base 导出 - 证书验证标志
   TSSLCertVerifyFlag = fafafa.ssl.base.TSSLCertVerifyFlag;
@@ -193,13 +200,19 @@ const
 
 // 工厂函数
 function SSLFactory: TSSLFactory;
+  deprecated 'Use TSSLFactory class methods directly (no instance needed)';
 function SSLHelper: TSSLHelper;
+  deprecated 'Use TSSLHelper class methods directly (no instance needed)';
 
 // 快速创建函数
 function CreateSSLLibrary(ALibType: TSSLLibraryType = sslAutoDetect): ISSLLibrary;
+  deprecated 'Use TSSLFactory.GetLibraryInstance(...)';
 function CreateSSLContext(AType: TSSLContextType = sslCtxClient): ISSLContext;
+  deprecated 'Use TSSLFactory.CreateContext(...) or fafafa.ssl.context.builder';
 function CreateSSLCertificate: ISSLCertificate;
+  deprecated 'Use TSSLFactory.CreateCertificate(...)';
 function CreateSSLConnection(AContext: ISSLContext; ASocket: THandle): ISSLConnection;
+  deprecated 'Use AContext.CreateConnection(...) and per-connection SNI via ISSLClientConnection';
 
 // 辅助函数
 function SSLErrorToString(AError: TSSLErrorCode): string;

@@ -21,7 +21,8 @@ program https_client_post;
 
 uses
   SysUtils, Classes, DateUtils,
-  fafafa.ssl, fafafa.ssl.base;
+  fafafa.ssl, fafafa.ssl.base,
+  fafafa.examples.tcp;
 
 const
   DEFAULT_TIMEOUT = 30000;
@@ -61,16 +62,21 @@ end;
 
 function ParseURL(const AURL: string; out AHost, APath: string; out APort: Word): Boolean;
 var
-  LPos: Integer;
+  LPos, LPortPos: Integer;
   LTemp: string;
 begin
   Result := False;
   APort := 443;
-  
+
   LTemp := AURL;
   if Pos('https://', LowerCase(LTemp)) = 1 then
-    Delete(LTemp, 1, 8);
-  
+    Delete(LTemp, 1, 8)
+  else if Pos('http://', LowerCase(LTemp)) = 1 then
+  begin
+    Delete(LTemp, 1, 7);
+    APort := 80;
+  end;
+
   LPos := Pos('/', LTemp);
   if LPos > 0 then
   begin
@@ -82,7 +88,14 @@ begin
     AHost := LTemp;
     APath := '/';
   end;
-  
+
+  LPortPos := Pos(':', AHost);
+  if LPortPos > 0 then
+  begin
+    APort := StrToIntDef(Copy(AHost, LPortPos + 1, Length(AHost)), APort);
+    AHost := Copy(AHost, 1, LPortPos - 1);
+  end;
+
   Result := (AHost <> '');
 end;
 
@@ -138,6 +151,8 @@ function DoPOSTRequest(const AURL, AData, AContentType: string;
 var
   LContext: ISSLContext;
   LConnection: ISSLConnection;
+  LClientConn: ISSLClientConnection;
+  LSocket: TSocketHandle;
   LHost, LPath: string;
   LPort: Word;
   LRequest: RawByteString;
@@ -156,15 +171,34 @@ begin
     LStartTime := Now;
     
     Log('创建SSL上下文...');
-    LContext := TSSLFactory.CreateContext(sslOpenSSL, sslCtxClient);
-    LContext.SetVerifyMode([sslVerifyNone]); // 简化示例，实际应启用验证
-    
-    Log('创建连接...');
-    LConnection := LContext.CreateConnection;
-    
+    LContext := TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL);
+    if LContext = nil then
+      raise Exception.Create('创建SSL上下文失败');
+
+    // 简化示例：默认关闭证书验证（生产环境建议启用并加载系统根证书）
+    LContext.SetVerifyMode([sslVerifyNone]);
+
     Log(Format('连接到 %s:%d...', [LHost, LPort]));
-    LConnection.Connect(LHost, LPort);
-    Log('连接成功');
+    LSocket := INVALID_SOCKET;
+    LConnection := nil;
+    try
+      LSocket := ConnectTCP(LHost, LPort);
+
+      Log('创建连接...');
+      LConnection := LContext.CreateConnection(THandle(LSocket));
+      if LConnection = nil then
+        raise Exception.Create('创建连接失败');
+
+      LConnection.SetTimeout(DEFAULT_TIMEOUT);
+
+      // per-connection SNI/hostname
+      if Supports(LConnection, ISSLClientConnection, LClientConn) then
+        LClientConn.SetServerName(LHost);
+
+      if not LConnection.Connect then
+        raise Exception.Create('TLS 握手失败');
+
+      Log('连接成功');
     
     // 构建并发送POST请求
     LRequest := BuildPOSTRequest(LHost, LPath, AData, AContentType);
@@ -187,12 +221,24 @@ begin
     
     Log('读取响应...');
     AResponse := ReadResponse(LConnection);
-    
+
     Log(Format('请求完成 (耗时 %d ms)', 
       [MilliSecondsBetween(Now, LStartTime)]));
-    
+
     Result := True;
-    
+  finally
+    if LConnection <> nil then
+    begin
+      try
+        LConnection.Shutdown;
+      except
+        // ignore
+      end;
+    end;
+    LConnection := nil;
+    CloseSocket(LSocket);
+  end;
+
   except
     on E: Exception do
     begin
@@ -255,6 +301,7 @@ procedure Main;
 var
   LResponse: string;
   LContentType: string;
+  NetErr: string;
 begin
   GLogEnabled := True;
   
@@ -283,6 +330,13 @@ begin
   WriteLn('内容类型: ', LContentType);
   WriteLn;
   
+  if not InitNetwork(NetErr) then
+  begin
+    WriteLn('网络初始化失败: ', NetErr);
+    ExitCode := 2;
+    Exit;
+  end;
+
   try
     if DoPOSTRequest(GURL, GData, LContentType, LResponse) then
     begin
@@ -305,6 +359,8 @@ begin
       ExitCode := 2;
     end;
   end;
+
+  CleanupNetwork;
 end;
 
 begin

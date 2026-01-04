@@ -1,143 +1,143 @@
 program test_real_websites;
 
 {$mode objfpc}{$H+}
+{$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
 {
-  真实网站连接测试
-  
-  功能：测试连接到多个真实HTTPS网站，验证库的实战可用性
-  用途：发现真实场景中的问题
+  真实网站连接测试（简版）
+
+  目标：
+  - 真实网络环境下，对多个 HTTPS 站点做一次完整 TLS 握手
+  - 使用当前公共 API：ConnectTCP + TSSLContextBuilder + TSSLConnector
+  - 证书验证：WithVerifyPeer + WithSystemRoots
+
+  注意：这是网络依赖示例，离线环境会出现失败/跳过。
 }
 
 uses
-  SysUtils, Classes,
-  fafafa.ssl.openssl.backed,
-  fafafa.ssl.base;
+  SysUtils,
+  fafafa.ssl,
+  fafafa.ssl.context.builder,
+  fafafa.examples.tcp;
 
 type
   TWebsiteTest = record
-    URL: string;
     Host: string;
+    Port: Word;
     Description: string;
   end;
 
 const
   TEST_SITES: array[1..10] of TWebsiteTest = (
-    (URL: 'https://www.google.com'; Host: 'www.google.com'; Description: 'Google搜索'),
-    (URL: 'https://www.github.com'; Host: 'www.github.com'; Description: 'GitHub'),
-    (URL: 'https://api.github.com'; Host: 'api.github.com'; Description: 'GitHub API'),
-    (URL: 'https://www.cloudflare.com'; Host: 'www.cloudflare.com'; Description: 'Cloudflare'),
-    (URL: 'https://www.mozilla.org'; Host: 'www.mozilla.org'; Description: 'Mozilla'),
-    (URL: 'https://www.wikipedia.org'; Host: 'www.wikipedia.org'; Description: 'Wikipedia'),
-    (URL: 'https://www.npmjs.com'; Host: 'www.npmjs.com'; Description: 'NPM'),
-    (URL: 'https://www.rust-lang.org'; Host: 'www.rust-lang.org'; Description: 'Rust'),
-    (URL: 'https://golang.org'; Host: 'golang.org'; Description: 'Go语言'),
-    (URL: 'https://www.python.org'; Host: 'www.python.org'; Description: 'Python')
+    (Host: 'www.google.com'; Port: 443; Description: 'Google'),
+    (Host: 'github.com'; Port: 443; Description: 'GitHub'),
+    (Host: 'api.github.com'; Port: 443; Description: 'GitHub API'),
+    (Host: 'www.cloudflare.com'; Port: 443; Description: 'Cloudflare'),
+    (Host: 'www.mozilla.org'; Port: 443; Description: 'Mozilla'),
+    (Host: 'www.wikipedia.org'; Port: 443; Description: 'Wikipedia'),
+    (Host: 'www.npmjs.com'; Port: 443; Description: 'NPM'),
+    (Host: 'www.rust-lang.org'; Port: 443; Description: 'Rust'),
+    (Host: 'golang.org'; Port: 443; Description: 'Go'),
+    (Host: 'www.python.org'; Port: 443; Description: 'Python')
   );
 
 var
-  TotalTests: Integer = 0;
-  PassedTests: Integer = 0;
-  FailedTests: Integer = 0;
-  LLib: ISSLLibrary;
+  GTotalTests: Integer = 0;
+  GPassedTests: Integer = 0;
+  GFailedTests: Integer = 0;
+  GSkippedTests: Integer = 0;
 
-procedure TestWebsite(const aTest: TWebsiteTest);
+procedure TestWebsite(const ATest: TWebsiteTest; const AConnector: TSSLConnector);
+var
+  Sock: TSocketHandle;
+  TLS: TSSLStream;
 begin
-  Inc(TotalTests);
-  Write(Format('[%2d/%2d] 测试 %s (%s)... ',
-    [TotalTests, Length(TEST_SITES), aTest.Description, aTest.Host]));
-  
+  Inc(GTotalTests);
+  Write(Format('[%2d/%2d] %-12s (%s:%d) ... ',
+    [GTotalTests, Length(TEST_SITES), ATest.Description, ATest.Host, ATest.Port]));
+
+  Sock := INVALID_SOCKET;
+  TLS := nil;
   try
-    // 注意：这里我们仅验证SSL库是否能创建上下文
-    // 完整的连接需要socket层支持，但这超出了本示例范围
-    
-    // 至少验证库可以被重复使用
-    var LContext := LLib.CreateContext(sslCtxClient);
-    if LContext <> nil then
-    begin
-      Inc(PassedTests);
-      WriteLn('✓');
-    end
-    else
-    begin
-      Inc(FailedTests);
-      WriteLn('✗ (上下文创建失败)');
+    try
+      Sock := ConnectTCP(ATest.Host, ATest.Port);
+    except
+      on E: Exception do
+      begin
+        Inc(GSkippedTests);
+        WriteLn('⊘ 跳过: ', E.Message);
+        Exit;
+      end;
     end;
-    
+
+    TLS := AConnector.ConnectSocket(THandle(Sock), ATest.Host);
+
+    WriteLn('✓ ',
+      ProtocolVersionToString(TLS.Connection.GetProtocolVersion), ' / ',
+      TLS.Connection.GetCipherName, ' | ',
+      TLS.Connection.GetVerifyResultString);
+
+    Inc(GPassedTests);
   except
     on E: Exception do
     begin
-      Inc(FailedTests);
-      WriteLn('✗');
-      WriteLn('    错误: ', E.Message);
+      Inc(GFailedTests);
+      WriteLn('✗ ', E.Message);
     end;
+  finally
+    if TLS <> nil then
+      TLS.Free;
+    CloseSocket(Sock);
   end;
 end;
 
+var
+  NetErr: string;
+  Ctx: ISSLContext;
+  Connector: TSSLConnector;
+  I: Integer;
+  EffectiveTotal: Integer;
 begin
   WriteLn('====================================================');
-  WriteLn('  fafafa.ssl - 真实网站测试程序');
+  WriteLn('fafafa.ssl - 真实网站连接测试（简版）');
   WriteLn('====================================================');
   WriteLn;
-  WriteLn('注意：当前版本仅测试SSL库的基本功能');
-  WriteLn('完整的HTTPS连接测试需要在实际网络环境中运行');
-  WriteLn;
+
+  if not InitNetwork(NetErr) then
+  begin
+    WriteLn('网络初始化失败: ', NetErr);
+    Halt(2);
+  end;
 
   try
-    // 初始化SSL库
-    WriteLn('初始化 OpenSSL 库...');
-    LLib := CreateOpenSSLLibrary;
-    if not LLib.Initialize then
-      raise Exception.Create('SSL库初始化失败');
-    
-    WriteLn('✓ OpenSSL ', LLib.GetVersionString);
+    Ctx := TSSLContextBuilder.Create
+      .WithTLS12And13
+      .WithVerifyPeer
+      .WithSystemRoots
+      .BuildClient;
+
+    Connector := TSSLConnector.FromContext(Ctx).WithTimeout(15000);
+
+    for I := Low(TEST_SITES) to High(TEST_SITES) do
+      TestWebsite(TEST_SITES[I], Connector);
+
     WriteLn;
-    WriteLn('开始测试...');
     WriteLn('----------------------------------------------------');
-    
-    // 测试所有网站
-    for var I := Low(TEST_SITES) to High(TEST_SITES) do
-      TestWebsite(TEST_SITES[I]);
-    
-    WriteLn('----------------------------------------------------');
-    WriteLn;
-    
-    // 显示统计
-    WriteLn('====================================================');
-    WriteLn('测试结果:');
-    WriteLn('  总计: ', TotalTests);
-    WriteLn('  通过: ', PassedTests, ' (', 
-      Format('%.1f%%', [PassedTests * 100.0 / TotalTests]), ')');
-    WriteLn('  失败: ', FailedTests);
-    WriteLn('====================================================');
-    WriteLn;
-    
-    if FailedTests = 0 then
-    begin
-      WriteLn('✅ 所有测试通过！SSL库工作正常。');
-      WriteLn;
-      WriteLn('下一步：');
-      WriteLn('  1. 在Windows上运行完整的网络连接测试');
-      WriteLn('  2. 测试客户端证书认证');
-      WriteLn('  3. 测试各种TLS版本和密码套件');
-    end
-    else
-    begin
-      WriteLn('⚠️  部分测试失败，请检查上述错误信息');
-    end;
-    
-    LLib.Finalize;
-    
-  except
-    on E: Exception do
-    begin
-      WriteLn;
-      WriteLn('严重错误: ', E.Message);
-      Halt(1);
-    end;
+    WriteLn('结果汇总:');
+    WriteLn('  Total:   ', GTotalTests);
+    WriteLn('  Passed:  ', GPassedTests);
+    WriteLn('  Failed:  ', GFailedTests);
+    if GSkippedTests > 0 then
+      WriteLn('  Skipped: ', GSkippedTests);
+
+    EffectiveTotal := GTotalTests - GSkippedTests;
+    if EffectiveTotal <= 0 then
+      EffectiveTotal := GTotalTests;
+
+    if EffectiveTotal > 0 then
+      WriteLn(Format('  Pass rate (excluding skipped): %.1f%%',
+        [GPassedTests * 100.0 / EffectiveTotal]));
+  finally
+    CleanupNetwork;
   end;
-  
-  WriteLn;
-  WriteLn('按回车退出...');
-  ReadLn;
 end.

@@ -1,0 +1,130 @@
+fafafa.ssl Code Coverage Report
+Generated: 2025年 12月 23日 星期二 11:44:02 CST
+================================================
+
+Source Statistics:
+  Source files:     111
+  Source lines:     60882
+  Functions/Procs:  3000
+
+Test Statistics:
+  Test files:       256
+
+Module Coverage Summary:
+
+Module                                    Lines
+----------------------------------------------
+fafafa.ssl.base.pas                       1314
+fafafa.ssl.cert.advanced.pas               605
+fafafa.ssl.cert.builder.impl.pas           585
+fafafa.ssl.cert.builder.pas                168
+fafafa.ssl.certchain.pas                   728
+fafafa.ssl.cert.pas                        120
+fafafa.ssl.cert.utils.pas                 1573
+fafafa.ssl.connection.builder.pas          369
+fafafa.ssl.context.builder.pas            1511
+fafafa.ssl.crypto.constant_time.pas        225
+fafafa.ssl.crypto.utils.pas               2160
+fafafa.ssl.debug.utils.pas                 609
+fafafa.ssl.encoding.pas                    581
+fafafa.ssl.errors.pas                      340
+fafafa.ssl.exceptions.pas                  244
+fafafa.ssl.factory.pas                    1154
+fafafa.ssl.http.json.pas                   295
+fafafa.ssl.http.simple.pas                 674
+fafafa.ssl.init.pas                         90
+fafafa.ssl.logging.pas                     718
+fafafa.ssl.memutils.pas                    102
+fafafa.ssl.openssl.api.aead.pas            555
+fafafa.ssl.openssl.api.aes.pas             326
+fafafa.ssl.openssl.api.aria.pas            313
+fafafa.ssl.openssl.api.asn1.pas            599
+fafafa.ssl.openssl.api.async.pas           522
+fafafa.ssl.openssl.api.bio.pas             513
+fafafa.ssl.openssl.api.blake2.pas          339
+fafafa.ssl.openssl.api.bn.pas              542
+fafafa.ssl.openssl.api.buffer.pas          235
+fafafa.ssl.openssl.api.chacha.pas          361
+fafafa.ssl.openssl.api.cmac.evp.pas        280
+fafafa.ssl.openssl.api.cmac.pas            405
+fafafa.ssl.openssl.api.cms.pas             596
+fafafa.ssl.openssl.api.comp.pas            490
+fafafa.ssl.openssl.api.conf.pas            214
+fafafa.ssl.openssl.api.consts.pas          647
+fafafa.ssl.openssl.api.core.pas           1051
+fafafa.ssl.openssl.api.crypto.pas          553
+fafafa.ssl.openssl.api.ct.pas              617
+fafafa.ssl.openssl.api.des.pas             392
+fafafa.ssl.openssl.api.dh.pas              300
+fafafa.ssl.openssl.api.dsa.pas             297
+fafafa.ssl.openssl.api.dso.pas             222
+fafafa.ssl.openssl.api.ecdh.pas            266
+fafafa.ssl.openssl.api.ecdsa.pas           261
+fafafa.ssl.openssl.api.ec.pas              488
+fafafa.ssl.openssl.api.engine.pas          268
+fafafa.ssl.openssl.api.err.pas             694
+fafafa.ssl.openssl.api.evp.pas            1053
+fafafa.ssl.openssl.api.hmac.pas            161
+fafafa.ssl.openssl.api.kdf.pas             540
+fafafa.ssl.openssl.api.legacy_ciphers.pas   641
+fafafa.ssl.openssl.api.lhash.pas           377
+fafafa.ssl.openssl.api.md.pas              318
+fafafa.ssl.openssl.api.modes.pas           883
+fafafa.ssl.openssl.api.obj.pas             336
+fafafa.ssl.openssl.api.ocsp.pas            692
+fafafa.ssl.openssl.api.param.pas           423
+fafafa.ssl.openssl.api.pas                1216
+fafafa.ssl.openssl.api.pem.pas             542
+fafafa.ssl.openssl.api.pkcs12.pas          515
+fafafa.ssl.openssl.api.pkcs7.pas           582
+fafafa.ssl.openssl.api.pkcs.pas            637
+fafafa.ssl.openssl.api.provider.pas        338
+fafafa.ssl.openssl.api.rand.pas            420
+fafafa.ssl.openssl.api.rsa.pas             406
+fafafa.ssl.openssl.api.scrypt_whirlpool.pas   162
+fafafa.ssl.openssl.api.seed.pas            190
+fafafa.ssl.openssl.api.sha3.evp.pas        371
+fafafa.ssl.openssl.api.sha3.pas            345
+fafafa.ssl.openssl.api.sha.pas             382
+fafafa.ssl.openssl.api.sm.pas              226
+fafafa.ssl.openssl.api.srp.pas             364
+fafafa.ssl.openssl.api.ssl.pas             408
+fafafa.ssl.openssl.api.stack.pas           437
+fafafa.ssl.openssl.api.store.pas           697
+fafafa.ssl.openssl.api.thread.pas          284
+fafafa.ssl.openssl.api.ts.pas              743
+fafafa.ssl.openssl.api.txt_db.pas          216
+fafafa.ssl.openssl.api.ui.pas              583
+fafafa.ssl.openssl.api.utils.pas           100
+fafafa.ssl.openssl.api.x509.pas            697
+fafafa.ssl.openssl.api.x509v3.pas          340
+fafafa.ssl.openssl.backed.pas              820
+fafafa.ssl.openssl.base.pas                419
+fafafa.ssl.openssl.certificate.pas        1472
+fafafa.ssl.openssl.certstore.pas           517
+fafafa.ssl.openssl.connection.pas          881
+fafafa.ssl.openssl.context.pas            1602
+fafafa.ssl.openssl.errors.pas              277
+fafafa.ssl.openssl.loader.pas              531
+fafafa.ssl.openssl.session.pas             277
+fafafa.ssl.pas                             382
+fafafa.ssl.quick.pas                       457
+fafafa.ssl.ringbuffer.pas                  361
+fafafa.ssl.safety.pas                      627
+fafafa.ssl.secure.pas                      772
+fafafa.ssl.sockets.pas                      81
+fafafa.ssl.utils.pas                       407
+fafafa.ssl.winssl.api.pas                  420
+fafafa.ssl.winssl.base.pas                 777
+fafafa.ssl.winssl.certificate.pas         1442
+fafafa.ssl.winssl.certstore.pas            695
+fafafa.ssl.winssl.connection.pas          1616
+fafafa.ssl.winssl.context.pas              802
+fafafa.ssl.winssl.enterprise.pas           405
+fafafa.ssl.winssl.errors.pas               335
+fafafa.ssl.winssl.lib.pas                  594
+fafafa.ssl.winssl.optimized.pas            185
+fafafa.ssl.winssl.utils.pas                592
+
+Note: Full coverage instrumentation requires additional tooling.
+Consider using Valgrind or custom instrumentation for detailed coverage.

@@ -20,7 +20,8 @@ program https_client_auth;
 
 uses
   SysUtils, Classes, DateUtils, Math,
-  fafafa.ssl, fafafa.ssl.base;
+  fafafa.ssl, fafafa.ssl.base,
+  fafafa.examples.tcp;
 
 const
   BUFFER_SIZE = 16384;
@@ -71,16 +72,21 @@ end;
 
 function ParseURL(const AURL: string; out AHost, APath: string; out APort: Word): Boolean;
 var
-  LPos: Integer;
+  LPos, LPortPos: Integer;
   LTemp: string;
 begin
   Result := False;
   APort := 443;
-  
+
   LTemp := AURL;
   if Pos('https://', LowerCase(LTemp)) = 1 then
-    Delete(LTemp, 1, 8);
-  
+    Delete(LTemp, 1, 8)
+  else if Pos('http://', LowerCase(LTemp)) = 1 then
+  begin
+    Delete(LTemp, 1, 7);
+    APort := 80;
+  end;
+
   LPos := Pos('/', LTemp);
   if LPos > 0 then
   begin
@@ -92,7 +98,14 @@ begin
     AHost := LTemp;
     APath := '/';
   end;
-  
+
+  LPortPos := Pos(':', AHost);
+  if LPortPos > 0 then
+  begin
+    APort := StrToIntDef(Copy(AHost, LPortPos + 1, Length(AHost)), APort);
+    AHost := Copy(AHost, 1, LPortPos - 1);
+  end;
+
   Result := (AHost <> '');
 end;
 
@@ -141,11 +154,14 @@ function DoAuthenticatedRequest(const AConfig: TAuthConfig;
 var
   LContext: ISSLContext;
   LConnection: ISSLConnection;
+  LClientConn: ISSLClientConnection;
+  LStore: ISSLCertificateStore;
+  LSocket: TSocketHandle;
   LHost, APath: string;
   LPort: Word;
   LRequest: RawByteString;
   LStartTime: TDateTime;
-  LCertPEM, LKeyPEM, LCAPEM: string;
+  LCertPEM, LKeyPEM: string;
 begin
   Result := False;
   
@@ -180,12 +196,7 @@ begin
     Exit;
   end;
   
-  // 加载CA证书（如果提供）
-  if (AConfig.CAFile <> '') and FileExists(AConfig.CAFile) then
-  begin
-    Log('加载CA证书...');
-    LCAPEM := LoadFileAsString(AConfig.CAFile);
-  end;
+  // CA 文件路径：可选（如果提供则优先使用该 CA，否则使用系统根证书）
   
   // 解析URL
   Log('解析URL: ' + AConfig.URL);
@@ -200,26 +211,28 @@ begin
     
     // 创建SSL上下文
     Log('创建SSL上下文...');
-    LContext := TSSLFactory.CreateContext(sslOpenSSL, sslCtxClient);
+    LContext := TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL);
     if LContext = nil then
-    begin
-      WriteLn('错误: 创建SSL上下文失败');
-      Exit;
-    end;
-    
+      raise Exception.Create('创建SSL上下文失败');
+
     // 配置证书验证
     Log('配置证书验证...');
-    if LCAPEM <> '' then
+    LContext.SetVerifyMode([sslVerifyPeer]);
+
+    if (AConfig.CAFile <> '') and FileExists(AConfig.CAFile) then
     begin
-      // 使用自定义CA
-      LContext.SetVerifyMode([sslVerifyPeer]);
-      // 注意：这里需要实际的LoadCAFromPEM方法，示例中简化
-      Log('警告: 自定义CA加载功能需要实现');
+      Log('加载自定义 CA 文件: ' + AConfig.CAFile);
+      LContext.LoadCAFile(AConfig.CAFile);
     end
     else
     begin
-      // 使用系统CA
-      LContext.SetVerifyMode([sslVerifyPeer]);
+      // 使用系统根证书
+      LStore := TSSLFactory.CreateCertificateStore(sslOpenSSL);
+      if LStore <> nil then
+      begin
+        LStore.LoadSystemStore;
+        LContext.SetCertificateStore(LStore);
+      end;
     end;
     
     // 加载客户端证书和私钥
@@ -236,19 +249,26 @@ begin
       end;
     end;
     
-    // 创建连接
-    Log('创建SSL连接...');
-    LConnection := LContext.CreateConnection;
-    if LConnection = nil then
-    begin
-      WriteLn('错误: 创建连接失败');
-      Exit;
-    end;
-    
-    // 连接到服务器
+    // 建立 TCP 连接并创建 SSL 连接
     Log(Format('连接到 %s:%d...', [LHost, LPort]));
-    LConnection.Connect(LHost, LPort);
-    Log('连接成功 - 客户端证书已发送');
+    LSocket := INVALID_SOCKET;
+    LConnection := nil;
+    try
+      LSocket := ConnectTCP(LHost, LPort);
+
+      Log('创建SSL连接...');
+      LConnection := LContext.CreateConnection(THandle(LSocket));
+      if LConnection = nil then
+        raise Exception.Create('创建连接失败');
+
+      // per-connection SNI/hostname
+      if Supports(LConnection, ISSLClientConnection, LClientConn) then
+        LClientConn.SetServerName(LHost);
+
+      if not LConnection.Connect then
+        raise Exception.Create('TLS 握手失败');
+
+      Log('连接成功 - 客户端证书已发送');
     
     // 获取连接信息
     try
@@ -257,8 +277,10 @@ begin
       Log(Format('密码套件: %s', [LConnection.GetCipherName]));
       
       // 验证服务器证书
-      WriteLn('服务器证书验证: ', 
-        Math.IfThen(LConnection.GetVerifyResult = 0, '成功', '失败'));
+      if LConnection.GetVerifyResult = 0 then
+        WriteLn('服务器证书验证: 成功')
+      else
+        WriteLn('服务器证书验证: 失败');
     except
       Log('警告: 无法获取连接信息');
     end;
@@ -275,12 +297,24 @@ begin
     // 读取响应
     Log('读取响应...');
     AResponse := ReadResponse(LConnection);
-    
+
     Log(Format('请求完成 (耗时 %d ms)', 
       [MilliSecondsBetween(Now, LStartTime)]));
-    
+
     Result := True;
-    
+  finally
+    if LConnection <> nil then
+    begin
+      try
+        LConnection.Shutdown;
+      except
+        // ignore
+      end;
+    end;
+    LConnection := nil;
+    CloseSocket(LSocket);
+  end;
+
   except
     on E: ESSLException do
     begin
@@ -342,6 +376,7 @@ end;
 procedure Main;
 var
   LResponse: string;
+  NetErr: string;
 begin
   GVerbose := True;
   
@@ -372,6 +407,13 @@ begin
     WriteLn('CA: ', GConfig.CAFile);
   WriteLn;
   
+  if not InitNetwork(NetErr) then
+  begin
+    WriteLn('网络初始化失败: ', NetErr);
+    ExitCode := 2;
+    Exit;
+  end;
+
   try
     if DoAuthenticatedRequest(GConfig, LResponse) then
     begin
@@ -394,6 +436,8 @@ begin
       ExitCode := 2;
     end;
   end;
+
+  CleanupNetwork;
 end;
 
 begin

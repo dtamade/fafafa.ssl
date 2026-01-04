@@ -89,7 +89,7 @@ type
     
     function GetX509Handle: Pointer;  // Returns PX509
     property X509Handle: Pointer read GetX509Handle;
-  end;
+  end deprecated 'OpenSSL-only; use fafafa.ssl.openssl.cert.builder';
 
   {**
    * IPrivateKey - Private key interface
@@ -115,7 +115,7 @@ type
     
     function GetEVP_PKEYHandle: Pointer; // Returns PEVP_PKEY
     property EVP_PKEYHandle: Pointer read GetEVP_PKEYHandle;
-  end;
+  end deprecated 'OpenSSL-only; use fafafa.ssl.openssl.cert.builder';
 
   {**
    * IKeyPairWithCertificate - Certificate + Private Key pair

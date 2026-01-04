@@ -802,12 +802,16 @@ type
     function GetOptions: TSSLOptions;
 
     {** 设置 SNI 服务器名称（客户端使用）
-        @param AServerName 服务器主机名 *}
+        @param AServerName 服务器主机名
+        @deprecated 推荐使用 per-connection SNI：ISSLClientConnection.SetServerName *}
     procedure SetServerName(const AServerName: string);
+      deprecated 'Use per-connection SNI via ISSLClientConnection.SetServerName';
 
     {** 获取 SNI 服务器名称
-        @returns 服务器主机名 *}
+        @returns 服务器主机名
+        @deprecated 推荐使用 per-connection SNI：ISSLClientConnection.GetServerName *}
     function GetServerName: string;
+      deprecated 'Use per-connection SNI via ISSLClientConnection.GetServerName';
 
     {** 设置 ALPN 协议列表
         @param AProtocols 逗号分隔的协议列表（如 "h2,http/1.1"） *}
@@ -864,9 +868,11 @@ type
    *
    * @example
    *   var Conn: ISSLConnection;
+   *   var ClientConn: ISSLClientConnection;
    *   begin
    *     Conn := Ctx.CreateConnection(Socket);
-   *     Conn.SetServerName('example.com');
+   *     ClientConn := Conn as ISSLClientConnection;
+   *     ClientConn.SetServerName('example.com');
    *     if Conn.Connect then
    *       Conn.WriteString('GET / HTTP/1.1'#13#10);
    *   end;
@@ -1015,6 +1021,30 @@ type
     {** 获取关联的上下文
         @returns 创建此连接的上下文接口 *}
     function GetContext: ISSLContext;
+  end;
+
+  {**
+   * ISSLClientConnection - 客户端连接扩展接口（per-connection 设置）
+   *
+   * 目的：将客户端特有且可能随连接变化的参数（如 SNI/hostname）从 Context 中下沉到 Connection。
+   * 这样同一个 Context 可以安全地并发创建多个不同目标主机的连接。
+   *
+   * 使用约定：应在调用 Connect/DoHandshake 之前设置。
+   *
+   * @stable 1.0
+   * @locked 2025-12-31
+   * @breaking-change-policy Additive (non-breaking)
+   *}
+  ISSLClientConnection = interface(ISSLConnection)
+    ['{7A8F3F3E-6E4B-4F3A-9B9C-9E3F5C3A2B10}']
+
+    {** 设置服务器名称（SNI）
+        @param AServerName 服务器主机名（如 example.com） *}
+    procedure SetServerName(const AServerName: string);
+
+    {** 获取当前连接的服务器名称（SNI）
+        @returns 服务器主机名，未设置时为空字符串 *}
+    function GetServerName: string;
   end;
 
   {**

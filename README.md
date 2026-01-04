@@ -44,30 +44,36 @@ fpc -i          # 应显示 3.2.0+
 ### 30秒示例
 
 ```pascal
-program HelloHTTPS;
+program HelloTLS;
 
 uses
-  fafafa.ssl.factory, fafafa.ssl.base;
+  SysUtils,
+  fafafa.ssl,
+  fafafa.ssl.context.builder;
 
 var
-  Lib: ISSLLibrary;
   Ctx: ISSLContext;
-  Conn: ISSLConnection;
+  TLS: TSSLConnector;
+  Stream: TSSLStream;
+  YourSocket: THandle; // 你自己创建并连接到 www.google.com:443 的 TCP socket
 begin
-  // 1. 初始化库
-  Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
-  Lib.Initialize;
-  
-  // 2. 创建客户端上下文（自动加载系统CA证书）
-  Ctx := Lib.CreateContext(sslCtxClient);
-  Ctx.SetServerName('www.google.com');
-  
-  // 3. 建立安全连接
-  Conn := Ctx.CreateConnection(YourSocket);
-  if Conn.Connect then
-    WriteLn('✅ TLS连接成功！协议: ', Conn.GetProtocolVersion);
-  
-  Lib.Finalize;
+  // 1) 创建客户端上下文（验证对端 + 自动加载系统根证书）
+  Ctx := TSSLContextBuilder.Create
+    .WithTLS12And13
+    .WithVerifyPeer
+    .WithSystemRoots
+    .BuildClient;
+
+  // 2) 建立 TLS（ServerName 是连接级别配置：SNI + hostname verification）
+  TLS := TSSLConnector.FromContext(Ctx);
+  Stream := TLS.ConnectSocket(YourSocket, 'www.google.com');
+  try
+    WriteLn('✓ TLS 连接成功');
+    WriteLn('协议: ', Ord(Stream.Connection.GetProtocolVersion));
+    WriteLn('密码套件: ', Stream.Connection.GetCipherName);
+  finally
+    Stream.Free;
+  end;
 end.
 ```
 
@@ -83,7 +89,8 @@ fpc -Fusrc -Fusrc/openssl your_app.pas
 | 文档 | 描述 |
 |------|------|
 | [API Reference](docs/API_Reference.md) | 完整API文档 |
-| [Quick Start](docs/QuickStart.md) | 快速入门指南 |
+| [Getting Started](docs/GETTING_STARTED.md) | 入门（推荐入口与最小示例） |
+| [Quick Start](docs/QUICKSTART.md) | 快速开始指南 |
 | [Examples](examples/) | 95+示例程序 |
 | [FAQ](docs/FAQ.md) | 常见问题解答 |
 | [Deployment Guide](.gemini/antigravity/brain/.../production_deployment_guide.md) | 生产部署指南 |
@@ -111,16 +118,13 @@ AESKey := TCryptoUtils.GenerateKey(256);
 ### TLS连接
 
 ```pascal
-uses fafafa.ssl.factory;
+uses fafafa.ssl;
 
-Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
-Lib.Initialize;
-
-Ctx := Lib.CreateContext(sslCtxClient);
-Ctx.SetServerName('api.example.com');
-Ctx.SetCipherlist('TLS_AES_256_GCM_SHA384');  // 可选
+Ctx := TSSLFactory.CreateContext(sslCtxClient);
+Ctx.SetCipherList('TLS_AES_256_GCM_SHA384');  // 可选
 
 Conn := Ctx.CreateConnection(Socket);
+(Conn as ISSLClientConnection).SetServerName('api.example.com');
 Conn.Connect;
 
 // 发送/接收数据
@@ -128,7 +132,7 @@ Conn.Write(Data^, Length(Data));
 BytesRead := Conn.Read(Buffer^, BufferSize);
 
 // 获取连接信息
-WriteLn('协议: ', Conn.GetProtocolVersion);
+WriteLn('协议: ', Ord(Conn.GetProtocolVersion));
 WriteLn('加密套件: ', Conn.GetCipherName);
 WriteLn('会话复用: ', Conn.IsSessionReused);
 ```
@@ -138,31 +142,39 @@ WriteLn('会话复用: ', Conn.IsSessionReused);
 ```pascal
 uses fafafa.ssl.cert.builder;
 
-// 创建自签名证书
-Builder := Lib.CreateCertificateBuilder;
-Builder.SetSubject('CN=My Server,O=My Company');
-Builder.SetIssuer('CN=My CA');
-Builder.SetSerialNumber('123456');
-Builder.SetNotBefore(Now);
-Builder.SetNotAfter(Now + 365);
-Builder.SetKeySize(2048);
+var
+  KeyPair: IKeyPairWithCertificate;
+begin
+  // 创建自签名服务器证书（示例：localhost）
+  KeyPair := TCertificateBuilder.Create
+    .WithCommonName('localhost')
+    .WithOrganization('My Company')
+    .ValidFor(365)
+    .WithRSAKey(2048)
+    .AsServerCert
+    .AddSubjectAltName('DNS:localhost')
+    .SelfSigned;
 
-Cert := Builder.Build;
-Cert := Builder.Build;
-Cert.SaveToFile('server.pem');
+  KeyPair.SaveToFiles('server.crt', 'server.key');
+end;
 ```
 
 ### 证书快速生成 (Quick API)
 
 ```pascal
-uses fafafa.ssl.quick;
+uses fafafa.ssl.quick, fafafa.ssl.cert.builder;
 
-// 一键生成自签名证书
-TSSLQuick.GenerateSelfSigned('server.crt', 'server.key');
+var
+  KeyPair: IKeyPairWithCertificate;
 
-// 检测远程证书信息
-Info := TSSLQuick.GetCertificateInfo('www.google.com');
-WriteLn('过期时间: ', DateTimeToStr(Info.ValidUntil));
+begin
+  // 一键生成自签名证书（返回接口对象；你可以保存为文件）
+  KeyPair := TSSLQuick.GenerateSelfSigned('localhost');
+  KeyPair.SaveToFiles('server.crt', 'server.key');
+
+  // 或者直接生成到指定路径
+  TSSLQuick.GenerateCertFiles('localhost', 'server2.crt', 'server2.key');
+end;
 ```
 
 ### 🆕 高级 API（v2.0+）
@@ -218,8 +230,8 @@ Conn := TSSLConnectionBuilder.Create
 
 ```pascal
 const
-  CERT_PEM = '-----BEGIN CERTIFICATE-----...'；
-  KEY_PEM = '-----BEGIN PRIVATE KEY-----...'；
+  CERT_PEM = '-----BEGIN CERTIFICATE-----...';
+  KEY_PEM = '-----BEGIN PRIVATE KEY-----...';
 begin
   Context.LoadCertificatePEM(CERT_PEM);
   Context.LoadPrivateKeyPEM(KEY_PEM, 'password');

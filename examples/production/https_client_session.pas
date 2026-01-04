@@ -20,7 +20,8 @@ program https_client_session;
 
 uses
   SysUtils, Classes, DateUtils,
-  fafafa.ssl, fafafa.ssl.base;
+  fafafa.ssl, fafafa.ssl.base,
+  fafafa.examples.tcp;
 
 const
   BUFFER_SIZE = 16384;
@@ -49,16 +50,21 @@ end;
 
 function ParseURL(const AURL: string; out AHost, APath: string; out APort: Word): Boolean;
 var
-  LPos: Integer;
+  LPos, LPortPos: Integer;
   LTemp: string;
 begin
   Result := False;
   APort := 443;
-  
+
   LTemp := AURL;
   if Pos('https://', LowerCase(LTemp)) = 1 then
-    Delete(LTemp, 1, 8);
-  
+    Delete(LTemp, 1, 8)
+  else if Pos('http://', LowerCase(LTemp)) = 1 then
+  begin
+    Delete(LTemp, 1, 7);
+    APort := 80;
+  end;
+
   LPos := Pos('/', LTemp);
   if LPos > 0 then
   begin
@@ -70,7 +76,14 @@ begin
     AHost := LTemp;
     APath := '/';
   end;
-  
+
+  LPortPos := Pos(':', AHost);
+  if LPortPos > 0 then
+  begin
+    APort := StrToIntDef(Copy(AHost, LPortPos + 1, Length(AHost)), APort);
+    AHost := Copy(AHost, 1, LPortPos - 1);
+  end;
+
   Result := (AHost <> '');
 end;
 
@@ -101,7 +114,7 @@ begin
     except
       Break;
     end;
-  until LBytesRead = 0;
+  until LBytesRead <= 0;
   
   Result := LTotalRead > 0;
 end;
@@ -111,43 +124,58 @@ function DoSingleRequest(AContext: ISSLContext; const AHost, APath: string;
   APort: Word; var ASessionReused: Boolean): Integer;
 var
   LConnection: ISSLConnection;
+  LClientConn: ISSLClientConnection;
+  LSocket: TSocketHandle;
   LRequest: RawByteString;
   LStartTime: TDateTime;
 begin
   Result := -1;
   ASessionReused := False;
-  
+
+  LSocket := INVALID_SOCKET;
   try
-    LStartTime := Now;
-    
-    // 创建连接
-    LConnection := AContext.CreateConnection;
-    if LConnection = nil then
-      Exit;
-    
-    // 连接
-    LConnection.Connect(AHost, APort);
-    
-    // 检查会话是否被复用
     try
-      ASessionReused := LConnection.IsSessionReused;
+      LSocket := ConnectTCP(AHost, APort);
+
+      // 创建连接（绑定已连接的 TCP socket）
+      LConnection := AContext.CreateConnection(THandle(LSocket));
+      if LConnection = nil then
+        Exit;
+
+      // per-connection SNI/hostname
+      if Supports(LConnection, ISSLClientConnection, LClientConn) then
+        LClientConn.SetServerName(AHost);
+
+      LStartTime := Now;
+
+      // TLS 握手
+      if not LConnection.Connect then
+        Exit;
+
+      // 检查会话是否被复用
+      try
+        ASessionReused := LConnection.IsSessionReused;
+      except
+        // 某些实现可能不支持
+      end;
+
+      // 发送请求
+      LRequest := BuildHTTPRequest(AHost, APath);
+      if (Length(LRequest) = 0) or (LConnection.Write(LRequest[1], Length(LRequest)) <> Length(LRequest)) then
+        Exit;
+
+      // 读取响应
+      if not ReadResponse(LConnection) then
+        Exit;
+
+      Result := MilliSecondsBetween(Now, LStartTime);
+
+      LConnection.Shutdown;
     except
-      // 某些实现可能不支持
+      Result := -1;
     end;
-    
-    // 发送请求
-    LRequest := BuildHTTPRequest(AHost, APath);
-    if LConnection.Write(LRequest[1], Length(LRequest)) <> Length(LRequest) then
-      Exit;
-    
-    // 读取响应
-    if not ReadResponse(LConnection) then
-      Exit;
-    
-    Result := MilliSecondsBetween(Now, LStartTime);
-    
-  except
-    Result := -1;
+  finally
+    CloseSocket(LSocket);
   end;
 end;
 
@@ -171,7 +199,7 @@ begin
     Write(Format('请求 %d/%d ... ', [i, ACount]));
     
     // 每次创建新的上下文
-    LContext := TSSLFactory.CreateContext(sslOpenSSL, sslCtxClient);
+    LContext := TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL);
     LContext.SetVerifyMode([sslVerifyNone]);
     
     LTime := DoSingleRequest(LContext, AHost, APath, APort, LSessionReused);
@@ -209,8 +237,11 @@ begin
   AStats.TotalRequests := ACount;
   
   // 创建一个共享的上下文
-  LContext := TSSLFactory.CreateContext(sslOpenSSL, sslCtxClient);
+  LContext := TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL);
   LContext.SetVerifyMode([sslVerifyNone]);
+  LContext.SetSessionCacheMode(True);
+  LContext.SetSessionCacheSize(256);
+  LContext.SetSessionTimeout(600);
   
   for i := 1 to ACount do
   begin
@@ -296,7 +327,7 @@ end;
 
 procedure Main;
 var
-  LHost, LPath: string;
+  LHost, LPath, NetErr: string;
   LPort: Word;
   LNoReuseStats, LReuseStats: TSessionStats;
 begin
@@ -339,28 +370,38 @@ begin
     Exit;
   end;
   
+  if not InitNetwork(NetErr) then
+  begin
+    WriteLn('网络初始化失败: ', NetErr);
+    ExitCode := 1;
+    Exit;
+  end;
+
   try
-    // 测试不使用会话复用
-    TestWithoutSessionReuse(LHost, LPath, LPort, GRequestCount, LNoReuseStats);
-    
-    // 短暂延迟
-    Sleep(1000);
-    
-    // 测试使用会话复用
-    TestWithSessionReuse(LHost, LPath, LPort, GRequestCount, LReuseStats);
-    
-    // 显示统计
-    ShowStats(LNoReuseStats, LReuseStats);
-    
-    ExitCode := 0;
-    
-  except
-    on E: Exception do
-    begin
-      WriteLn;
-      WriteLn('错误: ', E.Message);
-      ExitCode := 2;
+    try
+      // 测试不使用会话复用
+      TestWithoutSessionReuse(LHost, LPath, LPort, GRequestCount, LNoReuseStats);
+
+      // 短暂延迟
+      Sleep(1000);
+
+      // 测试使用会话复用
+      TestWithSessionReuse(LHost, LPath, LPort, GRequestCount, LReuseStats);
+
+      // 显示统计
+      ShowStats(LNoReuseStats, LReuseStats);
+
+      ExitCode := 0;
+    except
+      on E: Exception do
+      begin
+        WriteLn;
+        WriteLn('错误: ', E.Message);
+        ExitCode := 2;
+      end;
     end;
+  finally
+    CleanupNetwork;
   end;
 end;
 

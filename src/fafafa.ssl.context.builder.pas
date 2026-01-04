@@ -545,7 +545,11 @@ begin
 end;
 
 function TSSLContextBuilderImpl.BuildClient: ISSLContext;
+var
+  Store: ISSLCertificateStore;
 begin
+  Store := nil;
+
   Result := TSSLFactory.CreateContext(sslCtxClient, sslAutoDetect);
   if Result = nil then
     raise ESSLException.Create('Failed to create SSL client context');
@@ -567,26 +571,25 @@ begin
   if FPrivateKeyPEM <> '' then
     Result.LoadPrivateKeyPEM(FPrivateKeyPEM, FPrivateKeyPassword);
   
+  // Load system roots if requested
+  if FUseSystemRoots then
+  begin
+    // Prefer the backend-specific certificate store abstraction.
+    // This is best-effort: if loading fails, handshake verification will fail later.
+    Store := TSSLFactory.CreateCertificateStore(sslAutoDetect);
+    if Store <> nil then
+    begin
+      Store.LoadSystemStore;
+      Result.SetCertificateStore(Store);
+    end;
+  end;
+
+  // Load CA certificates (after setting system roots so they merge into the same store)
   if FCAFile <> '' then
     Result.LoadCAFile(FCAFile);
     
   if FCAPath <> '' then
     Result.LoadCAPath(FCAPath);
-  
-  // Load system roots if requested
-  if FUseSystemRoots then
-  begin
-    {$IFDEF UNIX}
-    // Common CA bundle locations on Linux
-    if FileExists('/etc/ssl/certs/ca-certificates.crt') then
-      Result.LoadCAFile('/etc/ssl/certs/ca-certificates.crt')
-    else if FileExists('/etc/pki/tls/certs/ca-bundle.crt') then
-      Result.LoadCAFile('/etc/pki/tls/certs/ca-bundle.crt')
-    else if DirectoryExists('/etc/ssl/certs') then
-      Result.LoadCAPath('/etc/ssl/certs');
-    {$ENDIF}
-    // On Windows, WinSSL uses system store automatically
-  end;
   
   // Cipher configuration
   if FCipherList <> '' then

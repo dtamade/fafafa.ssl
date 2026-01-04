@@ -20,8 +20,9 @@ program https_client_simple;
 }
 
 uses
-  SysUtils, Classes, DateUtils,
-  fafafa.ssl, fafafa.ssl.base;
+  SysUtils, Classes, DateUtils, Math,
+  fafafa.ssl, fafafa.ssl.base,
+  fafafa.examples.tcp;
 
 const
   DEFAULT_TIMEOUT = 30000;  // 30秒
@@ -168,6 +169,9 @@ function DoHTTPSRequest(const AConfig: THTTPSClientConfig;
 var
   LContext: ISSLContext;
   LConnection: ISSLConnection;
+  LClientConn: ISSLClientConnection;
+  LStore: ISSLCertificateStore;
+  LSocket: TSocketHandle;
   LHost, LPath: string;
   LPort: Word;
   LRequest: RawByteString;
@@ -196,64 +200,85 @@ begin
       
       // 创建SSL上下文
       Log(llInfo, '创建SSL上下文...');
-      LContext := TSSLFactory.CreateContext(sslOpenSSL, sslCtxClient);
+      LContext := TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL);
       if LContext = nil then
-      begin
-        Log(llError, '创建SSL上下文失败');
-        Continue;
-      end;
-      
+        raise Exception.Create('创建SSL上下文失败');
+
       // 配置上下文
       if AConfig.VerifyPeer then
       begin
         Log(llInfo, '启用证书验证');
         LContext.SetVerifyMode([sslVerifyPeer]);
+
+        // 加载系统根证书（通过证书存储抽象）
+        LStore := TSSLFactory.CreateCertificateStore(sslOpenSSL);
+        if LStore <> nil then
+        begin
+          LStore.LoadSystemStore;
+          LContext.SetCertificateStore(LStore);
+        end;
       end
       else
       begin
         Log(llWarning, '证书验证已禁用');
         LContext.SetVerifyMode([sslVerifyNone]);
       end;
-      
-      // 创建连接
-      Log(llInfo, '创建SSL连接...');
-      LConnection := LContext.CreateConnection;
-      if LConnection = nil then
-      begin
-        Log(llError, '创建连接失败');
-        Continue;
-      end;
-      
-      // 连接到服务器
-      Log(llInfo, Format('连接到 %s:%d...', [LHost, LPort]));
-      LConnection.Connect(LHost, LPort);
-      Log(llInfo, '连接成功');
-      
-      // 获取连接信息
+
+      // 建立 TCP 连接并执行 TLS 握手
+      LSocket := INVALID_SOCKET;
+      LConnection := nil;
       try
-        Log(llInfo, Format('TLS版本: %s', [
-          ProtocolVersionToString(LConnection.GetProtocolVersion)]));
-        Log(llInfo, Format('密码套件: %s', [LConnection.GetCipherName]));
-      except
-        // 忽略信息获取错误
-      end;
-      
-      // 发送HTTP请求
-      LRequest := BuildHTTPRequest(LHost, LPath);
-      Log(llDebug, '发送HTTP请求...');
-      if LConnection.Write(LRequest[1], Length(LRequest)) <> Length(LRequest) then
-      begin
-        Log(llError, '发送请求失败');
-        Continue;
-      end;
-      Log(llInfo, Format('请求已发送，%d 字节', [Length(LRequest)]));
-      
-      // 读取响应
-      Log(llInfo, '读取响应...');
-      if not ReadResponse(LConnection, AResponse) then
-      begin
-        Log(llError, '读取响应失败');
-        Continue;
+        Log(llInfo, Format('连接到 %s:%d...', [LHost, LPort]));
+        LSocket := ConnectTCP(LHost, LPort);
+
+        Log(llInfo, '创建SSL连接...');
+        LConnection := LContext.CreateConnection(THandle(LSocket));
+        if LConnection = nil then
+          raise Exception.Create('创建连接失败');
+
+        LConnection.SetTimeout(AConfig.Timeout);
+
+        // per-connection SNI/hostname
+        if Supports(LConnection, ISSLClientConnection, LClientConn) then
+          LClientConn.SetServerName(LHost);
+
+        Log(llInfo, '执行 TLS 握手...');
+        if not LConnection.Connect then
+          raise Exception.Create('TLS 握手失败');
+
+        Log(llInfo, '连接成功');
+
+        // 获取连接信息
+        try
+          Log(llInfo, Format('TLS版本: %s', [
+            ProtocolVersionToString(LConnection.GetProtocolVersion)]));
+          Log(llInfo, Format('密码套件: %s', [LConnection.GetCipherName]));
+        except
+          // 忽略信息获取错误
+        end;
+
+        // 发送HTTP请求
+        LRequest := BuildHTTPRequest(LHost, LPath);
+        Log(llDebug, '发送HTTP请求...');
+        if LConnection.Write(LRequest[1], Length(LRequest)) <> Length(LRequest) then
+          raise Exception.Create('发送请求失败');
+        Log(llInfo, Format('请求已发送，%d 字节', [Length(LRequest)]));
+
+        // 读取响应
+        Log(llInfo, '读取响应...');
+        if not ReadResponse(LConnection, AResponse) then
+          raise Exception.Create('读取响应失败');
+      finally
+        if LConnection <> nil then
+        begin
+          try
+            LConnection.Shutdown;
+          except
+            // ignore
+          end;
+        end;
+        LConnection := nil;
+        CloseSocket(LSocket);
       end;
       
       LEndTime := Now;
@@ -332,6 +357,7 @@ end;
 procedure Main;
 var
   LResponse: string;
+  NetErr: string;
 begin
   // 默认配置
   GConfig.URL := 'https://www.google.com';
@@ -348,6 +374,13 @@ begin
   WriteLn('======================================');
   WriteLn;
   
+  if not InitNetwork(NetErr) then
+  begin
+    WriteLn('网络初始化失败: ', NetErr);
+    ExitCode := 2;
+    Exit;
+  end;
+
   // 执行请求
   try
     if DoHTTPSRequest(GConfig, LResponse) then
@@ -371,6 +404,8 @@ begin
       ExitCode := 2;
     end;
   end;
+
+  CleanupNetwork;
 end;
 
 begin

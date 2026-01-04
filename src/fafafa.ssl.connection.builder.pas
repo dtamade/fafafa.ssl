@@ -217,6 +217,7 @@ function TSSLConnectionBuilderImpl.TryBuildClient(out AConnection: ISSLConnectio
 var
   VerifyRes: Integer;
   VerifyStr: string;
+  ClientConn: ISSLClientConnection;
 begin
   AConnection := nil;
   
@@ -240,10 +241,6 @@ begin
   end;
   
   try
-    // Set hostname for SNI if provided
-    if FHostname <> '' then
-      FContext.SetServerName(FHostname);
-    
     // Create connection
     if FUseSocket then
       AConnection := FContext.CreateConnection(FSocket)
@@ -254,6 +251,19 @@ begin
     begin
       Result := TSSLOperationResult.Err(sslErrConnection, 'Failed to create connection');
       Exit;
+    end;
+
+    // Set per-connection server name for SNI/hostname verification if provided
+    if FHostname <> '' then
+    begin
+      if Supports(AConnection, ISSLClientConnection, ClientConn) then
+        ClientConn.SetServerName(FHostname)
+      else
+      begin
+        AConnection := nil;
+        Result := TSSLOperationResult.Err(sslErrUnsupported, 'Backend does not support per-connection server name');
+        Exit;
+      end;
     end;
     
     // Configure connection

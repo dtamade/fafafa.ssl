@@ -22,7 +22,8 @@ program real_world_test;
 
 uses
   SysUtils, Classes, DateUtils, Math, StrUtils,
-  fafafa.ssl, fafafa.ssl.base;
+  fafafa.ssl, fafafa.ssl.base,
+  fafafa.examples.tcp;
 
 const
   DEFAULT_SITES_FILE = 'test_sites.txt';
@@ -63,16 +64,21 @@ end;
 
 function ParseURL(const AURL: string; out AHost, APath: string; out APort: Word): Boolean;
 var
-  LPos: Integer;
+  LPos, LPortPos: Integer;
   LTemp: string;
 begin
   Result := False;
   APort := 443;
-  
+
   LTemp := AURL;
   if Pos('https://', LowerCase(LTemp)) = 1 then
-    Delete(LTemp, 1, 8);
-  
+    Delete(LTemp, 1, 8)
+  else if Pos('http://', LowerCase(LTemp)) = 1 then
+  begin
+    Delete(LTemp, 1, 7);
+    APort := 80;
+  end;
+
   LPos := Pos('/', LTemp);
   if LPos > 0 then
   begin
@@ -84,14 +90,24 @@ begin
     AHost := LTemp;
     APath := '/';
   end;
-  
+
+  LPortPos := Pos(':', AHost);
+  if LPortPos > 0 then
+  begin
+    APort := StrToIntDef(Copy(AHost, LPortPos + 1, Length(AHost)), APort);
+    AHost := Copy(AHost, 1, LPortPos - 1);
+  end;
+
   Result := (AHost <> '');
 end;
 
 function TestSingleSite(const AURL, ADescription: string): TTestResult;
 var
   LContext: ISSLContext;
+  LStore: ISSLCertificateStore;
   LConnection: ISSLConnection;
+  LClientConn: ISSLClientConnection;
+  LSocket: TSocketHandle;
   LHost, LPath: string;
   LPort: Word;
   LRequest: RawByteString;
@@ -118,31 +134,53 @@ begin
     LStartTime := Now;
     
     // 创建SSL上下文
-    LContext := TSSLFactory.CreateContext(sslOpenSSL, sslCtxClient);
+    LContext := TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL);
     if LContext = nil then
     begin
       Result.ErrorMsg := '创建SSL上下文失败';
       WriteLn('失败 (上下文创建失败)');
       Exit;
     end;
-    
-    // 配置证书验证
-    LContext.SetVerifyMode([sslVerifyPeer]);
-    
-    // 创建连接
-    LConnection := LContext.CreateConnection;
-    if LConnection = nil then
+
+    // 配置证书验证（使用系统根证书）
+    LStore := TSSLFactory.CreateCertificateStore(sslOpenSSL);
+    if LStore <> nil then
     begin
-      Result.ErrorMsg := '创建连接失败';
-      WriteLn('失败 (连接创建失败)');
-      Exit;
+      LStore.LoadSystemStore;
+      LContext.SetCertificateStore(LStore);
     end;
-    
-    // 连接到服务器
-    LConnection.Connect(LHost, LPort);
-    
-    // 记录连接时间
-    Result.ConnectTime := MilliSecondsBetween(Now, LStartTime);
+    LContext.SetVerifyMode([sslVerifyPeer]);
+
+    // 连接到服务器（TCP socket + TLS）
+    LSocket := INVALID_SOCKET;
+    try
+      LStartTime := Now;
+      LSocket := ConnectTCP(LHost, LPort);
+
+      // 创建连接
+      LConnection := LContext.CreateConnection(THandle(LSocket));
+      if LConnection = nil then
+      begin
+        Result.ErrorMsg := '创建连接失败';
+        WriteLn('失败 (连接创建失败)');
+        Exit;
+      end;
+
+      LConnection.SetTimeout(CONNECT_TIMEOUT);
+
+      // per-connection SNI/hostname
+      if Supports(LConnection, ISSLClientConnection, LClientConn) then
+        LClientConn.SetServerName(LHost);
+
+      if not LConnection.Connect then
+      begin
+        Result.ErrorMsg := 'TLS握手失败';
+        WriteLn('失败 (TLS握手失败)');
+        Exit;
+      end;
+
+      // 记录连接时间
+      Result.ConnectTime := MilliSecondsBetween(Now, LStartTime);
     
     // 获取TLS信息
     try
@@ -180,7 +218,7 @@ begin
       except
         Break;
       end;
-    until LBytesRead = 0;
+    until LBytesRead <= 0;
     
     if Result.DataReceived > 0 then
     begin
@@ -193,7 +231,12 @@ begin
       Result.ErrorMsg := '未收到数据';
       WriteLn('失败 (未收到数据)');
     end;
-    
+
+    LConnection.Shutdown;
+  finally
+    CloseSocket(LSocket);
+  end;
+
   except
     on E: ESSLException do
     begin
@@ -321,9 +364,9 @@ var
   LSuccessRate: Double;
 begin
   WriteLn;
-  WriteLn('='.PadRight(60, '='));
+  WriteLn(StringOfChar('=', 60));
   WriteLn('测试报告 - ', FormatDateTime('yyyy-mm-dd hh:nn:ss', Now));
-  WriteLn('='.PadRight(60, '='));
+  WriteLn(StringOfChar('=', 60));
   WriteLn;
   
   // 统计摘要
@@ -343,7 +386,7 @@ begin
   
   WriteLn;
   WriteLn('详细结果:');
-  WriteLn('-'.PadRight(60, '-'));
+  WriteLn(StringOfChar('-', 60));
   
   for i := 0 to Length(GResults) - 1 do
   begin
@@ -369,7 +412,7 @@ begin
     WriteLn;
   end;
   
-  WriteLn('='.PadRight(60, '='));
+  WriteLn(StringOfChar('=', 60));
   
   // 评估
   WriteLn;
@@ -386,7 +429,7 @@ end;
 
 procedure Main;
 var
-  LSitesFile: string;
+  LSitesFile, NetErr: string;
 begin
   WriteLn('fafafa.ssl - 真实网站连接测试');
   WriteLn('=================================');
@@ -398,25 +441,35 @@ begin
   else
     LSitesFile := DEFAULT_SITES_FILE;
   
+  if not InitNetwork(NetErr) then
+  begin
+    WriteLn('网络初始化失败: ', NetErr);
+    ExitCode := 3;
+    Exit;
+  end;
+
   try
-    RunTests(LSitesFile);
-    GenerateReport;
-    
-    // 返回码基于成功率
-    if GStats.SuccessCount >= GStats.TotalTests * 0.95 then
-      ExitCode := 0  // >= 95%成功
-    else if GStats.SuccessCount >= GStats.TotalTests * 0.8 then
-      ExitCode := 1  // 80-95%成功
-    else
-      ExitCode := 2; // < 80%成功
-      
-  except
-    on E: Exception do
-    begin
-      WriteLn;
-      WriteLn('致命错误: ', E.Message);
-      ExitCode := 3;
+    try
+      RunTests(LSitesFile);
+      GenerateReport;
+
+      // 返回码基于成功率
+      if GStats.SuccessCount >= GStats.TotalTests * 0.95 then
+        ExitCode := 0  // >= 95%成功
+      else if GStats.SuccessCount >= GStats.TotalTests * 0.8 then
+        ExitCode := 1  // 80-95%成功
+      else
+        ExitCode := 2; // < 80%成功
+    except
+      on E: Exception do
+      begin
+        WriteLn;
+        WriteLn('致命错误: ', E.Message);
+        ExitCode := 3;
+      end;
     end;
+  finally
+    CleanupNetwork;
   end;
 end;
 

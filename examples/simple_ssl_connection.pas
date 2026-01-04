@@ -9,8 +9,7 @@ uses
   {$ELSE}
   BaseUnix, Unix, Sockets,
   {$ENDIF}
-  fafafa.ssl.factory,
-  fafafa.ssl.base;
+  fafafa.ssl;
 
 {
   这个示例展示 fafafa.ssl 的正确使用方式：
@@ -116,6 +115,7 @@ procedure SimpleSSLConnection;
 var
   LContext: ISSLContext;
   LConnection: ISSLConnection;
+  LClientConn: ISSLClientConnection;
   LSocket: THandle;
   LRequest: string;
   LBuffer: array[0..4095] of Byte;
@@ -148,7 +148,8 @@ begin
     WriteLn('[3/6] 将socket传入SSL库...');
     WriteLn('      fafafa.ssl 不创建socket，只接收已有的socket');
     LConnection := LContext.CreateConnection(LSocket);
-    LConnection.SetHostname('example.com');  // 设置SNI
+    LClientConn := LConnection as ISSLClientConnection;
+    LClientConn.SetServerName('example.com');  // per-connection SNI/hostname
     WriteLn('      ✓ SSL连接对象已创建');
     WriteLn;
     
@@ -156,8 +157,8 @@ begin
     if not LConnection.Connect then
       raise Exception.Create('SSL握手失败');
     WriteLn('      ✓ SSL握手成功');
-    WriteLn('      协议: ', Ord(LConnection.GetProtocol));
-    WriteLn('      密码套件: ', LConnection.GetCipher);
+    WriteLn('      协议: ', Ord(LConnection.GetProtocolVersion));
+    WriteLn('      密码套件: ', LConnection.GetCipherName);
     WriteLn;
     
     WriteLn('[5/6] 发送数据（HTTP请求）...');
@@ -170,7 +171,7 @@ begin
       'Connection: close'#13#10 +
       #13#10;
     
-    if LConnection.Write(@LRequest[1], Length(LRequest)) <> Length(LRequest) then
+    if LConnection.Write(LRequest[1], Length(LRequest)) <> Length(LRequest) then
       raise Exception.Create('写入数据失败');
     WriteLn('      ✓ 请求已发送 (', Length(LRequest), ' 字节)');
     WriteLn;
@@ -178,7 +179,7 @@ begin
     WriteLn('[6/6] 接收响应...');
     LResponse := '';
     repeat
-      LBytesRead := LConnection.Read(@LBuffer[0], SizeOf(LBuffer));
+      LBytesRead := LConnection.Read(LBuffer[0], SizeOf(LBuffer));
       if LBytesRead > 0 then
       begin
         SetString(LResponse, PAnsiChar(@LBuffer[0]), LBytesRead);

@@ -33,7 +33,7 @@ uses
   fafafa.ssl.logging;
 
 type
-  TOpenSSLConnection = class(TInterfacedObject, ISSLConnection)
+  TOpenSSLConnection = class(TInterfacedObject, ISSLConnection, ISSLClientConnection)
   private
     FContext: ISSLContext;
     FSocket: THandle;
@@ -44,6 +44,7 @@ type
     FConnected: Boolean;
     FBlocking: Boolean;
     FTimeout: Integer;
+    FServerName: string;
     function HasStreamTransport: Boolean;
     function PumpStreamToBIO: Integer;
     function PumpBIOToStream: Integer;
@@ -53,7 +54,12 @@ type
     constructor Create(AContext: ISSLContext; ASocket: THandle); overload;
     constructor Create(AContext: ISSLContext; AStream: TStream); overload;
     destructor Destroy; override;
-    
+
+    { ISSLClientConnection }
+    procedure SetServerName(const AServerName: string);
+    function GetServerName: string;
+
+    { ISSLConnection }
     function Connect: Boolean;
     function Accept: Boolean;
     function Shutdown: Boolean;
@@ -122,9 +128,10 @@ begin
       'TOpenSSLConnection.Create'
     );
 
-  // Apply SNI if configured
-  if (AContext.GetServerName <> '') and Assigned(SSL_set_tlsext_host_name) then
-    SSL_set_tlsext_host_name(FSSL, PAnsiChar(AContext.GetServerName));
+  // Initialize per-connection server name from context default (backward compatibility)
+  FServerName := '';
+  if (AContext.GetServerName <> '') then
+    SetServerName(AContext.GetServerName);
 
   SSL_set_fd(FSSL, ASocket);
 end;
@@ -154,9 +161,10 @@ begin
       'TOpenSSLConnection.Create'
     );
 
-  // Apply SNI if configured
-  if (AContext.GetServerName <> '') and Assigned(SSL_set_tlsext_host_name) then
-    SSL_set_tlsext_host_name(FSSL, PAnsiChar(AContext.GetServerName));
+  // Initialize per-connection server name from context default (backward compatibility)
+  FServerName := '';
+  if (AContext.GetServerName <> '') then
+    SetServerName(AContext.GetServerName);
 
   // Ensure BIO API is available
   if not IsOpenSSLBIOLoaded then
@@ -190,6 +198,20 @@ begin
   if FSSL <> nil then
     SSL_free(FSSL);
   inherited Destroy;
+end;
+
+procedure TOpenSSLConnection.SetServerName(const AServerName: string);
+begin
+  FServerName := AServerName;
+
+  // Apply SNI on the underlying SSL handle (must be set before handshake)
+  if (FServerName <> '') and Assigned(SSL_set_tlsext_host_name) and Assigned(FSSL) then
+    SSL_set_tlsext_host_name(FSSL, PAnsiChar(AnsiString(FServerName)));
+end;
+
+function TOpenSSLConnection.GetServerName: string;
+begin
+  Result := FServerName;
 end;
 
 function TOpenSSLConnection.Connect: Boolean;
@@ -528,7 +550,7 @@ begin
   // Hostname verification: client-side only
   if AIsClient and not (sslCertVerifyIgnoreHostname in VerifyFlags) then
   begin
-    Host := FContext.GetServerName;
+    Host := FServerName;
     HostNormalized := NormalizeHostForVerify(Host);
 
     if HostNormalized = '' then

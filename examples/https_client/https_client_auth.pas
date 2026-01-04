@@ -3,12 +3,21 @@ program https_client_auth;
 {$mode ObjFPC}{$H+}
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
-{ HTTPS 客户端证书示例
-  展示如何配置 mTLS (双向 TLS)。 }
+{ HTTPS 客户端证书示例（mTLS）
+
+  说明：
+  - 本示例不再依赖历史上的 fafafa.ssl.http.simple（已移除）。
+  - 通过 Context Builder 配置客户端证书/私钥，并使用 TSSLConnector 建立 TLS。
+}
 
 uses
-  SysUtils,
-  fafafa.ssl.http.simple;
+  SysUtils, Classes,
+  fafafa.ssl,
+  fafafa.ssl.context.builder,
+  fafafa.examples.tcp;
+
+const
+  BUFFER_SIZE = 16384;
 
 procedure PrintHeader;
 begin
@@ -30,46 +39,136 @@ begin
   end;
 end;
 
-procedure ExecuteRequest(const AURL, ACertFile, AKeyFile, ACAFile: string);
+function ParseURL(const AURL: string; out AHost, APath: string; out APort: Word): Boolean;
 var
-  LOptions: THTTPSOptions;
-  LResponse: THTTPResponse;
+  LTemp, LHostPart: string;
+  LPos, LPortPos: Integer;
 begin
-  LOptions := TSimpleHTTPSClient.DefaultOptions;
+  Result := False;
+  AHost := '';
+  APath := '/';
+  APort := 443;
+
+  LTemp := Trim(AURL);
+  if Pos('https://', LowerCase(LTemp)) = 1 then
+    Delete(LTemp, 1, 8)
+  else if Pos('http://', LowerCase(LTemp)) = 1 then
+  begin
+    Delete(LTemp, 1, 7);
+    APort := 80;
+  end;
+
+  LPos := Pos('/', LTemp);
+  if LPos > 0 then
+  begin
+    LHostPart := Copy(LTemp, 1, LPos - 1);
+    APath := Copy(LTemp, LPos, Length(LTemp));
+  end
+  else
+    LHostPart := LTemp;
+
+  LPortPos := Pos(':', LHostPart);
+  if LPortPos > 0 then
+  begin
+    APort := StrToIntDef(Copy(LHostPart, LPortPos + 1, Length(LHostPart)), APort);
+    AHost := Copy(LHostPart, 1, LPortPos - 1);
+  end
+  else
+    AHost := LHostPart;
+
+  Result := (AHost <> '');
+end;
+
+function ReadAll(AStream: TStream): string;
+var
+  Buffer: array[0..BUFFER_SIZE - 1] of Byte;
+  N: Longint;
+  Mem: TMemoryStream;
+begin
+  Result := '';
+  Mem := TMemoryStream.Create;
   try
-    LOptions.ClientCert := ACertFile;
-    LOptions.ClientKey := AKeyFile;
-    if ACAFile <> '' then
-      LOptions.CAFile := ACAFile;
-    LOptions.VerifyPeer := True;
-    LOptions.Headers.Add('Accept: application/json');
-    LResponse := TSimpleHTTPSClient.GetEx(AURL, LOptions);
-    try
-      if LResponse.Success then
-      begin
-        WriteLn('✓ 握手成功，服务器已接受客户端证书');
-        WriteLn('状态码: ', LResponse.StatusCode, ' ', LResponse.StatusText);
-        WriteLn('响应体:');
-        WriteLn(LResponse.Body);
-      end
-      else
-      begin
-        WriteLn('✗ 请求失败');
-        if LResponse.StatusCode <> 0 then
-          WriteLn('HTTP 状态码: ', LResponse.StatusCode);
-        WriteLn('错误: ', LResponse.ErrorMessage);
-      end;
-    finally
-      if LResponse.Headers <> nil then
-        LResponse.Headers.Free;
+    repeat
+      N := AStream.Read(Buffer[0], SizeOf(Buffer));
+      if N > 0 then
+        Mem.WriteBuffer(Buffer[0], N);
+    until N = 0;
+
+    if Mem.Size > 0 then
+    begin
+      SetLength(Result, Mem.Size);
+      Mem.Position := 0;
+      Mem.ReadBuffer(Result[1], Mem.Size);
     end;
   finally
-    LOptions.Headers.Free;
+    Mem.Free;
+  end;
+end;
+
+procedure ExecuteRequest(const AURL, ACertFile, AKeyFile, ACAFile: string);
+var
+  Host, Path, NetErr: string;
+  Port: Word;
+  Sock: TSocketHandle;
+  Builder: ISSLContextBuilder;
+  Ctx: ISSLContext;
+  Connector: TSSLConnector;
+  TLS: TSSLStream;
+  Request: RawByteString;
+  Response: string;
+begin
+  if not ParseURL(AURL, Host, Path, Port) then
+    raise Exception.Create('无法解析 URL: ' + AURL);
+
+  if not InitNetwork(NetErr) then
+    raise Exception.Create('网络初始化失败: ' + NetErr);
+
+  Sock := INVALID_SOCKET;
+  TLS := nil;
+  try
+    Sock := ConnectTCP(Host, Port);
+
+    Builder := TSSLContextBuilder.Create
+      .WithTLS12And13
+      .WithVerifyPeer
+      .WithCertificate(ACertFile)
+      .WithPrivateKey(AKeyFile);
+
+    if ACAFile <> '' then
+      Builder := Builder.WithCAFile(ACAFile)
+    else
+      Builder := Builder.WithSystemRoots;
+
+    Ctx := Builder.BuildClient;
+
+    Connector := TSSLConnector.FromContext(Ctx).WithTimeout(15000);
+    TLS := Connector.ConnectSocket(THandle(Sock), Host);
+
+    Request := 'GET ' + Path + ' HTTP/1.1'#13#10 +
+               'Host: ' + Host + #13#10 +
+               'User-Agent: fafafa.ssl-mtls-example/1.0'#13#10 +
+               'Connection: close'#13#10 +
+               #13#10;
+
+    if Length(Request) > 0 then
+      TLS.WriteBuffer(Request[1], Length(Request));
+
+    Response := ReadAll(TLS);
+
+    WriteLn('✓ 请求完成');
+    WriteLn('响应长度: ', Length(Response), ' 字节');
+    WriteLn;
+    WriteLn(Response);
+  finally
+    if TLS <> nil then
+      TLS.Free;
+    CloseSocket(Sock);
+    CleanupNetwork;
   end;
 end;
 
 var
-  LURL, LCertFile, LKeyFile, LCAFile: string;
+  URL, CertFile, KeyFile, CAFile: string;
 begin
   PrintHeader;
   if ParamCount < 3 then
@@ -77,16 +176,27 @@ begin
     WriteLn('缺少参数，至少需要 URL、客户端证书和私钥。');
     Halt(1);
   end;
-  LURL := ParamStr(1);
-  LCertFile := ParamStr(2);
-  LKeyFile := ParamStr(3);
+
+  URL := ParamStr(1);
+  CertFile := ParamStr(2);
+  KeyFile := ParamStr(3);
   if ParamCount >= 4 then
-    LCAFile := ParamStr(4)
+    CAFile := ParamStr(4)
   else
-    LCAFile := '';
-  ValidateFile(LCertFile, '客户端证书');
-  ValidateFile(LKeyFile, '客户端私钥');
-  if LCAFile <> '' then
-    ValidateFile(LCAFile, 'CA 文件');
-  ExecuteRequest(LURL, LCertFile, LKeyFile, LCAFile);
+    CAFile := '';
+
+  ValidateFile(CertFile, '客户端证书');
+  ValidateFile(KeyFile, '客户端私钥');
+  if CAFile <> '' then
+    ValidateFile(CAFile, 'CA 文件');
+
+  try
+    ExecuteRequest(URL, CertFile, KeyFile, CAFile);
+  except
+    on E: Exception do
+    begin
+      WriteLn('✗ 错误: ', E.Message);
+      Halt(1);
+    end;
+  end;
 end.
