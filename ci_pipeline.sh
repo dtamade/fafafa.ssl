@@ -109,6 +109,13 @@ build_tests() {
         error "Failed to compile test_openssl_ocsp_fail_closed"
         return 1
     }
+
+    # Backend contract tests (offline, repeatable)
+    info "  Compiling backend contract tests..."
+    $FPC_BIN $FPC_COMMON_OPTS -Futests/contract -o"$TESTS_BIN/test_backend_contract" tests/contract/test_backend_contract.pas || {
+        error "Failed to compile test_backend_contract"
+        return 1
+    }
     
     info "✅ All tests compiled successfully"
     return 0
@@ -132,6 +139,21 @@ run_integration_tests() {
     else
         warn "Skipping network integration tests (set FAFAFA_RUN_NETWORK_TESTS=1 to enable)"
     fi
+
+    # Backend contract tests (offline, repeatable)
+    info "  Running backend contract tests..."
+    if [ ! -x "$TESTS_BIN/test_backend_contract" ]; then
+        warn "Backend contract test binary not found, compiling..."
+        $FPC_BIN $FPC_COMMON_OPTS -Futests/contract -o"$TESTS_BIN/test_backend_contract" tests/contract/test_backend_contract.pas || {
+            error "Failed to compile test_backend_contract"
+            return 1
+        }
+    fi
+
+    "$TESTS_BIN/test_backend_contract" || {
+        error "Backend contract tests failed"
+        return 1
+    }
 
     # OpenSSL OCSP regression tests
     info "  Running OpenSSL OCSP regression tests..."
