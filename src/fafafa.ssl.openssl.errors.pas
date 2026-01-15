@@ -68,8 +68,20 @@ function GetOpenSSLFriendlyErrorMessageEN(AErrorCode: Cardinal): string;
 implementation
 
 uses
-  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.err,
   fafafa.ssl.openssl.loader;
+
+procedure EnsureOpenSSLErrorAPI;
+begin
+  // IMPORTANT: Do not implicitly initialize OpenSSL here.
+  // Error helpers must be side-effect free (contract tests rely on this).
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
+    Exit;
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmERR) then
+    LoadOpenSSLERR;
+end;
 
 function GetOpenSSLErrorString: string;
 var
@@ -78,15 +90,7 @@ var
 begin
   Result := '';
 
-  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
-  begin
-    try
-      LoadOpenSSLLibrary;
-    except
-      on E: Exception do
-        TSecurityLog.Debug('OpenSSL', Format('LoadOpenSSLLibrary failed in GetOpenSSLErrorString: %s', [E.Message]));
-    end;
-  end;
+  EnsureOpenSSLErrorAPI;
 
   if not Assigned(ERR_get_error) or not Assigned(ERR_error_string_n) then
   begin
@@ -113,15 +117,7 @@ function GetLastOpenSSLError: Cardinal;
 begin
   Result := 0;
 
-  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
-  begin
-    try
-      LoadOpenSSLLibrary;
-    except
-      on E: Exception do
-        TSecurityLog.Debug('OpenSSL', Format('LoadOpenSSLLibrary failed in GetLastOpenSSLError: %s', [E.Message]));
-    end;
-  end;
+  EnsureOpenSSLErrorAPI;
 
   if Assigned(ERR_peek_error) then
     Result := ERR_peek_error();  // Peek without clearing
