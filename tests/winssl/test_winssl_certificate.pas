@@ -195,7 +195,7 @@ procedure TestConstantValues;
 var
   Store: ISSLCertificateStore;
   Cert: ISSLCertificate;
-  KeyUsage: TStringList;
+  KeyUsage: TSSLStringArray;
 begin
   WriteLn('=== 测试 4: 证书扩展 ===');
   WriteLn;
@@ -209,14 +209,10 @@ begin
       if Cert <> nil then
       begin
         KeyUsage := Cert.GetKeyUsage;
-        try
-          if KeyUsage <> nil then
-            WritePass
-          else
-            WriteFail('KeyUsage 为 nil');
-        finally
-          KeyUsage.Free;
-        end;
+        if Length(KeyUsage) > 0 then
+          WritePass
+        else
+          WriteFail('KeyUsage 为空');
       end
       else
         WriteFail('获取证书失败');
@@ -292,7 +288,7 @@ begin
   PrintSummary;
   WriteLn('');
   
-  // 等待按键
-  WriteLn('按回车键退出...');
-  ReadLn;
+  // Exit with appropriate code
+  if TestsFailed > 0 then
+    Halt(1);
 end.

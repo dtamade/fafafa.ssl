@@ -87,16 +87,40 @@ const
   MBEDTLS_ERR_PK_KEY_INVALID_FORMAT = -$3D00;
   MBEDTLS_ERR_PK_FILE_IO_ERROR = -$3E00;
 
+  { 消息摘要类型 }
+  MBEDTLS_MD_NONE = 0;
+  MBEDTLS_MD_MD5 = 3;
+  MBEDTLS_MD_SHA1 = 4;
+  MBEDTLS_MD_SHA224 = 5;
+  MBEDTLS_MD_SHA256 = 6;
+  MBEDTLS_MD_SHA384 = 7;
+  MBEDTLS_MD_SHA512 = 8;
+
 type
   { MbedTLS 不透明指针类型 }
   Pmbedtls_ssl_context = Pointer;
   Pmbedtls_ssl_config = Pointer;
   Pmbedtls_ssl_session = Pointer;
-  Pmbedtls_x509_crt = Pointer;
   Pmbedtls_x509_crl = Pointer;
   Pmbedtls_pk_context = Pointer;
   Pmbedtls_entropy_context = Pointer;
   Pmbedtls_ctr_drbg_context = Pointer;
+
+  { MbedTLS x509_buf 结构 - 用于访问原始证书数据 }
+  Tmbedtls_x509_buf = record
+    tag: Integer;       // ASN1 tag
+    len: NativeUInt;    // ASN1 length
+    p: PByte;           // ASN1 data pointer
+  end;
+  Pmbedtls_x509_buf = ^Tmbedtls_x509_buf;
+
+  { MbedTLS x509_crt 结构的前几个字段 - 用于访问 raw DER 数据 }
+  Tmbedtls_x509_crt_partial = record
+    own_buffer: Integer;  // 是否拥有缓冲区
+    raw: Tmbedtls_x509_buf;  // 原始 DER 数据
+    // 后续字段省略，我们只需要 raw
+  end;
+  Pmbedtls_x509_crt = ^Tmbedtls_x509_crt_partial;
 
   { MbedTLS 后端状态 }
   TMbedTLSBackendState = (

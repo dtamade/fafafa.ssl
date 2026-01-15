@@ -816,6 +816,8 @@ var
   EVP_PKEY_id: TEVP_PKEY_get_id = nil;  // Alias for compatibility
   EVP_PKEY_get_bits: TEVP_PKEY_get_bits = nil;
   EVP_PKEY_get_size: TEVP_PKEY_get_size = nil;
+  EVP_PKEY_get_raw_private_key: TEVP_PKEY_get_raw_private_key = nil;
+  EVP_PKEY_get_raw_public_key: TEVP_PKEY_get_raw_public_key = nil;
   
   // PKEY context functions
   EVP_PKEY_CTX_new: TEVP_PKEY_CTX_new = nil;
@@ -870,7 +872,7 @@ uses
 
 const
   // EVP function bindings for batch loading
-  EVP_BINDINGS: array[0..88] of TFunctionBinding = (
+  EVP_BINDINGS: array[0..90] of TFunctionBinding = (
     // MD Context functions
     (Name: 'EVP_MD_CTX_new'; FuncPtr: @EVP_MD_CTX_new; Required: True),
     (Name: 'EVP_MD_CTX_free'; FuncPtr: @EVP_MD_CTX_free; Required: True),
@@ -956,6 +958,8 @@ const
     (Name: 'EVP_PKEY_get_id'; FuncPtr: @EVP_PKEY_get_id; Required: False),
     (Name: 'EVP_PKEY_get_bits'; FuncPtr: @EVP_PKEY_get_bits; Required: False),
     (Name: 'EVP_PKEY_get_size'; FuncPtr: @EVP_PKEY_get_size; Required: False),
+    (Name: 'EVP_PKEY_get_raw_private_key'; FuncPtr: @EVP_PKEY_get_raw_private_key; Required: False),
+    (Name: 'EVP_PKEY_get_raw_public_key'; FuncPtr: @EVP_PKEY_get_raw_public_key; Required: False),
     // PKEY context functions
     (Name: 'EVP_PKEY_CTX_new'; FuncPtr: @EVP_PKEY_CTX_new; Required: False),
     (Name: 'EVP_PKEY_CTX_new_id'; FuncPtr: @EVP_PKEY_CTX_new_id; Required: False),

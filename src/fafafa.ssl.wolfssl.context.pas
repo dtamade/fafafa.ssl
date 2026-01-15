@@ -142,6 +142,7 @@ type
     FHandshakeComplete: Boolean;
     FTimeout: Integer;
     FBlocking: Boolean;
+    FLastError: Integer;  // P0: 错误跟踪
   public
     constructor Create(AContext: TWolfSSLContext; ASocket: THandle);
     destructor Destroy; override;
@@ -621,6 +622,7 @@ begin
   FHandshakeComplete := False;
   FTimeout := 30000;
   FBlocking := True;
+  FLastError := 0;  // P0: 初始化错误跟踪
 
   if not Assigned(wolfSSL_new) then
     raise ESSLException.Create('wolfSSL_new not available');
@@ -811,12 +813,14 @@ end;
 
 function TWolfSSLConnection.GetProtocolVersion: TSSLProtocolVersion;
 begin
-  Result := sslProtocolTLS12;  // 默认值
+  // 复用 GetNegotiatedProtocol 的实现
+  Result := GetNegotiatedProtocol;
 end;
 
 function TWolfSSLConnection.GetCipherName: string;
 begin
-  Result := '';
+  // 复用 GetNegotiatedCipher 的实现
+  Result := GetNegotiatedCipher;
 end;
 
 function TWolfSSLConnection.IsConnected: Boolean;
@@ -825,8 +829,16 @@ begin
 end;
 
 function TWolfSSLConnection.GetPeerCertificate: ISSLCertificate;
+var
+  LX509: PWOLFSSL_X509;
 begin
   Result := nil;
+  if FWolfSSL = nil then Exit;
+  if not Assigned(wolfSSL_get_peer_certificate) then Exit;
+
+  LX509 := wolfSSL_get_peer_certificate(FWolfSSL);
+  if LX509 <> nil then
+    Result := TWolfSSLCertificate.Create(LX509);
 end;
 
 function TWolfSSLConnection.GetPeerCertificateChain: TSSLCertificateArray;
@@ -836,12 +848,26 @@ end;
 
 function TWolfSSLConnection.GetVerifyResult: Integer;
 begin
-  Result := 0;
+  // WolfSSL 没有直接的 get_verify_result API
+  // 使用 FLastError 来跟踪验证错误
+  // 如果握手成功且没有错误，返回 0 表示验证通过
+  if FHandshakeComplete and (FLastError = 0) then
+    Result := 0
+  else
+    Result := FLastError;
 end;
 
 function TWolfSSLConnection.GetVerifyResultString: string;
+var
+  LResult: Integer;
 begin
-  Result := '';
+  LResult := GetVerifyResult;
+  if LResult = 0 then
+    Result := 'OK'
+  else if LResult = WOLFSSL_SUCCESS then
+    Result := 'OK'
+  else
+    Result := GetLastErrorString;  // 使用已有的错误字符串方法
 end;
 
 function TWolfSSLConnection.GetSession: ISSLSession;

@@ -95,7 +95,9 @@ const
 implementation
 
 uses
-  fafafa.ssl.secure;
+  fafafa.ssl.secure.compare;  // Phase 3.3 P1: 使用独立的常量时间比较模块
+                               // 修复: 原来使用 fafafa.ssl.secure 导致间接依赖 OpenSSL
+                               // 现在使用不依赖 OpenSSL 的独立模块
 
 // ============================================================================
 // 工厂函数

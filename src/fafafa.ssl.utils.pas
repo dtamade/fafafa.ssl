@@ -30,9 +30,14 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
-  fafafa.ssl.encoding,        // Phase 2.3.4 - Use unified encoding utilities
-  fafafa.ssl.crypto.utils,    // Phase 2.3.4 - Use unified crypto utilities
+  fafafa.ssl.base64,          // Phase 3.3 P1 - 纯 Pascal Base64，无 OpenSSL 依赖
   fafafa.ssl.debug.utils;     // Phase 2.3.4 - Use unified debug utilities
+                              // 
+                              // Phase 3.3 P1: 移除 OpenSSL 依赖
+                              // 修复严重设计缺陷: 原来导入了以下模块导致 WinSSL 用户必须安装 OpenSSL:
+                              // - fafafa.ssl.encoding (依赖 OpenSSL BIO)
+                              // - fafafa.ssl.crypto.utils (依赖 OpenSSL EVP)
+                              // 现在使用纯 Pascal 实现的 fafafa.ssl.base64
 
 type
   { TSSLUtils - SSL 工具类 }
@@ -80,11 +85,15 @@ implementation
 
 uses
   Math,
-  fafafa.ssl.openssl.api.consts,
-  fafafa.ssl.openssl.api.core,
-  fafafa.ssl.openssl.api.evp,
-  fafafa.ssl.openssl.api.crypto,
   fafafa.ssl.errors;
+
+// Phase 3.3 P1: 移除未使用的 OpenSSL 依赖
+// 原来导入了以下模块但实际未使用:
+// - fafafa.ssl.openssl.api.consts
+// - fafafa.ssl.openssl.api.core
+// - fafafa.ssl.openssl.api.evp
+// - fafafa.ssl.openssl.api.crypto
+// 这些导入导致 WinSSL 用户必须安装 OpenSSL DLL
 
 { StringsToArray - Phase 3.2 统一实现 }
 function StringsToArray(AStrings: TStrings): TSSLStringArray;
@@ -151,7 +160,7 @@ begin
     end;
     
     if LBase64 <> '' then
-      Result := TEncodingUtils.Base64Decode(LBase64);
+      Result := TBase64Utils.Decode(LBase64);
   finally
     LLines.Free;
   end;
@@ -168,7 +177,7 @@ begin
   if Length(ADER) = 0 then
     Exit;
 
-  LBase64 := TEncodingUtils.Base64Encode(ADER);
+  LBase64 := TBase64Utils.Encode(ADER);
   
   LLines := TStringList.Create;
   try

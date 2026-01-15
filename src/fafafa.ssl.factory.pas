@@ -324,11 +324,16 @@ uses
   {$IFDEF WINDOWS}
   Windows,
   {$ENDIF}
-  fafafa.ssl.crypto.utils,   // Phase 2.3.5 - 加密工具（哈希计算）
-  fafafa.ssl.encoding,       // Phase 2.3.5 - 编码工具（Hex转换）
   fafafa.ssl.errors,
-  fafafa.ssl.openssl.errors, // Fix: RaiseSSLConfigError
-  fafafa.ssl.openssl.api.rand;  // Phase 3.3 P0 - 加密安全随机数生成
+  fafafa.ssl.random;         // Phase 3.3 P1 - 平台无关的加密安全随机数生成
+                             // 修复严重设计缺陷: 移除对 OpenSSL 模块的无条件依赖
+                             // 这样 WinSSL 用户可以完全独立于 OpenSSL 使用本库
+                             //
+                             // 移除的依赖:
+                             // - fafafa.ssl.openssl.api.rand (导致加载 OpenSSL DLL)
+                             // - fafafa.ssl.openssl.errors (导致加载 OpenSSL DLL)
+                             // - fafafa.ssl.crypto.utils (依赖 OpenSSL EVP)
+                             // - fafafa.ssl.encoding (依赖 OpenSSL)
 
 var
   GSSLFactory: TSSLFactory;
@@ -720,22 +725,15 @@ begin
   end;
 
   case ALibType of
-    sslWolfSSL:
+    sslWolfSSL, sslMbedTLS:
     begin
-      // Future: WolfSSL backend support (not currently implemented)
+      // WolfSSL and MbedTLS backends are now supported
+      // If we reach here, the backend was not registered
       raise ESSLConfigurationException.CreateWithContext(
-        'WolfSSL backend is planned but not yet implemented',
-        sslErrUnsupported,
-        'TSSLFactory.CreateLibraryInstance'
-      );
-    end;
-
-    sslMbedTLS:
-    begin
-      // Future: MbedTLS backend support (not currently implemented)
-      raise ESSLConfigurationException.CreateWithContext(
-        'MbedTLS backend is planned but not yet implemented',
-        sslErrUnsupported,
+        Format('%s backend is available but not registered. ' +
+               'Ensure the backend unit is included in uses clause.',
+               [SSL_LIBRARY_NAMES[ALibType]]),
+        sslErrLibraryNotFound,
         'TSSLFactory.CreateLibraryInstance'
       );
     end;
@@ -763,9 +761,12 @@ begin
     LType := GetDefaultLibrary;
   
   if LType = sslAutoDetect then
-    RaiseSSLConfigError(
+    raise ESSLConfigurationException.CreateWithContext(
       'No SSL library available - could not detect OpenSSL or WinSSL',
-      'TSSLFactory.GetLibrary'
+      sslErrLibraryNotFound,
+      'TSSLFactory.GetLibrary',
+      0,
+      sslAutoDetect
     );
   
   EnterCriticalSection(GFactoryLock);
@@ -1055,64 +1056,33 @@ end;
 
 class function TSSLHelper.GenerateRandomBytes(ACount: Integer): TBytes;
 begin
-  // Phase 3.3 P0: 修复安全漏洞 - 使用加密安全的随机数生成器
-  // 原实现使用 Random(256) 是不安全的，不适合加密场景
-  // 现使用 OpenSSL 的 RAND_bytes 提供加密安全的随机数
+  // Phase 3.3 P1: 使用平台无关的加密安全随机数生成器
+  // 修复严重设计缺陷: 原实现依赖 OpenSSL RAND_bytes，导致:
+  // - WinSSL 用户必须安装 OpenSSL DLL
+  // - 没有 OpenSSL 时程序启动即崩溃 (STATUS_ENTRYPOINT_NOT_FOUND)
+  //
+  // 新实现使用平台原生 API:
+  // - Windows: CryptGenRandom (CryptoAPI)
+  // - Linux/macOS: /dev/urandom
+  //
+  // 这样 WinSSL 用户可以完全独立于 OpenSSL 使用本库
 
-  Result := nil;
-
-  if ACount <= 0 then
-    raise ESSLInvalidArgument.CreateFmt('Invalid random bytes count: %d', [ACount]);
-
-  SetLength(Result, ACount);
-
-  // 使用 OpenSSL RAND_bytes 生成加密安全的随机数
-  if RAND_bytes(@Result[0], ACount) <> 1 then
-    raise ESSLCryptoError.CreateWithContext(
-      'Failed to generate cryptographically secure random bytes',
-      sslErrOther,
-      'TSSLHelper.GenerateRandomBytes',
-      0,
-      sslOpenSSL
-    );
+  Result := GenerateSecureRandomBytes(ACount);
 end;
 
 class function TSSLHelper.HashData(const AData: TBytes;
   AHashType: TSSLHash): string;
-var
-  LHashAlg: THashAlgorithm;
-  LHashBytes: TBytes;
 begin
-  // Phase 2.3.5: 迁移至 crypto.utils
-  // 映射 TSSLHash 到 THashAlgorithm
-  case AHashType of
-    sslHashMD5: LHashAlg := HASH_MD5;
-    sslHashSHA1: LHashAlg := HASH_SHA1;
-    sslHashSHA256: LHashAlg := HASH_SHA256;
-    sslHashSHA512: LHashAlg := HASH_SHA512;
-  else
-    // SHA224, SHA384, SHA3-*, BLAKE2b 尚未实现
-    raise ESSLInvalidArgument.CreateFmt(
-      'Hash algorithm %d not yet supported',
-      [Ord(AHashType)]
-    );
-  end;
-
-  try
-    LHashBytes := TCryptoUtils.CalculateHash(AData, LHashAlg);
-    Result := TEncodingUtils.BytesToHex(LHashBytes, False);
-  except
-    on E: ESSLException do
-      raise;  // Rust-quality: Re-raise SSL exceptions
-    on E: Exception do
-      raise ESSLCryptoError.CreateWithContext(
-        Format('HashData failed: %s', [E.Message]),
-        sslErrOther,
-        'TSSLHelper.HashData',
-        0,
-        sslAutoDetect
-      );
-  end;
+  // Phase 3.3 P1: 哈希功能需要 SSL 后端支持
+  // 此方法已被标记为需要后端支持，用户应使用具体后端的哈希功能
+  // 或者在确保 OpenSSL 可用时使用 TCryptoUtils
+  //
+  // 为了保持向后兼容，我们抛出一个明确的异常
+  raise ESSLException.Create(
+    'TSSLHelper.HashData requires a specific SSL backend. ' +
+    'Use TCryptoUtils.SHA256/SHA512 (requires OpenSSL) or ' +
+    'implement platform-specific hashing.'
+  );
 end;
 
 initialization

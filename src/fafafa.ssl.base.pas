@@ -205,6 +205,8 @@ type
     sslErrCertificateExpired,// 证书过期
     sslErrCertificateRevoked,// 证书被撤销
     sslErrCertificateUnknown,// 未知证书
+    sslErrCertificateUntrusted, // 证书不受信任
+    sslErrHostnameMismatch,  // 主机名不匹配
     sslErrConnection,        // 连接错误
     sslErrTimeout,           // 超时
     sslErrIO,                // I/O错误
@@ -1261,6 +1263,8 @@ const
     '证书过期',
     '证书被撤销',
     '未知证书',
+    '证书不受信任',
+    '主机名不匹配',
     '连接错误',
     '超时',
     'I/O错误',
@@ -1299,6 +1303,8 @@ const
     'Certificate expired',
     'Certificate revoked',
     'Unknown certificate',
+    'Certificate untrusted',
+    'Hostname mismatch',
     'Connection error',
     'Timeout',
     'I/O error',

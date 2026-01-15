@@ -37,13 +37,16 @@ end;
 // ============================================================================
 
 procedure TestLibraryInitialization;
+var
+  Lib: ISSLLibrary;
 begin
   TestSection('Library Initialization Tests');
   
   // Test 1: Create library
   try
-    Library := CreateWinSSLLibrary;
-    if Library <> nil then
+    Lib := CreateWinSSLLibrary;
+    SSLLib := Lib;  // 保存到全局变量供后续测试使用
+    if Lib <> nil then
       TestPass('CreateWinSSLLibrary')
     else
       TestFail('CreateWinSSLLibrary', 'Returned nil');
@@ -54,17 +57,17 @@ begin
   
   // Test 2: Initialize library
   try
-    if Library.Initialize then
+    if Lib.Initialize then
       TestPass('Library.Initialize')
     else
-      TestFail('Library.Initialize', 'Returned False: ' + Library.GetLastErrorString);
+      TestFail('Library.Initialize', 'Returned False');
   except
     on E: Exception do
       TestFail('Library.Initialize', E.Message);
   end;
   
   // Test 3: Check if initialized
-  if Library.IsInitialized then
+  if Lib.IsInitialized then
     TestPass('Library.IsInitialized')
   else
     TestFail('Library.IsInitialized', 'Not initialized');
@@ -83,7 +86,7 @@ begin
   
   // Test 1: Get library type
   try
-    LibType := Library.GetLibraryType;
+    LibType := SSLLib.GetLibraryType;
     if LibType = sslWinSSL then
       TestPass('GetLibraryType')
     else
@@ -95,7 +98,7 @@ begin
   
   // Test 2: Get version string
   try
-    VersionStr := Library.GetVersionString;
+    VersionStr := SSLLib.GetVersionString;
     if Pos('Schannel', VersionStr) > 0 then
       TestPass('GetVersionString: ' + VersionStr)
     else
@@ -107,7 +110,7 @@ begin
   
   // Test 3: Get version number
   try
-    if Library.GetVersionNumber > 0 then
+    if SSLLib.GetVersionNumber > 0 then
       TestPass('GetVersionNumber')
     else
       TestFail('GetVersionNumber', 'Invalid version number');
@@ -118,7 +121,7 @@ begin
   
   // Test 4: Get compile flags
   try
-    VersionStr := Library.GetCompileFlags;
+    VersionStr := SSLLib.GetCompileFlags;
     if Length(VersionStr) > 0 then
       TestPass('GetCompileFlags: ' + VersionStr)
     else
@@ -138,19 +141,19 @@ begin
   TestSection('Protocol Support Tests');
   
   // Test 1: TLS 1.2 support
-  if Library.IsProtocolSupported(sslProtocolTLS12) then
+  if SSLLib.IsProtocolSupported(sslProtocolTLS12) then
     TestPass('TLS 1.2 supported')
   else
     TestFail('TLS 1.2 supported', 'Should be supported');
     
   // Test 2: SSL 2.0 not supported
-  if not Library.IsProtocolSupported(sslProtocolSSL2) then
+  if not SSLLib.IsProtocolSupported(sslProtocolSSL2) then
     TestPass('SSL 2.0 not supported (correct)')
   else
     TestFail('SSL 2.0 not supported', 'Should not be supported');
     
   // Test 3: SSL 3.0 not supported
-  if not Library.IsProtocolSupported(sslProtocolSSL3) then
+  if not SSLLib.IsProtocolSupported(sslProtocolSSL3) then
     TestPass('SSL 3.0 not supported (correct)')
   else
     TestFail('SSL 3.0 not supported', 'Should not be supported');
@@ -165,20 +168,20 @@ begin
   TestSection('Feature Support Tests');
 
   // Test 1: SNI support
-  if Library.IsFeatureSupported(sslFeatSNI) then
+  if SSLLib.IsFeatureSupported(sslFeatSNI) then
     TestPass('SNI supported')
   else
     TestFail('SNI supported', 'Should be supported');
 
   // Test 2: Session cache support
-  if Library.IsFeatureSupported(sslFeatSessionCache) then
+  if SSLLib.IsFeatureSupported(sslFeatSessionCache) then
     TestPass('Session cache supported')
   else
     TestFail('Session cache supported', 'Should be supported');
 end;
 
 // ============================================================================
-// 测试上下文创�?
+// 测试上下文创建
 // ============================================================================
 
 procedure TestContextCreation;
@@ -187,7 +190,7 @@ begin
   
   // Test 1: Create client context
   try
-    Context := Library.CreateContext(sslCtxClient);
+    Context := SSLLib.CreateContext(sslCtxClient);
     if Context <> nil then
       TestPass('CreateContext (client)')
     else
@@ -249,8 +252,8 @@ begin
   
   // Test 1: Clear error
   try
-    Library.ClearError;
-    if Library.GetLastError = 0 then
+    SSLLib.ClearError;
+    if SSLLib.GetLastError = 0 then
       TestPass('ClearError')
     else
       TestFail('ClearError', 'Error not cleared');
@@ -272,8 +275,8 @@ begin
   
   // Test 1: Get statistics
   try
-    Stats := Library.GetStatistics;
-    // 至少应该有一个上下文被创�?
+    Stats := SSLLib.GetStatistics;
+    // 至少应该有一个上下文被创建
     if Stats.ConnectionsTotal > 0 then
       TestPass('GetStatistics (ConnectionsTotal > 0)')
     else
@@ -285,8 +288,8 @@ begin
   
   // Test 2: Reset statistics
   try
-    Library.ResetStatistics;
-    Stats := Library.GetStatistics;
+    SSLLib.ResetStatistics;
+    Stats := SSLLib.GetStatistics;
     if Stats.ConnectionsTotal = 0 then
       TestPass('ResetStatistics')
     else
@@ -298,7 +301,7 @@ begin
 end;
 
 // ============================================================================
-// 测试库清�?
+// 测试库清理
 // ============================================================================
 
 procedure TestLibraryFinalization;
@@ -307,8 +310,8 @@ begin
   
   // Test 1: Finalize library
   try
-    Library.Finalize;
-    if not Library.IsInitialized then
+    SSLLib.Finalize;
+    if not SSLLib.IsInitialized then
       TestPass('Library.Finalize')
     else
       TestFail('Library.Finalize', 'Still initialized');
@@ -319,7 +322,7 @@ begin
 end;
 
 // ============================================================================
-// 主程�?
+// 主程序
 // ============================================================================
 
 begin

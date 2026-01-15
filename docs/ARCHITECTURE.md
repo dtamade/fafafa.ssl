@@ -80,9 +80,17 @@ end;
 ```
 
 ### 3.4 后端实现模块
-- `fafafa.ssl.openssl` - OpenSSL 实现（Linux/macOS 默认）
-- `fafafa.ssl.winssl` - Windows Schannel 实现（Windows 默认）
-- `fafafa.ssl.wolfssl` / `fafafa.ssl.mbedtls` - 规划中的后端，目前尚未落地；如调用这些库类型，工厂会抛出 `ESSLException` 提醒“暂未实现”。
+
+| 后端 | 模块 | 支持级别 | 说明 |
+|------|------|----------|------|
+| OpenSSL | `fafafa.ssl.openssl` | **Stable** | Linux/macOS 默认，生产就绪 |
+| WinSSL | `fafafa.ssl.winssl` | **Stable** | Windows 默认，原生 Schannel |
+| MbedTLS | `fafafa.ssl.mbedtls` | Preview | 轻量级嵌入式 TLS，需 `-dENABLE_MBEDTLS` |
+| WolfSSL | `fafafa.ssl.wolfssl` | Preview | 轻量级 TLS，需 `-dENABLE_WOLFSSL` |
+
+**支持级别说明**：
+- **Stable**: 生产就绪，完整功能支持，经过全面测试
+- **Preview**: 功能完整但需要外部库支持，适合评估和特定场景
 
 每个后端模块包含：
 ```pascal

@@ -189,6 +189,10 @@
 3. **[TDD_STATUS_AND_ROADMAP.md](TDD_STATUS_AND_ROADMAP.md)** - TDD 改进计划 ⚠️
 4. **[KDF_TEST_RESULTS.md](KDF_TEST_RESULTS.md)** - 专项测试
 
+### 🗺️ 路线图和指南 (2026 新增)
+1. **[DEVELOPMENT_ROADMAP_2026.md](DEVELOPMENT_ROADMAP_2026.md)** - 2026 开发路线图 ⭐ **新**
+2. **[PROGRESSIVE_DISCLOSURE_GUIDE.md](PROGRESSIVE_DISCLOSURE_GUIDE.md)** - 渐进式披露指南 ⭐ **新**
+
 ---
 
 ## 📊 文档统计
@@ -199,7 +203,8 @@
 | 测试文档 | 5 | ~1700 |
 | 兼容性文档 | 2 | ~700 |
 | 项目总结 | 1 | ~500 |
-| **总计** | **11** | **~5400** |
+| 路线图和指南 | 2 | ~450 |
+| **总计** | **13** | **~5850** |
 
 ---
 
@@ -229,6 +234,12 @@
 ### "我想了解 TDD 和测试质量"
 👉 **[TDD_STATUS_AND_ROADMAP.md](TDD_STATUS_AND_ROADMAP.md)** ⚠️ **重要**
 
+### "我想了解 2026 开发计划"
+👉 **[DEVELOPMENT_ROADMAP_2026.md](DEVELOPMENT_ROADMAP_2026.md)** ⭐ **新**
+
+### "我不知道从哪个 API 层级开始"
+👉 **[PROGRESSIVE_DISCLOSURE_GUIDE.md](PROGRESSIVE_DISCLOSURE_GUIDE.md)** ⭐ **新**
+
 ---
 
 ## 📝 文档更新日志
@@ -242,6 +253,10 @@
 | 2025-10-02 | WORKING.md | ✏️ 添加 Phase 3 完成记录 |
 | 2025-10-02 | README.md | ✏️ 更新为实际项目状态 |
 | 2025-10-02 | DOCUMENTATION_INDEX.md | ✏️ 添加 TDD 文档 |
+| 2026-01-09 | DEVELOPMENT_ROADMAP_2026.md | 🆕 2026 开发路线图 |
+| 2026-01-09 | PROGRESSIVE_DISCLOSURE_GUIDE.md | 🆕 渐进式披露指南 |
+| 2026-01-09 | MbedTLS 后端框架 | 🆕 src/fafafa.ssl.mbedtls.* (base/api/lib) |
+| 2026-01-10 | 硬件加速模块 | 🆕 src/fafafa.ssl.hardware.pas + openssl.hardware.pas |
 | 2025-09-30 | OPENSSL3_COMPATIBILITY_STRATEGY.md | ✅ 完成 |
 | 2025-09-30 | SHA3_ISSUE_ANALYSIS.md | ✅ 完成 |
 | 2025-09-30 | TESTING_README.md | ✅ 完成 |
@@ -289,5 +304,5 @@
 
 ---
 
-**最后更新**: 2025-10-02  
+**最后更新**: 2026-01-10
 **维护者**: fafafa.ssl 项目组

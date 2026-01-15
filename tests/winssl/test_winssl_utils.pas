@@ -4,6 +4,7 @@ program test_winssl_utils;
 
 uses
   SysUtils,
+  fafafa.ssl.base,
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.utils;
 
@@ -120,7 +121,7 @@ begin
   TestSection('Protocol Version Mapping Tests');
   
   // Test 1: TLS 1.2 client flag
-  Versions := [sslpvTLS1_2];
+  Versions := [sslProtocolTLS12];
   Flags := ProtocolVersionsToSchannelFlags(Versions, False);
   if (Flags and SP_PROT_TLS1_2_CLIENT) <> 0 then
     TestPass('ProtocolVersionsToSchannelFlags - TLS 1.2 Client')
@@ -128,7 +129,7 @@ begin
     TestFail('ProtocolVersionsToSchannelFlags - TLS 1.2 Client', 'Flag not set');
     
   // Test 2: TLS 1.2 server flag
-  Versions := [sslpvTLS1_2];
+  Versions := [sslProtocolTLS12];
   Flags := ProtocolVersionsToSchannelFlags(Versions, True);
   if (Flags and SP_PROT_TLS1_2_SERVER) <> 0 then
     TestPass('ProtocolVersionsToSchannelFlags - TLS 1.2 Server')
@@ -136,7 +137,7 @@ begin
     TestFail('ProtocolVersionsToSchannelFlags - TLS 1.2 Server', 'Flag not set');
     
   // Test 3: Multiple versions (TLS 1.2 + TLS 1.3)
-  Versions := [sslpvTLS1_2, sslpvTLS1_3];
+  Versions := [sslProtocolTLS12, sslProtocolTLS13];
   Flags := ProtocolVersionsToSchannelFlags(Versions, False);
   if ((Flags and SP_PROT_TLS1_2_CLIENT) <> 0) and 
      ((Flags and SP_PROT_TLS1_3_CLIENT) <> 0) then
@@ -147,33 +148,33 @@ begin
   // Test 4: Parse flags back to versions
   Flags := SP_PROT_TLS1_2_CLIENT or SP_PROT_TLS1_3_CLIENT;
   Versions := SchannelFlagsToProtocolVersions(Flags, False);
-  if (sslpvTLS1_2 in Versions) and (sslpvTLS1_3 in Versions) then
+  if (sslProtocolTLS12 in Versions) and (sslProtocolTLS13 in Versions) then
     TestPass('SchannelFlagsToProtocolVersions - Multiple versions')
   else
     TestFail('SchannelFlagsToProtocolVersions - Multiple versions', 'Versions not parsed correctly');
     
   // Test 5: Get protocol version name
-  VersionName := GetProtocolVersionName(sslpvTLS1_2);
+  VersionName := GetProtocolVersionName(sslProtocolTLS12);
   if VersionName = 'TLS 1.2' then
     TestPass('GetProtocolVersionName - TLS 1.2')
   else
     TestFail('GetProtocolVersionName - TLS 1.2', 'Wrong name: ' + VersionName);
     
   // Test 6: Get protocol version name for TLS 1.3
-  VersionName := GetProtocolVersionName(sslpvTLS1_3);
+  VersionName := GetProtocolVersionName(sslProtocolTLS13);
   if VersionName = 'TLS 1.3' then
     TestPass('GetProtocolVersionName - TLS 1.3')
   else
     TestFail('GetProtocolVersionName - TLS 1.3', 'Wrong name: ' + VersionName);
     
   // Test 7: Check deprecated protocol (SSL 2.0)
-  if IsProtocolDeprecated(sslpvSSL2) then
+  if IsProtocolDeprecated(sslProtocolSSL2) then
     TestPass('IsProtocolDeprecated - SSL 2.0')
   else
     TestFail('IsProtocolDeprecated - SSL 2.0', 'Should be deprecated');
     
   // Test 8: Check non-deprecated protocol (TLS 1.2)
-  if not IsProtocolDeprecated(sslpvTLS1_2) then
+  if not IsProtocolDeprecated(sslProtocolTLS12) then
     TestPass('IsProtocolDeprecated - TLS 1.2')
   else
     TestFail('IsProtocolDeprecated - TLS 1.2', 'Should not be deprecated');

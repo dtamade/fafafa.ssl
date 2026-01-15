@@ -113,6 +113,10 @@ type
   TwolfSSL_SESSION_free = procedure(session: PWOLFSSL_SESSION); cdecl;
   TwolfSSL_session_reused = function(ssl: PWOLFSSL): Integer; cdecl;
 
+  // 会话序列化 (新增)
+  TwolfSSL_i2d_SSL_SESSION = function(session: PWOLFSSL_SESSION; pp: PPByte): Integer; cdecl;
+  TwolfSSL_d2i_SSL_SESSION = function(session: PPWOLFSSL_SESSION; const pp: PPByte; length: Integer): PWOLFSSL_SESSION; cdecl;
+
   // ALPN 支持 (新增)
   TwolfSSL_UseALPN = function(ssl: PWOLFSSL; const protocol_name_list: PAnsiChar;
     protocol_name_listSz: Cardinal; options: Integer): Integer; cdecl;
@@ -186,6 +190,10 @@ var
   wolfSSL_set_session: TwolfSSL_set_session = nil;
   wolfSSL_SESSION_free: TwolfSSL_SESSION_free = nil;
   wolfSSL_session_reused: TwolfSSL_session_reused = nil;
+
+  // 会话序列化 (新增)
+  wolfSSL_i2d_SSL_SESSION: TwolfSSL_i2d_SSL_SESSION = nil;
+  wolfSSL_d2i_SSL_SESSION: TwolfSSL_d2i_SSL_SESSION = nil;
 
   // ALPN 支持 (新增)
   wolfSSL_UseALPN: TwolfSSL_UseALPN = nil;
@@ -312,6 +320,10 @@ begin
   wolfSSL_SESSION_free := TwolfSSL_SESSION_free(GetProc('wolfSSL_SESSION_free'));
   wolfSSL_session_reused := TwolfSSL_session_reused(GetProc('wolfSSL_session_reused'));
 
+  // 会话序列化 (新增)
+  wolfSSL_i2d_SSL_SESSION := TwolfSSL_i2d_SSL_SESSION(GetProc('wolfSSL_i2d_SSL_SESSION'));
+  wolfSSL_d2i_SSL_SESSION := TwolfSSL_d2i_SSL_SESSION(GetProc('wolfSSL_d2i_SSL_SESSION'));
+
   // ALPN 支持 (新增)
   wolfSSL_UseALPN := TwolfSSL_UseALPN(GetProc('wolfSSL_UseALPN'));
   wolfSSL_ALPN_GetProtocol := TwolfSSL_ALPN_GetProtocol(GetProc('wolfSSL_ALPN_GetProtocol'));
@@ -398,6 +410,10 @@ begin
   wolfSSL_set_session := nil;
   wolfSSL_SESSION_free := nil;
   wolfSSL_session_reused := nil;
+
+  // 会话序列化
+  wolfSSL_i2d_SSL_SESSION := nil;
+  wolfSSL_d2i_SSL_SESSION := nil;
 
   // ALPN 支持
   wolfSSL_UseALPN := nil;

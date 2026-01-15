@@ -71,7 +71,9 @@ type
   PPWOLFSSL_X509 = ^PWOLFSSL_X509;
   PWOLFSSL_X509_STORE = Pointer;
   PWOLFSSL_SESSION = Pointer;
+  PPWOLFSSL_SESSION = ^PWOLFSSL_SESSION;  // 添加: 会话指针的指针类型
   PPAnsiChar = ^PAnsiChar;
+  PPByte = ^PByte;  // 添加: 字节指针的指针类型
 
   { WolfSSL 后端状态 }
   TWolfSSLBackendState = (

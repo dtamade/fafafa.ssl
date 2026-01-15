@@ -219,6 +219,111 @@ generate_report() {
     info "✅ Report generated: report_${DATE}.md"
 }
 
+# Run test quality audit
+run_audit() {
+    info "Running test quality audit..."
+    
+    cd "$PROJECT_ROOT"
+    
+    AUDIT_BIN="$PROJECT_ROOT/tools/test_audit/bin"
+    AUDIT_OUTPUT="$PROJECT_ROOT/reports/audit"
+    
+    mkdir -p "$AUDIT_BIN" "$AUDIT_OUTPUT"
+    
+    # Compile audit tool if needed
+    if [ ! -f "$AUDIT_BIN/test_audit" ]; then
+        info "  Compiling audit tool..."
+        $FPC_BIN $FPC_COMMON_OPTS \
+            -Futools/test_audit \
+            -o"$AUDIT_BIN/test_audit" \
+            tools/test_audit/test_audit_main.pas || {
+            error "Failed to compile test_audit"
+            return 1
+        }
+    fi
+    
+    # Run audit
+    info "  Running audit analysis..."
+    "$AUDIT_BIN/test_audit" \
+        -s src \
+        -t tests \
+        -o "$AUDIT_OUTPUT" \
+        -v || {
+        warn "Audit completed with warnings or quality below threshold"
+    }
+    
+    # Check for quality gate
+    QUALITY_THRESHOLD="${QUALITY_THRESHOLD:-70}"
+    
+    # Parse latest audit report for overall score
+    LATEST_REPORT=$(ls -t "$AUDIT_OUTPUT"/audit_*.json 2>/dev/null | head -1)
+    if [ -f "$LATEST_REPORT" ]; then
+        # Extract overall score using grep/sed (simple JSON parsing)
+        OVERALL_SCORE=$(grep -o '"Overall":[0-9]*' "$LATEST_REPORT" | grep -o '[0-9]*' | head -1)
+        
+        if [ -n "$OVERALL_SCORE" ]; then
+            info "  Overall Quality Score: $OVERALL_SCORE%"
+            
+            if [ "$OVERALL_SCORE" -lt "$QUALITY_THRESHOLD" ]; then
+                error "Quality score ($OVERALL_SCORE%) below threshold ($QUALITY_THRESHOLD%)"
+                return 1
+            else
+                info "✅ Quality gate passed: $OVERALL_SCORE% >= $QUALITY_THRESHOLD%"
+            fi
+        fi
+    fi
+    
+    # Archive audit results
+    if [ -d "$AUDIT_OUTPUT" ]; then
+        mkdir -p "$AUDIT_OUTPUT/archive"
+        for f in "$AUDIT_OUTPUT"/audit_*.md "$AUDIT_OUTPUT"/audit_*.json; do
+            if [ -f "$f" ]; then
+                cp "$f" "$AUDIT_OUTPUT/archive/" 2>/dev/null || true
+            fi
+        done
+        info "  Audit results archived"
+    fi
+    
+    info "✅ Test quality audit completed"
+    return 0
+}
+
+# Generate quality trend report
+generate_quality_trend() {
+    info "Generating quality trend report..."
+    
+    cd "$PROJECT_ROOT"
+    
+    AUDIT_OUTPUT="$PROJECT_ROOT/reports/audit"
+    TREND_FILE="$AUDIT_OUTPUT/quality_trend.csv"
+    
+    # Initialize trend file if not exists
+    if [ ! -f "$TREND_FILE" ]; then
+        echo "Date,Overall,Coverage,Boundary,Error,Crypto,Thread,Resource,Backend" > "$TREND_FILE"
+    fi
+    
+    # Parse latest audit report
+    LATEST_REPORT=$(ls -t "$AUDIT_OUTPUT"/audit_*.json 2>/dev/null | head -1)
+    if [ -f "$LATEST_REPORT" ]; then
+        # Extract scores (simple parsing)
+        OVERALL=$(grep -o '"Overall":[0-9]*' "$LATEST_REPORT" | grep -o '[0-9]*' | head -1)
+        COVERAGE=$(grep -o '"Coverage":[0-9]*' "$LATEST_REPORT" | grep -o '[0-9]*' | head -1)
+        BOUNDARY=$(grep -o '"BoundaryTesting":[0-9]*' "$LATEST_REPORT" | grep -o '[0-9]*' | head -1)
+        ERROR=$(grep -o '"ErrorHandling":[0-9]*' "$LATEST_REPORT" | grep -o '[0-9]*' | head -1)
+        CRYPTO=$(grep -o '"CryptoTesting":[0-9]*' "$LATEST_REPORT" | grep -o '[0-9]*' | head -1)
+        THREAD=$(grep -o '"ThreadSafety":[0-9]*' "$LATEST_REPORT" | grep -o '[0-9]*' | head -1)
+        RESOURCE=$(grep -o '"ResourceManagement":[0-9]*' "$LATEST_REPORT" | grep -o '[0-9]*' | head -1)
+        BACKEND=$(grep -o '"BackendConsistency":[0-9]*' "$LATEST_REPORT" | grep -o '[0-9]*' | head -1)
+        
+        # Append to trend file
+        echo "$DATE,$OVERALL,$COVERAGE,$BOUNDARY,$ERROR,$CRYPTO,$THREAD,$RESOURCE,$BACKEND" >> "$TREND_FILE"
+        
+        info "  Quality trend updated: $TREND_FILE"
+    fi
+    
+    info "✅ Quality trend report generated"
+}
+
 # Clean build artifacts
 clean() {
     info "Cleaning build artifacts..."
@@ -249,6 +354,10 @@ main() {
             run_benchmarks
             generate_report
             ;;
+        audit)
+            run_audit
+            generate_quality_trend
+            ;;
         clean)
             clean
             ;;
@@ -258,10 +367,12 @@ main() {
             run_integration_tests
             run_benchmarks
             generate_report
+            run_audit
+            generate_quality_trend
             ;;
         *)
             error "Unknown command: $command"
-            echo "Usage: $0 [build|test|bench|clean|all]"
+            echo "Usage: $0 [build|test|bench|audit|clean|all]"
             exit 1
             ;;
     esac

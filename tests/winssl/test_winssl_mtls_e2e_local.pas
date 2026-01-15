@@ -47,7 +47,8 @@ begin
   if not Result then begin closesocket(aSocket); aSocket := INVALID_SOCKET; end;
 end;
 
-function Env(const name, defVal: string = ''): string; begin Result := GetEnvironmentVariable(name); if Result = '' then Result := defVal; end;
+function Env(const name: string; const defVal: string): string; begin Result := GetEnvironmentVariable(name); if Result = '' then Result := defVal; end;
+function EnvDefault(const name: string): string; begin Result := GetEnvironmentVariable(name); end;
 
 procedure Test_mTLS_E2E_Local;
 var
@@ -62,9 +63,9 @@ begin
 
   Host := Env('FAFAFA_WINSSL_MTLS_SERVER', '127.0.0.1');
   Port := StrToIntDef(Env('FAFAFA_WINSSL_MTLS_PORT', '44330'), 44330);
-  Pfx := Env('FAFAFA_WINSSL_PFX');
-  PfxPass := Env('FAFAFA_WINSSL_PFX_PASSWORD');
-  CaFile := Env('FAFAFA_TLS_CA');
+  Pfx := Env('FAFAFA_WINSSL_PFX', '');
+  PfxPass := Env('FAFAFA_WINSSL_PFX_PASSWORD', '');
+  CaFile := Env('FAFAFA_TLS_CA', '');
 
   if (Pfx = '') then begin Check('环境变量', False, '缺少 FAFAFA_WINSSL_PFX'); Exit; end;
 
@@ -98,17 +99,10 @@ begin
 
     if not ConnectToHost(Host, Port, S) then begin Check('TCP 连接到 ' + Host + ':' + IntToStr(Port), False); Exit; end;
     try
-      Conn := Ctx.CreateConnection(S);
+      Conn := Ctx.CreateConnection(THandle(S));
       Check('创建 SSL 连接对象', Conn <> nil);
-      ok := (Conn <> nil) and Conn.Connect;
+      ok := (Conn <> nil) and (Conn.DoHandshake = sslHsCompleted);
       Check('mTLS 握手', ok);
-      if ok then
-      begin
-        var info := Conn.GetConnectionInfo;
-        WriteLn('  协议: ', SSL_PROTOCOL_NAMES[info.ProtocolVersion]);
-        WriteLn('  密码套件: ', info.CipherSuite);
-        WriteLn('  复用: ', BoolToStr(info.IsResumed, True));
-      end;
       if ok then Conn.Shutdown;
     finally
       if S <> INVALID_SOCKET then closesocket(S);

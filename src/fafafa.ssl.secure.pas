@@ -108,8 +108,9 @@ implementation
 
 uses
   fafafa.ssl.exceptions,  // Phase 3.3 P0 - 统一异常定义
+  fafafa.ssl.random,      // Phase P0 - 平台无关的安全随机数生成
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.api.rand,
+  // fafafa.ssl.openssl.api.rand - P0 移除：TSecureRandom 已迁移到 fafafa.ssl.random
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.kdf;
 
@@ -283,59 +284,19 @@ end;
 { TSecureRandom }
 
 class function TSecureRandom.Generate(ASize: Integer): TBytes;
-var
-  I: Integer;
-  LRetryCount: Integer;
 begin
-  SetLength(Result, ASize);
-  if ASize <= 0 then
-    Exit;
-
-  // Try to use OpenSSL RAND_bytes (cryptographically secure)
-  if Assigned(RAND_bytes) then
-  begin
-    // First attempt
-    if RAND_bytes(@Result[0], ASize) = 1 then
-      Exit;
-
-    // If failed, try to seed the PRNG and retry
-    if Assigned(RAND_poll) then
-    begin
-      TSecurityLog.Warning('SecureRandom', 'RAND_bytes failed, attempting RAND_poll to seed PRNG');
-      RAND_poll();
-
-      // Retry after seeding
-      if RAND_bytes(@Result[0], ASize) = 1 then
-      begin
-        TSecurityLog.Info('SecureRandom', 'RAND_bytes succeeded after RAND_poll');
-        Exit;
-      end;
-    end;
-  end;
-
-  // If we reach here, cryptographic RNG is not available
-  // In production mode, this is a critical error - we should NOT fall back to insecure RNG
-  {$IFDEF RELEASE}
-  raise ESSLError.Create('Cryptographically secure random number generator not available. ' +
-                        'OpenSSL RAND_bytes is required for secure operation. ' +
-                        'Ensure OpenSSL is properly loaded and initialized.');
-  {$ELSE}
-  // In debug mode, allow fallback with strong warning
-  TSecurityLog.Error('SecureRandom', 'CRITICAL: Falling back to non-cryptographic random number generator. ' +
-                    'This is NOT secure for production use!');
-  WriteLn('');
-  WriteLn('╔════════════════════════════════════════════════════════════╗');
-  WriteLn('║ SECURITY WARNING: Non-cryptographic RNG in use!           ║');
-  WriteLn('║ OpenSSL RAND_bytes not available.                         ║');
-  WriteLn('║ This is ONLY acceptable in DEBUG builds.                  ║');
-  WriteLn('║ DO NOT use this in production!                            ║');
-  WriteLn('╚════════════════════════════════════════════════════════════╝');
-  WriteLn('');
-
-  Randomize;
-  for I := 0 to ASize - 1 do
-    Result[I] := Random(256);
-  {$ENDIF}
+  // P0 安全修复：使用平台无关的加密安全随机数生成器
+  // 消除对 OpenSSL RAND_bytes 的直接依赖，实现 WinSSL 零依赖目标
+  //
+  // 新实现使用 fafafa.ssl.random 模块：
+  // - Windows: CryptGenRandom (CryptoAPI)
+  // - Linux/macOS: /dev/urandom
+  //
+  // 优点：
+  // 1. WinSSL 用户无需安装 OpenSSL DLL
+  // 2. 统一的跨平台行为
+  // 3. 始终使用加密安全的随机源（无不安全降级）
+  Result := GenerateSecureRandomBytes(ASize);
 end;
 
 class function TSecureRandom.GenerateInt(AMin, AMax: Integer): Integer;

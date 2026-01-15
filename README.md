@@ -1,242 +1,146 @@
 # fafafa.ssl - Production-Ready SSL/TLS Library
 
-[![Production Ready](https://img.shields.io/badge/Production%20Ready-99.5%25-brightgreen)](https://github.com)
-[![Tests](https://img.shields.io/badge/Tests-1086%20passed%20(99.1%25)-success)](docs/PHASE_7_FINAL_REPORT.md)
-[![OpenSSL](https://img.shields.io/badge/OpenSSL-1.1.1%2B%20%7C%203.0%2B-blue)](https://www.openssl.org/)
-[![TLS](https://img.shields.io/badge/TLS-1.2%20%7C%201.3-blue)](https://tools.ietf.org/html/rfc8446)
-[![FPC](https://img.shields.io/badge/FreePascal-3.2.0%2B-orange)](https://www.freepascal.org/)
-[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+[![Production Ready](https://img.shields.io/badge/Production%20Ready-99.5%25-brightgreen)](https://github.com) [![Tests](https://img.shields.io/badge/Tests-1086%20passed-success)](docs/archive/phase_reports/PHASE_7_FINAL_REPORT.md) [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-**企业级 SSL/TLS 加密库** - 为 FreePascal 提供完整的 OpenSSL 封装
+**企业级 SSL/TLS 加密库** - 为 FreePascal 提供完整的 TLS/加密封装，支持 OpenSSL、WinSSL、MbedTLS、WolfSSL 四后端
 
-**✅ 生产环境认证完成** - 通过 7 个阶段、1,086 项测试、52 个真实网站验证
-
-## 🌟 核心特性
-
-- ✅ **双后端支持**: OpenSSL (Linux/macOS/Windows) + WinSSL (Windows Native)
-- ✅ **简洁API**: 1行代码实现HTTPS连接
-- ✅ **生产级加密**: AES-256-GCM, PBKDF2, SHA-256/512
-- ✅ **完整证书管理**: X.509解析、验证、生成、CRL/OCSP
-- ✅ **会话复用**: 70-90%握手性能提升
-- ✅ **专业错误处理**: 33种错误码，中英文双语
-- ✅ **全面测试**: 70+真实网站验证，E2E场景覆盖
-- ✅ **CI/CD自动化**: 一键构建、测试、性能回归检测
-- 🆕 **Rust 风格 Result 类型**: TSSLDataResult, TSSLOperationResult
-- 🆕 **流式 Connection Builder**: 对标 rustls ConnectionConfig
-- 🆕 **完整 Try 方法覆盖**: TrySHA256, TrySecureRandom 等
-- 🆕 **Quick API**: 证书快速生成与检测 (TSSLQuick)
-- 🆕 **PFX/P12 支持**: WinSSL 后端原生支持 PFX 加载
-
-
-## 📦 快速开始
-
-### 安装要求
+## 📦 30秒快速开始
 
 ```bash
-# Ubuntu/Debian
+# 安装 (Ubuntu/Debian)
 sudo apt-get install libssl-dev fpc
-
-# 验证
-openssl version  # 应显示 1.1.1+ 或 3.0+
-fpc -i          # 应显示 3.2.0+
 ```
 
-### 30秒示例
+### 最小示例
+
+完整可运行代码，包含 TCP 连接 - 复制即可运行：
 
 ```pascal
-program HelloTLS;
+program quickstart_complete;
+{$mode objfpc}{$H+}
 
 uses
-  SysUtils,
-  fafafa.ssl,
-  fafafa.ssl.context.builder;
+  SysUtils, Math,
+  fafafa.ssl.factory, fafafa.ssl.base,
+  fafafa.ssl.openssl.api, fafafa.ssl.openssl.backed,
+  fafafa.examples.tcp;  // 跨平台 TCP 辅助
 
 var
+  Lib: ISSLLibrary;
   Ctx: ISSLContext;
-  TLS: TSSLConnector;
-  Stream: TSSLStream;
-  YourSocket: THandle; // 你自己创建并连接到 www.google.com:443 的 TCP socket
-begin
-  // 1) 创建客户端上下文（验证对端 + 自动加载系统根证书）
-  Ctx := TSSLContextBuilder.Create
-    .WithTLS12And13
-    .WithVerifyPeer
-    .WithSystemRoots
-    .BuildClient;
+  Conn: ISSLConnection;
+  Socket: TSocketHandle;
+  NetError: string;
 
-  // 2) 建立 TLS（ServerName 是连接级别配置：SNI + hostname verification）
-  TLS := TSSLConnector.FromContext(Ctx);
-  Stream := TLS.ConnectSocket(YourSocket, 'www.google.com');
-  try
-    WriteLn('✓ TLS 连接成功');
-    WriteLn('协议: ', Ord(Stream.Connection.GetProtocolVersion));
-    WriteLn('密码套件: ', Stream.Connection.GetCipherName);
-  finally
-    Stream.Free;
-  end;
+begin
+  // 1) 初始化网络 (Windows 需要)
+  InitNetwork(NetError);
+
+  // 2) TCP 连接
+  Socket := ConnectTCP('www.google.com', 443);
+
+  // 3) 初始化 OpenSSL
+  Lib := TSSLFactory.GetLibrary(sslOpenSSL);
+  Lib.Initialize;
+
+  // 4) 创建 SSL 上下文和连接
+  Ctx := Lib.CreateContext(sslCtxClient);
+  Ctx.SetVerifyMode([sslVerifyNone]);
+  Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
+
+  Conn := Ctx.CreateConnection(Socket);
+  (Conn as ISSLClientConnection).SetServerName('www.google.com');
+  Conn.Connect;
+
+  // 5) 显示连接信息
+  WriteLn('TLS 连接成功!');
+  WriteLn('协议: TLS 1.', Ord(Conn.GetProtocolVersion) - Ord(sslProtocolTLS10));
+  WriteLn('密码套件: ', Conn.GetCipherName);
+
+  // 清理
+  Conn.Shutdown;
+  CloseSocket(Socket);
+  CleanupNetwork;
 end.
 ```
 
 ### 编译运行
 
 ```bash
-fpc -Fusrc -Fusrc/openssl your_app.pas
-./your_app
+fpc -Fusrc -Fusrc/openssl -Fuexamples quickstart_complete.pas
+./quickstart_complete
 ```
+
+输出示例：
+```
+TLS 连接成功!
+协议: TLS 1.3
+密码套件: TLS_AES_256_GCM_SHA384
+```
+
+## 🌟 核心特性
+
+| 特性 | 描述 |
+|------|------|
+| **四后端支持** | OpenSSL + WinSSL (Stable) / MbedTLS + WolfSSL (Preview) |
+| **现代 API** | Rust 风格 Result 类型、Fluent Builder、Try 方法 |
+| **生产级加密** | AES-256-GCM, PBKDF2, SHA-256/512, TLS 1.2/1.3 |
+| **完整证书管理** | X.509 解析/验证/生成、CRL/OCSP |
+| **全面测试** | 1,086 项测试、70+ 真实网站验证 |
 
 ## 📚 文档
 
-| 文档 | 描述 |
+| 入口 | 描述 |
 |------|------|
-| [API Reference](docs/API_Reference.md) | 完整API文档 |
-| [Getting Started](docs/GETTING_STARTED.md) | 入门（推荐入口与最小示例） |
-| [Quick Start](docs/QUICKSTART.md) | 快速开始指南 |
-| [Examples](examples/) | 95+示例程序 |
+| [文档索引](docs/INDEX.md) | **推荐入口** - 渐进式文档导航 |
+| [API 参考](docs/API_REFERENCE.md) | 完整 API 文档 |
+| [示例程序](examples/) | 分类示例 (Basic/Advanced/Scenarios) |
 | [FAQ](docs/FAQ.md) | 常见问题解答 |
-| [Deployment Guide](.gemini/antigravity/brain/.../production_deployment_guide.md) | 生产部署指南 |
 
-## 🚀 核心API
+## 🚀 核心 API
 
-### 基础加密
-
-```pascal
-uses fafafa.ssl.crypto.utils;
-
-// SHA-256
-Hash := TCryptoUtils.SHA256('Hello World');
-HexStr := TCryptoUtils.SHA256Hex('Hello World');
-
-// AES-256-GCM加密
-Ciphertext := TCryptoUtils.AES_GCM_Encrypt(Data, Key, IV);
-Plaintext := TCryptoUtils.AES_GCM_Decrypt(Ciphertext, Key, IV);
-
-// 安全随机数
-RandomBytes := TCryptoUtils.SecureRandom(32);
-AESKey := TCryptoUtils.GenerateKey(256);
-```
-
-### TLS连接
+### 推荐方式：Fluent Builder（现代 API）
 
 ```pascal
-uses fafafa.ssl;
+uses fafafa.ssl.connection.builder, fafafa.ssl.quick;
 
-Ctx := TSSLFactory.CreateContext(sslCtxClient);
-Ctx.SetCipherList('TLS_AES_256_GCM_SHA384');  // 可选
-
-Conn := Ctx.CreateConnection(Socket);
-(Conn as ISSLClientConnection).SetServerName('api.example.com');
-Conn.Connect;
-
-// 发送/接收数据
-Conn.Write(Data^, Length(Data));
-BytesRead := Conn.Read(Buffer^, BufferSize);
-
-// 获取连接信息
-WriteLn('协议: ', Ord(Conn.GetProtocolVersion));
-WriteLn('加密套件: ', Conn.GetCipherName);
-WriteLn('会话复用: ', Conn.IsSessionReused);
-```
-
-### 证书操作
-
-```pascal
-uses fafafa.ssl.cert.builder;
-
-var
-  KeyPair: IKeyPairWithCertificate;
-begin
-  // 创建自签名服务器证书（示例：localhost）
-  KeyPair := TCertificateBuilder.Create
-    .WithCommonName('localhost')
-    .WithOrganization('My Company')
-    .ValidFor(365)
-    .WithRSAKey(2048)
-    .AsServerCert
-    .AddSubjectAltName('DNS:localhost')
-    .SelfSigned;
-
-  KeyPair.SaveToFiles('server.crt', 'server.key');
-end;
-```
-
-### 证书快速生成 (Quick API)
-
-```pascal
-uses fafafa.ssl.quick, fafafa.ssl.cert.builder;
-
-var
-  KeyPair: IKeyPairWithCertificate;
-
-begin
-  // 一键生成自签名证书（返回接口对象；你可以保存为文件）
-  KeyPair := TSSLQuick.GenerateSelfSigned('localhost');
-  KeyPair.SaveToFiles('server.crt', 'server.key');
-
-  // 或者直接生成到指定路径
-  TSSLQuick.GenerateCertFiles('localhost', 'server2.crt', 'server2.key');
-end;
-```
-
-### 🆕 高级 API（v2.0+）
-
-#### Result 类型（Rust 风格错误处理）
-
-```pascal
-uses fafafa.ssl.base;
-
-var
-  Result: TSSLDataResult;
-begin
-  Result := TSSLDataResult.Ok(MyData);
-  if Result.IsOk then
-    ProcessData(Result.Unwrap)
-  else
-    HandleError(Result.ErrorMessage);
-end;
-```
-
-#### Try 方法（无异常版本）
-
-```pascal
-uses fafafa.ssl.crypto.utils;
-
-var Hash: TBytes;
-begin
-  // 不抛异常，返回布尔值
-  if TCryptoUtils.TrySHA256(Data, Hash) then
-    WriteLn('哈希成功')
-  else
-    WriteLn('哈希失败');
-    
-  // 对比传统方式（可能抛异常）
-  Hash := TCryptoUtils.SHA256(Data);
-end;
-```
-
-#### Connection Builder（流式 API）
-
-```pascal
-uses fafafa.ssl.connection.builder;
-
+// TLS 连接 - 流式 API
 Conn := TSSLConnectionBuilder.Create
-  .WithContext(Context)
-  .WithSocket(Socket)
   .WithHostname('api.example.com')
   .WithTimeout(30000)
   .BuildClient;
+
+// 证书生成 - Quick API
+TSSLQuick.GenerateCertFiles('localhost', 'server.crt', 'server.key');
+
+// 错误处理 - Result 类型（无异常）
+if TCryptoUtils.TrySHA256(Data, Hash) then
+  ProcessData(Hash);
 ```
 
-#### PEM 字符串直接加载
+### 底层 API（完整控制）
+
+<details>
+<summary>展开查看底层 API 示例</summary>
 
 ```pascal
-const
-  CERT_PEM = '-----BEGIN CERTIFICATE-----...';
-  KEY_PEM = '-----BEGIN PRIVATE KEY-----...';
-begin
-  Context.LoadCertificatePEM(CERT_PEM);
-  Context.LoadPrivateKeyPEM(KEY_PEM, 'password');
-end;
+// 基础加密
+Hash := TCryptoUtils.SHA256('Hello World');
+Ciphertext := TCryptoUtils.AES_GCM_Encrypt(Data, Key, IV);
+
+// TLS 连接（工厂模式）
+Ctx := TSSLFactory.CreateContext(sslCtxClient);
+Conn := Ctx.CreateConnection(Socket);
+Conn.Connect;
+
+// 证书生成（Builder 模式）
+KeyPair := TCertificateBuilder.Create
+  .WithCommonName('localhost')
+  .ValidFor(365)
+  .SelfSigned;
 ```
+
+</details>
 
 ## 🧪 测试 & CI/CD
 
@@ -320,8 +224,10 @@ fafafa.ssl/
 ├── src/                      # 核心源代码
 │   ├── fafafa.ssl.factory.pas   # 工厂模式入口
 │   ├── fafafa.ssl.base.pas      # 基础接口定义
-│   ├── fafafa.ssl.openssl/      # OpenSSL后端
-│   ├── fafafa.ssl.winssl/       # WinSSL后端
+│   ├── fafafa.ssl.openssl/      # OpenSSL后端 (Stable)
+│   ├── fafafa.ssl.winssl/       # WinSSL后端 (Stable)
+│   ├── fafafa.ssl.mbedtls/      # MbedTLS后端 (Preview)
+│   ├── fafafa.ssl.wolfssl/      # WolfSSL后端 (Preview)
 │   ├── fafafa.ssl.crypto.utils.pas  # 加密工具
 │   ├── fafafa.ssl.cert.*/       # 证书管理
 │   └── fafafa.ssl.errors.pas    # 错误处理
@@ -336,6 +242,21 @@ fafafa.ssl/
 │   └── coverage_report.sh   # 覆盖率报告
 ├── docs/                     # 文档
 └── ci_pipeline.sh           # CI/CD主脚本
+```
+
+### 后端支持级别
+
+| 后端 | 状态 | 平台 | 说明 |
+|------|------|------|------|
+| OpenSSL | **Stable** | Linux/macOS/Windows | 生产就绪，完整功能支持 |
+| WinSSL | **Stable** | Windows | 生产就绪，原生 Schannel 支持 |
+| MbedTLS | Preview | Linux/Windows | 轻量级嵌入式 TLS，需安装 libmbedtls |
+| WolfSSL | Preview | Linux/Windows | 轻量级 TLS，需安装 libwolfssl |
+
+**启用 Preview 后端**：
+```bash
+# 编译时启用 MbedTLS/WolfSSL
+fpc -dENABLE_MBEDTLS -dENABLE_WOLFSSL -Fusrc your_app.pas
 ```
 
 ## 🤝 贡献指南

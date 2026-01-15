@@ -4,6 +4,7 @@ program test_quick;
 
 uses
   SysUtils, Classes,
+  fafafa.ssl,  // 使用主单元以确保所有后端被注册
   fafafa.ssl.base,
   fafafa.ssl.context.builder,
   fafafa.ssl.quick,
@@ -11,7 +12,7 @@ uses
 
 procedure TestContextBuilder;
 var
-  LClient, LServer: ISSLContext;
+  LClient: ISSLContext;
 begin
   WriteLn('Testing TSSLContextBuilder...');
   
@@ -61,34 +62,11 @@ begin
   end;
 end;
 
-procedure TestQuickConnect;
-var
-  LConn: ISSLConnection;
-begin
-  WriteLn('Testing TSSLQuick.Connect (google.com:443)...');
-  
-  try
-    LConn := TSSLQuick.Connect('google.com', 443);
-    if LConn <> nil then
-    begin
-      WriteLn('PASS: Connected to google.com');
-      WriteLn('  Protocol: ' + SSL_PROTOCOL_NAMES[LConn.GetProtocolVersion]);
-      WriteLn('  Cipher: ' + LConn.GetCipherName);
-      LConn.Close;
-    end
-    else
-      WriteLn('FAIL: Connect returned nil');
-  except
-    on E: Exception do
-      WriteLn('WARN: Connection failed (network issue?): ' + E.Message);
-  end;
-end;
-
 begin
   try
     TestContextBuilder;
     TestQuickCert;
-    TestQuickConnect;
+    // Note: TSSLQuick.Connect was removed - use TSSLContextBuilder for connections
     WriteLn('All tests completed.');
   except
     on E: Exception do

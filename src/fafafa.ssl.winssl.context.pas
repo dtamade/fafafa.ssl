@@ -20,6 +20,7 @@ interface
 uses
   Windows, SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.errors,      // 添加：RaiseInvalidParameter
   fafafa.ssl.exceptions,  // 新增：类型化异常
   fafafa.ssl.logging,     // P1: 废弃协议警告
   fafafa.ssl.winssl.base,
@@ -47,18 +48,25 @@ type
     // 证书相关
     FCertContext: PCCERT_CONTEXT;
     FCertStore: HCERTSTORE;
+    FCAStore: HCERTSTORE;  // P0-2: CA 证书内存存储
     FExternalCertStore: ISSLCertificateStore;  // 保持外部证书存储的引用
     FSessionCacheEnabled: Boolean;
     FSessionTimeout: Integer;
     FSessionCacheSize: Integer;
-    
+
     // 回调
     FVerifyCallback: TSSLVerifyCallback;
     FPasswordCallback: TSSLPasswordCallback;
     FInfoCallback: TSSLInfoCallback;
 
+    // P0-1: 延迟初始化支持
+    FCredentialsNeedRebuild: Boolean;  // 标记凭据需要重建
+    FCredentialsAcquired: Boolean;     // 凭据是否已获取
+
     procedure CleanupCertificate;
     procedure ApplyOptions;
+    { P0-1: 延迟凭据获取 - 确保证书加载后才获取凭据 }
+    procedure EnsureCredentialsAcquired;
     { P1: 统一上下文验证模式 - 与 OpenSSL 保持一致 }
     procedure RequireValidContext(const AMethodName: string);
     { P1: PEM→DER 转换 - 消除跨平台差异 }
@@ -121,6 +129,10 @@ type
     { ISSLContext - 回调设置 }
     procedure SetPasswordCallback(ACallback: TSSLPasswordCallback);
     procedure SetInfoCallback(ACallback: TSSLInfoCallback);
+
+    { P1-7: 回调获取（供连接使用） }
+    function GetVerifyCallback: TSSLVerifyCallback;
+    function GetInfoCallback: TSSLInfoCallback;
     
     { ISSLContext - 创建连接 }
     function CreateConnection(ASocket: THandle): ISSLConnection; overload;
@@ -129,6 +141,9 @@ type
     { ISSLContext - 状态查询 }
     function IsValid: Boolean;
     function GetNativeHandle: Pointer;
+
+    { P0-2: 获取 CA 证书存储句柄（供连接验证使用） }
+    function GetCAStoreHandle: HCERTSTORE;
   end;
 
 implementation
@@ -141,11 +156,6 @@ uses
 // ============================================================================
 
 constructor TWinSSLContext.Create(ALibrary: ISSLLibrary; AType: TSSLContextType);
-var
-  SchannelCred: SCHANNEL_CRED;
-  Status: SECURITY_STATUS;
-  TimeStamp: TTimeStamp;
-  dwDirection: DWORD;
 begin
   inherited Create;
   FLibrary := ALibrary;
@@ -164,59 +174,35 @@ begin
   // 证书相关初始化
   FCertContext := nil;
   FCertStore := nil;
+  FCAStore := nil;  // P0-2: CA 证书内存存储
   FExternalCertStore := nil;
   FSessionCacheEnabled := True;
   FSessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
   FSessionCacheSize := SSL_DEFAULT_SESSION_CACHE_SIZE;
-  
+
   // 回调初始化
   FVerifyCallback := nil;
   FPasswordCallback := nil;
   FInfoCallback := nil;
-  
+
+  // P0-1: 延迟初始化 - 不在构造函数中获取凭据
+  // 凭据将在 CreateConnection 或 GetNativeHandle 时获取
+  FCredentialsAcquired := False;
+  FCredentialsNeedRebuild := True;  // 标记需要构建凭据
+
   InitSecHandle(FCredHandle);
-  
-  // 初始化 Schannel 凭据
-  FillChar(SchannelCred, SizeOf(SchannelCred), 0);
-  SchannelCred.dwVersion := SCHANNEL_CRED_VERSION;
-  
-  // 设置协议版本标志
-  SchannelCred.grbitEnabledProtocols := ProtocolVersionsToSchannelFlags(
-    FProtocolVersions, 
-    FContextType = sslCtxServer
-  );
-  
-  // 设置标志
-  SchannelCred.dwFlags := SCH_CRED_NO_DEFAULT_CREDS or 
-                          SCH_CRED_MANUAL_CRED_VALIDATION;
-  
-  // 确定方向（客户端或服务端）
-  if FContextType = sslCtxServer then
-    dwDirection := SECPKG_CRED_INBOUND
-  else
-    dwDirection := SECPKG_CRED_OUTBOUND;
-  
-  // 获取凭据句柄
-  Status := AcquireCredentialsHandleW(
-    nil,
-    PWideChar(WideString('Microsoft Unified Security Protocol Provider')),
-    dwDirection,
-    nil,
-    @SchannelCred,
-    nil,
-    nil,
-    @FCredHandle,
-    @TimeStamp
-  );
-  
-  FInitialized := IsSuccess(Status);
+
+  // P0-1: 移除立即获取凭据的代码
+  // 凭据获取移至 EnsureCredentialsAcquired 方法
+  FInitialized := True;  // 上下文已初始化，但凭据尚未获取
   ApplyOptions;
 end;
 
 destructor TWinSSLContext.Destroy;
 begin
   CleanupCertificate;
-  if FInitialized and IsValidSecHandle(FCredHandle) then
+  // P0-1: 只有在凭据已获取时才释放
+  if FCredentialsAcquired and IsValidSecHandle(FCredHandle) then
     FreeCredentialsHandle(@FCredHandle);
   inherited Destroy;
 end;
@@ -235,6 +221,13 @@ begin
     FCertStore := nil;
   end;
 
+  // P0-2: 清理 CA 证书存储
+  if FCAStore <> nil then
+  begin
+    CertCloseStore(FCAStore, 0);
+    FCAStore := nil;
+  end;
+
   // 清理外部证书存储引用
   FExternalCertStore := nil;
 end;
@@ -244,6 +237,78 @@ begin
   // 当前实现已映射主要选项（会话缓存等）
   // 可扩展：根据实际需求添加更多 WinSSL 选项映射
   SetSessionCacheMode(ssoEnableSessionCache in FOptions);
+end;
+
+{ P0-1: 延迟凭据获取 - 确保证书加载后才获取凭据
+  此方法在 CreateConnection 或 GetNativeHandle 时调用
+  确保 LoadCertificate/LoadPrivateKey 的设置能够生效 }
+procedure TWinSSLContext.EnsureCredentialsAcquired;
+var
+  SchannelCred: SCHANNEL_CRED;
+  Status: SECURITY_STATUS;
+  TimeStamp: TTimeStamp;
+  dwDirection: DWORD;
+begin
+  // 如果凭据已获取且不需要重建，直接返回
+  if FCredentialsAcquired and (not FCredentialsNeedRebuild) then
+    Exit;
+
+  // 如果已有凭据句柄，先释放
+  if FCredentialsAcquired and IsValidSecHandle(FCredHandle) then
+  begin
+    FreeCredentialsHandle(@FCredHandle);
+    InitSecHandle(FCredHandle);
+  end;
+
+  // 初始化 Schannel 凭据
+  FillChar(SchannelCred, SizeOf(SchannelCred), 0);
+  SchannelCred.dwVersion := SCHANNEL_CRED_VERSION;
+
+  // 设置协议版本标志
+  SchannelCred.grbitEnabledProtocols := ProtocolVersionsToSchannelFlags(
+    FProtocolVersions,
+    FContextType = sslCtxServer
+  );
+
+  // 设置标志
+  SchannelCred.dwFlags := SCH_CRED_NO_DEFAULT_CREDS or
+                          SCH_CRED_MANUAL_CRED_VALIDATION;
+
+  // P0-1: 关键修复 - 如果有证书，将其包含在凭据中
+  if FCertContext <> nil then
+  begin
+    SchannelCred.cCreds := 1;
+    SchannelCred.paCred := @FCertContext;
+  end;
+
+  // 确定方向（客户端或服务端）
+  if FContextType = sslCtxServer then
+    dwDirection := SECPKG_CRED_INBOUND
+  else
+    dwDirection := SECPKG_CRED_OUTBOUND;
+
+  // 获取凭据句柄
+  Status := AcquireCredentialsHandleW(
+    nil,
+    PWideChar(WideString('Microsoft Unified Security Protocol Provider')),
+    dwDirection,
+    nil,
+    @SchannelCred,
+    nil,
+    nil,
+    @FCredHandle,
+    @TimeStamp
+  );
+
+  if not IsSuccess(Status) then
+    raise ESSLInitializationException.CreateWithContext(
+      Format('Failed to acquire credentials handle: 0x%x', [Status]),
+      sslErrNotInitialized,
+      'EnsureCredentialsAcquired'
+    );
+
+  FCredentialsAcquired := True;
+  FCredentialsNeedRebuild := False;
 end;
 
 { P1: 统一上下文验证模式 - 与 OpenSSL 保持一致 }
@@ -357,6 +422,9 @@ begin
 
   // P2: 使用共享辅助函数记录废弃协议警告
   LogDeprecatedProtocolWarnings('WinSSL', AVersions);
+
+  // P0-1: 协议版本变更需要重建凭据
+  FCredentialsNeedRebuild := True;
 end;
 
 function TWinSSLContext.GetProtocolVersions: TSSLProtocolVersions;
@@ -430,7 +498,11 @@ begin
     CertCloseStore(PFXStore, 0);
     
     if FCertContext <> nil then
+    begin
+      // P0-1: 证书加载后标记需要重建凭据
+      FCredentialsNeedRebuild := True;
       Exit; // 成功加载
+    end;
   end;
 
   // 2. 尝试作为普通证书加载 (DER/PEM)
@@ -476,6 +548,9 @@ begin
       sslWinSSL
     );
   end;
+
+  // P0-1: 证书加载后标记需要重建凭据
+  FCredentialsNeedRebuild := True;
 end;
 
 procedure TWinSSLContext.LoadCertificate(ACert: ISSLCertificate);
@@ -487,13 +562,17 @@ begin
       sslErrInvalidParam,
       'TWinSSLContext.LoadCertificate'
     );
-  
+
   CleanupCertificate;
-  
+
   // 获取证书的原生句柄
   FCertContext := PCCERT_CONTEXT(ACert.GetNativeHandle);
   if FCertContext <> nil then
+  begin
     FCertContext := CertDuplicateCertificateContext(FCertContext);
+    // P0-1: 证书加载后标记需要重建凭据
+    FCredentialsNeedRebuild := True;
+  end;
 end;
 
 procedure TWinSSLContext.LoadPrivateKey(const AFileName: string; const APassword: string);
@@ -557,8 +636,10 @@ begin
     begin
       if FCertContext <> nil then
         CertFreeCertificateContext(FCertContext);
-        
+
       FCertContext := CertDuplicateCertificateContext(CertContext);
+      // P0-1: 私钥加载后标记需要重建凭据
+      FCredentialsNeedRebuild := True;
     end;
     CertCloseStore(PFXStore, 0);
   end
@@ -635,6 +716,9 @@ begin
       GetLastError,
       sslWinSSL
     );
+
+  // P0-1: 证书加载后标记需要重建凭据
+  FCredentialsNeedRebuild := True;
 end;
 
 procedure TWinSSLContext.LoadPrivateKeyPEM(const APEM: string; const APassword: string = '');
@@ -675,22 +759,67 @@ begin
       sslErrLoadFailed,
       'TWinSSLContext.LoadCAFile'
     );
-  
+
   LFileStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try
     LSize := LFileStream.Size;
     SetLength(LCertData, LSize);
     LFileStream.Read(LCertData[0], LSize);
-    
-    // 加载CA证书到系统存储
+
+    // P0-2: 创建或重用 CA 证书内存存储
+    if FCAStore = nil then
+    begin
+      FCAStore := CertOpenStore(
+        CERT_STORE_PROV_MEMORY,
+        0,
+        0,
+        0,
+        nil
+      );
+      if FCAStore = nil then
+        raise ESSLResourceException.CreateWithContext(
+          'Failed to create CA certificate store',
+          sslErrMemory,
+          'TWinSSLContext.LoadCAFile'
+        );
+    end;
+
+    // 创建证书上下文
     LCertContext := CertCreateCertificateContext(
       X509_ASN_ENCODING or PKCS_7_ASN_ENCODING,
       @LCertData[0],
       Length(LCertData)
     );
-    
-    if LCertContext <> nil then
+
+    if LCertContext = nil then
+      raise ESSLCertificateLoadException.CreateWithContext(
+        'Failed to parse CA certificate',
+        sslErrLoadFailed,
+        'TWinSSLContext.LoadCAFile',
+        GetLastError,
+        sslWinSSL
+      );
+
+    // P0-2: 将 CA 证书添加到内存存储（而不是立即释放）
+    if not CertAddCertificateContextToStore(
+      FCAStore,
+      LCertContext,
+      CERT_STORE_ADD_REPLACE_EXISTING,
+      nil
+    ) then
+    begin
       CertFreeCertificateContext(LCertContext);
+      raise ESSLCertificateLoadException.CreateWithContext(
+        'Failed to add CA certificate to store',
+        sslErrLoadFailed,
+        'TWinSSLContext.LoadCAFile',
+        GetLastError,
+        sslWinSSL
+      );
+    end;
+
+    // 释放临时证书上下文（存储中已有副本）
+    CertFreeCertificateContext(LCertContext);
   finally
     LFileStream.Free;
   end;
@@ -903,6 +1032,17 @@ begin
   FInfoCallback := ACallback;
 end;
 
+{ P1-7: 回调获取方法 }
+function TWinSSLContext.GetVerifyCallback: TSSLVerifyCallback;
+begin
+  Result := FVerifyCallback;
+end;
+
+function TWinSSLContext.GetInfoCallback: TSSLInfoCallback;
+begin
+  Result := FInfoCallback;
+end;
+
 // ============================================================================
 // ISSLContext - 创建连接
 // ============================================================================
@@ -911,6 +1051,9 @@ function TWinSSLContext.CreateConnection(ASocket: THandle): ISSLConnection;
 begin
   // P1: 统一上下文验证模式 - 与 OpenSSL RequireValidContext 模式一致
   RequireValidContext('TWinSSLContext.CreateConnection');
+
+  // P0-1: 延迟凭据获取 - 确保证书已加载后才获取凭据
+  EnsureCredentialsAcquired;
 
   // Let exceptions propagate - caller must handle errors explicitly
   Result := TWinSSLConnection.Create(Self, ASocket);
@@ -925,6 +1068,9 @@ begin
   if AStream = nil then
     RaiseInvalidParameter('AStream cannot be nil');
 
+  // P0-1: 延迟凭据获取 - 确保证书已加载后才获取凭据
+  EnsureCredentialsAcquired;
+
   // Let exceptions propagate - caller must handle errors explicitly
   Result := TWinSSLConnection.Create(Self, AStream);
 end;
@@ -935,12 +1081,21 @@ end;
 
 function TWinSSLContext.IsValid: Boolean;
 begin
-  Result := FInitialized and IsValidSecHandle(FCredHandle);
+  // P0-1: 上下文有效性检查 - 凭据可能尚未获取
+  Result := FInitialized and (FCredentialsAcquired or FCredentialsNeedRebuild);
 end;
 
 function TWinSSLContext.GetNativeHandle: Pointer;
 begin
+  // P0-1: 延迟凭据获取 - 确保返回有效的凭据句柄
+  EnsureCredentialsAcquired;
   Result := @FCredHandle;
+end;
+
+{ P0-2: 获取 CA 证书存储句柄（供连接验证使用） }
+function TWinSSLContext.GetCAStoreHandle: HCERTSTORE;
+begin
+  Result := FCAStore;
 end;
 
 end.

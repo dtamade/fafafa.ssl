@@ -29,27 +29,47 @@ begin
   end;
 end;
 
+procedure TestErrorMessageEN(const aTestName: string; aErrorCode: DWORD; const aExpected: string);
+var
+  LResult: string;
+begin
+  Inc(GTestCount);
+  LResult := GetFriendlyErrorMessageEN(aErrorCode);
+  
+  if Pos(aExpected, LResult) > 0 then
+  begin
+    Inc(GPassCount);
+    WriteLn('[PASS] ', aTestName);
+  end
+  else
+  begin
+    WriteLn('[FAIL] ', aTestName);
+    WriteLn('       Expected to contain: ', aExpected);
+    WriteLn('       Got: ', LResult);
+  end;
+end;
+
 begin
   WriteLn('WinSSL Error Handling Test Suite');
   WriteLn;
   
-  // 测试常见错误码映射
-  TestErrorMessage('Test 1: SEC_E_OK', DWORD(SEC_E_OK), '成功');
-  TestErrorMessage('Test 2: SEC_I_CONTINUE_NEEDED', DWORD(SEC_I_CONTINUE_NEEDED), '继续');
-  TestErrorMessage('Test 3: SEC_E_INCOMPLETE_MESSAGE', DWORD(SEC_E_INCOMPLETE_MESSAGE), '不完整');
-  TestErrorMessage('Test 4: CERT_E_EXPIRED', DWORD(CERT_E_EXPIRED), '过期');
-  TestErrorMessage('Test 5: CERT_E_UNTRUSTEDROOT', DWORD(CERT_E_UNTRUSTEDROOT), '不受信任');
-  TestErrorMessage('Test 6: CERT_E_REVOKED', DWORD(CERT_E_REVOKED), '吊销');
+  // Test English error messages (avoid encoding issues)
+  TestErrorMessageEN('Test 1: SEC_E_OK', DWORD(SEC_E_OK), 'successful');
+  TestErrorMessageEN('Test 2: SEC_I_CONTINUE_NEEDED', DWORD(SEC_I_CONTINUE_NEEDED), 'continues');
+  TestErrorMessageEN('Test 3: SEC_E_INCOMPLETE_MESSAGE', DWORD(SEC_E_INCOMPLETE_MESSAGE), 'Incomplete');
+  TestErrorMessageEN('Test 4: CERT_E_EXPIRED', DWORD(CERT_E_EXPIRED), 'expired');
+  TestErrorMessageEN('Test 5: CERT_E_UNTRUSTEDROOT', DWORD(CERT_E_UNTRUSTEDROOT), 'untrusted');
+  TestErrorMessageEN('Test 6: CERT_E_REVOKED', DWORD(CERT_E_REVOKED), 'revoked');
   
-  // 测试未知错误码
+  // Test unknown error code - use English version
   Inc(GTestCount);
-  if Pos('未知错误', GetFriendlyErrorMessageCN($DEADBEEF)) > 0 then
+  if Pos('Unknown error', GetFriendlyErrorMessageEN($DEADBEEF)) > 0 then
   begin
     Inc(GPassCount);
-    WriteLn('[PASS] Test 9: Unknown Error Code');
+    WriteLn('[PASS] Test 7: Unknown Error Code');
   end
   else
-    WriteLn('[FAIL] Test 9: Unknown Error Code');
+    WriteLn('[FAIL] Test 7: Unknown Error Code');
   
   WriteLn;
   WriteLn('=' + StringOfChar('=', 78));

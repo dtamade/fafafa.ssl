@@ -375,6 +375,103 @@ permissions:
 
 ---
 
+## 测试质量审计集成
+
+### 概述
+
+CI管道集成了测试质量审计工具，用于自动评估测试覆盖率和质量指标。
+
+### 审计命令
+
+```bash
+# 单独运行审计
+./ci_pipeline.sh audit
+
+# 作为完整管道的一部分运行
+./ci_pipeline.sh all
+```
+
+### 质量门禁
+
+审计工具会检查以下质量指标：
+
+| 指标 | 目标阈值 | 说明 |
+|------|----------|------|
+| Overall Score | ≥70% | 综合质量评分 |
+| Error Handling | ≥60% | 错误处理测试覆盖 |
+| Thread Safety | ≥60% | 线程安全测试覆盖 |
+| Backend Consistency | ≥60% | 后端一致性测试 |
+| Crypto Testing | ≥60% | 加密功能测试 |
+| Coverage | ≥60% | 代码覆盖率 |
+| Boundary Testing | ≥80% | 边界条件测试 |
+
+### 配置质量阈值
+
+通过环境变量配置质量门禁阈值：
+
+```bash
+# 设置质量阈值为75%
+QUALITY_THRESHOLD=75 ./ci_pipeline.sh audit
+```
+
+### 审计报告
+
+审计工具生成以下报告：
+
+- `reports/audit/audit_YYYYMMDD_HHMMSS.md` - Markdown格式报告
+- `reports/audit/audit_YYYYMMDD_HHMMSS.json` - JSON格式报告
+- `reports/audit/quality_trend.csv` - 质量趋势数据
+
+### 质量趋势追踪
+
+每次审计运行后，质量分数会追加到趋势文件中：
+
+```csv
+Date,Overall,Coverage,Boundary,Error,Crypto,Thread,Resource,Backend
+20260106_120000,75,65,82,68,70,62,58,72
+```
+
+### GitHub Actions集成
+
+在GitHub Actions中添加审计步骤：
+
+```yaml
+- name: 🔍 Run Test Quality Audit
+  run: |
+    ./ci_pipeline.sh audit
+  env:
+    QUALITY_THRESHOLD: 70
+
+- name: 📊 Upload Audit Reports
+  uses: actions/upload-artifact@v4
+  with:
+    name: audit-reports
+    path: reports/audit/
+    retention-days: 30
+```
+
+### 质量徽章
+
+在README.md中添加质量徽章（需要配置徽章服务）：
+
+```markdown
+![Test Quality](https://img.shields.io/badge/test%20quality-75%25-green)
+```
+
+### 本地审计
+
+开发者可以在提交前本地运行审计：
+
+```bash
+# 编译审计工具
+fpc -Fusrc -Futools/test_audit -otools/test_audit/bin/test_audit tools/test_audit/test_audit_main.pas
+
+# 运行审计
+./tools/test_audit/bin/test_audit -s src -t tests -o reports/audit -v
+```
+
+---
+
 **更新日期**: 2025-10-28  
 **适用版本**: fafafa.ssl v1.0.0-rc  
 **维护者**: fafafa.ssl团队

@@ -18,6 +18,7 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.base64,
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
   fafafa.ssl.mbedtls.base,
@@ -145,6 +146,35 @@ uses
 
 const
   MBEDTLS_X509_CRT_SIZE = 1024;  // 估算大小
+
+{ Helper function to extract field from MbedTLS info output }
+function ExtractField(const AInfo, AFieldName: string): string;
+var
+  LPos, LEndPos: Integer;
+  LSearchStr: string;
+begin
+  Result := '';
+  LSearchStr := AFieldName + ' name';
+  LPos := Pos(LSearchStr, AInfo);
+  if LPos = 0 then
+  begin
+    LSearchStr := AFieldName + ':';
+    LPos := Pos(LSearchStr, AInfo);
+  end;
+
+  if LPos > 0 then
+  begin
+    LPos := LPos + Length(LSearchStr);
+    // Skip whitespace
+    while (LPos <= Length(AInfo)) and (AInfo[LPos] in [' ', #9, ':']) do
+      Inc(LPos);
+    // Find end of line
+    LEndPos := LPos;
+    while (LEndPos <= Length(AInfo)) and not (AInfo[LEndPos] in [#10, #13]) do
+      Inc(LEndPos);
+    Result := Trim(Copy(AInfo, LPos, LEndPos - LPos));
+  end;
+end;
 
 { TMbedTLSCertificate }
 
@@ -299,13 +329,75 @@ begin
 end;
 
 function TMbedTLSCertificate.SaveToPEM: string;
+var
+  LDER: TBytes;
+  LBase64: string;
+  LLine: string;
+  I, LPos, LLineLen: Integer;
 begin
-  Result := FPEMData;
+  // Return cached PEM if available
+  if FPEMData <> '' then
+  begin
+    Result := FPEMData;
+    Exit;
+  end;
+
+  // Convert DER to PEM
+  LDER := SaveToDER;
+  if Length(LDER) = 0 then
+  begin
+    Result := '';
+    Exit;
+  end;
+
+  // Encode to Base64
+  LBase64 := TBase64Utils.Encode(LDER);
+  if LBase64 = '' then
+  begin
+    Result := '';
+    Exit;
+  end;
+
+  // Build PEM format with 64-char line wrapping
+  Result := '-----BEGIN CERTIFICATE-----' + LineEnding;
+  LPos := 1;
+  LLineLen := 64;
+  while LPos <= Length(LBase64) do
+  begin
+    if LPos + LLineLen - 1 <= Length(LBase64) then
+      LLine := Copy(LBase64, LPos, LLineLen)
+    else
+      LLine := Copy(LBase64, LPos, Length(LBase64) - LPos + 1);
+    Result := Result + LLine + LineEnding;
+    Inc(LPos, LLineLen);
+  end;
+  Result := Result + '-----END CERTIFICATE-----' + LineEnding;
+
+  // Cache the result
+  FPEMData := Result;
 end;
 
 function TMbedTLSCertificate.SaveToDER: TBytes;
 begin
-  Result := Copy(FDERData);
+  // Return cached DER if available
+  if Length(FDERData) > 0 then
+  begin
+    Result := Copy(FDERData);
+    Exit;
+  end;
+
+  // Extract DER from native handle
+  SetLength(Result, 0);
+  if FX509Crt = nil then Exit;
+
+  // Access raw DER data from MbedTLS certificate structure
+  if (FX509Crt^.raw.p <> nil) and (FX509Crt^.raw.len > 0) then
+  begin
+    SetLength(Result, FX509Crt^.raw.len);
+    Move(FX509Crt^.raw.p^, Result[0], FX509Crt^.raw.len);
+    // Cache the result
+    FDERData := Copy(Result);
+  end;
 end;
 
 function TMbedTLSCertificate.GetInfo: TSSLCertificateInfo;
@@ -320,28 +412,215 @@ begin
 end;
 
 function TMbedTLSCertificate.GetSubject: string;
+var
+  LBuf: array[0..2047] of AnsiChar;
+  LLen: Integer;
 begin
-  Result := 'Subject';  // 占位符 - MbedTLS 需要额外 API
+  Result := '';
+  if FX509Crt = nil then Exit;
+  if not Assigned(mbedtls_x509_crt_info) then Exit;
+
+  FillChar(LBuf, SizeOf(LBuf), 0);
+  LLen := mbedtls_x509_crt_info(@LBuf[0], SizeOf(LBuf), '', FX509Crt);
+  if LLen > 0 then
+  begin
+    // Parse subject from info output
+    Result := ExtractField(string(LBuf), 'subject');
+    if Result = '' then
+      Result := 'Subject';  // Fallback
+  end
+  else
+    Result := 'Subject';
 end;
 
 function TMbedTLSCertificate.GetIssuer: string;
+var
+  LBuf: array[0..2047] of AnsiChar;
+  LLen: Integer;
 begin
-  Result := 'Issuer';  // 占位符
+  Result := '';
+  if FX509Crt = nil then Exit;
+  if not Assigned(mbedtls_x509_crt_info) then Exit;
+
+  FillChar(LBuf, SizeOf(LBuf), 0);
+  LLen := mbedtls_x509_crt_info(@LBuf[0], SizeOf(LBuf), '', FX509Crt);
+  if LLen > 0 then
+  begin
+    // Parse issuer from info output
+    Result := ExtractField(string(LBuf), 'issuer');
+    if Result = '' then
+      Result := 'Issuer';  // Fallback
+  end
+  else
+    Result := 'Issuer';
 end;
 
 function TMbedTLSCertificate.GetSerialNumber: string;
+var
+  LBuf: array[0..4095] of AnsiChar;
+  LLen: Integer;
+  LInfo, LLine: string;
+  LPos, LEndPos: Integer;
 begin
-  Result := '0';  // 占位符
+  Result := '';
+  if FX509Crt = nil then Exit;
+  if not Assigned(mbedtls_x509_crt_info) then Exit;
+
+  FillChar(LBuf, SizeOf(LBuf), 0);
+  LLen := mbedtls_x509_crt_info(@LBuf[0], SizeOf(LBuf), '', FX509Crt);
+  if LLen <= 0 then Exit;
+
+  LInfo := string(LBuf);
+  // 查找 "serial number" 行
+  LPos := Pos('serial number', LowerCase(LInfo));
+  if LPos > 0 then
+  begin
+    // 找到冒号后的内容
+    LPos := Pos(':', Copy(LInfo, LPos, Length(LInfo)));
+    if LPos > 0 then
+    begin
+      LPos := Pos('serial number', LowerCase(LInfo)) + LPos;
+      // 跳过空白
+      while (LPos <= Length(LInfo)) and (LInfo[LPos] in [' ', #9, ':']) do
+        Inc(LPos);
+      // 找到行尾
+      LEndPos := LPos;
+      while (LEndPos <= Length(LInfo)) and not (LInfo[LEndPos] in [#10, #13]) do
+        Inc(LEndPos);
+      Result := Trim(Copy(LInfo, LPos, LEndPos - LPos));
+    end;
+  end;
+
+  if Result = '' then
+    Result := '0';
+end;
+
+function ParseMbedTLSDate(const ADateStr: string): TDateTime;
+var
+  LYear, LMonth, LDay, LHour, LMin, LSec: Word;
+  LParts: TStringArray;
+  LDatePart, LTimePart: string;
+  LPos: Integer;
+begin
+  Result := 0;
+  // MbedTLS 日期格式: "2024-01-15 12:30:45" 或 "Jan 15 12:30:45 2024 GMT"
+  if ADateStr = '' then Exit;
+
+  // 尝试解析 YYYY-MM-DD HH:MM:SS 格式
+  LPos := Pos(' ', ADateStr);
+  if LPos > 0 then
+  begin
+    LDatePart := Copy(ADateStr, 1, LPos - 1);
+    LTimePart := Copy(ADateStr, LPos + 1, Length(ADateStr));
+
+    // 解析日期部分
+    if (Length(LDatePart) >= 10) and (LDatePart[5] = '-') and (LDatePart[8] = '-') then
+    begin
+      try
+        LYear := StrToIntDef(Copy(LDatePart, 1, 4), 0);
+        LMonth := StrToIntDef(Copy(LDatePart, 6, 2), 0);
+        LDay := StrToIntDef(Copy(LDatePart, 9, 2), 0);
+
+        // 解析时间部分
+        LHour := 0; LMin := 0; LSec := 0;
+        if (Length(LTimePart) >= 8) and (LTimePart[3] = ':') then
+        begin
+          LHour := StrToIntDef(Copy(LTimePart, 1, 2), 0);
+          LMin := StrToIntDef(Copy(LTimePart, 4, 2), 0);
+          LSec := StrToIntDef(Copy(LTimePart, 7, 2), 0);
+        end;
+
+        if (LYear > 0) and (LMonth in [1..12]) and (LDay in [1..31]) then
+          Result := EncodeDate(LYear, LMonth, LDay) + EncodeTime(LHour, LMin, LSec, 0);
+      except
+        Result := 0;
+      end;
+    end;
+  end;
 end;
 
 function TMbedTLSCertificate.GetNotBefore: TDateTime;
+var
+  LBuf: array[0..4095] of AnsiChar;
+  LLen: Integer;
+  LInfo, LDateStr: string;
+  LPos, LEndPos: Integer;
 begin
-  Result := Now - 365;  // 占位符
+  Result := Now - 365;  // 默认值
+  if FX509Crt = nil then Exit;
+  if not Assigned(mbedtls_x509_crt_info) then Exit;
+
+  FillChar(LBuf, SizeOf(LBuf), 0);
+  LLen := mbedtls_x509_crt_info(@LBuf[0], SizeOf(LBuf), '', FX509Crt);
+  if LLen <= 0 then Exit;
+
+  LInfo := string(LBuf);
+  // 查找 "issued on" 或 "not before"
+  LPos := Pos('issued  on', LowerCase(LInfo));
+  if LPos = 0 then
+    LPos := Pos('not before', LowerCase(LInfo));
+
+  if LPos > 0 then
+  begin
+    // 找到冒号后的内容
+    LPos := LPos + 10;  // 跳过 "issued  on" 或 "not before"
+    while (LPos <= Length(LInfo)) and (LInfo[LPos] in [' ', #9, ':']) do
+      Inc(LPos);
+    // 找到行尾
+    LEndPos := LPos;
+    while (LEndPos <= Length(LInfo)) and not (LInfo[LEndPos] in [#10, #13]) do
+      Inc(LEndPos);
+    LDateStr := Trim(Copy(LInfo, LPos, LEndPos - LPos));
+
+    if LDateStr <> '' then
+    begin
+      Result := ParseMbedTLSDate(LDateStr);
+      if Result = 0 then
+        Result := Now - 365;
+    end;
+  end;
 end;
 
 function TMbedTLSCertificate.GetNotAfter: TDateTime;
+var
+  LBuf: array[0..4095] of AnsiChar;
+  LLen: Integer;
+  LInfo, LDateStr: string;
+  LPos, LEndPos: Integer;
 begin
-  Result := Now + 365;  // 占位符
+  Result := Now + 365;  // 默认值
+  if FX509Crt = nil then Exit;
+  if not Assigned(mbedtls_x509_crt_info) then Exit;
+
+  FillChar(LBuf, SizeOf(LBuf), 0);
+  LLen := mbedtls_x509_crt_info(@LBuf[0], SizeOf(LBuf), '', FX509Crt);
+  if LLen <= 0 then Exit;
+
+  LInfo := string(LBuf);
+  // 查找 "expires on" 或 "not after"
+  LPos := Pos('expires on', LowerCase(LInfo));
+  if LPos = 0 then
+    LPos := Pos('not after', LowerCase(LInfo));
+
+  if LPos > 0 then
+  begin
+    // 找到冒号后的内容
+    LPos := LPos + 10;  // 跳过 "expires on" 或 "not after"
+    while (LPos <= Length(LInfo)) and (LInfo[LPos] in [' ', #9, ':']) do
+      Inc(LPos);
+    // 找到行尾
+    LEndPos := LPos;
+    while (LEndPos <= Length(LInfo)) and not (LInfo[LEndPos] in [#10, #13]) do
+      Inc(LEndPos);
+    LDateStr := Trim(Copy(LInfo, LPos, LEndPos - LPos));
+
+    if LDateStr <> '' then
+    begin
+      Result := ParseMbedTLSDate(LDateStr);
+      if Result = 0 then
+        Result := Now + 365;
+    end;
+  end;
 end;
 
 function TMbedTLSCertificate.GetPublicKey: string;
@@ -365,19 +644,70 @@ begin
 end;
 
 function TMbedTLSCertificate.Verify(ACAStore: ISSLCertificateStore): Boolean;
+var
+  LFlags: Cardinal;
+  LCACerts: Pmbedtls_x509_crt;
 begin
   Result := False;
   if FX509Crt = nil then Exit;
   if ACAStore = nil then Exit;
-  Result := True;  // 占位符
+  if not Assigned(mbedtls_x509_crt_verify) then Exit;
+
+  LCACerts := Pmbedtls_x509_crt(ACAStore.GetNativeHandle);
+  if LCACerts = nil then Exit;
+
+  LFlags := 0;
+  Result := mbedtls_x509_crt_verify(FX509Crt, LCACerts, nil, nil, @LFlags, nil, nil) = 0;
 end;
 
 function TMbedTLSCertificate.VerifyEx(ACAStore: ISSLCertificateStore;
   AFlags: TSSLCertVerifyFlags; out AResult: TSSLCertVerifyResult): Boolean;
+var
+  LFlags: Cardinal;
+  LCACerts: Pmbedtls_x509_crt;
+  LBuf: array[0..1023] of AnsiChar;
 begin
   FillChar(AResult, SizeOf(AResult), 0);
-  AResult.Success := Verify(ACAStore);
-  Result := AResult.Success;
+  Result := False;
+
+  if FX509Crt = nil then
+  begin
+    AResult.ErrorMessage := 'Certificate not loaded';
+    Exit;
+  end;
+
+  if ACAStore = nil then
+  begin
+    AResult.ErrorMessage := 'CA store is nil';
+    Exit;
+  end;
+
+  if not Assigned(mbedtls_x509_crt_verify) then
+  begin
+    AResult.ErrorMessage := 'mbedtls_x509_crt_verify not available';
+    Exit;
+  end;
+
+  LCACerts := Pmbedtls_x509_crt(ACAStore.GetNativeHandle);
+  LFlags := 0;
+
+  if mbedtls_x509_crt_verify(FX509Crt, LCACerts, nil, nil, @LFlags, nil, nil) = 0 then
+  begin
+    AResult.Success := True;
+    Result := True;
+  end
+  else
+  begin
+    AResult.Success := False;
+    AResult.ErrorCode := Integer(LFlags);
+    // Get verification error info
+    if Assigned(mbedtls_x509_crt_verify_info) then
+    begin
+      FillChar(LBuf, SizeOf(LBuf), 0);
+      mbedtls_x509_crt_verify_info(@LBuf[0], SizeOf(LBuf), '', LFlags);
+      AResult.ErrorMessage := string(LBuf);
+    end;
+  end;
 end;
 
 function TMbedTLSCertificate.VerifyHostname(const AHostname: string): Boolean;
@@ -433,18 +763,197 @@ begin
 end;
 
 function TMbedTLSCertificate.GetSubjectAltNames: TSSLStringArray;
+var
+  LBuf: array[0..4095] of AnsiChar;
+  LLen: Integer;
+  LInfo, LLine: string;
+  LPos, LEndPos, LCount: Integer;
+  LSANs: array of string;
 begin
   SetLength(Result, 0);
+  if FX509Crt = nil then Exit;
+  if not Assigned(mbedtls_x509_crt_info) then Exit;
+
+  FillChar(LBuf, SizeOf(LBuf), 0);
+  LLen := mbedtls_x509_crt_info(@LBuf[0], SizeOf(LBuf), '', FX509Crt);
+  if LLen <= 0 then Exit;
+
+  LInfo := string(LBuf);
+  SetLength(LSANs, 0);
+
+  // 查找 "subject alt name" 部分
+  LPos := Pos('subject alt name', LowerCase(LInfo));
+  if LPos > 0 then
+  begin
+    // 移动到该行末尾后的内容
+    LPos := LPos + 16;
+    while (LPos <= Length(LInfo)) and (LInfo[LPos] in [' ', #9, ':']) do
+      Inc(LPos);
+
+    // 解析 DNS 名称
+    while LPos <= Length(LInfo) do
+    begin
+      // 查找 DNS: 或 dNSName:
+      if (LowerCase(Copy(LInfo, LPos, 4)) = 'dns:') or
+         (LowerCase(Copy(LInfo, LPos, 8)) = 'dnsname:') then
+      begin
+        if LowerCase(Copy(LInfo, LPos, 4)) = 'dns:' then
+          LPos := LPos + 4
+        else
+          LPos := LPos + 8;
+
+        // 跳过空白
+        while (LPos <= Length(LInfo)) and (LInfo[LPos] = ' ') do
+          Inc(LPos);
+
+        // 读取名称直到逗号或换行
+        LEndPos := LPos;
+        while (LEndPos <= Length(LInfo)) and not (LInfo[LEndPos] in [',', #10, #13]) do
+          Inc(LEndPos);
+
+        if LEndPos > LPos then
+        begin
+          SetLength(LSANs, Length(LSANs) + 1);
+          LSANs[High(LSANs)] := Trim(Copy(LInfo, LPos, LEndPos - LPos));
+        end;
+        LPos := LEndPos + 1;
+      end
+      else if LInfo[LPos] in [#10, #13] then
+      begin
+        // 检查下一行是否还是 SAN 内容
+        Inc(LPos);
+        while (LPos <= Length(LInfo)) and (LInfo[LPos] in [' ', #9]) do
+          Inc(LPos);
+        // 如果下一行不是以 DNS 开头，退出
+        if (LPos > Length(LInfo)) or
+           ((LowerCase(Copy(LInfo, LPos, 4)) <> 'dns:') and
+            (LowerCase(Copy(LInfo, LPos, 8)) <> 'dnsname:')) then
+          Break;
+      end
+      else
+        Inc(LPos);
+    end;
+  end;
+
+  Result := LSANs;
 end;
 
 function TMbedTLSCertificate.GetKeyUsage: TSSLStringArray;
+var
+  LBuf: array[0..4095] of AnsiChar;
+  LLen: Integer;
+  LInfo, LUsage: string;
+  LPos, LEndPos: Integer;
+  LUsages: array of string;
 begin
   SetLength(Result, 0);
+  if FX509Crt = nil then Exit;
+  if not Assigned(mbedtls_x509_crt_info) then Exit;
+
+  FillChar(LBuf, SizeOf(LBuf), 0);
+  LLen := mbedtls_x509_crt_info(@LBuf[0], SizeOf(LBuf), '', FX509Crt);
+  if LLen <= 0 then Exit;
+
+  LInfo := string(LBuf);
+  SetLength(LUsages, 0);
+
+  // 查找 "key usage" 部分
+  LPos := Pos('key usage', LowerCase(LInfo));
+  if LPos > 0 then
+  begin
+    LPos := LPos + 9;
+    while (LPos <= Length(LInfo)) and (LInfo[LPos] in [' ', #9, ':']) do
+      Inc(LPos);
+
+    // 读取到行尾
+    LEndPos := LPos;
+    while (LEndPos <= Length(LInfo)) and not (LInfo[LEndPos] in [#10, #13]) do
+      Inc(LEndPos);
+
+    LUsage := Trim(Copy(LInfo, LPos, LEndPos - LPos));
+
+    // 按逗号分割
+    while LUsage <> '' do
+    begin
+      LPos := Pos(',', LUsage);
+      if LPos > 0 then
+      begin
+        SetLength(LUsages, Length(LUsages) + 1);
+        LUsages[High(LUsages)] := Trim(Copy(LUsage, 1, LPos - 1));
+        LUsage := Trim(Copy(LUsage, LPos + 1, Length(LUsage)));
+      end
+      else
+      begin
+        SetLength(LUsages, Length(LUsages) + 1);
+        LUsages[High(LUsages)] := Trim(LUsage);
+        Break;
+      end;
+    end;
+  end;
+
+  Result := LUsages;
 end;
 
 function TMbedTLSCertificate.GetExtendedKeyUsage: TSSLStringArray;
+var
+  LBuf: array[0..4095] of AnsiChar;
+  LLen: Integer;
+  LInfo, LUsage: string;
+  LPos, LEndPos: Integer;
+  LUsages: array of string;
 begin
   SetLength(Result, 0);
+  if FX509Crt = nil then Exit;
+  if not Assigned(mbedtls_x509_crt_info) then Exit;
+
+  FillChar(LBuf, SizeOf(LBuf), 0);
+  LLen := mbedtls_x509_crt_info(@LBuf[0], SizeOf(LBuf), '', FX509Crt);
+  if LLen <= 0 then Exit;
+
+  LInfo := string(LBuf);
+  SetLength(LUsages, 0);
+
+  // 查找 "ext key usage" 或 "extended key usage" 部分
+  LPos := Pos('ext key usage', LowerCase(LInfo));
+  if LPos = 0 then
+    LPos := Pos('extended key usage', LowerCase(LInfo));
+
+  if LPos > 0 then
+  begin
+    // 跳过标签
+    while (LPos <= Length(LInfo)) and (LInfo[LPos] <> ':') do
+      Inc(LPos);
+    Inc(LPos);  // 跳过冒号
+    while (LPos <= Length(LInfo)) and (LInfo[LPos] in [' ', #9]) do
+      Inc(LPos);
+
+    // 读取到行尾
+    LEndPos := LPos;
+    while (LEndPos <= Length(LInfo)) and not (LInfo[LEndPos] in [#10, #13]) do
+      Inc(LEndPos);
+
+    LUsage := Trim(Copy(LInfo, LPos, LEndPos - LPos));
+
+    // 按逗号分割
+    while LUsage <> '' do
+    begin
+      LPos := Pos(',', LUsage);
+      if LPos > 0 then
+      begin
+        SetLength(LUsages, Length(LUsages) + 1);
+        LUsages[High(LUsages)] := Trim(Copy(LUsage, 1, LPos - 1));
+        LUsage := Trim(Copy(LUsage, LPos + 1, Length(LUsage)));
+      end
+      else
+      begin
+        SetLength(LUsages, Length(LUsages) + 1);
+        LUsages[High(LUsages)] := Trim(LUsage);
+        Break;
+      end;
+    end;
+  end;
+
+  Result := LUsages;
 end;
 
 function TMbedTLSCertificate.GetFingerprint(AHashType: TSSLHash): string;
@@ -457,13 +966,49 @@ begin
 end;
 
 function TMbedTLSCertificate.GetFingerprintSHA1: string;
+var
+  LMdInfo: Pointer;
+  LHash: array[0..19] of Byte;  // SHA1 = 20 bytes
+  I: Integer;
 begin
   Result := '';
+  if FX509Crt = nil then Exit;
+  if Length(FDERData) = 0 then Exit;
+  if not Assigned(mbedtls_md_info_from_type) then Exit;
+  if not Assigned(mbedtls_md) then Exit;
+
+  LMdInfo := mbedtls_md_info_from_type(MBEDTLS_MD_SHA1);
+  if LMdInfo = nil then Exit;
+
+  FillChar(LHash, SizeOf(LHash), 0);
+  if mbedtls_md(LMdInfo, @FDERData[0], Length(FDERData), @LHash[0]) = 0 then
+  begin
+    for I := 0 to 19 do
+      Result := Result + IntToHex(LHash[I], 2);
+  end;
 end;
 
 function TMbedTLSCertificate.GetFingerprintSHA256: string;
+var
+  LMdInfo: Pointer;
+  LHash: array[0..31] of Byte;  // SHA256 = 32 bytes
+  I: Integer;
 begin
   Result := '';
+  if FX509Crt = nil then Exit;
+  if Length(FDERData) = 0 then Exit;
+  if not Assigned(mbedtls_md_info_from_type) then Exit;
+  if not Assigned(mbedtls_md) then Exit;
+
+  LMdInfo := mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+  if LMdInfo = nil then Exit;
+
+  FillChar(LHash, SizeOf(LHash), 0);
+  if mbedtls_md(LMdInfo, @FDERData[0], Length(FDERData), @LHash[0]) = 0 then
+  begin
+    for I := 0 to 31 do
+      Result := Result + IntToHex(LHash[I], 2);
+  end;
 end;
 
 procedure TMbedTLSCertificate.SetIssuerCertificate(ACert: ISSLCertificate);

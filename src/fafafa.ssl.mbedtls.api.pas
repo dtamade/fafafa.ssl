@@ -120,6 +120,18 @@ type
   Tmbedtls_x509_crt_parse_path = function(chain: Pmbedtls_x509_crt;
     const path: PAnsiChar): Integer; cdecl;
   Tmbedtls_x509_crt_free = procedure(crt: Pmbedtls_x509_crt); cdecl;
+  Tmbedtls_x509_crt_info = function(buf: PAnsiChar; size: NativeUInt;
+    const prefix: PAnsiChar; const crt: Pmbedtls_x509_crt): Integer; cdecl;
+  Tmbedtls_x509_crt_verify = function(crt: Pmbedtls_x509_crt;
+    trust_ca: Pmbedtls_x509_crt; ca_crl: Pmbedtls_x509_crl;
+    const cn: PAnsiChar; flags: PCardinal;
+    f_vrfy: Pointer; p_vrfy: Pointer): Integer; cdecl;
+  Tmbedtls_x509_crt_verify_info = function(buf: PAnsiChar; size: NativeUInt;
+    const prefix: PAnsiChar; flags: Cardinal): Integer; cdecl;
+
+  // SSL 对端证书
+  Tmbedtls_ssl_get_peer_cert = function(ssl: Pmbedtls_ssl_context): Pmbedtls_x509_crt; cdecl;
+  Tmbedtls_ssl_get_version = function(ssl: Pmbedtls_ssl_context): PAnsiChar; cdecl;
 
   // 私钥
   Tmbedtls_pk_init = procedure(ctx: Pmbedtls_pk_context); cdecl;
@@ -135,6 +147,12 @@ type
   // 错误处理
   Tmbedtls_strerror = procedure(errnum: Integer; buffer: PAnsiChar;
     buflen: NativeUInt); cdecl;
+
+  // 消息摘要 (MD) - 用于计算指纹
+  Tmbedtls_md_info_from_type = function(md_type: Integer): Pointer; cdecl;
+  Tmbedtls_md = function(md_info: Pointer; const input: PByte;
+    ilen: NativeUInt; output: PByte): Integer; cdecl;
+  Tmbedtls_md_get_size = function(md_info: Pointer): Byte; cdecl;
 
 var
   { 函数指针 - 版本信息 }
@@ -189,6 +207,13 @@ var
   mbedtls_x509_crt_parse_file: Tmbedtls_x509_crt_parse_file = nil;
   mbedtls_x509_crt_parse_path: Tmbedtls_x509_crt_parse_path = nil;
   mbedtls_x509_crt_free: Tmbedtls_x509_crt_free = nil;
+  mbedtls_x509_crt_info: Tmbedtls_x509_crt_info = nil;
+  mbedtls_x509_crt_verify: Tmbedtls_x509_crt_verify = nil;
+  mbedtls_x509_crt_verify_info: Tmbedtls_x509_crt_verify_info = nil;
+
+  { 函数指针 - SSL 对端证书 }
+  mbedtls_ssl_get_peer_cert: Tmbedtls_ssl_get_peer_cert = nil;
+  mbedtls_ssl_get_version: Tmbedtls_ssl_get_version = nil;
 
   { 函数指针 - 私钥 }
   mbedtls_pk_init: Tmbedtls_pk_init = nil;
@@ -198,6 +223,11 @@ var
 
   { 函数指针 - 错误处理 }
   mbedtls_strerror: Tmbedtls_strerror = nil;
+
+  { 函数指针 - 消息摘要 }
+  mbedtls_md_info_from_type: Tmbedtls_md_info_from_type = nil;
+  mbedtls_md: Tmbedtls_md = nil;
+  mbedtls_md_get_size: Tmbedtls_md_get_size = nil;
 
 { 库加载函数 }
 function LoadMbedTLSLibrary: Boolean;
@@ -265,6 +295,12 @@ begin
   mbedtls_x509_crt_parse_file := nil;
   mbedtls_x509_crt_parse_path := nil;
   mbedtls_x509_crt_free := nil;
+  mbedtls_x509_crt_info := nil;
+  mbedtls_x509_crt_verify := nil;
+  mbedtls_x509_crt_verify_info := nil;
+  // SSL 对端证书
+  mbedtls_ssl_get_peer_cert := nil;
+  mbedtls_ssl_get_version := nil;
   // 私钥
   mbedtls_pk_init := nil;
   mbedtls_pk_free := nil;
@@ -272,6 +308,10 @@ begin
   mbedtls_pk_parse_key := nil;
   // 错误
   mbedtls_strerror := nil;
+  // 消息摘要
+  mbedtls_md_info_from_type := nil;
+  mbedtls_md := nil;
+  mbedtls_md_get_size := nil;
 end;
 
 function LoadMbedTLSLibrary: Boolean;
@@ -396,6 +436,18 @@ begin
     GetProc(GMbedX509Handle, 'mbedtls_x509_crt_parse_path'));
   mbedtls_x509_crt_free := Tmbedtls_x509_crt_free(
     GetProc(GMbedX509Handle, 'mbedtls_x509_crt_free'));
+  mbedtls_x509_crt_info := Tmbedtls_x509_crt_info(
+    GetProc(GMbedX509Handle, 'mbedtls_x509_crt_info'));
+  mbedtls_x509_crt_verify := Tmbedtls_x509_crt_verify(
+    GetProc(GMbedX509Handle, 'mbedtls_x509_crt_verify'));
+  mbedtls_x509_crt_verify_info := Tmbedtls_x509_crt_verify_info(
+    GetProc(GMbedX509Handle, 'mbedtls_x509_crt_verify_info'));
+
+  // 加载 SSL 对端证书函数（从 mbedtls）
+  mbedtls_ssl_get_peer_cert := Tmbedtls_ssl_get_peer_cert(
+    GetProc(GMbedTLSHandle, 'mbedtls_ssl_get_peer_cert'));
+  mbedtls_ssl_get_version := Tmbedtls_ssl_get_version(
+    GetProc(GMbedTLSHandle, 'mbedtls_ssl_get_version'));
 
   // 加载私钥函数（从 mbedcrypto）
   mbedtls_pk_init := Tmbedtls_pk_init(
@@ -410,6 +462,14 @@ begin
   // 加载错误函数（从 mbedcrypto）
   mbedtls_strerror := Tmbedtls_strerror(
     GetProc(GMbedCryptoHandle, 'mbedtls_strerror'));
+
+  // 加载消息摘要函数（从 mbedcrypto）
+  mbedtls_md_info_from_type := Tmbedtls_md_info_from_type(
+    GetProc(GMbedCryptoHandle, 'mbedtls_md_info_from_type'));
+  mbedtls_md := Tmbedtls_md(
+    GetProc(GMbedCryptoHandle, 'mbedtls_md'));
+  mbedtls_md_get_size := Tmbedtls_md_get_size(
+    GetProc(GMbedCryptoHandle, 'mbedtls_md_get_size'));
 
   // 验证必需函数
   if not Assigned(mbedtls_entropy_init) or
