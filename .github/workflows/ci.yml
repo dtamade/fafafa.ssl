@@ -84,6 +84,16 @@ jobs:
         chmod +x ./scripts/compile_all.sh
         ./scripts/compile_all.sh
 
+    - name: Compile backend contract tests
+      run: |
+        echo "=== Compiling Backend Contract Tests ==="
+        fpc -Fusrc -FEtests/bin tests/contract/test_backend_contract.pas
+
+    - name: Run backend contract tests (gating)
+      run: |
+        echo "=== Running Backend Contract Tests ==="
+        timeout 60 tests/bin/test_backend_contract
+
     - name: Run unit tests
       run: |
         echo "=== Running Pure Pascal Tests ==="
@@ -193,24 +203,36 @@ jobs:
     - name: Run pure Pascal tests on Windows
       run: |
         echo === Running Pure Pascal Tests ===
-        tests\bin\test_asn1.exe
-        tests\bin\test_x509.exe
-        tests\bin\test_pem.exe
-        tests\bin\test_hash.exe
-        tests\bin\test_ocsp.exe
-        tests\bin\test_crl.exe
+        tests\\bin\\test_asn1.exe
+        tests\\bin\\test_x509.exe
+        tests\\bin\\test_pem.exe
+        tests\\bin\\test_hash.exe
+        tests\\bin\\test_ocsp.exe
+        tests\\bin\\test_crl.exe
+      shell: cmd
+
+    - name: Compile backend contract tests
+      run: |
+        echo === Compiling Backend Contract Tests ===
+        fpc -Fusrc -FEtests\\bin tests\\contract\\test_backend_contract.pas
+      shell: cmd
+
+    - name: Run backend contract tests (gating)
+      run: |
+        echo === Running Backend Contract Tests ===
+        tests\\bin\\test_backend_contract.exe
       shell: cmd
 
     - name: Compile WinSSL Backend
       run: |
         echo === Compiling WinSSL Backend ===
-        fpc -Fusrc -Futests\bin -FEtests\bin src\fafafa.ssl.base.pas
-        fpc -Fusrc -Futests\bin -FEtests\bin src\fafafa.ssl.winssl.lib.pas
-        fpc -Fusrc -Futests\bin -FEtests\bin src\fafafa.ssl.winssl.errors.pas
-        fpc -Fusrc -Futests\bin -FEtests\bin src\fafafa.ssl.winssl.context.pas
-        fpc -Fusrc -Futests\bin -FEtests\bin src\fafafa.ssl.winssl.connection.pas
-        fpc -Fusrc -Futests\bin -FEtests\bin src\fafafa.ssl.winssl.certificate.pas
-        fpc -Fusrc -Futests\bin -FEtests\bin src\fafafa.ssl.winssl.certstore.pas
+        fpc -Fusrc -Futests\\bin -FEtests\\bin src\\fafafa.ssl.base.pas
+        fpc -Fusrc -Futests\\bin -FEtests\\bin src\\fafafa.ssl.winssl.lib.pas
+        fpc -Fusrc -Futests\\bin -FEtests\\bin src\\fafafa.ssl.winssl.errors.pas
+        fpc -Fusrc -Futests\\bin -FEtests\\bin src\\fafafa.ssl.winssl.context.pas
+        fpc -Fusrc -Futests\\bin -FEtests\\bin src\\fafafa.ssl.winssl.connection.pas
+        fpc -Fusrc -Futests\\bin -FEtests\\bin src\\fafafa.ssl.winssl.certificate.pas
+        fpc -Fusrc -Futests\\bin -FEtests\\bin src\\fafafa.ssl.winssl.certstore.pas
       shell: cmd
       continue-on-error: true
 
