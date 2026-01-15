@@ -1,0 +1,1015 @@
+﻿{
+    "timestamp":  "2026-01-06T06:05:35",
+    "compilation":  {
+                        "failed":  98,
+                        "details":  [
+                                        {
+                                            "Module":  "fafafa.ssl.asn1",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  233
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.base",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  158
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.cert.advanced",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  183
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.cert.builder.impl",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  168
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.cert.builder",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  164
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.cert",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  161
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.cert.utils",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  192
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.certchain",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  206
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.collections",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  176
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.connection.builder",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  192
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.context.builder",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  161
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.crl",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  217
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.crypto.constant_time",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  174
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.crypto.hash",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  196
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.crypto.utils",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  173
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.debug.utils",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  180
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.encoding",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  179
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.errors",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  163
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.exceptions",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  171
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.factory",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  160
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.init",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  177
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.logging",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  186
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.memutils",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  145
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.ocsp",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  214
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.aead",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  198
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.aes",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  197
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.aria",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  174
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.asn1",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  187
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.async",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  186
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.bio",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  170
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.blake2",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  159
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.bn",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  172
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.buffer",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  162
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.chacha",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  161
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.cmac.evp",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  160
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.cms",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  169
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.comp",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  180
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.conf",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  170
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.consts",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  77
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.core",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  169
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.crypto",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  167
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.ct",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  175
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.des",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  163
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.dh",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  165
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.dsa",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  168
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.dso",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  188
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.ec",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  162
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.ecdh",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  174
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.ecdsa",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  174
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.engine",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  173
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.err",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  202
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.evp",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  172
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.hmac",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  169
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.kdf",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  165
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.legacy_ciphers",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  225
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.lhash",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  204
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.md",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  170
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.modes",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  187
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.obj",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  220
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.ocsp",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  175
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.param",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  166
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  167
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.pem",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  208
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.pkcs",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  171
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.pkcs12",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  170
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.pkcs7",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  166
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.provider",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  173
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.rand",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  196
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.rsa",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  177
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.scrypt_whirlpool",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  169
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.seed",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  169
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.sha",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  169
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.sha3.evp",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  166
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.sm",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  171
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.srp",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  193
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.ssl",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  180
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.stack",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  172
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.store",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  229
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.thread",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  187
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.ts",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  163
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.txt_db",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  171
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.ui",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  193
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.utils",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  164
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.x509",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  207
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.x509v3",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  205
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.backed",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  195
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.base",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  159
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.cert.builder",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  185
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.certificate",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  164
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.certstore",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  162
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.connection",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  184
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.context",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  185
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.dependencies",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  141
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.errors",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  164
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.loader",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  147
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.session",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  164
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.x509.chain",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  176
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  167
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.pem",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  196
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.quick",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  186
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.result.utils",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  164
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.ringbuffer.lockfree",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  184
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.safety",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  174
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.secure",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  169
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.ssh",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  165
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.tls",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  193
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.utils",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  189
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.api",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  143
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.base",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  158
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.certificate",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  170
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.certstore",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  162
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.connection",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  182
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.context",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  179
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.enterprise",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  219
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.errors",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  168
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.lib",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  189
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.utils",
+                                            "Status":  "FAIL",
+                                            "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                            "Duration":  181
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.x509",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  205
+                                        }
+                                    ],
+                        "total":  118,
+                        "passed":  20
+                    },
+    "backendComparison":  {
+                              "failed":  0,
+                              "details":  [
+
+                                          ],
+                              "total":  0,
+                              "passed":  0
+                          },
+    "ssh":  {
+                "failed":  1,
+                "details":  [
+                                {
+                                    "Passed":  0,
+                                    "Category":  "SSH",
+                                    "Name":  "test_ssh",
+                                    "Status":  "COMPILE_ERROR",
+                                    "Duration":  0,
+                                    "Total":  0,
+                                    "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                    "Failed":  0
+                                }
+                            ],
+                "total":  1,
+                "passed":  0
+            },
+    "environment":  {
+                        "workingDirectory":  "C:\\Users\\dtama\\projects\\fafafa.ssl",
+                        "opensslAvailable":  false,
+                        "powershell":  "5.1.26100.7462",
+                        "openssl":  "Unknown",
+                        "windows":  "Microsoft Windows NT 10.0.26200.0",
+                        "fpc":  "3.2.2"
+                    },
+    "summary":  {
+                    "passed":  1,
+                    "durationSeconds":  26.42,
+                    "failed":  24,
+                    "compileErrors":  98,
+                    "total":  25,
+                    "skipped":  0,
+                    "passRate":  4
+                },
+    "openssl":  {
+                    "failed":  0,
+                    "details":  [
+
+                                ],
+                    "total":  0,
+                    "passed":  0
+                },
+    "winssl":  {
+                   "failed":  23,
+                   "details":  [
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_actual_features",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_alpn_sni",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_api_basic",
+                                       "Status":  "PASS",
+                                       "Duration":  29,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_cert_verify_ex",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_certificate",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_certificate_loading",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_certificate_san",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_enterprise",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_error_mapping_online",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_errors",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_handshake_debug",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_hostname_mismatch_online",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_https_client",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_integration_multi",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_lib_simple",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_library_basic",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_mtls_e2e_local",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_mtls_skeleton",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_ocsp_crl_skeleton",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_performance",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_revocation_online",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_session_resumption",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_unit_comprehensive",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_utils",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.base.pas(1289,3) Error: Expected another 2 array elements",
+                                       "Failed":  0
+                                   }
+                               ],
+                   "total":  24,
+                   "passed":  1
+               }
+}

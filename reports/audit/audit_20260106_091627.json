@@ -1,0 +1,2191 @@
+{
+  "timestamp" : "2026-01-06T09:15:58",
+  "projectPath" : "C:\\Users\\dtama\\projects\\fafafa.ssl\\tools\\test_audit",
+  "scores" : {
+    "overall" : 67,
+    "coverage" : 42,
+    "boundaryTesting" : 70,
+    "errorHandling" : 75,
+    "cryptoTesting" : 80,
+    "threadSafety" : 70,
+    "resourceManagement" : 75,
+    "backendConsistency" : 80
+  },
+  "statistics" : {
+    "totalSourceFiles" : 2035,
+    "totalTestFiles" : 1799,
+    "totalFunctions" : 2035,
+    "totalTestCases" : 1799,
+    "overallCoverage" : 4.1867321867321863E+001
+  },
+  "coverageResults" : [
+    {
+      "unitName" : "fafafa.ssl",
+      "fileName" : "..\\..\\src\\fafafa.ssl.pas",
+      "totalFunctions" : 19,
+      "testedFunctions" : 9,
+      "coveragePercent" : 4.7368421052631575E+001,
+      "untestedFunctions" : [
+        "SSLFactory",
+        "SSLHelper",
+        "CreateSSLCertificate",
+        "SSLErrorToString",
+        "LibraryTypeToString",
+        "QuickServer",
+        "CheckSSLSupport",
+        "GetSSLSupportInfo",
+        "ValidateCertificate",
+        "GetCertificateDetails"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.asn1",
+      "fileName" : "..\\..\\src\\fafafa.ssl.asn1.pas",
+      "totalFunctions" : 85,
+      "testedFunctions" : 22,
+      "coveragePercent" : 2.5882352941176475E+001,
+      "untestedFunctions" : [
+        "IsSequence",
+        "IsSet",
+        "IsContextTag",
+        "TotalLength",
+        "ChildCount",
+        "FirstChild",
+        "LastChild",
+        "IsSequence",
+        "IsSet",
+        "IsInteger",
+        "IsOID",
+        "IsBitString",
+        "IsOctetString",
+        "IsUTF8String",
+        "IsPrintableString",
+        "IsIA5String",
+        "IsUTCTime",
+        "IsGeneralizedTime",
+        "IsNull",
+        "IsBoolean",
+        "IsContextTag",
+        "AsInteger",
+        "AsBigInteger",
+        "AsOID",
+        "AsString",
+        "AsBoolean",
+        "AsDateTime",
+        "AsBitString",
+        "AsOctetString",
+        "GetCount",
+        "GetItem",
+        "ReadByte",
+        "PeekByte",
+        "ReadTag",
+        "ReadLengthField",
+        "ReadBytes",
+        "Parse",
+        "ParseNode",
+        "WriteTag",
+        "WriteLength",
+        "WriteBytes",
+        "PushPosition",
+        "PopAndWriteLength",
+        "WriteNull",
+        "WriteBoolean",
+        "WriteInteger",
+        "WriteBigInteger",
+        "WriteOID",
+        "WriteOctetString",
+        "WriteBitString",
+        "WriteUTF8String",
+        "WritePrintableString",
+        "WriteIA5String",
+        "WriteUTCTime",
+        "WriteGeneralizedTime",
+        "BeginSequence",
+        "EndSequence",
+        "BeginSet",
+        "EndSet",
+        "BeginContextTag",
+        "EndContextTag",
+        "WriteRaw",
+        "GetData"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.base",
+      "fileName" : "..\\..\\src\\fafafa.ssl.base.pas",
+      "totalFunctions" : 206,
+      "testedFunctions" : 107,
+      "coveragePercent" : 5.1941747572815530E+001,
+      "untestedFunctions" : [
+        "AsBytes",
+        "IsEmpty",
+        "IsValid",
+        "GetByteUnchecked",
+        "IsErr",
+        "IsErr",
+        "IsErr",
+        "AddWarning",
+        "AddError",
+        "HasWarnings",
+        "HasErrors",
+        "WarningCount",
+        "ErrorCount",
+        "IsInitialized",
+        "GetLibraryType",
+        "GetVersionString",
+        "GetVersionNumber",
+        "GetCompileFlags",
+        "GetCapabilities",
+        "GetDefaultConfig",
+        "GetLastError",
+        "GetLastErrorString",
+        "GetStatistics",
+        "GetContextType",
+        "GetProtocolVersions",
+        "LoadCAPath",
+        "GetVerifyMode",
+        "GetVerifyDepth",
+        "GetCipherList",
+        "GetCipherSuites",
+        "GetSessionCacheMode",
+        "GetSessionTimeout",
+        "GetSessionCacheSize",
+        "GetOptions",
+        "GetServerName",
+        "GetALPNProtocols",
+        "GetCertVerifyFlags",
+        "IsValid",
+        "GetNativeHandle",
+        "Accept",
+        "DoHandshake",
+        "IsHandshakeComplete",
+        "Renegotiate",
+        "ReadString",
+        "WantRead",
+        "WantWrite",
+        "GetConnectionInfo",
+        "GetPeerCertificateChain",
+        "GetVerifyResult",
+        "GetVerifyResultString",
+        "GetSession",
+        "IsSessionReused",
+        "GetSelectedALPNProtocol",
+        "IsConnected",
+        "GetState",
+        "GetStateString",
+        "GetTimeout",
+        "SetBlocking",
+        "GetBlocking",
+        "GetNativeHandle",
+        "GetContext",
+        "GetServerName",
+        "LoadFromStream",
+        "SaveToStream",
+        "SaveToPEM",
+        "SaveToDER",
+        "GetSubject",
+        "GetSerialNumber",
+        "GetNotBefore",
+        "GetNotAfter",
+        "GetPublicKey",
+        "GetPublicKeyAlgorithm",
+        "GetSignatureAlgorithm",
+        "IsExpired",
+        "IsCA",
+        "GetDaysUntilExpiry",
+        "GetSubjectCN",
+        "GetSubjectAltNames",
+        "GetKeyUsage",
+        "GetExtendedKeyUsage",
+        "GetFingerprintSHA1",
+        "GetFingerprintSHA256",
+        "GetNativeHandle",
+        "RemoveCertificate",
+        "Contains",
+        "GetCount",
+        "LoadSystemStore",
+        "BuildCertificateChain",
+        "GetNativeHandle",
+        "GetTimeout",
+        "IsValid",
+        "IsResumable",
+        "Serialize",
+        "GetNativeHandle",
+        "SSLErrorToString",
+        "LibraryTypeToString",
+        "GetFafafaSSLVersion",
+        "GetFafafaSSLInterfaceVersion",
+        "CheckInterfaceVersion"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.cert.advanced",
+      "fileName" : "..\\..\\src\\fafafa.ssl.cert.advanced.pas",
+      "totalFunctions" : 15,
+      "testedFunctions" : 8,
+      "coveragePercent" : 5.3333333333333336E+001,
+      "untestedFunctions" : [
+        "CheckCertificate",
+        "LoadFromURL",
+        "GetRevokedDate",
+        "GetRevocationReason",
+        "Refresh",
+        "IsExpired",
+        "GetNextUpdate"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.cert.builder",
+      "fileName" : "..\\..\\src\\fafafa.ssl.cert.builder.pas",
+      "totalFunctions" : 39,
+      "testedFunctions" : 10,
+      "coveragePercent" : 2.5641025641025639E+001,
+      "untestedFunctions" : [
+        "GetSubject",
+        "GetSerialNumber",
+        "GetNotBefore",
+        "GetNotAfter",
+        "GetSubjectAltNames",
+        "IsCA",
+        "IsExpired",
+        "GetX509Handle",
+        "GetEVP_PKEYHandle",
+        "GetPrivateKey",
+        "SaveToFiles",
+        "SaveToPEM",
+        "WithCommonName",
+        "WithOrganization",
+        "WithOrganizationalUnit",
+        "WithCountry",
+        "WithState",
+        "WithLocality",
+        "ValidFrom",
+        "ValidUntil",
+        "WithRSAKey",
+        "WithECDSAKey",
+        "WithEd25519Key",
+        "AddSubjectAltName",
+        "AsCA",
+        "AsServerCert",
+        "AsClientCert",
+        "WithSerialNumber",
+        "SignedBy"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.cert.builder.impl",
+      "fileName" : "..\\..\\src\\fafafa.ssl.cert.builder.impl.pas",
+      "totalFunctions" : 53,
+      "testedFunctions" : 17,
+      "coveragePercent" : 3.2075471698113205E+001,
+      "untestedFunctions" : [
+        "LoadInfo",
+        "EnsureHandle",
+        "EnsurePEM",
+        "CreateFromHandle",
+        "GetSubject",
+        "GetSerialNumber",
+        "GetNotBefore",
+        "GetNotAfter",
+        "GetSubjectAltNames",
+        "IsCA",
+        "IsExpired",
+        "GetX509Handle",
+        "EnsureHandle",
+        "EnsurePEM",
+        "CreateFromHandle",
+        "GetEVP_PKEYHandle",
+        "GetPrivateKey",
+        "SaveToFiles",
+        "SaveToPEM",
+        "WithCommonName",
+        "WithOrganization",
+        "WithOrganizationalUnit",
+        "WithCountry",
+        "WithState",
+        "WithLocality",
+        "ValidFrom",
+        "ValidUntil",
+        "WithRSAKey",
+        "WithECDSAKey",
+        "WithEd25519Key",
+        "AddSubjectAltName",
+        "AsCA",
+        "AsServerCert",
+        "AsClientCert",
+        "WithSerialNumber",
+        "SignedBy"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.certchain",
+      "fileName" : "..\\..\\src\\fafafa.ssl.certchain.pas",
+      "totalFunctions" : 40,
+      "testedFunctions" : 7,
+      "coveragePercent" : 1.7500000000000000E+001,
+      "untestedFunctions" : [
+        "GetOptions",
+        "SetTrustedStore",
+        "GetTrustedStore",
+        "SetIntermediateStore",
+        "GetIntermediateStore",
+        "SetCRLStore",
+        "GetCRLStore",
+        "VerifyChain",
+        "BuildChain",
+        "CheckCertificateTime",
+        "CheckCertificateSignature",
+        "CheckCertificateKeyUsage",
+        "CheckCertificateRevocation",
+        "CheckHostname",
+        "FindIssuer",
+        "IsRootCertificate",
+        "ValidatePathLength",
+        "MatchHostname",
+        "ParseSubjectAltNames",
+        "GetOptions",
+        "SetTrustedStore",
+        "GetTrustedStore",
+        "SetIntermediateStore",
+        "GetIntermediateStore",
+        "SetCRLStore",
+        "GetCRLStore",
+        "VerifyChain",
+        "BuildChain",
+        "CheckCertificateTime",
+        "CheckCertificateSignature",
+        "CheckCertificateKeyUsage",
+        "CheckCertificateRevocation",
+        "CheckHostname"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.collections",
+      "fileName" : "..\\..\\src\\fafafa.ssl.collections.pas",
+      "totalFunctions" : 51,
+      "testedFunctions" : 39,
+      "coveragePercent" : 7.6470588235294116E+001,
+      "untestedFunctions" : [
+        "Contains",
+        "Remove",
+        "Contains",
+        "Remove",
+        "Contains",
+        "Remove",
+        "FindIndex",
+        "Contains",
+        "Remove",
+        "FindIndex",
+        "Contains",
+        "Remove"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.connection.builder",
+      "fileName" : "..\\..\\src\\fafafa.ssl.connection.builder.pas",
+      "totalFunctions" : 12,
+      "testedFunctions" : 9,
+      "coveragePercent" : 7.5000000000000000E+001,
+      "untestedFunctions" : [
+        "WithStream",
+        "WithSession",
+        "WithSessionReuse"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.context.builder",
+      "fileName" : "..\\..\\src\\fafafa.ssl.context.builder.pas",
+      "totalFunctions" : 55,
+      "testedFunctions" : 41,
+      "coveragePercent" : 7.4545454545454547E+001,
+      "untestedFunctions" : [
+        "WithTLS12",
+        "WithTLS13",
+        "WithTLS12And13",
+        "WithVerifyPeer",
+        "WithVerifyNone",
+        "WithCAPath",
+        "WithSystemRoots",
+        "WithSafeDefaults",
+        "WithoutOption",
+        "Validate",
+        "ValidateClient",
+        "ValidateServer",
+        "ExportToJSON",
+        "ExportToINI"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.crl",
+      "fileName" : "..\\..\\src\\fafafa.ssl.crl.pas",
+      "totalFunctions" : 24,
+      "testedFunctions" : 11,
+      "coveragePercent" : 4.5833333333333329E+001,
+      "untestedFunctions" : [
+        "ParseCRL",
+        "ParseTBSCertList",
+        "ParseRevokedCertificates",
+        "ParseCRLEntry",
+        "ParseEntryExtensions",
+        "ParseExtensions",
+        "ParseName",
+        "GetEntryCount",
+        "GetRevokedEntry",
+        "IsExpired",
+        "IsValid",
+        "GetCRLURLFromCertificate",
+        "GetCRLURLsFromCertificate"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.crypto.hash",
+      "fileName" : "..\\..\\src\\fafafa.ssl.crypto.hash.pas",
+      "totalFunctions" : 42,
+      "testedFunctions" : 42,
+      "coveragePercent" : 1.0000000000000000E+002,
+      "untestedFunctions" : [
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.crypto.utils",
+      "fileName" : "..\\..\\src\\fafafa.ssl.crypto.utils.pas",
+      "totalFunctions" : 14,
+      "testedFunctions" : 12,
+      "coveragePercent" : 8.5714285714285708E+001,
+      "untestedFunctions" : [
+        "CheckNotFinalized",
+        "CheckNotFinalized"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.debug.utils",
+      "fileName" : "..\\..\\src\\fafafa.ssl.debug.utils.pas",
+      "totalFunctions" : 46,
+      "testedFunctions" : 15,
+      "coveragePercent" : 3.2608695652173914E+001,
+      "untestedFunctions" : [
+        "ReadByte",
+        "ReadWord",
+        "ReadDWord",
+        "ReadBytes",
+        "ReadString",
+        "WriteByte",
+        "WriteWord",
+        "WriteDWord",
+        "WriteBytes",
+        "PeekByte",
+        "RemainingBytes",
+        "GetHexDump",
+        "Append",
+        "AppendLine",
+        "AppendFormat",
+        "Indent",
+        "Unindent",
+        "SetIndentStr",
+        "GetBit",
+        "SetBit",
+        "SetAll",
+        "Toggle",
+        "IsEmpty",
+        "IsFull",
+        "FindResource",
+        "RegisterResource",
+        "UnregisterResource",
+        "GetResourceCount",
+        "GetResourceSnapshot",
+        "ReportLeaks",
+        "HasLeaks"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.errors",
+      "fileName" : "..\\..\\src\\fafafa.ssl.errors.pas",
+      "totalFunctions" : 24,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "RaiseSSLError",
+        "RaiseSSLErrorFmt",
+        "RaiseFunctionNotAvailable",
+        "RaiseInvalidParameter",
+        "RaiseInvalidData",
+        "RaiseNotInitialized",
+        "RaiseMemoryError",
+        "RaiseUnsupported",
+        "RaiseEncryptionError",
+        "RaiseDecryptionError",
+        "RaiseKeyDerivationError",
+        "RaiseCertificateError",
+        "RaiseCertificateExpired",
+        "RaiseCertificateVerifyError",
+        "RaiseLoadError",
+        "RaiseParseError",
+        "RaiseConnectionError",
+        "RaiseInvalidFormat",
+        "RaiseInitializationError",
+        "RaiseConfigurationError",
+        "RaiseResourceExhausted",
+        "RaiseBufferError",
+        "FormatErrorMessage",
+        "GetErrorMessage"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.exceptions",
+      "fileName" : "..\\..\\src\\fafafa.ssl.exceptions.pas",
+      "totalFunctions" : 7,
+      "testedFunctions" : 3,
+      "coveragePercent" : 4.2857142857142854E+001,
+      "untestedFunctions" : [
+        "CreateWithCode",
+        "CreateFmt",
+        "CreateWithContext",
+        "CreateWithSysCode"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.factory",
+      "fileName" : "..\\..\\src\\fafafa.ssl.factory.pas",
+      "totalFunctions" : 6,
+      "testedFunctions" : 3,
+      "coveragePercent" : 5.0000000000000000E+001,
+      "untestedFunctions" : [
+        "SSLFactory",
+        "SSLHelper",
+        "CreateSSLCertificate"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.init",
+      "fileName" : "..\\..\\src\\fafafa.ssl.init.pas",
+      "totalFunctions" : 3,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "InitializeOpenSSL",
+        "IsOpenSSLInitialized",
+        "GetOpenSSLVersion"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.logging",
+      "fileName" : "..\\..\\src\\fafafa.ssl.logging.pas",
+      "totalFunctions" : 51,
+      "testedFunctions" : 17,
+      "coveragePercent" : 3.3333333333333329E+001,
+      "untestedFunctions" : [
+        "LogTrace",
+        "LogDebug",
+        "LogInfo",
+        "LogWarning",
+        "LogAudit",
+        "LogCritical",
+        "SetMinLevel",
+        "GetMinLevel",
+        "FormatMessage",
+        "LogTrace",
+        "LogDebug",
+        "LogInfo",
+        "LogWarning",
+        "LogAudit",
+        "LogCritical",
+        "SetMinLevel",
+        "GetMinLevel",
+        "RotateLogFile",
+        "CheckRotation",
+        "AddLogger",
+        "RemoveLogger",
+        "LogTrace",
+        "LogDebug",
+        "LogInfo",
+        "LogWarning",
+        "LogAudit",
+        "LogCritical",
+        "SetMinLevel",
+        "GetMinLevel",
+        "CreateInstance",
+        "StartMeasure",
+        "EndMeasure",
+        "GetReport",
+        "LogDeprecatedProtocolWarnings"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.memutils",
+      "fileName" : "..\\..\\src\\fafafa.ssl.memutils.pas",
+      "totalFunctions" : 3,
+      "testedFunctions" : 3,
+      "coveragePercent" : 1.0000000000000000E+002,
+      "untestedFunctions" : [
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.ocsp",
+      "fileName" : "..\\..\\src\\fafafa.ssl.ocsp.pas",
+      "totalFunctions" : 19,
+      "testedFunctions" : 14,
+      "coveragePercent" : 7.3684210526315780E+001,
+      "untestedFunctions" : [
+        "GenerateNonce",
+        "ParseBasicOCSPResponse",
+        "ParseResponseData",
+        "ParseSingleResponse",
+        "GetOCSPURLFromCertificate"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.pas",
+      "totalFunctions" : 10,
+      "testedFunctions" : 2,
+      "coveragePercent" : 2.0000000000000000E+001,
+      "untestedFunctions" : [
+        "LoadOpenSSLLibrary",
+        "UnloadOpenSSLLibrary",
+        "IsOpenSSLLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "GetOpenSSLVersion",
+        "GetOpenSSLErrorString",
+        "IsCryptoLibraryLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "GetCryptoProcAddress",
+        "SSL_set_tlsext_host_name"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.aead",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.aead.pas",
+      "totalFunctions" : 4,
+      "testedFunctions" : 4,
+      "coveragePercent" : 1.0000000000000000E+002,
+      "untestedFunctions" : [
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.aes",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.aes.pas",
+      "totalFunctions" : 9,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadAESFunctions",
+        "UnloadAESFunctions",
+        "IsAESLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "AESEncryptECB",
+        "AESDecryptECB",
+        "AESEncryptCBC",
+        "AESDecryptCBC",
+        "AESEncryptCTR",
+        "AESDecryptCTR"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.aria",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.aria.pas",
+      "totalFunctions" : 6,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadARIAFunctions",
+        "UnloadARIAFunctions",
+        "ARIAEncryptBlock",
+        "ARIADecryptBlock",
+        "ARIAEncryptCBC",
+        "ARIADecryptCBC"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.asn1",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.asn1.pas",
+      "totalFunctions" : 6,
+      "testedFunctions" : 1,
+      "coveragePercent" : 1.6666666666666664E+001,
+      "untestedFunctions" : [
+        "UnloadOpenSSLASN1",
+        "ASN1StringToString",
+        "StringToASN1String",
+        "ASN1TimeToDateTime",
+        "DateTimeToASN1Time"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.async",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.async.pas",
+      "totalFunctions" : 21,
+      "testedFunctions" : 6,
+      "coveragePercent" : 2.8571428571428569E+001,
+      "untestedFunctions" : [
+        "LoadASYNCFunctions",
+        "UnloadASYNCFunctions",
+        "InitializeAsyncContext",
+        "CleanupAsyncContext",
+        "CreateAsyncJob",
+        "RunAsyncJob",
+        "WaitForAsyncJob",
+        "IsAsyncCapable",
+        "Pause",
+        "Resume",
+        "Wait",
+        "AddJob",
+        "RemoveJob",
+        "WaitAll",
+        "CancelAll"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.bio",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.bio.pas",
+      "totalFunctions" : 11,
+      "testedFunctions" : 1,
+      "coveragePercent" : 9.0909090909090917E+000,
+      "untestedFunctions" : [
+        "UnloadOpenSSLBIO",
+        "IsOpenSSLBIOLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "BIO_set_conn_hostname",
+        "BIO_set_conn_port",
+        "BIO_do_connect",
+        "BIO_get_ssl",
+        "BIO_pending_impl",
+        "BIO_set_flags",
+        "BIO_flush",
+        "BIO_get_mem_data"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.blake2",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.blake2.pas",
+      "totalFunctions" : 8,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadBLAKE2Functions",
+        "UnloadBLAKE2Functions",
+        "IsBLAKE2Loaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "BLAKE2b256Hash",
+        "BLAKE2b512Hash",
+        "BLAKE2s256Hash",
+        "BLAKE2bMAC",
+        "BLAKE2sMAC"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.bn",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.bn.pas",
+      "totalFunctions" : 3,
+      "testedFunctions" : 1,
+      "coveragePercent" : 3.3333333333333329E+001,
+      "untestedFunctions" : [
+        "UnloadOpenSSLBN",
+        "IsOpenSSLBNLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.buffer",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.buffer.pas",
+      "totalFunctions" : 14,
+      "testedFunctions" : 1,
+      "coveragePercent" : 7.1428571428571423E+000,
+      "untestedFunctions" : [
+        "CreateBuffer",
+        "CreateBuffer",
+        "CreateSecureBuffer",
+        "CreateSecureBuffer",
+        "FreeBuffer",
+        "GrowBuffer",
+        "AppendToBuffer",
+        "AppendStringToBuffer",
+        "BufferToBytes",
+        "BufferToString",
+        "DuplicateString",
+        "DuplicateData",
+        "UnloadBufferModule"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.chacha",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.chacha.pas",
+      "totalFunctions" : 8,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadChaChaFunctions",
+        "UnloadChaChaFunctions",
+        "IsChaChaLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "ChaCha20Encrypt",
+        "ChaCha20Decrypt",
+        "ChaCha20Poly1305AEADEncrypt",
+        "ChaCha20Poly1305AEADDecrypt",
+        "Poly1305MAC"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.cmac.evp",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.cmac.evp.pas",
+      "totalFunctions" : 12,
+      "testedFunctions" : 8,
+      "coveragePercent" : 6.6666666666666657E+001,
+      "untestedFunctions" : [
+        "FinalBytes",
+        "CMAC_AES192_EVP",
+        "ComputeCMAC_EVP",
+        "IsEVPCMACAvailable"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.cms",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.cms.pas",
+      "totalFunctions" : 6,
+      "testedFunctions" : 1,
+      "coveragePercent" : 1.6666666666666664E+001,
+      "untestedFunctions" : [
+        "UnloadOpenSSLCMS",
+        "CMSSignData",
+        "CMSVerifySignature",
+        "CMSEncryptData",
+        "CMSDecryptData"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.comp",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.comp.pas",
+      "totalFunctions" : 9,
+      "testedFunctions" : 3,
+      "coveragePercent" : 3.3333333333333329E+001,
+      "untestedFunctions" : [
+        "UnloadCOMPFunctions",
+        "CompressData",
+        "DecompressData",
+        "CompressDataZlib",
+        "DecompressDataZlib",
+        "CreateCompressBIO"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.conf",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.conf.pas",
+      "totalFunctions" : 3,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "NCONF_get_number",
+        "LoadOpenSSLConf",
+        "UnloadOpenSSLConf"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.core",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.core.pas",
+      "totalFunctions" : 15,
+      "testedFunctions" : 5,
+      "coveragePercent" : 3.3333333333333329E+001,
+      "untestedFunctions" : [
+        "UnloadOpenSSLCore",
+        "IsOpenSSLCoreLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "GetOpenSSLVersion",
+        "GetOpenSSLVersionString",
+        "IsCryptoLibraryLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "GetCryptoProcAddress",
+        "GetSSLProcAddress",
+        "SSL_want_read_impl",
+        "SSL_want_write_impl",
+        "SSL_CTX_get_session_cache_mode_impl"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.crypto",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.crypto.pas",
+      "totalFunctions" : 3,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadOpenSSLCrypto",
+        "UnloadOpenSSLCrypto",
+        "IsOpenSSLCryptoLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.ct",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.ct.pas",
+      "totalFunctions" : 8,
+      "testedFunctions" : 1,
+      "coveragePercent" : 1.2500000000000000E+001,
+      "untestedFunctions" : [
+        "UnloadCTFunctions",
+        "EnableCertificateTransparency",
+        "ValidateSCTList",
+        "GetSCTValidationStatusString",
+        "LoadCTLogStore",
+        "PrintSCTInfo",
+        "X509_get_SCT_LIST"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.des",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.des.pas",
+      "totalFunctions" : 7,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadDESFunctions",
+        "UnloadDESFunctions",
+        "IsDESLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "DESEncrypt",
+        "DESDecrypt",
+        "DES3Encrypt",
+        "DES3Decrypt"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.dh",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.dh.pas",
+      "totalFunctions" : 3,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadOpenSSLDH",
+        "UnloadOpenSSLDH",
+        "IsOpenSSLDHLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.dsa",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.dsa.pas",
+      "totalFunctions" : 3,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadOpenSSLDSA",
+        "UnloadOpenSSLDSA",
+        "IsOpenSSLDSALoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.dso",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.dso.pas",
+      "totalFunctions" : 7,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadDSO",
+        "UnloadDSO",
+        "DSOLoadLibrary",
+        "DSOGetSymbol",
+        "DSOFreeLibrary",
+        "DSOGetFlags",
+        "DSOSetFlags"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.ec",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.ec.pas",
+      "totalFunctions" : 8,
+      "testedFunctions" : 1,
+      "coveragePercent" : 1.2500000000000000E+001,
+      "untestedFunctions" : [
+        "UnloadECFunctions",
+        "IsECLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "EC_KEY_new_secp256k1",
+        "EC_KEY_new_prime256v1",
+        "EC_KEY_new_secp384r1",
+        "EC_KEY_new_secp521r1",
+        "EC_GROUP_get_curve_name_string"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.ecdh",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.ecdh.pas",
+      "totalFunctions" : 6,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadOpenSSLECDH",
+        "UnloadOpenSSLECDH",
+        "IsOpenSSLECDHLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "ECDH_ComputeSharedSecret",
+        "ECDH_ComputeSharedSecretWithKDF",
+        "ECDH_SetCofactorMode"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.ecdsa",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.ecdsa.pas",
+      "totalFunctions" : 6,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadOpenSSLECDSA",
+        "UnloadOpenSSLECDSA",
+        "IsOpenSSLECDSALoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "ECDSA_SignData",
+        "ECDSA_VerifyData",
+        "ECDSA_GetSignatureSize"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.engine",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.engine.pas",
+      "totalFunctions" : 8,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadOpenSSLEngine",
+        "UnloadOpenSSLEngine",
+        "IsOpenSSLEngineLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "InitializeEngine",
+        "LoadEnginePrivateKey",
+        "LoadEnginePublicKey",
+        "SetEngineAsDefault",
+        "ListAvailableEngines"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.err",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.err.pas",
+      "totalFunctions" : 11,
+      "testedFunctions" : 5,
+      "coveragePercent" : 4.5454545454545453E+001,
+      "untestedFunctions" : [
+        "ERR_GET_FUNC_INLINE",
+        "ERR_FATAL_ERROR_INLINE",
+        "ERR_PACK_INLINE",
+        "LoadOpenSSLERR",
+        "UnloadOpenSSLERR",
+        "IsOpenSSLERRLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.evp",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.evp.pas",
+      "totalFunctions" : 10,
+      "testedFunctions" : 4,
+      "coveragePercent" : 4.0000000000000000E+001,
+      "untestedFunctions" : [
+        "UnloadEVP",
+        "IsEVPLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "EVP_MD_block_size",
+        "EVP_CIPHER_key_length",
+        "EVP_CIPHER_iv_length",
+        "EVP_CIPHER_block_size"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.hmac",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.hmac.pas",
+      "totalFunctions" : 6,
+      "testedFunctions" : 3,
+      "coveragePercent" : 5.0000000000000000E+001,
+      "untestedFunctions" : [
+        "LoadOpenSSLHMAC",
+        "UnloadOpenSSLHMAC",
+        "IsOpenSSLHMACLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.kdf",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.kdf.pas",
+      "totalFunctions" : 6,
+      "testedFunctions" : 2,
+      "coveragePercent" : 3.3333333333333329E+001,
+      "untestedFunctions" : [
+        "LoadKDFFunctions",
+        "UnloadKDFFunctions",
+        "DeriveKeyScrypt",
+        "GenerateSalt"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.legacy_ciphers",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.legacy_ciphers.pas",
+      "totalFunctions" : 2,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadLegacyCiphersFunctions",
+        "UnloadLegacyCiphersFunctions"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.lhash",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.lhash.pas",
+      "totalFunctions" : 14,
+      "testedFunctions" : 1,
+      "coveragePercent" : 7.1428571428571423E+000,
+      "untestedFunctions" : [
+        "LoadLHashFunctions",
+        "UnloadLHashFunctions",
+        "IsLHashLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "CreateStringHashTable",
+        "FreeHashTable",
+        "InsertIntoHashTable",
+        "RetrieveFromHashTable",
+        "DeleteFromHashTable",
+        "GetHashTableItemCount",
+        "HashString",
+        "HashStringWrapper",
+        "HashPointer",
+        "ComparePointers"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.md",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.md.pas",
+      "totalFunctions" : 11,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadMDFunctions",
+        "UnloadMDFunctions",
+        "IsMDLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "MD4Hash",
+        "MD5Hash",
+        "MDC2Hash",
+        "RIPEMD160Hash",
+        "MD4HashString",
+        "MD5HashString",
+        "MDC2HashString",
+        "RIPEMD160HashString"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.modes",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.modes.pas",
+      "totalFunctions" : 13,
+      "testedFunctions" : 8,
+      "coveragePercent" : 6.1538461538461540E+001,
+      "untestedFunctions" : [
+        "LoadModesFunctions",
+        "UnloadModesFunctions",
+        "IsModesLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "AES_WrapKey",
+        "AES_UnwrapKey"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.obj",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.obj.pas",
+      "totalFunctions" : 15,
+      "testedFunctions" : 1,
+      "coveragePercent" : 6.6666666666666670E+000,
+      "untestedFunctions" : [
+        "NIDToOID",
+        "OIDToNID",
+        "NIDToLongName",
+        "NIDToShortName",
+        "LongNameToNID",
+        "ShortNameToNID",
+        "ObjectToString",
+        "StringToObject",
+        "CreateOID",
+        "CompareObjects",
+        "DuplicateObject",
+        "GetSignatureAlgorithms",
+        "FindSignatureNID",
+        "UnloadOBJModule"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.ocsp",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.ocsp.pas",
+      "totalFunctions" : 6,
+      "testedFunctions" : 1,
+      "coveragePercent" : 1.6666666666666664E+001,
+      "untestedFunctions" : [
+        "UnloadOpenSSLOCSP",
+        "CheckCertificateStatus",
+        "CreateOCSPRequest",
+        "SendOCSPRequest",
+        "VerifyOCSPResponse"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.param",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.param.pas",
+      "totalFunctions" : 6,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadOSSLPARAM",
+        "UnloadOSSLPARAM",
+        "CreateParamArray",
+        "FreeParamArray",
+        "GetParamValue",
+        "SetParamValue"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.pem",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.pem.pas",
+      "totalFunctions" : 10,
+      "testedFunctions" : 3,
+      "coveragePercent" : 3.0000000000000000E+001,
+      "untestedFunctions" : [
+        "UnloadOpenSSLPEM",
+        "LoadPrivateKeyFromPEM",
+        "LoadPublicKeyFromPEM",
+        "LoadCertificateFromPEM",
+        "SavePrivateKeyToPEM",
+        "SavePublicKeyToPEM",
+        "SaveCertificateToPEM"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.pkcs",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.pkcs.pas",
+      "totalFunctions" : 6,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadOpenSSLPKCS",
+        "UnloadOpenSSLPKCS",
+        "LoadPKCS12FromFile",
+        "SavePKCS12ToFile",
+        "CreatePKCS7SignedData",
+        "VerifyPKCS7SignedData"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.pkcs12",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.pkcs12.pas",
+      "totalFunctions" : 8,
+      "testedFunctions" : 1,
+      "coveragePercent" : 1.2500000000000000E+001,
+      "untestedFunctions" : [
+        "CreatePKCS12",
+        "ParsePKCS12",
+        "LoadPKCS12FromFile",
+        "SavePKCS12ToFile",
+        "LoadPKCS12FromBytes",
+        "SavePKCS12ToBytes",
+        "UnloadPKCS12Module"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.pkcs7",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.pkcs7.pas",
+      "totalFunctions" : 7,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadPKCS7Functions",
+        "UnloadPKCS7Functions",
+        "IsPKCS7Loaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "SignData",
+        "VerifySignedData",
+        "EncryptData",
+        "DecryptData"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.provider",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.provider.pas",
+      "totalFunctions" : 10,
+      "testedFunctions" : 6,
+      "coveragePercent" : 6.0000000000000000E+001,
+      "untestedFunctions" : [
+        "CreateLibraryContext",
+        "LoadConfigForContext",
+        "SelfTestProvider",
+        "UnloadProviderModule"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.rand",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.rand.pas",
+      "totalFunctions" : 7,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadOpenSSLRAND",
+        "UnloadOpenSSLRAND",
+        "IsOpenSSLRANDLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "RAND_bytes_secure",
+        "RAND_bytes_secure_ex",
+        "RAND_generate_hex",
+        "RAND_generate_base64"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.rsa",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.rsa.pas",
+      "totalFunctions" : 3,
+      "testedFunctions" : 1,
+      "coveragePercent" : 3.3333333333333329E+001,
+      "untestedFunctions" : [
+        "UnloadOpenSSLRSA",
+        "IsOpenSSLRSALoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.scrypt_whirlpool",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.scrypt_whirlpool.pas",
+      "totalFunctions" : 5,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadScryptWhirlpoolFunctions",
+        "UnloadScryptWhirlpoolFunctions",
+        "ScryptHashPassword",
+        "WhirlpoolHash",
+        "WhirlpoolHashString"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.seed",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.seed.pas",
+      "totalFunctions" : 6,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadSEEDFunctions",
+        "UnloadSEEDFunctions",
+        "SEEDEncryptBlock",
+        "SEEDDecryptBlock",
+        "SEEDEncryptCBC",
+        "SEEDDecryptCBC"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.sha",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.sha.pas",
+      "totalFunctions" : 11,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadSHAFunctions",
+        "UnloadSHAFunctions",
+        "IsSHALoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "SHA1Hash",
+        "SHA256Hash",
+        "SHA384Hash",
+        "SHA512Hash",
+        "SHA1HashString",
+        "SHA256HashString",
+        "SHA384HashString",
+        "SHA512HashString"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.sha3.evp",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.sha3.evp.pas",
+      "totalFunctions" : 13,
+      "testedFunctions" : 11,
+      "coveragePercent" : 8.4615384615384613E+001,
+      "untestedFunctions" : [
+        "FinalXOF",
+        "IsEVPSHA3Available"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.sm",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.sm.pas",
+      "totalFunctions" : 3,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "IsSMAlgorithmsSupported",
+        "LoadOpenSSLSM",
+        "UnloadOpenSSLSM"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.srp",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.srp.pas",
+      "totalFunctions" : 5,
+      "testedFunctions" : 1,
+      "coveragePercent" : 2.0000000000000000E+001,
+      "untestedFunctions" : [
+        "UnloadSRP",
+        "SRPCreateUser",
+        "SRPVerifyUser",
+        "SRPGenerateVerifier"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.ssl",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.ssl.pas",
+      "totalFunctions" : 4,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadOpenSSLSSL",
+        "UnloadOpenSSLSSL",
+        "IsOpenSSLSSLLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "SSL_set_tlsext_host_name_impl"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.stack",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.stack.pas",
+      "totalFunctions" : 12,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadStackFunctions",
+        "UnloadStackFunctions",
+        "IsStackLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded",
+        "CreateStringStack",
+        "FreeStringStack",
+        "GetStringFromStack",
+        "GetStackCount",
+        "CreateStack",
+        "FreeStack",
+        "PushToStack",
+        "PopFromStack",
+        "GetFromStack"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.store",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.store.pas",
+      "totalFunctions" : 7,
+      "testedFunctions" : 2,
+      "coveragePercent" : 2.8571428571428569E+001,
+      "untestedFunctions" : [
+        "UnloadSTOREFunctions",
+        "LoadCertificateFromStore",
+        "LoadPrivateKeyFromStore",
+        "LoadCertificateChainFromStore",
+        "SearchCertificateByAlias"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.thread",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.thread.pas",
+      "totalFunctions" : 10,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadThread",
+        "UnloadThread",
+        "CreateThreadLock",
+        "FreeThreadLock",
+        "LockForRead",
+        "LockForWrite",
+        "UnlockThread",
+        "GetCurrentThreadID",
+        "AtomicIncrement",
+        "AtomicDecrement"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.ts",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.ts.pas",
+      "totalFunctions" : 5,
+      "testedFunctions" : 2,
+      "coveragePercent" : 4.0000000000000000E+001,
+      "untestedFunctions" : [
+        "UnloadTSFunctions",
+        "VerifyTimestampResponse",
+        "GetTimestampTime"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.txt_db",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.txt_db.pas",
+      "totalFunctions" : 6,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadTXTDB",
+        "UnloadTXTDB",
+        "TXTDBReadFromFile",
+        "TXTDBWriteToFile",
+        "TXTDBAddRow",
+        "TXTDBFindRow"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.ui",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.ui.pas",
+      "totalFunctions" : 5,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadUIFunctions",
+        "UnloadUIFunctions",
+        "CreateSimplePasswordUI",
+        "ReadPasswordWithUI",
+        "CreateConsoleUI"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.utils",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.utils.pas",
+      "totalFunctions" : 7,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "GetLibHandle",
+        "SetLibHandle",
+        "OpenSSLString",
+        "PascalString",
+        "AllocOpenSSLMem",
+        "FreeOpenSSLMem",
+        "GetLastOpenSSLError"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.x509",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.x509.pas",
+      "totalFunctions" : 3,
+      "testedFunctions" : 1,
+      "coveragePercent" : 3.3333333333333329E+001,
+      "untestedFunctions" : [
+        "UnloadOpenSSLX509",
+        "IsOpenSSLX509Loaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.api.x509v3",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.api.x509v3.pas",
+      "totalFunctions" : 6,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "LoadX509V3Functions",
+        "UnloadX509V3Functions",
+        "X509AddBasicConstraints",
+        "X509AddKeyUsage",
+        "X509AddExtKeyUsage",
+        "X509AddSubjectAltName"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.backed",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.backed.pas",
+      "totalFunctions" : 38,
+      "testedFunctions" : 15,
+      "coveragePercent" : 3.9473684210526315E+001,
+      "untestedFunctions" : [
+        "InternalLog",
+        "LoadOpenSSLLibraries",
+        "UnloadOpenSSLLibraries",
+        "DetectOpenSSLVersion",
+        "SetError",
+        "ClearInternalError",
+        "IsInitialized",
+        "GetLibraryType",
+        "GetVersionString",
+        "GetVersionNumber",
+        "GetCompileFlags",
+        "GetCapabilities",
+        "GetDefaultConfig",
+        "GetLastError",
+        "GetLastErrorString",
+        "GetStatistics",
+        "SetCustomLibraryPaths",
+        "GetCustomLibraryPaths",
+        "IsUsingCustomPaths",
+        "ClearCustomLibraryPaths",
+        "CreateOpenSSLLibrary",
+        "RegisterOpenSSLBackend",
+        "UnregisterOpenSSLBackend"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.certificate",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.certificate.pas",
+      "totalFunctions" : 41,
+      "testedFunctions" : 19,
+      "coveragePercent" : 4.6341463414634148E+001,
+      "untestedFunctions" : [
+        "ComputeFingerprint",
+        "LoadFromStream",
+        "SaveToStream",
+        "SaveToPEM",
+        "SaveToDER",
+        "GetSubject",
+        "GetSerialNumber",
+        "GetNotBefore",
+        "GetNotAfter",
+        "GetPublicKey",
+        "GetPublicKeyAlgorithm",
+        "GetSignatureAlgorithm",
+        "IsExpired",
+        "IsCA",
+        "GetDaysUntilExpiry",
+        "GetSubjectCN",
+        "GetSubjectAltNames",
+        "GetKeyUsage",
+        "GetExtendedKeyUsage",
+        "GetFingerprintSHA1",
+        "GetFingerprintSHA256",
+        "GetNativeHandle"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.certstore",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.certstore.pas",
+      "totalFunctions" : 20,
+      "testedFunctions" : 12,
+      "coveragePercent" : 6.0000000000000000E+001,
+      "untestedFunctions" : [
+        "BuildIndexForCertificate",
+        "ClearIndexes",
+        "RemoveCertificate",
+        "Contains",
+        "GetCount",
+        "LoadSystemStore",
+        "BuildCertificateChain",
+        "GetNativeHandle"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.connection",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.connection.pas",
+      "totalFunctions" : 44,
+      "testedFunctions" : 16,
+      "coveragePercent" : 3.6363636363636367E+001,
+      "untestedFunctions" : [
+        "HasStreamTransport",
+        "PumpStreamToBIO",
+        "PumpBIOToStream",
+        "InternalHandshake",
+        "ValidatePostHandshake",
+        "GetServerName",
+        "Accept",
+        "DoHandshake",
+        "IsHandshakeComplete",
+        "Renegotiate",
+        "ReadString",
+        "WantRead",
+        "WantWrite",
+        "GetConnectionInfo",
+        "GetPeerCertificateChain",
+        "GetVerifyResult",
+        "GetVerifyResultString",
+        "GetSession",
+        "IsSessionReused",
+        "GetSelectedALPNProtocol",
+        "IsConnected",
+        "GetState",
+        "GetStateString",
+        "GetTimeout",
+        "SetBlocking",
+        "GetBlocking",
+        "GetNativeHandle",
+        "GetContext"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.context",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.context.pas",
+      "totalFunctions" : 51,
+      "testedFunctions" : 29,
+      "coveragePercent" : 5.6862745098039213E+001,
+      "untestedFunctions" : [
+        "ApplyProtocolVersions",
+        "ApplyVerifyMode",
+        "ApplyOptions",
+        "GetSSLMethod",
+        "RequireValidContext",
+        "CheckPrivateKeyMatchesCertificate",
+        "GetContextType",
+        "GetProtocolVersions",
+        "LoadCAPath",
+        "GetVerifyMode",
+        "GetVerifyDepth",
+        "GetCipherList",
+        "GetCipherSuites",
+        "GetSessionCacheMode",
+        "GetSessionTimeout",
+        "GetSessionCacheSize",
+        "GetOptions",
+        "GetServerName",
+        "GetALPNProtocols",
+        "GetCertVerifyFlags",
+        "IsValid",
+        "GetNativeHandle"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.dependencies",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.dependencies.pas",
+      "totalFunctions" : 6,
+      "testedFunctions" : 6,
+      "coveragePercent" : 1.0000000000000000E+002,
+      "untestedFunctions" : [
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.errors",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.errors.pas",
+      "totalFunctions" : 10,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "GetOpenSSLErrorString",
+        "GetLastOpenSSLError",
+        "CheckOpenSSLResult",
+        "RaiseSSLInitError",
+        "RaiseSSLCertError",
+        "RaiseSSLConnectionError",
+        "RaiseSSLCryptoError",
+        "RaiseSSLConfigError",
+        "GetOpenSSLFriendlyErrorMessageCN",
+        "GetOpenSSLFriendlyErrorMessageEN"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.session",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.session.pas",
+      "totalFunctions" : 15,
+      "testedFunctions" : 10,
+      "coveragePercent" : 6.6666666666666657E+001,
+      "untestedFunctions" : [
+        "GetTimeout",
+        "IsValid",
+        "IsResumable",
+        "Serialize",
+        "GetNativeHandle"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.openssl.x509.chain",
+      "fileName" : "..\\..\\src\\fafafa.ssl.openssl.x509.chain.pas",
+      "totalFunctions" : 1,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "FindIssuerX509InChain"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.pem",
+      "fileName" : "..\\..\\src\\fafafa.ssl.pem.pas",
+      "totalFunctions" : 27,
+      "testedFunctions" : 15,
+      "coveragePercent" : 5.5555555555555557E+001,
+      "untestedFunctions" : [
+        "IsEncrypted",
+        "FindNextBlock",
+        "ExtractBlockContent",
+        "LoadFromStream",
+        "BlockCount",
+        "GetAllBlocksOfType",
+        "GetCertificates",
+        "GetPrivateKeys",
+        "WriteBlockWithType",
+        "WriteBlocks",
+        "WritePrivateKey",
+        "WritePublicKey"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.result.utils",
+      "fileName" : "..\\..\\src\\fafafa.ssl.result.utils.pas",
+      "totalFunctions" : 23,
+      "testedFunctions" : 16,
+      "coveragePercent" : 6.9565217391304344E+001,
+      "untestedFunctions" : [
+        "AndThen",
+        "AndThen",
+        "AndThen",
+        "AndThen",
+        "MapErr",
+        "AndThen",
+        "AndThen"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.ringbuffer.lockfree",
+      "fileName" : "..\\..\\src\\fafafa.ssl.ringbuffer.lockfree.pas",
+      "totalFunctions" : 17,
+      "testedFunctions" : 11,
+      "coveragePercent" : 6.4705882352941174E+001,
+      "untestedFunctions" : [
+        "GetSize",
+        "GetWriteSpace",
+        "GetAvailable",
+        "WriteBarrier",
+        "ReadBarrier",
+        "FullBarrier"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.safety",
+      "fileName" : "..\\..\\src\\fafafa.ssl.safety.pas",
+      "totalFunctions" : 33,
+      "testedFunctions" : 22,
+      "coveragePercent" : 6.6666666666666657E+001,
+      "untestedFunctions" : [
+        "ToBits",
+        "IsValid",
+        "ToMilliseconds",
+        "ToSeconds",
+        "IsInfinite",
+        "ToKB",
+        "ToMB",
+        "IsValid",
+        "IsSome",
+        "IsNone",
+        "IsErr"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.secure",
+      "fileName" : "..\\..\\src\\fafafa.ssl.secure.pas",
+      "totalFunctions" : 23,
+      "testedFunctions" : 19,
+      "coveragePercent" : 8.2608695652173907E+001,
+      "untestedFunctions" : [
+        "Allocate",
+        "Allocate",
+        "IsLocked",
+        "CreateSecureKeyStore"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.ssh",
+      "fileName" : "..\\..\\src\\fafafa.ssl.ssh.pas",
+      "totalFunctions" : 34,
+      "testedFunctions" : 13,
+      "coveragePercent" : 3.8235294117647058E+001,
+      "untestedFunctions" : [
+        "IsErr",
+        "IsErr",
+        "IsErr",
+        "IsErr",
+        "GetKeyType",
+        "GetKeyData",
+        "GetComment",
+        "SetComment",
+        "ToPEMFormat",
+        "GetFingerprintSHA256",
+        "GetFingerprintMD5",
+        "IsValid",
+        "GetKeyType",
+        "GetPublicKey",
+        "IsEncrypted",
+        "ToPEMFormat",
+        "IsValid",
+        "GetPublicKey",
+        "GetPrivateKey",
+        "SaveToFiles",
+        "IsValidPair"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.tls",
+      "fileName" : "..\\..\\src\\fafafa.ssl.tls.pas",
+      "totalFunctions" : 22,
+      "testedFunctions" : 10,
+      "coveragePercent" : 4.5454545454545453E+001,
+      "untestedFunctions" : [
+        "Seek",
+        "ApplyClientOptions",
+        "WithSession",
+        "WithSessionReuse",
+        "TryConnectSocket",
+        "ConnectStream",
+        "TryConnectStream",
+        "ApplyServerOptions",
+        "AcceptSocket",
+        "TryAcceptSocket",
+        "AcceptStream",
+        "TryAcceptStream"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.utils",
+      "fileName" : "..\\..\\src\\fafafa.ssl.utils.pas",
+      "totalFunctions" : 1,
+      "testedFunctions" : 0,
+      "coveragePercent" : 0.0000000000000000E+000,
+      "untestedFunctions" : [
+        "StringsToArray"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.winssl.api",
+      "fileName" : "..\\..\\src\\fafafa.ssl.winssl.api.pas",
+      "totalFunctions" : 35,
+      "testedFunctions" : 2,
+      "coveragePercent" : 5.7142857142857144E+000,
+      "untestedFunctions" : [
+        "InitializeSecurityContextW",
+        "AcceptSecurityContextW",
+        "DeleteSecurityContext",
+        "QueryContextAttributesW",
+        "QueryCredentialsAttributesW",
+        "EncryptMessage",
+        "DecryptMessage",
+        "ApplyControlToken",
+        "CompleteAuthToken",
+        "FreeContextBuffer",
+        "CertOpenStore",
+        "CertOpenSystemStoreW",
+        "CertCloseStore",
+        "CertFindCertificateInStore",
+        "CertEnumCertificatesInStore",
+        "CertDuplicateCertificateContext",
+        "CertAddCertificateContextToStore",
+        "CertDeleteCertificateFromStore",
+        "CertAddEncodedCertificateToStore",
+        "CertFreeCertificateContext",
+        "CertGetCertificateChain",
+        "CertFreeCertificateChain",
+        "CertVerifyCertificateChainPolicy",
+        "CertGetNameStringW",
+        "CertNameToStrW",
+        "CertCreateCertificateContext",
+        "CertFindExtension",
+        "CryptDecodeObject",
+        "CryptHashCertificate",
+        "PFXImportCertStore",
+        "CryptStringToBinaryA",
+        "CryptBinaryToStringA",
+        "CryptEncodeObject"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.winssl.base",
+      "fileName" : "..\\..\\src\\fafafa.ssl.winssl.base.pas",
+      "totalFunctions" : 2,
+      "testedFunctions" : 1,
+      "coveragePercent" : 5.0000000000000000E+001,
+      "untestedFunctions" : [
+        "SUCCEEDED"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.winssl.certificate",
+      "fileName" : "..\\..\\src\\fafafa.ssl.winssl.certificate.pas",
+      "totalFunctions" : 44,
+      "testedFunctions" : 20,
+      "coveragePercent" : 4.5454545454545453E+001,
+      "untestedFunctions" : [
+        "BinaryToHexString",
+        "CalculateFingerprint",
+        "LoadFromStream",
+        "SaveToStream",
+        "SaveToPEM",
+        "SaveToDER",
+        "GetSubject",
+        "GetSerialNumber",
+        "GetNotBefore",
+        "GetNotAfter",
+        "GetPublicKey",
+        "GetPublicKeyAlgorithm",
+        "GetSignatureAlgorithm",
+        "IsExpired",
+        "IsCA",
+        "GetDaysUntilExpiry",
+        "GetSubjectCN",
+        "GetSubjectAltNames",
+        "GetKeyUsage",
+        "GetExtendedKeyUsage",
+        "GetFingerprintSHA1",
+        "GetFingerprintSHA256",
+        "GetNativeHandle",
+        "CreateWinSSLCertificateFromContext"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.winssl.certstore",
+      "fileName" : "..\\..\\src\\fafafa.ssl.winssl.certstore.pas",
+      "totalFunctions" : 29,
+      "testedFunctions" : 17,
+      "coveragePercent" : 5.8620689655172406E+001,
+      "untestedFunctions" : [
+        "ClearCache",
+        "LoadCertificates",
+        "IsOpen",
+        "RemoveCertificate",
+        "Contains",
+        "GetCount",
+        "GetAllCertificates",
+        "LoadSystemStore",
+        "BuildCertificateChain",
+        "GetNativeHandle",
+        "GetSystemStoreNames",
+        "CreateWinSSLCertificateStore"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.winssl.connection",
+      "fileName" : "..\\..\\src\\fafafa.ssl.winssl.connection.pas",
+      "totalFunctions" : 74,
+      "testedFunctions" : 30,
+      "coveragePercent" : 4.0540540540540540E+001,
+      "untestedFunctions" : [
+        "GetTimeout",
+        "IsValid",
+        "IsResumable",
+        "Serialize",
+        "GetNativeHandle",
+        "SetPeerCertificate",
+        "SetSessionHandle",
+        "HasSessionHandle",
+        "AddSession",
+        "GetSession",
+        "RemoveSession",
+        "CleanupExpired",
+        "SetMaxSessions",
+        "ClientHandshake",
+        "ServerHandshake",
+        "RecvData",
+        "PrepareInputBufferDesc",
+        "PrepareOutputBufferDesc",
+        "HandleExtraData",
+        "SendOutputBuffer",
+        "ValidatePeerCertificate",
+        "GetServerName",
+        "Accept",
+        "DoHandshake",
+        "IsHandshakeComplete",
+        "Renegotiate",
+        "ReadString",
+        "WantRead",
+        "WantWrite",
+        "GetConnectionInfo",
+        "GetPeerCertificateChain",
+        "GetVerifyResult",
+        "GetVerifyResultString",
+        "GetSession",
+        "IsSessionReused",
+        "GetSelectedALPNProtocol",
+        "IsConnected",
+        "GetState",
+        "GetStateString",
+        "GetTimeout",
+        "SetBlocking",
+        "GetBlocking",
+        "GetNativeHandle",
+        "GetContext"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.winssl.context",
+      "fileName" : "..\\..\\src\\fafafa.ssl.winssl.context.pas",
+      "totalFunctions" : 48,
+      "testedFunctions" : 29,
+      "coveragePercent" : 6.0416666666666664E+001,
+      "untestedFunctions" : [
+        "CleanupCertificate",
+        "ApplyOptions",
+        "RequireValidContext",
+        "GetContextType",
+        "GetProtocolVersions",
+        "LoadCAPath",
+        "GetVerifyMode",
+        "GetVerifyDepth",
+        "GetCipherList",
+        "GetCipherSuites",
+        "GetSessionCacheMode",
+        "GetSessionTimeout",
+        "GetSessionCacheSize",
+        "GetOptions",
+        "GetServerName",
+        "GetALPNProtocols",
+        "GetCertVerifyFlags",
+        "IsValid",
+        "GetNativeHandle"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.winssl.enterprise",
+      "fileName" : "..\\..\\src\\fafafa.ssl.winssl.enterprise.pas",
+      "totalFunctions" : 15,
+      "testedFunctions" : 6,
+      "coveragePercent" : 4.0000000000000000E+001,
+      "untestedFunctions" : [
+        "DetectFIPSMode",
+        "LoadGroupPolicies",
+        "LoadTrustedRoots",
+        "IsFIPSEnabled",
+        "ReadGroupPolicy",
+        "IsEnterpriseCATrusted",
+        "GetAllPolicies",
+        "ReadGroupPolicy",
+        "IsFIPSModeEnabled"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.winssl.errors",
+      "fileName" : "..\\..\\src\\fafafa.ssl.winssl.errors.pas",
+      "totalFunctions" : 15,
+      "testedFunctions" : 6,
+      "coveragePercent" : 4.0000000000000000E+001,
+      "untestedFunctions" : [
+        "HandleError",
+        "HandleError",
+        "SetEnabled",
+        "HandleError",
+        "FormatErrorInfo",
+        "SetGlobalErrorHandler",
+        "EnableErrorLogging",
+        "ClassifyWinSSLError",
+        "GetWinSSLErrorCategory"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.winssl.lib",
+      "fileName" : "..\\..\\src\\fafafa.ssl.winssl.lib.pas",
+      "totalFunctions" : 31,
+      "testedFunctions" : 15,
+      "coveragePercent" : 4.8387096774193552E+001,
+      "untestedFunctions" : [
+        "InternalLog",
+        "DetectWindowsVersion",
+        "CheckSchannelSupport",
+        "SetError",
+        "ClearInternalError",
+        "IsInitialized",
+        "GetLibraryType",
+        "GetVersionString",
+        "GetVersionNumber",
+        "GetCompileFlags",
+        "GetCapabilities",
+        "GetDefaultConfig",
+        "GetLastError",
+        "GetLastErrorString",
+        "GetStatistics",
+        "CreateWinSSLLibrary"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.winssl.utils",
+      "fileName" : "..\\..\\src\\fafafa.ssl.winssl.utils.pas",
+      "totalFunctions" : 24,
+      "testedFunctions" : 20,
+      "coveragePercent" : 8.3333333333333343E+001,
+      "untestedFunctions" : [
+        "FreeSecBufferDesc",
+        "DebugLog",
+        "DebugDumpSecBuffer",
+        "DebugDumpSecBufferDesc"
+      ]
+    },
+    {
+      "unitName" : "fafafa.ssl.x509",
+      "fileName" : "..\\..\\src\\fafafa.ssl.x509.pas",
+      "totalFunctions" : 35,
+      "testedFunctions" : 16,
+      "coveragePercent" : 4.5714285714285715E+001,
+      "untestedFunctions" : [
+        "CommonName",
+        "Organization",
+        "OrganizationalUnit",
+        "Country",
+        "Locality",
+        "EmailAddress",
+        "IsValid",
+        "ParseFromASN1",
+        "ParseTBSCertificate",
+        "ParseName",
+        "ParseValidity",
+        "ParsePublicKeyInfo",
+        "ParseExtensions",
+        "ParseExtension",
+        "ProcessKnownExtensions",
+        "LoadFromStream",
+        "SerialNumberAsHex",
+        "IsCA",
+        "IsValidNow"
+      ]
+    }
+  ],
+  "boundaryGaps" : [
+  ],
+  "improvementTasks" : [
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "compiler": {
+    "path": "C:\\lazarus\\fpc\\3.2.2\\bin\\x86_64-win64\\fpc.exe",
+    "flags": ["-Mobjfpc", "-Sh"],
+    "sourceDir": "src",
+    "outputDir": "bin",
+    "platform": "x86_64-win64"
+  },
+  "openssl": {
+    "dlls": ["libssl-3-x64.dll", "libcrypto-3-x64.dll"],
+    "minVersion": "3.0.0",
+    "searchPaths": [
+      ".",
+      "bin",
+      "C:\\OpenSSL-Win64\\bin",
+      "C:\\Program Files\\OpenSSL-Win64\\bin"
+    ]
+  },
+  "testDirectories": {
+    "openssl": [
+      "tests/openssl",
+      "tests/crypto",
+      "tests/certificate",
+      "tests/connection",
+      "tests/integration"
+    ],
+    "winssl": [
+      "tests/winssl"
+    ],
+    "ssh": [
+      "tests"
+    ],
+    "unit": [
+      "tests/unit"
+    ],
+    "security": [
+      "tests/security"
+    ],
+    "performance": [
+      "tests/performance",
+      "tests/benchmarks"
+    ]
+  },
+  "testPatterns": {
+    "include": ["test_*.pas", "benchmark_*.pas"],
+    "exclude": ["*_template.pas", "*_base.pas", "*_framework.pas"]
+  },
+  "execution": {
+    "timeout": 60,
+    "maxRetries": 1,
+    "parallelCompile": false,
+    "continueOnError": true
+  },
+  "reports": {
+    "outputDir": "reports",
+    "formats": ["markdown", "json"],
+    "includeEnvironment": true,
+    "includeTimings": true,
+    "verboseErrors": true
+  },
+  "sshTests": {
+    "unitTest": "tests/test_ssh.pas",
+    "propertyTest": "tests/test_ssh_properties.pas"
+  },
+  "backendComparison": {
+    "enabled": true,
+    "tests": [
+      "tests/integration/test_backend_comparison.pas",
+      "tests/integration/test_integration_winssl_openssl_comparison.pas"
+    ]
+  }
+}

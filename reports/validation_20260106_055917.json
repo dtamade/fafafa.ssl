@@ -1,0 +1,308 @@
+﻿{
+    "timestamp":  "2026-01-06T05:59:17",
+    "compilation":  {
+                        "failed":  0,
+                        "details":  [
+
+                                    ],
+                        "total":  0,
+                        "passed":  0
+                    },
+    "backendComparison":  {
+                              "failed":  0,
+                              "details":  [
+
+                                          ],
+                              "total":  0,
+                              "passed":  0
+                          },
+    "ssh":  {
+                "failed":  1,
+                "details":  [
+                                {
+                                    "Passed":  0,
+                                    "Category":  "SSH",
+                                    "Name":  "test_ssh",
+                                    "Status":  "TIMEOUT",
+                                    "Duration":  30000,
+                                    "Total":  1,
+                                    "Message":  "Test exceeded timeout of 30 seconds",
+                                    "Failed":  1
+                                }
+                            ],
+                "total":  1,
+                "passed":  0
+            },
+    "environment":  {
+                        "workingDirectory":  "C:\\Users\\dtama\\projects\\fafafa.ssl",
+                        "opensslAvailable":  false,
+                        "powershell":  "5.1.26100.7462",
+                        "openssl":  "Unknown",
+                        "windows":  "Microsoft Windows NT 10.0.26200.0",
+                        "fpc":  "3.2.2"
+                    },
+    "summary":  {
+                    "passed":  3,
+                    "durationSeconds":  38.41,
+                    "failed":  22,
+                    "compileErrors":  0,
+                    "total":  25,
+                    "skipped":  0,
+                    "passRate":  12
+                },
+    "openssl":  {
+                    "failed":  0,
+                    "details":  [
+
+                                ],
+                    "total":  0,
+                    "passed":  0
+                },
+    "winssl":  {
+                   "failed":  21,
+                   "details":  [
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_actual_features",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.memutils.pas(58,11) Error: Identifier not found \"SecureZeroMemory\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_alpn_sni",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_api_basic",
+                                       "Status":  "PASS",
+                                       "Duration":  83,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_cert_verify_ex",
+                                       "Status":  "FAIL",
+                                       "Duration":  41,
+                                       "Total":  1,
+                                       "Message":  "WinSSL Certificate VerifyEx Test Suite\r\nTesting enhanced certificate verification functionality...\r\n\r\n\r\n===============================================================================\r\nWinSSL Certific",
+                                       "Failed":  1
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_certificate",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_certificate_loading",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_certificate_san",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_enterprise",
+                                       "Status":  "PASS",
+                                       "Duration":  60,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_error_mapping_online",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_errors",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.errors.pas(376,17) Error: Identifier not found \"sslErrCertificateUntrusted\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_handshake_debug",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_hostname_mismatch_online",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_https_client",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_integration_multi",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_lib_simple",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_library_basic",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_mtls_e2e_local",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_mtls_skeleton",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_ocsp_crl_skeleton",
+                                       "Status":  "PASS",
+                                       "Duration":  58,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_performance",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_revocation_online",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_session_resumption",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_unit_comprehensive",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "fafafa.ssl.winssl.certificate.pas(423,11) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_utils",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "test_winssl_utils.pas(116,13) Error: Identifier not found \"TSSLProtocolVersions\"",
+                                       "Failed":  0
+                                   }
+                               ],
+                   "total":  24,
+                   "passed":  3
+               }
+}

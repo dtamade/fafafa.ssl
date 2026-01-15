@@ -1,0 +1,1015 @@
+﻿{
+    "timestamp":  "2026-01-06T06:13:49",
+    "compilation":  {
+                        "failed":  0,
+                        "details":  [
+                                        {
+                                            "Module":  "fafafa.ssl.asn1",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  299
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.base",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  254
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.cert.advanced",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  232
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.cert.builder.impl",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  272
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.cert.builder",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  310
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.cert",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  255
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.cert.utils",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  264
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.certchain",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  204
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.collections",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  154
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.connection.builder",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  231
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.context.builder",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  305
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.crl",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  262
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.crypto.constant_time",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  246
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.crypto.hash",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  379
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.crypto.utils",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  437
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.debug.utils",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  311
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.encoding",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  246
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.errors",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  227
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.exceptions",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  190
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.factory",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  229
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.init",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  203
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.logging",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  213
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.memutils",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  154
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.ocsp",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  222
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.aead",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  207
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.aes",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  189
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.aria",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  218
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.asn1",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  181
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.async",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  210
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.bio",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  200
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.blake2",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  186
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.bn",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  189
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.buffer",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  164
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.chacha",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  193
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.cmac.evp",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  180
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.cms",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  188
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.comp",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  183
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.conf",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  179
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.consts",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  77
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.core",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  217
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.crypto",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  193
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.ct",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  201
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.des",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  183
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.dh",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  200
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.dsa",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  193
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.dso",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  205
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.ec",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  189
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.ecdh",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  189
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.ecdsa",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  188
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.engine",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  172
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.err",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  190
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.evp",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  207
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.hmac",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  200
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.kdf",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  209
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.legacy_ciphers",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  225
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.lhash",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  208
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.md",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  206
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.modes",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  226
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.obj",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  190
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.ocsp",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  222
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.param",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  193
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  199
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.pem",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  195
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.pkcs",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  207
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.pkcs12",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  200
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.pkcs7",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  207
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.provider",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  178
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.rand",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  191
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.rsa",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  203
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.scrypt_whirlpool",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  199
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.seed",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  180
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.sha",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  176
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.sha3.evp",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  180
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.sm",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  178
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.srp",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  189
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.ssl",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  178
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.stack",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  172
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.store",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  192
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.thread",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  180
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.ts",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  199
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.txt_db",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  192
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.ui",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  196
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.utils",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  179
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.x509",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  213
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.api.x509v3",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  180
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.backed",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  259
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.base",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  141
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.cert.builder",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  207
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.certificate",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  268
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.certstore",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  259
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.connection",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  281
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.context",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  274
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.dependencies",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  143
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.errors",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  171
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.loader",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  150
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.session",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  229
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.openssl.x509.chain",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  174
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  414
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.pem",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  192
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.quick",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  250
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.result.utils",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  177
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.ringbuffer.lockfree",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  184
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.safety",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  186
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.secure",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  214
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.ssh",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  323
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.tls",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  177
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.utils",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  232
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.api",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  152
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.base",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  169
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.certificate",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  233
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.certstore",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  223
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.connection",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  245
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.context",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  230
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.enterprise",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  205
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.errors",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  199
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.lib",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  264
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.winssl.utils",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  182
+                                        },
+                                        {
+                                            "Module":  "fafafa.ssl.x509",
+                                            "Status":  "PASS",
+                                            "Message":  "",
+                                            "Duration":  221
+                                        }
+                                    ],
+                        "total":  118,
+                        "passed":  118
+                    },
+    "backendComparison":  {
+                              "failed":  0,
+                              "details":  [
+
+                                          ],
+                              "total":  0,
+                              "passed":  0
+                          },
+    "ssh":  {
+                "failed":  1,
+                "details":  [
+                                {
+                                    "Passed":  0,
+                                    "Category":  "SSH",
+                                    "Name":  "test_ssh",
+                                    "Status":  "TIMEOUT",
+                                    "Duration":  30000,
+                                    "Total":  1,
+                                    "Message":  "Test exceeded timeout of 30 seconds",
+                                    "Failed":  1
+                                }
+                            ],
+                "total":  1,
+                "passed":  0
+            },
+    "environment":  {
+                        "workingDirectory":  "C:\\Users\\dtama\\projects\\fafafa.ssl",
+                        "opensslAvailable":  false,
+                        "powershell":  "5.1.26100.7462",
+                        "openssl":  "Unknown",
+                        "windows":  "Microsoft Windows NT 10.0.26200.0",
+                        "fpc":  "3.2.2"
+                    },
+    "summary":  {
+                    "passed":  15,
+                    "durationSeconds":  64.94,
+                    "failed":  10,
+                    "compileErrors":  0,
+                    "total":  25,
+                    "skipped":  0,
+                    "passRate":  60
+                },
+    "openssl":  {
+                    "failed":  0,
+                    "details":  [
+
+                                ],
+                    "total":  0,
+                    "passed":  0
+                },
+    "winssl":  {
+                   "failed":  9,
+                   "details":  [
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_actual_features",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "test_winssl_actual_features.pas(25,40) Error: identifier idents no member \"IsAvailable\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_alpn_sni",
+                                       "Status":  "PASS",
+                                       "Duration":  35,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_api_basic",
+                                       "Status":  "PASS",
+                                       "Duration":  28,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_cert_verify_ex",
+                                       "Status":  "FAIL",
+                                       "Duration":  35,
+                                       "Total":  1,
+                                       "Message":  "WinSSL Certificate VerifyEx Test Suite\r\nTesting enhanced certificate verification functionality...\r\n\r\n\r\n===============================================================================\r\nWinSSL Certific",
+                                       "Failed":  1
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_certificate",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "test_winssl_certificate.pas(211,25) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_certificate_loading",
+                                       "Status":  "PASS",
+                                       "Duration":  30,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_certificate_san",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "test_winssl_certificate_san.pas(100,15) Error: Incompatible types: got \"TSSLStringArray\" expected \"TStringList\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_enterprise",
+                                       "Status":  "PASS",
+                                       "Duration":  58,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_error_mapping_online",
+                                       "Status":  "PASS",
+                                       "Duration":  38,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_errors",
+                                       "Status":  "FAIL",
+                                       "Duration":  37,
+                                       "Total":  1,
+                                       "Message":  "WinSSL Error Handling Test Suite\r\n\r\n[PASS] Test 1: SEC_E_OK\r\n[PASS] Test 2: SEC_I_CONTINUE_NEEDED\r\n[PASS] Test 3: SEC_E_INCOMPLETE_MESSAGE\r\n[PASS] Test 4: CERT_E_EXPIRED\r\n[PASS] Test 5: CERT_E_UNTRUST",
+                                       "Failed":  1
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_handshake_debug",
+                                       "Status":  "PASS",
+                                       "Duration":  39,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_hostname_mismatch_online",
+                                       "Status":  "PASS",
+                                       "Duration":  33,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_https_client",
+                                       "Status":  "PASS",
+                                       "Duration":  27,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_integration_multi",
+                                       "Status":  "PASS",
+                                       "Duration":  28,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_lib_simple",
+                                       "Status":  "PASS",
+                                       "Duration":  37,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_library_basic",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "test_winssl_library_basic.pas(45,5) Error: Illegal expression",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_mtls_e2e_local",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "test_winssl_mtls_e2e_local.pas(50,43) Error: Default value can only be assigned to one parameter",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_mtls_skeleton",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "test_winssl_mtls_skeleton.pas(292,36) Error: Incompatible type for arg no. 1: Got \"TSSLVerifyMode\", expected \"TSSLVerifyModes\"",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_ocsp_crl_skeleton",
+                                       "Status":  "PASS",
+                                       "Duration":  40,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_performance",
+                                       "Status":  "PASS",
+                                       "Duration":  44,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_revocation_online",
+                                       "Status":  "PASS",
+                                       "Duration":  34,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_session_resumption",
+                                       "Status":  "PASS",
+                                       "Duration":  30,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  1,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_unit_comprehensive",
+                                       "Status":  "PASS",
+                                       "Duration":  29,
+                                       "Total":  1,
+                                       "Message":  "",
+                                       "Failed":  0
+                                   },
+                                   {
+                                       "Passed":  0,
+                                       "Category":  "WinSSL",
+                                       "Name":  "test_winssl_utils",
+                                       "Status":  "COMPILE_ERROR",
+                                       "Duration":  0,
+                                       "Total":  0,
+                                       "Message":  "test_winssl_utils.pas(116,13) Error: Identifier not found \"TSSLProtocolVersions\"",
+                                       "Failed":  0
+                                   }
+                               ],
+                   "total":  24,
+                   "passed":  15
+               }
+}

@@ -1,0 +1,27 @@
+{
+  "sourceDir": "src",
+  "testDir": "tests",
+  "outputDir": "reports/audit",
+  "thresholds": {
+    "coverage": 80.0,
+    "boundary": 70.0,
+    "error": 75.0,
+    "crypto": 90.0,
+    "thread": 70.0,
+    "resource": 75.0,
+    "backend": 80.0,
+    "overall": 75.0
+  },
+  "excludePatterns": [
+    "*.inc",
+    "*_sbox.inc",
+    "*.lpk",
+    "*.lpr"
+  ],
+  "includePatterns": [
+    "*.pas"
+  ],
+  "verbose": false,
+  "incrementalMode": false,
+  "baselineFile": ""
+}
