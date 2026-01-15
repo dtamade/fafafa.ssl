@@ -72,3 +72,4 @@ examples/temp_certs/
 !tests/certs/*.crt
 !examples/*.crt
 !examples/*.key
++.ace-tool/
