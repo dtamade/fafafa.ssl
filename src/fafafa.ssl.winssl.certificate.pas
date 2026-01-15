@@ -400,8 +400,6 @@ end;
 // ============================================================================
 
 function TWinSSLCertificate.GetInfo: TSSLCertificateInfo;
-var
-  SANs: TStringList;
 begin
   FillChar(Result, SizeOf(Result), 0);
   
@@ -420,12 +418,8 @@ begin
   Result.Version := GetVersion;
   Result.IsCA := IsCA;
 
-  SANs := GetSubjectAltNames;
-  try
-    Result.SubjectAltNames := StringsToArray(SANs);
-  finally
-    SANs.Free;
-  end;
+  // GetSubjectAltNames already returns TSSLStringArray
+  Result.SubjectAltNames := GetSubjectAltNames;
 end;
 
 function TWinSSLCertificate.GetSubject: string;
@@ -843,7 +837,7 @@ end;
 
 function TWinSSLCertificate.VerifyHostname(const AHostname: string): Boolean;
 var
-  SANs: TStringList;
+  SANs: TSSLStringArray;
   i: Integer;
   CN, Entry: string;
   HostIsIP, EntryIsIP: Boolean;
@@ -905,39 +899,35 @@ begin
 
   // 首先检查 Subject Alternative Names (SAN)
   SANs := GetSubjectAltNames;
-  try
-    for i := 0 to SANs.Count - 1 do
+  for i := 0 to High(SANs) do
+  begin
+    Entry := Trim(SANs[i]);
+    if Entry = '' then
+      Continue;
+
+    EntryIsIP := TSSLUtils.IsIPAddress(Entry);
+
+    if HostIsIP then
     begin
-      Entry := Trim(SANs[i]);
-      if Entry = '' then
-        Continue;
-
-      EntryIsIP := TSSLUtils.IsIPAddress(Entry);
-
-      if HostIsIP then
-      begin
-        if EntryIsIP and SameText(Entry, AHostname) then
-        begin
-          Result := True;
-          Exit;
-        end;
-        Continue;
-      end;
-
-      // 只针对域名进行通配符匹配，忽略 IP 及其他条目（email/URI 等）
-      if EntryIsIP then
-        Continue;
-      if not TSSLUtils.IsValidHostname(Entry) then
-        Continue;
-
-      if MatchWildcard(Entry, AHostname) then
+      if EntryIsIP and SameText(Entry, AHostname) then
       begin
         Result := True;
         Exit;
       end;
+      Continue;
     end;
-  finally
-    SANs.Free;
+
+    // 只针对域名进行通配符匹配，忽略 IP 及其他条目（email/URI 等）
+    if EntryIsIP then
+      Continue;
+    if not TSSLUtils.IsValidHostname(Entry) then
+      Continue;
+
+    if MatchWildcard(Entry, AHostname) then
+    begin
+      Result := True;
+      Exit;
+    end;
   end;
 
   // 如果没有 SAN 或未匹配，检查 Common Name (CN)

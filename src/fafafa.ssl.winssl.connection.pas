@@ -29,10 +29,13 @@ uses
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.utils,
-  fafafa.ssl.winssl.certificate;
+  fafafa.ssl.winssl.certificate,
+  fafafa.ssl.winssl.context;  // P0-2: 访问 TWinSSLContext.GetCAStoreHandle
 
 type
-  { TWinSSLSession - Windows Schannel 会话实现 }
+  { TWinSSLSession - Windows Schannel 会话实现
+    P0-4: 安全化重构 - 不再持有 CtxtHandle，改为元数据模式
+    Schannel 的会话复用由系统自动管理，此类仅保存会话元数据 }
   TWinSSLSession = class(TInterfacedObject, ISSLSession)
   private
     FID: string;
@@ -41,9 +44,10 @@ type
     FProtocolVersion: TSSLProtocolVersion;
     FCipherName: string;
     FSessionData: TBytes;
-    FSessionHandle: CtxtHandle;
-    FHasHandle: Boolean;
+    // P0-4: 移除 FSessionHandle 和 FHasHandle，避免双重释放风险
+    // Schannel 会话由系统管理，不需要显式持有句柄
     FPeerCertificate: ISSLCertificate;  // P1.2: 缓存对端证书以匹配 OpenSSL 行为
+    FIsResumed: Boolean;  // P0-4: 标记是否为恢复的会话
   public
     constructor Create;
     destructor Destroy; override;
@@ -69,9 +73,10 @@ type
     { P1.2: 设置对端证书（供 Connection 调用） }
     procedure SetPeerCertificate(ACert: ISSLCertificate);
 
-    { 内部方法 }
-    procedure SetSessionHandle(const AHandle: CtxtHandle);
-    function HasSessionHandle: Boolean;
+    { P0-4: 元数据设置方法（供 Connection 调用） }
+    procedure SetSessionMetadata(const AID: string; AProtocol: TSSLProtocolVersion;
+      const ACipher: string; AResumed: Boolean);
+    function WasResumed: Boolean;
   end;
 
   { TWinSSLSessionManager - 会话缓存管理器 }
@@ -135,6 +140,12 @@ type
 
     // Post-handshake verification (Strategy A)
     function ValidatePeerCertificate(out AVerifyError: Integer): Boolean;
+
+    // P1-6: ALPN 协议缓冲区构建
+    function BuildALPNBuffer(const AProtocols: string; out ABuffer: TBytes): Boolean;
+
+    // P1-7: InfoCallback 辅助方法
+    procedure NotifyInfoCallback(AWhere: Integer; ARet: Integer; const AState: string);
 
   public
     constructor Create(AContext: ISSLContext; ASocket: THandle); overload;
@@ -215,15 +226,15 @@ begin
   FProtocolVersion := sslProtocolTLS12;
   FCipherName := '';
   SetLength(FSessionData, 0);
-  InitSecHandle(FSessionHandle);
-  FHasHandle := False;
+  // P0-4: 移除 FSessionHandle 初始化，不再持有句柄
   FPeerCertificate := nil;
+  FIsResumed := False;
 end;
 
 destructor TWinSSLSession.Destroy;
 begin
-  if FHasHandle then
-    DeleteSecurityContext(@FSessionHandle);
+  // P0-4: 移除 DeleteSecurityContext 调用，不再持有句柄
+  // Schannel 会话由系统自动管理
   inherited Destroy;
 end;
 
@@ -290,10 +301,9 @@ end;
 
 function TWinSSLSession.GetNativeHandle: Pointer;
 begin
-  if FHasHandle then
-    Result := @FSessionHandle
-  else
-    Result := nil;
+  // P0-4: 不再持有 CtxtHandle，返回 nil
+  // Schannel 会话由系统自动管理
+  Result := nil;
 end;
 
 function TWinSSLSession.Clone: ISSLSession;
@@ -307,6 +317,7 @@ begin
   LSession.FProtocolVersion := FProtocolVersion;
   LSession.FCipherName := FCipherName;
   LSession.FSessionData := FSessionData;
+  LSession.FIsResumed := FIsResumed;
   // P1.2: 克隆对端证书
   if FPeerCertificate <> nil then
     LSession.FPeerCertificate := FPeerCertificate.Clone
@@ -315,17 +326,19 @@ begin
   Result := LSession;
 end;
 
-procedure TWinSSLSession.SetSessionHandle(const AHandle: CtxtHandle);
+{ P0-4: 元数据设置方法 }
+procedure TWinSSLSession.SetSessionMetadata(const AID: string;
+  AProtocol: TSSLProtocolVersion; const ACipher: string; AResumed: Boolean);
 begin
-  if FHasHandle then
-    DeleteSecurityContext(@FSessionHandle);
-  FSessionHandle := AHandle;
-  FHasHandle := True;
+  FID := AID;
+  FProtocolVersion := AProtocol;
+  FCipherName := ACipher;
+  FIsResumed := AResumed;
 end;
 
-function TWinSSLSession.HasSessionHandle: Boolean;
+function TWinSSLSession.WasResumed: Boolean;
 begin
-  Result := FHasHandle and IsValidSecHandle(FSessionHandle);
+  Result := FIsResumed;
 end;
 
 // ============================================================================
@@ -553,11 +566,16 @@ function TWinSSLConnection.Connect: Boolean;
 var
   LVerifyError: Integer;
 begin
+  // P1-7: 通知握手开始
+  NotifyInfoCallback(1, 0, 'handshake_start');
+
   Result := ClientHandshake;
   if not Result then
   begin
     FConnected := False;
     FHandshakeState := sslHsFailed;
+    // P1-7: 通知握手失败
+    NotifyInfoCallback(2, -1, 'handshake_failed');
     Exit;
   end;
 
@@ -569,11 +587,15 @@ begin
   begin
     FConnected := False;
     FHandshakeState := sslHsFailed;
+    // P1-7: 通知验证失败
+    NotifyInfoCallback(2, LVerifyError, 'verify_failed');
     Result := False;
     Exit;
   end;
 
   FHandshakeState := sslHsCompleted;
+  // P1-7: 通知握手完成
+  NotifyInfoCallback(3, 0, 'handshake_done');
   Result := True;
 end;
 
@@ -581,11 +603,16 @@ function TWinSSLConnection.Accept: Boolean;
 var
   LVerifyError: Integer;
 begin
+  // P1-7: 通知握手开始
+  NotifyInfoCallback(1, 0, 'handshake_start');
+
   Result := ServerHandshake;
   if not Result then
   begin
     FConnected := False;
     FHandshakeState := sslHsFailed;
+    // P1-7: 通知握手失败
+    NotifyInfoCallback(2, -1, 'handshake_failed');
     Exit;
   end;
 
@@ -597,11 +624,15 @@ begin
   begin
     FConnected := False;
     FHandshakeState := sslHsFailed;
+    // P1-7: 通知验证失败
+    NotifyInfoCallback(2, LVerifyError, 'verify_failed');
     Result := False;
     Exit;
   end;
 
   FHandshakeState := sslHsCompleted;
+  // P1-7: 通知握手完成
+  NotifyInfoCallback(3, 0, 'handshake_done');
   Result := True;
 end;
 
@@ -610,31 +641,105 @@ var
   OutBuffers: array[0..0] of TSecBuffer;
   OutBufferDesc: TSecBufferDesc;
   dwType, Status: DWORD;
+  dwSSPIFlags, dwSSPIOutFlags: DWORD;
+  tsExpiry: TTimeStamp;
+  LCredHandle: PCredHandle;
+  LSent: Integer;
 begin
   Result := False;
-  
+
   if not FConnected then
     Exit;
-  
-  // 发送关闭通知
+
+  // P0-3: 实现完整的 close_notify 发送
+  // Step 1: 应用关闭控制令牌
   dwType := SCHANNEL_SHUTDOWN;
-  
+
   OutBuffers[0].pvBuffer := @dwType;
   OutBuffers[0].BufferType := SECBUFFER_TOKEN;
   OutBuffers[0].cbBuffer := SizeOf(dwType);
-  
+
   OutBufferDesc.cBuffers := 1;
   OutBufferDesc.pBuffers := @OutBuffers[0];
   OutBufferDesc.ulVersion := SECBUFFER_VERSION;
-  
+
   Status := ApplyControlToken(@FCtxtHandle, @OutBufferDesc);
-  
-  if IsSuccess(Status) then
+
+  if not IsSuccess(Status) then
   begin
+    // 即使 ApplyControlToken 失败，也尝试清理
     DeleteSecurityContext(@FCtxtHandle);
     FConnected := False;
-    Result := True;
+    Exit;
   end;
+
+  // Step 2: 生成 close_notify 令牌
+  // 准备输出缓冲区
+  OutBuffers[0].pvBuffer := nil;
+  OutBuffers[0].BufferType := SECBUFFER_TOKEN;
+  OutBuffers[0].cbBuffer := 0;
+
+  OutBufferDesc.cBuffers := 1;
+  OutBufferDesc.pBuffers := @OutBuffers[0];
+  OutBufferDesc.ulVersion := SECBUFFER_VERSION;
+
+  // 获取凭据句柄
+  LCredHandle := PCredHandle(FContext.GetNativeHandle);
+
+  // 根据上下文类型调用相应的函数生成关闭令牌
+  dwSSPIFlags := ISC_REQ_SEQUENCE_DETECT or ISC_REQ_REPLAY_DETECT or
+                 ISC_REQ_CONFIDENTIALITY or ISC_RET_EXTENDED_ERROR or
+                 ISC_REQ_ALLOCATE_MEMORY or ISC_REQ_STREAM;
+
+  if FContext.GetContextType = sslCtxClient then
+  begin
+    Status := InitializeSecurityContextW(
+      LCredHandle,
+      @FCtxtHandle,
+      nil,
+      dwSSPIFlags,
+      0,
+      SECURITY_NATIVE_DREP,
+      nil,
+      0,
+      @FCtxtHandle,
+      @OutBufferDesc,
+      @dwSSPIOutFlags,
+      @tsExpiry
+    );
+  end
+  else
+  begin
+    Status := AcceptSecurityContext(
+      LCredHandle,
+      @FCtxtHandle,
+      nil,
+      dwSSPIFlags,
+      SECURITY_NATIVE_DREP,
+      @FCtxtHandle,
+      @OutBufferDesc,
+      @dwSSPIOutFlags,
+      @tsExpiry
+    );
+  end;
+
+  // Step 3: 发送 close_notify 令牌到对端
+  if (OutBuffers[0].pvBuffer <> nil) and (OutBuffers[0].cbBuffer > 0) then
+  begin
+    LSent := SendData(OutBuffers[0].pvBuffer^, OutBuffers[0].cbBuffer);
+    // 释放 SSPI 分配的内存
+    FreeContextBuffer(OutBuffers[0].pvBuffer);
+    // 即使发送失败也继续清理
+    if LSent <= 0 then
+    begin
+      // 发送失败，但仍然标记为关闭
+    end;
+  end;
+
+  // Step 4: 清理安全上下文
+  DeleteSecurityContext(@FCtxtHandle);
+  FConnected := False;
+  Result := True;
 end;
 
 procedure TWinSSLConnection.Close;
@@ -687,6 +792,8 @@ begin
     Exit(sslHsFailed);
 
   FHandshakeState := sslHsInProgress;
+  // P1-7: 通知握手开始
+  NotifyInfoCallback(1, 0, 'handshake_start');
 
   if FContext.GetContextType = sslCtxClient then
     LHandshakeOk := ClientHandshake
@@ -697,6 +804,8 @@ begin
   begin
     FConnected := False;
     FHandshakeState := sslHsFailed;
+    // P1-7: 通知握手失败
+    NotifyInfoCallback(2, -1, 'handshake_failed');
     Exit(FHandshakeState);
   end;
 
@@ -708,10 +817,14 @@ begin
   begin
     FConnected := False;
     FHandshakeState := sslHsFailed;
+    // P1-7: 通知验证失败
+    NotifyInfoCallback(2, LVerifyError, 'verify_failed');
     Exit(FHandshakeState);
   end;
 
   FHandshakeState := sslHsCompleted;
+  // P1-7: 通知握手完成
+  NotifyInfoCallback(3, 0, 'handshake_done');
   Result := FHandshakeState;
 end;
 
@@ -784,6 +897,98 @@ begin
     if cbData <= 0 then
       Result := False;
   end;
+end;
+
+{ P1-6: 构建 ALPN 协议缓冲区
+  格式: SEC_APPLICATION_PROTOCOLS
+    - ProtocolListsSize: DWORD (总大小)
+    - ProtocolLists: SEC_APPLICATION_PROTOCOL_LIST[]
+      - ProtoNegoExt: DWORD (SecApplicationProtocolNegotiationExt_ALPN = 2)
+      - ProtocolListSize: Word (协议列表大小)
+      - ProtocolList: 每个协议以长度前缀 (1字节) + 协议名称
+
+  输入格式: 逗号分隔的协议列表，如 "h2,http/1.1" }
+function TWinSSLConnection.BuildALPNBuffer(const AProtocols: string; out ABuffer: TBytes): Boolean;
+var
+  LProtocols: TStringList;
+  LTotalSize, LListSize, LOffset, I: Integer;
+  LProtoLen: Byte;
+begin
+  Result := False;
+  SetLength(ABuffer, 0);
+
+  if AProtocols = '' then
+    Exit;
+
+  LProtocols := TStringList.Create;
+  try
+    LProtocols.Delimiter := ',';
+    LProtocols.StrictDelimiter := True;
+    LProtocols.DelimitedText := AProtocols;
+
+    if LProtocols.Count = 0 then
+      Exit;
+
+    // 计算协议列表大小 (每个协议: 1字节长度 + 协议名称)
+    LListSize := 0;
+    for I := 0 to LProtocols.Count - 1 do
+    begin
+      if Length(LProtocols[I]) > 255 then
+        Continue;  // 跳过过长的协议名
+      Inc(LListSize, 1 + Length(LProtocols[I]));
+    end;
+
+    if LListSize = 0 then
+      Exit;
+
+    // 总大小: SEC_APPLICATION_PROTOCOLS header (4) + SEC_APPLICATION_PROTOCOL_LIST header (6) + 协议列表
+    LTotalSize := 4 + 4 + 2 + LListSize;
+    SetLength(ABuffer, LTotalSize);
+    FillChar(ABuffer[0], LTotalSize, 0);
+
+    LOffset := 0;
+
+    // SEC_APPLICATION_PROTOCOLS.ProtocolListsSize
+    PDWORD(@ABuffer[LOffset])^ := LTotalSize - 4;  // 不包括自身的 4 字节
+    Inc(LOffset, 4);
+
+    // SEC_APPLICATION_PROTOCOL_LIST.ProtoNegoExt
+    PDWORD(@ABuffer[LOffset])^ := SecApplicationProtocolNegotiationExt_ALPN;
+    Inc(LOffset, 4);
+
+    // SEC_APPLICATION_PROTOCOL_LIST.ProtocolListSize
+    PWord(@ABuffer[LOffset])^ := Word(LListSize);
+    Inc(LOffset, 2);
+
+    // 协议列表
+    for I := 0 to LProtocols.Count - 1 do
+    begin
+      if Length(LProtocols[I]) > 255 then
+        Continue;
+      LProtoLen := Length(LProtocols[I]);
+      ABuffer[LOffset] := LProtoLen;
+      Inc(LOffset);
+      if LProtoLen > 0 then
+      begin
+        Move(LProtocols[I][1], ABuffer[LOffset], LProtoLen);
+        Inc(LOffset, LProtoLen);
+      end;
+    end;
+
+    Result := True;
+  finally
+    LProtocols.Free;
+  end;
+end;
+
+{ P1-7: InfoCallback 辅助方法 - 在握手状态变化时通知用户 }
+procedure TWinSSLConnection.NotifyInfoCallback(AWhere: Integer; ARet: Integer; const AState: string);
+var
+  LCallback: TSSLInfoCallback;
+begin
+  LCallback := TWinSSLContext(FContext).GetInfoCallback;
+  if Assigned(LCallback) then
+    LCallback(AWhere, ARet, AState);
 end;
 
 function TWinSSLConnection.ValidatePeerCertificate(out AVerifyError: Integer): Boolean;
@@ -911,11 +1116,13 @@ begin
     FillChar(LChainPara, SizeOf(LChainPara), 0);
     LChainPara.cbSize := SizeOf(CERT_CHAIN_PARA);
 
+    // P0-2: 使用自定义 CA 存储进行证书链验证
+    // 如果上下文有 CA 存储，传递给 CertGetCertificateChain
     if not CertGetCertificateChain(
       nil,
       LCertContext,
       nil,
-      nil,
+      TWinSSLContext(FContext).GetCAStoreHandle,  // P0-2: 传入 CA 存储
       @LChainPara,
       LChainFlags,
       nil,
@@ -982,6 +1189,23 @@ begin
         if LPolicyStatus.dwError <> 0 then
         begin
           AVerifyError := Integer(LPolicyStatus.dwError);
+
+          // P1-7: 调用验证回调，允许用户覆盖验证结果
+          if Assigned(TWinSSLContext(FContext).GetVerifyCallback) then
+          begin
+            // 获取证书信息用于回调
+            if TWinSSLContext(FContext).GetVerifyCallback(
+              GetPeerCertificate.GetInfo,
+              AVerifyError,
+              GetVerifyResultString
+            ) then
+            begin
+              // 回调返回 True，允许连接继续
+              Result := True;
+              Exit;
+            end;
+          end;
+
           Result := False;
           Exit;
         end;
@@ -1014,6 +1238,11 @@ var
   ServerName: PWideChar;
   cbData, cbIoBuffer: DWORD;
   IoBuffer: array[0..16384-1] of Byte;
+  // P1-6: ALPN 支持
+  LALPNBuffer: TBytes;
+  LALPNInBuffers: array[0..1] of TSecBuffer;
+  LALPNInBufferDesc: TSecBufferDesc;
+  LHasALPN: Boolean;
 begin
   Result := False;
 
@@ -1027,24 +1256,61 @@ begin
 
   ServerName := StringToPWideChar(FServerName);
   try
+    // P1-6: 构建 ALPN 缓冲区
+    LHasALPN := BuildALPNBuffer(FContext.GetALPNProtocols, LALPNBuffer);
+
     // P1-1: 使用辅助方法初始化输出缓冲区
     PrepareOutputBufferDesc(OutBuffers, OutBufferDesc);
 
-    // 第一次调用 InitializeSecurityContext
-    Status := InitializeSecurityContextW(
-      PCredHandle(FContext.GetNativeHandle),
-      nil,
-      ServerName,
-      dwSSPIFlags,
-      0,
-      0,
-      nil,
-      0,
-      @FCtxtHandle,
-      @OutBufferDesc,
-      @dwSSPIOutFlags,
-      nil
-    );
+    // P1-6: 如果有 ALPN，准备输入缓冲区
+    if LHasALPN and (Length(LALPNBuffer) > 0) then
+    begin
+      LALPNInBuffers[0].pvBuffer := @LALPNBuffer[0];
+      LALPNInBuffers[0].cbBuffer := Length(LALPNBuffer);
+      LALPNInBuffers[0].BufferType := SECBUFFER_APPLICATION_PROTOCOLS;
+
+      LALPNInBuffers[1].pvBuffer := nil;
+      LALPNInBuffers[1].cbBuffer := 0;
+      LALPNInBuffers[1].BufferType := SECBUFFER_EMPTY;
+
+      LALPNInBufferDesc.cBuffers := 2;
+      LALPNInBufferDesc.pBuffers := @LALPNInBuffers[0];
+      LALPNInBufferDesc.ulVersion := SECBUFFER_VERSION;
+
+      // 第一次调用 InitializeSecurityContext（带 ALPN）
+      Status := InitializeSecurityContextW(
+        PCredHandle(FContext.GetNativeHandle),
+        nil,
+        ServerName,
+        dwSSPIFlags,
+        0,
+        0,
+        @LALPNInBufferDesc,
+        0,
+        @FCtxtHandle,
+        @OutBufferDesc,
+        @dwSSPIOutFlags,
+        nil
+      );
+    end
+    else
+    begin
+      // 第一次调用 InitializeSecurityContext（无 ALPN）
+      Status := InitializeSecurityContextW(
+        PCredHandle(FContext.GetNativeHandle),
+        nil,
+        ServerName,
+        dwSSPIFlags,
+        0,
+        0,
+        nil,
+        0,
+        @FCtxtHandle,
+        @OutBufferDesc,
+        @dwSSPIOutFlags,
+        nil
+      );
+    end;
 
     if not ((Status = SEC_I_CONTINUE_NEEDED) or IsSuccess(Status)) then
       Exit;
@@ -1383,6 +1649,9 @@ end;
 function TWinSSLConnection.GetError(ARet: Integer): TSSLErrorCode;
 var
   LastErr: DWORD;
+  {$IFDEF WINDOWS}
+  WsaErr: Integer;
+  {$ENDIF}
 begin
   // 成功或非错误情况
   if ARet >= 0 then
@@ -1392,17 +1661,47 @@ begin
     Exit;
   end;
 
-  // 获取Windows最后错误码
+  {$IFDEF WINDOWS}
+  // P1-8: 对 Winsock 操作使用 WSAGetLastError
+  // Winsock 错误码与 GetLastError 分开存储
+  WsaErr := WSAGetLastError;
+
+  // 首先检查 Winsock 错误
+  case WsaErr of
+    WSAEWOULDBLOCK:
+    begin
+      FLastError := sslErrWantRead;
+      Result := sslErrWantRead;
+      Exit;
+    end;
+
+    WSAENOTCONN,
+    WSAECONNRESET,
+    WSAECONNABORTED:
+    begin
+      FLastError := sslErrConnection;
+      Result := sslErrConnection;
+      Exit;
+    end;
+
+    WSAETIMEDOUT:
+    begin
+      FLastError := sslErrTimeout;
+      Result := sslErrTimeout;
+      Exit;
+    end;
+  end;
+  {$ENDIF}
+
+  // 获取 Windows/SSPI 错误码
   LastErr := GetLastError;
 
-  // 映射到SSL错误码
+  // 映射到 SSL 错误码
   case LastErr of
     {$IFDEF WINDOWS}
-    WSAEWOULDBLOCK,
     ERROR_IO_PENDING:
       Result := sslErrWantRead;  // 非阻塞操作需要等待
 
-    WSAENOTCONN,
     ERROR_NOT_CONNECTED:
       Result := sslErrConnection;
     {$ENDIF}

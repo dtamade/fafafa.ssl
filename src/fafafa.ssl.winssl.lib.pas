@@ -20,6 +20,7 @@ interface
 uses
   Windows, SysUtils, Classes,
   fafafa.ssl.base,
+  // fafafa.ssl.factory 移到 implementation 以避免循环依赖
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.utils;
@@ -96,13 +97,18 @@ type
 { 全局工厂函数 }
 function CreateWinSSLLibrary: ISSLLibrary;
 
+{ 后端注册函数 - 供 fafafa.ssl.winssl.autoregister 使用 }
+procedure RegisterWinSSLBackend;
+procedure UnregisterWinSSLBackend;
+
 implementation
 
 uses
   fafafa.ssl.winssl.context,
   fafafa.ssl.winssl.certificate,
   fafafa.ssl.winssl.certstore,
-  fafafa.ssl.factory;  // 需要引用 factory 以调用 RegisterLibrary
+  fafafa.ssl.errors,   // P0 后端语义统一：引入统一的错误抛出函数
+  fafafa.ssl.factory;  // 在 implementation 中导入以调用 RegisterLibrary
 
 // ============================================================================
 // 全局工厂函数
@@ -422,7 +428,7 @@ begin
     sslFeatSessionTickets:
       Result := True;  // Windows Schannel原生支持会话票据
     sslFeatRenegotiation:
-      Result := True;  // Windows Schannel原生支持重新协商
+      Result := False;  // P0-5: Windows Schannel 不完全支持 TLS 重协商，实际会抛异常
     sslFeatOCSPStapling:
       Result := False;  // 需要手动实现OCSP装订
     sslFeatCertificateTransparency:
@@ -558,57 +564,49 @@ end;
 
 function TWinSSLLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
 begin
+  // P0 后端语义统一：与 OpenSSL 后端保持一致的失败语义
+  // 未初始化时抛出异常，而不是返回 nil
   if not FInitialized then
-  begin
-    SetError(-1, 'Library not initialized');
-    InternalLog(sslLogError, 'Cannot create context: library not initialized');
-    Result := nil;
-    Exit;
-  end;
-  
-  try
-    Result := TWinSSLContext.Create(Self, AType);
-    if (Result <> nil) and (FDefaultConfig.Options <> []) then
-      Result.SetOptions(FDefaultConfig.Options);
-    Inc(FStatistics.ConnectionsTotal);
-    if AType = sslCtxClient then
-      InternalLog(sslLogInfo, 'Created client context')
-    else
-      InternalLog(sslLogInfo, 'Created server context');
-  except
-    on E: Exception do
-    begin
-      SetError(-1, E.Message);
-      InternalLog(sslLogError, Format('Failed to create context: %s', [E.Message]));
-      Result := nil;
-    end;
-  end;
+    RaiseSSLInitError(
+      'Cannot create context: WinSSL library not initialized',
+      'TWinSSLLibrary.CreateContext'
+    );
+
+  // 让异常传播 - 调用方必须显式处理错误
+  Result := TWinSSLContext.Create(Self, AType);
+
+  if (Result <> nil) and (FDefaultConfig.Options <> []) then
+    Result.SetOptions(FDefaultConfig.Options);
+
+  Inc(FStatistics.ConnectionsTotal);
+  if AType = sslCtxClient then
+    InternalLog(sslLogInfo, 'Created client context')
+  else
+    InternalLog(sslLogInfo, 'Created server context');
 end;
 
 function TWinSSLLibrary.CreateCertificate: ISSLCertificate;
 begin
+  // P0 后端语义统一：与 OpenSSL 后端保持一致的失败语义
   if not FInitialized then
-  begin
-    SetError(-1, 'Library not initialized');
-    InternalLog(sslLogError, 'Cannot create certificate: library not initialized');
-    Result := nil;
-    Exit;
-  end;
-  
+    RaiseSSLInitError(
+      'Cannot create certificate: WinSSL library not initialized',
+      'TWinSSLLibrary.CreateCertificate'
+    );
+
   // 创建空证书对象，调用方可通过 LoadFromFile/LoadFromStream 等方法加载实际证书
   Result := TWinSSLCertificate.Create(nil, False);
 end;
 
 function TWinSSLLibrary.CreateCertificateStore: ISSLCertificateStore;
 begin
+  // P0 后端语义统一：与 OpenSSL 后端保持一致的失败语义
   if not FInitialized then
-  begin
-    SetError(-1, 'Library not initialized');
-    InternalLog(sslLogError, 'Cannot create certificate store: library not initialized');
-    Result := nil;
-    Exit;
-  end;
-  
+    RaiseSSLInitError(
+      'Cannot create certificate store: WinSSL library not initialized',
+      'TWinSSLLibrary.CreateCertificateStore'
+    );
+
   // 默认创建受信任根证书存储，调用方可根据需要重新打开其他系统存储
   Result := TWinSSLCertificateStore.Create(SSL_STORE_ROOT);
 end;
@@ -620,28 +618,44 @@ end;
 procedure RegisterWinSSLBackend;
 begin
   {$IFDEF WINDOWS}
-  // 在 Windows 平台上注册 WinSSL 后端
-  // 优先级设为 200，高于 OpenSSL 的 100，使其成为 Windows 上的默认选择
-  TSSLFactory.RegisterLibrary(sslWinSSL, TWinSSLLibrary,
-    'Windows Schannel (Native SSL/TLS)', 200);
+  try
+    // 在 Windows 平台上注册 WinSSL 后端
+    // 优先级设为 200，高于 OpenSSL 的 100，使其成为 Windows 上的默认选择
+    TSSLFactory.RegisterLibrary(sslWinSSL, TWinSSLLibrary,
+      'Windows Schannel (Native SSL/TLS)', 200);
+  except
+    on E: Exception do
+    begin
+      // 初始化失败时静默处理，避免程序崩溃
+      // 用户可以通过 IsLibraryAvailable 检查 WinSSL 是否可用
+    end;
+  end;
   {$ENDIF}
 end;
 
 procedure UnregisterWinSSLBackend;
 begin
   {$IFDEF WINDOWS}
-  TSSLFactory.UnregisterLibrary(sslWinSSL);
+  try
+    TSSLFactory.UnregisterLibrary(sslWinSSL);
+  except
+    // 清理失败时静默处理
+  end;
   {$ENDIF}
 end;
 
 initialization
   {$IFDEF WINDOWS}
-  RegisterWinSSLBackend;
+  // 延迟注册：不在初始化时自动注册
+  // 用户需要在程序启动后手动调用 RegisterWinSSLBackend
+  // 或者使用 fafafa.ssl.winssl.autoregister 单元
   {$ENDIF}
 
 finalization
   {$IFDEF WINDOWS}
-  UnregisterWinSSLBackend;
+  // 清理时取消注册（如果已注册）
+  // 注意：UnregisterWinSSLBackend 内部有 try-except 保护
+  // UnregisterWinSSLBackend;  // 暂时禁用，由 autoregister 单元处理
   {$ENDIF}
 
 end.

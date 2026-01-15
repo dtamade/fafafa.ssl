@@ -55,7 +55,7 @@ procedure TestWinSSLSAN;
 var
   Lib: ISSLLibrary;
   Cert: ISSLCertificate;
-  SANs: TStringList;
+  SANs: TSSLStringArray;
   Info: TSSLCertificateInfo;
   HasSanTest, HasExample, HasIp: Boolean;
   I: Integer;
@@ -98,17 +98,19 @@ begin
   end;
 
   SANs := Cert.GetSubjectAltNames;
-  try
-    AssertNotNil('GetSubjectAltNames returns non-nil list', Pointer(SANs));
-    HasSanTest := SANs.IndexOf('san-test.local') <> -1;
-    HasExample := SANs.IndexOf('example.test') <> -1;
-    HasIp := SANs.IndexOf('127.0.0.1') <> -1;
-    AssertTrue('SANs contain DNS:san-test.local', HasSanTest);
-    AssertTrue('SANs contain DNS:example.test', HasExample);
-    AssertTrue('SANs contain IP:127.0.0.1', HasIp);
-  finally
-    SANs.Free;
+  AssertTrue('GetSubjectAltNames returns non-empty array', Length(SANs) > 0);
+  HasSanTest := False;
+  HasExample := False;
+  HasIp := False;
+  for I := 0 to High(SANs) do
+  begin
+    if SANs[I] = 'san-test.local' then HasSanTest := True;
+    if SANs[I] = 'example.test' then HasExample := True;
+    if SANs[I] = '127.0.0.1' then HasIp := True;
   end;
+  AssertTrue('SANs contain DNS:san-test.local', HasSanTest);
+  AssertTrue('SANs contain DNS:example.test', HasExample);
+  AssertTrue('SANs contain IP:127.0.0.1', HasIp);
 
   Info := Cert.GetInfo;
   InInfo := False;

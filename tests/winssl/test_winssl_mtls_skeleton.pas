@@ -289,7 +289,7 @@ begin
     Check('设置服务器名称 (SNI)', True);
 
     // 测试验证模式设置
-    Ctx.SetVerifyMode(sslVerifyPeer);
+    Ctx.SetVerifyMode([sslVerifyPeer]);
     Check('设置验证模式 (VerifyPeer)', True);
   end;
   {$ELSE}
@@ -383,16 +383,15 @@ begin
     Check('TCP 连接到 ' + ServerHost, True);
 
     try
-      Conn := Ctx.CreateConnection;
+      Conn := Ctx.CreateConnection(THandle(Socket));
       Check('创建连接对象', Conn <> nil);
 
       if Conn <> nil then
       begin
-        Conn.SetSocket(Socket);
-        if Conn.Handshake then
+        if Conn.DoHandshake = sslHsCompleted then
           Check('mTLS 握手', True)
         else
-          Check('mTLS 握手', False, Conn.GetLastErrorString);
+          Check('mTLS 握手', False, 'Handshake failed');
       end;
     finally
       closesocket(Socket);

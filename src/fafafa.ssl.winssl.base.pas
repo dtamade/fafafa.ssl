@@ -145,6 +145,20 @@ type
     ProtocolIdSize: Byte;           // 协议 ID 长度
     ProtocolId: array[0..254] of Byte;  // 协议 ID
   end;
+
+  // P1-6: ALPN 协议列表结构（用于注入握手）
+  PSEC_APPLICATION_PROTOCOL_LIST = ^SEC_APPLICATION_PROTOCOL_LIST;
+  SEC_APPLICATION_PROTOCOL_LIST = record
+    ProtoNegoExt: DWORD;            // 协商扩展类型 (SecApplicationProtocolNegotiationExt_ALPN)
+    ProtocolListSize: Word;         // 协议列表大小
+    ProtocolList: array[0..0] of Byte;  // 协议列表（变长）
+  end;
+
+  PSEC_APPLICATION_PROTOCOLS = ^SEC_APPLICATION_PROTOCOLS;
+  SEC_APPLICATION_PROTOCOLS = record
+    ProtocolListsSize: DWORD;       // 协议列表总大小
+    ProtocolLists: array[0..0] of Byte;  // SEC_APPLICATION_PROTOCOL_LIST 数组（变长）
+  end;
   
   // 证书链相关
   HCERTCHAINENGINE = Pointer;
@@ -397,6 +411,17 @@ const
   SECBUFFER_CHANGE_PASS_RESPONSE = 15;
   SECBUFFER_TARGET_HOST        = 16;
   SECBUFFER_ALERT              = 17;
+  SECBUFFER_APPLICATION_PROTOCOLS = 18;  // P1-6: ALPN 协议缓冲区类型
+
+  // P1-6: ALPN 协议协商类型
+  SecApplicationProtocolNegotiationExt_None  = 0;
+  SecApplicationProtocolNegotiationExt_NPN   = 1;
+  SecApplicationProtocolNegotiationExt_ALPN  = 2;
+
+  // P1-6: ALPN 协议协商状态
+  SecApplicationProtocolNegotiationStatus_None             = 0;
+  SecApplicationProtocolNegotiationStatus_Success          = 1;
+  SecApplicationProtocolNegotiationStatus_SelectedClientOnly = 2;
   
   // TLS/SSL 协议版本标志
   SP_PROT_TLS1_0_SERVER        = $00000040;
@@ -593,6 +618,8 @@ const
   SEC_E_ALGORITHM_MISMATCH       = SECURITY_STATUS($80090331);
   SEC_E_SECURITY_QOS_FAILED      = SECURITY_STATUS($80090332);
   SEC_E_UNFINISHED_CONTEXT_DELETED = SECURITY_STATUS($80090333);
+  SEC_E_INVALID_PARAMETER        = SECURITY_STATUS($80090334);  // 添加缺失的常量
+  SEC_E_CONTEXT_EXPIRED          = SECURITY_STATUS($80090317);  // 上下文过期
   
   // QueryContextAttributes 属性
   SECPKG_ATTR_SIZES              = 0;
