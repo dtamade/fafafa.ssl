@@ -440,6 +440,81 @@ begin
   end;
 end;
 
+{**
+ * 契约测试 6: 安全默认值 (fail-closed)
+ *
+ * - Client context 默认必须启用 sslVerifyPeer
+ * - 默认不应忽略 hostname
+ * - 默认不应允许自签名证书
+ *}
+procedure TestContract_Context_SecureDefaults(ABackend: TSSLLibraryType);
+var
+  LLib: ISSLLibrary;
+  LCtx: ISSLContext;
+  LVerifyMode: TSSLVerifyModes;
+  LFlags: TSSLCertVerifyFlags;
+begin
+  PrintSubHeader(Format('Contract 6: Secure Defaults - %s',
+    [SSL_LIBRARY_NAMES[ABackend]]));
+
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    WriteLn('  [SKIP] Backend not available on this platform');
+    Exit;
+  end;
+
+  try
+    LLib := TSSLFactory.GetLibrary(ABackend);
+    LCtx := LLib.CreateContext(sslCtxClient);
+
+    LVerifyMode := LCtx.GetVerifyMode;
+    if sslVerifyPeer in LVerifyMode then
+    begin
+      WriteLn('  [PASS] Default VerifyMode includes sslVerifyPeer');
+      AddResult('Context_Default_VerifyPeer', ABackend, True);
+    end
+    else
+    begin
+      WriteLn('  [FAIL] Default VerifyMode missing sslVerifyPeer');
+      AddResult('Context_Default_VerifyPeer', ABackend, False,
+        'sslVerifyPeer not enabled by default');
+    end;
+
+    LFlags := LCtx.GetCertVerifyFlags;
+
+    if not (sslCertVerifyIgnoreHostname in LFlags) then
+    begin
+      WriteLn('  [PASS] Default CertVerifyFlags does not ignore hostname');
+      AddResult('Context_Default_NoIgnoreHostname', ABackend, True);
+    end
+    else
+    begin
+      WriteLn('  [FAIL] Default CertVerifyFlags ignores hostname');
+      AddResult('Context_Default_NoIgnoreHostname', ABackend, False,
+        'sslCertVerifyIgnoreHostname should not be default');
+    end;
+
+    if not (sslCertVerifyAllowSelfSigned in LFlags) then
+    begin
+      WriteLn('  [PASS] Default CertVerifyFlags does not allow self-signed');
+      AddResult('Context_Default_NoAllowSelfSigned', ABackend, True);
+    end
+    else
+    begin
+      WriteLn('  [FAIL] Default CertVerifyFlags allows self-signed');
+      AddResult('Context_Default_NoAllowSelfSigned', ABackend, False,
+        'sslCertVerifyAllowSelfSigned should not be default');
+    end;
+
+  except
+    on E: Exception do
+    begin
+      WriteLn('  [FAIL] Exception: ', E.ClassName, ' - ', E.Message);
+      AddResult('Context_SecureDefaults', ABackend, False, E.Message);
+    end;
+  end;
+end;
+
 procedure PrintSummary;
 var
   I: Integer;
@@ -508,6 +583,9 @@ begin
 
     // 5) Offline certificate / hostname behavior
     TestContract_Certificate_SAN_VerifyHostname(LBackend);
+
+    // 6) Secure defaults (fail-closed)
+    TestContract_Context_SecureDefaults(LBackend);
   end;
 
   PrintSummary;
