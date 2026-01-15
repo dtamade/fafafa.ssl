@@ -327,8 +327,7 @@ uses
   fafafa.ssl.crypto.utils,   // Phase 2.3.5 - 加密工具（哈希计算）
   fafafa.ssl.encoding,       // Phase 2.3.5 - 编码工具（Hex转换）
   fafafa.ssl.errors,
-  fafafa.ssl.openssl.errors, // Fix: RaiseSSLConfigError
-  fafafa.ssl.openssl.api.rand;  // Phase 3.3 P0 - 加密安全随机数生成
+  fafafa.ssl.random;         // Platform secure RNG (no backend dependency)
 
 var
   GSSLFactory: TSSLFactory;
@@ -763,9 +762,12 @@ begin
     LType := GetDefaultLibrary;
   
   if LType = sslAutoDetect then
-    RaiseSSLConfigError(
+    raise ESSLConfigurationException.CreateWithContext(
       'No SSL library available - could not detect OpenSSL or WinSSL',
-      'TSSLFactory.GetLibrary'
+      sslErrLibraryNotFound,
+      'TSSLFactory.GetLibrary',
+      0,
+      sslAutoDetect
     );
   
   EnterCriticalSection(GFactoryLock);
@@ -1057,24 +1059,23 @@ class function TSSLHelper.GenerateRandomBytes(ACount: Integer): TBytes;
 begin
   // Phase 3.3 P0: 修复安全漏洞 - 使用加密安全的随机数生成器
   // 原实现使用 Random(256) 是不安全的，不适合加密场景
-  // 现使用 OpenSSL 的 RAND_bytes 提供加密安全的随机数
-
-  Result := nil;
+  // 现使用平台安全随机数源（不依赖特定 SSL 后端）
 
   if ACount <= 0 then
     raise ESSLInvalidArgument.CreateFmt('Invalid random bytes count: %d', [ACount]);
 
-  SetLength(Result, ACount);
-
-  // 使用 OpenSSL RAND_bytes 生成加密安全的随机数
-  if RAND_bytes(@Result[0], ACount) <> 1 then
-    raise ESSLCryptoError.CreateWithContext(
-      'Failed to generate cryptographically secure random bytes',
-      sslErrOther,
-      'TSSLHelper.GenerateRandomBytes',
-      0,
-      sslOpenSSL
-    );
+  try
+    Result := GenerateSecureRandomBytes(ACount);
+  except
+    on E: Exception do
+      raise ESSLCryptoError.CreateWithContext(
+        Format('Failed to generate cryptographically secure random bytes: %s', [E.Message]),
+        sslErrOther,
+        'TSSLHelper.GenerateRandomBytes',
+        0,
+        sslAutoDetect
+      );
+  end;
 end;
 
 class function TSSLHelper.HashData(const AData: TBytes;
