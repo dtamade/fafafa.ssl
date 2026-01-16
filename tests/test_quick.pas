@@ -4,6 +4,7 @@ program test_quick;
 
 uses
   SysUtils, Classes,
+  fafafa.ssl,  // Ensure all linked backends are registered
   fafafa.ssl.base,
   fafafa.ssl.context.builder,
   fafafa.ssl.quick,
@@ -65,8 +66,15 @@ procedure TestQuickConnect;
 var
   LConn: ISSLConnection;
 begin
+  // Network-dependent test: off by default for reproducible CI.
+  if GetEnvironmentVariable('FAFAFA_RUN_NETWORK_TESTS') <> '1' then
+  begin
+    WriteLn('SKIP: TSSLQuick.Connect network test (set FAFAFA_RUN_NETWORK_TESTS=1 to enable)');
+    Exit;
+  end;
+
   WriteLn('Testing TSSLQuick.Connect (google.com:443)...');
-  
+
   try
     LConn := TSSLQuick.Connect('google.com', 443);
     if LConn <> nil then

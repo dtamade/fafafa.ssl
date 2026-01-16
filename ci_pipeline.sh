@@ -3,7 +3,7 @@
 # fafafa.ssl CI/CD Automation Script
 # 
 # Purpose: Automated building, testing, and regression detection
-# Usage: ./ci_pipeline.sh [build|test|bench|all]
+# Usage: ./ci_pipeline.sh [build|test|bench|audit|clean|all]
 #
 
 set -e  # Exit on error
@@ -19,6 +19,11 @@ RUN_NETWORK_TESTS="${FAFAFA_RUN_NETWORK_TESTS:-0}"
 EXAMPLES_BIN="$PROJECT_ROOT/examples/bin"
 TESTS_BIN="$PROJECT_ROOT/tests/bin"
 BENCH_BIN="$PROJECT_ROOT/tests/benchmarks/bin"
+
+AUDIT_DIR="$PROJECT_ROOT/tools/test_audit"
+AUDIT_BIN="$AUDIT_DIR/bin"
+AUDIT_CONFIG="$AUDIT_DIR/audit_config.json"
+AUDIT_OUTPUT="$PROJECT_ROOT/reports/audit"
 
 # FPC unit paths (helps with custom FPC installs that may have incomplete fpc.cfg search paths)
 FPC_UNIT_PATHS=""
@@ -207,6 +212,97 @@ run_benchmarks() {
     info "✅ Performance benchmarks completed"
 }
 
+# Generate/append a simple audit score trend CSV
+# (Best-effort; does not fail the pipeline if parsing fails)
+generate_quality_trend() {
+    if [ ! -d "$AUDIT_OUTPUT" ]; then
+        return 0
+    fi
+
+    local latest_json
+    latest_json=$(ls -t "$AUDIT_OUTPUT"/audit_*.json 2>/dev/null | head -n 1)
+    if [ -z "$latest_json" ]; then
+        return 0
+    fi
+
+    local trend_file="$AUDIT_OUTPUT/quality_trend.csv"
+    if [ ! -f "$trend_file" ]; then
+        echo "Date,Overall,Coverage,Boundary,Error,Crypto,Thread,Resource,Backend" > "$trend_file"
+    fi
+
+    python3 - "$latest_json" >> "$trend_file" <<'PY'
+import json
+import sys
+from datetime import datetime
+
+p = sys.argv[1]
+with open(p, 'r', encoding='utf-8') as f:
+    data = json.load(f)
+
+scores = data.get('scores', {})
+ts = data.get('timestamp', '')
+try:
+    dt = datetime.fromisoformat(ts)
+    date = dt.strftime('%Y%m%d_%H%M%S')
+except Exception:
+    date = ts or 'unknown'
+
+def get(k, default=''):
+    v = scores.get(k, default)
+    return str(v)
+
+row = [
+    date,
+    get('overall'),
+    get('coverage'),
+    get('boundaryTesting'),
+    get('errorHandling'),
+    get('cryptoTesting'),
+    get('threadSafety'),
+    get('resourceManagement'),
+    get('backendConsistency'),
+]
+print(','.join(row))
+PY
+}
+
+# Run test quality audit (optional)
+run_audit() {
+    info "Running test quality audit..."
+
+    cd "$PROJECT_ROOT"
+
+    if [ ! -f "$AUDIT_CONFIG" ]; then
+        error "Audit config not found: $AUDIT_CONFIG"
+        return 1
+    fi
+
+    mkdir -p "$AUDIT_BIN" "$AUDIT_OUTPUT"
+
+    info "  Compiling audit tool..."
+    $FPC_BIN $FPC_UNIT_PATHS -Fusrc -Futools/test_audit -FU"$AUDIT_BIN" -o"$AUDIT_BIN/test_audit" tools/test_audit/test_audit_main.pas || {
+        error "Failed to compile audit tool"
+        return 1
+    }
+
+    info "  Running audit analysis..."
+    set +e
+    "$AUDIT_BIN/test_audit" -c "$AUDIT_CONFIG" -s "src" -t "tests" -o "$AUDIT_OUTPUT"
+    local audit_rc=$?
+    set -e
+
+    # Best-effort trend update
+    generate_quality_trend || true
+
+    if [ $audit_rc -eq 0 ]; then
+        info "✅ Test quality audit passed"
+    else
+        warn "Test quality audit failed (quality below threshold or audit error)"
+    fi
+
+    return $audit_rc
+}
+
 # Generate performance report
 generate_report() {
     info "Generating performance report..."
@@ -271,6 +367,9 @@ main() {
             run_benchmarks
             generate_report
             ;;
+        audit)
+            run_audit
+            ;;
         clean)
             clean
             ;;
@@ -283,7 +382,7 @@ main() {
             ;;
         *)
             error "Unknown command: $command"
-            echo "Usage: $0 [build|test|bench|clean|all]"
+            echo "Usage: $0 [build|test|bench|audit|clean|all]"
             exit 1
             ;;
     esac

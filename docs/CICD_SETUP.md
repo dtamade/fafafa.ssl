@@ -367,6 +367,39 @@ permissions:
   contents: read  # 只读
 ```
 
+## 测试质量审计（可选）
+
+仓库提供了一个可选的测试质量审计工具：`tools/test_audit/`。
+
+### 运行审计
+
+```bash
+# 运行审计（会编译并执行 tools/test_audit）
+./ci_pipeline.sh audit
+```
+
+说明：
+- 默认配置文件：`tools/test_audit/audit_config.json`
+- 默认输出目录：`reports/audit/`（已在 `.gitignore` 中忽略）
+- 审计会根据配置中的 `thresholds.overall` 等阈值决定退出码：低于阈值会返回非 0。
+
+### 在 GitHub Actions 中使用（示例）
+
+你可以将审计作为可选步骤加入 workflow（建议先 `continue-on-error: true`，待阈值稳定后再启用强制门禁）：
+
+```yaml
+- name: 🔍 Run Test Quality Audit
+  run: ./ci_pipeline.sh audit
+  continue-on-error: true
+
+- name: 📊 Upload Audit Reports
+  uses: actions/upload-artifact@v4
+  with:
+    name: audit-reports
+    path: reports/audit/
+    retention-days: 30
+```
+
 ## 进一步参考
 
 - [GitHub Actions文档](https://docs.github.com/en/actions)

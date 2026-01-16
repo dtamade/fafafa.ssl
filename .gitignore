@@ -43,6 +43,10 @@ tests/benchmarks/archive/benchmark_*.csv
 # 覆盖率报告
 coverage/
 
+# Test audit outputs
+reports/audit/
+tools/test_audit/reports/
+
 # Claude Code 本地配置
 .claude/
 
@@ -72,4 +76,4 @@ examples/temp_certs/
 !tests/certs/*.crt
 !examples/*.crt
 !examples/*.key
-+.ace-tool/
+.ace-tool/
