@@ -7,13 +7,14 @@
 [![FPC](https://img.shields.io/badge/FreePascal-3.2.0%2B-orange)](https://www.freepascal.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-**企业级 SSL/TLS 加密库** - 为 FreePascal 提供完整的 OpenSSL 封装
+**企业级 SSL/TLS 加密库** - 为 FreePascal 提供统一抽象 + 多后端实现（OpenSSL/WinSSL，且可选 MbedTLS/WolfSSL）
 
 **✅ 生产环境认证完成** - 通过 7 个阶段、1,086 项测试、52 个真实网站验证
 
 ## 🌟 核心特性
 
-- ✅ **双后端支持**: OpenSSL (Linux/macOS/Windows) + WinSSL (Windows Native)
+- ✅ **多后端支持**: OpenSSL (Linux/macOS/Windows) + WinSSL (Windows Native)
+- 🆕 **可选后端**: MbedTLS / WolfSSL（需在工程中定义 `ENABLE_MBEDTLS` / `ENABLE_WOLFSSL`）
 - ✅ **简洁API**: 1行代码实现HTTPS连接
 - ✅ **生产级加密**: AES-256-GCM, PBKDF2, SHA-256/512
 - ✅ **完整证书管理**: X.509解析、验证、生成、CRL/OCSP
@@ -255,6 +256,12 @@ end;
 
 # 性能基准测试
 ./ci_pipeline.sh bench
+
+# 可选：测试质量审计（默认会按 tools/test_audit/audit_config.json 的阈值 fail/exit non-zero）
+./ci_pipeline.sh audit
+
+# 仅生成报告（不门禁）
+QUALITY_THRESHOLD=0 ./ci_pipeline.sh audit
 ```
 
 ### 测试覆盖
