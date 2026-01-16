@@ -80,9 +80,24 @@ end;
 ```
 
 ### 3.4 后端实现模块
-- `fafafa.ssl.openssl` - OpenSSL 实现（Linux/macOS 默认）
-- `fafafa.ssl.winssl` - Windows Schannel 实现（Windows 默认）
-- `fafafa.ssl.wolfssl` / `fafafa.ssl.mbedtls` - 规划中的后端，目前尚未落地；如调用这些库类型，工厂会抛出 `ESSLException` 提醒“暂未实现”。
+| 模块 | 实现说明 | 启用方式 |
+|------|---------|---------|
+| `fafafa.ssl.openssl.*` | OpenSSL 实现（Linux/macOS 默认） | 默认启用 |
+| `fafafa.ssl.winssl.*` | Windows Schannel 实现（Windows 默认） | 默认启用（仅 Windows） |
+| `fafafa.ssl.mbedtls.*` | mbedTLS 实现（轻量 TLS） | `{$DEFINE ENABLE_MBEDTLS}` |
+| `fafafa.ssl.wolfssl.*` | wolfSSL 实现（嵌入式/兼容性） | `{$DEFINE ENABLE_WOLFSSL}` |
+
+- **OpenSSL 后端**
+  - 低层绑定：`fafafa.ssl.openssl.api.*.pas`（function pointer bindings）
+  - Loader：`fafafa.ssl.openssl.loader.pas`（负责 `libcrypto`/`libssl` 动态加载与符号解析）
+  - 高层实现：`fafafa.ssl.openssl.{context,connection,certificate,session,store}.*`
+
+- **WinSSL（Schannel）后端**
+  - 实现单元：`fafafa.ssl.winssl.*`
+  - 非 Windows 环境应跳过 WinSSL 专用构建/测试
+
+- **MbedTLS / WolfSSL 后端**
+  - 默认不启用：如需编译并注册这些后端，请在工程/编译参数中定义 `ENABLE_MBEDTLS` / `ENABLE_WOLFSSL`
 
 每个后端模块包含：
 ```pascal

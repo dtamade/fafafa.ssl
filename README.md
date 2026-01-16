@@ -1,7 +1,7 @@
 # fafafa.ssl - Production-Ready SSL/TLS Library
 
 [![Production Ready](https://img.shields.io/badge/Production%20Ready-99.5%25-brightgreen)](https://github.com)
-[![Tests](https://img.shields.io/badge/Tests-1086%20passed%20(99.1%25)-success)](docs/PHASE_7_FINAL_REPORT.md)
+[![Tests](https://img.shields.io/badge/Tests-1086%20passed%20(99.1%25)-success)](docs/archive/phase_reports/PHASE_7_FINAL_REPORT.md)
 [![OpenSSL](https://img.shields.io/badge/OpenSSL-1.1.1%2B%20%7C%203.0%2B-blue)](https://www.openssl.org/)
 [![TLS](https://img.shields.io/badge/TLS-1.2%20%7C%201.3-blue)](https://tools.ietf.org/html/rfc8446)
 [![FPC](https://img.shields.io/badge/FreePascal-3.2.0%2B-orange)](https://www.freepascal.org/)
@@ -80,20 +80,20 @@ end.
 ### 编译运行
 
 ```bash
-fpc -Fusrc -Fusrc/openssl your_app.pas
-./your_app
+fpc -B -Mobjfpc -Sh -Fu./src -Fi./src -FU./lib your_app.pas -o./bin/your_app
+./bin/your_app
 ```
 
 ## 📚 文档
 
 | 文档 | 描述 |
 |------|------|
-| [API Reference](docs/API_Reference.md) | 完整API文档 |
+| [API Reference](docs/API_REFERENCE.md) | 完整API文档 |
 | [Getting Started](docs/GETTING_STARTED.md) | 入门（推荐入口与最小示例） |
 | [Quick Start](docs/QUICKSTART.md) | 快速开始指南 |
 | [Examples](examples/) | 95+示例程序 |
 | [FAQ](docs/FAQ.md) | 常见问题解答 |
-| [Deployment Guide](.gemini/antigravity/brain/.../production_deployment_guide.md) | 生产部署指南 |
+| [Deployment Guide](docs/DEPLOYMENT_GUIDE.md) | 生产部署指南 |
 
 ## 🚀 核心API
 
