@@ -135,8 +135,10 @@ type
 implementation
 
 uses
+  fafafa.ssl.mbedtls.lib,
   fafafa.ssl.mbedtls.certificate,
-  fafafa.ssl.mbedtls.session;
+  fafafa.ssl.mbedtls.session,
+  fafafa.ssl.mbedtls.connection;
 
 const
   // MbedTLS structure sizes - use large buffers for safety
@@ -186,6 +188,8 @@ end;
 procedure TMbedTLSContext.AllocateConfig;
 var
   LEndpoint: Integer;
+  LLib: TMbedTLSLibrary;
+  LObj: TObject;
 begin
   if FSSLConfig <> nil then
     FreeConfig;
@@ -209,6 +213,21 @@ begin
   if Assigned(mbedtls_ssl_config_defaults) then
     mbedtls_ssl_config_defaults(FSSLConfig, LEndpoint,
       MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT);
+
+  // 配置 RNG - 从 Library 获取 CTR_DRBG 上下文
+  if Assigned(mbedtls_ssl_conf_rng) and Assigned(mbedtls_ctr_drbg_random) then
+  begin
+    if FLibrary <> nil then
+    begin
+      LObj := FLibrary as TObject;
+      if LObj is TMbedTLSLibrary then
+      begin
+        LLib := TMbedTLSLibrary(LObj);
+        if LLib.GetCtrDrbgContext <> nil then
+          mbedtls_ssl_conf_rng(FSSLConfig, Tmbedtls_f_rng(mbedtls_ctr_drbg_random), LLib.GetCtrDrbgContext);
+      end;
+    end;
+  end;
 end;
 
 procedure TMbedTLSContext.FreeConfig;
@@ -319,15 +338,70 @@ begin
 end;
 
 procedure TMbedTLSContext.LoadCertificate(AStream: TStream);
+var
+  LData: TBytes;
+  LSize: Integer;
 begin
   RequireValidContext('LoadCertificate');
-  raise ESSLException.Create('Loading certificate from stream not yet implemented for MbedTLS');
+
+  if AStream = nil then
+    raise ESSLCertError.Create('Stream is nil');
+
+  LSize := AStream.Size - AStream.Position;
+  if LSize <= 0 then
+    raise ESSLCertError.Create('Stream is empty');
+
+  SetLength(LData, LSize + 1);  // +1 for null terminator (PEM needs it)
+  AStream.ReadBuffer(LData[0], LSize);
+  LData[LSize] := 0;  // Null terminate
+
+  // 分配证书链
+  if FCertChain = nil then
+  begin
+    GetMem(FCertChain, MBEDTLS_X509_CRT_SIZE);
+    FillChar(FCertChain^, MBEDTLS_X509_CRT_SIZE, 0);
+    if Assigned(mbedtls_x509_crt_init) then
+      mbedtls_x509_crt_init(FCertChain);
+  end;
+
+  if not Assigned(mbedtls_x509_crt_parse) then
+    raise ESSLCertError.Create('mbedtls_x509_crt_parse not available');
+
+  if mbedtls_x509_crt_parse(FCertChain, @LData[0], LSize + 1) <> 0 then
+    raise ESSLCertError.Create('Failed to load certificate from stream');
 end;
 
 procedure TMbedTLSContext.LoadCertificate(ACert: ISSLCertificate);
+var
+  LPEMData: string;
+  LAnsi: AnsiString;
 begin
   RequireValidContext('LoadCertificate');
-  raise ESSLException.Create('Loading certificate from ISSLCertificate not yet implemented for MbedTLS');
+
+  if ACert = nil then
+    raise ESSLCertError.Create('Certificate is nil');
+
+  // 尝试从证书获取 PEM 数据
+  LPEMData := ACert.SaveToPEM;
+  if LPEMData = '' then
+    raise ESSLCertError.Create('Cannot get PEM data from certificate');
+
+  LAnsi := AnsiString(LPEMData);
+
+  // 分配证书链
+  if FCertChain = nil then
+  begin
+    GetMem(FCertChain, MBEDTLS_X509_CRT_SIZE);
+    FillChar(FCertChain^, MBEDTLS_X509_CRT_SIZE, 0);
+    if Assigned(mbedtls_x509_crt_init) then
+      mbedtls_x509_crt_init(FCertChain);
+  end;
+
+  if not Assigned(mbedtls_x509_crt_parse) then
+    raise ESSLCertError.Create('mbedtls_x509_crt_parse not available');
+
+  if mbedtls_x509_crt_parse(FCertChain, PByte(PAnsiChar(LAnsi)), Length(LAnsi) + 1) <> 0 then
+    raise ESSLCertError.Create('Failed to load certificate from ISSLCertificate');
 end;
 
 procedure TMbedTLSContext.LoadPrivateKey(const AFileName: string; const APassword: string);
@@ -350,26 +424,128 @@ begin
     raise ESSLCertError.Create('mbedtls_pk_parse_keyfile not available');
 
   if mbedtls_pk_parse_keyfile(FPrivateKey, PAnsiChar(AnsiString(AFileName)),
-       PAnsiChar(AnsiString(APassword)), nil, nil) <> 0 then
+    PAnsiChar(AnsiString(APassword)), nil, nil) <> 0 then
     raise ESSLCertError.CreateFmt('Failed to load private key: %s', [AFileName]);
 end;
 
 procedure TMbedTLSContext.LoadPrivateKey(AStream: TStream; const APassword: string);
+var
+  LData: TBytes;
+  LSize: Integer;
+  LPwd: PAnsiChar;
+  LPwdLen: NativeUInt;
 begin
   RequireValidContext('LoadPrivateKey');
-  raise ESSLException.Create('Loading private key from stream not yet implemented for MbedTLS');
+
+  if AStream = nil then
+    raise ESSLCertError.Create('Stream is nil');
+
+  LSize := AStream.Size - AStream.Position;
+  if LSize <= 0 then
+    raise ESSLCertError.Create('Stream is empty');
+
+  SetLength(LData, LSize + 1);  // +1 for null terminator
+  AStream.ReadBuffer(LData[0], LSize);
+  LData[LSize] := 0;  // Null terminate
+
+  // 分配私钥上下文
+  if FPrivateKey = nil then
+  begin
+    GetMem(FPrivateKey, MBEDTLS_PK_CONTEXT_SIZE);
+    FillChar(FPrivateKey^, MBEDTLS_PK_CONTEXT_SIZE, 0);
+    if Assigned(mbedtls_pk_init) then
+      mbedtls_pk_init(FPrivateKey);
+  end;
+
+  if not Assigned(mbedtls_pk_parse_key) then
+    raise ESSLCertError.Create('mbedtls_pk_parse_key not available');
+
+  // 设置密码
+  if APassword <> '' then
+  begin
+    LPwd := PAnsiChar(AnsiString(APassword));
+    LPwdLen := Length(APassword);
+  end
+  else
+  begin
+    LPwd := nil;
+    LPwdLen := 0;
+  end;
+
+  if mbedtls_pk_parse_key(FPrivateKey, @LData[0], LSize + 1,
+    PByte(LPwd), LPwdLen, nil, nil) <> 0 then
+    raise ESSLCertError.Create('Failed to load private key from stream');
 end;
 
 procedure TMbedTLSContext.LoadCertificatePEM(const APEM: string);
+var
+  LAnsi: AnsiString;
 begin
   RequireValidContext('LoadCertificatePEM');
-  raise ESSLException.Create('Loading certificate from PEM string not yet implemented for MbedTLS');
+
+  if APEM = '' then
+    raise ESSLCertError.Create('PEM string is empty');
+
+  LAnsi := AnsiString(APEM);
+
+  // 分配证书链
+  if FCertChain = nil then
+  begin
+    GetMem(FCertChain, MBEDTLS_X509_CRT_SIZE);
+    FillChar(FCertChain^, MBEDTLS_X509_CRT_SIZE, 0);
+    if Assigned(mbedtls_x509_crt_init) then
+      mbedtls_x509_crt_init(FCertChain);
+  end;
+
+  if not Assigned(mbedtls_x509_crt_parse) then
+    raise ESSLCertError.Create('mbedtls_x509_crt_parse not available');
+
+  // MbedTLS PEM 解析需要 null 终止
+  if mbedtls_x509_crt_parse(FCertChain, PByte(PAnsiChar(LAnsi)), Length(LAnsi) + 1) <> 0 then
+    raise ESSLCertError.Create('Failed to load certificate from PEM string');
 end;
 
 procedure TMbedTLSContext.LoadPrivateKeyPEM(const APEM: string; const APassword: string);
+var
+  LAnsi: AnsiString;
+  LPwd: PAnsiChar;
+  LPwdLen: NativeUInt;
 begin
   RequireValidContext('LoadPrivateKeyPEM');
-  raise ESSLException.Create('Loading private key from PEM string not yet implemented for MbedTLS');
+
+  if APEM = '' then
+    raise ESSLCertError.Create('PEM string is empty');
+
+  LAnsi := AnsiString(APEM);
+
+  // 分配私钥上下文
+  if FPrivateKey = nil then
+  begin
+    GetMem(FPrivateKey, MBEDTLS_PK_CONTEXT_SIZE);
+    FillChar(FPrivateKey^, MBEDTLS_PK_CONTEXT_SIZE, 0);
+    if Assigned(mbedtls_pk_init) then
+      mbedtls_pk_init(FPrivateKey);
+  end;
+
+  if not Assigned(mbedtls_pk_parse_key) then
+    raise ESSLCertError.Create('mbedtls_pk_parse_key not available');
+
+  // 设置密码
+  if APassword <> '' then
+  begin
+    LPwd := PAnsiChar(AnsiString(APassword));
+    LPwdLen := Length(APassword);
+  end
+  else
+  begin
+    LPwd := nil;
+    LPwdLen := 0;
+  end;
+
+  // MbedTLS PEM 解析需要 null 终止
+  if mbedtls_pk_parse_key(FPrivateKey, PByte(PAnsiChar(LAnsi)), Length(LAnsi) + 1,
+    PByte(LPwd), LPwdLen, nil, nil) <> 0 then
+    raise ESSLCertError.Create('Failed to load private key from PEM string');
 end;
 
 procedure TMbedTLSContext.LoadCAFile(const AFileName: string);
@@ -426,9 +602,24 @@ begin
 end;
 
 procedure TMbedTLSContext.SetCertificateStore(AStore: ISSLCertificateStore);
+var
+  LCACerts: Pmbedtls_x509_crt;
 begin
   RequireValidContext('SetCertificateStore');
-  raise ESSLException.Create('SetCertificateStore not yet implemented for MbedTLS');
+
+  if AStore = nil then
+    raise ESSLCertError.Create('Certificate store is nil');
+
+  // 获取存储的原生句柄（CA 证书链）
+  LCACerts := Pmbedtls_x509_crt(AStore.GetNativeHandle);
+  if LCACerts = nil then
+    raise ESSLCertError.Create('Certificate store has no CA certificates');
+
+  // 设置 CA 链到 SSL 配置
+  if Assigned(mbedtls_ssl_conf_ca_chain) then
+    mbedtls_ssl_conf_ca_chain(FSSLConfig, LCACerts, nil)
+  else
+    raise ESSLCertError.Create('mbedtls_ssl_conf_ca_chain not available');
 end;
 
 { 验证配置 }
@@ -570,13 +761,32 @@ end;
 function TMbedTLSContext.CreateConnection(ASocket: THandle): ISSLConnection;
 begin
   RequireValidContext('CreateConnection');
-  raise ESSLException.Create('CreateConnection not yet implemented for MbedTLS');
+
+  try
+    Result := TMbedTLSConnection.Create(Self as ISSLContext, FSSLConfig, ASocket);
+  except
+    on E: ESSLException do
+      raise;
+    on E: Exception do
+      raise ESSLException.CreateFmt('Failed to create MbedTLS connection: %s', [E.Message]);
+  end;
 end;
 
 function TMbedTLSContext.CreateConnection(AStream: TStream): ISSLConnection;
 begin
   RequireValidContext('CreateConnection');
-  raise ESSLException.Create('Stream-based connections not yet implemented for MbedTLS');
+
+  if AStream = nil then
+    raise ESSLException.Create('Cannot create connection: stream is nil');
+
+  try
+    Result := TMbedTLSConnection.Create(Self as ISSLContext, FSSLConfig, AStream);
+  except
+    on E: ESSLException do
+      raise;
+    on E: Exception do
+      raise ESSLException.CreateFmt('Failed to create MbedTLS stream connection: %s', [E.Message]);
+  end;
 end;
 
 { 状态查询 }

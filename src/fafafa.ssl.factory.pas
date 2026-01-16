@@ -324,10 +324,9 @@ uses
   {$IFDEF WINDOWS}
   Windows,
   {$ENDIF}
-  fafafa.ssl.crypto.utils,   // Phase 2.3.5 - 加密工具（哈希计算）
-  fafafa.ssl.encoding,       // Phase 2.3.5 - 编码工具（Hex转换）
+  fafafa.ssl.crypto.hash,
   fafafa.ssl.errors,
-  fafafa.ssl.random;         // Platform secure RNG (no backend dependency)
+  fafafa.ssl.random;
 
 var
   GSSLFactory: TSSLFactory;
@@ -562,6 +561,18 @@ begin
 
   EnterCriticalSection(GFactoryLock);
   try
+    // If the library instance is already cached, do not create/initialize a
+    // temporary instance (some backends use shared global loaders).
+    if Assigned(FLibraries[ALibType]) then
+    begin
+      LLib := FLibraries[ALibType];
+      if Assigned(LLib) then
+        Result := LLib.IsInitialized or LLib.Initialize
+      else
+        Result := False;
+      Exit;
+    end;
+
     // P0: 使用 Map 接口检查是否已注册
     if FRegistrationMap.Contains(Ord(ALibType)) then
     begin
@@ -569,7 +580,7 @@ begin
       try
         LLib := CreateLibraryInstance(ALibType);
         Result := Assigned(LLib) and LLib.Initialize;
-        if Result and not Assigned(FLibraries[ALibType]) then
+        if Result then
           FLibraries[ALibType] := LLib;
       except
         Result := False;
@@ -721,9 +732,9 @@ begin
   case ALibType of
     sslWolfSSL:
     begin
-      // Future: WolfSSL backend support (not currently implemented)
+      // Optional backend - requires ENABLE_WOLFSSL (fafafa.ssl.wolfssl.lib)
       raise ESSLConfigurationException.CreateWithContext(
-        'WolfSSL backend is planned but not yet implemented',
+        'WolfSSL backend is not enabled (define ENABLE_WOLFSSL)',
         sslErrUnsupported,
         'TSSLFactory.CreateLibraryInstance'
       );
@@ -731,9 +742,9 @@ begin
 
     sslMbedTLS:
     begin
-      // Future: MbedTLS backend support (not currently implemented)
+      // Optional backend - requires ENABLE_MBEDTLS (fafafa.ssl.mbedtls.lib)
       raise ESSLConfigurationException.CreateWithContext(
-        'MbedTLS backend is planned but not yet implemented',
+        'MbedTLS backend is not enabled (define ENABLE_MBEDTLS)',
         sslErrUnsupported,
         'TSSLFactory.CreateLibraryInstance'
       );
@@ -1081,39 +1092,25 @@ end;
 class function TSSLHelper.HashData(const AData: TBytes;
   AHashType: TSSLHash): string;
 var
-  LHashAlg: THashAlgorithm;
   LHashBytes: TBytes;
 begin
-  // Phase 2.3.5: 迁移至 crypto.utils
-  // 映射 TSSLHash 到 THashAlgorithm
+  // Backend-agnostic hashing: avoid mandatory OpenSSL dependency.
+  // Supported (pure Pascal): MD5, SHA1, SHA256, SHA384, SHA512.
   case AHashType of
-    sslHashMD5: LHashAlg := HASH_MD5;
-    sslHashSHA1: LHashAlg := HASH_SHA1;
-    sslHashSHA256: LHashAlg := HASH_SHA256;
-    sslHashSHA512: LHashAlg := HASH_SHA512;
+    sslHashMD5:    LHashBytes := fafafa.ssl.crypto.hash.MD5(AData);
+    sslHashSHA1:   LHashBytes := fafafa.ssl.crypto.hash.SHA1(AData);
+    sslHashSHA256: LHashBytes := fafafa.ssl.crypto.hash.SHA256(AData);
+    sslHashSHA384: LHashBytes := fafafa.ssl.crypto.hash.SHA384(AData);
+    sslHashSHA512: LHashBytes := fafafa.ssl.crypto.hash.SHA512(AData);
   else
-    // SHA224, SHA384, SHA3-*, BLAKE2b 尚未实现
+    // SHA224, SHA3-*, BLAKE2b not implemented in pure Pascal hash module.
     raise ESSLInvalidArgument.CreateFmt(
       'Hash algorithm %d not yet supported',
       [Ord(AHashType)]
     );
   end;
 
-  try
-    LHashBytes := TCryptoUtils.CalculateHash(AData, LHashAlg);
-    Result := TEncodingUtils.BytesToHex(LHashBytes, False);
-  except
-    on E: ESSLException do
-      raise;  // Rust-quality: Re-raise SSL exceptions
-    on E: Exception do
-      raise ESSLCryptoError.CreateWithContext(
-        Format('HashData failed: %s', [E.Message]),
-        sslErrOther,
-        'TSSLHelper.HashData',
-        0,
-        sslAutoDetect
-      );
-  end;
+  Result := fafafa.ssl.crypto.hash.HashToHex(LHashBytes);
 end;
 
 initialization

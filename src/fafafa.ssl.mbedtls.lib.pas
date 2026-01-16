@@ -525,4 +525,10 @@ begin
   TSSLFactory.UnregisterLibrary(sslMbedTLS);
 end;
 
+initialization
+  RegisterMbedTLSBackend;
+
+finalization
+  UnregisterMbedTLSBackend;
+
 end.

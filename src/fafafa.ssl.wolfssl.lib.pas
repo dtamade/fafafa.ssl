@@ -168,6 +168,10 @@ begin
 end;
 
 function TWolfSSLLibrary.DetectCapabilities: Boolean;
+var
+  LVer: string;
+  LParts: array of string;
+  LMajor, LMinor, LPatch: Integer;
 begin
   Result := False;
 
@@ -179,6 +183,29 @@ begin
     FCapabilities.VersionString := string(wolfSSL_lib_version())
   else
     FCapabilities.VersionString := 'Unknown';
+
+  // 解析版本号 (例如 "5.7.2" -> 50702)
+  LVer := FCapabilities.VersionString;
+  LMajor := 0;
+  LMinor := 0;
+  LPatch := 0;
+  SetLength(LParts, 0);
+
+  // 简单解析 major.minor.patch
+  if Pos('.', LVer) > 0 then
+  begin
+    LMajor := StrToIntDef(Copy(LVer, 1, Pos('.', LVer) - 1), 0);
+    Delete(LVer, 1, Pos('.', LVer));
+    if Pos('.', LVer) > 0 then
+    begin
+      LMinor := StrToIntDef(Copy(LVer, 1, Pos('.', LVer) - 1), 0);
+      Delete(LVer, 1, Pos('.', LVer));
+      LPatch := StrToIntDef(LVer, 0);
+    end
+    else
+      LMinor := StrToIntDef(LVer, 0);
+  end;
+  FCapabilities.VersionNumber := LMajor * 10000 + LMinor * 100 + LPatch;
 
   // 检测 TLS 1.3 支持
   FCapabilities.HasTLS13 := Assigned(wolfTLSv1_3_client_method);
@@ -434,5 +461,11 @@ procedure UnregisterWolfSSLBackend;
 begin
   TSSLFactory.UnregisterLibrary(sslWolfSSL);
 end;
+
+initialization
+  RegisterWolfSSLBackend;
+
+finalization
+  UnregisterWolfSSLBackend;
 
 end.

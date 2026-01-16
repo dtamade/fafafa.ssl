@@ -251,6 +251,12 @@ uses
   {$IFDEF WINDOWS}
   , fafafa.ssl.winssl.lib
   {$ENDIF}
+  {$IFDEF ENABLE_MBEDTLS}
+  , fafafa.ssl.mbedtls.lib
+  {$ENDIF}
+  {$IFDEF ENABLE_WOLFSSL}
+  , fafafa.ssl.wolfssl.lib
+  {$ENDIF}
   ;
 
 // 从 fafafa.ssl.factory 导入实现

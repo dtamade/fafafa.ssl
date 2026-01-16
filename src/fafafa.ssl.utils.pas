@@ -30,9 +30,8 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
-  fafafa.ssl.encoding,        // Phase 2.3.4 - Use unified encoding utilities
-  fafafa.ssl.crypto.utils,    // Phase 2.3.4 - Use unified crypto utilities
-  fafafa.ssl.debug.utils;     // Phase 2.3.4 - Use unified debug utilities
+  fafafa.ssl.base64,
+  fafafa.ssl.debug.utils;
 
 type
   { TSSLUtils - SSL 工具类 }
@@ -80,10 +79,6 @@ implementation
 
 uses
   Math,
-  fafafa.ssl.openssl.api.consts,
-  fafafa.ssl.openssl.api.core,
-  fafafa.ssl.openssl.api.evp,
-  fafafa.ssl.openssl.api.crypto,
   fafafa.ssl.errors;
 
 { StringsToArray - Phase 3.2 统一实现 }
@@ -151,7 +146,7 @@ begin
     end;
     
     if LBase64 <> '' then
-      Result := TEncodingUtils.Base64Decode(LBase64);
+      Result := TBase64Utils.Decode(LBase64);
   finally
     LLines.Free;
   end;
@@ -168,7 +163,7 @@ begin
   if Length(ADER) = 0 then
     Exit;
 
-  LBase64 := TEncodingUtils.Base64Encode(ADER);
+  LBase64 := TBase64Utils.Encode(ADER);
   
   LLines := TStringList.Create;
   try

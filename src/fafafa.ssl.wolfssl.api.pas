@@ -80,6 +80,9 @@ type
   // 版本信息
   TwolfSSL_lib_version = function: PAnsiChar; cdecl;
 
+  // SAN 解析（返回 SAN 条目值；调用多次返回下一个，直到 nil）
+  TwolfSSL_X509_get_next_altname = function(cert: PWOLFSSL_X509): PAnsiChar; cdecl;
+
   // X509 证书操作
   TwolfSSL_X509_load_certificate_file = function(const filename: PAnsiChar;
     format: Integer): PWOLFSSL_X509; cdecl;
@@ -112,6 +115,10 @@ type
   TwolfSSL_set_session = function(ssl: PWOLFSSL; session: PWOLFSSL_SESSION): Integer; cdecl;
   TwolfSSL_SESSION_free = procedure(session: PWOLFSSL_SESSION); cdecl;
   TwolfSSL_session_reused = function(ssl: PWOLFSSL): Integer; cdecl;
+
+  // 会话序列化 (新增)
+  TwolfSSL_i2d_SSL_SESSION = function(session: PWOLFSSL_SESSION; pp: PPByte): Integer; cdecl;
+  TwolfSSL_d2i_SSL_SESSION = function(session: PPWOLFSSL_SESSION; const pp: PPByte; length: Integer): PWOLFSSL_SESSION; cdecl;
 
   // ALPN 支持 (新增)
   TwolfSSL_UseALPN = function(ssl: PWOLFSSL; const protocol_name_list: PAnsiChar;
@@ -164,6 +171,7 @@ var
 
   // X509 函数
   wolfSSL_X509_load_certificate_file: TwolfSSL_X509_load_certificate_file = nil;
+  wolfSSL_X509_get_next_altname: TwolfSSL_X509_get_next_altname = nil;
   wolfSSL_X509_free: TwolfSSL_X509_free = nil;
   wolfSSL_X509_d2i: TwolfSSL_X509_d2i = nil;
   wolfSSL_X509_get_subject_name: TwolfSSL_X509_get_subject_name = nil;
@@ -186,6 +194,10 @@ var
   wolfSSL_set_session: TwolfSSL_set_session = nil;
   wolfSSL_SESSION_free: TwolfSSL_SESSION_free = nil;
   wolfSSL_session_reused: TwolfSSL_session_reused = nil;
+
+  // 会话序列化 (新增)
+  wolfSSL_i2d_SSL_SESSION: TwolfSSL_i2d_SSL_SESSION = nil;
+  wolfSSL_d2i_SSL_SESSION: TwolfSSL_d2i_SSL_SESSION = nil;
 
   // ALPN 支持 (新增)
   wolfSSL_UseALPN: TwolfSSL_UseALPN = nil;
@@ -279,6 +291,8 @@ begin
   // X509 函数
   wolfSSL_X509_load_certificate_file := TwolfSSL_X509_load_certificate_file(
     GetProc('wolfSSL_X509_load_certificate_file'));
+  wolfSSL_X509_get_next_altname := TwolfSSL_X509_get_next_altname(
+    GetProc('wolfSSL_X509_get_next_altname'));
   wolfSSL_X509_free := TwolfSSL_X509_free(GetProc('wolfSSL_X509_free'));
   wolfSSL_X509_d2i := TwolfSSL_X509_d2i(GetProc('wolfSSL_d2i_X509'));
   wolfSSL_X509_get_subject_name := TwolfSSL_X509_get_subject_name(
@@ -312,6 +326,10 @@ begin
   wolfSSL_SESSION_free := TwolfSSL_SESSION_free(GetProc('wolfSSL_SESSION_free'));
   wolfSSL_session_reused := TwolfSSL_session_reused(GetProc('wolfSSL_session_reused'));
 
+  // 会话序列化 (新增)
+  wolfSSL_i2d_SSL_SESSION := TwolfSSL_i2d_SSL_SESSION(GetProc('wolfSSL_i2d_SSL_SESSION'));
+  wolfSSL_d2i_SSL_SESSION := TwolfSSL_d2i_SSL_SESSION(GetProc('wolfSSL_d2i_SSL_SESSION'));
+
   // ALPN 支持 (新增)
   wolfSSL_UseALPN := TwolfSSL_UseALPN(GetProc('wolfSSL_UseALPN'));
   wolfSSL_ALPN_GetProtocol := TwolfSSL_ALPN_GetProtocol(GetProc('wolfSSL_ALPN_GetProtocol'));
@@ -327,8 +345,8 @@ begin
 
   // 验证必需函数
   if not Assigned(wolfssl_init) or
-     not Assigned(wolfSSL_CTX_new) or
-     not Assigned(wolfSSL_new) then
+    not Assigned(wolfSSL_CTX_new) or
+    not Assigned(wolfSSL_new) then
   begin
     UnloadWolfSSLLibrary;
     Exit(False);
@@ -376,6 +394,7 @@ begin
 
   // X509 函数
   wolfSSL_X509_load_certificate_file := nil;
+  wolfSSL_X509_get_next_altname := nil;
   wolfSSL_X509_free := nil;
   wolfSSL_X509_d2i := nil;
   wolfSSL_X509_get_subject_name := nil;
@@ -398,6 +417,10 @@ begin
   wolfSSL_set_session := nil;
   wolfSSL_SESSION_free := nil;
   wolfSSL_session_reused := nil;
+
+  // 会话序列化
+  wolfSSL_i2d_SSL_SESSION := nil;
+  wolfSSL_d2i_SSL_SESSION := nil;
 
   // ALPN 支持
   wolfSSL_UseALPN := nil;

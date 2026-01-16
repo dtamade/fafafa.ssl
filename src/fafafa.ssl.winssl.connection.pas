@@ -688,8 +688,8 @@ begin
 
   // 根据上下文类型调用相应的函数生成关闭令牌
   dwSSPIFlags := ISC_REQ_SEQUENCE_DETECT or ISC_REQ_REPLAY_DETECT or
-                 ISC_REQ_CONFIDENTIALITY or ISC_RET_EXTENDED_ERROR or
-                 ISC_REQ_ALLOCATE_MEMORY or ISC_REQ_STREAM;
+    ISC_REQ_CONFIDENTIALITY or ISC_RET_EXTENDED_ERROR or
+    ISC_REQ_ALLOCATE_MEMORY or ISC_REQ_STREAM;
 
   if FContext.GetContextType = sslCtxClient then
   begin

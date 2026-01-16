@@ -49,17 +49,35 @@ uses
   {$ENDIF};
 
 procedure SecureZeroMemory(Buffer: Pointer; Size: NativeUInt);
+{$IFDEF WINDOWS}
+var
+  RtlSecureZeroMemory: procedure(Dest: Pointer; Length: NativeUInt); stdcall;
+  hNtdll: THandle;
+{$ENDIF}
 begin
   if (Buffer = nil) or (Size = 0) then
     Exit;
-    
+
   {$IFDEF WINDOWS}
-  // Use Windows API for secure zeroing
-  Windows.SecureZeroMemory(Buffer, Size);
+  // Prefer RtlSecureZeroMemory from ntdll.dll when available.
+  hNtdll := GetModuleHandle('ntdll.dll');
+  if hNtdll <> 0 then
+  begin
+    Pointer(RtlSecureZeroMemory) := GetProcAddress(hNtdll, 'RtlSecureZeroMemory');
+    if Assigned(RtlSecureZeroMemory) then
+    begin
+      RtlSecureZeroMemory(Buffer, Size);
+      Exit;
+    end;
+  end;
+
+  // Fallback: Fill and use an interlocked op as a barrier to discourage optimization.
+  FillChar(Buffer^, Size, 0);
+  InterlockedExchange(PLongInt(Buffer)^, PLongInt(Buffer)^);
   {$ELSE}
   // For Unix/Linux: Fill with zeros and add memory barrier
   FillChar(Buffer^, Size, 0);
-  
+
   // Memory barrier to prevent compiler optimization
   // This ensures the FillChar isn't optimized away
   {$IFDEF CPUX86_64}

@@ -185,13 +185,47 @@ begin
 end;
 
 function TWolfSSLSession.Serialize: TBytes;
+var
+  LLen: Integer;
+  LBuf: PByte;
+  LBufPtr: PByte;
 begin
-  // WolfSSL 会话序列化需要额外 API
-  // 返回已缓存的序列化数据或空数组
-  Result := Copy(FSerializedData);
+  SetLength(Result, 0);
+
+  // 如果有缓存的序列化数据，直接返回
+  if Length(FSerializedData) > 0 then
+  begin
+    Result := Copy(FSerializedData);
+    Exit;
+  end;
+
+  if FSession = nil then Exit;
+
+  // 使用 WolfSSL 的 i2d 函数序列化会话
+  if Assigned(wolfSSL_i2d_SSL_SESSION) then
+  begin
+    // 首先获取所需的缓冲区大小
+    LLen := wolfSSL_i2d_SSL_SESSION(FSession, nil);
+    if LLen > 0 then
+    begin
+      SetLength(Result, LLen);
+      LBufPtr := @Result[0];
+      LLen := wolfSSL_i2d_SSL_SESSION(FSession, @LBufPtr);
+      if LLen <= 0 then
+        SetLength(Result, 0)
+      else
+      begin
+        SetLength(Result, LLen);
+        FSerializedData := Copy(Result);  // 缓存序列化数据
+      end;
+    end;
+  end;
 end;
 
 function TWolfSSLSession.Deserialize(const AData: TBytes): Boolean;
+var
+  LDataPtr: PByte;
+  LSession: PWOLFSSL_SESSION;
 begin
   Result := False;
   if Length(AData) = 0 then Exit;
@@ -199,9 +233,32 @@ begin
   // 保存序列化数据以供后续使用
   FSerializedData := Copy(AData);
 
-  // WolfSSL 会话反序列化需要额外 API
-  // 目前仅保存数据
-  Result := True;
+  // 使用 WolfSSL 的 d2i 函数反序列化会话
+  if Assigned(wolfSSL_d2i_SSL_SESSION) then
+  begin
+    // 释放旧会话
+    if FOwnsSession and (FSession <> nil) then
+    begin
+      if Assigned(wolfSSL_SESSION_free) then
+        wolfSSL_SESSION_free(FSession);
+      FSession := nil;
+    end;
+
+    LDataPtr := @AData[0];
+    LSession := wolfSSL_d2i_SSL_SESSION(nil, @LDataPtr, Length(AData));
+    if LSession <> nil then
+    begin
+      FSession := LSession;
+      FOwnsSession := True;
+      ExtractSessionInfo;
+      Result := True;
+    end;
+  end
+  else
+  begin
+    // 如果没有反序列化 API，仅保存数据
+    Result := True;
+  end;
 end;
 
 function TWolfSSLSession.GetNativeHandle: Pointer;

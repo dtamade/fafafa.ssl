@@ -107,9 +107,9 @@ function CreateSecureKeyStore: ISecureKeyStore;
 implementation
 
 uses
-  fafafa.ssl.exceptions,  // Phase 3.3 P0 - 统一异常定义
+  fafafa.ssl.exceptions,
+  fafafa.ssl.random,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.api.rand,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.kdf;
 
@@ -283,59 +283,23 @@ end;
 { TSecureRandom }
 
 class function TSecureRandom.Generate(ASize: Integer): TBytes;
-var
-  I: Integer;
-  LRetryCount: Integer;
 begin
-  SetLength(Result, ASize);
+  SetLength(Result, 0);
   if ASize <= 0 then
     Exit;
 
-  // Try to use OpenSSL RAND_bytes (cryptographically secure)
-  if Assigned(RAND_bytes) then
-  begin
-    // First attempt
-    if RAND_bytes(@Result[0], ASize) = 1 then
-      Exit;
-
-    // If failed, try to seed the PRNG and retry
-    if Assigned(RAND_poll) then
-    begin
-      TSecurityLog.Warning('SecureRandom', 'RAND_bytes failed, attempting RAND_poll to seed PRNG');
-      RAND_poll();
-
-      // Retry after seeding
-      if RAND_bytes(@Result[0], ASize) = 1 then
-      begin
-        TSecurityLog.Info('SecureRandom', 'RAND_bytes succeeded after RAND_poll');
-        Exit;
-      end;
-    end;
+  try
+    Result := GenerateSecureRandomBytes(ASize);
+  except
+    on E: Exception do
+      raise ESSLCryptoError.CreateWithContext(
+        Format('Cryptographically secure RNG not available: %s', [E.Message]),
+        sslErrOther,
+        'TSecureRandom.Generate',
+        0,
+        sslAutoDetect
+      );
   end;
-
-  // If we reach here, cryptographic RNG is not available
-  // In production mode, this is a critical error - we should NOT fall back to insecure RNG
-  {$IFDEF RELEASE}
-  raise ESSLError.Create('Cryptographically secure random number generator not available. ' +
-                        'OpenSSL RAND_bytes is required for secure operation. ' +
-                        'Ensure OpenSSL is properly loaded and initialized.');
-  {$ELSE}
-  // In debug mode, allow fallback with strong warning
-  TSecurityLog.Error('SecureRandom', 'CRITICAL: Falling back to non-cryptographic random number generator. ' +
-                    'This is NOT secure for production use!');
-  WriteLn('');
-  WriteLn('╔════════════════════════════════════════════════════════════╗');
-  WriteLn('║ SECURITY WARNING: Non-cryptographic RNG in use!           ║');
-  WriteLn('║ OpenSSL RAND_bytes not available.                         ║');
-  WriteLn('║ This is ONLY acceptable in DEBUG builds.                  ║');
-  WriteLn('║ DO NOT use this in production!                            ║');
-  WriteLn('╚════════════════════════════════════════════════════════════╝');
-  WriteLn('');
-
-  Randomize;
-  for I := 0 to ASize - 1 do
-    Result[I] := Random(256);
-  {$ENDIF}
 end;
 
 class function TSecureRandom.GenerateInt(AMin, AMax: Integer): Integer;
