@@ -285,9 +285,46 @@ run_audit() {
         return 1
     }
 
+    local audit_config_to_use="$AUDIT_CONFIG"
+
+    if [ -n "${QUALITY_THRESHOLD:-}" ]; then
+        info "  Applying QUALITY_THRESHOLD override: ${QUALITY_THRESHOLD}"
+
+        local tmp_config="$AUDIT_OUTPUT/audit_config.override.json"
+
+        set +e
+        python3 - "$AUDIT_CONFIG" "$tmp_config" "$QUALITY_THRESHOLD" <<'PY'
+import json
+import sys
+
+src, dst, thr = sys.argv[1], sys.argv[2], sys.argv[3]
+try:
+    thr_val = float(thr)
+except ValueError:
+    raise SystemExit(f"Invalid QUALITY_THRESHOLD: {thr}")
+
+with open(src, 'r', encoding='utf-8') as f:
+    data = json.load(f)
+
+data.setdefault('thresholds', {})['overall'] = thr_val
+
+with open(dst, 'w', encoding='utf-8') as f:
+    json.dump(data, f, ensure_ascii=False, indent=2)
+PY
+        local py_rc=$?
+        set -e
+
+        if [ $py_rc -ne 0 ]; then
+            error "Failed to apply QUALITY_THRESHOLD override"
+            return 1
+        fi
+
+        audit_config_to_use="$tmp_config"
+    fi
+
     info "  Running audit analysis..."
     set +e
-    "$AUDIT_BIN/test_audit" -c "$AUDIT_CONFIG" -s "src" -t "tests" -o "$AUDIT_OUTPUT"
+    "$AUDIT_BIN/test_audit" -c "$audit_config_to_use" -s "src" -t "tests" -o "$AUDIT_OUTPUT"
     local audit_rc=$?
     set -e
 

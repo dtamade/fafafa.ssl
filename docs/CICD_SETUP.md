@@ -369,27 +369,49 @@ permissions:
 
 ## 测试质量审计（可选）
 
-仓库提供了一个可选的测试质量审计工具：`tools/test_audit/`。
+仓库提供了一个可选的测试质量审计工具：`tools/test_audit/`，用于对测试覆盖率与质量指标做静态/启发式分析。
 
 ### 运行审计
 
 ```bash
-# 运行审计（会编译并执行 tools/test_audit）
 ./ci_pipeline.sh audit
 ```
+
+可选环境变量：
+- `QUALITY_THRESHOLD=<0..100>`：覆盖 `tools/test_audit/audit_config.json` 中的 `thresholds.overall`（便于在 CI 中临时调整门禁）。
 
 说明：
 - 默认配置文件：`tools/test_audit/audit_config.json`
 - 默认输出目录：`reports/audit/`（已在 `.gitignore` 中忽略）
-- 审计会根据配置中的 `thresholds.overall` 等阈值决定退出码：低于阈值会返回非 0。
+- 审计退出码：当前仅根据 `thresholds.overall`（或 `QUALITY_THRESHOLD` 覆盖值）决定；低于阈值返回非 0。
+
+### 报告产物
+
+- `reports/audit/audit_YYYYMMDD_HHMMSS.md`
+- `reports/audit/audit_YYYYMMDD_HHMMSS.json`
+- `reports/audit/quality_trend.csv`（每次审计运行后会追加一行）
+
+### 质量指标（参考）
+
+审计报告会输出以下分类分数（0–100），用于定位薄弱区域（当前默认门禁只看 Overall）：
+
+- Coverage
+- Boundary Testing
+- Error Handling
+- Crypto Testing
+- Thread Safety
+- Resource Management
+- Backend Consistency
 
 ### 在 GitHub Actions 中使用（示例）
 
-你可以将审计作为可选步骤加入 workflow（建议先 `continue-on-error: true`，待阈值稳定后再启用强制门禁）：
+建议先作为“信息性步骤”接入（不阻塞主流程），等指标稳定后再逐步提高阈值并移除 `continue-on-error`：
 
 ```yaml
 - name: 🔍 Run Test Quality Audit
   run: ./ci_pipeline.sh audit
+  env:
+    QUALITY_THRESHOLD: 0
   continue-on-error: true
 
 - name: 📊 Upload Audit Reports
@@ -400,6 +422,16 @@ permissions:
     retention-days: 30
 ```
 
+### 本地直接运行（可选）
+
+```bash
+# 编译审计工具
+fpc -Fusrc -Futools/test_audit -otools/test_audit/bin/test_audit tools/test_audit/test_audit_main.pas
+
+# 运行审计
+./tools/test_audit/bin/test_audit -c tools/test_audit/audit_config.json -s src -t tests -o reports/audit -v
+```
+
 ## 进一步参考
 
 - [GitHub Actions文档](https://docs.github.com/en/actions)
@@ -408,7 +440,7 @@ permissions:
 
 ---
 
-**更新日期**: 2025-10-28  
+**更新日期**: 2026-01-16  
 **适用版本**: fafafa.ssl v1.0.0-rc  
 **维护者**: fafafa.ssl团队
 
