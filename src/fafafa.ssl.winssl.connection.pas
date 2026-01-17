@@ -2024,6 +2024,33 @@ begin
     SEC_I_CONTINUE_NEEDED,
     SEC_I_INCOMPLETE_CREDENTIALS:
       Result := sslErrWantWrite;  // 需要发送更多数据
+
+    // P1 TODO 1.1: 证书相关错误映射
+    SEC_E_CERT_EXPIRED,
+    CERT_E_EXPIRED:
+      Result := sslErrCertificate;  // 证书过期
+
+    SEC_E_WRONG_PRINCIPAL,
+    CERT_E_CN_NO_MATCH:
+      Result := sslErrCertificate;  // 证书主体不匹配
+
+    SEC_E_UNTRUSTED_ROOT,
+    CERT_E_UNTRUSTEDROOT:
+      Result := sslErrCertificate;  // 不受信任的根证书
+
+    // P1 TODO 1.1: 协议相关错误映射
+    SEC_E_INVALID_TOKEN:
+      Result := sslErrProtocol;  // 无效的令牌/协议错误
+
+    SEC_E_MESSAGE_ALTERED:
+      Result := sslErrProtocol;  // 消息被篡改
+
+    // P1 TODO 1.1: 握手相关错误映射
+    SEC_E_ALGORITHM_MISMATCH:
+      Result := sslErrHandshake;  // 算法不匹配
+
+    SEC_E_UNSUPPORTED_FUNCTION:
+      Result := sslErrConfiguration;  // 不支持的功能
   else
     Result := sslErrOther;
   end;
