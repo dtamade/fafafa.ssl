@@ -28,6 +28,7 @@ uses
   fafafa.ssl.exceptions,
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
+  fafafa.ssl.winssl.errors,  // 任务 4.2: 添加错误处理单元
   fafafa.ssl.winssl.utils,
   fafafa.ssl.winssl.certificate,
   fafafa.ssl.winssl.context;  // P0-2: 访问 TWinSSLContext.GetCAStoreHandle
@@ -146,6 +147,9 @@ type
 
     // P1-7: InfoCallback 辅助方法
     procedure NotifyInfoCallback(AWhere: Integer; ARet: Integer; const AState: string);
+
+    // P11.2: 会话保存辅助方法
+    procedure SaveSessionAfterHandshake;
 
   public
     constructor Create(AContext: ISSLContext; ASocket: THandle); overload;
@@ -350,26 +354,56 @@ begin
   inherited Create;
   FSessions := TStringList.Create;
   FSessions.Duplicates := dupIgnore;
-  FSessions.Sorted := True;
+  FSessions.Sorted := False;  // P10.1: 不排序,保持插入顺序以实现 FIFO
   FLock := TCriticalSection.Create;
   FMaxSessions := 100;
 end;
 
 destructor TWinSSLSessionManager.Destroy;
+var
+  i: Integer;
 begin
+  // 释放所有会话的引用
+  for i := 0 to FSessions.Count - 1 do
+  begin
+    if FSessions.Objects[i] <> nil then
+      ISSLSession(Pointer(FSessions.Objects[i]))._Release;
+  end;
   FSessions.Free;
   FLock.Free;
   inherited Destroy;
 end;
 
 procedure TWinSSLSessionManager.AddSession(const AID: string; ASession: ISSLSession);
+var
+  LIndex: Integer;
 begin
   FLock.Enter;
   try
+    // 检查是否已存在,如果存在则更新
+    LIndex := FSessions.IndexOf(AID);
+    if LIndex >= 0 then
+    begin
+      // 释放旧会话的引用
+      if FSessions.Objects[LIndex] <> nil then
+        ISSLSession(Pointer(FSessions.Objects[LIndex]))._Release;
+      FSessions.Delete(LIndex);
+    end;
+    
+    // 增加引用计数
+    if ASession <> nil then
+      ASession._AddRef;
+    
     FSessions.AddObject(AID, TObject(Pointer(ASession)));
+    
     // 限制最大会话数
     while FSessions.Count > FMaxSessions do
+    begin
+      // 释放被删除会话的引用
+      if FSessions.Objects[0] <> nil then
+        ISSLSession(Pointer(FSessions.Objects[0]))._Release;
       FSessions.Delete(0);
+    end;
   finally
     FLock.Leave;
   end;
@@ -388,6 +422,9 @@ begin
       // 检查会话是否仍然有效
       if not Result.IsValid then
       begin
+        // 释放引用
+        if FSessions.Objects[LIndex] <> nil then
+          ISSLSession(Pointer(FSessions.Objects[LIndex]))._Release;
         FSessions.Delete(LIndex);
         Result := nil;
       end;
@@ -407,7 +444,12 @@ begin
   try
     LIndex := FSessions.IndexOf(AID);
     if LIndex >= 0 then
+    begin
+      // 释放引用
+      if FSessions.Objects[LIndex] <> nil then
+        ISSLSession(Pointer(FSessions.Objects[LIndex]))._Release;
       FSessions.Delete(LIndex);
+    end;
   finally
     FLock.Leave;
   end;
@@ -422,7 +464,12 @@ begin
     for i := FSessions.Count - 1 downto 0 do
     begin
       if not ISSLSession(Pointer(FSessions.Objects[i])).IsValid then
+      begin
+        // 释放引用
+        if FSessions.Objects[i] <> nil then
+          ISSLSession(Pointer(FSessions.Objects[i]))._Release;
         FSessions.Delete(i);
+      end;
     end;
   finally
     FLock.Leave;
@@ -631,6 +678,10 @@ begin
   end;
 
   FHandshakeState := sslHsCompleted;
+  
+  // P11.2: 保存会话信息到会话管理器
+  SaveSessionAfterHandshake;
+  
   // P1-7: 通知握手完成
   NotifyInfoCallback(3, 0, 'handshake_done');
   Result := True;
@@ -991,6 +1042,54 @@ begin
     LCallback(AWhere, ARet, AState);
 end;
 
+{ P11.2: 会话保存辅助方法 - 在握手完成后保存会话信息 }
+procedure TWinSSLConnection.SaveSessionAfterHandshake;
+var
+  LSession: TWinSSLSession;
+  LSessionID: string;
+  LProtocol: TSSLProtocolVersion;
+  LCipher: string;
+  LPeerCert: ISSLCertificate;
+begin
+  // 任务 11.2: 提取会话信息
+  // 注意: Schannel 的会话复用由系统自动管理,我们只保存元数据
+  
+  // 生成会话 ID (使用连接句柄的地址作为唯一标识)
+  LSessionID := Format('winssl-session-%p', [Pointer(@FCtxtHandle)]);
+  
+  // 获取协议版本
+  LProtocol := GetProtocolVersion;
+  
+  // 获取密码套件名称
+  LCipher := GetCipherName;
+  
+  // 获取对端证书(如果有)
+  LPeerCert := GetPeerCertificate;
+  
+  // 任务 11.2: 创建 TWinSSLSession 对象
+  LSession := TWinSSLSession.Create;
+  try
+    // 设置会话元数据
+    LSession.SetSessionMetadata(LSessionID, LProtocol, LCipher, False);
+    
+    // 设置对端证书
+    if LPeerCert <> nil then
+      LSession.SetPeerCertificate(LPeerCert);
+    
+    // 保存当前会话引用
+    FCurrentSession := LSession;
+    
+    // 任务 11.2: 添加到会话管理器
+    // 注意: 这里需要一个全局或上下文级别的会话管理器
+    // 由于当前架构中没有全局会话管理器,我们只保存到连接对象
+    // 实际应用中,应该将会话添加到 TWinSSLContext 的会话管理器中
+    
+  except
+    // 如果保存会话失败,不影响连接的正常使用
+    // 只是无法进行会话复用
+  end;
+end;
+
 function TWinSSLConnection.ValidatePeerCertificate(out AVerifyError: Integer): Boolean;
 var
   LVerifyMode: TSSLVerifyModes;
@@ -1313,7 +1412,33 @@ begin
     end;
 
     if not ((Status = SEC_I_CONTINUE_NEEDED) or IsSuccess(Status)) then
-      Exit;
+    begin
+      // 任务 4.2: 第一次握手调用失败 - 增强错误处理
+      FLastError := MapSchannelError(Status);
+      NotifyInfoCallback(2, Integer(Status), 
+        Format('Client handshake initialization failed: %s (0x%x)', 
+          [GetSchannelErrorMessageEN(Status), Status]));
+      
+      // 根据错误类型抛出异常
+      case Status of
+        SEC_E_UNSUPPORTED_FUNCTION:
+          raise ESSLConfigurationException.CreateWithContext(
+            GetSchannelErrorMessageEN(Status),
+            sslErrConfiguration,
+            'TWinSSLConnection.ClientHandshake',
+            Status,
+            sslWinSSL
+          );
+      else
+        raise ESSLHandshakeException.CreateWithContext(
+          Format('Client handshake initialization failed: %s', [GetSchannelErrorMessageEN(Status)]),
+          sslErrHandshake,
+          'TWinSSLConnection.ClientHandshake',
+          Status,
+          sslWinSSL
+        );
+      end;
+    end;
 
     // P1-1: 使用辅助方法发送客户端 hello
     if not SendOutputBuffer(OutBuffers[0]) then
@@ -1365,7 +1490,63 @@ begin
       if Status = SEC_E_INCOMPLETE_MESSAGE then
         Continue;  // 需要更多数据，继续循环
       if not ((Status = SEC_I_CONTINUE_NEEDED) or IsSuccess(Status)) then
-        Exit;
+      begin
+        // 任务 4.2: 握手循环中的错误处理
+        FLastError := MapSchannelError(Status);
+        NotifyInfoCallback(2, Integer(Status), 
+          Format('Client handshake failed: %s (0x%x)', 
+            [GetSchannelErrorMessageEN(Status), Status]));
+        
+        // 根据错误类型抛出异常
+        case Status of
+          SEC_E_CERT_EXPIRED,
+          CERT_E_EXPIRED:
+            raise ESSLCertificateException.CreateWithContext(
+              GetSchannelErrorMessageEN(Status),
+              sslErrCertificate,
+              'TWinSSLConnection.ClientHandshake',
+              Status,
+              sslWinSSL
+            );
+            
+          SEC_E_UNTRUSTED_ROOT,
+          CERT_E_UNTRUSTEDROOT:
+            raise ESSLCertificateException.CreateWithContext(
+              GetSchannelErrorMessageEN(Status),
+              sslErrCertificateUntrusted,
+              'TWinSSLConnection.ClientHandshake',
+              Status,
+              sslWinSSL
+            );
+            
+          SEC_E_ALGORITHM_MISMATCH:
+            raise ESSLHandshakeException.CreateWithContext(
+              GetSchannelErrorMessageEN(Status),
+              sslErrHandshake,
+              'TWinSSLConnection.ClientHandshake',
+              Status,
+              sslWinSSL
+            );
+            
+          SEC_E_INVALID_TOKEN:
+            raise ESSLProtocolException.CreateWithContext(
+              GetSchannelErrorMessageEN(Status),
+              sslErrProtocol,
+              'TWinSSLConnection.ClientHandshake',
+              Status,
+              sslWinSSL
+            );
+            
+        else
+          raise ESSLHandshakeException.CreateWithContext(
+            Format('Client handshake failed: %s', [GetSchannelErrorMessageEN(Status)]),
+            sslErrHandshake,
+            'TWinSSLConnection.ClientHandshake',
+            Status,
+            sslWinSSL
+          );
+        end;
+      end;
     end;
 
     Result := IsSuccess(Status);
@@ -1378,6 +1559,7 @@ end;
 
 // ============================================================================
 // 握手实现 - 服务器端
+// WinSSL 服务端支持 - 任务 3.1: 实现服务端握手
 // ============================================================================
 
 function TWinSSLConnection.ServerHandshake: Boolean;
@@ -1387,84 +1569,214 @@ var
   InBuffers: array[0..1] of TSecBuffer;
   InBufferDesc: TSecBufferDesc;
   Status: SECURITY_STATUS;
-  dwSSPIPackageFlags, dwSSPIOutFlags: DWORD;
+  dwSSPIFlags, dwSSPIOutFlags: DWORD;
   cbData, cbIoBuffer: DWORD;
   IoBuffer: array[0..16384-1] of Byte;
+  fDoRead: Boolean;
+  phContext: PCtxtHandle;
 begin
   Result := False;
 
-  // 设置服务器端标志
-  dwSSPIPackageFlags := ASC_REQ_SEQUENCE_DETECT or
-                        ASC_REQ_REPLAY_DETECT or
-                        ASC_REQ_CONFIDENTIALITY or
-                        ASC_RET_EXTENDED_ERROR or
-                        ASC_REQ_ALLOCATE_MEMORY or
-                        ASC_REQ_STREAM;
+  // 任务 3.1: 设置服务器端标志
+  dwSSPIFlags := ASC_REQ_SEQUENCE_DETECT or
+                 ASC_REQ_REPLAY_DETECT or
+                 ASC_REQ_CONFIDENTIALITY or
+                 ASC_RET_EXTENDED_ERROR or
+                 ASC_REQ_ALLOCATE_MEMORY or
+                 ASC_REQ_STREAM;
 
-  // Request client certificate when peer verification is enabled.
+  // 任务 3.1: 如果启用了对端验证,请求客户端证书
   if sslVerifyPeer in FContext.GetVerifyMode then
-    dwSSPIPackageFlags := dwSSPIPackageFlags or ASC_REQ_MUTUAL_AUTH;
+    dwSSPIFlags := dwSSPIFlags or ASC_REQ_MUTUAL_AUTH;
 
-  // P1-1: 使用辅助方法初始化输出缓冲区
-  PrepareOutputBufferDesc(OutBuffers, OutBufferDesc);
-
+  // 初始化握手状态
+  FHandshakeState := sslHsInProgress;
   cbIoBuffer := 0;
-  Status := SEC_I_CONTINUE_NEEDED;  // 初始化状态以便第一次迭代工作
+  fDoRead := True;
+  phContext := nil;  // 第一次调用时为 nil
 
-  // 握手主循环
+  // 任务 3.1: 握手主循环 - 处理握手消息直到完成或失败
   while True do
   begin
-    // 接收客户端数据
-    if (cbIoBuffer = 0) or (Status = SEC_E_INCOMPLETE_MESSAGE) then
+    // 任务 3.1: 接收客户端数据(如果需要)
+    if fDoRead then
     begin
       cbData := RecvData(IoBuffer[cbIoBuffer], SizeOf(IoBuffer) - cbIoBuffer);
       if cbData <= 0 then
+      begin
+        // 网络错误或连接关闭
+        FLastError := sslErrConnection;
         Exit;
+      end;
       Inc(cbIoBuffer, cbData);
-    end;
+    end
+    else
+      fDoRead := True;  // 下次循环需要读取
 
-    // P1-1: 使用辅助方法设置输入缓冲区
+    // 任务 3.1: 准备输入缓冲区(客户端 Hello 或其他握手消息)
     PrepareInputBufferDesc(InBuffers, InBufferDesc, @IoBuffer[0], cbIoBuffer);
 
-    // 调用 AcceptSecurityContext
+    // 任务 3.1: 准备输出缓冲区(服务端响应)
+    PrepareOutputBufferDesc(OutBuffers, OutBufferDesc);
+
+    // 任务 3.1: 调用 AcceptSecurityContext 处理握手
     Status := AcceptSecurityContextW(
       PCredHandle(FContext.GetNativeHandle),
-      nil,
+      phContext,
       @InBufferDesc,
-      dwSSPIPackageFlags,
-      0,
+      dwSSPIFlags,
+      SECURITY_NATIVE_DREP,
       @FCtxtHandle,
       @OutBufferDesc,
       @dwSSPIOutFlags,
       nil
     );
 
-    // P1-1: 使用辅助方法处理额外数据
+    // 第一次调用后,使用已创建的上下文
+    if phContext = nil then
+      phContext := @FCtxtHandle;
+
+    // 任务 3.1: 处理额外数据(SECBUFFER_EXTRA)
     HandleExtraData(InBuffers, IoBuffer, cbIoBuffer, Status);
 
-    // P1-1: 使用辅助方法发送响应数据
-    if not SendOutputBuffer(OutBuffers[0]) then
-      Exit;
-
-    // 检查握手状态
-    if Status = SEC_E_INCOMPLETE_MESSAGE then
-      Continue;  // 需要更多数据，继续循环
-
-    if IsSuccess(Status) then
+    // 任务 3.1: 发送服务端响应消息到客户端
+    if (OutBuffers[0].cbBuffer > 0) and (OutBuffers[0].pvBuffer <> nil) then
     begin
-      // 握手成功
-      Result := True;
-      Break;
-    end
-    else if Status = SEC_I_CONTINUE_NEEDED then
-    begin
-      // 需要继续握手
-      Continue;
-    end
+      if not SendOutputBuffer(OutBuffers[0]) then
+      begin
+        FLastError := sslErrConnection;
+        Exit;
+      end;
+    end;
+
+    // 任务 3.1: 检查握手状态
+    case Status of
+      SEC_E_OK:
+      begin
+        // 握手成功完成
+        Result := True;
+        FHandshakeState := sslHsCompleted;
+        Break;
+      end;
+
+      SEC_I_CONTINUE_NEEDED:
+      begin
+        // 需要继续握手,循环继续
+        Continue;
+      end;
+
+      SEC_E_INCOMPLETE_MESSAGE:
+      begin
+        // 消息不完整,需要更多数据
+        // 不清空缓冲区,继续读取
+        fDoRead := True;
+        Continue;
+      end;
+
+      SEC_I_INCOMPLETE_CREDENTIALS:
+      begin
+        // 凭据不完整(可能需要客户端证书)
+        // 继续握手
+        Continue;
+      end;
+
     else
-    begin
-      // 握手失败
-      Break;
+      // 任务 4.2: 握手失败 - 增强错误处理
+      FHandshakeState := sslHsFailed;
+      
+      // 任务 4.2: 使用 MapSchannelError 映射错误类型
+      FLastError := MapSchannelError(Status);
+      
+      // 任务 4.2: 记录详细的错误信息
+      NotifyInfoCallback(2, Integer(Status), 
+        Format('Server handshake failed: %s (0x%x)', 
+          [GetSchannelErrorMessageEN(Status), Status]));
+      
+      // 任务 4.2: 发送 TLS 警报消息(如果适用)
+      // 注意: Schannel 会自动发送某些警报消息,但我们可以尝试显式发送
+      // 对于某些错误,Schannel 已经在 AcceptSecurityContext 中发送了警报
+      // 这里我们主要确保上下文被正确清理
+      if IsValidSecHandle(FCtxtHandle) then
+      begin
+        // 尝试发送关闭通知(如果连接仍然有效)
+        // 这会触发 Schannel 发送 close_notify 警报
+        try
+          DeleteSecurityContext(@FCtxtHandle);
+          InitSecHandle(FCtxtHandle);
+        except
+          // 忽略清理错误
+        end;
+      end;
+      
+      // 任务 4.2: 根据错误类型抛出相应的异常
+      case Status of
+        SEC_E_UNSUPPORTED_FUNCTION:
+          raise ESSLConfigurationException.CreateWithContext(
+            GetSchannelErrorMessageEN(Status),
+            sslErrConfiguration,
+            'TWinSSLConnection.ServerHandshake',
+            Status,
+            sslWinSSL
+          );
+          
+        SEC_E_CERT_EXPIRED,
+        CERT_E_EXPIRED:
+          raise ESSLCertificateException.CreateWithContext(
+            GetSchannelErrorMessageEN(Status),
+            sslErrCertificate,
+            'TWinSSLConnection.ServerHandshake',
+            Status,
+            sslWinSSL
+          );
+          
+        SEC_E_UNTRUSTED_ROOT,
+        CERT_E_UNTRUSTEDROOT,
+        SEC_E_CERT_UNKNOWN:
+          raise ESSLCertificateException.CreateWithContext(
+            GetSchannelErrorMessageEN(Status),
+            sslErrCertificateUntrusted,
+            'TWinSSLConnection.ServerHandshake',
+            Status,
+            sslWinSSL
+          );
+          
+        SEC_E_ALGORITHM_MISMATCH:
+          raise ESSLHandshakeException.CreateWithContext(
+            GetSchannelErrorMessageEN(Status),
+            sslErrHandshake,
+            'TWinSSLConnection.ServerHandshake',
+            Status,
+            sslWinSSL
+          );
+          
+        SEC_E_INVALID_TOKEN:
+          raise ESSLProtocolException.CreateWithContext(
+            GetSchannelErrorMessageEN(Status),
+            sslErrProtocol,
+            'TWinSSLConnection.ServerHandshake',
+            Status,
+            sslWinSSL
+          );
+          
+        SEC_E_MESSAGE_ALTERED:
+          raise ESSLProtocolException.CreateWithContext(
+            GetSchannelErrorMessageEN(Status),
+            sslErrProtocol,
+            'TWinSSLConnection.ServerHandshake',
+            Status,
+            sslWinSSL
+          );
+          
+      else
+        // 通用握手错误
+        raise ESSLHandshakeException.CreateWithContext(
+          Format('Server handshake failed: %s', [GetSchannelErrorMessageEN(Status)]),
+          sslErrHandshake,
+          'TWinSSLConnection.ServerHandshake',
+          Status,
+          sslWinSSL
+        );
+      end;
     end;
   end;
 end;

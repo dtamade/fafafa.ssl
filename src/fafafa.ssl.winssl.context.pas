@@ -18,7 +18,7 @@ unit fafafa.ssl.winssl.context;
 interface
 
 uses
-  Windows, SysUtils, Classes,
+  Windows, SysUtils, Classes, StrUtils,
   fafafa.ssl.base,
   fafafa.ssl.errors,      // 添加：RaiseInvalidParameter
   fafafa.ssl.exceptions,  // 新增：类型化异常
@@ -241,7 +241,10 @@ end;
 
 { P0-1: 延迟凭据获取 - 确保证书加载后才获取凭据
   此方法在 CreateConnection 或 GetNativeHandle 时调用
-  确保 LoadCertificate/LoadPrivateKey 的设置能够生效 }
+  确保 LoadCertificate/LoadPrivateKey 的设置能够生效
+  
+  WinSSL 服务端支持 - 任务 2.1:
+  增强服务端凭据获取,确保服务器证书正确配置 }
 procedure TWinSSLContext.EnsureCredentialsAcquired;
 var
   SchannelCred: SCHANNEL_CRED;
@@ -260,6 +263,16 @@ begin
     InitSecHandle(FCredHandle);
   end;
 
+  // 任务 2.1: 服务端模式验证 - 服务端必须有证书
+  if (FContextType = sslCtxServer) and (FCertContext = nil) then
+    raise ESSLConfigurationException.CreateWithContext(
+      'Server context requires a certificate. Use LoadCertificate() to load a server certificate.',
+      sslErrConfiguration,
+      'TWinSSLContext.EnsureCredentialsAcquired',
+      0,
+      sslWinSSL
+    );
+
   // 初始化 Schannel 凭据
   FillChar(SchannelCred, SizeOf(SchannelCred), 0);
   SchannelCred.dwVersion := SCHANNEL_CRED_VERSION;
@@ -274,9 +287,16 @@ begin
   SchannelCred.dwFlags := SCH_CRED_NO_DEFAULT_CREDS or
                           SCH_CRED_MANUAL_CRED_VALIDATION;
 
-  // P0-1: 关键修复 - 如果有证书，将其包含在凭据中
-  if FCertContext <> nil then
+  // 任务 2.1: 服务端凭据配置 - 服务端必须包含证书
+  if FContextType = sslCtxServer then
   begin
+    // 服务端模式: 必须提供证书
+    SchannelCred.cCreds := 1;
+    SchannelCred.paCred := @FCertContext;
+  end
+  else if FCertContext <> nil then
+  begin
+    // 客户端模式: 如果有证书则包含(用于双向 TLS)
     SchannelCred.cCreds := 1;
     SchannelCred.paCred := @FCertContext;
   end;
@@ -302,9 +322,12 @@ begin
 
   if not IsSuccess(Status) then
     raise ESSLInitializationException.CreateWithContext(
-      Format('Failed to acquire credentials handle: 0x%x', [Status]),
+      Format('Failed to acquire credentials handle: 0x%x (%s mode)', 
+        [Status, IfThen(FContextType = sslCtxServer, 'server', 'client')]),
       sslErrNotInitialized,
-      'EnsureCredentialsAcquired'
+      'TWinSSLContext.EnsureCredentialsAcquired',
+      Status,
+      sslWinSSL
     );
 
   FCredentialsAcquired := True;

@@ -63,6 +63,15 @@ type
 
 { 错误码映射函数 }
 
+{ 任务 4.1: 映射 Schannel 错误码到 SSL 错误类型 }
+function MapSchannelError(AErrorCode: DWORD): TSSLErrorCode;
+
+{ 任务 4.1: 获取 Schannel 错误的用户友好消息 (中文) }
+function GetSchannelErrorMessageCN(AErrorCode: DWORD): string;
+
+{ 任务 4.1: 获取 Schannel 错误的用户友好消息 (英文) }
+function GetSchannelErrorMessageEN(AErrorCode: DWORD): string;
+
 { 获取友好的错误消息 (中文) }
 function GetFriendlyErrorMessageCN(AErrorCode: DWORD): string;
 
@@ -164,112 +173,405 @@ end;
 
 { 错误码映射函数 }
 
-function GetFriendlyErrorMessageCN(AErrorCode: DWORD): string;
+{ 任务 4.1: 映射 Schannel 错误码到 SSL 错误类型
+  将 Windows Schannel API 返回的错误码映射到统一的 TSSLErrorCode
+  需求: 2.4, 7.1, 7.2, 7.6 }
+function MapSchannelError(AErrorCode: DWORD): TSSLErrorCode;
 begin
   case LONG(AErrorCode) of
-    // Security 错误 (常用)
+    // 成功状态
+    LONG(SEC_E_OK):
+      Result := sslErrNone;
+
+    // 握手继续状态 (不是错误)
+    LONG(SEC_I_CONTINUE_NEEDED),
+    LONG(SEC_I_COMPLETE_NEEDED),
+    LONG(SEC_I_COMPLETE_AND_CONTINUE):
+      Result := sslErrNone;
+
+    // 需要更多数据
+    LONG(SEC_E_INCOMPLETE_MESSAGE):
+      Result := sslErrWantRead;
+
+    // 协议/握手错误
+    LONG(SEC_E_INVALID_TOKEN),
+    LONG(SEC_E_MESSAGE_ALTERED),
+    LONG(SEC_E_OUT_OF_SEQUENCE):
+      Result := sslErrProtocol;
+
+    // 算法不匹配
+    LONG(SEC_E_ALGORITHM_MISMATCH):
+      Result := sslErrHandshake;
+
+    // 不支持的功能
+    LONG(SEC_E_UNSUPPORTED_FUNCTION):
+      Result := sslErrUnsupported;
+
+    // 证书错误 - 不受信任的根
+    LONG(SEC_E_UNTRUSTED_ROOT),
+    LONG(CERT_E_UNTRUSTEDROOT):
+      Result := sslErrCertificateUntrusted;
+
+    // 证书错误 - 过期
+    LONG(SEC_E_CERT_EXPIRED),
+    LONG(CERT_E_EXPIRED):
+      Result := sslErrCertificateExpired;
+
+    // 证书错误 - 吊销
+    LONG(CERT_E_REVOKED):
+      Result := sslErrCertificateRevoked;
+
+    // 证书错误 - 吊销检查失败
+    LONG(CERT_E_REVOCATION_FAILURE):
+      Result := sslErrVerificationFailed;
+
+    // 证书错误 - 主机名不匹配
+    LONG(CERT_E_CN_NO_MATCH),
+    LONG(CERT_E_INVALID_NAME):
+      Result := sslErrHostnameMismatch;
+
+    // 证书错误 - 用途错误
+    LONG(CERT_E_WRONG_USAGE):
+      Result := sslErrCertificate;
+
+    // 证书错误 - 签名无效
+    LONG(TRUST_E_CERT_SIGNATURE):
+      Result := sslErrVerificationFailed;
+
+    // 证书错误 - 未知证书
+    LONG(SEC_E_CERT_UNKNOWN),
+    LONG(SEC_E_WRONG_PRINCIPAL):
+      Result := sslErrCertificate;
+
+    // 句柄/参数错误
+    LONG(SEC_E_INVALID_HANDLE),
+    LONG(ERROR_INVALID_HANDLE):
+      Result := sslErrInvalidParam;
+
+    LONG(ERROR_INVALID_PARAMETER),
+    LONG(SEC_E_INVALID_PARAMETER):
+      Result := sslErrInvalidParam;
+
+    // 内存错误
+    LONG(ERROR_NOT_ENOUGH_MEMORY),
+    LONG(SEC_E_INSUFFICIENT_MEMORY):
+      Result := sslErrMemory;
+
+    // 初始化错误
+    LONG(SEC_E_SECPKG_NOT_FOUND),
+    LONG(SEC_E_NOT_OWNER):
+      Result := sslErrNotInitialized;
+
+    // 连接错误
+    LONG(SEC_E_CONTEXT_EXPIRED):
+      Result := sslErrConnection;
+
+    // 访问/配置错误
+    LONG(ERROR_ACCESS_DENIED),
+    LONG(SEC_E_LOGON_DENIED):
+      Result := sslErrConfiguration;
+
+    // 不支持
+    LONG(ERROR_NOT_SUPPORTED):
+      Result := sslErrUnsupported;
+
+    // 加密/解密错误
+    LONG(SEC_E_DECRYPT_FAILURE):
+      Result := sslErrEncryption;
+
+  else
+    // 未知错误映射到通用错误
+    Result := sslErrOther;
+  end;
+end;
+
+{ 任务 4.1: 获取 Schannel 错误的用户友好消息 (中文)
+  为每个错误类型生成用户友好的消息
+  需求: 7.1, 7.2, 7.6 }
+function GetSchannelErrorMessageCN(AErrorCode: DWORD): string;
+begin
+  case LONG(AErrorCode) of
+    // 成功状态
     LONG(SEC_E_OK):
       Result := '操作成功';
+
+    // 握手继续状态
     LONG(SEC_I_CONTINUE_NEEDED):
       Result := '握手需要继续';
+    LONG(SEC_I_COMPLETE_NEEDED):
+      Result := '握手需要完成';
+    LONG(SEC_I_COMPLETE_AND_CONTINUE):
+      Result := '握手需要完成并继续';
+
+    // 需要更多数据
     LONG(SEC_E_INCOMPLETE_MESSAGE):
-      Result := '消息不完整';
+      Result := 'TLS 消息不完整,需要接收更多数据';
+
+    // 协议/握手错误
     LONG(SEC_E_INVALID_TOKEN):
-      Result := '无效的令牌';
-    LONG(SEC_E_INVALID_HANDLE):
-      Result := '无效的句柄';
-    LONG(SEC_E_UNTRUSTED_ROOT):
-      Result := '不受信任的根证书';
-    LONG(SEC_E_CERT_EXPIRED):
-      Result := '证书已过期';
+      Result := '收到无效的 TLS 令牌,可能是协议不匹配';
+    LONG(SEC_E_MESSAGE_ALTERED):
+      Result := 'TLS 消息被篡改,连接不安全';
+    LONG(SEC_E_OUT_OF_SEQUENCE):
+      Result := 'TLS 消息顺序错误';
+
+    // 算法不匹配
     LONG(SEC_E_ALGORITHM_MISMATCH):
-      Result := '算法不匹配';
-      
-    // 证书错误
+      Result := '客户端和服务端没有共同支持的加密算法';
+
+    // 不支持的功能
+    LONG(SEC_E_UNSUPPORTED_FUNCTION):
+      Result := '此 Windows 版本不支持请求的 TLS 功能';
+
+    // 证书错误 - 不受信任的根
+    LONG(SEC_E_UNTRUSTED_ROOT),
+    LONG(CERT_E_UNTRUSTEDROOT):
+      Result := '证书链到不受信任的根证书颁发机构';
+
+    // 证书错误 - 过期
+    LONG(SEC_E_CERT_EXPIRED),
     LONG(CERT_E_EXPIRED):
       Result := '证书已过期';
-    LONG(CERT_E_UNTRUSTEDROOT):
-      Result := '证书链到不受信任的根';
-    LONG(CERT_E_WRONG_USAGE):
-      Result := '证书用途错误';
+
+    // 证书错误 - 吊销
     LONG(CERT_E_REVOKED):
       Result := '证书已被吊销';
+
+    // 证书错误 - 吊销检查失败
     LONG(CERT_E_REVOCATION_FAILURE):
-      Result := '吊销检查失败';
+      Result := '无法检查证书吊销状态';
+
+    // 证书错误 - 主机名不匹配
     LONG(CERT_E_CN_NO_MATCH):
-      Result := '证书通用名不匹配';
+      Result := '证书的通用名称与服务器名称不匹配';
     LONG(CERT_E_INVALID_NAME):
       Result := '证书名称无效';
+
+    // 证书错误 - 用途错误
+    LONG(CERT_E_WRONG_USAGE):
+      Result := '证书用途不正确';
+
+    // 证书错误 - 签名无效
     LONG(TRUST_E_CERT_SIGNATURE):
       Result := '证书签名无效';
-      
-    // Windows 错误
-    LONG(ERROR_INVALID_PARAMETER):
-      Result := '参数无效';
-    LONG(ERROR_NOT_ENOUGH_MEMORY):
-      Result := '内存不足';
+
+    // 证书错误 - 未知证书
+    LONG(SEC_E_CERT_UNKNOWN):
+      Result := '证书未知或不受信任';
+    LONG(SEC_E_WRONG_PRINCIPAL):
+      Result := '证书主体不正确';
+
+    // 句柄/参数错误
+    LONG(SEC_E_INVALID_HANDLE),
     LONG(ERROR_INVALID_HANDLE):
-      Result := '句柄无效';
-    LONG(ERROR_NOT_SUPPORTED):
-      Result := '不支持的操作';
+      Result := '无效的安全句柄';
+    LONG(ERROR_INVALID_PARAMETER),
+    LONG(SEC_E_INVALID_PARAMETER):
+      Result := '参数无效';
+
+    // 内存错误
+    LONG(ERROR_NOT_ENOUGH_MEMORY),
+    LONG(SEC_E_INSUFFICIENT_MEMORY):
+      Result := '内存不足';
+
+    // 初始化错误
+    LONG(SEC_E_SECPKG_NOT_FOUND):
+      Result := '找不到安全包';
+    LONG(SEC_E_NOT_OWNER):
+      Result := '没有权限访问安全上下文';
+
+    // 连接错误
+    LONG(SEC_E_CONTEXT_EXPIRED):
+      Result := 'TLS 连接已过期或关闭';
+
+    // 访问/配置错误
     LONG(ERROR_ACCESS_DENIED):
       Result := '访问被拒绝';
-      
+    LONG(SEC_E_LOGON_DENIED):
+      Result := '登录被拒绝';
+
+    // 不支持
+    LONG(ERROR_NOT_SUPPORTED):
+      Result := '不支持的操作';
+
+    // 加密/解密错误
+    LONG(SEC_E_DECRYPT_FAILURE):
+      Result := '数据解密失败';
+
   else
     Result := Format('未知错误 (0x%x)', [AErrorCode]);
   end;
 end;
 
-function GetFriendlyErrorMessageEN(AErrorCode: DWORD): string;
+{ 任务 4.1: 获取 Schannel 错误的用户友好消息 (英文)
+  为每个错误类型生成用户友好的消息
+  需求: 7.1, 7.2, 7.6 }
+function GetSchannelErrorMessageEN(AErrorCode: DWORD): string;
 begin
   case LONG(AErrorCode) of
+    // 成功状态
     LONG(SEC_E_OK):
       Result := 'Operation successful';
+
+    // 握手继续状态
     LONG(SEC_I_CONTINUE_NEEDED):
       Result := 'Handshake continues';
+    LONG(SEC_I_COMPLETE_NEEDED):
+      Result := 'Handshake needs completion';
+    LONG(SEC_I_COMPLETE_AND_CONTINUE):
+      Result := 'Handshake needs completion and continuation';
+
+    // 需要更多数据
     LONG(SEC_E_INCOMPLETE_MESSAGE):
-      Result := 'Incomplete message';
+      Result := 'TLS message incomplete, need more data';
+
+    // 协议/握手错误
     LONG(SEC_E_INVALID_TOKEN):
-      Result := 'Invalid token';
-    LONG(SEC_E_INVALID_HANDLE):
-      Result := 'Invalid handle';
-    LONG(SEC_E_UNTRUSTED_ROOT):
-      Result := 'Untrusted root certificate';
-    LONG(SEC_E_CERT_EXPIRED):
-      Result := 'Certificate expired';
+      Result := 'Invalid TLS token received, possible protocol mismatch';
+    LONG(SEC_E_MESSAGE_ALTERED):
+      Result := 'TLS message has been tampered with, connection is not secure';
+    LONG(SEC_E_OUT_OF_SEQUENCE):
+      Result := 'TLS message sequence error';
+
+    // 算法不匹配
     LONG(SEC_E_ALGORITHM_MISMATCH):
-      Result := 'Algorithm mismatch';
-      
+      Result := 'No common encryption algorithm between client and server';
+
+    // 不支持的功能
+    LONG(SEC_E_UNSUPPORTED_FUNCTION):
+      Result := 'Requested TLS feature not supported on this Windows version';
+
+    // 证书错误 - 不受信任的根
+    LONG(SEC_E_UNTRUSTED_ROOT),
+    LONG(CERT_E_UNTRUSTEDROOT):
+      Result := 'Certificate chain to untrusted root authority';
+
+    // 证书错误 - 过期
+    LONG(SEC_E_CERT_EXPIRED),
     LONG(CERT_E_EXPIRED):
       Result := 'Certificate has expired';
-    LONG(CERT_E_UNTRUSTEDROOT):
-      Result := 'Certificate chain to untrusted root';
-    LONG(CERT_E_WRONG_USAGE):
-      Result := 'Certificate has wrong usage';
+
+    // 证书错误 - 吊销
     LONG(CERT_E_REVOKED):
       Result := 'Certificate has been revoked';
+
+    // 证书错误 - 吊销检查失败
     LONG(CERT_E_REVOCATION_FAILURE):
-      Result := 'Revocation check failed';
+      Result := 'Unable to check certificate revocation status';
+
+    // 证书错误 - 主机名不匹配
     LONG(CERT_E_CN_NO_MATCH):
-      Result := 'Certificate common name does not match';
+      Result := 'Certificate common name does not match server name';
     LONG(CERT_E_INVALID_NAME):
       Result := 'Certificate name is invalid';
+
+    // 证书错误 - 用途错误
+    LONG(CERT_E_WRONG_USAGE):
+      Result := 'Certificate has wrong usage';
+
+    // 证书错误 - 签名无效
     LONG(TRUST_E_CERT_SIGNATURE):
       Result := 'Certificate signature is invalid';
-      
-    LONG(ERROR_INVALID_PARAMETER):
-      Result := 'Invalid parameter';
-    LONG(ERROR_NOT_ENOUGH_MEMORY):
-      Result := 'Not enough memory';
+
+    // 证书错误 - 未知证书
+    LONG(SEC_E_CERT_UNKNOWN):
+      Result := 'Certificate is unknown or untrusted';
+    LONG(SEC_E_WRONG_PRINCIPAL):
+      Result := 'Certificate principal is incorrect';
+
+    // 句柄/参数错误
+    LONG(SEC_E_INVALID_HANDLE),
     LONG(ERROR_INVALID_HANDLE):
-      Result := 'Invalid handle';
-    LONG(ERROR_NOT_SUPPORTED):
-      Result := 'Operation not supported';
+      Result := 'Invalid security handle';
+    LONG(ERROR_INVALID_PARAMETER),
+    LONG(SEC_E_INVALID_PARAMETER):
+      Result := 'Invalid parameter';
+
+    // 内存错误
+    LONG(ERROR_NOT_ENOUGH_MEMORY),
+    LONG(SEC_E_INSUFFICIENT_MEMORY):
+      Result := 'Not enough memory';
+
+    // 初始化错误
+    LONG(SEC_E_SECPKG_NOT_FOUND):
+      Result := 'Security package not found';
+    LONG(SEC_E_NOT_OWNER):
+      Result := 'No permission to access security context';
+
+    // 连接错误
+    LONG(SEC_E_CONTEXT_EXPIRED):
+      Result := 'TLS connection has expired or closed';
+
+    // 访问/配置错误
     LONG(ERROR_ACCESS_DENIED):
       Result := 'Access denied';
-      
+    LONG(SEC_E_LOGON_DENIED):
+      Result := 'Logon denied';
+
+    // 不支持
+    LONG(ERROR_NOT_SUPPORTED):
+      Result := 'Operation not supported';
+
+    // 加密/解密错误
+    LONG(SEC_E_DECRYPT_FAILURE):
+      Result := 'Data decryption failed';
+
   else
     Result := Format('Unknown error (0x%x)', [AErrorCode]);
+  end;
+end;
+
+function GetFriendlyErrorMessageCN(AErrorCode: DWORD): string;
+begin
+  // 任务 4.1: 优先使用 Schannel 专用错误消息
+  Result := GetSchannelErrorMessageCN(AErrorCode);
+  
+  // 如果是未知错误,尝试获取系统错误消息
+  if Pos('未知错误', Result) > 0 then
+  begin
+    case LONG(AErrorCode) of
+      // Windows 错误
+      LONG(ERROR_INVALID_PARAMETER):
+        Result := '参数无效';
+      LONG(ERROR_NOT_ENOUGH_MEMORY):
+        Result := '内存不足';
+      LONG(ERROR_INVALID_HANDLE):
+        Result := '句柄无效';
+      LONG(ERROR_NOT_SUPPORTED):
+        Result := '不支持的操作';
+      LONG(ERROR_ACCESS_DENIED):
+        Result := '访问被拒绝';
+    else
+      // 使用系统错误消息
+      Result := GetSystemErrorMessage(AErrorCode);
+    end;
+  end;
+end;
+
+function GetFriendlyErrorMessageEN(AErrorCode: DWORD): string;
+begin
+  // 任务 4.1: 优先使用 Schannel 专用错误消息
+  Result := GetSchannelErrorMessageEN(AErrorCode);
+  
+  // 如果是未知错误,尝试获取系统错误消息
+  if Pos('Unknown error', Result) > 0 then
+  begin
+    case LONG(AErrorCode) of
+      // Windows 错误
+      LONG(ERROR_INVALID_PARAMETER):
+        Result := 'Invalid parameter';
+      LONG(ERROR_NOT_ENOUGH_MEMORY):
+        Result := 'Not enough memory';
+      LONG(ERROR_INVALID_HANDLE):
+        Result := 'Invalid handle';
+      LONG(ERROR_NOT_SUPPORTED):
+        Result := 'Operation not supported';
+      LONG(ERROR_ACCESS_DENIED):
+        Result := 'Access denied';
+    else
+      // 使用系统错误消息
+      Result := GetSystemErrorMessage(AErrorCode);
+    end;
   end;
 end;
 

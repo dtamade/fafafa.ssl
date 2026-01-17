@@ -48,6 +48,9 @@ function GetSchannelErrorCategory(dwError: SECURITY_STATUS): TSchannelErrorCateg
 { 将 Schannel 错误码转换为可读的错误消息 }
 function GetSchannelErrorString(dwError: SECURITY_STATUS): string;
 
+{ WinSSL 服务端支持 - 任务 4.1: 将 Schannel 错误映射到 SSL 错误类型 }
+function MapSchannelErrorToSSLError(dwError: SECURITY_STATUS): TSSLErrorCode;
+
 { 将 Schannel 错误码转换为系统错误消息（通过 FormatMessage）}
 function GetSystemErrorMessage(dwError: DWORD): string;
 
@@ -313,6 +316,60 @@ end;
 function IsSuccess(dwError: SECURITY_STATUS): Boolean;
 begin
   Result := (dwError = SEC_E_OK);
+end;
+
+{ WinSSL 服务端支持 - 任务 4.1: 将 Schannel 错误映射到 SSL 错误类型
+  根据设计文档中的错误码映射表实现 }
+function MapSchannelErrorToSSLError(dwError: SECURITY_STATUS): TSSLErrorCode;
+begin
+  case dwError of
+    // 成功
+    SEC_E_OK:
+      Result := sslErrNone;
+      
+    // 需要更多数据/操作
+    SEC_E_INCOMPLETE_MESSAGE:
+      Result := sslErrWantRead;
+    SEC_I_CONTINUE_NEEDED,
+    SEC_I_COMPLETE_NEEDED,
+    SEC_I_COMPLETE_AND_CONTINUE:
+      Result := sslErrWantWrite;
+      
+    // 证书错误
+    SEC_E_CERT_EXPIRED,
+    SEC_E_CERT_UNKNOWN,
+    SEC_E_UNTRUSTED_ROOT,
+    SEC_E_WRONG_PRINCIPAL:
+      Result := sslErrCertificate;
+      
+    // 握手/协议错误
+    SEC_E_ALGORITHM_MISMATCH,
+    SEC_E_ILLEGAL_MESSAGE,
+    SEC_E_UNSUPPORTED_FUNCTION:
+      Result := sslErrHandshake;
+      
+    // 加密/解密错误
+    SEC_E_DECRYPT_FAILURE,
+    SEC_E_ENCRYPT_FAILURE,
+    SEC_E_MESSAGE_ALTERED:
+      Result := sslErrEncryption;
+      
+    // 配置错误
+    SEC_E_NO_CREDENTIALS,
+    SEC_E_UNKNOWN_CREDENTIALS,
+    SEC_E_INVALID_HANDLE,
+    SEC_E_INVALID_TOKEN:
+      Result := sslErrConfiguration;
+      
+    // 内存/资源错误
+    SEC_E_INSUFFICIENT_MEMORY,
+    SEC_E_BUFFER_TOO_SMALL:
+      Result := sslErrMemory;
+      
+  else
+    // 其他未知错误
+    Result := sslErrOther;
+  end;
 end;
 
 // ============================================================================
