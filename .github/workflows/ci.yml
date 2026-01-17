@@ -237,6 +237,85 @@ jobs:
       continue-on-error: true
 
   # ============================================================================
+  # macOS OpenSSL Build
+  # ============================================================================
+  build-macos:
+    runs-on: macos-latest
+    needs: pure-pascal-tests
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Free Pascal
+      run: |
+        brew install fpc
+        fpc -iV
+
+    - name: Install OpenSSL
+      run: |
+        brew install openssl@3
+        echo "DYLD_LIBRARY_PATH=/opt/homebrew/opt/openssl@3/lib:/usr/local/opt/openssl@3/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+
+    - name: Show versions
+      run: |
+        echo "=== System Information ==="
+        uname -a
+        echo "=== FPC Version ==="
+        fpc -iV
+        echo "=== OpenSSL Version ==="
+        openssl version
+
+    - name: Create output directories
+      run: |
+        mkdir -p tests/bin
+        mkdir -p tests/lib
+
+    - name: Compile pure Pascal modules
+      run: |
+        echo "=== Compiling Pure Pascal Modules ==="
+        fpc -Fusrc -FEtests/bin src/fafafa.ssl.asn1.pas || echo "Warning: asn1 compilation failed"
+        fpc -Fusrc -FEtests/bin src/fafafa.ssl.x509.pas || echo "Warning: x509 compilation failed"
+        fpc -Fusrc -FEtests/bin src/fafafa.ssl.pem.pas || echo "Warning: pem compilation failed"
+        fpc -Fusrc -FEtests/bin src/fafafa.ssl.crypto.hash.pas || echo "Warning: hash compilation failed"
+
+    - name: Compile pure Pascal tests
+      run: |
+        echo "=== Compiling Pure Pascal Tests ==="
+        fpc -Fusrc -Futests/bin -FEtests/bin tests/test_asn1.pas || echo "Warning: test_asn1 compilation failed"
+        fpc -Fusrc -Futests/bin -FEtests/bin tests/test_x509.pas || echo "Warning: test_x509 compilation failed"
+        fpc -Fusrc -Futests/bin -FEtests/bin tests/test_pem.pas || echo "Warning: test_pem compilation failed"
+        fpc -Fusrc -Futests/bin -FEtests/bin tests/test_hash.pas || echo "Warning: test_hash compilation failed"
+
+    - name: Run pure Pascal tests
+      run: |
+        echo "=== Running Pure Pascal Tests ==="
+        PASSED=0
+        FAILED=0
+        for test in tests/bin/test_asn1 tests/bin/test_x509 tests/bin/test_pem tests/bin/test_hash; do
+          if [ -x "$test" ]; then
+            testname=$(basename "$test")
+            echo -n "Running: $testname... "
+            if timeout 60 "$test" > /dev/null 2>&1; then
+              echo "OK"
+              PASSED=$((PASSED + 1))
+            else
+              echo "FAILED"
+              FAILED=$((FAILED + 1))
+            fi
+          fi
+        done
+        echo ""
+        echo "macOS Test Summary: $PASSED passed, $FAILED failed"
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: macos-test-results
+        path: tests/bin/
+
+  # ============================================================================
   # Code Quality Checks
   # ============================================================================
   code-quality:

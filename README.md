@@ -37,6 +37,13 @@
 # Ubuntu/Debian
 sudo apt-get install libssl-dev fpc
 
+# macOS
+brew install fpc openssl@3
+
+# Windows
+choco install freepascal
+# OpenSSL 可选 (WinSSL 零依赖)
+
 # 验证
 openssl version  # 应显示 1.1.1+ 或 3.0+
 fpc -i          # 应显示 3.2.0+
