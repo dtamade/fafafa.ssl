@@ -123,6 +123,17 @@ type
     // 最后一次操作状态（用于 WantRead/WantWrite）
     FLastError: TSSLErrorCode;
 
+    // Phase 3.3: 性能统计和监控
+    FConnectionStartTime: TDateTime;     // 连接开始时间
+    FHandshakeStartTime: Int64;          // 握手开始时间（高精度计数器）
+    FHandshakeEndTime: Int64;            // 握手结束时间（高精度计数器）
+    FHandshakeDuration: Integer;         // 握手持续时间（毫秒）
+    FFirstByteTime: Int64;               // 首字节时间
+    FBytesSentCount: Int64;              // 已发送字节数
+    FBytesReceivedCount: Int64;          // 已接收字节数
+    FErrorHistory: array[0..9] of TSSLErrorRecord;  // 错误历史（最近10个）
+    FErrorHistoryIndex: Integer;         // 错误历史索引
+
     // 内部方法
     function PerformHandshake: TSSLHandshakeState;
     function ClientHandshake: Boolean;
@@ -513,6 +524,17 @@ begin
   // 初始化错误状态
   FLastError := sslErrNone;
 
+  // Phase 3.3: 初始化性能统计字段
+  FConnectionStartTime := Now;
+  FHandshakeStartTime := 0;
+  FHandshakeEndTime := 0;
+  FHandshakeDuration := 0;
+  FFirstByteTime := 0;
+  FBytesSentCount := 0;
+  FBytesReceivedCount := 0;
+  FErrorHistoryIndex := 0;
+  FillChar(FErrorHistory, SizeOf(FErrorHistory), 0);
+
   InitSecHandle(FCtxtHandle);
 end;
 
@@ -542,6 +564,17 @@ begin
 
   // 初始化错误状态
   FLastError := sslErrNone;
+
+  // Phase 3.3: 初始化性能统计字段
+  FConnectionStartTime := Now;
+  FHandshakeStartTime := 0;
+  FHandshakeEndTime := 0;
+  FHandshakeDuration := 0;
+  FFirstByteTime := 0;
+  FBytesSentCount := 0;
+  FBytesReceivedCount := 0;
+  FErrorHistoryIndex := 0;
+  FillChar(FErrorHistory, SizeOf(FErrorHistory), 0);
 
   InitSecHandle(FCtxtHandle);
 end;
@@ -678,10 +711,17 @@ begin
   end;
 
   FHandshakeState := sslHsCompleted;
-  
+
+  // Phase 3.3: 记录握手结束时间并计算持续时间
+  QueryPerformanceCounter(FHandshakeEndTime);
+  if LFrequency > 0 then
+    FHandshakeDuration := Integer(((FHandshakeEndTime - FHandshakeStartTime) * 1000) div LFrequency)
+  else
+    FHandshakeDuration := 0;
+
   // P11.2: 保存会话信息到会话管理器
   SaveSessionAfterHandshake;
-  
+
   // P1-7: 通知握手完成
   NotifyInfoCallback(3, 0, 'handshake_done');
   Result := True;
@@ -1342,8 +1382,13 @@ var
   LALPNInBuffers: array[0..1] of TSecBuffer;
   LALPNInBufferDesc: TSecBufferDesc;
   LHasALPN: Boolean;
+  LFrequency: Int64;  // Phase 3.3: 高精度计时器频率
 begin
   Result := False;
+
+  // Phase 3.3: 记录握手开始时间
+  QueryPerformanceFrequency(LFrequency);
+  QueryPerformanceCounter(FHandshakeStartTime);
 
   // 设置标志
   dwSSPIFlags := ISC_REQ_SEQUENCE_DETECT or
@@ -1574,8 +1619,13 @@ var
   IoBuffer: array[0..16384-1] of Byte;
   fDoRead: Boolean;
   phContext: PCtxtHandle;
+  LFrequency: Int64;  // Phase 3.3: 高精度计时器频率
 begin
   Result := False;
+
+  // Phase 3.3: 记录握手开始时间
+  QueryPerformanceFrequency(LFrequency);
+  QueryPerformanceCounter(FHandshakeStartTime);
 
   // 任务 3.1: 设置服务器端标志
   dwSSPIFlags := ASC_REQ_SEQUENCE_DETECT or
@@ -1656,6 +1706,14 @@ begin
         // 握手成功完成
         Result := True;
         FHandshakeState := sslHsCompleted;
+
+        // Phase 3.3: 记录握手结束时间并计算持续时间
+        QueryPerformanceCounter(FHandshakeEndTime);
+        if LFrequency > 0 then
+          FHandshakeDuration := Integer(((FHandshakeEndTime - FHandshakeStartTime) * 1000) div LFrequency)
+        else
+          FHandshakeDuration := 0;
+
         Break;
       end;
 

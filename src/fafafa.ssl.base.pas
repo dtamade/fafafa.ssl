@@ -385,8 +385,9 @@ type
   end;
   PSSLConfig = ^TSSLConfig;
 
-  { SSL 统计信息 }
+  { SSL 统计信息 - Phase 3.3: 增强监控和诊断 }
   TSSLStatistics = record
+    // 连接统计
     ConnectionsTotal: Int64;        // 总连接数
     ConnectionsActive: Integer;     // 活动连接数
     HandshakesSuccessful: Int64;    // 成功握手次数
@@ -398,8 +399,54 @@ type
     RenegotiationsCount: Int64;     // 重新协商次数
     AlertsSent: Int64;              // 发送的警报数
     AlertsReceived: Int64;          // 接收的警报数
+
+    // Phase 3.3: 性能统计
+    HandshakeTimeTotal: Int64;      // 总握手时间（毫秒）
+    HandshakeTimeMin: Integer;      // 最小握手时间（毫秒）
+    HandshakeTimeMax: Integer;      // 最大握手时间（毫秒）
+    HandshakeTimeAvg: Integer;      // 平均握手时间（毫秒）
+
+    // Phase 3.3: Session 复用统计
+    SessionsReused: Int64;          // Session 复用次数
+    SessionsCreated: Int64;         // 新 Session 创建次数
+    SessionReuseRate: Double;       // Session 复用率（百分比 0-100）
   end;
   PSSLStatistics = ^TSSLStatistics;
+
+  { Phase 3.3: 错误记录 - 用于错误历史追踪 }
+  TSSLErrorRecord = record
+    ErrorCode: TSSLErrorCode;       // 错误码
+    ErrorMessage: string;           // 错误消息
+    Timestamp: TDateTime;           // 发生时间
+  end;
+
+  { Phase 3.3: 健康状态 - 连接健康检查 }
+  TSSLHealthStatus = record
+    IsConnected: Boolean;           // 是否已连接
+    HandshakeComplete: Boolean;     // 握手是否完成
+    LastError: TSSLErrorCode;       // 最后一次错误
+    LastErrorTime: TDateTime;       // 最后错误时间
+    BytesSent: Int64;               // 已发送字节数
+    BytesReceived: Int64;           // 已接收字节数
+    ConnectionAge: Integer;         // 连接存活时间（秒）
+  end;
+
+  { Phase 3.3: 性能指标 - 连接性能统计 }
+  TSSLPerformanceMetrics = record
+    HandshakeTime: Integer;         // 握手时间（毫秒）
+    FirstByteTime: Integer;         // 首字节时间（毫秒）
+    TotalBytesTransferred: Int64;   // 总传输字节数
+    AverageLatency: Integer;        // 平均延迟（毫秒）
+    SessionReused: Boolean;         // Session 是否复用
+  end;
+
+  { Phase 3.3: 诊断信息 - 完整的连接诊断数据 }
+  TSSLDiagnosticInfo = record
+    ConnectionInfo: TSSLConnectionInfo;      // 连接信息
+    HealthStatus: TSSLHealthStatus;          // 健康状态
+    PerformanceMetrics: TSSLPerformanceMetrics; // 性能指标
+    ErrorHistory: array of TSSLErrorRecord;  // 错误历史
+  end;
 
   // ============================================================================
   // Result 类型定义（借鉴 Rust Result<T, E> 模式）
