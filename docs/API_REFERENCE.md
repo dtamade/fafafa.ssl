@@ -221,9 +221,23 @@ ISSLConnection = interface
   // 数据传输
   function Read(var aBuffer; aCount: Integer): Integer;
   function Write(const aBuffer; aCount: Integer): Integer;
-  function ReadString: string;
-  function WriteString(const aData: string): Integer;
-  
+
+  // 字符串便捷方法
+  // ReadString: 从 SSL 连接读取数据到字符串
+  //   - AStr: 输出参数，接收读取的数据
+  //   - 返回: True 表示成功读取数据，False 表示无数据或错误
+  //   - 缓冲区大小: 4096 字节
+  //   - 编码: 支持 UTF-8，使用 SetString 直接转换
+  //   - 注意: 对于大于 4096 字节的数据，需要多次调用
+  function ReadString(out AStr: string): Boolean;
+
+  // WriteString: 将字符串写入 SSL 连接
+  //   - AStr: 要写入的字符串数据
+  //   - 返回: True 表示完整写入成功，False 表示部分写入或失败
+  //   - 编码: 直接发送字符串字节，支持 UTF-8
+  //   - 注意: 确保完整写入，部分写入视为失败
+  function WriteString(const AStr: string): Boolean;
+
   // 状态查询
   function IsConnected: Boolean;
   function GetState: TSSLConnectionState;
@@ -243,6 +257,8 @@ end;
 ```
 
 **使用示例**:
+
+**基本用法**:
 ```pascal
 var
   LConn: ISSLConnection;
@@ -251,9 +267,74 @@ begin
   LConn := LContext.CreateConnection(MySocket);
   if LConn.Connect then
   begin
-    LConn.WriteString('GET / HTTP/1.1'#13#10#13#10);
-    LData := LConn.ReadString;
-    WriteLn('响应: ', LData);
+    // 发送 HTTP 请求
+    if LConn.WriteString('GET / HTTP/1.1'#13#10#13#10) then
+      WriteLn('请求发送成功')
+    else
+      WriteLn('请求发送失败');
+
+    // 读取响应
+    if LConn.ReadString(LData) then
+      WriteLn('响应: ', LData)
+    else
+      WriteLn('读取响应失败');
+
+    LConn.Shutdown;
+  end;
+end;
+```
+
+**读取大数据**:
+```pascal
+var
+  LConn: ISSLConnection;
+  LChunk: string;
+  LFullData: string;
+begin
+  LConn := LContext.CreateConnection(MySocket);
+  if LConn.Connect then
+  begin
+    LConn.WriteString('GET /large-file HTTP/1.1'#13#10#13#10);
+
+    // 循环读取直到没有更多数据
+    LFullData := '';
+    while LConn.ReadString(LChunk) do
+    begin
+      LFullData := LFullData + LChunk;
+      WriteLn('已读取: ', Length(LFullData), ' 字节');
+    end;
+
+    WriteLn('总共读取: ', Length(LFullData), ' 字节');
+    LConn.Shutdown;
+  end;
+end;
+```
+
+**错误处理**:
+```pascal
+var
+  LConn: ISSLConnection;
+  LRequest, LResponse: string;
+begin
+  LConn := LContext.CreateConnection(MySocket);
+
+  try
+    if not LConn.Connect then
+      raise Exception.Create('连接失败');
+
+    LRequest := 'GET / HTTP/1.1'#13#10 +
+                'Host: example.com'#13#10 +
+                'Connection: close'#13#10#13#10;
+
+    if not LConn.WriteString(LRequest) then
+      raise Exception.Create('发送请求失败');
+
+    if not LConn.ReadString(LResponse) then
+      raise Exception.Create('读取响应失败');
+
+    WriteLn('响应: ', LResponse);
+
+  finally
     LConn.Shutdown;
   end;
 end;
