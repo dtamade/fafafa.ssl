@@ -1070,6 +1070,24 @@ type
     {** 获取关联的上下文
         @returns 创建此连接的上下文接口 *}
     function GetContext: ISSLContext;
+
+    // Phase 3.3: 监控和诊断接口
+
+    {** 获取连接健康状态
+        @returns 健康状态记录 *}
+    function GetHealthStatus: TSSLHealthStatus;
+
+    {** 检查连接是否健康
+        @returns True 如果连接健康（已连接且无严重错误） *}
+    function IsHealthy: Boolean;
+
+    {** 获取完整的诊断信息
+        @returns 诊断信息记录，包含连接信息、健康状态、性能指标和错误历史 *}
+    function GetDiagnosticInfo: TSSLDiagnosticInfo;
+
+    {** 获取性能指标
+        @returns 性能指标记录 *}
+    function GetPerformanceMetrics: TSSLPerformanceMetrics;
   end;
 
   {**

@@ -153,6 +153,9 @@ type
     // Post-handshake verification (Strategy A)
     function ValidatePeerCertificate(out AVerifyError: Integer): Boolean;
 
+    // Phase 3.3: 监控辅助方法
+    procedure RecordError(AErrorCode: TSSLErrorCode; const AErrorMessage: string);
+
     // P1-6: ALPN 协议缓冲区构建
     function BuildALPNBuffer(const AProtocols: string; out ABuffer: TBytes): Boolean;
 
@@ -224,6 +227,12 @@ type
     { ISSLConnection - 原生句柄 }
     function GetNativeHandle: Pointer;
     function GetContext: ISSLContext;
+
+    { ISSLConnection - Phase 3.3: 监控和诊断 }
+    function GetHealthStatus: TSSLHealthStatus;
+    function IsHealthy: Boolean;
+    function GetDiagnosticInfo: TSSLDiagnosticInfo;
+    function GetPerformanceMetrics: TSSLPerformanceMetrics;
   end;
 
 implementation
@@ -674,6 +683,14 @@ begin
   end;
 
   FHandshakeState := sslHsCompleted;
+
+  // Phase 3.3: 更新全局统计信息
+  if FContext is TWinSSLContext then
+  begin
+    TWinSSLLibrary(TWinSSLContext(FContext).GetLibrary).UpdateHandshakeStatistics(FHandshakeDuration, True);
+    TWinSSLLibrary(TWinSSLContext(FContext).GetLibrary).UpdateSessionStatistics(FSessionReused);
+  end;
+
   // P1-7: 通知握手完成
   NotifyInfoCallback(3, 0, 'handshake_done');
   Result := True;
@@ -721,6 +738,13 @@ begin
 
   // P11.2: 保存会话信息到会话管理器
   SaveSessionAfterHandshake;
+
+  // Phase 3.3: 更新全局统计信息
+  if FContext is TWinSSLContext then
+  begin
+    TWinSSLLibrary(TWinSSLContext(FContext).GetLibrary).UpdateHandshakeStatistics(FHandshakeDuration, True);
+    TWinSSLLibrary(TWinSSLContext(FContext).GetLibrary).UpdateSessionStatistics(FSessionReused);
+  end;
 
   // P1-7: 通知握手完成
   NotifyInfoCallback(3, 0, 'handshake_done');
@@ -1863,6 +1887,9 @@ begin
     Dec(FDecryptedBufferUsed, Result);
     if FDecryptedBufferUsed > 0 then
       Move(FDecryptedBuffer[Result], FDecryptedBuffer[0], FDecryptedBufferUsed);
+
+    // Phase 3.3: 跟踪接收字节数
+    Inc(FBytesReceivedCount, Result);
     Exit;
   end;
   
@@ -1903,7 +1930,10 @@ begin
     begin
       Result := Min(ACount, Integer(InBuffers[i].cbBuffer));
       Move(InBuffers[i].pvBuffer^, ABuffer, Result);
-      
+
+      // Phase 3.3: 跟踪接收字节数
+      Inc(FBytesReceivedCount, Result);
+
       // 保存剩余数据
       if Integer(InBuffers[i].cbBuffer) > Result then
       begin
@@ -1979,7 +2009,11 @@ begin
   // 发送加密数据
   cbData := SendData(Message[0], OutBuffers[0].cbBuffer + OutBuffers[1].cbBuffer + OutBuffers[2].cbBuffer);
   if cbData > 0 then
+  begin
     Result := ACount;
+    // Phase 3.3: 跟踪发送字节数
+    Inc(FBytesSentCount, ACount);
+  end;
 end;
 
 function TWinSSLConnection.ReadString(out AStr: string): Boolean;
@@ -2546,6 +2580,101 @@ end;
 function TWinSSLConnection.GetContext: ISSLContext;
 begin
   Result := FContext;
+end;
+
+// ============================================================================
+// Phase 3.3: 监控和诊断实现
+// ============================================================================
+
+function TWinSSLConnection.GetHealthStatus: TSSLHealthStatus;
+begin
+  Result.IsConnected := FConnected;
+  Result.HandshakeComplete := (FHandshakeState = sslHsCompleted);
+  Result.LastError := FLastError;
+
+  // 获取最后一个错误的时间戳
+  if FErrorHistoryIndex > 0 then
+    Result.LastErrorTime := FErrorHistory[FErrorHistoryIndex - 1].Timestamp
+  else if FErrorHistory[9].ErrorCode <> sslErrNone then
+    Result.LastErrorTime := FErrorHistory[9].Timestamp
+  else
+    Result.LastErrorTime := 0;
+
+  Result.BytesSent := FBytesSentCount;
+  Result.BytesReceived := FBytesReceivedCount;
+
+  // 计算连接存活时间（秒）
+  if FConnectionStartTime > 0 then
+    Result.ConnectionAge := SecondsBetween(Now, FConnectionStartTime)
+  else
+    Result.ConnectionAge := 0;
+end;
+
+function TWinSSLConnection.IsHealthy: Boolean;
+begin
+  // 连接健康的条件：
+  // 1. 已连接
+  // 2. 握手已完成
+  // 3. 最后一个错误不是严重错误
+  Result := FConnected and
+            (FHandshakeState = sslHsCompleted) and
+            (FLastError in [sslErrNone, sslErrWouldBlock, sslErrWantRead, sslErrWantWrite]);
+end;
+
+function TWinSSLConnection.GetDiagnosticInfo: TSSLDiagnosticInfo;
+var
+  I, LCount: Integer;
+begin
+  // 获取连接信息
+  Result.ConnectionInfo := GetConnectionInfo;
+
+  // 获取健康状态
+  Result.HealthStatus := GetHealthStatus;
+
+  // 获取性能指标
+  Result.PerformanceMetrics := GetPerformanceMetrics;
+
+  // 收集错误历史（最近10个错误）
+  LCount := 0;
+  SetLength(Result.ErrorHistory, 10);
+
+  // 从当前索引开始向前收集
+  for I := 0 to 9 do
+  begin
+    if FErrorHistory[I].ErrorCode <> sslErrNone then
+    begin
+      Result.ErrorHistory[LCount] := FErrorHistory[I];
+      Inc(LCount);
+    end;
+  end;
+
+  // 调整数组大小为实际错误数量
+  SetLength(Result.ErrorHistory, LCount);
+end;
+
+function TWinSSLConnection.GetPerformanceMetrics: TSSLPerformanceMetrics;
+begin
+  Result.HandshakeTime := FHandshakeDuration;
+  Result.FirstByteTime := 0;  // TODO: 实现首字节时间跟踪
+  Result.TotalBytesTransferred := FBytesSentCount + FBytesReceivedCount;
+  Result.AverageLatency := 0;  // TODO: 实现延迟跟踪
+  Result.SessionReused := FSessionReused;
+end;
+
+procedure TWinSSLConnection.RecordError(AErrorCode: TSSLErrorCode; const AErrorMessage: string);
+begin
+  // 记录错误到循环缓冲区
+  FErrorHistory[FErrorHistoryIndex].ErrorCode := AErrorCode;
+  FErrorHistory[FErrorHistoryIndex].ErrorMessage := AErrorMessage;
+  FErrorHistory[FErrorHistoryIndex].Timestamp := Now;
+
+  // 更新索引（循环）
+  Inc(FErrorHistoryIndex);
+  if FErrorHistoryIndex >= Length(FErrorHistory) then
+    FErrorHistoryIndex := 0;
+
+  // 更新最后一个错误
+  FLastError := AErrorCode;
 end;
 
 end.

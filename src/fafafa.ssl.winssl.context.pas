@@ -144,6 +144,9 @@ type
 
     { P0-2: 获取 CA 证书存储句柄（供连接验证使用） }
     function GetCAStoreHandle: HCERTSTORE;
+
+    { Phase 3.3: 获取库实例（供连接更新统计使用） }
+    function GetLibrary: ISSLLibrary;
   end;
 
 implementation
@@ -1119,6 +1122,12 @@ end;
 function TWinSSLContext.GetCAStoreHandle: HCERTSTORE;
 begin
   Result := FCAStore;
+end;
+
+{ Phase 3.3: 获取库实例（供连接更新统计使用） }
+function TWinSSLContext.GetLibrary: ISSLLibrary;
+begin
+  Result := FLibrary;
 end;
 
 end.

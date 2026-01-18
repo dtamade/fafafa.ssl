@@ -42,18 +42,21 @@ type
       Build: DWORD;
       IsServer: Boolean;
     end;
-    
+
+    // Phase 3.3: 线程安全的统计更新
+    FStatisticsLock: TRTLCriticalSection;
+
     { 内部方法 }
     procedure InternalLog(ALevel: TSSLLogLevel; const AMessage: string);
     function DetectWindowsVersion: Boolean;
     function CheckSchannelSupport: Boolean;
     procedure SetError(AError: Integer; const AErrorMsg: string);
     procedure ClearInternalError;
-    
+
   public
     constructor Create;
     destructor Destroy; override;
-    
+
     { ISSLLibrary - 初始化和清理 }
     function Initialize: Boolean;
     procedure Finalize;
@@ -92,6 +95,10 @@ type
     function CreateContext(AType: TSSLContextType): ISSLContext;
     function CreateCertificate: ISSLCertificate;
     function CreateCertificateStore: ISSLCertificateStore;
+
+    { Phase 3.3: 公共统计更新方法 }
+    procedure UpdateHandshakeStatistics(AHandshakeDuration: Integer; ASuccess: Boolean);
+    procedure UpdateSessionStatistics(ASessionReused: Boolean);
   end;
 
 { 全局工厂函数 }
@@ -160,7 +167,10 @@ begin
   
   // 初始化统计信息
   FillChar(FStatistics, SizeOf(FStatistics), 0);
-  
+
+  // Phase 3.3: 初始化统计锁
+  InitializeCriticalSection(FStatisticsLock);
+
   // 初始化 Windows 版本信息
   FillChar(FWindowsVersion, SizeOf(FWindowsVersion), 0);
 end;
@@ -169,6 +179,10 @@ destructor TWinSSLLibrary.Destroy;
 begin
   if FInitialized then
     Finalize;
+
+  // Phase 3.3: 清理统计锁
+  DeleteCriticalSection(FStatisticsLock);
+
   inherited Destroy;
 end;
 
@@ -540,8 +554,75 @@ end;
 
 procedure TWinSSLLibrary.ResetStatistics;
 begin
-  FillChar(FStatistics, SizeOf(FStatistics), 0);
+  // Phase 3.3: 线程安全的统计重置
+  EnterCriticalSection(FStatisticsLock);
+  try
+    FillChar(FStatistics, SizeOf(FStatistics), 0);
+    // 初始化最小握手时间为最大值
+    FStatistics.HandshakeTimeMin := High(Integer);
+  finally
+    LeaveCriticalSection(FStatisticsLock);
+  end;
   InternalLog(sslLogInfo, 'Statistics reset');
+end;
+
+// ============================================================================
+// Phase 3.3: 统计更新方法实现
+// ============================================================================
+
+procedure TWinSSLLibrary.UpdateHandshakeStatistics(AHandshakeDuration: Integer; ASuccess: Boolean);
+begin
+  EnterCriticalSection(FStatisticsLock);
+  try
+    if ASuccess then
+    begin
+      Inc(FStatistics.HandshakesSuccessful);
+
+      // 更新握手时间统计
+      Inc(FStatistics.HandshakeTimeTotal, AHandshakeDuration);
+
+      // 更新最小握手时间
+      if (FStatistics.HandshakeTimeMin = 0) or (AHandshakeDuration < FStatistics.HandshakeTimeMin) then
+        FStatistics.HandshakeTimeMin := AHandshakeDuration;
+
+      // 更新最大握手时间
+      if AHandshakeDuration > FStatistics.HandshakeTimeMax then
+        FStatistics.HandshakeTimeMax := AHandshakeDuration;
+
+      // 计算平均握手时间
+      if FStatistics.HandshakesSuccessful > 0 then
+        FStatistics.HandshakeTimeAvg := Integer(FStatistics.HandshakeTimeTotal div FStatistics.HandshakesSuccessful);
+    end
+    else
+      Inc(FStatistics.HandshakesFailed);
+  finally
+    LeaveCriticalSection(FStatisticsLock);
+  end;
+end;
+
+procedure TWinSSLLibrary.UpdateSessionStatistics(ASessionReused: Boolean);
+begin
+  EnterCriticalSection(FStatisticsLock);
+  try
+    if ASessionReused then
+    begin
+      Inc(FStatistics.SessionsReused);
+      Inc(FStatistics.SessionCacheHits);
+    end
+    else
+    begin
+      Inc(FStatistics.SessionsCreated);
+      Inc(FStatistics.SessionCacheMisses);
+    end;
+
+    // 计算 Session 复用率（百分比）
+    if (FStatistics.SessionsReused + FStatistics.SessionsCreated) > 0 then
+      FStatistics.SessionReuseRate := (FStatistics.SessionsReused * 100.0) / (FStatistics.SessionsReused + FStatistics.SessionsCreated)
+    else
+      FStatistics.SessionReuseRate := 0.0;
+  finally
+    LeaveCriticalSection(FStatisticsLock);
+  end;
 end;
 
 // ============================================================================
