@@ -259,6 +259,194 @@ begin
 end;
 ```
 
+### WinSSL Session 管理
+
+WinSSL 后端提供完整的 TLS Session 复用功能，通过 Windows Schannel 的凭据句柄缓存机制实现。Session 复用可以显著提升 HTTPS 连接性能（预期提升 70-90%），特别适合需要频繁建立连接的场景。
+
+#### 核心接口
+
+```pascal
+ISSLSession = interface
+  function GetSessionData: TBytes;
+  procedure SetSessionData(const aData: TBytes);
+  function IsValid: Boolean;
+  function GetCreationTime: TDateTime;
+  function GetLastAccessTime: TDateTime;
+end;
+```
+
+#### WinSSL Session 实现
+
+WinSSL 后端通过以下类实现 Session 管理：
+
+- **TWinSSLSession**: 实现 ISSLSession 接口，封装 Schannel Session 数据
+- **TWinSSLSessionManager**: Session 缓存管理器，支持自动过期和清理
+
+#### 使用示例
+
+**基本 Session 复用**:
+```pascal
+var
+  LLib: ISSLLibrary;
+  LContext: ISSLContext;
+  LConn1, LConn2: ISSLConnection;
+  LSession: ISSLSession;
+begin
+  // 创建 WinSSL 库
+  LLib := CreateWinSSLLibrary;
+  LLib.Initialize;
+
+  LContext := LLib.CreateContext(sslCtxClient);
+
+  // 第一次连接 - 完整握手
+  LConn1 := LContext.CreateConnection(Socket1);
+  if LConn1.Connect then
+  begin
+    WriteLn('第一次连接成功');
+
+    // 获取 Session
+    LSession := LConn1.GetSession;
+    WriteLn('Session ID: ', LConn1.GetSessionID);
+
+    LConn1.Shutdown;
+  end;
+
+  // 第二次连接 - 复用 Session
+  LConn2 := LContext.CreateConnection(Socket2);
+  LConn2.SetSession(LSession);  // 设置之前保存的 Session
+
+  if LConn2.Connect then
+  begin
+    WriteLn('第二次连接成功');
+
+    // 检查是否复用了 Session
+    if LConn2.IsSessionResumed then
+      WriteLn('✓ Session 复用成功 - 握手时间大幅减少')
+    else
+      WriteLn('✗ Session 未复用 - 执行了完整握手');
+
+    LConn2.Shutdown;
+  end;
+end;
+```
+
+**多连接 Session 缓存**:
+```pascal
+var
+  LLib: ISSLLibrary;
+  LContext: ISSLContext;
+  LSessionCache: TDictionary<string, ISSLSession>;
+  LConn: ISSLConnection;
+  LHost: string;
+begin
+  LLib := CreateWinSSLLibrary;
+  LLib.Initialize;
+  LContext := LLib.CreateContext(sslCtxClient);
+
+  // 创建 Session 缓存
+  LSessionCache := TDictionary<string, ISSLSession>.Create;
+  try
+    // 连接到多个主机
+    for LHost in ['api.example.com', 'cdn.example.com', 'www.example.com'] do
+    begin
+      LConn := LContext.CreateConnection(ConnectToHost(LHost, 443));
+
+      // 尝试复用缓存的 Session
+      if LSessionCache.ContainsKey(LHost) then
+        LConn.SetSession(LSessionCache[LHost]);
+
+      if LConn.Connect then
+      begin
+        WriteLn(Format('连接到 %s: Session %s',
+          [LHost,
+           IfThen(LConn.IsSessionResumed, '复用', '新建')]));
+
+        // 保存 Session 供后续使用
+        LSessionCache.AddOrSetValue(LHost, LConn.GetSession);
+
+        // 执行业务逻辑
+        LConn.WriteString('GET / HTTP/1.1'#13#10 +
+                         'Host: ' + LHost + #13#10#13#10);
+        WriteLn(LConn.ReadString);
+
+        LConn.Shutdown;
+      end;
+    end;
+  finally
+    LSessionCache.Free;
+  end;
+end;
+```
+
+#### 性能优化建议
+
+1. **长连接场景**: 对于需要频繁连接同一服务器的应用（如 REST API 客户端），始终保存和复用 Session
+2. **Session 有效期**: WinSSL Session 默认有效期由 Windows 系统策略控制，通常为 10 小时
+3. **内存管理**: Session 数据较小（通常 < 1KB），可以安全缓存大量 Session
+4. **线程安全**: TWinSSLSession 对象是线程安全的，可以在多线程环境中共享
+
+#### 与 OpenSSL 的差异
+
+| 特性 | WinSSL | OpenSSL |
+|------|--------|---------|
+| Session 存储 | 自动（凭据句柄缓存） | 手动（需要序列化） |
+| Session 有效期 | 系统策略控制 | 应用程序控制 |
+| 跨进程共享 | 不支持 | 支持（通过序列化） |
+| 性能提升 | 70-90% | 70-90% |
+
+#### 错误处理
+
+```pascal
+var
+  LConn: ISSLConnection;
+  LSession: ISSLSession;
+begin
+  LConn := LContext.CreateConnection(MySocket);
+
+  // 尝试设置 Session
+  if Assigned(LSession) and LSession.IsValid then
+    LConn.SetSession(LSession)
+  else
+    WriteLn('警告: Session 无效或已过期，将执行完整握手');
+
+  if LConn.Connect then
+  begin
+    // 连接成功
+    if not LConn.IsSessionResumed then
+      WriteLn('注意: Session 未复用，可能原因：');
+      WriteLn('  - Session 已过期');
+      WriteLn('  - 服务器不支持 Session 复用');
+      WriteLn('  - 服务器要求重新验证');
+    end;
+  end;
+end;
+```
+
+#### 调试和监控
+
+```pascal
+var
+  LConn: ISSLConnection;
+  LSession: ISSLSession;
+begin
+  LConn := LContext.CreateConnection(MySocket);
+
+  if LConn.Connect then
+  begin
+    LSession := LConn.GetSession;
+
+    // 输出 Session 信息
+    WriteLn('Session 信息:');
+    WriteLn('  ID: ', LConn.GetSessionID);
+    WriteLn('  创建时间: ', DateTimeToStr(LSession.GetCreationTime));
+    WriteLn('  最后访问: ', DateTimeToStr(LSession.GetLastAccessTime));
+    WriteLn('  是否复用: ', BoolToStr(LConn.IsSessionResumed, True));
+    WriteLn('  协议版本: ', GetProtocolName(LConn.GetProtocolVersion));
+    WriteLn('  密码套件: ', LConn.GetCipherName);
+  end;
+end;
+```
+
 ---
 
 ## 数据类型

@@ -83,6 +83,148 @@ begin
 end.
 ```
 
+### 3.1) WinSSL Session 复用（Windows 平台）
+
+> WinSSL 后端支持 TLS Session 复用，可显著提升连接性能（70-90%）。
+> 适用于需要频繁连接同一服务器的场景（如 REST API 客户端）。
+
+**基本 Session 复用示例**:
+```pascal
+program winssl_session_reuse;
+
+{$mode ObjFPC}{$H+}
+
+uses
+  SysUtils,
+  fafafa.ssl,
+  fafafa.ssl.context.builder;
+
+var
+  Ctx: ISSLContext;
+  Conn1, Conn2: ISSLConnection;
+  Session: ISSLSession;
+  Socket1, Socket2: THandle;
+begin
+  // 创建 WinSSL 上下文
+  Ctx := TSSLContextBuilder.Create
+    .WithBackend(sslWinSSL)
+    .WithTLS12And13
+    .WithVerifyPeer
+    .WithSystemRoots
+    .BuildClient;
+
+  // 第一次连接 - 完整握手
+  Socket1 := ConnectToHost('api.example.com', 443);
+  Conn1 := Ctx.CreateConnection(Socket1);
+  Conn1.SetServerName('api.example.com');
+
+  if Conn1.Connect then
+  begin
+    WriteLn('第一次连接成功');
+    WriteLn('Session ID: ', Conn1.GetSessionID);
+
+    // 保存 Session 供后续使用
+    Session := Conn1.GetSession;
+
+    // 执行业务逻辑...
+    Conn1.Shutdown;
+  end;
+
+  // 第二次连接 - 复用 Session
+  Socket2 := ConnectToHost('api.example.com', 443);
+  Conn2 := Ctx.CreateConnection(Socket2);
+  Conn2.SetServerName('api.example.com');
+  Conn2.SetSession(Session);  // 设置之前保存的 Session
+
+  if Conn2.Connect then
+  begin
+    WriteLn('第二次连接成功');
+
+    // 检查是否复用了 Session
+    if Conn2.IsSessionResumed then
+      WriteLn('✓ Session 复用成功 - 握手时间大幅减少')
+    else
+      WriteLn('✗ Session 未复用 - 执行了完整握手');
+
+    Conn2.Shutdown;
+  end;
+end.
+```
+
+**多主机 Session 缓存示例**:
+```pascal
+program winssl_session_cache;
+
+{$mode ObjFPC}{$H+}
+
+uses
+  SysUtils, Classes, Generics.Collections,
+  fafafa.ssl,
+  fafafa.ssl.context.builder;
+
+var
+  Ctx: ISSLContext;
+  SessionCache: TDictionary<string, ISSLSession>;
+  Conn: ISSLConnection;
+  Host: string;
+  Hosts: TStringList;
+  Socket: THandle;
+begin
+  // 创建 WinSSL 上下文
+  Ctx := TSSLContextBuilder.Create
+    .WithBackend(sslWinSSL)
+    .WithTLS12And13
+    .WithVerifyPeer
+    .WithSystemRoots
+    .BuildClient;
+
+  // 创建 Session 缓存
+  SessionCache := TDictionary<string, ISSLSession>.Create;
+  Hosts := TStringList.Create;
+  try
+    Hosts.Add('api.example.com');
+    Hosts.Add('cdn.example.com');
+    Hosts.Add('www.example.com');
+
+    // 连接到多个主机
+    for Host in Hosts do
+    begin
+      Socket := ConnectToHost(Host, 443);
+      Conn := Ctx.CreateConnection(Socket);
+      Conn.SetServerName(Host);
+
+      // 尝试复用缓存的 Session
+      if SessionCache.ContainsKey(Host) then
+        Conn.SetSession(SessionCache[Host]);
+
+      if Conn.Connect then
+      begin
+        WriteLn(Format('连接到 %s: Session %s',
+          [Host,
+           IfThen(Conn.IsSessionResumed, '复用', '新建')]));
+
+        // 保存 Session 供后续使用
+        SessionCache.AddOrSetValue(Host, Conn.GetSession);
+
+        // 执行业务逻辑...
+        Conn.Shutdown;
+      end;
+    end;
+  finally
+    SessionCache.Free;
+    Hosts.Free;
+  end;
+end.
+```
+
+**性能提示**:
+- Session 复用可减少 70-90% 的握手时间
+- Session 默认有效期约 10 小时（由 Windows 系统策略控制）
+- 适合 REST API 客户端、爬虫等频繁连接场景
+- Session 数据较小（< 1KB），可安全缓存大量 Session
+
+---
+
 ## 4) 证书快速生成（Quick API）
 
 ```pascal

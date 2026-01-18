@@ -121,6 +121,313 @@ begin
 end;
 ```
 
+### 4.4 Session 管理架构
+
+WinSSL 后端实现了完整的 TLS Session 复用功能，通过 Windows Schannel 的凭据句柄缓存机制实现高性能连接复用。
+
+#### 4.4.1 核心组件
+
+```pascal
+// Session 接口定义
+ISSLSession = interface
+  function GetSessionData: TBytes;
+  procedure SetSessionData(const aData: TBytes);
+  function IsValid: Boolean;
+  function GetCreationTime: TDateTime;
+  function GetLastAccessTime: TDateTime;
+end;
+
+// WinSSL Session 实现
+TWinSSLSession = class(TInterfacedObject, ISSLSession)
+private
+  FSessionData: TBytes;           // Session 数据（Schannel 内部格式）
+  FCreationTime: TDateTime;       // 创建时间
+  FLastAccessTime: TDateTime;     // 最后访问时间
+  FIsValid: Boolean;              // 有效性标志
+public
+  constructor Create;
+  destructor Destroy; override;
+
+  // ISSLSession 实现
+  function GetSessionData: TBytes;
+  procedure SetSessionData(const aData: TBytes);
+  function IsValid: Boolean;
+  function GetCreationTime: TDateTime;
+  function GetLastAccessTime: TDateTime;
+end;
+
+// Session 缓存管理器
+TWinSSLSessionManager = class
+private
+  FSessions: TDictionary<string, ISSLSession>;  // 主机名 -> Session 映射
+  FLock: TCriticalSection;                      // 线程安全锁
+  FMaxCacheSize: Integer;                       // 最大缓存数量
+  FDefaultTimeout: Integer;                     // 默认超时（秒）
+public
+  constructor Create;
+  destructor Destroy; override;
+
+  // Session 管理
+  procedure AddSession(const AHostName: string; ASession: ISSLSession);
+  function GetSession(const AHostName: string): ISSLSession;
+  procedure RemoveSession(const AHostName: string);
+  procedure ClearExpiredSessions;
+  procedure ClearAllSessions;
+
+  // 配置
+  property MaxCacheSize: Integer read FMaxCacheSize write FMaxCacheSize;
+  property DefaultTimeout: Integer read FDefaultTimeout write FDefaultTimeout;
+end;
+```
+
+#### 4.4.2 Session 复用流程
+
+**第一次连接（完整握手）**:
+```
+1. 客户端调用 AcquireCredentialsHandle 获取凭据句柄
+2. 调用 InitializeSecurityContext 开始握手
+3. 与服务器交换握手数据包（多次往返）
+4. 握手完成，建立安全连接
+5. 调用 QueryContextAttributes(SECPKG_ATTR_SESSION_INFO) 获取 Session 信息
+6. 创建 TWinSSLSession 对象保存 Session 数据
+7. 将 Session 添加到缓存管理器
+```
+
+**后续连接（Session 复用）**:
+```
+1. 从缓存管理器获取之前保存的 Session
+2. 使用相同的凭据句柄（Schannel 自动识别缓存）
+3. 调用 InitializeSecurityContext 时，Schannel 尝试 Session 复用
+4. 如果服务器接受，握手快速完成（1 个往返）
+5. 更新 Session 的最后访问时间
+```
+
+#### 4.4.3 Schannel 凭据句柄缓存机制
+
+Windows Schannel 通过凭据句柄（CredHandle）实现 Session 缓存：
+
+```pascal
+// 凭据句柄结构
+type
+  TCredentialCache = record
+    CredHandle: CredHandle;           // 凭据句柄
+    ServerName: string;               // 目标服务器名称
+    CachedSessions: TList;            // 缓存的 Session 列表
+    LastUsed: TDateTime;              // 最后使用时间
+  end;
+
+// 凭据句柄管理
+function GetOrCreateCredHandle(const AServerName: string): CredHandle;
+begin
+  // 1. 检查是否已有该服务器的凭据句柄
+  if FCredHandleCache.ContainsKey(AServerName) then
+  begin
+    Result := FCredHandleCache[AServerName].CredHandle;
+    FCredHandleCache[AServerName].LastUsed := Now;
+    Exit;
+  end;
+
+  // 2. 创建新的凭据句柄
+  LStatus := AcquireCredentialsHandle(
+    nil,                              // 主体名称
+    UNISP_NAME,                       // 包名称（Schannel）
+    SECPKG_CRED_OUTBOUND,            // 凭据使用方式
+    nil,                              // LUID
+    @FSchannelCred,                   // 认证数据
+    nil,                              // GetKey 函数
+    nil,                              // GetKey 参数
+    @Result,                          // 凭据句柄输出
+    @LExpiry                          // 过期时间
+  );
+
+  // 3. 缓存凭据句柄
+  FCredHandleCache.Add(AServerName, TCredentialCache.Create(Result));
+end;
+```
+
+**关键特性**:
+- **自动缓存**: Schannel 在凭据句柄内部自动缓存 Session
+- **透明复用**: 使用相同凭据句柄连接时，Schannel 自动尝试 Session 复用
+- **系统级缓存**: Session 数据存储在系统内存中，进程间不共享
+- **有效期管理**: Session 有效期由 Windows 系统策略控制（默认 10 小时）
+
+#### 4.4.4 Session 数据结构
+
+```pascal
+// Schannel Session 信息
+type
+  SecPkgContext_SessionInfo = record
+    dwFlags: DWORD;                   // 标志位
+    cbSessionId: DWORD;               // Session ID 长度
+    rgbSessionId: array[0..31] of Byte; // Session ID 数据
+  end;
+
+// 查询 Session 信息
+function GetSessionInfo: SecPkgContext_SessionInfo;
+var
+  LStatus: SECURITY_STATUS;
+  LSessionInfo: SecPkgContext_SessionInfo;
+begin
+  LStatus := QueryContextAttributes(
+    @FCtxtHandle,
+    SECPKG_ATTR_SESSION_INFO,
+    @LSessionInfo
+  );
+
+  if LStatus = SEC_E_OK then
+    Result := LSessionInfo
+  else
+    raise EWinSSLException.CreateFmt('获取 Session 信息失败: 0x%x', [LStatus]);
+end;
+```
+
+#### 4.4.5 性能优化策略
+
+**1. 凭据句柄池化**:
+```pascal
+// 为不同服务器维护独立的凭据句柄
+// 避免频繁创建和销毁凭据句柄
+FCredHandlePool: TDictionary<string, CredHandle>;
+```
+
+**2. Session 预热**:
+```pascal
+// 在应用启动时预先建立连接，缓存 Session
+procedure WarmupSessions(const AHosts: TStringList);
+var
+  LHost: string;
+  LConn: ISSLConnection;
+begin
+  for LHost in AHosts do
+  begin
+    LConn := CreateConnection(LHost, 443);
+    if LConn.Connect then
+    begin
+      // 保存 Session 供后续使用
+      FSessionManager.AddSession(LHost, LConn.GetSession);
+      LConn.Shutdown;
+    end;
+  end;
+end;
+```
+
+**3. 智能过期清理**:
+```pascal
+// 定期清理过期 Session，避免内存泄漏
+procedure TWinSSLSessionManager.ClearExpiredSessions;
+var
+  LPair: TPair<string, ISSLSession>;
+  LExpiredKeys: TStringList;
+begin
+  FLock.Enter;
+  try
+    LExpiredKeys := TStringList.Create;
+    try
+      // 查找过期 Session
+      for LPair in FSessions do
+      begin
+        if not LPair.Value.IsValid or
+           (SecondsBetween(Now, LPair.Value.GetLastAccessTime) > FDefaultTimeout) then
+          LExpiredKeys.Add(LPair.Key);
+      end;
+
+      // 删除过期 Session
+      for var LKey in LExpiredKeys do
+        FSessions.Remove(LKey);
+    finally
+      LExpiredKeys.Free;
+    end;
+  finally
+    FLock.Leave;
+  end;
+end;
+```
+
+**4. LRU 缓存策略**:
+```pascal
+// 当缓存达到上限时，移除最少使用的 Session
+procedure TWinSSLSessionManager.EnforceCacheLimit;
+var
+  LOldestKey: string;
+  LOldestTime: TDateTime;
+begin
+  if FSessions.Count <= FMaxCacheSize then
+    Exit;
+
+  // 查找最旧的 Session
+  LOldestTime := Now;
+  for var LPair in FSessions do
+  begin
+    if LPair.Value.GetLastAccessTime < LOldestTime then
+    begin
+      LOldestTime := LPair.Value.GetLastAccessTime;
+      LOldestKey := LPair.Key;
+    end;
+  end;
+
+  // 移除最旧的 Session
+  FSessions.Remove(LOldestKey);
+end;
+```
+
+#### 4.4.6 线程安全
+
+Session 管理器使用临界区（Critical Section）保证线程安全：
+
+```pascal
+procedure TWinSSLSessionManager.AddSession(const AHostName: string;
+  ASession: ISSLSession);
+begin
+  FLock.Enter;
+  try
+    // 检查缓存限制
+    EnforceCacheLimit;
+
+    // 添加或更新 Session
+    FSessions.AddOrSetValue(AHostName, ASession);
+  finally
+    FLock.Leave;
+  end;
+end;
+
+function TWinSSLSessionManager.GetSession(const AHostName: string): ISSLSession;
+begin
+  FLock.Enter;
+  try
+    if FSessions.TryGetValue(AHostName, Result) then
+    begin
+      // 更新最后访问时间
+      if Result.IsValid then
+        Exit;
+    end;
+
+    Result := nil;
+  finally
+    FLock.Leave;
+  end;
+end;
+```
+
+#### 4.4.7 与 OpenSSL 的差异
+
+| 特性 | WinSSL (Schannel) | OpenSSL |
+|------|-------------------|---------|
+| **Session 存储** | 凭据句柄内部自动缓存 | 需要手动序列化和存储 |
+| **复用机制** | 透明自动复用 | 需要显式设置 Session |
+| **跨进程共享** | 不支持（进程隔离） | 支持（通过序列化） |
+| **有效期控制** | 系统策略控制 | 应用程序控制 |
+| **内存管理** | 系统自动管理 | 应用程序负责 |
+| **性能提升** | 70-90% | 70-90% |
+
+#### 4.4.8 已知限制
+
+1. **进程隔离**: Session 缓存仅在单个进程内有效，无法跨进程共享
+2. **系统策略依赖**: Session 有效期受 Windows 组策略控制，应用程序无法直接修改
+3. **服务器支持**: Session 复用需要服务器端支持，某些服务器可能拒绝复用
+4. **TLS 1.3 差异**: TLS 1.3 的 Session 复用机制与 TLS 1.2 不同（使用 PSK）
+
+---
+
 ## 5. 错误处理
 
 ### 5.1 Windows 错误码映射

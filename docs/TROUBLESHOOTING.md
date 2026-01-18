@@ -563,6 +563,307 @@ end;
 {$ENDIF}
 ```
 
+#### WinSSL 常见问题
+
+**问题: Session 复用不工作**
+
+**症状**:
+```
+连接成功，但 IsSessionResumed 总是返回 False
+```
+
+**可能原因和解决方案**:
+
+1. **服务器不支持 Session 复用**
+```pascal
+// 检查服务器是否支持 Session 复用
+if not LConn.IsSessionResumed then
+begin
+  WriteLn('Session 未复用，可能原因：');
+  WriteLn('  - 服务器不支持 Session 复用');
+  WriteLn('  - Session 已过期（默认 10 小时）');
+  WriteLn('  - 服务器要求重新验证');
+end;
+```
+
+2. **凭据句柄未正确缓存**
+```pascal
+// 确保使用相同的 Context 对象
+// 错误示例：每次创建新 Context
+for i := 1 to 10 do
+begin
+  LCtx := CreateWinSSLLibrary.CreateContext(sslCtxClient);  // ✗ 错误
+  LConn := LCtx.CreateConnection(Socket);
+end;
+
+// 正确示例：复用 Context
+LCtx := CreateWinSSLLibrary.CreateContext(sslCtxClient);  // ✓ 正确
+for i := 1 to 10 do
+begin
+  LConn := LCtx.CreateConnection(Socket);
+end;
+```
+
+3. **Session 对象未正确传递**
+```pascal
+// 确保 Session 对象有效
+if Assigned(LSession) and LSession.IsValid then
+  LConn.SetSession(LSession)
+else
+  WriteLn('警告: Session 无效或已过期');
+```
+
+**问题: 证书验证失败**
+
+**错误信息**:
+```
+SEC_E_UNTRUSTED_ROOT (0x80090325)
+CERT_E_UNTRUSTEDROOT (0x800B0109)
+```
+
+**解决方案**:
+
+1. **检查系统证书存储**
+```powershell
+# 打开证书管理器
+certmgr.msc
+
+# 检查受信任的根证书颁发机构
+# 确保服务器证书的根 CA 在列表中
+```
+
+2. **导入缺失的根证书**
+```powershell
+# 导入根证书到系统存储
+certutil -addstore Root ca-cert.crt
+
+# 或使用代码导入
+```
+
+```pascal
+var
+  LStore: ISSLCertificateStore;
+  LCert: ISSLCertificate;
+begin
+  LStore := LLib.CreateCertificateStore;
+  LStore.Open(SSL_STORE_ROOT);
+
+  LCert := LLib.CreateCertificate;
+  LCert.LoadFromFile('ca-cert.crt');
+
+  LStore.AddCertificate(LCert);
+end;
+```
+
+3. **临时禁用验证（仅用于测试）**
+```pascal
+// 仅用于开发/测试环境
+LContext.SetVerifyMode([]);  // 禁用证书验证
+```
+
+**问题: 连接速度慢**
+
+**症状**:
+```
+首次连接需要 2-3 秒，后续连接仍然很慢
+```
+
+**解决方案**:
+
+1. **启用 Session 复用**
+```pascal
+// 使用 Session 缓存
+var
+  LSessionCache: TDictionary<string, ISSLSession>;
+begin
+  LSessionCache := TDictionary<string, ISSLSession>.Create;
+  try
+    // 首次连接
+    LConn1 := LCtx.CreateConnection(Socket1);
+    if LConn1.Connect then
+      LSessionCache.Add('example.com', LConn1.GetSession);
+
+    // 后续连接 - 快速复用
+    LConn2 := LCtx.CreateConnection(Socket2);
+    LConn2.SetSession(LSessionCache['example.com']);
+    LConn2.Connect;  // 快速握手
+  finally
+    LSessionCache.Free;
+  end;
+end;
+```
+
+2. **检查网络延迟**
+```powershell
+# 测试网络延迟
+ping example.com
+
+# 使用 tracert 检查路由
+tracert example.com
+```
+
+3. **检查 DNS 解析**
+```powershell
+# 清除 DNS 缓存
+ipconfig /flushdns
+
+# 测试 DNS 解析速度
+nslookup example.com
+```
+
+**问题: 内存泄漏**
+
+**症状**:
+```
+长时间运行后内存持续增长
+```
+
+**解决方案**:
+
+1. **正确释放连接对象**
+```pascal
+// 错误示例：未释放连接
+for i := 1 to 1000 do
+begin
+  LConn := LCtx.CreateConnection(Socket);
+  LConn.Connect;
+  // ✗ 未调用 Shutdown 和释放
+end;
+
+// 正确示例：正确释放
+for i := 1 to 1000 do
+begin
+  LConn := LCtx.CreateConnection(Socket);
+  try
+    if LConn.Connect then
+    begin
+      // 执行操作...
+    end;
+  finally
+    LConn.Shutdown;  // ✓ 正确关闭
+  end;
+end;
+```
+
+2. **清理过期 Session**
+```pascal
+// 定期清理 Session 缓存
+procedure CleanupSessions;
+var
+  LPair: TPair<string, ISSLSession>;
+  LExpiredKeys: TStringList;
+begin
+  LExpiredKeys := TStringList.Create;
+  try
+    for LPair in FSessionCache do
+    begin
+      if not LPair.Value.IsValid or
+         (SecondsBetween(Now, LPair.Value.GetLastAccessTime) > 36000) then
+        LExpiredKeys.Add(LPair.Key);
+    end;
+
+    for var LKey in LExpiredKeys do
+      FSessionCache.Remove(LKey);
+  finally
+    LExpiredKeys.Free;
+  end;
+end;
+```
+
+#### WinSSL 错误码参考
+
+**证书相关错误**:
+
+| 错误码 | 常量名 | 说明 | 解决方案 |
+|--------|--------|------|----------|
+| 0x80090325 | SEC_E_UNTRUSTED_ROOT | 不受信任的根证书 | 导入根 CA 证书到系统存储 |
+| 0x80090327 | SEC_E_CERT_EXPIRED | 证书已过期 | 更新服务器证书或调整系统时间 |
+| 0x80090322 | SEC_E_WRONG_PRINCIPAL | 证书主体不匹配 | 检查 ServerName 是否与证书 CN 匹配 |
+| 0x800B0109 | CERT_E_UNTRUSTEDROOT | 证书链不受信任 | 导入中间证书和根证书 |
+| 0x800B0101 | CERT_E_EXPIRED | 证书已过期 | 更新证书 |
+| 0x800B010F | CERT_E_CN_NO_MATCH | 证书名称不匹配 | 使用正确的主机名 |
+| 0x800B010C | CERT_E_REVOKED | 证书已被吊销 | 使用有效证书 |
+
+**协议相关错误**:
+
+| 错误码 | 常量名 | 说明 | 解决方案 |
+|--------|--------|------|----------|
+| 0x80090308 | SEC_E_INVALID_TOKEN | 无效的令牌/协议错误 | 检查 TLS 版本兼容性 |
+| 0x8009030D | SEC_E_MESSAGE_ALTERED | 消息被篡改 | 检查网络中间设备 |
+| 0x80090304 | SEC_E_INCOMPLETE_MESSAGE | 消息不完整 | 继续读取数据 |
+| 0x80090326 | SEC_E_ILLEGAL_MESSAGE | 非法消息 | 检查协议版本 |
+
+**握手相关错误**:
+
+| 错误码 | 常量名 | 说明 | 解决方案 |
+|--------|--------|------|----------|
+| 0x80090331 | SEC_E_ALGORITHM_MISMATCH | 算法不匹配 | 检查密码套件配置 |
+| 0x80090305 | SEC_E_CERT_UNKNOWN | 证书未知 | 检查证书格式 |
+| 0x8009030E | SEC_E_NO_CREDENTIALS | 无凭据 | 提供客户端证书 |
+
+**配置相关错误**:
+
+| 错误码 | 常量名 | 说明 | 解决方案 |
+|--------|--------|------|----------|
+| 0x80090302 | SEC_E_UNSUPPORTED_FUNCTION | 不支持的功能 | 检查 Windows 版本 |
+| 0x80090303 | SEC_E_TARGET_UNKNOWN | 目标未知 | 检查服务器名称 |
+
+**使用示例**:
+
+```pascal
+function HandleWinSSLError(AErrorCode: DWORD): string;
+begin
+  case AErrorCode of
+    SEC_E_UNTRUSTED_ROOT:
+      Result := '证书不受信任。请导入根 CA 证书到系统存储。';
+
+    SEC_E_CERT_EXPIRED:
+      Result := '证书已过期。请更新服务器证书。';
+
+    SEC_E_WRONG_PRINCIPAL:
+      Result := '证书主体不匹配。请检查 ServerName 设置。';
+
+    SEC_E_ALGORITHM_MISMATCH:
+      Result := '密码套件不匹配。请检查 TLS 配置。';
+
+    SEC_E_INVALID_TOKEN:
+      Result := '协议错误。请检查 TLS 版本兼容性。';
+
+    else
+      Result := Format('未知错误: 0x%x', [AErrorCode]);
+  end;
+end;
+
+// 使用
+try
+  LConn.Connect;
+except
+  on E: EWinSSLException do
+  begin
+    WriteLn('WinSSL 错误: ', HandleWinSSLError(E.ErrorCode));
+    WriteLn('详细信息: ', E.Message);
+  end;
+end;
+```
+
+**调试技巧**:
+
+```pascal
+// 启用详细错误信息
+procedure LogWinSSLError(const AOperation: string; AErrorCode: DWORD);
+begin
+  WriteLn(Format('[WinSSL] %s 失败', [AOperation]));
+  WriteLn(Format('  错误码: 0x%x', [AErrorCode]));
+  WriteLn(Format('  错误信息: %s', [GetWinSSLErrorMessageCN(AErrorCode)]));
+  WriteLn(Format('  系统信息: %s', [SysErrorMessage(AErrorCode)]));
+end;
+
+// 使用
+LStatus := InitializeSecurityContext(...);
+if LStatus <> SEC_E_OK then
+  LogWinSSLError('InitializeSecurityContext', LStatus);
+```
+
 ### Linux
 
 **问题: CA 证书路径不正确**
