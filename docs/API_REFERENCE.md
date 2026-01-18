@@ -241,6 +241,7 @@ ISSLConnection = interface
   // 状态查询
   function IsConnected: Boolean;
   function GetState: TSSLConnectionState;
+  function GetConnectionInfo: TSSLConnectionInfo;
   function GetProtocolVersion: TSSLProtocolVersion;
   function GetCipherName: string;
   function GetCipherBits: Integer;
@@ -335,6 +336,75 @@ begin
     WriteLn('响应: ', LResponse);
 
   finally
+    LConn.Shutdown;
+  end;
+end;
+```
+
+**获取连接详细信息**:
+```pascal
+var
+  LConn: ISSLConnection;
+  LInfo: TSSLConnectionInfo;
+begin
+  LConn := LContext.CreateConnection(MySocket);
+
+  if LConn.Connect then
+  begin
+    // 获取完整的连接信息
+    LInfo := LConn.GetConnectionInfo;
+
+    WriteLn('=== SSL/TLS 连接信息 ===');
+    WriteLn('协议版本: ', GetProtocolName(LInfo.ProtocolVersion));
+    WriteLn('密码套件: ', LInfo.CipherSuite);
+    WriteLn('密钥长度: ', LInfo.KeySize, ' bits');
+    WriteLn('MAC 长度: ', LInfo.MacSize, ' bytes');
+    WriteLn('Session 复用: ', BoolToStr(LInfo.IsResumed, True));
+    WriteLn('服务器名称: ', LInfo.ServerName);
+
+    if LInfo.ALPNProtocol <> '' then
+      WriteLn('ALPN 协议: ', LInfo.ALPNProtocol);
+
+    LConn.Shutdown;
+  end;
+end;
+```
+
+**监控和诊断**:
+```pascal
+var
+  LConn: ISSLConnection;
+  LInfo: TSSLConnectionInfo;
+  LStartTime: TDateTime;
+begin
+  LStartTime := Now;
+  LConn := LContext.CreateConnection(MySocket);
+
+  if LConn.Connect then
+  begin
+    LInfo := LConn.GetConnectionInfo;
+
+    // 记录连接性能指标
+    WriteLn('=== 连接性能指标 ===');
+    WriteLn('连接时间: ', MilliSecondsBetween(Now, LStartTime), ' ms');
+    WriteLn('协议: ', GetProtocolName(LInfo.ProtocolVersion));
+    WriteLn('密码套件: ', LInfo.CipherSuite);
+    WriteLn('密钥强度: ', LInfo.KeySize, ' bits');
+
+    // 检查是否使用了强加密
+    if LInfo.KeySize >= 256 then
+      WriteLn('✓ 使用强加密')
+    else if LInfo.KeySize >= 128 then
+      WriteLn('⚠ 使用中等强度加密')
+    else
+      WriteLn('✗ 加密强度不足');
+
+    // 检查协议版本
+    if LInfo.ProtocolVersion in [sslProtocolTLS12, sslProtocolTLS13] then
+      WriteLn('✓ 使用现代 TLS 协议')
+    else
+      WriteLn('⚠ 使用旧版 TLS 协议');
+
     LConn.Shutdown;
   end;
 end;
@@ -599,6 +669,32 @@ TSSLCertVerifyResult = record
   DetailedInfo: string;     // 详细信息
 end;
 ```
+
+### TSSLConnectionInfo
+```pascal
+TSSLConnectionInfo = record
+  ProtocolVersion: TSSLProtocolVersion;  // 协议版本
+  CipherSuite: string;                   // 密码套件名称
+  CipherSuiteId: Word;                   // 密码套件ID
+  KeyExchange: TSSLKeyExchange;          // 密钥交换算法
+  Cipher: TSSLCipher;                    // 加密算法
+  Hash: TSSLHash;                        // 哈希算法
+  KeySize: Integer;                      // 密钥长度（位）
+  MacSize: Integer;                      // MAC长度（字节）
+  IsResumed: Boolean;                    // 是否为恢复的会话
+  SessionId: string;                     // 会话ID
+  CompressionMethod: string;             // 压缩方法
+  ServerName: string;                    // SNI服务器名称
+  ALPNProtocol: string;                  // ALPN协商的协议
+  PeerCertificate: TSSLCertificateInfo;  // 对端证书信息
+end;
+```
+
+**说明**:
+- `GetConnectionInfo` 方法返回此结构，包含连接的完整信息
+- 用于监控、诊断和安全审计
+- WinSSL 后端通过 `QueryContextAttributesW` API 获取这些信息
+- 所有字段在连接建立后填充，未连接时返回默认值
 
 ---
 
