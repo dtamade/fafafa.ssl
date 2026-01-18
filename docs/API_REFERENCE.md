@@ -253,7 +253,13 @@ ISSLConnection = interface
   
   // 会话信息
   function GetSessionID: string;
-  function IsSessionResumed: Boolean;
+  function IsSessionReused: Boolean;
+
+  // Phase 3.3: 监控和诊断
+  function GetHealthStatus: TSSLHealthStatus;
+  function IsHealthy: Boolean;
+  function GetDiagnosticInfo: TSSLDiagnosticInfo;
+  function GetPerformanceMetrics: TSSLPerformanceMetrics;
 end;
 ```
 
@@ -598,6 +604,195 @@ begin
 end;
 ```
 
+#### Phase 3.3: 监控和诊断示例
+
+**健康检查**:
+```pascal
+var
+  LConn: ISSLConnection;
+  LHealth: TSSLHealthStatus;
+begin
+  LConn := LContext.CreateConnection(MySocket);
+
+  if LConn.Connect then
+  begin
+    // 快速健康检查
+    if LConn.IsHealthy then
+      WriteLn('✓ 连接健康')
+    else
+      WriteLn('✗ 连接不健康');
+
+    // 获取详细健康状态
+    LHealth := LConn.GetHealthStatus;
+    WriteLn('健康状态详情:');
+    WriteLn('  已连接: ', BoolToStr(LHealth.IsConnected, True));
+    WriteLn('  握手完成: ', BoolToStr(LHealth.HandshakeComplete, True));
+    WriteLn('  最后错误: ', GetErrorName(LHealth.LastError));
+    WriteLn('  发送字节: ', LHealth.BytesSent);
+    WriteLn('  接收字节: ', LHealth.BytesReceived);
+    WriteLn('  连接时长: ', LHealth.ConnectionAge, ' 秒');
+  end;
+end;
+```
+
+**性能监控**:
+```pascal
+var
+  LConn: ISSLConnection;
+  LPerf: TSSLPerformanceMetrics;
+begin
+  LConn := LContext.CreateConnection(MySocket);
+
+  if LConn.Connect then
+  begin
+    // 获取性能指标
+    LPerf := LConn.GetPerformanceMetrics;
+
+    WriteLn('性能指标:');
+    WriteLn('  握手时间: ', LPerf.HandshakeTime, ' ms');
+    WriteLn('  总传输: ', LPerf.TotalBytesTransferred, ' bytes');
+    WriteLn('  Session 复用: ', BoolToStr(LPerf.SessionReused, True));
+
+    // 性能分析
+    if LPerf.HandshakeTime < 50 then
+      WriteLn('✓ 握手性能优秀')
+    else if LPerf.HandshakeTime < 100 then
+      WriteLn('⚠ 握手性能良好')
+    else
+      WriteLn('✗ 握手性能需要优化');
+  end;
+end;
+```
+
+**完整诊断**:
+```pascal
+var
+  LConn: ISSLConnection;
+  LDiag: TSSLDiagnosticInfo;
+  I: Integer;
+begin
+  LConn := LContext.CreateConnection(MySocket);
+
+  if LConn.Connect then
+  begin
+    // 获取完整诊断信息
+    LDiag := LConn.GetDiagnosticInfo;
+
+    WriteLn('=== 完整诊断报告 ===');
+
+    // 连接信息
+    WriteLn('连接信息:');
+    WriteLn('  协议: ', GetProtocolName(LDiag.ConnectionInfo.ProtocolVersion));
+    WriteLn('  密码套件: ', LDiag.ConnectionInfo.CipherSuite);
+    WriteLn('  密钥长度: ', LDiag.ConnectionInfo.KeySize, ' bits');
+
+    // 健康状态
+    WriteLn('健康状态:');
+    WriteLn('  状态: ', BoolToStr(LDiag.HealthStatus.IsConnected, True));
+    WriteLn('  连接时长: ', LDiag.HealthStatus.ConnectionAge, ' 秒');
+
+    // 性能指标
+    WriteLn('性能指标:');
+    WriteLn('  握手时间: ', LDiag.PerformanceMetrics.HandshakeTime, ' ms');
+    WriteLn('  总传输: ', LDiag.PerformanceMetrics.TotalBytesTransferred, ' bytes');
+
+    // 错误历史
+    if Length(LDiag.ErrorHistory) > 0 then
+    begin
+      WriteLn('错误历史:');
+      for I := 0 to High(LDiag.ErrorHistory) do
+        WriteLn('  [', DateTimeToStr(LDiag.ErrorHistory[I].Timestamp), '] ',
+                GetErrorName(LDiag.ErrorHistory[I].ErrorCode), ': ',
+                LDiag.ErrorHistory[I].ErrorMessage);
+    end;
+  end;
+end;
+```
+
+**全局统计监控**:
+```pascal
+var
+  LLib: ISSLLibrary;
+  LStats: TSSLStatistics;
+begin
+  LLib := CreateWinSSLLibrary;
+  LLib.Initialize;
+
+  // ... 执行多个连接 ...
+
+  // 获取全局统计
+  LStats := LLib.GetStatistics;
+
+  WriteLn('=== 全局统计信息 ===');
+  WriteLn('连接统计:');
+  WriteLn('  总连接数: ', LStats.ConnectionsTotal);
+  WriteLn('  活动连接: ', LStats.ConnectionsActive);
+  WriteLn('  成功握手: ', LStats.HandshakesSuccessful);
+  WriteLn('  失败握手: ', LStats.HandshakesFailed);
+
+  WriteLn('性能统计:');
+  WriteLn('  平均握手时间: ', LStats.HandshakeTimeAvg, ' ms');
+  WriteLn('  最小握手时间: ', LStats.HandshakeTimeMin, ' ms');
+  WriteLn('  最大握手时间: ', LStats.HandshakeTimeMax, ' ms');
+
+  WriteLn('Session 复用统计:');
+  WriteLn('  Session 创建: ', LStats.SessionsCreated);
+  WriteLn('  Session 复用: ', LStats.SessionsReused);
+  WriteLn('  复用率: ', Format('%.2f%%', [LStats.SessionReuseRate]));
+
+  // 重置统计
+  LLib.ResetStatistics;
+
+  LLib.Finalize;
+end;
+```
+
+**生产环境监控**:
+```pascal
+var
+  LLib: ISSLLibrary;
+  LConn: ISSLConnection;
+  LStats: TSSLStatistics;
+  LHealth: TSSLHealthStatus;
+begin
+  LLib := CreateWinSSLLibrary;
+  LLib.Initialize;
+
+  // 定期监控循环
+  while True do
+  begin
+    // 检查全局统计
+    LStats := LLib.GetStatistics;
+
+    // 告警：握手失败率过高
+    if (LStats.HandshakesSuccessful + LStats.HandshakesFailed > 0) and
+       (LStats.HandshakesFailed * 100 / (LStats.HandshakesSuccessful + LStats.HandshakesFailed) > 5) then
+      WriteLn('⚠ 告警：握手失败率超过 5%');
+
+    // 告警：平均握手时间过长
+    if LStats.HandshakeTimeAvg > 200 then
+      WriteLn('⚠ 告警：平均握手时间超过 200ms');
+
+    // 告警：Session 复用率过低
+    if (LStats.SessionsCreated + LStats.SessionsReused > 10) and
+       (LStats.SessionReuseRate < 50) then
+      WriteLn('⚠ 告警：Session 复用率低于 50%');
+
+    // 检查活动连接健康状态
+    for LConn in ActiveConnections do
+    begin
+      if not LConn.IsHealthy then
+      begin
+        LHealth := LConn.GetHealthStatus;
+        WriteLn('⚠ 不健康连接: 最后错误 ', GetErrorName(LHealth.LastError));
+      end;
+    end;
+
+    Sleep(60000); // 每分钟检查一次
+  end;
+end;
+```
+
 ---
 
 ## 数据类型
@@ -695,6 +890,107 @@ end;
 - 用于监控、诊断和安全审计
 - WinSSL 后端通过 `QueryContextAttributesW` API 获取这些信息
 - 所有字段在连接建立后填充，未连接时返回默认值
+
+---
+
+### Phase 3.3: 监控和诊断类型
+
+#### TSSLStatistics
+```pascal
+TSSLStatistics = record
+  // 连接统计
+  ConnectionsTotal: Int64;
+  ConnectionsActive: Integer;
+  HandshakesSuccessful: Int64;
+  HandshakesFailed: Int64;
+  BytesSent: Int64;
+  BytesReceived: Int64;
+  SessionCacheHits: Int64;
+  SessionCacheMisses: Int64;
+  RenegotiationsCount: Int64;
+  AlertsSent: Int64;
+  AlertsReceived: Int64;
+
+  // Phase 3.3: 性能统计
+  HandshakeTimeTotal: Int64;      // 总握手时间（毫秒）
+  HandshakeTimeMin: Integer;      // 最小握手时间（毫秒）
+  HandshakeTimeMax: Integer;      // 最大握手时间（毫秒）
+  HandshakeTimeAvg: Integer;      // 平均握手时间（毫秒）
+
+  // Phase 3.3: Session 复用统计
+  SessionsReused: Int64;          // Session 复用次数
+  SessionsCreated: Int64;         // 新 Session 创建次数
+  SessionReuseRate: Double;       // Session 复用率（百分比 0-100）
+end;
+```
+
+**说明**:
+- 通过 `ISSLLibrary.GetStatistics` 获取全局统计信息
+- 性能统计使用高精度计时器（QueryPerformanceCounter）
+- Session 复用率自动计算：`SessionsReused / (SessionsReused + SessionsCreated) * 100`
+- 使用 `ISSLLibrary.ResetStatistics` 重置所有计数器
+
+#### TSSLHealthStatus
+```pascal
+TSSLHealthStatus = record
+  IsConnected: Boolean;           // 是否已连接
+  HandshakeComplete: Boolean;     // 握手是否完成
+  LastError: TSSLErrorCode;       // 最后一个错误码
+  LastErrorTime: TDateTime;       // 最后一个错误的时间戳
+  BytesSent: Int64;               // 已发送字节数
+  BytesReceived: Int64;           // 已接收字节数
+  ConnectionAge: Integer;         // 连接存活时间（秒）
+end;
+```
+
+**说明**:
+- 通过 `ISSLConnection.GetHealthStatus` 获取连接健康状态
+- 用于快速诊断连接问题和监控连接状态
+- `ConnectionAge` 从连接创建时开始计算
+
+#### TSSLPerformanceMetrics
+```pascal
+TSSLPerformanceMetrics = record
+  HandshakeTime: Integer;         // 握手时间（毫秒）
+  FirstByteTime: Integer;         // 首字节时间（毫秒）
+  TotalBytesTransferred: Int64;   // 总传输字节数
+  AverageLatency: Integer;        // 平均延迟（毫秒）
+  SessionReused: Boolean;         // Session 是否复用
+end;
+```
+
+**说明**:
+- 通过 `ISSLConnection.GetPerformanceMetrics` 获取性能指标
+- 用于性能分析和优化
+- `HandshakeTime` 使用高精度计时器测量
+
+#### TSSLErrorRecord
+```pascal
+TSSLErrorRecord = record
+  ErrorCode: TSSLErrorCode;       // 错误码
+  ErrorMessage: string;           // 错误消息
+  Timestamp: TDateTime;           // 错误时间戳
+end;
+```
+
+**说明**:
+- 用于错误历史跟踪
+- 连接维护最近 10 个错误的循环缓冲区
+
+#### TSSLDiagnosticInfo
+```pascal
+TSSLDiagnosticInfo = record
+  ConnectionInfo: TSSLConnectionInfo;      // 连接信息
+  HealthStatus: TSSLHealthStatus;          // 健康状态
+  PerformanceMetrics: TSSLPerformanceMetrics;  // 性能指标
+  ErrorHistory: array of TSSLErrorRecord;  // 错误历史
+end;
+```
+
+**说明**:
+- 通过 `ISSLConnection.GetDiagnosticInfo` 获取完整诊断信息
+- 包含连接的所有监控和诊断数据
+- 用于故障排查和性能分析
 
 ---
 
