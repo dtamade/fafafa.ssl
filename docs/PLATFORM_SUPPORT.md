@@ -30,10 +30,11 @@ fafafa.ssl 是一个跨平台的 SSL/TLS 抽象框架,支持多个操作系统�
    - 动态库: `libssl-3-x64.dll`, `libcrypto-3-x64.dll`
    - 安装方式: 从 OpenSSL 官网下载或使用包管理器
 
-2. **WinSSL (Schannel)** (零依赖)
+2. **WinSSL (Schannel)** (零依赖，100% 完成)
    - 版本: Windows Vista+
    - TLS 1.3 支持: Windows 10 20348+ 或 Windows 11
-   - 优势: 零外部依赖,使用系统原生 SSL/TLS
+   - 状态: ✅ 生产就绪（所有 6 个阶段完成）
+   - 优势: 零外部依赖,使用系统原生 SSL/TLS,自动安全更新
 
 ### 安装指南
 

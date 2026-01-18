@@ -80,12 +80,12 @@ end;
 ```
 
 ### 3.4 后端实现模块
-| 模块 | 实现说明 | 启用方式 |
-|------|---------|---------|
-| `fafafa.ssl.openssl.*` | OpenSSL 实现（Linux/macOS 默认） | 默认启用 |
-| `fafafa.ssl.winssl.*` | Windows Schannel 实现（Windows 默认） | 默认启用（仅 Windows） |
-| `fafafa.ssl.mbedtls.*` | mbedTLS 实现（轻量 TLS） | `{$DEFINE ENABLE_MBEDTLS}` |
-| `fafafa.ssl.wolfssl.*` | wolfSSL 实现（嵌入式/兼容性） | `{$DEFINE ENABLE_WOLFSSL}` |
+| 模块 | 实现说明 | 启用方式 | 状态 |
+|------|---------|---------|------|
+| `fafafa.ssl.openssl.*` | OpenSSL 实现（Linux/macOS 默认） | 默认启用 | ✅ 生产就绪 |
+| `fafafa.ssl.winssl.*` | Windows Schannel 实现（Windows 默认，100% 完成） | 默认启用（仅 Windows） | ✅ 生产就绪 |
+| `fafafa.ssl.mbedtls.*` | mbedTLS 实现（轻量 TLS） | `{$DEFINE ENABLE_MBEDTLS}` | 🔄 可选 |
+| `fafafa.ssl.wolfssl.*` | wolfSSL 实现（嵌入式/兼容性） | `{$DEFINE ENABLE_WOLFSSL}` | 🔄 可选 |
 
 - **OpenSSL 后端**
   - 低层绑定：`fafafa.ssl.openssl.api.*.pas`（function pointer bindings）

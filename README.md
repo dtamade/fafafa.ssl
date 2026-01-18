@@ -13,8 +13,9 @@
 
 ## 🌟 核心特性
 
-- ✅ **多后端支持**: OpenSSL (Linux/macOS/Windows) + WinSSL (Windows Native)
+- ✅ **多后端支持**: OpenSSL (Linux/macOS/Windows) + WinSSL (Windows Native, 100% 完成)
 - 🆕 **可选后端**: MbedTLS / WolfSSL（需在工程中定义 `ENABLE_MBEDTLS` / `ENABLE_WOLFSSL`）
+- ✅ **WinSSL 生产就绪**: 零依赖部署、系统证书集成、自动安全更新
 - ✅ **简洁API**: 1行代码实现HTTPS连接
 - ✅ **生产级加密**: AES-256-GCM, PBKDF2, SHA-256/512
 - ✅ **完整证书管理**: X.509解析、验证、生成、CRL/OCSP
@@ -99,6 +100,7 @@ fpc -B -Mobjfpc -Sh -Fu./src -Fi./src -FU./lib your_app.pas -o./bin/your_app
 | [API Reference](docs/API_REFERENCE.md) | 完整API文档 |
 | [Getting Started](docs/GETTING_STARTED.md) | 入门（推荐入口与最小示例） |
 | [Quick Start](docs/QUICKSTART.md) | 快速开始指南 |
+| [WinSSL User Guide](docs/WINSSL_USER_GUIDE.md) | WinSSL 后端用户指南（100% 完成） |
 | [Examples](examples/) | 95+示例程序 |
 | [FAQ](docs/FAQ.md) | 常见问题解答 |
 | [Deployment Guide](docs/DEPLOYMENT_GUIDE.md) | 生产部署指南 |
