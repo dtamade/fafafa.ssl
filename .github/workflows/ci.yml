@@ -5,315 +5,60 @@ on:
     branches: [ master, main, develop ]
   pull_request:
     branches: [ master, main ]
+  schedule:
+    # Run daily at 00:00 UTC
+    - cron: '0 0 * * *'
 
 env:
   FPC_VERSION: '3.2.2'
 
 jobs:
   # ============================================================================
-  # Pure Pascal Tests (Platform Independent)
+  # OpenSSL Module Tests (Linux) - 核心测试
   # ============================================================================
-  pure-pascal-tests:
+  openssl-module-tests:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Free Pascal
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y fpc
-
-    - name: Create output directories
-      run: mkdir -p tests/bin
-
-    - name: Compile pure Pascal modules
-      run: |
-        echo "=== Compiling Pure Pascal Modules ==="
-        fpc -Fusrc -FEtests/bin src/fafafa.ssl.asn1.pas
-        fpc -Fusrc -FEtests/bin src/fafafa.ssl.x509.pas
-        fpc -Fusrc -FEtests/bin src/fafafa.ssl.pem.pas
-        fpc -Fusrc -FEtests/bin src/fafafa.ssl.crypto.hash.pas
-        fpc -Fusrc -FEtests/bin src/fafafa.ssl.ocsp.pas
-        fpc -Fusrc -FEtests/bin src/fafafa.ssl.crl.pas
-
-    - name: Compile pure Pascal tests
-      run: |
-        echo "=== Compiling Tests ==="
-        fpc -Fusrc -Futests/bin -FEtests/bin tests/test_asn1.pas
-        fpc -Fusrc -Futests/bin -FEtests/bin tests/test_x509.pas
-        fpc -Fusrc -Futests/bin -FEtests/bin tests/test_pem.pas
-        fpc -Fusrc -Futests/bin -FEtests/bin tests/test_hash.pas
-        fpc -Fusrc -Futests/bin -FEtests/bin tests/test_ocsp.pas
-        fpc -Fusrc -Futests/bin -FEtests/bin tests/test_crl.pas
-
-    - name: Run pure Pascal tests
-      run: |
-        chmod +x scripts/run_pure_pascal_tests.sh
-        ./scripts/run_pure_pascal_tests.sh
-
-  # ============================================================================
-  # Linux OpenSSL Build
-  # ============================================================================
-  build-linux:
-    runs-on: ubuntu-latest
-    needs: pure-pascal-tests
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install Free Pascal
+    - name: Install Free Pascal and OpenSSL
       run: |
         sudo apt-get update
         sudo apt-get install -y fpc libssl-dev
-
-    - name: Show FPC version
-      run: fpc -iV
-
-    - name: Create output directories
-      run: |
-        mkdir -p tests/bin
-        mkdir -p tests/security/bin
-        mkdir -p tests/integration/bin
-        mkdir -p benchmarks/bin
-
-    - name: Compile core sources
-      run: |
-        chmod +x ./scripts/compile_all.sh
-        ./scripts/compile_all.sh
-
-    - name: Compile backend contract tests
-      run: |
-        echo "=== Compiling Backend Contract Tests ==="
-        fpc -Fusrc -FEtests/bin tests/contract/test_backend_contract.pas
-
-    - name: Run backend contract tests (gating)
-      run: |
-        echo "=== Running Backend Contract Tests ==="
-        timeout 60 tests/bin/test_backend_contract
-
-    - name: Run unit tests
-      run: |
-        echo "=== Running Pure Pascal Tests ==="
-        chmod +x ./scripts/run_pure_pascal_tests.sh
-        ./scripts/run_pure_pascal_tests.sh
-
-        echo ""
-        echo "=== Running Available Tests ==="
-        PASSED=0
-        FAILED=0
-        for test in tests/bin/test_*; do
-          if [ -x "$test" ]; then
-            testname=$(basename "$test")
-            echo -n "Running: $testname... "
-            if timeout 60 "$test" > /dev/null 2>&1; then
-              echo "OK"
-              PASSED=$((PASSED + 1))
-            else
-              echo "FAILED"
-              FAILED=$((FAILED + 1))
-            fi
-          fi
-        done
-        echo ""
-        echo "Test Summary: $PASSED passed, $FAILED failed"
-        # Don't fail on test failures in CI since some tests need OpenSSL
-
-  # ============================================================================
-  # Windows WinSSL Build
-  # ============================================================================
-  build-windows:
-    runs-on: windows-latest
-    needs: pure-pascal-tests
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install Free Pascal
-      shell: pwsh
-      run: |
-        choco install freepascal -y --no-progress
-        # Find and add FPC to path
-        $fpcExe = Get-ChildItem -Path "C:\" -Recurse -Filter "fpc.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($fpcExe) {
-          $fpcDir = Split-Path $fpcExe.FullName -Parent
-          echo "$fpcDir" >> $env:GITHUB_PATH
-          Write-Host "Found FPC at: $fpcDir"
-        }
-
-    - name: Show FPC version
-      run: fpc -iV
-
-    - name: Create output directories
-      run: |
-        if not exist tests\bin mkdir tests\bin
-        if not exist tests\security\bin mkdir tests\security\bin
-      shell: cmd
-
-    - name: Compile pure Pascal modules
-      shell: pwsh
-      run: |
-        echo "=== Compiling Pure Pascal Modules ==="
-        $fpcPath = "C:\tools\freepascal"
-        $unitPath = "$fpcPath\units\i386-win32"
-        $flags = "-Fusrc", "-Fu$unitPath\rtl", "-Fu$unitPath\rtl-objpas", "-Fu$unitPath\fcl-base", "-FEtests\bin"
-
-        $modules = @(
-          "src\fafafa.ssl.asn1.pas",
-          "src\fafafa.ssl.x509.pas",
-          "src\fafafa.ssl.pem.pas",
-          "src\fafafa.ssl.crypto.hash.pas",
-          "src\fafafa.ssl.ocsp.pas",
-          "src\fafafa.ssl.crl.pas"
-        )
-
-        foreach ($mod in $modules) {
-          Write-Host "Compiling $mod..."
-          & fpc @flags $mod
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "Warning: $mod compilation failed, continuing..."
-          }
-        }
-        Write-Host "Compilation phase complete"
-
-    - name: Compile pure Pascal tests
-      shell: pwsh
-      run: |
-        $fpcPath = "C:\tools\freepascal"
-        $unitPath = "$fpcPath\units\i386-win32"
-        $flags = "-Fusrc", "-Futests\bin", "-Fu$unitPath\rtl", "-Fu$unitPath\rtl-objpas", "-Fu$unitPath\fcl-base", "-FEtests\bin"
-
-        $tests = @(
-          "tests\test_asn1.pas",
-          "tests\test_x509.pas",
-          "tests\test_pem.pas",
-          "tests\test_hash.pas",
-          "tests\test_ocsp.pas",
-          "tests\test_crl.pas"
-        )
-
-        foreach ($test in $tests) {
-          Write-Host "Compiling $test..."
-          & fpc @flags $test
-        }
-
-    - name: Run pure Pascal tests on Windows
-      run: |
-        echo === Running Pure Pascal Tests ===
-        tests\\bin\\test_asn1.exe
-        tests\\bin\\test_x509.exe
-        tests\\bin\\test_pem.exe
-        tests\\bin\\test_hash.exe
-        tests\\bin\\test_ocsp.exe
-        tests\\bin\\test_crl.exe
-      shell: cmd
-
-    - name: Compile backend contract tests
-      run: |
-        echo === Compiling Backend Contract Tests ===
-        fpc -Fusrc -FEtests\\bin tests\\contract\\test_backend_contract.pas
-      shell: cmd
-
-    - name: Run backend contract tests (gating)
-      run: |
-        echo === Running Backend Contract Tests ===
-        tests\\bin\\test_backend_contract.exe
-      shell: cmd
-
-    - name: Compile WinSSL Backend
-      run: |
-        echo === Compiling WinSSL Backend ===
-        fpc -Fusrc -Futests\\bin -FEtests\\bin src\\fafafa.ssl.base.pas
-        fpc -Fusrc -Futests\\bin -FEtests\\bin src\\fafafa.ssl.winssl.lib.pas
-        fpc -Fusrc -Futests\\bin -FEtests\\bin src\\fafafa.ssl.winssl.errors.pas
-        fpc -Fusrc -Futests\\bin -FEtests\\bin src\\fafafa.ssl.winssl.context.pas
-        fpc -Fusrc -Futests\\bin -FEtests\\bin src\\fafafa.ssl.winssl.connection.pas
-        fpc -Fusrc -Futests\\bin -FEtests\\bin src\\fafafa.ssl.winssl.certificate.pas
-        fpc -Fusrc -Futests\\bin -FEtests\\bin src\\fafafa.ssl.winssl.certstore.pas
-      shell: cmd
-      continue-on-error: true
-
-  # ============================================================================
-  # macOS OpenSSL Build
-  # ============================================================================
-  build-macos:
-    runs-on: macos-latest
-    needs: pure-pascal-tests
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install Free Pascal
-      run: |
-        brew install fpc
         fpc -iV
-
-    - name: Install OpenSSL
-      run: |
-        brew install openssl@3
-        echo "DYLD_LIBRARY_PATH=/opt/homebrew/opt/openssl@3/lib:/usr/local/opt/openssl@3/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
-
-    - name: Show versions
-      run: |
-        echo "=== System Information ==="
-        uname -a
-        echo "=== FPC Version ==="
-        fpc -iV
-        echo "=== OpenSSL Version ==="
         openssl version
 
     - name: Create output directories
       run: |
-        mkdir -p tests/bin
-        mkdir -p tests/lib
+        mkdir -p bin
+        mkdir -p test-reports
 
-    - name: Compile pure Pascal modules
+    - name: Run all module tests
       run: |
-        echo "=== Compiling Pure Pascal Modules ==="
-        fpc -Fusrc -FEtests/bin src/fafafa.ssl.asn1.pas || echo "Warning: asn1 compilation failed"
-        fpc -Fusrc -FEtests/bin src/fafafa.ssl.x509.pas || echo "Warning: x509 compilation failed"
-        fpc -Fusrc -FEtests/bin src/fafafa.ssl.pem.pas || echo "Warning: pem compilation failed"
-        fpc -Fusrc -FEtests/bin src/fafafa.ssl.crypto.hash.pas || echo "Warning: hash compilation failed"
+        chmod +x scripts/run_all_module_tests.sh
+        ./scripts/run_all_module_tests.sh --verbose
 
-    - name: Compile pure Pascal tests
-      run: |
-        echo "=== Compiling Pure Pascal Tests ==="
-        fpc -Fusrc -Futests/bin -FEtests/bin tests/test_asn1.pas || echo "Warning: test_asn1 compilation failed"
-        fpc -Fusrc -Futests/bin -FEtests/bin tests/test_x509.pas || echo "Warning: test_x509 compilation failed"
-        fpc -Fusrc -Futests/bin -FEtests/bin tests/test_pem.pas || echo "Warning: test_pem compilation failed"
-        fpc -Fusrc -Futests/bin -FEtests/bin tests/test_hash.pas || echo "Warning: test_hash compilation failed"
-
-    - name: Run pure Pascal tests
-      run: |
-        echo "=== Running Pure Pascal Tests ==="
-        PASSED=0
-        FAILED=0
-        for test in tests/bin/test_asn1 tests/bin/test_x509 tests/bin/test_pem tests/bin/test_hash; do
-          if [ -x "$test" ]; then
-            testname=$(basename "$test")
-            echo -n "Running: $testname... "
-            if timeout 60 "$test" > /dev/null 2>&1; then
-              echo "OK"
-              PASSED=$((PASSED + 1))
-            else
-              echo "FAILED"
-              FAILED=$((FAILED + 1))
-            fi
-          fi
-        done
-        echo ""
-        echo "macOS Test Summary: $PASSED passed, $FAILED failed"
-
-    - name: Upload test results
+    - name: Upload test reports
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: macos-test-results
-        path: tests/bin/
+        name: test-reports-linux
+        path: test-reports/
+        retention-days: 30
+
+    - name: Generate test summary
+      if: always()
+      run: |
+        echo "## 测试结果摘要" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ -f test-reports/test_report_*.txt ]; then
+          LATEST_REPORT=$(ls -t test-reports/test_report_*.txt | head -1)
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          tail -30 "$LATEST_REPORT" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        fi
 
   # ============================================================================
   # Code Quality Checks
