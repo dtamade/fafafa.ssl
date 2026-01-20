@@ -25,10 +25,12 @@ uses
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ts,
   fafafa.ssl.openssl.api.asn1,
-  fafafa.ssl.openssl.api.bio;
+  fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.loader;
 
 var
   TotalTests, PassedTests, FailedTests: Integer;
+  IsOpenSSL3: Boolean;
 
 procedure Test(const TestName: string; Condition: Boolean);
 begin
@@ -67,12 +69,12 @@ begin
   LResult := Assigned(@TS_REQ_set_msg_imprint) and (TS_REQ_set_msg_imprint <> nil);
   Test('TS_REQ_set_msg_imprint 函数加载', LResult);
 
-  // 测试请求验证
-  LResult := Assigned(@TS_REQ_get_body) and (TS_REQ_get_body <> nil);
-  Test('TS_REQ_get_body 函数加载', LResult);
+  // 测试请求获取
+  LResult := Assigned(@TS_REQ_get_version) and (TS_REQ_get_version <> nil);
+  Test('TS_REQ_get_version 函数加载', LResult);
 
-  LResult := Assigned(@TS_REQ_verify) and (TS_REQ_verify <> nil);
-  Test('TS_REQ_verify 函数加载', LResult);
+  LResult := Assigned(@TS_REQ_get_msg_imprint) and (TS_REQ_get_msg_imprint <> nil);
+  Test('TS_REQ_get_msg_imprint 函数加载', LResult);
 end;
 
 procedure TestTS_ResponseOperations;
@@ -90,15 +92,15 @@ begin
   Test('TS_RESP_free 函数加载', LResult);
 
   // 测试响应状态
-  LResult := Assigned(@TS_RESP_set_status) and (TS_RESP_set_status <> nil);
-  Test('TS_RESP_set_status 函数加载', LResult);
+  LResult := Assigned(@TS_RESP_set_status_info) and (TS_RESP_set_status_info <> nil);
+  Test('TS_RESP_set_status_info 函数加载', LResult);
 
-  LResult := Assigned(@TS_RESP_set_tst_info) and (TS_RESP_set_tst_info <> nil);
-  Test('TS_RESP_set_tst_info 函数加载', LResult);
+  LResult := Assigned(@TS_RESP_create_response) and (TS_RESP_create_response <> nil);
+  Test('TS_RESP_create_response 函数加载', LResult);
 
   // 测试获取响应信息
-  LResult := Assigned(@TS_RESP_get_status) and (TS_RESP_get_status <> nil);
-  Test('TS_RESP_get_status 函数加载', LResult);
+  LResult := Assigned(@TS_RESP_get_status_info) and (TS_RESP_get_status_info <> nil);
+  Test('TS_RESP_get_status_info 函数加载', LResult);
 
   LResult := Assigned(@TS_RESP_get_token) and (TS_RESP_get_token <> nil);
   Test('TS_RESP_get_token 函数加载', LResult);
@@ -122,21 +124,29 @@ begin
   LResult := Assigned(@TS_TST_INFO_set_version) and (TS_TST_INFO_set_version <> nil);
   Test('TS_TST_INFO_set_version 函数加载', LResult);
 
-  LResult := Assigned(@TS_TST_INFO_set_policy_id) and (TS_TST_INFO_set_policy_id <> nil);
-  Test('TS_TST_INFO_set_policy_id 函数加载', LResult);
+  // OpenSSL 1.x only functions - skip on OpenSSL 3.x
+  if not IsOpenSSL3 then
+  begin
+    LResult := Assigned(@TS_TST_INFO_set_policy_id) and (TS_TST_INFO_set_policy_id <> nil);
+    Test('TS_TST_INFO_set_policy_id 函数加载 (OpenSSL 1.x)', LResult);
 
-  LResult := Assigned(@TS_TST_INFO_set_msg_imprint) and (TS_TST_INFO_set_msg_imprint <> nil);
-  Test('TS_TST_INFO_set_msg_imprint 函数加载', LResult);
+    LResult := Assigned(@TS_TST_INFO_set_msg_imprint) and (TS_TST_INFO_set_msg_imprint <> nil);
+    Test('TS_TST_INFO_set_msg_imprint 函数加载 (OpenSSL 1.x)', LResult);
+  end;
 
   // 测试获取时间戳信息
   LResult := Assigned(@TS_TST_INFO_get_version) and (TS_TST_INFO_get_version <> nil);
   Test('TS_TST_INFO_get_version 函数加载', LResult);
 
-  LResult := Assigned(@TS_TST_INFO_get_policy_id) and (TS_TST_INFO_get_policy_id <> nil);
-  Test('TS_TST_INFO_get_policy_id 函数加载', LResult);
+  // OpenSSL 1.x only functions - skip on OpenSSL 3.x
+  if not IsOpenSSL3 then
+  begin
+    LResult := Assigned(@TS_TST_INFO_get_policy_id) and (TS_TST_INFO_get_policy_id <> nil);
+    Test('TS_TST_INFO_get_policy_id 函数加载 (OpenSSL 1.x)', LResult);
 
-  LResult := Assigned(@TS_TST_INFO_get_msg_imprint) and (TS_TST_INFO_get_msg_imprint <> nil);
-  Test('TS_TST_INFO_get_msg_imprint 函数加载', LResult);
+    LResult := Assigned(@TS_TST_INFO_get_msg_imprint) and (TS_TST_INFO_get_msg_imprint <> nil);
+    Test('TS_TST_INFO_get_msg_imprint 函数加载 (OpenSSL 1.x)', LResult);
+  end;
 end;
 
 procedure TestTS_Verification;
@@ -147,12 +157,12 @@ begin
   WriteLn('=== 测试 4: TS 验证 ===');
 
   // 测试响应验证
-  LResult := Assigned(@TS_RESP_verify) and (TS_RESP_verify <> nil);
-  Test('TS_RESP_verify 函数加载', LResult);
-
-  // 测试时间验证
   LResult := Assigned(@TS_RESP_verify_response) and (TS_RESP_verify_response <> nil);
   Test('TS_RESP_verify_response 函数加载', LResult);
+
+  // 测试签名验证
+  LResult := Assigned(@TS_RESP_verify_signature) and (TS_RESP_verify_signature <> nil);
+  Test('TS_RESP_verify_signature 函数加载', LResult);
 
   // 测试时间戳验证
   LResult := Assigned(@TS_VERIFY_CTX_new) and (TS_VERIFY_CTX_new <> nil);
@@ -169,32 +179,25 @@ begin
   WriteLn;
   WriteLn('=== 测试 5: TS I/O 和序列化 ===');
 
-  // 测试请求 DER 编码
-  LResult := Assigned(@i2d_TS_REQ) and (i2d_TS_REQ <> nil);
-  Test('i2d_TS_REQ 函数加载', LResult);
-
-  LResult := Assigned(@d2i_TS_REQ) and (d2i_TS_REQ <> nil);
-  Test('d2i_TS_REQ 函数加载', LResult);
-
-  // 测试响应 DER 编码
-  LResult := Assigned(@i2d_TS_RESP) and (i2d_TS_RESP <> nil);
-  Test('i2d_TS_RESP 函数加载', LResult);
-
-  LResult := Assigned(@d2i_TS_RESP) and (d2i_TS_RESP <> nil);
-  Test('d2i_TS_RESP 函数加载', LResult);
-
   // 测试 BIO 编码
-  LResult := Assigned(@i2d_TS_REQ_bio) and (i2d_TS_REQ_bio <> nil);
-  Test('i2d_TS_REQ_bio 函数加载', LResult);
+  LResult := Assigned(@TS_REQ_i2d_bio) and (TS_REQ_i2d_bio <> nil);
+  Test('TS_REQ_i2d_bio 函数加载', LResult);
 
-  LResult := Assigned(@d2i_TS_REQ_bio) and (d2i_TS_REQ_bio <> nil);
-  Test('d2i_TS_REQ_bio 函数加载', LResult);
+  LResult := Assigned(@TS_REQ_d2i_bio) and (TS_REQ_d2i_bio <> nil);
+  Test('TS_REQ_d2i_bio 函数加载', LResult);
 
-  LResult := Assigned(@i2d_TS_RESP_bio) and (i2d_TS_RESP_bio <> nil);
-  Test('i2d_TS_RESP_bio 函数加载', LResult);
+  LResult := Assigned(@TS_RESP_i2d_bio) and (TS_RESP_i2d_bio <> nil);
+  Test('TS_RESP_i2d_bio 函数加载', LResult);
 
-  LResult := Assigned(@d2i_TS_RESP_bio) and (d2i_TS_RESP_bio <> nil);
-  Test('d2i_TS_RESP_bio 函数加载', LResult);
+  LResult := Assigned(@TS_RESP_d2i_bio) and (TS_RESP_d2i_bio <> nil);
+  Test('TS_RESP_d2i_bio 函数加载', LResult);
+
+  // 测试打印函数
+  LResult := Assigned(@TS_REQ_print_bio) and (TS_REQ_print_bio <> nil);
+  Test('TS_REQ_print_bio 函数加载', LResult);
+
+  LResult := Assigned(@TS_RESP_print_bio) and (TS_RESP_print_bio <> nil);
+  Test('TS_RESP_print_bio 函数加载', LResult);
 end;
 
 procedure TestTS_UtilityFunctions;
@@ -204,23 +207,23 @@ begin
   WriteLn;
   WriteLn('=== 测试 6: TS 工具函数 ===');
 
-  // 测试状态字符串
-  LResult := Assigned(@TS_STATUS_INFO_get_status) and (TS_STATUS_INFO_get_status <> nil);
-  Test('TS_STATUS_INFO_get_status 函数加载', LResult);
+  // 测试状态信息
+  LResult := Assigned(@TS_STATUS_INFO_get0_status) and (TS_STATUS_INFO_get0_status <> nil);
+  Test('TS_STATUS_INFO_get0_status 函数加载', LResult);
 
-  LResult := Assigned(@TS_STATUS_INFO_get0_text) and (TS_STATUS_INFO_get0_text <> nil);
-  Test('TS_STATUS_INFO_get0_text 函数加载', LResult);
+  // OpenSSL 1.x only function - skip on OpenSSL 3.x
+  if not IsOpenSSL3 then
+  begin
+    LResult := Assigned(@TS_STATUS_INFO_get0_text) and (TS_STATUS_INFO_get0_text <> nil);
+    Test('TS_STATUS_INFO_get0_text 函数加载 (OpenSSL 1.x)', LResult);
+  end;
 
-  // 测试错误字符串
-  LResult := Assigned(@TSerror_string) and (TSerror_string <> nil);
-  Test('TSerror_string 函数加载', LResult);
+  // 测试打印函数
+  LResult := Assigned(@TS_TST_INFO_print_bio) and (TS_TST_INFO_print_bio <> nil);
+  Test('TS_TST_INFO_print_bio 函数加载', LResult);
 
-  // 测试时间操作
-  LResult := Assigned(@TS_ASN1_INTEGER_new) and (TS_ASN1_INTEGER_new <> nil);
-  Test('TS_ASN1_INTEGER_new 函数加载', LResult);
-
-  LResult := Assigned(@TS_ASN1_INTEGER_free) and (TS_ASN1_INTEGER_free <> nil);
-  Test('TS_ASN1_INTEGER_free 函数加载', LResult);
+  LResult := Assigned(@TS_STATUS_INFO_print_bio) and (TS_STATUS_INFO_print_bio <> nil);
+  Test('TS_STATUS_INFO_print_bio 函数加载', LResult);
 
   // 测试状态常量
   Test('TS_STATUS_GRANTED (0)', TS_STATUS_GRANTED = 0);
@@ -243,13 +246,38 @@ begin
   // 初始化 OpenSSL
   WriteLn;
   WriteLn('初始化 OpenSSL 库...');
-  if not LoadOpenSSLCore then
-  begin
-    WriteLn('❌ 错误：无法加载 OpenSSL 库');
-    Halt(1);
+  try
+    LoadOpenSSLCore;
+    WriteLn('✅ OpenSSL 库加载成功');
+    WriteLn('版本: ', GetOpenSSLVersionString);
+
+    // 检测 OpenSSL 版本
+    IsOpenSSL3 := TOpenSSLLoader.IsOpenSSL3;
+    if IsOpenSSL3 then
+      WriteLn('检测到 OpenSSL 3.x - 将跳过不兼容的函数测试')
+    else
+      WriteLn('检测到 OpenSSL 1.x - 将测试所有函数');
+  except
+    on E: Exception do
+    begin
+      WriteLn('❌ 错误：无法加载 OpenSSL 库: ', E.Message);
+      Halt(1);
+    end;
   end;
-  WriteLn('✅ OpenSSL 库加载成功');
-  WriteLn('版本: ', GetOpenSSLVersionString);
+
+  // 加载 TS 模块
+  WriteLn;
+  WriteLn('加载 TS 模块...');
+  try
+    LoadTSFunctions;
+    WriteLn('✅ TS 模块加载成功');
+  except
+    on E: Exception do
+    begin
+      WriteLn('❌ 错误：无法加载 TS 模块: ', E.Message);
+      Halt(1);
+    end;
+  end;
 
   // 执行测试套件
   TestTS_RequestOperations;

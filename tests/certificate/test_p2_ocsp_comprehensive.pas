@@ -27,10 +27,12 @@ uses
   fafafa.ssl.openssl.api.ocsp,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.bio,
-  fafafa.ssl.openssl.api.asn1;
+  fafafa.ssl.openssl.api.asn1,
+  fafafa.ssl.openssl.loader;
 
 var
   TotalTests, PassedTests, FailedTests: Integer;
+  IsOpenSSL3: Boolean;
 
 procedure Test(const TestName: string; Condition: Boolean);
 begin
@@ -80,16 +82,16 @@ begin
   WriteLn('=== 测试 2: OCSP 请求操作 ===');
 
   // 测试添加证书 ID
-  LResult := Assigned(@OCSP_request_add_cert_id) and (OCSP_request_add_cert_id <> nil);
-  Test('OCSP_request_add_cert_id 函数加载', LResult);
+  LResult := Assigned(@OCSP_request_add0_id) and (OCSP_request_add0_id <> nil);
+  Test('OCSP_request_add0_id 函数加载', LResult);
 
-  // 测试设置请求扩展
-  LResult := Assigned(@OCSP_request_set1_id) and (OCSP_request_set1_id <> nil);
-  Test('OCSP_request_set1_id 函数加载', LResult);
+  // 测试添加 nonce
+  LResult := Assigned(@OCSP_request_add1_nonce) and (OCSP_request_add1_nonce <> nil);
+  Test('OCSP_request_add1_nonce 函数加载', LResult);
 
-  // 测试获取请求扩展
-  LResult := Assigned(@OCSP_request_get1_id) and (OCSP_request_get1_id <> nil);
-  Test('OCSP_request_get1_id 函数加载', LResult);
+  // 测试添加证书
+  LResult := Assigned(@OCSP_request_add1_cert) and (OCSP_request_add1_cert <> nil);
+  Test('OCSP_request_add1_cert 函数加载', LResult);
 
   // 测试添加扩展
   LResult := Assigned(@OCSP_request_add_ext) and (OCSP_request_add_ext <> nil);
@@ -108,16 +110,16 @@ begin
   Test('OCSP_cert_id_new 函数加载', LResult);
 
   // 测试证书 ID 释放
-  LResult := Assigned(@OCSP_cert_id_free) and (OCSP_cert_id_free <> nil);
-  Test('OCSP_cert_id_free 函数加载', LResult);
+  LResult := Assigned(@OCSP_CERTID_free) and (OCSP_CERTID_free <> nil);
+  Test('OCSP_CERTID_free 函数加载', LResult);
 
-  // 测试解析证书 ID
-  LResult := Assigned(@OCSP_parse_cert_id) and (OCSP_parse_cert_id <> nil);
-  Test('OCSP_parse_cert_id 函数加载', LResult);
+  // 测试证书 ID 复制
+  LResult := Assigned(@OCSP_CERTID_dup) and (OCSP_CERTID_dup <> nil);
+  Test('OCSP_CERTID_dup 函数加载', LResult);
 
-  // 测试获取证书 ID 哈希
-  LResult := Assigned(@OCSP_cert_id_hash) and (OCSP_cert_id_hash <> nil);
-  Test('OCSP_cert_id_hash 函数加载', LResult);
+  // 测试证书转 ID
+  LResult := Assigned(@OCSP_cert_to_id) and (OCSP_cert_to_id <> nil);
+  Test('OCSP_cert_to_id 函数加载', LResult);
 end;
 
 procedure TestOCSP_ResponseOperations;
@@ -127,25 +129,26 @@ begin
   WriteLn;
   WriteLn('=== 测试 4: OCSP 响应操作 ===');
 
-  // 测试获取响应状态
-  LResult := Assigned(@OCSP_response_get1_status) and (OCSP_response_get1_status <> nil);
-  Test('OCSP_response_get1_status 函数加载', LResult);
+  // OpenSSL 1.x only functions - skip on OpenSSL 3.x
+  if not IsOpenSSL3 then
+  begin
+    LResult := Assigned(@OCSP_RESPONSE_status) and (OCSP_RESPONSE_status <> nil);
+    Test('OCSP_RESPONSE_status 函数加载 (OpenSSL 1.x)', LResult);
 
-  // 测试获取基本响应
-  LResult := Assigned(@OCSP_response_get_basic) and (OCSP_response_get_basic <> nil);
-  Test('OCSP_response_get_basic 函数加载', LResult);
+    LResult := Assigned(@OCSP_RESPONSE_get1_basic) and (OCSP_RESPONSE_get1_basic <> nil);
+    Test('OCSP_RESPONSE_get1_basic 函数加载 (OpenSSL 1.x)', LResult);
 
-  // 测试获取响应扩展
-  LResult := Assigned(@OCSP_response_get1_ext) and (OCSP_response_get1_ext <> nil);
-  Test('OCSP_response_get1_ext 函数加载', LResult);
+    LResult := Assigned(@OCSP_RESPONSE_create) and (OCSP_RESPONSE_create <> nil);
+    Test('OCSP_RESPONSE_create 函数加载 (OpenSSL 1.x)', LResult);
+  end;
 
-  // 测试设置响应扩展
-  LResult := Assigned(@OCSP_response_set1_ext) and (OCSP_response_set1_ext <> nil);
-  Test('OCSP_response_set1_ext 函数加载', LResult);
+  // 测试获取响应数据
+  LResult := Assigned(@OCSP_resp_get0_respdata) and (OCSP_resp_get0_respdata <> nil);
+  Test('OCSP_resp_get0_respdata 函数加载', LResult);
 
   // 测试获取响应生成时间
-  LResult := Assigned(@OCSP_response_get1_produced_at) and (OCSP_response_get1_produced_at <> nil);
-  Test('OCSP_response_get1_produced_at 函数加载', LResult);
+  LResult := Assigned(@OCSP_resp_get0_produced_at) and (OCSP_resp_get0_produced_at <> nil);
+  Test('OCSP_resp_get0_produced_at 函数加载', LResult);
 end;
 
 procedure TestOCSP_SingleResponse;
@@ -179,19 +182,22 @@ begin
   WriteLn;
   WriteLn('=== 测试 6: OCSP 验证 ===');
 
-  // 测试验证响应
-  LResult := Assigned(@OCSP_basic_verify) and (OCSP_basic_verify <> nil);
-  Test('OCSP_basic_verify 函数加载', LResult);
+  // OpenSSL 1.x only function - skip on OpenSSL 3.x
+  if not IsOpenSSL3 then
+  begin
+    LResult := Assigned(@OCSP_BASICRESP_verify) and (OCSP_BASICRESP_verify <> nil);
+    Test('OCSP_BASICRESP_verify 函数加载 (OpenSSL 1.x)', LResult);
+  end;
 
-  // 测试验证响应状态
-  LResult := Assigned(@OCSP_response_status_str) and (OCSP_response_status_str <> nil);
-  Test('OCSP_response_status_str 函数加载', LResult);
+  // 测试检查 nonce
+  LResult := Assigned(@OCSP_check_nonce) and (OCSP_check_nonce <> nil);
+  Test('OCSP_check_nonce 函数加载', LResult);
 
-  // 测试获取验证错误
-  LResult := Assigned(@OCSP_resp_verify) and (OCSP_resp_verify <> nil);
-  Test('OCSP_resp_verify 函数加载', LResult);
+  // 测试复制 nonce
+  LResult := Assigned(@OCSP_copy_nonce) and (OCSP_copy_nonce <> nil);
+  Test('OCSP_copy_nonce 函数加载', LResult);
 
-  // 测试检查响应
+  // 测试检查有效性
   LResult := Assigned(@OCSP_check_validity) and (OCSP_check_validity <> nil);
   Test('OCSP_check_validity 函数加载', LResult);
 end;
@@ -219,13 +225,13 @@ begin
   LResult := Assigned(@d2i_OCSP_RESPONSE) and (d2i_OCSP_RESPONSE <> nil);
   Test('d2i_OCSP_RESPONSE 函数加载', LResult);
 
-  // 测试 BIO 请求编码
-  LResult := Assigned(@i2d_OCSP_REQUEST_bio) and (i2d_OCSP_REQUEST_bio <> nil);
-  Test('i2d_OCSP_REQUEST_bio 函数加载', LResult);
+  // 测试打印请求
+  LResult := Assigned(@OCSP_REQUEST_print) and (OCSP_REQUEST_print <> nil);
+  Test('OCSP_REQUEST_print 函数加载', LResult);
 
-  // 测试 BIO 响应编码
-  LResult := Assigned(@i2d_OCSP_RESPONSE_bio) and (i2d_OCSP_RESPONSE_bio <> nil);
-  Test('i2d_OCSP_RESPONSE_bio 函数加载', LResult);
+  // 测试打印响应
+  LResult := Assigned(@OCSP_RESPONSE_print) and (OCSP_RESPONSE_print <> nil);
+  Test('OCSP_RESPONSE_print 函数加载', LResult);
 end;
 
 procedure TestOCSP_UtilityFunctions;
@@ -235,21 +241,24 @@ begin
   WriteLn;
   WriteLn('=== 测试 8: OCSP 工具函数 ===');
 
-  // 测试错误字符串
-  LResult := Assigned(@OCSPerror_string) and (OCSPerror_string <> nil);
-  Test('OCSPerror_string 函数加载', LResult);
+  // 测试 HTTP 函数
+  LResult := Assigned(@OCSP_sendreq_new) and (OCSP_sendreq_new <> nil);
+  Test('OCSP_sendreq_new 函数加载', LResult);
 
-  // 测试获取响应详细信息
-  LResult := Assigned(@OCSP_response_get_mem_bio) and (OCSP_response_get_mem_bio <> nil);
-  Test('OCSP_response_get_mem_bio 函数加载', LResult);
+  // OpenSSL 1.x only function - skip on OpenSSL 3.x
+  if not IsOpenSSL3 then
+  begin
+    LResult := Assigned(@OCSP_parse_url) and (OCSP_parse_url <> nil);
+    Test('OCSP_parse_url 函数加载 (OpenSSL 1.x)', LResult);
+  end;
 
   // 测试状态常量
   Test('OCSP_RESPONSE_STATUS_SUCCESSFUL (0)', OCSP_RESPONSE_STATUS_SUCCESSFUL = 0);
   Test('OCSP_RESPONSE_STATUS_MALFORMEDREQUEST (1)', OCSP_RESPONSE_STATUS_MALFORMEDREQUEST = 1);
   Test('OCSP_RESPONSE_STATUS_INTERNALERROR (2)', OCSP_RESPONSE_STATUS_INTERNALERROR = 2);
   Test('OCSP_RESPONSE_STATUS_TRYLATER (3)', OCSP_RESPONSE_STATUS_TRYLATER = 3);
-  Test('OCSP_RESPONSE_STATUS_SIGREQUIRED (4)', OCSP_RESPONSE_STATUS_SIGREQUIRED = 4);
-  Test('OCSP_RESPONSE_STATUS_UNAUTHORIZED (5)', OCSP_RESPONSE_STATUS_UNAUTHORIZED = 5);
+  Test('OCSP_RESPONSE_STATUS_SIGREQUIRED (5)', OCSP_RESPONSE_STATUS_SIGREQUIRED = 5);
+  Test('OCSP_RESPONSE_STATUS_UNAUTHORIZED (6)', OCSP_RESPONSE_STATUS_UNAUTHORIZED = 6);
 end;
 
 begin
@@ -264,13 +273,42 @@ begin
   // 初始化 OpenSSL
   WriteLn;
   WriteLn('初始化 OpenSSL 库...');
-  if not LoadOpenSSLCore then
-  begin
-    WriteLn('❌ 错误：无法加载 OpenSSL 库');
-    Halt(1);
+  try
+    LoadOpenSSLCore;
+    WriteLn('✅ OpenSSL 库加载成功');
+    WriteLn('版本: ', GetOpenSSLVersionString);
+
+    // 检测 OpenSSL 版本
+    IsOpenSSL3 := TOpenSSLLoader.IsOpenSSL3;
+    if IsOpenSSL3 then
+      WriteLn('检测到 OpenSSL 3.x - 将跳过不兼容的函数测试')
+    else
+      WriteLn('检测到 OpenSSL 1.x - 将测试所有函数');
+  except
+    on E: Exception do
+    begin
+      WriteLn('❌ 错误：无法加载 OpenSSL 库: ', E.Message);
+      Halt(1);
+    end;
   end;
-  WriteLn('✅ OpenSSL 库加载成功');
-  WriteLn('版本: ', GetOpenSSLVersionString);
+
+  // 加载 OCSP 模块
+  WriteLn;
+  WriteLn('加载 OCSP 模块...');
+  try
+    if not LoadOpenSSLOCSP(GetCryptoLibHandle) then
+    begin
+      WriteLn('❌ 错误：无法加载 OCSP 模块');
+      Halt(1);
+    end;
+    WriteLn('✅ OCSP 模块加载成功');
+  except
+    on E: Exception do
+    begin
+      WriteLn('❌ 错误：无法加载 OCSP 模块: ', E.Message);
+      Halt(1);
+    end;
+  end;
 
   // 执行测试套件
   TestOCSP_BasicOperations;

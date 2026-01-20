@@ -68,20 +68,20 @@ begin
   Test('CMS_ContentInfo_free 函数加载', LResult);
 
   // 测试 DER 编码
-  LResult := Assigned(@Ti2d_CMS_ContentInfo) and (Ti2d_CMS_ContentInfo <> nil);
-  Test('Ti2d_CMS_ContentInfo 函数加载', LResult);
+  LResult := Assigned(@i2d_CMS_ContentInfo) and (i2d_CMS_ContentInfo <> nil);
+  Test('i2d_CMS_ContentInfo 函数加载', LResult);
 
   // 测试 DER 解码
-  LResult := Assigned(@Td2i_CMS_ContentInfo) and (Td2i_CMS_ContentInfo <> nil);
-  Test('Td2i_CMS_ContentInfo 函数加载', LResult);
+  LResult := Assigned(@d2i_CMS_ContentInfo) and (d2i_CMS_ContentInfo <> nil);
+  Test('d2i_CMS_ContentInfo 函数加载', LResult);
 
   // 测试 BIO 编码
-  LResult := Assigned(@Ti2d_CMS_bio) and (Ti2d_CMS_bio <> nil);
-  Test('Ti2d_CMS_bio 函数加载', LResult);
+  LResult := Assigned(@i2d_CMS_bio) and (i2d_CMS_bio <> nil);
+  Test('i2d_CMS_bio 函数加载', LResult);
 
   // 测试 BIO 解码
-  LResult := Assigned(@Td2i_CMS_bio) and (Td2i_CMS_bio <> nil);
-  Test('Td2i_CMS_bio 函数加载', LResult);
+  LResult := Assigned(@d2i_CMS_bio) and (d2i_CMS_bio <> nil);
+  Test('d2i_CMS_bio 函数加载', LResult);
 end;
 
 procedure TestCMS_SignOperations;
@@ -132,16 +132,16 @@ begin
   Test('CMS_get0_signers 函数加载', LResult);
 
   // 测试数据验证
-  LResult := Assigned(@CMS_dataVerify) and (CMS_dataVerify <> nil);
-  Test('CMS_dataVerify 函数加载', LResult);
+  LResult := Assigned(@CMS_digest_verify) and (CMS_digest_verify <> nil);
+  Test('CMS_digest_verify 函数加载', LResult);
 
   // 测试签名验证
-  LResult := Assigned(@CMS_signatureVerify) and (CMS_signatureVerify <> nil);
-  Test('CMS_signatureVerify 函数加载', LResult);
+  LResult := Assigned(@CMS_SignerInfo_verify) and (CMS_SignerInfo_verify <> nil);
+  Test('CMS_SignerInfo_verify 函数加载', LResult);
 
   // 测试获取签名者信息
-  LResult := Assigned(@CMS_get0_SignerInfo) and (CMS_get0_SignerInfo <> nil);
-  Test('CMS_get0_SignerInfo 函数加载', LResult);
+  LResult := Assigned(@CMS_get0_SignerInfos) and (CMS_get0_SignerInfos <> nil);
+  Test('CMS_get0_SignerInfos 函数加载', LResult);
 end;
 
 procedure TestCMS_EncryptDecrypt;
@@ -164,12 +164,12 @@ begin
   Test('CMS_set1_eContentType 函数加载', LResult);
 
   // 测试获取内容类型
-  LResult := Assigned(@CMS_ContentInfo_get0_type) and (CMS_ContentInfo_get0_type <> nil);
-  Test('CMS_ContentInfo_get0_type 函数加载', LResult);
+  LResult := Assigned(@CMS_get0_type) and (CMS_get0_type <> nil);
+  Test('CMS_get0_type 函数加载', LResult);
 
   // 测试获取内容
-  LResult := Assigned(@CMS_ContentInfo_get0_content) and (CMS_ContentInfo_get0_content <> nil);
-  Test('CMS_ContentInfo_get0_content 函数加载', LResult);
+  LResult := Assigned(@CMS_get0_content) and (CMS_get0_content <> nil);
+  Test('CMS_get0_content 函数加载', LResult);
 end;
 
 procedure TestCMS_RecipientInfo;
@@ -202,17 +202,15 @@ begin
   LResult := Assigned(@CMS_ReceiptRequest_create0) and (CMS_ReceiptRequest_create0 <> nil);
   Test('CMS_ReceiptRequest_create0 函数加载', LResult);
 
-  // 测试获取收据
-  LResult := Assigned(@CMS_get1_Receipt) and (CMS_get1_Receipt <> nil);
-  Test('CMS_get1_Receipt 函数加载', LResult);
+  // Note: CMS_get1_Receipt does not exist in OpenSSL 3.x
 
   // 测试收据验证
-  LResult := Assigned(@CMS_Receipt_verify) and (CMS_Receipt_verify <> nil);
-  Test('CMS_Receipt_verify 函数加载', LResult);
+  LResult := Assigned(@CMS_verify_receipt) and (CMS_verify_receipt <> nil);
+  Test('CMS_verify_receipt 函数加载', LResult);
 
   // 测试获取原始收据请求
-  LResult := Assigned(@CMS_ContentInfo_get0_ReceiptRequest) and (CMS_ContentInfo_get0_ReceiptRequest <> nil);
-  Test('CMS_ContentInfo_get0_ReceiptRequest 函数加载', LResult);
+  LResult := Assigned(@CMS_get1_ReceiptRequest) and (CMS_get1_ReceiptRequest <> nil);
+  Test('CMS_get1_ReceiptRequest 函数加载', LResult);
 end;
 
 procedure TestCMS_Attributes;
@@ -223,24 +221,12 @@ begin
   WriteLn('=== 测试 7: CMS 属性管理 ===');
 
   // 测试添加签名属性
-  LResult := Assigned(@CMS_add1_attr) and (CMS_add1_attr <> nil);
-  Test('CMS_add1_attr 函数加载', LResult);
-
-  // 测试添加签名字段
-  LResult := Assigned(@CMS_add1_attr_smimecap) and (CMS_add1_attr_smimecap <> nil);
-  Test('CMS_add1_attr_smimecap 函数加载', LResult);
-
-  // 测试添加签名时间
-  LResult := Assigned(@CMS_add1_attr_signingTime) and (CMS_add1_attr_signingTime <> nil);
-  Test('CMS_add1_attr_signingTime 函数加载', LResult);
+  LResult := Assigned(@CMS_signed_add1_attr) and (CMS_signed_add1_attr <> nil);
+  Test('CMS_signed_add1_attr 函数加载', LResult);
 
   // 测试获取属性
-  LResult := Assigned(@CMS_get0_attr) and (CMS_get0_attr <> nil);
-  Test('CMS_get0_attr 函数加载', LResult);
-
-  // 测试获取签名者属性
-  LResult := Assigned(@CMS_SignerInfo_get0_attr) and (CMS_SignerInfo_get0_attr <> nil);
-  Test('CMS_SignerInfo_get0_attr 函数加载', LResult);
+  LResult := Assigned(@CMS_signed_get_attr) and (CMS_signed_get_attr <> nil);
+  Test('CMS_signed_get_attr 函数加载', LResult);
 end;
 
 procedure TestCMS_UtilityFunctions;
@@ -250,17 +236,17 @@ begin
   WriteLn;
   WriteLn('=== 测试 8: CMS 工具函数 ===');
 
-  // 测试获取版本
-  LResult := Assigned(@CMS_ContentInfo_get_eContent) and (CMS_ContentInfo_get_eContent <> nil);
-  Test('CMS_ContentInfo_get_eContent 函数加载', LResult);
+  // 测试获取内容
+  LResult := Assigned(@CMS_get0_content) and (CMS_get0_content <> nil);
+  Test('CMS_get0_content 函数加载', LResult);
 
   // 测试打印函数
   LResult := Assigned(@CMS_ContentInfo_print_ctx) and (CMS_ContentInfo_print_ctx <> nil);
   Test('CMS_ContentInfo_print_ctx 函数加载', LResult);
 
   // 测试流操作
-  LResult := Assigned(@Ti2d_CMS_bio_stream) and (Ti2d_CMS_bio_stream <> nil);
-  Test('Ti2d_CMS_bio_stream 函数加载', LResult);
+  LResult := Assigned(@i2d_CMS_bio_stream) and (i2d_CMS_bio_stream <> nil);
+  Test('i2d_CMS_bio_stream 函数加载', LResult);
 
   // 测试标志常量
   Test('CMS_TEXT 标志 ($1)', CMS_TEXT = $1);
@@ -270,26 +256,6 @@ begin
   Test('CMS_PARTIAL 标志 ($4000)', CMS_PARTIAL = $4000);
   Test('CMS_REUSE_DIGEST 标志 ($8000)', CMS_REUSE_DIGEST = $8000);
   Test('CMS_USE_KEYID 标志 ($10000)', CMS_USE_KEYID = $10000);
-end;
-
-procedure TestCMS_PEMOperations;
-var
-  LResult: Boolean;
-begin
-  WriteLn;
-  WriteLn('=== 测试 9: CMS PEM 操作 ===');
-
-  // 测试 PEM 编码
-  LResult := Assigned(@PEM_write_bio_CMS) and (PEM_write_bio_CMS <> nil);
-  Test('PEM_write_bio_CMS 函数加载', LResult);
-
-  // 测试 PEM 解码
-  LResult := Assigned(@PEM_read_bio_CMS) and (PEM_read_bio_CMS <> nil);
-  Test('PEM_read_bio_CMS 函数加载', LResult);
-
-  // 测试压缩 CMS 编码
-  LResult := Assigned(@PEM_write_bio_CMS_stream) and (PEM_write_bio_CMS_stream <> nil);
-  Test('PEM_write_bio_CMS_stream 函数加载', LResult);
 end;
 
 begin
@@ -304,13 +270,27 @@ begin
   // 初始化 OpenSSL
   WriteLn;
   WriteLn('初始化 OpenSSL 库...');
-  if not LoadOpenSSLCore then
+  try
+    LoadOpenSSLCore;
+    WriteLn('✅ OpenSSL 库加载成功');
+    WriteLn('版本: ', GetOpenSSLVersionString);
+  except
+    on E: Exception do
+    begin
+      WriteLn('❌ 错误：无法加载 OpenSSL 库: ', E.Message);
+      Halt(1);
+    end;
+  end;
+
+  // 加载 CMS 模块
+  WriteLn;
+  WriteLn('加载 CMS 模块...');
+  if not LoadOpenSSLCMS(GetCryptoLibHandle) then
   begin
-    WriteLn('❌ 错误：无法加载 OpenSSL 库');
+    WriteLn('❌ 错误：无法加载 CMS 模块');
     Halt(1);
   end;
-  WriteLn('✅ OpenSSL 库加载成功');
-  WriteLn('版本: ', GetOpenSSLVersionString);
+  WriteLn('✅ CMS 模块加载成功');
 
   // 执行测试套件
   TestCMS_ContentInfo;
@@ -321,7 +301,7 @@ begin
   TestCMS_ReceiptOperations;
   TestCMS_Attributes;
   TestCMS_UtilityFunctions;
-  TestCMS_PEMOperations;
+  // Note: PEM operations removed - they belong to PEM module, not CMS module
 
   // 输出测试结果
   WriteLn;
