@@ -98,6 +98,27 @@ compile_test() {
     log_info "编译 $test_name..."
   fi
 
+  # 平台特定的编译参数
+  local platform_flags=""
+
+  # 检测操作系统
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS: 添加 OpenSSL 3.x 库路径
+    if command -v brew &> /dev/null; then
+      local openssl_prefix=$(brew --prefix openssl@3 2>/dev/null)
+      if [ -n "$openssl_prefix" ]; then
+        platform_flags="-Fl$openssl_prefix/lib -Fi$openssl_prefix/include"
+      fi
+    fi
+  elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
+    # Windows: 添加 OpenSSL 库路径
+    if [ -d "C:/Program Files/OpenSSL-Win64/lib" ]; then
+      platform_flags="-FlC:/Program Files/OpenSSL-Win64/lib -FiC:/Program Files/OpenSSL-Win64/include"
+    elif [ -d "C:/OpenSSL-Win64/lib" ]; then
+      platform_flags="-FlC:/OpenSSL-Win64/lib -FiC:/OpenSSL-Win64/include"
+    fi
+  fi
+
   if fpc -Mobjfpc -Sh -O2 \
     -Fu"$PROJECT_ROOT/src" \
     -Fu"$PROJECT_ROOT/src/openssl" \
@@ -105,6 +126,7 @@ compile_test() {
     -Fu"$PROJECT_ROOT/tests" \
     -Fi"$PROJECT_ROOT/src" \
     -FE"$BIN_DIR" \
+    $platform_flags \
     "$test_file" > /dev/null 2>&1; then
     return 0
   else
