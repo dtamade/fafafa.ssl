@@ -93,13 +93,15 @@ compile_test() {
   local test_file=$1
   local test_name=$(basename "$test_file" .pas)
   local output_file="$BIN_DIR/$test_name"
+  local compile_log="$REPORTS_DIR/${test_name}_compile.log"
 
   if [ "$VERBOSE" = true ]; then
     log_info "编译 $test_name..."
   fi
 
-  # 平台特定的编译参数
+  # 平台特定的编译参数和环境变量
   local platform_flags=""
+  local platform_env=""
 
   # 检测操作系统
   if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -107,18 +109,33 @@ compile_test() {
     if command -v brew &> /dev/null; then
       local openssl_prefix=$(brew --prefix openssl@3 2>/dev/null)
       if [ -n "$openssl_prefix" ]; then
+        # 编译时库路径和头文件路径
         platform_flags="-Fl$openssl_prefix/lib -Fi$openssl_prefix/include"
+        # 运行时库路径（使用 rpath）
+        platform_flags="$platform_flags -k-rpath -k$openssl_prefix/lib"
+        # 设置运行时环境变量
+        export DYLD_LIBRARY_PATH="$openssl_prefix/lib:$DYLD_LIBRARY_PATH"
       fi
     fi
   elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
-    # Windows: 添加 OpenSSL 库路径
-    if [ -d "C:/Program Files/OpenSSL-Win64/lib" ]; then
-      platform_flags="-FlC:/Program Files/OpenSSL-Win64/lib -FiC:/Program Files/OpenSSL-Win64/include"
-    elif [ -d "C:/OpenSSL-Win64/lib" ]; then
-      platform_flags="-FlC:/OpenSSL-Win64/lib -FiC:/OpenSSL-Win64/include"
-    fi
+    # Windows: 检查多个可能的 OpenSSL 安装位置
+    local openssl_paths=(
+      "C:/Program Files/OpenSSL-Win64"
+      "C:/OpenSSL-Win64"
+      "C:/Program Files/OpenSSL"
+      "C:/OpenSSL"
+    )
+
+    for openssl_path in "${openssl_paths[@]}"; do
+      if [ -d "$openssl_path/lib" ]; then
+        platform_flags="-Fl$openssl_path/lib -Fi$openssl_path/include"
+        export PATH="$openssl_path/bin:$PATH"
+        break
+      fi
+    done
   fi
 
+  # 编译并捕获输出
   if fpc -Mobjfpc -Sh -O2 \
     -Fu"$PROJECT_ROOT/src" \
     -Fu"$PROJECT_ROOT/src/openssl" \
@@ -127,9 +144,14 @@ compile_test() {
     -Fi"$PROJECT_ROOT/src" \
     -FE"$BIN_DIR" \
     $platform_flags \
-    "$test_file" > /dev/null 2>&1; then
+    "$test_file" > "$compile_log" 2>&1; then
     return 0
   else
+    # 编译失败时显示错误信息（仅在 verbose 模式下）
+    if [ "$VERBOSE" = true ] && [ -f "$compile_log" ]; then
+      echo "编译错误详情:" >> "$REPORT_FILE"
+      tail -20 "$compile_log" >> "$REPORT_FILE"
+    fi
     return 1
   fi
 }
