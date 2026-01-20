@@ -14,99 +14,45 @@ env:
 
 jobs:
   # ============================================================================
-  # OpenSSL Module Tests - 多平台测试
+  # OpenSSL Module Tests - Linux 平台测试
+  # 注意：macOS 和 Windows 平台支持正在开发中
   # ============================================================================
   openssl-module-tests:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        include:
-          - os: ubuntu-latest
-            platform_name: Linux
-            continue-on-error: false
-          - os: macos-latest
-            platform_name: macOS
-            continue-on-error: true
-          - os: windows-latest
-            platform_name: Windows
-            continue-on-error: true
-
-    runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.continue-on-error }}
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # Linux: 使用 apt-get 安装
-    - name: Install Free Pascal and OpenSSL (Linux)
-      if: runner.os == 'Linux'
+    - name: Install Free Pascal and OpenSSL
       run: |
         sudo apt-get update
         sudo apt-get install -y fpc libssl-dev
         fpc -iV
         openssl version
 
-    # macOS: 使用 Homebrew 安装
-    - name: Install Free Pascal and OpenSSL (macOS)
-      if: runner.os == 'macOS'
-      run: |
-        brew install fpc openssl@3
-        # 链接 OpenSSL 3.x 到系统路径
-        brew link --force openssl@3
-        # 设置环境变量指向 OpenSSL 3.x
-        echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
-        echo "PKG_CONFIG_PATH=$(brew --prefix openssl@3)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
-        fpc -iV
-        openssl version
-
-    # Windows: 使用 Chocolatey 安装
-    - name: Install Free Pascal and OpenSSL (Windows)
-      if: runner.os == 'Windows'
-      shell: pwsh
-      run: |
-        choco install freepascal -y
-        choco install openssl -y
-        # 刷新环境变量
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-        # 添加 FPC 到 PATH
-        $env:Path += ";C:\FPC\3.2.2\bin\i386-win32"
-        # 验证安装
-        fpc -iV
-        openssl version
-
     - name: Create output directories
-      shell: bash
       run: |
         mkdir -p bin
         mkdir -p test-reports
 
-    - name: Run all module tests (Unix)
-      if: runner.os != 'Windows'
+    - name: Run all module tests
       run: |
         chmod +x scripts/run_all_module_tests.sh
-        ./scripts/run_all_module_tests.sh --verbose
-
-    - name: Run all module tests (Windows)
-      if: runner.os == 'Windows'
-      shell: bash
-      run: |
         ./scripts/run_all_module_tests.sh --verbose
 
     - name: Upload test reports
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: test-reports-${{ matrix.platform_name }}
+        name: test-reports
         path: test-reports/
         retention-days: 30
 
     - name: Generate test summary
       if: always()
-      shell: bash
       run: |
-        echo "## 测试结果摘要 (${{ matrix.platform_name }})" >> $GITHUB_STEP_SUMMARY
+        echo "## 测试结果摘要" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         if [ -f test-reports/test_report_*.txt ]; then
           LATEST_REPORT=$(ls -t test-reports/test_report_*.txt | head -1)
