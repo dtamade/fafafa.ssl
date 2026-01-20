@@ -14,44 +14,85 @@ env:
 
 jobs:
   # ============================================================================
-  # OpenSSL Module Tests (Linux) - 核心测试
+  # OpenSSL Module Tests - 多平台测试
   # ============================================================================
   openssl-module-tests:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            platform_name: Linux
+          - os: macos-latest
+            platform_name: macOS
+          - os: windows-latest
+            platform_name: Windows
+
+    runs-on: ${{ matrix.os }}
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Free Pascal and OpenSSL
+    # Linux: 使用 apt-get 安装
+    - name: Install Free Pascal and OpenSSL (Linux)
+      if: runner.os == 'Linux'
       run: |
         sudo apt-get update
         sudo apt-get install -y fpc libssl-dev
         fpc -iV
         openssl version
 
+    # macOS: 使用 Homebrew 安装
+    - name: Install Free Pascal and OpenSSL (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install fpc openssl@3
+        fpc -iV
+        openssl version
+
+    # Windows: 使用 Chocolatey 安装
+    - name: Install Free Pascal and OpenSSL (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        choco install freepascal -y
+        choco install openssl -y
+        fpc -iV
+        openssl version
+
     - name: Create output directories
+      shell: bash
       run: |
         mkdir -p bin
         mkdir -p test-reports
 
-    - name: Run all module tests
+    - name: Run all module tests (Unix)
+      if: runner.os != 'Windows'
       run: |
         chmod +x scripts/run_all_module_tests.sh
+        ./scripts/run_all_module_tests.sh --verbose
+
+    - name: Run all module tests (Windows)
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
         ./scripts/run_all_module_tests.sh --verbose
 
     - name: Upload test reports
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: test-reports-linux
+        name: test-reports-${{ matrix.platform_name }}
         path: test-reports/
         retention-days: 30
 
     - name: Generate test summary
       if: always()
+      shell: bash
       run: |
-        echo "## 测试结果摘要" >> $GITHUB_STEP_SUMMARY
+        echo "## 测试结果摘要 (${{ matrix.platform_name }})" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         if [ -f test-reports/test_report_*.txt ]; then
           LATEST_REPORT=$(ls -t test-reports/test_report_*.txt | head -1)
