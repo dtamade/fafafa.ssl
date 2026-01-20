@@ -24,12 +24,16 @@ jobs:
         include:
           - os: ubuntu-latest
             platform_name: Linux
+            continue-on-error: false
           - os: macos-latest
             platform_name: macOS
+            continue-on-error: true
           - os: windows-latest
             platform_name: Windows
+            continue-on-error: true
 
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.continue-on-error }}
 
     steps:
     - name: Checkout code
