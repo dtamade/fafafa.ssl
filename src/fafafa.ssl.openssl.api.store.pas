@@ -378,6 +378,8 @@ begin
   // OSSL_STORE_LOADER 函数
   OSSL_STORE_LOADER_new := TOSSL_STORE_LOADER_new(GetCryptoProcAddress('OSSL_STORE_LOADER_new'));
   OSSL_STORE_LOADER_free := TOSSL_STORE_LOADER_free(GetCryptoProcAddress('OSSL_STORE_LOADER_free'));
+  OSSL_STORE_LOADER_set_open := TOSSL_STORE_LOADER_set_open(GetCryptoProcAddress('OSSL_STORE_LOADER_set_open'));
+  OSSL_STORE_LOADER_set_open_ex := TOSSL_STORE_LOADER_set_open_ex(GetCryptoProcAddress('OSSL_STORE_LOADER_set_open_ex'));
   OSSL_STORE_register_loader := TOSSL_STORE_register_loader(GetCryptoProcAddress('OSSL_STORE_register_loader'));
   OSSL_STORE_unregister_loader := TOSSL_STORE_unregister_loader(GetCryptoProcAddress('OSSL_STORE_unregister_loader'));
 end;

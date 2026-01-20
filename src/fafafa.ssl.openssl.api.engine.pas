@@ -134,7 +134,7 @@ function ListAvailableEngines: TStringList;
 implementation
 
 const
-  EngineFunctionBindings: array[0..17] of TFunctionBinding = (
+  EngineFunctionBindings: array[0..21] of TFunctionBinding = (
     (Name: 'ENGINE_new'; FuncPtr: @ENGINE_new; Required: False),
     (Name: 'ENGINE_free'; FuncPtr: @ENGINE_free; Required: False),
     (Name: 'ENGINE_up_ref'; FuncPtr: @ENGINE_up_ref; Required: False),
@@ -150,9 +150,13 @@ const
     (Name: 'ENGINE_load_builtin_engines'; FuncPtr: @ENGINE_load_builtin_engines; Required: False),
     (Name: 'ENGINE_get_id'; FuncPtr: @ENGINE_get_id; Required: False),
     (Name: 'ENGINE_get_name'; FuncPtr: @ENGINE_get_name; Required: False),
+    (Name: 'ENGINE_set_id'; FuncPtr: @ENGINE_set_id; Required: False),
+    (Name: 'ENGINE_set_name'; FuncPtr: @ENGINE_set_name; Required: False),
+    (Name: 'ENGINE_ctrl'; FuncPtr: @ENGINE_ctrl; Required: False),
     (Name: 'ENGINE_ctrl_cmd_string'; FuncPtr: @ENGINE_ctrl_cmd_string; Required: False),
     (Name: 'ENGINE_set_default'; FuncPtr: @ENGINE_set_default; Required: False),
-    (Name: 'ENGINE_load_private_key'; FuncPtr: @ENGINE_load_private_key; Required: False)
+    (Name: 'ENGINE_load_private_key'; FuncPtr: @ENGINE_load_private_key; Required: False),
+    (Name: 'ENGINE_load_public_key'; FuncPtr: @ENGINE_load_public_key; Required: False)
   );
 
 function LoadOpenSSLEngine(const ACryptoLib: THandle): Boolean;

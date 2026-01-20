@@ -267,6 +267,16 @@ begin
   PKCS7_add_signer := TPKCS7_add_signer(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_add_signer'));
   PKCS7_add_certificate := TPKCS7_add_certificate(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_add_certificate'));
   PKCS7_add_crl := TPKCS7_add_crl(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_add_crl'));
+
+  // Load attribute functions
+  PKCS7_digest_from_attributes := TPKCS7_digest_from_attributes(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_digest_from_attributes'));
+  PKCS7_add_signed_attribute := TPKCS7_add_signed_attribute(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_add_signed_attribute'));
+  PKCS7_add_attribute := TPKCS7_add_attribute(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_add_attribute'));
+  PKCS7_get_attribute := TPKCS7_get_attribute(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_get_attribute'));
+  PKCS7_get_signed_attribute := TPKCS7_get_signed_attribute(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_get_signed_attribute'));
+  PKCS7_set_signed_attributes := TPKCS7_set_signed_attributes(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_set_signed_attributes'));
+  PKCS7_set_attributes := TPKCS7_set_attributes(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_set_attributes'));
+
   PKCS7_sign := TPKCS7_sign(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_sign'));
   PKCS7_sign_add_signer := TPKCS7_sign_add_signer(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_sign_add_signer'));
   PKCS7_final := TPKCS7_final(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_final'));
@@ -277,7 +287,30 @@ begin
   PKCS7_add_recipient := TPKCS7_add_recipient(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_add_recipient'));
   PKCS7_RECIP_INFO_set := TPKCS7_RECIP_INFO_set(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_RECIP_INFO_set'));
   PKCS7_set_cipher := TPKCS7_set_cipher(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_set_cipher'));
-  
+
+  // Load data operation functions
+  PKCS7_stream_func := TPKCS7_stream(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_stream'));
+  PKCS7_dataInit := TPKCS7_dataInit(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_dataInit'));
+  PKCS7_dataFinal := TPKCS7_dataFinal(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_dataFinal'));
+  PKCS7_dataDecode := TPKCS7_dataDecode(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_dataDecode'));
+  PKCS7_dataVerify := TPKCS7_dataVerify(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_dataVerify'));
+  PKCS7_signatureVerify := TPKCS7_signatureVerify(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_signatureVerify'));
+
+  // Load info functions
+  PKCS7_get_signer_info := TPKCS7_get_signer_info(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_get_signer_info'));
+  PKCS7_get_recip_info := TPKCS7_get_recip_info(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_get_recip_info'));
+  PKCS7_add_recipient_info := TPKCS7_add_recipient_info(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_add_recipient_info'));
+  PKCS7_RECIP_INFO_get0_alg := TPKCS7_RECIP_INFO_get0_alg(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_RECIP_INFO_get0_alg'));
+  PKCS7_SIGNER_INFO_get0_algs := TPKCS7_SIGNER_INFO_get0_algs(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_SIGNER_INFO_get0_algs'));
+  PKCS7_SIGNER_INFO_set := TPKCS7_SIGNER_INFO_set(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_SIGNER_INFO_set'));
+
+  // Load S/MIME capability functions
+  PKCS7_add_attrib_smimecap := TPKCS7_add_attrib_smimecap(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_add_attrib_smimecap'));
+  PKCS7_simple_smimecap := TPKCS7_simple_smimecap(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_simple_smimecap'));
+  PKCS7_add_attrib_content_type := TPKCS7_add_attrib_content_type(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_add_attrib_content_type'));
+  PKCS7_add0_attrib_signing_time := TPKCS7_add0_attrib_signing_time(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_add0_attrib_signing_time'));
+  PKCS7_add1_attrib_digest := TPKCS7_add1_attrib_digest(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_add1_attrib_digest'));
+
   // Load I/O functions
   i2d_PKCS7 := Ti2d_PKCS7(TOpenSSLLoader.GetFunction(LHandle, 'i2d_PKCS7'));
   d2i_PKCS7 := Td2i_PKCS7(TOpenSSLLoader.GetFunction(LHandle, 'd2i_PKCS7'));
@@ -290,6 +323,9 @@ begin
   SMIME_write_PKCS7 := TSMIME_write_PKCS7(TOpenSSLLoader.GetFunction(LHandle, 'SMIME_write_PKCS7'));
   SMIME_read_PKCS7 := TSMIME_read_PKCS7(TOpenSSLLoader.GetFunction(LHandle, 'SMIME_read_PKCS7'));
   SMIME_text := TSMIME_text(TOpenSSLLoader.GetFunction(LHandle, 'SMIME_text'));
+
+  // Load print function
+  PKCS7_print_ctx := TPKCS7_print_ctx(TOpenSSLLoader.GetFunction(LHandle, 'PKCS7_print_ctx'));
 
   Result := Assigned(PKCS7_new) and Assigned(PKCS7_sign) and Assigned(PKCS7_verify);
   TOpenSSLLoader.SetModuleLoaded(osmPKCS7, Result);

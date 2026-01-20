@@ -469,8 +469,9 @@ begin
   TS_REQ_new := TTS_REQ_new(GetCryptoProcAddress('TS_REQ_new'));
   TS_REQ_free := TTS_REQ_free(GetCryptoProcAddress('TS_REQ_free'));
   TS_REQ_dup := TTS_REQ_dup(GetCryptoProcAddress('TS_REQ_dup'));
-  TS_REQ_d2i_bio := TTS_REQ_d2i_bio(GetCryptoProcAddress('TS_REQ_d2i_bio'));
-  TS_REQ_i2d_bio := TTS_REQ_i2d_bio(GetCryptoProcAddress('TS_REQ_i2d_bio'));
+  // Note: OpenSSL 3.x uses d2i_TS_REQ_bio and i2d_TS_REQ_bio (not TS_REQ_d2i_bio/TS_REQ_i2d_bio)
+  TS_REQ_d2i_bio := TTS_REQ_d2i_bio(GetCryptoProcAddress('d2i_TS_REQ_bio'));
+  TS_REQ_i2d_bio := TTS_REQ_i2d_bio(GetCryptoProcAddress('i2d_TS_REQ_bio'));
   TS_REQ_set_version := TTS_REQ_set_version(GetCryptoProcAddress('TS_REQ_set_version'));
   TS_REQ_get_version := TTS_REQ_get_version(GetCryptoProcAddress('TS_REQ_get_version'));
   TS_REQ_set_msg_imprint := TTS_REQ_set_msg_imprint(GetCryptoProcAddress('TS_REQ_set_msg_imprint'));
@@ -489,7 +490,10 @@ begin
   TS_TST_INFO_dup := TTS_TST_INFO_dup(GetCryptoProcAddress('TS_TST_INFO_dup'));
   TS_TST_INFO_d2i_bio := TTS_TST_INFO_d2i_bio(GetCryptoProcAddress('TS_TST_INFO_d2i_bio'));
   TS_TST_INFO_i2d_bio := TTS_TST_INFO_i2d_bio(GetCryptoProcAddress('TS_TST_INFO_i2d_bio'));
+  TS_TST_INFO_set_version := TTS_TST_INFO_set_version(GetCryptoProcAddress('TS_TST_INFO_set_version'));
   TS_TST_INFO_get_version := TTS_TST_INFO_get_version(GetCryptoProcAddress('TS_TST_INFO_get_version'));
+  TS_TST_INFO_get_serial := TTS_TST_INFO_get_serial(GetCryptoProcAddress('TS_TST_INFO_get_serial'));
+  TS_TST_INFO_set_time := TTS_TST_INFO_set_time(GetCryptoProcAddress('TS_TST_INFO_set_time'));
   TS_TST_INFO_get_time := TTS_TST_INFO_get_time(GetCryptoProcAddress('TS_TST_INFO_get_time'));
   TS_TST_INFO_print_bio := TTS_TST_INFO_print_bio(GetCryptoProcAddress('TS_TST_INFO_print_bio'));
   
@@ -502,9 +506,11 @@ begin
   // TS_RESP 函数
   TS_RESP_new := TTS_RESP_new(GetCryptoProcAddress('TS_RESP_new'));
   TS_RESP_free := TTS_RESP_free(GetCryptoProcAddress('TS_RESP_free'));
-  TS_RESP_d2i_bio := TTS_RESP_d2i_bio(GetCryptoProcAddress('TS_RESP_d2i_bio'));
-  TS_RESP_i2d_bio := TTS_RESP_i2d_bio(GetCryptoProcAddress('TS_RESP_i2d_bio'));
+  // Note: OpenSSL 3.x uses d2i_TS_RESP_bio and i2d_TS_RESP_bio (not TS_RESP_d2i_bio/TS_RESP_i2d_bio)
+  TS_RESP_d2i_bio := TTS_RESP_d2i_bio(GetCryptoProcAddress('d2i_TS_RESP_bio'));
+  TS_RESP_i2d_bio := TTS_RESP_i2d_bio(GetCryptoProcAddress('i2d_TS_RESP_bio'));
   TS_RESP_create_response := TTS_RESP_create_response(GetCryptoProcAddress('TS_RESP_create_response'));
+  TS_RESP_set_status_info := TTS_RESP_set_status_info(GetCryptoProcAddress('TS_RESP_set_status_info'));
   TS_RESP_get_status_info := TTS_RESP_get_status_info(GetCryptoProcAddress('TS_RESP_get_status_info'));
   TS_RESP_get_token := TTS_RESP_get_token(GetCryptoProcAddress('TS_RESP_get_token'));
   TS_RESP_get_tst_info := TTS_RESP_get_tst_info(GetCryptoProcAddress('TS_RESP_get_tst_info'));
