@@ -74,6 +74,8 @@ examples/temp_certs/
 *.pem
 !tests/certs/*.pem
 !tests/certs/*.crt
+!tests/certificate/test_certs/*.pem
+!tests/certificate/test_certs/*.key
 !examples/*.crt
 !examples/*.key
 .ace-tool/
