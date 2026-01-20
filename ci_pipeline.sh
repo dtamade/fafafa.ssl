@@ -202,13 +202,65 @@ run_benchmarks() {
         warn "Performance regression detected or benchmark failed"
         cat "benchmark_${DATE}.log"
     }
-    
+
     # Archive results
     if [ -f "benchmark_results.csv" ]; then
         cp "benchmark_results.csv" "archive/benchmark_${DATE}.csv"
         info "Results archived to archive/benchmark_${DATE}.csv"
     fi
-    
+
+    # Run local TLS handshake benchmarks (CI-friendly, no network dependency)
+    info "Running local TLS handshake benchmarks..."
+
+    # Generate temporary self-signed certificate for local testing
+    local TEMP_CERT="/tmp/ci_tls_cert_${DATE}.pem"
+    local TEMP_KEY="/tmp/ci_tls_key_${DATE}.pem"
+
+    openssl req -x509 -newkey rsa:2048 -keyout "$TEMP_KEY" -out "$TEMP_CERT" \
+        -days 1 -nodes -subj "/CN=localhost" >/dev/null 2>&1 || {
+        warn "Failed to generate test certificate, skipping local TLS benchmarks"
+        return 0
+    }
+
+    # Start local TLS server
+    FAFAFA_TLS_CERT="$TEMP_CERT" \
+    FAFAFA_TLS_KEY="$TEMP_KEY" \
+    FAFAFA_TLS_PORT=44330 \
+    "$PROJECT_ROOT/scripts/local_tls_server.sh" start >/dev/null 2>&1 || {
+        warn "Failed to start local TLS server, skipping local TLS benchmarks"
+        rm -f "$TEMP_CERT" "$TEMP_KEY"
+        return 0
+    }
+
+    # Wait for server to be ready
+    sleep 1
+
+    # Run diagnostic benchmark against localhost
+    if [ -x "$BENCH_BIN/benchmark_tls_handshake_diagnostic" ]; then
+        "$BENCH_BIN/benchmark_tls_handshake_diagnostic" 100 localhost:44330 > "tls_local_benchmark_${DATE}.log" 2>&1 || {
+            warn "Local TLS benchmark failed"
+            cat "tls_local_benchmark_${DATE}.log"
+        }
+
+        # Check P95 threshold (should be < 10ms for local)
+        if grep -q "P95:" "tls_local_benchmark_${DATE}.log"; then
+            local p95=$(grep "P95:" "tls_local_benchmark_${DATE}.log" | tail -1 | awk '{print $2}' | sed 's/ms//')
+            if [ -n "$p95" ] && [ "$p95" -gt 10 ]; then
+                warn "⚠️  Local TLS handshake P95 ($p95 ms) exceeds threshold (10ms)"
+            else
+                info "✅ Local TLS handshake performance: P95 = ${p95}ms"
+            fi
+        fi
+    else
+        warn "benchmark_tls_handshake_diagnostic not found, skipping local TLS benchmarks"
+    fi
+
+    # Stop local TLS server
+    "$PROJECT_ROOT/scripts/local_tls_server.sh" stop >/dev/null 2>&1
+
+    # Cleanup
+    rm -f "$TEMP_CERT" "$TEMP_KEY"
+
     info "✅ Performance benchmarks completed"
 }
 
