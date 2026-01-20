@@ -49,6 +49,11 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         brew install fpc openssl@3
+        # 链接 OpenSSL 3.x 到系统路径
+        brew link --force openssl@3
+        # 设置环境变量指向 OpenSSL 3.x
+        echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=$(brew --prefix openssl@3)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
         fpc -iV
         openssl version
 
@@ -59,6 +64,11 @@ jobs:
       run: |
         choco install freepascal -y
         choco install openssl -y
+        # 刷新环境变量
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+        # 添加 FPC 到 PATH
+        $env:Path += ";C:\FPC\3.2.2\bin\i386-win32"
+        # 验证安装
         fpc -iV
         openssl version
 
