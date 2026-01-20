@@ -11,10 +11,11 @@
 1. **[GETTING_STARTED.md](GETTING_STARTED.md)** - 入门（推荐入口与最小示例）
 2. **[QUICKSTART.md](QUICKSTART.md)** - 快速开始
 3. **[API_REFERENCE.md](API_REFERENCE.md)** - API 参考
-4. **[examples/README.md](../examples/README.md)** - 示例导航
-5. **[testing/README_TESTING.md](testing/README_TESTING.md)** - 测试说明（入口）
-6. **[CICD_SETUP.md](CICD_SETUP.md)** - CI/CD 与本地流水线
-7. **[ARCHITECTURE.md](ARCHITECTURE.md)** - 架构说明
+4. **[examples/README.md](../examples/README.md)** - 示例程序说明
+5. **[examples/EXAMPLES_INDEX.md](../examples/EXAMPLES_INDEX.md)** - 示例程序完整索引（按功能分类）
+6. **[testing/README_TESTING.md](testing/README_TESTING.md)** - 测试说明（入口）
+7. **[CICD_SETUP.md](CICD_SETUP.md)** - CI/CD 与本地流水线
+8. **[ARCHITECTURE.md](ARCHITECTURE.md)** - 架构说明
 
 ---
 
@@ -82,4 +83,4 @@
 
 ---
 
-**最后更新**: 2026-01-16
+**最后更新**: 2026-01-20
