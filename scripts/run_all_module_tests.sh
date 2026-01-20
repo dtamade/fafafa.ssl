@@ -1,0 +1,277 @@
+#!/bin/bash
+
+#############################################################################
+# 自动化模块测试脚本
+#
+# 功能：
+# - 自动编译并运行所有模块测试
+# - 生成详细的测试报告
+# - 支持持续集成
+#
+# 用法：
+#   ./scripts/run_all_module_tests.sh [options]
+#
+# 选项：
+#   --verbose    显示详细输出
+#   --stop-on-fail  遇到失败立即停止
+#   --modules    指定要测试的模块（逗号分隔）
+#############################################################################
+
+set -e
+
+# 颜色定义
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# 配置
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TESTS_DIR="$PROJECT_ROOT/tests"
+BIN_DIR="$PROJECT_ROOT/bin"
+REPORTS_DIR="$PROJECT_ROOT/test-reports"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+REPORT_FILE="$REPORTS_DIR/test_report_$TIMESTAMP.txt"
+
+# 选项
+VERBOSE=false
+STOP_ON_FAIL=false
+SPECIFIC_MODULES=""
+
+# 解析命令行参数
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --verbose)
+      VERBOSE=true
+      shift
+      ;;
+    --stop-on-fail)
+      STOP_ON_FAIL=true
+      shift
+      ;;
+    --modules)
+      SPECIFIC_MODULES="$2"
+      shift 2
+      ;;
+    *)
+      echo "未知选项: $1"
+      exit 1
+      ;;
+  esac
+done
+
+# 创建报告目录
+mkdir -p "$REPORTS_DIR"
+mkdir -p "$BIN_DIR"
+
+# 初始化统计
+TOTAL_TESTS=0
+PASSED_TESTS=0
+FAILED_TESTS=0
+SKIPPED_TESTS=0
+
+# 日志函数
+log_info() {
+  echo -e "${BLUE}[INFO]${NC} $1" | tee -a "$REPORT_FILE"
+}
+
+log_success() {
+  echo -e "${GREEN}[PASS]${NC} $1" | tee -a "$REPORT_FILE"
+}
+
+log_error() {
+  echo -e "${RED}[FAIL]${NC} $1" | tee -a "$REPORT_FILE"
+}
+
+log_warning() {
+  echo -e "${YELLOW}[WARN]${NC} $1" | tee -a "$REPORT_FILE"
+}
+
+# 编译测试程序
+compile_test() {
+  local test_file=$1
+  local test_name=$(basename "$test_file" .pas)
+  local output_file="$BIN_DIR/$test_name"
+
+  if [ "$VERBOSE" = true ]; then
+    log_info "编译 $test_name..."
+  fi
+
+  if fpc -Mobjfpc -Sh -O2 \
+    -Fu"$PROJECT_ROOT/src" \
+    -Fu"$PROJECT_ROOT/src/openssl" \
+    -Fu"$PROJECT_ROOT/src/winssl" \
+    -Fu"$PROJECT_ROOT/tests" \
+    -Fi"$PROJECT_ROOT/src" \
+    -FE"$BIN_DIR" \
+    "$test_file" > /dev/null 2>&1; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+# 运行测试程序
+run_test() {
+  local test_name=$1
+  local output_file="$BIN_DIR/$test_name"
+  local result_file="$REPORTS_DIR/${test_name}_result.txt"
+
+  if [ ! -f "$output_file" ]; then
+    log_error "$test_name: 可执行文件不存在"
+    return 1
+  fi
+
+  if [ "$VERBOSE" = true ]; then
+    log_info "运行 $test_name..."
+  fi
+
+  # 运行测试并捕获输出（增加超时到60秒）
+  local exit_code=0
+  if timeout 60 "$output_file" > "$result_file" 2>&1; then
+    exit_code=0
+    return 0
+  else
+    exit_code=$?
+
+    # 解析测试结果以显示部分通过的情况
+    local passed=$(grep -oP "Passed:\s+\K\d+" "$result_file" 2>/dev/null || echo "0")
+    local total=$(grep -oP "Total Tests:\s+\K\d+" "$result_file" 2>/dev/null || echo "0")
+
+    if [ $exit_code -eq 124 ]; then
+      log_error "$test_name: 超时（60秒）"
+    elif [ "$total" -gt 0 ] && [ "$passed" -gt 0 ]; then
+      log_warning "$test_name: 部分通过 ($passed/$total, 退出码: $exit_code)"
+    else
+      log_error "$test_name: 失败（退出码: $exit_code）"
+    fi
+
+    return 1
+  fi
+}
+
+# 测试模块定义
+declare -A MODULE_TESTS=(
+  # P2 模块
+  ["PKCS7"]="test_p2_pkcs7 test_p2_pkcs7_comprehensive"
+  ["PKCS12"]="test_p2_pkcs12 test_p2_pkcs12_comprehensive test_p2_pkcs12_create_parse"
+  ["CMS"]="test_p2_cms test_p2_cms_comprehensive"
+  ["Store"]="test_p2_store test_p2_store_comprehensive"
+  ["OCSP"]="test_p2_ocsp test_p2_ocsp_comprehensive"
+  ["TS"]="test_p2_ts test_p2_ts_comprehensive"
+
+  # P3 模块
+  ["CT"]="test_p2_ct test_p2_ct_comprehensive"
+  ["SRP"]="test_p2_srp test_p2_srp_comprehensive"
+  ["Comp"]="test_p2_comp"
+
+  # P4 模块
+  ["Engine"]="test_p4_engine"
+  ["Provider"]="test_provider"
+)
+
+# 开始测试
+echo "========================================" | tee "$REPORT_FILE"
+echo "模块自动化测试报告" | tee -a "$REPORT_FILE"
+echo "时间: $(date)" | tee -a "$REPORT_FILE"
+echo "========================================" | tee -a "$REPORT_FILE"
+echo "" | tee -a "$REPORT_FILE"
+
+# 确定要测试的模块
+if [ -n "$SPECIFIC_MODULES" ]; then
+  IFS=',' read -ra MODULES <<< "$SPECIFIC_MODULES"
+else
+  MODULES=("${!MODULE_TESTS[@]}")
+fi
+
+# 遍历每个模块
+for module in "${MODULES[@]}"; do
+  if [ -z "${MODULE_TESTS[$module]}" ]; then
+    log_warning "未知模块: $module"
+    continue
+  fi
+
+  echo "" | tee -a "$REPORT_FILE"
+  log_info "========== 测试模块: $module =========="
+
+  module_passed=0
+  module_failed=0
+
+  # 遍历模块的所有测试
+  for test_name in ${MODULE_TESTS[$module]}; do
+    TOTAL_TESTS=$((TOTAL_TESTS + 1))
+
+    # 查找测试文件
+    test_file=$(find "$TESTS_DIR" -name "${test_name}.pas" 2>/dev/null | head -1)
+
+    if [ -z "$test_file" ]; then
+      log_warning "$test_name: 测试文件未找到"
+      SKIPPED_TESTS=$((SKIPPED_TESTS + 1))
+      continue
+    fi
+
+    # 编译测试
+    if ! compile_test "$test_file"; then
+      log_error "$test_name: 编译失败"
+      FAILED_TESTS=$((FAILED_TESTS + 1))
+      module_failed=$((module_failed + 1))
+
+      if [ "$STOP_ON_FAIL" = true ]; then
+        log_error "遇到失败，停止测试"
+        exit 1
+      fi
+      continue
+    fi
+
+    # 运行测试
+    if run_test "$test_name"; then
+      log_success "$test_name: 通过"
+      PASSED_TESTS=$((PASSED_TESTS + 1))
+      module_passed=$((module_passed + 1))
+    else
+      log_error "$test_name: 失败"
+      FAILED_TESTS=$((FAILED_TESTS + 1))
+      module_failed=$((module_failed + 1))
+
+      if [ "$STOP_ON_FAIL" = true ]; then
+        log_error "遇到失败，停止测试"
+        exit 1
+      fi
+    fi
+  done
+
+  # 模块总结
+  module_total=$((module_passed + module_failed))
+  if [ $module_total -gt 0 ]; then
+    module_rate=$(awk "BEGIN {printf \"%.1f\", $module_passed * 100.0 / $module_total}")
+    log_info "$module 模块: $module_passed/$module_total 通过 ($module_rate%)"
+  fi
+done
+
+# 生成总结
+echo "" | tee -a "$REPORT_FILE"
+echo "========================================" | tee -a "$REPORT_FILE"
+echo "测试总结" | tee -a "$REPORT_FILE"
+echo "========================================" | tee -a "$REPORT_FILE"
+echo "总测试数: $TOTAL_TESTS" | tee -a "$REPORT_FILE"
+echo "通过: $PASSED_TESTS" | tee -a "$REPORT_FILE"
+echo "失败: $FAILED_TESTS" | tee -a "$REPORT_FILE"
+echo "跳过: $SKIPPED_TESTS" | tee -a "$REPORT_FILE"
+
+if [ $TOTAL_TESTS -gt 0 ]; then
+  PASS_RATE=$(awk "BEGIN {printf \"%.1f\", $PASSED_TESTS * 100.0 / $TOTAL_TESTS}")
+  echo "通过率: $PASS_RATE%" | tee -a "$REPORT_FILE"
+fi
+
+echo "" | tee -a "$REPORT_FILE"
+echo "详细报告: $REPORT_FILE" | tee -a "$REPORT_FILE"
+
+# 退出码
+if [ $FAILED_TESTS -gt 0 ]; then
+  log_error "测试失败"
+  exit 1
+else
+  log_success "所有测试通过"
+  exit 0
+fi
