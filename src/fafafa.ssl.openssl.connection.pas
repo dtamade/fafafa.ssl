@@ -94,6 +94,12 @@ type
     function GetBlocking: Boolean;
     function GetNativeHandle: Pointer;
     function GetContext: ISSLContext;
+
+    { Phase 3.3: 监控和诊断接口 }
+    function GetHealthStatus: TSSLHealthStatus;
+    function IsHealthy: Boolean;
+    function GetDiagnosticInfo: TSSLDiagnosticInfo;
+    function GetPerformanceMetrics: TSSLPerformanceMetrics;
   end;
 
 implementation
@@ -1284,6 +1290,47 @@ begin
       Exit(False);
     end;
   end;
+end;
+
+{ Phase 3.3: 监控和诊断接口实现 }
+
+function TOpenSSLConnection.GetHealthStatus: TSSLHealthStatus;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+
+  Result.IsConnected := FConnected;
+  Result.HandshakeComplete := IsHandshakeComplete;
+  Result.LastError := sslErrNone;  // 简化实现，实际应跟踪最后错误
+  Result.LastErrorTime := 0;
+  Result.BytesSent := 0;           // 简化实现，实际应跟踪字节数
+  Result.BytesReceived := 0;
+  Result.ConnectionAge := 0;       // 简化实现，实际应计算连接时长
+end;
+
+function TOpenSSLConnection.IsHealthy: Boolean;
+begin
+  Result := FConnected and IsHandshakeComplete and (FSSL <> nil);
+end;
+
+function TOpenSSLConnection.GetDiagnosticInfo: TSSLDiagnosticInfo;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+
+  Result.ConnectionInfo := GetConnectionInfo;
+  Result.HealthStatus := GetHealthStatus;
+  Result.PerformanceMetrics := GetPerformanceMetrics;
+  SetLength(Result.ErrorHistory, 0);  // 简化实现，实际应维护错误历史
+end;
+
+function TOpenSSLConnection.GetPerformanceMetrics: TSSLPerformanceMetrics;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+
+  Result.HandshakeTime := 0;        // 简化实现，实际应测量握手时间
+  Result.FirstByteTime := 0;
+  Result.TotalBytesTransferred := 0;
+  Result.AverageLatency := 0;
+  Result.SessionReused := IsSessionReused;
 end;
 
 end.
