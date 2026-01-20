@@ -161,25 +161,31 @@ run_test() {
   fi
 }
 
-# 测试模块定义
-declare -A MODULE_TESTS=(
-  # P2 模块
-  ["PKCS7"]="test_p2_pkcs7 test_p2_pkcs7_comprehensive"
-  ["PKCS12"]="test_p2_pkcs12 test_p2_pkcs12_comprehensive test_p2_pkcs12_create_parse"
-  ["CMS"]="test_p2_cms test_p2_cms_comprehensive"
-  ["Store"]="test_p2_store test_p2_store_comprehensive"
-  ["OCSP"]="test_p2_ocsp test_p2_ocsp_comprehensive"
-  ["TS"]="test_p2_ts test_p2_ts_comprehensive"
+# 测试模块定义 - 兼容 bash 3.x
+# 使用函数来模拟关联数组
+get_module_tests() {
+  local module=$1
+  case "$module" in
+    # P2 模块
+    "PKCS7") echo "test_p2_pkcs7 test_p2_pkcs7_comprehensive" ;;
+    "PKCS12") echo "test_p2_pkcs12 test_p2_pkcs12_comprehensive test_p2_pkcs12_create_parse" ;;
+    "CMS") echo "test_p2_cms test_p2_cms_comprehensive" ;;
+    "Store") echo "test_p2_store test_p2_store_comprehensive" ;;
+    "OCSP") echo "test_p2_ocsp test_p2_ocsp_comprehensive" ;;
+    "TS") echo "test_p2_ts test_p2_ts_comprehensive" ;;
+    # P3 模块
+    "CT") echo "test_p2_ct test_p2_ct_comprehensive" ;;
+    "SRP") echo "test_p2_srp test_p2_srp_comprehensive" ;;
+    "Comp") echo "test_p2_comp" ;;
+    # P4 模块
+    "Engine") echo "test_p4_engine" ;;
+    "Provider") echo "test_provider" ;;
+    *) echo "" ;;
+  esac
+}
 
-  # P3 模块
-  ["CT"]="test_p2_ct test_p2_ct_comprehensive"
-  ["SRP"]="test_p2_srp test_p2_srp_comprehensive"
-  ["Comp"]="test_p2_comp"
-
-  # P4 模块
-  ["Engine"]="test_p4_engine"
-  ["Provider"]="test_provider"
-)
+# 所有模块列表
+ALL_MODULES="PKCS7 PKCS12 CMS Store OCSP TS CT SRP Comp Engine Provider"
 
 # 开始测试
 echo "========================================" | tee "$REPORT_FILE"
@@ -192,12 +198,14 @@ echo "" | tee -a "$REPORT_FILE"
 if [ -n "$SPECIFIC_MODULES" ]; then
   IFS=',' read -ra MODULES <<< "$SPECIFIC_MODULES"
 else
-  MODULES=("${!MODULE_TESTS[@]}")
+  MODULES=($ALL_MODULES)
 fi
 
 # 遍历每个模块
 for module in "${MODULES[@]}"; do
-  if [ -z "${MODULE_TESTS[$module]}" ]; then
+  module_tests=$(get_module_tests "$module")
+
+  if [ -z "$module_tests" ]; then
     log_warning "未知模块: $module"
     continue
   fi
@@ -209,7 +217,7 @@ for module in "${MODULES[@]}"; do
   module_failed=0
 
   # 遍历模块的所有测试
-  for test_name in ${MODULE_TESTS[$module]}; do
+  for test_name in $module_tests; do
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
     # 查找测试文件
