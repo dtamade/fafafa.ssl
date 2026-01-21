@@ -22,7 +22,11 @@ unit fafafa.ssl.random;
 interface
 
 uses
-  SysUtils, Classes;
+  SysUtils, Classes
+  {$IFDEF USE_RANDOM_POOL}
+  , fafafa.ssl.random.pool
+  {$ENDIF}
+  ;
 
 type
   {**
@@ -202,7 +206,13 @@ begin
 
   SetLength(Result, ACount);
 
+  // Phase B 优化：优先使用缓存池（如果启用）
+  // 缓存池会自动判断是否使用池化，大请求会直接调用底层生成器
+  {$IFDEF USE_RANDOM_POOL}
+  if not PooledRandomBytes(@Result[0], ACount) then
+  {$ELSE}
   if not SecureRandomBytes(@Result[0], ACount) then
+  {$ENDIF}
   begin
     // 清零失败的缓冲区
     FillChar(Result[0], ACount, 0);

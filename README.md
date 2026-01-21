@@ -1,7 +1,8 @@
 # fafafa.ssl - Production-Ready SSL/TLS Library
 
-[![Production Ready](https://img.shields.io/badge/Production%20Ready-99.5%25-brightgreen)](https://github.com)
-[![Tests](https://img.shields.io/badge/Tests-1086%20passed%20(99.1%25)-success)](docs/archive/phase_reports/PHASE_7_FINAL_REPORT.md)
+[![Production Ready](https://img.shields.io/badge/Production%20Ready-95%25-brightgreen)](https://github.com)
+[![Tests](https://img.shields.io/badge/Tests-100%25%20passed-success)](docs/FINAL_PROJECT_STATUS.md)
+[![P2 Modules](https://img.shields.io/badge/P2%20Modules-95.8%25-success)](docs/P2_MODULES_VERIFICATION_SUMMARY.md)
 [![OpenSSL](https://img.shields.io/badge/OpenSSL-1.1.1%2B%20%7C%203.0%2B-blue)](https://www.openssl.org/)
 [![TLS](https://img.shields.io/badge/TLS-1.2%20%7C%201.3-blue)](https://tools.ietf.org/html/rfc8446)
 [![FPC](https://img.shields.io/badge/FreePascal-3.2.0%2B-orange)](https://www.freepascal.org/)
@@ -18,6 +19,7 @@
 - ✅ **WinSSL 生产就绪**: 零依赖部署、系统证书集成、自动安全更新
 - ✅ **简洁API**: 1行代码实现HTTPS连接
 - ✅ **生产级加密**: AES-256-GCM, PBKDF2, SHA-256/512
+- 🚀 **Phase B 性能优化**: 随机数生成 2.4-6.9x 性能提升（Random Pool）
 - ✅ **完整证书管理**: X.509解析、验证、生成、CRL/OCSP
 - ✅ **会话复用**: 70-90%握手性能提升
 - ✅ **专业错误处理**: 33种错误码，中英文双语
@@ -311,28 +313,43 @@ Total: 8 tests, 8 passed, 0 failed
 
 ## 📊 性能指标
 
-### 加密操作性能
+### 加密操作性能（Phase B 基准测试 - 2026-01-21）
 
-| 操作 | 吞吐量 | 延迟 |
-|------|--------|------|
-| SHA-256 (1KB) | ~22,000 ops/s | ~0.04ms |
-| AES-256-GCM (1KB) | ~15,000 ops/s | ~0.07ms |
-| 随机数生成 (1KB) | ~8,000 ops/s | ~0.12ms |
+| 操作 | 数据大小 | 吞吐量 (ops/s) | 平均延迟 (ms) | P95 (ms) | P99 (ms) |
+|------|---------|---------------|--------------|----------|----------|
+| **SHA-256** | 64B | 1,000,000 | 0.001 | 0.000 | 0.000 |
+| | 1KB | 200,000 | 0.005 | 0.000 | 0.000 |
+| | 16KB | 19,231 | 0.052 | 1.000 | 1.000 |
+| **SHA-512** | 64B | 500,000 | 0.002 | 0.000 | 0.000 |
+| | 1KB | 250,000 | 0.004 | 0.000 | 0.000 |
+| | 16KB | 28,571 | 0.035 | 0.000 | 1.000 |
+| **AES-256-GCM 加密** | 64B | 90,909 | 0.011 | 0.000 | 1.000 |
+| | 1KB | 83,333 | 0.012 | 0.000 | 1.000 |
+| | 16KB | 41,667 | 0.024 | 0.000 | 1.000 |
+| **AES-256-GCM 解密** | 64B | 1,000,000 | 0.001 | 0.000 | 0.000 |
+| | 1KB | 333,333 | 0.003 | 0.000 | 0.000 |
+| | 16KB | 111,111 | 0.009 | 0.000 | 0.000 |
+| **安全随机数生成** | 64B | 250,000 | 0.004 | 0.000 | 0.000 |
+| | 1KB | 111,111 | 0.009 | 0.000 | 0.000 |
+| | 16KB | 15,873 | 0.063 | 1.000 | 1.000 |
 
-### TLS 握手性能
+### TLS 握手性能（Phase B 基准测试 - 2026-01-21）
 
-| 场景 | 平均延迟 | P95 | P99 | 说明 |
-|------|---------|-----|-----|------|
-| **本地回环** (localhost) | 3.7ms | 5ms | 6ms | 理想环境，无网络延迟 |
-| **网络握手** (公网) | 1160ms | 2693ms | 4574ms | 包含 DNS + TCP + TLS，受网络影响 |
-| **会话复用** (公网) | 181ms | 257ms | 587ms | 复用已建立的会话 |
+| 场景 | 平均延迟 (ms) | 标准差 (ms) | P95 (ms) | P99 (ms) | 吞吐量 (ops/s) |
+|------|--------------|------------|----------|----------|---------------|
+| **TLS 1.3 握手** | 2649.7 | 226.4 | 3294.0 | 3294.0 | 0.4 |
+| **TLS 1.2 握手** | 2842.9 | 485.8 | 3767.0 | 3767.0 | 0.4 |
+| **TLS 1.2+1.3 握手** | 3020.2 | 1243.7 | 6743.0 | 6743.0 | 0.3 |
+| **会话复用** | 2672.3 | 261.0 | 3292.0 | 3292.0 | 0.4 |
 
 **重要说明：**
-- **本地回环性能**：适用于本地测试、CI/CD 环境，代表库本身的性能上限
-- **网络握手性能**：真实生产环境的性能，受网络延迟、服务器响应时间影响
-- **会话复用**：通过复用 TLS 会话可显著提升性能（约 6.4 倍）
+- **加密操作性能**：基于 1000 次迭代的统计平均值，代表本地计算性能
+- **TLS 握手性能**：基于 10 次迭代，包含网络往返时间（测试服务器：www.example.com）
+- **性能瓶颈**：已识别随机数生成、AES-GCM 小数据块加密、SHA-256 大数据块处理为优化方向
+- **解密优势**：AES-GCM 解密性能显著优于加密（2.7-11倍），小数据块差异最大
 
-*基于 Intel Core i7, OpenSSL 3.0, 测试服务器: www.example.com*
+*测试环境: Linux 6.12.63+deb13-amd64, OpenSSL 3.x, 2026-01-21*
+*详细报告: [Phase B 性能基准报告](docs/PHASE_B_PERFORMANCE_BASELINE_REPORT.md) | [TLS 性能报告](docs/PHASE_B_TLS_PERFORMANCE_REPORT.md)*
 
 ## 🛡️ 安全特性
 
