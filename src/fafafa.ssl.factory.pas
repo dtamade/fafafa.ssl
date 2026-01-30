@@ -784,22 +784,6 @@ begin
   
   Result := GetLibraryInstance(ALibType);
 end;
-        end;
-        FLibraries[LType] := Result;
-      end
-      else
-        raise ESSLInitializationException.CreateWithContext(
-          Format('Failed to create SSL library instance for %s', [SSL_LIBRARY_NAMES[LType]]),
-          sslErrLibraryNotFound,
-          'TSSLFactory.GetLibrary',
-          0,
-          LType
-        );
-    end;
-  finally
-    LeaveCriticalSection(GFactoryLock);
-  end;
-end;
 
 class function TSSLFactory.CreateContext(AContextType: TSSLContextType;
   ALibType: TSSLLibraryType): ISSLContext;

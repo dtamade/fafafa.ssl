@@ -26,6 +26,7 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.pkcs11.types,
+  fafafa.ssl.pkcs11.api,
   fafafa.ssl.pkcs11.backend,
   fafafa.ssl.pkcs11.uri,
   fafafa.ssl.openssl.api.types,
@@ -51,9 +52,6 @@ type
     
     { Load key using OSSL_STORE API }
     function LoadKeyFromStore(const AURI: string; const APIN: string): PEVP_PKEY;
-  protected
-    function FindToken(const AConfig: TPKCS11Config): CK_SLOT_ID; override;
-    function FindKey(ASession: CK_SESSION_HANDLE; const AConfig: TPKCS11Config): CK_OBJECT_HANDLE; override;
   public
     constructor Create;
     destructor Destroy; override;
@@ -263,14 +261,14 @@ begin
       CKR_GENERAL_ERROR);
   
   try
-    // Expect certificate
-    if not OSSL_STORE_expect(StoreCtx, OSSL_STORE_INFO_CERT) then
+    // Expect private key
+    if OSSL_STORE_expect(StoreCtx, OSSL_STORE_INFO_PKEY) <> 1 then
       raise EPKCS11Exception.Create(
-        'Failed to set OSSL_STORE expectation to CERT',
+        'Failed to set OSSL_STORE expectation to PKEY',
         CKR_GENERAL_ERROR);
     
-    // Load objects until we find a certificate
-    while not OSSL_STORE_eof(StoreCtx) do
+    // Load objects until we find a private key
+    while OSSL_STORE_eof(StoreCtx) = 0 do
     begin
       Info := OSSL_STORE_load(StoreCtx);
       if Info = nil then
