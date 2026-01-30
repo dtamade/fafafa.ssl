@@ -1,0 +1,56 @@
+============================================
+P2 COMP Module Test Suite
+Testing OpenSSL Compression API
+============================================
+
+OpenSSL Version: 3.x (libcrypto.so.3)
+
+[1] Load COMP functions... PASS
+[2] COMP compression method NID constants... PASS
+[3] COMP compression level constants... PASS
+[4] COMP compression strategy constants... PASS
+[5] COMP window bits constants... PASS
+[6] COMP method functions availability...   [INFO] COMP_CTX_new loaded
+  [INFO] COMP_CTX_free loaded
+  [INFO] COMP_get_name loaded
+  [INFO] COMP_get_type loaded
+PASS
+[7] COMP compression method getters availability...   [INFO] COMP_zlib loaded
+  [INFO] COMP_zlib_oneshot loaded
+  [INFO] COMP_brotli loaded
+  [INFO] COMP_zstd loaded
+PASS
+[8] SSL_COMP functions availability...   [INFO] SSL_COMP_add_compression_method loaded
+  [INFO] SSL_COMP_get_compression_methods loaded
+  [INFO] SSL_COMP_get0_name loaded
+  [INFO] SSL_COMP_get_id loaded
+PASS
+[9] BIO compression functions availability...   [INFO] BIO_f_zlib loaded
+  [INFO] BIO_f_brotli loaded
+  [INFO] BIO_f_zstd loaded
+PASS
+[10] COMP compress/expand functions availability...   [INFO] COMP_compress_block loaded
+  [INFO] COMP_expand_block loaded
+PASS
+[11] Zlib parameter setting functions availability... PASS
+[12] Helper function GetCompressionMethodName (nil check)... PASS
+[13] Helper function IsCompressionSupported (nil check)... PASS
+[14] Deprecation warning check... 
+  [WARNING] SSL/TLS compression is DEPRECATED in OpenSSL 3.x
+  [WARNING] Most COMP functions may not be available
+  [WARNING] This is expected and normal behavior
+  [INFO] Use application-level compression instead
+PASS
+
+============================================
+Test Summary
+============================================
+Total Tests:  14
+Passed:       14 (100.0%)
+Failed:       0 (0.0%)
+============================================
+All tests PASSED! ✓
+
+Note: COMP API is deprecated in OpenSSL 3.x
+      Function availability checks passing is expected
+      even when functions return nil pointers.

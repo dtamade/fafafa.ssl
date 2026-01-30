@@ -4,6 +4,7 @@
 [![Tests](https://img.shields.io/badge/Tests-100%25%20passed-success)](docs/FINAL_PROJECT_STATUS.md)
 [![P2 Modules](https://img.shields.io/badge/P2%20Modules-95.8%25-success)](docs/P2_MODULES_VERIFICATION_SUMMARY.md)
 [![OpenSSL](https://img.shields.io/badge/OpenSSL-1.1.1%2B%20%7C%203.0%2B-blue)](https://www.openssl.org/)
+[![OpenSSL 3.x](https://img.shields.io/badge/OpenSSL%203.x-100%25%20Compatible-success)](docs/PKCS12_OPENSSL3_COMPATIBILITY_REPORT.md)
 [![TLS](https://img.shields.io/badge/TLS-1.2%20%7C%201.3-blue)](https://tools.ietf.org/html/rfc8446)
 [![FPC](https://img.shields.io/badge/FreePascal-3.2.0%2B-orange)](https://www.freepascal.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)

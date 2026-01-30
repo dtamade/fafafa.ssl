@@ -171,7 +171,7 @@ begin
   WriteLn('=== Testing Connection Builder ===');
 
   // 1. Create Context
-  Ctx := SSLFactory.CreateContext(sslCtxClient);
+  Ctx := TSSLFactory.CreateContext(sslCtxClient);
   Check(Ctx <> nil, 'SSLFactory creates context');
 
   // 2. Test Validation: Missing Context

@@ -1,0 +1,36 @@
+============================================
+P2 TS Module Test Suite
+Testing OpenSSL TS (Timestamp Protocol) API
+============================================
+
+OpenSSL Version: 3.x (libcrypto.so.3)
+
+[1] Load TS functions... PASS
+[2] TS status constants... PASS
+[3] TS info flag constants... PASS
+[4] TS verify flag constants... PASS
+[5] TS_MSG_IMPRINT lifecycle (new/free)... PASS
+[6] TS_REQ lifecycle (new/free)... PASS
+[7] TS_TST_INFO lifecycle (new/free)... PASS
+[8] TS_STATUS_INFO lifecycle (new/free)... PASS
+[9] TS_RESP lifecycle (new/free)... PASS
+[10] TS_RESP_CTX lifecycle (new/free)... PASS
+[11] TS_VERIFY_CTX lifecycle (new/free)... PASS
+[12] TS_REQ functions availability... PASS
+[13] TS_TST_INFO functions availability... PASS
+[14] TS_RESP functions availability... PASS
+[15] TS verification functions availability... PASS
+[16] TS I/O functions availability... PASS
+[17] TS print functions availability... PASS
+
+============================================
+Test Summary
+============================================
+Total Tests:  17
+Passed:       17 (100.0%)
+Failed:       0 (0.0%)
+============================================
+All tests PASSED! ✓
+
+Note: TS (Timestamp Protocol) provides RFC 3161
+      timestamping for document integrity.

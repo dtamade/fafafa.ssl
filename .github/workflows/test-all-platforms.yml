@@ -32,13 +32,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🚀 Setup FPC
-        run: |
-          # 使用 vcpkg 或直接安装
-          # 尝试下载预编译版本
-          wget -q https://sourceforge.net/projects/freepascal/files/Source/3.2.2/fpc-3.2.2.source.tar.gz
-          # 简化：使用 fpcupdeluxe 或跳过编译
-          echo "Skip FPC installation, use Docker image instead"
+      - name: 🚀 Setup FPC & Lazarus
+        uses: gcarreno/setup-lazarus@v3
+        with:
+          lazarus-version: stable
+          include-packages: ""
+          with-cache: true
 
       - name: 📦 Cache FPC packages
         uses: actions/cache@v4
@@ -175,7 +174,7 @@ jobs:
             libssl-dev \
             pkg-config \
             build-essential \
-            Lazarus \
+            lazarus \
             lcl-platform-units \
             lazbuild
 
@@ -247,17 +246,33 @@ jobs:
       - name: 📦 Install dependencies
         run: |
           brew install openssl@3
-          # 创建 OpenSSL 链接
           brew link --force openssl@3
-          export LDFLAGS="-L/usr/local/opt/openssl@3/lib"
-          export CPPFLAGS="-I/usr/local/opt/openssl@3/include"
+          
+          # Detect correct path (Apple Silicon vs Intel)
+          if [ -d "/opt/homebrew/opt/openssl@3" ]; then
+            OPENSSL_PATH="/opt/homebrew/opt/openssl@3"
+          else
+            OPENSSL_PATH="/usr/local/opt/openssl@3"
+          fi
+          
+          # Persist environment variables
+          echo "OPENSSL_ROOT=$OPENSSL_PATH" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=$OPENSSL_PATH/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$OPENSSL_PATH/lib/pkgconfig" >> $GITHUB_ENV
+          
+          # Add to PATH for runtime
+          echo "$OPENSSL_PATH/bin" >> $GITHUB_PATH
 
       - name: 🏗️ Compile tests
         run: |
+          # Use detected OpenSSL path
           for test in tests/test_*.pas; do
             if [[ ! "$test" =~ winssl ]]; then
               echo "Building: $test"
-              fpc -Fusrc -FEtests/bin "$test" -Fi/usr/local/include 2>&1 || echo "Build failed: $test"
+              fpc -Fusrc -FEtests/bin \
+                  -Fl$OPENSSL_ROOT/lib \
+                  -Fi$OPENSSL_ROOT/include \
+                  "$test" 2>&1 || echo "Build failed: $test"
             fi
           done
 

@@ -1,0 +1,71 @@
+=============================================================
+OCSP (在线证书状态协议) 模块综合测试
+=============================================================
+
+初始化 OpenSSL 库...
+✅ OpenSSL 库加载成功
+版本: 3.x (libcrypto.so.3)
+检测到 OpenSSL 3.x - 将跳过不兼容的函数测试
+
+加载 OCSP 模块...
+✅ OCSP 模块加载成功
+
+=== 测试 1: OCSP 基本操作 ===
+OCSP_request_new 函数加载: PASS
+OCSP_request_free 函数加载: PASS
+OCSP_response_new 函数加载: PASS
+OCSP_response_free 函数加载: PASS
+
+=== 测试 2: OCSP 请求操作 ===
+OCSP_request_add0_id 函数加载: PASS
+OCSP_request_add1_nonce 函数加载: PASS
+OCSP_request_add1_cert 函数加载: PASS
+OCSP_request_add_ext 函数加载: PASS
+
+=== 测试 3: OCSP 证书 ID ===
+OCSP_cert_id_new 函数加载: PASS
+OCSP_CERTID_free 函数加载: PASS
+OCSP_CERTID_dup 函数加载: PASS
+OCSP_cert_to_id 函数加载: PASS
+
+=== 测试 4: OCSP 响应操作 ===
+OCSP_resp_get0_respdata 函数加载: PASS
+OCSP_resp_get0_produced_at 函数加载: PASS
+
+=== 测试 5: OCSP 单响应 ===
+OCSP_resp_count 函数加载: PASS
+OCSP_resp_get0 函数加载: PASS
+OCSP_single_get0_status 函数加载: PASS
+OCSP_resp_find 函数加载: PASS
+
+=== 测试 6: OCSP 验证 ===
+OCSP_check_nonce 函数加载: PASS
+OCSP_copy_nonce 函数加载: PASS
+OCSP_check_validity 函数加载: PASS
+
+=== 测试 7: OCSP I/O 和序列化 ===
+i2d_OCSP_REQUEST 函数加载: PASS
+d2i_OCSP_REQUEST 函数加载: PASS
+i2d_OCSP_RESPONSE 函数加载: PASS
+d2i_OCSP_RESPONSE 函数加载: PASS
+OCSP_REQUEST_print 函数加载: PASS
+OCSP_RESPONSE_print 函数加载: PASS
+
+=== 测试 8: OCSP 工具函数 ===
+OCSP_sendreq_new 函数加载: PASS
+OCSP_RESPONSE_STATUS_SUCCESSFUL (0): PASS
+OCSP_RESPONSE_STATUS_MALFORMEDREQUEST (1): PASS
+OCSP_RESPONSE_STATUS_INTERNALERROR (2): PASS
+OCSP_RESPONSE_STATUS_TRYLATER (3): PASS
+OCSP_RESPONSE_STATUS_SIGREQUIRED (5): PASS
+OCSP_RESPONSE_STATUS_UNAUTHORIZED (6): PASS
+
+=============================================================
+测试结果总结
+=============================================================
+总测试数: 34
+通过: 34
+失败: 0
+通过率: 100.0%
+
+🎉 所有测试通过！OCSP 模块工作正常

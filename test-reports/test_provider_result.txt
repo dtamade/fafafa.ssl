@@ -1,0 +1,28 @@
+========================================
+OpenSSL Provider API Test
+========================================
+
+OpenSSL loaded successfully!
+
+Testing Provider Availability...
+
+  [+] default provider: Available
+  [-] base provider: NOT Available
+  [-] legacy provider: NOT Available
+  [-] fips provider: NOT Available (expected in standard builds)
+
+Testing Provider Load...
+
+  [+] Successfully loaded provider: default
+  [+] Successfully unloaded provider
+
+Testing Library Context...
+
+  [+] Successfully created library context
+  [+] Successfully freed library context
+
+========================================
+Provider API tests completed!
+========================================
+
+Press Enter to exit...

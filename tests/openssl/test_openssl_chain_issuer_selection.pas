@@ -25,8 +25,14 @@ end;
 
 function MustGetX509(const ACert: ICertificate): PX509;
 var
+  {$PUSH}
+  {$WARN SYMBOL_DEPRECATED OFF}
   LEx: ICertificateEx;
+  {$POP}
 begin
+  {$PUSH}
+  {$WARN SYMBOL_DEPRECATED OFF}
+  // ICertificateEx is deprecated but required for OpenSSL-specific testing
   if not Supports(ACert, ICertificateEx, LEx) then
   begin
     WriteLn('❌ FAIL: Certificate does not support ICertificateEx');
@@ -34,6 +40,7 @@ begin
   end;
 
   Result := PX509(LEx.GetX509Handle);
+  {$POP}
   if Result = nil then
   begin
     WriteLn('❌ FAIL: X509 handle is nil');

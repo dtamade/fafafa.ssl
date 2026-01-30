@@ -1,0 +1,39 @@
+name: Phase C Week 3-4 Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install FreePascal
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y fpc
+        
+    - name: Install OpenSSL
+      run: |
+        sudo apt-get install -y libssl-dev
+        
+    - name: Compile Phase C Tests
+      run: |
+        mkdir -p bin lib/tests
+        fpc -B -Mobjfpc -Sh -Fu./src -Fi./src -FU./lib/tests tests/test_security_attacks.pas -o./bin/test_security_attacks
+        fpc -B -Mobjfpc -Sh -Fu./src -Fi./src -FU./lib/tests tests/connection/test_phase5_complete_handshake.pas -o./bin/test_phase5_complete_handshake
+        fpc -B -Mobjfpc -Sh -Fu./src -Fi./src -FU./lib/tests tests/test_concurrent_connections.pas -o./bin/test_concurrent_connections
+        
+    - name: Run Phase C Tests
+      run: |
+        chmod +x scripts/run_phase_c_tests.sh
+        ./scripts/run_phase_c_tests.sh
+        
+    - name: Check Interface Completeness
+      run: |
+        python3 scripts/check_interface_completeness.py

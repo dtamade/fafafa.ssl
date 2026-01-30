@@ -1,0 +1,50 @@
+========================================
+模块自动化测试报告
+时间: 2026年 01月 20日 星期二 10:39:34 CST
+========================================
+
+
+[0;34m[INFO][0m ========== 测试模块: PKCS7 ==========
+[0;32m[PASS][0m test_p2_pkcs7: 通过
+[0;32m[PASS][0m test_p2_pkcs7_comprehensive: 通过
+[0;34m[INFO][0m PKCS7 模块: 2/2 通过 (100.0%)
+
+[0;34m[INFO][0m ========== 测试模块: SRP ==========
+[0;32m[PASS][0m test_p2_srp: 通过
+[0;32m[PASS][0m test_p2_srp_comprehensive: 通过
+[0;34m[INFO][0m SRP 模块: 2/2 通过 (100.0%)
+
+[0;34m[INFO][0m ========== 测试模块: OCSP ==========
+[0;32m[PASS][0m test_p2_ocsp: 通过
+[0;32m[PASS][0m test_p2_ocsp_comprehensive: 通过
+[0;34m[INFO][0m OCSP 模块: 2/2 通过 (100.0%)
+
+[0;34m[INFO][0m ========== 测试模块: TS ==========
+[0;32m[PASS][0m test_p2_ts: 通过
+[0;32m[PASS][0m test_p2_ts_comprehensive: 通过
+[0;34m[INFO][0m TS 模块: 2/2 通过 (100.0%)
+
+[0;34m[INFO][0m ========== 测试模块: CMS ==========
+[0;32m[PASS][0m test_p2_cms: 通过
+[0;32m[PASS][0m test_p2_cms_comprehensive: 通过
+[0;34m[INFO][0m CMS 模块: 2/2 通过 (100.0%)
+
+[0;34m[INFO][0m ========== 测试模块: Store ==========
+[0;32m[PASS][0m test_p2_store: 通过
+[0;32m[PASS][0m test_p2_store_comprehensive: 通过
+[0;34m[INFO][0m Store 模块: 2/2 通过 (100.0%)
+
+[0;34m[INFO][0m ========== 测试模块: Engine ==========
+[0;31m[FAIL][0m test_p4_engine: 超时或崩溃
+[0;31m[FAIL][0m test_p4_engine: 失败
+[0;34m[INFO][0m Engine 模块: 0/1 通过 (0.0%)
+
+[0;34m[INFO][0m ========== 测试模块: PKCS12 ==========
+[0;32m[PASS][0m test_p2_pkcs12: 通过
+[0;31m[FAIL][0m test_p2_pkcs12_comprehensive: 超时或崩溃
+[0;31m[FAIL][0m test_p2_pkcs12_comprehensive: 失败
+[0;32m[PASS][0m test_p2_pkcs12_create_parse: 通过
+[0;34m[INFO][0m PKCS12 模块: 2/3 通过 (66.7%)
+
+[0;34m[INFO][0m ========== 测试模块: CT ==========
+[0;32m[PASS][0m test_p2_ct: 通过

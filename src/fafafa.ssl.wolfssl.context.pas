@@ -119,6 +119,12 @@ type
     function IsValid: Boolean;
     function GetNativeHandle: Pointer;
 
+    { ISSLContext - 健康状态和诊断 }
+    function GetHealthStatus: TSSLHealthStatus;
+    function IsHealthy: Boolean;
+    function GetDiagnosticInfo: TSSLDiagnosticInfo;
+    function GetPerformanceMetrics: TSSLPerformanceMetrics;
+
     { 便利方法 }
     procedure ConfigureSecureDefaults;
   end;
@@ -204,6 +210,12 @@ type
 
     { ISSLConnection - 上下文 }
     function GetContext: ISSLContext;
+
+    { ISSLConnection - 健康状态和诊断 }
+    function GetHealthStatus: TSSLHealthStatus;
+    function IsHealthy: Boolean;
+    function GetDiagnosticInfo: TSSLDiagnosticInfo;
+    function GetPerformanceMetrics: TSSLPerformanceMetrics;
 
     { ISSLConnection - 原生句柄 }
     function GetNativeHandle: Pointer;
@@ -597,6 +609,37 @@ end;
 function TWolfSSLContext.GetNativeHandle: Pointer;
 begin
   Result := FWolfSSLCtx;
+end;
+
+function TWolfSSLContext.GetHealthStatus: TSSLHealthStatus;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+  Result.IsConnected := False;  // Context doesn't have connection state
+  Result.HandshakeComplete := False;
+  Result.LastError := sslErrNone;
+  Result.LastErrorTime := 0;
+  Result.BytesSent := 0;
+  Result.BytesReceived := 0;
+  Result.ConnectionAge := 0;
+end;
+
+function TWolfSSLContext.IsHealthy: Boolean;
+begin
+  Result := IsValid;
+end;
+
+function TWolfSSLContext.GetDiagnosticInfo: TSSLDiagnosticInfo;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+  Result.HealthStatus := GetHealthStatus;
+  Result.PerformanceMetrics := GetPerformanceMetrics;
+  SetLength(Result.ErrorHistory, 0);
+end;
+
+function TWolfSSLContext.GetPerformanceMetrics: TSSLPerformanceMetrics;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+  // Context-level metrics are not tracked in this implementation
 end;
 
 procedure TWolfSSLContext.ConfigureSecureDefaults;
@@ -1030,6 +1073,38 @@ end;
 function TWolfSSLConnection.GetNativeHandle: Pointer;
 begin
   Result := FWolfSSL;
+end;
+
+function TWolfSSLConnection.GetHealthStatus: TSSLHealthStatus;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+  Result.IsConnected := (FWolfSSL <> nil);
+  Result.HandshakeComplete := FHandshakeComplete;
+  Result.LastError := sslErrNone;
+  Result.LastErrorTime := 0;
+  Result.BytesSent := 0;
+  Result.BytesReceived := 0;
+  Result.ConnectionAge := 0;
+end;
+
+function TWolfSSLConnection.IsHealthy: Boolean;
+begin
+  Result := (FWolfSSL <> nil) and FHandshakeComplete;
+end;
+
+function TWolfSSLConnection.GetDiagnosticInfo: TSSLDiagnosticInfo;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+  Result.ConnectionInfo := GetConnectionInfo;
+  Result.HealthStatus := GetHealthStatus;
+  Result.PerformanceMetrics := GetPerformanceMetrics;
+  SetLength(Result.ErrorHistory, 0);
+end;
+
+function TWolfSSLConnection.GetPerformanceMetrics: TSSLPerformanceMetrics;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+  // Connection-level metrics are not tracked in this implementation
 end;
 
 end.

@@ -31,7 +31,11 @@ uses
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.pem,
   fafafa.ssl.openssl.api.evp,
-  fafafa.ssl.logging;
+  fafafa.ssl.logging,
+  fafafa.ssl.pkcs11.uri,
+  fafafa.ssl.pkcs11.types,
+  fafafa.ssl.pkcs11.backend,
+  fafafa.ssl.cert.pinning;
 
 type
   { TOpenSSLContext - OpenSSL 上下文类 }
@@ -59,6 +63,10 @@ type
     FPasswordCallback: TSSLPasswordCallback;
     FInfoCallback: TSSLInfoCallback;
     
+    // 证书固定
+    FPinValidator: TPinValidator;
+    FPinningEnabled: Boolean;
+    
     procedure ApplyProtocolVersions;
     procedure ApplyVerifyMode;
     procedure ApplyOptions;
@@ -69,6 +77,9 @@ type
 
     { P1-2: 私钥-证书匹配检查辅助方法 }
     procedure CheckPrivateKeyMatchesCertificate(const AMethodName: string);
+
+    { PKCS#11: Load private key from PKCS#11 token }
+    procedure LoadPrivateKeyFromPKCS11(const AURI: string; const APIN: string);
 
   public
     constructor Create(ALibrary: ISSLLibrary; AType: TSSLContextType);
@@ -127,6 +138,15 @@ type
     { ISSLContext - 回调设置 }
     procedure SetPasswordCallback(ACallback: TSSLPasswordCallback);
     procedure SetInfoCallback(ACallback: TSSLInfoCallback);
+    
+    { ISSLContext - 证书固定 }
+    procedure AddCertificatePin(const AHash: TBytes; APinType: Integer;
+      const ADescription: string; AIsBackup: Boolean = False);
+    procedure AddCertificatePinBase64(const ABase64Hash: string; APinType: Integer;
+      const ADescription: string; AIsBackup: Boolean = False);
+    procedure SetCertificatePinningEnabled(AEnabled: Boolean);
+    function GetCertificatePinningEnabled: Boolean;
+    procedure ClearCertificatePins;
     
     { ISSLContext - 创建连接 }
     function CreateConnection(ASocket: THandle): ISSLConnection; overload;
@@ -417,6 +437,10 @@ begin
   FPasswordCallback := nil;
   FInfoCallback := nil;
   
+  // 初始化证书固定
+  FPinValidator := TPinValidator.Create;
+  FPinningEnabled := False;
+  
   // 创建 SSL_CTX
   Method := GetSSLMethod;
   if Method = nil then
@@ -467,6 +491,10 @@ begin
       SSL_CTX_free(FSSLContext);
     FSSLContext := nil;
   end;
+  
+  // 清理证书固定
+  FreeAndNil(FPinValidator);
+  
   inherited Destroy;
 end;
 
@@ -733,6 +761,13 @@ var
 begin
   RequireValidContext('TOpenSSLContext.LoadPrivateKey');
 
+  // Check if this is a PKCS#11 URI
+  if TPKCS11URIParser.IsPKCS11URI(AFileName) then
+  begin
+    LoadPrivateKeyFromPKCS11(AFileName, APassword);
+    Exit;
+  end;
+
   FileNameA := AnsiString(AFileName);
 
   // 使用 PEM_read_bio_PrivateKey 支持加密私钥
@@ -994,6 +1029,112 @@ begin
     end;
   finally
     BIO_free(BIO);
+  end;
+end;
+
+procedure TOpenSSLContext.LoadPrivateKeyFromPKCS11(const AURI: string; const APIN: string);
+var
+  URIParsed: TPKCS11URI;
+  Config: TPKCS11Config;
+  Backend: IPKCS11Backend;
+  PKey: PEVP_PKEY;
+begin
+  RequireValidContext('TOpenSSLContext.LoadPrivateKeyFromPKCS11');
+  
+  // Parse PKCS#11 URI
+  try
+    URIParsed := TPKCS11URIParser.Parse(AURI);
+  except
+    on E: Exception do
+      raise ESSLKeyException.CreateWithContext(
+        Format('Failed to parse PKCS#11 URI: %s', [E.Message]),
+        sslErrParseFailed,
+        'TOpenSSLContext.LoadPrivateKeyFromPKCS11',
+        0,
+        sslOpenSSL
+      );
+  end;
+  
+  // Build configuration from URI
+  Config := TPKCS11Config.FromURI(URIParsed);
+  
+  // Override PIN if provided
+  if APIN <> '' then
+  begin
+    Config.PINMethod := pmValue;
+    Config.PINValue := APIN;
+  end;
+  
+  // Validate configuration
+  if not Config.IsValid then
+    raise ESSLKeyException.CreateWithContext(
+      'Invalid PKCS#11 configuration',
+      sslErrLoadFailed,
+      'TOpenSSLContext.LoadPrivateKeyFromPKCS11',
+      0,
+      sslOpenSSL
+    );
+  
+  // Create backend (auto-detect Provider or ENGINE)
+  try
+    Backend := TPKCS11BackendFactory.CreateBackend(btAuto);
+  except
+    on E: Exception do
+      raise ESSLKeyException.CreateWithContext(
+        Format('Failed to create PKCS#11 backend: %s', [E.Message]),
+        sslErrLoadFailed,
+        'TOpenSSLContext.LoadPrivateKeyFromPKCS11',
+        0,
+        sslOpenSSL
+      );
+  end;
+  
+  // Load private key from PKCS#11 token
+  try
+    PKey := Backend.LoadPrivateKey(Config);
+    if PKey = nil then
+      raise ESSLKeyException.CreateWithContext(
+        'Failed to load private key from PKCS#11 token',
+        sslErrLoadFailed,
+        'TOpenSSLContext.LoadPrivateKeyFromPKCS11',
+        0,
+        sslOpenSSL
+      );
+    
+    try
+      // Use the key in SSL context
+      if SSL_CTX_use_PrivateKey(FSSLContext, PKey) <> 1 then
+        raise ESSLKeyException.CreateWithContext(
+          'Failed to use PKCS#11 private key in SSL context',
+          sslErrLoadFailed,
+          'TOpenSSLContext.LoadPrivateKeyFromPKCS11',
+          Integer(GetLastOpenSSLError),
+          sslOpenSSL
+        );
+      
+      CheckPrivateKeyMatchesCertificate('TOpenSSLContext.LoadPrivateKeyFromPKCS11');
+      TSecurityLog.Audit('OpenSSL', 'LoadPrivateKeyFromPKCS11', 'System', 
+        Format('Private key loaded from PKCS#11 token (Backend: %s)', [Backend.GetName]));
+    finally
+      EVP_PKEY_free(PKey);
+    end;
+  except
+    on E: EPKCS11Exception do
+      raise ESSLKeyException.CreateWithContext(
+        Format('PKCS#11 error: %s', [E.Message]),
+        sslErrLoadFailed,
+        'TOpenSSLContext.LoadPrivateKeyFromPKCS11',
+        Integer(E.ReturnValue),
+        sslOpenSSL
+      );
+    on E: Exception do
+      raise ESSLKeyException.CreateWithContext(
+        Format('Failed to load PKCS#11 private key: %s', [E.Message]),
+        sslErrLoadFailed,
+        'TOpenSSLContext.LoadPrivateKeyFromPKCS11',
+        0,
+        sslOpenSSL
+      );
   end;
 end;
 
@@ -1418,6 +1559,58 @@ begin
     SSL_CTX_set_info_callback(FSSLContext, @InfoCallbackThunk)
   else
     SSL_CTX_set_info_callback(FSSLContext, nil);
+end;
+
+// ============================================================================
+// ISSLContext - 证书固定
+// ============================================================================
+
+procedure TOpenSSLContext.AddCertificatePin(const AHash: TBytes; APinType: Integer;
+  const ADescription: string; AIsBackup: Boolean);
+begin
+  if FPinValidator = nil then
+    raise ESSLException.CreateWithContext(
+      'Pin validator not initialized',
+      sslErrNotInitialized,
+      'TOpenSSLContext.AddCertificatePin'
+    );
+  
+  FPinValidator.AddPin(AHash, TPinType(APinType), ADescription, AIsBackup);
+end;
+
+procedure TOpenSSLContext.AddCertificatePinBase64(const ABase64Hash: string; 
+  APinType: Integer; const ADescription: string; AIsBackup: Boolean);
+begin
+  if FPinValidator = nil then
+    raise ESSLException.CreateWithContext(
+      'Pin validator not initialized',
+      sslErrNotInitialized,
+      'TOpenSSLContext.AddCertificatePinBase64'
+    );
+  
+  FPinValidator.AddPinBase64(ABase64Hash, TPinType(APinType), ADescription, AIsBackup);
+end;
+
+procedure TOpenSSLContext.SetCertificatePinningEnabled(AEnabled: Boolean);
+begin
+  FPinningEnabled := AEnabled;
+  
+  if FPinValidator <> nil then
+    FPinValidator.RequireValidPin := AEnabled;
+  
+  TSecurityLog.Info('OpenSSL', 
+    Format('Certificate pinning %s', [IfThen(AEnabled, 'enabled', 'disabled')]));
+end;
+
+function TOpenSSLContext.GetCertificatePinningEnabled: Boolean;
+begin
+  Result := FPinningEnabled;
+end;
+
+procedure TOpenSSLContext.ClearCertificatePins;
+begin
+  if FPinValidator <> nil then
+    FPinValidator.ClearPins;
 end;
 
 // ============================================================================

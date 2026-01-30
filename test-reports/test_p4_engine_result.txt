@@ -1,0 +1,37 @@
+============================================
+P4 ENGINE Module Test Suite
+Testing OpenSSL ENGINE (Hardware Acceleration) API
+============================================
+
+OpenSSL Version: 3.x (libcrypto.so.3)
+
+WARNING: ENGINE is deprecated in OpenSSL 3.x
+         Use Provider API instead
+
+[1] Load ENGINE functions... PASS
+[2] ENGINE basic functions availability... PASS
+[3] ENGINE discovery functions availability... PASS
+[4] ENGINE lifecycle functions availability... PASS
+[5] ENGINE info functions availability... PASS
+[6] ENGINE control functions availability... PASS
+[7] ENGINE key loading functions availability... PASS
+[8] ENGINE method flag constants... PASS
+[9] Helper functions availability... PASS
+[10] Deprecation warning check... 
+  [WARNING] ENGINE API is DEPRECATED in OpenSSL 3.x
+  [WARNING] Use Provider API instead for OpenSSL 3.x
+  [WARNING] ENGINE functions may not be available
+  [INFO] This module is for backward compatibility only
+PASS
+
+============================================
+Test Summary
+============================================
+Total Tests:  10
+Passed:       10 (100.0%)
+Failed:       0 (0.0%)
+============================================
+All tests PASSED! ✓
+
+Note: ENGINE API is deprecated in OpenSSL 3.x
+      Use Provider API for new applications

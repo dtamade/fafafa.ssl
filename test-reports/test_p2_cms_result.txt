@@ -1,0 +1,39 @@
+============================================
+P2 CMS Module Test Suite
+Testing OpenSSL CMS (Cryptographic Message Syntax) API
+============================================
+
+OpenSSL Version: 3.x (libcrypto.so.3)
+
+[1] Load CMS functions... PASS
+[2] CMS recipient info type constants... PASS
+[3] CMS flag constants... PASS
+[4] CMS_ContentInfo lifecycle (new/free)... PASS
+[5] CMS sign functions availability... PASS
+[6] CMS encrypt functions availability... PASS
+[7] CMS I/O functions availability... PASS
+[8] CMS RecipientInfo functions availability... PASS
+[9] CMS SignerInfo functions availability... PASS
+[10] CMS signed attribute functions availability... PASS
+[11] CMS unsigned attribute functions availability... PASS
+[12] CMS utility functions availability... PASS
+[13] CMS receipt functions availability... PASS
+[14] CMS dataInit function availability... PASS
+[15] CMS_get0_signers function availability... PASS
+[16] CMS SignerInfo sign function availability... PASS
+[17] CMS RecipientInfo key functions availability... PASS
+[18] CMS RecipientInfo encrypt/decrypt functions... PASS
+[19] CMS SignerInfo algorithm functions... PASS
+[20] CMS print function availability... PASS
+
+============================================
+Test Summary
+============================================
+Total Tests:  20
+Passed:       20 (100.0%)
+Failed:       0 (0.0%)
+============================================
+All tests PASSED! ✓
+
+Note: CMS (Cryptographic Message Syntax) is the modern
+      successor to PKCS#7 with enhanced features.

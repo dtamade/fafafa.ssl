@@ -1,0 +1,79 @@
+=============================================================
+CMS (加密消息语法) 模块综合测试
+=============================================================
+
+初始化 OpenSSL 库...
+✅ OpenSSL 库加载成功
+版本: 3.x (libcrypto.so.3)
+
+加载 CMS 模块...
+✅ CMS 模块加载成功
+
+=== 测试 1: CMS ContentInfo 基本操作 ===
+CMS_ContentInfo_new 函数加载: PASS
+CMS_ContentInfo_free 函数加载: PASS
+i2d_CMS_ContentInfo 函数加载: PASS
+d2i_CMS_ContentInfo 函数加载: PASS
+i2d_CMS_bio 函数加载: PASS
+d2i_CMS_bio 函数加载: PASS
+
+=== 测试 2: CMS 签名操作 ===
+CMS_sign 函数加载: PASS
+CMS_add1_signer 函数加载: PASS
+CMS_sign_receipt 函数加载: PASS
+CMS_final 函数加载: PASS
+CMS_dataInit 函数加载: PASS
+CMS_data 函数加载: PASS
+
+=== 测试 3: CMS 验证操作 ===
+CMS_verify 函数加载: PASS
+CMS_get0_signers 函数加载: PASS
+CMS_digest_verify 函数加载: PASS
+CMS_SignerInfo_verify 函数加载: PASS
+CMS_get0_SignerInfos 函数加载: PASS
+
+=== 测试 4: CMS 加密/解密 ===
+CMS_encrypt 函数加载: PASS
+CMS_decrypt 函数加载: PASS
+CMS_set1_eContentType 函数加载: PASS
+CMS_get0_type 函数加载: PASS
+CMS_get0_content 函数加载: PASS
+
+=== 测试 5: CMS 接收者信息 ===
+CMS_add1_recipient_cert 函数加载: PASS
+CMS_RECIPINFO_TRANS (0): PASS
+CMS_RECIPINFO_AGREE (1): PASS
+CMS_RECIPINFO_KEK (2): PASS
+CMS_RECIPINFO_PASS (3): PASS
+CMS_RECIPINFO_OTHER (4): PASS
+
+=== 测试 6: CMS 收据操作 ===
+CMS_ReceiptRequest_create0 函数加载: PASS
+CMS_verify_receipt 函数加载: PASS
+CMS_get1_ReceiptRequest 函数加载: PASS
+
+=== 测试 7: CMS 属性管理 ===
+CMS_signed_add1_attr 函数加载: PASS
+CMS_signed_get_attr 函数加载: PASS
+
+=== 测试 8: CMS 工具函数 ===
+CMS_get0_content 函数加载: PASS
+CMS_ContentInfo_print_ctx 函数加载: PASS
+i2d_CMS_bio_stream 函数加载: PASS
+CMS_TEXT 标志 ($1): PASS
+CMS_DETACHED 标志 ($40): PASS
+CMS_BINARY 标志 ($80): PASS
+CMS_STREAM 标志 ($1000): PASS
+CMS_PARTIAL 标志 ($4000): PASS
+CMS_REUSE_DIGEST 标志 ($8000): PASS
+CMS_USE_KEYID 标志 ($10000): PASS
+
+=============================================================
+测试结果总结
+=============================================================
+总测试数: 43
+通过: 43
+失败: 0
+通过率: 100.0%
+
+🎉 所有测试通过！CMS 模块工作正常

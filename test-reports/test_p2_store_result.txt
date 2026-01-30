@@ -1,0 +1,33 @@
+============================================
+P2 STORE Module Test Suite
+Testing OpenSSL OSSL_STORE API
+============================================
+
+OpenSSL Version: 3.x (libcrypto.so.3)
+
+[1] Load STORE functions... PASS
+[2] STORE INFO type constants defined... PASS
+[3] STORE SEARCH type constants defined... PASS
+[4] OSSL_STORE_INFO_type_string function... PASS
+[5] Create OSSL_STORE_INFO NAME API availability... PASS
+[6] Get NAME from OSSL_STORE_INFO API availability... PASS
+[7] Set NAME description API availability... PASS
+[8] Helper function StoreObjectTypeToString... PASS
+[9] STORE INFO CERT operations (requires actual certificate)... PASS
+[10] STORE INFO PKEY operations (API availability)... PASS
+[11] STORE INFO PUBKEY operations (API availability)... PASS
+[12] STORE SEARCH API functions availability... PASS
+[13] STORE LOADER API functions availability... PASS
+[14] STORE CTX API functions availability... PASS
+[15] STORE expect and find API functions... PASS
+[16] Create temporary test certificate file... PASS
+[17] Cleanup temporary test files... PASS
+
+============================================
+Test Summary
+============================================
+Total Tests:  17
+Passed:       17 (100.0%)
+Failed:       0 (0.0%)
+============================================
+All tests PASSED! ✓

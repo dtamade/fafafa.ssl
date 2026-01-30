@@ -1,0 +1,44 @@
+============================================
+P2 OCSP Module Test Suite
+Testing OpenSSL OCSP (Online Certificate Status Protocol) API
+============================================
+
+OpenSSL Version: 3.x (libcrypto.so.3)
+
+[1] Load OCSP functions... PASS
+[2] OCSP response status constants... PASS
+[3] OCSP certificate status constants... PASS
+[4] OCSP revoked status constants... PASS
+[5] OCSP flag constants... PASS
+[6] OCSP_REQUEST lifecycle (new/free)... PASS
+[7] OCSP_RESPONSE lifecycle (new/free)... PASS
+[8] OCSP_BASICRESP lifecycle (new/free)... PASS
+[9] OCSP_CERTID lifecycle (new/free)... PASS
+[10] OCSP request I/O functions availability... PASS
+[11] OCSP response I/O functions availability... PASS
+[12] OCSP basic response I/O functions availability... PASS
+[13] OCSP request extension functions availability... PASS
+[14] OCSP basic response extension functions availability... PASS
+[15] OCSP request sign function availability... PASS
+[16] OCSP basic response sign functions availability... PASS
+[17] OCSP response create function availability... PASS
+[18] OCSP CERTID functions availability... PASS
+[19] OCSP request operations availability... PASS
+[20] OCSP response operations availability... PASS
+[21] OCSP nonce functions availability... PASS
+[22] OCSP single response functions availability... PASS
+[23] OCSP response data functions availability... PASS
+[24] OCSP responder ID functions availability... PASS
+[25] OCSP CERTID info function availability... PASS
+
+============================================
+Test Summary
+============================================
+Total Tests:  25
+Passed:       25 (100.0%)
+Failed:       0 (0.0%)
+============================================
+All tests PASSED! ✓
+
+Note: OCSP (Online Certificate Status Protocol) provides
+      real-time certificate revocation checking.
