@@ -32,7 +32,8 @@ uses
   fafafa.ssl.openssl.api.types,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.provider,
-  fafafa.ssl.openssl.api.store;
+  fafafa.ssl.openssl.api.store,
+  fafafa.ssl.openssl.api.ui;
 
 type
   { TProviderBackend - OpenSSL 3.x Provider-based PKCS#11 backend }
@@ -140,23 +141,67 @@ var
   Info: POSSL_STORE_INFO;
   InfoType: Integer;
   Key: PEVP_PKEY;
+  URIAnsi: AnsiString;
+  PINAnsi: AnsiString;
+  UIMethod: PUI_METHOD;
 begin
   Result := nil;
+  Key := nil;
   
-  // Open OSSL_STORE context with URI
-  StoreCtx := OSSL_STORE_open(PAnsiChar(AnsiString(AURI)), nil, nil, nil, nil);
+  // Convert strings to ANSI
+  URIAnsi := AnsiString(AURI);
+  PINAnsi := AnsiString(APIN);
+  
+  // Create UI method for PIN
+  UIMethod := CreateUIMethod(PINAnsi);
+  
+  // Open OSSL_STORE context
+  StoreCtx := OSSL_STORE_open(PAnsiChar(URIAnsi), UIMethod, nil, nil, nil);
   if StoreCtx = nil then
     raise EPKCS11Exception.Create(
-      'Failed to open OSSL_STORE with URI: ' + AURI,
+      'Failed to open OSSL_STORE for URI: ' + AURI,
       CKR_GENERAL_ERROR);
   
   try
-    // Set PIN if provided
-    if APIN <> '' then
+    // Expect private key
+    if OSSL_STORE_expect(StoreCtx, OSSL_STORE_INFO_PKEY) <> 1 then
+      raise EPKCS11Exception.Create(
+        'Failed to set OSSL_STORE expectation to PKEY',
+        CKR_GENERAL_ERROR);
+    
+    // Load objects until we find a private key
+    while OSSL_STORE_eof(StoreCtx) = 0 do
     begin
-      // TODO: Set PIN via UI method or callback
-      // This requires OSSL_STORE_CTX_set_ui_method which might not be bound yet
+      Info := OSSL_STORE_load(StoreCtx);
+      if Info = nil then
+        Continue;
+      
+      try
+        InfoType := OSSL_STORE_INFO_get_type(Info);
+        
+        if InfoType = OSSL_STORE_INFO_PKEY then
+        begin
+          Key := OSSL_STORE_INFO_get1_PKEY(Info);
+          if Key <> nil then
+          begin
+            Result := Key;
+            Break;
+          end;
+        end;
+      finally
+        OSSL_STORE_INFO_free(Info);
+      end;
     end;
+    
+    if Result = nil then
+      raise EPKCS11Exception.Create(
+        'No private key found in PKCS#11 URI: ' + AURI,
+        CKR_KEY_HANDLE_INVALID);
+  finally
+    if StoreCtx <> nil then
+      OSSL_STORE_close(StoreCtx);
+  end;
+end;
     
     // Expect private key
     if not OSSL_STORE_expect(StoreCtx, OSSL_STORE_INFO_PKEY) then
@@ -261,30 +306,23 @@ begin
       CKR_GENERAL_ERROR);
   
   try
-    // Expect private key
-    if OSSL_STORE_expect(StoreCtx, OSSL_STORE_INFO_PKEY) <> 1 then
+    // Expect certificate
+    if OSSL_STORE_expect(StoreCtx, OSSL_STORE_INFO_CERT) <> 1 then
       raise EPKCS11Exception.Create(
-        'Failed to set OSSL_STORE expectation to PKEY',
+        'Failed to set OSSL_STORE expectation to CERT',
         CKR_GENERAL_ERROR);
-    
-    // Load objects until we find a private key
-    while OSSL_STORE_eof(StoreCtx) = 0 do
-    begin
-      Info := OSSL_STORE_load(StoreCtx);
-      if Info = nil then
-        Continue;
       
-      try
-        InfoType := OSSL_STORE_INFO_get_type(Info);
-        
-        if InfoType = OSSL_STORE_INFO_CERT then
+      // Check if this is a certificate
+      if OSSL_STORE_INFO_get_type(Info) = OSSL_STORE_INFO_CERT then
+      begin
+        Cert := OSSL_STORE_INFO_get0_CERT(Info);
+        if Cert <> nil then
         begin
-          Cert := OSSL_STORE_INFO_get1_CERT(Info);
-          if Cert <> nil then
-          begin
-            Result := Cert;
-            Break;
-          end;
+          Result := Cert;
+          OSSL_STORE_INFO_free(Info);
+          Break;
+        end;
+      end;
         end;
       finally
         OSSL_STORE_INFO_free(Info);
