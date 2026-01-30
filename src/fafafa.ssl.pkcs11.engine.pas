@@ -26,6 +26,7 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.pkcs11.types,
+  fafafa.ssl.pkcs11.api,
   fafafa.ssl.pkcs11.backend,
   fafafa.ssl.pkcs11.uri,
   fafafa.ssl.openssl.api.types,
@@ -272,14 +273,13 @@ begin
   // Load certificate from engine
   // Note: ENGINE_load_certificate might not be available in all ENGINE implementations
   // This is a simplified implementation
-  Cert := ENGINE_load_public_key(FEngine, PAnsiChar(KeyIDAnsi), nil, nil) as PX509;
+  // ENGINE_load_public_key returns PEVP_PKEY, not PX509
+  // We need to extract the certificate from the key or use a different approach
+  raise EPKCS11Exception.Create(
+    'Certificate loading from ENGINE not yet implemented',
+    CKR_FUNCTION_NOT_SUPPORTED);
   
-  if Cert = nil then
-    raise EPKCS11Exception.Create(
-      'Failed to load certificate from ENGINE with ID: ' + KeyID,
-      CKR_GENERAL_ERROR);
-  
-  Result := Cert;
+  Result := nil;
 end;
 
 function TEngineBackend.IsAvailable: Boolean;

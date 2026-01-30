@@ -762,49 +762,28 @@ end;
 
 class function TSSLFactory.GetLibrary(ALibType: TSSLLibraryType): ISSLLibrary;
 var
-  LType: TSSLLibraryType;
-  LInitError: Integer;
-  LInitErrorString: string;
+  LDefaultLib: TSSLLibraryType;
+  LDetected: TSSLLibraryType;
 begin
-  CheckInitialized;
-  
-  LType := ALibType;
-  if LType = sslAutoDetect then
-    LType := GetDefaultLibrary;
-  
-  if LType = sslAutoDetect then
-    raise ESSLConfigurationException.CreateWithContext(
-      'No SSL library available - could not detect OpenSSL or WinSSL',
-      sslErrLibraryNotFound,
-      'TSSLFactory.GetLibrary',
-      0,
-      sslAutoDetect
-    );
-  
-  EnterCriticalSection(GFactoryLock);
-  try
-    Result := FLibraries[LType];
+  if ALibType = sslAutoDetect then
+  begin
+    // First try to get the default library
+    LDefaultLib := GetDefaultLibrary;
     
-    if not Assigned(Result) then
+    // If default is also auto-detect, try to detect best available library
+    if LDefaultLib = sslAutoDetect then
     begin
-      Result := CreateLibraryInstance(LType);
-      if Assigned(Result) then
-      begin
-        if FAutoInitialize then
-        begin
-          if not Result.Initialize then
-          begin
-            LInitError := Result.GetLastError;
-            LInitErrorString := Result.GetLastErrorString;
-            raise ESSLInitializationException.CreateWithContext(
-              Format('Failed to initialize SSL library: %s (LastError=%d, Details=%s)',
-                [SSL_LIBRARY_NAMES[LType], LInitError, LInitErrorString]),
-              sslErrNotInitialized,
-              'TSSLFactory.GetLibrary',
-              LInitError,
-              LType
-            );
-          end;
+      LDetected := DetectBestLibrary;
+      if LDetected = sslAutoDetect then
+        raise ESSLException.Create('No SSL library available. Please register a library first.');
+      ALibType := LDetected;
+    end
+    else
+      ALibType := LDefaultLib;
+  end;
+  
+  Result := GetLibraryInstance(ALibType);
+end;
         end;
         FLibraries[LType] := Result;
       end

@@ -20,7 +20,8 @@ uses
   fafafa.ssl.cert.builder,
   fafafa.ssl.cert.pinning,
   fafafa.ssl.crypto.utils,
-  fafafa.ssl.factory;
+  fafafa.ssl.factory,
+  fafafa.ssl.openssl.backed;  // Force OpenSSL backend registration
 
 type
   TTestResult = record

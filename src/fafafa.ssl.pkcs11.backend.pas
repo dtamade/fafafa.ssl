@@ -27,6 +27,7 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.pkcs11.types,
+  fafafa.ssl.pkcs11.api,
   fafafa.ssl.openssl.api.types,
   fafafa.ssl.openssl.api.evp;
 
