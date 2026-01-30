@@ -152,8 +152,8 @@ begin
   URIAnsi := AnsiString(AURI);
   PINAnsi := AnsiString(APIN);
   
-  // Create UI method for PIN
-  UIMethod := CreateUIMethod(PINAnsi);
+  // Create UI method for PIN (use simple password UI)
+  UIMethod := CreateSimplePasswordUI('Enter PIN: ');
   
   // Open OSSL_STORE context
   StoreCtx := OSSL_STORE_open(PAnsiChar(URIAnsi), UIMethod, nil, nil, nil);
