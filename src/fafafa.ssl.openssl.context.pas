@@ -1056,7 +1056,7 @@ begin
   end;
   
   // Build configuration from URI
-  Config := TPKCS11Config.FromURI(URIParsed);
+  Config := TPKCS11ConfigFromURI(URIParsed);
   
   // Override PIN if provided
   if APIN <> '' then
@@ -1598,8 +1598,10 @@ begin
   if FPinValidator <> nil then
     FPinValidator.RequireValidPin := AEnabled;
   
-  TSecurityLog.Info('OpenSSL', 
-    Format('Certificate pinning %s', [IfThen(AEnabled, 'enabled', 'disabled')]));
+  if AEnabled then
+    TSecurityLog.Info('OpenSSL', 'Certificate pinning enabled')
+  else
+    TSecurityLog.Info('OpenSSL', 'Certificate pinning disabled');
 end;
 
 function TOpenSSLContext.GetCertificatePinningEnabled: Boolean;

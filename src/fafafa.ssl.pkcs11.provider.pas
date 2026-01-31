@@ -60,6 +60,8 @@ type
     { IPKCS11Backend interface }
     function LoadPrivateKey(const AConfig: TPKCS11Config): PEVP_PKEY; override;
     function LoadCertificate(const AConfig: TPKCS11Config): PX509; override;
+    function FindToken(const AConfig: TPKCS11Config): CK_SLOT_ID; override;
+    function FindKey(ASession: CK_SESSION_HANDLE; const AConfig: TPKCS11Config): CK_OBJECT_HANDLE; override;
     function IsAvailable: Boolean; override;
     function GetName: string; override;
     function GetVersion: string; override;
@@ -202,45 +204,6 @@ begin
       OSSL_STORE_close(StoreCtx);
   end;
 end;
-    
-    // Expect private key
-    if not OSSL_STORE_expect(StoreCtx, OSSL_STORE_INFO_PKEY) then
-      raise EPKCS11Exception.Create(
-        'Failed to set OSSL_STORE expectation to PKEY',
-        CKR_GENERAL_ERROR);
-    
-    // Load objects until we find a private key
-    while not OSSL_STORE_eof(StoreCtx) do
-    begin
-      Info := OSSL_STORE_load(StoreCtx);
-      if Info = nil then
-        Continue;
-      
-      try
-        InfoType := OSSL_STORE_INFO_get_type(Info);
-        
-        if InfoType = OSSL_STORE_INFO_PKEY then
-        begin
-          Key := OSSL_STORE_INFO_get1_PKEY(Info);
-          if Key <> nil then
-          begin
-            Result := Key;
-            Break;
-          end;
-        end;
-      finally
-        OSSL_STORE_INFO_free(Info);
-      end;
-    end;
-    
-    if Result = nil then
-      raise EPKCS11Exception.Create(
-        'No private key found in PKCS#11 token',
-        CKR_KEY_HANDLE_INVALID);
-  finally
-    OSSL_STORE_close(StoreCtx);
-  end;
-end;
 
 function TProviderBackend.FindToken(const AConfig: TPKCS11Config): CK_SLOT_ID;
 begin
@@ -311,18 +274,25 @@ begin
       raise EPKCS11Exception.Create(
         'Failed to set OSSL_STORE expectation to CERT',
         CKR_GENERAL_ERROR);
+    
+    // Load objects until we find a certificate
+    while OSSL_STORE_eof(StoreCtx) = 0 do
+    begin
+      Info := OSSL_STORE_load(StoreCtx);
+      if Info = nil then
+        Continue;
       
-      // Check if this is a certificate
-      if OSSL_STORE_INFO_get_type(Info) = OSSL_STORE_INFO_CERT then
-      begin
-        Cert := OSSL_STORE_INFO_get0_CERT(Info);
-        if Cert <> nil then
+      try
+        InfoType := OSSL_STORE_INFO_get_type(Info);
+        
+        if InfoType = OSSL_STORE_INFO_CERT then
         begin
-          Result := Cert;
-          OSSL_STORE_INFO_free(Info);
-          Break;
-        end;
-      end;
+          Cert := OSSL_STORE_INFO_get1_CERT(Info);
+          if Cert <> nil then
+          begin
+            Result := Cert;
+            Break;
+          end;
         end;
       finally
         OSSL_STORE_INFO_free(Info);
