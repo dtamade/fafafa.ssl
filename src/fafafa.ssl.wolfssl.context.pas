@@ -383,16 +383,63 @@ begin
 end;
 
 procedure TWolfSSLContext.LoadCertificate(AStream: TStream);
+var
+  LBuffer: TBytes;
+  LRet: Integer;
 begin
   RequireValidContext('LoadCertificate');
-  // WolfSSL 不直接支持从流加载，需要先保存到临时文件
-  raise ESSLException.Create('Loading certificate from stream not yet implemented for WolfSSL');
+
+  if AStream = nil then
+    raise ESSLCertError.Create('Stream is nil');
+
+  if not Assigned(wolfSSL_CTX_use_certificate_buffer) then
+    raise ESSLCertError.Create('wolfSSL_CTX_use_certificate_buffer not available');
+
+  // 读取流内容到缓冲区
+  SetLength(LBuffer, AStream.Size - AStream.Position);
+  if Length(LBuffer) = 0 then
+    raise ESSLCertError.Create('Stream is empty');
+
+  AStream.ReadBuffer(LBuffer[0], Length(LBuffer));
+
+  // 尝试 PEM 格式
+  LRet := wolfSSL_CTX_use_certificate_buffer(FWolfSSLCtx, @LBuffer[0],
+    Length(LBuffer), WOLFSSL_FILETYPE_PEM);
+
+  // 如果 PEM 失败，尝试 DER 格式
+  if LRet <> WOLFSSL_SUCCESS then
+  begin
+    LRet := wolfSSL_CTX_use_certificate_buffer(FWolfSSLCtx, @LBuffer[0],
+      Length(LBuffer), WOLFSSL_FILETYPE_ASN1);
+  end;
+
+  if LRet <> WOLFSSL_SUCCESS then
+    raise ESSLCertError.Create('Failed to load certificate from stream');
 end;
 
 procedure TWolfSSLContext.LoadCertificate(ACert: ISSLCertificate);
+var
+  LDERData: TBytes;
+  LRet: Integer;
 begin
   RequireValidContext('LoadCertificate');
-  raise ESSLException.Create('Loading certificate from ISSLCertificate not yet implemented for WolfSSL');
+
+  if ACert = nil then
+    raise ESSLCertError.Create('Certificate is nil');
+
+  if not Assigned(wolfSSL_CTX_use_certificate_buffer) then
+    raise ESSLCertError.Create('wolfSSL_CTX_use_certificate_buffer not available');
+
+  // 从 ISSLCertificate 获取 DER 编码数据
+  LDERData := ACert.SaveToDER;
+  if Length(LDERData) = 0 then
+    raise ESSLCertError.Create('Certificate DER data is empty');
+
+  LRet := wolfSSL_CTX_use_certificate_buffer(FWolfSSLCtx, @LDERData[0],
+    Length(LDERData), WOLFSSL_FILETYPE_ASN1);
+
+  if LRet <> WOLFSSL_SUCCESS then
+    raise ESSLCertError.Create('Failed to load certificate from ISSLCertificate');
 end;
 
 procedure TWolfSSLContext.LoadPrivateKey(const AFileName: string; const APassword: string);
@@ -412,21 +459,86 @@ begin
 end;
 
 procedure TWolfSSLContext.LoadPrivateKey(AStream: TStream; const APassword: string);
+var
+  LBuffer: TBytes;
+  LRet: Integer;
 begin
   RequireValidContext('LoadPrivateKey');
-  raise ESSLException.Create('Loading private key from stream not yet implemented for WolfSSL');
+
+  if AStream = nil then
+    raise ESSLCertError.Create('Stream is nil');
+
+  if not Assigned(wolfSSL_CTX_use_PrivateKey_buffer) then
+    raise ESSLCertError.Create('wolfSSL_CTX_use_PrivateKey_buffer not available');
+
+  // 读取流内容到缓冲区
+  SetLength(LBuffer, AStream.Size - AStream.Position);
+  if Length(LBuffer) = 0 then
+    raise ESSLCertError.Create('Stream is empty');
+
+  AStream.ReadBuffer(LBuffer[0], Length(LBuffer));
+
+  // 注意：WolfSSL 密码回调需要单独设置，这里假设密钥未加密或已通过回调处理
+  // 尝试 PEM 格式
+  LRet := wolfSSL_CTX_use_PrivateKey_buffer(FWolfSSLCtx, @LBuffer[0],
+    Length(LBuffer), WOLFSSL_FILETYPE_PEM);
+
+  // 如果 PEM 失败，尝试 DER 格式
+  if LRet <> WOLFSSL_SUCCESS then
+  begin
+    LRet := wolfSSL_CTX_use_PrivateKey_buffer(FWolfSSLCtx, @LBuffer[0],
+      Length(LBuffer), WOLFSSL_FILETYPE_ASN1);
+  end;
+
+  if LRet <> WOLFSSL_SUCCESS then
+    raise ESSLCertError.Create('Failed to load private key from stream');
 end;
 
 procedure TWolfSSLContext.LoadCertificatePEM(const APEM: string);
+var
+  LBuffer: TBytes;
+  LRet: Integer;
 begin
   RequireValidContext('LoadCertificatePEM');
-  raise ESSLException.Create('Loading certificate from PEM string not yet implemented for WolfSSL');
+
+  if APEM = '' then
+    raise ESSLCertError.Create('PEM string is empty');
+
+  if not Assigned(wolfSSL_CTX_use_certificate_buffer) then
+    raise ESSLCertError.Create('wolfSSL_CTX_use_certificate_buffer not available');
+
+  // 转换 PEM 字符串为字节数组
+  LBuffer := TEncoding.UTF8.GetBytes(APEM);
+
+  LRet := wolfSSL_CTX_use_certificate_buffer(FWolfSSLCtx, @LBuffer[0],
+    Length(LBuffer), WOLFSSL_FILETYPE_PEM);
+
+  if LRet <> WOLFSSL_SUCCESS then
+    raise ESSLCertError.Create('Failed to load certificate from PEM string');
 end;
 
 procedure TWolfSSLContext.LoadPrivateKeyPEM(const APEM: string; const APassword: string);
+var
+  LBuffer: TBytes;
+  LRet: Integer;
 begin
   RequireValidContext('LoadPrivateKeyPEM');
-  raise ESSLException.Create('Loading private key from PEM string not yet implemented for WolfSSL');
+
+  if APEM = '' then
+    raise ESSLCertError.Create('PEM string is empty');
+
+  if not Assigned(wolfSSL_CTX_use_PrivateKey_buffer) then
+    raise ESSLCertError.Create('wolfSSL_CTX_use_PrivateKey_buffer not available');
+
+  // 转换 PEM 字符串为字节数组
+  LBuffer := TEncoding.UTF8.GetBytes(APEM);
+
+  // 注意：WolfSSL 密码回调需要单独设置
+  LRet := wolfSSL_CTX_use_PrivateKey_buffer(FWolfSSLCtx, @LBuffer[0],
+    Length(LBuffer), WOLFSSL_FILETYPE_PEM);
+
+  if LRet <> WOLFSSL_SUCCESS then
+    raise ESSLCertError.Create('Failed to load private key from PEM string');
 end;
 
 procedure TWolfSSLContext.LoadCAFile(const AFileName: string);
@@ -458,10 +570,39 @@ begin
 end;
 
 procedure TWolfSSLContext.SetCertificateStore(AStore: ISSLCertificateStore);
+var
+  LCert: ISSLCertificate;
+  LDERData: TBytes;
+  LRet: Integer;
+  I, LCount: Integer;
 begin
   RequireValidContext('SetCertificateStore');
-  // WolfSSL 使用不同的证书存储机制
-  raise ESSLException.Create('SetCertificateStore not yet implemented for WolfSSL');
+
+  if AStore = nil then
+    raise ESSLCertError.Create('Certificate store is nil');
+
+  if not Assigned(wolfSSL_CTX_load_verify_buffer) then
+    raise ESSLCertError.Create('wolfSSL_CTX_load_verify_buffer not available');
+
+  // 从证书存储中获取所有证书并加载
+  LCount := AStore.GetCount;
+
+  for I := 0 to LCount - 1 do
+  begin
+    LCert := AStore.GetCertificate(I);
+    if LCert <> nil then
+    begin
+      LDERData := LCert.SaveToDER;
+      if Length(LDERData) > 0 then
+      begin
+        LRet := wolfSSL_CTX_load_verify_buffer(FWolfSSLCtx, @LDERData[0],
+          Length(LDERData), WOLFSSL_FILETYPE_ASN1);
+        if LRet <> WOLFSSL_SUCCESS then
+          raise ESSLCertError.CreateFmt('Failed to load certificate from store: %s',
+            [LCert.GetSubject]);
+      end;
+    end;
+  end;
 end;
 
 { 验证配置 }

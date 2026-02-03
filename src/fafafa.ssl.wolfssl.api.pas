@@ -132,6 +132,16 @@ type
   TwolfSSL_get_version = function(ssl: PWOLFSSL): PAnsiChar; cdecl;
   TwolfSSL_get_peer_certificate = function(ssl: PWOLFSSL): PWOLFSSL_X509; cdecl;
 
+  // Buffer 加载 (新增 - 用于从内存加载证书/密钥)
+  TwolfSSL_CTX_use_certificate_buffer = function(ctx: PWOLFSSL_CTX;
+    const buf: Pointer; sz: Integer; format: Integer): Integer; cdecl;
+  TwolfSSL_CTX_use_PrivateKey_buffer = function(ctx: PWOLFSSL_CTX;
+    const buf: Pointer; sz: Integer; format: Integer): Integer; cdecl;
+  TwolfSSL_CTX_use_certificate_chain_buffer = function(ctx: PWOLFSSL_CTX;
+    const buf: Pointer; sz: Integer): Integer; cdecl;
+  TwolfSSL_CTX_load_verify_buffer = function(ctx: PWOLFSSL_CTX;
+    const buf: Pointer; sz: Integer; format: Integer): Integer; cdecl;
+
 var
   { WolfSSL 函数指针 }
   wolfssl_init: Twolfssl_init = nil;
@@ -208,6 +218,12 @@ var
   wolfSSL_CIPHER_get_name: TwolfSSL_CIPHER_get_name = nil;
   wolfSSL_get_version: TwolfSSL_get_version = nil;
   wolfSSL_get_peer_certificate: TwolfSSL_get_peer_certificate = nil;
+
+  // Buffer 加载 (新增)
+  wolfSSL_CTX_use_certificate_buffer: TwolfSSL_CTX_use_certificate_buffer = nil;
+  wolfSSL_CTX_use_PrivateKey_buffer: TwolfSSL_CTX_use_PrivateKey_buffer = nil;
+  wolfSSL_CTX_use_certificate_chain_buffer: TwolfSSL_CTX_use_certificate_chain_buffer = nil;
+  wolfSSL_CTX_load_verify_buffer: TwolfSSL_CTX_load_verify_buffer = nil;
 
 { 库加载函数 }
 function LoadWolfSSLLibrary: Boolean;
@@ -343,6 +359,16 @@ begin
   wolfSSL_get_peer_certificate := TwolfSSL_get_peer_certificate(
     GetProc('wolfSSL_get_peer_certificate'));
 
+  // Buffer 加载 (新增)
+  wolfSSL_CTX_use_certificate_buffer := TwolfSSL_CTX_use_certificate_buffer(
+    GetProc('wolfSSL_CTX_use_certificate_buffer'));
+  wolfSSL_CTX_use_PrivateKey_buffer := TwolfSSL_CTX_use_PrivateKey_buffer(
+    GetProc('wolfSSL_CTX_use_PrivateKey_buffer'));
+  wolfSSL_CTX_use_certificate_chain_buffer := TwolfSSL_CTX_use_certificate_chain_buffer(
+    GetProc('wolfSSL_CTX_use_certificate_chain_buffer'));
+  wolfSSL_CTX_load_verify_buffer := TwolfSSL_CTX_load_verify_buffer(
+    GetProc('wolfSSL_CTX_load_verify_buffer'));
+
   // 验证必需函数
   if not Assigned(wolfssl_init) or
     not Assigned(wolfSSL_CTX_new) or
@@ -431,6 +457,12 @@ begin
   wolfSSL_CIPHER_get_name := nil;
   wolfSSL_get_version := nil;
   wolfSSL_get_peer_certificate := nil;
+
+  // Buffer 加载
+  wolfSSL_CTX_use_certificate_buffer := nil;
+  wolfSSL_CTX_use_PrivateKey_buffer := nil;
+  wolfSSL_CTX_use_certificate_chain_buffer := nil;
+  wolfSSL_CTX_load_verify_buffer := nil;
 
   GWolfSSLLoaded := False;
 end;
