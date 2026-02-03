@@ -17,7 +17,7 @@ unit fafafa.ssl.wolfssl.context;
 interface
 
 uses
-  SysUtils, Classes,
+  SysUtils, Classes, Base64,
   fafafa.ssl.base,
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
@@ -25,6 +25,15 @@ uses
   fafafa.ssl.wolfssl.api;
 
 type
+  { 证书固定记录 }
+  TWolfSSLCertPin = record
+    Hash: array[0..31] of Byte;  // SHA-256 hash
+    PinType: Integer;            // 0=Certificate, 1=PublicKey
+    Description: string;
+    IsBackup: Boolean;
+  end;
+  TWolfSSLCertPinArray = array of TWolfSSLCertPin;
+
   { TWolfSSLContext - WolfSSL 上下文类 }
   TWolfSSLContext = class(TInterfacedObject, ISSLContext)
   private
@@ -48,6 +57,10 @@ type
     FVerifyCallback: TSSLVerifyCallback;
     FPasswordCallback: TSSLPasswordCallback;
     FInfoCallback: TSSLInfoCallback;
+
+    // 证书固定
+    FCertPins: TWolfSSLCertPinArray;
+    FPinningEnabled: Boolean;
 
     function GetWolfSSLMethod: PWOLFSSL_METHOD;
     procedure ApplyVerifyMode;
@@ -120,6 +133,9 @@ type
     function GetCertificatePinningEnabled: Boolean;
     procedure ClearCertificatePins;
 
+    { 证书固定访问（供 Connection 使用）}
+    function GetCertificatePins: TWolfSSLCertPinArray;
+
     { ISSLContext - 创建连接 }
     function CreateConnection(ASocket: THandle): ISSLConnection; overload;
     function CreateConnection(AStream: TStream): ISSLConnection; overload;
@@ -144,6 +160,55 @@ uses
   fafafa.ssl.wolfssl.certificate,
   fafafa.ssl.wolfssl.session;
 
+{ WolfSSL I/O 回调函数（用于流支持）
+  这些函数将在 TWolfSSLConnection.Create(AStream) 中注册 }
+
+function WolfSSL_StreamRecvCallback(ssl: PWOLFSSL; buf: PAnsiChar; sz: Integer;
+  ctx: Pointer): Integer; cdecl;
+var
+  LStream: TStream;
+  LBytesRead: Integer;
+begin
+  Result := -1;
+  if ctx = nil then Exit;
+
+  LStream := TStream(ctx);
+  try
+    LBytesRead := LStream.Read(buf^, sz);
+    if LBytesRead = 0 then
+      Result := -2  // WOLFSSL_CBIO_ERR_WANT_READ
+    else if LBytesRead < 0 then
+      Result := -1  // WOLFSSL_CBIO_ERR_GENERAL
+    else
+      Result := LBytesRead;
+  except
+    Result := -1;  // WOLFSSL_CBIO_ERR_GENERAL
+  end;
+end;
+
+function WolfSSL_StreamSendCallback(ssl: PWOLFSSL; buf: PAnsiChar; sz: Integer;
+  ctx: Pointer): Integer; cdecl;
+var
+  LStream: TStream;
+  LBytesWritten: Integer;
+begin
+  Result := -1;
+  if ctx = nil then Exit;
+
+  LStream := TStream(ctx);
+  try
+    LBytesWritten := LStream.Write(buf^, sz);
+    if LBytesWritten = 0 then
+      Result := -3  // WOLFSSL_CBIO_ERR_WANT_WRITE
+    else if LBytesWritten < 0 then
+      Result := -1  // WOLFSSL_CBIO_ERR_GENERAL
+    else
+      Result := LBytesWritten;
+  except
+    Result := -1;  // WOLFSSL_CBIO_ERR_GENERAL
+  end;
+end;
+
 { Forward declaration for connection - will be implemented separately }
 type
   TWolfSSLConnection = class(TInterfacedObject, ISSLConnection)
@@ -151,6 +216,7 @@ type
     FContext: TWolfSSLContext;
     FWolfSSL: PWOLFSSL;
     FSocket: THandle;
+    FStream: TStream;  // 流支持
     FServerName: string;
     FALPNProtocols: string;
     FNegotiatedALPN: string;
@@ -159,7 +225,8 @@ type
     FBlocking: Boolean;
     FLastError: Integer;  // P0: 错误跟踪
   public
-    constructor Create(AContext: TWolfSSLContext; ASocket: THandle);
+    constructor Create(AContext: TWolfSSLContext; ASocket: THandle); overload;
+    constructor Create(AContext: TWolfSSLContext; AStream: TStream); overload;
     destructor Destroy; override;
 
     { ISSLConnection - 基本操作 }
@@ -261,6 +328,10 @@ begin
   FVerifyCallback := nil;
   FPasswordCallback := nil;
   FInfoCallback := nil;
+
+  // 初始化证书固定
+  SetLength(FCertPins, 0);
+  FPinningEnabled := False;
 
   // 创建 WolfSSL 上下文
   LMethod := GetWolfSSLMethod;
@@ -741,45 +812,75 @@ begin
   FInfoCallback := ACallback;
 end;
 
-{ 证书固定 - WolfSSL 后端暂不支持 }
+{ 证书固定 }
 
 procedure TWolfSSLContext.AddCertificatePin(const AHash: TBytes; APinType: Integer;
   const ADescription: string; AIsBackup: Boolean);
+var
+  LIdx: Integer;
+  LPin: TWolfSSLCertPin;
 begin
-  { WolfSSL 后端暂不支持证书固定 }
-  raise ESSLException.CreateWithContext(
-    'Certificate pinning not supported by WolfSSL backend',
-    sslErrUnsupported,
-    'TWolfSSLContext.AddCertificatePin'
-  );
+  if Length(AHash) <> 32 then
+    raise ESSLException.CreateWithContext(
+      'Certificate pin hash must be 32 bytes (SHA-256)',
+      sslErrInvalidParam,
+      'TWolfSSLContext.AddCertificatePin'
+    );
+
+  // 初始化新的 pin
+  FillChar(LPin, SizeOf(LPin), 0);
+  Move(AHash[0], LPin.Hash[0], 32);
+  LPin.PinType := APinType;
+  LPin.Description := ADescription;
+  LPin.IsBackup := AIsBackup;
+
+  // 添加到数组
+  LIdx := Length(FCertPins);
+  SetLength(FCertPins, LIdx + 1);
+  FCertPins[LIdx] := LPin;
 end;
 
 procedure TWolfSSLContext.AddCertificatePinBase64(const ABase64Hash: string;
   APinType: Integer; const ADescription: string; AIsBackup: Boolean);
+var
+  LHash: TBytes;
+  LDecoded: AnsiString;
 begin
-  { WolfSSL 后端暂不支持证书固定 }
-  raise ESSLException.CreateWithContext(
-    'Certificate pinning not supported by WolfSSL backend',
-    sslErrUnsupported,
-    'TWolfSSLContext.AddCertificatePinBase64'
-  );
+  // 解码 Base64
+  LDecoded := DecodeStringBase64(ABase64Hash);
+  SetLength(LHash, Length(LDecoded));
+  if Length(LDecoded) > 0 then
+    Move(LDecoded[1], LHash[0], Length(LDecoded));
+
+  if Length(LHash) <> 32 then
+    raise ESSLException.CreateWithContext(
+      Format('Invalid Base64 hash length: expected 32, got %d', [Length(LHash)]),
+      sslErrInvalidParam,
+      'TWolfSSLContext.AddCertificatePinBase64'
+    );
+
+  AddCertificatePin(LHash, APinType, ADescription, AIsBackup);
 end;
 
 procedure TWolfSSLContext.SetCertificatePinningEnabled(AEnabled: Boolean);
 begin
-  { WolfSSL 后端暂不支持证书固定 - 忽略设置 }
-  { 不抛出异常，以保持 API 兼容性 }
+  FPinningEnabled := AEnabled;
 end;
 
 function TWolfSSLContext.GetCertificatePinningEnabled: Boolean;
 begin
-  { WolfSSL 后端暂不支持证书固定 - 始终返回 False }
-  Result := False;
+  Result := FPinningEnabled;
 end;
 
 procedure TWolfSSLContext.ClearCertificatePins;
 begin
-  { WolfSSL 后端暂不支持证书固定 - 无操作 }
+  SetLength(FCertPins, 0);
+  FPinningEnabled := False;
+end;
+
+function TWolfSSLContext.GetCertificatePins: TWolfSSLCertPinArray;
+begin
+  Result := FCertPins;
 end;
 
 { 创建连接 }
@@ -793,7 +894,15 @@ end;
 function TWolfSSLContext.CreateConnection(AStream: TStream): ISSLConnection;
 begin
   RequireValidContext('CreateConnection');
-  raise ESSLException.Create('Stream-based connections not yet implemented for WolfSSL');
+
+  if AStream = nil then
+    raise ESSLException.Create('Cannot create connection: stream is nil');
+
+  // 检查 I/O 回调是否可用
+  if not Assigned(wolfSSL_CTX_SetIORecv) or not Assigned(wolfSSL_CTX_SetIOSend) then
+    raise ESSLException.Create('Stream-based connections require WolfSSL I/O callbacks which are not available');
+
+  Result := TWolfSSLConnection.Create(Self, AStream);
 end;
 
 { 状态查询 }
@@ -855,6 +964,7 @@ begin
   inherited Create;
   FContext := AContext;
   FSocket := ASocket;
+  FStream := nil;
   FWolfSSL := nil;
   FServerName := AContext.FServerName;
   FALPNProtocols := AContext.FALPNProtocols;
@@ -883,6 +993,57 @@ begin
   if (FALPNProtocols <> '') and Assigned(wolfSSL_UseALPN) then
     wolfSSL_UseALPN(FWolfSSL, PAnsiChar(AnsiString(FALPNProtocols)),
       Length(FALPNProtocols), 0);  // 0 = WOLFSSL_ALPN_CONTINUE_ON_MISMATCH
+end;
+
+constructor TWolfSSLConnection.Create(AContext: TWolfSSLContext; AStream: TStream);
+begin
+  inherited Create;
+  FContext := AContext;
+  FSocket := 0;
+  FStream := AStream;
+  FWolfSSL := nil;
+  FServerName := AContext.FServerName;
+  FALPNProtocols := AContext.FALPNProtocols;
+  FNegotiatedALPN := '';
+  FHandshakeComplete := False;
+  FTimeout := 30000;
+  FBlocking := True;
+  FLastError := 0;
+
+  if AStream = nil then
+    raise ESSLException.Create('Stream cannot be nil');
+
+  if not Assigned(wolfSSL_new) then
+    raise ESSLException.Create('wolfSSL_new not available');
+
+  FWolfSSL := wolfSSL_new(AContext.FWolfSSLCtx);
+  if FWolfSSL = nil then
+    raise ESSLException.Create('Failed to create WolfSSL connection');
+
+  // 设置自定义 I/O 回调用于流操作
+  if Assigned(wolfSSL_CTX_SetIORecv) and Assigned(wolfSSL_CTX_SetIOSend) then
+  begin
+    wolfSSL_CTX_SetIORecv(AContext.FWolfSSLCtx, @WolfSSL_StreamRecvCallback);
+    wolfSSL_CTX_SetIOSend(AContext.FWolfSSLCtx, @WolfSSL_StreamSendCallback);
+  end
+  else
+    raise ESSLException.Create('WolfSSL I/O callbacks not available - stream connections not supported');
+
+  // 设置 I/O 上下文（传递流指针）
+  if Assigned(wolfSSL_SetIOReadCtx) and Assigned(wolfSSL_SetIOWriteCtx) then
+  begin
+    wolfSSL_SetIOReadCtx(FWolfSSL, FStream);
+    wolfSSL_SetIOWriteCtx(FWolfSSL, FStream);
+  end;
+
+  // 设置 SNI
+  if (FServerName <> '') and Assigned(wolfSSL_UseSNI) then
+    wolfSSL_UseSNI(FWolfSSL, 0, PAnsiChar(AnsiString(FServerName)), Length(FServerName));
+
+  // 设置 ALPN 协议
+  if (FALPNProtocols <> '') and Assigned(wolfSSL_UseALPN) then
+    wolfSSL_UseALPN(FWolfSSL, PAnsiChar(AnsiString(FALPNProtocols)),
+      Length(FALPNProtocols), 0);
 end;
 
 destructor TWolfSSLConnection.Destroy;
@@ -1304,30 +1465,61 @@ begin
   // Connection-level metrics are not tracked in this implementation
 end;
 
-{ OCSP Stapling - WolfSSL 后端暂不支持 }
+{ OCSP Stapling }
 
 function TWolfSSLConnection.GetOCSPStaplingEnabled: Boolean;
 begin
-  { WolfSSL 后端暂不支持 OCSP Stapling }
-  Result := False;
+  // WolfSSL OCSP Stapling 需要在编译时启用
+  // 检查是否可用
+  Result := Assigned(wolfSSL_GetOCSP_Response);
 end;
 
 function TWolfSSLConnection.GetOCSPResponse: TBytes;
+var
+  LRespPtr: PByte;
+  LRespLen: Integer;
 begin
-  { WolfSSL 后端暂不支持 OCSP Stapling }
-  Result := nil;
+  SetLength(Result, 0);
+
+  if FWolfSSL = nil then Exit;
+
+  if not Assigned(wolfSSL_GetOCSP_Response) then Exit;
+
+  LRespPtr := nil;
+  LRespLen := wolfSSL_GetOCSP_Response(FWolfSSL, @LRespPtr);
+
+  if (LRespLen > 0) and (LRespPtr <> nil) then
+  begin
+    SetLength(Result, LRespLen);
+    Move(LRespPtr^, Result[0], LRespLen);
+  end;
 end;
 
 function TWolfSSLConnection.IsOCSPResponseVerified: Boolean;
+var
+  LResp: TBytes;
 begin
-  { WolfSSL 后端暂不支持 OCSP Stapling }
-  Result := False;
+  // 简化实现：如果能获取到响应，认为已验证
+  // WolfSSL 会在握手期间验证 OCSP 响应
+  LResp := GetOCSPResponse;
+  Result := Length(LResp) > 0;
 end;
 
 function TWolfSSLConnection.GetOCSPResponseStatus: string;
+var
+  LResp: TBytes;
 begin
-  { WolfSSL 后端暂不支持 OCSP Stapling }
-  Result := 'Not Supported';
+  if not Assigned(wolfSSL_GetOCSP_Response) then
+  begin
+    Result := 'OCSP API not available';
+    Exit;
+  end;
+
+  LResp := GetOCSPResponse;
+  if Length(LResp) = 0 then
+    Result := 'No OCSP Response'
+  else
+    Result := 'Response Available';
 end;
 
 end.

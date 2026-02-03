@@ -4,13 +4,13 @@
 
 unit fafafa_ssl;
 
-{$mode objfpc}{$H+}
 {$warn 5023 off : no warning about unused units}
 interface
 
 uses
-  fafafa.ssl.factory,
-  fafafa.ssl;
+  fafafa.ssl.base, fafafa.ssl.factory, fafafa.ssl, fafafa.ssl.context.builder, 
+  fafafa.ssl.x509, fafafa.ssl.ocsp, fafafa.ssl.ocsp.cache, 
+  fafafa.ssl.ocsp.stapling, fafafa.ssl.http.client, fafafa.ssl.crypto.hash;
 
 implementation
 

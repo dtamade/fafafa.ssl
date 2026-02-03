@@ -128,9 +128,13 @@ type
     FHandshakeStartTime: Int64;          // 握手开始时间（高精度计数器）
     FHandshakeEndTime: Int64;            // 握手结束时间（高精度计数器）
     FHandshakeDuration: Integer;         // 握手持续时间（毫秒）
-    FFirstByteTime: Int64;               // 首字节时间
+    FFirstByteTime: Int64;               // 首字节时间（高精度计数器值）
+    FFirstByteRecorded: Boolean;         // 是否已记录首字节时间
     FBytesSentCount: Int64;              // 已发送字节数
     FBytesReceivedCount: Int64;          // 已接收字节数
+    FLatencySum: Int64;                  // 延迟总和（微秒）
+    FLatencyCount: Integer;              // 延迟样本数
+    FLastReadTime: Int64;                // 上次读取时间（高精度计数器）
     FErrorHistory: array[0..9] of TSSLErrorRecord;  // 错误历史（最近10个）
     FErrorHistoryIndex: Integer;         // 错误历史索引
 
@@ -539,8 +543,12 @@ begin
   FHandshakeEndTime := 0;
   FHandshakeDuration := 0;
   FFirstByteTime := 0;
+  FFirstByteRecorded := False;
   FBytesSentCount := 0;
   FBytesReceivedCount := 0;
+  FLatencySum := 0;
+  FLatencyCount := 0;
+  FLastReadTime := 0;
   FErrorHistoryIndex := 0;
   FillChar(FErrorHistory, SizeOf(FErrorHistory), 0);
 
@@ -580,8 +588,12 @@ begin
   FHandshakeEndTime := 0;
   FHandshakeDuration := 0;
   FFirstByteTime := 0;
+  FFirstByteRecorded := False;
   FBytesSentCount := 0;
   FBytesReceivedCount := 0;
+  FLatencySum := 0;
+  FLatencyCount := 0;
+  FLastReadTime := 0;
   FErrorHistoryIndex := 0;
   FillChar(FErrorHistory, SizeOf(FErrorHistory), 0);
 
@@ -1873,12 +1885,13 @@ var
   InBufferDesc: TSecBufferDesc;
   Status: SECURITY_STATUS;
   i, cbData: Integer;
+  LCurrentTime: Int64;
 begin
   Result := 0;
-  
+
   if not FConnected then
     Exit;
-  
+
   // 如果有已解密的数据，直接返回
   if FDecryptedBufferUsed > 0 then
   begin
@@ -1890,9 +1903,16 @@ begin
 
     // Phase 3.3: 跟踪接收字节数
     Inc(FBytesReceivedCount, Result);
+
+    // 跟踪首字节时间
+    if (not FFirstByteRecorded) and (Result > 0) then
+    begin
+      QueryPerformanceCounter(FFirstByteTime);
+      FFirstByteRecorded := True;
+    end;
     Exit;
   end;
-  
+
   // 读取加密数据
   if FRecvBufferUsed < SizeOf(FRecvBuffer) then
   begin
@@ -1901,28 +1921,28 @@ begin
       Exit;
     Inc(FRecvBufferUsed, cbData);
   end;
-  
+
   // 解密数据
   InBuffers[0].pvBuffer := @FRecvBuffer[0];
   InBuffers[0].cbBuffer := FRecvBufferUsed;
   InBuffers[0].BufferType := SECBUFFER_DATA;
-  
+
   InBuffers[1].BufferType := SECBUFFER_EMPTY;
   InBuffers[2].BufferType := SECBUFFER_EMPTY;
   InBuffers[3].BufferType := SECBUFFER_EMPTY;
-  
+
   InBufferDesc.cBuffers := 4;
   InBufferDesc.pBuffers := @InBuffers[0];
   InBufferDesc.ulVersion := SECBUFFER_VERSION;
-  
+
   Status := DecryptMessage(@FCtxtHandle, @InBufferDesc, 0, nil);
-  
+
   if Status = SEC_E_INCOMPLETE_MESSAGE then
     Exit; // 需要更多数据
-  
+
   if not IsSuccess(Status) then
     Exit;
-  
+
   // 查找解密的数据
   for i := 0 to 3 do
   begin
@@ -1934,6 +1954,22 @@ begin
       // Phase 3.3: 跟踪接收字节数
       Inc(FBytesReceivedCount, Result);
 
+      // 跟踪首字节时间
+      if (not FFirstByteRecorded) and (Result > 0) then
+      begin
+        QueryPerformanceCounter(FFirstByteTime);
+        FFirstByteRecorded := True;
+      end;
+
+      // 跟踪延迟（连续读取之间的间隔）
+      if FLastReadTime > 0 then
+      begin
+        QueryPerformanceCounter(LCurrentTime);
+        Inc(FLatencySum, LCurrentTime - FLastReadTime);
+        Inc(FLatencyCount);
+      end;
+      QueryPerformanceCounter(FLastReadTime);
+
       // 保存剩余数据
       if Integer(InBuffers[i].cbBuffer) > Result then
       begin
@@ -1943,7 +1979,7 @@ begin
       Break;
     end;
   end;
-  
+
   // 处理额外数据
   for i := 0 to 3 do
   begin
@@ -2653,12 +2689,36 @@ begin
 end;
 
 function TWinSSLConnection.GetPerformanceMetrics: TSSLPerformanceMetrics;
+var
+  LFrequency: Int64;
 begin
   Result.HandshakeTime := FHandshakeDuration;
-  Result.FirstByteTime := 0;  // TODO: 实现首字节时间跟踪
   Result.TotalBytesTransferred := FBytesSentCount + FBytesReceivedCount;
-  Result.AverageLatency := 0;  // TODO: 实现延迟跟踪
   Result.SessionReused := FSessionReused;
+
+  // 计算首字节时间（握手结束到首字节的毫秒数）
+  if FFirstByteRecorded and (FHandshakeEndTime > 0) then
+  begin
+    QueryPerformanceFrequency(LFrequency);
+    if LFrequency > 0 then
+      Result.FirstByteTime := ((FFirstByteTime - FHandshakeEndTime) * 1000) div LFrequency
+    else
+      Result.FirstByteTime := 0;
+  end
+  else
+    Result.FirstByteTime := 0;
+
+  // 计算平均延迟（毫秒）
+  if (FLatencyCount > 0) then
+  begin
+    QueryPerformanceFrequency(LFrequency);
+    if LFrequency > 0 then
+      Result.AverageLatency := ((FLatencySum div FLatencyCount) * 1000) div LFrequency
+    else
+      Result.AverageLatency := 0;
+  end
+  else
+    Result.AverageLatency := 0;
 end;
 
 procedure TWinSSLConnection.RecordError(AErrorCode: TSSLErrorCode; const AErrorMessage: string);

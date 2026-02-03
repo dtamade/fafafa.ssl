@@ -17,7 +17,7 @@ unit fafafa.ssl.mbedtls.context;
 interface
 
 uses
-  SysUtils, Classes,
+  SysUtils, Classes, Base64,
   fafafa.ssl.base,
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
@@ -25,6 +25,15 @@ uses
   fafafa.ssl.mbedtls.api;
 
 type
+  { 证书固定记录 }
+  TMbedTLSCertPin = record
+    Hash: array[0..31] of Byte;  // SHA-256 hash
+    PinType: Integer;            // 0=Certificate, 1=PublicKey
+    Description: string;
+    IsBackup: Boolean;
+  end;
+  TMbedTLSCertPinArray = array of TMbedTLSCertPin;
+
   { TMbedTLSContext - MbedTLS 上下文类 }
   TMbedTLSContext = class(TInterfacedObject, ISSLContext)
   private
@@ -53,6 +62,10 @@ type
     FCertChain: Pmbedtls_x509_crt;
     FPrivateKey: Pmbedtls_pk_context;
     FCACerts: Pmbedtls_x509_crt;
+
+    // 证书固定
+    FCertPins: TMbedTLSCertPinArray;
+    FPinningEnabled: Boolean;
 
     procedure AllocateConfig;
     procedure FreeConfig;
@@ -126,6 +139,9 @@ type
     function GetCertificatePinningEnabled: Boolean;
     procedure ClearCertificatePins;
 
+    { 证书固定访问（供 Connection 使用）}
+    function GetCertificatePins: TMbedTLSCertPinArray;
+
     { ISSLContext - 创建连接 }
     function CreateConnection(ASocket: THandle): ISSLConnection; overload;
     function CreateConnection(AStream: TStream): ISSLConnection; overload;
@@ -182,6 +198,10 @@ begin
   FVerifyCallback := nil;
   FPasswordCallback := nil;
   FInfoCallback := nil;
+
+  // 初始化证书固定
+  SetLength(FCertPins, 0);
+  FPinningEnabled := False;
 
   AllocateConfig;
   ApplyVerifyMode;
@@ -765,45 +785,75 @@ begin
   FInfoCallback := ACallback;
 end;
 
-{ 证书固定 - MbedTLS 后端暂不支持 }
+{ 证书固定 }
 
 procedure TMbedTLSContext.AddCertificatePin(const AHash: TBytes; APinType: Integer;
   const ADescription: string; AIsBackup: Boolean);
+var
+  LIdx: Integer;
+  LPin: TMbedTLSCertPin;
 begin
-  { MbedTLS 后端暂不支持证书固定 }
-  raise ESSLException.CreateWithContext(
-    'Certificate pinning not supported by MbedTLS backend',
-    sslErrUnsupported,
-    'TMbedTLSContext.AddCertificatePin'
-  );
+  if Length(AHash) <> 32 then
+    raise ESSLException.CreateWithContext(
+      'Certificate pin hash must be 32 bytes (SHA-256)',
+      sslErrInvalidParam,
+      'TMbedTLSContext.AddCertificatePin'
+    );
+
+  // 初始化新的 pin
+  FillChar(LPin, SizeOf(LPin), 0);
+  Move(AHash[0], LPin.Hash[0], 32);
+  LPin.PinType := APinType;
+  LPin.Description := ADescription;
+  LPin.IsBackup := AIsBackup;
+
+  // 添加到数组
+  LIdx := Length(FCertPins);
+  SetLength(FCertPins, LIdx + 1);
+  FCertPins[LIdx] := LPin;
 end;
 
 procedure TMbedTLSContext.AddCertificatePinBase64(const ABase64Hash: string;
   APinType: Integer; const ADescription: string; AIsBackup: Boolean);
+var
+  LHash: TBytes;
+  LDecoded: AnsiString;
 begin
-  { MbedTLS 后端暂不支持证书固定 }
-  raise ESSLException.CreateWithContext(
-    'Certificate pinning not supported by MbedTLS backend',
-    sslErrUnsupported,
-    'TMbedTLSContext.AddCertificatePinBase64'
-  );
+  // 解码 Base64
+  LDecoded := DecodeStringBase64(ABase64Hash);
+  SetLength(LHash, Length(LDecoded));
+  if Length(LDecoded) > 0 then
+    Move(LDecoded[1], LHash[0], Length(LDecoded));
+
+  if Length(LHash) <> 32 then
+    raise ESSLException.CreateWithContext(
+      Format('Invalid Base64 hash length: expected 32, got %d', [Length(LHash)]),
+      sslErrInvalidParam,
+      'TMbedTLSContext.AddCertificatePinBase64'
+    );
+
+  AddCertificatePin(LHash, APinType, ADescription, AIsBackup);
 end;
 
 procedure TMbedTLSContext.SetCertificatePinningEnabled(AEnabled: Boolean);
 begin
-  { MbedTLS 后端暂不支持证书固定 - 忽略设置 }
-  { 不抛出异常，以保持 API 兼容性 }
+  FPinningEnabled := AEnabled;
 end;
 
 function TMbedTLSContext.GetCertificatePinningEnabled: Boolean;
 begin
-  { MbedTLS 后端暂不支持证书固定 - 始终返回 False }
-  Result := False;
+  Result := FPinningEnabled;
 end;
 
 procedure TMbedTLSContext.ClearCertificatePins;
 begin
-  { MbedTLS 后端暂不支持证书固定 - 无操作 }
+  SetLength(FCertPins, 0);
+  FPinningEnabled := False;
+end;
+
+function TMbedTLSContext.GetCertificatePins: TMbedTLSCertPinArray;
+begin
+  Result := FCertPins;
 end;
 
 { 创建连接 }

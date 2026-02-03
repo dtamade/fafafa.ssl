@@ -679,26 +679,27 @@ end;
 
 function TMbedTLSConnection.GetOCSPStaplingEnabled: Boolean;
 begin
-  { MbedTLS 后端暂不支持 OCSP Stapling }
+  // MbedTLS 不支持客户端 OCSP Stapling
+  // 只有服务器端可以发送 OCSP 响应
   Result := False;
 end;
 
 function TMbedTLSConnection.GetOCSPResponse: TBytes;
 begin
-  { MbedTLS 后端暂不支持 OCSP Stapling }
+  // MbedTLS 客户端无法接收 OCSP Stapling 响应
   Result := nil;
 end;
 
 function TMbedTLSConnection.IsOCSPResponseVerified: Boolean;
 begin
-  { MbedTLS 后端暂不支持 OCSP Stapling }
+  // MbedTLS 不支持客户端 OCSP Stapling
   Result := False;
 end;
 
 function TMbedTLSConnection.GetOCSPResponseStatus: string;
 begin
-  { MbedTLS 后端暂不支持 OCSP Stapling }
-  Result := 'Not Supported';
+  // MbedTLS 库限制：不支持客户端 OCSP Stapling
+  Result := 'Not Supported (MbedTLS limitation)';
 end;
 
 end.

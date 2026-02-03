@@ -142,6 +142,27 @@ type
   TwolfSSL_CTX_load_verify_buffer = function(ctx: PWOLFSSL_CTX;
     const buf: Pointer; sz: Integer; format: Integer): Integer; cdecl;
 
+  // OCSP Stapling (新增)
+  TwolfSSL_CTX_EnableOCSP = function(ctx: PWOLFSSL_CTX; options: Integer): Integer; cdecl;
+  TwolfSSL_CTX_DisableOCSP = function(ctx: PWOLFSSL_CTX): Integer; cdecl;
+  TwolfSSL_CTX_EnableOCSPStapling = function(ctx: PWOLFSSL_CTX): Integer; cdecl;
+  TwolfSSL_CTX_DisableOCSPStapling = function(ctx: PWOLFSSL_CTX): Integer; cdecl;
+  TwolfSSL_CTX_SetOCSP_OverrideURL = function(ctx: PWOLFSSL_CTX; const url: PAnsiChar): Integer; cdecl;
+  TwolfSSL_UseOCSPStapling = function(ssl: PWOLFSSL; options: Integer): Integer; cdecl;
+  TwolfSSL_GetOCSP_Response = function(ssl: PWOLFSSL; resp: PPByte): Integer; cdecl;
+
+  // I/O 回调类型定义（用于流支持）
+  TwolfSSL_IORecvCallback = function(ssl: PWOLFSSL; buf: PAnsiChar; sz: Integer;
+    ctx: Pointer): Integer; cdecl;
+  TwolfSSL_IOSendCallback = function(ssl: PWOLFSSL; buf: PAnsiChar; sz: Integer;
+    ctx: Pointer): Integer; cdecl;
+
+  // I/O 回调设置函数类型
+  TwolfSSL_CTX_SetIORecv = procedure(ctx: PWOLFSSL_CTX; callback: TwolfSSL_IORecvCallback); cdecl;
+  TwolfSSL_CTX_SetIOSend = procedure(ctx: PWOLFSSL_CTX; callback: TwolfSSL_IOSendCallback); cdecl;
+  TwolfSSL_SetIOReadCtx = procedure(ssl: PWOLFSSL; ctx: Pointer); cdecl;
+  TwolfSSL_SetIOWriteCtx = procedure(ssl: PWOLFSSL; ctx: Pointer); cdecl;
+
 var
   { WolfSSL 函数指针 }
   wolfssl_init: Twolfssl_init = nil;
@@ -224,6 +245,21 @@ var
   wolfSSL_CTX_use_PrivateKey_buffer: TwolfSSL_CTX_use_PrivateKey_buffer = nil;
   wolfSSL_CTX_use_certificate_chain_buffer: TwolfSSL_CTX_use_certificate_chain_buffer = nil;
   wolfSSL_CTX_load_verify_buffer: TwolfSSL_CTX_load_verify_buffer = nil;
+
+  // OCSP Stapling (新增)
+  wolfSSL_CTX_EnableOCSP: TwolfSSL_CTX_EnableOCSP = nil;
+  wolfSSL_CTX_DisableOCSP: TwolfSSL_CTX_DisableOCSP = nil;
+  wolfSSL_CTX_EnableOCSPStapling: TwolfSSL_CTX_EnableOCSPStapling = nil;
+  wolfSSL_CTX_DisableOCSPStapling: TwolfSSL_CTX_DisableOCSPStapling = nil;
+  wolfSSL_CTX_SetOCSP_OverrideURL: TwolfSSL_CTX_SetOCSP_OverrideURL = nil;
+  wolfSSL_UseOCSPStapling: TwolfSSL_UseOCSPStapling = nil;
+  wolfSSL_GetOCSP_Response: TwolfSSL_GetOCSP_Response = nil;
+
+  // I/O 回调函数（用于流支持）
+  wolfSSL_CTX_SetIORecv: TwolfSSL_CTX_SetIORecv = nil;
+  wolfSSL_CTX_SetIOSend: TwolfSSL_CTX_SetIOSend = nil;
+  wolfSSL_SetIOReadCtx: TwolfSSL_SetIOReadCtx = nil;
+  wolfSSL_SetIOWriteCtx: TwolfSSL_SetIOWriteCtx = nil;
 
 { 库加载函数 }
 function LoadWolfSSLLibrary: Boolean;
@@ -369,6 +405,32 @@ begin
   wolfSSL_CTX_load_verify_buffer := TwolfSSL_CTX_load_verify_buffer(
     GetProc('wolfSSL_CTX_load_verify_buffer'));
 
+  // OCSP Stapling (新增)
+  wolfSSL_CTX_EnableOCSP := TwolfSSL_CTX_EnableOCSP(
+    GetProc('wolfSSL_CTX_EnableOCSP'));
+  wolfSSL_CTX_DisableOCSP := TwolfSSL_CTX_DisableOCSP(
+    GetProc('wolfSSL_CTX_DisableOCSP'));
+  wolfSSL_CTX_EnableOCSPStapling := TwolfSSL_CTX_EnableOCSPStapling(
+    GetProc('wolfSSL_CTX_EnableOCSPStapling'));
+  wolfSSL_CTX_DisableOCSPStapling := TwolfSSL_CTX_DisableOCSPStapling(
+    GetProc('wolfSSL_CTX_DisableOCSPStapling'));
+  wolfSSL_CTX_SetOCSP_OverrideURL := TwolfSSL_CTX_SetOCSP_OverrideURL(
+    GetProc('wolfSSL_CTX_SetOCSP_OverrideURL'));
+  wolfSSL_UseOCSPStapling := TwolfSSL_UseOCSPStapling(
+    GetProc('wolfSSL_UseOCSPStapling'));
+  wolfSSL_GetOCSP_Response := TwolfSSL_GetOCSP_Response(
+    GetProc('wolfSSL_GetOCSP_Response'));
+
+  // I/O 回调函数（用于流支持）
+  wolfSSL_CTX_SetIORecv := TwolfSSL_CTX_SetIORecv(
+    GetProc('wolfSSL_CTX_SetIORecv'));
+  wolfSSL_CTX_SetIOSend := TwolfSSL_CTX_SetIOSend(
+    GetProc('wolfSSL_CTX_SetIOSend'));
+  wolfSSL_SetIOReadCtx := TwolfSSL_SetIOReadCtx(
+    GetProc('wolfSSL_SetIOReadCtx'));
+  wolfSSL_SetIOWriteCtx := TwolfSSL_SetIOWriteCtx(
+    GetProc('wolfSSL_SetIOWriteCtx'));
+
   // 验证必需函数
   if not Assigned(wolfssl_init) or
     not Assigned(wolfSSL_CTX_new) or
@@ -463,6 +525,15 @@ begin
   wolfSSL_CTX_use_PrivateKey_buffer := nil;
   wolfSSL_CTX_use_certificate_chain_buffer := nil;
   wolfSSL_CTX_load_verify_buffer := nil;
+
+  // OCSP Stapling
+  wolfSSL_CTX_EnableOCSP := nil;
+  wolfSSL_CTX_DisableOCSP := nil;
+  wolfSSL_CTX_EnableOCSPStapling := nil;
+  wolfSSL_CTX_DisableOCSPStapling := nil;
+  wolfSSL_CTX_SetOCSP_OverrideURL := nil;
+  wolfSSL_UseOCSPStapling := nil;
+  wolfSSL_GetOCSP_Response := nil;
 
   GWolfSSLLoaded := False;
 end;
