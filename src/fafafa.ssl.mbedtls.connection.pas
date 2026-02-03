@@ -110,6 +110,18 @@ type
 
     { ISSLConnection - 原生句柄 }
     function GetNativeHandle: Pointer;
+
+    { ISSLConnection - 健康状态和诊断 }
+    function GetHealthStatus: TSSLHealthStatus;
+    function IsHealthy: Boolean;
+    function GetDiagnosticInfo: TSSLDiagnosticInfo;
+    function GetPerformanceMetrics: TSSLPerformanceMetrics;
+
+    { ISSLConnection - OCSP Stapling }
+    function GetOCSPStaplingEnabled: Boolean;
+    function GetOCSPResponse: TBytes;
+    function IsOCSPResponseVerified: Boolean;
+    function GetOCSPResponseStatus: string;
   end;
 
 implementation
@@ -627,6 +639,66 @@ end;
 function TMbedTLSConnection.GetNativeHandle: Pointer;
 begin
   Result := FSSLContext;
+end;
+
+{ ISSLConnection - 健康状态和诊断 }
+
+function TMbedTLSConnection.GetHealthStatus: TSSLHealthStatus;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+  Result.IsConnected := (FSSLContext <> nil) and FHandshakeComplete;
+  Result.HandshakeComplete := FHandshakeComplete;
+  Result.LastError := sslErrNone;
+  Result.LastErrorTime := 0;
+  Result.BytesSent := 0;
+  Result.BytesReceived := 0;
+  Result.ConnectionAge := 0;
+end;
+
+function TMbedTLSConnection.IsHealthy: Boolean;
+begin
+  Result := (FSSLContext <> nil) and FHandshakeComplete;
+end;
+
+function TMbedTLSConnection.GetDiagnosticInfo: TSSLDiagnosticInfo;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+  Result.ConnectionInfo := GetConnectionInfo;
+  Result.HealthStatus := GetHealthStatus;
+  Result.PerformanceMetrics := GetPerformanceMetrics;
+  SetLength(Result.ErrorHistory, 0);
+end;
+
+function TMbedTLSConnection.GetPerformanceMetrics: TSSLPerformanceMetrics;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+  // Connection-level metrics are not tracked in this implementation
+end;
+
+{ OCSP Stapling - MbedTLS 后端暂不支持 }
+
+function TMbedTLSConnection.GetOCSPStaplingEnabled: Boolean;
+begin
+  { MbedTLS 后端暂不支持 OCSP Stapling }
+  Result := False;
+end;
+
+function TMbedTLSConnection.GetOCSPResponse: TBytes;
+begin
+  { MbedTLS 后端暂不支持 OCSP Stapling }
+  Result := nil;
+end;
+
+function TMbedTLSConnection.IsOCSPResponseVerified: Boolean;
+begin
+  { MbedTLS 后端暂不支持 OCSP Stapling }
+  Result := False;
+end;
+
+function TMbedTLSConnection.GetOCSPResponseStatus: string;
+begin
+  { MbedTLS 后端暂不支持 OCSP Stapling }
+  Result := 'Not Supported';
 end;
 
 end.

@@ -370,9 +370,8 @@ procedure TestTSIOFunctions;
 begin
   StartTest('TS I/O functions availability');
   try
-    if not Assigned(TS_REQ_d2i_bio) then
-      FailTest('TS_REQ_d2i_bio not loaded')
-    else if not Assigned(TS_REQ_i2d_bio) then
+    // Note: TS_REQ_d2i_bio does not exist in OpenSSL 3.x
+    if not Assigned(TS_REQ_i2d_bio) then
       FailTest('TS_REQ_i2d_bio not loaded')
     else if not Assigned(TS_RESP_d2i_bio) then
       FailTest('TS_RESP_d2i_bio not loaded')

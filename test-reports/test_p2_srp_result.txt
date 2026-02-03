@@ -1,0 +1,32 @@
+============================================
+P2 SRP Module Test Suite
+Testing OpenSSL SRP (Secure Remote Password) API
+============================================
+
+OpenSSL Version: 3.x (libcrypto.so.3)
+
+WARNING: SRP is deprecated in OpenSSL 3.x and may not be available.
+
+[1] Load SRP functions... PASS
+[2] SRP_VBASE lifecycle (new/free)... PASS
+[3] SRP_user_pwd lifecycle (new/free)... PASS
+[4] SRP calculation functions availability... PASS
+[5] SRP key calculation functions availability... PASS
+[6] SRP verify functions availability... PASS
+[7] SRP user password functions availability... PASS
+[8] SRP VBASE functions availability... PASS
+[9] SRP gN parameter functions availability... PASS
+[10] SRP verifier creation functions availability... PASS
+[11] SRP_get_default_gN basic test... PASS
+
+============================================
+Test Summary
+============================================
+Total Tests:  11
+Passed:       11 (100.0%)
+Failed:       0 (0.0%)
+============================================
+All tests PASSED! ✓
+
+Note: SRP (Secure Remote Password) is deprecated in
+      OpenSSL 3.x. Many functions may not be available.

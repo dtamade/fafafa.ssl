@@ -73,9 +73,17 @@ begin
     Connector := TSSLConnector.FromContext(AContext)
       .WithTimeout(HANDSHAKE_TIMEOUT_MS);
 
-    TLS := Connector.ConnectSocket(THandle(Sock), AHost);
-
-    Result := (TLS <> nil) and (TLS.Connection <> nil);
+    try
+      TLS := Connector.ConnectSocket(THandle(Sock), AHost);
+      Result := (TLS <> nil) and (TLS.Connection <> nil);
+    except
+      on E: Exception do
+      begin
+        // TLS handshake failed, but this is expected in benchmarks
+        // Just return False to indicate failure
+        Result := False;
+      end;
+    end;
   finally
     if TLS <> nil then
       TLS.Free;

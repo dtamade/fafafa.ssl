@@ -499,6 +499,14 @@ type
   TEVP_PKEY_parameters_eq = function(const a: PEVP_PKEY; const b: PEVP_PKEY): Integer; cdecl;
   TEVP_PKEY_eq = function(const a: PEVP_PKEY; const b: PEVP_PKEY): Integer; cdecl;
   
+  // PKEY encoding/decoding functions
+  Ti2d_PUBKEY = function(a: PEVP_PKEY; pp: PPByte): Integer; cdecl;
+  Ti2d_PUBKEY_bio = function(bp: PBIO; pkey: PEVP_PKEY): Integer; cdecl;
+  Ti2d_PUBKEY_fp = function(fp: Pointer; pkey: PEVP_PKEY): Integer; cdecl;
+  Td2i_PUBKEY = function(a: PPEVP_PKEY; pp: PPByte; length: Integer): PEVP_PKEY; cdecl;
+  Td2i_PUBKEY_bio = function(bp: PBIO; a: PPEVP_PKEY): PEVP_PKEY; cdecl;
+  Td2i_PUBKEY_fp = function(fp: Pointer; a: PPEVP_PKEY): PEVP_PKEY; cdecl;
+  
   TEVP_PKEY_CTX_new = function(pkey: PEVP_PKEY; e: PENGINE): PEVP_PKEY_CTX; cdecl;
   TEVP_PKEY_CTX_new_id = function(id: Integer; e: PENGINE): PEVP_PKEY_CTX; cdecl;
   TEVP_PKEY_CTX_new_from_name = function(libctx: POSSL_LIB_CTX; const name: PAnsiChar; const propquery: PAnsiChar): PEVP_PKEY_CTX; cdecl;
@@ -819,6 +827,14 @@ var
   EVP_PKEY_get_raw_private_key: TEVP_PKEY_get_raw_private_key = nil;
   EVP_PKEY_get_raw_public_key: TEVP_PKEY_get_raw_public_key = nil;
   
+  // PKEY encoding/decoding functions
+  i2d_PUBKEY: Ti2d_PUBKEY = nil;
+  i2d_PUBKEY_bio: Ti2d_PUBKEY_bio = nil;
+  i2d_PUBKEY_fp: Ti2d_PUBKEY_fp = nil;
+  d2i_PUBKEY: Td2i_PUBKEY = nil;
+  d2i_PUBKEY_bio: Td2i_PUBKEY_bio = nil;
+  d2i_PUBKEY_fp: Td2i_PUBKEY_fp = nil;
+  
   // PKEY context functions
   EVP_PKEY_CTX_new: TEVP_PKEY_CTX_new = nil;
   EVP_PKEY_CTX_new_id: TEVP_PKEY_CTX_new_id = nil;
@@ -872,7 +888,7 @@ uses
 
 const
   // EVP function bindings for batch loading
-  EVP_BINDINGS: array[0..90] of TFunctionBinding = (
+  EVP_BINDINGS: array[0..96] of TFunctionBinding = (
     // MD Context functions
     (Name: 'EVP_MD_CTX_new'; FuncPtr: @EVP_MD_CTX_new; Required: True),
     (Name: 'EVP_MD_CTX_free'; FuncPtr: @EVP_MD_CTX_free; Required: True),
@@ -960,6 +976,13 @@ const
     (Name: 'EVP_PKEY_get_size'; FuncPtr: @EVP_PKEY_get_size; Required: False),
     (Name: 'EVP_PKEY_get_raw_private_key'; FuncPtr: @EVP_PKEY_get_raw_private_key; Required: False),
     (Name: 'EVP_PKEY_get_raw_public_key'; FuncPtr: @EVP_PKEY_get_raw_public_key; Required: False),
+    // PKEY encoding/decoding functions
+    (Name: 'i2d_PUBKEY'; FuncPtr: @i2d_PUBKEY; Required: False),
+    (Name: 'i2d_PUBKEY_bio'; FuncPtr: @i2d_PUBKEY_bio; Required: False),
+    (Name: 'i2d_PUBKEY_fp'; FuncPtr: @i2d_PUBKEY_fp; Required: False),
+    (Name: 'd2i_PUBKEY'; FuncPtr: @d2i_PUBKEY; Required: False),
+    (Name: 'd2i_PUBKEY_bio'; FuncPtr: @d2i_PUBKEY_bio; Required: False),
+    (Name: 'd2i_PUBKEY_fp'; FuncPtr: @d2i_PUBKEY_fp; Required: False),
     // PKEY context functions
     (Name: 'EVP_PKEY_CTX_new'; FuncPtr: @EVP_PKEY_CTX_new; Required: False),
     (Name: 'EVP_PKEY_CTX_new_id'; FuncPtr: @EVP_PKEY_CTX_new_id; Required: False),

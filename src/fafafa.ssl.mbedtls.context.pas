@@ -117,6 +117,15 @@ type
     procedure SetPasswordCallback(ACallback: TSSLPasswordCallback);
     procedure SetInfoCallback(ACallback: TSSLInfoCallback);
 
+    { ISSLContext - 证书固定 }
+    procedure AddCertificatePin(const AHash: TBytes; APinType: Integer;
+      const ADescription: string; AIsBackup: Boolean = False);
+    procedure AddCertificatePinBase64(const ABase64Hash: string; APinType: Integer;
+      const ADescription: string; AIsBackup: Boolean = False);
+    procedure SetCertificatePinningEnabled(AEnabled: Boolean);
+    function GetCertificatePinningEnabled: Boolean;
+    procedure ClearCertificatePins;
+
     { ISSLContext - 创建连接 }
     function CreateConnection(ASocket: THandle): ISSLConnection; overload;
     function CreateConnection(AStream: TStream): ISSLConnection; overload;
@@ -754,6 +763,47 @@ end;
 procedure TMbedTLSContext.SetInfoCallback(ACallback: TSSLInfoCallback);
 begin
   FInfoCallback := ACallback;
+end;
+
+{ 证书固定 - MbedTLS 后端暂不支持 }
+
+procedure TMbedTLSContext.AddCertificatePin(const AHash: TBytes; APinType: Integer;
+  const ADescription: string; AIsBackup: Boolean);
+begin
+  { MbedTLS 后端暂不支持证书固定 }
+  raise ESSLException.CreateWithContext(
+    'Certificate pinning not supported by MbedTLS backend',
+    sslErrUnsupported,
+    'TMbedTLSContext.AddCertificatePin'
+  );
+end;
+
+procedure TMbedTLSContext.AddCertificatePinBase64(const ABase64Hash: string;
+  APinType: Integer; const ADescription: string; AIsBackup: Boolean);
+begin
+  { MbedTLS 后端暂不支持证书固定 }
+  raise ESSLException.CreateWithContext(
+    'Certificate pinning not supported by MbedTLS backend',
+    sslErrUnsupported,
+    'TMbedTLSContext.AddCertificatePinBase64'
+  );
+end;
+
+procedure TMbedTLSContext.SetCertificatePinningEnabled(AEnabled: Boolean);
+begin
+  { MbedTLS 后端暂不支持证书固定 - 忽略设置 }
+  { 不抛出异常，以保持 API 兼容性 }
+end;
+
+function TMbedTLSContext.GetCertificatePinningEnabled: Boolean;
+begin
+  { MbedTLS 后端暂不支持证书固定 - 始终返回 False }
+  Result := False;
+end;
+
+procedure TMbedTLSContext.ClearCertificatePins;
+begin
+  { MbedTLS 后端暂不支持证书固定 - 无操作 }
 end;
 
 { 创建连接 }

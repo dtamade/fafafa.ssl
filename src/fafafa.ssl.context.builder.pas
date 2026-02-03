@@ -20,7 +20,8 @@ interface
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.base;
+  fafafa.ssl.base,
+  fafafa.ssl.pkcs11.types;
 
 type
   { Forward declarations }
@@ -71,6 +72,15 @@ type
     function WithALPN(const AProtocols: string): ISSLContextBuilder;
     function WithSessionCache(AEnabled: Boolean): ISSLContextBuilder;
     function WithSessionTimeout(ASeconds: Integer): ISSLContextBuilder;
+
+    // PKCS#11 support
+    function UsePKCS11(const AURI: string): ISSLContextBuilder;
+    function WithPKCS11PIN(const APIN: string): ISSLContextBuilder;
+    function WithPKCS11PINMethod(AMethod: TPKCS11PINMethod): ISSLContextBuilder;
+
+    // OCSP Stapling support
+    function WithOCSPStapling(AEnabled: Boolean = True): ISSLContextBuilder;
+    function WithOCSPStaplingRequired(ARequired: Boolean = True): ISSLContextBuilder;
 
     // Options
     function WithOption(AOption: TSSLOption): ISSLContextBuilder;
@@ -169,6 +179,15 @@ type
     FSessionCacheEnabled: Boolean;
     FSessionTimeout: Integer;
     FOptions: TSSLOptions;
+    
+    // PKCS#11 fields
+    FPKCS11URI: string;
+    FPKCS11PIN: string;
+    FPKCS11PINMethod: TPKCS11PINMethod;
+    
+    // OCSP Stapling fields
+    FOCSPStaplingEnabled: Boolean;
+    FOCSPStaplingRequired: Boolean;
   public
     constructor Create;
     
@@ -202,6 +221,15 @@ type
     function WithOption(AOption: TSSLOption): ISSLContextBuilder;
     function WithOptions(AOptions: TSSLOptions): ISSLContextBuilder;
     function WithoutOption(AOption: TSSLOption): ISSLContextBuilder;
+    
+    // PKCS#11 support
+    function UsePKCS11(const AURI: string): ISSLContextBuilder;
+    function WithPKCS11PIN(const APIN: string): ISSLContextBuilder;
+    function WithPKCS11PINMethod(AMethod: TPKCS11PINMethod): ISSLContextBuilder;
+
+    // OCSP Stapling support
+    function WithOCSPStapling(AEnabled: Boolean = True): ISSLContextBuilder;
+    function WithOCSPStaplingRequired(ARequired: Boolean = True): ISSLContextBuilder;
 
     function BuildClient: ISSLContext;
     function BuildServer: ISSLContext;
@@ -371,6 +399,15 @@ begin
   FSessionCacheEnabled := True;
   FSessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
   FOptions := [ssoEnableSNI, ssoDisableCompression, ssoDisableRenegotiation];
+  
+  // PKCS#11 defaults
+  FPKCS11URI := '';
+  FPKCS11PIN := '';
+  FPKCS11PINMethod := pmNone;
+  
+  // OCSP Stapling defaults
+  FOCSPStaplingEnabled := False;
+  FOCSPStaplingRequired := False;
 end;
 
 function TSSLContextBuilderImpl.WithTLS12: ISSLContextBuilder;
@@ -544,6 +581,48 @@ begin
   Result := Self;
 end;
 
+{ PKCS#11 Support }
+
+function TSSLContextBuilderImpl.UsePKCS11(const AURI: string): ISSLContextBuilder;
+begin
+  FPKCS11URI := AURI;
+  Result := Self;
+end;
+
+function TSSLContextBuilderImpl.WithPKCS11PIN(const APIN: string): ISSLContextBuilder;
+begin
+  FPKCS11PIN := APIN;
+  FPKCS11PINMethod := pmValue;
+  Result := Self;
+end;
+
+function TSSLContextBuilderImpl.WithPKCS11PINMethod(AMethod: TPKCS11PINMethod): ISSLContextBuilder;
+begin
+  FPKCS11PINMethod := AMethod;
+  Result := Self;
+end;
+
+{ OCSP Stapling Support }
+
+function TSSLContextBuilderImpl.WithOCSPStapling(AEnabled: Boolean): ISSLContextBuilder;
+begin
+  FOCSPStaplingEnabled := AEnabled;
+  if AEnabled then
+    Include(FOptions, ssoEnableOCSPStapling)
+  else
+    Exclude(FOptions, ssoEnableOCSPStapling);
+  Result := Self;
+end;
+
+function TSSLContextBuilderImpl.WithOCSPStaplingRequired(ARequired: Boolean): ISSLContextBuilder;
+begin
+  FOCSPStaplingRequired := ARequired;
+  // If required, also enable stapling
+  if ARequired then
+    WithOCSPStapling(True);
+  Result := Self;
+end;
+
 function TSSLContextBuilderImpl.BuildClient: ISSLContext;
 var
   Store: ISSLCertificateStore;
@@ -566,9 +645,15 @@ begin
   if FCertificatePEM <> '' then
     Result.LoadCertificatePEM(FCertificatePEM);
   
-  if FPrivateKeyFile <> '' then
-    Result.LoadPrivateKey(FPrivateKeyFile, FPrivateKeyPassword);
-  if FPrivateKeyPEM <> '' then
+  // Load private key (PKCS#11 or file)
+  if FPKCS11URI <> '' then
+  begin
+    // PKCS#11 private key - TODO: Implement LoadPrivateKeyFromPKCS11
+    raise ESSLException.Create('PKCS#11 support not yet implemented');
+  end
+  else if FPrivateKeyFile <> '' then
+    Result.LoadPrivateKey(FPrivateKeyFile, FPrivateKeyPassword)
+  else if FPrivateKeyPEM <> '' then
     Result.LoadPrivateKeyPEM(FPrivateKeyPEM, FPrivateKeyPassword);
   
   // Load system roots if requested
@@ -626,13 +711,19 @@ begin
   if (FCertificateFile = '') and (FCertificatePEM = '') then
     raise ESSLException.Create('Server context requires a certificate');
     
-  if (FPrivateKeyFile = '') and (FPrivateKeyPEM = '') then
+  if (FPrivateKeyFile = '') and (FPrivateKeyPEM = '') and (FPKCS11URI = '') then
     raise ESSLException.Create('Server context requires a private key');
   
   if FCertificateFile <> '' then
     Result.LoadCertificate(FCertificateFile);
   
-  if FPrivateKeyFile <> '' then
+  // Load private key (PKCS#11 or file)
+  if FPKCS11URI <> '' then
+  begin
+    // PKCS#11 private key - TODO: Implement LoadPrivateKeyFromPKCS11
+    raise ESSLException.Create('PKCS#11 support not yet implemented');
+  end
+  else if FPrivateKeyFile <> '' then
     Result.LoadPrivateKey(FPrivateKeyFile, FPrivateKeyPassword);
   
   if FCAFile <> '' then
@@ -870,6 +961,10 @@ begin
       if LOption in FOptions then
         LOptions.Add(Ord(LOption));
     LRoot.Add('options', LOptions);
+    
+    // OCSP Stapling
+    LRoot.Add('ocsp_stapling_enabled', FOCSPStaplingEnabled);
+    LRoot.Add('ocsp_stapling_required', FOCSPStaplingRequired);
 
     Result := LRoot.FormatJSON;
   finally
@@ -956,6 +1051,12 @@ begin
         for I := 0 to LOptions.Count - 1 do
           Include(FOptions, TSSLOption(LOptions.Integers[I]));
       end;
+      
+      // OCSP Stapling
+      if IndexOfName('ocsp_stapling_enabled') >= 0 then
+        FOCSPStaplingEnabled := Booleans['ocsp_stapling_enabled'];
+      if IndexOfName('ocsp_stapling_required') >= 0 then
+        FOCSPStaplingRequired := Booleans['ocsp_stapling_required'];
     end;
   finally
     LRoot.Free;
@@ -1039,6 +1140,18 @@ begin
       end;
     LLines.Add('[Options]');
     LLines.Add('options=' + LOptionsStr);
+    LLines.Add('');
+    
+    // OCSP Stapling
+    LLines.Add('[OCSP Stapling]');
+    if FOCSPStaplingEnabled then
+      LLines.Add('ocsp_stapling_enabled=true')
+    else
+      LLines.Add('ocsp_stapling_enabled=false');
+    if FOCSPStaplingRequired then
+      LLines.Add('ocsp_stapling_required=true')
+    else
+      LLines.Add('ocsp_stapling_required=false');
 
     Result := LLines.Text;
   finally
@@ -1125,7 +1238,11 @@ begin
           FOptions := [];
           for J := 0 to LParts.Count - 1 do
             Include(FOptions, TSSLOption(StrToIntDef(LParts[J], 0)));
-        end;
+        end
+        else if LKey = 'ocsp_stapling_enabled' then
+          FOCSPStaplingEnabled := (LowerCase(LValue) = 'true')
+        else if LKey = 'ocsp_stapling_required' then
+          FOCSPStaplingRequired := (LowerCase(LValue) = 'true');
       end;
     end;
   finally
@@ -1162,6 +1279,15 @@ begin
   LClone.FSessionCacheEnabled := FSessionCacheEnabled;
   LClone.FSessionTimeout := FSessionTimeout;
   LClone.FOptions := FOptions;
+  
+  // Copy PKCS#11 fields
+  LClone.FPKCS11URI := FPKCS11URI;
+  LClone.FPKCS11PIN := FPKCS11PIN;
+  LClone.FPKCS11PINMethod := FPKCS11PINMethod;
+  
+  // Copy OCSP Stapling fields
+  LClone.FOCSPStaplingEnabled := FOCSPStaplingEnabled;
+  LClone.FOCSPStaplingRequired := FOCSPStaplingRequired;
 
   Result := LClone;
 end;
@@ -1187,6 +1313,15 @@ begin
   FSessionCacheEnabled := True;
   FSessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
   FOptions := [ssoEnableSNI, ssoDisableCompression, ssoDisableRenegotiation];
+  
+  // Reset PKCS#11 fields
+  FPKCS11URI := '';
+  FPKCS11PIN := '';
+  FPKCS11PINMethod := pmNone;
+  
+  // Reset OCSP Stapling fields
+  FOCSPStaplingEnabled := False;
+  FOCSPStaplingRequired := False;
 
   Result := Self;
 end;

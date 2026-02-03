@@ -548,6 +548,7 @@ end;
 class function TSSLFactory.IsLibraryAvailable(ALibType: TSSLLibraryType): Boolean;
 var
   LLib: ISSLLibrary;
+  LNeedInit: Boolean;
 begin
   Result := False;
   CheckInitialized;
@@ -559,35 +560,56 @@ begin
     Exit;
   end;
 
+  // 先检查缓存的库实例
   EnterCriticalSection(GFactoryLock);
   try
-    // If the library instance is already cached, do not create/initialize a
-    // temporary instance (some backends use shared global loaders).
     if Assigned(FLibraries[ALibType]) then
     begin
       LLib := FLibraries[ALibType];
-      if Assigned(LLib) then
-        Result := LLib.IsInitialized or LLib.Initialize
-      else
-        Result := False;
-      Exit;
-    end;
-
-    // P0: 使用 Map 接口检查是否已注册
-    if FRegistrationMap.Contains(Ord(ALibType)) then
+      LNeedInit := Assigned(LLib) and not LLib.IsInitialized;
+    end
+    else
     begin
-      // 尝试创建实例以验证可用性
-      try
-        LLib := CreateLibraryInstance(ALibType);
-        Result := Assigned(LLib) and LLib.Initialize;
-        if Result then
-          FLibraries[ALibType] := LLib;
-      except
-        Result := False;
+      // 检查是否已注册，如果是则创建实例
+      if FRegistrationMap.Contains(Ord(ALibType)) then
+      begin
+        try
+          LLib := CreateLibraryInstance(ALibType);
+          LNeedInit := Assigned(LLib);
+        except
+          LLib := nil;
+          LNeedInit := False;
+        end;
+      end
+      else
+      begin
+        LLib := nil;
+        LNeedInit := False;
       end;
     end;
   finally
     LeaveCriticalSection(GFactoryLock);
+  end;
+
+  // 在锁外调用 Initialize 以避免死锁
+  if Assigned(LLib) then
+  begin
+    if LNeedInit then
+      Result := LLib.Initialize
+    else
+      Result := LLib.IsInitialized;
+    
+    // 如果初始化成功，缓存实例
+    if Result then
+    begin
+      EnterCriticalSection(GFactoryLock);
+      try
+        if not Assigned(FLibraries[ALibType]) then
+          FLibraries[ALibType] := LLib;
+      finally
+        LeaveCriticalSection(GFactoryLock);
+      end;
+    end;
   end;
 end;
 
@@ -762,63 +784,52 @@ end;
 
 class function TSSLFactory.GetLibrary(ALibType: TSSLLibraryType): ISSLLibrary;
 var
-  LType: TSSLLibraryType;
-  LInitError: Integer;
-  LInitErrorString: string;
+  LDefaultLib: TSSLLibraryType;
+  LDetected: TSSLLibraryType;
+  LNeedInit: Boolean;
 begin
-  CheckInitialized;
+  if ALibType = sslAutoDetect then
+  begin
+    // First try to get the default library
+    LDefaultLib := GetDefaultLibrary;
+    
+    // If default is also auto-detect, try to detect best available library
+    if LDefaultLib = sslAutoDetect then
+    begin
+      LDetected := DetectBestLibrary;
+      if LDetected = sslAutoDetect then
+        raise ESSLException.Create('No SSL library available. Please register a library first.');
+      ALibType := LDetected;
+    end
+    else
+      ALibType := LDefaultLib;
+  end;
   
-  LType := ALibType;
-  if LType = sslAutoDetect then
-    LType := GetDefaultLibrary;
-  
-  if LType = sslAutoDetect then
-    raise ESSLConfigurationException.CreateWithContext(
-      'No SSL library available - could not detect OpenSSL or WinSSL',
-      sslErrLibraryNotFound,
-      'TSSLFactory.GetLibrary',
-      0,
-      sslAutoDetect
-    );
-  
+  // 先检查缓存的库实例
   EnterCriticalSection(GFactoryLock);
   try
-    Result := FLibraries[LType];
-    
-    if not Assigned(Result) then
+    if Assigned(FLibraries[ALibType]) then
     begin
-      Result := CreateLibraryInstance(LType);
+      Result := FLibraries[ALibType];
+      LNeedInit := not Result.IsInitialized;
+    end
+    else
+    begin
+      // 创建新实例
+      Result := CreateLibraryInstance(ALibType);
+      LNeedInit := Assigned(Result);
       if Assigned(Result) then
-      begin
-        if FAutoInitialize then
-        begin
-          if not Result.Initialize then
-          begin
-            LInitError := Result.GetLastError;
-            LInitErrorString := Result.GetLastErrorString;
-            raise ESSLInitializationException.CreateWithContext(
-              Format('Failed to initialize SSL library: %s (LastError=%d, Details=%s)',
-                [SSL_LIBRARY_NAMES[LType], LInitError, LInitErrorString]),
-              sslErrNotInitialized,
-              'TSSLFactory.GetLibrary',
-              LInitError,
-              LType
-            );
-          end;
-        end;
-        FLibraries[LType] := Result;
-      end
-      else
-        raise ESSLInitializationException.CreateWithContext(
-          Format('Failed to create SSL library instance for %s', [SSL_LIBRARY_NAMES[LType]]),
-          sslErrLibraryNotFound,
-          'TSSLFactory.GetLibrary',
-          0,
-          LType
-        );
+        FLibraries[ALibType] := Result;
     end;
   finally
     LeaveCriticalSection(GFactoryLock);
+  end;
+  
+  // 在锁外初始化以避免死锁
+  if Assigned(Result) and LNeedInit then
+  begin
+    if not Result.Initialize then
+      raise ESSLException.CreateFmt('Failed to initialize %s library', [SSL_LIBRARY_NAMES[ALibType]]);
   end;
 end;
 

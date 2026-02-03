@@ -90,7 +90,13 @@ show_help() {
      - 安全随机数生成 (64B, 1KB, 16KB)
      - 密钥生成 (128-bit, 256-bit)
 
-  2. benchmark_tls_handshake         - TLS 握手性能测试
+  2. benchmark_random_pool           - 随机数缓存池性能测试 (Phase B)
+     - 小数据块 (256B) - 高频请求场景
+     - 中等数据块 (1KB) - 标准场景
+     - 大数据块 (4KB) - 边界场景
+     - 超大数据块 (8KB) - 直接生成场景
+
+  3. benchmark_tls_handshake         - TLS 握手性能测试
      - TLS 1.2 握手
      - TLS 1.3 握手
      - TLS 1.2+1.3 握手
@@ -296,6 +302,7 @@ log_info "编译基准测试..."
 echo "----------------------------------------------------------------"
 
 compile_benchmark "$BENCHMARKS_DIR/benchmark_crypto_comprehensive.pas" || true
+compile_benchmark "$BENCHMARKS_DIR/benchmark_random_pool.pas" || true
 
 if [ "$SKIP_TLS" = false ]; then
   compile_benchmark "$BENCHMARKS_DIR/benchmark_tls_handshake.pas" || true
@@ -310,6 +317,7 @@ log_info "运行基准测试..."
 echo "----------------------------------------------------------------"
 
 run_benchmark "benchmark_crypto_comprehensive" "$ITERATIONS" || true
+run_benchmark "benchmark_random_pool" "$ITERATIONS" || true
 
 if [ "$SKIP_TLS" = false ]; then
   run_benchmark "benchmark_tls_handshake" "$TLS_ITERATIONS" || true

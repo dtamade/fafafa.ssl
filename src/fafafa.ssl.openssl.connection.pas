@@ -100,6 +100,12 @@ type
     function IsHealthy: Boolean;
     function GetDiagnosticInfo: TSSLDiagnosticInfo;
     function GetPerformanceMetrics: TSSLPerformanceMetrics;
+    
+    { OCSP Stapling 接口 }
+    function GetOCSPStaplingEnabled: Boolean;
+    function GetOCSPResponse: TBytes;
+    function IsOCSPResponseVerified: Boolean;
+    function GetOCSPResponseStatus: string;
   end;
 
 implementation
@@ -1331,6 +1337,32 @@ begin
   Result.TotalBytesTransferred := 0;
   Result.AverageLatency := 0;
   Result.SessionReused := IsSessionReused;
+end;
+
+{ OCSP Stapling 方法实现 }
+
+function TOpenSSLConnection.GetOCSPStaplingEnabled: Boolean;
+begin
+  // TODO: 实现 OCSP Stapling 状态检查
+  Result := False;
+end;
+
+function TOpenSSLConnection.GetOCSPResponse: TBytes;
+begin
+  // TODO: 实现 OCSP 响应获取
+  SetLength(Result, 0);
+end;
+
+function TOpenSSLConnection.IsOCSPResponseVerified: Boolean;
+begin
+  // TODO: 实现 OCSP 响应验证状态检查
+  Result := False;
+end;
+
+function TOpenSSLConnection.GetOCSPResponseStatus: string;
+begin
+  // TODO: 实现 OCSP 响应状态获取
+  Result := 'Not Implemented';
 end;
 
 end.

@@ -1,0 +1,41 @@
+============================================
+P2 CT Module Test Suite
+Testing OpenSSL CT (Certificate Transparency) API
+============================================
+
+OpenSSL Version: 3.x (libcrypto.so.3)
+
+[1] Load CT functions... PASS
+[2] CT log entry type constants... PASS
+[3] SCT version constants... PASS
+[4] SCT source constants... PASS
+[5] SCT validation status constants... PASS
+[6] CT_POLICY_EVAL_CTX lifecycle (new/free)... PASS
+[7] SCT lifecycle (new/free)... PASS
+[8] CTLOG_STORE lifecycle (new/free)... PASS
+[9] CT_POLICY_EVAL_CTX functions availability... PASS
+[10] SCT version functions availability... PASS
+[11] SCT log entry type functions availability... PASS
+[12] SCT timestamp functions availability... PASS
+[13] SCT log ID functions availability... PASS
+[14] SCT signature functions availability... PASS
+[15] SCT extensions functions availability... PASS
+[16] SCT source functions availability... PASS
+[17] SCT validation functions availability... PASS
+[18] SCT list functions availability... PASS
+[19] CTLOG functions availability... PASS
+[20] CTLOG_STORE functions availability... PASS
+[21] SCT serialization functions availability... PASS
+[22] X509 CT extension functions availability... PASS
+
+============================================
+Test Summary
+============================================
+Total Tests:  22
+Passed:       22 (100.0%)
+Failed:       0 (0.0%)
+============================================
+All tests PASSED! ✓
+
+Note: CT (Certificate Transparency) provides public,
+      append-only logs of SSL/TLS certificates (RFC 6962).

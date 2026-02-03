@@ -407,9 +407,9 @@ procedure TestCMSSignerInfoAlgorithmFunctions;
 begin
   StartTest('CMS SignerInfo algorithm functions');
   try
-    if not Assigned(CMS_set1_signer_cert) then
-      FailTest('CMS_set1_signer_cert not loaded')
-    else if not Assigned(CMS_SignerInfo_get0_algs) then
+    // Note: CMS_set1_signer_cert does not exist in OpenSSL 3.x
+    // Only check CMS_SignerInfo_get0_algs
+    if not Assigned(CMS_SignerInfo_get0_algs) then
       FailTest('CMS_SignerInfo_get0_algs not loaded')
     else
       PassTest;

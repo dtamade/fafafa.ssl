@@ -183,7 +183,10 @@ begin
   // Warmup to reduce one-time initialization noise
   try
     for I := 1 to 20 do
+    begin
       Ctx := GLib.CreateContext(sslCtxClient);
+      if Ctx = nil then ; // Suppress unused variable warning
+    end;
   except
     // Ignore warmup failures; the timed run will report the real error
   end;
@@ -195,7 +198,10 @@ begin
     begin
       StartTime := GetTickCount64;
       for I := 1 to ACount do
+      begin
         Ctx := GLib.CreateContext(sslCtxClient);
+        if Ctx = nil then ; // Suppress unused variable warning
+      end;
       EndTime := GetTickCount64;
 
       SampleDuration := EndTime - StartTime;

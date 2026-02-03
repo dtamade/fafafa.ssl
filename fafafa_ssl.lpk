@@ -46,7 +46,7 @@ Supports OpenSSL, WolfSSL, MbedTLS and Windows Schannel
 Provides a consistent interface across all SSL/TLS backends"/>
     <License Value="MIT License"/>
     <Version Major="1" Minor="0" Release="0" Build="0"/>
-    <Files Count="3">
+    <Files Count="10">
       <Item1>
         <Filename Value="src\fafafa.ssl.base.pas"/>
         <UnitName Value="fafafa.ssl.base"/>
@@ -59,6 +59,34 @@ Provides a consistent interface across all SSL/TLS backends"/>
         <Filename Value="src\fafafa.ssl.pas"/>
         <UnitName Value="fafafa.ssl"/>
       </Item3>
+      <Item4>
+        <Filename Value="src\fafafa.ssl.context.builder.pas"/>
+        <UnitName Value="fafafa.ssl.context.builder"/>
+      </Item4>
+      <Item5>
+        <Filename Value="src\fafafa.ssl.x509.pas"/>
+        <UnitName Value="fafafa.ssl.x509"/>
+      </Item5>
+      <Item6>
+        <Filename Value="src\fafafa.ssl.ocsp.pas"/>
+        <UnitName Value="fafafa.ssl.ocsp"/>
+      </Item6>
+      <Item7>
+        <Filename Value="src\fafafa.ssl.ocsp.cache.pas"/>
+        <UnitName Value="fafafa.ssl.ocsp.cache"/>
+      </Item7>
+      <Item8>
+        <Filename Value="src\fafafa.ssl.ocsp.stapling.pas"/>
+        <UnitName Value="fafafa.ssl.ocsp.stapling"/>
+      </Item8>
+      <Item9>
+        <Filename Value="src\fafafa.ssl.http.client.pas"/>
+        <UnitName Value="fafafa.ssl.http.client"/>
+      </Item9>
+      <Item10>
+        <Filename Value="src\fafafa.ssl.crypto.hash.pas"/>
+        <UnitName Value="fafafa.ssl.crypto.hash"/>
+      </Item10>
     </Files>
     <CompatibilityMode Value="True"/>
     <RequiredPkgs Count="1">

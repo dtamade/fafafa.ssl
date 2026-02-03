@@ -25,7 +25,8 @@ uses
   fafafa.ssl.logging,     // P1: 废弃协议警告
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
-  fafafa.ssl.winssl.utils;
+  fafafa.ssl.winssl.utils,
+  fafafa.ssl.cert.pinning;
 
 type
   { TWinSSLContext - Windows Schannel 上下文类 }
@@ -62,6 +63,10 @@ type
     // P0-1: 延迟初始化支持
     FCredentialsNeedRebuild: Boolean;  // 标记凭据需要重建
     FCredentialsAcquired: Boolean;     // 凭据是否已获取
+    
+    // 证书固定
+    FPinValidator: TPinValidator;
+    FPinningEnabled: Boolean;
 
     procedure CleanupCertificate;
     procedure ApplyOptions;
@@ -134,6 +139,15 @@ type
     function GetVerifyCallback: TSSLVerifyCallback;
     function GetInfoCallback: TSSLInfoCallback;
     
+    { ISSLContext - 证书固定 }
+    procedure AddCertificatePin(const AHash: TBytes; APinType: Integer;
+      const ADescription: string; AIsBackup: Boolean = False);
+    procedure AddCertificatePinBase64(const ABase64Hash: string; APinType: Integer;
+      const ADescription: string; AIsBackup: Boolean = False);
+    procedure SetCertificatePinningEnabled(AEnabled: Boolean);
+    function GetCertificatePinningEnabled: Boolean;
+    procedure ClearCertificatePins;
+    
     { ISSLContext - 创建连接 }
     function CreateConnection(ASocket: THandle): ISSLConnection; overload;
     function CreateConnection(AStream: TStream): ISSLConnection; overload;
@@ -188,6 +202,10 @@ begin
   FPasswordCallback := nil;
   FInfoCallback := nil;
 
+  // 初始化证书固定
+  FPinValidator := TPinValidator.Create;
+  FPinningEnabled := False;
+
   // P0-1: 延迟初始化 - 不在构造函数中获取凭据
   // 凭据将在 CreateConnection 或 GetNativeHandle 时获取
   FCredentialsAcquired := False;
@@ -207,6 +225,10 @@ begin
   // P0-1: 只有在凭据已获取时才释放
   if FCredentialsAcquired and IsValidSecHandle(FCredHandle) then
     FreeCredentialsHandle(@FCredHandle);
+  
+  // 清理证书固定
+  FreeAndNil(FPinValidator);
+  
   inherited Destroy;
 end;
 
@@ -1067,6 +1089,58 @@ end;
 function TWinSSLContext.GetInfoCallback: TSSLInfoCallback;
 begin
   Result := FInfoCallback;
+end;
+
+// ============================================================================
+// ISSLContext - 证书固定
+// ============================================================================
+
+procedure TWinSSLContext.AddCertificatePin(const AHash: TBytes; APinType: Integer;
+  const ADescription: string; AIsBackup: Boolean);
+begin
+  if FPinValidator = nil then
+    raise ESSLException.CreateWithContext(
+      'Pin validator not initialized',
+      sslErrNotInitialized,
+      'TWinSSLContext.AddCertificatePin'
+    );
+  
+  FPinValidator.AddPin(AHash, TPinType(APinType), ADescription, AIsBackup);
+end;
+
+procedure TWinSSLContext.AddCertificatePinBase64(const ABase64Hash: string; 
+  APinType: Integer; const ADescription: string; AIsBackup: Boolean);
+begin
+  if FPinValidator = nil then
+    raise ESSLException.CreateWithContext(
+      'Pin validator not initialized',
+      sslErrNotInitialized,
+      'TWinSSLContext.AddCertificatePinBase64'
+    );
+  
+  FPinValidator.AddPinBase64(ABase64Hash, TPinType(APinType), ADescription, AIsBackup);
+end;
+
+procedure TWinSSLContext.SetCertificatePinningEnabled(AEnabled: Boolean);
+begin
+  FPinningEnabled := AEnabled;
+  
+  if FPinValidator <> nil then
+    FPinValidator.RequireValidPin := AEnabled;
+  
+  TSecurityLog.Info('WinSSL', 
+    Format('Certificate pinning %s', [IfThen(AEnabled, 'enabled', 'disabled')]));
+end;
+
+function TWinSSLContext.GetCertificatePinningEnabled: Boolean;
+begin
+  Result := FPinningEnabled;
+end;
+
+procedure TWinSSLContext.ClearCertificatePins;
+begin
+  if FPinValidator <> nil then
+    FPinValidator.ClearPins;
 end;
 
 // ============================================================================

@@ -98,6 +98,7 @@ var
   NetErr: string;
   StartTime, EndTime: QWord;
   StatIdx: Integer;
+  HttpBuf: TBytes;
 begin
   Result := False;
   Sock := INVALID_SOCKET;
@@ -163,8 +164,25 @@ begin
 
     if (TLS <> nil) and (TLS.Connection <> nil) then
     begin
-      GStats[StatIdx].EndTime := EndTime;
-      GStats[StatIdx].Duration := EndTime - StartTime;
+      // 关键：TLS 1.3 会话票据在握手后异步发送
+      // 需要发送 HTTP 请求并读取响应以触发票据接收
+      if AConnectionNum = 1 then
+      begin
+        WriteLn('  → 发送 HTTP 请求以触发 TLS 1.3 票据接收...');
+        try
+          // 发送 HTTP 请求
+          HttpBuf := TEncoding.UTF8.GetBytes('GET / HTTP/1.0'#13#10#13#10);
+          TLS.Write(HttpBuf[0], Length(HttpBuf));
+          // 读取一些数据以触发票据接收（不需要读取全部响应）
+          SetLength(HttpBuf, 100);
+          TLS.Read(HttpBuf[0], 100);
+        except
+          // 忽略读取错误，我们只是为了触发票据接收
+        end;
+      end;
+
+      GStats[StatIdx].EndTime := GetTickCount64MS;
+      GStats[StatIdx].Duration := GStats[StatIdx].EndTime - StartTime;
 
       // 通过 OpenSSL API 检查是否真正复用了会话
       GStats[StatIdx].SessionReused := TLS.Connection.IsSessionReused;
@@ -318,19 +336,34 @@ begin
   if (GHost = 'localhost') or (GHost = '127.0.0.1') then
   begin
     WriteLn('检测到 localhost，禁用证书验证');
-    WriteLn('使用 TLS 1.2（TLS 1.3 的会话复用机制不同）');
-    Context := TSSLContextBuilder.Create
-      .WithTLS12                   // 仅使用 TLS 1.2（会话复用更可靠）
-      .WithVerifyNone              // 禁用证书验证（仅用于 localhost 测试）
-      .WithSessionCache(True)      // 启用会话缓存 ⭐
-      .WithSessionTimeout(300)     // 会话超时 5 分钟 ⭐
-      .BuildClient;
+
+    // 根据端口选择 TLS 版本：44330=TLS 1.2, 44331=TLS 1.3
+    if GPort = 44331 then
+    begin
+      WriteLn('使用 TLS 1.3（会话复用已完美支持）');
+      Context := TSSLContextBuilder.Create
+        .WithTLS13                   // 仅使用 TLS 1.3
+        .WithVerifyNone              // 禁用证书验证（仅用于 localhost 测试）
+        .WithSessionCache(True)      // 启用会话缓存 ⭐
+        .WithSessionTimeout(300)     // 会话超时 5 分钟 ⭐
+        .BuildClient;
+    end
+    else
+    begin
+      WriteLn('使用 TLS 1.2（会话复用已完美支持）');
+      Context := TSSLContextBuilder.Create
+        .WithTLS12                   // 仅使用 TLS 1.2
+        .WithVerifyNone              // 禁用证书验证（仅用于 localhost 测试）
+        .WithSessionCache(True)      // 启用会话缓存 ⭐
+        .WithSessionTimeout(300)     // 会话超时 5 分钟 ⭐
+        .BuildClient;
+    end;
   end
   else
   begin
-    WriteLn('使用 TLS 1.2（TLS 1.3 的会话复用机制不同）');
+    WriteLn('使用 TLS 1.2+1.3（自动协商）');
     Context := TSSLContextBuilder.Create
-      .WithTLS12                   // 仅使用 TLS 1.2（会话复用更可靠）
+      .WithTLS12And13              // 支持 TLS 1.2 和 1.3
       .WithVerifyPeer              // 验证服务器证书
       .WithSystemRoots             // 使用系统根证书
       .WithSessionCache(True)      // 启用会话缓存 ⭐

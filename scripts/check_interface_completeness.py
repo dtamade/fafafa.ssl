@@ -152,50 +152,42 @@ def main():
     # 定义要检查的接口和实现
     checks = [
         {
-            'interface_file': src_dir / "fafafa.ssl.abstract.intf.pas",
-            'interface': 'ISSLLibrary',
-            'implementations': [
-                ('fafafa.ssl.openssl.pas', 'TOpenSSLLibrary'),
-                ('fafafa.ssl.winssl.lib.pas', 'TWinSSLLibrary'),
-            ]
-        },
-        {
-            'interface_file': src_dir / "fafafa.ssl.abstract.intf.pas",
+            'interface_file': src_dir / "fafafa.ssl.base.pas",
             'interface': 'ISSLContext',
             'implementations': [
-                ('fafafa.ssl.openssl.pas', 'TOpenSSLContext'),
+                ('fafafa.ssl.openssl.context.pas', 'TOpenSSLContext'),
                 ('fafafa.ssl.winssl.context.pas', 'TWinSSLContext'),
             ]
         },
         {
-            'interface_file': src_dir / "fafafa.ssl.abstract.intf.pas",
+            'interface_file': src_dir / "fafafa.ssl.base.pas",
             'interface': 'ISSLConnection',
             'implementations': [
-                ('fafafa.ssl.openssl.pas', 'TOpenSSLConnection'),
+                ('fafafa.ssl.openssl.connection.pas', 'TOpenSSLConnection'),
                 ('fafafa.ssl.winssl.connection.pas', 'TWinSSLConnection'),
             ]
         },
         {
-            'interface_file': src_dir / "fafafa.ssl.abstract.intf.pas",
-            'interface': 'ISSLCertificate',
+            'interface_file': src_dir / "fafafa.ssl.base.pas",
+            'interface': 'ICertificate',
             'implementations': [
-                ('fafafa.ssl.openssl.pas', 'TOpenSSLCertificate'),
+                ('fafafa.ssl.openssl.certificate.pas', 'TOpenSSLCertificate'),
                 ('fafafa.ssl.winssl.certificate.pas', 'TWinSSLCertificate'),
             ]
         },
         {
-            'interface_file': src_dir / "fafafa.ssl.abstract.intf.pas",
-            'interface': 'ISSLCertificateStore',
+            'interface_file': src_dir / "fafafa.ssl.base.pas",
+            'interface': 'ICertificateStore',
             'implementations': [
-                ('fafafa.ssl.openssl.pas', 'TOpenSSLCertificateStore'),
+                ('fafafa.ssl.openssl.certstore.pas', 'TOpenSSLCertificateStore'),
                 ('fafafa.ssl.winssl.certstore.pas', 'TWinSSLCertificateStore'),
             ]
         },
         {
-            'interface_file': src_dir / "fafafa.ssl.abstract.intf.pas",
+            'interface_file': src_dir / "fafafa.ssl.base.pas",
             'interface': 'ISSLSession',
             'implementations': [
-                ('fafafa.ssl.openssl.pas', 'TOpenSSLSession'),
+                ('fafafa.ssl.openssl.session.pas', 'TOpenSSLSession'),
             ]
         },
     ]

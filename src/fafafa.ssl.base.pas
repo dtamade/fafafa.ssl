@@ -886,6 +886,33 @@ type
         @param ACallback 信息回调函数 *}
     procedure SetInfoCallback(ACallback: TSSLInfoCallback);
 
+    {** 添加证书固定（Certificate Pinning）
+        @param AHash SHA-256 哈希值（32字节）
+        @param APinType 固定类型（证书或公钥）- 0=证书, 1=公钥
+        @param ADescription 描述信息
+        @param AIsBackup 是否为备用固定 *}
+    procedure AddCertificatePin(const AHash: TBytes; APinType: Integer;
+      const ADescription: string; AIsBackup: Boolean = False);
+
+    {** 添加证书固定（Base64编码）
+        @param ABase64Hash Base64编码的SHA-256哈希
+        @param APinType 固定类型（证书或公钥）- 0=证书, 1=公钥
+        @param ADescription 描述信息
+        @param AIsBackup 是否为备用固定 *}
+    procedure AddCertificatePinBase64(const ABase64Hash: string; APinType: Integer;
+      const ADescription: string; AIsBackup: Boolean = False);
+
+    {** 启用/禁用证书固定验证
+        @param AEnabled True启用，False禁用 *}
+    procedure SetCertificatePinningEnabled(AEnabled: Boolean);
+
+    {** 获取证书固定是否启用
+        @returns True如果已启用 *}
+    function GetCertificatePinningEnabled: Boolean;
+
+    {** 清除所有证书固定 *}
+    procedure ClearCertificatePins;
+
     {** 从套接字创建 SSL 连接
         @param ASocket 已连接的套接字句柄
         @returns 新创建的连接接口 *}
@@ -1088,6 +1115,24 @@ type
     {** 获取性能指标
         @returns 性能指标记录 *}
     function GetPerformanceMetrics: TSSLPerformanceMetrics;
+    
+    // OCSP Stapling support
+    
+    {** 获取 OCSP Stapling 状态
+        @returns True 如果启用了 OCSP Stapling *}
+    function GetOCSPStaplingEnabled: Boolean;
+    
+    {** 获取 OCSP Stapling 响应（客户端）
+        @returns OCSP 响应的 DER 编码字节，未提供时返回空数组 *}
+    function GetOCSPResponse: TBytes;
+    
+    {** 检查 OCSP Stapling 响应是否已验证
+        @returns True 如果响应已验证且证书状态为 Good *}
+    function IsOCSPResponseVerified: Boolean;
+    
+    {** 获取 OCSP 响应状态描述
+        @returns 状态描述字符串（如 "Good", "Revoked", "Unknown", "Not Provided"） *}
+    function GetOCSPResponseStatus: string;
   end;
 
   {**

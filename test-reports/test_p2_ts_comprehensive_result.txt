@@ -1,0 +1,68 @@
+=============================================================
+TS (时间戳协议) 模块综合测试
+=============================================================
+
+初始化 OpenSSL 库...
+✅ OpenSSL 库加载成功
+版本: 3.x (libcrypto.so.3)
+检测到 OpenSSL 3.x - 将跳过不兼容的函数测试
+
+加载 TS 模块...
+✅ TS 模块加载成功
+
+=== 测试 1: TS 请求操作 ===
+TS_REQ_new 函数加载: PASS
+TS_REQ_free 函数加载: PASS
+TS_REQ_set_version 函数加载: PASS
+TS_REQ_set_msg_imprint 函数加载: PASS
+TS_REQ_get_version 函数加载: PASS
+TS_REQ_get_msg_imprint 函数加载: PASS
+
+=== 测试 2: TS 响应操作 ===
+TS_RESP_new 函数加载: PASS
+TS_RESP_free 函数加载: PASS
+TS_RESP_set_status_info 函数加载: PASS
+TS_RESP_create_response 函数加载: PASS
+TS_RESP_get_status_info 函数加载: PASS
+TS_RESP_get_token 函数加载: PASS
+
+=== 测试 3: TS TSTInfo ===
+TS_TST_INFO_new 函数加载: PASS
+TS_TST_INFO_free 函数加载: PASS
+TS_TST_INFO_set_version 函数加载: PASS
+TS_TST_INFO_get_version 函数加载: PASS
+
+=== 测试 4: TS 验证 ===
+TS_RESP_verify_response 函数加载: PASS
+TS_RESP_verify_signature 函数加载: PASS
+TS_VERIFY_CTX_new 函数加载: PASS
+TS_VERIFY_CTX_free 函数加载: PASS
+
+=== 测试 5: TS I/O 和序列化 ===
+TS_REQ_i2d_bio 函数加载: PASS
+TS_REQ_d2i_bio 函数加载: PASS
+TS_RESP_i2d_bio 函数加载: PASS
+TS_RESP_d2i_bio 函数加载: PASS
+TS_REQ_print_bio 函数加载: PASS
+TS_RESP_print_bio 函数加载: PASS
+
+=== 测试 6: TS 工具函数 ===
+TS_STATUS_INFO_get0_status 函数加载: PASS
+TS_TST_INFO_print_bio 函数加载: PASS
+TS_STATUS_INFO_print_bio 函数加载: PASS
+TS_STATUS_GRANTED (0): PASS
+TS_STATUS_GRANTED_WITH_MODS (1): PASS
+TS_STATUS_REJECTION (2): PASS
+TS_STATUS_WAITING (3): PASS
+TS_STATUS_REVOCATION_WARNING (4): PASS
+TS_STATUS_REVOCATION_NOTIFICATION (5): PASS
+
+=============================================================
+测试结果总结
+=============================================================
+总测试数: 35
+通过: 35
+失败: 0
+通过率: 100.0%
+
+🎉 所有测试通过！TS 模块工作正常
