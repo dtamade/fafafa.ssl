@@ -111,6 +111,15 @@ type
     procedure SetPasswordCallback(ACallback: TSSLPasswordCallback);
     procedure SetInfoCallback(ACallback: TSSLInfoCallback);
 
+    { ISSLContext - 证书固定 }
+    procedure AddCertificatePin(const AHash: TBytes; APinType: Integer;
+      const ADescription: string; AIsBackup: Boolean = False);
+    procedure AddCertificatePinBase64(const ABase64Hash: string; APinType: Integer;
+      const ADescription: string; AIsBackup: Boolean = False);
+    procedure SetCertificatePinningEnabled(AEnabled: Boolean);
+    function GetCertificatePinningEnabled: Boolean;
+    procedure ClearCertificatePins;
+
     { ISSLContext - 创建连接 }
     function CreateConnection(ASocket: THandle): ISSLConnection; overload;
     function CreateConnection(AStream: TStream): ISSLConnection; overload;
@@ -219,6 +228,12 @@ type
 
     { ISSLConnection - 原生句柄 }
     function GetNativeHandle: Pointer;
+
+    { ISSLConnection - OCSP Stapling }
+    function GetOCSPStaplingEnabled: Boolean;
+    function GetOCSPResponse: TBytes;
+    function IsOCSPResponseVerified: Boolean;
+    function GetOCSPResponseStatus: string;
   end;
 
 { TWolfSSLContext }
@@ -583,6 +598,47 @@ end;
 procedure TWolfSSLContext.SetInfoCallback(ACallback: TSSLInfoCallback);
 begin
   FInfoCallback := ACallback;
+end;
+
+{ 证书固定 - WolfSSL 后端暂不支持 }
+
+procedure TWolfSSLContext.AddCertificatePin(const AHash: TBytes; APinType: Integer;
+  const ADescription: string; AIsBackup: Boolean);
+begin
+  { WolfSSL 后端暂不支持证书固定 }
+  raise ESSLException.CreateWithContext(
+    'Certificate pinning not supported by WolfSSL backend',
+    sslErrUnsupported,
+    'TWolfSSLContext.AddCertificatePin'
+  );
+end;
+
+procedure TWolfSSLContext.AddCertificatePinBase64(const ABase64Hash: string;
+  APinType: Integer; const ADescription: string; AIsBackup: Boolean);
+begin
+  { WolfSSL 后端暂不支持证书固定 }
+  raise ESSLException.CreateWithContext(
+    'Certificate pinning not supported by WolfSSL backend',
+    sslErrUnsupported,
+    'TWolfSSLContext.AddCertificatePinBase64'
+  );
+end;
+
+procedure TWolfSSLContext.SetCertificatePinningEnabled(AEnabled: Boolean);
+begin
+  { WolfSSL 后端暂不支持证书固定 - 忽略设置 }
+  { 不抛出异常，以保持 API 兼容性 }
+end;
+
+function TWolfSSLContext.GetCertificatePinningEnabled: Boolean;
+begin
+  { WolfSSL 后端暂不支持证书固定 - 始终返回 False }
+  Result := False;
+end;
+
+procedure TWolfSSLContext.ClearCertificatePins;
+begin
+  { WolfSSL 后端暂不支持证书固定 - 无操作 }
 end;
 
 { 创建连接 }
@@ -1105,6 +1161,32 @@ function TWolfSSLConnection.GetPerformanceMetrics: TSSLPerformanceMetrics;
 begin
   FillChar(Result, SizeOf(Result), 0);
   // Connection-level metrics are not tracked in this implementation
+end;
+
+{ OCSP Stapling - WolfSSL 后端暂不支持 }
+
+function TWolfSSLConnection.GetOCSPStaplingEnabled: Boolean;
+begin
+  { WolfSSL 后端暂不支持 OCSP Stapling }
+  Result := False;
+end;
+
+function TWolfSSLConnection.GetOCSPResponse: TBytes;
+begin
+  { WolfSSL 后端暂不支持 OCSP Stapling }
+  Result := nil;
+end;
+
+function TWolfSSLConnection.IsOCSPResponseVerified: Boolean;
+begin
+  { WolfSSL 后端暂不支持 OCSP Stapling }
+  Result := False;
+end;
+
+function TWolfSSLConnection.GetOCSPResponseStatus: string;
+begin
+  { WolfSSL 后端暂不支持 OCSP Stapling }
+  Result := 'Not Supported';
 end;
 
 end.

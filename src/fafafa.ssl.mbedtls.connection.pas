@@ -116,6 +116,12 @@ type
     function IsHealthy: Boolean;
     function GetDiagnosticInfo: TSSLDiagnosticInfo;
     function GetPerformanceMetrics: TSSLPerformanceMetrics;
+
+    { ISSLConnection - OCSP Stapling }
+    function GetOCSPStaplingEnabled: Boolean;
+    function GetOCSPResponse: TBytes;
+    function IsOCSPResponseVerified: Boolean;
+    function GetOCSPResponseStatus: string;
   end;
 
 implementation
@@ -667,6 +673,32 @@ function TMbedTLSConnection.GetPerformanceMetrics: TSSLPerformanceMetrics;
 begin
   FillChar(Result, SizeOf(Result), 0);
   // Connection-level metrics are not tracked in this implementation
+end;
+
+{ OCSP Stapling - MbedTLS 后端暂不支持 }
+
+function TMbedTLSConnection.GetOCSPStaplingEnabled: Boolean;
+begin
+  { MbedTLS 后端暂不支持 OCSP Stapling }
+  Result := False;
+end;
+
+function TMbedTLSConnection.GetOCSPResponse: TBytes;
+begin
+  { MbedTLS 后端暂不支持 OCSP Stapling }
+  Result := nil;
+end;
+
+function TMbedTLSConnection.IsOCSPResponseVerified: Boolean;
+begin
+  { MbedTLS 后端暂不支持 OCSP Stapling }
+  Result := False;
+end;
+
+function TMbedTLSConnection.GetOCSPResponseStatus: string;
+begin
+  { MbedTLS 后端暂不支持 OCSP Stapling }
+  Result := 'Not Supported';
 end;
 
 end.
