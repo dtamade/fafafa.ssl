@@ -159,7 +159,15 @@ type
     ProtocolListsSize: DWORD;       // 协议列表总大小
     ProtocolLists: array[0..0] of Byte;  // SEC_APPLICATION_PROTOCOL_LIST 数组（变长）
   end;
-  
+
+  // 会话信息结构
+  PSecPkgContext_SessionInfo = ^SecPkgContext_SessionInfo;
+  SecPkgContext_SessionInfo = record
+    dwFlags: DWORD;                 // 会话标志
+    cbSessionId: DWORD;             // 会话 ID 长度
+    rgbSessionId: array[0..31] of Byte;  // 会话 ID (最大 32 字节)
+  end;
+
   // 证书链相关
   HCERTCHAINENGINE = Pointer;
   
@@ -661,6 +669,7 @@ const
   SECPKG_ATTR_IS_LOOPBACK        = 37;
   SECPKG_ATTR_REMOTE_CERT_CONTEXT = 83;
   SECPKG_ATTR_CONNECTION_INFO    = 90;
+  SECPKG_ATTR_SESSION_INFO       = 91;  // 会话信息
   
   // 证书编码类型
   X509_ASN_ENCODING              = $00000001;
