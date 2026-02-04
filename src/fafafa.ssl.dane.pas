@@ -5,8 +5,13 @@
  * Provides an additional layer of security by validating certificates against
  * DNS TLSA records published in DNSSEC-signed zones.
  *
+ * ldns 库是可选依赖。如果 ldns 不可用：
+ * - QueryTLSARecords 返回 False 并记录警告
+ * - VerifyDNSSEC 返回 False
+ * - GetDNSSECStatus 返回 "ldns library not available"
+ *
  * @author fafafa.ssl team
- * @version 1.0.0
+ * @version 1.1.0
  * @since 2026-01-31
  *}
 unit fafafa.ssl.dane;
@@ -86,6 +91,7 @@ type
     FRequireDNSSEC: Boolean;
     FEnableCache: Boolean;
     FCacheTimeout: Integer;  // Seconds
+    FLastDNSSECStatus: string;
 
     function ExtractCertificateData(ACert: PX509; ASelector: TDANESelector): TBytes;
     function HashData(const AData: TBytes; AMatchingType: TDANEMatchingType): TBytes;
@@ -166,6 +172,7 @@ type
   private
     FDNSResolver: string;
     FDNSTimeout: Integer;
+    FLastDNSSECStatusCode: Integer;  // 0=unknown, 1=secure, 2=insecure, 3=bogus
 
   public
     constructor Create(const ADomain: string; APort: Word);
@@ -197,7 +204,8 @@ uses
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
   fafafa.ssl.logging,
-  fafafa.ssl.encoding;
+  fafafa.ssl.encoding,
+  fafafa.ssl.dns.ldns;
 
 { TDANEValidator }
 
@@ -209,6 +217,7 @@ begin
   FRequireDNSSEC := True;
   FEnableCache := True;
   FCacheTimeout := 3600;  // 1 hour
+  FLastDNSSECStatus := '';
   SetLength(FRecords, 0);
 end;
 
@@ -220,12 +229,11 @@ end;
 
 function TDANEValidator.ExtractCertificateData(ACert: PX509; ASelector: TDANESelector): TBytes;
 var
-  Bio: PBIO;
   DataLen: Integer;
   PubKey: PEVP_PKEY;
   P: PByte;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if ACert = nil then
     Exit;
@@ -272,7 +280,7 @@ var
   DigestLen: Cardinal;
   MD: PEVP_MD;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if Length(AData) = 0 then
     Exit;
@@ -290,8 +298,6 @@ begin
 
     dmSHA512:
       MD := EVP_sha512();
-  else
-    Exit;
   end;
 
   Ctx := EVP_MD_CTX_new();
@@ -383,18 +389,104 @@ begin
 end;
 
 function TDANEValidator.QueryTLSARecords(const ADomain: string; APort: Word): Boolean;
+var
+  LdnsRecords: TLdnsTLSARecordArray;
+  DNSSECStatus: TDNSSECStatus;
+  i: Integer;
+  Rec: TDANETLSARecord;
 begin
-  // TODO: Implement DNS TLSA query using system resolver or DNS library
-  // This is a placeholder implementation
   Result := False;
-  TSecurityLog.Warning('DANE', 'DNS TLSA query not yet implemented');
-  
-  // For now, return False to indicate no records found
-  // In a real implementation, this would:
-  // 1. Construct TLSA query name: _<port>._tcp.<domain>
-  // 2. Query DNS for TLSA records
-  // 3. Verify DNSSEC if required
-  // 4. Parse and store TLSA records
+
+  // 检查 ldns 是否可用
+  if not IsLdnsLoaded then
+  begin
+    if not LoadLdns then
+    begin
+      TSecurityLog.Warning('DANE', 'ldns library not available, DNS TLSA query disabled');
+      FLastDNSSECStatus := 'ldns library not available';
+      Exit(False);
+    end;
+  end;
+
+  // 更新域名和端口
+  FDomain := ADomain;
+  FPort := APort;
+
+  // 清除旧记录
+  ClearRecords;
+
+  // 使用 ldns 查询 TLSA 记录
+  TSecurityLog.Info('DANE', Format('Querying TLSA records for %s:%d', [ADomain, APort]));
+
+  if not QueryDNSTLSA(ADomain, APort, 'tcp', LdnsRecords, DNSSECStatus) then
+  begin
+    TSecurityLog.Warning('DANE', Format('Failed to query TLSA records for %s:%d', [ADomain, APort]));
+    FLastDNSSECStatus := 'DNS query failed';
+    Exit(False);
+  end;
+
+  // 检查 DNSSEC 状态
+  FLastDNSSECStatus := DNSSECStatusToStr(DNSSECStatus);
+  TSecurityLog.Info('DANE', Format('DNSSEC status: %s', [FLastDNSSECStatus]));
+
+  // 如果要求 DNSSEC 验证，检查状态
+  if FRequireDNSSEC and (DNSSECStatus <> dnssecSecure) then
+  begin
+    TSecurityLog.Warning('DANE', 'DNSSEC validation required but not secure, rejecting records');
+    Exit(False);
+  end;
+
+  // 没有找到记录
+  if Length(LdnsRecords) = 0 then
+  begin
+    TSecurityLog.Info('DANE', Format('No TLSA records found for %s:%d', [ADomain, APort]));
+    Exit(True);  // 查询成功，只是没有记录
+  end;
+
+  // 转换 ldns 记录到 DANE 记录
+  for i := 0 to High(LdnsRecords) do
+  begin
+    // 检查 Usage 值是否有效 (0-3)
+    if LdnsRecords[i].Usage > 3 then
+    begin
+      TSecurityLog.Warning('DANE', Format('Invalid TLSA usage value: %d, skipping', [LdnsRecords[i].Usage]));
+      Continue;
+    end;
+
+    // 检查 Selector 值是否有效 (0-1)
+    if LdnsRecords[i].Selector > 1 then
+    begin
+      TSecurityLog.Warning('DANE', Format('Invalid TLSA selector value: %d, skipping', [LdnsRecords[i].Selector]));
+      Continue;
+    end;
+
+    // 检查 MatchingType 值是否有效 (0-2)
+    if LdnsRecords[i].MatchingType > 2 then
+    begin
+      TSecurityLog.Warning('DANE', Format('Invalid TLSA matching type value: %d, skipping', [LdnsRecords[i].MatchingType]));
+      Continue;
+    end;
+
+    Rec.Usage := TDANEUsage(LdnsRecords[i].Usage);
+    Rec.Selector := TDANESelector(LdnsRecords[i].Selector);
+    Rec.MatchingType := TDANEMatchingType(LdnsRecords[i].MatchingType);
+    Rec.TTL := LdnsRecords[i].TTL;
+    Rec.Retrieved := Now;
+
+    // 复制证书数据
+    SetLength(Rec.CertificateData, Length(LdnsRecords[i].CertData));
+    if Length(LdnsRecords[i].CertData) > 0 then
+      Move(LdnsRecords[i].CertData[0], Rec.CertificateData[0], Length(LdnsRecords[i].CertData));
+
+    SetLength(FRecords, Length(FRecords) + 1);
+    FRecords[High(FRecords)] := Rec;
+
+    TSecurityLog.Info('DANE', Format('Added TLSA record: usage=%d, selector=%d, matching=%d, data=%d bytes',
+      [Ord(Rec.Usage), Ord(Rec.Selector), Ord(Rec.MatchingType), Length(Rec.CertificateData)]));
+  end;
+
+  Result := Length(FRecords) > 0;
+  TSecurityLog.Info('DANE', Format('Loaded %d TLSA records for %s:%d', [Length(FRecords), ADomain, APort]));
 end;
 
 procedure TDANEValidator.AddTLSARecord(AUsage: TDANEUsage; ASelector: TDANESelector;
@@ -406,7 +498,8 @@ begin
   Rec.Selector := ASelector;
   Rec.MatchingType := AMatchingType;
   SetLength(Rec.CertificateData, Length(AData));
-  Move(AData[0], Rec.CertificateData[0], Length(AData));
+  if Length(AData) > 0 then
+    Move(AData[0], Rec.CertificateData[0], Length(AData));
   Rec.TTL := FCacheTimeout;
   Rec.Retrieved := Now;
 
@@ -568,6 +661,7 @@ begin
   inherited Create(ADomain, APort);
   FDNSResolver := '';  // Use system default
   FDNSTimeout := 5000;  // 5 seconds
+  FLastDNSSECStatusCode := 0;  // Unknown
 end;
 
 procedure TDANEValidatorEx.SetDNSResolver(const AResolver: string);
@@ -583,17 +677,83 @@ begin
 end;
 
 function TDANEValidatorEx.VerifyDNSSEC: Boolean;
+var
+  DNSSECStatus: TDNSSECStatus;
 begin
-  // TODO: Implement DNSSEC verification
-  // This is a placeholder implementation
   Result := False;
-  TSecurityLog.Warning('DANE', 'DNSSEC verification not yet implemented');
+
+  // 检查 ldns 是否可用
+  if not IsLdnsLoaded then
+  begin
+    if not LoadLdns then
+    begin
+      TSecurityLog.Warning('DANE', 'ldns library not available, DNSSEC verification disabled');
+      FLastDNSSECStatusCode := 0;  // Unknown
+      Exit(False);
+    end;
+  end;
+
+  // 验证 DNSSEC 链
+  TSecurityLog.Info('DANE', Format('Verifying DNSSEC for domain: %s', [FDomain]));
+
+  DNSSECStatus := VerifyDNSSECChain(FDomain, LDNS_RR_TYPE_TLSA);
+
+  case DNSSECStatus of
+    dnssecSecure:
+    begin
+      FLastDNSSECStatusCode := 1;
+      TSecurityLog.Info('DANE', 'DNSSEC verification successful');
+      Result := True;
+    end;
+
+    dnssecInsecure:
+    begin
+      FLastDNSSECStatusCode := 2;
+      TSecurityLog.Warning('DANE', 'Domain is not DNSSEC signed (insecure)');
+      Result := False;
+    end;
+
+    dnssecBogus:
+    begin
+      FLastDNSSECStatusCode := 3;
+      TSecurityLog.Error('DANE', 'DNSSEC verification failed (bogus)');
+      Result := False;
+    end;
+
+    else
+    begin
+      FLastDNSSECStatusCode := 0;
+      TSecurityLog.Warning('DANE', 'DNSSEC status indeterminate');
+      Result := False;
+    end;
+  end;
 end;
 
 function TDANEValidatorEx.GetDNSSECStatus: string;
 begin
-  // TODO: Implement DNSSEC status check
-  Result := 'DNSSEC status: Not implemented';
+  // 检查 ldns 是否可用
+  if not IsLdnsLoaded then
+  begin
+    if not LoadLdns then
+    begin
+      Result := 'ldns library not available';
+      Exit;
+    end;
+  end;
+
+  // 根据上次验证结果返回状态
+  case FLastDNSSECStatusCode of
+    0: Result := 'DNSSEC status: Unknown (not verified yet)';
+    1: Result := 'DNSSEC status: Secure (validated)';
+    2: Result := 'DNSSEC status: Insecure (not signed)';
+    3: Result := 'DNSSEC status: Bogus (validation failed)';
+  else
+    Result := 'DNSSEC status: Unknown';
+  end;
+
+  // 如果有缓存的状态信息，附加它
+  if FLastDNSSECStatus <> '' then
+    Result := Result + ' - ' + FLastDNSSECStatus;
 end;
 
 end.

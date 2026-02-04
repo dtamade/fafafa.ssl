@@ -648,8 +648,10 @@ begin
   // Load private key (PKCS#11 or file)
   if FPKCS11URI <> '' then
   begin
-    // PKCS#11 private key - TODO: Implement LoadPrivateKeyFromPKCS11
-    raise ESSLException.Create('PKCS#11 support not yet implemented');
+    // PKCS#11 private key - Use LoadPrivateKey which supports PKCS#11 URIs
+    // The underlying ISSLContext.LoadPrivateKey detects PKCS#11 URIs and
+    // delegates to LoadPrivateKeyFromPKCS11 internally
+    Result.LoadPrivateKey(FPKCS11URI, FPKCS11PIN);
   end
   else if FPrivateKeyFile <> '' then
     Result.LoadPrivateKey(FPrivateKeyFile, FPrivateKeyPassword)
@@ -720,8 +722,10 @@ begin
   // Load private key (PKCS#11 or file)
   if FPKCS11URI <> '' then
   begin
-    // PKCS#11 private key - TODO: Implement LoadPrivateKeyFromPKCS11
-    raise ESSLException.Create('PKCS#11 support not yet implemented');
+    // PKCS#11 private key - Use LoadPrivateKey which supports PKCS#11 URIs
+    // The underlying ISSLContext.LoadPrivateKey detects PKCS#11 URIs and
+    // delegates to LoadPrivateKeyFromPKCS11 internally
+    Result.LoadPrivateKey(FPKCS11URI, FPKCS11PIN);
   end
   else if FPrivateKeyFile <> '' then
     Result.LoadPrivateKey(FPrivateKeyFile, FPrivateKeyPassword);
