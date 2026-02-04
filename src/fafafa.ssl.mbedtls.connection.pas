@@ -2,12 +2,13 @@
  * Unit: fafafa.ssl.mbedtls.connection
  * Purpose: MbedTLS 连接实现
  *
- * 实现 ISSLConnection 接口的 MbedTLS 后端。
+ * 继承 TBaseSSLConnection 基类，实现 MbedTLS 后端的连接功能。
  * 负责 TLS 握手、数据传输和连接管理。
  *
  * @author fafafa.ssl team
- * @version 1.0.0
+ * @version 2.0.0
  * @since 2026-01-10
+ * @updated 2026-02-04 - 重构为使用 TBaseSSLConnection 基类
  *}
 
 unit fafafa.ssl.mbedtls.connection;
@@ -21,14 +22,14 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
+  fafafa.ssl.connection.base,
   fafafa.ssl.mbedtls.base,
   fafafa.ssl.mbedtls.api;
 
 type
   { TMbedTLSConnection - MbedTLS 连接类 }
-  TMbedTLSConnection = class(TInterfacedObject, ISSLConnection)
+  TMbedTLSConnection = class(TBaseSSLConnection)
   private
-    FContextIntf: ISSLContext;
     FSSLConfig: Pmbedtls_ssl_config;
     FSSLContext: Pmbedtls_ssl_context;
     FSocket: THandle;
@@ -36,92 +37,59 @@ type
     FServerName: string;
     FALPNProtocols: string;
     FNegotiatedALPN: string;
-    FHandshakeComplete: Boolean;
-    FTimeout: Integer;
-    FBlocking: Boolean;
-    FLastError: Integer;           // P0: 错误跟踪
-    FSessionReused: Boolean;       // P0: 会话复用跟踪
+    FLastNativeError: Integer;
+    FSessionReused: Boolean;
 
     procedure AllocateSSLContext;
     procedure FreeSSLContext;
+
+  protected
+    { 抽象方法实现 }
+    function DoRead(var ABuffer; ACount: Integer): Integer; override;
+    function DoWrite(const ABuffer; ACount: Integer): Integer; override;
+    function DoConnect: Boolean; override;
+    function DoAccept: Boolean; override;
+    function DoHandshakeInternal: TSSLHandshakeState; override;
+    function DoShutdown: Boolean; override;
+    procedure DoClose; override;
+    function DoRenegotiate: Boolean; override;
+    function DoGetError(ARet: Integer): TSSLErrorCode; override;
+    function DoWantRead: Boolean; override;
+    function DoWantWrite: Boolean; override;
+    function DoGetProtocolVersion: TSSLProtocolVersion; override;
+    function DoGetCipherName: string; override;
+    function DoGetPeerCertificate: ISSLCertificate; override;
+    function DoGetPeerCertificateChain: TSSLCertificateArray; override;
+    function DoGetVerifyResult: Integer; override;
+    function DoGetVerifyResultString: string; override;
+    function DoGetSession: ISSLSession; override;
+    procedure DoSetSession(ASession: ISSLSession); override;
+    function DoIsSessionReused: Boolean; override;
+    function DoGetSelectedALPNProtocol: string; override;
+    function DoGetState: string; override;
+    function DoGetNativeHandle: Pointer; override;
+
+    { OCSP 方法覆盖 }
+    function DoGetOCSPStaplingEnabled: Boolean; override;
+    function DoGetOCSPResponse: TBytes; override;
+    function DoIsOCSPResponseVerified: Boolean; override;
+    function DoGetOCSPResponseStatus: string; override;
 
   public
     constructor Create(AContext: ISSLContext; ASSLConfig: Pmbedtls_ssl_config; ASocket: THandle); overload;
     constructor Create(AContext: ISSLContext; ASSLConfig: Pmbedtls_ssl_config; AStream: TStream); overload;
     destructor Destroy; override;
 
-    { ISSLConnection - 基本操作 }
-    function Connect: Boolean;
-    function Accept: Boolean;
-    function Shutdown: Boolean;
-    procedure Close;
-    function DoHandshake: TSSLHandshakeState;
-    function IsHandshakeComplete: Boolean;
-    function Renegotiate: Boolean;
-    function Read(var ABuffer; ACount: Integer): Integer;
-    function Write(const ABuffer; ACount: Integer): Integer;
-    function ReadString(out AStr: string): Boolean;
-    function WriteString(const AStr: string): Boolean;
-    function WantRead: Boolean;
-    function WantWrite: Boolean;
-
-    { ISSLConnection - 错误处理 }
-    function GetError(ARetCode: Integer): TSSLErrorCode;
-    function GetLastError: Integer;
-    function GetLastErrorString: string;
-
-    { ISSLConnection - 连接信息 }
-    function GetConnectionInfo: TSSLConnectionInfo;
-    function GetProtocolVersion: TSSLProtocolVersion;
-    function GetCipherName: string;
-    function IsConnected: Boolean;
-
-    { ISSLConnection - 证书 }
-    function GetPeerCertificate: ISSLCertificate;
-    function GetPeerCertificateChain: TSSLCertificateArray;
-    function GetVerifyResult: Integer;
-    function GetVerifyResultString: string;
-
-    { ISSLConnection - 会话 }
-    function GetSession: ISSLSession;
-    procedure SetSession(ASession: ISSLSession);
-    function IsSessionReused: Boolean;
-
-    { ISSLConnection - SNI/ALPN }
+    { SNI/ALPN 设置 }
     procedure SetServerName(const AServerName: string);
     function GetServerName: string;
-    function GetSelectedALPNProtocol: string;
+
+    { 额外方法 }
     function GetNegotiatedProtocol: TSSLProtocolVersion;
     function GetNegotiatedCipher: string;
     function GetNegotiatedALPN: string;
-
-    { ISSLConnection - 状态 }
-    function GetState: string;
-    function GetStateString: string;
-
-    { ISSLConnection - 超时和阻塞 }
-    procedure SetTimeout(ATimeout: Integer);
-    function GetTimeout: Integer;
-    procedure SetBlocking(ABlocking: Boolean);
-    function GetBlocking: Boolean;
-
-    { ISSLConnection - 上下文 }
-    function GetContext: ISSLContext;
-
-    { ISSLConnection - 原生句柄 }
-    function GetNativeHandle: Pointer;
-
-    { ISSLConnection - 健康状态和诊断 }
-    function GetHealthStatus: TSSLHealthStatus;
-    function IsHealthy: Boolean;
-    function GetDiagnosticInfo: TSSLDiagnosticInfo;
-    function GetPerformanceMetrics: TSSLPerformanceMetrics;
-
-    { ISSLConnection - OCSP Stapling }
-    function GetOCSPStaplingEnabled: Boolean;
-    function GetOCSPResponse: TBytes;
-    function IsOCSPResponseVerified: Boolean;
-    function GetOCSPResponseStatus: string;
+    function GetLastError: Integer;
+    function GetLastErrorString: string;
   end;
 
 implementation
@@ -133,10 +101,6 @@ uses
 
 const
   MBEDTLS_SSL_CONTEXT_SIZE = 4096;  // Increased for safety
-
-var
-  // Thread-local stream reference for BIO callbacks
-  GCurrentStream: TStream = nil;
 
 { Socket BIO callbacks for MbedTLS }
 function MbedTLSSocketSend(ctx: Pointer; const buf: PByte; len: NativeUInt): Integer; cdecl;
@@ -200,8 +164,7 @@ end;
 
 constructor TMbedTLSConnection.Create(AContext: ISSLContext; ASSLConfig: Pmbedtls_ssl_config; ASocket: THandle);
 begin
-  inherited Create;
-  FContextIntf := AContext;
+  inherited Create(AContext);
   FSSLConfig := ASSLConfig;
   FSocket := ASocket;
   FStream := nil;
@@ -209,10 +172,7 @@ begin
   FServerName := '';
   FALPNProtocols := '';
   FNegotiatedALPN := '';
-  FHandshakeComplete := False;
-  FTimeout := 30000;
-  FBlocking := True;
-  FLastError := 0;
+  FLastNativeError := 0;
   FSessionReused := False;
 
   AllocateSSLContext;
@@ -220,8 +180,7 @@ end;
 
 constructor TMbedTLSConnection.Create(AContext: ISSLContext; ASSLConfig: Pmbedtls_ssl_config; AStream: TStream);
 begin
-  inherited Create;
-  FContextIntf := AContext;
+  inherited Create(AContext);
   FSSLConfig := ASSLConfig;
   FSocket := 0;
   FStream := AStream;
@@ -229,10 +188,7 @@ begin
   FServerName := '';
   FALPNProtocols := '';
   FNegotiatedALPN := '';
-  FHandshakeComplete := False;
-  FTimeout := 30000;
-  FBlocking := True;
-  FLastError := 0;
+  FLastNativeError := 0;
   FSessionReused := False;
 
   AllocateSSLContext;
@@ -241,7 +197,6 @@ end;
 destructor TMbedTLSConnection.Destroy;
 begin
   FreeSSLContext;
-  FContextIntf := nil;
   inherited Destroy;
 end;
 
@@ -281,8 +236,8 @@ begin
   end;
 
   // Set server name (SNI) if configured
-  if (FContextIntf <> nil) and (FContextIntf.GetServerName <> '') then
-    SetServerName(FContextIntf.GetServerName);
+  if (FContext <> nil) and (FContext.GetServerName <> '') then
+    SetServerName(FContext.GetServerName);
 end;
 
 procedure TMbedTLSConnection.FreeSSLContext;
@@ -296,7 +251,31 @@ begin
   end;
 end;
 
-function TMbedTLSConnection.Connect: Boolean;
+{ 抽象方法实现 }
+
+function TMbedTLSConnection.DoRead(var ABuffer; ACount: Integer): Integer;
+begin
+  Result := -1;
+  if FSSLContext = nil then Exit;
+  if not Assigned(mbedtls_ssl_read) then Exit;
+
+  Result := mbedtls_ssl_read(FSSLContext, @ABuffer, ACount);
+  if Result < 0 then
+    FLastNativeError := Result;
+end;
+
+function TMbedTLSConnection.DoWrite(const ABuffer; ACount: Integer): Integer;
+begin
+  Result := -1;
+  if FSSLContext = nil then Exit;
+  if not Assigned(mbedtls_ssl_write) then Exit;
+
+  Result := mbedtls_ssl_write(FSSLContext, @ABuffer, ACount);
+  if Result < 0 then
+    FLastNativeError := Result;
+end;
+
+function TMbedTLSConnection.DoConnect: Boolean;
 var
   LResult: Integer;
 begin
@@ -305,17 +284,32 @@ begin
   if not Assigned(mbedtls_ssl_handshake) then Exit;
 
   LResult := mbedtls_ssl_handshake(FSSLContext);
-  FLastError := LResult;
-  FHandshakeComplete := LResult = 0;
-  Result := FHandshakeComplete;
+  FLastNativeError := LResult;
+  Result := LResult = 0;
 end;
 
-function TMbedTLSConnection.Accept: Boolean;
+function TMbedTLSConnection.DoAccept: Boolean;
 begin
-  Result := Connect;
+  Result := DoConnect;
 end;
 
-function TMbedTLSConnection.Shutdown: Boolean;
+function TMbedTLSConnection.DoHandshakeInternal: TSSLHandshakeState;
+begin
+  if FHandshakeComplete then
+    Result := sslHsCompleted
+  else if DoConnect then
+    Result := sslHsCompleted
+  else
+  begin
+    // 检查是否需要重试
+    if DoWantRead or DoWantWrite then
+      Result := sslHsInProgress
+    else
+      Result := sslHsFailed;
+  end;
+end;
+
+function TMbedTLSConnection.DoShutdown: Boolean;
 var
   LResult: Integer;
 begin
@@ -327,119 +321,33 @@ begin
   Result := LResult >= 0;
 end;
 
-procedure TMbedTLSConnection.Close;
+procedure TMbedTLSConnection.DoClose;
 begin
-  Shutdown;
+  DoShutdown;
 end;
 
-function TMbedTLSConnection.DoHandshake: TSSLHandshakeState;
+function TMbedTLSConnection.DoRenegotiate: Boolean;
 begin
-  if FHandshakeComplete then
-    Result := sslHsCompleted
-  else if Connect then
-    Result := sslHsCompleted
-  else
-    Result := sslHsFailed;
-end;
-
-function TMbedTLSConnection.IsHandshakeComplete: Boolean;
-begin
-  Result := FHandshakeComplete;
-end;
-
-function TMbedTLSConnection.Renegotiate: Boolean;
-begin
+  // MbedTLS 重新协商需要额外实现
   Result := False;
 end;
 
-function TMbedTLSConnection.Read(var ABuffer; ACount: Integer): Integer;
+function TMbedTLSConnection.DoGetError(ARet: Integer): TSSLErrorCode;
 begin
-  Result := -1;
-  if FSSLContext = nil then Exit;
-  if not Assigned(mbedtls_ssl_read) then Exit;
-
-  Result := mbedtls_ssl_read(FSSLContext, @ABuffer, ACount);
-  if Result < 0 then
-    FLastError := Result;
+  Result := MbedTLSErrorToSSLError(ARet);
 end;
 
-function TMbedTLSConnection.Write(const ABuffer; ACount: Integer): Integer;
+function TMbedTLSConnection.DoWantRead: Boolean;
 begin
-  Result := -1;
-  if FSSLContext = nil then Exit;
-  if not Assigned(mbedtls_ssl_write) then Exit;
-
-  Result := mbedtls_ssl_write(FSSLContext, @ABuffer, ACount);
-  if Result < 0 then
-    FLastError := Result;
+  Result := FLastNativeError = MBEDTLS_ERR_SSL_WANT_READ;
 end;
 
-function TMbedTLSConnection.ReadString(out AStr: string): Boolean;
-var
-  LBuf: array[0..4095] of Byte;
-  LRead: Integer;
+function TMbedTLSConnection.DoWantWrite: Boolean;
 begin
-  Result := False;
-  AStr := '';
-  LRead := Read(LBuf, SizeOf(LBuf));
-  if LRead > 0 then
-  begin
-    SetString(AStr, PAnsiChar(@LBuf[0]), LRead);
-    Result := True;
-  end;
+  Result := FLastNativeError = MBEDTLS_ERR_SSL_WANT_WRITE;
 end;
 
-function TMbedTLSConnection.WriteString(const AStr: string): Boolean;
-var
-  LWritten: Integer;
-begin
-  Result := False;
-  if AStr = '' then Exit(True);
-  LWritten := Write(AStr[1], Length(AStr));
-  Result := LWritten = Length(AStr);
-end;
-
-function TMbedTLSConnection.WantRead: Boolean;
-begin
-  Result := GetLastError = MBEDTLS_ERR_SSL_WANT_READ;
-end;
-
-function TMbedTLSConnection.WantWrite: Boolean;
-begin
-  Result := GetLastError = MBEDTLS_ERR_SSL_WANT_WRITE;
-end;
-
-function TMbedTLSConnection.GetError(ARetCode: Integer): TSSLErrorCode;
-begin
-  Result := MbedTLSErrorToSSLError(ARetCode);
-end;
-
-function TMbedTLSConnection.GetLastError: Integer;
-begin
-  Result := FLastError;
-end;
-
-function TMbedTLSConnection.GetLastErrorString: string;
-var
-  LBuf: array[0..255] of AnsiChar;
-begin
-  Result := '';
-  if FLastError = 0 then Exit;
-  if not Assigned(mbedtls_strerror) then Exit;
-
-  FillChar(LBuf, SizeOf(LBuf), 0);
-  mbedtls_strerror(FLastError, @LBuf[0], SizeOf(LBuf));
-  Result := string(LBuf);
-end;
-
-function TMbedTLSConnection.GetConnectionInfo: TSSLConnectionInfo;
-begin
-  FillChar(Result, SizeOf(Result), 0);
-  Result.ProtocolVersion := GetProtocolVersion;
-  Result.CipherSuite := GetCipherName;
-end;
-
-function TMbedTLSConnection.GetProtocolVersion: TSSLProtocolVersion;
+function TMbedTLSConnection.DoGetProtocolVersion: TSSLProtocolVersion;
 var
   LVersion: PAnsiChar;
 begin
@@ -463,7 +371,7 @@ begin
     Result := sslProtocolSSL3;
 end;
 
-function TMbedTLSConnection.GetCipherName: string;
+function TMbedTLSConnection.DoGetCipherName: string;
 begin
   Result := '';
   if FSSLContext = nil then Exit;
@@ -472,12 +380,7 @@ begin
   Result := string(mbedtls_ssl_get_ciphersuite(FSSLContext));
 end;
 
-function TMbedTLSConnection.IsConnected: Boolean;
-begin
-  Result := (FSSLContext <> nil) and FHandshakeComplete;
-end;
-
-function TMbedTLSConnection.GetPeerCertificate: ISSLCertificate;
+function TMbedTLSConnection.DoGetPeerCertificate: ISSLCertificate;
 var
   LPeerCert: Pmbedtls_x509_crt;
 begin
@@ -490,7 +393,7 @@ begin
     Result := TMbedTLSCertificate.Create(LPeerCert, False);  // Don't own the handle
 end;
 
-function TMbedTLSConnection.GetPeerCertificateChain: TSSLCertificateArray;
+function TMbedTLSConnection.DoGetPeerCertificateChain: TSSLCertificateArray;
 var
   LPeerCert: Pmbedtls_x509_crt;
 begin
@@ -507,7 +410,7 @@ begin
   end;
 end;
 
-function TMbedTLSConnection.GetVerifyResult: Integer;
+function TMbedTLSConnection.DoGetVerifyResult: Integer;
 begin
   Result := 0;
   if FSSLContext = nil then Exit;
@@ -516,7 +419,7 @@ begin
   Result := mbedtls_ssl_get_verify_result(FSSLContext);
 end;
 
-function TMbedTLSConnection.GetVerifyResultString: string;
+function TMbedTLSConnection.DoGetVerifyResultString: string;
 var
   LBuf: array[0..511] of AnsiChar;
   LFlags: Cardinal;
@@ -538,12 +441,12 @@ begin
   Result := Trim(string(LBuf));
 end;
 
-function TMbedTLSConnection.GetSession: ISSLSession;
+function TMbedTLSConnection.DoGetSession: ISSLSession;
 begin
   Result := TMbedTLSSession.FromContext(FSSLContext);
 end;
 
-procedure TMbedTLSConnection.SetSession(ASession: ISSLSession);
+procedure TMbedTLSConnection.DoSetSession(ASession: ISSLSession);
 var
   LRet: Integer;
 begin
@@ -556,10 +459,62 @@ begin
     FSessionReused := True;  // Mark session as potentially reused
 end;
 
-function TMbedTLSConnection.IsSessionReused: Boolean;
+function TMbedTLSConnection.DoIsSessionReused: Boolean;
 begin
   Result := FSessionReused;
 end;
+
+function TMbedTLSConnection.DoGetSelectedALPNProtocol: string;
+begin
+  Result := FNegotiatedALPN;
+  if (Result = '') and (FSSLContext <> nil) and Assigned(mbedtls_ssl_get_alpn_protocol) then
+  begin
+    Result := string(mbedtls_ssl_get_alpn_protocol(FSSLContext));
+    FNegotiatedALPN := Result;
+  end;
+end;
+
+function TMbedTLSConnection.DoGetState: string;
+begin
+  if FHandshakeComplete then
+    Result := 'CONNECTED'
+  else
+    Result := 'DISCONNECTED';
+end;
+
+function TMbedTLSConnection.DoGetNativeHandle: Pointer;
+begin
+  Result := FSSLContext;
+end;
+
+{ OCSP 方法覆盖 }
+
+function TMbedTLSConnection.DoGetOCSPStaplingEnabled: Boolean;
+begin
+  // MbedTLS 不支持客户端 OCSP Stapling
+  // 只有服务器端可以发送 OCSP 响应
+  Result := False;
+end;
+
+function TMbedTLSConnection.DoGetOCSPResponse: TBytes;
+begin
+  // MbedTLS 客户端无法接收 OCSP Stapling 响应
+  Result := nil;
+end;
+
+function TMbedTLSConnection.DoIsOCSPResponseVerified: Boolean;
+begin
+  // MbedTLS 不支持客户端 OCSP Stapling
+  Result := False;
+end;
+
+function TMbedTLSConnection.DoGetOCSPResponseStatus: string;
+begin
+  // MbedTLS 库限制：不支持客户端 OCSP Stapling
+  Result := 'Not Supported (MbedTLS limitation)';
+end;
+
+{ SNI/ALPN 设置 }
 
 procedure TMbedTLSConnection.SetServerName(const AServerName: string);
 begin
@@ -573,133 +528,39 @@ begin
   Result := FServerName;
 end;
 
-function TMbedTLSConnection.GetSelectedALPNProtocol: string;
-begin
-  Result := FNegotiatedALPN;
-  if (Result = '') and (FSSLContext <> nil) and Assigned(mbedtls_ssl_get_alpn_protocol) then
-  begin
-    Result := string(mbedtls_ssl_get_alpn_protocol(FSSLContext));
-    FNegotiatedALPN := Result;
-  end;
-end;
+{ 额外方法 }
 
 function TMbedTLSConnection.GetNegotiatedProtocol: TSSLProtocolVersion;
 begin
-  Result := GetProtocolVersion;
+  Result := DoGetProtocolVersion;
 end;
 
 function TMbedTLSConnection.GetNegotiatedCipher: string;
 begin
-  Result := GetCipherName;
+  Result := DoGetCipherName;
 end;
 
 function TMbedTLSConnection.GetNegotiatedALPN: string;
 begin
-  Result := GetSelectedALPNProtocol;
+  Result := DoGetSelectedALPNProtocol;
 end;
 
-function TMbedTLSConnection.GetState: string;
+function TMbedTLSConnection.GetLastError: Integer;
 begin
-  if FHandshakeComplete then
-    Result := 'CONNECTED'
-  else
-    Result := 'DISCONNECTED';
+  Result := FLastNativeError;
 end;
 
-function TMbedTLSConnection.GetStateString: string;
+function TMbedTLSConnection.GetLastErrorString: string;
+var
+  LBuf: array[0..255] of AnsiChar;
 begin
-  Result := GetState;
-end;
+  Result := '';
+  if FLastNativeError = 0 then Exit;
+  if not Assigned(mbedtls_strerror) then Exit;
 
-procedure TMbedTLSConnection.SetTimeout(ATimeout: Integer);
-begin
-  FTimeout := ATimeout;
-end;
-
-function TMbedTLSConnection.GetTimeout: Integer;
-begin
-  Result := FTimeout;
-end;
-
-procedure TMbedTLSConnection.SetBlocking(ABlocking: Boolean);
-begin
-  FBlocking := ABlocking;
-end;
-
-function TMbedTLSConnection.GetBlocking: Boolean;
-begin
-  Result := FBlocking;
-end;
-
-function TMbedTLSConnection.GetContext: ISSLContext;
-begin
-  Result := FContextIntf;
-end;
-
-function TMbedTLSConnection.GetNativeHandle: Pointer;
-begin
-  Result := FSSLContext;
-end;
-
-{ ISSLConnection - 健康状态和诊断 }
-
-function TMbedTLSConnection.GetHealthStatus: TSSLHealthStatus;
-begin
-  FillChar(Result, SizeOf(Result), 0);
-  Result.IsConnected := (FSSLContext <> nil) and FHandshakeComplete;
-  Result.HandshakeComplete := FHandshakeComplete;
-  Result.LastError := sslErrNone;
-  Result.LastErrorTime := 0;
-  Result.BytesSent := 0;
-  Result.BytesReceived := 0;
-  Result.ConnectionAge := 0;
-end;
-
-function TMbedTLSConnection.IsHealthy: Boolean;
-begin
-  Result := (FSSLContext <> nil) and FHandshakeComplete;
-end;
-
-function TMbedTLSConnection.GetDiagnosticInfo: TSSLDiagnosticInfo;
-begin
-  FillChar(Result, SizeOf(Result), 0);
-  Result.ConnectionInfo := GetConnectionInfo;
-  Result.HealthStatus := GetHealthStatus;
-  Result.PerformanceMetrics := GetPerformanceMetrics;
-  SetLength(Result.ErrorHistory, 0);
-end;
-
-function TMbedTLSConnection.GetPerformanceMetrics: TSSLPerformanceMetrics;
-begin
-  FillChar(Result, SizeOf(Result), 0);
-  // Connection-level metrics are not tracked in this implementation
-end;
-
-{ OCSP Stapling - MbedTLS 后端暂不支持 }
-
-function TMbedTLSConnection.GetOCSPStaplingEnabled: Boolean;
-begin
-  // MbedTLS 不支持客户端 OCSP Stapling
-  // 只有服务器端可以发送 OCSP 响应
-  Result := False;
-end;
-
-function TMbedTLSConnection.GetOCSPResponse: TBytes;
-begin
-  // MbedTLS 客户端无法接收 OCSP Stapling 响应
-  Result := nil;
-end;
-
-function TMbedTLSConnection.IsOCSPResponseVerified: Boolean;
-begin
-  // MbedTLS 不支持客户端 OCSP Stapling
-  Result := False;
-end;
-
-function TMbedTLSConnection.GetOCSPResponseStatus: string;
-begin
-  // MbedTLS 库限制：不支持客户端 OCSP Stapling
-  Result := 'Not Supported (MbedTLS limitation)';
+  FillChar(LBuf, SizeOf(LBuf), 0);
+  mbedtls_strerror(FLastNativeError, @LBuf[0], SizeOf(LBuf));
+  Result := string(LBuf);
 end;
 
 end.
