@@ -11,13 +11,17 @@
 program test_stream_connection;
 
 {$mode objfpc}{$H+}
+{$DEFINE ENABLE_WOLFSSL}
+{$DEFINE ENABLE_MBEDTLS}
 
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.factory,
   fafafa.ssl.exceptions,
-  fafafa.ssl.openssl.backed;
+  fafafa.ssl.openssl.backed,
+  fafafa.ssl.wolfssl.lib,
+  fafafa.ssl.mbedtls.lib;
 
 var
   GTestsPassed: Integer = 0;

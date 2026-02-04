@@ -171,8 +171,8 @@ MbedTLS 库本身不支持客户端 OCSP Stapling，相关方法返回适当的�
 |------|---------|----------|
 | OpenSSL | 完整支持 | ✅ 已验证 |
 | WinSSL | 完整支持 | ⚠️ 需 Windows |
-| WolfSSL | 通过 I/O 回调支持 | ⚠️ 需 WolfSSL 库 |
-| MbedTLS | 完整支持 | ⚠️ 需 MbedTLS 库 |
+| WolfSSL | 通过 I/O 回调支持 | ✅ 已验证 |
+| MbedTLS | 完整支持 | ✅ 已验证 |
 
 ---
 
