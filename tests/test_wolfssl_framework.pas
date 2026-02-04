@@ -157,8 +157,8 @@ begin
     Test('Certificate not loaded initially', LCert.GetNativeHandle = nil);
     Test('GetVersion returns default', LCert.GetVersion = 3);
     Test('GetPublicKeyAlgorithm returns default', LCert.GetPublicKeyAlgorithm = 'RSA');
-    // Note: Without X509 loaded, GetNotAfter returns 0, so IsExpired returns True
-    Test('IsExpired returns True without X509', LCert.IsExpired);
+    // Note: Without X509 loaded, GetNotAfter returns Now+365 (default future date), so IsExpired returns False
+    Test('IsExpired returns False without X509 (default future date)', not LCert.IsExpired);
     Test('Clone works', LCert.Clone <> nil);
   finally
     LCert.Free;
