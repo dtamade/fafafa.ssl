@@ -212,13 +212,29 @@ begin
     Halt(1);
   end;
   WriteLn('OK');
-  
+
   Write('Loading EVP functions... ');
   if not LoadEVP(GetCryptoLibHandle) then
   begin
     WriteLn('FAIL');
     Halt(1);
   end;
+  WriteLn('OK');
+
+  Write('Loading BN functions... ');
+  LoadOpenSSLBN;
+  WriteLn('OK');
+
+  Write('Loading BIO functions... ');
+  LoadOpenSSLBIO;
+  WriteLn('OK');
+
+  Write('Loading RAND functions... ');
+  LoadOpenSSLRAND;
+  WriteLn('OK');
+
+  Write('Loading ERR functions... ');
+  LoadOpenSSLERR;
   WriteLn('OK');
   WriteLn;
   

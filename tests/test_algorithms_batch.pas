@@ -20,18 +20,15 @@ type
 var
   Results: array of TAlgorithmResult;
 
-procedure AddResult(const Name, AlgType: string; Available, Tested, Passed: Boolean; const Note: string = '');
+procedure AddResult(const AName, AAlgType: string; AAvailable, ATested, APassed: Boolean; const ANote: string = '');
 begin
   SetLength(Results, Length(Results) + 1);
-  with Results[High(Results)] do
-  begin
-    Name := Name;
-    AlgType := AlgType;
-    Available := Available;
-    Tested := Tested;
-    Passed := Passed;
-    Note := Note;
-  end;
+  Results[High(Results)].Name := AName;
+  Results[High(Results)].AlgType := AAlgType;
+  Results[High(Results)].Available := AAvailable;
+  Results[High(Results)].Tested := ATested;
+  Results[High(Results)].Passed := APassed;
+  Results[High(Results)].Note := ANote;
 end;
 
 function TestHashAlgorithm(const AlgName: string): Boolean;
@@ -216,13 +213,23 @@ begin
   WriteLn;
   WriteLn('Hash Algorithms:');
   WriteLn('  Total:     ', TotalHash);
-  WriteLn('  Available: ', AvailHash, ' (', FormatFloat('0.0', (AvailHash/TotalHash)*100), '%)');
-  WriteLn('  Passed:    ', PassedHash, ' (', FormatFloat('0.0', (PassedHash/TotalHash)*100), '%)');
+  if TotalHash > 0 then
+  begin
+    WriteLn('  Available: ', AvailHash, ' (', FormatFloat('0.0', (AvailHash/TotalHash)*100), '%)');
+    WriteLn('  Passed:    ', PassedHash, ' (', FormatFloat('0.0', (PassedHash/TotalHash)*100), '%)');
+  end
+  else
+    WriteLn('  (No hash algorithm tests recorded)');
   WriteLn;
   WriteLn('Cipher Algorithms:');
   WriteLn('  Total:     ', TotalCipher);
-  WriteLn('  Available: ', AvailCipher, ' (', FormatFloat('0.0', (AvailCipher/TotalCipher)*100), '%)');
-  WriteLn('  Passed:    ', PassedCipher, ' (', FormatFloat('0.0', (PassedCipher/TotalCipher)*100), '%)');
+  if TotalCipher > 0 then
+  begin
+    WriteLn('  Available: ', AvailCipher, ' (', FormatFloat('0.0', (AvailCipher/TotalCipher)*100), '%)');
+    WriteLn('  Passed:    ', PassedCipher, ' (', FormatFloat('0.0', (PassedCipher/TotalCipher)*100), '%)');
+  end
+  else
+    WriteLn('  (No cipher algorithm tests recorded)');
   WriteLn;
   WriteLn('Overall:');
   WriteLn('  Total:     ', TotalHash + TotalCipher);

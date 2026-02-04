@@ -16,7 +16,8 @@ uses
   SysUtils,
   fafafa.ssl.base,
   fafafa.ssl.context.builder,
-  fafafa.ssl.cert.utils;
+  fafafa.ssl.cert.utils,
+  fafafa.ssl.openssl.backed;  // 确保 OpenSSL 后端注册
 
 var
   GTestsPassed: Integer = 0;

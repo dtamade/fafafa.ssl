@@ -7,6 +7,7 @@ uses
   fafafa.ssl.aesgcm.pool,
   fafafa.ssl.crypto.utils,
   fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.backed,  // 确保 OpenSSL 后端注册
   fafafa.ssl.exceptions;
 
 var

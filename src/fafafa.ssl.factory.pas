@@ -829,7 +829,9 @@ begin
   if Assigned(Result) and LNeedInit then
   begin
     if not Result.Initialize then
-      raise ESSLException.CreateFmt('Failed to initialize %s library', [SSL_LIBRARY_NAMES[ALibType]]);
+      raise ESSLInitializationException.CreateFmt(
+        'Failed to initialize %s library (LastError=%d, Details=%s)',
+        [SSL_LIBRARY_NAMES[ALibType], Result.GetLastError, Result.GetLastErrorString]);
   end;
 end;
 

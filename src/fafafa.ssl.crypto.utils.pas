@@ -722,6 +722,14 @@ begin
       RaiseInitializationError('EVP module', E.Message);
   end;
 
+  // 加载RAND模块 - 为AES-GCM上下文池所需
+  try
+    LoadOpenSSLRAND;
+  except
+    on E: Exception do
+      RaiseInitializationError('RAND module', E.Message);
+  end;
+
   // 检测RAND可用性
   GRANDAvailable := Assigned(RAND_bytes);
 

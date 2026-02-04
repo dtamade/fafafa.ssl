@@ -3,6 +3,9 @@ program test_priority2_modules;
 {$mode objfpc}{$H+}{$J-}
 
 uses
+  {$IFDEF UNIX}
+  cthreads,  // 必须在最前面，用于线程模块
+  {$ENDIF}
   SysUtils,
   // Priority 2 - Symmetric Ciphers (2 modules)
   fafafa.ssl.openssl.api.aria,

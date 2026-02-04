@@ -19,7 +19,8 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.context.builder,
   fafafa.ssl.crypto.utils,
-  fafafa.ssl.factory;
+  fafafa.ssl.factory,
+  fafafa.ssl.openssl.backed;  // 确保 OpenSSL 后端注册
 
 type
   TTestResult = record
