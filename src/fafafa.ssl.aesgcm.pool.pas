@@ -199,6 +199,13 @@ begin
   // 使用 OpenSSL EVP 直接计算 SHA-256 哈希
   SetLength(Result, 32); // SHA-256 输出 32 字节
 
+  // 检查 EVP 函数是否已加载
+  if not Assigned(EVP_sha256) then
+    raise ESSLCryptoError.Create('EVP_sha256 function not loaded - OpenSSL EVP module not initialized');
+
+  if not Assigned(EVP_MD_CTX_new) then
+    raise ESSLCryptoError.Create('EVP_MD_CTX_new function not loaded - OpenSSL EVP module not initialized');
+
   LMD := EVP_sha256();
   if LMD = nil then
     raise ESSLCryptoError.Create('Failed to get SHA-256 digest');
