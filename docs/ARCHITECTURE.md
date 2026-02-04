@@ -102,9 +102,67 @@ end;
 每个后端模块包含：
 ```pascal
 TXXXSSLContext = class(TInterfacedObject, ISSLContext)
-TXXXSSLConnection = class(TInterfacedObject, ISSLConnection)  
+TXXXSSLConnection = class(TBaseSSLConnection)  // 继承自抽象基类
 TXXXSSLCertificate = class(TInterfacedObject, ISSLCertificate)
 TXXXSSLLibrary = class(TInterfacedObject, ISSLLibrary)
+```
+
+### 3.6 连接抽象基类 (`fafafa.ssl.connection.base`)
+
+**职责**：为所有 SSL 连接实现提供共享的基础功能
+
+**架构设计**：
+```pascal
+TBaseSSLConnection = class(TInterfacedObject, ISSLConnection)
+protected
+  { 21 个抽象方法 - 后端必须实现 }
+  function DoRead(var ABuffer; ACount: Integer): Integer; virtual; abstract;
+  function DoWrite(const ABuffer; ACount: Integer): Integer; virtual; abstract;
+  function DoConnect: Boolean; virtual; abstract;
+  function DoAccept: Boolean; virtual; abstract;
+  function DoHandshakeInternal: TSSLHandshakeState; virtual; abstract;
+  function DoShutdown: Boolean; virtual; abstract;
+  procedure DoClose; virtual; abstract;
+  function DoRenegotiate: Boolean; virtual; abstract;
+  function DoGetError(ARet: Integer): TSSLErrorCode; virtual; abstract;
+  function DoWantRead: Boolean; virtual; abstract;
+  function DoWantWrite: Boolean; virtual; abstract;
+  function DoGetProtocolVersion: TSSLProtocolVersion; virtual; abstract;
+  function DoGetCipherName: string; virtual; abstract;
+  function DoGetPeerCertificate: ISSLCertificate; virtual; abstract;
+  function DoGetPeerCertificateChain: TSSLCertificateArray; virtual; abstract;
+  function DoGetVerifyResult: Integer; virtual; abstract;
+  function DoGetVerifyResultString: string; virtual; abstract;
+  function DoGetSession: ISSLSession; virtual; abstract;
+  procedure DoSetSession(ASession: ISSLSession); virtual; abstract;
+  function DoIsSessionReused: Boolean; virtual; abstract;
+  function DoGetSelectedALPNProtocol: string; virtual; abstract;
+  function DoGetState: string; virtual; abstract;
+  function DoGetNativeHandle: Pointer; virtual; abstract;
+public
+  { ~50 个 ISSLConnection 方法的统一实现 }
+  function Connect: Boolean;          // 调用 DoConnect + 更新状态
+  function Read(var ABuffer; ACount: Integer): Integer;  // 调用 DoRead + 统计
+  function ReadString(out AStr: string): Boolean;        // 基于 Read 实现
+  function GetHealthStatus: TSSLHealthStatus;            // 统一实现
+  function GetPerformanceMetrics: TSSLPerformanceMetrics; // 统一实现
+  // ... 其他方法
+end;
+```
+
+**设计优势**：
+- **代码复用**：通用逻辑只需实现一次，后端只实现 21 个抽象方法
+- **一致性**：所有后端共享相同的状态管理、性能跟踪、错误处理逻辑
+- **可维护性**：修改通用行为只需修改基类
+- **代码减少**：总计减少约 800 行重复代码
+
+**后端继承关系**：
+```
+TBaseSSLConnection (676 lines)
+├── TOpenSSLConnection (1388 lines) - 保留 ValidatePostHandshake 等复杂逻辑
+├── TWinSSLConnection (2169 lines) - 保留 Schannel 握手、会话管理
+├── TWolfSSLConnection (641 lines) - 独立模块
+└── TMbedTLSConnection (566 lines) - 最简洁的实现
 ```
 
 ### 3.5 证书时间与扩展解析策略
