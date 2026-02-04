@@ -79,3 +79,13 @@ examples/temp_certs/
 !examples/*.crt
 !examples/*.key
 .ace-tool/
+
+# 测试二进制文件 (Linux/macOS 无扩展名)
+tests/test_*
+!tests/test_*.pas
+!tests/test_*.lpi
+!tests/test_*.md
+
+# 测试输出目录
+tests/bin/
+tests/lib/
