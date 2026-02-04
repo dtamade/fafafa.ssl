@@ -34,8 +34,22 @@ type
    *
    * 为所有 SSL 后端提供共享的连接实现基础。
    * 后端只需实现抽象方法即可获得完整功能。
+   *
+   * 实现的接口：
+   * - ISSLConnection: 核心连接功能
+   * - ISSLDiagnostics: 诊断功能
+   * - ISSLSessionResumption: 会话复用
+   * - ISSLCertificateVerification: 证书验证
+   * - ISSLOCSPStapling: OCSP 装订
+   * - ISSLConnectionInfo: 连接信息
    *}
-  TBaseSSLConnection = class(TInterfacedObject, ISSLConnection)
+  TBaseSSLConnection = class(TInterfacedObject,
+    ISSLConnection,
+    ISSLDiagnostics,
+    ISSLSessionResumption,
+    ISSLCertificateVerification,
+    ISSLOCSPStapling,
+    ISSLConnectionInfo)
   protected
     { 状态字段 }
     FConnected: Boolean;

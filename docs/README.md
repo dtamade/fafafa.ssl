@@ -1,55 +1,129 @@
 # fafafa.ssl 文档中心
 
-> **最后更新**: 2026-01-16
+> **版本**: v1.0.0
+> **更新**: 2026-02-05
 
-本目录包含 fafafa.ssl 的“当前文档”（面向使用者/贡献者）。
-历史阶段报告与工作记录请见 `docs/archive/`。
-
-## 🚀 推荐入口
-- **[DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)** - 文档索引（从这里开始）
-- **[GETTING_STARTED.md](GETTING_STARTED.md)** - 入门（推荐入口与最小示例）
-- **[QUICKSTART.md](QUICKSTART.md)** - 快速开始
-- **[API_REFERENCE.md](API_REFERENCE.md)** - API 参考
-- **[examples/README.md](../examples/README.md)** - 示例导航
-- **[testing/README_TESTING.md](testing/README_TESTING.md)** - 测试说明（入口）
-- **[CICD_SETUP.md](CICD_SETUP.md)** - CI/CD 与本地流水线
-
-## 📚 常用主题
-
-### 架构与设计
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - 架构说明
-- **[adr/README.md](adr/README.md)** - 架构决策记录（ADR）
-
-### 安全
-- **[SECURITY_GUIDE.md](SECURITY_GUIDE.md)** - 安全最佳实践
-- **[SECURITY_AUDIT.md](SECURITY_AUDIT.md)** - 安全审计记录
-- **[CA_CERTIFICATE_AUTO_LOADING.md](CA_CERTIFICATE_AUTO_LOADING.md)** - 系统根证书加载说明
-
-### 依赖与平台
-- **[DEPENDENCIES.md](DEPENDENCIES.md)** - 依赖说明
-- **[LINUX_QUICKSTART.md](LINUX_QUICKSTART.md)** - Linux 快速开始
-- **[WINSSL_QUICKSTART.md](WINSSL_QUICKSTART.md)** - WinSSL 快速开始
-
-### 故障排查
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - 常见问题排查
-- **[FAQ.md](FAQ.md)** - FAQ
-
-### 工具
-- **[TOOLS.md](TOOLS.md)** - 工具与脚本
-
-## 🤝 贡献与规范
-- **贡献指南**: **[CONTRIBUTING.md](../CONTRIBUTING.md)**
-- **仓库约定**: **[WARP.md](../WARP.md)**, **[AGENTS.md](AGENTS.md)**
-- **代码标准**: **[CODE_STYLE.md](CODE_STYLE.md)**, **[CODING_STANDARDS.md](CODING_STANDARDS.md)**
-
-## 🗄️ 历史归档
-- **[archive/README.md](archive/README.md)**
-
-## 🆘 获取帮助
-- **Bug 报告**: [GitHub Issues](https://github.com/dtamade/fafafa.ssl/issues)
-- **功能请求**: [GitHub Discussions](https://github.com/dtamade/fafafa.ssl/discussions)
+fafafa.ssl 是 Free Pascal 的高性能 SSL/TLS 库，支持 OpenSSL、WinSSL、MbedTLS、WolfSSL 多后端。
 
 ---
 
-**维护者**: fafafa.ssl 项目组  
-**许可证**: [MIT](../LICENSE)
+## 快速开始
+
+```pascal
+uses fafafa.ssl.factory, fafafa.ssl.base;
+
+var
+  Ctx: ISSLContext;
+  Conn: ISSLConnection;
+begin
+  // 创建客户端上下文
+  Ctx := TSSLFactory.CreateContext(sslClient);
+
+  // 创建连接（包装你的 socket）
+  Conn := Ctx.CreateConnection(YourSocket);
+
+  // SSL 握手
+  if Conn.Connect then
+  begin
+    Conn.Write(Data, Length(Data));
+    BytesRead := Conn.Read(Buffer, SizeOf(Buffer));
+  end;
+
+  Conn.Shutdown;
+end;
+```
+
+---
+
+## 文档结构
+
+```
+docs/
+├── README.md              # 本文件
+├── INTEGRATION_GUIDE.md   # 框架集成指南 ⭐
+├── PLATFORM_SUPPORT.md    # 平台支持
+├── DEPENDENCIES.md        # 依赖说明
+├── RELEASE_NOTES.md       # 发布说明
+│
+├── guides/                # 用户指南
+│   ├── GETTING_STARTED.md
+│   ├── USER_GUIDE.md
+│   ├── QUICKSTART.md
+│   ├── TROUBLESHOOTING.md
+│   ├── FAQ.md
+│   └── ...
+│
+├── reference/             # API 参考
+│   ├── API_REFERENCE.md
+│   ├── INTERFACE_DESIGN_V2.md
+│   ├── ARCHITECTURE.md
+│   └── ...
+│
+└── archive/               # 历史文档
+    └── (项目报告、阶段总结等)
+```
+
+---
+
+## 核心文档
+
+| 文档 | 说明 |
+|------|------|
+| [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | **框架集成指南** - 如何集成到其他网络框架 |
+| [guides/QUICKSTART.md](guides/QUICKSTART.md) | 5 分钟快速上手 |
+| [guides/USER_GUIDE.md](guides/USER_GUIDE.md) | 完整用户指南 |
+| [reference/API_REFERENCE.md](reference/API_REFERENCE.md) | API 参考手册 |
+| [reference/INTERFACE_DESIGN_V2.md](reference/INTERFACE_DESIGN_V2.md) | 接口设计文档 |
+
+---
+
+## 后端支持
+
+| 后端 | 平台 | 文档 |
+|------|------|------|
+| OpenSSL | 全平台 | [reference/OPENSSL_MODULES.md](reference/OPENSSL_MODULES.md) |
+| WinSSL | Windows | [guides/WINSSL_USER_GUIDE.md](guides/WINSSL_USER_GUIDE.md) |
+| MbedTLS | 全平台 | [guides/MBEDTLS_USER_GUIDE.md](guides/MBEDTLS_USER_GUIDE.md) |
+| WolfSSL | 全平台 | 基础支持 |
+
+---
+
+## ISSLConnection 核心接口
+
+框架集成只需关注这些方法：
+
+```pascal
+ISSLConnection = interface
+  // 连接控制
+  function Connect: Boolean;
+  function Accept: Boolean;
+  function Shutdown: Boolean;
+
+  // 数据传输
+  function Read(var ABuffer; ACount: Integer): Integer;
+  function Write(const ABuffer; ACount: Integer): Integer;
+
+  // 非阻塞支持
+  function WantRead: Boolean;   // SSL 需要读取？
+  function WantWrite: Boolean;  // SSL 需要写入？
+  function GetError(ARet: Integer): TSSLErrorCode;
+
+  // 状态查询
+  function IsConnected: Boolean;
+  function GetProtocolVersion: TSSLProtocolVersion;
+  function GetCipherName: string;
+end;
+```
+
+详见 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)
+
+---
+
+## 获取帮助
+
+- **Issues**: https://github.com/dtamade/fafafa.ssl/issues
+- **Discussions**: https://github.com/dtamade/fafafa.ssl/discussions
+
+---
+
+**许可证**: MIT

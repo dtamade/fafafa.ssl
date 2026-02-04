@@ -1160,6 +1160,121 @@ type
   end;
 
   {**
+   * ISSLDiagnostics - 连接诊断扩展接口
+   *
+   * 提供连接健康状态、性能指标等诊断信息。
+   * 此接口是可选的，用于监控和调试场景。
+   *
+   * @stable 1.0
+   * @since 2026-02-05
+   *}
+  ISSLDiagnostics = interface
+    ['{8E4F2A1B-3C5D-6E7F-8A9B-0C1D2E3F4A5B}']
+
+    {** 获取连接健康状态 *}
+    function GetHealthStatus: TSSLHealthStatus;
+
+    {** 检查连接是否健康 *}
+    function IsHealthy: Boolean;
+
+    {** 获取性能指标 *}
+    function GetPerformanceMetrics: TSSLPerformanceMetrics;
+
+    {** 获取完整诊断信息 *}
+    function GetDiagnosticInfo: TSSLDiagnosticInfo;
+  end;
+
+  {**
+   * ISSLSessionResumption - 会话复用扩展接口
+   *
+   * 提供 TLS 会话保存和恢复功能，用于减少握手开销。
+   *
+   * @stable 1.0
+   * @since 2026-02-05
+   *}
+  ISSLSessionResumption = interface
+    ['{9F5A3B2C-4D6E-7F8A-9B0C-1D2E3F4A5B6C}']
+
+    {** 获取当前会话 *}
+    function GetSession: ISSLSession;
+
+    {** 设置要恢复的会话 *}
+    procedure SetSession(ASession: ISSLSession);
+
+    {** 检查是否使用了会话恢复 *}
+    function IsSessionReused: Boolean;
+  end;
+
+  {**
+   * ISSLCertificateVerification - 证书验证扩展接口
+   *
+   * 提供证书链和验证结果的详细信息。
+   *
+   * @stable 1.0
+   * @since 2026-02-05
+   *}
+  ISSLCertificateVerification = interface
+    ['{A0B1C2D3-E4F5-6A7B-8C9D-0E1F2A3B4C5D}']
+
+    {** 获取对端证书链 *}
+    function GetPeerCertificateChain: TSSLCertificateArray;
+
+    {** 获取证书验证结果码 *}
+    function GetVerifyResult: Integer;
+
+    {** 获取证书验证结果描述 *}
+    function GetVerifyResultString: string;
+  end;
+
+  {**
+   * ISSLOCSPStapling - OCSP 装订扩展接口
+   *
+   * 提供 OCSP Stapling 相关功能。
+   *
+   * @stable 1.0
+   * @since 2026-02-05
+   *}
+  ISSLOCSPStapling = interface
+    ['{B1C2D3E4-F5A6-7B8C-9D0E-1F2A3B4C5D6E}']
+
+    {** 检查是否启用了 OCSP Stapling *}
+    function GetOCSPStaplingEnabled: Boolean;
+
+    {** 获取 OCSP 响应 *}
+    function GetOCSPResponse: TBytes;
+
+    {** 检查 OCSP 响应是否已验证 *}
+    function IsOCSPResponseVerified: Boolean;
+
+    {** 获取 OCSP 响应状态 *}
+    function GetOCSPResponseStatus: string;
+  end;
+
+  {**
+   * ISSLConnectionInfo - 连接信息扩展接口
+   *
+   * 提供连接的详细配置和状态信息。
+   *
+   * @stable 1.0
+   * @since 2026-02-05
+   *}
+  ISSLConnectionInfo = interface
+    ['{C2D3E4F5-A6B7-8C9D-0E1F-2A3B4C5D6E7F}']
+
+    {** 获取连接详细信息 *}
+    function GetConnectionInfo: TSSLConnectionInfo;
+
+    {** 获取关联的上下文 *}
+    function GetContext: ISSLContext;
+
+    {** 获取 ALPN 协商结果 *}
+    function GetSelectedALPNProtocol: string;
+
+    {** 获取状态描述字符串 *}
+    function GetStateString: string;
+  end;
+
+  {**
    * ISSLCertificate - Full-featured certificate interface for SSL operations
    *
    * This interface provides comprehensive certificate management capabilities:
