@@ -188,10 +188,10 @@ type
     class var FEnabled: Boolean;
     FEntries: TStringList;
     FLock: TRTLCriticalSection;
-    constructor CreateInstance;
   public
+    constructor CreateInstance;
     class function Instance: TSSLProfiler;
-    class procedure FreeInstance;
+    class procedure FreeProfilerInstance; reintroduce;
     class property Enabled: Boolean read FEnabled write FEnabled;
 
     destructor Destroy; override;
@@ -637,7 +637,7 @@ begin
   Result := FInstance;
 end;
 
-class procedure TSSLProfiler.FreeInstance;
+class procedure TSSLProfiler.FreeProfilerInstance;
 begin
   FreeAndNil(FInstance);
 end;
@@ -748,6 +748,6 @@ begin
 end;
 
 finalization
-  TSSLProfiler.FreeInstance;
+  TSSLProfiler.FreeProfilerInstance;
 
 end.

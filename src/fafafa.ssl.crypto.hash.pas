@@ -3,6 +3,16 @@ unit fafafa.ssl.crypto.hash;
 {$mode objfpc}{$H+}
 {$modeswitch advancedrecords}
 
+{ 禁用64位常量范围检查警告 - SHA-512 K常量需要 }
+{$WARN 4110 off}  // Range check error while evaluating constants
+{ 禁用函数结果未初始化警告 - SetLength 已经初始化 TBytes }
+{$WARN 5093 off}  // Function result variable of managed type does not seem initialized
+{ 禁用本地变量未使用警告 - 某些临时变量用于中间计算 }
+{$WARN 5024 off}  // Parameter not used
+{$WARN 5025 off}  // Local variable not used
+{ 禁用不可达代码警告 - case 语句的 else 分支是防御性代码 }
+{$WARN 6018 off}  // Unreachable code
+
 {
   纯 Pascal 哈希算法实现
 

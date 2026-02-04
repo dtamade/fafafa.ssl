@@ -34,6 +34,9 @@ unit fafafa.ssl.factory;
 {$mode ObjFPC}{$H+}
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
+{ 禁用弃用 API 警告 - 工厂模式为旧 API 提供兼容层 }
+{$WARN 6058 off}  // Symbol is deprecated
+
 interface
 
 uses
@@ -870,7 +873,11 @@ begin
     Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
 
     if LConfig.ServerName <> '' then
+    begin
+      {$PUSH}{$WARN 6058 off}
       Result.SetServerName(LConfig.ServerName);
+      {$POP}
+    end;
 
     if LConfig.ALPNProtocols <> '' then
       Result.SetALPNProtocols(LConfig.ALPNProtocols);

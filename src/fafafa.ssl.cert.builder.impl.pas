@@ -1,6 +1,6 @@
 {
   fafafa.ssl.cert.builder.impl - Certificate Builder Implementation
-  
+
   Internal implementation of the fluent certificate builder.
   Users should not use this unit directly - use fafafa.ssl.cert.builder instead.
 }
@@ -9,6 +9,9 @@ unit fafafa.ssl.cert.builder.impl;
 
 {$mode objfpc}{$H+}
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
+
+{ 禁用函数结果未初始化警告 - SetLength 已经初始化 TBytes }
+{$WARN 5093 off}  // Function result variable of managed type does not seem initialized
 
 interface
 

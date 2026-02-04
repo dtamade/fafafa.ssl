@@ -3,6 +3,9 @@ unit fafafa.ssl.cert.utils;
 {$mode objfpc}{$H+}
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
+{ 禁用函数结果未初始化警告 - SetLength 已经初始化 TBytes }
+{$WARN 5093 off}  // Function result variable of managed type does not seem initialized
+
 {**
  * Unit: fafafa.ssl.cert.utils
  * Purpose: 企业级证书工具类
