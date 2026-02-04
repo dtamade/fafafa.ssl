@@ -88,6 +88,17 @@ docs/
 
 ---
 
+## 高级功能
+
+| 功能 | 说明 | 文档 |
+|------|------|------|
+| PKCS#11 | 硬件安全模块 (HSM) 支持 | [guides/PKCS11_USER_GUIDE.md](guides/PKCS11_USER_GUIDE.md) |
+| DANE/DNSSEC | DNS-Based 证书验证 | [guides/DANE_USER_GUIDE.md](guides/DANE_USER_GUIDE.md) |
+| CT | 证书透明度验证 | [guides/CT_IMPLEMENTATION_GUIDE.md](guides/CT_IMPLEMENTATION_GUIDE.md) |
+| PKCS#7/12 | 证书打包和签名 | [guides/PKCS7_USER_GUIDE.md](guides/PKCS7_USER_GUIDE.md), [guides/PKCS12_USER_GUIDE.md](guides/PKCS12_USER_GUIDE.md) |
+
+---
+
 ## ISSLConnection 核心接口
 
 框架集成只需关注这些方法：
