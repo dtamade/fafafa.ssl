@@ -11,6 +11,30 @@
 
 ### 新增 🎉
 
+#### 测试项目文件完善 (2026-02-04)
+- **完整的 .lpi 覆盖** - 为所有 366 个测试程序创建 Lazarus 项目文件
+  - tests/ (根目录): 61 个
+  - certificate/: 39 个
+  - crypto/: 61 个
+  - examples/: 39 个
+  - winssl/: 37 个
+  - integration/: 26 个
+  - connection/: 17 个
+  - unit/: 17 个
+  - benchmarks/: 15 个
+  - openssl/: 13 个
+  - diagnostic/: 11 个
+  - config/: 10 个
+  - security/: 8 个
+
+### 修复 🐛
+
+#### 编译器警告清理 (2026-02-04)
+- **fafafa.ssl.logging.pas** - 修复 FreeInstance 方法名冲突
+- **fafafa.ssl.crypto.hash.pas** - 抑制 SHA-512 常量范围检查警告
+- **fafafa.ssl.cert.utils.pas** - 抑制 TBytes 未初始化误报
+- **fafafa.ssl.factory.pas** - 正确处理弃用 API 调用
+
 #### TBaseSSLConnection 抽象基类 (2026-02-04)
 - **架构重构** - 所有连接模块现在继承自 `TBaseSSLConnection`
   - 21 个抽象 `Do*` 方法供后端实现
