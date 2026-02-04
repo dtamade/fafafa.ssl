@@ -35,6 +35,21 @@ const
 
 type
   // ========================================================================
+  // 会话创建回调类型
+  // ========================================================================
+
+  { TSessionCreateFunc - 会话创建回调函数类型
+
+    用于从序列化数据创建 ISSLSession 实例。
+    由于会话对象的创建依赖于具体的 SSL 后端（OpenSSL、WinSSL 等），
+    因此需要通过回调函数来创建。
+
+    @param AData 序列化的会话数据
+    @return 创建的会话接口，失败时返回 nil
+  }
+  TSessionCreateFunc = function(const AData: TBytes): ISSLSession;
+
+  // ========================================================================
   // 会话缓存条目
   // ========================================================================
   TSessionCacheEntry = record
@@ -81,7 +96,8 @@ type
     FMaxSessions: Integer;
     FDefaultTimeout: Integer;
     FPutCount: Integer;
-    
+    FSessionCreateFunc: TSessionCreateFunc;
+
     function GenerateCacheKey(const AHostName: string; APort: Word): string;
     procedure CleanupExpired;
     procedure EnforceSizeLimit;
@@ -90,7 +106,7 @@ type
     constructor Create(AMaxSessions: Integer = DEFAULT_MAX_SESSIONS;
       ADefaultTimeout: Integer = DEFAULT_SESSION_TIMEOUT);
     destructor Destroy; override;
-    
+
     // 会话操作
     function Get(const AHostName: string; APort: Word): ISSLSession;
     procedure Put(const AHostName: string; APort: Word; ASession: ISSLSession);
@@ -98,17 +114,21 @@ type
     procedure Clear;
     function Contains(const AHostName: string; APort: Word): Boolean;
     function GetCount: Integer;
-    
+
     // 统计信息
     function GetStats: TSessionCacheStats;
     procedure ResetStats;
-    
+
     // 持久化 (TLS 1.3 会话票据)
     function SaveToFile(const AFileName: string): Boolean;
     function LoadFromFile(const AFileName: string): Boolean;
-    
+
+    // 会话创建回调
+    procedure SetSessionCreateFunc(AFunc: TSessionCreateFunc);
+
     property MaxSessions: Integer read FMaxSessions write FMaxSessions;
     property DefaultTimeout: Integer read FDefaultTimeout write FDefaultTimeout;
+    property SessionCreateFunc: TSessionCreateFunc read FSessionCreateFunc write FSessionCreateFunc;
   end;
 
 implementation
@@ -163,7 +183,8 @@ begin
   FMaxSessions := AMaxSessions;
   FDefaultTimeout := ADefaultTimeout;
   FPutCount := 0;
-  
+  FSessionCreateFunc := nil;
+
   FillChar(FStats, SizeOf(FStats), 0);
 end;
 
@@ -509,27 +530,28 @@ var
   SessionData: TBytes;
   Entry: TSessionCacheEntry;
   Session: ISSLSession;
+  Key: string;
 begin
   Result := False;
-  
+
   if not FileExists(AFileName) then
     Exit;
-  
+
   FLock.Enter;
   try
     try
       FCache.Clear;
-      
+
       Stream := TFileStream.Create(AFileName, fmOpenRead);
       try
         // 读取版本号
         Stream.ReadBuffer(Version, SizeOf(Integer));
         if Version <> 1 then
           Exit;
-        
+
         // 读取条目数
         Stream.ReadBuffer(Count, SizeOf(Integer));
-        
+
         // 读取每个条目
         for I := 0 to Count - 1 do
         begin
@@ -538,40 +560,68 @@ begin
           SetLength(HostName, DataLen);
           if DataLen > 0 then
             Stream.ReadBuffer(HostName[1], DataLen);
-          
+
           // 读取端口
           Stream.ReadBuffer(Port, SizeOf(Word));
-          
+
           // 读取会话数据
+          SetLength(SessionData, 0);
           Stream.ReadBuffer(DataLen, SizeOf(Integer));
           if DataLen > 0 then
           begin
             SetLength(SessionData, DataLen);
             Stream.ReadBuffer(SessionData[0], DataLen);
           end;
-          
+
           // 读取时间戳
           FillChar(Entry, SizeOf(Entry), 0);
           Stream.ReadBuffer(Entry.CreatedAt, SizeOf(TDateTime));
           Stream.ReadBuffer(Entry.LastAccessedAt, SizeOf(TDateTime));
           Stream.ReadBuffer(Entry.AccessCount, SizeOf(Integer));
-          
-          // TODO: 反序列化会话 (需要知道后端类型)
-          // 这里需要根据实际后端创建相应的 Session 对象
-          // Session := CreateSessionFromData(SessionData);
-          
-          // 暂时跳过,因为需要后端特定的反序列化逻辑
+
+          // 检查会话是否过期
+          if Entry.IsExpired(FDefaultTimeout) then
+            Continue;
+
+          // 反序列化会话
+          Session := nil;
+          if (Length(SessionData) > 0) and Assigned(FSessionCreateFunc) then
+          begin
+            // 使用回调函数创建会话
+            Session := FSessionCreateFunc(SessionData);
+          end;
+
+          // 如果成功创建会话，添加到缓存
+          if (Session <> nil) and Session.IsValid then
+          begin
+            Entry.Session := Session;
+            Entry.HostName := HostName;
+            Entry.Port := Port;
+
+            Key := GenerateCacheKey(HostName, Port);
+            FCache.Add(Key, Entry);
+          end;
         end;
-        
+
         FStats.TotalSessions := FCache.Count;
         Result := True;
-        
+
       finally
         Stream.Free;
       end;
     except
       Result := False;
     end;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+procedure TSSLSessionCache.SetSessionCreateFunc(AFunc: TSessionCreateFunc);
+begin
+  FLock.Enter;
+  try
+    FSessionCreateFunc := AFunc;
   finally
     FLock.Leave;
   end;

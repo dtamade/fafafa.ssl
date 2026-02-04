@@ -110,9 +110,38 @@ type
   // ========================================================================
   // OCSP Stapling 服务端
   // ========================================================================
-  
+
+  // 证书对记录（用于自动刷新）
+  TOCSPCertificatePair = record
+    Cert: TX509Certificate;
+    IssuerCert: TX509Certificate;
+  end;
+
+  // 证书对数组
+  TOCSPCertificatePairArray = array of TOCSPCertificatePair;
+
+  // 前向声明
+  TOCSPStaplingServer = class;
+
+  { TOCSPAutoRefreshThread - OCSP 响应自动刷新线程
+
+    在后台定期检查缓存的 OCSP 响应，在过期前自动刷新。
+  }
+  TOCSPAutoRefreshThread = class(TThread)
+  private
+    FOwner: TOCSPStaplingServer;
+    FStopEvent: TEvent;
+    FCheckIntervalMS: Integer;  // 检查间隔（毫秒）
+  protected
+    procedure Execute; override;
+  public
+    constructor Create(AOwner: TOCSPStaplingServer);
+    destructor Destroy; override;
+    procedure SignalStop;
+  end;
+
   { TOCSPStaplingServer - 服务端 Stapling 管理
-    
+
     职责:
     - 为服务器证书获取 OCSP 响应
     - 缓存响应并在过期前自动刷新
@@ -124,10 +153,15 @@ type
     FCache: TOCSPResponseCache;
     FLock: TCriticalSection;
     FAutoRefreshEnabled: Boolean;
-    
+    FRefreshThread: TOCSPAutoRefreshThread;
+    // 存储需要刷新的证书列表
+    FCertificates: TOCSPCertificatePairArray;
+    FCertLock: TCriticalSection;
+
     function FetchOCSPResponse(ACert, AIssuerCert: TX509Certificate): TBytes;
     function SendOCSPRequest(const AURL: string; const ARequest: TBytes): TBytes;
     function ShouldRefreshResponse(const AResponse: TBytes): Boolean;
+    procedure RefreshAllCertificates;
   public
     constructor Create(AConfig: TOCSPStaplingConfig; ACache: TOCSPResponseCache = nil);
     destructor Destroy; override;
@@ -136,6 +170,8 @@ type
     function GetStapledResponse(ACert, AIssuerCert: TX509Certificate;
       AForceRefresh: Boolean = False): TBytes;
     function RefreshResponse(ACert, AIssuerCert: TX509Certificate): Boolean;
+    procedure RegisterCertificate(ACert, AIssuerCert: TX509Certificate);
+    procedure UnregisterCertificate(ACert: TX509Certificate);
     procedure EnableAutoRefresh;
     procedure DisableAutoRefresh;
     
@@ -388,11 +424,17 @@ begin
   FConfig := AConfig;
   FCache := ACache;
   FLock := TCriticalSection.Create;
+  FCertLock := TCriticalSection.Create;
   FAutoRefreshEnabled := False;
+  FRefreshThread := nil;
+  SetLength(FCertificates, 0);
 end;
 
 destructor TOCSPStaplingServer.Destroy;
 begin
+  // 确保停止刷新线程
+  DisableAutoRefresh;
+  FCertLock.Free;
   FLock.Free;
   inherited Destroy;
 end;
@@ -587,14 +629,174 @@ end;
 
 procedure TOCSPStaplingServer.EnableAutoRefresh;
 begin
-  FAutoRefreshEnabled := True;
-  // TODO: 启动后台刷新线程
+  FLock.Enter;
+  try
+    if FAutoRefreshEnabled then
+      Exit;  // 已经启用
+
+    FAutoRefreshEnabled := True;
+
+    // 创建并启动后台刷新线程
+    if FRefreshThread = nil then
+    begin
+      FRefreshThread := TOCSPAutoRefreshThread.Create(Self);
+      FRefreshThread.Start;
+    end;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TOCSPStaplingServer.DisableAutoRefresh;
+var
+  LThread: TOCSPAutoRefreshThread;
 begin
-  FAutoRefreshEnabled := False;
-  // TODO: 停止后台刷新线程
+  FLock.Enter;
+  try
+    if not FAutoRefreshEnabled then
+      Exit;  // 已经禁用
+
+    FAutoRefreshEnabled := False;
+    LThread := FRefreshThread;
+    FRefreshThread := nil;
+  finally
+    FLock.Leave;
+  end;
+
+  // 在锁外停止线程，避免死锁
+  if LThread <> nil then
+  begin
+    LThread.SignalStop;
+    LThread.WaitFor;
+    LThread.Free;
+  end;
+end;
+
+procedure TOCSPStaplingServer.RegisterCertificate(ACert, AIssuerCert: TX509Certificate);
+var
+  I, Len: Integer;
+begin
+  if ACert = nil then
+    Exit;
+
+  FCertLock.Enter;
+  try
+    // 检查是否已存在
+    for I := 0 to High(FCertificates) do
+    begin
+      if FCertificates[I].Cert = ACert then
+        Exit;  // 已注册
+    end;
+
+    // 添加新证书
+    Len := Length(FCertificates);
+    SetLength(FCertificates, Len + 1);
+    FCertificates[Len].Cert := ACert;
+    FCertificates[Len].IssuerCert := AIssuerCert;
+  finally
+    FCertLock.Leave;
+  end;
+end;
+
+procedure TOCSPStaplingServer.UnregisterCertificate(ACert: TX509Certificate);
+var
+  I, J: Integer;
+begin
+  if ACert = nil then
+    Exit;
+
+  FCertLock.Enter;
+  try
+    for I := 0 to High(FCertificates) do
+    begin
+      if FCertificates[I].Cert = ACert then
+      begin
+        // 移除该证书（将后面的元素前移）
+        for J := I to High(FCertificates) - 1 do
+          FCertificates[J] := FCertificates[J + 1];
+        SetLength(FCertificates, Length(FCertificates) - 1);
+        Exit;
+      end;
+    end;
+  finally
+    FCertLock.Leave;
+  end;
+end;
+
+procedure TOCSPStaplingServer.RefreshAllCertificates;
+var
+  I: Integer;
+  CertsCopy: TOCSPCertificatePairArray;
+begin
+  // 复制证书列表以避免长时间持有锁
+  FCertLock.Enter;
+  try
+    SetLength(CertsCopy, Length(FCertificates));
+    for I := 0 to High(FCertificates) do
+      CertsCopy[I] := FCertificates[I];
+  finally
+    FCertLock.Leave;
+  end;
+
+  // 刷新每个证书的 OCSP 响应
+  for I := 0 to High(CertsCopy) do
+  begin
+    try
+      RefreshResponse(CertsCopy[I].Cert, CertsCopy[I].IssuerCert);
+    except
+      // 忽略单个证书刷新失败，继续处理其他证书
+    end;
+  end;
+end;
+
+// ========================================================================
+// TOCSPAutoRefreshThread
+// ========================================================================
+
+constructor TOCSPAutoRefreshThread.Create(AOwner: TOCSPStaplingServer);
+begin
+  inherited Create(True);  // 创建为挂起状态
+  FreeOnTerminate := False;
+  FOwner := AOwner;
+  // 默认每 5 分钟检查一次
+  FCheckIntervalMS := 5 * 60 * 1000;
+  FStopEvent := TEvent.Create(nil, True, False, '');
+end;
+
+destructor TOCSPAutoRefreshThread.Destroy;
+begin
+  FStopEvent.Free;
+  inherited Destroy;
+end;
+
+procedure TOCSPAutoRefreshThread.SignalStop;
+begin
+  Terminate;
+  FStopEvent.SetEvent;
+end;
+
+procedure TOCSPAutoRefreshThread.Execute;
+var
+  WaitResult: TWaitResult;
+begin
+  while not Terminated do
+  begin
+    // 等待指定时间或收到停止信号
+    WaitResult := FStopEvent.WaitFor(FCheckIntervalMS);
+
+    if Terminated or (WaitResult = wrSignaled) then
+      Break;
+
+    // 执行刷新
+    if (FOwner <> nil) and FOwner.FAutoRefreshEnabled then
+    begin
+      try
+        FOwner.RefreshAllCertificates;
+      except
+        // 忽略刷新错误，下次重试
+      end;
+    end;
+  end;
 end;
 
 // ========================================================================

@@ -276,23 +276,48 @@ end;
 function TSCTValidator.ValidateSCTList(SCTs: PSCT_LIST; Cert: PX509; Issuer: PX509): TSCTValidationResultArray;
 var
   EvalCtx: PCT_POLICY_EVAL_CTX;
+  Count, I: Integer;
+  SCT: PSCT;
 begin
   SetLength(Result, 0);
-  
+
   if (SCTs = nil) or (Cert = nil) then Exit;
-  
+
   // 创建评估上下文
   EvalCtx := CreateEvalContext(Cert, Issuer);
   if EvalCtx = nil then Exit;
-  
+
   try
     // 使用 OpenSSL 的 SCT_LIST_validate 函数验证整个列表
     if Assigned(SCT_LIST_validate) then
       SCT_LIST_validate(SCTs, EvalCtx);
-    
-    // TODO: 遍历 SCT 列表并收集每个 SCT 的验证结果
-    // 这需要 OPENSSL_sk_num 和 OPENSSL_sk_value 函数
-    // 暂时返回空数组
+
+    // 遍历 SCT 列表并收集每个 SCT 的验证结果
+    // 使用 OPENSSL_sk_num 获取 SCT 数量
+    if not Assigned(OPENSSL_sk_num) then Exit;
+    if not Assigned(OPENSSL_sk_value) then Exit;
+
+    Count := OPENSSL_sk_num(POPENSSL_STACK(SCTs));
+    if Count <= 0 then Exit;
+
+    SetLength(Result, Count);
+
+    for I := 0 to Count - 1 do
+    begin
+      // 获取单个 SCT
+      SCT := PSCT(OPENSSL_sk_value(POPENSSL_STACK(SCTs), I));
+      if SCT <> nil then
+        Result[I] := ValidateSingleSCT(SCT, EvalCtx)
+      else
+      begin
+        // SCT 为空，标记为无效
+        Result[I].IsValid := False;
+        Result[I].Status := SCT_VALIDATION_STATUS_NOT_SET;
+        Result[I].ErrorMessage := 'Null SCT at index ' + IntToStr(I);
+        Result[I].LogName := '';
+        Result[I].Timestamp := 0;
+      end;
+    end;
   finally
     if Assigned(CT_POLICY_EVAL_CTX_free) then
       CT_POLICY_EVAL_CTX_free(EvalCtx);

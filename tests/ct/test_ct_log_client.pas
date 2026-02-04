@@ -6,7 +6,9 @@ uses
   SysUtils, Classes,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.ct,
   fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.ct.log;
 
 var
@@ -350,15 +352,17 @@ end;
 begin
   WriteLn('=== CT Log Client Module Tests ===');
   WriteLn;
-  
+
   // 加载 OpenSSL 函数
   try
-    if not TOpenSSLLoader.LoadOpenSSL then
+    LoadOpenSSLCore;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('ERROR: Failed to load OpenSSL library');
       Halt(1);
     end;
-    
+
     LoadCTFunctions;
   except
     on E: Exception do

@@ -79,6 +79,7 @@ function Base64Decode(const Input: string): TBytes;
 implementation
 
 uses
+  fphttpclient, ssockets, sslsockets, opensslsockets,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.loader,
   fafafa.ssl.base64;
@@ -107,20 +108,68 @@ begin
 end;
 
 function TCTLogClient.LoadFromJSON(const JSONData: string): Boolean;
+var
+  JSON: TJSONData;
+  LogsArray: TJSONArray;
+  Log: TJSONObject;
+  LogInfo: TCTLogInfo;
+  I: Integer;
 begin
   Result := False;
-  
+
   if JSONData = '' then Exit;
-  
-  // 解析 Google CT 日志列表格式
+
+  // 首先尝试解析 Google CT 日志列表格式
   if ParseGoogleCTLogList(JSONData) then
   begin
     // 创建日志存储
     Result := CreateLogStore;
-    
+
     // 如果启用了缓存，保存到文件
     if Result and (FCacheFile <> '') then
       SaveToFile(FCacheFile);
+    Exit;
+  end;
+
+  // 如果 Google 格式解析失败，尝试解析简单的缓存格式
+  try
+    JSON := GetJSON(JSONData);
+    if JSON = nil then Exit;
+
+    try
+      if JSON.JSONType <> jtObject then Exit;
+
+      // 尝试获取 logs 数组（简单缓存格式）
+      LogsArray := TJSONObject(JSON).Get('logs', TJSONArray(nil));
+      if LogsArray = nil then Exit;
+
+      SetLength(FLogList, 0);
+
+      for I := 0 to LogsArray.Count - 1 do
+      begin
+        if LogsArray.Items[I].JSONType <> jtObject then Continue;
+
+        Log := TJSONObject(LogsArray.Items[I]);
+
+        LogInfo.LogID := Log.Get('log_id', '');
+        LogInfo.Key := Log.Get('key', '');
+        LogInfo.URL := Log.Get('url', '');
+        LogInfo.Description := Log.Get('description', '');
+        LogInfo.OperatorName := Log.Get('operator', '');
+        LogInfo.MaxMergeDelay := Log.Get('mmd', 86400);
+        LogInfo.IsUsable := Log.Get('usable', True);
+
+        SetLength(FLogList, Length(FLogList) + 1);
+        FLogList[High(FLogList)] := LogInfo;
+      end;
+
+      Result := True;
+      CreateLogStore;
+    finally
+      JSON.Free;
+    end;
+  except
+    Result := False;
   end;
 end;
 
@@ -130,35 +179,35 @@ var
   Operators: TJSONArray;
   Logs: TJSONArray;
   I, J: Integer;
-  Operator: TJSONObject;
+  OperatorObj: TJSONObject;
   Log: TJSONObject;
   LogInfo: TCTLogInfo;
   OperatorName: string;
 begin
   Result := False;
   SetLength(FLogList, 0);
-  
+
   try
     JSON := GetJSON(JSONData);
     if JSON = nil then Exit;
-    
+
     try
       if JSON.JSONType <> jtObject then Exit;
-      
+
       // 获取 operators 数组
       Operators := TJSONObject(JSON).Get('operators', TJSONArray(nil));
       if Operators = nil then Exit;
-      
+
       // 遍历所有运营商
       for I := 0 to Operators.Count - 1 do
       begin
         if Operators.Items[I].JSONType <> jtObject then Continue;
-        
-        Operator := TJSONObject(Operators.Items[I]);
-        OperatorName := Operator.Get('name', '');
+
+        OperatorObj := TJSONObject(Operators.Items[I]);
+        OperatorName := OperatorObj.Get('name', '');
         
         // 获取该运营商的日志列表
-        Logs := Operator.Get('logs', TJSONArray(nil));
+        Logs := OperatorObj.Get('logs', TJSONArray(nil));
         if Logs = nil then Continue;
         
         // 遍历所有日志
@@ -434,7 +483,10 @@ end;
 function Base64Decode(const Input: string): TBytes;
 begin
   // 使用项目的 Base64 解码功能
-  Result := fafafa.ssl.base64.DecodeBase64(Input);
+  if Input = '' then
+    SetLength(Result, 0)
+  else
+    Result := TBase64Utils.Decode(Input);
 end;
 
 end.
