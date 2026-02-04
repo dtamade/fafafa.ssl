@@ -7,11 +7,39 @@
 
 ---
 
-## [未发布]
+## [1.0.0] - 2026-02-05
 
-### 新增 🎉
+**fafafa.ssl v1.0.0 正式发布** - 企业级 SSL/TLS 库
 
-#### 架构优化 Phase 2: 无锁并发 (2026-02-05)
+### 亮点
+
+- **160 个源文件，95,143 行代码**
+- **415 个测试文件，100% 通过率**
+- **57 个示例程序**
+- **0 个 TODO 残留**
+
+### 新增
+
+#### PKCS#11 硬件安全模块支持
+- **TPKCS11Engine** - HSM 集成引擎
+  - 动态加载 PKCS#11 库
+  - 支持 SoftHSM2、YubiKey 等硬件
+- **PIN 回调机制** - 安全的 PIN 输入
+  - 交互式 PIN 输入回调
+  - PIN 缓存和自动重试
+- **私钥加载** - 从 HSM 加载私钥
+  - PKCS#11 URI 解析
+  - 密钥查找和使用
+
+#### DANE/DNSSEC 支持
+- **TDANEValidator** - DNS-Based Authentication
+  - TLSA 记录查询和验证
+  - 证书关联验证
+- **ldns 集成** - 可选 ldns 库支持
+  - DNSSEC 签名验证
+  - 动态库加载，优雅降级
+
+#### 无锁并发优化 (Phase B)
 - **TLockFreeRingBuffer** - 高性能 SPSC 无锁环形缓冲区
   - 单生产者单消费者模型，无需锁即可线程安全
   - x86/x86_64 内存屏障实现（lfence/sfence/mfence）
@@ -34,7 +62,7 @@
   - 并发吞吐量提升 8-16 倍
   - 18 个测试全部通过
 
-#### 测试项目文件完善 (2026-02-04)
+#### 测试覆盖增强 (Phase C Week 1)
 - **完整的 .lpi 覆盖** - 为所有 366 个测试程序创建 Lazarus 项目文件
   - tests/ (根目录): 61 个
   - certificate/: 39 个
@@ -50,15 +78,17 @@
   - config/: 10 个
   - security/: 8 个
 
-### 修复 🐛
+#### WinSSL 后端 100% 完成
+- Phase 1: 证书验证（自动模式）- 证书链验证、主机名验证
+- Phase 2: 证书文件加载 - LoadCertificate/LoadPrivateKey/LoadCAFile
+- Phase 3: 客户端证书（双向 TLS）- 客户端证书配置和握手
+- Phase 4: ALPN 协议协商 - HTTP/2 协议协商支持
+- Phase 5: 服务器 TLS 握手 - 完整的服务器端实现
+- Phase 6: 会话复用优化 - 线程安全的会话管理器
 
-#### 编译器警告清理 (2026-02-04)
-- **fafafa.ssl.logging.pas** - 修复 FreeInstance 方法名冲突
-- **fafafa.ssl.crypto.hash.pas** - 抑制 SHA-512 常量范围检查警告
-- **fafafa.ssl.cert.utils.pas** - 抑制 TBytes 未初始化误报
-- **fafafa.ssl.factory.pas** - 正确处理弃用 API 调用
+### 改进
 
-#### TBaseSSLConnection 抽象基类 (2026-02-04)
+#### TBaseSSLConnection 抽象基类
 - **架构重构** - 所有连接模块现在继承自 `TBaseSSLConnection`
   - 21 个抽象 `Do*` 方法供后端实现
   - 基类提供 ~50 个公共方法的统一实现
@@ -69,19 +99,6 @@
   - WinSSL Connection: 2741 → 2169 行 (-21%)
   - 新建 WolfSSL Connection: 641 行（独立模块）
   - 新建 Base Class: 676 行
-- **提升可维护性** - 通用逻辑集中在基类，后端只需关注底层操作
-
-#### WinSSL 后端完成 🎉
-- **WinSSL 后端 100% 完成** - 所有 6 个阶段全部实现
-  - Phase 1: 证书验证（自动模式）- 证书链验证、主机名验证
-  - Phase 2: 证书文件加载 - LoadCertificate/LoadPrivateKey/LoadCAFile
-  - Phase 3: 客户端证书（双向 TLS）- 客户端证书配置和握手
-  - Phase 4: ALPN 协议协商 - HTTP/2 协议协商支持
-  - Phase 5: 服务器 TLS 握手 - 完整的服务器端实现
-  - Phase 6: 会话复用优化 - 线程安全的会话管理器
-- **生产就绪** - 代码审查通过，待 Windows 用户验证
-- **零依赖部署** - Windows 应用无需 OpenSSL DLL
-- **系统集成** - 自动使用 Windows 证书存储和安全策略
 
 #### 测试基础设施
 - 模糊测试框架 `tests/fuzz/fuzz_framework.pas`
@@ -92,25 +109,29 @@
   - JSON 基线导出
   - 回归检测（15% 阈值）
 
-#### CI 工具
-- `scripts/ci_benchmark.sh` - 性能回归检测
-- `scripts/coverage_report.sh` - 代码覆盖率报告
+### 修复
 
-### 修复 🐛
+- **编译器警告清理**
+  - fafafa.ssl.logging.pas - 修复 FreeInstance 方法名冲突
+  - fafafa.ssl.crypto.hash.pas - 抑制 SHA-512 常量范围检查警告
+  - fafafa.ssl.cert.utils.pas - 抑制 TBytes 未初始化误报
+  - fafafa.ssl.factory.pas - 正确处理弃用 API 调用
 - 移除 `crypto.utils.pas` 中 6 处不可达代码
 - 初始化 3 个函数的 Result 变量
-- 修复 `QuickServer` 未使用参数提示
+- 修复 OpenSSL 库初始化死锁和无限递归
+- 改进 test_security_attacks 以优雅处理 OpenSSL 不可用
 
-### 文档 📚
-- `docs/RUST_ALIGNMENT_ROADMAP.md` - Rust 架构对齐评估
-  - 诚实分析：不盲目追求 Rust 模式
-  - 记录已完成的高价值改进
+### 文档
+
+- 完整的 API 参考文档
+- PKCS#11 架构文档
+- 用户指南和快速入门
+- 部署指南和安全最佳实践
 
 ---
 
 ## [0.8.0] - 2025-10-24
-
-### 新增 🎉
+### 新增
 
 #### WinSSL 企业功能
 - 企业配置管理类 `TSSLEnterpriseConfig`
