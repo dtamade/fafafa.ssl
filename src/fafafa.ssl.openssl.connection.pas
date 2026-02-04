@@ -170,7 +170,7 @@ begin
     SetServerName(AContext.GetServerName);
 
   // Ensure BIO API is available
-  if not IsOpenSSLBIOLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmBIO) then
     LoadOpenSSLBIO;
 
   if (not Assigned(BIO_new)) or (not Assigned(BIO_s_mem)) or

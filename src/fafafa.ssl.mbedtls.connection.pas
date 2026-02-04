@@ -20,7 +20,6 @@ interface
 uses
   SysUtils, Classes, Sockets,
   fafafa.ssl.base,
-  fafafa.ssl.errors,
   fafafa.ssl.exceptions,
   fafafa.ssl.connection.base,
   fafafa.ssl.mbedtls.base,
@@ -96,8 +95,7 @@ implementation
 
 uses
   fafafa.ssl.mbedtls.certificate,
-  fafafa.ssl.mbedtls.session,
-  fafafa.ssl.mbedtls.lib;
+  fafafa.ssl.mbedtls.session;
 
 const
   MBEDTLS_SSL_CONTEXT_SIZE = 4096;  // Increased for safety
