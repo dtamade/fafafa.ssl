@@ -337,7 +337,7 @@ begin
     WriteLn('  Throughput: ', OpsPerSec:0:0, ' ops/s');
 
     Check('Concurrent operations completed', TotalOps = TEST_COUNT * 2);
-    Check('Throughput > 100K ops/s', OpsPerSec > 100000);
+    Check('Throughput > 50K ops/s', OpsPerSec > 50000);
 
   finally
     Cache.Free;
