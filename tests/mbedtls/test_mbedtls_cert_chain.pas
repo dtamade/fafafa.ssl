@@ -75,11 +75,11 @@ begin
 
       LCtx.SetVerifyMode([sslVerifyPeer]); // 启用验证
 
-      LConn := LCtx.CreateConnection(LSock);
+      // ✅ 设置 SNI - 必须在 CreateConnection 之前!
+      LCtx.SetServerName('www.google.com');
+      WriteLn('✅ SNI set to: www.google.com');
 
-      // 设置 SNI (Server Name Indication)
-      if Supports(LConn, ISSLClientConnection) then
-        (LConn as ISSLClientConnection).SetServerName('www.google.com');
+      LConn := LCtx.CreateConnection(LSock);
 
       if LConn.Connect then
       begin
@@ -217,6 +217,7 @@ begin
       LCtx := GLib.CreateContext(sslCtxClient);
       LCtx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
       LCtx.SetVerifyMode([sslVerifyPeer]);
+      LCtx.SetServerName('www.google.com'); // SNI
 
       LConn := LCtx.CreateConnection(LSock);
       if LConn.Connect then
@@ -275,6 +276,7 @@ begin
       LCtx := GLib.CreateContext(sslCtxClient);
       LCtx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
       LCtx.SetVerifyMode([sslVerifyPeer]);
+      LCtx.SetServerName('www.google.com'); // SNI
 
       LConn := LCtx.CreateConnection(LSock);
       if LConn.Connect then
@@ -352,8 +354,10 @@ begin
     LSock := ConnectTCP('www.google.com', 443);
     try
       LCtx := GLib.CreateContext(sslCtxClient);
+      LCtx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
       LCtx.SetVerifyMode([sslVerifyPeer]);
       LCtx.SetVerifyDepth(10); // 允许最多 10 级证书链
+      LCtx.SetServerName('www.google.com'); // SNI
 
       LConn := LCtx.CreateConnection(LSock);
       if LConn.Connect then
