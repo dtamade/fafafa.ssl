@@ -21,7 +21,8 @@ interface
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
-  fafafa.ssl.pkcs11.types;
+  fafafa.ssl.pkcs11.types,
+  fafafa.ssl.backend.selector;  // v1.3.0: 自动后端选择
 
 type
   { Forward declarations }
@@ -81,6 +82,17 @@ type
     // OCSP Stapling support
     function WithOCSPStapling(AEnabled: Boolean = True): ISSLContextBuilder;
     function WithOCSPStaplingRequired(ARequired: Boolean = True): ISSLContextBuilder;
+
+    // v1.3.0: Automatic backend selection
+    function WithAutoBackendSelection(const ARequirements: TSSLRequirements): ISSLContextBuilder;
+    function WithSecurityFirst: ISSLContextBuilder;
+    function WithPerformanceFirst: ISSLContextBuilder;
+    function WithCompatibilityFirst: ISSLContextBuilder;
+    function WithBackend(ABackendType: TSSLLibraryType): ISSLContextBuilder;
+    function RequireTLS13: ISSLContextBuilder;
+    function RequireCipher(ACipher: TSSLCipher): ISSLContextBuilder;
+    function RequirePKCS11Support: ISSLContextBuilder;
+    function PreferOSNative: ISSLContextBuilder;
 
     // Options
     function WithOption(AOption: TSSLOption): ISSLContextBuilder;
@@ -188,6 +200,12 @@ type
     // OCSP Stapling fields
     FOCSPStaplingEnabled: Boolean;
     FOCSPStaplingRequired: Boolean;
+
+    // v1.3.0: Automatic backend selection fields
+    FAutoSelectBackend: Boolean;
+    FBackendRequirements: TSSLRequirements;
+    FExplicitBackend: TSSLLibraryType;
+    FExplicitBackendSet: Boolean;
   public
     constructor Create;
     
@@ -230,6 +248,17 @@ type
     // OCSP Stapling support
     function WithOCSPStapling(AEnabled: Boolean = True): ISSLContextBuilder;
     function WithOCSPStaplingRequired(ARequired: Boolean = True): ISSLContextBuilder;
+
+    // v1.3.0: Automatic backend selection
+    function WithAutoBackendSelection(const ARequirements: TSSLRequirements): ISSLContextBuilder;
+    function WithSecurityFirst: ISSLContextBuilder;
+    function WithPerformanceFirst: ISSLContextBuilder;
+    function WithCompatibilityFirst: ISSLContextBuilder;
+    function WithBackend(ABackendType: TSSLLibraryType): ISSLContextBuilder;
+    function RequireTLS13: ISSLContextBuilder;
+    function RequireCipher(ACipher: TSSLCipher): ISSLContextBuilder;
+    function RequirePKCS11Support: ISSLContextBuilder;
+    function PreferOSNative: ISSLContextBuilder;
 
     function BuildClient: ISSLContext;
     function BuildServer: ISSLContext;
@@ -408,6 +437,12 @@ begin
   // OCSP Stapling defaults
   FOCSPStaplingEnabled := False;
   FOCSPStaplingRequired := False;
+
+  // v1.3.0: Automatic backend selection defaults
+  FAutoSelectBackend := False;
+  FillChar(FBackendRequirements, SizeOf(FBackendRequirements), 0);
+  FExplicitBackend := sslOpenSSL;  // 默认
+  FExplicitBackendSet := False;
 end;
 
 function TSSLContextBuilderImpl.WithTLS12: ISSLContextBuilder;
@@ -626,10 +661,27 @@ end;
 function TSSLContextBuilderImpl.BuildClient: ISSLContext;
 var
   Store: ISSLCertificateStore;
+  SelectedBackend: TSSLLibraryType;
+  MatchScore: Integer;
 begin
   Store := nil;
 
-  Result := TSSLFactory.CreateContext(sslCtxClient, sslAutoDetect);
+  // v1.3.0: 自动后端选择
+  if FAutoSelectBackend then
+  begin
+    if not SelectBestBackend(FBackendRequirements, SelectedBackend, MatchScore) then
+      raise ESSLException.Create('No suitable SSL backend found for requirements');
+    Result := TSSLFactory.CreateContext(sslCtxClient, SelectedBackend);
+  end
+  else if FExplicitBackendSet then
+  begin
+    Result := TSSLFactory.CreateContext(sslCtxClient, FExplicitBackend);
+  end
+  else
+  begin
+    Result := TSSLFactory.CreateContext(sslCtxClient, sslAutoDetect);
+  end;
+
   if Result = nil then
     raise ESSLException.Create('Failed to create SSL client context');
   
@@ -698,8 +750,26 @@ begin
 end;
 
 function TSSLContextBuilderImpl.BuildServer: ISSLContext;
+var
+  SelectedBackend: TSSLLibraryType;
+  MatchScore: Integer;
 begin
-  Result := TSSLFactory.CreateContext(sslCtxServer, sslAutoDetect);
+  // v1.3.0: 自动后端选择
+  if FAutoSelectBackend then
+  begin
+    if not SelectBestBackend(FBackendRequirements, SelectedBackend, MatchScore) then
+      raise ESSLException.Create('No suitable SSL backend found for requirements');
+    Result := TSSLFactory.CreateContext(sslCtxServer, SelectedBackend);
+  end
+  else if FExplicitBackendSet then
+  begin
+    Result := TSSLFactory.CreateContext(sslCtxServer, FExplicitBackend);
+  end
+  else
+  begin
+    Result := TSSLFactory.CreateContext(sslCtxServer, sslAutoDetect);
+  end;
+
   if Result = nil then
     raise ESSLException.Create('Failed to create SSL server context');
   
@@ -1653,6 +1723,88 @@ begin
   else if LFieldLower = 'session_cache_enabled' then
     FSessionCacheEnabled := (LowerCase(AValue) = 'true');
   // If field not recognized, silently ignore (defensive programming)
+end;
+
+{ v1.3.0: Automatic backend selection methods }
+
+function TSSLContextBuilderImpl.WithAutoBackendSelection(
+  const ARequirements: TSSLRequirements): ISSLContextBuilder;
+begin
+  Result := Self;
+  FAutoSelectBackend := True;
+  FBackendRequirements := ARequirements;
+end;
+
+function TSSLContextBuilderImpl.WithSecurityFirst: ISSLContextBuilder;
+begin
+  Result := WithAutoBackendSelection(CreateSecurityFirstRequirements);
+end;
+
+function TSSLContextBuilderImpl.WithPerformanceFirst: ISSLContextBuilder;
+begin
+  Result := WithAutoBackendSelection(CreatePerformanceFirstRequirements);
+end;
+
+function TSSLContextBuilderImpl.WithCompatibilityFirst: ISSLContextBuilder;
+begin
+  Result := WithAutoBackendSelection(CreateCompatibilityFirstRequirements);
+end;
+
+function TSSLContextBuilderImpl.WithBackend(ABackendType: TSSLLibraryType): ISSLContextBuilder;
+begin
+  Result := Self;
+  FExplicitBackend := ABackendType;
+  FExplicitBackendSet := True;
+  FAutoSelectBackend := False;  // 显式指定后端时禁用自动选择
+end;
+
+function TSSLContextBuilderImpl.RequireTLS13: ISSLContextBuilder;
+begin
+  Result := Self;
+  if not FAutoSelectBackend then
+  begin
+    // 如果还没有启用自动选择，则创建默认需求
+    FBackendRequirements := CreateDefaultRequirements;
+    FAutoSelectBackend := True;
+  end;
+  // 添加 TLS 1.3 要求
+  FBackendRequirements.RequiredProtocols := [sslProtocolTLS13];
+end;
+
+function TSSLContextBuilderImpl.RequireCipher(ACipher: TSSLCipher): ISSLContextBuilder;
+begin
+  Result := Self;
+  if not FAutoSelectBackend then
+  begin
+    FBackendRequirements := CreateDefaultRequirements;
+    FAutoSelectBackend := True;
+  end;
+  // 添加密码算法要求
+  Include(FBackendRequirements.RequiredCiphers, ACipher);
+end;
+
+function TSSLContextBuilderImpl.RequirePKCS11Support: ISSLContextBuilder;
+begin
+  Result := Self;
+  if not FAutoSelectBackend then
+  begin
+    FBackendRequirements := CreateDefaultRequirements;
+    FAutoSelectBackend := True;
+  end;
+  // 要求 PKCS#11 支持
+  FBackendRequirements.PlatformPreferences.RequirePKCS11 := True;
+end;
+
+function TSSLContextBuilderImpl.PreferOSNative: ISSLContextBuilder;
+begin
+  Result := Self;
+  if not FAutoSelectBackend then
+  begin
+    FBackendRequirements := CreateDefaultRequirements;
+    FAutoSelectBackend := True;
+  end;
+  // 优先 OS 原生实现
+  FBackendRequirements.PlatformPreferences.PreferOSNative := True;
 end;
 
 end.
