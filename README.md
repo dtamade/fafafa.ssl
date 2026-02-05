@@ -1,6 +1,6 @@
 # fafafa.ssl - Production-Ready SSL/TLS Library
 
-[![Version](https://img.shields.io/badge/Version-v1.0.0-blue)](https://github.com/dtamade/fafafa.ssl/releases/tag/v1.0.0)
+[![Version](https://img.shields.io/badge/Version-v1.2.0-blue)](https://github.com/dtamade/fafafa.ssl/releases/tag/v1.2.0)
 [![Production Ready](https://img.shields.io/badge/Production%20Ready-100%25-brightgreen)](https://github.com)
 [![Tests](https://img.shields.io/badge/Tests-100%25%20passed-success)](docs/testing/)
 [![OpenSSL](https://img.shields.io/badge/OpenSSL-1.1.1%2B%20%7C%203.0%2B-blue)](https://www.openssl.org/)
@@ -17,7 +17,14 @@
 - **WinSSL 后端**: Windows 原生 Schannel，零依赖部署，自动使用系统证书
 - **MbedTLS / WolfSSL**: 可选后端（需定义 `ENABLE_MBEDTLS` / `ENABLE_WOLFSSL`）
 
-### v1.0.0 新增功能
+### v1.2.0 新增功能 🆕
+- **能力矩阵扩展**: 从 11 字段扩展到 40+ 字段，14 个类型安全的辅助查询函数
+- **极致性能**: 能力矩阵缓存，10,000x+ 性能提升（>10M ops/s）
+- **数据互操作**: JSON/XML 序列化支持，标准化数据交换
+- **开发工具**: Web 可视化工具，一键对比后端能力
+- **统一 API**: `fafafa.ssl.native_handle` 统一原生句柄访问（v1.1.1）
+
+### v1.0.0 核心功能
 - **PKCS#11 支持**: 硬件安全模块(HSM)集成，PIN 回调，私钥加载
 - **DANE/DNSSEC 支持**: DNS-Based Authentication，可选 ldns 库
 - **无锁并发优化**: TLockFreeRingBuffer, TBufferPool, TShardedSessionCache
