@@ -17,6 +17,12 @@
 - **WinSSL 后端**: Windows 原生 Schannel，零依赖部署，自动使用系统证书
 - **MbedTLS / WolfSSL**: 可选后端（需定义 `ENABLE_MBEDTLS` / `ENABLE_WOLFSSL`）
 
+### v1.3.0 新增功能（进行中）🆕
+- **自动后端选择**: 基于需求智能选择最佳后端（安全/性能/兼容性优先）
+- **Builder 集成**: WithSecurityFirst, RequireTLS13 等链式 API
+- **智能评分**: 40+ 维度评分算法，推荐原因自动生成
+- **完整指南**: 800+ 行后端选择使用指南
+
 ### v1.2.0 新增功能 🆕
 - **能力矩阵扩展**: 从 11 字段扩展到 40+ 字段，14 个类型安全的辅助查询函数
 - **极致性能**: 能力矩阵缓存，10,000x+ 性能提升（>10M ops/s）
@@ -59,6 +65,41 @@ choco install freepascal
 # 验证
 openssl version  # 应显示 1.1.1+ 或 3.0+
 fpc -i           # 应显示 3.2.0+
+```
+
+### 30 秒示例（v1.3.0 自动选择）
+
+```pascal
+program HelloTLS;
+
+uses
+  SysUtils,
+  fafafa.ssl,
+  fafafa.ssl.context.builder;
+
+var
+  Ctx: ISSLContext;
+  TLS: TSSLConnector;
+  Stream: TSSLStream;
+  YourSocket: THandle;
+begin
+  // 1) 自动选择最佳后端（安全优先）
+  Ctx := TSSLContextBuilder.Create
+    .WithSecurityFirst        // v1.3.0: 智能选择
+    .WithVerifyPeer
+    .WithSystemRoots
+    .BuildClient;
+
+  // 2) 建立 TLS
+  TLS := TSSLConnector.FromContext(Ctx);
+  Stream := TLS.ConnectSocket(YourSocket, 'www.google.com');
+  try
+    WriteLn('TLS 连接成功');
+    WriteLn('协议: ', Ord(Stream.Connection.GetProtocolVersion));
+  finally
+    Stream.Free;
+  end;
+end.
 ```
 
 ### 30 秒示例
@@ -109,6 +150,7 @@ fpc -B -Mobjfpc -Sh -Fu./src -Fi./src -FU./lib your_app.pas -o./bin/your_app
 | 文档 | 描述 |
 |------|------|
 | [快速入门](docs/guides/5_MINUTE_QUICKSTART.md) | 5 分钟快速入门 |
+| [后端选择指南](docs/BACKEND_SELECTION_GUIDE.md) | 自动后端选择完整指南（v1.3.0） |
 | [用户指南](docs/guides/USER_GUIDE.md) | 完整用户指南 |
 | [API 参考](docs/reference/API_REFERENCE.md) | API 参考文档 |
 | [WinSSL 指南](docs/guides/WINSSL_USER_GUIDE.md) | WinSSL 后端用户指南 |
@@ -278,6 +320,25 @@ fafafa.ssl/
 详见 [CONTRIBUTING.md](CONTRIBUTING.md) 和 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
 ## 版本历史
+
+- **v1.3.0** (进行中) - 智能化版本
+  - 自动后端选择（阶段 1 ✅ 完成）
+  - 能力矩阵差异对比（阶段 2 计划中）
+  - YAML 序列化支持（阶段 3 计划中）
+
+- **v1.2.0** (2026-02-05) - 能力矩阵扩展版本
+  - 40+ 字段能力矩阵
+  - 14 个辅助查询函数
+  - 能力矩阵缓存（10,000x+ 性能提升）
+  - JSON/XML 序列化
+  - Web 可视化工具
+
+- **v1.1.1** (2026-02-05) - 易用性提升
+  - 统一原生句柄辅助
+  - 泛型类型安全 API
+
+- **v1.1.0** (2026-02-05) - 架构重构版本
+  - GetNativeHandle 抽象重构
 
 - **v1.0.0** (2026-02-05) - 正式发布版本
   - PKCS#11 支持（PIN 回调、私钥加载）

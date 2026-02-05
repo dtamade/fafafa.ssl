@@ -7,6 +7,69 @@
 
 ---
 
+## [Unreleased]
+
+### v1.3.0 阶段 1 - 自动后端选择 (2026-02-05)
+
+**进行中** - 智能化后端选择功能
+
+#### 新增
+
+##### 自动后端选择
+- **fafafa.ssl.backend.selector 单元** - 智能后端选择器
+  - `TSSLRequirements` 记录 - 需求定义
+  - `TSSLOptimizationTarget` 枚举 - 5种优化目标（平衡/安全/性能/体积/兼容性）
+  - `TSSLPlatformPreferences` 记录 - 平台偏好配置
+  - `TSSLBackendMatch` 记录 - 匹配结果详情
+  - `SelectBestBackend()` - 选择单个最佳后端
+  - `SelectBestBackends()` - 选择多个后端并排序
+  - `CreateDefaultRequirements()` - 创建默认需求
+  - `CreateSecurityFirstRequirements()` - 安全优先需求
+  - `CreatePerformanceFirstRequirements()` - 性能优先需求
+  - `CreateCompatibilityFirstRequirements()` - 兼容性优先需求
+  - `ValidateRequirements()` - 需求验证
+  - 智能评分算法（0-100分）
+    - 必需功能 40%
+    - 优选功能 20%
+    - 安全评分 20%
+    - 性能评分 10%
+    - 平台匹配 10%
+  - 推荐原因自动生成
+
+##### Builder 集成
+- **TSSLContextBuilder 扩展** - 链式 API
+  - `WithAutoBackendSelection()` - 显式需求选择
+  - `WithSecurityFirst()` - 安全优先快捷方法
+  - `WithPerformanceFirst()` - 性能优先快捷方法
+  - `WithCompatibilityFirst()` - 兼容性优先快捷方法
+  - `WithBackend()` - 显式指定后端
+  - `RequireTLS13()` - 要求 TLS 1.3
+  - `RequireCipher()` - 要求特定密码算法
+  - `RequirePKCS11Support()` - 要求 PKCS#11
+  - `PreferOSNative()` - 优先 OS 原生实现
+  - BuildClient/BuildServer 自动后端选择集成
+
+#### 文档
+- **BACKEND_SELECTION_GUIDE.md** (818 行) - 完整使用指南
+  - 自动选择概述
+  - TSSLRequirements 详解
+  - 评分算法说明
+  - Builder API 参考
+  - 6 个实际使用场景
+  - 10 个常见问题
+  - 40+ 代码示例
+
+#### 测试
+- **test_backend_selector_basic.pas** - 基础选择测试（6/6 通过）
+- **test_backend_selector_debug.pas** - 调试工具
+- **test_builder_integration.pas** - Builder 集成测试（7/8 通过）
+
+#### 性能
+- SelectBestBackend: <1ms
+- 基于 v1.2.0 能力矩阵缓存（>10M ops/s）
+
+---
+
 ## [1.2.0] - 2026-02-05
 
 **能力矩阵扩展版本** - 细粒度后端能力查询和性能优化
