@@ -22,11 +22,12 @@ uses
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
   fafafa.ssl.mbedtls.base,
+  fafafa.ssl.mbedtls.native_handle,
   fafafa.ssl.mbedtls.api;
 
 type
   { TMbedTLSCertificate - MbedTLS 证书类 }
-  TMbedTLSCertificate = class(TInterfacedObject, ISSLCertificate)
+  TMbedTLSCertificate = class(TInterfacedObject, ISSLCertificate, ISSLNativeHandleAccess)
   private
     FX509Crt: Pmbedtls_x509_crt;
     FInfo: TSSLCertificateInfo;
@@ -94,13 +95,16 @@ type
     procedure SetIssuerCertificate(ACert: ISSLCertificate);
     function GetIssuerCertificate: ISSLCertificate;
 
-    { ISSLCertificate - 原生句柄 }
+    { ISSLNativeHandleAccess implementation }
     function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
+
     function Clone: ISSLCertificate;
   end;
 
   { TMbedTLSCertificateStore - MbedTLS 证书存储类 }
-  TMbedTLSCertificateStore = class(TInterfacedObject, ISSLCertificateStore)
+  TMbedTLSCertificateStore = class(TInterfacedObject, ISSLCertificateStore, ISSLNativeHandleAccess)
   private
     FCACerts: Pmbedtls_x509_crt;
     FCertificates: TInterfaceList;
@@ -135,8 +139,10 @@ type
     function VerifyCertificate(ACert: ISSLCertificate): Boolean;
     function BuildCertificateChain(ACert: ISSLCertificate): TSSLCertificateArray;
 
-    { ISSLCertificateStore - 原生句柄 }
+    { ISSLNativeHandleAccess implementation }
     function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
   end;
 
 implementation
@@ -654,7 +660,7 @@ begin
   if ACAStore = nil then Exit;
   if not Assigned(mbedtls_x509_crt_verify) then Exit;
 
-  LCACerts := Pmbedtls_x509_crt(ACAStore.GetNativeHandle);
+  LCACerts := Pmbedtls_x509_crt(GetNativeHandleSafe(ACAStore, 'TMbedTLSCertificate.Verify'));
   if LCACerts = nil then Exit;
 
   LFlags := 0;
@@ -689,7 +695,7 @@ begin
     Exit;
   end;
 
-  LCACerts := Pmbedtls_x509_crt(ACAStore.GetNativeHandle);
+  LCACerts := Pmbedtls_x509_crt(GetNativeHandleSafe(ACAStore, 'TMbedTLSCertificate.VerifyEx'));
   LFlags := 0;
 
   if mbedtls_x509_crt_verify(FX509Crt, LCACerts, nil, nil, @LFlags, nil, nil) = 0 then
@@ -1129,6 +1135,16 @@ begin
   Result := FX509Crt;
 end;
 
+function TMbedTLSCertificate.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslMbedTLS;
+end;
+
+function TMbedTLSCertificate.IsNativeHandleValid: Boolean;
+begin
+  Result := (FX509Crt <> nil);
+end;
+
 function TMbedTLSCertificate.Clone: ISSLCertificate;
 var
   LClone: TMbedTLSCertificate;
@@ -1395,6 +1411,16 @@ end;
 function TMbedTLSCertificateStore.GetNativeHandle: Pointer;
 begin
   Result := FCACerts;
+end;
+
+function TMbedTLSCertificateStore.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslMbedTLS;
+end;
+
+function TMbedTLSCertificateStore.IsNativeHandleValid: Boolean;
+begin
+  Result := (FCACerts <> nil);
 end;
 
 end.

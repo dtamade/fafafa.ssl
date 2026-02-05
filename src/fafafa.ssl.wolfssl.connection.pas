@@ -23,6 +23,7 @@ uses
   fafafa.ssl.exceptions,
   fafafa.ssl.connection.base,
   fafafa.ssl.wolfssl.base,
+  fafafa.ssl.wolfssl.native_handle,
   fafafa.ssl.wolfssl.api;
 
 type
@@ -151,7 +152,7 @@ end;
 constructor TWolfSSLConnection.Create(AContext: ISSLContext; ASocket: THandle);
 begin
   inherited Create(AContext);
-  FWolfSSLCtx := PWOLFSSL_CTX(AContext.GetNativeHandle);
+  FWolfSSLCtx := PWOLFSSL_CTX(GetNativeHandleSafe(AContext, 'TWolfSSLConnection.Create'));
   FSocket := ASocket;
   FStream := nil;
   FWolfSSL := nil;
@@ -178,7 +179,7 @@ end;
 constructor TWolfSSLConnection.Create(AContext: ISSLContext; AStream: TStream);
 begin
   inherited Create(AContext);
-  FWolfSSLCtx := PWOLFSSL_CTX(AContext.GetNativeHandle);
+  FWolfSSLCtx := PWOLFSSL_CTX(GetNativeHandleSafe(AContext, 'TWolfSSLConnection.Create'));
   FSocket := 0;
   FStream := AStream;
   FWolfSSL := nil;
@@ -469,7 +470,7 @@ begin
   if FWolfSSL = nil then Exit;
   if not Assigned(wolfSSL_set_session) then Exit;
 
-  LSession := PWOLFSSL_SESSION(ASession.GetNativeHandle);
+  LSession := PWOLFSSL_SESSION(GetNativeHandleSafe(ASession, 'TWolfSSLConnection.DoSetSession'));
   if LSession <> nil then
     wolfSSL_set_session(FWolfSSL, LSession);
 end;

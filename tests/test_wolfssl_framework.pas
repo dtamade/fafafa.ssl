@@ -27,6 +27,7 @@ uses
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
   fafafa.ssl.wolfssl.base,
+  fafafa.ssl.wolfssl.native_handle,
   fafafa.ssl.wolfssl.api,
   fafafa.ssl.wolfssl.lib,
   fafafa.ssl.wolfssl.context,
@@ -37,6 +38,15 @@ var
   GTestCount: Integer = 0;
   GPassCount: Integer = 0;
   GFailCount: Integer = 0;
+
+{ Helper function to check if object has native handle }
+function HasNativeHandle(const AObject: IInterface): Boolean;
+var
+  NativeAccess: ISSLNativeHandleAccess;
+begin
+  Result := Supports(AObject, ISSLNativeHandleAccess, NativeAccess) and
+            (NativeAccess.GetNativeHandle <> nil);
+end;
 
 procedure Test(const AName: string; ACondition: Boolean);
 begin
@@ -154,7 +164,7 @@ begin
   LCert := TWolfSSLCertificate.Create;
   try
     Test('Certificate created', LCert <> nil);
-    Test('Certificate not loaded initially', LCert.GetNativeHandle = nil);
+    Test('Certificate not loaded initially', not HasNativeHandle(LCert));
     Test('GetVersion returns default', LCert.GetVersion = 3);
     Test('GetPublicKeyAlgorithm returns default', LCert.GetPublicKeyAlgorithm = 'RSA');
     // Note: Without X509 loaded, GetNotAfter returns Now+365 (default future date), so IsExpired returns False
@@ -224,7 +234,7 @@ begin
       Test('Client context created', LCtx <> nil);
       Test('Context type is client', LCtx.GetContextType = sslCtxClient);
       Test('Context is valid', LCtx.IsValid);
-      Test('Native handle not nil', LCtx.GetNativeHandle <> nil);
+      Test('Native handle not nil', HasNativeHandle(LCtx));
 
       // Test default values
       Test('Default verify mode includes peer', sslVerifyPeer in LCtx.GetVerifyMode);
@@ -360,7 +370,7 @@ begin
     Test('Session timeout default', LSession.GetTimeout = SSL_DEFAULT_SESSION_TIMEOUT);
     Test('Session not valid without handle', not LSession.IsValid);
     Test('Session not resumable without handle', not LSession.IsResumable);
-    Test('Native handle is nil', LSession.GetNativeHandle = nil);
+    Test('Native handle is nil', not HasNativeHandle(LSession));
 
     // Test timeout setting
     LSession.SetTimeout(7200);

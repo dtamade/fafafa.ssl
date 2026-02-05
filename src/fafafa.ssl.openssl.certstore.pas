@@ -19,10 +19,11 @@ uses
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.stack,
+  fafafa.ssl.openssl.native_handle,
   fafafa.ssl.openssl.certificate;
 
 type
-  TOpenSSLCertificateStore = class(TInterfacedObject, ISSLCertificateStore)
+  TOpenSSLCertificateStore = class(TInterfacedObject, ISSLCertificateStore, ISSLNativeHandleAccess)
   private
     FStore: PX509_STORE;
     FOwnsHandle: Boolean;
@@ -57,7 +58,11 @@ type
     function FindByFingerprint(const AFingerprint: string): ISSLCertificate;
     function VerifyCertificate(ACert: ISSLCertificate): Boolean;
     function BuildCertificateChain(ACert: ISSLCertificate): TSSLCertificateArray;
+
+    // ISSLNativeHandleAccess implementation
     function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
   end;
 
 implementation
@@ -257,7 +262,7 @@ begin
   if not Assigned(X509_STORE_add_cert) then
     Exit;
 
-  X509 := PX509(ACert.GetNativeHandle);
+  X509 := PX509(GetNativeHandleSafe(ACert, 'TOpenSSLCertificateStore.AddCertificate'));
   if X509 = nil then
     Exit;
 
@@ -701,6 +706,16 @@ end;
 function TOpenSSLCertificateStore.GetNativeHandle: Pointer;
 begin
   Result := FStore;
+end;
+
+function TOpenSSLCertificateStore.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslOpenSSL;
+end;
+
+function TOpenSSLCertificateStore.IsNativeHandleValid: Boolean;
+begin
+  Result := (FStore <> nil);
 end;
 
 end.

@@ -23,11 +23,12 @@ uses
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.utils,
+  fafafa.ssl.winssl.native_handle,
   fafafa.ssl.utils;
 
 type
   { TWinSSLCertificate - Windows 证书类 }
-  TWinSSLCertificate = class(TInterfacedObject, ISSLCertificate)
+  TWinSSLCertificate = class(TInterfacedObject, ISSLCertificate, ISSLNativeHandleAccess)
   private
     FCertContext: PCCERT_CONTEXT;
     FOwnsContext: Boolean;
@@ -92,9 +93,12 @@ type
     { ISSLCertificate - 证书链 }
     procedure SetIssuerCertificate(ACert: ISSLCertificate);
     function GetIssuerCertificate: ISSLCertificate;
-    
-    { ISSLCertificate - 原生句柄 }
+
+    { ISSLNativeHandleAccess implementation }
     function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
+
     function Clone: ISSLCertificate;
   end;
 
@@ -651,7 +655,7 @@ begin
   if ACAStore <> nil then
   begin
     // 如果提供了自定义 CA 存储，使用它
-    StoreHandle := HCERTSTORE(ACAStore.GetNativeHandle);
+    StoreHandle := HCERTSTORE(GetNativeHandleSafe(ACAStore, 'TWinSSLCertificate.Verify'));
   end;
 
   // 构建证书链
@@ -730,7 +734,7 @@ begin
 
   LStoreHandle := nil;
   if ACAStore <> nil then
-    LStoreHandle := HCERTSTORE(ACAStore.GetNativeHandle);
+    LStoreHandle := HCERTSTORE(GetNativeHandleSafe(ACAStore, 'TWinSSLCertificate.VerifyEx'));
 
   // 根据标志配置链验证
   LChainFlags := 0;
@@ -1408,12 +1412,22 @@ begin
 end;
 
 // ============================================================================
-// ISSLCertificate - 原生句柄
+// ISSLNativeHandleAccess implementation
 // ============================================================================
 
 function TWinSSLCertificate.GetNativeHandle: Pointer;
 begin
   Result := FCertContext;
+end;
+
+function TWinSSLCertificate.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslWinSSL;
+end;
+
+function TWinSSLCertificate.IsNativeHandleValid: Boolean;
+begin
+  Result := (FCertContext <> nil);
 end;
 
 function TWinSSLCertificate.Clone: ISSLCertificate;

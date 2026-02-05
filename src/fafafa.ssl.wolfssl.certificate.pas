@@ -21,11 +21,12 @@ uses
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
   fafafa.ssl.wolfssl.base,
+  fafafa.ssl.wolfssl.native_handle,
   fafafa.ssl.wolfssl.api;
 
 type
   { TWolfSSLCertificate - WolfSSL 证书类 }
-  TWolfSSLCertificate = class(TInterfacedObject, ISSLCertificate)
+  TWolfSSLCertificate = class(TInterfacedObject, ISSLCertificate, ISSLNativeHandleAccess)
   private
     FX509: PWOLFSSL_X509;
     FInfo: TSSLCertificateInfo;
@@ -89,13 +90,16 @@ type
     procedure SetIssuerCertificate(ACert: ISSLCertificate);
     function GetIssuerCertificate: ISSLCertificate;
 
-    { ISSLCertificate - 原生句柄 }
+    { ISSLNativeHandleAccess implementation }
     function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
+
     function Clone: ISSLCertificate;
   end;
 
   { TWolfSSLCertificateStore - WolfSSL 证书存储类 }
-  TWolfSSLCertificateStore = class(TInterfacedObject, ISSLCertificateStore)
+  TWolfSSLCertificateStore = class(TInterfacedObject, ISSLCertificateStore, ISSLNativeHandleAccess)
   private
     FX509Store: PWOLFSSL_X509_STORE;
     FCertificates: TInterfaceList;
@@ -127,8 +131,10 @@ type
     function VerifyCertificate(ACert: ISSLCertificate): Boolean;
     function BuildCertificateChain(ACert: ISSLCertificate): TSSLCertificateArray;
 
-    { ISSLCertificateStore - 原生句柄 }
+    { ISSLNativeHandleAccess implementation }
     function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
   end;
 
 implementation
@@ -472,7 +478,7 @@ begin
   if ACAStore = nil then Exit;
 
   // 获取 CA Store 的原生句柄
-  LStore := PWOLFSSL_X509_STORE(ACAStore.GetNativeHandle);
+  LStore := PWOLFSSL_X509_STORE(GetNativeHandleSafe(ACAStore, 'TWolfSSLCertificate.Verify'));
 
   // 如果有原生 Store，使用它进行验证
   if LStore <> nil then
@@ -771,6 +777,16 @@ begin
   Result := FX509;
 end;
 
+function TWolfSSLCertificate.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslWolfSSL;
+end;
+
+function TWolfSSLCertificate.IsNativeHandleValid: Boolean;
+begin
+  Result := (FX509 <> nil);
+end;
+
 function TWolfSSLCertificate.Clone: ISSLCertificate;
 var
   LClone: TWolfSSLCertificate;
@@ -1039,6 +1055,16 @@ end;
 function TWolfSSLCertificateStore.GetNativeHandle: Pointer;
 begin
   Result := FX509Store;
+end;
+
+function TWolfSSLCertificateStore.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslWolfSSL;
+end;
+
+function TWolfSSLCertificateStore.IsNativeHandleValid: Boolean;
+begin
+  Result := (FX509Store <> nil);
 end;
 
 end.

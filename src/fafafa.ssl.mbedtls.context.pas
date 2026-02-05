@@ -22,6 +22,7 @@ uses
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
   fafafa.ssl.mbedtls.base,
+  fafafa.ssl.mbedtls.native_handle,
   fafafa.ssl.mbedtls.api;
 
 type
@@ -35,7 +36,7 @@ type
   TMbedTLSCertPinArray = array of TMbedTLSCertPin;
 
   { TMbedTLSContext - MbedTLS 上下文类 }
-  TMbedTLSContext = class(TInterfacedObject, ISSLContext)
+  TMbedTLSContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess)
   private
     FLibrary: ISSLLibrary;
     FContextType: TSSLContextType;
@@ -148,7 +149,11 @@ type
 
     { ISSLContext - 状态查询 }
     function IsValid: Boolean;
+
+    { ISSLNativeHandleAccess implementation }
     function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
 
     { 便利方法 }
     procedure ConfigureSecureDefaults;
@@ -640,7 +645,7 @@ begin
     raise ESSLCertError.Create('Certificate store is nil');
 
   // 获取存储的原生句柄（CA 证书链）
-  LCACerts := Pmbedtls_x509_crt(AStore.GetNativeHandle);
+  LCACerts := Pmbedtls_x509_crt(GetNativeHandleSafe(AStore, 'TMbedTLSContext.SetCertificateStore'));
   if LCACerts = nil then
     raise ESSLCertError.Create('Certificate store has no CA certificates');
 
@@ -899,6 +904,16 @@ end;
 function TMbedTLSContext.GetNativeHandle: Pointer;
 begin
   Result := FSSLConfig;
+end;
+
+function TMbedTLSContext.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslMbedTLS;
+end;
+
+function TMbedTLSContext.IsNativeHandleValid: Boolean;
+begin
+  Result := (FSSLConfig <> nil);
 end;
 
 procedure TMbedTLSContext.ConfigureSecureDefaults;

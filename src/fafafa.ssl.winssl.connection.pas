@@ -33,6 +33,7 @@ uses
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.errors,
   fafafa.ssl.winssl.utils,
+  fafafa.ssl.winssl.native_handle,
   fafafa.ssl.winssl.certificate,
   fafafa.ssl.winssl.context;
 
@@ -40,7 +41,7 @@ type
   { TWinSSLSession - Windows Schannel 会话实现
     P0-4: 安全化重构 - 不再持有 CtxtHandle，改为元数据模式
     Schannel 的会话复用由系统自动管理，此类仅保存会话元数据 }
-  TWinSSLSession = class(TInterfacedObject, ISSLSession)
+  TWinSSLSession = class(TInterfacedObject, ISSLSession, ISSLNativeHandleAccess)
   private
     FID: string;
     FCreationTime: TDateTime;
@@ -69,7 +70,11 @@ type
     function Serialize: TBytes;
     function Deserialize(const AData: TBytes): Boolean;
 
+    { ISSLNativeHandleAccess implementation }
     function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
+
     function Clone: ISSLSession;
 
     { 设置对端证书（供 Connection 调用）}
@@ -282,6 +287,17 @@ function TWinSSLSession.GetNativeHandle: Pointer;
 begin
   // Schannel 会话由系统自动管理
   Result := nil;
+end;
+
+function TWinSSLSession.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslWinSSL;
+end;
+
+function TWinSSLSession.IsNativeHandleValid: Boolean;
+begin
+  // WinSSL session 没有原生句柄
+  Result := False;
 end;
 
 function TWinSSLSession.Clone: ISSLSession;
@@ -1087,7 +1103,7 @@ begin
   OutBufferDesc.pBuffers := @OutBuffers[0];
   OutBufferDesc.ulVersion := SECBUFFER_VERSION;
 
-  LCredHandle := PCredHandle(FContext.GetNativeHandle);
+  LCredHandle := PCredHandle(GetNativeHandleSafe(FContext, 'TWinSSLConnection.PerformHandshake'));
 
   dwSSPIFlags := ISC_REQ_SEQUENCE_DETECT or ISC_REQ_REPLAY_DETECT or
     ISC_REQ_CONFIDENTIALITY or ISC_RET_EXTENDED_ERROR or
@@ -1746,7 +1762,7 @@ begin
       LALPNInBufferDesc.ulVersion := SECBUFFER_VERSION;
 
       Status := InitializeSecurityContextW(
-        PCredHandle(FContext.GetNativeHandle),
+        PCredHandle(GetNativeHandleSafe(FContext, 'TWinSSLConnection.ClientHandshake')),
         nil,
         ServerName,
         dwSSPIFlags,
@@ -1763,7 +1779,7 @@ begin
     else
     begin
       Status := InitializeSecurityContextW(
-        PCredHandle(FContext.GetNativeHandle),
+        PCredHandle(GetNativeHandleSafe(FContext, 'TWinSSLConnection.ClientHandshake')),
         nil,
         ServerName,
         dwSSPIFlags,
@@ -1823,7 +1839,7 @@ begin
       PrepareOutputBufferDesc(OutBuffers, OutBufferDesc);
 
       Status := InitializeSecurityContextW(
-        PCredHandle(FContext.GetNativeHandle),
+        PCredHandle(GetNativeHandleSafe(FContext, 'TWinSSLConnection.ClientHandshake')),
         @FCtxtHandle,
         ServerName,
         dwSSPIFlags,
@@ -1963,7 +1979,7 @@ begin
     PrepareOutputBufferDesc(OutBuffers, OutBufferDesc);
 
     Status := AcceptSecurityContextW(
-      PCredHandle(FContext.GetNativeHandle),
+      PCredHandle(GetNativeHandleSafe(FContext, 'TWinSSLConnection.ServerHandshake')),
       phContext,
       @InBufferDesc,
       dwSSPIFlags,

@@ -27,6 +27,7 @@ uses
   fafafa.ssl.openssl.errors,
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.native_handle,  // 原生句柄辅助函数
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl,
   fafafa.ssl.openssl.api.consts,
@@ -40,7 +41,7 @@ uses
   fafafa.ssl.logging;
 
 type
-  TOpenSSLConnection = class(TBaseSSLConnection, ISSLClientConnection)
+  TOpenSSLConnection = class(TBaseSSLConnection, ISSLClientConnection, ISSLNativeHandleAccess)
   private
     FSocket: THandle;
     FStream: TStream;
@@ -97,6 +98,11 @@ type
     procedure SetServerName(const AServerName: string);
     function GetServerName: string;
 
+    { ISSLNativeHandleAccess }
+    function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
+
     { 覆盖基类方法以添加日志 }
     function DoHandshake: TSSLHandshakeState; reintroduce;
 
@@ -123,9 +129,8 @@ begin
   FBioWrite := nil;
   FLastSSLError := 0;
 
-  Ctx := PSSL_CTX(AContext.GetNativeHandle);
-  if Ctx = nil then
-    RaiseInvalidParameter('SSL context (GetNativeHandle returned nil)');
+  // 使用辅助函数安全获取原生句柄
+  Ctx := PSSL_CTX(GetNativeHandleSafe(AContext, 'TOpenSSLConnection.Create'));
 
   FSSL := SSL_new(Ctx);
   if FSSL = nil then
@@ -153,9 +158,8 @@ begin
   FBioWrite := nil;
   FLastSSLError := 0;
 
-  Ctx := PSSL_CTX(AContext.GetNativeHandle);
-  if Ctx = nil then
-    RaiseInvalidParameter('SSL context (GetNativeHandle returned nil)');
+  // 使用辅助函数安全获取原生句柄
+  Ctx := PSSL_CTX(GetNativeHandleSafe(AContext, 'TOpenSSLConnection.Create'));
 
   FSSL := SSL_new(Ctx);
   if FSSL = nil then
@@ -688,8 +692,8 @@ begin
   if not Assigned(SSL_set_session) then
     Exit;
 
-  Sess := PSSL_SESSION(ASession.GetNativeHandle);
-  if Sess = nil then
+  // 使用 TryGetNativeHandle 因为会话可能不支持原生句柄
+  if not TryGetNativeHandle(ASession, Pointer(Sess)) then
     Exit;
 
   SSL_set_session(FSSL, Sess);
@@ -726,6 +730,23 @@ end;
 function TOpenSSLConnection.DoGetNativeHandle: Pointer;
 begin
   Result := FSSL;
+end;
+
+{ ISSLNativeHandleAccess 实现 }
+
+function TOpenSSLConnection.GetNativeHandle: Pointer;
+begin
+  Result := FSSL;
+end;
+
+function TOpenSSLConnection.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslOpenSSL;
+end;
+
+function TOpenSSLConnection.IsNativeHandleValid: Boolean;
+begin
+  Result := (FSSL <> nil);
 end;
 
 { OCSP 方法覆盖 }
@@ -1180,7 +1201,12 @@ begin
     Exit;
   end;
 
-  PeerX509 := PX509(PeerCert.GetNativeHandle);
+  // 安全获取对端证书的原生句柄
+  if not TryGetNativeHandle(PeerCert, Pointer(PeerX509)) then
+  begin
+    Result := False;
+    Exit;
+  end;
   if PeerX509 = nil then
   begin
     if Assigned(SSL_set_verify_result) then
@@ -1248,7 +1274,7 @@ begin
       // Fall back to verified chain building via X509_STORE if needed
       VerifyStore := nil;
       if Assigned(SSL_CTX_get_cert_store) then
-        VerifyStore := SSL_CTX_get_cert_store(PSSL_CTX(FContext.GetNativeHandle));
+        VerifyStore := SSL_CTX_get_cert_store(PSSL_CTX(GetNativeHandleSafe(FContext, 'TOpenSSLConnection.VerifyCertificateOCSP')));
 
       if (IssuerX509 = nil) and (VerifyStore <> nil) and
         Assigned(X509_STORE_CTX_new) and Assigned(X509_STORE_CTX_free) and

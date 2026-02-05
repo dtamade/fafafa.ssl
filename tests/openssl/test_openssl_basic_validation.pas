@@ -19,6 +19,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.factory,
   fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.native_handle,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.x509,
@@ -32,6 +33,15 @@ var
   TestsPassed: Integer = 0;
   TestsFailed: Integer = 0;
   TestsTotal: Integer = 0;
+
+{ Helper function to check if object has native handle }
+function HasNativeHandle(const AObject: IInterface): Boolean;
+var
+  NativeAccess: ISSLNativeHandleAccess;
+begin
+  Result := Supports(AObject, ISSLNativeHandleAccess, NativeAccess) and
+            (NativeAccess.GetNativeHandle <> nil);
+end;
 
 procedure LogTest(const TestName: string; Passed: Boolean; const Details: string = '');
 begin
@@ -260,7 +270,7 @@ begin
     begin
       LogTest('Context.IsValid', Ctx.IsValid);
       LogTest('Context.GetContextType', Ctx.GetContextType = sslCtxClient);
-      LogTest('Context.GetNativeHandle', Ctx.GetNativeHandle <> nil);
+      LogTest('Context.GetNativeHandle', HasNativeHandle(Ctx));
     end;
     
     // 释放Context
@@ -300,7 +310,7 @@ begin
     
     if Assigned(Cert) then
     begin
-      LogTest('Certificate.GetNativeHandle', Cert.GetNativeHandle <> nil);
+      LogTest('Certificate.GetNativeHandle', HasNativeHandle(Cert));
       // 空证书应该返回空信息
       LogTest('Certificate.GetSubject (空)', Cert.GetSubject = '');
       LogTest('Certificate.GetIssuer (空)', Cert.GetIssuer = '');

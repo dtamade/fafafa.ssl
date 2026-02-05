@@ -20,11 +20,12 @@ uses
   SysUtils, Classes, DateUtils,
   fafafa.ssl.base,
   fafafa.ssl.wolfssl.base,
+  fafafa.ssl.wolfssl.native_handle,
   fafafa.ssl.wolfssl.api;
 
 type
   { TWolfSSLSession - WolfSSL 会话类 }
-  TWolfSSLSession = class(TInterfacedObject, ISSLSession)
+  TWolfSSLSession = class(TInterfacedObject, ISSLSession, ISSLNativeHandleAccess)
   private
     FSession: PWOLFSSL_SESSION;
     FOwnsSession: Boolean;
@@ -60,8 +61,11 @@ type
     function Serialize: TBytes;
     function Deserialize(const AData: TBytes): Boolean;
 
-    { ISSLSession - 原生句柄 }
+    { ISSLNativeHandleAccess implementation }
     function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
+
     function Clone: ISSLSession;
 
     { 额外方法 }
@@ -264,6 +268,16 @@ end;
 function TWolfSSLSession.GetNativeHandle: Pointer;
 begin
   Result := FSession;
+end;
+
+function TWolfSSLSession.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslWolfSSL;
+end;
+
+function TWolfSSLSession.IsNativeHandleValid: Boolean;
+begin
+  Result := (FSession <> nil);
 end;
 
 function TWolfSSLSession.Clone: ISSLSession;

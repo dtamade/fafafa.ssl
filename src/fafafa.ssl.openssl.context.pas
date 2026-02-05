@@ -24,6 +24,7 @@ uses
   fafafa.ssl.exceptions,
   fafafa.ssl.openssl.errors,  // Phase 3.1 - OpenSSL-specific error handling
   fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.native_handle,  // 原生句柄辅助函数
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl,
   fafafa.ssl.openssl.api.x509,
@@ -39,7 +40,7 @@ uses
 
 type
   { TOpenSSLContext - OpenSSL 上下文类 }
-  TOpenSSLContext = class(TInterfacedObject, ISSLContext)
+  TOpenSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess)
   private
     FLibrary: ISSLLibrary;
     FContextType: TSSLContextType;
@@ -154,7 +155,11 @@ type
     
     { ISSLContext - 状态查询 }
     function IsValid: Boolean;
+
+    { ISSLNativeHandleAccess - 原生句柄访问 }
     function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
 
     { 便利方法 - 一键配置安全默认值 }
     procedure ConfigureSecureDefaults;
@@ -736,15 +741,10 @@ begin
 
   if ACert = nil then
     RaiseInvalidParameter('Certificate');
-  
-  Cert := PX509(ACert.GetNativeHandle);
-  if Cert = nil then
-    raise ESSLCertificateException.CreateWithContext(
-      'Invalid certificate handle (GetNativeHandle returned nil)',
-      sslErrCertificate,
-      'TOpenSSLContext.LoadCertificate'
-    );
-  
+
+  // 使用辅助函数安全获取原生句柄
+  Cert := PX509(GetNativeHandleSafe(ACert, 'TOpenSSLContext.LoadCertificate'));
+
   if SSL_CTX_use_certificate(FSSLContext, Cert) <> 1 then
     RaiseSSLCertError(
       'Failed to use certificate in SSL context',
@@ -1225,13 +1225,8 @@ begin
   if AStore = nil then
     RaiseInvalidParameter('Certificate store');
 
-  Store := PX509_STORE(AStore.GetNativeHandle);
-  if Store = nil then
-    raise ESSLCertificateException.CreateWithContext(
-      'Invalid certificate store handle (GetNativeHandle returned nil)',
-      sslErrCertificate,
-      'TOpenSSLContext.SetCertificateStore'
-    );
+  // 使用辅助函数安全获取原生句柄
+  Store := PX509_STORE(GetNativeHandleSafe(AStore, 'TOpenSSLContext.SetCertificateStore'));
 
   if Assigned(SSL_CTX_set1_cert_store) then
     SSL_CTX_set1_cert_store(FSSLContext, Store)
@@ -1673,6 +1668,16 @@ end;
 function TOpenSSLContext.GetNativeHandle: Pointer;
 begin
   Result := FSSLContext;
+end;
+
+function TOpenSSLContext.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslOpenSSL;
+end;
+
+function TOpenSSLContext.IsNativeHandleValid: Boolean;
+begin
+  Result := (FSSLContext <> nil);
 end;
 
 procedure TOpenSSLContext.ConfigureSecureDefaults;

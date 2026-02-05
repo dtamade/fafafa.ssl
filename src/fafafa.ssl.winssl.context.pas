@@ -26,11 +26,12 @@ uses
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
   fafafa.ssl.winssl.utils,
+  fafafa.ssl.winssl.native_handle,
   fafafa.ssl.cert.pinning;
 
 type
   { TWinSSLContext - Windows Schannel 上下文类 }
-  TWinSSLContext = class(TInterfacedObject, ISSLContext)
+  TWinSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess)
   private
     FLibrary: ISSLLibrary;
     FContextType: TSSLContextType;
@@ -154,7 +155,11 @@ type
     
     { ISSLContext - 状态查询 }
     function IsValid: Boolean;
+
+    { ISSLNativeHandleAccess implementation }
     function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
 
     { P0-2: 获取 CA 证书存储句柄（供连接验证使用） }
     function GetCAStoreHandle: HCERTSTORE;
@@ -614,7 +619,7 @@ begin
   CleanupCertificate;
 
   // 获取证书的原生句柄
-  FCertContext := PCCERT_CONTEXT(ACert.GetNativeHandle);
+  FCertContext := PCCERT_CONTEXT(GetNativeHandleSafe(ACert, 'TWinSSLContext.LoadCertificate'));
   if FCertContext <> nil then
   begin
     FCertContext := CertDuplicateCertificateContext(FCertContext);
@@ -908,9 +913,10 @@ begin
   if AStore = nil then
     Exit;  // nil 表示清除存储
 
-  if AStore.GetNativeHandle = nil then
+  // 验证存储句柄有效性
+  if not TryGetNativeHandle(AStore, nil) then
     raise ESSLCertificateException.CreateWithContext(
-      'Invalid certificate store handle (GetNativeHandle returned nil)',
+      'Invalid certificate store handle (does not support native handle access)',
       sslErrCertificate,
       'TWinSSLContext.SetCertificateStore',
       0,
@@ -1190,6 +1196,16 @@ begin
   // P0-1: 延迟凭据获取 - 确保返回有效的凭据句柄
   EnsureCredentialsAcquired;
   Result := @FCredHandle;
+end;
+
+function TWinSSLContext.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslWinSSL;
+end;
+
+function TWinSSLContext.IsNativeHandleValid: Boolean;
+begin
+  Result := FInitialized and FCredentialsAcquired;
 end;
 
 { P0-2: 获取 CA 证书存储句柄（供连接验证使用） }

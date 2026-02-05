@@ -20,11 +20,12 @@ uses
   SysUtils, Classes, DateUtils,
   fafafa.ssl.base,
   fafafa.ssl.mbedtls.base,
+  fafafa.ssl.mbedtls.native_handle,
   fafafa.ssl.mbedtls.api;
 
 type
   { TMbedTLSSession - MbedTLS 会话类 }
-  TMbedTLSSession = class(TInterfacedObject, ISSLSession)
+  TMbedTLSSession = class(TInterfacedObject, ISSLSession, ISSLNativeHandleAccess)
   private
     FSession: Pmbedtls_ssl_session;
     FOwnsSession: Boolean;
@@ -62,8 +63,11 @@ type
     function Serialize: TBytes;
     function Deserialize(const AData: TBytes): Boolean;
 
-    { ISSLSession - 原生句柄 }
+    { ISSLNativeHandleAccess implementation }
     function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
+
     function Clone: ISSLSession;
 
     { 额外方法 }
@@ -220,6 +224,16 @@ end;
 function TMbedTLSSession.GetNativeHandle: Pointer;
 begin
   Result := FSession;
+end;
+
+function TMbedTLSSession.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslMbedTLS;
+end;
+
+function TMbedTLSSession.IsNativeHandleValid: Boolean;
+begin
+  Result := (FSession <> nil);
 end;
 
 function TMbedTLSSession.Clone: ISSLSession;

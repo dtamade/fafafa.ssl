@@ -564,7 +564,8 @@ type
   ISSLCertificateStore = interface;
   ISSLSession = interface;
   ISSLLibrary = interface;
-  
+  ISSLNativeHandleAccess = interface;  // 原生句柄访问接口（可选）
+
   // 数组类型
   TSSLCertificateArray = array of ISSLCertificate;
 
@@ -581,6 +582,36 @@ type
     SupportsPEMPrivateKey: Boolean;   // PEM 格式私钥加载支持
     MinTLSVersion: TSSLProtocolVersion;  // 支持的最低 TLS 版本
     MaxTLSVersion: TSSLProtocolVersion;  // 支持的最高 TLS 版本
+  end;
+
+  {**
+   * ISSLNativeHandleAccess - 原生句柄访问接口（可选）
+   *
+   * 这是一个可选接口，仅由基于 C 库的后端（OpenSSL, WinSSL, MbedTLS）实现。
+   * 纯 FreePascal TLS 后端不实现此接口，因为它们没有底层 C 库句柄。
+   *
+   * 使用方法：
+   *   if Supports(Conn, ISSLNativeHandleAccess, NativeAccess) then
+   *     Handle := NativeAccess.GetNativeHandle;
+   *
+   * @since 1.1.0
+   * @breaking-change 从核心接口移除 GetNativeHandle，改为可选接口
+   *}
+  ISSLNativeHandleAccess = interface
+    ['{B2C4E6F8-1A2B-3C4D-5E6F-7A8B9C0D1E2F}']
+
+    {** 获取底层 C 库的原生句柄
+        @returns 平台相关的原生句柄指针（如 SSL*, HSSL 等）
+        @warning 仅适用于 C 库后端，纯 Pascal 后端不实现此接口 *}
+    function GetNativeHandle: Pointer;
+
+    {** 获取后端类型，帮助调用者判断句柄的类型
+        @returns TSSLLibraryType 枚举值 *}
+    function GetBackendType: TSSLLibraryType;
+
+    {** 检查原生句柄是否有效（非空且已初始化）
+        @returns True 如果句柄有效 *}
+    function IsNativeHandleValid: Boolean;
   end;
 
   {**
@@ -926,10 +957,6 @@ type
     {** 检查上下文是否有效
         @returns True 如果上下文已正确初始化 *}
     function IsValid: Boolean;
-
-    {** 获取原生句柄（用于高级操作）
-        @returns 平台相关的原生句柄指针 *}
-    function GetNativeHandle: Pointer;
   end;
 
   {**
@@ -1089,10 +1116,6 @@ type
     {** 获取当前阻塞模式
         @returns True 如果是阻塞模式 *}
     function GetBlocking: Boolean;
-
-    {** 获取原生 SSL 句柄
-        @returns 平台相关的原生句柄 *}
-    function GetNativeHandle: Pointer;
 
     {** 获取关联的上下文
         @returns 创建此连接的上下文接口 *}
@@ -1347,8 +1370,7 @@ type
     procedure SetIssuerCertificate(ACert: ISSLCertificate);
     function GetIssuerCertificate: ISSLCertificate;  // 返回内部引用，不转移所有权
 
-    // 原生句柄
-    function GetNativeHandle: Pointer;  // 返回原生句柄，不转移所有权
+    // 对象管理
     function Clone: ISSLCertificate;    // P3-21: 创建新实例，调用者拥有所有权
   end;
 
@@ -1383,9 +1405,6 @@ type
     // 验证
     function VerifyCertificate(ACert: ISSLCertificate): Boolean;
     function BuildCertificateChain(ACert: ISSLCertificate): TSSLCertificateArray;
-    
-    // 原生句柄
-    function GetNativeHandle: Pointer;
   end;
 
   {**
@@ -1413,9 +1432,8 @@ type
     // 序列化
     function Serialize: TBytes;
     function Deserialize(const AData: TBytes): Boolean;
-    
-    // 原生句柄
-    function GetNativeHandle: Pointer;
+
+    // 对象管理
     function Clone: ISSLSession;
   end;
 

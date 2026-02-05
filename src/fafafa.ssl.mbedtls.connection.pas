@@ -23,6 +23,7 @@ uses
   fafafa.ssl.exceptions,
   fafafa.ssl.connection.base,
   fafafa.ssl.mbedtls.base,
+  fafafa.ssl.mbedtls.native_handle,
   fafafa.ssl.mbedtls.api;
 
 type
@@ -452,7 +453,7 @@ begin
   if FSSLContext = nil then Exit;
   if not Assigned(mbedtls_ssl_set_session) then Exit;
 
-  LRet := mbedtls_ssl_set_session(FSSLContext, Pmbedtls_ssl_session(ASession.GetNativeHandle));
+  LRet := mbedtls_ssl_set_session(FSSLContext, Pmbedtls_ssl_session(GetNativeHandleSafe(ASession, 'TMbedTLSConnection.DoSetSession')));
   if LRet = 0 then
     FSessionReused := True;  // Mark session as potentially reused
 end;
