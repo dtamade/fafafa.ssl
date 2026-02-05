@@ -48,6 +48,7 @@ type
     FCipherList: string;
     FCipherSuites: string;
     FALPNProtocols: string;
+    FALPNProtocolsArray: array of PAnsiChar;  // NULL-terminated array for mbedtls
     FSessionCacheEnabled: Boolean;
     FSessionTimeout: Integer;
     FSessionCacheSize: Integer;
@@ -213,7 +214,15 @@ begin
 end;
 
 destructor TMbedTLSContext.Destroy;
+var
+  I: Integer;
 begin
+  // 清理 ALPN 协议数组
+  for I := 0 to High(FALPNProtocolsArray) do
+    if FALPNProtocolsArray[I] <> nil then
+      StrDispose(FALPNProtocolsArray[I]);
+  SetLength(FALPNProtocolsArray, 0);
+
   FreeConfig;
   FLibrary := nil;
   inherited Destroy;
@@ -761,8 +770,44 @@ begin
 end;
 
 procedure TMbedTLSContext.SetALPNProtocols(const AProtocols: string);
+var
+  LProtos: TStringList;
+  I, LRet: Integer;
 begin
   FALPNProtocols := AProtocols;
+
+  // 清理旧的数组
+  for I := 0 to High(FALPNProtocolsArray) do
+    if FALPNProtocolsArray[I] <> nil then
+      StrDispose(FALPNProtocolsArray[I]);
+  SetLength(FALPNProtocolsArray, 0);
+
+  if FSSLConfig = nil then Exit;
+  if AProtocols = '' then Exit;
+  if not Assigned(mbedtls_ssl_conf_alpn_protocols) then Exit;
+
+  // 解析逗号分隔的协议列表
+  LProtos := TStringList.Create;
+  try
+    LProtos.Delimiter := ',';
+    LProtos.StrictDelimiter := True;
+    LProtos.DelimitedText := Trim(AProtocols);
+
+    if LProtos.Count = 0 then Exit;
+
+    // 构建 NULL-terminated 数组 (需要额外一个 nil 结尾)
+    SetLength(FALPNProtocolsArray, LProtos.Count + 1);
+    for I := 0 to LProtos.Count - 1 do
+      FALPNProtocolsArray[I] := StrNew(PAnsiChar(AnsiString(Trim(LProtos[I]))));
+    FALPNProtocolsArray[LProtos.Count] := nil;  // NULL 终止
+
+    // 配置到 mbedtls
+    LRet := mbedtls_ssl_conf_alpn_protocols(FSSLConfig, @FALPNProtocolsArray[0]);
+    if LRet <> 0 then
+      raise ESSLException.CreateFmt('Failed to set ALPN protocols: 0x%04X', [-LRet]);
+  finally
+    LProtos.Free;
+  end;
 end;
 
 function TMbedTLSContext.GetALPNProtocols: string;

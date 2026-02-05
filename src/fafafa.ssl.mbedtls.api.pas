@@ -102,6 +102,8 @@ type
   Tmbedtls_ssl_get_verify_result = function(ssl: Pmbedtls_ssl_context): Cardinal; cdecl;
   Tmbedtls_ssl_get_ciphersuite = function(ssl: Pmbedtls_ssl_context): PAnsiChar; cdecl;
   Tmbedtls_ssl_get_alpn_protocol = function(ssl: Pmbedtls_ssl_context): PAnsiChar; cdecl;
+  Tmbedtls_ssl_conf_alpn_protocols = function(conf: Pmbedtls_ssl_config;
+    protos: PPAnsiChar): Integer; cdecl;
 
   // SSL 会话
   Tmbedtls_ssl_session_init = procedure(session: Pmbedtls_ssl_session); cdecl;
@@ -194,6 +196,7 @@ var
   mbedtls_ssl_get_verify_result: Tmbedtls_ssl_get_verify_result = nil;
   mbedtls_ssl_get_ciphersuite: Tmbedtls_ssl_get_ciphersuite = nil;
   mbedtls_ssl_get_alpn_protocol: Tmbedtls_ssl_get_alpn_protocol = nil;
+  mbedtls_ssl_conf_alpn_protocols: Tmbedtls_ssl_conf_alpn_protocols = nil;
 
   { 函数指针 - SSL 会话 }
   mbedtls_ssl_session_init: Tmbedtls_ssl_session_init = nil;
@@ -284,6 +287,7 @@ begin
   mbedtls_ssl_get_verify_result := nil;
   mbedtls_ssl_get_ciphersuite := nil;
   mbedtls_ssl_get_alpn_protocol := nil;
+  mbedtls_ssl_conf_alpn_protocols := nil;
   // SSL 会话
   mbedtls_ssl_session_init := nil;
   mbedtls_ssl_session_free := nil;
@@ -414,6 +418,8 @@ begin
     GetProc(GMbedTLSHandle, 'mbedtls_ssl_get_ciphersuite'));
   mbedtls_ssl_get_alpn_protocol := Tmbedtls_ssl_get_alpn_protocol(
     GetProc(GMbedTLSHandle, 'mbedtls_ssl_get_alpn_protocol'));
+  mbedtls_ssl_conf_alpn_protocols := Tmbedtls_ssl_conf_alpn_protocols(
+    GetProc(GMbedTLSHandle, 'mbedtls_ssl_conf_alpn_protocols'));
 
   // 加载 SSL 会话函数（从 mbedtls）
   mbedtls_ssl_session_init := Tmbedtls_ssl_session_init(
