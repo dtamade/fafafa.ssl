@@ -355,6 +355,7 @@ begin
   if not FInitialized then
     Exit;
 
+  // v1.1.0 字段（向后兼容）
   Result.SupportsTLS13 := FCapabilities.HasTLS13;
   Result.SupportsALPN := FCapabilities.HasALPN;
   Result.SupportsSNI := FCapabilities.HasSNI;
@@ -370,6 +371,65 @@ begin
     Result.MaxTLSVersion := sslProtocolTLS13
   else
     Result.MaxTLSVersion := sslProtocolTLS12;
+
+  // v1.2.0 新增字段
+  Result.BackendType := sslWolfSSL;
+  Result.BackendImplType := sslImplCLibrary;
+  Result.BackendVersion := GetVersionString;
+  Result.SupportsDTLS := True;  // WolfSSL 支持 DTLS
+
+  // 功能支持级别
+  Result.SNISupport := sslSupportStable;
+  Result.ALPNSupport := sslSupportStable;
+  if FCapabilities.HasOCSP then
+    Result.OCSPStaplingSupport := sslSupportStable
+  else
+    Result.OCSPStaplingSupport := sslSupportNone;
+  Result.CertTransparencySupport := sslSupportNone;
+  Result.SessionTicketsSupport := sslSupportStable;
+
+  // 密码算法支持
+  Result.SupportedCiphers := [
+    sslCipherAES128, sslCipherAES256, sslCipherAES128GCM, sslCipherAES256GCM
+  ];
+  if FCapabilities.HasChaCha20 then
+    Result.SupportedCiphers := Result.SupportedCiphers + [sslCipherCHACHA20_POLY1305];
+
+  // 哈希算法支持
+  Result.SupportedHashes := [
+    sslHashSHA1, sslHashSHA256, sslHashSHA384, sslHashSHA512
+  ];
+
+  // 密钥交换算法支持
+  Result.SupportedKeyExchanges := [
+    sslKexRSA, sslKexDHE_RSA, sslKexECDHE_RSA, sslKexECDHE_ECDSA
+  ];
+
+  // 性能特性（WolfSSL 针对嵌入式优化）
+  Result.HasHardwareAcceleration := True;  // 支持硬件加速
+  Result.HasSIMDOptimization := True;      // 支持 SIMD
+  Result.HasAssemblyOptimization := True;  // 有汇编优化
+
+  // 平台特性
+  Result.RequiresExternalLibrary := True;
+  Result.SupportsSystemCertStore := False;  // WolfSSL 通常不使用系统证书存储
+  Result.SupportsPKCS11 := False;           // 需要特殊配置
+  Result.SupportsTPM := False;
+
+  // 安全特性
+  Result.HasConstantTimeOperations := True;  // WolfSSL 注重恒定时间操作
+  Result.SupportsFIPSMode := False;          // 需要 FIPS 版本
+  Result.HasSecureMemoryWipe := True;
+
+  // 证书和密钥格式支持
+  Result.SupportsDERPrivateKey := True;
+  Result.SupportsPKCS8PrivateKey := True;
+  Result.SupportsPKCS12 := True;
+  Result.SupportsPasswordProtectedKeys := True;
+
+  // 兼容性（WolfSSL 与 OpenSSL 兼容性较好）
+  Result.CompatibilityLevel := 85;  // 85% 兼容性
+  Result.KnownIssues := 'May require specific build options for full feature support';
 end;
 
 procedure TWolfSSLLibrary.SetDefaultConfig(const AConfig: TSSLConfig);

@@ -553,8 +553,10 @@ end;
 
 function TOpenSSLLibrary.GetCapabilities: TSSLBackendCapabilities;
 begin
-  // P2-2: 返回 OpenSSL 后端能力矩阵
+  // P2-2 + v1.2: 返回 OpenSSL 后端完整能力矩阵
   FillChar(Result, SizeOf(Result), 0);
+
+  // ===== v1.1.0 保留字段（向后兼容）=====
 
   // 检测 TLS 1.3 支持 (OpenSSL 1.1.1+)
   Result.SupportsTLS13 := (FVersionNumber >= $1010100F);
@@ -583,6 +585,132 @@ begin
     Result.MaxTLSVersion := sslProtocolTLS13
   else
     Result.MaxTLSVersion := sslProtocolTLS12;
+
+  // ===== v1.2.0 新增字段 =====
+
+  // ----- 基础信息 -----
+  Result.BackendType := sslOpenSSL;
+  Result.BackendImplType := sslImplCLibrary;  // OpenSSL 是 C 库绑定
+  Result.BackendVersion := GetVersionString;
+
+  // ----- 协议支持 -----
+  Result.SupportsDTLS := True;  // OpenSSL 支持 DTLS
+
+  // ----- 高级特性支持（带支持级别）-----
+  Result.SNISupport := sslSupportStable;
+  Result.ALPNSupport := sslSupportStable;
+  Result.OCSPStaplingSupport := sslSupportStable;
+
+  // Certificate Transparency: OpenSSL 1.1.0+ 为实验性，3.0+ 为稳定
+  if FVersionNumber >= $30000000 then
+    Result.CertTransparencySupport := sslSupportStable
+  else if FVersionNumber >= $1010000F then
+    Result.CertTransparencySupport := sslSupportExperimental
+  else
+    Result.CertTransparencySupport := sslSupportNone;
+
+  Result.SessionTicketsSupport := sslSupportStable;
+  Result.SessionCacheSupport := sslSupportStable;
+
+  // 0-RTT 和 Early Data（仅 TLS 1.3）
+  if Result.SupportsTLS13 then
+  begin
+    Result.ZeroRTTSupport := sslSupportStable;
+    Result.EarlyDataSupport := sslSupportStable;
+  end
+  else
+  begin
+    Result.ZeroRTTSupport := sslSupportNone;
+    Result.EarlyDataSupport := sslSupportNone;
+  end;
+
+  // 重新协商（TLS 1.2）- OpenSSL 3.0 已弃用
+  if FVersionNumber >= $30000000 then
+    Result.RenegotiationSupport := sslSupportDeprecated
+  else
+    Result.RenegotiationSupport := sslSupportStable;
+
+  // 握手后认证（TLS 1.3）
+  if Result.SupportsTLS13 then
+    Result.PostHandshakeAuthSupport := sslSupportStable
+  else
+    Result.PostHandshakeAuthSupport := sslSupportNone;
+
+  // ----- 算法支持（细粒度）-----
+  Result.SupportedCiphers := [
+    sslCipherAES128, sslCipherAES256,
+    sslCipherAES128GCM, sslCipherAES256GCM
+  ];
+
+  // 3DES 已弃用但仍支持（向后兼容）
+  if FVersionNumber < $30000000 then
+    Result.SupportedCiphers := Result.SupportedCiphers + [sslCipher3DES];
+
+  // ChaCha20-Poly1305 需要 OpenSSL 1.1.0+
+  if FVersionNumber >= $1010000F then
+    Result.SupportedCiphers := Result.SupportedCiphers + [sslCipherCHACHA20_POLY1305];
+
+  // RC4 和 DES 在 OpenSSL 3.0+ 中不再支持
+  if FVersionNumber < $30000000 then
+    Result.SupportedCiphers := Result.SupportedCiphers + [sslCipherRC4, sslCipherDES];
+
+  Result.SupportedHashes := [
+    sslHashSHA1,      // 已弃用但支持
+    sslHashSHA224,
+    sslHashSHA256, sslHashSHA384, sslHashSHA512
+  ];
+
+  // SHA3 和 BLAKE2 需要 OpenSSL 1.1.1+
+  if FVersionNumber >= $1010100F then
+    Result.SupportedHashes := Result.SupportedHashes +
+      [sslHashSHA3_256, sslHashSHA3_512, sslHashBLAKE2b];
+
+  // MD5 在 OpenSSL 3.0+ 中受限
+  if FVersionNumber < $30000000 then
+    Result.SupportedHashes := Result.SupportedHashes + [sslHashMD5];
+
+  Result.SupportedKeyExchanges := [
+    sslKexRSA,           // TLS 1.2 及以下，TLS 1.3 不支持
+    sslKexDHE_RSA,
+    sslKexECDHE_RSA,
+    sslKexDHE_DSS,
+    sslKexECDHE_ECDSA
+  ];
+
+  // ----- 性能特性 -----
+  // 硬件加速：需要运行时检测 AES-NI 等
+  Result.HasHardwareAcceleration := True;  // OpenSSL 自动检测并使用
+  Result.HasSIMDOptimization := True;      // OpenSSL 包含 SIMD 优化
+  Result.HasAssemblyOptimization := True;  // OpenSSL 包含汇编优化
+
+  // ----- 平台特性 -----
+  Result.RequiresExternalLibrary := True;  // 需要 libssl.so / libssl.dll
+  {$IFDEF WINDOWS}
+  Result.SupportsSystemCertStore := True;  // Windows 可访问系统证书
+  {$ELSE}
+  Result.SupportsSystemCertStore := False;
+  {$ENDIF}
+  Result.SupportsPKCS11 := True;           // 通过 ENGINE 支持
+  Result.SupportsTPM := True;              // 通过 ENGINE 支持
+
+  // ----- 安全特性 -----
+  Result.HasConstantTimeOperations := True;   // OpenSSL 实现恒定时间算法
+  Result.SupportsFIPSMode := False;           // 默认构建不启用，需要 FIPS 模块
+  Result.HasSecureMemoryWipe := True;         // OPENSSL_cleanse
+
+  // ----- 证书和密钥支持 -----
+  Result.SupportsDERPrivateKey := True;
+  Result.SupportsPKCS8PrivateKey := True;
+  Result.SupportsPKCS12 := True;
+  Result.SupportsPasswordProtectedKeys := True;
+
+  // ----- 扩展性 -----
+  Result.SupportsCustomCipherSuites := True;
+  Result.SupportsCallbacks := True;
+
+  // ----- 兼容性和质量 -----
+  Result.CompatibilityLevel := 100;  // OpenSSL 是参考实现，完全兼容
+  Result.KnownIssues := '';
 
   InternalLog(sslLogDebug, Format('GetCapabilities: TLS1.3=%s, ALPN=%s, SNI=%s',
     [

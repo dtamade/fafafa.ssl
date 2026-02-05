@@ -415,6 +415,7 @@ begin
   if not FInitialized then
     Exit;
 
+  // v1.1.0 字段（向后兼容）
   Result.SupportsTLS13 := FCapabilities.HasTLS13;
   Result.SupportsALPN := FCapabilities.HasALPN;
   Result.SupportsSNI := FCapabilities.HasSNI;
@@ -430,6 +431,62 @@ begin
     Result.MaxTLSVersion := sslProtocolTLS13
   else
     Result.MaxTLSVersion := sslProtocolTLS12;
+
+  // v1.2.0 新增字段
+  Result.BackendType := sslMbedTLS;
+  Result.BackendImplType := sslImplCLibrary;
+  Result.BackendVersion := GetVersionString;
+  Result.SupportsDTLS := True;  // MbedTLS 支持 DTLS
+
+  // 功能支持级别
+  Result.SNISupport := sslSupportStable;
+  Result.ALPNSupport := sslSupportStable;
+  Result.OCSPStaplingSupport := sslSupportNone;  // 需要手动实现
+  Result.CertTransparencySupport := sslSupportNone;
+  Result.SessionTicketsSupport := sslSupportStable;
+
+  // 密码算法支持（MbedTLS 主要针对嵌入式，算法精简）
+  Result.SupportedCiphers := [
+    sslCipherAES128, sslCipherAES256, sslCipherAES128GCM, sslCipherAES256GCM
+  ];
+  if FCapabilities.HasChaCha20 then
+    Result.SupportedCiphers := Result.SupportedCiphers + [sslCipherCHACHA20_POLY1305];
+
+  // 哈希算法支持
+  Result.SupportedHashes := [
+    sslHashSHA1, sslHashSHA256, sslHashSHA384, sslHashSHA512
+  ];
+
+  // 密钥交换算法支持
+  Result.SupportedKeyExchanges := [
+    sslKexRSA, sslKexDHE_RSA, sslKexECDHE_RSA, sslKexECDHE_ECDSA
+  ];
+
+  // 性能特性（MbedTLS 针对嵌入式和IoT优化）
+  Result.HasHardwareAcceleration := True;   // 支持硬件加速
+  Result.HasSIMDOptimization := False;      // 通常不使用 SIMD（嵌入式）
+  Result.HasAssemblyOptimization := True;   // 部分汇编优化
+
+  // 平台特性
+  Result.RequiresExternalLibrary := True;
+  Result.SupportsSystemCertStore := False;  // 嵌入式通常不使用系统证书
+  Result.SupportsPKCS11 := False;           // 需要特殊配置
+  Result.SupportsTPM := False;
+
+  // 安全特性（MbedTLS 注重嵌入式安全）
+  Result.HasConstantTimeOperations := True;
+  Result.SupportsFIPSMode := False;         // 不支持 FIPS
+  Result.HasSecureMemoryWipe := True;
+
+  // 证书和密钥格式支持
+  Result.SupportsDERPrivateKey := True;
+  Result.SupportsPKCS8PrivateKey := True;
+  Result.SupportsPKCS12 := True;
+  Result.SupportsPasswordProtectedKeys := True;
+
+  // 兼容性（MbedTLS 与 OpenSSL 兼容性中等，部分功能需要适配）
+  Result.CompatibilityLevel := 75;  // 75% 兼容性
+  Result.KnownIssues := 'Optimized for embedded systems, may lack some enterprise features';
 end;
 
 procedure TMbedTLSLibrary.SetDefaultConfig(const AConfig: TSSLConfig);

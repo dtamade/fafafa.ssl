@@ -96,11 +96,28 @@ type
   TSSLLibraryType = (
     sslAutoDetect,   // 自动检测可用库
     sslOpenSSL,      // OpenSSL
-    sslWolfSSL,      // WolfSSL  
+    sslWolfSSL,      // WolfSSL
     sslMbedTLS,      // MbedTLS
-    sslWinSSL        // Windows Schannel (仅Windows)
+    sslWinSSL,       // Windows Schannel (仅Windows)
+    sslFreePascal    // 纯 FreePascal 实现（未来）
   );
   TSSLLibraryTypes = set of TSSLLibraryType;
+
+  { 后端实现类型 (v1.2 新增) }
+  TSSLBackendImplType = (
+    sslImplNative,      // 纯 FreePascal 实现（无外部依赖）
+    sslImplCLibrary,    // C 语言库绑定（OpenSSL, MbedTLS 等）
+    sslImplOSNative,    // 操作系统原生 API（WinSSL, SecureTransport 等）
+    sslImplHybrid       // 混合实现（部分纯 Pascal + 部分 C 库）
+  );
+
+  { 功能支持级别 (v1.2 新增) }
+  TSSLFeatureSupportLevel = (
+    sslSupportNone,        // 不支持
+    sslSupportExperimental,// 实验性（不推荐生产）
+    sslSupportStable,      // 稳定（推荐生产）
+    sslSupportDeprecated   // 已弃用（计划移除）
+  );
 
   { SSL/TLS 协议版本 }
   TSSLProtocolVersion = (
@@ -253,6 +270,7 @@ type
     sslKexDHE_PSK,
     sslKexRSA_PSK
   );
+  TSSLKeyExchangeSupport = set of TSSLKeyExchange;  // v1.2: 算法支持集合
 
   { 加密算法 }
   TSSLCipher = (
@@ -266,6 +284,7 @@ type
     sslCipherDES,
     sslCipherRC4
   );
+  TSSLCipherSupport = set of TSSLCipher;  // v1.2: 算法支持集合
 
   { 哈希算法 }
   TSSLHash = (
@@ -279,6 +298,7 @@ type
     sslHashSHA3_512,
     sslHashBLAKE2b
   );
+  TSSLHashSupport = set of TSSLHash;  // v1.2: 算法支持集合
 
   { 通用字符串数组，用于只读字段传递 }
   TSSLStringArray = array of string;
@@ -569,8 +589,9 @@ type
   // 数组类型
   TSSLCertificateArray = array of ISSLCertificate;
 
-  { TSSLBackendCapabilities - 后端能力矩阵 (P2-2) }
+  { TSSLBackendCapabilities - 后端能力矩阵 (v1.2 扩展) }
   TSSLBackendCapabilities = record
+    // ===== v1.1.0 保留字段（向后兼容）=====
     SupportsTLS13: Boolean;           // TLS 1.3 支持
     SupportsALPN: Boolean;            // 应用层协议协商
     SupportsSNI: Boolean;             // 服务器名称指示
@@ -582,6 +603,63 @@ type
     SupportsPEMPrivateKey: Boolean;   // PEM 格式私钥加载支持
     MinTLSVersion: TSSLProtocolVersion;  // 支持的最低 TLS 版本
     MaxTLSVersion: TSSLProtocolVersion;  // 支持的最高 TLS 版本
+
+    // ===== v1.2.0 新增字段 =====
+
+    // ----- 基础信息 -----
+    BackendType: TSSLLibraryType;       // 后端类型（OpenSSL, WinSSL 等）
+    BackendImplType: TSSLBackendImplType; // 实现类型（原生/C库/OS原生）
+    BackendVersion: string;             // 后端版本（如 "OpenSSL 3.0.13"）
+
+    // ----- 协议支持 -----
+    SupportsDTLS: Boolean;              // DTLS 支持
+
+    // ----- 高级特性支持（带支持级别）-----
+    SNISupport: TSSLFeatureSupportLevel;        // SNI 支持级别
+    ALPNSupport: TSSLFeatureSupportLevel;       // ALPN 支持级别
+    OCSPStaplingSupport: TSSLFeatureSupportLevel; // OCSP 装订支持级别
+    CertTransparencySupport: TSSLFeatureSupportLevel; // 证书透明度支持级别
+    SessionTicketsSupport: TSSLFeatureSupportLevel;   // 会话票据支持级别
+    SessionCacheSupport: TSSLFeatureSupportLevel;     // 会话缓存支持级别
+    ZeroRTTSupport: TSSLFeatureSupportLevel;    // 0-RTT 支持级别（TLS 1.3）
+    EarlyDataSupport: TSSLFeatureSupportLevel;  // Early Data 支持级别
+    RenegotiationSupport: TSSLFeatureSupportLevel; // 重新协商支持级别（TLS 1.2）
+    PostHandshakeAuthSupport: TSSLFeatureSupportLevel; // 握手后认证（TLS 1.3）
+
+    // ----- 算法支持（细粒度）-----
+    SupportedCiphers: TSSLCipherSupport;        // 支持的对称加密算法
+    SupportedHashes: TSSLHashSupport;           // 支持的哈希算法
+    SupportedKeyExchanges: TSSLKeyExchangeSupport; // 支持的密钥交换算法
+
+    // ----- 性能特性 -----
+    HasHardwareAcceleration: Boolean;    // 是否支持硬件加速（AES-NI 等）
+    HasSIMDOptimization: Boolean;        // 是否有 SIMD 优化
+    HasAssemblyOptimization: Boolean;    // 是否有汇编优化
+
+    // ----- 平台特性 -----
+    RequiresExternalLibrary: Boolean;    // 是否需要外部库文件
+    SupportsSystemCertStore: Boolean;    // 是否支持系统证书存储
+    SupportsPKCS11: Boolean;             // 是否支持 PKCS#11 硬件令牌
+    SupportsTPM: Boolean;                // 是否支持 TPM（可信平台模块）
+
+    // ----- 安全特性 -----
+    HasConstantTimeOperations: Boolean;  // 是否有恒定时间操作（防时序攻击）
+    SupportsFIPSMode: Boolean;           // 是否支持 FIPS 140-2 模式
+    HasSecureMemoryWipe: Boolean;        // 是否有安全内存擦除
+
+    // ----- 证书和密钥支持 -----
+    SupportsDERPrivateKey: Boolean;      // DER 格式私钥加载支持
+    SupportsPKCS8PrivateKey: Boolean;    // PKCS#8 格式私钥支持
+    SupportsPKCS12: Boolean;             // PKCS#12 证书包支持
+    SupportsPasswordProtectedKeys: Boolean; // 加密私钥支持
+
+    // ----- 扩展性 -----
+    SupportsCustomCipherSuites: Boolean; // 是否支持自定义密码套件
+    SupportsCallbacks: Boolean;          // 是否支持回调函数
+
+    // ----- 兼容性和质量 -----
+    CompatibilityLevel: Integer;         // 兼容性级别（0-100，100=完全兼容）
+    KnownIssues: string;                 // 已知问题描述（简短）
   end;
 
   {**
@@ -1477,7 +1555,8 @@ const
     'OpenSSL',
     'WolfSSL',
     'MbedTLS',
-    'Windows Schannel'
+    'Windows Schannel',
+    'FreePascal Native'
   );
 
   // 协议版本字符串
@@ -1619,6 +1698,74 @@ function GetFafafaSSLInterfaceVersion: Integer;
     @param ARequiredVersion 要求的最低接口版本
     @returns True 如果当前版本 >= 要求版本 *}
 function CheckInterfaceVersion(ARequiredVersion: Integer): Boolean;
+
+// ===== v1.2: 能力矩阵辅助函数 =====
+
+{** 检查算法是否被后端支持
+    @param ACaps 后端能力矩阵
+    @param ACipher 要检查的加密算法
+    @returns True 如果支持 *}
+function IsCipherSupported(const ACaps: TSSLBackendCapabilities;
+                          ACipher: TSSLCipher): Boolean;
+
+{** 检查哈希算法是否被后端支持
+    @param ACaps 后端能力矩阵
+    @param AHash 要检查的哈希算法
+    @returns True 如果支持 *}
+function IsHashSupported(const ACaps: TSSLBackendCapabilities;
+                        AHash: TSSLHash): Boolean;
+
+{** 检查密钥交换算法是否被后端支持
+    @param ACaps 后端能力矩阵
+    @param AKex 要检查的密钥交换算法
+    @returns True 如果支持 *}
+function IsKeyExchangeSupported(const ACaps: TSSLBackendCapabilities;
+                                AKex: TSSLKeyExchange): Boolean;
+
+{** 检查功能支持级别是否为稳定
+    @param ASupport 支持级别
+    @returns True 如果为稳定 *}
+function IsFeatureStable(ASupport: TSSLFeatureSupportLevel): Boolean;
+
+{** 检查功能是否可用（稳定或实验性）
+    @param ASupport 支持级别
+    @returns True 如果可用 *}
+function IsFeatureUsable(ASupport: TSSLFeatureSupportLevel): Boolean;
+
+{** 检查功能是否已弃用
+    @param ASupport 支持级别
+    @returns True 如果已弃用 *}
+function IsFeatureDeprecated(ASupport: TSSLFeatureSupportLevel): Boolean;
+
+{** 检查是否为原生 FreePascal 后端
+    @param ACaps 后端能力矩阵
+    @returns True 如果为纯 Pascal 实现 *}
+function IsNativeBackend(const ACaps: TSSLBackendCapabilities): Boolean;
+
+{** 检查是否为 C 库后端
+    @param ACaps 后端能力矩阵
+    @returns True 如果为 C 库绑定 *}
+function IsCLibraryBackend(const ACaps: TSSLBackendCapabilities): Boolean;
+
+{** 检查后端是否需要外部依赖
+    @param ACaps 后端能力矩阵
+    @returns True 如果需要外部库文件 *}
+function RequiresExternalDependencies(const ACaps: TSSLBackendCapabilities): Boolean;
+
+{** 计算后端安全性评分（0-100）
+    @param ACaps 后端能力矩阵
+    @returns 安全性评分 *}
+function GetSecurityScore(const ACaps: TSSLBackendCapabilities): Integer;
+
+{** 计算后端性能评分（0-100）
+    @param ACaps 后端能力矩阵
+    @returns 性能评分 *}
+function GetPerformanceScore(const ACaps: TSSLBackendCapabilities): Integer;
+
+{** 生成能力矩阵的人类可读描述
+    @param ACaps 后端能力矩阵
+    @returns 描述字符串 *}
+function GetCapabilitiesDescription(const ACaps: TSSLBackendCapabilities): string;
 
 implementation
 
@@ -1994,6 +2141,187 @@ end;
 function CheckInterfaceVersion(ARequiredVersion: Integer): Boolean;
 begin
   Result := FAFAFA_SSL_INTERFACE_VERSION >= ARequiredVersion;
+end;
+
+// ============================================================================
+// v1.2: 能力矩阵辅助函数实现
+// ============================================================================
+
+function IsCipherSupported(const ACaps: TSSLBackendCapabilities;
+                          ACipher: TSSLCipher): Boolean;
+begin
+  Result := ACipher in ACaps.SupportedCiphers;
+end;
+
+function IsHashSupported(const ACaps: TSSLBackendCapabilities;
+                        AHash: TSSLHash): Boolean;
+begin
+  Result := AHash in ACaps.SupportedHashes;
+end;
+
+function IsKeyExchangeSupported(const ACaps: TSSLBackendCapabilities;
+                                AKex: TSSLKeyExchange): Boolean;
+begin
+  Result := AKex in ACaps.SupportedKeyExchanges;
+end;
+
+function IsFeatureStable(ASupport: TSSLFeatureSupportLevel): Boolean;
+begin
+  Result := ASupport = sslSupportStable;
+end;
+
+function IsFeatureUsable(ASupport: TSSLFeatureSupportLevel): Boolean;
+begin
+  Result := ASupport in [sslSupportStable, sslSupportExperimental];
+end;
+
+function IsFeatureDeprecated(ASupport: TSSLFeatureSupportLevel): Boolean;
+begin
+  Result := ASupport = sslSupportDeprecated;
+end;
+
+function IsNativeBackend(const ACaps: TSSLBackendCapabilities): Boolean;
+begin
+  Result := ACaps.BackendImplType = sslImplNative;
+end;
+
+function IsCLibraryBackend(const ACaps: TSSLBackendCapabilities): Boolean;
+begin
+  Result := ACaps.BackendImplType = sslImplCLibrary;
+end;
+
+function RequiresExternalDependencies(const ACaps: TSSLBackendCapabilities): Boolean;
+begin
+  Result := ACaps.RequiresExternalLibrary;
+end;
+
+function GetSecurityScore(const ACaps: TSSLBackendCapabilities): Integer;
+var
+  LScore: Integer;
+begin
+  LScore := 0;
+
+  // 协议支持（20分）
+  if ACaps.SupportsTLS13 then
+    Inc(LScore, 20);
+
+  // 安全特性（30分）
+  if ACaps.HasConstantTimeOperations then
+    Inc(LScore, 10);
+  if ACaps.SupportsFIPSMode then
+    Inc(LScore, 10);
+  if ACaps.HasSecureMemoryWipe then
+    Inc(LScore, 10);
+
+  // 算法安全性（30分）
+  // 支持现代安全算法
+  if IsCipherSupported(ACaps, sslCipherAES256GCM) then
+    Inc(LScore, 10);
+  if IsCipherSupported(ACaps, sslCipherCHACHA20_POLY1305) then
+    Inc(LScore, 10);
+  // 不支持不安全算法（加分）
+  if not IsCipherSupported(ACaps, sslCipherRC4) then
+    Inc(LScore, 5);
+  if not IsCipherSupported(ACaps, sslCipherDES) then
+    Inc(LScore, 5);
+
+  // 高级安全特性（20分）
+  if IsFeatureStable(ACaps.OCSPStaplingSupport) then
+    Inc(LScore, 10);
+  if IsFeatureUsable(ACaps.CertTransparencySupport) then
+    Inc(LScore, 10);
+
+  Result := LScore;
+  if Result > 100 then
+    Result := 100;
+end;
+
+function GetPerformanceScore(const ACaps: TSSLBackendCapabilities): Integer;
+var
+  LScore: Integer;
+begin
+  LScore := 50;  // 基础分
+
+  // 硬件加速（30分）
+  if ACaps.HasHardwareAcceleration then
+    Inc(LScore, 30);
+
+  // SIMD 优化（10分）
+  if ACaps.HasSIMDOptimization then
+    Inc(LScore, 10);
+
+  // 汇编优化（10分）
+  if ACaps.HasAssemblyOptimization then
+    Inc(LScore, 10);
+
+  Result := LScore;
+  if Result > 100 then
+    Result := 100;
+end;
+
+function GetCapabilitiesDescription(const ACaps: TSSLBackendCapabilities): string;
+var
+  LLines: array of string;
+
+  procedure AddLine(const ALine: string);
+  var L: Integer;
+  begin
+    L := Length(LLines);
+    SetLength(LLines, L + 1);
+    LLines[L] := ALine;
+  end;
+
+  function Join(const ASep: string): string;
+  var
+    I: Integer;
+  begin
+    Result := '';
+    for I := 0 to High(LLines) do
+    begin
+      if I > 0 then
+        Result := Result + ASep;
+      Result := Result + LLines[I];
+    end;
+  end;
+
+begin
+  SetLength(LLines, 0);
+
+  // 基础信息
+  AddLine('Backend: ' + LibraryTypeToString(ACaps.BackendType));
+  AddLine('Version: ' + ACaps.BackendVersion);
+
+  case ACaps.BackendImplType of
+    sslImplNative:
+      AddLine('Implementation: Pure FreePascal');
+    sslImplCLibrary:
+      AddLine('Implementation: C Library Binding');
+    sslImplOSNative:
+      AddLine('Implementation: OS Native API');
+    sslImplHybrid:
+      AddLine('Implementation: Hybrid');
+  end;
+
+  // 协议支持
+  AddLine('TLS Versions: ' +
+          ProtocolVersionToString(ACaps.MinTLSVersion) + ' - ' +
+          ProtocolVersionToString(ACaps.MaxTLSVersion));
+
+  // 关键特性
+  if ACaps.RequiresExternalLibrary then
+    AddLine('Dependencies: External library required')
+  else
+    AddLine('Dependencies: None (zero dependency)');
+
+  // 评分
+  AddLine('Security Score: ' + IntToStr(GetSecurityScore(ACaps)) + '/100');
+  AddLine('Performance Score: ' + IntToStr(GetPerformanceScore(ACaps)) + '/100');
+
+  // 已知问题
+  if ACaps.KnownIssues <> '' then
+    AddLine('Known Issues: ' + ACaps.KnownIssues);
+
+  Result := Join(LineEnding);
 end;
 
 end.

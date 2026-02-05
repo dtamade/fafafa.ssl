@@ -460,6 +460,7 @@ begin
   // P2-2: 返回 WinSSL (Schannel) 后端能力矩阵
   FillChar(Result, SizeOf(Result), 0);
 
+  // v1.1.0 字段（向后兼容）
   // TLS 1.3 支持需要 Windows 10 版本 1903+ 或 Windows Server 2022+
   Result.SupportsTLS13 := (FWindowsVersion.Major >= 10) and (FWindowsVersion.Build >= 18362);
 
@@ -495,6 +496,71 @@ begin
     Result.MaxTLSVersion := sslProtocolTLS13
   else
     Result.MaxTLSVersion := sslProtocolTLS12;
+
+  // v1.2.0 新增字段
+  Result.BackendType := sslWinSSL;
+  Result.BackendImplType := sslImplOSNative;  // WinSSL 使用操作系统原生 API
+  Result.BackendVersion := Format('Windows %d.%d.%d',
+    [FWindowsVersion.Major, FWindowsVersion.Minor, FWindowsVersion.Build]);
+  Result.SupportsDTLS := False;  // Schannel 不支持 DTLS
+
+  // 功能支持级别
+  Result.SNISupport := sslSupportStable;
+  if Result.SupportsALPN then
+    Result.ALPNSupport := sslSupportStable
+  else
+    Result.ALPNSupport := sslSupportNone;
+  Result.OCSPStaplingSupport := sslSupportNone;
+  Result.CertTransparencySupport := sslSupportNone;
+  Result.SessionTicketsSupport := sslSupportStable;
+
+  // 密码算法支持（Schannel 由系统决定）
+  Result.SupportedCiphers := [
+    sslCipherAES128, sslCipherAES256, sslCipherAES128GCM, sslCipherAES256GCM
+  ];
+  if Result.SupportsChaChaPoly then
+    Result.SupportedCiphers := Result.SupportedCiphers + [sslCipherCHACHA20_POLY1305];
+
+  // 哈希算法支持
+  Result.SupportedHashes := [
+    sslHashSHA1, sslHashSHA256, sslHashSHA384, sslHashSHA512
+  ];
+
+  // 密钥交换算法支持
+  Result.SupportedKeyExchanges := [
+    sslKexRSA, sslKexDHE_RSA
+  ];
+  if Result.SupportsECDHE then
+  begin
+    Result.SupportedKeyExchanges := Result.SupportedKeyExchanges +
+      [sslKexECDHE_RSA, sslKexECDHE_ECDSA];
+  end;
+
+  // 性能特性（Schannel 高度优化）
+  Result.HasHardwareAcceleration := True;  // 使用系统硬件加速
+  Result.HasSIMDOptimization := True;      // 系统级 SIMD
+  Result.HasAssemblyOptimization := True;  // 系统级汇编优化
+
+  // 平台特性
+  Result.RequiresExternalLibrary := False;  // Schannel 是系统内置
+  Result.SupportsSystemCertStore := True;   // WinSSL 的核心优势
+  Result.SupportsPKCS11 := True;            // 通过 CNG 支持
+  Result.SupportsTPM := True;               // Windows 原生 TPM 支持
+
+  // 安全特性
+  Result.HasConstantTimeOperations := True;  // 系统级实现
+  Result.SupportsFIPSMode := True;           // Windows FIPS 模式
+  Result.HasSecureMemoryWipe := True;        // CNG 提供
+
+  // 证书和密钥格式支持（WinSSL 偏好 Windows 格式）
+  Result.SupportsDERPrivateKey := True;
+  Result.SupportsPKCS8PrivateKey := True;
+  Result.SupportsPKCS12 := True;   // WinSSL 的首选格式
+  Result.SupportsPasswordProtectedKeys := True;
+
+  // 兼容性（WinSSL 行为依赖 Windows 版本）
+  Result.CompatibilityLevel := 90;  // 90% 兼容性
+  Result.KnownIssues := 'Feature availability depends on Windows version; does not support PEM private keys directly';
 
   InternalLog(sslLogDebug, Format('GetCapabilities: TLS1.3=%s, ALPN=%s, SNI=%s (Win %d.%d.%d)',
     [
