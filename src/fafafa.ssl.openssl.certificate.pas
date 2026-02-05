@@ -18,6 +18,7 @@ uses
   fafafa.ssl.x509,
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.native_handle,  // 原生句柄辅助函数
   fafafa.ssl.openssl.x509.chain,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.x509,
@@ -33,7 +34,7 @@ uses
   fafafa.ssl.openssl.api.consts;
 
 type
-  TOpenSSLCertificate = class(TInterfacedObject, ISSLCertificate)
+  TOpenSSLCertificate = class(TInterfacedObject, ISSLCertificate, ISSLNativeHandleAccess)
   private
     FX509: PX509;
     FOwnsHandle: Boolean;
@@ -81,8 +82,12 @@ type
     function GetFingerprintSHA256: string;
     procedure SetIssuerCertificate(ACert: ISSLCertificate);
     function GetIssuerCertificate: ISSLCertificate;
-    function GetNativeHandle: Pointer;
     function Clone: ISSLCertificate;
+
+    { ISSLNativeHandleAccess }
+    function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
   end;
 
 implementation
@@ -712,8 +717,9 @@ begin
       (not Assigned(X509_STORE_CTX_free)) then
       Exit;
   end;
-  
-  Store := PX509_STORE(ACAStore.GetNativeHandle);
+
+  // 使用辅助函数安全获取原生句柄
+  Store := PX509_STORE(GetNativeHandleSafe(ACAStore, 'TOpenSSLCertificate.Verify'));
   if Store = nil then
     Exit;
 
@@ -785,8 +791,9 @@ begin
     AResult.ErrorMessage := 'CA store is nil';
     Exit;
   end;
-  
-  Store := PX509_STORE(ACAStore.GetNativeHandle);
+
+  // 使用辅助函数安全获取原生句柄
+  Store := PX509_STORE(GetNativeHandleSafe(ACAStore, 'TOpenSSLCertificate.VerifyEx'));
   if Store = nil then
   begin
     AResult.ErrorMessage := 'Invalid CA store handle';
@@ -875,7 +882,11 @@ begin
           // Determine issuer certificate (required for OCSP CertID)
           IssuerX509 := nil;
           if FIssuerCert <> nil then
-            IssuerX509 := PX509(FIssuerCert.GetNativeHandle);
+          begin
+            // 尝试获取发行者证书的原生句柄
+            if not TryGetNativeHandle(FIssuerCert, Pointer(IssuerX509)) then
+              IssuerX509 := nil;
+          end;
 
           if IssuerX509 = nil then
           begin
@@ -1680,6 +1691,16 @@ end;
 function TOpenSSLCertificate.GetNativeHandle: Pointer;
 begin
   Result := FX509;
+end;
+
+function TOpenSSLCertificate.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslOpenSSL;
+end;
+
+function TOpenSSLCertificate.IsNativeHandleValid: Boolean;
+begin
+  Result := (FX509 <> nil);
 end;
 
 function TOpenSSLCertificate.Clone: ISSLCertificate;
