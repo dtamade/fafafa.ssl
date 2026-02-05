@@ -25,6 +25,8 @@ function InitNetwork(out AError: string): Boolean;
 procedure CleanupNetwork;
 
 function ConnectTCP(const AHost: string; APort: Word): TSocketHandle;
+function ListenTCP(APort: Word; const AAddress: string = '0.0.0.0'): TSocketHandle;
+function AcceptConnection(AListenSocket: TSocketHandle): TSocketHandle;
 procedure CloseSocket(var ASocket: TSocketHandle);
 
 implementation
@@ -89,6 +91,65 @@ begin
   end;
 end;
 
+function ListenTCP(APort: Word; const AAddress: string = '0.0.0.0'): TSocketHandle;
+var
+  Addr: TSockAddr;
+  HostEnt: PHostEnt;
+  OptVal: Integer;
+begin
+  Result := socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if Result = INVALID_SOCKET then
+    raise Exception.Create('Unable to create listen socket');
+
+  // Set SO_REUSEADDR
+  OptVal := 1;
+  if setsockopt(Result, SOL_SOCKET, SO_REUSEADDR, @OptVal, SizeOf(OptVal)) <> 0 then
+  begin
+    closesocket(Result);
+    raise Exception.Create('Unable to set SO_REUSEADDR');
+  end;
+
+  FillChar(Addr, SizeOf(Addr), 0);
+  Addr.sin_family := AF_INET;
+  Addr.sin_port := htons(APort);
+
+  if AAddress = '0.0.0.0' then
+    Addr.sin_addr.S_addr := INADDR_ANY
+  else
+  begin
+    HostEnt := gethostbyname(PAnsiChar(AnsiString(AAddress)));
+    if HostEnt = nil then
+    begin
+      closesocket(Result);
+      raise Exception.CreateFmt('Unable to resolve bind address: %s', [AAddress]);
+    end;
+    Addr.sin_addr := PInAddr(HostEnt^.h_addr_list^)^;
+  end;
+
+  if bind(Result, Addr, SizeOf(Addr)) <> 0 then
+  begin
+    closesocket(Result);
+    raise Exception.CreateFmt('Unable to bind to %s:%d', [AAddress, APort]);
+  end;
+
+  if listen(Result, SOMAXCONN) <> 0 then
+  begin
+    closesocket(Result);
+    raise Exception.CreateFmt('Unable to listen on port %d', [APort]);
+  end;
+end;
+
+function AcceptConnection(AListenSocket: TSocketHandle): TSocketHandle;
+var
+  Addr: TSockAddr;
+  AddrLen: Integer;
+begin
+  AddrLen := SizeOf(Addr);
+  Result := accept(AListenSocket, @Addr, @AddrLen);
+  if Result = INVALID_SOCKET then
+    raise Exception.Create('Accept failed');
+end;
+
 procedure CloseSocket(var ASocket: TSocketHandle);
 begin
   if ASocket = INVALID_SOCKET then Exit;
@@ -125,6 +186,67 @@ begin
   end;
 
   Result := Sock;
+end;
+
+function ListenTCP(APort: Word; const AAddress: string = '0.0.0.0'): TSocketHandle;
+var
+  Sock: cint;
+  Addr: TInetSockAddr;
+  HostEntry: THostEntry;
+  OptVal: cint;
+begin
+  Sock := fpSocket(AF_INET, SOCK_STREAM, 0);
+  if Sock < 0 then
+    raise Exception.Create('Unable to create listen socket');
+
+  // Set SO_REUSEADDR
+  OptVal := 1;
+  if fpSetSockOpt(Sock, SOL_SOCKET, SO_REUSEADDR, @OptVal, SizeOf(OptVal)) <> 0 then
+  begin
+    fpClose(Sock);
+    raise Exception.Create('Unable to set SO_REUSEADDR');
+  end;
+
+  FillChar(Addr, SizeOf(Addr), 0);
+  Addr.sin_family := AF_INET;
+  Addr.sin_port := htons(APort);
+
+  if AAddress = '0.0.0.0' then
+    Addr.sin_addr.s_addr := 0  // INADDR_ANY
+  else
+  begin
+    if not ResolveHostByName(AAddress, HostEntry) then
+    begin
+      fpClose(Sock);
+      raise Exception.CreateFmt('Unable to resolve bind address: %s', [AAddress]);
+    end;
+    Addr.sin_addr := HostEntry.Addr;
+  end;
+
+  if fpBind(Sock, @Addr, SizeOf(Addr)) <> 0 then
+  begin
+    fpClose(Sock);
+    raise Exception.CreateFmt('Unable to bind to %s:%d', [AAddress, APort]);
+  end;
+
+  if fpListen(Sock, SOMAXCONN) <> 0 then
+  begin
+    fpClose(Sock);
+    raise Exception.CreateFmt('Unable to listen on port %d', [APort]);
+  end;
+
+  Result := Sock;
+end;
+
+function AcceptConnection(AListenSocket: TSocketHandle): TSocketHandle;
+var
+  Addr: TInetSockAddr;
+  AddrLen: TSockLen;
+begin
+  AddrLen := SizeOf(Addr);
+  Result := fpAccept(AListenSocket, @Addr, @AddrLen);
+  if Result < 0 then
+    raise Exception.Create('Accept failed');
 end;
 
 procedure CloseSocket(var ASocket: TSocketHandle);
