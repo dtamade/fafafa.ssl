@@ -28,6 +28,7 @@ uses
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
   fafafa.ssl.mbedtls.base,
+  fafafa.ssl.mbedtls.native_handle,
   fafafa.ssl.mbedtls.api,
   fafafa.ssl.mbedtls.lib,
   fafafa.ssl.mbedtls.context,
@@ -38,6 +39,15 @@ var
   GTestCount: Integer = 0;
   GPassCount: Integer = 0;
   GFailCount: Integer = 0;
+
+{ Helper function to check if object has native handle }
+function HasNativeHandle(const AObject: IInterface): Boolean;
+var
+  NativeAccess: ISSLNativeHandleAccess;
+begin
+  Result := Supports(AObject, ISSLNativeHandleAccess, NativeAccess) and
+            (NativeAccess.GetNativeHandle <> nil);
+end;
 
 procedure Test(const AName: string; ACondition: Boolean);
 begin
@@ -252,7 +262,7 @@ begin
       Test('Client context created', LCtx <> nil);
       Test('Context type is client', LCtx.GetContextType = sslCtxClient);
       Test('Context is valid', LCtx.IsValid);
-      Test('Native handle not nil', LCtx.GetNativeHandle <> nil);
+      Test('Native handle not nil', HasNativeHandle(LCtx));
 
       Test('Default verify mode includes peer', sslVerifyPeer in LCtx.GetVerifyMode);
       Test('Default verify depth > 0', LCtx.GetVerifyDepth > 0);

@@ -7,10 +7,20 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.factory,
   fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.native_handle,
   fafafa.ssl.openssl.api.core;
 
 var
   TestsPassed, TestsFailed: Integer;
+
+{ Helper function to check if object has native handle }
+function HasNativeHandle(const AObject: IInterface): Boolean;
+var
+  NativeAccess: ISSLNativeHandleAccess;
+begin
+  Result := Supports(AObject, ISSLNativeHandleAccess, NativeAccess) and
+            (NativeAccess.GetNativeHandle <> nil);
+end;
 
 procedure Test(const Name: string; Condition: Boolean; const Details: string = '');
 begin
@@ -100,7 +110,7 @@ begin
     if Assigned(Ctx) then
     begin
       Test('Context.IsValid', Ctx.IsValid);
-      Test('Context.GetNativeHandle', Ctx.GetNativeHandle <> nil);
+      Test('Context.GetNativeHandle', HasNativeHandle(Ctx));
     end;
     
     Ctx := nil;
@@ -132,7 +142,7 @@ begin
     
     if Assigned(Cert) then
     begin
-      Test('Certificate.GetNativeHandle', Cert.GetNativeHandle <> nil);
+      Test('Certificate.GetNativeHandle', HasNativeHandle(Cert));
     end;
   except
     on E: Exception do
