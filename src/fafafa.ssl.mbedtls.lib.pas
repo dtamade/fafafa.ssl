@@ -47,12 +47,17 @@ type
     FEntropyContext: Pmbedtls_entropy_context;
     FCtrDrbgContext: Pmbedtls_ctr_drbg_context;
 
+    { v1.2.0: 能力矩阵缓存 }
+    FCapabilitiesCached: Boolean;
+    FCapabilitiesCache: TSSLBackendCapabilities;
+
     procedure InternalLog(ALevel: TSSLLogLevel; const AMessage: string);
     procedure SetError(AError: Integer; const AErrorMsg: string);
     procedure ClearInternalError;
     function DetectCapabilities: Boolean;
     function InitializeRNG: Boolean;
     procedure FinalizeRNG;
+    procedure InvalidateCapabilitiesCache;  // v1.2.0: 缓存失效
 
   public
     constructor Create;
@@ -160,6 +165,10 @@ begin
 
   FillChar(FStatistics, SizeOf(FStatistics), 0);
   FillChar(FCapabilities, SizeOf(FCapabilities), 0);
+
+  { v1.2.0: 初始化能力矩阵缓存 }
+  FCapabilitiesCached := False;
+  FillChar(FCapabilitiesCache, SizeOf(FCapabilitiesCache), 0);
 end;
 
 destructor TMbedTLSLibrary.Destroy;
@@ -331,6 +340,9 @@ begin
   if not FInitialized then
     Exit;
 
+  { v1.2.0: 使缓存失效 }
+  InvalidateCapabilitiesCache;
+
   FinalizeRNG;
   UnloadMbedTLSLibrary;
   FInitialized := False;
@@ -410,6 +422,13 @@ end;
 
 function TMbedTLSLibrary.GetCapabilities: TSSLBackendCapabilities;
 begin
+  { v1.2.0: 如果已缓存，直接返回缓存值 }
+  if FCapabilitiesCached then
+  begin
+    Result := FCapabilitiesCache;
+    Exit;
+  end;
+
   FillChar(Result, SizeOf(Result), 0);
 
   if not FInitialized then
@@ -487,6 +506,10 @@ begin
   // 兼容性（MbedTLS 与 OpenSSL 兼容性中等，部分功能需要适配）
   Result.CompatibilityLevel := 75;  // 75% 兼容性
   Result.KnownIssues := 'Optimized for embedded systems, may lack some enterprise features';
+
+  { v1.2.0: 缓存能力矩阵 }
+  FCapabilitiesCache := Result;
+  FCapabilitiesCached := True;
 end;
 
 procedure TMbedTLSLibrary.SetDefaultConfig(const AConfig: TSSLConfig);
@@ -564,6 +587,14 @@ end;
 function TMbedTLSLibrary.GetCtrDrbgContext: Pmbedtls_ctr_drbg_context;
 begin
   Result := FCtrDrbgContext;
+end;
+
+{ v1.2.0: 能力矩阵缓存管理 }
+
+procedure TMbedTLSLibrary.InvalidateCapabilitiesCache;
+begin
+  FCapabilitiesCached := False;
+  FillChar(FCapabilitiesCache, SizeOf(FCapabilitiesCache), 0);
 end;
 
 { 注册函数 }

@@ -46,12 +46,17 @@ type
     // Phase 3.3: 线程安全的统计更新
     FStatisticsLock: TRTLCriticalSection;
 
+    { v1.2.0: 能力矩阵缓存 }
+    FCapabilitiesCached: Boolean;
+    FCapabilitiesCache: TSSLBackendCapabilities;
+
     { 内部方法 }
     procedure InternalLog(ALevel: TSSLLogLevel; const AMessage: string);
     function DetectWindowsVersion: Boolean;
     function CheckSchannelSupport: Boolean;
     procedure SetError(AError: Integer; const AErrorMsg: string);
     procedure ClearInternalError;
+    procedure InvalidateCapabilitiesCache;  // v1.2.0: 缓存失效
 
   public
     constructor Create;
@@ -174,6 +179,10 @@ begin
   // 初始化 Windows 版本信息
   FillChar(FWindowsVersion, SizeOf(FWindowsVersion), 0);
 end;
+  { v1.2.0: 初始化能力矩阵缓存 }
+  FCapabilitiesCached := False;
+  FillChar(FCapabilitiesCache, SizeOf(FCapabilitiesCache), 0);
+
 
 destructor TWinSSLLibrary.Destroy;
 begin
@@ -322,6 +331,9 @@ begin
   if not FInitialized then
     Exit;
     
+  
+  { v1.2.0: 使缓存失效 }
+  InvalidateCapabilitiesCache;
   InternalLog(sslLogInfo, 'Finalizing WinSSL library...');
   
   // WinSSL 不需要特殊的清理操作
@@ -457,6 +469,13 @@ end;
 
 function TWinSSLLibrary.GetCapabilities: TSSLBackendCapabilities;
 begin
+  { v1.2.0: 如果已缓存，直接返回缓存值 }
+  if FCapabilitiesCached then
+  begin
+    Result := FCapabilitiesCache;
+    Exit;
+  end;
+
   // P2-2: 返回 WinSSL (Schannel) 后端能力矩阵
   FillChar(Result, SizeOf(Result), 0);
 
@@ -571,6 +590,10 @@ begin
       FWindowsVersion.Minor,
       FWindowsVersion.Build
     ]));
+  
+  { v1.2.0: 缓存能力矩阵 }
+  FCapabilitiesCache := Result;
+  FCapabilitiesCached := True;
 end;
 
 // ============================================================================
@@ -756,6 +779,15 @@ begin
 
   // 默认创建受信任根证书存储，调用方可根据需要重新打开其他系统存储
   Result := TWinSSLCertificateStore.Create(SSL_STORE_ROOT);
+end;
+
+
+{ v1.2.0: 能力矩阵缓存管理 }
+
+procedure TWinSSLLibrary.InvalidateCapabilitiesCache;
+begin
+  FCapabilitiesCached := False;
+  FillChar(FCapabilitiesCache, SizeOf(FCapabilitiesCache), 0);
 end;
 
 // ============================================================================

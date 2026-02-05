@@ -39,10 +39,15 @@ type
     FLogLevel: TSSLLogLevel;
     FCapabilities: TWolfSSLCapabilities;
 
+    { v1.2.0: 能力矩阵缓存 }
+    FCapabilitiesCached: Boolean;
+    FCapabilitiesCache: TSSLBackendCapabilities;
+
     procedure InternalLog(ALevel: TSSLLogLevel; const AMessage: string);
     procedure SetError(AError: Integer; const AErrorMsg: string);
     procedure ClearInternalError;
     function DetectCapabilities: Boolean;
+    procedure InvalidateCapabilitiesCache;  // v1.2.0: 缓存失效
 
   public
     constructor Create;
@@ -139,6 +144,10 @@ begin
 
   FillChar(FStatistics, SizeOf(FStatistics), 0);
   FillChar(FCapabilities, SizeOf(FCapabilities), 0);
+
+  { v1.2.0: 初始化能力矩阵缓存 }
+  FCapabilitiesCached := False;
+  FillChar(FCapabilitiesCache, SizeOf(FCapabilitiesCache), 0);
 end;
 
 destructor TWolfSSLLibrary.Destroy;
@@ -268,6 +277,9 @@ begin
   if not FInitialized then
     Exit;
 
+  { v1.2.0: 使缓存失效 }
+  InvalidateCapabilitiesCache;
+
   if Assigned(wolfssl_cleanup) then
     wolfssl_cleanup();
 
@@ -350,6 +362,13 @@ end;
 
 function TWolfSSLLibrary.GetCapabilities: TSSLBackendCapabilities;
 begin
+  { v1.2.0: 如果已缓存，直接返回缓存值 }
+  if FCapabilitiesCached then
+  begin
+    Result := FCapabilitiesCache;
+    Exit;
+  end;
+
   FillChar(Result, SizeOf(Result), 0);
 
   if not FInitialized then
@@ -430,6 +449,10 @@ begin
   // 兼容性（WolfSSL 与 OpenSSL 兼容性较好）
   Result.CompatibilityLevel := 85;  // 85% 兼容性
   Result.KnownIssues := 'May require specific build options for full feature support';
+
+  { v1.2.0: 缓存能力矩阵 }
+  FCapabilitiesCache := Result;
+  FCapabilitiesCached := True;
 end;
 
 procedure TWolfSSLLibrary.SetDefaultConfig(const AConfig: TSSLConfig);
@@ -502,6 +525,14 @@ begin
     raise ESSLInitError.Create('Cannot create certificate store: WolfSSL library not initialized');
 
   Result := TWolfSSLCertificateStore.Create;
+end;
+
+{ v1.2.0: 能力矩阵缓存管理 }
+
+procedure TWolfSSLLibrary.InvalidateCapabilitiesCache;
+begin
+  FCapabilitiesCached := False;
+  FillChar(FCapabilitiesCache, SizeOf(FCapabilitiesCache), 0);
 end;
 
 { 注册函数 }
