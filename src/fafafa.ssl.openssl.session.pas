@@ -17,13 +17,14 @@ uses
   fafafa.ssl.openssl.api.ssl,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.native_handle,
   fafafa.ssl.openssl.certificate;
 
 const
   HexDigits: array[0..15] of Char = '0123456789ABCDEF';
 
 type
-  TOpenSSLSession = class(TInterfacedObject, ISSLSession)
+  TOpenSSLSession = class(TInterfacedObject, ISSLSession, ISSLNativeHandleAccess)
   private
     FSession: PSSL_SESSION;
     FOwnsHandle: Boolean;
@@ -42,8 +43,12 @@ type
     function GetPeerCertificate: ISSLCertificate;
     function Serialize: TBytes;
     function Deserialize(const AData: TBytes): Boolean;
-    function GetNativeHandle: Pointer;
     function Clone: ISSLSession;
+
+    // ISSLNativeHandleAccess implementation
+    function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
   end;
 
 implementation
@@ -261,6 +266,16 @@ end;
 function TOpenSSLSession.GetNativeHandle: Pointer;
 begin
   Result := FSession;
+end;
+
+function TOpenSSLSession.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslOpenSSL;
+end;
+
+function TOpenSSLSession.IsNativeHandleValid: Boolean;
+begin
+  Result := (FSession <> nil);
 end;
 
 function TOpenSSLSession.Clone: ISSLSession;
