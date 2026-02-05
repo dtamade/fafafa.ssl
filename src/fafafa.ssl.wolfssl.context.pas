@@ -22,6 +22,7 @@ uses
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
   fafafa.ssl.wolfssl.base,
+  fafafa.ssl.wolfssl.native_handle,
   fafafa.ssl.wolfssl.api;
 
 type
@@ -35,7 +36,7 @@ type
   TWolfSSLCertPinArray = array of TWolfSSLCertPin;
 
   { TWolfSSLContext - WolfSSL 上下文类 }
-  TWolfSSLContext = class(TInterfacedObject, ISSLContext)
+  TWolfSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess)
   private
     FLibrary: ISSLLibrary;
     FContextType: TSSLContextType;
@@ -142,7 +143,11 @@ type
 
     { ISSLContext - 状态查询 }
     function IsValid: Boolean;
+
+    { ISSLNativeHandleAccess implementation }
     function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
 
     { ISSLContext - 健康状态和诊断 }
     function GetHealthStatus: TSSLHealthStatus;
@@ -211,7 +216,7 @@ end;
 
 { Forward declaration for connection - will be implemented separately }
 type
-  TWolfSSLConnection = class(TInterfacedObject, ISSLConnection)
+  TWolfSSLConnection = class(TInterfacedObject, ISSLConnection, ISSLNativeHandleAccess)
   private
     FContext: TWolfSSLContext;
     FWolfSSL: PWOLFSSL;
@@ -293,8 +298,10 @@ type
     function GetDiagnosticInfo: TSSLDiagnosticInfo;
     function GetPerformanceMetrics: TSSLPerformanceMetrics;
 
-    { ISSLConnection - 原生句柄 }
+    { ISSLNativeHandleAccess implementation }
     function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
 
     { ISSLConnection - OCSP Stapling }
     function GetOCSPStaplingEnabled: Boolean;
@@ -917,6 +924,16 @@ begin
   Result := FWolfSSLCtx;
 end;
 
+function TWolfSSLContext.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslWolfSSL;
+end;
+
+function TWolfSSLContext.IsNativeHandleValid: Boolean;
+begin
+  Result := (FWolfSSLCtx <> nil);
+end;
+
 function TWolfSSLContext.GetHealthStatus: TSSLHealthStatus;
 begin
   FillChar(Result, SizeOf(Result), 0);
@@ -1284,7 +1301,7 @@ begin
   if FWolfSSL = nil then Exit;
   if not Assigned(wolfSSL_set_session) then Exit;
 
-  LSession := PWOLFSSL_SESSION(ASession.GetNativeHandle);
+  LSession := PWOLFSSL_SESSION(GetNativeHandleSafe(ASession, 'TWolfSSLConnection.SetSession'));
   if LSession <> nil then
     wolfSSL_set_session(FWolfSSL, LSession);
 end;
@@ -1431,6 +1448,16 @@ end;
 function TWolfSSLConnection.GetNativeHandle: Pointer;
 begin
   Result := FWolfSSL;
+end;
+
+function TWolfSSLConnection.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslWolfSSL;
+end;
+
+function TWolfSSLConnection.IsNativeHandleValid: Boolean;
+begin
+  Result := (FWolfSSL <> nil);
 end;
 
 function TWolfSSLConnection.GetHealthStatus: TSSLHealthStatus;
