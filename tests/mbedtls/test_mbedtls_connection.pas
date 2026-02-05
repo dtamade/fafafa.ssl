@@ -83,7 +83,7 @@ begin
       if LConn.Connect(LSock.Handle) then
       begin
         WriteLn('   ✅ Handshake successful!');
-        WriteLn('   Protocol: ', LConn.GetProtocolVersionString);
+        WriteLn('   Protocol: ', Ord(LConn.GetProtocolVersion));
         WriteLn('   Cipher: ', LConn.GetCipherName);
         WriteLn;
 
