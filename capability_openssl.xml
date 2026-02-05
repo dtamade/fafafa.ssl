@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SSLBackendCapabilities>
+  <supportsTLS13>True</supportsTLS13>
+  <supportsALPN>True</supportsALPN>
+  <supportsSNI>True</supportsSNI>
+  <supportsOCSPStapling>True</supportsOCSPStapling>
+  <supportsCertificateTransparency>True</supportsCertificateTransparency>
+  <supportsSessionTickets>True</supportsSessionTickets>
+  <supportsECDHE>True</supportsECDHE>
+  <supportsChaChaPoly>True</supportsChaChaPoly>
+  <supportsPEMPrivateKey>True</supportsPEMPrivateKey>
+  <minTLSVersion>3</minTLSVersion>
+  <maxTLSVersion>6</maxTLSVersion>
+  <backendType>1</backendType>
+  <backendImplType>1</backendImplType>
+  <backendVersion>OpenSSL 3.5.4 30 Sep 2025</backendVersion>
+  <supportsDTLS>True</supportsDTLS>
+  <sniSupport>stable</sniSupport>
+  <alpnSupport>stable</alpnSupport>
+  <ocspStaplingSupport>stable</ocspStaplingSupport>
+  <certTransparencySupport>stable</certTransparencySupport>
+  <sessionTicketsSupport>stable</sessionTicketsSupport>
+  <hasHardwareAcceleration>True</hasHardwareAcceleration>
+  <hasSIMDOptimization>True</hasSIMDOptimization>
+  <hasAssemblyOptimization>True</hasAssemblyOptimization>
+  <requiresExternalLibrary>True</requiresExternalLibrary>
+  <supportsSystemCertStore>False</supportsSystemCertStore>
+  <supportsPKCS11>True</supportsPKCS11>
+  <supportsTPM>True</supportsTPM>
+  <hasConstantTimeOperations>True</hasConstantTimeOperations>
+  <supportsFIPSMode>False</supportsFIPSMode>
+  <hasSecureMemoryWipe>True</hasSecureMemoryWipe>
+  <compatibilityLevel>100</compatibilityLevel>
+  <knownIssues></knownIssues>
+</SSLBackendCapabilities>
