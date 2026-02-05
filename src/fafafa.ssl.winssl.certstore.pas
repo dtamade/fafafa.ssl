@@ -22,11 +22,12 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
+  fafafa.ssl.winssl.native_handle,
   fafafa.ssl.winssl.certificate;
 
 type
   { TWinSSLCertificateStore - Windows 证书存储类 }
-  TWinSSLCertificateStore = class(TInterfacedObject, ISSLCertificateStore)
+  TWinSSLCertificateStore = class(TInterfacedObject, ISSLCertificateStore, ISSLNativeHandleAccess)
   private
     FStoreHandle: HCERTSTORE;
     FStoreName: string;
@@ -72,8 +73,10 @@ type
     function VerifyCertificate(ACert: ISSLCertificate): Boolean;
     function BuildCertificateChain(ACert: ISSLCertificate): TSSLCertificateArray;
 
-    { ISSLCertificateStore - 原生句柄 }
+    { ISSLNativeHandleAccess implementation }
     function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
 
     { 额外的辅助方法（不在接口中） }
     function OpenSystemStore(const AStoreName: string): Boolean;
@@ -263,7 +266,7 @@ begin
     Exit;
 
   // 获取证书的原生上下文
-  CertContext := PCCERT_CONTEXT(ACert.GetNativeHandle);
+  CertContext := PCCERT_CONTEXT(GetNativeHandleSafe(ACert, 'TWinSSLCertificateStore'));
   if CertContext = nil then
     Exit;
 
@@ -292,7 +295,7 @@ begin
     Exit;
 
   // 获取证书的原生上下文
-  CertContext := PCCERT_CONTEXT(ACert.GetNativeHandle);
+  CertContext := PCCERT_CONTEXT(GetNativeHandleSafe(ACert, 'TWinSSLCertificateStore'));
   if CertContext = nil then
     Exit;
 
@@ -329,7 +332,7 @@ begin
     Exit;
 
   // 获取证书的原生上下文
-  CertContext := PCCERT_CONTEXT(ACert.GetNativeHandle);
+  CertContext := PCCERT_CONTEXT(GetNativeHandleSafe(ACert, 'TWinSSLCertificateStore'));
   if CertContext = nil then
     Exit;
 
@@ -606,7 +609,7 @@ begin
   if (ACert = nil) then
     Exit;
 
-  CertContext := PCCERT_CONTEXT(ACert.GetNativeHandle);
+  CertContext := PCCERT_CONTEXT(GetNativeHandleSafe(ACert, 'TWinSSLCertificateStore'));
   if CertContext = nil then
     Exit;
 
@@ -686,12 +689,22 @@ begin
 end;
 
 // ============================================================================
-// ISSLCertificateStore - 原生句柄
+// ISSLNativeHandleAccess implementation
 // ============================================================================
 
 function TWinSSLCertificateStore.GetNativeHandle: Pointer;
 begin
   Result := Pointer(FStoreHandle);
+end;
+
+function TWinSSLCertificateStore.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslWinSSL;
+end;
+
+function TWinSSLCertificateStore.IsNativeHandleValid: Boolean;
+begin
+  Result := (FStoreHandle <> nil);
 end;
 
 end.
