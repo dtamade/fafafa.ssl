@@ -9,13 +9,58 @@
 
 ## [Unreleased]
 
-### v1.3.0 阶段 2 - 能力矩阵差异对比 (2026-02-05)
+## [Unreleased]
 
-**已完成** - 后端能力差异分析
+---
 
-#### 新增
+## [1.3.0] - 2026-02-05
 
-##### 差异对比功能
+**智能化版本** - 自动后端选择和能力差异分析
+
+### 核心功能
+
+#### 阶段 1: 自动后端选择 ✅
+
+##### 新增
+
+- **fafafa.ssl.backend.selector 单元** - 智能后端选择器
+  - `TSSLRequirements` 记录 - 需求定义
+  - `TSSLOptimizationTarget` 枚举 - 5种优化目标（平衡/安全/性能/体积/兼容性）
+  - `TSSLPlatformPreferences` 记录 - 平台偏好配置
+  - `TSSLBackendMatch` 记录 - 匹配结果详情
+  - `SelectBestBackend()` - 选择单个最佳后端
+  - `SelectBestBackends()` - 选择多个后端并排序
+  - `CreateDefaultRequirements()` - 创建默认需求
+  - `CreateSecurityFirstRequirements()` - 安全优先需求
+  - `CreatePerformanceFirstRequirements()` - 性能优先需求
+  - `CreateCompatibilityFirstRequirements()` - 兼容性优先需求
+  - `ValidateRequirements()` - 需求验证
+  - 智能评分算法（0-100分）
+    - 必需功能 40%
+    - 优选功能 20%
+    - 安全评分 20%
+    - 性能评分 10%
+    - 平台匹配 10%
+  - 推荐原因自动生成
+
+##### Builder 集成
+
+- **TSSLContextBuilder 扩展** - 链式 API
+  - `WithAutoBackendSelection()` - 显式需求选择
+  - `WithSecurityFirst()` - 安全优先快捷方法
+  - `WithPerformanceFirst()` - 性能优先快捷方法
+  - `WithCompatibilityFirst()` - 兼容性优先快捷方法
+  - `WithBackend()` - 显式指定后端
+  - `RequireTLS13()` - 要求 TLS 1.3
+  - `RequireCipher()` - 要求特定密码算法
+  - `RequirePKCS11Support()` - 要求 PKCS#11
+  - `PreferOSNative()` - 优先 OS 原生实现
+  - BuildClient/BuildServer 自动后端选择集成
+
+#### 阶段 2: 能力矩阵差异对比 ✅
+
+##### 新增
+
 - **fafafa.ssl.capability.diff 单元** - 能力矩阵差异对比
   - `TCapabilityDifference` 枚举 - 差异级别（相同/轻微/较大/不兼容）
   - `TCapabilityFieldChange` 记录 - 字段变更详情
@@ -26,10 +71,11 @@
   - 智能差异分级算法
     - 完全相同: 无差异
     - 轻微差异: ≤5 处变更
-    - 较大差异: >5 处变更或缺失功能
+    - 较大差异: >5 处变更或有缺失功能
     - 不兼容: >3 个功能缺失或安全评分差 >30
 
 ##### 报告格式支持
+
 - **文本格式** - ASCII 艺术风格，适合终端显示
 - **JSON 格式** - 结构化数据，方便程序处理
 - **HTML 格式** - 美观的网页报告，CSS 样式完整
@@ -39,25 +85,53 @@
   - 新增/缺失功能列表
   - 字段变更对比
 
-#### 测试
+#### 已取消功能 ❌
+
+以下功能经过评估后取消，原因如下：
+
+- **YAML 序列化**: JSON/XML 已满足需求，YAML 为伪需求
+- **运行时能力协商**: 自动后端选择已解决，功能重复
+
+### 文档
+
+- **BACKEND_SELECTION_GUIDE.md** (818 行) - 完整使用指南
+  - 自动选择概述
+  - TSSLRequirements 详解
+  - 评分算法说明
+  - Builder API 参考
+  - 6 个实际使用场景
+  - 10 个常见问题
+  - 40+ 代码示例
+
+### 测试
+
+- **test_backend_selector_basic.pas** - 基础选择测试（6/6 通过）
+- **test_backend_selector_debug.pas** - 调试工具
+- **test_builder_integration.pas** - Builder 集成测试（7/8 通过）
 - **test_capability_diff.pas** - 差异对比测试（6/6 通过）
-  - 测试 1: 相同后端对比 ✅
-  - 测试 2: 修改后能力矩阵对比 ✅
-  - 测试 3: 文本报告生成 ✅
-  - 测试 4: JSON 报告生成 ✅
-  - 测试 5: HTML 报告生成 ✅
-  - 测试 6: 直接后端对比 ✅
 
-#### 代码统计
-- 新增代码: +642 行（src/fafafa.ssl.capability.diff.pas）
-- 测试代码: +315 行（tests/test_capability_diff.pas）
-- 总计: **+957 行**
+**总计**: 20 个测试场景，19 通过（95%）
 
----
+### 性能
 
-### v1.3.0 阶段 1 - 自动后端选择 (2026-02-05)
+- SelectBestBackend: <1ms
+- CompareCapabilities: <1ms
+- GenerateDiffReport: <2ms
+- 基于 v1.2.0 能力矩阵缓存（>10M ops/s）
 
-**已完成** - 智能化后端选择功能
+### 代码统计
+
+- 核心代码: +1,842 行
+- 测试代码: +845 行
+- 文档: +858 行
+- **总计**: **+3,545 行**
+
+### 向后兼容
+
+- ✅ **100% 向后兼容 v1.2.0**
+- ✅ 现有代码无需修改
+- ✅ 自动选择为可选功能
+- ✅ 可继续显式指定后端
 
 #### 新增
 

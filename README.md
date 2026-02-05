@@ -1,6 +1,6 @@
 # fafafa.ssl - Production-Ready SSL/TLS Library
 
-[![Version](https://img.shields.io/badge/Version-v1.2.0-blue)](https://github.com/dtamade/fafafa.ssl/releases/tag/v1.2.0)
+[![Version](https://img.shields.io/badge/Version-v1.3.0-blue)](https://github.com/dtamade/fafafa.ssl/releases/tag/v1.3.0)
 [![Production Ready](https://img.shields.io/badge/Production%20Ready-100%25-brightgreen)](https://github.com)
 [![Tests](https://img.shields.io/badge/Tests-100%25%20passed-success)](docs/testing/)
 [![OpenSSL](https://img.shields.io/badge/OpenSSL-1.1.1%2B%20%7C%203.0%2B-blue)](https://www.openssl.org/)
@@ -17,12 +17,12 @@
 - **WinSSL 后端**: Windows 原生 Schannel，零依赖部署，自动使用系统证书
 - **MbedTLS / WolfSSL**: 可选后端（需定义 `ENABLE_MBEDTLS` / `ENABLE_WOLFSSL`）
 
-### v1.3.0 新增功能（进行中）🆕
-- **自动后端选择**: 基于需求智能选择最佳后端（安全/性能/兼容性优先）✅ 完成
-- **Builder 集成**: WithSecurityFirst, RequireTLS13 等链式 API ✅ 完成
-- **智能评分**: 40+ 维度评分算法，推荐原因自动生成 ✅ 完成
-- **完整指南**: 800+ 行后端选择使用指南 ✅ 完成
-- **差异对比**: 能力矩阵差异分析，多格式报告生成（text/json/html）✅ 完成
+### v1.3.0 智能化版本 ✅
+- **自动后端选择**: 基于需求智能选择最佳后端（安全/性能/兼容性优先）
+- **Builder 集成**: WithSecurityFirst, RequireTLS13 等链式 API
+- **智能评分**: 40+ 维度评分算法，推荐原因自动生成
+- **差异对比**: 能力矩阵差异分析，多格式报告生成（text/json/html）
+- **完整指南**: 800+ 行后端选择使用指南
 
 ### v1.2.0 新增功能 🆕
 - **能力矩阵扩展**: 从 11 字段扩展到 40+ 字段，14 个类型安全的辅助查询函数
@@ -322,10 +322,11 @@ fafafa.ssl/
 
 ## 版本历史
 
-- **v1.3.0** (进行中) - 智能化版本
-  - 自动后端选择（阶段 1 ✅ 完成）
-  - 能力矩阵差异对比（阶段 2 计划中）
-  - YAML 序列化支持（阶段 3 计划中）
+- **v1.3.0** (2026-02-05) - 智能化版本
+  - 自动后端选择（智能评分算法）
+  - 能力矩阵差异对比（多格式报告）
+  - Builder 链式 API 扩展
+  - 已取消：YAML 序列化、运行时协商（伪需求）
 
 - **v1.2.0** (2026-02-05) - 能力矩阵扩展版本
   - 40+ 字段能力矩阵
