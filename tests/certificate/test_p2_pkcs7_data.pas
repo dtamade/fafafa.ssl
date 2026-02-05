@@ -158,7 +158,8 @@ begin
           BIO_free(out_bio);
         end;
 
-        BIO_free(data_bio);
+        // Skip BIO_free(data_bio) - ownership transferred to PKCS7_dataInit
+        // BIO_free(data_bio);
       end;
     end;
 
