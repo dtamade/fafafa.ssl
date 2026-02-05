@@ -29,7 +29,8 @@ uses
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.bio,
-  fafafa.ssl.openssl.api.asn1;
+  fafafa.ssl.openssl.api.asn1,
+  fafafa.ssl.openssl.loader;
 
 var
   TotalTests, PassedTests, FailedTests: Integer;
@@ -128,6 +129,15 @@ begin
   WriteLn;
 
   WriteLn('✅ OpenSSL 库加载成功');
+  WriteLn;
+
+  // 加载 CMS 模块
+  if not LoadOpenSSLCMS(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto)) then
+  begin
+    WriteLn('❌ 错误：无法加载 CMS 模块');
+    Halt(1);
+  end;
+  WriteLn('✅ CMS 模块加载成功');
   WriteLn;
 
   // 运行测试
