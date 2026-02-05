@@ -1183,16 +1183,474 @@ end.
 
 ---
 
+## 能力矩阵 API (v1.2.0+)
+
+### 概述
+
+能力矩阵提供细粒度的后端能力查询，包括算法支持、功能成熟度、性能特性等。
+
+### TSSLBackendCapabilities
+
+后端能力信息记录。
+
+```pascal
+type
+  TSSLBackendCapabilities = record
+    // v1.1.0 字段（向后兼容）
+    SupportsTLS13: Boolean;
+    SupportsALPN: Boolean;
+    SupportsSNI: Boolean;
+    SupportsOCSPStapling: Boolean;
+    SupportsCertificateTransparency: Boolean;
+    SupportsSessionTickets: Boolean;
+    SupportsECDHE: Boolean;
+    SupportsChaChaPoly: Boolean;
+    SupportsPEMPrivateKey: Boolean;
+    MinTLSVersion: TSSLProtocolVersion;
+    MaxTLSVersion: TSSLProtocolVersion;
+
+    // v1.2.0 新增字段
+    BackendType: TSSLLibraryType;
+    BackendImplType: TSSLBackendImplType;
+    BackendVersion: string;
+    SupportsDTLS: Boolean;
+
+    // 功能支持级别
+    SNISupport: TSSLFeatureSupportLevel;
+    ALPNSupport: TSSLFeatureSupportLevel;
+    OCSPStaplingSupport: TSSLFeatureSupportLevel;
+    CertTransparencySupport: TSSLFeatureSupportLevel;
+    SessionTicketsSupport: TSSLFeatureSupportLevel;
+    // ... 其他功能级别字段
+
+    // 算法支持
+    SupportedCiphers: TSSLCipherSupport;
+    SupportedHashes: TSSLHashSupport;
+    SupportedKeyExchanges: TSSLKeyExchangeSupport;
+
+    // 性能特性
+    HasHardwareAcceleration: Boolean;
+    HasSIMDOptimization: Boolean;
+    HasAssemblyOptimization: Boolean;
+
+    // 平台特性
+    RequiresExternalLibrary: Boolean;
+    SupportsSystemCertStore: Boolean;
+    SupportsPKCS11: Boolean;
+    SupportsTPM: Boolean;
+
+    // 安全特性
+    HasConstantTimeOperations: Boolean;
+    SupportsFIPSMode: Boolean;
+    HasSecureMemoryWipe: Boolean;
+
+    // 兼容性
+    CompatibilityLevel: Byte;  // 0-100
+    KnownIssues: string;
+  end;
+```
+
+### ISSLLibrary.GetCapabilities
+
+获取后端能力矩阵。
+
+```pascal
+function GetCapabilities: TSSLBackendCapabilities;
+```
+
+**返回值**: 包含后端所有能力信息的记录。
+
+**使用示例**:
+```pascal
+var
+  Lib: ISSLLibrary;
+  Caps: TSSLBackendCapabilities;
+begin
+  Lib := TSSLFactory.GetLibrary(sslOpenSSL);
+  Caps := Lib.GetCapabilities;
+
+  WriteLn('Backend: ', SSL_LIBRARY_NAMES[Caps.BackendType]);
+  WriteLn('Version: ', Caps.BackendVersion);
+  WriteLn('TLS 1.3: ', Caps.SupportsTLS13);
+end;
+```
+
+---
+
+### 算法查询函数
+
+#### IsCipherSupported
+
+检查是否支持指定的对称加密算法。
+
+```pascal
+function IsCipherSupported(const ACaps: TSSLBackendCapabilities;
+                          ACipher: TSSLCipher): Boolean;
+```
+
+**参数**:
+- `ACaps`: 后端能力矩阵
+- `ACipher`: 要查询的加密算法
+
+**返回值**: 如果支持返回 `True`，否则返回 `False`。
+
+**使用示例**:
+```pascal
+if IsCipherSupported(Caps, sslCipherCHACHA20_POLY1305) then
+  WriteLn('ChaCha20-Poly1305 is supported');
+```
+
+#### IsHashSupported
+
+检查是否支持指定的哈希算法。
+
+```pascal
+function IsHashSupported(const ACaps: TSSLBackendCapabilities;
+                        AHash: TSSLHash): Boolean;
+```
+
+**参数**:
+- `ACaps`: 后端能力矩阵
+- `AHash`: 要查询的哈希算法
+
+**返回值**: 如果支持返回 `True`，否则返回 `False`。
+
+**使用示例**:
+```pascal
+if IsHashSupported(Caps, sslHashSHA256) then
+  WriteLn('SHA-256 is supported');
+```
+
+#### IsKeyExchangeSupported
+
+检查是否支持指定的密钥交换算法。
+
+```pascal
+function IsKeyExchangeSupported(const ACaps: TSSLBackendCapabilities;
+                               AKex: TSSLKeyExchange): Boolean;
+```
+
+**参数**:
+- `ACaps`: 后端能力矩阵
+- `AKex`: 要查询的密钥交换算法
+
+**返回值**: 如果支持返回 `True`，否则返回 `False`。
+
+**使用示例**:
+```pascal
+if IsKeyExchangeSupported(Caps, sslKexECDHE_RSA) then
+  WriteLn('ECDHE-RSA is supported');
+```
+
+---
+
+### 功能级别查询函数
+
+#### IsFeatureStable
+
+检查功能是否稳定（推荐生产使用）。
+
+```pascal
+function IsFeatureStable(ASupport: TSSLFeatureSupportLevel): Boolean;
+```
+
+**参数**:
+- `ASupport`: 功能支持级别
+
+**返回值**: 如果功能稳定返回 `True`。
+
+**使用示例**:
+```pascal
+if IsFeatureStable(Caps.ALPNSupport) then
+  WriteLn('ALPN is production-ready');
+```
+
+#### IsFeatureUsable
+
+检查功能是否可用（包括实验性功能）。
+
+```pascal
+function IsFeatureUsable(ASupport: TSSLFeatureSupportLevel): Boolean;
+```
+
+**参数**:
+- `ASupport`: 功能支持级别
+
+**返回值**: 如果功能可用返回 `True`（包括实验性和稳定）。
+
+#### IsFeatureDeprecated
+
+检查功能是否已弃用。
+
+```pascal
+function IsFeatureDeprecated(ASupport: TSSLFeatureSupportLevel): Boolean;
+```
+
+**参数**:
+- `ASupport`: 功能支持级别
+
+**返回值**: 如果功能已弃用返回 `True`。
+
+---
+
+### 后端类型查询函数
+
+#### IsNativeBackend
+
+检查是否为纯 FreePascal 实现的后端。
+
+```pascal
+function IsNativeBackend(const ACaps: TSSLBackendCapabilities): Boolean;
+```
+
+**参数**:
+- `ACaps`: 后端能力矩阵
+
+**返回值**: 如果是纯 Pascal 实现返回 `True`。
+
+#### IsCLibraryBackend
+
+检查是否为 C 库绑定后端。
+
+```pascal
+function IsCLibraryBackend(const ACaps: TSSLBackendCapabilities): Boolean;
+```
+
+**参数**:
+- `ACaps`: 后端能力矩阵
+
+**返回值**: 如果是 C 库绑定返回 `True`。
+
+#### RequiresExternalDependencies
+
+检查是否需要外部依赖（库文件）。
+
+```pascal
+function RequiresExternalDependencies(const ACaps: TSSLBackendCapabilities): Boolean;
+```
+
+**参数**:
+- `ACaps`: 后端能力矩阵
+
+**返回值**: 如果需要外部库返回 `True`。
+
+---
+
+### 评分函数
+
+#### GetSecurityScore
+
+获取后端的安全评分（0-100）。
+
+```pascal
+function GetSecurityScore(const ACaps: TSSLBackendCapabilities): Integer;
+```
+
+**参数**:
+- `ACaps`: 后端能力矩阵
+
+**返回值**: 安全评分（0-100），分数越高越安全。
+
+**评分因素**:
+- TLS 1.3 支持 (+20)
+- 恒定时间操作 (+20)
+- FIPS 模式 (+15)
+- 安全内存擦除 (+15)
+- 现代算法支持 (+30)
+
+**使用示例**:
+```pascal
+var
+  Score: Integer;
+begin
+  Score := GetSecurityScore(Caps);
+  WriteLn('Security Score: ', Score, '/100');
+
+  if Score >= 90 then
+    WriteLn('Excellent security')
+  else if Score >= 70 then
+    WriteLn('Good security')
+  else
+    WriteLn('Consider using a more secure backend');
+end;
+```
+
+#### GetPerformanceScore
+
+获取后端的性能评分（0-100）。
+
+```pascal
+function GetPerformanceScore(const ACaps: TSSLBackendCapabilities): Integer;
+```
+
+**参数**:
+- `ACaps`: 后端能力矩阵
+
+**返回值**: 性能评分（0-100），分数越高性能越好。
+
+**评分因素**:
+- 硬件加速 (+40)
+- SIMD 优化 (+30)
+- 汇编优化 (+30)
+
+**使用示例**:
+```pascal
+var
+  Score: Integer;
+begin
+  Score := GetPerformanceScore(Caps);
+  WriteLn('Performance Score: ', Score, '/100');
+
+  if Score >= 90 then
+    WriteLn('High performance backend')
+  else if Score >= 70 then
+    WriteLn('Good performance')
+  else
+    WriteLn('Consider performance optimizations');
+end;
+```
+
+---
+
+### 描述生成函数
+
+#### GetCapabilitiesDescription
+
+生成后端能力的完整文本描述。
+
+```pascal
+function GetCapabilitiesDescription(const ACaps: TSSLBackendCapabilities): string;
+```
+
+**参数**:
+- `ACaps`: 后端能力矩阵
+
+**返回值**: 包含后端所有能力信息的多行文本。
+
+**使用示例**:
+```pascal
+var
+  Desc: string;
+begin
+  Desc := GetCapabilitiesDescription(Caps);
+  WriteLn(Desc);
+
+  // 输出示例:
+  // Backend: OpenSSL
+  // Version: OpenSSL 3.5.4 30 Sep 2025
+  // Implementation: C Library Binding
+  // TLS Versions: TLS 1.0 - TLS 1.3
+  // DTLS: Supported
+  // Dependencies: External library required
+  // Platform Features:
+  //   - PKCS#11 hardware tokens
+  // Security Score: 90/100
+  // Performance Score: 100/100
+end;
+```
+
+---
+
+### 完整使用示例
+
+```pascal
+program capability_example;
+
+uses
+  SysUtils, fafafa.ssl.base, fafafa.ssl.factory;
+
+procedure PrintBackendInfo(ABackend: TSSLLibraryType);
+var
+  Lib: ISSLLibrary;
+  Caps: TSSLBackendCapabilities;
+begin
+  try
+    Lib := TSSLFactory.GetLibrary(ABackend);
+    if not Assigned(Lib) then
+    begin
+      WriteLn('Backend not available: ', SSL_LIBRARY_NAMES[ABackend]);
+      Exit;
+    end;
+
+    Caps := Lib.GetCapabilities;
+
+    WriteLn('========================================');
+    WriteLn('Backend: ', SSL_LIBRARY_NAMES[Caps.BackendType]);
+    WriteLn('========================================');
+    WriteLn;
+
+    // 基础信息
+    WriteLn('Version: ', Caps.BackendVersion);
+    WriteLn('Implementation Type: ', Ord(Caps.BackendImplType));
+    WriteLn;
+
+    // 协议支持
+    WriteLn('TLS Support:');
+    WriteLn('  TLS 1.3: ', Caps.SupportsTLS13);
+    WriteLn('  DTLS: ', Caps.SupportsDTLS);
+    WriteLn('  Min Version: TLS ', Ord(Caps.MinTLSVersion) - Ord(sslProtocolTLS10) + 1, '.0');
+    WriteLn('  Max Version: TLS ', Ord(Caps.MaxTLSVersion) - Ord(sslProtocolTLS10) + 1, '.0');
+    WriteLn;
+
+    // 算法支持
+    WriteLn('Algorithm Support:');
+    WriteLn('  AES-256-GCM: ', IsCipherSupported(Caps, sslCipherAES256GCM));
+    WriteLn('  ChaCha20-Poly1305: ', IsCipherSupported(Caps, sslCipherCHACHA20_POLY1305));
+    WriteLn('  SHA-256: ', IsHashSupported(Caps, sslHashSHA256));
+    WriteLn('  ECDHE-RSA: ', IsKeyExchangeSupported(Caps, sslKexECDHE_RSA));
+    WriteLn;
+
+    // 功能成熟度
+    WriteLn('Feature Maturity:');
+    WriteLn('  ALPN: ', IsFeatureStable(Caps.ALPNSupport));
+    WriteLn('  SNI: ', IsFeatureStable(Caps.SNISupport));
+    WriteLn;
+
+    // 性能和安全
+    WriteLn('Performance & Security:');
+    WriteLn('  Security Score: ', GetSecurityScore(Caps), '/100');
+    WriteLn('  Performance Score: ', GetPerformanceScore(Caps), '/100');
+    WriteLn('  Hardware Acceleration: ', Caps.HasHardwareAcceleration);
+    WriteLn('  SIMD Optimization: ', Caps.HasSIMDOptimization);
+    WriteLn;
+
+    // 平台特性
+    WriteLn('Platform Features:');
+    WriteLn('  External Library Required: ', Caps.RequiresExternalLibrary);
+    WriteLn('  System Certificate Store: ', Caps.SupportsSystemCertStore);
+    WriteLn('  PKCS#11: ', Caps.SupportsPKCS11);
+    WriteLn('  TPM: ', Caps.SupportsTPM);
+    WriteLn;
+
+  except
+    on E: Exception do
+      WriteLn('Error: ', E.Message);
+  end;
+end;
+
+begin
+  PrintBackendInfo(sslOpenSSL);
+  PrintBackendInfo(sslWolfSSL);
+  PrintBackendInfo(sslMbedTLS);
+  PrintBackendInfo(sslWinSSL);
+end.
+```
+
+---
+
 ## 参考资源
 
 - **OpenSSL 文档**: https://www.openssl.org/docs/
 - **Windows Schannel**: https://docs.microsoft.com/en-us/windows/win32/secauthn/schannel
 - **RFC 5280** (X.509): https://tools.ietf.org/html/rfc5280
 - **RFC 8446** (TLS 1.3): https://tools.ietf.org/html/rfc8446
+- **能力矩阵指南**: `docs/CAPABILITY_MATRIX_GUIDE.md` - 详细使用指南
 
 ---
 
 **版本历史**:
+- v1.2 (2026-02-05): 添加能力矩阵 API（v1.2.0）
 - v0.8 (2025-10-24): 添加 VerifyEx 方法和 WinSSL 企业功能
 - v0.7 (2025-10-01): 初始 API 文档
+
 

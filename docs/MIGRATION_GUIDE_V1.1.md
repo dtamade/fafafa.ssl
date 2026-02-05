@@ -389,14 +389,267 @@ else
 
 ---
 
+---
+
+## v1.2.0 更新: 能力矩阵扩展 (2026-02-05)
+
+v1.2.0 在 v1.1.0 的基础上进一步扩展了后端能力查询功能，引入了细粒度的能力矩阵系统。
+
+### 新增功能
+
+#### 1. 扩展的能力矩阵
+
+`TSSLBackendCapabilities` 从 11 个字段扩展到 40+ 个字段：
+
+```pascal
+var
+  Lib: ISSLLibrary;
+  Caps: TSSLBackendCapabilities;
+begin
+  Lib := TSSLFactory.GetLibrary(sslOpenSSL);
+  Caps := Lib.GetCapabilities;
+
+  // v1.1.0 字段（继续可用）
+  WriteLn('Supports TLS 1.3: ', Caps.SupportsTLS13);
+  WriteLn('Supports ALPN: ', Caps.SupportsALPN);
+
+  // v1.2.0 新增字段
+  WriteLn('Backend Version: ', Caps.BackendVersion);
+  WriteLn('Implementation Type: ', Ord(Caps.BackendImplType));
+  WriteLn('Supports DTLS: ', Caps.SupportsDTLS);
+  WriteLn('Has Hardware Acceleration: ', Caps.HasHardwareAcceleration);
+  WriteLn('Supports System Cert Store: ', Caps.SupportsSystemCertStore);
+  WriteLn('Supports PKCS#11: ', Caps.SupportsPKCS11);
+end;
+```
+
+#### 2. 算法支持查询
+
+v1.2.0 引入了细粒度的算法支持查询：
+
+```pascal
+uses
+  fafafa.ssl.base;
+
+var
+  Caps: TSSLBackendCapabilities;
+begin
+  Caps := Lib.GetCapabilities;
+
+  // 查询对称加密算法
+  if IsCipherSupported(Caps, sslCipherAES256GCM) then
+    WriteLn('AES-256-GCM is supported');
+
+  if IsCipherSupported(Caps, sslCipherCHACHA20_POLY1305) then
+    WriteLn('ChaCha20-Poly1305 is supported');
+
+  // 查询哈希算法
+  if IsHashSupported(Caps, sslHashSHA256) then
+    WriteLn('SHA-256 is supported');
+
+  // 查询密钥交换算法
+  if IsKeyExchangeSupported(Caps, sslKexECDHE_RSA) then
+    WriteLn('ECDHE-RSA is supported');
+end;
+```
+
+#### 3. 功能成熟度评估
+
+v1.2.0 引入了功能支持级别的概念：
+
+```pascal
+var
+  Caps: TSSLBackendCapabilities;
+begin
+  Caps := Lib.GetCapabilities;
+
+  // 检查功能是否稳定（推荐生产使用）
+  if IsFeatureStable(Caps.ALPNSupport) then
+    WriteLn('ALPN is production-ready');
+
+  // 检查功能是否可用（包括实验性）
+  if IsFeatureUsable(Caps.OCSPStaplingSupport) then
+    WriteLn('OCSP Stapling is available (might be experimental)');
+
+  // 检查功能是否已弃用
+  if IsFeatureDeprecated(Caps.CertTransparencySupport) then
+    WriteLn('Certificate Transparency is deprecated');
+end;
+```
+
+#### 4. 后端评分系统
+
+v1.2.0 引入了安全和性能评分系统（0-100）：
+
+```pascal
+var
+  Caps: TSSLBackendCapabilities;
+  SecScore, PerfScore: Integer;
+begin
+  Caps := Lib.GetCapabilities;
+
+  // 安全评分（基于安全特性）
+  SecScore := GetSecurityScore(Caps);
+  WriteLn('Security Score: ', SecScore, '/100');
+
+  // 性能评分（基于性能特性）
+  PerfScore := GetPerformanceScore(Caps);
+  WriteLn('Performance Score: ', PerfScore, '/100');
+end;
+```
+
+#### 5. 统一的原生句柄辅助单元 (v1.1.1)
+
+v1.1.1 引入了统一的辅助单元，简化了原生句柄访问：
+
+**之前（v1.1.0）**:
+```pascal
+uses
+  fafafa.ssl.openssl.native_handle;  // 需要记住后端特定单元
+
+var
+  Ctx: ISSLContext;
+  Handle: PSSL_CTX;
+begin
+  Handle := PSSL_CTX(GetNativeHandleSafe(Ctx, 'MyCode'));
+end;
+```
+
+**之后（v1.1.1+）**:
+```pascal
+uses
+  fafafa.ssl.native_handle;  // 统一单元，适用于所有后端
+
+var
+  Ctx: ISSLContext;
+  Handle: PSSL_CTX;
+begin
+  // 方式1: 简洁（接近 v1.0.0）
+  Handle := PSSL_CTX(GetNativeHandle(Ctx));
+
+  // 方式2: 类型安全（推荐）
+  Handle := specialize GetNativeHandleAs<PSSL_CTX>(Ctx);
+
+  // 方式3: 最安全（生产环境推荐）
+  Handle := specialize GetNativeHandleAsSafe<PSSL_CTX>(Ctx, 'MyCode');
+end;
+```
+
+#### 6. 智能后端选择示例
+
+基于能力矩阵的智能后端选择：
+
+```pascal
+function SelectBestBackend: TSSLLibraryType;
+var
+  Candidates: array of TSSLLibraryType;
+  BestScore, Score: Integer;
+  I: Integer;
+  Lib: ISSLLibrary;
+  Caps: TSSLBackendCapabilities;
+begin
+  Candidates := [sslOpenSSL, sslWolfSSL, sslMbedTLS, sslWinSSL];
+  BestScore := 0;
+  Result := sslOpenSSL;
+
+  for I := Low(Candidates) to High(Candidates) do
+  begin
+    try
+      Lib := TSSLFactory.GetLibrary(Candidates[I]);
+      if not Assigned(Lib) then
+        Continue;
+
+      Caps := Lib.GetCapabilities;
+
+      // 综合评分（安全 + 性能）
+      Score := GetSecurityScore(Caps) + GetPerformanceScore(Caps);
+
+      // 额外加分：系统证书存储支持
+      if Caps.SupportsSystemCertStore then
+        Score := Score + 10;
+
+      // 额外加分：硬件加速
+      if Caps.HasHardwareAcceleration then
+        Score := Score + 5;
+
+      if Score > BestScore then
+      begin
+        BestScore := Score;
+        Result := Candidates[I];
+      end;
+    except
+      Continue;
+    end;
+  end;
+
+  WriteLn('Selected backend: ', SSL_LIBRARY_NAMES[Result],
+          ' (score: ', BestScore, ')');
+end;
+```
+
+#### 7. 完整能力描述
+
+获取后端的完整文本描述：
+
+```pascal
+var
+  Caps: TSSLBackendCapabilities;
+  Desc: string;
+begin
+  Caps := Lib.GetCapabilities;
+  Desc := GetCapabilitiesDescription(Caps);
+  WriteLn(Desc);
+
+  // 输出示例:
+  // Backend: OpenSSL
+  // Version: OpenSSL 3.5.4 30 Sep 2025
+  // Implementation: C Library Binding
+  // TLS Versions: TLS 1.0 - TLS 1.3
+  // Dependencies: External library required
+  // Security Score: 90/100
+  // Performance Score: 100/100
+end;
+```
+
+### 向后兼容性
+
+✅ **完全向后兼容**：
+- v1.1.0 的所有 11 个字段保持不变
+- 新字段追加到记录末尾
+- 现有代码无需任何修改
+
+### 后端特性对比 (v1.2.0)
+
+| 特性 | OpenSSL | WolfSSL | MbedTLS | WinSSL |
+|------|---------|---------|---------|--------|
+| **实现类型** | C Library | C Library | C Library | OS Native |
+| **安全评分** | 90/100 | 85/100 | 80/100 | 90/100 |
+| **性能评分** | 100/100 | 95/100 | 85/100 | 100/100 |
+| **TLS 1.3** | ✅ | ✅ | ✅ | ✅ (Win10+) |
+| **DTLS** | ✅ | ✅ | ✅ | ❌ |
+| **硬件加速** | ✅ | ✅ | ✅ | ✅ |
+| **系统证书** | ❌ | ❌ | ❌ | ✅ |
+| **PKCS#11** | ✅ | ⚠️ | ⚠️ | ✅ |
+| **TPM** | ❌ | ❌ | ❌ | ✅ |
+| **FIPS** | ✅ | ❌ | ❌ | ✅ |
+
+### 相关文档
+
+- **快速参考**: `docs/NATIVE_HANDLE_QUICK_REF.md` - 原生句柄使用指南
+- **能力矩阵指南**: `docs/CAPABILITY_MATRIX_GUIDE.md` - 能力矩阵详细说明
+- **API 参考**: `docs/API_REFERENCE.md` - 完整 API 文档
+- **完成报告**: `.claude/plans/task3-capability-matrix-completion-report.md` - 技术细节
+
+---
+
 ## 总结
 
-v1.1.0 的架构改进为 fafafa.ssl 的长远发展奠定了基础。对于绝大多数用户，此变更是透明的；对于高级用户，迁移过程简单明了。
+v1.1.0 的架构改进为 fafafa.ssl 的长远发展奠定了基础，v1.2.0 进一步扩展了细粒度的能力查询功能。对于绝大多数用户，这些变更是透明的；对于高级用户，提供了更强大的后端查询和决策能力。
 
 感谢您使用 fafafa.ssl！
 
 ---
 
-**文档版本**: 1.0
+**文档版本**: 1.2
 **最后更新**: 2026-02-05
 **作者**: fafafa.ssl 团队
