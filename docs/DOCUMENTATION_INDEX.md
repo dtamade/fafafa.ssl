@@ -15,7 +15,7 @@
 5. **[examples/EXAMPLES_INDEX.md](../examples/EXAMPLES_INDEX.md)** - 示例程序完整索引（按功能分类）
 6. **[testing/README_TESTING.md](testing/README_TESTING.md)** - 测试说明（入口）
 7. **[CICD_SETUP.md](CICD_SETUP.md)** - CI/CD 与本地流水线
-8. **[ARCHITECTURE.md](ARCHITECTURE.md)** - 架构说明
+8. **[ARCHITECTURE.md](ARCHITECTURE.md)** - 架构设计文档 🆕
 
 ---
 
@@ -26,6 +26,7 @@
 - **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)**
 - **[ZERO_DEPENDENCY_DEPLOYMENT.md](ZERO_DEPENDENCY_DEPLOYMENT.md)**
 - **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)**
+- **[MIGRATION_GUIDE_V1.1.md](MIGRATION_GUIDE_V1.1.md)** - v1.1 迁移指南 🆕
 
 ### 构建与依赖
 - **[DEPENDENCIES.md](DEPENDENCIES.md)**
@@ -83,4 +84,4 @@
 
 ---
 
-**最后更新**: 2026-01-20
+**最后更新**: 2026-02-05

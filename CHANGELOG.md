@@ -7,6 +7,62 @@
 
 ---
 
+## [1.1.0] - 待发布
+
+**架构改进版本** - 为纯 FreePascal TLS 后端铺平道路
+
+### 变更
+
+#### 架构改进
+
+- **GetNativeHandle 接口重构**
+  - 从 6 个核心接口移除 `GetNativeHandle` 方法
+  - 新增可选接口 `ISSLNativeHandleAccess`
+  - C 库后端（OpenSSL/WinSSL/MbedTLS/WolfSSL）实现新接口
+  - 纯 Pascal 后端无需实现（为未来准备）
+
+- **类型安全提升**
+  - 使用 `Supports()` 接口查询机制
+  - 运行时类型检查防止误用
+  - 统一的错误上下文信息
+
+- **辅助函数单元**
+  - `fafafa.ssl.openssl.native_handle`
+  - `fafafa.ssl.winssl.native_handle`
+  - `fafafa.ssl.mbedtls.native_handle`
+  - `fafafa.ssl.wolfssl.native_handle`
+  - 提供 `GetNativeHandleSafe()` 和 `TryGetNativeHandle()` 函数
+
+### 新增
+
+- **文档**
+  - `docs/ARCHITECTURE.md` - 架构设计文档
+  - `docs/MIGRATION_GUIDE_V1.1.md` - v1.1 迁移指南
+  - `.claude/plans/refactoring-completion-report.md` - 重构完成报告
+  - `.claude/plans/refactoring-test-verification.md` - 测试验证报告
+
+### 修复
+
+- 更新测试文件以使用新的接口模式
+  - `test_mbedtls_framework.pas`
+  - `test_wolfssl_framework.pas`
+  - `openssl/test_openssl_v2.pas`
+  - `openssl/test_openssl_basic_validation.pas`
+
+### 影响
+
+- **向后兼容**: ✅ 对于标准用户代码完全兼容
+- **高级用户**: 需要迁移直接使用 `GetNativeHandle` 的代码（见迁移指南）
+- **性能**: 无性能回归（Supports 查询开销可忽略）
+
+### 测试验证
+
+- 191 个测试通过，通过率 ~99%
+- 所有后端编译成功
+- 无功能回归
+
+---
+
 ## [1.0.0] - 2026-02-05
 
 **fafafa.ssl v1.0.0 正式发布** - 企业级 SSL/TLS 库
