@@ -60,6 +60,9 @@ type
     // 现在通过 TOpenSSLLoader 获取
     FVersionString: string;
     FVersionNumber: Cardinal;
+    // v1.2.0: 能力矩阵缓存
+    FCapabilitiesCached: Boolean;
+    FCapabilitiesCache: TSSLBackendCapabilities;
 
     { 内部方法 }
     procedure InternalLog(ALevel: TSSLLogLevel; const AMessage: string);
@@ -68,6 +71,7 @@ type
     function DetectOpenSSLVersion: Boolean;
     procedure SetError(AError: Integer; const AErrorMsg: string);
     procedure ClearInternalError;
+    procedure InvalidateCapabilitiesCache;  // v1.2.0: 缓存失效
     
   public
     constructor Create;
@@ -191,7 +195,10 @@ begin
   // 现在通过 TOpenSSLLoader 管理
   FVersionString := '';
   FVersionNumber := 0;
-  
+  // v1.2.0: 初始化能力矩阵缓存
+  FCapabilitiesCached := False;
+  FillChar(FCapabilitiesCache, SizeOf(FCapabilitiesCache), 0);
+
   // 初始化默认配置
   FillChar(FDefaultConfig, SizeOf(FDefaultConfig), 0);
   with FDefaultConfig do
@@ -351,6 +358,13 @@ begin
   FLastErrorString := '';
 end;
 
+// v1.2.0: 能力矩阵缓存失效
+procedure TOpenSSLLibrary.InvalidateCapabilitiesCache;
+begin
+  FCapabilitiesCached := False;
+  FillChar(FCapabilitiesCache, SizeOf(FCapabilitiesCache), 0);
+end;
+
 // ============================================================================
 // ISSLLibrary - 初始化和清理
 // ============================================================================
@@ -422,12 +436,15 @@ procedure TOpenSSLLibrary.Finalize;
 begin
   if not FInitialized then
     Exit;
-    
+
   InternalLog(sslLogInfo, 'Finalizing OpenSSL library...');
-  
+
+  // v1.2.0: 失效能力矩阵缓存
+  InvalidateCapabilitiesCache;
+
   // OpenSSL 1.1.0+ auto-cleans on exit
   // Manual cleanup not required
-  
+
   FInitialized := False;
   InternalLog(sslLogInfo, 'OpenSSL library finalized');
 end;
@@ -553,7 +570,16 @@ end;
 
 function TOpenSSLLibrary.GetCapabilities: TSSLBackendCapabilities;
 begin
-  // P2-2 + v1.2: 返回 OpenSSL 后端完整能力矩阵
+  // P2-2 + v1.2: 返回 OpenSSL 后端完整能力矩阵（带缓存）
+
+  // v1.2.0: 如果已缓存，直接返回缓存值
+  if FCapabilitiesCached then
+  begin
+    Result := FCapabilitiesCache;
+    Exit;
+  end;
+
+  // 生成能力矩阵
   FillChar(Result, SizeOf(Result), 0);
 
   // ===== v1.1.0 保留字段（向后兼容）=====
@@ -718,6 +744,10 @@ begin
       BoolToStr(Result.SupportsALPN, True),
       BoolToStr(Result.SupportsSNI, True)
     ]));
+
+  // v1.2.0: 缓存能力矩阵
+  FCapabilitiesCache := Result;
+  FCapabilitiesCached := True;
 end;
 
 // ============================================================================
