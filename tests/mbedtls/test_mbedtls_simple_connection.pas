@@ -27,7 +27,7 @@ const
 
 procedure TestSimpleConnection;
 var
-  LLib: TMbedTLSLibrary;
+  LLib: ISSLLibrary;  // 使用接口引用避免引用计数问题
   LCtx: TMbedTLSContext;
   LConn: ISSLConnection;
   LMbedConn: TMbedTLSConnection;
@@ -137,7 +137,7 @@ begin
     WriteLn('   ✅ Library finalized');
 
   finally
-    LLib.Free;
+    LLib := nil;  // 释放接口引用，自动释放对象
     CleanupNetwork;
   end;
 
