@@ -1382,11 +1382,22 @@ const
     SSL_OP_CIPHER_SERVER_PREFERENCE;
 var
   Mask: UInt64;
+  StatusType: Integer;
 begin
   SetSessionCacheMode(ssoEnableSessionCache in FOptions);
 
   if FSSLContext = nil then
     Exit;
+
+  // Client-side OCSP stapling request extension (status_request / RFC 6066)
+  if (FContextType <> sslCtxServer) and Assigned(SSL_CTX_set_tlsext_status_type) then
+  begin
+    if ssoEnableOCSPStapling in FOptions then
+      StatusType := TLSEXT_STATUSTYPE_ocsp
+    else
+      StatusType := 0;
+    SSL_CTX_set_tlsext_status_type(FSSLContext, StatusType);
+  end;
 
   Mask := 0;
 

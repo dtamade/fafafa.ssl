@@ -307,6 +307,9 @@ const
   TLSEXT_TYPE_renegotiate = $ff01;
   TLSEXT_TYPE_next_proto_neg = 13172;
   
+  // TLS status request types
+  TLSEXT_STATUSTYPE_ocsp = 1;
+
   // TLS name types
   TLSEXT_NAMETYPE_host_name = 0;
   

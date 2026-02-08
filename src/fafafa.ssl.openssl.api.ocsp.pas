@@ -494,6 +494,16 @@ begin
   // 使用批量加载模式
   TOpenSSLLoader.LoadFunctions(ACryptoLib, OCSPBindings);
 
+  // OpenSSL 3.x 中部分 OCSP API 使用小写命名（非旧式宏导出）
+  if not Assigned(OCSP_RESPONSE_create) then
+    OCSP_RESPONSE_create := TOCSP_RESPONSE_create(GetProcedureAddress(ACryptoLib, 'OCSP_response_create'));
+
+  if not Assigned(OCSP_RESPONSE_status) then
+    OCSP_RESPONSE_status := TOCSP_RESPONSE_status(GetProcedureAddress(ACryptoLib, 'OCSP_response_status'));
+
+  if not Assigned(OCSP_RESPONSE_get1_basic) then
+    OCSP_RESPONSE_get1_basic := TOCSP_RESPONSE_get1_basic(GetProcedureAddress(ACryptoLib, 'OCSP_response_get1_basic'));
+
   TOpenSSLLoader.SetModuleLoaded(osmOCSP, Assigned(OCSP_REQUEST_new) and Assigned(OCSP_RESPONSE_new));
   Result := TOpenSSLLoader.IsModuleLoaded(osmOCSP);
 end;

@@ -287,6 +287,16 @@ function IsOpenSSLSSLLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoa
 { Helper function - SSL_set_tlsext_host_name is a macro in OpenSSL, not a real function }
 function SSL_set_tlsext_host_name_impl(ssl: PSSL; const name: PAnsiChar): Integer; cdecl;
 
+{ OCSP tlsext macro fallback helpers }
+function SSL_CTX_set_tlsext_status_type_impl(ctx: PSSL_CTX; &type: Integer): clong; cdecl;
+function SSL_CTX_get_tlsext_status_type_impl(ctx: PSSL_CTX): clong; cdecl;
+function SSL_set_tlsext_status_type_impl(ssl: PSSL; &type: Integer): clong; cdecl;
+function SSL_get_tlsext_status_type_impl(ssl: PSSL): clong; cdecl;
+function SSL_set_tlsext_status_ocsp_resp_impl(ssl: PSSL; resp: PByte; len: clong): clong; cdecl;
+function SSL_get_tlsext_status_ocsp_resp_impl(ssl: PSSL; resp: PPByte): clong; cdecl;
+function SSL_CTX_set_tlsext_status_cb_impl(ctx: PSSL_CTX; cb: Pointer): clong; cdecl;
+function SSL_CTX_set_tlsext_status_arg_impl(ctx: PSSL_CTX; arg: Pointer): clong; cdecl;
+
 implementation
 
 uses
@@ -367,7 +377,42 @@ begin
   SSL_CTX_set_alpn_select_cb := TSSL_CTX_set_alpn_select_cb(GetSSLProcAddress('SSL_CTX_set_alpn_select_cb'));
   SSL_get0_alpn_selected := TSSL_get0_alpn_selected(GetSSLProcAddress('SSL_get0_alpn_selected'));
   SSL_select_next_proto := TSSL_select_next_proto(GetSSLProcAddress('SSL_select_next_proto'));
-  
+
+  // Load OCSP stapling extension functions (optional)
+  SSL_CTX_set_tlsext_status_type := TSSL_CTX_set_tlsext_status_type(GetSSLProcAddress('SSL_CTX_set_tlsext_status_type'));
+  SSL_CTX_get_tlsext_status_type := TSSL_CTX_get_tlsext_status_type(GetSSLProcAddress('SSL_CTX_get_tlsext_status_type'));
+  SSL_set_tlsext_status_type := TSSL_set_tlsext_status_type(GetSSLProcAddress('SSL_set_tlsext_status_type'));
+  SSL_get_tlsext_status_type := TSSL_get_tlsext_status_type(GetSSLProcAddress('SSL_get_tlsext_status_type'));
+  SSL_set_tlsext_status_ocsp_resp := TSSL_set_tlsext_status_ocsp_resp(GetSSLProcAddress('SSL_set_tlsext_status_ocsp_resp'));
+  SSL_get_tlsext_status_ocsp_resp := TSSL_get_tlsext_status_ocsp_resp(GetSSLProcAddress('SSL_get_tlsext_status_ocsp_resp'));
+  SSL_CTX_set_tlsext_status_cb := TSSL_CTX_set_tlsext_status_cb(GetSSLProcAddress('SSL_CTX_set_tlsext_status_cb'));
+  SSL_CTX_set_tlsext_status_arg := TSSL_CTX_set_tlsext_status_arg(GetSSLProcAddress('SSL_CTX_set_tlsext_status_arg'));
+
+  // Fallback to macro-based wrappers when symbols are not exported
+  if not Assigned(SSL_CTX_set_tlsext_status_type) then
+    SSL_CTX_set_tlsext_status_type := @SSL_CTX_set_tlsext_status_type_impl;
+
+  if not Assigned(SSL_CTX_get_tlsext_status_type) then
+    SSL_CTX_get_tlsext_status_type := @SSL_CTX_get_tlsext_status_type_impl;
+
+  if not Assigned(SSL_set_tlsext_status_type) then
+    SSL_set_tlsext_status_type := @SSL_set_tlsext_status_type_impl;
+
+  if not Assigned(SSL_get_tlsext_status_type) then
+    SSL_get_tlsext_status_type := @SSL_get_tlsext_status_type_impl;
+
+  if not Assigned(SSL_set_tlsext_status_ocsp_resp) then
+    SSL_set_tlsext_status_ocsp_resp := @SSL_set_tlsext_status_ocsp_resp_impl;
+
+  if not Assigned(SSL_get_tlsext_status_ocsp_resp) then
+    SSL_get_tlsext_status_ocsp_resp := @SSL_get_tlsext_status_ocsp_resp_impl;
+
+  if not Assigned(SSL_CTX_set_tlsext_status_cb) then
+    SSL_CTX_set_tlsext_status_cb := @SSL_CTX_set_tlsext_status_cb_impl;
+
+  if not Assigned(SSL_CTX_set_tlsext_status_arg) then
+    SSL_CTX_set_tlsext_status_arg := @SSL_CTX_set_tlsext_status_arg_impl;
+
   // Load other extension functions...
   // Many functions are optional and may not exist in older versions
 
@@ -380,6 +425,14 @@ begin
   // Clear all function pointers
   SSL_CTX_set_min_proto_version := nil;
   SSL_CTX_set_max_proto_version := nil;
+  SSL_CTX_set_tlsext_status_type := nil;
+  SSL_CTX_get_tlsext_status_type := nil;
+  SSL_set_tlsext_status_type := nil;
+  SSL_get_tlsext_status_type := nil;
+  SSL_set_tlsext_status_ocsp_resp := nil;
+  SSL_get_tlsext_status_ocsp_resp := nil;
+  SSL_CTX_set_tlsext_status_cb := nil;
+  SSL_CTX_set_tlsext_status_arg := nil;
   // ... clear all other function pointers ...
 
   TOpenSSLLoader.SetModuleLoaded(osmSSL, False);
@@ -402,6 +455,87 @@ begin
   if Assigned(SSL_ctrl) then
     Result := Integer(SSL_ctrl(ssl, SSL_CTRL_SET_TLSEXT_HOSTNAME,
                               TLSEXT_NAMETYPE_host_name, Pointer(name)))
+  else
+    Result := 0;
+end;
+
+
+function SSL_CTX_set_tlsext_status_type_impl(ctx: PSSL_CTX; &type: Integer): clong; cdecl;
+const
+  SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE = 65;
+begin
+  if Assigned(SSL_CTX_ctrl) then
+    Result := SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE, &type, nil)
+  else
+    Result := 0;
+end;
+
+function SSL_CTX_get_tlsext_status_type_impl(ctx: PSSL_CTX): clong; cdecl;
+const
+  SSL_CTRL_GET_TLSEXT_STATUS_REQ_TYPE = 127;
+begin
+  if Assigned(SSL_CTX_ctrl) then
+    Result := SSL_CTX_ctrl(ctx, SSL_CTRL_GET_TLSEXT_STATUS_REQ_TYPE, 0, nil)
+  else
+    Result := 0;
+end;
+
+function SSL_set_tlsext_status_type_impl(ssl: PSSL; &type: Integer): clong; cdecl;
+const
+  SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE = 65;
+begin
+  if Assigned(SSL_ctrl) then
+    Result := SSL_ctrl(ssl, SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE, &type, nil)
+  else
+    Result := 0;
+end;
+
+function SSL_get_tlsext_status_type_impl(ssl: PSSL): clong; cdecl;
+const
+  SSL_CTRL_GET_TLSEXT_STATUS_REQ_TYPE = 127;
+begin
+  if Assigned(SSL_ctrl) then
+    Result := SSL_ctrl(ssl, SSL_CTRL_GET_TLSEXT_STATUS_REQ_TYPE, 0, nil)
+  else
+    Result := 0;
+end;
+
+function SSL_set_tlsext_status_ocsp_resp_impl(ssl: PSSL; resp: PByte; len: clong): clong; cdecl;
+const
+  SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP = 71;
+begin
+  if Assigned(SSL_ctrl) then
+    Result := SSL_ctrl(ssl, SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP, len, resp)
+  else
+    Result := 0;
+end;
+
+function SSL_get_tlsext_status_ocsp_resp_impl(ssl: PSSL; resp: PPByte): clong; cdecl;
+const
+  SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP = 70;
+begin
+  if Assigned(SSL_ctrl) then
+    Result := SSL_ctrl(ssl, SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP, 0, resp)
+  else
+    Result := 0;
+end;
+
+function SSL_CTX_set_tlsext_status_cb_impl(ctx: PSSL_CTX; cb: Pointer): clong; cdecl;
+const
+  SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB = 63;
+begin
+  if Assigned(SSL_CTX_ctrl) then
+    Result := SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB, 0, cb)
+  else
+    Result := 0;
+end;
+
+function SSL_CTX_set_tlsext_status_arg_impl(ctx: PSSL_CTX; arg: Pointer): clong; cdecl;
+const
+  SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG = 64;
+begin
+  if Assigned(SSL_CTX_ctrl) then
+    Result := SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG, 0, arg)
   else
     Result := 0;
 end;

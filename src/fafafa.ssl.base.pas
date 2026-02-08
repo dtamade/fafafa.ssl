@@ -183,7 +183,9 @@ type
     ssoNoTLSv1,             // 禁用 TLSv1.0
     ssoNoTLSv1_1,           // 禁用 TLSv1.1
     ssoNoTLSv1_2,           // 禁用 TLSv1.2
-    ssoNoTLSv1_3            // 禁用 TLSv1.3
+    ssoNoTLSv1_3,            // 禁用 TLSv1.3
+    ssoRequireOCSPStapling,  // 强制要求 OCSP 装订（追加到末尾以保持历史序号兼容）
+    ssoEnableCertVerifyCache  // 启用证书验证缓存（默认关闭）
   );
   TSSLOptions = set of TSSLOption;
 

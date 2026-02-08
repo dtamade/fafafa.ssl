@@ -38,6 +38,7 @@ uses
   fafafa.ssl.openssl.x509.chain,
   fafafa.ssl.openssl.certificate,
   fafafa.ssl.openssl.session,
+  fafafa.ssl.cert.verify.cache,
   fafafa.ssl.logging;
 
 type
@@ -56,8 +57,12 @@ type
     function PumpBIOToStream: Integer;
     function InternalHandshake(AIsClient: Boolean): Boolean;
     function ValidatePostHandshake(AIsClient: Boolean): Boolean;
+    procedure ApplyPreHandshakeOCSPStatusRequest(AIsClient: Boolean);
 
   protected
+    { B51-M5: required OCSP stapling fail-closed policy helper }
+    function ValidateRequiredOCSPStapling(AIsClient: Boolean): Boolean;
+
     { 抽象方法实现 }
     function DoRead(var ABuffer; ACount: Integer): Integer; override;
     function DoWrite(const ABuffer; ACount: Integer): Integer; override;
@@ -373,6 +378,8 @@ begin
     Result := InternalHandshake(True);
     Exit;
   end;
+
+  ApplyPreHandshakeOCSPStatusRequest(True);
 
   Ret := SSL_connect(FSSL);
   FConnected := (Ret = 1);
@@ -752,20 +759,9 @@ end;
 { OCSP 方法覆盖 }
 
 function TOpenSSLConnection.DoGetOCSPStaplingEnabled: Boolean;
-var
-  RespLen: clong;
-  RespPtr: PByte;
 begin
-  Result := False;
-  if FSSL = nil then Exit;
-
-  // 检查是否有 OCSP 响应（如果有则说明 OCSP Stapling 已启用且有响应）
-  if Assigned(SSL_get_tlsext_status_ocsp_resp) then
-  begin
-    RespPtr := nil;
-    RespLen := SSL_get_tlsext_status_ocsp_resp(FSSL, @RespPtr);
-    Result := (RespLen > 0) and (RespPtr <> nil);
-  end;
+  // 兼容符号函数与宏回退：是否存在 stapled 响应
+  Result := Length(DoGetOCSPResponse) > 0;
 end;
 
 function TOpenSSLConnection.DoGetOCSPResponse: TBytes;
@@ -774,17 +770,16 @@ var
   RespPtr: PByte;
 begin
   SetLength(Result, 0);
-  if FSSL = nil then Exit;
+  if (FSSL = nil) or (not Assigned(SSL_get_tlsext_status_ocsp_resp)) then
+    Exit;
 
-  if Assigned(SSL_get_tlsext_status_ocsp_resp) then
+  RespPtr := nil;
+  RespLen := SSL_get_tlsext_status_ocsp_resp(FSSL, @RespPtr);
+
+  if (RespLen > 0) and (RespPtr <> nil) then
   begin
-    RespPtr := nil;
-    RespLen := SSL_get_tlsext_status_ocsp_resp(FSSL, @RespPtr);
-    if (RespLen > 0) and (RespPtr <> nil) then
-    begin
-      SetLength(Result, RespLen);
-      Move(RespPtr^, Result[0], RespLen);
-    end;
+    SetLength(Result, RespLen);
+    Move(RespPtr^, Result[0], RespLen);
   end;
 end;
 
@@ -792,43 +787,108 @@ function TOpenSSLConnection.DoIsOCSPResponseVerified: Boolean;
 var
   RespData: TBytes;
   OCSPResp: POCSP_RESPONSE;
-  BasicResp: POCSP_BASICRESP;
-  RespStatus: Integer;
   DataPtr: PByte;
+  PeerCert: ISSLCertificate;
+  PeerX509: PX509;
+  IssuerX509: PX509;
+  IssuerNeedsFree: Boolean;
+  VerifyStore: PX509_STORE;
+  PeerChain: PSTACK_OF_X509;
+  StoreCtx: PX509_STORE_CTX;
+  VerifiedChain: PSTACK_OF_X509;
 begin
   Result := False;
 
-  // 获取 OCSP 响应
-  RespData := DoGetOCSPResponse;
-  if Length(RespData) = 0 then Exit;
+  if (FSSL = nil) or (FContext = nil) then
+    Exit;
 
-  // 解析 OCSP 响应
-  if not Assigned(d2i_OCSP_RESPONSE) then Exit;
-  if not Assigned(OCSP_RESPONSE_status) then Exit;
-  if not Assigned(OCSP_RESPONSE_get1_basic) then Exit;
+  // 获取 stapled OCSP 响应
+  RespData := DoGetOCSPResponse;
+  if Length(RespData) = 0 then
+    Exit;
+
+  // Ensure OCSP APIs are available
+  if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) then
+    LoadOpenSSLOCSP(GetCryptoLibHandle);
+
+  if (not TOpenSSLLoader.IsModuleLoaded(osmOCSP)) or (not Assigned(d2i_OCSP_RESPONSE)) then
+    Exit;
 
   DataPtr := @RespData[0];
   OCSPResp := d2i_OCSP_RESPONSE(nil, @DataPtr, Length(RespData));
-  if OCSPResp = nil then Exit;
+  if OCSPResp = nil then
+    Exit;
+
+  IssuerX509 := nil;
+  IssuerNeedsFree := False;
 
   try
-    // 检查响应状态
-    RespStatus := OCSP_RESPONSE_status(OCSPResp);
-    if RespStatus <> OCSP_RESPONSE_STATUS_SUCCESSFUL then Exit;
+    // 获取对端证书（需要用于响应验证）
+    PeerCert := DoGetPeerCertificate;
+    if PeerCert = nil then
+      Exit;
 
-    // 获取基本响应
-    BasicResp := OCSP_RESPONSE_get1_basic(OCSPResp);
-    if BasicResp = nil then Exit;
+    if not TryGetNativeHandle(PeerCert, Pointer(PeerX509)) then
+      Exit;
 
-    try
-      // 如果能成功获取基本响应且状态为成功，则认为已验证
-      // 完整验证需要使用 OCSP_basic_verify，这里简化处理
-      Result := True;
-    finally
-      if Assigned(OCSP_BASICRESP_free) then
-        OCSP_BASICRESP_free(BasicResp);
+    if PeerX509 = nil then
+      Exit;
+
+    // Try to obtain issuer cert from peer chain first
+    PeerChain := nil;
+    if Assigned(SSL_get_peer_cert_chain) then
+      PeerChain := SSL_get_peer_cert_chain(FSSL);
+
+    if PeerChain <> nil then
+      IssuerX509 := FindIssuerX509InChain(PeerX509, PeerChain);
+
+    // Retrieve verify store from context
+    VerifyStore := nil;
+    if Assigned(SSL_CTX_get_cert_store) then
+      VerifyStore := SSL_CTX_get_cert_store(
+        PSSL_CTX(GetNativeHandleSafe(FContext, 'TOpenSSLConnection.DoIsOCSPResponseVerified')));
+
+    // Fall back to verified chain building if issuer not found
+    if (IssuerX509 = nil) and (VerifyStore <> nil) and
+      Assigned(X509_STORE_CTX_new) and Assigned(X509_STORE_CTX_free) and
+      Assigned(X509_STORE_CTX_init) and Assigned(X509_verify_cert) and
+      Assigned(X509_STORE_CTX_get0_chain) then
+    begin
+      StoreCtx := X509_STORE_CTX_new();
+      if StoreCtx <> nil then
+      try
+        PeerChain := nil;
+        if Assigned(SSL_get_peer_cert_chain) then
+          PeerChain := SSL_get_peer_cert_chain(FSSL);
+
+        if X509_STORE_CTX_init(StoreCtx, VerifyStore, PeerX509, PeerChain) = 1 then
+        begin
+          if X509_verify_cert(StoreCtx) = 1 then
+          begin
+            VerifiedChain := X509_STORE_CTX_get0_chain(StoreCtx);
+            if VerifiedChain <> nil then
+            begin
+              IssuerX509 := FindIssuerX509InChain(PeerX509, VerifiedChain);
+              if (IssuerX509 <> nil) and Assigned(X509_up_ref) then
+              begin
+                X509_up_ref(IssuerX509);
+                IssuerNeedsFree := True;
+              end;
+            end;
+          end;
+        end;
+      finally
+        X509_STORE_CTX_free(StoreCtx);
+      end;
     end;
+
+    // Use shared OCSP verification helper (signature + chain validation)
+    Result := VerifyOCSPResponse(OCSPResp, PeerX509, IssuerX509, VerifyStore, nil);
+
   finally
+    if IssuerNeedsFree and (IssuerX509 <> nil) and Assigned(X509_free) then
+      X509_free(IssuerX509);
+
     if Assigned(OCSP_RESPONSE_free) then
       OCSP_RESPONSE_free(OCSPResp);
   end;
@@ -846,6 +906,10 @@ begin
   // 获取 OCSP 响应
   RespData := DoGetOCSPResponse;
   if Length(RespData) = 0 then Exit;
+
+  // Ensure OCSP APIs are available
+  if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) then
+    LoadOpenSSLOCSP(GetCryptoLibHandle);
 
   // 解析 OCSP 响应
   if not Assigned(d2i_OCSP_RESPONSE) then
@@ -1004,6 +1068,26 @@ begin
   end;
 end;
 
+procedure TOpenSSLConnection.ApplyPreHandshakeOCSPStatusRequest(AIsClient: Boolean);
+var
+  Options: TSSLOptions;
+  StatusType: Integer;
+begin
+  if (FSSL = nil) or (FContext = nil) or (not AIsClient) then
+    Exit;
+
+  if not Assigned(SSL_set_tlsext_status_type) then
+    Exit;
+
+  Options := FContext.GetOptions;
+  if ssoEnableOCSPStapling in Options then
+    StatusType := TLSEXT_STATUSTYPE_ocsp
+  else
+    StatusType := 0;
+
+  SSL_set_tlsext_status_type(FSSL, StatusType);
+end;
+
 function TOpenSSLConnection.InternalHandshake(AIsClient: Boolean): Boolean;
 var
   LRet, LErr: Integer;
@@ -1012,6 +1096,8 @@ begin
 
   if (FSSL = nil) or (not HasStreamTransport) then
     Exit;
+
+  ApplyPreHandshakeOCSPStatusRequest(AIsClient);
 
   // Set initial handshake state explicitly for stream-based connections
   if AIsClient then
@@ -1072,10 +1158,45 @@ begin
   end;
 end;
 
+function TOpenSSLConnection.ValidateRequiredOCSPStapling(AIsClient: Boolean): Boolean;
+var
+  Options: TSSLOptions;
+  Resp: TBytes;
+begin
+  Result := True;
+
+  if (not AIsClient) or (FSSL = nil) or (FContext = nil) then
+    Exit;
+
+  Options := FContext.GetOptions;
+  if not (ssoRequireOCSPStapling in Options) then
+    Exit;
+
+  Resp := DoGetOCSPResponse;
+  if Length(Resp) = 0 then
+  begin
+    if Assigned(SSL_set_verify_result) then
+      SSL_set_verify_result(FSSL, X509_V_ERR_OCSP_VERIFY_NEEDED);
+    Exit(False);
+  end;
+
+  if not DoIsOCSPResponseVerified then
+  begin
+    if Assigned(SSL_set_verify_result) then
+      SSL_set_verify_result(FSSL, X509_V_ERR_OCSP_VERIFY_FAILED);
+    Exit(False);
+  end;
+end;
+
 function TOpenSSLConnection.ValidatePostHandshake(AIsClient: Boolean): Boolean;
 var
   VerifyModes: TSSLVerifyModes;
   VerifyFlags: TSSLCertVerifyFlags;
+  ConnectionOptions: TSSLOptions;
+  CertVerifyCacheEnabled: Boolean;
+  CertVerifyCache: TCertVerifyCache;
+  CachedVerifyResult: TCertVerifyResult;
+  PerformVerifyCall: Boolean;
   RequirePeerCert: Boolean;
   PeerCert: ISSLCertificate;
   PeerX509: PX509;
@@ -1219,6 +1340,16 @@ begin
     Exit(False);
 
   VerifyFlags := FContext.GetCertVerifyFlags;
+  ConnectionOptions := FContext.GetOptions;
+  CertVerifyCacheEnabled := ssoEnableCertVerifyCache in ConnectionOptions;
+  if CertVerifyCacheEnabled then
+    CertVerifyCache := GetGlobalCertVerifyCache
+  else
+    CertVerifyCache := nil;
+
+  // OCSP stapling required policy (fail-closed): require stapled response and verification success
+  if not ValidateRequiredOCSPStapling(AIsClient) then
+    Exit(False);
 
   // OCSP revocation checking (fail closed when requested)
   if sslCertVerifyCheckOCSP in VerifyFlags then
@@ -1290,7 +1421,57 @@ begin
 
           if X509_STORE_CTX_init(StoreCtx, VerifyStore, PeerX509, PeerChain) = 1 then
           begin
-            if X509_verify_cert(StoreCtx) = 1 then
+            PerformVerifyCall := True;
+
+            if CertVerifyCacheEnabled and (CertVerifyCache <> nil) then
+            begin
+              if CertVerifyCache.TryGet(PeerX509, CachedVerifyResult) then
+              begin
+                if not CachedVerifyResult.Valid then
+                begin
+                  PerformVerifyCall := False;
+                  TSecurityLog.Debug('OpenSSL',
+                    'Cert verify cache hit (invalid result), skipping X509_verify_cert');
+                end
+                else
+                  TSecurityLog.Debug('OpenSSL',
+                    'Cert verify cache hit (valid result), refreshing X509_verify_cert');
+              end
+              else
+                TSecurityLog.Debug('OpenSSL',
+                  'Cert verify cache miss, executing X509_verify_cert');
+            end;
+
+            if PerformVerifyCall then
+            begin
+              VerifyRes := X509_verify_cert(StoreCtx);
+
+              if CertVerifyCacheEnabled and (CertVerifyCache <> nil) then
+              begin
+                CachedVerifyResult.Valid := (VerifyRes = 1);
+                if (VerifyRes = 1) then
+                  CachedVerifyResult.ErrorCode := X509_V_OK
+                else if Assigned(X509_STORE_CTX_get_error) then
+                  CachedVerifyResult.ErrorCode := X509_STORE_CTX_get_error(StoreCtx)
+                else
+                  CachedVerifyResult.ErrorCode := X509_V_ERR_APPLICATION_VERIFICATION;
+                CachedVerifyResult.ErrorMessage := '';
+                CachedVerifyResult.VerifiedAt := Now;
+                CertVerifyCache.Put(PeerX509, CachedVerifyResult);
+
+                TSecurityLog.Debug('OpenSSL',
+                  Format('Cert verify cache updated (valid=%s, code=%d)',
+                    [BoolToStr(CachedVerifyResult.Valid, True), CachedVerifyResult.ErrorCode]));
+              end;
+            end
+            else
+            begin
+              VerifyRes := 0;
+              if Assigned(X509_STORE_CTX_set_error) and (CachedVerifyResult.ErrorCode <> 0) then
+                X509_STORE_CTX_set_error(StoreCtx, CachedVerifyResult.ErrorCode);
+            end;
+
+            if VerifyRes = 1 then
             begin
               VerifiedChain := X509_STORE_CTX_get0_chain(StoreCtx);
               if VerifiedChain <> nil then

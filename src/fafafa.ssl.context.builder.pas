@@ -82,6 +82,7 @@ type
     // OCSP Stapling support
     function WithOCSPStapling(AEnabled: Boolean = True): ISSLContextBuilder;
     function WithOCSPStaplingRequired(ARequired: Boolean = True): ISSLContextBuilder;
+    function WithCertVerifyCache(AEnabled: Boolean = True): ISSLContextBuilder;
 
     // v1.3.0: Automatic backend selection
     function WithAutoBackendSelection(const ARequirements: TSSLRequirements): ISSLContextBuilder;
@@ -206,6 +207,8 @@ type
     FBackendRequirements: TSSLRequirements;
     FExplicitBackend: TSSLLibraryType;
     FExplicitBackendSet: Boolean;
+
+    procedure SyncOCSPStaplingOptions;
   public
     constructor Create;
     
@@ -248,6 +251,7 @@ type
     // OCSP Stapling support
     function WithOCSPStapling(AEnabled: Boolean = True): ISSLContextBuilder;
     function WithOCSPStaplingRequired(ARequired: Boolean = True): ISSLContextBuilder;
+    function WithCertVerifyCache(AEnabled: Boolean = True): ISSLContextBuilder;
 
     // v1.3.0: Automatic backend selection
     function WithAutoBackendSelection(const ARequirements: TSSLRequirements): ISSLContextBuilder;
@@ -445,6 +449,33 @@ begin
   FExplicitBackendSet := False;
 end;
 
+procedure TSSLContextBuilderImpl.SyncOCSPStaplingOptions;
+begin
+  // Option-set can come from generic APIs/import; keep boolean flags and options aligned.
+  if ssoRequireOCSPStapling in FOptions then
+    FOCSPStaplingRequired := True;
+
+  if FOCSPStaplingRequired then
+    Include(FOptions, ssoRequireOCSPStapling)
+  else
+    Exclude(FOptions, ssoRequireOCSPStapling);
+
+  if ssoEnableOCSPStapling in FOptions then
+    FOCSPStaplingEnabled := True;
+
+  if FOCSPStaplingRequired then
+    FOCSPStaplingEnabled := True;
+
+  if FOCSPStaplingEnabled then
+    Include(FOptions, ssoEnableOCSPStapling)
+  else
+  begin
+    Exclude(FOptions, ssoEnableOCSPStapling);
+    Exclude(FOptions, ssoRequireOCSPStapling);
+    FOCSPStaplingRequired := False;
+  end;
+end;
+
 function TSSLContextBuilderImpl.WithTLS12: ISSLContextBuilder;
 begin
   FProtocolVersions := [sslProtocolTLS12];
@@ -601,18 +632,40 @@ end;
 function TSSLContextBuilderImpl.WithOption(AOption: TSSLOption): ISSLContextBuilder;
 begin
   Include(FOptions, AOption);
+
+  case AOption of
+    ssoEnableOCSPStapling:
+      FOCSPStaplingEnabled := True;
+    ssoRequireOCSPStapling:
+      FOCSPStaplingRequired := True;
+  end;
+
+  SyncOCSPStaplingOptions;
   Result := Self;
 end;
 
 function TSSLContextBuilderImpl.WithOptions(AOptions: TSSLOptions): ISSLContextBuilder;
 begin
   FOptions := FOptions + AOptions;
+  SyncOCSPStaplingOptions;
   Result := Self;
 end;
 
 function TSSLContextBuilderImpl.WithoutOption(AOption: TSSLOption): ISSLContextBuilder;
 begin
   Exclude(FOptions, AOption);
+
+  case AOption of
+    ssoEnableOCSPStapling:
+      begin
+        FOCSPStaplingEnabled := False;
+        FOCSPStaplingRequired := False;
+      end;
+    ssoRequireOCSPStapling:
+      FOCSPStaplingRequired := False;
+  end;
+
+  SyncOCSPStaplingOptions;
   Result := Self;
 end;
 
@@ -646,15 +699,30 @@ begin
     Include(FOptions, ssoEnableOCSPStapling)
   else
     Exclude(FOptions, ssoEnableOCSPStapling);
+
+  SyncOCSPStaplingOptions;
   Result := Self;
 end;
 
 function TSSLContextBuilderImpl.WithOCSPStaplingRequired(ARequired: Boolean): ISSLContextBuilder;
 begin
   FOCSPStaplingRequired := ARequired;
-  // If required, also enable stapling
+
   if ARequired then
-    WithOCSPStapling(True);
+    Include(FOptions, ssoRequireOCSPStapling)
+  else
+    Exclude(FOptions, ssoRequireOCSPStapling);
+
+  SyncOCSPStaplingOptions;
+  Result := Self;
+end;
+
+function TSSLContextBuilderImpl.WithCertVerifyCache(AEnabled: Boolean): ISSLContextBuilder;
+begin
+  if AEnabled then
+    Include(FOptions, ssoEnableCertVerifyCache)
+  else
+    Exclude(FOptions, ssoEnableCertVerifyCache);
   Result := Self;
 end;
 
@@ -686,6 +754,7 @@ begin
     raise ESSLException.Create('Failed to create SSL client context');
   
   // Apply configuration
+  SyncOCSPStaplingOptions;
   Result.SetProtocolVersions(FProtocolVersions);
   Result.SetVerifyMode(FVerifyMode);
   Result.SetVerifyDepth(FVerifyDepth);
@@ -774,6 +843,7 @@ begin
     raise ESSLException.Create('Failed to create SSL server context');
   
   // Apply configuration (same as client, but server context)
+  SyncOCSPStaplingOptions;
   Result.SetProtocolVersions(FProtocolVersions);
   Result.SetVerifyMode(FVerifyMode);
   Result.SetVerifyDepth(FVerifyDepth);
@@ -1131,6 +1201,8 @@ begin
         FOCSPStaplingEnabled := Booleans['ocsp_stapling_enabled'];
       if IndexOfName('ocsp_stapling_required') >= 0 then
         FOCSPStaplingRequired := Booleans['ocsp_stapling_required'];
+
+      SyncOCSPStaplingOptions;
     end;
   finally
     LRoot.Free;
@@ -1319,6 +1391,8 @@ begin
           FOCSPStaplingRequired := (LowerCase(LValue) = 'true');
       end;
     end;
+
+    SyncOCSPStaplingOptions;
   finally
     LParts.Free;
     LLines.Free;
@@ -1362,6 +1436,7 @@ begin
   // Copy OCSP Stapling fields
   LClone.FOCSPStaplingEnabled := FOCSPStaplingEnabled;
   LClone.FOCSPStaplingRequired := FOCSPStaplingRequired;
+  LClone.SyncOCSPStaplingOptions;
 
   Result := LClone;
 end;
@@ -1396,6 +1471,7 @@ begin
   // Reset OCSP Stapling fields
   FOCSPStaplingEnabled := False;
   FOCSPStaplingRequired := False;
+  SyncOCSPStaplingOptions;
 
   Result := Self;
 end;
@@ -1689,6 +1765,8 @@ begin
   // Add all options to the current option set
   for I := Low(AOptions) to High(AOptions) do
     Include(FOptions, AOptions[I]);
+
+  SyncOCSPStaplingOptions;
 end;
 
 function TSSLContextBuilderImpl.Override(const AField, AValue: string): ISSLContextBuilder;

@@ -44,10 +44,12 @@ type
       Raises:
         EPKCS11Exception if PIN cannot be acquired
     }
-    class function GetPIN(AMethod: TPKCS11PINMethod; 
-                         const AValue: string = '';
-                         ACallback: TPKCS11PINCallback = nil;
-                         const ATokenLabel: string = ''): string;
+    class function GetPIN(
+      AMethod: TPKCS11PINMethod;
+      const AValue: string = '';
+      ACallback: TPKCS11PINCallback = nil;
+      const ATokenLabel: string = ''
+    ): string;
     
     { Validate PIN format and strength
       
@@ -75,7 +77,7 @@ type
 implementation
 
 uses
-  StrUtils;
+  fafafa.ssl.pkcs11.api;
 
 { TPKCS11PINManager }
 
@@ -142,10 +144,12 @@ begin
       CKR_PIN_INVALID);
 end;
 
-class function TPKCS11PINManager.GetPIN(AMethod: TPKCS11PINMethod; 
-                                       const AValue: string;
-                                       ACallback: TPKCS11PINCallback;
-                                       const ATokenLabel: string): string;
+class function TPKCS11PINManager.GetPIN(
+  AMethod: TPKCS11PINMethod;
+  const AValue: string;
+  ACallback: TPKCS11PINCallback;
+  const ATokenLabel: string
+): string;
 var
   Prompt: string;
 begin
