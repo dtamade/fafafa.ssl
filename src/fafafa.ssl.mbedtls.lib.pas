@@ -394,6 +394,8 @@ begin
     sslProtocolTLS12: Result := FCapabilities.HasTLS12;
     sslProtocolTLS13: Result := FCapabilities.HasTLS13;
     sslProtocolDTLS10, sslProtocolDTLS12: Result := False;  // 暂不支持
+  else
+    Result := False;  // 未知协议
   end;
 end;
 

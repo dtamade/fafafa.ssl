@@ -340,7 +340,7 @@ var
   LDER: TBytes;
   LBase64: string;
   LLine: string;
-  I, LPos, LLineLen: Integer;
+  LPos, LLineLen: Integer;
 begin
   // Return cached PEM if available
   if FPEMData <> '' then
@@ -466,7 +466,7 @@ function TMbedTLSCertificate.GetSerialNumber: string;
 var
   LBuf: array[0..4095] of AnsiChar;
   LLen: Integer;
-  LInfo, LLine: string;
+  LInfo: string;
   LPos, LEndPos: Integer;
 begin
   Result := '';
@@ -505,7 +505,6 @@ end;
 function ParseMbedTLSDate(const ADateStr: string): TDateTime;
 var
   LYear, LMonth, LDay, LHour, LMin, LSec: Word;
-  LParts: TStringArray;
   LDatePart, LTimePart: string;
   LPos: Integer;
 begin
@@ -1071,6 +1070,8 @@ begin
   case AHashType of
     sslHashSHA1: Result := GetFingerprintSHA1;
     sslHashSHA256: Result := GetFingerprintSHA256;
+  else
+    Result := GetFingerprintSHA256; // 默认使用 SHA256
   end;
 end;
 
