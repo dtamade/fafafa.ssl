@@ -9,6 +9,7 @@ PKCS#7 模块综合测试
 
 加载 PKCS7 模块...
 ✅ PKCS7 模块加载成功
+✅ PEM 模块加载成功
 
 === 测试 1: PKCS7 基本操作 ===
 PKCS7_new 函数加载: PASS
@@ -67,11 +68,57 @@ PKCS7_add_crl 函数加载: PASS
 PKCS7_get_recip_info 函数加载: PASS (OpenSSL 3.x 中不可用)
 PKCS7_get_attribute 函数加载: PASS
 
+=== 测试 9: PKCS7 篡改数据验签失败 ===
+加载 PEM 模块: PASS
+PKCS7_sign 函数加载: PASS
+PKCS7_verify 函数加载: PASS
+BIO_new_file 函数加载: PASS
+BIO_new_mem_buf 函数加载: PASS
+加载 PKCS7 签名证书: PASS
+加载 PKCS7 签名私钥: PASS
+加载原始签名数据: PASS
+创建 detached PKCS7 签名: PASS
+加载原始验签数据: PASS
+使用原始数据验签应成功: PASS
+加载原始数据用于 CA 链校验: PASS
+缺失受信任 CA 时验签应失败: PASS
+创建空输入 BIO: PASS
+detached 签名在空输入下验签应失败: PASS
+读取原始数据用于篡改: PASS
+创建篡改数据 BIO: PASS
+使用篡改数据验签应失败: PASS
+
+=== 测试 11: PKCS7 错误接收者解密失败 ===
+加载 PEM 模块: PASS
+加载 Stack 模块: PASS
+加载 EVP 模块: PASS
+PKCS7_encrypt 函数加载: PASS
+PKCS7_decrypt 函数加载: PASS
+OPENSSL_sk_new_null 函数加载: PASS
+加载接收者证书: PASS
+加载接收者私钥: PASS
+加载错误接收者证书: PASS
+加载错误接收者私钥: PASS
+创建接收者证书栈: PASS
+加载待加密数据: PASS
+获取 AES-256-CBC 算法: PASS
+创建 PKCS7 加密数据: PASS
+为正确接收者创建输出 BIO: PASS
+正确接收者解密应成功: PASS
+为错误接收者创建输出 BIO: PASS
+错误接收者解密应失败: PASS
+
+=== 测试 12: PKCS7 离线失败夹具 ===
+PKCS7 malformed fixture 存在: PASS
+d2i_PKCS7 函数加载: PASS
+PKCS7 malformed fixture 非空: PASS
+解析 malformed PKCS7 返回 nil: PASS
+
 =============================================================
 测试结果总结
 =============================================================
-总测试数: 41
-通过: 41
+总测试数: 81
+通过: 81
 失败: 0
 通过率: 100.0%
 

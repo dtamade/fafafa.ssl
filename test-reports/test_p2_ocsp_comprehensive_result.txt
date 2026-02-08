@@ -60,11 +60,40 @@ OCSP_RESPONSE_STATUS_TRYLATER (3): PASS
 OCSP_RESPONSE_STATUS_SIGREQUIRED (5): PASS
 OCSP_RESPONSE_STATUS_UNAUTHORIZED (6): PASS
 
+=== 测试 9: OCSP 离线失败夹具 ===
+OCSP malformed fixture 存在: PASS
+d2i_OCSP_RESPONSE 函数加载: PASS
+OCSP malformed fixture 非空: PASS
+解析 malformed OCSP 响应返回 nil: PASS
+
+=== 测试 10: OCSP 截断请求失败场景 ===
+d2i_OCSP_REQUEST 函数加载: PASS
+解析截断 OCSP 请求返回 nil: PASS
+
+=== 测试 11: OCSP 时间有效性窗口失败场景 ===
+加载 ASN1 模块: PASS
+OCSP_check_validity 函数加载: PASS
+ASN1_GENERALIZEDTIME_new 函数加载: PASS
+ASN1_GENERALIZEDTIME_set_string 函数加载: PASS
+创建 thisUpdate/nextUpdate 结构: PASS
+设置未来 thisUpdate: PASS
+设置未来 nextUpdate: PASS
+未来 thisUpdate 时间窗口校验应失败: PASS
+设置历史 thisUpdate: PASS
+设置过期 nextUpdate: PASS
+过期 nextUpdate 时间窗口校验应失败: PASS
+
+=== 测试 12: OCSP 无签名响应验证失败场景 ===
+OCSP_RESPONSE_new 函数加载: PASS
+VerifyOCSPResponse helper 可用: PASS
+创建空 OCSP 响应: PASS
+无签名/无效 OCSP 响应验证应失败: PASS
+
 =============================================================
 测试结果总结
 =============================================================
-总测试数: 34
-通过: 34
+总测试数: 55
+通过: 55
 失败: 0
 通过率: 100.0%
 

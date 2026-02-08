@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-02-08T03:43:24+08:00",
+  "fpc_version": "3.3.1",
+  "summary": {
+    "total": 75,
+    "passed": 71,
+    "failed": 0,
+    "skipped": 4,
+    "pass_rate": 100.0
+  },
+  "failed_files": []
+}

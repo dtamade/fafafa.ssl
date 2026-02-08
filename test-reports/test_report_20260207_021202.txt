@@ -1,0 +1,44 @@
+========================================
+模块自动化测试报告
+时间: Sat Feb  7 02:12:02 CST 2026
+========================================
+
+
+[0;34m[INFO][0m ========== 测试模块: CT ==========
+[0;34m[INFO][0m 编译 test_p2_ct...
+[0;34m[INFO][0m 运行 test_p2_ct...
+[0;32m[PASS][0m test_p2_ct: 通过
+[0;34m[INFO][0m 编译 test_p2_ct_comprehensive...
+编译错误详情:
+Free Pascal Compiler version 3.3.1-19195-gebfc7485b1-dirty [2026/01/07] for x86_64
+Copyright (c) 1993-2025 by Florian Klaempfl and others
+Target OS: Linux for x86-64
+Compiling /home/dtamade/projects/fafafa.ssl/tests/certificate/test_p2_ct_comprehensive.pas
+Compiling ./src/fafafa.ssl.openssl.api.bio.pas
+Compiling ./src/fafafa.ssl.openssl.api.core.pas
+Compiling ./src/fafafa.ssl.openssl.api.ct.pas
+Compiling ./src/fafafa.ssl.openssl.api.evp.pas
+Compiling ./src/fafafa.ssl.openssl.api.pas
+Compiling ./src/fafafa.ssl.openssl.api.x509.pas
+fafafa.ssl.openssl.api.ct.pas(417,3) Note: Local variable "LogStore" not used
+test_p2_ct_comprehensive.pas(67,3) Note: Local variable "LResult" not used
+test_p2_ct_comprehensive.pas(199,12) Error: Identifier not found "PX509"
+test_p2_ct_comprehensive.pas(199,17) Error: Error in type definition
+test_p2_ct_comprehensive.pas(236,56) Error: Operator is not overloaded: "<erroneous type>" = "^untyped"
+test_p2_ct_comprehensive.pas(320) Fatal: There were 3 errors compiling module, stopping
+Fatal: Compilation aborted
+Error: /opt/fpcupdeluxe/fpc/bin/x86_64-linux/ppcx64 returned an error exitcode
+[0;31m[FAIL][0m test_p2_ct_comprehensive: 编译失败
+[0;34m[INFO][0m CT 模块: 1/2 通过 (50.0%)
+
+========================================
+测试总结
+========================================
+总测试数: 2
+通过: 1
+失败: 1
+跳过: 0
+通过率: 50.0%
+
+详细报告: /home/dtamade/projects/fafafa.ssl/test-reports/test_report_20260207_021202.txt
+[0;31m[FAIL][0m 测试失败（通过率: 50.0% < 70%）

@@ -1,0 +1,48 @@
+========================================
+模块自动化测试报告
+时间: Sat Feb  7 00:20:16 CST 2026
+========================================
+
+
+[0;34m[INFO][0m ========== 测试模块: PKCS7 ==========
+[0;34m[INFO][0m 编译 test_p2_pkcs7...
+[0;34m[INFO][0m 运行 test_p2_pkcs7...
+[0;32m[PASS][0m test_p2_pkcs7: 通过
+[0;34m[INFO][0m 编译 test_p2_pkcs7_comprehensive...
+[0;34m[INFO][0m 运行 test_p2_pkcs7_comprehensive...
+[0;32m[PASS][0m test_p2_pkcs7_comprehensive: 通过
+[0;34m[INFO][0m PKCS7 模块: 2/2 通过 (100.0%)
+
+[0;34m[INFO][0m ========== 测试模块: CMS ==========
+[0;34m[INFO][0m 编译 test_p2_cms...
+[0;34m[INFO][0m 运行 test_p2_cms...
+[0;32m[PASS][0m test_p2_cms: 通过
+[0;34m[INFO][0m 编译 test_p2_cms_comprehensive...
+[0;34m[INFO][0m 运行 test_p2_cms_comprehensive...
+[0;32m[PASS][0m test_p2_cms_comprehensive: 通过
+[0;34m[INFO][0m CMS 模块: 2/2 通过 (100.0%)
+
+[0;34m[INFO][0m ========== 测试模块: PKCS12 ==========
+[0;34m[INFO][0m 编译 test_p2_pkcs12...
+[0;34m[INFO][0m 运行 test_p2_pkcs12...
+[0;32m[PASS][0m test_p2_pkcs12: 通过
+[0;34m[INFO][0m 编译 test_p2_pkcs12_comprehensive...
+[0;34m[INFO][0m 运行 test_p2_pkcs12_comprehensive...
+[0;32m[PASS][0m test_p2_pkcs12_comprehensive: 通过
+[0;34m[INFO][0m 编译 test_p2_pkcs12_create_parse...
+[0;34m[INFO][0m 运行 test_p2_pkcs12_create_parse...
+[0;31m[FAIL][0m test_p2_pkcs12_create_parse: 失败（退出码: 1）
+[0;31m[FAIL][0m test_p2_pkcs12_create_parse: 失败
+[0;34m[INFO][0m PKCS12 模块: 2/3 通过 (66.7%)
+
+========================================
+测试总结
+========================================
+总测试数: 7
+通过: 6
+失败: 1
+跳过: 0
+通过率: 85.7%
+
+详细报告: /home/dtamade/projects/fafafa.ssl/test-reports/test_report_20260207_002016.txt
+[0;32m[PASS][0m 测试通过（通过率: 85.7%）

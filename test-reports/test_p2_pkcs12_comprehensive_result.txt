@@ -59,11 +59,19 @@ NID_pbe_WithSHA1And40BitRC4 常量: PASS
 NID_pbe_WithSHA1And3_Key_TripleDES_CBC 常量: PASS
 NID_pbe_WithSHA1And2_Key_TripleDES_CBC 常量: PASS
 
+=== 测试 9: PKCS12 离线失败夹具 ===
+PKCS12 malformed fixture 存在: PASS
+d2i_PKCS12_bio 函数加载: PASS
+BIO_new_mem_buf 函数加载: PASS
+PKCS12 malformed fixture 非空: PASS
+为 PKCS12 fixture 创建 BIO: PASS
+解析 malformed PKCS12 返回 nil: PASS
+
 =============================================================
 测试结果总结
 =============================================================
-总测试数: 34
-通过: 34
+总测试数: 40
+通过: 40
 失败: 0
 跳过 (OpenSSL 3.x 不可用): 11
 通过率: 100.0%

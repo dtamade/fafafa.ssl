@@ -58,6 +58,12 @@ CA 链包含证书: PASS
 
 密码保护测试完成！
 
+=== 测试 5: PKCS12 缺失私钥失败场景 ===
+加载仅证书场景证书: PASS
+创建不含私钥的 PKCS12: PASS
+不含私钥 PKCS12 的 MAC 验证: PASS
+解析不含私钥 PKCS12 时私钥应为空: PASS
+
 === 测试 4: PKCS12 文件 I/O ===
 加载测试证书: PASS
 加载测试私钥: PASS
@@ -73,11 +79,36 @@ CA 链包含证书: PASS
 
 文件 I/O 测试完成！
 
+=== 测试 6: PKCS12 往返导出解析 ===
+往返场景加载证书: PASS
+往返场景加载私钥: PASS
+创建原始 PKCS12: PASS
+原始 PKCS12 MAC 验证: PASS
+创建 round1 输出文件: PASS
+导出 round1 PKCS12: PASS
+round1 文件存在: PASS
+打开 round1 文件: PASS
+读取 round1 PKCS12: PASS
+解析 round1 PKCS12: PASS
+round1 提取证书: PASS
+round1 提取私钥: PASS
+创建 round2 输出文件: PASS
+导出 round2 PKCS12: PASS
+round2 文件存在: PASS
+打开 round2 文件: PASS
+读取 round2 PKCS12: PASS
+round2 PKCS12 MAC 验证: PASS
+解析 round2 PKCS12: PASS
+round2 提取证书: PASS
+round2 提取私钥: PASS
+
+往返导出解析测试完成！
+
 =============================================================
 测试结果总结
 =============================================================
-总测试数: 41
-通过: 41
+总测试数: 66
+通过: 66
 失败: 0
 通过率: 100.0%
 

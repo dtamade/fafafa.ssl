@@ -68,11 +68,51 @@ CMS_PARTIAL 标志 ($4000): PASS
 CMS_REUSE_DIGEST 标志 ($8000): PASS
 CMS_USE_KEYID 标志 ($10000): PASS
 
+=== 测试 9: CMS 篡改数据验签失败 ===
+加载 PEM 模块: PASS
+CMS_sign 函数加载: PASS
+CMS_verify 函数加载: PASS
+加载 CMS 签名证书: PASS
+加载 CMS 签名私钥: PASS
+读取原始数据用于签名: PASS
+创建 detached CMS 签名: PASS
+使用原始数据验签应成功: PASS
+缺失受信任 CA 时验签应失败: PASS
+detached 签名在空输入下验签应失败: PASS
+复制原始数据用于篡改: PASS
+使用篡改数据验签应失败: PASS
+
+=== 测试 11: CMS 错误接收者解密失败 ===
+加载 PEM 模块: PASS
+加载 Stack 模块: PASS
+加载 EVP 模块: PASS
+CMS_encrypt 函数加载: PASS
+CMS_decrypt 函数加载: PASS
+OPENSSL_sk_new_null 函数加载: PASS
+加载接收者证书: PASS
+加载接收者私钥: PASS
+加载错误接收者证书: PASS
+加载错误接收者私钥: PASS
+创建 CMS 接收者证书栈: PASS
+读取待加密数据: PASS
+创建 CMS 加密数据: PASS
+为正确接收者创建输出 BIO: PASS
+正确接收者解密应成功: PASS
+正确接收者解密输出非空: PASS
+为错误接收者创建输出 BIO: PASS
+错误接收者解密应失败: PASS
+
+=== 测试 12: CMS 离线失败夹具 ===
+CMS malformed fixture 存在: PASS
+d2i_CMS_ContentInfo 函数加载: PASS
+CMS malformed fixture 非空: PASS
+解析 malformed CMS 返回 nil: PASS
+
 =============================================================
 测试结果总结
 =============================================================
-总测试数: 43
-通过: 43
+总测试数: 77
+通过: 77
 失败: 0
 通过率: 100.0%
 

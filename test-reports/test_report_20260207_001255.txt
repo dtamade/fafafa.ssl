@@ -1,0 +1,46 @@
+========================================
+模块自动化测试报告
+时间: Sat Feb  7 00:12:55 CST 2026
+========================================
+
+
+[0;34m[INFO][0m ========== 测试模块: CMS ==========
+[0;34m[INFO][0m 编译 test_p2_cms...
+[0;34m[INFO][0m 运行 test_p2_cms...
+[0;32m[PASS][0m test_p2_cms: 通过
+[0;34m[INFO][0m 编译 test_p2_cms_comprehensive...
+编译错误详情:
+Compiling ./src/fafafa.ssl.openssl.api.pem.pas
+Compiling ./src/fafafa.ssl.openssl.api.bio.pas
+Compiling ./src/fafafa.ssl.openssl.api.evp.pas
+Compiling ./src/fafafa.ssl.openssl.api.pas
+Compiling ./src/fafafa.ssl.openssl.api.rand.pas
+Compiling ./src/fafafa.ssl.openssl.api.core.pas
+Compiling ./src/fafafa.ssl.openssl.api.x509.pas
+Compiling ./src/fafafa.ssl.openssl.api.cms.pas
+test_p2_cms_comprehensive.pas(58,3) Note: Local variable "cms" not used
+test_p2_cms_comprehensive.pas(285,46) Error: Wrong number of parameters specified for call to "CMSSignData"
+fafafa.ssl.openssl.api.cms.pas(491,10) Error: Found declaration: CMSSignData(const TBytes;Pointer;PEVP_PKEY;LongWord=`64`):fafafa.ssl.openssl.api.cms.PCMS_ContentInfo;
+test_p2_cms_comprehensive.pas(286,53) Error: Wrong number of parameters specified for call to "CMSVerifySignature"
+fafafa.ssl.openssl.api.cms.pas(511,10) Error: Found declaration: CMSVerifySignature(const TBytes;PCMS_ContentInfo;Pointer;Pointer;LongWord=`0`):System.Boolean;
+test_p2_cms_comprehensive.pas(288,20) Error: Wrong number of parameters specified for call to "CMSSignData"
+fafafa.ssl.openssl.api.cms.pas(491,10) Error: Found declaration: CMSSignData(const TBytes;Pointer;PEVP_PKEY;LongWord=`64`):fafafa.ssl.openssl.api.cms.PCMS_ContentInfo;
+test_p2_cms_comprehensive.pas(288,51) Error: Wrong number of parameters specified for call to "CMSVerifySignature"
+fafafa.ssl.openssl.api.cms.pas(511,10) Error: Found declaration: CMSVerifySignature(const TBytes;PCMS_ContentInfo;Pointer;Pointer;LongWord=`0`):System.Boolean;
+test_p2_cms_comprehensive.pas(449) Fatal: There were 8 errors compiling module, stopping
+Fatal: Compilation aborted
+Error: /opt/fpcupdeluxe/fpc/bin/x86_64-linux/ppcx64 returned an error exitcode
+[0;31m[FAIL][0m test_p2_cms_comprehensive: 编译失败
+[0;34m[INFO][0m CMS 模块: 1/2 通过 (50.0%)
+
+========================================
+测试总结
+========================================
+总测试数: 2
+通过: 1
+失败: 1
+跳过: 0
+通过率: 50.0%
+
+详细报告: /home/dtamade/projects/fafafa.ssl/test-reports/test_report_20260207_001255.txt
+[0;31m[FAIL][0m 测试失败（通过率: 50.0% < 70%）

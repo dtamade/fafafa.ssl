@@ -1,0 +1,27 @@
+========================================
+模块自动化测试报告
+时间: Sat Feb  7 00:13:59 CST 2026
+========================================
+
+
+[0;34m[INFO][0m ========== 测试模块: CMS ==========
+[0;34m[INFO][0m 编译 test_p2_cms...
+[0;34m[INFO][0m 运行 test_p2_cms...
+[0;32m[PASS][0m test_p2_cms: 通过
+[0;34m[INFO][0m 编译 test_p2_cms_comprehensive...
+[0;34m[INFO][0m 运行 test_p2_cms_comprehensive...
+[0;31m[FAIL][0m test_p2_cms_comprehensive: 失败（退出码: 217）
+[0;31m[FAIL][0m test_p2_cms_comprehensive: 失败
+[0;34m[INFO][0m CMS 模块: 1/2 通过 (50.0%)
+
+========================================
+测试总结
+========================================
+总测试数: 2
+通过: 1
+失败: 1
+跳过: 0
+通过率: 50.0%
+
+详细报告: /home/dtamade/projects/fafafa.ssl/test-reports/test_report_20260207_001359.txt
+[0;31m[FAIL][0m 测试失败（通过率: 50.0% < 70%）

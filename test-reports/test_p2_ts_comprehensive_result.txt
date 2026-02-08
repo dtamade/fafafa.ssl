@@ -57,11 +57,42 @@ TS_STATUS_WAITING (3): PASS
 TS_STATUS_REVOCATION_WARNING (4): PASS
 TS_STATUS_REVOCATION_NOTIFICATION (5): PASS
 
+=== 测试 7: TS 离线失败夹具 ===
+TS malformed fixture 存在: PASS
+TS_RESP_d2i_bio 函数加载: PASS
+BIO_new_mem_buf 函数加载: PASS
+TS malformed fixture 非空: PASS
+为 TS fixture 创建 BIO: PASS
+解析 malformed TS 响应返回 nil: PASS
+
+=== 测试 8: TS 截断响应失败场景 ===
+TS_RESP_d2i_bio 函数加载: PASS
+BIO_new_mem_buf 函数加载: PASS
+为截断 TS 响应创建 BIO: PASS
+解析截断 TS 响应返回 nil: PASS
+
+=== 测试 9: TS 拒绝状态失败场景 ===
+TS_RESP_new 函数加载: PASS
+TS_RESP_get_status_info 函数加载: PASS
+TS_STATUS_INFO_get0_status 函数加载: PASS
+创建 TS 响应结构: PASS
+无状态信息响应验证应失败: PASS
+TS 状态写入 API 缺失时兜底路径有效: PASS
+
+=== 测试 10: TS 空响应签名验证失败场景 ===
+TS_RESP_new 函数加载: PASS
+TS_VERIFY_CTX_new 函数加载: PASS
+TS_RESP_verify_response 函数加载: PASS
+TS_VERIFY_CTX_free 函数加载: PASS
+TS_RESP_free 函数加载: PASS
+创建空 TS 响应与验证上下文: PASS
+空响应签名验证应失败: PASS
+
 =============================================================
 测试结果总结
 =============================================================
-总测试数: 35
-通过: 35
+总测试数: 58
+通过: 58
 失败: 0
 通过率: 100.0%
 

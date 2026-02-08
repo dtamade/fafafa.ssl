@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-02-08T01:50:04+08:00",
+  "fpc_version": "3.3.1",
+  "summary": {
+    "total": 75,
+    "passed": 60,
+    "failed": 11,
+    "skipped": 4,
+    "pass_rate": 84.5
+  },
+  "failed_files": ["examples/example_aes_gcm_aead.pas","examples/example_json_api.pas","examples/https_simple_get.pas","examples/password_hash/password_hash.pas","examples/pkcs7_data_example.pas","examples/pkcs7_encrypt_decrypt_example.pas","examples/pkcs7_sign_verify_example.pas","examples/practical_examples.pas","examples/probe_sockets.pas","examples/simple_ssl_connection.pas","examples/simple_test.pas"]
+}

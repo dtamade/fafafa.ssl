@@ -76,11 +76,19 @@ OSSL_STORE_SEARCH_BY_ISSUER_SERIAL (2): PASS
 OSSL_STORE_SEARCH_BY_KEY_FINGERPRINT (3): PASS
 OSSL_STORE_SEARCH_BY_ALIAS (4): PASS
 
+=== 测试 8: STORE 离线失败夹具 ===
+STORE invalid fixture 存在: PASS
+从无效 STORE 夹具加载证书返回 nil: PASS
+
+=== 测试 9: STORE 缺失文件失败场景 ===
+缺失 STORE fixture 文件前置检查: PASS
+从缺失 STORE 文件加载证书返回 nil: PASS
+
 =============================================================
 测试结果总结
 =============================================================
-总测试数: 52
-通过: 52
+总测试数: 56
+通过: 56
 失败: 0
 通过率: 100.0%
 
