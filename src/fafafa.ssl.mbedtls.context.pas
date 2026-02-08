@@ -72,6 +72,7 @@ type
     procedure AllocateConfig;
     procedure FreeConfig;
     procedure ApplyVerifyMode;
+    procedure ApplyCredentials;
     procedure RequireValidContext(const AMethodName: string);
 
   public
@@ -332,6 +333,25 @@ begin
     LMode := MBEDTLS_SSL_VERIFY_NONE;
 
   mbedtls_ssl_conf_authmode(FSSLConfig, LMode);
+end;
+
+procedure TMbedTLSContext.ApplyCredentials;
+var
+  LRet: Integer;
+begin
+  if FSSLConfig = nil then Exit;
+
+  // 配置 CA 证书链（用于验证对端）
+  if (FCACerts <> nil) and Assigned(mbedtls_ssl_conf_ca_chain) then
+    mbedtls_ssl_conf_ca_chain(FSSLConfig, FCACerts, nil);
+
+  // 配置自己的证书和私钥（用于服务端或客户端认证）
+  if (FCertChain <> nil) and (FPrivateKey <> nil) and Assigned(mbedtls_ssl_conf_own_cert) then
+  begin
+    LRet := mbedtls_ssl_conf_own_cert(FSSLConfig, FCertChain, FPrivateKey);
+    if LRet <> 0 then
+      raise ESSLCertError.CreateFmt('Failed to configure own certificate: error 0x%x', [-LRet]);
+  end;
 end;
 
 procedure TMbedTLSContext.RequireValidContext(const AMethodName: string);
@@ -912,6 +932,9 @@ function TMbedTLSContext.CreateConnection(ASocket: THandle): ISSLConnection;
 begin
   RequireValidContext('CreateConnection');
 
+  // 在创建连接前应用证书凭据
+  ApplyCredentials;
+
   try
     Result := TMbedTLSConnection.Create(Self as ISSLContext, FSSLConfig, ASocket);
   except
@@ -928,6 +951,9 @@ begin
 
   if AStream = nil then
     raise ESSLException.Create('Cannot create connection: stream is nil');
+
+  // 在创建连接前应用证书凭据
+  ApplyCredentials;
 
   try
     Result := TMbedTLSConnection.Create(Self as ISSLContext, FSSLConfig, AStream);
