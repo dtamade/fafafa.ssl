@@ -1,0 +1,94 @@
+Examples Compile Check - 2026年 02月 09日 星期一 00:06:01 CST
+================================
+PASS: examples/01_tls_client.pas
+PASS: examples/02_generate_certificate.pas
+PASS: examples/03_file_encryption.pas
+PASS: examples/04_https_rest_client.pas
+PASS: examples/05_https_server.pas
+PASS: examples/06_digital_signature.pas
+PASS: examples/07_certificate_chain.pas
+PASS: examples/08_mutual_tls.pas
+PASS: examples/09_winssl_fips.pas
+PASS: examples/10_cert_renewal.pas
+PASS: examples/certificate_verification_example.pas
+PASS: examples/cert_info_viewer.pas
+PASS: examples/demo_facade_api.pas
+PASS: examples/demo_fluent_api.pas
+PASS: examples/example_aes_gcm_aead.pas
+PASS: examples/example_cert_pinning.pas
+PASS: examples/example_cert_pinning_simple.pas
+PASS: examples/example_crypto_simple.pas
+PASS: examples/example_crypto_working.pas
+PASS: examples/example_error_handling.pas
+PASS: examples/example_factory_usage.pas
+PASS: examples/example_https_api.pas
+PASS: examples/example_json_api.pas
+PASS: examples/example_result_type.pas
+PASS: examples/example_streaming_operations.pas
+PASS: examples/example_tls_client.pas
+PASS: examples/fafafa.examples.sockets.pas
+PASS: examples/fafafa.examples.tcp.pas
+PASS: examples/file_encrypt_tool.pas
+PASS: examples/hash_calculator.pas
+PASS: examples/hello_ssl.pas
+PASS: examples/https_client_production.pas
+PASS: examples/https_simple_get.pas
+PASS: examples/password_hash.pas
+PASS: examples/password_hash_v2.pas
+PASS: examples/pem_der_converter.pas
+PASS: examples/pkcs12_example.pas
+PASS: examples/pkcs7_basic_example.pas
+PASS: examples/pkcs7_data_example.pas
+PASS: examples/pkcs7_encrypt_decrypt_example.pas
+PASS: examples/pkcs7_encrypt_example.pas
+PASS: examples/pkcs7_sign_encrypt_example.pas
+PASS: examples/pkcs7_sign_example.pas
+PASS: examples/pkcs7_sign_verify_example.pas
+PASS: examples/pkcs7_sign_verify_simple.pas
+PASS: examples/practical_examples.pas
+PASS: examples/probe_sockets.pas
+PASS: examples/security_enhancements_demo.pas
+PASS: examples/session_resumption_example.pas
+PASS: examples/session_reuse_example.pas
+PASS: examples/simple_https_demo.pas
+PASS: examples/simple_ssl_connection.pas
+PASS: examples/simple_test.pas
+PASS: examples/ultra_simple_test.pas
+FAIL: examples/winssl_health_checker.pas
+winssl_health_checker.pas(241,7) Error: Identifier not found "closesocket"
+winssl_health_checker.pas(245,5) Error: Identifier not found "WSACleanup"
+winssl_health_checker.pas(257,1) Fatal: Syntax error, "identifier" expected but "VAR" found
+Fatal: Compilation aborted
+Error: /opt/fpcupdeluxe/fpc/bin/x86_64-linux/ppcx64 returned an error exitcode
+FAIL: examples/winssl_https_downloader.pas
+winssl_https_downloader.pas(327,7) Error: Identifier not found "closesocket"
+winssl_https_downloader.pas(331,5) Error: Identifier not found "WSACleanup"
+winssl_https_downloader.pas(430) Fatal: There were 29 errors compiling module, stopping
+Fatal: Compilation aborted
+Error: /opt/fpcupdeluxe/fpc/bin/x86_64-linux/ppcx64 returned an error exitcode
+FAIL: examples/winssl_rest_client.pas
+winssl_rest_client.pas(386,7) Error: Identifier not found "closesocket"
+winssl_rest_client.pas(390,5) Error: Identifier not found "WSACleanup"
+winssl_rest_client.pas(532) Fatal: There were 29 errors compiling module, stopping
+Fatal: Compilation aborted
+Error: /opt/fpcupdeluxe/fpc/bin/x86_64-linux/ppcx64 returned an error exitcode
+PASS: examples/digital_signature/digital_signature.pas
+PASS: examples/file_encrypt/file_encrypt.pas
+PASS: examples/https_client/https_client_auth.pas
+PASS: examples/https_client/https_client_post.pas
+PASS: examples/https_client/https_client_session.pas
+PASS: examples/https_client/https_client_simple.pas
+PASS: examples/https_server/https_server_alpn.pas
+PASS: examples/https_server/https_server_common.pas
+PASS: examples/https_server/https_server_mtls.pas
+PASS: examples/https_server/https_server_simple.pas
+PASS: examples/password_hash/password_hash.pas
+PASS: examples/password_hash/test_rand.pas
+PASS: examples/production/https_client_auth.pas
+PASS: examples/production/https_client_post.pas
+PASS: examples/production/https_client_session.pas
+PASS: examples/production/https_client_simple.pas
+PASS: examples/production/https_server_simple.pas
+PASS: examples/validation/real_world_test.pas
+
+Summary: 72 passed, 3 failed

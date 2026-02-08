@@ -1079,18 +1079,33 @@ var
   LMdInfo: Pointer;
   LHash: array[0..19] of Byte;  // SHA1 = 20 bytes
   I: Integer;
+  LDERData: PByte;
+  LDERLen: Integer;
 begin
   Result := '';
   if FX509Crt = nil then Exit;
-  if Length(FDERData) = 0 then Exit;
   if not Assigned(mbedtls_md_info_from_type) then Exit;
   if not Assigned(mbedtls_md) then Exit;
+
+  // Get DER data - prefer cached, fallback to native handle
+  if Length(FDERData) > 0 then
+  begin
+    LDERData := @FDERData[0];
+    LDERLen := Length(FDERData);
+  end
+  else if (FX509Crt^.raw.p <> nil) and (FX509Crt^.raw.len > 0) then
+  begin
+    LDERData := FX509Crt^.raw.p;
+    LDERLen := FX509Crt^.raw.len;
+  end
+  else
+    Exit;
 
   LMdInfo := mbedtls_md_info_from_type(MBEDTLS_MD_SHA1);
   if LMdInfo = nil then Exit;
 
   FillChar(LHash, SizeOf(LHash), 0);
-  if mbedtls_md(LMdInfo, @FDERData[0], Length(FDERData), @LHash[0]) = 0 then
+  if mbedtls_md(LMdInfo, LDERData, LDERLen, @LHash[0]) = 0 then
   begin
     for I := 0 to 19 do
       Result := Result + IntToHex(LHash[I], 2);
@@ -1102,18 +1117,33 @@ var
   LMdInfo: Pointer;
   LHash: array[0..31] of Byte;  // SHA256 = 32 bytes
   I: Integer;
+  LDERData: PByte;
+  LDERLen: Integer;
 begin
   Result := '';
   if FX509Crt = nil then Exit;
-  if Length(FDERData) = 0 then Exit;
   if not Assigned(mbedtls_md_info_from_type) then Exit;
   if not Assigned(mbedtls_md) then Exit;
+
+  // Get DER data - prefer cached, fallback to native handle
+  if Length(FDERData) > 0 then
+  begin
+    LDERData := @FDERData[0];
+    LDERLen := Length(FDERData);
+  end
+  else if (FX509Crt^.raw.p <> nil) and (FX509Crt^.raw.len > 0) then
+  begin
+    LDERData := FX509Crt^.raw.p;
+    LDERLen := FX509Crt^.raw.len;
+  end
+  else
+    Exit;
 
   LMdInfo := mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
   if LMdInfo = nil then Exit;
 
   FillChar(LHash, SizeOf(LHash), 0);
-  if mbedtls_md(LMdInfo, @FDERData[0], Length(FDERData), @LHash[0]) = 0 then
+  if mbedtls_md(LMdInfo, LDERData, LDERLen, @LHash[0]) = 0 then
   begin
     for I := 0 to 31 do
       Result := Result + IntToHex(LHash[I], 2);
