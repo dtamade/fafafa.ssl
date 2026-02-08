@@ -118,6 +118,35 @@
 - **[test_reports/ROADMAP_CLOSURE_PROGRESS_2026-02-08.md](test_reports/ROADMAP_CLOSURE_PROGRESS_2026-02-08.md)** - 路线图收口进度报告（2026-02-08） 🆕
 - **[test_reports/WAVE_B_CI_GATE_PROGRESS_2026-02-08.md](test_reports/WAVE_B_CI_GATE_PROGRESS_2026-02-08.md)** - Wave B Linux CI 门禁执行记录（2026-02-08） 🆕
 - **[test_reports/WAVE_B_CROSS_PLATFORM_GATE_MANIFEST_2026-02-08.md](test_reports/WAVE_B_CROSS_PLATFORM_GATE_MANIFEST_2026-02-08.md)** - Wave B 跨平台门禁执行清单（2026-02-08） 🆕
+- **[test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md](test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md)** - Wave C 一页式运行手册（B121） 🆕
+- **[test_reports/WAVE_C_B122_CI_DEFERRED_LOCAL_MODE_2026-02-08.md](test_reports/WAVE_C_B122_CI_DEFERRED_LOCAL_MODE_2026-02-08.md)** - Wave C CI 暂缓与本地优先决策记录（B122） 🆕
+- **[test_reports/WAVE_C_B123_LOCAL_FIRST_CONTINUITY_RESULT_2026-02-09.md](test_reports/WAVE_C_B123_LOCAL_FIRST_CONTINUITY_RESULT_2026-02-09.md)** - Wave C 本地优先连续性门禁结果（B123） 🆕
+- **[test_reports/WAVE_C_B124_LOCAL_DRIFT_WATCH_RESULT_2026-02-09.md](test_reports/WAVE_C_B124_LOCAL_DRIFT_WATCH_RESULT_2026-02-09.md)** - Wave C 本地优先周期漂移检查结果（B124） 🆕
+- **[test_reports/WAVE_C_B125_LOCAL_GUARD_BUNDLE_RESULT_2026-02-09.md](test_reports/WAVE_C_B125_LOCAL_GUARD_BUNDLE_RESULT_2026-02-09.md)** - Wave C 本地守护汇总结果（B125） 🆕
+- **[test_reports/WAVE_C_B126_LOCAL_GUARD_HISTORY_RESULT_2026-02-09.md](test_reports/WAVE_C_B126_LOCAL_GUARD_HISTORY_RESULT_2026-02-09.md)** - Wave C 本地守护历史趋势结果（B126） 🆕
+- **[test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md](test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md)** - Wave C 本地守护故障速查手册（B127） 🆕
+- **[test_reports/WAVE_C_B128_LOCAL_FIRST_DOC_ENTRY_RESULT_2026-02-09.md](test_reports/WAVE_C_B128_LOCAL_FIRST_DOC_ENTRY_RESULT_2026-02-09.md)** - Wave C 本地优先文档入口收口结果（B128） 🆕
+- **[test_reports/WAVE_C_B129_ONCALL_CHECK_RESULT_2026-02-09.md](test_reports/WAVE_C_B129_ONCALL_CHECK_RESULT_2026-02-09.md)** - Wave C 本地守护值班检查结果（B129） 🆕
+- **[test_reports/WAVE_C_B130_ONCALL_RHYTHM_TEMPLATE_2026-02-09.md](test_reports/WAVE_C_B130_ONCALL_RHYTHM_TEMPLATE_2026-02-09.md)** - Wave C 本地守护值班节奏模板（B130） 🆕
+- **[test_reports/WAVE_C_B131_LOCAL_FIRST_HANDOFF_CHECKLIST_2026-02-09.md](test_reports/WAVE_C_B131_LOCAL_FIRST_HANDOFF_CHECKLIST_2026-02-09.md)** - Wave C 本地守护最小交接清单（B131） 🆕
+- **[test_reports/WAVE_C_B132_LOCAL_FIRST_STATUS_SNAPSHOT_RESULT_2026-02-09.md](test_reports/WAVE_C_B132_LOCAL_FIRST_STATUS_SNAPSHOT_RESULT_2026-02-09.md)** - Wave C 本地优先状态快照结果（B132） 🆕
+- **[test_reports/WAVE_C_B133_LOCAL_GUARD_EVIDENCE_RETENTION_2026-02-09.md](test_reports/WAVE_C_B133_LOCAL_GUARD_EVIDENCE_RETENTION_2026-02-09.md)** - Wave C 本地守护证据保留策略建议（B133） 🆕
+- **[test_reports/WAVE_C_B134_LOCAL_FIRST_CLOSURE_SUMMARY_2026-02-09.md](test_reports/WAVE_C_B134_LOCAL_FIRST_CLOSURE_SUMMARY_2026-02-09.md)** - Wave C 本地优先阶段收口摘要（B134） 🆕
+- **[test_reports/WAVE_C_B135_PRE_CI_REENABLE_PACKET_2026-02-09.md](test_reports/WAVE_C_B135_PRE_CI_REENABLE_PACKET_2026-02-09.md)** - Wave C 恢复 CI 前检查包（B135） 🆕
+- **[test_reports/WAVE_C_B136_DELIVERABLES_OVERVIEW_2026-02-09.md](test_reports/WAVE_C_B136_DELIVERABLES_OVERVIEW_2026-02-09.md)** - Wave C 当前可交付清单总览（B136） 🆕
+- **[test_reports/WAVE_C_B137_PRE_CI_REENABLE_PACKET_RESULT_2026-02-09.md](test_reports/WAVE_C_B137_PRE_CI_REENABLE_PACKET_RESULT_2026-02-09.md)** - Wave C 恢复 CI 前审批包结果（B137） 🆕
+- **[test_reports/WAVE_C_B138_PRE_CI_REENABLE_FULL_GATE_RESULT_2026-02-09.md](test_reports/WAVE_C_B138_PRE_CI_REENABLE_FULL_GATE_RESULT_2026-02-09.md)** - Wave C 恢复 CI 前全量门禁结果（B138） 🆕
+- **[test_reports/WAVE_C_B139_LOCAL_GUARD_CLEANUP_PLAN_RESULT_2026-02-09.md](test_reports/WAVE_C_B139_LOCAL_GUARD_CLEANUP_PLAN_RESULT_2026-02-09.md)** - Wave C 本地守护清理计划结果（B139） 🆕
+- **[test_reports/WAVE_C_B140_LOCAL_GUARD_CONSISTENCY_RESULT_2026-02-09.md](test_reports/WAVE_C_B140_LOCAL_GUARD_CONSISTENCY_RESULT_2026-02-09.md)** - Wave C 本地守护一致性检查结果（B140） 🆕
+- **[test_reports/WAVE_C_B141_LOCAL_GUARD_OPERATIONS_SUMMARY_2026-02-09.md](test_reports/WAVE_C_B141_LOCAL_GUARD_OPERATIONS_SUMMARY_2026-02-09.md)** - Wave C 本地守护运维摘要（B141） 🆕
+- **[test_reports/WAVE_C_B142_LOCAL_GUARD_STATUS_EXPORT_RESULT_2026-02-09.md](test_reports/WAVE_C_B142_LOCAL_GUARD_STATUS_EXPORT_RESULT_2026-02-09.md)** - Wave C 本地守护状态导出结果（B142） 🆕
+- **[test_reports/WAVE_C_B143_LOCAL_GUARD_ALERT_THRESHOLDS_RESULT_2026-02-09.md](test_reports/WAVE_C_B143_LOCAL_GUARD_ALERT_THRESHOLDS_RESULT_2026-02-09.md)** - Wave C 本地守护告警阈值结果（B143） 🆕
+- **[test_reports/WAVE_C_B144_LOCAL_GUARD_OPS_PACK_RESULT_2026-02-09.md](test_reports/WAVE_C_B144_LOCAL_GUARD_OPS_PACK_RESULT_2026-02-09.md)** - Wave C 本地守护运维打包结果（B144） 🆕
+- **[test_reports/WAVE_C_B145_FAST_TRACK_BUNDLE_RESULT_2026-02-09.md](test_reports/WAVE_C_B145_FAST_TRACK_BUNDLE_RESULT_2026-02-09.md)** - Wave C 快速打包阶段结果（B145） 🆕
+- **[test_reports/WAVE_C_B146_CI_REENABLE_SUBMISSION_PACK_RESULT_2026-02-09.md](test_reports/WAVE_C_B146_CI_REENABLE_SUBMISSION_PACK_RESULT_2026-02-09.md)** - Wave C 恢复 CI 提交包结果（B146） 🆕
+- **[test_reports/WAVE_C_B147_SUBMISSION_PACK_CHECK_RESULT_2026-02-09.md](test_reports/WAVE_C_B147_SUBMISSION_PACK_CHECK_RESULT_2026-02-09.md)** - Wave C 提交包校验结果（B147） 🆕
+- **[test_reports/WAVE_C_B148_CI_REENABLE_APPROVAL_BRIEF_RESULT_2026-02-09.md](test_reports/WAVE_C_B148_CI_REENABLE_APPROVAL_BRIEF_RESULT_2026-02-09.md)** - Wave C 恢复 CI 审批简报结果（B148） 🆕
+- **[test_reports/WAVE_C_B149_CI_REENABLE_SUBMISSION_BUNDLE_RESULT_2026-02-09.md](test_reports/WAVE_C_B149_CI_REENABLE_SUBMISSION_BUNDLE_RESULT_2026-02-09.md)** - Wave C 恢复 CI 提交打包结果（B149） 🆕
 
 ### 路线图与计划
 - **[DEVELOPMENT_ROADMAP_2026.md](DEVELOPMENT_ROADMAP_2026.md)** - 2026 开发路线图 🆕
@@ -179,6 +208,22 @@
 - **[../tools/README.md](../tools/README.md)** - 能力矩阵可视化工具 🆕
 - **[../.github/workflows/ci-matrix-draft.yml](../.github/workflows/ci-matrix-draft.yml)** - GitHub Actions 多平台 CI 工作流 🆕
 - **[../scripts/detect_macos_openssl_enhanced.sh](../scripts/detect_macos_openssl_enhanced.sh)** - macOS OpenSSL 增强检测脚本 🆕
+- **[../scripts/check_wave_c_local_first_continuity.sh](../scripts/check_wave_c_local_first_continuity.sh)** - Wave C 本地优先连续性检查脚本（B123） 🆕
+- **[../scripts/check_wave_c_local_drift_watch.sh](../scripts/check_wave_c_local_drift_watch.sh)** - Wave C 本地优先周期漂移检查脚本（B124） 🆕
+- **[../scripts/run_wave_c_local_first_guard_bundle.sh](../scripts/run_wave_c_local_first_guard_bundle.sh)** - Wave C 本地守护汇总执行脚本（B125） 🆕
+- **[../scripts/summarize_wave_c_local_guard_history.sh](../scripts/summarize_wave_c_local_guard_history.sh)** - Wave C 本地守护历史趋势汇总脚本（B126） 🆕
+- **[../scripts/run_wave_c_local_guard_oncall_check.sh](../scripts/run_wave_c_local_guard_oncall_check.sh)** - Wave C 本地守护值班检查脚本（B129） 🆕
+- **[../scripts/generate_wave_c_local_first_status_snapshot.sh](../scripts/generate_wave_c_local_first_status_snapshot.sh)** - Wave C 本地优先状态快照脚本（B132） 🆕
+- **[../scripts/run_wave_c_pre_ci_reenable_full_gate.sh](../scripts/run_wave_c_pre_ci_reenable_full_gate.sh)** - Wave C 恢复 CI 前全量门禁脚本（B138） 🆕
+- **[../scripts/cleanup_wave_c_local_guard_reports.sh](../scripts/cleanup_wave_c_local_guard_reports.sh)** - Wave C 本地守护清理计划脚本（B139） 🆕
+- **[../scripts/check_wave_c_local_guard_consistency.sh](../scripts/check_wave_c_local_guard_consistency.sh)** - Wave C 本地守护一致性检查脚本（B140） 🆕
+- **[../scripts/export_wave_c_local_guard_status_json.sh](../scripts/export_wave_c_local_guard_status_json.sh)** - Wave C 本地守护状态导出脚本（B142） 🆕
+- **[../scripts/check_wave_c_local_guard_alert_thresholds.sh](../scripts/check_wave_c_local_guard_alert_thresholds.sh)** - Wave C 本地守护告警阈值脚本（B143） 🆕
+- **[../scripts/run_wave_c_local_guard_ops_pack.sh](../scripts/run_wave_c_local_guard_ops_pack.sh)** - Wave C 本地守护运维打包脚本（B144） 🆕
+- **[../scripts/prepare_wave_c_ci_reenable_submission_pack.sh](../scripts/prepare_wave_c_ci_reenable_submission_pack.sh)** - Wave C 恢复 CI 提交包生成脚本（B146） 🆕
+- **[../scripts/check_wave_c_ci_reenable_submission_pack.sh](../scripts/check_wave_c_ci_reenable_submission_pack.sh)** - Wave C 恢复 CI 提交包校验脚本（B147） 🆕
+- **[../scripts/generate_wave_c_ci_reenable_approval_brief.sh](../scripts/generate_wave_c_ci_reenable_approval_brief.sh)** - Wave C 恢复 CI 审批简报脚本（B148） 🆕
+- **[../scripts/run_wave_c_ci_reenable_submission_bundle.sh](../scripts/run_wave_c_ci_reenable_submission_bundle.sh)** - Wave C 恢复 CI 提交打包脚本（B149） 🆕
 - **[archive/MAINTENANCE_PLAN.md](archive/MAINTENANCE_PLAN.md)**（归档）
 - **[guides/TROUBLESHOOTING.md](guides/TROUBLESHOOTING.md)**
 - **[guides/COMMON_PITFALLS.md](guides/COMMON_PITFALLS.md)** - 常见陷阱与避坑指南 🆕
@@ -205,4 +250,4 @@
 
 ---
 
-**最后更新**: 2026-02-07 (B78)
+**最后更新**: 2026-02-09 (B149)

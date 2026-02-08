@@ -171,3 +171,19 @@ Ctx := TSSLContextBuilder.Create
 - 详细文档：`docs/guides/QUICKSTART.md`
 - API 参考：`docs/reference/`
 - 测试用例：`tests/` 目录包含更多使用示例
+
+## Local-first 守护（CI 暂缓场景）
+
+若当前处于 CI 暂缓模式，可直接运行：
+
+```bash
+# 本地守护一键门禁（B125）
+bash scripts/run_wave_c_local_first_guard_bundle.sh --strict
+
+# 本地守护趋势汇总（B126）
+bash scripts/summarize_wave_c_local_guard_history.sh --strict
+```
+
+出现异常时：
+- 先看 `docs/test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md`
+- 再按手册顺序重跑 B123/B124/B125/B126

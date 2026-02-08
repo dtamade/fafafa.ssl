@@ -158,6 +158,8 @@ fpc -B -Mobjfpc -Sh -Fu./src -Fi./src -FU./lib your_app.pas -o./bin/your_app
 | [示例程序](examples/) | 57 个示例程序 |
 | [FAQ](docs/guides/FAQ.md) | 常见问题解答 |
 | [部署指南](docs/guides/DEPLOYMENT_GUIDE.md) | 生产部署指南 |
+| [Wave C Local-first Runbook](docs/test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md) | CI 暂缓时的一页执行手册 |
+| [Wave C Local Guard Troubleshooting](docs/test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md) | 本地守护链路故障速查 |
 
 ## 核心 API
 
@@ -253,6 +255,20 @@ end;
 # 性能基准测试
 ./ci_pipeline.sh bench
 ```
+
+### CI 暂缓时（Local-first 守护）
+
+```bash
+# 一键执行本地守护门禁（B123 + B124）
+bash scripts/run_wave_c_local_first_guard_bundle.sh --strict
+
+# 汇总最近守护趋势（B126）
+bash scripts/summarize_wave_c_local_guard_history.sh --strict
+```
+
+更多细节：
+- 执行手册：`docs/test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md`
+- 故障速查：`docs/test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md`
 
 ### 测试覆盖
 

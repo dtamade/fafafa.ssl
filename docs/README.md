@@ -74,6 +74,8 @@ docs/
 | [guides/USER_GUIDE.md](guides/USER_GUIDE.md) | 完整用户指南 |
 | [reference/API_REFERENCE.md](reference/API_REFERENCE.md) | API 参考手册 |
 | [reference/INTERFACE_DESIGN_V2.md](reference/INTERFACE_DESIGN_V2.md) | 接口设计文档 |
+| [test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md](test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md) | Wave C local-first 一页执行手册 |
+| [test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md](test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md) | Wave C local-first 故障速查 |
 
 ---
 
