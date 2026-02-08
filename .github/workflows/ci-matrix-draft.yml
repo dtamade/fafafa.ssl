@@ -1,0 +1,259 @@
+name: CI Matrix (Draft)
+
+# B63: GitHub Actions 多平台矩阵测试工作流草案
+# 状态: draft - 需要根据实际环境调整
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+    inputs:
+      skip_windows:
+        description: 'Skip Windows tests'
+        required: false
+        default: 'false'
+      skip_macos:
+        description: 'Skip macOS tests'
+        required: false
+        default: 'false'
+
+env:
+  FPC_VERSION: '3.2.2'
+
+jobs:
+  # ============================================================================
+  # 编译门禁 - 快速失败
+  # ============================================================================
+  compile-gate:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install FPC
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y fpc libssl-dev
+        fpc -iV
+
+    - name: Run compile gate
+      run: |
+        python3 scripts/compile_all_modules.py
+
+    - name: Upload compile results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: compile-gate-results
+        path: |
+          *.log
+          compile_*.txt
+        retention-days: 7
+
+  # ============================================================================
+  # Linux 矩阵测试
+  # ============================================================================
+  linux-matrix:
+    needs: compile-gate
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        openssl: ['3.0', '3.1', '3.2']
+        include:
+          - openssl: '3.0'
+            apt_package: 'libssl3'
+          - openssl: '3.1'
+            apt_package: 'libssl3'
+          - openssl: '3.2'
+            apt_package: 'libssl3'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y fpc libssl-dev
+        openssl version
+
+    - name: Run P2 module tests
+      run: |
+        mkdir -p bin test-reports
+        chmod +x scripts/run_all_module_tests.sh
+        ./scripts/run_all_module_tests.sh --verbose || true
+
+    - name: Upload test reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-openssl-${{ matrix.openssl }}-reports
+        path: test-reports/
+        retention-days: 14
+
+  # ============================================================================
+  # macOS 测试 (草案)
+  # ============================================================================
+  macos-test:
+    needs: compile-gate
+    if: github.event.inputs.skip_macos != 'true'
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install FPC via Homebrew
+      run: |
+        brew install fpc
+        fpc -iV
+
+    - name: Install OpenSSL
+      run: |
+        brew install openssl@3
+        echo "DYLD_LIBRARY_PATH=/opt/homebrew/opt/openssl@3/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+        echo "LIBRARY_PATH=/opt/homebrew/opt/openssl@3/lib:$LIBRARY_PATH" >> $GITHUB_ENV
+        echo "CPATH=/opt/homebrew/opt/openssl@3/include:$CPATH" >> $GITHUB_ENV
+
+    - name: Verify OpenSSL
+      run: |
+        /opt/homebrew/opt/openssl@3/bin/openssl version
+        ls -la /opt/homebrew/opt/openssl@3/lib/
+
+    - name: Run compile gate
+      run: |
+        python3 scripts/compile_all_modules.py || true
+
+    - name: Run basic tests
+      run: |
+        mkdir -p bin test-reports
+        # 基础测试（macOS 路径可能需要调整）
+        fpc -Mobjfpc -Sh -Fu./src examples/hello_ssl.pas -o./bin/hello_ssl || true
+        ./bin/hello_ssl || true
+
+    - name: Upload results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-reports
+        path: |
+          test-reports/
+          *.log
+        retention-days: 14
+
+  # ============================================================================
+  # Windows 测试 (草案)
+  # ============================================================================
+  windows-test:
+    needs: compile-gate
+    if: github.event.inputs.skip_windows != 'true'
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install FPC
+      run: |
+        choco install freepascal -y
+        fpc -iV
+
+    - name: Download OpenSSL (optional)
+      run: |
+        # Windows 可使用 WinSSL 后端，OpenSSL 可选
+        echo "Windows tests can use WinSSL backend without OpenSSL DLLs"
+
+    - name: Run compile gate
+      run: |
+        python scripts/compile_all_modules.py
+      shell: cmd
+
+    - name: Run WinSSL tests
+      run: |
+        mkdir bin
+        mkdir test-reports
+        # WinSSL 后端测试
+        fpc -Mobjfpc -Sh -Fu.\src examples\hello_ssl.pas -o.\bin\hello_ssl.exe
+        .\bin\hello_ssl.exe
+      shell: cmd
+      continue-on-error: true
+
+    - name: Upload results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-reports
+        path: |
+          test-reports/
+          *.log
+        retention-days: 14
+
+  # ============================================================================
+  # 测试汇总
+  # ============================================================================
+  test-summary:
+    needs: [linux-matrix, macos-test, windows-test]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: all-reports
+
+    - name: Generate summary
+      run: |
+        echo "## CI Matrix Test Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+
+        # 检查各平台结果
+        for dir in all-reports/*/; do
+          platform=$(basename "$dir")
+          if ls "$dir"/*.txt 2>/dev/null | head -1 | xargs grep -q "PASS\|SUCCESS" 2>/dev/null; then
+            echo "| $platform | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| $platform | ⚠️ Check logs |" >> $GITHUB_STEP_SUMMARY
+          fi
+        done
+
+    - name: Upload combined reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: all-platform-reports
+        path: all-reports/
+        retention-days: 30
+
+  # ============================================================================
+  # 代码质量检查
+  # ============================================================================
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Check TODO/FIXME
+      run: |
+        echo "## Code Quality" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### TODO/FIXME markers" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        grep -rn "TODO\|FIXME" src/*.pas 2>/dev/null | head -20 || echo "None found"
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+    - name: Source statistics
+      run: |
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Source Statistics" >> $GITHUB_STEP_SUMMARY
+        echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Source files | $(find src -name '*.pas' | wc -l) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Test files | $(find tests -name '*.pas' | wc -l) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Example files | $(find examples -name '*.pas' | wc -l) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Total lines | $(find src -name '*.pas' -exec cat {} \; | wc -l) |" >> $GITHUB_STEP_SUMMARY

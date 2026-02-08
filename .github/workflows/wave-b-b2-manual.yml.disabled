@@ -1,0 +1,251 @@
+name: Wave B B2 Manual Gate (Template)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Optional run id (default timestamp)
+        required: false
+        default: ""
+      run_linux_baseline:
+        description: Run Linux baseline gate
+        required: false
+        default: "true"
+      openssl_root_macos:
+        description: Optional macOS OpenSSL root (e.g. /opt/homebrew/opt/openssl@3)
+        required: false
+        default: ""
+      strict_closure:
+        description: Fail workflow if B2 not closed
+        required: false
+        default: "false"
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      run_id: ${{ steps.prepare.outputs.run_id }}
+    steps:
+      - name: Prepare run id
+        id: prepare
+        shell: bash
+        run: |
+          if [[ -n "${{ github.event.inputs.run_id }}" ]]; then
+            RUN_ID="${{ github.event.inputs.run_id }}"
+          else
+            RUN_ID="$(date +%Y%m%d_%H%M%S)"
+          fi
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+          echo "[INFO] run_id=$RUN_ID"
+
+  linux-gate:
+    needs: setup
+    if: ${{ github.event.inputs.run_linux_baseline != 'false' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fpc libssl-dev
+
+      - name: Run Linux Wave B gate
+        shell: bash
+        run: |
+          RUN_ID="${{ needs.setup.outputs.run_id }}"
+          bash scripts/run_wave_b_ci_gate.sh \
+            --examples-threshold 80.0 \
+            --examples-report "test-reports/examples_compile_ci_gate_${RUN_ID}.json" \
+            --summary-out "test-reports/wave_b_ci_gate_summary_${RUN_ID}.md"
+
+      - name: Upload Linux evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-b-linux-${{ needs.setup.outputs.run_id }}
+          path: |
+            test-reports/wave_b_ci_gate_summary_${{ needs.setup.outputs.run_id }}.md
+            test-reports/examples_compile_ci_gate_${{ needs.setup.outputs.run_id }}.json
+            test-reports/wave_b_compile_*.log
+            test-reports/wave_b_modules_*.log
+            test-reports/wave_b_examples_*.log
+          if-no-files-found: warn
+
+  macos-gate:
+    needs: setup
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          brew install freepascal openssl@3
+
+      - name: Resolve OpenSSL path
+        id: openssl
+        shell: bash
+        run: |
+          if [[ -n "${{ github.event.inputs.openssl_root_macos }}" ]]; then
+            OPENSSL_ROOT="${{ github.event.inputs.openssl_root_macos }}"
+          elif [[ -d "/opt/homebrew/opt/openssl@3" ]]; then
+            OPENSSL_ROOT="/opt/homebrew/opt/openssl@3"
+          else
+            OPENSSL_ROOT="/usr/local/opt/openssl@3"
+          fi
+          echo "OPENSSL_ROOT=$OPENSSL_ROOT" >> "$GITHUB_OUTPUT"
+          echo "[INFO] OPENSSL_ROOT=$OPENSSL_ROOT"
+
+      - name: Run macOS Wave B gate
+        shell: bash
+        run: |
+          RUN_ID="${{ needs.setup.outputs.run_id }}"
+          bash scripts/run_wave_b_macos_gate.sh \
+            --run-id "$RUN_ID" \
+            --output-dir test-reports \
+            --openssl-root "${{ steps.openssl.outputs.OPENSSL_ROOT }}"
+
+      - name: Upload macOS evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-b-macos-${{ needs.setup.outputs.run_id }}
+          path: |
+            test-reports/wave_b_macos_gate_summary_${{ needs.setup.outputs.run_id }}.md
+            test-reports/wave_b_macos_*.log
+            test-reports/examples_compile_gate_macos_${{ needs.setup.outputs.run_id }}.json
+          if-no-files-found: warn
+
+  windows-gate:
+    needs: setup
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Windows Wave B gate
+        shell: powershell
+        run: |
+          $runId = "${{ needs.setup.outputs.run_id }}"
+          powershell -ExecutionPolicy Bypass -File scripts/run_wave_b_windows_gate.ps1 -RunId $runId
+
+      - name: Upload Windows evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-b-windows-${{ needs.setup.outputs.run_id }}
+          path: |
+            test-reports/wave_b_windows_gate_summary_${{ needs.setup.outputs.run_id }}.md
+            test-reports/wave_b_windows_*.log
+          if-no-files-found: warn
+
+  summary:
+    needs: [setup, linux-gate, macos-gate, windows-gate]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Linux evidence
+        if: ${{ github.event.inputs.run_linux_baseline != 'false' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: wave-b-linux-${{ needs.setup.outputs.run_id }}
+          path: artifacts/linux
+
+      - name: Download macOS evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: wave-b-macos-${{ needs.setup.outputs.run_id }}
+          path: artifacts/macos
+
+      - name: Download Windows evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: wave-b-windows-${{ needs.setup.outputs.run_id }}
+          path: artifacts/windows
+
+      - name: Build summary + closure + consistency
+        shell: bash
+        run: |
+          mkdir -p test-reports
+          RUN_ID="${{ needs.setup.outputs.run_id }}"
+
+          cp -f artifacts/linux/* test-reports/ 2>/dev/null || true
+          cp -f artifacts/macos/* test-reports/ 2>/dev/null || true
+          cp -f artifacts/windows/* test-reports/ 2>/dev/null || true
+
+          LINUX_SUMMARY="test-reports/wave_b_ci_gate_summary_${RUN_ID}.md"
+          LINUX_EXAMPLES="test-reports/examples_compile_ci_gate_${RUN_ID}.json"
+
+          MACOS_ARGS=()
+          WINDOWS_ARGS=()
+          if [[ -f "test-reports/wave_b_macos_gate_summary_${RUN_ID}.md" ]]; then
+            MACOS_ARGS=(--macos-summary "test-reports/wave_b_macos_gate_summary_${RUN_ID}.md")
+          fi
+          if [[ -f "test-reports/wave_b_windows_gate_summary_${RUN_ID}.md" ]]; then
+            WINDOWS_ARGS=(--windows-summary "test-reports/wave_b_windows_gate_summary_${RUN_ID}.md")
+          fi
+
+          bash scripts/generate_wave_b_cross_platform_summary.sh \
+            --run-id "$RUN_ID" \
+            --linux-summary "$LINUX_SUMMARY" \
+            --linux-examples "$LINUX_EXAMPLES" \
+            "${MACOS_ARGS[@]}" \
+            "${WINDOWS_ARGS[@]}" \
+            --output "test-reports/wave_b_cross_platform_summary_${RUN_ID}.md"
+
+          bash scripts/check_wave_b_b2_closure_readiness.sh \
+            --run-id "$RUN_ID" \
+            --linux-summary "$LINUX_SUMMARY" \
+            "${MACOS_ARGS[@]}" \
+            "${WINDOWS_ARGS[@]}" \
+            --output "test-reports/wave_b_b2_closure_readiness_${RUN_ID}.md"
+
+          bash scripts/check_wave_b_b2_evidence_consistency.sh \
+            --run-id "$RUN_ID" \
+            --linux-summary "$LINUX_SUMMARY" \
+            --linux-examples "$LINUX_EXAMPLES" \
+            "${MACOS_ARGS[@]}" \
+            "${WINDOWS_ARGS[@]}" \
+            --cross-summary "test-reports/wave_b_cross_platform_summary_${RUN_ID}.md" \
+            --closure-report "test-reports/wave_b_b2_closure_readiness_${RUN_ID}.md" \
+            --output "test-reports/wave_b_b2_evidence_consistency_${RUN_ID}.md"
+
+          if [[ "${{ github.event.inputs.strict_closure }}" == "true" ]]; then
+            bash scripts/check_wave_b_b2_evidence_consistency.sh \
+              --run-id "$RUN_ID" \
+              --linux-summary "$LINUX_SUMMARY" \
+              --linux-examples "$LINUX_EXAMPLES" \
+              "${MACOS_ARGS[@]}" \
+              "${WINDOWS_ARGS[@]}" \
+              --cross-summary "test-reports/wave_b_cross_platform_summary_${RUN_ID}.md" \
+              --closure-report "test-reports/wave_b_b2_closure_readiness_${RUN_ID}.md" \
+              --strict \
+              --dry-run
+
+            bash scripts/check_wave_b_b2_closure_readiness.sh \
+              --run-id "$RUN_ID" \
+              --linux-summary "$LINUX_SUMMARY" \
+              "${MACOS_ARGS[@]}" \
+              "${WINDOWS_ARGS[@]}" \
+              --strict \
+              --dry-run
+          fi
+
+      - name: Upload final summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-b-summary-${{ needs.setup.outputs.run_id }}
+          path: |
+            test-reports/wave_b_cross_platform_summary_${{ needs.setup.outputs.run_id }}.md
+            test-reports/wave_b_b2_closure_readiness_${{ needs.setup.outputs.run_id }}.md
+            test-reports/wave_b_b2_evidence_consistency_${{ needs.setup.outputs.run_id }}.md
+          if-no-files-found: warn

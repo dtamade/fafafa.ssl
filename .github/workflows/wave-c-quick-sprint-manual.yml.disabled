@@ -1,0 +1,85 @@
+name: Wave C Quick Sprint Manual (Template)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Optional run id (default timestamp)
+        required: false
+        default: ""
+      run_validation:
+        description: Run B101 full validation before bundle
+        required: false
+        default: "true"
+      strict_bundle:
+        description: Fail workflow when quick bundle gate fails
+        required: false
+        default: "true"
+
+jobs:
+  wave-c-quick-sprint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve run id
+        id: runid
+        shell: bash
+        run: |
+          if [[ -n "${{ github.event.inputs.run_id }}" ]]; then
+            RUN_ID="${{ github.event.inputs.run_id }}"
+          else
+            RUN_ID="$(date +%Y%m%d_%H%M%S)"
+          fi
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "[INFO] run_id=$RUN_ID"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fpc libssl-dev
+
+      - name: Optional B101 full validation
+        if: ${{ github.event.inputs.run_validation != 'false' }}
+        shell: bash
+        run: |
+          RUN_ID="${{ steps.runid.outputs.run_id }}"
+          bash scripts/run_wave_c_b101_validation_playbook.sh \
+            --run-id "$RUN_ID" \
+            --strict \
+            --full-gate \
+            --output "test-reports/wave_c_b101_validation_${RUN_ID}.md"
+
+      - name: Run Wave C quick sprint bundle
+        shell: bash
+        run: |
+          RUN_ID="${{ steps.runid.outputs.run_id }}"
+          STRICT_FLAG=""
+          if [[ "${{ github.event.inputs.strict_bundle }}" == "true" ]]; then
+            STRICT_FLAG="--strict"
+          fi
+
+          bash scripts/run_wave_c_quick_sprint_bundle.sh \
+            --run-id "$RUN_ID" \
+            $STRICT_FLAG \
+            --output "test-reports/wave_c_quick_sprint_bundle_${RUN_ID}.md"
+
+      - name: Upload Wave C sprint artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-c-quick-sprint-${{ steps.runid.outputs.run_id }}
+          path: |
+            test-reports/wave_c_b101_validation_${{ steps.runid.outputs.run_id }}.md
+            test-reports/wave_c_b107_threshold_eval_${{ steps.runid.outputs.run_id }}.md
+            test-reports/wave_c_b108_default_on_readiness_${{ steps.runid.outputs.run_id }}.md
+            test-reports/wave_c_b109_canary_rollout_${{ steps.runid.outputs.run_id }}.md
+            test-reports/wave_c_b110_rollback_drill_${{ steps.runid.outputs.run_id }}.md
+            test-reports/wave_c_quick_sprint_bundle_${{ steps.runid.outputs.run_id }}.md
+            test-reports/wave_c_b107_threshold_eval_${{ steps.runid.outputs.run_id }}.log
+            test-reports/wave_c_b108_default_on_readiness_${{ steps.runid.outputs.run_id }}.log
+            test-reports/wave_c_b109_canary_rollout_${{ steps.runid.outputs.run_id }}.log
+            test-reports/wave_c_b110_rollback_drill_${{ steps.runid.outputs.run_id }}.log
+          if-no-files-found: warn
