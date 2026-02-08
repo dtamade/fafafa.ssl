@@ -1,0 +1,219 @@
+#!/bin/bash
+# verify_examples_compile.sh
+# B70: 示例编译验证脚本
+# 验证 examples/ 目录下所有 .pas 文件能否通过编译
+
+# 不使用 set -e，因为编译失败是预期的情况
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+EXAMPLES_DIR="$PROJECT_ROOT/examples"
+SRC_DIR="$PROJECT_ROOT/src"
+
+# 颜色输出
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+# 参数
+VERBOSE=false
+STOP_ON_ERROR=false
+OUTPUT_FORMAT="text"
+REPORT_FILE=""
+
+# 帮助信息
+show_help() {
+    cat << 'EOF_HELP'
+用法: verify_examples_compile.sh [选项]
+
+选项:
+  -v, --verbose         显示详细编译输出
+  -s, --stop-on-error   遇到第一个错误时停止
+  -f, --format FORMAT   输出格式: text (默认), json, markdown
+  -o, --output FILE     输出报告到文件
+  -h, --help            显示此帮助信息
+
+示例:
+  ./verify_examples_compile.sh              # 编译所有示例
+  ./verify_examples_compile.sh -v           # 详细模式
+  ./verify_examples_compile.sh -f markdown  # Markdown 格式输出
+EOF_HELP
+}
+
+# 解析参数
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -v|--verbose) VERBOSE=true; shift ;;
+        -s|--stop-on-error) STOP_ON_ERROR=true; shift ;;
+        -f|--format) OUTPUT_FORMAT="$2"; shift 2 ;;
+        -o|--output) REPORT_FILE="$2"; shift 2 ;;
+        -h|--help) show_help; exit 0 ;;
+        *) echo -e "${RED}错误: 未知选项 $1${NC}"; exit 2 ;;
+    esac
+done
+
+# 检查 FPC
+if ! command -v fpc &> /dev/null; then
+    echo -e "${RED}错误: 未找到 fpc 编译器${NC}"
+    exit 2
+fi
+
+FPC_VERSION=$(fpc -iV 2>/dev/null || echo "unknown")
+echo "FPC 版本: $FPC_VERSION"
+echo "项目根目录: $PROJECT_ROOT"
+echo ""
+
+# 统计
+TOTAL=0
+PASSED=0
+FAILED=0
+SKIPPED=0
+declare -a FAILED_FILES
+declare -a SKIPPED_FILES
+
+# 检查是否跳过（WinSSL 示例在非 Windows 下跳过）
+should_skip() {
+    local basename
+    basename=$(basename "$1")
+    case "$basename" in
+        winssl_*|*_winssl_*|09_winssl_fips.pas)
+            [[ "$(uname)" != MINGW* && "$(uname)" != CYGWIN* ]]
+            return $?
+            ;;
+    esac
+    return 1
+}
+
+# 编译单个文件
+compile_file() {
+    local file="$1"
+    local temp_dir
+    local basename
+
+    temp_dir=$(mktemp -d)
+    basename=$(basename "$file" .pas)
+
+    if $VERBOSE; then
+        fpc -Mobjfpc -Sh -Fu"$SRC_DIR" -Fu"$EXAMPLES_DIR" -FE"$temp_dir" -o"$temp_dir/$basename" "$file" 2>&1
+        local result=$?
+    else
+        fpc -Mobjfpc -Sh -Fu"$SRC_DIR" -Fu"$EXAMPLES_DIR" -FE"$temp_dir" -o"$temp_dir/$basename" "$file" > /dev/null 2>&1
+        local result=$?
+    fi
+
+    rm -rf "$temp_dir"
+    return $result
+}
+
+echo "开始编译验证..."
+echo "========================================"
+
+# 遍历所有示例文件
+for file in $(find "$EXAMPLES_DIR" -name "*.pas" -type f | sort); do
+    relative_path="${file#$PROJECT_ROOT/}"
+    ((TOTAL++))
+
+    if should_skip "$file"; then
+        ((SKIPPED++))
+        SKIPPED_FILES+=("$relative_path")
+        $VERBOSE && echo -e "${YELLOW}[SKIP]${NC} $relative_path"
+        continue
+    fi
+
+    if compile_file "$file"; then
+        ((PASSED++))
+        echo -e "${GREEN}[PASS]${NC} $relative_path"
+    else
+        ((FAILED++))
+        FAILED_FILES+=("$relative_path")
+        echo -e "${RED}[FAIL]${NC} $relative_path"
+        $STOP_ON_ERROR && break
+    fi
+done
+
+echo "========================================"
+echo ""
+
+# 计算通过率
+TESTED=$((TOTAL - SKIPPED))
+if [ $TESTED -gt 0 ]; then
+    PASS_RATE=$(echo "scale=1; $PASSED * 100 / $TESTED" | bc)
+else
+    PASS_RATE="0"
+fi
+
+# 输出摘要
+output_summary() {
+    case $OUTPUT_FORMAT in
+        json)
+            local failed_json
+            if [ ${#FAILED_FILES[@]} -gt 0 ]; then
+                failed_json=$(printf '"%s",' "${FAILED_FILES[@]}" | sed 's/,$//')
+            else
+                failed_json=""
+            fi
+            cat << EOF_JSON
+{
+  "timestamp": "$(date -Iseconds)",
+  "fpc_version": "$FPC_VERSION",
+  "summary": {
+    "total": $TOTAL,
+    "passed": $PASSED,
+    "failed": $FAILED,
+    "skipped": $SKIPPED,
+    "pass_rate": $PASS_RATE
+  },
+  "failed_files": [${failed_json}]
+}
+EOF_JSON
+            ;;
+        markdown)
+            cat << EOF_MD
+# 示例编译验证报告
+
+> 生成时间: $(date '+%Y-%m-%d %H:%M:%S')
+> FPC 版本: $FPC_VERSION
+
+## 摘要
+
+| 指标 | 数值 |
+|------|------|
+| 总计 | $TOTAL |
+| 通过 | $PASSED |
+| 失败 | $FAILED |
+| 跳过 | $SKIPPED |
+| 通过率 | ${PASS_RATE}% |
+
+EOF_MD
+            if [ ${#FAILED_FILES[@]} -gt 0 ]; then
+                echo "## 失败文件"
+                for f in "${FAILED_FILES[@]}"; do echo "- \`$f\`"; done
+            fi
+            ;;
+        *)
+            echo "编译验证摘要"
+            echo "============"
+            echo "总计: $TOTAL"
+            echo "通过: $PASSED"
+            echo "失败: $FAILED"
+            echo "跳过: $SKIPPED"
+            echo "通过率: ${PASS_RATE}%"
+            if [ ${#FAILED_FILES[@]} -gt 0 ]; then
+                echo ""
+                echo "失败文件:"
+                for f in "${FAILED_FILES[@]}"; do echo "  - $f"; done
+            fi
+            ;;
+    esac
+}
+
+if [ -n "$REPORT_FILE" ]; then
+    output_summary > "$REPORT_FILE"
+    echo "报告已保存到: $REPORT_FILE"
+else
+    output_summary
+fi
+
+# 退出码
+[ $FAILED -gt 0 ] && exit 1 || exit 0

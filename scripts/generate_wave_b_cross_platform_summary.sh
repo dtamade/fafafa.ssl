@@ -1,0 +1,272 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+RUN_ID=""
+LINUX_SUMMARY=""
+LINUX_EXAMPLES_JSON="test-reports/examples_compile_ci_gate.json"
+MACOS_PROBE=""
+MACOS_SUMMARY=""
+WINDOWS_SUMMARY=""
+OUTPUT_FILE=""
+DRY_RUN=false
+
+usage() {
+  cat <<'USAGE'
+Wave B Cross-Platform Summary Generator
+
+用途：
+  聚合 Linux/macOS/Windows 的 Wave B 门禁证据，生成统一 markdown 摘要。
+
+用法：
+  scripts/generate_wave_b_cross_platform_summary.sh [options]
+
+选项：
+  --run-id ID               指定 run_id（默认时间戳）
+  --linux-summary FILE      Linux gate summary（默认自动取最新 wave_b_ci_gate_summary_*.md）
+  --linux-examples FILE     Linux examples json（默认 test-reports/examples_compile_ci_gate.json）
+  --macos-probe FILE        macOS probe json（可选）
+  --macos-summary FILE      macOS gate summary markdown（可选）
+  --windows-summary FILE    Windows gate summary markdown（可选）
+  --output FILE             输出文件（默认 test-reports/wave_b_cross_platform_summary_<run_id>.md）
+  --dry-run                 仅打印参数与判定，不写文件
+  --help                    显示帮助
+USAGE
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --run-id)
+      RUN_ID="$2"
+      shift 2
+      ;;
+    --linux-summary)
+      LINUX_SUMMARY="$2"
+      shift 2
+      ;;
+    --linux-examples)
+      LINUX_EXAMPLES_JSON="$2"
+      shift 2
+      ;;
+    --macos-probe)
+      MACOS_PROBE="$2"
+      shift 2
+      ;;
+    --macos-summary)
+      MACOS_SUMMARY="$2"
+      shift 2
+      ;;
+    --windows-summary)
+      WINDOWS_SUMMARY="$2"
+      shift 2
+      ;;
+    --output)
+      OUTPUT_FILE="$2"
+      shift 2
+      ;;
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    --help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+if [[ -z "$RUN_ID" ]]; then
+  RUN_ID="$(date +%Y%m%d_%H%M%S)"
+fi
+
+if [[ -z "$LINUX_SUMMARY" ]]; then
+  LINUX_SUMMARY="$(cd "$PROJECT_ROOT" && ls -1t test-reports/wave_b_ci_gate_summary_*.md 2>/dev/null | head -1 || true)"
+fi
+
+if [[ -z "$LINUX_SUMMARY" || ! -f "$PROJECT_ROOT/$LINUX_SUMMARY" ]]; then
+  echo "[ERROR] Linux summary not found. Use --linux-summary to specify." >&2
+  exit 1
+fi
+
+if [[ -z "$OUTPUT_FILE" ]]; then
+  OUTPUT_FILE="test-reports/wave_b_cross_platform_summary_${RUN_ID}.md"
+fi
+
+read_linux_summary_field() {
+  local file="$1"
+  local key="$2"
+  grep -E "^- ${key}:" "$file" | head -1 | sed -E "s/^- ${key}: *//" | tr -d '`' || true
+}
+
+read_platform_summary_overall() {
+  local file="$1"
+  grep -E "^- overall:" "$file" \
+    | head -1 \
+    | sed -E 's/^- overall: *//' \
+    | tr -d '`*' \
+    | tr '[:lower:]' '[:upper:]' \
+    | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
+}
+
+normalize_platform_state() {
+  local overall="$1"
+  case "$overall" in
+    PASS|FAIL|DRY_RUN)
+      echo "$overall"
+      ;;
+    *)
+      echo "READY"
+      ;;
+  esac
+}
+
+linux_overall="$(read_linux_summary_field "$PROJECT_ROOT/$LINUX_SUMMARY" "Overall Status")"
+if [[ -z "$linux_overall" ]]; then
+  linux_overall="UNKNOWN"
+fi
+
+linux_examples_total="n/a"
+linux_examples_passed="n/a"
+linux_examples_failed="n/a"
+linux_examples_skipped="n/a"
+linux_examples_rate="n/a"
+
+if [[ -f "$PROJECT_ROOT/$LINUX_EXAMPLES_JSON" ]]; then
+  parsed_linux_examples=$(python3 - "$PROJECT_ROOT/$LINUX_EXAMPLES_JSON" <<'PY'
+import json
+import sys
+p = sys.argv[1]
+with open(p, 'r', encoding='utf-8') as f:
+    data = json.load(f)
+s = data.get('summary', {})
+print(s.get('total', 'n/a'))
+print(s.get('passed', 'n/a'))
+print(s.get('failed', 'n/a'))
+print(s.get('skipped', 'n/a'))
+print(s.get('pass_rate', 'n/a'))
+PY
+)
+  linux_examples_total="$(echo "$parsed_linux_examples" | sed -n '1p')"
+  linux_examples_passed="$(echo "$parsed_linux_examples" | sed -n '2p')"
+  linux_examples_failed="$(echo "$parsed_linux_examples" | sed -n '3p')"
+  linux_examples_skipped="$(echo "$parsed_linux_examples" | sed -n '4p')"
+  linux_examples_rate="$(echo "$parsed_linux_examples" | sed -n '5p')"
+fi
+
+macos_state="PENDING"
+macos_note="no evidence"
+if [[ -n "$MACOS_SUMMARY" && -f "$PROJECT_ROOT/$MACOS_SUMMARY" ]]; then
+  macos_overall="$(read_platform_summary_overall "$PROJECT_ROOT/$MACOS_SUMMARY")"
+  macos_state="$(normalize_platform_state "$macos_overall")"
+  if [[ -n "$macos_overall" ]]; then
+    macos_note="summary: $MACOS_SUMMARY (overall=$macos_overall)"
+  else
+    macos_note="summary: $MACOS_SUMMARY"
+  fi
+elif [[ -n "$MACOS_PROBE" && -f "$PROJECT_ROOT/$MACOS_PROBE" ]]; then
+  probe_status=$(python3 - "$PROJECT_ROOT/$MACOS_PROBE" <<'PY'
+import json
+import sys
+with open(sys.argv[1], 'r', encoding='utf-8') as f:
+    d = json.load(f)
+print(d.get('status', 'unknown'))
+PY
+)
+  if [[ "$probe_status" == "error" ]]; then
+    macos_state="PROBE_ONLY"
+  else
+    macos_state="PROBE_OK"
+  fi
+  macos_note="probe: $MACOS_PROBE (status=$probe_status)"
+fi
+
+windows_state="PENDING"
+windows_note="no evidence"
+if [[ -n "$WINDOWS_SUMMARY" && -f "$PROJECT_ROOT/$WINDOWS_SUMMARY" ]]; then
+  windows_overall="$(read_platform_summary_overall "$PROJECT_ROOT/$WINDOWS_SUMMARY")"
+  windows_state="$(normalize_platform_state "$windows_overall")"
+  if [[ -n "$windows_overall" ]]; then
+    windows_note="summary: $WINDOWS_SUMMARY (overall=$windows_overall)"
+  else
+    windows_note="summary: $WINDOWS_SUMMARY"
+  fi
+fi
+
+macos_overall_check="TODO"
+case "$macos_state" in
+  PASS|FAIL|DRY_RUN)
+    macos_overall_check="$macos_state"
+    ;;
+esac
+
+windows_overall_check="TODO"
+case "$windows_state" in
+  PASS|FAIL|DRY_RUN)
+    windows_overall_check="$windows_state"
+    ;;
+esac
+
+if [[ "$DRY_RUN" == "true" ]]; then
+  echo "[DRY-RUN] run_id=$RUN_ID"
+  echo "[DRY-RUN] linux_summary=$LINUX_SUMMARY"
+  echo "[DRY-RUN] linux_overall=$linux_overall"
+  echo "[DRY-RUN] linux_examples: passed=$linux_examples_passed failed=$linux_examples_failed total=$linux_examples_total rate=$linux_examples_rate"
+  echo "[DRY-RUN] macos_state=$macos_state note=$macos_note"
+  echo "[DRY-RUN] windows_state=$windows_state note=$windows_note"
+  echo "[DRY-RUN] output=$OUTPUT_FILE"
+  exit 0
+fi
+
+mkdir -p "$(dirname "$PROJECT_ROOT/$OUTPUT_FILE")"
+
+cat > "$PROJECT_ROOT/$OUTPUT_FILE" <<EOF_SUMMARY
+# Wave B Cross-Platform Summary
+
+- run_id: $RUN_ID
+- generated_at: $(date '+%Y-%m-%d %H:%M:%S %z')
+- linux_summary: $LINUX_SUMMARY
+- linux_examples_json: $LINUX_EXAMPLES_JSON
+
+## 1) Platform Evidence Status
+
+| platform | state | evidence |
+|----------|-------|----------|
+| linux | $linux_overall | $LINUX_SUMMARY |
+| macos | $macos_state | $macos_note |
+| windows | $windows_state | $windows_note |
+
+## 2) Linux Gate Metrics
+
+| metric | value |
+|--------|-------|
+| total | $linux_examples_total |
+| passed | $linux_examples_passed |
+| failed | $linux_examples_failed |
+| skipped | $linux_examples_skipped |
+| pass_rate | $linux_examples_rate |
+
+## 3) Cross-Platform Checklist
+
+| check | linux | macos | windows |
+|-------|-------|-------|---------|
+| compile_all_modules | PASS | TODO | TODO |
+| p2_modules_gate | PASS | TODO | TODO |
+| examples_compile_gate | PASS | TODO | TODO |
+| overall | $linux_overall | $macos_overall_check | $windows_overall_check |
+
+## 4) Next Actions
+
+- 在 macOS runner 执行 B2 命令并回填 macos 证据文件。
+- 在 Windows runner 执行 WinSSL/OpenSSL 对照回归并回填 windows 证据文件。
+- 回填后重新运行本脚本，形成最终三平台对齐摘要。
+EOF_SUMMARY
+
+echo "[PASS] wave-b cross-platform summary generated: $OUTPUT_FILE"
