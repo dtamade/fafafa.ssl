@@ -3,6 +3,14 @@ program winssl_health_checker;
 {$mode objfpc}{$H+}
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
+{$IFNDEF WINDOWS}
+// WinSSL 示例仅支持 Windows 平台
+begin
+  WriteLn('This example requires Windows platform (uses WinSSL backend).');
+  WriteLn('On Linux/macOS, please use the OpenSSL-based examples instead.');
+end.
+{$ELSE}
+
 uses
   {$IFDEF WINDOWS}
   Windows, WinSock2,
@@ -459,3 +467,4 @@ begin
     LURLs.Free;
   end;
 end.
+{$ENDIF}
