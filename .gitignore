@@ -95,6 +95,9 @@ tests/test_*
 tests/bin/
 tests/lib/
 
+# CI 构建产物
+artifacts/
+
 # 示例编译产物 (Linux/macOS 无扩展名)
 examples/01_tls_client
 examples/02_generate_certificate
