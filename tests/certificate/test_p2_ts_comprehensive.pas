@@ -26,6 +26,7 @@ uses
   fafafa.ssl.openssl.api.ts,
   fafafa.ssl.openssl.api.asn1,
   fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.loader;
 
 var
@@ -234,6 +235,219 @@ begin
   Test('TS_STATUS_REVOCATION_NOTIFICATION (5)', TS_STATUS_REVOCATION_NOTIFICATION = 5);
 end;
 
+procedure TestTS_OfflineMalformedResponseFixture;
+const
+  FIXTURE_PATH = './tests/fixtures/p2/ts/ts_response_malformed_v1.der';
+var
+  LFixtureExists: Boolean;
+  LStream: TFileStream;
+  LData: TBytes;
+  LBio: PBIO;
+  LResp: PTS_RESP;
+begin
+  WriteLn;
+  WriteLn('=== 测试 7: TS 离线失败夹具 ===');
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmBIO) then
+    LoadOpenSSLBIO;
+
+  LFixtureExists := FileExists(FIXTURE_PATH);
+  Test('TS malformed fixture 存在', LFixtureExists);
+  if not LFixtureExists then
+    Exit;
+
+  Test('TS_RESP_d2i_bio 函数加载', Assigned(TS_RESP_d2i_bio));
+  Test('BIO_new_mem_buf 函数加载', Assigned(BIO_new_mem_buf));
+  if (not Assigned(TS_RESP_d2i_bio)) or (not Assigned(BIO_new_mem_buf)) then
+    Exit;
+
+  LStream := TFileStream.Create(FIXTURE_PATH, fmOpenRead or fmShareDenyNone);
+  try
+    SetLength(LData, LStream.Size);
+    if Length(LData) > 0 then
+      LStream.ReadBuffer(LData[0], Length(LData));
+  finally
+    LStream.Free;
+  end;
+
+  Test('TS malformed fixture 非空', Length(LData) > 0);
+  if Length(LData) = 0 then
+    Exit;
+
+  LBio := BIO_new_mem_buf(@LData[0], Length(LData));
+  if LBio = nil then
+  begin
+    Test('为 TS fixture 创建 BIO', False);
+    Exit;
+  end;
+  Test('为 TS fixture 创建 BIO', True);
+
+  LResp := nil;
+  try
+    LResp := TS_RESP_d2i_bio(LBio, @LResp);
+    Test('解析 malformed TS 响应返回 nil', LResp = nil);
+  finally
+    if Assigned(BIO_free) then
+      BIO_free(LBio);
+    if (LResp <> nil) and Assigned(TS_RESP_free) then
+      TS_RESP_free(LResp);
+  end;
+end;
+
+procedure TestTS_TruncatedResponseFailure;
+var
+  LData: TBytes;
+  LBio: PBIO;
+  LResp: PTS_RESP;
+begin
+  WriteLn;
+  WriteLn('=== 测试 8: TS 截断响应失败场景 ===');
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmBIO) then
+    LoadOpenSSLBIO;
+
+  Test('TS_RESP_d2i_bio 函数加载', Assigned(TS_RESP_d2i_bio));
+  Test('BIO_new_mem_buf 函数加载', Assigned(BIO_new_mem_buf));
+  if (not Assigned(TS_RESP_d2i_bio)) or (not Assigned(BIO_new_mem_buf)) then
+    Exit;
+
+  SetLength(LData, 2);
+  LData[0] := $30;
+  LData[1] := $82;
+
+  LBio := BIO_new_mem_buf(@LData[0], Length(LData));
+  Test('为截断 TS 响应创建 BIO', LBio <> nil);
+  if LBio = nil then
+    Exit;
+
+  LResp := nil;
+  try
+    LResp := TS_RESP_d2i_bio(LBio, @LResp);
+    Test('解析截断 TS 响应返回 nil', LResp = nil);
+  finally
+    if Assigned(BIO_free) then
+      BIO_free(LBio);
+    if (LResp <> nil) and Assigned(TS_RESP_free) then
+      TS_RESP_free(LResp);
+  end;
+end;
+
+procedure TestTS_RejectionStatusFailure;
+var
+  LResp: PTS_RESP;
+  LStatusInfo: PTS_STATUS_INFO;
+  LAttachedStatusInfo: PTS_STATUS_INFO;
+  LStatus: PASN1_INTEGER;
+  LResult: Boolean;
+begin
+  WriteLn;
+  WriteLn('=== 测试 9: TS 拒绝状态失败场景 ===');
+
+  Test('TS_RESP_new 函数加载', Assigned(TS_RESP_new));
+  Test('TS_RESP_get_status_info 函数加载', Assigned(TS_RESP_get_status_info));
+  Test('TS_STATUS_INFO_get0_status 函数加载', Assigned(TS_STATUS_INFO_get0_status));
+  if (not Assigned(TS_RESP_new)) or (not Assigned(TS_RESP_get_status_info)) or
+     (not Assigned(TS_STATUS_INFO_get0_status)) then
+    Exit;
+
+  LResp := nil;
+  LStatusInfo := nil;
+  try
+    LResp := TS_RESP_new();
+    Test('创建 TS 响应结构', LResp <> nil);
+    if LResp = nil then
+      Exit;
+
+    // 兜底失败路径：无状态信息响应应验证失败
+    LResult := not VerifyTimestampResponse(LResp, nil, nil);
+    Test('无状态信息响应验证应失败', LResult);
+
+    // 可选增强：若状态写入 API 可用，再验证显式 rejection 状态失败路径
+    if (not Assigned(TS_STATUS_INFO_new)) or (not Assigned(TS_STATUS_INFO_set_status)) or
+       (not Assigned(TS_RESP_set_status_info)) then
+    begin
+      Test('TS 状态写入 API 缺失时兜底路径有效', True);
+      Exit;
+    end;
+
+    Test('TS 状态写入 API 可用', True);
+
+    LStatusInfo := TS_STATUS_INFO_new();
+    Test('创建 TS 状态结构', LStatusInfo <> nil);
+    if LStatusInfo = nil then
+      Exit;
+
+    LResult := TS_STATUS_INFO_set_status(LStatusInfo, TS_STATUS_REJECTION) = 1;
+    Test('设置 TS 拒绝状态', LResult);
+    if not LResult then
+      Exit;
+
+    LResult := TS_RESP_set_status_info(LResp, LStatusInfo) = 1;
+    Test('写入响应状态信息', LResult);
+    if not LResult then
+      Exit;
+    LStatusInfo := nil;
+
+    LAttachedStatusInfo := TS_RESP_get_status_info(LResp);
+    Test('读取响应状态信息', LAttachedStatusInfo <> nil);
+    if LAttachedStatusInfo = nil then
+      Exit;
+
+    LStatus := TS_STATUS_INFO_get0_status(LAttachedStatusInfo);
+    Test('读取拒绝状态值指针', LStatus <> nil);
+
+    LResult := not VerifyTimestampResponse(LResp, nil, nil);
+    Test('拒绝状态响应验证应失败', LResult);
+  finally
+    if (LStatusInfo <> nil) and Assigned(TS_STATUS_INFO_free) then
+      TS_STATUS_INFO_free(LStatusInfo);
+    if (LResp <> nil) and Assigned(TS_RESP_free) then
+      TS_RESP_free(LResp);
+  end;
+end;
+
+
+procedure TestTS_EmptyResponseSignatureFailure;
+var
+  LResp: PTS_RESP;
+  LVerifyCtx: PTS_VERIFY_CTX;
+  LResult: Boolean;
+begin
+  WriteLn;
+  WriteLn('=== 测试 10: TS 空响应签名验证失败场景 ===');
+
+  Test('TS_RESP_new 函数加载', Assigned(TS_RESP_new));
+  Test('TS_VERIFY_CTX_new 函数加载', Assigned(TS_VERIFY_CTX_new));
+  Test('TS_RESP_verify_response 函数加载', Assigned(TS_RESP_verify_response));
+  Test('TS_VERIFY_CTX_free 函数加载', Assigned(TS_VERIFY_CTX_free));
+  Test('TS_RESP_free 函数加载', Assigned(TS_RESP_free));
+  if (not Assigned(TS_RESP_new)) or (not Assigned(TS_VERIFY_CTX_new)) or
+     (not Assigned(TS_RESP_verify_response)) then
+    Exit;
+
+  LResp := TS_RESP_new();
+  LVerifyCtx := TS_VERIFY_CTX_new();
+  Test('创建空 TS 响应与验证上下文', (LResp <> nil) and (LVerifyCtx <> nil));
+  if (LResp = nil) or (LVerifyCtx = nil) then
+  begin
+    if (LResp <> nil) and Assigned(TS_RESP_free) then
+      TS_RESP_free(LResp);
+    if (LVerifyCtx <> nil) and Assigned(TS_VERIFY_CTX_free) then
+      TS_VERIFY_CTX_free(LVerifyCtx);
+    Exit;
+  end;
+
+  try
+    LResult := TS_RESP_verify_response(LVerifyCtx, LResp) = 1;
+    Test('空响应签名验证应失败', not LResult);
+  finally
+    if Assigned(TS_VERIFY_CTX_free) then
+      TS_VERIFY_CTX_free(LVerifyCtx);
+    if Assigned(TS_RESP_free) then
+      TS_RESP_free(LResp);
+  end;
+end;
+
 begin
   TotalTests := 0;
   PassedTests := 0;
@@ -286,6 +500,10 @@ begin
   TestTS_Verification;
   TestTS_IOAndSerialization;
   TestTS_UtilityFunctions;
+  TestTS_OfflineMalformedResponseFixture;
+  TestTS_TruncatedResponseFailure;
+  TestTS_RejectionStatusFailure;
+  TestTS_EmptyResponseSignatureFailure;
 
   // 输出测试结果
   WriteLn;

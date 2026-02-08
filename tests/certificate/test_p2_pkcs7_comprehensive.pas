@@ -25,11 +25,14 @@ program test_p2_pkcs7_comprehensive;
 
 uses
   SysUtils, Classes,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.pkcs7,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.pem,
+  fafafa.ssl.openssl.api.stack,
   fafafa.ssl.openssl.api.rand,
   fafafa.ssl.openssl.loader;
 
@@ -279,6 +282,277 @@ begin
   Test('PKCS7_get_attribute 函数加载', LResult);
 end;
 
+procedure TestPKCS7_TamperedDataFailure;
+const
+  CERT_PATH = './tests/certificate/test_certs/signer_cert.pem';
+  KEY_PATH = './tests/certificate/test_certs/signer_key.pem';
+  DATA_PATH = './tests/certificate/test_certs/test_data.txt';
+var
+  LCert: PX509;
+  LKey: PEVP_PKEY;
+  LDataBio: PBIO;
+  LVerifyBio: PBIO;
+  LEmptyBio: PBIO;
+  LTamperedBio: PBIO;
+  LP7: PPKCS7;
+  LStream: TFileStream;
+  LEmptyData: array[0..0] of Byte;
+  LTamperedData: TBytes;
+  LResult: Boolean;
+begin
+  WriteLn;
+  WriteLn('=== 测试 9: PKCS7 篡改数据验签失败 ===');
+
+  LoadOpenSSLBIO;
+  LResult := LoadOpenSSLPEM(GetCryptoLibHandle);
+  Test('加载 PEM 模块', LResult);
+
+  Test('PKCS7_sign 函数加载', Assigned(PKCS7_sign));
+  Test('PKCS7_verify 函数加载', Assigned(PKCS7_verify));
+  Test('BIO_new_file 函数加载', Assigned(BIO_new_file));
+  Test('BIO_new_mem_buf 函数加载', Assigned(BIO_new_mem_buf));
+  if (not Assigned(PKCS7_sign)) or (not Assigned(PKCS7_verify)) or
+     (not Assigned(BIO_new_file)) or (not Assigned(BIO_new_mem_buf)) then
+    Exit;
+
+  LCert := LoadCertificateFromPEM(CERT_PATH);
+  Test('加载 PKCS7 签名证书', LCert <> nil);
+
+  LKey := LoadPrivateKeyFromPEM(KEY_PATH);
+  Test('加载 PKCS7 签名私钥', LKey <> nil);
+  if (LCert = nil) or (LKey = nil) then
+    Exit;
+
+  LDataBio := BIO_new_file(PAnsiChar(AnsiString(DATA_PATH)), 'r');
+  Test('加载原始签名数据', LDataBio <> nil);
+  if LDataBio = nil then
+    Exit;
+
+  LP7 := PKCS7_sign(LCert, LKey, nil, LDataBio, PKCS7_DETACHED or PKCS7_BINARY);
+  Test('创建 detached PKCS7 签名', LP7 <> nil);
+
+  if Assigned(BIO_free) then
+    BIO_free(LDataBio);
+
+  if LP7 = nil then
+    Exit;
+
+  LVerifyBio := BIO_new_file(PAnsiChar(AnsiString(DATA_PATH)), 'r');
+  Test('加载原始验签数据', LVerifyBio <> nil);
+  if LVerifyBio <> nil then
+  begin
+    LResult := PKCS7_verify(LP7, nil, nil, LVerifyBio, nil, PKCS7_DETACHED or PKCS7_NOVERIFY) = 1;
+    Test('使用原始数据验签应成功', LResult);
+    if Assigned(BIO_free) then
+      BIO_free(LVerifyBio);
+  end
+  else
+    Test('使用原始数据验签应成功', False);
+
+  LVerifyBio := BIO_new_file(PAnsiChar(AnsiString(DATA_PATH)), 'r');
+  Test('加载原始数据用于 CA 链校验', LVerifyBio <> nil);
+  if LVerifyBio <> nil then
+  begin
+    // 不使用 PKCS7_NOVERIFY 且不提供信任链，预期验签失败
+    LResult := PKCS7_verify(LP7, nil, nil, LVerifyBio, nil, PKCS7_DETACHED) = 1;
+    Test('缺失受信任 CA 时验签应失败', not LResult);
+    if Assigned(BIO_free) then
+      BIO_free(LVerifyBio);
+  end
+  else
+    Test('缺失受信任 CA 时验签应失败', False);
+
+  LEmptyData[0] := 0;
+  LEmptyBio := BIO_new_mem_buf(@LEmptyData[0], 0);
+  Test('创建空输入 BIO', LEmptyBio <> nil);
+  if LEmptyBio <> nil then
+  begin
+    LResult := PKCS7_verify(LP7, nil, nil, LEmptyBio, nil, PKCS7_DETACHED or PKCS7_NOVERIFY) = 1;
+    Test('detached 签名在空输入下验签应失败', not LResult);
+    if Assigned(BIO_free) then
+      BIO_free(LEmptyBio);
+  end
+  else
+    Test('detached 签名在空输入下验签应失败', False);
+
+  LStream := TFileStream.Create(DATA_PATH, fmOpenRead or fmShareDenyNone);
+  try
+    SetLength(LTamperedData, LStream.Size);
+    if Length(LTamperedData) > 0 then
+      LStream.ReadBuffer(LTamperedData[0], Length(LTamperedData));
+  finally
+    LStream.Free;
+  end;
+
+  Test('读取原始数据用于篡改', Length(LTamperedData) > 0);
+  if Length(LTamperedData) = 0 then
+    Exit;
+
+  LTamperedData[0] := LTamperedData[0] xor $01;
+  LTamperedBio := BIO_new_mem_buf(@LTamperedData[0], Length(LTamperedData));
+  Test('创建篡改数据 BIO', LTamperedBio <> nil);
+  if LTamperedBio = nil then
+    Exit;
+
+  LResult := PKCS7_verify(LP7, nil, nil, LTamperedBio, nil, PKCS7_DETACHED or PKCS7_NOVERIFY) = 1;
+  Test('使用篡改数据验签应失败', not LResult);
+
+  if Assigned(BIO_free) then
+    BIO_free(LTamperedBio);
+end;
+
+procedure TestPKCS7_DecryptRecipientMismatchFailure;
+const
+  RECIP_CERT_PATH = './tests/certificate/test_certs/recipient_cert.pem';
+  RECIP_KEY_PATH = './tests/certificate/test_certs/recipient_key.pem';
+  WRONG_CERT_PATH = './tests/certificate/test_certs/signer_cert.pem';
+  WRONG_KEY_PATH = './tests/certificate/test_certs/signer_key.pem';
+  DATA_PATH = './tests/certificate/test_certs/test_data.txt';
+var
+  LRecipientCert: PX509;
+  LRecipientKey: PEVP_PKEY;
+  LWrongCert: PX509;
+  LWrongKey: PEVP_PKEY;
+  LRecipientStack: PSTACK_OF_X509;
+  LDataBio: PBIO;
+  LOutBio: PBIO;
+  LP7: PPKCS7;
+  LCipher: PEVP_CIPHER;
+  LResult: Boolean;
+begin
+  WriteLn;
+  WriteLn('=== 测试 11: PKCS7 错误接收者解密失败 ===');
+
+  LoadOpenSSLBIO;
+  LResult := LoadOpenSSLPEM(GetCryptoLibHandle);
+  Test('加载 PEM 模块', LResult);
+
+  LResult := LoadStackFunctions;
+  Test('加载 Stack 模块', LResult);
+
+  LResult := LoadEVP(GetCryptoLibHandle);
+  Test('加载 EVP 模块', LResult);
+
+  Test('PKCS7_encrypt 函数加载', Assigned(PKCS7_encrypt));
+  Test('PKCS7_decrypt 函数加载', Assigned(PKCS7_decrypt));
+  Test('OPENSSL_sk_new_null 函数加载', Assigned(OPENSSL_sk_new_null));
+  if (not Assigned(PKCS7_encrypt)) or (not Assigned(PKCS7_decrypt)) or
+     (not Assigned(OPENSSL_sk_new_null)) then
+    Exit;
+
+  LRecipientCert := LoadCertificateFromPEM(RECIP_CERT_PATH);
+  Test('加载接收者证书', LRecipientCert <> nil);
+
+  LRecipientKey := LoadPrivateKeyFromPEM(RECIP_KEY_PATH);
+  Test('加载接收者私钥', LRecipientKey <> nil);
+
+  LWrongCert := LoadCertificateFromPEM(WRONG_CERT_PATH);
+  Test('加载错误接收者证书', LWrongCert <> nil);
+
+  LWrongKey := LoadPrivateKeyFromPEM(WRONG_KEY_PATH);
+  Test('加载错误接收者私钥', LWrongKey <> nil);
+
+  if (LRecipientCert = nil) or (LRecipientKey = nil) or (LWrongCert = nil) or (LWrongKey = nil) then
+    Exit;
+
+  LRecipientStack := OPENSSL_sk_new_null();
+  Test('创建接收者证书栈', LRecipientStack <> nil);
+  if LRecipientStack = nil then
+    Exit;
+
+  OPENSSL_sk_push(LRecipientStack, LRecipientCert);
+
+  LDataBio := BIO_new_file(PAnsiChar(AnsiString(DATA_PATH)), 'r');
+  Test('加载待加密数据', LDataBio <> nil);
+  if LDataBio = nil then
+    Exit;
+
+  LCipher := EVP_aes_256_cbc();
+  Test('获取 AES-256-CBC 算法', LCipher <> nil);
+  if LCipher = nil then
+    Exit;
+
+  LP7 := PKCS7_encrypt(LRecipientStack, LDataBio, LCipher, 0);
+  Test('创建 PKCS7 加密数据', LP7 <> nil);
+
+  if Assigned(BIO_free) then
+    BIO_free(LDataBio);
+
+  if LP7 = nil then
+    Exit;
+
+  LOutBio := BIO_new(BIO_s_mem());
+  Test('为正确接收者创建输出 BIO', LOutBio <> nil);
+  if LOutBio <> nil then
+  begin
+    LResult := PKCS7_decrypt(LP7, LRecipientKey, LRecipientCert, LOutBio, 0) = 1;
+    Test('正确接收者解密应成功', LResult);
+    if Assigned(BIO_free) then
+      BIO_free(LOutBio);
+  end
+  else
+    Test('正确接收者解密应成功', False);
+
+  LOutBio := BIO_new(BIO_s_mem());
+  Test('为错误接收者创建输出 BIO', LOutBio <> nil);
+  if LOutBio <> nil then
+  begin
+    LResult := PKCS7_decrypt(LP7, LWrongKey, LWrongCert, LOutBio, 0) = 1;
+    Test('错误接收者解密应失败', not LResult);
+    if Assigned(BIO_free) then
+      BIO_free(LOutBio);
+  end
+  else
+    Test('错误接收者解密应失败', False);
+
+  if Assigned(OPENSSL_sk_free) then
+    OPENSSL_sk_free(LRecipientStack);
+end;
+
+procedure TestPKCS7_OfflineMalformedFixture;
+const
+  FIXTURE_PATH = './tests/fixtures/p2/pkcs7/pkcs7_malformed_v1.der';
+var
+  LFixtureExists: Boolean;
+  LStream: TFileStream;
+  LData: TBytes;
+  LInputPtr: PByte;
+  LP7: PPKCS7;
+begin
+  WriteLn;
+  WriteLn('=== 测试 12: PKCS7 离线失败夹具 ===');
+
+  LFixtureExists := FileExists(FIXTURE_PATH);
+  Test('PKCS7 malformed fixture 存在', LFixtureExists);
+  if not LFixtureExists then
+    Exit;
+
+  Test('d2i_PKCS7 函数加载', Assigned(d2i_PKCS7));
+  if not Assigned(d2i_PKCS7) then
+    Exit;
+
+  LStream := TFileStream.Create(FIXTURE_PATH, fmOpenRead or fmShareDenyNone);
+  try
+    SetLength(LData, LStream.Size);
+    if Length(LData) > 0 then
+      LStream.ReadBuffer(LData[0], Length(LData));
+  finally
+    LStream.Free;
+  end;
+
+  Test('PKCS7 malformed fixture 非空', Length(LData) > 0);
+  if Length(LData) = 0 then
+    Exit;
+
+  LInputPtr := @LData[0];
+  LP7 := nil;
+  LP7 := d2i_PKCS7(@LP7, @LInputPtr, Length(LData));
+  Test('解析 malformed PKCS7 返回 nil', LP7 = nil);
+
+  if (LP7 <> nil) and Assigned(PKCS7_free) then
+    PKCS7_free(LP7);
+end;
+
 begin
   TotalTests := 0;
   PassedTests := 0;
@@ -319,6 +593,11 @@ begin
     WriteLn('    继续测试函数加载状态...');
   end;
 
+  if LoadOpenSSLPEM(GetCryptoLibHandle) then
+    WriteLn('✅ PEM 模块加载成功')
+  else
+    WriteLn('⚠️  PEM 模块加载失败（部分 PEM 相关测试可能失败）');
+
   // 执行测试套件
   TestPKCS7_BasicOperations;
   TestPKCS7_SignerInfo;
@@ -328,6 +607,9 @@ begin
   TestPKCS7_DataOperations;
   TestPKCS7_IOSerialization;
   TestPKCS7_AdvancedFeatures;
+  TestPKCS7_TamperedDataFailure;
+  TestPKCS7_DecryptRecipientMismatchFailure;
+  TestPKCS7_OfflineMalformedFixture;
 
   // 输出测试结果
   WriteLn;

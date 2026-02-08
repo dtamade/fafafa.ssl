@@ -21,6 +21,7 @@ program test_p2_store_comprehensive;
 
 uses
   SysUtils, Classes,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.store,
   fafafa.ssl.openssl.loader;
@@ -283,6 +284,41 @@ begin
   Test('OSSL_STORE_SEARCH_BY_ALIAS (4)', OSSL_STORE_SEARCH_BY_ALIAS = 4);
 end;
 
+procedure TestSTORE_OfflineInvalidFixture;
+const
+  FIXTURE_PATH = './tests/fixtures/p2/store/store_invalid_cert_payload_v1.txt';
+var
+  LFixtureExists: Boolean;
+  LCert: PX509;
+begin
+  WriteLn;
+  WriteLn('=== 测试 8: STORE 离线失败夹具 ===');
+
+  LFixtureExists := FileExists(FIXTURE_PATH);
+  Test('STORE invalid fixture 存在', LFixtureExists);
+  if not LFixtureExists then
+    Exit;
+
+  // 使用 file: URI 读取非证书文本，预期解析失败并返回 nil
+  LCert := LoadCertificateFromStore('file:' + FIXTURE_PATH);
+  Test('从无效 STORE 夹具加载证书返回 nil', LCert = nil);
+end;
+
+procedure TestSTORE_MissingFileFailure;
+const
+  MISSING_PATH = './tests/fixtures/p2/store/store_missing_cert_payload_v1.txt';
+var
+  LCert: PX509;
+begin
+  WriteLn;
+  WriteLn('=== 测试 9: STORE 缺失文件失败场景 ===');
+
+  Test('缺失 STORE fixture 文件前置检查', not FileExists(MISSING_PATH));
+
+  LCert := LoadCertificateFromStore('file:' + MISSING_PATH);
+  Test('从缺失 STORE 文件加载证书返回 nil', LCert = nil);
+end;
+
 begin
   TotalTests := 0;
   PassedTests := 0;
@@ -336,6 +372,8 @@ begin
   TestSTORE_LoaderOperations;
   TestSTORE_ExpectOperations;
   TestSTORE_Constants;
+  TestSTORE_OfflineInvalidFixture;
+  TestSTORE_MissingFileFailure;
 
   // 输出测试结果
   WriteLn;

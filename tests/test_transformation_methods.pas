@@ -435,6 +435,69 @@ begin
     'Can build context after transformation methods');
 end;
 
+{ Test 21: Cert verify cache is disabled by default }
+procedure Test_WithCertVerifyCache_DefaultOff;
+var
+  LBuilder: ISSLContextBuilder;
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+begin
+  TestHeader('Test 21: Cert Verify Cache Default Off');
+
+  LBuilder := TSSLContextBuilder.CreateWithSafeDefaults;
+  LResult := LBuilder.TryBuildClient(LContext);
+
+  Assert(LResult.IsOk,
+    'TryBuildClient succeeds with default settings');
+
+  if LResult.IsOk and (LContext <> nil) then
+    Assert(not (ssoEnableCertVerifyCache in LContext.GetOptions),
+      'Cert verify cache option is disabled by default');
+end;
+
+{ Test 22: WithCertVerifyCache enables option }
+procedure Test_WithCertVerifyCache_Enable;
+var
+  LBuilder: ISSLContextBuilder;
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+begin
+  TestHeader('Test 22: Cert Verify Cache Enable');
+
+  LBuilder := TSSLContextBuilder.CreateWithSafeDefaults
+    .WithCertVerifyCache(True);
+  LResult := LBuilder.TryBuildClient(LContext);
+
+  Assert(LResult.IsOk,
+    'TryBuildClient succeeds when cert verify cache enabled');
+
+  if LResult.IsOk and (LContext <> nil) then
+    Assert(ssoEnableCertVerifyCache in LContext.GetOptions,
+      'Cert verify cache option is persisted to context');
+end;
+
+{ Test 23: WithCertVerifyCache can be disabled explicitly }
+procedure Test_WithCertVerifyCache_Disable;
+var
+  LBuilder: ISSLContextBuilder;
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+begin
+  TestHeader('Test 23: Cert Verify Cache Disable');
+
+  LBuilder := TSSLContextBuilder.CreateWithSafeDefaults
+    .WithCertVerifyCache(True)
+    .WithCertVerifyCache(False);
+  LResult := LBuilder.TryBuildClient(LContext);
+
+  Assert(LResult.IsOk,
+    'TryBuildClient succeeds when cert verify cache toggled off');
+
+  if LResult.IsOk and (LContext <> nil) then
+    Assert(not (ssoEnableCertVerifyCache in LContext.GetOptions),
+      'Cert verify cache option can be explicitly disabled');
+end;
+
 { Main Test Runner }
 begin
   WriteLn;
@@ -470,6 +533,9 @@ begin
     Test_Combining_All;
     Test_Transformation_WithPresets;
     Test_BuildAfterTransformation;
+    Test_WithCertVerifyCache_DefaultOff;
+    Test_WithCertVerifyCache_Enable;
+    Test_WithCertVerifyCache_Disable;
 
     // Print summary
     WriteLn;

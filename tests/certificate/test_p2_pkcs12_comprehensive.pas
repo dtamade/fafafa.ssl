@@ -30,6 +30,7 @@ uses
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.rand;
 
 var
@@ -244,6 +245,62 @@ begin
   Test('NID_pbe_WithSHA1And2_Key_TripleDES_CBC 常量', NID_pbe_WithSHA1And2_Key_TripleDES_CBC = 147);
 end;
 
+procedure TestPKCS12_OfflineMalformedFixture;
+const
+  FIXTURE_PATH = './tests/fixtures/p2/pkcs12/pkcs12_malformed_v1.der';
+var
+  LFixtureExists: Boolean;
+  LStream: TFileStream;
+  LData: TBytes;
+  LBio: PBIO;
+  LP12: PPKCS12;
+begin
+  WriteLn;
+  WriteLn('=== 测试 9: PKCS12 离线失败夹具 ===');
+
+  if not Assigned(BIO_new_mem_buf) then
+    LoadOpenSSLBIO;
+
+  LFixtureExists := FileExists(FIXTURE_PATH);
+  Test('PKCS12 malformed fixture 存在', LFixtureExists);
+  if not LFixtureExists then
+    Exit;
+
+  Test('d2i_PKCS12_bio 函数加载', Assigned(d2i_PKCS12_bio));
+  Test('BIO_new_mem_buf 函数加载', Assigned(BIO_new_mem_buf));
+  if (not Assigned(d2i_PKCS12_bio)) or (not Assigned(BIO_new_mem_buf)) then
+    Exit;
+
+  LStream := TFileStream.Create(FIXTURE_PATH, fmOpenRead or fmShareDenyNone);
+  try
+    SetLength(LData, LStream.Size);
+    if Length(LData) > 0 then
+      LStream.ReadBuffer(LData[0], Length(LData));
+  finally
+    LStream.Free;
+  end;
+
+  Test('PKCS12 malformed fixture 非空', Length(LData) > 0);
+  if Length(LData) = 0 then
+    Exit;
+
+  LBio := BIO_new_mem_buf(@LData[0], Length(LData));
+  Test('为 PKCS12 fixture 创建 BIO', LBio <> nil);
+  if LBio = nil then
+    Exit;
+
+  LP12 := nil;
+  try
+    LP12 := d2i_PKCS12_bio(LBio, LP12);
+    Test('解析 malformed PKCS12 返回 nil', LP12 = nil);
+  finally
+    if Assigned(BIO_free) then
+      BIO_free(LBio);
+    if (LP12 <> nil) and Assigned(PKCS12_free) then
+      PKCS12_free(LP12);
+  end;
+end;
+
 begin
   TotalTests := 0;
   PassedTests := 0;
@@ -292,6 +349,7 @@ begin
   TestPKCS12_IOSerialization;
   TestPKCS12_Pkcs8Integration;
   TestPKCS12_UtilityFunctions;
+  TestPKCS12_OfflineMalformedFixture;
 
   // 输出测试结果
   WriteLn;

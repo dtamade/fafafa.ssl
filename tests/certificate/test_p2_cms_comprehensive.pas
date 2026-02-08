@@ -25,12 +25,15 @@ program test_p2_cms_comprehensive;
 
 uses
   SysUtils, Classes,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.cms,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.bio,
-  fafafa.ssl.openssl.api.rand;
+  fafafa.ssl.openssl.api.stack,
+  fafafa.ssl.openssl.api.rand,
+  fafafa.ssl.openssl.api.pem;
 
 var
   TotalTests, PassedTests, FailedTests: Integer;
@@ -258,6 +261,250 @@ begin
   Test('CMS_USE_KEYID 标志 ($10000)', CMS_USE_KEYID = $10000);
 end;
 
+procedure TestCMS_TamperedDataFailure;
+const
+  CERT_PATH = './tests/certificate/test_certs/signer_cert.pem';
+  KEY_PATH = './tests/certificate/test_certs/signer_key.pem';
+  DATA_PATH = './tests/certificate/test_certs/test_data.txt';
+var
+  LCert: PX509;
+  LKey: PEVP_PKEY;
+  LCMS: PCMS_ContentInfo;
+  LStream: TFileStream;
+  LData: TBytes;
+  LEmptyData: TBytes;
+  LTamperedData: TBytes;
+  LResult: Boolean;
+begin
+  WriteLn;
+  WriteLn('=== 测试 9: CMS 篡改数据验签失败 ===');
+
+  LoadOpenSSLBIO;
+  LResult := LoadOpenSSLPEM(GetCryptoLibHandle);
+  Test('加载 PEM 模块', LResult);
+
+  Test('CMS_sign 函数加载', Assigned(CMS_sign));
+  Test('CMS_verify 函数加载', Assigned(CMS_verify));
+  if (not Assigned(CMS_sign)) or (not Assigned(CMS_verify)) then
+    Exit;
+
+  LCert := LoadCertificateFromPEM(CERT_PATH);
+  Test('加载 CMS 签名证书', LCert <> nil);
+
+  LKey := LoadPrivateKeyFromPEM(KEY_PATH);
+  Test('加载 CMS 签名私钥', LKey <> nil);
+  if (LCert = nil) or (LKey = nil) then
+    Exit;
+
+  LStream := TFileStream.Create(DATA_PATH, fmOpenRead or fmShareDenyNone);
+  try
+    SetLength(LData, LStream.Size);
+    if Length(LData) > 0 then
+      LStream.ReadBuffer(LData[0], Length(LData));
+  finally
+    LStream.Free;
+  end;
+
+  Test('读取原始数据用于签名', Length(LData) > 0);
+  if Length(LData) = 0 then
+    Exit;
+
+  LCMS := CMSSignData(LData, LCert, LKey);
+  Test('创建 detached CMS 签名', LCMS <> nil);
+
+  if LCMS = nil then
+    Exit;
+
+  LResult := CMSVerifySignature(LData, LCMS, nil, nil, CMS_NOVERIFY);
+  Test('使用原始数据验签应成功', LResult);
+
+  // 不使用 CMS_NOVERIFY 且不提供信任链，预期验签失败
+  LResult := CMSVerifySignature(LData, LCMS, nil, nil, 0);
+  Test('缺失受信任 CA 时验签应失败', not LResult);
+
+  SetLength(LEmptyData, 0);
+  LResult := CMSVerifySignature(LEmptyData, LCMS, nil, nil, CMS_NOVERIFY);
+  Test('detached 签名在空输入下验签应失败', not LResult);
+
+  LTamperedData := Copy(LData, 0, Length(LData));
+  Test('复制原始数据用于篡改', Length(LTamperedData) > 0);
+  if Length(LTamperedData) = 0 then
+    Exit;
+
+  LTamperedData[0] := LTamperedData[0] xor $01;
+  LResult := CMSVerifySignature(LTamperedData, LCMS, nil, nil, CMS_NOVERIFY);
+  Test('使用篡改数据验签应失败', not LResult);
+
+  if Assigned(CMS_ContentInfo_free) then
+    CMS_ContentInfo_free(LCMS);
+end;
+
+procedure TestCMS_DecryptRecipientMismatchFailure;
+const
+  RECIP_CERT_PATH = './tests/certificate/test_certs/recipient_cert.pem';
+  RECIP_KEY_PATH = './tests/certificate/test_certs/recipient_key.pem';
+  WRONG_CERT_PATH = './tests/certificate/test_certs/signer_cert.pem';
+  WRONG_KEY_PATH = './tests/certificate/test_certs/signer_key.pem';
+  DATA_PATH = './tests/certificate/test_certs/test_data.txt';
+var
+  LRecipientCert: PX509;
+  LRecipientKey: PEVP_PKEY;
+  LWrongCert: PX509;
+  LWrongKey: PEVP_PKEY;
+  LRecipients: PSTACK_OF_X509;
+  LStream: TFileStream;
+  LData: TBytes;
+  LEncryptedCMS: PCMS_ContentInfo;
+  LOutBio: PBIO;
+  LReadBuffer: array[0..255] of Byte;
+  LReadLen: Integer;
+  LResult: Boolean;
+begin
+  WriteLn;
+  WriteLn('=== 测试 11: CMS 错误接收者解密失败 ===');
+
+  LoadOpenSSLBIO;
+  LResult := LoadOpenSSLPEM(GetCryptoLibHandle);
+  Test('加载 PEM 模块', LResult);
+
+  LResult := LoadStackFunctions;
+  Test('加载 Stack 模块', LResult);
+
+  LResult := LoadEVP(GetCryptoLibHandle);
+  Test('加载 EVP 模块', LResult);
+
+  Test('CMS_encrypt 函数加载', Assigned(CMS_encrypt));
+  Test('CMS_decrypt 函数加载', Assigned(CMS_decrypt));
+  Test('OPENSSL_sk_new_null 函数加载', Assigned(OPENSSL_sk_new_null));
+  if (not Assigned(CMS_encrypt)) or (not Assigned(CMS_decrypt)) or
+     (not Assigned(OPENSSL_sk_new_null)) then
+    Exit;
+
+  LRecipientCert := LoadCertificateFromPEM(RECIP_CERT_PATH);
+  Test('加载接收者证书', LRecipientCert <> nil);
+
+  LRecipientKey := LoadPrivateKeyFromPEM(RECIP_KEY_PATH);
+  Test('加载接收者私钥', LRecipientKey <> nil);
+
+  LWrongCert := LoadCertificateFromPEM(WRONG_CERT_PATH);
+  Test('加载错误接收者证书', LWrongCert <> nil);
+
+  LWrongKey := LoadPrivateKeyFromPEM(WRONG_KEY_PATH);
+  Test('加载错误接收者私钥', LWrongKey <> nil);
+
+  if (LRecipientCert = nil) or (LRecipientKey = nil) or (LWrongCert = nil) or (LWrongKey = nil) then
+    Exit;
+
+  LRecipients := OPENSSL_sk_new_null();
+  Test('创建 CMS 接收者证书栈', LRecipients <> nil);
+  if LRecipients = nil then
+    Exit;
+
+  OPENSSL_sk_push(LRecipients, LRecipientCert);
+
+  LStream := TFileStream.Create(DATA_PATH, fmOpenRead or fmShareDenyNone);
+  try
+    SetLength(LData, LStream.Size);
+    if Length(LData) > 0 then
+      LStream.ReadBuffer(LData[0], Length(LData));
+  finally
+    LStream.Free;
+  end;
+
+  Test('读取待加密数据', Length(LData) > 0);
+  if Length(LData) = 0 then
+    Exit;
+
+  LEncryptedCMS := CMSEncryptData(LData, LRecipients, EVP_aes_256_cbc(), 0);
+  Test('创建 CMS 加密数据', LEncryptedCMS <> nil);
+  if LEncryptedCMS = nil then
+    Exit;
+
+  LOutBio := BIO_new(BIO_s_mem());
+  Test('为正确接收者创建输出 BIO', LOutBio <> nil);
+  if LOutBio <> nil then
+  begin
+    LResult := CMS_decrypt(LEncryptedCMS, LRecipientKey, LRecipientCert, nil, LOutBio, 0) = 1;
+    Test('正确接收者解密应成功', LResult);
+    if LResult then
+    begin
+      LReadLen := BIO_read(LOutBio, @LReadBuffer[0], SizeOf(LReadBuffer));
+      Test('正确接收者解密输出非空', LReadLen > 0);
+    end
+    else
+      Test('正确接收者解密输出非空', False);
+    if Assigned(BIO_free) then
+      BIO_free(LOutBio);
+  end
+  else
+  begin
+    Test('正确接收者解密应成功', False);
+    Test('正确接收者解密输出非空', False);
+  end;
+
+  LOutBio := BIO_new(BIO_s_mem());
+  Test('为错误接收者创建输出 BIO', LOutBio <> nil);
+  if LOutBio <> nil then
+  begin
+    LResult := CMS_decrypt(LEncryptedCMS, LWrongKey, LWrongCert, nil, LOutBio, 0) = 1;
+    Test('错误接收者解密应失败', not LResult);
+    if Assigned(BIO_free) then
+      BIO_free(LOutBio);
+  end
+  else
+    Test('错误接收者解密应失败', False);
+
+  if Assigned(CMS_ContentInfo_free) then
+    CMS_ContentInfo_free(LEncryptedCMS);
+
+  if Assigned(OPENSSL_sk_free) then
+    OPENSSL_sk_free(LRecipients);
+end;
+
+procedure TestCMS_OfflineMalformedFixture;
+const
+  FIXTURE_PATH = './tests/fixtures/p2/cms/cms_malformed_v1.der';
+var
+  LFixtureExists: Boolean;
+  LStream: TFileStream;
+  LData: TBytes;
+  LInputPtr: PByte;
+  LCMS: PCMS_ContentInfo;
+begin
+  WriteLn;
+  WriteLn('=== 测试 12: CMS 离线失败夹具 ===');
+
+  LFixtureExists := FileExists(FIXTURE_PATH);
+  Test('CMS malformed fixture 存在', LFixtureExists);
+  if not LFixtureExists then
+    Exit;
+
+  Test('d2i_CMS_ContentInfo 函数加载', Assigned(d2i_CMS_ContentInfo));
+  if not Assigned(d2i_CMS_ContentInfo) then
+    Exit;
+
+  LStream := TFileStream.Create(FIXTURE_PATH, fmOpenRead or fmShareDenyNone);
+  try
+    SetLength(LData, LStream.Size);
+    if Length(LData) > 0 then
+      LStream.ReadBuffer(LData[0], Length(LData));
+  finally
+    LStream.Free;
+  end;
+
+  Test('CMS malformed fixture 非空', Length(LData) > 0);
+  if Length(LData) = 0 then
+    Exit;
+
+  LInputPtr := @LData[0];
+  LCMS := nil;
+  LCMS := d2i_CMS_ContentInfo(@LCMS, @LInputPtr, Length(LData));
+  Test('解析 malformed CMS 返回 nil', LCMS = nil);
+
+  if (LCMS <> nil) and Assigned(CMS_ContentInfo_free) then
+    CMS_ContentInfo_free(LCMS);
+end;
+
 begin
   TotalTests := 0;
   PassedTests := 0;
@@ -301,6 +548,9 @@ begin
   TestCMS_ReceiptOperations;
   TestCMS_Attributes;
   TestCMS_UtilityFunctions;
+  TestCMS_TamperedDataFailure;
+  TestCMS_DecryptRecipientMismatchFailure;
+  TestCMS_OfflineMalformedFixture;
   // Note: PEM operations removed - they belong to PEM module, not CMS module
 
   // 输出测试结果

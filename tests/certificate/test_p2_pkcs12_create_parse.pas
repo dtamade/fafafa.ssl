@@ -331,6 +331,217 @@ begin
   WriteLn('密码保护测试完成！');
 end;
 
+procedure TestPKCS12_MissingPrivateKeyFailure;
+var
+  cert: PX509;
+  p12: PPKCS12;
+  parsed_cert: PX509;
+  parsed_pkey: PEVP_PKEY;
+  parsed_ca: PSTACK_OF_X509;
+  password: PAnsiChar;
+  LResult: Boolean;
+begin
+  WriteLn;
+  WriteLn('=== 测试 5: PKCS12 缺失私钥失败场景 ===');
+
+  cert := LoadCertificate('./tests/certificate/test_certs/recipient_cert.pem');
+  Test('加载仅证书场景证书', cert <> nil);
+  if cert = nil then
+    Exit;
+
+  password := 'NoPrivateKey!';
+  p12 := PKCS12_create(
+    password,
+    'CertOnly',
+    nil,   // 故意不提供私钥
+    cert,
+    nil,
+    0, 0, 0, 0, 0
+  );
+  Test('创建不含私钥的 PKCS12', p12 <> nil);
+  if p12 = nil then
+    Exit;
+
+  LResult := PKCS12_verify_mac(p12, password, -1) = 1;
+  Test('不含私钥 PKCS12 的 MAC 验证', LResult);
+
+  parsed_cert := nil;
+  parsed_pkey := nil;
+  parsed_ca := nil;
+  LResult := PKCS12_parse(p12, password, parsed_pkey, parsed_cert, parsed_ca) = 1;
+
+  // 无私钥容器在当前实现下 parse 可能返回失败（期望失败路径）
+  if not LResult then
+  begin
+    Test('解析不含私钥 PKCS12 返回失败（预期）', True);
+  end
+  else
+  begin
+    Test('解析不含私钥 PKCS12 时私钥应为空', parsed_pkey = nil);
+    // OpenSSL 版本差异下，cert 可能为 nil（证书可在其他结构中保留）
+    // 此处仅强约束“不能提取出私钥”。
+  end;
+end;
+
+
+procedure TestPKCS12_RoundTripCreateExportParseExport;
+var
+  cert: PX509;
+  pkey: PEVP_PKEY;
+  p12_original: PPKCS12;
+  p12_round1: PPKCS12;
+  p12_round2: PPKCS12;
+  out_bio: PBIO;
+  in_bio: PBIO;
+  parsed_cert1: PX509;
+  parsed_pkey1: PEVP_PKEY;
+  parsed_ca1: PSTACK_OF_X509;
+  parsed_cert2: PX509;
+  parsed_pkey2: PEVP_PKEY;
+  parsed_ca2: PSTACK_OF_X509;
+  password: PAnsiChar;
+  file_round1: AnsiString;
+  file_round2: AnsiString;
+  LResult: Boolean;
+begin
+  WriteLn;
+  WriteLn('=== 测试 6: PKCS12 往返导出解析 ===');
+
+  cert := LoadCertificate('./tests/certificate/test_certs/signer_cert.pem');
+  Test('往返场景加载证书', cert <> nil);
+
+  pkey := LoadPrivateKey('./tests/certificate/test_certs/signer_key.pem');
+  Test('往返场景加载私钥', pkey <> nil);
+
+  if (cert = nil) or (pkey = nil) then
+    Exit;
+
+  password := 'RoundTrip!2026';
+
+  p12_original := PKCS12_create(
+    password,
+    'RoundTrip',
+    pkey,
+    cert,
+    nil,
+    0, 0, 0, 0, 0
+  );
+  Test('创建原始 PKCS12', p12_original <> nil);
+  if p12_original = nil then
+    Exit;
+
+  LResult := PKCS12_verify_mac(p12_original, password, -1) = 1;
+  Test('原始 PKCS12 MAC 验证', LResult);
+
+  file_round1 := '/tmp/test_pkcs12_roundtrip_1.p12';
+  file_round2 := '/tmp/test_pkcs12_roundtrip_2.p12';
+
+  out_bio := BIO_new_file(PAnsiChar(file_round1), 'wb');
+  Test('创建 round1 输出文件', out_bio <> nil);
+  if out_bio = nil then
+    Exit;
+
+  LResult := i2d_PKCS12_bio(out_bio, p12_original) = 1;
+  Test('导出 round1 PKCS12', LResult);
+  BIO_free(out_bio);
+  if not LResult then
+  begin
+    DeleteFile(file_round1);
+    Exit;
+  end;
+
+  Test('round1 文件存在', FileExists(file_round1));
+  if not FileExists(file_round1) then
+    Exit;
+
+  in_bio := BIO_new_file(PAnsiChar(file_round1), 'rb');
+  Test('打开 round1 文件', in_bio <> nil);
+  if in_bio = nil then
+  begin
+    DeleteFile(file_round1);
+    Exit;
+  end;
+
+  p12_round1 := nil;
+  p12_round1 := d2i_PKCS12_bio(in_bio, p12_round1);
+  BIO_free(in_bio);
+  Test('读取 round1 PKCS12', p12_round1 <> nil);
+  if p12_round1 = nil then
+  begin
+    DeleteFile(file_round1);
+    Exit;
+  end;
+
+  parsed_cert1 := nil;
+  parsed_pkey1 := nil;
+  parsed_ca1 := nil;
+  LResult := PKCS12_parse(p12_round1, password, parsed_pkey1, parsed_cert1, parsed_ca1) = 1;
+  Test('解析 round1 PKCS12', LResult);
+  if LResult then
+  begin
+    Test('round1 提取证书', parsed_cert1 <> nil);
+    Test('round1 提取私钥', parsed_pkey1 <> nil);
+  end;
+
+  out_bio := BIO_new_file(PAnsiChar(file_round2), 'wb');
+  Test('创建 round2 输出文件', out_bio <> nil);
+  if out_bio = nil then
+  begin
+    DeleteFile(file_round1);
+    Exit;
+  end;
+
+  LResult := i2d_PKCS12_bio(out_bio, p12_round1) = 1;
+  Test('导出 round2 PKCS12', LResult);
+  BIO_free(out_bio);
+  if not LResult then
+  begin
+    DeleteFile(file_round1);
+    DeleteFile(file_round2);
+    Exit;
+  end;
+
+  Test('round2 文件存在', FileExists(file_round2));
+  if not FileExists(file_round2) then
+  begin
+    DeleteFile(file_round1);
+    Exit;
+  end;
+
+  in_bio := BIO_new_file(PAnsiChar(file_round2), 'rb');
+  Test('打开 round2 文件', in_bio <> nil);
+  if in_bio <> nil then
+  begin
+    p12_round2 := nil;
+    p12_round2 := d2i_PKCS12_bio(in_bio, p12_round2);
+    BIO_free(in_bio);
+
+    Test('读取 round2 PKCS12', p12_round2 <> nil);
+    if p12_round2 <> nil then
+    begin
+      LResult := PKCS12_verify_mac(p12_round2, password, -1) = 1;
+      Test('round2 PKCS12 MAC 验证', LResult);
+
+      parsed_cert2 := nil;
+      parsed_pkey2 := nil;
+      parsed_ca2 := nil;
+      LResult := PKCS12_parse(p12_round2, password, parsed_pkey2, parsed_cert2, parsed_ca2) = 1;
+      Test('解析 round2 PKCS12', LResult);
+      if LResult then
+      begin
+        Test('round2 提取证书', parsed_cert2 <> nil);
+        Test('round2 提取私钥', parsed_pkey2 <> nil);
+      end;
+    end;
+  end;
+
+  DeleteFile(file_round1);
+  DeleteFile(file_round2);
+
+  WriteLn;
+  WriteLn('往返导出解析测试完成！');
+end;
+
 procedure TestPKCS12_FileIO;
 var
   cert: PX509;
@@ -505,7 +716,9 @@ begin
   TestPKCS12_BasicCreateParse;
   TestPKCS12_WithCAChain;
   TestPKCS12_PasswordProtection;
+  TestPKCS12_MissingPrivateKeyFailure;
   TestPKCS12_FileIO;
+  TestPKCS12_RoundTripCreateExportParseExport;
 
   // 输出测试结果
   WriteLn;

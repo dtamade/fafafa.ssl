@@ -261,6 +261,161 @@ begin
   Test('OCSP_RESPONSE_STATUS_UNAUTHORIZED (6)', OCSP_RESPONSE_STATUS_UNAUTHORIZED = 6);
 end;
 
+procedure TestOCSP_OfflineMalformedFixture;
+const
+  FIXTURE_PATH = './tests/fixtures/p2/ocsp/ocsp_response_malformed_v1.der';
+var
+  LFixtureExists: Boolean;
+  LStream: TFileStream;
+  LData: TBytes;
+  LInputPtr: PByte;
+  LResponse: POCSP_RESPONSE;
+begin
+  WriteLn;
+  WriteLn('=== 测试 9: OCSP 离线失败夹具 ===');
+
+  LFixtureExists := FileExists(FIXTURE_PATH);
+  Test('OCSP malformed fixture 存在', LFixtureExists);
+  if not LFixtureExists then
+    Exit;
+
+  Test('d2i_OCSP_RESPONSE 函数加载', Assigned(d2i_OCSP_RESPONSE));
+  if not Assigned(d2i_OCSP_RESPONSE) then
+    Exit;
+
+  LStream := TFileStream.Create(FIXTURE_PATH, fmOpenRead or fmShareDenyNone);
+  try
+    SetLength(LData, LStream.Size);
+    if Length(LData) > 0 then
+      LStream.ReadBuffer(LData[0], Length(LData));
+  finally
+    LStream.Free;
+  end;
+
+  Test('OCSP malformed fixture 非空', Length(LData) > 0);
+  if Length(LData) = 0 then
+    Exit;
+
+  LInputPtr := @LData[0];
+  LResponse := nil;
+  LResponse := d2i_OCSP_RESPONSE(@LResponse, @LInputPtr, Length(LData));
+  Test('解析 malformed OCSP 响应返回 nil', LResponse = nil);
+
+  if (LResponse <> nil) and Assigned(OCSP_RESPONSE_free) then
+    OCSP_RESPONSE_free(LResponse);
+end;
+
+procedure TestOCSP_TruncatedRequestFailure;
+var
+  LData: TBytes;
+  LInputPtr: PByte;
+  LRequest: POCSP_REQUEST;
+begin
+  WriteLn;
+  WriteLn('=== 测试 10: OCSP 截断请求失败场景 ===');
+
+  Test('d2i_OCSP_REQUEST 函数加载', Assigned(d2i_OCSP_REQUEST));
+  if not Assigned(d2i_OCSP_REQUEST) then
+    Exit;
+
+  SetLength(LData, 2);
+  LData[0] := $30;
+  LData[1] := $82;
+
+  LInputPtr := @LData[0];
+  LRequest := nil;
+  LRequest := d2i_OCSP_REQUEST(@LRequest, @LInputPtr, Length(LData));
+  Test('解析截断 OCSP 请求返回 nil', LRequest = nil);
+
+  if (LRequest <> nil) and Assigned(OCSP_REQUEST_free) then
+    OCSP_REQUEST_free(LRequest);
+end;
+
+procedure TestOCSP_TimeValidityWindowFailure;
+var
+  LThisUpd, LNextUpd: ASN1_GENERALIZEDTIME;
+  LResult: Boolean;
+begin
+  WriteLn;
+  WriteLn('=== 测试 11: OCSP 时间有效性窗口失败场景 ===');
+
+  LResult := LoadOpenSSLASN1(GetCryptoLibHandle);
+  Test('加载 ASN1 模块', LResult);
+
+  Test('OCSP_check_validity 函数加载', Assigned(OCSP_check_validity));
+  Test('ASN1_GENERALIZEDTIME_new 函数加载', Assigned(ASN1_GENERALIZEDTIME_new));
+  Test('ASN1_GENERALIZEDTIME_set_string 函数加载', Assigned(ASN1_GENERALIZEDTIME_set_string));
+  if (not Assigned(OCSP_check_validity)) or (not Assigned(ASN1_GENERALIZEDTIME_new)) or
+     (not Assigned(ASN1_GENERALIZEDTIME_set_string)) then
+    Exit;
+
+  LThisUpd := ASN1_GENERALIZEDTIME_new();
+  LNextUpd := ASN1_GENERALIZEDTIME_new();
+  Test('创建 thisUpdate/nextUpdate 结构', (LThisUpd <> nil) and (LNextUpd <> nil));
+  if (LThisUpd = nil) or (LNextUpd = nil) then
+    Exit;
+
+  // 场景 A：thisUpdate 在未来，窗口校验应失败
+  LResult := ASN1_GENERALIZEDTIME_set_string(LThisUpd, '20990101000000Z') = 1;
+  Test('设置未来 thisUpdate', LResult);
+  LResult := ASN1_GENERALIZEDTIME_set_string(LNextUpd, '20990102000000Z') = 1;
+  Test('设置未来 nextUpdate', LResult);
+  if LResult then
+  begin
+    LResult := OCSP_check_validity(LThisUpd, LNextUpd, 0, -1) = 1;
+    Test('未来 thisUpdate 时间窗口校验应失败', not LResult);
+  end
+  else
+    Test('未来 thisUpdate 时间窗口校验应失败', False);
+
+  // 场景 B：nextUpdate 早已过期，窗口校验应失败
+  LResult := ASN1_GENERALIZEDTIME_set_string(LThisUpd, '20000101000000Z') = 1;
+  Test('设置历史 thisUpdate', LResult);
+  LResult := ASN1_GENERALIZEDTIME_set_string(LNextUpd, '20000102000000Z') = 1;
+  Test('设置过期 nextUpdate', LResult);
+  if LResult then
+  begin
+    LResult := OCSP_check_validity(LThisUpd, LNextUpd, 0, 0) = 1;
+    Test('过期 nextUpdate 时间窗口校验应失败', not LResult);
+  end
+  else
+    Test('过期 nextUpdate 时间窗口校验应失败', False);
+
+  if Assigned(ASN1_GENERALIZEDTIME_free) then
+  begin
+    ASN1_GENERALIZEDTIME_free(LThisUpd);
+    ASN1_GENERALIZEDTIME_free(LNextUpd);
+  end;
+end;
+
+
+procedure TestOCSP_UnsignedResponseVerificationFailure;
+var
+  LResponse: POCSP_RESPONSE;
+  LResult: Boolean;
+begin
+  WriteLn;
+  WriteLn('=== 测试 12: OCSP 无签名响应验证失败场景 ===');
+
+  Test('OCSP_RESPONSE_new 函数加载', Assigned(OCSP_RESPONSE_new));
+  Test('VerifyOCSPResponse helper 可用', Assigned(@VerifyOCSPResponse));
+  if not Assigned(OCSP_RESPONSE_new) then
+    Exit;
+
+  LResponse := OCSP_RESPONSE_new();
+  Test('创建空 OCSP 响应', LResponse <> nil);
+  if LResponse = nil then
+    Exit;
+
+  try
+    LResult := VerifyOCSPResponse(LResponse, nil, nil, nil, nil);
+    Test('无签名/无效 OCSP 响应验证应失败', not LResult);
+  finally
+    if Assigned(OCSP_RESPONSE_free) then
+      OCSP_RESPONSE_free(LResponse);
+  end;
+end;
+
 begin
   TotalTests := 0;
   PassedTests := 0;
@@ -319,6 +474,10 @@ begin
   TestOCSP_Verification;
   TestOCSP_IOSerialization;
   TestOCSP_UtilityFunctions;
+  TestOCSP_OfflineMalformedFixture;
+  TestOCSP_TruncatedRequestFailure;
+  TestOCSP_TimeValidityWindowFailure;
+  TestOCSP_UnsignedResponseVerificationFailure;
 
   // 输出测试结果
   WriteLn;
