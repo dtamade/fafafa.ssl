@@ -30,8 +30,10 @@ var
   LLib: TMbedTLSLibrary;
   LCtx: TMbedTLSContext;
   LConn: ISSLConnection;
+  LMbedConn: TMbedTLSConnection;
   LSock: TSocketHandle;
   LError: string;
+  LState: TSSLHandshakeState;
 begin
   WriteLn('================================================================================');
   WriteLn('MbedTLS Simple Connection Test');
@@ -64,6 +66,8 @@ begin
     // 3. 创建 Context
     WriteLn('3. Creating SSL context...');
     LCtx := TMbedTLSContext.Create(LLib, sslCtxClient);
+    LCtx.SetVerifyMode([]);  // 暂不验证证书
+    LCtx.SetServerName(TEST_HOST);  // SNI 在 context 级别设置
     WriteLn('   ✅ Context created');
     WriteLn;
 
@@ -84,60 +88,53 @@ begin
     end;
 
     try
-      // 5. 创建 SSL Connection
+      // 5. 创建 SSL Connection（传入 socket）
       WriteLn('5. Creating SSL connection...');
-      LConn := LCtx.CreateConnection;
+      LConn := LCtx.CreateConnection(LSock);
       WriteLn('   ✅ SSL connection created');
       WriteLn;
 
-      // 6. 设置 SNI
-      WriteLn('6. Setting SNI...');
-      if LConn.SetServerName(TEST_HOST) then
-        WriteLn('   ✅ SNI set: ', TEST_HOST)
+      // 获取 MbedTLS 特定接口用于调试
+      if LConn is TMbedTLSConnection then
+        LMbedConn := TMbedTLSConnection(LConn as TObject)
       else
-        WriteLn('   ⚠️  SNI not set');
-      WriteLn;
+        LMbedConn := nil;
 
-      // 7. 绑定 Socket
-      WriteLn('7. Binding socket...');
-      if LConn.Attach(LSock) then
+      // 6. TLS 握手
+      WriteLn('6. Performing TLS handshake...');
+      LState := LConn.DoHandshake;
+
+      if LState = sslHsCompleted then
       begin
-        WriteLn('   ✅ Socket attached');
+        WriteLn('   ✅ Handshake successful!');
+        WriteLn('   Protocol Version: ', GetEnumName(TypeInfo(TSSLProtocolVersion), Ord(LConn.GetProtocolVersion)));
+        WriteLn('   Cipher: ', LConn.GetCipherName);
+        WriteLn('   Peer Certificate: ', LConn.GetPeerCertificate <> nil);
+        WriteLn('   Verify Result: ', LConn.GetVerifyResult);
         WriteLn;
 
-        // 8. TLS 握手
-        WriteLn('8. Performing TLS handshake...');
-        if LConn.Connect then
-        begin
-          WriteLn('   ✅ Handshake successful!');
-          WriteLn('   Protocol Version: ', GetEnumName(TypeInfo(TSSLProtocolVersion), Ord(LConn.GetProtocolVersion)));
-          WriteLn('   Cipher: ', LConn.GetCipherName);
-          WriteLn('   Peer Certificate: ', LConn.GetPeerCertificate <> nil);
-          WriteLn('   Verify Result: ', LConn.GetVerifyResult);
-          WriteLn;
-
-          // 9. 关闭连接
-          WriteLn('9. Closing connection...');
-          LConn.Shutdown;
-          WriteLn('   ✅ SSL connection closed');
-        end
-        else
-        begin
-          WriteLn('   ❌ Handshake failed');
-          WriteLn('   Error: ', LConn.GetLastErrorString);
-        end;
+        // 7. 关闭连接
+        WriteLn('7. Closing connection...');
+        LConn.Shutdown;
+        WriteLn('   ✅ SSL connection closed');
       end
       else
-        WriteLn('   ❌ Failed to attach socket');
+      begin
+        WriteLn('   ❌ Handshake failed (state=', Ord(LState), ')');
+        if LMbedConn <> nil then
+          WriteLn('   Error: ', LMbedConn.GetLastErrorString);
+      end;
+
+      LConn := nil;
 
     finally
       CloseSocket(LSock);
     end;
 
     WriteLn;
-    WriteLn('10. Finalizing library...');
+    WriteLn('8. Finalizing library...');
     LLib.Finalize;
-    WriteLn('    ✅ Library finalized');
+    WriteLn('   ✅ Library finalized');
 
   finally
     LLib.Free;

@@ -7,17 +7,17 @@ program test_mbedtls_connection;
 
   测试场景:
   1. 连接公共 HTTPS 服务器
-  2. 验证 TLS 1.2 握手
-  3. 验证 TLS 1.3 握手 (如支持)
-  4. 简单 HTTP GET 请求
+  2. 验证 TLS 1.2/1.3 握手
+  3. 简单 HTTP GET 请求和响应读取
 }
 
 uses
-  SysUtils, Classes, Sockets,
+  SysUtils, Classes, Math,
   fafafa.ssl.base,
   fafafa.ssl.mbedtls.lib,
   fafafa.ssl.mbedtls.context,
-  fafafa.ssl.mbedtls.connection;
+  fafafa.ssl.mbedtls.connection,
+  fafafa.examples.tcp;
 
 const
   TEST_HOST = 'www.google.com';
@@ -27,60 +27,84 @@ procedure TestSimpleConnection;
 var
   LLib: TMbedTLSLibrary;
   LCtx: TMbedTLSContext;
-  LConn: TMbedTLSConnection;
-  LSock: TInetSocket;
-  LRequest: string;
+  LConn: ISSLConnection;
+  LMbedConn: TMbedTLSConnection;
+  LSock: TSocketHandle;
+  LRequest: AnsiString;
   LBuffer: array[0..4095] of Byte;
   LBytesRead: Integer;
+  LState: TSSLHandshakeState;
+  LError: string;
 begin
   WriteLn('================================================================================');
-  WriteLn('MbedTLS Simple Connection Test');
+  WriteLn('MbedTLS Connection Test (HTTP GET)');
   WriteLn('================================================================================');
   WriteLn;
 
-  // 1. 初始化 Library
-  WriteLn('1. Initializing MbedTLS library...');
-  LLib := TMbedTLSLibrary.Create;
-  if not LLib.Initialize then
+  // 1. 初始化网络
+  WriteLn('1. Initializing network...');
+  if not InitNetwork(LError) then
   begin
-    WriteLn('❌ Failed to initialize MbedTLS');
-    LLib.Free;
+    WriteLn('   ❌ Failed: ', LError);
     Halt(1);
   end;
-  WriteLn('   ✅ Initialized: ', LLib.GetVersionString);
+  WriteLn('   ✅ Network initialized');
   WriteLn;
 
-  // 2. 创建 Context
-  WriteLn('2. Creating SSL context...');
-  LCtx := TMbedTLSContext.Create(LLib, sslCtxClient);
-  WriteLn('   ✅ Context created');
-  WriteLn;
-
-  // 3. 创建 TCP Socket
-  WriteLn('3. Creating TCP socket...');
-  LSock := TInetSocket.Create(TEST_HOST, TEST_PORT);
+  // 2. 初始化 Library
+  WriteLn('2. Initializing MbedTLS library...');
+  LLib := TMbedTLSLibrary.Create;
   try
-    LSock.Connect;
-    WriteLn('   ✅ Connected to ', TEST_HOST, ':', TEST_PORT);
+    if not LLib.Initialize then
+    begin
+      WriteLn('   ❌ Failed to initialize MbedTLS');
+      CleanupNetwork;
+      Halt(1);
+    end;
+    WriteLn('   ✅ Initialized: ', LLib.GetVersionString);
     WriteLn;
 
-    // 4. 创建 SSL Connection
-    WriteLn('4. Creating SSL connection...');
-    LConn := TMbedTLSConnection.Create(LCtx);
+    // 3. 创建 Context
+    WriteLn('3. Creating SSL context...');
+    LCtx := TMbedTLSContext.Create(LLib, sslCtxClient);
+    LCtx.SetVerifyMode([]);
+    LCtx.SetServerName(TEST_HOST);
+    WriteLn('   ✅ Context created (SNI: ', TEST_HOST, ')');
+    WriteLn;
+
+    // 4. 创建 TCP Socket
+    WriteLn('4. Connecting to ', TEST_HOST, ':', TEST_PORT, '...');
     try
+      LSock := ConnectTCP(TEST_HOST, TEST_PORT);
+      WriteLn('   ✅ TCP connected');
+      WriteLn;
+    except
+      on E: Exception do
+      begin
+        WriteLn('   ❌ Failed: ', E.Message);
+        LLib.Finalize;
+        CleanupNetwork;
+        Halt(1);
+      end;
+    end;
+
+    try
+      // 5. 创建 SSL Connection
+      WriteLn('5. Creating SSL connection...');
+      LConn := LCtx.CreateConnection(LSock);
       WriteLn('   ✅ SSL connection created');
 
-      // 5. 设置 SNI
-      WriteLn('5. Setting SNI...');
-      if LConn.SetServerName(TEST_HOST) then
-        WriteLn('   ✅ SNI set: ', TEST_HOST)
+      if LConn is TMbedTLSConnection then
+        LMbedConn := TMbedTLSConnection(LConn as TObject)
       else
-        WriteLn('   ⚠️  SNI not set');
+        LMbedConn := nil;
       WriteLn;
 
       // 6. TLS 握手
       WriteLn('6. Performing TLS handshake...');
-      if LConn.Connect(LSock.Handle) then
+      LState := LConn.DoHandshake;
+
+      if LState = sslHsCompleted then
       begin
         WriteLn('   ✅ Handshake successful!');
         WriteLn('   Protocol: ', Ord(LConn.GetProtocolVersion));
@@ -100,12 +124,13 @@ begin
 
           // 8. 读取响应
           WriteLn('8. Reading response...');
-          LBytesRead := LConn.Read(LBuffer, SizeOf(LBuffer));
+          LBytesRead := LConn.Read(LBuffer[0], SizeOf(LBuffer));
           if LBytesRead > 0 then
           begin
             WriteLn('   ✅ Response received (', LBytesRead, ' bytes)');
             WriteLn('   First 100 bytes:');
-            WriteLn('   ', Copy(string(PAnsiChar(@LBuffer[0])), 1, 100));
+            LBuffer[Min(LBytesRead, 100)] := 0;
+            WriteLn('   ', PAnsiChar(@LBuffer[0]));
             WriteLn;
           end
           else
@@ -121,25 +146,28 @@ begin
       end
       else
       begin
-        WriteLn('   ❌ Handshake failed');
-        WriteLn('   Error: ', LConn.GetLastErrorString);
+        WriteLn('   ❌ Handshake failed (state=', Ord(LState), ')');
+        if LMbedConn <> nil then
+          WriteLn('   Error: ', LMbedConn.GetLastErrorString);
       end;
 
+      LConn := nil;
+
     finally
-      LConn.Free;
+      CloseSocket(LSock);
     end;
 
+    WriteLn;
+    WriteLn('10. Finalizing library...');
+    LLib.Finalize;
+    WriteLn('    ✅ Library finalized');
+
   finally
-    LSock.Free;
+    LLib.Free;
+    CleanupNetwork;
   end;
 
   WriteLn;
-  WriteLn('10. Finalizing library...');
-  LLib.Finalize;
-  LLib.Free;
-  WriteLn('    ✅ Library finalized');
-  WriteLn;
-
   WriteLn('================================================================================');
   WriteLn('🎉 Connection Test Complete!');
   WriteLn('================================================================================');
@@ -153,6 +181,7 @@ begin
     begin
       WriteLn;
       WriteLn('❌ Fatal error: ', E.ClassName, ': ', E.Message);
+      CleanupNetwork;
       Halt(1);
     end;
   end;
