@@ -50,6 +50,11 @@ tools/test_audit/reports/
 # Claude Code 本地配置
 .claude/
 
+# planning-with-files（本地工作记忆文件，路线图请同步到 docs/）
+task_plan.md
+findings.md
+progress.md
+
 # Warp
 WARP.md
 
@@ -89,3 +94,33 @@ tests/test_*
 # 测试输出目录
 tests/bin/
 tests/lib/
+
+# 示例编译产物 (Linux/macOS 无扩展名)
+examples/01_tls_client
+examples/02_generate_certificate
+examples/03_file_encryption
+examples/06_digital_signature
+examples/certificate_verification_example
+examples/demo_fluent_api
+examples/digital_signature/digital_signature
+examples/example_aes_gcm_aead
+examples/example_cert_pinning
+examples/example_https_api
+examples/example_json_api
+examples/example_streaming_operations
+examples/https_client_production
+examples/https_simple_get
+examples/password_hash/password_hash
+examples/password_hash_v2
+examples/pkcs7_basic_example
+examples/pkcs7_data_example
+examples/pkcs7_encrypt_decrypt_example
+examples/pkcs7_sign_verify_example
+examples/pkcs7_sign_verify_simple
+examples/practical_examples
+examples/probe_sockets
+examples/security_enhancements_demo
+examples/simple_ssl_connection
+examples/simple_test
+examples/https_client/https_client_simple
+examples/production/https_client_simple
