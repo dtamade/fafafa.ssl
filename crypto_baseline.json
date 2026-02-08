@@ -1,27 +1,27 @@
 {
-  "generated": "21-1-26 14:03:32",
+  "generated": "8-2-26 04:27:12",
   "tests": [
     {
       "name": "aes_gcm_dec_16kb",
-      "mean_ms": 0.012000,
-      "stddev_ms": 0.108885,
+      "mean_ms": 0.000000,
+      "stddev_ms": 0.000000,
       "min_ms": 0.000000,
-      "max_ms": 1.000000,
-      "p50_ms": 0.000000,
-      "p95_ms": 0.000000,
-      "p99_ms": 1.000000,
-      "iterations": 500
-    },
-    {
-      "name": "aes_gcm_dec_1kb",
-      "mean_ms": 0.004000,
-      "stddev_ms": 0.063119,
-      "min_ms": 0.000000,
-      "max_ms": 1.000000,
+      "max_ms": 0.000000,
       "p50_ms": 0.000000,
       "p95_ms": 0.000000,
       "p99_ms": 0.000000,
-      "iterations": 500
+      "iterations": 50
+    },
+    {
+      "name": "aes_gcm_dec_1kb",
+      "mean_ms": 0.000000,
+      "stddev_ms": 0.000000,
+      "min_ms": 0.000000,
+      "max_ms": 0.000000,
+      "p50_ms": 0.000000,
+      "p95_ms": 0.000000,
+      "p99_ms": 0.000000,
+      "iterations": 50
     },
     {
       "name": "aes_gcm_dec_64b",
@@ -32,95 +32,95 @@
       "p50_ms": 0.000000,
       "p95_ms": 0.000000,
       "p99_ms": 0.000000,
-      "iterations": 500
+      "iterations": 50
     },
     {
       "name": "aes_gcm_enc_16kb",
-      "mean_ms": 0.022000,
-      "stddev_ms": 0.146683,
+      "mean_ms": 0.020000,
+      "stddev_ms": 0.140000,
       "min_ms": 0.000000,
       "max_ms": 1.000000,
       "p50_ms": 0.000000,
       "p95_ms": 0.000000,
       "p99_ms": 1.000000,
-      "iterations": 500
+      "iterations": 50
     },
     {
       "name": "aes_gcm_enc_1kb",
-      "mean_ms": 0.014000,
-      "stddev_ms": 0.117490,
+      "mean_ms": 0.020000,
+      "stddev_ms": 0.140000,
       "min_ms": 0.000000,
       "max_ms": 1.000000,
       "p50_ms": 0.000000,
       "p95_ms": 0.000000,
       "p99_ms": 1.000000,
-      "iterations": 500
+      "iterations": 50
     },
     {
       "name": "aes_gcm_enc_64b",
-      "mean_ms": 0.016000,
-      "stddev_ms": 0.125475,
+      "mean_ms": 0.000000,
+      "stddev_ms": 0.000000,
       "min_ms": 0.000000,
-      "max_ms": 1.000000,
+      "max_ms": 0.000000,
       "p50_ms": 0.000000,
       "p95_ms": 0.000000,
-      "p99_ms": 1.000000,
-      "iterations": 500
+      "p99_ms": 0.000000,
+      "iterations": 50
     },
     {
       "name": "generate_key_128bit",
-      "mean_ms": 0.008000,
-      "stddev_ms": 0.089084,
+      "mean_ms": 0.000000,
+      "stddev_ms": 0.000000,
       "min_ms": 0.000000,
-      "max_ms": 1.000000,
+      "max_ms": 0.000000,
       "p50_ms": 0.000000,
       "p95_ms": 0.000000,
       "p99_ms": 0.000000,
-      "iterations": 500
+      "iterations": 50
     },
     {
       "name": "generate_key_256bit",
-      "mean_ms": 0.008000,
-      "stddev_ms": 0.089084,
+      "mean_ms": 0.000000,
+      "stddev_ms": 0.000000,
       "min_ms": 0.000000,
-      "max_ms": 1.000000,
+      "max_ms": 0.000000,
       "p50_ms": 0.000000,
       "p95_ms": 0.000000,
       "p99_ms": 0.000000,
-      "iterations": 500
+      "iterations": 50
     },
     {
       "name": "secure_random_16kb",
-      "mean_ms": 0.060000,
-      "stddev_ms": 0.237487,
+      "mean_ms": 0.020000,
+      "stddev_ms": 0.140000,
       "min_ms": 0.000000,
       "max_ms": 1.000000,
       "p50_ms": 0.000000,
-      "p95_ms": 1.000000,
+      "p95_ms": 0.000000,
       "p99_ms": 1.000000,
-      "iterations": 500
+      "iterations": 50
     },
     {
       "name": "secure_random_1kb",
-      "mean_ms": 0.008000,
-      "stddev_ms": 0.089084,
+      "mean_ms": 0.000000,
+      "stddev_ms": 0.000000,
       "min_ms": 0.000000,
-      "max_ms": 1.000000,
+      "max_ms": 0.000000,
       "p50_ms": 0.000000,
       "p95_ms": 0.000000,
       "p99_ms": 0.000000,
-      "iterations": 500
+      "iterations": 50
     },
     {
       "name": "secure_random_64b",
-      "mean_ms": 0.006000,
-      "stddev_ms": 0.077227,
+      "mean_ms": 0.000000,
+      "stddev_ms": 0.000000,
       "min_ms": 0.000000,
-      "max_ms": 1.000000,
+      "max_ms": 0.000000,
       "p50_ms": 0.000000,
       "p95_ms": 0.000000,
       "p99_ms": 0.000000,
-      "iterations": 500
+      "iterations": 50
     },
     {
       "name": "sha256_16kb",
@@ -131,62 +131,62 @@
       "p50_ms": 0.000000,
       "p95_ms": 1.000000,
       "p99_ms": 1.000000,
-      "iterations": 500
+      "iterations": 50
     },
     {
       "name": "sha256_1kb",
-      "mean_ms": 0.004000,
-      "stddev_ms": 0.063119,
+      "mean_ms": 0.000000,
+      "stddev_ms": 0.000000,
       "min_ms": 0.000000,
-      "max_ms": 1.000000,
+      "max_ms": 0.000000,
       "p50_ms": 0.000000,
       "p95_ms": 0.000000,
       "p99_ms": 0.000000,
-      "iterations": 500
+      "iterations": 50
     },
     {
       "name": "sha256_64b",
-      "mean_ms": 0.002000,
-      "stddev_ms": 0.044677,
+      "mean_ms": 0.000000,
+      "stddev_ms": 0.000000,
       "min_ms": 0.000000,
-      "max_ms": 1.000000,
+      "max_ms": 0.000000,
       "p50_ms": 0.000000,
       "p95_ms": 0.000000,
       "p99_ms": 0.000000,
-      "iterations": 500
+      "iterations": 50
     },
     {
       "name": "sha512_16kb",
-      "mean_ms": 0.032000,
-      "stddev_ms": 0.176000,
+      "mean_ms": 0.040000,
+      "stddev_ms": 0.195959,
       "min_ms": 0.000000,
       "max_ms": 1.000000,
       "p50_ms": 0.000000,
       "p95_ms": 0.000000,
       "p99_ms": 1.000000,
-      "iterations": 500
+      "iterations": 50
     },
     {
       "name": "sha512_1kb",
-      "mean_ms": 0.004000,
-      "stddev_ms": 0.063119,
+      "mean_ms": 0.000000,
+      "stddev_ms": 0.000000,
       "min_ms": 0.000000,
-      "max_ms": 1.000000,
+      "max_ms": 0.000000,
       "p50_ms": 0.000000,
       "p95_ms": 0.000000,
       "p99_ms": 0.000000,
-      "iterations": 500
+      "iterations": 50
     },
     {
       "name": "sha512_64b",
-      "mean_ms": 0.002000,
-      "stddev_ms": 0.044677,
+      "mean_ms": 0.020000,
+      "stddev_ms": 0.140000,
       "min_ms": 0.000000,
       "max_ms": 1.000000,
       "p50_ms": 0.000000,
       "p95_ms": 0.000000,
-      "p99_ms": 0.000000,
-      "iterations": 500
+      "p99_ms": 1.000000,
+      "iterations": 50
     }
   ]
 }
