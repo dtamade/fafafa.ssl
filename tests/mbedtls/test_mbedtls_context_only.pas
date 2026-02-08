@@ -4,6 +4,8 @@ program test_mbedtls_context_only;
 
 {
   最小化测试:只测试 Context 的创建和释放
+
+  重要: TMbedTLSLibrary 继承自 TInterfacedObject，需要使用接口引用
 }
 
 uses
@@ -13,7 +15,7 @@ uses
   fafafa.ssl.mbedtls.context;
 
 var
-  LLib1, LLib2: TMbedTLSLibrary;
+  LLib1, LLib2: ISSLLibrary;  // 使用接口引用避免引用计数问题
   LCtx: TMbedTLSContext;
 
 begin
@@ -23,8 +25,8 @@ begin
   WriteLn('  Library initialized');
   LLib1.Finalize;
   WriteLn('  Library finalized');
-  LLib1.Free;
-  WriteLn('  Library freed');
+  LLib1 := nil;  // 释放接口引用
+  WriteLn('  Library released');
   WriteLn('  ✅ Test 1 OK');
   WriteLn;
 
@@ -42,9 +44,9 @@ begin
 
   LLib2.Finalize;
   WriteLn('  Library finalized');
-  WriteLn('  About to free library...');
-  LLib2.Free;
-  WriteLn('  Library freed');
+  WriteLn('  About to release library...');
+  LLib2 := nil;  // 释放接口引用
+  WriteLn('  Library released');
   WriteLn('  ✅ Test 2 OK');
   WriteLn;
 

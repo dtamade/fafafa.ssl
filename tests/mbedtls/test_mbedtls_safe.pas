@@ -5,7 +5,9 @@ program test_mbedtls_safe;
 {
   MbedTLS 安全资源管理测试
 
-  显式管理生命周期,避免 Interface 引用计数问题
+  显式管理生命周期,使用接口引用避免引用计数问题
+
+  重要: TMbedTLSLibrary 继承自 TInterfacedObject，需要使用接口引用
 }
 
 uses
@@ -21,7 +23,7 @@ const
 
 procedure TestConnection;
 var
-  LLib: TMbedTLSLibrary;
+  LLib: ISSLLibrary;  // 使用接口引用避免引用计数问题
   LCtx: TMbedTLSContext;
   LConn: ISSLConnection;
   LSock: TSocketHandle;
@@ -145,7 +147,7 @@ begin
       end;
     end;
 
-    // 9.4 Finalize 并释放 Library
+    // 9.4 Finalize Library
     WriteLn('   9.4 Finalizing library...');
     try
       LLib.Finalize;
@@ -155,14 +157,10 @@ begin
         WriteLn('       ⚠️  Finalize error: ', E.Message);
     end;
 
-    WriteLn('   9.5 Freeing library...');
-    try
-      LLib.Free;
-      WriteLn('       ✅ Library freed');
-    except
-      on E: Exception do
-        WriteLn('       ⚠️  Library free error: ', E.Message);
-    end;
+    // 9.5 释放 Library 接口引用
+    WriteLn('   9.5 Releasing library interface...');
+    LLib := nil;  // 释放接口引用
+    WriteLn('       ✅ Library released');
 
     CleanupNetwork;
     WriteLn('   ✅ Cleanup complete');

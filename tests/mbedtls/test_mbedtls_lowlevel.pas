@@ -6,6 +6,11 @@ program test_mbedtls_lowlevel;
   MbedTLS 底层 API 测试
 
   直接使用 TMbedTLSContext.CreateConnection(Socket) API
+
+  重要:
+  - TMbedTLSLibrary 继承自 TInterfacedObject，需要使用接口引用
+  - TMbedTLSContext 也继承自 TInterfacedObject
+  - Connection 持有 Context 的接口引用 (FContext: ISSLContext)
 }
 
 uses
@@ -21,8 +26,8 @@ const
 
 procedure TestConnection;
 var
-  LLib: TMbedTLSLibrary;
-  LCtx: TMbedTLSContext;
+  LLib: ISSLLibrary;  // 使用接口引用
+  LCtx: ISSLContext;  // 使用接口引用
   LConn: ISSLConnection;
   LSock: TSocketHandle;
   LError: string;
@@ -48,6 +53,10 @@ begin
   // 2. 初始化 MbedTLS
   WriteLn('2. Initializing MbedTLS...');
   LLib := TMbedTLSLibrary.Create;
+  LCtx := nil;
+  LConn := nil;
+  LSock := INVALID_SOCKET;
+
   try
     if not LLib.Initialize then
     begin
@@ -74,7 +83,9 @@ begin
       on E: Exception do
       begin
         WriteLn('   ❌ ', E.Message);
+        LCtx := nil;
         LLib.Finalize;
+        LLib := nil;
         CleanupNetwork;
         Halt(1);
       end;
@@ -83,7 +94,7 @@ begin
     try
       // 5. 创建 SSL Connection (带 Socket)
       WriteLn('5. Creating SSL connection with socket...');
-      LConn := LCtx.CreateConnection(LSock);
+      LConn := (LCtx as TMbedTLSContext).CreateConnection(LSock);
       WriteLn('   ✅ Created');
       WriteLn;
 
@@ -153,12 +164,20 @@ begin
     end;
 
     WriteLn;
-    WriteLn('10. Finalizing...');
+    WriteLn('10. Cleanup...');
+
+    // 按正确顺序释放
+    LConn := nil;
+    WriteLn('    ✅ Connection released');
+
+    LCtx := nil;
+    WriteLn('    ✅ Context released');
+
     LLib.Finalize;
-    WriteLn('    ✅ Done');
+    WriteLn('    ✅ Library finalized');
 
   finally
-    LLib.Free;
+    LLib := nil;
     CleanupNetwork;
   end;
 

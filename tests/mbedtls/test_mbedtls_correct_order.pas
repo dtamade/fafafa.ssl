@@ -8,8 +8,14 @@ program test_mbedtls_correct_order;
   正确的顺序:
   1. 释放 Connection (Interface,自动)
   2. 关闭 Socket
-  3. 释放 Context (持有 Library 接口引用)
-  4. Finalize + Free Library
+  3. Context 由 Connection 的接口引用自动管理，不需要手动释放
+  4. Finalize + 释放 Library (使用接口引用)
+
+  重要:
+  - TMbedTLSLibrary 继承自 TInterfacedObject，需要使用接口引用
+  - TMbedTLSContext 也继承自 TInterfacedObject
+  - Connection 持有 Context 的接口引用 (FContext: ISSLContext)
+  - 当 Connection 释放时，如果是最后一个引用，Context 也会自动释放
 }
 
 uses
@@ -25,8 +31,8 @@ const
 
 procedure TestConnection;
 var
-  LLib: TMbedTLSLibrary;
-  LCtx: TMbedTLSContext;
+  LLib: ISSLLibrary;  // 使用接口引用
+  LCtx: ISSLContext;  // 使用接口引用，让引用计数机制管理生命周期
   LConn: ISSLConnection;
   LSock: TSocketHandle;
   LError: string;
@@ -68,7 +74,9 @@ begin
     WriteLn('   ✅ Connected');
 
     WriteLn('4. Create SSL connection...');
-    LConn := LCtx.CreateConnection(LSock);
+    // 注意：CreateConnection 需要 TMbedTLSContext，但 LCtx 是 ISSLContext
+    // 需要类型转换或修改 API
+    LConn := (LCtx as TMbedTLSContext).CreateConnection(LSock);
     WriteLn('   ✅ Created');
 
     WriteLn('5. TLS handshake...');
@@ -103,7 +111,8 @@ begin
     WriteLn;
     WriteLn('Cleanup in correct order:');
 
-    // 1. 释放 Connection (Interface 引用计数)
+    // 1. 释放 Connection
+    // Connection 持有 Context 的接口引用，释放 Connection 会减少 Context 的引用计数
     if LConn <> nil then
     begin
       WriteLn('  1. Releasing connection interface...');
@@ -119,25 +128,27 @@ begin
       WriteLn('     ✅ Closed');
     end;
 
-    // 3. 释放 Context (必须在 Finalize 之前!)
-    //    因为 Context.Free 需要调用 mbedtls_ssl_config_free 等函数
+    // 3. 释放 Context 接口引用
+    // 由于我们也持有 LCtx 接口引用，Context 不会在 Connection 释放时被销毁
+    // 需要先 Finalize Library（Context 需要调用 mbedtls 函数清理）
+    // 但这会导致问题：Context.Destroy 调用 mbedtls_ssl_config_free
+    // 解决：先释放 Context，再 Finalize
     if LCtx <> nil then
     begin
-      WriteLn('  3. Freeing context (BEFORE Finalize, needs MbedTLS functions)...');
-      LCtx.Free;
-      WriteLn('     ✅ Freed');
+      WriteLn('  3. Releasing context interface (triggers cleanup)...');
+      LCtx := nil;
+      WriteLn('     ✅ Released');
     end;
 
-    // 4. Finalize Library (卸载 MbedTLS 动态库)
-    //    注意:之后不能再调用任何 MbedTLS 函数!
+    // 4. Finalize Library
     WriteLn('  4. Finalizing library (unloads DLLs)...');
     LLib.Finalize;
     WriteLn('     ✅ Finalized');
 
-    // 5. Free Library 对象本身
-    WriteLn('  5. Freeing library object...');
-    LLib.Free;
-    WriteLn('     ✅ Freed');
+    // 5. 释放 Library 接口引用
+    WriteLn('  5. Releasing library interface...');
+    LLib := nil;
+    WriteLn('     ✅ Released');
 
     CleanupNetwork;
     WriteLn('  ✅ All cleanup complete');
