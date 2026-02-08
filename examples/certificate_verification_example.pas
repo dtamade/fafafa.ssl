@@ -8,7 +8,7 @@ program certificate_verification_example;
 }
 
 uses
-  SysUtils, Classes,
+  SysUtils, Classes, Math,
   fafafa.ssl.factory,
   fafafa.ssl.base;
 
@@ -79,7 +79,7 @@ begin
       
       // 5. 高级验证（带详细结果）
       WriteLn('Performing advanced verification...');
-      if Cert.VerifyEx(Store, [sslCertVerifyCheckTime], VerifyResult) then
+      if Cert.VerifyEx(Store, [sslCertVerifyDefault], VerifyResult) then
       begin
         WriteLn('✓ Verification successful');
         WriteLn('  Result: ', VerifyResult.ErrorMessage);
@@ -186,4 +186,3 @@ begin
   WriteLn('Press Enter to exit...');
   ReadLn;
 end.
-

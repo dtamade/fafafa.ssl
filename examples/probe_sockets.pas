@@ -1,10 +1,10 @@
 program probe_sockets;
 {$mode objfpc}{$H+}
-uses BaseUnix, Unix;
+uses BaseUnix, Unix, Sockets;
 
 var
   s: cint;
-  addr: SockAddr_In;
+  addr: TInetSockAddr;
 begin
   s := fpSocket(AF_INET, SOCK_STREAM, 0);
   addr.sin_family := AF_INET;

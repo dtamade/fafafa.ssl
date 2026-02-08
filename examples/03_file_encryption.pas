@@ -17,8 +17,9 @@ uses
   SysUtils, Classes,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.evp,
-  fafafa.ssl.openssl.api.evp.cipher,
-  fafafa.ssl.openssl.api.crypto;
+  fafafa.ssl.openssl.api.crypto,
+  fafafa.ssl.openssl.api.rand,
+  fafafa.ssl.openssl.api.scrypt_whirlpool;
 
 const
   SALT_SIZE = 16;
@@ -53,6 +54,18 @@ begin
     KEY_SIZE, @Result[0]
   ) <> 1 then
     raise Exception.Create('Failed to derive key');
+end;
+
+function GetFileSize(const aFileName: string): Int64;
+var
+  LStream: TFileStream;
+begin
+  LStream := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyNone);
+  try
+    Result := LStream.Size;
+  finally
+    LStream.Free;
+  end;
 end;
 
 procedure EncryptFile(const aInputFile, aOutputFile, aPassword: string);
@@ -131,7 +144,7 @@ begin
           LBytesRead := LInput.Read(LPlainChunk[0], Length(LPlainChunk));
           if LBytesRead > 0 then
           begin
-            if EVP_EncryptUpdate(LCtx, @LCipherChunk[0], @LOutLen,
+            if EVP_EncryptUpdate(LCtx, @LCipherChunk[0], LOutLen,
                                  @LPlainChunk[0], LBytesRead) <> 1 then
               raise Exception.Create('Failed to encrypt data');
             
@@ -149,7 +162,7 @@ begin
         WriteLn;
         
         // 完成加密
-        if EVP_EncryptFinal_ex(LCtx, @LCipherChunk[0], @LOutLen) <> 1 then
+        if EVP_EncryptFinal_ex(LCtx, @LCipherChunk[0], LOutLen) <> 1 then
           raise Exception.Create('Failed to finalize encryption');
         
         if LOutLen > 0 then
@@ -163,7 +176,7 @@ begin
         // 7. 获取并写入认证标签
         WriteLn('[7/7] 写入认证标签...');
         SetLength(LTag, TAG_SIZE);
-        if EVP_CIPHER_CTX_ctrl(LCtx, EVP_CTRL_GCM_GET_TAG, TAG_SIZE, @LTag[0]) <> 1 then
+        if EVP_CIPHER_CTX_ctrl(LCtx, EVP_CTRL_GCM_GET_TAG, TAG_SIZE, Pointer(@LTag[0])) <> 1 then
           raise Exception.Create('Failed to get authentication tag');
         
         // 回到头部位置写入 Tag
@@ -189,7 +202,7 @@ begin
   WriteLn;
   WriteLn('✓ 加密成功！');
   WriteLn('  输出文件: ', aOutputFile);
-  WriteLn('  文件大小: ', FileSize(aOutputFile), ' 字节');
+  WriteLn('  文件大小: ', GetFileSize(aOutputFile), ' 字节');
 end;
 
 procedure DecryptFile(const aInputFile, aOutputFile, aPassword: string);
@@ -270,7 +283,7 @@ begin
           LBytesRead := LInput.Read(LCipherChunk[0], Length(LCipherChunk));
           if LBytesRead > 0 then
           begin
-            if EVP_DecryptUpdate(LCtx, @LPlainChunk[0], @LOutLen,
+            if EVP_DecryptUpdate(LCtx, @LPlainChunk[0], LOutLen,
                                  @LCipherChunk[0], LBytesRead) <> 1 then
               raise Exception.Create('Failed to decrypt data');
             
@@ -289,10 +302,10 @@ begin
         
         // 6. 验证认证标签并完成解密
         WriteLn('[6/6] 验证认证标签...');
-        if EVP_CIPHER_CTX_ctrl(LCtx, EVP_CTRL_GCM_SET_TAG, TAG_SIZE, @LTag[0]) <> 1 then
+        if EVP_CIPHER_CTX_ctrl(LCtx, EVP_CTRL_GCM_SET_TAG, TAG_SIZE, Pointer(@LTag[0])) <> 1 then
           raise Exception.Create('Failed to set authentication tag');
         
-        if EVP_DecryptFinal_ex(LCtx, @LPlainChunk[0], @LOutLen) <> 1 then
+        if EVP_DecryptFinal_ex(LCtx, @LPlainChunk[0], LOutLen) <> 1 then
           raise Exception.Create('Authentication failed: file may be corrupted or wrong password');
         
         if LOutLen > 0 then
@@ -318,7 +331,7 @@ begin
   WriteLn;
   WriteLn('✓ 解密成功！');
   WriteLn('  输出文件: ', aOutputFile);
-  WriteLn('  文件大小: ', FileSize(aOutputFile), ' 字节');
+  WriteLn('  文件大小: ', GetFileSize(aOutputFile), ' 字节');
 end;
 
 procedure ShowUsage;
@@ -415,4 +428,3 @@ begin
     end;
   end;
 end.
-

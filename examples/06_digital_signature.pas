@@ -146,7 +146,7 @@ begin
     
     // 初始化签名操作
     LPKeyCtx := nil;
-    if EVP_DigestSignInit(LMDCtx, LPKeyCtx, LMD, nil, LPKey) <> 1 then
+    if EVP_DigestSignInit(LMDCtx, @LPKeyCtx, LMD, nil, LPKey) <> 1 then
     begin
       EVP_MD_CTX_free(LMDCtx);
       EVP_PKEY_free(LPKey);
@@ -156,7 +156,7 @@ begin
     
     // 计算签名长度
     LSigLen := 0;
-    if EVP_DigestSign(LMDCtx, nil, LSigLen, @LMessage[1], Length(LMessage)) <> 1 then
+    if EVP_DigestSignFinal(LMDCtx, nil, LSigLen) <> 1 then
     begin
       EVP_MD_CTX_free(LMDCtx);
       EVP_PKEY_free(LPKey);
@@ -167,7 +167,15 @@ begin
     WriteLn('     签名长度: ', LSigLen, ' 字节');
     
     // 生成签名
-    if EVP_DigestSign(LMDCtx, @LSignature[0], LSigLen, @LMessage[1], Length(LMessage)) <> 1 then
+    if EVP_DigestSignUpdate(LMDCtx, @LMessage[1], Length(LMessage)) <> 1 then
+    begin
+      EVP_MD_CTX_free(LMDCtx);
+      EVP_PKEY_free(LPKey);
+      WriteLn('     ✗ 签名更新失败');
+      Exit;
+    end;
+
+    if EVP_DigestSignFinal(LMDCtx, @LSignature[0], LSigLen) <> 1 then
     begin
       EVP_MD_CTX_free(LMDCtx);
       EVP_PKEY_free(LPKey);
@@ -196,7 +204,7 @@ begin
     end;
     
     LPKeyCtx := nil;
-    if EVP_DigestVerifyInit(LMDCtx, LPKeyCtx, EVP_sha256(), nil, LPKey) <> 1 then
+    if EVP_DigestVerifyInit(LMDCtx, @LPKeyCtx, EVP_sha256(), nil, LPKey) <> 1 then
     begin
       EVP_MD_CTX_free(LMDCtx);
       EVP_PKEY_free(LPKey);
@@ -204,7 +212,15 @@ begin
       Exit;
     end;
     
-    LVerifyResult := EVP_DigestVerify(LMDCtx, @LSignature[0], LSigLen, @LMessage[1], Length(LMessage));
+    if EVP_DigestVerifyUpdate(LMDCtx, @LMessage[1], Length(LMessage)) <> 1 then
+    begin
+      EVP_MD_CTX_free(LMDCtx);
+      EVP_PKEY_free(LPKey);
+      WriteLn('     ✗ 验证更新失败');
+      Exit;
+    end;
+
+    LVerifyResult := EVP_DigestVerifyFinal(LMDCtx, @LSignature[0], LSigLen);
     
     if LVerifyResult = 1 then
       WriteLn('     ✓ 签名验证通过 - 消息完整且未被篡改')
@@ -228,7 +244,7 @@ begin
     end;
     
     LPKeyCtx := nil;
-    if EVP_DigestVerifyInit(LMDCtx, LPKeyCtx, EVP_sha256(), nil, LPKey) <> 1 then
+    if EVP_DigestVerifyInit(LMDCtx, @LPKeyCtx, EVP_sha256(), nil, LPKey) <> 1 then
     begin
       EVP_MD_CTX_free(LMDCtx);
       EVP_PKEY_free(LPKey);
@@ -236,7 +252,15 @@ begin
       Exit;
     end;
     
-    LVerifyResult := EVP_DigestVerify(LMDCtx, @LSignature[0], LSigLen, @LTamperedMsg[1], Length(LTamperedMsg));
+    if EVP_DigestVerifyUpdate(LMDCtx, @LTamperedMsg[1], Length(LTamperedMsg)) <> 1 then
+    begin
+      EVP_MD_CTX_free(LMDCtx);
+      EVP_PKEY_free(LPKey);
+      WriteLn('     ✗ 验证更新失败');
+      Exit;
+    end;
+
+    LVerifyResult := EVP_DigestVerifyFinal(LMDCtx, @LSignature[0], LSigLen);
     
     if LVerifyResult = 1 then
       WriteLn('     ✗ 签名验证通过 - 这不应该发生！')

@@ -14,7 +14,8 @@ program demo_fluent_api;
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
-  fafafa.ssl.crypto.utils;
+  fafafa.ssl.crypto.utils,
+  fafafa.ssl.encoding;
 
 procedure DemoResultTypes;
 var
@@ -63,19 +64,19 @@ begin
   
   // TrySHA256 - 无异常版本
   if TCryptoUtils.TrySHA256(Data, Hash) then
-    WriteLn('✅ TrySHA256 成功: ', TCryptoUtils.BytesToHex(Hash))
+    WriteLn('✅ TrySHA256 成功: ', TEncodingUtils.BytesToHex(Hash, False))
   else
     WriteLn('❌ TrySHA256 失败');
     
   // TrySHA512
   if TCryptoUtils.TrySHA512('测试字符串', Hash) then
-    WriteLn('✅ TrySHA512 成功: ', Copy(TCryptoUtils.BytesToHex(Hash), 1, 32), '...')
+    WriteLn('✅ TrySHA512 成功: ', Copy(TEncodingUtils.BytesToHex(Hash, False), 1, 32), '...')
   else
     WriteLn('❌ TrySHA512 失败');
     
   // TrySecureRandom
   if TCryptoUtils.TrySecureRandom(16, Random) then
-    WriteLn('✅ TrySecureRandom(16) 成功: ', TCryptoUtils.BytesToHex(Random))
+    WriteLn('✅ TrySecureRandom(16) 成功: ', TEncodingUtils.BytesToHex(Random, False))
   else
     WriteLn('❌ TrySecureRandom 失败');
 end;
@@ -95,8 +96,8 @@ begin
   IV := TCryptoUtils.GenerateIV(12);     // 12 字节 (GCM)
   
   WriteLn('📦 原始数据: ', TEncoding.UTF8.GetString(Data));
-  WriteLn('🔑 密钥: ', TCryptoUtils.BytesToHex(Key));
-  WriteLn('🎲 IV: ', TCryptoUtils.BytesToHex(IV));
+  WriteLn('🔑 密钥: ', TEncodingUtils.BytesToHex(Key, False));
+  WriteLn('🎲 IV: ', TEncodingUtils.BytesToHex(IV, False));
   
   // 加密
   if TCryptoUtils.TryAES_GCM_Encrypt(Data, Key, IV, Encrypted) then

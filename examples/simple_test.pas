@@ -8,7 +8,9 @@ uses
   cthreads,
   {$ENDIF}
   fafafa.ssl,
-  fafafa.ssl.utils;
+  fafafa.ssl.base,
+  fafafa.ssl.utils,
+  fafafa.ssl.encoding;
 
 var
   LData: TBytes;
@@ -26,7 +28,7 @@ begin
   LData := TEncoding.UTF8.GetBytes('Hello, World!');
   
   try
-    LHash := TSSLHelper.HashData(LData, sslHashSHA256);
+    LHash := TSSLHelper.HashData(LData, fafafa.ssl.base.sslHashSHA256);
     WriteLn('  Input:  "Hello, World!"');
     WriteLn('  SHA256: ', LHash);
     if LHash <> '' then
@@ -42,11 +44,11 @@ begin
   // Test 2: Base64 Encode/Decode
   WriteLn('Test 2: Base64 Encode/Decode');
   try
-    LBase64 := TSSLUtils.BytesToBase64(LData);
+    LBase64 := TEncodingUtils.Base64Encode(LData);
     WriteLn('  Input:   "Hello, World!"');
     WriteLn('  Base64:  ', LBase64);
     
-    LData := TSSLUtils.Base64ToBytes(LBase64);
+    LData := TEncodingUtils.Base64Decode(LBase64);
     WriteLn('  Decoded: ', TEncoding.UTF8.GetString(LData));
     
     if TEncoding.UTF8.GetString(LData) = 'Hello, World!' then

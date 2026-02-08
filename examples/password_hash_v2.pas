@@ -15,6 +15,7 @@ program password_hash_improved;
 uses
   SysUtils,
   fafafa.ssl.crypto.utils,
+  fafafa.ssl.encoding,
   fafafa.ssl.exceptions;
 
 {** 计算密码SHA-256哈希 *}
@@ -26,7 +27,7 @@ begin
     raise ESSLInvalidArgument.Create('Password cannot be empty');
     
   LHash := TCryptoUtils.SHA256(APassword);
-  Result := LowerCase(TCryptoUtils.BytesToHex(LHash));
+  Result := LowerCase(TEncodingUtils.BytesToHex(LHash, False));
 end;
 
 {** 验证密码哈希 *}
@@ -106,8 +107,8 @@ begin
     on E: ESSLException do
     begin
       WriteLn('错误: ', E.Message);
-      if E.ErrorCode <> 0 then
-        WriteLn('错误码: 0x', IntToHex(E.ErrorCode, 8));
+      if Ord(E.ErrorCode) <> 0 then
+        WriteLn('错误码: 0x', IntToHex(Ord(E.ErrorCode), 8));
       Halt(1);
     end;
     on E: Exception do

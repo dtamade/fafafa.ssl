@@ -12,7 +12,8 @@ program example_streaming_operations;
 uses
   SysUtils,
   fafafa.ssl.base,
-  fafafa.ssl.crypto.utils;
+  fafafa.ssl.crypto.utils,
+  fafafa.ssl.encoding;
 
 {**
  * Example 1: Streaming Hash for Large File
@@ -49,7 +50,7 @@ begin
     // Get final hash
     LHash := LHasher.Finalize;
 
-    WriteLn('File hash (SHA256): ', TCryptoUtils.BytesToHex(LHash));
+    WriteLn('File hash (SHA256): ', TEncodingUtils.BytesToHex(LHash, False));
     WriteLn('Memory used: Only 1KB buffer (vs loading entire file)');
   finally
     LHasher.Free;
@@ -94,7 +95,7 @@ begin
 
     LHash := LHasher.Finalize;
     WriteLn;
-    WriteLn('Hash complete: ', TCryptoUtils.BytesToHex(LHash));
+    WriteLn('Hash complete: ', TEncodingUtils.BytesToHex(LHash, False));
   finally
     LHasher.Free;
   end;
@@ -126,7 +127,7 @@ begin
       LData[I] := Byte(1);
     LHasher.Update(LData);
     LHash1 := LHasher.Finalize;
-    WriteLn('File 1 hash: ', TCryptoUtils.BytesToHex(LHash1));
+    WriteLn('File 1 hash: ', TEncodingUtils.BytesToHex(LHash1, False));
 
     // Reset and hash file 2
     LHasher.Reset;
@@ -134,7 +135,7 @@ begin
       LData[I] := Byte(2);
     LHasher.Update(LData);
     LHash2 := LHasher.Finalize;
-    WriteLn('File 2 hash: ', TCryptoUtils.BytesToHex(LHash2));
+    WriteLn('File 2 hash: ', TEncodingUtils.BytesToHex(LHash2, False));
 
     // Reset and hash file 3
     LHasher.Reset;
@@ -142,7 +143,7 @@ begin
       LData[I] := Byte(3);
     LHasher.Update(LData);
     LHash3 := LHasher.Finalize;
-    WriteLn('File 3 hash: ', TCryptoUtils.BytesToHex(LHash3));
+    WriteLn('File 3 hash: ', TEncodingUtils.BytesToHex(LHash3, False));
 
     WriteLn;
     WriteLn('Benefit: Single hasher object reused for all files');
@@ -202,7 +203,7 @@ begin
       LTotalEncrypted := LTotalEncrypted + Length(LFinal);
       WriteLn;
       WriteLn(Format('Total encrypted: %d bytes', [LTotalEncrypted]));
-      WriteLn('Authentication tag: ', TCryptoUtils.BytesToHex(LTag));
+      WriteLn('Authentication tag: ', TEncodingUtils.BytesToHex(LTag, False));
       WriteLn;
       WriteLn('Note: Tag must be stored/transmitted for decryption verification');
     end;
@@ -318,7 +319,7 @@ begin
     LHash := LHasher.Finalize;
 
     WriteLn;
-    WriteLn('Hash: ', TCryptoUtils.BytesToHex(LHash));
+    WriteLn('Hash: ', TEncodingUtils.BytesToHex(LHash, False));
     WriteLn('Memory copies: 0 (only views created)');
   finally
     LHasher.Free;
@@ -364,7 +365,7 @@ begin
 
     LHash := LHasher.Finalize;
 
-    WriteLn('Stream hash: ', TCryptoUtils.BytesToHex(LHash));
+    WriteLn('Stream hash: ', TEncodingUtils.BytesToHex(LHash, False));
     WriteLn;
     WriteLn('Use case: Verify data integrity for streamed downloads');
   finally

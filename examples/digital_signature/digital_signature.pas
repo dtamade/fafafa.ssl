@@ -210,7 +210,7 @@ begin
     end;
     
     // Initialize signing with SHA-256
-    if EVP_DigestSignInit(md_ctx, pkey_ctx, EVP_sha256(), nil, pkey) <= 0 then
+    if EVP_DigestSignInit(md_ctx, @pkey_ctx, EVP_sha256(), nil, pkey) <= 0 then
     begin
       WriteLn('ERROR: Failed to initialize signing');
       Exit;
@@ -334,7 +334,7 @@ begin
     end;
     
     // Initialize verification with SHA-256
-    if EVP_DigestVerifyInit(md_ctx, pkey_ctx, EVP_sha256(), nil, pkey) <= 0 then
+    if EVP_DigestVerifyInit(md_ctx, @pkey_ctx, EVP_sha256(), nil, pkey) <= 0 then
     begin
       WriteLn('ERROR: Failed to initialize verification');
       Exit;

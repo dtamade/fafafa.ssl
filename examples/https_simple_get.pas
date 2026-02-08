@@ -1,163 +1,177 @@
 program https_simple_get;
 
-{$mode objfpc}{$H+}
+{$mode ObjFPC}{$H+}
+{$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
 {
   超简单 HTTPS GET 请求示例
-  
-  功能：最简化的HTTPS请求示例，适合快速入门
-  用途：验证库是否可用，学习基本用法
-  难度：⭐ 入门级
+
+  说明：
+  - 使用当前推荐 API：TSSLContextBuilder + TSSLConnector + TSSLStream
+  - 使用 fafafa.examples.tcp 处理跨平台 TCP 连接
 }
 
 uses
   SysUtils, Classes,
-  {$IFDEF MSWINDOWS}WinSock2{$ELSE}Sockets{$ENDIF},
-  fafafa.ssl.openssl.backed,
-  fafafa.ssl.base;
+  fafafa.ssl,
+  fafafa.ssl.context.builder,
+  fafafa.examples.tcp;
 
 const
-  TARGET_HOST = 'www.example.com';
-  TARGET_PORT = 443;
+  TARGET_URL = 'https://www.example.com/';
+  PREVIEW_LIMIT = 500;
+  BUFFER_SIZE = 16384;
 
+function ParseURL(const AURL: string; out AHost, APath: string; out APort: Word): Boolean;
 var
-  LLib: ISSLLibrary;
-  LContext: ISSLContext;
-  LConn: ISSLConnection;
-  LSocket: TSocket;
-  LRequest, LResponse: string;
-
-// 辅助函数：建立TCP连接
-function ConnectTCP(const aHost: string; aPort: Word): TSocket;
-var
-  LAddr: TSockAddr;
-  LHostEnt: PHostEnt;
+  LTemp, LHostPart: string;
+  LSlashPos, LPortPos: Integer;
 begin
-  Result := socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if Result = INVALID_SOCKET then
-    raise Exception.Create('无法创建socket');
-  
-  LHostEnt := gethostbyname(PAnsiChar(AnsiString(aHost)));
-  if LHostEnt = nil then
+  Result := False;
+  AHost := '';
+  APath := '/';
+  APort := 443;
+
+  LTemp := Trim(AURL);
+  if Pos('https://', LowerCase(LTemp)) = 1 then
+    Delete(LTemp, 1, 8)
+  else if Pos('http://', LowerCase(LTemp)) = 1 then
   begin
-    closesocket(Result);
-    raise Exception.CreateFmt('无法解析主机: %s', [aHost]);
+    Delete(LTemp, 1, 7);
+    APort := 80;
   end;
-  
-  FillChar(LAddr, SizeOf(LAddr), 0);
-  LAddr.sin_family := AF_INET;
-  LAddr.sin_port := htons(aPort);
-  LAddr.sin_addr := PInAddr(LHostEnt^.h_addr_list^)^;
-  
-  if connect(Result, LAddr, SizeOf(LAddr)) <> 0 then
+
+  LSlashPos := Pos('/', LTemp);
+  if LSlashPos > 0 then
   begin
-    closesocket(Result);
-    raise Exception.CreateFmt('无法连接到 %s:%d', [aHost, aPort]);
+    LHostPart := Copy(LTemp, 1, LSlashPos - 1);
+    APath := Copy(LTemp, LSlashPos, Length(LTemp));
+  end
+  else
+    LHostPart := LTemp;
+
+  LPortPos := Pos(':', LHostPart);
+  if LPortPos > 0 then
+  begin
+    APort := StrToIntDef(Copy(LHostPart, LPortPos + 1, Length(LHostPart)), APort);
+    AHost := Copy(LHostPart, 1, LPortPos - 1);
+  end
+  else
+    AHost := LHostPart;
+
+  Result := (AHost <> '');
+end;
+
+function ReadAll(AStream: TStream): RawByteString;
+var
+  LBuffer: array[0..BUFFER_SIZE - 1] of Byte;
+  LRead: Longint;
+  LMem: TMemoryStream;
+begin
+  Result := '';
+  LMem := TMemoryStream.Create;
+  try
+    repeat
+      LRead := AStream.Read(LBuffer[0], SizeOf(LBuffer));
+      if LRead > 0 then
+        LMem.WriteBuffer(LBuffer[0], LRead);
+    until LRead = 0;
+
+    if LMem.Size > 0 then
+    begin
+      SetLength(Result, LMem.Size);
+      LMem.Position := 0;
+      LMem.ReadBuffer(Result[1], LMem.Size);
+    end;
+  finally
+    LMem.Free;
   end;
 end;
 
+procedure ExecuteGET(const AURL: string);
+var
+  LHost, LPath, LNetErr: string;
+  LPort: Word;
+  LSocket: TSocketHandle;
+  LContext: ISSLContext;
+  LConnector: TSSLConnector;
+  LTLS: TSSLStream;
+  LRequest: RawByteString;
+  LResponse: RawByteString;
+  LPreview: string;
+begin
+  if not ParseURL(AURL, LHost, LPath, LPort) then
+    raise Exception.Create('无法解析 URL: ' + AURL);
+
+  if not InitNetwork(LNetErr) then
+    raise Exception.Create('网络初始化失败: ' + LNetErr);
+
+  LSocket := INVALID_SOCKET;
+  LTLS := nil;
+  try
+    LSocket := ConnectTCP(LHost, LPort);
+
+    LContext := TSSLContextBuilder.Create
+      .WithTLS12And13
+      .WithVerifyPeer
+      .WithSystemRoots
+      .BuildClient;
+
+    LConnector := TSSLConnector.FromContext(LContext).WithTimeout(15000);
+    LTLS := LConnector.ConnectSocket(THandle(LSocket), LHost);
+
+    LRequest := 'GET ' + LPath + ' HTTP/1.1'#13#10 +
+                'Host: ' + LHost + #13#10 +
+                'User-Agent: fafafa.ssl-https_simple_get/1.0'#13#10 +
+                'Connection: close'#13#10 +
+                #13#10;
+
+    if Length(LRequest) > 0 then
+      LTLS.WriteBuffer(LRequest[1], Length(LRequest));
+
+    LResponse := ReadAll(LTLS);
+
+    WriteLn('✓ 请求完成');
+    WriteLn('响应长度: ', Length(LResponse), ' 字节');
+    WriteLn;
+
+    if Length(LResponse) > PREVIEW_LIMIT then
+      LPreview := Copy(string(LResponse), 1, PREVIEW_LIMIT) + '...'
+    else
+      LPreview := string(LResponse);
+
+    WriteLn('响应预览（前 ', PREVIEW_LIMIT, ' 字符）:');
+    WriteLn('------------------------------------------');
+    WriteLn(LPreview);
+    WriteLn('------------------------------------------');
+  finally
+    if LTLS <> nil then
+      LTLS.Free;
+    CloseSocket(LSocket);
+    CleanupNetwork;
+  end;
+end;
+
+var
+  LURL: string;
 begin
   WriteLn('==========================================');
   WriteLn('   fafafa.ssl - 超简单 HTTPS 示例');
   WriteLn('==========================================');
   WriteLn;
 
+  if ParamCount >= 1 then
+    LURL := ParamStr(1)
+  else
+    LURL := TARGET_URL;
+
   try
-    {$IFDEF MSWINDOWS}
-    var LWSAData: TWSAData;
-    WSAStartup(MAKEWORD(2, 2), LWSAData);
-    {$ENDIF}
-
-    // 步骤1: 创建并初始化SSL库
-    WriteLn('步骤 1: 初始化SSL库...');
-    LLib := CreateOpenSSLLibrary;
-    if not LLib.Initialize then
-      raise Exception.Create('SSL库初始化失败');
-    WriteLn('  ✓ 成功 (OpenSSL ', LLib.GetVersionString, ')');
-    WriteLn;
-
-    // 步骤2: 创建客户端上下文
-    WriteLn('步骤 2: 创建SSL上下文...');
-    LContext := LLib.CreateContext(sslCtxClient);
-    if LContext = nil then
-      raise Exception.Create('创建上下文失败');
-    WriteLn('  ✓ 成功');
-    WriteLn;
-
-    // 步骤3: 建立TCP连接
-    WriteLn('步骤 3: 连接到 ', TARGET_HOST, ':', TARGET_PORT, '...');
-    LSocket := ConnectTCP(TARGET_HOST, TARGET_PORT);
-    WriteLn('  ✓ TCP连接成功');
-    WriteLn;
-
-    // 步骤4: TLS握手
-    WriteLn('步骤 4: 执行TLS握手...');
-    LConn := LContext.CreateConnection(LSocket);
-    if not LConn.Connect then
-      raise Exception.Create('TLS握手失败');
-    WriteLn('  ✓ 握手成功');
-    WriteLn('    协议: ', ProtocolVersionToString(LConn.GetProtocolVersion));
-    WriteLn('    密码套件: ', LConn.GetCipherName);
-    WriteLn;
-
-    // 步骤5: 发送HTTP请求
-    WriteLn('步骤 5: 发送HTTP请求...');
-    LRequest := 'GET / HTTP/1.1'#13#10 +
-                'Host: ' + TARGET_HOST + #13#10 +
-                'Connection: close'#13#10 +
-                #13#10;
-    LConn.WriteString(LRequest);
-    WriteLn('  ✓ 请求已发送 (', Length(LRequest), ' 字节)');
-    WriteLn;
-
-    // 步骤6: 接收响应
-    WriteLn('步骤 6: 接收响应...');
-    if not LConn.ReadString(LResponse) then
-      LResponse := '';
-    WriteLn('  ✓ 收到 ', Length(LResponse), ' 字节');
-    WriteLn;
-
-    // 显示响应（前500字符）
-    WriteLn('==========================================');
-    WriteLn('响应内容 (前500字符):');
-    WriteLn('------------------------------------------');
-    if Length(LResponse) > 500 then
-      WriteLn(Copy(LResponse, 1, 500), '...')
-    else
-      WriteLn(LResponse);
-    WriteLn('------------------------------------------');
-    WriteLn;
-
-    // 清理
-    LConn.Shutdown;
-    closesocket(LSocket);
-    LLib.Finalize;
-
-    WriteLn('==========================================');
-    WriteLn('✅ 测试成功！');
-    WriteLn('==========================================');
-    WriteLn;
-    WriteLn('💡 接下来你可以：');
-    WriteLn('  1. 修改 TARGET_HOST 测试其他网站');
-    WriteLn('  2. 查看 examples/01_tls_client.pas 了解更多细节');
-    WriteLn('  3. 阅读文档学习证书验证等高级功能');
-    WriteLn;
-
-    {$IFDEF MSWINDOWS}
-    WSACleanup;
-    {$ENDIF}
-
+    ExecuteGET(LURL);
   except
     on E: Exception do
     begin
-      WriteLn;
-      WriteLn('==========================================');
-      WriteLn('❌ 错误: ', E.Message);
-      WriteLn('==========================================');
+      WriteLn('✗ 错误: ', E.Message);
       Halt(1);
     end;
   end;
-
-  WriteLn('按回车退出...');
-  ReadLn;
 end.

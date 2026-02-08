@@ -364,11 +364,11 @@ begin
       AResp.ErrorMessage := E.Message;
       Result := False;
     end;
-  finally
-    if TLS <> nil then
-      TLS.Free;
-    CloseSocket(Sock);
   end;
+
+  if TLS <> nil then
+    TLS.Free;
+  CloseSocket(Sock);
 end;
 
 procedure PrintPreview(const ABody: RawByteString; AMaxLen: Integer);

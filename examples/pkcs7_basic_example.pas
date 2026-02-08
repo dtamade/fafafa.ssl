@@ -19,13 +19,13 @@ begin
 
   // Initialize OpenSSL
   WriteLn('1. 初始化 OpenSSL 库...');
-  if not TOpenSSLLoader.Initialize then
+  if not LoadOpenSSLLibrary then
   begin
     WriteLn('   ✗ 错误: 无法初始化 OpenSSL 库');
     Halt(1);
   end;
   WriteLn('   ✓ OpenSSL 库初始化成功');
-  WriteLn('   版本: ', TOpenSSLLoader.GetVersionString);
+  WriteLn('   版本: ', GetOpenSSLVersion);
   WriteLn('');
 
   // Test PKCS7 function availability

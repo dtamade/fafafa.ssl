@@ -6,7 +6,8 @@ uses
   SysUtils,
   fafafa.ssl,
   fafafa.ssl.context.builder,
-  fafafa.ssl.base;
+  fafafa.ssl.base,
+  fafafa.ssl.cert.pinning;
 
 var
   Ctx: ISSLContext;
@@ -28,7 +29,7 @@ begin
     // 注意：这些是示例 Pin，实际使用时需要从真实证书中提取
     Ctx.AddCertificatePinBase64(
       'X3pGTSOuJeEVw989IJ/cEtXUEmy52zs1TZQrU06KUKg=',
-      ptPublicKey,
+      Ord(ptPublicKey),
       'Google Primary Pin',
       False
     );
@@ -38,7 +39,7 @@ begin
     // 添加备用 Pin（OWASP 最佳实践：至少 2 个 Pin）
     Ctx.AddCertificatePinBase64(
       'YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=',
-      ptPublicKey,
+      Ord(ptPublicKey),
       'Google Backup Pin',
       True
     );

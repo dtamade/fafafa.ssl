@@ -21,7 +21,7 @@ uses
   fafafa.ssl.openssl.api.types,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.rand,
-  fafafa.ssl.openssl.kdf;
+  fafafa.ssl.openssl.api.kdf;
 
 const
   VERSION = '1.0.0';

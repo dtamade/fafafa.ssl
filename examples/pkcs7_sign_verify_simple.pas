@@ -131,7 +131,7 @@ begin
 
   // Initialize OpenSSL
   WriteLn('1. 初始化 OpenSSL 库...');
-  if not TOpenSSLLoader.Initialize then
+  if not LoadOpenSSLLibrary then
   begin
     WriteLn('   ✗ 错误: 无法初始化 OpenSSL 库');
     Halt(1);

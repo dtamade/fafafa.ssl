@@ -37,6 +37,8 @@ procedure GenerateSelfSignedCertificate(
   const aOrganization: string = 'My Organization');
 var
   LPrivKey: PEVP_PKEY;
+  LRsa: PRSA;
+  LBn: PBIGNUM;
   LCert: PX509;
   LName: PX509_NAME;
   LBio: PBIO;
@@ -52,8 +54,8 @@ begin
   if LPrivKey = nil then
     raise Exception.Create('Failed to create EVP_PKEY');
   
-  var LRsa := RSA_new();
-  var LBn := BN_new();
+  LRsa := RSA_new();
+  LBn := BN_new();
   BN_set_word(LBn, RSA_F4);  // 65537
   
   if RSA_generate_key_ex(LRsa, KEY_SIZE, LBn, nil) <> 1 then
@@ -64,7 +66,14 @@ begin
     raise Exception.Create('Failed to generate RSA key');
   end;
   
-  EVP_PKEY_assign_RSA(LPrivKey, LRsa);
+  if EVP_PKEY_set1_RSA(LPrivKey, LRsa) <> 1 then
+  begin
+    RSA_free(LRsa);
+    BN_free(LBn);
+    EVP_PKEY_free(LPrivKey);
+    raise Exception.Create('Failed to assign RSA key to EVP_PKEY');
+  end;
+  RSA_free(LRsa);
   BN_free(LBn);
   WriteLn('      ✓ 密钥对生成成功');
   
@@ -91,8 +100,8 @@ begin
   LNotAfter := ASN1_TIME_new();
   X509_gmtime_adj(LNotBefore, 0);
   X509_gmtime_adj(LNotAfter, Int64(CERT_DAYS) * 24 * 3600);
-  X509_set_notBefore(LCert, LNotBefore);
-  X509_set_notAfter(LCert, LNotAfter);
+  X509_set1_notBefore(LCert, LNotBefore);
+  X509_set1_notAfter(LCert, LNotAfter);
   ASN1_TIME_free(LNotBefore);
   ASN1_TIME_free(LNotAfter);
   
@@ -103,12 +112,12 @@ begin
   // 4. 设置主题信息
   WriteLn('[4/7] 设置主题信息...');
   LName := X509_get_subject_name(LCert);
-  X509_NAME_add_entry_by_txt(LName, 'C', MBSTRING_ASC, 
-    PAnsiChar(AnsiString(aCountry)), -1, -1, 0);
-  X509_NAME_add_entry_by_txt(LName, 'O', MBSTRING_ASC, 
-    PAnsiChar(AnsiString(aOrganization)), -1, -1, 0);
-  X509_NAME_add_entry_by_txt(LName, 'CN', MBSTRING_ASC, 
-    PAnsiChar(AnsiString(aCommonName)), -1, -1, 0);
+  X509_NAME_add_entry_by_txt(LName, 'C', MBSTRING_ASC,
+    PByte(PAnsiChar(AnsiString(aCountry))), -1, -1, 0);
+  X509_NAME_add_entry_by_txt(LName, 'O', MBSTRING_ASC,
+    PByte(PAnsiChar(AnsiString(aOrganization))), -1, -1, 0);
+  X509_NAME_add_entry_by_txt(LName, 'CN', MBSTRING_ASC,
+    PByte(PAnsiChar(AnsiString(aCommonName))), -1, -1, 0);
   
   WriteLn('      ✓ 国家: ', aCountry);
   WriteLn('      ✓ 组织: ', aOrganization);
@@ -289,4 +298,3 @@ begin
     end;
   end;
 end.
-

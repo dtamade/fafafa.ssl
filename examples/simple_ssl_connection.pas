@@ -1,223 +1,121 @@
 program simple_ssl_connection;
 
 {$mode ObjFPC}{$H+}
-
-uses
-  SysUtils, Classes,
-  {$IFDEF WINDOWS}
-  Windows, WinSock2,
-  {$ELSE}
-  BaseUnix, Unix, Sockets,
-  {$ENDIF}
-  fafafa.ssl;
+{$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
 {
-  这个示例展示 fafafa.ssl 的正确使用方式：
-  
-  1. 用户自己创建socket（使用系统API或任何网络库）
-  2. 将socket传入 fafafa.ssl
-  3. fafafa.ssl 只负责SSL/TLS加密
-  
-  这遵循业界最佳实践（OpenSSL、mbedTLS等都是这样设计的）
+  这个示例展示 fafafa.ssl 的推荐使用方式：
+
+  1) 用户自己创建 TCP socket（这里使用 fafafa.examples.tcp 跨平台封装）
+  2) 将 socket 交给 fafafa.ssl 建立 TLS
+  3) 应用层协议（如 HTTP）仍由用户处理
 }
 
-// 辅助函数：创建TCP连接（用户也可以用Synapse、Indy等网络库）
-function CreateTCPConnection(const aHost: string; aPort: Word): THandle;
-{$IFDEF WINDOWS}
-var
-  WSAData: TWSAData;
-  Sock: TSocket;
-  Addr: TSockAddrIn;
-  HostEnt: PHostEnt;
-begin
-  Result := INVALID_HANDLE_VALUE;
-  
-  // 初始化WinSock
-  if WSAStartup(MAKEWORD(2, 2), WSAData) <> 0 then
-    raise Exception.Create('WSAStartup failed');
-    
-  // 创建socket
-  Sock := socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if Sock = INVALID_SOCKET then
-    raise Exception.Create('Socket creation failed');
-    
-  // 解析主机名
-  HostEnt := gethostbyname(PAnsiChar(AnsiString(aHost)));
-  if HostEnt = nil then
-  begin
-    closesocket(Sock);
-    raise Exception.CreateFmt('Cannot resolve host: %s', [aHost]);
-  end;
-  
-  // 连接
-  FillChar(Addr, SizeOf(Addr), 0);
-  Addr.sin_family := AF_INET;
-  Addr.sin_port := htons(aPort);
-  Addr.sin_addr := PInAddr(HostEnt^.h_addr_list^)^;
-  
-  if WinSock2.connect(Sock, Addr, SizeOf(Addr)) <> 0 then
-  begin
-    closesocket(Sock);
-    raise Exception.CreateFmt('Cannot connect to %s:%d', [aHost, aPort]);
-  end;
-  
-  Result := Sock;
-end;
-{$ELSE}
-var
-  Sock: cint;
-  Addr: TInetSockAddr;
-  HostEnt: PHostEnt;
-begin
-  Result := -1;
-  
-  // 创建socket
-  Sock := fpSocket(AF_INET, SOCK_STREAM, 0);
-  if Sock < 0 then
-    raise Exception.Create('Socket creation failed');
-    
-  // 解析主机名
-  HostEnt := gethostbyname(PChar(aHost));
-  if HostEnt = nil then
-  begin
-    fpClose(Sock);
-    raise Exception.CreateFmt('Cannot resolve host: %s', [aHost]);
-  end;
-  
-  // 连接
-  FillChar(Addr, SizeOf(Addr), 0);
-  Addr.sin_family := AF_INET;
-  Addr.sin_port := htons(aPort);
-  Move(HostEnt^.h_addr_list^^, Addr.sin_addr, SizeOf(Addr.sin_addr));
-  
-  if fpConnect(Sock, @Addr, SizeOf(Addr)) <> 0 then
-  begin
-    fpClose(Sock);
-    raise Exception.CreateFmt('Cannot connect to %s:%d', [aHost, aPort]);
-  end;
-  
-  Result := Sock;
-end;
-{$ENDIF}
+uses
+  SysUtils,
+  fafafa.ssl,
+  fafafa.ssl.context.builder,
+  fafafa.examples.tcp;
 
-procedure CloseSocket(aSocket: THandle);
-begin
-  {$IFDEF WINDOWS}
-  if aSocket <> INVALID_HANDLE_VALUE then
-    closesocket(aSocket);
-  {$ELSE}
-  if aSocket >= 0 then
-    fpClose(aSocket);
-  {$ENDIF}
-end;
+const
+  TARGET_HOST = 'example.com';
+  TARGET_PORT = 443;
 
 procedure SimpleSSLConnection;
 var
   LContext: ISSLContext;
-  LConnection: ISSLConnection;
-  LClientConn: ISSLClientConnection;
-  LSocket: THandle;
-  LRequest: string;
+  LConnector: TSSLConnector;
+  LTLS: TSSLStream;
+  LSocket: TSocketHandle;
+  LRequest: RawByteString;
   LBuffer: array[0..4095] of Byte;
-  LBytesRead: Integer;
-  LResponse: string;
+  LBytesRead: Longint;
+  LChunk: string;
+  LNetErr: string;
 begin
   WriteLn('╔══════════════════════════════════════════════════════════════╗');
-  WriteLn('║   简单SSL/TLS连接示例                                       ║');
-  WriteLn('║   展示如何结合socket和fafafa.ssl                            ║');
+  WriteLn('║   简单 SSL/TLS 连接示例                                     ║');
+  WriteLn('║   展示如何结合 socket 和 fafafa.ssl                          ║');
   WriteLn('╚══════════════════════════════════════════════════════════════╝');
   WriteLn;
-  
-  LSocket := {$IFDEF WINDOWS}INVALID_HANDLE_VALUE{$ELSE}-1{$ENDIF};
-  
+
+  if not InitNetwork(LNetErr) then
+    raise Exception.Create('网络初始化失败: ' + LNetErr);
+
+  LSocket := INVALID_SOCKET;
+  LTLS := nil;
   try
-    WriteLn('[1/6] 创建SSL上下文...');
-    LContext := TSSLFactory.CreateContext(sslCtxClient);
-    LContext.SetVerifyMode([sslVerifyPeer]);
-    WriteLn('      ✓ SSL上下文已创建');
+    WriteLn('[1/5] 创建 TCP 连接...');
+    LSocket := ConnectTCP(TARGET_HOST, TARGET_PORT);
+    WriteLn('      ✓ TCP 连接已建立');
     WriteLn;
-    
-    WriteLn('[2/6] 创建TCP连接...');
-    WriteLn('      目标: example.com:443');
-    WriteLn('      注意: 我们用系统API创建socket');
-    WriteLn('            （也可以用Synapse、Indy等网络库）');
-    LSocket := CreateTCPConnection('example.com', 443);
-    WriteLn('      ✓ TCP连接已建立 (Socket Handle: ', LSocket, ')');
+
+    WriteLn('[2/5] 创建 TLS 上下文...');
+    LContext := TSSLContextBuilder.Create
+      .WithTLS12And13
+      .WithVerifyPeer
+      .WithSystemRoots
+      .BuildClient;
+    WriteLn('      ✓ TLS 上下文已创建');
     WriteLn;
-    
-    WriteLn('[3/6] 将socket传入SSL库...');
-    WriteLn('      fafafa.ssl 不创建socket，只接收已有的socket');
-    LConnection := LContext.CreateConnection(LSocket);
-    LClientConn := LConnection as ISSLClientConnection;
-    LClientConn.SetServerName('example.com');  // per-connection SNI/hostname
-    WriteLn('      ✓ SSL连接对象已创建');
+
+    WriteLn('[3/5] 将 socket 交给 fafafa.ssl 并握手...');
+    LConnector := TSSLConnector.FromContext(LContext).WithTimeout(15000);
+    LTLS := LConnector.ConnectSocket(THandle(LSocket), TARGET_HOST);
+    WriteLn('      ✓ TLS 握手成功');
+    WriteLn('      协议: ', ProtocolVersionToString(LTLS.Connection.GetProtocolVersion));
+    WriteLn('      密码套件: ', LTLS.Connection.GetCipherName);
     WriteLn;
-    
-    WriteLn('[4/6] 执行SSL握手...');
-    if not LConnection.Connect then
-      raise Exception.Create('SSL握手失败');
-    WriteLn('      ✓ SSL握手成功');
-    WriteLn('      协议: ', Ord(LConnection.GetProtocolVersion));
-    WriteLn('      密码套件: ', LConnection.GetCipherName);
-    WriteLn;
-    
-    WriteLn('[5/6] 发送数据（HTTP请求）...');
-    // fafafa.ssl只负责SSL/TLS加密
-    // 应用层协议（HTTP/SMTP/FTP等）由用户自己实现
-    LRequest := 
+
+    WriteLn('[4/5] 发送 HTTP 请求...');
+    LRequest :=
       'GET / HTTP/1.1'#13#10 +
-      'Host: example.com'#13#10 +
+      'Host: ' + TARGET_HOST + #13#10 +
       'User-Agent: fafafa.ssl-example/1.0'#13#10 +
       'Connection: close'#13#10 +
       #13#10;
-    
-    if LConnection.Write(LRequest[1], Length(LRequest)) <> Length(LRequest) then
-      raise Exception.Create('写入数据失败');
+
+    if Length(LRequest) > 0 then
+      LTLS.WriteBuffer(LRequest[1], Length(LRequest));
     WriteLn('      ✓ 请求已发送 (', Length(LRequest), ' 字节)');
     WriteLn;
-    
-    WriteLn('[6/6] 接收响应...');
-    LResponse := '';
+
+    WriteLn('[5/5] 接收响应...');
     repeat
-      LBytesRead := LConnection.Read(LBuffer[0], SizeOf(LBuffer));
+      LBytesRead := LTLS.Read(LBuffer[0], SizeOf(LBuffer));
       if LBytesRead > 0 then
       begin
-        SetString(LResponse, PAnsiChar(@LBuffer[0]), LBytesRead);
-        Write(LResponse);
+        SetString(LChunk, PAnsiChar(@LBuffer[0]), LBytesRead);
+        Write(LChunk);
       end;
     until LBytesRead <= 0;
     WriteLn;
     WriteLn('      ✓ 响应已接收');
     WriteLn;
-    
-    WriteLn('[完成] 连接已关闭');
-    WriteLn;
+
     WriteLn('════════════════════════════════════════════════════════════');
     WriteLn('总结：');
-    WriteLn('  1. 用户创建socket（任何方式）');
-    WriteLn('  2. 传入fafafa.ssl进行SSL/TLS加密');
-    WriteLn('  3. fafafa.ssl专注于加密，不管理网络');
-    WriteLn('  4. 这是OpenSSL/mbedTLS等的标准模式');
+    WriteLn('  1. 用户创建并管理 socket');
+    WriteLn('  2. fafafa.ssl 专注于 TLS 握手与加密传输');
+    WriteLn('  3. 应用层协议逻辑保持在业务侧');
     WriteLn('════════════════════════════════════════════════════════════');
-    
-  except
-    on E: Exception do
-    begin
-      WriteLn;
-      WriteLn('❌ 错误: ', E.Message);
-      ExitCode := 1;
-    end;
-  end;
-  
-  // 清理socket（用户负责）
-  if LSocket <> {$IFDEF WINDOWS}INVALID_HANDLE_VALUE{$ELSE}-1{$ENDIF} then
+  finally
+    if LTLS <> nil then
+      LTLS.Free;
     CloseSocket(LSocket);
+    CleanupNetwork;
+  end;
 end;
 
 begin
   WriteLn;
-  SimpleSSLConnection;
-  WriteLn;
-  WriteLn('按回车键退出...');
-  ReadLn;
+  try
+    SimpleSSLConnection;
+  except
+    on E: Exception do
+    begin
+      WriteLn('❌ 错误: ', E.Message);
+      Halt(1);
+    end;
+  end;
 end.

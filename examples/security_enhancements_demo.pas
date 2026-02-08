@@ -44,7 +44,7 @@ begin
   // Primary pin: Current certificate public key
   Ctx.AddCertificatePinBase64(
     'YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=',
-    ptPublicKey,
+    Ord(ptPublicKey),
     'Primary - Current Certificate',
     False
   );
@@ -52,7 +52,7 @@ begin
   // Backup pin: Intermediate CA public key
   Ctx.AddCertificatePinBase64(
     'sRHdihwgkaib1P1gxX8HFszlD+7/gTfNvuAybgLPNis=',
-    ptPublicKey,
+    Ord(ptPublicKey),
     'Backup - Intermediate CA',
     True
   );
@@ -94,10 +94,24 @@ begin
   end;
 end;
 
+type
+  TDemoRotationEventHandler = class
+  public
+    procedure HandleRotationEvent(AEventType: TRotationEventType;
+      const AMessage: string; const ACertPath: string);
+  end;
+
+procedure TDemoRotationEventHandler.HandleRotationEvent(AEventType: TRotationEventType;
+  const AMessage: string; const ACertPath: string);
+begin
+  RotationEventHandler(AEventType, AMessage, ACertPath);
+end;
+
 procedure DemoCertificateRotation;
 var
   Ctx: ISSLContext;
   RotationMgr: TCertificateRotationManager;
+  EventHandler: TDemoRotationEventHandler;
   Config: TRotationConfig;
   DaysRemaining: Integer;
 begin
@@ -120,9 +134,10 @@ begin
 
   // Create rotation manager
   RotationMgr := TCertificateRotationManager.Create(Ctx);
+  EventHandler := TDemoRotationEventHandler.Create;
   try
     // Set up rotation event handler
-    RotationMgr.OnRotationEvent := @RotationEventHandler;
+    RotationMgr.OnRotationEvent := @EventHandler.HandleRotationEvent;
 
     // Configure rotation
     Config.CertificatePath := 'server.crt';
@@ -178,6 +193,7 @@ begin
     WriteLn('Rotation monitoring stopped');
     WriteLn;
   finally
+    EventHandler.Free;
     RotationMgr.Free;
   end;
 end;
