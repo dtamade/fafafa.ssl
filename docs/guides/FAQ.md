@@ -336,11 +336,19 @@ TSSLLibrary.Instance.SetCustomLibraryPath('/custom/path');
 
 ## 高级话题
 
-### Q: 如何实现OCSP验证？
+### Q: 如何实现 OCSP 验证？
 
-**A**: 当前版本未内置OCSP，计划在未来版本添加。
+**A**: 当前版本已提供 OpenSSL OCSP API 封装，可直接使用：
+- `CreateOCSPRequest`
+- `SendOCSPRequest`
+- `VerifyOCSPResponse`
+- `CheckCertificateStatus`
 
-**临时方案**: 使用外部OCSP工具：
+建议先参考：
+- `docs/guides/OCSP_USAGE_GUIDE.md`
+- `docs/test_reports/P2_OCSP_MODULE_REPORT.md`
+
+命令行快速排查仍可使用：
 ```bash
 openssl ocsp -issuer ca.pem -cert cert.pem \
   -url http://ocsp.example.com -resp_text
