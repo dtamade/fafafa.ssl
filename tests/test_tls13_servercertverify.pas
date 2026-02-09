@@ -381,6 +381,43 @@ begin
   Result := True;
 end;
 
+function TryLocatePKCS8AlgorithmIdentifierTagOffset(
+  const ADER: TBytes;
+  out ATagOffset: Integer
+): Boolean;
+var
+  LOffset: Integer;
+  LSeqLength: Integer;
+  LVersionLength: Integer;
+begin
+  ATagOffset := -1;
+  Result := False;
+
+  if Length(ADER) < 8 then
+    Exit;
+
+  LOffset := 0;
+  if ADER[LOffset] <> $30 then
+    Exit;
+  Inc(LOffset);
+  if not TryReadDERLength(ADER, LOffset, LSeqLength) then
+    Exit;
+  if LOffset + LSeqLength > Length(ADER) then
+    Exit;
+
+  if (LOffset >= Length(ADER)) or (ADER[LOffset] <> $02) then
+    Exit;
+  Inc(LOffset);
+  if not TryReadDERLength(ADER, LOffset, LVersionLength) then
+    Exit;
+  Inc(LOffset, LVersionLength);
+  if LOffset >= Length(ADER) then
+    Exit;
+
+  ATagOffset := LOffset;
+  Result := True;
+end;
+
 function TryExtractFirstPrivateKeyDER(
   const APEMBlob: TBytes;
   out ADER: TBytes;
@@ -963,6 +1000,90 @@ procedure AssertContains(const AText, ASubText, AMessage: string);
 begin
   if Pos(ASubText, AText) <= 0 then
     Fail(AMessage + ' (missing: ' + ASubText + ')');
+end;
+
+function TruncateBytesFromEnd(const AData: TBytes; ACutBytes: Integer): TBytes;
+begin
+  if (ACutBytes <= 0) or (ACutBytes >= Length(AData)) then
+    Exit([]);
+  Result := Copy(AData, 0, Length(AData) - ACutBytes);
+end;
+
+function CopyBytesWithMutation(const AData: TBytes; AOffset: Integer; AValue: Byte): TBytes;
+begin
+  if (AOffset < 0) or (AOffset >= Length(AData)) then
+    Exit([]);
+
+  Result := Copy(AData, 0, Length(AData));
+  Result[AOffset] := AValue;
+end;
+
+function BuildPEMBlockWithType(const ATypeString: string; const ADERData: TBytes): TBytes;
+var
+  LWriter: TPEMWriter;
+  LText: string;
+begin
+  LWriter := TPEMWriter.Create;
+  try
+    LText := LWriter.WriteBlockWithType(ATypeString, ADERData);
+  finally
+    LWriter.Free;
+  end;
+
+  Result := TEncoding.ASCII.GetBytes(LText);
+end;
+
+procedure AssertPKCS1SignatureMatchesBaseline(
+  const AKeyMaterial: TBytes;
+  const ABaselineSig: TBytes;
+  const AInput: TBytes;
+  const ALabel: string
+);
+var
+  LSig: TBytes;
+  LErr: string;
+  I: Integer;
+  LDiff: Integer;
+begin
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      AKeyMaterial,
+      AInput,
+      LSig,
+      LErr
+    ),
+    ALabel + ': signing should succeed: ' + LErr
+  );
+
+  AssertEqualsInt(Length(ABaselineSig), Length(LSig), ALabel + ': signature length mismatch');
+  LDiff := 0;
+  for I := 0 to Length(LSig) - 1 do
+    if LSig[I] <> ABaselineSig[I] then
+      Inc(LDiff);
+  AssertEqualsInt(0, LDiff, ALabel + ': signature should match baseline output');
+end;
+
+procedure AssertMalformedDERRejected(
+  const ADER: TBytes;
+  const AInput: TBytes;
+  const ALabel: string
+);
+var
+  LSig: TBytes;
+  LErr: string;
+begin
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      ADER,
+      AInput,
+      LSig,
+      LErr
+    ),
+    ALabel + ': malformed DER should be rejected'
+  );
+  AssertContains(LErr, 'Unsupported DER private key format', ALabel + ': malformed DER error message mismatch');
 end;
 
 procedure AssertEqualsQWord(AExpected, AActual: QWord; const AMessage: string);
@@ -2239,6 +2360,267 @@ begin
   AssertContains(LErr, 'Unsupported DER private key format', 'Malformed DER error message should remain stable');
 end;
 
+procedure TestRSASignatureHandlesMalformedDERVariants;
+var
+  LPemBlob: TBytes;
+  LDER: TBytes;
+  LType: TPEMType;
+  LInput: TBytes;
+  LTranscriptHash: TBytes;
+  LTruncated: TBytes;
+  LMutated: TBytes;
+  LAlgTagOffset: Integer;
+  LErr: string;
+  LSig: TBytes;
+  I: Integer;
+begin
+  LPemBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  AssertTrue(TryExtractFirstPrivateKeyDER(LPemBlob, LDER, LType), 'Failed to extract DER for malformed-DER tests');
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($88 + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  LTruncated := TruncateBytesFromEnd(LDER, 1);
+  AssertMalformedDERRejected(LTruncated, LInput, 'der-truncated-1');
+
+  LTruncated := TruncateBytesFromEnd(LDER, 8);
+  AssertMalformedDERRejected(LTruncated, LInput, 'der-truncated-8');
+
+  LTruncated := TruncateBytesFromEnd(LDER, 32);
+  AssertMalformedDERRejected(LTruncated, LInput, 'der-truncated-32');
+
+  LMutated := CopyBytesWithMutation(LDER, 0, $31);
+  AssertMalformedDERRejected(LMutated, LInput, 'der-root-not-sequence');
+
+  LMutated := CopyBytesWithMutation(LDER, 1, $FF);
+  AssertMalformedDERRejected(LMutated, LInput, 'der-invalid-length-byte');
+
+  AssertTrue(
+    TryLocatePKCS8AlgorithmIdentifierTagOffset(LDER, LAlgTagOffset),
+    'Failed to locate PKCS#8 AlgorithmIdentifier tag offset'
+  );
+  LMutated := CopyBytesWithMutation(LDER, LAlgTagOffset, $31);
+  AssertMalformedDERRejected(LMutated, LInput, 'der-alg-id-not-sequence');
+
+  LMutated := CopyBytesWithMutation(LDER, LAlgTagOffset + 1, $00);
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LMutated,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'der-alg-id-short-seq should be rejected'
+  );
+  AssertContains(LErr, 'Unsupported DER private key format', 'der-alg-id-short-seq rejection message mismatch');
+end;
+
+procedure TestRSASignatureSelectsRSAFromMixedPEMBlocks;
+var
+  LKeyBlob: TBytes;
+  LBaselineSig: TBytes;
+  LErr: string;
+  LTranscriptHash: TBytes;
+  LInput: TBytes;
+  LRSAUnknown: TBytes;
+  LUnknownRSA: TBytes;
+  LECAndRSA: TBytes;
+  LCertAndRSA: TBytes;
+  LUnknownPEM: TBytes;
+  LECPRIVATEPEM: TBytes;
+  LCertPEM: TBytes;
+  I: Integer;
+begin
+  LKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  LCertPEM := LoadFileBytes('tests/certificate/test_certs/signer_cert.pem');
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($90 + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LKeyBlob,
+      LInput,
+      LBaselineSig,
+      LErr
+    ),
+    'baseline signing failed for mixed-PEM tests: ' + LErr
+  );
+
+  LUnknownPEM := BuildPEMBlockWithType('FAFAFA UNKNOWN KEY', [$01, $02, $03]);
+  LECPRIVATEPEM := BuildPEMBlockWithType('EC PRIVATE KEY', [$01, $02, $03]);
+
+  LRSAUnknown := BuildPEMWithMultiplePrivateKeys(LKeyBlob, LUnknownPEM);
+  AssertPKCS1SignatureMatchesBaseline(LRSAUnknown, LBaselineSig, LInput, 'mixedpem-rsa-then-unknown');
+
+  LUnknownRSA := BuildPEMWithMultiplePrivateKeys(LUnknownPEM, LKeyBlob);
+  AssertPKCS1SignatureMatchesBaseline(LUnknownRSA, LBaselineSig, LInput, 'mixedpem-unknown-then-rsa');
+
+  LECAndRSA := BuildPEMWithMultiplePrivateKeys(LECPRIVATEPEM, LKeyBlob);
+  AssertPKCS1SignatureMatchesBaseline(LECAndRSA, LBaselineSig, LInput, 'mixedpem-ec-then-rsa');
+
+  LCertAndRSA := BuildPEMWithMultiplePrivateKeys(LCertPEM, LKeyBlob);
+  AssertPKCS1SignatureMatchesBaseline(LCertAndRSA, LBaselineSig, LInput, 'mixedpem-cert-then-rsa');
+end;
+
+procedure TestRSASignatureRejectsPEMWithoutUsableRSAKey;
+var
+  LInput: TBytes;
+  LTranscriptHash: TBytes;
+  LErr: string;
+  LSig: TBytes;
+  LUnknownPEM: TBytes;
+  LECPRIVATEPEM: TBytes;
+  LPEMNoRSA: TBytes;
+  LPEMOnlyUnknown: TBytes;
+  I: Integer;
+begin
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($A0 + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  LUnknownPEM := BuildPEMBlockWithType('FAFAFA UNKNOWN KEY', [$01, $02, $03]);
+  LECPRIVATEPEM := BuildPEMBlockWithType('EC PRIVATE KEY', [$01, $02, $03]);
+  LPEMNoRSA := BuildPEMWithMultiplePrivateKeys(LECPRIVATEPEM, LUnknownPEM);
+
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LPEMNoRSA,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'PEM without usable RSA key should be rejected'
+  );
+  AssertTrue(
+    (Pos('No usable RSA private key found in PEM material', LErr) > 0) or
+    (Pos('PEM private key is not RSA', LErr) > 0),
+    'no-rsa-pem error message mismatch'
+  );
+
+  LPEMOnlyUnknown := LUnknownPEM;
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LPEMOnlyUnknown,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'PEM with only unknown key block should be rejected'
+  );
+  AssertTrue(Length(LErr) > 0, 'unknown-only-pem should return a non-empty error message');
+end;
+
+procedure TestRSASignatureRejectsMalformedPEMEnvelopes;
+var
+  LInput: TBytes;
+  LTranscriptHash: TBytes;
+  LErr: string;
+  LSig: TBytes;
+  LMissingEnd: TBytes;
+  LMismatchedMarker: TBytes;
+  LBrokenBase64: TBytes;
+  I: Integer;
+begin
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($B0 + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  LMissingEnd := TEncoding.ASCII.GetBytes(
+    '-----BEGIN PRIVATE KEY-----' + LineEnding +
+    'MIIEvQIBADANBgkq' + LineEnding
+  );
+
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LMissingEnd,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'missing-end PEM should be rejected'
+  );
+  AssertContains(LErr, 'No private key block found in PEM blob', 'missing-end PEM error message mismatch');
+
+  LMismatchedMarker := TEncoding.ASCII.GetBytes(
+    '-----BEGIN PRIVATE KEY-----' + LineEnding +
+    'AQID' + LineEnding +
+    '-----END RSA PRIVATE KEY-----' + LineEnding
+  );
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LMismatchedMarker,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'mismatched-marker PEM should be rejected'
+  );
+  AssertContains(LErr, 'No private key block found in PEM blob', 'mismatched-marker PEM error message mismatch');
+
+  LBrokenBase64 := TEncoding.ASCII.GetBytes(
+    '-----BEGIN PRIVATE KEY-----' + LineEnding +
+    '!!!!' + LineEnding +
+    '-----END PRIVATE KEY-----' + LineEnding
+  );
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LBrokenBase64,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'broken-base64 PEM should be rejected'
+  );
+  AssertTrue(Length(LErr) > 0, 'broken-base64 PEM should produce non-empty error message');
+end;
+
+procedure TestRSASignatureRejectsEncryptedPEMBlock;
+var
+  LInput: TBytes;
+  LTranscriptHash: TBytes;
+  LErr: string;
+  LSig: TBytes;
+  LEncryptedLikePEM: TBytes;
+  I: Integer;
+begin
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($C0 + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  LEncryptedLikePEM := TEncoding.ASCII.GetBytes(
+    '-----BEGIN ENCRYPTED PRIVATE KEY-----' + LineEnding +
+    'AQID' + LineEnding +
+    '-----END ENCRYPTED PRIVATE KEY-----' + LineEnding
+  );
+
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LEncryptedLikePEM,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'encrypted private key block should be rejected'
+  );
+  AssertContains(LErr, 'Encrypted PKCS#8 private keys are not supported', 'encrypted-key rejection message mismatch');
+end;
+
 procedure TestRSASignatureKeySizeConsistency;
 var
   LKeyBlob: TBytes;
@@ -2343,6 +2725,11 @@ begin
   TestRSASignatureUsesFirstUsableRSAKeyBlock;
   TestRSASignatureWith1024BitKeyLength;
   TestRSASignatureErrorMessagesAreStable;
+  TestRSASignatureHandlesMalformedDERVariants;
+  TestRSASignatureSelectsRSAFromMixedPEMBlocks;
+  TestRSASignatureRejectsPEMWithoutUsableRSAKey;
+  TestRSASignatureRejectsMalformedPEMEnvelopes;
+  TestRSASignatureRejectsEncryptedPEMBlock;
   TestRSASignatureRejectsPEMWithoutPrivateKeyBlock;
   TestRSASignatureKeySizeConsistency;
   TestRSASignatureFallsBackWhenPrivateExponentCorrupted;
