@@ -965,6 +965,140 @@ begin
     Fail(AMessage + ' (missing: ' + ASubText + ')');
 end;
 
+procedure AssertEqualsQWord(AExpected, AActual: QWord; const AMessage: string);
+begin
+  if AExpected <> AActual then
+    Fail(Format('%s (expected=%d actual=%d)', [AMessage, AExpected, AActual]));
+end;
+
+function BytesToQWord(const AData: TBytes): QWord;
+var
+  I: Integer;
+begin
+  Result := 0;
+  for I := 0 to Length(AData) - 1 do
+    Result := (Result shl 8) or QWord(AData[I]);
+end;
+
+function QWordToBytes(AValue: QWord): TBytes;
+var
+  LValue: QWord;
+  LCount: Integer;
+  I: Integer;
+begin
+  if AValue = 0 then
+  begin
+    SetLength(Result, 1);
+    Result[0] := 0;
+    Exit;
+  end;
+
+  LValue := AValue;
+  LCount := 0;
+  while LValue > 0 do
+  begin
+    Inc(LCount);
+    LValue := LValue shr 8;
+  end;
+
+  SetLength(Result, LCount);
+  LValue := AValue;
+  for I := LCount - 1 downto 0 do
+  begin
+    Result[I] := Byte(LValue and $FF);
+    LValue := LValue shr 8;
+  end;
+end;
+
+function PowModQWord(ABase, AExponent, AModulus: QWord): QWord;
+var
+  LBase: QWord;
+  LResult: QWord;
+  LExponent: QWord;
+begin
+  if AModulus = 0 then
+    Exit(0);
+
+  LBase := ABase mod AModulus;
+  LExponent := AExponent;
+  LResult := 1 mod AModulus;
+
+  while LExponent > 0 do
+  begin
+    if (LExponent and 1) = 1 then
+      LResult := (LResult * LBase) mod AModulus;
+    LBase := (LBase * LBase) mod AModulus;
+    LExponent := LExponent shr 1;
+  end;
+
+  Result := LResult;
+end;
+
+procedure AssertBigIntModMatchesQWord(AValue, AModulus: QWord; const ALabel: string);
+var
+  LOut: TBytes;
+  LErr: string;
+  LExpected: QWord;
+begin
+  AssertTrue(
+    TryBigIntModFromUnsignedBytes(QWordToBytes(AValue), QWordToBytes(AModulus), LOut, LErr),
+    ALabel + ': mod operation failed: ' + LErr
+  );
+  LExpected := AValue mod AModulus;
+  AssertEqualsQWord(LExpected, BytesToQWord(LOut), ALabel + ': mod result mismatch');
+end;
+
+procedure AssertBigIntModMulMatchesQWord(ALeft, ARight, AModulus: QWord; const ALabel: string);
+var
+  LOut: TBytes;
+  LErr: string;
+  LExpected: QWord;
+begin
+  AssertTrue(
+    TryBigIntModMulFromUnsignedBytes(QWordToBytes(ALeft), QWordToBytes(ARight), QWordToBytes(AModulus), LOut, LErr),
+    ALabel + ': modmul operation failed: ' + LErr
+  );
+  LExpected := ((ALeft mod AModulus) * (ARight mod AModulus)) mod AModulus;
+  AssertEqualsQWord(LExpected, BytesToQWord(LOut), ALabel + ': modmul result mismatch');
+end;
+
+procedure AssertBigIntModExpMatchesQWord(ABase, AExponent, AModulus: QWord; const ALabel: string);
+var
+  LOut: TBytes;
+  LErr: string;
+  LExpected: QWord;
+begin
+  AssertTrue(
+    TryBigIntModExpFromUnsignedBytes(QWordToBytes(ABase), QWordToBytes(AExponent), QWordToBytes(AModulus), LOut, LErr),
+    ALabel + ': modexp operation failed: ' + LErr
+  );
+  LExpected := PowModQWord(ABase, AExponent, AModulus);
+  AssertEqualsQWord(LExpected, BytesToQWord(LOut), ALabel + ': modexp result mismatch');
+end;
+
+procedure AssertBigIntSubModMatchesQWord(ALeft, ARight, AModulus: QWord; const ALabel: string);
+var
+  LOut: TBytes;
+  LErr: string;
+  LLeftReduced: QWord;
+  LRightReduced: QWord;
+  LExpected: QWord;
+begin
+  AssertTrue(
+    TryBigIntSubtractModuloFromUnsignedBytes(QWordToBytes(ALeft), QWordToBytes(ARight), QWordToBytes(AModulus), LOut, LErr),
+    ALabel + ': subtract-mod operation failed: ' + LErr
+  );
+
+  LLeftReduced := ALeft mod AModulus;
+  LRightReduced := ARight mod AModulus;
+  if LLeftReduced >= LRightReduced then
+    LExpected := LLeftReduced - LRightReduced
+  else
+    LExpected := AModulus - (LRightReduced - LLeftReduced);
+
+  AssertEqualsQWord(LExpected, BytesToQWord(LOut), ALabel + ': subtract-mod result mismatch');
+end;
+
 function BuildPKCS8WithContextAttribute(const ADER: TBytes): TBytes;
 const
   ATTRS_TAIL: array[0..21] of Byte = (
@@ -1667,6 +1801,160 @@ begin
   AssertEqualsInt($05, LOut[1], 'BigInt cross-byte vector low byte mismatch');
 end;
 
+procedure TestBigIntQWordVectorSuite;
+begin
+  AssertBigIntModMatchesQWord($00, $11, 'mod-zero');
+  AssertBigIntModMatchesQWord($10, $11, 'mod-less-than-modulus');
+  AssertBigIntModMatchesQWord($11, $11, 'mod-equals-modulus');
+  AssertBigIntModMatchesQWord($1234, $11, 'mod-small-divisor');
+  AssertBigIntModMatchesQWord($123456, $10001, 'mod-rsa65537');
+  AssertBigIntModMatchesQWord($FFFFFFFF, $7FFFFFFF, 'mod-32bit-max');
+  AssertBigIntModMatchesQWord(High(QWord), $FFFFFFFF, 'mod-64bit-by-32bit');
+  AssertBigIntModMatchesQWord(High(QWord) - QWord($0E), $FFFFFFFB, 'mod-prime-ish');
+  AssertBigIntModMatchesQWord($123456789ABCDEF0, $100000000, 'mod-power-of-two');
+
+  AssertBigIntModMulMatchesQWord($00, $1234, $11, 'modmul-zero-left');
+  AssertBigIntModMulMatchesQWord($1234, $00, $11, 'modmul-zero-right');
+  AssertBigIntModMulMatchesQWord($01, $1234, $11, 'modmul-one-left');
+  AssertBigIntModMulMatchesQWord($1234, $01, $11, 'modmul-one-right');
+  AssertBigIntModMulMatchesQWord($1234, $5678, $FFFF, 'modmul-16bit');
+  AssertBigIntModMulMatchesQWord($123456, $654321, $10001, 'modmul-rsa65537');
+  AssertBigIntModMulMatchesQWord($FFFFFFFF, $FFFFFFFD, $7FFFFFFF, 'modmul-32bit-max');
+  AssertBigIntModMulMatchesQWord($ABCDEF01, $12345678, $FFFFFFFB, 'modmul-random-a');
+  AssertBigIntModMulMatchesQWord(QWord($FFFFFFFF) shl 32, $00000000FFFFFFFF, $FFFFFFFF, 'modmul-crosslimb');
+
+  AssertBigIntModExpMatchesQWord($02, $00, $11, 'modexp-exp-zero');
+  AssertBigIntModExpMatchesQWord($00, $05, $11, 'modexp-base-zero');
+  AssertBigIntModExpMatchesQWord($01, $1234, $11, 'modexp-base-one');
+  AssertBigIntModExpMatchesQWord($02, $10, $11, 'modexp-power-two');
+  AssertBigIntModExpMatchesQWord($1234, $03, $10001, 'modexp-rsa65537');
+  AssertBigIntModExpMatchesQWord($DEADBEEF, $11, $FFFFFFFB, 'modexp-random-a');
+  AssertBigIntModExpMatchesQWord($123456789, $12345, $7FFFFFFF, 'modexp-large-exp');
+  AssertBigIntModExpMatchesQWord($FFFFFFFF, $FFFFFFFF, $FFFFFFFB, 'modexp-max-32');
+
+  AssertBigIntSubModMatchesQWord($05, $03, $11, 'submod-no-wrap');
+  AssertBigIntSubModMatchesQWord($03, $05, $11, 'submod-wrap');
+  AssertBigIntSubModMatchesQWord($11, $01, $11, 'submod-left-equals-mod');
+  AssertBigIntSubModMatchesQWord($1234, $5678, $10001, 'submod-rsa65537');
+  AssertBigIntSubModMatchesQWord($FFFFFFFF, $FFFFFFFE, $7FFFFFFF, 'submod-32bit');
+  AssertBigIntSubModMatchesQWord($ABCDEF01, $12345678, $FFFFFFFB, 'submod-random-a');
+end;
+
+procedure TestBigIntErrorSurface;
+var
+  LOut: TBytes;
+  LErr: string;
+begin
+  AssertTrue(
+    not TryBigIntModFromUnsignedBytes([$01], [$00], LOut, LErr),
+    'mod zero modulus should fail'
+  );
+  AssertContains(LErr, 'Modulus is zero', 'mod zero-modulus message mismatch');
+
+  AssertTrue(
+    not TryBigIntModExpFromUnsignedBytes([$02], [$03], [$00], LOut, LErr),
+    'modexp zero modulus should fail'
+  );
+  AssertContains(LErr, 'Modulus is zero', 'modexp zero-modulus message mismatch');
+
+  AssertTrue(
+    not TryBigIntModMulFromUnsignedBytes([$02], [$03], [$00], LOut, LErr),
+    'modmul zero modulus should fail'
+  );
+  AssertContains(LErr, 'Modulus is zero', 'modmul zero-modulus message mismatch');
+
+  AssertTrue(
+    not TryBigIntSubtractModuloFromUnsignedBytes([$02], [$03], [$00], LOut, LErr),
+    'submod zero modulus should fail'
+  );
+  AssertContains(LErr, 'Modulus is zero', 'submod zero-modulus message mismatch');
+
+  AssertTrue(
+    not TryBigIntToFixedLengthFromUnsignedBytes([$01], 0, LOut, LErr),
+    'fixed length zero should fail'
+  );
+  AssertContains(LErr, 'RSA output length is invalid', 'fixed-length invalid message mismatch');
+
+  AssertTrue(
+    not TryBigIntToFixedLengthFromUnsignedBytes([$01], -1, LOut, LErr),
+    'fixed length negative should fail'
+  );
+  AssertContains(LErr, 'RSA output length is invalid', 'fixed-length negative message mismatch');
+
+  AssertTrue(
+    not TryBigIntToFixedLengthFromUnsignedBytes([$01, $00], 1, LOut, LErr),
+    'fixed length overflow should fail'
+  );
+  AssertContains(LErr, 'RSA output does not fit target length', 'fixed-length overflow message mismatch');
+end;
+
+procedure TestBigIntLeadingZeroNormalization;
+var
+  LOut: TBytes;
+  LErr: string;
+begin
+  AssertTrue(
+    TryBigIntModFromUnsignedBytes([$00, $00, $01, $23], [$00, $00, $00, $10], LOut, LErr),
+    'leading-zero mod should succeed: ' + LErr
+  );
+  AssertEqualsQWord($03, BytesToQWord(LOut), 'leading-zero mod mismatch');
+
+  AssertTrue(
+    TryBigIntModMulFromUnsignedBytes([$00, $00, $01], [$00, $02], [$00, $11], LOut, LErr),
+    'leading-zero modmul should succeed: ' + LErr
+  );
+  AssertEqualsQWord($02, BytesToQWord(LOut), 'leading-zero modmul mismatch');
+
+  AssertTrue(
+    TryBigIntModExpFromUnsignedBytes([$00, $02], [$00, $04], [$00, $11], LOut, LErr),
+    'leading-zero modexp should succeed: ' + LErr
+  );
+  AssertEqualsQWord($10, BytesToQWord(LOut), 'leading-zero modexp mismatch');
+
+  AssertTrue(
+    TryBigIntSubtractModuloFromUnsignedBytes([$00, $03], [$00, $05], [$00, $11], LOut, LErr),
+    'leading-zero submod should succeed: ' + LErr
+  );
+  AssertEqualsQWord($0F, BytesToQWord(LOut), 'leading-zero submod mismatch');
+end;
+
+procedure TestBigIntFixedLengthExactFit;
+var
+  LOut: TBytes;
+  LErr: string;
+begin
+  AssertTrue(
+    TryBigIntToFixedLengthFromUnsignedBytes([$00, $00, $01, $23], 4, LOut, LErr),
+    'fixed-length exact fit should succeed: ' + LErr
+  );
+  AssertEqualsInt(4, Length(LOut), 'fixed-length output length mismatch');
+  AssertEqualsInt($00, LOut[0], 'fixed-length byte[0] mismatch');
+  AssertEqualsInt($00, LOut[1], 'fixed-length byte[1] mismatch');
+  AssertEqualsInt($01, LOut[2], 'fixed-length byte[2] mismatch');
+  AssertEqualsInt($23, LOut[3], 'fixed-length byte[3] mismatch');
+
+  AssertTrue(
+    TryBigIntToFixedLengthFromUnsignedBytes([$01, $23], 4, LOut, LErr),
+    'fixed-length left-pad should succeed: ' + LErr
+  );
+  AssertEqualsInt($00, LOut[0], 'fixed-length left-pad byte[0] mismatch');
+  AssertEqualsInt($00, LOut[1], 'fixed-length left-pad byte[1] mismatch');
+  AssertEqualsInt($01, LOut[2], 'fixed-length left-pad byte[2] mismatch');
+  AssertEqualsInt($23, LOut[3], 'fixed-length left-pad byte[3] mismatch');
+end;
+
+procedure TestRSAModExpExponentGuard;
+var
+  LSig: TBytes;
+  LErr: string;
+begin
+  AssertTrue(
+    not TryRSAModExpSignPurePascal([$01], [$00, $11], [$01, $00, $00, $00, $00], LSig, LErr),
+    'RSA oversized exponent should be rejected'
+  );
+  AssertContains(LErr, 'unreasonably large', 'RSA oversized exponent message mismatch');
+end;
+
 procedure TestBigIntRejectsNonCoprimeRSARepresentative;
 var
   LSig: TBytes;
@@ -2042,6 +2330,11 @@ begin
   TestSignerUnitHasNoExternalBigIntDependency;
   TestBigIntEvenModulusAndZeroExponent;
   TestBigIntCrossByteVector;
+  TestBigIntQWordVectorSuite;
+  TestBigIntErrorSurface;
+  TestBigIntLeadingZeroNormalization;
+  TestBigIntFixedLengthExactFit;
+  TestRSAModExpExponentGuard;
   TestBigIntRejectsNonCoprimeRSARepresentative;
   TestTinyModulusDefense;
   TestRSASignatureWithDERPrivateKey;
