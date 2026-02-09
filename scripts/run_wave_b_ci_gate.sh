@@ -7,15 +7,21 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 DRY_RUN=false
 VERBOSE=false
+WITH_COMPILE=true
+WITH_MODULES=true
+WITH_EXAMPLES=true
 MODULE_SET="PKCS7,PKCS12,CMS,Store,OCSP,TS,CT"
 EXAMPLES_THRESHOLD="80.0"
 EXAMPLES_REPORT_REL="test-reports/examples_compile_ci_gate.json"
 SUMMARY_OUT_REL=""
+WITH_TLS13_SIGN_PURITY_CHECK=false
 WITH_TLS13_SIGN_BENCH=false
 TLS13_SIGN_BENCH_ITERATIONS="3"
 TLS13_SIGN_BENCH_WARMUP="1"
 TLS13_SIGN_BENCH_SCHEME="rsa_pkcs1_sha256"
 TLS13_SIGN_BENCH_KEY="tests/certificate/test_certs/signer_key.pem"
+TLS13_SIGN_BENCH_TIMEOUT="120"
+TLS13_SIGN_BENCH_JSON_OUT_REL=""
 
 usage() {
   cat <<'USAGE'
@@ -26,7 +32,8 @@ Wave B Linux CI Gate Runner
   1) 全模块编译
   2) P2 核心模块回归
   3) 示例编译门禁（按通过率阈值判定）
-  4) （可选）TLS13 CertificateVerify 纯 Pascal signer 基准
+  4) （可选）TLS13 CertificateVerify signer 纯 Pascal 依赖检查
+  5) （可选）TLS13 CertificateVerify signer 基准
 
 用法：
   scripts/run_wave_b_ci_gate.sh [options]
@@ -36,11 +43,18 @@ Wave B Linux CI Gate Runner
   --examples-threshold FLOAT        示例通过率阈值，默认 80.0
   --examples-report PATH            示例 JSON 输出路径（相对项目根目录）
   --summary-out PATH                Summary markdown 输出路径（相对项目根目录）
-  --with-tls13-sign-bench           追加运行 TLS13 CertificateVerify signer 基准
+  --skip-compile                    跳过 compile_all_modules 阶段
+  --skip-modules                    跳过 run_all_module_tests 阶段
+  --skip-examples                   跳过 verify_examples_compile 阶段
+  --with-tls13-sign-purity-check    追加运行 TLS13 signer 纯 Pascal 依赖静态检查
+  --with-tls13-sign-bench           追加运行 TLS13 signer 基准
+  --only-tls13-sign-bench           快速模式：仅运行 TLS13 signer 基准
   --tls13-sign-bench-iterations N   签名基准迭代次数（默认: 3）
   --tls13-sign-bench-warmup N       签名基准预热次数（默认: 1）
   --tls13-sign-bench-scheme NAME    基准算法（默认: rsa_pkcs1_sha256）
   --tls13-sign-bench-key PATH       私钥路径（默认: tests/certificate/test_certs/signer_key.pem）
+  --tls13-sign-bench-timeout N      基准超时时间（秒，默认: 120）
+  --tls13-sign-bench-json-out PATH  基准 JSON 输出路径（相对项目根目录，可选）
   --verbose                         模块测试启用 verbose
   --dry-run                         仅打印命令，不执行
   --help                            显示帮助
@@ -65,7 +79,30 @@ while [[ $# -gt 0 ]]; do
       SUMMARY_OUT_REL="$2"
       shift 2
       ;;
+    --skip-compile)
+      WITH_COMPILE=false
+      shift
+      ;;
+    --skip-modules)
+      WITH_MODULES=false
+      shift
+      ;;
+    --skip-examples)
+      WITH_EXAMPLES=false
+      shift
+      ;;
+    --with-tls13-sign-purity-check)
+      WITH_TLS13_SIGN_PURITY_CHECK=true
+      shift
+      ;;
     --with-tls13-sign-bench)
+      WITH_TLS13_SIGN_BENCH=true
+      shift
+      ;;
+    --only-tls13-sign-bench)
+      WITH_COMPILE=false
+      WITH_MODULES=false
+      WITH_EXAMPLES=false
       WITH_TLS13_SIGN_BENCH=true
       shift
       ;;
@@ -83,6 +120,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --tls13-sign-bench-key)
       TLS13_SIGN_BENCH_KEY="$2"
+      shift 2
+      ;;
+    --tls13-sign-bench-timeout)
+      TLS13_SIGN_BENCH_TIMEOUT="$2"
+      shift 2
+      ;;
+    --tls13-sign-bench-json-out)
+      TLS13_SIGN_BENCH_JSON_OUT_REL="$2"
       shift 2
       ;;
     --verbose)
@@ -115,6 +160,11 @@ if [[ ! "$TLS13_SIGN_BENCH_WARMUP" =~ ^[0-9]+$ ]] || [[ "$TLS13_SIGN_BENCH_WARMU
   exit 1
 fi
 
+if [[ ! "$TLS13_SIGN_BENCH_TIMEOUT" =~ ^[0-9]+$ ]] || [[ "$TLS13_SIGN_BENCH_TIMEOUT" -le 0 ]]; then
+  echo "Invalid --tls13-sign-bench-timeout: $TLS13_SIGN_BENCH_TIMEOUT" >&2
+  exit 1
+fi
+
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 if [[ -z "$SUMMARY_OUT_REL" ]]; then
   SUMMARY_OUT_REL="test-reports/wave_b_ci_gate_summary_${RUN_ID}.md"
@@ -125,7 +175,13 @@ SUMMARY_OUT="$PROJECT_ROOT/$SUMMARY_OUT_REL"
 COMPILE_LOG="$PROJECT_ROOT/test-reports/wave_b_compile_${RUN_ID}.log"
 MODULE_LOG="$PROJECT_ROOT/test-reports/wave_b_modules_${RUN_ID}.log"
 EXAMPLES_LOG="$PROJECT_ROOT/test-reports/wave_b_examples_${RUN_ID}.log"
+PURITY_LOG="$PROJECT_ROOT/test-reports/wave_b_tls13_sign_purity_${RUN_ID}.log"
 BENCH_LOG="$PROJECT_ROOT/test-reports/wave_b_tls13_sign_bench_${RUN_ID}.log"
+
+BENCH_JSON_OUT=""
+if [[ -n "$TLS13_SIGN_BENCH_JSON_OUT_REL" ]]; then
+  BENCH_JSON_OUT="$PROJECT_ROOT/$TLS13_SIGN_BENCH_JSON_OUT_REL"
+fi
 
 mkdir -p "$PROJECT_ROOT/test-reports"
 
@@ -166,20 +222,56 @@ fi
 
 compile_cmd="cd '$PROJECT_ROOT' && python3 scripts/compile_all_modules.py"
 examples_cmd="cd '$PROJECT_ROOT' && bash scripts/verify_examples_compile.sh -f json -o '$EXAMPLES_REPORT_REL'"
-bench_cmd="cd '$PROJECT_ROOT' && FAFAFA_TLS13_SIGN_BENCH_ITERATIONS='$TLS13_SIGN_BENCH_ITERATIONS' FAFAFA_TLS13_SIGN_BENCH_WARMUP='$TLS13_SIGN_BENCH_WARMUP' FAFAFA_TLS13_SIGN_BENCH_SCHEME='$TLS13_SIGN_BENCH_SCHEME' FAFAFA_TLS13_SIGN_BENCH_KEY='$TLS13_SIGN_BENCH_KEY' bash scripts/run_freepascal_tls13_servercertverify_bench.sh"
+purity_cmd="cd '$PROJECT_ROOT' && bash scripts/check_tls13_signer_pure_pascal.sh"
+bench_cmd="cd '$PROJECT_ROOT' && FAFAFA_TLS13_SIGN_BENCH_ITERATIONS='$TLS13_SIGN_BENCH_ITERATIONS' FAFAFA_TLS13_SIGN_BENCH_WARMUP='$TLS13_SIGN_BENCH_WARMUP' FAFAFA_TLS13_SIGN_BENCH_SCHEME='$TLS13_SIGN_BENCH_SCHEME' FAFAFA_TLS13_SIGN_BENCH_KEY='$TLS13_SIGN_BENCH_KEY' FAFAFA_TLS13_SIGN_BENCH_TIMEOUT='$TLS13_SIGN_BENCH_TIMEOUT' FAFAFA_TLS13_SIGN_BENCH_JSON_OUT='$BENCH_JSON_OUT' bash scripts/run_freepascal_tls13_servercertverify_bench.sh"
 
-compile_exit=$(run_step "compile" "$compile_cmd" "$COMPILE_LOG")
-modules_exit=$(run_step "modules" "$build_module_cmd" "$MODULE_LOG")
-examples_exit=$(run_step "examples" "$examples_cmd" "$EXAMPLES_LOG")
-
+compile_exit="0"
+modules_exit="0"
+examples_exit="0"
+purity_exit="0"
 bench_exit="0"
+
+compile_status="SKIP"
+modules_status="SKIP"
+examples_status="SKIP"
+purity_status="SKIP"
 bench_status="SKIP"
-bench_row=""
-bench_cmd_md=""
-bench_metrics_md=""
-bench_crt_avg="n/a"
-bench_d_avg="n/a"
-bench_speedup="n/a"
+
+if [[ "$WITH_COMPILE" == "true" ]]; then
+  compile_exit=$(run_step "compile" "$compile_cmd" "$COMPILE_LOG")
+  if [[ "$compile_exit" == "0" ]]; then
+    compile_status="PASS"
+  else
+    compile_status="FAIL"
+  fi
+fi
+
+if [[ "$WITH_MODULES" == "true" ]]; then
+  modules_exit=$(run_step "modules" "$build_module_cmd" "$MODULE_LOG")
+  if [[ "$modules_exit" == "0" ]]; then
+    modules_status="PASS"
+  else
+    modules_status="FAIL"
+  fi
+fi
+
+if [[ "$WITH_EXAMPLES" == "true" ]]; then
+  examples_exit=$(run_step "examples" "$examples_cmd" "$EXAMPLES_LOG")
+  if [[ "$examples_exit" == "0" ]]; then
+    examples_status="PASS"
+  else
+    examples_status="FAIL"
+  fi
+fi
+
+if [[ "$WITH_TLS13_SIGN_PURITY_CHECK" == "true" ]]; then
+  purity_exit=$(run_step "tls13_sign_purity" "$purity_cmd" "$PURITY_LOG")
+  if [[ "$purity_exit" == "0" ]]; then
+    purity_status="PASS"
+  else
+    purity_status="FAIL"
+  fi
+fi
 
 if [[ "$WITH_TLS13_SIGN_BENCH" == "true" ]]; then
   bench_exit=$(run_step "tls13_sign_bench" "$bench_cmd" "$BENCH_LOG")
@@ -188,42 +280,16 @@ if [[ "$WITH_TLS13_SIGN_BENCH" == "true" ]]; then
   else
     bench_status="FAIL"
   fi
-
-  bench_row="| tls13_servercertverify_bench | \`$bench_exit\` | **$bench_status** | \`$(realpath --relative-to="$PROJECT_ROOT" "$BENCH_LOG")\` |"
-  bench_cmd_md="
-\`$bench_cmd\`"
-
-  if [[ "$DRY_RUN" == "false" && -f "$BENCH_LOG" ]]; then
-    bench_crt_avg=$(grep -E '^CRT_avg_ms=' "$BENCH_LOG" | tail -1 | cut -d '=' -f2 || true)
-    bench_d_avg=$(grep -E '^D_avg_ms=' "$BENCH_LOG" | tail -1 | cut -d '=' -f2 || true)
-    bench_speedup=$(grep -E '^Speedup_D_over_CRT=' "$BENCH_LOG" | tail -1 | cut -d '=' -f2 || true)
-
-    bench_crt_avg="${bench_crt_avg:-n/a}"
-    bench_d_avg="${bench_d_avg:-n/a}"
-    bench_speedup="${bench_speedup:-n/a}"
-  fi
-
-  bench_metrics_md="
-## TLS13 Signer Bench Metrics
-
-- Log: \`$(realpath --relative-to="$PROJECT_ROOT" "$BENCH_LOG")\`
-- Scheme: \`$TLS13_SIGN_BENCH_SCHEME\`
-- Iterations: \`$TLS13_SIGN_BENCH_ITERATIONS\`
-- Warmup: \`$TLS13_SIGN_BENCH_WARMUP\`
-- Key: \`$TLS13_SIGN_BENCH_KEY\`
-- CRT_avg_ms: \`$bench_crt_avg\`
-- D_avg_ms: \`$bench_d_avg\`
-- Speedup_D_over_CRT: \`$bench_speedup\`"
 fi
 
-examples_total="0"
-examples_passed="0"
-examples_failed="0"
-examples_skipped="0"
-examples_rate="0.0"
+examples_total="n/a"
+examples_passed="n/a"
+examples_failed="n/a"
+examples_skipped="n/a"
+examples_rate="n/a"
 examples_json_ok="false"
 
-if [[ "$DRY_RUN" == "false" && -f "$EXAMPLES_REPORT" ]]; then
+if [[ "$WITH_EXAMPLES" == "true" && "$DRY_RUN" == "false" && -f "$EXAMPLES_REPORT" ]]; then
   parsed=$(python3 - "$EXAMPLES_REPORT" <<'PY'
 import json
 import sys
@@ -248,40 +314,77 @@ PY
   fi
 fi
 
-compile_status="FAIL"
-modules_status="FAIL"
-examples_status="FAIL"
-
-if [[ "$compile_exit" == "0" ]]; then
-  compile_status="PASS"
-fi
-
-if [[ "$modules_exit" == "0" ]]; then
-  modules_status="PASS"
-fi
-
-if [[ "$DRY_RUN" == "true" ]]; then
-  examples_status="PASS"
-else
-  threshold_pass=$(python3 - <<PY
+if [[ "$WITH_EXAMPLES" == "true" && "$DRY_RUN" == "false" ]]; then
+  examples_status="FAIL"
+  if [[ "$examples_json_ok" == "true" ]]; then
+    threshold_pass=$(python3 - <<PY
 rate = float("$examples_rate")
 threshold = float("$EXAMPLES_THRESHOLD")
 print("true" if rate >= threshold else "false")
 PY
 )
-
-  if [[ "$examples_json_ok" == "true" && "$threshold_pass" == "true" ]]; then
-    examples_status="PASS"
+    if [[ "$examples_exit" == "0" && "$threshold_pass" == "true" ]]; then
+      examples_status="PASS"
+    fi
   fi
 fi
 
-overall_status="FAIL"
-if [[ "$compile_status" == "PASS" && "$modules_status" == "PASS" && "$examples_status" == "PASS" ]]; then
-  overall_status="PASS"
+bench_crt_avg="n/a"
+bench_d_avg="n/a"
+bench_speedup="n/a"
+
+if [[ "$WITH_TLS13_SIGN_BENCH" == "true" && "$DRY_RUN" == "false" && -f "$BENCH_LOG" ]]; then
+  bench_crt_avg=$(grep -E '^CRT_avg_ms=' "$BENCH_LOG" | tail -1 | cut -d '=' -f2 || true)
+  bench_d_avg=$(grep -E '^D_avg_ms=' "$BENCH_LOG" | tail -1 | cut -d '=' -f2 || true)
+  bench_speedup=$(grep -E '^Speedup_D_over_CRT=' "$BENCH_LOG" | tail -1 | cut -d '=' -f2 || true)
+  bench_crt_avg="${bench_crt_avg:-n/a}"
+  bench_d_avg="${bench_d_avg:-n/a}"
+  bench_speedup="${bench_speedup:-n/a}"
 fi
 
+overall_status="PASS"
+
+if [[ "$WITH_COMPILE" == "true" && "$compile_status" != "PASS" ]]; then
+  overall_status="FAIL"
+fi
+if [[ "$WITH_MODULES" == "true" && "$modules_status" != "PASS" ]]; then
+  overall_status="FAIL"
+fi
+if [[ "$WITH_EXAMPLES" == "true" && "$examples_status" != "PASS" ]]; then
+  overall_status="FAIL"
+fi
+if [[ "$WITH_TLS13_SIGN_PURITY_CHECK" == "true" && "$purity_status" != "PASS" ]]; then
+  overall_status="FAIL"
+fi
 if [[ "$WITH_TLS13_SIGN_BENCH" == "true" && "$bench_status" != "PASS" ]]; then
   overall_status="FAIL"
+fi
+
+compile_log_rel="-"
+modules_log_rel="-"
+examples_log_rel="-"
+purity_log_rel="-"
+bench_log_rel="-"
+
+if [[ "$WITH_COMPILE" == "true" ]]; then
+  compile_log_rel="$(realpath --relative-to="$PROJECT_ROOT" "$COMPILE_LOG")"
+fi
+if [[ "$WITH_MODULES" == "true" ]]; then
+  modules_log_rel="$(realpath --relative-to="$PROJECT_ROOT" "$MODULE_LOG")"
+fi
+if [[ "$WITH_EXAMPLES" == "true" ]]; then
+  examples_log_rel="$(realpath --relative-to="$PROJECT_ROOT" "$EXAMPLES_LOG")"
+fi
+if [[ "$WITH_TLS13_SIGN_PURITY_CHECK" == "true" ]]; then
+  purity_log_rel="$(realpath --relative-to="$PROJECT_ROOT" "$PURITY_LOG")"
+fi
+if [[ "$WITH_TLS13_SIGN_BENCH" == "true" ]]; then
+  bench_log_rel="$(realpath --relative-to="$PROJECT_ROOT" "$BENCH_LOG")"
+fi
+
+bench_json_line=""
+if [[ -n "$BENCH_JSON_OUT" ]]; then
+  bench_json_line="- JSON: \`$(realpath --relative-to="$PROJECT_ROOT" "$BENCH_JSON_OUT")\`"
 fi
 
 cat > "$SUMMARY_OUT" <<EOF_SUMMARY
@@ -296,17 +399,29 @@ cat > "$SUMMARY_OUT" <<EOF_SUMMARY
 
 | Step | Exit Code | Status | Log |
 |------|-----------|--------|-----|
-| compile_all_modules | \`$compile_exit\` | **$compile_status** | \`$(realpath --relative-to="$PROJECT_ROOT" "$COMPILE_LOG")\` |
-| run_all_module_tests | \`$modules_exit\` | **$modules_status** | \`$(realpath --relative-to="$PROJECT_ROOT" "$MODULE_LOG")\` |
-| verify_examples_compile | \`$examples_exit\` | **$examples_status** | \`$(realpath --relative-to="$PROJECT_ROOT" "$EXAMPLES_LOG")\` |
-$bench_row
+| compile_all_modules | \`$compile_exit\` | **$compile_status** | \`$compile_log_rel\` |
+| run_all_module_tests | \`$modules_exit\` | **$modules_status** | \`$modules_log_rel\` |
+| verify_examples_compile | \`$examples_exit\` | **$examples_status** | \`$examples_log_rel\` |
+| tls13_signer_purity | \`$purity_exit\` | **$purity_status** | \`$purity_log_rel\` |
+| tls13_servercertverify_bench | \`$bench_exit\` | **$bench_status** | \`$bench_log_rel\` |
 
 ## Examples Gate Metrics
 
-- Report: \`$(realpath --relative-to="$PROJECT_ROOT" "$EXAMPLES_REPORT")\`
+- Report: \`$(realpath --relative-to="$PROJECT_ROOT" "$EXAMPLES_REPORT" 2>/dev/null || echo "$EXAMPLES_REPORT_REL")\`
 - Threshold: \`$EXAMPLES_THRESHOLD\`
 - Summary: \`passed=$examples_passed, failed=$examples_failed, skipped=$examples_skipped, total=$examples_total, pass_rate=$examples_rate\`
-$bench_metrics_md
+
+## TLS13 Signer Bench Metrics
+
+- Scheme: \`$TLS13_SIGN_BENCH_SCHEME\`
+- Iterations: \`$TLS13_SIGN_BENCH_ITERATIONS\`
+- Warmup: \`$TLS13_SIGN_BENCH_WARMUP\`
+- Timeout: \`$TLS13_SIGN_BENCH_TIMEOUT\`
+- Key: \`$TLS13_SIGN_BENCH_KEY\`
+- CRT_avg_ms: \`$bench_crt_avg\`
+- D_avg_ms: \`$bench_d_avg\`
+- Speedup_D_over_CRT: \`$bench_speedup\`
+$bench_json_line
 
 ## Commands
 
@@ -315,7 +430,10 @@ $bench_metrics_md
 \`$build_module_cmd\`
 
 \`$examples_cmd\`
-$bench_cmd_md
+
+\`$purity_cmd\`
+
+\`$bench_cmd\`
 EOF_SUMMARY
 
 echo "[WAVE-B] summary: $SUMMARY_OUT"

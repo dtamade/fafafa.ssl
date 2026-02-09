@@ -9,6 +9,8 @@ WARMUP="${FAFAFA_TLS13_SIGN_BENCH_WARMUP:-2}"
 SCHEME="${FAFAFA_TLS13_SIGN_BENCH_SCHEME:-rsa_pkcs1_sha256}"
 KEY_FILE="${FAFAFA_TLS13_SIGN_BENCH_KEY:-tests/certificate/test_certs/signer_key.pem}"
 KEEP_WORKDIR="${FAFAFA_TLS13_SIGN_BENCH_KEEP_WORKDIR:-0}"
+TIMEOUT_SECONDS="${FAFAFA_TLS13_SIGN_BENCH_TIMEOUT:-120}"
+JSON_OUT="${FAFAFA_TLS13_SIGN_BENCH_JSON_OUT:-}"
 
 cleanup() {
   if [[ "$KEEP_WORKDIR" = "1" ]]; then
@@ -31,6 +33,16 @@ fi
 
 if [[ ! -f "$ROOT_DIR/$KEY_FILE" ]]; then
   echo "[bench] key not found: $ROOT_DIR/$KEY_FILE" >&2
+  exit 2
+fi
+
+if [[ ! "$TIMEOUT_SECONDS" =~ ^[0-9]+$ ]] || [[ "$TIMEOUT_SECONDS" -le 0 ]]; then
+  echo "[bench] invalid FAFAFA_TLS13_SIGN_BENCH_TIMEOUT: $TIMEOUT_SECONDS" >&2
+  exit 2
+fi
+
+if [[ "$SCHEME" != "rsa_pkcs1_sha256" && "$SCHEME" != "rsa_pss_rsae_sha256" && "$SCHEME" != "rsa_pss_pss_sha256" ]]; then
+  echo "[bench] invalid FAFAFA_TLS13_SIGN_BENCH_SCHEME: $SCHEME" >&2
   exit 2
 fi
 
@@ -437,8 +449,74 @@ fpc -MObjFPC -Scghi -O2 -Criot -g -gl -vewnhibq \
 echo "[bench] compiled: $WORKDIR/bench_tls13_servercertverify"
 echo "[bench] scheme=$SCHEME iterations=$ITERATIONS warmup=$WARMUP key=$KEY_FILE"
 
-BENCH_KEY_PATH="$KEY_FILE" \
+run_cmd=("$WORKDIR/bench_tls13_servercertverify")
+if command -v timeout >/dev/null 2>&1; then
+  run_cmd=(timeout "${TIMEOUT_SECONDS}s" "${run_cmd[@]}")
+fi
+
+set +e
+BENCH_OUTPUT=$(BENCH_KEY_PATH="$KEY_FILE" \
 BENCH_SCHEME="$SCHEME" \
 BENCH_ITERATIONS="$ITERATIONS" \
 BENCH_WARMUP="$WARMUP" \
-"$WORKDIR/bench_tls13_servercertverify"
+"${run_cmd[@]}" 2>&1)
+BENCH_RC=$?
+set -e
+
+echo "$BENCH_OUTPUT"
+
+if [[ "$BENCH_RC" -eq 124 ]]; then
+  echo "[bench] timed out after ${TIMEOUT_SECONDS}s" >&2
+  exit 124
+fi
+
+if [[ "$BENCH_RC" -ne 0 ]]; then
+  echo "[bench] failed with exit code: $BENCH_RC" >&2
+  exit "$BENCH_RC"
+fi
+
+if [[ -n "$JSON_OUT" ]]; then
+  mkdir -p "$(dirname "$JSON_OUT")"
+
+  bench_scheme=$(echo "$BENCH_OUTPUT" | grep -E '^BENCH_SCHEME=' | tail -1 | cut -d '=' -f2 || true)
+  bench_key=$(echo "$BENCH_OUTPUT" | grep -E '^BENCH_KEY=' | tail -1 | cut -d '=' -f2 || true)
+  bench_iterations=$(echo "$BENCH_OUTPUT" | grep -E '^BENCH_ITERATIONS=' | tail -1 | cut -d '=' -f2 || true)
+  bench_warmup=$(echo "$BENCH_OUTPUT" | grep -E '^BENCH_WARMUP=' | tail -1 | cut -d '=' -f2 || true)
+  crt_total_ms=$(echo "$BENCH_OUTPUT" | grep -E '^CRT_total_ms=' | tail -1 | cut -d '=' -f2 || true)
+  crt_avg_ms=$(echo "$BENCH_OUTPUT" | grep -E '^CRT_avg_ms=' | tail -1 | cut -d '=' -f2 || true)
+  d_total_ms=$(echo "$BENCH_OUTPUT" | grep -E '^D_total_ms=' | tail -1 | cut -d '=' -f2 || true)
+  d_avg_ms=$(echo "$BENCH_OUTPUT" | grep -E '^D_avg_ms=' | tail -1 | cut -d '=' -f2 || true)
+  speedup=$(echo "$BENCH_OUTPUT" | grep -E '^Speedup_D_over_CRT=' | tail -1 | cut -d '=' -f2 || true)
+
+  BENCH_SCHEME_VALUE="${bench_scheme}" \
+  BENCH_KEY_VALUE="${bench_key}" \
+  BENCH_ITERATIONS_VALUE="${bench_iterations}" \
+  BENCH_WARMUP_VALUE="${bench_warmup}" \
+  CRT_TOTAL_MS_VALUE="${crt_total_ms}" \
+  CRT_AVG_MS_VALUE="${crt_avg_ms}" \
+  D_TOTAL_MS_VALUE="${d_total_ms}" \
+  D_AVG_MS_VALUE="${d_avg_ms}" \
+  SPEEDUP_VALUE="${speedup}" \
+  python3 - "$JSON_OUT" <<'PY'
+import json
+import os
+import sys
+
+out = sys.argv[1]
+data = {
+    "bench_scheme": os.environ.get("BENCH_SCHEME_VALUE", ""),
+    "bench_key": os.environ.get("BENCH_KEY_VALUE", ""),
+    "bench_iterations": os.environ.get("BENCH_ITERATIONS_VALUE", ""),
+    "bench_warmup": os.environ.get("BENCH_WARMUP_VALUE", ""),
+    "crt_total_ms": os.environ.get("CRT_TOTAL_MS_VALUE", ""),
+    "crt_avg_ms": os.environ.get("CRT_AVG_MS_VALUE", ""),
+    "d_total_ms": os.environ.get("D_TOTAL_MS_VALUE", ""),
+    "d_avg_ms": os.environ.get("D_AVG_MS_VALUE", ""),
+    "speedup_d_over_crt": os.environ.get("SPEEDUP_VALUE", ""),
+}
+with open(out, "w", encoding="utf-8") as f:
+    json.dump(data, f, ensure_ascii=False, indent=2)
+PY
+
+  echo "[bench] json_out=$JSON_OUT"
+fi
