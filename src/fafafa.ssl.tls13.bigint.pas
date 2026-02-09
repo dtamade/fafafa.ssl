@@ -663,6 +663,37 @@ begin
   Result := MontgomeryMultiply(ACtx, LAccumulator, ACtx.One);
 end;
 
+function BigNatModMultiplyClassic(
+  const ALeft, ARight, AModulus: TBigNat
+): TBigNat;
+begin
+  Result := BigNatMultiply(BigNatMod(ALeft, AModulus), BigNatMod(ARight, AModulus));
+  Result := BigNatMod(Result, AModulus);
+end;
+
+function BigNatModExpClassic(
+  const ABase, AExponent, AModulus: TBigNat
+): TBigNat;
+var
+  LAccumulator: TBigNat;
+  LBaseReduced: TBigNat;
+  LBitLength: Integer;
+  I: Integer;
+begin
+  LAccumulator := BigNatMod(BigNatFromWord(1), AModulus);
+  LBaseReduced := BigNatMod(ABase, AModulus);
+
+  LBitLength := BigNatBitLength(AExponent);
+  for I := LBitLength - 1 downto 0 do
+  begin
+    LAccumulator := BigNatMod(BigNatMultiply(LAccumulator, LAccumulator), AModulus);
+    if BigNatGetBit(AExponent, I) then
+      LAccumulator := BigNatMod(BigNatMultiply(LAccumulator, LBaseReduced), AModulus);
+  end;
+
+  Result := LAccumulator;
+end;
+
 function TryRSAModExpSignPurePascal(
   const AEncodedMessage: TBytes;
   const AModulus: TBytes;
@@ -785,16 +816,21 @@ begin
 
   if BigNatIsZero(LExponent) then
   begin
-    AResult := BigNatToUnsignedBytes(BigNatFromWord(1));
+    AResult := BigNatToUnsignedBytes(BigNatMod(BigNatFromWord(1), LModulus));
     Result := True;
     Exit;
   end;
 
-  if not TryInitMontgomeryContext(LModulus, LCtx, AError) then
-    Exit;
-
   LReducedBase := BigNatMod(LBase, LModulus);
-  LOut := BigNatModExpMontgomery(LReducedBase, LExponent, LCtx);
+
+  if BigNatIsOdd(LModulus) and TryInitMontgomeryContext(LModulus, LCtx, AError) then
+    LOut := BigNatModExpMontgomery(LReducedBase, LExponent, LCtx)
+  else
+  begin
+    AError := '';
+    LOut := BigNatModExpClassic(LReducedBase, LExponent, LModulus);
+  end;
+
   AResult := BigNatToUnsignedBytes(LOut);
   Result := True;
 end;
@@ -869,16 +905,21 @@ begin
     Exit;
   end;
 
-  if not TryInitMontgomeryContext(LModulus, LCtx, AError) then
-    Exit;
-
   LLeft := BigNatMod(LLeft, LModulus);
   LRight := BigNatMod(LRight, LModulus);
 
-  LLeftMont := MontgomeryMultiply(LCtx, LLeft, LCtx.R2ModN);
-  LRightMont := MontgomeryMultiply(LCtx, LRight, LCtx.R2ModN);
-  LProdMont := MontgomeryMultiply(LCtx, LLeftMont, LRightMont);
-  LRes := MontgomeryMultiply(LCtx, LProdMont, LCtx.One);
+  if BigNatIsOdd(LModulus) and TryInitMontgomeryContext(LModulus, LCtx, AError) then
+  begin
+    LLeftMont := MontgomeryMultiply(LCtx, LLeft, LCtx.R2ModN);
+    LRightMont := MontgomeryMultiply(LCtx, LRight, LCtx.R2ModN);
+    LProdMont := MontgomeryMultiply(LCtx, LLeftMont, LRightMont);
+    LRes := MontgomeryMultiply(LCtx, LProdMont, LCtx.One);
+  end
+  else
+  begin
+    AError := '';
+    LRes := BigNatModMultiplyClassic(LLeft, LRight, LModulus);
+  end;
 
   AResult := BigNatToUnsignedBytes(LRes);
   Result := True;
