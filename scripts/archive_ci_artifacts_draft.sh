@@ -297,14 +297,17 @@ collect_class_artifacts "core-reports" "$RETENTION_CORE" \
   "test-reports/*_result.txt" \
   "test-reports/*_compile.log" \
   "test-reports/wave_b_ci_gate_summary_*.md" \
-  "test-reports/wave_b_tls13_sign_purity_*.log"
+  "test-reports/wave_b_tls13_sign_purity_*.log" \
+  "test-reports/tls13_signer_gate_bundle_*.md" \
+  "test-reports/tls13_signer_gate_snapshot_*.md" \
+  "test-reports/tls13_signer_gate_status_*.json"
 
 collect_class_artifacts "perf-baseline" "$RETENTION_PERF" \
   "tests/benchmarks/results/benchmark_summary_*.txt" \
   "tests/benchmarks/results/*.log" \
   "tests/benchmarks/results/*baseline*.json" \
   "test-reports/wave_b_tls13_sign_bench_*.log" \
-  "test-reports/*tls13_signer*.json" \
+  "test-reports/wave_b_tls13_signer_*.json" \
   "test-reports/tls13_signer_bench_history_*.md"
 
 collect_class_artifacts "docs-evidence" "$RETENTION_DOC" \

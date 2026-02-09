@@ -142,22 +142,25 @@ bash scripts/run_wave_b_ci_gate.sh \
 - `push` / `pull_request`：仅在 TLS13 signer 相关源码/脚本改动时触发；
 - `workflow_dispatch`：支持手工输入 `bench_iterations` / `bench_warmup` / `bench_scheme` / `bench_timeout`。
 
-CI 执行入口：`scripts/run_tls13_signer_gate_ci.sh`
+CI 执行入口（bundle）：`scripts/run_tls13_signer_gate_bundle.sh`
 
-执行链路（单入口）：
-1. `run_wave_b_ci_gate.sh --only-tls13-sign-bench --with-tls13-sign-purity-check`
-2. `summarize_tls13_signer_bench_history.sh` 生成历史汇总
-3. `archive_ci_artifacts_draft.sh` 产物归档（`artifacts/ci`）
+底层入口：`scripts/run_tls13_signer_gate_ci.sh`
+
+执行链路（bundle）：
+1. `run_tls13_signer_gate_ci.sh` 执行 purity + bench + history
+2. `generate_tls13_signer_gate_snapshot.sh` 生成 snapshot
+3. `export_tls13_signer_gate_status_json.sh` 导出状态 JSON
+4. `archive_ci_artifacts_draft.sh` 产物归档（`artifacts/ci`，可开关）
 
 本地对齐命令：
 
 ```bash
-FAFAFA_TLS13_SIGNER_GATE_RUN_ID=local_001 \
 FAFAFA_TLS13_SIGN_BENCH_ITERATIONS=2 \
 FAFAFA_TLS13_SIGN_BENCH_WARMUP=1 \
 FAFAFA_TLS13_SIGN_BENCH_SCHEME=rsa_pkcs1_sha256 \
 FAFAFA_TLS13_SIGN_BENCH_TIMEOUT=120 \
 FAFAFA_TLS13_SIGNER_GATE_ARCHIVE=1 \
 FAFAFA_TLS13_SIGNER_GATE_ARCHIVE_PROFILE=pr \
-bash scripts/run_tls13_signer_gate_ci.sh
+FAFAFA_TLS13_SIGNER_GATE_ARCHIVE_ROOT=artifacts/ci \
+bash scripts/run_tls13_signer_gate_bundle.sh --run-id local_001 --reports-dir test-reports --strict
 ```
