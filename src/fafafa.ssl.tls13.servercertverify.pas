@@ -144,6 +144,22 @@ begin
   Result := True;
 end;
 
+function UnsignedIsZero(const AData: TBytes): Boolean;
+var
+  LTrimmed: TBytes;
+begin
+  LTrimmed := StripLeadingZeroBytes(AData);
+  Result := (Length(LTrimmed) = 1) and (LTrimmed[0] = 0);
+end;
+
+function UnsignedIsOne(const AData: TBytes): Boolean;
+var
+  LTrimmed: TBytes;
+begin
+  LTrimmed := StripLeadingZeroBytes(AData);
+  Result := (Length(LTrimmed) = 1) and (LTrimmed[0] = 1);
+end;
+
 function TryValidateRSACRTComponents(
   const AModulus: TBytes;
   const AP, AQ, ADP, ADQ, AQInv: TBytes;
@@ -167,6 +183,24 @@ begin
   if (Length(AP) = 0) or (Length(AQ) = 0) or (Length(AQInv) = 0) then
   begin
     AError := 'RSA CRT validation failed: missing CRT fields';
+    Exit;
+  end;
+
+  if UnsignedBytesEqual(AP, AQ) then
+  begin
+    AError := 'RSA CRT validation failed: p and q must be distinct';
+    Exit;
+  end;
+
+  if UnsignedIsZero(AP) or UnsignedIsZero(AQ) or UnsignedIsOne(AP) or UnsignedIsOne(AQ) then
+  begin
+    AError := 'RSA CRT validation failed: p/q must be > 1';
+    Exit;
+  end;
+
+  if UnsignedIsZero(ADP) or UnsignedIsZero(ADQ) then
+  begin
+    AError := 'RSA CRT validation failed: dp/dq must be non-zero';
     Exit;
   end;
 
@@ -972,6 +1006,8 @@ var
   LHAdj: TBytes;
   LQH: TBytes;
   LPartial: TBytes;
+  LCheckP: TBytes;
+  LCheckQ: TBytes;
 begin
   SetLength(ASignature, 0);
   AError := '';
@@ -1001,6 +1037,23 @@ begin
     Exit;
   if not TryBigIntAddFromUnsignedBytes(LM2, LQH, LPartial, AError) then
     Exit;
+
+  if not TryBigIntModFromUnsignedBytes(LPartial, AP, LCheckP, AError) then
+    Exit;
+  if not TryBigIntModFromUnsignedBytes(LPartial, AQ, LCheckQ, AError) then
+    Exit;
+
+  if not UnsignedBytesEqual(LCheckP, LM1) then
+  begin
+    AError := 'RSA CRT recombination check failed modulo p';
+    Exit;
+  end;
+
+  if not UnsignedBytesEqual(LCheckQ, LM2) then
+  begin
+    AError := 'RSA CRT recombination check failed modulo q';
+    Exit;
+  end;
 
   if not TryBigIntToFixedLengthFromUnsignedBytes(LPartial, Length(AModulus), ASignature, AError) then
     Exit;

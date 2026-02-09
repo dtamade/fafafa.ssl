@@ -525,6 +525,44 @@ begin
   Move(ATTRS_TAIL[0], Result[LPayloadOffset + LSeqLen], Length(ATTRS_TAIL));
 end;
 
+function BuildPEMPrivateKeyWithLeadingJunk(const APEMBlob: TBytes): TBytes;
+const
+  JUNK_PREFIX = 'random-header:ignore-me'#13#10'still-junk'#13#10;
+var
+  LJunkBytes: TBytes;
+begin
+  LJunkBytes := TEncoding.ASCII.GetBytes(JUNK_PREFIX);
+  SetLength(Result, Length(LJunkBytes) + Length(APEMBlob));
+  if Length(LJunkBytes) > 0 then
+    Move(LJunkBytes[0], Result[0], Length(LJunkBytes));
+  if Length(APEMBlob) > 0 then
+    Move(APEMBlob[0], Result[Length(LJunkBytes)], Length(APEMBlob));
+end;
+
+function BuildPEMWithMultiplePrivateKeys(const APEMBlobA, APEMBlobB: TBytes): TBytes;
+const
+  SEP = LineEnding + LineEnding;
+var
+  LSepBytes: TBytes;
+  LOffset: Integer;
+begin
+  LSepBytes := TEncoding.ASCII.GetBytes(SEP);
+  SetLength(Result, Length(APEMBlobA) + Length(LSepBytes) + Length(APEMBlobB));
+  LOffset := 0;
+  if Length(APEMBlobA) > 0 then
+  begin
+    Move(APEMBlobA[0], Result[LOffset], Length(APEMBlobA));
+    Inc(LOffset, Length(APEMBlobA));
+  end;
+  if Length(LSepBytes) > 0 then
+  begin
+    Move(LSepBytes[0], Result[LOffset], Length(LSepBytes));
+    Inc(LOffset, Length(LSepBytes));
+  end;
+  if Length(APEMBlobB) > 0 then
+    Move(APEMBlobB[0], Result[LOffset], Length(APEMBlobB));
+end;
+
 procedure TestSelectSchemeFromClientHello;
 var
   LClientKeyShare: TBytes;
@@ -1030,6 +1068,178 @@ begin
   AssertEqualsInt(0, LDiff, 'PKCS#8 attributes should not change RSA-PKCS1 signature result');
 end;
 
+procedure TestRSASignatureWithPEMLeadingJunk;
+var
+  LKeyBlob: TBytes;
+  LMutatedPEM: TBytes;
+  LTranscriptHash: TBytes;
+  LInput: TBytes;
+  LSig: TBytes;
+  LErr: string;
+  I: Integer;
+begin
+  LKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  LMutatedPEM := BuildPEMPrivateKeyWithLeadingJunk(LKeyBlob);
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($73 + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LMutatedPEM,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'RSA-PKCS1 signing with leading PEM junk failed: ' + LErr
+  );
+  AssertEqualsInt(256, Length(LSig), 'PEM leading-junk signature length mismatch');
+end;
+
+procedure TestRSASignatureUsesFirstUsableRSAKeyBlock;
+var
+  LKeyBlobA: TBytes;
+  LKeyBlobB: TBytes;
+  LCombinedPEM: TBytes;
+  LTranscriptHash: TBytes;
+  LInput: TBytes;
+  LSigA: TBytes;
+  LSigCombined: TBytes;
+  LErr: string;
+  I: Integer;
+  LDiff: Integer;
+begin
+  LKeyBlobA := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  LKeyBlobB := LoadFileBytes('tests/certificate/test_certs/recipient_key.pem');
+  LCombinedPEM := BuildPEMWithMultiplePrivateKeys(LKeyBlobA, LKeyBlobB);
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($77 + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LKeyBlobA,
+      LInput,
+      LSigA,
+      LErr
+    ),
+    'RSA-PKCS1 signing with base key failed: ' + LErr
+  );
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LCombinedPEM,
+      LInput,
+      LSigCombined,
+      LErr
+    ),
+    'RSA-PKCS1 signing with multi-key PEM failed: ' + LErr
+  );
+
+  AssertEqualsInt(Length(LSigA), Length(LSigCombined), 'Multi-key PEM signature length mismatch');
+  LDiff := 0;
+  for I := 0 to Length(LSigA) - 1 do
+    if LSigA[I] <> LSigCombined[I] then
+      Inc(LDiff);
+  AssertEqualsInt(0, LDiff, 'Signer should use first usable RSA key block in PEM material');
+end;
+
+procedure TestRSASignatureWith1024BitKeyLength;
+var
+  LKeyBlob: TBytes;
+  LTranscriptHash: TBytes;
+  LInput: TBytes;
+  LSig: TBytes;
+  LErr: string;
+  I: Integer;
+begin
+  LKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_key_1024.pem');
+  AssertTrue(Length(LKeyBlob) > 0, 'Fixture 1024-bit key blob should not be empty');
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($7A + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LKeyBlob,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'RSA-PKCS1 signing with generated 1024-bit key failed: ' + LErr
+  );
+  AssertEqualsInt(128, Length(LSig), 'Generated 1024-bit key should produce 128-byte signature');
+end;
+
+procedure TestRSASignatureRejectsPEMWithoutPrivateKeyBlock;
+var
+  LCertBlob: TBytes;
+  LTranscriptHash: TBytes;
+  LInput: TBytes;
+  LSig: TBytes;
+  LErr: string;
+  I: Integer;
+begin
+  LCertBlob := LoadFileBytes('tests/certificate/test_certs/signer_cert.pem');
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($6A + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LCertBlob,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'PEM certificate blob should not be accepted as private key material'
+  );
+  AssertContains(LErr, 'No private key block found in PEM blob', 'Expected missing-private-key-block diagnostic');
+end;
+
+procedure TestRSASignatureErrorMessagesAreStable;
+var
+  LSig: TBytes;
+  LErr: string;
+begin
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      [],
+      [$01],
+      LSig,
+      LErr
+    ),
+    'Signer should fail for empty key material'
+  );
+  AssertContains(LErr, 'Private key material is empty', 'Error message for empty key should remain stable');
+
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      [$00, $01, $02],
+      [$01],
+      LSig,
+      LErr
+    ),
+    'Signer should fail for malformed DER'
+  );
+  AssertContains(LErr, 'Unsupported DER private key format', 'Malformed DER error message should remain stable');
+end;
+
 procedure TestRSASignatureKeySizeConsistency;
 var
   LKeyBlob: TBytes;
@@ -1125,6 +1335,11 @@ begin
   TestTinyModulusDefense;
   TestRSASignatureWithDERPrivateKey;
   TestRSASignatureWithPKCS8Attributes;
+  TestRSASignatureWithPEMLeadingJunk;
+  TestRSASignatureUsesFirstUsableRSAKeyBlock;
+  TestRSASignatureWith1024BitKeyLength;
+  TestRSASignatureErrorMessagesAreStable;
+  TestRSASignatureRejectsPEMWithoutPrivateKeyBlock;
   TestRSASignatureKeySizeConsistency;
   TestRSASignatureUsesCRTWhenAvailable;
   TestRSASignatureFallsBackWhenCRTInconsistent;
