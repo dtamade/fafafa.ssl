@@ -123,6 +123,94 @@ begin
   end;
 end;
 
+function UnsignedBytesEqual(const ALeft, ARight: TBytes): Boolean;
+var
+  LLeft: TBytes;
+  LRight: TBytes;
+  I: Integer;
+begin
+  LLeft := StripLeadingZeroBytes(ALeft);
+  LRight := StripLeadingZeroBytes(ARight);
+
+  if Length(LLeft) <> Length(LRight) then
+    Exit(False);
+
+  for I := 0 to Length(LLeft) - 1 do
+  begin
+    if LLeft[I] <> LRight[I] then
+      Exit(False);
+  end;
+
+  Result := True;
+end;
+
+function TryValidateRSACRTComponents(
+  const AModulus: TBytes;
+  const AP, AQ, AQInv: TBytes;
+  out AError: string
+): Boolean;
+var
+  LProduct: TBytes;
+  LProductFixed: TBytes;
+  LQInvCheck: TBytes;
+  LOne: TBytes;
+begin
+  AError := '';
+  Result := False;
+
+  if (Length(AModulus) = 0) or ((Length(AModulus) = 1) and (AModulus[0] = 0)) then
+  begin
+    AError := 'RSA CRT validation failed: modulus is empty';
+    Exit;
+  end;
+
+  if (Length(AP) = 0) or (Length(AQ) = 0) or (Length(AQInv) = 0) then
+  begin
+    AError := 'RSA CRT validation failed: missing CRT fields';
+    Exit;
+  end;
+
+  if ((AP[High(AP)] and 1) = 0) or ((AQ[High(AQ)] and 1) = 0) then
+  begin
+    AError := 'RSA CRT validation failed: p/q must be odd';
+    Exit;
+  end;
+
+  if not TryBigIntMulFromUnsignedBytes(AP, AQ, LProduct, AError) then
+  begin
+    AError := 'RSA CRT validation failed (p*q): ' + AError;
+    Exit;
+  end;
+
+  if not TryBigIntToFixedLengthFromUnsignedBytes(LProduct, Length(AModulus), LProductFixed, AError) then
+  begin
+    AError := 'RSA CRT validation failed (p*q sizing): ' + AError;
+    Exit;
+  end;
+
+  if not UnsignedBytesEqual(LProductFixed, AModulus) then
+  begin
+    AError := 'RSA CRT validation failed: p*q does not match modulus';
+    Exit;
+  end;
+
+  if not TryBigIntModMulFromUnsignedBytes(AQ, AQInv, AP, LQInvCheck, AError) then
+  begin
+    AError := 'RSA CRT validation failed (qInv): ' + AError;
+    Exit;
+  end;
+
+  SetLength(LOne, 1);
+  LOne[0] := 1;
+  if not UnsignedBytesEqual(LQInvCheck, LOne) then
+  begin
+    AError := 'RSA CRT validation failed: qInv is inconsistent with q mod p';
+    Exit;
+  end;
+
+  Result := True;
+end;
+
 function TryParseRSAPrivateKeyPKCS1(
   const ADER: TBytes;
   out AModulus: TBytes;
@@ -1025,6 +1113,8 @@ var
   LP, LQ, LDP, LDQ, LQInv: TBytes;
   LEM: TBytes;
   LModBits: Integer;
+  LCRTErr: string;
+  LExpErr: string;
 begin
   SetLength(ASignature, 0);
   AError := '';
@@ -1080,9 +1170,29 @@ begin
 
   if (Length(LP) > 0) and (Length(LQ) > 0) and (Length(LDP) > 0) and
      (Length(LDQ) > 0) and (Length(LQInv) > 0) then
-    Result := TryRSASignWithCRT(LEM, LModulus, LP, LQ, LDP, LDQ, LQInv, ASignature, AError)
-  else
-    Result := TryRSASignWithPrivateExponent(LEM, LModulus, LPrivateExponent, ASignature, AError);
+  begin
+    LCRTErr := '';
+    if TryValidateRSACRTComponents(LModulus, LP, LQ, LQInv, LCRTErr) then
+    begin
+      if TryRSASignWithCRT(LEM, LModulus, LP, LQ, LDP, LDQ, LQInv, ASignature, AError) then
+        Exit(True);
+      LCRTErr := AError;
+    end;
+
+    if TryRSASignWithPrivateExponent(LEM, LModulus, LPrivateExponent, ASignature, LExpErr) then
+    begin
+      AError := '';
+      Exit(True);
+    end;
+
+    if LCRTErr <> '' then
+      AError := LCRTErr + '; fallback exponent signing failed: ' + LExpErr
+    else
+      AError := 'RSA CRT signing failed and fallback exponent signing failed: ' + LExpErr;
+    Exit(False);
+  end;
+
+  Result := TryRSASignWithPrivateExponent(LEM, LModulus, LPrivateExponent, ASignature, AError);
 end;
 
 end.

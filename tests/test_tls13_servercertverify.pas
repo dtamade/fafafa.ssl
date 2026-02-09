@@ -146,6 +146,80 @@ begin
   Result := True;
 end;
 
+function TryLocatePKCS1PrimePValue(
+  const ADER: TBytes;
+  out AValueOffset: Integer;
+  out AValueLength: Integer
+): Boolean;
+var
+  LOffset: Integer;
+  LSeqLength: Integer;
+  LSeqEnd: Integer;
+  LFieldIndex: Integer;
+begin
+  AValueOffset := -1;
+  AValueLength := 0;
+  Result := False;
+
+  if Length(ADER) < 4 then
+    Exit;
+
+  LOffset := 0;
+  if ADER[LOffset] <> $30 then
+    Exit;
+  Inc(LOffset);
+
+  if not TryReadDERLength(ADER, LOffset, LSeqLength) then
+    Exit;
+
+  LSeqEnd := LOffset + LSeqLength;
+  if LSeqEnd > Length(ADER) then
+    Exit;
+
+  LFieldIndex := 0;
+  while LOffset < LSeqEnd do
+  begin
+    if ADER[LOffset] <> $02 then
+      Exit;
+    Inc(LOffset);
+
+    if not TryReadDERLength(ADER, LOffset, AValueLength) then
+      Exit;
+
+    if (AValueLength < 0) or (LOffset + AValueLength > LSeqEnd) then
+      Exit;
+
+    if LFieldIndex = 4 then
+    begin
+      AValueOffset := LOffset;
+      Exit(True);
+    end;
+
+    Inc(LOffset, AValueLength);
+    Inc(LFieldIndex);
+  end;
+end;
+
+function TryMutatePKCS1PrimeP(const ASourceDER: TBytes; out ADestDER: TBytes): Boolean;
+var
+  LValueOffset: Integer;
+  LValueLength: Integer;
+begin
+  SetLength(ADestDER, 0);
+  Result := False;
+
+  if not TryLocatePKCS1PrimePValue(ASourceDER, LValueOffset, LValueLength) then
+    Exit;
+  if LValueLength <= 1 then
+    Exit;
+
+  ADestDER := Copy(ASourceDER, 0, Length(ASourceDER));
+  ADestDER[LValueOffset + LValueLength - 1] := ADestDER[LValueOffset + LValueLength - 1] xor $02;
+  ADestDER[LValueOffset + LValueLength - 1] := ADestDER[LValueOffset + LValueLength - 1] or $01;
+
+  Result := True;
+end;
+
 function TryLocatePKCS8PrivateKeyOctetStringValue(
   const ADER: TBytes;
   out AValueOffset: Integer;
@@ -269,6 +343,90 @@ begin
 
         Result := Copy(LDER, 0, Length(LDER));
         Move(LMutatedPKCS1[0], Result[LOffset], LLength);
+      end;
+  end;
+end;
+
+function BuildMutatedPrimePPrivateKeyBlob(const APEMBlob: TBytes): TBytes;
+var
+  LDER: TBytes;
+  LMutatedPKCS1: TBytes;
+  LInnerPKCS1: TBytes;
+  LType: TPEMType;
+  LOffset: Integer;
+  LLength: Integer;
+begin
+  SetLength(Result, 0);
+
+  if not TryExtractFirstPrivateKeyDER(APEMBlob, LDER, LType) then
+    Exit;
+
+  case LType of
+    pemRSAPrivateKey:
+      begin
+        if TryMutatePKCS1PrimeP(LDER, Result) then
+          Exit;
+      end;
+
+    pemPrivateKey:
+      begin
+        if not TryLocatePKCS8PrivateKeyOctetStringValue(LDER, LOffset, LLength) then
+          Exit;
+
+        LInnerPKCS1 := Copy(LDER, LOffset, LLength);
+        if not TryMutatePKCS1PrimeP(LInnerPKCS1, LMutatedPKCS1) then
+          Exit;
+
+        if Length(LMutatedPKCS1) <> LLength then
+          Exit;
+
+        Result := Copy(LDER, 0, Length(LDER));
+        Move(LMutatedPKCS1[0], Result[LOffset], LLength);
+      end;
+  end;
+end;
+
+function BuildMutatedPrimePAndPrivateExponentPrivateKeyBlob(const APEMBlob: TBytes): TBytes;
+var
+  LDER: TBytes;
+  LMutatedPKCS1: TBytes;
+  LMutatedPKCS1B: TBytes;
+  LInnerPKCS1: TBytes;
+  LType: TPEMType;
+  LOffset: Integer;
+  LLength: Integer;
+begin
+  SetLength(Result, 0);
+
+  if not TryExtractFirstPrivateKeyDER(APEMBlob, LDER, LType) then
+    Exit;
+
+  case LType of
+    pemRSAPrivateKey:
+      begin
+        if not TryMutatePKCS1PrimeP(LDER, LMutatedPKCS1) then
+          Exit;
+        if not TryMutatePKCS1PrivateExponent(LMutatedPKCS1, LMutatedPKCS1B) then
+          Exit;
+        Result := LMutatedPKCS1B;
+      end;
+
+    pemPrivateKey:
+      begin
+        if not TryLocatePKCS8PrivateKeyOctetStringValue(LDER, LOffset, LLength) then
+          Exit;
+
+        LInnerPKCS1 := Copy(LDER, LOffset, LLength);
+        if not TryMutatePKCS1PrimeP(LInnerPKCS1, LMutatedPKCS1) then
+          Exit;
+        if not TryMutatePKCS1PrivateExponent(LMutatedPKCS1, LMutatedPKCS1B) then
+          Exit;
+
+        if Length(LMutatedPKCS1B) <> LLength then
+          Exit;
+
+        Result := Copy(LDER, 0, Length(LDER));
+        Move(LMutatedPKCS1B[0], Result[LOffset], LLength);
       end;
   end;
 end;
@@ -543,6 +701,120 @@ begin
     'Corrupted privateExponent should not affect RSA-PKCS1 signature when CRT components are used');
 end;
 
+procedure TestRSASignatureFallsBackWhenCRTInconsistent;
+var
+  LKeyBlob: TBytes;
+  LMutatedPKeyDER: TBytes;
+  LTranscriptHash: TBytes;
+  LInput: TBytes;
+  LSigOriginal: TBytes;
+  LSigMutated: TBytes;
+  LErr: string;
+  I: Integer;
+  LDiff: Integer;
+begin
+  LKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  AssertTrue(Length(LKeyBlob) > 0, 'Signer key blob should not be empty');
+
+  LMutatedPKeyDER := BuildMutatedPrimePPrivateKeyBlob(LKeyBlob);
+  AssertTrue(Length(LMutatedPKeyDER) > 0, 'Failed to produce DER key with corrupted prime p');
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($B0 + I);
+
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LKeyBlob,
+      LInput,
+      LSigOriginal,
+      LErr
+    ),
+    'RSA-PKCS1 signing with original key failed: ' + LErr
+  );
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LMutatedPKeyDER,
+      LInput,
+      LSigMutated,
+      LErr
+    ),
+    'RSA-PKCS1 signing with CRT-inconsistent key should fallback and still succeed: ' + LErr
+  );
+
+  AssertEqualsInt(Length(LSigOriginal), Length(LSigMutated), 'Signature length mismatch');
+
+  LDiff := 0;
+  for I := 0 to Length(LSigOriginal) - 1 do
+    if LSigOriginal[I] <> LSigMutated[I] then
+      Inc(LDiff);
+
+  AssertEqualsInt(0, LDiff,
+    'Corrupted prime p should not change signature when signer falls back to private exponent path');
+end;
+
+procedure TestRSASignatureUsesCorruptedExponentWhenCRTBroken;
+var
+  LKeyBlob: TBytes;
+  LMutatedBothDER: TBytes;
+  LTranscriptHash: TBytes;
+  LInput: TBytes;
+  LSigOriginal: TBytes;
+  LSig: TBytes;
+  LErr: string;
+  I: Integer;
+  LDiff: Integer;
+begin
+  LKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  AssertTrue(Length(LKeyBlob) > 0, 'Signer key blob should not be empty');
+
+  LMutatedBothDER := BuildMutatedPrimePAndPrivateExponentPrivateKeyBlob(LKeyBlob);
+  AssertTrue(Length(LMutatedBothDER) > 0, 'Failed to produce DER key with corrupted prime p + private exponent');
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($C0 + I);
+
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LKeyBlob,
+      LInput,
+      LSigOriginal,
+      LErr
+    ),
+    'RSA-PKCS1 signing with original key failed: ' + LErr
+  );
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LMutatedBothDER,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'Signing should still succeed via fallback exponent path: ' + LErr
+  );
+
+  AssertEqualsInt(Length(LSigOriginal), Length(LSig), 'Signature length mismatch');
+
+  LDiff := 0;
+  for I := 0 to Length(LSigOriginal) - 1 do
+    if LSigOriginal[I] <> LSig[I] then
+      Inc(LDiff);
+
+  AssertTrue(LDiff > 0,
+    'Corrupted private exponent should produce a different signature when CRT is broken and fallback is used');
+end;
+
 begin
   WriteLn('Testing TLS 1.3 server CertificateVerify helpers...');
 
@@ -552,6 +824,8 @@ begin
   TestPlaceholderSignature;
   TestSignerUnitHasNoExternalBigIntDependency;
   TestRSASignatureUsesCRTWhenAvailable;
+  TestRSASignatureFallsBackWhenCRTInconsistent;
+  TestRSASignatureUsesCorruptedExponentWhenCRTBroken;
   TestRealRSASignature;
 
   WriteLn('✅ TLS 1.3 server CertificateVerify helper checks passed');
