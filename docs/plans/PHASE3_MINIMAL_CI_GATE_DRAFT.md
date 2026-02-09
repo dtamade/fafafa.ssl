@@ -131,3 +131,33 @@ bash scripts/run_wave_b_ci_gate.sh \
 
 - B8：将 Phase2 指标模板回填到首轮 baseline 报告，形成“可审阅性能结论”。
 - B9：扩展跨平台矩阵（Linux/macOS/Windows）并增加平台差异门禁策略。
+
+---
+
+## 7. GitHub Actions 自动化（TLS13 Signer Gate）
+
+新增 workflow：`.github/workflows/tls13-signer-gate.yml`
+
+触发策略：
+- `push` / `pull_request`：仅在 TLS13 signer 相关源码/脚本改动时触发；
+- `workflow_dispatch`：支持手工输入 `bench_iterations` / `bench_warmup` / `bench_scheme` / `bench_timeout`。
+
+CI 执行入口：`scripts/run_tls13_signer_gate_ci.sh`
+
+执行链路（单入口）：
+1. `run_wave_b_ci_gate.sh --only-tls13-sign-bench --with-tls13-sign-purity-check`
+2. `summarize_tls13_signer_bench_history.sh` 生成历史汇总
+3. `archive_ci_artifacts_draft.sh` 产物归档（`artifacts/ci`）
+
+本地对齐命令：
+
+```bash
+FAFAFA_TLS13_SIGNER_GATE_RUN_ID=local_001 \
+FAFAFA_TLS13_SIGN_BENCH_ITERATIONS=2 \
+FAFAFA_TLS13_SIGN_BENCH_WARMUP=1 \
+FAFAFA_TLS13_SIGN_BENCH_SCHEME=rsa_pkcs1_sha256 \
+FAFAFA_TLS13_SIGN_BENCH_TIMEOUT=120 \
+FAFAFA_TLS13_SIGNER_GATE_ARCHIVE=1 \
+FAFAFA_TLS13_SIGNER_GATE_ARCHIVE_PROFILE=pr \
+bash scripts/run_tls13_signer_gate_ci.sh
+```

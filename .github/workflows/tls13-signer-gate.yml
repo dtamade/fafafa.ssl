@@ -1,0 +1,148 @@
+name: TLS13 Signer Gate
+
+on:
+  push:
+    branches: [ master, main, develop ]
+    paths:
+      - 'src/fafafa.ssl.tls13.*.pas'
+      - 'src/fafafa.ssl.freepascal.*.pas'
+      - 'scripts/run_tls13_signer_gate_ci.sh'
+      - 'scripts/run_wave_b_ci_gate.sh'
+      - 'scripts/run_minimal_ci_gate.sh'
+      - 'scripts/run_freepascal_tls13_servercertverify_bench.sh'
+      - 'scripts/check_tls13_signer_pure_pascal.sh'
+      - 'scripts/summarize_tls13_signer_bench_history.sh'
+      - 'scripts/archive_ci_artifacts_draft.sh'
+      - 'tests/test_tls13_servercertverify.pas'
+      - '.github/workflows/tls13-signer-gate.yml'
+  pull_request:
+    branches: [ master, main ]
+    paths:
+      - 'src/fafafa.ssl.tls13.*.pas'
+      - 'src/fafafa.ssl.freepascal.*.pas'
+      - 'scripts/run_tls13_signer_gate_ci.sh'
+      - 'scripts/run_wave_b_ci_gate.sh'
+      - 'scripts/run_minimal_ci_gate.sh'
+      - 'scripts/run_freepascal_tls13_servercertverify_bench.sh'
+      - 'scripts/check_tls13_signer_pure_pascal.sh'
+      - 'scripts/summarize_tls13_signer_bench_history.sh'
+      - 'scripts/archive_ci_artifacts_draft.sh'
+      - 'tests/test_tls13_servercertverify.pas'
+      - '.github/workflows/tls13-signer-gate.yml'
+  workflow_dispatch:
+    inputs:
+      bench_iterations:
+        description: 'TLS13 signer bench iterations'
+        required: false
+        default: '2'
+      bench_warmup:
+        description: 'TLS13 signer bench warmup'
+        required: false
+        default: '1'
+      bench_scheme:
+        description: 'TLS13 signer bench scheme'
+        required: false
+        default: 'rsa_pkcs1_sha256'
+      bench_timeout:
+        description: 'TLS13 signer bench timeout (seconds)'
+        required: false
+        default: '180'
+
+concurrency:
+  group: tls13-signer-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tls13-signer-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fpc libssl-dev python3 ripgrep
+          fpc -iV
+          openssl version
+
+      - name: Run TLS13 signer gate (purity + bench + history + archive)
+        run: |
+          BENCH_ITERATIONS="${{ github.event.inputs.bench_iterations }}"
+          BENCH_WARMUP="${{ github.event.inputs.bench_warmup }}"
+          BENCH_SCHEME="${{ github.event.inputs.bench_scheme }}"
+          BENCH_TIMEOUT="${{ github.event.inputs.bench_timeout }}"
+
+          BENCH_ITERATIONS="${BENCH_ITERATIONS:-2}"
+          BENCH_WARMUP="${BENCH_WARMUP:-1}"
+          BENCH_SCHEME="${BENCH_SCHEME:-rsa_pkcs1_sha256}"
+          BENCH_TIMEOUT="${BENCH_TIMEOUT:-180}"
+
+          FAFAFA_TLS13_SIGNER_GATE_RUN_ID="gh_${{ github.run_id }}_${{ github.run_attempt }}" \
+          FAFAFA_TLS13_SIGNER_GATE_OUTPUT_DIR="test-reports" \
+          FAFAFA_TLS13_SIGN_BENCH_ITERATIONS="${BENCH_ITERATIONS}" \
+          FAFAFA_TLS13_SIGN_BENCH_WARMUP="${BENCH_WARMUP}" \
+          FAFAFA_TLS13_SIGN_BENCH_SCHEME="${BENCH_SCHEME}" \
+          FAFAFA_TLS13_SIGN_BENCH_TIMEOUT="${BENCH_TIMEOUT}" \
+          FAFAFA_TLS13_SIGN_BENCH_HISTORY_LIMIT="10" \
+          FAFAFA_TLS13_SIGNER_GATE_ARCHIVE="1" \
+          FAFAFA_TLS13_SIGNER_GATE_ARCHIVE_PROFILE="pr" \
+          FAFAFA_TLS13_SIGNER_GATE_ARCHIVE_ROOT="artifacts/ci" \
+          bash scripts/run_tls13_signer_gate_ci.sh
+
+      - name: Upload TLS13 signer artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tls13-signer-gate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            test-reports/wave_b_ci_gate_summary_tls13_signer_*.md
+            test-reports/wave_b_tls13_signer_*.json
+            test-reports/tls13_signer_bench_history_*.md
+            test-reports/wave_b_tls13_sign_purity_*.log
+            test-reports/wave_b_tls13_sign_bench_*.log
+            artifacts/ci/tls13_signer_gh_${{ github.run_id }}_${{ github.run_attempt }}
+            artifacts/ci/tls13_signer_gh_${{ github.run_id }}_${{ github.run_attempt }}_pr_ci_artifacts.tar.gz
+          retention-days: 14
+
+      - name: Append step summary
+        if: always()
+        run: |
+          echo "## TLS13 Signer Gate" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          LATEST_SUMMARY=$(ls -1t test-reports/wave_b_ci_gate_summary_tls13_signer_*.md 2>/dev/null | head -1 || true)
+          LATEST_JSON=$(ls -1t test-reports/wave_b_tls13_signer_*.json 2>/dev/null | head -1 || true)
+          LATEST_HISTORY=$(ls -1t test-reports/tls13_signer_bench_history_*.md 2>/dev/null | head -1 || true)
+
+          if [[ -n "$LATEST_SUMMARY" ]]; then
+            echo "- Summary: \`$LATEST_SUMMARY\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [[ -n "$LATEST_JSON" ]]; then
+            echo "- Bench JSON: \`$LATEST_JSON\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [[ -n "$LATEST_HISTORY" ]]; then
+            echo "- History: \`$LATEST_HISTORY\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [[ -n "$LATEST_JSON" ]]; then
+            python3 - "$LATEST_JSON" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+            import json
+            import sys
+
+            path = sys.argv[1]
+            with open(path, 'r', encoding='utf-8') as f:
+                d = json.load(f)
+
+            print("")
+            print("### Bench Metrics")
+            print(f"- scheme: `{d.get('bench_scheme', '')}`")
+            print(f"- iterations: `{d.get('bench_iterations', '')}`")
+            print(f"- warmup: `{d.get('bench_warmup', '')}`")
+            print(f"- CRT_avg_ms: `{d.get('crt_avg_ms', '')}`")
+            print(f"- D_avg_ms: `{d.get('d_avg_ms', '')}`")
+            print(f"- Speedup_D_over_CRT: `{d.get('speedup_d_over_crt', '')}`")
+            PY
+          fi

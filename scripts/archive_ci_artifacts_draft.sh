@@ -295,12 +295,17 @@ log_info "include_binaries: $INCLUDE_BINARIES"
 collect_class_artifacts "core-reports" "$RETENTION_CORE" \
   "test-reports/test_report_*.txt" \
   "test-reports/*_result.txt" \
-  "test-reports/*_compile.log"
+  "test-reports/*_compile.log" \
+  "test-reports/wave_b_ci_gate_summary_*.md" \
+  "test-reports/wave_b_tls13_sign_purity_*.log"
 
 collect_class_artifacts "perf-baseline" "$RETENTION_PERF" \
   "tests/benchmarks/results/benchmark_summary_*.txt" \
   "tests/benchmarks/results/*.log" \
-  "tests/benchmarks/results/*baseline*.json"
+  "tests/benchmarks/results/*baseline*.json" \
+  "test-reports/wave_b_tls13_sign_bench_*.log" \
+  "test-reports/*tls13_signer*.json" \
+  "test-reports/tls13_signer_bench_history_*.md"
 
 collect_class_artifacts "docs-evidence" "$RETENTION_DOC" \
   "docs/test_reports/PHASE2_*.md" \
