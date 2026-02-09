@@ -8,7 +8,14 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DRY_RUN=false
 VERBOSE=false
 WITH_PHASE2_DRYRUN=true
+WITH_COMPILE=true
+WITH_MODULES=true
 MODULE_SET="PKCS7,PKCS12,CMS,Store,OCSP,TS,CT"
+WITH_TLS13_SIGN_BENCH=false
+TLS13_SIGN_BENCH_ITERATIONS="3"
+TLS13_SIGN_BENCH_WARMUP="1"
+TLS13_SIGN_BENCH_SCHEME="rsa_pkcs1_sha256"
+TLS13_SIGN_BENCH_KEY="tests/certificate/test_certs/signer_key.pem"
 
 usage() {
   cat <<'USAGE'
@@ -21,11 +28,19 @@ usage() {
   scripts/run_minimal_ci_gate.sh [options]
 
 选项：
-  --modules LIST          指定模块列表（默认: PKCS7,PKCS12,CMS,Store,OCSP,TS,CT）
-  --skip-phase2-dryrun    跳过 Phase2 baseline 脚本 dry-run 检查
-  --verbose               模块测试启用 verbose
-  --dry-run               仅打印命令，不执行
-  --help                  显示帮助
+  --modules LIST                     指定模块列表（默认: PKCS7,PKCS12,CMS,Store,OCSP,TS,CT）
+  --skip-compile                     跳过 compile_all_modules 阶段
+  --skip-modules                     跳过 run_all_module_tests 阶段
+  --skip-phase2-dryrun               跳过 Phase2 baseline 脚本 dry-run 检查
+  --with-tls13-sign-bench            追加运行 TLS13 CertificateVerify 纯 Pascal 签名基准
+  --only-tls13-sign-bench            快速模式：仅运行 TLS13 签名基准（自动启用 skip + with）
+  --tls13-sign-bench-iterations N    TLS13 签名基准迭代次数（默认: 3）
+  --tls13-sign-bench-warmup N        TLS13 签名基准预热次数（默认: 1）
+  --tls13-sign-bench-scheme NAME     基准算法（默认: rsa_pkcs1_sha256）
+  --tls13-sign-bench-key PATH        私钥路径（默认: tests/certificate/test_certs/signer_key.pem）
+  --verbose                          模块测试启用 verbose
+  --dry-run                          仅打印命令，不执行
+  --help                             显示帮助
 USAGE
 }
 
@@ -35,9 +50,44 @@ while [[ $# -gt 0 ]]; do
       MODULE_SET="$2"
       shift 2
       ;;
+    --skip-compile)
+      WITH_COMPILE=false
+      shift
+      ;;
+    --skip-modules)
+      WITH_MODULES=false
+      shift
+      ;;
     --skip-phase2-dryrun)
       WITH_PHASE2_DRYRUN=false
       shift
+      ;;
+    --with-tls13-sign-bench)
+      WITH_TLS13_SIGN_BENCH=true
+      shift
+      ;;
+    --only-tls13-sign-bench)
+      WITH_COMPILE=false
+      WITH_MODULES=false
+      WITH_PHASE2_DRYRUN=false
+      WITH_TLS13_SIGN_BENCH=true
+      shift
+      ;;
+    --tls13-sign-bench-iterations)
+      TLS13_SIGN_BENCH_ITERATIONS="$2"
+      shift 2
+      ;;
+    --tls13-sign-bench-warmup)
+      TLS13_SIGN_BENCH_WARMUP="$2"
+      shift 2
+      ;;
+    --tls13-sign-bench-scheme)
+      TLS13_SIGN_BENCH_SCHEME="$2"
+      shift 2
+      ;;
+    --tls13-sign-bench-key)
+      TLS13_SIGN_BENCH_KEY="$2"
+      shift 2
       ;;
     --verbose)
       VERBOSE=true
@@ -59,6 +109,16 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ ! "$TLS13_SIGN_BENCH_ITERATIONS" =~ ^[0-9]+$ ]] || [[ "$TLS13_SIGN_BENCH_ITERATIONS" -le 0 ]]; then
+  echo "Invalid --tls13-sign-bench-iterations: $TLS13_SIGN_BENCH_ITERATIONS" >&2
+  exit 1
+fi
+
+if [[ ! "$TLS13_SIGN_BENCH_WARMUP" =~ ^[0-9]+$ ]] || [[ "$TLS13_SIGN_BENCH_WARMUP" -lt 0 ]]; then
+  echo "Invalid --tls13-sign-bench-warmup: $TLS13_SIGN_BENCH_WARMUP" >&2
+  exit 1
+fi
+
 run_cmd() {
   local cmd="$1"
   echo "[GATE] $cmd"
@@ -72,16 +132,24 @@ echo "========================================"
 echo "fafafa.ssl Minimal CI Gate (Draft)"
 echo "========================================"
 
-run_cmd "cd '$PROJECT_ROOT' && python3 scripts/compile_all_modules.py"
-
-module_cmd="cd '$PROJECT_ROOT' && bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
-if [[ "$VERBOSE" == "true" ]]; then
-  module_cmd="$module_cmd --verbose"
+if [[ "$WITH_COMPILE" == "true" ]]; then
+  run_cmd "cd '$PROJECT_ROOT' && python3 scripts/compile_all_modules.py"
 fi
-run_cmd "$module_cmd"
+
+if [[ "$WITH_MODULES" == "true" ]]; then
+  module_cmd="cd '$PROJECT_ROOT' && bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
+  if [[ "$VERBOSE" == "true" ]]; then
+    module_cmd="$module_cmd --verbose"
+  fi
+  run_cmd "$module_cmd"
+fi
 
 if [[ "$WITH_PHASE2_DRYRUN" == "true" ]]; then
   run_cmd "cd '$PROJECT_ROOT' && bash scripts/run_phase2_performance_baseline.sh --dry-run --iterations 200 --tls-iterations 50"
+fi
+
+if [[ "$WITH_TLS13_SIGN_BENCH" == "true" ]]; then
+  run_cmd "cd '$PROJECT_ROOT' && FAFAFA_TLS13_SIGN_BENCH_ITERATIONS='$TLS13_SIGN_BENCH_ITERATIONS' FAFAFA_TLS13_SIGN_BENCH_WARMUP='$TLS13_SIGN_BENCH_WARMUP' FAFAFA_TLS13_SIGN_BENCH_SCHEME='$TLS13_SIGN_BENCH_SCHEME' FAFAFA_TLS13_SIGN_BENCH_KEY='$TLS13_SIGN_BENCH_KEY' bash scripts/run_freepascal_tls13_servercertverify_bench.sh"
 fi
 
 echo "[PASS] minimal CI gate finished"

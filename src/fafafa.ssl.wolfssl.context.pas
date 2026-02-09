@@ -42,6 +42,7 @@ type
     FContextType: TSSLContextType;
     FWolfSSLCtx: PWOLFSSL_CTX;
     FProtocolVersions: TSSLProtocolVersions;
+    FPreferredVersion: TSSLProtocolVersion;
     FVerifyMode: TSSLVerifyModes;
     FVerifyDepth: Integer;
     FServerName: string;
@@ -75,6 +76,8 @@ type
     function GetContextType: TSSLContextType;
     procedure SetProtocolVersions(AVersions: TSSLProtocolVersions);
     function GetProtocolVersions: TSSLProtocolVersions;
+    procedure SetPreferredVersion(AVersion: TSSLProtocolVersion);
+    function GetPreferredVersion: TSSLProtocolVersion;
 
     { ISSLContext - 证书和密钥管理 }
     procedure LoadCertificate(const AFileName: string); overload;
@@ -321,6 +324,7 @@ begin
   FContextType := AType;
   FWolfSSLCtx := nil;
   FProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
+  FPreferredVersion := sslProtocolTLS13;
   FVerifyMode := [sslVerifyPeer];
   FVerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
   FServerName := '';
@@ -435,12 +439,32 @@ end;
 procedure TWolfSSLContext.SetProtocolVersions(AVersions: TSSLProtocolVersions);
 begin
   FProtocolVersions := AVersions;
+
+  // 当首选版本不再可用时，自动回退为无偏好
+  if (FPreferredVersion <> sslProtocolUnknown) and
+     not (FPreferredVersion in FProtocolVersions) then
+    FPreferredVersion := sslProtocolUnknown;
+
   // WolfSSL 协议版本在创建时确定，运行时更改需要重建上下文
 end;
 
 function TWolfSSLContext.GetProtocolVersions: TSSLProtocolVersions;
 begin
   Result := FProtocolVersions;
+end;
+
+procedure TWolfSSLContext.SetPreferredVersion(AVersion: TSSLProtocolVersion);
+begin
+  if (AVersion <> sslProtocolUnknown) and
+     not (AVersion in FProtocolVersions) then
+    RaiseInvalidParameter('PreferredVersion');
+
+  FPreferredVersion := AVersion;
+end;
+
+function TWolfSSLContext.GetPreferredVersion: TSSLProtocolVersion;
+begin
+  Result := FPreferredVersion;
 end;
 
 { 证书和密钥管理 }
@@ -969,6 +993,7 @@ procedure TWolfSSLContext.ConfigureSecureDefaults;
 begin
   // 配置安全默认值
   FProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
+  FPreferredVersion := sslProtocolTLS13;
   FVerifyMode := [sslVerifyPeer];
   FVerifyDepth := 4;
   ApplyVerifyMode;

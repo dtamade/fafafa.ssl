@@ -902,6 +902,10 @@ begin
     if (LConfig.ProtocolVersions <> []) and (LConfig.ProtocolVersions <> Result.GetProtocolVersions) then
       Result.SetProtocolVersions(LConfig.ProtocolVersions);
 
+    if (LConfig.PreferredVersion <> sslProtocolUnknown) and
+       (LConfig.PreferredVersion <> Result.GetPreferredVersion) then
+      Result.SetPreferredVersion(LConfig.PreferredVersion);
+
     if (LConfig.VerifyMode <> []) and (LConfig.VerifyMode <> Result.GetVerifyMode) then
       Result.SetVerifyMode(LConfig.VerifyMode);
 

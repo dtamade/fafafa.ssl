@@ -125,6 +125,7 @@ const
   sslWolfSSL = fafafa.ssl.base.sslWolfSSL;
   sslMbedTLS = fafafa.ssl.base.sslMbedTLS;
   sslWinSSL = fafafa.ssl.base.sslWinSSL;
+  sslFreePascal = fafafa.ssl.base.sslFreePascal;
   
   // 协议版本常量
   sslProtocolSSL2 = fafafa.ssl.base.sslProtocolSSL2;
@@ -247,7 +248,8 @@ function DefaultPKCS12Options: TPKCS12Options;
 implementation
 
 uses
-  fafafa.ssl.openssl.backed
+  fafafa.ssl.openssl.backed,
+  fafafa.ssl.freepascal.lib
   {$IFDEF WINDOWS}
   , fafafa.ssl.winssl.lib
   {$ENDIF}

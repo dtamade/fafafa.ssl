@@ -42,6 +42,7 @@ type
     FContextType: TSSLContextType;
     FSSLConfig: Pmbedtls_ssl_config;
     FProtocolVersions: TSSLProtocolVersions;
+    FPreferredVersion: TSSLProtocolVersion;
     FVerifyMode: TSSLVerifyModes;
     FVerifyDepth: Integer;
     FServerName: string;
@@ -83,6 +84,8 @@ type
     function GetContextType: TSSLContextType;
     procedure SetProtocolVersions(AVersions: TSSLProtocolVersions);
     function GetProtocolVersions: TSSLProtocolVersions;
+    procedure SetPreferredVersion(AVersion: TSSLProtocolVersion);
+    function GetPreferredVersion: TSSLProtocolVersion;
 
     { ISSLContext - 证书和密钥管理 }
     procedure LoadCertificate(const AFileName: string); overload;
@@ -191,6 +194,7 @@ begin
   FPrivateKey := nil;
   FCACerts := nil;
   FProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
+  FPreferredVersion := sslProtocolTLS13;
   FVerifyMode := [sslVerifyPeer];
   FVerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
   FServerName := '';
@@ -368,11 +372,30 @@ end;
 procedure TMbedTLSContext.SetProtocolVersions(AVersions: TSSLProtocolVersions);
 begin
   FProtocolVersions := AVersions;
+
+  // 当首选版本不再可用时，自动回退为无偏好
+  if (FPreferredVersion <> sslProtocolUnknown) and
+     not (FPreferredVersion in FProtocolVersions) then
+    FPreferredVersion := sslProtocolUnknown;
 end;
 
 function TMbedTLSContext.GetProtocolVersions: TSSLProtocolVersions;
 begin
   Result := FProtocolVersions;
+end;
+
+procedure TMbedTLSContext.SetPreferredVersion(AVersion: TSSLProtocolVersion);
+begin
+  if (AVersion <> sslProtocolUnknown) and
+     not (AVersion in FProtocolVersions) then
+    RaiseInvalidParameter('PreferredVersion');
+
+  FPreferredVersion := AVersion;
+end;
+
+function TMbedTLSContext.GetPreferredVersion: TSSLProtocolVersion;
+begin
+  Result := FPreferredVersion;
 end;
 
 { 证书和密钥管理 }
@@ -990,6 +1013,7 @@ end;
 procedure TMbedTLSContext.ConfigureSecureDefaults;
 begin
   FProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
+  FPreferredVersion := sslProtocolTLS13;
   FVerifyMode := [sslVerifyPeer];
   FVerifyDepth := 4;
   ApplyVerifyMode;

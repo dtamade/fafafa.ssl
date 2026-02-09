@@ -11,6 +11,11 @@ MODULE_SET="PKCS7,PKCS12,CMS,Store,OCSP,TS,CT"
 EXAMPLES_THRESHOLD="80.0"
 EXAMPLES_REPORT_REL="test-reports/examples_compile_ci_gate.json"
 SUMMARY_OUT_REL=""
+WITH_TLS13_SIGN_BENCH=false
+TLS13_SIGN_BENCH_ITERATIONS="3"
+TLS13_SIGN_BENCH_WARMUP="1"
+TLS13_SIGN_BENCH_SCHEME="rsa_pkcs1_sha256"
+TLS13_SIGN_BENCH_KEY="tests/certificate/test_certs/signer_key.pem"
 
 usage() {
   cat <<'USAGE'
@@ -21,18 +26,24 @@ Wave B Linux CI Gate Runner
   1) 全模块编译
   2) P2 核心模块回归
   3) 示例编译门禁（按通过率阈值判定）
+  4) （可选）TLS13 CertificateVerify 纯 Pascal signer 基准
 
 用法：
   scripts/run_wave_b_ci_gate.sh [options]
 
 选项：
-  --modules LIST              指定模块列表（默认: PKCS7,PKCS12,CMS,Store,OCSP,TS,CT）
-  --examples-threshold FLOAT  示例通过率阈值，默认 80.0
-  --examples-report PATH      示例 JSON 输出路径（相对项目根目录）
-  --summary-out PATH          Summary markdown 输出路径（相对项目根目录）
-  --verbose                   模块测试启用 verbose
-  --dry-run                   仅打印命令，不执行
-  --help                      显示帮助
+  --modules LIST                    指定模块列表（默认: PKCS7,PKCS12,CMS,Store,OCSP,TS,CT）
+  --examples-threshold FLOAT        示例通过率阈值，默认 80.0
+  --examples-report PATH            示例 JSON 输出路径（相对项目根目录）
+  --summary-out PATH                Summary markdown 输出路径（相对项目根目录）
+  --with-tls13-sign-bench           追加运行 TLS13 CertificateVerify signer 基准
+  --tls13-sign-bench-iterations N   签名基准迭代次数（默认: 3）
+  --tls13-sign-bench-warmup N       签名基准预热次数（默认: 1）
+  --tls13-sign-bench-scheme NAME    基准算法（默认: rsa_pkcs1_sha256）
+  --tls13-sign-bench-key PATH       私钥路径（默认: tests/certificate/test_certs/signer_key.pem）
+  --verbose                         模块测试启用 verbose
+  --dry-run                         仅打印命令，不执行
+  --help                            显示帮助
 USAGE
 }
 
@@ -52,6 +63,26 @@ while [[ $# -gt 0 ]]; do
       ;;
     --summary-out)
       SUMMARY_OUT_REL="$2"
+      shift 2
+      ;;
+    --with-tls13-sign-bench)
+      WITH_TLS13_SIGN_BENCH=true
+      shift
+      ;;
+    --tls13-sign-bench-iterations)
+      TLS13_SIGN_BENCH_ITERATIONS="$2"
+      shift 2
+      ;;
+    --tls13-sign-bench-warmup)
+      TLS13_SIGN_BENCH_WARMUP="$2"
+      shift 2
+      ;;
+    --tls13-sign-bench-scheme)
+      TLS13_SIGN_BENCH_SCHEME="$2"
+      shift 2
+      ;;
+    --tls13-sign-bench-key)
+      TLS13_SIGN_BENCH_KEY="$2"
       shift 2
       ;;
     --verbose)
@@ -74,6 +105,16 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ ! "$TLS13_SIGN_BENCH_ITERATIONS" =~ ^[0-9]+$ ]] || [[ "$TLS13_SIGN_BENCH_ITERATIONS" -le 0 ]]; then
+  echo "Invalid --tls13-sign-bench-iterations: $TLS13_SIGN_BENCH_ITERATIONS" >&2
+  exit 1
+fi
+
+if [[ ! "$TLS13_SIGN_BENCH_WARMUP" =~ ^[0-9]+$ ]] || [[ "$TLS13_SIGN_BENCH_WARMUP" -lt 0 ]]; then
+  echo "Invalid --tls13-sign-bench-warmup: $TLS13_SIGN_BENCH_WARMUP" >&2
+  exit 1
+fi
+
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 if [[ -z "$SUMMARY_OUT_REL" ]]; then
   SUMMARY_OUT_REL="test-reports/wave_b_ci_gate_summary_${RUN_ID}.md"
@@ -84,6 +125,7 @@ SUMMARY_OUT="$PROJECT_ROOT/$SUMMARY_OUT_REL"
 COMPILE_LOG="$PROJECT_ROOT/test-reports/wave_b_compile_${RUN_ID}.log"
 MODULE_LOG="$PROJECT_ROOT/test-reports/wave_b_modules_${RUN_ID}.log"
 EXAMPLES_LOG="$PROJECT_ROOT/test-reports/wave_b_examples_${RUN_ID}.log"
+BENCH_LOG="$PROJECT_ROOT/test-reports/wave_b_tls13_sign_bench_${RUN_ID}.log"
 
 mkdir -p "$PROJECT_ROOT/test-reports"
 
@@ -124,10 +166,55 @@ fi
 
 compile_cmd="cd '$PROJECT_ROOT' && python3 scripts/compile_all_modules.py"
 examples_cmd="cd '$PROJECT_ROOT' && bash scripts/verify_examples_compile.sh -f json -o '$EXAMPLES_REPORT_REL'"
+bench_cmd="cd '$PROJECT_ROOT' && FAFAFA_TLS13_SIGN_BENCH_ITERATIONS='$TLS13_SIGN_BENCH_ITERATIONS' FAFAFA_TLS13_SIGN_BENCH_WARMUP='$TLS13_SIGN_BENCH_WARMUP' FAFAFA_TLS13_SIGN_BENCH_SCHEME='$TLS13_SIGN_BENCH_SCHEME' FAFAFA_TLS13_SIGN_BENCH_KEY='$TLS13_SIGN_BENCH_KEY' bash scripts/run_freepascal_tls13_servercertverify_bench.sh"
 
 compile_exit=$(run_step "compile" "$compile_cmd" "$COMPILE_LOG")
 modules_exit=$(run_step "modules" "$build_module_cmd" "$MODULE_LOG")
 examples_exit=$(run_step "examples" "$examples_cmd" "$EXAMPLES_LOG")
+
+bench_exit="0"
+bench_status="SKIP"
+bench_row=""
+bench_cmd_md=""
+bench_metrics_md=""
+bench_crt_avg="n/a"
+bench_d_avg="n/a"
+bench_speedup="n/a"
+
+if [[ "$WITH_TLS13_SIGN_BENCH" == "true" ]]; then
+  bench_exit=$(run_step "tls13_sign_bench" "$bench_cmd" "$BENCH_LOG")
+  if [[ "$bench_exit" == "0" ]]; then
+    bench_status="PASS"
+  else
+    bench_status="FAIL"
+  fi
+
+  bench_row="| tls13_servercertverify_bench | \`$bench_exit\` | **$bench_status** | \`$(realpath --relative-to="$PROJECT_ROOT" "$BENCH_LOG")\` |"
+  bench_cmd_md="
+\`$bench_cmd\`"
+
+  if [[ "$DRY_RUN" == "false" && -f "$BENCH_LOG" ]]; then
+    bench_crt_avg=$(grep -E '^CRT_avg_ms=' "$BENCH_LOG" | tail -1 | cut -d '=' -f2 || true)
+    bench_d_avg=$(grep -E '^D_avg_ms=' "$BENCH_LOG" | tail -1 | cut -d '=' -f2 || true)
+    bench_speedup=$(grep -E '^Speedup_D_over_CRT=' "$BENCH_LOG" | tail -1 | cut -d '=' -f2 || true)
+
+    bench_crt_avg="${bench_crt_avg:-n/a}"
+    bench_d_avg="${bench_d_avg:-n/a}"
+    bench_speedup="${bench_speedup:-n/a}"
+  fi
+
+  bench_metrics_md="
+## TLS13 Signer Bench Metrics
+
+- Log: \`$(realpath --relative-to="$PROJECT_ROOT" "$BENCH_LOG")\`
+- Scheme: \`$TLS13_SIGN_BENCH_SCHEME\`
+- Iterations: \`$TLS13_SIGN_BENCH_ITERATIONS\`
+- Warmup: \`$TLS13_SIGN_BENCH_WARMUP\`
+- Key: \`$TLS13_SIGN_BENCH_KEY\`
+- CRT_avg_ms: \`$bench_crt_avg\`
+- D_avg_ms: \`$bench_d_avg\`
+- Speedup_D_over_CRT: \`$bench_speedup\`"
+fi
 
 examples_total="0"
 examples_passed="0"
@@ -193,6 +280,10 @@ if [[ "$compile_status" == "PASS" && "$modules_status" == "PASS" && "$examples_s
   overall_status="PASS"
 fi
 
+if [[ "$WITH_TLS13_SIGN_BENCH" == "true" && "$bench_status" != "PASS" ]]; then
+  overall_status="FAIL"
+fi
+
 cat > "$SUMMARY_OUT" <<EOF_SUMMARY
 # Wave B Linux CI Gate Summary
 
@@ -208,12 +299,14 @@ cat > "$SUMMARY_OUT" <<EOF_SUMMARY
 | compile_all_modules | \`$compile_exit\` | **$compile_status** | \`$(realpath --relative-to="$PROJECT_ROOT" "$COMPILE_LOG")\` |
 | run_all_module_tests | \`$modules_exit\` | **$modules_status** | \`$(realpath --relative-to="$PROJECT_ROOT" "$MODULE_LOG")\` |
 | verify_examples_compile | \`$examples_exit\` | **$examples_status** | \`$(realpath --relative-to="$PROJECT_ROOT" "$EXAMPLES_LOG")\` |
+$bench_row
 
 ## Examples Gate Metrics
 
 - Report: \`$(realpath --relative-to="$PROJECT_ROOT" "$EXAMPLES_REPORT")\`
 - Threshold: \`$EXAMPLES_THRESHOLD\`
 - Summary: \`passed=$examples_passed, failed=$examples_failed, skipped=$examples_skipped, total=$examples_total, pass_rate=$examples_rate\`
+$bench_metrics_md
 
 ## Commands
 
@@ -222,6 +315,7 @@ cat > "$SUMMARY_OUT" <<EOF_SUMMARY
 \`$build_module_cmd\`
 
 \`$examples_cmd\`
+$bench_cmd_md
 EOF_SUMMARY
 
 echo "[WAVE-B] summary: $SUMMARY_OUT"

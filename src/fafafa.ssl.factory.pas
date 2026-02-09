@@ -382,6 +382,10 @@ begin
       Exclude(AConfig.Options, ssoNoTLSv1_3)
     else
       Include(AConfig.Options, ssoNoTLSv1_3);
+
+    if (AConfig.PreferredVersion <> sslProtocolUnknown) and
+       not (AConfig.PreferredVersion in AConfig.ProtocolVersions) then
+      AConfig.PreferredVersion := sslProtocolUnknown;
   end;
 
   if AConfig.EnableSessionTickets then
@@ -856,6 +860,9 @@ begin
     if LConfig.ProtocolVersions <> [] then
       Result.SetProtocolVersions(LConfig.ProtocolVersions);
 
+    if LConfig.PreferredVersion <> sslProtocolUnknown then
+      Result.SetPreferredVersion(LConfig.PreferredVersion);
+
     if LConfig.VerifyMode <> [] then
       Result.SetVerifyMode(LConfig.VerifyMode);
 
@@ -906,6 +913,9 @@ begin
   // 应用配置
   if LConfig.ProtocolVersions <> [] then
     Result.SetProtocolVersions(LConfig.ProtocolVersions);
+
+  if LConfig.PreferredVersion <> sslProtocolUnknown then
+    Result.SetPreferredVersion(LConfig.PreferredVersion);
     
   if LConfig.CertificateFile <> '' then
     Result.LoadCertificate(LConfig.CertificateFile);

@@ -844,6 +844,16 @@ type
         @returns 协议版本集合 *}
     function GetProtocolVersions: TSSLProtocolVersions;
 
+    {** 设置协议首选版本。
+        注意：该设置为跨后端统一的“协商偏好”，并不保证后端可强制命中。
+        传入 sslProtocolUnknown 表示不设置偏好（自动协商）。
+        @param AVersion 首选协议版本（必须属于当前 ProtocolVersions，或为 sslProtocolUnknown） *}
+    procedure SetPreferredVersion(AVersion: TSSLProtocolVersion);
+
+    {** 获取当前协议首选版本
+        @returns 首选协议版本；sslProtocolUnknown 表示未设置偏好 *}
+    function GetPreferredVersion: TSSLProtocolVersion;
+
     {** 从文件加载证书
         @param AFileName 证书文件路径（PEM 或 DER 格式）
         @raises ESSLCertificateException 加载失败时 *}

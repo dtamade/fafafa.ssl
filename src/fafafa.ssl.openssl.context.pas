@@ -46,6 +46,7 @@ type
     FContextType: TSSLContextType;
     FSSLContext: PSSL_CTX;
     FProtocolVersions: TSSLProtocolVersions;
+    FPreferredVersion: TSSLProtocolVersion;
     FVerifyMode: TSSLVerifyModes;
     FVerifyDepth: Integer;
     FServerName: string;
@@ -90,6 +91,8 @@ type
     function GetContextType: TSSLContextType;
     procedure SetProtocolVersions(AVersions: TSSLProtocolVersions);
     function GetProtocolVersions: TSSLProtocolVersions;
+    procedure SetPreferredVersion(AVersion: TSSLProtocolVersion);
+    function GetPreferredVersion: TSSLProtocolVersion;
     
     { ISSLContext - 证书和密钥管理 }
     procedure LoadCertificate(const AFileName: string); overload;
@@ -423,6 +426,7 @@ begin
   FLibrary := ALibrary;
   FContextType := AType;
   FProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
+  FPreferredVersion := sslProtocolTLS13;
   FVerifyMode := [sslVerifyPeer];
   FVerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
   FServerName := '';
@@ -642,6 +646,11 @@ procedure TOpenSSLContext.SetProtocolVersions(AVersions: TSSLProtocolVersions);
 begin
   FProtocolVersions := AVersions;
 
+  // 当首选版本不再可用时，自动回退为无偏好
+  if (FPreferredVersion <> sslProtocolUnknown) and
+     not (FPreferredVersion in FProtocolVersions) then
+    FPreferredVersion := sslProtocolUnknown;
+
   // P2: 使用共享辅助函数记录废弃协议警告
   LogDeprecatedProtocolWarnings('OpenSSL', AVersions);
 
@@ -651,6 +660,20 @@ end;
 function TOpenSSLContext.GetProtocolVersions: TSSLProtocolVersions;
 begin
   Result := FProtocolVersions;
+end;
+
+procedure TOpenSSLContext.SetPreferredVersion(AVersion: TSSLProtocolVersion);
+begin
+  if (AVersion <> sslProtocolUnknown) and
+     not (AVersion in FProtocolVersions) then
+    RaiseInvalidParameter('PreferredVersion');
+
+  FPreferredVersion := AVersion;
+end;
+
+function TOpenSSLContext.GetPreferredVersion: TSSLProtocolVersion;
+begin
+  Result := FPreferredVersion;
 end;
 
 // ============================================================================
@@ -1706,6 +1729,7 @@ begin
 
   // 1. 协议版本：仅 TLS 1.2 和 1.3
   SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
+  SetPreferredVersion(sslProtocolTLS13);
 
   // 2. 安全选项
   SetOptions([
