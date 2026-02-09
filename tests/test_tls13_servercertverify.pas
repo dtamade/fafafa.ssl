@@ -129,6 +129,59 @@ begin
   end;
 end;
 
+function TryLocatePKCS1IntegerFieldTagOffset(
+  const ADER: TBytes;
+  AFieldIndex: Integer;
+  out ATagOffset: Integer
+): Boolean;
+var
+  LOffset: Integer;
+  LSeqLength: Integer;
+  LSeqEnd: Integer;
+  LCurrentField: Integer;
+  LFieldLength: Integer;
+begin
+  ATagOffset := -1;
+  Result := False;
+
+  if (AFieldIndex < 0) or (Length(ADER) < 4) then
+    Exit;
+
+  LOffset := 0;
+  if ADER[LOffset] <> $30 then
+    Exit;
+  Inc(LOffset);
+
+  if not TryReadDERLength(ADER, LOffset, LSeqLength) then
+    Exit;
+
+  LSeqEnd := LOffset + LSeqLength;
+  if LSeqEnd > Length(ADER) then
+    Exit;
+
+  LCurrentField := 0;
+  while LOffset < LSeqEnd do
+  begin
+    if ADER[LOffset] <> $02 then
+      Exit;
+
+    if LCurrentField = AFieldIndex then
+    begin
+      ATagOffset := LOffset;
+      Exit(True);
+    end;
+
+    Inc(LOffset);
+    if not TryReadDERLength(ADER, LOffset, LFieldLength) then
+      Exit;
+    if (LFieldLength < 0) or (LOffset + LFieldLength > LSeqEnd) then
+      Exit;
+
+    Inc(LOffset, LFieldLength);
+    Inc(LCurrentField);
+  end;
+end;
+
 function TryLocatePKCS1PrivateExponentValue(
   const ADER: TBytes;
   out AValueOffset: Integer;
@@ -207,6 +260,26 @@ begin
   if AForceOdd then
     ADestDER[LValueOffset + LValueLength - 1] := ADestDER[LValueOffset + LValueLength - 1] or $01;
 
+  Result := True;
+end;
+
+function TryMutatePKCS1FieldTag(
+  const ASourceDER: TBytes;
+  AFieldIndex: Integer;
+  ATag: Byte;
+  out ADestDER: TBytes
+): Boolean;
+var
+  LTagOffset: Integer;
+begin
+  SetLength(ADestDER, 0);
+  Result := False;
+
+  if not TryLocatePKCS1IntegerFieldTagOffset(ASourceDER, AFieldIndex, LTagOffset) then
+    Exit;
+
+  ADestDER := Copy(ASourceDER, 0, Length(ASourceDER));
+  ADestDER[LTagOffset] := ATag;
   Result := True;
 end;
 
@@ -416,6 +489,123 @@ begin
 
   ATagOffset := LOffset;
   Result := True;
+end;
+
+function TryLocatePKCS8AlgorithmOIDValue(
+  const ADER: TBytes;
+  out AValueOffset: Integer;
+  out AValueLength: Integer;
+  out ATagOffset: Integer
+): Boolean;
+var
+  LOffset: Integer;
+  LSeqLength: Integer;
+  LVersionLength: Integer;
+  LAlgSeqLength: Integer;
+begin
+  AValueOffset := -1;
+  AValueLength := 0;
+  ATagOffset := -1;
+  Result := False;
+
+  if Length(ADER) < 12 then
+    Exit;
+
+  LOffset := 0;
+  if ADER[LOffset] <> $30 then
+    Exit;
+  Inc(LOffset);
+  if not TryReadDERLength(ADER, LOffset, LSeqLength) then
+    Exit;
+  if LOffset + LSeqLength > Length(ADER) then
+    Exit;
+
+  if (LOffset >= Length(ADER)) or (ADER[LOffset] <> $02) then
+    Exit;
+  Inc(LOffset);
+  if not TryReadDERLength(ADER, LOffset, LVersionLength) then
+    Exit;
+  Inc(LOffset, LVersionLength);
+
+  if (LOffset >= Length(ADER)) or (ADER[LOffset] <> $30) then
+    Exit;
+  Inc(LOffset);
+  if not TryReadDERLength(ADER, LOffset, LAlgSeqLength) then
+    Exit;
+
+  ATagOffset := LOffset;
+  if (LOffset >= Length(ADER)) or (ADER[LOffset] <> $06) then
+    Exit;
+  Inc(LOffset);
+
+  if not TryReadDERLength(ADER, LOffset, AValueLength) then
+    Exit;
+  if (AValueLength <= 0) or (LOffset + AValueLength > Length(ADER)) then
+    Exit;
+
+  AValueOffset := LOffset;
+  Result := True;
+end;
+
+function TryLocatePKCS8PrivateKeyTagOffset(
+  const ADER: TBytes;
+  out ATagOffset: Integer
+): Boolean;
+var
+  LOffset: Integer;
+  LSeqLength: Integer;
+  LChildLength: Integer;
+begin
+  ATagOffset := -1;
+  Result := False;
+
+  if Length(ADER) < 8 then
+    Exit;
+
+  LOffset := 0;
+  if ADER[LOffset] <> $30 then
+    Exit;
+  Inc(LOffset);
+  if not TryReadDERLength(ADER, LOffset, LSeqLength) then
+    Exit;
+  if LOffset + LSeqLength > Length(ADER) then
+    Exit;
+
+  if (LOffset >= Length(ADER)) or (ADER[LOffset] <> $02) then
+    Exit;
+  Inc(LOffset);
+  if not TryReadDERLength(ADER, LOffset, LChildLength) then
+    Exit;
+  Inc(LOffset, LChildLength);
+
+  if (LOffset >= Length(ADER)) or (ADER[LOffset] <> $30) then
+    Exit;
+  Inc(LOffset);
+  if not TryReadDERLength(ADER, LOffset, LChildLength) then
+    Exit;
+  Inc(LOffset, LChildLength);
+
+  if LOffset >= Length(ADER) then
+    Exit;
+  ATagOffset := LOffset;
+  Result := True;
+end;
+
+function TryExtractPKCS1FromPKCS8DER(const ADER: TBytes; out APKCS1DER: TBytes): Boolean;
+var
+  LOffset: Integer;
+  LLength: Integer;
+begin
+  SetLength(APKCS1DER, 0);
+  Result := False;
+
+  if not TryLocatePKCS8PrivateKeyOctetStringValue(ADER, LOffset, LLength) then
+    Exit;
+  if (LLength <= 0) or (LOffset + LLength > Length(ADER)) then
+    Exit;
+
+  APKCS1DER := Copy(ADER, LOffset, LLength);
+  Result := Length(APKCS1DER) > 0;
 end;
 
 function TryExtractFirstPrivateKeyDER(
@@ -1084,6 +1274,30 @@ begin
     ALabel + ': malformed DER should be rejected'
   );
   AssertContains(LErr, 'Unsupported DER private key format', ALabel + ': malformed DER error message mismatch');
+end;
+
+procedure AssertDEREitherRejectedOrFallbackSucceeds(
+  const ADER: TBytes;
+  const AInput: TBytes;
+  const ALabel: string
+);
+var
+  LSig: TBytes;
+  LErr: string;
+begin
+  if TryBuildTLS13CertificateVerifySignature(
+       TLS13_SIG_RSA_PKCS1_SHA256,
+       ADER,
+       AInput,
+       LSig,
+       LErr
+     ) then
+  begin
+    AssertTrue(Length(LSig) > 0, ALabel + ': success path must produce non-empty signature');
+    Exit;
+  end;
+
+  AssertContains(LErr, 'Unsupported DER private key format', ALabel + ': malformed DER rejection message mismatch');
 end;
 
 procedure AssertEqualsQWord(AExpected, AActual: QWord; const AMessage: string);
@@ -2621,6 +2835,187 @@ begin
   AssertContains(LErr, 'Encrypted PKCS#8 private keys are not supported', 'encrypted-key rejection message mismatch');
 end;
 
+procedure TestRSASignatureRejectsPKCS8FieldShapeMutations;
+var
+  LPemBlob: TBytes;
+  LDER: TBytes;
+  LType: TPEMType;
+  LInput: TBytes;
+  LTranscriptHash: TBytes;
+  LMutated: TBytes;
+  LOffset: Integer;
+  LLen: Integer;
+  LTagOffset: Integer;
+  I: Integer;
+begin
+  LPemBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  AssertTrue(TryExtractFirstPrivateKeyDER(LPemBlob, LDER, LType), 'PKCS8-shape: failed to extract DER');
+  AssertTrue(LType = pemPrivateKey, 'PKCS8-shape: expected PKCS#8 key type');
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($D0 + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(TryLocatePKCS8AlgorithmIdentifierTagOffset(LDER, LTagOffset), 'PKCS8-shape: locate alg tag failed');
+  LMutated := CopyBytesWithMutation(LDER, LTagOffset, $31);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-alg-not-sequence');
+
+  AssertTrue(TryLocatePKCS8PrivateKeyTagOffset(LDER, LTagOffset), 'PKCS8-shape: locate privateKey tag failed');
+  LMutated := CopyBytesWithMutation(LDER, LTagOffset, $05);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-privatekey-not-octetstring');
+
+  AssertTrue(TryLocatePKCS8PrivateKeyOctetStringValue(LDER, LOffset, LLen), 'PKCS8-shape: locate privateKey octets failed');
+  LMutated := Copy(LDER, 0, Length(LDER));
+  FillChar(LMutated[LOffset], LLen, 0);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-empty-inner-pkcs1');
+end;
+
+procedure TestRSASignatureRejectsPKCS8AlgorithmOIDMutations;
+var
+  LPemBlob: TBytes;
+  LDER: TBytes;
+  LType: TPEMType;
+  LInput: TBytes;
+  LTranscriptHash: TBytes;
+  LMutated: TBytes;
+  LOIDOffset: Integer;
+  LOIDLength: Integer;
+  LOIDTagOffset: Integer;
+  I: Integer;
+begin
+  LPemBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  AssertTrue(TryExtractFirstPrivateKeyDER(LPemBlob, LDER, LType), 'PKCS8-oid: failed to extract DER');
+  AssertTrue(LType = pemPrivateKey, 'PKCS8-oid: expected PKCS#8 key type');
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($E0 + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(
+    TryLocatePKCS8AlgorithmOIDValue(LDER, LOIDOffset, LOIDLength, LOIDTagOffset),
+    'PKCS8-oid: failed to locate algorithm OID'
+  );
+
+  LMutated := CopyBytesWithMutation(LDER, LOIDTagOffset, $02);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-oid-tag-not-oid');
+
+  LMutated := Copy(LDER, 0, Length(LDER));
+  FillChar(LMutated[LOIDOffset], LOIDLength, 0);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-oid-bytes-zeroed');
+
+  LMutated := Copy(LDER, 0, Length(LDER));
+  if LOIDLength > 0 then
+    LMutated[LOIDOffset + LOIDLength - 1] := LMutated[LOIDOffset + LOIDLength - 1] xor $01;
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-oid-last-byte-flipped');
+end;
+
+procedure TestRSASignatureRejectsPKCS1CoreFieldMutations;
+var
+  LPemBlob: TBytes;
+  LDER: TBytes;
+  LPKCS1: TBytes;
+  LInput: TBytes;
+  LTranscriptHash: TBytes;
+  LMutated: TBytes;
+  LType: TPEMType;
+  I: Integer;
+begin
+  LPemBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  AssertTrue(TryExtractFirstPrivateKeyDER(LPemBlob, LDER, LType), 'PKCS1-core: failed to extract DER');
+  AssertTrue(TryExtractPKCS1FromPKCS8DER(LDER, LPKCS1), 'PKCS1-core: failed to extract inner PKCS#1 DER');
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($F0 + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(TryMutatePKCS1FieldTag(LPKCS1, 1, $05, LMutated), 'PKCS1-core: mutate modulus tag failed');
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs1-modulus-not-integer');
+
+  AssertTrue(TryMutatePKCS1FieldTag(LPKCS1, 3, $05, LMutated), 'PKCS1-core: mutate exponent tag failed');
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs1-privateexp-not-integer');
+
+  AssertTrue(TrySetPKCS1FieldToConstant(LPKCS1, 1, 0, LMutated), 'PKCS1-core: zero modulus failed');
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs1-modulus-zero');
+
+  AssertTrue(TrySetPKCS1FieldToConstant(LPKCS1, 3, 0, LMutated), 'PKCS1-core: zero exponent failed');
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs1-exponent-zero');
+end;
+
+procedure TestRSASignatureRejectsPKCS1CRTFieldTagMutations;
+var
+  LPemBlob: TBytes;
+  LDER: TBytes;
+  LPKCS1: TBytes;
+  LInput: TBytes;
+  LTranscriptHash: TBytes;
+  LMutated: TBytes;
+  LType: TPEMType;
+  I: Integer;
+begin
+  LPemBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  AssertTrue(TryExtractFirstPrivateKeyDER(LPemBlob, LDER, LType), 'PKCS1-crt-tag: failed to extract DER');
+  AssertTrue(TryExtractPKCS1FromPKCS8DER(LDER, LPKCS1), 'PKCS1-crt-tag: failed to extract inner PKCS#1 DER');
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($60 + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(TryMutatePKCS1FieldTag(LPKCS1, 4, $05, LMutated), 'PKCS1-crt-tag: mutate p tag failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-crt-p-not-integer');
+
+  AssertTrue(TryMutatePKCS1FieldTag(LPKCS1, 5, $05, LMutated), 'PKCS1-crt-tag: mutate q tag failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-crt-q-not-integer');
+
+  AssertTrue(TryMutatePKCS1FieldTag(LPKCS1, 6, $05, LMutated), 'PKCS1-crt-tag: mutate dp tag failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-crt-dp-not-integer');
+
+  AssertTrue(TryMutatePKCS1FieldTag(LPKCS1, 7, $05, LMutated), 'PKCS1-crt-tag: mutate dq tag failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-crt-dq-not-integer');
+
+  AssertTrue(TryMutatePKCS1FieldTag(LPKCS1, 8, $05, LMutated), 'PKCS1-crt-tag: mutate qinv tag failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-crt-qinv-not-integer');
+end;
+
+procedure TestRSASignatureRejectsPKCS1CRTZeroValueMutations;
+var
+  LPemBlob: TBytes;
+  LDER: TBytes;
+  LPKCS1: TBytes;
+  LInput: TBytes;
+  LTranscriptHash: TBytes;
+  LMutated: TBytes;
+  LType: TPEMType;
+  I: Integer;
+begin
+  LPemBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  AssertTrue(TryExtractFirstPrivateKeyDER(LPemBlob, LDER, LType), 'PKCS1-crt-zero: failed to extract DER');
+  AssertTrue(TryExtractPKCS1FromPKCS8DER(LDER, LPKCS1), 'PKCS1-crt-zero: failed to extract inner PKCS#1 DER');
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($70 + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(TrySetPKCS1FieldToConstant(LPKCS1, 4, 0, LMutated), 'PKCS1-crt-zero: zero p failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-crt-p-zero');
+
+  AssertTrue(TrySetPKCS1FieldToConstant(LPKCS1, 5, 0, LMutated), 'PKCS1-crt-zero: zero q failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-crt-q-zero');
+
+  AssertTrue(TrySetPKCS1FieldToConstant(LPKCS1, 6, 0, LMutated), 'PKCS1-crt-zero: zero dp failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-crt-dp-zero');
+
+  AssertTrue(TrySetPKCS1FieldToConstant(LPKCS1, 7, 0, LMutated), 'PKCS1-crt-zero: zero dq failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-crt-dq-zero');
+
+  AssertTrue(TrySetPKCS1FieldToConstant(LPKCS1, 8, 0, LMutated), 'PKCS1-crt-zero: zero qinv failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-crt-qinv-zero');
+end;
+
 procedure TestRSASignatureKeySizeConsistency;
 var
   LKeyBlob: TBytes;
@@ -2730,6 +3125,11 @@ begin
   TestRSASignatureRejectsPEMWithoutUsableRSAKey;
   TestRSASignatureRejectsMalformedPEMEnvelopes;
   TestRSASignatureRejectsEncryptedPEMBlock;
+  TestRSASignatureRejectsPKCS8FieldShapeMutations;
+  TestRSASignatureRejectsPKCS8AlgorithmOIDMutations;
+  TestRSASignatureRejectsPKCS1CoreFieldMutations;
+  TestRSASignatureRejectsPKCS1CRTFieldTagMutations;
+  TestRSASignatureRejectsPKCS1CRTZeroValueMutations;
   TestRSASignatureRejectsPEMWithoutPrivateKeyBlock;
   TestRSASignatureKeySizeConsistency;
   TestRSASignatureFallsBackWhenPrivateExponentCorrupted;
