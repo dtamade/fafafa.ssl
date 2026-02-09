@@ -133,6 +133,11 @@ begin
   Result := (Length(AValue) > 0) and ((AValue[0] and 1) = 1);
 end;
 
+function BigNatIsOne(const AValue: TBigNat): Boolean;
+begin
+  Result := (Length(AValue) = 1) and (AValue[0] = 1);
+end;
+
 function BigNatCompare(const ALeft, ARight: TBigNat): Integer;
 var
   I: Integer;
@@ -694,6 +699,27 @@ begin
   Result := LAccumulator;
 end;
 
+function BigNatGCD(const ALeft, ARight: TBigNat): TBigNat;
+var
+  LA: TBigNat;
+  LB: TBigNat;
+  LTmp: TBigNat;
+begin
+  LA := Copy(ALeft, 0, Length(ALeft));
+  LB := Copy(ARight, 0, Length(ARight));
+  NormalizeBigNat(LA);
+  NormalizeBigNat(LB);
+
+  while not BigNatIsZero(LB) do
+  begin
+    LTmp := BigNatMod(LA, LB);
+    LA := LB;
+    LB := LTmp;
+  end;
+
+  Result := LA;
+end;
+
 function TryRSAModExpSignPurePascal(
   const AEncodedMessage: TBytes;
   const AModulus: TBytes;
@@ -707,6 +733,9 @@ var
   LExponent: TBigNat;
   LSignatureNat: TBigNat;
   LMontCtx: TMontgomeryContext;
+  LGCD: TBigNat;
+  LModulusBitLen: Integer;
+  LExponentBitLen: Integer;
 begin
   SetLength(ASignature, 0);
   AError := '';
@@ -740,9 +769,24 @@ begin
     Exit;
   end;
 
+  LModulusBitLen := BigNatBitLength(LModulus);
+  LExponentBitLen := BigNatBitLength(LExponent);
+  if LExponentBitLen > LModulusBitLen * 2 then
+  begin
+    AError := 'RSA private exponent is unreasonably large';
+    Exit;
+  end;
+
   if BigNatCompare(LMessage, LModulus) >= 0 then
   begin
     AError := 'Encoded message representative is not less than RSA modulus';
+    Exit;
+  end;
+
+  LGCD := BigNatGCD(LMessage, LModulus);
+  if not BigNatIsOne(LGCD) then
+  begin
+    AError := 'Encoded message representative is not coprime to RSA modulus';
     Exit;
   end;
 

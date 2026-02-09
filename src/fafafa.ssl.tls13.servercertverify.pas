@@ -146,7 +146,7 @@ end;
 
 function TryValidateRSACRTComponents(
   const AModulus: TBytes;
-  const AP, AQ, AQInv: TBytes;
+  const AP, AQ, ADP, ADQ, AQInv: TBytes;
   out AError: string
 ): Boolean;
 var
@@ -205,6 +205,28 @@ begin
   if not UnsignedBytesEqual(LQInvCheck, LOne) then
   begin
     AError := 'RSA CRT validation failed: qInv is inconsistent with q mod p';
+    Exit;
+  end;
+
+  if not TryBigIntModFromUnsignedBytes(ADP, AP, LQInvCheck, AError) then
+  begin
+    AError := 'RSA CRT validation failed (dp range): ' + AError;
+    Exit;
+  end;
+  if not UnsignedBytesEqual(LQInvCheck, ADP) then
+  begin
+    AError := 'RSA CRT validation failed: dp is out of range for modulus p';
+    Exit;
+  end;
+
+  if not TryBigIntModFromUnsignedBytes(ADQ, AQ, LQInvCheck, AError) then
+  begin
+    AError := 'RSA CRT validation failed (dq range): ' + AError;
+    Exit;
+  end;
+  if not UnsignedBytesEqual(LQInvCheck, ADQ) then
+  begin
+    AError := 'RSA CRT validation failed: dq is out of range for modulus q';
     Exit;
   end;
 
@@ -1172,7 +1194,7 @@ begin
      (Length(LDQ) > 0) and (Length(LQInv) > 0) then
   begin
     LCRTErr := '';
-    if TryValidateRSACRTComponents(LModulus, LP, LQ, LQInv, LCRTErr) then
+    if TryValidateRSACRTComponents(LModulus, LP, LQ, LDP, LDQ, LQInv, LCRTErr) then
     begin
       if TryRSASignWithCRT(LEM, LModulus, LP, LQ, LDP, LDQ, LQInv, ASignature, AError) then
         Exit(True);
@@ -1186,9 +1208,9 @@ begin
     end;
 
     if LCRTErr <> '' then
-      AError := LCRTErr + '; fallback exponent signing failed: ' + LExpErr
+      AError := 'E_TLS13_SIGNER_FALLBACK_FAILED: crt_reason=' + LCRTErr + '; exp_reason=' + LExpErr
     else
-      AError := 'RSA CRT signing failed and fallback exponent signing failed: ' + LExpErr;
+      AError := 'E_TLS13_SIGNER_FALLBACK_FAILED: crt_reason=unknown; exp_reason=' + LExpErr;
     Exit(False);
   end;
 

@@ -5,6 +5,7 @@ program test_tls13_servercertverify;
 uses
   SysUtils,
   Classes,
+  fafafa.ssl.tls13.bigint,
   fafafa.ssl.tls13.wire,
   fafafa.ssl.tls13.clienthello,
   fafafa.ssl.tls13.clienthello.parser,
@@ -455,6 +456,75 @@ begin
     Fail(Format('%s (expected=%d actual=%d)', [AMessage, AExpected, AActual]));
 end;
 
+procedure AssertContains(const AText, ASubText, AMessage: string);
+begin
+  if Pos(ASubText, AText) <= 0 then
+    Fail(AMessage + ' (missing: ' + ASubText + ')');
+end;
+
+function BuildPKCS8WithContextAttribute(const ADER: TBytes): TBytes;
+const
+  ATTRS_TAIL: array[0..21] of Byte = (
+    $A0, $14,
+      $31, $12,
+        $30, $10,
+          $06, $09, $2A, $86, $48, $86, $F7, $0D, $01, $09, $14,
+          $31, $03,
+            $0C, $01, $41
+  );
+var
+  LOffset: Integer;
+  LSeqLen: Integer;
+  LSeqLenBytes: Integer;
+  LNewSeqLen: Integer;
+  LNewLenBytes: Integer;
+  LTmp: Integer;
+  I: Integer;
+  LPayloadOffset: Integer;
+begin
+  SetLength(Result, 0);
+  if Length(ADER) < 4 then
+    Exit;
+  if ADER[0] <> $30 then
+    Exit;
+
+  LOffset := 1;
+  if not TryReadDERLength(ADER, LOffset, LSeqLen) then
+    Exit;
+
+  LSeqLenBytes := LOffset - 1;
+  LNewSeqLen := LSeqLen + Length(ATTRS_TAIL);
+
+  if LNewSeqLen < $80 then
+    LNewLenBytes := 1
+  else if LNewSeqLen <= $FF then
+    LNewLenBytes := 2
+  else if LNewSeqLen <= $FFFF then
+    LNewLenBytes := 3
+  else
+    Exit;
+
+  SetLength(Result, 1 + LNewLenBytes + LSeqLen + Length(ATTRS_TAIL));
+  Result[0] := $30;
+
+  if LNewLenBytes = 1 then
+    Result[1] := Byte(LNewSeqLen)
+  else
+  begin
+    Result[1] := $80 or Byte(LNewLenBytes - 1);
+    LTmp := LNewSeqLen;
+    for I := LNewLenBytes - 1 downto 1 do
+    begin
+      Result[1 + I] := Byte(LTmp and $FF);
+      LTmp := LTmp shr 8;
+    end;
+  end;
+
+  LPayloadOffset := 1 + LNewLenBytes;
+  Move(ADER[1 + LSeqLenBytes], Result[LPayloadOffset], LSeqLen);
+  Move(ATTRS_TAIL[0], Result[LPayloadOffset + LSeqLen], Length(ATTRS_TAIL));
+end;
+
 procedure TestSelectSchemeFromClientHello;
 var
   LClientKeyShare: TBytes;
@@ -815,6 +885,232 @@ begin
     'Corrupted private exponent should produce a different signature when CRT is broken and fallback is used');
 end;
 
+procedure TestBigIntEvenModulusAndZeroExponent;
+var
+  LOut: TBytes;
+  LErr: string;
+begin
+  AssertTrue(TryBigIntModExpFromUnsignedBytes([$0D], [$03], [$0A], LOut, LErr),
+    'BigInt even modulus modexp fallback failed: ' + LErr);
+  AssertEqualsInt(1, Length(LOut), 'BigInt even modulus modexp length mismatch');
+  AssertEqualsInt(7, LOut[0], '13^3 mod 10 should be 7');
+
+  AssertTrue(TryBigIntModMulFromUnsignedBytes([$07], [$09], [$0A], LOut, LErr),
+    'BigInt even modulus modmul fallback failed: ' + LErr);
+  AssertEqualsInt(1, Length(LOut), 'BigInt even modulus modmul length mismatch');
+  AssertEqualsInt(3, LOut[0], '7*9 mod 10 should be 3');
+
+  AssertTrue(TryBigIntModExpFromUnsignedBytes([$2A], [$00], [$01], LOut, LErr),
+    'BigInt exp=0 reduction failed: ' + LErr);
+  AssertEqualsInt(1, Length(LOut), 'BigInt exp=0 mod=1 length mismatch');
+  AssertEqualsInt(0, LOut[0], 'base^0 mod 1 should be 0');
+end;
+
+procedure TestBigIntCrossByteVector;
+var
+  LOut: TBytes;
+  LErr: string;
+begin
+  AssertTrue(TryBigIntModMulFromUnsignedBytes([$FF, $00, $01], [$02], [$01, $00, $01], LOut, LErr),
+    'BigInt cross-byte vector multiply failed: ' + LErr);
+  AssertEqualsInt(2, Length(LOut), 'BigInt cross-byte vector result length mismatch');
+  AssertEqualsInt($FE, LOut[0], 'BigInt cross-byte vector high byte mismatch');
+  AssertEqualsInt($05, LOut[1], 'BigInt cross-byte vector low byte mismatch');
+end;
+
+procedure TestBigIntRejectsNonCoprimeRSARepresentative;
+var
+  LSig: TBytes;
+  LErr: string;
+begin
+  AssertTrue(
+    not TryRSAModExpSignPurePascal([$06], [$0C], [$03], LSig, LErr),
+    'RSA pure Pascal should reject non-coprime message representative'
+  );
+  AssertContains(LErr, 'not coprime', 'Expected coprime rejection message');
+end;
+
+procedure TestTinyModulusDefense;
+var
+  LSig: TBytes;
+  LErr: string;
+begin
+  AssertTrue(
+    not TryRSAModExpSignPurePascal([$01], [$02], [$01], LSig, LErr),
+    'Tiny modulus input should be rejected'
+  );
+  AssertContains(LErr, 'must be odd', 'Tiny modulus defense should fail with odd-modulus validation error');
+end;
+
+procedure TestRSASignatureWithDERPrivateKey;
+var
+  LPemBlob: TBytes;
+  LDER: TBytes;
+  LType: TPEMType;
+  LTranscriptHash: TBytes;
+  LInput: TBytes;
+  LSig: TBytes;
+  LErr: string;
+  I: Integer;
+begin
+  LPemBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  AssertTrue(TryExtractFirstPrivateKeyDER(LPemBlob, LDER, LType), 'Failed to extract DER from PEM private key');
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($33 + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LDER,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'RSA-PKCS1 signing with DER key failed: ' + LErr
+  );
+  AssertEqualsInt(256, Length(LSig), 'RSA-PKCS1 DER signature length should match 2048-bit key');
+end;
+
+procedure TestRSASignatureWithPKCS8Attributes;
+var
+  LPemBlob: TBytes;
+  LDER: TBytes;
+  LMutatedDER: TBytes;
+  LType: TPEMType;
+  LTranscriptHash: TBytes;
+  LInput: TBytes;
+  LSigA: TBytes;
+  LSigB: TBytes;
+  LErr: string;
+  I: Integer;
+  LDiff: Integer;
+begin
+  LPemBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  AssertTrue(TryExtractFirstPrivateKeyDER(LPemBlob, LDER, LType), 'Failed to extract DER from PEM private key');
+  AssertTrue(LType = pemPrivateKey, 'Expected PKCS#8 PRIVATE KEY input');
+
+  LMutatedDER := BuildPKCS8WithContextAttribute(LDER);
+  AssertTrue(Length(LMutatedDER) > 0, 'Failed to build PKCS#8 key with context attribute');
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($44 + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LDER,
+      LInput,
+      LSigA,
+      LErr
+    ),
+    'RSA-PKCS1 signing with original PKCS#8 DER failed: ' + LErr
+  );
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LMutatedDER,
+      LInput,
+      LSigB,
+      LErr
+    ),
+    'RSA-PKCS1 signing with attributed PKCS#8 DER failed: ' + LErr
+  );
+
+  AssertEqualsInt(Length(LSigA), Length(LSigB), 'PKCS#8 attributed signature length mismatch');
+  LDiff := 0;
+  for I := 0 to Length(LSigA) - 1 do
+    if LSigA[I] <> LSigB[I] then
+      Inc(LDiff);
+  AssertEqualsInt(0, LDiff, 'PKCS#8 attributes should not change RSA-PKCS1 signature result');
+end;
+
+procedure TestRSASignatureKeySizeConsistency;
+var
+  LKeyBlob: TBytes;
+  LTranscriptHash: TBytes;
+  LInput: TBytes;
+  LSig: TBytes;
+  LErr: string;
+  I: Integer;
+begin
+  LKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($55 + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LKeyBlob,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'RSA-PKCS1 signing failed for key-size consistency check: ' + LErr
+  );
+  AssertEqualsInt(256, Length(LSig), 'Signer key must produce 256-byte signature for 2048-bit modulus');
+end;
+
+procedure TestFallbackErrorCodeOnDoubleFailure;
+var
+  LKeyBlob: TBytes;
+  LMutatedBothDER: TBytes;
+  LTranscriptHash: TBytes;
+  LInput: TBytes;
+  LSig: TBytes;
+  LErr: string;
+  I: Integer;
+begin
+  LKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  LMutatedBothDER := BuildMutatedPrimePAndPrivateExponentPrivateKeyBlob(LKeyBlob);
+  AssertTrue(Length(LMutatedBothDER) > 0, 'Failed to produce DER key with corrupted prime p + private exponent');
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($66 + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LMutatedBothDER,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'Double-corrupted key should fail signing'
+  );
+  AssertContains(LErr, 'E_TLS13_SIGNER_FALLBACK_FAILED', 'Fallback failure should expose structured error code');
+  AssertContains(LErr, 'crt_reason=', 'Fallback failure should contain CRT reason');
+  AssertContains(LErr, 'exp_reason=', 'Fallback failure should contain exponent reason');
+end;
+
+procedure TestFallbackErrorCodeFromDirectSignerCall;
+var
+  LSig: TBytes;
+  LErr: string;
+begin
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      [],
+      [$01],
+      LSig,
+      LErr
+    ),
+    'Direct signer call with empty key should fail'
+  );
+  AssertContains(LErr, 'Private key material is empty', 'Expected private-key-empty diagnostic');
+end;
+
 begin
   WriteLn('Testing TLS 1.3 server CertificateVerify helpers...');
 
@@ -823,9 +1119,17 @@ begin
   TestBuildCertificateVerifyHandshake;
   TestPlaceholderSignature;
   TestSignerUnitHasNoExternalBigIntDependency;
+  TestBigIntEvenModulusAndZeroExponent;
+  TestBigIntCrossByteVector;
+  TestBigIntRejectsNonCoprimeRSARepresentative;
+  TestTinyModulusDefense;
+  TestRSASignatureWithDERPrivateKey;
+  TestRSASignatureWithPKCS8Attributes;
+  TestRSASignatureKeySizeConsistency;
   TestRSASignatureUsesCRTWhenAvailable;
   TestRSASignatureFallsBackWhenCRTInconsistent;
   TestRSASignatureUsesCorruptedExponentWhenCRTBroken;
+  TestFallbackErrorCodeFromDirectSignerCall;
   TestRealRSASignature;
 
   WriteLn('✅ TLS 1.3 server CertificateVerify helper checks passed');
