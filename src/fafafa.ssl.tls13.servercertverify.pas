@@ -160,8 +160,37 @@ begin
   Result := (Length(LTrimmed) = 1) and (LTrimmed[0] = 1);
 end;
 
+function TryUnsignedSubtractOne(const AData: TBytes; out AResult: TBytes): Boolean;
+var
+  LValue: TBytes;
+  I: Integer;
+begin
+  SetLength(AResult, 0);
+  Result := False;
+
+  LValue := StripLeadingZeroBytes(AData);
+  if UnsignedIsZero(LValue) then
+    Exit;
+
+  AResult := Copy(LValue, 0, Length(LValue));
+  I := High(AResult);
+  while I >= 0 do
+  begin
+    if AResult[I] > 0 then
+    begin
+      Dec(AResult[I]);
+      AResult := StripLeadingZeroBytes(AResult);
+      Exit(True);
+    end;
+
+    AResult[I] := $FF;
+    Dec(I);
+  end;
+end;
+
 function TryValidateRSACRTComponents(
   const AModulus: TBytes;
+  const APrivateExponent: TBytes;
   const AP, AQ, ADP, ADQ, AQInv: TBytes;
   out AError: string
 ): Boolean;
@@ -169,6 +198,10 @@ var
   LProduct: TBytes;
   LProductFixed: TBytes;
   LQInvCheck: TBytes;
+  LPMinusOne: TBytes;
+  LQMinusOne: TBytes;
+  LDModPMinusOne: TBytes;
+  LDModQMinusOne: TBytes;
   LOne: TBytes;
 begin
   AError := '';
@@ -183,6 +216,12 @@ begin
   if (Length(AP) = 0) or (Length(AQ) = 0) or (Length(AQInv) = 0) then
   begin
     AError := 'RSA CRT validation failed: missing CRT fields';
+    Exit;
+  end;
+
+  if UnsignedIsZero(APrivateExponent) then
+  begin
+    AError := 'RSA CRT validation failed: private exponent is zero';
     Exit;
   end;
 
@@ -261,6 +300,40 @@ begin
   if not UnsignedBytesEqual(LQInvCheck, ADQ) then
   begin
     AError := 'RSA CRT validation failed: dq is out of range for modulus q';
+    Exit;
+  end;
+
+  if not TryUnsignedSubtractOne(AP, LPMinusOne) then
+  begin
+    AError := 'RSA CRT validation failed: invalid p for exponent congruence';
+    Exit;
+  end;
+
+  if not TryUnsignedSubtractOne(AQ, LQMinusOne) then
+  begin
+    AError := 'RSA CRT validation failed: invalid q for exponent congruence';
+    Exit;
+  end;
+
+  if not TryBigIntModFromUnsignedBytes(APrivateExponent, LPMinusOne, LDModPMinusOne, AError) then
+  begin
+    AError := 'RSA CRT validation failed (dp congruence): ' + AError;
+    Exit;
+  end;
+  if not UnsignedBytesEqual(LDModPMinusOne, ADP) then
+  begin
+    AError := 'RSA CRT validation failed: dp is inconsistent with private exponent';
+    Exit;
+  end;
+
+  if not TryBigIntModFromUnsignedBytes(APrivateExponent, LQMinusOne, LDModQMinusOne, AError) then
+  begin
+    AError := 'RSA CRT validation failed (dq congruence): ' + AError;
+    Exit;
+  end;
+  if not UnsignedBytesEqual(LDModQMinusOne, ADQ) then
+  begin
+    AError := 'RSA CRT validation failed: dq is inconsistent with private exponent';
     Exit;
   end;
 
@@ -1247,7 +1320,7 @@ begin
      (Length(LDQ) > 0) and (Length(LQInv) > 0) then
   begin
     LCRTErr := '';
-    if TryValidateRSACRTComponents(LModulus, LP, LQ, LDP, LDQ, LQInv, LCRTErr) then
+    if TryValidateRSACRTComponents(LModulus, LPrivateExponent, LP, LQ, LDP, LDQ, LQInv, LCRTErr) then
     begin
       if TryRSASignWithCRT(LEM, LModulus, LP, LQ, LDP, LDQ, LQInv, ASignature, AError) then
         Exit(True);
