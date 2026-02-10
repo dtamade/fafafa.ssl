@@ -1902,6 +1902,58 @@ begin
   AssertSelectSuccess([TLS13_SIG_RSA_PKCS1_SHA256, TLS13_SIG_ECDSA_SECP256R1_SHA256, TLS13_SIG_RSA_PSS_PSS_SHA256], TLS13_SIG_ECDSA_SECP256R1_SHA256, 'scheme-wavef-priority-ecdsa-over-pkcs1-and-psspss');
 end;
 
+procedure TestSelectSchemeMatrixWaveJ;
+var
+  LInfo: TTLS13ClientHelloInfo;
+  LScheme: Word;
+  LErr: string;
+
+  procedure SetAlgos(const AValues: array of Word);
+  var
+    I: Integer;
+  begin
+    SetLength(LInfo.SignatureAlgorithms, Length(AValues));
+    for I := 0 to High(AValues) do
+      LInfo.SignatureAlgorithms[I] := AValues[I];
+  end;
+
+  procedure AssertSelectSuccess(const AValues: array of Word; AExpected: Word; const ALabel: string);
+  begin
+    FillChar(LInfo, SizeOf(LInfo), 0);
+    LInfo.HasSignatureAlgorithms := True;
+    SetAlgos(AValues);
+    AssertTrue(
+      TrySelectTLS13ServerCertificateVerifyScheme(LInfo, LScheme, LErr),
+      ALabel + ': selection should succeed: ' + LErr
+    );
+    AssertEqualsWord(AExpected, LScheme, ALabel + ': selected scheme mismatch');
+  end;
+
+  procedure AssertSelectFailure(const AValues: array of Word; const ALabel: string);
+  begin
+    FillChar(LInfo, SizeOf(LInfo), 0);
+    LInfo.HasSignatureAlgorithms := True;
+    SetAlgos(AValues);
+    AssertTrue(
+      not TrySelectTLS13ServerCertificateVerifyScheme(LInfo, LScheme, LErr),
+      ALabel + ': selection should fail'
+    );
+    AssertContains(LErr, 'No supported TLS 1.3 CertificateVerify signature scheme from client', ALabel + ': failure message mismatch');
+  end;
+
+begin
+  AssertSelectSuccess([TLS13_SIG_RSA_PKCS1_SHA256, TLS13_SIG_RSA_PKCS1_SHA256, TLS13_SIG_RSA_PKCS1_SHA256], TLS13_SIG_RSA_PKCS1_SHA256, 'scheme-wavej-pkcs1-duplicates');
+  AssertSelectSuccess([TLS13_SIG_RSA_PSS_RSAE_SHA256, TLS13_SIG_RSA_PSS_PSS_SHA256, TLS13_SIG_RSA_PKCS1_SHA256], TLS13_SIG_RSA_PSS_RSAE_SHA256, 'scheme-wavej-rsae-priority-full-rsa-set');
+  AssertSelectSuccess([TLS13_SIG_RSA_PSS_PSS_SHA256, TLS13_SIG_ECDSA_SECP256R1_SHA256, TLS13_SIG_RSA_PSS_PSS_SHA256], TLS13_SIG_ECDSA_SECP256R1_SHA256, 'scheme-wavej-ecdsa-priority-over-psspss');
+  AssertSelectSuccess([$BEEF, $CAFE, TLS13_SIG_ECDSA_SECP256R1_SHA256], TLS13_SIG_ECDSA_SECP256R1_SHA256, 'scheme-wavej-unknown-prefix-ecdsa');
+  AssertSelectSuccess([$BEEF, TLS13_SIG_RSA_PSS_RSAE_SHA256, $CAFE], TLS13_SIG_RSA_PSS_RSAE_SHA256, 'scheme-wavej-rsae-between-unknowns');
+  AssertSelectSuccess([TLS13_SIG_RSA_PSS_PSS_SHA256, TLS13_SIG_RSA_PKCS1_SHA256, TLS13_SIG_RSA_PSS_PSS_SHA256], TLS13_SIG_RSA_PKCS1_SHA256, 'scheme-wavej-pkcs1-priority-over-psspss-duplicates');
+  AssertSelectSuccess([TLS13_SIG_ECDSA_SECP256R1_SHA256, TLS13_SIG_RSA_PKCS1_SHA256, TLS13_SIG_ECDSA_SECP256R1_SHA256], TLS13_SIG_ECDSA_SECP256R1_SHA256, 'scheme-wavej-ecdsa-priority-over-pkcs1-duplicates');
+  AssertSelectSuccess([TLS13_SIG_ED25519, TLS13_SIG_RSA_PSS_PSS_SHA256, TLS13_SIG_ED25519], TLS13_SIG_RSA_PSS_PSS_SHA256, 'scheme-wavej-psspss-only-supported');
+  AssertSelectFailure([TLS13_SIG_ED25519, $0707, $0808, $0909], 'scheme-wavej-all-unsupported');
+  AssertSelectFailure([$0001, $0002, $0003, $0004], 'scheme-wavej-only-unknowns');
+end;
+
 procedure TestBuildCertVerifyInput;
 const
   CONTEXT = 'TLS 1.3, server CertificateVerify';
@@ -2979,6 +3031,77 @@ begin
   AssertBigIntSubModMatchesQWord(QWord($0000000000000001), QWord($2000000000000001), QWord($1FFFFFFFFFFFFFFF), 'wavei-submod-8');
   AssertBigIntSubModMatchesQWord(QWord($00000000FFFFFFFF), QWord($FFFFFFFF00000000), QWord($0000000100000000), 'wavei-submod-9');
   AssertBigIntSubModMatchesQWord(QWord($FFFFFFFF00000000), QWord($00000000FFFFFFFF), QWord($0000000100000000), 'wavei-submod-10');
+end;
+
+procedure TestBigIntNormalizationAndFixedLengthMatrixWaveJ;
+var
+  LOut: TBytes;
+  LErr: string;
+begin
+  AssertBigIntModMatchesQWord(QWord($0000000000000000), QWord($0000000000000011), 'wavej-mod-1');
+  AssertBigIntModMatchesQWord(QWord($0000000000000010), QWord($0000000000000011), 'wavej-mod-2');
+  AssertBigIntModMatchesQWord(QWord($0000000012345678), QWord($0000000000000011), 'wavej-mod-3');
+  AssertBigIntModMulMatchesQWord(QWord($0000000000000001), QWord($0000000000000001), QWord($0000000000000011), 'wavej-modmul-1');
+  AssertBigIntModMulMatchesQWord(QWord($0000000000000000), QWord($0000000012345678), QWord($0000000000000011), 'wavej-modmul-2');
+  AssertBigIntModExpMatchesQWord(QWord($0000000000000002), QWord($0000000000000008), QWord($0000000000000011), 'wavej-modexp-1');
+  AssertBigIntModExpMatchesQWord(QWord($0000000000000003), QWord($0000000000000000), QWord($0000000000000011), 'wavej-modexp-2');
+  AssertBigIntSubModMatchesQWord(QWord($0000000000000001), QWord($0000000000000002), QWord($0000000000000011), 'wavej-submod-1');
+  AssertBigIntSubModMatchesQWord(QWord($0000000012345678), QWord($0000000000000001), QWord($0000000000000011), 'wavej-submod-2');
+  AssertBigIntSubModMatchesQWord(QWord($0000000000000000), QWord($0000000000000000), QWord($0000000000000011), 'wavej-submod-3');
+
+  AssertTrue(
+    TryBigIntToFixedLengthFromUnsignedBytes([$00], 1, LOut, LErr),
+    'wavej-fixed-1 should succeed: ' + LErr
+  );
+  AssertEqualsInt(1, Length(LOut), 'wavej-fixed-1 length mismatch');
+  AssertEqualsInt(0, LOut[0], 'wavej-fixed-1 byte mismatch');
+
+  AssertTrue(
+    TryBigIntToFixedLengthFromUnsignedBytes([$00], 2, LOut, LErr),
+    'wavej-fixed-2 should succeed: ' + LErr
+  );
+  AssertEqualsInt(2, Length(LOut), 'wavej-fixed-2 length mismatch');
+  AssertEqualsInt(0, LOut[0], 'wavej-fixed-2 byte0 mismatch');
+  AssertEqualsInt(0, LOut[1], 'wavej-fixed-2 byte1 mismatch');
+
+  AssertTrue(
+    TryBigIntToFixedLengthFromUnsignedBytes([$00, $01], 1, LOut, LErr),
+    'wavej-fixed-leading-zero-trim should succeed: ' + LErr
+  );
+  AssertEqualsInt(1, Length(LOut), 'wavej-fixed-leading-zero-trim length mismatch');
+  AssertEqualsInt(1, LOut[0], 'wavej-fixed-leading-zero-trim byte mismatch');
+
+  AssertTrue(
+    TryBigIntToFixedLengthFromUnsignedBytes([$01, $00], 2, LOut, LErr),
+    'wavej-fixed-0100 should succeed: ' + LErr
+  );
+  AssertEqualsInt(2, Length(LOut), 'wavej-fixed-0100 length mismatch');
+  AssertEqualsInt($01, LOut[0], 'wavej-fixed-0100 byte0 mismatch');
+  AssertEqualsInt($00, LOut[1], 'wavej-fixed-0100 byte1 mismatch');
+
+  AssertTrue(
+    not TryBigIntToFixedLengthFromUnsignedBytes([$01, $00], 1, LOut, LErr),
+    'wavej-fixed-overflow-0100 should fail'
+  );
+  AssertContains(LErr, 'RSA output does not fit target length', 'wavej-fixed-overflow-0100 message mismatch');
+
+  AssertTrue(
+    not TryBigIntToFixedLengthFromUnsignedBytes([$00, $01, $00], 1, LOut, LErr),
+    'wavej-fixed-overflow-00100 should fail'
+  );
+  AssertContains(LErr, 'RSA output does not fit target length', 'wavej-fixed-overflow-00100 message mismatch');
+
+  AssertTrue(
+    not TryBigIntToFixedLengthFromUnsignedBytes([$01], 0, LOut, LErr),
+    'wavej-fixed-len-zero should fail'
+  );
+  AssertContains(LErr, 'RSA output length is invalid', 'wavej-fixed-len-zero message mismatch');
+
+  AssertTrue(
+    not TryBigIntToFixedLengthFromUnsignedBytes([$01], -2, LOut, LErr),
+    'wavej-fixed-len-negative should fail'
+  );
+  AssertContains(LErr, 'RSA output length is invalid', 'wavej-fixed-len-negative message mismatch');
 end;
 
 procedure TestBigIntErrorSurface;
@@ -4819,6 +4942,7 @@ begin
   TestSelectSchemeFromClientHello;
   TestSelectSchemeMatrixWaveE;
   TestSelectSchemeMatrixWaveF;
+  TestSelectSchemeMatrixWaveJ;
   TestBuildCertVerifyInput;
   TestBuildCertificateVerifyHandshake;
   TestPlaceholderSignature;
@@ -4829,6 +4953,7 @@ begin
   TestBigIntQWordVectorSuiteWaveD;
   TestBigIntQWordVectorSuiteWaveF;
   TestBigIntQWordVectorSuiteWaveI;
+  TestBigIntNormalizationAndFixedLengthMatrixWaveJ;
   TestBigIntErrorSurface;
   TestBigIntLeadingZeroNormalization;
   TestBigIntFixedLengthExactFit;
