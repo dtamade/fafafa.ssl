@@ -1189,7 +1189,7 @@ end;
 procedure AssertContains(const AText, ASubText, AMessage: string);
 begin
   if Pos(ASubText, AText) <= 0 then
-    Fail(AMessage + ' (missing: ' + ASubText + ')');
+    Fail(AMessage + ' (missing: ' + ASubText + '; actual: ' + AText + ')');
 end;
 
 function TruncateBytesFromEnd(const AData: TBytes; ACutBytes: Integer): TBytes;
@@ -1298,6 +1298,107 @@ begin
   end;
 
   AssertContains(LErr, 'Unsupported DER private key format', ALabel + ': malformed DER rejection message mismatch');
+end;
+
+procedure AssertContainsAny(const AText: string; const ANeedles: array of string; const AMessage: string);
+var
+  I: Integer;
+  LMatched: Boolean;
+begin
+  LMatched := False;
+  for I := 0 to High(ANeedles) do
+  begin
+    if Pos(ANeedles[I], AText) > 0 then
+    begin
+      LMatched := True;
+      Break;
+    end;
+  end;
+
+  if not LMatched then
+    Fail(AMessage + ' (actual: ' + AText + ')');
+end;
+
+function BuildDeterministicCertVerifyInput(ASeed: Byte): TBytes;
+var
+  LTranscriptHash: TBytes;
+  I: Integer;
+begin
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte(ASeed + I);
+  Result := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+end;
+
+procedure AssertSignerFailureContains(
+  AScheme: Word;
+  const AKeyMaterial: TBytes;
+  const AInput: TBytes;
+  const ANeedle: string;
+  const ALabel: string
+);
+var
+  LSig: TBytes;
+  LErr: string;
+begin
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      AScheme,
+      AKeyMaterial,
+      AInput,
+      LSig,
+      LErr
+    ),
+    ALabel + ': operation should fail'
+  );
+  AssertContains(LErr, ANeedle, ALabel + ': error message mismatch');
+end;
+
+procedure AssertSignerFailureContainsAny(
+  AScheme: Word;
+  const AKeyMaterial: TBytes;
+  const AInput: TBytes;
+  const ANeedles: array of string;
+  const ALabel: string
+);
+var
+  LSig: TBytes;
+  LErr: string;
+begin
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      AScheme,
+      AKeyMaterial,
+      AInput,
+      LSig,
+      LErr
+    ),
+    ALabel + ': operation should fail'
+  );
+  AssertContainsAny(LErr, ANeedles, ALabel + ': error message mismatch');
+end;
+
+procedure AssertSignerFailureNonEmptyError(
+  AScheme: Word;
+  const AKeyMaterial: TBytes;
+  const AInput: TBytes;
+  const ALabel: string
+);
+var
+  LSig: TBytes;
+  LErr: string;
+begin
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      AScheme,
+      AKeyMaterial,
+      AInput,
+      LSig,
+      LErr
+    ),
+    ALabel + ': operation should fail'
+  );
+  AssertTrue(Length(LErr) > 0, ALabel + ': error message should be non-empty');
 end;
 
 procedure AssertEqualsQWord(AExpected, AActual: QWord; const AMessage: string);
@@ -2546,32 +2647,81 @@ end;
 
 procedure TestRSASignatureErrorMessagesAreStable;
 var
-  LSig: TBytes;
-  LErr: string;
+  LInput: TBytes;
 begin
-  AssertTrue(
-    not TryBuildTLS13CertificateVerifySignature(
-      TLS13_SIG_RSA_PKCS1_SHA256,
-      [],
-      [$01],
-      LSig,
-      LErr
-    ),
-    'Signer should fail for empty key material'
-  );
-  AssertContains(LErr, 'Private key material is empty', 'Error message for empty key should remain stable');
+  LInput := BuildDeterministicCertVerifyInput($6A);
 
-  AssertTrue(
-    not TryBuildTLS13CertificateVerifySignature(
-      TLS13_SIG_RSA_PKCS1_SHA256,
-      [$00, $01, $02],
-      [$01],
-      LSig,
-      LErr
-    ),
-    'Signer should fail for malformed DER'
+  AssertSignerFailureContains(
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    [],
+    LInput,
+    'Private key material is empty',
+    'stable-empty-key'
   );
-  AssertContains(LErr, 'Unsupported DER private key format', 'Malformed DER error message should remain stable');
+
+  AssertSignerFailureContains(
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    [$00, $01, $02],
+    LInput,
+    'Unsupported DER private key format',
+    'stable-malformed-der'
+  );
+end;
+
+procedure TestRSASignatureErrorSurfaceMatrix;
+var
+  LKeyBlob: TBytes;
+  LInput: TBytes;
+  LNoKeyPEM: TBytes;
+  LEncryptedPEM: TBytes;
+begin
+  LKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  LInput := BuildDeterministicCertVerifyInput($92);
+
+  AssertSignerFailureContains(
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    LKeyBlob,
+    [],
+    'CertificateVerify input is empty',
+    'matrix-empty-input'
+  );
+
+  AssertSignerFailureContains(
+    TLS13_SIG_ECDSA_SECP256R1_SHA256,
+    LKeyBlob,
+    LInput,
+    'Unsupported signature scheme for pure FreePascal signer',
+    'matrix-unsupported-scheme'
+  );
+
+  LNoKeyPEM := TEncoding.ASCII.GetBytes(
+    '-----BEGIN CERTIFICATE-----' + LineEnding +
+    'AQID' + LineEnding +
+    '-----END CERTIFICATE-----' + LineEnding
+  );
+  AssertSignerFailureContains(
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    LNoKeyPEM,
+    LInput,
+    'No private key block found in PEM blob',
+    'matrix-no-private-key-block'
+  );
+
+  LEncryptedPEM := TEncoding.ASCII.GetBytes(
+    '-----BEGIN ENCRYPTED PRIVATE KEY-----' + LineEnding +
+    'AQID' + LineEnding +
+    '-----END ENCRYPTED PRIVATE KEY-----' + LineEnding
+  );
+  AssertSignerFailureContainsAny(
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    LEncryptedPEM,
+    LInput,
+    [
+      'Encrypted PKCS#8 private keys are not supported in pure FreePascal TLS13 signer',
+      'Encrypted PEM private keys are not supported in pure FreePascal TLS13 signer'
+    ],
+    'matrix-encrypted-pem'
+  );
 end;
 
 procedure TestRSASignatureHandlesMalformedDERVariants;
@@ -3048,35 +3198,29 @@ end;
 procedure TestFallbackErrorCodeOnDoubleFailure;
 var
   LKeyBlob: TBytes;
+  LDER: TBytes;
+  LPKCS1: TBytes;
+  LMutatedModulus: TBytes;
   LMutatedBothDER: TBytes;
-  LTranscriptHash: TBytes;
-  LInput: TBytes;
-  LSig: TBytes;
-  LErr: string;
-  I: Integer;
+  LType: TPEMType;
 begin
   LKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
-  LMutatedBothDER := BuildMutatedPrimePAndPrivateExponentPrivateKeyBlob(LKeyBlob);
-  AssertTrue(Length(LMutatedBothDER) > 0, 'Failed to produce DER key with corrupted prime p + private exponent');
+  AssertTrue(TryExtractFirstPrivateKeyDER(LKeyBlob, LDER, LType), 'Failed to extract private key DER for double-failure test');
 
-  SetLength(LTranscriptHash, 32);
-  for I := 0 to 31 do
-    LTranscriptHash[I] := Byte($66 + I);
-  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+  if LType = pemPrivateKey then
+    AssertTrue(TryExtractPKCS1FromPKCS8DER(LDER, LPKCS1), 'Failed to extract inner PKCS#1 from PKCS#8 key')
+  else
+    LPKCS1 := Copy(LDER, 0, Length(LDER));
 
-  AssertTrue(
-    not TryBuildTLS13CertificateVerifySignature(
-      TLS13_SIG_RSA_PKCS1_SHA256,
-      LMutatedBothDER,
-      LInput,
-      LSig,
-      LErr
-    ),
-    'Double-corrupted key should fail signing'
+  AssertTrue(TryMutatePKCS1FieldLSB(LPKCS1, 1, $01, False, LMutatedModulus), 'Failed to mutate modulus parity for double-failure test');
+  AssertTrue(TrySetPKCS1FieldToConstant(LMutatedModulus, 4, 1, LMutatedBothDER), 'Failed to set prime p = 1 for double-failure test');
+  AssertTrue(Length(LMutatedBothDER) > 0, 'Failed to produce DER key with corrupted modulus parity + CRT component');
+
+  AssertFallbackErrorContainsCRTReason(
+    LMutatedBothDER,
+    'RSA CRT validation failed:',
+    'double-failure-error-shape'
   );
-  AssertContains(LErr, 'E_TLS13_SIGNER_FALLBACK_FAILED', 'Fallback failure should expose structured error code');
-  AssertContains(LErr, 'crt_reason=', 'Fallback failure should contain CRT reason');
-  AssertContains(LErr, 'exp_reason=', 'Fallback failure should contain exponent reason');
 end;
 
 procedure TestFallbackErrorCodeFromDirectSignerCall;
@@ -3120,6 +3264,7 @@ begin
   TestRSASignatureUsesFirstUsableRSAKeyBlock;
   TestRSASignatureWith1024BitKeyLength;
   TestRSASignatureErrorMessagesAreStable;
+  TestRSASignatureErrorSurfaceMatrix;
   TestRSASignatureHandlesMalformedDERVariants;
   TestRSASignatureSelectsRSAFromMixedPEMBlocks;
   TestRSASignatureRejectsPEMWithoutUsableRSAKey;
@@ -3144,6 +3289,7 @@ begin
   TestRSASignatureFallbackErrorWhenDPZeroAndExponentCorrupted;
   TestRSASignatureFallbackErrorWhenDQZeroAndExponentCorrupted;
   TestRSASignatureFallbackErrorWhenQInvZeroAndExponentCorrupted;
+  TestFallbackErrorCodeOnDoubleFailure;
   TestFallbackErrorCodeFromDirectSignerCall;
   TestRealRSASignature;
 
