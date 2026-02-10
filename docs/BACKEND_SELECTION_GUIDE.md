@@ -222,8 +222,7 @@ begin
 
   // 必须支持前向保密
   Requirements.RequiredKeyExchanges := [
-    sslKexECDHE_RSA,
-    sslKexECDHE_ECDSA
+    sslKexECDHE_RSA
   ];
 
   // 最低安全评分 85

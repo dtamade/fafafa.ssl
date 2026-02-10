@@ -21,6 +21,7 @@ var
   LAvailable: Boolean;
   LLib: ISSLLibrary;
   LCtx: ISSLContext;
+  LCaps: TSSLBackendCapabilities;
 begin
   WriteLn('Testing FreePascal backend registration and creation...');
 
@@ -34,6 +35,16 @@ begin
   LCtx := TSSLFactory.CreateContext(sslCtxClient, sslFreePascal);
   AssertTrue(LCtx <> nil, 'CreateContext should return context');
   AssertTrue(LCtx.GetContextType = sslCtxClient, 'Context type mismatch');
+
+  LCaps := LLib.GetCapabilities;
+  AssertTrue(IsKeyExchangeSupported(LCaps, sslKexECDHE_RSA),
+    'FreePascal backend should advertise ECDHE_RSA');
+  AssertTrue(not IsKeyExchangeSupported(LCaps, sslKexECDHE_ECDSA),
+    'FreePascal backend must not advertise ECDHE_ECDSA before pure ECDSA signer is implemented');
+  AssertTrue(not LCaps.RequiresExternalLibrary,
+    'FreePascal backend should not require external TLS library');
+  AssertTrue(Pos('RSA', UpperCase(LCaps.KnownIssues)) > 0,
+    'FreePascal capability KnownIssues should mention RSA-only CertificateVerify scope');
 
   WriteLn('✅ FreePascal backend basic checks passed');
 end.
