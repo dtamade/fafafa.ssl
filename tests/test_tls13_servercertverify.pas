@@ -1848,6 +1848,60 @@ begin
   AssertEqualsWord(TLS13_SIG_RSA_PSS_RSAE_SHA256, LScheme, 'scheme-wavee-priority-pss-rsae-over-ecdsa mismatch');
 end;
 
+procedure TestSelectSchemeMatrixWaveF;
+var
+  LInfo: TTLS13ClientHelloInfo;
+  LScheme: Word;
+  LErr: string;
+
+  procedure SetAlgos(const AValues: array of Word);
+  var
+    I: Integer;
+  begin
+    SetLength(LInfo.SignatureAlgorithms, Length(AValues));
+    for I := 0 to High(AValues) do
+      LInfo.SignatureAlgorithms[I] := AValues[I];
+  end;
+
+  procedure AssertSelectSuccess(const AValues: array of Word; AExpected: Word; const ALabel: string);
+  begin
+    FillChar(LInfo, SizeOf(LInfo), 0);
+    LInfo.HasSignatureAlgorithms := True;
+    SetAlgos(AValues);
+    AssertTrue(
+      TrySelectTLS13ServerCertificateVerifyScheme(LInfo, LScheme, LErr),
+      ALabel + ': selection should succeed: ' + LErr
+    );
+    AssertEqualsWord(AExpected, LScheme, ALabel + ': selected scheme mismatch');
+  end;
+
+  procedure AssertSelectFailure(const AValues: array of Word; const ALabel: string);
+  begin
+    FillChar(LInfo, SizeOf(LInfo), 0);
+    LInfo.HasSignatureAlgorithms := True;
+    SetAlgos(AValues);
+    AssertTrue(
+      not TrySelectTLS13ServerCertificateVerifyScheme(LInfo, LScheme, LErr),
+      ALabel + ': selection should fail'
+    );
+    AssertContains(LErr, 'No supported TLS 1.3 CertificateVerify signature scheme from client', ALabel + ': failure message mismatch');
+  end;
+
+begin
+  AssertSelectSuccess([TLS13_SIG_RSA_PSS_RSAE_SHA256, TLS13_SIG_RSA_PSS_RSAE_SHA256], TLS13_SIG_RSA_PSS_RSAE_SHA256, 'scheme-wavef-duplicate-pss-rsae');
+  AssertSelectSuccess([TLS13_SIG_ECDSA_SECP256R1_SHA256, TLS13_SIG_ECDSA_SECP256R1_SHA256], TLS13_SIG_ECDSA_SECP256R1_SHA256, 'scheme-wavef-duplicate-ecdsa');
+  AssertSelectSuccess([TLS13_SIG_RSA_PSS_PSS_SHA256, TLS13_SIG_ED25519, TLS13_SIG_RSA_PSS_PSS_SHA256], TLS13_SIG_RSA_PSS_PSS_SHA256, 'scheme-wavef-duplicate-pss-pss');
+  AssertSelectSuccess([$0000, TLS13_SIG_RSA_PKCS1_SHA256], TLS13_SIG_RSA_PKCS1_SHA256, 'scheme-wavef-unknown-plus-pkcs1');
+  AssertSelectSuccess([$FFFF, TLS13_SIG_ECDSA_SECP256R1_SHA256, TLS13_SIG_RSA_PSS_RSAE_SHA256], TLS13_SIG_RSA_PSS_RSAE_SHA256, 'scheme-wavef-priority-pss-rsae-with-unknown');
+  AssertSelectSuccess([TLS13_SIG_RSA_PKCS1_SHA256, TLS13_SIG_RSA_PSS_RSAE_SHA256], TLS13_SIG_RSA_PSS_RSAE_SHA256, 'scheme-wavef-priority-pss-rsae-over-pkcs1');
+  AssertSelectSuccess([TLS13_SIG_RSA_PSS_PSS_SHA256, TLS13_SIG_ECDSA_SECP256R1_SHA256], TLS13_SIG_ECDSA_SECP256R1_SHA256, 'scheme-wavef-priority-ecdsa-over-pss-pss');
+  AssertSelectSuccess([TLS13_SIG_RSA_PKCS1_SHA256, TLS13_SIG_RSA_PSS_PSS_SHA256], TLS13_SIG_RSA_PKCS1_SHA256, 'scheme-wavef-priority-pkcs1-over-pss-pss');
+  AssertSelectFailure([TLS13_SIG_ED25519, $1234, $0A0A], 'scheme-wavef-unsupported-only');
+  AssertSelectSuccess([TLS13_SIG_RSA_PSS_PSS_SHA256, $1234, TLS13_SIG_RSA_PKCS1_SHA256], TLS13_SIG_RSA_PKCS1_SHA256, 'scheme-wavef-pss-pss-plus-pkcs1');
+  AssertSelectSuccess([TLS13_SIG_ECDSA_SECP256R1_SHA256, TLS13_SIG_RSA_PSS_PSS_SHA256, TLS13_SIG_RSA_PSS_RSAE_SHA256], TLS13_SIG_RSA_PSS_RSAE_SHA256, 'scheme-wavef-priority-pss-rsae-over-all');
+  AssertSelectSuccess([TLS13_SIG_RSA_PKCS1_SHA256, TLS13_SIG_ECDSA_SECP256R1_SHA256, TLS13_SIG_RSA_PSS_PSS_SHA256], TLS13_SIG_ECDSA_SECP256R1_SHA256, 'scheme-wavef-priority-ecdsa-over-pkcs1-and-psspss');
+end;
+
 procedure TestBuildCertVerifyInput;
 const
   CONTEXT = 'TLS 1.3, server CertificateVerify';
@@ -2656,6 +2710,92 @@ begin
 
   AssertPSSFallbackSuccess(BuildPrimeQEqualPrimePPrivateKeyBlob(LKeyBlob), TLS13_SIG_RSA_PSS_RSAE_SHA256, 'fallback-pss-peq-rsae');
   AssertPSSFallbackSuccess(BuildPrimeQEqualPrimePPrivateKeyBlob(LKeyBlob), TLS13_SIG_RSA_PSS_PSS_SHA256, 'fallback-pss-peq-pss');
+end;
+
+procedure TestFallbackStructuredErrorMatrixWaveF;
+var
+  LKeyBlob: TBytes;
+  LInput: TBytes;
+
+  procedure AssertStructuredFailure(
+    const AMutatedDER: TBytes;
+    AScheme: Word;
+    const ALabel: string
+  );
+  var
+    LEvenModulusDER: TBytes;
+    LSig: TBytes;
+    LErr: string;
+  begin
+    AssertTrue(Length(AMutatedDER) > 0, ALabel + ': mutation output should not be empty');
+    AssertTrue(
+      TryMutateModulusParityInDERKey(AMutatedDER, LEvenModulusDER),
+      ALabel + ': failed to force even modulus for structured fallback'
+    );
+
+    AssertTrue(
+      not TryBuildTLS13CertificateVerifySignature(
+        AScheme,
+        LEvenModulusDER,
+        LInput,
+        LSig,
+        LErr
+      ),
+      ALabel + ': expected fallback failure'
+    );
+    AssertContains(LErr, 'E_TLS13_SIGNER_FALLBACK_FAILED', ALabel + ': missing structured fallback error code');
+    AssertContains(LErr, 'crt_reason=', ALabel + ': missing crt_reason detail');
+    AssertContains(LErr, 'exp_reason=', ALabel + ': missing exp_reason detail');
+  end;
+
+  procedure AssertStructuredOrCoprimeFailure(
+    const AMutatedDER: TBytes;
+    AScheme: Word;
+    const ALabel: string
+  );
+  var
+    LEvenModulusDER: TBytes;
+    LSig: TBytes;
+    LErr: string;
+  begin
+    AssertTrue(Length(AMutatedDER) > 0, ALabel + ': mutation output should not be empty');
+    AssertTrue(
+      TryMutateModulusParityInDERKey(AMutatedDER, LEvenModulusDER),
+      ALabel + ': failed to force even modulus for structured fallback'
+    );
+
+    AssertTrue(
+      not TryBuildTLS13CertificateVerifySignature(
+        AScheme,
+        LEvenModulusDER,
+        LInput,
+        LSig,
+        LErr
+      ),
+      ALabel + ': expected failure'
+    );
+
+    AssertContainsAny(
+      LErr,
+      ['E_TLS13_SIGNER_FALLBACK_FAILED', 'Encoded message representative is not coprime to RSA modulus'],
+      ALabel + ': expected structured fallback or non-coprime failure'
+    );
+  end;
+
+begin
+  LKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  LInput := BuildDeterministicCertVerifyInput($F6);
+
+  AssertStructuredFailure(BuildMutatedPrimePPrivateKeyBlob(LKeyBlob), TLS13_SIG_RSA_PKCS1_SHA256, 'fallback-wavef-primep-pkcs1');
+  AssertStructuredFailure(BuildMutatedPrimeQPrivateKeyBlob(LKeyBlob), TLS13_SIG_RSA_PKCS1_SHA256, 'fallback-wavef-primeq-pkcs1');
+  AssertStructuredFailure(BuildMutatedDPPrivateKeyBlob(LKeyBlob), TLS13_SIG_RSA_PKCS1_SHA256, 'fallback-wavef-dp-pkcs1');
+  AssertStructuredFailure(BuildMutatedDQPrivateKeyBlob(LKeyBlob), TLS13_SIG_RSA_PKCS1_SHA256, 'fallback-wavef-dq-pkcs1');
+  AssertStructuredFailure(BuildMutatedQInvPrivateKeyBlob(LKeyBlob), TLS13_SIG_RSA_PKCS1_SHA256, 'fallback-wavef-qinv-pkcs1');
+  AssertStructuredFailure(BuildPrimePIsOnePrivateKeyBlob(LKeyBlob), TLS13_SIG_RSA_PSS_RSAE_SHA256, 'fallback-wavef-primep-one-pss-rsae');
+  AssertStructuredFailure(BuildPrimeQEqualPrimePPrivateKeyBlob(LKeyBlob), TLS13_SIG_RSA_PSS_RSAE_SHA256, 'fallback-wavef-primeq-equal-pss-rsae');
+  AssertStructuredOrCoprimeFailure(BuildDPZeroPrivateKeyBlob(LKeyBlob), TLS13_SIG_RSA_PSS_PSS_SHA256, 'fallback-wavef-dp-zero-pss-pss');
+  AssertStructuredOrCoprimeFailure(BuildDQZeroPrivateKeyBlob(LKeyBlob), TLS13_SIG_RSA_PSS_PSS_SHA256, 'fallback-wavef-dq-zero-pss-pss');
+  AssertStructuredOrCoprimeFailure(BuildQInvZeroPrivateKeyBlob(LKeyBlob), TLS13_SIG_RSA_PSS_RSAE_SHA256, 'fallback-wavef-qinv-zero-pss-rsae');
 end;
 
 procedure TestBigIntEvenModulusAndZeroExponent;
@@ -4061,6 +4201,97 @@ begin
   );
 end;
 
+procedure TestPKCS8OIDMatrixWaveF;
+const
+  OID_RSASSA_PSS: array[0..8] of Byte = ($2A, $86, $48, $86, $F7, $0D, $01, $01, $0A);
+var
+  LPemBlob: TBytes;
+  LDER: TBytes;
+  LType: TPEMType;
+  LInput: TBytes;
+  LSig: TBytes;
+  LErr: string;
+  LMutated: TBytes;
+  LOIDOffset: Integer;
+  LOIDLength: Integer;
+  LOIDTagOffset: Integer;
+begin
+  LPemBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  AssertTrue(TryExtractFirstPrivateKeyDER(LPemBlob, LDER, LType), 'PKCS8-oid-wavef: failed to extract DER');
+  AssertTrue(LType = pemPrivateKey, 'PKCS8-oid-wavef: expected PKCS#8 key type');
+  AssertTrue(
+    TryLocatePKCS8AlgorithmOIDValue(LDER, LOIDOffset, LOIDLength, LOIDTagOffset),
+    'PKCS8-oid-wavef: failed to locate algorithm OID'
+  );
+  AssertEqualsInt(9, LOIDLength, 'PKCS8-oid-wavef: unexpected OID length');
+
+  LInput := BuildDeterministicCertVerifyInput($FA);
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PSS_RSAE_SHA256,
+      LDER,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'pkcs8-oid-wavef-baseline-pss-rsae should sign: ' + LErr
+  );
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PSS_PSS_SHA256,
+      LDER,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'pkcs8-oid-wavef-baseline-pss-pss should sign: ' + LErr
+  );
+
+  LMutated := Copy(LDER, 0, Length(LDER));
+  Move(OID_RSASSA_PSS[0], LMutated[LOIDOffset], Length(OID_RSASSA_PSS));
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PSS_RSAE_SHA256,
+      LMutated,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'pkcs8-oid-wavef-rsassa-pss-oid-rsae should sign: ' + LErr
+  );
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PSS_PSS_SHA256,
+      LMutated,
+      LInput,
+      LSig,
+      LErr
+    ),
+    'pkcs8-oid-wavef-rsassa-pss-oid-pss should sign: ' + LErr
+  );
+
+  LMutated := CopyBytesWithMutation(LDER, LOIDOffset + 1, LDER[LOIDOffset + 1] xor $01);
+  AssertSignerFailureContains(TLS13_SIG_RSA_PKCS1_SHA256, LMutated, LInput, 'Unsupported DER private key format', 'pkcs8-oid-wavef-byte1-flip');
+
+  LMutated := CopyBytesWithMutation(LDER, LOIDOffset + 3, LDER[LOIDOffset + 3] xor $01);
+  AssertSignerFailureContains(TLS13_SIG_RSA_PKCS1_SHA256, LMutated, LInput, 'Unsupported DER private key format', 'pkcs8-oid-wavef-byte3-flip');
+
+  LMutated := CopyBytesWithMutation(LDER, LOIDOffset + 5, LDER[LOIDOffset + 5] xor $01);
+  AssertSignerFailureContains(TLS13_SIG_RSA_PKCS1_SHA256, LMutated, LInput, 'Unsupported DER private key format', 'pkcs8-oid-wavef-byte5-flip');
+
+  LMutated := CopyBytesWithMutation(LDER, LOIDOffset + 6, LDER[LOIDOffset + 6] xor $01);
+  AssertSignerFailureContains(TLS13_SIG_RSA_PKCS1_SHA256, LMutated, LInput, 'Unsupported DER private key format', 'pkcs8-oid-wavef-byte6-flip');
+
+  LMutated := CopyBytesWithMutation(LDER, LOIDOffset + 8, $02);
+  AssertSignerFailureContains(TLS13_SIG_RSA_PKCS1_SHA256, LMutated, LInput, 'Unsupported DER private key format', 'pkcs8-oid-wavef-last-byte-02');
+
+  LMutated := CopyBytesWithMutation(LDER, LOIDTagOffset + 1, $08);
+  AssertSignerFailureContains(TLS13_SIG_RSA_PKCS1_SHA256, LMutated, LInput, 'Unsupported DER private key format', 'pkcs8-oid-wavef-len-08');
+end;
+
 procedure TestRSASignatureRejectsPKCS1CoreFieldMutations;
 var
   LPemBlob: TBytes;
@@ -4291,6 +4522,7 @@ begin
 
   TestSelectSchemeFromClientHello;
   TestSelectSchemeMatrixWaveE;
+  TestSelectSchemeMatrixWaveF;
   TestBuildCertVerifyInput;
   TestBuildCertificateVerifyHandshake;
   TestPlaceholderSignature;
@@ -4326,6 +4558,7 @@ begin
   TestRSASignatureRejectsPKCS8AlgorithmOIDMutations;
   TestPKCS8LengthMutationMatrixWaveC;
   TestPKCS8OIDMatrixWaveE;
+  TestPKCS8OIDMatrixWaveF;
   TestRSASignatureRejectsPKCS1CoreFieldMutations;
   TestRSASignatureRejectsPKCS1CRTFieldTagMutations;
   TestRSASignatureRejectsPKCS1CRTZeroValueMutations;
@@ -4347,6 +4580,7 @@ begin
   TestFallbackStructuredErrorMatrixExtended;
   TestFallbackMessageMatrixWaveC;
   TestFallbackPSSSuccessMatrixWaveE;
+  TestFallbackStructuredErrorMatrixWaveF;
   TestFallbackErrorCodeOnDoubleFailure;
   TestFallbackErrorCodeFromDirectSignerCall;
   TestRealRSASignature;
