@@ -306,11 +306,69 @@ begin
   NormalizeBigNat(Result);
 end;
 
+procedure BigNatSubtractInPlace(var ALeft: TBigNat; const ARight: TBigNat);
+var
+  I: Integer;
+  LBorrow: UInt32;
+  LA, LB: UInt32;
+  LDiff: UInt32;
+begin
+  LBorrow := 0;
+
+  for I := 0 to Length(ALeft) - 1 do
+  begin
+    LA := ALeft[I];
+    if I < Length(ARight) then
+      LB := ARight[I]
+    else
+      LB := 0;
+
+    if LA >= LB + LBorrow then
+    begin
+      LDiff := LA - LB - LBorrow;
+      LBorrow := 0;
+    end
+    else
+    begin
+      LDiff := LA + LIMB_BASE - LB - LBorrow;
+      LBorrow := 1;
+    end;
+
+    ALeft[I] := UInt16(LDiff and LIMB_MASK);
+  end;
+
+  NormalizeBigNat(ALeft);
+end;
+
+procedure BigNatDoubleInPlace(var AValue: TBigNat);
+var
+  I: Integer;
+  LSum: UInt32;
+  LCarry: UInt32;
+begin
+  if Length(AValue) = 0 then
+    Exit;
+
+  LCarry := 0;
+  for I := 0 to Length(AValue) - 1 do
+  begin
+    LSum := (UInt32(AValue[I]) shl 1) + LCarry;
+    AValue[I] := UInt16(LSum and LIMB_MASK);
+    LCarry := LSum shr LIMB_BITS;
+  end;
+
+  if LCarry <> 0 then
+  begin
+    SetLength(AValue, Length(AValue) + 1);
+    AValue[High(AValue)] := UInt16(LCarry and LIMB_MASK);
+  end;
+end;
+
 procedure BigNatDoubleMod(var AValue: TBigNat; const AModulus: TBigNat);
 begin
-  AValue := BigNatAdd(AValue, AValue);
+  BigNatDoubleInPlace(AValue);
   if BigNatCompare(AValue, AModulus) >= 0 then
-    AValue := BigNatSubtract(AValue, AModulus);
+    BigNatSubtractInPlace(AValue, AModulus);
 end;
 
 function BigNatMod(const AValue, AModulus: TBigNat): TBigNat;
@@ -337,7 +395,7 @@ begin
     begin
       BigNatAddWord(Result, 1);
       if BigNatCompare(Result, AModulus) >= 0 then
-        Result := BigNatSubtract(Result, AModulus);
+        BigNatSubtractInPlace(Result, AModulus);
     end;
   end;
 
