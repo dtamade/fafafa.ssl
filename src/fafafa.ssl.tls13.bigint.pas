@@ -622,12 +622,13 @@ begin
   Result := True;
 end;
 
-function MontgomeryMultiply(
+procedure MontgomeryMultiplyInto(
   const ACtx: TMontgomeryContext;
-  const ALeft, ARight: TBigNat
-): TBigNat;
+  const ALeft, ARight: TBigNat;
+  var AResult: TBigNat;
+  var AScratch: TBigNat
+);
 var
-  LT: array of UInt16;
   LN: Integer;
   I, J, K: Integer;
   LAI, LBJ, LM: UInt16;
@@ -635,8 +636,10 @@ var
   LCarry: UInt64;
 begin
   LN := ACtx.LimbCount;
-  SetLength(LT, 2 * LN + 2);
-  FillChar(LT[0], Length(LT) * SizeOf(UInt16), 0);
+
+  if Length(AScratch) <> (2 * LN + 2) then
+    SetLength(AScratch, 2 * LN + 2);
+  FillChar(AScratch[0], Length(AScratch) * SizeOf(UInt16), 0);
 
   for I := 0 to LN - 1 do
   begin
@@ -653,16 +656,16 @@ begin
       else
         LBJ := 0;
 
-      LUV := UInt64(LAI) * UInt64(LBJ) + UInt64(LT[I + J]) + LCarry;
-      LT[I + J] := UInt16(LUV and LIMB_MASK);
+      LUV := UInt64(LAI) * UInt64(LBJ) + UInt64(AScratch[I + J]) + LCarry;
+      AScratch[I + J] := UInt16(LUV and LIMB_MASK);
       LCarry := LUV shr LIMB_BITS;
     end;
 
     K := I + LN;
     while LCarry <> 0 do
     begin
-      LUV := UInt64(LT[K]) + LCarry;
-      LT[K] := UInt16(LUV and LIMB_MASK);
+      LUV := UInt64(AScratch[K]) + LCarry;
+      AScratch[K] := UInt16(LUV and LIMB_MASK);
       LCarry := LUV shr LIMB_BITS;
       Inc(K);
     end;
@@ -670,36 +673,46 @@ begin
 
   for I := 0 to LN - 1 do
   begin
-    LM := UInt16((UInt32(LT[I]) * UInt32(ACtx.NPrime)) and LIMB_MASK);
+    LM := UInt16((UInt32(AScratch[I]) * UInt32(ACtx.NPrime)) and LIMB_MASK);
 
     LCarry := 0;
     for J := 0 to LN - 1 do
     begin
-      LUV := UInt64(LM) * UInt64(ACtx.Modulus[J]) + UInt64(LT[I + J]) + LCarry;
-      LT[I + J] := UInt16(LUV and LIMB_MASK);
+      LUV := UInt64(LM) * UInt64(ACtx.Modulus[J]) + UInt64(AScratch[I + J]) + LCarry;
+      AScratch[I + J] := UInt16(LUV and LIMB_MASK);
       LCarry := LUV shr LIMB_BITS;
     end;
 
     K := I + LN;
     while LCarry <> 0 do
     begin
-      LUV := UInt64(LT[K]) + LCarry;
-      LT[K] := UInt16(LUV and LIMB_MASK);
+      LUV := UInt64(AScratch[K]) + LCarry;
+      AScratch[K] := UInt16(LUV and LIMB_MASK);
       LCarry := LUV shr LIMB_BITS;
       Inc(K);
     end;
   end;
 
-  SetLength(Result, LN + 1);
+  if Length(AResult) <> (LN + 1) then
+    SetLength(AResult, LN + 1);
   for I := 0 to LN do
-    Result[I] := LT[I + LN];
+    AResult[I] := AScratch[I + LN];
 
-  NormalizeBigNat(Result);
-  if BigNatCompare(Result, ACtx.Modulus) >= 0 then
-  begin
-    Result := BigNatSubtract(Result, ACtx.Modulus);
-    NormalizeBigNat(Result);
-  end;
+  NormalizeBigNat(AResult);
+  if BigNatCompare(AResult, ACtx.Modulus) >= 0 then
+    BigNatSubtractInPlace(AResult, ACtx.Modulus);
+end;
+
+function MontgomeryMultiply(
+  const ACtx: TMontgomeryContext;
+  const ALeft, ARight: TBigNat
+): TBigNat;
+var
+  LScratch: TBigNat;
+begin
+  SetLength(Result, 0);
+  SetLength(LScratch, 0);
+  MontgomeryMultiplyInto(ACtx, ALeft, ARight, Result, LScratch);
 end;
 
 function BigNatModExpMontgomery(
@@ -709,21 +722,38 @@ function BigNatModExpMontgomery(
 var
   LAccumulator: TBigNat;
   LBaseMont: TBigNat;
+  LNext: TBigNat;
+  LTmp: TBigNat;
+  LScratch: TBigNat;
   LBitLength: Integer;
   I: Integer;
 begin
   LAccumulator := Copy(ACtx.RModN, 0, Length(ACtx.RModN));
-  LBaseMont := MontgomeryMultiply(ACtx, ABase, ACtx.R2ModN);
+  SetLength(LBaseMont, 0);
+  SetLength(LNext, 0);
+  SetLength(LScratch, 0);
+
+  MontgomeryMultiplyInto(ACtx, ABase, ACtx.R2ModN, LBaseMont, LScratch);
 
   LBitLength := BigNatBitLength(AExponent);
   for I := LBitLength - 1 downto 0 do
   begin
-    LAccumulator := MontgomeryMultiply(ACtx, LAccumulator, LAccumulator);
+    MontgomeryMultiplyInto(ACtx, LAccumulator, LAccumulator, LNext, LScratch);
+    LTmp := LAccumulator;
+    LAccumulator := LNext;
+    LNext := LTmp;
+
     if BigNatGetBit(AExponent, I) then
-      LAccumulator := MontgomeryMultiply(ACtx, LAccumulator, LBaseMont);
+    begin
+      MontgomeryMultiplyInto(ACtx, LAccumulator, LBaseMont, LNext, LScratch);
+      LTmp := LAccumulator;
+      LAccumulator := LNext;
+      LNext := LTmp;
+    end;
   end;
 
-  Result := MontgomeryMultiply(ACtx, LAccumulator, ACtx.One);
+  SetLength(Result, 0);
+  MontgomeryMultiplyInto(ACtx, LAccumulator, ACtx.One, Result, LScratch);
 end;
 
 function BigNatModMultiplyClassic(
