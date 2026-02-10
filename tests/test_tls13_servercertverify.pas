@@ -3951,6 +3951,255 @@ begin
   AssertContains(LErr, 'Encrypted PKCS#8 private keys are not supported', 'encrypted-key rejection message mismatch');
 end;
 
+procedure TestPEMMixedAndEncryptedMatrixWaveG;
+var
+  LKeyBlob: TBytes;
+  LCertPEM: TBytes;
+  LUnknownPEM: TBytes;
+  LECPRIVATEPEM: TBytes;
+  LEncryptedPEM: TBytes;
+  LCombined: TBytes;
+  LBaselineSig: TBytes;
+  LInput: TBytes;
+  LErr: string;
+begin
+  LKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  LCertPEM := LoadFileBytes('tests/certificate/test_certs/signer_cert.pem');
+  LInput := BuildDeterministicCertVerifyInput($B6);
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      LKeyBlob,
+      LInput,
+      LBaselineSig,
+      LErr
+    ),
+    'pem-waveg-baseline signing failed: ' + LErr
+  );
+
+  LUnknownPEM := BuildPEMBlockWithType('FAFAFA UNKNOWN KEY', [$01, $02, $03]);
+  LECPRIVATEPEM := BuildPEMBlockWithType('EC PRIVATE KEY', [$01, $02, $03]);
+  LEncryptedPEM := TEncoding.ASCII.GetBytes(
+    '-----BEGIN ENCRYPTED PRIVATE KEY-----' + LineEnding +
+    'AQID' + LineEnding +
+    '-----END ENCRYPTED PRIVATE KEY-----' + LineEnding
+  );
+
+  LCombined := BuildPEMWithMultiplePrivateKeys(LEncryptedPEM, LKeyBlob);
+  AssertPKCS1SignatureMatchesBaseline(LCombined, LBaselineSig, LInput, 'pem-waveg-encrypted-then-rsa');
+
+  LCombined := BuildPEMWithMultiplePrivateKeys(LKeyBlob, LEncryptedPEM);
+  AssertPKCS1SignatureMatchesBaseline(LCombined, LBaselineSig, LInput, 'pem-waveg-rsa-then-encrypted');
+
+  LCombined := BuildPEMWithMultiplePrivateKeys(BuildPEMWithMultiplePrivateKeys(LEncryptedPEM, LUnknownPEM), LKeyBlob);
+  AssertPKCS1SignatureMatchesBaseline(LCombined, LBaselineSig, LInput, 'pem-waveg-encrypted-unknown-rsa');
+
+  LCombined := BuildPEMWithMultiplePrivateKeys(BuildPEMWithMultiplePrivateKeys(LUnknownPEM, LEncryptedPEM), LKeyBlob);
+  AssertPKCS1SignatureMatchesBaseline(LCombined, LBaselineSig, LInput, 'pem-waveg-unknown-encrypted-rsa');
+
+  LCombined := BuildPEMWithMultiplePrivateKeys(BuildPEMWithMultiplePrivateKeys(LCertPEM, LEncryptedPEM), LKeyBlob);
+  AssertPKCS1SignatureMatchesBaseline(LCombined, LBaselineSig, LInput, 'pem-waveg-cert-encrypted-rsa');
+
+  LCombined := BuildPEMWithMultiplePrivateKeys(BuildPEMWithMultiplePrivateKeys(LECPRIVATEPEM, LEncryptedPEM), LKeyBlob);
+  AssertPKCS1SignatureMatchesBaseline(LCombined, LBaselineSig, LInput, 'pem-waveg-ec-encrypted-rsa');
+
+  AssertSignerFailureContainsAny(
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    LEncryptedPEM,
+    LInput,
+    [
+      'Encrypted PKCS#8 private keys are not supported in pure FreePascal TLS13 signer',
+      'Encrypted PEM private keys are not supported in pure FreePascal TLS13 signer'
+    ],
+    'pem-waveg-encrypted-only'
+  );
+
+  LCombined := BuildPEMWithMultiplePrivateKeys(LUnknownPEM, LEncryptedPEM);
+  AssertSignerFailureContainsAny(
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    LCombined,
+    LInput,
+    [
+      'Encrypted PKCS#8 private keys are not supported in pure FreePascal TLS13 signer',
+      'Encrypted PEM private keys are not supported in pure FreePascal TLS13 signer'
+    ],
+    'pem-waveg-unknown-encrypted-only'
+  );
+
+  LCombined := BuildPEMWithMultiplePrivateKeys(LECPRIVATEPEM, LEncryptedPEM);
+  AssertSignerFailureContainsAny(
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    LCombined,
+    LInput,
+    [
+      'Encrypted PKCS#8 private keys are not supported in pure FreePascal TLS13 signer',
+      'Encrypted PEM private keys are not supported in pure FreePascal TLS13 signer'
+    ],
+    'pem-waveg-ec-encrypted-only'
+  );
+
+  LCombined := BuildPEMWithMultiplePrivateKeys(LECPRIVATEPEM, LUnknownPEM);
+  AssertSignerFailureContainsAny(
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    LCombined,
+    LInput,
+    [
+      'PEM private key is not RSA',
+      'No usable RSA private key found in PEM material',
+      'No private key block found in PEM blob'
+    ],
+    'pem-waveg-ec-unknown-only'
+  );
+
+  LCombined := BuildPEMWithMultiplePrivateKeys(LCertPEM, LUnknownPEM);
+  AssertSignerFailureContainsAny(
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    LCombined,
+    LInput,
+    [
+      'PEM private key is not RSA',
+      'No usable RSA private key found in PEM material',
+      'No private key block found in PEM blob'
+    ],
+    'pem-waveg-cert-unknown-only'
+  );
+
+  AssertSignerFailureContainsAny(
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    LUnknownPEM,
+    LInput,
+    [
+      'PEM private key is not RSA',
+      'No usable RSA private key found in PEM material',
+      'No private key block found in PEM blob'
+    ],
+    'pem-waveg-unknown-only'
+  );
+end;
+
+procedure TestErrorSurfaceCrossSchemeMatrixWaveG;
+var
+  LKeyBlob: TBytes;
+  LCertBlob: TBytes;
+  LInput: TBytes;
+  LMalformedDER: TBytes;
+  LEncryptedPEM: TBytes;
+begin
+  LKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  LCertBlob := LoadFileBytes('tests/certificate/test_certs/signer_cert.pem');
+  LInput := BuildDeterministicCertVerifyInput($C6);
+  LMalformedDER := [$00, $01, $02];
+  LEncryptedPEM := TEncoding.ASCII.GetBytes(
+    '-----BEGIN ENCRYPTED PRIVATE KEY-----' + LineEnding +
+    'AQID' + LineEnding +
+    '-----END ENCRYPTED PRIVATE KEY-----' + LineEnding
+  );
+
+  AssertSignerFailureContains(TLS13_SIG_RSA_PKCS1_SHA256, LKeyBlob, [], 'CertificateVerify input is empty', 'cross-waveg-empty-input-pkcs1');
+  AssertSignerFailureContains(TLS13_SIG_RSA_PSS_RSAE_SHA256, LKeyBlob, [], 'CertificateVerify input is empty', 'cross-waveg-empty-input-pss-rsae');
+  AssertSignerFailureContains(TLS13_SIG_RSA_PSS_PSS_SHA256, LKeyBlob, [], 'CertificateVerify input is empty', 'cross-waveg-empty-input-pss-pss');
+
+  AssertSignerFailureContains(TLS13_SIG_RSA_PKCS1_SHA256, [], LInput, 'Private key material is empty', 'cross-waveg-empty-key-pkcs1');
+  AssertSignerFailureContains(TLS13_SIG_RSA_PSS_RSAE_SHA256, [], LInput, 'Private key material is empty', 'cross-waveg-empty-key-pss-rsae');
+  AssertSignerFailureContains(TLS13_SIG_RSA_PSS_PSS_SHA256, [], LInput, 'Private key material is empty', 'cross-waveg-empty-key-pss-pss');
+
+  AssertSignerFailureContains(TLS13_SIG_RSA_PKCS1_SHA256, LMalformedDER, LInput, 'Unsupported DER private key format', 'cross-waveg-malformed-der-pkcs1');
+  AssertSignerFailureContains(TLS13_SIG_RSA_PSS_RSAE_SHA256, LMalformedDER, LInput, 'Unsupported DER private key format', 'cross-waveg-malformed-der-pss-rsae');
+  AssertSignerFailureContains(TLS13_SIG_RSA_PSS_PSS_SHA256, LMalformedDER, LInput, 'Unsupported DER private key format', 'cross-waveg-malformed-der-pss-pss');
+
+  AssertSignerFailureContains(TLS13_SIG_RSA_PKCS1_SHA256, LCertBlob, LInput, 'No private key block found in PEM blob', 'cross-waveg-cert-pem-pkcs1');
+  AssertSignerFailureContains(TLS13_SIG_RSA_PSS_RSAE_SHA256, LCertBlob, LInput, 'No private key block found in PEM blob', 'cross-waveg-cert-pem-pss-rsae');
+  AssertSignerFailureContains(TLS13_SIG_RSA_PSS_PSS_SHA256, LCertBlob, LInput, 'No private key block found in PEM blob', 'cross-waveg-cert-pem-pss-pss');
+
+  AssertSignerFailureContainsAny(
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    LEncryptedPEM,
+    LInput,
+    [
+      'Encrypted PKCS#8 private keys are not supported in pure FreePascal TLS13 signer',
+      'Encrypted PEM private keys are not supported in pure FreePascal TLS13 signer'
+    ],
+    'cross-waveg-encrypted-pkcs1'
+  );
+  AssertSignerFailureContainsAny(
+    TLS13_SIG_RSA_PSS_RSAE_SHA256,
+    LEncryptedPEM,
+    LInput,
+    [
+      'Encrypted PKCS#8 private keys are not supported in pure FreePascal TLS13 signer',
+      'Encrypted PEM private keys are not supported in pure FreePascal TLS13 signer'
+    ],
+    'cross-waveg-encrypted-pss-rsae'
+  );
+  AssertSignerFailureContainsAny(
+    TLS13_SIG_RSA_PSS_PSS_SHA256,
+    LEncryptedPEM,
+    LInput,
+    [
+      'Encrypted PKCS#8 private keys are not supported in pure FreePascal TLS13 signer',
+      'Encrypted PEM private keys are not supported in pure FreePascal TLS13 signer'
+    ],
+    'cross-waveg-encrypted-pss-pss'
+  );
+end;
+
+procedure TestPKCS1VersionAndPublicExponentMutationMatrixWaveG;
+var
+  LPemBlob: TBytes;
+  LDER: TBytes;
+  LPKCS1: TBytes;
+  LType: TPEMType;
+  LInput: TBytes;
+  LMutated: TBytes;
+begin
+  LPemBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  AssertTrue(TryExtractFirstPrivateKeyDER(LPemBlob, LDER, LType), 'PKCS1-waveg: failed to extract DER');
+
+  if LType = pemPrivateKey then
+    AssertTrue(TryExtractPKCS1FromPKCS8DER(LDER, LPKCS1), 'PKCS1-waveg: failed to extract inner PKCS#1 DER')
+  else
+    LPKCS1 := Copy(LDER, 0, Length(LDER));
+
+  LInput := BuildDeterministicCertVerifyInput($D6);
+
+  AssertTrue(TryMutatePKCS1FieldTag(LPKCS1, 0, $05, LMutated), 'PKCS1-waveg: mutate version tag null failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-waveg-version-tag-null');
+
+  AssertTrue(TryMutatePKCS1FieldTag(LPKCS1, 0, $30, LMutated), 'PKCS1-waveg: mutate version tag sequence failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-waveg-version-tag-sequence');
+
+  AssertTrue(TryMutatePKCS1FieldLengthByte(LPKCS1, 0, $00, LMutated), 'PKCS1-waveg: mutate version len=0 failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-waveg-version-len-zero');
+
+  AssertTrue(TryMutatePKCS1FieldLengthByte(LPKCS1, 0, $FF, LMutated), 'PKCS1-waveg: mutate version len=ff failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-waveg-version-len-ff');
+
+  AssertTrue(TrySetPKCS1FieldToConstant(LPKCS1, 0, 1, LMutated), 'PKCS1-waveg: set version=1 failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-waveg-version-one');
+
+  AssertTrue(TrySetPKCS1FieldToConstant(LPKCS1, 0, 2, LMutated), 'PKCS1-waveg: set version=2 failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-waveg-version-two');
+
+  AssertTrue(TryMutatePKCS1FieldTag(LPKCS1, 2, $05, LMutated), 'PKCS1-waveg: mutate publicExponent tag null failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-waveg-publicexp-tag-null');
+
+  AssertTrue(TryMutatePKCS1FieldTag(LPKCS1, 2, $04, LMutated), 'PKCS1-waveg: mutate publicExponent tag octet failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-waveg-publicexp-tag-octet');
+
+  AssertTrue(TryMutatePKCS1FieldLengthByte(LPKCS1, 2, $00, LMutated), 'PKCS1-waveg: mutate publicExponent len=0 failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-waveg-publicexp-len-zero');
+
+  AssertTrue(TryMutatePKCS1FieldLengthByte(LPKCS1, 2, $FF, LMutated), 'PKCS1-waveg: mutate publicExponent len=ff failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-waveg-publicexp-len-ff');
+
+  AssertTrue(TrySetPKCS1FieldToConstant(LPKCS1, 2, 1, LMutated), 'PKCS1-waveg: set publicExponent=1 failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-waveg-publicexp-one');
+
+  AssertTrue(TrySetPKCS1FieldToConstant(LPKCS1, 2, 3, LMutated), 'PKCS1-waveg: set publicExponent=3 failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-waveg-publicexp-three');
+end;
+
 procedure TestRSASignatureRejectsPKCS8FieldShapeMutations;
 var
   LPemBlob: TBytes;
@@ -4544,6 +4793,7 @@ begin
   TestRSASignatureUsesFirstUsableRSAKeyBlock;
   TestRSASignatureWith1024BitKeyLength;
   TestRSASignatureErrorMessagesAreStable;
+  TestErrorSurfaceCrossSchemeMatrixWaveG;
   TestRSASignatureErrorSurfaceMatrix;
   TestRSASignatureBoundaryMatrixExtended;
   TestRSAPSSBoundaryMatrixWaveC;
@@ -4551,6 +4801,7 @@ begin
   TestRSASignatureHandlesMalformedDERVariants;
   TestRSASignatureRejectsExtendedDERMutations;
   TestRSASignatureSelectsRSAFromMixedPEMBlocks;
+  TestPEMMixedAndEncryptedMatrixWaveG;
   TestRSASignatureRejectsPEMWithoutUsableRSAKey;
   TestRSASignatureRejectsMalformedPEMEnvelopes;
   TestRSASignatureRejectsEncryptedPEMBlock;
@@ -4563,6 +4814,7 @@ begin
   TestRSASignatureRejectsPKCS1CRTFieldTagMutations;
   TestRSASignatureRejectsPKCS1CRTZeroValueMutations;
   TestPKCS1LengthMutationMatrixWaveD;
+  TestPKCS1VersionAndPublicExponentMutationMatrixWaveG;
   TestRSASignatureRejectsPEMWithoutPrivateKeyBlock;
   TestRSASignatureKeySizeConsistency;
   TestRSASignatureFallsBackWhenPrivateExponentCorrupted;
