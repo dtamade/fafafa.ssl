@@ -2747,6 +2747,53 @@ begin
   AssertBigIntSubModMatchesQWord($0000000000000001, $FFFFFFFFFFFFFFFE, $7FFFFFFFFFFFFFFF, 'waved-submod-2');
 end;
 
+procedure TestBigIntQWordVectorSuiteWaveF;
+begin
+  AssertBigIntModMatchesQWord($0102030405060708, $03, 'wavef-mod-1');
+  AssertBigIntModMatchesQWord($FFFFFFFFFFFFFFFE, $FF, 'wavef-mod-2');
+  AssertBigIntModMatchesQWord($7FFFFFFFFFFFFFFF, $0000000100000001, 'wavef-mod-3');
+  AssertBigIntModMatchesQWord($AAAAAAAAAAAAAAAA, $5555555555555557, 'wavef-mod-4');
+  AssertBigIntModMatchesQWord($123456789ABCDEF0, $11, 'wavef-mod-5');
+  AssertBigIntModMatchesQWord($DEADBEEFCAFEBABE, $FFFFFFFB, 'wavef-mod-6');
+  AssertBigIntModMatchesQWord($8000000000000000, $7FFFFFFFFFFFFFE7, 'wavef-mod-7');
+  AssertBigIntModMatchesQWord($13579BDF2468ACE0, $1000000000000001, 'wavef-mod-8');
+  AssertBigIntModMatchesQWord($FEDCBA9876543210, $1FFFFFFFFFFFFFFF, 'wavef-mod-9');
+  AssertBigIntModMatchesQWord($1122334455667788, $0101010101010101, 'wavef-mod-10');
+
+  AssertBigIntModMulMatchesQWord($FFFFFFFFFFFFFFFD, $FFFFFFFFFFFFFFFB, $FFFFFFFFFFFFFFC5, 'wavef-modmul-1');
+  AssertBigIntModMulMatchesQWord($8000000000000000, $0000000000000002, $7FFFFFFFFFFFFFFF, 'wavef-modmul-2');
+  AssertBigIntModMulMatchesQWord($123456789ABCDEF0, $0FEDCBA987654321, $1FFFFFFFFFFFFFFF, 'wavef-modmul-3');
+  AssertBigIntModMulMatchesQWord($DEADBEEFCAFEBABE, $0000000100000001, $FFFFFFFF00000001, 'wavef-modmul-4');
+  AssertBigIntModMulMatchesQWord($AAAAAAAA55555555, $1111111122222222, $FFFFFFFB, 'wavef-modmul-5');
+  AssertBigIntModMulMatchesQWord($0123456789ABCDEF, $F0E1D2C3B4A59687, $7FFFFFFFFFFFFFE7, 'wavef-modmul-6');
+  AssertBigIntModMulMatchesQWord($00000000FFFFFFFF, $FFFFFFFF00000000, $FFFFFFFF, 'wavef-modmul-7');
+  AssertBigIntModMulMatchesQWord($13579BDF2468ACE1, $2468ACE113579BDF, $100000000000003D, 'wavef-modmul-8');
+  AssertBigIntModMulMatchesQWord($FFFFFFFFFFFFFFFE, $FFFFFFFFFFFFFFFE, $FFFFFFFFFFFFFFC5, 'wavef-modmul-9');
+  AssertBigIntModMulMatchesQWord($1122334455667788, $99AABBCCDDEEFF00, $7FFFFFFFFFFFFFED, 'wavef-modmul-10');
+
+  AssertBigIntModExpMatchesQWord($02, $3F, $7FFFFFFFFFFFFFFF, 'wavef-modexp-1');
+  AssertBigIntModExpMatchesQWord($03, $0400, $FFFFFFFF00000001, 'wavef-modexp-2');
+  AssertBigIntModExpMatchesQWord($123456789ABCDEF0, $12345, $FFFFFFFFFFFFFFC5, 'wavef-modexp-3');
+  AssertBigIntModExpMatchesQWord($FEDCBA9876543210, $2222, $7FFFFFFFFFFFFFE7, 'wavef-modexp-4');
+  AssertBigIntModExpMatchesQWord($AAAAAAAA55555555, $10001, $1FFFFFFFFFFFFFFF, 'wavef-modexp-5');
+  AssertBigIntModExpMatchesQWord($DEADBEEFCAFEBABE, $77, $FFFFFFFFFFFFFFF1, 'wavef-modexp-6');
+  AssertBigIntModExpMatchesQWord($0123456789ABCDEF, $ABCDE, $100000000000003D, 'wavef-modexp-7');
+  AssertBigIntModExpMatchesQWord($0000000000000005, $FFFFFFFF, $FFFFFFFFFFFFFFC5, 'wavef-modexp-8');
+  AssertBigIntModExpMatchesQWord($FFFFFFFF00000000, $11111111, $FFFFFFFB, 'wavef-modexp-9');
+  AssertBigIntModExpMatchesQWord($13579BDF2468ACE1, $87654321, $7FFFFFFFFFFFFFED, 'wavef-modexp-10');
+
+  AssertBigIntSubModMatchesQWord($FFFFFFFFFFFFFFFE, $01, $FFFFFFFFFFFFFFC5, 'wavef-submod-1');
+  AssertBigIntSubModMatchesQWord($01, $FFFFFFFFFFFFFFFE, $FFFFFFFFFFFFFFC5, 'wavef-submod-2');
+  AssertBigIntSubModMatchesQWord($123456789ABCDEF0, $0FEDCBA987654321, $1FFFFFFFFFFFFFFF, 'wavef-submod-3');
+  AssertBigIntSubModMatchesQWord($0FEDCBA987654321, $123456789ABCDEF0, $1FFFFFFFFFFFFFFF, 'wavef-submod-4');
+  AssertBigIntSubModMatchesQWord($AAAAAAAAAAAAAAAA, $5555555555555555, $7FFFFFFFFFFFFFFF, 'wavef-submod-5');
+  AssertBigIntSubModMatchesQWord($5555555555555555, $AAAAAAAAAAAAAAAA, $7FFFFFFFFFFFFFFF, 'wavef-submod-6');
+  AssertBigIntSubModMatchesQWord($DEADBEEFCAFEBABE, $DEADBEEFCAFEBABE, $FFFFFFFF00000001, 'wavef-submod-7');
+  AssertBigIntSubModMatchesQWord($0000000000000000, $0000000000000001, $FFFFFFFFFFFFFFF1, 'wavef-submod-8');
+  AssertBigIntSubModMatchesQWord($FFFFFFFF00000000, $00000000FFFFFFFF, $FFFFFFFB, 'wavef-submod-9');
+  AssertBigIntSubModMatchesQWord($1122334455667788, $99AABBCCDDEEFF00, $7FFFFFFFFFFFFFED, 'wavef-submod-10');
+end;
+
 procedure TestBigIntErrorSurface;
 var
   LOut: TBytes;
@@ -4252,6 +4299,7 @@ begin
   TestBigIntCrossByteVector;
   TestBigIntQWordVectorSuite;
   TestBigIntQWordVectorSuiteWaveD;
+  TestBigIntQWordVectorSuiteWaveF;
   TestBigIntErrorSurface;
   TestBigIntLeadingZeroNormalization;
   TestBigIntFixedLengthExactFit;
