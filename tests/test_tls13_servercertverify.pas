@@ -283,6 +283,31 @@ begin
   Result := True;
 end;
 
+function TryMutatePKCS1FieldLengthByte(
+  const ASourceDER: TBytes;
+  AFieldIndex: Integer;
+  ALengthByte: Byte;
+  out ADestDER: TBytes
+): Boolean;
+var
+  LTagOffset: Integer;
+  LLengthOffset: Integer;
+begin
+  SetLength(ADestDER, 0);
+  Result := False;
+
+  if not TryLocatePKCS1IntegerFieldTagOffset(ASourceDER, AFieldIndex, LTagOffset) then
+    Exit;
+
+  LLengthOffset := LTagOffset + 1;
+  if (LLengthOffset < 0) or (LLengthOffset >= Length(ASourceDER)) then
+    Exit;
+
+  ADestDER := Copy(ASourceDER, 0, Length(ASourceDER));
+  ADestDER[LLengthOffset] := ALengthByte;
+  Result := True;
+end;
+
 function TrySetPKCS1FieldToConstant(
   const ASourceDER: TBytes;
   AFieldIndex: Integer;
@@ -1479,6 +1504,42 @@ begin
   end;
 end;
 
+function MulModQWord(ALeft, ARight, AModulus: QWord): QWord;
+var
+  LLeft: QWord;
+  LRight: QWord;
+  LResult: QWord;
+begin
+  if AModulus = 0 then
+    Exit(0);
+
+  LLeft := ALeft mod AModulus;
+  LRight := ARight mod AModulus;
+  LResult := 0;
+
+  while LRight > 0 do
+  begin
+    if (LRight and 1) = 1 then
+    begin
+      if LResult >= AModulus - LLeft then
+        LResult := LResult - (AModulus - LLeft)
+      else
+        LResult := LResult + LLeft;
+    end;
+
+    LRight := LRight shr 1;
+    if LRight = 0 then
+      Break;
+
+    if LLeft >= AModulus - LLeft then
+      LLeft := LLeft - (AModulus - LLeft)
+    else
+      LLeft := LLeft + LLeft;
+  end;
+
+  Result := LResult;
+end;
+
 function PowModQWord(ABase, AExponent, AModulus: QWord): QWord;
 var
   LBase: QWord;
@@ -1495,8 +1556,8 @@ begin
   while LExponent > 0 do
   begin
     if (LExponent and 1) = 1 then
-      LResult := (LResult * LBase) mod AModulus;
-    LBase := (LBase * LBase) mod AModulus;
+      LResult := MulModQWord(LResult, LBase, AModulus);
+    LBase := MulModQWord(LBase, LBase, AModulus);
     LExponent := LExponent shr 1;
   end;
 
@@ -1527,7 +1588,7 @@ begin
     TryBigIntModMulFromUnsignedBytes(QWordToBytes(ALeft), QWordToBytes(ARight), QWordToBytes(AModulus), LOut, LErr),
     ALabel + ': modmul operation failed: ' + LErr
   );
-  LExpected := ((ALeft mod AModulus) * (ARight mod AModulus)) mod AModulus;
+  LExpected := MulModQWord(ALeft, ARight, AModulus);
   AssertEqualsQWord(LExpected, BytesToQWord(LOut), ALabel + ': modmul result mismatch');
 end;
 
@@ -2528,6 +2589,23 @@ begin
   AssertBigIntSubModMatchesQWord($ABCDEF01, $12345678, $FFFFFFFB, 'submod-random-a');
 end;
 
+procedure TestBigIntQWordVectorSuiteWaveD;
+begin
+  AssertBigIntModMatchesQWord($FFFFFFFFFFFFFFF1, $FFFFFFFFFFFFFFC5, 'waved-mod-1');
+  AssertBigIntModMatchesQWord($8000000000000001, $7FFFFFFFFFFFFFFF, 'waved-mod-2');
+  AssertBigIntModMatchesQWord($1234567890ABCDEF, $1FFFFFFFF, 'waved-mod-3');
+
+  AssertBigIntModMulMatchesQWord($FFFFFFFFFFFFFFFD, $FFFFFFFFFFFFFFFB, $FFFFFFFFFFFFFFC5, 'waved-modmul-1');
+  AssertBigIntModMulMatchesQWord($0123456789ABCDEF, $0FEDCBA987654321, $7FFFFFFFFFFFFFFF, 'waved-modmul-2');
+  AssertBigIntModMulMatchesQWord($123456789ABCDEF0, $1111111111111111, $1FFFFFFFF, 'waved-modmul-3');
+
+  AssertBigIntModExpMatchesQWord($123456789ABCDEF0, $123456, $FFFFFFFFFFFFFFC5, 'waved-modexp-1');
+  AssertBigIntModExpMatchesQWord($7FFFFFFFFFFFFFFE, $2222, $7FFFFFFFFFFFFFFF, 'waved-modexp-2');
+
+  AssertBigIntSubModMatchesQWord($FFFFFFFFFFFFFFFE, $123456789ABCDEF0, $FFFFFFFFFFFFFFC5, 'waved-submod-1');
+  AssertBigIntSubModMatchesQWord($0000000000000001, $FFFFFFFFFFFFFFFE, $7FFFFFFFFFFFFFFF, 'waved-submod-2');
+end;
+
 procedure TestBigIntErrorSurface;
 var
   LOut: TBytes;
@@ -3181,6 +3259,60 @@ begin
   AssertTrue(LDiff > 0, 'pss-boundary-randomness signatures should differ due to randomized salt');
 end;
 
+procedure TestRSASmallModulusBoundaryMatrixWaveD;
+var
+  LPemBlob: TBytes;
+  LDER: TBytes;
+  LPKCS1: TBytes;
+  LType: TPEMType;
+  LInput: TBytes;
+  LMutated: TBytes;
+
+  procedure AssertShortModulusError(
+    AScheme: Word;
+    AModulusConstant: Byte;
+    const ANeedle: string;
+    const ALabel: string
+  );
+  begin
+    AssertTrue(
+      TrySetPKCS1FieldToConstant(LPKCS1, 1, AModulusConstant, LMutated),
+      ALabel + ': failed to set modulus constant'
+    );
+    AssertSignerFailureContains(
+      AScheme,
+      LMutated,
+      LInput,
+      ANeedle,
+      ALabel
+    );
+  end;
+
+begin
+  LPemBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  AssertTrue(TryExtractFirstPrivateKeyDER(LPemBlob, LDER, LType), 'small-mod-waveD: failed to extract DER');
+
+  if LType = pemPrivateKey then
+    AssertTrue(TryExtractPKCS1FromPKCS8DER(LDER, LPKCS1), 'small-mod-waveD: failed to extract inner PKCS#1 DER')
+  else
+    LPKCS1 := Copy(LDER, 0, Length(LDER));
+
+  LInput := BuildDeterministicCertVerifyInput($ED);
+
+  AssertShortModulusError(TLS13_SIG_RSA_PKCS1_SHA256, 0, 'Unsupported DER private key format', 'small-mod-pkcs1-zero');
+  AssertShortModulusError(TLS13_SIG_RSA_PKCS1_SHA256, 1, 'RSA modulus is too short for PKCS#1 v1.5 SHA-256 encoding', 'small-mod-pkcs1-one');
+  AssertShortModulusError(TLS13_SIG_RSA_PKCS1_SHA256, 2, 'RSA modulus is too short for PKCS#1 v1.5 SHA-256 encoding', 'small-mod-pkcs1-two');
+  AssertShortModulusError(TLS13_SIG_RSA_PKCS1_SHA256, 3, 'RSA modulus is too short for PKCS#1 v1.5 SHA-256 encoding', 'small-mod-pkcs1-three');
+
+  AssertShortModulusError(TLS13_SIG_RSA_PSS_RSAE_SHA256, 1, 'RSA modulus bit length is invalid for PSS', 'small-mod-pss-rsae-one');
+  AssertShortModulusError(TLS13_SIG_RSA_PSS_RSAE_SHA256, 2, 'RSA modulus too short for SHA-256 PSS encoding', 'small-mod-pss-rsae-two');
+  AssertShortModulusError(TLS13_SIG_RSA_PSS_RSAE_SHA256, 3, 'RSA modulus too short for SHA-256 PSS encoding', 'small-mod-pss-rsae-three');
+
+  AssertShortModulusError(TLS13_SIG_RSA_PSS_PSS_SHA256, 1, 'RSA modulus bit length is invalid for PSS', 'small-mod-pss-pss-one');
+  AssertShortModulusError(TLS13_SIG_RSA_PSS_PSS_SHA256, 2, 'RSA modulus too short for SHA-256 PSS encoding', 'small-mod-pss-pss-two');
+  AssertShortModulusError(TLS13_SIG_RSA_PSS_PSS_SHA256, 3, 'RSA modulus too short for SHA-256 PSS encoding', 'small-mod-pss-pss-three');
+end;
+
 procedure TestRSASignatureHandlesMalformedDERVariants;
 var
   LPemBlob: TBytes;
@@ -3723,6 +3855,51 @@ begin
   AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-crt-qinv-zero');
 end;
 
+procedure TestPKCS1LengthMutationMatrixWaveD;
+var
+  LPemBlob: TBytes;
+  LDER: TBytes;
+  LPKCS1: TBytes;
+  LType: TPEMType;
+  LInput: TBytes;
+  LMutated: TBytes;
+begin
+  LPemBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  AssertTrue(TryExtractFirstPrivateKeyDER(LPemBlob, LDER, LType), 'PKCS1-len-waveD: failed to extract DER');
+
+  if LType = pemPrivateKey then
+    AssertTrue(TryExtractPKCS1FromPKCS8DER(LDER, LPKCS1), 'PKCS1-len-waveD: failed to extract inner PKCS#1 DER')
+  else
+    LPKCS1 := Copy(LDER, 0, Length(LDER));
+
+  LInput := BuildDeterministicCertVerifyInput($F4);
+
+  AssertTrue(Length(LPKCS1) > 3, 'PKCS1-len-waveD: PKCS#1 DER too short for root length mutations');
+  LMutated := CopyBytesWithMutation(LPKCS1, 1, $00);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs1-len-root-zero');
+  LMutated := CopyBytesWithMutation(LPKCS1, 1, $FF);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs1-len-root-ff');
+
+  AssertTrue(TryMutatePKCS1FieldLengthByte(LPKCS1, 1, $00, LMutated), 'PKCS1-len-waveD: mutate modulus len=0 failed');
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs1-len-modulus-zero');
+  AssertTrue(TryMutatePKCS1FieldLengthByte(LPKCS1, 1, $FF, LMutated), 'PKCS1-len-waveD: mutate modulus len=ff failed');
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs1-len-modulus-ff');
+
+  AssertTrue(TryMutatePKCS1FieldLengthByte(LPKCS1, 3, $00, LMutated), 'PKCS1-len-waveD: mutate exponent len=0 failed');
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs1-len-privateexp-zero');
+  AssertTrue(TryMutatePKCS1FieldLengthByte(LPKCS1, 3, $FF, LMutated), 'PKCS1-len-waveD: mutate exponent len=ff failed');
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs1-len-privateexp-ff');
+
+  AssertTrue(TryMutatePKCS1FieldLengthByte(LPKCS1, 4, $00, LMutated), 'PKCS1-len-waveD: mutate p len=0 failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-len-p-zero');
+  AssertTrue(TryMutatePKCS1FieldLengthByte(LPKCS1, 5, $00, LMutated), 'PKCS1-len-waveD: mutate q len=0 failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-len-q-zero');
+  AssertTrue(TryMutatePKCS1FieldLengthByte(LPKCS1, 6, $00, LMutated), 'PKCS1-len-waveD: mutate dp len=0 failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-len-dp-zero');
+  AssertTrue(TryMutatePKCS1FieldLengthByte(LPKCS1, 8, $00, LMutated), 'PKCS1-len-waveD: mutate qinv len=0 failed');
+  AssertDEREitherRejectedOrFallbackSucceeds(LMutated, LInput, 'pkcs1-len-qinv-zero');
+end;
+
 procedure TestRSASignatureKeySizeConsistency;
 var
   LKeyBlob: TBytes;
@@ -3809,6 +3986,7 @@ begin
   TestBigIntEvenModulusAndZeroExponent;
   TestBigIntCrossByteVector;
   TestBigIntQWordVectorSuite;
+  TestBigIntQWordVectorSuiteWaveD;
   TestBigIntErrorSurface;
   TestBigIntLeadingZeroNormalization;
   TestBigIntFixedLengthExactFit;
@@ -3824,6 +4002,7 @@ begin
   TestRSASignatureErrorSurfaceMatrix;
   TestRSASignatureBoundaryMatrixExtended;
   TestRSAPSSBoundaryMatrixWaveC;
+  TestRSASmallModulusBoundaryMatrixWaveD;
   TestRSASignatureHandlesMalformedDERVariants;
   TestRSASignatureRejectsExtendedDERMutations;
   TestRSASignatureSelectsRSAFromMixedPEMBlocks;
@@ -3836,6 +4015,7 @@ begin
   TestRSASignatureRejectsPKCS1CoreFieldMutations;
   TestRSASignatureRejectsPKCS1CRTFieldTagMutations;
   TestRSASignatureRejectsPKCS1CRTZeroValueMutations;
+  TestPKCS1LengthMutationMatrixWaveD;
   TestRSASignatureRejectsPEMWithoutPrivateKeyBlock;
   TestRSASignatureKeySizeConsistency;
   TestRSASignatureFallsBackWhenPrivateExponentCorrupted;
