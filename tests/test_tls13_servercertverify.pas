@@ -1954,6 +1954,49 @@ begin
   AssertSelectFailure([$0001, $0002, $0003, $0004], 'scheme-wavej-only-unknowns');
 end;
 
+procedure TestSelectSchemeByCertificateKeyType;
+var
+  LInfo: TTLS13ClientHelloInfo;
+  LScheme: Word;
+  LErr: string;
+begin
+  FillChar(LInfo, SizeOf(LInfo), 0);
+  LInfo.HasSignatureAlgorithms := True;
+  LInfo.SignatureAlgorithms := [
+    TLS13_SIG_ECDSA_SECP256R1_SHA256,
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    TLS13_SIG_RSA_PSS_PSS_SHA256
+  ];
+
+  AssertTrue(
+    TrySelectTLS13ServerCertificateVerifySchemeForKeyType(LInfo, 'RSA', LScheme, LErr),
+    'keytype-rsa-mixed should succeed: ' + LErr
+  );
+  AssertEqualsWord(TLS13_SIG_RSA_PKCS1_SHA256, LScheme, 'keytype-rsa-mixed selected scheme mismatch');
+
+  FillChar(LInfo, SizeOf(LInfo), 0);
+  LInfo.HasSignatureAlgorithms := True;
+  LInfo.SignatureAlgorithms := [TLS13_SIG_ECDSA_SECP256R1_SHA256];
+
+  AssertTrue(
+    not TrySelectTLS13ServerCertificateVerifySchemeForKeyType(LInfo, 'ECDSA', LScheme, LErr),
+    'keytype-ecdsa should fail until pure signer implemented'
+  );
+  AssertContains(LErr, 'ECDSA CertificateVerify signer is not implemented yet in pure Pascal backend',
+    'keytype-ecdsa failure message mismatch');
+
+  FillChar(LInfo, SizeOf(LInfo), 0);
+  LInfo.HasSignatureAlgorithms := True;
+  LInfo.SignatureAlgorithms := [TLS13_SIG_RSA_PSS_RSAE_SHA256, TLS13_SIG_RSA_PKCS1_SHA256];
+
+  AssertTrue(
+    not TrySelectTLS13ServerCertificateVerifySchemeForKeyType(LInfo, 'Ed25519', LScheme, LErr),
+    'keytype-unsupported should fail'
+  );
+  AssertContains(LErr, 'Unsupported leaf certificate key type for TLS 1.3 CertificateVerify',
+    'keytype-unsupported message mismatch');
+end;
+
 procedure TestBuildCertVerifyInput;
 const
   CONTEXT = 'TLS 1.3, server CertificateVerify';
@@ -5092,6 +5135,7 @@ begin
   TestSelectSchemeMatrixWaveE;
   TestSelectSchemeMatrixWaveF;
   TestSelectSchemeMatrixWaveJ;
+  TestSelectSchemeByCertificateKeyType;
   TestBuildCertVerifyInput;
   TestBuildCertificateVerifyHandshake;
   TestPlaceholderSignature;

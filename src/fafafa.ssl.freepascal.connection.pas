@@ -1489,6 +1489,7 @@ var
   LSignatureScheme: Word;
   LSignatureSchemeError: string;
   LLeafCertificate: TX509Certificate;
+  LLeafKeyType: string;
   LCertVerifyInput: TBytes;
   LCertVerifySignature: TBytes;
   LSignatureLength: Integer;
@@ -1510,6 +1511,7 @@ begin
   FSessionTicketCount := 0;
   InitTLS13NewSessionTicket(FLastSessionTicket);
   FIsServerMode := False;
+  LLeafKeyType := '';
 
   if FProtocolVersion <> sslProtocolTLS13 then
   begin
@@ -1622,12 +1624,6 @@ begin
 
   FProtocolVersion := sslProtocolTLS13;
   FCipherName := TLS13CipherSuiteToString(LSelectedCipherSuite);
-
-  if not TrySelectTLS13ServerCertificateVerifyScheme(LClientHello, LSignatureScheme, LSignatureSchemeError) then
-  begin
-    SetHandshakeError(sslErrUnsupported, LSignatureSchemeError);
-    Exit;
-  end;
 
   if not Supports(FContext, IFreePascalContextMaterial, LContextMaterial) then
   begin
@@ -1781,12 +1777,16 @@ begin
 
     if SameText(LLeafCertificate.PublicKeyInfo.KeyType, 'RSA') then
     begin
+      LLeafKeyType := 'RSA';
       LSignatureLength := (LLeafCertificate.PublicKeyInfo.KeySize + 7) div 8;
       if LSignatureLength <= 0 then
         LSignatureLength := Length(LLeafCertificate.PublicKeyInfo.RSAModulus);
     end
     else if SameText(LLeafCertificate.PublicKeyInfo.KeyType, 'ECDSA') then
+    begin
+      LLeafKeyType := 'ECDSA';
       LSignatureLength := 72
+    end
     else
       LSignatureLength := 0;
   finally
@@ -1796,6 +1796,17 @@ begin
   if LSignatureLength <= 0 then
   begin
     SetHandshakeError(sslErrUnsupported, 'Unsupported leaf certificate key type for TLS 1.3 CertificateVerify');
+    Exit;
+  end;
+
+  if not TrySelectTLS13ServerCertificateVerifySchemeForKeyType(
+    LClientHello,
+    LLeafKeyType,
+    LSignatureScheme,
+    LSignatureSchemeError
+  ) then
+  begin
+    SetHandshakeError(sslErrUnsupported, LSignatureSchemeError);
     Exit;
   end;
 
@@ -1834,12 +1845,6 @@ begin
           );
           Exit;
         end;
-      end;
-
-    TLS13_SIG_ECDSA_SECP256R1_SHA256:
-      begin
-        SetHandshakeError(sslErrUnsupported, 'ECDSA CertificateVerify signer is not implemented yet in pure Pascal backend');
-        Exit;
       end;
 
   else

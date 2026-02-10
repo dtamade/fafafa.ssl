@@ -25,6 +25,13 @@ function TrySelectTLS13ServerCertificateVerifyScheme(
   out AError: string
 ): Boolean;
 
+function TrySelectTLS13ServerCertificateVerifySchemeForKeyType(
+  const AClientHello: TTLS13ClientHelloInfo;
+  const ALeafKeyType: string;
+  out ASignatureScheme: Word;
+  out AError: string
+): Boolean;
+
 function BuildTLS13ServerCertificateVerifyInputSHA256(
   const ATranscriptHash: TBytes
 ): TBytes;
@@ -1175,6 +1182,63 @@ begin
   end;
 
   AError := 'No supported TLS 1.3 CertificateVerify signature scheme from client';
+end;
+
+function TrySelectTLS13ServerCertificateVerifySchemeForKeyType(
+  const AClientHello: TTLS13ClientHelloInfo;
+  const ALeafKeyType: string;
+  out ASignatureScheme: Word;
+  out AError: string
+): Boolean;
+var
+  LKeyType: string;
+begin
+  ASignatureScheme := 0;
+  AError := '';
+  Result := False;
+
+  LKeyType := UpperCase(Trim(ALeafKeyType));
+
+  if not AClientHello.HasSignatureAlgorithms then
+  begin
+    AError := 'ClientHello missing signature_algorithms extension';
+    Exit;
+  end;
+
+  if LKeyType = 'RSA' then
+  begin
+    if TLS13ClientHelloOffersSignatureScheme(AClientHello, TLS13_SIG_RSA_PSS_RSAE_SHA256) then
+    begin
+      ASignatureScheme := TLS13_SIG_RSA_PSS_RSAE_SHA256;
+      Exit(True);
+    end;
+
+    if TLS13ClientHelloOffersSignatureScheme(AClientHello, TLS13_SIG_RSA_PKCS1_SHA256) then
+    begin
+      ASignatureScheme := TLS13_SIG_RSA_PKCS1_SHA256;
+      Exit(True);
+    end;
+
+    if TLS13ClientHelloOffersSignatureScheme(AClientHello, TLS13_SIG_RSA_PSS_PSS_SHA256) then
+    begin
+      ASignatureScheme := TLS13_SIG_RSA_PSS_PSS_SHA256;
+      Exit(True);
+    end;
+
+    AError := 'No supported TLS 1.3 CertificateVerify signature scheme from client for RSA key';
+    Exit;
+  end;
+
+  if LKeyType = 'ECDSA' then
+  begin
+    if TLS13ClientHelloOffersSignatureScheme(AClientHello, TLS13_SIG_ECDSA_SECP256R1_SHA256) then
+      AError := 'ECDSA CertificateVerify signer is not implemented yet in pure Pascal backend'
+    else
+      AError := 'No supported TLS 1.3 CertificateVerify signature scheme from client for ECDSA key';
+    Exit;
+  end;
+
+  AError := 'Unsupported leaf certificate key type for TLS 1.3 CertificateVerify';
 end;
 
 function BuildTLS13ServerCertificateVerifyInputSHA256(
