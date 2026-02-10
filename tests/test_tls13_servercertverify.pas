@@ -2276,6 +2276,37 @@ var
     );
   end;
 
+  procedure AssertStructuredFallbackPSSFor(
+    const AMutatedDER: TBytes;
+    const AExpectedAny: array of string;
+    const ALabel: string
+  );
+  var
+    LEvenModulusDER: TBytes;
+    LSig: TBytes;
+    LErr: string;
+  begin
+    AssertTrue(Length(AMutatedDER) > 0, ALabel + ': mutation output should not be empty');
+    AssertTrue(
+      TryMutateModulusParityInDERKey(AMutatedDER, LEvenModulusDER),
+      ALabel + ': failed to force even modulus for structured fallback'
+    );
+
+    AssertTrue(
+      not TryBuildTLS13CertificateVerifySignature(
+        TLS13_SIG_RSA_PSS_RSAE_SHA256,
+        LEvenModulusDER,
+        LInput,
+        LSig,
+        LErr
+      ),
+      ALabel + ': expected fallback failure'
+    );
+    AssertContains(LErr, 'E_TLS13_SIGNER_FALLBACK_FAILED', ALabel + ': missing structured fallback error code');
+    AssertContainsAny(LErr, AExpectedAny, ALabel + ': missing expected crt_reason detail');
+    AssertContains(LErr, 'exp_reason=', ALabel + ': missing exp_reason detail');
+  end;
+
 begin
   LKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
   LInput := BuildDeterministicCertVerifyInput($D8);
@@ -2291,6 +2322,138 @@ begin
   AssertExponentPathFailureFor(BuildDPZeroPrivateKeyBlob(LKeyBlob), 'fallback-matrix-dp-zero');
   AssertExponentPathFailureFor(BuildDQZeroPrivateKeyBlob(LKeyBlob), 'fallback-matrix-dq-zero');
   AssertExponentPathFailureFor(BuildQInvZeroPrivateKeyBlob(LKeyBlob), 'fallback-matrix-qinv-zero');
+end;
+
+procedure TestFallbackMessageMatrixWaveC;
+var
+  LKeyBlob: TBytes;
+  LInput: TBytes;
+  LEvenMutated: TBytes;
+
+  procedure AssertStructuredFallbackPSSFor(
+    const AMutatedDER: TBytes;
+    const AExpectedAny: array of string;
+    const ALabel: string
+  );
+  var
+    LEvenModulusDER: TBytes;
+    LSig: TBytes;
+    LErr: string;
+  begin
+    AssertTrue(Length(AMutatedDER) > 0, ALabel + ': mutation output should not be empty');
+    AssertTrue(
+      TryMutateModulusParityInDERKey(AMutatedDER, LEvenModulusDER),
+      ALabel + ': failed to force even modulus for structured fallback'
+    );
+
+    AssertTrue(
+      not TryBuildTLS13CertificateVerifySignature(
+        TLS13_SIG_RSA_PSS_RSAE_SHA256,
+        LEvenModulusDER,
+        LInput,
+        LSig,
+        LErr
+      ),
+      ALabel + ': expected fallback failure'
+    );
+    AssertContains(LErr, 'E_TLS13_SIGNER_FALLBACK_FAILED', ALabel + ': missing structured fallback error code');
+    AssertContainsAny(LErr, AExpectedAny, ALabel + ': missing expected crt_reason detail');
+    AssertContains(LErr, 'exp_reason=', ALabel + ': missing exp_reason detail');
+  end;
+
+  procedure AssertStructuredReasonFor(
+    const AMutatedDER: TBytes;
+    const AExpectedAny: array of string;
+    const ALabel: string
+  );
+  var
+    LEvenModulusDER: TBytes;
+    LSig: TBytes;
+    LErr: string;
+  begin
+    AssertTrue(Length(AMutatedDER) > 0, ALabel + ': mutation output should not be empty');
+    AssertTrue(
+      TryMutateModulusParityInDERKey(AMutatedDER, LEvenModulusDER),
+      ALabel + ': failed to force even modulus for structured fallback'
+    );
+
+    AssertTrue(
+      not TryBuildTLS13CertificateVerifySignature(
+        TLS13_SIG_RSA_PKCS1_SHA256,
+        LEvenModulusDER,
+        LInput,
+        LSig,
+        LErr
+      ),
+      ALabel + ': expected fallback failure'
+    );
+    AssertContains(LErr, 'E_TLS13_SIGNER_FALLBACK_FAILED', ALabel + ': missing structured fallback error code');
+    AssertContainsAny(LErr, AExpectedAny, ALabel + ': missing expected crt_reason detail');
+    AssertContains(LErr, 'exp_reason=', ALabel + ': missing exp_reason detail');
+  end;
+
+begin
+  LKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  LInput := BuildDeterministicCertVerifyInput($E1);
+
+  AssertStructuredReasonFor(
+    BuildMutatedPrimePPrivateKeyBlob(LKeyBlob),
+    ['p*q does not match modulus', 'RSA CRT validation failed'],
+    'fallback-msg-primep-inconsistent'
+  );
+  AssertStructuredReasonFor(
+    BuildMutatedPrimeQPrivateKeyBlob(LKeyBlob),
+    ['p*q does not match modulus', 'RSA CRT validation failed'],
+    'fallback-msg-primeq-inconsistent'
+  );
+  AssertStructuredReasonFor(
+    BuildMutatedDPPrivateKeyBlob(LKeyBlob),
+    ['p*q does not match modulus', 'dp is inconsistent with private exponent', 'dp is out of range for modulus p'],
+    'fallback-msg-dp-inconsistent'
+  );
+  AssertStructuredReasonFor(
+    BuildMutatedDQPrivateKeyBlob(LKeyBlob),
+    ['p*q does not match modulus', 'dq is inconsistent with private exponent', 'dq is out of range for modulus q'],
+    'fallback-msg-dq-inconsistent'
+  );
+  AssertStructuredReasonFor(
+    BuildMutatedQInvPrivateKeyBlob(LKeyBlob),
+    ['p*q does not match modulus', 'qInv is inconsistent with q mod p', 'qInv'],
+    'fallback-msg-qinv-inconsistent'
+  );
+
+  AssertStructuredReasonFor(
+    BuildPrimePIsOnePrivateKeyBlob(LKeyBlob),
+    ['p*q does not match modulus', 'p/q must be > 1'],
+    'fallback-msg-primep-one'
+  );
+  AssertStructuredReasonFor(
+    BuildPrimeQEqualPrimePPrivateKeyBlob(LKeyBlob),
+    ['p*q does not match modulus', 'p and q must be distinct'],
+    'fallback-msg-primeq-equals-primep'
+  );
+  AssertStructuredReasonFor(
+    BuildMutatedPrivateKeyBlob(LKeyBlob),
+    ['p*q does not match modulus', 'dp is inconsistent with private exponent', 'dq is inconsistent with private exponent'],
+    'fallback-msg-privateexp-mutated'
+  );
+  AssertStructuredReasonFor(
+    BuildMutatedPrimePAndPrivateExponentPrivateKeyBlob(LKeyBlob),
+    ['p*q does not match modulus', 'p/q must be > 1', 'RSA CRT validation failed'],
+    'fallback-msg-primep-plus-privateexp-mutated'
+  );
+
+  AssertTrue(
+    TryMutateModulusParityInDERKey(BuildMutatedPrimePPrivateKeyBlob(LKeyBlob), LEvenMutated),
+    'fallback-msg-even-modulus-only: failed to mutate modulus parity'
+  );
+  AssertSignerFailureContains(
+    TLS13_SIG_RSA_PSS_RSAE_SHA256,
+    LEvenMutated,
+    LInput,
+    'Encoded message representative is not coprime to RSA modulus',
+    'fallback-msg-even-modulus-only'
+  );
 end;
 
 procedure TestBigIntEvenModulusAndZeroExponent;
@@ -2904,6 +3067,120 @@ begin
   );
 end;
 
+procedure TestRSAPSSBoundaryMatrixWaveC;
+var
+  LKeyBlob: TBytes;
+  LCertBlob: TBytes;
+  LInput: TBytes;
+  LSigA: TBytes;
+  LSigB: TBytes;
+  LEncryptedPEM: TBytes;
+  LErr: string;
+  LDiff: Integer;
+  I: Integer;
+begin
+  LKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  LCertBlob := LoadFileBytes('tests/certificate/test_certs/signer_cert.pem');
+  LInput := BuildDeterministicCertVerifyInput($B9);
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PSS_RSAE_SHA256,
+      LKeyBlob,
+      LInput,
+      LSigA,
+      LErr
+    ),
+    'pss-boundary-rsae-success should sign: ' + LErr
+  );
+  AssertEqualsInt(256, Length(LSigA), 'pss-boundary-rsae signature length mismatch');
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PSS_PSS_SHA256,
+      LKeyBlob,
+      LInput,
+      LSigA,
+      LErr
+    ),
+    'pss-boundary-pss-success should sign: ' + LErr
+  );
+  AssertEqualsInt(256, Length(LSigA), 'pss-boundary-pss signature length mismatch');
+
+  AssertSignerFailureContains(
+    TLS13_SIG_RSA_PSS_RSAE_SHA256,
+    [],
+    LInput,
+    'Private key material is empty',
+    'pss-boundary-empty-key-rsae'
+  );
+  AssertSignerFailureContains(
+    TLS13_SIG_RSA_PSS_PSS_SHA256,
+    [$00, $01, $02],
+    LInput,
+    'Unsupported DER private key format',
+    'pss-boundary-malformed-der-pss'
+  );
+  AssertSignerFailureContains(
+    TLS13_SIG_RSA_PSS_RSAE_SHA256,
+    LCertBlob,
+    LInput,
+    'No private key block found in PEM blob',
+    'pss-boundary-cert-pem-not-key'
+  );
+
+  LEncryptedPEM := TEncoding.ASCII.GetBytes(
+    '-----BEGIN ENCRYPTED PRIVATE KEY-----' + LineEnding +
+    'AQID' + LineEnding +
+    '-----END ENCRYPTED PRIVATE KEY-----' + LineEnding
+  );
+  AssertSignerFailureContainsAny(
+    TLS13_SIG_RSA_PSS_RSAE_SHA256,
+    LEncryptedPEM,
+    LInput,
+    [
+      'Encrypted PKCS#8 private keys are not supported in pure FreePascal TLS13 signer',
+      'Encrypted PEM private keys are not supported in pure FreePascal TLS13 signer'
+    ],
+    'pss-boundary-encrypted-pem'
+  );
+  AssertSignerFailureContains(
+    TLS13_SIG_RSA_PSS_PSS_SHA256,
+    LKeyBlob,
+    [],
+    'CertificateVerify input is empty',
+    'pss-boundary-empty-input-pss'
+  );
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PSS_PSS_SHA256,
+      LKeyBlob,
+      LInput,
+      LSigA,
+      LErr
+    ),
+    'pss-boundary-randomness-run-a should sign: ' + LErr
+  );
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_RSA_PSS_PSS_SHA256,
+      LKeyBlob,
+      LInput,
+      LSigB,
+      LErr
+    ),
+    'pss-boundary-randomness-run-b should sign: ' + LErr
+  );
+  AssertEqualsInt(Length(LSigA), Length(LSigB), 'pss-boundary-randomness signature length mismatch');
+
+  LDiff := 0;
+  for I := 0 to Length(LSigA) - 1 do
+    if LSigA[I] <> LSigB[I] then
+      Inc(LDiff);
+  AssertTrue(LDiff > 0, 'pss-boundary-randomness signatures should differ due to randomized salt');
+end;
+
 procedure TestRSASignatureHandlesMalformedDERVariants;
 var
   LPemBlob: TBytes;
@@ -3290,6 +3567,57 @@ begin
   AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-oid-last-byte-flipped');
 end;
 
+procedure TestPKCS8LengthMutationMatrixWaveC;
+var
+  LPemBlob: TBytes;
+  LDER: TBytes;
+  LType: TPEMType;
+  LInput: TBytes;
+  LMutated: TBytes;
+  LAlgTagOffset: Integer;
+  LPrivateKeyTagOffset: Integer;
+  LOIDOffset: Integer;
+  LOIDLength: Integer;
+  LOIDTagOffset: Integer;
+begin
+  LPemBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  AssertTrue(TryExtractFirstPrivateKeyDER(LPemBlob, LDER, LType), 'PKCS8-len: failed to extract DER');
+  AssertTrue(LType = pemPrivateKey, 'PKCS8-len: expected PKCS#8 key type');
+
+  LInput := BuildDeterministicCertVerifyInput($C8);
+
+  AssertTrue(Length(LDER) > 3, 'PKCS8-len: DER too short for root length mutations');
+  LMutated := CopyBytesWithMutation(LDER, 1, $00);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-len-root-zero');
+  LMutated := CopyBytesWithMutation(LDER, 1, $01);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-len-root-one');
+  LMutated := CopyBytesWithMutation(LDER, 1, $FF);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-len-root-ff');
+
+  AssertTrue(TryLocatePKCS8AlgorithmIdentifierTagOffset(LDER, LAlgTagOffset), 'PKCS8-len: locate AlgorithmIdentifier failed');
+  AssertTrue((LAlgTagOffset + 1) < Length(LDER), 'PKCS8-len: AlgorithmIdentifier length byte out of range');
+  LMutated := CopyBytesWithMutation(LDER, LAlgTagOffset + 1, $00);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-len-alg-zero');
+  LMutated := CopyBytesWithMutation(LDER, LAlgTagOffset + 1, $01);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-len-alg-one');
+  LMutated := CopyBytesWithMutation(LDER, LAlgTagOffset + 1, $FF);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-len-alg-ff');
+
+  AssertTrue(TryLocatePKCS8AlgorithmOIDValue(LDER, LOIDOffset, LOIDLength, LOIDTagOffset), 'PKCS8-len: locate OID failed');
+  AssertTrue((LOIDTagOffset + 1) < Length(LDER), 'PKCS8-len: OID length byte out of range');
+  LMutated := CopyBytesWithMutation(LDER, LOIDTagOffset + 1, $00);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-len-oid-zero');
+  LMutated := CopyBytesWithMutation(LDER, LOIDTagOffset + 1, $FF);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-len-oid-ff');
+
+  AssertTrue(TryLocatePKCS8PrivateKeyTagOffset(LDER, LPrivateKeyTagOffset), 'PKCS8-len: locate privateKey tag failed');
+  AssertTrue((LPrivateKeyTagOffset + 1) < Length(LDER), 'PKCS8-len: privateKey length byte out of range');
+  LMutated := CopyBytesWithMutation(LDER, LPrivateKeyTagOffset + 1, $00);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-len-privatekey-zero');
+  LMutated := CopyBytesWithMutation(LDER, LPrivateKeyTagOffset + 1, $FF);
+  AssertMalformedDERRejected(LMutated, LInput, 'pkcs8-len-privatekey-ff');
+end;
+
 procedure TestRSASignatureRejectsPKCS1CoreFieldMutations;
 var
   LPemBlob: TBytes;
@@ -3495,6 +3823,7 @@ begin
   TestRSASignatureErrorMessagesAreStable;
   TestRSASignatureErrorSurfaceMatrix;
   TestRSASignatureBoundaryMatrixExtended;
+  TestRSAPSSBoundaryMatrixWaveC;
   TestRSASignatureHandlesMalformedDERVariants;
   TestRSASignatureRejectsExtendedDERMutations;
   TestRSASignatureSelectsRSAFromMixedPEMBlocks;
@@ -3503,6 +3832,7 @@ begin
   TestRSASignatureRejectsEncryptedPEMBlock;
   TestRSASignatureRejectsPKCS8FieldShapeMutations;
   TestRSASignatureRejectsPKCS8AlgorithmOIDMutations;
+  TestPKCS8LengthMutationMatrixWaveC;
   TestRSASignatureRejectsPKCS1CoreFieldMutations;
   TestRSASignatureRejectsPKCS1CRTFieldTagMutations;
   TestRSASignatureRejectsPKCS1CRTZeroValueMutations;
@@ -3521,6 +3851,7 @@ begin
   TestRSASignatureFallbackErrorWhenDQZeroAndExponentCorrupted;
   TestRSASignatureFallbackErrorWhenQInvZeroAndExponentCorrupted;
   TestFallbackStructuredErrorMatrixExtended;
+  TestFallbackMessageMatrixWaveC;
   TestFallbackErrorCodeOnDoubleFailure;
   TestFallbackErrorCodeFromDirectSignerCall;
   TestRealRSASignature;
