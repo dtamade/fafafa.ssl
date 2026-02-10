@@ -1822,7 +1822,8 @@ begin
   case LSignatureScheme of
     TLS13_SIG_RSA_PSS_RSAE_SHA256,
     TLS13_SIG_RSA_PSS_PSS_SHA256,
-    TLS13_SIG_RSA_PKCS1_SHA256:
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    TLS13_SIG_ECDSA_SECP256R1_SHA256:
       begin
         if not TryBuildTLS13CertificateVerifySignature(
           LSignatureScheme,
@@ -1836,14 +1837,31 @@ begin
           Exit;
         end;
 
-        if Length(LCertVerifySignature) <> LSignatureLength then
+        if SameText(LLeafKeyType, 'RSA') then
         begin
-          SetHandshakeError(
-            sslErrHandshake,
-            Format('CertificateVerify signature length mismatch (expected=%d actual=%d)',
-              [LSignatureLength, Length(LCertVerifySignature)])
-          );
-          Exit;
+          if Length(LCertVerifySignature) <> LSignatureLength then
+          begin
+            SetHandshakeError(
+              sslErrHandshake,
+              Format('CertificateVerify signature length mismatch (expected=%d actual=%d)',
+                [LSignatureLength, Length(LCertVerifySignature)])
+            );
+            Exit;
+          end;
+        end
+        else if SameText(LLeafKeyType, 'ECDSA') then
+        begin
+          if (Length(LCertVerifySignature) <= 0) or
+             (Length(LCertVerifySignature) > LSignatureLength) or
+             (LCertVerifySignature[0] <> $30) then
+          begin
+            SetHandshakeError(
+              sslErrHandshake,
+              Format('ECDSA CertificateVerify signature is invalid DER length (max=%d actual=%d)',
+                [LSignatureLength, Length(LCertVerifySignature)])
+            );
+            Exit;
+          end;
         end;
       end;
 

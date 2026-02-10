@@ -1979,11 +1979,11 @@ begin
   LInfo.SignatureAlgorithms := [TLS13_SIG_ECDSA_SECP256R1_SHA256];
 
   AssertTrue(
-    not TrySelectTLS13ServerCertificateVerifySchemeForKeyType(LInfo, 'ECDSA', LScheme, LErr),
-    'keytype-ecdsa should fail until pure signer implemented'
+    TrySelectTLS13ServerCertificateVerifySchemeForKeyType(LInfo, 'ECDSA', LScheme, LErr),
+    'keytype-ecdsa should succeed: ' + LErr
   );
-  AssertContains(LErr, 'ECDSA CertificateVerify signer is not implemented yet in pure Pascal backend',
-    'keytype-ecdsa failure message mismatch');
+  AssertEqualsWord(TLS13_SIG_ECDSA_SECP256R1_SHA256, LScheme,
+    'keytype-ecdsa selected scheme mismatch');
 
   FillChar(LInfo, SizeOf(LInfo), 0);
   LInfo.HasSignatureAlgorithms := True;
@@ -3467,6 +3467,91 @@ begin
   AssertEqualsInt(256, Length(LSig), 'RSA-PKCS1 DER signature length should match 2048-bit key');
 end;
 
+procedure TestECDSASignatureWithECPrivateKey;
+var
+  LKeyBlob: TBytes;
+  LRSAKeyBlob: TBytes;
+  LTranscriptHash: TBytes;
+  LInput: TBytes;
+  LSigA: TBytes;
+  LSigB: TBytes;
+  LErr: string;
+  I: Integer;
+  LSeqLen: Integer;
+  LOffset: Integer;
+  LIntLen: Integer;
+  LDiff: Integer;
+begin
+  LKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_ecdsa_key.pem');
+  AssertTrue(Length(LKeyBlob) > 0, 'ECDSA private key blob should not be empty');
+
+  SetLength(LTranscriptHash, 32);
+  for I := 0 to 31 do
+    LTranscriptHash[I] := Byte($5A + I);
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_ECDSA_SECP256R1_SHA256,
+      LKeyBlob,
+      LInput,
+      LSigA,
+      LErr
+    ),
+    'ECDSA P-256 signing failed: ' + LErr
+  );
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_ECDSA_SECP256R1_SHA256,
+      LKeyBlob,
+      LInput,
+      LSigB,
+      LErr
+    ),
+    'ECDSA P-256 signing second call failed: ' + LErr
+  );
+
+  AssertTrue((Length(LSigA) >= 8) and (Length(LSigA) <= 72),
+    'ECDSA signature DER length should be within [8,72]');
+  AssertEqualsInt($30, LSigA[0], 'ECDSA signature must be DER sequence');
+
+  LDiff := 0;
+  AssertEqualsInt(Length(LSigA), Length(LSigB), 'ECDSA deterministic signature length mismatch');
+  for I := 0 to Length(LSigA) - 1 do
+    if LSigA[I] <> LSigB[I] then
+      Inc(LDiff);
+  AssertEqualsInt(0, LDiff, 'ECDSA deterministic signature mismatch for same key/input');
+
+  LOffset := 1;
+  AssertTrue(TryReadDERLength(LSigA, LOffset, LSeqLen), 'ECDSA DER sequence length parse failed');
+  AssertEqualsInt(Length(LSigA) - LOffset, LSeqLen, 'ECDSA DER sequence length mismatch');
+
+  AssertEqualsInt($02, LSigA[LOffset], 'ECDSA DER r INTEGER tag mismatch');
+  Inc(LOffset);
+  AssertTrue(TryReadDERLength(LSigA, LOffset, LIntLen), 'ECDSA DER r length parse failed');
+  AssertTrue(LIntLen > 0, 'ECDSA DER r length should be > 0');
+  Inc(LOffset, LIntLen);
+
+  AssertEqualsInt($02, LSigA[LOffset], 'ECDSA DER s INTEGER tag mismatch');
+  Inc(LOffset);
+  AssertTrue(TryReadDERLength(LSigA, LOffset, LIntLen), 'ECDSA DER s length parse failed');
+  AssertTrue(LIntLen > 0, 'ECDSA DER s length should be > 0');
+
+  LRSAKeyBlob := LoadFileBytes('tests/certificate/test_certs/signer_key.pem');
+  AssertTrue(
+    not TryBuildTLS13CertificateVerifySignature(
+      TLS13_SIG_ECDSA_SECP256R1_SHA256,
+      LRSAKeyBlob,
+      LInput,
+      LSigA,
+      LErr
+    ),
+    'ECDSA signing with RSA key should fail'
+  );
+  AssertContainsAny(LErr, ['not EC', 'No usable EC', 'algorithm/curve'], 'ECDSA signing with RSA key error mismatch');
+end;
+
 procedure TestRSASignatureWithPKCS8Attributes;
 var
   LPemBlob: TBytes;
@@ -3706,11 +3791,15 @@ begin
     'matrix-empty-input'
   );
 
-  AssertSignerFailureContains(
+  AssertSignerFailureContainsAny(
     TLS13_SIG_ECDSA_SECP256R1_SHA256,
     LKeyBlob,
     LInput,
-    'Unsupported signature scheme for pure FreePascal signer',
+    [
+      'not EC',
+      'No usable EC',
+      'algorithm/curve'
+    ],
     'matrix-unsupported-scheme'
   );
 
@@ -3777,11 +3866,15 @@ begin
     'boundary-empty-input-pss-pss'
   );
 
-  AssertSignerFailureContains(
+  AssertSignerFailureContainsAny(
     TLS13_SIG_ECDSA_SECP256R1_SHA256,
     LKeyBlob,
     LInput,
-    'Unsupported signature scheme for pure FreePascal signer',
+    [
+      'not EC',
+      'No usable EC',
+      'algorithm/curve'
+    ],
     'boundary-unsupported-ecdsa'
   );
   AssertSignerFailureContains(
@@ -5157,6 +5250,7 @@ begin
   TestBigIntRejectsNonCoprimeRSARepresentative;
   TestTinyModulusDefense;
   TestRSASignatureWithDERPrivateKey;
+  TestECDSASignatureWithECPrivateKey;
   TestRSASignatureWithPKCS8Attributes;
   TestRSASignatureWithPEMLeadingJunk;
   TestRSASignatureUsesFirstUsableRSAKeyBlock;

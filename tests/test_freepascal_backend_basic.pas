@@ -39,12 +39,12 @@ begin
   LCaps := LLib.GetCapabilities;
   AssertTrue(IsKeyExchangeSupported(LCaps, sslKexECDHE_RSA),
     'FreePascal backend should advertise ECDHE_RSA');
-  AssertTrue(not IsKeyExchangeSupported(LCaps, sslKexECDHE_ECDSA),
-    'FreePascal backend must not advertise ECDHE_ECDSA before pure ECDSA signer is implemented');
+  AssertTrue(IsKeyExchangeSupported(LCaps, sslKexECDHE_ECDSA),
+    'FreePascal backend should advertise ECDHE_ECDSA once pure ECDSA signer is available');
   AssertTrue(not LCaps.RequiresExternalLibrary,
     'FreePascal backend should not require external TLS library');
-  AssertTrue(Pos('RSA', UpperCase(LCaps.KnownIssues)) > 0,
-    'FreePascal capability KnownIssues should mention RSA-only CertificateVerify scope');
+  AssertTrue(Pos('ECDSA', UpperCase(LCaps.KnownIssues)) > 0,
+    'FreePascal capability KnownIssues should mention ECDSA CertificateVerify support scope');
 
   WriteLn('✅ FreePascal backend basic checks passed');
 end.

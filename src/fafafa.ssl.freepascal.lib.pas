@@ -224,7 +224,7 @@ begin
 
   Result.SupportedCiphers := [sslCipherAES128GCM, sslCipherAES256GCM, sslCipherCHACHA20_POLY1305];
   Result.SupportedHashes := [sslHashSHA256, sslHashSHA384, sslHashSHA512];
-  Result.SupportedKeyExchanges := [sslKexECDHE_RSA];
+  Result.SupportedKeyExchanges := [sslKexECDHE_RSA, sslKexECDHE_ECDSA];
 
   Result.HasHardwareAcceleration := False;
   Result.HasSIMDOptimization := False;
@@ -248,7 +248,7 @@ begin
   Result.SupportsCallbacks := True;
 
   Result.CompatibilityLevel := 35;
-  Result.KnownIssues := 'TLS 1.3 client path works (CHACHA20); server CertificateVerify uses pure-Pas RSA signer only.';
+  Result.KnownIssues := 'TLS 1.3 client path works (CHACHA20); server CertificateVerify supports pure-Pas RSA and ECDSA(P-256) signer.';
 
   FCapabilitiesCache := Result;
   FCapabilitiesCached := True;

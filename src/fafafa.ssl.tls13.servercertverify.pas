@@ -62,12 +62,15 @@ uses
   fafafa.ssl.pem,
   fafafa.ssl.crypto.hash,
   fafafa.ssl.random,
-  fafafa.ssl.tls13.bigint;
+  fafafa.ssl.tls13.bigint,
+  fafafa.ssl.tls13.ecdsa;
 
 const
   TLS13_SERVER_CERTVERIFY_CONTEXT = 'TLS 1.3, server CertificateVerify';
   OID_RSA_ENCRYPTION = '1.2.840.113549.1.1.1';
   OID_RSASSA_PSS = '1.2.840.113549.1.1.10';
+  OID_EC_PUBLIC_KEY = '1.2.840.10045.2.1';
+  OID_EC_SECP256R1 = '1.2.840.10045.3.1.7';
 
   SHA256_DIGESTINFO_PREFIX: array[0..18] of Byte = (
     $30, $31, $30, $0D,
@@ -878,6 +881,291 @@ begin
   AError := 'Unsupported DER private key format (expected RSA PKCS#8 or PKCS#1)';
 end;
 
+
+function TryParseECPrivateKeySEC1(
+  const ADER: TBytes;
+  out APrivateScalar: TBytes;
+  out ACurveOID: string;
+  out AError: string
+): Boolean;
+var
+  LReader: TASN1Reader;
+  LRoot: TASN1Node;
+  I: Integer;
+  LCtxNode: TASN1Node;
+begin
+  SetLength(APrivateScalar, 0);
+  ACurveOID := '';
+  AError := '';
+  Result := False;
+
+  if Length(ADER) = 0 then
+  begin
+    AError := 'EC SEC1 DER is empty';
+    Exit;
+  end;
+
+  LReader := TASN1Reader.Create(ADER);
+  try
+    try
+      LRoot := LReader.Parse;
+    except
+      on E: Exception do
+      begin
+        AError := 'EC SEC1 parse failed: ' + E.Message;
+        Exit;
+      end;
+    end;
+
+    try
+      if (LRoot = nil) or (not LRoot.IsSequence) then
+      begin
+        AError := 'EC SEC1 root is not ASN.1 SEQUENCE';
+        Exit;
+      end;
+
+      if LRoot.ChildCount < 2 then
+      begin
+        AError := 'EC SEC1 private key fields are incomplete';
+        Exit;
+      end;
+
+      if (not LRoot.GetChild(0).IsInteger) or (not LRoot.GetChild(1).IsOctetString) then
+      begin
+        AError := 'EC SEC1 version/privateKey fields are invalid';
+        Exit;
+      end;
+
+      APrivateScalar := StripLeadingZeroBytes(LRoot.GetChild(1).AsOctetString);
+      if (Length(APrivateScalar) = 0) or ((Length(APrivateScalar) = 1) and (APrivateScalar[0] = 0)) then
+      begin
+        AError := 'EC SEC1 private scalar is empty';
+        Exit;
+      end;
+
+      for I := 2 to LRoot.ChildCount - 1 do
+      begin
+        LCtxNode := LRoot.GetChild(I);
+        if LCtxNode.IsContextTag(0) and (LCtxNode.ChildCount > 0) and LCtxNode.GetChild(0).IsOID then
+        begin
+          ACurveOID := LCtxNode.GetChild(0).AsOID;
+          Break;
+        end;
+      end;
+
+      Result := True;
+    finally
+      LRoot.Free;
+    end;
+  finally
+    LReader.Free;
+  end;
+end;
+
+function TryParseECPrivateKeyPKCS8(
+  const ADER: TBytes;
+  out APrivateScalar: TBytes;
+  out ACurveOID: string;
+  out AError: string
+): Boolean;
+var
+  LReader: TASN1Reader;
+  LRoot: TASN1Node;
+  LAlgNode: TASN1Node;
+  LAlgOID: string;
+  LInnerDER: TBytes;
+  LInnerCurveOID: string;
+begin
+  SetLength(APrivateScalar, 0);
+  ACurveOID := '';
+  AError := '';
+  Result := False;
+
+  if Length(ADER) = 0 then
+  begin
+    AError := 'EC PKCS#8 DER is empty';
+    Exit;
+  end;
+
+  LReader := TASN1Reader.Create(ADER);
+  try
+    try
+      LRoot := LReader.Parse;
+    except
+      on E: Exception do
+      begin
+        AError := 'EC PKCS#8 parse failed: ' + E.Message;
+        Exit;
+      end;
+    end;
+
+    try
+      if (LRoot = nil) or (not LRoot.IsSequence) then
+      begin
+        AError := 'EC PKCS#8 root is not ASN.1 SEQUENCE';
+        Exit;
+      end;
+
+      if LRoot.ChildCount < 3 then
+      begin
+        AError := 'EC PKCS#8 PrivateKeyInfo fields are incomplete';
+        Exit;
+      end;
+
+      LAlgNode := LRoot.GetChild(1);
+      if (not LAlgNode.IsSequence) or (LAlgNode.ChildCount < 2) then
+      begin
+        AError := 'EC PKCS#8 AlgorithmIdentifier is invalid';
+        Exit;
+      end;
+
+      if (not LAlgNode.GetChild(0).IsOID) or (not LAlgNode.GetChild(1).IsOID) then
+      begin
+        AError := 'EC PKCS#8 algorithm/curve fields are invalid';
+        Exit;
+      end;
+
+      LAlgOID := LAlgNode.GetChild(0).AsOID;
+      if LAlgOID <> OID_EC_PUBLIC_KEY then
+      begin
+        AError := 'PKCS#8 key algorithm is not EC';
+        Exit;
+      end;
+
+      ACurveOID := LAlgNode.GetChild(1).AsOID;
+
+      if not LRoot.GetChild(2).IsOctetString then
+      begin
+        AError := 'EC PKCS#8 privateKey field is not OCTET STRING';
+        Exit;
+      end;
+
+      LInnerDER := LRoot.GetChild(2).AsOctetString;
+      if not TryParseECPrivateKeySEC1(LInnerDER, APrivateScalar, LInnerCurveOID, AError) then
+      begin
+        AError := 'EC PKCS#8 inner SEC1 parse failed: ' + AError;
+        Exit;
+      end;
+
+      if LInnerCurveOID <> '' then
+        ACurveOID := LInnerCurveOID;
+
+      Result := True;
+    finally
+      LRoot.Free;
+    end;
+  finally
+    LReader.Free;
+  end;
+end;
+
+function TryExtractECDSAPrivateKeyP256Scalar(
+  const APrivateKeyBlob: TBytes;
+  out APrivateScalar: TBytes;
+  out AError: string
+): Boolean;
+var
+  LReader: TPEMReader;
+  LBlocks: TPEMBlockArray;
+  LKeyDER: TBytes;
+  LText: AnsiString;
+  I: Integer;
+  LCurveOID: string;
+  LLastError: string;
+begin
+  SetLength(APrivateScalar, 0);
+  AError := '';
+  Result := False;
+
+  if Length(APrivateKeyBlob) = 0 then
+  begin
+    AError := 'Private key material is empty';
+    Exit;
+  end;
+
+  if BlobLooksLikePEM(APrivateKeyBlob) then
+  begin
+    LReader := TPEMReader.Create;
+    try
+      LText := BytesToAnsiString(APrivateKeyBlob);
+      try
+        LReader.LoadFromString(string(LText));
+      except
+        on E: Exception do
+        begin
+          AError := 'Failed to parse PEM private key blob: ' + E.Message;
+          Exit;
+        end;
+      end;
+
+      LBlocks := LReader.GetPrivateKeys;
+      if Length(LBlocks) = 0 then
+      begin
+        AError := 'No private key block found in PEM blob';
+        Exit;
+      end;
+
+      LLastError := '';
+      for I := 0 to High(LBlocks) do
+      begin
+        if LBlocks[I].IsEncrypted then
+        begin
+          LLastError := 'Encrypted PEM private keys are not supported in pure FreePascal TLS13 signer';
+          Continue;
+        end;
+
+        case LBlocks[I].BlockType of
+          pemPrivateKey:
+            begin
+              if TryParseECPrivateKeyPKCS8(LBlocks[I].Data, APrivateScalar, LCurveOID, LLastError) and
+                 (LCurveOID = OID_EC_SECP256R1) then
+                Exit(True);
+              if LLastError = '' then
+                LLastError := 'PKCS#8 EC key curve is not prime256v1';
+            end;
+
+          pemECPrivateKey:
+            begin
+              if TryParseECPrivateKeySEC1(LBlocks[I].Data, APrivateScalar, LCurveOID, LLastError) and
+                 (LCurveOID = OID_EC_SECP256R1) then
+                Exit(True);
+              if LLastError = '' then
+                LLastError := 'SEC1 EC key curve is not prime256v1';
+            end;
+
+          pemRSAPrivateKey:
+            LLastError := 'PEM private key is not EC';
+
+          pemEncryptedPrivateKey:
+            LLastError := 'Encrypted PKCS#8 private keys are not supported in pure FreePascal TLS13 signer';
+
+        else
+          LLastError := 'PEM private key is not EC';
+        end;
+      end;
+
+      if LLastError = '' then
+        LLastError := 'No usable EC P-256 private key found in PEM material';
+      AError := LLastError;
+      Exit(False);
+    finally
+      LReader.Free;
+    end;
+  end;
+
+  LKeyDER := Copy(APrivateKeyBlob, 0, Length(APrivateKeyBlob));
+
+  if TryParseECPrivateKeyPKCS8(LKeyDER, APrivateScalar, LCurveOID, AError) and
+     (LCurveOID = OID_EC_SECP256R1) then
+    Exit(True);
+
+  if TryParseECPrivateKeySEC1(LKeyDER, APrivateScalar, LCurveOID, AError) and
+     (LCurveOID = OID_EC_SECP256R1) then
+    Exit(True);
+
+  AError := 'Unsupported DER private key format (expected EC prime256v1 PKCS#8 or SEC1)';
+end;
+
 function MGF1_SHA256(const ASeed: TBytes; AMaskLength: Integer): TBytes;
 var
   LCounter: Cardinal;
@@ -1232,9 +1520,12 @@ begin
   if LKeyType = 'ECDSA' then
   begin
     if TLS13ClientHelloOffersSignatureScheme(AClientHello, TLS13_SIG_ECDSA_SECP256R1_SHA256) then
-      AError := 'ECDSA CertificateVerify signer is not implemented yet in pure Pascal backend'
-    else
-      AError := 'No supported TLS 1.3 CertificateVerify signature scheme from client for ECDSA key';
+    begin
+      ASignatureScheme := TLS13_SIG_ECDSA_SECP256R1_SHA256;
+      Exit(True);
+    end;
+
+    AError := 'No supported TLS 1.3 CertificateVerify signature scheme from client for ECDSA key';
     Exit;
   end;
 
@@ -1327,6 +1618,8 @@ var
   LModBits: Integer;
   LCRTErr: string;
   LExpErr: string;
+  LECPrivateScalar: TBytes;
+  LDigest: TBytes;
 begin
   SetLength(ASignature, 0);
   AError := '';
@@ -1341,7 +1634,8 @@ begin
   case ASignatureScheme of
     TLS13_SIG_RSA_PSS_RSAE_SHA256,
     TLS13_SIG_RSA_PSS_PSS_SHA256,
-    TLS13_SIG_RSA_PKCS1_SHA256:
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    TLS13_SIG_ECDSA_SECP256R1_SHA256:
       ;
   else
     begin
@@ -1349,6 +1643,16 @@ begin
         TLS13SignatureSchemeToString(ASignatureScheme);
       Exit;
     end;
+  end;
+
+  if ASignatureScheme = TLS13_SIG_ECDSA_SECP256R1_SHA256 then
+  begin
+    if not TryExtractECDSAPrivateKeyP256Scalar(APrivateKeyBlob, LECPrivateScalar, AError) then
+      Exit;
+
+    LDigest := SHA256(ACertificateVerifyInput);
+    Result := TryECDSASignP256SHA256(LDigest, LECPrivateScalar, ASignature, AError);
+    Exit;
   end;
 
   if not TryExtractRSAPrivateKeyComponents(APrivateKeyBlob, LModulus, LPrivateExponent, AError) then

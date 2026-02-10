@@ -45,8 +45,16 @@ var
   Ret: Integer;
   Buf: array[0..4095] of Byte;
   Resp: AnsiString;
+  CertPath: string;
+  KeyPath: string;
 begin
   Port := StrToIntDef(GetEnvironmentVariable('FAFAFA_TLS_PORT'), 19443);
+  CertPath := GetEnvironmentVariable('FAFAFA_TLS_CERT');
+  KeyPath := GetEnvironmentVariable('FAFAFA_TLS_KEY');
+  if CertPath = '' then
+    CertPath := 'tests/certificate/test_certs/signer_cert.pem';
+  if KeyPath = '' then
+    KeyPath := 'tests/certificate/test_certs/signer_key.pem';
 
   ListenSock := fpSocket(AF_INET, SOCK_STREAM, 0);
   if ListenSock < 0 then Die('socket failed');
@@ -67,8 +75,8 @@ begin
 
   Ctx := TSSLFactory.CreateContext(sslCtxServer, sslFreePascal);
   Ctx.SetPreferredVersion(sslProtocolTLS13);
-  Ctx.LoadCertificate('tests/certificate/test_certs/signer_cert.pem');
-  Ctx.LoadPrivateKey('tests/certificate/test_certs/signer_key.pem');
+  Ctx.LoadCertificate(CertPath);
+  Ctx.LoadPrivateKey(KeyPath);
 
   Conn := Ctx.CreateConnection(ClientSock);
   if Conn = nil then Die('create connection failed');
