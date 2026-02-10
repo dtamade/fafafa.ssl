@@ -3246,6 +3246,61 @@ begin
   AssertContains(LErr, 'RSA output does not fit target length', 'fixed-length overflow message mismatch');
 end;
 
+procedure TestBigIntStructuredErrorCodes;
+var
+  LOut: TBytes;
+  LErr: string;
+  LSig: TBytes;
+begin
+  AssertTrue(
+    not TryBigIntModFromUnsignedBytes([$01], [$00], LOut, LErr),
+    'structured-code mod zero modulus should fail'
+  );
+  AssertContains(LErr, 'E_TLS13_BIGINT_MODULUS_ZERO', 'structured-code mod zero-modulus code mismatch');
+
+  AssertTrue(
+    not TryBigIntModExpFromUnsignedBytes([$02], [$03], [$00], LOut, LErr),
+    'structured-code modexp zero modulus should fail'
+  );
+  AssertContains(LErr, 'E_TLS13_BIGINT_MODULUS_ZERO', 'structured-code modexp zero-modulus code mismatch');
+
+  AssertTrue(
+    not TryBigIntModMulFromUnsignedBytes([$02], [$03], [$00], LOut, LErr),
+    'structured-code modmul zero modulus should fail'
+  );
+  AssertContains(LErr, 'E_TLS13_BIGINT_MODULUS_ZERO', 'structured-code modmul zero-modulus code mismatch');
+
+  AssertTrue(
+    not TryBigIntSubtractModuloFromUnsignedBytes([$02], [$03], [$00], LOut, LErr),
+    'structured-code submod zero modulus should fail'
+  );
+  AssertContains(LErr, 'E_TLS13_BIGINT_MODULUS_ZERO', 'structured-code submod zero-modulus code mismatch');
+
+  AssertTrue(
+    not TryBigIntToFixedLengthFromUnsignedBytes([$01], 0, LOut, LErr),
+    'structured-code fixed-length zero should fail'
+  );
+  AssertContains(LErr, 'E_TLS13_BIGINT_OUTPUT_LENGTH_INVALID', 'structured-code fixed-length invalid code mismatch');
+
+  AssertTrue(
+    not TryBigIntToFixedLengthFromUnsignedBytes([$01, $00], 1, LOut, LErr),
+    'structured-code fixed-length overflow should fail'
+  );
+  AssertContains(LErr, 'E_TLS13_BIGINT_OUTPUT_OVERFLOW', 'structured-code fixed-length overflow code mismatch');
+
+  AssertTrue(
+    not TryRSAModExpSignPurePascal([$06], [$0C], [$03], LSig, LErr),
+    'structured-code RSA non-coprime should fail'
+  );
+  AssertContains(LErr, 'E_TLS13_BIGINT_RSA_MESSAGE_NOT_COPRIME', 'structured-code RSA non-coprime code mismatch');
+
+  AssertTrue(
+    not TryRSAModExpSignPurePascal([$01], [$02], [$01], LSig, LErr),
+    'structured-code RSA even modulus should fail'
+  );
+  AssertContains(LErr, 'E_TLS13_BIGINT_RSA_MODULUS_ODD_REQUIRED', 'structured-code RSA odd-required code mismatch');
+end;
+
 procedure TestBigIntLeadingZeroNormalization;
 var
   LOut: TBytes;
@@ -5051,6 +5106,7 @@ begin
   TestBigIntQWordVectorSuiteWaveK;
   TestBigIntQWordVectorSuiteWaveL;
   TestBigIntErrorSurface;
+  TestBigIntStructuredErrorCodes;
   TestBigIntLeadingZeroNormalization;
   TestBigIntFixedLengthExactFit;
   TestRSAModExpExponentGuard;

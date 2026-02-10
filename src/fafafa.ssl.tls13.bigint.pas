@@ -96,6 +96,28 @@ const
   LIMB_BASE = UInt32(1) shl LIMB_BITS;
   LIMB_MASK: UInt32 = LIMB_BASE - 1;
 
+  ERR_BIGINT_MODULUS_ZERO = 'E_TLS13_BIGINT_MODULUS_ZERO';
+  ERR_BIGINT_OUTPUT_LENGTH_INVALID = 'E_TLS13_BIGINT_OUTPUT_LENGTH_INVALID';
+  ERR_BIGINT_OUTPUT_OVERFLOW = 'E_TLS13_BIGINT_OUTPUT_OVERFLOW';
+
+  ERR_BIGINT_RSA_MODULUS_EMPTY = 'E_TLS13_BIGINT_RSA_MODULUS_EMPTY';
+  ERR_BIGINT_RSA_MODULUS_ZERO = 'E_TLS13_BIGINT_RSA_MODULUS_ZERO';
+  ERR_BIGINT_RSA_MODULUS_ODD_REQUIRED = 'E_TLS13_BIGINT_RSA_MODULUS_ODD_REQUIRED';
+  ERR_BIGINT_RSA_PRIVATE_EXPONENT_EMPTY = 'E_TLS13_BIGINT_RSA_PRIVATE_EXPONENT_EMPTY';
+  ERR_BIGINT_RSA_PRIVATE_EXPONENT_ZERO = 'E_TLS13_BIGINT_RSA_PRIVATE_EXPONENT_ZERO';
+  ERR_BIGINT_RSA_PRIVATE_EXPONENT_TOO_LARGE = 'E_TLS13_BIGINT_RSA_PRIVATE_EXPONENT_TOO_LARGE';
+  ERR_BIGINT_RSA_MESSAGE_OUT_OF_RANGE = 'E_TLS13_BIGINT_RSA_MESSAGE_OUT_OF_RANGE';
+  ERR_BIGINT_RSA_MESSAGE_NOT_COPRIME = 'E_TLS13_BIGINT_RSA_MESSAGE_NOT_COPRIME';
+  ERR_BIGINT_MONTGOMERY_NPRIME_FAILED = 'E_TLS13_BIGINT_MONTGOMERY_NPRIME_FAILED';
+
+function MakeBigIntError(const ACode, AMessage: string): string;
+begin
+  if ACode <> '' then
+    Result := ACode + ': ' + AMessage
+  else
+    Result := AMessage;
+end;
+
 function BigNatBitLength(const AValue: TBigNat): Integer; forward;
 function BigNatGetBit(const AValue: TBigNat; ABitIndex: Integer): Boolean; forward;
 
@@ -496,14 +518,14 @@ begin
 
   if ALength <= 0 then
   begin
-    AError := 'RSA output length is invalid';
+    AError := MakeBigIntError(ERR_BIGINT_OUTPUT_LENGTH_INVALID, 'RSA output length is invalid');
     Exit;
   end;
 
   LBitLen := BigNatBitLength(AValue);
   if LBitLen > ALength * 8 then
   begin
-    AError := 'RSA output does not fit target length';
+    AError := MakeBigIntError(ERR_BIGINT_OUTPUT_OVERFLOW, 'RSA output does not fit target length');
     Exit;
   end;
 
@@ -589,13 +611,13 @@ begin
 
   if BigNatIsZero(AModulus) then
   begin
-    AError := 'RSA modulus is zero';
+    AError := MakeBigIntError(ERR_BIGINT_RSA_MODULUS_ZERO, 'RSA modulus is zero');
     Exit;
   end;
 
   if not BigNatIsOdd(AModulus) then
   begin
-    AError := 'RSA modulus must be odd';
+    AError := MakeBigIntError(ERR_BIGINT_RSA_MODULUS_ODD_REQUIRED, 'RSA modulus must be odd');
     Exit;
   end;
 
@@ -605,7 +627,7 @@ begin
 
   if not TryComputeMontgomeryNPrime(ACtx.Modulus[0], ACtx.NPrime) then
   begin
-    AError := 'Failed to compute Montgomery parameter n''';
+    AError := MakeBigIntError(ERR_BIGINT_MONTGOMERY_NPRIME_FAILED, 'Failed to compute Montgomery parameter n''');
     Exit;
   end;
 
@@ -831,13 +853,13 @@ begin
 
   if Length(AModulus) = 0 then
   begin
-    AError := 'RSA modulus is empty';
+    AError := MakeBigIntError(ERR_BIGINT_RSA_MODULUS_EMPTY, 'RSA modulus is empty');
     Exit;
   end;
 
   if Length(APrivateExponent) = 0 then
   begin
-    AError := 'RSA private exponent is empty';
+    AError := MakeBigIntError(ERR_BIGINT_RSA_PRIVATE_EXPONENT_EMPTY, 'RSA private exponent is empty');
     Exit;
   end;
 
@@ -847,13 +869,13 @@ begin
 
   if BigNatIsZero(LModulus) then
   begin
-    AError := 'RSA modulus is zero';
+    AError := MakeBigIntError(ERR_BIGINT_RSA_MODULUS_ZERO, 'RSA modulus is zero');
     Exit;
   end;
 
   if BigNatIsZero(LExponent) then
   begin
-    AError := 'RSA private exponent is zero';
+    AError := MakeBigIntError(ERR_BIGINT_RSA_PRIVATE_EXPONENT_ZERO, 'RSA private exponent is zero');
     Exit;
   end;
 
@@ -861,20 +883,20 @@ begin
   LExponentBitLen := BigNatBitLength(LExponent);
   if LExponentBitLen > LModulusBitLen * 2 then
   begin
-    AError := 'RSA private exponent is unreasonably large';
+    AError := MakeBigIntError(ERR_BIGINT_RSA_PRIVATE_EXPONENT_TOO_LARGE, 'RSA private exponent is unreasonably large');
     Exit;
   end;
 
   if BigNatCompare(LMessage, LModulus) >= 0 then
   begin
-    AError := 'Encoded message representative is not less than RSA modulus';
+    AError := MakeBigIntError(ERR_BIGINT_RSA_MESSAGE_OUT_OF_RANGE, 'Encoded message representative is not less than RSA modulus');
     Exit;
   end;
 
   LGCD := BigNatGCD(LMessage, LModulus);
   if not BigNatIsOne(LGCD) then
   begin
-    AError := 'Encoded message representative is not coprime to RSA modulus';
+    AError := MakeBigIntError(ERR_BIGINT_RSA_MESSAGE_NOT_COPRIME, 'Encoded message representative is not coprime to RSA modulus');
     Exit;
   end;
 
@@ -908,7 +930,7 @@ begin
 
   if BigNatIsZero(LModulus) then
   begin
-    AError := 'Modulus is zero';
+    AError := MakeBigIntError(ERR_BIGINT_MODULUS_ZERO, 'Modulus is zero');
     Exit;
   end;
 
@@ -942,7 +964,7 @@ begin
 
   if BigNatIsZero(LModulus) then
   begin
-    AError := 'Modulus is zero';
+    AError := MakeBigIntError(ERR_BIGINT_MODULUS_ZERO, 'Modulus is zero');
     Exit;
   end;
 
@@ -990,7 +1012,7 @@ begin
 
   if BigNatIsZero(LModulus) then
   begin
-    AError := 'Modulus is zero';
+    AError := MakeBigIntError(ERR_BIGINT_MODULUS_ZERO, 'Modulus is zero');
     Exit;
   end;
 
@@ -1033,7 +1055,7 @@ begin
 
   if BigNatIsZero(LModulus) then
   begin
-    AError := 'Modulus is zero';
+    AError := MakeBigIntError(ERR_BIGINT_MODULUS_ZERO, 'Modulus is zero');
     Exit;
   end;
 
