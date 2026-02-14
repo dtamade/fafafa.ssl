@@ -187,3 +187,28 @@
   - `B55`：SLA/回滚联动报告归档验真脚本草案。
   - `B56`：闭环验收失败自动重试分流脚本草案。
   - `B57`：闭环门禁周趋势与漂移复核草案。
+
+## Repo Gap 50-Task Closure Checklist（2026-02-11）
+
+### Current Status
+- Completed: `46/50`
+- Blocked (environment): `4/50`（`P1-33~P1-36`, WinSSL）
+- Pending on Linux: `0/50`
+
+### Linux Batch Closure Evidence
+- `P2-44`（helper skip grouping）已完成：`tests/test_helper_utilities.pas` 统一 group-level skip helper + `Skipped` 计数。
+- `P2-50`（protocol/checklist writeback）已完成：本节 + 状态矩阵 + planning-with-files 三件套已回写。
+
+### Windows Batch Entry Checklist (P1-33~P1-36)
+1. **Environment gate**
+   - Use Windows host (or Linux with full Win64 RTL/runtime) that can compile units using `Windows`.
+2. **RED/GREEN target command**
+   - `fpc -Fu./src tests/winssl/test_winssl_server_handshake.pas -otmp/test_winssl_server_handshake && ./tmp/test_winssl_server_handshake`
+3. **Regression commands after each WinSSL fix**
+   - `fpc -Fu./src -Fu./tests/framework tests/integration/test_integration_winssl_openssl_comparison.pas -otmp/test_integration_winssl_openssl_comparison && ./tmp/test_integration_winssl_openssl_comparison`
+   - `fpc -Fu./src tests/test_stream_connection.pas -otmp/test_stream_conn && ./tmp/test_stream_conn`
+4. **Writeback locations**
+   - `task_plan.md`, `findings.md`, `progress.md`, `docs/test_reports/REPO_GAP_TASK_STATUS_MATRIX_2026-02-11.md`
+
+### Closure Rule
+- 当 `P1-33~P1-36` 在 Windows 环境完成并回归通过后，更新矩阵为 `Completed: 50, Blocked: 0, Pending: 0`，并生成最终收口报告。
