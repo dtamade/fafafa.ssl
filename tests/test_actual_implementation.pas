@@ -9,6 +9,22 @@ uses
   fafafa.ssl.utils,
   fafafa.ssl.encoding;
 
+var
+  GChecksPassed: Integer = 0;
+  GChecksFailed: Integer = 0;
+
+procedure MarkPass(const AMessage: string);
+begin
+  Inc(GChecksPassed);
+  WriteLn('[PASS] ', AMessage);
+end;
+
+procedure MarkFail(const AMessage: string);
+begin
+  Inc(GChecksFailed);
+  WriteLn('[FAIL] ', AMessage);
+end;
+
 procedure TestHashData;
 var
   LData: TBytes;
@@ -23,18 +39,18 @@ begin
   WriteLn('SHA256 Hash: ', LHash);
   
   if LHash <> '' then
-    WriteLn('[PASS] HashData SHA256 is implemented')
+    MarkPass('HashData SHA256 is implemented')
   else
-    WriteLn('[FAIL] HashData SHA256 returned empty');
+    MarkFail('HashData SHA256 returned empty');
   
   // Test MD5
   LHash := TSSLHelper.HashData(LData, sslHashMD5);
   WriteLn('MD5 Hash: ', LHash);
   
   if LHash <> '' then
-    WriteLn('[PASS] HashData MD5 is implemented')
+    MarkPass('HashData MD5 is implemented')
   else
-    WriteLn('[FAIL] HashData MD5 returned empty');
+    MarkFail('HashData MD5 returned empty');
   
   WriteLn;
 end;
@@ -58,9 +74,9 @@ begin
   WriteLn('Decoded: ', TEncoding.UTF8.GetString(LDecoded));
   
   if TEncoding.UTF8.GetString(LDecoded) = 'Test Data' then
-    WriteLn('[PASS] Base64 encode/decode is implemented')
+    MarkPass('Base64 encode/decode is implemented')
   else
-    WriteLn('[FAIL] Base64 encode/decode failed');
+    MarkFail('Base64 encode/decode failed');
   
   WriteLn;
 end;
@@ -91,9 +107,9 @@ begin
      (LDecoded[1] = $AD) and
      (LDecoded[2] = $BE) and 
      (LDecoded[3] = $EF) then
-    WriteLn('[PASS] Hex encode/decode is implemented')
+    MarkPass('Hex encode/decode is implemented')
   else
-    WriteLn('[FAIL] Hex encode/decode failed');
+    MarkFail('Hex encode/decode failed');
   
   WriteLn;
 end;
@@ -109,22 +125,22 @@ begin
     
     if LContext <> nil then
     begin
-      WriteLn('[PASS] SSL Context created successfully');
+      MarkPass('SSL Context created successfully');
       
       // Test protocol version setting
       LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
-      WriteLn('[PASS] Protocol versions set successfully');
+      MarkPass('Protocol versions set successfully');
       
       // Test verify mode
       LContext.SetVerifyMode([sslVerifyPeer]);
-      WriteLn('[PASS] Verify mode set successfully');
+      MarkPass('Verify mode set successfully');
     end
     else
-      WriteLn('[FAIL] SSL Context creation returned nil');
+      MarkFail('SSL Context creation returned nil');
       
   except
     on E: Exception do
-      WriteLn('[FAIL] Exception: ', E.Message);
+      MarkFail('SSL Context exception: ' + E.Message);
   end;
   
   WriteLn;
@@ -141,15 +157,15 @@ begin
   WriteLn('Random Bytes (16): ', TEncodingUtils.BytesToHex(LBytes));
   
   if Length(LBytes) = 16 then
-    WriteLn('[PASS] Random bytes generation is implemented')
+    MarkPass('Random bytes generation is implemented')
   else
-    WriteLn('[FAIL] Random bytes generation failed');
+    MarkFail('Random bytes generation failed');
   
   WriteLn;
 end;
 
 var
-  LPassCount, LTotalCount: Integer;
+  LTotalCount: Integer;
 
 begin
   WriteLn('========================================');
@@ -157,48 +173,51 @@ begin
   WriteLn('========================================');
   WriteLn;
   
-  LPassCount := 0;
+  GChecksPassed := 0;
+  GChecksFailed := 0;
   LTotalCount := 5;
   
   try
     TestHashData;
   except
     on E: Exception do
-      WriteLn('[ERROR] Test 1 Exception: ', E.Message);
+      MarkFail('Test 1 exception: ' + E.Message);
   end;
   
   try
     TestBase64;
   except
     on E: Exception do
-      WriteLn('[ERROR] Test 2 Exception: ', E.Message);
+      MarkFail('Test 2 exception: ' + E.Message);
   end;
   
   try
     TestHex;
   except
     on E: Exception do
-      WriteLn('[ERROR] Test 3 Exception: ', E.Message);
+      MarkFail('Test 3 exception: ' + E.Message);
   end;
   
   try
     TestSSLContext;
   except
     on E: Exception do
-      WriteLn('[ERROR] Test 4 Exception: ', E.Message);
+      MarkFail('Test 4 exception: ' + E.Message);
   end;
   
   try
     TestRandomBytes;
   except
     on E: Exception do
-      WriteLn('[ERROR] Test 5 Exception: ', E.Message);
+      MarkFail('Test 5 exception: ' + E.Message);
   end;
   
   WriteLn('========================================');
   WriteLn(' Test Summary');
   WriteLn('========================================');
   WriteLn('Total Tests: ', LTotalCount);
+  WriteLn('Checks Passed: ', GChecksPassed);
+  WriteLn('Checks Failed: ', GChecksFailed);
   WriteLn;
   WriteLn('This test verifies that:');
   WriteLn('  1. HashData (9 algorithms) is actually implemented');
@@ -207,7 +226,10 @@ begin
   WriteLn('  4. SSL Context creation is actually implemented');
   WriteLn('  5. Random bytes generation is actually implemented');
   WriteLn;
-  WriteLn('All functions return REAL results, not empty strings or TODO!');
+  if GChecksFailed = 0 then
+    WriteLn('All checked functions returned concrete results (no empty placeholders observed).')
+  else
+    WriteLn('Some checks failed; do not treat this run as proof of full implementation completeness.');
   WriteLn('========================================');
 end.
 

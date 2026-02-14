@@ -7,6 +7,12 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.openssl.backed;
 
+procedure Require(ACondition: Boolean; const AMessage: string);
+begin
+  if not ACondition then
+    raise Exception.Create(AMessage);
+end;
+
 procedure TestCapabilityHelpers;
 var
   Caps: TSSLBackendCapabilities;
@@ -16,18 +22,15 @@ begin
   WriteLn('========================================');
   WriteLn;
 
-  // 初始化一个模拟的能力矩阵
   FillChar(Caps, SizeOf(Caps), 0);
   Caps.BackendType := sslOpenSSL;
   Caps.BackendImplType := sslImplCLibrary;
   Caps.BackendVersion := 'OpenSSL 3.0.0 (simulated)';
 
-  // 测试算法支持
   Caps.SupportedCiphers := [sslCipherAES128, sslCipherAES256, sslCipherAES128GCM];
   Caps.SupportedHashes := [sslHashSHA256, sslHashSHA384, sslHashSHA512];
   Caps.SupportedKeyExchanges := [sslKexRSA, sslKexECDHE_RSA];
 
-  // 测试特性
   Caps.HasHardwareAcceleration := True;
   Caps.HasSIMDOptimization := True;
   Caps.HasConstantTimeOperations := True;
@@ -42,12 +45,25 @@ begin
   WriteLn('  IsHashSupported(SHA1): ', IsHashSupported(Caps, sslHashSHA1));
   WriteLn('  IsKeyExchangeSupported(RSA): ', IsKeyExchangeSupported(Caps, sslKexRSA));
   WriteLn('  IsKeyExchangeSupported(ECDHE_ECDSA): ', IsKeyExchangeSupported(Caps, sslKexECDHE_ECDSA));
+
+  Require(IsCipherSupported(Caps, sslCipherAES128), 'Simulated capability must contain AES128');
+  Require(not IsCipherSupported(Caps, sslCipherCHACHA20_POLY1305),
+    'Simulated capability must not contain ChaCha20');
+  Require(IsHashSupported(Caps, sslHashSHA256), 'Simulated capability must contain SHA256');
+  Require(not IsHashSupported(Caps, sslHashSHA1), 'Simulated capability must not contain SHA1');
+  Require(IsKeyExchangeSupported(Caps, sslKexRSA), 'Simulated capability must contain RSA key exchange');
+  Require(not IsKeyExchangeSupported(Caps, sslKexECDHE_ECDSA),
+    'Simulated capability must not contain ECDHE_ECDSA');
   WriteLn;
 
   WriteLn('[Backend Type Tests]');
   WriteLn('  IsNativeBackend: ', IsNativeBackend(Caps));
   WriteLn('  IsCLibraryBackend: ', IsCLibraryBackend(Caps));
   WriteLn('  RequiresExternalDependencies: ', RequiresExternalDependencies(Caps));
+
+  Require(not IsNativeBackend(Caps), 'Simulated OpenSSL backend is not native');
+  Require(IsCLibraryBackend(Caps), 'Simulated OpenSSL backend should be C library backend');
+  Require(RequiresExternalDependencies(Caps), 'Simulated OpenSSL backend should require external deps');
   WriteLn;
 
   WriteLn('[Feature Support Level Tests]');
@@ -58,11 +74,18 @@ begin
   WriteLn('  IsFeatureStable(OCSPStapling): ', IsFeatureStable(Caps.OCSPStaplingSupport));
   WriteLn('  IsFeatureUsable(OCSPStapling): ', IsFeatureUsable(Caps.OCSPStaplingSupport));
   WriteLn('  IsFeatureDeprecated(CertTransparency): ', IsFeatureDeprecated(Caps.CertTransparencySupport));
+
+  Require(IsFeatureStable(Caps.SNISupport), 'SNI support level should be stable');
+  Require(not IsFeatureStable(Caps.OCSPStaplingSupport), 'OCSP support level should not be stable');
+  Require(IsFeatureUsable(Caps.OCSPStaplingSupport), 'Experimental OCSP should be usable');
+  Require(IsFeatureDeprecated(Caps.CertTransparencySupport), 'CT support level should be deprecated');
   WriteLn;
 
   WriteLn('[Scoring Tests]');
   WriteLn('  GetSecurityScore: ', GetSecurityScore(Caps), '/100');
   WriteLn('  GetPerformanceScore: ', GetPerformanceScore(Caps), '/100');
+  Require(GetSecurityScore(Caps) > 0, 'Security score should be positive');
+  Require(GetPerformanceScore(Caps) > 0, 'Performance score should be positive');
   WriteLn;
 
   WriteLn('[Description Test]');
@@ -109,6 +132,13 @@ begin
       WriteLn('  ChaCha20: ', IsCipherSupported(Caps, sslCipherCHACHA20_POLY1305));
       WriteLn('  SHA256: ', IsHashSupported(Caps, sslHashSHA256));
       WriteLn('  ECDHE-RSA: ', IsKeyExchangeSupported(Caps, sslKexECDHE_RSA));
+
+      Require(Lib.IsCipherSupported('TLS_AES_128_GCM_SHA256'),
+        'OpenSSL should accept known TLS_AES_128_GCM_SHA256');
+      Require(not Lib.IsCipherSupported('TLS_FAKE_AES_128_GCM_SHA256'),
+        'OpenSSL should reject unknown fake cipher');
+      Require(not Lib.IsCipherSupported(''),
+        'OpenSSL should reject empty cipher name');
       WriteLn;
 
       WriteLn('[Security & Performance]');

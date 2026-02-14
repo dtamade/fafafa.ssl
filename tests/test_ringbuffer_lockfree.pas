@@ -5,6 +5,7 @@
 program test_ringbuffer_lockfree;
 
 {$mode objfpc}{$H+}
+{$UNITPATH framework}
 
 uses
   {$IFDEF UNIX}cthreads,{$ENDIF}

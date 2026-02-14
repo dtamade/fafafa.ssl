@@ -3,8 +3,9 @@ program test_real_usage;
 {$mode objfpc}{$H+}
 
 uses
-  SysUtils,
+  SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   fafafa.ssl.openssl.backed;
 
 var
@@ -12,7 +13,41 @@ var
   Context: ISSLContext;
   Store: ISSLCertificateStore;
   Cert: ISSLCertificate;
-  
+  GPassed: Integer = 0;
+  GFailed: Integer = 0;
+  GSkipped: Integer = 0;
+
+procedure RecordPass(const AName: string; const ADetail: string = '');
+begin
+  Inc(GPassed);
+  if ADetail = '' then
+    WriteLn('[PASS] ', AName)
+  else
+    WriteLn('[PASS] ', AName, ' - ', ADetail);
+end;
+
+procedure RecordFail(const AName: string; const ADetail: string = '');
+begin
+  Inc(GFailed);
+  if ADetail = '' then
+    WriteLn('[FAIL] ', AName)
+  else
+    WriteLn('[FAIL] ', AName, ' - ', ADetail);
+end;
+
+procedure RecordSkip(const AName: string; const AReason: string);
+begin
+  if Trim(AReason) = '' then
+  begin
+    Inc(GFailed);
+    WriteLn('[FAIL] ', AName, ' - skip reason is required');
+    Exit;
+  end;
+
+  Inc(GSkipped);
+  WriteLn('[SKIP] ', AName, ' - ', AReason);
+end;
+
 procedure TestRealCertificateLoading;
 var
   SerialNum, Subject, SigAlg: string;
@@ -20,189 +55,202 @@ var
 begin
   WriteLn;
   WriteLn('=== Test 1: Real Certificate Loading ===');
-  
-  // 尝试加载系统证书
+
   Store := SSLLib.CreateCertificateStore;
   if Store = nil then
   begin
-    WriteLn('❌ FAIL: Cannot create certificate store');
+    RecordFail('CreateCertificateStore', 'returned nil');
     Exit;
   end;
-  
-  WriteLn('Attempting to load system certificates...');
+  RecordPass('CreateCertificateStore');
+
   if not Store.LoadSystemStore then
   begin
-    WriteLn('⚠️  System certificate store failed');
-    WriteLn('Trying default paths...');
     if not Store.LoadFromPath('/etc/ssl/certs') then
     begin
-      WriteLn('❌ FAIL: Cannot load any certificates');
-      WriteLn('This is a BLOCKING issue - no certificates means no HTTPS!');
+      RecordFail('LoadSystemStore/LoadFromPath', 'cannot load any certificates');
       Exit;
     end;
-  end;
-  
-  WriteLn('✓ Certificate store loaded, count: ', Store.GetCount);
-  
+    RecordPass('Load certificate store from fallback path', '/etc/ssl/certs');
+  end
+  else
+    RecordPass('LoadSystemStore');
+
   if Store.GetCount = 0 then
   begin
-    WriteLn('❌ FAIL: Certificate store is empty!');
+    RecordFail('Certificate count', 'store is empty');
     Exit;
   end;
-  
-  // 测试实际的证书功能
+  RecordPass('Certificate count', IntToStr(Store.GetCount));
+
   Cert := Store.GetCertificate(0);
   if Cert = nil then
   begin
-    WriteLn('❌ FAIL: Cannot get certificate from store');
+    RecordFail('GetCertificate(0)', 'returned nil');
     Exit;
   end;
-  
-  WriteLn;
-  WriteLn('Testing certificate methods on real cert:');
-  
+  RecordPass('GetCertificate(0)');
+
   try
     Subject := Cert.GetSubject;
-    WriteLn('  Subject: ', Copy(Subject, 1, 60), '...');
-    if Subject = '' then
-      WriteLn('  ⚠️  WARNING: Subject is empty!');
+    if Subject <> '' then
+      RecordPass('GetSubject', Copy(Subject, 1, 60))
+    else
+      RecordFail('GetSubject', 'empty subject');
   except
     on E: Exception do
-      WriteLn('  ❌ GetSubject FAILED: ', E.Message);
+      RecordFail('GetSubject', E.Message);
   end;
-  
+
   try
     SerialNum := Cert.GetSerialNumber;
-    WriteLn('  Serial: ', Copy(SerialNum, 1, 40), '...');
-    if SerialNum = '' then
-      WriteLn('  ⚠️  WARNING: Serial number is empty!');
+    if SerialNum <> '' then
+      RecordPass('GetSerialNumber', Copy(SerialNum, 1, 40))
+    else
+      RecordSkip('GetSerialNumber non-empty', 'some backends/certs may not expose serial text');
   except
     on E: Exception do
-      WriteLn('  ❌ GetSerialNumber FAILED: ', E.Message);
+      RecordFail('GetSerialNumber', E.Message);
   end;
-  
+
   try
     SigAlg := Cert.GetSignatureAlgorithm;
-    WriteLn('  Signature Algorithm: ', SigAlg);
-    if SigAlg = '' then
-      WriteLn('  ⚠️  WARNING: Signature algorithm is empty!');
+    if SigAlg <> '' then
+      RecordPass('GetSignatureAlgorithm', SigAlg)
+    else
+      RecordFail('GetSignatureAlgorithm', 'empty signature algorithm');
   except
     on E: Exception do
-      WriteLn('  ❌ GetSignatureAlgorithm FAILED: ', E.Message);
+      RecordFail('GetSignatureAlgorithm', E.Message);
   end;
-  
+
   try
     IsCA := Cert.IsCA;
-    WriteLn('  IsCA: ', IsCA);
+    RecordPass('IsCA callable', BoolToStr(IsCA, True));
   except
     on E: Exception do
-      WriteLn('  ❌ IsCA FAILED: ', E.Message);
+      RecordFail('IsCA', E.Message);
   end;
-  
-  WriteLn('✓ Certificate methods work');
 end;
 
-procedure TestRealHTTPSConnection;
+procedure TestHTTPSConnectionContractWithoutSocket;
+var
+  LRaised: Boolean;
 begin
   WriteLn;
-  WriteLn('=== Test 2: Real HTTPS Connection ===');
-  
-  // 创建Context
+  WriteLn('=== Test 2: HTTPS Connection Contract (No Socket) ===');
+
   Context := SSLLib.CreateContext(sslCtxClient);
   if Context = nil then
   begin
-    WriteLn('❌ FAIL: Cannot create SSL context');
+    RecordFail('CreateContext(client)', 'returned nil');
     Exit;
   end;
-  
-  WriteLn('✓ Context created (configuration methods testing skipped)');
-  
-  WriteLn('⚠️  SKIP: Actual HTTPS connection test requires network code');
-  WriteLn('   This library provides SSL/TLS layer, but needs TCP socket separately');
+  RecordPass('CreateContext(client)');
+
+  if Context.GetContextType = sslCtxClient then
+    RecordPass('Context type is client')
+  else
+    RecordFail('Context type is client', 'unexpected context type');
+
+  LRaised := False;
+  try
+    Context.CreateConnection(TStream(nil));
+  except
+    on E: ESSLException do
+    begin
+      LRaised := True;
+      if Pos('nil', LowerCase(E.Message)) > 0 then
+        RecordPass('CreateConnection(nil) guard', E.Message)
+      else
+        RecordPass('CreateConnection(nil) guard', E.ClassName);
+    end;
+    on E: Exception do
+    begin
+      LRaised := True;
+      RecordPass('CreateConnection(nil) guard', E.ClassName);
+    end;
+  end;
+
+  if not LRaised then
+    RecordFail('CreateConnection(nil) guard', 'expected exception was not raised');
 end;
 
 procedure TestBasicAPI;
 begin
   WriteLn;
   WriteLn('=== Test 3: Basic API Availability ===');
-  
-  // 测试基本对象创建
+
   try
     Context := SSLLib.CreateContext(sslCtxClient);
-    WriteLn('✓ CreateContext works');
+    if Context <> nil then
+      RecordPass('CreateContext')
+    else
+      RecordFail('CreateContext', 'returned nil');
   except
     on E: Exception do
-      WriteLn('❌ CreateContext FAILED: ', E.Message);
+      RecordFail('CreateContext', E.Message);
   end;
-  
+
   try
     Store := SSLLib.CreateCertificateStore;
-    WriteLn('✓ CreateCertificateStore works');
+    if Store <> nil then
+      RecordPass('CreateCertificateStore')
+    else
+      RecordFail('CreateCertificateStore', 'returned nil');
   except
     on E: Exception do
-      WriteLn('❌ CreateCertificateStore FAILED: ', E.Message);
+      RecordFail('CreateCertificateStore', E.Message);
   end;
-  
+
   try
     Cert := SSLLib.CreateCertificate;
     if Cert = nil then
-      WriteLn('✓ CreateCertificate correctly returns nil (by design)')
+      RecordPass('CreateCertificate(nil-by-design)')
     else
-      WriteLn('⚠️  CreateCertificate returned non-nil (unexpected)');
+      RecordPass('CreateCertificate', 'backend supports direct creation');
   except
     on E: Exception do
-      WriteLn('❌ CreateCertificate FAILED: ', E.Message);
+      RecordFail('CreateCertificate', E.Message);
   end;
 end;
 
 begin
   WriteLn('========================================');
-  WriteLn('REAL USAGE TEST - Can we actually use this library?');
+  WriteLn('REAL USAGE TEST - Deterministic Contract');
   WriteLn('========================================');
-  
+
   try
-    // 初始化
-    WriteLn;
-    WriteLn('Initializing SSL library...');
     SSLLib := CreateOpenSSLLibrary;
     if SSLLib = nil then
     begin
-      WriteLn('❌ FATAL: Cannot create SSL library');
-      Halt(1);
-    end;
-    
-    if not SSLLib.Initialize then
+      RecordFail('CreateOpenSSLLibrary', 'returned nil');
+    end
+    else if not SSLLib.Initialize then
     begin
-      WriteLn('❌ FATAL: Cannot initialize SSL library');
-      Halt(1);
+      RecordFail('Initialize OpenSSL library', 'returned False');
+    end
+    else
+    begin
+      RecordPass('Initialize OpenSSL library', SSLLib.GetVersionString);
+
+      TestBasicAPI;
+      TestRealCertificateLoading;
+      TestHTTPSConnectionContractWithoutSocket;
     end;
-    
-    WriteLn('✓ SSL library initialized: ', SSLLib.GetVersionString);
-    
-    // 运行实际测试
-    TestBasicAPI;
-    TestRealCertificateLoading;
-    TestRealHTTPSConnection;
-    
-    WriteLn;
-    WriteLn('========================================');
-    WriteLn('HONEST ASSESSMENT');
-    WriteLn('========================================');
-    WriteLn('Based on actual testing:');
-    WriteLn('1. Library initialization: ✓ Works');
-    WriteLn('2. Certificate loading: ? Needs verification');
-    WriteLn('3. HTTPS connection: ? Not fully tested');
-    WriteLn('4. Production ready: ? Cannot confirm without real HTTPS test');
-    WriteLn;
-    WriteLn('CONCLUSION: More real-world testing needed!');
-    
   except
     on E: Exception do
-    begin
-      WriteLn;
-      WriteLn('❌ FATAL ERROR: ', E.Message);
-      Halt(2);
-    end;
+      RecordFail('Test fatal exception', E.Message);
   end;
-end.
 
+  WriteLn;
+  WriteLn('=== Summary ===');
+  WriteLn('Passed : ', GPassed);
+  WriteLn('Failed : ', GFailed);
+  WriteLn('Skipped: ', GSkipped);
+
+  if GFailed > 0 then
+    ExitCode := 1
+  else
+    ExitCode := 0;
+end.

@@ -8,10 +8,13 @@ program test_quick_cert;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.quick;
+  fafafa.ssl,
+  fafafa.ssl.quick,
+  fafafa.ssl.factory,
+  fafafa.ssl.base;
 
 var
-  Info: TQuickCertInfo;
+  Info: TSSLCertificateInfo;
   Host: string;
 begin
   WriteLn('╔═══════════════════════════════════════════╗');
@@ -19,28 +22,25 @@ begin
   WriteLn('╚═══════════════════════════════════════════╝');
   WriteLn;
   
-  Host := 'www.google.com';
-  WriteLn('正在获取 ', Host, ' 的证书信息...');
+  Host := '/etc/ssl/certs/ca-certificates.crt';
+  WriteLn('正在获取证书信息: ', Host);
   WriteLn;
   
   try
-    Info := TSSLQuick.GetCertificateInfo(Host);
+    Info := TSSLHelper.GetCertificateInfo(Host);
     
     WriteLn('证书信息:');
     WriteLn('  主题: ', Info.Subject);
     WriteLn('  颁发者: ', Info.Issuer);
-    WriteLn('  有效期开始: ', DateTimeToStr(Info.ValidFrom));
-    WriteLn('  有效期结束: ', DateTimeToStr(Info.ValidUntil));
-    WriteLn('  是否有效: ', BoolToStr(Info.IsValid, 'Yes', 'No'));
-    WriteLn('  是否过期: ', BoolToStr(Info.IsExpired, 'Yes', 'No'));
-    WriteLn('  距离过期: ', Info.DaysUntilExpiry, ' 天');
-    WriteLn('  SHA256指纹: ', Info.Fingerprint);
-    
-    if Info.ErrorMessage <> '' then
-      WriteLn('  错误: ', Info.ErrorMessage);
-    
+    WriteLn('  有效期开始: ', DateTimeToStr(Info.NotBefore));
+    WriteLn('  有效期结束: ', DateTimeToStr(Info.NotAfter));
+    WriteLn('  是否有效: ', BoolToStr((Now >= Info.NotBefore) and (Now <= Info.NotAfter), 'Yes', 'No'));
+    WriteLn('  是否过期: ', BoolToStr(Now > Info.NotAfter, 'Yes', 'No'));
+    WriteLn('  距离过期: ', Trunc(Info.NotAfter - Now), ' 天');
+    WriteLn('  SHA256指纹: ', Info.FingerprintSHA256);
+
     WriteLn;
-    if Info.IsValid then
+    if (Now >= Info.NotBefore) and (Now <= Info.NotAfter) then
     begin
       WriteLn('✅ 证书验证通过！');
       Halt(0);

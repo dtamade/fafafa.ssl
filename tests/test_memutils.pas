@@ -10,6 +10,7 @@
 unit test_memutils;
 
 {$mode objfpc}{$H+}
+{$UNITPATH framework}
 
 interface
 

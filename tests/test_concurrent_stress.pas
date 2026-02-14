@@ -14,9 +14,6 @@ program test_concurrent_stress;
 
 uses
   SysUtils, Classes, DateUtils,
-  {$IFDEF UNIX}
-  fafafa.ssl.sockets,
-  {$ENDIF}
   fafafa.ssl.factory,
   fafafa.ssl.base,
   fafafa.ssl;

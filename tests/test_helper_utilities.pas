@@ -10,8 +10,18 @@ uses
   fafafa.ssl.base,
   fafafa.ssl;
 
+type
+  TSkipCategory = (
+    scDependency,
+    scVersion,
+    scEnvironment,
+    scCapability,
+    scOther
+  );
+
 var
-  TotalTests, PassedTests, FailedTests: Integer;
+  TotalTests, PassedTests, FailedTests, SkippedTests: Integer;
+  SkipDependency, SkipVersion, SkipEnvironment, SkipCapability, SkipOther: Integer;
 
 procedure Test(const TestName: string; Condition: Boolean);
 begin
@@ -27,6 +37,43 @@ begin
     WriteLn('FAIL');
     Inc(FailedTests);
   end;
+end;
+
+procedure ReportGetInfoSetupFailure(const AReason: string);
+begin
+  Test('GetCertificateInfo setup failure: ' + AReason, False);
+end;
+
+procedure SkipOpenSSLGroup(const AGroupName: string; AGroupTests: Integer;
+  ACategory: TSkipCategory = scDependency);
+
+  function CategoryLabel: string;
+  begin
+    case ACategory of
+      scDependency: Result := 'dependency';
+      scVersion: Result := 'version';
+      scEnvironment: Result := 'environment';
+      scCapability: Result := 'capability';
+    else
+      Result := 'other';
+    end;
+  end;
+begin
+  if AGroupTests < 0 then
+    AGroupTests := 0;
+
+  Inc(SkippedTests, AGroupTests);
+  case ACategory of
+    scDependency: Inc(SkipDependency, AGroupTests);
+    scVersion: Inc(SkipVersion, AGroupTests);
+    scEnvironment: Inc(SkipEnvironment, AGroupTests);
+    scCapability: Inc(SkipCapability, AGroupTests);
+  else
+    Inc(SkipOther, AGroupTests);
+  end;
+
+  WriteLn('  [SKIP] [', CategoryLabel, '] ', AGroupName,
+    ' - OpenSSL not available (', AGroupTests, ' tests)');
 end;
 
 const
@@ -101,7 +148,7 @@ begin
   LLib := CreateSSLLibrary(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
-    WriteLn('  OpenSSL not available, skipping group');
+    SkipOpenSSLGroup('LoadCertificateFromFile', 4);
     Exit;
   end;
 
@@ -163,7 +210,7 @@ begin
   LLib := CreateSSLLibrary(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
-    WriteLn('  OpenSSL not available, skipping group');
+    SkipOpenSSLGroup('LoadCertificateFromMemory', 4);
     Exit;
   end;
 
@@ -213,7 +260,7 @@ begin
   LLib := CreateSSLLibrary(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
-    WriteLn('  OpenSSL not available, skipping group');
+    SkipOpenSSLGroup('LoadPrivateKeyFromFile', 4);
     Exit;
   end;
 
@@ -288,7 +335,7 @@ begin
   LLib := CreateSSLLibrary(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
-    WriteLn('  OpenSSL not available, skipping group');
+    SkipOpenSSLGroup('LoadPrivateKeyFromMemory', 4);
     Exit;
   end;
 
@@ -353,7 +400,7 @@ begin
   LLib := CreateSSLLibrary(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
-    WriteLn('  OpenSSL not available, skipping group');
+    SkipOpenSSLGroup('VerifyCertificate', 4);
     Exit;
   end;
 
@@ -423,7 +470,7 @@ begin
   LLib := CreateSSLLibrary(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
-    WriteLn('  OpenSSL not available, skipping group');
+    SkipOpenSSLGroup('GetCertificateInfo', 4);
     Exit;
   end;
 
@@ -445,8 +492,7 @@ begin
   end
   else
   begin
-    Test('GetCertificateInfo test setup', False);
-    Test('GetCertificateInfo placeholder', False);
+    ReportGetInfoSetupFailure('valid certificate load from memory failed');
   end;
 
   WriteLn;
@@ -470,6 +516,12 @@ begin
   TotalTests := 0;
   PassedTests := 0;
   FailedTests := 0;
+  SkippedTests := 0;
+  SkipDependency := 0;
+  SkipVersion := 0;
+  SkipEnvironment := 0;
+  SkipCapability := 0;
+  SkipOther := 0;
 
   WriteLn('Helper Utility Functions Tests');
   WriteLn('==============================');
@@ -486,8 +538,14 @@ begin
   TestGroup6_GetCertificateInfo;
 
   WriteLn('=' + StringOfChar('=', 70));
-  WriteLn(Format('Test Results: %d/%d passed (%.1f%%)',
-    [PassedTests, TotalTests, PassedTests * 100.0 / TotalTests]));
+  if TotalTests > 0 then
+    WriteLn(Format('Test Results: %d/%d passed (%.1f%%)',
+      [PassedTests, TotalTests, PassedTests * 100.0 / TotalTests]))
+  else
+    WriteLn('Test Results: no executable tests');
+
+  WriteLn(Format('Skipped: %d (dependency=%d, version=%d, environment=%d, capability=%d, other=%d)',
+    [SkippedTests, SkipDependency, SkipVersion, SkipEnvironment, SkipCapability, SkipOther]));
 
   if FailedTests > 0 then
   begin
@@ -504,7 +562,7 @@ begin
     WriteLn('  ✓ LoadPrivateKeyFromFile tested (2 tests)');
     WriteLn('  ✓ LoadPrivateKeyFromMemory tested (2 tests)');
     WriteLn('  ✓ VerifyCertificate tested (2 tests)');
-    WriteLn('  ✓ GetCertificateInfo tested (3 tests)');
+    WriteLn('  ✓ GetCertificateInfo tested (2 tests)');
     WriteLn;
     WriteLn('Helper utility functions are ready for use!');
   end;

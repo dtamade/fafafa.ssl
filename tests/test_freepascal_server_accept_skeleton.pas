@@ -31,6 +31,39 @@ begin
     Fail(Format('%s (expected=0x%.4x actual=0x%.4x)', [AMessage, AExpected, AActual]));
 end;
 
+function BuildClientHelloRecordWithSingleCipher(
+  const AServerName: string;
+  const AALPN: string;
+  const AKeyShare: TBytes;
+  ACipherSuite: Word
+): TBytes;
+var
+  LHandshake: TBytes;
+  LOffset: Integer;
+  LCipherLen: Word;
+  LSessionLen: Integer;
+begin
+  LHandshake := BuildTLS13ClientHelloHandshake(AServerName, AALPN, AKeyShare);
+
+  LOffset := 4;
+  Inc(LOffset, 2);
+  Inc(LOffset, 32);
+
+  LSessionLen := LHandshake[LOffset];
+  Inc(LOffset);
+  Inc(LOffset, LSessionLen);
+
+  LCipherLen := ReadUInt16(LHandshake, LOffset);
+  AssertEqualsWord(2, LCipherLen,
+    'ClientHello builder should encode one cipher suite before single-cipher patching');
+  Inc(LOffset, 2);
+
+  LHandshake[LOffset] := Byte(ACipherSuite shr 8);
+  LHandshake[LOffset + 1] := Byte(ACipherSuite and $FF);
+
+  Result := BuildTLSPlaintext(TLS_CONTENT_TYPE_HANDSHAKE, LHandshake);
+end;
+
 procedure TestServerAcceptSkeleton;
 var
   LCtx: ISSLContext;
@@ -54,7 +87,12 @@ begin
   LCtx.LoadPrivateKey('tests/certificate/test_certs/signer_key.pem');
 
   GenerateX25519KeyPair(LClientPrivate, LClientPublic);
-  LClientHelloRecord := BuildTLS13ClientHelloRecord('localhost', '', LClientPublic);
+  LClientHelloRecord := BuildClientHelloRecordWithSingleCipher(
+    'localhost',
+    '',
+    LClientPublic,
+    TLS13_CIPHER_AES_128_GCM_SHA256
+  );
 
   LIOStream := TMemoryStream.Create;
   try
@@ -75,15 +113,14 @@ begin
     );
     AssertTrue(
       (Pos('client finished', LVerifyStr) > 0) or
-      (Pos('certificateverify signer', LVerifyStr) > 0) or
-      (Pos('placeholder_certverify', LVerifyStr) > 0),
-      'Failure reason should indicate missing client Finished or pending CertificateVerify signer'
+      (Pos('certificateverify signer', LVerifyStr) > 0),
+      'Failure reason should indicate missing client Finished or CertificateVerify signer failure'
     );
 
     AssertTrue(LConn.GetProtocolVersion = sslProtocolTLS13,
       'Server skeleton should at least negotiate TLS 1.3 before stopping');
-    AssertTrue(LConn.GetCipherName = 'TLS_CHACHA20_POLY1305_SHA256',
-      'Server skeleton should select CHACHA20-POLY1305');
+    AssertTrue(LConn.GetCipherName = 'TLS_AES_128_GCM_SHA256',
+      'Server skeleton should select AES-128-GCM when client offers it');
 
     LServerResponseLen := LIOStream.Size - Length(LClientHelloRecord);
     AssertTrue(LServerResponseLen > 0, 'Server should write a ServerHello record to transport');
@@ -102,8 +139,8 @@ begin
 
     AssertTrue(LServerHello.Valid, 'Parsed ServerHello should be valid');
     AssertEqualsWord(TLS13_VERSION, LServerHello.SelectedVersion, 'Selected version should be TLS 1.3');
-    AssertEqualsWord(TLS13_CIPHER_CHACHA20_POLY1305_SHA256, LServerHello.SelectedCipherSuite,
-      'Selected cipher should be CHACHA20-POLY1305');
+    AssertEqualsWord(TLS13_CIPHER_AES_128_GCM_SHA256, LServerHello.SelectedCipherSuite,
+      'Selected cipher should be AES-128-GCM');
     AssertTrue(LServerHello.HasKeyShare, 'ServerHello should contain key_share');
     AssertEqualsWord(TLS13_GROUP_X25519, LServerHello.KeyShareGroup, 'ServerHello key_share group should be X25519');
     AssertEqualsWord(32, LServerHello.KeyShareLength, 'ServerHello key_share length should be 32');

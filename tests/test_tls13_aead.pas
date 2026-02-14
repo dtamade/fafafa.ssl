@@ -85,7 +85,7 @@ begin
       LEncrypted,
       LError
     ),
-    'TLS13 AEAD encrypt should succeed for CHACHA suite'
+    'TLS13 AEAD encrypt should succeed for CHACHA suite: ' + LError
   );
 
   AssertTrue(
@@ -98,25 +98,28 @@ begin
       LRecovered,
       LError
     ),
-    'TLS13 AEAD decrypt should succeed for CHACHA suite'
+    'TLS13 AEAD decrypt should succeed for CHACHA suite: ' + LError
   );
 
-  AssertBytesEqual(LPlain, LRecovered, 'Recovered plaintext mismatch');
+  AssertBytesEqual(LPlain, LRecovered, 'Recovered CHACHA plaintext mismatch');
 end;
 
-procedure TestUnsupportedSuite;
+procedure TestAES128SuiteRoundtrip;
 var
-  LKey, LNonce, LAAD, LPlain, LEncrypted: TBytes;
+  LKey, LNonce, LAAD, LPlain: TBytes;
+  LEncrypted, LRecovered: TBytes;
   LError: string;
 begin
-  SetLength(LKey, 16);
-  SetLength(LNonce, 12);
-  SetLength(LAAD, 0);
-  SetLength(LPlain, 1);
-  LPlain[0] := 0;
+  AssertTrue(TLS13AEADIsSupported(TLS13_CIPHER_AES_128_GCM_SHA256),
+    'AES-128-GCM suite should be supported');
+
+  LKey := HexToBytes('000102030405060708090a0b0c0d0e0f');
+  LNonce := HexToBytes('f0f1f2f3f4f5f6f7f8f9fafb');
+  LAAD := HexToBytes('feedfacedeadbeeffeedfacedeadbeefabaddad2');
+  LPlain := HexToBytes('d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a72');
 
   AssertTrue(
-    not TryTLS13AEADEncrypt(
+    TryTLS13AEADEncrypt(
       TLS13_CIPHER_AES_128_GCM_SHA256,
       LKey,
       LNonce,
@@ -125,16 +128,119 @@ begin
       LEncrypted,
       LError
     ),
-    'AES suite should be unsupported in pure FreePascal AEAD for now'
+    'TLS13 AEAD encrypt should succeed for AES-128-GCM suite: ' + LError
   );
-  AssertTrue(Pos('unsupported', LowerCase(LError)) > 0, 'Unsupported error message expected');
+
+  AssertTrue(Length(LEncrypted) = Length(LPlain) + 16,
+    'AES-128 encrypted payload should include 16-byte auth tag');
+
+  AssertTrue(
+    TryTLS13AEADDecrypt(
+      TLS13_CIPHER_AES_128_GCM_SHA256,
+      LKey,
+      LNonce,
+      LAAD,
+      LEncrypted,
+      LRecovered,
+      LError
+    ),
+    'TLS13 AEAD decrypt should succeed for AES-128-GCM suite: ' + LError
+  );
+
+  AssertBytesEqual(LPlain, LRecovered, 'Recovered AES-128 plaintext mismatch');
+end;
+
+procedure TestAES256SuiteRoundtrip;
+var
+  LKey, LNonce, LAAD, LPlain: TBytes;
+  LEncrypted, LRecovered: TBytes;
+  LError: string;
+begin
+  AssertTrue(TLS13AEADIsSupported(TLS13_CIPHER_AES_256_GCM_SHA384),
+    'AES-256-GCM suite should be supported');
+
+  LKey := HexToBytes('603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4');
+  LNonce := HexToBytes('cafebabefacedbaddecaf888');
+  LAAD := HexToBytes('feedfacedeadbeeffeedfacedeadbeefabaddad2');
+  LPlain := HexToBytes('6bc1bee22e409f96e93d7e117393172a');
+
+  AssertTrue(
+    TryTLS13AEADEncrypt(
+      TLS13_CIPHER_AES_256_GCM_SHA384,
+      LKey,
+      LNonce,
+      LAAD,
+      LPlain,
+      LEncrypted,
+      LError
+    ),
+    'TLS13 AEAD encrypt should succeed for AES-256-GCM suite: ' + LError
+  );
+
+  AssertTrue(
+    TryTLS13AEADDecrypt(
+      TLS13_CIPHER_AES_256_GCM_SHA384,
+      LKey,
+      LNonce,
+      LAAD,
+      LEncrypted,
+      LRecovered,
+      LError
+    ),
+    'TLS13 AEAD decrypt should succeed for AES-256-GCM suite: ' + LError
+  );
+
+  AssertBytesEqual(LPlain, LRecovered, 'Recovered AES-256 plaintext mismatch');
+end;
+
+procedure TestAESAuthenticationFailure;
+var
+  LKey, LNonce, LAAD, LPlain: TBytes;
+  LEncrypted, LRecovered: TBytes;
+  LError: string;
+begin
+  LKey := HexToBytes('000102030405060708090a0b0c0d0e0f');
+  LNonce := HexToBytes('f0f1f2f3f4f5f6f7f8f9fafb');
+  LAAD := HexToBytes('feedfacedeadbeeffeedfacedeadbeefabaddad2');
+  LPlain := HexToBytes('00112233445566778899aabbccddeeff');
+
+  AssertTrue(
+    TryTLS13AEADEncrypt(
+      TLS13_CIPHER_AES_128_GCM_SHA256,
+      LKey,
+      LNonce,
+      LAAD,
+      LPlain,
+      LEncrypted,
+      LError
+    ),
+    'AES-128 setup encrypt should succeed: ' + LError
+  );
+
+  AssertTrue(Length(LEncrypted) > 0, 'Encrypted payload should not be empty');
+  LEncrypted[High(LEncrypted)] := LEncrypted[High(LEncrypted)] xor $01;
+
+  AssertTrue(
+    not TryTLS13AEADDecrypt(
+      TLS13_CIPHER_AES_128_GCM_SHA256,
+      LKey,
+      LNonce,
+      LAAD,
+      LEncrypted,
+      LRecovered,
+      LError
+    ),
+    'AES-128 decrypt should fail when auth tag is tampered'
+  );
 end;
 
 begin
   WriteLn('Testing TLS 1.3 AEAD dispatch...');
 
   TestChaChaSuiteRoundtrip;
-  TestUnsupportedSuite;
+  TestAES128SuiteRoundtrip;
+  TestAES256SuiteRoundtrip;
+  TestAESAuthenticationFailure;
 
   WriteLn('✅ TLS 1.3 AEAD dispatch checks passed');
 end.

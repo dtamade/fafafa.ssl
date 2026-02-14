@@ -11,6 +11,7 @@ program test_native_handle_unified;
 
 uses
   SysUtils,
+  fafafa.ssl,
   fafafa.ssl.base,
   fafafa.ssl.factory,
   fafafa.ssl.native_handle,
@@ -20,12 +21,38 @@ type
   PSSL_CTX = Pointer;  // OpenSSL 类型（简化）
   PSSL = Pointer;
 
+var
+  GPassCount: Integer = 0;
+  GFailCount: Integer = 0;
+  GSkipCount: Integer = 0;
+
 procedure Test(const AName: string; AResult: Boolean);
 begin
   if AResult then
-    WriteLn('[PASS] ', AName)
+  begin
+    Inc(GPassCount);
+    WriteLn('[PASS] ', AName);
+  end
+  else
+  begin
+    Inc(GFailCount);
+    WriteLn('[FAIL] ', AName);
+  end;
+end;
+
+procedure Fail(const AName: string; const AMessage: string = '');
+begin
+  Inc(GFailCount);
+  if AMessage <> '' then
+    WriteLn('[FAIL] ', AName, ': ', AMessage)
   else
     WriteLn('[FAIL] ', AName);
+end;
+
+procedure Skip(const AReason: string);
+begin
+  Inc(GSkipCount);
+  WriteLn('[SKIP] ', AReason);
 end;
 
 procedure TestBasicFunctions;
@@ -41,12 +68,12 @@ begin
   try
     Lib := TSSLFactory.GetLibrary(sslOpenSSL);
   except
-    WriteLn('[SKIP] Factory not available');
+    Skip('Factory not available');
     Exit;
   end;
   if not Lib.Initialize then
   begin
-    WriteLn('[SKIP] OpenSSL not available');
+    Skip('OpenSSL not available');
     Exit;
   end;
 
@@ -66,14 +93,14 @@ begin
     Test('GetNativeHandle returns non-nil', Handle <> nil);
   except
     on E: Exception do
-      WriteLn('[FAIL] GetNativeHandle exception: ', E.Message);
+      Fail('GetNativeHandle exception', E.Message);
   end;
 
   // 测试 TryGetNativeHandle
   if TryGetNativeHandle(Ctx, Handle) then
     Test('TryGetNativeHandle success', Handle <> nil)
   else
-    WriteLn('[FAIL] TryGetNativeHandle failed');
+    Fail('TryGetNativeHandle failed');
 
   // 测试 IsNativeHandleValid
   Test('IsNativeHandleValid', IsNativeHandleValid(Ctx));
@@ -92,7 +119,7 @@ begin
   Lib := TSSLFactory.GetLibrary(sslOpenSSL);
   if not Lib.Initialize then
   begin
-    WriteLn('[SKIP] OpenSSL not available');
+    Skip('OpenSSL not available');
     Exit;
   end;
 
@@ -104,7 +131,7 @@ begin
     Test('GetNativeHandleSafe with context', Handle <> nil);
   except
     on E: Exception do
-      WriteLn('[FAIL] GetNativeHandleSafe exception: ', E.Message);
+      Fail('GetNativeHandleSafe exception', E.Message);
   end;
 
   // 测试 GetNativeHandleSafe 无上下文
@@ -113,7 +140,7 @@ begin
     Test('GetNativeHandleSafe without context', Handle <> nil);
   except
     on E: Exception do
-      WriteLn('[FAIL] GetNativeHandleSafe exception: ', E.Message);
+      Fail('GetNativeHandleSafe exception', E.Message);
   end;
 
   WriteLn;
@@ -130,7 +157,7 @@ begin
   Lib := TSSLFactory.GetLibrary(sslOpenSSL);
   if not Lib.Initialize then
   begin
-    WriteLn('[SKIP] OpenSSL not available');
+    Skip('OpenSSL not available');
     Exit;
   end;
 
@@ -142,7 +169,7 @@ begin
     Test('GetNativeHandleAs<PSSL_CTX>', SSL_CTX <> nil);
   except
     on E: Exception do
-      WriteLn('[FAIL] GetNativeHandleAs exception: ', E.Message);
+      Fail('GetNativeHandleAs exception', E.Message);
   end;
 
   // 测试 GetNativeHandleAsSafe
@@ -151,14 +178,14 @@ begin
     Test('GetNativeHandleAsSafe<PSSL_CTX>', SSL_CTX <> nil);
   except
     on E: Exception do
-      WriteLn('[FAIL] GetNativeHandleAsSafe exception: ', E.Message);
+      Fail('GetNativeHandleAsSafe exception', E.Message);
   end;
 
   // 测试 TryGetNativeHandleAs
   if specialize TryGetNativeHandleAs<PSSL_CTX>(Ctx, SSL_CTX) then
     Test('TryGetNativeHandleAs<PSSL_CTX>', SSL_CTX <> nil)
   else
-    WriteLn('[FAIL] TryGetNativeHandleAs failed');
+    Fail('TryGetNativeHandleAs failed');
 
   WriteLn;
 end;
@@ -179,7 +206,7 @@ begin
   // 测试错误消息 - GetNativeHandle
   try
     Handle := GetNativeHandle(DummyIntf);
-    WriteLn('[FAIL] Should throw exception for nil interface');
+    Fail('Should throw exception for nil interface');
   except
     on E: ESSLException do
     begin
@@ -188,13 +215,13 @@ begin
               Copy(E.Message, 1, 50), '...');
     end;
     on E: Exception do
-      WriteLn('[FAIL] Unexpected exception: ', E.ClassName);
+      Fail('Unexpected exception', E.ClassName);
   end;
 
   // 测试错误消息 - GetNativeHandleSafe 带上下文
   try
     Handle := GetNativeHandleSafe(DummyIntf, 'TestErrorMessages.Line123');
-    WriteLn('[FAIL] Should throw exception');
+    Fail('Should throw exception');
   except
     on E: ESSLException do
     begin
@@ -204,6 +231,49 @@ begin
       WriteLn('  Full error message:');
       WriteLn('  ', E.Message);
     end;
+  end;
+
+  WriteLn;
+end;
+
+
+procedure TestPureBackendLibraryContract;
+var
+  PureLib: ISSLLibrary;
+  Handle: Pointer;
+begin
+  WriteLn('=== 测试 Pure Backend 合同 ===');
+
+  PureLib := TSSLFactory.GetLibrary(sslFreePascal);
+  if PureLib = nil then
+  begin
+    Skip('FreePascal backend library not available');
+    WriteLn;
+    Exit;
+  end;
+
+  Test('GetBackendType returns sslFreePascal for pure backend library',
+       GetBackendType(PureLib) = sslFreePascal);
+  Test('IsNativeHandleAvailable is false for pure backend library',
+       not IsNativeHandleAvailable(PureLib));
+
+  if TryGetNativeHandle(PureLib, Handle) then
+    Fail('TryGetNativeHandle should fail for pure backend library')
+  else
+    Test('TryGetNativeHandle fails for pure backend library', Handle = nil);
+
+  try
+    Handle := GetNativeHandleSafe(PureLib, 'TestPureBackendLibraryContract');
+    Fail('GetNativeHandleSafe should throw for pure backend library', 'got unexpected handle');
+  except
+    on E: ESSLException do
+    begin
+      Test('GetNativeHandleSafe throws for pure backend library', True);
+      Test('Error message mentions pure FreePascal backend',
+           Pos('pure freepascal backend', LowerCase(E.Message)) > 0);
+    end;
+    on E: Exception do
+      Fail('Unexpected exception in pure backend contract', E.ClassName + ': ' + E.Message);
   end;
 
   WriteLn;
@@ -220,7 +290,7 @@ begin
   Lib := TSSLFactory.GetLibrary(sslOpenSSL);
   if not Lib.Initialize then
   begin
-    WriteLn('[SKIP] OpenSSL not available');
+    Skip('OpenSSL not available');
     Exit;
   end;
 
@@ -258,9 +328,20 @@ begin
     TestSafeFunction;
     TestGenericFunctions;
     TestErrorMessages;
+    TestPureBackendLibraryContract;
     TestUsageExample;
 
     WriteLn('==========================================');
+    WriteLn('汇总:');
+    WriteLn('  Passed: ', GPassCount);
+    WriteLn('  Failed: ', GFailCount);
+    WriteLn('  Skipped: ', GSkipCount);
+
+    if GFailCount > 0 then
+      ExitCode := 1
+    else
+      ExitCode := 0;
+
     WriteLn('测试完成！');
   except
     on E: Exception do

@@ -46,6 +46,76 @@ begin
   WriteLn('  [SKIP] ', AMessage);
 end;
 
+function IsCapabilityDrivenSkipMessage(const AMessage: string): Boolean;
+var
+  LMsg: string;
+begin
+  LMsg := LowerCase(AMessage);
+  Result := (Pos('not supported', LMsg) > 0) or
+            (Pos('only available on windows', LMsg) > 0) or
+            (Pos('i/o callback', LMsg) > 0) or
+            (Pos('io callback', LMsg) > 0);
+
+  if Pos('not implemented', LMsg) > 0 then
+    Result := False;
+end;
+
+
+procedure CheckSkipClassifier(const ACaseName, AMessage: string; AExpectedCapabilitySkip: Boolean);
+var
+  LActual: Boolean;
+begin
+  LActual := IsCapabilityDrivenSkipMessage(AMessage);
+  if LActual = AExpectedCapabilitySkip then
+    LogPass(ACaseName)
+  else
+    LogFail(ACaseName + ' classifier mismatch (expected=' +
+      BoolToStr(AExpectedCapabilitySkip, True) + ', actual=' +
+      BoolToStr(LActual, True) + ', message=' + AMessage + ')');
+end;
+
+procedure TestLegacyNotImplementedClassification;
+begin
+  WriteLn;
+  WriteLn('=== Stream Skip Classification Contract ===');
+
+  CheckSkipClassifier(
+    'Legacy not implemented is NOT capability skip',
+    'stream connection not implemented',
+    False
+  );
+
+  CheckSkipClassifier(
+    'Mixed not supported + not implemented still NOT capability skip',
+    'operation not supported due to not implemented backend path',
+    False
+  );
+
+  CheckSkipClassifier(
+    'not supported is capability skip',
+    'feature not supported in current backend',
+    True
+  );
+
+  CheckSkipClassifier(
+    'windows-only message is capability skip',
+    'feature only available on Windows',
+    True
+  );
+
+  CheckSkipClassifier(
+    'i/o callback message is capability skip',
+    'stream I/O callback is required',
+    True
+  );
+
+  CheckSkipClassifier(
+    'io callback message is capability skip',
+    'missing io callback binding',
+    True
+  );
+end;
+
 procedure TestOpenSSLStreamConnection;
 var
   LLibrary: ISSLLibrary;
@@ -88,10 +158,8 @@ begin
       except
         on E: ESSLException do
         begin
-          if Pos('not supported', LowerCase(E.Message)) > 0 then
-            LogSkip('OpenSSL stream connection not supported: ' + E.Message)
-          else if Pos('not implemented', LowerCase(E.Message)) > 0 then
-            LogSkip('OpenSSL stream connection not implemented: ' + E.Message)
+          if IsCapabilityDrivenSkipMessage(E.Message) then
+            LogSkip('OpenSSL stream connection capability-limited: ' + E.Message)
           else
             LogFail('OpenSSL CreateConnection(TStream) exception: ' + E.Message);
         end;
@@ -156,10 +224,8 @@ begin
       except
         on E: ESSLException do
         begin
-          if Pos('not supported', LowerCase(E.Message)) > 0 then
-            LogSkip('WinSSL stream connection not supported: ' + E.Message)
-          else if Pos('not implemented', LowerCase(E.Message)) > 0 then
-            LogSkip('WinSSL stream connection not implemented: ' + E.Message)
+          if IsCapabilityDrivenSkipMessage(E.Message) then
+            LogSkip('WinSSL stream connection capability-limited: ' + E.Message)
           else
             LogFail('WinSSL CreateConnection(TStream) exception: ' + E.Message);
         end;
@@ -219,12 +285,8 @@ begin
       except
         on E: ESSLException do
         begin
-          if Pos('not supported', LowerCase(E.Message)) > 0 then
-            LogSkip('WolfSSL stream connection not supported: ' + E.Message)
-          else if Pos('not implemented', LowerCase(E.Message)) > 0 then
-            LogSkip('WolfSSL stream connection not implemented: ' + E.Message)
-          else if Pos('i/o callback', LowerCase(E.Message)) > 0 then
-            LogSkip('WolfSSL I/O callbacks not available: ' + E.Message)
+          if IsCapabilityDrivenSkipMessage(E.Message) then
+            LogSkip('WolfSSL stream connection capability-limited: ' + E.Message)
           else
             LogFail('WolfSSL CreateConnection(TStream) exception: ' + E.Message);
         end;
@@ -284,10 +346,8 @@ begin
       except
         on E: ESSLException do
         begin
-          if Pos('not supported', LowerCase(E.Message)) > 0 then
-            LogSkip('MbedTLS stream connection not supported: ' + E.Message)
-          else if Pos('not implemented', LowerCase(E.Message)) > 0 then
-            LogSkip('MbedTLS stream connection not implemented: ' + E.Message)
+          if IsCapabilityDrivenSkipMessage(E.Message) then
+            LogSkip('MbedTLS stream connection capability-limited: ' + E.Message)
           else
             LogFail('MbedTLS CreateConnection(TStream) exception: ' + E.Message);
         end;
@@ -366,6 +426,7 @@ begin
   WriteLn('Testing CreateConnection(TStream) for all backends.');
   WriteLn('This verifies stream-based SSL connection support.');
 
+  TestLegacyNotImplementedClassification;
   TestOpenSSLStreamConnection;
   TestWinSSLStreamConnection;
   TestWolfSSLStreamConnection;

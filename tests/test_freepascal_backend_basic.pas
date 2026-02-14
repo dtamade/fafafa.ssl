@@ -3,7 +3,7 @@ program test_freepascal_backend_basic;
 {$mode ObjFPC}{$H+}
 
 uses
-  SysUtils,
+  SysUtils, Classes,
   fafafa.ssl,
   fafafa.ssl.factory,
   fafafa.ssl.base;
@@ -17,11 +17,57 @@ begin
   end;
 end;
 
+function ArrayContains(const AValues: TSSLStringArray; const AExpected: string): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 0 to High(AValues) do
+    if SameText(AValues[I], AExpected) then
+      Exit(True);
+end;
+
 var
   LAvailable: Boolean;
   LLib: ISSLLibrary;
   LCtx: ISSLContext;
   LCaps: TSSLBackendCapabilities;
+  LCert: ISSLCertificate;
+  LKUCert: ISSLCertificate;
+  LInvalidCert: ISSLCertificate;
+  LHostCert: ISSLCertificate;
+  LWildcardCert: ISSLCertificate;
+  LLoopLeaf: ISSLCertificate;
+  LLoopIssuer: ISSLCertificate;
+  LChain: TSSLCertificateArray;
+  LInvalidStream: TStringStream;
+  LValidDER: TBytes;
+  LTruncatedDER: TBytes;
+  LValidPEM: string;
+  LWrongTypePEM: string;
+  LKeyUsage: TSSLStringArray;
+  LExtKeyUsage: TSSLStringArray;
+  LStore: ISSLCertificateStore;
+  LFilterStore: ISSLCertificateStore;
+  LScanDir: string;
+  LScanTxtPath: string;
+  LScanPemPath: string;
+  LConn: ISSLConnection;
+  LStream: TMemoryStream;
+  LBuf: array[0..7] of Byte;
+  LRead: Integer;
+  LWritten: Integer;
+  LTLS12ClientCtx: ISSLContext;
+  LTLS12ServerCtx: ISSLContext;
+  LTLS12ClientConn: ISSLConnection;
+  LTLS12ServerConn: ISSLConnection;
+  LClientStream: TMemoryStream;
+  LServerStream: TMemoryStream;
+  LVerifyText: string;
+  LSubjectVariant: string;
+  LSerialCompact: string;
+  LSerialVariant: string;
+  LCharIndex: Integer;
 begin
   WriteLn('Testing FreePascal backend registration and creation...');
 
@@ -31,12 +77,203 @@ begin
   LLib := TSSLFactory.GetLibrary(sslFreePascal);
   AssertTrue(LLib <> nil, 'GetLibrary(sslFreePascal) should return library instance');
   AssertTrue(LLib.GetLibraryType = sslFreePascal, 'Library type mismatch');
+  LVerifyText := LowerCase(LLib.GetVersionString);
+  AssertTrue(Pos('freepascal', LVerifyText) > 0,
+    'FreePascal backend version string should mention FreePascal');
+  AssertTrue(Pos('skeleton', LVerifyText) = 0,
+    'FreePascal backend version string should not expose skeleton placeholder');
 
   LCtx := TSSLFactory.CreateContext(sslCtxClient, sslFreePascal);
   AssertTrue(LCtx <> nil, 'CreateContext should return context');
   AssertTrue(LCtx.GetContextType = sslCtxClient, 'Context type mismatch');
 
+  LCert := LLib.CreateCertificate;
+  AssertTrue(LCert <> nil, 'CreateCertificate should return certificate instance');
+  AssertTrue(
+    LCert.LoadFromFile('tests/certificate/test_certs/signer_cert.pem'),
+    'FreePascal certificate should load PEM file'
+  );
+  AssertTrue(LCert.GetFingerprintSHA256 <> '',
+    'Loaded certificate should expose SHA256 fingerprint');
+  AssertTrue(LCert.GetPublicKey <> '',
+    'Loaded certificate should expose non-empty public key info');
+  AssertTrue(LCert.GetExtension('2.5.29.14') <> '',
+    'Loaded certificate should expose Subject Key Identifier extension');
+
+  LInvalidCert := LLib.CreateCertificate;
+  AssertTrue(LInvalidCert <> nil, 'CreateCertificate should return invalid input check certificate instance');
+  LInvalidStream := TStringStream.Create('not-a-certificate');
+  try
+    AssertTrue(not LInvalidCert.LoadFromStream(LInvalidStream),
+      'FreePascal certificate should reject invalid stream data');
+  finally
+    LInvalidStream.Free;
+  end;
+
+  LValidDER := LCert.SaveToDER;
+  AssertTrue(Length(LValidDER) > 16,
+    'Loaded certificate should export DER bytes for truncated-input contract');
+  SetLength(LTruncatedDER, Length(LValidDER) - 8);
+  Move(LValidDER[0], LTruncatedDER[0], Length(LTruncatedDER));
+  AssertTrue(not LInvalidCert.LoadFromDER(LTruncatedDER),
+    'FreePascal certificate should reject truncated DER payload');
+
+  LValidPEM := LCert.SaveToPEM;
+  AssertTrue(LValidPEM <> '',
+    'Loaded certificate should export PEM for invalid block-type contract');
+  LWrongTypePEM := StringReplace(LValidPEM, '-----BEGIN CERTIFICATE-----',
+    '-----BEGIN PUBLIC KEY-----', [rfReplaceAll]);
+  LWrongTypePEM := StringReplace(LWrongTypePEM, '-----END CERTIFICATE-----',
+    '-----END PUBLIC KEY-----', [rfReplaceAll]);
+  AssertTrue(not LInvalidCert.LoadFromPEM(LWrongTypePEM),
+    'FreePascal certificate should reject PEM payload without CERTIFICATE block type');
+
+  LScanDir := IncludeTrailingPathDelimiter(GetTempDir(False)) +
+    'fafafa_fp_store_scan_' + IntToStr(Int64(GetTickCount64));
+  AssertTrue(ForceDirectories(LScanDir),
+    'Temporary directory for LoadFromPath filtering contract should be created');
+
+  LScanTxtPath := IncludeTrailingPathDelimiter(LScanDir) + 'renamed_cert.txt';
+  with TStringList.Create do
+  try
+    Text := LValidPEM;
+    SaveToFile(LScanTxtPath);
+  finally
+    Free;
+  end;
+
+  LFilterStore := LLib.CreateCertificateStore;
+  AssertTrue(LFilterStore <> nil,
+    'CreateCertificateStore should return instance for path filtering contract');
+  AssertTrue(not LFilterStore.LoadFromPath(LScanDir),
+    'LoadFromPath should ignore non-certificate extension files');
+  AssertTrue(LFilterStore.GetCount = 0,
+    'LoadFromPath should keep store empty when directory only contains non-certificate extension files');
+
+  LScanPemPath := IncludeTrailingPathDelimiter(LScanDir) + 'renamed_cert.pem';
+  with TStringList.Create do
+  try
+    Text := LValidPEM;
+    SaveToFile(LScanPemPath);
+  finally
+    Free;
+  end;
+
+  LFilterStore := LLib.CreateCertificateStore;
+  AssertTrue(LFilterStore <> nil,
+    'CreateCertificateStore should return instance for positive path filtering contract');
+  AssertTrue(LFilterStore.LoadFromPath(LScanDir),
+    'LoadFromPath should load certificate files with PEM extension');
+  AssertTrue(LFilterStore.GetCount = 1,
+    'LoadFromPath should only load certificate files from mixed directory');
+
+  DeleteFile(LScanTxtPath);
+  DeleteFile(LScanPemPath);
+  RemoveDir(LScanDir);
+
+  LHostCert := LLib.CreateCertificate;
+  AssertTrue(LHostCert <> nil, 'CreateCertificate should return SAN-vs-CN contract certificate instance');
+  AssertTrue(
+    LHostCert.LoadFromFile('tests/certificate/test_certs/san_cn_conflict_cert.pem'),
+    'FreePascal certificate should load SAN/CN conflict fixture PEM file'
+  );
+  AssertTrue(not LHostCert.VerifyHostname('cn-only.example.com'),
+    'Hostname verification should prioritize SAN over CN when SAN is present');
+  AssertTrue(LHostCert.VerifyHostname('alt.example.com'),
+    'Hostname verification should match SAN DNS entry');
+
+  LWildcardCert := LLib.CreateCertificate;
+  AssertTrue(LWildcardCert <> nil, 'CreateCertificate should return wildcard contract certificate instance');
+  AssertTrue(
+    LWildcardCert.LoadFromFile('tests/certificate/test_certs/san_wildcard_cert.pem'),
+    'FreePascal certificate should load wildcard SAN fixture PEM file'
+  );
+  AssertTrue(LWildcardCert.VerifyHostname('api.example.com'),
+    'Hostname verification should match single-label wildcard SAN');
+  AssertTrue(not LWildcardCert.VerifyHostname('deep.api.example.com'),
+    'Hostname verification wildcard should not match multi-label subdomain');
+
+  LKUCert := LLib.CreateCertificate;
+  AssertTrue(LKUCert <> nil, 'CreateCertificate should return KU/EKU fixture certificate instance');
+  AssertTrue(
+    LKUCert.LoadFromFile('tests/certificate/test_certs/keyusage_cert.pem'),
+    'FreePascal certificate should load KU/EKU fixture PEM file'
+  );
+
+  LKeyUsage := LKUCert.GetKeyUsage;
+  AssertTrue(Length(LKeyUsage) > 0,
+    'KU fixture should expose non-empty key usage list');
+  AssertTrue(ArrayContains(LKeyUsage, 'digitalSignature'),
+    'KU fixture should include digitalSignature usage');
+  AssertTrue(ArrayContains(LKeyUsage, 'keyEncipherment'),
+    'KU fixture should include keyEncipherment usage');
+
+  LExtKeyUsage := LKUCert.GetExtendedKeyUsage;
+  AssertTrue(Length(LExtKeyUsage) > 0,
+    'KU fixture should expose non-empty extended key usage list');
+  AssertTrue(ArrayContains(LExtKeyUsage, 'serverAuth'),
+    'KU fixture should include serverAuth extended usage');
+  AssertTrue(ArrayContains(LExtKeyUsage, 'clientAuth'),
+    'KU fixture should include clientAuth extended usage');
+
+  LStore := LLib.CreateCertificateStore;
+  AssertTrue(LStore <> nil, 'CreateCertificateStore should return store instance');
+  AssertTrue(LStore.GetCount = 0, 'New certificate store should be empty');
+  AssertTrue(LStore.AddCertificate(LCert), 'Certificate store should accept first certificate');
+  AssertTrue(not LStore.AddCertificate(LCert), 'Certificate store should reject duplicate certificate references');
+  AssertTrue(LStore.Contains(LCert.Clone),
+    'Certificate store should treat cloned certificate with same fingerprint as contained');
+  AssertTrue(not LStore.AddCertificate(LCert.Clone),
+    'Certificate store should reject duplicate certificate fingerprints across cloned instances');
+  AssertTrue(LStore.GetCount = 1, 'Certificate store count should be 1 after add');
+  AssertTrue(LStore.GetCertificate(0) <> nil, 'Certificate store should return certificate by index');
+  AssertTrue(LStore.FindByFingerprint(LCert.GetFingerprintSHA256) <> nil,
+    'Certificate store should find certificate by fingerprint');
+
+  LSubjectVariant := UpperCase(StringReplace(StringReplace(LCert.GetSubject, ',', ' , ', [rfReplaceAll]),
+    '=', ' = ', [rfReplaceAll]));
+  AssertTrue(LStore.FindBySubject(LSubjectVariant) <> nil,
+    'Certificate store should find certificate by normalized subject query');
+
+  LSerialCompact := StringReplace(StringReplace(UpperCase(LCert.GetSerialNumber), ':', '', [rfReplaceAll]),
+    ' ', '', [rfReplaceAll]);
+  AssertTrue(LSerialCompact <> '',
+    'Loaded certificate should expose serial for normalized serial query contract');
+  LSerialVariant := '';
+  for LCharIndex := 1 to Length(LSerialCompact) do
+  begin
+    if (LCharIndex > 1) and (((LCharIndex - 1) mod 2) = 0) then
+      LSerialVariant := LSerialVariant + ':';
+    LSerialVariant := LSerialVariant + LowerCase(LSerialCompact[LCharIndex]);
+  end;
+  LSerialVariant := '  ' + LSerialVariant + '  ';
+  AssertTrue(LStore.FindBySerialNumber(LSerialVariant) <> nil,
+    'Certificate store should find certificate by normalized serial query');
+
+  AssertTrue(LStore.RemoveCertificate(LCert.Clone),
+    'Certificate store should remove cloned certificate by matching fingerprint');
+  AssertTrue(LStore.GetCount = 0,
+    'Certificate store should be empty after removing cloned certificate match');
+  AssertTrue(LStore.AddCertificate(LCert),
+    'Certificate store should allow re-adding certificate after clone-based removal');
+
+  LLoopLeaf := LCert.Clone;
+  LLoopIssuer := LCert.Clone;
+  AssertTrue(LLoopLeaf <> nil, 'Clone leaf certificate should be created for chain dedup contract');
+  AssertTrue(LLoopIssuer <> nil, 'Clone issuer certificate should be created for chain dedup contract');
+  LLoopLeaf.SetIssuerCertificate(LLoopIssuer);
+  LChain := LStore.BuildCertificateChain(LLoopLeaf);
+  AssertTrue(Length(LChain) = 1,
+    'BuildCertificateChain should de-duplicate cloned issuer certificate by fingerprint');
+
+  if DirectoryExists('/etc/ssl/certs') then
+    AssertTrue(LStore.LoadSystemStore,
+      'LoadSystemStore should load certificates when Linux system store directory exists');
+
   LCaps := LLib.GetCapabilities;
+  if DirectoryExists('/etc/ssl/certs') then
+    AssertTrue(LCaps.SupportsSystemCertStore,
+      'FreePascal capabilities should advertise system cert store support when Linux system store directory exists');
   AssertTrue(IsKeyExchangeSupported(LCaps, sslKexECDHE_RSA),
     'FreePascal backend should advertise ECDHE_RSA');
   AssertTrue(IsKeyExchangeSupported(LCaps, sslKexECDHE_ECDSA),
@@ -45,6 +282,81 @@ begin
     'FreePascal backend should not require external TLS library');
   AssertTrue(Pos('ECDSA', UpperCase(LCaps.KnownIssues)) > 0,
     'FreePascal capability KnownIssues should mention ECDSA CertificateVerify support scope');
+  AssertTrue(Pos('SHA256', UpperCase(LCaps.KnownIssues)) > 0,
+    'FreePascal capability KnownIssues should mention current SHA256 suite focus');
+  AssertTrue(Pos('SHA384', UpperCase(LCaps.KnownIssues)) > 0,
+    'FreePascal capability KnownIssues should mention SHA384 path limitation explicitly');
+  AssertTrue(not LLib.IsCipherSupported('TLS_AES_256_GCM_SHA384'),
+    'FreePascal IsCipherSupported should reject TLS_AES_256_GCM_SHA384 while SHA384 Finished path remains pending');
+  AssertTrue(not IsCipherSupported(LCaps, sslCipherAES256GCM),
+    'FreePascal capability SupportedCiphers should not advertise AES256GCM while SHA384 Finished path remains pending');
+
+  LStream := TMemoryStream.Create;
+  try
+    LConn := LCtx.CreateConnection(LStream);
+    AssertTrue(LConn <> nil, 'CreateConnection(TStream) should return connection');
+
+    FillChar(LBuf, SizeOf(LBuf), 0);
+
+    LRead := LConn.Read(LBuf, SizeOf(LBuf));
+    AssertTrue(LRead = -1, 'Read before handshake should fail');
+    AssertTrue(LConn.GetError(-1) = sslErrProtocol,
+      'Read before handshake should report protocol precondition error');
+
+    LWritten := LConn.Write(LBuf, SizeOf(LBuf));
+    AssertTrue(LWritten = -1, 'Write before handshake should fail');
+    AssertTrue(LConn.GetError(-1) = sslErrProtocol,
+      'Write before handshake should report protocol precondition error');
+
+    AssertTrue(not LConn.Renegotiate,
+      'Renegotiate before handshake should fail');
+    AssertTrue(LConn.GetError(-1) = sslErrProtocol,
+      'Renegotiate before handshake should report protocol precondition error');
+  finally
+    LStream.Free;
+  end;
+
+  LTLS12ClientCtx := TSSLFactory.CreateContext(sslCtxClient, sslFreePascal);
+  AssertTrue(LTLS12ClientCtx <> nil, 'TLS1.2 client context should be created');
+  LTLS12ClientCtx.SetPreferredVersion(sslProtocolTLS12);
+
+  LClientStream := TMemoryStream.Create;
+  try
+    LTLS12ClientConn := LTLS12ClientCtx.CreateConnection(LClientStream);
+    AssertTrue(LTLS12ClientConn <> nil, 'TLS1.2 client connection should be created');
+    AssertTrue(not LTLS12ClientConn.Connect, 'TLS1.2 client connect should fail for FreePascal backend');
+    AssertTrue(LTLS12ClientConn.GetError(-1) = sslErrUnsupported,
+      'TLS1.2 client connect failure should be classified as unsupported');
+
+    LVerifyText := LowerCase(LTLS12ClientConn.GetVerifyResultString);
+    AssertTrue(Pos('unsupported', LVerifyText) > 0,
+      'TLS1.2 client connect failure text should include unsupported');
+    AssertTrue(Pos('not implemented', LVerifyText) = 0,
+      'TLS1.2 client connect failure text should not include not implemented');
+  finally
+    LClientStream.Free;
+  end;
+
+  LTLS12ServerCtx := TSSLFactory.CreateContext(sslCtxServer, sslFreePascal);
+  AssertTrue(LTLS12ServerCtx <> nil, 'TLS1.2 server context should be created');
+  LTLS12ServerCtx.SetPreferredVersion(sslProtocolTLS12);
+
+  LServerStream := TMemoryStream.Create;
+  try
+    LTLS12ServerConn := LTLS12ServerCtx.CreateConnection(LServerStream);
+    AssertTrue(LTLS12ServerConn <> nil, 'TLS1.2 server connection should be created');
+    AssertTrue(not LTLS12ServerConn.Accept, 'TLS1.2 server accept should fail for FreePascal backend');
+    AssertTrue(LTLS12ServerConn.GetError(-1) = sslErrUnsupported,
+      'TLS1.2 server accept failure should be classified as unsupported');
+
+    LVerifyText := LowerCase(LTLS12ServerConn.GetVerifyResultString);
+    AssertTrue(Pos('unsupported', LVerifyText) > 0,
+      'TLS1.2 server accept failure text should include unsupported');
+    AssertTrue(Pos('not implemented', LVerifyText) = 0,
+      'TLS1.2 server accept failure text should not include not implemented');
+  finally
+    LServerStream.Free;
+  end;
 
   WriteLn('✅ FreePascal backend basic checks passed');
 end.

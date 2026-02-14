@@ -40,6 +40,38 @@ var
   GPassCount: Integer = 0;
   GFailCount: Integer = 0;
 
+type
+  TMockWrongBackendNativeHandle = class(TInterfacedObject, ISSLNativeHandleAccess)
+  private
+    FHandle: Pointer;
+  public
+    constructor Create(AHandle: Pointer);
+    function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
+  end;
+
+constructor TMockWrongBackendNativeHandle.Create(AHandle: Pointer);
+begin
+  inherited Create;
+  FHandle := AHandle;
+end;
+
+function TMockWrongBackendNativeHandle.GetNativeHandle: Pointer;
+begin
+  Result := FHandle;
+end;
+
+function TMockWrongBackendNativeHandle.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslOpenSSL;
+end;
+
+function TMockWrongBackendNativeHandle.IsNativeHandleValid: Boolean;
+begin
+  Result := FHandle <> nil;
+end;
+
 { Helper function to check if object has native handle }
 function HasNativeHandle(const AObject: IInterface): Boolean;
 var
@@ -208,10 +240,37 @@ begin
   end;
 end;
 
+procedure TestMbedTLSNativeHandleContract;
+var
+  LMockWrong: IInterface;
+  LRaised: Boolean;
+  LHandle: Pointer;
+begin
+  WriteLn('');
+  WriteLn('=== MbedTLS Native Handle Contract ===');
+
+  LMockWrong := TMockWrongBackendNativeHandle.Create(Pointer($1234));
+  LRaised := False;
+  try
+    LHandle := GetNativeHandleSafe(LMockWrong, 'TestMbedTLSNativeHandleContract');
+    Test('MbedTLS native-handle helper rejects non-MbedTLS backend', False);
+  except
+    on E: ESSLException do
+    begin
+      LRaised := Pos('not a mbedtls backend', LowerCase(E.Message)) > 0;
+      Test('MbedTLS native-handle helper rejects non-MbedTLS backend', LRaised);
+    end;
+  end;
+
+  Test('TryGetNativeHandle returns handle for non-nil interface',
+    TryGetNativeHandle(LMockWrong, LHandle) and (LHandle <> nil));
+end;
+
 procedure TestMbedTLSSessionClass;
 var
   LSession: TMbedTLSSession;
   LClone: ISSLSession;
+  LData: TBytes;
 begin
   WriteLn('');
   WriteLn('=== MbedTLS Session Class ===');
@@ -235,7 +294,11 @@ begin
     Test('Clone has same ID', LClone.GetID = LSession.GetID);
 
     Test('Serialize returns empty for no session', Length(LSession.Serialize) = 0);
+    Test('Deserialize rejects empty payload', not LSession.Deserialize(nil));
     Test('Deserialize accepts data', LSession.Deserialize(TBytes.Create(1, 2, 3, 4)));
+    LData := LSession.Serialize;
+    Test('Serialize returns cached bytes after deserialize',
+      (Length(LData) = 4) and (LData[0] = 1) and (LData[1] = 2) and (LData[2] = 3) and (LData[3] = 4));
   finally
     LSession.Free;
   end;
@@ -288,6 +351,7 @@ procedure TestMbedTLSContextConfiguration;
 var
   LLib: ISSLLibrary;
   LCtx: ISSLContext;
+  LRaised: Boolean;
 begin
   WriteLn('');
   WriteLn('=== MbedTLS Context Configuration ===');
@@ -325,6 +389,15 @@ begin
       LCtx.SetOptions([ssoEnableSNI, ssoEnableALPN]);
       Test('Options set', ssoEnableSNI in LCtx.GetOptions);
 
+      LRaised := False;
+      try
+        LCtx.LoadCertificatePEM('not a valid pem certificate');
+      except
+        on E: ESSLCertError do
+          LRaised := Pos('certificate', LowerCase(E.Message)) > 0;
+      end;
+      Test('Invalid certificate PEM raises ESSLCertError mapping', LRaised);
+
     except
       on E: Exception do
       begin
@@ -356,8 +429,20 @@ begin
     Test('TLS 1.2 supported', LLib.IsProtocolSupported(sslProtocolTLS12));
     Test('SSL 2.0 not supported', not LLib.IsProtocolSupported(sslProtocolSSL2));
     Test('SSL 3.0 not supported', not LLib.IsProtocolSupported(sslProtocolSSL3));
+    Test('DTLS 1.0 not supported', not LLib.IsProtocolSupported(sslProtocolDTLS10));
+    Test('DTLS 1.2 not supported', not LLib.IsProtocolSupported(sslProtocolDTLS12));
+    with LLib.GetCapabilities do
+      Test('Capabilities DTLS support matches runtime protocol support',
+        SupportsDTLS = (LLib.IsProtocolSupported(sslProtocolDTLS10) or
+                        LLib.IsProtocolSupported(sslProtocolDTLS12)));
 
     Test('Session cache feature', LLib.IsFeatureSupported(sslFeatSessionCache));
+    Test('Known TLS1.3 cipher is reported supported',
+      LLib.IsCipherSupported('TLS_AES_128_GCM_SHA256'));
+    Test('Unknown fake cipher is rejected',
+      not LLib.IsCipherSupported('TLS_FAKE_AES_128_GCM_SHA256'));
+    Test('Empty cipher name is rejected',
+      not LLib.IsCipherSupported(''));
 
     Test('Version string not empty', LLib.GetVersionString <> '');
     WriteLn('  Version: ', LLib.GetVersionString);
@@ -408,6 +493,7 @@ begin
   // Certificate class tests (no library required)
   TestMbedTLSCertificateClass;
   TestMbedTLSCertificateStore;
+  TestMbedTLSNativeHandleContract;
 
   // Session class tests (no library required)
   TestMbedTLSSessionClass;

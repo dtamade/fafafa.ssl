@@ -160,8 +160,8 @@ begin
     Check('AddCertID 执行成功', True);
 
     // 测试编码
-    // 注意：当前实现返回空数据（TODO 标记）
-    Check('Encode 执行成功', True);
+    // 断言：编码接口可用，且请求在添加 CertID 后应产生非空 DER 数据
+    Check('Encode 输出非空', Length(Request.Encode) > 0);
 
   finally
     Request.Free;

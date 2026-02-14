@@ -7,7 +7,7 @@ uses
   fafafa.ssl.asn1, fafafa.ssl.x509;
 
 var
-  TestsPassed, TestsFailed: Integer;
+  TestsPassed, TestsFailed, TestsSkipped: Integer;
 
 procedure Check(const ATestName: string; ACondition: Boolean);
 begin
@@ -21,6 +21,12 @@ begin
     WriteLn('[FAIL] ', ATestName);
     Inc(TestsFailed);
   end;
+end;
+
+procedure Skip(const ATestName, AReason: string);
+begin
+  WriteLn('[SKIP] ', ATestName, ' - ', AReason);
+  Inc(TestsSkipped);
 end;
 
 // 创建一个简单的自签名测试证书 (DER 格式)
@@ -226,8 +232,7 @@ begin
   end
   else
   begin
-    WriteLn('  [SKIP] 未找到系统证书文件');
-    Check('真实证书 - 跳过 (无系统证书)', True);
+    Skip('真实证书 - 跳过', '未找到系统证书文件');
   end;
 end;
 
@@ -297,6 +302,7 @@ begin
 
   TestsPassed := 0;
   TestsFailed := 0;
+  TestsSkipped := 0;
 
   TestRecordTypes;
   TestCertificateLifecycle;
@@ -308,7 +314,7 @@ begin
 
   WriteLn;
   WriteLn('========================================');
-  WriteLn('测试结果: ', TestsPassed, ' 通过, ', TestsFailed, ' 失败');
+  WriteLn('测试结果: ', TestsPassed, ' 通过, ', TestsFailed, ' 失败, ', TestsSkipped, ' 跳过');
   WriteLn('========================================');
 
   if TestsFailed > 0 then

@@ -6,6 +6,7 @@
 program test_secure;
 
 {$mode objfpc}{$H+}
+{$UNITPATH framework}
 
 uses
   {$IFDEF UNIX}cthreads,{$ENDIF}

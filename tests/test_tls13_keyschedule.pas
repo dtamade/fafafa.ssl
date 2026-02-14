@@ -152,27 +152,71 @@ begin
   AssertTrue(Length(LSecrets.ServerHandshakeIV) = 12, 'Server IV bytes should be 12');
 end;
 
-procedure TestRejectSHA384CipherPath;
+procedure TestDeriveSHA384CipherPath;
 var
   LSharedSecret: TBytes;
   LTranscriptData: TBytes;
-  LSecrets: TTLS13HandshakeSecrets;
+  LSecrets, LSecrets2: TTLS13HandshakeSecrets;
   LError: string;
 begin
   LSharedSecret := HexToBytes('4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742');
   LTranscriptData := StringToBytes('ClientHelloHandshakeBytes||ServerHelloHandshakeBytes');
 
   AssertTrue(
-    not TryDeriveTLS13HandshakeSecrets(
+    TryDeriveTLS13HandshakeSecrets(
       TLS13_CIPHER_AES_256_GCM_SHA384,
       LSharedSecret,
       LTranscriptData,
       LSecrets,
       LError
     ),
-    'SHA384 cipher path should currently be rejected'
+    'SHA384 cipher path should derive successfully: ' + LError
   );
-  AssertTrue(Pos('not implemented yet', LError) > 0, 'Reject reason should mention not implemented');
+
+  AssertTrue(LSecrets.Valid, 'SHA384 secrets should be valid');
+  AssertTrue(LSecrets.HashSize = 48, 'SHA384 hash size should be 48');
+  AssertTrue(LSecrets.KeyLength = 32, 'AES-256 key length should be 32');
+  AssertTrue(LSecrets.IVLength = 12, 'SHA384 IV length should be 12');
+
+  AssertTrue(Length(LSecrets.TranscriptHash) = 48, 'SHA384 transcript hash length should be 48');
+  AssertTrue(Length(LSecrets.EarlySecret) = 48, 'SHA384 early secret length should be 48');
+  AssertTrue(Length(LSecrets.DerivedSecret) = 48, 'SHA384 derived secret length should be 48');
+  AssertTrue(Length(LSecrets.HandshakeSecret) = 48, 'SHA384 handshake secret length should be 48');
+  AssertTrue(Length(LSecrets.ClientHandshakeTrafficSecret) = 48, 'SHA384 client traffic secret length should be 48');
+  AssertTrue(Length(LSecrets.ServerHandshakeTrafficSecret) = 48, 'SHA384 server traffic secret length should be 48');
+  AssertTrue(Length(LSecrets.ClientHandshakeKey) = 32, 'SHA384 client handshake key length should be 32');
+  AssertTrue(Length(LSecrets.ServerHandshakeKey) = 32, 'SHA384 server handshake key length should be 32');
+  AssertTrue(Length(LSecrets.ClientHandshakeIV) = 12, 'SHA384 client handshake iv length should be 12');
+  AssertTrue(Length(LSecrets.ServerHandshakeIV) = 12, 'SHA384 server handshake iv length should be 12');
+
+  AssertTrue(
+    not BytesEqual(LSecrets.ClientHandshakeTrafficSecret, LSecrets.ServerHandshakeTrafficSecret),
+    'Client/server handshake traffic secrets should differ for SHA384 suite'
+  );
+
+  AssertTrue(
+    TryDeriveTLS13HandshakeSecrets(
+      TLS13_CIPHER_AES_256_GCM_SHA384,
+      LSharedSecret,
+      LTranscriptData,
+      LSecrets2,
+      LError
+    ),
+    'SHA384 re-derivation should succeed: ' + LError
+  );
+
+  AssertBytesEqual(LSecrets.TranscriptHash, LSecrets2.TranscriptHash,
+    'SHA384 transcript hash should be deterministic');
+  AssertBytesEqual(LSecrets.HandshakeSecret, LSecrets2.HandshakeSecret,
+    'SHA384 handshake secret should be deterministic');
+  AssertBytesEqual(LSecrets.ClientHandshakeKey, LSecrets2.ClientHandshakeKey,
+    'SHA384 client key should be deterministic');
+  AssertBytesEqual(LSecrets.ServerHandshakeKey, LSecrets2.ServerHandshakeKey,
+    'SHA384 server key should be deterministic');
+  AssertBytesEqual(LSecrets.ClientHandshakeIV, LSecrets2.ClientHandshakeIV,
+    'SHA384 client iv should be deterministic');
+  AssertBytesEqual(LSecrets.ServerHandshakeIV, LSecrets2.ServerHandshakeIV,
+    'SHA384 server iv should be deterministic');
 end;
 
 begin
@@ -180,7 +224,7 @@ begin
 
   TestDeterministicVectorSHA256;
   TestChachaKeyLength;
-  TestRejectSHA384CipherPath;
+  TestDeriveSHA384CipherPath;
 
   WriteLn('✅ TLS 1.3 key schedule checks passed');
 end.

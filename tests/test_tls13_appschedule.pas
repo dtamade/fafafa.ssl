@@ -35,6 +35,7 @@ function HexToBytes(const AHex: string): TBytes;
 var
   I, LLen: Integer;
 begin
+  Result := nil;
   LLen := Length(AHex);
   if (LLen = 0) or ((LLen and 1) <> 0) then
     Fail('Invalid hex length');
@@ -139,28 +140,100 @@ begin
   );
 end;
 
-procedure TestRejectUnsupportedSuite;
+procedure TestDeriveSHA384Suite;
 var
   LHandshakeSecret: TBytes;
   LTranscriptData: TBytes;
-  LSecrets: TTLS13ApplicationSecrets;
+  LSecrets, LSecrets2: TTLS13ApplicationSecrets;
+  LClientTrafficBefore: TBytes;
+  LClientKeyBefore: TBytes;
+  LClientIVBefore: TBytes;
   LError: string;
 begin
-  LHandshakeSecret := HexToBytes('6ba15db66ab3c7ca018f1d419801858133627705680281f983044762f85cb5c3');
-  LTranscriptData := HexToBytes('43487c7c5348');
+  LHandshakeSecret := HexToBytes(
+    '000102030405060708090a0b0c0d0e0f' +
+    '101112131415161718191a1b1c1d1e1f' +
+    '202122232425262728292a2b2c2d2e2f'
+  );
+  LTranscriptData := HexToBytes('43487c7c53487c7c45457c7c434552547c7c43567c7c53467c7c46494e');
 
   AssertTrue(
-    not TryDeriveTLS13ApplicationSecrets(
+    TryDeriveTLS13ApplicationSecrets(
       TLS13_CIPHER_AES_256_GCM_SHA384,
       LHandshakeSecret,
       LTranscriptData,
       LSecrets,
       LError
     ),
-    'SHA384 suite should be rejected for now'
+    'SHA384 suite should derive application secrets: ' + LError
   );
 
-  AssertTrue(Pos('not implemented', LowerCase(LError)) > 0, 'Expected not implemented message');
+  AssertTrue(LSecrets.Valid, 'SHA384 application secrets should be valid');
+  AssertTrue(LSecrets.HashSize = 48, 'SHA384 hash size should be 48');
+  AssertTrue(LSecrets.KeyLength = 32, 'AES-256 key length should be 32');
+  AssertTrue(LSecrets.IVLength = 12, 'SHA384 IV length should be 12');
+
+  AssertTrue(Length(LSecrets.TranscriptHash) = 48, 'SHA384 transcript hash length should be 48');
+  AssertTrue(Length(LSecrets.DerivedSecret) = 48, 'SHA384 derived secret length should be 48');
+  AssertTrue(Length(LSecrets.MasterSecret) = 48, 'SHA384 master secret length should be 48');
+  AssertTrue(Length(LSecrets.ClientApplicationTrafficSecret) = 48, 'SHA384 client traffic secret length should be 48');
+  AssertTrue(Length(LSecrets.ServerApplicationTrafficSecret) = 48, 'SHA384 server traffic secret length should be 48');
+  AssertTrue(Length(LSecrets.ClientApplicationKey) = 32, 'SHA384 client key length should be 32');
+  AssertTrue(Length(LSecrets.ServerApplicationKey) = 32, 'SHA384 server key length should be 32');
+  AssertTrue(Length(LSecrets.ClientApplicationIV) = 12, 'SHA384 client iv length should be 12');
+  AssertTrue(Length(LSecrets.ServerApplicationIV) = 12, 'SHA384 server iv length should be 12');
+
+  AssertTrue(
+    not BytesEqual(LSecrets.ClientApplicationTrafficSecret, LSecrets.ServerApplicationTrafficSecret),
+    'Client/server app traffic secrets should differ for SHA384 suite'
+  );
+
+  AssertTrue(
+    TryDeriveTLS13ApplicationSecrets(
+      TLS13_CIPHER_AES_256_GCM_SHA384,
+      LHandshakeSecret,
+      LTranscriptData,
+      LSecrets2,
+      LError
+    ),
+    'SHA384 re-derivation should succeed: ' + LError
+  );
+
+  AssertBytesEqual(LSecrets.MasterSecret, LSecrets2.MasterSecret,
+    'SHA384 master secret should be deterministic');
+  AssertBytesEqual(LSecrets.ClientApplicationKey, LSecrets2.ClientApplicationKey,
+    'SHA384 client key should be deterministic');
+  AssertBytesEqual(LSecrets.ServerApplicationKey, LSecrets2.ServerApplicationKey,
+    'SHA384 server key should be deterministic');
+
+  LClientTrafficBefore := LSecrets.ClientApplicationTrafficSecret;
+  LClientKeyBefore := LSecrets.ClientApplicationKey;
+  LClientIVBefore := LSecrets.ClientApplicationIV;
+
+  AssertTrue(
+    TryUpdateTLS13ClientApplicationWriteKeys(LSecrets, LError),
+    'SHA384 client write key update should succeed: ' + LError
+  );
+
+  AssertTrue(Length(LSecrets.ClientApplicationTrafficSecret) = 48,
+    'SHA384 updated client traffic secret length should remain 48');
+  AssertTrue(Length(LSecrets.ClientApplicationKey) = 32,
+    'SHA384 updated client key length should remain 32');
+  AssertTrue(Length(LSecrets.ClientApplicationIV) = 12,
+    'SHA384 updated client iv length should remain 12');
+
+  AssertTrue(
+    not BytesEqual(LClientTrafficBefore, LSecrets.ClientApplicationTrafficSecret),
+    'SHA384 client traffic secret should change after key update'
+  );
+  AssertTrue(
+    not BytesEqual(LClientKeyBefore, LSecrets.ClientApplicationKey),
+    'SHA384 client key should change after key update'
+  );
+  AssertTrue(
+    not BytesEqual(LClientIVBefore, LSecrets.ClientApplicationIV),
+    'SHA384 client iv should change after key update'
+  );
 end;
 
 
@@ -237,7 +310,7 @@ begin
   WriteLn('Testing TLS 1.3 application key schedule...');
 
   TestDeriveApplicationSecretsVector;
-  TestRejectUnsupportedSuite;
+  TestDeriveSHA384Suite;
   TestApplicationKeyUpdateDerivation;
 
   WriteLn('✅ TLS 1.3 application key schedule checks passed');

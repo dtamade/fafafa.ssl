@@ -11,6 +11,7 @@
 unit test_encoding;
 
 {$mode objfpc}{$H+}
+{$UNITPATH framework}
 
 interface
 

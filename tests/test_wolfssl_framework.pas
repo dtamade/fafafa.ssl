@@ -39,8 +39,13 @@ var
   GPassCount: Integer = 0;
   GFailCount: Integer = 0;
 
-{ Helper function to check if object has native handle }
-function HasNativeHandle(const AObject: IInterface): Boolean;
+function StubWolfSSLD2ISessionFail(session: PPWOLFSSL_SESSION; const pp: PPByte;
+  length: Integer): PWOLFSSL_SESSION; cdecl;
+begin
+  Result := nil;
+end;
+
+function HasNativeHandleContext(const AObject: ISSLContext): Boolean;
 var
   NativeAccess: ISSLNativeHandleAccess;
 begin
@@ -118,6 +123,7 @@ begin
 
   Test('$0303 maps back to TLS 1.2', WolfSSLProtocolToSSL($0303) = sslProtocolTLS12);
   Test('$0304 maps back to TLS 1.3', WolfSSLProtocolToSSL($0304) = sslProtocolTLS13);
+  Test('Unknown protocol maps to unknown', WolfSSLProtocolToSSL($FFFF) = sslProtocolUnknown);
 end;
 
 procedure TestWolfSSLLibraryCreation;
@@ -157,6 +163,7 @@ end;
 procedure TestWolfSSLCertificateClass;
 var
   LCert: TWolfSSLCertificate;
+  LClone: ISSLCertificate;
 begin
   WriteLn('');
   WriteLn('=== WolfSSL Certificate Class ===');
@@ -164,12 +171,15 @@ begin
   LCert := TWolfSSLCertificate.Create;
   try
     Test('Certificate created', LCert <> nil);
-    Test('Certificate not loaded initially', not HasNativeHandle(LCert));
+    Test('Certificate not loaded initially', LCert.GetNativeHandle = nil);
     Test('GetVersion returns default', LCert.GetVersion = 3);
     Test('GetPublicKeyAlgorithm returns default', LCert.GetPublicKeyAlgorithm = 'RSA');
-    // Note: Without X509 loaded, GetNotAfter returns Now+365 (default future date), so IsExpired returns False
-    Test('IsExpired returns False without X509 (default future date)', not LCert.IsExpired);
-    Test('Clone works', LCert.Clone <> nil);
+    Test('NotAfter unknown without X509', LCert.GetNotAfter = 0);
+    Test('IsExpired returns False without X509', not LCert.IsExpired);
+    Test('DaysUntilExpiry is 0 without X509', LCert.GetDaysUntilExpiry = 0);
+    LClone := LCert.Clone;
+    Test('Clone works', LClone <> nil);
+    LClone := nil;
   finally
     LCert.Free;
   end;
@@ -179,11 +189,15 @@ procedure TestWolfSSLCertificateStore;
 var
   LStore: TWolfSSLCertificateStore;
   LCert: ISSLCertificate;
+  LStoreClone: ISSLCertificate;
+  LSubjectVariant: string;
+  LLib: ISSLLibrary;
 begin
   WriteLn('');
   WriteLn('=== WolfSSL Certificate Store ===');
 
   LStore := TWolfSSLCertificateStore.Create;
+  LLib := CreateWolfSSLLibrary;
   try
     Test('Store created', LStore <> nil);
     Test('Store initially empty', LStore.GetCount = 0);
@@ -201,6 +215,32 @@ begin
     // Test removal
     Test('RemoveCertificate returns true', LStore.RemoveCertificate(LCert));
     Test('Store count is 0', LStore.GetCount = 0);
+
+    // Fingerprint semantics parity with FreePascal/MbedTLS stores
+    if (LLib <> nil) and LLib.Initialize then
+    begin
+      LCert := TWolfSSLCertificate.Create;
+      Test('Load fixture cert for certstore fingerprint semantics',
+        LCert.LoadFromFile('tests/certs/server-cert.pem'));
+      Test('Add loaded cert returns true', LStore.AddCertificate(LCert));
+      LStoreClone := LCert.Clone;
+      Test('Contains clone should be true by fingerprint', LStore.Contains(LStoreClone));
+      Test('Remove clone should remove by fingerprint', LStore.RemoveCertificate(LStoreClone));
+      Test('Store count returns to 0 after clone removal', LStore.GetCount = 0);
+
+      Test('Re-add loaded cert returns true', LStore.AddCertificate(LCert));
+      LSubjectVariant := UpperCase(StringReplace(StringReplace(LCert.GetSubject, ',', ' , ', [rfReplaceAll]),
+        '=', ' = ', [rfReplaceAll]));
+      Test('FindBySubject supports normalized query variant', LStore.FindBySubject(LSubjectVariant) <> nil);
+      Test('FindBySubject empty query returns nil', LStore.FindBySubject('') = nil);
+      Test('Remove loaded cert succeeds', LStore.RemoveCertificate(LCert));
+      Test('Store count back to 0', LStore.GetCount = 0);
+      LLib.Finalize;
+    end
+    else
+    begin
+      Test('Fingerprint semantics skipped when WolfSSL runtime unavailable', True);
+    end;
 
     // Test clear
     LStore.AddCertificate(TWolfSSLCertificate.Create);
@@ -234,7 +274,7 @@ begin
       Test('Client context created', LCtx <> nil);
       Test('Context type is client', LCtx.GetContextType = sslCtxClient);
       Test('Context is valid', LCtx.IsValid);
-      Test('Native handle not nil', HasNativeHandle(LCtx));
+      Test('Native handle not nil', HasNativeHandleContext(LCtx));
 
       // Test default values
       Test('Default verify mode includes peer', sslVerifyPeer in LCtx.GetVerifyMode);
@@ -261,6 +301,8 @@ procedure TestWolfSSLContextConfiguration;
 var
   LLib: ISSLLibrary;
   LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LErrMsg: string;
 begin
   WriteLn('');
   WriteLn('=== WolfSSL Context Configuration ===');
@@ -306,6 +348,15 @@ begin
       LCtx.SetOptions([ssoEnableSNI, ssoEnableALPN]);
       Test('Options set', ssoEnableSNI in LCtx.GetOptions);
 
+      // Renegotiation explicit unsupported semantics
+      LConn := LCtx.CreateConnection(0);
+      Test('Renegotiate returns false before handshake', not LConn.Renegotiate);
+      Test('Renegotiate reports unsupported error class',
+        LConn.GetError(-1) = sslErrUnsupported);
+      LErrMsg := LConn.GetVerifyResultString;
+      Test('Renegotiate exposes non-empty diagnostic message',
+        Pos('renegotiation', LowerCase(LErrMsg)) > 0);
+
     except
       on E: Exception do
       begin
@@ -338,8 +389,22 @@ begin
     Test('SSL 2.0 not supported', not LLib.IsProtocolSupported(sslProtocolSSL2));
     Test('SSL 3.0 not supported', not LLib.IsProtocolSupported(sslProtocolSSL3));
 
+    Test('DTLS 1.0 not supported', not LLib.IsProtocolSupported(sslProtocolDTLS10));
+    Test('DTLS 1.2 not supported', not LLib.IsProtocolSupported(sslProtocolDTLS12));
+
+    with LLib.GetCapabilities do
+      Test('Capabilities DTLS support matches runtime protocol support',
+        SupportsDTLS = (LLib.IsProtocolSupported(sslProtocolDTLS10) or
+                        LLib.IsProtocolSupported(sslProtocolDTLS12)));
+
     // Feature support
     Test('Session cache feature', LLib.IsFeatureSupported(sslFeatSessionCache));
+    Test('Known TLS1.3 cipher is reported supported',
+      LLib.IsCipherSupported('TLS_AES_128_GCM_SHA256'));
+    Test('Unknown fake cipher is rejected',
+      not LLib.IsCipherSupported('TLS_FAKE_AES_128_GCM_SHA256'));
+    Test('Empty cipher name is rejected',
+      not LLib.IsCipherSupported(''));
 
     // Version info
     Test('Version string not empty', LLib.GetVersionString <> '');
@@ -358,6 +423,7 @@ procedure TestWolfSSLSessionClass;
 var
   LSession: TWolfSSLSession;
   LClone: ISSLSession;
+  LOriginalD2I: TwolfSSL_d2i_SSL_SESSION;
 begin
   WriteLn('');
   WriteLn('=== WolfSSL Session Class ===');
@@ -370,7 +436,9 @@ begin
     Test('Session timeout default', LSession.GetTimeout = SSL_DEFAULT_SESSION_TIMEOUT);
     Test('Session not valid without handle', not LSession.IsValid);
     Test('Session not resumable without handle', not LSession.IsResumable);
-    Test('Native handle is nil', not HasNativeHandle(LSession));
+    Test('Native handle is nil', LSession.GetNativeHandle = nil);
+    Test('Default session protocol is unknown', LSession.GetProtocolVersion = sslProtocolUnknown);
+    Test('Default session cipher is unknown', LSession.GetCipherName = 'unknown');
 
     // Test timeout setting
     LSession.SetTimeout(7200);
@@ -384,7 +452,28 @@ begin
 
     // Test serialization
     Test('Serialize returns empty for no session', Length(LSession.Serialize) = 0);
-    Test('Deserialize accepts data', LSession.Deserialize(TBytes.Create(1, 2, 3, 4)));
+    Test('Deserialize rejects empty payload', not LSession.Deserialize(nil));
+
+    LOriginalD2I := wolfSSL_d2i_SSL_SESSION;
+    try
+      wolfSSL_d2i_SSL_SESSION := @StubWolfSSLD2ISessionFail;
+      Test('Deserialize rejects invalid payload when d2i API available',
+        not LSession.Deserialize(TBytes.Create(1, 2, 3, 4)));
+      Test('Serialize remains empty after failed deserialize',
+        Length(LSession.Serialize) = 0);
+    finally
+      wolfSSL_d2i_SSL_SESSION := LOriginalD2I;
+    end;
+
+    try
+      wolfSSL_d2i_SSL_SESSION := nil;
+      Test('Deserialize accepts data when d2i API unavailable',
+        LSession.Deserialize(TBytes.Create(5, 6, 7, 8)));
+      Test('Serialize returns cached data when d2i API unavailable',
+        Length(LSession.Serialize) = 4);
+    finally
+      wolfSSL_d2i_SSL_SESSION := LOriginalD2I;
+    end;
   finally
     LSession.Free;
   end;

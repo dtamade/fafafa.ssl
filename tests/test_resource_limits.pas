@@ -1,6 +1,6 @@
 {
   Phase C Week 3 - Resource Limits Test
-  
+
   Tests resource limitation scenarios:
   1. Large data block encryption (> 16MB)
   2. Certificate chain depth limit (> 10 layers)
@@ -12,53 +12,75 @@ program test_resource_limits;
 {$mode objfpc}{$H+}
 
 uses
-  SysUtils, Classes,
+  SysUtils, Classes, StrUtils,
+  fafafa.ssl,
   fafafa.ssl.base,
   fafafa.ssl.crypto.utils,
-  fafafa.ssl.cert,
-  fafafa.ssl.context;
+  fafafa.ssl.cert;
 
 type
   TTestResult = record
     TestName: string;
     Passed: Boolean;
-    ErrorMsg: string;
+    Skipped: Boolean;
+    Message: string;
   end;
 
 var
   Results: array of TTestResult;
   TotalTests: Integer = 0;
   PassedTests: Integer = 0;
+  FailedTests: Integer = 0;
+  SkippedTests: Integer = 0;
 
-procedure AddResult(const ATestName: string; APassed: Boolean; const AErrorMsg: string = '');
+procedure AddResult(const ATestName: string; APassed: Boolean; const AMessage: string = ''; ASkipped: Boolean = False);
 begin
   SetLength(Results, Length(Results) + 1);
   Results[High(Results)].TestName := ATestName;
   Results[High(Results)].Passed := APassed;
-  Results[High(Results)].ErrorMsg := AErrorMsg;
+  Results[High(Results)].Skipped := ASkipped;
+  Results[High(Results)].Message := AMessage;
   Inc(TotalTests);
-  if APassed then
-    Inc(PassedTests);
+
+  if ASkipped then
+    Inc(SkippedTests)
+  else if APassed then
+    Inc(PassedTests)
+  else
+    Inc(FailedTests);
 end;
 
 procedure PrintResults;
 var
-  i: Integer;
+  I: Integer;
+  ExecutedTests: Integer;
 begin
   WriteLn;
   WriteLn('=== Resource Limits Test Results ===');
   WriteLn;
-  for i := 0 to High(Results) do
+
+  for I := 0 to High(Results) do
   begin
-    Write('[', i + 1, '] ', Results[i].TestName, ': ');
-    if Results[i].Passed then
-      WriteLn('PASS')
+    Write('[', I + 1, '] ', Results[I].TestName, ': ');
+    if Results[I].Skipped then
+      WriteLn('SKIP', IfThen(Results[I].Message <> '', ' - ' + Results[I].Message, ''))
+    else if Results[I].Passed then
+      WriteLn('PASS', IfThen(Results[I].Message <> '', ' - ' + Results[I].Message, ''))
     else
-      WriteLn('FAIL - ', Results[i].ErrorMsg);
+      WriteLn('FAIL - ', Results[I].Message);
   end;
+
+  ExecutedTests := TotalTests - SkippedTests;
+
   WriteLn;
-  WriteLn('Total: ', TotalTests, ' tests, ', PassedTests, ' passed, ', TotalTests - PassedTests, ' failed');
-  WriteLn('Pass rate: ', (PassedTests * 100) div TotalTests, '%');
+  WriteLn('Total:   ', TotalTests);
+  WriteLn('Passed:  ', PassedTests);
+  WriteLn('Failed:  ', FailedTests);
+  WriteLn('Skipped: ', SkippedTests);
+  if ExecutedTests > 0 then
+    WriteLn('Pass rate (executed): ', (PassedTests * 100) div ExecutedTests, '%')
+  else
+    WriteLn('Pass rate (executed): N/A');
 end;
 
 { Test 1: Large data block encryption (> 16MB) }
@@ -68,30 +90,30 @@ const
 var
   LargeData: TBytes;
   Encrypted: TBytes;
-  ExceptionRaised: Boolean;
 begin
-  ExceptionRaised := False;
   try
     SetLength(LargeData, LARGE_SIZE);
     FillChar(LargeData[0], LARGE_SIZE, $AA);
-    
-    // Attempt to encrypt large data block
-    // Should either succeed with chunking or raise ESSLResourceException
+
     try
-      Encrypted := AES_256_GCM_Encrypt(LargeData, 'test-key-32-bytes-long-enough!', 'test-iv-12b!');
-      // If we get here, chunking worked
-      AddResult('Large data block encryption (17MB)', True);
+      Encrypted := TCryptoUtils.AES_GCM_Encrypt(
+        LargeData,
+        TBytes.Create(
+          1, 2, 3, 4, 5, 6, 7, 8,
+          9, 10, 11, 12, 13, 14, 15, 16,
+          17, 18, 19, 20, 21, 22, 23, 24,
+          25, 26, 27, 28, 29, 30, 31, 32
+        ),
+        TBytes.Create(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
+      );
+      AddResult('Large data block encryption (17MB)', Length(Encrypted) > 0);
     except
       on E: Exception do
       begin
-        // Expected: ESSLResourceException or similar
-        if (Pos('Resource', E.ClassName) > 0) or (Pos('Memory', E.Message) > 0) then
-        begin
-          AddResult('Large data block encryption (17MB)', True, 'Correctly raised: ' + E.ClassName);
-          ExceptionRaised := True;
-        end
+        if (Pos('resource', LowerCase(E.ClassName)) > 0) or (Pos('memory', LowerCase(E.Message)) > 0) then
+          AddResult('Large data block encryption (17MB)', True, 'resource guard raised: ' + E.ClassName)
         else
-          raise; // Unexpected exception
+          AddResult('Large data block encryption (17MB)', False, E.Message);
       end;
     end;
   except
@@ -102,19 +124,37 @@ end;
 
 { Test 2: Certificate chain depth limit }
 procedure TestCertificateChainDepthLimit;
+const
+  CHAIN_FIXTURE = 'tests/certificate/test_certs/deep-chain-over10.pem';
 var
   Cert: ISSLCertificate;
-  ExceptionRaised: Boolean;
 begin
-  ExceptionRaised := False;
+  if not FileExists(CHAIN_FIXTURE) then
+  begin
+    AddResult('Certificate chain depth limit (> 10 layers)', True,
+      'fixture not found: ' + CHAIN_FIXTURE, True);
+    Exit;
+  end;
+
   try
-    // Attempt to create/load a certificate chain with > 10 layers
-    // This is a placeholder - actual implementation would need test certificates
-    // For now, we test that the limit exists
-    
-    // Note: This test requires pre-generated certificate chains
-    // Marking as passed with note
-    AddResult('Certificate chain depth limit (> 10 layers)', True, 'Test requires pre-generated cert chains');
+    Cert := TSSLFactory.CreateCertificate;
+    if Cert = nil then
+    begin
+      AddResult('Certificate chain depth limit (> 10 layers)', False, 'CreateCertificate returned nil');
+      Exit;
+    end;
+
+    if not Cert.LoadFromFile(CHAIN_FIXTURE) then
+    begin
+      AddResult('Certificate chain depth limit (> 10 layers)', False, 'failed to load fixture');
+      Exit;
+    end;
+
+    // Deterministic baseline: fixture should at least be parseable.
+    if Cert.GetSubject = '' then
+      AddResult('Certificate chain depth limit (> 10 layers)', False, 'fixture subject empty')
+    else
+      AddResult('Certificate chain depth limit (> 10 layers)', True, 'fixture parsed');
   except
     on E: Exception do
       AddResult('Certificate chain depth limit (> 10 layers)', False, E.Message);
@@ -127,39 +167,29 @@ const
   MAX_CONNECTIONS = 1000;
 var
   Contexts: array of ISSLContext;
-  i: Integer;
-  ExceptionRaised: Boolean;
+  I: Integer;
 begin
-  ExceptionRaised := False;
   try
     SetLength(Contexts, MAX_CONNECTIONS);
-    
-    // Attempt to create many contexts
-    // Should either succeed or raise resource exception
+
     try
-      for i := 0 to MAX_CONNECTIONS - 1 do
-      begin
-        Contexts[i] := TSSLContext.Create;
-        // Basic initialization
-      end;
+      for I := 0 to MAX_CONNECTIONS - 1 do
+        Contexts[I] := TSSLFactory.CreateContext(sslCtxClient);
+
       AddResult('Concurrent connection memory limits (1000 contexts)', True);
     except
       on E: Exception do
       begin
-        if (Pos('Resource', E.ClassName) > 0) or (Pos('Memory', E.Message) > 0) then
-        begin
-          AddResult('Concurrent connection memory limits (1000 contexts)', True, 
-            'Correctly raised at ' + IntToStr(i) + ' contexts: ' + E.ClassName);
-          ExceptionRaised := True;
-        end
+        if (Pos('resource', LowerCase(E.ClassName)) > 0) or (Pos('memory', LowerCase(E.Message)) > 0) then
+          AddResult('Concurrent connection memory limits (1000 contexts)', True,
+            'resource guard raised at ' + IntToStr(I) + ': ' + E.ClassName)
         else
-          raise;
+          AddResult('Concurrent connection memory limits (1000 contexts)', False, E.Message);
       end;
     end;
-    
-    // Cleanup
-    for i := 0 to High(Contexts) do
-      Contexts[i] := nil;
+
+    for I := 0 to High(Contexts) do
+      Contexts[I] := nil;
   except
     on E: Exception do
       AddResult('Concurrent connection memory limits (1000 contexts)', False, E.Message);
@@ -169,31 +199,22 @@ end;
 { Test 4: File descriptor exhaustion }
 procedure TestFileDescriptorExhaustion;
 begin
-  try
-    // This test requires actual file operations and ulimit manipulation
-    // Marking as passed with note for manual testing
-    AddResult('File descriptor exhaustion', True, 'Test requires ulimit configuration');
-  except
-    on E: Exception do
-      AddResult('File descriptor exhaustion', False, E.Message);
-  end;
+  AddResult('File descriptor exhaustion', True,
+    'requires process ulimit manipulation; tracked as manual operational test', True);
 end;
 
 begin
   WriteLn('Starting Resource Limits Tests...');
   WriteLn;
-  
-  // Run all tests
+
   TestLargeDataBlockEncryption;
   TestCertificateChainDepthLimit;
   TestConcurrentConnectionMemoryLimits;
   TestFileDescriptorExhaustion;
-  
-  // Print results
+
   PrintResults;
-  
-  // Exit with appropriate code
-  if PassedTests = TotalTests then
+
+  if FailedTests = 0 then
     ExitCode := 0
   else
     ExitCode := 1;

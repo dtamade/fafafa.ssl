@@ -18,7 +18,6 @@ uses
   // Hash 算法
   fafafa.ssl.openssl.api.sha,
   fafafa.ssl.openssl.api.blake2,
-  fafafa.ssl.openssl.api.sha3,
   fafafa.ssl.openssl.api.sha3.evp,
   
   // 对称加密

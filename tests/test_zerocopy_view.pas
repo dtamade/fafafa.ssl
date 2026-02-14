@@ -301,12 +301,13 @@ var
   LData: TBytes;
   LView: TBytesView;
   LEncodedNormal: string;
+  LEncodedView: string;
   I: Integer;
 begin
   WriteLn;
   WriteLn('=== Base64Encode Tests ===');
 
-  // Test 1: Basic encoding (using TEncodingUtils directly since Base64EncodeView not implemented)
+  // Test 1: Basic encoding parity (TBytes vs TBytesView)
   WriteLn('  Creating test data...');
   SetLength(LData, 64);
   for I := 0 to 63 do
@@ -318,13 +319,20 @@ begin
   WriteLn('  Encoding with normal method...');
   LEncodedNormal := TEncodingUtils.Base64Encode(LData);
 
+  WriteLn('  Encoding with view method...');
+  LEncodedView := TEncodingUtils.Base64EncodeView(LView);
+
   Assert(LEncodedNormal <> '', 'Base64Encode: Result should not be empty');
   Assert(Length(LEncodedNormal) > 0, 'Base64Encode: Should produce non-empty result');
+  Assert(LEncodedView = LEncodedNormal, 'Base64EncodeView: Should match Base64Encode output');
 
   // Test 2: Empty data
   SetLength(LData, 0);
+  LView := TBytesView.FromBytes(LData);
   LEncodedNormal := TEncodingUtils.Base64Encode(LData);
+  LEncodedView := TEncodingUtils.Base64EncodeView(LView);
   Assert(LEncodedNormal = '', 'Base64Encode: Empty data should produce empty string');
+  Assert(LEncodedView = '', 'Base64EncodeView: Empty data should produce empty string');
 end;
 
 procedure TestZeroCopySemantics;
