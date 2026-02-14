@@ -103,7 +103,7 @@ fi
 read_linux_summary_field() {
   local file="$1"
   local key="$2"
-  grep -E "^- ${key}:" "$file" | head -1 | sed -E "s/^- ${key}: *//" | tr -d '`' || true
+  grep -E "^- ${key}:" "$file" | head -1 | sed -E "s/^- ${key}: *//" | tr -d '`*' || true
 }
 
 read_platform_summary_overall() {
@@ -128,9 +128,58 @@ normalize_platform_state() {
   esac
 }
 
+read_platform_step_status() {
+  local file="$1"
+  local step="$2"
+  awk -F'|' -v want_step="$step" '
+    {
+      if (NF >= 4) {
+        step_col = $2
+        status_col = $3
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", step_col)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", status_col)
+        gsub(/\*\*/, "", status_col)
+        if (tolower(step_col) == tolower(want_step)) {
+          print toupper(status_col)
+          exit
+        }
+      }
+    }
+  ' "$file" || true
+}
+
+normalize_check_state() {
+  local status="$1"
+  status="$(echo "$status" | tr -d '`*' | tr '[:lower:]' '[:upper:]' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
+  case "$status" in
+    PASS|FAIL|DRY_RUN|SKIP|PENDING|PROBE_ONLY|PROBE_OK|READY)
+      echo "$status"
+      ;;
+    *)
+      echo "TODO"
+      ;;
+  esac
+}
+
 linux_overall="$(read_linux_summary_field "$PROJECT_ROOT/$LINUX_SUMMARY" "Overall Status")"
 if [[ -z "$linux_overall" ]]; then
   linux_overall="UNKNOWN"
+fi
+
+linux_compile_check="TODO"
+linux_modules_check="TODO"
+linux_examples_check="TODO"
+linux_compile_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$LINUX_SUMMARY" "compile_all_modules")")"
+linux_modules_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$LINUX_SUMMARY" "run_all_module_tests")")"
+linux_examples_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$LINUX_SUMMARY" "verify_examples_compile")")"
+if [[ "$linux_compile_check" == "TODO" ]]; then
+  linux_compile_check="$(normalize_check_state "$linux_overall")"
+fi
+if [[ "$linux_modules_check" == "TODO" ]]; then
+  linux_modules_check="$(normalize_check_state "$linux_overall")"
+fi
+if [[ "$linux_examples_check" == "TODO" ]]; then
+  linux_examples_check="$(normalize_check_state "$linux_overall")"
 fi
 
 linux_examples_total="n/a"
@@ -214,6 +263,24 @@ case "$windows_state" in
     ;;
 esac
 
+macos_compile_check="TODO"
+macos_modules_check="TODO"
+macos_examples_check="TODO"
+if [[ -n "$MACOS_SUMMARY" && -f "$PROJECT_ROOT/$MACOS_SUMMARY" ]]; then
+  macos_compile_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$MACOS_SUMMARY" "compile")")"
+  macos_modules_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$MACOS_SUMMARY" "modules")")"
+  macos_examples_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$MACOS_SUMMARY" "examples")")"
+fi
+
+windows_compile_check="TODO"
+windows_modules_check="TODO"
+windows_examples_check="TODO"
+if [[ -n "$WINDOWS_SUMMARY" && -f "$PROJECT_ROOT/$WINDOWS_SUMMARY" ]]; then
+  windows_compile_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$WINDOWS_SUMMARY" "compile")")"
+  windows_modules_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$WINDOWS_SUMMARY" "modules")")"
+  windows_examples_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$WINDOWS_SUMMARY" "examples")")"
+fi
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] run_id=$RUN_ID"
   echo "[DRY-RUN] linux_summary=$LINUX_SUMMARY"
@@ -257,9 +324,9 @@ cat > "$PROJECT_ROOT/$OUTPUT_FILE" <<EOF_SUMMARY
 
 | check | linux | macos | windows |
 |-------|-------|-------|---------|
-| compile_all_modules | PASS | TODO | TODO |
-| p2_modules_gate | PASS | TODO | TODO |
-| examples_compile_gate | PASS | TODO | TODO |
+| compile_all_modules | $linux_compile_check | $macos_compile_check | $windows_compile_check |
+| p2_modules_gate | $linux_modules_check | $macos_modules_check | $windows_modules_check |
+| examples_compile_gate | $linux_examples_check | $macos_examples_check | $windows_examples_check |
 | overall | $linux_overall | $macos_overall_check | $windows_overall_check |
 
 ## 4) Next Actions
