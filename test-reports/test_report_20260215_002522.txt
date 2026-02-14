@@ -1,0 +1,53 @@
+========================================
+模块自动化测试报告
+时间: 2026年 02月 15日 星期日 00:25:22 CST
+========================================
+
+
+[0;34m[INFO][0m ========== 测试模块: PKCS7 ==========
+[0;32m[PASS][0m test_p2_pkcs7: 通过
+[0;32m[PASS][0m test_p2_pkcs7_comprehensive: 通过
+[0;34m[INFO][0m PKCS7 模块: 2/2 通过 (100.0%)
+
+[0;34m[INFO][0m ========== 测试模块: PKCS12 ==========
+[0;32m[PASS][0m test_p2_pkcs12: 通过
+[0;32m[PASS][0m test_p2_pkcs12_comprehensive: 通过
+[0;32m[PASS][0m test_p2_pkcs12_create_parse: 通过
+[0;34m[INFO][0m PKCS12 模块: 3/3 通过 (100.0%)
+
+[0;34m[INFO][0m ========== 测试模块: CMS ==========
+[0;32m[PASS][0m test_p2_cms: 通过
+[0;32m[PASS][0m test_p2_cms_comprehensive: 通过
+[0;34m[INFO][0m CMS 模块: 2/2 通过 (100.0%)
+
+[0;34m[INFO][0m ========== 测试模块: Store ==========
+[0;32m[PASS][0m test_p2_store: 通过
+[0;32m[PASS][0m test_p2_store_comprehensive: 通过
+[0;34m[INFO][0m Store 模块: 2/2 通过 (100.0%)
+
+[0;34m[INFO][0m ========== 测试模块: OCSP ==========
+[0;32m[PASS][0m test_p2_ocsp: 通过
+[0;32m[PASS][0m test_p2_ocsp_comprehensive: 通过
+[0;34m[INFO][0m OCSP 模块: 2/2 通过 (100.0%)
+
+[0;34m[INFO][0m ========== 测试模块: TS ==========
+[0;32m[PASS][0m test_p2_ts: 通过
+[0;32m[PASS][0m test_p2_ts_comprehensive: 通过
+[0;34m[INFO][0m TS 模块: 2/2 通过 (100.0%)
+
+[0;34m[INFO][0m ========== 测试模块: CT ==========
+[0;32m[PASS][0m test_p2_ct: 通过
+[0;32m[PASS][0m test_p2_ct_comprehensive: 通过
+[0;34m[INFO][0m CT 模块: 2/2 通过 (100.0%)
+
+========================================
+测试总结
+========================================
+总测试数: 15
+通过: 15
+失败: 0
+跳过: 0
+通过率: 100.0%
+
+详细报告: /home/dtamade/projects/fafafa.ssl/test-reports/test_report_20260215_002522.txt
+[0;32m[PASS][0m 测试通过（通过率: 100.0%）
