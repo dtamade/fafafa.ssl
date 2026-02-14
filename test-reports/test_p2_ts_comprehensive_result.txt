@@ -48,6 +48,7 @@ TS_RESP_print_bio 函数加载: PASS
 
 === 测试 6: TS 工具函数 ===
 TS_STATUS_INFO_get0_status 函数加载: PASS
+TS_STATUS_INFO_set_status 函数加载: PASS
 TS_TST_INFO_print_bio 函数加载: PASS
 TS_STATUS_INFO_print_bio 函数加载: PASS
 TS_STATUS_GRANTED (0): PASS
@@ -77,7 +78,21 @@ TS_RESP_get_status_info 函数加载: PASS
 TS_STATUS_INFO_get0_status 函数加载: PASS
 创建 TS 响应结构: PASS
 无状态信息响应验证应失败: PASS
-TS 状态写入 API 缺失时兜底路径有效: PASS
+TS 状态写入 API 可用: PASS
+创建 TS 状态结构: PASS
+设置 TS 拒绝状态: PASS
+写入响应状态信息: PASS
+读取响应状态信息: PASS
+读取拒绝状态值指针: PASS
+拒绝状态响应验证应失败: PASS
+
+=== 测试 10: TS 状态门控契约（Mock） ===
+Mock: rejection 状态应直接失败: PASS
+Mock: rejection 状态不应进入签名验证: PASS
+Mock: granted 状态应进入签名验证: PASS
+Mock: granted + verify success 应通过: PASS
+Mock: 缺失状态解析 API 应 fail-safe 拒绝: PASS
+Mock: 缺失状态解析 API 不应进入签名验证: PASS
 
 === 测试 10: TS 空响应签名验证失败场景 ===
 TS_RESP_new 函数加载: PASS
@@ -91,8 +106,8 @@ TS_RESP_free 函数加载: PASS
 =============================================================
 测试结果总结
 =============================================================
-总测试数: 58
-通过: 58
+总测试数: 71
+通过: 71
 失败: 0
 通过率: 100.0%
 

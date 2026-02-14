@@ -1,0 +1,11 @@
+{
+  "bench_scheme": "rsa_pkcs1_sha256",
+  "bench_key": "tests/certificate/test_certs/signer_key.pem",
+  "bench_iterations": "1",
+  "bench_warmup": "0",
+  "crt_total_ms": "87",
+  "crt_avg_ms": "87.0000",
+  "d_total_ms": "333",
+  "d_avg_ms": "333.0000",
+  "speedup_d_over_crt": "3.83x"
+}

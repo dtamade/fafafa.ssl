@@ -44,9 +44,11 @@ Purpose: Validate PKCS7 Cryptographic Message Syntax API
                              Test Results Summary
 ================================================================================
 
-Total Tests:  10
+Total Tests:  12
 Passed:       10
 Failed:       0
+Skipped:      2
+Skip breakdown: dependency=0, version=0, environment=0, capability=2, other=0, stack-partial=1
 
 Result: ALL TESTS PASSED [OK]
 
