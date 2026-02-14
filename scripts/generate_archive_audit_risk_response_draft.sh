@@ -97,6 +97,43 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_RISK_RESPONSE_${MATRIX_ID}.md"
 fi
 
+resolve_input_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$path" ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$PROJECT_ROOT/$path" ]]; then
+    echo "$PROJECT_ROOT/$path"
+    return
+  fi
+
+  echo "$path"
+}
+
+resolve_output_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+DASHBOARD_FILE="$(resolve_input_path "$DASHBOARD_FILE")"
+CHECKLIST_FILE="$(resolve_input_path "$CHECKLIST_FILE")"
+HOLD_REVIEW_FILE="$(resolve_input_path "$HOLD_REVIEW_FILE")"
+WEEKLY_REPORT_FILE="$(resolve_input_path "$WEEKLY_REPORT_FILE")"
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] matrix_id=$MATRIX_ID"
   echo "[DRY-RUN] dashboard=$DASHBOARD_FILE"

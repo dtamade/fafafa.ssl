@@ -35,6 +35,7 @@ var
   TotalTests: Integer = 0;
   PassedTests: Integer = 0;
   FailedTests: Integer = 0;
+  SkippedTests: Integer = 0;
   OpenSSLLoaded: Boolean = False;
 
 procedure StartTest(const TestName: string);
@@ -57,7 +58,7 @@ end;
 
 procedure SkipTest(const Reason: string);
 begin
-  Inc(PassedTests);  // 跳过的测试计为通过
+  Inc(SkippedTests);
   WriteLn('SKIP: ', Reason);
 end;
 
@@ -884,26 +885,32 @@ end;
 // ========================================================================
 // 主程序
 // ========================================================================
-
 procedure PrintSummary;
 var
   PassRate: Double;
+  ExecutedTests: Integer;
 begin
   WriteLn;
   WriteLn('=== Test Summary ===');
   WriteLn('Total Tests: ', TotalTests);
-  if TotalTests > 0 then
-    PassRate := (PassedTests / TotalTests) * 100.0
+  ExecutedTests := TotalTests - SkippedTests;
+
+  if ExecutedTests > 0 then
+    PassRate := (PassedTests / ExecutedTests) * 100.0
   else
-    PassRate := 0;
-  WriteLn('Passed: ', PassedTests, ' (', PassRate:0:1, '%)');
-  WriteLn('Failed: ', FailedTests, ' (', (100 - PassRate):0:1, '%)');
+    PassRate := 100.0;
+
+  WriteLn('Passed: ', PassedTests);
+  WriteLn('Failed: ', FailedTests);
+  WriteLn('Skipped: ', SkippedTests);
+  WriteLn('Pass rate (executed): ', PassRate:0:1, '%');
 
   if FailedTests = 0 then
-    WriteLn('All tests passed!')
+    WriteLn('All executed tests passed!')
   else
     WriteLn('Some tests failed!');
 end;
+
 
 procedure LoadOpenSSLFunctions;
 begin

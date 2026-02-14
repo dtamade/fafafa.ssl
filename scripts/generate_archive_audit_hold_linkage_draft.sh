@@ -85,6 +85,41 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_HOLD_LINKAGE_${LINKAGE_ID}.md"
 fi
 
+resolve_input_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$path" ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$PROJECT_ROOT/$path" ]]; then
+    echo "$PROJECT_ROOT/$path"
+    return
+  fi
+
+  echo "$path"
+}
+
+resolve_output_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+SAMPLING_FILE="$(resolve_input_path "$SAMPLING_FILE")"
+HOLD_REVIEW_FILE="$(resolve_input_path "$HOLD_REVIEW_FILE")"
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] linkage_id=$LINKAGE_ID"
   echo "[DRY-RUN] sampling_file=$SAMPLING_FILE"

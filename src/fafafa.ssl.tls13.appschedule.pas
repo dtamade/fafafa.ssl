@@ -2,10 +2,11 @@
  * Unit: fafafa.ssl.tls13.appschedule
  * Purpose: TLS 1.3 应用流量密钥派生（纯 Pascal）
  *
- * 当前实现：SHA-256 路径（no-PSK）
+ * 当前实现：SHA-256 / SHA-384 路径（no-PSK）
  * - master_secret
  * - c ap traffic / s ap traffic
  * - application write/read key + iv
+ * - traffic update
  *}
 
 unit fafafa.ssl.tls13.appschedule;
@@ -79,6 +80,7 @@ uses
 
 const
   TLS13_SHA256_HASH_SIZE = 32;
+  TLS13_SHA384_HASH_SIZE = 48;
   TLS13_DEFAULT_IV_SIZE = 12;
 
 procedure InitTLS13ApplicationSecrets(out ASecrets: TTLS13ApplicationSecrets);
@@ -100,6 +102,45 @@ begin
   InitTLS13ApplicationSecrets(ASecrets);
 end;
 
+function HashTranscriptForSuite(ACipherSuite: Word; const AData: TBytes): TBytes;
+begin
+  if TLS13CipherSuiteIsSHA256(ACipherSuite) then
+    Exit(SHA256(AData));
+
+  if TLS13CipherSuiteIsSHA384(ACipherSuite) then
+    Exit(SHA384(AData));
+
+  SetLength(Result, 0);
+end;
+
+function HKDFExtractForSuite(ACipherSuite: Word; const ASalt, AIKM: TBytes): TBytes;
+begin
+  if TLS13CipherSuiteIsSHA256(ACipherSuite) then
+    Exit(HKDF_Extract_SHA256(ASalt, AIKM));
+
+  if TLS13CipherSuiteIsSHA384(ACipherSuite) then
+    Exit(HKDF_Extract_SHA384(ASalt, AIKM));
+
+  SetLength(Result, 0);
+end;
+
+function HKDFExpandLabelForSuite(
+  ACipherSuite: Word;
+  const ASecret: TBytes;
+  const ALabel: string;
+  const AContext: TBytes;
+  ALength: Integer
+): TBytes;
+begin
+  if TLS13CipherSuiteIsSHA256(ACipherSuite) then
+    Exit(TLS13_HKDF_Expand_Label_SHA256(ASecret, ALabel, AContext, ALength));
+
+  if TLS13CipherSuiteIsSHA384(ACipherSuite) then
+    Exit(TLS13_HKDF_Expand_Label_SHA384(ASecret, ALabel, AContext, ALength));
+
+  SetLength(Result, 0);
+end;
+
 function TryDeriveTLS13ApplicationSecrets(
   ACipherSuite: Word;
   const AHandshakeSecret: TBytes;
@@ -108,6 +149,7 @@ function TryDeriveTLS13ApplicationSecrets(
   out AError: string
 ): Boolean;
 var
+  LHashSize: Integer;
   LKeyLength: Integer;
   LZeroLength: TBytes;
   LZeroHash: TBytes;
@@ -117,9 +159,10 @@ begin
   AError := '';
   Result := False;
 
-  if not TLS13CipherSuiteIsSHA256(ACipherSuite) then
+  LHashSize := TLS13CipherSuiteHashSize(ACipherSuite);
+  if LHashSize <= 0 then
   begin
-    AError := Format('Cipher suite 0x%.4x requires non-SHA256 application key schedule (not implemented yet)', [ACipherSuite]);
+    AError := Format('Unsupported TLS 1.3 cipher suite for application key schedule: 0x%.4x', [ACipherSuite]);
     Exit;
   end;
 
@@ -130,68 +173,78 @@ begin
     Exit;
   end;
 
-  if Length(AHandshakeSecret) <> TLS13_SHA256_HASH_SIZE then
+  if Length(AHandshakeSecret) <> LHashSize then
   begin
-    AError := 'TLS 1.3 handshake secret length must be 32 bytes (SHA-256 path)';
+    AError := Format(
+      'TLS 1.3 handshake secret length must be %d bytes for selected hash path (actual=%d)',
+      [LHashSize, Length(AHandshakeSecret)]
+    );
     Exit;
   end;
 
   SetLength(LZeroLength, 0);
-  SetLength(LZeroHash, TLS13_SHA256_HASH_SIZE);
-  FillChar(LZeroHash[0], TLS13_SHA256_HASH_SIZE, 0);
-  LEmptyHash := SHA256(LZeroLength);
+  SetLength(LZeroHash, LHashSize);
+  FillChar(LZeroHash[0], LHashSize, 0);
+  LEmptyHash := HashTranscriptForSuite(ACipherSuite, LZeroLength);
 
   ASecrets.Valid := True;
   ASecrets.CipherSuite := ACipherSuite;
-  ASecrets.HashSize := TLS13_SHA256_HASH_SIZE;
+  ASecrets.HashSize := LHashSize;
   ASecrets.KeyLength := LKeyLength;
   ASecrets.IVLength := TLS13_DEFAULT_IV_SIZE;
-  ASecrets.TranscriptHash := SHA256(ATranscriptData);
+  ASecrets.TranscriptHash := HashTranscriptForSuite(ACipherSuite, ATranscriptData);
 
-  ASecrets.DerivedSecret := TLS13_HKDF_Expand_Label_SHA256(
+  ASecrets.DerivedSecret := HKDFExpandLabelForSuite(
+    ACipherSuite,
     AHandshakeSecret,
     'derived',
     LEmptyHash,
-    TLS13_SHA256_HASH_SIZE
+    LHashSize
   );
-  ASecrets.MasterSecret := HKDF_Extract_SHA256(ASecrets.DerivedSecret, LZeroHash);
+  ASecrets.MasterSecret := HKDFExtractForSuite(ACipherSuite, ASecrets.DerivedSecret, LZeroHash);
 
-  ASecrets.ClientApplicationTrafficSecret := TLS13_HKDF_Expand_Label_SHA256(
+  ASecrets.ClientApplicationTrafficSecret := HKDFExpandLabelForSuite(
+    ACipherSuite,
     ASecrets.MasterSecret,
     'c ap traffic',
     ASecrets.TranscriptHash,
-    TLS13_SHA256_HASH_SIZE
+    LHashSize
   );
 
-  ASecrets.ServerApplicationTrafficSecret := TLS13_HKDF_Expand_Label_SHA256(
+  ASecrets.ServerApplicationTrafficSecret := HKDFExpandLabelForSuite(
+    ACipherSuite,
     ASecrets.MasterSecret,
     's ap traffic',
     ASecrets.TranscriptHash,
-    TLS13_SHA256_HASH_SIZE
+    LHashSize
   );
 
-  ASecrets.ClientApplicationKey := TLS13_HKDF_Expand_Label_SHA256(
+  ASecrets.ClientApplicationKey := HKDFExpandLabelForSuite(
+    ACipherSuite,
     ASecrets.ClientApplicationTrafficSecret,
     'key',
     LZeroLength,
     LKeyLength
   );
 
-  ASecrets.ServerApplicationKey := TLS13_HKDF_Expand_Label_SHA256(
+  ASecrets.ServerApplicationKey := HKDFExpandLabelForSuite(
+    ACipherSuite,
     ASecrets.ServerApplicationTrafficSecret,
     'key',
     LZeroLength,
     LKeyLength
   );
 
-  ASecrets.ClientApplicationIV := TLS13_HKDF_Expand_Label_SHA256(
+  ASecrets.ClientApplicationIV := HKDFExpandLabelForSuite(
+    ACipherSuite,
     ASecrets.ClientApplicationTrafficSecret,
     'iv',
     LZeroLength,
     TLS13_DEFAULT_IV_SIZE
   );
 
-  ASecrets.ServerApplicationIV := TLS13_HKDF_Expand_Label_SHA256(
+  ASecrets.ServerApplicationIV := HKDFExpandLabelForSuite(
+    ACipherSuite,
     ASecrets.ServerApplicationTrafficSecret,
     'iv',
     LZeroLength,
@@ -201,8 +254,10 @@ begin
   Result := True;
 end;
 
-function TryNextTLS13ApplicationTrafficSecretSHA256(
+function TryNextTLS13ApplicationTrafficSecret(
+  ACipherSuite: Word;
   const ACurrentTrafficSecret: TBytes;
+  AHashSize: Integer;
   out ANextTrafficSecret: TBytes;
   out AError: string
 ): Boolean;
@@ -213,26 +268,29 @@ begin
   AError := '';
   Result := False;
 
-  if Length(ACurrentTrafficSecret) <> TLS13_SHA256_HASH_SIZE then
+  if Length(ACurrentTrafficSecret) <> AHashSize then
   begin
     AError := Format('Invalid traffic secret length for key update (expected=%d actual=%d)',
-      [TLS13_SHA256_HASH_SIZE, Length(ACurrentTrafficSecret)]);
+      [AHashSize, Length(ACurrentTrafficSecret)]);
     Exit;
   end;
 
   SetLength(LZeroLength, 0);
-  ANextTrafficSecret := TLS13_HKDF_Expand_Label_SHA256(
+  ANextTrafficSecret := HKDFExpandLabelForSuite(
+    ACipherSuite,
     ACurrentTrafficSecret,
     'traffic upd',
     LZeroLength,
-    TLS13_SHA256_HASH_SIZE
+    AHashSize
   );
 
   Result := True;
 end;
 
-function TryDeriveTLS13ApplicationKeyMaterialSHA256(
+function TryDeriveTLS13ApplicationKeyMaterial(
+  ACipherSuite: Word;
   const ATrafficSecret: TBytes;
+  AHashSize: Integer;
   AKeyLength, AIVLength: Integer;
   out AKey, AIV: TBytes;
   out AError: string
@@ -245,10 +303,10 @@ begin
   AError := '';
   Result := False;
 
-  if Length(ATrafficSecret) <> TLS13_SHA256_HASH_SIZE then
+  if Length(ATrafficSecret) <> AHashSize then
   begin
     AError := Format('Invalid traffic secret length for key derivation (expected=%d actual=%d)',
-      [TLS13_SHA256_HASH_SIZE, Length(ATrafficSecret)]);
+      [AHashSize, Length(ATrafficSecret)]);
     Exit;
   end;
 
@@ -265,8 +323,8 @@ begin
   end;
 
   SetLength(LZeroLength, 0);
-  AKey := TLS13_HKDF_Expand_Label_SHA256(ATrafficSecret, 'key', LZeroLength, AKeyLength);
-  AIV := TLS13_HKDF_Expand_Label_SHA256(ATrafficSecret, 'iv', LZeroLength, AIVLength);
+  AKey := HKDFExpandLabelForSuite(ACipherSuite, ATrafficSecret, 'key', LZeroLength, AKeyLength);
+  AIV := HKDFExpandLabelForSuite(ACipherSuite, ATrafficSecret, 'iv', LZeroLength, AIVLength);
 
   Result := True;
 end;
@@ -277,6 +335,7 @@ function TryUpdateTLS13ApplicationDirection(
   out AError: string
 ): Boolean;
 var
+  LHashSize: Integer;
   LNextTrafficSecret: TBytes;
   LNextKey: TBytes;
   LNextIV: TBytes;
@@ -290,17 +349,36 @@ begin
     Exit;
   end;
 
-  if not TLS13CipherSuiteIsSHA256(ASecrets.CipherSuite) then
+  LHashSize := TLS13CipherSuiteHashSize(ASecrets.CipherSuite);
+  if LHashSize <= 0 then
   begin
-    AError := Format('Cipher suite 0x%.4x does not support SHA256 key update path yet', [ASecrets.CipherSuite]);
+    AError := Format('Cipher suite 0x%.4x does not support application key update path yet', [ASecrets.CipherSuite]);
     Exit;
   end;
 
-  if not TryNextTLS13ApplicationTrafficSecretSHA256(ATrafficSecret, LNextTrafficSecret, AError) then
+  if ASecrets.HashSize <= 0 then
+    ASecrets.HashSize := LHashSize;
+
+  if ASecrets.HashSize <> LHashSize then
+  begin
+    AError := Format('Application secret hash size mismatch (expected=%d actual=%d)',
+      [LHashSize, ASecrets.HashSize]);
+    Exit;
+  end;
+
+  if not TryNextTLS13ApplicationTrafficSecret(
+    ASecrets.CipherSuite,
+    ATrafficSecret,
+    ASecrets.HashSize,
+    LNextTrafficSecret,
+    AError
+  ) then
     Exit;
 
-  if not TryDeriveTLS13ApplicationKeyMaterialSHA256(
+  if not TryDeriveTLS13ApplicationKeyMaterial(
+    ASecrets.CipherSuite,
     LNextTrafficSecret,
+    ASecrets.HashSize,
     ASecrets.KeyLength,
     ASecrets.IVLength,
     LNextKey,

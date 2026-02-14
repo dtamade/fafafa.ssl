@@ -8,7 +8,8 @@ uses
   // 测试框架
   test_base,
   // 单元测试
-  test_openssl_core_unit;
+  test_openssl_core_unit,
+  test_openssl_async_unit;
 
 var
   App: TTestRunner;

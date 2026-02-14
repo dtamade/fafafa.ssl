@@ -17,6 +17,7 @@ uses
   fafafa.ssl.openssl.api.asn1,
   fafafa.ssl.openssl.api.obj,
   fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.bn,
   fafafa.ssl.openssl.api.rand;
 
 const
@@ -500,7 +501,11 @@ begin
   // TS_STATUS_INFO 函数
   TS_STATUS_INFO_new := TTS_STATUS_INFO_new(GetCryptoProcAddress('TS_STATUS_INFO_new'));
   TS_STATUS_INFO_free := TTS_STATUS_INFO_free(GetCryptoProcAddress('TS_STATUS_INFO_free'));
+  TS_STATUS_INFO_dup := TTS_STATUS_INFO_dup(GetCryptoProcAddress('TS_STATUS_INFO_dup'));
+  TS_STATUS_INFO_set_status := TTS_STATUS_INFO_set_status(GetCryptoProcAddress('TS_STATUS_INFO_set_status'));
   TS_STATUS_INFO_get0_status := TTS_STATUS_INFO_get0_status(GetCryptoProcAddress('TS_STATUS_INFO_get0_status'));
+  TS_STATUS_INFO_get0_text := TTS_STATUS_INFO_get0_text(GetCryptoProcAddress('TS_STATUS_INFO_get0_text'));
+  TS_STATUS_INFO_get0_failure_info := TTS_STATUS_INFO_get0_failure_info(GetCryptoProcAddress('TS_STATUS_INFO_get0_failure_info'));
   TS_STATUS_INFO_print_bio := TTS_STATUS_INFO_print_bio(GetCryptoProcAddress('TS_STATUS_INFO_print_bio'));
   
   // TS_RESP 函数
@@ -535,7 +540,7 @@ end;
 
 procedure UnloadTSFunctions;
 begin
-  // 重置所有函数指�?
+  // 重置所有函数指针
   TS_MSG_IMPRINT_new := nil;
   TS_MSG_IMPRINT_free := nil;
   TS_REQ_new := nil;
@@ -544,6 +549,12 @@ begin
   TS_TST_INFO_free := nil;
   TS_STATUS_INFO_new := nil;
   TS_STATUS_INFO_free := nil;
+  TS_STATUS_INFO_dup := nil;
+  TS_STATUS_INFO_set_status := nil;
+  TS_STATUS_INFO_get0_status := nil;
+  TS_STATUS_INFO_get0_text := nil;
+  TS_STATUS_INFO_get0_failure_info := nil;
+  TS_STATUS_INFO_print_bio := nil;
   TS_RESP_new := nil;
   TS_RESP_free := nil;
   TS_RESP_CTX_new := nil;
@@ -557,10 +568,13 @@ var
   MsgImprint: PTS_MSG_IMPRINT;
   Policy: PASN1_OBJECT;
   Nonce: PASN1_INTEGER;
+  NonceBN: PBIGNUM;
   MD: PEVP_MD;
   MDCtx: PEVP_MD_CTX;
   Hash: array[0..EVP_MAX_MD_SIZE-1] of Byte;
   HashLen: Cardinal;
+  DataPtr: PByte;
+  ImprintAlgo: Pointer;
   RandomBytes: array[0..7] of Byte;
 begin
   Result := nil;
@@ -577,63 +591,199 @@ begin
       TS_REQ_set_version(Result, 1);
       
     // Create message imprint
-    if Assigned(TS_MSG_IMPRINT_new) then
+    if not Assigned(TS_MSG_IMPRINT_new) then
     begin
-      MsgImprint := TS_MSG_IMPRINT_new();
-      if MsgImprint <> nil then
+      if Assigned(TS_REQ_free) then
+        TS_REQ_free(Result);
+      Exit(nil);
+    end;
+
+    MsgImprint := TS_MSG_IMPRINT_new();
+    if MsgImprint = nil then
+    begin
+      if Assigned(TS_REQ_free) then
+        TS_REQ_free(Result);
+      Exit(nil);
+    end;
+
+    // Calculate SHA-256 digest for RFC3161 message imprint
+    MD := EVP_sha256();
+    if (MD = nil) or
+       (not Assigned(EVP_MD_CTX_new)) or
+       (not Assigned(EVP_DigestInit_ex)) or
+       (not Assigned(EVP_DigestUpdate)) or
+       (not Assigned(EVP_DigestFinal_ex)) or
+       (not Assigned(TS_MSG_IMPRINT_set_msg)) or
+       (not Assigned(TS_REQ_set_msg_imprint)) then
+    begin
+      if Assigned(TS_MSG_IMPRINT_free) then
+        TS_MSG_IMPRINT_free(MsgImprint);
+      if Assigned(TS_REQ_free) then
+        TS_REQ_free(Result);
+      Exit(nil);
+    end;
+
+    MDCtx := EVP_MD_CTX_new();
+    if MDCtx = nil then
+    begin
+      if Assigned(TS_MSG_IMPRINT_free) then
+        TS_MSG_IMPRINT_free(MsgImprint);
+      if Assigned(TS_REQ_free) then
+        TS_REQ_free(Result);
+      Exit(nil);
+    end;
+
+    try
+      DataPtr := nil;
+      if Length(Data) > 0 then
+        DataPtr := @Data[0];
+
+      if (EVP_DigestInit_ex(MDCtx, MD, nil) <> 1) or
+         (EVP_DigestUpdate(MDCtx, DataPtr, Cardinal(Length(Data))) <> 1) then
       begin
-        // Calculate hash
-        MD := EVP_sha256();
-        if Assigned(EVP_MD_CTX_new) and Assigned(EVP_DigestInit_ex) and 
-          Assigned(EVP_DigestUpdate) and Assigned(EVP_DigestFinal_ex) then
+        if Assigned(TS_MSG_IMPRINT_free) then
+          TS_MSG_IMPRINT_free(MsgImprint);
+        if Assigned(TS_REQ_free) then
+          TS_REQ_free(Result);
+        Exit(nil);
+      end;
+
+      HashLen := 0;
+      if EVP_DigestFinal_ex(MDCtx, @Hash[0], HashLen) <> 1 then
+      begin
+        if Assigned(TS_MSG_IMPRINT_free) then
+          TS_MSG_IMPRINT_free(MsgImprint);
+        if Assigned(TS_REQ_free) then
+          TS_REQ_free(Result);
+        Exit(nil);
+      end;
+    finally
+      if Assigned(EVP_MD_CTX_free) then
+        EVP_MD_CTX_free(MDCtx);
+    end;
+
+    // Configure digest algorithm in imprint when API is available.
+    if Assigned(TS_MSG_IMPRINT_get_algo) and Assigned(X509_ALGOR_set_md) then
+    begin
+      ImprintAlgo := TS_MSG_IMPRINT_get_algo(MsgImprint);
+      if ImprintAlgo <> nil then
+        X509_ALGOR_set_md(ImprintAlgo, MD);
+    end;
+
+    if TS_MSG_IMPRINT_set_msg(MsgImprint, @Hash[0], Integer(HashLen)) <> 1 then
+    begin
+      if Assigned(TS_MSG_IMPRINT_free) then
+        TS_MSG_IMPRINT_free(MsgImprint);
+      if Assigned(TS_REQ_free) then
+        TS_REQ_free(Result);
+      Exit(nil);
+    end;
+
+    if TS_REQ_set_msg_imprint(Result, MsgImprint) <> 1 then
+    begin
+      if Assigned(TS_MSG_IMPRINT_free) then
+        TS_MSG_IMPRINT_free(MsgImprint);
+      if Assigned(TS_REQ_free) then
+        TS_REQ_free(Result);
+      Exit(nil);
+    end;
+    
+    // Set policy OID when provided: strict parse + strict attach
+    if PolicyOID <> '' then
+    begin
+      if not Assigned(TS_REQ_set_policy_id) then
+      begin
+        if Assigned(TS_REQ_free) then
+          TS_REQ_free(Result);
+        Exit(nil);
+      end;
+
+      if not Assigned(OBJ_txt2obj) then
+      begin
+        LoadOBJModule(GetCryptoLibHandle);
+      end;
+
+      if not Assigned(OBJ_txt2obj) then
+      begin
+        if Assigned(TS_REQ_free) then
+          TS_REQ_free(Result);
+        Exit(nil);
+      end;
+
+      Policy := OBJ_txt2obj(PAnsiChar(AnsiString(PolicyOID)), 1);
+      if Policy = nil then
+      begin
+        if Assigned(TS_REQ_free) then
+          TS_REQ_free(Result);
+        Exit(nil);
+      end;
+
+      if TS_REQ_set_policy_id(Result, Policy) <> 1 then
+      begin
+        if Assigned(TS_REQ_free) then
+          TS_REQ_free(Result);
+        Exit(nil);
+      end;
+
+      // Note: ASN1_OBJECT_free may not be available, object will be freed with request
+    end;
+    // Set nonce (random number)
+    if Assigned(TS_REQ_set_nonce) then
+    begin
+      FillChar(RandomBytes, SizeOf(RandomBytes), 0);
+      if Assigned(RAND_bytes) then
+        RAND_bytes(@RandomBytes[0], Length(RandomBytes))
+      else
+        PQWord(@RandomBytes[0])^ := QWord(GetTickCount64);
+
+      Nonce := nil;
+
+      // Prefer BN-based conversion for full 64-bit random nonce
+      if not TOpenSSLLoader.IsModuleLoaded(osmBN) then
+        LoadOpenSSLBN;
+
+      if Assigned(BN_bin2bn) and Assigned(BN_to_ASN1_INTEGER) then
+      begin
+        NonceBN := BN_bin2bn(@RandomBytes[0], Length(RandomBytes), nil);
+        if NonceBN <> nil then
         begin
-          MDCtx := EVP_MD_CTX_new();
-          if MDCtx <> nil then
-          begin
-            try
-              if (EVP_DigestInit_ex(MDCtx, MD, nil) = 1) and
-                (EVP_DigestUpdate(MDCtx, @Data[0], Cardinal(Length(Data))) = 1) then
-              begin
-                HashLen := 0;
-                if EVP_DigestFinal_ex(MDCtx, @Hash[0], HashLen) = 1 then
-                begin
-                  // Set hash message directly (simplified - proper algo setup requires additional APIs)
-                  if Assigned(TS_MSG_IMPRINT_set_msg) then
-                    TS_MSG_IMPRINT_set_msg(MsgImprint, @Hash[0], Integer(HashLen));
-                end;
-              end;
-            finally
-              if Assigned(EVP_MD_CTX_free) then
-                EVP_MD_CTX_free(MDCtx);
-            end;
+          try
+            Nonce := BN_to_ASN1_INTEGER(NonceBN, nil);
+          finally
+            if Assigned(BN_free) then
+              BN_free(NonceBN);
           end;
         end;
-        
-        // Set message imprint
-        if Assigned(TS_REQ_set_msg_imprint) then
-          TS_REQ_set_msg_imprint(Result, MsgImprint);
       end;
-    end;
-    
-    // Set policy OID if provided (simplified implementation)
-    if (PolicyOID <> '') and Assigned(TS_REQ_set_policy_id) and Assigned(OBJ_txt2obj) then
-    begin
-      Policy := OBJ_txt2obj(PAnsiChar(PolicyOID), 0);
-      if Policy <> nil then
+
+      // Fallback path for environments where BN helpers are unavailable
+      if (Nonce = nil) and Assigned(ASN1_INTEGER_new) and Assigned(ASN1_INTEGER_set) then
       begin
-        TS_REQ_set_policy_id(Result, Policy);
-        // Note: ASN1_OBJECT_free may not be available, object will be freed with request
+        Nonce := ASN1_INTEGER_new();
+        if Nonce <> nil then
+        begin
+          if ASN1_INTEGER_set(Nonce,
+            LongInt((LongWord(RandomBytes[4]) shl 24) or
+                    (LongWord(RandomBytes[5]) shl 16) or
+                    (LongWord(RandomBytes[6]) shl 8) or
+                    LongWord(RandomBytes[7]))) <> 1 then
+          begin
+            if Assigned(ASN1_INTEGER_free) then
+              ASN1_INTEGER_free(Nonce);
+            Nonce := nil;
+          end;
+        end;
       end;
-    end;
-    
-    // Set nonce (random number) - simplified
-    if Assigned(TS_REQ_set_nonce) and Assigned(RAND_bytes) then
-    begin
-      if RAND_bytes(@RandomBytes[0], Length(RandomBytes)) = 1 then
+
+      if Nonce <> nil then
       begin
-        // Create nonce from random bytes (simplified - proper ASN1_INTEGER setup requires additional APIs)
-        // For now, skip nonce to avoid compilation issues
-        // Future enhancement: implement proper ASN1_INTEGER creation
+        if TS_REQ_set_nonce(Result, Nonce) <> 1 then
+        begin
+          if Assigned(ASN1_INTEGER_free) then
+            ASN1_INTEGER_free(Nonce);
+        end
+        else if Assigned(ASN1_INTEGER_free) then
+          ASN1_INTEGER_free(Nonce);
       end;
     end;
     
@@ -655,6 +805,9 @@ var
   StatusInfo: PTS_STATUS_INFO;
   Status: PASN1_INTEGER;
   StatusValue: Integer;
+  StatusInt64: Int64;
+  StatusUInt64: UInt64;
+  StatusExtracted: Boolean;
 begin
   Result := False;
   
@@ -668,10 +821,49 @@ begin
   Status := TS_STATUS_INFO_get0_status(StatusInfo);
   if Status = nil then Exit;
   
-  // Status check (simplified - ASN1_INTEGER_get may not be available)
-  // For basic implementation, we assume granted status if status info exists
-  // Future enhancement: implement proper status value extraction
-  if StatusInfo = nil then
+  // Status check: only GRANTED / GRANTED_WITH_MODS may continue verification
+  StatusExtracted := False;
+  StatusValue := -1;
+
+  if Assigned(ASN1_INTEGER_get_int64) then
+  begin
+    StatusInt64 := 0;
+    if ASN1_INTEGER_get_int64(@StatusInt64, Status) = 1 then
+    begin
+      if (StatusInt64 >= Low(Integer)) and (StatusInt64 <= High(Integer)) then
+      begin
+        StatusValue := Integer(StatusInt64);
+        StatusExtracted := True;
+      end;
+    end;
+  end;
+
+  if (not StatusExtracted) and Assigned(ASN1_INTEGER_get_uint64) then
+  begin
+    StatusUInt64 := 0;
+    if ASN1_INTEGER_get_uint64(@StatusUInt64, Status) = 1 then
+    begin
+      if StatusUInt64 <= High(Integer) then
+      begin
+        StatusValue := Integer(StatusUInt64);
+        StatusExtracted := True;
+      end;
+    end;
+  end;
+
+  if (not StatusExtracted) and Assigned(ASN1_INTEGER_get) then
+  begin
+    StatusValue := ASN1_INTEGER_get(Status);
+    StatusExtracted := True;
+  end;
+
+  // Fail-safe: cannot extract status => reject
+  if not StatusExtracted then
+    Exit;
+
+  // RFC3161 status gate
+  if (StatusValue <> TS_STATUS_GRANTED) and
+     (StatusValue <> TS_STATUS_GRANTED_WITH_MODS) then
     Exit;
   
   // 创建验证上下?

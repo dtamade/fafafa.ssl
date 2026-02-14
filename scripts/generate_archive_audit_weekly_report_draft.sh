@@ -89,6 +89,8 @@ fi
 
 if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_WEEKLY_REPORT_${WEEK_ID}.md"
+elif [[ "$OUTPUT_FILE" != /* ]]; then
+  OUTPUT_FILE="$PROJECT_ROOT/$OUTPUT_FILE"
 fi
 
 if [[ "$DRY_RUN" == "true" ]]; then
@@ -124,6 +126,15 @@ mapfile -t CHECKLIST_FILES < <(
   done
 )
 
+resolve_report_abs_path() {
+  local file="$1"
+  if [[ "$file" == /* ]]; then
+    echo "$file"
+  else
+    echo "$PROJECT_ROOT/$file"
+  fi
+}
+
 extract_metric() {
   local file="$1"
   local key="$2"
@@ -155,7 +166,7 @@ checklist_fail=0
 blocking_count=0
 
 for file in "${HOLD_FILES[@]}"; do
-  abs="$PROJECT_ROOT/$file"
+  abs="$(resolve_report_abs_path "$file")"
   overdue="$(to_int_or_zero "$(extract_metric "$abs" "overdue")")"
   due_soon="$(to_int_or_zero "$(extract_metric "$abs" "due_soon")")"
   missing="$(to_int_or_zero "$(extract_metric "$abs" "missing_expiry")")"
@@ -170,7 +181,7 @@ for file in "${HOLD_FILES[@]}"; do
 done
 
 for file in "${LINKAGE_FILES[@]}"; do
-  abs="$PROJECT_ROOT/$file"
+  abs="$(resolve_report_abs_path "$file")"
   risk="$(to_int_or_zero "$(extract_metric "$abs" "sampled_runs_risk")")"
   status="$(extract_metric "$abs" "status")"
   [[ -z "$status" ]] && status="unknown"
@@ -180,7 +191,7 @@ for file in "${LINKAGE_FILES[@]}"; do
 done
 
 for file in "${CHECKLIST_FILES[@]}"; do
-  abs="$PROJECT_ROOT/$file"
+  abs="$(resolve_report_abs_path "$file")"
   readiness="$(extract_metric "$abs" "readiness")"
   blocking="$(extract_metric "$abs" "blocking_reasons")"
   [[ -z "$readiness" ]] && readiness="unknown"

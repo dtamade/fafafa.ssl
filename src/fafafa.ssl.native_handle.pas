@@ -317,11 +317,14 @@ end;
 function GetBackendType(const AObject: IInterface): TSSLLibraryType;
 var
   NativeAccess: ISSLNativeHandleAccess;
+  LibraryRef: ISSLLibrary;
 begin
   if Supports(AObject, ISSLNativeHandleAccess, NativeAccess) then
     Result := NativeAccess.GetBackendType
+  else if Supports(AObject, ISSLLibrary, LibraryRef) then
+    Result := LibraryRef.GetLibraryType
   else
-    Result := sslAutoDetect;  // 未知或纯 Pascal 后端
+    Result := sslAutoDetect;  // 未知对象
 end;
 
 function IsNativeHandleValid(const AObject: IInterface): Boolean;

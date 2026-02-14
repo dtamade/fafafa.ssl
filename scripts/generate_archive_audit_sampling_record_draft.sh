@@ -127,6 +127,40 @@ if [[ -n "$RUN_IDS_CSV" ]]; then
   SAMPLING_METHOD="manual"
 fi
 
+resolve_input_dir() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -d "$path" ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -d "$PROJECT_ROOT/$path" ]]; then
+    echo "$PROJECT_ROOT/$path"
+    return
+  fi
+
+  echo "$path"
+}
+
+resolve_output_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+ARTIFACT_ROOT="$(resolve_input_dir "$ARTIFACT_ROOT")"
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 trim_space() {
   echo "$1" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//'
 }

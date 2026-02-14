@@ -85,6 +85,41 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_APPROVAL_CHAIN_SLA_BREACH_ALERT_${ALERT_ID}.md"
 fi
 
+resolve_input_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$path" ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$PROJECT_ROOT/$path" ]]; then
+    echo "$PROJECT_ROOT/$path"
+    return
+  fi
+
+  echo "$path"
+}
+
+resolve_output_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+APPROVAL_CHAIN_REPORT="$(resolve_input_path "$APPROVAL_CHAIN_REPORT")"
+ANOMALY_RESPONSE_REPORT="$(resolve_input_path "$ANOMALY_RESPONSE_REPORT")"
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] alert_id=$ALERT_ID"
   echo "[DRY-RUN] approval_chain_report=$APPROVAL_CHAIN_REPORT"

@@ -29,10 +29,36 @@ begin
   Result := ValidateRequiredOCSPStapling(AIsClient);
 end;
 
+type
+  TSkipCategory = (
+    scDependency,
+    scVersion,
+    scEnvironment,
+    scCapability,
+    scOther
+  );
+
 var
   TestsPassed: Integer = 0;
   TestsFailed: Integer = 0;
   TestsSkipped: Integer = 0;
+  SkipDependency: Integer = 0;
+  SkipVersion: Integer = 0;
+  SkipEnvironment: Integer = 0;
+  SkipCapability: Integer = 0;
+  SkipOther: Integer = 0;
+
+function SkipCategoryLabel(ACategory: TSkipCategory): string;
+begin
+  case ACategory of
+    scDependency: Result := 'dependency';
+    scVersion: Result := 'version';
+    scEnvironment: Result := 'environment';
+    scCapability: Result := 'capability';
+  else
+    Result := 'other';
+  end;
+end;
 
 procedure LogPass(const AMessage: string);
 begin
@@ -46,10 +72,20 @@ begin
   WriteLn('[FAIL] ', AMessage);
 end;
 
-procedure LogSkip(const AMessage: string);
+procedure LogSkip(const AMessage: string; ACategory: TSkipCategory = scOther);
 begin
   Inc(TestsSkipped);
-  WriteLn('[SKIP] ', AMessage);
+
+  case ACategory of
+    scDependency: Inc(SkipDependency);
+    scVersion: Inc(SkipVersion);
+    scEnvironment: Inc(SkipEnvironment);
+    scCapability: Inc(SkipCapability);
+  else
+    Inc(SkipOther);
+  end;
+
+  WriteLn('[SKIP] [', SkipCategoryLabel(ACategory), '] ', AMessage);
 end;
 
 procedure CleanupOpenSSLMemory(APtr: Pointer);
@@ -97,7 +133,7 @@ begin
 
     if not LoadOpenSSLOCSP(GetCryptoLibHandle) then
     begin
-      LogSkip('OCSP module not available');
+      LogSkip('OCSP module not available', scCapability);
       Exit;
     end;
 
@@ -160,7 +196,7 @@ begin
       if Assigned(SSL_CTX_ctrl) then
         LogFail('SSL_CTX_get_tlsext_status_type should be available via wrapper when SSL_CTX_ctrl exists')
       else
-        LogSkip('SSL_CTX_get_tlsext_status_type unavailable');
+        LogSkip('SSL_CTX_get_tlsext_status_type unavailable', scCapability);
       Exit;
     end;
 
@@ -169,20 +205,20 @@ begin
       if Assigned(SSL_ctrl) then
         LogFail('SSL_get_tlsext_status_type should be available via wrapper when SSL_ctrl exists')
       else
-        LogSkip('SSL_get_tlsext_status_type unavailable');
+        LogSkip('SSL_get_tlsext_status_type unavailable', scCapability);
       Exit;
     end;
 
     LLibrary := TSSLFactory.GetLibraryInstance(sslOpenSSL);
     if LLibrary = nil then
     begin
-      LogSkip('OpenSSL library instance unavailable');
+      LogSkip('OpenSSL library instance unavailable', scDependency);
       Exit;
     end;
 
     if not LLibrary.Initialize then
     begin
-      LogSkip('OpenSSL library initialization failed');
+      LogSkip('OpenSSL library initialization failed', scDependency);
       Exit;
     end;
 
@@ -296,7 +332,7 @@ begin
 
     if not LoadOpenSSLOCSP(GetCryptoLibHandle) then
     begin
-      LogSkip('OCSP module not available');
+      LogSkip('OCSP module not available', scCapability);
       Exit;
     end;
 
@@ -305,14 +341,14 @@ begin
       if Assigned(SSL_ctrl) then
         LogFail('SSL_set_tlsext_status_ocsp_resp should be available via wrapper when SSL_ctrl exists')
       else
-        LogSkip('SSL_set_tlsext_status_ocsp_resp unavailable');
+        LogSkip('SSL_set_tlsext_status_ocsp_resp unavailable', scCapability);
       Exit;
     end;
 
     LCryptoMalloc := TCRYPTO_malloc_fn(GetProcedureAddress(GetCryptoLibHandle, 'CRYPTO_malloc'));
     if not Assigned(LCryptoMalloc) then
     begin
-      LogSkip('CRYPTO_malloc unavailable');
+      LogSkip('CRYPTO_malloc unavailable', scDependency);
       Exit;
     end;
 
@@ -325,13 +361,13 @@ begin
     LLibrary := TSSLFactory.GetLibraryInstance(sslOpenSSL);
     if LLibrary = nil then
     begin
-      LogSkip('OpenSSL library instance unavailable');
+      LogSkip('OpenSSL library instance unavailable', scDependency);
       Exit;
     end;
 
     if not LLibrary.Initialize then
     begin
-      LogSkip('OpenSSL library initialization failed');
+      LogSkip('OpenSSL library initialization failed', scDependency);
       Exit;
     end;
 
@@ -466,7 +502,7 @@ begin
 
     if not LoadOpenSSLOCSP(GetCryptoLibHandle) then
     begin
-      LogSkip('OCSP module not available');
+      LogSkip('OCSP module not available', scCapability);
       Exit;
     end;
 
@@ -475,7 +511,7 @@ begin
       if Assigned(SSL_ctrl) then
         LogFail('SSL_get_tlsext_status_ocsp_resp should be available via wrapper when SSL_ctrl exists')
       else
-        LogSkip('SSL_get_tlsext_status_ocsp_resp unavailable');
+        LogSkip('SSL_get_tlsext_status_ocsp_resp unavailable', scCapability);
       Exit;
     end;
 
@@ -484,14 +520,14 @@ begin
       if Assigned(SSL_ctrl) then
         LogFail('SSL_set_tlsext_status_ocsp_resp should be available via wrapper when SSL_ctrl exists')
       else
-        LogSkip('SSL_set_tlsext_status_ocsp_resp unavailable');
+        LogSkip('SSL_set_tlsext_status_ocsp_resp unavailable', scCapability);
       Exit;
     end;
 
     LCryptoMalloc := TCRYPTO_malloc_fn(GetProcedureAddress(GetCryptoLibHandle, 'CRYPTO_malloc'));
     if not Assigned(LCryptoMalloc) then
     begin
-      LogSkip('CRYPTO_malloc unavailable');
+      LogSkip('CRYPTO_malloc unavailable', scDependency);
       Exit;
     end;
 
@@ -504,13 +540,13 @@ begin
     LLibrary := TSSLFactory.GetLibraryInstance(sslOpenSSL);
     if LLibrary = nil then
     begin
-      LogSkip('OpenSSL library instance unavailable');
+      LogSkip('OpenSSL library instance unavailable', scDependency);
       Exit;
     end;
 
     if not LLibrary.Initialize then
     begin
-      LogSkip('OpenSSL library initialization failed');
+      LogSkip('OpenSSL library initialization failed', scDependency);
       Exit;
     end;
 
@@ -601,6 +637,8 @@ begin
   WriteLn('Passed:  ', TestsPassed);
   WriteLn('Failed:  ', TestsFailed);
   WriteLn('Skipped: ', TestsSkipped);
+  WriteLn(Format('Skip breakdown: dependency=%d, version=%d, environment=%d, capability=%d, other=%d',
+    [SkipDependency, SkipVersion, SkipEnvironment, SkipCapability, SkipOther]));
   WriteLn('============================================');
 
   if TestsFailed = 0 then

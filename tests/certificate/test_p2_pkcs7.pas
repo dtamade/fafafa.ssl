@@ -22,9 +22,25 @@ uses
 const
   TEST_DATA = 'This is test data for PKCS7 signing and encryption.';
 
+type
+  TSkipCategory = (
+    scDependency,
+    scVersion,
+    scEnvironment,
+    scCapability,
+    scOther
+  );
+
 var
   TestsPassed: Integer = 0;
   TestsFailed: Integer = 0;
+  TestsSkipped: Integer = 0;
+  SkipDependency: Integer = 0;
+  SkipVersion: Integer = 0;
+  SkipEnvironment: Integer = 0;
+  SkipCapability: Integer = 0;
+  SkipOther: Integer = 0;
+  SkipStackPartialCount: Integer = 0;
 
 // Helper function for BIO_reset (it's a macro in C)
 function BIO_reset(b: PBIO): clong;
@@ -45,6 +61,28 @@ procedure Fail(const TestName, Reason: string);
 begin
   Inc(TestsFailed);
   WriteLn('[FAIL] ', TestName, ': ', Reason);
+end;
+
+procedure Skip(const TestName, Reason: string; ACategory: TSkipCategory = scOther);
+begin
+  Inc(TestsSkipped);
+
+  case ACategory of
+    scDependency: Inc(SkipDependency);
+    scVersion: Inc(SkipVersion);
+    scEnvironment: Inc(SkipEnvironment);
+    scCapability: Inc(SkipCapability);
+  else
+    Inc(SkipOther);
+  end;
+
+  WriteLn('[SKIP] ', TestName, ' - ', Reason);
+end;
+
+procedure SkipStackPartial(const TestName, Reason: string);
+begin
+  Inc(SkipStackPartialCount);
+  Skip(TestName, Reason, scCapability);
 end;
 
 procedure TestSection(const Name: string);
@@ -239,8 +277,7 @@ begin
   // The I/O functions (i2d_PKCS7_bio, d2i_PKCS7_bio) are verified to be loaded
   // in Test_08, which is sufficient for API binding validation.
   WriteLn('[INFO] PKCS7 BIO I/O test skipped - requires complete PKCS7 structure with content');
-  WriteLn('[SKIP] ', TEST_NAME, ' - needs PKCS7_set_data API binding');
-  // Don't count as pass or fail - this is a known limitation
+  Skip(TEST_NAME, 'needs PKCS7_set_data API binding', scCapability);
 end;
 
 // Test 11: Generate test certificate and key for signing/encryption tests
@@ -405,7 +442,7 @@ const
   TEST_NAME = 'PKCS7 encrypt basic operation';
 begin
   WriteLn('[INFO] Encrypt test skipped - requires complete stack API implementation');
-  WriteLn('[SKIP] ' + TEST_NAME + ' - stack API not fully implemented');
+  SkipStackPartial(TEST_NAME, 'stack API not fully implemented');
 end;
 
 procedure RunAllTests;
@@ -538,9 +575,18 @@ begin
   WriteLn('                             Test Results Summary');
   WriteLn('================================================================================');
   WriteLn;
-  WriteLn(Format('Total Tests:  %d', [TestsPassed + TestsFailed]));
+  WriteLn(Format('Total Tests:  %d', [TestsPassed + TestsFailed + TestsSkipped]));
   WriteLn(Format('Passed:       %d', [TestsPassed]));
   WriteLn(Format('Failed:       %d', [TestsFailed]));
+  WriteLn(Format('Skipped:      %d', [TestsSkipped]));
+  WriteLn(Format('Skip breakdown: dependency=%d, version=%d, environment=%d, capability=%d, other=%d, stack-partial=%d',
+    [SkipDependency, SkipVersion, SkipEnvironment, SkipCapability, SkipOther, SkipStackPartialCount]));
+
+  if TestsSkipped = 0 then
+    Fail('Skip accounting', 'Expected deterministic skip count to be tracked');
+
+  if SkipStackPartialCount = 0 then
+    Fail('Stack partial skip accounting', 'Expected stack partial skip count to be tracked');
   
   if TestsFailed = 0 then
   begin

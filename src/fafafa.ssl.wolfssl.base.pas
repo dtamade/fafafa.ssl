@@ -137,7 +137,7 @@ begin
     $0303: Result := sslProtocolTLS12;
     $0304: Result := sslProtocolTLS13;
   else
-    Result := sslProtocolTLS12;  // 默认
+    Result := sslProtocolUnknown;
   end;
 end;
 

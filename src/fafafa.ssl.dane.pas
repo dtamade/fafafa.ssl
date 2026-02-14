@@ -549,7 +549,7 @@ begin
   AResult.Success := False;
   AResult.MatchedRecordIndex := -1;
   AResult.RecordsFound := Length(FRecords);
-  AResult.DNSSECValid := True;  // Assume valid for now
+  AResult.DNSSECValid := SameText(Trim(FLastDNSSECStatus), DNSSECStatusToStr(dnssecSecure));
 
   Result := False;
 

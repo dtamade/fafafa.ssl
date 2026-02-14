@@ -288,6 +288,41 @@ begin
   end;
 end;
 
+
+// ============================================================
+// 测试 5: ValidateCertificateEx DNSSEC 标志语义
+// ============================================================
+procedure TestValidateCertificateExDNSSECFlag;
+var
+  Validator: TDANEValidator;
+  ValidateResult: TDANEValidationResult;
+  DummyData: TBytes;
+begin
+  WriteLn;
+  WriteLn('=== Test: ValidateCertificateEx DNSSEC Flag ===');
+
+  Validator := TDANEValidator.Create('example.com', 443);
+  try
+    SetLength(DummyData, 32);
+    FillChar(DummyData[0], Length(DummyData), 0);
+    Validator.AddTLSARecord(duDomainIssuedCert, dsFullCertificate, dmSHA256, DummyData);
+
+    if not Validator.ValidateCertificateEx(nil, ValidateResult) then
+    begin
+      if not ValidateResult.DNSSECValid then
+        TestPass('ValidateCertificateEx DNSSEC flag',
+          'False when DNSSEC secure status is not established')
+      else
+        TestFail('ValidateCertificateEx DNSSEC flag',
+          'Should not default to True before DNSSEC secure status is known');
+    end
+    else
+      TestFail('ValidateCertificateEx DNSSEC flag',
+        'ValidateCertificateEx should fail for nil certificate input');
+  finally
+    Validator.Free;
+  end;
+end;
 // ============================================================
 // 测试 5: DNS TLSA 查询（需要 ldns 和网络）
 // ============================================================
@@ -509,6 +544,7 @@ begin
   TestGracefulDegradation;
   TestManualTLSARecords;
   TestValidatorProperties;
+  TestValidateCertificateExDNSSECFlag;
   TestDNSTLSAQuery;
   TestDANEValidatorEx;
   TestDNSSECChainVerification;

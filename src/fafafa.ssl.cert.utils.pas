@@ -76,7 +76,7 @@ type
    * 密钥类型枚举
    * - ktRSA: RSA非对称加密
    * - ktECDSA: 椭圆曲线数字签名算法
-   * - ktEd25519: Edwards曲线数字签名（未实现）
+   * - ktEd25519: Edwards曲线数字签名
    *}
   TKeyType = (ktRSA, ktECDSA, ktEd25519);
   
@@ -140,6 +140,8 @@ type
     class function ASN1TimeToDateTime(ATime: Pointer): TDateTime; static;
     class function GenerateRSAKey(ABits: Integer): PEVP_PKEY; static;
     class function GenerateECKey(const ACurve: string): PEVP_PKEY; static;
+    class function GenerateEd25519Key: PEVP_PKEY; static;
+    class function SignCertificateWithKey(ACert: PX509; AKey: PEVP_PKEY): Boolean; static;
     class function AddNameEntry(AName: PX509_NAME; const AKey, AValue: string): Boolean; static;
     class function AddExtension(ACert: PX509; AIssuer: PX509; ANID: Integer; const AValue: string): Boolean; static;
   public
@@ -497,6 +499,60 @@ begin
   end;
 end;
 
+class function TCertificateUtils.GenerateEd25519Key: PEVP_PKEY;
+var
+  LCtx: PEVP_PKEY_CTX;
+  LKey: PEVP_PKEY;
+begin
+  Result := nil;
+
+  EnsureInitialized;
+
+  if (not Assigned(EVP_PKEY_CTX_new_id)) or
+     (not Assigned(EVP_PKEY_keygen_init)) or
+     (not Assigned(EVP_PKEY_keygen)) then
+    RaiseUnsupported('Ed25519 key type');
+
+  LCtx := EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519, nil);
+  if LCtx = nil then
+    RaiseUnsupported('Ed25519 key type');
+
+  LKey := nil;
+  try
+    if EVP_PKEY_keygen_init(LCtx) <> 1 then
+      raise ESSLCertError.Create('Failed to initialize Ed25519 key generation');
+
+    if EVP_PKEY_keygen(LCtx, LKey) <> 1 then
+      raise ESSLCertError.Create('Failed to generate Ed25519 key pair');
+
+    Result := LKey;
+  finally
+    EVP_PKEY_CTX_free(LCtx);
+  end;
+end;
+
+class function TCertificateUtils.SignCertificateWithKey(ACert: PX509; AKey: PEVP_PKEY): Boolean;
+var
+  LKeyID: Integer;
+begin
+  Result := False;
+
+  if (ACert = nil) or (AKey = nil) then
+    Exit(False);
+
+  LKeyID := 0;
+  if Assigned(EVP_PKEY_get_id) then
+    LKeyID := EVP_PKEY_get_id(AKey);
+
+  if LKeyID = EVP_PKEY_ED25519 then
+    Exit(X509_sign(ACert, AKey, nil) <> 0);
+
+  if X509_sign(ACert, AKey, EVP_sha256()) <> 0 then
+    Exit(True);
+
+  Result := X509_sign(ACert, AKey, nil) <> 0;
+end;
+
 class function TCertificateUtils.AddExtension(ACert: PX509; AIssuer: PX509; ANID: Integer; const AValue: string): Boolean;
 var
   LExt: PX509_EXTENSION;
@@ -598,8 +654,7 @@ begin
   case AOptions.KeyType of
     ktRSA: LKey := GenerateRSAKey(AOptions.KeyBits);
     ktECDSA: LKey := GenerateECKey(AOptions.ECCurve);
-    else
-      RaiseUnsupported('key type');
+    ktEd25519: LKey := GenerateEd25519Key;
   end;
   
   if LKey = nil then
@@ -704,7 +759,7 @@ begin
       end;
 
       // 签名
-      if X509_sign(LCert, LKey, EVP_sha256()) = 0 then
+      if not SignCertificateWithKey(LCert, LKey) then
         raise ESSLCertError.Create('Failed to sign certificate');
       
       // 导出证书为PEM
@@ -817,8 +872,7 @@ begin
       case AOptions.KeyType of
         ktRSA: LKey := GenerateRSAKey(AOptions.KeyBits);
         ktECDSA: LKey := GenerateECKey(AOptions.ECCurve);
-        else
-          RaiseUnsupported('key type');
+        ktEd25519: LKey := GenerateEd25519Key;
       end;
       if LKey = nil then 
         raise ESSLCertError.Create('Failed to generate key pair');
@@ -891,7 +945,7 @@ begin
           end;
 
           // 4. 使用CA私钥签名
-          if X509_sign(LCert, LCAKey, EVP_sha256()) = 0 then
+          if not SignCertificateWithKey(LCert, LCAKey) then
             raise ESSLCertError.Create('Failed to sign certificate with CA key');
             
           // 5. 导出
@@ -977,6 +1031,12 @@ var
   LType: Integer;
   LVal: Pointer;
   LCount, I: Integer;
+  LPubKey: PEVP_PKEY;
+  LKeyID: Integer;
+  LSerialInt64: Int64;
+  LSerialAsn1: PASN1_INTEGER;
+  LSignatureNID: Integer;
+  LKeyUsageFlags: Cardinal;
 begin
   FillChar(Result, SizeOf(Result), 0);
   Result.SubjectAltNames := TStringList.Create;
@@ -990,6 +1050,11 @@ begin
     LoadOpenSSLBIO();
   if not Assigned(PEM_read_bio_X509) then
     LoadOpenSSLPEM(GetCryptoLibHandle);
+  if not Assigned(EVP_PKEY_get_id) then
+    LoadEVP(GetCryptoLibHandle);
+  if (not Assigned(fafafa.ssl.openssl.api.asn1.ASN1_INTEGER_get_int64)) and
+     (not Assigned(fafafa.ssl.openssl.api.asn1.ASN1_INTEGER_get)) then
+    fafafa.ssl.openssl.api.asn1.LoadOpenSSLASN1(GetCryptoLibHandle);
 
   if not TOpenSSLLoader.IsModuleLoaded(osmStack) then
     LoadStackFunctions(); // Ensure stack functions are loaded for SAN extraction
@@ -1006,22 +1071,118 @@ begin
       Result.Issuer := X509NameToString(X509_get_issuer_name(LCert));
       Result.Version := X509_get_version(LCert) + 1;
       Result.NotBefore := ASN1TimeToDateTime(X509_get_notBefore(LCert));
-      Result.NotBefore := ASN1TimeToDateTime(X509_get_notBefore(LCert));
       Result.NotAfter := ASN1TimeToDateTime(X509_get_notAfter(LCert));
-      
+
+      Result.SerialNumber := '';
+      LSerialAsn1 := X509_get_serialNumber(LCert);
+      if LSerialAsn1 <> nil then
+      begin
+        LSerialInt64 := 0;
+        if Assigned(fafafa.ssl.openssl.api.asn1.ASN1_INTEGER_get_int64) and
+           (fafafa.ssl.openssl.api.asn1.ASN1_INTEGER_get_int64(@LSerialInt64, ASN1_INTEGER(LSerialAsn1)) = 1) then
+          Result.SerialNumber := IntToStr(LSerialInt64)
+        else if Assigned(fafafa.ssl.openssl.api.asn1.ASN1_INTEGER_get) then
+          Result.SerialNumber := IntToStr(fafafa.ssl.openssl.api.asn1.ASN1_INTEGER_get(ASN1_INTEGER(LSerialAsn1)));
+      end;
+
+      Result.SignatureAlgorithm := '';
+      if Assigned(X509_get_signature_nid) then
+      begin
+        LSignatureNID := X509_get_signature_nid(LCert);
+        if (LSignatureNID <> NID_undef) and Assigned(OBJ_nid2sn) then
+          Result.SignatureAlgorithm := string(AnsiString(OBJ_nid2sn(LSignatureNID)));
+      end;
+
+      LPubKey := X509_get_pubkey(LCert);
+      if LPubKey <> nil then
+      try
+        LKeyID := 0;
+        if Assigned(EVP_PKEY_get_id) then
+          LKeyID := EVP_PKEY_get_id(LPubKey);
+
+        case LKeyID of
+          EVP_PKEY_RSA: Result.PublicKeyType := 'RSA';
+          EVP_PKEY_EC: Result.PublicKeyType := 'EC';
+          EVP_PKEY_ED25519: Result.PublicKeyType := 'ED25519';
+        else
+          Result.PublicKeyType := IntToStr(LKeyID);
+        end;
+
+        if Assigned(EVP_PKEY_get_bits) then
+          Result.PublicKeyBits := EVP_PKEY_get_bits(LPubKey);
+      finally
+        EVP_PKEY_free(LPubKey);
+      end;
+
       // Extract IsCA status
       if Assigned(X509_check_ca) then
       begin
         // Force extension caching if purpose checking is available
         if Assigned(X509_check_purpose) then
           X509_check_purpose(LCert, -1, 0);
-          
+
         Result.IsCA := (X509_check_ca(LCert) >= 1);
       end
       else
         Result.IsCA := False;
-      
-      
+
+      Result.KeyUsage := '';
+      if Assigned(X509_get_key_usage) then
+      begin
+        LKeyUsageFlags := X509_get_key_usage(LCert);
+
+        if (LKeyUsageFlags and $0080) <> 0 then
+          Result.KeyUsage := Result.KeyUsage + 'digitalSignature';
+        if (LKeyUsageFlags and $0040) <> 0 then
+        begin
+          if Result.KeyUsage <> '' then
+            Result.KeyUsage := Result.KeyUsage + ',';
+          Result.KeyUsage := Result.KeyUsage + 'nonRepudiation';
+        end;
+        if (LKeyUsageFlags and $0020) <> 0 then
+        begin
+          if Result.KeyUsage <> '' then
+            Result.KeyUsage := Result.KeyUsage + ',';
+          Result.KeyUsage := Result.KeyUsage + 'keyEncipherment';
+        end;
+        if (LKeyUsageFlags and $0010) <> 0 then
+        begin
+          if Result.KeyUsage <> '' then
+            Result.KeyUsage := Result.KeyUsage + ',';
+          Result.KeyUsage := Result.KeyUsage + 'dataEncipherment';
+        end;
+        if (LKeyUsageFlags and $0008) <> 0 then
+        begin
+          if Result.KeyUsage <> '' then
+            Result.KeyUsage := Result.KeyUsage + ',';
+          Result.KeyUsage := Result.KeyUsage + 'keyAgreement';
+        end;
+        if (LKeyUsageFlags and $0004) <> 0 then
+        begin
+          if Result.KeyUsage <> '' then
+            Result.KeyUsage := Result.KeyUsage + ',';
+          Result.KeyUsage := Result.KeyUsage + 'keyCertSign';
+        end;
+        if (LKeyUsageFlags and $0002) <> 0 then
+        begin
+          if Result.KeyUsage <> '' then
+            Result.KeyUsage := Result.KeyUsage + ',';
+          Result.KeyUsage := Result.KeyUsage + 'cRLSign';
+        end;
+        if (LKeyUsageFlags and $0001) <> 0 then
+        begin
+          if Result.KeyUsage <> '' then
+            Result.KeyUsage := Result.KeyUsage + ',';
+          Result.KeyUsage := Result.KeyUsage + 'encipherOnly';
+        end;
+        if (LKeyUsageFlags and $8000) <> 0 then
+        begin
+          if Result.KeyUsage <> '' then
+            Result.KeyUsage := Result.KeyUsage + ',';
+          Result.KeyUsage := Result.KeyUsage + 'decipherOnly';
+        end;
+      end;
+
       // Extract Subject Alternative Names
       if Assigned(X509_get_ext_d2i) and TOpenSSLLoader.IsModuleLoaded(osmStack) then
       begin
@@ -1073,7 +1234,7 @@ var
   LResult: TChainVerifyResult;
   LBIO, LOutBIO: PBIO;
   LX509: PX509;
-  LBuffer: array[0..8191] of AnsiChar;
+  LDataPtr: PAnsiChar;
   LLen: Integer;
   LInterPEM: string;
 begin
@@ -1113,11 +1274,12 @@ begin
         try
           if PEM_write_bio_X509(LOutBIO, LX509) = 1 then
           begin
-            LLen := BIO_get_mem_data(LOutBIO, PPAnsiChar(@LBuffer));
-            if LLen > 0 then
+            LDataPtr := nil;
+            LLen := BIO_get_mem_data(LOutBIO, @LDataPtr);
+            if (LLen > 0) and (LDataPtr <> nil) then
             begin
-              SetString(LInterPEM, PAnsiChar(@LBuffer[0]), LLen);
-              
+              SetString(LInterPEM, LDataPtr, LLen);
+
               // 创建并加载中间证书
               LInterCert := TSSLFactory.CreateCertificate;
               if LInterCert.LoadFromPEM(LInterPEM) then

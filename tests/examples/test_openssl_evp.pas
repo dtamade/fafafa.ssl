@@ -9,7 +9,18 @@ uses
   fafafa.ssl.openssl.api.err;
 
 var
-  TestsPassed, TestsFailed: Integer;
+  TestsPassed, TestsFailed, TestsSkipped: Integer;
+  SkipCapability, SkipOther: Integer;
+
+procedure MarkSkip(const AMessage: string; const ACategory: string = 'other');
+begin
+  Inc(TestsSkipped);
+  if LowerCase(ACategory) = 'capability' then
+    Inc(SkipCapability)
+  else
+    Inc(SkipOther);
+  WriteLn('  [SKIP] [', ACategory, '] ', AMessage);
+end;
 
 procedure TestDigestMD5;
 var
@@ -285,7 +296,7 @@ begin
   
   if not Assigned(EVP_get_digestbyname) then
   begin
-    WriteLn('  [SKIP] EVP_get_digestbyname not available');
+    MarkSkip('EVP_get_digestbyname not available', 'capability');
     Exit;
   end;
   
@@ -328,7 +339,7 @@ begin
   
   if not Assigned(EVP_get_cipherbyname) then
   begin
-    WriteLn('  [SKIP] EVP_get_cipherbyname not available');
+    MarkSkip('EVP_get_cipherbyname not available', 'capability');
     Exit;
   end;
   
@@ -425,6 +436,9 @@ end;
 begin
   TestsPassed := 0;
   TestsFailed := 0;
+  TestsSkipped := 0;
+  SkipCapability := 0;
+  SkipOther := 0;
   
   WriteLn('OpenSSL EVP Module Test');
   WriteLn('=======================');
@@ -459,13 +473,14 @@ begin
   TestCipherAES128CBC;
   WriteLn;
   
-  // Skip these tests as they may not be available in OpenSSL 1.1.1
-  // TestDigestByName;
-  // WriteLn;
-  // TestCipherByName;
-  // WriteLn;
-  // TestMultipleDigests;
-  // WriteLn;
+  TestDigestByName;
+  WriteLn;
+
+  TestCipherByName;
+  WriteLn;
+
+  TestMultipleDigests;
+  WriteLn;
   
   // Cleanup
   UnloadEVP;
@@ -475,7 +490,8 @@ begin
   WriteLn('=======================');
   WriteLn(Format('Tests Passed: %d', [TestsPassed]));
   WriteLn(Format('Tests Failed: %d', [TestsFailed]));
-  WriteLn(Format('Total Tests:  %d', [TestsPassed + TestsFailed]));
+  WriteLn(Format('Tests Skipped: %d (capability=%d, other=%d)', [TestsSkipped, SkipCapability, SkipOther]));
+  WriteLn(Format('Total Tests:   %d', [TestsPassed + TestsFailed + TestsSkipped]));
   WriteLn;
   
   if TestsFailed > 0 then

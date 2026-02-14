@@ -123,6 +123,18 @@ case "$PROFILE" in
     ;;
 esac
 
+resolve_output_dir() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+OUTPUT_ROOT="$(resolve_output_dir "$OUTPUT_ROOT")"
+
 RUN_DIR="$OUTPUT_ROOT/$RUN_ID"
 ARCHIVE_FILE="$OUTPUT_ROOT/${RUN_ID}_${PROFILE}_ci_artifacts.tar.gz"
 

@@ -220,6 +220,127 @@ implementation
 uses
   StrUtils;
 
+function HexCharToNibble(AChar: Char; out ANibble: Byte): Boolean;
+begin
+  case AChar of
+    '0'..'9':
+      begin
+        ANibble := Ord(AChar) - Ord('0');
+        Result := True;
+      end;
+    'a'..'f':
+      begin
+        ANibble := Ord(AChar) - Ord('a') + 10;
+        Result := True;
+      end;
+    'A'..'F':
+      begin
+        ANibble := Ord(AChar) - Ord('A') + 10;
+        Result := True;
+      end;
+  else
+    ANibble := 0;
+    Result := False;
+  end;
+end;
+
+function HexToBytesStrict(const AHex: string): TBytes;
+var
+  I, LIndex: Integer;
+  LNibbleHigh, LNibbleLow: Byte;
+  LNormalized: string;
+begin
+  LNormalized := '';
+  for I := 1 to Length(AHex) do
+  begin
+    case AHex[I] of
+      '0'..'9', 'a'..'f', 'A'..'F':
+        LNormalized := LNormalized + AHex[I];
+      ':', '-', ' ', #9:
+        ;
+    else
+      raise EPKCS11Exception.Create('Invalid PKCS#11 object id hex character: ' + AHex[I], CKR_ARGUMENTS_BAD);
+    end;
+  end;
+
+  if LNormalized = '' then
+  begin
+    SetLength(Result, 0);
+    Exit;
+  end;
+
+  if (Length(LNormalized) mod 2) <> 0 then
+    raise EPKCS11Exception.Create('Invalid PKCS#11 object id hex length', CKR_ARGUMENTS_BAD);
+
+  SetLength(Result, Length(LNormalized) div 2);
+  LIndex := 0;
+  I := 1;
+  while I <= Length(LNormalized) do
+  begin
+    if (not HexCharToNibble(LNormalized[I], LNibbleHigh)) or
+       (not HexCharToNibble(LNormalized[I + 1], LNibbleLow)) then
+      raise EPKCS11Exception.Create('Invalid PKCS#11 object id hex encoding', CKR_ARGUMENTS_BAD);
+
+    Result[LIndex] := (LNibbleHigh shl 4) or LNibbleLow;
+    Inc(LIndex);
+    Inc(I, 2);
+  end;
+end;
+
+function ReadPINFromFileStrict(const AFilePath: string): string;
+var
+  F: TextFile;
+  LLine: string;
+begin
+  if AFilePath = '' then
+    raise EPKCS11Exception.Create('PIN file path is empty', CKR_ARGUMENTS_BAD);
+
+  if not FileExists(AFilePath) then
+    raise EPKCS11Exception.Create('PIN file not found: ' + AFilePath, CKR_GENERAL_ERROR);
+
+  AssignFile(F, AFilePath);
+  Reset(F);
+  try
+    if not Eof(F) then
+    begin
+      ReadLn(F, LLine);
+      Result := Trim(LLine);
+    end
+    else
+      Result := '';
+  finally
+    CloseFile(F);
+  end;
+
+  if Result = '' then
+    raise EPKCS11Exception.Create('PIN file is empty: ' + AFilePath, CKR_PIN_INVALID);
+end;
+
+function ResolvePINSource(const APINSource: string): string;
+var
+  LVarName: string;
+begin
+  if StartsStr('env:', APINSource) then
+  begin
+    LVarName := Copy(APINSource, 5, MaxInt);
+    if LVarName = '' then
+      raise EPKCS11Exception.Create('PIN source env variable name is empty', CKR_ARGUMENTS_BAD);
+
+    Result := GetEnvironmentVariable(LVarName);
+    if Result = '' then
+      raise EPKCS11Exception.Create('PIN source environment variable not set or empty: ' + LVarName, CKR_PIN_INVALID);
+    Exit;
+  end;
+
+  if StartsStr('file:', APINSource) then
+  begin
+    Result := ReadPINFromFileStrict(Copy(APINSource, 6, MaxInt));
+    Exit;
+  end;
+
+  raise EPKCS11Exception.Create('Unsupported PKCS#11 PIN source: ' + APINSource, CKR_ARGUMENTS_BAD);
+end;
+
 { TPKCS11URI }
 
 function TPKCS11URI.ToString: string;
@@ -243,10 +364,7 @@ begin
   if PINValue <> '' then
     Result := PINValue
   else if PINSource <> '' then
-  begin
-    // Will be implemented in fafafa.ssl.pkcs11.pin.pas
-    raise Exception.Create('PIN source resolution not yet implemented');
-  end
+    Result := ResolvePINSource(PINSource)
   else
     Result := '';
 end;
@@ -281,10 +399,7 @@ begin
     Result.SlotID := StrToIntDef(AURI.SlotID, -1);
   
   if AURI.ObjectID <> '' then
-  begin
-    // Convert hex string to bytes
-    // Will be implemented properly later
-  end;
+    Result.KeyID := HexToBytesStrict(AURI.ObjectID);
   
   if AURI.HasPIN then
   begin
@@ -302,14 +417,13 @@ begin
     begin
       Result.PINMethod := pmFile;
       Result.PINFile := Copy(AURI.PINSource, 6, MaxInt);
-    end;
+    end
+    else
+      raise EPKCS11Exception.Create('Unsupported PKCS#11 PIN source scheme in URI: ' + AURI.PINSource, CKR_ARGUMENTS_BAD);
   end;
 end;
 
 function TPKCS11Config.GetPIN: string;
-var
-  F: TextFile;
-  Line: string;
 begin
   Result := '';
   
@@ -323,33 +437,19 @@ begin
       
     pmFile:
       if PINFile <> '' then
-      begin
-        try
-          AssignFile(F, PINFile);
-          Reset(F);
-          try
-            if not Eof(F) then
-            begin
-              ReadLn(F, Line);
-              Result := Trim(Line);
-            end;
-          finally
-            CloseFile(F);
-          end;
-        except
-          Result := '';
-        end;
-      end;
+        Result := ReadPINFromFileStrict(PINFile);
       
     pmCallback:
       if Assigned(PINCallback) then
-        PINCallback(TokenLabel, Result);
+      begin
+        if not PINCallback(TokenLabel, Result) then
+          Result := '';
+      end;
       
     pmInteractive:
-      begin
-        // Will be implemented in fafafa.ssl.pkcs11.pin.pas
-        raise Exception.Create('Interactive PIN not yet implemented');
-      end;
+      raise EPKCS11Exception.Create(
+        'Interactive PIN is unsupported in TPKCS11Config.GetPIN; use TPKCS11PINManager',
+        CKR_FUNCTION_NOT_SUPPORTED);
   end;
 end;
 

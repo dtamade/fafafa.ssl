@@ -5,6 +5,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # ============================================================
 # 参数解析
 # ============================================================
@@ -62,6 +65,72 @@ done
 if [[ -z "$VERIFY_ID" ]]; then
   echo "Error: --verify-id is required"
   exit 1
+fi
+
+resolve_input_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$path" ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$PROJECT_ROOT/$path" ]]; then
+    echo "$PROJECT_ROOT/$path"
+    return
+  fi
+
+  echo "$path"
+}
+
+resolve_dir_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -d "$path" ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -d "$PROJECT_ROOT/$path" ]]; then
+    echo "$PROJECT_ROOT/$path"
+    return
+  fi
+
+  echo "$path"
+}
+
+resolve_output_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+if [[ -n "$SLA_ALERT_REPORT" ]]; then
+  SLA_ALERT_REPORT="$(resolve_input_path "$SLA_ALERT_REPORT")"
+fi
+if [[ -n "$ROLLBACK_DRILL_REPORT" ]]; then
+  ROLLBACK_DRILL_REPORT="$(resolve_input_path "$ROLLBACK_DRILL_REPORT")"
+fi
+if [[ -n "$LINKAGE_DRILL_REPORT" ]]; then
+  LINKAGE_DRILL_REPORT="$(resolve_input_path "$LINKAGE_DRILL_REPORT")"
+fi
+ARCHIVE_ROOT="$(resolve_dir_path "$ARCHIVE_ROOT")"
+if [[ -n "$OUTPUT" ]]; then
+  OUTPUT="$(resolve_output_path "$OUTPUT")"
 fi
 
 TIMESTAMP=$(date +%Y-%m-%d\ %H:%M:%S\ %z)
@@ -310,6 +379,7 @@ main() {
   report=$(generate_report "${check_results[@]:-}")
 
   if [[ -n "$OUTPUT" ]]; then
+    mkdir -p "$(dirname "$OUTPUT")"
     echo "$report" > "$OUTPUT"
     echo "Report written to: $OUTPUT"
   else

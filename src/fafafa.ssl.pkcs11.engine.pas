@@ -410,41 +410,17 @@ begin
 end;
 
 function TEngineBackend.LoadCertificate(const AConfig: TPKCS11Config): PX509;
-var
-  PIN: string;
-  PINAnsi: AnsiString;
 begin
   Result := nil;
 
-  // Validate configuration
+  // Validate configuration first so caller still gets deterministic input errors.
   ValidateConfig(AConfig);
 
-  // Load engine if not already loaded
-  LoadEngine(AConfig.ModulePath);
-
-  // Resolve PIN
-  PIN := ResolvePIN(AConfig);
-
-  // Set PIN if provided
-  if PIN <> '' then
-  begin
-    PINAnsi := AnsiString(PIN);
-    if ENGINE_ctrl_cmd_string(FEngine, 'PIN', PAnsiChar(PINAnsi), 0) = 0 then
-      raise EPKCS11Exception.Create(
-        'Failed to set ENGINE PIN',
-        CKR_PIN_INCORRECT);
-  end;
-
-  // Load certificate from engine
-  // Note: ENGINE_load_certificate might not be available in all ENGINE implementations
-  // This is a simplified implementation
-  // ENGINE_load_public_key returns PEVP_PKEY, not PX509
-  // We need to extract the certificate from the key or use a different approach
+  // ENGINE backend does not provide a portable certificate retrieval API.
+  // Keep this path explicit to avoid ambiguous runtime failures/access violations.
   raise EPKCS11Exception.Create(
-    'Certificate loading from ENGINE not yet implemented',
+    'Certificate loading is unsupported by ENGINE backend; use provider backend for certificate retrieval',
     CKR_FUNCTION_NOT_SUPPORTED);
-
-  Result := nil;
 end;
 
 function TEngineBackend.IsAvailable: Boolean;

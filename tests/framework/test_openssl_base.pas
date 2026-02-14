@@ -34,7 +34,20 @@ type
     Passed: Integer;
     Failed: Integer;
     Skipped: Integer;
+    SkipDependency: Integer;
+    SkipVersion: Integer;
+    SkipEnvironment: Integer;
+    SkipCapability: Integer;
+    SkipOther: Integer;
   end;
+
+  TOpenSSLSkipCategory = (
+    tscDependency,
+    tscVersion,
+    tscEnvironment,
+    tscCapability,
+    tscOther
+  );
 
   {**
    * 测试日志级别
@@ -79,6 +92,10 @@ type
       FSkipped: Boolean;
       FStats: TTestStats;
       FCurrentTestName: string;
+
+    function ClassifySkipCategory(const AReasonLower: string): TOpenSSLSkipCategory;
+    function NormalizeSkipReason(const Reason: string; out ACategory: TOpenSSLSkipCategory): string;
+    procedure RecordSkipCategory(ACategory: TOpenSSLSkipCategory);
   protected
     {** 初始化 - 在测试开始前调用 *}
     procedure SetUp; virtual;
@@ -268,6 +285,19 @@ uses
   fafafa.ssl.openssl.api.hmac,
   fafafa.ssl.openssl.dependencies;
 
+function SkipCategoryToString(ACategory: TOpenSSLSkipCategory): string;
+begin
+  case ACategory of
+    tscDependency: Result := 'dependency';
+    tscVersion: Result := 'version';
+    tscEnvironment: Result := 'environment';
+    tscCapability: Result := 'capability';
+  else
+    Result := 'other';
+  end;
+end;
+
+
 { TOpenSSLTestBase }
 
 constructor TOpenSSLTestBase.Create;
@@ -310,6 +340,67 @@ begin
   end;
 end;
 
+function TOpenSSLTestBase.ClassifySkipCategory(const AReasonLower: string): TOpenSSLSkipCategory;
+begin
+  if (Pos('[dependency]', AReasonLower) = 1) or
+     (Pos('module', AReasonLower) > 0) or
+     (Pos('missing', AReasonLower) > 0) then
+    Exit(tscDependency);
+
+  if (Pos('[version]', AReasonLower) = 1) or
+     (Pos('requires openssl', AReasonLower) > 0) or
+     (Pos('version', AReasonLower) > 0) then
+    Exit(tscVersion);
+
+  if (Pos('[environment]', AReasonLower) = 1) or
+     (Pos('platform', AReasonLower) > 0) or
+     (Pos('windows', AReasonLower) > 0) or
+     (Pos('linux', AReasonLower) > 0) or
+     (Pos('environment', AReasonLower) > 0) then
+    Exit(tscEnvironment);
+
+  if (Pos('[capability]', AReasonLower) = 1) or
+     (Pos('not available', AReasonLower) > 0) or
+     (Pos('unavailable', AReasonLower) > 0) or
+     (Pos('not supported', AReasonLower) > 0) then
+    Exit(tscCapability);
+
+  Result := tscOther;
+end;
+
+function TOpenSSLTestBase.NormalizeSkipReason(const Reason: string;
+  out ACategory: TOpenSSLSkipCategory): string;
+var
+  LTrimmed: string;
+  LReasonLower: string;
+  LTag: string;
+begin
+  LTrimmed := Trim(Reason);
+  if LTrimmed = '' then
+    LTrimmed := 'unspecified skip reason';
+
+  LReasonLower := LowerCase(LTrimmed);
+  ACategory := ClassifySkipCategory(LReasonLower);
+  LTag := '[' + SkipCategoryToString(ACategory) + '] ';
+
+  if Pos(LTag, LReasonLower) = 1 then
+    Result := LTrimmed
+  else
+    Result := LTag + LTrimmed;
+end;
+
+procedure TOpenSSLTestBase.RecordSkipCategory(ACategory: TOpenSSLSkipCategory);
+begin
+  case ACategory of
+    tscDependency: Inc(FStats.SkipDependency);
+    tscVersion: Inc(FStats.SkipVersion);
+    tscEnvironment: Inc(FStats.SkipEnvironment);
+    tscCapability: Inc(FStats.SkipCapability);
+  else
+    Inc(FStats.SkipOther);
+  end;
+end;
+
 function TOpenSSLTestBase.SkipIfMissing(AModule: TOpenSSLModule): Boolean;
 begin
   Result := TOpenSSLLoader.IsModuleLoaded(AModule);
@@ -334,10 +425,13 @@ begin
 end;
 
 procedure TOpenSSLTestBase.SkipTest(const Reason: string);
+var
+  LCategory: TOpenSSLSkipCategory;
 begin
   FSkipped := True;
-  FSkipReason := Reason;
+  FSkipReason := NormalizeSkipReason(Reason, LCategory);
   Inc(FStats.Skipped);
+  RecordSkipCategory(LCategory);
 end;
 
 procedure TOpenSSLTestBase.LogTest(const TestName: string; Passed: Boolean; const Details: string);
@@ -395,8 +489,17 @@ begin
   WriteLn('Total:   ', FStats.Passed + FStats.Failed + FStats.Skipped);
   WriteLn('Passed:  ', FStats.Passed);
   WriteLn('Failed:  ', FStats.Failed);
+  WriteLn('Skipped: ', FStats.Skipped);
+
   if FStats.Skipped > 0 then
-    WriteLn('Skipped: ', FStats.Skipped);
+  begin
+    WriteLn('Skip Taxonomy:');
+    WriteLn('  dependency: ', FStats.SkipDependency);
+    WriteLn('  version: ', FStats.SkipVersion);
+    WriteLn('  environment: ', FStats.SkipEnvironment);
+    WriteLn('  capability: ', FStats.SkipCapability);
+    WriteLn('  other: ', FStats.SkipOther);
+  end;
 
   if FStats.Failed = 0 then
     WriteLn('RESULT: ALL TESTS PASSED')

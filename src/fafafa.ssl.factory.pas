@@ -329,7 +329,12 @@ uses
   {$ENDIF}
   fafafa.ssl.crypto.hash,
   fafafa.ssl.errors,
-  fafafa.ssl.random;
+  fafafa.ssl.random,
+  fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.sha,
+  fafafa.ssl.openssl.api.sha3.evp,
+  fafafa.ssl.openssl.api.blake2;
 
 var
   GSSLFactory: TSSLFactory;
@@ -1123,26 +1128,110 @@ class function TSSLHelper.HashData(const AData: TBytes;
   AHashType: TSSLHash): string;
 var
   LHashBytes: TBytes;
+  LCryptoLib: THandle;
+  LDataPtr: PByte;
+
+  function HashTypeName(AType: TSSLHash): string;
+  begin
+    case AType of
+      sslHashMD5: Result := 'MD5';
+      sslHashSHA1: Result := 'SHA1';
+      sslHashSHA224: Result := 'SHA224';
+      sslHashSHA256: Result := 'SHA256';
+      sslHashSHA384: Result := 'SHA384';
+      sslHashSHA512: Result := 'SHA512';
+      sslHashSHA3_256: Result := 'SHA3-256';
+      sslHashSHA3_512: Result := 'SHA3-512';
+      sslHashBLAKE2b: Result := 'BLAKE2b';
+    end;
+  end;
+
+  procedure EnsureOpenSSLLoaded;
+  begin
+    LCryptoLib := TOpenSSLLoader.GetLibraryHandle(osslLibCrypto);
+    if LCryptoLib = 0 then
+      raise ESSLInvalidArgument.Create(
+        'Requested hash algorithm requires OpenSSL libcrypto, but it is unavailable'
+      );
+  end;
+
+  procedure EnsureEVPModule;
+  begin
+    EnsureOpenSSLLoaded;
+    if not TOpenSSLLoader.IsModuleLoaded(osmEVP) then
+      LoadEVP(LCryptoLib);
+  end;
 begin
-  // Backend-agnostic hashing: avoid mandatory OpenSSL dependency.
-  // Supported (pure Pascal): MD5, SHA1, SHA256, SHA384, SHA512.
+  // Pure Pascal fast-paths
   case AHashType of
     sslHashMD5:    LHashBytes := fafafa.ssl.crypto.hash.MD5(AData);
     sslHashSHA1:   LHashBytes := fafafa.ssl.crypto.hash.SHA1(AData);
     sslHashSHA256: LHashBytes := fafafa.ssl.crypto.hash.SHA256(AData);
     sslHashSHA384: LHashBytes := fafafa.ssl.crypto.hash.SHA384(AData);
     sslHashSHA512: LHashBytes := fafafa.ssl.crypto.hash.SHA512(AData);
-  else
-    // SHA224, SHA3-*, BLAKE2b not implemented in pure Pascal hash module.
-    raise ESSLInvalidArgument.CreateFmt(
-      'Hash algorithm %d not yet supported',
-      [Ord(AHashType)]
-    );
+
+    sslHashSHA224:
+    begin
+      EnsureOpenSSLLoaded;
+      if not TOpenSSLLoader.IsModuleLoaded(osmSHA) then
+        LoadSHAFunctions(LCryptoLib);
+
+      if not Assigned(SHA224) then
+        raise ESSLInvalidArgument.CreateFmt(
+          '%s is not available in loaded OpenSSL build',
+          [HashTypeName(AHashType)]
+        );
+
+      SetLength(LHashBytes, SHA224_DIGEST_LENGTH);
+      if Length(AData) > 0 then
+        LDataPtr := @AData[0]
+      else
+        LDataPtr := nil;
+
+      if SHA224(LDataPtr, Length(AData), @LHashBytes[0]) = nil then
+        raise ESSLInvalidArgument.Create('SHA224 hashing failed');
+    end;
+
+    sslHashSHA3_256:
+    begin
+      EnsureEVPModule;
+      if not IsEVPSHA3Available then
+        raise ESSLInvalidArgument.CreateFmt(
+          '%s is not available in loaded OpenSSL build',
+          [HashTypeName(AHashType)]
+        );
+      LHashBytes := SHA3_256Hash_EVP(AData);
+    end;
+
+    sslHashSHA3_512:
+    begin
+      EnsureEVPModule;
+      if not IsEVPSHA3Available then
+        raise ESSLInvalidArgument.CreateFmt(
+          '%s is not available in loaded OpenSSL build',
+          [HashTypeName(AHashType)]
+        );
+      LHashBytes := SHA3_512Hash_EVP(AData);
+    end;
+
+    sslHashBLAKE2b:
+    begin
+      EnsureOpenSSLLoaded;
+      if not TOpenSSLLoader.IsModuleLoaded(osmBLAKE2) then
+        LoadBLAKE2Functions(LCryptoLib);
+
+      if not (Assigned(BLAKE2b_Init) or Assigned(BLAKE2b)) then
+        raise ESSLInvalidArgument.CreateFmt(
+          '%s is not available in loaded OpenSSL build',
+          [HashTypeName(AHashType)]
+        );
+
+      LHashBytes := BLAKE2b512Hash(AData);
+    end;
   end;
 
   Result := fafafa.ssl.crypto.hash.HashToHex(LHashBytes);
 end;
-
 initialization
   GSSLFactory := nil;
   GSSLHelper := nil;

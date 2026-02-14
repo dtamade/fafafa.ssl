@@ -1,6 +1,6 @@
 {**
  * Unit: fafafa.ssl.tls13.keyschedule
- * Purpose: TLS 1.3 Key Schedule（当前实现 SHA-256 路径）
+ * Purpose: TLS 1.3 Key Schedule（SHA-256 / SHA-384 路径）
  *}
 
 unit fafafa.ssl.tls13.keyschedule;
@@ -40,6 +40,8 @@ procedure InitTLS13HandshakeSecrets(out ASecrets: TTLS13HandshakeSecrets);
 procedure ClearTLS13HandshakeSecrets(var ASecrets: TTLS13HandshakeSecrets);
 
 function TLS13CipherSuiteIsSHA256(ACipherSuite: Word): Boolean;
+function TLS13CipherSuiteIsSHA384(ACipherSuite: Word): Boolean;
+function TLS13CipherSuiteHashSize(ACipherSuite: Word): Integer;
 function TLS13CipherSuiteKeyLength(ACipherSuite: Word): Integer;
 
 function TryDeriveTLS13HandshakeSecrets(
@@ -58,6 +60,7 @@ uses
 
 const
   TLS13_SHA256_HASH_SIZE = 32;
+  TLS13_SHA384_HASH_SIZE = 48;
   TLS13_DEFAULT_IV_SIZE = 12;
 
 procedure InitTLS13HandshakeSecrets(out ASecrets: TTLS13HandshakeSecrets);
@@ -87,16 +90,70 @@ begin
     (ACipherSuite = TLS13_CIPHER_CHACHA20_POLY1305_SHA256);
 end;
 
+function TLS13CipherSuiteIsSHA384(ACipherSuite: Word): Boolean;
+begin
+  Result := ACipherSuite = TLS13_CIPHER_AES_256_GCM_SHA384;
+end;
+
+function TLS13CipherSuiteHashSize(ACipherSuite: Word): Integer;
+begin
+  if TLS13CipherSuiteIsSHA256(ACipherSuite) then
+    Exit(TLS13_SHA256_HASH_SIZE);
+  if TLS13CipherSuiteIsSHA384(ACipherSuite) then
+    Exit(TLS13_SHA384_HASH_SIZE);
+  Result := 0;
+end;
+
 function TLS13CipherSuiteKeyLength(ACipherSuite: Word): Integer;
 begin
   case ACipherSuite of
     TLS13_CIPHER_AES_128_GCM_SHA256:
       Result := 16;
+    TLS13_CIPHER_AES_256_GCM_SHA384,
     TLS13_CIPHER_CHACHA20_POLY1305_SHA256:
       Result := 32;
   else
     Result := 0;
   end;
+end;
+
+function HashTranscriptForSuite(ACipherSuite: Word; const AData: TBytes): TBytes;
+begin
+  if TLS13CipherSuiteIsSHA256(ACipherSuite) then
+    Exit(SHA256(AData));
+
+  if TLS13CipherSuiteIsSHA384(ACipherSuite) then
+    Exit(SHA384(AData));
+
+  SetLength(Result, 0);
+end;
+
+function HKDFExtractForSuite(ACipherSuite: Word; const ASalt, AIKM: TBytes): TBytes;
+begin
+  if TLS13CipherSuiteIsSHA256(ACipherSuite) then
+    Exit(HKDF_Extract_SHA256(ASalt, AIKM));
+
+  if TLS13CipherSuiteIsSHA384(ACipherSuite) then
+    Exit(HKDF_Extract_SHA384(ASalt, AIKM));
+
+  SetLength(Result, 0);
+end;
+
+function HKDFExpandLabelForSuite(
+  ACipherSuite: Word;
+  const ASecret: TBytes;
+  const ALabel: string;
+  const AContext: TBytes;
+  ALength: Integer
+): TBytes;
+begin
+  if TLS13CipherSuiteIsSHA256(ACipherSuite) then
+    Exit(TLS13_HKDF_Expand_Label_SHA256(ASecret, ALabel, AContext, ALength));
+
+  if TLS13CipherSuiteIsSHA384(ACipherSuite) then
+    Exit(TLS13_HKDF_Expand_Label_SHA384(ASecret, ALabel, AContext, ALength));
+
+  SetLength(Result, 0);
 end;
 
 function TryDeriveTLS13HandshakeSecrets(
@@ -107,6 +164,7 @@ function TryDeriveTLS13HandshakeSecrets(
   out AError: string
 ): Boolean;
 var
+  LHashSize: Integer;
   LKeyLength: Integer;
   LZeroLength, LZeroHash, LEmptyHash: TBytes;
 begin
@@ -114,9 +172,10 @@ begin
   AError := '';
   Result := False;
 
-  if not TLS13CipherSuiteIsSHA256(ACipherSuite) then
+  LHashSize := TLS13CipherSuiteHashSize(ACipherSuite);
+  if LHashSize <= 0 then
   begin
-    AError := Format('Cipher suite 0x%.4x requires non-SHA256 key schedule (not implemented yet)', [ACipherSuite]);
+    AError := Format('Unsupported TLS 1.3 cipher suite for key schedule: 0x%.4x', [ACipherSuite]);
     Exit;
   end;
 
@@ -134,64 +193,70 @@ begin
   end;
 
   SetLength(LZeroLength, 0);
-  SetLength(LZeroHash, TLS13_SHA256_HASH_SIZE);
-  FillChar(LZeroHash[0], TLS13_SHA256_HASH_SIZE, 0);
-  LEmptyHash := SHA256(LZeroLength);
+  SetLength(LZeroHash, LHashSize);
+  FillChar(LZeroHash[0], LHashSize, 0);
+  LEmptyHash := HashTranscriptForSuite(ACipherSuite, LZeroLength);
 
   ASecrets.Valid := True;
   ASecrets.CipherSuite := ACipherSuite;
-  ASecrets.HashSize := TLS13_SHA256_HASH_SIZE;
+  ASecrets.HashSize := LHashSize;
   ASecrets.KeyLength := LKeyLength;
   ASecrets.IVLength := TLS13_DEFAULT_IV_SIZE;
-  ASecrets.TranscriptHash := SHA256(ATranscriptData);
+  ASecrets.TranscriptHash := HashTranscriptForSuite(ACipherSuite, ATranscriptData);
 
-  // TLS 1.3 key schedule (no-PSK path)
-  ASecrets.EarlySecret := HKDF_Extract_SHA256(LZeroLength, LZeroHash);
-  ASecrets.DerivedSecret := TLS13_HKDF_Expand_Label_SHA256(
+  ASecrets.EarlySecret := HKDFExtractForSuite(ACipherSuite, LZeroLength, LZeroHash);
+  ASecrets.DerivedSecret := HKDFExpandLabelForSuite(
+    ACipherSuite,
     ASecrets.EarlySecret,
     'derived',
     LEmptyHash,
-    TLS13_SHA256_HASH_SIZE
+    LHashSize
   );
 
-  ASecrets.HandshakeSecret := HKDF_Extract_SHA256(ASecrets.DerivedSecret, ASharedSecret);
+  ASecrets.HandshakeSecret := HKDFExtractForSuite(ACipherSuite, ASecrets.DerivedSecret, ASharedSecret);
 
-  ASecrets.ClientHandshakeTrafficSecret := TLS13_HKDF_Expand_Label_SHA256(
+  ASecrets.ClientHandshakeTrafficSecret := HKDFExpandLabelForSuite(
+    ACipherSuite,
     ASecrets.HandshakeSecret,
     'c hs traffic',
     ASecrets.TranscriptHash,
-    TLS13_SHA256_HASH_SIZE
+    LHashSize
   );
 
-  ASecrets.ServerHandshakeTrafficSecret := TLS13_HKDF_Expand_Label_SHA256(
+  ASecrets.ServerHandshakeTrafficSecret := HKDFExpandLabelForSuite(
+    ACipherSuite,
     ASecrets.HandshakeSecret,
     's hs traffic',
     ASecrets.TranscriptHash,
-    TLS13_SHA256_HASH_SIZE
+    LHashSize
   );
 
-  ASecrets.ClientHandshakeKey := TLS13_HKDF_Expand_Label_SHA256(
+  ASecrets.ClientHandshakeKey := HKDFExpandLabelForSuite(
+    ACipherSuite,
     ASecrets.ClientHandshakeTrafficSecret,
     'key',
     LZeroLength,
     LKeyLength
   );
 
-  ASecrets.ServerHandshakeKey := TLS13_HKDF_Expand_Label_SHA256(
+  ASecrets.ServerHandshakeKey := HKDFExpandLabelForSuite(
+    ACipherSuite,
     ASecrets.ServerHandshakeTrafficSecret,
     'key',
     LZeroLength,
     LKeyLength
   );
 
-  ASecrets.ClientHandshakeIV := TLS13_HKDF_Expand_Label_SHA256(
+  ASecrets.ClientHandshakeIV := HKDFExpandLabelForSuite(
+    ACipherSuite,
     ASecrets.ClientHandshakeTrafficSecret,
     'iv',
     LZeroLength,
     TLS13_DEFAULT_IV_SIZE
   );
 
-  ASecrets.ServerHandshakeIV := TLS13_HKDF_Expand_Label_SHA256(
+  ASecrets.ServerHandshakeIV := HKDFExpandLabelForSuite(
+    ACipherSuite,
     ASecrets.ServerHandshakeTrafficSecret,
     'iv',
     LZeroLength,

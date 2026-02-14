@@ -21,6 +21,9 @@
 1. 最低可用 API 集存在并可调用。
 2. 模块加载成功（`TOpenSSLLoader.IsModuleLoaded(...)` 或函数指针可用）。
 3. 对应模块测试在当前基线上通过。
+4. 若当前运行环境后端不可用，测试输出必须是结构化 SKIP（如 `[SKIP] [backend-not-available]` / `[SKIP] [dependency]` / `[SKIP] [capability]`），且不得计入 PASS。
+
+5. 对 WinSSL 等平台特定测试，在非目标平台必须输出结构化阻塞契约（`[BLOCKED] [platform]` + `[SKIP] [platform]`），不得记为 FAIL。
 
 ---
 

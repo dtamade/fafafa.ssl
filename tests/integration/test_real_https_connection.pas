@@ -9,11 +9,11 @@ program test_real_https_connection;
 
 uses
   {$IFDEF UNIX}
-  ctypes, BaseUnix,
+  ctypes, BaseUnix, Unix,
   {$ENDIF}
   SysUtils, Classes,
   fafafa.ssl.base,
-  fafafa.ssl.sockets,
+  sockets,
   fafafa.ssl.openssl.backed,
   fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.core,
@@ -22,60 +22,79 @@ uses
 var
   Runner: TSimpleTestRunner;
 
+{$IFNDEF WINDOWS}
+const
+  INVALID_SOCKET = TSocket(-1);
+
+type
+  TInetSockAddr = record
+    sin_family: cushort;
+    sin_port: cushort;
+    sin_addr: in_addr;
+    sin_zero: array[0..7] of char;
+  end;
+
+  PHostEnt = ^THostEnt;
+  THostEnt = record
+    h_name: PChar;
+    h_aliases: PPChar;
+    h_addrtype: cint;
+    h_length: cint;
+    h_addr_list: PPChar;
+  end;
+
+function gethostbyname(name: PChar): PHostEnt; cdecl; external 'c';
+{$ENDIF}
+
 { Create TCP socket }
 function CreateTCPSocket: TSocket;
 begin
-  Result := socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  Result := fpSocket(AF_INET, SOCK_STREAM, 0);
 end;
 
 { Resolve hostname }
-function ResolveHostname(const AHostname: string): Cardinal;
+function ResolveHostname(const AHostname: string; out AAddress: in_addr): Boolean;
 var
   HostEnt: PHostEnt;
-  HostnameA: AnsiString;
 begin
-  Result := INADDR_NONE;
-  HostnameA := AnsiString(AHostname);
+  Result := False;
+  FillChar(AAddress, SizeOf(AAddress), 0);
 
-  Result := inet_addr(PAnsiChar(HostnameA));
-  if Result <> INADDR_NONE then
+  HostEnt := gethostbyname(PChar(AHostname));
+  if (HostEnt = nil) or (HostEnt^.h_addr_list = nil) or (HostEnt^.h_addr_list^ = nil) then
     Exit;
 
-  HostEnt := gethostbyname(PAnsiChar(HostnameA));
-  if (HostEnt <> nil) and (HostEnt^.h_addr_list <> nil) and
-     (HostEnt^.h_addr_list^ <> nil) then
-    Result := PCardinal(HostEnt^.h_addr_list^)^;
+  Move(HostEnt^.h_addr_list^^, AAddress, SizeOf(AAddress));
+  Result := True;
 end;
 
 { Connect to server }
 function ConnectToHost(ASocket: TSocket; const AHostname: string; APort: Word): Boolean;
 var
-  Addr: TSockAddrIn;
-  IP: Cardinal;
+  Addr: TInetSockAddr;
+  IP: in_addr;
 begin
   Result := False;
 
-  IP := ResolveHostname(AHostname);
-  if IP = INADDR_NONE then
+  if not ResolveHostname(AHostname, IP) then
     Exit;
 
   FillChar(Addr, SizeOf(Addr), 0);
   Addr.sin_family := AF_INET;
   Addr.sin_port := htons(APort);
-  Addr.sin_addr.s_addr := IP;
+  Addr.sin_addr := IP;
 
-  Result := connect(ASocket, @Addr, SizeOf(Addr)) = 0;
+  Result := fpConnect(ASocket, @Addr, SizeOf(Addr)) = 0;
 end;
 
 { Set socket timeout }
 procedure SetSocketTimeout(ASocket: TSocket; ATimeoutMs: Integer);
 var
-  Timeout: TTimeVal;
+  Timeout: LongInt;
 begin
-  Timeout.tv_sec := ATimeoutMs div 1000;
-  Timeout.tv_usec := (ATimeoutMs mod 1000) * 1000;
-  setsockopt(ASocket, SOL_SOCKET, SO_RCVTIMEO, @Timeout, SizeOf(Timeout));
-  setsockopt(ASocket, SOL_SOCKET, SO_SNDTIMEO, @Timeout, SizeOf(Timeout));
+  Timeout := ATimeoutMs;
+  fpSetSockOpt(ASocket, SOL_SOCKET, SO_RCVTIMEO, @Timeout, SizeOf(Timeout));
+  fpSetSockOpt(ASocket, SOL_SOCKET, SO_SNDTIMEO, @Timeout, SizeOf(Timeout));
 end;
 
 { Test single HTTPS site connection }
@@ -199,7 +218,7 @@ begin
   end;
 
   if Sock <> INVALID_SOCKET then
-    close(Sock);
+    fpClose(Sock);
 end;
 
 { Test TLS version negotiation }
@@ -218,7 +237,7 @@ begin
   Sock := CreateTCPSocket;
   if Sock = INVALID_SOCKET then
   begin
-    WriteLn('[SKIP] TLS 1.3 negotiation - Cannot create socket');
+    Runner.Skip('TLS 1.3 negotiation', '[environment] cannot create socket');
     Exit;
   end;
 
@@ -226,8 +245,8 @@ begin
 
   if not ConnectToHost(Sock, 'www.google.com', 443) then
   begin
-    close(Sock);
-    WriteLn('[SKIP] TLS 1.3 negotiation - TCP connect failed');
+    fpClose(Sock);
+    Runner.Skip('TLS 1.3 negotiation', '[environment] TCP connect failed');
     Exit;
   end;
 
@@ -235,7 +254,7 @@ begin
     Lib := TOpenSSLLibrary.Create;
     if not Lib.Initialize then
     begin
-      WriteLn('[SKIP] TLS 1.3 negotiation - OpenSSL init failed');
+      Runner.Skip('TLS 1.3 negotiation', '[dependency] OpenSSL init failed');
       Exit;
     end;
 
@@ -259,7 +278,7 @@ begin
       Runner.Check('TLS 1.3 negotiation', False, E.Message);
   end;
 
-  close(Sock);
+  fpClose(Sock);
 end;
 
 { Test certificate verification }
@@ -278,7 +297,7 @@ begin
   Sock := CreateTCPSocket;
   if Sock = INVALID_SOCKET then
   begin
-    WriteLn('[SKIP] Get server certificate - Cannot create socket');
+    Runner.Skip('Get server certificate', '[environment] cannot create socket');
     Exit;
   end;
 
@@ -286,8 +305,8 @@ begin
 
   if not ConnectToHost(Sock, 'www.github.com', 443) then
   begin
-    close(Sock);
-    WriteLn('[SKIP] Get server certificate - TCP connect failed');
+    fpClose(Sock);
+    Runner.Skip('Get server certificate', '[environment] TCP connect failed');
     Exit;
   end;
 
@@ -324,7 +343,7 @@ begin
       Runner.Check('Get server certificate', False, E.Message);
   end;
 
-  close(Sock);
+  fpClose(Sock);
 end;
 
 { Test multiple known websites }
@@ -375,7 +394,7 @@ begin
   Sock := CreateTCPSocket;
   if Sock = INVALID_SOCKET then
   begin
-    WriteLn('[SKIP] SNI setup - Cannot create socket');
+    Runner.Skip('SNI setup', '[environment] cannot create socket');
     Exit;
   end;
 
@@ -383,8 +402,8 @@ begin
 
   if not ConnectToHost(Sock, 'www.cloudflare.com', 443) then
   begin
-    close(Sock);
-    WriteLn('[SKIP] SNI setup - TCP connect failed');
+    fpClose(Sock);
+    Runner.Skip('SNI setup', '[environment] TCP connect failed');
     Exit;
   end;
 
@@ -410,7 +429,7 @@ begin
       Runner.Check('SNI function', False, E.Message);
   end;
 
-  close(Sock);
+  fpClose(Sock);
 end;
 
 { Test ALPN }
@@ -428,7 +447,7 @@ begin
   Sock := CreateTCPSocket;
   if Sock = INVALID_SOCKET then
   begin
-    WriteLn('[SKIP] ALPN negotiation - Cannot create socket');
+    Runner.Skip('ALPN negotiation', '[environment] cannot create socket');
     Exit;
   end;
 
@@ -436,8 +455,8 @@ begin
 
   if not ConnectToHost(Sock, 'www.google.com', 443) then
   begin
-    close(Sock);
-    WriteLn('[SKIP] ALPN negotiation - TCP connect failed');
+    fpClose(Sock);
+    Runner.Skip('ALPN negotiation', '[environment] TCP connect failed');
     Exit;
   end;
 
@@ -468,7 +487,7 @@ begin
       Runner.Check('ALPN function', False, E.Message);
   end;
 
-  close(Sock);
+  fpClose(Sock);
 end;
 
 begin
@@ -490,11 +509,16 @@ begin
 
     WriteLn('OpenSSL Version: ', GetOpenSSLVersionString);
 
-    TestKnownWebsites;
-    TestTLSVersionNegotiation;
-    TestCertificateVerification;
-    TestSNI;
-    TestALPN;
+    if GetEnvironmentVariable('FAFAFA_RUN_NETWORK_TESTS') <> '1' then
+      Runner.Skip('Real HTTPS network suite', '[environment] network tests disabled (FAFAFA_RUN_NETWORK_TESTS!=1)')
+    else
+    begin
+      TestKnownWebsites;
+      TestTLSVersionNegotiation;
+      TestCertificateVerification;
+      TestSNI;
+      TestALPN;
+    end;
 
     Runner.PrintSummary;
     Halt(Runner.FailCount);

@@ -287,6 +287,16 @@ function IsOpenSSLSSLLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoa
 { Helper function - SSL_set_tlsext_host_name is a macro in OpenSSL, not a real function }
 function SSL_set_tlsext_host_name_impl(ssl: PSSL; const name: PAnsiChar): Integer; cdecl;
 
+{ Protocol min/max macro fallback helpers }
+function SSL_CTX_set_min_proto_version_impl(ctx: PSSL_CTX; version: Integer): Integer; cdecl;
+function SSL_CTX_set_max_proto_version_impl(ctx: PSSL_CTX; version: Integer): Integer; cdecl;
+function SSL_CTX_get_min_proto_version_impl(ctx: PSSL_CTX): Integer; cdecl;
+function SSL_CTX_get_max_proto_version_impl(ctx: PSSL_CTX): Integer; cdecl;
+function SSL_set_min_proto_version_impl(ssl: PSSL; version: Integer): Integer; cdecl;
+function SSL_set_max_proto_version_impl(ssl: PSSL; version: Integer): Integer; cdecl;
+function SSL_get_min_proto_version_impl(ssl: PSSL): Integer; cdecl;
+function SSL_get_max_proto_version_impl(ssl: PSSL): Integer; cdecl;
+
 { OCSP tlsext macro fallback helpers }
 function SSL_CTX_set_tlsext_status_type_impl(ctx: PSSL_CTX; &type: Integer): clong; cdecl;
 function SSL_CTX_get_tlsext_status_type_impl(ctx: PSSL_CTX): clong; cdecl;
@@ -326,7 +336,25 @@ begin
   SSL_version := TSSL_version(GetSSLProcAddress('SSL_version'));
   SSL_client_version := TSSL_client_version(GetSSLProcAddress('SSL_client_version'));
   SSL_is_dtls := TSSL_is_dtls(GetSSLProcAddress('SSL_is_dtls'));
-  
+
+  // Fallback to ctrl/macro wrappers when min/max proto symbols are not exported
+  if not Assigned(SSL_CTX_set_min_proto_version) then
+    SSL_CTX_set_min_proto_version := @SSL_CTX_set_min_proto_version_impl;
+  if not Assigned(SSL_CTX_set_max_proto_version) then
+    SSL_CTX_set_max_proto_version := @SSL_CTX_set_max_proto_version_impl;
+  if not Assigned(SSL_CTX_get_min_proto_version) then
+    SSL_CTX_get_min_proto_version := @SSL_CTX_get_min_proto_version_impl;
+  if not Assigned(SSL_CTX_get_max_proto_version) then
+    SSL_CTX_get_max_proto_version := @SSL_CTX_get_max_proto_version_impl;
+  if not Assigned(SSL_set_min_proto_version) then
+    SSL_set_min_proto_version := @SSL_set_min_proto_version_impl;
+  if not Assigned(SSL_set_max_proto_version) then
+    SSL_set_max_proto_version := @SSL_set_max_proto_version_impl;
+  if not Assigned(SSL_get_min_proto_version) then
+    SSL_get_min_proto_version := @SSL_get_min_proto_version_impl;
+  if not Assigned(SSL_get_max_proto_version) then
+    SSL_get_max_proto_version := @SSL_get_max_proto_version_impl;
+
   // Load Options functions
   SSL_CTX_set_options := TSSL_CTX_set_options(GetSSLProcAddress('SSL_CTX_set_options'));
   SSL_CTX_clear_options := TSSL_CTX_clear_options(GetSSLProcAddress('SSL_CTX_clear_options'));
@@ -441,6 +469,74 @@ end;
 function IsOpenSSLSSLLoaded: Boolean;
 begin
   Result := TOpenSSLLoader.IsModuleLoaded(osmSSL);
+end;
+
+function SSL_CTX_set_min_proto_version_impl(ctx: PSSL_CTX; version: Integer): Integer; cdecl;
+begin
+  if Assigned(SSL_CTX_ctrl) and
+    (SSL_CTX_ctrl(ctx, SSL_CTRL_SET_MIN_PROTO_VERSION, version, nil) > 0) then
+    Result := 1
+  else
+    Result := 0;
+end;
+
+function SSL_CTX_set_max_proto_version_impl(ctx: PSSL_CTX; version: Integer): Integer; cdecl;
+begin
+  if Assigned(SSL_CTX_ctrl) and
+    (SSL_CTX_ctrl(ctx, SSL_CTRL_SET_MAX_PROTO_VERSION, version, nil) > 0) then
+    Result := 1
+  else
+    Result := 0;
+end;
+
+function SSL_CTX_get_min_proto_version_impl(ctx: PSSL_CTX): Integer; cdecl;
+begin
+  if Assigned(SSL_CTX_ctrl) then
+    Result := Integer(SSL_CTX_ctrl(ctx, SSL_CTRL_GET_MIN_PROTO_VERSION, 0, nil))
+  else
+    Result := 0;
+end;
+
+function SSL_CTX_get_max_proto_version_impl(ctx: PSSL_CTX): Integer; cdecl;
+begin
+  if Assigned(SSL_CTX_ctrl) then
+    Result := Integer(SSL_CTX_ctrl(ctx, SSL_CTRL_GET_MAX_PROTO_VERSION, 0, nil))
+  else
+    Result := 0;
+end;
+
+function SSL_set_min_proto_version_impl(ssl: PSSL; version: Integer): Integer; cdecl;
+begin
+  if Assigned(SSL_ctrl) and
+    (SSL_ctrl(ssl, SSL_CTRL_SET_MIN_PROTO_VERSION, version, nil) > 0) then
+    Result := 1
+  else
+    Result := 0;
+end;
+
+function SSL_set_max_proto_version_impl(ssl: PSSL; version: Integer): Integer; cdecl;
+begin
+  if Assigned(SSL_ctrl) and
+    (SSL_ctrl(ssl, SSL_CTRL_SET_MAX_PROTO_VERSION, version, nil) > 0) then
+    Result := 1
+  else
+    Result := 0;
+end;
+
+function SSL_get_min_proto_version_impl(ssl: PSSL): Integer; cdecl;
+begin
+  if Assigned(SSL_ctrl) then
+    Result := Integer(SSL_ctrl(ssl, SSL_CTRL_GET_MIN_PROTO_VERSION, 0, nil))
+  else
+    Result := 0;
+end;
+
+function SSL_get_max_proto_version_impl(ssl: PSSL): Integer; cdecl;
+begin
+  if Assigned(SSL_ctrl) then
+    Result := Integer(SSL_ctrl(ssl, SSL_CTRL_GET_MAX_PROTO_VERSION, 0, nil))
+  else
+    Result := 0;
 end;
 
 { SSL_set_tlsext_host_name is a macro in OpenSSL:

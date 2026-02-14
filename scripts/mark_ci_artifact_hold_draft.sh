@@ -89,6 +89,32 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+resolve_input_dir() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -d "$path" ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -d "$PROJECT_ROOT/$path" ]]; then
+    echo "$PROJECT_ROOT/$path"
+    return
+  fi
+
+  echo "$path"
+}
+
+ARTIFACT_ROOT="$(resolve_input_dir "$ARTIFACT_ROOT")"
+if [[ -n "$RUN_DIR" ]]; then
+  RUN_DIR="$(resolve_input_dir "$RUN_DIR")"
+fi
+
 if [[ -n "$RUN_ID" && -n "$RUN_DIR" ]]; then
   echo "[FAIL] use either --run-id or --run-dir, not both" >&2
   exit 1

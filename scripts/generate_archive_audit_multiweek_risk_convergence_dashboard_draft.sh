@@ -97,6 +97,18 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_MULTIWEEK_RISK_CONVERGENCE_DASHBOARD_${DASHBOARD_ID}.md"
 fi
 
+resolve_output_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] dashboard_id=$DASHBOARD_ID"
   echo "[DRY-RUN] backtest_glob=$BACKTEST_GLOB"
@@ -129,6 +141,16 @@ collect_files() {
 mapfile -t BACKTEST_FILES < <(collect_files "$BACKTEST_GLOB")
 mapfile -t APPROVAL_FILES < <(collect_files "$APPROVAL_CHAIN_GLOB")
 mapfile -t RETEST_FILES < <(collect_files "$RETEST_GATE_GLOB")
+
+resolve_report_abs_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
 
 trim() {
   echo "$1" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//'
@@ -221,7 +243,7 @@ last_retest_failed=0
 
 for idx in "${!BACKTEST_FILES[@]}"; do
   file="${BACKTEST_FILES[$idx]}"
-  abs="$PROJECT_ROOT/$file"
+  abs="$(resolve_report_abs_path "$file")"
 
   critical_runs="$(to_int_or_zero "$(extract_metric "$abs" "critical_runs")")"
   high_runs="$(to_int_or_zero "$(extract_metric "$abs" "high_runs")")"
@@ -251,7 +273,7 @@ done
 
 for idx in "${!APPROVAL_FILES[@]}"; do
   file="${APPROVAL_FILES[$idx]}"
-  abs="$PROJECT_ROOT/$file"
+  abs="$(resolve_report_abs_path "$file")"
 
   rejected_stages="$(to_int_or_zero "$(extract_metric "$abs" "rejected_stages")")"
   conditional_stages="$(to_int_or_zero "$(extract_metric "$abs" "conditional_stages")")"
@@ -281,7 +303,7 @@ done
 
 for idx in "${!RETEST_FILES[@]}"; do
   file="${RETEST_FILES[$idx]}"
-  abs="$PROJECT_ROOT/$file"
+  abs="$(resolve_report_abs_path "$file")"
 
   retest_failed="$(to_int_or_zero "$(extract_metric "$abs" "retest_failed")")"
   open_critical="$(to_int_or_zero "$(extract_metric "$abs" "open_critical_after_retest")")"

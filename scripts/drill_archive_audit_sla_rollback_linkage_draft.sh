@@ -91,6 +91,42 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_SLA_ROLLBACK_LINKAGE_DRILL_${EXERCISE_ID}.md"
 fi
 
+resolve_input_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$path" ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$PROJECT_ROOT/$path" ]]; then
+    echo "$PROJECT_ROOT/$path"
+    return
+  fi
+
+  echo "$path"
+}
+
+resolve_output_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+SLA_ALERT_REPORT="$(resolve_input_path "$SLA_ALERT_REPORT")"
+ROLLBACK_VERSIONING_REPORT="$(resolve_input_path "$ROLLBACK_VERSIONING_REPORT")"
+DRILL_PLAN_REPORT="$(resolve_input_path "$DRILL_PLAN_REPORT")"
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] exercise_id=$EXERCISE_ID"
   echo "[DRY-RUN] sla_alert_report=$SLA_ALERT_REPORT"
@@ -475,7 +511,7 @@ elif [[ "$linkage_status" != "fail" && ( "$high_linkage_items" -gt 0 ) ]]; then
   release_advice="proceed-with-4h-watchlist-and-rerun-gates"
 fi
 
-if [[ "$linkage_status" != "fail" && "$versioning_status" == "pass" && "$sla_breach_status" == "pass" && "$critical_linkage_items" -eq 0 && "$high_linkage_items" -eq 0 && "$missing_alert_mappings" -eq 0 && "$alert_without_rollback" -eq 0 ]]; then
+if [[ "$linkage_status" != "fail" && "$versioning_status" == "pass" && "$sla_breach_status" == "pass" && "$critical_linkage_items" -eq 0 && "$high_linkage_items" -eq 0 && "$missing_alert_mappings" -eq 0 && "$alert_without_rollback" -eq 0 && "$linkage_items_total" -gt 0 ]]; then
   linkage_status="pass"
   release_advice="mapping-clean-ready-for-controlled-release"
 fi

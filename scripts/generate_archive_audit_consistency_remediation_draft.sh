@@ -91,6 +91,42 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_CONSISTENCY_REMEDIATION_${PLAN_ID}.md"
 fi
 
+resolve_input_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$path" ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$PROJECT_ROOT/$path" ]]; then
+    echo "$PROJECT_ROOT/$path"
+    return
+  fi
+
+  echo "$path"
+}
+
+resolve_output_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+CONSISTENCY_REPORT_FILE="$(resolve_input_path "$CONSISTENCY_REPORT_FILE")"
+CLOSURE_RECORD_FILE="$(resolve_input_path "$CLOSURE_RECORD_FILE")"
+BLOCKERS_FILE="$(resolve_input_path "$BLOCKERS_FILE")"
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] plan_id=$PLAN_ID"
   echo "[DRY-RUN] consistency_report=$CONSISTENCY_REPORT_FILE"

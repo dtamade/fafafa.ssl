@@ -79,7 +79,7 @@ begin
       Runner.Check('WinSSL initialization', False, E.Message);
   end;
   {$ELSE}
-  Runner.Check('WinSSL initialization', True, 'Skipped (Linux)');
+  Runner.Skip('WinSSL initialization', 'Linux platform');
   {$ENDIF}
 end;
 
@@ -128,7 +128,7 @@ begin
       Runner.Check('WinSSL context creation', False, E.Message);
   end;
   {$ELSE}
-  Runner.Check('WinSSL context creation', True, 'Skipped (Linux)');
+  Runner.Skip('WinSSL context creation', 'Linux platform');
   {$ENDIF}
 end;
 
@@ -179,7 +179,7 @@ begin
       Runner.Check('WinSSL protocol setup', False, E.Message);
   end;
   {$ELSE}
-  Runner.Check('WinSSL protocol support', True, 'Skipped (Linux)');
+  Runner.Skip('WinSSL protocol support', 'Linux platform');
   {$ENDIF}
 end;
 
@@ -228,7 +228,7 @@ begin
       Runner.Check('WinSSL session management', False, E.Message);
   end;
   {$ELSE}
-  Runner.Check('WinSSL session management', True, 'Skipped (Linux)');
+  Runner.Skip('WinSSL session management', 'Linux platform');
   {$ENDIF}
 end;
 
@@ -259,6 +259,11 @@ begin
       on E: Exception do
         Runner.Check('Test execution', False, E.Message);
     end;
+
+    {$IFNDEF WINDOWS}
+    Runner.Check('Non-Windows skip accounting', Runner.SkipCount >= 4,
+      Format('Expected >=4 skips, got %d', [Runner.SkipCount]));
+    {$ENDIF}
 
     Runner.PrintSummary;
     Halt(Runner.FailCount);

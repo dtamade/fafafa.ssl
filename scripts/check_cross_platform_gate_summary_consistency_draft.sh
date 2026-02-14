@@ -51,6 +51,12 @@ if [[ -z "$SUMMARY_FILE" ]]; then
   SUMMARY_FILE="$PROJECT_ROOT/docs/test_reports/CROSS_PLATFORM_GATE_SUMMARY_SAMPLE_B20.md"
 fi
 
+if [[ "$SUMMARY_FILE" != /* ]]; then
+  if [[ ! -f "$SUMMARY_FILE" && -f "$PROJECT_ROOT/$SUMMARY_FILE" ]]; then
+    SUMMARY_FILE="$PROJECT_ROOT/$SUMMARY_FILE"
+  fi
+fi
+
 if [[ ! -f "$SUMMARY_FILE" ]]; then
   echo "[FAIL] summary file not found: $SUMMARY_FILE" >&2
   exit 1

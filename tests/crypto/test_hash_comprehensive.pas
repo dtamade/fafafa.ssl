@@ -10,21 +10,26 @@ type
   TTestResult = record
     Name: string;
     Success: Boolean;
+    Skipped: Boolean;
     ErrorMsg: string;
   end;
 
 var
   Results: array of TTestResult;
-  TotalTests, PassedTests: Integer;
+  TotalTests, PassedTests, SkippedTests: Integer;
 
-procedure AddResult(const AName: string; ASuccess: Boolean; const AError: string = '');
+procedure AddResult(const AName: string; ASuccess: Boolean; const AError: string = '';
+  ASkipped: Boolean = False);
 begin
   SetLength(Results, Length(Results) + 1);
   Results[High(Results)].Name := AName;
   Results[High(Results)].Success := ASuccess;
+  Results[High(Results)].Skipped := ASkipped;
   Results[High(Results)].ErrorMsg := AError;
   Inc(TotalTests);
-  if ASuccess then
+  if ASkipped then
+    Inc(SkippedTests)
+  else if ASuccess then
     Inc(PassedTests);
 end;
 
@@ -54,7 +59,13 @@ begin
   
   for i := 0 to High(Results) do
   begin
-    if Results[i].Success then
+    if Results[i].Skipped then
+    begin
+      WriteLn('  [SKIP] ', Results[i].Name);
+      if Results[i].ErrorMsg <> '' then
+        WriteLn('         Reason: ', Results[i].ErrorMsg);
+    end
+    else if Results[i].Success then
       WriteLn('  [PASS] ', Results[i].Name)
     else
     begin
@@ -66,9 +77,13 @@ begin
   
   WriteLn;
   PrintSeparator;
-  WriteLn(Format('Total: %d tests, %d passed, %d failed (%.1f%%)',
-    [TotalTests, PassedTests, TotalTests - PassedTests,
-     (PassedTests / TotalTests) * 100]));
+  if (TotalTests - SkippedTests) > 0 then
+    WriteLn(Format('Total: %d tests, %d passed, %d failed, %d skipped (%.1f%% executed pass rate)',
+      [TotalTests, PassedTests, TotalTests - PassedTests - SkippedTests, SkippedTests,
+       (PassedTests / (TotalTests - SkippedTests)) * 100]))
+  else
+    WriteLn(Format('Total: %d tests, %d passed, %d failed, %d skipped (all skipped)',
+      [TotalTests, PassedTests, TotalTests - PassedTests - SkippedTests, SkippedTests]));
   PrintSeparator;
 end;
 
@@ -88,7 +103,7 @@ begin
   
   if md = nil then
   begin
-    AddResult(AlgName + ': Get algorithm', False, 'Algorithm not available');
+    AddResult(AlgName + ': Get algorithm', False, 'Algorithm not available', True);
     WriteLn('  [SKIP] Algorithm not available');
     Exit;
   end;
@@ -299,6 +314,7 @@ end;
 begin
   TotalTests := 0;
   PassedTests := 0;
+  SkippedTests := 0;
   SetLength(Results, 0);
   
   PrintSeparator;
@@ -354,6 +370,9 @@ begin
   // SHA-512/256 (truncated SHA-512)
   TestHash('SHA-512/256', EVP_sha512_256(), 'The quick brown fox jumps over the lazy dog',
     'DD9D67B371519C339ED8DBD25AF90E976A1EEEFD4AD3D889005E532FC5BEF04D');
+
+  // RED contract: unavailable algorithm should be treated as skip (not pass)
+  TestHash('UNAVAILABLE-ALG', EVP_get_digestbyname('no-such-digest-zzzz'), 'abc', '');
   
   // Test special cases
   TestIncrementalHash;
@@ -366,7 +385,7 @@ begin
   UnloadOpenSSLLibrary;
   
   // Exit with appropriate code
-  if PassedTests = TotalTests then
+  if (TotalTests - PassedTests - SkippedTests) = 0 then
     Halt(0)
   else
     Halt(1);

@@ -132,6 +132,18 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_CLEANUP_EXECUTION_RECORD_${RECORD_ID}.md"
 fi
 
+resolve_output_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ -z "$COMMAND_TEXT" ]]; then
   COMMAND_TEXT="bash scripts/cleanup_ci_artifacts_draft.sh --profile $PROFILE --mode $MODE"
 fi

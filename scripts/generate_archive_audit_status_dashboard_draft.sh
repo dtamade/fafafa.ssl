@@ -97,6 +97,8 @@ fi
 
 if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_STATUS_DASHBOARD_${DASHBOARD_ID}.md"
+elif [[ "$OUTPUT_FILE" != /* ]]; then
+  OUTPUT_FILE="$PROJECT_ROOT/$OUTPUT_FILE"
 fi
 
 if [[ "$DRY_RUN" == "true" ]]; then
@@ -121,6 +123,15 @@ collect_files() {
       printf '%s\n' "$file"
     done | sort
   )
+}
+
+resolve_report_abs_path() {
+  local file="$1"
+  if [[ "$file" == /* ]]; then
+    echo "$file"
+  else
+    echo "$PROJECT_ROOT/$file"
+  fi
 }
 
 mapfile -t HOLD_FILES < <(collect_files "$HOLD_REPORT_GLOB")
@@ -182,7 +193,7 @@ hold_warn_count=0
 hold_fail_count=0
 
 for file in "${HOLD_FILES[@]}"; do
-  abs="$PROJECT_ROOT/$file"
+  abs="$(resolve_report_abs_path "$file")"
   overdue="$(to_int_or_zero "$(extract_metric "$abs" "overdue")")"
   due_soon="$(to_int_or_zero "$(extract_metric "$abs" "due_soon")")"
   missing="$(to_int_or_zero "$(extract_metric "$abs" "missing_expiry")")"
@@ -213,7 +224,7 @@ linkage_warn_count=0
 linkage_fail_count=0
 
 for file in "${LINKAGE_FILES[@]}"; do
-  abs="$PROJECT_ROOT/$file"
+  abs="$(resolve_report_abs_path "$file")"
   risk="$(to_int_or_zero "$(extract_metric "$abs" "sampled_runs_risk")")"
   status_raw="$(extract_metric "$abs" "status")"
   status_raw="$(trim "$status_raw")"
@@ -239,7 +250,7 @@ checklist_warn_count=0
 checklist_fail_count=0
 
 for file in "${CHECKLIST_FILES[@]}"; do
-  abs="$PROJECT_ROOT/$file"
+  abs="$(resolve_report_abs_path "$file")"
   readiness="$(extract_metric "$abs" "readiness")"
   blocking="$(extract_metric "$abs" "blocking_reasons")"
   readiness="$(trim "$readiness")"
@@ -277,7 +288,7 @@ weekly_warn_count=0
 weekly_fail_count=0
 
 for file in "${WEEKLY_FILES[@]}"; do
-  abs="$PROJECT_ROOT/$file"
+  abs="$(resolve_report_abs_path "$file")"
   weekly_status="$(extract_metric "$abs" "weekly_status")"
   overdue_total="$(to_int_or_zero "$(extract_metric "$abs" "hold_overdue_total")")"
   checklist_fail_total="$(to_int_or_zero "$(extract_metric "$abs" "checklist_readiness_fail")")"

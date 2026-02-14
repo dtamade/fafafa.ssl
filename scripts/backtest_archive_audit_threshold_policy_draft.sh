@@ -103,6 +103,18 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_THRESHOLD_POLICY_BACKTEST_${BACKTEST_ID}.md"
 fi
 
+resolve_output_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] backtest_id=$BACKTEST_ID"
   echo "[DRY-RUN] dashboard_glob=$DASHBOARD_GLOB"
@@ -136,6 +148,16 @@ collect_files() {
 }
 
 mapfile -t DASHBOARD_FILES < <(collect_files "$DASHBOARD_GLOB")
+
+resolve_report_abs_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
 
 trim() {
   echo "$1" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//'
@@ -201,7 +223,7 @@ last_checklist_fail=0
 
 for idx in "${!DASHBOARD_FILES[@]}"; do
   file="${DASHBOARD_FILES[$idx]}"
-  abs="$PROJECT_ROOT/$file"
+  abs="$(resolve_report_abs_path "$file")"
 
   hold_overdue_total="$(to_int_or_zero "$(extract_metric "$abs" "hold_overdue_total")")"
   hold_due_soon_total="$(to_int_or_zero "$(extract_metric "$abs" "hold_due_soon_total")")"

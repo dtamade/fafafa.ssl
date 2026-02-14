@@ -77,6 +77,19 @@ implementation
 uses
   fafafa.ssl.wolfssl.certificate;
 
+function ParseWolfSSLVersionString(const AVersion: string): TSSLProtocolVersion;
+begin
+  if Pos('TLSv1.3', AVersion) > 0 then
+    Exit(sslProtocolTLS13);
+  if Pos('TLSv1.2', AVersion) > 0 then
+    Exit(sslProtocolTLS12);
+  if Pos('TLSv1.1', AVersion) > 0 then
+    Exit(sslProtocolTLS11);
+  if Pos('TLSv1', AVersion) > 0 then
+    Exit(sslProtocolTLS10);
+  Result := sslProtocolUnknown;
+end;
+
 { TWolfSSLSession }
 
 constructor TWolfSSLSession.Create;
@@ -87,8 +100,8 @@ begin
   FCreationTime := Now;
   FTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
   FSessionID := GenerateSessionID;  // 总是生成会话 ID
-  FProtocolVersion := sslProtocolTLS12;
-  FCipherName := '';
+  FProtocolVersion := sslProtocolUnknown;
+  FCipherName := 'unknown';
   SetLength(FSerializedData, 0);
 end;
 
@@ -121,9 +134,10 @@ begin
   FCreationTime := Now;
 
   // WolfSSL 会话信息提取需要额外 API
-  // 目前使用默认值
-  FProtocolVersion := sslProtocolTLS12;
-  FCipherName := '';
+  // 仅有 session 句柄时无法可靠提取协议与套件
+  // 返回显式 unknown，避免误导性默认值
+  FProtocolVersion := sslProtocolUnknown;
+  FCipherName := 'unknown';
 end;
 
 function TWolfSSLSession.GenerateSessionID: string;
@@ -234,26 +248,23 @@ begin
   Result := False;
   if Length(AData) = 0 then Exit;
 
-  // 保存序列化数据以供后续使用
-  FSerializedData := Copy(AData);
-
   // 使用 WolfSSL 的 d2i 函数反序列化会话
   if Assigned(wolfSSL_d2i_SSL_SESSION) then
   begin
-    // 释放旧会话
-    if FOwnsSession and (FSession <> nil) then
-    begin
-      if Assigned(wolfSSL_SESSION_free) then
-        wolfSSL_SESSION_free(FSession);
-      FSession := nil;
-    end;
-
     LDataPtr := @AData[0];
     LSession := wolfSSL_d2i_SSL_SESSION(nil, @LDataPtr, Length(AData));
     if LSession <> nil then
     begin
+      // 仅在新会话成功后替换旧会话，避免失败时破坏已有状态
+      if FOwnsSession and (FSession <> nil) then
+      begin
+        if Assigned(wolfSSL_SESSION_free) then
+          wolfSSL_SESSION_free(FSession);
+      end;
+
       FSession := LSession;
       FOwnsSession := True;
+      FSerializedData := Copy(AData);
       ExtractSessionInfo;
       Result := True;
     end;
@@ -261,6 +272,7 @@ begin
   else
   begin
     // 如果没有反序列化 API，仅保存数据
+    FSerializedData := Copy(AData);
     Result := True;
   end;
 end;
@@ -300,6 +312,10 @@ end;
 class function TWolfSSLSession.FromConnection(ASSL: PWOLFSSL): ISSLSession;
 var
   LSession: PWOLFSSL_SESSION;
+  LVersion: PAnsiChar;
+  LCipher: Pointer;
+  LCipherName: PAnsiChar;
+  LWrapped: TWolfSSLSession;
 begin
   Result := nil;
   if ASSL = nil then Exit;
@@ -307,7 +323,29 @@ begin
 
   LSession := wolfSSL_get_session(ASSL);
   if LSession <> nil then
-    Result := TWolfSSLSession.Create(LSession, False);  // 不拥有会话
+  begin
+    LWrapped := TWolfSSLSession.Create(LSession, False);  // 不拥有会话
+
+    if Assigned(wolfSSL_get_version) then
+    begin
+      LVersion := wolfSSL_get_version(ASSL);
+      if LVersion <> nil then
+        LWrapped.FProtocolVersion := ParseWolfSSLVersionString(string(LVersion));
+    end;
+
+    if Assigned(wolfSSL_get_current_cipher) and Assigned(wolfSSL_CIPHER_get_name) then
+    begin
+      LCipher := wolfSSL_get_current_cipher(ASSL);
+      if LCipher <> nil then
+      begin
+        LCipherName := wolfSSL_CIPHER_get_name(LCipher);
+        if LCipherName <> nil then
+          LWrapped.FCipherName := string(LCipherName);
+      end;
+    end;
+
+    Result := LWrapped;
+  end;
 end;
 
 end.

@@ -382,10 +382,88 @@ begin
 end;
 
 function TBenchmark.LoadBaseline(const AFileName: string): Boolean;
+var
+  LLines: TStringList;
+  LLine, LToken, LValue: string;
+  LPosColon, LPosFirstQuote, LPosSecondQuote: Integer;
+  LEntryCount: Integer;
+  LHasName, LHasMean: Boolean;
+  LMeanValue: Double;
+  LFormatSettings: TFormatSettings;
 begin
-  // Simple JSON parsing would go here
-  // For now, return False to indicate not implemented
   Result := False;
+
+  if not FileExists(AFileName) then
+    Exit;
+
+  LLines := TStringList.Create;
+  try
+    LLines.LoadFromFile(AFileName);
+    LEntryCount := 0;
+    LHasName := False;
+    LHasMean := False;
+    LFormatSettings := DefaultFormatSettings;
+    LFormatSettings.DecimalSeparator := '.';
+
+    for LLine in LLines do
+    begin
+      LToken := Trim(LLine);
+
+      if Pos('"name"', LToken) = 1 then
+      begin
+        LPosColon := Pos(':', LToken);
+        if LPosColon <= 0 then
+          Exit;
+        LValue := Trim(Copy(LToken, LPosColon + 1, MaxInt));
+
+        LPosFirstQuote := Pos('"', LValue);
+        if LPosFirstQuote <= 0 then
+          Exit;
+        LValue := Copy(LValue, LPosFirstQuote + 1, MaxInt);
+
+        LPosSecondQuote := Pos('"', LValue);
+        if LPosSecondQuote <= 0 then
+          Exit;
+        LValue := Copy(LValue, 1, LPosSecondQuote - 1);
+
+        if LValue = '' then
+          Exit;
+        LHasName := True;
+      end
+      else if Pos('"mean_ms"', LToken) = 1 then
+      begin
+        LPosColon := Pos(':', LToken);
+        if LPosColon <= 0 then
+          Exit;
+        LValue := Trim(Copy(LToken, LPosColon + 1, MaxInt));
+        if (LValue <> '') and (LValue[Length(LValue)] = ',') then
+          Delete(LValue, Length(LValue), 1);
+
+        if not TryStrToFloat(LValue, LMeanValue, LFormatSettings) then
+          Exit;
+
+        LHasMean := True;
+      end
+      else if (LToken = '},') or (LToken = '}') then
+      begin
+        if LHasName or LHasMean then
+        begin
+          if not (LHasName and LHasMean) then
+            Exit;
+          Inc(LEntryCount);
+          LHasName := False;
+          LHasMean := False;
+        end;
+      end;
+    end;
+
+    if LHasName or LHasMean then
+      Exit;
+
+    Result := LEntryCount > 0;
+  finally
+    LLines.Free;
+  end;
 end;
 
 function TBenchmark.CompareWithBaseline(const ABaseline: array of TBenchmarkStats): TBaselineComparisonArray;

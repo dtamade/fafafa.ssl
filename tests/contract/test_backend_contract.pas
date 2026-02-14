@@ -27,7 +27,8 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.factory,
   fafafa.ssl.exceptions,
-  fafafa.ssl.errors
+  fafafa.ssl.errors,
+  fafafa.ssl.freepascal.lib
   {$IFDEF UNIX}
   , fafafa.ssl.openssl.backed  // 注册 OpenSSL 后端
   , fafafa.ssl.mbedtls.lib     // 注册 MbedTLS 后端
@@ -54,6 +55,7 @@ var
   GTestCount: Integer = 0;
   GPassCount: Integer = 0;
   GFailCount: Integer = 0;
+  GSkipCount: Integer = 0;
 
 procedure AddResult(const ATestName: string; ABackend: TSSLLibraryType;
   APassed: Boolean; const AErrorMsg: string = '');
@@ -68,6 +70,12 @@ begin
     Inc(GPassCount)
   else
     Inc(GFailCount);
+end;
+
+procedure AddSkip(const AReason: string);
+begin
+  Inc(GSkipCount);
+  WriteLn('  [SKIP] ', AReason);
 end;
 
 procedure PrintHeader(const ATitle: string);
@@ -106,11 +114,33 @@ begin
 
     sslWolfSSL:
       ALib := TWolfSSLLibrary.Create;
+
+    sslFreePascal:
+      ALib := TFreePascalSSLLibrary.Create;
   else
     ALib := nil;
   end;
 
   Result := (ALib <> nil);
+end;
+
+procedure TestHarness_DirectInstanceCoverage_FreePascal;
+var
+  LLib: ISSLLibrary;
+begin
+  PrintSubHeader('Harness: Direct instance coverage - FreePascal');
+
+  if TryCreateDirectLibraryInstance(sslFreePascal, LLib) then
+  begin
+    WriteLn('  [PASS] TryCreateDirectLibraryInstance supports FreePascal backend');
+    AddResult('Harness_DirectInstanceCoverage_FreePascal', sslFreePascal, True);
+  end
+  else
+  begin
+    WriteLn('  [FAIL] TryCreateDirectLibraryInstance should support FreePascal backend');
+    AddResult('Harness_DirectInstanceCoverage_FreePascal', sslFreePascal, False,
+      'Direct instance helper does not handle sslFreePascal');
+  end;
 end;
 
 function ArrayContains(const AValues: TSSLStringArray; const AExpected: string): Boolean;
@@ -168,7 +198,7 @@ begin
 
   if not TryCreateDirectLibraryInstance(ABackend, LLib) then
   begin
-    WriteLn('  [SKIP] Backend not supported on this platform');
+    AddSkip('Backend not supported on this platform');
     Exit;
   end;
 
@@ -220,7 +250,7 @@ begin
 
   if not TSSLFactory.IsLibraryAvailable(ABackend) then
   begin
-    WriteLn('  [SKIP] Backend not available on this platform');
+    AddSkip('Backend not available on this platform');
     Exit;
   end;
 
@@ -259,7 +289,7 @@ begin
 
   if not TSSLFactory.IsLibraryAvailable(ABackend) then
   begin
-    WriteLn('  [SKIP] Backend not available on this platform');
+    AddSkip('Backend not available on this platform');
     Exit;
   end;
 
@@ -314,7 +344,7 @@ begin
 
   if not TSSLFactory.IsLibraryAvailable(ABackend) then
   begin
-    WriteLn('  [SKIP] Backend not available on this platform');
+    AddSkip('Backend not available on this platform');
     Exit;
   end;
 
@@ -367,7 +397,7 @@ begin
 
   if not TSSLFactory.IsLibraryAvailable(ABackend) then
   begin
-    WriteLn('  [SKIP] Backend not available on this platform');
+    AddSkip('Backend not available on this platform');
     Exit;
   end;
 
@@ -459,7 +489,7 @@ begin
 
   if not TSSLFactory.IsLibraryAvailable(ABackend) then
   begin
-    WriteLn('  [SKIP] Backend not available on this platform');
+    AddSkip('Backend not available on this platform');
     Exit;
   end;
 
@@ -523,12 +553,13 @@ begin
   PrintHeader('Contract Test Summary');
 
   WriteLn;
-  WriteLn(Format('Total Tests: %d', [GTestCount]));
+  WriteLn(Format('Total Tests: %d', [GPassCount + GFailCount + GSkipCount]));
   WriteLn(Format('Passed: %d', [GPassCount]));
   WriteLn(Format('Failed: %d', [GFailCount]));
+  WriteLn(Format('Skipped: %d', [GSkipCount]));
 
-  if GTestCount > 0 then
-    LPassRate := GPassCount / GTestCount * 100
+  if (GPassCount + GFailCount + GSkipCount) > 0 then
+    LPassRate := GPassCount / (GPassCount + GFailCount + GSkipCount) * 100
   else
     LPassRate := 0;
   WriteLn(Format('Pass Rate: %.1f%%', [LPassRate]));
@@ -560,6 +591,8 @@ begin
   PrintHeader('fafafa.ssl Backend Contract Tests');
   WriteLn('Date: ', DateTimeToStr(Now));
   WriteLn('Purpose: Verify consistent behavior across all SSL backends');
+
+  TestHarness_DirectInstanceCoverage_FreePascal;
 
   // 运行所有后端的契约测试（不可用后端会明确 SKIP）
   for LBackend := Low(TSSLLibraryType) to High(TSSLLibraryType) do

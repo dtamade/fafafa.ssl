@@ -466,6 +466,8 @@ var
   X509_set_subject_name: TX509_set_subject_name;
   X509_get_issuer_name: TX509_get_issuer_name;
   X509_set_issuer_name: TX509_set_issuer_name;
+  X509_get0_notBefore: TX509_get0_notBefore;
+  X509_get0_notAfter: TX509_get0_notAfter;
   X509_get_notBefore: TX509_get_notBefore;
   X509_get_notAfter: TX509_get_notAfter;
   X509_set1_notBefore: TX509_set1_notBefore;
@@ -480,10 +482,13 @@ var
   X509_CRL_free: TX509_CRL_free;
   X509_CRL_get0_by_cert: TX509_CRL_get0_by_cert;
   X509_CRL_get0_nextUpdate: TX509_CRL_get0_nextUpdate;
+  X509_REVOKED_get0_revocationDate: TX509_REVOKED_get0_revocationDate;
+  X509_REVOKED_get_ext_d2i: TX509_REVOKED_get_ext_d2i;
   X509_sign: TX509_sign;
   X509_gmtime_adj: TX509_gmtime_adj;
   
   // X509 Extension Functions
+  X509_get_ext_count: TX509_get_ext_count;
   X509_get_ext_by_NID: TX509_get_ext_by_NID;
   X509_get_ext_by_OBJ: TX509_get_ext_by_OBJ;
   X509_get_ext: TX509_get_ext;
@@ -499,12 +504,24 @@ var
   
   // X509 Verification Functions
   X509_verify: TX509_verify;
+  X509_check_purpose: TX509_check_purpose;
+  X509_check_trust: TX509_check_trust;
+  X509_check_issued: TX509_check_issued;
+  X509_check_akid: TX509_check_akid;
   X509_check_host: TX509_check_host;
+  X509_check_email: TX509_check_email;
   X509_check_ip: TX509_check_ip;
   X509_check_ip_asc: TX509_check_ip_asc;
   X509_check_private_key: TX509_check_private_key;
   X509_verify_cert: TX509_verify_cert;
   X509_verify_cert_error_string: TX509_verify_cert_error_string;
+
+  // X509 Compare/Policy Functions
+  X509_cmp: TX509_cmp;
+  X509_policy_check: TX509_policy_check;
+  X509_policy_tree_free: TX509_policy_tree_free;
+  X509_policy_tree_level_count: TX509_policy_tree_level_count;
+  X509_policy_tree_get0_level: TX509_policy_tree_get0_level;
   
   // X509 Store Functions
   X509_STORE_new: TX509_STORE_new;
@@ -542,6 +559,7 @@ var
   
   // X509 Algorithm Functions
   X509_ALGOR_get0: TX509_ALGOR_get0;
+  X509_ALGOR_set_md: TX509_ALGOR_set_md;
   
   // X509 I/O Functions
   d2i_X509_bio: Td2i_X509_bio;
@@ -590,6 +608,8 @@ begin
   X509_set_subject_name := TX509_set_subject_name(GetProcedureAddress(LibHandle, 'X509_set_subject_name'));
   X509_get_issuer_name := TX509_get_issuer_name(GetProcedureAddress(LibHandle, 'X509_get_issuer_name'));
   X509_set_issuer_name := TX509_set_issuer_name(GetProcedureAddress(LibHandle, 'X509_set_issuer_name'));
+  X509_get0_notBefore := TX509_get0_notBefore(GetProcedureAddress(LibHandle, 'X509_get0_notBefore'));
+  X509_get0_notAfter := TX509_get0_notAfter(GetProcedureAddress(LibHandle, 'X509_get0_notAfter'));
   // For OpenSSL 3.x, try getm variants first (mutable), fall back to get0
   X509_get_notBefore := TX509_get_notBefore(GetProcedureAddress(LibHandle, 'X509_getm_notBefore'));
   if not Assigned(X509_get_notBefore) then
@@ -611,8 +631,11 @@ begin
   X509_CRL_free := TX509_CRL_free(GetProcedureAddress(LibHandle, 'X509_CRL_free'));
   X509_CRL_get0_by_cert := TX509_CRL_get0_by_cert(GetProcedureAddress(LibHandle, 'X509_CRL_get0_by_cert'));
   X509_CRL_get0_nextUpdate := TX509_CRL_get0_nextUpdate(GetProcedureAddress(LibHandle, 'X509_CRL_get0_nextUpdate'));
+  X509_REVOKED_get0_revocationDate := TX509_REVOKED_get0_revocationDate(GetProcedureAddress(LibHandle, 'X509_REVOKED_get0_revocationDate'));
+  X509_REVOKED_get_ext_d2i := TX509_REVOKED_get_ext_d2i(GetProcedureAddress(LibHandle, 'X509_REVOKED_get_ext_d2i'));
   
   // Load X509 Extension Functions  
+  X509_get_ext_count := TX509_get_ext_count(GetProcedureAddress(LibHandle, 'X509_get_ext_count'));
   X509_get_ext_by_NID := TX509_get_ext_by_NID(GetProcedureAddress(LibHandle, 'X509_get_ext_by_NID'));
   X509_get_ext_by_OBJ := TX509_get_ext_by_OBJ(GetProcedureAddress(LibHandle, 'X509_get_ext_by_OBJ'));
   X509_get_ext := TX509_get_ext(GetProcedureAddress(LibHandle, 'X509_get_ext'));
@@ -628,12 +651,24 @@ begin
   
   // Load X509 Verification Functions
   X509_verify := TX509_verify(GetProcedureAddress(LibHandle, 'X509_verify'));
+  X509_check_purpose := TX509_check_purpose(GetProcedureAddress(LibHandle, 'X509_check_purpose'));
+  X509_check_trust := TX509_check_trust(GetProcedureAddress(LibHandle, 'X509_check_trust'));
+  X509_check_issued := TX509_check_issued(GetProcedureAddress(LibHandle, 'X509_check_issued'));
+  X509_check_akid := TX509_check_akid(GetProcedureAddress(LibHandle, 'X509_check_akid'));
   X509_check_host := TX509_check_host(GetProcedureAddress(LibHandle, 'X509_check_host'));
+  X509_check_email := TX509_check_email(GetProcedureAddress(LibHandle, 'X509_check_email'));
   X509_check_ip := TX509_check_ip(GetProcedureAddress(LibHandle, 'X509_check_ip'));
   X509_check_ip_asc := TX509_check_ip_asc(GetProcedureAddress(LibHandle, 'X509_check_ip_asc'));
   X509_check_private_key := TX509_check_private_key(GetProcedureAddress(LibHandle, 'X509_check_private_key'));
   X509_verify_cert := TX509_verify_cert(GetProcedureAddress(LibHandle, 'X509_verify_cert'));
   X509_verify_cert_error_string := TX509_verify_cert_error_string(GetProcedureAddress(LibHandle, 'X509_verify_cert_error_string'));
+
+  // Load X509 Compare/Policy Functions
+  X509_cmp := TX509_cmp(GetProcedureAddress(LibHandle, 'X509_cmp'));
+  X509_policy_check := TX509_policy_check(GetProcedureAddress(LibHandle, 'X509_policy_check'));
+  X509_policy_tree_free := TX509_policy_tree_free(GetProcedureAddress(LibHandle, 'X509_policy_tree_free'));
+  X509_policy_tree_level_count := TX509_policy_tree_level_count(GetProcedureAddress(LibHandle, 'X509_policy_tree_level_count'));
+  X509_policy_tree_get0_level := TX509_policy_tree_get0_level(GetProcedureAddress(LibHandle, 'X509_policy_tree_get0_level'));
   
   // Load X509 Store Functions
   X509_STORE_new := TX509_STORE_new(GetProcedureAddress(LibHandle, 'X509_STORE_new'));
@@ -671,6 +706,7 @@ begin
   
   // Load X509 Algorithm Functions
   X509_ALGOR_get0 := TX509_ALGOR_get0(GetProcedureAddress(LibHandle, 'X509_ALGOR_get0'));
+  X509_ALGOR_set_md := TX509_ALGOR_set_md(GetProcedureAddress(LibHandle, 'X509_ALGOR_set_md'));
   
   // Load X509 I/O Functions
   d2i_X509_bio := Td2i_X509_bio(GetProcedureAddress(LibHandle, 'd2i_X509_bio'));
@@ -697,19 +733,36 @@ begin
   X509_free := nil;
   X509_dup := nil;
   X509_up_ref := nil;
+  X509_get0_notBefore := nil;
+  X509_get0_notAfter := nil;
+  X509_REVOKED_get0_revocationDate := nil;
+  X509_REVOKED_get_ext_d2i := nil;
   X509_verify := nil;
+  X509_check_purpose := nil;
+  X509_check_trust := nil;
+  X509_check_issued := nil;
+  X509_check_akid := nil;
   X509_check_host := nil;
+  X509_check_email := nil;
   X509_check_ip := nil;
   X509_check_ip_asc := nil;
+  X509_cmp := nil;
+  X509_policy_check := nil;
+  X509_policy_tree_free := nil;
+  X509_policy_tree_level_count := nil;
+  X509_policy_tree_get0_level := nil;
   X509_STORE_new := nil;
   X509_STORE_free := nil;
   X509_STORE_add_cert := nil;
+  X509_get_ext_count := nil;
   X509_add_ext := nil;
   X509_EXTENSION_free := nil;
   X509_NAME_new := nil;
   X509_NAME_free := nil;
   X509_NAME_oneline := nil;
   X509_NAME_print_ex := nil;
+  X509_ALGOR_get0 := nil;
+  X509_ALGOR_set_md := nil;
   // ... 其他函数指针也设为 nil
 
   TOpenSSLLoader.SetModuleLoaded(osmX509, False);

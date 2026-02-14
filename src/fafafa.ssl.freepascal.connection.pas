@@ -8,10 +8,10 @@
  * - 接收并解析 ServerHello
  * - 处理加密握手记录并校验 Server Finished
  * - 发送加密 Client Finished
- * - 派生应用流量密钥并实现应用数据记录收发（CHACHA20-POLY1305）
+ * - 派生应用流量密钥并实现应用数据记录收发（AES-128-GCM/CHACHA20-POLY1305）
  *
  * 当前限制：
- * - TLS 1.3 AES-GCM 套件尚未实现（纯 Pascal）
+ * - TLS 1.3 AES-256-GCM-SHA384（Finished/PSK 相关）路径待补齐
  * - 对端证书验证链与会话复用等高级能力待补齐
  *}
 
@@ -81,6 +81,7 @@ type
     function ProcessPostHandshakeFragment(const AHandshakeFragment: TBytes): Boolean;
     function SendPostHandshakeKeyUpdate(ARequestPeerUpdate: Boolean): Boolean;
     procedure MarkUnsupported(const AOperation: string);
+    procedure MarkPrecondition(const AOperation: string);
   protected
     function DoRead(var ABuffer; ACount: Integer): Integer; override;
     function DoWrite(const ABuffer; ACount: Integer): Integer; override;
@@ -1342,7 +1343,14 @@ end;
 procedure TFreePascalConnection.MarkUnsupported(const AOperation: string);
 begin
   FLastErrorCode := sslErrUnsupported;
-  FLastErrorString := Format('%s is not implemented in FreePascal backend yet', [AOperation]);
+  FLastErrorString := Format('%s is unsupported by FreePascal backend', [AOperation]);
+  RecordError(FLastErrorCode, FLastErrorString);
+end;
+
+procedure TFreePascalConnection.MarkPrecondition(const AOperation: string);
+begin
+  FLastErrorCode := sslErrProtocol;
+  FLastErrorString := Format('%s requires completed TLS handshake', [AOperation]);
   RecordError(FLastErrorCode, FLastErrorString);
 end;
 
@@ -1355,7 +1363,7 @@ var
 begin
   if not FHandshakeComplete then
   begin
-    MarkUnsupported('TLS read before completed handshake');
+    MarkPrecondition('TLS read');
     Exit(-1);
   end;
 
@@ -1399,7 +1407,7 @@ var
 begin
   if not FHandshakeComplete then
   begin
-    MarkUnsupported('TLS write before completed handshake');
+    MarkPrecondition('TLS write');
     Exit(-1);
   end;
 
@@ -1610,14 +1618,16 @@ begin
   end;
 
   LSelectedCipherSuite := 0;
-  if TLS13ClientHelloOffersCipherSuite(LClientHello, TLS13_CIPHER_CHACHA20_POLY1305_SHA256) then
+  if TLS13ClientHelloOffersCipherSuite(LClientHello, TLS13_CIPHER_AES_128_GCM_SHA256) then
+    LSelectedCipherSuite := TLS13_CIPHER_AES_128_GCM_SHA256
+  else if TLS13ClientHelloOffersCipherSuite(LClientHello, TLS13_CIPHER_CHACHA20_POLY1305_SHA256) then
     LSelectedCipherSuite := TLS13_CIPHER_CHACHA20_POLY1305_SHA256;
 
   if LSelectedCipherSuite = 0 then
   begin
     SetHandshakeError(
       sslErrUnsupported,
-      'No supported TLS 1.3 cipher suite intersection (requires TLS_CHACHA20_POLY1305_SHA256 for pure FreePascal path)'
+      'No supported TLS 1.3 cipher suite intersection (requires TLS_AES_128_GCM_SHA256 or TLS_CHACHA20_POLY1305_SHA256 for current pure FreePascal path)'
     );
     Exit;
   end;
@@ -2174,7 +2184,7 @@ function TFreePascalConnection.DoRenegotiate: Boolean;
 begin
   if not FHandshakeComplete then
   begin
-    SetHandshakeError(sslErrHandshake, 'Cannot send TLS 1.3 KeyUpdate before handshake completion');
+    MarkPrecondition('TLS renegotiate/key update');
     Exit(False);
   end;
 

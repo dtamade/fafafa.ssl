@@ -25,6 +25,7 @@ type
     crl: PX509_CRL;
     db_meth: Pointer;
     db: Pointer;
+    issuer_pkey: PEVP_PKEY;
   end;
   
   PX509_EXTENSION_METHOD = ^X509_EXTENSION_METHOD;
@@ -202,7 +203,9 @@ function X509AddSubjectAltName(Cert: PX509; const DNS: string): Boolean;
 implementation
 
 uses
-  fafafa.ssl.openssl.api.utils, fafafa.ssl.openssl.loader;
+  fafafa.ssl.openssl.api.utils, fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.api.core, fafafa.ssl.openssl.api.asn1,
+  fafafa.ssl.openssl.api.x509;
 
 const
   { X509V3 函数绑定数组 - 用于批量加载 }
@@ -282,60 +285,204 @@ end;
 
 function X509AddBasicConstraints(Cert: PX509; CA: Boolean; PathLen: Integer): Boolean;
 var
-  bc: PBASIC_CONSTRAINTS;
-  ext: PX509_EXTENSION;
+  LBasicConstraints: PBASIC_CONSTRAINTS;
+  LExt: PX509_EXTENSION;
+  LPathLenValue: ASN1_INTEGER;
 begin
   Result := False;
-  if not Assigned(BASIC_CONSTRAINTS_new) or not Assigned(X509V3_EXT_i2d) then
+
+  if Cert = nil then
     Exit;
-    
-  bc := BASIC_CONSTRAINTS_new();
-  if bc = nil then Exit;
-  
+
+  if (not Assigned(X509_add_ext)) or (not Assigned(X509_EXTENSION_free)) then
+    LoadOpenSSLX509();
+
+  if (not Assigned(BASIC_CONSTRAINTS_new)) or
+     (not Assigned(BASIC_CONSTRAINTS_free)) or
+     (not Assigned(X509V3_EXT_i2d)) or
+     (not Assigned(X509_add_ext)) or
+     (not Assigned(X509_EXTENSION_free)) then
+    Exit;
+
+  LBasicConstraints := BASIC_CONSTRAINTS_new();
+  if LBasicConstraints = nil then
+    Exit;
+
   try
     if CA then
-      bc^.ca := $FF
+      LBasicConstraints^.ca := $FF
     else
-      bc^.ca := 0;
-      
+      LBasicConstraints^.ca := 0;
+
+    LBasicConstraints^.pathlen := nil;
+
     if PathLen >= 0 then
     begin
-      // Set pathlen if specified
-      // Note: Would need ASN1_INTEGER_set function
+      if (not Assigned(ASN1_INTEGER_new)) or
+         (not Assigned(ASN1_INTEGER_set)) then
+        LoadOpenSSLASN1(GetCryptoLibHandle);
+
+      if (not Assigned(ASN1_INTEGER_new)) or
+         (not Assigned(ASN1_INTEGER_set)) then
+        Exit;
+
+      LPathLenValue := ASN1_INTEGER_new();
+      if LPathLenValue = nil then
+        Exit;
+
+      if ASN1_INTEGER_set(LPathLenValue, PathLen) <> 1 then
+      begin
+        if Assigned(ASN1_INTEGER_free) then
+          ASN1_INTEGER_free(LPathLenValue);
+        Exit;
+      end;
+
+      LBasicConstraints^.pathlen := PASN1_INTEGER(LPathLenValue);
     end;
-    
-    ext := X509V3_EXT_i2d(NID_basic_constraints, 1, bc);
-    if ext <> nil then
-    begin
-      // Phase 4 Note: Full implementation requires:
-      // 1. X509_add_ext(Cert, ext, -1) to add extension
-      // 2. X509_EXTENSION_free(ext) to cleanup
-      // These functions need to be bound in fafafa.ssl.openssl.api.x509
-      // Current behavior: Returns True if extension was created
-      // Impact: Medium - extension is created but not added to certificate
-      Result := True;
+
+    LExt := X509V3_EXT_i2d(NID_basic_constraints, 1, LBasicConstraints);
+    if LExt = nil then
+      Exit;
+
+    try
+      Result := (X509_add_ext(Cert, LExt, -1) = 1);
+    finally
+      X509_EXTENSION_free(LExt);
     end;
   finally
-    BASIC_CONSTRAINTS_free(bc);
+    BASIC_CONSTRAINTS_free(LBasicConstraints);
   end;
 end;
 
 function X509AddKeyUsage(Cert: PX509; Usage: Cardinal): Boolean;
+var
+  LExt: PX509_EXTENSION;
+  LUsageValue: AnsiString;
+
+  procedure AppendUsageName(const AName: AnsiString);
+  begin
+    if LUsageValue <> '' then
+      LUsageValue := LUsageValue + ',';
+    LUsageValue := LUsageValue + AName;
+  end;
+
 begin
   Result := False;
-  // Implementation would require ASN1_BIT_STRING functions
+
+  if (Cert = nil) or (Usage = 0) then
+    Exit;
+
+  if (not Assigned(X509_add_ext)) or (not Assigned(X509_EXTENSION_free)) then
+    LoadOpenSSLX509();
+
+  if (not Assigned(X509V3_EXT_conf_nid)) or
+     (not Assigned(X509_add_ext)) or
+     (not Assigned(X509_EXTENSION_free)) then
+    Exit;
+
+  LUsageValue := '';
+  if (Usage and KU_DIGITAL_SIGNATURE) <> 0 then
+    AppendUsageName('digitalSignature');
+  if (Usage and KU_NON_REPUDIATION) <> 0 then
+    AppendUsageName('nonRepudiation');
+  if (Usage and KU_KEY_ENCIPHERMENT) <> 0 then
+    AppendUsageName('keyEncipherment');
+  if (Usage and KU_DATA_ENCIPHERMENT) <> 0 then
+    AppendUsageName('dataEncipherment');
+  if (Usage and KU_KEY_AGREEMENT) <> 0 then
+    AppendUsageName('keyAgreement');
+  if (Usage and KU_KEY_CERT_SIGN) <> 0 then
+    AppendUsageName('keyCertSign');
+  if (Usage and KU_CRL_SIGN) <> 0 then
+    AppendUsageName('cRLSign');
+  if (Usage and KU_ENCIPHER_ONLY) <> 0 then
+    AppendUsageName('encipherOnly');
+  if (Usage and KU_DECIPHER_ONLY) <> 0 then
+    AppendUsageName('decipherOnly');
+
+  if LUsageValue = '' then
+    Exit;
+
+  LUsageValue := 'critical,' + LUsageValue;
+
+  LExt := X509V3_EXT_conf_nid(nil, nil, NID_key_usage, PAnsiChar(LUsageValue));
+  if LExt = nil then
+    Exit;
+
+  try
+    Result := (X509_add_ext(Cert, LExt, -1) = 1);
+  finally
+    X509_EXTENSION_free(LExt);
+  end;
 end;
 
 function X509AddExtKeyUsage(Cert: PX509; const Usage: string): Boolean;
+var
+  LExt: PX509_EXTENSION;
+  LUsageValue: AnsiString;
 begin
   Result := False;
-  // Implementation would require extended key usage OID handling
+
+  if Cert = nil then
+    Exit;
+
+  LUsageValue := Trim(Usage);
+  if LUsageValue = '' then
+    Exit;
+
+  if (not Assigned(X509_add_ext)) or (not Assigned(X509_EXTENSION_free)) then
+    LoadOpenSSLX509();
+
+  if (not Assigned(X509V3_EXT_conf_nid)) or
+     (not Assigned(X509_add_ext)) or
+     (not Assigned(X509_EXTENSION_free)) then
+    Exit;
+
+  LExt := X509V3_EXT_conf_nid(nil, nil, NID_ext_key_usage, PAnsiChar(LUsageValue));
+  if LExt = nil then
+    Exit;
+
+  try
+    Result := (X509_add_ext(Cert, LExt, -1) = 1);
+  finally
+    X509_EXTENSION_free(LExt);
+  end;
 end;
 
 function X509AddSubjectAltName(Cert: PX509; const DNS: string): Boolean;
+var
+  LExt: PX509_EXTENSION;
+  LDNSValue: AnsiString;
 begin
   Result := False;
-  // Implementation would require GENERAL_NAME handling
+
+  if Cert = nil then
+    Exit;
+
+  LDNSValue := Trim(DNS);
+  if LDNSValue = '' then
+    Exit;
+
+  if UpperCase(Copy(LDNSValue, 1, 4)) <> 'DNS:' then
+    LDNSValue := 'DNS:' + LDNSValue;
+
+  if (not Assigned(X509_add_ext)) or (not Assigned(X509_EXTENSION_free)) then
+    LoadOpenSSLX509();
+
+  if (not Assigned(X509V3_EXT_conf_nid)) or
+     (not Assigned(X509_add_ext)) or
+     (not Assigned(X509_EXTENSION_free)) then
+    Exit;
+
+  LExt := X509V3_EXT_conf_nid(nil, nil, NID_subject_alt_name, PAnsiChar(LDNSValue));
+  if LExt = nil then
+    Exit;
+
+  try
+    Result := (X509_add_ext(Cert, LExt, -1) = 1);
+  finally
+    X509_EXTENSION_free(LExt);
+  end;
 end;
 
 end.

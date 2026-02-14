@@ -72,7 +72,18 @@ fi
 
 if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/CROSS_PLATFORM_GATE_SUMMARY_${RUN_ID}.md"
+elif [[ "$OUTPUT_FILE" != /* ]]; then
+  OUTPUT_FILE="$PROJECT_ROOT/$OUTPUT_FILE"
 fi
+
+resolve_report_abs_path() {
+  local file="$1"
+  if [[ "$file" == /* ]]; then
+    echo "$file"
+  else
+    echo "$PROJECT_ROOT/$file"
+  fi
+}
 
 mapfile -t REPORT_FILES < <(
   cd "$PROJECT_ROOT"
@@ -130,9 +141,10 @@ if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] output=$OUTPUT_FILE"
   echo "[DRY-RUN] input_count=${#REPORT_FILES[@]}"
   for file in "${REPORT_FILES[@]}"; do
-    platform="$(extract_field "$PROJECT_ROOT/$file" "platform")"
-    profile="$(extract_field "$PROJECT_ROOT/$file" "workflow_profile")"
-    runid_local="$(extract_field "$PROJECT_ROOT/$file" "run_id")"
+    abs_file="$(resolve_report_abs_path "$file")"
+    platform="$(extract_field "$abs_file" "platform")"
+    profile="$(extract_field "$abs_file" "workflow_profile")"
+    runid_local="$(extract_field "$abs_file" "run_id")"
     echo "[DRY-RUN] $file platform=$platform profile=$profile run_id=$runid_local"
   done
   echo "[PASS] cross-platform gate summary dry-run finished"
@@ -146,7 +158,7 @@ layers_file="$(mktemp)"
 trap 'rm -f "$entries_file" "$layers_file"' EXIT
 
 for file in "${REPORT_FILES[@]}"; do
-  abs_file="$PROJECT_ROOT/$file"
+  abs_file="$(resolve_report_abs_path "$file")"
 
   platform="$(extract_field "$abs_file" "platform")"
   profile="$(extract_field "$abs_file" "workflow_profile")"

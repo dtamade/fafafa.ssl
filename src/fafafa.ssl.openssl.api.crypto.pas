@@ -520,6 +520,12 @@ const
     (Name: 'OPENSSL_free';  FuncPtr: @OPENSSL_free;  Required: False)
   );
 
+procedure OpenSSLFreeFallback(ptr: Pointer); cdecl;
+begin
+  if Assigned(CRYPTO_free) then
+    CRYPTO_free(ptr, nil, 0);
+end;
+
 procedure LoadOpenSSLCrypto;
 var
   LLib: TLibHandle;
@@ -538,6 +544,10 @@ begin
 
   // Load crypto functions using batch loading
   TOpenSSLLoader.LoadFunctions(LLib, CRYPTO_BINDINGS);
+
+  // Compatibility fallback: some OpenSSL builds may not export OPENSSL_free
+  if (not Assigned(OPENSSL_free)) and Assigned(CRYPTO_free) then
+    OPENSSL_free := @OpenSSLFreeFallback;
 end;
 
 procedure UnloadOpenSSLCrypto;

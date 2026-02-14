@@ -150,8 +150,6 @@ class function TPKCS11PINManager.GetPIN(
   ACallback: TPKCS11PINCallback;
   const ATokenLabel: string
 ): string;
-var
-  Prompt: string;
 begin
   Result := '';
   
@@ -192,21 +190,23 @@ begin
           raise EPKCS11Exception.Create(
             'PIN callback not provided',
             CKR_ARGUMENTS_BAD);
-        
+
         if not ACallback(ATokenLabel, Result) then
           raise EPKCS11Exception.Create(
             'PIN callback failed or cancelled',
             CKR_PIN_INVALID);
+
+        Result := Trim(Result);
+        if Result = '' then
+          raise EPKCS11Exception.Create(
+            'PIN callback returned empty PIN',
+            CKR_PIN_INVALID);
       end;
       
     pmInteractive:
-      begin
-        if ATokenLabel <> '' then
-          Prompt := Format('Enter PIN for token "%s": ', [ATokenLabel])
-        else
-          Prompt := 'Enter PIN: ';
-        Result := ReadPINInteractive(Prompt);
-      end;
+      raise EPKCS11Exception.Create(
+        'Interactive PIN is unsupported in TPKCS11PINManager.GetPIN; use callback/value/file/environment methods',
+        CKR_FUNCTION_NOT_SUPPORTED);
   else
     raise EPKCS11Exception.Create(
       'Invalid PIN method',

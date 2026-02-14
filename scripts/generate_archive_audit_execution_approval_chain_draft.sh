@@ -97,6 +97,43 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_EXECUTION_APPROVAL_CHAIN_${CHAIN_ID}.md"
 fi
 
+resolve_input_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$path" ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$PROJECT_ROOT/$path" ]]; then
+    echo "$PROJECT_ROOT/$path"
+    return
+  fi
+
+  echo "$path"
+}
+
+resolve_output_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+EXECUTION_RECEIPT_FILE="$(resolve_input_path "$EXECUTION_RECEIPT_FILE")"
+CLOSURE_RECORD_FILE="$(resolve_input_path "$CLOSURE_RECORD_FILE")"
+REMEDIATION_PLAN_FILE="$(resolve_input_path "$REMEDIATION_PLAN_FILE")"
+BACKTEST_REPORT_FILE="$(resolve_input_path "$BACKTEST_REPORT_FILE")"
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] chain_id=$CHAIN_ID"
   echo "[DRY-RUN] execution_receipt=$EXECUTION_RECEIPT_FILE"

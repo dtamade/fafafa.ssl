@@ -11,8 +11,20 @@ uses
   fafafa.ssl.openssl.api.err,
   fafafa.ssl;
 
+type
+  TSkipGroupCategory = (
+    sgcDependency,
+    sgcVersion,
+    sgcEnvironment,
+    sgcCapability,
+    sgcOther
+  );
+
 var
-  TotalTests, PassedTests, FailedTests: Integer;
+  TotalTests, PassedTests, FailedTests, SkippedGroups: Integer;
+  SkippedDependencyGroups, SkippedVersionGroups,
+  SkippedEnvironmentGroups, SkippedCapabilityGroups,
+  SkippedOtherGroups: Integer;
 
 procedure Test(const TestName: string; Condition: Boolean);
 begin
@@ -28,6 +40,34 @@ begin
     WriteLn('FAIL');
     Inc(FailedTests);
   end;
+end;
+
+function SkipGroupCategoryToTag(ACategory: TSkipGroupCategory): string;
+begin
+  case ACategory of
+    sgcDependency: Result := '[dependency]';
+    sgcVersion: Result := '[version]';
+    sgcEnvironment: Result := '[environment]';
+    sgcCapability: Result := '[capability]';
+  else
+    Result := '[other]';
+  end;
+end;
+
+procedure SkipOpenSSLGroup(const AGroupName: string; ACategory: TSkipGroupCategory; const AReason: string);
+begin
+  Inc(SkippedGroups);
+
+  case ACategory of
+    sgcDependency: Inc(SkippedDependencyGroups);
+    sgcVersion: Inc(SkippedVersionGroups);
+    sgcEnvironment: Inc(SkippedEnvironmentGroups);
+    sgcCapability: Inc(SkippedCapabilityGroups);
+  else
+    Inc(SkippedOtherGroups);
+  end;
+
+  WriteLn('  [SKIP] ', AGroupName, ' - ', SkipGroupCategoryToTag(ACategory), ' ', AReason);
 end;
 
 { Helper to create synthetic OpenSSL error code }
@@ -61,13 +101,13 @@ begin
   LLib := CreateSSLLibrary(sslOpenSSL);
   if not Assigned(LLib) then
   begin
-    WriteLn('  OpenSSL library not available, skipping group');
+    SkipOpenSSLGroup('OpenSSL prerequisite', sgcDependency, 'library unavailable');
     Exit;
   end;
 
   if not LLib.Initialize then
   begin
-    WriteLn('  OpenSSL initialization failed, skipping group');
+    SkipOpenSSLGroup('OpenSSL prerequisite', sgcDependency, 'initialization failed');
     Exit;
   end;
 
@@ -230,7 +270,7 @@ begin
   LLib := CreateSSLLibrary(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
-    WriteLn('  OpenSSL not available, skipping group');
+    SkipOpenSSLGroup('OpenSSL prerequisite', sgcDependency, 'not available or initialization failed');
     Exit;
   end;
 
@@ -399,7 +439,7 @@ begin
   LLib := CreateSSLLibrary(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
-    WriteLn('  OpenSSL not available, skipping group');
+    SkipOpenSSLGroup('OpenSSL prerequisite', sgcDependency, 'not available or initialization failed');
     Exit;
   end;
 
@@ -483,7 +523,7 @@ begin
   LLib := CreateSSLLibrary(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
-    WriteLn('  OpenSSL not available, skipping group');
+    SkipOpenSSLGroup('OpenSSL prerequisite', sgcDependency, 'not available or initialization failed');
     Exit;
   end;
 
@@ -549,6 +589,12 @@ begin
   TotalTests := 0;
   PassedTests := 0;
   FailedTests := 0;
+  SkippedGroups := 0;
+  SkippedDependencyGroups := 0;
+  SkippedVersionGroups := 0;
+  SkippedEnvironmentGroups := 0;
+  SkippedCapabilityGroups := 0;
+  SkippedOtherGroups := 0;
 
   WriteLn('Comprehensive Error Handling Tests');
   WriteLn('==================================');
@@ -567,8 +613,19 @@ begin
   TestGroup5_PerformanceTests;
 
   WriteLn('=' + StringOfChar('=', 70));
-  WriteLn(Format('Test Results: %d/%d passed (%.1f%%)',
-    [PassedTests, TotalTests, PassedTests * 100.0 / TotalTests]));
+  if TotalTests > 0 then
+    WriteLn(Format('Test Results: %d/%d passed (%.1f%%)',
+      [PassedTests, TotalTests, PassedTests * 100.0 / TotalTests]))
+  else
+    WriteLn('Test Results: no executable tests');
+
+  WriteLn(Format('Skipped groups: %d (dependency=%d, version=%d, environment=%d, capability=%d, other=%d)',
+    [SkippedGroups,
+     SkippedDependencyGroups,
+     SkippedVersionGroups,
+     SkippedEnvironmentGroups,
+     SkippedCapabilityGroups,
+     SkippedOtherGroups]));
 
   if FailedTests > 0 then
   begin

@@ -93,20 +93,23 @@ end;
 procedure BenchmarkHKDF;
 const
   HKDF_ITERATIONS = 1000;
+var
+  LSalt, LInfo: TBytes;
 begin
   PrintHeader('HKDF Key Derivation Performance');
-  
-  WriteLn('HKDF not yet implemented in TCryptoUtils');
-  {
+
+  LSalt := TEncoding.UTF8.GetBytes('benchmark-salt');
+  LInfo := TEncoding.UTF8.GetBytes('benchmark-info');
+
   LBench := TBenchmark.Create('HKDF-SHA256 (32 bytes x 1000)');
   LBench.SetIterations(HKDF_ITERATIONS);
   LBench.Start;
   for I := 1 to HKDF_ITERATIONS do
-    LDerived := TCryptoUtils.HKDF(LData1KB, 'salt', 'info', 32, sslHashSHA256);
+    LDerived := TCryptoUtils.HKDF(LData1KB, LSalt, LInfo, 32, HASH_SHA256);
   LBench.Stop;
   LBench.Report;
   LBench.Free;
-  }
+
   WriteLn;
 end;
 

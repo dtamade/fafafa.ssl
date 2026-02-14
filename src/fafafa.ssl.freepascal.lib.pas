@@ -71,9 +71,1215 @@ procedure UnregisterFreePascalBackend;
 implementation
 
 uses
+  Classes,
   fafafa.ssl.exceptions,
+  fafafa.ssl.crypto.hash,
   fafafa.ssl.factory,
-  fafafa.ssl.freepascal.context;
+  fafafa.ssl.freepascal.context,
+  fafafa.ssl.utils,
+  fafafa.ssl.x509;
+
+const
+  CSystemStorePaths: array[0..4] of string = (
+    '/etc/ssl/certs',
+    '/etc/pki/tls/certs',
+    '/etc/pki/ca-trust/extracted/pem',
+    '/usr/local/share/certs',
+    '/system/etc/security/cacerts'
+  );
+
+function HasSystemCertStoreDirectories: Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := Low(CSystemStorePaths) to High(CSystemStorePaths) do
+  begin
+    if DirectoryExists(CSystemStorePaths[I]) then
+      Exit(True);
+  end;
+end;
+
+type
+  TFreePascalCertificate = class(TInterfacedObject, ISSLCertificate)
+  private
+    FDERData: TBytes;
+    FPEMData: string;
+    FInfo: TSSLCertificateInfo;
+    FIssuerCert: ISSLCertificate;
+    function ReadAllBytes(AStream: TStream): TBytes;
+    function HexNormalize(const AValue: string): string;
+    function CopyBytes(const AData: TBytes): TBytes;
+    procedure RebuildInfo;
+    function MatchHostname(const APattern, AHost: string): Boolean;
+  public
+    constructor Create;
+
+    function LoadFromFile(const AFileName: string): Boolean;
+    function LoadFromStream(AStream: TStream): Boolean;
+    function LoadFromMemory(const AData: Pointer; ASize: Integer): Boolean;
+    function LoadFromPEM(const APEM: string): Boolean;
+    function LoadFromDER(const ADER: TBytes): Boolean;
+
+    function SaveToFile(const AFileName: string): Boolean;
+    function SaveToStream(AStream: TStream): Boolean;
+    function SaveToPEM: string;
+    function SaveToDER: TBytes;
+
+    function GetInfo: TSSLCertificateInfo;
+    function GetSubject: string;
+    function GetIssuer: string;
+    function GetSerialNumber: string;
+    function GetNotBefore: TDateTime;
+    function GetNotAfter: TDateTime;
+    function GetPublicKey: string;
+    function GetPublicKeyAlgorithm: string;
+    function GetSignatureAlgorithm: string;
+    function GetVersion: Integer;
+
+    function Verify(ACAStore: ISSLCertificateStore): Boolean;
+    function VerifyEx(ACAStore: ISSLCertificateStore;
+      AFlags: TSSLCertVerifyFlags; out AResult: TSSLCertVerifyResult): Boolean;
+    function VerifyHostname(const AHostname: string): Boolean;
+    function IsExpired: Boolean;
+    function IsSelfSigned: Boolean;
+    function IsCA: Boolean;
+
+    function GetDaysUntilExpiry: Integer;
+    function GetSubjectCN: string;
+
+    function GetExtension(const AOID: string): string;
+    function GetSubjectAltNames: TSSLStringArray;
+    function GetKeyUsage: TSSLStringArray;
+    function GetExtendedKeyUsage: TSSLStringArray;
+
+    function GetFingerprint(AHashType: TSSLHash): string;
+    function GetFingerprintSHA1: string;
+    function GetFingerprintSHA256: string;
+
+    procedure SetIssuerCertificate(ACert: ISSLCertificate);
+    function GetIssuerCertificate: ISSLCertificate;
+    function Clone: ISSLCertificate;
+  end;
+
+  TFreePascalCertificateStore = class(TInterfacedObject, ISSLCertificateStore)
+  private
+    FCertificates: TInterfaceList;
+    function NormalizeFingerprint(const AFingerprint: string): string;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    function AddCertificate(ACert: ISSLCertificate): Boolean;
+    function RemoveCertificate(ACert: ISSLCertificate): Boolean;
+    function Contains(ACert: ISSLCertificate): Boolean;
+    procedure Clear;
+    function GetCount: Integer;
+    function GetCertificate(AIndex: Integer): ISSLCertificate;
+
+    function LoadFromFile(const AFileName: string): Boolean;
+    function LoadFromPath(const APath: string): Boolean;
+    function LoadSystemStore: Boolean;
+
+    function FindBySubject(const ASubject: string): ISSLCertificate;
+    function FindByIssuer(const AIssuer: string): ISSLCertificate;
+    function FindBySerialNumber(const ASerialNumber: string): ISSLCertificate;
+    function FindByFingerprint(const AFingerprint: string): ISSLCertificate;
+
+    function VerifyCertificate(ACert: ISSLCertificate): Boolean;
+    function BuildCertificateChain(ACert: ISSLCertificate): TSSLCertificateArray;
+  end;
+
+{ TFreePascalCertificate }
+
+constructor TFreePascalCertificate.Create;
+begin
+  inherited Create;
+  SetLength(FDERData, 0);
+  FPEMData := '';
+  FillChar(FInfo, SizeOf(FInfo), 0);
+  SetLength(FInfo.SubjectAltNames, 0);
+  FInfo.PathLenConstraint := -1;
+  FInfo.PathLength := -1;
+  FIssuerCert := nil;
+end;
+
+function TFreePascalCertificate.ReadAllBytes(AStream: TStream): TBytes;
+var
+  LSize: Int64;
+begin
+  SetLength(Result, 0);
+  if AStream = nil then
+    Exit;
+
+  LSize := AStream.Size - AStream.Position;
+  if LSize <= 0 then
+    Exit;
+
+  SetLength(Result, LSize);
+  AStream.ReadBuffer(Result[0], LSize);
+end;
+
+function TFreePascalCertificate.HexNormalize(const AValue: string): string;
+begin
+  Result := UpperCase(AValue);
+  Result := StringReplace(Result, ':', '', [rfReplaceAll]);
+  Result := StringReplace(Result, '-', '', [rfReplaceAll]);
+  Result := StringReplace(Result, ' ', '', [rfReplaceAll]);
+end;
+
+function TFreePascalCertificate.CopyBytes(const AData: TBytes): TBytes;
+begin
+  SetLength(Result, Length(AData));
+  if Length(AData) > 0 then
+    Move(AData[0], Result[0], Length(AData));
+end;
+
+procedure TFreePascalCertificate.RebuildInfo;
+var
+  LParser: TX509Certificate;
+  LSource: TBytes;
+  LSANs: TX509SubjectAltNames;
+  I: Integer;
+begin
+  FillChar(FInfo, SizeOf(FInfo), 0);
+  SetLength(FInfo.SubjectAltNames, 0);
+  FInfo.PathLenConstraint := -1;
+  FInfo.PathLength := -1;
+
+  if Length(FDERData) > 0 then
+    LSource := CopyBytes(FDERData)
+  else if FPEMData <> '' then
+  begin
+    SetLength(LSource, Length(FPEMData));
+    if Length(LSource) > 0 then
+      Move(FPEMData[1], LSource[0], Length(LSource));
+  end
+  else
+    SetLength(LSource, 0);
+
+  if Length(LSource) > 0 then
+  begin
+    FInfo.FingerprintSHA1 := HashToHex(SHA1(LSource));
+    FInfo.FingerprintSHA256 := HashToHex(SHA256(LSource));
+  end;
+
+  if (Length(FDERData) = 0) and (FPEMData = '') then
+    Exit;
+
+  LParser := TX509Certificate.Create;
+  try
+    try
+      if Length(FDERData) > 0 then
+        LParser.LoadFromDER(FDERData)
+      else
+        LParser.LoadFromPEM(FPEMData);
+
+      FInfo.Subject := LParser.Subject.ToString;
+      FInfo.Issuer := LParser.Issuer.ToString;
+      FInfo.SerialNumber := LParser.SerialNumberAsHex;
+      FInfo.NotBefore := LParser.Validity.NotBefore;
+      FInfo.NotAfter := LParser.Validity.NotAfter;
+      FInfo.PublicKeyAlgorithm := LParser.PublicKeyInfo.Algorithm.Name;
+      if FInfo.PublicKeyAlgorithm = '' then
+        FInfo.PublicKeyAlgorithm := LParser.PublicKeyInfo.Algorithm.OID;
+      FInfo.PublicKeySize := LParser.PublicKeyInfo.KeySize;
+      FInfo.SignatureAlgorithm := LParser.SignatureAlgorithm.Name;
+      if FInfo.SignatureAlgorithm = '' then
+        FInfo.SignatureAlgorithm := LParser.SignatureAlgorithm.OID;
+      FInfo.Version := Ord(LParser.Version) + 1;
+      FInfo.IsCA := LParser.IsCA;
+      FInfo.PathLenConstraint := LParser.BasicConstraints.PathLenConstraint;
+      FInfo.PathLength := LParser.BasicConstraints.PathLenConstraint;
+
+      LSANs := LParser.SubjectAltNames;
+      SetLength(FInfo.SubjectAltNames, Length(LSANs));
+      for I := 0 to High(LSANs) do
+        FInfo.SubjectAltNames[I] := LSANs[I].Value;
+    except
+      // 保持基础字段和指纹即可
+    end;
+  finally
+    LParser.Free;
+  end;
+end;
+
+function TFreePascalCertificate.MatchHostname(const APattern, AHost: string): Boolean;
+var
+  LPattern: string;
+  LHost: string;
+  LSuffix: string;
+  LPrefix: string;
+begin
+  LPattern := LowerCase(Trim(APattern));
+  LHost := LowerCase(Trim(AHost));
+
+  if (LPattern = '') or (LHost = '') then
+    Exit(False);
+
+  if LPattern = LHost then
+    Exit(True);
+
+  if (Length(LPattern) > 2) and (Copy(LPattern, 1, 2) = '*.') then
+  begin
+    LSuffix := Copy(LPattern, 2, Length(LPattern) - 1);
+    if (Length(LHost) <= Length(LSuffix)) or
+      (Copy(LHost, Length(LHost) - Length(LSuffix) + 1, Length(LSuffix)) <> LSuffix) then
+      Exit(False);
+
+    LPrefix := Copy(LHost, 1, Length(LHost) - Length(LSuffix));
+    Result := (LPrefix <> '') and (Pos('.', LPrefix) = 0);
+    Exit;
+  end;
+
+  Result := False;
+end;
+
+function TFreePascalCertificate.LoadFromFile(const AFileName: string): Boolean;
+var
+  LStream: TFileStream;
+begin
+  Result := False;
+  if not FileExists(AFileName) then
+    Exit;
+
+  LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
+  try
+    Result := LoadFromStream(LStream);
+  finally
+    LStream.Free;
+  end;
+end;
+
+function TFreePascalCertificate.LoadFromStream(AStream: TStream): Boolean;
+var
+  LRaw: TBytes;
+  LText: string;
+begin
+  Result := False;
+  if AStream = nil then
+    Exit;
+
+  LRaw := ReadAllBytes(AStream);
+  if Length(LRaw) = 0 then
+    Exit;
+
+  SetString(LText, PAnsiChar(@LRaw[0]), Length(LRaw));
+  if TSSLUtils.IsPEMFormat(LText) then
+    Result := LoadFromPEM(LText)
+  else
+    Result := LoadFromDER(LRaw);
+end;
+
+function TFreePascalCertificate.LoadFromMemory(const AData: Pointer; ASize: Integer): Boolean;
+var
+  LRaw: TBytes;
+  LText: string;
+begin
+  Result := False;
+  if (AData = nil) or (ASize <= 0) then
+    Exit;
+
+  SetLength(LRaw, ASize);
+  Move(AData^, LRaw[0], ASize);
+
+  SetString(LText, PAnsiChar(@LRaw[0]), Length(LRaw));
+  if TSSLUtils.IsPEMFormat(LText) then
+    Result := LoadFromPEM(LText)
+  else
+    Result := LoadFromDER(LRaw);
+end;
+
+function TFreePascalCertificate.LoadFromPEM(const APEM: string): Boolean;
+var
+  LDER: TBytes;
+  LCertificatePEM: string;
+begin
+  Result := False;
+  if Trim(APEM) = '' then
+    Exit;
+
+  LCertificatePEM := TSSLUtils.ExtractPEMBlock(APEM, 'CERTIFICATE');
+  if Trim(LCertificatePEM) = '' then
+  begin
+    SetLength(FDERData, 0);
+    FPEMData := '';
+    RebuildInfo;
+    Exit(False);
+  end;
+
+  try
+    LDER := TSSLUtils.PEMToDER(LCertificatePEM);
+  except
+    SetLength(FDERData, 0);
+    FPEMData := '';
+    RebuildInfo;
+    Exit(False);
+  end;
+
+  if Length(LDER) = 0 then
+  begin
+    SetLength(FDERData, 0);
+    FPEMData := '';
+    RebuildInfo;
+    Exit(False);
+  end;
+
+  if not LoadFromDER(LDER) then
+    Exit(False);
+
+  FPEMData := LCertificatePEM;
+  Result := True;
+end;
+
+function TFreePascalCertificate.LoadFromDER(const ADER: TBytes): Boolean;
+var
+  LParser: TX509Certificate;
+begin
+  Result := False;
+  if Length(ADER) = 0 then
+    Exit;
+
+  LParser := TX509Certificate.Create;
+  try
+    try
+      LParser.LoadFromDER(ADER);
+    except
+      SetLength(FDERData, 0);
+      FPEMData := '';
+      RebuildInfo;
+      Exit(False);
+    end;
+  finally
+    LParser.Free;
+  end;
+
+  FDERData := CopyBytes(ADER);
+  try
+    FPEMData := TSSLUtils.DERToPEM(FDERData);
+  except
+    FPEMData := '';
+  end;
+
+  RebuildInfo;
+  Result := True;
+end;
+
+function TFreePascalCertificate.SaveToFile(const AFileName: string): Boolean;
+var
+  LStream: TFileStream;
+  LBytes: TBytes;
+begin
+  Result := False;
+  if Trim(AFileName) = '' then
+    Exit;
+
+  LBytes := SaveToDER;
+  if Length(LBytes) = 0 then
+  begin
+    SetLength(LBytes, Length(FPEMData));
+    if Length(LBytes) > 0 then
+      Move(FPEMData[1], LBytes[0], Length(LBytes));
+  end;
+
+  if Length(LBytes) = 0 then
+    Exit;
+
+  LStream := TFileStream.Create(AFileName, fmCreate);
+  try
+    LStream.WriteBuffer(LBytes[0], Length(LBytes));
+    Result := True;
+  finally
+    LStream.Free;
+  end;
+end;
+
+function TFreePascalCertificate.SaveToStream(AStream: TStream): Boolean;
+var
+  LBytes: TBytes;
+begin
+  Result := False;
+  if AStream = nil then
+    Exit;
+
+  LBytes := SaveToDER;
+  if Length(LBytes) = 0 then
+  begin
+    SetLength(LBytes, Length(FPEMData));
+    if Length(LBytes) > 0 then
+      Move(FPEMData[1], LBytes[0], Length(LBytes));
+  end;
+
+  if Length(LBytes) = 0 then
+    Exit;
+
+  AStream.WriteBuffer(LBytes[0], Length(LBytes));
+  Result := True;
+end;
+
+function TFreePascalCertificate.SaveToPEM: string;
+begin
+  if (FPEMData = '') and (Length(FDERData) > 0) then
+  begin
+    try
+      FPEMData := TSSLUtils.DERToPEM(FDERData);
+    except
+      FPEMData := '';
+    end;
+  end;
+  Result := FPEMData;
+end;
+
+function TFreePascalCertificate.SaveToDER: TBytes;
+begin
+  if (Length(FDERData) = 0) and (FPEMData <> '') then
+  begin
+    try
+      FDERData := TSSLUtils.PEMToDER(FPEMData);
+    except
+      SetLength(FDERData, 0);
+    end;
+  end;
+
+  Result := CopyBytes(FDERData);
+end;
+
+function TFreePascalCertificate.GetInfo: TSSLCertificateInfo;
+begin
+  Result := FInfo;
+end;
+
+function TFreePascalCertificate.GetSubject: string;
+begin
+  Result := FInfo.Subject;
+end;
+
+function TFreePascalCertificate.GetIssuer: string;
+begin
+  Result := FInfo.Issuer;
+end;
+
+function TFreePascalCertificate.GetSerialNumber: string;
+begin
+  Result := FInfo.SerialNumber;
+end;
+
+function TFreePascalCertificate.GetNotBefore: TDateTime;
+begin
+  Result := FInfo.NotBefore;
+end;
+
+function TFreePascalCertificate.GetNotAfter: TDateTime;
+begin
+  Result := FInfo.NotAfter;
+end;
+
+function TFreePascalCertificate.GetPublicKey: string;
+begin
+  Result := GetPublicKeyAlgorithm;
+end;
+
+function TFreePascalCertificate.GetPublicKeyAlgorithm: string;
+begin
+  Result := FInfo.PublicKeyAlgorithm;
+end;
+
+function TFreePascalCertificate.GetSignatureAlgorithm: string;
+begin
+  Result := FInfo.SignatureAlgorithm;
+end;
+
+function TFreePascalCertificate.GetVersion: Integer;
+begin
+  Result := FInfo.Version;
+end;
+
+function TFreePascalCertificate.Verify(ACAStore: ISSLCertificateStore): Boolean;
+begin
+  if ACAStore = nil then
+    Exit(False);
+  Result := ACAStore.VerifyCertificate(Self);
+end;
+
+function TFreePascalCertificate.VerifyEx(ACAStore: ISSLCertificateStore;
+  AFlags: TSSLCertVerifyFlags; out AResult: TSSLCertVerifyResult): Boolean;
+begin
+  FillChar(AResult, SizeOf(AResult), 0);
+  AResult.DetailedInfo := '';
+
+  if ACAStore = nil then
+  begin
+    AResult.Success := False;
+    AResult.ErrorCode := 1;
+    AResult.ErrorMessage := 'Certificate store is not configured';
+    Exit(False);
+  end;
+
+  Result := ACAStore.VerifyCertificate(Self);
+  AResult.Success := Result;
+  if Result then
+  begin
+    AResult.ErrorCode := 0;
+    AResult.ErrorMessage := '';
+  end
+  else
+  begin
+    AResult.ErrorCode := 2;
+    AResult.ErrorMessage := 'Certificate verification failed';
+  end;
+
+  if not (sslCertVerifyIgnoreExpiry in AFlags) then
+  begin
+    if IsExpired then
+    begin
+      Result := False;
+      AResult.Success := False;
+      AResult.ErrorCode := 3;
+      AResult.ErrorMessage := 'Certificate is expired';
+    end;
+  end;
+end;
+
+function TFreePascalCertificate.VerifyHostname(const AHostname: string): Boolean;
+var
+  LSANs: TSSLStringArray;
+  I: Integer;
+begin
+  Result := False;
+  if Trim(AHostname) = '' then
+    Exit;
+
+  LSANs := GetSubjectAltNames;
+  if Length(LSANs) > 0 then
+  begin
+    for I := 0 to High(LSANs) do
+    begin
+      if MatchHostname(LSANs[I], AHostname) then
+        Exit(True);
+    end;
+    Exit(False);
+  end;
+
+  Result := MatchHostname(GetSubjectCN, AHostname);
+end;
+
+function TFreePascalCertificate.IsExpired: Boolean;
+begin
+  if FInfo.NotAfter = 0 then
+    Exit(False);
+  Result := Now > FInfo.NotAfter;
+end;
+
+function TFreePascalCertificate.IsSelfSigned: Boolean;
+begin
+  Result := (FInfo.Subject <> '') and (FInfo.Issuer <> '') and
+    SameText(FInfo.Subject, FInfo.Issuer);
+end;
+
+function TFreePascalCertificate.IsCA: Boolean;
+begin
+  Result := FInfo.IsCA;
+end;
+
+function TFreePascalCertificate.GetDaysUntilExpiry: Integer;
+begin
+  if FInfo.NotAfter = 0 then
+    Exit(0);
+  Result := Trunc(FInfo.NotAfter - Now);
+end;
+
+function TFreePascalCertificate.GetSubjectCN: string;
+var
+  LSubject: string;
+  LPos: Integer;
+begin
+  Result := '';
+  LSubject := GetSubject;
+  if LSubject = '' then
+    Exit;
+
+  LPos := Pos('CN=', UpperCase(LSubject));
+  if LPos <= 0 then
+    Exit;
+
+  Result := Copy(LSubject, LPos + 3, MaxInt);
+  LPos := Pos(',', Result);
+  if LPos > 0 then
+    Result := Copy(Result, 1, LPos - 1);
+
+  LPos := Pos('/', Result);
+  if LPos > 0 then
+    Result := Copy(Result, 1, LPos - 1);
+
+  Result := Trim(Result);
+end;
+
+function TFreePascalCertificate.GetExtension(const AOID: string): string;
+var
+  LParser: TX509Certificate;
+  LTargetOID: string;
+  I: Integer;
+begin
+  Result := '';
+  LTargetOID := Trim(AOID);
+  if LTargetOID = '' then
+    Exit;
+
+  if (Length(FDERData) = 0) and (FPEMData = '') then
+    Exit;
+
+  LParser := TX509Certificate.Create;
+  try
+    try
+      if Length(FDERData) > 0 then
+        LParser.LoadFromDER(FDERData)
+      else
+        LParser.LoadFromPEM(FPEMData);
+    except
+      Exit;
+    end;
+
+    for I := 0 to High(LParser.Extensions) do
+    begin
+      if SameText(LParser.Extensions[I].OID, LTargetOID) then
+      begin
+        if Length(LParser.Extensions[I].Value) > 0 then
+          Result := HashToHex(LParser.Extensions[I].Value)
+        else
+          Result := LParser.Extensions[I].Name;
+        Exit;
+      end;
+    end;
+  finally
+    LParser.Free;
+  end;
+end;
+
+function TFreePascalCertificate.GetSubjectAltNames: TSSLStringArray;
+var
+  I: Integer;
+begin
+  SetLength(Result, Length(FInfo.SubjectAltNames));
+  for I := 0 to High(FInfo.SubjectAltNames) do
+    Result[I] := FInfo.SubjectAltNames[I];
+end;
+
+function TFreePascalCertificate.GetKeyUsage: TSSLStringArray;
+var
+  LParser: TX509Certificate;
+  LUsage: TX509KeyUsage;
+
+  procedure AddToResult(const AUsage: string);
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := AUsage;
+  end;
+
+begin
+  SetLength(Result, 0);
+
+  LParser := TX509Certificate.Create;
+  try
+    try
+      if Length(FDERData) > 0 then
+        LParser.LoadFromDER(FDERData)
+      else
+        LParser.LoadFromPEM(FPEMData);
+    except
+      Exit;
+    end;
+
+    LUsage := LParser.KeyUsage;
+    if kuDigitalSignature in LUsage then
+      AddToResult('digitalSignature');
+    if kuNonRepudiation in LUsage then
+      AddToResult('nonRepudiation');
+    if kuKeyEncipherment in LUsage then
+      AddToResult('keyEncipherment');
+    if kuDataEncipherment in LUsage then
+      AddToResult('dataEncipherment');
+    if kuKeyAgreement in LUsage then
+      AddToResult('keyAgreement');
+    if kuKeyCertSign in LUsage then
+      AddToResult('keyCertSign');
+    if kuCRLSign in LUsage then
+      AddToResult('cRLSign');
+    if kuEncipherOnly in LUsage then
+      AddToResult('encipherOnly');
+    if kuDecipherOnly in LUsage then
+      AddToResult('decipherOnly');
+  finally
+    LParser.Free;
+  end;
+end;
+
+function TFreePascalCertificate.GetExtendedKeyUsage: TSSLStringArray;
+var
+  LParser: TX509Certificate;
+  LUsage: TX509ExtKeyUsage;
+
+  procedure AddToResult(const AUsage: string);
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := AUsage;
+  end;
+
+begin
+  SetLength(Result, 0);
+
+  LParser := TX509Certificate.Create;
+  try
+    try
+      if Length(FDERData) > 0 then
+        LParser.LoadFromDER(FDERData)
+      else
+        LParser.LoadFromPEM(FPEMData);
+    except
+      Exit;
+    end;
+
+    LUsage := LParser.ExtKeyUsage;
+    if ekuServerAuth in LUsage then
+      AddToResult('serverAuth');
+    if ekuClientAuth in LUsage then
+      AddToResult('clientAuth');
+    if ekuCodeSigning in LUsage then
+      AddToResult('codeSigning');
+    if ekuEmailProtection in LUsage then
+      AddToResult('emailProtection');
+    if ekuTimeStamping in LUsage then
+      AddToResult('timeStamping');
+    if ekuOCSPSigning in LUsage then
+      AddToResult('OCSPSigning');
+  finally
+    LParser.Free;
+  end;
+end;
+
+function TFreePascalCertificate.GetFingerprint(AHashType: TSSLHash): string;
+begin
+  case AHashType of
+    sslHashSHA1:
+      Result := GetFingerprintSHA1;
+    sslHashSHA256:
+      Result := GetFingerprintSHA256;
+    sslHashSHA384:
+      Result := HashToHex(SHA384(SaveToDER));
+    sslHashSHA512:
+      Result := HashToHex(SHA512(SaveToDER));
+  else
+    Result := GetFingerprintSHA256;
+  end;
+end;
+
+function TFreePascalCertificate.GetFingerprintSHA1: string;
+begin
+  if FInfo.FingerprintSHA1 = '' then
+    FInfo.FingerprintSHA1 := HashToHex(SHA1(SaveToDER));
+  Result := FInfo.FingerprintSHA1;
+end;
+
+function TFreePascalCertificate.GetFingerprintSHA256: string;
+begin
+  if FInfo.FingerprintSHA256 = '' then
+    FInfo.FingerprintSHA256 := HashToHex(SHA256(SaveToDER));
+  Result := FInfo.FingerprintSHA256;
+end;
+
+procedure TFreePascalCertificate.SetIssuerCertificate(ACert: ISSLCertificate);
+begin
+  FIssuerCert := ACert;
+end;
+
+function TFreePascalCertificate.GetIssuerCertificate: ISSLCertificate;
+begin
+  Result := FIssuerCert;
+end;
+
+function TFreePascalCertificate.Clone: ISSLCertificate;
+var
+  LClone: TFreePascalCertificate;
+  I: Integer;
+begin
+  LClone := TFreePascalCertificate.Create;
+  LClone.FDERData := CopyBytes(FDERData);
+  LClone.FPEMData := FPEMData;
+  LClone.FInfo := FInfo;
+  SetLength(LClone.FInfo.SubjectAltNames, Length(FInfo.SubjectAltNames));
+  for I := 0 to High(FInfo.SubjectAltNames) do
+    LClone.FInfo.SubjectAltNames[I] := FInfo.SubjectAltNames[I];
+  LClone.FIssuerCert := FIssuerCert;
+  Result := LClone;
+end;
+
+{ TFreePascalCertificateStore }
+
+constructor TFreePascalCertificateStore.Create;
+begin
+  inherited Create;
+  FCertificates := TInterfaceList.Create;
+end;
+
+destructor TFreePascalCertificateStore.Destroy;
+begin
+  FCertificates.Clear;
+  FCertificates.Free;
+  inherited Destroy;
+end;
+
+function TFreePascalCertificateStore.NormalizeFingerprint(const AFingerprint: string): string;
+begin
+  Result := UpperCase(AFingerprint);
+  Result := StringReplace(Result, ':', '', [rfReplaceAll]);
+  Result := StringReplace(Result, '-', '', [rfReplaceAll]);
+  Result := StringReplace(Result, ' ', '', [rfReplaceAll]);
+end;
+
+function TFreePascalCertificateStore.AddCertificate(ACert: ISSLCertificate): Boolean;
+var
+  LFingerprint: string;
+begin
+  Result := False;
+  if ACert = nil then
+    Exit;
+
+  if Contains(ACert) then
+    Exit;
+
+  LFingerprint := NormalizeFingerprint(ACert.GetFingerprintSHA256);
+  if (LFingerprint <> '') and (FindByFingerprint(LFingerprint) <> nil) then
+    Exit;
+
+  FCertificates.Add(ACert);
+  Result := True;
+end;
+
+function TFreePascalCertificateStore.RemoveCertificate(ACert: ISSLCertificate): Boolean;
+var
+  LIdx: Integer;
+  LFingerprint: string;
+  LMatch: ISSLCertificate;
+begin
+  Result := False;
+  if ACert = nil then
+    Exit;
+
+  LIdx := FCertificates.IndexOf(ACert);
+  if LIdx < 0 then
+  begin
+    LFingerprint := NormalizeFingerprint(ACert.GetFingerprintSHA256);
+    if LFingerprint <> '' then
+    begin
+      LMatch := FindByFingerprint(LFingerprint);
+      if LMatch <> nil then
+        LIdx := FCertificates.IndexOf(LMatch);
+    end;
+  end;
+
+  if LIdx >= 0 then
+  begin
+    FCertificates.Delete(LIdx);
+    Result := True;
+  end;
+end;
+
+function TFreePascalCertificateStore.Contains(ACert: ISSLCertificate): Boolean;
+var
+  LFingerprint: string;
+begin
+  Result := False;
+  if ACert = nil then
+    Exit;
+
+  if FCertificates.IndexOf(ACert) >= 0 then
+    Exit(True);
+
+  LFingerprint := NormalizeFingerprint(ACert.GetFingerprintSHA256);
+  if LFingerprint = '' then
+    Exit(False);
+
+  Result := FindByFingerprint(LFingerprint) <> nil;
+end;
+
+procedure TFreePascalCertificateStore.Clear;
+begin
+  FCertificates.Clear;
+end;
+
+function TFreePascalCertificateStore.GetCount: Integer;
+begin
+  Result := FCertificates.Count;
+end;
+
+function TFreePascalCertificateStore.GetCertificate(AIndex: Integer): ISSLCertificate;
+begin
+  Result := nil;
+  if (AIndex >= 0) and (AIndex < FCertificates.Count) then
+    Result := FCertificates[AIndex] as ISSLCertificate;
+end;
+
+function TFreePascalCertificateStore.LoadFromFile(const AFileName: string): Boolean;
+var
+  LCert: ISSLCertificate;
+begin
+  Result := False;
+  if not FileExists(AFileName) then
+    Exit;
+
+  LCert := TFreePascalCertificate.Create;
+  if not LCert.LoadFromFile(AFileName) then
+    Exit;
+
+  Result := AddCertificate(LCert);
+end;
+
+function TFreePascalCertificateStore.LoadFromPath(const APath: string): Boolean;
+  function IsCertificateCandidateFile(const AFileName: string): Boolean;
+  var
+    LExt: string;
+    I: Integer;
+  begin
+    LExt := LowerCase(ExtractFileExt(AFileName));
+    if (LExt = '.pem') or (LExt = '.crt') or (LExt = '.cer') or (LExt = '.der') then
+      Exit(True);
+
+    if (Length(LExt) > 1) and (LExt[1] = '.') then
+    begin
+      Result := True;
+      for I := 2 to Length(LExt) do
+      begin
+        if not (LExt[I] in ['0'..'9']) then
+          Exit(False);
+      end;
+      Exit(True);
+    end;
+
+    Result := False;
+  end;
+var
+  LSearch: TSearchRec;
+  LFileName: string;
+  LLoadedCount: Integer;
+begin
+  Result := False;
+  if not DirectoryExists(APath) then
+    Exit;
+
+  LLoadedCount := 0;
+  if FindFirst(IncludeTrailingPathDelimiter(APath) + '*', faAnyFile, LSearch) = 0 then
+  begin
+    repeat
+      if (LSearch.Name = '.') or (LSearch.Name = '..') then
+        Continue;
+      if (LSearch.Attr and faDirectory) <> 0 then
+        Continue;
+      if not IsCertificateCandidateFile(LSearch.Name) then
+        Continue;
+
+      LFileName := IncludeTrailingPathDelimiter(APath) + LSearch.Name;
+      if LoadFromFile(LFileName) then
+        Inc(LLoadedCount);
+    until FindNext(LSearch) <> 0;
+
+    FindClose(LSearch);
+  end;
+
+  Result := LLoadedCount > 0;
+end;
+
+function TFreePascalCertificateStore.LoadSystemStore: Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := Low(CSystemStorePaths) to High(CSystemStorePaths) do
+  begin
+    if not DirectoryExists(CSystemStorePaths[I]) then
+      Continue;
+
+    if LoadFromPath(CSystemStorePaths[I]) then
+      Exit(True);
+  end;
+end;
+
+function TFreePascalCertificateStore.FindBySubject(const ASubject: string): ISSLCertificate;
+  function NormalizeSubject(const AValue: string): string;
+  var
+    LResult: string;
+  begin
+    LResult := UpperCase(Trim(AValue));
+    LResult := StringReplace(LResult, ' , ', ',', [rfReplaceAll]);
+    LResult := StringReplace(LResult, ', ', ',', [rfReplaceAll]);
+    LResult := StringReplace(LResult, ' ,', ',', [rfReplaceAll]);
+    LResult := StringReplace(LResult, ' = ', '=', [rfReplaceAll]);
+    LResult := StringReplace(LResult, '= ', '=', [rfReplaceAll]);
+    LResult := StringReplace(LResult, ' =', '=', [rfReplaceAll]);
+    Result := LResult;
+  end;
+var
+  I: Integer;
+  LCert: ISSLCertificate;
+  LTarget: string;
+begin
+  Result := nil;
+  LTarget := NormalizeSubject(ASubject);
+  if LTarget = '' then
+    Exit;
+
+  for I := 0 to FCertificates.Count - 1 do
+  begin
+    LCert := FCertificates[I] as ISSLCertificate;
+    if NormalizeSubject(LCert.GetSubject) = LTarget then
+      Exit(LCert);
+  end;
+end;
+
+function TFreePascalCertificateStore.FindByIssuer(const AIssuer: string): ISSLCertificate;
+var
+  I: Integer;
+  LCert: ISSLCertificate;
+begin
+  Result := nil;
+  for I := 0 to FCertificates.Count - 1 do
+  begin
+    LCert := FCertificates[I] as ISSLCertificate;
+    if SameText(LCert.GetIssuer, AIssuer) then
+      Exit(LCert);
+  end;
+end;
+
+function TFreePascalCertificateStore.FindBySerialNumber(const ASerialNumber: string): ISSLCertificate;
+  function NormalizeSerial(const AValue: string): string;
+  var
+    I: Integer;
+    LChar: Char;
+  begin
+    Result := '';
+    for I := 1 to Length(AValue) do
+    begin
+      LChar := UpCase(AValue[I]);
+      if LChar in ['0'..'9', 'A'..'F'] then
+        Result := Result + LChar;
+    end;
+  end;
+var
+  I: Integer;
+  LCert: ISSLCertificate;
+  LTarget: string;
+begin
+  Result := nil;
+  LTarget := NormalizeSerial(ASerialNumber);
+  if LTarget = '' then
+    Exit;
+
+  for I := 0 to FCertificates.Count - 1 do
+  begin
+    LCert := FCertificates[I] as ISSLCertificate;
+    if NormalizeSerial(LCert.GetSerialNumber) = LTarget then
+      Exit(LCert);
+  end;
+end;
+
+function TFreePascalCertificateStore.FindByFingerprint(const AFingerprint: string): ISSLCertificate;
+var
+  I: Integer;
+  LTarget: string;
+  LCert: ISSLCertificate;
+begin
+  Result := nil;
+  LTarget := NormalizeFingerprint(AFingerprint);
+  if LTarget = '' then
+    Exit;
+
+  for I := 0 to FCertificates.Count - 1 do
+  begin
+    LCert := FCertificates[I] as ISSLCertificate;
+    if NormalizeFingerprint(LCert.GetFingerprintSHA256) = LTarget then
+      Exit(LCert);
+  end;
+end;
+
+function TFreePascalCertificateStore.VerifyCertificate(ACert: ISSLCertificate): Boolean;
+var
+  LIssuer: ISSLCertificate;
+begin
+  Result := False;
+  if ACert = nil then
+    Exit;
+
+  if ACert.IsExpired then
+    Exit;
+
+  if Contains(ACert) then
+    Exit(True);
+
+  if ACert.IsSelfSigned then
+  begin
+    Result := FindByFingerprint(ACert.GetFingerprintSHA256) <> nil;
+    Exit;
+  end;
+
+  LIssuer := FindBySubject(ACert.GetIssuer);
+  if LIssuer = nil then
+    Exit;
+
+  if LIssuer.IsExpired then
+    Exit;
+
+  ACert.SetIssuerCertificate(LIssuer);
+  Result := True;
+end;
+
+function TFreePascalCertificateStore.BuildCertificateChain(ACert: ISSLCertificate): TSSLCertificateArray;
+var
+  LCurrent, LNext: ISSLCertificate;
+  LIndex, I: Integer;
+  LExists: Boolean;
+begin
+  SetLength(Result, 0);
+  if ACert = nil then
+    Exit;
+
+  LCurrent := ACert;
+  LIndex := 0;
+  while (LCurrent <> nil) and (LIndex < 16) do
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := LCurrent;
+
+    if LCurrent.IsSelfSigned then
+      Break;
+
+    LNext := LCurrent.GetIssuerCertificate;
+    if LNext = nil then
+      LNext := FindBySubject(LCurrent.GetIssuer);
+
+    if LNext = nil then
+      Break;
+
+    LExists := False;
+    for I := 0 to High(Result) do
+    begin
+      if Result[I] = LNext then
+      begin
+        LExists := True;
+        Break;
+      end;
+
+      if NormalizeFingerprint(Result[I].GetFingerprintSHA256) =
+        NormalizeFingerprint(LNext.GetFingerprintSHA256) then
+      begin
+        LExists := True;
+        Break;
+      end;
+    end;
+    if LExists then
+      Break;
+
+    LCurrent := LNext;
+    Inc(LIndex);
+  end;
+end;
 
 constructor TFreePascalSSLLibrary.Create;
 begin
@@ -140,7 +1346,7 @@ end;
 
 function TFreePascalSSLLibrary.GetVersionString: string;
 begin
-  Result := 'FreePascal Native Backend (skeleton)';
+  Result := 'FreePascal Native Backend (TLS 1.3 core path)';
 end;
 
 function TFreePascalSSLLibrary.GetVersionNumber: Cardinal;
@@ -171,7 +1377,6 @@ begin
   LUpper := UpperCase(Trim(ACipherName));
   Result :=
     (LUpper = 'TLS_AES_128_GCM_SHA256') or
-    (LUpper = 'TLS_AES_256_GCM_SHA384') or
     (LUpper = 'TLS_CHACHA20_POLY1305_SHA256');
 end;
 
@@ -222,7 +1427,7 @@ begin
   Result.RenegotiationSupport := sslSupportNone;
   Result.PostHandshakeAuthSupport := sslSupportNone;
 
-  Result.SupportedCiphers := [sslCipherAES128GCM, sslCipherAES256GCM, sslCipherCHACHA20_POLY1305];
+  Result.SupportedCiphers := [sslCipherAES128GCM, sslCipherCHACHA20_POLY1305];
   Result.SupportedHashes := [sslHashSHA256, sslHashSHA384, sslHashSHA512];
   Result.SupportedKeyExchanges := [sslKexECDHE_RSA, sslKexECDHE_ECDSA];
 
@@ -231,7 +1436,7 @@ begin
   Result.HasAssemblyOptimization := False;
 
   Result.RequiresExternalLibrary := False;
-  Result.SupportsSystemCertStore := False;
+  Result.SupportsSystemCertStore := HasSystemCertStoreDirectories;
   Result.SupportsPKCS11 := False;
   Result.SupportsTPM := False;
 
@@ -247,8 +1452,8 @@ begin
   Result.SupportsCustomCipherSuites := True;
   Result.SupportsCallbacks := True;
 
-  Result.CompatibilityLevel := 35;
-  Result.KnownIssues := 'TLS 1.3 client path works (CHACHA20); server CertificateVerify supports pure-Pas RSA and ECDSA(P-256) signer.';
+  Result.CompatibilityLevel := 42;
+  Result.KnownIssues := 'TLS 1.3 pure-Pas server path supports ECDSA(P-256)/RSA CertificateVerify and currently focuses on SHA256 suites (TLS_AES_128_GCM_SHA256 / TLS_CHACHA20_POLY1305_SHA256); TLS_AES_256_GCM_SHA384 (SHA384 Finished) and PSK/resumption remain in progress.';
 
   FCapabilitiesCache := Result;
   FCapabilitiesCached := True;
@@ -319,24 +1524,30 @@ end;
 
 function TFreePascalSSLLibrary.CreateCertificate: ISSLCertificate;
 begin
-  raise ESSLConfigurationException.CreateWithContext(
-    'CreateCertificate is not implemented in FreePascal backend yet',
-    sslErrUnsupported,
-    'TFreePascalSSLLibrary.CreateCertificate',
-    0,
-    sslFreePascal
-  );
+  if not FInitialized then
+    raise ESSLInitializationException.CreateWithContext(
+      'Cannot create certificate: FreePascal library not initialized',
+      sslErrNotInitialized,
+      'TFreePascalSSLLibrary.CreateCertificate',
+      0,
+      sslFreePascal
+    );
+
+  Result := TFreePascalCertificate.Create;
 end;
 
 function TFreePascalSSLLibrary.CreateCertificateStore: ISSLCertificateStore;
 begin
-  raise ESSLConfigurationException.CreateWithContext(
-    'CreateCertificateStore is not implemented in FreePascal backend yet',
-    sslErrUnsupported,
-    'TFreePascalSSLLibrary.CreateCertificateStore',
-    0,
-    sslFreePascal
-  );
+  if not FInitialized then
+    raise ESSLInitializationException.CreateWithContext(
+      'Cannot create certificate store: FreePascal library not initialized',
+      sslErrNotInitialized,
+      'TFreePascalSSLLibrary.CreateCertificateStore',
+      0,
+      sslFreePascal
+    );
+
+  Result := TFreePascalCertificateStore.Create;
 end;
 
 function CreateFreePascalSSLLibrary: ISSLLibrary;

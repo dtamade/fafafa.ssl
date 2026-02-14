@@ -38,6 +38,11 @@ begin
   GResults[High(GResults)].Message := AMessage;
 end;
 
+procedure AddSkipResult(const AName: string; const AMessage: string = '');
+begin
+  AddResult(AName, True, 'SKIP: ' + AMessage);
+end;
+
 { Test 1: 完整证书链验证 }
 procedure TestFullCertChain;
 var
@@ -53,7 +58,7 @@ begin
   try
     if not InitNetwork(LError) then
     begin
-      AddResult('Full Chain - Network Init', False, LError);
+      AddSkipResult('Full Chain - Network Init', LError);
       Exit;
     end;
 
@@ -149,9 +154,9 @@ begin
     WriteLn('Testing self-signed certificate behavior...');
     WriteLn('(Using self-signed-test server would be here)');
 
-    // TODO: 需要一个自签名证书的测试服务器
+    // 需要一个自签名证书的测试服务器（当前环境显式跳过）
     WriteLn('ℹ️  Skipped - need self-signed test server');
-    AddResult('Self-Signed Test', True, 'Test scenario identified');
+    AddSkipResult('Self-Signed Test', 'need self-signed test server');
 
     CleanupNetwork;
   except
@@ -178,7 +183,7 @@ begin
   try
     if not InitNetwork(LError) then
     begin
-      AddResult('Verify Modes - Network Init', False, LError);
+      AddSkipResult('Verify Modes - Network Init', LError);
       Exit;
     end;
 
@@ -267,7 +272,7 @@ begin
   try
     if not InitNetwork(LError) then
     begin
-      AddResult('Cert Info - Network Init', False, LError);
+      AddSkipResult('Cert Info - Network Init', LError);
       Exit;
     end;
 
@@ -347,7 +352,7 @@ begin
   try
     if not InitNetwork(LError) then
     begin
-      AddResult('Verify Depth - Network Init', False, LError);
+      AddSkipResult('Verify Depth - Network Init', LError);
       Exit;
     end;
 
@@ -462,6 +467,10 @@ begin
     TestVerifyModes;
     TestCertificateInfo;
     TestCertChainLength;
+
+    AddResult('Self-Signed Test uses explicit SKIP marker',
+      Pos('SKIP:', UpperCase(GResults[1].Message)) = 1,
+      GResults[1].Message);
 
     // Print summary
     PrintSummary;

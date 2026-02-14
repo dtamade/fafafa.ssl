@@ -145,6 +145,11 @@ var
   PA, PB: PByte;
   Diff: Byte;
 begin
+  // Guard zero-length contract first to avoid NativeUInt underflow on loop bound.
+  // Empty buffers are equal regardless of pointer values.
+  if Len = 0 then
+    Exit(1);
+
   if (A = nil) or (B = nil) then
     Exit(0);
   

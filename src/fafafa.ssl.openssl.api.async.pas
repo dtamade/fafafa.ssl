@@ -327,9 +327,9 @@ begin
   Result := (WaitResult >= WAIT_OBJECT_0) and 
             (WaitResult < WAIT_OBJECT_0 + NumFds);
   {$ELSE}
-  // Unix implementation would use select/poll/epoll
-  // This is a simplified placeholder
-  Result := True;
+  // Unix path: no polling implementation is wired yet.
+  // Return False for pending FDs to avoid false-positive wait success.
+  Result := False;
   {$ENDIF}
 end;
 

@@ -5,6 +5,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # ============================================================
 # 参数解析
 # ============================================================
@@ -68,6 +71,62 @@ if [[ -z "$REPORT_ID" ]]; then
 fi
 
 TIMESTAMP=$(date +%Y-%m-%d\ %H:%M:%S\ %z)
+
+resolve_input_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$path" ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$PROJECT_ROOT/$path" ]]; then
+    echo "$PROJECT_ROOT/$path"
+    return
+  fi
+
+  echo "$path"
+}
+
+resolve_output_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+if [[ -n "$CLOSURE_GATE_REPORT" ]]; then
+  CLOSURE_GATE_REPORT="$(resolve_input_path "$CLOSURE_GATE_REPORT")"
+fi
+if [[ -n "$AUTOFIX_REPORT" ]]; then
+  AUTOFIX_REPORT="$(resolve_input_path "$AUTOFIX_REPORT")"
+fi
+if [[ -n "$REVALIDATE_REPORT" ]]; then
+  REVALIDATE_REPORT="$(resolve_input_path "$REVALIDATE_REPORT")"
+fi
+if [[ -n "$TREND_REPORT" ]]; then
+  TREND_REPORT="$(resolve_input_path "$TREND_REPORT")"
+fi
+if [[ -n "$RETRY_REPORT" ]]; then
+  RETRY_REPORT="$(resolve_input_path "$RETRY_REPORT")"
+fi
+if [[ -n "$SLA_DRILL_REPORT" ]]; then
+  SLA_DRILL_REPORT="$(resolve_input_path "$SLA_DRILL_REPORT")"
+fi
+if [[ -n "$VERIFY_REPORT" ]]; then
+  VERIFY_REPORT="$(resolve_input_path "$VERIFY_REPORT")"
+fi
+if [[ -n "$OUTPUT" ]]; then
+  OUTPUT="$(resolve_output_path "$OUTPUT")"
+fi
 
 # ============================================================
 # 数据提取函数
@@ -361,6 +420,7 @@ main() {
   report=$(generate_report "$chain_data" "$summary")
 
   if [[ -n "$OUTPUT" ]]; then
+    mkdir -p "$(dirname "$OUTPUT")"
     echo "$report" > "$OUTPUT"
     echo "Report written to: $OUTPUT"
   else

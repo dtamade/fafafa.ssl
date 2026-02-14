@@ -337,9 +337,31 @@ begin
 end;
 
 function TWolfSSLLibrary.IsCipherSupported(const ACipherName: string): Boolean;
+var
+  LCipher: string;
 begin
-  // WolfSSL 支持大多数现代密码套件
-  Result := FInitialized;
+  if not FInitialized then
+    Exit(False);
+
+  LCipher := UpperCase(Trim(ACipherName));
+  if LCipher = '' then
+    Exit(False);
+
+  Result :=
+    (LCipher = 'TLS_AES_128_GCM_SHA256') or
+    (LCipher = 'TLS_AES_256_GCM_SHA384') or
+    (LCipher = 'AES128') or
+    (LCipher = 'AES256') or
+    (LCipher = 'AES128-GCM') or
+    (LCipher = 'AES256-GCM') or
+    (LCipher = 'AES128_GCM') or
+    (LCipher = 'AES256_GCM');
+
+  if (not Result) and FCapabilities.HasChaCha20 then
+    Result :=
+      (LCipher = 'TLS_CHACHA20_POLY1305_SHA256') or
+      (LCipher = 'CHACHA20_POLY1305') or
+      (LCipher = 'CHACHA20-POLY1305');
 end;
 
 function TWolfSSLLibrary.IsFeatureSupported(AFeature: TSSLFeature): Boolean;
@@ -395,7 +417,8 @@ begin
   Result.BackendType := sslWolfSSL;
   Result.BackendImplType := sslImplCLibrary;
   Result.BackendVersion := GetVersionString;
-  Result.SupportsDTLS := True;  // WolfSSL 支持 DTLS
+  Result.SupportsDTLS :=
+    IsProtocolSupported(sslProtocolDTLS10) or IsProtocolSupported(sslProtocolDTLS12);
 
   // 功能支持级别
   Result.SNISupport := sslSupportStable;

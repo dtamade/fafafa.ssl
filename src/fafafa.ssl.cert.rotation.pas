@@ -24,7 +24,7 @@ interface
 
 uses
   Classes, SysUtils, SyncObjs, DateUtils,
-  fafafa.ssl.base, fafafa.ssl.errors, fafafa.ssl.logging;
+  fafafa.ssl.base, fafafa.ssl.errors, fafafa.ssl.logging, fafafa.ssl.exceptions;
 
 type
   {**
@@ -159,7 +159,9 @@ type
 implementation
 
 uses
-  fafafa.ssl.utils;
+  Math,
+  fafafa.ssl.utils,
+  fafafa.ssl.factory;
 
 { TCertificateRotationManager }
 
@@ -198,21 +200,50 @@ end;
 function TCertificateRotationManager.CheckCertificateExpiry(
   out ADaysRemaining: Integer): Boolean;
 var
-  Cert: ISSLCertificate;
+  CertInfo: TSSLCertificateInfo;
   NotAfter: TDateTime;
 begin
   Result := False;
   ADaysRemaining := 0;
 
   try
-    // This is a simplified check - in production, you'd load the certificate
-    // and check its NotAfter field
-    // For now, we'll return True (valid) as a placeholder
-    Result := True;
-    ADaysRemaining := 90;  // Placeholder
+    if Trim(FConfig.CertificatePath) = '' then
+    begin
+      TSecurityLog.Warning('CertRotation',
+        'Certificate expiry check skipped: certificate path is not configured');
+      Exit;
+    end;
+
+    if not FileExists(FConfig.CertificatePath) then
+    begin
+      TSecurityLog.Error('CertRotation',
+        Format('Certificate expiry check failed: file not found: %s',
+          [FConfig.CertificatePath]));
+      Exit;
+    end;
+
+    CertInfo := TSSLHelper.GetCertificateInfo(FConfig.CertificatePath);
+    NotAfter := CertInfo.NotAfter;
+
+    if NotAfter <= 0 then
+      raise ESSLException.CreateWithContext(
+        Format('Certificate does not contain a valid NotAfter timestamp: %s',
+          [FConfig.CertificatePath]),
+        sslErrCertificate,
+        'TCertificateRotationManager.CheckCertificateExpiry',
+        0,
+        sslAutoDetect
+      );
+
+    ADaysRemaining := Floor(NotAfter - Now);
+    Result := Now <= NotAfter;
 
     TSecurityLog.Debug('CertRotation',
-      Format('Certificate expiry check: %d days remaining', [ADaysRemaining]));
+      Format('Certificate expiry check: path=%s, notAfter=%s, daysRemaining=%d, valid=%s',
+        [FConfig.CertificatePath,
+         DateTimeToStr(NotAfter),
+         ADaysRemaining,
+         BoolToStr(Result, True)]));
   except
     on E: Exception do
     begin

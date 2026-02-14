@@ -91,6 +91,42 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/PRE_RELEASE_ARCHIVE_AUDIT_CHECKLIST_${CHECKLIST_ID}.md"
 fi
 
+resolve_input_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$path" ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$PROJECT_ROOT/$path" ]]; then
+    echo "$PROJECT_ROOT/$path"
+    return
+  fi
+
+  echo "$path"
+}
+
+resolve_output_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+GATE_SUMMARY_FILE="$(resolve_input_path "$GATE_SUMMARY_FILE")"
+HOLD_REVIEW_FILE="$(resolve_input_path "$HOLD_REVIEW_FILE")"
+LINKAGE_REPORT_FILE="$(resolve_input_path "$LINKAGE_REPORT_FILE")"
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] checklist_id=$CHECKLIST_ID"
   echo "[DRY-RUN] gate_summary=$GATE_SUMMARY_FILE"

@@ -3,15 +3,17 @@ unit test_openssl_core_unit;
 {$mode objfpc}{$H+}
 
 {
-  这是第一个真正的 TDD 单元测试
+  OpenSSL Core 模块单元测试
 
-  目标：测试 OpenSSL Core 模块的核心功能
+  目标：
   - 库加载状态管理
   - 版本信息获取
-  - 错误处理
+  - 重复加载幂等性
+  - 库句柄可用性
+  - Crypto free 符号回退契约
 
-  注意：这是单元测试，不应该依赖真实的 OpenSSL 库
-  TODO: 当 Mock 层建立后，替换为 Mock 版本
+  说明：当前测试运行于真实库环境；
+  对“未加载状态”不可控前置条件使用显式 Skip 契约。
 }
 
 interface
@@ -19,7 +21,9 @@ interface
 uses
   Classes, SysUtils, fpcunit, testregistry,
   test_base,
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.api.crypto;
 
 type
   { TTestOpenSSLCore - OpenSSL Core 模块单元测试 }
@@ -33,17 +37,20 @@ type
     // 库状态测试
     procedure TestIsLoaded_AfterLoad_ShouldReturnTrue;
     procedure TestIsLoaded_BeforeLoad_ShouldReturnFalse;
-    
+
     // 版本信息测试
     procedure TestGetVersion_WhenLoaded_ShouldReturnValidString;
     procedure TestGetVersion_WhenNotLoaded_ShouldReturnEmptyOrError;
-    
+
     // 多次加载测试
     procedure TestLoadMultipleTimes_ShouldBeIdempotent;
-    
+
     // 库句柄测试
     procedure TestGetCryptoLibHandle_WhenLoaded_ShouldReturnNonZero;
     procedure TestGetSSLLibHandle_WhenLoaded_ShouldReturnNonZero;
+
+    // Crypto 回归测试
+    procedure TestLoadCrypto_WhenCryptoFreeAvailable_ShouldExposeOpenSSLFree;
   end;
 
 implementation
@@ -53,90 +60,74 @@ implementation
 procedure TTestOpenSSLCore.SetUp;
 begin
   inherited SetUp;
-  // 保存当前加载状态
-  FSavedLoadedState := IsOpenSSLCoreLoaded;
+  FSavedLoadedState := TOpenSSLLoader.IsModuleLoaded(osmCore);
 end;
 
 procedure TTestOpenSSLCore.TearDown;
 begin
-  // 恢复原始状态（如果需要）
-  // 注意：目前无法"卸载"OpenSSL，这是一个限制
   inherited TearDown;
 end;
 
 procedure TTestOpenSSLCore.TestIsLoaded_AfterLoad_ShouldReturnTrue;
 begin
-  // Given & When
   LoadOpenSSLCore;
-  
-  // Then
-  AssertTrue('IsOpenSSLCoreLoaded should return true after LoadOpenSSLCore', 
-             IsOpenSSLCoreLoaded);
+  AssertTrue('TOpenSSLLoader.IsModuleLoaded(osmCore) should return true after LoadOpenSSLCore',
+             TOpenSSLLoader.IsModuleLoaded(osmCore));
 end;
 
 procedure TTestOpenSSLCore.TestIsLoaded_BeforeLoad_ShouldReturnFalse;
 begin
-  // Given
-  // (假设没有加载 - 但实际上可能已经加载了)
-  
-  // When & Then
-  // 注意：这个测试有限制，因为我们无法真正"卸载"库
-  // 如果库已经加载，这个测试会失败
-  // TODO: 需要 Mock 层来正确测试这个场景
-  
-  if not FSavedLoadedState then
+  if FSavedLoadedState then
   begin
-    // 只有在初始状态未加载时才测试
-    AssertFalse('IsOpenSSLCoreLoaded should return false before LoadOpenSSLCore',
-                IsOpenSSLCoreLoaded);
-  end
-  else
-  begin
-    // 库已经加载，跳过测试
-    WriteLn('WARNING: TestIsLoaded_BeforeLoad_ShouldReturnFalse skipped - library already loaded');
+    Ignore('Precondition not met: OpenSSL core is already loaded at test start');
+    Exit;
   end;
+
+  AssertFalse('TOpenSSLLoader.IsModuleLoaded(osmCore) should return false before LoadOpenSSLCore',
+             TOpenSSLLoader.IsModuleLoaded(osmCore));
 end;
 
 procedure TTestOpenSSLCore.TestGetVersion_WhenLoaded_ShouldReturnValidString;
 var
   Version: string;
 begin
-  // Given
   LoadOpenSSLCore;
-  
-  // When
+
   Version := GetOpenSSLVersionString;
-  
-  // Then
+
   AssertTrue('Version string should not be empty', Version <> '');
-  // Version format can be "3.x (libcrypto-3-x64.dll)" or similar
-  AssertTrue('Version should contain version number or dll name', 
-             (Pos('3.', Version) > 0) or (Pos('libcrypto', Version) > 0) or (Pos('OpenSSL', Version) > 0));
+  AssertTrue('Version should contain version number or dll name',
+             (Pos('3.', Version) > 0) or
+             (Pos('libcrypto', Version) > 0) or
+             (Pos('OpenSSL', Version) > 0));
 end;
 
 procedure TTestOpenSSLCore.TestGetVersion_WhenNotLoaded_ShouldReturnEmptyOrError;
+var
+  Version: string;
+  RaisedException: Boolean;
 begin
-  // Given
-  // (假设未加载，但实际上可能已经加载)
-  
-  // When & Then
-  // TODO: 需要 Mock 层来正确测试这个场景
-  
-  if not FSavedLoadedState then
+  if FSavedLoadedState then
   begin
-    // 尝试获取版本（不先加载）
-    // 行为可能是返回空字符串或引发异常
-    try
-      GetOpenSSLVersionString;
-      // 如果没有异常，至少应该返回某个默认值
-    except
-      // 异常也是可接受的行为
-    end;
-  end
-  else
-  begin
-    WriteLn('WARNING: TestGetVersion_WhenNotLoaded_ShouldReturnEmptyOrError skipped - library already loaded');
+    Ignore('Precondition not met: OpenSSL core is already loaded at test start');
+    Exit;
   end;
+
+  RaisedException := False;
+  Version := '';
+
+  try
+    Version := GetOpenSSLVersionString;
+  except
+    on E: Exception do
+      RaisedException := True;
+  end;
+
+  AssertTrue('When core is not loaded, call should raise or return empty/unknown version',
+    RaisedException or
+    (Trim(Version) = '') or
+    (Pos('unknown', LowerCase(Version)) > 0) or
+    (Pos('not loaded', LowerCase(Version)) > 0));
 end;
 
 procedure TTestOpenSSLCore.TestLoadMultipleTimes_ShouldBeIdempotent;
@@ -144,20 +135,17 @@ var
   FirstLoadResult, SecondLoadResult: Boolean;
   FirstVersion, SecondVersion: string;
 begin
-  // Given & When
   LoadOpenSSLCore;
-  FirstLoadResult := IsOpenSSLCoreLoaded;
+  FirstLoadResult := TOpenSSLLoader.IsModuleLoaded(osmCore);
   FirstVersion := GetOpenSSLVersionString;
-  
-  // 再次加载
+
   LoadOpenSSLCore;
-  SecondLoadResult := IsOpenSSLCoreLoaded;
+  SecondLoadResult := TOpenSSLLoader.IsModuleLoaded(osmCore);
   SecondVersion := GetOpenSSLVersionString;
-  
-  // Then
+
   AssertTrue('Should be loaded after first call', FirstLoadResult);
   AssertTrue('Should still be loaded after second call', SecondLoadResult);
-  AssertEquals('Version should be same after multiple loads', 
+  AssertEquals('Version should be same after multiple loads',
                FirstVersion, SecondVersion);
 end;
 
@@ -165,13 +153,8 @@ procedure TTestOpenSSLCore.TestGetCryptoLibHandle_WhenLoaded_ShouldReturnNonZero
 var
   Handle: TLibHandle;
 begin
-  // Given
   LoadOpenSSLCore;
-  
-  // When
   Handle := GetCryptoLibHandle;
-  
-  // Then
   AssertTrue('Crypto lib handle should be non-zero', Handle <> NilHandle);
 end;
 
@@ -179,14 +162,21 @@ procedure TTestOpenSSLCore.TestGetSSLLibHandle_WhenLoaded_ShouldReturnNonZero;
 var
   Handle: TLibHandle;
 begin
-  // Given
   LoadOpenSSLCore;
-  
-  // When
   Handle := GetSSLLibHandle;
-  
-  // Then
   AssertTrue('SSL lib handle should be non-zero', Handle <> NilHandle);
+end;
+
+procedure TTestOpenSSLCore.TestLoadCrypto_WhenCryptoFreeAvailable_ShouldExposeOpenSSLFree;
+begin
+  LoadOpenSSLCore;
+  LoadOpenSSLCrypto;
+
+  if Assigned(CRYPTO_free) then
+    AssertTrue('OPENSSL_free should be assigned when CRYPTO_free is available',
+               Assigned(OPENSSL_free))
+  else
+    Ignore('CRYPTO_free is unavailable in current OpenSSL build');
 end;
 
 initialization

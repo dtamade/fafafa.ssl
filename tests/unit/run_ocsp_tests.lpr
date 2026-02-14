@@ -3,6 +3,7 @@ program run_ocsp_tests;
 {$mode objfpc}{$H+}
 
 uses
+  {$IFDEF UNIX}cthreads,{$ENDIF}
   Classes, SysUtils, CustApp,
   fpcunit, testreport, testregistry,
   // OCSP Stapling 单元测试

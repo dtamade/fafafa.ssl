@@ -168,6 +168,9 @@ uses
   fafafa.ssl.wolfssl.certificate,
   fafafa.ssl.wolfssl.session;
 
+const
+  WOLFSSL_ERROR_UNSUPPORTED_RENEGOTIATION = -20001;
+
 { WolfSSL I/O 回调函数（用于流支持）
   这些函数将在 TWolfSSLConnection.Create(AStream) 中注册 }
 
@@ -1159,7 +1162,8 @@ end;
 
 function TWolfSSLConnection.Renegotiate: Boolean;
 begin
-  Result := False;  // WolfSSL 重新协商需要额外实现
+  Result := False;
+  FLastError := WOLFSSL_ERROR_UNSUPPORTED_RENEGOTIATION;
 end;
 
 function TWolfSSLConnection.Read(var ABuffer; ACount: Integer): Integer;
@@ -1219,6 +1223,12 @@ function TWolfSSLConnection.GetError(ARetCode: Integer): TSSLErrorCode;
 var
   LErr: Integer;
 begin
+  if FLastError = WOLFSSL_ERROR_UNSUPPORTED_RENEGOTIATION then
+  begin
+    Result := sslErrUnsupported;
+    Exit;
+  end;
+
   if FWolfSSL = nil then
     Exit(sslErrGeneral);
   LErr := GetLastError;
@@ -1227,7 +1237,10 @@ end;
 
 function TWolfSSLConnection.GetLastError: Integer;
 begin
-  Result := 0;
+  Result := FLastError;
+  if Result <> 0 then
+    Exit;
+
   if (FWolfSSL <> nil) and Assigned(wolfSSL_get_error) then
     Result := wolfSSL_get_error(FWolfSSL, 0);
 end;
@@ -1237,6 +1250,12 @@ var
   LError: Integer;
   LBuf: array[0..255] of AnsiChar;
 begin
+  if FLastError = WOLFSSL_ERROR_UNSUPPORTED_RENEGOTIATION then
+  begin
+    Result := 'TLS renegotiation is not supported by WolfSSL backend; reconnect required';
+    Exit;
+  end;
+
   Result := '';
   LError := GetLastError;
   if (LError <> 0) and Assigned(wolfSSL_ERR_error_string) then

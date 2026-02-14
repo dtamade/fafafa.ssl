@@ -141,7 +141,24 @@ implementation
 
 uses
   Contnrs, DateUtils,
-  fafafa.ssl.utils;
+  fafafa.ssl.utils,
+  fafafa.ssl.crypto.hash,
+  fafafa.ssl.x509;
+
+function NormalizeWolfCertText(const AValue: string): string;
+begin
+  Result := Trim(UpperCase(AValue));
+  Result := StringReplace(Result, ',', '', [rfReplaceAll]);
+  Result := StringReplace(Result, ' ', '', [rfReplaceAll]);
+end;
+
+function NormalizeWolfCertFingerprint(const AFingerprint: string): string;
+begin
+  Result := Trim(UpperCase(AFingerprint));
+  Result := StringReplace(Result, ':', '', [rfReplaceAll]);
+  Result := StringReplace(Result, '-', '', [rfReplaceAll]);
+  Result := StringReplace(Result, ' ', '', [rfReplaceAll]);
+end;
 
 { TWolfSSLCertificate }
 
@@ -174,9 +191,44 @@ begin
 end;
 
 function TWolfSSLCertificate.LoadFromFile(const AFileName: string): Boolean;
+var
+  LRawBytes: TBytes;
+  LText: string;
+  LStream: TFileStream;
 begin
   Result := False;
   if not FileExists(AFileName) then Exit;
+
+  SetLength(FDERData, 0);
+  FPEMData := '';
+
+  SetLength(LRawBytes, 0);
+  LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
+  try
+    if LStream.Size > 0 then
+    begin
+      SetLength(LRawBytes, LStream.Size);
+      LStream.ReadBuffer(LRawBytes[0], Length(LRawBytes));
+    end;
+  finally
+    LStream.Free;
+  end;
+
+  if Length(LRawBytes) > 0 then
+  begin
+    SetString(LText, PAnsiChar(@LRawBytes[0]), Length(LRawBytes));
+    if TSSLUtils.IsPEMFormat(LText) then
+    begin
+      FPEMData := LText;
+      FDERData := TSSLUtils.PEMToDER(FPEMData);
+    end
+    else
+    begin
+      FDERData := Copy(LRawBytes);
+      FPEMData := TSSLUtils.DERToPEM(FDERData);
+    end;
+  end;
+
   if not Assigned(wolfSSL_X509_load_certificate_file) then Exit;
 
   if FX509 <> nil then
@@ -188,6 +240,10 @@ begin
 
   FX509 := wolfSSL_X509_load_certificate_file(PAnsiChar(AnsiString(AFileName)),
     WOLFSSL_FILETYPE_PEM);
+  if FX509 = nil then
+    FX509 := wolfSSL_X509_load_certificate_file(PAnsiChar(AnsiString(AFileName)),
+      WOLFSSL_FILETYPE_ASN1);
+
   Result := FX509 <> nil;
 end;
 
@@ -206,41 +262,90 @@ begin
 end;
 
 function TWolfSSLCertificate.LoadFromMemory(const AData: Pointer; ASize: Integer): Boolean;
+var
+  LX509: PWOLFSSL_X509;
+  LDER: TBytes;
+  LParser: TX509Certificate;
 begin
   Result := False;
+  SetLength(FDERData, 0);
+  FPEMData := '';
+
   if (AData = nil) or (ASize <= 0) then Exit;
+  SetLength(LDER, ASize);
+  Move(AData^, LDER[0], ASize);
+
+  if not TSSLUtils.IsDERFormat(LDER) then
+    Exit;
+
+  // 先用统一 X509 解析器做安全性校验，避免把无效输入交给 wolfSSL parser
+  LParser := TX509Certificate.Create;
+  try
+    try
+      LParser.LoadFromDER(LDER);
+    except
+      Exit;
+    end;
+  finally
+    LParser.Free;
+  end;
+
   if not Assigned(wolfSSL_X509_d2i) then Exit;
+
+  LX509 := wolfSSL_X509_d2i(nil, @LDER[0], Length(LDER));
+  if LX509 = nil then
+    Exit;
 
   if FX509 <> nil then
   begin
     if Assigned(wolfSSL_X509_free) then
       wolfSSL_X509_free(FX509);
-    FX509 := nil;
   end;
 
-  FX509 := wolfSSL_X509_d2i(nil, AData, ASize);
-  Result := FX509 <> nil;
+  FX509 := LX509;
+  FDERData := Copy(LDER);
+  FPEMData := TSSLUtils.DERToPEM(FDERData);
+  Result := True;
 end;
 
 function TWolfSSLCertificate.LoadFromPEM(const APEM: string): Boolean;
 var
-  LAnsi: AnsiString;
+  LDER: TBytes;
 begin
   Result := False;
+  SetLength(FDERData, 0);
+  FPEMData := '';
+
   if APEM = '' then Exit;
 
-  LAnsi := AnsiString(APEM);
-  FPEMData := APEM;
-  Result := LoadFromMemory(PAnsiChar(LAnsi), Length(LAnsi));
+  if not TSSLUtils.IsPEMFormat(APEM) then
+    Exit;
+
+  LDER := TSSLUtils.PEMToDER(APEM);
+  if Length(LDER) = 0 then
+    Exit;
+
+  Result := LoadFromDER(LDER);
+
+  if Result then
+    FPEMData := APEM;
 end;
 
 function TWolfSSLCertificate.LoadFromDER(const ADER: TBytes): Boolean;
 begin
   Result := False;
+  SetLength(FDERData, 0);
+  FPEMData := '';
+
   if Length(ADER) = 0 then Exit;
 
-  FDERData := Copy(ADER);
   Result := LoadFromMemory(@ADER[0], Length(ADER));
+
+  if Result then
+  begin
+    FDERData := Copy(ADER);
+    FPEMData := TSSLUtils.DERToPEM(FDERData);
+  end;
 end;
 
 function TWolfSSLCertificate.SaveToFile(const AFileName: string): Boolean;
@@ -280,12 +385,15 @@ end;
 function TWolfSSLCertificate.SaveToPEM: string;
 begin
   Result := FPEMData;
-  // WolfSSL PEM 导出需要额外 API
+  if (Result = '') and (Length(FDERData) > 0) then
+    Result := TSSLUtils.DERToPEM(FDERData);
 end;
 
 function TWolfSSLCertificate.SaveToDER: TBytes;
 begin
   Result := Copy(FDERData);
+  if (Length(Result) = 0) and (FPEMData <> '') then
+    Result := TSSLUtils.PEMToDER(FPEMData);
 end;
 
 function TWolfSSLCertificate.GetInfo: TSSLCertificateInfo;
@@ -371,75 +479,43 @@ end;
 
 function TWolfSSLCertificate.GetNotBefore: TDateTime;
 var
-  LTime: Pointer;
-  LTm: record
-    tm_sec: Integer;
-    tm_min: Integer;
-    tm_hour: Integer;
-    tm_mday: Integer;
-    tm_mon: Integer;
-    tm_year: Integer;
-    tm_wday: Integer;
-    tm_yday: Integer;
-    tm_isdst: Integer;
-  end;
+  LParser: TX509Certificate;
 begin
-  Result := Now - 365;  // 默认值
-  if FX509 = nil then Exit;
+  Result := 0;
+  if FPEMData = '' then
+    Exit;
 
-  if Assigned(wolfSSL_X509_get_notBefore) and Assigned(wolfSSL_ASN1_TIME_to_tm) then
-  begin
-    LTime := wolfSSL_X509_get_notBefore(FX509);
-    if LTime <> nil then
-    begin
-      FillChar(LTm, SizeOf(LTm), 0);
-      if wolfSSL_ASN1_TIME_to_tm(LTime, @LTm) = 1 then
-      begin
-        try
-          Result := EncodeDate(LTm.tm_year + 1900, LTm.tm_mon + 1, LTm.tm_mday) +
-                    EncodeTime(LTm.tm_hour, LTm.tm_min, LTm.tm_sec, 0);
-        except
-          Result := Now - 365;
-        end;
-      end;
+  LParser := TX509Certificate.Create;
+  try
+    try
+      LParser.LoadFromPEM(FPEMData);
+      Result := LParser.Validity.NotBefore;
+    except
+      Result := 0;
     end;
+  finally
+    LParser.Free;
   end;
 end;
 
 function TWolfSSLCertificate.GetNotAfter: TDateTime;
 var
-  LTime: Pointer;
-  LTm: record
-    tm_sec: Integer;
-    tm_min: Integer;
-    tm_hour: Integer;
-    tm_mday: Integer;
-    tm_mon: Integer;
-    tm_year: Integer;
-    tm_wday: Integer;
-    tm_yday: Integer;
-    tm_isdst: Integer;
-  end;
+  LParser: TX509Certificate;
 begin
-  Result := Now + 365;  // 默认值
-  if FX509 = nil then Exit;
+  Result := 0;
+  if FPEMData = '' then
+    Exit;
 
-  if Assigned(wolfSSL_X509_get_notAfter) and Assigned(wolfSSL_ASN1_TIME_to_tm) then
-  begin
-    LTime := wolfSSL_X509_get_notAfter(FX509);
-    if LTime <> nil then
-    begin
-      FillChar(LTm, SizeOf(LTm), 0);
-      if wolfSSL_ASN1_TIME_to_tm(LTime, @LTm) = 1 then
-      begin
-        try
-          Result := EncodeDate(LTm.tm_year + 1900, LTm.tm_mon + 1, LTm.tm_mday) +
-                    EncodeTime(LTm.tm_hour, LTm.tm_min, LTm.tm_sec, 0);
-        except
-          Result := Now + 365;
-        end;
-      end;
+  LParser := TX509Certificate.Create;
+  try
+    try
+      LParser.LoadFromPEM(FPEMData);
+      Result := LParser.Validity.NotAfter;
+    except
+      Result := 0;
     end;
+  finally
+    LParser.Free;
   end;
 end;
 
@@ -653,8 +729,17 @@ begin
 end;
 
 function TWolfSSLCertificate.IsExpired: Boolean;
+var
+  LNotAfter: TDateTime;
 begin
-  Result := Now > GetNotAfter;
+  LNotAfter := GetNotAfter;
+  if LNotAfter <= 0 then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  Result := Now > LNotAfter;
 end;
 
 function TWolfSSLCertificate.IsSelfSigned: Boolean;
@@ -663,13 +748,41 @@ begin
 end;
 
 function TWolfSSLCertificate.IsCA: Boolean;
+var
+  LDER: TBytes;
+  LParser: TX509Certificate;
 begin
-  Result := False;  // 需要检查 BasicConstraints
+  Result := False;
+
+  LDER := SaveToDER;
+  if Length(LDER) = 0 then
+    Exit;
+
+  LParser := TX509Certificate.Create;
+  try
+    try
+      LParser.LoadFromDER(LDER);
+      Result := LParser.IsCA;
+    except
+      Result := False;
+    end;
+  finally
+    LParser.Free;
+  end;
 end;
 
 function TWolfSSLCertificate.GetDaysUntilExpiry: Integer;
+var
+  LNotAfter: TDateTime;
 begin
-  Result := DaysBetween(Now, GetNotAfter);
+  LNotAfter := GetNotAfter;
+  if LNotAfter <= 0 then
+  begin
+    Result := 0;
+    Exit;
+  end;
+
+  Result := DaysBetween(Now, LNotAfter);
   if IsExpired then
     Result := -Result;
 end;
@@ -751,15 +864,31 @@ begin
 end;
 
 function TWolfSSLCertificate.GetFingerprintSHA1: string;
+var
+  LDER: TBytes;
 begin
-  Result := '';
-  // 需要 WolfSSL 哈希 API
+  LDER := SaveToDER;
+  if Length(LDER) = 0 then
+  begin
+    Result := '';
+    Exit;
+  end;
+
+  Result := HashToHex(SHA1(LDER));
 end;
 
 function TWolfSSLCertificate.GetFingerprintSHA256: string;
+var
+  LDER: TBytes;
 begin
-  Result := '';
-  // 需要 WolfSSL 哈希 API
+  LDER := SaveToDER;
+  if Length(LDER) = 0 then
+  begin
+    Result := '';
+    Exit;
+  end;
+
+  Result := HashToHex(SHA256(LDER));
 end;
 
 procedure TWolfSSLCertificate.SetIssuerCertificate(ACert: ISSLCertificate);
@@ -834,11 +963,34 @@ end;
 function TWolfSSLCertificateStore.RemoveCertificate(ACert: ISSLCertificate): Boolean;
 var
   LIndex: Integer;
+  LTarget: string;
+  I: Integer;
+  LExisting: ISSLCertificate;
 begin
   Result := False;
   if ACert = nil then Exit;
 
   LIndex := FCertificates.IndexOf(ACert);
+  if LIndex < 0 then
+  begin
+    LTarget := NormalizeWolfCertFingerprint(ACert.GetFingerprintSHA256);
+    if LTarget = '' then
+      LTarget := NormalizeWolfCertFingerprint(ACert.GetFingerprintSHA1);
+
+    if LTarget <> '' then
+    begin
+      for I := 0 to FCertificates.Count - 1 do
+      begin
+        LExisting := FCertificates[I] as ISSLCertificate;
+        if NormalizeWolfCertFingerprint(LExisting.GetFingerprintSHA256) = LTarget then
+        begin
+          LIndex := I;
+          Break;
+        end;
+      end;
+    end;
+  end;
+
   if LIndex >= 0 then
   begin
     FCertificates.Delete(LIndex);
@@ -847,8 +999,30 @@ begin
 end;
 
 function TWolfSSLCertificateStore.Contains(ACert: ISSLCertificate): Boolean;
+var
+  LTarget: string;
+  I: Integer;
+  LExisting: ISSLCertificate;
 begin
-  Result := FCertificates.IndexOf(ACert) >= 0;
+  Result := False;
+  if ACert = nil then
+    Exit;
+
+  if FCertificates.IndexOf(ACert) >= 0 then
+    Exit(True);
+
+  LTarget := NormalizeWolfCertFingerprint(ACert.GetFingerprintSHA256);
+  if LTarget = '' then
+    LTarget := NormalizeWolfCertFingerprint(ACert.GetFingerprintSHA1);
+  if LTarget = '' then
+    Exit(False);
+
+  for I := 0 to FCertificates.Count - 1 do
+  begin
+    LExisting := FCertificates[I] as ISSLCertificate;
+    if NormalizeWolfCertFingerprint(LExisting.GetFingerprintSHA256) = LTarget then
+      Exit(True);
+  end;
 end;
 
 procedure TWolfSSLCertificateStore.Clear;
@@ -946,12 +1120,17 @@ function TWolfSSLCertificateStore.FindBySubject(const ASubject: string): ISSLCer
 var
   I: Integer;
   LCert: ISSLCertificate;
+  LTarget: string;
 begin
   Result := nil;
+  LTarget := NormalizeWolfCertText(ASubject);
+  if LTarget = '' then
+    Exit;
+
   for I := 0 to FCertificates.Count - 1 do
   begin
     LCert := FCertificates[I] as ISSLCertificate;
-    if Pos(ASubject, LCert.GetSubject) > 0 then
+    if Pos(LTarget, NormalizeWolfCertText(LCert.GetSubject)) > 0 then
     begin
       Result := LCert;
       Exit;

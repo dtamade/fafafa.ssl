@@ -103,6 +103,42 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_RISK_EXECUTION_RECEIPT_${RECEIPT_ID}.md"
 fi
 
+resolve_input_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$path" ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$PROJECT_ROOT/$path" ]]; then
+    echo "$PROJECT_ROOT/$path"
+    return
+  fi
+
+  echo "$path"
+}
+
+resolve_output_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+RISK_MATRIX_FILE="$(resolve_input_path "$RISK_MATRIX_FILE")"
+BLOCKERS_FILE="$(resolve_input_path "$BLOCKERS_FILE")"
+THRESHOLD_POLICY_FILE="$(resolve_input_path "$THRESHOLD_POLICY_FILE")"
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] receipt_id=$RECEIPT_ID"
   echo "[DRY-RUN] risk_matrix=$RISK_MATRIX_FILE"

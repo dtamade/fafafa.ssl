@@ -48,6 +48,14 @@ begin
       AContextMsg
     );
 
+
+  if NativeAccess.GetBackendType <> sslMbedTLS then
+    raise ESSLException.CreateWithContext(
+      'Object does not support native handle access (not a MbedTLS backend)',
+      sslErrUnsupported,
+      AContextMsg
+    );
+
   Result := NativeAccess.GetNativeHandle;
   if Result = nil then
     raise ESSLException.CreateWithContext(

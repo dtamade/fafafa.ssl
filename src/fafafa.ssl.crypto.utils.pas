@@ -47,6 +47,8 @@ uses
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.kdf,
+  fafafa.ssl.openssl.api.hmac,
   fafafa.ssl.openssl.api.rand,
   fafafa.ssl.aesgcm.pool;      // Phase B - AES-GCM context pool optimization
 
@@ -557,7 +559,22 @@ type
       const AData: TBytes;
       AAlgorithm: THashAlgorithm
     ): TBytes; static;
-    
+
+    { ==================== 密钥派生 ==================== }
+
+    class function HKDF(
+      const AKey, ASalt, AInfo: TBytes;
+      AOutputLength: Integer;
+      AAlgorithm: THashAlgorithm = HASH_SHA256
+    ): TBytes; static;
+
+    class function TryHKDF(
+      const AKey, ASalt, AInfo: TBytes;
+      AOutputLength: Integer;
+      out AResult: TBytes;
+      AAlgorithm: THashAlgorithm = HASH_SHA256
+    ): Boolean; static;
+
     { ==================== 随机数生成 ==================== }
     
     {**
@@ -1574,6 +1591,50 @@ begin
     HASH_SHA512: Result := SHA512(AData);
   else
     RaiseUnsupported('hash algorithm');
+  end;
+end;
+
+class function TCryptoUtils.HKDF(
+  const AKey, ASalt, AInfo: TBytes;
+  AOutputLength: Integer;
+  AAlgorithm: THashAlgorithm
+): TBytes;
+var
+  LDigest: PEVP_MD;
+begin
+  if AOutputLength <= 0 then
+    RaiseInvalidParameter('HKDF output length (must be > 0)');
+
+  if Length(AKey) = 0 then
+    RaiseInvalidParameter('HKDF input key material must not be empty');
+
+  EnsureInitialized;
+  LoadKDFFunctions;
+  if not LoadOpenSSLHMAC then
+    raise ESSLCryptoError.Create('Failed to load HMAC functions for HKDF');
+
+  LDigest := GetEVPDigest(AAlgorithm);
+  if LDigest = nil then
+    raise ESSLCryptoError.Create('Failed to resolve HKDF digest algorithm');
+
+  Result := DeriveKeyHKDF(AKey, ASalt, AInfo, AOutputLength, LDigest);
+  if Length(Result) <> AOutputLength then
+    raise ESSLCryptoError.Create('HKDF derivation failed');
+end;
+
+class function TCryptoUtils.TryHKDF(
+  const AKey, ASalt, AInfo: TBytes;
+  AOutputLength: Integer;
+  out AResult: TBytes;
+  AAlgorithm: THashAlgorithm
+): Boolean;
+begin
+  try
+    AResult := HKDF(AKey, ASalt, AInfo, AOutputLength, AAlgorithm);
+    Result := True;
+  except
+    SetLength(AResult, 0);
+    Result := False;
   end;
 end;
 

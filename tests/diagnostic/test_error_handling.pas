@@ -9,8 +9,18 @@ uses
   fafafa.ssl.base,
   fafafa.ssl;
 
+type
+  TSkipCategory = (
+    scDependency,
+    scVersion,
+    scEnvironment,
+    scCapability,
+    scOther
+  );
+
 var
-  TotalTests, PassedTests, FailedTests: Integer;
+  TotalTests, PassedTests, FailedTests, SkippedTests: Integer;
+  SkipDependency, SkipVersion, SkipEnvironment, SkipCapability, SkipOther: Integer;
 
 procedure Test(const TestName: string; Condition: Boolean);
 begin
@@ -28,6 +38,34 @@ begin
   end;
 end;
 
+function SkipCategoryToTag(ACategory: TSkipCategory): string;
+begin
+  case ACategory of
+    scDependency: Result := '[dependency]';
+    scVersion: Result := '[version]';
+    scEnvironment: Result := '[environment]';
+    scCapability: Result := '[capability]';
+  else
+    Result := '[other]';
+  end;
+end;
+
+procedure SkipOpenSSLTest(const ATestName: string; ACategory: TSkipCategory; const AReason: string);
+begin
+  Inc(SkippedTests);
+
+  case ACategory of
+    scDependency: Inc(SkipDependency);
+    scVersion: Inc(SkipVersion);
+    scEnvironment: Inc(SkipEnvironment);
+    scCapability: Inc(SkipCapability);
+  else
+    Inc(SkipOther);
+  end;
+
+  WriteLn('  [SKIP] ', ATestName, ' - ', SkipCategoryToTag(ACategory), ' ', AReason);
+end;
+
 procedure TestErrorHandlingInitialization;
 var
   LLib: ISSLLibrary;
@@ -41,13 +79,13 @@ begin
   LLib := CreateSSLLibrary(sslOpenSSL);
   if not Assigned(LLib) then
   begin
-    WriteLn('  OpenSSL library not available, skipping test');
+    SkipOpenSSLTest('ErrorHandlingInitialization', scDependency, 'library unavailable');
     Exit;
   end;
 
   if not LLib.Initialize then
   begin
-    WriteLn('  OpenSSL initialization failed, skipping test');
+    SkipOpenSSLTest('OpenSSL prerequisite', scDependency, 'initialization failed');
     Exit;
   end;
 
@@ -77,13 +115,13 @@ begin
   LLib := CreateSSLLibrary(sslOpenSSL);
   if not Assigned(LLib) then
   begin
-    WriteLn('  OpenSSL library not available, skipping test');
+    SkipOpenSSLTest('OpenSSL prerequisite', scDependency, 'library unavailable');
     Exit;
   end;
 
   if not LLib.Initialize then
   begin
-    WriteLn('  OpenSSL initialization failed, skipping test');
+    SkipOpenSSLTest('OpenSSL prerequisite', scDependency, 'initialization failed');
     Exit;
   end;
 
@@ -126,13 +164,13 @@ begin
   LLib := CreateSSLLibrary(sslOpenSSL);
   if not Assigned(LLib) then
   begin
-    WriteLn('  OpenSSL library not available, skipping test');
+    SkipOpenSSLTest('OpenSSL prerequisite', scDependency, 'library unavailable');
     Exit;
   end;
 
   if not LLib.Initialize then
   begin
-    WriteLn('  OpenSSL initialization failed, skipping test');
+    SkipOpenSSLTest('OpenSSL prerequisite', scDependency, 'initialization failed');
     Exit;
   end;
 
@@ -176,13 +214,13 @@ begin
   LLib := CreateSSLLibrary(sslOpenSSL);
   if not Assigned(LLib) then
   begin
-    WriteLn('  OpenSSL library not available, skipping test');
+    SkipOpenSSLTest('OpenSSL prerequisite', scDependency, 'library unavailable');
     Exit;
   end;
 
   if not LLib.Initialize then
   begin
-    WriteLn('  OpenSSL initialization failed, skipping test');
+    SkipOpenSSLTest('OpenSSL prerequisite', scDependency, 'initialization failed');
     Exit;
   end;
 
@@ -220,13 +258,13 @@ begin
   LLib := CreateSSLLibrary(sslOpenSSL);
   if not Assigned(LLib) then
   begin
-    WriteLn('  OpenSSL library not available, skipping test');
+    SkipOpenSSLTest('OpenSSL prerequisite', scDependency, 'library unavailable');
     Exit;
   end;
 
   if not LLib.Initialize then
   begin
-    WriteLn('  OpenSSL initialization failed, skipping test');
+    SkipOpenSSLTest('OpenSSL prerequisite', scDependency, 'initialization failed');
     Exit;
   end;
 
@@ -251,6 +289,12 @@ begin
   TotalTests := 0;
   PassedTests := 0;
   FailedTests := 0;
+  SkippedTests := 0;
+  SkipDependency := 0;
+  SkipVersion := 0;
+  SkipEnvironment := 0;
+  SkipCapability := 0;
+  SkipOther := 0;
 
   WriteLn('OpenSSL Error Handling Tests');
   WriteLn('============================');
@@ -266,8 +310,14 @@ begin
   TestErrorHandlingWithValidOperations;
 
   WriteLn('=' + StringOfChar('=', 70));
-  WriteLn(Format('Test Results: %d/%d passed (%.1f%%)',
-    [PassedTests, TotalTests, PassedTests * 100.0 / TotalTests]));
+  if TotalTests > 0 then
+    WriteLn(Format('Test Results: %d/%d passed (%.1f%%)',
+      [PassedTests, TotalTests, PassedTests * 100.0 / TotalTests]))
+  else
+    WriteLn('Test Results: no executable tests');
+
+  WriteLn(Format('Skipped tests: %d (dependency=%d, version=%d, environment=%d, capability=%d, other=%d)',
+    [SkippedTests, SkipDependency, SkipVersion, SkipEnvironment, SkipCapability, SkipOther]));
 
   if FailedTests > 0 then
   begin

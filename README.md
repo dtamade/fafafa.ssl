@@ -30,6 +30,8 @@
 - **数据互操作**: JSON/XML 序列化支持，标准化数据交换
 - **开发工具**: Web 可视化工具，一键对比后端能力
 - **统一 API**: `fafafa.ssl.native_handle` 统一原生句柄访问（v1.1.1）
+- **能力语义收敛**: `Supports*`/`*Support` 字段表示“当前后端运行时能力”，后端不可用路径统一记录为 `[SKIP] [backend-not-available|dependency|capability]`，不计为 PASS（详见 `docs/reference/P2_MINIMUM_API_CAPABILITY_MATRIX.md`）
+- **WinSSL 跨平台测试契约**: `tests/winssl/*` 在非 Windows 平台输出 `[BLOCKED] [platform]` + `[SKIP] [platform]`，用于区分平台阻塞与真实失败。
 
 ### v1.0.0 核心功能
 - **PKCS#11 支持**: 硬件安全模块(HSM)集成，PIN 回调，私钥加载

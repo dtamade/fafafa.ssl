@@ -372,7 +372,7 @@ begin
     WriteLn('✓ 所有测试通过! OpenSSL实现基础功能验证成功。');
     WriteLn('  下一步建议:');
     WriteLn('  1. 编写具体功能的单元测试');
-    WriteLn('  2. 完善TODO标记的功能');
+    WriteLn('  2. 完善占位标记的功能');
     WriteLn('  3. 添加实际的SSL连接测试');
   end
   else

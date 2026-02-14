@@ -59,6 +59,42 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+resolve_input_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$path" ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -f "$PROJECT_ROOT/$path" ]]; then
+    echo "$PROJECT_ROOT/$path"
+    return
+  fi
+
+  echo "$path"
+}
+
+resolve_output_path() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+INDEX_FILE="$(resolve_input_path "$INDEX_FILE")"
+if [[ -n "$OUTPUT_FILE" ]]; then
+  OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+fi
+
 case "$SCOPE" in
   archive-evidence|all) ;;
   *)

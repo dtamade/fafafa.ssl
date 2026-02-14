@@ -127,3 +127,8 @@ examples/simple_ssl_connection
 examples/simple_test
 examples/https_client/https_client_simple
 examples/production/https_client_simple
+bin/
+tmp/
+*.o
+*.ppu
+*.exe

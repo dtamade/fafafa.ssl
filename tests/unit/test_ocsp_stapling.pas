@@ -443,24 +443,32 @@ end;
 
 procedure TOCSPStaplingClientTest.TestProcessValidResponse;
 var
-  Result: TOCSPStaplingResult;
-  Response: TBytes;
-  Cert, IssuerCert: TX509Certificate;
+  LResult: TOCSPStaplingResult;
+  LResponse: TBytes;
+  LCert, LIssuerCert: TX509Certificate;
 begin
-  // 注意: 这个测试需要有效的证书和 OCSP 响应
-  // 在实际测试中,应该使用测试证书和预生成的响应
-  
-  // TODO: 实现完整的测试
-  // SetLength(Response, 100);
-  // Cert := TX509Certificate.Create;
-  // IssuerCert := TX509Certificate.Create;
-  // try
-  //   Result := FClient.ProcessStapledResponse(Response, Cert, IssuerCert);
-  //   AssertEquals('Status should be verified', ossVerified, Result.Status);
-  // finally
-  //   Cert.Free;
-  //   IssuerCert.Free;
-  // end;
+  // 使用最小 successful OCSP DER（无 SingleResponse），验证确定性失败路径
+  SetLength(LResponse, 5);
+  LResponse[0] := 48;
+  LResponse[1] := 3;
+  LResponse[2] := 10;
+  LResponse[3] := 1;
+  LResponse[4] := 0;
+
+  LCert := TX509Certificate.Create;
+  LIssuerCert := TX509Certificate.Create;
+  try
+    LResult := FClient.ProcessStapledResponse(LResponse, LCert, LIssuerCert);
+    AssertTrue('Successful DER without matching cert should fail verification',
+      LResult.Status = ossVerificationFailed);
+    AssertTrue('Error message should mention certificate lookup',
+      Pos('Certificate', LResult.ErrorMessage) > 0);
+    AssertTrue('LastResult should track latest status',
+      FClient.LastResult.Status = LResult.Status);
+  finally
+    LCert.Free;
+    LIssuerCert.Free;
+  end;
 end;
 
 procedure TOCSPStaplingClientTest.TestProcessInvalidResponse;
@@ -524,9 +532,31 @@ begin
 end;
 
 procedure TOCSPStaplingClientTest.TestResponseCaching;
+var
+  LResult: TOCSPStaplingResult;
+  LInvalid, LEmpty: TBytes;
+  LCert, LIssuerCert: TX509Certificate;
 begin
-  // TODO: 实现缓存测试
-  // 验证响应被正确缓存
+  SetLength(LInvalid, 10);
+  FillChar(LInvalid[0], 10, 255);
+  SetLength(LEmpty, 0);
+
+  LCert := TX509Certificate.Create;
+  LIssuerCert := TX509Certificate.Create;
+  try
+    LResult := FClient.ProcessStapledResponse(LInvalid, LCert, LIssuerCert);
+    AssertTrue('Invalid response should fail verification',
+      LResult.Status = ossVerificationFailed);
+    AssertEquals('Failed response should not be cached', 0, FCache.GetCount);
+
+    LResult := FClient.ProcessStapledResponse(LEmpty, LCert, LIssuerCert);
+    AssertTrue('Empty response should be marked as not provided',
+      LResult.Status = ossNotProvided);
+    AssertEquals('Empty response should not be cached', 0, FCache.GetCount);
+  finally
+    LCert.Free;
+    LIssuerCert.Free;
+  end;
 end;
 
 // ========================================================================
@@ -552,14 +582,42 @@ begin
 end;
 
 procedure TOCSPStaplingServerTest.TestGetStapledResponse;
+var
+  LConfig: TOCSPStaplingConfig;
+  LServer: TOCSPStaplingServer;
+  LCert, LIssuerCert: TX509Certificate;
+  LResponse: TBytes;
 begin
-  // TODO: 实现完整的服务端测试
-  // 需要模拟 OCSP 服务器或使用测试数据
+  // 在禁用 stapling 配置下，服务端应稳定返回空响应（不触发网络）
+  LConfig := TOCSPStaplingConfig.Default;
+  LConfig.EnableServerStapling := False;
+  LServer := TOCSPStaplingServer.Create(LConfig, FCache);
+  LCert := TX509Certificate.Create;
+  LIssuerCert := TX509Certificate.Create;
+  try
+    LResponse := LServer.GetStapledResponse(LCert, LIssuerCert, False);
+    AssertEquals('Disabled stapling should return empty response', 0, Length(LResponse));
+  finally
+    LCert.Free;
+    LIssuerCert.Free;
+    LServer.Free;
+  end;
 end;
 
 procedure TOCSPStaplingServerTest.TestResponseRefresh;
+var
+  LCert, LIssuerCert: TX509Certificate;
 begin
-  // TODO: 实现刷新测试
+  // 空白证书不包含 AIA OCSP URL，刷新应失败但不能抛异常
+  LCert := TX509Certificate.Create;
+  LIssuerCert := TX509Certificate.Create;
+  try
+    AssertFalse('Refresh should fail when certificate has no OCSP URL',
+      FServer.RefreshResponse(LCert, LIssuerCert));
+  finally
+    LCert.Free;
+    LIssuerCert.Free;
+  end;
 end;
 
 procedure TOCSPStaplingServerTest.TestAutoRefresh;
@@ -578,8 +636,40 @@ begin
 end;
 
 procedure TOCSPStaplingServerTest.TestCacheIntegration;
+var
+  LConfig: TOCSPStaplingConfig;
+  LServer: TOCSPStaplingServer;
+  LThisUpdate, LNextUpdate: TDateTime;
+  LSerial, LCachedResponse, LReturned: TBytes;
+  LCert, LIssuerCert: TX509Certificate;
 begin
-  // TODO: 实现缓存集成测试
+  // 预置缓存条目，验证禁用 stapling 时不会破坏缓存内容
+  SetLength(LSerial, 0);
+  SetLength(LCachedResponse, 5);
+  LCachedResponse[0] := 48;
+  LCachedResponse[1] := 3;
+  LCachedResponse[2] := 10;
+  LCachedResponse[3] := 1;
+  LCachedResponse[4] := 0;
+  LThisUpdate := Now;
+  LNextUpdate := Now + 1.0;
+  FCache.Put(LSerial, LCachedResponse, LThisUpdate, LNextUpdate);
+  AssertEquals('Cache should contain preload entry', 1, FCache.GetCount);
+
+  LConfig := TOCSPStaplingConfig.Default;
+  LConfig.EnableServerStapling := False;
+  LServer := TOCSPStaplingServer.Create(LConfig, FCache);
+  LCert := TX509Certificate.Create;
+  LIssuerCert := TX509Certificate.Create;
+  try
+    LReturned := LServer.GetStapledResponse(LCert, LIssuerCert, False);
+    AssertEquals('Disabled server should return empty response', 0, Length(LReturned));
+    AssertEquals('Cache entry should remain unchanged', 1, FCache.GetCount);
+  finally
+    LCert.Free;
+    LIssuerCert.Free;
+    LServer.Free;
+  end;
 end;
 
 // ========================================================================
@@ -612,8 +702,28 @@ begin
 end;
 
 procedure TOCSPStaplingManagerTest.TestServerInterface;
+var
+  LConfig: TOCSPStaplingConfig;
+  LManager: TOCSPStaplingManager;
+  LCert, LIssuerCert: TX509Certificate;
+  LResponse: TBytes;
 begin
-  // TODO: 实现服务端接口测试
+  LConfig := TOCSPStaplingConfig.Default;
+  LConfig.EnableServerStapling := False;
+  LManager := TOCSPStaplingManager.Create(LConfig);
+  LCert := TX509Certificate.Create;
+  LIssuerCert := TX509Certificate.Create;
+  try
+    LResponse := LManager.ServerGetResponse(LCert, LIssuerCert);
+    AssertEquals('Server response should be empty when stapling disabled',
+      0, Length(LResponse));
+    AssertFalse('Server refresh should fail without OCSP URL',
+      LManager.ServerRefreshResponse(LCert, LIssuerCert));
+  finally
+    LCert.Free;
+    LIssuerCert.Free;
+    LManager.Free;
+  end;
 end;
 
 procedure TOCSPStaplingManagerTest.TestCacheManagement;

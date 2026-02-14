@@ -20,7 +20,8 @@ program test_basic;
 
 uses
   SysUtils, Classes, 
-  fafafa.ssl;  // 主库单元
+  fafafa.ssl,
+  fafafa.ssl.base;  // 主库单元
 
 procedure PrintSeparator;
 begin
@@ -31,6 +32,7 @@ procedure TestLibraryDetection;
 var
   LAvailableLibs: TSSLLibraryTypes;
   LLibType: TSSLLibraryType;
+  LLib: ISSLLibrary;
 begin
   PrintSeparator;
   WriteLn('测试 1: SSL 库检测');
@@ -47,7 +49,7 @@ begin
   WriteLn;
   
   // 获取可用库列表
-  LAvailableLibs := TSSLFactory.AvailableLibraries;
+  LAvailableLibs := TSSLFactory.GetAvailableLibraries;
   
   WriteLn('可用的 SSL 库:');
   for LLibType := Low(TSSLLibraryType) to High(TSSLLibraryType) do
@@ -58,7 +60,7 @@ begin
       
       // 尝试获取版本信息
       try
-        var LLib := TSSLFactory.GetLibraryInstance(LLibType);
+        LLib := TSSLFactory.GetLibraryInstance(LLibType);
         if Assigned(LLib) then
         begin
           WriteLn('    版本: ', LLib.GetVersionString);
@@ -76,7 +78,7 @@ begin
   end;
   
   WriteLn;
-  WriteLn('默认库: ', LibraryTypeToString(TSSLFactory.DefaultLibrary));
+  WriteLn('默认库: ', LibraryTypeToString(TSSLFactory.GetDefaultLibrary));
 end;
 
 procedure TestContextCreation;
@@ -96,7 +98,7 @@ begin
     begin
       WriteLn('✅ 客户端上下文创建成功');
       WriteLn('  上下文类型: 客户端');
-      WriteLn('  协议版本: ', SSL_PROTOCOL_NAMES[sslProtocolTLS12]);
+      WriteLn('  协议版本: ', ProtocolVersionToString(sslProtocolTLS12));
     end;
     
     // 测试配置
@@ -111,7 +113,7 @@ begin
     WriteLn;
     WriteLn('使用配置结构创建上下文...');
     LConfig := CreateDefaultConfig(sslCtxServer);
-    LConfig.LibraryType := TSSLFactory.DefaultLibrary;
+    LConfig.LibraryType := TSSLFactory.GetDefaultLibrary;
     LConfig.ProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
     
     LContext := TSSLFactory.CreateContext(LConfig);
@@ -174,7 +176,7 @@ begin
       end
       else
       begin
-        WriteLn('⚠ 系统证书加载失败（可能未实现）');
+        WriteLn('⚠ [SKIP] [capability] 系统证书加载失败（system store unavailable or backend not implemented）');
       end;
       {$ENDIF}
     end;
@@ -188,6 +190,10 @@ begin
 end;
 
 procedure TestErrorHandling;
+var
+  LContext: ISSLContext;
+  LInvalidLib: TSSLLibraryType;
+  LInvalidLibOrdinal: Integer;
 begin
   PrintSeparator;
   WriteLn('测试 4: 错误处理');
@@ -196,7 +202,9 @@ begin
   try
     // 测试无效库类型
     WriteLn('尝试使用无效的库类型...');
-    var LContext := TSSLFactory.CreateContext(sslCtxClient, TSSLLibraryType(99));
+    LInvalidLibOrdinal := Ord(High(TSSLLibraryType)) + 10;
+    LInvalidLib := TSSLLibraryType(LInvalidLibOrdinal);
+    LContext := TSSLFactory.CreateContext(sslCtxClient, LInvalidLib);
     WriteLn('⚠ 应该抛出异常但没有！');
   except
     on E: ESSLLibraryException do
@@ -220,6 +228,8 @@ begin
 end;
 
 procedure TestSystemInfo;
+var
+  LLib: ISSLLibrary;
 begin
   PrintSeparator;
   WriteLn('测试 5: 系统信息');
@@ -231,7 +241,7 @@ begin
   WriteLn;
   WriteLn('功能支持检查:');
   
-  var LLib := TSSLFactory.GetLibraryInstance;
+  LLib := TSSLFactory.GetLibraryInstance;
   if Assigned(LLib) then
   begin
     WriteLn('  SNI (Server Name Indication): ',
@@ -239,7 +249,7 @@ begin
     WriteLn('  ALPN (Application Layer Protocol Negotiation): ',
       BoolToStr(LLib.IsFeatureSupported(sslFeatALPN), '支持', '不支持'));
     WriteLn('  Session Resumption: ',
-      BoolToStr(LLib.IsFeatureSupported(sslFeatSessionResumption), '支持', '不支持'));
+      BoolToStr(LLib.IsFeatureSupported(sslFeatSessionTickets), '支持', '不支持'));
     
     // 协议版本支持
     WriteLn;

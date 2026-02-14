@@ -41,21 +41,26 @@ type
   TTestResult = record
     Name: string;
     Success: Boolean;
+    Skipped: Boolean;
     ErrorMsg: string;
   end;
 
 var
   Results: array of TTestResult;
-  TotalTests, PassedTests: Integer;
+  TotalTests, PassedTests, SkippedTests: Integer;
 
-procedure AddResult(const AName: string; ASuccess: Boolean; const AError: string = '');
+procedure AddResult(const AName: string; ASuccess: Boolean; const AError: string = '';
+  ASkipped: Boolean = False);
 begin
   SetLength(Results, Length(Results) + 1);
   Results[High(Results)].Name := AName;
   Results[High(Results)].Success := ASuccess;
+  Results[High(Results)].Skipped := ASkipped;
   Results[High(Results)].ErrorMsg := AError;
   Inc(TotalTests);
-  if ASuccess then
+  if ASkipped then
+    Inc(SkippedTests)
+  else if ASuccess then
     Inc(PassedTests);
 end;
 
@@ -85,7 +90,13 @@ begin
   
   for i := 0 to High(Results) do
   begin
-    if Results[i].Success then
+    if Results[i].Skipped then
+    begin
+      WriteLn('  [SKIP] ', Results[i].Name);
+      if Results[i].ErrorMsg <> '' then
+        WriteLn('         Reason: ', Results[i].ErrorMsg);
+    end
+    else if Results[i].Success then
       WriteLn('  [PASS] ', Results[i].Name)
     else
     begin
@@ -97,9 +108,13 @@ begin
   
   WriteLn;
   PrintSeparator;
-  WriteLn(Format('Total: %d tests, %d passed, %d failed (%.1f%%)',
-    [TotalTests, PassedTests, TotalTests - PassedTests,
-     (PassedTests / TotalTests) * 100]));
+  if (TotalTests - SkippedTests) > 0 then
+    WriteLn(Format('Total: %d tests, %d passed, %d failed, %d skipped (%.1f%% executed pass rate)',
+      [TotalTests, PassedTests, TotalTests - PassedTests - SkippedTests, SkippedTests,
+       (PassedTests / (TotalTests - SkippedTests)) * 100]))
+  else
+    WriteLn(Format('Total: %d tests, %d passed, %d failed, %d skipped (all skipped)',
+      [TotalTests, PassedTests, TotalTests - PassedTests - SkippedTests, SkippedTests]));
   PrintSeparator;
 end;
 
@@ -118,7 +133,7 @@ begin
   
   if md = nil then
   begin
-    AddResult('HMAC-' + AlgName + ': Get digest', False, 'Digest not available');
+    AddResult('HMAC-' + AlgName + ': Get digest', False, 'Digest not available', True);
     WriteLn('  [SKIP] Digest not available');
     Exit;
   end;
@@ -258,6 +273,7 @@ end;
 begin
   TotalTests := 0;
   PassedTests := 0;
+  SkippedTests := 0;
   SetLength(Results, 0);
   
   PrintSeparator;
@@ -310,6 +326,9 @@ begin
   // HMAC-SHA512
   TestHMAC_Legacy('SHA512', EVP_sha512(), 'key', 'The quick brown fox jumps over the lazy dog',
     'B42AF09057BAC1E2D41708E48A902E09B5FF7F12AB428A4FE86653C73DD248FB82F948A549F7B791A5B41915EE4D1EC3935357E4E2317250D0372AFA2EBEEB3A');
+
+  // RED contract: unavailable digest should be treated as skip (not pass)
+  TestHMAC_Legacy('UNAVAILABLE-DIGEST', EVP_get_digestbyname('no-such-digest-zzzz'), 'key', 'message', '');
   
   // Test special cases
   TestIncrementalHMAC;
@@ -322,7 +341,7 @@ begin
   UnloadOpenSSLLibrary;
   
   // Exit with appropriate code
-  if PassedTests = TotalTests then
+  if (TotalTests - PassedTests - SkippedTests) = 0 then
     Halt(0)
   else
     Halt(1);

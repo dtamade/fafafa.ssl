@@ -501,6 +501,75 @@ end;
 // ISSLLibrary - 功能支持查询
 // ============================================================================
 
+
+function ProtocolToOpenSSLVersion(AProtocol: TSSLProtocolVersion): Integer;
+const
+  OSSL_TLS1_VERSION = $0301;
+  OSSL_TLS1_1_VERSION = $0302;
+  OSSL_TLS1_2_VERSION = $0303;
+  OSSL_TLS1_3_VERSION = $0304;
+begin
+  case AProtocol of
+    sslProtocolTLS10: Result := OSSL_TLS1_VERSION;
+    sslProtocolTLS11: Result := OSSL_TLS1_1_VERSION;
+    sslProtocolTLS12: Result := OSSL_TLS1_2_VERSION;
+    sslProtocolTLS13: Result := OSSL_TLS1_3_VERSION;
+  else
+    Result := 0;
+  end;
+end;
+
+function RuntimeProbeProtocolSupport(AProtocol: TSSLProtocolVersion; AVersionNumber: Cardinal): Boolean;
+var
+  LMethod: PSSL_METHOD;
+  LCtx: PSSL_CTX;
+  LProtocolVersion: Integer;
+begin
+  Result := False;
+
+  LProtocolVersion := ProtocolToOpenSSLVersion(AProtocol);
+  if LProtocolVersion = 0 then
+    Exit;
+
+  if not Assigned(TLS_method) or not Assigned(SSL_CTX_new) or not Assigned(SSL_CTX_free) then
+  begin
+    case AProtocol of
+      sslProtocolTLS10:
+        Result := (AVersionNumber >= $10000000);
+      sslProtocolTLS11,
+      sslProtocolTLS12:
+        Result := (AVersionNumber >= $10001000);
+      sslProtocolTLS13:
+        Result := (AVersionNumber >= $1010100F);
+    else
+      Result := False;
+    end;
+    Exit;
+  end;
+
+  LMethod := TLS_method();
+  if LMethod = nil then
+    Exit;
+
+  LCtx := SSL_CTX_new(LMethod);
+  if LCtx = nil then
+    Exit;
+
+  try
+    if Assigned(SSL_CTX_set_min_proto_version) and
+      (SSL_CTX_set_min_proto_version(LCtx, LProtocolVersion) <> 1) then
+      Exit;
+
+    if Assigned(SSL_CTX_set_max_proto_version) and
+      (SSL_CTX_set_max_proto_version(LCtx, LProtocolVersion) <> 1) then
+      Exit;
+
+    Result := True;
+  finally
+    SSL_CTX_free(LCtx);
+  end;
+end;
+
 function TOpenSSLLibrary.IsProtocolSupported(AProtocol: TSSLProtocolVersion): Boolean;
 begin
   Result := False;
@@ -515,51 +584,91 @@ begin
 
     sslProtocolTLS10,
     sslProtocolTLS11,
-    sslProtocolTLS12:
-      Result := True;  // 所有现代 OpenSSL 都支持
-
+    sslProtocolTLS12,
     sslProtocolTLS13:
-      // TLS 1.3 在 OpenSSL 1.1.1+ 支持
-      Result := (FVersionNumber >= $1010100F);
+      Result := RuntimeProbeProtocolSupport(AProtocol, FVersionNumber);
 
     sslProtocolDTLS10,
     sslProtocolDTLS12:
-      Result := True;  // OpenSSL 支持 DTLS
+      Result := Assigned(DTLS_method) or (FVersionNumber >= $10000000);
   end;
 end;
-
 function TOpenSSLLibrary.IsCipherSupported(const ACipherName: string): Boolean;
+var
+  LCipherName: string;
+  LCipherAnsi: AnsiString;
+  LMethod: PSSL_METHOD;
+  LCtx: PSSL_CTX;
 begin
   Result := False;
-  
-  if not FInitialized or (ACipherName = '') then
+
+  if not FInitialized then
     Exit;
-  
-  // Simple implementation: assume common ciphers are supported
-  Result := (Pos('AES', UpperCase(ACipherName)) > 0) or
-            (Pos('CHACHA', UpperCase(ACipherName)) > 0) or
-            (Pos('GCM', UpperCase(ACipherName)) > 0);
+
+  LCipherName := Trim(ACipherName);
+  if LCipherName = '' then
+    Exit;
+
+  // Runtime-accurate check: ask OpenSSL parser instead of keyword heuristics
+  if not Assigned(TLS_method) or not Assigned(SSL_CTX_new) then
+    Exit;
+
+  LMethod := TLS_method();
+  if LMethod = nil then
+    Exit;
+
+  LCtx := SSL_CTX_new(LMethod);
+  if LCtx = nil then
+    Exit;
+
+  try
+    LCipherAnsi := AnsiString(LCipherName);
+
+    if Assigned(SSL_CTX_set_cipher_list) then
+      Result := SSL_CTX_set_cipher_list(LCtx, PAnsiChar(LCipherAnsi)) = 1;
+
+    // TLS 1.3 ciphersuites use a dedicated parser API
+    if (not Result) and Assigned(SSL_CTX_set_ciphersuites) then
+      Result := SSL_CTX_set_ciphersuites(LCtx, PAnsiChar(LCipherAnsi)) = 1;
+  finally
+    if Assigned(SSL_CTX_free) then
+      SSL_CTX_free(LCtx);
+  end;
 end;
 
 { 类型安全版本（Phase 1.3 - Rust质量标准） }
 function TOpenSSLLibrary.IsFeatureSupported(AFeature: TSSLFeature): Boolean;
 begin
+  if not FInitialized then
+    Exit(False);
+
   case AFeature of
     sslFeatSNI:
-      Result := True;  // OpenSSL原生支持SNI
+      Result := Assigned(SSL_set_tlsext_host_name) or
+        Assigned(SSL_CTX_set_tlsext_servername_callback);
+
     sslFeatALPN:
-      Result := True;  // OpenSSL原生支持ALPN
+      Result := Assigned(SSL_CTX_set_alpn_protos) and
+        Assigned(SSL_get0_alpn_selected);
+
     sslFeatSessionCache:
-      Result := True;  // OpenSSL原生支持会话缓存
+      Result := Assigned(SSL_CTX_set_session_cache_mode) and
+        Assigned(SSL_CTX_get_session_cache_mode);
+
     sslFeatSessionTickets:
-      Result := True;  // OpenSSL原生支持会话票据
+      Result := Assigned(SSL_CTX_set_tlsext_ticket_key_cb) or
+        Assigned(SSL_set_session_ticket_ext_cb);
+
     sslFeatRenegotiation:
-      Result := True;  // OpenSSL原生支持重新协商
+      Result := Assigned(SSL_renegotiate);
+
     sslFeatOCSPStapling:
-      Result := True;  // OpenSSL原生支持OCSP装订
+      Result := Assigned(SSL_CTX_set_tlsext_status_type) and
+        Assigned(SSL_CTX_set_tlsext_status_cb);
+
     sslFeatCertificateTransparency:
-      // Certificate Transparency需要OpenSSL 1.1.0+
-      Result := (FVersionNumber >= $1010000F);
+      Result := (FVersionNumber >= $1010000F) and
+        TOpenSSLLoader.IsModuleLoaded(osmCT);
   else
     Result := False;
   end;
@@ -567,7 +676,6 @@ begin
   InternalLog(sslLogDebug, Format('Feature support check (type-safe): %d = %s',
     [Ord(AFeature), BoolToStr(Result, True)]));
 end;
-
 function TOpenSSLLibrary.GetCapabilities: TSSLBackendCapabilities;
 begin
   // P2-2 + v1.2: 返回 OpenSSL 后端完整能力矩阵（带缓存）

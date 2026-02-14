@@ -96,6 +96,29 @@ if ! [[ "$OLDER_THAN_DAYS" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
+resolve_input_dir() {
+  local path="$1"
+
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -d "$path" ]]; then
+    echo "$path"
+    return
+  fi
+
+  if [[ -d "$PROJECT_ROOT/$path" ]]; then
+    echo "$PROJECT_ROOT/$path"
+    return
+  fi
+
+  echo "$path"
+}
+
+ARTIFACT_ROOT="$(resolve_input_dir "$ARTIFACT_ROOT")"
+
 if [[ ! -d "$ARTIFACT_ROOT" ]]; then
   echo "[WARN] artifact root not found: $ARTIFACT_ROOT"
   echo "[PASS] nothing to clean"

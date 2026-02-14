@@ -33,18 +33,18 @@ end;
 
 function BenchmarkLocking: Int64;
 var
-  Buffer: TRingBuffer;
+  Buffer: TLockFreeRingBuffer;
   I: Integer;
   StartTime: TDateTime;
 begin
-  Buffer := TRingBuffer.Create(BUFFER_SIZE_POW2);
+  Buffer := TLockFreeRingBuffer.Create(BUFFER_SIZE_POW2);
   try
     StartTime := Now;
 
     for I := 1 to ITERATIONS do
     begin
-      Buffer.Write(TestData, CHUNK_SIZE);
-      Buffer.Read(ReadBuf, CHUNK_SIZE);
+      Buffer.TryWrite(TestData, CHUNK_SIZE);
+      Buffer.TryRead(ReadBuf, CHUNK_SIZE);
     end;
 
     Result := MilliSecondsBetween(Now, StartTime);
@@ -77,13 +77,13 @@ end;
 
 function BenchmarkLockingZeroCopy: Int64;
 var
-  Buffer: TRingBuffer;
+  Buffer: TLockFreeRingBuffer;
   I: Integer;
   StartTime: TDateTime;
   WritePtr, ReadPtr: PByte;
   WriteSize, ReadSize: Integer;
 begin
-  Buffer := TRingBuffer.Create(BUFFER_SIZE_POW2);
+  Buffer := TLockFreeRingBuffer.Create(BUFFER_SIZE_POW2);
   try
     StartTime := Now;
 
@@ -93,14 +93,14 @@ begin
       if (WritePtr <> nil) and (WriteSize >= CHUNK_SIZE) then
       begin
         Move(TestData[0], WritePtr^, CHUNK_SIZE);
-        Buffer.ConfirmWrite(CHUNK_SIZE);
+        Buffer.CommitWrite(CHUNK_SIZE);
       end;
 
       Buffer.GetReadBuffer(ReadPtr, ReadSize);
       if (ReadPtr <> nil) and (ReadSize >= CHUNK_SIZE) then
       begin
         Move(ReadPtr^, ReadBuf[0], CHUNK_SIZE);
-        Buffer.ConfirmRead(CHUNK_SIZE);
+        Buffer.CommitRead(CHUNK_SIZE);
       end;
     end;
 

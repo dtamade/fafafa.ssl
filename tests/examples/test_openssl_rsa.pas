@@ -4,7 +4,7 @@ program test_openssl_rsa;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.crypto,
   fafafa.ssl.openssl.api.bn,
@@ -40,6 +40,13 @@ begin
   for I := 0 to Len-1 do
     Result := Result + IntToHex(Data[I], 2);
   Result := LowerCase(Result);
+end;
+
+procedure PrintScopeNote;
+begin
+  WriteLn('[NOTE] Scope: this example validates RSA primitive round-trip behavior.');
+  WriteLn('[NOTE] It does not claim full RSA_sign/RSA_verify digest-encoding compliance.');
+  WriteLn;
 end;
 
 // Test RSA key generation
@@ -209,8 +216,8 @@ begin
   // NID for SHA256 (usually 672)
   nid_sha256 := 672;
   
-  // Note: RSA_sign typically requires a hash of the message
-  // For simplicity, we'll use a simplified test
+  // Scope note: this block intentionally validates raw RSA private/public primitive round-trip.
+  // It is not a substitute for full RSA_sign/RSA_verify digest+padding compliance testing.
   WriteLn('  Signing with RSA...');
   
   // Use private key to sign (encrypt)
@@ -340,6 +347,7 @@ begin
   WriteLn('OpenSSL RSA Module Unit Test');
   WriteLn('============================');
   WriteLn;
+  PrintScopeNote;
   
   // Load OpenSSL
   Write('Loading OpenSSL libraries... ');
