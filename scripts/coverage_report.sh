@@ -21,6 +21,45 @@ TESTS_DIR="$PROJECT_ROOT/tests"
 COVERAGE_DIR="$PROJECT_ROOT/coverage"
 TEST_PROGRAM="${1:-test_quick_all}"
 
+# Find FPC
+FPC="${FPC:-$(command -v fpc || true)}"
+
+if [ -z "$FPC" ]; then
+    FPC_CANDIDATES=(
+        "$HOME/freePascal/fpc/bin/x86_64-linux/fpc"
+        "/usr/local/bin/fpc"
+        "/usr/bin/fpc"
+    )
+    for candidate in "${FPC_CANDIDATES[@]}"; do
+        if [ -x "$candidate" ]; then
+            FPC="$candidate"
+            break
+        fi
+    done
+fi
+
+if [ -z "$FPC" ] || [ ! -x "$FPC" ]; then
+    echo "ERROR: Free Pascal compiler not found"
+    exit 1
+fi
+
+FPC_UNITS="${FPC_UNITS:-$HOME/freePascal/fpc/units/x86_64-linux}"
+FPC_UNIT_DIRS=(
+    "$FPC_UNITS"
+    "$FPC_UNITS/rtl"
+    "$FPC_UNITS/rtl-objpas"
+    "$FPC_UNITS/rtl-unix"
+    "$FPC_UNITS/fcl-base"
+    "$FPC_UNITS/fcl-json"
+    "$FPC_UNITS/pthreads"
+)
+FPC_UNIT_FLAGS=()
+for unit_dir in "${FPC_UNIT_DIRS[@]}"; do
+    if [ -d "$unit_dir" ]; then
+        FPC_UNIT_FLAGS+=("-Fi$unit_dir" "-Fu$unit_dir")
+    fi
+done
+
 echo "================================================"
 echo "  fafafa.ssl Code Coverage Report"
 echo "================================================"
@@ -53,16 +92,8 @@ echo "Test source: $TEST_SOURCE"
 # Compile with coverage options
 # Note: FPC doesn't have built-in coverage like gcov
 # Using -gl for line info which helps with manual coverage analysis
-/home/dtamade/freePascal/fpc/bin/x86_64-linux/fpc \
-    -Fi/home/dtamade/freePascal/fpc/units/x86_64-linux \
-    -Fi/home/dtamade/freePascal/fpc/units/x86_64-linux/rtl \
-    -Fu/home/dtamade/freePascal/fpc/units/x86_64-linux \
-    -Fu/home/dtamade/freePascal/fpc/units/x86_64-linux/rtl \
-    -Fu/home/dtamade/freePascal/fpc/units/x86_64-linux/rtl-objpas \
-    -Fu/home/dtamade/freePascal/fpc/units/x86_64-linux/rtl-unix \
-    -Fu/home/dtamade/freePascal/fpc/units/x86_64-linux/fcl-base \
-    -Fu/home/dtamade/freePascal/fpc/units/x86_64-linux/fcl-json \
-    -Fu/home/dtamade/freePascal/fpc/units/x86_64-linux/pthreads \
+"$FPC" \
+    "${FPC_UNIT_FLAGS[@]}" \
     -Fu"$SRC_DIR" \
     -FE"$COVERAGE_DIR" \
     -gl -O- \

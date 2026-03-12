@@ -281,6 +281,8 @@ begin
       'TLS1.1 should be unsupported when runtime policy rejects TLS1.1 setters');
     Require(SSLLib.IsProtocolSupported(sslProtocolTLS12),
       'TLS1.2 should remain supported when runtime policy allows TLS1.2 setters');
+    Require(not SSLLib.IsProtocolSupported(sslProtocolUnknown),
+      'Unknown protocol enum must never be reported as supported');
   finally
     SSL_CTX_set_min_proto_version := LOrigSetMin;
     SSL_CTX_set_max_proto_version := LOrigSetMax;

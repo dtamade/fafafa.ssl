@@ -4,7 +4,7 @@ program test_ssl_connection_local;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   
   fafafa.ssl.base;
 

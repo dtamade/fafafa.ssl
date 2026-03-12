@@ -93,7 +93,9 @@ begin
   try
     // 测试简单创建
     WriteLn('创建客户端上下文...');
+    {$PUSH}{$WARN SYMBOL_DEPRECATED OFF}
     LContext := CreateSSLContext(sslCtxClient);
+    {$POP}
     if Assigned(LContext) then
     begin
       WriteLn('✅ 客户端上下文创建成功');
@@ -106,7 +108,11 @@ begin
     WriteLn('配置 SSL 参数...');
     LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     LContext.SetVerifyMode([sslVerifyPeer]);
+    // Deprecated compatibility coverage: this example test intentionally
+    // keeps context-level ServerName to verify the old bridge API still works.
+    {$PUSH}{$WARN SYMBOL_DEPRECATED OFF}
     LContext.SetServerName('www.example.com');
+    {$POP}
     WriteLn('✅ SSL 参数配置成功');
     
     // 测试从配置创建
@@ -135,7 +141,6 @@ procedure TestCertificateHandling;
 var
   LCert: ISSLCertificate;
   LStore: ISSLCertificateStore;
-  LInfo: TSSLCertificateInfo;
 begin
   PrintSeparator;
   WriteLn('测试 3: 证书处理');
@@ -144,7 +149,9 @@ begin
   try
     // 创建证书对象
     WriteLn('创建证书对象...');
+    {$PUSH}{$WARN SYMBOL_DEPRECATED OFF}
     LCert := CreateSSLCertificate;
+    {$POP}
     if Assigned(LCert) then
     begin
       WriteLn('✅ 证书对象创建成功');
@@ -191,7 +198,6 @@ end;
 
 procedure TestErrorHandling;
 var
-  LContext: ISSLContext;
   LInvalidLib: TSSLLibraryType;
   LInvalidLibOrdinal: Integer;
 begin
@@ -204,7 +210,7 @@ begin
     WriteLn('尝试使用无效的库类型...');
     LInvalidLibOrdinal := Ord(High(TSSLLibraryType)) + 10;
     LInvalidLib := TSSLLibraryType(LInvalidLibOrdinal);
-    LContext := TSSLFactory.CreateContext(sslCtxClient, LInvalidLib);
+    TSSLFactory.CreateContext(sslCtxClient, LInvalidLib);
     WriteLn('⚠ 应该抛出异常但没有！');
   except
     on E: ESSLLibraryException do
@@ -264,7 +270,6 @@ end;
 procedure TestMemoryManagement;
 var
   LContext: ISSLContext;
-  LCert: ISSLCertificate;
   LCount: Integer;
 begin
   PrintSeparator;
@@ -276,9 +281,15 @@ begin
   try
     for LCount := 1 to 10 do
     begin
+      {$PUSH}{$WARN SYMBOL_DEPRECATED OFF}
       LContext := CreateSSLContext(sslCtxClient);
-      LCert := CreateSSLCertificate;
+      {$POP}
+      {$PUSH}{$WARN SYMBOL_DEPRECATED OFF}
+      CreateSSLCertificate;
+      {$POP}
       // 接口会自动释放
+      if not Assigned(LContext) then
+        raise Exception.Create('CreateSSLContext returned nil during memory management smoke');
     end;
     
     WriteLn('✅ 创建并释放 10 个上下文和证书对象');
@@ -290,7 +301,9 @@ begin
     WriteLn('  已释放所有库');
     
     // 重新创建
+    {$PUSH}{$WARN SYMBOL_DEPRECATED OFF}
     LContext := CreateSSLContext(sslCtxClient);
+    {$POP}
     if Assigned(LContext) then
       WriteLn('✅ 库自动重新初始化成功');
       

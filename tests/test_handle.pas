@@ -4,20 +4,21 @@ program test_handle;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader;
 
 var
   LProc: Pointer;
 
 begin
   WriteLn('Before loading');
-  WriteLn('IsCryptoLibraryLoaded: ', IsCryptoLibraryLoaded);
+  WriteLn('TOpenSSLLoader.IsModuleLoaded(osmCore): ', TOpenSSLLoader.IsModuleLoaded(osmCore));
   WriteLn('GetCryptoLibHandle: ', GetCryptoLibHandle);
   WriteLn;
   
   LoadOpenSSLCore();
   WriteLn('After loading');
-  WriteLn('IsCryptoLibraryLoaded: ', IsCryptoLibraryLoaded);
+  WriteLn('TOpenSSLLoader.IsModuleLoaded(osmCore): ', TOpenSSLLoader.IsModuleLoaded(osmCore));
   WriteLn('GetCryptoLibHandle: ', GetCryptoLibHandle);
   WriteLn;
   

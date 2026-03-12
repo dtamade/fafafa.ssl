@@ -33,10 +33,12 @@ NC='\033[0m' # No Color
 # 配置
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPTS_DIR="$PROJECT_ROOT/scripts"
-REPORTS_DIR="$PROJECT_ROOT/test-reports"
+REPORTS_DIR="${FAFAFA_CONTINUOUS_MONITOR_REPORTS_DIR:-$PROJECT_ROOT/tmp/continuous_test_monitor_reports}"
 MONITOR_DIR="$REPORTS_DIR/monitor"
 HISTORY_FILE="$MONITOR_DIR/test_history.csv"
 SUMMARY_FILE="$MONITOR_DIR/monitor_summary.txt"
+TREND_FILE="$MONITOR_DIR/trend_report.txt"
+RUNS_DIR="$REPORTS_DIR/runs"
 
 # 默认选项
 INTERVAL=3600  # 1 hour
@@ -72,7 +74,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # 创建监控目录
-mkdir -p "$MONITOR_DIR"
+mkdir -p "$MONITOR_DIR" "$RUNS_DIR"
 
 # 初始化历史文件
 if [ ! -f "$HISTORY_FILE" ]; then
@@ -118,17 +120,23 @@ run_tests() {
 
   log_info "========== 运行 #$run_number =========="
 
-  # 构建测试命令
-  local test_cmd="$SCRIPTS_DIR/run_all_module_tests.sh"
+  # 构建测试命令（每轮独立输出目录，避免并发/重叠运行产物冲突）
+  local run_id
+  run_id="$(date +%Y%m%d_%H%M%S)_$$_${run_number}"
+  local unit_output_dir="$RUNS_DIR/continuous_monitor_units_${run_id}"
+  local bin_output_dir="$RUNS_DIR/continuous_monitor_bin_${run_id}"
+  local test_args=()
   if [ -n "$SPECIFIC_MODULES" ]; then
-    test_cmd="$test_cmd --modules $SPECIFIC_MODULES"
+    test_args+=(--modules "$SPECIFIC_MODULES")
   fi
+
+  mkdir -p "$unit_output_dir" "$bin_output_dir"
 
   # 运行测试
   local test_output
   local test_exit_code
 
-  if test_output=$($test_cmd 2>&1); then
+  if test_output=$(FAFAFA_FPC_UNIT_OUTPUT_DIR="$unit_output_dir" FAFAFA_TEST_BIN_DIR="$bin_output_dir" "$SCRIPTS_DIR/run_all_module_tests.sh" "${test_args[@]}" 2>&1); then
     test_exit_code=0
   else
     test_exit_code=$?
@@ -164,8 +172,6 @@ run_tests() {
 # 生成趋势报告
 generate_trend_report() {
   log_info "生成趋势报告..."
-
-  local trend_file="$MONITOR_DIR/trend_report.txt"
 
   {
     echo "========================================"
@@ -213,9 +219,9 @@ generate_trend_report() {
       echo "  - 测试质量保持稳定 (最近5次: $recent_avg%, 之前5次: $older_avg%)"
     fi
 
-  } > "$trend_file"
+  } > "$TREND_FILE"
 
-  cat "$trend_file"
+  cat "$TREND_FILE"
 }
 
 # 清理函数

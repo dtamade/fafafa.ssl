@@ -7,7 +7,7 @@ uses
   fafafa.ssl,
   fafafa.ssl.base,
   fafafa.ssl.factory,
-  fafafa.ssl.openssl.backed;
+  fafafa.ssl.openssl.lib;
 
 procedure Require(ACondition: Boolean; const AMessage: string);
 begin
@@ -169,11 +169,11 @@ begin
     Lib.IsCipherSupported('TLS_AES_256_GCM_SHA384'));
 
   Require(Pos('SHA384', UpperCase(Caps.KnownIssues)) > 0,
-    'FreePascal KnownIssues must include SHA384 limitation statement');
-  Require(not IsCipherSupported(Caps, sslCipherAES256GCM),
-    'FreePascal capabilities must not advertise AES256GCM while SHA384 finished path is pending');
-  Require(not Lib.IsCipherSupported('TLS_AES_256_GCM_SHA384'),
-    'FreePascal IsCipherSupported must reject TLS_AES_256_GCM_SHA384 while SHA384 finished path is pending');
+    'FreePascal KnownIssues should still mention remaining SHA384-related caveats');
+  Require(IsCipherSupported(Caps, sslCipherAES256GCM),
+    'FreePascal capabilities should advertise AES256GCM once SHA384 handshake path is wired');
+  Require(Lib.IsCipherSupported('TLS_AES_256_GCM_SHA384'),
+    'FreePascal IsCipherSupported should accept TLS_AES_256_GCM_SHA384 once SHA384 handshake path is wired');
 
   WriteLn('  ✓ FreePascal KnownIssues runtime alignment verified');
   WriteLn;

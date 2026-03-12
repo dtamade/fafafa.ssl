@@ -4,7 +4,10 @@ program test_aead_comprehensive;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api;
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.api.evp;
 
 type
   TTestResult = record
@@ -139,7 +142,7 @@ begin
       end;
       
       // Add AAD (Additional Authenticated Data)
-      if EVP_EncryptUpdate(ctx, nil, @len, @aad[0], 16) <> 1 then
+      if fafafa.ssl.openssl.api.evp.EVP_EncryptUpdate(ctx, nil, len, @aad[0], 16) <> 1 then
       begin
         AddResult('AES-256-GCM: Add AAD', False, 'AAD addition failed');
         Exit;
@@ -147,7 +150,7 @@ begin
       WriteLn('  [+] AAD added: ', BytesToHex(aad, 16));
       
       // Encrypt plaintext
-      if EVP_EncryptUpdate(ctx, @ciphertext[0], @len, @plaintext[0], 32) <> 1 then
+      if fafafa.ssl.openssl.api.evp.EVP_EncryptUpdate(ctx, @ciphertext[0], len, @plaintext[0], 32) <> 1 then
       begin
         AddResult('AES-256-GCM: Encrypt update', False, 'Encryption failed');
         Exit;
@@ -155,7 +158,7 @@ begin
       ciphertext_len := len;
       
       // Finalize encryption
-      if EVP_EncryptFinal_ex(ctx, @ciphertext[ciphertext_len], @len) <> 1 then
+      if fafafa.ssl.openssl.api.evp.EVP_EncryptFinal_ex(ctx, @ciphertext[ciphertext_len], len) <> 1 then
       begin
         AddResult('AES-256-GCM: Encrypt final', False, 'Finalization failed');
         Exit;
@@ -208,14 +211,14 @@ begin
       end;
       
       // Add AAD
-      if EVP_DecryptUpdate(ctx, nil, @len, @aad[0], 16) <> 1 then
+      if fafafa.ssl.openssl.api.evp.EVP_DecryptUpdate(ctx, nil, len, @aad[0], 16) <> 1 then
       begin
         AddResult('AES-256-GCM: Add AAD (decrypt)', False, 'AAD addition failed');
         Exit;
       end;
       
       // Decrypt ciphertext
-      if EVP_DecryptUpdate(ctx, @decrypted[0], @len, @ciphertext[0], ciphertext_len) <> 1 then
+      if fafafa.ssl.openssl.api.evp.EVP_DecryptUpdate(ctx, @decrypted[0], len, @ciphertext[0], ciphertext_len) <> 1 then
       begin
         AddResult('AES-256-GCM: Decrypt update', False, 'Decryption failed');
         Exit;
@@ -230,7 +233,7 @@ begin
       end;
       
       // Finalize decryption (this verifies the tag)
-      if EVP_DecryptFinal_ex(ctx, @decrypted[decrypted_len], @len) <> 1 then
+      if fafafa.ssl.openssl.api.evp.EVP_DecryptFinal_ex(ctx, @decrypted[decrypted_len], len) <> 1 then
       begin
         AddResult('AES-256-GCM: Authentication', False, 'Tag verification failed');
         Exit;
@@ -326,7 +329,7 @@ begin
       end;
       
       // Add AAD
-      if EVP_EncryptUpdate(ctx, nil, @len, @aad[0], 24) <> 1 then
+      if fafafa.ssl.openssl.api.evp.EVP_EncryptUpdate(ctx, nil, len, @aad[0], 24) <> 1 then
       begin
         AddResult('ChaCha20-Poly1305: Add AAD', False, 'AAD addition failed');
         Exit;
@@ -334,7 +337,7 @@ begin
       WriteLn('  [+] AAD added: ', BytesToHex(aad, 24));
       
       // Encrypt plaintext
-      if EVP_EncryptUpdate(ctx, @ciphertext[0], @len, @plaintext[0], 48) <> 1 then
+      if fafafa.ssl.openssl.api.evp.EVP_EncryptUpdate(ctx, @ciphertext[0], len, @plaintext[0], 48) <> 1 then
       begin
         AddResult('ChaCha20-Poly1305: Encrypt update', False, 'Encryption failed');
         Exit;
@@ -342,7 +345,7 @@ begin
       ciphertext_len := len;
       
       // Finalize encryption
-      if EVP_EncryptFinal_ex(ctx, @ciphertext[ciphertext_len], @len) <> 1 then
+      if fafafa.ssl.openssl.api.evp.EVP_EncryptFinal_ex(ctx, @ciphertext[ciphertext_len], len) <> 1 then
       begin
         AddResult('ChaCha20-Poly1305: Encrypt final', False, 'Finalization failed');
         Exit;
@@ -381,14 +384,14 @@ begin
       end;
       
       // Add AAD
-      if EVP_DecryptUpdate(ctx, nil, @len, @aad[0], 24) <> 1 then
+      if EVP_DecryptUpdate(ctx, nil, len, @aad[0], 24) <> 1 then
       begin
         AddResult('ChaCha20-Poly1305: Add AAD (decrypt)', False, 'AAD addition failed');
         Exit;
       end;
       
       // Decrypt ciphertext
-      if EVP_DecryptUpdate(ctx, @decrypted[0], @len, @ciphertext[0], ciphertext_len) <> 1 then
+      if fafafa.ssl.openssl.api.evp.EVP_DecryptUpdate(ctx, @decrypted[0], len, @ciphertext[0], ciphertext_len) <> 1 then
       begin
         AddResult('ChaCha20-Poly1305: Decrypt update', False, 'Decryption failed');
         Exit;
@@ -403,7 +406,7 @@ begin
       end;
       
       // Finalize decryption (verifies tag)
-      if EVP_DecryptFinal_ex(ctx, @decrypted[decrypted_len], @len) <> 1 then
+      if fafafa.ssl.openssl.api.evp.EVP_DecryptFinal_ex(ctx, @decrypted[decrypted_len], len) <> 1 then
       begin
         AddResult('ChaCha20-Poly1305: Authentication', False, 'Tag verification failed');
         Exit;
@@ -484,9 +487,9 @@ begin
       EVP_EncryptInit_ex(ctx, cipher, nil, nil, nil);
       EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, 12, nil);
       EVP_EncryptInit_ex(ctx, nil, nil, @key[0], @iv[0]);
-      EVP_EncryptUpdate(ctx, @ciphertext[0], @len, @plaintext[0], 16);
+      fafafa.ssl.openssl.api.evp.EVP_EncryptUpdate(ctx, @ciphertext[0], len, @plaintext[0], 16);
       ciphertext_len := len;
-      EVP_EncryptFinal_ex(ctx, @ciphertext[ciphertext_len], @len);
+      fafafa.ssl.openssl.api.evp.EVP_EncryptFinal_ex(ctx, @ciphertext[ciphertext_len], len);
       ciphertext_len := ciphertext_len + len;
       EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, @tag[0]);
       
@@ -511,11 +514,11 @@ begin
       EVP_DecryptInit_ex(ctx, cipher, nil, nil, nil);
       EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, 12, nil);
       EVP_DecryptInit_ex(ctx, nil, nil, @key[0], @iv[0]);
-      EVP_DecryptUpdate(ctx, @decrypted[0], @len, @ciphertext[0], ciphertext_len);
+      fafafa.ssl.openssl.api.evp.EVP_DecryptUpdate(ctx, @decrypted[0], len, @ciphertext[0], ciphertext_len);
       EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16, @tag[0]);
       
       // This should fail
-      if EVP_DecryptFinal_ex(ctx, @decrypted[len], @i) = 1 then
+      if fafafa.ssl.openssl.api.evp.EVP_DecryptFinal_ex(ctx, @decrypted[len], i) = 1 then
       begin
         WriteLn('  [FAIL] Tampering not detected!');
         AddResult('Tampering: Detection', False, 'Tampered data was accepted');
@@ -548,12 +551,27 @@ begin
   
   // Load OpenSSL
   try
-    if not LoadOpenSSLLibrary then
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('ERROR: Failed to load OpenSSL: ', E.Message);
+        Halt(1);
+      end;
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('ERROR: Failed to load OpenSSL library!');
       Halt(1);
     end;
     WriteLn('OpenSSL library loaded successfully');
+    if not LoadEVP(GetCryptoLibHandle) then
+    begin
+      WriteLn('ERROR: Failed to load EVP functions');
+      Halt(1);
+    end;
     if Assigned(OPENSSL_version) then
       WriteLn('Version: ', OPENSSL_version(0))
     else
@@ -565,7 +583,6 @@ begin
       Halt(1);
     end;
   end;
-  
   // Run tests
   TestAES256GCM;
   TestChaCha20Poly1305;
@@ -576,6 +593,7 @@ begin
   
   // Cleanup
   UnloadOpenSSLLibrary;
+  WriteLn('[PASS] aead comprehensive validation completed');
   
   // Exit with appropriate code
   if PassedTests = TotalTests then

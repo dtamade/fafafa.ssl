@@ -4,12 +4,13 @@ program test_pem;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.bio,
-  fafafa.ssl.openssl.pem,
-  fafafa.ssl.openssl.rsa,
-  fafafa.ssl.openssl.evp;
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.pem,
+  fafafa.ssl.openssl.api.rsa,
+  fafafa.ssl.openssl.api.evp;
 
 var
   TestsPassed: Integer = 0;
@@ -55,7 +56,11 @@ begin
   WriteLn('Testing PEM RSA key read/write...');
   
   // Generate RSA key for testing
-  LoadRSAFunctions;
+  if not LoadOpenSSLRSA then
+  begin
+    TestResult('RSA module loading for PEM test', False);
+    Exit;
+  end;
   Key := RSA_new();
   if Key = nil then
   begin
@@ -105,7 +110,11 @@ begin
   WriteLn('Testing PEM private key read/write...');
   
   // Generate RSA key using EVP
-  LoadEVP;
+  if not LoadEVP(GetCryptoLibHandle) then
+  begin
+    TestResult('EVP module loading', False);
+    Exit;
+  end;
   Key := EVP_PKEY_new();
   if Key = nil then
   begin
@@ -194,7 +203,7 @@ begin
     WriteLn;
     
     // Load BIO module
-    LoadBIOFunctions;
+    LoadOpenSSLBIO;
     
     // Run tests
     TestPEMLoading;

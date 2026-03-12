@@ -92,4 +92,4 @@
 - `fpc -Fu./src tests/unit/test_hkdf_rfc5869.pas -otmp/test_hkdf_rfc5869 && ./tmp/test_hkdf_rfc5869` -> PASS（`Passed:1 Failed:0 Skipped:1`）
 - `fpc -Fu./src tests/test_stream_connection.pas -otmp/test_stream_conn && ./tmp/test_stream_conn` -> PASS（`10/0/1`）
 - `fpc -Fu./src -Fu./tests/framework -Fu./tests/unit tests/unit/run_unit_tests_simple.lpr -otmp/run_unit_tests_simple && ./tmp/run_unit_tests_simple --format=plain --all` -> PASS（`N:10 E:0 F:0 I:2`）
-- `bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT` -> PASS（`15/15`, report `test-reports/test_report_20260212_140825.txt`）
+- `bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT` -> PASS（`15/15`, report `docs/archive/reports/test-report-history/test_report_20260212_140825.txt`）

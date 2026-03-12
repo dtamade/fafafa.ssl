@@ -4,7 +4,9 @@ program test_hash_extended_perf;
 
 uses
   SysUtils, DateUtils,
-  fafafa.ssl.openssl.api;
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader;
 
 const
   TEST_ITERATIONS = 1000;
@@ -145,9 +147,15 @@ begin
   WriteLn(Separator);
   
   // Load OpenSSL
-  if not IsOpenSSLLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
-    if not LoadOpenSSLLibrary then
+    try
+      LoadOpenSSLCore;
+    except
+      WriteLn('✗ Failed to load OpenSSL');
+      Exit;
+    end;
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('✗ Failed to load OpenSSL');
       Exit;
@@ -156,7 +164,7 @@ begin
 
   // EVP functions are automatically loaded with the OpenSSL library
 
-  VersionStr := GetOpenSSLVersion;
+  VersionStr := GetOpenSSLVersionString;
   WriteLn('Loaded: ', VersionStr);
   WriteLn;
 

@@ -18,7 +18,8 @@ uses
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.pkcs7,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;
 
 procedure Main;
 var
@@ -29,10 +30,20 @@ begin
   WriteLn('=============================================================');
   WriteLn;
 
-  if not LoadOpenSSLLibrary then
-    raise Exception.Create('无法加载 OpenSSL');
+  try
+    LoadOpenSSLCore;
+  except
+    on E: Exception do
+      raise Exception.Create('无法加载 OpenSSL: ' + E.Message);
+  end;
 
-  WriteLn('OpenSSL: ', GetOpenSSLVersion);
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
+    raise Exception.Create('OpenSSL core 未保持已加载状态');
+
+  LoadEVP(GetCryptoLibHandle);
+  LoadPKCS7Functions;
+
+  WriteLn('OpenSSL: ', fafafa.ssl.openssl.api.core.GetOpenSSLVersionString);
   WriteLn;
 
   WriteLn('核心函数可用性：');
@@ -57,6 +68,7 @@ begin
   WriteLn('验证入口：');
   WriteLn('- tests/certificate/test_p2_pkcs7_comprehensive.pas');
   WriteLn('- tests/certificate/test_pkcs7_sign_verify_workflow.pas');
+  WriteLn('[PASS] pkcs7 encrypt/decrypt example completed');
 end;
 
 begin

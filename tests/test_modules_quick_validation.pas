@@ -4,6 +4,8 @@ program test_modules_quick_validation;
 
 uses
   SysUtils,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.bn,
@@ -27,6 +29,21 @@ begin
   Results[High(Results)].Name := Name;
   Results[High(Results)].Available := Available;
   Results[High(Results)].Note := Note;
+end;
+
+procedure LoadValidationModules;
+var
+  LCrypto: TLibHandle;
+begin
+  LCrypto := GetCryptoLibHandle;
+  if LCrypto = NilHandle then
+    Exit;
+
+  LoadOpenSSLERR;
+  LoadOpenSSLBIO;
+  LoadOpenSSLRAND;
+  LoadOpenSSLBN;
+  LoadEVP(LCrypto);
 end;
 
 // Quick validation - just check if functions can be called
@@ -161,6 +178,8 @@ begin
     WriteLn('SUCCESS: All module headers translated correctly!')
   else
     WriteLn('WARNING: Some modules have issues');
+
+  WriteLn('[PASS] quick module validation completed');
   
   WriteLn;
   WriteLn('Detailed Results:');
@@ -177,17 +196,24 @@ end;
 begin
   try
     WriteLn('Loading OpenSSL...');
-    if not LoadOpenSSLLibrary then
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('ERROR: Failed to load OpenSSL library: ', E.Message);
+        Halt(1);
+      end;
+    end;
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
-      WriteLn('ERROR: Failed to load OpenSSL library');
+      WriteLn('ERROR: OpenSSL core did not stay loaded');
       Halt(1);
     end;
     WriteLn('OpenSSL loaded successfully');
     WriteLn;
 
-    // Load module functions - handled automatically by LoadOpenSSLLibrary
-    LoadEVP(GetCryptoLibHandle);
-    // LoadBN, LoadBIO, LoadRANDFunctions, LoadERRFunctions are deprecated
+    LoadValidationModules;
 
     RunAllTests;
     PrintSummary;

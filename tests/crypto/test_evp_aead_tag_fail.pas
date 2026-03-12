@@ -4,8 +4,9 @@ program test_evp_aead_tag_fail;
 
 uses
   SysUtils,
+  fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.core,
-  fafafa.ssl.openssl.api;
+  fafafa.ssl.openssl.loader;
 
 procedure TestAES256GCM_TagFail;
 const
@@ -86,7 +87,10 @@ begin
   end;
 
   if failedAsExpected then
-    WriteLn('✅ NEGATIVE TEST PASSED')
+  begin
+    WriteLn('✅ NEGATIVE TEST PASSED');
+    WriteLn('[PASS] evp aead tag-fail validation completed');
+  end
   else
   begin
     WriteLn('❌ NEGATIVE TEST FAILED');
@@ -96,7 +100,7 @@ end;
 
 begin
   try
-    LoadOpenSSLLibrary;
+    LoadOpenSSLCore;
   except
     on E: Exception do
     begin

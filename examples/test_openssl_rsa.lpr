@@ -4,10 +4,10 @@ program test_openssl_rsa;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.rsa,
-  fafafa.ssl.openssl.bn,
-  fafafa.ssl.openssl.evp,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.rsa,
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api;
 
 var
@@ -269,7 +269,7 @@ function TestRSAInvalidInputs: Boolean;
 var
   rsa: PRSA;
   e: PBIGNUM;
-  encrypted: array[0..255] of Byte;
+  encrypted: TBytes;
   enc_len: Integer;
 begin
   Result := False;
@@ -345,7 +345,7 @@ begin
   WriteLn;
   
   LoadOpenSSLCore;
-  WriteLn('OpenSSL version: ', GetOpenSSLVersion);
+  WriteLn('OpenSSL version: ', GetOpenSSLVersionString);
   WriteLn;
   
   if not LoadOpenSSLBN then

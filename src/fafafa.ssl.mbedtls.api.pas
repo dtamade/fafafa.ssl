@@ -91,6 +91,7 @@ type
     f_recv_timeout: Tmbedtls_ssl_recv_timeout); cdecl;
   Tmbedtls_ssl_set_hostname = function(ssl: Pmbedtls_ssl_context;
     hostname: PAnsiChar): Integer; cdecl;
+  Tmbedtls_ssl_get_hostname_pointer = function(ssl: Pmbedtls_ssl_context): PAnsiChar; cdecl;
 
   // SSL 操作
   Tmbedtls_ssl_handshake = function(ssl: Pmbedtls_ssl_context): Integer; cdecl;
@@ -187,6 +188,7 @@ var
   mbedtls_ssl_free: Tmbedtls_ssl_free = nil;
   mbedtls_ssl_set_bio: Tmbedtls_ssl_set_bio = nil;
   mbedtls_ssl_set_hostname: Tmbedtls_ssl_set_hostname = nil;
+  mbedtls_ssl_get_hostname_pointer: Tmbedtls_ssl_get_hostname_pointer = nil;
 
   { 函数指针 - SSL 操作 }
   mbedtls_ssl_handshake: Tmbedtls_ssl_handshake = nil;
@@ -279,6 +281,7 @@ begin
   mbedtls_ssl_free := nil;
   mbedtls_ssl_set_bio := nil;
   mbedtls_ssl_set_hostname := nil;
+  mbedtls_ssl_get_hostname_pointer := nil;
   // SSL 操作
   mbedtls_ssl_handshake := nil;
   mbedtls_ssl_read := nil;
@@ -402,6 +405,8 @@ begin
     GetProc(GMbedTLSHandle, 'mbedtls_ssl_set_bio'));
   mbedtls_ssl_set_hostname := Tmbedtls_ssl_set_hostname(
     GetProc(GMbedTLSHandle, 'mbedtls_ssl_set_hostname'));
+  mbedtls_ssl_get_hostname_pointer := Tmbedtls_ssl_get_hostname_pointer(
+    GetProc(GMbedTLSHandle, 'mbedtls_ssl_get_hostname_pointer'));
 
   // 加载 SSL 操作函数（从 mbedtls）
   mbedtls_ssl_handshake := Tmbedtls_ssl_handshake(

@@ -244,9 +244,9 @@ begin
   for I := 0 to FPoolSize - 1 do
   begin
     if FEntries[I].Initialized and
-       (not FEntries[I].InUse) and
-       (FEntries[I].IsEncrypt = AIsEncrypt) and
-       (Length(FEntries[I].KeyHash) = Length(LKeyHash)) then
+      (not FEntries[I].InUse) and
+      (FEntries[I].IsEncrypt = AIsEncrypt) and
+      (Length(FEntries[I].KeyHash) = Length(LKeyHash)) then
     begin
       // 比较密钥哈希
       if CompareMem(@FEntries[I].KeyHash[0], @LKeyHash[0], Length(LKeyHash)) then

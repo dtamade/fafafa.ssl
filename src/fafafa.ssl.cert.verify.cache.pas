@@ -90,7 +90,6 @@ implementation
 uses
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.x509,
-  fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.loader;
 
@@ -100,9 +99,6 @@ var
 
 function GetGlobalCertVerifyCache: TCertVerifyCache;
 begin
-  if GlobalCacheLock = nil then
-    GlobalCacheLock := TCriticalSection.Create;
-
   GlobalCacheLock.Enter;
   try
     if GlobalCache = nil then
@@ -119,7 +115,10 @@ constructor TCertVerifyCache.Create(ACapacity: Integer; ATTL: Integer);
 begin
   inherited Create;
   FLock := TCriticalSection.Create;
-  FCapacity := ACapacity;
+  if ACapacity > 0 then
+    FCapacity := ACapacity
+  else
+    FCapacity := 0;
   FTTL := ATTL;
   FCount := 0;
   FHits := 0;
@@ -138,46 +137,59 @@ var
   LCtx: PEVP_MD_CTX;
   LDigest: array[0..31] of Byte;
   LLen: Cardinal;
-  LDerBio: PBIO;
-  LDerData: array[0..4095] of Byte;
+  LDerData: TBytes;
   LDerLen: Integer;
+  LEncodedLen: Integer;
+  LDerPtr: PByte;
+  LDerWritePtr: PByte;
+  LMD: PEVP_MD;
 begin
-  SetLength(Result, 32);
+  Result := nil;
+  if ACert = nil then
+    Exit;
+  if not Assigned(i2d_X509) then
+    Exit;
 
-  // 1. 获取 DER 编码
-  LDerBio := BIO_new(BIO_s_mem());
-  if LDerBio = nil then
+  // 1) 获取完整 DER 编码（避免固定缓冲区截断）
+  LDerLen := i2d_X509(ACert, nil);
+  if LDerLen <= 0 then
+    Exit;
+
+  SetLength(LDerData, LDerLen);
+  LDerPtr := @LDerData[0];
+  LDerWritePtr := LDerPtr;
+  LEncodedLen := i2d_X509(ACert, @LDerWritePtr);
+  if LEncodedLen <> LDerLen then
+    Exit;
+
+  // 2) 计算 SHA-256
+  if (not Assigned(EVP_MD_CTX_new)) or (not Assigned(EVP_MD_CTX_free)) or
+    (not Assigned(EVP_DigestInit_ex)) or (not Assigned(EVP_DigestUpdate)) or
+    (not Assigned(EVP_DigestFinal_ex)) or (not Assigned(EVP_sha256)) then
+    Exit;
+
+  LMD := EVP_sha256();
+  if LMD = nil then
+    Exit;
+
+  LCtx := EVP_MD_CTX_new();
+  if LCtx = nil then
     Exit;
 
   try
-    if i2d_X509_bio(LDerBio, ACert) <> 1 then
+    if EVP_DigestInit_ex(LCtx, LMD, nil) <> 1 then
+      Exit;
+    if EVP_DigestUpdate(LCtx, LDerPtr, Cardinal(LDerLen)) <> 1 then
       Exit;
 
-    LDerLen := BIO_read(LDerBio, @LDerData[0], SizeOf(LDerData));
-    if LDerLen <= 0 then
+    LLen := 32;
+    if EVP_DigestFinal_ex(LCtx, @LDigest[0], LLen) <> 1 then
       Exit;
 
-    // 2. 计算 SHA-256
-    LCtx := EVP_MD_CTX_new();
-    if LCtx = nil then
-      Exit;
-
-    try
-      if EVP_DigestInit_ex(LCtx, EVP_sha256(), nil) <> 1 then
-        Exit;
-      if EVP_DigestUpdate(LCtx, @LDerData[0], Cardinal(LDerLen)) <> 1 then
-        Exit;
-
-      LLen := 32;
-      if EVP_DigestFinal_ex(LCtx, @LDigest[0], LLen) <> 1 then
-        Exit;
-
-      Move(LDigest[0], Result[0], 32);
-    finally
-      EVP_MD_CTX_free(LCtx);
-    end;
+    SetLength(Result, 32);
+    Move(LDigest[0], Result[0], 32);
   finally
-    BIO_free(LDerBio);
+    EVP_MD_CTX_free(LCtx);
   end;
 end;
 
@@ -201,7 +213,9 @@ end;
 
 function TCertVerifyCache.IsExpired(const AEntry: TCacheEntry): Boolean;
 begin
-  Result := SecondsBetween(Now, AEntry.Result.VerifiedAt) > FTTL;
+  if FTTL <= 0 then
+    Exit(True);
+  Result := SecondsBetween(Now, AEntry.Result.VerifiedAt) >= FTTL;
 end;
 
 procedure TCertVerifyCache.EvictOldest;
@@ -239,10 +253,10 @@ var
   LIdx: Integer;
 begin
   Result := False;
+  LFingerprint := ComputeFingerprint(ACert);
 
   FLock.Enter;
   try
-    LFingerprint := ComputeFingerprint(ACert);
     if Length(LFingerprint) <> 32 then
     begin
       Inc(FMisses);
@@ -285,12 +299,15 @@ var
   LFingerprint: TBytes;
   LIdx: Integer;
 begin
+  if FCapacity <= 0 then
+    Exit;
+
+  LFingerprint := ComputeFingerprint(ACert);
+  if Length(LFingerprint) <> 32 then
+    Exit;
+
   FLock.Enter;
   try
-    LFingerprint := ComputeFingerprint(ACert);
-    if Length(LFingerprint) <> 32 then
-      Exit;
-
     // 检查是否已存在
     LIdx := FindEntry(LFingerprint);
     if LIdx >= 0 then
@@ -369,6 +386,7 @@ begin
 end;
 
 initialization
+  GlobalCacheLock := TCriticalSection.Create;
 
 finalization
   if GlobalCache <> nil then

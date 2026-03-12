@@ -19,6 +19,10 @@ uses
   fafafa.ssl.openssl.api.sha,
   fafafa.ssl.openssl.api.blake2,
   fafafa.ssl.openssl.api.sha3.evp,
+
+  // Core loader helpers
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   
   // 对称加密
   fafafa.ssl.openssl.api.aes,
@@ -77,6 +81,39 @@ begin
   end;
 end;
 
+procedure LoadValidationModules;
+var
+  LCrypto: TLibHandle;
+begin
+  LCrypto := GetCryptoLibHandle;
+  if LCrypto = NilHandle then
+    Exit;
+
+  LoadOpenSSLERR;
+  LoadOpenSSLBIO;
+  LoadOpenSSLRAND;
+  LoadBufferModule(LCrypto);
+  LoadEVP(LCrypto);
+  LoadSHAFunctions(LCrypto);
+  LoadBLAKE2Functions(LCrypto);
+  LoadAESFunctions(LCrypto);
+  LoadDESFunctions(LCrypto);
+  LoadChaChaFunctions;
+  LoadOpenSSLHMAC;
+  LoadOpenSSLBN;
+  LoadOpenSSLRSA;
+  LoadOpenSSLDSA;
+  LoadOpenSSLDH;
+  LoadECFunctions(LCrypto);
+  LoadOpenSSLECDH;
+  LoadOpenSSLECDSA;
+  LoadOpenSSLASN1(LCrypto);
+  LoadOpenSSLPEM(LCrypto);
+  LoadOpenSSLX509;
+  LoadX509V3Functions(LCrypto);
+  LoadKDFFunctions;
+end;
+
 begin
   WriteLn('========================================');
   WriteLn('  OpenSSL 核心模块验证');
@@ -119,18 +156,31 @@ begin
   WriteLn;
   WriteLn('验证库加载...');
   WriteLn('----------------------------------------');
-  if LoadOpenSSLLibrary then
+  try
+    LoadOpenSSLCore;
+    TestModule('OpenSSL Core 加载成功', TOpenSSLLoader.IsModuleLoaded(osmCore));
+  except
+    on E: Exception do
+    begin
+      TestModule('OpenSSL Core 加载成功', False);
+      WriteLn('  错误: ', E.Message);
+      Exit;
+    end;
+  end;
+
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
-    TestModule('OpenSSL 库加载成功', True);
-    TestModule('Crypto库已加载', IsCryptoLibraryLoaded);
+    TestModule('Crypto库已加载', TOpenSSLLoader.IsModuleLoaded(osmCore));
     // TestModule('SSL库已加载', IsSSLLibraryLoaded);  // 在ssl模块中定义
-    WriteLn('  版本: ', GetOpenSSLVersion);
+    WriteLn('  版本: ', fafafa.ssl.openssl.api.core.GetOpenSSLVersionString);
+
+    LoadValidationModules;
     
     WriteLn;
     WriteLn('验证函数指针...');
     WriteLn('----------------------------------------');
     
-    if IsCryptoLibraryLoaded then
+    if TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       // BIO
       TestModule('BIO_new', Assigned(BIO_new));
@@ -228,9 +278,9 @@ begin
     WriteLn('结论: 核心模块的类型定义、常量和函数');
     WriteLn('      声明都正确,可以正常使用!');
     WriteLn;
-    WriteLn('注意: 部分模块(modes, stack, obj, rand_old,');
-    WriteLn('      async, comp, legacy_ciphers)有编译');
-    WriteLn('      错误,需要修复后再验证。');
+    WriteLn('注意: 更广范围的 legacy/扩展模块');
+    WriteLn('      (如 modes, stack, obj, async, comp,');
+    WriteLn('      legacy_ciphers) 仍建议单独验证。');
     Halt(0);
   end
   else

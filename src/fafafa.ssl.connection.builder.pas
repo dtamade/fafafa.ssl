@@ -86,6 +86,7 @@ type
     FTimeout: Integer;
     FBlocking: Boolean;
     FHostname: string;
+    FHasHostnameOverride: Boolean;
     FSession: ISSLSession;
     FSessionReuse: Boolean;
     FUseSocket: Boolean;
@@ -130,6 +131,7 @@ begin
   FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
   FBlocking := True;
   FHostname := '';
+  FHasHostnameOverride := False;
   FSession := nil;
   FSessionReuse := True;
   FUseSocket := True;
@@ -172,6 +174,7 @@ end;
 function TSSLConnectionBuilderImpl.WithHostname(const AHostname: string): ISSLConnectionBuilder;
 begin
   FHostname := AHostname;
+  FHasHostnameOverride := True;
   Result := Self;
 end;
 
@@ -253,8 +256,8 @@ begin
       Exit;
     end;
 
-    // Set per-connection server name for SNI/hostname verification if provided
-    if FHostname <> '' then
+    // Apply per-connection server name override, including explicit empty clear
+    if FHasHostnameOverride then
     begin
       if Supports(AConnection, ISSLClientConnection, ClientConn) then
         ClientConn.SetServerName(FHostname)

@@ -4,10 +4,12 @@ program test_openssl_load;
 {$CODEPAGE UTF8}
 
 uses
-  SysUtils, Classes, Windows,
+  SysUtils,
+  {$IFDEF UNIX}cthreads,{$ENDIF}
   // OpenSSL 类型和常量
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.api.core,
   // 核心模块
   fafafa.ssl.openssl.api.err,
   fafafa.ssl.openssl.api.bio,
@@ -25,7 +27,7 @@ uses
   fafafa.ssl.openssl.api.sha,
   fafafa.ssl.openssl.api.sha3,
   fafafa.ssl.openssl.api.md,
-  fafafa.ssl.openssl.blake2,
+  fafafa.ssl.openssl.api.blake2,
   fafafa.ssl.openssl.api.hmac,
   // 对称加密模块
   fafafa.ssl.openssl.api.aes,
@@ -57,116 +59,544 @@ uses
   fafafa.ssl.openssl.api.engine,
   fafafa.ssl.openssl.api.comp,
   fafafa.ssl.openssl.api.modes,
-  fafafa.ssl.openssl.api.cmac.evp,  // Phase 2.2: 使用EVP API替代废弃的cmac.pas
-  // 国密算法
+  fafafa.ssl.openssl.api.cmac.evp,
   fafafa.ssl.openssl.api.sm;
 
 type
+  TModuleLoadProc = procedure;
+
   TModuleTest = record
     Name: string;
-    LoadProc: procedure(ALib: THandle);
-    UnloadProc: procedure;
+    LoadProc: TModuleLoadProc;
+    UnloadProc: TModuleLoadProc;
     TestFunc: Pointer;
   end;
 
 var
-  LibSSL, LibCrypto: THandle;
   Modules: array of TModuleTest;
   SuccessCount, FailCount: Integer;
+  ModuleIndex: Integer;
 
-procedure AddModule(const AName: string; ALoadProc: procedure(ALib: THandle); 
-  AUnloadProc: procedure; ATestFunc: Pointer = nil);
+procedure AddModule(const AName: string; ALoadProc, AUnloadProc: TModuleLoadProc; ATestFunc: Pointer = nil);
 var
-  Len: Integer;
+  LIndex: Integer;
 begin
-  Len := Length(Modules);
-  SetLength(Modules, Len + 1);
-  with Modules[Len] do
-  begin
-    Name := AName;
-    LoadProc := ALoadProc;
-    UnloadProc := AUnloadProc;
-    TestFunc := ATestFunc;
-  end;
+  SetLength(Modules, Length(Modules) + 1);
+  LIndex := High(Modules);
+  Modules[LIndex].Name := AName;
+  Modules[LIndex].LoadProc := ALoadProc;
+  Modules[LIndex].UnloadProc := AUnloadProc;
+  Modules[LIndex].TestFunc := ATestFunc;
+end;
+
+procedure LoadERRCompat;
+begin
+  LoadOpenSSLERR;
+end;
+
+procedure UnloadERRCompat;
+begin
+  UnloadOpenSSLERR;
+end;
+
+procedure LoadBIOCompat;
+begin
+  LoadOpenSSLBIO;
+end;
+
+procedure UnloadBIOCompat;
+begin
+  UnloadOpenSSLBIO;
+end;
+
+procedure LoadSSLCompat;
+begin
+  LoadOpenSSLSSL;
+end;
+
+procedure UnloadSSLCompat;
+begin
+  UnloadOpenSSLSSL;
+end;
+
+procedure LoadEVPCompat;
+begin
+  LoadEVP(GetCryptoLibHandle);
+end;
+
+procedure UnloadEVPCompat;
+begin
+  UnloadEVP;
+end;
+
+procedure LoadX509Compat;
+begin
+  LoadOpenSSLX509;
+end;
+
+procedure UnloadX509Compat;
+begin
+  UnloadOpenSSLX509;
+end;
+
+procedure LoadRSACompat;
+begin
+  LoadOpenSSLRSA;
+end;
+
+procedure UnloadRSACompat;
+begin
+  UnloadOpenSSLRSA;
+end;
+
+procedure LoadDSACompat;
+begin
+  LoadOpenSSLDSA;
+end;
+
+procedure UnloadDSACompat;
+begin
+  UnloadOpenSSLDSA;
+end;
+
+procedure LoadDHCompat;
+begin
+  LoadOpenSSLDH;
+end;
+
+procedure UnloadDHCompat;
+begin
+  UnloadOpenSSLDH;
+end;
+
+procedure LoadECCompat;
+begin
+  LoadECFunctions(GetCryptoLibHandle);
+end;
+
+procedure UnloadECCompat;
+begin
+  UnloadECFunctions;
+end;
+
+procedure LoadECDSACompat;
+begin
+  LoadOpenSSLECDSA;
+end;
+
+procedure UnloadECDSACompat;
+begin
+  UnloadOpenSSLECDSA;
+end;
+
+procedure LoadECDHCompat;
+begin
+  LoadOpenSSLECDH;
+end;
+
+procedure UnloadECDHCompat;
+begin
+  UnloadOpenSSLECDH;
+end;
+
+procedure LoadSHACompat;
+begin
+  LoadSHAFunctions(GetCryptoLibHandle);
+end;
+
+procedure UnloadSHACompat;
+begin
+  UnloadSHAFunctions;
+end;
+
+procedure LoadSHA3Compat;
+begin
+  LoadSHA3Functions(GetCryptoLibHandle);
+end;
+
+procedure UnloadSHA3Compat;
+begin
+  UnloadSHA3Functions;
+end;
+
+procedure LoadMDCompat;
+begin
+  LoadMDFunctions(GetCryptoLibHandle);
+end;
+
+procedure UnloadMDCompat;
+begin
+  UnloadMDFunctions;
+end;
+
+procedure LoadBLAKE2Compat;
+begin
+  LoadBLAKE2Functions(GetCryptoLibHandle);
+end;
+
+procedure UnloadBLAKE2Compat;
+begin
+  UnloadBLAKE2Functions;
+end;
+
+procedure LoadHMACCompat;
+begin
+  LoadOpenSSLHMAC;
+end;
+
+procedure UnloadHMACCompat;
+begin
+  UnloadOpenSSLHMAC;
+end;
+
+procedure LoadAESCompat;
+begin
+  LoadAESFunctions(GetCryptoLibHandle);
+end;
+
+procedure UnloadAESCompat;
+begin
+  UnloadAESFunctions;
+end;
+
+procedure LoadDESCompat;
+begin
+  LoadDESFunctions(GetCryptoLibHandle);
+end;
+
+procedure UnloadDESCompat;
+begin
+  UnloadDESFunctions;
+end;
+
+procedure LoadChaChaCompat;
+begin
+  LoadChaChaFunctions;
+end;
+
+procedure UnloadChaChaCompat;
+begin
+  UnloadChaChaFunctions;
+end;
+
+procedure LoadPEMCompat;
+begin
+  LoadOpenSSLPEM(GetCryptoLibHandle);
+end;
+
+procedure UnloadPEMCompat;
+begin
+  UnloadOpenSSLPEM;
+end;
+
+procedure LoadASN1Compat;
+begin
+  LoadOpenSSLASN1(GetCryptoLibHandle);
+end;
+
+procedure UnloadASN1Compat;
+begin
+  UnloadOpenSSLASN1;
+end;
+
+procedure LoadPKCS7Compat;
+begin
+  LoadPKCS7Functions;
+end;
+
+procedure UnloadPKCS7Compat;
+begin
+  UnloadPKCS7Functions;
+end;
+
+procedure LoadPKCS12Compat;
+begin
+  LoadPKCS12Module(GetCryptoLibHandle);
+end;
+
+procedure UnloadPKCS12Compat;
+begin
+  UnloadPKCS12Module;
+end;
+
+procedure LoadX509V3Compat;
+begin
+  LoadX509V3Functions(GetCryptoLibHandle);
+end;
+
+procedure UnloadX509V3Compat;
+begin
+  UnloadX509V3Functions;
+end;
+
+procedure LoadRANDCompat;
+begin
+  LoadOpenSSLRAND;
+end;
+
+procedure UnloadRANDCompat;
+begin
+  UnloadOpenSSLRAND;
+end;
+
+procedure LoadBNCompat;
+begin
+  LoadOpenSSLBN;
+end;
+
+procedure UnloadBNCompat;
+begin
+  UnloadOpenSSLBN;
+end;
+
+procedure LoadOBJCompat;
+begin
+  LoadOBJModule(GetCryptoLibHandle);
+end;
+
+procedure UnloadOBJCompat;
+begin
+  UnloadOBJModule;
+end;
+
+procedure LoadBufferCompat;
+begin
+  LoadBufferModule(GetCryptoLibHandle);
+end;
+
+procedure UnloadBufferCompat;
+begin
+  UnloadBufferModule;
+end;
+
+procedure LoadStackCompat;
+begin
+  LoadStackFunctions;
+end;
+
+procedure UnloadStackCompat;
+begin
+  UnloadStackFunctions;
+end;
+
+procedure LoadLHashCompat;
+begin
+  LoadLHashFunctions;
+end;
+
+procedure UnloadLHashCompat;
+begin
+  UnloadLHashFunctions;
+end;
+
+procedure LoadCMSCompat;
+begin
+  LoadOpenSSLCMS(GetCryptoLibHandle);
+end;
+
+procedure UnloadCMSCompat;
+begin
+  UnloadOpenSSLCMS;
+end;
+
+procedure LoadTSCompat;
+begin
+  LoadTSFunctions;
+end;
+
+procedure UnloadTSCompat;
+begin
+  UnloadTSFunctions;
+end;
+
+procedure LoadCTCompat;
+begin
+  LoadCTFunctions;
+end;
+
+procedure UnloadCTCompat;
+begin
+  UnloadCTFunctions;
+end;
+
+procedure LoadOCSPCompat;
+begin
+  LoadOpenSSLOCSP(GetCryptoLibHandle);
+end;
+
+procedure UnloadOCSPCompat;
+begin
+  UnloadOpenSSLOCSP;
+end;
+
+procedure LoadKDFCompat;
+begin
+  LoadKDFFunctions;
+end;
+
+procedure UnloadKDFCompat;
+begin
+  UnloadKDFFunctions;
+end;
+
+procedure LoadSTORECompat;
+begin
+  LoadSTOREFunctions;
+end;
+
+procedure UnloadSTORECompat;
+begin
+  UnloadSTOREFunctions;
+end;
+
+procedure LoadProviderCompat;
+begin
+  LoadProviderModule(GetCryptoLibHandle);
+end;
+
+procedure UnloadProviderCompat;
+begin
+  UnloadProviderModule;
+end;
+
+procedure LoadCONFCompat;
+begin
+  LoadOpenSSLConf;
+end;
+
+procedure UnloadCONFCompat;
+begin
+  UnloadOpenSSLConf;
+end;
+
+procedure LoadUICompat;
+begin
+  LoadUIFunctions;
+end;
+
+procedure UnloadUICompat;
+begin
+  UnloadUIFunctions;
+end;
+
+procedure LoadEngineCompat;
+begin
+  LoadOpenSSLEngine(GetCryptoLibHandle);
+end;
+
+procedure UnloadEngineCompat;
+begin
+  UnloadOpenSSLEngine;
+end;
+
+procedure LoadCOMPCompat;
+begin
+  LoadCOMPFunctions;
+end;
+
+procedure UnloadCOMPCompat;
+begin
+  UnloadCOMPFunctions;
+end;
+
+procedure LoadModesCompat;
+begin
+  LoadModesFunctions;
+end;
+
+procedure UnloadModesCompat;
+begin
+  UnloadModesFunctions;
+end;
+
+procedure LoadCMACCompat;
+begin
+  // fafafa.ssl.openssl.api.cmac.evp uses internal lazy loading.
+  // No exported loader exists, so the smoke test only verifies the module can be referenced.
+end;
+
+procedure UnloadCMACCompat;
+begin
+end;
+
+procedure LoadSMCompat;
+begin
+  LoadOpenSSLSM;
+end;
+
+procedure UnloadSMCompat;
+begin
+  UnloadOpenSSLSM;
 end;
 
 procedure InitializeModules;
 begin
-  // 核心模块
-  AddModule('ERR (错误处理)', @LoadErrModule, @UnloadErrModule, @ERR_get_error);
-  AddModule('BIO (I/O抽象)', @LoadBIOModule, @UnloadBIOModule, @BIO_new);
-  AddModule('SSL/TLS', @LoadSSLModule, @UnloadSSLModule, @SSL_new);
-  AddModule('EVP (加密接口)', @LoadEVPModule, @UnloadEVPModule, @EVP_MD_CTX_new);
-  AddModule('X509 (证书)', @LoadX509Module, @UnloadX509Module, @X509_new);
-  
-  // 公钥算法
-  AddModule('RSA', @LoadRSAModule, @UnloadRSAModule, @RSA_new);
-  AddModule('DSA', @LoadDSAModule, @UnloadDSAModule, @DSA_new);
-  AddModule('DH (Diffie-Hellman)', @LoadDHModule, @UnloadDHModule, @DH_new);
-  AddModule('EC (椭圆曲线)', @LoadECModule, @UnloadECModule, @EC_KEY_new);
-  AddModule('ECDSA', @LoadECDSAModule, @UnloadECDSAModule, @ECDSA_sign);
-  AddModule('ECDH', @LoadECDHModule, @UnloadECDHModule, nil);
-  
-  // 哈希算法
-  AddModule('SHA', @LoadSHAModule, @UnloadSHAModule, @SHA1);
-  AddModule('SHA3', @LoadSHA3Module, @UnloadSHA3Module, @SHA3_256);
-  AddModule('MD (MD5/MD4)', @LoadMDModule, @UnloadMDModule, @MD5);
-  AddModule('BLAKE2', @LoadBLAKE2Module, @UnloadBLAKE2Module, @BLAKE2b256);
-  AddModule('HMAC', @LoadHMACModule, @UnloadHMACModule, @HMAC);
-  
-  // 对称加密
-  AddModule('AES', @LoadAESModule, @UnloadAESModule, @AES_encrypt);
-  AddModule('DES', @LoadDESModule, @UnloadDESModule, @DES_ecb_encrypt);
-  AddModule('ChaCha20-Poly1305', @LoadChaChaModule, @UnloadChaChaModule, @ChaCha20_Encrypt);
-  
-  // 证书格式
-  AddModule('PEM', @LoadPEMModule, @UnloadPEMModule, @PEM_read_bio_X509);
-  AddModule('ASN.1', @LoadASN1Module, @UnloadASN1Module, @ASN1_STRING_new);
-  AddModule('PKCS7', @LoadPKCS7Module, @UnloadPKCS7Module, @PKCS7_new);
-  AddModule('PKCS12', @LoadPKCS12Module, @UnloadPKCS12Module, @PKCS12_new);
-  AddModule('X509v3 (扩展)', @LoadX509V3Module, @UnloadX509V3Module, @X509V3_EXT_conf);
-  
-  // 辅助功能
-  AddModule('RAND (随机数)', @LoadRandModule, @UnloadRandModule, @RAND_bytes);
-  AddModule('BN (大数)', @LoadBNModule, @UnloadBNModule, @BN_new);
-  AddModule('OBJ (对象标识符)', @LoadOBJModule, @UnloadOBJModule, @OBJ_nid2obj);
-  AddModule('BUFFER', @LoadBufferModule, @UnloadBufferModule, @BUF_MEM_new);
-  AddModule('STACK', @LoadStackModule, @UnloadStackModule, @OPENSSL_sk_new);
-  AddModule('LHASH', @LoadLHashModule, @UnloadLHashModule, @OPENSSL_LH_new);
-  
-  // 高级功能
-  AddModule('CMS (加密消息)', @LoadCMSModule, @UnloadCMSModule, @CMS_ContentInfo_new);
-  AddModule('TS (时间戳)', @LoadTSModule, @UnloadTSModule, @TS_REQ_new);
-  AddModule('CT (证书透明)', @LoadCTModule, @UnloadCTModule, @SCT_new);
-  AddModule('OCSP', @LoadOCSPModule, @UnloadOCSPModule, @OCSP_REQUEST_new);
-  AddModule('KDF (密钥派生)', @LoadKDFModule, @UnloadKDFModule, @PBKDF2);
-  AddModule('STORE', @LoadStoreModule, @UnloadStoreModule, @OSSL_STORE_open);
-  AddModule('PROVIDER (3.0+)', @LoadProviderModule, @UnloadProviderModule, @OSSL_PROVIDER_load);
-  AddModule('CONF (配置)', @LoadCONFModule, @UnloadCONFModule, @NCONF_new);
-  AddModule('UI (用户接口)', @LoadUIModule, @UnloadUIModule, @UI_new);
-  AddModule('ENGINE', @LoadEngineModule, @UnloadEngineModule, @ENGINE_new);
-  AddModule('COMP (压缩)', @LoadCompModule, @UnloadCompModule, @COMP_CTX_new);
-  AddModule('MODES (加密模式)', @LoadModesModule, @UnloadModesModule, @CRYPTO_gcm128_new);
-  AddModule('CMAC', @LoadCMACModule, @UnloadCMACModule, @CMAC_CTX_new);
-  AddModule('SM (国密)', @LoadSMModule, @UnloadSMModule, @SM3);
+  AddModule('ERR (错误处理)', @LoadERRCompat, @UnloadERRCompat, @ERR_get_error);
+  AddModule('BIO (I/O抽象)', @LoadBIOCompat, @UnloadBIOCompat, @BIO_new);
+  AddModule('SSL/TLS', @LoadSSLCompat, @UnloadSSLCompat, @SSL_new);
+  AddModule('EVP (加密接口)', @LoadEVPCompat, @UnloadEVPCompat, @EVP_MD_CTX_new);
+  AddModule('X509 (证书)', @LoadX509Compat, @UnloadX509Compat, @X509_new);
+
+  AddModule('RSA', @LoadRSACompat, @UnloadRSACompat, @RSA_new);
+  AddModule('DSA', @LoadDSACompat, @UnloadDSACompat, @DSA_new);
+  AddModule('DH (Diffie-Hellman)', @LoadDHCompat, @UnloadDHCompat, @DH_new);
+  AddModule('EC (椭圆曲线)', @LoadECCompat, @UnloadECCompat, @EC_KEY_new);
+  AddModule('ECDSA', @LoadECDSACompat, @UnloadECDSACompat, @ECDSA_sign);
+  AddModule('ECDH', @LoadECDHCompat, @UnloadECDHCompat, nil);
+
+  AddModule('SHA', @LoadSHACompat, @UnloadSHACompat, @SHA1);
+  AddModule('SHA3', @LoadSHA3Compat, @UnloadSHA3Compat, @SHA3_256);
+  AddModule('MD (MD5/MD4)', @LoadMDCompat, @UnloadMDCompat, @MD5);
+  AddModule('BLAKE2', @LoadBLAKE2Compat, @UnloadBLAKE2Compat, nil);
+  AddModule('HMAC', @LoadHMACCompat, @UnloadHMACCompat, @HMAC);
+
+  AddModule('AES', @LoadAESCompat, @UnloadAESCompat, @AES_encrypt);
+  AddModule('DES', @LoadDESCompat, @UnloadDESCompat, @DES_ecb_encrypt);
+  AddModule('ChaCha20-Poly1305', @LoadChaChaCompat, @UnloadChaChaCompat, nil);
+
+  AddModule('PEM', @LoadPEMCompat, @UnloadPEMCompat, @PEM_read_bio_X509);
+  AddModule('ASN.1', @LoadASN1Compat, @UnloadASN1Compat, @ASN1_STRING_new);
+  AddModule('PKCS7', @LoadPKCS7Compat, @UnloadPKCS7Compat, @PKCS7_new);
+  AddModule('PKCS12', @LoadPKCS12Compat, @UnloadPKCS12Compat, @PKCS12_new);
+  AddModule('X509v3 (扩展)', @LoadX509V3Compat, @UnloadX509V3Compat, @X509V3_EXT_conf);
+
+  AddModule('RAND (随机数)', @LoadRANDCompat, @UnloadRANDCompat, @RAND_bytes);
+  AddModule('BN (大数)', @LoadBNCompat, @UnloadBNCompat, @BN_new);
+  AddModule('OBJ (对象标识符)', @LoadOBJCompat, @UnloadOBJCompat, @OBJ_nid2obj);
+  AddModule('BUFFER', @LoadBufferCompat, @UnloadBufferCompat, @BUF_MEM_new);
+  AddModule('STACK', @LoadStackCompat, @UnloadStackCompat, @OPENSSL_sk_new);
+  AddModule('LHASH', @LoadLHashCompat, @UnloadLHashCompat, @OPENSSL_LH_new);
+
+  AddModule('CMS (加密消息)', @LoadCMSCompat, @UnloadCMSCompat, @CMS_ContentInfo_new);
+  AddModule('TS (时间戳)', @LoadTSCompat, @UnloadTSCompat, @TS_REQ_new);
+  AddModule('CT (证书透明)', @LoadCTCompat, @UnloadCTCompat, @SCT_new);
+  AddModule('OCSP', @LoadOCSPCompat, @UnloadOCSPCompat, @OCSP_REQUEST_new);
+  AddModule('KDF (密钥派生)', @LoadKDFCompat, @UnloadKDFCompat, nil);
+  AddModule('STORE', @LoadSTORECompat, @UnloadSTORECompat, @OSSL_STORE_open);
+  AddModule('PROVIDER (3.0+)', @LoadProviderCompat, @UnloadProviderCompat, @OSSL_PROVIDER_load);
+  AddModule('CONF (配置)', @LoadCONFCompat, @UnloadCONFCompat, @NCONF_new);
+  AddModule('UI (用户接口)', @LoadUICompat, @UnloadUICompat, @UI_new);
+  AddModule('ENGINE', @LoadEngineCompat, @UnloadEngineCompat, @ENGINE_new);
+  AddModule('COMP (压缩)', @LoadCOMPCompat, @UnloadCOMPCompat, @COMP_CTX_new);
+  AddModule('MODES (加密模式)', @LoadModesCompat, @UnloadModesCompat, nil);
+  AddModule('CMAC', @LoadCMACCompat, @UnloadCMACCompat, nil);
+  AddModule('SM (国密)', @LoadSMCompat, @UnloadSMCompat, @SM3);
 end;
 
 procedure TestModule(const Module: TModuleTest);
 begin
   Write(Format('  %-30s: ', [Module.Name]));
-  
+
   try
-    // 加载模块
-    Module.LoadProc(LibCrypto);
-    
-    // 检查关键函数是否加载成功
-    if Assigned(Module.TestFunc) and not Assigned(Module.TestFunc^) then
+    Module.LoadProc;
+
+    if Assigned(Module.TestFunc) and not Assigned(PPointer(Module.TestFunc)^) then
     begin
       WriteLn('[失败] - 函数未加载');
       Inc(FailCount);
       Exit;
     end;
-    
+
     WriteLn('[成功]');
     Inc(SuccessCount);
   except
@@ -175,35 +605,6 @@ begin
       WriteLn('[失败] - ', E.Message);
       Inc(FailCount);
     end;
-  end;
-end;
-
-procedure LoadOpenSSLLibraries;
-const
-  LIBSSL_NAME = 'libssl-1_1-x64.dll';
-  LIBCRYPTO_NAME = 'libcrypto-1_1-x64.dll';
-  LIBSSL_NAME_3 = 'libssl-3-x64.dll';
-  LIBCRYPTO_NAME_3 = 'libcrypto-3-x64.dll';
-begin
-  // 尝试加载 OpenSSL 3.0
-  LibSSL := LoadLibrary(LIBSSL_NAME_3);
-  LibCrypto := LoadLibrary(LIBCRYPTO_NAME_3);
-  
-  // 如果失败，尝试加载 OpenSSL 1.1
-  if (LibSSL = 0) or (LibCrypto = 0) then
-  begin
-    if LibSSL <> 0 then FreeLibrary(LibSSL);
-    if LibCrypto <> 0 then FreeLibrary(LibCrypto);
-    
-    LibSSL := LoadLibrary(LIBSSL_NAME);
-    LibCrypto := LoadLibrary(LIBCRYPTO_NAME);
-  end;
-  
-  if (LibSSL = 0) or (LibCrypto = 0) then
-  begin
-    WriteLn('错误: 无法加载 OpenSSL 库');
-    WriteLn('请确保 OpenSSL DLL 文件在系统路径中');
-    Halt(1);
   end;
 end;
 
@@ -217,7 +618,7 @@ begin
     SuccessRate := (SuccessCount / Total) * 100
   else
     SuccessRate := 0;
-    
+
   WriteLn;
   WriteLn('========================================');
   WriteLn('           测试结果汇总');
@@ -227,12 +628,12 @@ begin
   WriteLn(Format('  加载失败: %d', [FailCount]));
   WriteLn(Format('  成功率:   %.1f%%', [SuccessRate]));
   WriteLn('========================================');
-  
+
   if FailCount > 0 then
-    WriteLn('注意: 某些模块可能需要特定版本的 OpenSSL');
+    WriteLn('注意: 某些模块可能依赖当前运行时不提供的 OpenSSL 功能');
 end;
 
-procedure GetOpenSSLVersion;
+procedure PrintOpenSSLVersionInfo;
 var
   Version: LongWord;
   VersionStr: PAnsiChar;
@@ -242,10 +643,10 @@ begin
     Version := OpenSSL_version_num();
     WriteLn(Format('OpenSSL 版本号: 0x%x', [Version]));
   end;
-  
+
   if Assigned(OpenSSL_version) then
   begin
-    VersionStr := OpenSSL_version(OPENSSL_VERSION);
+    VersionStr := OpenSSL_version(0);
     if Assigned(VersionStr) then
       WriteLn('OpenSSL 版本: ', string(VersionStr));
   end;
@@ -256,46 +657,46 @@ begin
   WriteLn('     OpenSSL Pascal 绑定模块加载测试');
   WriteLn('========================================');
   WriteLn;
-  
+
   SuccessCount := 0;
   FailCount := 0;
-  
-  // 加载 OpenSSL 库
+
   WriteLn('1. 加载 OpenSSL 动态库...');
-  LoadOpenSSLLibraries;
+  try
+    LoadOpenSSLCore;
+  except
+    on E: Exception do
+    begin
+      WriteLn('错误: 无法加载 OpenSSL 库');
+      WriteLn(E.Message);
+      Halt(1);
+    end;
+  end;
+
   WriteLn('   OpenSSL 库加载成功');
+  WriteLn('   Crypto handle: ', PtrUInt(GetCryptoLibHandle));
+  WriteLn('   SSL handle: ', PtrUInt(GetSSLLibHandle));
   WriteLn;
-  
-  // 初始化模块列表
+
   InitializeModules;
-  
-  // 加载版本信息模块
+
   WriteLn('2. 获取 OpenSSL 版本信息...');
-  LoadErrModule(LibCrypto);  // ERR 模块包含版本函数
-  GetOpenSSLVersion;
+  LoadERRCompat;
+  PrintOpenSSLVersionInfo;
   WriteLn;
-  
-  // 测试所有模块
+
   WriteLn('3. 测试模块加载...');
   WriteLn('----------------------------------------');
-  
-  for var Module in Modules do
-    TestModule(Module);
-  
-  // 打印测试结果
+  for ModuleIndex := Low(Modules) to High(Modules) do
+    TestModule(Modules[ModuleIndex]);
+
   PrintTestResults;
-  
-  // 清理
+
   WriteLn;
   WriteLn('4. 清理资源...');
-  for var Module in Modules do
-    Module.UnloadProc;
-  
-  if LibSSL <> 0 then FreeLibrary(LibSSL);
-  if LibCrypto <> 0 then FreeLibrary(LibCrypto);
-  
+  for ModuleIndex := Low(Modules) to High(Modules) do
+    Modules[ModuleIndex].UnloadProc;
+  UnloadOpenSSLCore;
   WriteLn('   清理完成');
-  WriteLn;
-  WriteLn('测试结束. 按 Enter 退出...');
-  ReadLn;
+  WriteLn('[PASS] OpenSSL loader smoke completed');
 end.

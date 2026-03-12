@@ -58,16 +58,16 @@
 ## 4. 当前结果摘要
 
 基于模块综合结果：
-- `test-reports/test_p2_ts_comprehensive_result.txt`
+- `docs/archive/reports/test-p2-history/test_p2_ts_comprehensive_result.txt`
 - 总测试数：58
 - 通过：58
 - 失败：0
 - 通过率：100%
 
 本轮（2026-02-07）回归：
-- TS 模块回归：`test-reports/test_report_20260207_024905.txt`（2/2，100%）
-- CT/OCSP/TS 联合回归：`test-reports/test_report_20260207_025410.txt`（6/6，100%）
-- P2 聚焦回归：`test-reports/test_report_20260207_025418.txt`（15/15，100%）
+- TS 模块回归：`docs/archive/reports/test-report-history/test_report_20260207_024905.txt`（2/2，100%）
+- CT/OCSP/TS 联合回归：`docs/archive/reports/test-report-history/test_report_20260207_025410.txt`（6/6，100%）
+- P2 聚焦回归：`docs/archive/reports/test-report-history/test_report_20260207_025418.txt`（15/15，100%）
 
 ---
 

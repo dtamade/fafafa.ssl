@@ -313,6 +313,7 @@ begin
   begin
     WriteLn;
     WriteLn('🎉 所有测试通过！CT 模块工作正常');
+    WriteLn('[PASS] ct comprehensive completed');
   end;
 
   UnloadOpenSSLCore;

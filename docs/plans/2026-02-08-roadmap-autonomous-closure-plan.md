@@ -2,8 +2,8 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** 在“批次模式”下持续自治推进，完成当前路线图未闭环项（优先 B79/B80/B83/B81/B82），并以可验证证据宣布阶段收口。  
-**Architecture:** 采用单通道滚动执行（WIP=1）：先刷新基线，再修复核心示例与 API 漂移，随后执行编译/模块门禁，最后发布进度报告与下一阶段计划。所有“完成”结论必须来自本轮新鲜命令输出。  
+**Goal:** 在“批次模式”下持续自治推进，完成当前路线图未闭环项（优先 B79/B80/B83/B81/B82），并以可验证证据宣布阶段收口。
+**Architecture:** 采用单通道滚动执行（WIP=1）：先刷新基线，再修复核心示例与 API 漂移，随后执行编译/模块门禁，最后发布进度报告与下一阶段计划。所有“完成”结论必须来自本轮新鲜命令输出。
 **Tech Stack:** Free Pascal 3.3.1、OpenSSL 3.x、项目脚本（`scripts/verify_examples_compile.sh`、`scripts/compile_all_modules.py`、`scripts/run_all_module_tests.sh`）、规划三件套（`task_plan.md`/`findings.md`/`progress.md`）。
 
 ---
@@ -25,16 +25,16 @@
 - Modify: `docs/test_reports/EXAMPLES_COMPILE_FIX_TRACKER.md`
 - Modify: `findings.md`
 - Modify: `progress.md`
-- Create: `test-reports/examples_compile_latest.json`
+- Create: `docs/archive/reports/examples-compile-history/examples_compile_latest.json`
 
 **Step 1: 运行示例编译基线**
 
-Run: `bash scripts/verify_examples_compile.sh -f json -o test-reports/examples_compile_latest.json`  
+Run: `bash scripts/verify_examples_compile.sh -f json -o docs/archive/reports/examples-compile-history/examples_compile_latest.json`
 Expected: 允许失败退出码；生成 `examples_compile_latest.json`。
 
 **Step 2: 运行全模块编译门禁**
 
-Run: `python3 scripts/compile_all_modules.py`  
+Run: `python3 scripts/compile_all_modules.py`
 Expected: 输出 `157/157` 成功（如失败则先处理阻断再进入 B79）。
 
 **Step 3: 回写基线到追踪文档**
@@ -58,7 +58,7 @@ Action: 在 `task_plan.md` 明确当前为 B79（in_progress），并记录下�
 
 **Step 1: 逐个编译核心失败示例并记录首个错误**
 
-Run: `fpc -Mobjfpc -Sh -Fu./src examples/02_generate_certificate.pas`（对核心失败文件逐个执行）  
+Run: `fpc -Mobjfpc -Sh -Fu./src examples/02_generate_certificate.pas`（对核心失败文件逐个执行）
 Expected: 收集每个文件“第一错误”。
 
 **Step 2: 修复内联变量/ObjFPC 不兼容写法**
@@ -67,7 +67,7 @@ Action: 把 `var x := ...` 等写法改为传统 `var` 声明块；避免引入�
 
 **Step 3: 复跑核心示例编译**
 
-Run: 对 `01/02/03/06` 再次逐个 `fpc` 编译。  
+Run: 对 `01/02/03/06` 再次逐个 `fpc` 编译。
 Expected: 至少减少一类语法错误。
 
 **Step 4: 更新追踪状态**
@@ -94,7 +94,7 @@ Action: 补齐必要 `uses`，移除不存在或已下线单元依赖。
 
 **Step 3: 核心集合回归**
 
-Run: `bash scripts/verify_examples_compile.sh -f json -o test-reports/examples_compile_after_b79.json`  
+Run: `bash scripts/verify_examples_compile.sh -f json -o test-reports/examples_compile_after_b79.json`
 Expected: `passed` 高于起始基线；失败项集中到 API 变更类别。
 
 ---
@@ -118,12 +118,12 @@ Action: 仅改调用层，不在示例中增加新的框架依赖。
 
 **Step 3: 目标示例编译验证**
 
-Run: 对上述文件逐个 `fpc -Mobjfpc -Sh -Fu./src ...`。  
+Run: 对上述文件逐个 `fpc -Mobjfpc -Sh -Fu./src ...`。
 Expected: 目标列表中的失败数下降。
 
 **Step 4: 全量示例回归**
 
-Run: `bash scripts/verify_examples_compile.sh -f json -o test-reports/examples_compile_after_b80.json`  
+Run: `bash scripts/verify_examples_compile.sh -f json -o test-reports/examples_compile_after_b80.json`
 Expected: 通过率达到当前阶段目标（建议先达到 `>= 70%`，再冲刺 `>= 80%`）。
 
 ---
@@ -134,21 +134,21 @@ Expected: 通过率达到当前阶段目标（建议先达到 `>= 70%`，再冲�
 - Modify: `task_plan.md`
 - Modify: `findings.md`
 - Modify: `progress.md`
-- Create: `test-reports/examples_compile_gate_b83.json`
+- Create: `docs/archive/reports/examples-compile-history/examples_compile_gate_b83.json`
 
 **Step 1: 编译门禁**
 
-Run: `python3 scripts/compile_all_modules.py`  
+Run: `python3 scripts/compile_all_modules.py`
 Expected: `157/157`。
 
 **Step 2: P2 核心模块门禁**
 
-Run: `bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT`  
+Run: `bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT`
 Expected: 无失败。
 
 **Step 3: 示例门禁**
 
-Run: `bash scripts/verify_examples_compile.sh -f json -o test-reports/examples_compile_gate_b83.json`  
+Run: `bash scripts/verify_examples_compile.sh -f json -o docs/archive/reports/examples-compile-history/examples_compile_gate_b83.json`
 Expected: 达到当轮目标阈值；输出可追踪失败列表。
 
 **Step 4: 决策回写**
@@ -211,7 +211,7 @@ Action: 在 `task_plan.md` 更新“进行中/下一批/阻塞”。
 
 ## 失败转向策略（3-Strike）
 
-- **Strike 1**：局部修复 + 目标文件重编译。  
-- **Strike 2**：按错误类别分批拆解，缩小改动面。  
+- **Strike 1**：局部修复 + 目标文件重编译。
+- **Strike 2**：按错误类别分批拆解，缩小改动面。
 - **Strike 3**：回退到最近稳定批次，改为“文档化阻断 + 下一轮专项批次”。
 

@@ -25,8 +25,11 @@ uses
 
 type
   { OpenSSL-only handle access }
+  {$PUSH}
+  {$WARN SYMBOL_DEPRECATED OFF}
   ICertificateEx = fafafa.ssl.cert.builder.ICertificateEx;
   IPrivateKeyEx = fafafa.ssl.cert.builder.IPrivateKeyEx;
+  {$POP}
 
 implementation
 

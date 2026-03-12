@@ -20,14 +20,18 @@ program test_config_import_export;
 uses
   SysUtils,
   fafafa.ssl.base,
+  fafafa.ssl.factory,
   fafafa.ssl.context.builder,
   fafafa.ssl.cert.utils,
   fafafa.ssl.exceptions,
+  fafafa.ssl.freepascal.context,
   fpjson, jsonparser;
 
 var
   GTestsPassed: Integer = 0;
   GTestsFailed: Integer = 0;
+
+{$I test_fake_default_backend_fixture.inc}
 
 procedure Assert(ACondition: Boolean; const AMessage: string);
 begin
@@ -444,21 +448,26 @@ begin
     Exit;
   end;
 
-  // Export Production preset
-  LJSON := TSSLContextBuilder.Production.ExportToJSON;
+  RegisterTestDefaultFakeLibrary;
+  try
+    // Export Production preset
+    LJSON := TSSLContextBuilder.Production.ExportToJSON;
 
-  // Create new builder from JSON and add certificate
-  LBuilder := TSSLContextBuilder.Create
-    .ImportFromJSON(LJSON)
-    .WithCertificatePEM(LCert)
-    .WithPrivateKeyPEM(LKey);
+    // Create new builder from JSON and add certificate
+    LBuilder := TSSLContextBuilder.Create
+      .ImportFromJSON(LJSON)
+      .WithCertificatePEM(LCert)
+      .WithPrivateKeyPEM(LKey);
 
-  // Try to build server context
-  LResult := LBuilder.TryBuildServer(LContext);
+    // Try to build server context
+    LResult := LBuilder.TryBuildServer(LContext);
 
-  Assert(LResult.IsOk, 'Imported preset config can build server context');
-  if not LResult.IsOk then
-    WriteLn('  Error: ', LResult.ErrorMessage);
+    Assert(LResult.IsOk, 'Imported preset config can build server context');
+    if not LResult.IsOk then
+      WriteLn('  Error: ', LResult.ErrorMessage);
+  finally
+    CleanupTestDefaultFakeLibrary;
+  end;
 end;
 
 { Test 17: System roots configuration export }

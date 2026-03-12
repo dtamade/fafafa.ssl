@@ -5,7 +5,7 @@ program test_session_unit;
 uses
   SysUtils, DateUtils,
   fafafa.ssl.base,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   fafafa.ssl.openssl.session,
   fafafa.ssl.openssl.api.core;  // 添加以便访问 SSL_SESSION API
 

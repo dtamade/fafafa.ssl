@@ -5,6 +5,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # ============================================================
 # 参数解析
 # ============================================================
@@ -26,7 +29,7 @@ Options:
   --output FILE                输出报告路径（可选）
   --weeks N                    分析周数（默认 4）
   --drift-threshold N          漂移阈值百分比（默认 10）
-  --strict                     严格模式：检测到漂移则 exit 1
+  --strict                     严格模式：drift_percent >= drift_threshold 则 exit 1
   -h, --help                   显示帮助
 
 Examples:
@@ -62,6 +65,31 @@ if [[ -z "$GATE_REPORT_GLOB" ]]; then
 fi
 
 TIMESTAMP=$(date +%Y-%m-%d\ %H:%M:%S\ %z)
+
+resolve_output_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+resolve_input_glob() {
+  local pattern="$1"
+  if [[ "$pattern" == /* ]]; then
+    echo "$pattern"
+  elif compgen -G "$pattern" > /dev/null; then
+    echo "$pattern"
+  else
+    echo "$PROJECT_ROOT/$pattern"
+  fi
+}
+
+GATE_REPORT_GLOB="$(resolve_input_glob "$GATE_REPORT_GLOB")"
+if [[ -n "$OUTPUT" ]]; then
+  OUTPUT="$(resolve_output_path "$OUTPUT")"
+fi
 
 # ============================================================
 # 数据提取函数
@@ -299,6 +327,7 @@ main() {
   report=$(generate_report "$analysis")
 
   if [[ -n "$OUTPUT" ]]; then
+    mkdir -p "$(dirname "$OUTPUT")"
     echo "$report" > "$OUTPUT"
     echo "Report written to: $OUTPUT"
   else
@@ -307,12 +336,11 @@ main() {
 
   # 严格模式检查
   if [[ "$STRICT" == "true" ]]; then
-    local drift_percent trend
+    local drift_percent
     drift_percent=$(echo "$analysis" | grep "^drift_percent|" | cut -d'|' -f2)
-    trend=$(echo "$analysis" | grep "^trend|" | cut -d'|' -f2)
 
-    if [[ $drift_percent -ge $DRIFT_THRESHOLD && "$trend" == "degrading" ]]; then
-      echo "Strict mode: Degrading trend with ${drift_percent}% drift detected"
+    if [[ $drift_percent -ge $DRIFT_THRESHOLD ]]; then
+      echo "Strict mode: Drift detected with ${drift_percent}% (threshold=${DRIFT_THRESHOLD}%)"
       exit 1
     fi
   fi

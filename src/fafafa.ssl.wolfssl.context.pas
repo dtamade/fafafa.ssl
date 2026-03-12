@@ -222,7 +222,7 @@ end;
 
 { Forward declaration for connection - will be implemented separately }
 type
-  TWolfSSLConnection = class(TInterfacedObject, ISSLConnection, ISSLNativeHandleAccess)
+  TWolfSSLConnection = class(TInterfacedObject, ISSLConnection, ISSLClientConnection, ISSLNativeHandleAccess)
   private
     FContext: TWolfSSLContext;
     FWolfSSL: PWOLFSSL;
@@ -445,7 +445,7 @@ begin
 
   // 当首选版本不再可用时，自动回退为无偏好
   if (FPreferredVersion <> sslProtocolUnknown) and
-     not (FPreferredVersion in FProtocolVersions) then
+    not (FPreferredVersion in FProtocolVersions) then
     FPreferredVersion := sslProtocolUnknown;
 
   // WolfSSL 协议版本在创建时确定，运行时更改需要重建上下文
@@ -459,7 +459,7 @@ end;
 procedure TWolfSSLContext.SetPreferredVersion(AVersion: TSSLProtocolVersion);
 begin
   if (AVersion <> sslProtocolUnknown) and
-     not (AVersion in FProtocolVersions) then
+    not (AVersion in FProtocolVersions) then
     RaiseInvalidParameter('PreferredVersion');
 
   FPreferredVersion := AVersion;
@@ -613,7 +613,7 @@ begin
     raise ESSLCertError.Create('wolfSSL_CTX_use_certificate_buffer not available');
 
   // 转换 PEM 字符串为字节数组
-  LBuffer := TEncoding.UTF8.GetBytes(APEM);
+  LBuffer := TEncoding.UTF8.GetBytes(UnicodeString(APEM));
 
   LRet := wolfSSL_CTX_use_certificate_buffer(FWolfSSLCtx, @LBuffer[0],
     Length(LBuffer), WOLFSSL_FILETYPE_PEM);
@@ -636,7 +636,7 @@ begin
     raise ESSLCertError.Create('wolfSSL_CTX_use_PrivateKey_buffer not available');
 
   // 转换 PEM 字符串为字节数组
-  LBuffer := TEncoding.UTF8.GetBytes(APEM);
+  LBuffer := TEncoding.UTF8.GetBytes(UnicodeString(APEM));
 
   // 注意：WolfSSL 密码回调需要单独设置
   LRet := wolfSSL_CTX_use_PrivateKey_buffer(FWolfSSLCtx, @LBuffer[0],
@@ -980,7 +980,7 @@ end;
 
 function TWolfSSLContext.GetDiagnosticInfo: TSSLDiagnosticInfo;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TSSLDiagnosticInfo);
   Result.HealthStatus := GetHealthStatus;
   Result.PerformanceMetrics := GetPerformanceMetrics;
   SetLength(Result.ErrorHistory, 0);
@@ -988,7 +988,7 @@ end;
 
 function TWolfSSLContext.GetPerformanceMetrics: TSSLPerformanceMetrics;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TSSLPerformanceMetrics);
   // Context-level metrics are not tracked in this implementation
 end;
 
@@ -1267,10 +1267,22 @@ begin
 end;
 
 function TWolfSSLConnection.GetConnectionInfo: TSSLConnectionInfo;
+var
+  LServerName: PAnsiChar;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TSSLConnectionInfo);
   Result.ProtocolVersion := GetProtocolVersion;
   Result.CipherSuite := GetCipherName;
+  Result.ServerName := FServerName;
+
+  if (FWolfSSL <> nil) and Assigned(wolfSSL_get_servername) then
+  begin
+    LServerName := wolfSSL_get_servername(FWolfSSL, 0);
+    if LServerName <> nil then
+      Result.ServerName := string(LServerName)
+    else
+      Result.ServerName := '';
+  end;
 end;
 
 function TWolfSSLConnection.GetProtocolVersion: TSSLProtocolVersion;
@@ -1305,7 +1317,7 @@ end;
 
 function TWolfSSLConnection.GetPeerCertificateChain: TSSLCertificateArray;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 end;
 
 function TWolfSSLConnection.GetVerifyResult: Integer;
@@ -1362,8 +1374,25 @@ end;
 procedure TWolfSSLConnection.SetServerName(const AServerName: string);
 begin
   FServerName := AServerName;
-  if (FWolfSSL <> nil) and (FServerName <> '') and Assigned(wolfSSL_UseSNI) then
-    wolfSSL_UseSNI(FWolfSSL, 0, PAnsiChar(AnsiString(FServerName)), Length(FServerName));
+  if FWolfSSL = nil then
+    Exit;
+
+  if Assigned(wolfSSL_set_tlsext_host_name) then
+  begin
+    if FServerName <> '' then
+      wolfSSL_set_tlsext_host_name(FWolfSSL, PAnsiChar(AnsiString(FServerName)))
+    else
+      wolfSSL_set_tlsext_host_name(FWolfSSL, PAnsiChar(AnsiString('')));
+    Exit;
+  end;
+
+  if not Assigned(wolfSSL_UseSNI) then
+    Exit;
+
+  if FServerName <> '' then
+    wolfSSL_UseSNI(FWolfSSL, 0, PAnsiChar(AnsiString(FServerName)), Length(FServerName))
+  else
+    wolfSSL_UseSNI(FWolfSSL, 0, nil, 0);
 end;
 
 function TWolfSSLConnection.GetServerName: string;
@@ -1523,7 +1552,7 @@ end;
 
 function TWolfSSLConnection.GetDiagnosticInfo: TSSLDiagnosticInfo;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TSSLDiagnosticInfo);
   Result.ConnectionInfo := GetConnectionInfo;
   Result.HealthStatus := GetHealthStatus;
   Result.PerformanceMetrics := GetPerformanceMetrics;
@@ -1532,7 +1561,7 @@ end;
 
 function TWolfSSLConnection.GetPerformanceMetrics: TSSLPerformanceMetrics;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TSSLPerformanceMetrics);
   // Connection-level metrics are not tracked in this implementation
 end;
 
@@ -1550,7 +1579,7 @@ var
   LRespPtr: PByte;
   LRespLen: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if FWolfSSL = nil then Exit;
 

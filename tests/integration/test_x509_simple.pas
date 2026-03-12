@@ -33,6 +33,9 @@ type
   TX509_verify = function(a: PX509; r: PEVP_PKEY): Integer; cdecl;
   TX509_dup = function(x: PX509): PX509; cdecl;
   TX509_cmp = function(const a: PX509; const b: PX509): Integer; cdecl;
+  TX509_get_notBefore = function(const x: PX509): PASN1_TIME; cdecl;
+  TX509_get_notAfter = function(const x: PX509): PASN1_TIME; cdecl;
+  TX509_gmtime_adj = function(s: PASN1_TIME; adj: clong): PASN1_TIME; cdecl;
 
   { X.509 Name Functions }
   TX509_NAME_new = function: PX509_NAME; cdecl;
@@ -64,6 +67,10 @@ type
   { EVP_MD Functions }
   TEVP_sha256 = function: PEVP_MD; cdecl;
 
+const
+  RSA_F4 = $10001;
+  EVP_PKEY_RSA = 6;
+
 var
   Runner: TSimpleTestRunner;
 
@@ -84,6 +91,9 @@ var
   X509_verify: TX509_verify = nil;
   X509_dup: TX509_dup = nil;
   X509_cmp: TX509_cmp = nil;
+  X509_get_notBefore: TX509_get_notBefore = nil;
+  X509_get_notAfter: TX509_get_notAfter = nil;
+  X509_gmtime_adj: TX509_gmtime_adj = nil;
 
   X509_NAME_new: TX509_NAME_new = nil;
   X509_NAME_free: TX509_NAME_free = nil;
@@ -134,6 +144,13 @@ begin
   X509_verify := TX509_verify(GetProcedureAddress(LibHandle, 'X509_verify'));
   X509_dup := TX509_dup(GetProcedureAddress(LibHandle, 'X509_dup'));
   X509_cmp := TX509_cmp(GetProcedureAddress(LibHandle, 'X509_cmp'));
+  X509_get_notBefore := TX509_get_notBefore(GetProcedureAddress(LibHandle, 'X509_getm_notBefore'));
+  if not Assigned(X509_get_notBefore) then
+    X509_get_notBefore := TX509_get_notBefore(GetProcedureAddress(LibHandle, 'X509_get0_notBefore'));
+  X509_get_notAfter := TX509_get_notAfter(GetProcedureAddress(LibHandle, 'X509_getm_notAfter'));
+  if not Assigned(X509_get_notAfter) then
+    X509_get_notAfter := TX509_get_notAfter(GetProcedureAddress(LibHandle, 'X509_get0_notAfter'));
+  X509_gmtime_adj := TX509_gmtime_adj(GetProcedureAddress(LibHandle, 'X509_gmtime_adj'));
 
   // Load X509_NAME functions
   X509_NAME_new := TX509_NAME_new(GetProcedureAddress(LibHandle, 'X509_NAME_new'));
@@ -334,35 +351,114 @@ procedure TestX509Dup;
 var
   cert1, cert2: PX509;
   serial: PASN1_INTEGER;
+  name: PX509_NAME;
+  key: PEVP_PKEY;
+  rsa: Pointer;
+  exponent: PBIGNUM;
+  ready: Boolean;
 begin
   WriteLn;
   WriteLn('=== X509 Certificate Duplication ===');
 
-  // Create and configure first certificate
+  ready := Assigned(X509_dup) and Assigned(X509_cmp) and
+           Assigned(X509_NAME_new) and Assigned(X509_NAME_add_entry_by_txt) and
+           Assigned(X509_get_notBefore) and Assigned(X509_get_notAfter) and
+           Assigned(X509_gmtime_adj) and Assigned(EVP_PKEY_new) and
+           Assigned(EVP_PKEY_assign) and Assigned(RSA_new) and
+           Assigned(RSA_generate_key_ex) and Assigned(BN_new) and
+           Assigned(BN_set_word) and Assigned(EVP_sha256);
+  Runner.Check('Duplication helpers loaded', ready);
+  if not ready then Exit;
+
+  cert1 := nil;
+  cert2 := nil;
+  serial := nil;
+  name := nil;
+  key := nil;
+  rsa := nil;
+  exponent := nil;
+
   cert1 := X509_new();
   Runner.Check('Create certificate 1', cert1 <> nil);
   if cert1 = nil then Exit;
 
-  X509_set_version(cert1, 2);
-  serial := ASN1_INTEGER_new();
-  ASN1_INTEGER_set(serial, 99999);
-  X509_set_serialNumber(cert1, serial);
-  ASN1_INTEGER_free(serial);
+  try
+    Runner.Check('Set duplicate version', X509_set_version(cert1, 2) = 1);
 
-  // Duplicate certificate
-  cert2 := X509_dup(cert1);
-  Runner.Check('Duplicate certificate', cert2 <> nil);
+    serial := ASN1_INTEGER_new();
+    Runner.Check('Create duplicate serial', serial <> nil);
+    if serial = nil then Exit;
 
-  if cert2 <> nil then
-  begin
-    Runner.Check('Verify duplicated version', X509_get_version(cert2) = 2);
-    Runner.Check('Verify duplicated serial',
-            ASN1_INTEGER_get(X509_get_serialNumber(cert2)) = 99999);
-    Runner.Check('Compare certificates', X509_cmp(cert1, cert2) = 0);
-    X509_free(cert2);
+    try
+      Runner.Check('Set duplicate serial value', ASN1_INTEGER_set(serial, 99999) = 1);
+      Runner.Check('Set duplicate serial', X509_set_serialNumber(cert1, serial) = 1);
+    finally
+      ASN1_INTEGER_free(serial);
+      serial := nil;
+    end;
+
+    name := X509_NAME_new();
+    Runner.Check('Create duplicate subject name', name <> nil);
+    if name = nil then Exit;
+
+    try
+      Runner.Check('Add duplicate CN',
+        X509_NAME_add_entry_by_txt(name, 'CN', $1001, PByte(PAnsiChar('Duplicate Test Cert')), -1, -1, 0) = 1);
+      Runner.Check('Set duplicate subject', X509_set_subject_name(cert1, name) = 1);
+      Runner.Check('Set duplicate issuer', X509_set_issuer_name(cert1, name) = 1);
+    finally
+      X509_NAME_free(name);
+      name := nil;
+    end;
+
+    Runner.Check('Set duplicate notBefore', X509_gmtime_adj(X509_get_notBefore(cert1), 0) <> nil);
+    Runner.Check('Set duplicate notAfter', X509_gmtime_adj(X509_get_notAfter(cert1), 365 * 24 * 3600) <> nil);
+
+    key := EVP_PKEY_new();
+    Runner.Check('Create duplicate key container', key <> nil);
+    if key = nil then Exit;
+
+    rsa := RSA_new();
+    Runner.Check('Create duplicate RSA key', rsa <> nil);
+    if rsa = nil then Exit;
+
+    exponent := BN_new();
+    Runner.Check('Create duplicate exponent', exponent <> nil);
+    if exponent = nil then Exit;
+
+    Runner.Check('Set duplicate exponent', BN_set_word(exponent, RSA_F4) = 1);
+    Runner.Check('Generate duplicate RSA key', RSA_generate_key_ex(rsa, 2048, exponent, nil) = 1);
+    Runner.Check('Assign duplicate RSA key', EVP_PKEY_assign(key, EVP_PKEY_RSA, rsa) = 1);
+    rsa := nil;
+
+    Runner.Check('Set duplicate public key', X509_set_pubkey(cert1, key) = 1);
+    Runner.Check('Sign duplicate certificate', X509_sign(cert1, key, EVP_sha256()) > 0);
+
+    cert2 := X509_dup(cert1);
+    Runner.Check('Duplicate certificate', cert2 <> nil);
+
+    if cert2 <> nil then
+    begin
+      Runner.Check('Verify duplicated version', X509_get_version(cert2) = 2);
+      Runner.Check('Verify duplicated serial',
+              ASN1_INTEGER_get(X509_get_serialNumber(cert2)) = 99999);
+      Runner.Check('Compare certificates', X509_cmp(cert1, cert2) = 0);
+    end;
+  finally
+    if exponent <> nil then
+      BN_free(exponent);
+    if rsa <> nil then
+      RSA_free(rsa);
+    if key <> nil then
+      EVP_PKEY_free(key);
+    if name <> nil then
+      X509_NAME_free(name);
+    if serial <> nil then
+      ASN1_INTEGER_free(serial);
+    if cert2 <> nil then
+      X509_free(cert2);
+    X509_free(cert1);
   end;
-
-  X509_free(cert1);
 end;
 
 begin

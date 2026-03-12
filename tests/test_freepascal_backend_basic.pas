@@ -86,6 +86,10 @@ begin
   LCtx := TSSLFactory.CreateContext(sslCtxClient, sslFreePascal);
   AssertTrue(LCtx <> nil, 'CreateContext should return context');
   AssertTrue(LCtx.GetContextType = sslCtxClient, 'Context type mismatch');
+  AssertTrue(LCtx.GetProtocolVersions = [sslProtocolTLS13],
+    'FreePascal default client context should start with TLS1.3-only protocol versions while TLS1.2 is unsupported');
+  AssertTrue(LCtx.GetPreferredVersion = sslProtocolTLS13,
+    'FreePascal default client context should prefer TLS1.3');
 
   LCert := LLib.CreateCertificate;
   AssertTrue(LCert <> nil, 'CreateCertificate should return certificate instance');
@@ -274,22 +278,38 @@ begin
   if DirectoryExists('/etc/ssl/certs') then
     AssertTrue(LCaps.SupportsSystemCertStore,
       'FreePascal capabilities should advertise system cert store support when Linux system store directory exists');
+  AssertTrue(LLib.IsProtocolSupported(sslProtocolTLS12),
+    'FreePascal library should advertise TLS1.2 protocol support once a real local client handshake path exists');
+  AssertTrue(LLib.IsProtocolSupported(sslProtocolTLS13),
+    'FreePascal library should continue advertising TLS1.3 protocol support');
+  AssertTrue(LCaps.MinTLSVersion = sslProtocolTLS12,
+    'FreePascal capabilities should expose TLS1.2 as the current minimum supported TLS version');
+  AssertTrue(LCaps.MaxTLSVersion = sslProtocolTLS13,
+    'FreePascal capabilities should expose TLS1.3 as the current maximum supported TLS version');
+  AssertTrue(LLib.GetDefaultConfig.ProtocolVersions = [sslProtocolTLS13],
+    'FreePascal library default config should expose TLS1.3-only protocol versions while TLS1.2 is unsupported');
+  AssertTrue(LLib.GetDefaultConfig.PreferredVersion = sslProtocolTLS13,
+    'FreePascal library default config should prefer TLS1.3');
   AssertTrue(IsKeyExchangeSupported(LCaps, sslKexECDHE_RSA),
     'FreePascal backend should advertise ECDHE_RSA');
   AssertTrue(IsKeyExchangeSupported(LCaps, sslKexECDHE_ECDSA),
     'FreePascal backend should advertise ECDHE_ECDSA once pure ECDSA signer is available');
   AssertTrue(not LCaps.RequiresExternalLibrary,
     'FreePascal backend should not require external TLS library');
+  AssertTrue(Pos('TLS 1.2', UpperCase(LCaps.KnownIssues)) > 0,
+    'FreePascal capability KnownIssues should explicitly mention the current TLS1.2 scope and limits');
   AssertTrue(Pos('ECDSA', UpperCase(LCaps.KnownIssues)) > 0,
     'FreePascal capability KnownIssues should mention ECDSA CertificateVerify support scope');
-  AssertTrue(Pos('SHA256', UpperCase(LCaps.KnownIssues)) > 0,
-    'FreePascal capability KnownIssues should mention current SHA256 suite focus');
   AssertTrue(Pos('SHA384', UpperCase(LCaps.KnownIssues)) > 0,
-    'FreePascal capability KnownIssues should mention SHA384 path limitation explicitly');
-  AssertTrue(not LLib.IsCipherSupported('TLS_AES_256_GCM_SHA384'),
-    'FreePascal IsCipherSupported should reject TLS_AES_256_GCM_SHA384 while SHA384 Finished path remains pending');
-  AssertTrue(not IsCipherSupported(LCaps, sslCipherAES256GCM),
-    'FreePascal capability SupportedCiphers should not advertise AES256GCM while SHA384 Finished path remains pending');
+    'FreePascal capability KnownIssues should still mention remaining SHA384-related caveats');
+  AssertTrue(LLib.IsCipherSupported('TLS_AES_256_GCM_SHA384'),
+    'FreePascal IsCipherSupported should accept TLS_AES_256_GCM_SHA384 once SHA384 handshake path is wired');
+  AssertTrue(LLib.IsCipherSupported('TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256'),
+    'FreePascal IsCipherSupported should accept TLS1.2 CHACHA suite once local TLS1.2 path is wired');
+  AssertTrue(LLib.IsCipherSupported('TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256'),
+    'FreePascal IsCipherSupported should accept TLS1.2 AES128-GCM suite once local TLS1.2 path is wired');
+  AssertTrue(IsCipherSupported(LCaps, sslCipherAES256GCM),
+    'FreePascal capability SupportedCiphers should advertise AES256GCM once SHA384 handshake path is wired');
 
   LStream := TMemoryStream.Create;
   try
@@ -318,6 +338,7 @@ begin
 
   LTLS12ClientCtx := TSSLFactory.CreateContext(sslCtxClient, sslFreePascal);
   AssertTrue(LTLS12ClientCtx <> nil, 'TLS1.2 client context should be created');
+  LTLS12ClientCtx.SetProtocolVersions([sslProtocolTLS12]);
   LTLS12ClientCtx.SetPreferredVersion(sslProtocolTLS12);
 
   LClientStream := TMemoryStream.Create;
@@ -339,6 +360,7 @@ begin
 
   LTLS12ServerCtx := TSSLFactory.CreateContext(sslCtxServer, sslFreePascal);
   AssertTrue(LTLS12ServerCtx <> nil, 'TLS1.2 server context should be created');
+  LTLS12ServerCtx.SetProtocolVersions([sslProtocolTLS12]);
   LTLS12ServerCtx.SetPreferredVersion(sslProtocolTLS12);
 
   LServerStream := TMemoryStream.Create;

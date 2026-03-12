@@ -5,6 +5,8 @@ program test_camellia;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.evp;
 
 var
@@ -335,7 +337,17 @@ begin
   
   try
     // 加载 OpenSSL
-    if not LoadOpenSSLLibrary then
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('ERROR: Failed to load OpenSSL library: ', E.Message);
+        Halt(1);
+      end;
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('ERROR: Failed to load OpenSSL library');
       ExitCode := 1;
@@ -381,6 +393,7 @@ begin
     begin
       WriteLn('✅ ALL TESTS PASSED');
       ExitCode := 0;
+      WriteLn('[PASS] camellia smoke completed');
     end
     else
     begin

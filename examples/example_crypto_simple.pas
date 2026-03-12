@@ -11,6 +11,7 @@ program example_crypto_simple;
 uses
   SysUtils,
   fafafa.ssl.init,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.rand;
 
@@ -157,7 +158,7 @@ begin
     // 初始化OpenSSL
     WriteLn('初始化 OpenSSL...');
     InitializeOpenSSL;
-    WriteLn('✓ OpenSSL版本: ', GetOpenSSLVersion);
+    WriteLn('✓ OpenSSL版本: ', GetOpenSSLVersionString);
     WriteLn;
     
     // 运行示例

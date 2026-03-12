@@ -5,11 +5,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+RUN_ID="${FAFAFA_LINUX_MATRIX_RUN_ID:-$(date +%Y%m%d_%H%M%S)_$$}"
+COMPILE_UNIT_OUTPUT_DIR="${FAFAFA_LINUX_MATRIX_COMPILE_UNIT_OUTPUT_DIR:-tmp/linux_matrix_compile_units_${RUN_ID}}"
+MODULE_UNIT_OUTPUT_DIR="${FAFAFA_LINUX_MATRIX_MODULE_UNIT_OUTPUT_DIR:-tmp/linux_matrix_module_units_${RUN_ID}}"
+MODULE_BIN_OUTPUT_DIR="${FAFAFA_LINUX_MATRIX_MODULE_BIN_OUTPUT_DIR:-tmp/linux_matrix_module_bin_${RUN_ID}}"
+
 MODULE_SET="PKCS7,PKCS12,CMS,Store,OCSP,TS,CT"
 WITH_COMPILE=true
 WITH_PHASE2_DRYRUN=true
 VERBOSE=false
 DRY_RUN=false
+REPORT_OUTPUT=""
 
 OPENSSL111_LIB_DIR=""
 OPENSSL3_LIB_DIR=""
@@ -48,6 +54,7 @@ Linux OpenSSL 版本矩阵脚本（Draft）
   --skip-phase2-dryrun       跳过 Phase2 baseline dry-run
   --verbose                  模块测试增加 --verbose
   --dry-run                  仅打印将执行的命令
+  --report-output FILE       输出执行日志/摘要到文件
   --help                     显示帮助
 USAGE
 }
@@ -82,6 +89,10 @@ while [[ $# -gt 0 ]]; do
       DRY_RUN=true
       shift
       ;;
+    --report-output)
+      REPORT_OUTPUT="$2"
+      shift 2
+      ;;
     --help)
       usage
       exit 0
@@ -93,6 +104,21 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+resolve_output_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+if [[ -n "$REPORT_OUTPUT" ]]; then
+  REPORT_OUTPUT="$(resolve_output_path "$REPORT_OUTPUT")"
+  mkdir -p "$(dirname "$REPORT_OUTPUT")"
+  exec > >(tee "$REPORT_OUTPUT") 2>&1
+fi
 
 find_lib_dir() {
   local target="$1"
@@ -148,13 +174,13 @@ run_profile() {
 
   if [[ "$WITH_COMPILE" == "true" ]]; then
     if [[ -n "$prefix" ]]; then
-      run_cmd "cd '$PROJECT_ROOT' && $prefix python3 scripts/compile_all_modules.py"
+      run_cmd "cd '$PROJECT_ROOT' && $prefix python3 scripts/compile_all_modules.py --unit-output-dir '$COMPILE_UNIT_OUTPUT_DIR'"
     else
-      run_cmd "cd '$PROJECT_ROOT' && python3 scripts/compile_all_modules.py"
+      run_cmd "cd '$PROJECT_ROOT' && python3 scripts/compile_all_modules.py --unit-output-dir '$COMPILE_UNIT_OUTPUT_DIR'"
     fi
   fi
 
-  local module_cmd="bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
+  local module_cmd="FAFAFA_FPC_UNIT_OUTPUT_DIR='$MODULE_UNIT_OUTPUT_DIR' FAFAFA_TEST_BIN_DIR='$MODULE_BIN_OUTPUT_DIR' bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
   if [[ "$VERBOSE" == "true" ]]; then
     module_cmd="$module_cmd --verbose"
   fi
@@ -177,10 +203,17 @@ run_profile() {
 echo "========================================"
 echo "fafafa.ssl Linux OpenSSL Matrix (Draft)"
 echo "========================================"
+echo "run_id: $RUN_ID"
+echo "compile unit output dir: $COMPILE_UNIT_OUTPUT_DIR"
+echo "module unit output dir: $MODULE_UNIT_OUTPUT_DIR"
+echo "module bin output dir: $MODULE_BIN_OUTPUT_DIR"
 echo "modules: $MODULE_SET"
 echo "compile: $WITH_COMPILE"
 echo "phase2 dry-run: $WITH_PHASE2_DRYRUN"
 echo "dry-run: $DRY_RUN"
+if [[ -n "$REPORT_OUTPUT" ]]; then
+  echo "report-output: $REPORT_OUTPUT"
+fi
 
 echo ""
 echo "detected openssl 1.1.1 lib dir: ${OPENSSL111_LIB_DIR:-<not found>}"

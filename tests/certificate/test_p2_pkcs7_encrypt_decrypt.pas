@@ -502,6 +502,7 @@ begin
   begin
     WriteLn;
     WriteLn('🎉 所有加密和解密测试通过！PKCS#7 加密功能正常');
+    WriteLn('[PASS] p2 pkcs7 encrypt/decrypt completed');
   end;
 
   UnloadOpenSSLCore;

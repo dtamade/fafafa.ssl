@@ -5,6 +5,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # ============================================================
 # 参数解析
 # ============================================================
@@ -73,6 +76,39 @@ fi
 
 TIMESTAMP=$(date +%Y-%m-%d\ %H:%M:%S\ %z)
 MODE=$( [[ "$DRY_RUN" == "true" ]] && echo "dry-run" || echo "apply" )
+
+resolve_input_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  elif [[ -e "$path" ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+resolve_output_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+if [[ -n "$CLOSURE_GATE_REPORT" ]]; then
+  CLOSURE_GATE_REPORT="$(resolve_input_path "$CLOSURE_GATE_REPORT")"
+fi
+if [[ -n "$AUTOFIX_REPORT" ]]; then
+  AUTOFIX_REPORT="$(resolve_input_path "$AUTOFIX_REPORT")"
+fi
+if [[ -n "$VERIFY_REPORT" ]]; then
+  VERIFY_REPORT="$(resolve_input_path "$VERIFY_REPORT")"
+fi
+if [[ -n "$OUTPUT" ]]; then
+  OUTPUT="$(resolve_output_path "$OUTPUT")"
+fi
 
 # ============================================================
 # 数据提取函数
@@ -306,6 +342,7 @@ main() {
   report=$(generate_report "${processed_items[@]:-}")
 
   if [[ -n "$OUTPUT" ]]; then
+    mkdir -p "$(dirname "$OUTPUT")"
     echo "$report" > "$OUTPUT"
     echo "Report written to: $OUTPUT"
   else

@@ -14,6 +14,8 @@ uses
   fafafa.ssl.openssl.api.sha,
   fafafa.ssl.openssl.api.blake2,
   fafafa.ssl.openssl.api.sha3.evp,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.aes,
   fafafa.ssl.openssl.api.des,
   fafafa.ssl.openssl.api.chacha,
@@ -43,6 +45,39 @@ begin
   Write('[', Total:2, '] ', Name:40);
   if OK then begin WriteLn(' PASS'); Inc(Pass); end
   else begin WriteLn(' FAIL'); Inc(Fail); end;
+end;
+
+procedure LoadValidationModules;
+var
+  LCrypto: TLibHandle;
+begin
+  LCrypto := GetCryptoLibHandle;
+  if LCrypto = NilHandle then
+    Exit;
+
+  LoadOpenSSLERR;
+  LoadOpenSSLBIO;
+  LoadOpenSSLRAND;
+  LoadBufferModule(LCrypto);
+  LoadEVP(LCrypto);
+  LoadSHAFunctions(LCrypto);
+  LoadBLAKE2Functions(LCrypto);
+  LoadAESFunctions(LCrypto);
+  LoadDESFunctions(LCrypto);
+  LoadChaChaFunctions;
+  LoadOpenSSLHMAC;
+  LoadOpenSSLBN;
+  LoadOpenSSLRSA;
+  LoadOpenSSLDSA;
+  LoadOpenSSLDH;
+  LoadECFunctions(LCrypto);
+  LoadOpenSSLECDH;
+  LoadOpenSSLECDSA;
+  LoadOpenSSLASN1(LCrypto);
+  LoadOpenSSLPEM(LCrypto);
+  LoadOpenSSLX509;
+  LoadX509V3Functions(LCrypto);
+  LoadKDFFunctions;
 end;
 
 begin
@@ -77,15 +112,28 @@ begin
   
   WriteLn;
   WriteLn('Library Loading:');
-  if LoadOpenSSLLibrary then
+  try
+    LoadOpenSSLCore;
+    Test('LoadOpenSSLCore', TOpenSSLLoader.IsModuleLoaded(osmCore));
+  except
+    on E: Exception do
+    begin
+      Test('LoadOpenSSLCore', False);
+      WriteLn('  ERROR: ', E.Message);
+      Exit;
+    end;
+  end;
+
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
-    Test('LoadOpenSSLLibrary', True);
-    Test('IsCryptoLibraryLoaded', IsCryptoLibraryLoaded);
-    WriteLn('  Version: ', GetOpenSSLVersion);
+    Test('TOpenSSLLoader.IsModuleLoaded(osmCore)', TOpenSSLLoader.IsModuleLoaded(osmCore));
+    WriteLn('  Version: ', fafafa.ssl.openssl.api.core.GetOpenSSLVersionString);
+
+    LoadValidationModules;
     
     WriteLn;
     WriteLn('Function Pointers:');
-    if IsCryptoLibraryLoaded then
+    if TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       Test('BIO_new', Assigned(BIO_new));
       Test('BIO_free', Assigned(BIO_free));
@@ -121,7 +169,7 @@ begin
   end
   else
   begin
-    Test('LoadOpenSSLLibrary FAILED', False);
+    Test('LoadOpenSSLCore FAILED', False);
     WriteLn('  WARNING: Cannot load OpenSSL library');
   end;
   
@@ -142,10 +190,10 @@ begin
   begin
     WriteLn('SUCCESS: All core module headers are valid!');
     WriteLn;
-    WriteLn('Note: Some modules (modes, stack, obj,');
-    WriteLn('      rand_old, async, comp, legacy_ciphers,');
-    WriteLn('      pkcs*) have compilation errors and');
-    WriteLn('      need to be fixed separately.');
+    WriteLn('Note: Broader legacy or optional modules');
+    WriteLn('      (modes, stack, obj, async, comp,');
+    WriteLn('      legacy_ciphers, pkcs*) should be');
+    WriteLn('      validated separately.');
     Halt(0);
   end
   else

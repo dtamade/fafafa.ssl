@@ -329,6 +329,8 @@ begin
     TestASN1Time;
 
     Runner.PrintSummary;
+    if Runner.FailCount = 0 then
+      WriteLn('[PASS] asn1 simple integration completed');
     Halt(Runner.FailCount);
   finally
     Runner.Free;

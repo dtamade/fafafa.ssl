@@ -4,11 +4,11 @@ program test_kdf;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.kdf,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.rand;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.kdf,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.rand;
 
 var
   TestsPassed: Integer = 0;

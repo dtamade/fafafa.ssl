@@ -3,9 +3,9 @@ program test_openssl_chacha;
 
 uses
   SysUtils, DynLibs,
-  fafafa.ssl.openssl.types, fafafa.ssl.openssl.core, 
-  fafafa.ssl.openssl.chacha, fafafa.ssl.openssl.evp, 
-  fafafa.ssl.openssl.api, fafafa.ssl.openssl.consts;
+  fafafa.ssl.openssl.api.types, fafafa.ssl.openssl.api.core, 
+  fafafa.ssl.openssl.api.chacha, fafafa.ssl.openssl.api.evp, 
+  fafafa.ssl.openssl.api, fafafa.ssl.openssl.api.consts;
 
 var
   TestsPassed: Integer = 0;
@@ -100,7 +100,7 @@ begin
   WriteLn;
   
   LoadOpenSSLCore;
-  WriteLn('OpenSSL version: ', GetOpenSSLVersion);
+  WriteLn('OpenSSL version: ', GetOpenSSLVersionString);
   WriteLn;
   
   if not LoadChaChaFunctions then

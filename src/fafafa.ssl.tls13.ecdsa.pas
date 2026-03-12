@@ -25,12 +25,26 @@ function TryECDSASignP256SHA256(
   out AError: string
 ): Boolean;
 
+function TryGenerateECDHEP256KeyShare(
+  out APrivateScalar: TBytes;
+  out APublicKey: TBytes;
+  out AError: string
+): Boolean;
+
+function TryComputeECDHEP256SharedSecret(
+  const APrivateScalar: TBytes;
+  const APeerPublicKey: TBytes;
+  out ASharedSecret: TBytes;
+  out AError: string
+): Boolean;
+
 implementation
 
 uses
   fafafa.ssl.asn1,
   fafafa.ssl.tls13.bigint,
-  fafafa.ssl.tls13.primitives;
+  fafafa.ssl.tls13.primitives,
+  fafafa.ssl.random;
 
 type
   TECPoint = record
@@ -754,6 +768,117 @@ begin
   LV := HMAC_SHA256(LK, LV);
 
   AError := 'ECDSA signing failed after repeated nonce attempts';
+end;
+
+function TryParseP256UncompressedPoint(const AEncoded: TBytes; out APoint: TECPoint; out AError: string): Boolean;
+var
+  LX, LY: TBytes;
+begin
+  AError := '';
+  APoint := P256InfinityPoint;
+  Result := False;
+
+  if Length(AEncoded) <> 65 then
+  begin
+    AError := 'P-256 public point must be 65 bytes';
+    Exit;
+  end;
+  if AEncoded[0] <> $04 then
+  begin
+    AError := 'Only uncompressed P-256 public points are supported';
+    Exit;
+  end;
+
+  LX := Copy(AEncoded, 1, 32);
+  LY := Copy(AEncoded, 33, 32);
+  APoint.X := StripLeadingZeroBytes(LX);
+  APoint.Y := StripLeadingZeroBytes(LY);
+  APoint.IsInfinity := False;
+  Result := True;
+end;
+
+function TryBuildP256UncompressedPoint(const APoint: TECPoint; out AEncoded: TBytes; out AError: string): Boolean;
+var
+  LX, LY: TBytes;
+begin
+  SetLength(AEncoded, 0);
+  AError := '';
+  Result := False;
+
+  if APoint.IsInfinity then
+  begin
+    AError := 'P-256 public point must not be infinity';
+    Exit;
+  end;
+  if not TryToFixedLength32(StripLeadingZeroBytes(APoint.X), LX, AError) then
+    Exit;
+  if not TryToFixedLength32(StripLeadingZeroBytes(APoint.Y), LY, AError) then
+    Exit;
+
+  SetLength(AEncoded, 65);
+  AEncoded[0] := $04;
+  Move(LX[0], AEncoded[1], 32);
+  Move(LY[0], AEncoded[33], 32);
+  Result := True;
+end;
+
+function TryGenerateECDHEP256KeyShare(
+  out APrivateScalar: TBytes;
+  out APublicKey: TBytes;
+  out AError: string
+): Boolean;
+var
+  LN: TBytes;
+  LCandidate: TBytes;
+  LPoint: TECPoint;
+begin
+  SetLength(APrivateScalar, 0);
+  SetLength(APublicKey, 0);
+  AError := '';
+  Result := False;
+
+  LN := ConstToBytes(P256_ORDER_N);
+
+  repeat
+    LCandidate := GenerateSecureRandomBytes(32);
+    if not TryMod(StripLeadingZeroBytes(LCandidate), LN, APrivateScalar, AError) then
+      Exit;
+  until not IsZeroBytes(APrivateScalar);
+
+  if not TryP256ScalarMultBase(APrivateScalar, LPoint, AError) then
+    Exit;
+  if not TryBuildP256UncompressedPoint(LPoint, APublicKey, AError) then
+    Exit;
+
+  Result := True;
+end;
+
+function TryComputeECDHEP256SharedSecret(
+  const APrivateScalar: TBytes;
+  const APeerPublicKey: TBytes;
+  out ASharedSecret: TBytes;
+  out AError: string
+): Boolean;
+var
+  LPeerPoint: TECPoint;
+  LSharedPoint: TECPoint;
+begin
+  SetLength(ASharedSecret, 0);
+  AError := '';
+  Result := False;
+
+  if not TryParseP256UncompressedPoint(APeerPublicKey, LPeerPoint, AError) then
+    Exit;
+  if not TryP256ScalarMult(APrivateScalar, LPeerPoint, LSharedPoint, AError) then
+    Exit;
+  if LSharedPoint.IsInfinity then
+  begin
+    AError := 'P-256 shared point is infinity';
+    Exit;
+  end;
+  if not TryToFixedLength32(StripLeadingZeroBytes(LSharedPoint.X), ASharedSecret, AError) then
+    Exit;
+  Result := True;
 end;
 
 end.

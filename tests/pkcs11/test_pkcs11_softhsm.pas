@@ -27,6 +27,7 @@ uses
   SysUtils, Classes, Process,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.rsa,
   fafafa.ssl.openssl.api.bn,
@@ -682,11 +683,21 @@ begin
   // 初始化 OpenSSL
   WriteLn('正在初始化 OpenSSL...');
   try
-    if LoadOpenSSLLibrary then
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        Skip('OpenSSL initialization', E.Message);
+        Exit;
+      end;
+    end;
+
+    if TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       OpenSSLInitialized := True;
       WriteLn('OpenSSL 初始化成功');
-      WriteLn('OpenSSL 版本: ', GetOpenSSLVersion);
+      WriteLn('OpenSSL 版本: ', GetOpenSSLVersionString);
     end
     else
     begin

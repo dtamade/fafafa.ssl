@@ -241,9 +241,9 @@ begin
     TSecurityLog.Debug('CertRotation',
       Format('Certificate expiry check: path=%s, notAfter=%s, daysRemaining=%d, valid=%s',
         [FConfig.CertificatePath,
-         DateTimeToStr(NotAfter),
-         ADaysRemaining,
-         BoolToStr(Result, True)]));
+        DateTimeToStr(NotAfter),
+        ADaysRemaining,
+        BoolToStr(Result, True)]));
   except
     on E: Exception do
     begin
@@ -487,10 +487,10 @@ begin
     '  Auto-reload on change: %s' + LineEnding +
     '  Check interval: %d seconds' + LineEnding,
     [ActiveStr,
-     FConfig.CertificatePath,
-     PrivKeyStr,
-     AutoReloadStr,
-     FConfig.CheckIntervalSeconds]);
+    FConfig.CertificatePath,
+    PrivKeyStr,
+    AutoReloadStr,
+    FConfig.CheckIntervalSeconds]);
 
   if CheckCertificateExpiry(DaysRemaining) then
     Result := Result + Format('  Days until expiry: %d' + LineEnding, [DaysRemaining]);

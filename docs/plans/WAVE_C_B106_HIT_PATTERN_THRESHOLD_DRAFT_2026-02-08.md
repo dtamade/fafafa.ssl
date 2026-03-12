@@ -2,10 +2,10 @@
 
 ## 输入证据
 
-- `test-reports/wave_c_b101_validation_20260208_043500.md`
-- `test-reports/wave_c_b101_validation_20260208_045835.md`
-- `test-reports/wave_c_b101_validation_20260208_050421.md`
-- `test-reports/wave_c_b101_validation_20260208_051419.md`
+- `docs/archive/reports/wave-c-quick-enablement-history/wave_c_b101_validation_20260208_043500.md`
+- `docs/archive/reports/wave-c-quick-enablement-history/wave_c_b101_validation_20260208_045835.md`
+- `docs/archive/reports/wave-c-quick-enablement-history/wave_c_b101_validation_20260208_050421.md`
+- `docs/archive/reports/wave-c-quick-enablement-history/wave_c_b101_validation_20260208_051419.md`
 - `docs/test_reports/WAVE_C_B105_CACHE_OBSERVABILITY_RESULT_2026-02-08.md`
 
 ## 命中模式快照（B101 全门禁）

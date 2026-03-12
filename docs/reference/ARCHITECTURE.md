@@ -1,362 +1,311 @@
-# fafafa.ssl 项目架构设计
+# fafafa.ssl API Canon
 
-## 1. 项目概览
+> 更新：2026-03-10
+> 角色：这是当前 SSL/TLS 接口设计真相文档，不是历史里程碑记录。
+> 路线图入口：`docs/plans/2026-03-10-api-canon-and-implementation-roadmap.md`
 
-### 1.1 目标
-创建一个统一的 SSL/TLS 抽象层，支持 OpenSSL、WolfSSL、MbedTLS、WinSSL(Schannel) 四种后端实现，为 Pascal 生态提供简单易用的 SSL/TLS 解决方案。
+## 状态
 
-### 1.2 核心原则
-- **统一接口**：屏蔽不同库的 API 差异
-- **动态选择**：运行时选择后端实现
-- **错误透明**：统一的错误处理机制
-- **性能优先**：最小化抽象层开销
-- **内存安全**：严格的资源管理
+fafafa.ssl 当前已经从“多后端功能堆叠”转入“API canon 设计冻结”阶段。
 
-## 2. 架构层次设计
+当前文档的目标不是复述所有实现细节，而是明确：
+- 哪些接口是推荐主路径
+- 哪些接口只属于兼容层
+- 哪些 contract 已经固定
+- 纯 Pascal 后端接下来要朝什么目标演进
 
-```
-┌─────────────────────────────────────┐
-│          用户应用层                    │
-├─────────────────────────────────────┤
-│      fafafa.ssl 统一接口层            │  ← 核心抽象层
-├─────────────────────────────────────┤
-│     后端适配器层 (Adapter Layer)      │
-├─────────┬─────────┬─────────┬───────┤
-│ OpenSSL │ WolfSSL │ MbedTLS │WinSSL │  ← 原生库封装
-│ Wrapper │ Wrapper │ Wrapper │Wrapper│
-└─────────┴─────────┴─────────┴───────┘
-```
+## 设计优先级
 
-## 3. 核心模块设计
+### 北极星
+- 第一优先：SSL/TLS 接口设计要全面、合理、优雅
+- 第二优先：实现完整度
+- 重点投资方向：纯 Pascal 后端
 
-### 3.1 基础类型模块 (`fafafa.ssl.types`)
-**职责**：定义所有通用数据类型、枚举、常量、异常类
+### 最高原则
+- `API 易用与一致性` 优先于抽象炫技、后端特色暴露、或局部极限性能
 
-**关键类型**：
-- `TSSLLibraryType`: 后端库类型枚举
-- `TSSLProtocolVersion`: 协议版本枚举
-- `TSSLVerifyMode`: 证书验证模式
-- `TSSLContextType`: 上下文类型（客户端/服务端）
-- `ESSLException`: 统一异常类
-- `TSSLCertificateInfo`: 证书信息结构
-- `TSSLConnectionInfo`: 连接信息结构
+### 目标用户
+- 主用户：普通业务开发者
+- 次用户：框架作者
 
-### 3.2 核心接口模块 (`fafafa.ssl.intf`)
-**职责**：定义所有抽象接口
+### 平台优先级
+- 一等平台：`Linux + Windows`
+- 纯 Pascal 后端优先覆盖：Linux
 
-**主要接口**：
+### 兼容性策略
+- 设计期允许受控 breaking changes
+- 但必须同时具备：
+  - 明确迁移说明
+  - 能保留 deprecated 过渡层时尽量保留
+  - contract/test 与文档真相同步更新
+
+## API Canon
+
+### Core API
+
+Core API 面向普通业务开发者，目标是覆盖 80% 的常见 HTTPS/TLS 场景，并尽量屏蔽后端差异。
+
+Core API 的核心组成：
+- `TSSLContextBuilder`
+- `ISSLContext`
+- `ISSLConnection`
+- `ISSLClientConnection`
+- `TSSLConnector` / `TSSLStream`
+
+Core API 的基本要求：
+- 默认安全
+- 默认可读
+- 默认后端无关
+- contract 清晰，避免“字段看起来能配、其实不生效”
+- 取消 / timeout / close 必须边界清楚
+
+### Advanced API
+
+Advanced API 面向框架作者和高阶调用方，用来表达 Core API 不应直接暴露的高级能力。
+
+Advanced API 典型内容：
+- backend selection / capability matrix
+- certificate / CA / PKCS12 / PKCS7 / mTLS
+- advanced builder fields
+- diagnostics / native handle / runtime capability surface
+- Result / exception / structured warning semantics
+
+原则：
+- 可以更强，但不能污染 Core API
+- 必须有明确 contract，而不是“能调就算支持”
+
+### Backend-Specific API
+
+Backend-Specific API 仅在确有必要时保留。
+
+它只应承担两类职责：
+- 暴露后端确实独有、且无法自然抽象进 Core/Advanced 的能力
+- 提供兼容桥接，帮助旧调用方迁移
+
+规则：
+- 必须显式标注 backend 归属
+- 必须说明 fallback / unavailable 语义
+- 不应成为普通业务代码的默认入口
+
+## 入口治理
+
+### `TSSLContextBuilder` 是唯一推荐主入口
+
+`TSSLContextBuilder` 是当前唯一推荐主入口。
+
+它必须成为：
+- 配置语义最完整的入口
+- 文档最完整的入口
+- contract 最严格的入口
+- backend 一致性最强的入口
+
+主路径示意：
+
 ```pascal
-ISSLContext = interface
-  // 上下文配置和管理
-end;
-
-ISSLConnection = interface  
-  // SSL连接的建立、数据传输、状态查询
-end;
-
-ISSLCertificate = interface
-  // 证书加载、验证、信息获取
-end;
-
-ISSLLibrary = interface
-  // 库的初始化、清理、版本信息
-end;
+Ctx := TSSLContextBuilder.Create
+  .WithVerifyPeer
+  .WithSystemRoots
+  .BuildClient;
 ```
 
-### 3.3 工厂管理模块 (`fafafa.ssl.factory`)
-**职责**：
-- 后端库的动态加载和选择
-- 实例创建和生命周期管理
-- 库可用性检测
+server 路径示意：
 
-**核心类**：
 ```pascal
-TSSLFactory = class
-  class function CreateContext(ALibType: TSSLLibraryType; 
-    AContextType: TSSLContextType): ISSLContext;
-  class function GetAvailableLibraries: TSSLLibraryTypeSet;
-  class function IsLibraryAvailable(ALibType: TSSLLibraryType): Boolean;
-end;
+Ctx := TSSLContextBuilder.Create
+  .WithCertificatePEM(CertPEM)
+  .WithPrivateKeyPEM(KeyPEM)
+  .BuildServer;
 ```
 
-### 3.4 后端实现模块
-| 模块 | 实现说明 | 启用方式 | 状态 |
-|------|---------|---------|------|
-| `fafafa.ssl.openssl.*` | OpenSSL 实现（Linux/macOS 默认） | 默认启用 | ✅ 生产就绪 |
-| `fafafa.ssl.winssl.*` | Windows Schannel 实现（Windows 默认，100% 完成） | 默认启用（仅 Windows） | ✅ 生产就绪 |
-| `fafafa.ssl.mbedtls.*` | mbedTLS 实现（轻量 TLS） | `{$DEFINE ENABLE_MBEDTLS}` | 🔄 可选 |
-| `fafafa.ssl.wolfssl.*` | wolfSSL 实现（嵌入式/兼容性） | `{$DEFINE ENABLE_WOLFSSL}` | 🔄 可选 |
+### `TSSLFactory + TSSLConfig` 仅保留为兼容/底层入口
 
-- **OpenSSL 后端**
-  - 低层绑定：`fafafa.ssl.openssl.api.*.pas`（function pointer bindings）
-  - Loader：`fafafa.ssl.openssl.loader.pas`（负责 `libcrypto`/`libssl` 动态加载与符号解析）
-  - 高层实现：`fafafa.ssl.openssl.{context,connection,certificate,session,store}.*`
+`TSSLFactory + TSSLConfig` 不再是推荐 DSL，只保留为兼容/底层入口。
 
-- **WinSSL（Schannel）后端**
-  - 实现单元：`fafafa.ssl.winssl.*`
-  - 非 Windows 环境应跳过 WinSSL 专用构建/测试
+它们的职责：
+- 创建 backend / context / store / certificate 实例
+- 承载 library-scope stable defaults
+- 服务现有兼容调用方
 
-- **MbedTLS / WolfSSL 后端**
-  - 默认不启用：如需编译并注册这些后端，请在工程/编译参数中定义 `ENABLE_MBEDTLS` / `ENABLE_WOLFSSL`
+它们不应继续承载：
+- builder-only 语义
+- PEM/PKCS11 等高级材料 DSL
+- 伪“全能配置对象”定位
 
-每个后端模块包含：
-```pascal
-TXXXSSLContext = class(TInterfacedObject, ISSLContext)
-TXXXSSLConnection = class(TBaseSSLConnection)  // 继承自抽象基类
-TXXXSSLCertificate = class(TInterfacedObject, ISSLCertificate)
-TXXXSSLLibrary = class(TInterfacedObject, ISSLLibrary)
-```
+重点 contract：
+- `ISSLLibrary.SetDefaultConfig(...)` 只负责 library-scope stable defaults
+- request/context-scope 字段必须通过 `TSSLFactory.CreateContext(const AConfig)` 或 builder 应用
+- `TSSLConfig` 继续瘦身，避免与 builder 形成两套平行 DSL
 
-### 3.6 连接抽象基类 (`fafafa.ssl.connection.base`)
+### `TSSLConnector` / `TSSLStream`
 
-**职责**：为所有 SSL 连接实现提供共享的基础功能
+`TSSLConnector` / `TSSLStream` 是业务快捷入口，用于把 `ISSLContext` 消费成更直接的连接体验。
 
-**架构设计**：
-```pascal
-TBaseSSLConnection = class(TInterfacedObject, ISSLConnection)
-protected
-  { 21 个抽象方法 - 后端必须实现 }
-  function DoRead(var ABuffer; ACount: Integer): Integer; virtual; abstract;
-  function DoWrite(const ABuffer; ACount: Integer): Integer; virtual; abstract;
-  function DoConnect: Boolean; virtual; abstract;
-  function DoAccept: Boolean; virtual; abstract;
-  function DoHandshakeInternal: TSSLHandshakeState; virtual; abstract;
-  function DoShutdown: Boolean; virtual; abstract;
-  procedure DoClose; virtual; abstract;
-  function DoRenegotiate: Boolean; virtual; abstract;
-  function DoGetError(ARet: Integer): TSSLErrorCode; virtual; abstract;
-  function DoWantRead: Boolean; virtual; abstract;
-  function DoWantWrite: Boolean; virtual; abstract;
-  function DoGetProtocolVersion: TSSLProtocolVersion; virtual; abstract;
-  function DoGetCipherName: string; virtual; abstract;
-  function DoGetPeerCertificate: ISSLCertificate; virtual; abstract;
-  function DoGetPeerCertificateChain: TSSLCertificateArray; virtual; abstract;
-  function DoGetVerifyResult: Integer; virtual; abstract;
-  function DoGetVerifyResultString: string; virtual; abstract;
-  function DoGetSession: ISSLSession; virtual; abstract;
-  procedure DoSetSession(ASession: ISSLSession); virtual; abstract;
-  function DoIsSessionReused: Boolean; virtual; abstract;
-  function DoGetSelectedALPNProtocol: string; virtual; abstract;
-  function DoGetState: string; virtual; abstract;
-  function DoGetNativeHandle: Pointer; virtual; abstract;
-public
-  { ~50 个 ISSLConnection 方法的统一实现 }
-  function Connect: Boolean;          // 调用 DoConnect + 更新状态
-  function Read(var ABuffer; ACount: Integer): Integer;  // 调用 DoRead + 统计
-  function ReadString(out AStr: string): Boolean;        // 基于 Read 实现
-  function GetHealthStatus: TSSLHealthStatus;            // 统一实现
-  function GetPerformanceMetrics: TSSLPerformanceMetrics; // 统一实现
-  // ... 其他方法
-end;
-```
+它们的定位：
+- 业务代码易用层
+- 不重新发明配置 DSL
+- 以消费 `ISSLContext` 为主，而不是绕开 builder/factory 再造一套配置入口
 
-**设计优势**：
-- **代码复用**：通用逻辑只需实现一次，后端只实现 21 个抽象方法
-- **一致性**：所有后端共享相同的状态管理、性能跟踪、错误处理逻辑
-- **可维护性**：修改通用行为只需修改基类
-- **代码减少**：总计减少约 800 行重复代码
+## Core Contract 真相
 
-**后端继承关系**：
-```
-TBaseSSLConnection (676 lines)
-├── TOpenSSLConnection (1388 lines) - 保留 ValidatePostHandshake 等复杂逻辑
-├── TWinSSLConnection (2169 lines) - 保留 Schannel 握手、会话管理
-├── TWolfSSLConnection (641 lines) - 独立模块
-└── TMbedTLSConnection (566 lines) - 最简洁的实现
-```
+### 单次 backend 解析
 
-### 3.5 证书时间与扩展解析策略
+- `TSSLContextBuilder.BuildClient` / `BuildServer` 会先 resolve 一次 concrete backend
+- 后续 `TSSLFactory.CreateContext(...)` 与 `TSSLFactory.CreateCertificateStore(...)` 共享同一个 resolved backend
+- `WithSystemRoots` 不再触发第二次 autodetect
+- `WithBackend(sslAutoDetect)` 与隐式默认路径都会先收口到 concrete backend 再执行
 
-为保证不同后端在证书语义上的一致性，时间字段和常用扩展（尤其是 `subjectAltName`）做了统一约定：
+### 配置作用域分离
 
-- **有效期时间（NotBefore/NotAfter）**  
-  - OpenSSL 后端通过 `X509_get_notBefore/After` 取得 `PASN1_TIME`，再委托统一的 `ASN1TimeToDateTime` 工具函数完成解析，避免直接手写 `TM` 结构解析曾经引发的 AV 问题。  
-  - WinSSL 后端使用 `FileTimeToSystemTime` → `SystemTimeToDateTime` 解析 `CERT_INFO.NotBefore/NotAfter`，两端最终都返回正常的 `TDateTime`，并在 `TSSLCertificateInfo.NotBefore/NotAfter` 中对齐语义。
+- library scope：
+  - `LogLevel`
+  - `LogCallback`
+  - 其它可被 backend 稳定保存的 default
+- request/context scope：
+  - `CertificateFile`
+  - `PrivateKeyFile`
+  - `PrivateKeyPassword`
+  - `CAFile`
+  - `CAPath`
 
-- **subjectAltName（SAN）扩展**  
-  - OpenSSL 简化后端（`fafafa.ssl.openssl.certificate`）优先通过 `X509_get_ext_d2i(..., NID_subject_alt_name, ...)` 解码为 `GENERAL_NAMES`，再枚举 `GENERAL_NAME` 条目：
-  - `GEN_DNS`/`GEN_EMAIL`/`GEN_URI` → 使用 ASN1 字符串工具转换为纯文本域名、邮箱、URI；
-  - `GEN_IPADD` → 按字节解析为 IPv4/IPv6 文本（如 `127.0.0.1`、`2001:db8::1`）。
-  - 如果运行环境缺少相关 X509v3/stack API，则回退到 `X509V3_EXT_print` 的文本输出并做简单字符串解析（兼容旧实现）。
-  - WinSSL 后端（`fafafa.ssl.winssl.certificate`）使用 `CertFindExtension(szOID_SUBJECT_ALT_NAME2, ...)` + `CryptDecodeObject` 解码为 `CERT_ALT_NAME_INFO`，当前已枚举 `CERT_ALT_NAME_DNS_NAME`、`CERT_ALT_NAME_IP_ADDRESS`、`CERT_ALT_NAME_RFC822_NAME`、`CERT_ALT_NAME_URL`，输出纯域名/IP/邮箱/URI，与 OpenSSL 一致。
-- 抽象层约定：
-  - `ISSLCertificate.GetSubjectAltNames` 始终返回 **不带前缀** 的主机名/IP/邮箱/URI 字符串（例如 `san-test.local`、`example.test`、`127.0.0.1`、`admin@example.test`、`spiffe://mesh/node`），不暴露 `DNS:` / `IP Address:` 等后端格式细节；
-  - `TSSLCertificateInfo.SubjectAltNames` 为上述结果的只读快照，两后端语义保持一致，方便上层做主机名匹配或调试输出。
+`TSSLConfig` 当前不能再被视作“所有配置都能放进去”的总入口。
 
-此外，主机名验证统一遵循以下策略：
-- OpenSSL 后端直接调用 `X509_check_host`，自动处理 SAN/CN、通配符及 IP/DNS 区分；
-- WinSSL 后端在 `VerifyHostname` 中复用 `TSSLUtils.IsIPAddress/IsValidHostname`，遍历 SAN 时将 IP 与域名通配逻辑分离，忽略 Email/URI 条目并在 SAN 未命中时回退到 CN，与 OpenSSL 语义对齐。
+### owner fields normalize
 
-## 4. 错误处理架构
+- `LibraryType` / `ContextType` 在 library default path 上是 owner fields
+- backend 保存 defaults 时会把它们 normalize 回 backend-owned baseline
+- `GetDefaultConfig(...)` 返回的是 backend 当前可生效的默认真相，而不是调用方输入镜像
 
-### 4.1 四层错误处理机制
+### runtime-only dead fields 显式失败
 
-1. **原生错误捕获**：捕获底层库的错误码和消息
-2. **错误码映射**：将原生错误映射到统一的 `TSSLErrorCode`
-3. **上下文信息**：添加操作上下文和堆栈信息
-4. **用户友好消息**：提供可读的错误描述
+以下字段当前不属于 context 创建 contract：
+- `BufferSize`
+- `HandshakeTimeout`
 
-### 4.2 错误信息结构
-```pascal
-ESSLException = class(Exception)
-  ErrorCode: TSSLErrorCode;        // 统一错误码
-  LibraryType: TSSLLibraryType;    // 源库类型
-  NativeError: Integer;            // 原生错误码
-  NativeMessage: string;           // 原生错误消息
-  Context: string;                 // 操作上下文
-end;
-```
+它们不能再被静默当作“已生效配置”接受。
 
-### 4.3 错误处理策略
-- **即时转换**：底层错误立即转换为统一格式
-- **上下文保留**：保持原始错误信息便于调试
-- **分级处理**：区分致命错误和可恢复错误
-- **日志集成**：自动记录错误详情
+### `ServerName` 策略
 
-## 5. 内存管理策略
+- 推荐路径：per-connection SNI
+- 顺序：先 `CreateConnection(...)`，再对 `ISSLClientConnection` 调 `SetServerName(...)`
+- contract：
+  - `connection override > context default > empty`
+  - 显式空 override 也属于有效 override
 
-### 5.1 资源管理原则
-- **RAII模式**：对象构造时获取资源，析构时释放
-- **引用计数**：使用接口的自动引用计数
-- **异常安全**：确保异常情况下资源正确释放
+`ISSLContext.ServerName` 当前仅保留兼容桥接语义，不再是推荐新接口。
 
-### 5.2 缓冲区管理
-- **统一缓冲区大小**：默认 16KB，可配置
-- **零拷贝优化**：尽可能避免数据拷贝
-- **内存池**：考虑为频繁分配的小对象使用内存池
+### 材料优先级 contract
 
-## 6. 性能优化设计
+#### 证书
+- `certificate_pem > certificate_file`
+- `ImportFromJSON(...)` / `Merge(...)` 留下的双态不应再误走 file-first
 
-### 6.1 延迟加载
-- 动态库延迟加载，只在需要时加载
-- 上下文延迟初始化，减少启动开销
+#### 私钥
+- `PKCS#11 > private_key_pem > private_key_file`
+- `ImportFromJSON(...)` / `Merge(...)` 留下的双态不应再误走 file-first
 
-### 6.2 缓存策略  
-- 证书验证结果缓存
-- DNS解析结果缓存（如果涉及）
-- 会话复用支持
+#### PKCS11
+- `UsePKCS11(...)` 只替代私钥来源
+- `UsePKCS11(...)` 只替代私钥来源，不替代 server 证书要求
+- server 证书仍需通过 `WithCertificate` 或 `WithCertificatePEM` 提供
+- 当 `pkcs11_uri` 与本地私钥材料并存时，validation/build 都会显式按 `PKCS#11` 优先生效
 
-### 6.3 批量操作
-- 支持批量证书验证
-- 批量数据传输接口
+## Backend Model
 
-## 7. 线程安全设计
+| Backend | 角色 | 一等平台 | 外部依赖 | 当前定位 |
+|---|---|---|---|---|
+| `OpenSSL` | Linux 现实基线 | Linux | 需要 | 生产主力 |
+| `WinSSL` | Windows 现实基线 | Windows | 系统自带 | 生产主力 |
+| `MbedTLS` | 可选轻量 backend | Linux/Windows | 需要 | 可选适配层 |
+| `WolfSSL` | 可选兼容 backend | Linux/Windows | 需要 | 可选适配层 |
+| `纯 Pascal / FreePascal` | 无原生依赖的可移植后端 | Linux 优先 | 不需要 | 战略重点，优先建设中 |
 
-### 7.1 线程安全等级
-- **库级别**：确保库的初始化/清理线程安全
-- **上下文级别**：上下文可在多线程间共享（只读配置）
-- **连接级别**：单个连接不支持并发操作，需要外部同步
+### backend-specific 保留策略
 
-### 7.2 同步机制
-- 使用 Pascal 的 `TCriticalSection` 保护共享资源
-- 原子操作用于简单的计数器和状态标志
+- OpenSSL / WinSSL 继续作为现实生产基线
+- MbedTLS / WolfSSL 保持可选
+- backend-specific 能力必须通过 capability / contract 明确边界
+- 兼容 shim 可以保留，但不应再成为新演进中心
 
-## 8. 配置管理
+## 纯 Pascal 后端
 
-### 8.1 配置层次
-```pascal
-TSSLConfig = record
-  // 全局配置
-  DefaultLibraryType: TSSLLibraryType;
-  BufferSize: Integer;
-  LogLevel: TSSLLogLevel;
-  
-  // 上下文配置  
-  ProtocolVersion: TSSLProtocolVersion;
-  VerifyMode: TSSLVerifyMode;
-  CertificatePath: string;
-  PrivateKeyPath: string;
-  
-  // 连接配置
-  HandshakeTimeout: Integer;
-  ReadTimeout: Integer;
-  WriteTimeout: Integer;
-end;
-```
+### 战略定位
 
-### 8.2 配置来源优先级
-1. 代码中显式设置的参数
-2. 环境变量
-3. 配置文件
-4. 默认值
+纯 Pascal 后端的目标不是“教学样例”，而是：
+- 无原生依赖
+- 可移植
+- 可部署
+- 可优化
 
-## 9. 测试策略
+同时要求：
+- 保持可接受性能
+- 不把“无依赖”当作“低标准”借口
 
-### 9.1 测试覆盖
-- **单元测试**：每个接口方法的功能测试
-- **集成测试**：不同后端的兼容性测试
-- **压力测试**：并发连接和大数据量测试
-- **安全测试**：恶意输入和边界条件测试
+### 第一里程碑
 
-### 9.2 模拟测试
-- Mock SSL服务器用于客户端测试
-- 证书生成工具用于测试不同证书场景
-- 网络条件模拟（延迟、丢包、中断）
+纯 Pascal 后端的第一个实现里程碑是：
+- `HTTPS/TLS 客户端生产可用`
 
-## 10. 部署和分发
+### M1 验收标准
 
-### 10.1 库文件组织
-```
-fafafa.ssl/
-├── bin/           # 编译后的库文件
-├── include/       # Pascal 单元文件
-├── examples/      # 使用示例
-└── docs/          # 文档
-```
+1. `TLS 1.2 / 1.3` 稳定握手
+2. 默认开启证书链校验
+3. 默认开启 hostname verification
+4. 支持系统根证书
+5. 支持自定义 CA / CA bundle
+6. 支持 SNI
+7. 支持 ALPN
+8. 支持超时、取消、明确错误语义
+9. 支持稳定的流式读写与关闭语义
+10. 支持可观测性：日志 / 握手失败原因 / 对端证书信息
 
-### 10.2 依赖管理
-- 静态链接优先，减少运行时依赖
-- 提供动态库版本支持更新
-- 清晰的版本兼容性矩阵
+### M1 暂不强制
 
-## 11. 开发里程碑
+- OCSP / CRL 强校验
+- PKCS#11
+- mTLS
+- HTTP/2 完整协议层
+- 激进性能目标
 
-### 阶段1：基础架构 (Week 1-2)
-- [ ] 创建类型定义 (`fafafa.ssl.types`)
-- [ ] 设计核心接口 (`fafafa.ssl.intf`)
-- [ ] 实现工厂模式 (`fafafa.ssl.factory`)
-- [ ] 建立测试框架
+## 错误与观测模型
 
-### 阶段2：OpenSSL 后端 (Week 3-4)
-- [ ] OpenSSL 绑定和封装
-- [ ] 基本 SSL 上下文功能
-- [ ] 客户端连接实现
-- [ ] 单元测试完成
+当前 API canon 要求：
+- 错误不是“能抛就行”，而是要有统一语义
+- warning 不是“可有可无”，而是要承担 mixed-input / fallback / precedence 的解释责任
+- Result / exception / log 三条面要各司其职
 
-### 阶段3：WolfSSL 后端 (Week 5-6)
-- [ ] WolfSSL 绑定和封装
-- [ ] 接口实现和测试
-- [ ] 兼容性验证
+推荐方向：
+- Core API：稳定异常 / 结果语义
+- Advanced API：更细粒度诊断、capability、native detail
+- docs：必须明确什么是 error、什么是 warning、什么是 fallback
 
-### 阶段4：MbedTLS 后端 (Week 7-8)
-- [ ] MbedTLS 绑定和封装
-- [ ] 接口实现和测试
-- [ ] 性能对比分析
+## 兼容与废弃策略
 
-### 阶段5：WinSSL 后端 (Week 9-10)
-- [ ] Windows Schannel API 封装
-- [ ] 接口实现和测试
-- [ ] Windows 平台优化
+以下 surface 当前属于兼容层，而不是推荐新设计：
+- `ISSLContext.ServerName`
+- `TSSLFactory + TSSLConfig` 作为主 DSL 的用法
+- 各 backend 的历史 shim 入口
 
-### 阶段6：完善和优化 (Week 11-12)
-- [ ] 错误处理完善
-- [ ] 性能优化和对比分析
-- [ ] 文档完善
-- [ ] 发布准备
+废弃策略：
+- 先降级为 compatibility surface
+- 再停止在新文档/新示例里推广
+- 最后在 contract 稳定后再考虑更强 deprecation
 
-## 12. 风险评估
+## 当前不再推荐的理解方式
 
-### 12.1 技术风险
-- **库版本兼容性**：不同版本 SSL 库的 API 差异
-- **平台差异**：Windows/Linux/macOS 的实现差异
-- **性能开销**：抽象层带来的性能损失
+以下理解已经过时：
+- “所有配置都应该塞进 `TSSLConfig`”
+- “context-level `ServerName` 是推荐主路径”
+- “builder / factory / config 是同构入口”
+- “PKCS11 能替代整个 server identity”
+- “后端差异可以长期靠实现细节自然对齐”
 
-### 12.2 缓解策略
-- 建立完整的测试矩阵覆盖主要版本组合
-- 使用条件编译处理平台差异
-- 基准测试持续监控性能影响
+## 与路线图的关系
 
----
-**文档版本**: 1.0  
-**创建时间**: 2025-09-28  
-**作者**: fafafa.ssl 开发团队
+这份文档对应路线图的 `Wave 1`：
+- 先冻结 API canon
+- 再抽 contract index
+- 然后把 pure Pascal M1 contract 列出来，进入实现期
+
+后续权威入口：
+- 总路线图：`docs/plans/2026-03-10-api-canon-and-implementation-roadmap.md`
+- 月度真相汇总：`docs/plans/2026-03-current-summary.md`

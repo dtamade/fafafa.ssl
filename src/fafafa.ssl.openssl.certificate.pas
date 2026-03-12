@@ -400,7 +400,7 @@ var
   Len: Integer;
   Buf: PAnsiChar;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   if FX509 = nil then Exit;
   
   BIO := BIO_new(BIO_s_mem());
@@ -427,7 +427,7 @@ var
   Item: string;
   PathLen: LongInt;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TSSLCertificateInfo);
   Result.Subject := GetSubject;
   Result.Issuer := GetIssuer;
   Result.SerialNumber := GetSerialNumber;
@@ -537,43 +537,59 @@ var
   SerialNum: PASN1_INTEGER;
   BN: PBIGNUM;
   HexStr: PAnsiChar;
+  SerialInt64: Int64;
 begin
   Result := '';
-  
+
   if FX509 = nil then
     Exit;
-  
-  // 检查必要的API是否已加载
-  if not Assigned(X509_get_serialNumber) or 
-    not Assigned(ASN1_INTEGER_to_BN) or 
-    not Assigned(BN_bn2hex) then
+
+  if not Assigned(X509_get_serialNumber) then
     Exit;
-  
-  // 获取序列号
+
   SerialNum := X509_get_serialNumber(FX509);
   if SerialNum = nil then
     Exit;
-  
-  // 转换为BIGNUM
-  BN := ASN1_INTEGER_to_BN(SerialNum, nil);
-  if BN = nil then
-    Exit;
-  
-  try
-    // 转换为16进制字符串
-    HexStr := BN_bn2hex(BN);
-    if HexStr <> nil then
-    begin
-      Result := string(HexStr);
-      // 释放OpenSSL分配的字符串
-      if Assigned(OPENSSL_free) then
-        OPENSSL_free(HexStr);
+
+  if not Assigned(ASN1_INTEGER_to_BN) or not Assigned(BN_bn2hex) then
+    LoadOpenSSLBN;
+
+  if not Assigned(ASN1_INTEGER_get_int64) and not Assigned(ASN1_INTEGER_get) then
+    LoadOpenSSLASN1(GetCryptoLibHandle);
+
+  if Assigned(ASN1_INTEGER_to_BN) and Assigned(BN_bn2hex) then
+  begin
+    BN := ASN1_INTEGER_to_BN(SerialNum, nil);
+    if BN = nil then
+      Exit;
+
+    try
+      HexStr := BN_bn2hex(BN);
+      if HexStr <> nil then
+      begin
+        Result := string(HexStr);
+        if Assigned(OPENSSL_free) then
+          OPENSSL_free(HexStr);
+      end;
+    finally
+      if Assigned(BN_free) then
+        BN_free(BN);
     end;
-  finally
-    // 释放BIGNUM
-    if Assigned(BN_free) then
-      BN_free(BN);
+
+    if Result <> '' then
+      Exit;
   end;
+
+  SerialInt64 := 0;
+  if Assigned(ASN1_INTEGER_get_int64) and
+    (ASN1_INTEGER_get_int64(@SerialInt64, ASN1_INTEGER(SerialNum)) = 1) then
+  begin
+    Result := IntToStr(SerialInt64);
+    Exit;
+  end;
+
+  if Assigned(ASN1_INTEGER_get) then
+    Result := IntToStr(ASN1_INTEGER_get(ASN1_INTEGER(SerialNum)));
 end;
 
 function TOpenSSLCertificate.GetNotBefore: TDateTime;

@@ -8,6 +8,7 @@ SIGNOFF_RECORD="docs/test_reports/WAVE_C_B113_RELEASE_SIGNOFF_RECORD_2026-02-08.
 ACCEPTANCE_REPORT="docs/test_reports/WAVE_C_B114_CLOSURE_ACCEPTANCE_RESULT_2026-02-08.md"
 WORKFLOW_TEMPLATE=".github/workflows/wave-c-quick-sprint-manual.yml.disabled"
 OUTPUT_FILE=""
+REPORTS_DIR="${FAFAFA_WAVE_C_ENABLEMENT_REPORTS_DIR:-tmp/wave_c_enablement_reports}"
 
 usage() {
   cat <<'USAGE'
@@ -21,10 +22,11 @@ Wave C B115 Workflow Enable Prereq Check
 
 选项：
   --run-id ID            指定 run_id
+  --reports-dir DIR      报告目录（默认 tmp/wave_c_enablement_reports）
   --signoff-record FILE  指定签核记录
   --acceptance FILE      指定闭环验收报告
   --workflow FILE        指定 workflow 模板文件
-  --output FILE          输出报告路径
+  --output FILE          输出报告路径（默认 tmp/wave_c_enablement_reports/wave_c_b115_workflow_enable_prereq_<run_id>.md）
   --strict               状态非 READY_FOR_ENABLE 返回非 0
   --help                 显示帮助
 USAGE
@@ -34,6 +36,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --run-id)
       RUN_ID="$2"
+      shift 2
+      ;;
+    --reports-dir)
+      REPORTS_DIR="$2"
       shift 2
       ;;
     --signoff-record)
@@ -69,8 +75,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b115_workflow_enable_prereq_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORTS_DIR/wave_c_b115_workflow_enable_prereq_${RUN_ID}.md"
 fi
+
+mkdir -p "$(dirname "$OUTPUT_FILE")"
 
 check_file_state() {
   local file="$1"

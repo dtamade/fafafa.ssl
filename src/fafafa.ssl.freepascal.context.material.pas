@@ -14,15 +14,36 @@ unit fafafa.ssl.freepascal.context.material;
 interface
 
 uses
-  SysUtils;
+  SysUtils,
+  fafafa.ssl.base;
 
 type
+  TFreePascalPinInfo = record
+    Hash: TBytes;
+    PinType: Integer;
+    Description: string;
+    IsBackup: Boolean;
+  end;
+
+  TFreePascalPinInfoArray = array of TFreePascalPinInfo;
+
   IFreePascalContextMaterial = interface
     ['{6B661525-EA6C-4D8F-8307-3AA51866FC71}']
     function HasCertificateMaterial: Boolean;
     function HasPrivateKeyMaterial: Boolean;
     function GetCertificateMaterial: TBytes;
     function GetPrivateKeyMaterial: TBytes;
+  end;
+
+  IFreePascalContextTrustStore = interface
+    ['{9D970527-1D2E-4A6A-8B66-7F4A868E7A8A}']
+    function GetCertificateStore: ISSLCertificateStore;
+    function GetCAFile: string;
+    function GetCAPath: string;
+    function GetVerifyCallback: TSSLVerifyCallback;
+    function GetInfoCallback: TSSLInfoCallback;
+    function GetCertificatePinningEnabled: Boolean;
+    function GetPins: TFreePascalPinInfoArray;
   end;
 
 implementation

@@ -370,6 +370,7 @@ function LoadOpenSSLOCSP(const ACryptoLib: THandle): Boolean;
 procedure UnloadOpenSSLOCSP;
 
 // 辅助函数
+function CheckCertificateStatusDependenciesAvailable: Boolean;
 function CheckCertificateStatus(ACert: PX509; AIssuer: PX509;
   const AOCSPUrl: string; ATimeout: Integer = 10; AStore: PX509_STORE = nil): Integer;
 function CreateOCSPRequest(ACert: PX509; AIssuer: PX509): POCSP_REQUEST;
@@ -504,6 +505,9 @@ begin
   if not Assigned(OCSP_RESPONSE_get1_basic) then
     OCSP_RESPONSE_get1_basic := TOCSP_RESPONSE_get1_basic(GetProcedureAddress(ACryptoLib, 'OCSP_response_get1_basic'));
 
+  // Keep module "loaded" semantics intentionally minimal (entry-point presence).
+  // Runtime safety for CheckCertificateStatus call-path is enforced separately by
+  // CheckCertificateStatusDependenciesAvailable and higher-level fail-closed guards.
   TOpenSSLLoader.SetModuleLoaded(osmOCSP, Assigned(OCSP_REQUEST_new) and Assigned(OCSP_RESPONSE_new));
   Result := TOpenSSLLoader.IsModuleLoaded(osmOCSP);
 end;
@@ -520,6 +524,21 @@ begin
 end;
 
 // 辅助函数实现
+function CheckCertificateStatusDependenciesAvailable: Boolean;
+begin
+  Result := Assigned(OCSP_REQUEST_new) and
+    Assigned(OCSP_REQUEST_free) and
+    Assigned(OCSP_RESPONSE_status) and
+    Assigned(OCSP_RESPONSE_get1_basic) and
+    Assigned(OCSP_RESPONSE_free) and
+    Assigned(OCSP_BASICRESP_verify) and
+    Assigned(OCSP_BASICRESP_free) and
+    Assigned(OCSP_cert_to_id) and
+    Assigned(OCSP_CERTID_free) and
+    Assigned(OCSP_resp_find_status) and
+    Assigned(OCSP_check_validity);
+end;
+
 function CheckCertificateStatus(ACert: PX509; AIssuer: PX509;
   const AOCSPUrl: string; ATimeout: Integer; AStore: PX509_STORE): Integer;
 var
@@ -582,12 +601,7 @@ begin
     Exit;
 
   // Ensure required OCSP entry points exist
-  if (not Assigned(OCSP_RESPONSE_status)) or
-    (not Assigned(OCSP_RESPONSE_get1_basic)) or
-    (not Assigned(OCSP_BASICRESP_verify)) or
-    (not Assigned(OCSP_cert_to_id)) or
-    (not Assigned(OCSP_resp_find_status)) or
-    (not Assigned(OCSP_check_validity)) then
+  if not CheckCertificateStatusDependenciesAvailable then
     Exit;
 
   // 创建 OCSP 请求
@@ -1012,7 +1026,8 @@ begin
 
   if (not Assigned(OCSP_RESPONSE_status)) or
     (not Assigned(OCSP_RESPONSE_get1_basic)) or
-    (not Assigned(OCSP_BASICRESP_verify)) then
+    (not Assigned(OCSP_BASICRESP_verify)) or
+    (not Assigned(OCSP_BASICRESP_free)) then
     Exit;
 
   // 检查响应状态

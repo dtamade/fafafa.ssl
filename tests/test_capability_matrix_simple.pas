@@ -5,7 +5,7 @@ program test_capability_matrix_simple;
 uses
   SysUtils,
   fafafa.ssl.base,
-  fafafa.ssl.openssl.backed;
+  fafafa.ssl.openssl.lib;
 
 procedure Require(ACondition: Boolean; const AMessage: string);
 begin

@@ -83,6 +83,7 @@ type
     function WithOCSPStapling(AEnabled: Boolean = True): ISSLContextBuilder;
     function WithOCSPStaplingRequired(ARequired: Boolean = True): ISSLContextBuilder;
     function WithCertVerifyCache(AEnabled: Boolean = True): ISSLContextBuilder;
+    function WithCertVerifyCacheSkipValidHitRefresh(AEnabled: Boolean = True): ISSLContextBuilder;
 
     // v1.3.0: Automatic backend selection
     function WithAutoBackendSelection(const ARequirements: TSSLRequirements): ISSLContextBuilder;
@@ -209,6 +210,14 @@ type
     FExplicitBackendSet: Boolean;
 
     procedure SyncOCSPStaplingOptions;
+    procedure SyncAdvancedOptionCoupledFields(
+      const AHasServerName, AHasALPNProtocols, AHasSessionCacheEnabled: Boolean;
+      AUseFieldOnlyImportSemantics: Boolean);
+    procedure ApplyResolvedContextConfiguration(AContext: ISSLContext;
+      ASelectedBackend: TSSLLibraryType; ARequireServerIdentity: Boolean);
+    function ResolveBuildBackend(out ASelectedBackend: TSSLLibraryType): Boolean;
+    function CreateResolvedContext(AContextType: TSSLContextType;
+      const AFailureMessage: string; out ASelectedBackend: TSSLLibraryType): ISSLContext;
   public
     constructor Create;
     
@@ -252,6 +261,7 @@ type
     function WithOCSPStapling(AEnabled: Boolean = True): ISSLContextBuilder;
     function WithOCSPStaplingRequired(ARequired: Boolean = True): ISSLContextBuilder;
     function WithCertVerifyCache(AEnabled: Boolean = True): ISSLContextBuilder;
+    function WithCertVerifyCacheSkipValidHitRefresh(AEnabled: Boolean = True): ISSLContextBuilder;
 
     // v1.3.0: Automatic backend selection
     function WithAutoBackendSelection(const ARequirements: TSSLRequirements): ISSLContextBuilder;
@@ -476,6 +486,567 @@ begin
   end;
 end;
 
+procedure TSSLContextBuilderImpl.SyncAdvancedOptionCoupledFields(
+  const AHasServerName, AHasALPNProtocols, AHasSessionCacheEnabled: Boolean;
+  AUseFieldOnlyImportSemantics: Boolean);
+begin
+  if AHasServerName then
+    if (not AUseFieldOnlyImportSemantics) or (FServerName <> '') then
+      Include(FOptions, ssoEnableSNI);
+
+  if AHasALPNProtocols then
+    if (not AUseFieldOnlyImportSemantics) or (FALPNProtocols <> '') then
+      Include(FOptions, ssoEnableALPN);
+
+  if AHasSessionCacheEnabled then
+    if FSessionCacheEnabled then
+      Include(FOptions, ssoEnableSessionCache)
+    else
+      Exclude(FOptions, ssoEnableSessionCache);
+end;
+
+function PKCS11PINMethodToText(AMethod: TPKCS11PINMethod): string;
+begin
+  case AMethod of
+    pmValue: Result := 'value';
+    pmEnvironment: Result := 'environment';
+    pmFile: Result := 'file';
+    pmCallback: Result := 'callback';
+    pmInteractive: Result := 'interactive';
+  else
+    Result := 'none';
+  end;
+end;
+
+function TryParsePKCS11PINMethodText(const AValue: string;
+  out AMethod: TPKCS11PINMethod): Boolean;
+var
+  LValue: string;
+begin
+  LValue := LowerCase(Trim(AValue));
+
+  if (LValue = 'none') or (LValue = 'pmnone') then
+    AMethod := pmNone
+  else if (LValue = 'value') or (LValue = 'pmvalue') then
+    AMethod := pmValue
+  else if (LValue = 'environment') or (LValue = 'env') or (LValue = 'pmenvironment') then
+    AMethod := pmEnvironment
+  else if (LValue = 'file') or (LValue = 'pmfile') then
+    AMethod := pmFile
+  else if (LValue = 'callback') or (LValue = 'pmcallback') then
+    AMethod := pmCallback
+  else if (LValue = 'interactive') or (LValue = 'prompt') or (LValue = 'pminteractive') then
+    AMethod := pmInteractive
+  else
+    Exit(False);
+
+  Result := True;
+end;
+
+
+procedure AddBackendSelectionToJSON(AObject: TJSONObject;
+  AAutoSelectBackend: Boolean;
+  const ARequirements: TSSLRequirements;
+  AExplicitBackend: TSSLLibraryType;
+  AExplicitBackendSet: Boolean);
+var
+  LProtocols: TJSONArray;
+  LCiphers: TJSONArray;
+  LHashes: TJSONArray;
+  LKeyExchanges: TJSONArray;
+  LFeatures: TJSONArray;
+  LPreferredCiphers: TJSONArray;
+  LPreferredHashes: TJSONArray;
+  LProtocol: TSSLProtocolVersion;
+  LCipher: TSSLCipher;
+  LHash: TSSLHash;
+  LKeyExchange: TSSLKeyExchange;
+  LFeature: TSSLFeature;
+begin
+  AObject.Add('backend_auto_select', AAutoSelectBackend);
+  AObject.Add('backend_explicit_library', Ord(AExplicitBackend));
+  AObject.Add('backend_explicit_library_set', AExplicitBackendSet);
+
+  LProtocols := TJSONArray.Create;
+  for LProtocol := Low(TSSLProtocolVersion) to High(TSSLProtocolVersion) do
+    if LProtocol in ARequirements.RequiredProtocols then
+      LProtocols.Add(Ord(LProtocol));
+  AObject.Add('backend_required_protocols', LProtocols);
+
+  LCiphers := TJSONArray.Create;
+  for LCipher := Low(TSSLCipher) to High(TSSLCipher) do
+    if LCipher in ARequirements.RequiredCiphers then
+      LCiphers.Add(Ord(LCipher));
+  AObject.Add('backend_required_ciphers', LCiphers);
+
+  LHashes := TJSONArray.Create;
+  for LHash := Low(TSSLHash) to High(TSSLHash) do
+    if LHash in ARequirements.RequiredHashes then
+      LHashes.Add(Ord(LHash));
+  AObject.Add('backend_required_hashes', LHashes);
+
+  LKeyExchanges := TJSONArray.Create;
+  for LKeyExchange := Low(TSSLKeyExchange) to High(TSSLKeyExchange) do
+    if LKeyExchange in ARequirements.RequiredKeyExchanges then
+      LKeyExchanges.Add(Ord(LKeyExchange));
+  AObject.Add('backend_required_key_exchanges', LKeyExchanges);
+
+  LFeatures := TJSONArray.Create;
+  for LFeature := Low(TSSLFeature) to High(TSSLFeature) do
+    if LFeature in ARequirements.RequiredFeatures then
+      LFeatures.Add(Ord(LFeature));
+  AObject.Add('backend_required_features', LFeatures);
+
+  LPreferredCiphers := TJSONArray.Create;
+  for LCipher := Low(TSSLCipher) to High(TSSLCipher) do
+    if LCipher in ARequirements.PreferredCiphers then
+      LPreferredCiphers.Add(Ord(LCipher));
+  AObject.Add('backend_preferred_ciphers', LPreferredCiphers);
+
+  LPreferredHashes := TJSONArray.Create;
+  for LHash := Low(TSSLHash) to High(TSSLHash) do
+    if LHash in ARequirements.PreferredHashes then
+      LPreferredHashes.Add(Ord(LHash));
+  AObject.Add('backend_preferred_hashes', LPreferredHashes);
+
+  AObject.Add('backend_min_security_score', ARequirements.MinSecurityScore);
+  AObject.Add('backend_min_performance_score', ARequirements.MinPerformanceScore);
+  AObject.Add('backend_min_compatibility_level', ARequirements.MinCompatibilityLevel);
+  AObject.Add('backend_prefer_os_native', ARequirements.PlatformPreferences.PreferOSNative);
+  AObject.Add('backend_prefer_hardware_accel',
+    ARequirements.PlatformPreferences.PreferHardwareAccel);
+  AObject.Add('backend_prefer_fips_compliant',
+    ARequirements.PlatformPreferences.PreferFIPSCompliant);
+  AObject.Add('backend_require_pkcs11', ARequirements.PlatformPreferences.RequirePKCS11);
+  AObject.Add('backend_require_tpm', ARequirements.PlatformPreferences.RequireTPM);
+  AObject.Add('backend_require_system_cert_store',
+    ARequirements.PlatformPreferences.RequireSystemCertStore);
+  AObject.Add('backend_optimization_target', Ord(ARequirements.OptimizationTarget));
+end;
+
+procedure ResetBackendRequirements(var ARequirements: TSSLRequirements); forward;
+procedure ResetExplicitBackendSelection(
+  var AExplicitBackend: TSSLLibraryType;
+  var AExplicitBackendSet: Boolean); forward;
+function HasBackendSelectionRequirements(const ARequirements: TSSLRequirements): Boolean; forward;
+procedure NormalizeBackendSelectionState(
+  var AAutoSelectBackend: Boolean;
+  var ARequirements: TSSLRequirements;
+  var AExplicitBackend: TSSLLibraryType;
+  var AExplicitBackendSet: Boolean); forward;
+
+procedure LoadBackendSelectionFromJSONObject(AObject: TJSONObject;
+  var AAutoSelectBackend: Boolean;
+  var ARequirements: TSSLRequirements;
+  var AExplicitBackend: TSSLLibraryType;
+  var AExplicitBackendSet: Boolean);
+var
+  LValues: TJSONArray;
+  I: Integer;
+begin
+  if AObject.IndexOfName('backend_auto_select') >= 0 then
+    AAutoSelectBackend := AObject.Booleans['backend_auto_select'];
+
+  if AObject.IndexOfName('backend_explicit_library') >= 0 then
+    AExplicitBackend := TSSLLibraryType(AObject.Integers['backend_explicit_library']);
+
+  if AObject.IndexOfName('backend_explicit_library_set') >= 0 then
+    AExplicitBackendSet := AObject.Booleans['backend_explicit_library_set'];
+
+  if AObject.IndexOfName('backend_required_protocols') >= 0 then
+  begin
+    LValues := AObject.Arrays['backend_required_protocols'];
+    ARequirements.RequiredProtocols := [];
+    for I := 0 to LValues.Count - 1 do
+      Include(ARequirements.RequiredProtocols, TSSLProtocolVersion(LValues.Integers[I]));
+  end;
+
+  if AObject.IndexOfName('backend_required_ciphers') >= 0 then
+  begin
+    LValues := AObject.Arrays['backend_required_ciphers'];
+    ARequirements.RequiredCiphers := [];
+    for I := 0 to LValues.Count - 1 do
+      Include(ARequirements.RequiredCiphers, TSSLCipher(LValues.Integers[I]));
+  end;
+
+  if AObject.IndexOfName('backend_required_hashes') >= 0 then
+  begin
+    LValues := AObject.Arrays['backend_required_hashes'];
+    ARequirements.RequiredHashes := [];
+    for I := 0 to LValues.Count - 1 do
+      Include(ARequirements.RequiredHashes, TSSLHash(LValues.Integers[I]));
+  end;
+
+  if AObject.IndexOfName('backend_required_key_exchanges') >= 0 then
+  begin
+    LValues := AObject.Arrays['backend_required_key_exchanges'];
+    ARequirements.RequiredKeyExchanges := [];
+    for I := 0 to LValues.Count - 1 do
+      Include(ARequirements.RequiredKeyExchanges, TSSLKeyExchange(LValues.Integers[I]));
+  end;
+
+  if AObject.IndexOfName('backend_required_features') >= 0 then
+  begin
+    LValues := AObject.Arrays['backend_required_features'];
+    ARequirements.RequiredFeatures := [];
+    for I := 0 to LValues.Count - 1 do
+      Include(ARequirements.RequiredFeatures, TSSLFeature(LValues.Integers[I]));
+  end;
+
+  if AObject.IndexOfName('backend_preferred_ciphers') >= 0 then
+  begin
+    LValues := AObject.Arrays['backend_preferred_ciphers'];
+    ARequirements.PreferredCiphers := [];
+    for I := 0 to LValues.Count - 1 do
+      Include(ARequirements.PreferredCiphers, TSSLCipher(LValues.Integers[I]));
+  end;
+
+  if AObject.IndexOfName('backend_preferred_hashes') >= 0 then
+  begin
+    LValues := AObject.Arrays['backend_preferred_hashes'];
+    ARequirements.PreferredHashes := [];
+    for I := 0 to LValues.Count - 1 do
+      Include(ARequirements.PreferredHashes, TSSLHash(LValues.Integers[I]));
+  end;
+
+  if AObject.IndexOfName('backend_min_security_score') >= 0 then
+    ARequirements.MinSecurityScore := AObject.Integers['backend_min_security_score'];
+
+  if AObject.IndexOfName('backend_min_performance_score') >= 0 then
+    ARequirements.MinPerformanceScore := AObject.Integers['backend_min_performance_score'];
+
+  if AObject.IndexOfName('backend_min_compatibility_level') >= 0 then
+    ARequirements.MinCompatibilityLevel := AObject.Integers['backend_min_compatibility_level'];
+
+  if AObject.IndexOfName('backend_prefer_os_native') >= 0 then
+    ARequirements.PlatformPreferences.PreferOSNative :=
+      AObject.Booleans['backend_prefer_os_native'];
+
+  if AObject.IndexOfName('backend_prefer_hardware_accel') >= 0 then
+    ARequirements.PlatformPreferences.PreferHardwareAccel :=
+      AObject.Booleans['backend_prefer_hardware_accel'];
+
+  if AObject.IndexOfName('backend_prefer_fips_compliant') >= 0 then
+    ARequirements.PlatformPreferences.PreferFIPSCompliant :=
+      AObject.Booleans['backend_prefer_fips_compliant'];
+
+  if AObject.IndexOfName('backend_require_pkcs11') >= 0 then
+    ARequirements.PlatformPreferences.RequirePKCS11 :=
+      AObject.Booleans['backend_require_pkcs11'];
+
+  if AObject.IndexOfName('backend_require_tpm') >= 0 then
+    ARequirements.PlatformPreferences.RequireTPM :=
+      AObject.Booleans['backend_require_tpm'];
+
+  if AObject.IndexOfName('backend_require_system_cert_store') >= 0 then
+    ARequirements.PlatformPreferences.RequireSystemCertStore :=
+      AObject.Booleans['backend_require_system_cert_store'];
+
+  if AObject.IndexOfName('backend_optimization_target') >= 0 then
+    ARequirements.OptimizationTarget :=
+      TSSLOptimizationTarget(AObject.Integers['backend_optimization_target']);
+
+  NormalizeBackendSelectionState(
+    AAutoSelectBackend,
+    ARequirements,
+    AExplicitBackend,
+    AExplicitBackendSet);
+end;
+
+procedure AddBackendSelectionToINI(ALines: TStringList;
+  AAutoSelectBackend: Boolean;
+  const ARequirements: TSSLRequirements;
+  AExplicitBackend: TSSLLibraryType;
+  AExplicitBackendSet: Boolean);
+var
+  LRequiredProtocols: string;
+  LRequiredCiphers: string;
+  LRequiredHashes: string;
+  LRequiredKeyExchanges: string;
+  LRequiredFeatures: string;
+  LPreferredCiphers: string;
+  LPreferredHashes: string;
+  LProtocol: TSSLProtocolVersion;
+  LCipher: TSSLCipher;
+  LHash: TSSLHash;
+  LKeyExchange: TSSLKeyExchange;
+  LFeature: TSSLFeature;
+
+  procedure AppendValue(var ATarget: string; AValue: Integer);
+  begin
+    if ATarget <> '' then
+      ATarget := ATarget + ',';
+    ATarget := ATarget + IntToStr(AValue);
+  end;
+begin
+  LRequiredProtocols := '';
+  for LProtocol := Low(TSSLProtocolVersion) to High(TSSLProtocolVersion) do
+    if LProtocol in ARequirements.RequiredProtocols then
+      AppendValue(LRequiredProtocols, Ord(LProtocol));
+
+  LRequiredCiphers := '';
+  for LCipher := Low(TSSLCipher) to High(TSSLCipher) do
+    if LCipher in ARequirements.RequiredCiphers then
+      AppendValue(LRequiredCiphers, Ord(LCipher));
+
+  LRequiredHashes := '';
+  for LHash := Low(TSSLHash) to High(TSSLHash) do
+    if LHash in ARequirements.RequiredHashes then
+      AppendValue(LRequiredHashes, Ord(LHash));
+
+  LRequiredKeyExchanges := '';
+  for LKeyExchange := Low(TSSLKeyExchange) to High(TSSLKeyExchange) do
+    if LKeyExchange in ARequirements.RequiredKeyExchanges then
+      AppendValue(LRequiredKeyExchanges, Ord(LKeyExchange));
+
+  LRequiredFeatures := '';
+  for LFeature := Low(TSSLFeature) to High(TSSLFeature) do
+    if LFeature in ARequirements.RequiredFeatures then
+      AppendValue(LRequiredFeatures, Ord(LFeature));
+
+  LPreferredCiphers := '';
+  for LCipher := Low(TSSLCipher) to High(TSSLCipher) do
+    if LCipher in ARequirements.PreferredCiphers then
+      AppendValue(LPreferredCiphers, Ord(LCipher));
+
+  LPreferredHashes := '';
+  for LHash := Low(TSSLHash) to High(TSSLHash) do
+    if LHash in ARequirements.PreferredHashes then
+      AppendValue(LPreferredHashes, Ord(LHash));
+
+  ALines.Add('[Backend Selection]');
+  if AAutoSelectBackend then
+    ALines.Add('backend_auto_select=true')
+  else
+    ALines.Add('backend_auto_select=false');
+  ALines.Add('backend_explicit_library=' + IntToStr(Ord(AExplicitBackend)));
+  if AExplicitBackendSet then
+    ALines.Add('backend_explicit_library_set=true')
+  else
+    ALines.Add('backend_explicit_library_set=false');
+  ALines.Add('backend_required_protocols=' + LRequiredProtocols);
+  ALines.Add('backend_required_ciphers=' + LRequiredCiphers);
+  ALines.Add('backend_required_hashes=' + LRequiredHashes);
+  ALines.Add('backend_required_key_exchanges=' + LRequiredKeyExchanges);
+  ALines.Add('backend_required_features=' + LRequiredFeatures);
+  ALines.Add('backend_preferred_ciphers=' + LPreferredCiphers);
+  ALines.Add('backend_preferred_hashes=' + LPreferredHashes);
+  ALines.Add('backend_min_security_score=' + IntToStr(ARequirements.MinSecurityScore));
+  ALines.Add('backend_min_performance_score=' + IntToStr(ARequirements.MinPerformanceScore));
+  ALines.Add('backend_min_compatibility_level=' + IntToStr(ARequirements.MinCompatibilityLevel));
+  if ARequirements.PlatformPreferences.PreferOSNative then
+    ALines.Add('backend_prefer_os_native=true')
+  else
+    ALines.Add('backend_prefer_os_native=false');
+  if ARequirements.PlatformPreferences.PreferHardwareAccel then
+    ALines.Add('backend_prefer_hardware_accel=true')
+  else
+    ALines.Add('backend_prefer_hardware_accel=false');
+  if ARequirements.PlatformPreferences.PreferFIPSCompliant then
+    ALines.Add('backend_prefer_fips_compliant=true')
+  else
+    ALines.Add('backend_prefer_fips_compliant=false');
+  if ARequirements.PlatformPreferences.RequirePKCS11 then
+    ALines.Add('backend_require_pkcs11=true')
+  else
+    ALines.Add('backend_require_pkcs11=false');
+  if ARequirements.PlatformPreferences.RequireTPM then
+    ALines.Add('backend_require_tpm=true')
+  else
+    ALines.Add('backend_require_tpm=false');
+  if ARequirements.PlatformPreferences.RequireSystemCertStore then
+    ALines.Add('backend_require_system_cert_store=true')
+  else
+    ALines.Add('backend_require_system_cert_store=false');
+  ALines.Add('backend_optimization_target=' +
+    IntToStr(Ord(ARequirements.OptimizationTarget)));
+  ALines.Add('');
+end;
+
+function ApplyBackendSelectionINIKey(const AKey, AValue: string;
+  AParts: TStringList;
+  var AAutoSelectBackend: Boolean;
+  var ARequirements: TSSLRequirements;
+  var AExplicitBackend: TSSLLibraryType;
+  var AExplicitBackendSet: Boolean): Boolean;
+var
+  I: Integer;
+begin
+  Result := True;
+
+  if AKey = 'backend_auto_select' then
+    AAutoSelectBackend := LowerCase(AValue) = 'true'
+  else if AKey = 'backend_explicit_library' then
+    AExplicitBackend := TSSLLibraryType(StrToIntDef(AValue, Ord(sslOpenSSL)))
+  else if AKey = 'backend_explicit_library_set' then
+    AExplicitBackendSet := LowerCase(AValue) = 'true'
+  else if AKey = 'backend_required_protocols' then
+  begin
+    ARequirements.RequiredProtocols := [];
+    if AValue <> '' then
+    begin
+      AParts.CommaText := AValue;
+      for I := 0 to AParts.Count - 1 do
+        Include(ARequirements.RequiredProtocols,
+          TSSLProtocolVersion(StrToIntDef(AParts[I], 0)));
+    end;
+  end
+  else if AKey = 'backend_required_ciphers' then
+  begin
+    ARequirements.RequiredCiphers := [];
+    if AValue <> '' then
+    begin
+      AParts.CommaText := AValue;
+      for I := 0 to AParts.Count - 1 do
+        Include(ARequirements.RequiredCiphers,
+          TSSLCipher(StrToIntDef(AParts[I], 0)));
+    end;
+  end
+  else if AKey = 'backend_required_hashes' then
+  begin
+    ARequirements.RequiredHashes := [];
+    if AValue <> '' then
+    begin
+      AParts.CommaText := AValue;
+      for I := 0 to AParts.Count - 1 do
+        Include(ARequirements.RequiredHashes,
+          TSSLHash(StrToIntDef(AParts[I], 0)));
+    end;
+  end
+  else if AKey = 'backend_required_key_exchanges' then
+  begin
+    ARequirements.RequiredKeyExchanges := [];
+    if AValue <> '' then
+    begin
+      AParts.CommaText := AValue;
+      for I := 0 to AParts.Count - 1 do
+        Include(ARequirements.RequiredKeyExchanges,
+          TSSLKeyExchange(StrToIntDef(AParts[I], 0)));
+    end;
+  end
+  else if AKey = 'backend_required_features' then
+  begin
+    ARequirements.RequiredFeatures := [];
+    if AValue <> '' then
+    begin
+      AParts.CommaText := AValue;
+      for I := 0 to AParts.Count - 1 do
+        Include(ARequirements.RequiredFeatures,
+          TSSLFeature(StrToIntDef(AParts[I], 0)));
+    end;
+  end
+  else if AKey = 'backend_preferred_ciphers' then
+  begin
+    ARequirements.PreferredCiphers := [];
+    if AValue <> '' then
+    begin
+      AParts.CommaText := AValue;
+      for I := 0 to AParts.Count - 1 do
+        Include(ARequirements.PreferredCiphers,
+          TSSLCipher(StrToIntDef(AParts[I], 0)));
+    end;
+  end
+  else if AKey = 'backend_preferred_hashes' then
+  begin
+    ARequirements.PreferredHashes := [];
+    if AValue <> '' then
+    begin
+      AParts.CommaText := AValue;
+      for I := 0 to AParts.Count - 1 do
+        Include(ARequirements.PreferredHashes,
+          TSSLHash(StrToIntDef(AParts[I], 0)));
+    end;
+  end
+  else if AKey = 'backend_min_security_score' then
+    ARequirements.MinSecurityScore := StrToIntDef(AValue, 0)
+  else if AKey = 'backend_min_performance_score' then
+    ARequirements.MinPerformanceScore := StrToIntDef(AValue, 0)
+  else if AKey = 'backend_min_compatibility_level' then
+    ARequirements.MinCompatibilityLevel := StrToIntDef(AValue, 0)
+  else if AKey = 'backend_prefer_os_native' then
+    ARequirements.PlatformPreferences.PreferOSNative := LowerCase(AValue) = 'true'
+  else if AKey = 'backend_prefer_hardware_accel' then
+    ARequirements.PlatformPreferences.PreferHardwareAccel := LowerCase(AValue) = 'true'
+  else if AKey = 'backend_prefer_fips_compliant' then
+    ARequirements.PlatformPreferences.PreferFIPSCompliant := LowerCase(AValue) = 'true'
+  else if AKey = 'backend_require_pkcs11' then
+    ARequirements.PlatformPreferences.RequirePKCS11 := LowerCase(AValue) = 'true'
+  else if AKey = 'backend_require_tpm' then
+    ARequirements.PlatformPreferences.RequireTPM := LowerCase(AValue) = 'true'
+  else if AKey = 'backend_require_system_cert_store' then
+    ARequirements.PlatformPreferences.RequireSystemCertStore := LowerCase(AValue) = 'true'
+  else if AKey = 'backend_optimization_target' then
+    ARequirements.OptimizationTarget :=
+      TSSLOptimizationTarget(StrToIntDef(AValue, Ord(optBalanced)))
+  else
+    Result := False;
+end;
+
+
+procedure ResetBackendRequirements(var ARequirements: TSSLRequirements);
+begin
+  FillChar(ARequirements, SizeOf(ARequirements), 0);
+end;
+
+procedure ResetExplicitBackendSelection(
+  var AExplicitBackend: TSSLLibraryType;
+  var AExplicitBackendSet: Boolean);
+begin
+  AExplicitBackend := sslOpenSSL;
+  AExplicitBackendSet := False;
+end;
+
+function HasBackendSelectionRequirements(const ARequirements: TSSLRequirements): Boolean;
+begin
+  Result :=
+    (ARequirements.RequiredProtocols <> []) or
+    (ARequirements.RequiredCiphers <> []) or
+    (ARequirements.RequiredHashes <> []) or
+    (ARequirements.RequiredKeyExchanges <> []) or
+    (ARequirements.RequiredFeatures <> []) or
+    (ARequirements.PreferredCiphers <> []) or
+    (ARequirements.PreferredHashes <> []) or
+    (ARequirements.MinSecurityScore <> 0) or
+    (ARequirements.MinPerformanceScore <> 0) or
+    (ARequirements.MinCompatibilityLevel <> 0) or
+    ARequirements.PlatformPreferences.PreferOSNative or
+    ARequirements.PlatformPreferences.PreferHardwareAccel or
+    ARequirements.PlatformPreferences.PreferFIPSCompliant or
+    ARequirements.PlatformPreferences.RequirePKCS11 or
+    ARequirements.PlatformPreferences.RequireTPM or
+    ARequirements.PlatformPreferences.RequireSystemCertStore or
+    (ARequirements.OptimizationTarget <> optBalanced);
+end;
+
+procedure NormalizeBackendSelectionState(
+  var AAutoSelectBackend: Boolean;
+  var ARequirements: TSSLRequirements;
+  var AExplicitBackend: TSSLLibraryType;
+  var AExplicitBackendSet: Boolean);
+begin
+  if AAutoSelectBackend then
+  begin
+    ResetExplicitBackendSelection(AExplicitBackend, AExplicitBackendSet);
+    Exit;
+  end;
+
+  if AExplicitBackendSet then
+  begin
+    ResetBackendRequirements(ARequirements);
+    Exit;
+  end;
+
+  if HasBackendSelectionRequirements(ARequirements) then
+  begin
+    AAutoSelectBackend := True;
+    ResetExplicitBackendSelection(AExplicitBackend, AExplicitBackendSet);
+    Exit;
+  end;
+
+  ResetBackendRequirements(ARequirements);
+  ResetExplicitBackendSelection(AExplicitBackend, AExplicitBackendSet);
+end;
+
 function TSSLContextBuilderImpl.WithTLS12: ISSLContextBuilder;
 begin
   FProtocolVersions := [sslProtocolTLS12];
@@ -638,6 +1209,8 @@ begin
       FOCSPStaplingEnabled := True;
     ssoRequireOCSPStapling:
       FOCSPStaplingRequired := True;
+  else
+    // Other options have no coupled builder state.
   end;
 
   SyncOCSPStaplingOptions;
@@ -663,6 +1236,8 @@ begin
       end;
     ssoRequireOCSPStapling:
       FOCSPStaplingRequired := False;
+  else
+    // Other options have no coupled builder state.
   end;
 
   SyncOCSPStaplingOptions;
@@ -726,169 +1301,152 @@ begin
   Result := Self;
 end;
 
-function TSSLContextBuilderImpl.BuildClient: ISSLContext;
+function TSSLContextBuilderImpl.WithCertVerifyCacheSkipValidHitRefresh(AEnabled: Boolean): ISSLContextBuilder;
+begin
+  if AEnabled then
+    Include(FOptions, ssoSkipCertVerifyCacheValidHitRefresh)
+  else
+    Exclude(FOptions, ssoSkipCertVerifyCacheValidHitRefresh);
+  Result := Self;
+end;
+
+function TSSLContextBuilderImpl.ResolveBuildBackend(
+  out ASelectedBackend: TSSLLibraryType): Boolean;
+var
+  LMatchScore: Integer;
+begin
+  ASelectedBackend := sslAutoDetect;
+
+  if FAutoSelectBackend then
+  begin
+    Result := SelectBestBackend(FBackendRequirements, ASelectedBackend, LMatchScore);
+    Exit;
+  end;
+
+  Result := True;
+  if FExplicitBackendSet then
+  begin
+    if FExplicitBackend = sslAutoDetect then
+      ASelectedBackend := TSSLFactory.GetDefaultLibrary
+    else
+      ASelectedBackend := FExplicitBackend;
+    Exit;
+  end;
+
+  ASelectedBackend := TSSLFactory.GetDefaultLibrary;
+end;
+
+function TSSLContextBuilderImpl.CreateResolvedContext(
+  AContextType: TSSLContextType;
+  const AFailureMessage: string;
+  out ASelectedBackend: TSSLLibraryType): ISSLContext;
+begin
+  if not ResolveBuildBackend(ASelectedBackend) then
+    raise ESSLException.Create('No suitable SSL backend found for requirements');
+
+  Result := TSSLFactory.CreateContext(AContextType, ASelectedBackend);
+  if Result = nil then
+    raise ESSLException.Create(AFailureMessage);
+end;
+
+procedure TSSLContextBuilderImpl.ApplyResolvedContextConfiguration(AContext: ISSLContext;
+  ASelectedBackend: TSSLLibraryType; ARequireServerIdentity: Boolean);
 var
   Store: ISSLCertificateStore;
-  SelectedBackend: TSSLLibraryType;
-  MatchScore: Integer;
 begin
   Store := nil;
 
-  // v1.3.0: 自动后端选择
-  if FAutoSelectBackend then
+  SyncOCSPStaplingOptions;
+  AContext.SetProtocolVersions(FProtocolVersions);
+  AContext.SetVerifyMode(FVerifyMode);
+  AContext.SetVerifyDepth(FVerifyDepth);
+  AContext.SetOptions(FOptions);
+
+  if ARequireServerIdentity then
   begin
-    if not SelectBestBackend(FBackendRequirements, SelectedBackend, MatchScore) then
-      raise ESSLException.Create('No suitable SSL backend found for requirements');
-    Result := TSSLFactory.CreateContext(sslCtxClient, SelectedBackend);
-  end
-  else if FExplicitBackendSet then
-  begin
-    Result := TSSLFactory.CreateContext(sslCtxClient, FExplicitBackend);
-  end
-  else
-  begin
-    Result := TSSLFactory.CreateContext(sslCtxClient, sslAutoDetect);
+    if (FCertificateFile = '') and (FCertificatePEM = '') then
+      raise ESSLException.Create('Server context requires a certificate');
+
+    if (FPrivateKeyFile = '') and (FPrivateKeyPEM = '') and (FPKCS11URI = '') then
+      raise ESSLException.Create('Server context requires a private key');
   end;
 
-  if Result = nil then
-    raise ESSLException.Create('Failed to create SSL client context');
-  
-  // Apply configuration
-  SyncOCSPStaplingOptions;
-  Result.SetProtocolVersions(FProtocolVersions);
-  Result.SetVerifyMode(FVerifyMode);
-  Result.SetVerifyDepth(FVerifyDepth);
-  Result.SetOptions(FOptions);
-  
-  // Load certificates
-  if FCertificateFile <> '' then
-    Result.LoadCertificate(FCertificateFile);
   if FCertificatePEM <> '' then
-    Result.LoadCertificatePEM(FCertificatePEM);
-  
-  // Load private key (PKCS#11 or file)
+    AContext.LoadCertificatePEM(FCertificatePEM)
+  else if FCertificateFile <> '' then
+    AContext.LoadCertificate(FCertificateFile);
+
   if FPKCS11URI <> '' then
   begin
-    // PKCS#11 private key - Use LoadPrivateKey which supports PKCS#11 URIs
-    // The underlying ISSLContext.LoadPrivateKey detects PKCS#11 URIs and
-    // delegates to LoadPrivateKeyFromPKCS11 internally
-    Result.LoadPrivateKey(FPKCS11URI, FPKCS11PIN);
+    AContext.LoadPrivateKey(FPKCS11URI, FPKCS11PIN);
   end
-  else if FPrivateKeyFile <> '' then
-    Result.LoadPrivateKey(FPrivateKeyFile, FPrivateKeyPassword)
   else if FPrivateKeyPEM <> '' then
-    Result.LoadPrivateKeyPEM(FPrivateKeyPEM, FPrivateKeyPassword);
-  
-  // Load system roots if requested
+    AContext.LoadPrivateKeyPEM(FPrivateKeyPEM, FPrivateKeyPassword)
+  else if FPrivateKeyFile <> '' then
+    AContext.LoadPrivateKey(FPrivateKeyFile, FPrivateKeyPassword);
+
   if FUseSystemRoots then
   begin
-    // Prefer the backend-specific certificate store abstraction.
-    // This is best-effort: if loading fails, handshake verification will fail later.
-    Store := TSSLFactory.CreateCertificateStore(sslAutoDetect);
+    Store := TSSLFactory.CreateCertificateStore(ASelectedBackend);
     if Store <> nil then
     begin
       Store.LoadSystemStore;
-      Result.SetCertificateStore(Store);
+      AContext.SetCertificateStore(Store);
     end;
   end;
 
-  // Load CA certificates (after setting system roots so they merge into the same store)
   if FCAFile <> '' then
-    Result.LoadCAFile(FCAFile);
-    
+    AContext.LoadCAFile(FCAFile);
+
   if FCAPath <> '' then
-    Result.LoadCAPath(FCAPath);
-  
-  // Cipher configuration
+    AContext.LoadCAPath(FCAPath);
+
   if FCipherList <> '' then
-    Result.SetCipherList(FCipherList);
-    
+    AContext.SetCipherList(FCipherList);
+
   if FTLS13Ciphersuites <> '' then
-    Result.SetCipherSuites(FTLS13Ciphersuites);
-  
-  // SNI and ALPN
+    AContext.SetCipherSuites(FTLS13Ciphersuites);
+
   if FServerName <> '' then
-    Result.SetServerName(FServerName);
-    
+  begin
+    {$PUSH}{$WARN SYMBOL_DEPRECATED OFF}
+    AContext.SetServerName(FServerName);
+    {$POP}
+  end;
+
   if FALPNProtocols <> '' then
-    Result.SetALPNProtocols(FALPNProtocols);
-  
-  // Session configuration
-  Result.SetSessionCacheMode(FSessionCacheEnabled);
-  Result.SetSessionTimeout(FSessionTimeout);
+    AContext.SetALPNProtocols(FALPNProtocols);
+
+  AContext.SetSessionCacheMode(FSessionCacheEnabled);
+  AContext.SetSessionTimeout(FSessionTimeout);
+end;
+
+function TSSLContextBuilderImpl.BuildClient: ISSLContext;
+var
+  SelectedBackend: TSSLLibraryType;
+begin
+  SelectedBackend := sslAutoDetect;
+
+  Result := CreateResolvedContext(
+    sslCtxClient,
+    'Failed to create SSL client context',
+    SelectedBackend);
+
+  ApplyResolvedContextConfiguration(Result, SelectedBackend, False);
 end;
 
 function TSSLContextBuilderImpl.BuildServer: ISSLContext;
 var
   SelectedBackend: TSSLLibraryType;
-  MatchScore: Integer;
 begin
-  // v1.3.0: 自动后端选择
-  if FAutoSelectBackend then
-  begin
-    if not SelectBestBackend(FBackendRequirements, SelectedBackend, MatchScore) then
-      raise ESSLException.Create('No suitable SSL backend found for requirements');
-    Result := TSSLFactory.CreateContext(sslCtxServer, SelectedBackend);
-  end
-  else if FExplicitBackendSet then
-  begin
-    Result := TSSLFactory.CreateContext(sslCtxServer, FExplicitBackend);
-  end
-  else
-  begin
-    Result := TSSLFactory.CreateContext(sslCtxServer, sslAutoDetect);
-  end;
+  SelectedBackend := sslAutoDetect;
 
-  if Result = nil then
-    raise ESSLException.Create('Failed to create SSL server context');
-  
-  // Apply configuration (same as client, but server context)
-  SyncOCSPStaplingOptions;
-  Result.SetProtocolVersions(FProtocolVersions);
-  Result.SetVerifyMode(FVerifyMode);
-  Result.SetVerifyDepth(FVerifyDepth);
-  Result.SetOptions(FOptions);
-  
-  // Server MUST have certificate and private key
-  if (FCertificateFile = '') and (FCertificatePEM = '') then
-    raise ESSLException.Create('Server context requires a certificate');
-    
-  if (FPrivateKeyFile = '') and (FPrivateKeyPEM = '') and (FPKCS11URI = '') then
-    raise ESSLException.Create('Server context requires a private key');
-  
-  if FCertificateFile <> '' then
-    Result.LoadCertificate(FCertificateFile);
-  
-  // Load private key (PKCS#11 or file)
-  if FPKCS11URI <> '' then
-  begin
-    // PKCS#11 private key - Use LoadPrivateKey which supports PKCS#11 URIs
-    // The underlying ISSLContext.LoadPrivateKey detects PKCS#11 URIs and
-    // delegates to LoadPrivateKeyFromPKCS11 internally
-    Result.LoadPrivateKey(FPKCS11URI, FPKCS11PIN);
-  end
-  else if FPrivateKeyFile <> '' then
-    Result.LoadPrivateKey(FPrivateKeyFile, FPrivateKeyPassword);
-  
-  if FCAFile <> '' then
-    Result.LoadCAFile(FCAFile);
-    
-  if FCAPath <> '' then
-    Result.LoadCAPath(FCAPath);
-  
-  // Cipher configuration
-  if FCipherList <> '' then
-    Result.SetCipherList(FCipherList);
-    
-  if FTLS13Ciphersuites <> '' then
-    Result.SetCipherSuites(FTLS13Ciphersuites);
-  
-  if FALPNProtocols <> '' then
-    Result.SetALPNProtocols(FALPNProtocols);
-  
-  // Session configuration
-  Result.SetSessionCacheMode(FSessionCacheEnabled);
-  Result.SetSessionTimeout(FSessionTimeout);
+  Result := CreateResolvedContext(
+    sslCtxServer,
+    'Failed to create SSL server context',
+    SelectedBackend);
+
+  ApplyResolvedContextConfiguration(Result, SelectedBackend, True);
 end;
 
 function TSSLContextBuilderImpl.TryBuildClient(out AContext: ISSLContext): TSSLOperationResult;
@@ -1004,8 +1562,8 @@ begin
     Result.AddError('Server context requires a certificate (use WithCertificate or WithCertificatePEM)');
 
   // Check private key configuration (REQUIRED for server)
-  if (FPrivateKeyFile = '') and (FPrivateKeyPEM = '') then
-    Result.AddError('Server context requires a private key (use WithPrivateKey or WithPrivateKeyPEM)');
+  if (FPrivateKeyFile = '') and (FPrivateKeyPEM = '') and (FPKCS11URI = '') then
+    Result.AddError('Server context requires a private key (use WithPrivateKey, WithPrivateKeyPEM, or UsePKCS11)');
 
   // Check if both file and PEM are set for certificate (potentially confusing)
   if (FCertificateFile <> '') and (FCertificatePEM <> '') then
@@ -1015,9 +1573,17 @@ begin
   if (FPrivateKeyFile <> '') and (FPrivateKeyPEM <> '') then
     Result.AddWarning('Both private key file and PEM are set - PEM will be used');
 
+  if FPKCS11URI <> '' then
+  begin
+    if FPrivateKeyFile <> '' then
+      Result.AddWarning('PKCS#11 URI and private key file are both set - PKCS#11 will be used');
+    if FPrivateKeyPEM <> '' then
+      Result.AddWarning('PKCS#11 URI and private key PEM are both set - PKCS#11 will be used');
+  end;
+
   // Warn if client verification is enabled without CA
   if (sslVerifyPeer in FVerifyMode) and
-    (FCAFile = '') and (FCAPath = '') then
+    (FCAFile = '') and (FCAPath = '') and (not FUseSystemRoots) then
     Result.AddWarning('Client verification enabled but no CA certificates configured');
 end;
 
@@ -1084,10 +1650,14 @@ begin
     LRoot.Add('certificate_file', FCertificateFile);
     LRoot.Add('certificate_pem', FCertificatePEM);
     LRoot.Add('private_key_file', FPrivateKeyFile);
+    LRoot.Add('private_key_password', FPrivateKeyPassword);
     LRoot.Add('private_key_pem', FPrivateKeyPEM);
     LRoot.Add('ca_file', FCAFile);
     LRoot.Add('ca_path', FCAPath);
     LRoot.Add('use_system_roots', FUseSystemRoots);
+    LRoot.Add('pkcs11_uri', FPKCS11URI);
+    LRoot.Add('pkcs11_pin', FPKCS11PIN);
+    LRoot.Add('pkcs11_pin_method', PKCS11PINMethodToText(FPKCS11PINMethod));
 
     // Cipher configuration
     LRoot.Add('cipher_list', FCipherList);
@@ -1098,6 +1668,13 @@ begin
     LRoot.Add('alpn_protocols', FALPNProtocols);
     LRoot.Add('session_cache_enabled', FSessionCacheEnabled);
     LRoot.Add('session_timeout', FSessionTimeout);
+
+    AddBackendSelectionToJSON(
+      LRoot,
+      FAutoSelectBackend,
+      FBackendRequirements,
+      FExplicitBackend,
+      FExplicitBackendSet);
 
     // Options
     LOptions := TJSONArray.Create;
@@ -1120,6 +1697,11 @@ function TSSLContextBuilderImpl.ImportFromJSON(const AJSON: string): ISSLContext
 var
   LRoot: TJSONData;
   LProtocols, LVerify, LOptions: TJSONArray;
+  LPKCS11PINMethod: TPKCS11PINMethod;
+  LHasOptions: Boolean;
+  LHasServerName: Boolean;
+  LHasALPNProtocols: Boolean;
+  LHasSessionCacheEnabled: Boolean;
   I: Integer;
 begin
   Result := Self;
@@ -1162,6 +1744,8 @@ begin
         FCertificatePEM := Strings['certificate_pem'];
       if IndexOfName('private_key_file') >= 0 then
         FPrivateKeyFile := Strings['private_key_file'];
+      if IndexOfName('private_key_password') >= 0 then
+        FPrivateKeyPassword := Strings['private_key_password'];
       if IndexOfName('private_key_pem') >= 0 then
         FPrivateKeyPEM := Strings['private_key_pem'];
       if IndexOfName('ca_file') >= 0 then
@@ -1170,6 +1754,13 @@ begin
         FCAPath := Strings['ca_path'];
       if IndexOfName('use_system_roots') >= 0 then
         FUseSystemRoots := Booleans['use_system_roots'];
+      if IndexOfName('pkcs11_uri') >= 0 then
+        FPKCS11URI := Strings['pkcs11_uri'];
+      if IndexOfName('pkcs11_pin') >= 0 then
+        FPKCS11PIN := Strings['pkcs11_pin'];
+      if (IndexOfName('pkcs11_pin_method') >= 0) and
+        TryParsePKCS11PINMethodText(Strings['pkcs11_pin_method'], LPKCS11PINMethod) then
+        FPKCS11PINMethod := LPKCS11PINMethod;
 
       // Cipher configuration
       if IndexOfName('cipher_list') >= 0 then
@@ -1178,23 +1769,37 @@ begin
         FTLS13Ciphersuites := Strings['tls13_ciphersuites'];
 
       // Advanced options
-      if IndexOfName('server_name') >= 0 then
+      LHasServerName := IndexOfName('server_name') >= 0;
+      if LHasServerName then
         FServerName := Strings['server_name'];
-      if IndexOfName('alpn_protocols') >= 0 then
+      LHasALPNProtocols := IndexOfName('alpn_protocols') >= 0;
+      if LHasALPNProtocols then
         FALPNProtocols := Strings['alpn_protocols'];
-      if IndexOfName('session_cache_enabled') >= 0 then
+      LHasSessionCacheEnabled := IndexOfName('session_cache_enabled') >= 0;
+      if LHasSessionCacheEnabled then
         FSessionCacheEnabled := Booleans['session_cache_enabled'];
       if IndexOfName('session_timeout') >= 0 then
         FSessionTimeout := Integers['session_timeout'];
 
+      LoadBackendSelectionFromJSONObject(
+        TJSONObject(LRoot),
+        FAutoSelectBackend,
+        FBackendRequirements,
+        FExplicitBackend,
+        FExplicitBackendSet);
+
       // Options
-      if IndexOfName('options') >= 0 then
+      LHasOptions := IndexOfName('options') >= 0;
+      if LHasOptions then
       begin
         LOptions := Arrays['options'];
         FOptions := [];
         for I := 0 to LOptions.Count - 1 do
           Include(FOptions, TSSLOption(LOptions.Integers[I]));
-      end;
+      end
+      else
+        SyncAdvancedOptionCoupledFields(
+          LHasServerName, LHasALPNProtocols, LHasSessionCacheEnabled, True);
       
       // OCSP Stapling
       if IndexOfName('ocsp_stapling_enabled') >= 0 then
@@ -1202,6 +1807,11 @@ begin
       if IndexOfName('ocsp_stapling_required') >= 0 then
         FOCSPStaplingRequired := Booleans['ocsp_stapling_required'];
 
+      NormalizeBackendSelectionState(
+        FAutoSelectBackend,
+        FBackendRequirements,
+        FExplicitBackend,
+        FExplicitBackendSet);
       SyncOCSPStaplingOptions;
     end;
   finally
@@ -1250,12 +1860,20 @@ begin
     LLines.Add('[Certificates]');
     LLines.Add('certificate_file=' + FCertificateFile);
     LLines.Add('private_key_file=' + FPrivateKeyFile);
+    LLines.Add('private_key_password=' + FPrivateKeyPassword);
     LLines.Add('ca_file=' + FCAFile);
     LLines.Add('ca_path=' + FCAPath);
     if FUseSystemRoots then
       LLines.Add('use_system_roots=true')
     else
       LLines.Add('use_system_roots=false');
+    LLines.Add('');
+
+    // PKCS#11 configuration
+    LLines.Add('[PKCS11]');
+    LLines.Add('pkcs11_uri=' + FPKCS11URI);
+    LLines.Add('pkcs11_pin=' + FPKCS11PIN);
+    LLines.Add('pkcs11_pin_method=' + PKCS11PINMethodToText(FPKCS11PINMethod));
     LLines.Add('');
 
     // Cipher configuration
@@ -1274,6 +1892,13 @@ begin
       LLines.Add('session_cache_enabled=false');
     LLines.Add('session_timeout=' + IntToStr(FSessionTimeout));
     LLines.Add('');
+
+    AddBackendSelectionToINI(
+      LLines,
+      FAutoSelectBackend,
+      FBackendRequirements,
+      FExplicitBackend,
+      FExplicitBackendSet);
 
     // Options
     LOptionsStr := '';
@@ -1312,12 +1937,22 @@ var
   LLine, LKey, LValue: string;
   LPos: Integer;
   LParts: TStringList;
+  LPKCS11PINMethod: TPKCS11PINMethod;
+  LHasOptions: Boolean;
+  LHasServerName: Boolean;
+  LHasALPNProtocols: Boolean;
+  LHasSessionCacheEnabled: Boolean;
   J: Integer;
 begin
   Result := Self;
 
   if AINI = '' then
     Exit;
+
+  LHasOptions := False;
+  LHasServerName := False;
+  LHasALPNProtocols := False;
+  LHasSessionCacheEnabled := False;
 
   LLines := TStringList.Create;
   LParts := TStringList.Create;
@@ -1360,26 +1995,53 @@ begin
           FCertificateFile := LValue
         else if LKey = 'private_key_file' then
           FPrivateKeyFile := LValue
+        else if LKey = 'private_key_password' then
+          FPrivateKeyPassword := LValue
         else if LKey = 'ca_file' then
           FCAFile := LValue
         else if LKey = 'ca_path' then
           FCAPath := LValue
         else if LKey = 'use_system_roots' then
           FUseSystemRoots := (LowerCase(LValue) = 'true')
+        else if LKey = 'pkcs11_uri' then
+          FPKCS11URI := LValue
+        else if LKey = 'pkcs11_pin' then
+          FPKCS11PIN := LValue
+        else if (LKey = 'pkcs11_pin_method') and
+          TryParsePKCS11PINMethodText(LValue, LPKCS11PINMethod) then
+          FPKCS11PINMethod := LPKCS11PINMethod
         else if LKey = 'cipher_list' then
           FCipherList := LValue
         else if LKey = 'tls13_ciphersuites' then
           FTLS13Ciphersuites := LValue
+        else if ApplyBackendSelectionINIKey(
+          LKey, LValue, LParts,
+          FAutoSelectBackend,
+          FBackendRequirements,
+          FExplicitBackend,
+          FExplicitBackendSet) then
+        begin
+        end
         else if LKey = 'server_name' then
-          FServerName := LValue
+        begin
+          FServerName := LValue;
+          LHasServerName := True;
+        end
         else if LKey = 'alpn_protocols' then
-          FALPNProtocols := LValue
+        begin
+          FALPNProtocols := LValue;
+          LHasALPNProtocols := True;
+        end
         else if LKey = 'session_cache_enabled' then
-          FSessionCacheEnabled := (LowerCase(LValue) = 'true')
+        begin
+          FSessionCacheEnabled := (LowerCase(LValue) = 'true');
+          LHasSessionCacheEnabled := True;
+        end
         else if LKey = 'session_timeout' then
           FSessionTimeout := StrToIntDef(LValue, SSL_DEFAULT_SESSION_TIMEOUT)
         else if LKey = 'options' then
         begin
+          LHasOptions := True;
           LParts.CommaText := LValue;
           FOptions := [];
           for J := 0 to LParts.Count - 1 do
@@ -1392,6 +2054,15 @@ begin
       end;
     end;
 
+    if not LHasOptions then
+      SyncAdvancedOptionCoupledFields(
+        LHasServerName, LHasALPNProtocols, LHasSessionCacheEnabled, True);
+
+    NormalizeBackendSelectionState(
+      FAutoSelectBackend,
+      FBackendRequirements,
+      FExplicitBackend,
+      FExplicitBackendSet);
     SyncOCSPStaplingOptions;
   finally
     LParts.Free;
@@ -1436,6 +2107,12 @@ begin
   // Copy OCSP Stapling fields
   LClone.FOCSPStaplingEnabled := FOCSPStaplingEnabled;
   LClone.FOCSPStaplingRequired := FOCSPStaplingRequired;
+
+  // Copy backend-selection fields
+  LClone.FAutoSelectBackend := FAutoSelectBackend;
+  LClone.FBackendRequirements := FBackendRequirements;
+  LClone.FExplicitBackend := FExplicitBackend;
+  LClone.FExplicitBackendSet := FExplicitBackendSet;
   LClone.SyncOCSPStaplingOptions;
 
   Result := LClone;
@@ -1471,6 +2148,12 @@ begin
   // Reset OCSP Stapling fields
   FOCSPStaplingEnabled := False;
   FOCSPStaplingRequired := False;
+
+  // Reset backend-selection fields
+  FAutoSelectBackend := False;
+  FillChar(FBackendRequirements, SizeOf(FBackendRequirements), 0);
+  FExplicitBackend := sslOpenSSL;
+  FExplicitBackendSet := False;
   SyncOCSPStaplingOptions;
 
   Result := Self;
@@ -1488,6 +2171,7 @@ var
   LData: TJSONData;
   LObj: TJSONObject;
   LProtocols, LVerify, LOptions: TJSONArray;
+  LPKCS11PINMethod: TPKCS11PINMethod;
   I: Integer;
 begin
   Result := Self;
@@ -1535,37 +2219,50 @@ begin
     if LObj.IndexOfName('verify_depth') >= 0 then
       FVerifyDepth := LObj.Integers['verify_depth'];
 
-    if (LObj.IndexOfName('certificate_file') >= 0) and (LObj.Strings['certificate_file'] <> '') then
+    if LObj.IndexOfName('certificate_file') >= 0 then
       FCertificateFile := LObj.Strings['certificate_file'];
 
-    if (LObj.IndexOfName('certificate_pem') >= 0) and (LObj.Strings['certificate_pem'] <> '') then
+    if LObj.IndexOfName('certificate_pem') >= 0 then
       FCertificatePEM := LObj.Strings['certificate_pem'];
 
-    if (LObj.IndexOfName('private_key_file') >= 0) and (LObj.Strings['private_key_file'] <> '') then
+    if LObj.IndexOfName('private_key_file') >= 0 then
       FPrivateKeyFile := LObj.Strings['private_key_file'];
 
-    if (LObj.IndexOfName('private_key_pem') >= 0) and (LObj.Strings['private_key_pem'] <> '') then
+    if LObj.IndexOfName('private_key_password') >= 0 then
+      FPrivateKeyPassword := LObj.Strings['private_key_password'];
+
+    if LObj.IndexOfName('private_key_pem') >= 0 then
       FPrivateKeyPEM := LObj.Strings['private_key_pem'];
 
-    if (LObj.IndexOfName('ca_file') >= 0) and (LObj.Strings['ca_file'] <> '') then
+    if LObj.IndexOfName('ca_file') >= 0 then
       FCAFile := LObj.Strings['ca_file'];
 
-    if (LObj.IndexOfName('ca_path') >= 0) and (LObj.Strings['ca_path'] <> '') then
+    if LObj.IndexOfName('ca_path') >= 0 then
       FCAPath := LObj.Strings['ca_path'];
 
     if LObj.IndexOfName('use_system_roots') >= 0 then
       FUseSystemRoots := LObj.Booleans['use_system_roots'];
 
-    if (LObj.IndexOfName('cipher_list') >= 0) and (LObj.Strings['cipher_list'] <> '') then
+    if LObj.IndexOfName('pkcs11_uri') >= 0 then
+      FPKCS11URI := LObj.Strings['pkcs11_uri'];
+
+    if LObj.IndexOfName('pkcs11_pin') >= 0 then
+      FPKCS11PIN := LObj.Strings['pkcs11_pin'];
+
+    if (LObj.IndexOfName('pkcs11_pin_method') >= 0) and
+      TryParsePKCS11PINMethodText(LObj.Strings['pkcs11_pin_method'], LPKCS11PINMethod) then
+      FPKCS11PINMethod := LPKCS11PINMethod;
+
+    if LObj.IndexOfName('cipher_list') >= 0 then
       FCipherList := LObj.Strings['cipher_list'];
 
-    if (LObj.IndexOfName('tls13_ciphersuites') >= 0) and (LObj.Strings['tls13_ciphersuites'] <> '') then
+    if LObj.IndexOfName('tls13_ciphersuites') >= 0 then
       FTLS13Ciphersuites := LObj.Strings['tls13_ciphersuites'];
 
-    if (LObj.IndexOfName('server_name') >= 0) and (LObj.Strings['server_name'] <> '') then
+    if LObj.IndexOfName('server_name') >= 0 then
       FServerName := LObj.Strings['server_name'];
 
-    if (LObj.IndexOfName('alpn_protocols') >= 0) and (LObj.Strings['alpn_protocols'] <> '') then
+    if LObj.IndexOfName('alpn_protocols') >= 0 then
       FALPNProtocols := LObj.Strings['alpn_protocols'];
 
     if LObj.IndexOfName('session_cache_enabled') >= 0 then
@@ -1574,16 +2271,26 @@ begin
     if LObj.IndexOfName('session_timeout') >= 0 then
       FSessionTimeout := LObj.Integers['session_timeout'];
 
+    LoadBackendSelectionFromJSONObject(
+      LObj,
+      FAutoSelectBackend,
+      FBackendRequirements,
+      FExplicitBackend,
+      FExplicitBackendSet);
+
+    if LObj.IndexOfName('ocsp_stapling_enabled') >= 0 then
+      FOCSPStaplingEnabled := LObj.Booleans['ocsp_stapling_enabled'];
+
+    if LObj.IndexOfName('ocsp_stapling_required') >= 0 then
+      FOCSPStaplingRequired := LObj.Booleans['ocsp_stapling_required'];
+
     // Merge options
     if LObj.IndexOfName('options') >= 0 then
     begin
       LOptions := LObj.Arrays['options'];
-      if LOptions.Count > 0 then
-      begin
-        FOptions := [];
-        for I := 0 to LOptions.Count - 1 do
-          Include(FOptions, TSSLOption(LOptions.Integers[I]));
-      end;
+      FOptions := [];
+      for I := 0 to LOptions.Count - 1 do
+        Include(FOptions, TSSLOption(LOptions.Integers[I]));
     end;
   finally
     LData.Free;
@@ -1772,10 +2479,13 @@ end;
 function TSSLContextBuilderImpl.Override(const AField, AValue: string): ISSLContextBuilder;
 var
   LFieldLower: string;
+  LPKCS11PINMethod: TPKCS11PINMethod;
+  LSyncOCSP: Boolean;
 begin
   Result := Self;
 
   LFieldLower := LowerCase(AField);
+  LSyncOCSP := False;
 
   // Override specific configuration fields based on field name
   if LFieldLower = 'cipher_list' then
@@ -1783,23 +2493,103 @@ begin
   else if LFieldLower = 'tls13_ciphersuites' then
     FTLS13Ciphersuites := AValue
   else if LFieldLower = 'server_name' then
-    FServerName := AValue
+  begin
+    FServerName := AValue;
+    SyncAdvancedOptionCoupledFields(True, False, False, False);
+  end
   else if LFieldLower = 'alpn_protocols' then
-    FALPNProtocols := AValue
+  begin
+    FALPNProtocols := AValue;
+    SyncAdvancedOptionCoupledFields(False, True, False, False);
+  end
   else if LFieldLower = 'ca_file' then
     FCAFile := AValue
   else if LFieldLower = 'ca_path' then
     FCAPath := AValue
+  else if LFieldLower = 'use_system_roots' then
+    FUseSystemRoots := (LowerCase(AValue) = 'true')
+  else if LFieldLower = 'cert_verify_cache' then
+  begin
+    if LowerCase(AValue) = 'true' then
+      Include(FOptions, ssoEnableCertVerifyCache)
+    else
+      Exclude(FOptions, ssoEnableCertVerifyCache);
+  end
+  else if LFieldLower = 'cert_verify_cache_skip_valid_hit_refresh' then
+  begin
+    if LowerCase(AValue) = 'true' then
+      Include(FOptions, ssoSkipCertVerifyCacheValidHitRefresh)
+    else
+      Exclude(FOptions, ssoSkipCertVerifyCacheValidHitRefresh);
+  end
+  else if LFieldLower = 'ocsp_stapling_enabled' then
+  begin
+    FOCSPStaplingEnabled := (LowerCase(AValue) = 'true');
+    if FOCSPStaplingEnabled then
+      Include(FOptions, ssoEnableOCSPStapling)
+    else
+      Exclude(FOptions, ssoEnableOCSPStapling);
+    LSyncOCSP := True;
+  end
+  else if LFieldLower = 'ocsp_stapling_required' then
+  begin
+    FOCSPStaplingRequired := (LowerCase(AValue) = 'true');
+    if FOCSPStaplingRequired then
+      Include(FOptions, ssoRequireOCSPStapling)
+    else
+      Exclude(FOptions, ssoRequireOCSPStapling);
+    LSyncOCSP := True;
+  end
+  else if LFieldLower = 'pkcs11_uri' then
+    FPKCS11URI := AValue
+  else if LFieldLower = 'pkcs11_pin' then
+  begin
+    FPKCS11PIN := AValue;
+    FPKCS11PINMethod := pmValue;
+  end
+  else if LFieldLower = 'pkcs11_pin_method' then
+  begin
+    if TryParsePKCS11PINMethodText(AValue, LPKCS11PINMethod) then
+      FPKCS11PINMethod := LPKCS11PINMethod;
+  end
   else if LFieldLower = 'certificate_file' then
-    FCertificateFile := AValue
+  begin
+    FCertificateFile := AValue;
+    if AValue <> '' then
+      FCertificatePEM := '';
+  end
+  else if LFieldLower = 'certificate_pem' then
+  begin
+    FCertificatePEM := AValue;
+    if AValue <> '' then
+      FCertificateFile := '';
+  end
   else if LFieldLower = 'private_key_file' then
-    FPrivateKeyFile := AValue
+  begin
+    FPrivateKeyFile := AValue;
+    if AValue <> '' then
+      FPrivateKeyPEM := '';
+  end
+  else if LFieldLower = 'private_key_pem' then
+  begin
+    FPrivateKeyPEM := AValue;
+    if AValue <> '' then
+      FPrivateKeyFile := '';
+  end
+  else if LFieldLower = 'private_key_password' then
+    FPrivateKeyPassword := AValue
   else if LFieldLower = 'session_timeout' then
     FSessionTimeout := StrToIntDef(AValue, FSessionTimeout)
   else if LFieldLower = 'verify_depth' then
     FVerifyDepth := StrToIntDef(AValue, FVerifyDepth)
   else if LFieldLower = 'session_cache_enabled' then
+  begin
     FSessionCacheEnabled := (LowerCase(AValue) = 'true');
+    SyncAdvancedOptionCoupledFields(False, False, True, False);
+  end;
+
+  if LSyncOCSP then
+    SyncOCSPStaplingOptions;
   // If field not recognized, silently ignore (defensive programming)
 end;
 
@@ -1811,6 +2601,11 @@ begin
   Result := Self;
   FAutoSelectBackend := True;
   FBackendRequirements := ARequirements;
+  NormalizeBackendSelectionState(
+    FAutoSelectBackend,
+    FBackendRequirements,
+    FExplicitBackend,
+    FExplicitBackendSet);
 end;
 
 function TSSLContextBuilderImpl.WithSecurityFirst: ISSLContextBuilder;
@@ -1834,6 +2629,11 @@ begin
   FExplicitBackend := ABackendType;
   FExplicitBackendSet := True;
   FAutoSelectBackend := False;  // 显式指定后端时禁用自动选择
+  NormalizeBackendSelectionState(
+    FAutoSelectBackend,
+    FBackendRequirements,
+    FExplicitBackend,
+    FExplicitBackendSet);
 end;
 
 function TSSLContextBuilderImpl.RequireTLS13: ISSLContextBuilder;
@@ -1847,6 +2647,11 @@ begin
   end;
   // 添加 TLS 1.3 要求
   FBackendRequirements.RequiredProtocols := [sslProtocolTLS13];
+  NormalizeBackendSelectionState(
+    FAutoSelectBackend,
+    FBackendRequirements,
+    FExplicitBackend,
+    FExplicitBackendSet);
 end;
 
 function TSSLContextBuilderImpl.RequireCipher(ACipher: TSSLCipher): ISSLContextBuilder;
@@ -1859,6 +2664,11 @@ begin
   end;
   // 添加密码算法要求
   Include(FBackendRequirements.RequiredCiphers, ACipher);
+  NormalizeBackendSelectionState(
+    FAutoSelectBackend,
+    FBackendRequirements,
+    FExplicitBackend,
+    FExplicitBackendSet);
 end;
 
 function TSSLContextBuilderImpl.RequirePKCS11Support: ISSLContextBuilder;
@@ -1871,6 +2681,11 @@ begin
   end;
   // 要求 PKCS#11 支持
   FBackendRequirements.PlatformPreferences.RequirePKCS11 := True;
+  NormalizeBackendSelectionState(
+    FAutoSelectBackend,
+    FBackendRequirements,
+    FExplicitBackend,
+    FExplicitBackendSet);
 end;
 
 function TSSLContextBuilderImpl.PreferOSNative: ISSLContextBuilder;
@@ -1883,6 +2698,11 @@ begin
   end;
   // 优先 OS 原生实现
   FBackendRequirements.PlatformPreferences.PreferOSNative := True;
+  NormalizeBackendSelectionState(
+    FAutoSelectBackend,
+    FBackendRequirements,
+    FExplicitBackend,
+    FExplicitBackendSet);
 end;
 
 end.

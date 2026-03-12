@@ -5,6 +5,8 @@ program test_rand;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.rand;
 
 var
@@ -18,7 +20,16 @@ begin
   
   // Load OpenSSL
   WriteLn('[1] Loading OpenSSL library...');
-  if LoadOpenSSLLibrary then
+  try
+    LoadOpenSSLCore;
+  except
+    on E: Exception do
+    begin
+      WriteLn('[ERROR] Failed to load OpenSSL: ', E.Message);
+      Halt(1);
+    end;
+  end;
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
     WriteLn('[OK] OpenSSL loaded')
   else
   begin
@@ -29,7 +40,7 @@ begin
   // Check crypto library
   WriteLn('[2] Checking crypto library handle...');
   WriteLn('Crypto lib handle: ', GetCryptoLibHandle);
-  WriteLn('Is loaded: ', IsCryptoLibraryLoaded);
+  WriteLn('Is loaded: ', TOpenSSLLoader.IsModuleLoaded(osmCore));
   
   // Try to load RAND_bytes manually
   WriteLn('[3] Testing GetCryptoProcAddress...');

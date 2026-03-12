@@ -209,7 +209,7 @@ var
   Len: Integer;
   Buf: PAnsiChar;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   
   if FSession = nil then
     Exit;

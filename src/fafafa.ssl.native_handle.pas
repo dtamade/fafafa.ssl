@@ -150,7 +150,7 @@ generic function GetNativeHandleAsSafe<T>(const AObject: IInterface;
  * @since v1.1.1
  *}
 generic function TryGetNativeHandleAs<T>(const AObject: IInterface;
-                                         out AHandle: T): Boolean;
+                                        out AHandle: T): Boolean;
 
 {**
  * 检查对象是否支持原生句柄访问
@@ -293,7 +293,7 @@ begin
 end;
 
 generic function TryGetNativeHandleAs<T>(const AObject: IInterface;
-                                         out AHandle: T): Boolean;
+                                        out AHandle: T): Boolean;
 var
   Handle: Pointer;
 begin

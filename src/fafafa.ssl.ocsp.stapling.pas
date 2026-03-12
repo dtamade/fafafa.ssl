@@ -546,7 +546,7 @@ begin
             
             // 缓存响应
             if FConfig.UseCache and (FCache <> nil) and 
-               (Length(OCSPResp.Responses) > 0) then
+              (Length(OCSPResp.Responses) > 0) then
             begin
               FCache.Put(ACert.SerialNumber, ResponseData,
                 OCSPResp.Responses[0].ThisUpdate,
@@ -608,7 +608,7 @@ begin
       OCSPResp.LoadFromDER(AResponse);
       
       if (OCSPResp.ResponseStatus = ocsprsSuccessful) and
-         (Length(OCSPResp.Responses) > 0) then
+        (Length(OCSPResp.Responses) > 0) then
       begin
         // 检查是否在刷新窗口内
         if OCSPResp.Responses[0].HasNextUpdate then

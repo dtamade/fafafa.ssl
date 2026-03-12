@@ -4,13 +4,13 @@ program test_ecdh;
 
 uses
   SysUtils, Classes, DynLibs,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.bn,
-  fafafa.ssl.openssl.ec,
-  fafafa.ssl.openssl.ecdh,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.err;
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.api.ec,
+  fafafa.ssl.openssl.api.ecdh,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.err;
 
 var
   TestsPassed: Integer = 0;

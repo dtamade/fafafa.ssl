@@ -11,7 +11,9 @@ program hello_ssl;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api;
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader;
 
 var
   LVersion: string;
@@ -25,13 +27,26 @@ begin
   
   WriteLn('[Step 1] Loading OpenSSL library...');
   
-  if LoadOpenSSLLibrary then
+  try
+    LoadOpenSSLCore;
+  except
+    on E: Exception do
+    begin
+      WriteLn('         FAILED');
+      WriteLn;
+      WriteLn('[ERROR] ', E.Message);
+      ExitCode := 1;
+      Exit;
+    end;
+  end;
+
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     WriteLn('         SUCCESS');
     WriteLn;
     
     // Get version info
-    LVersion := GetOpenSSLVersion;
+    LVersion := GetOpenSSLVersionString;
     WriteLn('[Step 2] Get version info...');
     WriteLn('         Version: ', LVersion);
     WriteLn;

@@ -2,7 +2,7 @@ program test_context_repeat;
 {$mode objfpc}{$H+}
 uses
   SysUtils,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   fafafa.ssl.base;
 var
   Lib: ISSLLibrary;

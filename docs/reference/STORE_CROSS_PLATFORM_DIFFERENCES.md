@@ -69,7 +69,7 @@ OpenSSL Store API 路径由 `fafafa.ssl.openssl.api.store` 处理，典型调用
 
 - Store invalid payload：`tests/fixtures/p2/store/store_invalid_cert_payload_v1.txt`
 - Store missing file：`tests/crypto/test_p2_store_comprehensive.pas:307`
-- 最新聚焦回归（含 Store）：`test-reports/test_report_20260207_022236.txt`
+- 最新聚焦回归（含 Store）：`docs/archive/reports/test-report-history/test_report_20260207_022236.txt`
 
 ## 差异总结
 

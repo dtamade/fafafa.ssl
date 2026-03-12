@@ -5,6 +5,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # ============================================================
 # 参数解析
 # ============================================================
@@ -27,7 +30,7 @@ Options:
   --revalidate-id ID           重验批次 ID（必需）
   --output FILE                输出报告路径（可选）
   --dry-run                    仅生成重验计划，不实际执行
-  --strict                     严格模式：重验失败则 exit 1
+  --strict                     严格模式：revalidation_status 非 pass 则 exit 1
   -h, --help                   显示帮助
 
 Examples:
@@ -60,6 +63,36 @@ if [[ -z "$REVALIDATE_ID" ]]; then
 fi
 
 TIMESTAMP=$(date +%Y-%m-%d\ %H:%M:%S\ %z)
+
+resolve_input_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  elif [[ -e "$path" ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+resolve_output_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+if [[ -n "$AUTOFIX_REPORT" ]]; then
+  AUTOFIX_REPORT="$(resolve_input_path "$AUTOFIX_REPORT")"
+fi
+if [[ -n "$CLOSURE_GATE_SCRIPT" ]]; then
+  CLOSURE_GATE_SCRIPT="$(resolve_input_path "$CLOSURE_GATE_SCRIPT")"
+fi
+if [[ -n "$OUTPUT" ]]; then
+  OUTPUT="$(resolve_output_path "$OUTPUT")"
+fi
 
 # ============================================================
 # 数据提取函数
@@ -137,9 +170,9 @@ run_closure_gate_revalidation() {
   # 执行闭环门禁脚本
   local exit_code=0
   if [[ -n "$args" ]]; then
-    bash "$script" $args --output "$temp_output" 2>/dev/null || exit_code=$?
+    (cd "$PROJECT_ROOT" && bash "$script" $args --output "$temp_output" 2>/dev/null) || exit_code=$?
   else
-    bash "$script" --dry-run --gate-id "revalidate_${REVALIDATE_ID}" --output "$temp_output" 2>/dev/null || exit_code=$?
+    (cd "$PROJECT_ROOT" && bash "$script" --dry-run --gate-id "revalidate_${REVALIDATE_ID}" --output "$temp_output" 2>/dev/null) || exit_code=$?
   fi
 
   # 解析结果
@@ -304,6 +337,7 @@ main() {
   report=$(generate_report "$autofix_data" "$revalidation_data")
 
   if [[ -n "$OUTPUT" ]]; then
+    mkdir -p "$(dirname "$OUTPUT")"
     echo "$report" > "$OUTPUT"
     echo "Report written to: $OUTPUT"
   else
@@ -315,8 +349,8 @@ main() {
     local revalidation_status
     revalidation_status=$(echo "$revalidation_data" | grep "^revalidation_status|" | cut -d'|' -f2)
 
-    if [[ "$revalidation_status" == "fail" || "$revalidation_status" == "error" ]]; then
-      echo "Strict mode: Revalidation failed with status=$revalidation_status"
+    if [[ "$revalidation_status" != "pass" ]]; then
+      echo "Strict mode: Revalidation requires pass status, got status=$revalidation_status"
       exit 1
     fi
   fi

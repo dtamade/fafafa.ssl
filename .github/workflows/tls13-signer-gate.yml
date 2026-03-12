@@ -96,7 +96,7 @@ jobs:
           FAFAFA_TLS13_SIGNER_GATE_ARCHIVE="1" \
           FAFAFA_TLS13_SIGNER_GATE_ARCHIVE_PROFILE="pr" \
           FAFAFA_TLS13_SIGNER_GATE_ARCHIVE_ROOT="artifacts/ci" \
-          bash scripts/run_tls13_signer_gate_bundle.sh --run-id "${RUN_ID}" --reports-dir test-reports --strict
+          bash scripts/run_tls13_signer_gate_bundle.sh --run-id "${RUN_ID}" --reports-dir tmp/tls13_signer_gate_reports --strict
 
       - name: Upload TLS13 signer artifacts
         if: always()
@@ -104,14 +104,14 @@ jobs:
         with:
           name: tls13-signer-gate-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            test-reports/tls13_signer_gate_bundle_*.md
-            test-reports/tls13_signer_gate_snapshot_*.md
-            test-reports/tls13_signer_gate_status_*.json
-            test-reports/wave_b_ci_gate_summary_tls13_signer_*.md
-            test-reports/wave_b_tls13_signer_*.json
-            test-reports/tls13_signer_bench_history_*.md
-            test-reports/wave_b_tls13_sign_purity_*.log
-            test-reports/wave_b_tls13_sign_bench_*.log
+            tmp/tls13_signer_gate_reports/tls13_signer_gate_bundle_*.md
+            tmp/tls13_signer_gate_reports/tls13_signer_gate_snapshot_*.md
+            tmp/tls13_signer_gate_reports/tls13_signer_gate_status_*.json
+            tmp/tls13_signer_gate_reports/wave_b_ci_gate_summary_tls13_signer_*.md
+            tmp/tls13_signer_gate_reports/wave_b_tls13_signer_*.json
+            tmp/tls13_signer_gate_reports/tls13_signer_bench_history_*.md
+            tmp/tls13_signer_gate_reports/wave_b_tls13_sign_purity_*.log
+            tmp/tls13_signer_gate_reports/wave_b_tls13_sign_bench_*.log
             artifacts/ci/tls13_signer_gh_${{ github.run_id }}_${{ github.run_attempt }}
             artifacts/ci/tls13_signer_gh_${{ github.run_id }}_${{ github.run_attempt }}_pr_ci_artifacts.tar.gz
           retention-days: 14
@@ -122,10 +122,10 @@ jobs:
           echo "## TLS13 Signer Gate" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          LATEST_BUNDLE=$(ls -1t test-reports/tls13_signer_gate_bundle_*.md 2>/dev/null | head -1 || true)
-          LATEST_SNAPSHOT=$(ls -1t test-reports/tls13_signer_gate_snapshot_*.md 2>/dev/null | head -1 || true)
-          LATEST_STATUS=$(ls -1t test-reports/tls13_signer_gate_status_*.json 2>/dev/null | head -1 || true)
-          LATEST_BENCH_JSON=$(ls -1t test-reports/wave_b_tls13_signer_*.json 2>/dev/null | head -1 || true)
+          LATEST_BUNDLE=$(ls -1t tmp/tls13_signer_gate_reports/tls13_signer_gate_bundle_*.md 2>/dev/null | head -1 || true)
+          LATEST_SNAPSHOT=$(ls -1t tmp/tls13_signer_gate_reports/tls13_signer_gate_snapshot_*.md 2>/dev/null | head -1 || true)
+          LATEST_STATUS=$(ls -1t tmp/tls13_signer_gate_reports/tls13_signer_gate_status_*.json 2>/dev/null | head -1 || true)
+          LATEST_BENCH_JSON=$(ls -1t tmp/tls13_signer_gate_reports/wave_b_tls13_signer_*.json 2>/dev/null | head -1 || true)
 
           if [[ -n "$LATEST_BUNDLE" ]]; then
             echo "- Bundle: \`$LATEST_BUNDLE\`" >> "$GITHUB_STEP_SUMMARY"

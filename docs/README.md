@@ -1,7 +1,7 @@
 # fafafa.ssl 文档中心
 
 > **版本**: v1.0.0
-> **更新**: 2026-02-05
+> **更新**: 2026-03-09
 
 fafafa.ssl 是 Free Pascal 的高性能 SSL/TLS 库，支持 OpenSSL、WinSSL、MbedTLS、WolfSSL 多后端。
 
@@ -17,7 +17,7 @@ var
   Conn: ISSLConnection;
 begin
   // 创建客户端上下文
-  Ctx := TSSLFactory.CreateContext(sslClient);
+  Ctx := TSSLFactory.CreateContext(sslCtxClient);
 
   // 创建连接（包装你的 socket）
   Conn := Ctx.CreateConnection(YourSocket);
@@ -34,6 +34,16 @@ end;
 ```
 
 ---
+
+
+## 当前语义真相（2026-03-09）
+
+- `TSSLContextBuilder` 在 `BuildClient` / `BuildServer` 路径上会先 resolve 一次 concrete backend，再把同一个 backend 复用于 context 与 system-roots store；builder 不再让 context/store 各自重新 autodetect。
+- `ISSLLibrary.SetDefaultConfig(...)` 是 library-scope 入口，只应用稳定默认值；证书、私钥、CA 文件/路径属于 request/context scope，请走 `TSSLFactory.CreateContext(const AConfig)` 或 builder。
+- `LibraryType` / `ContextType` 在 library defaults 上会 normalize 回 backend-owned baseline，因此 `GetDefaultConfig(...)` 反映的是 backend 当前真相，而不是调用方临时噪音。
+- `LogLevel` / `LogCallback` 属于 library scope；`BufferSize` / `HandshakeTimeout` 这类当前未接到 context 创建路径的 runtime-only 字段，不应被当作默认配置入口。
+- `UsePKCS11(...)` 只替代私钥来源；server 证书仍需通过 `WithCertificate` 或 `WithCertificatePEM` 提供。若 `pkcs11_uri` 与本地私钥材料并存，当前合同是 `PKCS#11` 优先。
+- 当前主线汇总见 `plans/2026-03-current-summary.md`，设计细节见 `reference/ARCHITECTURE.md`。
 
 ## 文档结构
 
@@ -59,8 +69,12 @@ docs/
 │   ├── ARCHITECTURE.md
 │   └── ...
 │
-└── archive/               # 历史文档
-    └── (项目报告、阶段总结等)
+├── PLANS_CURRENT_INDEX.md # 当前执行/治理入口
+├── plans/                 # 历史执行计划（记录用途）
+│   └── README.md          # 历史目录边界说明
+├── test_reports/          # 历史验证报告（记录用途）
+│   └── README.md          # 历史目录边界说明
+└── archive/               # 历史归档文档（记录用途）
 ```
 
 ---
@@ -73,6 +87,16 @@ docs/
 | [guides/QUICKSTART.md](guides/QUICKSTART.md) | 5 分钟快速上手 |
 | [guides/USER_GUIDE.md](guides/USER_GUIDE.md) | 完整用户指南 |
 | [reference/API_REFERENCE.md](reference/API_REFERENCE.md) | API 参考手册 |
+| [reference/API_CONTRACT_CURRENT_INDEX.md](reference/API_CONTRACT_CURRENT_INDEX.md) | 当前 API contract 入口 |
+| [reference/PURE_PASCAL_CLIENT_M1_CHECKLIST.md](reference/PURE_PASCAL_CLIENT_M1_CHECKLIST.md) | pure Pascal client M1 清单 |
+| [reference/API_ENTRYPOINT_GOVERNANCE.md](reference/API_ENTRYPOINT_GOVERNANCE.md) | 入口治理文档 |
+| [reference/API_ERROR_MODEL.md](reference/API_ERROR_MODEL.md) | 当前错误模型 |
+| [reference/API_CAPABILITY_STRATEGY.md](reference/API_CAPABILITY_STRATEGY.md) | capability / fallback 策略 |
+| [testing/CURRENT_HEALTH.md](testing/CURRENT_HEALTH.md) | 当前仓库健康状态与最短验证路径 |
+| [PLANS_CURRENT_INDEX.md](PLANS_CURRENT_INDEX.md) | 当前执行/治理入口与最近高信号计划索引 |
+| [testing/RUNTIME_CONTRACT_CLEANUP_PR_BODY_2026-03-07.md](testing/RUNTIME_CONTRACT_CLEANUP_PR_BODY_2026-03-07.md) | Runtime 合同清理的 PR 正文模板 |
+| [test_reports/REPO_HYGIENE_REMEDIATION_SUMMARY_2026-03-06.md](test_reports/REPO_HYGIENE_REMEDIATION_SUMMARY_2026-03-06.md) | 最近一轮仓库卫生整改汇总 |
+| [test_reports/REPO_HYGIENE_HANDOFF_SUMMARY_2026-03-06.md](test_reports/REPO_HYGIENE_HANDOFF_SUMMARY_2026-03-06.md) | 最近一轮仓库卫生整改交接清单 |
 | [reference/INTERFACE_DESIGN_V2.md](reference/INTERFACE_DESIGN_V2.md) | 接口设计文档 |
 | [test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md](test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md) | Wave C local-first 一页执行手册 |
 | [test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md](test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md) | Wave C local-first 故障速查 |
@@ -136,6 +160,13 @@ end;
 
 - **Issues**: https://github.com/dtamade/fafafa.ssl/issues
 - **Discussions**: https://github.com/dtamade/fafafa.ssl/discussions
+
+---
+
+## 文档治理
+
+- 文档噪声治理规则：`docs/DOCS_NOISE_GOVERNANCE.md`
+- active 范围扫描默认排除：`docs/archive/**`、`docs/plans/**`、`docs/test_reports/**`
 
 ---
 

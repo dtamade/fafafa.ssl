@@ -268,6 +268,8 @@ begin
     TestProtocolVersions;
 
     Runner.PrintSummary;
+    if Runner.FailCount = 0 then
+      WriteLn('[PASS] tls end-to-end integration completed');
     Halt(Runner.FailCount);
   finally
     Runner.Free;

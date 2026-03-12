@@ -21,10 +21,10 @@
 
 - 编译门禁：`python3 scripts/compile_all_modules.py` → `157/157`（通过）
 - P2 核心模块：`bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT` → `15/15`（通过）
-- Wave B 门禁脚本：`bash scripts/run_wave_b_ci_gate.sh --examples-threshold 80.0` → `PASS`（`test-reports/wave_b_ci_gate_summary_20260208_022636.md`）
+- Wave B 门禁脚本：`bash scripts/run_wave_b_ci_gate.sh --examples-threshold 80.0` → `PASS`（`docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_022636.md`）
 - 示例编译通过率：
-  - 启动基线：`36/75`（`50.7%`，`test-reports/examples_compile_latest.json`）
-  - 当前门禁：`62/75`（`87.3%`，`test-reports/examples_compile_gate_b85.json`）
+  - 启动基线：`36/75`（`50.7%`，`docs/archive/reports/examples-compile-history/examples_compile_latest.json`）
+  - 当前门禁：`62/75`（`87.3%`，`docs/archive/reports/examples-compile-history/examples_compile_gate_b85.json`）
 
 进展报告见：`docs/test_reports/ROADMAP_CLOSURE_PROGRESS_2026-02-08.md`。
 
@@ -144,9 +144,9 @@ python3 scripts/compile_all_modules.py
 ## 最新执行更新（2026-02-08 02:57 +0800）
 
 - 示例编译门禁已从 `87.3%` 提升至 `100.0%`：
-  - `test-reports/examples_compile_gate_b87.json`（`passed=71, failed=0, skipped=4`）
+  - `docs/archive/reports/examples-compile-history/examples_compile_gate_b87.json`（`passed=71, failed=0, skipped=4`）
 - Wave B Linux 最小 CI 门禁继续保持 PASS：
-  - `test-reports/wave_b_ci_gate_summary_20260208_025426.md`
+  - `docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_025426.md`
   - 三步门禁均 `exit=0`（compile/modules/examples）
 - 路线图收口状态：
   - Wave A 示例修复闭环完成（失败项清零）；
@@ -157,31 +157,31 @@ python3 scripts/compile_all_modules.py
 - 修复 `scripts/verify_examples_compile.sh` JSON 输出边界条件：
   - 当无失败示例时，`failed_files` 由错误的 `[""]` 改为标准 `[]`。
 - 复核证据：
-  - `test-reports/examples_compile_gate_b88.json`
-  - `test-reports/examples_compile_ci_gate.json`
-  - `test-reports/wave_b_ci_gate_summary_20260208_034029.md`
+  - `docs/archive/reports/examples-compile-history/examples_compile_gate_b88.json`
+  - `docs/archive/reports/examples-compile-history/examples_compile_ci_gate.json`
+  - `docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_034029.md`
 - 影响：
   - 提升 Wave B/B2 跨平台汇总自动化稳定性，避免下游解析误判“存在空字符串失败项”。
 
 ## B89（跨平台汇总自动化）
 
 - 脚本新增：`scripts/generate_wave_b_cross_platform_summary.sh`
-- 样例产物：`test-reports/wave_b_cross_platform_summary_20260208_034029.md`
+- 样例产物：`docs/archive/reports/wave-b-history/wave_b_cross_platform_summary_20260208_034029.md`
 - 状态：已具备统一汇总能力，待 macOS/Windows 实机证据回填。
 
 ## B90（B2 执行入口）
 
 - 新增 `scripts/run_wave_b_macos_gate.sh` 与 `scripts/run_wave_b_windows_gate.ps1`。
-- macOS dry-run 样例：`test-reports/wave_b_macos_gate_summary_20260208_0350.md`。
+- macOS dry-run 样例：`docs/archive/reports/wave-b-history/wave_b_macos_gate_summary_20260208_0350.md`。
 - 下一阶段：在真实 macOS/Windows runner 执行并回填平台摘要。
 
 ## 最新执行更新（2026-02-08 04:04 +0800）
 
 - B90 runner 收口校验完成：
-  - `test-reports/wave_b_macos_gate_summary_20260208_041500.md`（`mode=dry-run`, `overall=DRY_RUN`）
+  - `docs/archive/reports/wave-b-history/wave_b_macos_gate_summary_20260208_041500.md`（`mode=dry-run`, `overall=DRY_RUN`）
 - B91 汇总稳健性修复完成：
   - `scripts/generate_wave_b_cross_platform_summary.sh` 现在会解析平台摘要 `overall` 字段。
-  - `test-reports/wave_b_cross_platform_summary_20260208_041500.md` 已显示 `macos=DRY_RUN`（不再误判为 `READY`）。
+  - `docs/archive/reports/wave-b-history/wave_b_cross_platform_summary_20260208_041500.md` 已显示 `macos=DRY_RUN`（不再误判为 `READY`）。
 - 当前主线：继续推进 B2 实机回填（macOS/Windows），完成三平台最终闭环摘要。
 
 ## 最新执行更新（2026-02-08 04:08 +0800）
@@ -194,7 +194,7 @@ python3 scripts/compile_all_modules.py
 
 - B93 已完成 B2 闭环判定自动化：
   - 新增 `scripts/check_wave_b_b2_closure_readiness.sh`
-  - 当前样例状态：`test-reports/wave_b_b2_closure_readiness_20260208_041500.md` => `IN_PROGRESS`
+  - 当前样例状态：`docs/archive/reports/wave-b-history/wave_b_b2_closure_readiness_20260208_041500.md` => `IN_PROGRESS`
 - 该脚本支持 `--strict` 非 0 返回，可直接用于 CI gate。
 
 ## 最新执行更新（2026-02-08 04:26 +0800）

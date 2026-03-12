@@ -423,7 +423,7 @@ var
   HMACLen: Cardinal;
   MDSize: Integer;
   OutKey: TBytes;
-  KeyPtr, SaltPtr, InfoPtr, TPtr: PByte;
+  KeyPtr, SaltPtr, TPtr: PByte;
 begin
   Result := nil;  // Initialize result
   SetLength(Result, 0);

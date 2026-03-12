@@ -25,7 +25,8 @@ type
     IsBackup: Boolean;
   end;
 
-  TFreePascalContext = class(TInterfacedObject, ISSLContext, IFreePascalContextMaterial)
+  TFreePascalContext = class(TInterfacedObject, ISSLContext,
+    IFreePascalContextMaterial, IFreePascalContextTrustStore)
   private
     FLibrary: ISSLLibrary;
     FContextType: TSSLContextType;
@@ -125,20 +126,107 @@ type
     function HasPrivateKeyMaterial: Boolean;
     function GetCertificateMaterial: TBytes;
     function GetPrivateKeyMaterial: TBytes;
+    function GetCertificateStore: ISSLCertificateStore;
+    function GetCAFile: string;
+    function GetCAPath: string;
+    function GetVerifyCallback: TSSLVerifyCallback;
+    function GetInfoCallback: TSSLInfoCallback;
+    function GetPins: TFreePascalPinInfoArray;
   end;
 
 implementation
 
 uses
   fafafa.ssl.exceptions,
+  fafafa.ssl.pem,
+  fafafa.ssl.freepascal.keydecrypt,
   fafafa.ssl.freepascal.connection;
+
+procedure RaisePasswordProtectedPrivateKeyLoadFailure(const AContext, AMessage: string;
+  AErrorCode: TSSLErrorCode);
+begin
+  raise ESSLKeyException.CreateWithContext(
+    AMessage,
+    AErrorCode,
+    AContext,
+    0,
+    sslFreePascal
+  );
+end;
+
+function ResolveEncryptedPrivateKeyPassword(
+  ACallback: TSSLPasswordCallback;
+  const AProvidedPassword: string;
+  AIsRetry: Boolean;
+  out APassword: string
+): Boolean;
+begin
+  APassword := '';
+  if (not AIsRetry) and (AProvidedPassword <> '') then
+  begin
+    APassword := AProvidedPassword;
+    Exit(True);
+  end;
+
+  if Assigned(ACallback) then
+    Result := ACallback(APassword, AIsRetry) and (APassword <> '')
+  else
+    Result := False;
+end;
+
+function NormalizePrivateKeyMaterial(
+  const AData: TBytes;
+  const AProvidedPassword: string;
+  ACallback: TSSLPasswordCallback;
+  const AContext: string
+): TBytes;
+var
+  LResolvedPassword: string;
+  LDecrypted: TBytes;
+  LWasEncrypted: Boolean;
+  LError: string;
+begin
+  Result := Copy(AData, 0, Length(AData));
+
+  if TryDecryptPrivateKeyMaterial(Result, '', LDecrypted, LWasEncrypted, LError) then
+    Exit;
+
+  if not LWasEncrypted then
+    Exit;
+
+  if not ResolveEncryptedPrivateKeyPassword(ACallback, AProvidedPassword, False, LResolvedPassword) then
+    RaisePasswordProtectedPrivateKeyLoadFailure(
+      AContext,
+      'Encrypted private key requires password or password callback',
+      sslErrConfiguration
+    );
+
+  if TryDecryptPrivateKeyMaterial(Result, LResolvedPassword, LDecrypted, LWasEncrypted, LError) then
+  begin
+    Result := LDecrypted;
+    Exit;
+  end;
+
+  if ResolveEncryptedPrivateKeyPassword(ACallback, '', True, LResolvedPassword) and
+    TryDecryptPrivateKeyMaterial(Result, LResolvedPassword, LDecrypted, LWasEncrypted, LError) then
+  begin
+    Result := LDecrypted;
+    Exit;
+  end;
+
+  RaisePasswordProtectedPrivateKeyLoadFailure(
+    AContext,
+    'Failed to decrypt encrypted private key: ' + LError,
+    sslErrLoadFailed
+  );
+end;
 
 constructor TFreePascalContext.Create(ALibrary: ISSLLibrary; AType: TSSLContextType);
 begin
   inherited Create;
   FLibrary := ALibrary;
   FContextType := AType;
-  FProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
+  FProtocolVersions := [sslProtocolTLS13];
   FPreferredVersion := sslProtocolTLS13;
   FVerifyMode := [sslVerifyPeer];
   FVerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
@@ -165,6 +253,7 @@ function TFreePascalContext.ReadStreamToBytes(AStream: TStream): TBytes;
 var
   LSize: Int64;
 begin
+  Result := nil;
   if AStream = nil then
     RaiseInvalidParameter('AStream');
 
@@ -172,9 +261,11 @@ begin
   if LSize < 0 then
     LSize := 0;
 
-  SetLength(Result, LSize);
   if LSize > 0 then
+  begin
+    SetLength(Result, LSize);
     AStream.ReadBuffer(Result[0], LSize);
+  end;
 end;
 
 function TFreePascalContext.GetContextType: TSSLContextType;
@@ -187,7 +278,7 @@ begin
   FProtocolVersions := AVersions;
 
   if (FPreferredVersion <> sslProtocolUnknown) and
-     not (FPreferredVersion in FProtocolVersions) then
+    not (FPreferredVersion in FProtocolVersions) then
     FPreferredVersion := sslProtocolUnknown;
 
   LogDeprecatedProtocolWarnings('FreePascal', AVersions);
@@ -201,7 +292,7 @@ end;
 procedure TFreePascalContext.SetPreferredVersion(AVersion: TSSLProtocolVersion);
 begin
   if (AVersion <> sslProtocolUnknown) and
-     not (AVersion in FProtocolVersions) then
+    not (AVersion in FProtocolVersions) then
     RaiseInvalidParameter('PreferredVersion');
 
   FPreferredVersion := AVersion;
@@ -266,14 +357,23 @@ begin
   finally
     LStream.Free;
   end;
-
-  if APassword <> '' then;
+  FPrivateKeyData := NormalizePrivateKeyMaterial(
+    FPrivateKeyData,
+    APassword,
+    FPasswordCallback,
+    'TFreePascalContext.LoadPrivateKey'
+  );
 end;
 
 procedure TFreePascalContext.LoadPrivateKey(AStream: TStream; const APassword: string);
 begin
   FPrivateKeyData := ReadStreamToBytes(AStream);
-  if APassword <> '' then;
+  FPrivateKeyData := NormalizePrivateKeyMaterial(
+    FPrivateKeyData,
+    APassword,
+    FPasswordCallback,
+    'TFreePascalContext.LoadPrivateKey'
+  );
 end;
 
 procedure TFreePascalContext.LoadCertificatePEM(const APEM: string);
@@ -294,8 +394,12 @@ begin
   SetLength(FPrivateKeyData, Length(LAnsi));
   if Length(LAnsi) > 0 then
     Move(LAnsi[1], FPrivateKeyData[0], Length(LAnsi));
-
-  if APassword <> '' then;
+  FPrivateKeyData := NormalizePrivateKeyMaterial(
+    FPrivateKeyData,
+    APassword,
+    FPasswordCallback,
+    'TFreePascalContext.LoadPrivateKeyPEM'
+  );
 end;
 
 procedure TFreePascalContext.LoadCAFile(const AFileName: string);
@@ -542,6 +646,46 @@ end;
 function TFreePascalContext.GetPrivateKeyMaterial: TBytes;
 begin
   Result := Copy(FPrivateKeyData, 0, Length(FPrivateKeyData));
+end;
+
+function TFreePascalContext.GetCertificateStore: ISSLCertificateStore;
+begin
+  Result := FCertificateStore;
+end;
+
+function TFreePascalContext.GetCAFile: string;
+begin
+  Result := FCAFile;
+end;
+
+function TFreePascalContext.GetCAPath: string;
+begin
+  Result := FCAPath;
+end;
+
+function TFreePascalContext.GetVerifyCallback: TSSLVerifyCallback;
+begin
+  Result := FVerifyCallback;
+end;
+
+function TFreePascalContext.GetInfoCallback: TSSLInfoCallback;
+begin
+  Result := FInfoCallback;
+end;
+
+function TFreePascalContext.GetPins: TFreePascalPinInfoArray;
+var
+  I: Integer;
+begin
+  Result := nil;
+  SetLength(Result, Length(FPins));
+  for I := 0 to High(FPins) do
+  begin
+    Result[I].Hash := Copy(FPins[I].Hash, 0, Length(FPins[I].Hash));
+    Result[I].PinType := FPins[I].PinType;
+    Result[I].Description := FPins[I].Description;
+    Result[I].IsBackup := FPins[I].IsBackup;
+  end;
 end;
 
 end.

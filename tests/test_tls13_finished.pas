@@ -99,10 +99,66 @@ begin
   );
 end;
 
+procedure TestFinishedVectorSHA384;
+var
+  LServerTrafficSecret: TBytes;
+  LTranscriptHash: TBytes;
+  LFinishedKey: TBytes;
+  LVerifyData: TBytes;
+begin
+  LServerTrafficSecret := HexToBytes(
+    '000102030405060708090a0b0c0d0e0f' +
+    '101112131415161718191a1b1c1d1e1f' +
+    '202122232425262728292a2b2c2d2e2f'
+  );
+  LTranscriptHash := HexToBytes(
+    '808182838485868788898a8b8c8d8e8f' +
+    '909192939495969798999a9b9c9d9e9f' +
+    'a0a1a2a3a4a5a6a7a8a9aaabacadaeaf'
+  );
+
+  LFinishedKey := TLS13FinishedKeySHA384(LServerTrafficSecret);
+  AssertBytesEqual(
+    HexToBytes(
+      'fcbe325d88fe0a23ac276c591cdbfe90' +
+      '895612d7c0cbcdb21e3d1ffc20d96ed8' +
+      '148a1610d115f29b6771bccdf7a29fe2'
+    ),
+    LFinishedKey,
+    'SHA384 finished key mismatch'
+  );
+
+  LVerifyData := TLS13ComputeFinishedVerifyDataFromTrafficSecretSHA384(
+    LServerTrafficSecret,
+    LTranscriptHash
+  );
+  AssertBytesEqual(
+    HexToBytes(
+      'd72bc9a44b4c8b6200ee19a1703f28f1' +
+      '676f100ce3f0527d648e8c31a7c38dea' +
+      '1ce41d81b56e3643876466630575f6bc'
+    ),
+    LVerifyData,
+    'SHA384 finished verify_data mismatch'
+  );
+
+  AssertTrue(
+    TLS13VerifyFinishedSHA384(LServerTrafficSecret, LTranscriptHash, LVerifyData),
+    'SHA384 finished verify should succeed'
+  );
+
+  LVerifyData[0] := LVerifyData[0] xor $01;
+  AssertTrue(
+    not TLS13VerifyFinishedSHA384(LServerTrafficSecret, LTranscriptHash, LVerifyData),
+    'SHA384 finished verify should fail when verify_data is modified'
+  );
+end;
+
 begin
   WriteLn('Testing TLS 1.3 finished verification helpers...');
 
   TestFinishedVector;
+  TestFinishedVectorSHA384;
 
   WriteLn('✅ TLS 1.3 finished checks passed');
 end.

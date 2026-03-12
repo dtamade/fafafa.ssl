@@ -15,8 +15,8 @@
 ```bash
 # 在 Linux/macOS shell 中
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
-LINUX_SUMMARY="test-reports/wave_b_ci_gate_summary_20260208_034029.md"
-LINUX_EXAMPLES="test-reports/examples_compile_ci_gate.json"
+LINUX_SUMMARY="docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_034029.md"
+LINUX_EXAMPLES="docs/archive/reports/examples-compile-history/examples_compile_ci_gate.json"
 ```
 
 > 说明：`LINUX_SUMMARY` 可替换为最新一次 Linux gate 报告。

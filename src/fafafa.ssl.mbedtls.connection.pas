@@ -28,7 +28,7 @@ uses
 
 type
   { TMbedTLSConnection - MbedTLS 连接类 }
-  TMbedTLSConnection = class(TBaseSSLConnection)
+  TMbedTLSConnection = class(TBaseSSLConnection, ISSLClientConnection)
   private
     FSSLConfig: Pmbedtls_ssl_config;
     FSSLContext: Pmbedtls_ssl_context;
@@ -81,6 +81,7 @@ type
     destructor Destroy; override;
 
     { SNI/ALPN 设置 }
+    function GetConnectionInfo: TSSLConnectionInfo; override;
     procedure SetServerName(const AServerName: string);
     function GetServerName: string;
 
@@ -202,6 +203,7 @@ end;
 procedure TMbedTLSConnection.AllocateSSLContext;
 var
   LRet: Integer;
+  LDefaultServerName: string;
 begin
   if FSSLContext <> nil then
     FreeSSLContext;
@@ -234,9 +236,10 @@ begin
         @MbedTLSSocketSend, @MbedTLSSocketRecv, nil);
   end;
 
-  // Set server name (SNI) if configured
-  if (FContext <> nil) and (FContext.GetServerName <> '') then
-    SetServerName(FContext.GetServerName);
+  // Set server name (SNI) from client context if configured
+  LDefaultServerName := GetLegacyContextDefaultServerName;
+  if LDefaultServerName <> '' then
+    SetServerName(LDefaultServerName);
 end;
 
 procedure TMbedTLSConnection.FreeSSLContext;
@@ -396,7 +399,7 @@ function TMbedTLSConnection.DoGetPeerCertificateChain: TSSLCertificateArray;
 var
   LPeerCert: Pmbedtls_x509_crt;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   if FSSLContext = nil then Exit;
   if not Assigned(mbedtls_ssl_get_peer_cert) then Exit;
 
@@ -513,13 +516,35 @@ begin
   Result := 'Not Supported (MbedTLS limitation)';
 end;
 
+function TMbedTLSConnection.GetConnectionInfo: TSSLConnectionInfo;
+var
+  LServerName: PAnsiChar;
+begin
+  Result := inherited GetConnectionInfo;
+  Result.ServerName := FServerName;
+
+  if (FSSLContext <> nil) and Assigned(mbedtls_ssl_get_hostname_pointer) then
+  begin
+    LServerName := mbedtls_ssl_get_hostname_pointer(FSSLContext);
+    if LServerName <> nil then
+      Result.ServerName := string(LServerName)
+    else
+      Result.ServerName := '';
+  end;
+end;
+
 { SNI/ALPN 设置 }
 
 procedure TMbedTLSConnection.SetServerName(const AServerName: string);
 begin
   FServerName := AServerName;
-  if (FSSLContext <> nil) and (FServerName <> '') and Assigned(mbedtls_ssl_set_hostname) then
-    mbedtls_ssl_set_hostname(FSSLContext, PAnsiChar(AnsiString(FServerName)));
+  if (FSSLContext = nil) or not Assigned(mbedtls_ssl_set_hostname) then
+    Exit;
+
+  if FServerName <> '' then
+    mbedtls_ssl_set_hostname(FSSLContext, PAnsiChar(AnsiString(FServerName)))
+  else
+    mbedtls_ssl_set_hostname(FSSLContext, nil);
 end;
 
 function TMbedTLSConnection.GetServerName: string;

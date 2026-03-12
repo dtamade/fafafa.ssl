@@ -198,11 +198,52 @@ begin
   try
     Test('Certificate created', LCert <> nil);
     Test('Certificate not loaded initially', LCert.GetNativeHandle = nil);
+    Test('NotBefore unknown without X509', LCert.GetNotBefore = 0);
+    Test('NotAfter unknown without X509', LCert.GetNotAfter = 0);
+    Test('IsExpired returns False without X509', not LCert.IsExpired);
+    Test('DaysUntilExpiry returns 0 without X509', LCert.GetDaysUntilExpiry = 0);
     Test('GetVersion returns default', LCert.GetVersion = 3);
     Test('GetPublicKeyAlgorithm returns default', LCert.GetPublicKeyAlgorithm = 'RSA');
     Test('Clone works', LCert.Clone <> nil);
   finally
     LCert.Free;
+  end;
+end;
+
+procedure TestMbedTLSCertificateIsCABasicConstraints;
+var
+  LLib: ISSLLibrary;
+  LCaCert: TMbedTLSCertificate;
+  LLeafCert: TMbedTLSCertificate;
+  LLoadedCA, LLoadedLeaf: Boolean;
+begin
+  WriteLn('');
+  WriteLn('=== MbedTLS Certificate IsCA BasicConstraints ===');
+
+  LLib := CreateMbedTLSLibrary;
+  if (LLib = nil) or (not LLib.Initialize) then
+  begin
+    WriteLn('  (Skipped - MbedTLS library not available)');
+    Test('IsCA basic constraints skipped', True);
+    Exit;
+  end;
+
+  LCaCert := TMbedTLSCertificate.Create;
+  LLeafCert := TMbedTLSCertificate.Create;
+  try
+    LLoadedCA := LCaCert.LoadFromFile('tests/certificate/test_certs/ca_cert.pem');
+    Test('Load CA certificate fixture', LLoadedCA);
+    if LLoadedCA then
+      Test('CA certificate should report IsCA=True', LCaCert.IsCA);
+
+    LLoadedLeaf := LLeafCert.LoadFromFile('tests/certificate/test_certs/recipient_cert.pem');
+    Test('Load leaf certificate fixture', LLoadedLeaf);
+    if LLoadedLeaf then
+      Test('Leaf certificate should report IsCA=False', not LLeafCert.IsCA);
+  finally
+    LLeafCert.Free;
+    LCaCert.Free;
+    LLib.Finalize;
   end;
 end;
 
@@ -492,6 +533,7 @@ begin
 
   // Certificate class tests (no library required)
   TestMbedTLSCertificateClass;
+  TestMbedTLSCertificateIsCABasicConstraints;
   TestMbedTLSCertificateStore;
   TestMbedTLSNativeHandleContract;
 

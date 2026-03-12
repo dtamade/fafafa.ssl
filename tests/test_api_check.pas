@@ -3,7 +3,7 @@ program test_api_check;
 uses
   SysUtils,
   fafafa.ssl.base,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.bn,
   fafafa.ssl.openssl.api.asn1,

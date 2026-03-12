@@ -573,6 +573,7 @@ begin
   begin
     WriteLn;
     WriteLn('🎉 所有测试通过！CMS 模块工作正常');
+    WriteLn('[PASS] cms comprehensive completed');
   end;
 
   UnloadOpenSSLCore;

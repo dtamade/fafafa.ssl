@@ -149,7 +149,8 @@ implementation
 
 uses
   Contnrs, DateUtils,
-  fafafa.ssl.utils;
+  fafafa.ssl.utils,
+  fafafa.ssl.x509;
 
 const
   MBEDTLS_X509_CRT_SIZE = 1024;  // 估算大小
@@ -394,7 +395,7 @@ begin
   end;
 
   // Extract DER from native handle
-  SetLength(Result, 0);
+  Result := nil;
   if FX509Crt = nil then Exit;
 
   // Access raw DER data from MbedTLS certificate structure
@@ -552,7 +553,7 @@ var
   LInfo, LDateStr: string;
   LPos, LEndPos: Integer;
 begin
-  Result := Now - 365;  // 默认值
+  Result := 0;
   if FX509Crt = nil then Exit;
   if not Assigned(mbedtls_x509_crt_info) then Exit;
 
@@ -579,11 +580,7 @@ begin
     LDateStr := Trim(Copy(LInfo, LPos, LEndPos - LPos));
 
     if LDateStr <> '' then
-    begin
       Result := ParseMbedTLSDate(LDateStr);
-      if Result = 0 then
-        Result := Now - 365;
-    end;
   end;
 end;
 
@@ -594,7 +591,7 @@ var
   LInfo, LDateStr: string;
   LPos, LEndPos: Integer;
 begin
-  Result := Now + 365;  // 默认值
+  Result := 0;
   if FX509Crt = nil then Exit;
   if not Assigned(mbedtls_x509_crt_info) then Exit;
 
@@ -621,11 +618,7 @@ begin
     LDateStr := Trim(Copy(LInfo, LPos, LEndPos - LPos));
 
     if LDateStr <> '' then
-    begin
       Result := ParseMbedTLSDate(LDateStr);
-      if Result = 0 then
-        Result := Now + 365;
-    end;
   end;
 end;
 
@@ -829,8 +822,13 @@ begin
 end;
 
 function TMbedTLSCertificate.IsExpired: Boolean;
+var
+  LNotAfter: TDateTime;
 begin
-  Result := Now > GetNotAfter;
+  LNotAfter := GetNotAfter;
+  if LNotAfter <= 0 then
+    Exit(False);
+  Result := Now > LNotAfter;
 end;
 
 function TMbedTLSCertificate.IsSelfSigned: Boolean;
@@ -839,13 +837,37 @@ begin
 end;
 
 function TMbedTLSCertificate.IsCA: Boolean;
+var
+  LDER: TBytes;
+  LParser: TX509Certificate;
 begin
-  Result := False;  // 需要检查 BasicConstraints
+  Result := False;
+
+  LDER := SaveToDER;
+  if Length(LDER) = 0 then
+    Exit;
+
+  LParser := TX509Certificate.Create;
+  try
+    try
+      LParser.LoadFromDER(LDER);
+      Result := LParser.IsCA;
+    except
+      Result := False;
+    end;
+  finally
+    LParser.Free;
+  end;
 end;
 
 function TMbedTLSCertificate.GetDaysUntilExpiry: Integer;
+var
+  LNotAfter: TDateTime;
 begin
-  Result := DaysBetween(Now, GetNotAfter);
+  LNotAfter := GetNotAfter;
+  if LNotAfter <= 0 then
+    Exit(0);
+  Result := DaysBetween(Now, LNotAfter);
   if IsExpired then
     Result := -Result;
 end;
@@ -893,7 +915,7 @@ var
   end;
 
 begin
-  SetLength(Result, 0);
+  Result := nil;
   if FX509Crt = nil then Exit;
   if not Assigned(mbedtls_x509_crt_info) then Exit;
 
@@ -954,7 +976,7 @@ var
   LPos, LEndPos: Integer;
   LUsages: array of string;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   if FX509Crt = nil then Exit;
   if not Assigned(mbedtls_x509_crt_info) then Exit;
 
@@ -1010,7 +1032,7 @@ var
   LPos, LEndPos: Integer;
   LUsages: array of string;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   if FX509Crt = nil then Exit;
   if not Assigned(mbedtls_x509_crt_info) then Exit;
 
@@ -1414,7 +1436,7 @@ var
   LIssuer: ISSLCertificate;
   LMaxDepth: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   if ACert = nil then Exit;
 
   SetLength(LChain, 0);

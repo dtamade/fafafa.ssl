@@ -5,12 +5,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-RUN_ID="$(date +%Y%m%d_%H%M%S)"
+RUN_ID="${FAFAFA_WAVE_C_B101_RUN_ID:-$(date +%Y%m%d_%H%M%S)}"
 MODULE_SET="PKCS7,PKCS12,CMS,Store,OCSP,TS,CT"
 FULL_GATE=false
 STRICT=false
 DRY_RUN=false
 OUTPUT_FILE=""
+FPC_EXE="${FAFAFA_FPC_EXE:-fpc}"
 
 usage() {
   cat <<'USAGE'
@@ -26,7 +27,7 @@ Wave C B101 Validation Playbook
   --run-id ID         指定 run_id（默认时间戳）
   --modules LIST      模块列表（默认: PKCS7,PKCS12,CMS,Store,OCSP,TS,CT）
   --full-gate         执行 compile_all_modules + run_all_module_tests
-  --output FILE       输出报告（默认 test-reports/wave_c_b101_validation_<run_id>.md）
+  --output FILE       输出报告（默认 tmp/wave_c_b101_reports_<run_id>/wave_c_b101_validation_<run_id>.md）
   --strict            任一步骤失败返回非 0
   --dry-run           仅打印步骤，不执行
   --help              显示帮助
@@ -71,14 +72,22 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+COMPILE_UNIT_OUTPUT_DIR="${FAFAFA_WAVE_C_B101_COMPILE_UNIT_OUTPUT_DIR:-tmp/wave_c_b101_compile_units_${RUN_ID}}"
+MODULE_UNIT_OUTPUT_DIR="${FAFAFA_WAVE_C_B101_MODULE_UNIT_OUTPUT_DIR:-tmp/wave_c_b101_module_units_${RUN_ID}}"
+MODULE_BIN_OUTPUT_DIR="${FAFAFA_WAVE_C_B101_MODULE_BIN_OUTPUT_DIR:-tmp/wave_c_b101_module_bin_${RUN_ID}}"
+REPORT_DIR="${FAFAFA_WAVE_C_B101_REPORT_DIR:-tmp/wave_c_b101_reports_${RUN_ID}}"
+
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b101_validation_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORT_DIR/wave_c_b101_validation_${RUN_ID}.md"
 fi
 
-COMPILE_LOG="test-reports/wave_c_b101_compile_${RUN_ID}.log"
-MODULE_LOG="test-reports/wave_c_b101_modules_${RUN_ID}.log"
-BENCH_COMPILE_LOG="test-reports/wave_c_b101_bench_compile_${RUN_ID}.log"
-BENCH_RUN_LOG="test-reports/wave_c_b101_bench_run_${RUN_ID}.log"
+COMPILE_LOG="$REPORT_DIR/wave_c_b101_compile_${RUN_ID}.log"
+MODULE_LOG="$REPORT_DIR/wave_c_b101_modules_${RUN_ID}.log"
+BENCH_COMPILE_LOG="$REPORT_DIR/wave_c_b101_bench_compile_${RUN_ID}.log"
+BENCH_RUN_LOG="$REPORT_DIR/wave_c_b101_bench_run_${RUN_ID}.log"
+
+mkdir -p "$PROJECT_ROOT/$REPORT_DIR"
+mkdir -p "$(dirname "$PROJECT_ROOT/$OUTPUT_FILE")"
 
 run_step() {
   local label="$1"
@@ -104,11 +113,11 @@ bench_compile_exit=0
 bench_run_exit=0
 
 if [[ "$FULL_GATE" == "true" ]]; then
-  compile_exit=$(run_step "compile_all_modules" "python3 scripts/compile_all_modules.py" "$COMPILE_LOG")
-  modules_exit=$(run_step "run_all_module_tests" "bash scripts/run_all_module_tests.sh --modules $MODULE_SET" "$MODULE_LOG")
+  compile_exit=$(run_step "compile_all_modules" "python3 scripts/compile_all_modules.py --unit-output-dir '$COMPILE_UNIT_OUTPUT_DIR' --fpc-exe '$FPC_EXE'" "$COMPILE_LOG")
+  modules_exit=$(run_step "run_all_module_tests" "FAFAFA_FPC_EXE='$FPC_EXE' FAFAFA_FPC_UNIT_OUTPUT_DIR='$MODULE_UNIT_OUTPUT_DIR' FAFAFA_TEST_BIN_DIR='$MODULE_BIN_OUTPUT_DIR' bash scripts/run_all_module_tests.sh --modules $MODULE_SET" "$MODULE_LOG")
 fi
 
-bench_compile_exit=$(run_step "compile_benchmark_cert_cache" "mkdir -p tests/benchmarks/bin && fpc -Mobjfpc -Sh -O2 -Fu./src -Fu./src/openssl -Fu./tests/benchmarks -Fu./examples -Fi./src -FE./tests/benchmarks/bin tests/benchmarks/benchmark_cert_verify_cache.pas" "$BENCH_COMPILE_LOG")
+bench_compile_exit=$(run_step "compile_benchmark_cert_cache" "mkdir -p tests/benchmarks/bin && '$FPC_EXE' -Mobjfpc -Sh -O2 -Fu./src -Fu./src/openssl -Fu./tests/benchmarks -Fu./examples -Fi./src -FE./tests/benchmarks/bin tests/benchmarks/benchmark_cert_verify_cache.pas" "$BENCH_COMPILE_LOG")
 
 if [[ "$bench_compile_exit" == "0" ]]; then
   bench_run_exit=$(run_step "run_benchmark_cert_cache" "./tests/benchmarks/bin/benchmark_cert_verify_cache" "$BENCH_RUN_LOG")

@@ -5,7 +5,8 @@ program test_ocsp_validation;
 uses
   SysUtils,
   fafafa.ssl.openssl.api.core,
-  fafafa.ssl.openssl.api.ocsp;
+  fafafa.ssl.openssl.api.ocsp,
+  fafafa.ssl.openssl.loader;
 
 var
   TotalTests, PassedTests, FailedTests: Integer;
@@ -39,12 +40,27 @@ begin
 
   // 初始化 OpenSSL
   WriteLn('初始化 OpenSSL...');
-  if not LoadOpenSSLCore then
-  begin
-    WriteLn('❌ 无法加载 OpenSSL 库');
-    Halt(1);
+  try
+    LoadOpenSSLCore;
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
+    begin
+      WriteLn('❌ 无法加载 OpenSSL 库');
+      Halt(1);
+    end;
+
+    if not LoadOpenSSLOCSP(GetCryptoLibHandle) then
+    begin
+      WriteLn('❌ 无法加载 OCSP 模块');
+      Halt(1);
+    end;
+  except
+    on E: Exception do
+    begin
+      WriteLn('❌ 无法加载 OpenSSL/OCSP 模块: ', E.Message);
+      Halt(1);
+    end;
   end;
-  WriteLn('✅ OpenSSL 库加载成功');
+  WriteLn('✅ OpenSSL/OCSP 模块加载成功');
   WriteLn('版本: ', GetOpenSSLVersionString);
   WriteLn;
 
@@ -97,6 +113,7 @@ begin
   else
   begin
     WriteLn('🎉 所有测试通过！OCSP 模块工作正常');
+    WriteLn('[PASS] ocsp validation completed');
   end;
 
   UnloadOpenSSLCore;

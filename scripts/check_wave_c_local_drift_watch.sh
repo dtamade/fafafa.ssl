@@ -5,6 +5,8 @@ set -euo pipefail
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 STRICT=false
 OUTPUT_FILE=""
+REPORTS_DIR="${FAFAFA_WAVE_C_LOCAL_GUARD_REPORTS_DIR:-tmp/wave_c_local_guard_reports}"
+QUICK_SPRINT_REPORTS_DIR="${FAFAFA_WAVE_C_QUICK_SPRINT_REPORTS_DIR:-tmp/wave_c_quick_sprint_reports}"
 MAX_BUNDLE_AGE_HOURS=72
 MAX_CONTINUITY_AGE_HOURS=24
 MAX_DRIFT_CHECK_GAP_HOURS=24
@@ -30,7 +32,7 @@ Wave C B124 Local-First Drift Watch
 
 选项：
   --run-id ID                       指定 run_id
-  --output FILE                     输出报告路径
+  --output FILE                     输出报告路径（默认 tmp/wave_c_local_guard_reports/wave_c_b124_local_drift_watch_<run_id>.md）
   --max-bundle-age-hours N          latest bundle 最大允许时效（默认 72）
   --max-continuity-age-hours N      B123 continuity 报告最大允许时效（默认 24）
   --max-drift-check-gap-hours N     B124 检查最大间隔（默认 24）
@@ -78,7 +80,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b124_local_drift_watch_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORTS_DIR/wave_c_b124_local_drift_watch_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
@@ -126,7 +128,7 @@ elif [[ -f "$WORKFLOW_ENABLED_FILE" && -f "$WORKFLOW_DISABLED_FILE" ]]; then
   workflow_check="FAIL"
 fi
 
-latest_continuity="$(ls -1t test-reports/wave_c_b123_local_first_continuity_*.md 2>/dev/null | head -1 || true)"
+latest_continuity="$(ls -1t "$REPORTS_DIR"/wave_c_b123_local_first_continuity_*.md 2>/dev/null | head -1 || true)"
 continuity_exists="FAIL"
 continuity_state="UNKNOWN"
 continuity_age_check="FAIL"
@@ -147,7 +149,7 @@ if [[ -n "$latest_continuity" ]]; then
   fi
 fi
 
-latest_bundle="$(ls -1t test-reports/wave_c_quick_sprint_bundle_*.md 2>/dev/null | head -1 || true)"
+latest_bundle="$(ls -1t "$QUICK_SPRINT_REPORTS_DIR"/wave_c_quick_sprint_bundle_*.md 2>/dev/null | head -1 || true)"
 bundle_exists="FAIL"
 bundle_overall="FAIL"
 bundle_age_hours="-1"
@@ -166,7 +168,7 @@ if [[ -n "$latest_bundle" ]]; then
   fi
 fi
 
-latest_prev_drift="$(ls -1t test-reports/wave_c_b124_local_drift_watch_*.md 2>/dev/null | head -1 || true)"
+latest_prev_drift="$(ls -1t "$REPORTS_DIR"/wave_c_b124_local_drift_watch_*.md 2>/dev/null | head -1 || true)"
 drift_gap_check="BOOTSTRAP"
 drift_gap_hours="-1"
 

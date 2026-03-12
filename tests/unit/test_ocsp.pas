@@ -58,14 +58,24 @@ begin
     LCert := TCertificate.CreateSelfSigned('test.com').Certificate;
     LIssuer := TCertificate.CreateSelfSigned('issuer.com').Certificate;
     
-    LResp := LOCSP.CheckCertificate(LCert, LIssuer);
-    
-    if LResp.Status = ocspError then
-      WriteLn('✓ Correctly returned Error (Network/Mock)')
-    else
-      WriteLn('? Returned status: ', Ord(LResp.Status));
-      
-    WriteLn('  Message: ', LResp.ErrorMessage);
+    try
+      LResp := LOCSP.CheckCertificate(LCert, LIssuer);
+
+      if LResp.Status = ocspError then
+        WriteLn('✓ Correctly returned Error (Network/Mock)')
+      else
+        WriteLn('? Returned status: ', Ord(LResp.Status));
+
+      WriteLn('  Message: ', LResp.ErrorMessage);
+    except
+      on E: Exception do
+      begin
+        if Pos('OpenSSL API CheckCertificateStatus', E.Message) > 0 then
+          WriteLn('✓ Correctly fail-closed on missing OCSP status API')
+        else
+          raise;
+      end;
+    end;
     
     WriteLn;
     WriteLn('====================================');

@@ -456,8 +456,6 @@ end;
 function TWolfSSLCertificate.GetSerialNumber: string;
 var
   LSerial: Pointer;
-  LBuf: array[0..127] of Byte;
-  I, LLen: Integer;
 begin
   Result := '';
   if FX509 = nil then Exit;
@@ -823,7 +821,7 @@ begin
     Exit;
   end;
 
-  SetLength(Result, 0);
+  Result := nil;
   if FX509 = nil then Exit;
   if not Assigned(wolfSSL_X509_get_next_altname) then Exit;
 
@@ -846,12 +844,12 @@ end;
 
 function TWolfSSLCertificate.GetKeyUsage: TSSLStringArray;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 end;
 
 function TWolfSSLCertificate.GetExtendedKeyUsage: TSSLStringArray;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 end;
 
 function TWolfSSLCertificate.GetFingerprint(AHashType: TSSLHash): string;
@@ -860,6 +858,8 @@ begin
   case AHashType of
     sslHashSHA1: Result := GetFingerprintSHA1;
     sslHashSHA256: Result := GetFingerprintSHA256;
+  else
+    Result := '';
   end;
 end;
 
@@ -1204,7 +1204,7 @@ var
   LIssuer: ISSLCertificate;
   LMaxDepth: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   if ACert = nil then Exit;
 
   SetLength(LChain, 0);

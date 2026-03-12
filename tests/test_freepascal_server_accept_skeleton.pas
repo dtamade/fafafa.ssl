@@ -85,11 +85,12 @@ begin
   LCtx.SetPreferredVersion(sslProtocolTLS13);
   LCtx.LoadCertificate('tests/certificate/test_certs/signer_cert.pem');
   LCtx.LoadPrivateKey('tests/certificate/test_certs/signer_key.pem');
+  LCtx.SetALPNProtocols('h2,http/1.1');
 
   GenerateX25519KeyPair(LClientPrivate, LClientPublic);
   LClientHelloRecord := BuildClientHelloRecordWithSingleCipher(
     'localhost',
-    '',
+    'h2,http/1.1',
     LClientPublic,
     TLS13_CIPHER_AES_128_GCM_SHA256
   );
@@ -121,6 +122,8 @@ begin
       'Server skeleton should at least negotiate TLS 1.3 before stopping');
     AssertTrue(LConn.GetCipherName = 'TLS_AES_128_GCM_SHA256',
       'Server skeleton should select AES-128-GCM when client offers it');
+    AssertTrue(LConn.GetSelectedALPNProtocol = 'h2',
+      'Server skeleton should select the first compatible ALPN protocol');
 
     LServerResponseLen := LIOStream.Size - Length(LClientHelloRecord);
     AssertTrue(LServerResponseLen > 0, 'Server should write a ServerHello record to transport');

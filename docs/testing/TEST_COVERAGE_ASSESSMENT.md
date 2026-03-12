@@ -1,5 +1,8 @@
 # Test Coverage Assessment - fafafa.ssl
 
+
+> **Historical snapshot:** This page captures a point-in-time testing or validation snapshot and may not reflect the current repository state. For current verification commands and active workflow guidance, start with `docs/testing/TESTING_README.md`.
+
 **Assessment Date**: 2025-10-28  
 **Assessor**: AI Engineer  
 **Project Version**: v1.0.0-rc.1

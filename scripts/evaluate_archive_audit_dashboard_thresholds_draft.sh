@@ -97,6 +97,29 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_DASHBOARD_THRESHOLD_POLICY_${POLICY_ID}.md"
 fi
 
+resolve_input_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  elif [[ -e "$path" ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+resolve_output_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+DASHBOARD_FILE="$(resolve_input_path "$DASHBOARD_FILE")"
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] policy_id=$POLICY_ID"
   echo "[DRY-RUN] dashboard=$DASHBOARD_FILE"

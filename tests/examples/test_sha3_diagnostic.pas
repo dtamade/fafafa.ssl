@@ -172,7 +172,8 @@ begin
   
   try
     // 加载OpenSSL
-    if not LoadOpenSSLCore then
+    LoadOpenSSLCore;
+    if GetCryptoLibHandle = 0 then
     begin
       WriteLn('FATAL: Failed to load OpenSSL core');
       Halt(1);

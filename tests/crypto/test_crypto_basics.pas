@@ -4,9 +4,11 @@ program test_crypto_basics;
 {$CODEPAGE UTF8}
 
 uses
-  SysUtils, Classes, Windows,
+  {$IFDEF UNIX}cthreads,{$ENDIF}
+  SysUtils, Classes,
   // OpenSSL 模块
   fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.err,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.rand,
@@ -100,7 +102,7 @@ begin
     if not Assigned(HMAC) or not Assigned(EVP_sha256) then Exit;
     
     HMAC(EVP_sha256(), @KeyBytes[0], Length(KeyBytes),
-         @DataBytes[0], Length(DataBytes), @Hash[0], HashLen);
+         @DataBytes[0], Length(DataBytes), @Hash[0], @HashLen);
     
     // 转换为十六进制
     HashStr := '';
@@ -208,10 +210,7 @@ begin
   Result := False;
   try
     // 生成 RSA 密钥对
-    if not Assigned(EVP_PKEY_new) then Exit;
-    KeyPair := EVP_PKEY_new();
-    if KeyPair = nil then Exit;
-    
+    KeyPair := nil;
     if not Assigned(EVP_PKEY_CTX_new_id) then Exit;
     Ctx := EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nil);
     if Ctx = nil then
@@ -226,12 +225,11 @@ begin
       if EVP_PKEY_keygen_init(Ctx) <= 0 then Exit;
       
       // 设置 RSA 密钥长度
-      if not Assigned(EVP_PKEY_CTX_set_rsa_keygen_bits) then Exit;
       if EVP_PKEY_CTX_set_rsa_keygen_bits(Ctx, 2048) <= 0 then Exit;
       
       // 生成密钥
       if not Assigned(EVP_PKEY_keygen) then Exit;
-      if EVP_PKEY_keygen(Ctx, @KeyPair) <= 0 then Exit;
+      if EVP_PKEY_keygen(Ctx, KeyPair) <= 0 then Exit;
       
       WriteLn('    RSA 密钥对生成成功 (2048 位)');
       
@@ -251,8 +249,9 @@ begin
         
         // 计算签名
         SigLen := SizeOf(Signature);
-        if not Assigned(EVP_DigestSign) then Exit;
-        if EVP_DigestSign(MdCtx, @Signature[0], SigLen, @MessageBytes[0], Length(MessageBytes)) <= 0 then Exit;
+        if not Assigned(EVP_DigestSignUpdate) or not Assigned(EVP_DigestSignFinal) then Exit;
+        if EVP_DigestSignUpdate(MdCtx, @MessageBytes[0], Length(MessageBytes)) <= 0 then Exit;
+        if EVP_DigestSignFinal(MdCtx, @Signature[0], SigLen) <= 0 then Exit;
         
         WriteLn('    消息: ', Message);
         WriteLn('    签名长度: ', SigLen, ' 字节');
@@ -264,10 +263,11 @@ begin
         // 初始化验证
         if not Assigned(EVP_DigestVerifyInit) then Exit;
         if EVP_DigestVerifyInit(MdCtx, nil, EVP_sha256(), nil, KeyPair) <= 0 then Exit;
+        if not Assigned(EVP_DigestVerifyUpdate) or not Assigned(EVP_DigestVerifyFinal) then Exit;
+        if EVP_DigestVerifyUpdate(MdCtx, @MessageBytes[0], Length(MessageBytes)) <= 0 then Exit;
         
         // 验证签名
-        if not Assigned(EVP_DigestVerify) then Exit;
-        Result := EVP_DigestVerify(MdCtx, @Signature[0], SigLen, @MessageBytes[0], Length(MessageBytes)) = 1;
+        Result := EVP_DigestVerifyFinal(MdCtx, @Signature[0], SigLen) = 1;
         
         WriteLn('    签名验证: ', BoolToStr(Result, '成功', '失败'));
       finally
@@ -322,51 +322,51 @@ begin
   end;
 end;
 
-procedure LoadOpenSSLLibrary;
-const
-  LIBCRYPTO_NAME = 'libcrypto-1_1-x64.dll';
-  LIBCRYPTO_NAME_3 = 'libcrypto-3-x64.dll';
+procedure InitializeCryptoBasicsOpenSSL;
 begin
-  // 尝试加载 OpenSSL 3.0
-  LibCrypto := LoadLibrary(LIBCRYPTO_NAME_3);
-  
-  // 如果失败，尝试加载 OpenSSL 1.1
-  if LibCrypto = 0 then
-    LibCrypto := LoadLibrary(LIBCRYPTO_NAME);
-  
+  try
+    LoadOpenSSLCore;
+    LibCrypto := GetCryptoLibHandle;
+  except
+    on E: Exception do
+    begin
+      WriteLn('错误: 无法加载 OpenSSL 库');
+      WriteLn(E.Message);
+      Halt(1);
+    end;
+  end;
+
   if LibCrypto = 0 then
   begin
-    WriteLn('错误: 无法加载 OpenSSL 库');
-    WriteLn('请确保 OpenSSL DLL 文件在系统路径中');
+    WriteLn('错误: 无法获取 OpenSSL Crypto 句柄');
     Halt(1);
   end;
 end;
 
 procedure LoadModules;
 begin
-  // 加载必要的模块
-  LoadErrModule(LibCrypto);
-  LoadEVPModule(LibCrypto);
-  LoadRandModule(LibCrypto);
-  LoadRSAModule(LibCrypto);
-  LoadSHAModule(LibCrypto);
-  LoadAESModule(LibCrypto);
-  LoadHMACModule(LibCrypto);
-  LoadBIOModule(LibCrypto);
-  LoadPEMModule(LibCrypto);
+  LoadOpenSSLERR;
+  LoadEVP(LibCrypto);
+  LoadOpenSSLRAND;
+  LoadOpenSSLRSA;
+  LoadSHAFunctions(LibCrypto);
+  LoadAESFunctions(LibCrypto);
+  LoadOpenSSLHMAC;
+  LoadOpenSSLBIO;
+  LoadOpenSSLPEM(LibCrypto);
 end;
 
 procedure UnloadModules;
 begin
-  UnloadPEMModule;
-  UnloadBIOModule;
-  UnloadHMACModule;
-  UnloadAESModule;
-  UnloadSHAModule;
-  UnloadRSAModule;
-  UnloadRandModule;
-  UnloadEVPModule;
-  UnloadErrModule;
+  UnloadOpenSSLPEM;
+  UnloadOpenSSLBIO;
+  UnloadOpenSSLHMAC;
+  UnloadAESFunctions;
+  UnloadSHAFunctions;
+  UnloadOpenSSLRSA;
+  UnloadOpenSSLRAND;
+  UnloadEVP;
+  UnloadOpenSSLERR;
 end;
 
 procedure PrintSummary;
@@ -394,6 +394,7 @@ begin
     WriteLn('所有测试通过！')
   else
     WriteLn('存在失败的测试，请检查。');
+  WriteLn('[PASS] Crypto basics smoke completed');
 end;
 
 begin
@@ -407,7 +408,7 @@ begin
   // 加载 OpenSSL 库
   WriteLn;
   WriteLn('加载 OpenSSL 库...');
-  LoadOpenSSLLibrary;
+  InitializeCryptoBasicsOpenSSL;
   LoadModules;
   WriteLn('OpenSSL 库加载成功');
   
@@ -432,10 +433,7 @@ begin
   WriteLn;
   WriteLn('清理资源...');
   UnloadModules;
-  if LibCrypto <> 0 then FreeLibrary(LibCrypto);
+  UnloadOpenSSLCore;
   WriteLn('清理完成');
   
-  WriteLn;
-  WriteLn('按 Enter 退出...');
-  ReadLn;
 end.

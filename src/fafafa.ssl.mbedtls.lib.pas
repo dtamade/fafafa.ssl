@@ -440,8 +440,6 @@ begin
     sslFeatRenegotiation: Result := False;  // 安全考虑，默认禁用
     sslFeatOCSPStapling: Result := False;   // 需要手动实现
     sslFeatCertificateTransparency: Result := False;
-  else
-    Result := False;
   end;
 end;
 
@@ -539,10 +537,16 @@ begin
 end;
 
 procedure TMbedTLSLibrary.SetDefaultConfig(const AConfig: TSSLConfig);
+var
+  LConfig: TSSLConfig;
 begin
-  FDefaultConfig := AConfig;
-  FLogLevel := AConfig.LogLevel;
-  FLogCallback := AConfig.LogCallback;
+  LConfig := AConfig;
+  TSSLFactory.NormalizeLibraryDefaultOwnerFields(LConfig, sslMbedTLS);
+  TSSLFactory.ValidateLibraryDefaultConfigFields(LConfig, 'TMbedTLSLibrary.SetDefaultConfig');
+  TSSLFactory.NormalizeConfig(LConfig);
+  FDefaultConfig := LConfig;
+  FLogLevel := LConfig.LogLevel;
+  FLogCallback := LConfig.LogCallback;
 end;
 
 function TMbedTLSLibrary.GetDefaultConfig: TSSLConfig;
@@ -578,6 +582,7 @@ end;
 procedure TMbedTLSLibrary.SetLogCallback(ACallback: TSSLLogCallback);
 begin
   FLogCallback := ACallback;
+  FDefaultConfig.LogCallback := ACallback;
 end;
 
 procedure TMbedTLSLibrary.Log(ALevel: TSSLLogLevel; const AMessage: string);
@@ -586,11 +591,19 @@ begin
 end;
 
 function TMbedTLSLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
+var
+  LConfig: TSSLConfig;
 begin
   if not FInitialized then
     raise ESSLInitError.Create('Cannot create context: MbedTLS library not initialized');
 
   Result := TMbedTLSContext.Create(Self, AType);
+  if Result <> nil then
+  begin
+    LConfig := FDefaultConfig;
+    LConfig.ContextType := AType;
+    TSSLFactory.ApplyConfigToContext(Result, LConfig);
+  end;
   InternalLog(sslLogDebug, 'Created MbedTLS context');
 end;
 
@@ -629,7 +642,7 @@ procedure RegisterMbedTLSBackend;
 begin
   try
     TSSLFactory.RegisterLibrary(sslMbedTLS, TMbedTLSLibrary,
-      'MbedTLS (Embedded TLS)', 175);
+      'MbedTLS (Embedded TLS)', 175, @CreateMbedTLSLibrary);
   except
   end;
 end;

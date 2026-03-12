@@ -7,8 +7,8 @@
 ## 验收 run
 
 - run_id: `20260208_173726`
-- B101 full gate: `test-reports/wave_c_b101_validation_20260208_173726.md`
-- Quick bundle: `test-reports/wave_c_quick_sprint_bundle_20260208_173726.md`
+- B101 full gate: `docs/archive/reports/wave-c-quick-enablement-history/wave_c_b101_validation_20260208_173726.md`
+- Quick bundle: `docs/archive/reports/wave-c-quick-enablement-history/wave_c_quick_sprint_bundle_20260208_173726.md`
 
 ## 关键结果
 

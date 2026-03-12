@@ -19,7 +19,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.factory,
   fafafa.ssl.exceptions,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   fafafa.ssl.wolfssl.lib,
   fafafa.ssl.mbedtls.lib;
 

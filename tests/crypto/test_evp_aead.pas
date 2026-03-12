@@ -7,6 +7,8 @@ uses
   SysUtils,
   DynLibs,
   fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.evp;
 
 // Helper function to convert bytes to hex string
@@ -397,8 +399,23 @@ begin
   
   // Initialize OpenSSL
   try
-    if not LoadOpenSSLLibrary then
-      raise Exception.Create('Failed to load OpenSSL library');
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('ERROR: Failed to load OpenSSL library: ', E.Message);
+        UnloadOpenSSLCore;
+    Halt(1);
+      end;
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
+    begin
+      WriteLn('ERROR: OpenSSL core did not stay loaded');
+      Halt(1);
+    end;
+
   except
     on E: Exception do
     begin
@@ -464,12 +481,14 @@ begin
   if LPassCount = LTotalCount then
   begin
     WriteLn('🎉 All AEAD tests PASSED!');
+    WriteLn('[PASS] evp aead validation completed');
     WriteLn;
     WriteLn('AEAD (Authenticated Encryption with Associated Data) provides:');
     WriteLn('  • Confidentiality (encryption)');
     WriteLn('  • Integrity (authentication)');
     WriteLn('  • Protection against tampering');
     WriteLn('  • Support for additional authenticated data (AAD)');
+    UnloadOpenSSLCore;
     Halt(0);
   end
   else

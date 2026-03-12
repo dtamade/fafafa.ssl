@@ -27,7 +27,7 @@ uses
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.rand,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   fafafa.ssl.openssl.loader,
   test_openssl_base;
 

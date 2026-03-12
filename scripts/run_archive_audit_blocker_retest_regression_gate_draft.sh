@@ -97,6 +97,30 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_BLOCKER_RETEST_REGRESSION_GATE_${GATE_ID}.md"
 fi
 
+resolve_input_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  elif [[ -e "$path" ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+resolve_output_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+CLOSURE_RECORD_FILE="$(resolve_input_path "$CLOSURE_RECORD_FILE")"
+APPROVAL_CHAIN_FILE="$(resolve_input_path "$APPROVAL_CHAIN_FILE")"
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] gate_id=$GATE_ID"
   echo "[DRY-RUN] closure_record=$CLOSURE_RECORD_FILE"

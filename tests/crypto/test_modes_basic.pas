@@ -5,6 +5,8 @@ program test_modes_basic;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.modes;
 
@@ -207,10 +209,20 @@ begin
   WriteLn;
   
   try
-    // Load OpenSSL library
-    if not LoadOpenSSLLibrary then
+    // Load OpenSSL core
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('ERROR: Failed to load OpenSSL library: ', E.Message);
+        Halt(1);
+      end;
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
-      WriteLn('ERROR: Failed to load OpenSSL library');
+      WriteLn('ERROR: OpenSSL core did not stay loaded');
       Halt(1);
     end;
     
@@ -221,7 +233,7 @@ begin
       Halt(1);
     end;
     
-    WriteLn('OpenSSL Version: ', GetOpenSSLVersion);
+    WriteLn('OpenSSL Version: ', GetOpenSSLVersionString);
     WriteLn;
     
     // Run tests

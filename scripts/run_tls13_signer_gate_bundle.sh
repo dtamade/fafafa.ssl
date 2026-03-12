@@ -3,7 +3,8 @@
 set -euo pipefail
 
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
-REPORTS_DIR="test-reports"
+DEFAULT_REPORTS_DIR="tmp/tls13_signer_gate_reports"
+REPORTS_DIR="${FAFAFA_TLS13_SIGNER_GATE_REPORTS_DIR:-$DEFAULT_REPORTS_DIR}"
 OUTPUT_FILE=""
 STRICT=false
 ARCHIVE_ENABLED="${FAFAFA_TLS13_SIGNER_GATE_ARCHIVE:-1}"
@@ -22,7 +23,7 @@ TLS13 Signer Gate Bundle
 
 选项：
   --run-id ID         指定 run_id
-  --reports-dir DIR   报告目录（默认 test-reports）
+  --reports-dir DIR   报告目录（默认 tmp/tls13_signer_gate_reports）
   --output FILE       输出汇总报告路径
   --strict            任一步骤失败返回非 0
   --help              显示帮助
@@ -84,28 +85,39 @@ status_log="$REPORTS_DIR/tls13_signer_gate_status_${RUN_ID}.log"
 archive_log="$REPORTS_DIR/tls13_signer_gate_archive_${RUN_ID}.log"
 
 run_step() {
-  local cmd="$1"
-  local log="$2"
+  local log="$1"
+  shift
 
   set +e
-  eval "$cmd" > "$log" 2>&1
+  "$@" > "$log" 2>&1
   local ec=$?
   set -e
 
   echo "$ec"
 }
 
-ci_exit=$(run_step \
-  "FAFAFA_TLS13_SIGNER_GATE_RUN_ID='${RUN_ID}' FAFAFA_TLS13_SIGNER_GATE_OUTPUT_DIR='${REPORTS_DIR}' FAFAFA_TLS13_SIGNER_GATE_ARCHIVE=0 bash scripts/run_tls13_signer_gate_ci.sh" \
-  "$ci_log")
+ci_exit=$(run_step "$ci_log" \
+  env \
+  "FAFAFA_TLS13_SIGNER_GATE_RUN_ID=$RUN_ID" \
+  "FAFAFA_TLS13_SIGNER_GATE_OUTPUT_DIR=$REPORTS_DIR" \
+  "FAFAFA_TLS13_SIGNER_GATE_ARCHIVE=0" \
+  bash scripts/run_tls13_signer_gate_ci.sh)
 
-snapshot_exit=$(run_step \
-  "bash scripts/generate_tls13_signer_gate_snapshot.sh --run-id '${RUN_ID}' --output '${snapshot_report}' --summary '${ci_summary}' --bench-json '${ci_bench_json}' --history '${ci_history}'" \
-  "$snapshot_log")
+snapshot_exit=$(run_step "$snapshot_log" \
+  bash scripts/generate_tls13_signer_gate_snapshot.sh \
+  --run-id "$RUN_ID" \
+  --output "$snapshot_report" \
+  --summary "$ci_summary" \
+  --bench-json "$ci_bench_json" \
+  --history "$ci_history")
 
-status_exit=$(run_step \
-  "bash scripts/export_tls13_signer_gate_status_json.sh --run-id '${RUN_ID}' --output '${status_json}' --summary '${ci_summary}' --snapshot '${snapshot_report}' --bench-json '${ci_bench_json}'" \
-  "$status_log")
+status_exit=$(run_step "$status_log" \
+  bash scripts/export_tls13_signer_gate_status_json.sh \
+  --run-id "$RUN_ID" \
+  --output "$status_json" \
+  --summary "$ci_summary" \
+  --snapshot "$snapshot_report" \
+  --bench-json "$ci_bench_json")
 
 archive_exit="SKIP"
 archive_output="(disabled)"
@@ -113,9 +125,14 @@ archive_log_ref="(disabled)"
 if [[ "$ARCHIVE_ENABLED" == "1" ]]; then
   archive_output="$ARCHIVE_ROOT/$archive_run_id"
   archive_log_ref="$archive_log"
-  archive_exit=$(run_step \
-    "bash scripts/archive_ci_artifacts_draft.sh --profile '${ARCHIVE_PROFILE}' --run-id '${archive_run_id}' --output-root '${ARCHIVE_ROOT}'" \
-    "$archive_log")
+  archive_exit=$(run_step "$archive_log" \
+    env \
+    "FAFAFA_WAVE_B_REPORTS_DIR=$REPORTS_DIR" \
+    "FAFAFA_TLS13_SIGNER_GATE_REPORTS_DIR=$REPORTS_DIR" \
+    bash scripts/archive_ci_artifacts_draft.sh \
+    --profile "$ARCHIVE_PROFILE" \
+    --run-id "$archive_run_id" \
+    --output-root "$ARCHIVE_ROOT")
 fi
 
 overall="PASS"

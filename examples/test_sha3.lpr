@@ -4,9 +4,9 @@ program test_sha3;
 
 uses
   SysUtils, Classes, DynLibs,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.sha3;
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.sha3;
 
 var
   TestsPassed: Integer = 0;

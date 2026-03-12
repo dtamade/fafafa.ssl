@@ -1,4 +1,4 @@
-name: CI
+name: Linux OpenSSL CI
 
 on:
   push:
@@ -6,82 +6,32 @@ on:
   pull_request:
     branches: [ master, main ]
   schedule:
-    # Run daily at 00:00 UTC
     - cron: '0 0 * * *'
 
-env:
-  FPC_VERSION: '3.2.2'
+concurrency:
+  group: linux-openssl-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # ============================================================================
-  # OpenSSL Module Tests - Linux 平台测试
-  # 注意：macOS 和 Windows 平台支持正在开发中
-  # ============================================================================
-  openssl-module-tests:
+  linux-local-verified-gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install Free Pascal and OpenSSL
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y fpc libssl-dev
-        fpc -iV
-        openssl version
+      - name: Install Free Pascal and OpenSSL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fpc libssl-dev python3
+          fpc -iV
+          openssl version
 
-    - name: Create output directories
-      run: |
-        mkdir -p bin
-        mkdir -p test-reports
+      - name: Compile core Pascal modules
+        run: |
+          python3 scripts/compile_all_modules.py
 
-    - name: Run all module tests
-      run: |
-        chmod +x scripts/run_all_module_tests.sh
-        ./scripts/run_all_module_tests.sh --verbose
-
-    - name: Upload test reports
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-reports
-        path: test-reports/
-        retention-days: 30
-
-    - name: Generate test summary
-      if: always()
-      run: |
-        echo "## 测试结果摘要" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        if [ -f test-reports/test_report_*.txt ]; then
-          LATEST_REPORT=$(ls -t test-reports/test_report_*.txt | head -1)
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          tail -30 "$LATEST_REPORT" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        fi
-
-  # ============================================================================
-  # Code Quality Checks
-  # ============================================================================
-  code-quality:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Check for TODO/FIXME
-      run: |
-        echo "=== Checking for TODO/FIXME markers ==="
-        grep -rn "TODO\|FIXME" src/*.pas || echo "No TODO/FIXME found"
-
-    - name: Check line count statistics
-      run: |
-        echo "=== Source code statistics ==="
-        echo "Pascal source files:"
-        find src -name "*.pas" | wc -l
-        echo "Total lines:"
-        find src -name "*.pas" -exec cat {} \; | wc -l
-        echo "Test files:"
-        find tests -name "*.pas" | wc -l
+      - name: Run fast-local smoke gate
+        run: |
+          bash scripts/run_minimal_ci_gate.sh --fast-local

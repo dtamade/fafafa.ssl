@@ -15,12 +15,16 @@ program test_config_snapshot_clone;
 uses
   SysUtils,
   fafafa.ssl.base,
+  fafafa.ssl.factory,
   fafafa.ssl.context.builder,
-  fafafa.ssl.cert.utils;
+  fafafa.ssl.cert.utils,
+  fafafa.ssl.freepascal.context;
 
 var
   GTestsPassed: Integer = 0;
   GTestsFailed: Integer = 0;
+
+{$I test_fake_default_backend_fixture.inc}
 
 procedure Assert(ACondition: Boolean; const AMessage: string);
 begin
@@ -180,16 +184,21 @@ begin
     Exit;
   end;
 
-  LBuilder := TSSLContextBuilder.Create
-    .WithTLS13
-    .WithVerifyNone
-    .Reset  // Reset and continue chaining
-    .WithCertificatePEM(LCert)
-    .WithPrivateKeyPEM(LKey);
+  RegisterTestDefaultFakeLibrary;
+  try
+    LBuilder := TSSLContextBuilder.Create
+      .WithTLS13
+      .WithVerifyNone
+      .Reset  // Reset and continue chaining
+      .WithCertificatePEM(LCert)
+      .WithPrivateKeyPEM(LKey);
 
-  LResult := LBuilder.TryBuildServer(LContext);
+    LResult := LBuilder.TryBuildServer(LContext);
 
-  Assert(LResult.IsOk, 'Reset in chain allows successful build');
+    Assert(LResult.IsOk, 'Reset in chain allows successful build');
+  finally
+    CleanupTestDefaultFakeLibrary;
+  end;
 end;
 
 { Test 6: Merge from empty source }
@@ -360,23 +369,28 @@ begin
     Exit;
   end;
 
-  LBuilder := TSSLContextBuilder.Create
-    .WithCertificatePEM(LCert)
-    .WithPrivateKeyPEM(LKey);
+  RegisterTestDefaultFakeLibrary;
+  try
+    LBuilder := TSSLContextBuilder.Create
+      .WithCertificatePEM(LCert)
+      .WithPrivateKeyPEM(LKey);
 
-  // Build first context
-  LResult := LBuilder.TryBuildServer(LContext1);
-  Assert(LResult.IsOk, 'First build succeeds');
+    // Build first context
+    LResult := LBuilder.TryBuildServer(LContext1);
+    Assert(LResult.IsOk, 'First build succeeds');
 
-  // Reset and build again
-  LBuilder.Reset
-    .WithCertificatePEM(LCert)
-    .WithPrivateKeyPEM(LKey);
+    // Reset and build again
+    LBuilder.Reset
+      .WithCertificatePEM(LCert)
+      .WithPrivateKeyPEM(LKey);
 
-  LResult := LBuilder.TryBuildServer(LContext2);
-  Assert(LResult.IsOk, 'Second build after reset succeeds');
+    LResult := LBuilder.TryBuildServer(LContext2);
+    Assert(LResult.IsOk, 'Second build after reset succeeds');
 
-  Assert(LContext1 <> LContext2, 'Reset creates new independent context');
+    Assert(LContext1 <> LContext2, 'Reset creates new independent context');
+  finally
+    CleanupTestDefaultFakeLibrary;
+  end;
 end;
 
 { Test 13: Preset clone }

@@ -185,7 +185,8 @@ type
     ssoNoTLSv1_2,           // 禁用 TLSv1.2
     ssoNoTLSv1_3,            // 禁用 TLSv1.3
     ssoRequireOCSPStapling,  // 强制要求 OCSP 装订（追加到末尾以保持历史序号兼容）
-    ssoEnableCertVerifyCache  // 启用证书验证缓存（默认关闭）
+    ssoEnableCertVerifyCache,  // 启用证书验证缓存（默认关闭）
+    ssoSkipCertVerifyCacheValidHitRefresh  // valid cache hit 时跳过 X509_verify_cert refresh（默认关闭）
   );
   TSSLOptions = set of TSSLOption;
 
@@ -973,12 +974,16 @@ type
 
     {** 设置 SNI 服务器名称（客户端使用）
         @param AServerName 服务器主机名
+        迁移路径：新代码应在 ISSLContext.CreateConnection(...) 之后，通过 ISSLClientConnection.SetServerName(...) 设置。
+        兼容边界：这个 context 值仅作为后续 client connection 的默认 fallback；server connection 不继承，且显式 connection override 优先。
         @deprecated 推荐使用 per-connection SNI：ISSLClientConnection.SetServerName *}
     procedure SetServerName(const AServerName: string);
       deprecated 'Use per-connection SNI via ISSLClientConnection.SetServerName';
 
     {** 获取 SNI 服务器名称
         @returns 服务器主机名
+        迁移路径：新代码应从 ISSLClientConnection.GetServerName(...) 读取当前连接上的实际值。
+        兼容边界：这里返回的是 context fallback bridge，不是连接运行期的唯一真相源。
         @deprecated 推荐使用 per-connection SNI：ISSLClientConnection.GetServerName *}
     function GetServerName: string;
       deprecated 'Use per-connection SNI via ISSLClientConnection.GetServerName';
@@ -2337,4 +2342,3 @@ begin
 end;
 
 end.
-

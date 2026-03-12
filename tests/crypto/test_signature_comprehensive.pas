@@ -4,7 +4,12 @@ program test_signature_comprehensive;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api;
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.api.rsa,
+  fafafa.ssl.openssl.loader;
 
 type
   TTestResult = record
@@ -85,35 +90,34 @@ var
   EVP_sha256: TEVP_sha256;
 
 procedure LoadSignatureFunctions;
-var
-  LibHandle: THandle;
 begin
-  LibHandle := LoadLibrary(CRYPTO_LIB);
-  if LibHandle = 0 then
-    raise Exception.Create('Failed to load ' + CRYPTO_LIB);
-  
-  Pointer(RSA_new) := GetProcAddress(LibHandle, 'RSA_new');
-  Pointer(RSA_free) := GetProcAddress(LibHandle, 'RSA_free');
-  Pointer(RSA_generate_key_ex) := GetProcAddress(LibHandle, 'RSA_generate_key_ex');
-  Pointer(RSA_size) := GetProcAddress(LibHandle, 'RSA_size');
-  Pointer(RSA_sign) := GetProcAddress(LibHandle, 'RSA_sign');
-  Pointer(RSA_verify) := GetProcAddress(LibHandle, 'RSA_verify');
-  Pointer(BN_new) := GetProcAddress(LibHandle, 'BN_new');
-  Pointer(BN_free) := GetProcAddress(LibHandle, 'BN_free');
-  Pointer(BN_set_word) := GetProcAddress(LibHandle, 'BN_set_word');
-  Pointer(EVP_PKEY_new) := GetProcAddress(LibHandle, 'EVP_PKEY_new');
-  Pointer(EVP_PKEY_free) := GetProcAddress(LibHandle, 'EVP_PKEY_free');
-  Pointer(EVP_PKEY_assign) := GetProcAddress(LibHandle, 'EVP_PKEY_assign');
-  Pointer(EVP_PKEY_CTX_new) := GetProcAddress(LibHandle, 'EVP_PKEY_CTX_new');
-  Pointer(EVP_PKEY_CTX_free) := GetProcAddress(LibHandle, 'EVP_PKEY_CTX_free');
-  Pointer(EVP_PKEY_sign_init) := GetProcAddress(LibHandle, 'EVP_PKEY_sign_init');
-  Pointer(EVP_PKEY_sign) := GetProcAddress(LibHandle, 'EVP_PKEY_sign');
-  Pointer(EVP_PKEY_verify_init) := GetProcAddress(LibHandle, 'EVP_PKEY_verify_init');
-  Pointer(EVP_PKEY_verify) := GetProcAddress(LibHandle, 'EVP_PKEY_verify');
-  Pointer(EVP_PKEY_CTX_set_rsa_padding) := GetProcAddress(LibHandle, 'EVP_PKEY_CTX_set_rsa_padding');
-  Pointer(EVP_PKEY_CTX_set_signature_md) := GetProcAddress(LibHandle, 'EVP_PKEY_CTX_set_signature_md');
-  Pointer(EVP_Digest) := GetProcAddress(LibHandle, 'EVP_Digest');
-  Pointer(EVP_sha256) := GetProcAddress(LibHandle, 'EVP_sha256');
+  LoadOpenSSLCore;
+  LoadEVP(GetCryptoLibHandle);
+  LoadOpenSSLBN;
+  LoadOpenSSLRSA;
+
+  Pointer(RSA_new) := GetCryptoProcAddress('RSA_new');
+  Pointer(RSA_free) := GetCryptoProcAddress('RSA_free');
+  Pointer(RSA_generate_key_ex) := GetCryptoProcAddress('RSA_generate_key_ex');
+  Pointer(RSA_size) := GetCryptoProcAddress('RSA_size');
+  Pointer(RSA_sign) := GetCryptoProcAddress('RSA_sign');
+  Pointer(RSA_verify) := GetCryptoProcAddress('RSA_verify');
+  Pointer(BN_new) := GetCryptoProcAddress('BN_new');
+  Pointer(BN_free) := GetCryptoProcAddress('BN_free');
+  Pointer(BN_set_word) := GetCryptoProcAddress('BN_set_word');
+  Pointer(EVP_PKEY_new) := GetCryptoProcAddress('EVP_PKEY_new');
+  Pointer(EVP_PKEY_free) := GetCryptoProcAddress('EVP_PKEY_free');
+  Pointer(EVP_PKEY_assign) := GetCryptoProcAddress('EVP_PKEY_assign');
+  Pointer(EVP_PKEY_CTX_new) := GetCryptoProcAddress('EVP_PKEY_CTX_new');
+  Pointer(EVP_PKEY_CTX_free) := GetCryptoProcAddress('EVP_PKEY_CTX_free');
+  Pointer(EVP_PKEY_sign_init) := GetCryptoProcAddress('EVP_PKEY_sign_init');
+  Pointer(EVP_PKEY_sign) := GetCryptoProcAddress('EVP_PKEY_sign');
+  Pointer(EVP_PKEY_verify_init) := GetCryptoProcAddress('EVP_PKEY_verify_init');
+  Pointer(EVP_PKEY_verify) := GetCryptoProcAddress('EVP_PKEY_verify');
+  Pointer(EVP_PKEY_CTX_set_rsa_padding) := GetCryptoProcAddress('EVP_PKEY_CTX_set_rsa_padding');
+  Pointer(EVP_PKEY_CTX_set_signature_md) := GetCryptoProcAddress('EVP_PKEY_CTX_set_signature_md');
+  Pointer(EVP_Digest) := GetCryptoProcAddress('EVP_Digest');
+  Pointer(EVP_sha256) := GetCryptoProcAddress('EVP_sha256');
 end;
 
 procedure AddResult(const AName: string; ASuccess: Boolean; const AError: string = '');
@@ -547,7 +551,17 @@ begin
   
   // Load OpenSSL
   try
-    if not LoadOpenSSLLibrary then
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('ERROR: Failed to load OpenSSL: ', E.Message);
+        Halt(1);
+      end;
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('ERROR: Failed to load OpenSSL library!');
       Halt(1);
@@ -569,7 +583,6 @@ begin
       Halt(1);
     end;
   end;
-  
   // Run tests
   TestRSAKeyGeneration;
   TestRSASignVerify;
@@ -580,7 +593,8 @@ begin
   PrintResults;
   
   // Cleanup
-  UnloadOpenSSLLibrary;
+  UnloadOpenSSLCore;
+  WriteLn('[PASS] signature comprehensive validation completed');
   
   // Exit with appropriate code
   if PassedTests = TotalTests then

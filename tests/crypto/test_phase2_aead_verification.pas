@@ -6,7 +6,8 @@ uses
   SysUtils,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.core,
-  fafafa.ssl.openssl.api.evp;
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.loader;
 
 type
   TTestResult = record
@@ -785,9 +786,27 @@ begin
     PrintHeader;
     
     // Load OpenSSL
-    if not LoadOpenSSLLibrary then
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('ERROR: Failed to load OpenSSL library: ', E.Message);
+        ExitCode := 1;
+        Exit;
+      end;
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('ERROR: Failed to load OpenSSL library');
+      ExitCode := 1;
+      Exit;
+    end;
+
+    if not LoadEVP(GetCryptoLibHandle) then
+    begin
+      WriteLn('ERROR: Failed to load EVP module');
       ExitCode := 1;
       Exit;
     end;
@@ -817,6 +836,7 @@ begin
     
     // Print results
     PrintResults;
+    WriteLn('[PASS] phase2 aead verification completed');
     
     // Set exit code
     if FailedTests = 0 then

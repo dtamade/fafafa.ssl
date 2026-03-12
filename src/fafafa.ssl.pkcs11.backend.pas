@@ -196,8 +196,6 @@ begin
                 
     btAuto:
       Result := IsBackendAvailable(btProvider) or IsBackendAvailable(btEngine);
-  else
-    Result := False;
   end;
 end;
 

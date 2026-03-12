@@ -7,6 +7,7 @@ uses
   fafafa.ssl,
   
   fafafa.ssl.base,
+  fafafa.ssl.native_handle,
   fafafa.ssl.factory;
 
 var
@@ -64,7 +65,7 @@ begin
     
     // Test 3: Get native handle
     WriteLn('Test 3: Get native handle');
-    WriteTestResult('Native handle is not nil', Store.GetNativeHandle <> nil);
+    WriteTestResult('Native handle is available', IsNativeHandleAvailable(Store));
     
     // Test 4: Clear empty store (should not crash)
     WriteLn('Test 4: Clear empty store');

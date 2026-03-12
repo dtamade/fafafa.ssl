@@ -15,7 +15,7 @@ uses
   {$IFNDEF WINDOWS}
   sockets,  // FPC sockets unit
   BaseUnix, Unix,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   {$ENDIF}
   {$IFDEF WINDOWS}Windows, WinSock2, fafafa.ssl.winssl.lib,{$ENDIF}
   fafafa.ssl.openssl.api,

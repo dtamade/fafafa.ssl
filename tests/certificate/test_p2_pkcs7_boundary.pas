@@ -423,6 +423,7 @@ begin
   begin
     WriteLn;
     WriteLn('🎉 所有边界测试通过！PKCS#7 模块边界处理正常');
+    WriteLn('[PASS] pkcs7 boundary completed');
   end;
 
   UnloadOpenSSLCore;

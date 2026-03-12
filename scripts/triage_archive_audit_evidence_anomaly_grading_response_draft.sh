@@ -91,6 +91,31 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_EVIDENCE_ANOMALY_GRADING_RESPONSE_${RESPONSE_ID}.md"
 fi
 
+resolve_input_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  elif [[ -e "$path" ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+resolve_output_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+AUDIT_REPORT="$(resolve_input_path "$AUDIT_REPORT")"
+ADAPTIVE_POLICY_REPORT="$(resolve_input_path "$ADAPTIVE_POLICY_REPORT")"
+VERSIONING_REPORT="$(resolve_input_path "$VERSIONING_REPORT")"
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] response_id=$RESPONSE_ID"
   echo "[DRY-RUN] audit_report=$AUDIT_REPORT"

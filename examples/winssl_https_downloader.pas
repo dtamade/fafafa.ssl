@@ -144,6 +144,7 @@ var
   LLib: ISSLLibrary;
   LCtx: ISSLContext;
   LConn: ISSLConnection;
+  LClientConn: ISSLClientConnection;
   LSocket: TSocket;
   LAddr: TSockAddrIn;
   LHostEnt: PHostEnt;
@@ -188,7 +189,6 @@ begin
 
     // Create client context
     LCtx := LLib.CreateContext(sslCtxClient);
-    LCtx.SetServerName(LComponents.Host);
     LCtx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 
     // Create TCP socket
@@ -224,6 +224,8 @@ begin
 
       // Create SSL connection
       LConn := LCtx.CreateConnection(LSocket);
+      if Supports(LConn, ISSLClientConnection, LClientConn) then
+        LClientConn.SetServerName(LComponents.Host);
 
       WriteLn('Performing TLS handshake...');
       if not LConn.Connect then

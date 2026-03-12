@@ -3,6 +3,7 @@
 set -euo pipefail
 
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
+REPORTS_DIR="${FAFAFA_TLS13_SIGNER_GATE_REPORTS_DIR:-tmp/tls13_signer_gate_reports}"
 OUTPUT_FILE=""
 SUMMARY_FILE=""
 BENCH_JSON_FILE=""
@@ -21,7 +22,8 @@ TLS13 Signer Gate Snapshot
 
 选项：
   --run-id ID       指定 run_id
-  --output FILE     输出报告路径
+  --reports-dir DIR 报告目录（默认 tmp/tls13_signer_gate_reports）
+  --output FILE     输出报告路径（默认 tmp/tls13_signer_gate_reports/tls13_signer_gate_snapshot_<run_id>.md）
   --summary FILE    指定 gate summary（默认自动取最新）
   --bench-json FILE 指定 bench json（默认自动取最新）
   --history FILE    指定历史汇总（默认自动取最新）
@@ -34,6 +36,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --run-id)
       RUN_ID="$2"
+      shift 2
+      ;;
+    --reports-dir)
+      REPORTS_DIR="$2"
       shift 2
       ;;
     --output)
@@ -69,21 +75,49 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/tls13_signer_gate_snapshot_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORTS_DIR/tls13_signer_gate_snapshot_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 
+resolve_run_scoped_artifact() {
+  local run_scoped_path="$1"
+  local glob_pattern="$2"
+
+  python3 - "$run_scoped_path" "$glob_pattern" <<'PY'
+import glob
+import os
+import sys
+
+run_scoped_path = sys.argv[1]
+glob_pattern = sys.argv[2]
+if os.path.isfile(run_scoped_path):
+    print(run_scoped_path)
+else:
+    matches = sorted(glob.glob(glob_pattern), key=lambda p: (os.path.getmtime(p), p), reverse=True)
+    if matches:
+        print(matches[0])
+PY
+}
+
+resolve_exact_artifact() {
+  local run_scoped_path="$1"
+
+  if [[ -f "$run_scoped_path" ]]; then
+    printf '%s\n' "$run_scoped_path"
+  fi
+}
+
 if [[ -z "$SUMMARY_FILE" ]]; then
-  SUMMARY_FILE="$(ls -1t test-reports/wave_b_ci_gate_summary_tls13_signer_*.md 2>/dev/null | head -1 || true)"
+  SUMMARY_FILE="$(resolve_run_scoped_artifact "$REPORTS_DIR/wave_b_ci_gate_summary_tls13_signer_${RUN_ID}.md" "$REPORTS_DIR/wave_b_ci_gate_summary_tls13_signer_*.md")"
 fi
 
 if [[ -z "$BENCH_JSON_FILE" ]]; then
-  BENCH_JSON_FILE="$(ls -1t test-reports/wave_b_tls13_signer_*.json 2>/dev/null | head -1 || true)"
+  BENCH_JSON_FILE="$(resolve_run_scoped_artifact "$REPORTS_DIR/wave_b_tls13_signer_${RUN_ID}.json" "$REPORTS_DIR/wave_b_tls13_signer_*.json")"
 fi
 
 if [[ -z "$HISTORY_FILE" ]]; then
-  HISTORY_FILE="$(ls -1t test-reports/tls13_signer_bench_history_*.md 2>/dev/null | head -1 || true)"
+  HISTORY_FILE="$(resolve_exact_artifact "$REPORTS_DIR/tls13_signer_bench_history_${RUN_ID}.md")"
 fi
 
 extract_overall_from_summary() {

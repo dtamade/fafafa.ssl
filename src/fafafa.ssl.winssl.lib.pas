@@ -601,10 +601,16 @@ end;
 // ============================================================================
 
 procedure TWinSSLLibrary.SetDefaultConfig(const AConfig: TSSLConfig);
+var
+  LConfig: TSSLConfig;
 begin
-  FDefaultConfig := AConfig;
-  FLogLevel := AConfig.LogLevel;
-  FLogCallback := AConfig.LogCallback;
+  LConfig := AConfig;
+  TSSLFactory.NormalizeLibraryDefaultOwnerFields(LConfig, sslWinSSL);
+  TSSLFactory.ValidateLibraryDefaultConfigFields(LConfig, 'TWinSSLLibrary.SetDefaultConfig');
+  TSSLFactory.NormalizeConfig(LConfig);
+  FDefaultConfig := LConfig;
+  FLogLevel := LConfig.LogLevel;
+  FLogCallback := LConfig.LogCallback;
   InternalLog(sslLogInfo, 'Default configuration updated');
 end;
 
@@ -721,6 +727,7 @@ end;
 procedure TWinSSLLibrary.SetLogCallback(ACallback: TSSLLogCallback);
 begin
   FLogCallback := ACallback;
+  FDefaultConfig.LogCallback := ACallback;
 end;
 
 procedure TWinSSLLibrary.Log(ALevel: TSSLLogLevel; const AMessage: string);
@@ -733,6 +740,8 @@ end;
 // ============================================================================
 
 function TWinSSLLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
+var
+  LConfig: TSSLConfig;
 begin
   // P0 后端语义统一：与 OpenSSL 后端保持一致的失败语义
   // 未初始化时抛出异常，而不是返回 nil
@@ -745,8 +754,12 @@ begin
   // 让异常传播 - 调用方必须显式处理错误
   Result := TWinSSLContext.Create(Self, AType);
 
-  if (Result <> nil) and (FDefaultConfig.Options <> []) then
-    Result.SetOptions(FDefaultConfig.Options);
+  if Result <> nil then
+  begin
+    LConfig := FDefaultConfig;
+    LConfig.ContextType := AType;
+    TSSLFactory.ApplyConfigToContext(Result, LConfig);
+  end;
 
   Inc(FStatistics.ConnectionsTotal);
   if AType = sslCtxClient then
@@ -801,7 +814,7 @@ begin
     // 在 Windows 平台上注册 WinSSL 后端
     // 优先级设为 200，高于 OpenSSL 的 100，使其成为 Windows 上的默认选择
     TSSLFactory.RegisterLibrary(sslWinSSL, TWinSSLLibrary,
-      'Windows Schannel (Native SSL/TLS)', 200);
+      'Windows Schannel (Native SSL/TLS)', 200, @CreateWinSSLLibrary);
   except
     on E: Exception do
     begin

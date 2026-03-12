@@ -24,7 +24,7 @@ uses
   fafafa.ssl.exceptions,
   fafafa.ssl.crypto.utils,
   fafafa.ssl.encoding,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.core,
   test_openssl_base;

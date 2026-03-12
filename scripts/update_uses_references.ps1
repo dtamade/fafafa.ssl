@@ -1,7 +1,26 @@
 # update_uses_references.ps1
 # 更新所有文件中对 OpenSSL 模块的 uses 引用
 
-$srcDir = "D:\projects\Pascal\lazarus\My\libs\fafafa.ssl"
+param(
+    [string]$ProjectRoot = ""
+)
+
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+    $resolvedProjectRoot = Split-Path -Parent $scriptDir
+}
+elseif ([System.IO.Path]::IsPathRooted($ProjectRoot)) {
+    $resolvedProjectRoot = $ProjectRoot
+}
+else {
+    $resolvedProjectRoot = Join-Path (Get-Location).Path $ProjectRoot
+}
+$resolvedProjectRoot = [System.IO.Path]::GetFullPath($resolvedProjectRoot)
+$srcDir = $resolvedProjectRoot
+
+if (-not (Test-Path $srcDir)) {
+    throw "project root not found: $srcDir"
+}
 
 Write-Host "==========================================="
 Write-Host "  更新 Uses 引用脚本"
@@ -47,7 +66,10 @@ foreach ($file in $files) {
     if ($fileChanged) {
         Set-Content $file.FullName -Value $content -NoNewline
         $updated++
-        $relPath = $file.FullName.Replace($srcDir + "\", "")
+        $relPath = $file.FullName
+        if ($relPath.StartsWith($srcDir, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $relPath = $relPath.Substring($srcDir.Length).TrimStart('\', '/')
+        }
         Write-Host "✓ $relPath" -ForegroundColor Green
     }
 }

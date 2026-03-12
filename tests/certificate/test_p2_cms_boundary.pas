@@ -161,6 +161,7 @@ begin
   if FailedTests = 0 then
   begin
     WriteLn('🎉 所有测试通过！CMS 边界测试工作正常');
+    WriteLn('[PASS] cms boundary completed');
     ExitCode := 0;
   end
   else

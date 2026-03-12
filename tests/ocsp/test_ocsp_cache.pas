@@ -195,6 +195,37 @@ begin
   end;
 end;
 
+procedure TestEmptySerialNumberRejected;
+var
+  Cache: TOCSPResponseCache;
+  EmptySerial, Response, Retrieved: TBytes;
+begin
+  StartTest('Empty serial number should not be cached');
+  try
+    Cache := TOCSPResponseCache.Create;
+    try
+      SetLength(EmptySerial, 0);
+      Response := CreateTestResponse(32);
+
+      Cache.Put(EmptySerial, Response, Now, IncHour(Now, 1));
+
+      if Cache.GetCount <> 0 then
+        FailTest('Empty serial should not create cache entry')
+      else if Cache.Contains(EmptySerial) then
+        FailTest('Contains should return false for empty serial')
+      else if Cache.Get(EmptySerial, Retrieved) then
+        FailTest('Get should return false for empty serial')
+      else
+        PassTest;
+    finally
+      Cache.Free;
+    end;
+  except
+    on E: Exception do
+      FailTest('Exception: ' + E.Message);
+  end;
+end;
+
 procedure TestContains;
 var
   Cache: TOCSPResponseCache;
@@ -220,6 +251,33 @@ begin
         else
           PassTest;
       end;
+    finally
+      Cache.Free;
+    end;
+  except
+    on E: Exception do
+      FailTest('Exception: ' + E.Message);
+  end;
+end;
+
+procedure TestSmallMaxEntriesStillStoresEntry;
+var
+  Cache: TOCSPResponseCache;
+  SerialNumber, Response, Retrieved: TBytes;
+begin
+  StartTest('Small MaxEntries should still store at least one entry');
+  try
+    Cache := TOCSPResponseCache.Create(1, 3600);
+    try
+      SerialNumber := CreateTestSerialNumber(1234);
+      Response := CreateTestResponse(40);
+
+      Cache.Put(SerialNumber, Response, Now, IncHour(Now, 1));
+
+      if not Cache.Get(SerialNumber, Retrieved) then
+        FailTest('Entry should be retrievable when MaxEntries=1')
+      else
+        PassTest;
     finally
       Cache.Free;
     end;
@@ -282,6 +340,35 @@ begin
         FailTest('Expired entry should be removed')
       else if Cache.Contains(SerialNumber) then
         FailTest('Entry should be removed after expired Get')
+      else
+        PassTest;
+    finally
+      Cache.Free;
+    end;
+  except
+    on E: Exception do
+      FailTest('Exception: ' + E.Message);
+  end;
+end;
+
+procedure TestContainsExpiredEntry;
+var
+  Cache: TOCSPResponseCache;
+  SerialNumber, Response: TBytes;
+begin
+  StartTest('Contains should reject expired entry and cleanup');
+  try
+    Cache := TOCSPResponseCache.Create;
+    try
+      SerialNumber := CreateTestSerialNumber(77);
+      Response := CreateTestResponse(32);
+
+      Cache.Put(SerialNumber, Response, IncSecond(Now, -10), IncSecond(Now, -1));
+
+      if Cache.Contains(SerialNumber) then
+        FailTest('Contains should return false for expired entry')
+      else if Cache.GetCount <> 0 then
+        FailTest('Expired entry should be removed by Contains check')
       else
         PassTest;
     finally
@@ -717,6 +804,188 @@ begin
   end;
 end;
 
+type
+  TGetPutStressThread = class(TThread)
+  private
+    FCache: TOCSPResponseCache;
+    FIterations: Integer;
+    FCompleted: Boolean;
+    FProgress: Integer;
+  protected
+    procedure Execute; override;
+  public
+    constructor Create(ACache: TOCSPResponseCache; AIterations: Integer);
+    property Completed: Boolean read FCompleted;
+    property Progress: Integer read FProgress;
+  end;
+
+  TStatsStressThread = class(TThread)
+  private
+    FCache: TOCSPResponseCache;
+    FIterations: Integer;
+    FCompleted: Boolean;
+    FProgress: Integer;
+  protected
+    procedure Execute; override;
+  public
+    constructor Create(ACache: TOCSPResponseCache; AIterations: Integer);
+    property Completed: Boolean read FCompleted;
+    property Progress: Integer read FProgress;
+  end;
+
+constructor TGetPutStressThread.Create(ACache: TOCSPResponseCache; AIterations: Integer);
+begin
+  inherited Create(True);
+  FCache := ACache;
+  FIterations := AIterations;
+  FCompleted := False;
+  FProgress := 0;
+  FreeOnTerminate := False;
+end;
+
+procedure TGetPutStressThread.Execute;
+var
+  I: Integer;
+  SerialNumber, Response, Retrieved: TBytes;
+begin
+  for I := 1 to FIterations do
+  begin
+    if Terminated then
+      Break;
+
+    SetLength(SerialNumber, 4);
+    SerialNumber[0] := 1;
+    SerialNumber[1] := Byte(I and $FF);
+    SerialNumber[2] := Byte((I shr 8) and $FF);
+    SerialNumber[3] := Byte((I shr 16) and $FF);
+
+    Response := CreateTestResponse(64);
+    FCache.Put(SerialNumber, Response, Now, IncSecond(Now, 30));
+    FCache.Get(SerialNumber, Retrieved);
+
+    FProgress := I;
+  end;
+  FCompleted := True;
+end;
+
+constructor TStatsStressThread.Create(ACache: TOCSPResponseCache; AIterations: Integer);
+begin
+  inherited Create(True);
+  FCache := ACache;
+  FIterations := AIterations;
+  FCompleted := False;
+  FProgress := 0;
+  FreeOnTerminate := False;
+end;
+
+procedure TStatsStressThread.Execute;
+var
+  I: Integer;
+  Stats: TOCSPCacheStats;
+begin
+  for I := 1 to FIterations do
+  begin
+    if Terminated then
+      Break;
+
+    Stats := FCache.GetStats;
+    if Stats.TotalEntries < 0 then
+      raise Exception.Create('Invalid TotalEntries');
+
+    if (I mod 1000) = 0 then
+      FCache.ResetStats;
+
+    FProgress := I;
+  end;
+  FCompleted := True;
+end;
+
+procedure TestConcurrentStatsAndGetNoDeadlock;
+const
+  StressIterations = 2000000;
+  MaxObserveMs = 12000;
+  StallMs = 1200;
+  ProgressTarget = 25000;
+var
+  Cache: TOCSPResponseCache;
+  GetPutThread: TGetPutStressThread;
+  StatsThread: TStatsStressThread;
+  StartTick, LastProgressTick: QWord;
+  LastGetProgress, LastStatsProgress: Integer;
+  Success: Boolean;
+  CanCleanup: Boolean;
+begin
+  StartTest('Concurrent Get/Put and GetStats/ResetStats should not deadlock');
+  Cache := nil;
+  GetPutThread := nil;
+  StatsThread := nil;
+  CanCleanup := False;
+  Success := False;
+  LastGetProgress := 0;
+  LastStatsProgress := 0;
+
+  try
+    Cache := TOCSPResponseCache.Create(20000, 3600);
+    GetPutThread := TGetPutStressThread.Create(Cache, StressIterations);
+    StatsThread := TStatsStressThread.Create(Cache, StressIterations);
+
+    GetPutThread.Start;
+    StatsThread.Start;
+
+    StartTick := GetTickCount64;
+    LastProgressTick := StartTick;
+
+    while (GetTickCount64 - StartTick) < MaxObserveMs do
+    begin
+      if (GetPutThread.Progress <> LastGetProgress) or
+         (StatsThread.Progress <> LastStatsProgress) then
+      begin
+        LastGetProgress := GetPutThread.Progress;
+        LastStatsProgress := StatsThread.Progress;
+        LastProgressTick := GetTickCount64;
+      end;
+
+      if (GetTickCount64 - LastProgressTick) > StallMs then
+      begin
+        FailTest('Potential deadlock detected: concurrent progress stalled');
+        Exit;
+      end;
+
+      if (LastGetProgress >= ProgressTarget) and
+         (LastStatsProgress >= ProgressTarget) then
+      begin
+        Success := True;
+        Break;
+      end;
+
+      Sleep(10);
+    end;
+
+    if not Success then
+    begin
+      FailTest('Stress observation timeout before reaching safe progress target');
+      Exit;
+    end;
+
+    GetPutThread.Terminate;
+    StatsThread.Terminate;
+    GetPutThread.WaitFor;
+    StatsThread.WaitFor;
+    CanCleanup := True;
+    PassTest;
+  except
+    on E: Exception do
+      FailTest('Exception: ' + E.Message);
+  end;
+
+  if CanCleanup then
+  begin
+    GetPutThread.Free;
+    StatsThread.Free;
+    Cache.Free;
+  end;
+end;
+
 // ========================================================================
 // 测试: 持久化
 // ========================================================================
@@ -921,6 +1190,12 @@ begin
   try
     FillChar(Entry, SizeOf(Entry), 0);
 
+    // Unknown/zero nextUpdate should fail closed
+    Entry.NextUpdate := 0;
+    if not Entry.IsExpired then
+      FailTest('Entry with NextUpdate=0 should be treated as expired')
+    else
+    begin
     // 测试过期条目
     Entry.NextUpdate := IncHour(Now, -1);  // 1 小时前过期
     if not Entry.IsExpired then
@@ -933,6 +1208,7 @@ begin
         FailTest('Entry should not be expired')
       else
         PassTest;
+    end;
     end;
   except
     on E: Exception do
@@ -1056,11 +1332,14 @@ begin
   TestPutAndGet;
   TestGetNonexistent;
   TestPutEmptyResponse;
+  TestEmptySerialNumberRejected;
   TestContains;
+  TestSmallMaxEntriesStillStoresEntry;
 
   // 过期处理测试
   TestExpiredEntryReturnsMiss;
   TestAutoExpireOnGet;
+  TestContainsExpiredEntry;
 
   // 更新和删除测试
   TestUpdateEntry;
@@ -1078,6 +1357,7 @@ begin
   // 并发测试
   TestConcurrentPut;
   TestConcurrentGet;
+  TestConcurrentStatsAndGetNoDeadlock;
 
   // 持久化测试
   TestSaveToFile;

@@ -24,28 +24,55 @@ mkdir -p "$TESTS_DIR/framework/bin"
 VERBOSE=${VERBOSE:-0}
 
 # Find FPC
-FPC=$(which fpc 2>/dev/null || echo "/home/dtamade/freePascal/fpc/bin/x86_64-linux/fpc")
+FPC="${FPC:-$(command -v fpc || true)}"
 
-if [ ! -x "$FPC" ]; then
+if [ -z "$FPC" ]; then
+    FPC_CANDIDATES=(
+        "$HOME/freePascal/fpc/bin/x86_64-linux/fpc"
+        "/usr/local/bin/fpc"
+        "/usr/bin/fpc"
+    )
+    for candidate in "${FPC_CANDIDATES[@]}"; do
+        if [ -x "$candidate" ]; then
+            FPC="$candidate"
+            break
+        fi
+    done
+fi
+
+if [ -z "$FPC" ] || [ ! -x "$FPC" ]; then
     echo "ERROR: Free Pascal compiler not found"
     exit 1
 fi
 
 echo "Using FPC: $FPC"
-echo "FPC Version: $($FPC -iV)"
+echo "FPC Version: $("$FPC" -iV)"
 echo ""
 
 # FPC unit paths
-FPC_UNITS="/home/dtamade/freePascal/fpc/units/x86_64-linux"
+FPC_UNITS="${FPC_UNITS:-$HOME/freePascal/fpc/units/x86_64-linux}"
+FPC_UNIT_DIRS=(
+    "$FPC_UNITS"
+    "$FPC_UNITS/rtl"
+    "$FPC_UNITS/rtl-objpas"
+    "$FPC_UNITS/rtl-console"
+    "$FPC_UNITS/rtl-extra"
+    "$FPC_UNITS/rtl-generics"
+    "$FPC_UNITS/fcl-base"
+    "$FPC_UNITS/fcl-json"
+    "$FPC_UNITS/fcl-fpcunit"
+    "$FPC_UNITS/pthreads"
+    "$FPC_UNITS/hash"
+)
+FPC_UNIT_FLAGS=""
+for unit_dir in "${FPC_UNIT_DIRS[@]}"; do
+    if [ -d "$unit_dir" ]; then
+        FPC_UNIT_FLAGS="$FPC_UNIT_FLAGS -Fi$unit_dir -Fu$unit_dir"
+    fi
+done
 
 # Compiler flags with full unit paths
-FPC_FLAGS="-Fu$SRC_DIR -Fu$OUTPUT_DIR"
-FPC_FLAGS="$FPC_FLAGS -Fi$FPC_UNITS -Fi$FPC_UNITS/rtl -Fi$FPC_UNITS/rtl-objpas"
-FPC_FLAGS="$FPC_FLAGS -Fu$FPC_UNITS -Fu$FPC_UNITS/rtl -Fu$FPC_UNITS/rtl-objpas"
-FPC_FLAGS="$FPC_FLAGS -Fu$FPC_UNITS/fcl-base -Fu$FPC_UNITS/rtl-console -Fu$FPC_UNITS/rtl-extra"
-FPC_FLAGS="$FPC_FLAGS -Fu$FPC_UNITS/pthreads -Fu$FPC_UNITS/fcl-json -Fu$FPC_UNITS/fcl-fpcunit"
-FPC_FLAGS="$FPC_FLAGS -Fu$FPC_UNITS/rtl-generics -Fu$FPC_UNITS/hash"
-FPC_FLAGS="$FPC_FLAGS -FE$OUTPUT_DIR -O2"
+FPC_FLAGS="-Fu$SRC_DIR -Fu$OUTPUT_DIR$FPC_UNIT_FLAGS -FE$OUTPUT_DIR -O2"
 
 # Track results
 COMPILED=0
@@ -57,7 +84,7 @@ for file in "$SRC_DIR"/*.pas; do
     if [ -f "$file" ]; then
         basename=$(basename "$file")
         echo -n "  Compiling $basename... "
-        if $FPC $FPC_FLAGS "$file" > /dev/null 2>&1; then
+        if "$FPC" $FPC_FLAGS "$file" > /dev/null 2>&1; then
             echo "OK"
             COMPILED=$((COMPILED + 1))
         else
@@ -72,18 +99,12 @@ compile_test() {
     local file="$1"
     local outdir="$2"
     local basename=$(basename "$file")
-    local TEST_FLAGS="-Fu$SRC_DIR -Fu$OUTPUT_DIR -Fu$TESTS_DIR/framework -Fu$TESTS_DIR/framework/bin"
-    TEST_FLAGS="$TEST_FLAGS -Fi$FPC_UNITS -Fi$FPC_UNITS/rtl -Fi$FPC_UNITS/rtl-objpas"
-    TEST_FLAGS="$TEST_FLAGS -Fu$FPC_UNITS -Fu$FPC_UNITS/rtl -Fu$FPC_UNITS/rtl-objpas"
-    TEST_FLAGS="$TEST_FLAGS -Fu$FPC_UNITS/fcl-base -Fu$FPC_UNITS/rtl-console -Fu$FPC_UNITS/rtl-extra"
-    TEST_FLAGS="$TEST_FLAGS -Fu$FPC_UNITS/pthreads -Fu$FPC_UNITS/fcl-json -Fu$FPC_UNITS/fcl-fpcunit"
-    TEST_FLAGS="$TEST_FLAGS -Fu$FPC_UNITS/rtl-generics -Fu$FPC_UNITS/hash"
-    TEST_FLAGS="$TEST_FLAGS -FE$outdir -O2"
+    local TEST_FLAGS="-Fu$SRC_DIR -Fu$OUTPUT_DIR -Fu$TESTS_DIR/framework -Fu$TESTS_DIR/framework/bin$FPC_UNIT_FLAGS -FE$outdir -O2"
 
     mkdir -p "$outdir"
     echo -n "  Compiling $basename... "
     if [ "$VERBOSE" = "1" ]; then
-        if $FPC $TEST_FLAGS "$file"; then
+        if "$FPC" $TEST_FLAGS "$file"; then
             echo "OK"
             COMPILED=$((COMPILED + 1))
         else
@@ -91,7 +112,7 @@ compile_test() {
             FAILED=$((FAILED + 1))
         fi
     else
-        if $FPC $TEST_FLAGS "$file" > /dev/null 2>&1; then
+        if "$FPC" $TEST_FLAGS "$file" > /dev/null 2>&1; then
             echo "OK"
             COMPILED=$((COMPILED + 1))
         else

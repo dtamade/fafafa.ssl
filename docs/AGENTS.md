@@ -6,6 +6,31 @@
 ## 构建、测试与开发命令
 在仓库根目录执行 `chmod +x build_linux.sh && ./build_linux.sh`，即可用统一的 FPC 选项编译所有 Lazarus 包并检查依赖。修改核心单元后先运行 `python3 scripts/compile_all_modules.py` 做快速构建门禁，评审前执行 `python3 scripts/check_code_style.py src` 捕捉模式或缩进问题。Windows 贡献者可通过 `powershell -ExecutionPolicy Bypass -File run_all_tests.ps1` 自动编译运行每个 `test_openssl_*.pas`；Linux 开发者可用 `fpc -Fu./src -Fu./src/openssl tests/test_<name>.pas` 或自定义脚本逐个执行。
 
+Minimal gate 快捷模式（高频本地验证）：
+
+```bash
+# 默认快速本地门禁（含 warning/noise 治理）
+bash scripts/run_minimal_ci_gate.sh --fast-local
+
+# 极致快速烟测（跳过 warning/noise 治理）
+bash scripts/run_minimal_ci_gate.sh --fast-local --skip-warning-noise-governance-batch
+
+# 提交前最小回归（fast-local + skip-warning + contract-batch）
+bash scripts/run_minimal_ci_gate.sh --pre-commit-minimal
+
+# pre-commit 三合同批次（preset/docs/help）
+bash scripts/run_minimal_ci_gate.sh --fast-local --skip-warning-noise-governance-batch --with-pre-commit-triplet-contract-batch
+
+# 仅平台路径 dry-run 合同
+bash scripts/run_minimal_ci_gate.sh --only-platform-path-check-dryrun
+
+# 仅 TLS13 签名基准
+bash scripts/run_minimal_ci_gate.sh --only-tls13-sign-bench
+
+# 提交前本地全合同回归（minimal gate 关键语义）
+bash scripts/run_minimal_ci_gate.sh --fast-local --skip-warning-noise-governance-batch --with-minimal-gate-contract-batch
+```
+
 ## 代码风格与命名约定
 所有 Pascal 单元须以 `{$mode ObjFPC}{$H+}` 开头，面向 Windows 的单元（`winssl`、`factory`、`abstract` 等）还需 `{$CODEPAGE UTF8}`。统一使用两个空格缩进、禁止 Tab，单行不超过 120 个字符。命名遵循 T/I/L/A/F 前缀：`TMyClass`、`IMyInterface`、局部 `LValue`、参数 `AValue`、字段 `FValue`；常量使用全大写下划线（如 `MAX_BUFFER_SIZE`）。对外 API 需要块注释说明用途，`scripts/check_code_style.py` 会验证这些规则。
 

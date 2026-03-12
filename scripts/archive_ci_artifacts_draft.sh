@@ -12,6 +12,10 @@ INCLUDE_BINARIES=false
 COMPRESS=true
 DRY_RUN=false
 
+WAVE_B_REPORTS_DIR="${FAFAFA_WAVE_B_REPORTS_DIR:-tmp/wave_b_reports}"
+TLS13_SIGNER_GATE_REPORTS_DIR="${FAFAFA_TLS13_SIGNER_GATE_REPORTS_DIR:-tmp/tls13_signer_gate_reports}"
+LEGACY_REPORTS_DIR="${FAFAFA_ARCHIVE_LEGACY_REPORTS_DIR:-test-reports}"
+
 RETENTION_CORE=30
 RETENTION_PERF=14
 RETENTION_DOC=30
@@ -305,28 +309,35 @@ log_info "dry_run: $DRY_RUN"
 log_info "include_binaries: $INCLUDE_BINARIES"
 
 collect_class_artifacts "core-reports" "$RETENTION_CORE" \
-  "test-reports/test_report_*.txt" \
-  "test-reports/*_result.txt" \
-  "test-reports/*_compile.log" \
-  "test-reports/wave_b_ci_gate_summary_*.md" \
-  "test-reports/wave_b_tls13_sign_purity_*.log" \
-  "test-reports/tls13_signer_gate_bundle_*.md" \
-  "test-reports/tls13_signer_gate_snapshot_*.md" \
-  "test-reports/tls13_signer_gate_status_*.json"
+  "$LEGACY_REPORTS_DIR/test_report_*.txt" \
+  "$LEGACY_REPORTS_DIR/*_result.txt" \
+  "$LEGACY_REPORTS_DIR/*_compile.log" \
+  "$WAVE_B_REPORTS_DIR/wave_b_ci_gate_summary_*.md" \
+  "$WAVE_B_REPORTS_DIR/wave_b_macos_gate_summary_*.md" \
+  "$WAVE_B_REPORTS_DIR/wave_b_windows_gate_summary_*.md" \
+  "$WAVE_B_REPORTS_DIR/winssl_blocker_batch_*.md" \
+  "$TLS13_SIGNER_GATE_REPORTS_DIR/wave_b_tls13_sign_purity_*.log" \
+  "$TLS13_SIGNER_GATE_REPORTS_DIR/tls13_signer_gate_bundle_*.md" \
+  "$TLS13_SIGNER_GATE_REPORTS_DIR/tls13_signer_gate_snapshot_*.md" \
+  "$TLS13_SIGNER_GATE_REPORTS_DIR/tls13_signer_gate_status_*.json"
 
 collect_class_artifacts "perf-baseline" "$RETENTION_PERF" \
   "tests/benchmarks/results/benchmark_summary_*.txt" \
   "tests/benchmarks/results/*.log" \
   "tests/benchmarks/results/*baseline*.json" \
-  "test-reports/wave_b_tls13_sign_bench_*.log" \
-  "test-reports/wave_b_tls13_signer_*.json" \
-  "test-reports/tls13_signer_bench_history_*.md"
-
+  "$TLS13_SIGNER_GATE_REPORTS_DIR/wave_b_tls13_sign_bench_*.log" \
+  "$TLS13_SIGNER_GATE_REPORTS_DIR/wave_b_tls13_signer_*.json" \
+  "$TLS13_SIGNER_GATE_REPORTS_DIR/tls13_signer_bench_history_*.md"
 collect_class_artifacts "docs-evidence" "$RETENTION_DOC" \
   "docs/test_reports/PHASE2_*.md" \
   "docs/plans/PHASE3_*.md"
 
 collect_class_artifacts "debug-logs" "$RETENTION_DEBUG" \
+  "$WAVE_B_REPORTS_DIR/wave_b_compile_*.log" \
+  "$WAVE_B_REPORTS_DIR/wave_b_modules_*.log" \
+  "$WAVE_B_REPORTS_DIR/wave_b_examples_*.log" \
+  "$WAVE_B_REPORTS_DIR/wave_b_macos_*.log" \
+  "$WAVE_B_REPORTS_DIR/wave_b_windows_*.log" \
   "tests/benchmarks/bin/*_compile.log"
 
 if [[ "$INCLUDE_BINARIES" == "true" ]]; then

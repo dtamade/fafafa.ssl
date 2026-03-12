@@ -179,7 +179,6 @@ end;
 function TWolfSSLLibrary.DetectCapabilities: Boolean;
 var
   LVer: string;
-  LParts: array of string;
   LMajor, LMinor, LPatch: Integer;
 begin
   Result := False;
@@ -198,7 +197,6 @@ begin
   LMajor := 0;
   LMinor := 0;
   LPatch := 0;
-  SetLength(LParts, 0);
 
   // 简单解析 major.minor.patch
   if Pos('.', LVer) > 0 then
@@ -333,6 +331,8 @@ begin
     sslProtocolTLS12: Result := True;
     sslProtocolTLS13: Result := FCapabilities.HasTLS13;
     sslProtocolDTLS10, sslProtocolDTLS12: Result := False;  // 暂不支持
+  else
+    Result := False;
   end;
 end;
 
@@ -377,8 +377,6 @@ begin
     sslFeatRenegotiation: Result := False;  // 安全考虑，默认禁用
     sslFeatOCSPStapling: Result := FCapabilities.HasOCSP;
     sslFeatCertificateTransparency: Result := False;
-  else
-    Result := False;
   end;
 end;
 
@@ -479,10 +477,16 @@ begin
 end;
 
 procedure TWolfSSLLibrary.SetDefaultConfig(const AConfig: TSSLConfig);
+var
+  LConfig: TSSLConfig;
 begin
-  FDefaultConfig := AConfig;
-  FLogLevel := AConfig.LogLevel;
-  FLogCallback := AConfig.LogCallback;
+  LConfig := AConfig;
+  TSSLFactory.NormalizeLibraryDefaultOwnerFields(LConfig, sslWolfSSL);
+  TSSLFactory.ValidateLibraryDefaultConfigFields(LConfig, 'TWolfSSLLibrary.SetDefaultConfig');
+  TSSLFactory.NormalizeConfig(LConfig);
+  FDefaultConfig := LConfig;
+  FLogLevel := LConfig.LogLevel;
+  FLogCallback := LConfig.LogCallback;
 end;
 
 function TWolfSSLLibrary.GetDefaultConfig: TSSLConfig;
@@ -518,6 +522,7 @@ end;
 procedure TWolfSSLLibrary.SetLogCallback(ACallback: TSSLLogCallback);
 begin
   FLogCallback := ACallback;
+  FDefaultConfig.LogCallback := ACallback;
 end;
 
 procedure TWolfSSLLibrary.Log(ALevel: TSSLLogLevel; const AMessage: string);
@@ -526,12 +531,20 @@ begin
 end;
 
 function TWolfSSLLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
+var
+  LConfig: TSSLConfig;
 begin
   // P0 后端语义统一：与 OpenSSL/WinSSL 后端保持一致的失败语义
   if not FInitialized then
     raise ESSLInitError.Create('Cannot create context: WolfSSL library not initialized');
 
   Result := TWolfSSLContext.Create(Self, AType);
+  if Result <> nil then
+  begin
+    LConfig := FDefaultConfig;
+    LConfig.ContextType := AType;
+    TSSLFactory.ApplyConfigToContext(Result, LConfig);
+  end;
 end;
 
 function TWolfSSLLibrary.CreateCertificate: ISSLCertificate;
@@ -565,7 +578,7 @@ begin
   try
     // 注册 WolfSSL 后端，优先级 150（介于 OpenSSL 100 和 WinSSL 200 之间）
     TSSLFactory.RegisterLibrary(sslWolfSSL, TWolfSSLLibrary,
-      'WolfSSL (Lightweight TLS)', 150);
+      'WolfSSL (Lightweight TLS)', 150, @CreateWolfSSLLibrary);
   except
     // 注册失败时静默处理
   end;

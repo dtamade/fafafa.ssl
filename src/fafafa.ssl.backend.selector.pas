@@ -302,20 +302,20 @@ begin
 
     // 检查评分范围
     if (ARequirements.MinSecurityScore < 0) or
-       (ARequirements.MinSecurityScore > 100) then
+      (ARequirements.MinSecurityScore > 100) then
       ErrorList.Add('MinSecurityScore 必须在 0-100 之间');
 
     if (ARequirements.MinPerformanceScore < 0) or
-       (ARequirements.MinPerformanceScore > 100) then
+      (ARequirements.MinPerformanceScore > 100) then
       ErrorList.Add('MinPerformanceScore 必须在 0-100 之间');
 
     if (ARequirements.MinCompatibilityLevel < 0) or
-       (ARequirements.MinCompatibilityLevel > 100) then
+      (ARequirements.MinCompatibilityLevel > 100) then
       ErrorList.Add('MinCompatibilityLevel 必须在 0-100 之间');
 
     // 检查不合理的组合
     if ARequirements.PlatformPreferences.RequirePKCS11 and
-       ARequirements.PlatformPreferences.RequireTPM then
+      ARequirements.PlatformPreferences.RequireTPM then
       ErrorList.Add('PKCS#11 和 TPM 通常不同时需要，请检查需求');
 
     // 转换结果
@@ -540,21 +540,21 @@ begin
 
   // 检查最低评分要求
   if (AReq.MinSecurityScore > 0) and
-     (ADetails.SecurityScore < AReq.MinSecurityScore) then
+    (ADetails.SecurityScore < AReq.MinSecurityScore) then
   begin
     Result := 0;
     Exit;
   end;
 
   if (AReq.MinPerformanceScore > 0) and
-     (ADetails.PerformanceScore < AReq.MinPerformanceScore) then
+    (ADetails.PerformanceScore < AReq.MinPerformanceScore) then
   begin
     Result := 0;
     Exit;
   end;
 
   if (AReq.MinCompatibilityLevel > 0) and
-     (ADetails.CompatibilityLevel < AReq.MinCompatibilityLevel) then
+    (ADetails.CompatibilityLevel < AReq.MinCompatibilityLevel) then
   begin
     Result := 0;
     Exit;

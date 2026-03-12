@@ -16,9 +16,12 @@ program file_encryption;
 uses
   SysUtils, Classes,
   fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.crypto,
   fafafa.ssl.openssl.api.rand,
+  fafafa.ssl.openssl.api.kdf,
   fafafa.ssl.openssl.api.scrypt_whirlpool;
 
 const
@@ -46,7 +49,10 @@ begin
   LPasswordBytes := BytesOf(AnsiString(aPassword));
   SetLength(Result, KEY_SIZE);
   
-  if PKCS5_PBKDF2_HMAC(
+  if (not Assigned(fafafa.ssl.openssl.api.kdf.PKCS5_PBKDF2_HMAC)) or (not Assigned(EVP_sha256)) then
+    raise Exception.Create('Required KDF or digest function is not available');
+
+  if fafafa.ssl.openssl.api.kdf.PKCS5_PBKDF2_HMAC(
     @LPasswordBytes[0], Length(LPasswordBytes),
     @aSalt[0], Length(aSalt),
     ITERATIONS,
@@ -368,12 +374,26 @@ begin
   LPassword := ParamStr(4);
   
   // 初始化 OpenSSL
-  if not LoadOpenSSLLibrary then
+  try
+    LoadOpenSSLCore;
+  except
+    on E: Exception do
+    begin
+      WriteLn('✗ 无法加载 OpenSSL 库: ', E.Message);
+      ExitCode := 1;
+      Exit;
+    end;
+  end;
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
-    WriteLn('✗ 无法加载 OpenSSL 库');
+    WriteLn('✗ OpenSSL core 未保持已加载状态');
     ExitCode := 1;
     Exit;
   end;
+  LoadEVP(GetCryptoLibHandle);
+  LoadOpenSSLRAND;
+  LoadKDFFunctions;
   
   try
     // 检查输入文件
@@ -415,6 +435,8 @@ begin
     WriteLn;
     
     ExitCode := 0;
+    WriteLn('[PASS] file encryption example completed');
+    WriteLn('[PASS] file encryption example completed');
     
   except
     on E: Exception do

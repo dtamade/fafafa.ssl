@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_PATH="$ROOT_DIR/scripts/compile_all_modules.py"
+
+echo "[TEST] compile_all_modules command should include isolated -FU output dir"
+
+python3 - "$ROOT_DIR" "$SCRIPT_PATH" <<'PY'
+import importlib.util
+import pathlib
+import sys
+
+root_dir = pathlib.Path(sys.argv[1])
+script_path = pathlib.Path(sys.argv[2])
+
+spec = importlib.util.spec_from_file_location("compile_all_modules", script_path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+sample_pas = root_dir / "src" / "fafafa.ssl.base.pas"
+unit_output = root_dir / "tmp" / "contract_units_dir"
+
+cmd = module.build_fpc_command(sample_pas, rebuild=False, unit_output_dir=unit_output)
+
+expected_fu = f"-FU{unit_output}"
+if expected_fu not in cmd:
+    print("[FAIL] expected isolated unit output flag missing:", expected_fu)
+    print("[INFO] cmd:", " ".join(str(x) for x in cmd))
+    sys.exit(1)
+
+print("[PASS] isolated unit output flag found:", expected_fu)
+PY
+
+echo "[PASS] compile_all_modules unit output isolation contract"

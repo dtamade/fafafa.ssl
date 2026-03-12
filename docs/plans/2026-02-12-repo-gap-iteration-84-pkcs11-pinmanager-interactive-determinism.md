@@ -83,4 +83,4 @@
 - `fpc -Fu./src tests/certificate/test_tsa_api.pas -otmp/test_tsa_api && ./tmp/test_tsa_api` -> PASS (`20/20`)
 - `fpc -Fu./src tests/test_stream_connection.pas -otmp/test_stream_conn && ./tmp/test_stream_conn` -> PASS (`Passed: 10, Failed: 0, Skipped: 1`)
 - `fpc -Fu./src -Fu./tests/framework -Fu./tests/unit tests/unit/run_unit_tests_simple.lpr -otmp/run_unit_tests_simple && ./tmp/run_unit_tests_simple --format=plain --all` -> PASS (`N:10 E:0 F:0 I:2`)
-- `bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT` -> PASS (`15/15`, report `test-reports/test_report_20260212_135750.txt`)
+- `bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT` -> PASS (`15/15`, report `docs/archive/reports/test-report-history/test_report_20260212_135750.txt`)

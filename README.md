@@ -1,14 +1,12 @@
-# fafafa.ssl - Production-Ready SSL/TLS Library
+# fafafa.ssl - Multi-backend SSL/TLS library for FreePascal
 
 [![Version](https://img.shields.io/badge/Version-v1.3.0-blue)](https://github.com/dtamade/fafafa.ssl/releases/tag/v1.3.0)
-[![Production Ready](https://img.shields.io/badge/Production%20Ready-100%25-brightgreen)](https://github.com)
-[![Tests](https://img.shields.io/badge/Tests-100%25%20passed-success)](docs/testing/)
 [![OpenSSL](https://img.shields.io/badge/OpenSSL-1.1.1%2B%20%7C%203.0%2B-blue)](https://www.openssl.org/)
 [![TLS](https://img.shields.io/badge/TLS-1.2%20%7C%201.3-blue)](https://tools.ietf.org/html/rfc8446)
 [![FPC](https://img.shields.io/badge/FreePascal-3.2.0%2B-orange)](https://www.freepascal.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-**企业级 SSL/TLS 加密库** - 为 FreePascal 提供统一抽象 + 多后端实现（OpenSSL/WinSSL，且可选 MbedTLS/WolfSSL）
+**统一 SSL/TLS 抽象层** - 为 FreePascal 提供多后端实现（OpenSSL / WinSSL，且可选 MbedTLS / WolfSSL）和一致的构建接口。
 
 ## 核心特性
 
@@ -37,7 +35,7 @@
 - **PKCS#11 支持**: 硬件安全模块(HSM)集成，PIN 回调，私钥加载
 - **DANE/DNSSEC 支持**: DNS-Based Authentication，可选 ldns 库
 - **无锁并发优化**: TLockFreeRingBuffer, TBufferPool, TShardedSessionCache
-- **完整测试覆盖**: 415 个测试文件，100% 通过率
+- **测试与契约**: Pascal 测试、脚本契约测试和本地门禁脚本位于 `tests/` 与 `scripts/`
 
 ### 加密与安全
 - **TLS 协议**: TLS 1.2/1.3，自动协议协商
@@ -105,48 +103,35 @@ begin
 end.
 ```
 
-### 30 秒示例
-
-```pascal
-program HelloTLS;
-
-uses
-  SysUtils,
-  fafafa.ssl,
-  fafafa.ssl.context.builder;
-
-var
-  Ctx: ISSLContext;
-  TLS: TSSLConnector;
-  Stream: TSSLStream;
-  YourSocket: THandle;
-begin
-  // 1) 创建客户端上下文（验证对端 + 自动加载系统根证书）
-  Ctx := TSSLContextBuilder.Create
-    .WithTLS12And13
-    .WithVerifyPeer
-    .WithSystemRoots
-    .BuildClient;
-
-  // 2) 建立 TLS（ServerName 是连接级别配置：SNI + hostname verification）
-  TLS := TSSLConnector.FromContext(Ctx);
-  Stream := TLS.ConnectSocket(YourSocket, 'www.google.com');
-  try
-    WriteLn('TLS 连接成功');
-    WriteLn('协议: ', Ord(Stream.Connection.GetProtocolVersion));
-    WriteLn('密码套件: ', Stream.Connection.GetCipherName);
-  finally
-    Stream.Free;
-  end;
-end.
-```
-
 ### 编译运行
 
 ```bash
 fpc -B -Mobjfpc -Sh -Fu./src -Fi./src -FU./lib your_app.pas -o./bin/your_app
 ./bin/your_app
 ```
+
+## 本地验证
+
+如果你想先确认当前工作区是健康的，优先跑这两个命令：
+
+```bash
+python3 scripts/compile_all_modules.py
+bash scripts/run_minimal_ci_gate.sh --fast-local
+```
+
+- `compile_all_modules.py` 会在 Linux 上编译核心 Pascal 单元。
+- `run_minimal_ci_gate.sh --fast-local` 会运行轻量本地门禁，适合高频回归。
+- 更广的验证入口和当前 CI 范围见 `docs/testing/TESTING_README.md`。
+
+
+## 当前配置 Contract（2026-03-09）
+
+- `TSSLContextBuilder.BuildClient` / `BuildServer` 会先解析一次 concrete backend，再把同一个 backend 复用于 context 创建与 `WithSystemRoots` 的证书库创建；`WithBackend(sslAutoDetect)` 与隐式默认路径都遵守这条规则。
+- `ISSLLibrary.SetDefaultConfig(...)` 只接受 library-scoped / stable defaults。`CertificateFile`、`PrivateKeyFile`、`PrivateKeyPassword`、`CAFile`、`CAPath` 属于 request/context scope，会被拒绝；请改用 `TSSLFactory.CreateContext(const AConfig)` 或 `TSSLContextBuilder`。
+- `LibraryType` / `ContextType` 是 library-default path 的 owner fields。backend 保存 defaults 时会把它们 normalize 回 backend-owned stable values，因此 `GetDefaultConfig(...)` 代表“当前可生效的默认值”，不是调用方临时输入的镜像。
+- `LogLevel` / `LogCallback` 属于 library scope；证书、私钥、CA 材料属于 context scope。把这两类配置分开，能避免 default-config 污染与跨 backend 语义漂移。
+- `UsePKCS11(...)` 只替代私钥来源；server 场景仍需通过 `WithCertificate` 或 `WithCertificatePEM` 提供证书。若同时给出本地私钥与 `pkcs11_uri`，builder/validation 都会按 `PKCS#11` 优先生效。
+- 设计背景与月度收口记录见 `docs/reference/ARCHITECTURE.md`、`docs/plans/2026-03-current-summary.md`。
 
 ## 文档
 
@@ -157,7 +142,7 @@ fpc -B -Mobjfpc -Sh -Fu./src -Fi./src -FU./lib your_app.pas -o./bin/your_app
 | [用户指南](docs/guides/USER_GUIDE.md) | 完整用户指南 |
 | [API 参考](docs/reference/API_REFERENCE.md) | API 参考文档 |
 | [WinSSL 指南](docs/guides/WINSSL_USER_GUIDE.md) | WinSSL 后端用户指南 |
-| [示例程序](examples/) | 57 个示例程序 |
+| [示例程序](examples/) | 可运行示例与集成样例 |
 | [FAQ](docs/guides/FAQ.md) | 常见问题解答 |
 | [部署指南](docs/guides/DEPLOYMENT_GUIDE.md) | 生产部署指南 |
 | [Wave C Local-first Runbook](docs/test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md) | CI 暂缓时的一页执行手册 |
@@ -199,6 +184,10 @@ Conn.Connect;
 Conn.Write(Data^, Length(Data));
 BytesRead := Conn.Read(Buffer^, BufferSize);
 ```
+
+Prefer per-connection SNI: create the connection first, then cast to `ISSLClientConnection` and call `SetServerName(...)` before `Connect`.
+
+Ctx.SetServerName(...) remains deprecated compatibility only. It acts as a default for future client connections, and server connections don't inherit it.
 
 ### 证书操作
 
@@ -245,17 +234,17 @@ end;
 ### 运行测试
 
 ```bash
-# 完整 CI/CD 流程（构建+测试+性能）
-./ci_pipeline.sh all
+# 核心模块编译（Linux / OpenSSL 主入口）
+python3 scripts/compile_all_modules.py
 
-# 仅构建
-./ci_pipeline.sh build
+# 高频本地烟测（当前推荐 smoke）
+bash scripts/run_minimal_ci_gate.sh --fast-local
 
-# 仅测试
-./ci_pipeline.sh test
+# 提交前最小回归
+bash scripts/run_minimal_ci_gate.sh --pre-commit-minimal
 
-# 性能基准测试
-./ci_pipeline.sh bench
+# 仓库治理合同批次（可选）
+bash tests/scripts/test_repo_hygiene_contract_batch.sh
 ```
 
 ### CI 暂缓时（Local-first 守护）
@@ -268,18 +257,40 @@ bash scripts/run_wave_c_local_first_guard_bundle.sh --strict
 bash scripts/summarize_wave_c_local_guard_history.sh --strict
 ```
 
+### 最小 CI 门禁快捷模式
+
+```bash
+# 高频本地校验（默认包含 warning/noise 治理批次）
+bash scripts/run_minimal_ci_gate.sh --fast-local
+
+# 极致快速烟测（显式跳过 warning/noise 治理批次）
+bash scripts/run_minimal_ci_gate.sh --fast-local --skip-warning-noise-governance-batch
+
+# 提交前最小回归（一条命令等价于 fast-local + skip-warning + contract-batch）
+bash scripts/run_minimal_ci_gate.sh --pre-commit-minimal
+
+# pre-commit 三合同批次（preset/docs/help）
+bash scripts/run_minimal_ci_gate.sh --fast-local --skip-warning-noise-governance-batch --with-pre-commit-triplet-contract-batch
+
+# 仅验证四平台路径检查 dry-run 批次
+bash scripts/run_minimal_ci_gate.sh --only-platform-path-check-dryrun
+
+# 仅运行 TLS13 CertificateVerify 签名基准
+bash scripts/run_minimal_ci_gate.sh --only-tls13-sign-bench
+
+# 提交前本地全合同回归（minimal gate 关键语义）
+bash scripts/run_minimal_ci_gate.sh --fast-local --skip-warning-noise-governance-batch --with-minimal-gate-contract-batch
+```
+
 更多细节：
 - 执行手册：`docs/test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md`
 - 故障速查：`docs/test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md`
 
-### 测试覆盖
+### 验证说明
 
-| 测试类型 | 数量 | 状态 |
-|---------|------|------|
-| 源文件 | 160 | - |
-| 测试文件 | 415 | 100% 通过 |
-| 示例程序 | 57 | - |
-| 代码行数 | 95,143 | - |
+- `tests/` 同时包含 Pascal 测试、按后端划分的验证程序，以及脚本契约测试。
+- `scripts/` 中的本地门禁脚本是当前最稳定的回归入口。
+- 历史报告和阶段性结果保存在 `docs/archive/` 与 `docs/test_reports/`，它们更适合作为背景资料，而不是实时状态页。
 
 ## 性能指标
 
@@ -314,18 +325,11 @@ bash scripts/summarize_wave_c_local_guard_history.sh --strict
 
 ```
 fafafa.ssl/
-├── src/                      # 核心源代码 (160 文件)
-│   ├── fafafa.ssl.factory.pas   # 工厂模式入口
-│   ├── fafafa.ssl.base.pas      # 基础接口定义
-│   ├── fafafa.ssl.openssl/      # OpenSSL 后端
-│   ├── fafafa.ssl.winssl/       # WinSSL 后端
-│   ├── fafafa.ssl.pkcs11/       # PKCS#11 支持
-│   ├── fafafa.ssl.dane.pas      # DANE/DNSSEC 支持
-│   ├── fafafa.ssl.crypto.*      # 加密工具
-│   └── fafafa.ssl.cert.*        # 证书管理
-├── examples/                 # 57 个示例程序
-├── tests/                    # 415 个测试文件
-└── docs/                     # 完整文档
+├── src/        # 扁平 Pascal 单元命名：fafafa.ssl.*.pas
+├── tests/      # Pascal 测试、后端验证、脚本契约测试
+├── scripts/    # 本地门禁、批处理和辅助工具
+├── examples/   # 可运行示例与生产用法样例
+└── docs/       # 指南、参考、计划和测试报告
 ```
 
 ## 贡献指南

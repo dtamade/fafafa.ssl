@@ -5,6 +5,7 @@ set -euo pipefail
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 OUTPUT_FILE=""
 STRICT=false
+REPORTS_DIR="${FAFAFA_WAVE_C_LOCAL_GUARD_REPORTS_DIR:-tmp/wave_c_local_guard_reports}"
 
 usage() {
   cat <<'USAGE'
@@ -18,7 +19,7 @@ Wave C B132 Local-first Status Snapshot
 
 选项：
   --run-id ID      指定 run_id
-  --output FILE    输出报告路径
+  --output FILE    输出报告路径（默认 tmp/wave_c_local_guard_reports/wave_c_b132_local_first_status_snapshot_<run_id>.md）
   --strict         检查失败时返回非 0
   --help           显示帮助
 USAGE
@@ -51,7 +52,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b132_local_first_status_snapshot_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORTS_DIR/wave_c_b132_local_first_status_snapshot_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
@@ -63,11 +64,11 @@ elif [[ -f ".github/workflows/wave-c-quick-sprint-manual.yml" ]]; then
   workflow_state="ENABLED"
 fi
 
-latest_b123="$(ls -1t test-reports/wave_c_b123_local_first_continuity_*.md 2>/dev/null | head -1 || true)"
-latest_b124="$(ls -1t test-reports/wave_c_b124_local_drift_watch_*.md 2>/dev/null | head -1 || true)"
-latest_b125="$(ls -1t test-reports/wave_c_b125_local_guard_bundle_*.md 2>/dev/null | head -1 || true)"
-latest_b126="$(ls -1t test-reports/wave_c_b126_local_guard_history_*.md 2>/dev/null | head -1 || true)"
-latest_b129="$(ls -1t test-reports/wave_c_b129_oncall_check_*.md 2>/dev/null | head -1 || true)"
+latest_b123="$(ls -1t "$REPORTS_DIR"/wave_c_b123_local_first_continuity_*.md 2>/dev/null | head -1 || true)"
+latest_b124="$(ls -1t "$REPORTS_DIR"/wave_c_b124_local_drift_watch_*.md 2>/dev/null | head -1 || true)"
+latest_b125="$(ls -1t "$REPORTS_DIR"/wave_c_b125_local_guard_bundle_*.md 2>/dev/null | head -1 || true)"
+latest_b126="$(ls -1t "$REPORTS_DIR"/wave_c_b126_local_guard_history_*.md 2>/dev/null | head -1 || true)"
+latest_b129="$(ls -1t "$REPORTS_DIR"/wave_c_b129_oncall_check_*.md 2>/dev/null | head -1 || true)"
 
 extract_marked_state() {
   local file="$1"

@@ -6,6 +6,8 @@ program file_encrypt;
 uses
   SysUtils, Classes, DynLibs,
   fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.evp;
 
 const
@@ -447,8 +449,15 @@ begin
   
   // Initialize OpenSSL
   try
-    if not LoadOpenSSLLibrary then
-      raise Exception.Create('无法加载 OpenSSL 库');
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+        raise Exception.Create('无法加载 OpenSSL 库: ' + E.Message);
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
+      raise Exception.Create('OpenSSL core 未保持已加载状态');
   except
     on E: Exception do
     begin
@@ -458,21 +467,10 @@ begin
   end;
   
   // Load EVP module
-  {$IFDEF MSWINDOWS}
-  LCryptoLib := LoadLibrary('libcrypto-3-x64.dll');
-  if LCryptoLib = NilHandle then
-    LCryptoLib := LoadLibrary('libcrypto-3.dll');
-  if LCryptoLib = NilHandle then
-    LCryptoLib := LoadLibrary('libcrypto.dll');
-  {$ELSE}
-  LCryptoLib := LoadLibrary('libcrypto.so.3');
-  if LCryptoLib = NilHandle then
-    LCryptoLib := LoadLibrary('libcrypto.so');
-  {$ENDIF}
-  
+  LCryptoLib := GetCryptoLibHandle;
   if LCryptoLib = NilHandle then
   begin
-    WriteLn('❌ 无法加载 libcrypto');
+    WriteLn('❌ 无法获取 libcrypto 句柄');
     Halt(1);
   end;
   
@@ -491,14 +489,20 @@ begin
     '-e', 'encrypt':
       begin
         if EncryptFile(LInputFile, LOutputFile, LPassword) then
+        begin
+          WriteLn('[PASS] file_encrypt tool completed');
           Halt(0)
+        end
         else
           Halt(1);
       end;
     '-d', 'decrypt':
       begin
         if DecryptFile(LInputFile, LOutputFile, LPassword) then
+        begin
+          WriteLn('[PASS] file_encrypt tool completed');
           Halt(0)
+        end
         else
           Halt(1);
       end;

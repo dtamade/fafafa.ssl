@@ -28,10 +28,12 @@ uses
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.hmac,
   fafafa.ssl.openssl.api.rand,
-  fafafa.ssl.openssl.api.bn;
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.loader;
 
 var
-  TotalTests, PassedTests, FailedTests: Integer;
+  TotalTests, PassedTests, FailedTests, SkippedTests: Integer;
+  OpenSSL11Available: Boolean;
 
 procedure LogTest(const TestName: string; Passed: Boolean);
 begin
@@ -48,6 +50,13 @@ begin
   end;
 end;
 
+procedure SkipTest(const TestName, Reason: string);
+begin
+  Inc(TotalTests);
+  Inc(SkippedTests);
+  WriteLn('[SKIP] ', TestName, ': ', Reason);
+end;
+
 function TestCoreLoading: Boolean;
 var
   VersionStr: string;
@@ -58,14 +67,14 @@ begin
     // Force load OpenSSL 1.1.x
     LoadOpenSSLCoreWithVersion(sslVersion_1_1);
     
-    if not IsOpenSSLCoreLoaded then
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
       Exit;
       
     Version := GetOpenSSLVersion;
     VersionStr := GetOpenSSLVersionString;
     
-    Result := (Ord(Version) = Ord(sslVersion_1_1)) and 
-              (Pos('1.1', VersionStr) > 0 or Pos('1_1', VersionStr) > 0);
+    Result := (Ord(Version) = Ord(sslVersion_1_1)) and
+              ((Pos('1.1', VersionStr) > 0) or (Pos('1_1', VersionStr) > 0));
               
     if Result then
       WriteLn('  Version: ', VersionStr);
@@ -266,7 +275,7 @@ begin
       if EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, -1, EVP_PKEY_CTRL_RSA_KEYGEN_BITS, 2048, nil) <> 1 then Exit;
       
       pkey_tmp := pkey;
-      if EVP_PKEY_keygen(ctx, @pkey_tmp) <> 1 then Exit;
+      if EVP_PKEY_keygen(ctx, pkey_tmp) <> 1 then Exit;
       pkey := pkey_tmp;
       
       Result := (pkey <> nil);
@@ -293,11 +302,11 @@ begin
     
     try
       if EVP_PKEY_keygen_init(ctx) <> 1 then Exit;
-      if EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_EC, EVP_PKEY_OP_PARAMGEN or EVP_PKEY_OP_KEYGEN, 
-                          EVP_PKEY_CTRL_EC_PARAMGEN_CURVE_NID, NID_X9_62_prime256v1, nil) <> 1 then Exit;
+      if EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_EC, EVP_PKEY_OP_PARAMGEN or EVP_PKEY_OP_KEYGEN,
+                          $1001, NID_X9_62_prime256v1, nil) <> 1 then Exit;
       
       pkey_tmp := pkey;
-      if EVP_PKEY_keygen(ctx, @pkey_tmp) <> 1 then Exit;
+      if EVP_PKEY_keygen(ctx, pkey_tmp) <> 1 then Exit;
       pkey := pkey_tmp;
       
       Result := (pkey <> nil);
@@ -324,7 +333,7 @@ begin
   len := 0;
   try
     // Load HMAC functions
-    fafafa.ssl.openssl.api.hmac.LoadHMAC(GetCryptoLibHandle);
+    fafafa.ssl.openssl.api.hmac.LoadOpenSSLHMAC;
     
     key := 'secret';
     data := 'message';
@@ -358,7 +367,7 @@ begin
   Result := False;
   try
     // Load RAND functions
-    fafafa.ssl.openssl.api.rand.LoadRAND(GetCryptoLibHandle);
+    fafafa.ssl.openssl.api.rand.LoadOpenSSLRAND;
     
     FillByte(buffer, Length(buffer), 0);
     
@@ -387,7 +396,7 @@ begin
   Result := False;
   try
     // Load BN functions
-    fafafa.ssl.openssl.api.bn.LoadBN(GetCryptoLibHandle);
+    fafafa.ssl.openssl.api.bn.LoadOpenSSLBN;
     
     a := BN_new();
     b := BN_new();
@@ -433,9 +442,28 @@ begin
   TotalTests := 0;
   PassedTests := 0;
   FailedTests := 0;
+  SkippedTests := 0;
+  OpenSSL11Available := False;
   
   WriteLn('=== Core & Version Tests ===');
-  LogTest('1.1.x Core Loading', TestCoreLoading);
+  OpenSSL11Available := TestCoreLoading;
+  if not OpenSSL11Available then
+  begin
+    SkipTest('OpenSSL 1.1.x runtime not available', 'current environment does not provide OpenSSL 1.1.x');
+    WriteLn;
+    WriteLn('=====================================');
+    WriteLn('Test Summary');
+    WriteLn('=====================================');
+    WriteLn('Total tests: ', TotalTests);
+    WriteLn('Passed: ', PassedTests);
+    WriteLn('Failed: ', FailedTests);
+    WriteLn('Skipped: ', SkippedTests);
+    WriteLn;
+    WriteLn('[INFO] Compatibility test skipped because OpenSSL 1.1.x runtime is unavailable.');
+    Exit;
+  end;
+
+  LogTest('1.1.x Core Loading', True);
   LogTest('EVP Module Loading', TestEVPLoading);
   WriteLn;
   
@@ -470,6 +498,7 @@ begin
   WriteLn('Total tests: ', TotalTests);
   WriteLn('Passed: ', PassedTests);
   WriteLn('Failed: ', FailedTests);
+  WriteLn('Skipped: ', SkippedTests);
   WriteLn('Pass rate: ', Format('%.1f%%', [(PassedTests / TotalTests) * 100]));
   WriteLn;
   

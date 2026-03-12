@@ -2,7 +2,11 @@
 
 set -euo pipefail
 
-REPORTS_DIR="test-reports"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+REPORTS_DIR="${FAFAFA_WAVE_C_QUICK_SPRINT_REPORTS_DIR:-tmp/wave_c_quick_sprint_reports}"
+VALIDATION_GLOB="${FAFAFA_WAVE_C_B101_VALIDATION_GLOB:-tmp/wave_c_b101_reports_*/wave_c_b101_validation_*.md}"
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 READINESS_REPORT=""
 THRESHOLD_REPORT=""
@@ -21,12 +25,13 @@ Wave C B109 Controlled Canary Rollout Preparation
   scripts/prepare_wave_c_b109_canary_rollout.sh [options]
 
 选项：
-  --reports-dir DIR         报告目录（默认 test-reports）
+  --reports-dir DIR         报告目录（默认 tmp/wave_c_quick_sprint_reports）
   --readiness-report FILE   指定 B108 readiness 报告
   --threshold-report FILE   指定 B107 threshold 报告
   --validation-report FILE  指定 B101 validation 报告
+  --validation-glob GLOB    B101 验证报告 glob（默认 tmp/wave_c_b101_reports_*/wave_c_b101_validation_*.md）
   --run-id ID               指定 run_id
-  --output FILE             输出路径（默认 test-reports/wave_c_b109_canary_rollout_<run_id>.md）
+  --output FILE             输出路径（默认 tmp/wave_c_quick_sprint_reports/wave_c_b109_canary_rollout_<run_id>.md）
   --strict                  状态非 READY 时返回非 0
   --help                    显示帮助
 USAGE
@@ -48,6 +53,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --validation-report)
       VALIDATION_REPORT="$2"
+      shift 2
+      ;;
+    --validation-glob)
+      VALIDATION_GLOB="$2"
       shift 2
       ;;
     --run-id)
@@ -74,6 +83,22 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+resolve_latest_validation_report() {
+  python3 - "$PROJECT_ROOT" "$VALIDATION_GLOB" <<'PY'
+import glob
+import os
+import sys
+from pathlib import Path
+
+project_root = Path(sys.argv[1])
+validation_glob = sys.argv[2]
+glob_pattern = validation_glob if os.path.isabs(validation_glob) else str(project_root / validation_glob)
+paths = sorted(glob.glob(glob_pattern), key=lambda p: (os.path.getmtime(p), p), reverse=True)
+if paths:
+  print(paths[0])
+PY
+}
+
 if [[ -z "$READINESS_REPORT" ]]; then
   READINESS_REPORT="$(ls -1t "$REPORTS_DIR"/wave_c_b108_default_on_readiness_*.md 2>/dev/null | head -1 || true)"
 fi
@@ -83,12 +108,14 @@ if [[ -z "$THRESHOLD_REPORT" ]]; then
 fi
 
 if [[ -z "$VALIDATION_REPORT" ]]; then
-  VALIDATION_REPORT="$(ls -1t "$REPORTS_DIR"/wave_c_b101_validation_*.md 2>/dev/null | head -1 || true)"
+  VALIDATION_REPORT="$(resolve_latest_validation_report)"
 fi
 
 if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$REPORTS_DIR/wave_c_b109_canary_rollout_${RUN_ID}.md"
 fi
+
+mkdir -p "$(dirname "$OUTPUT_FILE")"
 
 if [[ -z "$READINESS_REPORT" || -z "$THRESHOLD_REPORT" || -z "$VALIDATION_REPORT" ]]; then
   echo "Missing input reports for B109" >&2

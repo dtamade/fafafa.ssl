@@ -1,0 +1,95 @@
+=============================================================
+STORE (存储) 模块综合测试
+=============================================================
+
+初始化 OpenSSL 库...
+✅ OpenSSL 库加载成功
+版本: 3.x (libcrypto.so.3)
+检测到 OpenSSL 3.x - 将跳过不兼容的函数测试
+
+加载 STORE 模块...
+✅ STORE 模块加载成功
+
+=== 测试 1: STORE INFO 结构 ===
+OSSL_STORE_INFO_get_type 函数加载: PASS
+OSSL_STORE_INFO_type_string 函数加载: PASS
+OSSL_STORE_INFO_free 函数加载: PASS
+
+=== 测试 2: STORE INFO 类型操作 ===
+OSSL_STORE_INFO_new_NAME 函数加载: PASS
+OSSL_STORE_INFO_get0_NAME 函数加载: PASS
+OSSL_STORE_INFO_get0_NAME_description 函数加载: PASS
+OSSL_STORE_INFO_set0_NAME_description 函数加载: PASS
+OSSL_STORE_INFO_new_CERT 函数加载: PASS
+OSSL_STORE_INFO_get0_CERT 函数加载: PASS
+OSSL_STORE_INFO_get1_CERT 函数加载: PASS
+OSSL_STORE_INFO_new_PKEY 函数加载: PASS
+OSSL_STORE_INFO_get0_PKEY 函数加载: PASS
+OSSL_STORE_INFO_get1_PKEY 函数加载: PASS
+OSSL_STORE_INFO_new_PUBKEY 函数加载: PASS
+OSSL_STORE_INFO_get0_PUBKEY 函数加载: PASS
+OSSL_STORE_INFO_get1_PUBKEY 函数加载: PASS
+OSSL_STORE_INFO_new_CRL 函数加载: PASS
+OSSL_STORE_INFO_get0_CRL 函数加载: PASS
+OSSL_STORE_INFO_get1_CRL 函数加载: PASS
+
+=== 测试 3: STORE CTX 操作 ===
+OSSL_STORE_open 函数加载: PASS
+OSSL_STORE_open_ex 函数加载: PASS
+OSSL_STORE_close 函数加载: PASS
+OSSL_STORE_load 函数加载: PASS
+OSSL_STORE_eof 函数加载: PASS
+OSSL_STORE_error 函数加载: PASS
+OSSL_STORE_ctrl 函数加载: PASS
+OSSL_STORE_vctrl 函数加载: PASS
+
+=== 测试 4: STORE SEARCH 操作 ===
+OSSL_STORE_SEARCH_by_name 函数加载: PASS
+OSSL_STORE_SEARCH_by_issuer_serial 函数加载: PASS
+OSSL_STORE_SEARCH_by_key_fingerprint 函数加载: PASS
+OSSL_STORE_SEARCH_by_alias 函数加载: PASS
+OSSL_STORE_SEARCH_free 函数加载: PASS
+OSSL_STORE_supports_search 函数加载: PASS
+OSSL_STORE_find 函数加载: PASS
+
+=== 测试 5: STORE LOADER 操作 ===
+OSSL_STORE_LOADER_new 函数加载: PASS
+OSSL_STORE_LOADER_free 函数加载: PASS
+OSSL_STORE_LOADER_set_open 函数加载: PASS
+OSSL_STORE_LOADER_set_open_ex 函数加载: PASS
+OSSL_STORE_register_loader 函数加载: PASS
+OSSL_STORE_unregister_loader 函数加载: PASS
+
+=== 测试 6: STORE EXPECT 操作 ===
+OSSL_STORE_expect 函数加载: PASS
+OSSL_STORE_supports_search 函数加载: PASS
+
+=== 测试 7: STORE 常量定义 ===
+OSSL_STORE_INFO_NAME (1): PASS
+OSSL_STORE_INFO_PARAMS (2): PASS
+OSSL_STORE_INFO_PUBKEY (3): PASS
+OSSL_STORE_INFO_PKEY (4): PASS
+OSSL_STORE_INFO_CERT (5): PASS
+OSSL_STORE_INFO_CRL (6): PASS
+OSSL_STORE_SEARCH_BY_NAME (1): PASS
+OSSL_STORE_SEARCH_BY_ISSUER_SERIAL (2): PASS
+OSSL_STORE_SEARCH_BY_KEY_FINGERPRINT (3): PASS
+OSSL_STORE_SEARCH_BY_ALIAS (4): PASS
+
+=== 测试 8: STORE 离线失败夹具 ===
+STORE invalid fixture 存在: PASS
+从无效 STORE 夹具加载证书返回 nil: PASS
+
+=== 测试 9: STORE 缺失文件失败场景 ===
+缺失 STORE fixture 文件前置检查: PASS
+从缺失 STORE 文件加载证书返回 nil: PASS
+
+=============================================================
+测试结果总结
+=============================================================
+总测试数: 56
+通过: 56
+失败: 0
+通过率: 100.0%
+
+🎉 所有测试通过！STORE 模块工作正常

@@ -21,14 +21,16 @@ function BuildTLS13ServerHelloHandshake(
   const ALegacySessionID: TBytes;
   ACipherSuite: Word;
   const AServerKeyShare: TBytes;
-  AKeyShareGroup: Word = TLS13_GROUP_X25519
+  AKeyShareGroup: Word = TLS13_GROUP_X25519;
+  ASelectedIdentity: Integer = -1
 ): TBytes;
 
 function BuildTLS13ServerHelloRecord(
   const ALegacySessionID: TBytes;
   ACipherSuite: Word;
   const AServerKeyShare: TBytes;
-  AKeyShareGroup: Word = TLS13_GROUP_X25519
+  AKeyShareGroup: Word = TLS13_GROUP_X25519;
+  ASelectedIdentity: Integer = -1
 ): TBytes;
 
 implementation
@@ -70,11 +72,27 @@ begin
   Result := BuildExtensionHeader(TLS_EXTENSION_KEY_SHARE, LData);
 end;
 
+function BuildExtensionSelectedIdentity(ASelectedIdentity: Integer): TBytes;
+var
+  LData: TBytes;
+begin
+  if ASelectedIdentity < 0 then
+  begin
+    Result := nil;
+    Exit;
+  end;
+
+  SetLength(LData, 0);
+  AppendUInt16(LData, Word(ASelectedIdentity));
+  Result := BuildExtensionHeader(TLS_EXTENSION_PRE_SHARED_KEY, LData);
+end;
+
 function BuildTLS13ServerHelloBody(
   const ALegacySessionID: TBytes;
   ACipherSuite: Word;
   const AServerKeyShare: TBytes;
-  AKeyShareGroup: Word
+  AKeyShareGroup: Word;
+  ASelectedIdentity: Integer
 ): TBytes;
 var
   LRandom: TBytes;
@@ -104,6 +122,9 @@ begin
   LExtension := BuildExtensionKeyShare(AKeyShareGroup, AServerKeyShare);
   AppendBytes(LExtensions, LExtension);
 
+  LExtension := BuildExtensionSelectedIdentity(ASelectedIdentity);
+  AppendBytes(LExtensions, LExtension);
+
   SetLength(Result, 0);
   AppendUInt16(Result, TLS_LEGACY_VERSION);
   AppendBytes(Result, LRandom);
@@ -119,13 +140,20 @@ function BuildTLS13ServerHelloHandshake(
   const ALegacySessionID: TBytes;
   ACipherSuite: Word;
   const AServerKeyShare: TBytes;
-  AKeyShareGroup: Word
+  AKeyShareGroup: Word;
+  ASelectedIdentity: Integer
 ): TBytes;
 var
   LBody: TBytes;
 begin
   SetLength(Result, 0);
-  LBody := BuildTLS13ServerHelloBody(ALegacySessionID, ACipherSuite, AServerKeyShare, AKeyShareGroup);
+  LBody := BuildTLS13ServerHelloBody(
+    ALegacySessionID,
+    ACipherSuite,
+    AServerKeyShare,
+    AKeyShareGroup,
+    ASelectedIdentity
+  );
 
   SetLength(Result, 0);
   AppendByte(Result, TLS_HANDSHAKE_TYPE_SERVER_HELLO);
@@ -137,7 +165,8 @@ function BuildTLS13ServerHelloRecord(
   const ALegacySessionID: TBytes;
   ACipherSuite: Word;
   const AServerKeyShare: TBytes;
-  AKeyShareGroup: Word
+  AKeyShareGroup: Word;
+  ASelectedIdentity: Integer
 ): TBytes;
 var
   LHandshake: TBytes;
@@ -146,7 +175,8 @@ begin
     ALegacySessionID,
     ACipherSuite,
     AServerKeyShare,
-    AKeyShareGroup
+    AKeyShareGroup,
+    ASelectedIdentity
   );
   Result := BuildTLSPlaintext(TLS_CONTENT_TYPE_HANDSHAKE, LHandshake);
 end;

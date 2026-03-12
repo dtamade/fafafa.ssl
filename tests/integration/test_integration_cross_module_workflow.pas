@@ -170,9 +170,19 @@ begin
     end;
 
     WriteLn('Loading OpenSSL library...');
-    if not LoadOpenSSLLibrary then
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('ERROR: Could not load OpenSSL library: ', E.Message);
+        Halt(1);
+      end;
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
-      WriteLn('ERROR: Could not load OpenSSL library');
+      WriteLn('ERROR: OpenSSL core did not stay loaded');
       Halt(1);
     end;
 
@@ -186,6 +196,8 @@ begin
     TestCrossModuleCompatibility;
 
     Runner.PrintSummary;
+    if Runner.FailCount = 0 then
+      WriteLn('[PASS] integration cross-module workflow completed');
     Halt(Runner.FailCount);
   finally
     Runner.Free;

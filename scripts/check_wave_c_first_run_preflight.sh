@@ -5,6 +5,8 @@ set -euo pipefail
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 STRICT=false
 OUTPUT_FILE=""
+REPORTS_DIR="${FAFAFA_WAVE_C_ENABLEMENT_REPORTS_DIR:-tmp/wave_c_enablement_reports}"
+QUICK_SPRINT_REPORTS_DIR="${FAFAFA_WAVE_C_QUICK_SPRINT_REPORTS_DIR:-tmp/wave_c_quick_sprint_reports}"
 
 WORKFLOW_FILE=".github/workflows/wave-c-quick-sprint-manual.yml"
 REQUIRED_SCRIPTS=(
@@ -23,9 +25,11 @@ Wave C First-Run Preflight
   scripts/check_wave_c_first_run_preflight.sh [options]
 
 选项：
-  --run-id ID      指定 run_id
-  --output FILE    输出报告路径
-  --strict         非 READY 时返回非 0
+  --run-id ID             指定 run_id
+  --reports-dir DIR       报告目录（默认 tmp/wave_c_enablement_reports）
+  --quick-reports-dir DIR Quick sprint 报告目录（默认 tmp/wave_c_quick_sprint_reports）
+  --output FILE           输出报告路径（默认 tmp/wave_c_enablement_reports/wave_c_b119_first_run_preflight_<run_id>.md）
+  --strict                非 READY 时返回非 0
 USAGE
 }
 
@@ -33,6 +37,14 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --run-id)
       RUN_ID="$2"
+      shift 2
+      ;;
+    --reports-dir)
+      REPORTS_DIR="$2"
+      shift 2
+      ;;
+    --quick-reports-dir)
+      QUICK_SPRINT_REPORTS_DIR="$2"
       shift 2
       ;;
     --output)
@@ -56,8 +68,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b119_first_run_preflight_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORTS_DIR/wave_c_b119_first_run_preflight_${RUN_ID}.md"
 fi
+
+mkdir -p "$(dirname "$OUTPUT_FILE")"
 
 workflow_status="FAIL"
 if [[ -f "$WORKFLOW_FILE" ]]; then
@@ -75,7 +89,7 @@ for script in "${REQUIRED_SCRIPTS[@]}"; do
   fi
 done
 
-latest_bundle="$(ls -1t test-reports/wave_c_quick_sprint_bundle_*.md 2>/dev/null | head -1 || true)"
+latest_bundle="$(ls -1t "$QUICK_SPRINT_REPORTS_DIR"/wave_c_quick_sprint_bundle_*.md 2>/dev/null | head -1 || true)"
 bundle_status="PASS"
 if [[ -z "$latest_bundle" ]]; then
   bundle_status="FAIL"

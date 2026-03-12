@@ -2,7 +2,11 @@
 
 set -euo pipefail
 
-REPORTS_DIR="test-reports"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+REPORTS_DIR="${FAFAFA_WAVE_C_QUICK_SPRINT_REPORTS_DIR:-tmp/wave_c_quick_sprint_reports}"
+VALIDATION_GLOB="${FAFAFA_WAVE_C_B101_VALIDATION_GLOB:-tmp/wave_c_b101_reports_*/wave_c_b101_validation_*.md}"
 MIN_HIT_RATE="99.0"
 MIN_SPEEDUP="3.0"
 STRICT=false
@@ -22,9 +26,10 @@ Wave C Default-On Readiness Check
   scripts/check_wave_c_default_on_readiness.sh [options]
 
 选项：
-  --reports-dir DIR          报告目录（默认 test-reports）
+  --reports-dir DIR          报告目录（默认 tmp/wave_c_quick_sprint_reports）
   --threshold-report FILE    指定 B107 阈值报告
   --validation-report FILE   指定 B101 验证报告
+  --validation-glob GLOB     B101 验证报告 glob（默认 tmp/wave_c_b101_reports_*/wave_c_b101_validation_*.md）
   --min-hit-rate N           命中率阈值（默认 99.0）
   --min-speedup N            加速比阈值（默认 3.0）
   --run-id ID                指定 run_id
@@ -46,6 +51,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --validation-report)
       VALIDATION_REPORT="$2"
+      shift 2
+      ;;
+    --validation-glob)
+      VALIDATION_GLOB="$2"
       shift 2
       ;;
     --min-hit-rate)
@@ -80,17 +89,35 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+resolve_latest_validation_report() {
+  python3 - "$PROJECT_ROOT" "$VALIDATION_GLOB" <<'PY'
+import glob
+import os
+import sys
+from pathlib import Path
+
+project_root = Path(sys.argv[1])
+validation_glob = sys.argv[2]
+glob_pattern = validation_glob if os.path.isabs(validation_glob) else str(project_root / validation_glob)
+paths = sorted(glob.glob(glob_pattern), key=lambda p: (os.path.getmtime(p), p), reverse=True)
+if paths:
+  print(paths[0])
+PY
+}
+
 if [[ -z "$THRESHOLD_REPORT" ]]; then
   THRESHOLD_REPORT="$(ls -1t "$REPORTS_DIR"/wave_c_b107_threshold_eval_*.md 2>/dev/null | head -1 || true)"
 fi
 
 if [[ -z "$VALIDATION_REPORT" ]]; then
-  VALIDATION_REPORT="$(ls -1t "$REPORTS_DIR"/wave_c_b101_validation_*.md 2>/dev/null | head -1 || true)"
+  VALIDATION_REPORT="$(resolve_latest_validation_report)"
 fi
 
 if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$REPORTS_DIR/wave_c_b108_default_on_readiness_${RUN_ID}.md"
 fi
+
+mkdir -p "$(dirname "$OUTPUT_FILE")"
 
 if [[ -z "$THRESHOLD_REPORT" || -z "$VALIDATION_REPORT" ]]; then
   echo "Missing input reports" >&2

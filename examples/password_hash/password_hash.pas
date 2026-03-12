@@ -19,7 +19,9 @@ uses
   SysUtils, Classes, Base64,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.rand,
   fafafa.ssl.openssl.api.kdf;
 
@@ -323,10 +325,19 @@ begin
   // Load OpenSSL
   if mode <> omHelp then
   begin
-    if not LoadOpenSSLLibrary then
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('[ERROR] Failed to load OpenSSL: ', E.Message);
+        ExitCode := 1;
+        Exit;
+      end;
+    end;
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
-      WriteLn('[ERROR] Failed to load OpenSSL');
-      WriteLn('Please ensure libcrypto-3-x64.dll is in system PATH');
+      WriteLn('[ERROR] OpenSSL core did not stay loaded');
       ExitCode := 1;
       Exit;
     end;
@@ -388,6 +399,7 @@ begin
           WriteLn('IMPORTANT: Store this hash securely in your database.');
           WriteLn('Never store plain-text passwords!');
           ExitCode := 0;
+          WriteLn('[PASS] password hash tool completed');
         except
           on E: Exception do
           begin
@@ -416,6 +428,7 @@ begin
           WriteLn('[OK] [OK] [OK] Password verification SUCCESSFUL!');
           WriteLn('The password matches the stored hash.');
           ExitCode := 0;
+          WriteLn('[PASS] password hash tool completed');
         end
         else
         begin

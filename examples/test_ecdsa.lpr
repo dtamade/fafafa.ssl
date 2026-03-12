@@ -4,13 +4,13 @@ program test_ecdsa;
 
 uses
   SysUtils, Classes, DynLibs,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.bn,
-  fafafa.ssl.openssl.ec,
-  fafafa.ssl.openssl.ecdsa,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.err;
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.bn,
+  fafafa.ssl.openssl.api.ec,
+  fafafa.ssl.openssl.api.ecdsa,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.err;
 
 var
   TestsPassed: Integer = 0;

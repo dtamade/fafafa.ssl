@@ -99,9 +99,20 @@ if [[ -z "$RUN_ID" ]]; then
   RUN_ID="$(date +"%Y%m%d_%H%M%S")"
 fi
 
+resolve_output_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
 if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/GATE_ARCHIVE_EVIDENCE_${RUN_ID}.md"
 fi
+
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
 
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] platform=$PLATFORM profile=$PROFILE gate_layer=$GATE_LAYER"

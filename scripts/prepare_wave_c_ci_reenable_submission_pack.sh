@@ -5,6 +5,8 @@ set -euo pipefail
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 OUTPUT_FILE=""
 STRICT=false
+LOCAL_GUARD_REPORTS_DIR="${FAFAFA_WAVE_C_LOCAL_GUARD_REPORTS_DIR:-tmp/wave_c_local_guard_reports}"
+REPORTS_DIR="${FAFAFA_WAVE_C_CI_REENABLE_REPORTS_DIR:-tmp/wave_c_ci_reenable_reports}"
 
 usage() {
   cat <<'USAGE'
@@ -18,7 +20,7 @@ Wave C B146 CI Re-enable Submission Pack
 
 选项：
   --run-id ID      指定 run_id
-  --output FILE    输出报告路径
+  --output FILE    输出报告路径（默认 tmp/wave_c_ci_reenable_reports/wave_c_b146_ci_reenable_submission_pack_<run_id>.md）
   --strict         状态非 READY_TO_SUBMIT 返回非 0
   --help           显示帮助
 USAGE
@@ -51,16 +53,16 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b146_ci_reenable_submission_pack_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORTS_DIR/wave_c_b146_ci_reenable_submission_pack_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 
-latest_packet="$(ls -1t test-reports/wave_c_b137_pre_ci_reenable_packet_*.md 2>/dev/null | head -1 || true)"
-latest_fullgate="$(ls -1t test-reports/wave_c_b138_pre_ci_reenable_full_gate_*.md 2>/dev/null | head -1 || true)"
-latest_status_json="$(ls -1t test-reports/wave_c_b142_local_guard_status_*.json 2>/dev/null | head -1 || true)"
-latest_alert="$(ls -1t test-reports/wave_c_b143_alert_thresholds_*.md 2>/dev/null | head -1 || true)"
-latest_ops_pack="$(ls -1t test-reports/wave_c_b144_local_guard_ops_pack_*.md 2>/dev/null | head -1 || true)"
+latest_packet="$(ls -1t "$REPORTS_DIR"/wave_c_b137_pre_ci_reenable_packet_*.md 2>/dev/null | head -1 || true)"
+latest_fullgate="$(ls -1t "$LOCAL_GUARD_REPORTS_DIR"/wave_c_b138_pre_ci_reenable_full_gate_*.md 2>/dev/null | head -1 || true)"
+latest_status_json="$(ls -1t "$LOCAL_GUARD_REPORTS_DIR"/wave_c_b142_local_guard_status_*.json 2>/dev/null | head -1 || true)"
+latest_alert="$(ls -1t "$REPORTS_DIR"/wave_c_b143_alert_thresholds_*.md 2>/dev/null | head -1 || true)"
+latest_ops_pack="$(ls -1t "$LOCAL_GUARD_REPORTS_DIR"/wave_c_b144_local_guard_ops_pack_*.md 2>/dev/null | head -1 || true)"
 
 extract_marked_state() {
   local file="$1"

@@ -5,6 +5,7 @@ set -euo pipefail
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 OUTPUT_JSON=""
 STRICT=false
+REPORTS_DIR="${FAFAFA_WAVE_C_LOCAL_GUARD_REPORTS_DIR:-tmp/wave_c_local_guard_reports}"
 
 usage() {
   cat <<'USAGE'
@@ -18,7 +19,7 @@ Wave C B142 Local Guard Status Export
 
 选项：
   --run-id ID       指定 run_id
-  --output FILE     输出 JSON 路径
+  --output FILE     输出 JSON 路径（默认 tmp/wave_c_local_guard_reports/wave_c_b142_local_guard_status_<run_id>.json）
   --strict          overall_state 非 HEALTHY 返回非 0
   --help            显示帮助
 USAGE
@@ -51,7 +52,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_JSON" ]]; then
-  OUTPUT_JSON="test-reports/wave_c_b142_local_guard_status_${RUN_ID}.json"
+  OUTPUT_JSON="$REPORTS_DIR/wave_c_b142_local_guard_status_${RUN_ID}.json"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_JSON")"
@@ -63,10 +64,10 @@ elif [[ -f ".github/workflows/wave-c-quick-sprint-manual.yml" ]]; then
   workflow_state="ENABLED"
 fi
 
-latest_oncall="$(ls -1t test-reports/wave_c_b129_oncall_check_*.md 2>/dev/null | head -1 || true)"
-latest_snapshot="$(ls -1t test-reports/wave_c_b132_local_first_status_snapshot_*.md 2>/dev/null | head -1 || true)"
-latest_fullgate="$(ls -1t test-reports/wave_c_b138_pre_ci_reenable_full_gate_*.md 2>/dev/null | head -1 || true)"
-latest_consistency="$(ls -1t test-reports/wave_c_b140_local_guard_consistency_*.md 2>/dev/null | head -1 || true)"
+latest_oncall="$(ls -1t "$REPORTS_DIR"/wave_c_b129_oncall_check_*.md 2>/dev/null | head -1 || true)"
+latest_snapshot="$(ls -1t "$REPORTS_DIR"/wave_c_b132_local_first_status_snapshot_*.md 2>/dev/null | head -1 || true)"
+latest_fullgate="$(ls -1t "$REPORTS_DIR"/wave_c_b138_pre_ci_reenable_full_gate_*.md 2>/dev/null | head -1 || true)"
+latest_consistency="$(ls -1t "$REPORTS_DIR"/wave_c_b140_local_guard_consistency_*.md 2>/dev/null | head -1 || true)"
 
 extract_marked_state() {
   local file="$1"

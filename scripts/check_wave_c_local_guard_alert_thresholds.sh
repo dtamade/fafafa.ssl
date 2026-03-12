@@ -6,6 +6,8 @@ RUN_ID="$(date +%Y%m%d_%H%M%S)"
 INPUT_JSON=""
 OUTPUT_FILE=""
 STRICT=false
+LOCAL_GUARD_REPORTS_DIR="${FAFAFA_WAVE_C_LOCAL_GUARD_REPORTS_DIR:-tmp/wave_c_local_guard_reports}"
+REPORTS_DIR="${FAFAFA_WAVE_C_CI_REENABLE_REPORTS_DIR:-tmp/wave_c_ci_reenable_reports}"
 
 usage() {
   cat <<'USAGE'
@@ -20,7 +22,7 @@ Wave C B143 Local Guard Alert Thresholds
 选项：
   --run-id ID       指定 run_id
   --input FILE      指定 B142 JSON（默认最新）
-  --output FILE     输出报告路径
+  --output FILE     输出报告路径（默认 tmp/wave_c_ci_reenable_reports/wave_c_b143_alert_thresholds_<run_id>.md）
   --strict          alert_level 非 NONE 返回非 0
   --help            显示帮助
 USAGE
@@ -57,11 +59,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$INPUT_JSON" ]]; then
-  INPUT_JSON="$(ls -1t test-reports/wave_c_b142_local_guard_status_*.json 2>/dev/null | head -1 || true)"
+  INPUT_JSON="$(ls -1t "$LOCAL_GUARD_REPORTS_DIR"/wave_c_b142_local_guard_status_*.json 2>/dev/null | head -1 || true)"
 fi
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b143_alert_thresholds_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORTS_DIR/wave_c_b143_alert_thresholds_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"

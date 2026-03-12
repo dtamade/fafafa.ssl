@@ -371,7 +371,7 @@ begin
   for I := 0 to Length(AResponse) - 4 do
   begin
     if (AResponse[I] = 13) and (AResponse[I + 1] = 10) and
-       (AResponse[I + 2] = 13) and (AResponse[I + 3] = 10) then
+      (AResponse[I + 2] = 13) and (AResponse[I + 3] = 10) then
     begin
       HeaderEnd := I;
       Break;

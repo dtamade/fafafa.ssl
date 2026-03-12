@@ -97,6 +97,32 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_LINKAGE_ROLLBACK_DRILL_PLAN_${DRILL_ID}.md"
 fi
 
+resolve_input_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  elif [[ -e "$path" ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+resolve_output_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+TRACKER_REPORT="$(resolve_input_path "$TRACKER_REPORT")"
+VERSIONING_REPORT="$(resolve_input_path "$VERSIONING_REPORT")"
+ANOMALY_RESPONSE_REPORT="$(resolve_input_path "$ANOMALY_RESPONSE_REPORT")"
+SLA_ALERT_REPORT="$(resolve_input_path "$SLA_ALERT_REPORT")"
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] drill_id=$DRILL_ID"
   echo "[DRY-RUN] tracker_report=$TRACKER_REPORT"

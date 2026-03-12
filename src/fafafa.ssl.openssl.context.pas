@@ -256,6 +256,7 @@ var
   TotalLen, Offset: Integer;
   AnsiProto: AnsiString;
 begin
+  Result := nil;
   TotalLen := 0;
   ProtoList := AProtocols.Split([',']);
   for Proto in ProtoList do
@@ -648,7 +649,7 @@ begin
 
   // 当首选版本不再可用时，自动回退为无偏好
   if (FPreferredVersion <> sslProtocolUnknown) and
-     not (FPreferredVersion in FProtocolVersions) then
+    not (FPreferredVersion in FProtocolVersions) then
     FPreferredVersion := sslProtocolUnknown;
 
   // P2: 使用共享辅助函数记录废弃协议警告
@@ -665,7 +666,7 @@ end;
 procedure TOpenSSLContext.SetPreferredVersion(AVersion: TSSLProtocolVersion);
 begin
   if (AVersion <> sslProtocolUnknown) and
-     not (AVersion in FProtocolVersions) then
+    not (AVersion in FProtocolVersions) then
     RaiseInvalidParameter('PreferredVersion');
 
   FPreferredVersion := AVersion;

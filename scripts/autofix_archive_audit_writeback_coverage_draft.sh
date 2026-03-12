@@ -5,6 +5,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # ============================================================
 # 参数解析
 # ============================================================
@@ -75,6 +78,42 @@ fi
 
 TIMESTAMP=$(date +%Y-%m-%d\ %H:%M:%S\ %z)
 MODE=$( [[ "$DRY_RUN" == "true" ]] && echo "dry-run" || echo "apply" )
+
+resolve_input_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  elif [[ -e "$path" ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+resolve_output_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+if [[ -n "$CLOSURE_GATE_REPORT" ]]; then
+  CLOSURE_GATE_REPORT="$(resolve_input_path "$CLOSURE_GATE_REPORT")"
+fi
+if [[ -n "$TRACKER_REPORT" ]]; then
+  TRACKER_REPORT="$(resolve_input_path "$TRACKER_REPORT")"
+fi
+if [[ -n "$VERSIONING_REPORT" ]]; then
+  VERSIONING_REPORT="$(resolve_input_path "$VERSIONING_REPORT")"
+fi
+if [[ -n "$SLA_ROLLBACK_REPORT" ]]; then
+  SLA_ROLLBACK_REPORT="$(resolve_input_path "$SLA_ROLLBACK_REPORT")"
+fi
+if [[ -n "$OUTPUT" ]]; then
+  OUTPUT="$(resolve_output_path "$OUTPUT")"
+fi
 
 # ============================================================
 # 数据提取函数
@@ -296,6 +335,7 @@ main() {
   report=$(generate_report "${executed_actions[@]:-}")
 
   if [[ -n "$OUTPUT" ]]; then
+    mkdir -p "$(dirname "$OUTPUT")"
     echo "$report" > "$OUTPUT"
     echo "Report written to: $OUTPUT"
   else

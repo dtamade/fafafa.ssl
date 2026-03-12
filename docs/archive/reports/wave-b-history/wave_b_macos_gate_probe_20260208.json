@@ -1,0 +1,10 @@
+{
+  "status": "error",
+  "arch": "intel",
+  "homebrew_prefix": "",
+  "openssl_path": "",
+  "openssl_version": "",
+  "system_openssl": "OpenSSL 3.5.4 30 Sep 2025 (Library: OpenSSL 3.5.4 30 Sep 2025)",
+  "env_issues": "DYLD_LIBRARY_PATH not set PKG_CONFIG_PATH not set OPENSSL_ROOT not set",
+  "fpc_version": "3.3.1"
+}

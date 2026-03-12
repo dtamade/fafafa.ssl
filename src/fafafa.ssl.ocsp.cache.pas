@@ -122,8 +122,9 @@ uses
 
 function TOCSPCacheEntry.IsExpired: Boolean;
 begin
-  if NextUpdate = 0 then
-    Result := False
+  if NextUpdate <= 0 then
+    // Fail closed: unknown nextUpdate must not be treated as non-expiring.
+    Result := True
   else
     Result := Now >= NextUpdate;
 end;
@@ -226,6 +227,19 @@ var
 begin
   Result := False;
   SetLength(AResponse, 0);
+
+  if Length(ASerialNumber) = 0 then
+  begin
+    FStatsLock.Enter;
+    try
+      Inc(FStats.TotalRequests);
+      Inc(FStats.CacheMisses);
+      FStats.Misses := FStats.CacheMisses;
+    finally
+      FStatsLock.Leave;
+    end;
+    Exit(False);
+  end;
   
   Key := GenerateCacheKey(ASerialNumber);
   ShardIdx := GetShardIndex(Key);
@@ -293,7 +307,7 @@ var
   Entry: TOCSPCacheEntry;
   MaxEntriesPerShard: Integer;
 begin
-  if Length(AResponse) = 0 then
+  if (Length(ASerialNumber) = 0) or (Length(AResponse) = 0) then
     Exit;
   
   Key := GenerateCacheKey(ASerialNumber);
@@ -329,7 +343,12 @@ begin
     end;
     
     // 分片级别的大小限制
-    MaxEntriesPerShard := FMaxEntries div SHARD_COUNT;
+    if FMaxEntries <= 0 then
+      MaxEntriesPerShard := 0
+    else
+      // Use ceil division so small positive MaxEntries still allow caching.
+      MaxEntriesPerShard := (FMaxEntries + SHARD_COUNT - 1) div SHARD_COUNT;
+
     if FShards[ShardIdx].Cache.Count > MaxEntriesPerShard then
       EnforceSizeLimitInShard(ShardIdx);
   finally
@@ -342,6 +361,9 @@ var
   Key: string;
   ShardIdx, Idx: Integer;
 begin
+  if Length(ASerialNumber) = 0 then
+    Exit;
+
   Key := GenerateCacheKey(ASerialNumber);
   ShardIdx := GetShardIndex(Key);
   
@@ -381,14 +403,27 @@ end;
 function TOCSPResponseCache.Contains(const ASerialNumber: TBytes): Boolean;
 var
   Key: string;
-  ShardIdx: Integer;
+  ShardIdx, Idx: Integer;
+  Entry: TOCSPCacheEntry;
 begin
+  if Length(ASerialNumber) = 0 then
+    Exit(False);
+
   Key := GenerateCacheKey(ASerialNumber);
   ShardIdx := GetShardIndex(Key);
   
   FShards[ShardIdx].Lock.Enter;
   try
-    Result := FShards[ShardIdx].Cache.IndexOf(Key) >= 0;
+    Idx := FShards[ShardIdx].Cache.IndexOf(Key);
+    if Idx < 0 then
+      Exit(False);
+
+    Entry := FShards[ShardIdx].Cache.Data[Idx];
+    if Entry.IsValid then
+      Exit(True);
+
+    FShards[ShardIdx].Cache.Delete(Idx);
+    Result := False;
   finally
     FShards[ShardIdx].Lock.Leave;
   end;
@@ -451,7 +486,11 @@ var
 begin
   // 注意: 调用者必须持有分片锁
   
-  MaxEntriesPerShard := FMaxEntries div SHARD_COUNT;
+  if FMaxEntries <= 0 then
+    MaxEntriesPerShard := 0
+  else
+    // Keep shard limit aligned with Put() ceil-division semantics.
+    MaxEntriesPerShard := (FMaxEntries + SHARD_COUNT - 1) div SHARD_COUNT;
   
   while FShards[AShardIndex].Cache.Count > MaxEntriesPerShard do
   begin
@@ -473,11 +512,16 @@ begin
 end;
 
 function TOCSPResponseCache.GetStats: TOCSPCacheStats;
+var
+  CurrentEntries: Integer;
 begin
+  // Lock order: shards -> stats. GetCount acquires shard locks, so take it first.
+  CurrentEntries := GetCount;
+
   FStatsLock.Enter;
   try
     Result := FStats;
-    Result.TotalEntries := GetCount;
+    Result.TotalEntries := CurrentEntries;
     Result.Hits := FStats.CacheHits;
     Result.Misses := FStats.CacheMisses;
   finally
@@ -486,7 +530,12 @@ begin
 end;
 
 procedure TOCSPResponseCache.ResetStats;
+var
+  CurrentEntries: Integer;
 begin
+  // Lock order: shards -> stats. Avoid calling GetCount while holding stats lock.
+  CurrentEntries := GetCount;
+
   FStatsLock.Enter;
   try
     FStats.TotalRequests := 0;
@@ -495,7 +544,7 @@ begin
     FStats.Hits := 0;
     FStats.Misses := 0;
     FStats.ExpiredEntries := 0;
-    FStats.TotalEntries := GetCount;
+    FStats.TotalEntries := CurrentEntries;
   finally
     FStatsLock.Leave;
   end;

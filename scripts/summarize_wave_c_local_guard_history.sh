@@ -5,6 +5,7 @@ set -euo pipefail
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 STRICT=false
 OUTPUT_FILE=""
+REPORTS_DIR="${FAFAFA_WAVE_C_LOCAL_GUARD_REPORTS_DIR:-tmp/wave_c_local_guard_reports}"
 LIMIT=20
 
 usage() {
@@ -20,7 +21,7 @@ Wave C B126 Local Guard History Summary
 选项：
   --run-id ID       指定 run_id
   --limit N         最多扫描最近 N 份 bundle 报告（默认 20）
-  --output FILE     输出报告路径
+  --output FILE     输出报告路径（默认 tmp/wave_c_local_guard_reports/wave_c_b126_local_guard_history_<run_id>.md）
   --strict          存在 FAIL 记录时返回非 0
   --help            显示帮助
 USAGE
@@ -57,12 +58,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b126_local_guard_history_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORTS_DIR/wave_c_b126_local_guard_history_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 
-mapfile -t reports < <(ls -1t test-reports/wave_c_b125_local_guard_bundle_*.md 2>/dev/null | head -n "$LIMIT" || true)
+mapfile -t reports < <(ls -1t "$REPORTS_DIR"/wave_c_b125_local_guard_bundle_*.md 2>/dev/null | head -n "$LIMIT" || true)
 
 total=0
 pass_count=0

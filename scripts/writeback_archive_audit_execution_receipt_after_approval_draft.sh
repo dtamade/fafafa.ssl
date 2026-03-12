@@ -91,6 +91,31 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_EXECUTION_RECEIPT_WRITEBACK_${WRITEBACK_ID}.md"
 fi
 
+resolve_input_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  elif [[ -e "$path" ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+resolve_output_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+EXECUTION_RECEIPT_FILE="$(resolve_input_path "$EXECUTION_RECEIPT_FILE")"
+APPROVAL_CHAIN_FILE="$(resolve_input_path "$APPROVAL_CHAIN_FILE")"
+RETEST_GATE_FILE="$(resolve_input_path "$RETEST_GATE_FILE")"
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] writeback_id=$WRITEBACK_ID"
   echo "[DRY-RUN] execution_receipt=$EXECUTION_RECEIPT_FILE"

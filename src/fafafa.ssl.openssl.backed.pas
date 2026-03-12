@@ -9,6 +9,10 @@
     实现 ISSLLibrary 接口的 OpenSSL 后端。
     负责 OpenSSL 的初始化、配置和上下文创建。
     支持 Linux, macOS, Android 等平台。
+
+    说明:
+      此单元保留为历史兼容实现。
+      规范导入单元名为 fafafa.ssl.openssl.lib，当前由该单元委托实现。
 }
  
 unit fafafa.ssl.openssl.backed;
@@ -578,6 +582,9 @@ begin
     Exit;
 
   case AProtocol of
+    sslProtocolUnknown:
+      Result := False;
+
     sslProtocolSSL2,
     sslProtocolSSL3:
       Result := False;  // SSL 2.0/3.0 已废弃
@@ -669,8 +676,6 @@ begin
     sslFeatCertificateTransparency:
       Result := (FVersionNumber >= $1010000F) and
         TOpenSSLLoader.IsModuleLoaded(osmCT);
-  else
-    Result := False;
   end;
 
   InternalLog(sslLogDebug, Format('Feature support check (type-safe): %d = %s',
@@ -867,6 +872,8 @@ var
   LConfig: TSSLConfig;
 begin
   LConfig := AConfig;
+  TSSLFactory.NormalizeLibraryDefaultOwnerFields(LConfig, sslOpenSSL);
+  TSSLFactory.ValidateLibraryDefaultConfigFields(LConfig, 'TOpenSSLLibrary.SetDefaultConfig');
   TSSLFactory.NormalizeConfig(LConfig);
 
   FDefaultConfig := LConfig;
@@ -976,6 +983,7 @@ end;
 procedure TOpenSSLLibrary.SetLogCallback(ACallback: TSSLLogCallback);
 begin
   FLogCallback := ACallback;
+  FDefaultConfig.LogCallback := ACallback;
 end;
 
 procedure TOpenSSLLibrary.Log(ALevel: TSSLLogLevel; const AMessage: string);
@@ -1001,48 +1009,11 @@ begin
   // Let exceptions propagate - caller must handle errors explicitly
   Result := TOpenSSLContext.Create(Self, AType);
 
-  // Apply default config (already normalized in constructor/SetDefaultConfig)
   if Result <> nil then
   begin
     LConfig := FDefaultConfig;
     LConfig.ContextType := AType;
-
-    if (LConfig.ProtocolVersions <> []) and (LConfig.ProtocolVersions <> Result.GetProtocolVersions) then
-      Result.SetProtocolVersions(LConfig.ProtocolVersions);
-
-    if (LConfig.PreferredVersion <> sslProtocolUnknown) and
-       (LConfig.PreferredVersion <> Result.GetPreferredVersion) then
-      Result.SetPreferredVersion(LConfig.PreferredVersion);
-
-    if (LConfig.VerifyMode <> []) and (LConfig.VerifyMode <> Result.GetVerifyMode) then
-      Result.SetVerifyMode(LConfig.VerifyMode);
-
-    if (LConfig.VerifyDepth > 0) and (LConfig.VerifyDepth <> Result.GetVerifyDepth) then
-      Result.SetVerifyDepth(LConfig.VerifyDepth);
-
-    if (LConfig.CipherList <> '') and (LConfig.CipherList <> Result.GetCipherList) then
-      Result.SetCipherList(LConfig.CipherList);
-
-    if (LConfig.CipherSuites <> '') and (LConfig.CipherSuites <> Result.GetCipherSuites) then
-      Result.SetCipherSuites(LConfig.CipherSuites);
-
-    if (LConfig.Options <> []) and (LConfig.Options <> Result.GetOptions) then
-      Result.SetOptions(LConfig.Options);
-
-    if (LConfig.SessionCacheSize > 0) and (LConfig.SessionCacheSize <> Result.GetSessionCacheSize) then
-      Result.SetSessionCacheSize(LConfig.SessionCacheSize);
-
-    if (LConfig.SessionTimeout > 0) and (LConfig.SessionTimeout <> Result.GetSessionTimeout) then
-      Result.SetSessionTimeout(LConfig.SessionTimeout);
-
-    if (ssoEnableSessionCache in LConfig.Options) <> Result.GetSessionCacheMode then
-      Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
-
-    if (LConfig.ServerName <> '') and (LConfig.ServerName <> Result.GetServerName) then
-      Result.SetServerName(LConfig.ServerName);
-
-    if (LConfig.ALPNProtocols <> '') and (LConfig.ALPNProtocols <> Result.GetALPNProtocols) then
-      Result.SetALPNProtocols(LConfig.ALPNProtocols);
+    TSSLFactory.ApplyConfigToContext(Result, LConfig);
   end;
 
   Inc(FStatistics.ConnectionsTotal);
@@ -1093,7 +1064,7 @@ begin
   // 在非Windows平台上注册 OpenSSL 后端
   // 优先级设为 100，作为默认选择
   TSSLFactory.RegisterLibrary(sslOpenSSL, TOpenSSLLibrary,
-    'OpenSSL (Cross-platform SSL/TLS)', 100);
+    'OpenSSL (Cross-platform SSL/TLS)', 100, @CreateOpenSSLLibrary);
 end;
 
 procedure UnregisterOpenSSLBackend;

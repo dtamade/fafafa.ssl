@@ -421,6 +421,9 @@ begin
     // Print unified summary (P1-2.2: Consistent output format)
     Runner.PrintSummary;
 
+    if Runner.FailCount = 0 then
+      WriteLn('[PASS] bn simple integration completed');
+
     if Runner.FailCount > 0 then
       Halt(1);
   finally

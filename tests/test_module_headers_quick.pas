@@ -3,12 +3,14 @@ program test_module_headers_quick;
 {$mode objfpc}{$H+}
 
 uses
+  {$IFDEF UNIX}cthreads,{$ENDIF}
   SysUtils,
   // Core modules
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.utils,
   fafafa.ssl.openssl.api.crypto,
   
@@ -94,14 +96,13 @@ uses
   fafafa.ssl.openssl.api.thread;
   
   // Legacy - 暂时跳过有编译错误的模块
-  // fafafa.ssl.openssl.legacy_ciphers,
+  // fafafa.ssl.openssl.api.legacy_ciphers,
   // fafafa.ssl.openssl.api.async,
   // fafafa.ssl.openssl.api.comp,
   // fafafa.ssl.openssl.api.rand_old;
 
 var
   TestsPassed, TestsFailed, TestsTotal: Integer;
-  ModuleName: string;
 
 procedure TestModule(const Name: string; Condition: Boolean);
 begin
@@ -117,6 +118,40 @@ begin
     WriteLn(' ✗ 失败');
     Inc(TestsFailed);
   end;
+end;
+
+procedure LoadValidationModules;
+var
+  LCrypto: TLibHandle;
+begin
+  LCrypto := GetCryptoLibHandle;
+  if LCrypto = NilHandle then
+    Exit;
+
+  LoadOpenSSLERR;
+  LoadOpenSSLBIO;
+  LoadOpenSSLRAND;
+  LoadBufferModule(LCrypto);
+  LoadEVP(LCrypto);
+  LoadSHAFunctions(LCrypto);
+  LoadBLAKE2Functions(LCrypto);
+  LoadAESFunctions(LCrypto);
+  LoadDESFunctions(LCrypto);
+  LoadChaChaFunctions;
+  LoadOpenSSLHMAC;
+  LoadOpenSSLBN;
+  LoadOpenSSLRSA;
+  LoadOpenSSLDSA;
+  LoadOpenSSLDH;
+  LoadECFunctions(LCrypto);
+  LoadOpenSSLECDH;
+  LoadOpenSSLECDSA;
+  LoadOpenSSLASN1(LCrypto);
+  LoadOpenSSLPEM(LCrypto);
+  LoadOpenSSLX509;
+  LoadX509V3Functions(LCrypto);
+  LoadKDFFunctions;
+  LoadOpenSSLSSL;
 end;
 
 procedure TestBasicDefinitions;
@@ -165,18 +200,25 @@ begin
   WriteLn;
   WriteLn('验证库加载功能...');
   WriteLn('----------------------------------------');
-  
-  Loaded := LoadOpenSSLLibrary;
-  TestModule('OpenSSL 库加载', Loaded);
-  
+
+  try
+    LoadOpenSSLCore;
+    Loaded := TOpenSSLLoader.IsModuleLoaded(osmCore);
+  except
+    Loaded := False;
+  end;
+
+  TestModule('OpenSSL Core 加载', Loaded);
+
   if Loaded then
   begin
-    TestModule('IsCryptoLibraryLoaded', IsCryptoLibraryLoaded);
-    // TestModule('IsCryptoLibraryLoaded', IsCryptoLibraryLoaded);  // Not in current API
+    TestModule('OpenSSL Core 已加载', TOpenSSLLoader.IsModuleLoaded(osmCore));
 
     // Test version
     TestModule('OpenSSL 版本获取', GetOpenSSLVersionString <> '');
     WriteLn('    版本: ', GetOpenSSLVersionString);
+
+    LoadValidationModules;
   end;
 end;
 
@@ -186,7 +228,7 @@ begin
   WriteLn('验证关键函数指针...');
   WriteLn('----------------------------------------');
   
-  if IsCryptoLibraryLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     // BIO functions
     TestModule('BIO_new 函数指针', Assigned(BIO_new));
@@ -256,7 +298,7 @@ begin
   WriteLn('验证SSL/TLS函数指针...');
   WriteLn('----------------------------------------');
   
-  if IsCryptoLibraryLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     TestModule('SSL_CTX_new 函数指针', Assigned(SSL_CTX_new));
     TestModule('SSL_CTX_free 函数指针', Assigned(SSL_CTX_free));
@@ -297,7 +339,7 @@ begin
   TestLibraryLoading;
   
   // Phase 4: Function pointers (runtime check)
-  if IsCryptoLibraryLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     TestFunctionPointers;
     TestSSLFunctionPointers;
@@ -329,6 +371,6 @@ begin
     Halt(1);
   end;
   
-  if IsCryptoLibraryLoaded or IsCryptoLibraryLoaded then
-    UnloadOpenSSLLibrary;
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
+    UnloadOpenSSLCore;
 end.

@@ -86,7 +86,7 @@ function StringsToArray(AStrings: TStrings): TSSLStringArray;
 var
   I: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   if (AStrings = nil) or (AStrings.Count = 0) then
     Exit;
 

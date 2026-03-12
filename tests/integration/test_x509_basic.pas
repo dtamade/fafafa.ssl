@@ -23,6 +23,9 @@ uses
   fafafa.ssl.openssl.loader,
   test_openssl_base;
 
+const
+  MBSTRING_UTF8 = $1000 or 1;
+
 var
   Runner: TSimpleTestRunner;
 
@@ -100,16 +103,16 @@ begin
   if name <> nil then
   begin
     Runner.Check('Add Country Name (C)',
-            X509_NAME_add_entry_by_txt(name, 'C', MBSTRING_ASC,
-                                       PByte(PAnsiChar('US')), 2, -1, 0) = 1);
+            X509_NAME_add_entry_by_txt(name, 'C', MBSTRING_UTF8,
+                                       PByte(PAnsiChar('US')), -1, -1, 0) = 1);
 
     Runner.Check('Add Organization (O)',
-            X509_NAME_add_entry_by_txt(name, 'O', MBSTRING_ASC,
-                                       PByte(PAnsiChar('Test Org')), 8, -1, 0) = 1);
+            X509_NAME_add_entry_by_txt(name, 'O', MBSTRING_UTF8,
+                                       PByte(PAnsiChar('Test Org')), -1, -1, 0) = 1);
 
     Runner.Check('Add Common Name (CN)',
-            X509_NAME_add_entry_by_txt(name, 'CN', MBSTRING_ASC,
-                                       PByte(PAnsiChar('test.example.com')), 16, -1, 0) = 1);
+            X509_NAME_add_entry_by_txt(name, 'CN', MBSTRING_UTF8,
+                                       PByte(PAnsiChar('test.example.com')), -1, -1, 0) = 1);
 
     entry_count := X509_NAME_entry_count(name);
     Runner.Check('Verify entry count', entry_count = 3,
@@ -148,6 +151,9 @@ begin
   end;
 
   try
+    Runner.Check('Set certificate version', X509_set_version(cert, 2) = 1,
+            'Version 3 (value=2)');
+
     serial := ASN1_INTEGER_new();
     if serial <> nil then
     begin
@@ -164,8 +170,8 @@ begin
     name := X509_NAME_new();
     if name <> nil then
     begin
-      X509_NAME_add_entry_by_txt(name, 'CN', MBSTRING_ASC,
-                                 PByte(PAnsiChar('Test Subject')), 12, -1, 0);
+      X509_NAME_add_entry_by_txt(name, 'CN', MBSTRING_UTF8,
+                                 PByte(PAnsiChar('Test Subject')), -1, -1, 0);
       Runner.Check('Set subject name', X509_set_subject_name(cert, name) = 1);
       X509_NAME_free(name);
     end;
@@ -173,8 +179,8 @@ begin
     name := X509_NAME_new();
     if name <> nil then
     begin
-      X509_NAME_add_entry_by_txt(name, 'CN', MBSTRING_ASC,
-                                 PByte(PAnsiChar('Test Issuer')), 11, -1, 0);
+      X509_NAME_add_entry_by_txt(name, 'CN', MBSTRING_UTF8,
+                                 PByte(PAnsiChar('Test Issuer')), -1, -1, 0);
       Runner.Check('Set issuer name', X509_set_issuer_name(cert, name) = 1);
       X509_NAME_free(name);
     end;

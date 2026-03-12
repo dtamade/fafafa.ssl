@@ -5,7 +5,7 @@ program test_direct_cache;
 uses
   SysUtils,
   fafafa.ssl.base,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   fafafa.ssl.wolfssl.lib,
   fafafa.ssl.mbedtls.lib;
 

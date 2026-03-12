@@ -17,7 +17,7 @@ uses
   {$ENDIF}
   SysUtils, Classes,
   fafafa.ssl.base,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.bio,

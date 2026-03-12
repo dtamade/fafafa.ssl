@@ -30,12 +30,12 @@ uses
   fafafa.ssl.errors,
   fafafa.ssl.freepascal.lib
   {$IFDEF UNIX}
-  , fafafa.ssl.openssl.backed  // 注册 OpenSSL 后端
+  , fafafa.ssl.openssl.lib  // 注册 OpenSSL 后端
   , fafafa.ssl.mbedtls.lib     // 注册 MbedTLS 后端
   , fafafa.ssl.wolfssl.lib     // 注册 WolfSSL 后端
   {$ENDIF}
   {$IFDEF WINDOWS}
-  , fafafa.ssl.openssl.backed  // 注册 OpenSSL 后端
+  , fafafa.ssl.openssl.lib  // 注册 OpenSSL 后端
   , fafafa.ssl.winssl.lib      // 注册 WinSSL 后端
   , fafafa.ssl.mbedtls.lib     // 注册 MbedTLS 后端
   , fafafa.ssl.wolfssl.lib     // 注册 WolfSSL 后端

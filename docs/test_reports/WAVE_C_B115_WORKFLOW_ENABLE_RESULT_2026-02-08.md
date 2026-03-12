@@ -7,9 +7,9 @@
 ## 执行
 
 - 非 strict：
-  - `bash scripts/check_wave_c_workflow_enable_prereq.sh --run-id 20260208_174800 --output test-reports/wave_c_b115_workflow_enable_prereq_20260208_174800.md`
+  - `bash scripts/check_wave_c_workflow_enable_prereq.sh --run-id 20260208_174800 --output docs/archive/reports/wave-c-quick-enablement-history/wave_c_b115_workflow_enable_prereq_20260208_174800.md`
 - strict（故障路径验证）：
-  - `bash scripts/check_wave_c_workflow_enable_prereq.sh --run-id 20260208_174800_strict --strict --output test-reports/wave_c_b115_workflow_enable_prereq_20260208_174800_strict.md`
+  - `bash scripts/check_wave_c_workflow_enable_prereq.sh --run-id 20260208_174800_strict --strict --output docs/archive/reports/wave-c-quick-enablement-history/wave_c_b115_workflow_enable_prereq_20260208_174800_strict.md`
 
 ## 结果
 

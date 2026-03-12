@@ -2,10 +2,20 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+COMMON_LIB="$SCRIPT_DIR/wave_c_audit_note_common.sh"
+if [[ ! -f "$COMMON_LIB" ]]; then
+  echo "[ERROR] common lib not found: $COMMON_LIB" >&2
+  exit 1
+fi
+# shellcheck source=/dev/null
+source "$COMMON_LIB"
+
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 INPUT_FILE=""
 OUTPUT_FILE=""
 STRICT=false
+REPORTS_DIR="${FAFAFA_WAVE_C_CI_REENABLE_REPORTS_DIR:-tmp/wave_c_ci_reenable_reports}"
 
 usage() {
   cat <<'USAGE'
@@ -20,7 +30,7 @@ Wave C B147 CI Re-enable Submission Pack Check
 选项：
   --run-id ID      指定 run_id
   --input FILE     指定 B146 提交包（默认最新）
-  --output FILE    输出检查报告
+  --output FILE    输出检查报告（默认 tmp/wave_c_ci_reenable_reports/wave_c_b147_submission_pack_check_<run_id>.md）
   --strict         check_state 非 PASS 返回非 0
   --help           显示帮助
 USAGE
@@ -57,11 +67,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$INPUT_FILE" ]]; then
-  INPUT_FILE="$(ls -1t test-reports/wave_c_b146_ci_reenable_submission_pack_*.md 2>/dev/null | head -1 || true)"
+  INPUT_FILE="$(ls -1t "$REPORTS_DIR"/wave_c_b146_ci_reenable_submission_pack_*.md 2>/dev/null | head -1 || true)"
 fi
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b147_submission_pack_check_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORTS_DIR/wave_c_b147_submission_pack_check_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
@@ -100,6 +110,13 @@ if [[ "$missing" -ne 0 || "$ready_state" != "READY_TO_SUBMIT" ]]; then
   check_state="FAIL"
 fi
 
+projected_b148_alert_state="CLEAR"
+if [[ "$check_state" != "PASS" ]]; then
+  projected_b148_alert_state="WARN"
+fi
+
+projected_b149_audit_alert_note="$(wave_c_map_alert_state_to_audit_note "$projected_b148_alert_state")"
+
 {
   echo "# Wave C B147 Submission Pack Check"
   echo
@@ -113,6 +130,11 @@ fi
   echo "| token | result |"
   echo "|-------|--------|"
   printf "%b" "$rows"
+  echo
+  echo "## Downstream Audit Projection"
+  echo
+  echo "- projected_b148_alert_state: **$projected_b148_alert_state**"
+  echo "- projected_b149_audit_alert_note: **$projected_b149_audit_alert_note**"
   echo
   echo "## Decision"
   echo

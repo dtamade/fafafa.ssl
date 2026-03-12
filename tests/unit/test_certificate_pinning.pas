@@ -10,7 +10,7 @@ uses
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.pem,
-  fafafa.ssl.openssl.core;
+  fafafa.ssl.openssl.api.core;
 
 {**
  * Certificate Pinning Test Suite

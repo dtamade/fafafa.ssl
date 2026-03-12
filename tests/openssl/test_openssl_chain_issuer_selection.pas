@@ -7,10 +7,11 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.factory,
   fafafa.ssl.cert.builder,
+  fafafa.ssl.openssl.cert.builder,
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.stack,
-  fafafa.ssl.openssl.x509.chain,
+  fafafa.ssl.openssl.api.x509.chain,
   fafafa.ssl;
 
 procedure Check(ACondition: Boolean; const AMessage: string);
@@ -25,22 +26,15 @@ end;
 
 function MustGetX509(const ACert: ICertificate): PX509;
 var
-  {$PUSH}
-  {$WARN SYMBOL_DEPRECATED OFF}
-  LEx: ICertificateEx;
-  {$POP}
+  LEx: fafafa.ssl.openssl.cert.builder.ICertificateEx;
 begin
-  {$PUSH}
-  {$WARN SYMBOL_DEPRECATED OFF}
-  // ICertificateEx is deprecated but required for OpenSSL-specific testing
-  if not Supports(ACert, ICertificateEx, LEx) then
+  if not Supports(ACert, fafafa.ssl.openssl.cert.builder.ICertificateEx, LEx) then
   begin
     WriteLn('❌ FAIL: Certificate does not support ICertificateEx');
     Halt(1);
   end;
 
   Result := PX509(LEx.GetX509Handle);
-  {$POP}
   if Result = nil then
   begin
     WriteLn('❌ FAIL: X509 handle is nil');

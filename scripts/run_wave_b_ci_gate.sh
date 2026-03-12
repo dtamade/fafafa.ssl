@@ -12,7 +12,9 @@ WITH_MODULES=true
 WITH_EXAMPLES=true
 MODULE_SET="PKCS7,PKCS12,CMS,Store,OCSP,TS,CT"
 EXAMPLES_THRESHOLD="80.0"
-EXAMPLES_REPORT_REL="test-reports/examples_compile_ci_gate.json"
+REPORTS_DIR="${FAFAFA_WAVE_B_REPORTS_DIR:-tmp/wave_b_reports}"
+EXAMPLES_REPORT_REL=""
+EXAMPLES_REPORT_EXPLICIT=false
 SUMMARY_OUT_REL=""
 WITH_TLS13_SIGN_PURITY_CHECK=false
 WITH_TLS13_SIGN_BENCH=false
@@ -22,6 +24,7 @@ TLS13_SIGN_BENCH_SCHEME="rsa_pkcs1_sha256"
 TLS13_SIGN_BENCH_KEY="tests/certificate/test_certs/signer_key.pem"
 TLS13_SIGN_BENCH_TIMEOUT="120"
 TLS13_SIGN_BENCH_JSON_OUT_REL=""
+FPC_EXE="${FAFAFA_FPC_EXE:-fpc}"
 
 usage() {
   cat <<'USAGE'
@@ -40,9 +43,10 @@ Wave B Linux CI Gate Runner
 
 选项：
   --modules LIST                    指定模块列表（默认: PKCS7,PKCS12,CMS,Store,OCSP,TS,CT）
+  --reports-dir PATH                默认 reports 根目录（默认: tmp/wave_b_reports；CLI > env > default）
   --examples-threshold FLOAT        示例通过率阈值，默认 80.0
-  --examples-report PATH            示例 JSON 输出路径（相对项目根目录）
-  --summary-out PATH                Summary markdown 输出路径（相对项目根目录）
+  --examples-report PATH            示例 JSON 输出路径（相对项目根目录，默认 tmp/wave_b_reports/examples_compile_ci_gate.json）
+  --summary-out PATH                Summary markdown 输出路径（相对项目根目录，默认 tmp/wave_b_reports/wave_b_ci_gate_summary_<run_id>.md）
   --skip-compile                    跳过 compile_all_modules 阶段
   --skip-modules                    跳过 run_all_module_tests 阶段
   --skip-examples                   跳过 verify_examples_compile 阶段
@@ -67,12 +71,17 @@ while [[ $# -gt 0 ]]; do
       MODULE_SET="$2"
       shift 2
       ;;
+    --reports-dir)
+      REPORTS_DIR="$2"
+      shift 2
+      ;;
     --examples-threshold)
       EXAMPLES_THRESHOLD="$2"
       shift 2
       ;;
     --examples-report)
       EXAMPLES_REPORT_REL="$2"
+      EXAMPLES_REPORT_EXPLICIT=true
       shift 2
       ;;
     --summary-out)
@@ -165,37 +174,98 @@ if [[ ! "$TLS13_SIGN_BENCH_TIMEOUT" =~ ^[0-9]+$ ]] || [[ "$TLS13_SIGN_BENCH_TIME
   exit 1
 fi
 
-RUN_ID="$(date +%Y%m%d_%H%M%S)"
+RUN_ID="${FAFAFA_WAVE_B_CI_GATE_RUN_ID:-$(date +%Y%m%d_%H%M%S)}"
+export FAFAFA_WAVE_B_CI_GATE_RUN_ID="$RUN_ID"
+COMPILE_UNIT_OUTPUT_DIR="${FAFAFA_WAVE_B_CI_GATE_COMPILE_UNIT_OUTPUT_DIR:-tmp/wave_b_ci_gate_compile_units_${RUN_ID}}"
+MODULE_UNIT_OUTPUT_DIR="${FAFAFA_WAVE_B_CI_GATE_MODULE_UNIT_OUTPUT_DIR:-tmp/wave_b_ci_gate_module_units_${RUN_ID}}"
+MODULE_BIN_OUTPUT_DIR="${FAFAFA_WAVE_B_CI_GATE_MODULE_BIN_OUTPUT_DIR:-tmp/wave_b_ci_gate_module_bin_${RUN_ID}}"
+if [[ -z "$EXAMPLES_REPORT_REL" ]]; then
+  EXAMPLES_REPORT_REL="${FAFAFA_WAVE_B_EXAMPLES_REPORT_REL:-$REPORTS_DIR/examples_compile_ci_gate.json}"
+fi
+if [[ -n "${FAFAFA_WAVE_B_EXAMPLES_REPORT_REL:-}" ]]; then
+  EXAMPLES_REPORT_EXPLICIT=true
+fi
+EXAMPLES_REPORT_RUN_SCOPED_REL="${FAFAFA_WAVE_B_EXAMPLES_REPORT_RUN_SCOPED_REL:-$REPORTS_DIR/examples_compile_ci_gate_${RUN_ID}.json}"
+EXAMPLES_ARCHIVE_DIR_REL="${FAFAFA_WAVE_B_EXAMPLES_ARCHIVE_DIR_REL:-$REPORTS_DIR/examples-compile-history}"
+EXAMPLES_ARCHIVE_REPORT_REL="${FAFAFA_WAVE_B_EXAMPLES_ARCHIVE_REPORT_REL:-$EXAMPLES_ARCHIVE_DIR_REL/examples_compile_ci_gate_${RUN_ID}.json}"
+EXAMPLES_ARCHIVE_ALIAS_REL="${FAFAFA_WAVE_B_EXAMPLES_ARCHIVE_ALIAS_REL:-$EXAMPLES_ARCHIVE_DIR_REL/examples_compile_ci_gate.json}"
+EXPECTED_EXAMPLES_ARCHIVE_BASENAME="examples_compile_ci_gate_${RUN_ID}.json"
+ARCHIVE_REPORT_DIR_REL="$(dirname "$EXAMPLES_ARCHIVE_REPORT_REL")"
+if [[ "$ARCHIVE_REPORT_DIR_REL" == "." || "$ARCHIVE_REPORT_DIR_REL" == "$EXAMPLES_ARCHIVE_REPORT_REL" ]]; then
+  ARCHIVE_REPORT_DIR_REL="$EXAMPLES_ARCHIVE_DIR_REL"
+fi
+if [[ "$(basename "$EXAMPLES_ARCHIVE_REPORT_REL")" != "$EXPECTED_EXAMPLES_ARCHIVE_BASENAME" ]]; then
+  EXAMPLES_ARCHIVE_REPORT_REL="$ARCHIVE_REPORT_DIR_REL/$EXPECTED_EXAMPLES_ARCHIVE_BASENAME"
+fi
+if [[ "$EXAMPLES_ARCHIVE_REPORT_REL" == "$EXAMPLES_REPORT_REL" || "$EXAMPLES_ARCHIVE_REPORT_REL" == "$EXAMPLES_REPORT_RUN_SCOPED_REL" ]]; then
+  EXAMPLES_ARCHIVE_REPORT_REL="$EXAMPLES_ARCHIVE_DIR_REL/$EXPECTED_EXAMPLES_ARCHIVE_BASENAME"
+fi
 if [[ -z "$SUMMARY_OUT_REL" ]]; then
-  SUMMARY_OUT_REL="test-reports/wave_b_ci_gate_summary_${RUN_ID}.md"
+  SUMMARY_OUT_REL="${FAFAFA_WAVE_B_SUMMARY_OUT_REL:-$REPORTS_DIR/wave_b_ci_gate_summary_${RUN_ID}.md}"
+fi
+if [[ -z "$TLS13_SIGN_BENCH_JSON_OUT_REL" && "$WITH_TLS13_SIGN_BENCH" == "true" ]]; then
+  TLS13_SIGN_BENCH_JSON_OUT_REL="${FAFAFA_WAVE_B_TLS13_SIGN_BENCH_JSON_OUT_REL:-$REPORTS_DIR/wave_b_tls13_signer_${RUN_ID}.json}"
 fi
 
 EXAMPLES_REPORT="$PROJECT_ROOT/$EXAMPLES_REPORT_REL"
+EXAMPLES_REPORT_RUN_SCOPED="$PROJECT_ROOT/$EXAMPLES_REPORT_RUN_SCOPED_REL"
+EXAMPLES_ARCHIVE_REPORT="$PROJECT_ROOT/$EXAMPLES_ARCHIVE_REPORT_REL"
+EXAMPLES_ARCHIVE_ALIAS="$PROJECT_ROOT/$EXAMPLES_ARCHIVE_ALIAS_REL"
 SUMMARY_OUT="$PROJECT_ROOT/$SUMMARY_OUT_REL"
-COMPILE_LOG="$PROJECT_ROOT/test-reports/wave_b_compile_${RUN_ID}.log"
-MODULE_LOG="$PROJECT_ROOT/test-reports/wave_b_modules_${RUN_ID}.log"
-EXAMPLES_LOG="$PROJECT_ROOT/test-reports/wave_b_examples_${RUN_ID}.log"
-PURITY_LOG="$PROJECT_ROOT/test-reports/wave_b_tls13_sign_purity_${RUN_ID}.log"
-BENCH_LOG="$PROJECT_ROOT/test-reports/wave_b_tls13_sign_bench_${RUN_ID}.log"
+COMPILE_LOG="$PROJECT_ROOT/$REPORTS_DIR/wave_b_compile_${RUN_ID}.log"
+MODULE_LOG="$PROJECT_ROOT/$REPORTS_DIR/wave_b_modules_${RUN_ID}.log"
+EXAMPLES_LOG="$PROJECT_ROOT/$REPORTS_DIR/wave_b_examples_${RUN_ID}.log"
+PURITY_LOG="$PROJECT_ROOT/$REPORTS_DIR/wave_b_tls13_sign_purity_${RUN_ID}.log"
+BENCH_LOG="$PROJECT_ROOT/$REPORTS_DIR/wave_b_tls13_sign_bench_${RUN_ID}.log"
 
 BENCH_JSON_OUT=""
 if [[ -n "$TLS13_SIGN_BENCH_JSON_OUT_REL" ]]; then
   BENCH_JSON_OUT="$PROJECT_ROOT/$TLS13_SIGN_BENCH_JSON_OUT_REL"
 fi
 
-mkdir -p "$PROJECT_ROOT/test-reports"
-
-STEP_SHELL="/bin/bash"
-if [[ -x "/usr/bin/zsh" ]]; then
-  STEP_SHELL="/usr/bin/zsh"
+mkdir -p "$PROJECT_ROOT/$REPORTS_DIR"
+mkdir -p "$(dirname "$SUMMARY_OUT")"
+mkdir -p "$(dirname "$EXAMPLES_REPORT")"
+if [[ -n "$BENCH_JSON_OUT" ]]; then
+  mkdir -p "$(dirname "$BENCH_JSON_OUT")"
 fi
+
+examples_history_alias_cleanup="absent"
+examples_selection="current_alias"
+examples_warning="none"
+examples_current_alias_rel="$EXAMPLES_REPORT_REL"
+examples_run_scoped_rel="$EXAMPLES_REPORT_RUN_SCOPED_REL"
+examples_archive_report_rel="$EXAMPLES_ARCHIVE_REPORT_REL"
+examples_history_alias_rel="$EXAMPLES_ARCHIVE_ALIAS_REL"
+
+if [[ "$EXAMPLES_REPORT_EXPLICIT" == "true" ]]; then
+  examples_selection="explicit_override"
+  examples_warning="explicit override in use; verify owner run_id/path manually"
+fi
+
+format_command() {
+  local formatted=""
+  local quoted_arg=""
+  local arg
+
+  for arg in "$@"; do
+    printf -v quoted_arg '%q' "$arg"
+    if [[ -n "$formatted" ]]; then
+      formatted+=" "
+    fi
+    formatted+="$quoted_arg"
+  done
+
+  printf '%s' "$formatted"
+}
 
 run_step() {
   local step_name="$1"
-  local cmd="$2"
+  local display_cmd="$2"
   local log_file="$3"
+  shift 3
 
-  echo "[WAVE-B] [$step_name] $cmd" >&2
+  echo "[WAVE-B] [$step_name] $display_cmd" >&2
 
   if [[ "$DRY_RUN" == "true" ]]; then
     echo "[WAVE-B] [$step_name] dry-run skip" > "$log_file"
@@ -206,7 +276,10 @@ run_step() {
   local started ended elapsed exit_code
   started=$(date +%s)
   set +e
-  "$STEP_SHELL" -lc "$cmd" > "$log_file" 2>&1
+  (
+    cd "$PROJECT_ROOT"
+    "$@"
+  ) > "$log_file" 2>&1
   exit_code=$?
   ended=$(date +%s)
   elapsed=$((ended - started))
@@ -215,15 +288,15 @@ run_step() {
   echo "$exit_code"
 }
 
-build_module_cmd="cd '$PROJECT_ROOT' && bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
+compile_cmd_display="python3 scripts/compile_all_modules.py --unit-output-dir '$COMPILE_UNIT_OUTPUT_DIR' --fpc-exe '$FPC_EXE'"
+examples_cmd_display="bash scripts/verify_examples_compile.sh -f json -o '$EXAMPLES_REPORT_REL'"
+purity_cmd_display="bash scripts/check_tls13_signer_pure_pascal.sh"
+bench_cmd_display="FAFAFA_TLS13_SIGN_BENCH_ITERATIONS='$TLS13_SIGN_BENCH_ITERATIONS' FAFAFA_TLS13_SIGN_BENCH_WARMUP='$TLS13_SIGN_BENCH_WARMUP' FAFAFA_TLS13_SIGN_BENCH_SCHEME='$TLS13_SIGN_BENCH_SCHEME' FAFAFA_TLS13_SIGN_BENCH_KEY='$TLS13_SIGN_BENCH_KEY' FAFAFA_TLS13_SIGN_BENCH_TIMEOUT='$TLS13_SIGN_BENCH_TIMEOUT' FAFAFA_TLS13_SIGN_BENCH_JSON_OUT='$BENCH_JSON_OUT' bash scripts/run_freepascal_tls13_servercertverify_bench.sh"
 if [[ "$VERBOSE" == "true" ]]; then
-  build_module_cmd="$build_module_cmd --verbose"
+  build_module_cmd_display="FAFAFA_FPC_EXE='$FPC_EXE' FAFAFA_FPC_UNIT_OUTPUT_DIR='$MODULE_UNIT_OUTPUT_DIR' FAFAFA_TEST_BIN_DIR='$MODULE_BIN_OUTPUT_DIR' bash scripts/run_all_module_tests.sh --modules $MODULE_SET --verbose"
+else
+  build_module_cmd_display="FAFAFA_FPC_EXE='$FPC_EXE' FAFAFA_FPC_UNIT_OUTPUT_DIR='$MODULE_UNIT_OUTPUT_DIR' FAFAFA_TEST_BIN_DIR='$MODULE_BIN_OUTPUT_DIR' bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
 fi
-
-compile_cmd="cd '$PROJECT_ROOT' && python3 scripts/compile_all_modules.py"
-examples_cmd="cd '$PROJECT_ROOT' && bash scripts/verify_examples_compile.sh -f json -o '$EXAMPLES_REPORT_REL'"
-purity_cmd="cd '$PROJECT_ROOT' && bash scripts/check_tls13_signer_pure_pascal.sh"
-bench_cmd="cd '$PROJECT_ROOT' && FAFAFA_TLS13_SIGN_BENCH_ITERATIONS='$TLS13_SIGN_BENCH_ITERATIONS' FAFAFA_TLS13_SIGN_BENCH_WARMUP='$TLS13_SIGN_BENCH_WARMUP' FAFAFA_TLS13_SIGN_BENCH_SCHEME='$TLS13_SIGN_BENCH_SCHEME' FAFAFA_TLS13_SIGN_BENCH_KEY='$TLS13_SIGN_BENCH_KEY' FAFAFA_TLS13_SIGN_BENCH_TIMEOUT='$TLS13_SIGN_BENCH_TIMEOUT' FAFAFA_TLS13_SIGN_BENCH_JSON_OUT='$BENCH_JSON_OUT' bash scripts/run_freepascal_tls13_servercertverify_bench.sh"
 
 compile_exit="0"
 modules_exit="0"
@@ -238,7 +311,7 @@ purity_status="SKIP"
 bench_status="SKIP"
 
 if [[ "$WITH_COMPILE" == "true" ]]; then
-  compile_exit=$(run_step "compile" "$compile_cmd" "$COMPILE_LOG")
+  compile_exit=$(run_step "compile" "cd '$PROJECT_ROOT' && $compile_cmd_display" "$COMPILE_LOG"     python3 scripts/compile_all_modules.py     --unit-output-dir "$COMPILE_UNIT_OUTPUT_DIR"     --fpc-exe "$FPC_EXE")
   if [[ "$compile_exit" == "0" ]]; then
     compile_status="PASS"
   else
@@ -247,7 +320,11 @@ if [[ "$WITH_COMPILE" == "true" ]]; then
 fi
 
 if [[ "$WITH_MODULES" == "true" ]]; then
-  modules_exit=$(run_step "modules" "$build_module_cmd" "$MODULE_LOG")
+  if [[ "$VERBOSE" == "true" ]]; then
+    modules_exit=$(run_step "modules" "cd '$PROJECT_ROOT' && $build_module_cmd_display" "$MODULE_LOG"       env       "FAFAFA_FPC_EXE=$FPC_EXE"       "FAFAFA_FPC_UNIT_OUTPUT_DIR=$MODULE_UNIT_OUTPUT_DIR"       "FAFAFA_TEST_BIN_DIR=$MODULE_BIN_OUTPUT_DIR"       bash scripts/run_all_module_tests.sh       --modules "$MODULE_SET"       --verbose)
+  else
+    modules_exit=$(run_step "modules" "cd '$PROJECT_ROOT' && $build_module_cmd_display" "$MODULE_LOG"       env       "FAFAFA_FPC_EXE=$FPC_EXE"       "FAFAFA_FPC_UNIT_OUTPUT_DIR=$MODULE_UNIT_OUTPUT_DIR"       "FAFAFA_TEST_BIN_DIR=$MODULE_BIN_OUTPUT_DIR"       bash scripts/run_all_module_tests.sh       --modules "$MODULE_SET")
+  fi
   if [[ "$modules_exit" == "0" ]]; then
     modules_status="PASS"
   else
@@ -256,7 +333,25 @@ if [[ "$WITH_MODULES" == "true" ]]; then
 fi
 
 if [[ "$WITH_EXAMPLES" == "true" ]]; then
-  examples_exit=$(run_step "examples" "$examples_cmd" "$EXAMPLES_LOG")
+  examples_exit=$(run_step "examples" "cd '$PROJECT_ROOT' && $examples_cmd_display" "$EXAMPLES_LOG"     bash scripts/verify_examples_compile.sh     -f json     -o "$EXAMPLES_REPORT_REL")
+  if [[ -f "$EXAMPLES_REPORT" ]]; then
+    mkdir -p "$(dirname "$EXAMPLES_REPORT_RUN_SCOPED")"
+    if [[ "$EXAMPLES_REPORT" != "$EXAMPLES_REPORT_RUN_SCOPED" ]]; then
+      cp "$EXAMPLES_REPORT" "$EXAMPLES_REPORT_RUN_SCOPED"
+    fi
+
+    mkdir -p "$(dirname "$EXAMPLES_ARCHIVE_REPORT")"
+    if [[ "$EXAMPLES_REPORT" != "$EXAMPLES_ARCHIVE_REPORT" ]]; then
+      cp "$EXAMPLES_REPORT" "$EXAMPLES_ARCHIVE_REPORT"
+    fi
+
+    if [[ "$EXAMPLES_ARCHIVE_ALIAS" == "$EXAMPLES_REPORT" || "$EXAMPLES_ARCHIVE_ALIAS" == "$EXAMPLES_REPORT_RUN_SCOPED" || "$EXAMPLES_ARCHIVE_ALIAS" == "$EXAMPLES_ARCHIVE_REPORT" ]]; then
+      examples_history_alias_cleanup="path_conflict"
+    elif [[ -f "$EXAMPLES_ARCHIVE_ALIAS" ]]; then
+      rm -f "$EXAMPLES_ARCHIVE_ALIAS"
+      examples_history_alias_cleanup="removed"
+    fi
+  fi
   if [[ "$examples_exit" == "0" ]]; then
     examples_status="PASS"
   else
@@ -265,7 +360,7 @@ if [[ "$WITH_EXAMPLES" == "true" ]]; then
 fi
 
 if [[ "$WITH_TLS13_SIGN_PURITY_CHECK" == "true" ]]; then
-  purity_exit=$(run_step "tls13_sign_purity" "$purity_cmd" "$PURITY_LOG")
+  purity_exit=$(run_step "tls13_sign_purity" "cd '$PROJECT_ROOT' && $purity_cmd_display" "$PURITY_LOG"     bash scripts/check_tls13_signer_pure_pascal.sh)
   if [[ "$purity_exit" == "0" ]]; then
     purity_status="PASS"
   else
@@ -274,7 +369,7 @@ if [[ "$WITH_TLS13_SIGN_PURITY_CHECK" == "true" ]]; then
 fi
 
 if [[ "$WITH_TLS13_SIGN_BENCH" == "true" ]]; then
-  bench_exit=$(run_step "tls13_sign_bench" "$bench_cmd" "$BENCH_LOG")
+  bench_exit=$(run_step "tls13_sign_bench" "cd '$PROJECT_ROOT' && $bench_cmd_display" "$BENCH_LOG"     env     "FAFAFA_TLS13_SIGN_BENCH_ITERATIONS=$TLS13_SIGN_BENCH_ITERATIONS"     "FAFAFA_TLS13_SIGN_BENCH_WARMUP=$TLS13_SIGN_BENCH_WARMUP"     "FAFAFA_TLS13_SIGN_BENCH_SCHEME=$TLS13_SIGN_BENCH_SCHEME"     "FAFAFA_TLS13_SIGN_BENCH_KEY=$TLS13_SIGN_BENCH_KEY"     "FAFAFA_TLS13_SIGN_BENCH_TIMEOUT=$TLS13_SIGN_BENCH_TIMEOUT"     "FAFAFA_TLS13_SIGN_BENCH_JSON_OUT=$BENCH_JSON_OUT"     bash scripts/run_freepascal_tls13_servercertverify_bench.sh)
   if [[ "$bench_exit" == "0" ]]; then
     bench_status="PASS"
   else
@@ -387,6 +482,17 @@ if [[ -n "$BENCH_JSON_OUT" ]]; then
   bench_json_line="- JSON: \`$(realpath --relative-to="$PROJECT_ROOT" "$BENCH_JSON_OUT")\`"
 fi
 
+if [[ "$DRY_RUN" == "true" ]]; then
+  echo "[DRY-RUN] run_id=$RUN_ID"
+  echo "[DRY-RUN] summary_out=$SUMMARY_OUT_REL"
+  echo "[DRY-RUN] examples_report=$EXAMPLES_REPORT_REL"
+  echo "[DRY-RUN] examples_current_alias=$examples_current_alias_rel"
+  echo "[DRY-RUN] examples_run_scoped=$examples_run_scoped_rel"
+  echo "[DRY-RUN] examples_archive=$examples_archive_report_rel"
+  echo "[DRY-RUN] examples_selection=$examples_selection"
+  echo "[DRY-RUN] examples_warning=$examples_warning"
+fi
+
 cat > "$SUMMARY_OUT" <<EOF_SUMMARY
 # Wave B Linux CI Gate Summary
 
@@ -408,6 +514,14 @@ cat > "$SUMMARY_OUT" <<EOF_SUMMARY
 ## Examples Gate Metrics
 
 - Report: \`$(realpath --relative-to="$PROJECT_ROOT" "$EXAMPLES_REPORT" 2>/dev/null || echo "$EXAMPLES_REPORT_REL")\`
+- Selection: \`$examples_selection\`
+- Current Alias: \`$examples_current_alias_rel\`
+- Alias Owner Run ID: \`$RUN_ID\`
+- Run-Scoped Copy: \`$examples_run_scoped_rel\`
+- Archive Copy: \`$examples_archive_report_rel\`
+- History Alias Path: \`$examples_history_alias_rel\`
+- History Alias Cleanup: \`$examples_history_alias_cleanup\`
+- Warning: \`$examples_warning\`
 - Threshold: \`$EXAMPLES_THRESHOLD\`
 - Summary: \`passed=$examples_passed, failed=$examples_failed, skipped=$examples_skipped, total=$examples_total, pass_rate=$examples_rate\`
 
@@ -425,15 +539,15 @@ $bench_json_line
 
 ## Commands
 
-\`$compile_cmd\`
+\`$compile_cmd_display\`
 
-\`$build_module_cmd\`
+\`$build_module_cmd_display\`
 
-\`$examples_cmd\`
+\`$examples_cmd_display\`
 
-\`$purity_cmd\`
+\`$purity_cmd_display\`
 
-\`$bench_cmd\`
+\`$bench_cmd_display\`
 EOF_SUMMARY
 
 echo "[WAVE-B] summary: $SUMMARY_OUT"

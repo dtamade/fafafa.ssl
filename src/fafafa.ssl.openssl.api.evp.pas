@@ -746,6 +746,12 @@ var
   EVP_sha256: TEVP_sha256 = nil;
   EVP_sha384: TEVP_sha384 = nil;
   EVP_sha512: TEVP_sha512 = nil;
+  EVP_sha3_224: TEVP_sha3_224 = nil;
+  EVP_sha3_256: TEVP_sha3_256 = nil;
+  EVP_sha3_384: TEVP_sha3_384 = nil;
+  EVP_sha3_512: TEVP_sha3_512 = nil;
+  EVP_shake128: TEVP_shake128 = nil;
+  EVP_shake256: TEVP_shake256 = nil;
   EVP_blake2b512: TEVP_blake2b512 = nil;
   EVP_blake2s256: TEVP_blake2s256 = nil;
   EVP_get_digestbyname: TEVP_get_digestbyname = nil;
@@ -888,7 +894,7 @@ uses
 
 const
   // EVP function bindings for batch loading
-  EVP_BINDINGS: array[0..96] of TFunctionBinding = (
+  EVP_BINDINGS: array[0..102] of TFunctionBinding = (
     // MD Context functions
     (Name: 'EVP_MD_CTX_new'; FuncPtr: @EVP_MD_CTX_new; Required: True),
     (Name: 'EVP_MD_CTX_free'; FuncPtr: @EVP_MD_CTX_free; Required: True),
@@ -908,6 +914,12 @@ const
     (Name: 'EVP_sha256'; FuncPtr: @EVP_sha256; Required: False),
     (Name: 'EVP_sha384'; FuncPtr: @EVP_sha384; Required: False),
     (Name: 'EVP_sha512'; FuncPtr: @EVP_sha512; Required: False),
+    (Name: 'EVP_sha3_224'; FuncPtr: @EVP_sha3_224; Required: False),
+    (Name: 'EVP_sha3_256'; FuncPtr: @EVP_sha3_256; Required: False),
+    (Name: 'EVP_sha3_384'; FuncPtr: @EVP_sha3_384; Required: False),
+    (Name: 'EVP_sha3_512'; FuncPtr: @EVP_sha3_512; Required: False),
+    (Name: 'EVP_shake128'; FuncPtr: @EVP_shake128; Required: False),
+    (Name: 'EVP_shake256'; FuncPtr: @EVP_shake256; Required: False),
     (Name: 'EVP_blake2b512'; FuncPtr: @EVP_blake2b512; Required: False),
     (Name: 'EVP_blake2s256'; FuncPtr: @EVP_blake2s256; Required: False),
     (Name: 'EVP_get_digestbyname'; FuncPtr: @EVP_get_digestbyname; Required: False),

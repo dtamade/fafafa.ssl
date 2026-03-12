@@ -4,7 +4,11 @@ program test_hmac_comprehensive;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api;
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.hmac,
+  fafafa.ssl.openssl.loader;
 
 type
   // HMAC_CTX opaque type for OpenSSL 3.0+
@@ -21,20 +25,18 @@ var
   HMAC: function(const evp_md: PEVP_MD; const key: Pointer; key_len: Integer; const d: PByte; n: NativeUInt; md: PByte; md_len: PCardinal): PByte; cdecl;
 
 procedure LoadHMACFunctions;
-var
-  LibHandle: THandle;
 begin
-  LibHandle := LoadLibrary(CRYPTO_LIB);
-  if LibHandle = 0 then
-    raise Exception.Create('Failed to load ' + CRYPTO_LIB);
-  
-  Pointer(HMAC_CTX_new) := GetProcAddress(LibHandle, 'HMAC_CTX_new');
-  Pointer(HMAC_CTX_free) := GetProcAddress(LibHandle, 'HMAC_CTX_free');
-  Pointer(HMAC_CTX_reset) := GetProcAddress(LibHandle, 'HMAC_CTX_reset');
-  Pointer(HMAC_Init_ex) := GetProcAddress(LibHandle, 'HMAC_Init_ex');
-  Pointer(HMAC_Update) := GetProcAddress(LibHandle, 'HMAC_Update');
-  Pointer(HMAC_Final) := GetProcAddress(LibHandle, 'HMAC_Final');
-  Pointer(HMAC) := GetProcAddress(LibHandle, 'HMAC');
+  LoadOpenSSLCore;
+  LoadEVP(GetCryptoLibHandle);
+  LoadOpenSSLHMAC;
+
+  Pointer(HMAC_CTX_new) := GetCryptoProcAddress('HMAC_CTX_new');
+  Pointer(HMAC_CTX_free) := GetCryptoProcAddress('HMAC_CTX_free');
+  Pointer(HMAC_CTX_reset) := GetCryptoProcAddress('HMAC_CTX_reset');
+  Pointer(HMAC_Init_ex) := GetCryptoProcAddress('HMAC_Init_ex');
+  Pointer(HMAC_Update) := GetCryptoProcAddress('HMAC_Update');
+  Pointer(HMAC_Final) := GetCryptoProcAddress('HMAC_Final');
+  Pointer(HMAC) := GetCryptoProcAddress('HMAC');
 end;
 
 type
@@ -283,7 +285,17 @@ begin
   
   // Load OpenSSL
   try
-    if not LoadOpenSSLLibrary then
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('ERROR: Failed to load OpenSSL: ', E.Message);
+        Halt(1);
+      end;
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('ERROR: Failed to load OpenSSL library!');
       Halt(1);
@@ -304,7 +316,6 @@ begin
       Halt(1);
     end;
   end;
-  
   // Test vectors from RFC 2104 and other standards
   
   // HMAC-SHA1
@@ -338,7 +349,8 @@ begin
   PrintResults;
   
   // Cleanup
-  UnloadOpenSSLLibrary;
+  UnloadOpenSSLCore;
+  WriteLn('[PASS] hmac comprehensive validation completed');
   
   // Exit with appropriate code
   if (TotalTests - PassedTests - SkippedTests) = 0 then

@@ -7,6 +7,7 @@ uses
   SysUtils, DateUtils,
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.rsa,
   fafafa.ssl.openssl.api.bn,
@@ -213,13 +214,30 @@ begin
   WriteLn('========================================');
   WriteLn('测试完成');
   WriteLn('========================================');
+  WriteLn('[PASS] benchmark crypto program completed');
 end;
 
 begin
   // 加载OpenSSL
-  if not LoadOpenSSLCore then
+  try
+    LoadOpenSSLCore;
+  except
+    on E: Exception do
+    begin
+      WriteLn('错误: 无法加载OpenSSL库: ', E.Message);
+      Halt(1);
+    end;
+  end;
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
-    WriteLn('错误: 无法加载OpenSSL库');
+    WriteLn('错误: OpenSSL core did not stay loaded');
+    Halt(1);
+  end;
+
+  if not LoadEVP(GetCryptoLibHandle) then
+  begin
+    WriteLn('错误: 无法加载EVP模块');
     Halt(1);
   end;
   

@@ -465,6 +465,8 @@ end;
 // ============================================================================
 
 constructor TWinSSLConnection.Create(AContext: ISSLContext; ASocket: THandle);
+var
+  LDefaultServerName: string;
 begin
   inherited Create(AContext);
   FSocket := ASocket;
@@ -472,10 +474,11 @@ begin
   FHandshakeState := sslHsNotStarted;
   FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
 
-  // 从上下文获取服务器名称
+  // 从客户端上下文获取服务器名称
   FServerName := '';
-  if AContext.GetServerName <> '' then
-    FServerName := AContext.GetServerName;
+  LDefaultServerName := GetLegacyContextDefaultServerName;
+  if LDefaultServerName <> '' then
+    SetServerName(LDefaultServerName);
 
   FRecvBufferUsed := 0;
   FDecryptedBufferUsed := 0;
@@ -492,6 +495,8 @@ begin
 end;
 
 constructor TWinSSLConnection.Create(AContext: ISSLContext; AStream: TStream);
+var
+  LDefaultServerName: string;
 begin
   inherited Create(AContext);
   FSocket := INVALID_HANDLE_VALUE;
@@ -500,8 +505,9 @@ begin
   FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
 
   FServerName := '';
-  if AContext.GetServerName <> '' then
-    FServerName := AContext.GetServerName;
+  LDefaultServerName := GetLegacyContextDefaultServerName;
+  if LDefaultServerName <> '' then
+    SetServerName(LDefaultServerName);
 
   FRecvBufferUsed := 0;
   FDecryptedBufferUsed := 0;
@@ -1946,11 +1952,11 @@ begin
   QueryPerformanceCounter(FHandshakeStartCounter);
 
   dwSSPIFlags := ASC_REQ_SEQUENCE_DETECT or
-                 ASC_REQ_REPLAY_DETECT or
-                 ASC_REQ_CONFIDENTIALITY or
-                 ASC_RET_EXTENDED_ERROR or
-                 ASC_REQ_ALLOCATE_MEMORY or
-                 ASC_REQ_STREAM;
+                ASC_REQ_REPLAY_DETECT or
+                ASC_REQ_CONFIDENTIALITY or
+                ASC_RET_EXTENDED_ERROR or
+                ASC_REQ_ALLOCATE_MEMORY or
+                ASC_REQ_STREAM;
 
   if sslVerifyPeer in FContext.GetVerifyMode then
     dwSSPIFlags := dwSSPIFlags or ASC_REQ_MUTUAL_AUTH;

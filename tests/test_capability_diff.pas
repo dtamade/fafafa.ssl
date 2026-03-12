@@ -17,7 +17,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.factory,
   fafafa.ssl.capability.diff,
-  fafafa.ssl.openssl.backed;  // 注册 OpenSSL 后端
+  fafafa.ssl.openssl.lib;  // 注册 OpenSSL 后端
 
 procedure PrintSeparator(const ATitle: string);
 begin

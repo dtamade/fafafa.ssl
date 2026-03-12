@@ -31,6 +31,12 @@ function TryExtractLeafCertificateDERFromBlob(
   out AError: string
 ): Boolean;
 
+function TryParseTLS13ServerCertificateHandshake(
+  const AHandshake: TBytes;
+  out ACertificates: TTLS13CertificateArray;
+  out AError: string
+): Boolean;
+
 function TryBuildTLS13ServerCertificateHandshake(
   const ACertificateBlob: TBytes;
   out AHandshake: TBytes;
@@ -146,6 +152,120 @@ begin
 
   ALeafCertificateDER := Copy(LCerts[0], 0, Length(LCerts[0]));
   Result := True;
+end;
+
+function TryParseTLS13ServerCertificateHandshake(
+  const AHandshake: TBytes;
+  out ACertificates: TTLS13CertificateArray;
+  out AError: string
+): Boolean;
+var
+  LOffset: Integer;
+  LBodyLength: Cardinal;
+  LBodyEnd: Integer;
+  LContextLength: Integer;
+  LCertListLength: Integer;
+  LCertListEnd: Integer;
+  LCertLength: Integer;
+  LExtLength: Integer;
+  LCount: Integer;
+begin
+  SetLength(ACertificates, 0);
+  AError := '';
+  Result := False;
+
+  if Length(AHandshake) < 8 then
+  begin
+    AError := 'Certificate handshake is too short';
+    Exit;
+  end;
+
+  if AHandshake[0] <> TLS_HANDSHAKE_TYPE_CERTIFICATE then
+  begin
+    AError := 'Handshake message is not Certificate';
+    Exit;
+  end;
+
+  LBodyLength := ReadUInt24(AHandshake, 1);
+  if LBodyLength > Cardinal(High(Integer) - 4) then
+  begin
+    AError := 'Certificate body length is too large';
+    Exit;
+  end;
+
+  LBodyEnd := 4 + Integer(LBodyLength);
+  if Length(AHandshake) <> LBodyEnd then
+  begin
+    AError := 'Certificate body length mismatch';
+    Exit;
+  end;
+
+  LOffset := 4;
+  LContextLength := AHandshake[LOffset];
+  Inc(LOffset);
+  if LOffset + LContextLength > LBodyEnd then
+  begin
+    AError := 'Certificate request context exceeds body';
+    Exit;
+  end;
+  Inc(LOffset, LContextLength);
+
+  if LOffset + 3 > LBodyEnd then
+  begin
+    AError := 'Missing certificate list length';
+    Exit;
+  end;
+
+  LCertListLength := ReadUInt24(AHandshake, LOffset);
+  Inc(LOffset, 3);
+  LCertListEnd := LOffset + LCertListLength;
+  if LCertListEnd <> LBodyEnd then
+  begin
+    AError := 'Certificate list length mismatch';
+    Exit;
+  end;
+
+  LCount := 0;
+  while LOffset < LCertListEnd do
+  begin
+    if LOffset + 3 > LCertListEnd then
+    begin
+      AError := 'Certificate entry header exceeds certificate list';
+      Exit;
+    end;
+
+    LCertLength := ReadUInt24(AHandshake, LOffset);
+    Inc(LOffset, 3);
+    if (LCertLength <= 0) or (LOffset + LCertLength > LCertListEnd) then
+    begin
+      AError := 'Certificate entry length is invalid';
+      Exit;
+    end;
+
+    SetLength(ACertificates, LCount + 1);
+    ACertificates[LCount] := Copy(AHandshake, LOffset, LCertLength);
+    Inc(LOffset, LCertLength);
+
+    if LOffset + 2 > LCertListEnd then
+    begin
+      AError := 'Certificate entry extensions length is missing';
+      Exit;
+    end;
+
+    LExtLength := ReadUInt16(AHandshake, LOffset);
+    Inc(LOffset, 2);
+    if LOffset + LExtLength > LCertListEnd then
+    begin
+      AError := 'Certificate entry extensions exceed certificate list';
+      Exit;
+    end;
+    Inc(LOffset, LExtLength);
+    Inc(LCount);
+  end;
+
+  Result := Length(ACertificates) > 0;
+  if not Result then
+    AError := 'Certificate list is empty';
 end;
 
 function TryBuildTLS13ServerCertificateHandshake(

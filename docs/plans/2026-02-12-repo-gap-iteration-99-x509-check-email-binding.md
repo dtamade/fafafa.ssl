@@ -94,4 +94,4 @@ Expected: 全部通过。
 - `tests/contract/test_backend_contract.pas`: PASS（`Failed: 0`）
 - `tests/test_stream_connection.pas`: PASS（`Failed: 0`）
 - `tests/unit/run_unit_tests_simple.lpr --all`: PASS（`NumberOfFailures=0`）
-- P2 module suite: PASS（`15/15`, report: `test-reports/test_report_20260212_194600.txt`）
+- P2 module suite: PASS（`15/15`, report: `docs/archive/reports/test-report-history/test_report_20260212_194600.txt`）

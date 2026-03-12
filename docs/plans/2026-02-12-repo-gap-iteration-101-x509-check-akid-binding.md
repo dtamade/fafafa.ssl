@@ -85,4 +85,4 @@ Expected: 全部通过。
 - `test_stream_connection`: PASS (`Failed: 0`)
 - `run_unit_tests_simple --all`: PASS (`NumberOfFailures=0`)
 - P2 modules: PASS (`15/15`)
-  - report: `test-reports/test_report_20260212_230410.txt`
+  - report: `docs/archive/reports/test-report-history/test_report_20260212_230410.txt`

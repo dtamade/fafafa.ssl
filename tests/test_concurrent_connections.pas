@@ -20,7 +20,7 @@ uses
   fafafa.ssl.context.builder,
   fafafa.ssl.crypto.utils,
   fafafa.ssl.factory,
-  fafafa.ssl.openssl.backed;  // 确保 OpenSSL 后端注册
+  fafafa.ssl.openssl.lib;  // 确保 OpenSSL 后端注册
 
 type
   TTestResult = record

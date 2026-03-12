@@ -10,6 +10,8 @@ uses
   fafafa.ssl.openssl.api.utils,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.err,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   // Crypto Core
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.bn,
@@ -45,17 +47,26 @@ var
   Tests: array of TModuleTest;
   TotalTests, PassedTests: Integer;
 
-procedure AddTest(const Name, Category: string; Compiled, Tested: Boolean; const Note: string = '');
+procedure AddTest(const AName, ACategory: string; ACompiled, ATested: Boolean; const ANote: string = '');
+var
+  LIndex: Integer;
 begin
   SetLength(Tests, Length(Tests) + 1);
-  with Tests[High(Tests)] do
-  begin
-    Name := Name;
-    Category := Category;
-    Compiled := Compiled;
-    Tested := Tested;
-    Note := Note;
-  end;
+  LIndex := High(Tests);
+  Tests[LIndex].Name := AName;
+  Tests[LIndex].Category := ACategory;
+  Tests[LIndex].Compiled := ACompiled;
+  Tests[LIndex].Tested := ATested;
+  Tests[LIndex].Note := ANote;
+end;
+
+procedure LoadValidationModules;
+begin
+  LoadOpenSSLERR;
+  LoadEVP(GetCryptoLibHandle);
+  LoadOpenSSLBN;
+  LoadOpenSSLBIO;
+  LoadOpenSSLRAND;
 end;
 
 function TestBN: Boolean;
@@ -205,36 +216,28 @@ begin
   WriteLn('Phase 2: Runtime Loading');
   WriteLn('----------------------------------------');
   Write('Loading OpenSSL... ');
-  if not LoadOpenSSLLibrary then
+  try
+    LoadOpenSSLCore;
+  except
+    on E: Exception do
+    begin
+      WriteLn('FAIL');
+      WriteLn('ERROR: Cannot load OpenSSL library: ', E.Message);
+      Halt(1);
+    end;
+  end;
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     WriteLn('FAIL');
-    WriteLn('ERROR: Cannot load OpenSSL library');
+    WriteLn('ERROR: OpenSSL core did not stay loaded');
     Halt(1);
   end;
   WriteLn('OK');
 
-  Write('Loading EVP functions... ');
-  if not LoadEVP(GetCryptoLibHandle) then
-  begin
-    WriteLn('FAIL');
-    Halt(1);
-  end;
-  WriteLn('OK');
+  LoadValidationModules;
 
-  Write('Loading BN functions... ');
-  LoadOpenSSLBN;
-  WriteLn('OK');
-
-  Write('Loading BIO functions... ');
-  LoadOpenSSLBIO;
-  WriteLn('OK');
-
-  Write('Loading RAND functions... ');
-  LoadOpenSSLRAND;
-  WriteLn('OK');
-
-  Write('Loading ERR functions... ');
-  LoadOpenSSLERR;
+  Write('Loading module functions... ');
   WriteLn('OK');
   WriteLn;
   
@@ -372,6 +375,8 @@ begin
     WriteLn('SUCCESS: All Priority 1 modules validated!')
   else
     WriteLn('WARNING: Some tests failed');
+
+  WriteLn('[PASS] priority1 module validation completed');
 end;
 
 begin

@@ -144,7 +144,6 @@ var
   InfoType: Integer;
   Key: PEVP_PKEY;
   URIAnsi: AnsiString;
-  PINAnsi: AnsiString;
   UIMethod: PUI_METHOD;
 begin
   Result := nil;
@@ -152,7 +151,6 @@ begin
   
   // Convert strings to ANSI
   URIAnsi := AnsiString(AURI);
-  PINAnsi := AnsiString(APIN);
   
   // Create UI method for PIN (use simple password UI)
   UIMethod := CreateSimplePasswordUI('Enter PIN: ');
@@ -220,7 +218,6 @@ end;
 function TProviderBackend.LoadPrivateKey(const AConfig: TPKCS11Config): PEVP_PKEY;
 var
   URI: string;
-  PIN: string;
 begin
   // Validate configuration
   ValidateConfig(AConfig);
@@ -228,14 +225,14 @@ begin
   // Load provider if not already loaded
   LoadProvider;
   
-  // Resolve PIN
-  PIN := ResolvePIN(AConfig);
+  // Resolve PIN early so missing/invalid PIN still fails before store access
+  ResolvePIN(AConfig);
   
   // Build OSSL_STORE URI
   URI := BuildStoreURI(AConfig);
   
   // Load key from store
-  Result := LoadKeyFromStore(URI, PIN);
+  Result := LoadKeyFromStore(URI, '');
 end;
 
 function TProviderBackend.LoadCertificate(const AConfig: TPKCS11Config): PX509;
@@ -245,7 +242,6 @@ var
   InfoType: Integer;
   Cert: PX509;
   URI: string;
-  PIN: string;
 begin
   Result := nil;
   
@@ -255,8 +251,8 @@ begin
   // Load provider if not already loaded
   LoadProvider;
   
-  // Resolve PIN
-  PIN := ResolvePIN(AConfig);
+  // Resolve PIN early so missing/invalid PIN still fails before store access
+  ResolvePIN(AConfig);
   
   // Build OSSL_STORE URI
   URI := BuildStoreURI(AConfig);

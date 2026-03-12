@@ -292,16 +292,15 @@ var
   Digest: array[0..EVP_MAX_MD_SIZE-1] of Byte;
   DigestLen: Cardinal;
 begin
+  Result := nil;
+
   if ACert = nil then
-  begin
-    SetLength(Result, 0);
     Exit;
-  end;
 
   if X509_digest(ACert, EVP_sha256(), @Digest[0], @DigestLen) <> 1 then
   begin
     TSecurityLog.Error('CertPinning', 'Failed to compute certificate digest');
-    SetLength(Result, 0);
+    Result := nil;
     Exit;
   end;
 
@@ -320,7 +319,7 @@ var
   P: PByte;
   DigestLen: Cardinal;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if ACert = nil then
     Exit;
@@ -461,12 +460,11 @@ end;
 procedure TPinValidator.AddPinBase64(const ABase64Hash: string; AType: TPinType;
   const ADescription: string; AIsBackup: Boolean);
 var
-  Pin: TCertificatePin;
   HashBytes: TBytes;
 begin
-  Pin := TCertificatePin.FromBase64(ABase64Hash, AType, ADescription, AIsBackup);
   SetLength(HashBytes, 32);
-  Move(Pin.Hash[0], HashBytes[0], 32);
+  with TCertificatePin.FromBase64(ABase64Hash, AType, ADescription, AIsBackup) do
+    Move(Hash[0], HashBytes[0], 32);
   AddPin(HashBytes, AType, ADescription, AIsBackup);
 end;
 
@@ -514,7 +512,7 @@ begin
     case Pin.PinType of
       ptCertificate:
         if (Length(CertHash) > 0) and (Length(CertHash) = 32) and
-           ConstantTimeCompare(CertHash, Slice(Pin.Hash, 32)) then
+          ConstantTimeCompare(CertHash, Slice(Pin.Hash, 32)) then
         begin
           TSecurityLog.Info('CertPinning',
             Format('Certificate matched pin: %s', [Pin.Description]));
@@ -524,7 +522,7 @@ begin
 
       ptPublicKey:
         if (Length(PubKeyHash) > 0) and (Length(PubKeyHash) = 32) and
-           ConstantTimeCompare(PubKeyHash, Slice(Pin.Hash, 32)) then
+          ConstantTimeCompare(PubKeyHash, Slice(Pin.Hash, 32)) then
         begin
           TSecurityLog.Info('CertPinning',
             Format('Public key matched pin: %s', [Pin.Description]));
@@ -677,7 +675,7 @@ begin
     case Pin.PinType of
       ptCertificate:
         if (Length(CertHash) > 0) and (Length(CertHash) = 32) and
-           ConstantTimeCompare(CertHash, Slice(Pin.Hash, 32)) then
+          ConstantTimeCompare(CertHash, Slice(Pin.Hash, 32)) then
         begin
           AResult.Success := True;
           AResult.MatchedPinIndex := i;
@@ -688,7 +686,7 @@ begin
 
       ptPublicKey:
         if (Length(PubKeyHash) > 0) and (Length(PubKeyHash) = 32) and
-           ConstantTimeCompare(PubKeyHash, Slice(Pin.Hash, 32)) then
+          ConstantTimeCompare(PubKeyHash, Slice(Pin.Hash, 32)) then
         begin
           AResult.Success := True;
           AResult.MatchedPinIndex := i;

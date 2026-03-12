@@ -7,7 +7,7 @@
 ## 交付物
 
 - 脚本：`scripts/check_wave_c_local_first_continuity.sh`
-- 样例报告：`test-reports/wave_c_b123_local_first_continuity_20260209_030722.md`
+- 样例报告：`docs/archive/reports/wave-c-local-first-guard-history/wave_c_b123_local_first_continuity_20260209_030722.md`
 
 ## 执行
 
@@ -16,7 +16,7 @@ bash scripts/toggle_wave_c_quick_sprint_workflow.sh disable
 bash scripts/check_wave_c_local_first_continuity.sh \
   --run-id 20260209_030722 \
   --strict \
-  --output test-reports/wave_c_b123_local_first_continuity_20260209_030722.md
+  --output docs/archive/reports/wave-c-local-first-guard-history/wave_c_b123_local_first_continuity_20260209_030722.md
 ```
 
 ## 结果

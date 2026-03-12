@@ -109,6 +109,34 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_WRITEBACK_CHANGE_COVERAGE_REMEDIATION_TRACKER_${TRACKER_ID}.md"
 fi
 
+resolve_input_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  elif [[ -e "$path" ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+resolve_output_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+WRITEBACK_REPORT="$(resolve_input_path "$WRITEBACK_REPORT")"
+LINKAGE_REPORT="$(resolve_input_path "$LINKAGE_REPORT")"
+ADAPTIVE_POLICY_REPORT="$(resolve_input_path "$ADAPTIVE_POLICY_REPORT")"
+VERSIONING_REPORT="$(resolve_input_path "$VERSIONING_REPORT")"
+ANOMALY_RESPONSE_REPORT="$(resolve_input_path "$ANOMALY_RESPONSE_REPORT")"
+SLA_ALERT_REPORT="$(resolve_input_path "$SLA_ALERT_REPORT")"
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] tracker_id=$TRACKER_ID"
   echo "[DRY-RUN] writeback_report=$WRITEBACK_REPORT"

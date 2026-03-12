@@ -12,11 +12,11 @@
 
 | gate | required | evidence | status |
 |------|----------|----------|--------|
-| B107 threshold | PASS | `test-reports/wave_c_b107_threshold_eval_20260208_053500.md` | PASS |
-| B108 readiness | READY | `test-reports/wave_c_b108_default_on_readiness_20260208_053500.md` | READY |
-| B109 canary plan | CANARY_READY | `test-reports/wave_c_b109_canary_rollout_20260208_053500.md` | CANARY_READY |
-| B110 rollback drill | PASS | `test-reports/wave_c_b110_rollback_drill_20260208_053500.md` | PASS |
-| Quick sprint bundle | PASS | `test-reports/wave_c_quick_sprint_bundle_20260208_053500.md` | PASS |
+| B107 threshold | PASS | `docs/archive/reports/wave-c-quick-enablement-history/wave_c_b107_threshold_eval_20260208_053500.md` | PASS |
+| B108 readiness | READY | `docs/archive/reports/wave-c-quick-enablement-history/wave_c_b108_default_on_readiness_20260208_053500.md` | READY |
+| B109 canary plan | CANARY_READY | `docs/archive/reports/wave-c-quick-enablement-history/wave_c_b109_canary_rollout_20260208_053500.md` | CANARY_READY |
+| B110 rollback drill | PASS | `docs/archive/reports/wave-c-quick-enablement-history/wave_c_b110_rollback_drill_20260208_053500.md` | PASS |
+| Quick sprint bundle | PASS | `docs/archive/reports/wave-c-quick-enablement-history/wave_c_quick_sprint_bundle_20260208_053500.md` | PASS |
 
 ## Risk Decision
 

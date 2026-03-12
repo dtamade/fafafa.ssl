@@ -3,7 +3,7 @@
 - run_id: 20260208_175000
 - generated_at: 2026-02-08 17:43:12 +0800
 - signoff_record: docs/test_reports/WAVE_C_B113_RELEASE_SIGNOFF_RECORD_2026-02-08.md
-- prereq_report: test-reports/wave_c_b115_workflow_enable_prereq_20260208_174800_strict.md
+- prereq_report: docs/archive/reports/wave-c-quick-enablement-history/wave_c_b115_workflow_enable_prereq_20260208_174800_strict.md
 - signoff_state: READY_FOR_APPROVAL
 - enable_state: HOLD
 

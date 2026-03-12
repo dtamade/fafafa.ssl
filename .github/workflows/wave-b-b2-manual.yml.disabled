@@ -59,8 +59,8 @@ jobs:
           RUN_ID="${{ needs.setup.outputs.run_id }}"
           bash scripts/run_wave_b_ci_gate.sh \
             --examples-threshold 80.0 \
-            --examples-report "test-reports/examples_compile_ci_gate_${RUN_ID}.json" \
-            --summary-out "test-reports/wave_b_ci_gate_summary_${RUN_ID}.md"
+            --examples-report "tmp/wave_b_reports/examples_compile_ci_gate_${RUN_ID}.json" \
+            --summary-out "tmp/wave_b_reports/wave_b_ci_gate_summary_${RUN_ID}.md"
 
       - name: Upload Linux evidence
         if: always()
@@ -68,11 +68,11 @@ jobs:
         with:
           name: wave-b-linux-${{ needs.setup.outputs.run_id }}
           path: |
-            test-reports/wave_b_ci_gate_summary_${{ needs.setup.outputs.run_id }}.md
-            test-reports/examples_compile_ci_gate_${{ needs.setup.outputs.run_id }}.json
-            test-reports/wave_b_compile_*.log
-            test-reports/wave_b_modules_*.log
-            test-reports/wave_b_examples_*.log
+            tmp/wave_b_reports/wave_b_ci_gate_summary_${{ needs.setup.outputs.run_id }}.md
+            tmp/wave_b_reports/examples_compile_ci_gate_${{ needs.setup.outputs.run_id }}.json
+            tmp/wave_b_reports/wave_b_compile_*.log
+            tmp/wave_b_reports/wave_b_modules_*.log
+            tmp/wave_b_reports/wave_b_examples_*.log
           if-no-files-found: warn
 
   macos-gate:
@@ -107,7 +107,7 @@ jobs:
           RUN_ID="${{ needs.setup.outputs.run_id }}"
           bash scripts/run_wave_b_macos_gate.sh \
             --run-id "$RUN_ID" \
-            --output-dir test-reports \
+            --output-dir tmp/wave_b_reports \
             --openssl-root "${{ steps.openssl.outputs.OPENSSL_ROOT }}"
 
       - name: Upload macOS evidence
@@ -116,9 +116,9 @@ jobs:
         with:
           name: wave-b-macos-${{ needs.setup.outputs.run_id }}
           path: |
-            test-reports/wave_b_macos_gate_summary_${{ needs.setup.outputs.run_id }}.md
-            test-reports/wave_b_macos_*.log
-            test-reports/examples_compile_gate_macos_${{ needs.setup.outputs.run_id }}.json
+            tmp/wave_b_reports/wave_b_macos_gate_summary_${{ needs.setup.outputs.run_id }}.md
+            tmp/wave_b_reports/wave_b_macos_*.log
+            tmp/wave_b_reports/examples_compile_gate_macos_${{ needs.setup.outputs.run_id }}.json
           if-no-files-found: warn
 
   windows-gate:
@@ -140,8 +140,8 @@ jobs:
         with:
           name: wave-b-windows-${{ needs.setup.outputs.run_id }}
           path: |
-            test-reports/wave_b_windows_gate_summary_${{ needs.setup.outputs.run_id }}.md
-            test-reports/wave_b_windows_*.log
+            tmp/wave_b_reports/wave_b_windows_gate_summary_${{ needs.setup.outputs.run_id }}.md
+            tmp/wave_b_reports/wave_b_windows_*.log
           if-no-files-found: warn
 
   summary:
@@ -174,23 +174,24 @@ jobs:
       - name: Build summary + closure + consistency
         shell: bash
         run: |
-          mkdir -p test-reports
+          REPORTS_DIR="tmp/wave_b_reports"
+          mkdir -p "$REPORTS_DIR"
           RUN_ID="${{ needs.setup.outputs.run_id }}"
 
-          cp -f artifacts/linux/* test-reports/ 2>/dev/null || true
-          cp -f artifacts/macos/* test-reports/ 2>/dev/null || true
-          cp -f artifacts/windows/* test-reports/ 2>/dev/null || true
+          cp -f artifacts/linux/* "$REPORTS_DIR"/ 2>/dev/null || true
+          cp -f artifacts/macos/* "$REPORTS_DIR"/ 2>/dev/null || true
+          cp -f artifacts/windows/* "$REPORTS_DIR"/ 2>/dev/null || true
 
-          LINUX_SUMMARY="test-reports/wave_b_ci_gate_summary_${RUN_ID}.md"
-          LINUX_EXAMPLES="test-reports/examples_compile_ci_gate_${RUN_ID}.json"
+          LINUX_SUMMARY="$REPORTS_DIR/wave_b_ci_gate_summary_${RUN_ID}.md"
+          LINUX_EXAMPLES="$REPORTS_DIR/examples_compile_ci_gate_${RUN_ID}.json"
 
           MACOS_ARGS=()
           WINDOWS_ARGS=()
-          if [[ -f "test-reports/wave_b_macos_gate_summary_${RUN_ID}.md" ]]; then
-            MACOS_ARGS=(--macos-summary "test-reports/wave_b_macos_gate_summary_${RUN_ID}.md")
+          if [[ -f "$REPORTS_DIR/wave_b_macos_gate_summary_${RUN_ID}.md" ]]; then
+            MACOS_ARGS=(--macos-summary "$REPORTS_DIR/wave_b_macos_gate_summary_${RUN_ID}.md")
           fi
-          if [[ -f "test-reports/wave_b_windows_gate_summary_${RUN_ID}.md" ]]; then
-            WINDOWS_ARGS=(--windows-summary "test-reports/wave_b_windows_gate_summary_${RUN_ID}.md")
+          if [[ -f "$REPORTS_DIR/wave_b_windows_gate_summary_${RUN_ID}.md" ]]; then
+            WINDOWS_ARGS=(--windows-summary "$REPORTS_DIR/wave_b_windows_gate_summary_${RUN_ID}.md")
           fi
 
           bash scripts/generate_wave_b_cross_platform_summary.sh \
@@ -199,14 +200,14 @@ jobs:
             --linux-examples "$LINUX_EXAMPLES" \
             "${MACOS_ARGS[@]}" \
             "${WINDOWS_ARGS[@]}" \
-            --output "test-reports/wave_b_cross_platform_summary_${RUN_ID}.md"
+            --output "$REPORTS_DIR/wave_b_cross_platform_summary_${RUN_ID}.md"
 
           bash scripts/check_wave_b_b2_closure_readiness.sh \
             --run-id "$RUN_ID" \
             --linux-summary "$LINUX_SUMMARY" \
             "${MACOS_ARGS[@]}" \
             "${WINDOWS_ARGS[@]}" \
-            --output "test-reports/wave_b_b2_closure_readiness_${RUN_ID}.md"
+            --output "$REPORTS_DIR/wave_b_b2_closure_readiness_${RUN_ID}.md"
 
           bash scripts/check_wave_b_b2_evidence_consistency.sh \
             --run-id "$RUN_ID" \
@@ -214,9 +215,9 @@ jobs:
             --linux-examples "$LINUX_EXAMPLES" \
             "${MACOS_ARGS[@]}" \
             "${WINDOWS_ARGS[@]}" \
-            --cross-summary "test-reports/wave_b_cross_platform_summary_${RUN_ID}.md" \
-            --closure-report "test-reports/wave_b_b2_closure_readiness_${RUN_ID}.md" \
-            --output "test-reports/wave_b_b2_evidence_consistency_${RUN_ID}.md"
+            --cross-summary "$REPORTS_DIR/wave_b_cross_platform_summary_${RUN_ID}.md" \
+            --closure-report "$REPORTS_DIR/wave_b_b2_closure_readiness_${RUN_ID}.md" \
+            --output "$REPORTS_DIR/wave_b_b2_evidence_consistency_${RUN_ID}.md"
 
           if [[ "${{ github.event.inputs.strict_closure }}" == "true" ]]; then
             bash scripts/check_wave_b_b2_evidence_consistency.sh \
@@ -225,8 +226,8 @@ jobs:
               --linux-examples "$LINUX_EXAMPLES" \
               "${MACOS_ARGS[@]}" \
               "${WINDOWS_ARGS[@]}" \
-              --cross-summary "test-reports/wave_b_cross_platform_summary_${RUN_ID}.md" \
-              --closure-report "test-reports/wave_b_b2_closure_readiness_${RUN_ID}.md" \
+              --cross-summary "$REPORTS_DIR/wave_b_cross_platform_summary_${RUN_ID}.md" \
+              --closure-report "$REPORTS_DIR/wave_b_b2_closure_readiness_${RUN_ID}.md" \
               --strict \
               --dry-run
 
@@ -245,7 +246,7 @@ jobs:
         with:
           name: wave-b-summary-${{ needs.setup.outputs.run_id }}
           path: |
-            test-reports/wave_b_cross_platform_summary_${{ needs.setup.outputs.run_id }}.md
-            test-reports/wave_b_b2_closure_readiness_${{ needs.setup.outputs.run_id }}.md
-            test-reports/wave_b_b2_evidence_consistency_${{ needs.setup.outputs.run_id }}.md
+            tmp/wave_b_reports/wave_b_cross_platform_summary_${{ needs.setup.outputs.run_id }}.md
+            tmp/wave_b_reports/wave_b_b2_closure_readiness_${{ needs.setup.outputs.run_id }}.md
+            tmp/wave_b_reports/wave_b_b2_evidence_consistency_${{ needs.setup.outputs.run_id }}.md
           if-no-files-found: warn

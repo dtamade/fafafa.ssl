@@ -447,7 +447,7 @@ var
   LBytes: TBytes;
 begin
   LBytes := ReadBytes(ALength);
-  Result := TEncoding.UTF8.GetString(LBytes);
+  Result := string(TEncoding.UTF8.GetString(LBytes));
 end;
 
 procedure TSSLMemoryStream.WriteByte(AValue: Byte);
@@ -475,7 +475,7 @@ procedure TSSLMemoryStream.WriteString(const AStr: string);
 var
   LBytes: TBytes;
 begin
-  LBytes := TEncoding.UTF8.GetBytes(AStr);
+  LBytes := TEncoding.UTF8.GetBytes(UnicodeString(AStr));
   WriteBytes(LBytes);
 end;
 

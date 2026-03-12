@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PATTERN="${FAFAFA_TLS13_SIGN_BENCH_HISTORY_GLOB:-test-reports/wave_b_tls13_sign_bench_*.log}"
+PATTERN="${FAFAFA_TLS13_SIGN_BENCH_HISTORY_GLOB:-tmp/tls13_signer_gate_reports/wave_b_tls13_sign_bench_*.log}"
 OUT_FILE="${FAFAFA_TLS13_SIGN_BENCH_HISTORY_OUT:-}"
 LIMIT="${FAFAFA_TLS13_SIGN_BENCH_HISTORY_LIMIT:-20}"
 

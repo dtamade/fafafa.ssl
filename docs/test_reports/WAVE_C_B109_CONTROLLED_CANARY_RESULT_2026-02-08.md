@@ -8,12 +8,12 @@
 
 - 模板文档：`docs/plans/WAVE_C_B109_CONTROLLED_CANARY_ENABLEMENT_TEMPLATE_2026-02-08.md`
 - 自动化脚本：`scripts/prepare_wave_c_b109_canary_rollout.sh`
-- 样例计划：`test-reports/wave_c_b109_canary_rollout_20260208_052700.md`
+- 样例计划：`docs/archive/reports/wave-c-quick-enablement-history/wave_c_b109_canary_rollout_20260208_052700.md`
 
 ## 验证
 
 - `bash -n scripts/prepare_wave_c_b109_canary_rollout.sh`（通过）
-- `bash scripts/prepare_wave_c_b109_canary_rollout.sh --run-id 20260208_052700 --strict --output test-reports/wave_c_b109_canary_rollout_20260208_052700.md`（通过）
+- `bash scripts/prepare_wave_c_b109_canary_rollout.sh --run-id 20260208_052700 --strict --output docs/archive/reports/wave-c-quick-enablement-history/wave_c_b109_canary_rollout_20260208_052700.md`（通过）
 
 ## 结果
 

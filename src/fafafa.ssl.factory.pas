@@ -17,14 +17,14 @@
  * @example
  * <code>
  *   // 自动检测并创建SSL Context
- *   LCtx := TSSLFactory.CreateContext(sslClient);
+ *   LCtx := TSSLFactory.CreateContext(sslCtxClient);
  *
  *   // 指定使用OpenSSL后端
- *   LCtx := TSSLFactory.CreateContext(sslClient, sslOpenSSL);
+ *   LCtx := TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL);
  *
  *   // 使用配置对象创建
  *   LConfig := TSSLConfig.Create;
- *   LConfig.ContextType := sslClient;
+ *   LConfig.ContextType := sslCtxClient;
  *   LCtx := TSSLFactory.CreateContext(LConfig);
  * </code>
  *}
@@ -47,6 +47,8 @@ uses
   fafafa.ssl.collections; // P0: 可替换的 Map 接口
 
 type
+  TSSLLibraryFactoryFunc = function: ISSLLibrary;
+
   {** SSL库类类型 (用于内部注册) *}
   TSSLLibraryClass = class of TInterfacedObject;
 
@@ -58,6 +60,7 @@ type
   TSSLLibraryRegistration = record
     LibraryType: TSSLLibraryType;      // 库类型标识
     LibraryClass: TSSLLibraryClass;    // 库类（必须实现 ISSLLibrary）
+    LibraryFactory: TSSLLibraryFactoryFunc; // 显式工厂函数（优先于 class-ref 构造）
     Description: string;                // 库描述
     Priority: Integer;                  // 优先级（数字越大越优先）
   end;
@@ -76,10 +79,10 @@ type
    * 使用模式:
    * <code>
    *   // 最简单：自动检测后端
-   *   LCtx := TSSLFactory.CreateContext(sslClient);
+   *   LCtx := TSSLFactory.CreateContext(sslCtxClient);
    *
    *   // 指定后端
-   *   LCtx := TSSLFactory.CreateContext(sslClient, sslOpenSSL);
+   *   LCtx := TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL);
    *
    *   // 高级：使用配置
    *   LCtx := TSSLFactory.CreateContext(LConfig);
@@ -123,14 +126,25 @@ type
      * @param ADescription 库描述（可选）
      * @param APriority 优先级（默认0，数字越大越优先）
      *
-     * 注意: 此方法供后端实现的初始化代码调用
+     * 注意:
+     * - 推荐同时传入 `ALibraryFactory`，这样工厂会走后端自己的 `Create*Library`
+     *   入口并保留 constructor baseline。
+     * - 不带 `ALibraryFactory` 的 class-only 注册仅保留兼容 fallback，用于无状态测试替身
+     *   或遗留第三方代码。
      *}
     class procedure RegisterLibrary(
       ALibType: TSSLLibraryType;
       ALibraryClass: TSSLLibraryClass;
       const ADescription: string = '';
       APriority: Integer = 0
-    );
+    ); overload; deprecated 'Pass ALibraryFactory to preserve constructor semantics';
+    class procedure RegisterLibrary(
+      ALibType: TSSLLibraryType;
+      ALibraryClass: TSSLLibraryClass;
+      const ADescription: string;
+      APriority: Integer;
+      ALibraryFactory: TSSLLibraryFactoryFunc
+    ); overload;
 
     {**
      * 取消注册SSL后端库
@@ -224,10 +238,10 @@ type
      * @example
      * <code>
      *   // 自动检测库
-     *   LCtx := TSSLFactory.CreateContext(sslClient);
+     *   LCtx := TSSLFactory.CreateContext(sslCtxClient);
      *
      *   // 指定使用OpenSSL
-     *   LCtx := TSSLFactory.CreateContext(sslServer, sslOpenSSL);
+     *   LCtx := TSSLFactory.CreateContext(sslCtxServer, sslOpenSSL);
      * </code>
      *}
     class function CreateContext(
@@ -245,7 +259,7 @@ type
      * @example
      * <code>
      *   LConfig := TSSLConfig.Create;
-     *   LConfig.ContextType := sslClient;
+     *   LConfig.ContextType := sslCtxClient;
      *   LConfig.ProtocolVersions := [sslTLS12, sslTLS13];
      *   LCtx := TSSLFactory.CreateContext(LConfig);
      * </code>
@@ -253,6 +267,11 @@ type
     class function CreateContext(const AConfig: TSSLConfig): ISSLContext; overload;
 
     class procedure NormalizeConfig(var AConfig: TSSLConfig);
+    class procedure NormalizeLibraryDefaultOwnerFields(var AConfig: TSSLConfig;
+      AOwnerLibraryType: TSSLLibraryType);
+    class procedure ValidateRuntimeConfigFields(const AConfig: TSSLConfig; const AContext: string);
+    class procedure ValidateLibraryDefaultConfigFields(const AConfig: TSSLConfig; const AContext: string);
+    class procedure ApplyConfigToContext(AContext: ISSLContext; const AConfig: TSSLConfig);
 
     {**
      * 创建证书对象
@@ -342,6 +361,112 @@ var
   GFactoryLock: TRTLCriticalSection;  // 工厂类的全局锁
   GFactoryLockInitialized: Boolean = False;
 
+class procedure TSSLFactory.NormalizeLibraryDefaultOwnerFields(var AConfig: TSSLConfig;
+  AOwnerLibraryType: TSSLLibraryType);
+begin
+  AConfig.LibraryType := AOwnerLibraryType;
+  AConfig.ContextType := sslCtxClient;
+end;
+
+class procedure TSSLFactory.ValidateRuntimeConfigFields(const AConfig: TSSLConfig;
+  const AContext: string);
+begin
+  if (AConfig.BufferSize <> 0) and
+    (AConfig.BufferSize <> SSL_DEFAULT_BUFFER_SIZE) then
+    raise ESSLConfigurationException.CreateWithContext(
+      'BufferSize in TSSLConfig is not applied during context creation; runtime uses backend-managed buffers',
+      sslErrConfiguration,
+      AContext,
+      0,
+      AConfig.LibraryType
+    );
+
+  if (AConfig.HandshakeTimeout <> 0) and
+    (AConfig.HandshakeTimeout <> SSL_DEFAULT_HANDSHAKE_TIMEOUT) then
+    raise ESSLConfigurationException.CreateWithContext(
+      'HandshakeTimeout in TSSLConfig is not applied during context creation; use ISSLConnection.SetTimeout or TSSLConnectionBuilder timeout',
+      sslErrConfiguration,
+      AContext,
+      0,
+      AConfig.LibraryType
+    );
+end;
+
+class procedure TSSLFactory.ValidateLibraryDefaultConfigFields(const AConfig: TSSLConfig;
+  const AContext: string);
+begin
+  ValidateRuntimeConfigFields(AConfig, AContext);
+
+  if AConfig.CertificateFile <> '' then
+    raise ESSLConfigurationException.CreateWithContext(
+      'CertificateFile in TSSLConfig is request-scoped; use TSSLFactory.CreateContext(const AConfig) or builder to load certificate material',
+      sslErrConfiguration,
+      AContext,
+      0,
+      AConfig.LibraryType
+    );
+
+  if AConfig.PrivateKeyFile <> '' then
+    raise ESSLConfigurationException.CreateWithContext(
+      'PrivateKeyFile in TSSLConfig is request-scoped; use TSSLFactory.CreateContext(const AConfig) or builder to load private key material',
+      sslErrConfiguration,
+      AContext,
+      0,
+      AConfig.LibraryType
+    );
+
+  if AConfig.PrivateKeyPassword <> '' then
+    raise ESSLConfigurationException.CreateWithContext(
+      'PrivateKeyPassword in TSSLConfig is request-scoped; use TSSLFactory.CreateContext(const AConfig) or builder when loading encrypted private keys',
+      sslErrConfiguration,
+      AContext,
+      0,
+      AConfig.LibraryType
+    );
+
+  if AConfig.CAFile <> '' then
+    raise ESSLConfigurationException.CreateWithContext(
+      'CAFile in TSSLConfig is request-scoped; use TSSLFactory.CreateContext(const AConfig) or builder to load CA material',
+      sslErrConfiguration,
+      AContext,
+      0,
+      AConfig.LibraryType
+    );
+
+  if AConfig.CAPath <> '' then
+    raise ESSLConfigurationException.CreateWithContext(
+      'CAPath in TSSLConfig is request-scoped; use TSSLFactory.CreateContext(const AConfig) or builder to load CA material',
+      sslErrConfiguration,
+      AContext,
+      0,
+      AConfig.LibraryType
+    );
+end;
+
+procedure ValidateRequestScopedConfigFields(const AConfig: TSSLConfig;
+  const AContext: string);
+begin
+  TSSLFactory.ValidateRuntimeConfigFields(AConfig, AContext);
+
+  if AConfig.LogLevel <> sslLogNone then
+    raise ESSLConfigurationException.CreateWithContext(
+      'LogLevel in TSSLConfig is library-scoped; use ISSLLibrary.SetDefaultConfig to change backend logging',
+      sslErrConfiguration,
+      AContext,
+      0,
+      AConfig.LibraryType
+    );
+
+  if Assigned(AConfig.LogCallback) then
+    raise ESSLConfigurationException.CreateWithContext(
+      'LogCallback in TSSLConfig is library-scoped; use ISSLLibrary.SetDefaultConfig or SetLogCallback on the library instance',
+      sslErrConfiguration,
+      AContext,
+      0,
+      AConfig.LibraryType
+    );
+end;
+
 procedure NormalizeConfigOptions(var AConfig: TSSLConfig);
 begin
   if AConfig.EnableCompression then
@@ -389,7 +514,7 @@ begin
       Include(AConfig.Options, ssoNoTLSv1_3);
 
     if (AConfig.PreferredVersion <> sslProtocolUnknown) and
-       not (AConfig.PreferredVersion in AConfig.ProtocolVersions) then
+      not (AConfig.PreferredVersion in AConfig.ProtocolVersions) then
       AConfig.PreferredVersion := sslProtocolUnknown;
   end;
 
@@ -429,6 +554,52 @@ end;
 class procedure TSSLFactory.NormalizeConfig(var AConfig: TSSLConfig);
 begin
   NormalizeConfigOptions(AConfig);
+end;
+
+class procedure TSSLFactory.ApplyConfigToContext(AContext: ISSLContext; const AConfig: TSSLConfig);
+var
+  LConfig: TSSLConfig;
+begin
+  if AContext = nil then
+    Exit;
+
+  LConfig := AConfig;
+  NormalizeConfigOptions(LConfig);
+
+  if LConfig.Options <> [] then
+    AContext.SetOptions(LConfig.Options);
+
+  if LConfig.ProtocolVersions <> [] then
+    AContext.SetProtocolVersions(LConfig.ProtocolVersions);
+
+  if LConfig.PreferredVersion <> sslProtocolUnknown then
+    AContext.SetPreferredVersion(LConfig.PreferredVersion);
+
+  if LConfig.VerifyMode <> [] then
+    AContext.SetVerifyMode(LConfig.VerifyMode);
+
+  if LConfig.VerifyDepth > 0 then
+    AContext.SetVerifyDepth(LConfig.VerifyDepth);
+
+  if LConfig.CipherList <> '' then
+    AContext.SetCipherList(LConfig.CipherList);
+
+  if LConfig.CipherSuites <> '' then
+    AContext.SetCipherSuites(LConfig.CipherSuites);
+
+  AContext.SetSessionCacheSize(LConfig.SessionCacheSize);
+  AContext.SetSessionTimeout(LConfig.SessionTimeout);
+  AContext.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
+
+  if LConfig.ServerName <> '' then
+  begin
+    {$PUSH}{$WARN SYMBOL_DEPRECATED OFF}
+    AContext.SetServerName(LConfig.ServerName);
+    {$POP}
+  end;
+
+  if LConfig.ALPNProtocols <> '' then
+    AContext.SetALPNProtocols(LConfig.ALPNProtocols);
 end;
 
 { 全局函数实现 }
@@ -522,6 +693,13 @@ end;
 
 class procedure TSSLFactory.RegisterLibrary(ALibType: TSSLLibraryType;
   ALibraryClass: TSSLLibraryClass; const ADescription: string; APriority: Integer);
+begin
+  RegisterLibrary(ALibType, ALibraryClass, ADescription, APriority, nil);
+end;
+
+class procedure TSSLFactory.RegisterLibrary(ALibType: TSSLLibraryType;
+  ALibraryClass: TSSLLibraryClass; const ADescription: string; APriority: Integer;
+  ALibraryFactory: TSSLLibraryFactoryFunc);
 var
   LReg: TSSLLibraryRegistration;
 begin
@@ -531,6 +709,7 @@ begin
     // P0: 使用 Map 接口，O(1) 查找（当使用 HashMap 实现时）
     LReg.LibraryType := ALibType;
     LReg.LibraryClass := ALibraryClass;
+    LReg.LibraryFactory := ALibraryFactory;
     LReg.Description := ADescription;
     LReg.Priority := APriority;
     FRegistrationMap.Put(Ord(ALibType), LReg);
@@ -560,7 +739,6 @@ end;
 class function TSSLFactory.IsLibraryAvailable(ALibType: TSSLLibraryType): Boolean;
 var
   LLib: ISSLLibrary;
-  LNeedInit: Boolean;
 begin
   Result := False;
   CheckInitialized;
@@ -578,7 +756,6 @@ begin
     if Assigned(FLibraries[ALibType]) then
     begin
       LLib := FLibraries[ALibType];
-      LNeedInit := Assigned(LLib) and not LLib.IsInitialized;
     end
     else
     begin
@@ -587,41 +764,25 @@ begin
       begin
         try
           LLib := CreateLibraryInstance(ALibType);
-          LNeedInit := Assigned(LLib);
+          if Assigned(LLib) then
+            FLibraries[ALibType] := LLib;
         except
           LLib := nil;
-          LNeedInit := False;
         end;
       end
       else
-      begin
         LLib := nil;
-        LNeedInit := False;
-      end;
+    end;
+
+    if Assigned(LLib) then
+    begin
+      if not LLib.IsInitialized then
+        Result := LLib.Initialize
+      else
+        Result := True;
     end;
   finally
     LeaveCriticalSection(GFactoryLock);
-  end;
-
-  // 在锁外调用 Initialize 以避免死锁
-  if Assigned(LLib) then
-  begin
-    if LNeedInit then
-      Result := LLib.Initialize
-    else
-      Result := LLib.IsInitialized;
-    
-    // 如果初始化成功，缓存实例
-    if Result then
-    begin
-      EnterCriticalSection(GFactoryLock);
-      try
-        if not Assigned(FLibraries[ALibType]) then
-          FLibraries[ALibType] := LLib;
-      finally
-        LeaveCriticalSection(GFactoryLock);
-      end;
-    end;
   end;
 end;
 
@@ -750,6 +911,19 @@ begin
   if FRegistrationMap.TryGet(Ord(ALibType), LReg) then
     LClass := LReg.LibraryClass;
 
+  if FRegistrationMap.TryGet(Ord(ALibType), LReg) and Assigned(LReg.LibraryFactory) then
+  begin
+    try
+      Result := LReg.LibraryFactory();
+    except
+      Result := nil;
+    end;
+    if Assigned(Result) then
+      Exit;
+
+    Exit;
+  end;
+
   if Assigned(LClass) then
   begin
     try
@@ -798,7 +972,6 @@ class function TSSLFactory.GetLibrary(ALibType: TSSLLibraryType): ISSLLibrary;
 var
   LDefaultLib: TSSLLibraryType;
   LDetected: TSSLLibraryType;
-  LNeedInit: Boolean;
 begin
   if ALibType = sslAutoDetect then
   begin
@@ -823,27 +996,24 @@ begin
     if Assigned(FLibraries[ALibType]) then
     begin
       Result := FLibraries[ALibType];
-      LNeedInit := not Result.IsInitialized;
     end
     else
     begin
       // 创建新实例
       Result := CreateLibraryInstance(ALibType);
-      LNeedInit := Assigned(Result);
       if Assigned(Result) then
         FLibraries[ALibType] := Result;
     end;
+
+    if Assigned(Result) and not Result.IsInitialized then
+    begin
+      if not Result.Initialize then
+        raise ESSLInitializationException.CreateFmt(
+          'Failed to initialize %s library (LastError=%d, Details=%s)',
+          [SSL_LIBRARY_NAMES[ALibType], Result.GetLastError, Result.GetLastErrorString]);
+    end;
   finally
     LeaveCriticalSection(GFactoryLock);
-  end;
-  
-  // 在锁外初始化以避免死锁
-  if Assigned(Result) and LNeedInit then
-  begin
-    if not Result.Initialize then
-      raise ESSLInitializationException.CreateFmt(
-        'Failed to initialize %s library (LastError=%d, Details=%s)',
-        [SSL_LIBRARY_NAMES[ALibType], Result.GetLastError, Result.GetLastErrorString]);
   end;
 end;
 
@@ -851,49 +1021,9 @@ class function TSSLFactory.CreateContext(AContextType: TSSLContextType;
   ALibType: TSSLLibraryType): ISSLContext;
 var
   LLib: ISSLLibrary;
-  LConfig: TSSLConfig;
 begin
   LLib := GetLibrary(ALibType);
   Result := LLib.CreateContext(AContextType);
-  if Result <> nil then
-  begin
-    LConfig := LLib.GetDefaultConfig;
-    NormalizeConfigOptions(LConfig);
-    if LConfig.Options <> [] then
-      Result.SetOptions(LConfig.Options);
-
-    if LConfig.ProtocolVersions <> [] then
-      Result.SetProtocolVersions(LConfig.ProtocolVersions);
-
-    if LConfig.PreferredVersion <> sslProtocolUnknown then
-      Result.SetPreferredVersion(LConfig.PreferredVersion);
-
-    if LConfig.VerifyMode <> [] then
-      Result.SetVerifyMode(LConfig.VerifyMode);
-
-    if LConfig.VerifyDepth > 0 then
-      Result.SetVerifyDepth(LConfig.VerifyDepth);
-
-    if LConfig.CipherList <> '' then
-      Result.SetCipherList(LConfig.CipherList);
-
-    if LConfig.CipherSuites <> '' then
-      Result.SetCipherSuites(LConfig.CipherSuites);
-
-    Result.SetSessionCacheSize(LConfig.SessionCacheSize);
-    Result.SetSessionTimeout(LConfig.SessionTimeout);
-    Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
-
-    if LConfig.ServerName <> '' then
-    begin
-      {$PUSH}{$WARN 6058 off}
-      Result.SetServerName(LConfig.ServerName);
-      {$POP}
-    end;
-
-    if LConfig.ALPNProtocols <> '' then
-      Result.SetALPNProtocols(LConfig.ALPNProtocols);
-  end;
 end;
 
 class function TSSLFactory.CreateContext(const AConfig: TSSLConfig): ISSLContext;
@@ -902,52 +1032,27 @@ var
   LConfig: TSSLConfig;
 begin
   LConfig := AConfig;
+  ValidateRequestScopedConfigFields(LConfig, 'TSSLFactory.CreateContext');
   NormalizeConfigOptions(LConfig);
 
   LLib := GetLibrary(LConfig.LibraryType);
-  LLib.SetDefaultConfig(LConfig);
   Result := LLib.CreateContext(LConfig.ContextType);
   if Result = nil then
     Exit;
 
-  Result.SetOptions(LConfig.Options);
-  Result.SetSessionCacheSize(LConfig.SessionCacheSize);
-  Result.SetSessionTimeout(LConfig.SessionTimeout);
-  Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
-  
-  // 应用配置
-  if LConfig.ProtocolVersions <> [] then
-    Result.SetProtocolVersions(LConfig.ProtocolVersions);
+  ApplyConfigToContext(Result, LConfig);
 
-  if LConfig.PreferredVersion <> sslProtocolUnknown then
-    Result.SetPreferredVersion(LConfig.PreferredVersion);
-    
   if LConfig.CertificateFile <> '' then
     Result.LoadCertificate(LConfig.CertificateFile);
-    
+
   if LConfig.PrivateKeyFile <> '' then
     Result.LoadPrivateKey(LConfig.PrivateKeyFile, LConfig.PrivateKeyPassword);
-    
+
   if LConfig.CAFile <> '' then
     Result.LoadCAFile(LConfig.CAFile);
-    
-  if LConfig.VerifyMode <> [] then
-    Result.SetVerifyMode(LConfig.VerifyMode);
 
-  if LConfig.VerifyDepth > 0 then
-    Result.SetVerifyDepth(LConfig.VerifyDepth);
-    
-  if LConfig.CipherList <> '' then
-    Result.SetCipherList(LConfig.CipherList);
-
-  if LConfig.CipherSuites <> '' then
-    Result.SetCipherSuites(LConfig.CipherSuites);
-    
-  if LConfig.ServerName <> '' then
-    Result.SetServerName(LConfig.ServerName);
-    
-  if LConfig.ALPNProtocols <> '' then
-    Result.SetALPNProtocols(LConfig.ALPNProtocols);
+  if LConfig.CAPath <> '' then
+    Result.LoadCAPath(LConfig.CAPath);
 end;
 
 class function TSSLFactory.CreateCertificate(ALibType: TSSLLibraryType): ISSLCertificate;

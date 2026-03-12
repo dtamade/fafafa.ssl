@@ -21,6 +21,7 @@ VERBOSE=false
 STOP_ON_ERROR=false
 OUTPUT_FORMAT="text"
 REPORT_FILE=""
+EXAMPLES_RUN_ID="${FAFAFA_EXAMPLES_RUN_ID:-${FAFAFA_WAVE_B_CI_GATE_RUN_ID:-}}"
 
 # 帮助信息
 show_help() {
@@ -153,8 +154,13 @@ output_summary() {
             else
                 failed_json=""
             fi
+            local run_id_line=""
+            if [ -n "$EXAMPLES_RUN_ID" ]; then
+                printf -v run_id_line '  "run_id": "%s",' "$EXAMPLES_RUN_ID"
+            fi
             cat << EOF_JSON
 {
+$run_id_line
   "timestamp": "$(date -Iseconds)",
   "fpc_version": "$FPC_VERSION",
   "summary": {
@@ -209,6 +215,7 @@ EOF_MD
 }
 
 if [ -n "$REPORT_FILE" ]; then
+    mkdir -p "$(dirname "$REPORT_FILE")"
     output_summary > "$REPORT_FILE"
     echo "报告已保存到: $REPORT_FILE"
 else

@@ -120,6 +120,7 @@ class function TPKCS11URIParser.HexToBytes(const AHex: string): TBytes;
 var
   I, Len: Integer;
 begin
+  Result := nil;
   Len := Length(AHex) div 2;
   SetLength(Result, Len);
   for I := 0 to Len - 1 do
@@ -205,7 +206,7 @@ var
   I, SepPos: Integer;
   AttrName, AttrValue: string;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TPKCS11URI);
   
   // Trim and validate
   URI := Trim(AURIString);

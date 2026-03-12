@@ -410,11 +410,9 @@ end;
 function LoadCertificateFromStore(const URI: string; const Password: string): PX509;
 var
   URIAnsi: AnsiString;
-  PasswordAnsi: AnsiString;
   StoreCtx: POSSL_STORE_CTX;
   StoreInfo: POSSL_STORE_INFO;
   InfoType: Integer;
-  Cert: PX509;
   UIMethod: PUI_METHOD;
   
   function PasswordCallback(buf: PAnsiChar; size: Integer; rwflag: Integer;
@@ -452,7 +450,6 @@ begin
   UIMethod := nil;
   if Password <> '' then
   begin
-    PasswordAnsi := AnsiString(Password);
     // Note: UI_METHOD creation requires additional API bindings.
     // For now, password-protected stores must be loaded separately.
     // This is a low-priority enhancement for GUI applications.

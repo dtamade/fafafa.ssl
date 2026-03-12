@@ -16,11 +16,11 @@
 ## 验证
 
 - `bash -n scripts/check_wave_c_default_on_readiness.sh`（通过）
-- `bash scripts/check_wave_c_default_on_readiness.sh --run-id 20260208_052300 --strict --output test-reports/wave_c_b108_default_on_readiness_20260208_052300.md`（通过）
+- `bash scripts/check_wave_c_default_on_readiness.sh --run-id 20260208_052300 --strict --output docs/archive/reports/wave-c-quick-enablement-history/wave_c_b108_default_on_readiness_20260208_052300.md`（通过）
 
 ## 结果
 
-- 生成报告：`test-reports/wave_c_b108_default_on_readiness_20260208_052300.md`
+- 生成报告：`docs/archive/reports/wave-c-quick-enablement-history/wave_c_b108_default_on_readiness_20260208_052300.md`
 - readiness: `READY`
 - 检查项均 `PASS`：
   - threshold report overall

@@ -5,7 +5,7 @@
 
 ## 已实现的模块
 
-### ✅ 核心模块 (fafafa.ssl.openssl.core.pas)
+### ✅ 核心模块 (fafafa.ssl.openssl.api.core.pas)
 - SSL 库管理 (OPENSSL_init_ssl, cleanup, version)
 - SSL 方法 (TLS_method, TLS_client_method, TLS_server_method)
 - SSL 上下文 (SSL_CTX_new, SSL_CTX_free, 配置函数)
@@ -15,7 +15,7 @@
 - 证书管理 (基本的证书加载和验证)
 - 会话管理 (SSL_SESSION 相关函数)
 
-### ✅ 类型定义 (fafafa.ssl.openssl.types.pas)
+### ✅ 类型定义 (fafafa.ssl.openssl.api.types.pas)
 - 基础类型映射 (PSSL, PSSL_CTX, PX509 等)
 - 堆栈类型 (PSTACK_OF_X509 等)
 - EVP 类型 (PEVP_MD, PEVP_CIPHER, PEVP_PKEY 等)
@@ -23,27 +23,27 @@
 - ASN1 类型
 - PKCS 类型
 
-### ✅ 常量定义 (fafafa.ssl.openssl.consts.pas)
+### ✅ 常量定义 (fafafa.ssl.openssl.api.consts.pas)
 - SSL 版本常量
 - 选项标志
 - 错误代码
 - 验证模式
 - 文件类型
 
-### ✅ BIO 模块 (fafafa.ssl.openssl.bio.pas)
+### ✅ BIO 模块 (fafafa.ssl.openssl.api.bio.pas)
 - BIO 创建和管理
 - 文件/内存/套接字 BIO
 - BIO 链操作
 - BIO 对操作
 
-### ✅ X509 证书模块 (fafafa.ssl.openssl.x509.pas)
+### ✅ X509 证书模块 (fafafa.ssl.openssl.api.x509.pas)
 - 证书创建和解析
 - 证书验证
 - 证书存储
 - 证书扩展
 - CRL 处理
 
-### ✅ SSL 扩展模块 (fafafa.ssl.openssl.ssl.pas) - 新增
+### ✅ SSL 扩展模块 (fafafa.ssl.openssl.api.ssl.pas) - 新增
 - 协议版本控制
 - 选项和模式管理
 - 密码套件管理
@@ -54,7 +54,7 @@
 - Early data (0-RTT)
 - QUIC 支持 (OpenSSL 3.2+)
 
-### ⚠️ EVP 模块 (fafafa.ssl.openssl.evp.pas) - 部分实现
+### ⚠️ EVP 模块 (fafafa.ssl.openssl.api.evp.pas) - 部分实现
 - 需要补充更多加密算法接口
 
 ### ⚠️ Crypto 模块 (fafafa.ssl.openssl.crypto.pas) - 部分实现

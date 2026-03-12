@@ -5,6 +5,8 @@ program test_ripemd;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.evp;
 
 type
@@ -194,7 +196,17 @@ begin
   WriteLn;
   
   try
-    if not LoadOpenSSLLibrary then
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('ERROR: Failed to load OpenSSL library: ', E.Message);
+        Halt(1);
+      end;
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('ERROR: Failed to load OpenSSL library');
       Halt(1);
@@ -227,4 +239,5 @@ begin
   
   // Note: Don't halt with error if algorithm is simply not available
   // This is expected for legacy algorithms in OpenSSL 3.x
+  WriteLn('[PASS] ripemd smoke completed');
 end.

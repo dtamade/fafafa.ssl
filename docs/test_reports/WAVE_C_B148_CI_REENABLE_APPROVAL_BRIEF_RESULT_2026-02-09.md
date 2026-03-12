@@ -7,7 +7,7 @@
 ## 交付内容
 
 - 脚本：`scripts/generate_wave_c_ci_reenable_approval_brief.sh`
-- 报告：`test-reports/wave_c_b148_ci_reenable_approval_brief_20260209_052657.md`
+- 报告：`docs/archive/reports/wave-c-pre-ci-submission-history/wave_c_b148_ci_reenable_approval_brief_20260209_052657.md`
 
 ## 验证基线
 

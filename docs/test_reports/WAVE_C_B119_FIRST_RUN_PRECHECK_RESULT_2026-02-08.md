@@ -2,7 +2,7 @@
 
 ## 执行
 
-- `bash scripts/check_wave_c_first_run_preflight.sh --run-id 20260208_175100 --strict --output test-reports/wave_c_b119_first_run_preflight_20260208_175100.md`
+- `bash scripts/check_wave_c_first_run_preflight.sh --run-id 20260208_175100 --strict --output docs/archive/reports/wave-c-quick-enablement-history/wave_c_b119_first_run_preflight_20260208_175100.md`
 
 ## 结果
 

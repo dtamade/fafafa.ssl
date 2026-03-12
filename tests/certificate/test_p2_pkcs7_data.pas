@@ -314,6 +314,7 @@ begin
   begin
     WriteLn;
     WriteLn('🎉 所有数据封装测试通过！PKCS#7 数据封装功能正常');
+    WriteLn('[PASS] p2 pkcs7 data completed');
   end;
 
   UnloadOpenSSLCore;

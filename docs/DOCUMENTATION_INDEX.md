@@ -1,3 +1,8 @@
+## Runtime Contract Index
+- Current active runtime contract entrypoints: `docs/plans/2026-03-07-runtime-contracts-current-index.md`
+- Historical runtime-contract plan trail: `docs/plans/2026-03-07-runtime-contracts-historical-index.md`
+- Runtime-contract cleanup PR body: `docs/testing/RUNTIME_CONTRACT_CLEANUP_PR_BODY_2026-03-07.md`
+
 # fafafa.ssl 文档索引
 
 本索引仅链接到仓库中实际存在的文件。
@@ -14,8 +19,9 @@
 4. **[examples/README.md](../examples/README.md)** - 示例程序说明
 5. **[examples/EXAMPLES_INDEX.md](../examples/EXAMPLES_INDEX.md)** - 示例程序完整索引（按功能分类）
 6. **[testing/README_TESTING.md](testing/README_TESTING.md)** - 测试说明（入口）
-7. **[archive/CICD_SETUP.md](archive/CICD_SETUP.md)** - CI/CD 与本地流水线（归档）
-8. **[ARCHITECTURE.md](ARCHITECTURE.md)** - 架构设计文档 🆕
+7. **[PLANS_CURRENT_INDEX.md](PLANS_CURRENT_INDEX.md)** - 当前执行/治理入口与最近高信号计划索引 🆕
+8. **[archive/CICD_SETUP.md](archive/CICD_SETUP.md)** - CI/CD 与本地流水线（归档）
+9. **[ARCHITECTURE.md](ARCHITECTURE.md)** - 架构设计文档 🆕
 
 ---
 
@@ -42,7 +48,6 @@
 
 ### API / 设计 / 约定
 - **[reference/API_DESIGN_GUIDE.md](reference/API_DESIGN_GUIDE.md)**
-- **[reference/API_REFERENCE.md](reference/API_REFERENCE.md)** - API 完整参考 🆕
 - **[reference/P2_MINIMUM_API_CAPABILITY_MATRIX.md](reference/P2_MINIMUM_API_CAPABILITY_MATRIX.md)** - P2 最低可用 API 与能力矩阵字段映射 🆕
 - **[reference/OPENSSL_1_1_1_VS_3X_DIFF_AND_REGRESSION.md](reference/OPENSSL_1_1_1_VS_3X_DIFF_AND_REGRESSION.md)** - OpenSSL 1.1.1 vs 3.x 差异清单与回归策略 🆕
 - **[reference/STORE_CROSS_PLATFORM_DIFFERENCES.md](reference/STORE_CROSS_PLATFORM_DIFFERENCES.md)** - Store 跨平台差异说明（Linux/macOS/Windows） 🆕

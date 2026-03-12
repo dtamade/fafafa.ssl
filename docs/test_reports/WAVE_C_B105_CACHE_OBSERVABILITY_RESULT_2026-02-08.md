@@ -25,7 +25,7 @@
   - 结果：`Passed: 4, Failed: 0, Skipped: 0`。
 
 ### 全门禁 playbook
-- `bash scripts/run_wave_c_b101_validation_playbook.sh --run-id 20260208_051419 --strict --full-gate --output test-reports/wave_c_b101_validation_20260208_051419.md`
+- `bash scripts/run_wave_c_b101_validation_playbook.sh --run-id 20260208_051419 --strict --full-gate --output docs/archive/reports/wave-c-quick-enablement-history/wave_c_b101_validation_20260208_051419.md`
   - 结果：`overall PASS`
   - compile_all_modules: `0`
   - run_all_module_tests: `0`

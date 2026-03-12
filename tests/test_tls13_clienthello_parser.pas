@@ -27,6 +27,12 @@ begin
     Fail(Format('%s (expected=0x%.4x actual=0x%.4x)', [AMessage, AExpected, AActual]));
 end;
 
+procedure AssertEqualsStr(const AExpected, AActual, AMessage: string);
+begin
+  if AExpected <> AActual then
+    Fail(Format('%s (expected="%s" actual="%s")', [AMessage, AExpected, AActual]));
+end;
+
 function BuildExtensionHeader(AType: Word; const AData: TBytes): TBytes;
 begin
   Result := nil;
@@ -48,7 +54,7 @@ var
   LX25519Share: TBytes;
   I: Integer;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   SetLength(LBody, 0);
   AppendUInt16(LBody, TLS_LEGACY_VERSION);
 
@@ -117,7 +123,7 @@ var
   LExtData: TBytes;
   LKeyShare: TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   SetLength(LBody, 0);
   AppendUInt16(LBody, TLS_LEGACY_VERSION);
 
@@ -179,6 +185,12 @@ begin
   AssertEqualsWord(TLS_LEGACY_VERSION, LInfo.LegacyVersion, 'legacy_version mismatch');
   AssertTrue(LInfo.HasSupportedVersions, 'supported_versions extension should exist');
   AssertTrue(TLS13ClientHelloSupportsVersion(LInfo, TLS13_VERSION), 'TLS 1.3 should be offered');
+  AssertTrue(LInfo.HasALPN, 'ALPN extension should exist');
+  AssertEqualsStr('h2,http/1.1', LInfo.ALPNProtocols, 'ALPN protocol list mismatch');
+  AssertTrue(TLS13ClientHelloOffersALPNProtocol(LInfo, 'h2'),
+    'ClientHello should offer ALPN h2');
+  AssertTrue(TLS13ClientHelloOffersALPNProtocol(LInfo, 'http/1.1'),
+    'ClientHello should offer ALPN http/1.1');
   AssertTrue(TLS13ClientHelloOffersCipherSuite(LInfo, TLS13_CIPHER_CHACHA20_POLY1305_SHA256),
     'CHACHA20 suite should be offered');
 
@@ -225,12 +237,61 @@ begin
     'Expected supported_versions related error, got: ' + LError);
 end;
 
+procedure TestParsePSKBinderOffsets;
+var
+  LKeyShare: TBytes;
+  LRandom: TBytes;
+  LSessionID: TBytes;
+  LIdentity: TBytes;
+  LBinder: TBytes;
+  LHandshake: TBytes;
+  LInfo: TTLS13ClientHelloInfo;
+  LError: string;
+begin
+  SetLength(LKeyShare, 32);
+  FillChar(LKeyShare[0], Length(LKeyShare), $5A);
+  SetLength(LRandom, 32);
+  FillChar(LRandom[0], Length(LRandom), $11);
+  SetLength(LSessionID, 32);
+  FillChar(LSessionID[0], Length(LSessionID), $22);
+  LIdentity := BytesOf('ticket-identity');
+  SetLength(LBinder, 32);
+  FillChar(LBinder[0], Length(LBinder), $AB);
+
+  LHandshake := BuildTLS13ClientHelloHandshakeWithPSK(
+    'localhost',
+    'h2',
+    LKeyShare,
+    LRandom,
+    LSessionID,
+    TLS13_CIPHER_CHACHA20_POLY1305_SHA256,
+    LIdentity,
+    $174EABCD,
+    LBinder
+  );
+
+  AssertTrue(TryParseTLS13ClientHelloFromHandshake(LHandshake, LInfo, LError),
+    'Parse PSK ClientHello failed: ' + LError);
+  AssertTrue(LInfo.HasPreSharedKey, 'PSK ClientHello should parse pre_shared_key');
+  AssertTrue(LInfo.PSKObfuscatedTicketAge = $174EABCD,
+    'PSK obfuscated ticket age should match input');
+  AssertTrue(LInfo.PSKBindersOffset > 0,
+    'PSK parser should expose binders list offset');
+  AssertTrue(LInfo.PSKBinderOffset = LInfo.PSKBindersOffset + 3,
+    'Single-binder path should place binder bytes after binders length + binder length');
+  AssertEqualsWord(33, ReadUInt16(LHandshake, LInfo.PSKBindersOffset),
+    'Binders vector length should be readable at binders offset');
+  AssertTrue(LHandshake[LInfo.PSKBindersOffset + 2] = 32,
+    'Binder entry length should follow binders vector length');
+end;
+
 begin
   WriteLn('Testing TLS 1.3 ClientHello parser...');
 
   TestParseGeneratedClientHello;
   TestSelectX25519FromMultipleKeyShares;
   TestRejectMalformedSupportedVersions;
+  TestParsePSKBinderOffsets;
 
   WriteLn('✅ TLS 1.3 ClientHello parser checks passed');
 end.

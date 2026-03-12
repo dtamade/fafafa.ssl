@@ -5,6 +5,7 @@ set -euo pipefail
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 OUTPUT_FILE=""
 STRICT=false
+REPORTS_DIR="${FAFAFA_WAVE_C_LOCAL_GUARD_REPORTS_DIR:-tmp/wave_c_local_guard_reports}"
 
 usage() {
   cat <<'USAGE'
@@ -18,7 +19,7 @@ Wave C B140 Local Guard Consistency Check
 
 选项：
   --run-id ID      指定 run_id
-  --output FILE    输出报告路径
+  --output FILE    输出报告路径（默认 tmp/wave_c_local_guard_reports/wave_c_b140_local_guard_consistency_<run_id>.md）
   --strict         非 CONSISTENT 返回非 0
   --help           显示帮助
 USAGE
@@ -51,7 +52,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b140_local_guard_consistency_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORTS_DIR/wave_c_b140_local_guard_consistency_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"

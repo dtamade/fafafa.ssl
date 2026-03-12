@@ -5,6 +5,7 @@ program test_load_rand_detailed;
 uses
   SysUtils,
   fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.rand,
   fafafa.ssl.openssl.api;
 
@@ -18,7 +19,7 @@ begin
   
   WriteLn('[1] Load Core');
   LoadOpenSSLCore();
-  WriteLn('  IsCryptoLibraryLoaded: ', IsCryptoLibraryLoaded);
+  WriteLn('  TOpenSSLLoader.IsModuleLoaded(osmCore): ', TOpenSSLLoader.IsModuleLoaded(osmCore));
   WriteLn;
   
   WriteLn('[2] Check library handle');

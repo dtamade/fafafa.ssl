@@ -52,6 +52,15 @@ function TryDeriveTLS13HandshakeSecrets(
   out AError: string
 ): Boolean;
 
+function TryDeriveTLS13HandshakeSecretsWithPSK(
+  ACipherSuite: Word;
+  const APSK: TBytes;
+  const ASharedSecret: TBytes;
+  const ATranscriptData: TBytes;
+  out ASecrets: TTLS13HandshakeSecrets;
+  out AError: string
+): Boolean;
+
 implementation
 
 uses
@@ -163,6 +172,25 @@ function TryDeriveTLS13HandshakeSecrets(
   out ASecrets: TTLS13HandshakeSecrets;
   out AError: string
 ): Boolean;
+begin
+  Result := TryDeriveTLS13HandshakeSecretsWithPSK(
+    ACipherSuite,
+    nil,
+    ASharedSecret,
+    ATranscriptData,
+    ASecrets,
+    AError
+  );
+end;
+
+function TryDeriveTLS13HandshakeSecretsWithPSK(
+  ACipherSuite: Word;
+  const APSK: TBytes;
+  const ASharedSecret: TBytes;
+  const ATranscriptData: TBytes;
+  out ASecrets: TTLS13HandshakeSecrets;
+  out AError: string
+): Boolean;
 var
   LHashSize: Integer;
   LKeyLength: Integer;
@@ -204,7 +232,10 @@ begin
   ASecrets.IVLength := TLS13_DEFAULT_IV_SIZE;
   ASecrets.TranscriptHash := HashTranscriptForSuite(ACipherSuite, ATranscriptData);
 
-  ASecrets.EarlySecret := HKDFExtractForSuite(ACipherSuite, LZeroLength, LZeroHash);
+  if Length(APSK) > 0 then
+    ASecrets.EarlySecret := HKDFExtractForSuite(ACipherSuite, LZeroLength, APSK)
+  else
+    ASecrets.EarlySecret := HKDFExtractForSuite(ACipherSuite, LZeroLength, LZeroHash);
   ASecrets.DerivedSecret := HKDFExpandLabelForSuite(
     ACipherSuite,
     ASecrets.EarlySecret,

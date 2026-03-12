@@ -518,10 +518,22 @@ begin
 end;
 
 function TCertificateBuilderImpl.AddSubjectAltName(const ASAN: string): ICertificateBuilder;
+var
+  LSan: string;
 begin
   if not Assigned(FOptions.SubjectAltNames) then
     FOptions.SubjectAltNames := TStringList.Create;
-  FOptions.SubjectAltNames.Add(ASAN);
+
+  LSan := Trim(ASAN);
+  if LSan = '' then
+    Exit(Self);
+
+  // OpenSSL subjectAltName expects typed entries (e.g. "DNS:example.com").
+  // Treat a bare value as a DNS name to keep the fluent builder ergonomic.
+  if Pos(':', LSan) = 0 then
+    LSan := 'DNS:' + LSan;
+
+  FOptions.SubjectAltNames.Add(LSan);
   Result := Self;
 end;
 

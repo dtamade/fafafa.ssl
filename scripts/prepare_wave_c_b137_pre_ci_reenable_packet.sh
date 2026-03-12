@@ -7,6 +7,8 @@ ONCALL_REPORT=""
 SNAPSHOT_REPORT=""
 OUTPUT_FILE=""
 STRICT=false
+LOCAL_GUARD_REPORTS_DIR="${FAFAFA_WAVE_C_LOCAL_GUARD_REPORTS_DIR:-tmp/wave_c_local_guard_reports}"
+REPORTS_DIR="${FAFAFA_WAVE_C_CI_REENABLE_REPORTS_DIR:-tmp/wave_c_ci_reenable_reports}"
 
 WORKFLOW_ENABLED_FILE=".github/workflows/wave-c-quick-sprint-manual.yml"
 WORKFLOW_DISABLED_FILE=".github/workflows/wave-c-quick-sprint-manual.yml.disabled"
@@ -25,7 +27,7 @@ Wave C B137 Pre-CI Re-enable Packet Builder
   --run-id ID            指定 run_id
   --oncall-report FILE   指定 B129 oncall 报告（默认最新）
   --snapshot-report FILE 指定 B132 snapshot 报告（默认最新）
-  --output FILE          输出报告路径
+  --output FILE          输出报告路径（默认 tmp/wave_c_ci_reenable_reports/wave_c_b137_pre_ci_reenable_packet_<run_id>.md）
   --strict               状态非 READY_FOR_APPROVAL 返回非 0
   --help                 显示帮助
 USAGE
@@ -66,15 +68,15 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$ONCALL_REPORT" ]]; then
-  ONCALL_REPORT="$(ls -1t test-reports/wave_c_b129_oncall_check_*.md 2>/dev/null | head -1 || true)"
+  ONCALL_REPORT="$(ls -1t "$LOCAL_GUARD_REPORTS_DIR"/wave_c_b129_oncall_check_*.md 2>/dev/null | head -1 || true)"
 fi
 
 if [[ -z "$SNAPSHOT_REPORT" ]]; then
-  SNAPSHOT_REPORT="$(ls -1t test-reports/wave_c_b132_local_first_status_snapshot_*.md 2>/dev/null | head -1 || true)"
+  SNAPSHOT_REPORT="$(ls -1t "$LOCAL_GUARD_REPORTS_DIR"/wave_c_b132_local_first_status_snapshot_*.md 2>/dev/null | head -1 || true)"
 fi
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b137_pre_ci_reenable_packet_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORTS_DIR/wave_c_b137_pre_ci_reenable_packet_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"

@@ -6,7 +6,7 @@ uses
   SysUtils, Classes,
   
   fafafa.ssl.base,
-  fafafa.ssl.openssl.backed;
+  fafafa.ssl.openssl.lib;
 
 procedure TestCertificateVerification;
 var

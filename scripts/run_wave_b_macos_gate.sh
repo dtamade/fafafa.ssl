@@ -5,14 +5,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-RUN_ID="$(date +%Y%m%d_%H%M%S)"
+RUN_ID="${FAFAFA_WAVE_B_MACOS_GATE_RUN_ID:-$(date +%Y%m%d_%H%M%S)}"
 MODULE_SET="PKCS7,PKCS12,CMS,Store,OCSP,TS,CT"
 EXAMPLES_THRESHOLD="80.0"
-OUTPUT_DIR_REL="test-reports"
+OUTPUT_DIR_REL="${FAFAFA_WAVE_B_REPORTS_DIR:-tmp/wave_b_reports}"
 OPENSSL_ROOT=""
 VERBOSE=false
 DRY_RUN=false
 PATH_CHECK_DRY_RUN=true
+FPC_EXE="${FAFAFA_FPC_EXE:-fpc}"
 
 usage() {
   cat <<'USAGE'
@@ -28,7 +29,7 @@ Wave B macOS Gate Runner
   --run-id ID                指定 run_id
   --modules LIST             模块列表（默认: PKCS7,PKCS12,CMS,Store,OCSP,TS,CT）
   --examples-threshold NUM   示例通过率阈值（默认: 80.0）
-  --output-dir DIR           输出目录（相对项目根，默认: test-reports）
+  --output-dir DIR           输出目录（相对项目根，默认: tmp/wave_b_reports）
   --openssl-root DIR         指定 OpenSSL 根目录（可选）
   --verbose                  模块测试启用 --verbose
   --dry-run                  仅打印命令，不执行
@@ -82,6 +83,10 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+COMPILE_UNIT_OUTPUT_DIR="${FAFAFA_WAVE_B_MACOS_GATE_COMPILE_UNIT_OUTPUT_DIR:-tmp/wave_b_macos_gate_compile_units_${RUN_ID}}"
+MODULE_UNIT_OUTPUT_DIR="${FAFAFA_WAVE_B_MACOS_GATE_MODULE_UNIT_OUTPUT_DIR:-tmp/wave_b_macos_gate_module_units_${RUN_ID}}"
+MODULE_BIN_OUTPUT_DIR="${FAFAFA_WAVE_B_MACOS_GATE_MODULE_BIN_OUTPUT_DIR:-tmp/wave_b_macos_gate_module_bin_${RUN_ID}}"
 
 if [[ "$OSTYPE" != darwin* && "$DRY_RUN" != "true" ]]; then
   echo "[FAIL] this script is intended for macOS (current: $OSTYPE). Use --dry-run for rehearsal." >&2
@@ -140,13 +145,21 @@ if [[ "$PATH_CHECK_DRY_RUN" == "false" ]]; then
 fi
 
 probe_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} bash scripts/detect_macos_openssl_enhanced.sh --json > '$PROBE_JSON_REL'"
-path_check_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} bash scripts/run_macos_openssl_path_check_draft.sh ${path_check_flag}"
-compile_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} python3 scripts/compile_all_modules.py"
-modules_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
+path_check_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} FAFAFA_FPC_EXE='$FPC_EXE' bash scripts/run_macos_openssl_path_check_draft.sh ${path_check_flag}"
+compile_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} python3 scripts/compile_all_modules.py --unit-output-dir '$COMPILE_UNIT_OUTPUT_DIR' --fpc-exe '$FPC_EXE'"
+modules_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} FAFAFA_FPC_EXE='$FPC_EXE' FAFAFA_FPC_UNIT_OUTPUT_DIR='$MODULE_UNIT_OUTPUT_DIR' FAFAFA_TEST_BIN_DIR='$MODULE_BIN_OUTPUT_DIR' bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
 examples_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} bash scripts/verify_examples_compile.sh -f json -o '$EXAMPLES_JSON_REL'"
 
 if [[ "$VERBOSE" == "true" ]]; then
   modules_cmd="$modules_cmd --verbose"
+fi
+
+if [[ "$DRY_RUN" == "true" ]]; then
+  echo "[DRY-RUN] run_id=$RUN_ID"
+  echo "[DRY-RUN] output_dir=$OUTPUT_DIR_REL"
+  echo "[DRY-RUN] summary=$SUMMARY_REL"
+  echo "[DRY-RUN] probe_json=$PROBE_JSON_REL"
+  echo "[DRY-RUN] examples_json=$EXAMPLES_JSON_REL"
 fi
 
 probe_exit=$(run_step "probe" "$probe_cmd" "$PROBE_LOG_REL")

@@ -143,6 +143,7 @@ begin
     
     WriteLn('==========================================');
     WriteLn('✅ 所有测试通过！');
+    WriteLn('[PASS] cert utils enterprise completed');
     WriteLn('==========================================');
   except
     on E: Exception do

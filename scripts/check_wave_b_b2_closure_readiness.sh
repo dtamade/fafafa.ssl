@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
+REPORTS_DIR="${FAFAFA_WAVE_B_REPORTS_DIR:-tmp/wave_b_reports}"
 LINUX_SUMMARY=""
 MACOS_SUMMARY=""
 WINDOWS_SUMMARY=""
@@ -25,10 +26,11 @@ Wave B / B2 Closure Readiness Checker
 
 选项：
   --run-id ID               指定 run_id（默认时间戳）
+  --reports-dir DIR        报告目录（默认 tmp/wave_b_reports）
   --linux-summary FILE      Linux summary（默认自动选最新 wave_b_ci_gate_summary_*.md）
   --macos-summary FILE      macOS summary（可选）
   --windows-summary FILE    Windows summary（可选）
-  --output FILE             输出 markdown（默认 test-reports/wave_b_b2_closure_readiness_<run_id>.md）
+  --output FILE             输出 markdown（默认 tmp/wave_b_reports/wave_b_b2_closure_readiness_<run_id>.md）
   --strict                  若未闭环则返回非 0
   --dry-run                 仅打印判定，不写文件
   --help                    显示帮助
@@ -39,6 +41,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --run-id)
       RUN_ID="$2"
+      shift 2
+      ;;
+    --reports-dir)
+      REPORTS_DIR="$2"
       shift 2
       ;;
     --linux-summary)
@@ -77,8 +83,31 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+resolve_run_scoped_artifact() {
+  local run_scoped_path="$1"
+  local glob_pattern="$2"
+
+  python3 - "$run_scoped_path" "$glob_pattern" <<'PY'
+import glob
+import os
+import sys
+
+run_scoped_path = sys.argv[1]
+glob_pattern = sys.argv[2]
+if os.path.isfile(run_scoped_path):
+    print(run_scoped_path)
+else:
+    matches = sorted(glob.glob(glob_pattern), key=lambda p: (os.path.getmtime(p), p), reverse=True)
+    if matches:
+        print(matches[0])
+PY
+}
+
 if [[ -z "$LINUX_SUMMARY" ]]; then
-  LINUX_SUMMARY="$(cd "$PROJECT_ROOT" && ls -1t test-reports/wave_b_ci_gate_summary_*.md 2>/dev/null | head -1 || true)"
+  LINUX_SUMMARY="$(resolve_run_scoped_artifact "$PROJECT_ROOT/$REPORTS_DIR/wave_b_ci_gate_summary_${RUN_ID}.md" "$PROJECT_ROOT/$REPORTS_DIR/wave_b_ci_gate_summary_*.md")"
+  if [[ -n "$LINUX_SUMMARY" ]]; then
+    LINUX_SUMMARY="${LINUX_SUMMARY#"$PROJECT_ROOT/"}"
+  fi
 fi
 
 if [[ -z "$LINUX_SUMMARY" ]]; then
@@ -87,7 +116,7 @@ if [[ -z "$LINUX_SUMMARY" ]]; then
 fi
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_b_b2_closure_readiness_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORTS_DIR/wave_b_b2_closure_readiness_${RUN_ID}.md"
 fi
 
 resolve_path() {
@@ -109,6 +138,9 @@ normalize_status() {
   case "$upper" in
     PASS|FAIL|DRY_RUN)
       echo "$upper"
+      ;;
+    SKIP|SKIPPED)
+      echo "SKIPPED"
       ;;
     *)
       echo "UNKNOWN"
@@ -176,6 +208,9 @@ fi
 
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] run_id=$RUN_ID"
+  echo "[DRY-RUN] linux_summary=$LINUX_SUMMARY"
+  echo "[DRY-RUN] macos_summary=$MACOS_SUMMARY"
+  echo "[DRY-RUN] windows_summary=$WINDOWS_SUMMARY"
   echo "[DRY-RUN] linux=$linux_state ($linux_note)"
   echo "[DRY-RUN] macos=$macos_state ($macos_note)"
   echo "[DRY-RUN] windows=$windows_state ($windows_note)"
@@ -211,10 +246,18 @@ cat > "$PROJECT_ROOT/$OUTPUT_FILE" <<EOF_REPORT
 - macos = PASS
 - windows = PASS
 
+## Status Semantics
+
+- \`PASS\`: live gate passed and counts toward closure.
+- \`DRY_RUN\`: rehearsal evidence exists but does not count toward closure.
+- \`SKIPPED\`: intentionally skipped evidence; does not count toward closure.
+- \`PENDING\`: expected summary/evidence file is missing.
+- \`READY\`: summary exists but overall field is unknown/unmapped.
+
 ## Next Actions
 
-- 若 macOS 为 DRY_RUN/PENDING：在 macOS runner 执行 live gate 并回填 summary。
-- 若 Windows 为 PENDING：在 Windows runner 执行 live gate 并回填 summary。
+- 若 macOS 为 DRY_RUN/SKIPPED/PENDING/READY：在 macOS runner 执行 live gate 并回填 summary。
+- 若 Windows 为 DRY_RUN/SKIPPED/PENDING/READY：在 Windows runner 执行 live gate 并回填 summary。
 - 三平台 summary 回填后，复跑 'scripts/generate_wave_b_cross_platform_summary.sh'。
 EOF_REPORT
 

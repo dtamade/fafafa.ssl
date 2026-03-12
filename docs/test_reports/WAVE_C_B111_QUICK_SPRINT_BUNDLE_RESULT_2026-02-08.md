@@ -7,12 +7,12 @@
 ## 交付物
 
 - 脚本：`scripts/run_wave_c_quick_sprint_bundle.sh`
-- 样例汇总：`test-reports/wave_c_quick_sprint_bundle_20260208_053500.md`
+- 样例汇总：`docs/archive/reports/wave-c-quick-enablement-history/wave_c_quick_sprint_bundle_20260208_053500.md`
 
 ## 验证
 
 - `bash -n scripts/run_wave_c_quick_sprint_bundle.sh`（通过）
-- `bash scripts/run_wave_c_quick_sprint_bundle.sh --run-id 20260208_053500 --strict --output test-reports/wave_c_quick_sprint_bundle_20260208_053500.md`（通过）
+- `bash scripts/run_wave_c_quick_sprint_bundle.sh --run-id 20260208_053500 --strict --output docs/archive/reports/wave-c-quick-enablement-history/wave_c_quick_sprint_bundle_20260208_053500.md`（通过）
 
 ## 结果
 

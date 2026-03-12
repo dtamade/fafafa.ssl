@@ -369,9 +369,9 @@ begin
 
   // 检查关键函数是否加载成功
   if not Assigned(ldns_resolver_new_frm_file) or
-     not Assigned(ldns_resolver_query) or
-     not Assigned(ldns_pkt_rr_list_by_type) or
-     not Assigned(ldns_rr_rdf) then
+    not Assigned(ldns_resolver_query) or
+    not Assigned(ldns_pkt_rr_list_by_type) or
+    not Assigned(ldns_rr_rdf) then
   begin
     LdnsLoadError := 'ldns 库缺少必要的函数';
     FreeLibrary(LdnsHandle);
@@ -560,7 +560,7 @@ begin
       DataRdf := ldns_rr_rdf(RR, 3);
 
       if (UsageRdf = nil) or (SelectorRdf = nil) or
-         (MatchingRdf = nil) or (DataRdf = nil) then
+        (MatchingRdf = nil) or (DataRdf = nil) then
         Continue;
 
       SetLength(ARecords, Length(ARecords) + 1);

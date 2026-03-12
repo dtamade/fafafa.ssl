@@ -13,7 +13,9 @@ uses
   SysUtils, Classes,
   fafafa.ssl.factory,
   fafafa.ssl.base,
-  fafafa.ssl.crypto.utils;
+  fafafa.ssl.crypto.utils,
+  fafafa.ssl.encoding,
+  fafafa.ssl.openssl.lib;
 
 type
   TTestResult = record
@@ -150,7 +152,7 @@ begin
     end;
     
     // Test Base64
-    LEncoded := TCryptoUtils.Base64Encode('Hello World');
+    LEncoded := TEncodingUtils.Base64Encode('Hello World');
     if LEncoded <> 'SGVsbG8gV29ybGQ=' then
     begin
       AddResult('Base64Encode', False, 'Encoding mismatch');
@@ -158,7 +160,7 @@ begin
       Exit;
     end;
     
-    LDecoded := TCryptoUtils.Base64DecodeString(LEncoded);
+    LDecoded := TEncodingUtils.Base64DecodeString(LEncoded);
     if LDecoded <> 'Hello World' then
     begin
       AddResult('Base64Decode', False, 'Decoding mismatch');
@@ -233,6 +235,8 @@ begin
     
     // Test various config methods
     try
+      // Deprecated compatibility coverage: this core test intentionally
+      // exercises context-level ServerName as a legacy bridge API.
       LContext.SetServerName('www.example.com');
       LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
       LContext.SetVerifyMode([sslVerifyPeer]);

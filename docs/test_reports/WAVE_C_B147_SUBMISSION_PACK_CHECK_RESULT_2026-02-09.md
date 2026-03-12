@@ -7,7 +7,7 @@
 ## 交付内容
 
 - 脚本：`scripts/check_wave_c_ci_reenable_submission_pack.sh`
-- 报告：`test-reports/wave_c_b147_submission_pack_check_20260209_052657.md`
+- 报告：`docs/archive/reports/wave-c-pre-ci-submission-history/wave_c_b147_submission_pack_check_20260209_052657.md`
 
 ## 验证基线
 

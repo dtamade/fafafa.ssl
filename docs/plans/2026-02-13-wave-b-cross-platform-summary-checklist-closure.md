@@ -63,7 +63,7 @@ Expected: PASS，输出 `checklist TODO closure contract passed`。
 **Step 1: Script dry-run compatibility**
 
 Run:
-- `bash scripts/generate_wave_b_cross_platform_summary.sh --run-id tdd_regression --linux-summary test-reports/wave_b_ci_gate_summary_20260208_025426.md --macos-summary test-reports/wave_b_macos_gate_summary_20260208_041500.md --dry-run`
+- `bash scripts/generate_wave_b_cross_platform_summary.sh --run-id tdd_regression --linux-summary docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_025426.md --macos-summary docs/archive/reports/wave-b-history/wave_b_macos_gate_summary_20260208_041500.md --dry-run`
 
 Expected: PASS，dry-run 正常输出且无报错。
 

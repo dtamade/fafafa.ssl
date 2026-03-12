@@ -5,6 +5,8 @@ program test_algorithm_availability;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.evp;
 
 var
@@ -47,9 +49,19 @@ begin
   WriteLn;
   
   try
-    if not LoadOpenSSLLibrary then
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('ERROR: Failed to load OpenSSL: ', E.Message);
+        Halt(1);
+      end;
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
-      WriteLn('ERROR: Failed to load OpenSSL');
+      WriteLn('ERROR: OpenSSL core did not stay loaded');
       Halt(1);
     end;
     
@@ -105,6 +117,8 @@ begin
       WriteLn('SUCCESS: Core algorithms available!')
     else
       WriteLn('WARNING: Some core algorithms missing');
+
+    WriteLn('[PASS] algorithm availability validation completed');
       
   except
     on E: Exception do

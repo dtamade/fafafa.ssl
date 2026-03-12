@@ -76,6 +76,8 @@ type
   // SNI 支持
   TwolfSSL_UseSNI = function(ssl: PWOLFSSL; sniType: Byte;
     const data: Pointer; size: Word): Integer; cdecl;
+  TwolfSSL_set_tlsext_host_name = function(ssl: PWOLFSSL; const host_name: PAnsiChar): Integer; cdecl;
+  TwolfSSL_get_servername = function(ssl: PWOLFSSL; sniType: Byte): PAnsiChar; cdecl;
 
   // 版本信息
   TwolfSSL_lib_version = function: PAnsiChar; cdecl;
@@ -198,6 +200,8 @@ var
 
   wolfSSL_CTX_set_verify: TwolfSSL_CTX_set_verify = nil;
   wolfSSL_UseSNI: TwolfSSL_UseSNI = nil;
+  wolfSSL_set_tlsext_host_name: TwolfSSL_set_tlsext_host_name = nil;
+  wolfSSL_get_servername: TwolfSSL_get_servername = nil;
   wolfSSL_lib_version: TwolfSSL_lib_version = nil;
 
   // X509 函数
@@ -336,6 +340,8 @@ begin
 
   // SNI 函数
   wolfSSL_UseSNI := TwolfSSL_UseSNI(GetProc('wolfSSL_UseSNI'));
+  wolfSSL_set_tlsext_host_name := TwolfSSL_set_tlsext_host_name(GetProc('wolfSSL_set_tlsext_host_name'));
+  wolfSSL_get_servername := TwolfSSL_get_servername(GetProc('wolfSSL_get_servername'));
 
   // 版本函数
   wolfSSL_lib_version := TwolfSSL_lib_version(GetProc('wolfSSL_lib_version'));
@@ -478,6 +484,8 @@ begin
   wolfSSL_CTX_load_verify_locations := nil;
   wolfSSL_CTX_set_verify := nil;
   wolfSSL_UseSNI := nil;
+  wolfSSL_set_tlsext_host_name := nil;
+  wolfSSL_get_servername := nil;
   wolfSSL_lib_version := nil;
 
   // X509 函数

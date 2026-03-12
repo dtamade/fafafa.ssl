@@ -5,6 +5,7 @@ set -euo pipefail
 RUN_ID=""
 STRICT=false
 OUTPUT_FILE=""
+REPORTS_DIR="${FAFAFA_WAVE_C_QUICK_SPRINT_REPORTS_DIR:-tmp/wave_c_quick_sprint_reports}"
 
 usage() {
   cat <<'USAGE'
@@ -18,7 +19,7 @@ Wave C Post-Trigger Observability Check
 
 选项：
   --run-id ID      必填，触发 run_id
-  --output FILE    输出报告路径
+  --output FILE    输出报告路径（默认 tmp/wave_c_quick_sprint_reports/wave_c_b120_post_trigger_observability_<run_id>.md）
   --strict         非 READY 返回非 0
 USAGE
 }
@@ -55,15 +56,17 @@ if [[ -z "$RUN_ID" ]]; then
 fi
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b120_post_trigger_observability_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORTS_DIR/wave_c_b120_post_trigger_observability_${RUN_ID}.md"
 fi
 
+mkdir -p "$(dirname "$OUTPUT_FILE")"
+
 required=(
-  "test-reports/wave_c_b107_threshold_eval_${RUN_ID}.md"
-  "test-reports/wave_c_b108_default_on_readiness_${RUN_ID}.md"
-  "test-reports/wave_c_b109_canary_rollout_${RUN_ID}.md"
-  "test-reports/wave_c_b110_rollback_drill_${RUN_ID}.md"
-  "test-reports/wave_c_quick_sprint_bundle_${RUN_ID}.md"
+  "$REPORTS_DIR/wave_c_b107_threshold_eval_${RUN_ID}.md"
+  "$REPORTS_DIR/wave_c_b108_default_on_readiness_${RUN_ID}.md"
+  "$REPORTS_DIR/wave_c_b109_canary_rollout_${RUN_ID}.md"
+  "$REPORTS_DIR/wave_c_b110_rollback_drill_${RUN_ID}.md"
+  "$REPORTS_DIR/wave_c_quick_sprint_bundle_${RUN_ID}.md"
 )
 
 missing=0

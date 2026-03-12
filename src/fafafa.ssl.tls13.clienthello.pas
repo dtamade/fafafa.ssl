@@ -18,6 +18,24 @@ function BuildTLS13ClientHelloHandshake(
   const AALPNProtocols: string;
   const AKeyShare: TBytes
 ): TBytes;
+function BuildTLS13ClientHelloHandshakeWithCipherSuites(
+  const AServerName: string;
+  const AALPNProtocols: string;
+  const AKeyShare: TBytes;
+  const ACipherSuites: array of Word
+): TBytes;
+
+function BuildTLS13ClientHelloHandshakeWithPSK(
+  const AServerName: string;
+  const AALPNProtocols: string;
+  const AKeyShare: TBytes;
+  const ARandom: TBytes;
+  const ALegacySessionID: TBytes;
+  ACipherSuite: Word;
+  const APSKIdentity: TBytes;
+  APSKObfuscatedTicketAge: Cardinal;
+  const APSKBinder: TBytes
+): TBytes;
 
 function BuildTLS13ClientHelloRecord(
   const AServerName: string;
@@ -211,10 +229,46 @@ begin
   Result := BuildExtensionHeader(TLS_EXTENSION_KEY_SHARE, LData);
 end;
 
-function BuildTLS13ClientHelloBody(
+function BuildExtensionPreSharedKey(
+  const APSKIdentity: TBytes;
+  APSKObfuscatedTicketAge: Cardinal;
+  const APSKBinder: TBytes
+): TBytes;
+var
+  LIdentities, LBinders, LData: TBytes;
+begin
+  if (Length(APSKIdentity) = 0) or (Length(APSKBinder) = 0) then
+  begin
+    Result := nil;
+    Exit;
+  end;
+
+  SetLength(LIdentities, 0);
+  AppendUInt16(LIdentities, Word(Length(APSKIdentity)));
+  AppendBytes(LIdentities, APSKIdentity);
+  AppendByte(LIdentities, Byte((APSKObfuscatedTicketAge shr 24) and $FF));
+  AppendByte(LIdentities, Byte((APSKObfuscatedTicketAge shr 16) and $FF));
+  AppendByte(LIdentities, Byte((APSKObfuscatedTicketAge shr 8) and $FF));
+  AppendByte(LIdentities, Byte(APSKObfuscatedTicketAge and $FF));
+
+  SetLength(LBinders, 0);
+  AppendByte(LBinders, Byte(Length(APSKBinder)));
+  AppendBytes(LBinders, APSKBinder);
+
+  SetLength(LData, 0);
+  AppendUInt16(LData, Word(Length(LIdentities)));
+  AppendBytes(LData, LIdentities);
+  AppendUInt16(LData, Word(Length(LBinders)));
+  AppendBytes(LData, LBinders);
+
+  Result := BuildExtensionHeader(TLS_EXTENSION_PRE_SHARED_KEY, LData);
+end;
+
+function BuildTLS13ClientHelloBodyWithCipherSuites(
   const AServerName: string;
   const AALPNProtocols: string;
-  const AKeyShare: TBytes
+  const AKeyShare: TBytes;
+  const ACipherSuites: array of Word
 ): TBytes;
 var
   LRandom, LSessionId: TBytes;
@@ -222,12 +276,17 @@ var
   LCompressionMethods: TBytes;
   LExtensions: TBytes;
   LExt: TBytes;
+  I: Integer;
 begin
+  Result := nil;
   LRandom := GenerateSecureRandomBytes(32);
   LSessionId := GenerateSecureRandomBytes(32);
 
   SetLength(LCipherSuites, 0);
-  AppendUInt16(LCipherSuites, TLS13_CIPHER_CHACHA20_POLY1305_SHA256);
+  for I := 0 to High(ACipherSuites) do
+    AppendUInt16(LCipherSuites, ACipherSuites[I]);
+  if Length(LCipherSuites) = 0 then
+    AppendUInt16(LCipherSuites, TLS13_CIPHER_CHACHA20_POLY1305_SHA256);
 
   SetLength(LCompressionMethods, 0);
   AppendByte(LCompressionMethods, 1);
@@ -268,6 +327,78 @@ begin
   AppendBytes(Result, LExtensions);
 end;
 
+function BuildTLS13ClientHelloBody(
+  const AServerName: string;
+  const AALPNProtocols: string;
+  const AKeyShare: TBytes
+): TBytes;
+var
+  LDefaultCipherSuites: array[0..0] of Word;
+begin
+  LDefaultCipherSuites[0] := TLS13_CIPHER_CHACHA20_POLY1305_SHA256;
+  Result := BuildTLS13ClientHelloBodyWithCipherSuites(
+    AServerName,
+    AALPNProtocols,
+    AKeyShare,
+    LDefaultCipherSuites
+  );
+end;
+
+function BuildTLS13ClientHelloBodyWithPSK(
+  const AServerName: string;
+  const AALPNProtocols: string;
+  const AKeyShare: TBytes;
+  const ARandom: TBytes;
+  const ALegacySessionID: TBytes;
+  ACipherSuite: Word;
+  const APSKIdentity: TBytes;
+  APSKObfuscatedTicketAge: Cardinal;
+  const APSKBinder: TBytes
+): TBytes;
+var
+  LCipherSuites: TBytes;
+  LCompressionMethods: TBytes;
+  LExtensions: TBytes;
+  LExt: TBytes;
+begin
+  Result := nil;
+  SetLength(LCipherSuites, 0);
+  AppendUInt16(LCipherSuites, ACipherSuite);
+
+  SetLength(LCompressionMethods, 0);
+  AppendByte(LCompressionMethods, 1);
+  AppendByte(LCompressionMethods, 0);
+
+  SetLength(LExtensions, 0);
+  LExt := BuildExtensionServerName(AServerName);
+  AppendBytes(LExtensions, LExt);
+  LExt := BuildExtensionSupportedVersions;
+  AppendBytes(LExtensions, LExt);
+  LExt := BuildExtensionSupportedGroups;
+  AppendBytes(LExtensions, LExt);
+  LExt := BuildExtensionSignatureAlgorithms;
+  AppendBytes(LExtensions, LExt);
+  LExt := BuildExtensionPSKKeyExchangeModes;
+  AppendBytes(LExtensions, LExt);
+  LExt := BuildExtensionKeyShare(AKeyShare);
+  AppendBytes(LExtensions, LExt);
+  LExt := BuildExtensionALPN(AALPNProtocols);
+  AppendBytes(LExtensions, LExt);
+  LExt := BuildExtensionPreSharedKey(APSKIdentity, APSKObfuscatedTicketAge, APSKBinder);
+  AppendBytes(LExtensions, LExt);
+
+  SetLength(Result, 0);
+  AppendUInt16(Result, TLS_LEGACY_VERSION);
+  AppendBytes(Result, ARandom);
+  AppendByte(Result, Byte(Length(ALegacySessionID)));
+  AppendBytes(Result, ALegacySessionID);
+  AppendUInt16(Result, Word(Length(LCipherSuites)));
+  AppendBytes(Result, LCipherSuites);
+  AppendBytes(Result, LCompressionMethods);
+  AppendUInt16(Result, Word(Length(LExtensions)));
+  AppendBytes(Result, LExtensions);
+end;
+
 function BuildTLS13ClientHelloHandshake(
   const AServerName: string;
   const AALPNProtocols: string;
@@ -276,9 +407,65 @@ function BuildTLS13ClientHelloHandshake(
 var
   LBody: TBytes;
 begin
+  Result := nil;
   LBody := BuildTLS13ClientHelloBody(AServerName, AALPNProtocols, AKeyShare);
 
   SetLength(Result, 0);
+  AppendByte(Result, TLS_HANDSHAKE_TYPE_CLIENT_HELLO);
+  AppendUInt24(Result, Length(LBody));
+  AppendBytes(Result, LBody);
+end;
+
+function BuildTLS13ClientHelloHandshakeWithCipherSuites(
+  const AServerName: string;
+  const AALPNProtocols: string;
+  const AKeyShare: TBytes;
+  const ACipherSuites: array of Word
+): TBytes;
+var
+  LBody: TBytes;
+begin
+  Result := nil;
+  LBody := BuildTLS13ClientHelloBodyWithCipherSuites(
+    AServerName,
+    AALPNProtocols,
+    AKeyShare,
+    ACipherSuites
+  );
+
+  SetLength(Result, 0);
+  AppendByte(Result, TLS_HANDSHAKE_TYPE_CLIENT_HELLO);
+  AppendUInt24(Result, Length(LBody));
+  AppendBytes(Result, LBody);
+end;
+
+function BuildTLS13ClientHelloHandshakeWithPSK(
+  const AServerName: string;
+  const AALPNProtocols: string;
+  const AKeyShare: TBytes;
+  const ARandom: TBytes;
+  const ALegacySessionID: TBytes;
+  ACipherSuite: Word;
+  const APSKIdentity: TBytes;
+  APSKObfuscatedTicketAge: Cardinal;
+  const APSKBinder: TBytes
+): TBytes;
+var
+  LBody: TBytes;
+begin
+  Result := nil;
+  LBody := BuildTLS13ClientHelloBodyWithPSK(
+    AServerName,
+    AALPNProtocols,
+    AKeyShare,
+    ARandom,
+    ALegacySessionID,
+    ACipherSuite,
+    APSKIdentity,
+    APSKObfuscatedTicketAge,
+    APSKBinder
+  );
+
   AppendByte(Result, TLS_HANDSHAKE_TYPE_CLIENT_HELLO);
   AppendUInt24(Result, Length(LBody));
   AppendBytes(Result, LBody);

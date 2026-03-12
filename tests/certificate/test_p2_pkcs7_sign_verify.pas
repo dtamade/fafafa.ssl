@@ -551,6 +551,7 @@ begin
   begin
     WriteLn;
     WriteLn('🎉 所有签名和验证测试通过！PKCS#7 签名功能正常');
+    WriteLn('[PASS] p2 pkcs7 sign/verify completed');
   end;
 
   UnloadOpenSSLCore;

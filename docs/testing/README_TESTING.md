@@ -1,5 +1,8 @@
 # OpenSSL Pascal Bindings - Testing Guide
 
+
+> **Historical snapshot:** This page captures a point-in-time testing or validation snapshot and may not reflect the current repository state. For current verification commands and active workflow guidance, start with `docs/testing/TESTING_README.md`.
+
 ## Quick Start
 
 ### Run All Tests
@@ -170,3 +173,9 @@ See main project LICENSE file
 **Last Updated**: 2025-09-30  
 **Version**: 1.0  
 **Status**: Active Development
+
+## Runtime contract index
+For the current active runtime-contract entrypoints, check `docs/plans/2026-03-07-runtime-contracts-current-index.md`.
+For the historical March 7, 2026 runtime-contract cleanup trail, check `docs/plans/2026-03-07-runtime-contracts-historical-index.md`.
+For a short handoff/PR summary, check `docs/testing/RUNTIME_CONTRACT_CLEANUP_SUMMARY_2026-03-07.md`.
+For a PR-ready bilingual summary, check `docs/testing/RUNTIME_CONTRACT_CLEANUP_PR_SUMMARY_2026-03-07.md`.

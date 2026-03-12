@@ -17,9 +17,9 @@ program aes_gcm_example;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.consts;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.consts;
 
 var
   Ctx: PEVP_CIPHER_CTX;
@@ -263,7 +263,7 @@ EVP_EncryptInit_ex(Ctx, nil, nil, KeyPtr, IVPtr);
 - 完整文档: `docs/AEAD_SUPPORT.md`
 - 实现总结: `docs/AEAD_IMPLEMENTATION_SUMMARY.md`
 - 诊断工具: `tests/diagnose_aead.exe`
-- MODES 模块: `src/fafafa.ssl.openssl.modes.pas`
+- MODES 模块: `src/fafafa.ssl.openssl.api.modes.pas`
 
 ---
 

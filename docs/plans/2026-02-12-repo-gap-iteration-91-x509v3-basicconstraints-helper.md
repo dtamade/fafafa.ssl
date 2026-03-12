@@ -105,7 +105,7 @@
 - `fpc -Fu./src tests/test_stream_connection.pas -otmp/test_stream_conn && ./tmp/test_stream_conn` -> PASS（10/0/1）
 - `fpc -Fu./src -Fu./tests/framework -Fu./tests/unit tests/unit/run_unit_tests_simple.lpr -otmp/run_unit_tests_simple && ./tmp/run_unit_tests_simple --format=plain --all` -> PASS（N:10 E:0 F:0 I:2）
 - `bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT` -> PASS（15/15）
-  - 报告：`test-reports/test_report_20260212_161654.txt`
+  - 报告：`docs/archive/reports/test-report-history/test_report_20260212_161654.txt`
 
 ### 结论
 - 本轮优先关闭 P0 崩溃面：`X509AddBasicConstraints` 对 bare cert 输入已从“可能崩溃”收敛为“确定性失败返回”。

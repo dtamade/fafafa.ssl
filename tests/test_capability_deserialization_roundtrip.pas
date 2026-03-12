@@ -5,7 +5,7 @@ program test_capability_deserialization_roundtrip;
 uses
   SysUtils,
   fafafa.ssl.base,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   fafafa.ssl.capability.serializer;
 
 procedure Fail(const AMessage: string);

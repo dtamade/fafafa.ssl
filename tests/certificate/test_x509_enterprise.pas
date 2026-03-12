@@ -281,6 +281,7 @@ begin
   begin
     WriteLn('🎉 X.509 证书模块企业级测试全部通过！');
     WriteLn('✅ 符合企业级框架标准');
+    WriteLn('[PASS] x509 enterprise completed');
   end;
 
   UnloadOpenSSLCore;

@@ -19,7 +19,9 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.factory,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.backed;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.lib;
 
 var
   Total, Passed, Failed: Integer;
@@ -188,9 +190,19 @@ begin
 
   try
     // 初始化 OpenSSL
-    if not LoadOpenSSLLibrary then
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('ERROR: Failed to load OpenSSL library: ', E.Message);
+        Halt(1);
+      end;
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
-      WriteLn('ERROR: Failed to load OpenSSL library');
+      WriteLn('ERROR: OpenSSL core did not stay loaded');
       Halt(1);
     end;
 
@@ -214,4 +226,6 @@ begin
 
   if Failed > 0 then
     Halt(1);
+
+  WriteLn('[PASS] backend capabilities validation completed');
 end.

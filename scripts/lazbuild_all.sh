@@ -5,9 +5,23 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-LAZBUILD="/home/dtamade/freePascal/lazarus/lazbuild"
+LAZBUILD="${LAZBUILD:-$(command -v lazbuild || true)}"
 
-if [ ! -x "$LAZBUILD" ]; then
+if [ -z "$LAZBUILD" ]; then
+    LAZBUILD_CANDIDATES=(
+        "/usr/bin/lazbuild"
+        "/usr/local/bin/lazbuild"
+        "/opt/homebrew/bin/lazbuild"
+    )
+    for candidate in "${LAZBUILD_CANDIDATES[@]}"; do
+        if [ -x "$candidate" ]; then
+            LAZBUILD="$candidate"
+            break
+        fi
+    done
+fi
+
+if [ -z "$LAZBUILD" ] || [ ! -x "$LAZBUILD" ]; then
     echo "错误: lazbuild 未找到: $LAZBUILD"
     exit 1
 fi
@@ -73,7 +87,7 @@ compile_lpi() {
     fi
 
     echo -n "  编译 $name... "
-    if $LAZBUILD "$lpi" > /dev/null 2>&1; then
+    if "$LAZBUILD" "$lpi" > /dev/null 2>&1; then
         echo "成功"
         ((COMPILED++))
     else

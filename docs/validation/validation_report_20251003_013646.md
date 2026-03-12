@@ -1,5 +1,8 @@
 # OpenSSL 模块验证报告
 
+
+> **Historical snapshot:** This page captures a point-in-time testing or validation snapshot and may not reflect the current repository state. For current verification commands and active workflow guidance, start with `docs/testing/TESTING_README.md`.
+
 **生成时间:** 2025-10-03 01:37:04  
 **验证范围:** 所有 OpenSSL 模块 (65个)  
 **验证策略:** 分层快速验证

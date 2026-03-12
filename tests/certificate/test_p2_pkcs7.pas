@@ -41,6 +41,8 @@ var
   SkipCapability: Integer = 0;
   SkipOther: Integer = 0;
   SkipStackPartialCount: Integer = 0;
+  TestCert: PX509 = nil;
+  TestPrivKey: PEVP_PKEY = nil;
 
 // Helper function for BIO_reset (it's a macro in C)
 function BIO_reset(b: PBIO): clong;
@@ -266,25 +268,100 @@ begin
     Fail(TEST_NAME, 'Some S/MIME functions are missing');
 end;
 
+function GenerateTestCertAndKey: Boolean; forward;
+procedure FreeTestCertAndKey; forward;
+
 // Test 10: PKCS7 BIO operations
 procedure Test_10_PKCS7_BIO_Operations;
 const
   TEST_NAME = 'PKCS7 BIO read/write operations';
+var
+  bio_in: PBIO;
+  bio_der: PBIO;
+  bio_parse: PBIO;
+  p7_written: PPKCS7;
+  p7_read: PPKCS7;
+  der_buf: array[0..65535] of Byte;
+  der_len: Integer;
 begin
-  // NOTE: Testing BIO I/O with an empty PKCS7 structure is not valid
-  // A proper test would require creating a complete PKCS7 structure with content,
-  // which requires additional API functions not yet bound (PKCS7_set_data, etc.)
-  // The I/O functions (i2d_PKCS7_bio, d2i_PKCS7_bio) are verified to be loaded
-  // in Test_08, which is sufficient for API binding validation.
-  WriteLn('[INFO] PKCS7 BIO I/O test skipped - requires complete PKCS7 structure with content');
-  Skip(TEST_NAME, 'needs PKCS7_set_data API binding', scCapability);
+  if not GenerateTestCertAndKey then
+  begin
+    Fail(TEST_NAME, 'Failed to generate local cert/key for roundtrip fixture');
+    Exit;
+  end;
+
+  bio_in := nil;
+  bio_der := nil;
+  bio_parse := nil;
+  p7_written := nil;
+  p7_read := nil;
+  der_len := 0;
+  try
+    bio_in := BIO_new_mem_buf(PAnsiChar(TEST_DATA), Length(TEST_DATA));
+    if bio_in = nil then
+    begin
+      Fail(TEST_NAME, 'Failed to create input BIO');
+      Exit;
+    end;
+
+    p7_written := PKCS7_sign(TestCert, TestPrivKey, nil, bio_in, PKCS7_DETACHED or PKCS7_BINARY);
+    if p7_written = nil then
+    begin
+      Skip(TEST_NAME, 'PKCS7_sign returned nil in this runtime', scEnvironment);
+      Exit;
+    end;
+
+    bio_der := BIO_new(BIO_s_mem());
+    if bio_der = nil then
+    begin
+      Fail(TEST_NAME, 'Failed to create DER BIO');
+      Exit;
+    end;
+
+    if i2d_PKCS7_bio(bio_der, p7_written) <= 0 then
+    begin
+      Fail(TEST_NAME, 'i2d_PKCS7_bio failed');
+      Exit;
+    end;
+
+    der_len := BIO_read(bio_der, @der_buf[0], SizeOf(der_buf));
+    if der_len <= 0 then
+    begin
+      Fail(TEST_NAME, 'Failed to read DER bytes from BIO');
+      Exit;
+    end;
+
+    bio_parse := BIO_new_mem_buf(@der_buf[0], der_len);
+    if bio_parse = nil then
+    begin
+      Fail(TEST_NAME, 'Failed to create parse BIO');
+      Exit;
+    end;
+
+    p7_read := d2i_PKCS7_bio(bio_parse, nil);
+    if p7_read = nil then
+    begin
+      Fail(TEST_NAME, 'd2i_PKCS7_bio failed to parse serialized object');
+      Exit;
+    end;
+
+    Pass(TEST_NAME);
+  finally
+    if p7_read <> nil then
+      PKCS7_free(p7_read);
+    if p7_written <> nil then
+      PKCS7_free(p7_written);
+    if bio_parse <> nil then
+      BIO_free(bio_parse);
+    if bio_der <> nil then
+      BIO_free(bio_der);
+    if bio_in <> nil then
+      BIO_free(bio_in);
+    FreeTestCertAndKey;
+  end;
 end;
 
 // Test 11: Generate test certificate and key for signing/encryption tests
-var
-  TestCert: PX509;
-  TestPrivKey: PEVP_PKEY;
-
 function GenerateTestCertAndKey: Boolean;
 var
   pkey: PEVP_PKEY;
@@ -436,16 +513,67 @@ begin
 end;
 
 // Test 13: PKCS7 encrypt basic operation
-// NOTE: Skipped - requires complete stack API implementation (sk_X509_push/free)
 procedure Test_13_PKCS7_Encrypt_Basic;
 const
   TEST_NAME = 'PKCS7 encrypt basic operation';
+var
+  bio_in: PBIO;
+  recip_stack: PSTACK_OF_X509;
+  p7: PPKCS7;
 begin
-  WriteLn('[INFO] Encrypt test skipped - requires complete stack API implementation');
-  SkipStackPartial(TEST_NAME, 'stack API not fully implemented');
+  if (TestCert = nil) or (TestPrivKey = nil) then
+  begin
+    Fail(TEST_NAME, 'Test cert/key not available');
+    Exit;
+  end;
+
+  if not Assigned(OPENSSL_sk_new_null) or not Assigned(OPENSSL_sk_push) or
+     not Assigned(OPENSSL_sk_free) then
+  begin
+    SkipStackPartial(TEST_NAME, 'stack API not available at runtime');
+    Exit;
+  end;
+
+  recip_stack := OPENSSL_sk_new_null();
+  if recip_stack = nil then
+  begin
+    Fail(TEST_NAME, 'Failed to create recipient stack');
+    Exit;
+  end;
+
+  bio_in := nil;
+  p7 := nil;
+  try
+    if OPENSSL_sk_push(recip_stack, TestCert) = 0 then
+    begin
+      Fail(TEST_NAME, 'Failed to push recipient certificate');
+      Exit;
+    end;
+
+    bio_in := BIO_new_mem_buf(PAnsiChar(TEST_DATA), Length(TEST_DATA));
+    if bio_in = nil then
+    begin
+      Fail(TEST_NAME, 'Failed to create input BIO');
+      Exit;
+    end;
+
+    p7 := PKCS7_encrypt(recip_stack, bio_in, EVP_aes_256_cbc(), PKCS7_BINARY);
+    if p7 <> nil then
+      Pass(TEST_NAME)
+    else
+      Fail(TEST_NAME, 'PKCS7_encrypt returned nil');
+  finally
+    if p7 <> nil then
+      PKCS7_free(p7);
+    if bio_in <> nil then
+      BIO_free(bio_in);
+    OPENSSL_sk_free(recip_stack);
+  end;
 end;
 
 procedure RunAllTests;
+var
+  LSkipTotal: Integer;
 begin
   WriteLn('================================================================================');
   WriteLn('                  PKCS7 Module Comprehensive Test Suite');
@@ -582,11 +710,14 @@ begin
   WriteLn(Format('Skip breakdown: dependency=%d, version=%d, environment=%d, capability=%d, other=%d, stack-partial=%d',
     [SkipDependency, SkipVersion, SkipEnvironment, SkipCapability, SkipOther, SkipStackPartialCount]));
 
-  if TestsSkipped = 0 then
-    Fail('Skip accounting', 'Expected deterministic skip count to be tracked');
+  LSkipTotal := SkipDependency + SkipVersion + SkipEnvironment + SkipCapability + SkipOther;
+  if TestsSkipped <> LSkipTotal then
+    Fail('Skip accounting',
+      Format('Mismatch: skipped=%d, breakdown=%d', [TestsSkipped, LSkipTotal]));
 
-  if SkipStackPartialCount = 0 then
-    Fail('Stack partial skip accounting', 'Expected stack partial skip count to be tracked');
+  if SkipStackPartialCount > SkipCapability then
+    Fail('Stack partial skip accounting',
+      Format('stack-partial=%d exceeds capability=%d', [SkipStackPartialCount, SkipCapability]));
   
   if TestsFailed = 0 then
   begin

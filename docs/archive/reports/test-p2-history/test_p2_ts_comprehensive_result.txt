@@ -1,0 +1,114 @@
+=============================================================
+TS (时间戳协议) 模块综合测试
+=============================================================
+
+初始化 OpenSSL 库...
+✅ OpenSSL 库加载成功
+版本: 3.x (libcrypto.so.3)
+检测到 OpenSSL 3.x - 将跳过不兼容的函数测试
+
+加载 TS 模块...
+✅ TS 模块加载成功
+
+=== 测试 1: TS 请求操作 ===
+TS_REQ_new 函数加载: PASS
+TS_REQ_free 函数加载: PASS
+TS_REQ_set_version 函数加载: PASS
+TS_REQ_set_msg_imprint 函数加载: PASS
+TS_REQ_get_version 函数加载: PASS
+TS_REQ_get_msg_imprint 函数加载: PASS
+
+=== 测试 2: TS 响应操作 ===
+TS_RESP_new 函数加载: PASS
+TS_RESP_free 函数加载: PASS
+TS_RESP_set_status_info 函数加载: PASS
+TS_RESP_create_response 函数加载: PASS
+TS_RESP_get_status_info 函数加载: PASS
+TS_RESP_get_token 函数加载: PASS
+
+=== 测试 3: TS TSTInfo ===
+TS_TST_INFO_new 函数加载: PASS
+TS_TST_INFO_free 函数加载: PASS
+TS_TST_INFO_set_version 函数加载: PASS
+TS_TST_INFO_get_version 函数加载: PASS
+
+=== 测试 4: TS 验证 ===
+TS_RESP_verify_response 函数加载: PASS
+TS_RESP_verify_signature 函数加载: PASS
+TS_VERIFY_CTX_new 函数加载: PASS
+TS_VERIFY_CTX_free 函数加载: PASS
+
+=== 测试 5: TS I/O 和序列化 ===
+TS_REQ_i2d_bio 函数加载: PASS
+TS_REQ_d2i_bio 函数加载: PASS
+TS_RESP_i2d_bio 函数加载: PASS
+TS_RESP_d2i_bio 函数加载: PASS
+TS_REQ_print_bio 函数加载: PASS
+TS_RESP_print_bio 函数加载: PASS
+
+=== 测试 6: TS 工具函数 ===
+TS_STATUS_INFO_get0_status 函数加载: PASS
+TS_STATUS_INFO_set_status 函数加载: PASS
+TS_TST_INFO_print_bio 函数加载: PASS
+TS_STATUS_INFO_print_bio 函数加载: PASS
+TS_STATUS_GRANTED (0): PASS
+TS_STATUS_GRANTED_WITH_MODS (1): PASS
+TS_STATUS_REJECTION (2): PASS
+TS_STATUS_WAITING (3): PASS
+TS_STATUS_REVOCATION_WARNING (4): PASS
+TS_STATUS_REVOCATION_NOTIFICATION (5): PASS
+
+=== 测试 7: TS 离线失败夹具 ===
+TS malformed fixture 存在: PASS
+TS_RESP_d2i_bio 函数加载: PASS
+BIO_new_mem_buf 函数加载: PASS
+TS malformed fixture 非空: PASS
+为 TS fixture 创建 BIO: PASS
+解析 malformed TS 响应返回 nil: PASS
+
+=== 测试 8: TS 截断响应失败场景 ===
+TS_RESP_d2i_bio 函数加载: PASS
+BIO_new_mem_buf 函数加载: PASS
+为截断 TS 响应创建 BIO: PASS
+解析截断 TS 响应返回 nil: PASS
+
+=== 测试 9: TS 拒绝状态失败场景 ===
+TS_RESP_new 函数加载: PASS
+TS_RESP_get_status_info 函数加载: PASS
+TS_STATUS_INFO_get0_status 函数加载: PASS
+创建 TS 响应结构: PASS
+无状态信息响应验证应失败: PASS
+TS 状态写入 API 可用: PASS
+创建 TS 状态结构: PASS
+设置 TS 拒绝状态: PASS
+写入响应状态信息: PASS
+读取响应状态信息: PASS
+读取拒绝状态值指针: PASS
+拒绝状态响应验证应失败: PASS
+
+=== 测试 10: TS 状态门控契约（Mock） ===
+Mock: rejection 状态应直接失败: PASS
+Mock: rejection 状态不应进入签名验证: PASS
+Mock: granted 状态应进入签名验证: PASS
+Mock: granted + verify success 应通过: PASS
+Mock: 缺失状态解析 API 应 fail-safe 拒绝: PASS
+Mock: 缺失状态解析 API 不应进入签名验证: PASS
+
+=== 测试 10: TS 空响应签名验证失败场景 ===
+TS_RESP_new 函数加载: PASS
+TS_VERIFY_CTX_new 函数加载: PASS
+TS_RESP_verify_response 函数加载: PASS
+TS_VERIFY_CTX_free 函数加载: PASS
+TS_RESP_free 函数加载: PASS
+创建空 TS 响应与验证上下文: PASS
+空响应签名验证应失败: PASS
+
+=============================================================
+测试结果总结
+=============================================================
+总测试数: 71
+通过: 71
+失败: 0
+通过率: 100.0%
+
+🎉 所有测试通过！TS 模块工作正常

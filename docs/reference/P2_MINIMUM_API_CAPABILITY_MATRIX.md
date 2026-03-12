@@ -44,7 +44,8 @@
 ## 字段来源与判定依据
 
 - 能力矩阵结构：`src/fafafa.ssl.base.pas` 中的 `TSSLBackendCapabilities`。
-- OpenSSL 字段赋值：`src/fafafa.ssl.openssl.backed.pas` 的 `TOpenSSLLibrary.GetCapabilities`。
+- OpenSSL 规范导入单元：`src/fafafa.ssl.openssl.lib.pas`（当前委托到历史实现 `src/fafafa.ssl.openssl.backed.pas`）。
+- OpenSSL 字段赋值实现：`src/fafafa.ssl.openssl.backed.pas` 的 `TOpenSSLLibrary.GetCapabilities`。
 - 序列化输出：`src/fafafa.ssl.capability.serializer.pas`，示例文件：`capability_openssl.json`、`capability_openssl.xml`。
 - P2 测试汇总：`docs/test_reports/P2_MODULES_TEST_REPORT.md`。
 
@@ -89,4 +90,3 @@ python3 scripts/compile_all_modules.py
 ```bash
 cat docs/test_reports/P2_MODULES_TEST_REPORT.md
 ```
-

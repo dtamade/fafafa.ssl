@@ -2,7 +2,7 @@ program test_cert_load_debug;
 {$mode objfpc}{$H+}
 uses
   SysUtils,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.x509,

@@ -11,7 +11,7 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.factory,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   fafafa.ssl.openssl.certificate;
 
 var

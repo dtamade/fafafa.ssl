@@ -4,6 +4,7 @@ set -euo pipefail
 
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 OUTPUT_FILE=""
+REPORTS_DIR="${FAFAFA_WAVE_C_LOCAL_GUARD_REPORTS_DIR:-tmp/wave_c_local_guard_reports}"
 APPLY=false
 KEEP_TIER1=20
 KEEP_TIER2=50
@@ -20,7 +21,7 @@ Wave C B139 Local Guard Cleanup Planner
 
 选项：
   --run-id ID        指定 run_id
-  --output FILE      输出报告路径
+  --output FILE      输出报告路径（默认 tmp/wave_c_local_guard_reports/wave_c_b139_local_guard_cleanup_plan_<run_id>.md）
   --keep-tier1 N     Tier1 保留份数（默认 20）
   --keep-tier2 N     Tier2 保留份数（默认 50）
   --apply            执行实际删除（默认仅 dry-run）
@@ -63,19 +64,19 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b139_local_guard_cleanup_plan_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORTS_DIR/wave_c_b139_local_guard_cleanup_plan_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 
 tier1_patterns=(
-  "test-reports/wave_c_b129_oncall_check_*.md"
-  "test-reports/wave_c_b125_local_guard_bundle_*.md"
+  "$REPORTS_DIR/wave_c_b129_oncall_check_*.md"
+  "$REPORTS_DIR/wave_c_b125_local_guard_bundle_*.md"
 )
 
 tier2_patterns=(
-  "test-reports/wave_c_b126_local_guard_history_*.md"
-  "test-reports/wave_c_b124_local_drift_watch_*.md"
+  "$REPORTS_DIR/wave_c_b126_local_guard_history_*.md"
+  "$REPORTS_DIR/wave_c_b124_local_drift_watch_*.md"
 )
 
 gather_delete_candidates() {

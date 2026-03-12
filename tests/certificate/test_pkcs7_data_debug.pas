@@ -137,4 +137,5 @@ begin
 
   WriteLn;
   WriteLn('🎉 测试完成，程序即将退出');
+  WriteLn('[PASS] pkcs7 data debug completed');
 end.

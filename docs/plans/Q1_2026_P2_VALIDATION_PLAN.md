@@ -111,7 +111,7 @@ python3 scripts/compile_all_modules.py
   - `test_p2_store_comprehensive`
 - [x] 7 模块聚焦回归全通过：
   - `bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT`
-  - 结果：15/15 通过（`test-reports/test_report_20260207_025418.txt`）
+  - 结果：15/15 通过（`docs/archive/reports/test-report-history/test_report_20260207_025418.txt`）
 - [x] OpenSSL 1.1.1 vs 3.x 差异清单与回归策略已落盘：
   - `docs/reference/OPENSSL_1_1_1_VS_3X_DIFF_AND_REGRESSION.md`
   - 包含符号差异、行为差异、P2 模块回归分层命令（Tier 1/2/3）

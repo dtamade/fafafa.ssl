@@ -6,22 +6,39 @@
 # ============================================================================
 
 param(
+    [string]$ProjectRoot = "",
+    [string]$UnitOutputDir = "",
     [switch]$SkipCompile = $false,
     [switch]$Verbose = $false
 )
 
 $ErrorActionPreference = "Continue"
-$projectRoot = "D:\projects\Pascal\lazarus\My\libs\fafafa.ssl"
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$resolvedProjectRoot = $ProjectRoot
+if ([string]::IsNullOrWhiteSpace($resolvedProjectRoot)) {
+    $resolvedProjectRoot = Split-Path -Parent $scriptDir
+}
+$projectRoot = $resolvedProjectRoot
 $srcDir = Join-Path $projectRoot "src"
 $reportDir = Join-Path $projectRoot "docs\validation"
+$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+
+$resolvedUnitOutputDir = $UnitOutputDir
+if ([string]::IsNullOrWhiteSpace($resolvedUnitOutputDir)) {
+    $resolvedUnitOutputDir = Join-Path $projectRoot "tmp\validate_all_modules_units_${timestamp}_${PID}"
+} elseif (-not [System.IO.Path]::IsPathRooted($resolvedUnitOutputDir)) {
+    $resolvedUnitOutputDir = Join-Path $projectRoot $resolvedUnitOutputDir
+}
 
 # 创建报告目录
 if (!(Test-Path $reportDir)) {
     New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
 }
+if (!(Test-Path $resolvedUnitOutputDir)) {
+    New-Item -ItemType Directory -Path $resolvedUnitOutputDir -Force | Out-Null
+}
 
 # 报告文件
-$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $compileLog = Join-Path $reportDir "compile_$timestamp.log"
 $reportFile = Join-Path $reportDir "validation_report_$timestamp.md"
 
@@ -161,7 +178,7 @@ function Test-ModuleCompile {
     
     try {
         # 仅语法检查，不生成输出文件
-        $result = & $fpcPath -Sew -vn "$ModulePath" 2>&1
+        $result = & $fpcPath -Sew -vn "-FU$resolvedUnitOutputDir" "$ModulePath" 2>&1
         
         if ($LASTEXITCODE -eq 0) {
             Write-Log "✅ $moduleName - OK" "SUCCESS"

@@ -14,7 +14,7 @@ program generate_certificate;
 
 uses
   SysUtils, DateUtils,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.rsa,
   fafafa.ssl.openssl.api.evp,
@@ -23,7 +23,9 @@ uses
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.asn1,
   fafafa.ssl.openssl.api.bn,
-  fafafa.ssl.base;
+  fafafa.ssl.base,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader;
 
 const
   KEY_SIZE = 2048;
@@ -225,12 +227,31 @@ begin
   WriteLn;
   
   // 初始化 OpenSSL
-  if not LoadOpenSSLLibrary then
+  try
+    LoadOpenSSLCore;
+  except
+    on E: Exception do
+    begin
+      WriteLn('✗ 无法加载 OpenSSL 库: ', E.Message);
+      ExitCode := 1;
+      Exit;
+    end;
+  end;
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
-    WriteLn('✗ 无法加载 OpenSSL 库');
+    WriteLn('✗ OpenSSL core 未保持已加载状态');
     ExitCode := 1;
     Exit;
   end;
+
+  LoadEVP(GetCryptoLibHandle);
+  LoadOpenSSLRSA;
+  LoadOpenSSLX509;
+  LoadOpenSSLPEM(GetCryptoLibHandle);
+  LoadOpenSSLBIO;
+  LoadOpenSSLASN1(GetCryptoLibHandle);
+  LoadOpenSSLBN;
   
   try
     // 设置文件路径
@@ -285,6 +306,7 @@ begin
     WriteLn;
     
     ExitCode := 0;
+    WriteLn('[PASS] generate certificate example completed');
     
   except
     on E: Exception do

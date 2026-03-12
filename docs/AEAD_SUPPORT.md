@@ -8,7 +8,7 @@
 
 ### 1. EVP 模块增强 (100% 完成)
 
-已为 `fafafa.ssl.openssl.evp` 模块添加完整的 AEAD 支持：
+已为 `fafafa.ssl.openssl.api.evp` 模块添加完整的 AEAD 支持：
 
 #### 新增的密码函数
 - **AES-GCM**: `EVP_aes_128_gcm`, `EVP_aes_192_gcm`, `EVP_aes_256_gcm`
@@ -24,7 +24,7 @@
 
 ### 2. 高级封装模块 (已创建)
 
-创建了 `fafafa.ssl.openssl.aead` 模块，提供高级易用的 AEAD 加密接口：
+创建了 `fafafa.ssl.openssl.api.aead` 模块，提供高级易用的 AEAD 加密接口：
 
 ```pascal
 // AES-GCM 加密
@@ -143,9 +143,9 @@ if EVP_EncryptUpdate(Ctx, nil, @OutLen, @AAD[0], Integer(Length(AAD))) <> 1 then
 
 ```pascal
 uses
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.evp,
-  fafafa.ssl.openssl.aead;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.aead;
 
 var
   Key, IV, PlainText: TBytes;

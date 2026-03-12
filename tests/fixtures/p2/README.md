@@ -6,6 +6,7 @@ This directory stores offline fixture files for P2 modules:
 - `cms/`
 - `pkcs12/`
 - `ocsp/`
+- `crl/`
 - `ct/`
 - `ts/`
 - `store/`
@@ -52,6 +53,13 @@ Examples:
 |------|-------------|
 | `ocsp_response_successful_basic_v1.der` | Valid basic OCSP response |
 | `ocsp_response_malformed_v1.der` | Malformed data for error handling |
+
+### CRL
+
+| File | Description |
+|------|-------------|
+| `revoked_list_keycompromise_v1.txt` | Valid CRL PEM payload containing one revoked entry with reason `keyCompromise` |
+| `revoked_cert_keycompromise_v1.txt` | Revoked certificate PEM payload referenced by the above CRL |
 
 ### CT
 

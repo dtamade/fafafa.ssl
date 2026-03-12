@@ -16,7 +16,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.context.builder,
   fafafa.ssl.cert.utils,
-  fafafa.ssl.openssl.backed;  // 确保 OpenSSL 后端注册
+  fafafa.ssl.openssl.lib;  // 确保 OpenSSL 后端注册
 
 var
   GTestsPassed: Integer = 0;
@@ -435,6 +435,36 @@ begin
     'Can build context after transformation methods');
 end;
 
+{ Test 20.1: Override should support PEM material fields }
+procedure Test_Override_PEMMaterialFields;
+var
+  LBuilder: ISSLContextBuilder;
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+  LCert, LKey: string;
+begin
+  TestHeader('Test 20.1: Override PEM Material Fields');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'override-pem.local', 'Test Org', 30, LCert, LKey
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Exit;
+  end;
+
+  LBuilder := TSSLContextBuilder.Create
+    .Override('certificate_pem', LCert)
+    .Override('private_key_pem', LKey);
+
+  LResult := LBuilder.TryBuildServer(LContext);
+
+  Assert(LResult.IsOk,
+    'Override should support certificate/private-key PEM fields for server build');
+  if not LResult.IsOk then
+    WriteLn('  Error: ', LResult.ErrorMessage);
+end;
+
 { Test 21: Cert verify cache is disabled by default }
 procedure Test_WithCertVerifyCache_DefaultOff;
 var
@@ -498,6 +528,49 @@ begin
       'Cert verify cache option can be explicitly disabled');
 end;
 
+{ Test 24: Valid-hit refresh skip policy is disabled by default }
+procedure Test_WithCertVerifyCacheSkipValidHitRefresh_DefaultOff;
+var
+  LBuilder: ISSLContextBuilder;
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+begin
+  TestHeader('Test 24: Cert Verify Cache Valid-Hit Refresh Skip Default Off');
+
+  LBuilder := TSSLContextBuilder.CreateWithSafeDefaults
+    .WithCertVerifyCache(True);
+  LResult := LBuilder.TryBuildClient(LContext);
+
+  Assert(LResult.IsOk,
+    'TryBuildClient succeeds when cert verify cache enabled (policy default)');
+
+  if LResult.IsOk and (LContext <> nil) then
+    Assert(not (ssoSkipCertVerifyCacheValidHitRefresh in LContext.GetOptions),
+      'Valid-hit refresh skip policy is disabled by default');
+end;
+
+{ Test 25: Valid-hit refresh skip policy can be enabled }
+procedure Test_WithCertVerifyCacheSkipValidHitRefresh_Enable;
+var
+  LBuilder: ISSLContextBuilder;
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+begin
+  TestHeader('Test 25: Cert Verify Cache Valid-Hit Refresh Skip Enable');
+
+  LBuilder := TSSLContextBuilder.CreateWithSafeDefaults
+    .WithCertVerifyCache(True)
+    .WithCertVerifyCacheSkipValidHitRefresh(True);
+  LResult := LBuilder.TryBuildClient(LContext);
+
+  Assert(LResult.IsOk,
+    'TryBuildClient succeeds when valid-hit refresh skip policy enabled');
+
+  if LResult.IsOk and (LContext <> nil) then
+    Assert(ssoSkipCertVerifyCacheValidHitRefresh in LContext.GetOptions,
+      'Valid-hit refresh skip policy is persisted to context');
+end;
+
 { Main Test Runner }
 begin
   WriteLn;
@@ -533,9 +606,12 @@ begin
     Test_Combining_All;
     Test_Transformation_WithPresets;
     Test_BuildAfterTransformation;
+    Test_Override_PEMMaterialFields;
     Test_WithCertVerifyCache_DefaultOff;
     Test_WithCertVerifyCache_Enable;
     Test_WithCertVerifyCache_Disable;
+    Test_WithCertVerifyCacheSkipValidHitRefresh_DefaultOff;
+    Test_WithCertVerifyCacheSkipValidHitRefresh_Enable;
 
     // Print summary
     WriteLn;

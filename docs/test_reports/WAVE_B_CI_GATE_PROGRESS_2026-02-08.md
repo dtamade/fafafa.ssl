@@ -11,7 +11,7 @@
 ## 本轮执行证据
 
 - 命令：`bash scripts/run_wave_b_ci_gate.sh --examples-threshold 80.0`
-- Summary：`test-reports/wave_b_ci_gate_summary_20260208_022636.md`
+- Summary：`docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_022636.md`
 - Compile log：`test-reports/wave_b_compile_20260208_022636.log`
 - Modules log：`test-reports/wave_b_modules_20260208_022636.log`
 - Examples log：`test-reports/wave_b_examples_20260208_022636.log`
@@ -32,7 +32,7 @@
 ## 追加执行（2026-02-08 02:57 +0800）
 
 - 命令：`bash scripts/run_wave_b_ci_gate.sh --examples-threshold 80.0`
-- 产物：`test-reports/wave_b_ci_gate_summary_20260208_025426.md`
+- 产物：`docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_025426.md`
 - 结果：overall **PASS**
   - compile: PASS
   - modules: PASS
@@ -43,7 +43,7 @@
 ## 追加执行（2026-02-08 03:43 +0800）
 
 - 命令：`bash scripts/run_wave_b_ci_gate.sh --examples-threshold 80.0`
-- 产物：`test-reports/wave_b_ci_gate_summary_20260208_034029.md`
+- 产物：`docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_034029.md`
 - 结果：overall **PASS**
   - compile: PASS
   - modules: PASS
@@ -52,4 +52,4 @@
 ### 口径稳健性补充
 
 - `scripts/verify_examples_compile.sh` 已修复 JSON 空失败列表输出。
-- `test-reports/examples_compile_ci_gate.json` 当前 `failed_files=[]`，可直接供跨平台汇总脚本消费。
+- `docs/archive/reports/examples-compile-history/examples_compile_ci_gate.json` 当前 `failed_files=[]`，可直接供跨平台汇总脚本消费。

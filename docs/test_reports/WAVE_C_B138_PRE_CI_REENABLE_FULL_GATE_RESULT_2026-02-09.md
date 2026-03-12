@@ -7,7 +7,7 @@
 ## 交付物
 
 - 脚本：`scripts/run_wave_c_pre_ci_reenable_full_gate.sh`
-- 报告：`test-reports/wave_c_b138_pre_ci_reenable_full_gate_20260209_045450.md`
+- 报告：`docs/archive/reports/wave-c-pre-ci-submission-history/wave_c_b138_pre_ci_reenable_full_gate_20260209_045450.md`
 
 ## 执行
 
@@ -15,7 +15,7 @@
 bash scripts/run_wave_c_pre_ci_reenable_full_gate.sh \
   --run-id 20260209_045450 \
   --strict \
-  --output test-reports/wave_c_b138_pre_ci_reenable_full_gate_20260209_045450.md
+  --output docs/archive/reports/wave-c-pre-ci-submission-history/wave_c_b138_pre_ci_reenable_full_gate_20260209_045450.md
 ```
 
 ## 结果

@@ -787,7 +787,7 @@ begin
 end;
 ```
 
-参考现有后端的实现（`src/fafafa.ssl.openssl.backed.pas` 等）。
+参考现有后端的实现（规范导入单元为 `src/fafafa.ssl.openssl.lib.pas`，当前委托到历史实现 `src/fafafa.ssl.openssl.backed.pas`）。
 
 ---
 

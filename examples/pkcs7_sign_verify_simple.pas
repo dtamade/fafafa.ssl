@@ -15,7 +15,8 @@ uses
   fafafa.ssl.openssl.api.pem,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.pkcs7,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;
 
 const
   TEST_DATA = 'This is a test message for PKCS#7 signing demonstration.';
@@ -131,12 +132,30 @@ begin
 
   // Initialize OpenSSL
   WriteLn('1. 初始化 OpenSSL 库...');
-  if not LoadOpenSSLLibrary then
+  try
+    LoadOpenSSLCore;
+  except
+    on E: Exception do
+    begin
+      WriteLn('   ✗ 错误: 无法初始化 OpenSSL 库: ', E.Message);
+      Halt(1);
+    end;
+  end;
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
-    WriteLn('   ✗ 错误: 无法初始化 OpenSSL 库');
+    WriteLn('   ✗ 错误: OpenSSL core 未保持已加载状态');
     Halt(1);
   end;
+  LoadEVP(GetCryptoLibHandle);
+  LoadOpenSSLRSA;
+  LoadOpenSSLX509;
+  LoadOpenSSLPEM(GetCryptoLibHandle);
+  LoadOpenSSLBIO;
+  LoadOpenSSLASN1(GetCryptoLibHandle);
+  LoadOpenSSLBN;
+  LoadPKCS7Functions;
   WriteLn('   ✓ OpenSSL 库初始化成功');
+  WriteLn('   版本: ', fafafa.ssl.openssl.api.core.GetOpenSSLVersionString);
   WriteLn('');
 
   // Generate test certificate and key
@@ -212,4 +231,5 @@ begin
   BIO_free(DataBIO);
   EVP_PKEY_free(TestPrivKey);
   X509_free(TestCert);
+  WriteLn('[PASS] pkcs7 sign/verify simple example completed');
 end.

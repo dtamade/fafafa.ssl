@@ -1,5 +1,8 @@
 # OpenSSL Module Test Plan
 
+
+> **Historical snapshot:** This page captures a point-in-time testing or validation snapshot and may not reflect the current repository state. For current verification commands and active workflow guidance, start with `docs/testing/TESTING_README.md`.
+
 ## Test Strategy
 Systematically test all 72 OpenSSL modules based on their dependencies and importance.
 

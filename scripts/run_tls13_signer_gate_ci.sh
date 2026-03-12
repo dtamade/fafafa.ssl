@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 RUN_ID="${FAFAFA_TLS13_SIGNER_GATE_RUN_ID:-$(date +%Y%m%d_%H%M%S)}"
-OUTPUT_DIR_REL="${FAFAFA_TLS13_SIGNER_GATE_OUTPUT_DIR:-test-reports}"
+OUTPUT_DIR_REL="${FAFAFA_TLS13_SIGNER_GATE_OUTPUT_DIR:-tmp/tls13_signer_gate_reports}"
 
 BENCH_ITERATIONS="${FAFAFA_TLS13_SIGN_BENCH_ITERATIONS:-2}"
 BENCH_WARMUP="${FAFAFA_TLS13_SIGN_BENCH_WARMUP:-1}"
@@ -59,7 +59,7 @@ cd "$PROJECT_ROOT"
 echo "[tls13-gate] run_id=$RUN_ID"
 echo "[tls13-gate] output_dir=$OUTPUT_DIR_REL"
 
-bash scripts/run_wave_b_ci_gate.sh \
+FAFAFA_WAVE_B_REPORTS_DIR="$OUTPUT_DIR_REL" bash scripts/run_wave_b_ci_gate.sh \
   --only-tls13-sign-bench \
   --with-tls13-sign-purity-check \
   --summary-out "$SUMMARY_REL" \
@@ -76,6 +76,8 @@ bash scripts/summarize_tls13_signer_bench_history.sh >/dev/null
 
 if [[ "$ARCHIVE_ENABLED" == "1" ]]; then
   ARCHIVE_RUN_ID="tls13_signer_${RUN_ID}"
+  FAFAFA_WAVE_B_REPORTS_DIR="$OUTPUT_DIR_REL" \
+  FAFAFA_TLS13_SIGNER_GATE_REPORTS_DIR="$OUTPUT_DIR_REL" \
   bash scripts/archive_ci_artifacts_draft.sh \
     --profile "$ARCHIVE_PROFILE" \
     --run-id "$ARCHIVE_RUN_ID" \

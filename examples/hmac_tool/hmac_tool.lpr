@@ -5,7 +5,9 @@ program hmac_tool;
 uses
   SysUtils, Classes, StrUtils,
   fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.evp;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.api.evp;
 
 const
   PROGRAM_VERSION = '1.0.0';
@@ -259,8 +261,7 @@ begin
 
     try
       // Initialize HMAC
-      PKCtx := nil;
-      if EVP_DigestSignInit(Ctx, PKCtx, MD, nil, PKey) <> 1 then
+      if EVP_DigestSignInit(Ctx, nil, MD, nil, PKey) <> 1 then
         raise Exception.Create('Failed to initialize HMAC');
 
       // Process file
@@ -608,15 +609,22 @@ begin
     end;
 
     // Initialize OpenSSL
-    if not LoadOpenSSLLibrary then
-      raise Exception.Create('Failed to load OpenSSL');
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+        raise Exception.Create('Failed to load OpenSSL: ' + E.Message);
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
+      raise Exception.Create('OpenSSL core did not stay loaded');
 
     if not LoadEVP(GetCryptoLibHandle) then
       raise Exception.Create('Failed to load OpenSSL EVP functions');
 
     case Operation of
-      opGenerate: DoGenerate;
-      opVerify: DoVerify;
+      opGenerate: begin DoGenerate; WriteLn('[PASS] hmac tool completed'); end;
+      opVerify: begin DoVerify; WriteLn('[PASS] hmac tool completed'); end;
     end;
 
   except

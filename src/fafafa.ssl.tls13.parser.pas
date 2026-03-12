@@ -19,6 +19,8 @@ type
     LegacyVersion: Word;
     SelectedVersion: Word;
     SelectedCipherSuite: Word;
+    HasPreSharedKey: Boolean;
+    SelectedIdentity: Word;
     HasKeyShare: Boolean;
     KeyShareGroup: Word;
     KeyShareLength: Word;
@@ -166,6 +168,14 @@ begin
           SetLength(AInfo.PeerKeyShare, LPeerShareLen);
           if LPeerShareLen > 0 then
             Move(AHandshake[LExtDataStart + 4], AInfo.PeerKeyShare[0], LPeerShareLen);
+        end;
+
+      TLS_EXTENSION_PRE_SHARED_KEY:
+        begin
+          if LExtLen <> 2 then
+            Exit;
+          AInfo.HasPreSharedKey := True;
+          AInfo.SelectedIdentity := ReadUInt16(AHandshake, LExtDataStart);
         end;
     end;
 

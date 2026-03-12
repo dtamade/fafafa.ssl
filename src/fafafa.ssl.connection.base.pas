@@ -61,6 +61,7 @@ type
     { 错误跟踪 }
     FLastErrorCode: TSSLErrorCode;
     FLastErrorString: string;
+    FLastErrorTime: TDateTime;
 
     { 性能指标 }
     FConnectTime: TDateTime;
@@ -173,6 +174,9 @@ type
     {** 更新写入统计 *}
     procedure UpdateWriteStats(ABytesWritten: Integer);
 
+    {** 读取 deprecated client context ServerName fallback（兼容旧语义） *}
+    function GetLegacyContextDefaultServerName: string;
+
   public
     constructor Create(AContext: ISSLContext); virtual;
     destructor Destroy; override;
@@ -262,6 +266,7 @@ begin
   FTimeout := 30000; // 默认 30 秒
   FLastErrorCode := sslErrNone;
   FLastErrorString := '';
+  FLastErrorTime := 0;
 
   // 初始化性能指标
   FConnectTime := 0;
@@ -290,24 +295,39 @@ begin
   inherited Destroy;
 end;
 
+function TBaseSSLConnection.GetLegacyContextDefaultServerName: string;
+begin
+  Result := '';
+
+  if (FContext = nil) or (FContext.GetContextType <> sslCtxClient) then
+    Exit;
+
+  {$PUSH}{$WARN SYMBOL_DEPRECATED OFF}
+  Result := FContext.GetServerName;
+  {$POP}
+end;
+
 procedure TBaseSSLConnection.RecordError(ACode: TSSLErrorCode; const AMessage: string);
 var
+  I: Integer;
+  LNow: TDateTime;
   LEntry: TSSLErrorRecord;
 begin
   FLastErrorCode := ACode;
   FLastErrorString := AMessage;
+  LNow := Now;
+  FLastErrorTime := LNow;
 
   // 添加到历史
-  LEntry.Timestamp := Now;
+  LEntry.Timestamp := LNow;
   LEntry.ErrorCode := ACode;
   LEntry.ErrorMessage := AMessage;
 
   if Length(FErrorHistory) >= FMaxErrorHistory then
   begin
-    // 移除最旧的条目
-    Move(FErrorHistory[1], FErrorHistory[0],
-         (Length(FErrorHistory) - 1) * SizeOf(TSSLErrorRecord));
-    SetLength(FErrorHistory, Length(FErrorHistory));
+    // 安全移除最旧条目：TSSLErrorRecord 含 managed string，不能使用 Move。
+    for I := 1 to High(FErrorHistory) do
+      FErrorHistory[I - 1] := FErrorHistory[I];
     FErrorHistory[High(FErrorHistory)] := LEntry;
   end
   else
@@ -467,19 +487,29 @@ function TBaseSSLConnection.GetError(ARet: Integer): TSSLErrorCode;
 begin
   Result := DoGetError(ARet);
   FLastErrorCode := Result;
+  if Result <> sslErrNone then
+  begin
+    if FLastErrorString = '' then
+      FLastErrorString := SSLErrorToString(Result);
+    FLastErrorTime := Now;
+  end;
 end;
 
 { 连接信息 }
 
 function TBaseSSLConnection.GetConnectionInfo: TSSLConnectionInfo;
+var
+  LClientConnection: ISSLClientConnection;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TSSLConnectionInfo);
   Result.ProtocolVersion := GetProtocolVersion;
   Result.CipherSuite := GetCipherName;
   Result.KeySize := 0; // 后端可覆盖
   Result.CompressionMethod := 'NONE';
   Result.IsResumed := IsSessionReused;
   Result.ALPNProtocol := GetSelectedALPNProtocol;
+  if Supports(Self, ISSLClientConnection, LClientConnection) then
+    Result.ServerName := LClientConnection.GetServerName;
 end;
 
 function TBaseSSLConnection.GetProtocolVersion: TSSLProtocolVersion;
@@ -602,7 +632,7 @@ begin
   Result.IsConnected := FConnected;
   Result.HandshakeComplete := FHandshakeComplete;
   Result.LastError := FLastErrorCode;
-  Result.LastErrorTime := Now; // 简化实现
+  Result.LastErrorTime := FLastErrorTime;
   Result.BytesSent := FBytesWritten;
   Result.BytesReceived := FBytesRead;
   if FConnectTime > 0 then
@@ -620,7 +650,7 @@ function TBaseSSLConnection.GetDiagnosticInfo: TSSLDiagnosticInfo;
 var
   I: Integer;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TSSLDiagnosticInfo);
   Result.ConnectionInfo := GetConnectionInfo;
   Result.HealthStatus := GetHealthStatus;
   Result.PerformanceMetrics := GetPerformanceMetrics;
@@ -654,7 +684,7 @@ end;
 
 function TBaseSSLConnection.DoGetOCSPResponse: TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 end;
 
 function TBaseSSLConnection.DoIsOCSPResponseVerified: Boolean;

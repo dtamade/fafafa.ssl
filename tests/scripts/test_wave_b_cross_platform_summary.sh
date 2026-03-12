@@ -60,6 +60,22 @@ cat > "$PROJECT_ROOT/$TEST_DIR/windows_summary.md" <<'WINDOWS_EOF'
 | examples | **PASS** | 71/75 compiled |
 WINDOWS_EOF
 
+# 创建 fixture Android summary
+cat > "$PROJECT_ROOT/$TEST_DIR/android_summary.md" <<'ANDROID_EOF'
+# Wave B Android Gate Summary
+
+- run_id: test_android
+- overall: PASS
+
+## Gate Steps
+
+| step | status | notes |
+|------|--------|-------|
+| compile | **PASS** | all modules compiled |
+| modules | **PASS** | all tests passed |
+| examples | **PASS** | 71/75 compiled |
+ANDROID_EOF
+
 # 创建 fixture Linux examples JSON
 cat > "$PROJECT_ROOT/$TEST_DIR/examples.json" <<'JSON_EOF'
 {
@@ -82,6 +98,7 @@ bash scripts/generate_wave_b_cross_platform_summary.sh \
   --linux-examples "$TEST_DIR/examples.json" \
   --macos-summary "$TEST_DIR/macos_summary.md" \
   --windows-summary "$TEST_DIR/windows_summary.md" \
+  --android-summary "$TEST_DIR/android_summary.md" \
   --output "$TEST_DIR/cross_platform_summary.md"
 
 OUTPUT_FILE="$PROJECT_ROOT/$TEST_DIR/cross_platform_summary.md"

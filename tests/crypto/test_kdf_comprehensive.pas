@@ -4,7 +4,10 @@ program test_kdf_comprehensive;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api;
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.loader;
 
 type
   TTestResult = record
@@ -55,19 +58,16 @@ const
   EVP_PKEY_OP_DERIVE = 1 shl 10;
 
 procedure LoadKDFFunctions;
-var
-  LibHandle: THandle;
 begin
-  LibHandle := LoadLibrary(CRYPTO_LIB);
-  if LibHandle = 0 then
-    raise Exception.Create('Failed to load ' + CRYPTO_LIB);
-  
-  Pointer(PKCS5_PBKDF2_HMAC) := GetProcAddress(LibHandle, 'PKCS5_PBKDF2_HMAC');
-  Pointer(EVP_PKEY_derive_init) := GetProcAddress(LibHandle, 'EVP_PKEY_derive_init');
-  Pointer(EVP_PKEY_derive) := GetProcAddress(LibHandle, 'EVP_PKEY_derive');
-  Pointer(EVP_PKEY_CTX_new_id) := GetProcAddress(LibHandle, 'EVP_PKEY_CTX_new_id');
-  Pointer(EVP_PKEY_CTX_free) := GetProcAddress(LibHandle, 'EVP_PKEY_CTX_free');
-  Pointer(EVP_PKEY_CTX_ctrl) := GetProcAddress(LibHandle, 'EVP_PKEY_CTX_ctrl');
+  LoadOpenSSLCore;
+  LoadEVP(GetCryptoLibHandle);
+
+  Pointer(PKCS5_PBKDF2_HMAC) := GetCryptoProcAddress('PKCS5_PBKDF2_HMAC');
+  Pointer(EVP_PKEY_derive_init) := GetCryptoProcAddress('EVP_PKEY_derive_init');
+  Pointer(EVP_PKEY_derive) := GetCryptoProcAddress('EVP_PKEY_derive');
+  Pointer(EVP_PKEY_CTX_new_id) := GetCryptoProcAddress('EVP_PKEY_CTX_new_id');
+  Pointer(EVP_PKEY_CTX_free) := GetCryptoProcAddress('EVP_PKEY_CTX_free');
+  Pointer(EVP_PKEY_CTX_ctrl) := GetCryptoProcAddress('EVP_PKEY_CTX_ctrl');
 end;
 
 procedure AddResult(const AName: string; ASuccess: Boolean; const AError: string = '');
@@ -411,7 +411,17 @@ begin
   
   // Load OpenSSL
   try
-    if not LoadOpenSSLLibrary then
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('ERROR: Failed to load OpenSSL: ', E.Message);
+        Halt(1);
+      end;
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('ERROR: Failed to load OpenSSL library!');
       Halt(1);
@@ -433,7 +443,6 @@ begin
       Halt(1);
     end;
   end;
-  
   // Run PBKDF2 tests
   TestPBKDF2;
   TestPBKDF2_SHA512;
@@ -446,7 +455,8 @@ begin
   PrintResults;
   
   // Cleanup
-  UnloadOpenSSLLibrary;
+  UnloadOpenSSLCore;
+  WriteLn('[PASS] kdf comprehensive validation completed');
   
   // Exit with appropriate code
   if PassedTests = TotalTests then

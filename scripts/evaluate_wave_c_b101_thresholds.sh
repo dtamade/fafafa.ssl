@@ -5,7 +5,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-REPORTS_DIR="test-reports"
+REPORTS_DIR="${FAFAFA_WAVE_C_QUICK_SPRINT_REPORTS_DIR:-tmp/wave_c_quick_sprint_reports}"
+VALIDATION_GLOB="${FAFAFA_WAVE_C_B101_VALIDATION_GLOB:-tmp/wave_c_b101_reports_*/wave_c_b101_validation_*.md}"
 MIN_HIT_RATE="99.0"
 MIN_SPEEDUP="3.0"
 MIN_PASSING_RUNS=3
@@ -24,7 +25,8 @@ Wave C B107 Threshold Evaluation
   scripts/evaluate_wave_c_b101_thresholds.sh [options]
 
 选项：
-  --reports-dir DIR       报告目录（默认 test-reports）
+  --reports-dir DIR       报告目录（默认 tmp/wave_c_quick_sprint_reports）
+  --validation-glob GLOB  B101 验证报告 glob（默认 tmp/wave_c_b101_reports_*/wave_c_b101_validation_*.md）
   --min-hit-rate N        命中率阈值（默认 99.0）
   --min-speedup N         加速比阈值（默认 3.0）
   --min-passing-runs N    至少满足阈值的 run 数（默认 3）
@@ -39,6 +41,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --reports-dir)
       REPORTS_DIR="$2"
+      shift 2
+      ;;
+    --validation-glob)
+      VALIDATION_GLOB="$2"
       shift 2
       ;;
     --min-hit-rate)
@@ -78,23 +84,27 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b107_threshold_eval_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORTS_DIR/wave_c_b107_threshold_eval_${RUN_ID}.md"
 fi
 
-mapfile -t EVAL_OUTPUT < <(python3 - "$PROJECT_ROOT" "$REPORTS_DIR" "$MIN_HIT_RATE" "$MIN_SPEEDUP" "$MIN_PASSING_RUNS" "$OUTPUT_FILE" <<'PY'
+mapfile -t EVAL_OUTPUT < <(python3 - "$PROJECT_ROOT" "$VALIDATION_GLOB" "$MIN_HIT_RATE" "$MIN_SPEEDUP" "$MIN_PASSING_RUNS" "$OUTPUT_FILE" <<'PY'
+import glob
+import os
 import re
 import sys
 from pathlib import Path
 
 project_root = Path(sys.argv[1])
-reports_dir = project_root / sys.argv[2]
+validation_glob = sys.argv[2]
 min_hit = float(sys.argv[3])
 min_speedup = float(sys.argv[4])
 min_passing_runs = int(sys.argv[5])
 output_file = project_root / sys.argv[6]
 
+glob_pattern = validation_glob if os.path.isabs(validation_glob) else str(project_root / validation_glob)
 rows = []
-for report in sorted(reports_dir.glob('wave_c_b101_validation_*.md')):
+for report_path in sorted(glob.glob(glob_pattern)):
+  report = Path(report_path)
   text = report.read_text(errors='ignore')
   run_id = re.search(r'run_id:\s*(\S+)', text)
   overall = re.search(r'overall:\s*\*\*(\w+)\*\*', text)
@@ -137,7 +147,7 @@ overall_status = 'PASS' if passing >= min_passing_runs else 'FAIL'
 output_file.parent.mkdir(parents=True, exist_ok=True)
 with output_file.open('w', encoding='utf-8') as f:
   f.write('# Wave C B107 Threshold Evaluation Report\n\n')
-  f.write(f'- reports_dir: {reports_dir.relative_to(project_root)}\n')
+  f.write(f'- validation_glob: {validation_glob}\n')
   f.write(f'- min_hit_rate_percent: {min_hit}\n')
   f.write(f'- min_speedup_factor_x: {min_speedup}\n')
   f.write(f'- min_passing_runs: {min_passing_runs}\n')

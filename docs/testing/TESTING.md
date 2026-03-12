@@ -1,5 +1,8 @@
 # OpenSSL Pascal Bindings Testing Guide
 
+
+> **Historical snapshot:** This page captures a point-in-time testing or validation snapshot and may not reflect the current repository state. For current verification commands and active workflow guidance, start with `docs/testing/TESTING_README.md`.
+
 ## Automated Test Suite
 
 ### Quick Start
@@ -57,8 +60,8 @@ program test_openssl_<module>;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.<module>;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.<module>;
 
 var
   TestsPassed, TestsFailed: Integer;

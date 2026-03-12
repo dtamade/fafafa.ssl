@@ -32,9 +32,17 @@ type
     HasSupportedVersions: Boolean;
     HasSignatureAlgorithms: Boolean;
     HasKeyShare: Boolean;
+    HasALPN: Boolean;
+    HasPreSharedKey: Boolean;
+    ALPNProtocols: string;
     KeyShareGroup: Word;
     KeyShareLength: Word;
     PeerKeyShare: TBytes;
+    PSKIdentity: TBytes;
+    PSKObfuscatedTicketAge: Cardinal;
+    PSKBinder: TBytes;
+    PSKBindersOffset: Integer;
+    PSKBinderOffset: Integer;
   end;
 
 function TryParseTLS13ClientHelloFromHandshake(
@@ -46,18 +54,13 @@ function TryParseTLS13ClientHelloFromHandshake(
 function TLS13ClientHelloSupportsVersion(const AInfo: TTLS13ClientHelloInfo; AVersion: Word): Boolean;
 function TLS13ClientHelloOffersCipherSuite(const AInfo: TTLS13ClientHelloInfo; ACipherSuite: Word): Boolean;
 function TLS13ClientHelloOffersSignatureScheme(const AInfo: TTLS13ClientHelloInfo; ASignatureScheme: Word): Boolean;
+function TLS13ClientHelloOffersALPNProtocol(const AInfo: TTLS13ClientHelloInfo; const AProtocol: string): Boolean;
 
 implementation
 
 procedure InitClientHelloInfo(out AInfo: TTLS13ClientHelloInfo);
 begin
-  FillChar(AInfo, SizeOf(AInfo), 0);
-  SetLength(AInfo.Random, 0);
-  SetLength(AInfo.LegacySessionID, 0);
-  SetLength(AInfo.CipherSuites, 0);
-  SetLength(AInfo.SupportedVersions, 0);
-  SetLength(AInfo.SignatureAlgorithms, 0);
-  SetLength(AInfo.PeerKeyShare, 0);
+  AInfo := Default(TTLS13ClientHelloInfo);
 end;
 
 function TLS13ClientHelloSupportsVersion(const AInfo: TTLS13ClientHelloInfo; AVersion: Word): Boolean;
@@ -88,6 +91,86 @@ begin
     if AInfo.SignatureAlgorithms[I] = ASignatureScheme then
       Exit(True);
   Result := False;
+end;
+
+function TLS13ClientHelloOffersALPNProtocol(const AInfo: TTLS13ClientHelloInfo; const AProtocol: string): Boolean;
+var
+  LProtocols: TStringArray;
+  I: Integer;
+begin
+  Result := False;
+  if AProtocol = '' then
+    Exit;
+
+  LProtocols := AInfo.ALPNProtocols.Split([',']);
+  for I := 0 to High(LProtocols) do
+    if SameText(Trim(LProtocols[I]), AProtocol) then
+      Exit(True);
+end;
+
+procedure ParseALPNExtension(
+  const AHandshake: TBytes;
+  ADataOffset, ADataLength: Integer;
+  var AInfo: TTLS13ClientHelloInfo;
+  out AError: string
+);
+var
+  LListLength: Integer;
+  LOffset: Integer;
+  LEndPos: Integer;
+  LProtoLen: Integer;
+  LProtocol: string;
+begin
+  AError := '';
+
+  if ADataLength < 2 then
+  begin
+    AError := 'alpn extension is too short';
+    Exit;
+  end;
+
+  LListLength := ReadUInt16(AHandshake, ADataOffset);
+  if LListLength <> ADataLength - 2 then
+  begin
+    AError := 'alpn list length mismatch';
+    Exit;
+  end;
+
+  LOffset := ADataOffset + 2;
+  LEndPos := LOffset + LListLength;
+  AInfo.ALPNProtocols := '';
+
+  while LOffset < LEndPos do
+  begin
+    if LOffset + 1 > LEndPos then
+    begin
+      AError := 'alpn protocol length exceeds extension boundary';
+      Exit;
+    end;
+
+    LProtoLen := AHandshake[LOffset];
+    Inc(LOffset);
+    if (LProtoLen <= 0) or (LOffset + LProtoLen > LEndPos) then
+    begin
+      AError := 'alpn protocol entry is invalid';
+      Exit;
+    end;
+
+    SetLength(LProtocol, LProtoLen);
+    Move(AHandshake[LOffset], LProtocol[1], LProtoLen);
+    if AInfo.ALPNProtocols <> '' then
+      AInfo.ALPNProtocols := AInfo.ALPNProtocols + ',';
+    AInfo.ALPNProtocols := AInfo.ALPNProtocols + LProtocol;
+    Inc(LOffset, LProtoLen);
+  end;
+
+  if LOffset <> LEndPos then
+  begin
+    AError := 'alpn extension has trailing bytes';
+    Exit;
+  end;
+
+  AInfo.HasALPN := AInfo.ALPNProtocols <> '';
 end;
 
 procedure ParseSupportedVersionsExtension(
@@ -257,6 +340,82 @@ begin
   end;
 
   AInfo.HasKeyShare := LFoundAny;
+end;
+
+procedure ParsePreSharedKeyExtension(
+  const AHandshake: TBytes;
+  ADataOffset, ADataLength: Integer;
+  var AInfo: TTLS13ClientHelloInfo;
+  out AError: string
+);
+var
+  LOffset: Integer;
+  LIdentitiesLen: Integer;
+  LIdentityLen: Integer;
+  LBindersLen: Integer;
+  LBinderLen: Integer;
+begin
+  AError := '';
+  if ADataLength < 7 then
+  begin
+    AError := 'pre_shared_key extension is too short';
+    Exit;
+  end;
+
+  LOffset := ADataOffset;
+  LIdentitiesLen := ReadUInt16(AHandshake, LOffset);
+  Inc(LOffset, 2);
+  if (LIdentitiesLen < 6) or (LOffset + LIdentitiesLen > ADataOffset + ADataLength) then
+  begin
+    AError := 'pre_shared_key identities length is invalid';
+    Exit;
+  end;
+
+  LIdentityLen := ReadUInt16(AHandshake, LOffset);
+  Inc(LOffset, 2);
+  if (LIdentityLen <= 0) or (LOffset + LIdentityLen + 4 > ADataOffset + 2 + LIdentitiesLen) then
+  begin
+    AError := 'pre_shared_key identity length is invalid';
+    Exit;
+  end;
+
+  SetLength(AInfo.PSKIdentity, LIdentityLen);
+  Move(AHandshake[LOffset], AInfo.PSKIdentity[0], LIdentityLen);
+  Inc(LOffset, LIdentityLen);
+  AInfo.PSKObfuscatedTicketAge :=
+    (Cardinal(AHandshake[LOffset]) shl 24) or
+    (Cardinal(AHandshake[LOffset + 1]) shl 16) or
+    (Cardinal(AHandshake[LOffset + 2]) shl 8) or
+    Cardinal(AHandshake[LOffset + 3]);
+  Inc(LOffset, 4);
+
+  if LOffset <> ADataOffset + 2 + LIdentitiesLen then
+  begin
+    AError := 'pre_shared_key identities block trailing bytes';
+    Exit;
+  end;
+
+  AInfo.PSKBindersOffset := LOffset;
+  LBindersLen := ReadUInt16(AHandshake, LOffset);
+  Inc(LOffset, 2);
+  if (LBindersLen < 1) or (LOffset + LBindersLen <> ADataOffset + ADataLength) then
+  begin
+    AError := 'pre_shared_key binders length is invalid';
+    Exit;
+  end;
+
+  LBinderLen := AHandshake[LOffset];
+  Inc(LOffset);
+  if (LBinderLen <= 0) or (LOffset + LBinderLen > ADataOffset + ADataLength) then
+  begin
+    AError := 'pre_shared_key binder length is invalid';
+    Exit;
+  end;
+
+  SetLength(AInfo.PSKBinder, LBinderLen);
+  AInfo.PSKBinderOffset := LOffset;
+  Move(AHandshake[LOffset], AInfo.PSKBinder[0], LBinderLen);
+  AInfo.HasPreSharedKey := True;
 end;
 
 function TryParseTLS13ClientHelloFromHandshake(
@@ -437,6 +596,26 @@ begin
       TLS_EXTENSION_KEY_SHARE:
         begin
           ParseKeyShareExtension(AHandshake, LExtDataOffset, LExtLen, AInfo, LExtError);
+          if LExtError <> '' then
+          begin
+            AError := LExtError;
+            Exit;
+          end;
+        end;
+
+      TLS_EXTENSION_ALPN:
+        begin
+          ParseALPNExtension(AHandshake, LExtDataOffset, LExtLen, AInfo, LExtError);
+          if LExtError <> '' then
+          begin
+            AError := LExtError;
+            Exit;
+          end;
+        end;
+
+      TLS_EXTENSION_PRE_SHARED_KEY:
+        begin
+          ParsePreSharedKeyExtension(AHandshake, LExtDataOffset, LExtLen, AInfo, LExtError);
           if LExtError <> '' then
           begin
             AError := LExtError;

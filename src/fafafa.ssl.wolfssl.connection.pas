@@ -1,13 +1,14 @@
 {**
  * Unit: fafafa.ssl.wolfssl.connection
- * Purpose: WolfSSL SSL 连接实现
+ * Purpose: WolfSSL standalone compatibility shim
  *
- * 继承 TBaseSSLConnection 基类，实现 WolfSSL 后端的连接功能。
- * 支持基于 Socket 和 Stream 的 TLS 连接。
+ * 保留历史公开类名 `TWolfSSLConnection`，但不再维护第二套完整连接实现。
+ * 当前实现是一个薄兼容层：直接委托给 runtime path
+ * `ISSLContext.CreateConnection(...)` 创建的真实 WolfSSL 连接对象。
+ * 兼容策略：保留公开类名作为历史入口，但 runtime 真相源固定在 `fafafa.ssl.wolfssl.context`。
  *
- * @author fafafa.ssl team
- * @version 1.0.0
- * @since 2026-02-04
+ * 这样可以避免 standalone 单元与 runtime path 在 SNI / connection info /
+ * native handle 等语义上再次漂移。
  *}
 
 unit fafafa.ssl.wolfssl.connection;
@@ -21,71 +22,75 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
-  fafafa.ssl.connection.base,
   fafafa.ssl.wolfssl.base,
-  fafafa.ssl.wolfssl.native_handle,
   fafafa.ssl.wolfssl.api;
 
 type
-  { TWolfSSLConnection - WolfSSL SSL 连接类 }
-  TWolfSSLConnection = class(TBaseSSLConnection)
+  TWolfSSLConnection = class(TInterfacedObject, ISSLConnection, ISSLClientConnection,
+    ISSLNativeHandleAccess)
   private
-    FWolfSSLCtx: PWOLFSSL_CTX;
-    FWolfSSL: PWOLFSSL;
-    FSocket: THandle;
-    FStream: TStream;
-    FServerName: string;
-    FALPNProtocols: string;
-    FNegotiatedALPN: string;
-    FLastNativeError: Integer;
+    FInner: ISSLConnection;
+    FClientConnection: ISSLClientConnection;
+    FNativeAccess: ISSLNativeHandleAccess;
 
-    procedure SetupSocket;
-    procedure SetupStream;
-    procedure SetupSNI;
-    procedure SetupALPN;
-
-  protected
-    { 抽象方法实现 }
-    function DoRead(var ABuffer; ACount: Integer): Integer; override;
-    function DoWrite(const ABuffer; ACount: Integer): Integer; override;
-    function DoConnect: Boolean; override;
-    function DoAccept: Boolean; override;
-    function DoHandshakeInternal: TSSLHandshakeState; override;
-    function DoShutdown: Boolean; override;
-    procedure DoClose; override;
-    function DoRenegotiate: Boolean; override;
-    function DoGetError(ARet: Integer): TSSLErrorCode; override;
-    function DoWantRead: Boolean; override;
-    function DoWantWrite: Boolean; override;
-    function DoGetProtocolVersion: TSSLProtocolVersion; override;
-    function DoGetCipherName: string; override;
-    function DoGetPeerCertificate: ISSLCertificate; override;
-    function DoGetPeerCertificateChain: TSSLCertificateArray; override;
-    function DoGetVerifyResult: Integer; override;
-    function DoGetVerifyResultString: string; override;
-    function DoGetSession: ISSLSession; override;
-    procedure DoSetSession(ASession: ISSLSession); override;
-    function DoIsSessionReused: Boolean; override;
-    function DoGetSelectedALPNProtocol: string; override;
-    function DoGetState: string; override;
-    function DoGetNativeHandle: Pointer; override;
-
-    { OCSP 方法覆盖 }
-    function DoGetOCSPStaplingEnabled: Boolean; override;
-    function DoGetOCSPResponse: TBytes; override;
-    function DoIsOCSPResponseVerified: Boolean; override;
-    function DoGetOCSPResponseStatus: string; override;
-
+    procedure RequireWolfSSLContext(AContext: ISSLContext; const AMethodName: string);
+    procedure InitializeWithSocket(AContext: ISSLContext; ASocket: THandle);
+    procedure InitializeWithStream(AContext: ISSLContext; AStream: TStream);
+    function GetNativeWolfSSL: PWOLFSSL;
   public
     constructor Create(AContext: ISSLContext; ASocket: THandle); overload;
     constructor Create(AContext: ISSLContext; AStream: TStream); overload;
     destructor Destroy; override;
 
-    { SNI/ALPN 设置 }
+    function Connect: Boolean;
+    function Accept: Boolean;
+    function Shutdown: Boolean;
+    procedure Close;
+    function DoHandshake: TSSLHandshakeState;
+    function IsHandshakeComplete: Boolean;
+    function Renegotiate: Boolean;
+    function Read(var ABuffer; ACount: Integer): Integer;
+    function Write(const ABuffer; ACount: Integer): Integer;
+    function ReadString(out AStr: string): Boolean;
+    function WriteString(const AStr: string): Boolean;
+    function WantRead: Boolean;
+    function WantWrite: Boolean;
+    function GetError(ARet: Integer): TSSLErrorCode;
+    function GetConnectionInfo: TSSLConnectionInfo;
+    function GetProtocolVersion: TSSLProtocolVersion;
+    function GetCipherName: string;
+    function GetPeerCertificate: ISSLCertificate;
+    function GetPeerCertificateChain: TSSLCertificateArray;
+    function GetVerifyResult: Integer;
+    function GetVerifyResultString: string;
+    function GetSession: ISSLSession;
+    procedure SetSession(ASession: ISSLSession);
+    function IsSessionReused: Boolean;
+    function GetSelectedALPNProtocol: string;
+    function IsConnected: Boolean;
+    function GetState: string;
+    function GetStateString: string;
+    procedure SetTimeout(ATimeout: Integer);
+    function GetTimeout: Integer;
+    procedure SetBlocking(ABlocking: Boolean);
+    function GetBlocking: Boolean;
+    function GetContext: ISSLContext;
+    function GetHealthStatus: TSSLHealthStatus;
+    function IsHealthy: Boolean;
+    function GetDiagnosticInfo: TSSLDiagnosticInfo;
+    function GetPerformanceMetrics: TSSLPerformanceMetrics;
+    function GetOCSPStaplingEnabled: Boolean;
+    function GetOCSPResponse: TBytes;
+    function IsOCSPResponseVerified: Boolean;
+    function GetOCSPResponseStatus: string;
+
     procedure SetServerName(const AServerName: string);
     function GetServerName: string;
 
-    { 额外方法 }
+    function GetNativeHandle: Pointer;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
+
     function GetNegotiatedProtocol: TSSLProtocolVersion;
     function GetNegotiatedCipher: string;
     function GetNegotiatedALPN: string;
@@ -95,533 +100,358 @@ type
 
 implementation
 
-uses
-  fafafa.ssl.wolfssl.certificate,
-  fafafa.ssl.wolfssl.session;
-
-{ WolfSSL I/O 回调函数（用于流支持）}
-
-function WolfSSL_StreamRecvCallback(ssl: PWOLFSSL; buf: PAnsiChar; sz: Integer;
-  ctx: Pointer): Integer; cdecl;
+procedure TWolfSSLConnection.RequireWolfSSLContext(AContext: ISSLContext; const AMethodName: string);
 var
-  LStream: TStream;
-  LBytesRead: Integer;
+  LContextNative: ISSLNativeHandleAccess;
 begin
-  Result := -1;
-  if ctx = nil then Exit;
+  if AContext = nil then
+    raise ESSLException.CreateWithContext(
+      'WolfSSL context is required',
+      sslErrInvalidParam,
+      AMethodName
+    );
 
-  LStream := TStream(ctx);
-  try
-    LBytesRead := LStream.Read(buf^, sz);
-    if LBytesRead = 0 then
-      Result := -2  // WOLFSSL_CBIO_ERR_WANT_READ
-    else if LBytesRead < 0 then
-      Result := -1  // WOLFSSL_CBIO_ERR_GENERAL
-    else
-      Result := LBytesRead;
-  except
-    Result := -1;  // WOLFSSL_CBIO_ERR_GENERAL
-  end;
+  if not Supports(AContext, ISSLNativeHandleAccess, LContextNative) or
+    (LContextNative.GetBackendType <> sslWolfSSL) then
+    raise ESSLException.CreateWithContext(
+      'WolfSSL context is required',
+      sslErrInvalidParam,
+      AMethodName
+    );
 end;
 
-function WolfSSL_StreamSendCallback(ssl: PWOLFSSL; buf: PAnsiChar; sz: Integer;
-  ctx: Pointer): Integer; cdecl;
-var
-  LStream: TStream;
-  LBytesWritten: Integer;
+procedure TWolfSSLConnection.InitializeWithSocket(AContext: ISSLContext; ASocket: THandle);
 begin
-  Result := -1;
-  if ctx = nil then Exit;
+  RequireWolfSSLContext(AContext, 'TWolfSSLConnection.Create');
+  FInner := AContext.CreateConnection(ASocket);
 
-  LStream := TStream(ctx);
-  try
-    LBytesWritten := LStream.Write(buf^, sz);
-    if LBytesWritten = 0 then
-      Result := -3  // WOLFSSL_CBIO_ERR_WANT_WRITE
-    else if LBytesWritten < 0 then
-      Result := -1  // WOLFSSL_CBIO_ERR_GENERAL
-    else
-      Result := LBytesWritten;
-  except
-    Result := -1;  // WOLFSSL_CBIO_ERR_GENERAL
-  end;
+  if FInner = nil then
+    raise ESSLException.CreateWithContext(
+      'Failed to create WolfSSL runtime connection',
+      sslErrConnection,
+      'TWolfSSLConnection.Create'
+    );
+
+  if not Supports(FInner, ISSLClientConnection, FClientConnection) then
+    raise ESSLException.CreateWithContext(
+      'WolfSSL runtime connection does not support per-connection server name',
+      sslErrUnsupported,
+      'TWolfSSLConnection.Create'
+    );
+
+  if not Supports(FInner, ISSLNativeHandleAccess, FNativeAccess) then
+    raise ESSLException.CreateWithContext(
+      'WolfSSL runtime connection does not expose native handle access',
+      sslErrUnsupported,
+      'TWolfSSLConnection.Create'
+    );
 end;
 
-{ TWolfSSLConnection }
+procedure TWolfSSLConnection.InitializeWithStream(AContext: ISSLContext; AStream: TStream);
+begin
+  RequireWolfSSLContext(AContext, 'TWolfSSLConnection.Create');
+  FInner := AContext.CreateConnection(AStream);
+
+  if FInner = nil then
+    raise ESSLException.CreateWithContext(
+      'Failed to create WolfSSL runtime connection',
+      sslErrConnection,
+      'TWolfSSLConnection.Create'
+    );
+
+  if not Supports(FInner, ISSLClientConnection, FClientConnection) then
+    raise ESSLException.CreateWithContext(
+      'WolfSSL runtime connection does not support per-connection server name',
+      sslErrUnsupported,
+      'TWolfSSLConnection.Create'
+    );
+
+  if not Supports(FInner, ISSLNativeHandleAccess, FNativeAccess) then
+    raise ESSLException.CreateWithContext(
+      'WolfSSL runtime connection does not expose native handle access',
+      sslErrUnsupported,
+      'TWolfSSLConnection.Create'
+    );
+end;
+
+function TWolfSSLConnection.GetNativeWolfSSL: PWOLFSSL;
+begin
+  Result := PWOLFSSL(GetNativeHandle);
+end;
 
 constructor TWolfSSLConnection.Create(AContext: ISSLContext; ASocket: THandle);
 begin
-  inherited Create(AContext);
-  FWolfSSLCtx := PWOLFSSL_CTX(GetNativeHandleSafe(AContext, 'TWolfSSLConnection.Create'));
-  FSocket := ASocket;
-  FStream := nil;
-  FWolfSSL := nil;
-  FServerName := AContext.GetServerName;
-  FALPNProtocols := AContext.GetALPNProtocols;
-  FNegotiatedALPN := '';
-  FLastNativeError := 0;
-
-  if FWolfSSLCtx = nil then
-    raise ESSLException.Create('Invalid WolfSSL context');
-
-  if not Assigned(wolfSSL_new) then
-    raise ESSLException.Create('wolfSSL_new not available');
-
-  FWolfSSL := wolfSSL_new(FWolfSSLCtx);
-  if FWolfSSL = nil then
-    raise ESSLException.Create('Failed to create WolfSSL connection');
-
-  SetupSocket;
-  SetupSNI;
-  SetupALPN;
+  inherited Create;
+  InitializeWithSocket(AContext, ASocket);
 end;
 
 constructor TWolfSSLConnection.Create(AContext: ISSLContext; AStream: TStream);
 begin
-  inherited Create(AContext);
-  FWolfSSLCtx := PWOLFSSL_CTX(GetNativeHandleSafe(AContext, 'TWolfSSLConnection.Create'));
-  FSocket := 0;
-  FStream := AStream;
-  FWolfSSL := nil;
-  FServerName := AContext.GetServerName;
-  FALPNProtocols := AContext.GetALPNProtocols;
-  FNegotiatedALPN := '';
-  FLastNativeError := 0;
-
-  if AStream = nil then
-    raise ESSLException.Create('Stream cannot be nil');
-
-  if FWolfSSLCtx = nil then
-    raise ESSLException.Create('Invalid WolfSSL context');
-
-  if not Assigned(wolfSSL_new) then
-    raise ESSLException.Create('wolfSSL_new not available');
-
-  FWolfSSL := wolfSSL_new(FWolfSSLCtx);
-  if FWolfSSL = nil then
-    raise ESSLException.Create('Failed to create WolfSSL connection');
-
-  SetupStream;
-  SetupSNI;
-  SetupALPN;
+  inherited Create;
+  InitializeWithStream(AContext, AStream);
 end;
 
 destructor TWolfSSLConnection.Destroy;
 begin
-  if FWolfSSL <> nil then
-  begin
-    if Assigned(wolfSSL_free) then
-      wolfSSL_free(FWolfSSL);
-    FWolfSSL := nil;
-  end;
+  FNativeAccess := nil;
+  FClientConnection := nil;
+  FInner := nil;
   inherited Destroy;
 end;
 
-procedure TWolfSSLConnection.SetupSocket;
+function TWolfSSLConnection.Connect: Boolean;
 begin
-  if Assigned(wolfSSL_set_fd) then
-    wolfSSL_set_fd(FWolfSSL, Integer(FSocket));
+  Result := FInner.Connect;
 end;
 
-procedure TWolfSSLConnection.SetupStream;
+function TWolfSSLConnection.Accept: Boolean;
 begin
-  // 检查 I/O 回调是否可用
-  if not Assigned(wolfSSL_CTX_SetIORecv) or not Assigned(wolfSSL_CTX_SetIOSend) then
-    raise ESSLException.Create('WolfSSL I/O callbacks not available - stream connections not supported');
-
-  // 设置自定义 I/O 回调用于流操作
-  wolfSSL_CTX_SetIORecv(FWolfSSLCtx, @WolfSSL_StreamRecvCallback);
-  wolfSSL_CTX_SetIOSend(FWolfSSLCtx, @WolfSSL_StreamSendCallback);
-
-  // 设置 I/O 上下文（传递流指针）
-  if Assigned(wolfSSL_SetIOReadCtx) and Assigned(wolfSSL_SetIOWriteCtx) then
-  begin
-    wolfSSL_SetIOReadCtx(FWolfSSL, FStream);
-    wolfSSL_SetIOWriteCtx(FWolfSSL, FStream);
-  end;
+  Result := FInner.Accept;
 end;
 
-procedure TWolfSSLConnection.SetupSNI;
+function TWolfSSLConnection.Shutdown: Boolean;
 begin
-  if (FServerName <> '') and Assigned(wolfSSL_UseSNI) then
-    wolfSSL_UseSNI(FWolfSSL, 0, PAnsiChar(AnsiString(FServerName)), Length(FServerName));
+  Result := FInner.Shutdown;
 end;
 
-procedure TWolfSSLConnection.SetupALPN;
+procedure TWolfSSLConnection.Close;
 begin
-  if (FALPNProtocols <> '') and Assigned(wolfSSL_UseALPN) then
-    wolfSSL_UseALPN(FWolfSSL, PAnsiChar(AnsiString(FALPNProtocols)),
-      Length(FALPNProtocols), 0);  // 0 = WOLFSSL_ALPN_CONTINUE_ON_MISMATCH
+  FInner.Close;
 end;
 
-{ 抽象方法实现 }
-
-function TWolfSSLConnection.DoRead(var ABuffer; ACount: Integer): Integer;
+function TWolfSSLConnection.DoHandshake: TSSLHandshakeState;
 begin
-  Result := -1;
-  if FWolfSSL = nil then Exit;
-  if not Assigned(wolfSSL_read) then Exit;
-
-  Result := wolfSSL_read(FWolfSSL, @ABuffer, ACount);
-  if Result < 0 then
-    FLastNativeError := wolfSSL_get_error(FWolfSSL, Result);
+  Result := FInner.DoHandshake;
 end;
 
-function TWolfSSLConnection.DoWrite(const ABuffer; ACount: Integer): Integer;
+function TWolfSSLConnection.IsHandshakeComplete: Boolean;
 begin
-  Result := -1;
-  if FWolfSSL = nil then Exit;
-  if not Assigned(wolfSSL_write) then Exit;
-
-  Result := wolfSSL_write(FWolfSSL, @ABuffer, ACount);
-  if Result < 0 then
-    FLastNativeError := wolfSSL_get_error(FWolfSSL, Result);
+  Result := FInner.IsHandshakeComplete;
 end;
 
-function TWolfSSLConnection.DoConnect: Boolean;
-var
-  LResult: Integer;
+function TWolfSSLConnection.Renegotiate: Boolean;
 begin
-  Result := False;
-  if FWolfSSL = nil then Exit;
-  if not Assigned(wolfSSL_connect) then Exit;
-
-  LResult := wolfSSL_connect(FWolfSSL);
-  if LResult <> WOLFSSL_SUCCESS then
-    FLastNativeError := wolfSSL_get_error(FWolfSSL, LResult);
-  Result := LResult = WOLFSSL_SUCCESS;
+  Result := FInner.Renegotiate;
 end;
 
-function TWolfSSLConnection.DoAccept: Boolean;
-var
-  LResult: Integer;
+function TWolfSSLConnection.Read(var ABuffer; ACount: Integer): Integer;
 begin
-  Result := False;
-  if FWolfSSL = nil then Exit;
-  if not Assigned(wolfSSL_accept) then Exit;
-
-  LResult := wolfSSL_accept(FWolfSSL);
-  if LResult <> WOLFSSL_SUCCESS then
-    FLastNativeError := wolfSSL_get_error(FWolfSSL, LResult);
-  Result := LResult = WOLFSSL_SUCCESS;
+  Result := FInner.Read(ABuffer, ACount);
 end;
 
-function TWolfSSLConnection.DoHandshakeInternal: TSSLHandshakeState;
+function TWolfSSLConnection.Write(const ABuffer; ACount: Integer): Integer;
 begin
-  if FHandshakeComplete then
-    Result := sslHsCompleted
-  else if DoConnect then
-    Result := sslHsCompleted
-  else
-  begin
-    // 检查是否需要重试
-    if DoWantRead or DoWantWrite then
-      Result := sslHsInProgress
-    else
-      Result := sslHsFailed;
-  end;
+  Result := FInner.Write(ABuffer, ACount);
 end;
 
-function TWolfSSLConnection.DoShutdown: Boolean;
-var
-  LResult: Integer;
+function TWolfSSLConnection.ReadString(out AStr: string): Boolean;
 begin
-  Result := False;
-  if FWolfSSL = nil then Exit;
-  if not Assigned(wolfSSL_shutdown) then Exit;
-
-  LResult := wolfSSL_shutdown(FWolfSSL);
-  Result := LResult >= 0;
+  Result := FInner.ReadString(AStr);
 end;
 
-procedure TWolfSSLConnection.DoClose;
+function TWolfSSLConnection.WriteString(const AStr: string): Boolean;
 begin
-  DoShutdown;
+  Result := FInner.WriteString(AStr);
 end;
 
-function TWolfSSLConnection.DoRenegotiate: Boolean;
+function TWolfSSLConnection.WantRead: Boolean;
 begin
-  // WolfSSL 重新协商需要额外实现
-  Result := False;
+  Result := FInner.WantRead;
 end;
 
-function TWolfSSLConnection.DoGetError(ARet: Integer): TSSLErrorCode;
-var
-  LErr: Integer;
+function TWolfSSLConnection.WantWrite: Boolean;
 begin
-  if FWolfSSL = nil then
-    Exit(sslErrGeneral);
-
-  if Assigned(wolfSSL_get_error) then
-    LErr := wolfSSL_get_error(FWolfSSL, ARet)
-  else
-    LErr := FLastNativeError;
-
-  Result := WolfSSLErrorToSSLError(LErr);
+  Result := FInner.WantWrite;
 end;
 
-function TWolfSSLConnection.DoWantRead: Boolean;
+function TWolfSSLConnection.GetError(ARet: Integer): TSSLErrorCode;
 begin
-  Result := FLastNativeError = WOLFSSL_ERROR_WANT_READ;
+  Result := FInner.GetError(ARet);
 end;
 
-function TWolfSSLConnection.DoWantWrite: Boolean;
+function TWolfSSLConnection.GetConnectionInfo: TSSLConnectionInfo;
 begin
-  Result := FLastNativeError = WOLFSSL_ERROR_WANT_WRITE;
+  Result := FInner.GetConnectionInfo;
 end;
 
-function TWolfSSLConnection.DoGetProtocolVersion: TSSLProtocolVersion;
-var
-  LVersion: PAnsiChar;
+function TWolfSSLConnection.GetProtocolVersion: TSSLProtocolVersion;
 begin
-  Result := sslProtocolTLS12;  // 默认值
-  if FWolfSSL = nil then Exit;
-
-  if Assigned(wolfSSL_get_version) then
-  begin
-    LVersion := wolfSSL_get_version(FWolfSSL);
-    if LVersion <> nil then
-    begin
-      if Pos('TLSv1.3', string(LVersion)) > 0 then
-        Result := sslProtocolTLS13
-      else if Pos('TLSv1.2', string(LVersion)) > 0 then
-        Result := sslProtocolTLS12
-      else if Pos('TLSv1.1', string(LVersion)) > 0 then
-        Result := sslProtocolTLS11
-      else if Pos('TLSv1', string(LVersion)) > 0 then
-        Result := sslProtocolTLS10;
-    end;
-  end;
+  Result := FInner.GetProtocolVersion;
 end;
 
-function TWolfSSLConnection.DoGetCipherName: string;
-var
-  LCipher: Pointer;
-  LName: PAnsiChar;
+function TWolfSSLConnection.GetCipherName: string;
 begin
-  Result := '';
-  if FWolfSSL = nil then Exit;
-
-  if Assigned(wolfSSL_get_current_cipher) and Assigned(wolfSSL_CIPHER_get_name) then
-  begin
-    LCipher := wolfSSL_get_current_cipher(FWolfSSL);
-    if LCipher <> nil then
-    begin
-      LName := wolfSSL_CIPHER_get_name(LCipher);
-      if LName <> nil then
-        Result := string(LName);
-    end;
-  end;
+  Result := FInner.GetCipherName;
 end;
 
-function TWolfSSLConnection.DoGetPeerCertificate: ISSLCertificate;
-var
-  LX509: PWOLFSSL_X509;
+function TWolfSSLConnection.GetPeerCertificate: ISSLCertificate;
 begin
-  Result := nil;
-  if FWolfSSL = nil then Exit;
-  if not Assigned(wolfSSL_get_peer_certificate) then Exit;
-
-  LX509 := wolfSSL_get_peer_certificate(FWolfSSL);
-  if LX509 <> nil then
-    Result := TWolfSSLCertificate.Create(LX509);
+  Result := FInner.GetPeerCertificate;
 end;
 
-function TWolfSSLConnection.DoGetPeerCertificateChain: TSSLCertificateArray;
+function TWolfSSLConnection.GetPeerCertificateChain: TSSLCertificateArray;
 begin
-  // WolfSSL 获取证书链需要额外实现
-  SetLength(Result, 0);
+  Result := FInner.GetPeerCertificateChain;
 end;
 
-function TWolfSSLConnection.DoGetVerifyResult: Integer;
+function TWolfSSLConnection.GetVerifyResult: Integer;
 begin
-  // WolfSSL 没有直接的 get_verify_result API
-  // 使用 FLastNativeError 来跟踪验证错误
-  // 如果握手成功且没有错误，返回 0 表示验证通过
-  if FHandshakeComplete and (FLastNativeError = 0) then
-    Result := 0
-  else
-    Result := FLastNativeError;
+  Result := FInner.GetVerifyResult;
 end;
 
-function TWolfSSLConnection.DoGetVerifyResultString: string;
-var
-  LResult: Integer;
+function TWolfSSLConnection.GetVerifyResultString: string;
 begin
-  LResult := DoGetVerifyResult;
-  if LResult = 0 then
-    Result := 'OK'
-  else if LResult = WOLFSSL_SUCCESS then
-    Result := 'OK'
-  else
-    Result := GetLastErrorString;
+  Result := FInner.GetVerifyResultString;
 end;
 
-function TWolfSSLConnection.DoGetSession: ISSLSession;
+function TWolfSSLConnection.GetSession: ISSLSession;
 begin
-  Result := TWolfSSLSession.FromConnection(FWolfSSL);
+  Result := FInner.GetSession;
 end;
 
-procedure TWolfSSLConnection.DoSetSession(ASession: ISSLSession);
-var
-  LSession: PWOLFSSL_SESSION;
+procedure TWolfSSLConnection.SetSession(ASession: ISSLSession);
 begin
-  if ASession = nil then Exit;
-  if FWolfSSL = nil then Exit;
-  if not Assigned(wolfSSL_set_session) then Exit;
-
-  LSession := PWOLFSSL_SESSION(GetNativeHandleSafe(ASession, 'TWolfSSLConnection.DoSetSession'));
-  if LSession <> nil then
-    wolfSSL_set_session(FWolfSSL, LSession);
+  FInner.SetSession(ASession);
 end;
 
-function TWolfSSLConnection.DoIsSessionReused: Boolean;
+function TWolfSSLConnection.IsSessionReused: Boolean;
 begin
-  Result := False;
-  if FWolfSSL = nil then Exit;
-  if not Assigned(wolfSSL_session_reused) then Exit;
-
-  Result := wolfSSL_session_reused(FWolfSSL) = 1;
+  Result := FInner.IsSessionReused;
 end;
 
-function TWolfSSLConnection.DoGetSelectedALPNProtocol: string;
-var
-  LProtocol: PAnsiChar;
-  LSize: Word;
+function TWolfSSLConnection.GetSelectedALPNProtocol: string;
 begin
-  Result := '';
-  if FWolfSSL = nil then Exit;
-
-  // 如果已经缓存了协商结果，直接返回
-  if FNegotiatedALPN <> '' then
-  begin
-    Result := FNegotiatedALPN;
-    Exit;
-  end;
-
-  // 从 WolfSSL 获取协商的 ALPN 协议
-  if Assigned(wolfSSL_ALPN_GetProtocol) then
-  begin
-    LProtocol := nil;
-    LSize := 0;
-    if wolfSSL_ALPN_GetProtocol(FWolfSSL, @LProtocol, @LSize) = WOLFSSL_SUCCESS then
-    begin
-      if (LProtocol <> nil) and (LSize > 0) then
-      begin
-        SetString(FNegotiatedALPN, LProtocol, LSize);
-        Result := FNegotiatedALPN;
-      end;
-    end;
-  end;
+  Result := FInner.GetSelectedALPNProtocol;
 end;
 
-function TWolfSSLConnection.DoGetState: string;
+function TWolfSSLConnection.IsConnected: Boolean;
 begin
-  if FHandshakeComplete then
-    Result := 'CONNECTED'
-  else
-    Result := 'DISCONNECTED';
+  Result := FInner.IsConnected;
 end;
 
-function TWolfSSLConnection.DoGetNativeHandle: Pointer;
+function TWolfSSLConnection.GetState: string;
 begin
-  Result := FWolfSSL;
+  Result := FInner.GetState;
 end;
 
-{ OCSP 方法覆盖 }
-
-function TWolfSSLConnection.DoGetOCSPStaplingEnabled: Boolean;
+function TWolfSSLConnection.GetStateString: string;
 begin
-  // WolfSSL OCSP Stapling 需要在编译时启用
-  Result := Assigned(wolfSSL_GetOCSP_Response);
+  Result := FInner.GetStateString;
 end;
 
-function TWolfSSLConnection.DoGetOCSPResponse: TBytes;
-var
-  LRespPtr: PByte;
-  LRespLen: Integer;
+procedure TWolfSSLConnection.SetTimeout(ATimeout: Integer);
 begin
-  SetLength(Result, 0);
-
-  if FWolfSSL = nil then Exit;
-
-  if not Assigned(wolfSSL_GetOCSP_Response) then Exit;
-
-  LRespPtr := nil;
-  LRespLen := wolfSSL_GetOCSP_Response(FWolfSSL, @LRespPtr);
-
-  if (LRespLen > 0) and (LRespPtr <> nil) then
-  begin
-    SetLength(Result, LRespLen);
-    Move(LRespPtr^, Result[0], LRespLen);
-  end;
+  FInner.SetTimeout(ATimeout);
 end;
 
-function TWolfSSLConnection.DoIsOCSPResponseVerified: Boolean;
-var
-  LResp: TBytes;
+function TWolfSSLConnection.GetTimeout: Integer;
 begin
-  // 简化实现：如果能获取到响应，认为已验证
-  // WolfSSL 会在握手期间验证 OCSP 响应
-  LResp := DoGetOCSPResponse;
-  Result := Length(LResp) > 0;
+  Result := FInner.GetTimeout;
 end;
 
-function TWolfSSLConnection.DoGetOCSPResponseStatus: string;
-var
-  LResp: TBytes;
+procedure TWolfSSLConnection.SetBlocking(ABlocking: Boolean);
 begin
-  if not Assigned(wolfSSL_GetOCSP_Response) then
-  begin
-    Result := 'OCSP API not available';
-    Exit;
-  end;
-
-  LResp := DoGetOCSPResponse;
-  if Length(LResp) = 0 then
-    Result := 'No OCSP Response'
-  else
-    Result := 'Response Available';
+  FInner.SetBlocking(ABlocking);
 end;
 
-{ SNI/ALPN 设置 }
+function TWolfSSLConnection.GetBlocking: Boolean;
+begin
+  Result := FInner.GetBlocking;
+end;
+
+function TWolfSSLConnection.GetContext: ISSLContext;
+begin
+  Result := FInner.GetContext;
+end;
+
+function TWolfSSLConnection.GetHealthStatus: TSSLHealthStatus;
+begin
+  Result := FInner.GetHealthStatus;
+end;
+
+function TWolfSSLConnection.IsHealthy: Boolean;
+begin
+  Result := FInner.IsHealthy;
+end;
+
+function TWolfSSLConnection.GetDiagnosticInfo: TSSLDiagnosticInfo;
+begin
+  Result := FInner.GetDiagnosticInfo;
+end;
+
+function TWolfSSLConnection.GetPerformanceMetrics: TSSLPerformanceMetrics;
+begin
+  Result := FInner.GetPerformanceMetrics;
+end;
+
+function TWolfSSLConnection.GetOCSPStaplingEnabled: Boolean;
+begin
+  Result := FInner.GetOCSPStaplingEnabled;
+end;
+
+function TWolfSSLConnection.GetOCSPResponse: TBytes;
+begin
+  Result := FInner.GetOCSPResponse;
+end;
+
+function TWolfSSLConnection.IsOCSPResponseVerified: Boolean;
+begin
+  Result := FInner.IsOCSPResponseVerified;
+end;
+
+function TWolfSSLConnection.GetOCSPResponseStatus: string;
+begin
+  Result := FInner.GetOCSPResponseStatus;
+end;
 
 procedure TWolfSSLConnection.SetServerName(const AServerName: string);
 begin
-  FServerName := AServerName;
-  if (FWolfSSL <> nil) and (FServerName <> '') and Assigned(wolfSSL_UseSNI) then
-    wolfSSL_UseSNI(FWolfSSL, 0, PAnsiChar(AnsiString(FServerName)), Length(FServerName));
+  FClientConnection.SetServerName(AServerName);
 end;
 
 function TWolfSSLConnection.GetServerName: string;
 begin
-  Result := FServerName;
+  Result := FClientConnection.GetServerName;
 end;
 
-{ 额外方法 }
+function TWolfSSLConnection.GetNativeHandle: Pointer;
+begin
+  Result := FNativeAccess.GetNativeHandle;
+end;
+
+function TWolfSSLConnection.GetBackendType: TSSLLibraryType;
+begin
+  Result := FNativeAccess.GetBackendType;
+end;
+
+function TWolfSSLConnection.IsNativeHandleValid: Boolean;
+begin
+  Result := FNativeAccess.IsNativeHandleValid;
+end;
 
 function TWolfSSLConnection.GetNegotiatedProtocol: TSSLProtocolVersion;
 begin
-  Result := DoGetProtocolVersion;
+  Result := GetProtocolVersion;
 end;
 
 function TWolfSSLConnection.GetNegotiatedCipher: string;
 begin
-  Result := DoGetCipherName;
+  Result := GetCipherName;
 end;
 
 function TWolfSSLConnection.GetNegotiatedALPN: string;
 begin
-  Result := DoGetSelectedALPNProtocol;
+  Result := GetSelectedALPNProtocol;
 end;
 
 function TWolfSSLConnection.GetLastError: Integer;
+var
+  LNativeSSL: PWOLFSSL;
 begin
   Result := 0;
-  if (FWolfSSL <> nil) and Assigned(wolfSSL_get_error) then
-    Result := wolfSSL_get_error(FWolfSSL, 0)
-  else
-    Result := FLastNativeError;
+  LNativeSSL := GetNativeWolfSSL;
+  if (LNativeSSL <> nil) and Assigned(wolfSSL_get_error) then
+    Result := wolfSSL_get_error(LNativeSSL, 0);
 end;
 
 function TWolfSSLConnection.GetLastErrorString: string;

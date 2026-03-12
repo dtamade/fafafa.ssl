@@ -18,11 +18,11 @@
 ## 验证
 
 - `bash -n scripts/evaluate_wave_c_b101_thresholds.sh`（通过）
-- `bash scripts/evaluate_wave_c_b101_thresholds.sh --run-id 20260208_052000 --strict --output test-reports/wave_c_b107_threshold_eval_20260208_052000.md`（通过）
+- `bash scripts/evaluate_wave_c_b101_thresholds.sh --run-id 20260208_052000 --strict --output docs/archive/reports/wave-c-quick-enablement-history/wave_c_b107_threshold_eval_20260208_052000.md`（通过）
 
 ## 结果
 
-- 阈值评估报告：`test-reports/wave_c_b107_threshold_eval_20260208_052000.md`
+- 阈值评估报告：`docs/archive/reports/wave-c-quick-enablement-history/wave_c_b107_threshold_eval_20260208_052000.md`
 - overall: `PASS`
 - passing_runs: `4/4`
 

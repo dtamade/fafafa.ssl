@@ -104,6 +104,31 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$PROJECT_ROOT/docs/test_reports/ARCHIVE_AUDIT_WRITEBACK_CLOSURE_ACCEPTANCE_GATE_${GATE_ID}.md"
 fi
 
+resolve_input_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  elif [[ -e "$path" ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+resolve_output_path() {
+  local path="$1"
+  if [[ "$path" == /* ]]; then
+    echo "$path"
+  else
+    echo "$PROJECT_ROOT/$path"
+  fi
+}
+
+TRACKER_REPORT="$(resolve_input_path "$TRACKER_REPORT")"
+SLA_ROLLBACK_LINKAGE_REPORT="$(resolve_input_path "$SLA_ROLLBACK_LINKAGE_REPORT")"
+VERSIONING_REPORT="$(resolve_input_path "$VERSIONING_REPORT")"
+OUTPUT_FILE="$(resolve_output_path "$OUTPUT_FILE")"
+
 if ! [[ "$MIN_COVERAGE" =~ ^[0-9]+$ ]]; then
   echo "[FAIL] --min-coverage must be integer" >&2
   exit 1

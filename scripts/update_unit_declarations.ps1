@@ -1,7 +1,27 @@
 # update_unit_declarations.ps1
 # 更新所有重命名文件中的 unit 声明
 
-$srcDir = "D:\projects\Pascal\lazarus\My\libs\fafafa.ssl\src"
+param(
+    [string]$ProjectRoot = ""
+)
+
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+    $resolvedProjectRoot = Split-Path -Parent $scriptDir
+}
+elseif ([System.IO.Path]::IsPathRooted($ProjectRoot)) {
+    $resolvedProjectRoot = $ProjectRoot
+}
+else {
+    $resolvedProjectRoot = Join-Path (Get-Location).Path $ProjectRoot
+}
+$resolvedProjectRoot = [System.IO.Path]::GetFullPath($resolvedProjectRoot)
+$srcDir = Join-Path $resolvedProjectRoot "src"
+
+if (-not (Test-Path $srcDir)) {
+    throw "src directory not found: $srcDir"
+}
+
 Push-Location $srcDir
 
 Write-Host "==========================================="

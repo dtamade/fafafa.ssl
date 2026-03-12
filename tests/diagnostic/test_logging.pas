@@ -7,6 +7,8 @@ uses
   fafafa.ssl.logging,
   fafafa.ssl.secure,
   fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.kdf;
 
@@ -129,13 +131,23 @@ end;
 
 begin
   try
-    if not LoadOpenSSLLibrary then
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('Failed to load OpenSSL library: ', E.Message);
+        Exit;
+      end;
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('Failed to load OpenSSL library');
       Exit;
     end;
 
-    WriteLn('OpenSSL Version: ' + GetOpenSSLVersion);
+    WriteLn('OpenSSL Version: ' + GetOpenSSLVersionString);
 
     // Load EVP functions
     if not LoadEVP(GetCryptoLibHandle) then

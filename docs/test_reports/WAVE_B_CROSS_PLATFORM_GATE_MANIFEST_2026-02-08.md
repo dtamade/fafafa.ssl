@@ -8,9 +8,9 @@
 
 | 平台 | 报告 | 结果 |
 |------|------|------|
-| Linux | `test-reports/wave_b_ci_gate_summary_20260208_025426.md` | PASS |
-| Linux examples | `test-reports/examples_compile_ci_gate.json` | `71/75`，`failed=0`，`pass_rate=100.0%` |
-| macOS 探针（非实机） | `test-reports/wave_b_macos_gate_probe_20260208.json` | `status=error`（非 macOS 环境预期） |
+| Linux | `docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_025426.md` | PASS |
+| Linux examples | `docs/archive/reports/examples-compile-history/examples_compile_ci_gate.json` | `71/75`，`failed=0`，`pass_rate=100.0%` |
+| macOS 探针（非实机） | `docs/archive/reports/wave-b-history/wave_b_macos_gate_probe_20260208.json` | `status=error`（非 macOS 环境预期） |
 
 ---
 
@@ -105,14 +105,14 @@ powershell -ExecutionPolicy Bypass -File scripts/validate_all_modules.ps1 \
 ```bash
 bash scripts/generate_wave_b_cross_platform_summary.sh \
   --run-id 20260208_034029 \
-  --linux-summary test-reports/wave_b_ci_gate_summary_20260208_034029.md \
-  --macos-probe test-reports/wave_b_macos_gate_probe_20260208.json \
-  --output test-reports/wave_b_cross_platform_summary_20260208_034029.md
+  --linux-summary docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_034029.md \
+  --macos-probe docs/archive/reports/wave-b-history/wave_b_macos_gate_probe_20260208.json \
+  --output docs/archive/reports/wave-b-history/wave_b_cross_platform_summary_20260208_034029.md
 ```
 
 ### 本轮产物
 
-- `test-reports/wave_b_cross_platform_summary_20260208_034029.md`
+- `docs/archive/reports/wave-b-history/wave_b_cross_platform_summary_20260208_034029.md`
   - linux: `PASS`
   - macos: `PROBE_ONLY`
   - windows: `PENDING`
@@ -167,7 +167,7 @@ powershell -ExecutionPolicy Bypass -File scripts/run_wave_b_windows_gate.ps1 -Dr
   - `bash -n scripts/run_wave_b_macos_gate.sh`（通过）
 - macOS runner dry-run：
   - `bash scripts/run_wave_b_macos_gate.sh --dry-run --run-id 20260208_041500 --output-dir test-reports`
-  - 产物：`test-reports/wave_b_macos_gate_summary_20260208_041500.md`
+  - 产物：`docs/archive/reports/wave-b-history/wave_b_macos_gate_summary_20260208_041500.md`
   - 关键字段：`mode: dry-run`，`overall: DRY_RUN`
 - Windows runner 说明：
   - 当前 Linux 环境 `pwsh` 不可用，仅完成静态脚本校对，待 Windows runner 实机回填。
@@ -178,7 +178,7 @@ powershell -ExecutionPolicy Bypass -File scripts/run_wave_b_windows_gate.ps1 -Dr
   - 新增平台摘要 `overall` 字段解析（`PASS`/`FAIL`/`DRY_RUN`）。
   - 避免把 macOS dry-run 误标为 `READY`。
 - 验证产物：
-  - `test-reports/wave_b_cross_platform_summary_20260208_041500.md`
+  - `docs/archive/reports/wave-b-history/wave_b_cross_platform_summary_20260208_041500.md`
   - 平台状态更新为：`macos = DRY_RUN`，`windows = PENDING`。
 
 ### 下一步（B2 实机回填）
@@ -207,7 +207,7 @@ powershell -ExecutionPolicy Bypass -File scripts/run_wave_b_windows_gate.ps1 -Dr
   - `--strict` 模式下未闭环返回非 0，便于 CI 门禁接入。
 
 本轮样例：
-- `test-reports/wave_b_b2_closure_readiness_20260208_041500.md`（`IN_PROGRESS`）
+- `docs/archive/reports/wave-b-history/wave_b_b2_closure_readiness_20260208_041500.md`（`IN_PROGRESS`）
 
 ---
 
@@ -232,7 +232,7 @@ powershell -ExecutionPolicy Bypass -File scripts/run_wave_b_windows_gate.ps1 -Dr
   - 在 `--strict` 模式下将不一致状态转换为非 0 退出。
 
 样例：
-- `test-reports/wave_b_b2_evidence_consistency_20260208_041500.md`（`INCONSISTENT`）
+- `docs/archive/reports/wave-b-history/wave_b_b2_evidence_consistency_20260208_041500.md`（`INCONSISTENT`）
   - 原因：Linux summary run_id 与目标 run_id 不一致。
 
 ---
@@ -256,5 +256,5 @@ powershell -ExecutionPolicy Bypass -File scripts/run_wave_b_windows_gate.ps1 -Dr
   - `--strict` 模式下执行最终阻断判定。
 
 样例：
-- `test-reports/wave_b_b2_handoff_bundle_20260208_041500.md`
+- `docs/archive/reports/wave-b-history/wave_b_b2_handoff_bundle_20260208_041500.md`
   - `handoff_state=NEEDS_EVIDENCE_SYNC`

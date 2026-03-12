@@ -3,7 +3,11 @@ program test_bn_comprehensive;
 {$mode objfpc}{$H+}
 
 uses
-  SysUtils, fafafa.ssl.openssl.api, fafafa.ssl.openssl.api.bn;
+  SysUtils,
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.api.bn;
 
 var
   TestsPassed, TestsFailed: Integer;
@@ -145,7 +149,8 @@ begin
   remainder := BN_new();
   ctx := BN_CTX_new();
   
-  if (a <> nil) and (b <> nil) and (quotient <> nil) and (remainder <> nil) and (ctx <> nil) then
+  if (a <> nil) and (b <> nil) and (quotient <> nil) and (remainder <> nil) and (ctx <> nil) and
+     Assigned(BN_set_word) and Assigned(BN_div) and Assigned(BN_get_word) then
   begin
     BN_set_word(a, 1000);
     BN_set_word(b, 7);
@@ -165,20 +170,35 @@ end;
 
 procedure Test_BN_Modulo;
 var
-  a, b, result: PBIGNUM;
+  a, b, result, quotient: PBIGNUM;
   ctx: PBN_CTX;
   res_value: Cardinal;
 begin
   a := BN_new();
   b := BN_new();
   result := BN_new();
+  quotient := BN_new();
   ctx := BN_CTX_new();
   
-  if (a <> nil) and (b <> nil) and (result <> nil) and (ctx <> nil) then
+  if (a <> nil) and (b <> nil) and (result <> nil) and (quotient <> nil) and (ctx <> nil) and
+     Assigned(BN_set_word) and Assigned(BN_get_word) then
   begin
     BN_set_word(a, 100);
     BN_set_word(b, 7);
-    BN_mod(result, a, b, ctx);
+    if Assigned(BN_mod) then
+      BN_mod(result, a, b, ctx)
+    else if Assigned(BN_div) then
+      BN_div(quotient, result, a, b, ctx)
+    else
+    begin
+      RunTest('BN_mod (100 mod 7 = 2)', False);
+      if a <> nil then BN_free(a);
+      if b <> nil then BN_free(b);
+      if result <> nil then BN_free(result);
+      if quotient <> nil then BN_free(quotient);
+      if ctx <> nil then BN_CTX_free(ctx);
+      Exit;
+    end;
     res_value := BN_get_word(result);
     RunTest('BN_mod (100 mod 7 = 2)', res_value = 2);
   end
@@ -188,6 +208,7 @@ begin
   if a <> nil then BN_free(a);
   if b <> nil then BN_free(b);
   if result <> nil then BN_free(result);
+  if quotient <> nil then BN_free(quotient);
   if ctx <> nil then BN_CTX_free(ctx);
 end;
 
@@ -199,7 +220,7 @@ begin
   a := BN_new();
   b := BN_new();
   
-  if (a <> nil) and (b <> nil) then
+  if (a <> nil) and (b <> nil) and Assigned(BN_set_word) and Assigned(BN_cmp) then
   begin
     BN_set_word(a, 100);
     BN_set_word(b, 200);
@@ -234,7 +255,7 @@ var
   success: Boolean;
 begin
   bn := BN_new();
-  if bn <> nil then
+  if (bn <> nil) and Assigned(BN_set_word) and Assigned(BN_bn2hex) then
   begin
     BN_set_word(bn, $DEADBEEF);
     hex_str := BN_bn2hex(bn);
@@ -254,7 +275,7 @@ var
   success: Boolean;
 begin
   bn := BN_new();
-  if bn <> nil then
+  if (bn <> nil) and Assigned(BN_set_word) and Assigned(BN_bn2dec) then
   begin
     BN_set_word(bn, 123456789);
     dec_str := BN_bn2dec(bn);
@@ -276,11 +297,23 @@ begin
   TestsPassed := 0;
   TestsFailed := 0;
   
-  if not LoadOpenSSLLibrary then
+  try
+    LoadOpenSSLCore;
+  except
+    on E: Exception do
+    begin
+      WriteLn('ERROR: Failed to load OpenSSL library: ', E.Message);
+      Halt(1);
+    end;
+  end;
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
-    WriteLn('ERROR: Failed to load OpenSSL library');
+    WriteLn('ERROR: OpenSSL core did not stay loaded');
     Halt(1);
   end;
+
+  LoadOpenSSLBN;
   
   try
     WriteLn('Running BN tests...');
@@ -310,6 +343,7 @@ begin
     if TestsFailed = 0 then
     begin
       WriteLn('✓ All BN tests PASSED!');
+      WriteLn('[PASS] bn comprehensive validation completed');
       Halt(0);
     end
     else
@@ -319,6 +353,7 @@ begin
     end;
     
   finally
-    UnloadOpenSSLLibrary;
+    UnloadOpenSSLBN;
+    UnloadOpenSSLCore;
   end;
 end.

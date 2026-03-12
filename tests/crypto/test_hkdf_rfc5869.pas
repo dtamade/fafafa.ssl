@@ -10,7 +10,7 @@ program test_hkdf_rfc5869;
 uses
   SysUtils, Classes, Math,
   fafafa.ssl.base,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   fafafa.ssl.openssl.api.kdf,
   fafafa.ssl.openssl.api.evp;
 

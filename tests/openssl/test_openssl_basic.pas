@@ -6,7 +6,7 @@ uses
   SysUtils,
   fafafa.ssl.factory,
   fafafa.ssl.base,
-  fafafa.ssl.openssl.backed;
+  fafafa.ssl.openssl.lib;
 
 var
   Lib: ISSLLibrary;

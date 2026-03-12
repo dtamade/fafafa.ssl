@@ -12,7 +12,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.exceptions,
   fafafa.ssl.openssl.base,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl,
   fafafa.ssl.openssl.api.bio,

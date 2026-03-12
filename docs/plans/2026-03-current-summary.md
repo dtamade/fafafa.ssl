@@ -1,0 +1,3004 @@
+# 2026-03 Current Summary
+
+这个页面是 2026 年 3 月执行波次的月度汇总入口，用来降低 `docs/plans/**` 的导航噪音。
+
+## 当前真相入口
+
+- 当前仓库健康状态：`../testing/CURRENT_HEALTH.md`
+- 当前测试入口与验证命令：`../testing/TESTING_README.md`
+- 当前 plans 入口：`../PLANS_CURRENT_INDEX.md`
+- 当前 builder / factory / backend contract：`../reference/ARCHITECTURE.md`
+- 当前总路线图入口：`2026-03-10-api-canon-and-implementation-roadmap.md`
+- 当前 Wave 1 API canon 文档化计划：`2026-03-10-api-canon-wave-1-architecture-rewrite.md`
+- 当前 API contract 入口：`../reference/API_CONTRACT_CURRENT_INDEX.md`
+- 当前 pure Pascal client M1 清单：`../reference/PURE_PASCAL_CLIENT_M1_CHECKLIST.md`
+- 当前入口治理文档：`../reference/API_ENTRYPOINT_GOVERNANCE.md`
+- 当前错误模型文档：`../reference/API_ERROR_MODEL.md`
+- 当前 capability 策略文档：`../reference/API_CAPABILITY_STRATEGY.md`
+- 当前 pure Pascal ALPN 波次：`2026-03-10-pure-pascal-client-alpn-negotiation-foundation.md`
+- 当前 pure Pascal peer certificate 波次：`2026-03-10-pure-pascal-client-peer-certificate-foundation.md`
+- 当前 pure Pascal hostname verification 波次：`2026-03-10-pure-pascal-client-hostname-verification-path.md`
+- 当前 pure Pascal custom CA 波次：`2026-03-10-pure-pascal-client-custom-ca-sources-path.md`
+- 当前 pure Pascal verify callback 波次：`2026-03-10-pure-pascal-client-verify-callback-path.md`
+- 当前 pure Pascal info callback 波次：`2026-03-10-pure-pascal-client-info-callback-path.md`
+- 当前 pure Pascal chain verification 波次：`2026-03-10-pure-pascal-client-chain-verification-path.md`
+- 当前 pure Pascal system roots runtime 波次：`2026-03-10-pure-pascal-client-system-roots-runtime.md`
+- 当前 pure Pascal system roots runtime matrix 波次：`2026-03-11-pure-pascal-system-roots-runtime-matrix.md`
+- 当前 pure Pascal protocol support truth 波次：`2026-03-11-pure-pascal-protocol-support-truth.md`
+- 当前 pure Pascal TLS1.2 client minimum slice 计划：`2026-03-11-pure-pascal-tls12-client-minimum-slice.md`
+- 当前 pure Pascal session surface 波次：`2026-03-10-pure-pascal-session-surface-foundation.md`
+- 当前 pure Pascal certificate pinning 波次：`2026-03-10-pure-pascal-client-certificate-pinning-path.md`
+- 当前 pure Pascal password-protected key truth 波次：`2026-03-10-pure-pascal-password-protected-private-key-truth.md`
+- 当前 pure Pascal TLS13 session resumption 波次：`2026-03-10-pure-pascal-tls13-session-resumption-foundation.md`
+- 当前 pure Pascal session ticket runtime 波次：`2026-03-10-pure-pascal-session-ticket-runtime.md`
+
+## 本月高信号主线
+
+- API canon 与实现路线图：`2026-03-10-api-canon-and-implementation-roadmap.md`
+- API canon Wave 1：架构文档重写：`2026-03-10-api-canon-wave-1-architecture-rewrite.md`
+- API canon Wave 2：contract index：`2026-03-10-api-canon-wave-2-contract-index.md`
+- API canon Wave 3：pure Pascal client M1 checklist：`2026-03-10-api-canon-wave-3-pure-pascal-client-m1-checklist.md`
+- API canon Wave 4：entrypoint governance：`2026-03-10-api-canon-wave-4-entrypoint-governance.md`
+- API canon Wave 5：error model：`2026-03-10-api-canon-wave-5-error-model.md`
+- API canon Wave 6：capability strategy：`2026-03-10-api-canon-wave-6-capability-strategy.md`
+- pure Pascal client M1：ALPN foundation：`2026-03-10-pure-pascal-client-alpn-negotiation-foundation.md`
+- pure Pascal client M1：peer certificate foundation：`2026-03-10-pure-pascal-client-peer-certificate-foundation.md`
+- pure Pascal client M1：hostname verification path：`2026-03-10-pure-pascal-client-hostname-verification-path.md`
+- pure Pascal client M1：custom CA sources path：`2026-03-10-pure-pascal-client-custom-ca-sources-path.md`
+- pure Pascal client completeness：verify callback path：`2026-03-10-pure-pascal-client-verify-callback-path.md`
+- pure Pascal client completeness：info callback path：`2026-03-10-pure-pascal-client-info-callback-path.md`
+- pure Pascal client M1：chain verification path：`2026-03-10-pure-pascal-client-chain-verification-path.md`
+- pure Pascal client M1：system roots runtime：`2026-03-10-pure-pascal-client-system-roots-runtime.md`
+- pure Pascal client M1：system roots runtime matrix：`2026-03-11-pure-pascal-system-roots-runtime-matrix.md`
+- pure Pascal client M1：protocol support truth：`2026-03-11-pure-pascal-protocol-support-truth.md`
+- pure Pascal client M1：TLS1.2 client minimum slice 计划：`2026-03-11-pure-pascal-tls12-client-minimum-slice.md`
+- pure Pascal client completeness：session surface foundation：`2026-03-10-pure-pascal-session-surface-foundation.md`
+- pure Pascal client completeness：certificate pinning path：`2026-03-10-pure-pascal-client-certificate-pinning-path.md`
+- pure Pascal client completeness：password-protected key truth：`2026-03-10-pure-pascal-password-protected-private-key-truth.md`
+- pure Pascal client completeness：TLS13 session resumption foundation：`2026-03-10-pure-pascal-tls13-session-resumption-foundation.md`
+- pure Pascal client completeness：session ticket runtime：`2026-03-10-pure-pascal-session-ticket-runtime.md`
+- 项目审查整改总计划：`2026-03-06-project-review-remediation-plan.md`
+- runtime-contract 当前入口：`2026-03-07-runtime-contracts-current-index.md`
+- 工厂共享配置 / 初始化竞态修复：`2026-03-08-factory-shared-config-and-init-race.md`
+- context builder server build/validation 对齐：`2026-03-08-context-builder-server-validation-alignment.md`
+- direct `ISSLLibrary.CreateContext` default-config 语义统一：`2026-03-08-library-create-context-default-config-consistency.md`
+- config surface parity 审查：`2026-03-08-config-surface-parity-audit.md`
+- request config dead-field 显式失败：`2026-03-09-request-config-dead-field-visibleization.md`
+- library-default dead-field 显式失败：`2026-03-09-library-default-dead-field-visibleization.md`
+- request config logging-scope 显式失败：`2026-03-09-request-config-logging-scope-visibleization.md`
+- `CreateDefaultConfig(...)` request-safe logging 兼容收口：`2026-03-09-create-default-config-request-safe-logging.md`
+- factory registration constructor 基线收口：`2026-03-09-factory-library-registration-constructor-fix.md`
+- legacy class-only registration 治理：`2026-03-09-legacy-class-only-registration-governance.md`
+- builder override PEM parity 收口：`2026-03-09-builder-override-pem-parity.md`
+- builder override validation parity 收口：`2026-03-09-builder-override-validation-parity.md`
+- builder override PKCS11 JSON parity 收口：`2026-03-09-builder-override-pkcs11-json-parity.md`
+- builder override PKCS11 INI parity 收口：`2026-03-09-builder-override-pkcs11-ini-parity.md`
+- builder override OCSP parity 收口：`2026-03-09-builder-override-ocsp-parity.md`
+- builder override cert-verify-cache parity 收口：`2026-03-09-builder-override-cert-verify-cache-parity.md`
+- builder override advanced option parity 收口：`2026-03-09-builder-override-advanced-option-parity.md`
+- builder import advanced option parity 收口：`2026-03-09-builder-import-advanced-option-parity.md`
+- builder advanced option 空值语义合同化：`2026-03-09-builder-advanced-option-empty-value-contract.md`
+- builder merge advanced snapshot 语义收口：`2026-03-09-builder-merge-advanced-option-snapshot-semantics.md`
+- builder merge string-field 空值 snapshot 语义收口：`2026-03-09-builder-merge-string-field-empty-value-snapshot-semantics.md`
+- builder private-key-password snapshot 语义收口：`2026-03-09-builder-private-key-password-snapshot-semantics.md`
+- builder backend-selection snapshot 语义收口：`2026-03-09-builder-backend-selection-snapshot-semantics.md`
+- builder backend-selection mode normalization：`2026-03-09-builder-backend-selection-mode-normalization.md`
+- 测试夹具平台化：`2026-03-09-test-fixture-platformization.md`
+- 当前 contract 文档同步：`2026-03-09-doc-contract-truth-sync.md`
+- server builder `ServerName` context parity：`2026-03-09-context-builder-server-name-context-parity.md`
+- connection context `ServerName` fallback helper 收口：`2026-03-09-connection-context-server-name-fallback-helper-centralization.md`
+- `ISSLContext.ServerName` 迁移策略：`2026-03-09-server-name-migration-policy.md`
+- WolfSSL standalone shim policy：`2026-03-09-wolfssl-standalone-shim-policy.md`
+- focused style 尾波收敛：`2026-03-08-focused-style-tail-infra-units.md`
+- PKCS11 zero-noise warning 对齐：`2026-03-08-pkcs11-managed-result-warning-alignment.md`
+- plans 当前索引治理：`2026-03-08-plans-current-index-docs-governance.md`
+- git status 噪音摘要：`2026-03-08-git-status-noise-summary.md`
+- test-reports 噪音拆桶：`2026-03-08-git-status-noise-test-reports-bucket.md`
+- test-reports 输出策略收口：`2026-03-08-test-reports-output-policy-and-march-summary.md`
+- Wave C local-guard 报告目录收口：`2026-03-08-wave-c-local-guard-report-dir-policy.md`
+- Wave C CI re-enable / submission-pack 报告目录收口：`2026-03-08-wave-c-ci-reenable-report-dir-policy.md`
+- Wave C quick/enablement + Wave B/TLS13 报告目录收口：`2026-03-08-wave-c-quick-enablement-and-wave-b-tls13-report-dir-policy.md`
+- Wave B platform gates + active report surface：`2026-03-08-wave-b-platform-gates-and-active-report-surface.md`
+- Workflow-level Wave B / TLS13 report-dir 收口：`2026-03-08-workflow-report-dir-policy-wave-b-and-tls13.md`
+- Wave C quick + ci-matrix workflow report-dir 收口：`2026-03-08-wave-c-quick-and-ci-matrix-workflow-report-dir-policy.md`
+- 历史 `test_report_*.txt` 首桶清理：`2026-03-08-test-reports-historical-test-report-bucket.md`
+- 历史 `test_p2_*` 第二桶清理：`2026-03-08-test-reports-historical-test-p2-bucket.md`
+- 历史 `wave_b_*` 第三桶清理：`2026-03-08-test-reports-historical-wave-b-bucket.md`
+- 历史 `examples_compile*` + `tls13_signer_*` 第四桶清理：`2026-03-08-test-reports-historical-examples-and-tls13-buckets.md`
+- 历史 Wave C quick / enablement 第五桶清理：`2026-03-08-test-reports-historical-wave-c-quick-enablement-bucket.md`
+- 历史 Wave C pre-ci / submission / approval 第六桶清理：`2026-03-08-test-reports-historical-wave-c-pre-ci-submission-bucket.md`
+- 历史 Wave C local-first / local-guard 第七桶清理：`2026-03-08-test-reports-historical-wave-c-local-first-guard-bucket.md`
+- 历史 singleton 尾项清理：`2026-03-08-test-reports-historical-singleton-tail.md`
+- test-reports 历史面清理计划：`2026-03-08-test-reports-historical-surface-cleanup-plan.md`
+
+## 本月已完成的关键收口
+
+- P0：工厂层共享默认配置污染和首次初始化竞态已经修复。
+- P1：context builder server 路径已收敛到与 validation 一致的语义：`UsePKCS11`、server `WithSystemRoots`、certificate/private-key PEM 加载、以及 explicit backend 的 store 复用都已补齐。
+- P1：direct `ISSLLibrary.CreateContext(...)` 现在跨后端都会应用 library 默认配置；context 默认值不再只有 OpenSSL / WinSSL 生效。
+- P1：factory request path 现在会显式拒绝非默认的 `BufferSize` / `HandshakeTimeout`，不再静默接受未接线字段。
+- P1：backend `SetDefaultConfig(...)` 现在也会显式拒绝非默认的 `BufferSize` / `HandshakeTimeout`，request-path 与 library-default-path 已对齐。
+- P1：request-scoped factory config 现在也会显式拒绝 `LogLevel` / `LogCallback`；日志配置边界已收敛到 library-scope。
+- P1：`CreateDefaultConfig(...)` 现在会在函数出口显式清理 `LogLevel` / `LogCallback`；library-default logging 不再偶然泄漏回 request config。
+- P0：factory cached backend 现在会通过显式 `LibraryFactory` 保留 constructor baseline；`GetDefaultConfig(...)` 不再因 class-only instantiation 丢失默认配置。
+- P1：仓库内剩余 `RegisterLibrary(...)` 调用已全部切到显式 factory；class-only overload 现在仅保留兼容 fallback，并带有弃用信号。
+- P1：`TSSLContextBuilder.Override(...)` 现在支持 PEM 材料字段，并与 `With*PEM` 保持 last-write-wins 互斥语义。
+- P1：`TSSLContextBuilder.Override(...)` 现在也支持 validation 关键字段 `use_system_roots` / `pkcs11_uri`，`ValidateServer` 与 `WithSystemRoots` / `UsePKCS11` 结果保持一致。
+- P1：`TSSLContextBuilder.Override(...)` 现在也支持 `pkcs11_pin` / `pkcs11_pin_method`；PKCS#11 字段在 `ExportToJSON` / `ImportFromJSON` / `Merge(...)` 上不再静默丢失。
+- P1：PKCS#11 字段现在也进入 `ExportToINI` / `ImportFromINI`；INI / JSON 两条配置面已经收口到同一组字段。
+- P1：`Override(...)` 现在也支持 `ocsp_stapling_enabled` / `ocsp_stapling_required`，并与 `WithOCSPStapling*` 保持同样的 option-sync 语义。
+- P1：`Override(...)` 现在也支持 `cert_verify_cache` / `cert_verify_cache_skip_valid_hit_refresh`，并与 `WithCertVerifyCache*` 保持同样的 options parity。
+- P1：builder advanced option-coupled fields 的空值边界已显式合同化：override 空值仍启用 `ssoEnableSNI` / `ssoEnableALPN`，field-only import 空值不启用，对显式 `options` 仍保持优先；这波属于 contract-only 波次，无需生产代码变更。
+- P1：`Merge(...)` 现在也按 source snapshot 收口了 advanced empty-value 与 `options=[]` 语义：empty `server_name` / `alpn_protocols` 会清空目标字段，显式空 option-set 会清空 `FOptions`，OCSP booleans 也会随 source 一起覆盖。
+- P1：`Merge(...)` 现在也按 source snapshot 收口了 certificate / key / CA / PKCS#11 / cipher string fields 的 empty-value 语义；default source snapshot 不再让这些字段残留旧值。
+- P1：`private_key_password` 现在也进入 builder 的 JSON / INI snapshot surface，并参与 `ImportFromJSON(...)` / `ImportFromINI(...)` / `Merge(...)`；私钥路径/PEM 不再和密码状态脱钩。
+- P1：backend-selection state 现在也进入 builder 的 `Clone` / JSON / INI / `Merge(...)` / `Reset` surface；explicit backend 与 auto-selection requirements 不再在 snapshot / round-trip 后静默丢失。
+- P1：backend-selection mode 现在也会归一化：`WithAutoBackendSelection` / `Require*` 会清空 inert explicit state，`WithBackend` 会清空 stale requirements，import/merge 也不会再长期保留 auto+explicit 双态噪音。
+- P1：`python3 scripts/check_code_style.py src` 已恢复为 `0` errors / `0` warnings。
+- P1：repo-hygiene 现在能用 `git status` 摘要直接看见 `test_reports_drift`，不再被 `other` 淹没。
+- P1：高频报告脚本继续把默认输出迁移到 `tmp/`；Wave C local-guard、CI re-enable、quick/enablement，Wave B/TLS13 gate，Wave B 平台门禁/monitor 活动面，以及 Wave B/TLS13、Wave C quick、ci-matrix 这些 workflow 层显式覆盖都已完成路径收口。
+- P1：Wave B cross-summary 现在也显式输出 `linux_examples_warning`；Linux examples 的 selection/warning 在 cross-summary / evidence / handoff 三层已对齐。
+- P1：Wave B CI gate summary 现在也显式输出 examples warning；producer -> cross-summary -> evidence -> handoff 四层的 warning 面已对齐。
+- P1：Wave B CI gate summary 现在也显式输出 examples selection；producer summary 不再只靠 alias/path 让读者自己推断来源。
+- P1：Wave B CI gate dry-run 现在也显式输出 examples selection/warning；dry-run 和真实 summary 的 examples metadata 已对齐。
+- P1：Wave B CI gate dry-run 现在也显式输出 examples path 面（report/current_alias/run-scoped/archive）；producer dry-run 观察面已完整。
+- P1：Wave B CI gate dry-run 现在也显式输出 `run_id` / `summary_out`；summary 层的 dry-run 观测面已结构化。
+- P1：Wave B cross-summary / evidence 的 dry-run 现在也显式输出 `linux_examples_json`；dry-run 观察面已能同时看见 path + selection + warning。
+- P1：Wave B cross-summary dry-run 现在也显式输出 macOS/Windows/Android 输入路径；平台输入层的 dry-run 观测面已补齐。
+- P1：Wave B evidence dry-run 现在也显式输出 summary/cross/closure 输入路径；input path 层的观测面已补齐。
+- P1：Wave B handoff dry-run 现在也统一输出 `linux_examples_json`；Wave B 主链 dry-run 的 examples 字段名已经对齐。
+- P1：Wave B handoff dry-run 现在也显式输出 4 份目标报告路径；输出层不再只给 `output_dir` 让人自己拼。
+- P1：Wave B handoff dry-run 现在也显式输出 macOS / Windows summary 路径；平台输入层的 dry-run 观测面已补齐。
+- P1：Wave B closure dry-run 现在也显式输出三平台 summary 路径；closure dry-run 的输入面更完整。
+- P1：Wave B macOS gate dry-run 现在也显式输出 run_id / output_dir / summary / probe/examples 路径；platform gate dry-run 观察面已结构化。
+- P1：Wave B Windows gate dry-run 现在也显式输出 run_id / output_dir / summary / blocker/winssl/openssl/modules log 路径；Windows platform gate dry-run 观察面已结构化。
+- P1：Wave B active archive surface 现在也会收口 Linux/macOS/Windows gate debug logs；归档面不再只剩 summary markdown。
+- P1：`continuous_test_monitor.sh` 现在也把 `trend_report` 和 run-scoped unit/bin 目录收口到 monitor reports 根内；monitor 不再继续向根 `tmp/` 扩散活动产物。
+- P1：builder 现在也把 `private_key_file + private_key_pem` 双态收口到 `PKCS#11 > PEM > file`；`ImportFromJSON` / `Merge` 不再让 build 真行为和 validation 文案打架。
+- P1：builder 现在也把 `certificate_file + certificate_pem` 双态收口到 `PEM > file`；导入/合并产生的双态不再先撞 file-not-found。
+- P1：`ValidateServer` 现在也会对 `pkcs11_uri + private_key_file/private_key_pem` 发 precedence warning；PKCS11 mixed-input 不再是静默黑盒。
+- P1：PKCS11 用户面真相也已收口：`UsePKCS11(...)` 只替代私钥来源，不替代 server 证书要求；PKCS11 guide 里的旧 builder API 已清掉。
+- P0/P1：后续执行模式已切到路线图驱动；API canon、实现阶段划分、pure Pascal M1 验收标准和“非必要不停下”的执行协议已固定在总路线图中。
+- P0：`docs/reference/ARCHITECTURE.md` 已重写为 API canon 真相文档；旧的周计划式架构叙述已退出当前真相源。
+- P0：`docs/reference/API_CONTRACT_CURRENT_INDEX.md` 已建立为 contract 当前入口；Core / Advanced / Backend-Specific 三层现在有明确导航。
+- P0：`docs/reference/PURE_PASCAL_CLIENT_M1_CHECKLIST.md` 已建立；pure Pascal 客户端 M1 现在有“已满足 / 部分满足 / 缺失”的当前清单，而不是口头目标。
+- P0：`docs/reference/API_ENTRYPOINT_GOVERNANCE.md` 已建立；主入口/兼容入口/deprecated bridge surface 现在有单独治理文档。
+- P0：`docs/reference/API_ERROR_MODEL.md` 已建立；Core / Advanced API 的 result/exception/warning 语义现在有单独真相文档。
+- P0：`docs/reference/API_CAPABILITY_STRATEGY.md` 已建立；capability / dependency / unsupported / fallback 的解释规则现在有单独真相文档。
+- P1：`BuildClient` / `BuildServer` 的 material-loading 分支已抽成共享 helper；后续 cert/key/PKCS11/material drift 风险已从两份长分支压缩到一处。
+- P1：pure Pascal 路径的 `ALPN` 现在已具备最小协商骨架：ClientHello offer parse、server selection、EncryptedExtensions parse、selected protocol observability；M1 checklist 已从“缺失”提升到“部分满足”。
+- P1：pure Pascal 客户端现在也会在真实 TLS 1.3 scripted client handshake 中捕获 `Certificate` 握手消息，并支持 `GetPeerCertificate` / `GetPeerCertificateChain` 重建对端 leaf/chain；这为下一波 `hostname verification` / `system roots` / `custom CA` 提供了真实输入面。
+- P1：pure Pascal 客户端现在也会在 `sslVerifyPeer` 下，从真实握手路径读取 context trust store，并在 `Connect` 返回前执行 hostname verification；trusted-match 成功、hostname mismatch 显式失败的 focused client contract 已建立。
+- P1：pure Pascal 客户端现在也会在真实握手路径上消费 `LoadCAFile(...)` / `LoadCAPath(...)`；custom CA / CA bundle 不再只是 context 配置面存在，而是已有 focused client handshake 证据。
+- P1：pure Pascal 客户端现在也会真正消费 `SetVerifyCallback(...)`；verify callback 不再只是 context 存字段，而是已进入真实客户端验证主线，支持 veto success / override failure 两条 focused contract。
+- P1：pure Pascal 客户端现在也会真正消费 `SetInfoCallback(...)`；成功握手会发 `handshake_start/handshake_done`，验证失败会发 `verify_failed`，不再只是 context 存字段。
+- P1：pure Pascal 客户端现在也会在验证阶段消费 peer chain intermediates，并沿 issuer 链走到 trusted root；`leaf + intermediate + trusted root` 的真实 scripted handshake 已通过。
+- P1：`WithSystemRoots` 现在已有 env-gated 的真实外网小型矩阵证据；pure Pascal 客户端可在 `FAFAFA_RUN_NETWORK_TESTS=1` 下完成 `www.google.com` / `www.cloudflare.com` / `www.github.com` 的 system-roots 握手，并支持 `FAFAFA_SYSTEM_ROOTS_HOSTS` 做受控覆盖。
+- P1：pure Pascal 的协议版本真相现在也已收口：`IsProtocolSupported(sslProtocolTLS12)=False`、`MinTLSVersion=MaxTLSVersion=sslProtocolTLS13`，且 library default / context default 都改为 `TLS1.3-only`；显式 opt-in 的 TLS 1.2 路径仍保留 unsupported contract。
+- P1：pure Pascal TLS1.2 的 Phase A foundation 已落地：新增 `tls12.wire` / `tls12.prf` / `tls12.clienthello` / `tls12.serverhello.parser` / `tls12.rsa.verify`，并有独立的 PRF、ClientHello、server-flight synthetic parser、RSA verify 测试；但这还不改变当前 runtime truth，TLS1.2 client handshake 仍未接到 `freepascal.connection` 主线。
+- P1：pure Pascal TLS1.2 client 现在已经接入 `freepascal.connection` 的最小握手主线，并通过本地 OpenSSL oracle：`TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256` + X25519 + RSA PKCS#1 SHA-256 `ServerKeyExchange` 校验。与此同时，runtime truth 也已上调回 `IsProtocolSupported(sslProtocolTLS12)=True` / `MinTLSVersion=sslProtocolTLS12`，但 default config/context 仍保守保持 `TLS1.3-only`。
+- P1：pure Pascal TLS1.2 现在也已有最小 application-data 路径：本地 OpenSSL 下可完成 `Write(GET)` + `Read(HTTP response)`，`GetConnectionInfo` 也已能正确映射 `TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256` 的 cipher/kex/hash/keysize/macsize。
+- P1：pure Pascal TLS1.2 本地 verify-on 与 shutdown 也已进入回归面：在本地 CA 签发的 `localhost` 证书下可完成 `sslVerifyPeer` + hostname 成功握手，并能向 OpenSSL 发送 TLS1.2 `close_notify`。
+- P1：pure Pascal TLS1.2 的高层 API 入口也已覆盖：`TSSLContextBuilder.WithTLS12 + WithVerifyPeer + WithCAFile + BuildClient`，配合 `TSSLConnector` / `TSSLStream` 能完成本地 verify-on HTTPS roundtrip。
+- P1：pure Pascal TLS1.2 的 cipher coverage 已从单一路径扩到两路本地互操作：`TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256` 与 `TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256` 都已在本地 OpenSSL oracle 下通过。
+- P1：pure Pascal TLS1.2 的 session surface 已不再只是占位：`GetSession` / `Clone` / `SetSession` 在本地路径可用，且 current truth 已推进到 session-id resumption 可用。
+- P1：pure Pascal TLS1.2 的高层 API 现在对 `AES128-GCM` 也已对齐：`TSSLContextBuilder + TSSLConnector + TSSLStream` 在本地 verify-on `AES128-GCM` 路径下通过。
+- P1：pure Pascal TLS1.2 的 resumption truth 也已用矩阵锁住：当前在 `CHACHA` / `AES128-GCM` 两路下，第一次握手 `IsResumable=True`，第二次握手 `IsSessionReused=True`。
+- P1：pure Pascal TLS1.2 的 network-gated system-roots harness 也已落地：默认不绑定公网主机，只在显式提供 `FAFAFA_TLS12_SYSTEM_ROOTS_HOSTS` / `FAFAFA_TLS12_SYSTEM_ROOTS_HOST` 时运行。
+- P1：pure Pascal TLS1.2 现在已补到 `rsa_pkcs1_sha512` / `rsa_pss_rsae_sha256` 的本地互操作；同时 `AES256-GCM-SHA384` 也已在本地 OpenSSL oracle 下通过。
+- P1：`2026-03-11` 的 network-gated TLS1.2 system-roots 真实探针中，`www.apache.org`、`www.perl.org`、`ftp.gnu.org` 已通过。
+- P1：pure Pascal TLS1.2 的 `P-256 ECDHE` 也已在本地矩阵下通过；这意味着当前实现不再局限于 `X25519`。
+- P1：此前失败的 `rsa2048.badssl.com` 现在也已通过 TLS1.2 system-roots 真实探针，说明 `P-256 + rsa_pkcs1_sha512 + AES128-GCM` 的公网残差已收口。
+- P1：pure Pascal 的 session public surface 不再是空实现；`GetSession` 现在返回可序列化/可克隆的 session snapshot，`SetSession` 保持连接可用，`IsSessionReused` 当前仍显式 `False`，等待真实 resumption 实现。
+- P1：pure Pascal 客户端现在也会真正消费 `certificate pinning`；certificate pin 和 public-key pin 都已进入真实客户端验证主线，错误 pin 会显式失败。
+- P1：pure Pascal backend 不再把 `password-protected private keys` 伪装成“已支持”；capability 已回到真实值，且加密 PEM 私钥现在显式报 unsupported，而不是静默忽略 password/callback。
+- P1：pure Pascal 现在已有 TLS 1.3 single-identity `psk_dhe_ke` resumption foundation；scripted pure Pascal client/server 第二次握手已可走 reused path，但这还不是对外部 TLS 栈的互操作承诺。
+- P1：pure Pascal 客户端现在还能在真实外网站点上提取 `NewSessionTicket` 并形成 `IsResumable=True` 的 session snapshot；但用该 snapshot 对外部站点做第二次 resumed handshake 仍会收到对端 alert，外部互操作仍未完成。
+- P1/P2：历史 `test-reports/` 清理已经闭环完成八波：106 份 `test_report_*.txt`、18 份 `test_p2_*`、24 份 `wave_b_*`、10 份 `examples_compile*`、8 份 `tls13_signer_*`、30 份 Wave C quick / enablement、16 份 Wave C pre-ci / submission / approval、79 份 Wave C local-first / local-guard，以及 3 份 singleton 尾项，均已从 tracked surface 移除；其中 28 份 `test_report_*.txt`、3 份 `test_p2_*`、11 份 `wave_b_*`、9 份 `examples_compile*`、26 份 Wave C quick / enablement、9 份 Wave C pre-ci / submission、56 份 Wave C local-first / local-guard 证据已迁到 `docs/archive/reports/`，当前 tracked `test-reports/` 已降为 `0`。
+
+- P1：fake backend fixture 现在收口到 `tests/helpers/` 共享 include；config/build-path 与 builder/store consistency 不再各自维护一份私有夹具。
+- P1：FreePascal 连接现在也会把有效 `ServerName` 反映到 `GetConnectionInfo.ServerName`；`create -> override -> clear` 三段状态不再只在 OpenSSL / MbedTLS / WolfSSL 可观测。
+- P1：三份高可见 WinSSL 联网示例现在也切到 per-connection SNI，不再继续示范 deprecated context-level `SetServerName(...)`。
+- P1：`examples/example_factory_usage.pas` 现在也改成展示 per-connection SNI；最直接的快速入门入口不再继续打印旧的 context-level `SetServerName(...)`。
+- P1：五份高可见 WinSSL 示例测试（含 `test_performance` / `test_certchain`）现在也切到 per-connection SNI；示例测试层不再继续示范 deprecated context-level `SetServerName(...)`。
+- P1：`tests/examples/test_basic.pas` / `tests/examples/test_lib_core_functionality.pas` 现在被显式定性为 deprecated compatibility coverage，不再被误读成推荐写法。
+- P1：`tests/examples/test_lib_core_functionality.pas` 已重新对齐当前 Base64/registration API，历史 compile drift 已清掉。
+- P1：`tests/examples/test_basic.pas` 的 file-local deprecated warnings 与最后一个 note 已局部收口；compatibility coverage 保留，但不再继续刷 file-local noise。
+- P2：`README.md` / `docs/README.md` / `docs/reference/ARCHITECTURE.md` 现在显式记录 builder single-resolve backend、library-default vs request-scope、owner fields normalize 等当前合同。
+- P1：builder server path 现在也会保留配置好的 `ServerName` context 属性；`BuildServerWithValidation(...)` 不再把 `WithSNI(...)` 静默丢掉。
+
+## 2026-03-09 (config build-path fake backend fixture)
+- Added:
+  - `docs/plans/2026-03-09-config-build-path-fake-backend-fixture.md`
+  - `tests/config/test_fake_default_backend_fixture.inc`
+- RED:
+  - `fpc -Fu./src -otmp/test_config_snapshot_clone tests/config/test_config_snapshot_clone.pas && ./tmp/test_config_snapshot_clone` => FAIL (`18/22`)
+  - `fpc -Fu./src -otmp/test_config_import_export tests/config/test_config_import_export.pas && ./tmp/test_config_import_export` => FAIL (`46/47`) [`No SSL library available. Please register a library first.`]
+- GREEN:
+  - Updated `tests/config/test_config_snapshot_clone.pas`
+  - Updated `tests/config/test_config_import_export.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src -otmp/test_config_snapshot_clone tests/config/test_config_snapshot_clone.pas && ./tmp/test_config_snapshot_clone` => PASS (`22/22`)
+  - `fpc -Fu./src -otmp/test_config_import_export tests/config/test_config_import_export.pas && ./tmp/test_config_import_export` => PASS (`47/47`)
+  - `fpc -Fu./src -otmp/test_config_backend_selection_snapshot_semantics tests/config/test_config_backend_selection_snapshot_semantics.pas && ./tmp/test_config_backend_selection_snapshot_semantics` => PASS (`77/77`)
+  - `fpc -Fu./src -otmp/test_config_backend_selection_mode_normalization tests/config/test_config_backend_selection_mode_normalization.pas && ./tmp/test_config_backend_selection_mode_normalization` => PASS (`32/32`)
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+- Review snapshot:
+  - config build-path suites 现在不再依赖进程外部先注册默认 SSL backend
+  - next queue: 为 `BuildServer` implicit-default + `WithSystemRoots` 的 `SelectedBackend` 初始化缺口补 focused contract
+
+## 2026-03-09 (builder server default-backend store consistency)
+- Added:
+  - `docs/plans/2026-03-09-builder-server-default-backend-store-consistency.md`
+- RED:
+  - `fpc -gl -Fu./src -otmp/test_context_builder_backend_store_consistency tests/test_context_builder_backend_store_consistency.pas && ./tmp/test_context_builder_backend_store_consistency` => FAIL (`EAccessViolation` from `GetLibrary` -> `CreateCertificateStore` -> `BuildServer`)
+- GREEN:
+  - Updated `src/fafafa.ssl.context.builder.pas`
+  - Updated `tests/test_context_builder_backend_store_consistency.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -gl -Fu./src -otmp/test_context_builder_backend_store_consistency tests/test_context_builder_backend_store_consistency.pas && ./tmp/test_context_builder_backend_store_consistency` => PASS
+  - `fpc -Fu./src -otmp/test_config_snapshot_clone tests/config/test_config_snapshot_clone.pas && ./tmp/test_config_snapshot_clone` => PASS (`22/22`)
+  - `fpc -Fu./src -otmp/test_config_import_export tests/config/test_config_import_export.pas && ./tmp/test_config_import_export` => PASS (`47/47`)
+  - `fpc -Fu./src -otmp/test_config_backend_selection_snapshot_semantics tests/config/test_config_backend_selection_snapshot_semantics.pas && ./tmp/test_config_backend_selection_snapshot_semantics` => PASS (`77/77`)
+  - `fpc -Fu./src -otmp/test_config_backend_selection_mode_normalization tests/config/test_config_backend_selection_mode_normalization.pas && ./tmp/test_config_backend_selection_mode_normalization` => PASS (`32/32`)
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+- Review snapshot:
+  - `BuildServer` 的 implicit-default + `WithSystemRoots` 路径已不再消费未初始化 backend 值
+  - next queue: 收口 implicit-default 的 concrete backend 只解析一次，避免 context/store 分两次 autodetect
+
+## 2026-03-09 (builder implicit-default backend resolution consistency)
+- Added:
+  - `docs/plans/2026-03-09-builder-implicit-default-backend-resolution-consistency.md`
+- RED:
+  - `fpc -gl -Fu./src -otmp/test_context_builder_backend_store_consistency tests/test_context_builder_backend_store_consistency.pas && ./tmp/test_context_builder_backend_store_consistency` => FAIL (`resolved implicit backend client store creates on default backend expected=1 actual=0`)
+- GREEN:
+  - Updated `src/fafafa.ssl.context.builder.pas`
+  - Updated `tests/test_context_builder_backend_store_consistency.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -gl -Fu./src -otmp/test_context_builder_backend_store_consistency tests/test_context_builder_backend_store_consistency.pas && ./tmp/test_context_builder_backend_store_consistency` => PASS
+  - `fpc -Fu./src -otmp/test_config_snapshot_clone tests/config/test_config_snapshot_clone.pas && ./tmp/test_config_snapshot_clone` => PASS (`22/22`)
+  - `fpc -Fu./src -otmp/test_config_import_export tests/config/test_config_import_export.pas && ./tmp/test_config_import_export` => PASS (`47/47`)
+  - `fpc -Fu./src -otmp/test_config_backend_selection_snapshot_semantics tests/config/test_config_backend_selection_snapshot_semantics.pas && ./tmp/test_config_backend_selection_snapshot_semantics` => PASS (`77/77`)
+  - `fpc -Fu./src -otmp/test_config_backend_selection_mode_normalization tests/config/test_config_backend_selection_mode_normalization.pas && ./tmp/test_config_backend_selection_mode_normalization` => PASS (`32/32`)
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+- Review snapshot:
+  - implicit-default 路径现在会先解析一次 concrete backend，再由 context/store 共享复用
+  - next queue: 抽共享 builder backend-resolution helper，消掉 client/server 复制分支
+
+## 2026-03-09 (milestone 1 kickoff)
+- Added:
+  - `docs/plans/2026-03-09-milestone-1-builder-factory-backend-semantics.md`
+- Review snapshot:
+  - 开发节奏从碎片波次切到 milestone-driven execution
+  - Milestone 1 主线定为 `builder` / `factory` / backend 语义统一
+  - 当前已连续落地两波 backend-resolution 收口，后续继续沿同一主线推进
+
+
+## 2026-03-09 (builder backend-resolution helper)
+- Added:
+  - `docs/plans/2026-03-09-builder-backend-resolution-helper.md`
+- RED:
+  - `fpc -gl -Fu./src -otmp/test_context_builder_backend_store_consistency tests/test_context_builder_backend_store_consistency.pas && ./tmp/test_context_builder_backend_store_consistency` => FAIL (`resolved explicit autodetect client store creates on default backend expected=1 actual=0`)
+- GREEN:
+  - Updated `src/fafafa.ssl.context.builder.pas`
+  - Updated `tests/test_context_builder_backend_store_consistency.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -gl -Fu./src -otmp/test_context_builder_backend_store_consistency tests/test_context_builder_backend_store_consistency.pas && ./tmp/test_context_builder_backend_store_consistency` => PASS
+  - `fpc -Fu./src -otmp/test_config_snapshot_clone tests/config/test_config_snapshot_clone.pas && ./tmp/test_config_snapshot_clone` => PASS (`22/22`)
+  - `fpc -Fu./src -otmp/test_config_import_export tests/config/test_config_import_export.pas && ./tmp/test_config_import_export` => PASS (`47/47`)
+  - `fpc -Fu./src -otmp/test_config_backend_selection_snapshot_semantics tests/config/test_config_backend_selection_snapshot_semantics.pas && ./tmp/test_config_backend_selection_snapshot_semantics` => PASS (`77/77`)
+  - `fpc -Fu./src -otmp/test_config_backend_selection_mode_normalization tests/config/test_config_backend_selection_mode_normalization.pas && ./tmp/test_config_backend_selection_mode_normalization` => PASS (`32/32`)
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+  - `git diff --check -- src/fafafa.ssl.context.builder.pas tests/test_context_builder_backend_store_consistency.pas docs/plans/2026-03-09-builder-backend-resolution-helper.md task_plan.md findings.md progress.md docs/plans/2026-03-current-summary.md` => PASS
+- Review snapshot:
+  - builder 现在先统一 resolve concrete backend，再由 context/store 共享复用
+  - explicit `WithBackend(sslAutoDetect)` 不再在 drifting-default 场景里跨 backend 漂移
+  - next queue: 进入 Milestone 1 Task 3，收口 default-config / request-scope / context-scope boundary
+
+
+## 2026-03-09 (factory default-config boundary follow-up)
+- Added:
+  - `docs/plans/2026-03-09-factory-default-config-boundary-followup.md`
+- RED:
+  - `fpc -Fu./src -otmp/test_library_default_config_dead_field_visibleization tests/test_library_default_config_dead_field_visibleization.pas && ./tmp/test_library_default_config_dead_field_visibleization` => FAIL (`FreePascal Native default CertificateFile should raise ESSLConfigurationException`)
+- GREEN:
+  - Updated `src/fafafa.ssl.factory.pas`
+  - Updated `src/fafafa.ssl.openssl.backed.pas`
+  - Updated `src/fafafa.ssl.freepascal.lib.pas`
+  - Updated `src/fafafa.ssl.mbedtls.lib.pas`
+  - Updated `src/fafafa.ssl.wolfssl.lib.pas`
+  - Updated `src/fafafa.ssl.winssl.lib.pas`
+  - Updated `tests/test_library_default_config_dead_field_visibleization.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src -otmp/test_library_default_config_dead_field_visibleization tests/test_library_default_config_dead_field_visibleization.pas && ./tmp/test_library_default_config_dead_field_visibleization` => PASS
+  - `fpc -Fu./src -otmp/test_library_create_context_default_config_consistency tests/test_library_create_context_default_config_consistency.pas && ./tmp/test_library_create_context_default_config_consistency` => PASS
+  - `fpc -Fu./src -otmp/test_factory_request_config_logging_scope_visibleization tests/test_factory_request_config_logging_scope_visibleization.pas && ./tmp/test_factory_request_config_logging_scope_visibleization` => PASS
+  - `fpc -Fu./src -otmp/test_factory_shared_config_and_init_race tests/test_factory_shared_config_and_init_race.pas && ./tmp/test_factory_shared_config_and_init_race` => PASS
+  - `fpc -Fu./src -otmp/test_factory_backend_default_config_initialization tests/test_factory_backend_default_config_initialization.pas && ./tmp/test_factory_backend_default_config_initialization` => PASS
+  - `fpc -Fu./src -otmp/test_default_config tests/config/test_default_config.pas && ./tmp/test_default_config` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+- Review snapshot:
+  - library default config 不再吞 request-only certificate / private-key / CA material dead fields
+  - request path 仍然保持证书/CA material 的合法入口
+  - next queue: 明确 `LibraryType` / `ContextType` 在 library defaults 上的 reject vs normalize contract
+
+
+## 2026-03-09 (factory default-config owner fields contract)
+- Added:
+  - `docs/plans/2026-03-09-factory-default-config-owner-fields-contract.md`
+- RED:
+  - `fpc -Fu./src -otmp/test_library_default_config_dead_field_visibleization tests/test_library_default_config_dead_field_visibleization.pas && ./tmp/test_library_default_config_dead_field_visibleization` => FAIL (`FreePascal Native should normalize default LibraryType back to backend owner`)
+- GREEN:
+  - Updated `src/fafafa.ssl.factory.pas`
+  - Updated `src/fafafa.ssl.openssl.backed.pas`
+  - Updated `src/fafafa.ssl.freepascal.lib.pas`
+  - Updated `src/fafafa.ssl.mbedtls.lib.pas`
+  - Updated `src/fafafa.ssl.wolfssl.lib.pas`
+  - Updated `src/fafafa.ssl.winssl.lib.pas`
+  - Updated `tests/test_library_default_config_dead_field_visibleization.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src -otmp/test_library_default_config_dead_field_visibleization tests/test_library_default_config_dead_field_visibleization.pas && ./tmp/test_library_default_config_dead_field_visibleization` => PASS
+  - `fpc -Fu./src -otmp/test_library_create_context_default_config_consistency tests/test_library_create_context_default_config_consistency.pas && ./tmp/test_library_create_context_default_config_consistency` => PASS
+  - `fpc -Fu./src -otmp/test_factory_request_config_logging_scope_visibleization tests/test_factory_request_config_logging_scope_visibleization.pas && ./tmp/test_factory_request_config_logging_scope_visibleization` => PASS
+  - `fpc -Fu./src -otmp/test_factory_shared_config_and_init_race tests/test_factory_shared_config_and_init_race.pas && ./tmp/test_factory_shared_config_and_init_race` => PASS
+  - `fpc -Fu./src -otmp/test_factory_backend_default_config_initialization tests/test_factory_backend_default_config_initialization.pas && ./tmp/test_factory_backend_default_config_initialization` => PASS
+  - `fpc -Fu./src -otmp/test_default_config tests/config/test_default_config.pas && ./tmp/test_default_config` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+- Review snapshot:
+  - library defaults 现在会 normalize `LibraryType` / `ContextType` owner fields，而不是把调用方噪音直接持久化
+  - next queue: 进入 Task 4，抽 drifting/default fake backend fixture 平台化
+
+
+## 2026-03-09 (test fixture platformization)
+- Added:
+  - `docs/plans/2026-03-09-test-fixture-platformization.md`
+  - `tests/helpers/test_fake_default_backend_fixture.inc`
+  - `tests/helpers/test_backend_store_fake_fixture.inc`
+- GREEN:
+  - Replaced `tests/config/test_fake_default_backend_fixture.inc` with a thin wrapper include
+  - Updated `tests/test_context_builder_backend_store_consistency.pas` to import the shared builder/store fake backend fixture
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -gl -Fu./src -otmp/test_context_builder_backend_store_consistency tests/test_context_builder_backend_store_consistency.pas && ./tmp/test_context_builder_backend_store_consistency` => PASS
+  - `fpc -Fu./src -otmp/test_config_snapshot_clone tests/config/test_config_snapshot_clone.pas && ./tmp/test_config_snapshot_clone` => PASS (`22/22`)
+  - `fpc -Fu./src -otmp/test_config_import_export tests/config/test_config_import_export.pas && ./tmp/test_config_import_export` => PASS (`47/47`)
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+  - `git diff --check -- tests/helpers/test_fake_default_backend_fixture.inc tests/helpers/test_backend_store_fake_fixture.inc tests/config/test_fake_default_backend_fixture.inc tests/test_context_builder_backend_store_consistency.pas docs/plans/2026-03-09-test-fixture-platformization.md docs/plans/2026-03-current-summary.md task_plan.md findings.md progress.md` => PASS
+- Review snapshot:
+  - fake backend fixture 不再被单个测试程序私有化
+  - config/build-path 与 builder/store consistency 两条线现在共享同一组 helper includes
+  - next queue: 进入 Task 5，同步公共文档中的当前 contract
+
+## 2026-03-09 (doc contract truth sync)
+- Added:
+  - `docs/plans/2026-03-09-doc-contract-truth-sync.md`
+- GREEN:
+  - Updated `README.md`
+  - Updated `docs/README.md`
+  - Updated `docs/reference/ARCHITECTURE.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `git diff --check -- README.md docs/README.md docs/reference/ARCHITECTURE.md docs/plans/2026-03-09-doc-contract-truth-sync.md docs/plans/2026-03-current-summary.md task_plan.md findings.md progress.md` => PASS
+- Review snapshot:
+  - 公共入口文档现在明确写出 builder single-resolve backend contract
+  - 文档现在区分了 library-scoped defaults/logging 与 request/context-scoped material loading
+  - next queue: 回到 backend context/default-validation 架构复审，repo-noise 维持独立波次
+
+
+## 2026-03-09 (context builder server-name context parity)
+- Added:
+  - `docs/plans/2026-03-09-context-builder-server-name-context-parity.md`
+- RED:
+  - `fpc -Fu./src -otmp/test_config_validation tests/config/test_config_validation.pas && ./tmp/test_config_validation` => FAIL (`BuildServer preserves configured ServerName on context`)
+- GREEN:
+  - Updated `src/fafafa.ssl.context.builder.pas`
+  - Updated `tests/config/test_config_validation.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src -otmp/test_config_validation tests/config/test_config_validation.pas && ./tmp/test_config_validation` => PASS
+  - `fpc -B -gl -Fu./src -otmp/test_context_builder_backend_store_consistency tests/test_context_builder_backend_store_consistency.pas && ./tmp/test_context_builder_backend_store_consistency` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+  - `git diff --check -- src/fafafa.ssl.context.builder.pas tests/config/test_config_validation.pas docs/plans/2026-03-09-context-builder-server-name-context-parity.md docs/plans/2026-03-current-summary.md task_plan.md findings.md progress.md` => PASS
+- Review snapshot:
+  - `BuildServer` 现在与 `BuildClient` / factory request path 一样，会保留 context-level `ServerName`
+  - next queue: 继续复审 `ServerName` / SNI 这类 context-level 与 connection-level 的边界设计
+
+
+## 2026-03-09 (connection context server-name inheritance parity)
+- Added:
+  - `docs/plans/2026-03-09-connection-context-server-name-inheritance-parity.md`
+  - `tests/test_connection_context_server_name_inheritance.pas`
+- RED:
+  - `fpc -Fu./src -otmp/test_connection_context_server_name_inheritance tests/test_connection_context_server_name_inheritance.pas && ./tmp/test_connection_context_server_name_inheritance` => FAIL (`FreePascal Native inherited ServerName expected="ctx.default.example" actual=""`)
+- GREEN:
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src -otmp/test_connection_context_server_name_inheritance tests/test_connection_context_server_name_inheritance.pas && ./tmp/test_connection_context_server_name_inheritance` => PASS
+  - `fpc -Fu./src -otmp/test_config_validation tests/config/test_config_validation.pas && ./tmp/test_config_validation` => PASS
+  - `fpc -B -gl -Fu./src -otmp/test_context_builder_backend_store_consistency tests/test_context_builder_backend_store_consistency.pas && ./tmp/test_context_builder_backend_store_consistency` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+  - `git diff --check -- src/fafafa.ssl.freepascal.connection.pas && for f in tests/test_connection_context_server_name_inheritance.pas docs/plans/2026-03-09-connection-context-server-name-inheritance-parity.md docs/plans/2026-03-current-summary.md; do out=$(git diff --no-index --check /dev/null "$f" 2>&1 || true); [ -z "$out" ]; done` => PASS
+- Review snapshot:
+  - FreePascal connection 构造路径现在与 OpenSSL / WinSSL / WolfSSL / MbedTLS 一样，会继承 context 默认 `ServerName`
+  - context-level `ServerName` 不再只在部分 backend 生效；下一波该明确 owner / precedence，而不是继续靠实现偶然对齐
+
+
+## 2026-03-09 (connection server-mode SNI isolation)
+- Added:
+  - `docs/plans/2026-03-09-connection-server-mode-sni-isolation.md`
+  - `tests/test_connection_server_mode_sni_isolation.pas`
+- RED:
+  - `fpc -Fu./src -otmp/test_connection_server_mode_sni_isolation tests/test_connection_server_mode_sni_isolation.pas && ./tmp/test_connection_server_mode_sni_isolation` => FAIL (`FreePascal Native server connection should not inherit client SNI expected="" actual="server.context.should.not.flow"`)
+- GREEN:
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+  - Updated `src/fafafa.ssl.openssl.connection.pas`
+  - Updated `src/fafafa.ssl.winssl.connection.pas`
+  - Updated `src/fafafa.ssl.wolfssl.connection.pas`
+  - Updated `src/fafafa.ssl.mbedtls.connection.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src -otmp/test_connection_server_mode_sni_isolation tests/test_connection_server_mode_sni_isolation.pas && ./tmp/test_connection_server_mode_sni_isolation` => PASS
+  - `fpc -Fu./src -otmp/test_connection_context_server_name_inheritance tests/test_connection_context_server_name_inheritance.pas && ./tmp/test_connection_context_server_name_inheritance` => PASS
+  - `fpc -Fu./src -otmp/test_config_validation tests/config/test_config_validation.pas && ./tmp/test_config_validation` => PASS
+  - `fpc -B -gl -Fu./src -otmp/test_context_builder_backend_store_consistency tests/test_context_builder_backend_store_consistency.pas && ./tmp/test_context_builder_backend_store_consistency` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+  - `rg -n "if AContext.GetContextType = sslCtxClient then" src/fafafa.ssl.winssl.connection.pas` => PASS (`477`, `504`)
+  - `git diff --check -- src/fafafa.ssl.freepascal.connection.pas src/fafafa.ssl.openssl.connection.pas src/fafafa.ssl.winssl.connection.pas src/fafafa.ssl.wolfssl.connection.pas src/fafafa.ssl.mbedtls.connection.pas && for f in tests/test_connection_server_mode_sni_isolation.pas docs/plans/2026-03-09-connection-server-mode-sni-isolation.md docs/plans/2026-03-current-summary.md; do out=$(git diff --no-index --check /dev/null "$f" 2>&1 || true); [ -z "$out" ]; done` => PASS
+- Review snapshot:
+  - `ServerName` 默认值现在只在 client path 上做 backward-compatible 注入，不再泄漏到 server-side connection
+  - 下一波优先做 precedence 合同：`connection override > context default`，再考虑 shared helper 收口
+
+
+## 2026-03-09 (openssl server-name clear override parity)
+- Added:
+  - `docs/plans/2026-03-09-openssl-server-name-clear-override-parity.md`
+  - `tests/test_openssl_connection_server_name_clear_override.pas`
+- RED:
+  - `fpc -Fu./src -otmp/test_openssl_connection_server_name_clear_override tests/test_openssl_connection_server_name_clear_override.pas && ./tmp/test_openssl_connection_server_name_clear_override` => FAIL (`Native info after clear expected="" actual="override.example"`)
+- GREEN:
+  - Updated `src/fafafa.ssl.openssl.connection.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src -otmp/test_openssl_connection_server_name_clear_override tests/test_openssl_connection_server_name_clear_override.pas && ./tmp/test_openssl_connection_server_name_clear_override` => PASS
+  - `fpc -Fu./src -otmp/test_connection_server_mode_sni_isolation tests/test_connection_server_mode_sni_isolation.pas && ./tmp/test_connection_server_mode_sni_isolation` => PASS
+  - `fpc -Fu./src -otmp/test_connection_context_server_name_inheritance tests/test_connection_context_server_name_inheritance.pas && ./tmp/test_connection_context_server_name_inheritance` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+  - `git diff --check -- src/fafafa.ssl.openssl.connection.pas && for f in tests/test_openssl_connection_server_name_clear_override.pas docs/plans/2026-03-09-openssl-server-name-clear-override-parity.md docs/plans/2026-03-current-summary.md; do out=$(git diff --no-index --check /dev/null "$f" 2>&1 || true); [ -z "$out" ]; done` => PASS
+- Review snapshot:
+  - OpenSSL 现在在 `SetServerName('')` 时会同步清掉 native SNI，`GetConnectionInfo.ServerName` 不再残留旧值
+  - 下一波优先合同化 builder hostname override，再看 WolfSSL / MbedTLS clear-path parity
+
+
+## 2026-03-09 (connection builder hostname override precedence)
+- Added:
+  - `docs/plans/2026-03-09-connection-builder-hostname-override-precedence.md`
+  - `tests/test_connection_builder_hostname_override_precedence.pas`
+- RED:
+  - `fpc -Fu./src -otmp/test_connection_builder_hostname_override_precedence tests/test_connection_builder_hostname_override_precedence.pas && ./tmp/test_connection_builder_hostname_override_precedence` => FAIL (`Explicit empty hostname override should clear inherited context fallback`)
+- GREEN:
+  - Updated `src/fafafa.ssl.connection.builder.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src -otmp/test_connection_builder_hostname_override_precedence tests/test_connection_builder_hostname_override_precedence.pas && ./tmp/test_connection_builder_hostname_override_precedence` => PASS
+  - `fpc -Fu./src -otmp/test_new_api tests/test_new_api.pas && ./tmp/test_new_api` => PASS
+  - `fpc -Fu./src -otmp/test_openssl_connection_server_name_clear_override tests/test_openssl_connection_server_name_clear_override.pas && ./tmp/test_openssl_connection_server_name_clear_override` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+- Review snapshot:
+  - builder 现在显式支持 empty hostname override，不再把它当成“没传”
+  - `WithHostname('')` 会清空继承来的 context fallback，而不是保留旧值
+  - 下一波优先核对 WolfSSL / MbedTLS clear-path parity，再评估 `TSSLConnector` 同类问题
+
+
+## 2026-03-09 (tls connector hostname override precedence)
+- Added:
+  - `docs/plans/2026-03-09-tls-connector-hostname-override-precedence.md`
+  - `tests/test_tls_connector_hostname_override_precedence.pas`
+- RED:
+  - `fpc -Fu./src -otmp/test_tls_connector_hostname_override_precedence tests/test_tls_connector_hostname_override_precedence.pas && ./tmp/test_tls_connector_hostname_override_precedence` => FAIL (`Explicit empty hostname override should clear inherited context fallback expected="" actual="ctx.default.example"`)
+- GREEN:
+  - Updated `src/fafafa.ssl.tls.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src -otmp/test_tls_connector_hostname_override_precedence tests/test_tls_connector_hostname_override_precedence.pas && ./tmp/test_tls_connector_hostname_override_precedence` => PASS
+  - `fpc -Fu./src -otmp/test_connection_builder_hostname_override_precedence tests/test_connection_builder_hostname_override_precedence.pas && ./tmp/test_connection_builder_hostname_override_precedence` => PASS
+  - `fpc -Fu./src -otmp/test_new_api tests/test_new_api.pas && ./tmp/test_new_api` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+  - `git diff --check -- src/fafafa.ssl.tls.pas task_plan.md findings.md progress.md docs/plans/2026-03-current-summary.md && for f in docs/plans/2026-03-09-tls-connector-hostname-override-precedence.md tests/test_tls_connector_hostname_override_precedence.pas; do out=$(git diff --no-index --check /dev/null "$f" 2>&1 || true); [ -z "$out" ]; done` => PASS
+- Review snapshot:
+  - `TSSLConnector` 现在与 builder 保持一致：显式 empty hostname 也属于 connection-level override，不再回退到 context fallback
+  - `ConnectSocket/ConnectStream(..., '')` 会清空 inherited `ServerName`，而不是静默保留旧值
+  - 同批顺手移除了 `src/fafafa.ssl.tls.pas` 本地暴露出的 3 个编译 warning（`Seek` result / 两处 managed record `FillChar`）
+  - next queue: 继续核对 WolfSSL / MbedTLS clear-path parity 的可观测性，再考虑抽 shared hostname-override helper
+
+
+## 2026-03-09 (wolfssl / mbedtls server-name observability parity)
+- Added:
+  - `docs/plans/2026-03-09-wolfssl-mbedtls-server-name-observability-parity.md`
+  - `tests/test_wolfssl_connection_server_name_observability.pas`
+  - `tests/test_mbedtls_connection_server_name_observability.pas`
+- RED:
+  - `fpc -Fu./src -otmp/test_wolfssl_connection_server_name_observability tests/test_wolfssl_connection_server_name_observability.pas && ./tmp/test_wolfssl_connection_server_name_observability` => FAIL (`WolfSSL connection should support ISSLClientConnection`)
+  - `fpc -Fu./src -otmp/test_mbedtls_connection_server_name_observability tests/test_mbedtls_connection_server_name_observability.pas && ./tmp/test_mbedtls_connection_server_name_observability` => FAIL (`MbedTLS connection should support ISSLClientConnection`)
+  - after interface fix, second-level RED exposed observability/clear gaps:
+    - WolfSSL: `Connection info after create expected="ctx.default.example" actual=""`
+    - MbedTLS: `Connection info after create expected="ctx.default.example" actual=""`
+    - WolfSSL: `Connection info after clear expected="" actual="override.example"`
+- GREEN:
+  - Updated `src/fafafa.ssl.wolfssl.api.pas`
+  - Updated `src/fafafa.ssl.wolfssl.context.pas`
+  - Updated `src/fafafa.ssl.mbedtls.api.pas`
+  - Updated `src/fafafa.ssl.mbedtls.connection.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src -otmp/test_wolfssl_connection_server_name_observability tests/test_wolfssl_connection_server_name_observability.pas && ./tmp/test_wolfssl_connection_server_name_observability` => PASS
+  - `fpc -Fu./src -otmp/test_mbedtls_connection_server_name_observability tests/test_mbedtls_connection_server_name_observability.pas && ./tmp/test_mbedtls_connection_server_name_observability` => PASS
+  - `fpc -Fu./src -otmp/test_tls_connector_hostname_override_precedence tests/test_tls_connector_hostname_override_precedence.pas && ./tmp/test_tls_connector_hostname_override_precedence` => PASS
+  - `fpc -Fu./src -otmp/test_connection_builder_hostname_override_precedence tests/test_connection_builder_hostname_override_precedence.pas && ./tmp/test_connection_builder_hostname_override_precedence` => PASS
+  - `fpc -Fu./src -otmp/test_openssl_connection_server_name_clear_override tests/test_openssl_connection_server_name_clear_override.pas && ./tmp/test_openssl_connection_server_name_clear_override` => PASS
+  - `fpc -Fu./src -otmp/test_new_api tests/test_new_api.pas && ./tmp/test_new_api` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+  - `git diff --check -- src/fafafa.ssl.wolfssl.api.pas src/fafafa.ssl.wolfssl.context.pas src/fafafa.ssl.mbedtls.api.pas src/fafafa.ssl.mbedtls.connection.pas task_plan.md findings.md progress.md docs/plans/2026-03-current-summary.md && for f in docs/plans/2026-03-09-tls-connector-hostname-override-precedence.md tests/test_tls_connector_hostname_override_precedence.pas tests/test_wolfssl_connection_server_name_observability.pas tests/test_mbedtls_connection_server_name_observability.pas; do out=$(git diff --no-index --check /dev/null "$f" 2>&1 || true); [ -z "$out" ]; done` => PASS
+- Review snapshot:
+  - WolfSSL / MbedTLS 的真实连接类现在正式实现 `ISSLClientConnection`，builder / connector 的 per-connection hostname 语义终于在这两个 backend 上落到真对象
+  - `GetConnectionInfo.ServerName` 现在能观测 create / override / clear 三段状态，而不是只在 OpenSSL 上有证据面
+  - WolfSSL clear-path 需要 `wolfSSL_set_tlsext_host_name('')`；`nil` 会触发 native crash，`wolfSSL_UseSNI(nil, 0)` 也不会清掉旧值
+  - 下一波优先审 WolfSSL 独有的“context 内嵌连接类 vs 单独 connection 单元”双轨结构，避免语义再次漂移
+
+
+## 2026-03-09 (wolfssl standalone connection compatibility contract)
+- Added:
+  - `docs/plans/2026-03-09-wolfssl-standalone-connection-compatibility-contract.md`
+  - `tests/test_wolfssl_standalone_connection_server_name_compatibility.pas`
+  - `tests/test_wolfssl_standalone_native_handle_compatibility.pas`
+- RED:
+  - `fpc -Fu./src -otmp/test_wolfssl_standalone_connection_server_name_compatibility tests/test_wolfssl_standalone_connection_server_name_compatibility.pas && ./tmp/test_wolfssl_standalone_connection_server_name_compatibility` => FAIL (`standalone WolfSSL connection should support ISSLClientConnection`)
+  - `fpc -Fu./src -otmp/test_wolfssl_standalone_native_handle_compatibility tests/test_wolfssl_standalone_native_handle_compatibility.pas && ./tmp/test_wolfssl_standalone_native_handle_compatibility` => FAIL (`standalone WolfSSL connection should support ISSLNativeHandleAccess`)
+- GREEN:
+  - Rewrote `src/fafafa.ssl.wolfssl.connection.pas` into a thin compatibility shim delegating to `AContext.CreateConnection(...)`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src -otmp/test_wolfssl_standalone_connection_server_name_compatibility tests/test_wolfssl_standalone_connection_server_name_compatibility.pas && ./tmp/test_wolfssl_standalone_connection_server_name_compatibility` => PASS
+  - `fpc -Fu./src -otmp/test_wolfssl_standalone_native_handle_compatibility tests/test_wolfssl_standalone_native_handle_compatibility.pas && ./tmp/test_wolfssl_standalone_native_handle_compatibility` => PASS
+  - `fpc -Fu./src -otmp/test_wolfssl_connection_server_name_observability tests/test_wolfssl_connection_server_name_observability.pas && ./tmp/test_wolfssl_connection_server_name_observability` => PASS
+  - `fpc -Fu./src -otmp/test_mbedtls_connection_server_name_observability tests/test_mbedtls_connection_server_name_observability.pas && ./tmp/test_mbedtls_connection_server_name_observability` => PASS
+  - `fpc -Fu./src -otmp/test_tls_connector_hostname_override_precedence tests/test_tls_connector_hostname_override_precedence.pas && ./tmp/test_tls_connector_hostname_override_precedence` => PASS
+  - `fpc -Fu./src -otmp/test_connection_builder_hostname_override_precedence tests/test_connection_builder_hostname_override_precedence.pas && ./tmp/test_connection_builder_hostname_override_precedence` => PASS
+  - `fpc -Fu./src -otmp/test_openssl_connection_server_name_clear_override tests/test_openssl_connection_server_name_clear_override.pas && ./tmp/test_openssl_connection_server_name_clear_override` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+  - `git diff --check -- src/fafafa.ssl.wolfssl.connection.pas task_plan.md findings.md progress.md && for f in docs/plans/2026-03-09-wolfssl-standalone-connection-compatibility-contract.md docs/plans/2026-03-current-summary.md tests/test_wolfssl_standalone_connection_server_name_compatibility.pas tests/test_wolfssl_standalone_native_handle_compatibility.pas; do out=$(git diff --no-index --check /dev/null "$f" 2>&1 || true); [ -z "$out" ]; done` => PASS
+- Review snapshot:
+  - standalone `wolfssl.connection` 现在是显式的 compatibility shim，而不是继续漂移的第二套连接实现
+  - `ServerName`、`GetConnectionInfo.ServerName`、`ISSLNativeHandleAccess` 都收敛到 runtime path 的同一份真相
+  - 下一波优先决定这个 shim 是长期桥接层还是显式 deprecated 入口；结构审计显示更值钱的后续点是收口 OpenSSL / WinSSL / FreePascal 三处 `AContext.GetServerName` fallback 复制逻辑
+
+
+## 2026-03-09 (connection context server-name fallback helper centralization)
+- Added:
+  - `docs/plans/2026-03-09-connection-context-server-name-fallback-helper-centralization.md`
+  - `tests/scripts/test_connection_context_server_name_fallback_helper_contract.sh`
+- RED:
+  - `bash tests/scripts/test_connection_context_server_name_fallback_helper_contract.sh` => FAIL (`missing shared fallback helper usage in src/fafafa.ssl.openssl.connection.pas`)
+  - expanded the contract to include MbedTLS, then `bash tests/scripts/test_connection_context_server_name_fallback_helper_contract.sh` => FAIL (`missing shared fallback helper usage in src/fafafa.ssl.mbedtls.connection.pas`)
+- GREEN:
+  - Updated `src/fafafa.ssl.connection.base.pas`
+  - Updated `src/fafafa.ssl.openssl.connection.pas`
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+  - Updated `src/fafafa.ssl.winssl.connection.pas`
+  - Updated `src/fafafa.ssl.mbedtls.connection.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n tests/scripts/test_connection_context_server_name_fallback_helper_contract.sh && bash tests/scripts/test_connection_context_server_name_fallback_helper_contract.sh` => PASS
+  - `fpc -Fu./src -otmp/test_connection_context_server_name_inheritance tests/test_connection_context_server_name_inheritance.pas && ./tmp/test_connection_context_server_name_inheritance` => PASS
+  - `fpc -Fu./src -otmp/test_connection_server_mode_sni_isolation tests/test_connection_server_mode_sni_isolation.pas && ./tmp/test_connection_server_mode_sni_isolation` => PASS
+  - `fpc -Fu./src -otmp/test_mbedtls_connection_server_name_observability tests/test_mbedtls_connection_server_name_observability.pas && ./tmp/test_mbedtls_connection_server_name_observability` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+- Review snapshot:
+  - OpenSSL / FreePascal / WinSSL / MbedTLS runtime paths now share one helper for deprecated context-default `ServerName` fallback
+  - the drift hotspot has moved from scattered runtime reads to the deprecated API surface itself
+  - next queue: define migration/deprecation policy for `ISSLContext.ServerName`, then continue WolfSSL shim policy and warning/noise cleanup
+
+## 2026-03-09 (server-name migration policy)
+- Added:
+  - `docs/plans/2026-03-09-server-name-migration-policy.md`
+  - `tests/scripts/test_server_name_migration_policy_contract.sh`
+- RED:
+  - `bash tests/scripts/test_server_name_migration_policy_contract.sh` => FAIL (`base interface docs should describe the preferred per-connection migration path`)
+- GREEN:
+  - Updated `src/fafafa.ssl.base.pas`
+  - Updated `README.md`
+  - Updated `docs/reference/ARCHITECTURE.md`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n tests/scripts/test_server_name_migration_policy_contract.sh && bash tests/scripts/test_server_name_migration_policy_contract.sh` => PASS
+  - `fpc -Fu./src -otmp/test_connection_context_server_name_inheritance tests/test_connection_context_server_name_inheritance.pas && ./tmp/test_connection_context_server_name_inheritance` => PASS
+- Review snapshot:
+  - README、架构文档、接口注释现在都指向同一条推荐路径：`ISSLClientConnection.SetServerName(...)`
+  - `ISSLContext.ServerName` 被明确标记为兼容桥接层，而不是连接运行期真相源
+  - 下一波优先决定 WolfSSL shim 的长期策略，或单开 warning/noise 收口
+
+## 2026-03-09 (wolfssl standalone shim policy)
+- Added:
+  - `docs/plans/2026-03-09-wolfssl-standalone-shim-policy.md`
+  - `tests/scripts/test_wolfssl_standalone_shim_policy_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wolfssl_standalone_shim_policy_contract.sh` => FAIL (`wolfssl standalone unit header should document the compatibility-shim policy`)
+- GREEN:
+  - Updated `src/fafafa.ssl.wolfssl.connection.pas`
+  - Updated `docs/reference/ARCHITECTURE.md`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n tests/scripts/test_wolfssl_standalone_shim_policy_contract.sh && bash tests/scripts/test_wolfssl_standalone_shim_policy_contract.sh` => PASS
+  - `fpc -Fu./src -otmp/test_wolfssl_standalone_connection_server_name_compatibility tests/test_wolfssl_standalone_connection_server_name_compatibility.pas && ./tmp/test_wolfssl_standalone_connection_server_name_compatibility` => PASS
+  - `fpc -Fu./src -otmp/test_wolfssl_standalone_native_handle_compatibility tests/test_wolfssl_standalone_native_handle_compatibility.pas && ./tmp/test_wolfssl_standalone_native_handle_compatibility` => PASS
+- Review snapshot:
+  - WolfSSL standalone unit is now documented as a long-lived compatibility entry, not a second runtime evolution branch
+  - runtime 真相源位置已在源码头和架构文档里显式写清
+  - 下一波更值钱的是 warning/noise 收口，而不是继续扩写 shim 文档
+
+## 2026-03-09 (wolfssl/mbedtls focused warning noise cleanup)
+- Added:
+  - `docs/plans/2026-03-09-wolfssl-mbedtls-focused-warning-noise-cleanup.md`
+  - `tests/scripts/test_wolfssl_mbedtls_focused_warning_cleanup_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wolfssl_mbedtls_focused_warning_cleanup_contract.sh` => FAIL (`fafafa.ssl.mbedtls.certificate.pas(1439,19)` still emitted managed-result warning; `fafafa.ssl.wolfssl.lib.pas(327,3)` still emitted incomplete case warning)
+- GREEN:
+  - Updated `src/fafafa.ssl.mbedtls.certificate.pas`
+  - Updated `src/fafafa.ssl.wolfssl.certificate.pas`
+  - Updated `src/fafafa.ssl.wolfssl.lib.pas`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_wolfssl_mbedtls_focused_warning_cleanup_contract.sh` => PASS
+  - `fpc -Fu./src -otmp/test_wolfssl_standalone_connection_server_name_compatibility tests/test_wolfssl_standalone_connection_server_name_compatibility.pas && ./tmp/test_wolfssl_standalone_connection_server_name_compatibility` => PASS
+  - `fpc -Fu./src -otmp/test_wolfssl_standalone_native_handle_compatibility tests/test_wolfssl_standalone_native_handle_compatibility.pas && ./tmp/test_wolfssl_standalone_native_handle_compatibility` => PASS
+  - `fpc -Fu./src -otmp/test_mbedtls_connection_server_name_observability tests/test_mbedtls_connection_server_name_observability.pas && ./tmp/test_mbedtls_connection_server_name_observability` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+  - `git diff --check -- src/fafafa.ssl.mbedtls.certificate.pas src/fafafa.ssl.wolfssl.certificate.pas src/fafafa.ssl.wolfssl.lib.pas tests/scripts/test_wolfssl_mbedtls_focused_warning_cleanup_contract.sh tests/test_wolfssl_standalone_connection_server_name_compatibility.pas tests/test_wolfssl_standalone_native_handle_compatibility.pas tests/test_mbedtls_connection_server_name_observability.pas` => PASS
+- Review snapshot:
+  - backend-local WolfSSL / MbedTLS warning/noise 已清零
+  - unrelated OpenSSL warning 仍留在独立清理面，不再污染 focused contract
+  - 下一波更值钱的是脚本链治理，而不是继续在 WolfSSL / MbedTLS warning 面上零碎修补
+
+## 2026-03-09 (Wave C quick-sprint spaced-path safety)
+- Added:
+  - `docs/plans/2026-03-09-wave-c-quick-sprint-spaced-path-safety.md`
+  - `tests/scripts/test_wave_c_quick_sprint_bundle_reports_dir_spaces_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_c_quick_sprint_bundle_reports_dir_spaces_contract.sh` => FAIL (`run_wave_c_quick_sprint_bundle.sh` 先因 `eval` 拆词让 B107 报 `Unknown option: reports`；移除 `eval` 后，B108/B109/B110 又继续暴露 raw `VALIDATION_GLOB` 解析失败)
+- GREEN:
+  - Updated `scripts/run_wave_c_quick_sprint_bundle.sh`
+  - Updated `scripts/check_wave_c_default_on_readiness.sh`
+  - Updated `scripts/prepare_wave_c_b109_canary_rollout.sh`
+  - Updated `scripts/run_wave_c_b110_rollback_drill.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_wave_c_quick_sprint_bundle_reports_dir_spaces_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_c_quick_enablement_default_reports_runtime_contract.sh` => PASS
+  - `bash -n scripts/run_wave_c_quick_sprint_bundle.sh scripts/check_wave_c_default_on_readiness.sh scripts/prepare_wave_c_b109_canary_rollout.sh scripts/run_wave_c_b110_rollback_drill.sh tests/scripts/test_wave_c_quick_sprint_bundle_reports_dir_spaces_contract.sh` => PASS
+- Review snapshot:
+  - Wave C quick-sprint 链现在能稳定处理含空格 reports-dir
+  - quick reports / enablement reports 默认目录策略保持绿色
+  - 下一波最像这次、最值得直接复用同一模板的，是 `scripts/run_tls13_signer_gate_bundle.sh:92` 的同类 `eval` 风险
+
+## 2026-03-09 (Wave C enablement CLI reports-dir passthrough)
+- Added:
+  - `docs/plans/2026-03-09-wave-c-enablement-cli-reports-dir-passthrough.md`
+  - `tests/scripts/test_wave_c_enablement_cli_reports_dir_passthrough_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_c_enablement_cli_reports_dir_passthrough_contract.sh` => FAIL (`scripts/check_wave_c_workflow_enable_prereq.sh` 不接受 `--reports-dir`，caller 仍必须混用 env + CLI）
+- GREEN:
+  - Updated `scripts/check_wave_c_workflow_enable_prereq.sh`
+  - Updated `scripts/prepare_wave_c_b116_enablement_packet.sh`
+  - Updated `scripts/check_wave_c_first_run_preflight.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/check_wave_c_workflow_enable_prereq.sh scripts/prepare_wave_c_b116_enablement_packet.sh scripts/check_wave_c_first_run_preflight.sh tests/scripts/test_wave_c_enablement_cli_reports_dir_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_c_enablement_cli_reports_dir_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_repo_hygiene_wave_c_quick_enablement_tmp_defaults_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_c_quick_enablement_default_reports_runtime_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_c_quick_sprint_bundle_reports_dir_spaces_contract.sh` => PASS
+- Review snapshot:
+  - Wave C enablement 三支脚本现在都支持 caller-facing CLI reports-dir passthrough
+  - B116 默认 latest prereq lookup 会跟随 CLI `--reports-dir` 走
+  - B119 已把 enablement 输出目录与 quick bundle 发现目录拆成 `--reports-dir` / `--quick-reports-dir` 两条独立 surface
+
+## 2026-03-09 (TLS13 signer gate bundle quoted-path safety)
+- Added:
+  - `docs/plans/2026-03-09-tls13-signer-gate-bundle-quoted-path-safety.md`
+  - `tests/scripts/test_tls13_signer_gate_bundle_reports_dir_quote_contract.sh`
+- RED:
+  - `bash tests/scripts/test_tls13_signer_gate_bundle_reports_dir_quote_contract.sh` => FAIL (`run_tls13_signer_gate_bundle.sh` 的 `eval` 在 quoted reports-dir 下先触发 `unexpected EOF while looking for matching \`'\``，随后 snapshot/status 也继续暴露参数拆裂)
+- GREEN:
+  - Updated `scripts/run_tls13_signer_gate_bundle.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_tls13_signer_gate_bundle_reports_dir_quote_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+  - `bash -n scripts/run_tls13_signer_gate_bundle.sh tests/scripts/test_tls13_signer_gate_bundle_reports_dir_quote_contract.sh` => PASS
+- Review snapshot:
+  - TLS13 signer gate bundle 已能稳定处理 quoted reports-dir
+  - default TLS13 reports-dir contract 继续保持绿色
+  - 下一波应继续下沉到 `scripts/run_wave_b_ci_gate.sh` 的同类 shell-string 执行面
+
+## 2026-03-09 (Wave B CI gate quoted-path safety)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-ci-gate-quoted-path-safety.md`
+  - `tests/scripts/test_wave_b_ci_gate_reports_dir_quote_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_ci_gate_reports_dir_quote_contract.sh` => FAIL (`run_wave_b_ci_gate.sh` 的 bench step 在 quoted reports-dir 下仍通过 shell-string + `-lc` 执行，直接报 `unmatched '''`)
+- GREEN:
+  - Updated `scripts/run_wave_b_ci_gate.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_wave_b_ci_gate_reports_dir_quote_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_fpc_host_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_isolation_passthrough_contract.sh` => PASS
+  - `bash -n scripts/run_wave_b_ci_gate.sh tests/scripts/test_wave_b_ci_gate_reports_dir_quote_contract.sh` => PASS
+- Review snapshot:
+  - Wave B 主入口现在能稳定处理 quoted reports-dir
+  - dry-run / passthrough contract 没被这次执行层重构打破
+  - 下一波最值钱的是 snapshot/status/closure/evidence 的发现与 passthrough 一致性
+
+## 2026-03-09 (Wave B B2 closure run-id scoped default)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-b2-closure-runid-scoped-default.md`
+  - `tests/scripts/test_wave_b_b2_closure_readiness_run_id_scoped_default_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_b2_closure_readiness_run_id_scoped_default_contract.sh` => FAIL (`check_wave_b_b2_closure_readiness.sh` 在 target run 证据齐全时仍捡到 newer distractor Linux summary，closure_status 被错误拉成 `IN_PROGRESS``)
+- GREEN:
+  - Updated `scripts/check_wave_b_b2_closure_readiness.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_wave_b_b2_closure_readiness_run_id_scoped_default_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_readiness_dryrun_skipped_semantics_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_blocker_linkage_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+  - `bash -n scripts/check_wave_b_b2_closure_readiness.sh tests/scripts/test_wave_b_b2_closure_readiness_run_id_scoped_default_contract.sh` => PASS
+- Review snapshot:
+  - closure checker 已优先命中当前 run_id 的 Linux summary
+  - dryrun/skipped 与 blocker linkage contract 没被这次默认发现修复打破
+  - 下一波应继续收 evidence consistency 的默认发现与 linkage 边界
+
+## 2026-03-09 (Wave B B2 evidence examples run-id consistency)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-b2-evidence-examples-runid-consistency.md`
+  - `tests/scripts/test_wave_b_b2_evidence_consistency_examples_runid_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_runid_contract.sh` => FAIL (`check_wave_b_b2_evidence_consistency.sh` 之前只校验 examples JSON 是否可解析，没有把显式 `run_id` 漂移拉成 strict-mode 失败)
+- GREEN:
+  - Updated `scripts/check_wave_b_b2_evidence_consistency.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_runid_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_blocker_linkage_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_readiness_run_id_scoped_default_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh tests/scripts/test_wave_b_b2_evidence_consistency_examples_runid_contract.sh` => PASS
+- Review snapshot:
+  - evidence checker 现在会在 examples JSON 暴露 `run_id` 且与目标 run 不一致时明确拉红
+  - legacy 无 `run_id` JSON 继续保持 backward-compatible 的 `json_valid=YES` 语义
+  - 下一波最值钱的是 evidence checker 默认发现 / stale artifact fallback，而不是回头扩大 JSON schema 校验面
+
+## 2026-03-09 (Wave B B2 handoff run-id scoped Linux summary)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-b2-handoff-runid-scoped-linux-summary.md`
+  - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_run_id_scoped_linux_summary_contract.sh`
+- RED:
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_run_id_scoped_linux_summary_contract.sh` => FAIL (`prepare_wave_b_b2_handoff_bundle.sh` 在只给 `--run-id` 时仍捡到 newer distractor Linux summary，导致 cross summary 直接指向别的 run`)
+- GREEN:
+  - Updated `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_run_id_scoped_linux_summary_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_consistency_artifact_snapshot.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_semantics_snapshot.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_blocker_artifact_visibility.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh tests/scripts/test_prepare_wave_b_b2_handoff_bundle_run_id_scoped_linux_summary_contract.sh` => PASS
+- Review snapshot:
+  - handoff bundle 现在会先命中当前 run_id 的 Linux summary，再回退到 wildcard latest
+  - handoff 输出结构、closure 语义摘录与 blocker artifact 可见性都未被这次默认发现修复打破
+  - 下一波最值钱的是 direct `generate_wave_b_cross_platform_summary.sh` 的同型 run-id scoped 默认发现，而不是再回头扩大 handoff bundle 参数面
+
+## 2026-03-09 (Wave B cross-summary run-id scoped Linux default)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-cross-summary-runid-scoped-linux-default.md`
+  - `tests/scripts/test_wave_b_cross_platform_summary_run_id_scoped_linux_summary_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_run_id_scoped_linux_summary_contract.sh` => FAIL (`generate_wave_b_cross_platform_summary.sh` 在只给 `--run-id` 时仍捡到 newer distractor Linux summary，直接把 linux state / checklist 带成 FAIL`)
+- GREEN:
+  - Updated `scripts/generate_wave_b_cross_platform_summary.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_run_id_scoped_linux_summary_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_linux_checklist.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_missing_state_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_android_extension.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_default_output_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_windows_gate_blocker_layout.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh tests/scripts/test_wave_b_cross_platform_summary_run_id_scoped_linux_summary_contract.sh` => PASS
+- Review snapshot:
+  - direct cross-summary 现在会先命中当前 run_id 的 Linux summary，再回退到 wildcard latest
+  - checklist/default-output/android/windows-blocker 这些输出面都未被这次默认发现修复打破
+  - 下一波最值钱的是 `check_wave_b_b2_evidence_consistency.sh` 的 examples 默认发现，以及 TLS13 snapshot/status 的 stale-fallback 边界
+
+## 2026-03-09 (TLS13 status stale snapshot fallback)
+- Added:
+  - `docs/plans/2026-03-09-tls13-status-stale-snapshot-fallback.md`
+  - `tests/scripts/test_tls13_signer_gate_status_stale_snapshot_fallback_contract.sh`
+- RED:
+  - `bash tests/scripts/test_tls13_signer_gate_status_stale_snapshot_fallback_contract.sh` => FAIL (`export_tls13_signer_gate_status_json.sh` 在 target run 缺 snapshot 时会误吃其他 run 的 stale snapshot，把 `snapshot_state` 和 evidence 路径一起带偏`)
+- GREEN:
+  - Updated `scripts/export_tls13_signer_gate_status_json.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_tls13_signer_gate_status_stale_snapshot_fallback_contract.sh` => PASS
+  - `bash tests/scripts/test_tls13_signer_gate_run_id_scoped_default_selection_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+  - `bash -n scripts/export_tls13_signer_gate_status_json.sh tests/scripts/test_tls13_signer_gate_status_stale_snapshot_fallback_contract.sh` => PASS
+- Review snapshot:
+  - status export 对 `summary` / `bench_json` 仍保留 run-id scoped fallback，但对派生 `snapshot` 改为 exact-only，更符合工件语义
+  - target run 缺 snapshot 时现在安全降级为 `MISSING/ATTENTION`，不再借用别的 run 的旧 snapshot
+  - 下一波最值钱的是 `check_wave_b_b2_evidence_consistency.sh` 的 examples 默认发现，或 `generate_tls13_signer_gate_snapshot.sh` 的 history fallback
+
+## 2026-03-09 (TLS13 snapshot stale history fallback)
+- Added:
+  - `docs/plans/2026-03-09-tls13-snapshot-stale-history-fallback.md`
+  - `tests/scripts/test_tls13_signer_gate_snapshot_stale_history_fallback_contract.sh`
+- RED:
+  - `bash tests/scripts/test_tls13_signer_gate_snapshot_stale_history_fallback_contract.sh` => FAIL (`generate_tls13_signer_gate_snapshot.sh` 在 target run 缺 history 时会误吃 other run 的 stale history，把 evidence 路径带偏`)
+- GREEN:
+  - Updated `scripts/generate_tls13_signer_gate_snapshot.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_tls13_signer_gate_snapshot_stale_history_fallback_contract.sh` => PASS
+  - `bash tests/scripts/test_tls13_signer_gate_run_id_scoped_default_selection_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+  - `bash tests/scripts/test_tls13_signer_gate_status_stale_snapshot_fallback_contract.sh` => PASS
+  - `bash -n scripts/generate_tls13_signer_gate_snapshot.sh tests/scripts/test_tls13_signer_gate_snapshot_stale_history_fallback_contract.sh` => PASS
+- Review snapshot:
+  - snapshot 现在对 `history` 采用 exact-only，缺失时显示 `<none>`，不再借用其他 run 的旧 history
+  - run-id default selection、status stale snapshot fallback 与默认 reports runtime 仍保持绿色
+  - 下一波最值钱的是从生产侧提高 `examples JSON` 的 `run_id` 可观测性
+
+## 2026-03-09 (TLS13 snapshot status CLI reports-dir passthrough)
+- Added:
+  - `docs/plans/2026-03-09-tls13-snapshot-status-cli-reports-dir-passthrough.md`
+  - `tests/scripts/test_tls13_signer_gate_cli_reports_dir_passthrough_contract.sh`
+- RED:
+  - `bash tests/scripts/test_tls13_signer_gate_cli_reports_dir_passthrough_contract.sh` => FAIL (`generate_tls13_signer_gate_snapshot.sh` 不接受 `--reports-dir`，snapshot/status 直连调用仍只能依赖 env）
+- GREEN:
+  - Updated `scripts/generate_tls13_signer_gate_snapshot.sh`
+  - Updated `scripts/export_tls13_signer_gate_status_json.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/generate_tls13_signer_gate_snapshot.sh scripts/export_tls13_signer_gate_status_json.sh tests/scripts/test_tls13_signer_gate_cli_reports_dir_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_tls13_signer_gate_cli_reports_dir_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_tls13_signer_gate_status_stale_snapshot_fallback_contract.sh` => PASS
+  - `bash tests/scripts/test_tls13_signer_gate_snapshot_stale_history_fallback_contract.sh` => PASS
+  - `bash tests/scripts/test_tls13_signer_gate_bundle_reports_dir_quote_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+- Review snapshot:
+  - TLS13 snapshot/status 直连脚本现在都支持 caller-facing CLI `--reports-dir`
+  - bundle caller 与 direct caller 的目录控制面已经对齐
+  - stale-fallback 与 default-runtime 合同继续保持绿色
+
+## 2026-03-09 (Wave B CI gate examples report run-id)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-ci-gate-examples-report-runid.md`
+  - `tests/scripts/test_wave_b_ci_gate_examples_report_runid_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_report_runid_contract.sh` => FAIL (`run_wave_b_ci_gate.sh` 产出的 examples JSON 没有 `run_id`，默认静态路径下无法可靠识别 stale report`)
+- GREEN:
+  - Updated `scripts/run_wave_b_ci_gate.sh`
+  - Updated `scripts/verify_examples_compile.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_report_runid_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_reports_dir_quote_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_isolation_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_fpc_host_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_runid_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+  - `bash -n scripts/run_wave_b_ci_gate.sh scripts/verify_examples_compile.sh tests/scripts/test_wave_b_ci_gate_examples_report_runid_contract.sh` => PASS
+- Review snapshot:
+  - 默认 `examples_compile_ci_gate.json` 现在带有明确 `run_id`，静态路径不再是无主报告
+  - B2 evidence checker 的 examples run-id 严格模式现在更有实际抓手，而不是只在“恰好有人手写了 run_id”时才生效
+  - 下一波最值钱的是复审 `check_wave_b_b2_evidence_consistency.sh` 的 default examples artifact 发现/缺失语义，看看是否还要进一步 contract 化
+
+## 2026-03-09 (Wave B examples run-scoped default chain)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-examples-run-scoped-default-chain.md`
+  - `tests/scripts/test_wave_b_ci_gate_examples_report_run_scoped_alias_contract.sh`
+  - `tests/scripts/test_wave_b_cross_platform_summary_default_examples_run_scoped_contract.sh`
+  - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_default_examples_run_scoped_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_report_run_scoped_alias_contract.sh` => FAIL (`run_wave_b_ci_gate.sh` 只写静态 examples JSON，没有当前 run 专属副本`)
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_default_examples_run_scoped_contract.sh` => FAIL (`generate_wave_b_cross_platform_summary.sh` 默认仍消费 stale static examples JSON`)
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_default_examples_run_scoped_contract.sh` => FAIL (`prepare_wave_b_b2_handoff_bundle.sh` 默认 examples 路径未优先当前 run，导致 consistency report 被静态默认文件带偏`)
+- GREEN:
+  - Updated `scripts/run_wave_b_ci_gate.sh`
+  - Updated `scripts/generate_wave_b_cross_platform_summary.sh`
+  - Updated `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - Updated `scripts/check_wave_b_b2_evidence_consistency.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_report_run_scoped_alias_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_default_examples_run_scoped_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_default_examples_run_scoped_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_report_runid_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_run_id_scoped_linux_summary_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_run_id_scoped_linux_summary_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_runid_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_reports_dir_quote_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_isolation_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_fpc_host_passthrough_contract.sh` => PASS
+  - `bash -n scripts/run_wave_b_ci_gate.sh scripts/generate_wave_b_cross_platform_summary.sh scripts/prepare_wave_b_b2_handoff_bundle.sh scripts/check_wave_b_b2_evidence_consistency.sh` => PASS
+- Review snapshot:
+  - Wave B examples 现在同时有静态 alias 和当前 run 专属副本，consumer 默认优先 run-scoped
+  - stale static examples 报告不再轻易污染 cross-summary / handoff / evidence 默认链路
+  - 下一波最值钱的是复审 evidence checker 的 missing/default semantics，看是否要把“缺 run-scoped 但 static stale”与“完全缺失”进一步区分
+
+## 2026-03-09 (Wave B examples static fallback run-id guard)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-examples-static-fallback-runid-guard.md`
+  - `tests/scripts/test_wave_b_b2_evidence_consistency_default_examples_stale_static_guard_contract.sh`
+  - `tests/scripts/test_wave_b_cross_platform_summary_default_examples_stale_static_guard_contract.sh`
+  - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_default_examples_stale_static_guard_contract.sh`
+  - `tests/scripts/test_wave_b_b2_evidence_consistency_default_examples_static_same_run_fallback_contract.sh`
+  - `tests/scripts/test_wave_b_cross_platform_summary_default_examples_static_same_run_fallback_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_default_examples_stale_static_guard_contract.sh` => FAIL (`generate_wave_b_cross_platform_summary.sh` 在 run-scoped 缺失时仍会默认消费 other-run 的 stale static alias`)
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_default_examples_stale_static_guard_contract.sh` => FAIL (`prepare_wave_b_b2_handoff_bundle.sh` 仍会把 stale static alias 带进 consistency report`)
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_default_examples_static_same_run_fallback_contract.sh` => FAIL (`check_wave_b_b2_evidence_consistency.sh` 的 helper 顺序有漏洞，导致 same-run static alias 也无法安全回退`)
+- GREEN:
+  - Updated `scripts/generate_wave_b_cross_platform_summary.sh`
+  - Updated `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - Updated `scripts/check_wave_b_b2_evidence_consistency.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_default_examples_stale_static_guard_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_default_examples_stale_static_guard_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_default_examples_stale_static_guard_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_default_examples_static_same_run_fallback_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_default_examples_static_same_run_fallback_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_report_run_scoped_alias_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_default_examples_run_scoped_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_default_examples_run_scoped_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_runid_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_run_id_scoped_linux_summary_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_run_id_scoped_linux_summary_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_report_runid_contract.sh` => PASS
+  - `git diff --check -- scripts/generate_wave_b_cross_platform_summary.sh scripts/prepare_wave_b_b2_handoff_bundle.sh scripts/check_wave_b_b2_evidence_consistency.sh tests/scripts/test_wave_b_b2_evidence_consistency_default_examples_stale_static_guard_contract.sh tests/scripts/test_wave_b_cross_platform_summary_default_examples_stale_static_guard_contract.sh tests/scripts/test_prepare_wave_b_b2_handoff_bundle_default_examples_stale_static_guard_contract.sh tests/scripts/test_wave_b_b2_evidence_consistency_default_examples_static_same_run_fallback_contract.sh tests/scripts/test_wave_b_cross_platform_summary_default_examples_static_same_run_fallback_contract.sh docs/plans/2026-03-09-wave-b-examples-static-fallback-runid-guard.md` => PASS
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh scripts/prepare_wave_b_b2_handoff_bundle.sh scripts/check_wave_b_b2_evidence_consistency.sh tests/scripts/test_wave_b_b2_evidence_consistency_default_examples_stale_static_guard_contract.sh tests/scripts/test_wave_b_cross_platform_summary_default_examples_stale_static_guard_contract.sh tests/scripts/test_prepare_wave_b_b2_handoff_bundle_default_examples_stale_static_guard_contract.sh tests/scripts/test_wave_b_b2_evidence_consistency_default_examples_static_same_run_fallback_contract.sh tests/scripts/test_wave_b_cross_platform_summary_default_examples_static_same_run_fallback_contract.sh` => PASS
+- Review snapshot:
+  - default examples 发现现在收敛为：`explicit override -> run-scoped exact -> same-run static fallback -> missing`
+  - stale static alias 不再在 cross-summary / handoff / evidence 默认链路中冒充当前 run 证据
+  - evidence checker 之前依赖未定义 helper 的偶然行为已被消除；same-run static fallback 现在是显式 contract，而不是碰运气
+
+## 2026-03-09 (Wave B examples current alias / archive governance)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-examples-current-alias-archive-governance.md`
+  - `tests/scripts/test_wave_b_ci_gate_examples_archive_governance_contract.sh`
+  - `tests/scripts/test_wave_b_ci_gate_examples_history_alias_cleanup_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_archive_governance_contract.sh` => FAIL (`run_wave_b_ci_gate.sh` 只产 top-level current/run-scoped，两层语义里还没有 archive history copy`)
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_history_alias_cleanup_contract.sh` => FAIL (`history bucket` 里残留 generic static alias 时，producer 不会主动清理)
+- GREEN:
+  - Updated `scripts/run_wave_b_ci_gate.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_archive_governance_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_history_alias_cleanup_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_report_run_scoped_alias_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_report_runid_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_default_examples_run_scoped_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_default_examples_run_scoped_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_runid_contract.sh` => PASS
+  - `git diff --check -- scripts/run_wave_b_ci_gate.sh tests/scripts/test_wave_b_ci_gate_examples_archive_governance_contract.sh tests/scripts/test_wave_b_ci_gate_examples_history_alias_cleanup_contract.sh docs/plans/2026-03-09-wave-b-examples-current-alias-archive-governance.md` => PASS
+  - `bash -n scripts/run_wave_b_ci_gate.sh tests/scripts/test_wave_b_ci_gate_examples_archive_governance_contract.sh tests/scripts/test_wave_b_ci_gate_examples_history_alias_cleanup_contract.sh tests/scripts/test_wave_b_ci_gate_examples_report_run_scoped_alias_contract.sh tests/scripts/test_wave_b_ci_gate_examples_report_runid_contract.sh` => PASS
+- Review snapshot:
+  - producer 现在显式产出 `current alias + run-scoped copy + archive copy` 三层 examples 证据
+  - history bucket 明确只保留 run-scoped history；generic static alias 若残留，会在当前 run 被主动清理
+  - summary 现在会直接暴露 alias owner run_id / archive path / cleanup state，后续 consumer 或 reviewer 不用再靠约定猜“当前真相”
+
+## 2026-03-09 (Wave B examples selection observability)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-examples-selection-observability.md`
+  - `tests/scripts/test_wave_b_cross_platform_summary_examples_selection_explicit_override_contract.sh`
+  - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_selection_explicit_override_contract.sh`
+  - `tests/scripts/test_wave_b_b2_evidence_consistency_examples_selection_explicit_override_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_examples_selection_explicit_override_contract.sh` => FAIL (`cross-summary` 会写出 explicit path，但不会说明这是 explicit override)
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_selection_explicit_override_contract.sh` => FAIL (`handoff bundle` / `consistency report` 里看不到 Linux examples 的选择来源)
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_selection_explicit_override_contract.sh` => FAIL (`evidence checker` 不会把 explicit override 与 default discovery 区分开)
+- GREEN:
+  - Updated `scripts/generate_wave_b_cross_platform_summary.sh`
+  - Updated `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - Updated `scripts/check_wave_b_b2_evidence_consistency.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_default_examples_run_scoped_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_default_examples_run_scoped_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_runid_contract.sh` => PASS
+  - `git diff --check -- scripts/generate_wave_b_cross_platform_summary.sh scripts/prepare_wave_b_b2_handoff_bundle.sh scripts/check_wave_b_b2_evidence_consistency.sh tests/scripts/test_wave_b_cross_platform_summary_examples_selection_explicit_override_contract.sh tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_selection_explicit_override_contract.sh tests/scripts/test_wave_b_b2_evidence_consistency_examples_selection_explicit_override_contract.sh docs/plans/2026-03-09-wave-b-examples-selection-observability.md` => PASS
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh scripts/prepare_wave_b_b2_handoff_bundle.sh scripts/check_wave_b_b2_evidence_consistency.sh tests/scripts/test_wave_b_cross_platform_summary_examples_selection_explicit_override_contract.sh tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_selection_explicit_override_contract.sh tests/scripts/test_wave_b_b2_evidence_consistency_examples_selection_explicit_override_contract.sh` => PASS
+- Review snapshot:
+  - 三个 consumer 现在都会显式写出 `linux_examples_selection`
+  - explicit override 与 `run_scoped_exact` / `static_same_run_fallback` / `run_scoped_missing` 已可直接从产物读取
+  - 下一波若要加 warning contract，可以基于现成 selection 字段继续做，而不必再先补可观测性
+
+## 2026-03-09 (Wave B examples explicit override warning)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-examples-explicit-override-warning.md`
+  - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_warning_explicit_override_contract.sh`
+  - `tests/scripts/test_wave_b_b2_evidence_consistency_examples_warning_explicit_override_contract.sh`
+  - `tests/scripts/test_wave_b_b2_evidence_consistency_examples_warning_default_none_contract.sh`
+  - `tests/scripts/test_wave_b_cross_platform_summary_examples_selection_default_run_scoped_contract.sh`
+  - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_warning_default_none_contract.sh`
+- RED:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh` => FAIL (`unexpected end of file` after damaged resolver block)
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh` => FAIL (`unexpected end of file` after damaged resolver block)
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` => FAIL (`unexpected end of file` after damaged resolver block)
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_warning_default_none_contract.sh` => FAIL (`handoff` 默认路径会把 child `evidence` 错误标成 `explicit_override`)
+- GREEN:
+  - Updated `scripts/generate_wave_b_cross_platform_summary.sh`
+  - Updated `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - Updated `scripts/check_wave_b_b2_evidence_consistency.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh scripts/prepare_wave_b_b2_handoff_bundle.sh scripts/check_wave_b_b2_evidence_consistency.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_warning_default_none_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_warning_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_warning_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_warning_default_none_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_examples_selection_default_run_scoped_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_default_examples_run_scoped_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_default_examples_run_scoped_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_runid_contract.sh` => PASS
+- Review snapshot:
+  - `handoff` / `evidence` 现在会在真正 `explicit_override` 时输出 reviewer warning，而 default path 明确写 `none`
+  - damaged resolver blocks 已恢复，default examples selection 不再因 subshell 状态丢失回退成旧默认值
+  - `handoff` 只会把真实显式 CLI override 向 child consumer 传播；default run-scoped path 不再被二次误判成 `explicit_override`
+
+## 2026-03-09 (Wave B B2 closure/evidence CLI reports-dir passthrough)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-b2-closure-evidence-cli-reports-dir-passthrough.md`
+  - `tests/scripts/test_wave_b_b2_closure_evidence_cli_reports_dir_passthrough_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_b2_closure_evidence_cli_reports_dir_passthrough_contract.sh` => FAIL (`scripts/check_wave_b_b2_closure_readiness.sh` 不接受 `--reports-dir`，direct caller 仍只能靠 env 改目录）
+- GREEN:
+  - Updated `scripts/check_wave_b_b2_closure_readiness.sh`
+  - Updated `scripts/check_wave_b_b2_evidence_consistency.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/check_wave_b_b2_closure_readiness.sh scripts/check_wave_b_b2_evidence_consistency.sh tests/scripts/test_wave_b_b2_closure_evidence_cli_reports_dir_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_evidence_cli_reports_dir_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_readiness_dryrun_skipped_semantics_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_runid_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_warning_default_none_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+- Review snapshot:
+  - Wave B B2 closure/evidence 直连脚本现在都支持 caller-facing CLI `--reports-dir`
+  - direct caller 的默认发现会跟随 CLI reports-dir 走
+  - 既有 examples selection / warning / run-id consistency 与 Wave B/TLS13 runtime 合同继续保持绿色
+
+## 2026-03-09 (Wave B handoff CLI reports-dir passthrough)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-handoff-cli-reports-dir-passthrough.md`
+  - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_cli_reports_dir_passthrough_contract.sh`
+- RED:
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_cli_reports_dir_passthrough_contract.sh` => FAIL (`prepare_wave_b_b2_handoff_bundle.sh` 不接受 `--reports-dir`)
+  - 首次修复后继续暴露 deeper wrapper bug：handoff 自己切到新目录了，但 child `evidence` 仍回到旧默认目录找 examples
+- GREEN:
+  - Updated `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh tests/scripts/test_prepare_wave_b_b2_handoff_bundle_cli_reports_dir_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_cli_reports_dir_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_run_id_scoped_linux_summary_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_default_examples_run_scoped_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_warning_default_none_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+- Review snapshot:
+  - handoff wrapper 现在支持 caller-facing `--reports-dir`，且默认 `output-dir` 会自动跟随它
+  - fan-out 到 child consumer 时会透传 `FAFAFA_WAVE_B_REPORTS_DIR`
+  - 既有 handoff/default-runtime 合同继续保持绿色
+
+## 当前下一队列
+
+- P1/P2 继续扫同类 linked-evidence 边界，但当前 `run_wave_b_ci_gate -> cross-summary -> evidence -> handoff` 的 Linux examples 主链、history naming 与 handoff alert 面板已经基本闭环。
+- P2 repo-noise 进一步下降后，再回 backend context/default-validation 架构复审。
+
+## 使用建议
+
+- 想看“现在该看什么”，先读 `../PLANS_CURRENT_INDEX.md`。
+- 想看“本月做了什么”，读本页。
+- 想追某一波的命令与证据，跳回对应的日计划文件。
+
+## 2026-03-09 (Wave B CI gate CLI reports-dir passthrough)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-ci-gate-cli-reports-dir-passthrough.md`
+  - `tests/scripts/test_wave_b_ci_gate_cli_reports_dir_passthrough_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_ci_gate_cli_reports_dir_passthrough_contract.sh` => FAIL (`run_wave_b_ci_gate.sh` 不接受 `--reports-dir`，direct caller 仍只能依赖 env 切目录)
+- GREEN:
+  - Updated `scripts/run_wave_b_ci_gate.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/run_wave_b_ci_gate.sh tests/scripts/test_wave_b_ci_gate_cli_reports_dir_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_cli_reports_dir_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_reports_dir_quote_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_report_runid_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_report_run_scoped_alias_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_archive_governance_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_history_alias_cleanup_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+  - `git ls-files 'test-reports/*' | wc -l` => `0`
+- Review snapshot:
+  - Wave B CI gate 现在和后续 consumer 一样支持 caller-facing CLI `--reports-dir`
+  - `CLI > env > default` 在 CI gate 上也闭环了；显式 `--examples-report` / `--summary-out` / `--tls13-sign-bench-json-out` 覆盖语义保持不变
+  - 历史 tracked `test-reports` 存量已为 0，下一波不必再开单独的旧产物清理波次
+
+## 2026-03-09 (Wave B CI gate mixed output priority)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-ci-gate-mixed-output-priority.md`
+  - `tests/scripts/test_wave_b_ci_gate_mixed_output_priority_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_ci_gate_mixed_output_priority_contract.sh` => FAIL（显式 `--examples-report` / `--summary-out` 指向未创建子目录时无法稳定落盘；其中 `summary-out` 直接报父目录不存在）
+- GREEN:
+  - Updated `scripts/run_wave_b_ci_gate.sh`
+  - Updated `scripts/verify_examples_compile.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/run_wave_b_ci_gate.sh scripts/verify_examples_compile.sh tests/scripts/test_wave_b_ci_gate_mixed_output_priority_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_mixed_output_priority_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_cli_reports_dir_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_reports_dir_quote_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_report_runid_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_report_run_scoped_alias_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_archive_governance_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_history_alias_cleanup_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+- Review snapshot:
+  - 显式 `--examples-report` / `--summary-out` / `--tls13-sign-bench-json-out` 现在在父目录不存在时也能稳定落盘
+  - `reports-dir` 继续只承接 logs / run-scoped / archive 归档面，显式输出覆盖优先级不变
+  - 同类脚本中，cross/closure/evidence/handoff/TLS13 snapshot/status 已经具备 `dirname mkdir`；这波把 Wave B CI gate 链补齐了
+
+## 2026-03-09 (Wave B evidence cross-summary linked examples sync)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-evidence-cross-summary-linked-examples-sync.md`
+  - `tests/scripts/test_wave_b_b2_evidence_consistency_cross_summary_linked_examples_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_cross_summary_linked_examples_contract.sh` => FAIL（`cross_summary` 即使内嵌了错误的 `linux_examples_json/selection`，只要自身 `run_id` 正确，evidence checker 仍会判 `CONSISTENT`）
+- GREEN:
+  - Updated `scripts/check_wave_b_b2_evidence_consistency.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh tests/scripts/test_wave_b_b2_evidence_consistency_cross_summary_linked_examples_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_cross_summary_linked_examples_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_default_examples_static_same_run_fallback_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_default_examples_stale_static_guard_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_warning_default_none_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_default_examples_run_scoped_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_consistency_alert_summary.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+- Review snapshot:
+  - evidence checker 现在不只看 `cross_summary` 文件是否存在/同 run，还会在字段存在时校验其中内嵌的 `linux_examples_json` / `linux_examples_selection` 是否和当前 evidence 解析结果一致
+  - 旧版 minimal fixture 若不带这些字段，仍保持宽容，不会被强制判错
+  - 这波把 Wave B Linux examples 在 producer -> cross-summary -> evidence 这条 linked-evidence 主链补成了真正闭环
+
+## 2026-03-09 (Wave B examples history retention naming)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-examples-history-retention-naming.md`
+  - `tests/scripts/test_wave_b_ci_gate_examples_history_retention_naming_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_history_retention_naming_contract.sh` => FAIL（archive copy 路径若被误设成 generic 名称，producer 会照单全收，破坏 history bucket 的 run-scoped naming 边界）
+- GREEN:
+  - Updated `scripts/run_wave_b_ci_gate.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/run_wave_b_ci_gate.sh tests/scripts/test_wave_b_ci_gate_examples_history_retention_naming_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_history_retention_naming_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_archive_governance_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_history_alias_cleanup_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_mixed_output_priority_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_cli_reports_dir_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+- Review snapshot:
+  - history bucket 现在不仅会清理 generic alias，还会把 archive copy 文件名规范化到 `examples_compile_ci_gate_<run_id>.json`
+  - archive 目录仍可自定义，但 archive copy 不再允许漂移成 generic 名称
+  - 这波没有碰历史清理，只把 retention naming 边界补成了合同化约束
+
+## 2026-03-09 (Wave B handoff linked-evidence alert sync)
+- Added:
+  - `docs/plans/2026-03-09-wave-b-handoff-linked-evidence-alert-sync.md`
+  - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_linked_evidence_alert_sync_contract.sh`
+- RED:
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_linked_evidence_alert_sync_contract.sh` => FAIL（当 inconsistency 只来自 `linked_evidence_mismatch` 时，handoff bundle 仍显示 `alert_state=CLEAR`，且顶部计数缺少该指标）
+- GREEN:
+  - Updated `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh tests/scripts/test_prepare_wave_b_b2_handoff_bundle_linked_evidence_alert_sync_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_linked_evidence_alert_sync_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_consistency_alert_summary.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_default_examples_run_scoped_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_cross_summary_linked_examples_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_tls13_default_reports_runtime_contract.sh` => PASS
+- Review snapshot:
+  - handoff bundle 顶部 `Consistency Alert Summary` 现在会显示 `linked_evidence_mismatch`
+  - 只要 `linked_evidence_mismatch > 0`，`alert_state` 就会变成 `WARN`
+  - 这样 handoff 顶部计数面板终于和 `consistency_status=INCONSISTENT` 保持一致，不再自相矛盾
+
+## 2026-03-09 (library log callback roundtrip visibleization)
+- Added:
+  - `docs/plans/2026-03-09-library-log-callback-roundtrip-visibleization.md`
+  - `tests/test_library_log_callback_roundtrip_visibleization.pas`
+- RED:
+  - `fpc -Fu./src tests/test_library_log_callback_roundtrip_visibleization.pas -otmp/test_library_log_callback_roundtrip_visibleization` => PASS
+  - `./tmp/test_library_log_callback_roundtrip_visibleization` => FAIL（`SetLogCallback` 不会同步 `GetDefaultConfig.LogCallback`）
+- GREEN:
+  - Updated `src/fafafa.ssl.freepascal.lib.pas`
+  - Updated `src/fafafa.ssl.openssl.backed.pas`
+  - Updated `src/fafafa.ssl.winssl.lib.pas`
+  - Updated `src/fafafa.ssl.mbedtls.lib.pas`
+  - Updated `src/fafafa.ssl.wolfssl.lib.pas`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src tests/test_library_log_callback_roundtrip_visibleization.pas -otmp/test_library_log_callback_roundtrip_visibleization` => PASS
+  - `./tmp/test_library_log_callback_roundtrip_visibleization` => PASS
+  - `fpc -Fu./src tests/test_factory_request_config_logging_scope_visibleization.pas -otmp/test_factory_request_config_logging_scope_visibleization` => PASS
+  - `./tmp/test_factory_request_config_logging_scope_visibleization` => PASS
+  - `fpc -Fu./src tests/config/test_default_config.pas -otmp/test_default_config` => PASS
+  - `./tmp/test_default_config` => PASS
+  - `fpc -Fu./src tests/test_factory_backend_default_config_initialization.pas -otmp/test_factory_backend_default_config_initialization` => PASS
+  - `./tmp/test_factory_backend_default_config_initialization` => PASS
+  - `python3 scripts/compile_all_modules.py` => PASS（231/231）
+- Review snapshot:
+  - `SetLogCallback` 现在会同步 library default snapshot，因此 `GetDefaultConfig` 不再回显过期 callback
+  - request path 的 logging-scope 拒绝策略保持不变，`CreateDefaultConfig(...)` 继续清掉 library-only logging 字段
+  - backend logging-surface parity 又补齐一层，下一波更应该转向 `TSSLConfig` ownership / slimming 复审
+
+## 2026-03-09 (fake backend log callback snapshot parity)
+- Added:
+  - `docs/plans/2026-03-09-fake-backend-log-callback-snapshot-parity.md`
+- RED:
+  - `fpc -Fu./src tests/test_factory_shared_config_and_init_race.pas -otmp/test_factory_shared_config_and_init_race` => PASS
+  - `./tmp/test_factory_shared_config_and_init_race` => FAIL（`fake backend SetLogCallback should visibleize in GetDefaultConfig`）
+- GREEN:
+  - Updated `tests/test_factory_shared_config_and_init_race.pas`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src tests/test_factory_shared_config_and_init_race.pas -otmp/test_factory_shared_config_and_init_race` => PASS
+  - `./tmp/test_factory_shared_config_and_init_race` => PASS
+  - `fpc -Fu./src tests/test_library_log_callback_roundtrip_visibleization.pas -otmp/test_library_log_callback_roundtrip_visibleization` => PASS
+  - `./tmp/test_library_log_callback_roundtrip_visibleization` => PASS
+- Review snapshot:
+  - `test_factory_shared_config_and_init_race` 内部 fake backend 不再把 `SetLogCallback` 做成 no-op
+  - shared-config/init-race 这条测试主线现在能承接真实 backend 的 logging snapshot 语义
+  - 下一波可继续补 `tests/helpers/*.inc` 里的 test double parity，减少测试夹具语义分叉
+
+## 2026-03-10 (helper fake log callback snapshot parity)
+- Added:
+  - `docs/plans/2026-03-10-helper-fake-log-callback-snapshot-parity.md`
+  - `tests/test_helper_fake_log_callback_snapshot_parity.pas`
+- RED:
+  - `fpc -Fu./src tests/test_helper_fake_log_callback_snapshot_parity.pas -otmp/test_helper_fake_log_callback_snapshot_parity` => PASS
+  - `./tmp/test_helper_fake_log_callback_snapshot_parity` => FAIL（`test default helper fixture SetLogCallback should visibleize in GetDefaultConfig`）
+- GREEN:
+  - Updated `tests/helpers/test_fake_default_backend_fixture.inc`
+  - Updated `tests/helpers/test_backend_store_fake_fixture.inc`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src tests/test_helper_fake_log_callback_snapshot_parity.pas -otmp/test_helper_fake_log_callback_snapshot_parity` => PASS
+  - `./tmp/test_helper_fake_log_callback_snapshot_parity` => PASS
+  - `fpc -Fu./src tests/config/test_config_snapshot_clone.pas -otmp/test_config_snapshot_clone` => PASS
+  - `./tmp/test_config_snapshot_clone` => PASS
+  - `fpc -Fu./src tests/config/test_config_import_export.pas -otmp/test_config_import_export` => PASS
+  - `./tmp/test_config_import_export` => PASS
+  - `fpc -Fu./src tests/test_context_builder_backend_store_consistency.pas -otmp/test_context_builder_backend_store_consistency` => PASS
+  - `./tmp/test_context_builder_backend_store_consistency` => PASS
+- Review snapshot:
+  - 两个 `tests/helpers/*.inc` 夹具都不再把 `SetLogCallback` 吞掉
+  - helper fixture 开始维护最小 `GetDefaultConfig` 快照，logging-scope contract 可以跨到 builder/config 测试主线
+  - 下一波可以继续收口 helper fixture 的 owner-field / baseline parity，而不是再让夹具长期漂在生产语义之外
+
+## 2026-03-10 (helper create-context default-config consistency)
+- Added:
+  - `docs/plans/2026-03-10-helper-create-context-default-config-consistency.md`
+  - `tests/test_helper_create_context_default_config_consistency.pas`
+- RED:
+  - `fpc -Fu./src tests/test_helper_create_context_default_config_consistency.pas -otmp/test_helper_create_context_default_config_consistency` => PASS
+  - `./tmp/test_helper_create_context_default_config_consistency` => FAIL（`default helper fixture session timeout expected=123 actual=300`）
+- GREEN:
+  - Updated `tests/helpers/test_fake_default_backend_fixture.inc`
+  - Updated `tests/helpers/test_backend_store_fake_fixture.inc`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src tests/test_helper_create_context_default_config_consistency.pas -otmp/test_helper_create_context_default_config_consistency` => PASS
+  - `./tmp/test_helper_create_context_default_config_consistency` => PASS
+  - `fpc -Fu./src tests/test_helper_fake_log_callback_snapshot_parity.pas -otmp/test_helper_fake_log_callback_snapshot_parity` => PASS
+  - `./tmp/test_helper_fake_log_callback_snapshot_parity` => PASS
+  - `fpc -Fu./src tests/config/test_config_snapshot_clone.pas -otmp/test_config_snapshot_clone` => PASS
+  - `./tmp/test_config_snapshot_clone` => PASS
+  - `fpc -Fu./src tests/config/test_config_import_export.pas -otmp/test_config_import_export` => PASS
+  - `./tmp/test_config_import_export` => PASS
+  - `fpc -Fu./src tests/test_context_builder_backend_store_consistency.pas -otmp/test_context_builder_backend_store_consistency` => PASS
+  - `./tmp/test_context_builder_backend_store_consistency` => PASS
+- Review snapshot:
+  - helper fixture 的 `CreateContext` 不再回退到 `TFreePascalContext` 自己的内部默认值
+  - `SetDefaultConfig -> CreateContext` 这条主语义链在 helper fixture 上已经和真实 backend 对齐了一层
+  - 下一波可以继续收口 owner normalization / request-only field validation，而不是再让 helper 停留在“看起来有快照、实际不生效”的半状态
+
+## 2026-03-10 (helper/fake CreateContext snapshot immutability)
+- Added:
+  - `docs/plans/2026-03-10-helper-fake-create-context-snapshot-immutability.md`
+- RED:
+  - `fpc -Fu./src tests/test_helper_create_context_default_config_consistency.pas -otmp/test_helper_create_context_default_config_consistency` => PASS
+  - `./tmp/test_helper_create_context_default_config_consistency` => PASS（新增 server-path snapshot immutability 合同未暴露真缺口）
+  - `fpc -Fu./src tests/test_factory_shared_config_and_init_race.pas -otmp/test_factory_shared_config_and_init_race` => PASS
+  - `./tmp/test_factory_shared_config_and_init_race` => PASS（新增 fake backend snapshot immutability 合同未暴露真缺口）
+- GREEN:
+  - Updated `tests/test_helper_create_context_default_config_consistency.pas`
+  - Updated `tests/test_factory_shared_config_and_init_race.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src tests/test_helper_create_context_default_config_consistency.pas -otmp/test_helper_create_context_default_config_consistency` => PASS
+  - `./tmp/test_helper_create_context_default_config_consistency` => PASS
+  - `fpc -Fu./src tests/test_factory_shared_config_and_init_race.pas -otmp/test_factory_shared_config_and_init_race` => PASS
+  - `./tmp/test_factory_shared_config_and_init_race` => PASS
+- Review snapshot:
+  - helper fixture 与 shared-config fake backend 的 `CreateContext(...)` 现在都有显式合同保证：server context 创建不会回写污染默认快照
+  - 这条线现在更适合作为主 backend/API 复审的可信替身，而不是继续先修测试夹具
+  - next queue: 切回主 backend/API 复审，优先看 `ISSLContext.ServerName` 迁移后的残余 clear-path / deprecation 边界
+
+## 2026-03-10 (helper library default config validation parity)
+- Added:
+  - `docs/plans/2026-03-10-helper-library-default-config-validation-parity.md`
+  - `tests/test_helper_library_default_config_validation_parity.pas`
+- RED:
+  - `fpc -Fu./src tests/test_helper_library_default_config_validation_parity.pas -otmp/test_helper_library_default_config_validation_parity` => PASS
+  - `./tmp/test_helper_library_default_config_validation_parity` => FAIL（`default helper fixture HandshakeTimeout should raise ESSLConfigurationException`）
+- GREEN:
+  - Updated `tests/helpers/test_fake_default_backend_fixture.inc`
+  - Updated `tests/helpers/test_backend_store_fake_fixture.inc`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src tests/test_helper_library_default_config_validation_parity.pas -otmp/test_helper_library_default_config_validation_parity` => PASS
+  - `./tmp/test_helper_library_default_config_validation_parity` => PASS
+  - `fpc -Fu./src tests/test_helper_create_context_default_config_consistency.pas -otmp/test_helper_create_context_default_config_consistency` => PASS
+  - `./tmp/test_helper_create_context_default_config_consistency` => PASS
+  - `fpc -Fu./src tests/test_helper_fake_log_callback_snapshot_parity.pas -otmp/test_helper_fake_log_callback_snapshot_parity` => PASS
+  - `./tmp/test_helper_fake_log_callback_snapshot_parity` => PASS
+  - `fpc -Fu./src tests/config/test_config_snapshot_clone.pas -otmp/test_config_snapshot_clone` => PASS
+  - `./tmp/test_config_snapshot_clone` => PASS
+  - `fpc -Fu./src tests/config/test_config_import_export.pas -otmp/test_config_import_export` => PASS
+  - `./tmp/test_config_import_export` => PASS
+  - `fpc -Fu./src tests/test_context_builder_backend_store_consistency.pas -otmp/test_context_builder_backend_store_consistency` => PASS
+  - `./tmp/test_context_builder_backend_store_consistency` => PASS
+- Review snapshot:
+  - helper fixture 的 `SetDefaultConfig` 现在也会做 owner normalization、library-default validation 和 normalize
+  - request-only 字段与非法 runtime dead field 不会再被 helper fixture 误接受
+  - helper fixture 的 library-default surface 基本接上了真实 backend 的 contract 语义
+
+## 2026-03-10 (helper log dispatch parity)
+- Added:
+  - `docs/plans/2026-03-10-helper-log-dispatch-parity.md`
+  - `tests/test_helper_log_dispatch_parity.pas`
+- RED:
+  - `fpc -Fu./src tests/test_helper_log_dispatch_parity.pas -otmp/test_helper_log_dispatch_parity` => PASS
+  - `./tmp/test_helper_log_dispatch_parity` => FAIL（`default helper fixture info log should dispatch callback`）
+- GREEN:
+  - Updated `tests/helpers/test_fake_default_backend_fixture.inc`
+  - Updated `tests/helpers/test_backend_store_fake_fixture.inc`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src tests/test_helper_log_dispatch_parity.pas -otmp/test_helper_log_dispatch_parity` => PASS
+  - `./tmp/test_helper_log_dispatch_parity` => PASS
+  - `fpc -Fu./src tests/test_helper_library_default_config_validation_parity.pas -otmp/test_helper_library_default_config_validation_parity` => PASS
+  - `./tmp/test_helper_library_default_config_validation_parity` => PASS
+  - `fpc -Fu./src tests/test_helper_create_context_default_config_consistency.pas -otmp/test_helper_create_context_default_config_consistency` => PASS
+  - `./tmp/test_helper_create_context_default_config_consistency` => PASS
+  - `fpc -Fu./src tests/test_helper_fake_log_callback_snapshot_parity.pas -otmp/test_helper_fake_log_callback_snapshot_parity` => PASS
+  - `./tmp/test_helper_fake_log_callback_snapshot_parity` => PASS
+- Review snapshot:
+  - helper fixture 的 runtime `Log(...)` 终于接上真实 backend 的 callback dispatch 语义
+  - `LogLevel` 过滤与 callback 清空现在都能在 helper 主线上被真实验证
+  - helper fixture 的 logging surface 已经接近完整闭环
+
+## 2026-03-10 (fake backend log dispatch parity)
+- Added:
+  - `docs/plans/2026-03-10-fake-backend-log-dispatch-parity.md`
+- RED:
+  - `fpc -Fu./src tests/test_factory_shared_config_and_init_race.pas -otmp/test_factory_shared_config_and_init_race` => PASS
+  - `./tmp/test_factory_shared_config_and_init_race` => FAIL（`info log dispatch count mismatch: expected=1 actual=0`）
+- GREEN:
+  - Updated `tests/test_factory_shared_config_and_init_race.pas`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src tests/test_factory_shared_config_and_init_race.pas -otmp/test_factory_shared_config_and_init_race` => PASS
+  - `./tmp/test_factory_shared_config_and_init_race` => PASS
+  - `fpc -Fu./src tests/test_helper_log_dispatch_parity.pas -otmp/test_helper_log_dispatch_parity` => PASS
+  - `./tmp/test_helper_log_dispatch_parity` => PASS
+- Review snapshot:
+  - `test_factory_shared_config_and_init_race` 里的 fake backend 现在也会按 `LogLevel` / `LogCallback` 分发日志
+  - 这条主线的 fake backend 与 helper fixture、真实 backend 的 logging runtime 语义已经对齐
+  - 下一波可以更有把握地切回主 backend/API 复审
+
+## 2026-03-10 (fake backend library default config validation parity)
+- Added:
+  - `docs/plans/2026-03-10-fake-backend-library-default-config-validation-parity.md`
+- RED:
+  - `fpc -Fu./src tests/test_factory_shared_config_and_init_race.pas -otmp/test_factory_shared_config_and_init_race` => PASS
+  - `./tmp/test_factory_shared_config_and_init_race` => FAIL（`fake backend HandshakeTimeout should raise ESSLConfigurationException`）
+- GREEN:
+  - Updated `tests/test_factory_shared_config_and_init_race.pas`
+  - Updated `docs/PLANS_CURRENT_INDEX.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src tests/test_factory_shared_config_and_init_race.pas -otmp/test_factory_shared_config_and_init_race` => PASS
+  - `./tmp/test_factory_shared_config_and_init_race` => PASS
+  - `fpc -Fu./src tests/test_helper_library_default_config_validation_parity.pas -otmp/test_helper_library_default_config_validation_parity` => PASS
+  - `./tmp/test_helper_library_default_config_validation_parity` => PASS
+  - `fpc -Fu./src tests/test_helper_log_dispatch_parity.pas -otmp/test_helper_log_dispatch_parity` => PASS
+  - `./tmp/test_helper_log_dispatch_parity` => PASS
+- Review snapshot:
+  - `test_factory_shared_config_and_init_race` 里的 fake backend 不再绕过 owner normalization / library-default validation / normalize 主链
+  - baseline 初始化语义保持不变，收口只发生在显式 `SetDefaultConfig` 路径
+  - shared-config/init-race 主线现在同时覆盖 per-request isolation、library-default validation、logging snapshot、logging dispatch、init race 五层 contract
+
+## 2026-03-10 (FreePascal connection ServerName observability parity)
+- Added:
+  - `docs/plans/2026-03-10-freepascal-connection-server-name-observability-parity.md`
+  - `tests/test_freepascal_connection_server_name_observability.pas`
+- RED:
+  - `fpc -Fu./src tests/test_freepascal_connection_server_name_observability.pas -otmp/test_freepascal_connection_server_name_observability && ./tmp/test_freepascal_connection_server_name_observability` => FAIL（`Connection info after create expected="ctx.default.example" actual=""`）
+- GREEN:
+  - Updated `src/fafafa.ssl.connection.base.pas`
+  - Updated `tests/test_freepascal_connection_server_name_observability.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src tests/test_freepascal_connection_server_name_observability.pas -otmp/test_freepascal_connection_server_name_observability && ./tmp/test_freepascal_connection_server_name_observability` => PASS
+  - `fpc -Fu./src -otmp/test_connection_context_server_name_inheritance tests/test_connection_context_server_name_inheritance.pas && ./tmp/test_connection_context_server_name_inheritance` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+- Review snapshot:
+  - 默认 `GetConnectionInfo` 现在会在连接支持 `ISSLClientConnection` 时回填 `ServerName`
+  - FreePascal backend 不再在 `ServerName` 可观测性上落后于 OpenSSL / MbedTLS / WolfSSL
+  - next queue: 继续复审 `ISSLContext.ServerName` 迁移后的残余 clear-path / deprecation 边界，或切回 linked-evidence/script 链
+
+## 2026-03-10 (WinSSL network examples per-connection SNI)
+- Added:
+  - `docs/plans/2026-03-10-winssl-network-examples-per-connection-sni.md`
+  - `tests/scripts/test_winssl_network_examples_per_connection_sni_contract.sh`
+- RED:
+  - `bash -n tests/scripts/test_winssl_network_examples_per_connection_sni_contract.sh && bash tests/scripts/test_winssl_network_examples_per_connection_sni_contract.sh` => FAIL（`deprecated context-level SetServerName should not appear in examples/winssl_https_downloader.pas`）
+- GREEN:
+  - Updated `examples/winssl_https_downloader.pas`
+  - Updated `examples/winssl_rest_client.pas`
+  - Updated `examples/winssl_health_checker.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n tests/scripts/test_winssl_network_examples_per_connection_sni_contract.sh && bash tests/scripts/test_winssl_network_examples_per_connection_sni_contract.sh` => PASS
+  - `fpc examples/winssl_https_downloader.pas -otmp/winssl_https_downloader_smoke` => PASS
+  - `fpc examples/winssl_rest_client.pas -otmp/winssl_rest_client_smoke` => PASS
+  - `fpc examples/winssl_health_checker.pas -otmp/winssl_health_checker_smoke` => PASS
+- Review snapshot:
+  - 高可见 WinSSL 联网示例不再继续示范 deprecated context-level `SetServerName(...)`
+  - 示例层现在与 README / migration policy 一样，统一指向 per-connection SNI
+  - next queue: 继续扫 `examples/example_factory_usage.pas` / `tests/examples/test_basic.pas` 这类高可见入口，判断是否还要继续迁移或显式保留兼容示例定位
+
+## 2026-03-10 (example_factory_usage per-connection SNI)
+- Added:
+  - `docs/plans/2026-03-10-example-factory-usage-per-connection-sni.md`
+  - `tests/scripts/test_example_factory_usage_per_connection_sni_contract.sh`
+- RED:
+  - `bash -n tests/scripts/test_example_factory_usage_per_connection_sni_contract.sh && bash tests/scripts/test_example_factory_usage_per_connection_sni_contract.sh` => FAIL（`example_factory_usage should not teach deprecated context-level SetServerName`）
+- GREEN:
+  - Updated `examples/example_factory_usage.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n tests/scripts/test_example_factory_usage_per_connection_sni_contract.sh && bash tests/scripts/test_example_factory_usage_per_connection_sni_contract.sh` => PASS
+  - `fpc -Fu./src -Fi./src examples/example_factory_usage.pas -otmp/example_factory_usage_smoke` => PASS
+- Review snapshot:
+  - 最直接的 quick-start 示例不再继续示范 deprecated context-level `SetServerName(...)`
+  - 这让 README、架构文档、WinSSL 联网示例和 factory usage 示例都指向同一条 per-connection SNI 路径
+  - next queue: 继续判断 `tests/examples` 里这些高可见文件应保留为兼容 API 测试，还是也要迁到推荐路径
+
+## 2026-03-10 (WinSSL example-style tests per-connection SNI)
+- Added:
+  - `docs/plans/2026-03-10-winssl-example-tests-per-connection-sni.md`
+  - `tests/scripts/test_winssl_example_tests_per_connection_sni_contract.sh`
+- RED:
+  - `bash -n tests/scripts/test_winssl_example_tests_per_connection_sni_contract.sh && bash tests/scripts/test_winssl_example_tests_per_connection_sni_contract.sh` => FAIL（`deprecated context-level SetServerName should not appear in tests/examples/test_winssl_simple.pas`）
+- GREEN:
+  - Updated `tests/examples/test_winssl_simple.pas`
+  - Updated `tests/examples/test_winssl_debug.pas`
+  - Updated `tests/examples/test_winssl.pas`
+  - Updated `tests/examples/test_performance.pas`
+  - Updated `tests/examples/test_certchain.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n tests/scripts/test_winssl_example_tests_per_connection_sni_contract.sh && bash tests/scripts/test_winssl_example_tests_per_connection_sni_contract.sh` => PASS
+- Review snapshot:
+  - 五份 WinSSL 示例测试不再继续示范 deprecated context-level `SetServerName(...)`
+  - 由于这些文件是 Windows-only 测试入口，本波在 Linux 环境下只做了 shell contract 验证
+  - next queue: 判断 `tests/examples/test_basic.pas` / `tests/examples/test_lib_core_functionality.pas` 是否保留为兼容 API 覆盖，还是也应迁到推荐路径
+
+## 2026-03-10 (example tests context ServerName compat coverage)
+- Added:
+  - `docs/plans/2026-03-10-example-tests-context-servername-compat-coverage.md`
+  - `tests/scripts/test_examples_context_server_name_compat_coverage_contract.sh`
+- RED:
+  - `bash -n tests/scripts/test_examples_context_server_name_compat_coverage_contract.sh && bash tests/scripts/test_examples_context_server_name_compat_coverage_contract.sh` => PASS（合同是新加的定性 guard，不是 bugfix RED）
+- GREEN:
+  - Updated `tests/examples/test_basic.pas`
+  - Updated `tests/examples/test_lib_core_functionality.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n tests/scripts/test_examples_context_server_name_compat_coverage_contract.sh && bash tests/scripts/test_examples_context_server_name_compat_coverage_contract.sh` => PASS
+  - `fpc -Fu./src -Fi./src tests/examples/test_basic.pas -otmp/test_examples_test_basic_smoke` => PASS（warnings only）
+  - `fpc -Fu./src -Fi./src tests/examples/test_lib_core_functionality.pas -otmp/test_examples_test_lib_core_smoke` => existing FAIL（`TCryptoUtils.Base64Encode/Base64DecodeString` 缺失，非本波引入）
+- Review snapshot:
+  - 这两个入口现在明确是 compatibility coverage，不再和推荐示例混淆
+  - `test_lib_core_functionality.pas` 同时暴露出一条旧的 compile drift，但它与本波的 `ServerName` 定性无关
+  - next queue: 若继续 examples 层治理，可单独开波次处理 `test_lib_core_functionality.pas` 的历史编译漂移
+
+## 2026-03-10 (test_lib_core_functionality encoding API modernization)
+- Added:
+  - `docs/plans/2026-03-10-test-lib-core-functionality-encoding-api-modernization.md`
+- RED:
+  - `fpc -Fu./src -Fi./src tests/examples/test_lib_core_functionality.pas -otmp/test_examples_test_lib_core_smoke` => FAIL（`TCryptoUtils.Base64Encode/Base64DecodeString` 不存在）
+- GREEN:
+  - Updated `tests/examples/test_lib_core_functionality.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src -Fi./src tests/examples/test_lib_core_functionality.pas -otmp/test_examples_test_lib_core_smoke && ./tmp/test_examples_test_lib_core_smoke` => PASS
+  - `bash -n tests/scripts/test_examples_context_server_name_compat_coverage_contract.sh && bash tests/scripts/test_examples_context_server_name_compat_coverage_contract.sh` => PASS
+  - `fpc -Fu./src -Fi./src tests/examples/test_basic.pas -otmp/test_examples_test_basic_smoke` => PASS（warnings only）
+- Review snapshot:
+  - Base64 调用面已与当前 `TEncodingUtils` 对齐
+  - focused runtime 现在也会显式导入 OpenSSL 注册单元，不再因 backend 未注册而假失败
+  - next queue: 若继续 examples 层治理，可再看 `test_basic.pas` 的 deprecated warning/noise 是否要单开波次
+
+## 2026-03-10 (test_basic deprecated warning noise)
+- Added:
+  - `docs/plans/2026-03-10-test-basic-deprecated-warning-noise.md`
+  - `tests/scripts/test_test_basic_deprecated_warning_noise_contract.sh`
+- RED:
+  - `bash -n tests/scripts/test_test_basic_deprecated_warning_noise_contract.sh && bash tests/scripts/test_test_basic_deprecated_warning_noise_contract.sh` => FAIL（`test_basic should not emit file-local deprecated warnings`）
+- GREEN:
+  - Updated `tests/examples/test_basic.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n tests/scripts/test_test_basic_deprecated_warning_noise_contract.sh && bash tests/scripts/test_test_basic_deprecated_warning_noise_contract.sh` => PASS
+  - `fpc -Fu./src -Fi./src tests/examples/test_basic.pas -otmp/test_examples_test_basic_smoke` => PASS（no file-local warnings/notes）
+- Review snapshot:
+  - `test_basic.pas` 仍保留 compatibility coverage，但 file-local deprecated warnings 已被局部收口
+  - 当前 focused 编译已不再包含 `test_basic.pas` 自身的 warning/note 噪音
+  - next queue: 可以切回 linked-evidence/script 链，或继续处理 examples 层中更高价值的行为/契约问题
+
+## 2026-03-10 (Wave B cross-summary examples warning observability)
+- Added:
+  - `docs/plans/2026-03-10-wave-b-cross-summary-examples-warning-observability.md`
+  - `tests/scripts/test_wave_b_cross_platform_summary_examples_warning_explicit_override_contract.sh`
+  - `tests/scripts/test_wave_b_cross_platform_summary_examples_warning_default_none_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_examples_warning_explicit_override_contract.sh` => FAIL（cross-summary 缺少 `linux_examples_warning` 字段）
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_examples_warning_default_none_contract.sh` => FAIL（cross-summary 缺少 `linux_examples_warning: none`）
+- GREEN:
+  - Updated `scripts/generate_wave_b_cross_platform_summary.sh`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh tests/scripts/test_wave_b_cross_platform_summary_examples_warning_explicit_override_contract.sh tests/scripts/test_wave_b_cross_platform_summary_examples_warning_default_none_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_examples_warning_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_examples_warning_default_none_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_examples_selection_default_run_scoped_contract.sh` => PASS
+- Review snapshot:
+  - cross-summary 现在不只输出 examples selection，也输出 examples warning
+  - Linux examples 的 selection/warning 现在在 cross-summary / evidence / handoff 三层对齐
+  - next queue: 继续扫同类 linked-evidence 边界，优先看其它 producer 是否还缺 warning/selection 可观测字段
+
+## 2026-03-10 (Wave B CI gate examples warning observability)
+- Added:
+  - `docs/plans/2026-03-10-wave-b-ci-gate-examples-warning-observability.md`
+  - `tests/scripts/test_wave_b_ci_gate_examples_warning_explicit_override_contract.sh`
+  - `tests/scripts/test_wave_b_ci_gate_examples_warning_default_none_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_warning_explicit_override_contract.sh` => FAIL（CI gate summary 缺少 explicit override warning）
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_warning_default_none_contract.sh` => FAIL（CI gate summary 缺少 default `none` warning）
+- GREEN:
+  - Updated `scripts/run_wave_b_ci_gate.sh`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/run_wave_b_ci_gate.sh tests/scripts/test_wave_b_ci_gate_examples_warning_explicit_override_contract.sh tests/scripts/test_wave_b_ci_gate_examples_warning_default_none_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_warning_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_warning_default_none_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_cli_reports_dir_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_mixed_output_priority_contract.sh` => PASS
+- Review snapshot:
+  - producer summary 现在也显式输出 examples warning
+  - Linux examples 的 warning 面现在在 producer / cross-summary / evidence / handoff 四层对齐
+  - next queue: 继续扫 Wave B 其它 producer 是否还缺 warning/selection 可观测字段
+
+## 2026-03-10 (Wave B CI gate examples selection observability)
+- Added:
+  - `docs/plans/2026-03-10-wave-b-ci-gate-examples-selection-observability.md`
+  - `tests/scripts/test_wave_b_ci_gate_examples_selection_explicit_override_contract.sh`
+  - `tests/scripts/test_wave_b_ci_gate_examples_selection_default_alias_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_selection_explicit_override_contract.sh` => FAIL（CI gate summary 缺少 explicit override selection）
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_selection_default_alias_contract.sh` => FAIL（CI gate summary 缺少 default selection）
+- GREEN:
+  - Updated `scripts/run_wave_b_ci_gate.sh`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/run_wave_b_ci_gate.sh tests/scripts/test_wave_b_ci_gate_examples_selection_explicit_override_contract.sh tests/scripts/test_wave_b_ci_gate_examples_selection_default_alias_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_selection_default_alias_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_warning_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_warning_default_none_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_cli_reports_dir_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_mixed_output_priority_contract.sh` => PASS
+- Review snapshot:
+  - producer summary 现在也显式输出 examples selection
+  - Linux examples 的 selection/warning 现在在 producer summary 上都可见，不再只靠 alias/path 推断
+  - next queue: 继续扫 Wave B 其它 producer 是否还缺 selection/warning 可观测字段
+
+## 2026-03-10 (Wave B CI gate dry-run examples observability)
+- Added:
+  - `docs/plans/2026-03-10-wave-b-ci-gate-dryrun-examples-observability.md`
+  - `tests/scripts/test_wave_b_ci_gate_dryrun_examples_observability_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_ci_gate_dryrun_examples_observability_contract.sh` => FAIL（dry-run 缺少 examples selection/warning 输出）
+- GREEN:
+  - Updated `scripts/run_wave_b_ci_gate.sh`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/run_wave_b_ci_gate.sh tests/scripts/test_wave_b_ci_gate_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_selection_default_alias_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_warning_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_warning_default_none_contract.sh` => PASS
+- Review snapshot:
+  - dry-run 现在也会输出 examples selection/warning
+  - Linux examples metadata 在 dry-run / summary 两条面上都已对齐
+  - next queue: 继续扫其它 Wave B producer 的 dry-run metadata 缺口
+
+## 2026-03-10 (Wave B cross/evidence dry-run examples path observability)
+- Added:
+  - `docs/plans/2026-03-10-wave-b-cross-evidence-dryrun-examples-path-observability.md`
+  - `tests/scripts/test_wave_b_cross_platform_summary_dryrun_examples_observability_contract.sh`
+  - `tests/scripts/test_wave_b_b2_evidence_consistency_dryrun_examples_observability_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_dryrun_examples_observability_contract.sh` => FAIL（cross-summary dry-run 缺少 `linux_examples_json`）
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_dryrun_examples_observability_contract.sh` => FAIL（evidence dry-run 缺少 `linux_examples_json`）
+- GREEN:
+  - Updated `scripts/generate_wave_b_cross_platform_summary.sh`
+  - Updated `scripts/check_wave_b_b2_evidence_consistency.sh`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh scripts/check_wave_b_b2_evidence_consistency.sh tests/scripts/test_wave_b_cross_platform_summary_dryrun_examples_observability_contract.sh tests/scripts/test_wave_b_b2_evidence_consistency_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_examples_warning_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_examples_warning_default_none_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_warning_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_warning_default_none_contract.sh` => PASS
+- Review snapshot:
+  - cross-summary / evidence dry-run 现在也会显式输出 `linux_examples_json`
+  - dry-run 观察面已能同时看到 path + selection + warning
+  - next queue: 继续扫 Wave B 其它 producer/consumer 的 dry-run metadata 缺口
+
+## 2026-03-10 (Wave B handoff dry-run examples observability)
+- Added:
+  - `docs/plans/2026-03-10-wave-b-handoff-dryrun-examples-observability.md`
+  - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_examples_observability_contract.sh`
+- RED:
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_examples_observability_contract.sh` => FAIL（handoff dry-run 仍输出 `linux_examples=`，字段名未与其它脚本对齐）
+- GREEN:
+  - Updated `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_cli_reports_dir_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_warning_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_warning_default_none_contract.sh` => PASS
+- Review snapshot:
+  - handoff dry-run 现在也统一输出 `linux_examples_json`
+  - Wave B 主链 dry-run 的 examples path 字段名已经在 CI gate / cross-summary / evidence / handoff 上对齐
+  - next queue: 继续扫 Wave B 其它 producer/consumer 的 dry-run metadata 缺口
+
+## 2026-03-10 (Wave B CI gate dry-run examples path observability)
+- Added:
+  - `docs/plans/2026-03-10-wave-b-ci-gate-dryrun-examples-path-observability.md`
+  - `tests/scripts/test_wave_b_ci_gate_dryrun_examples_paths_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_ci_gate_dryrun_examples_paths_contract.sh` => FAIL（CI gate dry-run 缺少 examples path 面输出）
+- GREEN:
+  - Updated `scripts/run_wave_b_ci_gate.sh`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/run_wave_b_ci_gate.sh tests/scripts/test_wave_b_ci_gate_dryrun_examples_paths_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_dryrun_examples_paths_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_selection_default_alias_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_warning_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_warning_default_none_contract.sh` => PASS
+- Review snapshot:
+  - CI gate dry-run 现在也显式输出 examples path 面
+  - producer dry-run 已具备 path + selection + warning 完整观察面
+  - next queue: 继续扫其它 Wave B producer/consumer 的 dry-run metadata 缺口
+
+## 2026-03-10 (Wave B closure dry-run path observability)
+- Added:
+  - `docs/plans/2026-03-10-wave-b-closure-dryrun-path-observability.md`
+  - `tests/scripts/test_wave_b_b2_closure_readiness_dryrun_paths_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_b2_closure_readiness_dryrun_paths_contract.sh` => FAIL（closure dry-run 缺少 linux/macos/windows summary path）
+- GREEN:
+  - Updated `scripts/check_wave_b_b2_closure_readiness.sh`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/check_wave_b_b2_closure_readiness.sh tests/scripts/test_wave_b_b2_closure_readiness_dryrun_paths_contract.sh tests/scripts/test_wave_b_b2_closure_readiness_dryrun_skipped_semantics_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_readiness_dryrun_paths_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_readiness_dryrun_skipped_semantics_contract.sh` => PASS
+- Review snapshot:
+  - closure dry-run 现在也显式输出三平台 summary 路径
+  - 这让 dry-run 观察面在输入层也更完整，不再只给状态/注释
+  - next queue: 继续扫 Wave B 其它 producer/consumer 的 dry-run metadata 缺口
+
+## 2026-03-10 (Wave B handoff dry-run report paths)
+- Added:
+  - `docs/plans/2026-03-10-wave-b-handoff-dryrun-report-paths.md`
+  - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_report_paths_contract.sh`
+- RED:
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_report_paths_contract.sh` => FAIL（handoff dry-run 缺少 cross/closure/consistency/bundle report paths）
+- GREEN:
+  - Updated `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_report_paths_contract.sh tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_report_paths_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_cli_reports_dir_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_warning_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_examples_warning_default_none_contract.sh` => PASS
+- Review snapshot:
+  - handoff dry-run 现在也显式输出 4 份目标报告路径
+  - dry-run 观察面在输出层更加完整，不再只给 `output_dir`
+  - next queue: 继续扫其它 Wave B producer/consumer 的 dry-run metadata 缺口
+
+## 2026-03-10 (Wave B handoff dry-run platform paths)
+- Added:
+  - `docs/plans/2026-03-10-wave-b-handoff-dryrun-platform-paths.md`
+  - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_platform_paths_contract.sh`
+- RED:
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_platform_paths_contract.sh` => FAIL（handoff dry-run 缺少 macOS / Windows summary path）
+- GREEN:
+  - Updated `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_platform_paths_contract.sh tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_report_paths_contract.sh tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_platform_paths_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_report_paths_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_cli_reports_dir_passthrough_contract.sh` => PASS
+- Review snapshot:
+  - handoff dry-run 现在也显式输出 macOS / Windows summary path
+  - handoff dry-run 的平台输入层不再只靠 `macos_args/windows_args` 间接表达
+  - next queue: 继续扫其它 Wave B producer/consumer 的 dry-run metadata 缺口
+
+## 2026-03-10 (Wave B evidence dry-run path observability)
+- Added:
+  - `docs/plans/2026-03-10-wave-b-evidence-dryrun-path-observability.md`
+  - `tests/scripts/test_wave_b_b2_evidence_consistency_dryrun_paths_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_dryrun_paths_contract.sh` => FAIL（evidence dry-run 缺少 summary/cross/closure 输入路径）
+- GREEN:
+  - Updated `scripts/check_wave_b_b2_evidence_consistency.sh`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh tests/scripts/test_wave_b_b2_evidence_consistency_dryrun_paths_contract.sh tests/scripts/test_wave_b_b2_evidence_consistency_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_dryrun_paths_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_warning_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_examples_warning_default_none_contract.sh` => PASS
+- Review snapshot:
+  - evidence dry-run 现在也显式输出 summary/cross/closure 输入路径
+  - 这让 evidence dry-run 的输入路径层不再是黑盒
+  - next queue: 继续扫其它 Wave B producer/consumer 的 dry-run metadata 缺口
+
+## 2026-03-10 (Wave B cross-summary dry-run platform paths)
+- Added:
+  - `docs/plans/2026-03-10-wave-b-cross-dryrun-platform-paths.md`
+  - `tests/scripts/test_wave_b_cross_platform_summary_dryrun_platform_paths_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_dryrun_platform_paths_contract.sh` => FAIL（cross-summary dry-run 缺少 macOS/Windows/Android 输入路径）
+- GREEN:
+  - Updated `scripts/generate_wave_b_cross_platform_summary.sh`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh tests/scripts/test_wave_b_cross_platform_summary_dryrun_platform_paths_contract.sh tests/scripts/test_wave_b_cross_platform_summary_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_dryrun_platform_paths_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_examples_warning_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_examples_warning_default_none_contract.sh` => PASS
+- Review snapshot:
+  - cross-summary dry-run 现在也显式输出 macOS/Windows/Android 输入路径
+  - dry-run 观察面在平台输入层更完整
+  - next queue: 继续扫其它 Wave B producer/consumer 的 dry-run metadata 缺口
+
+## 2026-03-10 (Wave B CI gate dry-run summary observability)
+- Added:
+  - `docs/plans/2026-03-10-wave-b-ci-gate-dryrun-summary-observability.md`
+  - `tests/scripts/test_wave_b_ci_gate_dryrun_summary_observability_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_ci_gate_dryrun_summary_observability_contract.sh` => FAIL（CI gate dry-run 缺少 `run_id` / `summary_out` 结构化输出）
+- GREEN:
+  - Updated `scripts/run_wave_b_ci_gate.sh`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/run_wave_b_ci_gate.sh tests/scripts/test_wave_b_ci_gate_dryrun_summary_observability_contract.sh tests/scripts/test_wave_b_ci_gate_dryrun_examples_paths_contract.sh tests/scripts/test_wave_b_ci_gate_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_dryrun_summary_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_dryrun_examples_paths_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_dryrun_examples_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_selection_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_selection_default_alias_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_warning_explicit_override_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_warning_default_none_contract.sh` => PASS
+- Review snapshot:
+  - CI gate dry-run 现在也显式输出 `run_id` / `summary_out`
+  - producer dry-run 的 summary 层不再只依赖非结构化 stderr 提示
+  - next queue: 继续扫其它 Wave B producer/consumer 的 dry-run metadata 缺口
+
+## 2026-03-10 (Wave B macOS gate dry-run observability)
+- Added:
+  - `docs/plans/2026-03-10-wave-b-macos-gate-dryrun-observability.md`
+  - `tests/scripts/test_wave_b_macos_gate_dryrun_observability_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_macos_gate_dryrun_observability_contract.sh` => FAIL（macOS gate dry-run 缺少结构化 metadata 输出）
+- GREEN:
+  - Updated `scripts/run_wave_b_macos_gate.sh`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/run_wave_b_macos_gate.sh tests/scripts/test_wave_b_macos_gate_dryrun_observability_contract.sh tests/scripts/test_wave_b_macos_gate_isolation_passthrough_contract.sh tests/scripts/test_wave_b_macos_gate_fpc_host_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_dryrun_observability_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_isolation_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_fpc_host_passthrough_contract.sh` => PASS
+- Review snapshot:
+  - macOS gate dry-run 现在也有结构化 metadata 输出
+  - platform gate dry-run 不再只剩 step command 级观察面
+  - next queue: 继续扫其它 Wave B producer/consumer 的 dry-run metadata 缺口
+
+## 2026-03-10 (Wave B Windows gate dry-run observability)
+- Added:
+  - `docs/plans/2026-03-10-wave-b-windows-gate-dryrun-observability.md`
+  - `tests/scripts/test_wave_b_windows_gate_dryrun_observability_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_windows_gate_dryrun_observability_contract.sh` => FAIL（Windows gate dry-run 缺少结构化 metadata 输出）
+- GREEN:
+  - Updated `scripts/run_wave_b_windows_gate.ps1`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_wave_b_windows_gate_dryrun_observability_contract.sh` => PASS
+  - `bash -n tests/scripts/test_wave_b_windows_gate_dryrun_observability_contract.sh tests/scripts/test_wave_b_windows_gate_winssl_blocker_batch_integration_contract.sh tests/scripts/test_wave_b_windows_gate_validate_modules_passthrough_contract.sh tests/scripts/test_wave_b_windows_gate_powershell_host_fallback_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_windows_gate_winssl_blocker_batch_integration_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_windows_gate_validate_modules_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_windows_gate_powershell_host_fallback_contract.sh` => PASS
+- Review snapshot:
+  - Windows gate dry-run 现在也有结构化 metadata 输出
+  - platform gate 两端（macOS / Windows）都不再只剩 step command 级观察面
+  - next queue: 继续扫 active archive / continuous monitor 这条剩余 observability 链
+
+## 2026-03-10 (Wave B platform archive debug log surface)
+- Added:
+  - `docs/plans/2026-03-10-wave-b-platform-archive-debug-log-surface.md`
+  - `tests/scripts/test_wave_b_platform_archive_debug_logs_runtime_contract.sh`
+- RED:
+  - `bash tests/scripts/test_wave_b_platform_archive_debug_logs_runtime_contract.sh` => FAIL（archive dry-run 缺少 Wave B 活动日志面）
+- GREEN:
+  - Updated `scripts/archive_ci_artifacts_draft.sh`
+  - Updated `tests/scripts/test_repo_hygiene_wave_b_platform_surface_tmp_defaults_contract.sh`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n tests/scripts/test_wave_b_platform_archive_debug_logs_runtime_contract.sh tests/scripts/test_wave_b_platform_archive_default_reports_runtime_contract.sh tests/scripts/test_repo_hygiene_wave_b_platform_surface_tmp_defaults_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_platform_archive_debug_logs_runtime_contract.sh` => PASS
+  - `bash tests/scripts/test_wave_b_platform_archive_default_reports_runtime_contract.sh` => PASS
+  - `bash tests/scripts/test_repo_hygiene_wave_b_platform_surface_tmp_defaults_contract.sh` => PASS
+  - `git diff --check -- scripts/archive_ci_artifacts_draft.sh tests/scripts/test_wave_b_platform_archive_debug_logs_runtime_contract.sh tests/scripts/test_repo_hygiene_wave_b_platform_surface_tmp_defaults_contract.sh` => PASS
+- Review snapshot:
+  - archive dry-run / archive surface 现在也会收口当前活动的 Wave B debug logs
+  - summary 与 debug signal 的归档层次已重新对齐
+  - next queue: 优先看 `continuous_test_monitor.sh` 的运行态 contract 与输出治理
+
+## 2026-03-10 (continuous test monitor output governance)
+- Added:
+  - `docs/plans/2026-03-10-continuous-test-monitor-output-governance.md`
+  - `tests/scripts/test_continuous_test_monitor_output_governance_contract.sh`
+  - `tests/scripts/test_continuous_test_monitor_output_governance_runtime_contract.sh`
+- RED:
+  - `bash tests/scripts/test_continuous_test_monitor_output_governance_contract.sh` => FAIL（缺少 `TREND_FILE` / `RUNS_DIR`）
+  - `bash tests/scripts/test_continuous_test_monitor_output_governance_runtime_contract.sh` => FAIL（runtime 仍把 unit/bin 输出到根 `tmp/continuous_monitor_*`）
+- GREEN:
+  - Updated `scripts/continuous_test_monitor.sh`
+  - Updated `tests/scripts/test_repo_hygiene_wave_b_platform_surface_tmp_defaults_contract.sh`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash -n scripts/continuous_test_monitor.sh tests/scripts/test_continuous_test_monitor_output_governance_contract.sh tests/scripts/test_continuous_test_monitor_output_governance_runtime_contract.sh tests/scripts/test_continuous_test_monitor_isolation_passthrough_contract.sh tests/scripts/test_repo_hygiene_wave_b_platform_surface_tmp_defaults_contract.sh` => PASS
+  - `bash tests/scripts/test_continuous_test_monitor_output_governance_contract.sh` => PASS
+  - `bash tests/scripts/test_continuous_test_monitor_output_governance_runtime_contract.sh` => PASS
+  - `bash tests/scripts/test_continuous_test_monitor_isolation_passthrough_contract.sh` => PASS
+  - `bash tests/scripts/test_repo_hygiene_wave_b_platform_surface_tmp_defaults_contract.sh` => PASS
+  - `git diff --check -- scripts/continuous_test_monitor.sh tests/scripts/test_continuous_test_monitor_output_governance_contract.sh tests/scripts/test_continuous_test_monitor_output_governance_runtime_contract.sh tests/scripts/test_repo_hygiene_wave_b_platform_surface_tmp_defaults_contract.sh` => PASS
+- Review snapshot:
+  - monitor 的长期观察面与 run artifacts 现在都收口在同一个 reports 根下
+  - 这波已经把 active report surface 的最后一个明显噪音入口压住
+  - next queue: 回到 `backend context/default-validation` 架构复审
+
+## 2026-03-10 (builder private-key PEM precedence alignment)
+- Added:
+  - `docs/plans/2026-03-10-builder-private-key-pem-precedence-alignment.md`
+- RED:
+  - `fpc -gl -Fu./src -Fu./tests -Fu./tests/helpers -otmp/test_context_builder_backend_store_consistency tests/test_context_builder_backend_store_consistency.pas && ./tmp/test_context_builder_backend_store_consistency` => FAIL（`ImportFromJSON` 导入的 `private_key_pem` 仍被 file-first build 分支压过）
+- GREEN:
+  - Updated `src/fafafa.ssl.context.builder.pas`
+  - Updated `tests/test_context_builder_backend_store_consistency.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -gl -Fu./src -Fu./tests -Fu./tests/helpers -otmp/test_context_builder_backend_store_consistency tests/test_context_builder_backend_store_consistency.pas && ./tmp/test_context_builder_backend_store_consistency` => PASS
+  - `fpc -Fu./src -Fu./tests -Fu./tests/framework -otmp/test_config_validation tests/config/test_config_validation.pas && ./tmp/test_config_validation` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+- Review snapshot:
+  - `BuildClient` / `BuildServer` 现在和 `ValidateServer` 保持一致的 private-key precedence
+  - `ImportFromJSON` / `Merge` 产生的双态不再把 build 拉回 file-first
+  - next queue: 继续扫其它 `validation 文案 vs build 真顺序` 的 builder 双态分支
+
+## 2026-03-10 (builder certificate PEM precedence alignment)
+- Added:
+  - `docs/plans/2026-03-10-builder-certificate-pem-precedence-alignment.md`
+- RED:
+  - `fpc -gl -Fu./src -Fu./tests -Fu./tests/helpers -otmp/test_context_builder_backend_store_consistency tests/test_context_builder_backend_store_consistency.pas && ./tmp/test_context_builder_backend_store_consistency` => FAIL（imported `certificate_pem` 仍被 file-first build 分支压过）
+- GREEN:
+  - Updated `src/fafafa.ssl.context.builder.pas`
+  - Updated `tests/test_context_builder_backend_store_consistency.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -gl -Fu./src -Fu./tests -Fu./tests/helpers -otmp/test_context_builder_backend_store_consistency tests/test_context_builder_backend_store_consistency.pas && ./tmp/test_context_builder_backend_store_consistency` => PASS
+  - `fpc -Fu./src -Fu./tests -Fu./tests/framework -otmp/test_config_validation tests/config/test_config_validation.pas && ./tmp/test_config_validation` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+- Review snapshot:
+  - `BuildClient` / `BuildServer` 现在在 certificate precedence 上也和 validation 文案一致
+  - builder 的 file/PEM 双态材料路径已经在 cert/key 两侧都收口
+  - next queue: 优先扫 `pkcs11_uri + private_key_pem/file` 的显式 precedence/warning contract
+
+## 2026-03-10 (builder PKCS11 mixed key warning alignment)
+- Added:
+  - `docs/plans/2026-03-10-builder-pkcs11-mixed-key-warning-alignment.md`
+- RED:
+  - `fpc -Fu./src -Fu./tests -Fu./tests/framework -otmp/test_config_validation tests/config/test_config_validation.pas && ./tmp/test_config_validation` => FAIL（mixed PKCS11 key source 缺少 precedence warning）
+- GREEN:
+  - Updated `src/fafafa.ssl.context.builder.pas`
+  - Updated `tests/config/test_config_validation.pas`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `fpc -Fu./src -Fu./tests -Fu./tests/framework -otmp/test_config_validation tests/config/test_config_validation.pas && ./tmp/test_config_validation` => PASS
+  - `fpc -gl -Fu./src -Fu./tests -Fu./tests/helpers -otmp/test_context_builder_backend_store_consistency tests/test_context_builder_backend_store_consistency.pas && ./tmp/test_context_builder_backend_store_consistency` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+- Review snapshot:
+  - mixed PKCS11 private-key input 现在在 validation 面也是显式合同
+  - builder mixed-input 目前已把最主要的 file/PEM/PKCS11 precedence 风险收口
+  - next queue: 看 `certificate + PKCS11 key` 的 docs/validation 文案是否还需要显式提示
+
+## 2026-03-10 (builder PKCS11 certificate-required doc truth)
+- Added:
+  - `docs/plans/2026-03-10-builder-pkcs11-certificate-required-doc-truth.md`
+  - `tests/scripts/test_pkcs11_builder_docs_current_api_contract.sh`
+- RED:
+  - `bash tests/scripts/test_pkcs11_builder_docs_current_api_contract.sh` => FAIL（PKCS11 guide 仍使用旧 builder API，且未明确“证书仍必需”）
+- GREEN:
+  - Updated `tests/config/test_config_validation.pas`
+  - Updated `README.md`
+  - Updated `docs/README.md`
+  - Updated `docs/guides/PKCS11_USER_GUIDE.md`
+  - Updated `docs/plans/2026-03-current-summary.md`
+  - Updated `task_plan.md`
+  - Updated `findings.md`
+  - Updated `progress.md`
+- Verification:
+  - `bash tests/scripts/test_pkcs11_builder_docs_current_api_contract.sh` => PASS
+  - `fpc -Fu./src -Fu./tests -Fu./tests/framework -otmp/test_config_validation tests/config/test_config_validation.pas && ./tmp/test_config_validation` => PASS
+  - `fpc -gl -Fu./src -Fu./tests -Fu./tests/helpers -otmp/test_context_builder_backend_store_consistency tests/test_context_builder_backend_store_consistency.pas && ./tmp/test_context_builder_backend_store_consistency` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`231/231`)
+  - `git diff --check -- src/fafafa.ssl.context.builder.pas tests/config/test_config_validation.pas tests/scripts/test_pkcs11_builder_docs_current_api_contract.sh README.md docs/README.md docs/guides/PKCS11_USER_GUIDE.md` => PASS
+- Review snapshot:
+  - PKCS11 的行为合同和用户文档现在都明确：只替代私钥来源，证书仍需显式提供
+  - PKCS11 guide 已切回当前 builder API，不再继续示范历史接口
+  - next queue: 可以回到 helper 抽取，或者再扫一遍 PKCS11 guide 其它旧术语
+
+## 2026-03-10 (pure Pascal local session resumption roundtrip)
+- Added:
+  - `docs/plans/2026-03-10-pure-pascal-local-session-resumption-roundtrip.md`
+- RED:
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_session_resumption_roundtrip.pas -otmp/test_fp_local_resumption && ./tmp/test_fp_local_resumption` => FAIL
+  - Failure chain exposed three layers:
+    - fixed-port/startup test noise
+    - FreePascal backend default-config boolean drift (`EnableSessionTickets=False` silently stripping ticket options)
+    - transcript-state conflation between application traffic and resumption derivation
+- GREEN:
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+    - split resumption transcript state from application-traffic transcript state
+    - added `FResumptionTranscriptHash`
+    - derive resumption PSK from `FResumptionTranscriptHash`
+  - Updated `src/fafafa.ssl.freepascal.lib.pas`
+    - aligned default config booleans with default `Options` (`EnableSessionTickets=True`)
+  - Updated `tests/test_freepascal_local_session_resumption_roundtrip.pas`
+    - dynamic port + ready event
+    - stronger diagnostics
+    - latest-session refresh after read loop
+  - Updated `tests/integration/test_freepascal_session_ticket_runtime.pas`
+    - read through `LStream.Connection.Read(...)` for direct backend-ticket diagnostics
+- Verification:
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_session_resumption_roundtrip.pas -otmp/test_fp_local_resumption && ./tmp/test_fp_local_resumption` => PASS
+  - `fpc -Fu./src tests/test_freepascal_tls13_session_resumption_foundation.pas -otmp/test_fp_tls13_resumption && ./tmp/test_fp_tls13_resumption` => PASS
+  - `FAFAFA_RUN_NETWORK_TESTS=1 fpc -Fu./src -Fu./examples tests/integration/test_freepascal_session_ticket_runtime.pas -otmp/test_fp_session_ticket_runtime && FAFAFA_RUN_NETWORK_TESTS=1 ./tmp/test_fp_session_ticket_runtime` => PASS
+  - `fpc -Fu./src tests/test_library_create_context_default_config_consistency.pas -otmp/test_library_create_context_default_config_consistency && ./tmp/test_library_create_context_default_config_consistency` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`233/233`)
+- Review snapshot:
+  - local end-to-end `ticket -> resumable session -> resumed handshake` is now closed for pure Pascal
+  - real external `NewSessionTicket` capture remains green
+  - next queue moved to true external interoperability and remaining stream/runtime semantics
+
+## 2026-03-10 (pure Pascal external session resumption interop)
+- Added:
+  - `docs/plans/2026-03-10-pure-pascal-external-session-resumption-interop.md`
+  - `tests/integration/test_freepascal_session_resumption_runtime.pas`
+  - `tests/scripts/test_freepascal_tls13_resumption_openssl_interop_contract.sh`
+- RED:
+  - local OpenSSL `s_server` oracle initially failed on second handshake with:
+    - `tls_psk_do_binder:binder does not verify`
+  - after binder fix, real external probe still failed under `WithVerifyPeer.WithSystemRoots` on resumed validation
+- GREEN:
+  - Updated `src/fafafa.ssl.tls13.clienthello.parser.pas`
+    - parser now exposes binders-list offset separately from binder-bytes offset
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+    - fixed binder transcript truncation
+    - fixed `res binder` derivation context (`Hash("")`)
+    - resumed validation now rehydrates peer-chain intermediates from configured session snapshots
+  - Updated `src/fafafa.ssl.freepascal.session.pas`
+    - session snapshots now preserve peer certificate chain internally
+    - clone/serialize/deserialize carry the stored chain
+  - Updated `tests/test_tls13_clienthello_parser.pas`
+    - binder-offset regression coverage
+  - Updated `tests/test_freepascal_client_chain_verification_path.pas`
+    - session snapshot must preserve leaf + intermediate chain
+- Verification:
+  - `fpc -Fu./src tests/test_tls13_clienthello_parser.pas -otmp/test_tls13_clienthello_parser && ./tmp/test_tls13_clienthello_parser` => PASS
+  - `fpc -Fu./src tests/test_freepascal_client_chain_verification_path.pas -otmp/test_fp_client_chain && ./tmp/test_fp_client_chain` => PASS
+  - `bash tests/scripts/test_freepascal_tls13_resumption_openssl_interop_contract.sh` => PASS
+  - `FAFAFA_RUN_NETWORK_TESTS=1 fpc -Fu./src -Fu./examples tests/integration/test_freepascal_session_resumption_runtime.pas -otmp/test_fp_session_resumption_runtime && FAFAFA_RUN_NETWORK_TESTS=1 ./tmp/test_fp_session_resumption_runtime` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`233/233`)
+- Review snapshot:
+  - pure Pascal resumption is no longer just self-interoperability
+  - local OpenSSL interop and real external resumed handshake are both green
+  - next queue should move to stream/EOF semantics and remaining public-interface gaps
+
+## 2026-03-10 (pure Pascal stream semantics)
+- Added:
+  - `docs/plans/2026-03-10-pure-pascal-stream-semantics.md`
+  - `tests/scripts/test_freepascal_stream_semantics_contract.sh`
+- RED:
+  - local OpenSSL-driven stream contract initially failed because:
+    - `TSSLStream.Read` raised on graceful `close_notify`
+    - `SetBlocking(False)` did not actually change socket mode, so `WantRead` could not emerge
+- GREEN:
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+    - real socket-level `SetBlocking(False)` / `SetTimeout(...)`
+    - retryable transport errors now map to `sslErrWantRead` / `sslErrWantWrite`
+    - `DoWantRead` / `DoWantWrite` now reflect those retryable states
+    - application-data path now treats `close_notify` / transport EOF as graceful end-of-stream
+- Verification:
+  - `bash tests/scripts/test_freepascal_stream_semantics_contract.sh` => PASS
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_session_resumption_roundtrip.pas -otmp/test_fp_local_resumption && ./tmp/test_fp_local_resumption` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`233/233`)
+- Review snapshot:
+  - pure Pascal now has a real basic stream EOF story
+  - basic nonblocking `WantRead/WantWrite` semantics now exist for socket transport
+  - next queue should move to encrypted private key / password callback runtime support, then revisit deeper partial-record nonblocking buffering if needed
+
+## 2026-03-10 (pure Pascal password protected private key runtime)
+- Added:
+  - `docs/plans/2026-03-10-pure-pascal-password-protected-private-key-runtime.md`
+  - `src/fafafa.ssl.freepascal.keydecrypt.pas`
+  - `tests/test_freepascal_password_callback_runtime_path.pas`
+- RED:
+  - new runtime harness initially failed because pure Pascal still rejected encrypted private keys before the signer path could run
+- GREEN:
+  - Updated `src/fafafa.ssl.freepascal.context.pas`
+    - encrypted private keys are now normalized at load time instead of being rejected up front
+    - password string is tried first; `SetPasswordCallback(...)` now acts as fallback/retry
+  - Updated `src/fafafa.ssl.freepascal.lib.pas`
+    - capability truth now advertises password-protected key support again
+    - `KnownIssues` documents the still-limited algorithm surface
+  - Updated `tests/test_freepascal_password_protected_private_key_truth.pas`
+    - truth test now matches the new runtime support story
+  - Updated `docs/reference/PURE_PASCAL_CLIENT_M1_CHECKLIST.md`
+    - password-protected key row now reflects real runtime support with explicit boundaries
+- Verification:
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_password_callback_runtime_path.pas -otmp/test_fp_password_callback_runtime && ./tmp/test_fp_password_callback_runtime` => PASS
+  - `fpc -Fu./src tests/test_freepascal_password_protected_private_key_truth.pas -otmp/test_fp_password_key_truth && ./tmp/test_fp_password_key_truth` => PASS
+  - `fpc -Fu./src tests/test_freepascal_server_accept_skeleton.pas -otmp/test_fp_accept && ./tmp/test_fp_accept` => PASS
+  - `bash tests/scripts/test_freepascal_stream_semantics_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_tls13_resumption_openssl_interop_contract.sh` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`234/234`)
+- Review snapshot:
+  - pure Pascal password-string and direct callback paths now reach the real signer flow
+  - current support is intentionally scoped to `PBES2 + PBKDF2-HMAC-SHA256 + AES-CBC` plus legacy AES-CBC PEM
+  - next queue should move to `Shutdown -> close_notify`, then deeper partial-record nonblocking buffering
+
+## 2026-03-11 (pure Pascal shutdown close notify)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-shutdown-close-notify.md`
+  - `tests/scripts/test_freepascal_shutdown_close_notify_contract.sh`
+- RED:
+  - local OpenSSL-driven shutdown contract initially failed because the server did not observe an incoming client `close_notify`
+- GREEN:
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+    - added encrypted TLS 1.3 alert sender for application-traffic phase
+    - `DoShutdown` now sends `warning close_notify` instead of returning success as a no-op
+- Verification:
+  - `bash tests/scripts/test_freepascal_shutdown_close_notify_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_stream_semantics_contract.sh` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`234/234`)
+- Review snapshot:
+  - pure Pascal now covers both passive graceful EOF and active graceful shutdown
+  - next queue should move to deeper partial-record nonblocking buffering, or shutdown retry semantics for nonblocking mode
+
+## 2026-03-11 (pure Pascal nonblocking partial-record buffering)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-nonblocking-partial-record-buffering.md`
+  - `tests/scripts/test_freepascal_nonblocking_partial_record_contract.sh`
+- RED:
+  - local OpenSSL + split-proxy contract initially failed because:
+    - first nonblocking `Read` correctly surfaced `WantRead`
+    - later `Read` calls never returned decrypted payload, proving partial ciphertext bytes were not being preserved across retries
+- GREEN:
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+    - added persistent transport-side read buffering (`FTransportReadBuffer`)
+    - `RecvTLSRecord(...)` now buffers until a full TLS record is available before consuming bytes
+    - application read path now rejects `EOF + pending ciphertext` as truncated record instead of misclassifying it as graceful EOF
+- Verification:
+  - `bash tests/scripts/test_freepascal_nonblocking_partial_record_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_stream_semantics_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_shutdown_close_notify_contract.sh` => PASS
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_session_resumption_roundtrip.pas -otmp/test_fp_local_resumption && ./tmp/test_fp_local_resumption` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`234/234`)
+- Review snapshot:
+  - pure Pascal read-side nonblocking continuation now survives split TLS records correctly
+  - the next symmetric gap is write-side nonblocking continuation / `WantWrite`
+  - after that, `Shutdown` nonblocking retry semantics is the most coherent remaining stream-I/O contract hole
+
+## 2026-03-11 (pure Pascal nonblocking write WantWrite)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-nonblocking-write-wantwrite.md`
+  - `tests/scripts/test_freepascal_nonblocking_write_wantwrite_contract.sh`
+- RED:
+  - local OpenSSL + slow-proxy write-pressure contract initially failed because:
+    - the blocked write returned `-1`
+    - but `WantWrite` was lost and surfaced as generic `Failed to send TLS application record`
+- GREEN:
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+    - added pending-send state for post-handshake TLS records
+    - `SendApplicationDataFragment(...)` now preserves retryable `WantWrite` and can resume the same TLS record on retry
+    - `SendTLS13AlertRecord(...)` now reuses the same pending-send path
+    - reset/close paths clear stale pending-send state
+- Verification:
+  - `bash tests/scripts/test_freepascal_nonblocking_write_wantwrite_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_nonblocking_partial_record_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_stream_semantics_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_shutdown_close_notify_contract.sh` => PASS
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_session_resumption_roundtrip.pas -otmp/test_fp_local_resumption && ./tmp/test_fp_local_resumption` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`234/234`)
+- Review snapshot:
+  - pure Pascal write-side backpressure now exposes real `WantWrite`
+  - application data and `close_notify` now share the same pending-send foundation
+  - the next coherent stream-I/O hole is `Shutdown` nonblocking retry contract
+
+## 2026-03-11 (pure Pascal shutdown nonblocking retry)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-shutdown-nonblocking-retry.md`
+  - `tests/scripts/test_freepascal_shutdown_nonblocking_retry_contract.sh`
+- GREEN:
+  - no production code change was needed
+  - the contract is already satisfied by the pending-send foundation from the previous wave:
+    - if an application-data record is still pending, `Shutdown` surfaces `WantWrite`
+    - after the same write is resumed, `Shutdown` can complete normally
+- Verification:
+  - `bash tests/scripts/test_freepascal_shutdown_nonblocking_retry_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_nonblocking_write_wantwrite_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_shutdown_close_notify_contract.sh` => PASS
+- Review snapshot:
+  - pure Pascal shutdown now has an explicit nonblocking retry contract
+  - the next remaining post-handshake send surfaces still outside pending-send are:
+    - `SendPostHandshakeKeyUpdate(...)`
+    - `SendInitialSessionTicket(...)`
+
+## 2026-03-11 (pure Pascal post-handshake send pending unification)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-posthandshake-send-pending-unification.md`
+  - `tests/scripts/test_freepascal_renegotiate_nonblocking_retry_contract.sh`
+  - `tests/scripts/test_freepascal_posthandshake_send_pending_structure_contract.sh`
+- RED:
+  - `Renegotiate` under pending write initially failed with generic `Failed to send TLS KeyUpdate record`
+  - `KeyUpdate` / `NewSessionTicket` still bypassed pending-send entirely
+- GREEN:
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+    - added dedicated pending-write kinds for `KeyUpdate` and `SessionTicket`
+    - `SendPostHandshakeKeyUpdate(...)` now uses pending-send and only rotates write keys after flush completes
+    - `SendInitialSessionTicket` now resumes the original pending ticket record instead of regenerating new random ticket material on retry
+- Verification:
+  - `bash tests/scripts/test_freepascal_renegotiate_nonblocking_retry_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_posthandshake_send_pending_structure_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_shutdown_nonblocking_retry_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_nonblocking_write_wantwrite_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_nonblocking_partial_record_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_stream_semantics_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_shutdown_close_notify_contract.sh` => PASS
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_session_resumption_roundtrip.pas -otmp/test_fp_local_resumption && ./tmp/test_fp_local_resumption` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`234/234`)
+- Review snapshot:
+  - pure Pascal post-handshake send surfaces are now on one pending-send model
+  - the next highest-signal cleanup is stale last-error/detail after successful retry paths
+
+## 2026-03-11 (pure Pascal retry success clears stale error)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-retry-success-clears-stale-error.md`
+  - `tests/scripts/test_freepascal_retry_success_clears_stale_error_contract.sh`
+- RED:
+  - successful retry initially still left `GetVerifyResultString` stuck on the previous `would block` detail
+- GREEN:
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+    - successful `SendAll(...)` / pending flush now clear stale operational error state
+  - Updated `docs/reference/PURE_PASCAL_CLIENT_M1_CHECKLIST.md`
+    - stream-I/O row now cites the stronger contract evidence
+- Verification:
+  - `bash tests/scripts/test_freepascal_retry_success_clears_stale_error_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_renegotiate_nonblocking_retry_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_posthandshake_send_pending_structure_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_shutdown_nonblocking_retry_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_nonblocking_write_wantwrite_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_nonblocking_partial_record_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_stream_semantics_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_shutdown_close_notify_contract.sh` => PASS
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_session_resumption_roundtrip.pas -otmp/test_fp_local_resumption && ./tmp/test_fp_local_resumption` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`234/234`)
+- Review snapshot:
+  - retry success no longer leaks stale `WantRead` / `WantWrite` detail
+  - pure Pascal stream-I/O observability is now materially cleaner for business callers
+
+## 2026-03-11 (pure Pascal SHA384 suite support)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-sha384-suite-support.md`
+  - `tests/test_freepascal_local_sha384_suite_roundtrip.pas`
+- RED:
+  - SHA384 Finished helpers were missing
+  - local SHA384 roundtrip initially failed
+  - once capability truth moved toward AES256, default local resumption also exposed remaining SHA256-only binder / resumption PSK gates
+- GREEN:
+  - Updated `src/fafafa.ssl.tls13.finished.pas`
+    - added SHA384 Finished helpers and suite-aware wrappers
+  - Updated `src/fafafa.ssl.tls13.servercertverify.pas`
+    - added SHA384 CertificateVerify transcript-input builder
+  - Updated `src/fafafa.ssl.tls13.clienthello.pas`
+    - added explicit cipher-suite ClientHello builder for connection-path use
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+    - client/server now negotiate configured TLS 1.3 suite intersections
+    - Finished / CertificateVerify / binder / resumption PSK now handle SHA384 suite paths
+  - Updated `src/fafafa.ssl.tls13.aead.pas`
+    - warm-up AES-GCM support during unit initialization so worker-thread first use no longer misclassifies SHA384 as unsupported
+  - Updated `src/fafafa.ssl.freepascal.lib.pas`
+    - capability truth now advertises AES256GCM / `TLS_AES_256_GCM_SHA384`
+- Verification:
+  - `fpc -Fu./src tests/test_tls13_finished.pas -otmp/test_tls13_finished && ./tmp/test_tls13_finished` => PASS
+  - `fpc -Fu./src tests/test_freepascal_backend_basic.pas -otmp/test_fp_basic && ./tmp/test_fp_basic` => PASS
+  - `fpc -Fu./src tests/test_capability_cache.pas -otmp/test_capability_cache && ./tmp/test_capability_cache` => PASS
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_sha384_suite_roundtrip.pas -otmp/test_fp_sha384_roundtrip && ./tmp/test_fp_sha384_roundtrip` => PASS
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_session_resumption_roundtrip.pas -otmp/test_fp_local_resumption && ./tmp/test_fp_local_resumption` => PASS
+  - `bash tests/scripts/test_freepascal_stream_semantics_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_nonblocking_partial_record_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_nonblocking_write_wantwrite_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_shutdown_nonblocking_retry_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_renegotiate_nonblocking_retry_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_retry_success_clears_stale_error_contract.sh` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`234/234`)
+- Review snapshot:
+  - pure Pascal now has real `TLS_AES_256_GCM_SHA384` local handshake evidence
+  - default local resumption remains green after SHA384 binder / PSK follow-up
+  - next work should return to M1-level remaining “部分满足” review rather than keep digging isolated protocol tail gaps
+
+## 2026-03-11 (pure Pascal blocking read timeout)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-blocking-read-timeout.md`
+  - `tests/scripts/test_freepascal_blocking_read_timeout_contract.sh`
+- RED:
+  - blocking timed read initially surfaced as nonblocking-style `WantRead`
+  - after first fix attempt, application read path still collapsed timeout into generic IO
+- GREEN:
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+    - transport read/write now classify blocking timed socket expiry as `sslErrTimeout`
+    - application read path preserves timeout instead of overwriting it as generic IO
+- Verification:
+  - `bash tests/scripts/test_freepascal_blocking_read_timeout_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_stream_semantics_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_nonblocking_partial_record_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_nonblocking_write_wantwrite_contract.sh` => PASS
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_sha384_suite_roundtrip.pas -otmp/test_fp_sha384_roundtrip && ./tmp/test_fp_sha384_roundtrip` => PASS
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_session_resumption_roundtrip.pas -otmp/test_fp_local_resumption && ./tmp/test_fp_local_resumption` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`234/234`)
+- Review snapshot:
+  - pure Pascal blocking timeout and nonblocking retry are no longer conflated
+  - next coherent timeout/error-model steps are send timeout and handshake timeout
+
+## 2026-03-11 (pure Pascal write and handshake timeout)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-write-and-handshake-timeout.md`
+  - `tests/scripts/test_freepascal_blocking_write_timeout_contract.sh`
+  - `tests/scripts/test_freepascal_client_handshake_timeout_contract.sh`
+- RED:
+  - blocking write timeout was still collapsed into generic send IO
+  - client handshake timeout was still collapsed into generic handshake IO
+- GREEN:
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+    - timeout now participates in deferred send-state handling
+    - handshake read paths now preserve timeout instead of overwriting it
+- Verification:
+  - `bash tests/scripts/test_freepascal_blocking_write_timeout_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_client_handshake_timeout_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_blocking_read_timeout_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_stream_semantics_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_nonblocking_partial_record_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_nonblocking_write_wantwrite_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_shutdown_nonblocking_retry_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_renegotiate_nonblocking_retry_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_retry_success_clears_stale_error_contract.sh` => PASS
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_sha384_suite_roundtrip.pas -otmp/test_fp_sha384_roundtrip && ./tmp/test_fp_sha384_roundtrip` => PASS
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_session_resumption_roundtrip.pas -otmp/test_fp_local_resumption && ./tmp/test_fp_local_resumption` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`234/234`)
+- Review snapshot:
+  - pure Pascal timeout matrix now covers blocking read, blocking write, and client handshake
+  - the next timeout/error-model frontier is cancel surface rather than more raw timeout plumbing
+
+## 2026-03-11 (API cancellation model)
+- Added:
+  - `docs/plans/2026-03-11-api-cancellation-model.md`
+  - `docs/reference/API_CANCELLATION_MODEL.md`
+  - `tests/scripts/test_api_cancellation_model_doc_contract.sh`
+- RED:
+  - cancellation truth doc did not exist
+- GREEN:
+  - documented the current semantic split:
+    - no dedicated connection-level `Cancel` API today
+    - `Close` is the force-abort primitive
+    - `Shutdown` is graceful close, not cancellation
+    - `SetTimeout(...)` expresses budget / deadline, not cancellation
+  - linked the doc into `API_CONTRACT_CURRENT_INDEX.md`
+  - tightened `ARCHITECTURE.md` to mention cancel / timeout / close together
+- Verification:
+  - `bash tests/scripts/test_api_cancellation_model_doc_contract.sh` => PASS
+- Review snapshot:
+  - cancellation truth is now explicit instead of implicit tribal knowledge
+  - next work should decide whether to keep cancel as “doc-only truth” or promote it into an additive API
+
+## 2026-03-11 (pure Pascal observability state and verify result)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-observability-state-and-verify-result.md`
+  - `tests/test_freepascal_verify_result_string_observability.pas`
+  - `tests/scripts/test_freepascal_handshake_failed_state_contract.sh`
+- RED:
+  - successful verified handshake still returned `Not verified`
+  - failed handshake still returned `DISCONNECTED/Disconnected`
+- GREEN:
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+    - verified success now reports `Verification passed`
+    - verification-off success now reports `Verification disabled`
+    - failed handshake now reports `HANDSHAKE_FAILED / Handshake failed`
+    - `GetConnectionInfo` now fills `CipherSuiteId / KeySize`
+- Verification:
+  - `fpc -Fu./src tests/test_freepascal_verify_result_string_observability.pas -otmp/test_fp_verify_result_string && ./tmp/test_fp_verify_result_string` => PASS
+  - `bash tests/scripts/test_freepascal_handshake_failed_state_contract.sh` => PASS
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_sha384_suite_roundtrip.pas -otmp/test_fp_sha384_roundtrip && ./tmp/test_fp_sha384_roundtrip` => PASS
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_session_resumption_roundtrip.pas -otmp/test_fp_local_resumption && ./tmp/test_fp_local_resumption` => PASS
+- Review snapshot:
+  - pure Pascal observability no longer conflates verified success, verification-off success, and handshake failure
+  - connection-info surface is now materially more useful for framework callers
+
+## 2026-03-11 (pure Pascal info callback timeout observability)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-info-callback-timeout-observability.md`
+  - `tests/scripts/test_freepascal_info_callback_timeout_contract.sh`
+- RED:
+  - handshake timeout initially still emitted generic `handshake_failed`
+- GREEN:
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+    - added a centralized handshake failure info-state mapper
+    - timeout now emits `timeout`
+    - verify failures still emit `verify_failed`
+    - other failures continue to emit `handshake_failed`
+- Verification:
+  - `bash tests/scripts/test_freepascal_info_callback_timeout_contract.sh` => PASS
+  - `fpc -Fu./src tests/test_freepascal_client_info_callback_path.pas -otmp/test_fp_info_callback && ./tmp/test_fp_info_callback` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`234/234`)
+- Review snapshot:
+  - pure Pascal info callback taxonomy is now more aligned with the actual error model
+  - timeout is no longer hidden inside generic handshake failure events
+
+## 2026-03-11 (pure Pascal diagnostics timeout observability)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-diagnostics-timeout-observability.md`
+  - `tests/scripts/test_freepascal_diagnostics_timeout_contract.sh`
+- GREEN:
+  - no production code change was required
+  - current implementation already preserves timeout truth consistently across:
+    - `GetHealthStatus`
+    - `GetDiagnosticInfo.ErrorHistory`
+    - `GetState` / `GetStateString`
+- Verification:
+  - `bash tests/scripts/test_freepascal_diagnostics_timeout_contract.sh` => PASS
+- Review snapshot:
+  - timeout observability now has executable coverage across health / diagnostics / state
+  - next work should continue on connection-info and info-callback richness rather than inventing new diagnostic abstractions
+
+## 2026-03-11 (pure Pascal connection info richness)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-connection-info-richness.md`
+- GREEN:
+  - Updated `src/fafafa.ssl.freepascal.connection.pas`
+    - `GetConnectionInfo` now fills `CipherSuiteId / KeyExchange / Cipher / Hash / KeySize / MacSize / SessionId / PeerCertificate`
+  - Updated tests:
+    - `tests/test_freepascal_client_peer_certificate_foundation.pas`
+    - `tests/test_freepascal_local_sha384_suite_roundtrip.pas`
+    - `tests/test_freepascal_local_session_resumption_roundtrip.pas`
+- Verification:
+  - `fpc -Fu./src tests/test_freepascal_client_peer_certificate_foundation.pas -otmp/test_fp_peer_cert && ./tmp/test_fp_peer_cert` => PASS
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_sha384_suite_roundtrip.pas -otmp/test_fp_sha384_roundtrip && ./tmp/test_fp_sha384_roundtrip` => PASS
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_local_session_resumption_roundtrip.pas -otmp/test_fp_local_resumption && ./tmp/test_fp_local_resumption` => PASS
+- Review snapshot:
+  - pure Pascal connection-info surface is now much more useful for framework callers and logs
+  - next work should move up a level to M1 reprioritization rather than keep polishing isolated fields forever
+
+## 2026-03-11 (pure Pascal client trust source runtime matrix)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-client-trust-source-runtime-matrix.md`
+  - `tests/test_freepascal_client_trust_source_runtime_matrix.pas`
+- GREEN:
+  - no production code change was required
+  - current implementation already passes a local real-socket runtime matrix covering:
+    - no trust source -> fail
+    - `SetCertificateStore` -> pass
+    - `LoadCAFile` -> pass
+    - `LoadCAPath` -> pass
+- Verification:
+  - `fpc -Fu./src -Fu./examples tests/test_freepascal_client_trust_source_runtime_matrix.pas -otmp/test_fp_trust_runtime && ./tmp/test_fp_trust_runtime` => PASS
+- Review snapshot:
+  - custom CA / trust-store runtime evidence is now significantly stronger than the old scripted-only story
+  - next trust-source work should likely target broader system-roots runtime breadth
+
+## 2026-03-11 (pure Pascal ALPN runtime evidence)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-alpn-runtime-evidence.md`
+  - `tests/scripts/test_freepascal_tls13_builder_connector_stream_alpn_contract.sh`
+  - `tests/scripts/test_freepascal_tls12_local_alpn_openssl_contract.sh`
+  - `tests/integration/test_freepascal_alpn_runtime.pas`
+  - `tests/scripts/test_freepascal_alpn_runtime_contract.sh`
+- GREEN:
+  - no production code change was required
+  - current ALPN implementation already passes:
+    - TLS1.3 `TSSLContextBuilder.WithHTTP2 + TSSLConnector + TSSLStream` local OpenSSL interop
+    - TLS1.2 client-path local OpenSSL interop
+    - env-gated external ALPN runtime on system roots
+- Verification:
+  - `bash tests/scripts/test_freepascal_alpn_runtime_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_tls13_builder_connector_stream_alpn_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_tls12_local_alpn_openssl_contract.sh` => PASS
+  - `fpc -Fu./src tests/integration/test_freepascal_alpn_runtime.pas -otmp/test_fp_alpn_runtime` => PASS
+  - `./tmp/test_fp_alpn_runtime` => PASS（network disabled 时 clean skip）
+  - `FAFAFA_RUN_NETWORK_TESTS=1 FAFAFA_ALPN_RUNTIME_HOST=www.cloudflare.com ./tmp/test_fp_alpn_runtime` => PASS
+  - `FAFAFA_RUN_NETWORK_TESTS=1 FAFAFA_ALPN_RUNTIME_HOST=www.github.com ./tmp/test_fp_alpn_runtime` => PASS
+  - `fpc -Fu./src tests/test_freepascal_client_peer_certificate_foundation.pas -otmp/test_fp_peer_cert && ./tmp/test_fp_peer_cert` => PASS
+  - `fpc -Fu./src tests/test_freepascal_backend_basic.pas -otmp/test_fp_basic && ./tmp/test_fp_basic` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`241/241`)
+- Review snapshot:
+  - ALPN 当前缺的主要已不是 parser / 状态字段，而是主入口和 runtime 证据；这波已显著收口
+  - 下一波更值得做的是扩大 host/service class 覆盖，或转向真正还未完成的 resumption / broader runtime hardening
+
+## 2026-03-11 (pure Pascal ALPN fallback matrix)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-alpn-fallback-matrix.md`
+  - `tests/scripts/test_freepascal_alpn_runtime_matrix_contract.sh`
+  - `tests/scripts/test_freepascal_tls13_builder_connector_stream_alpn_http11_fallback_contract.sh`
+  - `tests/scripts/test_freepascal_tls12_local_alpn_http11_fallback_contract.sh`
+- GREEN:
+  - updated `tests/integration/test_freepascal_alpn_runtime.pas`
+    - added `FAFAFA_ALPN_RUNTIME_EXPECTED_PROTOCOL`
+    - added matrix-level success summary
+  - current ALPN implementation already passes:
+    - TLS1.3 local `http/1.1` fallback when client offers `h2,http/1.1`
+    - TLS1.2 local `http/1.1` fallback when client offers `h2,http/1.1`
+    - external multi-host matrix with exact expected-protocol locking
+- Verification:
+  - `bash tests/scripts/test_freepascal_alpn_runtime_matrix_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_tls13_builder_connector_stream_alpn_http11_fallback_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_tls12_local_alpn_http11_fallback_contract.sh` => PASS
+  - `fpc -Fu./src tests/integration/test_freepascal_alpn_runtime.pas -otmp/test_fp_alpn_runtime` => PASS
+  - `./tmp/test_fp_alpn_runtime` => PASS（network disabled 时 clean skip）
+  - `FAFAFA_RUN_NETWORK_TESTS=1 FAFAFA_ALPN_RUNTIME_HOSTS='www.cloudflare.com,www.github.com' FAFAFA_ALPN_RUNTIME_PROTOCOLS='http/1.1' FAFAFA_ALPN_RUNTIME_EXPECTED_PROTOCOL='http/1.1' ./tmp/test_fp_alpn_runtime` => PASS
+  - `FAFAFA_RUN_NETWORK_TESTS=1 FAFAFA_ALPN_RUNTIME_HOSTS='www.cloudflare.com,www.github.com' FAFAFA_ALPN_RUNTIME_PROTOCOLS='h2,http/1.1' FAFAFA_ALPN_RUNTIME_EXPECTED_PROTOCOL='h2' ./tmp/test_fp_alpn_runtime` => PASS
+  - `bash tests/scripts/test_freepascal_alpn_runtime_contract.sh` => PASS
+- Review snapshot:
+  - 现在 ALPN 已不只证明“能协商成功”，还证明了 offer-order 下的 fallback 行为与外网 multi-host 一致性
+  - 下一波更值得补的是更多 service class，例如明确 `http/1.1-only` / `h2-only` / 无 ALPN 的差异矩阵
+
+## 2026-03-11 (pure Pascal ALPN empty negotiation)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-alpn-empty-negotiation.md`
+  - `tests/scripts/test_freepascal_alpn_empty_negotiation_contract.sh`
+  - `tests/scripts/test_freepascal_tls13_builder_connector_stream_no_alpn_contract.sh`
+  - `tests/scripts/test_freepascal_tls12_local_no_alpn_contract.sh`
+- GREEN:
+  - updated `tests/integration/test_freepascal_alpn_runtime.pas`
+    - added `FAFAFA_ALPN_RUNTIME_ALLOW_EMPTY`
+    - kept the strict non-empty assertion path as default
+  - current ALPN implementation already passes:
+    - TLS1.3 local no-ALPN server path
+    - TLS1.2 local no-ALPN server path
+    - runtime harness compatibility with `allow-empty=True`
+- Verification:
+  - `bash tests/scripts/test_freepascal_alpn_empty_negotiation_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_tls13_builder_connector_stream_no_alpn_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_tls12_local_no_alpn_contract.sh` => PASS
+  - `fpc -Fu./src tests/integration/test_freepascal_alpn_runtime.pas -otmp/test_fp_alpn_runtime` => PASS
+  - `./tmp/test_fp_alpn_runtime` => PASS（network disabled 时 clean skip）
+  - `FAFAFA_RUN_NETWORK_TESTS=1 FAFAFA_ALPN_RUNTIME_HOST=www.cloudflare.com FAFAFA_ALPN_RUNTIME_ALLOW_EMPTY=1 FAFAFA_ALPN_RUNTIME_PROTOCOLS='h2,http/1.1' FAFAFA_ALPN_RUNTIME_EXPECTED_PROTOCOL='h2' ./tmp/test_fp_alpn_runtime` => PASS
+  - `bash tests/scripts/test_freepascal_alpn_runtime_matrix_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_alpn_runtime_contract.sh` => PASS
+- Review snapshot:
+  - ALPN 现在还明确覆盖了“协商为空”这一类 service class，而不是只覆盖正向命中
+  - 下一波更值得补的是显式 `h2-only` / client-no-offer / broader external service class matrix
+
+## 2026-03-11 (pure Pascal ALPN client no-offer)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-alpn-client-no-offer.md`
+  - `tests/scripts/test_freepascal_alpn_client_no_offer_contract.sh`
+  - `tests/scripts/test_freepascal_tls13_builder_connector_stream_client_no_alpn_offer_contract.sh`
+  - `tests/scripts/test_freepascal_tls12_local_client_no_alpn_offer_contract.sh`
+- GREEN:
+  - no production code change was required
+  - current implementation already passes:
+    - TLS1.3 client-no-offer + server `h2`
+    - TLS1.2 client-no-offer + server `h2`
+- Verification:
+  - `bash tests/scripts/test_freepascal_alpn_client_no_offer_contract.sh` => PASS（RED 时先失败：缺少 client-no-offer 合同文件）
+  - `bash tests/scripts/test_freepascal_tls13_builder_connector_stream_client_no_alpn_offer_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_tls12_local_client_no_alpn_offer_contract.sh` => PASS
+- Review snapshot:
+  - ALPN 现在既覆盖 server-no-alpn，也覆盖 client-no-offer；service-class 基础矩阵已经更完整
+  - 下一波更值得补的是显式 `h2-only` 或 broader external matrix，而不是继续在空协商语义上反复打磨
+
+## 2026-03-11 (pure Pascal TLS1.2 session-id resumption)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-tls12-sessionid-resumption.md`
+  - `tests/scripts/test_freepascal_tls12_resumption_openssl_interop_contract.sh`
+- GREEN:
+  - updated `src/fafafa.ssl.freepascal.session.pas`
+    - `IFreePascalResumptionSession` now exposes TLS1.2 session-id resumption material
+    - `TFreePascalSession` now persists `TLS12SessionIDBytes + TLS12MasterSecret`
+    - `IsResumable` now returns true for TLS1.2 session-id snapshots
+  - updated `src/fafafa.ssl.freepascal.connection.pas`
+    - first full TLS1.2 handshake now caches session-id + master-secret
+    - second handshake can take the abbreviated TLS1.2 resumed path
+    - resumed validation/observability reuse cached peer certificate chain
+  - updated `src/fafafa.ssl.tls12.serverhello.parser.pas`
+    - resumed `ServerHello` may omit extensions
+  - updated existing TLS1.2 session truth contracts from `False/False` to actual resumption truth
+- Verification:
+  - `bash tests/scripts/test_freepascal_tls12_resumption_openssl_interop_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_tls12_session_surface_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_tls12_resumption_truth_matrix_contract.sh` => PASS
+  - `fpc -Fu./src tests/test_freepascal_backend_basic.pas -otmp/test_fp_basic && ./tmp/test_fp_basic` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`241/241`)
+- Review snapshot:
+  - TLS1.2 session support is no longer just a public surface; actual session-id resumption now works against local OpenSSL
+  - next high-value work should shift to broader external TLS1.2 runtime coverage or to high-level resumption entry contracts
+
+## 2026-03-11 (pure Pascal TLS1.2 resumption entry/runtime evidence)
+- Added:
+  - `tests/scripts/test_freepascal_tls12_builder_connector_resumption_contract.sh`
+  - `tests/integration/test_freepascal_tls12_resumption_runtime.pas`
+  - `tests/scripts/test_freepascal_tls12_resumption_runtime_contract.sh`
+- GREEN:
+  - no production code change was required
+  - current implementation already passes:
+    - high-level `TSSLConnector` TLS1.2 resumption local contract
+    - compile-level/network-gated external runtime harness for TLS1.2 resumption
+- Verification:
+  - `bash tests/scripts/test_freepascal_tls12_builder_connector_resumption_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_tls12_resumption_runtime_contract.sh` => PASS
+  - `fpc -Fu./src tests/integration/test_freepascal_tls12_resumption_runtime.pas -otmp/test_fp_tls12_resumption_runtime` => PASS
+  - `./tmp/test_fp_tls12_resumption_runtime` => PASS（network disabled 时 clean skip）
+  - `FAFAFA_RUN_NETWORK_TESTS=1 FAFAFA_TLS12_RESUMPTION_HOST=www.apache.org ./tmp/test_fp_tls12_resumption_runtime` => PASS
+  - `FAFAFA_RUN_NETWORK_TESTS=1 FAFAFA_TLS12_RESUMPTION_HOST=www.perl.org ./tmp/test_fp_tls12_resumption_runtime` => PASS
+- Review snapshot:
+  - TLS1.2 resumption 已不只停留在 low-level local oracle；主入口和 external harness 都已经接上
+  - 下一波更值得补的是带明确公网 host 的 runtime 证据，而不是继续只加结构脚手架
+
+## 2026-03-11 (pure Pascal TLS1.2 external resumption matrix)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-tls12-external-resumption-matrix.md`
+- Verification:
+  - `FAFAFA_RUN_NETWORK_TESTS=1 FAFAFA_TLS12_RESUMPTION_HOST=www.apache.org FAFAFA_TLS12_RESUMPTION_REQUIRE_REUSE=1 ./tmp/test_fp_tls12_resumption_runtime` => PASS
+  - `FAFAFA_RUN_NETWORK_TESTS=1 FAFAFA_TLS12_RESUMPTION_HOSTS='www.apache.org,www.perl.org,rsa2048.badssl.com' ./tmp/test_fp_tls12_resumption_runtime` => PASS
+- Evidence snapshot:
+  - `www.apache.org` => `reused=True`
+  - `www.perl.org` => `reused=True`
+  - `rsa2048.badssl.com` => `reused=True`
+- Review snapshot:
+  - TLS1.2 external resumption is now green on the first focused public-host matrix
+  - the next value is breadth/maintenance rather than another immediate protocol fix
+
+## 2026-03-11 (pure Pascal TLS1.2 ticket resumption)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-tls12-ticket-resumption.md`
+  - `tests/scripts/test_freepascal_tls12_ticket_resumption_openssl_contract.sh`
+  - `tests/scripts/test_freepascal_tls12_builder_connector_ticket_resumption_contract.sh`
+- GREEN:
+  - updated `src/fafafa.ssl.tls12.wire.pas`
+    - added TLS1.2 `NewSessionTicket` / session-ticket extension constants
+  - updated `src/fafafa.ssl.tls12.serverhello.parser.pas`
+    - can parse TLS1.2 `NewSessionTicket`
+  - updated `src/fafafa.ssl.tls12.clienthello.pas`
+    - can build ClientHello with session-ticket extension
+  - updated `src/fafafa.ssl.freepascal.session.pas`
+    - session snapshots now persist TLS1.2 ticket bytes + lifetime hint
+  - updated `src/fafafa.ssl.freepascal.connection.pas`
+    - full handshake now consumes plaintext TLS1.2 `NewSessionTicket`
+    - second resumed handshake can reuse configured TLS1.2 ticket material
+    - resumed session now stays resumable even when the server does not immediately issue a fresh ticket
+- Verification:
+  - `bash tests/scripts/test_freepascal_tls12_ticket_resumption_openssl_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_tls12_builder_connector_ticket_resumption_contract.sh` => PASS
+  - `bash tests/scripts/test_freepascal_tls12_resumption_openssl_interop_contract.sh` => PASS
+  - `fpc -Fu./src tests/test_freepascal_backend_basic.pas -otmp/test_fp_basic && ./tmp/test_fp_basic` => PASS
+  - `python3 -u scripts/compile_all_modules.py` => PASS (`241/241`)
+- Review snapshot:
+  - TLS1.2 resumption is no longer only session-id based
+  - after ticket support, the earlier `rsa2048.badssl.com` residual also closes under strict runtime revalidation
+
+## 2026-03-11 (pure Pascal TLS1.2 external strict host expansion)
+- Verification:
+  - `FAFAFA_RUN_NETWORK_TESTS=1 FAFAFA_TLS12_RESUMPTION_HOSTS='ftp.gnu.org,www.debian.org,www.kernel.org,www.gnu.org' FAFAFA_TLS12_RESUMPTION_REQUIRE_REUSE=1 ./tmp/test_fp_tls12_resumption_runtime` => PASS
+  - `openssl s_client -tls1_2 -reconnect` cross-checks for:
+    - `ftp.gnu.org`
+    - `www.debian.org`
+    - `www.kernel.org`
+    - `www.gnu.org`
+- Evidence snapshot:
+  - `ftp.gnu.org` => `reused=True`
+  - `www.debian.org` => `reused=True`
+  - `www.kernel.org` => `reused=True`
+  - `www.gnu.org` => `reused=True`
+- Review snapshot:
+  - current TLS1.2 RSA-host resumption matrix is materially stronger than before
+  - next work should likely shift away from TLS1.2 client resumption and toward the next product gap
+
+## 2026-03-11 (pure Pascal server runtime entry)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-server-runtime-entry.md`
+  - `tests/scripts/test_freepascal_tls13_server_connection_builder_runtime_contract.sh`
+- Verification:
+  - `bash tests/scripts/test_freepascal_tls13_server_connection_builder_runtime_contract.sh` => PASS
+- Review snapshot:
+  - pure Pascal server path is no longer only covered by skeleton parsing or embedded thread roundtrip
+  - `TSSLContextBuilder.BuildServer + TSSLConnectionBuilder.BuildServer` now has a real OpenSSL-client runtime proof with app-data and ALPN
+
+## 2026-03-11 (pure Pascal TLS1.2 server minimum slice RED)
+- Added:
+  - `docs/plans/2026-03-11-pure-pascal-tls12-server-minimum-slice.md`
+  - `tests/scripts/test_freepascal_tls12_server_accept_openssl_contract.sh`
+- RED:
+  - `bash tests/scripts/test_freepascal_tls12_server_accept_openssl_contract.sh` => FAIL
+  - current failure stays aligned with product truth:
+    - `Server accept failed: TLS 1.3-only accept path (set PreferredVersion=TLS13) is unsupported by FreePascal backend`
+- Review snapshot:
+  - next actual protocol-completeness gap on the server side is now locked by an executable local OpenSSL contract

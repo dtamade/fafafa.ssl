@@ -234,6 +234,8 @@ begin
     TestBIOChain;
 
     Runner.PrintSummary;
+    if Runner.FailCount = 0 then
+      WriteLn('[PASS] bio simple integration completed');
     Halt(Runner.FailCount);
   finally
     Runner.Free;

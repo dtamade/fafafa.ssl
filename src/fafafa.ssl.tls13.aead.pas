@@ -310,4 +310,14 @@ begin
   end;
 end;
 
+procedure WarmUpAESGCMSupport;
+var
+  LWarmupError: string;
+begin
+  EnsureAESGCMAvailable(LWarmupError);
+end;
+
+initialization
+  WarmUpAESGCMSupport;
+
 end.

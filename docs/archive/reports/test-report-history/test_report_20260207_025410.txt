@@ -1,0 +1,44 @@
+========================================
+模块自动化测试报告
+时间: Sat Feb  7 02:54:10 CST 2026
+========================================
+
+
+[0;34m[INFO][0m ========== 测试模块: CT ==========
+[0;34m[INFO][0m 编译 test_p2_ct...
+[0;34m[INFO][0m 运行 test_p2_ct...
+[0;32m[PASS][0m test_p2_ct: 通过
+[0;34m[INFO][0m 编译 test_p2_ct_comprehensive...
+[0;34m[INFO][0m 运行 test_p2_ct_comprehensive...
+[0;32m[PASS][0m test_p2_ct_comprehensive: 通过
+[0;34m[INFO][0m CT 模块: 2/2 通过 (100.0%)
+
+[0;34m[INFO][0m ========== 测试模块: OCSP ==========
+[0;34m[INFO][0m 编译 test_p2_ocsp...
+[0;34m[INFO][0m 运行 test_p2_ocsp...
+[0;32m[PASS][0m test_p2_ocsp: 通过
+[0;34m[INFO][0m 编译 test_p2_ocsp_comprehensive...
+[0;34m[INFO][0m 运行 test_p2_ocsp_comprehensive...
+[0;32m[PASS][0m test_p2_ocsp_comprehensive: 通过
+[0;34m[INFO][0m OCSP 模块: 2/2 通过 (100.0%)
+
+[0;34m[INFO][0m ========== 测试模块: TS ==========
+[0;34m[INFO][0m 编译 test_p2_ts...
+[0;34m[INFO][0m 运行 test_p2_ts...
+[0;32m[PASS][0m test_p2_ts: 通过
+[0;34m[INFO][0m 编译 test_p2_ts_comprehensive...
+[0;34m[INFO][0m 运行 test_p2_ts_comprehensive...
+[0;32m[PASS][0m test_p2_ts_comprehensive: 通过
+[0;34m[INFO][0m TS 模块: 2/2 通过 (100.0%)
+
+========================================
+测试总结
+========================================
+总测试数: 6
+通过: 6
+失败: 0
+跳过: 0
+通过率: 100.0%
+
+详细报告: /home/dtamade/projects/fafafa.ssl/docs/archive/reports/test-report-history/test_report_20260207_025410.txt
+[0;32m[PASS][0m 测试通过（通过率: 100.0%）

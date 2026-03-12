@@ -454,8 +454,8 @@ begin
     if EVP_DigestInit_ex(LContext, EVP_sha256(), nil) <> 1 then
       raise ESSLCryptoError.Create('Failed to initialize digest');
       
-    // TODO: 添加流式处理支持
-    // FIXME: 处理大数据时可能内存不足
+    // 建议扩展为流式处理，避免一次性内存峰值
+    // 大数据场景建议采用分块处理策略
     
   finally
     EVP_MD_CTX_free(LContext);

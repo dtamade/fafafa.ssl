@@ -4,7 +4,7 @@ program test_openssl_buffer;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.types, fafafa.ssl.openssl.core, fafafa.ssl.openssl.buffer;
+  fafafa.ssl.openssl.api.types, fafafa.ssl.openssl.api.core, fafafa.ssl.openssl.api.buffer;
 
 var
   TestsPassed: Integer = 0;

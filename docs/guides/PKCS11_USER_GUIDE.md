@@ -84,15 +84,18 @@ var
 begin
   Builder := TSSLContextBuilder.Create;
 
-  // 配置 PKCS#11
+  // 配置 PKCS#11 私钥
   Ctx := Builder
-    .ForServer
     .WithCertificate('/path/to/cert.pem')
-    .WithPKCS11Key('pkcs11:token=TestToken;object=TestKey')
+    .UsePKCS11('pkcs11:token=TestToken;object=TestKey')
     .WithPKCS11PIN('1234')
-    .Build;
+    .BuildServer;
 end;
 ```
+
+注意：
+- `PKCS#11` 只替代私钥来源。
+- 仍需通过 `WithCertificate` 或 `WithCertificatePEM` 提供证书。
 
 ### 使用 PIN 回调
 

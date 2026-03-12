@@ -4,11 +4,11 @@ program test_cmac;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.cmac,
-  fafafa.ssl.openssl.aes,
-  fafafa.ssl.openssl.evp;
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.cmac.evp,
+  fafafa.ssl.openssl.api.aes,
+  fafafa.ssl.openssl.api.evp;
 
 var
   TestsPassed: Integer = 0;

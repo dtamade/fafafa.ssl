@@ -5,6 +5,8 @@ program test_sha3_simple;
 uses
   SysUtils,
   fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.evp;
 
 function BytesToHex(const Data: array of Byte; Len: Integer): string;
@@ -138,7 +140,17 @@ begin
   WriteLn;
   
   // Initialize OpenSSL
-  if not LoadOpenSSLLibrary then
+  try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('ERROR: Failed to load OpenSSL library: ', E.Message);
+        Halt(1);
+      end;
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     WriteLn('ERROR: Failed to initialize OpenSSL');
     Halt(1);
@@ -151,7 +163,7 @@ begin
   if not LoadEVP(GetCryptoLibHandle) then
   begin
     WriteLn('ERROR: Failed to load EVP functions');
-    UnloadOpenSSLLibrary;
+    UnloadOpenSSLCore;
     Halt(1);
   end;
   
@@ -161,10 +173,8 @@ begin
   try
     TestSHA3_256_Direct;
   finally
-    UnloadOpenSSLLibrary;
+    UnloadOpenSSLCore;
   end;
   
-  WriteLn;
-  WriteLn('Press Enter to exit...');
-  ReadLn;
+  WriteLn('[PASS] sha3 simple smoke completed');
 end.

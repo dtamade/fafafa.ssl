@@ -4,9 +4,9 @@ program test_camellia;
 
 uses
   SysUtils, Classes, DynLibs,
-  fafafa.ssl.openssl.types,
-  fafafa.ssl.openssl.core,
-  fafafa.ssl.openssl.legacy_ciphers;
+  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.legacy_ciphers;
 
 var
   TestsPassed: Integer = 0;

@@ -7,7 +7,7 @@
 ## 交付物
 
 - 脚本：`scripts/prepare_wave_c_b137_pre_ci_reenable_packet.sh`
-- 产物：`test-reports/wave_c_b137_pre_ci_reenable_packet_20260209_042549.md`
+- 产物：`docs/archive/reports/wave-c-pre-ci-submission-history/wave_c_b137_pre_ci_reenable_packet_20260209_042549.md`
 
 ## 执行
 
@@ -15,7 +15,7 @@
 bash scripts/prepare_wave_c_b137_pre_ci_reenable_packet.sh \
   --run-id 20260209_042549 \
   --strict \
-  --output test-reports/wave_c_b137_pre_ci_reenable_packet_20260209_042549.md
+  --output docs/archive/reports/wave-c-pre-ci-submission-history/wave_c_b137_pre_ci_reenable_packet_20260209_042549.md
 ```
 
 ## 结果

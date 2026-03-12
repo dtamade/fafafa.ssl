@@ -4,7 +4,11 @@ set -euo pipefail
 
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 STRICT=false
+DEFAULT_REPORTS_DIR="tmp/wave_c_local_guard_reports"
+REPORTS_DIR="${FAFAFA_WAVE_C_LOCAL_GUARD_REPORTS_DIR:-$DEFAULT_REPORTS_DIR}"
 OUTPUT_FILE=""
+WITH_PLATFORM_PATH_CHECKS_DRYRUN=true
+ONLY_PLATFORM_PATH_CHECK_DRYRUN=false
 
 usage() {
   cat <<'USAGE'
@@ -18,7 +22,10 @@ Wave C B138 Pre-CI Re-enable Full Gate
 
 选项：
   --run-id ID      指定 run_id
+  --reports-dir DIR 报告目录（默认 tmp/wave_c_local_guard_reports）
   --output FILE    输出报告路径
+  --only-platform-path-check-dryrun  仅执行 B125A 平台路径检查 dry-run batch（透传到 B129/B125）
+  --skip-platform-path-checks-dryrun  跳过 B129/B125 中的平台路径检查 dry-run batch
   --strict         overall 非 PASS 返回非 0
   --help           显示帮助
 USAGE
@@ -30,9 +37,21 @@ while [[ $# -gt 0 ]]; do
       RUN_ID="$2"
       shift 2
       ;;
+    --reports-dir)
+      REPORTS_DIR="$2"
+      shift 2
+      ;;
     --output)
       OUTPUT_FILE="$2"
       shift 2
+      ;;
+    --only-platform-path-check-dryrun)
+      ONLY_PLATFORM_PATH_CHECK_DRYRUN=true
+      shift
+      ;;
+    --skip-platform-path-checks-dryrun)
+      WITH_PLATFORM_PATH_CHECKS_DRYRUN=false
+      shift
       ;;
     --strict)
       STRICT=true
@@ -51,18 +70,19 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b138_pre_ci_reenable_full_gate_${RUN_ID}.md"
+  OUTPUT_FILE="$REPORTS_DIR/wave_c_b138_pre_ci_reenable_full_gate_${RUN_ID}.md"
 fi
 
+mkdir -p "$REPORTS_DIR"
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 
-oncall_report="test-reports/wave_c_b129_oncall_check_${RUN_ID}.md"
-snapshot_report="test-reports/wave_c_b132_local_first_status_snapshot_${RUN_ID}.md"
-packet_report="test-reports/wave_c_b137_pre_ci_reenable_packet_${RUN_ID}.md"
+oncall_report="$REPORTS_DIR/wave_c_b129_oncall_check_${RUN_ID}.md"
+snapshot_report="$REPORTS_DIR/wave_c_b132_local_first_status_snapshot_${RUN_ID}.md"
+packet_report="$REPORTS_DIR/wave_c_b137_pre_ci_reenable_packet_${RUN_ID}.md"
 
-oncall_log="test-reports/wave_c_b129_oncall_check_${RUN_ID}.b138.log"
-snapshot_log="test-reports/wave_c_b132_local_first_status_snapshot_${RUN_ID}.b138.log"
-packet_log="test-reports/wave_c_b137_pre_ci_reenable_packet_${RUN_ID}.b138.log"
+oncall_log="$REPORTS_DIR/wave_c_b129_oncall_check_${RUN_ID}.b138.log"
+snapshot_log="$REPORTS_DIR/wave_c_b132_local_first_status_snapshot_${RUN_ID}.b138.log"
+packet_log="$REPORTS_DIR/wave_c_b137_pre_ci_reenable_packet_${RUN_ID}.b138.log"
 
 run_step() {
   local cmd="$1"
@@ -76,9 +96,15 @@ run_step() {
   echo "$ec"
 }
 
-oncall_exit=$(run_step \
-  "bash scripts/run_wave_c_local_guard_oncall_check.sh --run-id ${RUN_ID} --strict --quiet --output ${oncall_report}" \
-  "$oncall_log")
+oncall_cmd="bash scripts/run_wave_c_local_guard_oncall_check.sh --run-id ${RUN_ID} --strict --quiet --reports-dir ${REPORTS_DIR} --output ${oncall_report}"
+if [[ "$ONLY_PLATFORM_PATH_CHECK_DRYRUN" == "true" ]]; then
+  oncall_cmd="$oncall_cmd --only-platform-path-check-dryrun"
+fi
+if [[ "$WITH_PLATFORM_PATH_CHECKS_DRYRUN" == "false" ]]; then
+  oncall_cmd="$oncall_cmd --skip-platform-path-checks-dryrun"
+fi
+
+oncall_exit=$(run_step "$oncall_cmd" "$oncall_log")
 
 snapshot_exit=$(run_step \
   "bash scripts/generate_wave_c_local_first_status_snapshot.sh --run-id ${RUN_ID} --strict --output ${snapshot_report}" \

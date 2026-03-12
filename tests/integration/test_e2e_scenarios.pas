@@ -300,10 +300,12 @@ begin
 
     except
       on E: Exception do
-        WriteLn('FATAL: ', E.Message);
+        Runner.Check('Scenario batch execution', False, E.Message);
     end;
 
     Runner.PrintSummary;
+    if Runner.FailCount = 0 then
+      WriteLn('[PASS] e2e scenarios integration completed');
     Halt(Runner.FailCount);
   finally
     Runner.Free;

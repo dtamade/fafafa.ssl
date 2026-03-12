@@ -39,6 +39,12 @@ function TryParseTLS13NewSessionTicket(
   out AError: string
 ): Boolean;
 
+function TryBuildTLS13NewSessionTicketHandshake(
+  const ATicket: TTLS13NewSessionTicket;
+  out AHandshakeMessage: TBytes;
+  out AError: string
+): Boolean;
+
 function TryParseTLS13KeyUpdate(
   const AHandshakeMessage: TBytes;
   out AInfo: TTLS13KeyUpdateInfo;
@@ -191,6 +197,71 @@ begin
     Move(AHandshakeMessage[LOffset], ATicket.Extensions[0], LExtLen);
 
   ATicket.Valid := True;
+  Result := True;
+end;
+
+function TryBuildTLS13NewSessionTicketHandshake(
+  const ATicket: TTLS13NewSessionTicket;
+  out AHandshakeMessage: TBytes;
+  out AError: string
+): Boolean;
+var
+  LBody: TBytes;
+begin
+  SetLength(AHandshakeMessage, 0);
+  AError := '';
+  Result := False;
+
+  if not ATicket.Valid then
+  begin
+    AError := 'NewSessionTicket data is not valid';
+    Exit;
+  end;
+
+  if Length(ATicket.Ticket) = 0 then
+  begin
+    AError := 'NewSessionTicket ticket must not be empty';
+    Exit;
+  end;
+
+  if Length(ATicket.TicketNonce) > 255 then
+  begin
+    AError := 'NewSessionTicket nonce is too large';
+    Exit;
+  end;
+
+  if Length(ATicket.Ticket) > $FFFF then
+  begin
+    AError := 'NewSessionTicket ticket is too large';
+    Exit;
+  end;
+
+  if Length(ATicket.Extensions) > $FFFF then
+  begin
+    AError := 'NewSessionTicket extensions are too large';
+    Exit;
+  end;
+
+  SetLength(LBody, 0);
+  AppendByte(LBody, Byte((ATicket.TicketLifetime shr 24) and $FF));
+  AppendByte(LBody, Byte((ATicket.TicketLifetime shr 16) and $FF));
+  AppendByte(LBody, Byte((ATicket.TicketLifetime shr 8) and $FF));
+  AppendByte(LBody, Byte(ATicket.TicketLifetime and $FF));
+  AppendByte(LBody, Byte((ATicket.TicketAgeAdd shr 24) and $FF));
+  AppendByte(LBody, Byte((ATicket.TicketAgeAdd shr 16) and $FF));
+  AppendByte(LBody, Byte((ATicket.TicketAgeAdd shr 8) and $FF));
+  AppendByte(LBody, Byte(ATicket.TicketAgeAdd and $FF));
+  AppendByte(LBody, Byte(Length(ATicket.TicketNonce)));
+  AppendBytes(LBody, ATicket.TicketNonce);
+  AppendUInt16(LBody, Word(Length(ATicket.Ticket)));
+  AppendBytes(LBody, ATicket.Ticket);
+  AppendUInt16(LBody, Word(Length(ATicket.Extensions)));
+  AppendBytes(LBody, ATicket.Extensions);
+
+  SetLength(AHandshakeMessage, 0);
+  AppendByte(AHandshakeMessage, TLS_HANDSHAKE_TYPE_NEW_SESSION_TICKET);
+  AppendUInt24(AHandshakeMessage, Length(LBody));
+  AppendBytes(AHandshakeMessage, LBody);
   Result := True;
 end;
 

@@ -7,7 +7,7 @@
 ## 交付物
 
 - 脚本：`scripts/check_wave_c_post_trigger_observability.sh`
-- 样例报告：`test-reports/wave_c_b120_post_trigger_observability_20260208_173726.md`
+- 样例报告：`docs/archive/reports/wave-c-quick-enablement-history/wave_c_b120_post_trigger_observability_20260208_173726.md`
 
 ## 验证
 

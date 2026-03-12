@@ -740,6 +740,7 @@ begin
   begin
     WriteLn;
     WriteLn('🎉 所有功能测试通过！PKCS#12 创建和解析功能正常');
+    WriteLn('[PASS] p2 pkcs12 create/parse completed');
   end;
 
   UnloadOpenSSLCore;

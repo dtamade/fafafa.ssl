@@ -105,5 +105,5 @@ python3 scripts/compile_all_modules.py
 
 ```bash
 cat docs/test_reports/P2_MODULES_TEST_REPORT.md
-ls -1 test-reports/test_report_*.txt | tail -n 3
+find tmp -maxdepth 2 -type f -name "test_report_*.txt" | sort | tail -n 3
 ```

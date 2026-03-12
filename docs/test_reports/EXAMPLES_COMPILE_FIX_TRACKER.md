@@ -114,12 +114,12 @@ FPC ObjFPC 模式不支持 `var x := ...` 语法，需要改为传统声明。
 
 ### 基线（批次启动前）
 
-- 报告：`test-reports/examples_compile_latest.json`
+- 报告：`docs/archive/reports/examples-compile-history/examples_compile_latest.json`
 - 结果：`total=75, passed=36, failed=35, skipped=4, pass_rate=50.7%`
 
 ### B79 后（核心示例修复）
 
-- 报告：`test-reports/examples_compile_after_b79_partial.json`
+- 报告：`docs/archive/reports/examples-compile-history/examples_compile_after_b79_partial.json`
 - 结果：`total=75, passed=41, failed=30, skipped=4, pass_rate=57.7%`
 - 净变化：`+5 passed`，`-5 failed`，通过率 `+7.0pp`
 
@@ -148,7 +148,7 @@ FPC ObjFPC 模式不支持 `var x := ...` 语法，需要改为传统声明。
 
 ### B80/B83 最新门禁（2026-02-08 01:25 +0800）
 
-- 报告：`test-reports/examples_compile_gate_b83.json`
+- 报告：`docs/archive/reports/examples-compile-history/examples_compile_gate_b83.json`
 - 结果：`total=75, passed=53, failed=18, skipped=4, pass_rate=74.6%`
 - 对比启动基线：`+17 passed`（36→53），`-17 failed`（35→18），通过率 `+23.9pp`
 
@@ -165,7 +165,7 @@ FPC ObjFPC 模式不支持 `var x := ...` 语法，需要改为传统声明。
 
 ### B80 收口门禁（2026-02-08 01:50 +0800）
 
-- 报告：`test-reports/examples_compile_gate_b84.json`
+- 报告：`docs/archive/reports/examples-compile-history/examples_compile_gate_b84.json`
 - 结果：`total=75, passed=60, failed=11, skipped=4, pass_rate=84.5%`
 - 对比 B83：`+7 passed`（53→60），`-7 failed`（18→11），通过率 `+9.9pp`
 - 对比启动基线：`+24 passed`（36→60），`-24 failed`（35→11），通过率 `+33.8pp`
@@ -197,7 +197,7 @@ FPC ObjFPC 模式不支持 `var x := ...` 语法，需要改为传统声明。
 
 ### B85 持续门禁（2026-02-08 02:20 +0800）
 
-- 报告：`test-reports/examples_compile_gate_b85.json`
+- 报告：`docs/archive/reports/examples-compile-history/examples_compile_gate_b85.json`
 - 结果：`total=75, passed=62, failed=9, skipped=4, pass_rate=87.3%`
 - 对比 B84：`+2 passed`（60→62），`-2 failed`（11→9），通过率 `+2.8pp`
 
@@ -220,7 +220,7 @@ FPC ObjFPC 模式不支持 `var x := ...` 语法，需要改为传统声明。
 
 ### B86 阶段门禁（2026-02-08 02:45 +0800）
 
-- 报告：`test-reports/examples_compile_gate_b86.json`
+- 报告：`docs/archive/reports/examples-compile-history/examples_compile_gate_b86.json`
 - 结果：`total=75, passed=66, failed=5, skipped=4, pass_rate=92.9%`
 - 对比 B85：`+4 passed`（62→66），`-4 failed`（9→5），通过率 `+5.6pp`
 
@@ -233,7 +233,7 @@ FPC ObjFPC 模式不支持 `var x := ...` 语法，需要改为传统声明。
 
 ### B87 收口门禁（2026-02-08 02:53 +0800）
 
-- 报告：`test-reports/examples_compile_gate_b87.json`
+- 报告：`docs/archive/reports/examples-compile-history/examples_compile_gate_b87.json`
 - 结果：`total=75, passed=71, failed=0, skipped=4, pass_rate=100.0%`
 - 对比 B86：`+5 passed`（66→71），`-5 failed`（5→0），通过率 `+7.1pp`
 
@@ -251,9 +251,9 @@ FPC ObjFPC 模式不支持 `var x := ...` 语法，需要改为传统声明。
 
 ### Wave B Linux Gate 同步（2026-02-08 02:57 +0800）
 
-- 报告：`test-reports/wave_b_ci_gate_summary_20260208_025426.md`
+- 报告：`docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_025426.md`
 - 结果：`compile=PASS, modules=PASS, examples=PASS, overall=PASS`
-- 示例口径：`test-reports/examples_compile_ci_gate.json`（`71/75`, `failed=0`, `pass_rate=100.0%`）
+- 示例口径：`docs/archive/reports/examples-compile-history/examples_compile_ci_gate.json`（`71/75`, `failed=0`, `pass_rate=100.0%`）
 
 ### B88 脚本稳健性修复（2026-02-08 03:43 +0800）
 
@@ -263,11 +263,11 @@ FPC ObjFPC 模式不支持 `var x := ...` 语法，需要改为传统声明。
 
 #### B88 门禁结果
 
-- 报告：`test-reports/examples_compile_gate_b88.json`
+- 报告：`docs/archive/reports/examples-compile-history/examples_compile_gate_b88.json`
 - 结果：`total=75, passed=71, failed=0, skipped=4, pass_rate=100.0%`
 - 格式验证：`failed_files=[]`（已修复）
 
 #### Wave B 同步验证
 
-- 报告：`test-reports/wave_b_ci_gate_summary_20260208_034029.md`
+- 报告：`docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_034029.md`
 - 结果：overall PASS，`examples_compile_ci_gate.json` 中 `failed_files=[]`。

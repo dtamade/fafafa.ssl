@@ -69,4 +69,4 @@
 - RED fail reproduced ✅
 - GREEN pass ✅
 - Regression chain pass ✅
-  - module batch report: `test-reports/test_report_20260212_133118.txt`
+  - module batch report: `docs/archive/reports/test-report-history/test_report_20260212_133118.txt`

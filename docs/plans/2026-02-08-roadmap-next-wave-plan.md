@@ -20,7 +20,7 @@
 **门禁命令**：
 
 ```bash
-bash scripts/verify_examples_compile.sh -f json -o test-reports/examples_compile_gate_b85.json
+bash scripts/verify_examples_compile.sh -f json -o docs/archive/reports/examples-compile-history/examples_compile_gate_b85.json
 ```
 
 ### A1：API/模块下线替换（高收益）
@@ -53,10 +53,10 @@ bash scripts/verify_examples_compile.sh -f json -o test-reports/examples_compile
 ```bash
 python3 scripts/compile_all_modules.py
 bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT
-bash scripts/verify_examples_compile.sh -f json -o test-reports/examples_compile_ci_gate.json
+bash scripts/verify_examples_compile.sh -f json -o docs/archive/reports/examples-compile-history/examples_compile_ci_gate.json
 ```
 
-**验收**：已完成（新增 `scripts/run_wave_b_ci_gate.sh`，报告 `test-reports/wave_b_ci_gate_summary_20260208_022636.md`，overall PASS）。
+**验收**：已完成（新增 `scripts/run_wave_b_ci_gate.sh`，报告 `docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_022636.md`，overall PASS）。
 
 ### B2：macOS/Windows 门禁脚本核验
 
@@ -109,9 +109,9 @@ bash scripts/verify_examples_compile.sh -f json -o test-reports/examples_compile
 ## 执行进展回填（2026-02-08 02:57 +0800）
 
 - 示例通过率目标已超额完成：`87.3% -> 100.0%`。
-  - 证据：`test-reports/examples_compile_gate_b87.json`
+  - 证据：`docs/archive/reports/examples-compile-history/examples_compile_gate_b87.json`
 - Wave B / B1 脚本化门禁持续通过：
-  - 证据：`test-reports/wave_b_ci_gate_summary_20260208_025426.md`
+  - 证据：`docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_025426.md`
 - 后续主线调整：
   1. 保持 Linux 门禁按批次复跑；
   2. 推进 B2（macOS/Windows runner）并回填统一格式报告。
@@ -120,14 +120,14 @@ bash scripts/verify_examples_compile.sh -f json -o test-reports/examples_compile
 
 - 已完成：门禁脚本稳健性收口（`failed_files` 空数组格式修复）。
 - 验证：
-  - `test-reports/examples_compile_gate_b88.json`（`failed_files=[]`）
-  - `test-reports/wave_b_ci_gate_summary_20260208_034029.md`（overall PASS）
+  - `docs/archive/reports/examples-compile-history/examples_compile_gate_b88.json`（`failed_files=[]`）
+  - `docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_034029.md`（overall PASS）
 - 下一步主线不变：推进 B2 实机回填（macOS/Windows）。
 
 ## B89 回填（2026-02-08 03:49 +0800）
 
 - 已新增 `scripts/generate_wave_b_cross_platform_summary.sh` 作为 B2 汇总入口。
-- 已生成样例：`test-reports/wave_b_cross_platform_summary_20260208_034029.md`。
+- 已生成样例：`docs/archive/reports/wave-b-history/wave_b_cross_platform_summary_20260208_034029.md`。
 - 后续动作：在 macOS/Windows runner 回填实测报告后，复跑同一脚本得到最终三平台闭环摘要。
 
 ## B90 回填（2026-02-08 03:55 +0800）
@@ -144,7 +144,7 @@ bash scripts/verify_examples_compile.sh -f json -o test-reports/examples_compile
   - `scripts/run_wave_b_windows_gate.ps1` 保持待 Windows runner 实机执行。
 - B91：已完成跨平台汇总状态解析修复。
   - `scripts/generate_wave_b_cross_platform_summary.sh` 已支持从平台摘要中解析 `overall` 并映射状态。
-  - 样例：`test-reports/wave_b_cross_platform_summary_20260208_041500.md`（`macos=DRY_RUN`）。
+  - 样例：`docs/archive/reports/wave-b-history/wave_b_cross_platform_summary_20260208_041500.md`（`macos=DRY_RUN`）。
 
 ### 下一批（B92）
 

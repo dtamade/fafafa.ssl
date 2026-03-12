@@ -20,18 +20,18 @@ type
 var
   Modules: array of TModuleInfo;
 
-procedure AddModule(const Name, FilePath, Category: string; Priority: Integer);
+procedure AddModule(const AName, AFilePath, ACategory: string; APriority: Integer);
+var
+  LIndex: Integer;
 begin
   SetLength(Modules, Length(Modules) + 1);
-  with Modules[High(Modules)] do
-  begin
-    Name := Name;
-    FilePath := FilePath;
-    Status := msNotTested;
-    Category := Category;
-    Priority := Priority;
-    Note := '';
-  end;
+  LIndex := High(Modules);
+  Modules[LIndex].Name := AName;
+  Modules[LIndex].FilePath := AFilePath;
+  Modules[LIndex].Status := msNotTested;
+  Modules[LIndex].Category := ACategory;
+  Modules[LIndex].Priority := APriority;
+  Modules[LIndex].Note := '';
 end;
 
 procedure InitializeModules;
@@ -64,7 +64,7 @@ begin
   AddModule('chacha', 'fafafa.ssl.openssl.api.chacha', 'Cipher', 1);
   AddModule('aria', 'fafafa.ssl.openssl.api.aria', 'Cipher', 2);
   AddModule('seed', 'fafafa.ssl.openssl.api.seed', 'Cipher', 2);
-  AddModule('legacy_ciphers', 'fafafa.ssl.openssl.legacy_ciphers', 'Cipher', 3);
+  AddModule('legacy_ciphers', 'fafafa.ssl.openssl.api.legacy_ciphers', 'Cipher', 3);
   
   // Asymmetric Crypto (Priority 1)
   AddModule('rsa', 'fafafa.ssl.openssl.api.rsa', 'PKI', 1);
@@ -125,7 +125,7 @@ begin
   AddModule('srp', 'fafafa.ssl.openssl.api.srp', 'Utility', 3);
   AddModule('thread', 'fafafa.ssl.openssl.api.thread', 'Utility', 2);
   AddModule('crypto', 'fafafa.ssl.openssl.api.crypto', 'Utility', 1);
-  AddModule('rand_old', 'fafafa.ssl.openssl.api.rand_old', 'Utility', 3);
+  // rand_old 已被当前 rand API 取代，不再作为活跃模块清单项。
 end;
 
 procedure PrintModuleList;

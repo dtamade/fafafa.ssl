@@ -67,4 +67,4 @@
 - RED reproduced ✅
 - GREEN passed ✅
 - TS comprehensive + core regressions passed ✅
-  - module report: `test-reports/test_report_20260212_134110.txt`
+  - module report: `docs/archive/reports/test-report-history/test_report_20260212_134110.txt`

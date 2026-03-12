@@ -250,6 +250,7 @@ var
   LNibbleHigh, LNibbleLow: Byte;
   LNormalized: string;
 begin
+  Result := nil;
   LNormalized := '';
   for I := 1 to Length(AHex) do
   begin
@@ -278,7 +279,7 @@ begin
   while I <= Length(LNormalized) do
   begin
     if (not HexCharToNibble(LNormalized[I], LNibbleHigh)) or
-       (not HexCharToNibble(LNormalized[I + 1], LNibbleLow)) then
+      (not HexCharToNibble(LNormalized[I + 1], LNibbleLow)) then
       raise EPKCS11Exception.Create('Invalid PKCS#11 object id hex encoding', CKR_ARGUMENTS_BAD);
 
     Result[LIndex] := (LNibbleHigh shl 4) or LNibbleLow;
@@ -380,7 +381,7 @@ end;
 
 function TPKCS11ConfigDefault: TPKCS11Config;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result := Default(TPKCS11Config);
   Result.SlotID := -1;  // Auto-detect
   Result.ReadOnly := True;
   Result.LoginRequired := True;
@@ -428,6 +429,8 @@ begin
   Result := '';
   
   case PINMethod of
+    pmNone:
+      ;
     pmValue:
       Result := PINValue;
       
@@ -459,7 +462,7 @@ function TPKCS11KeyInfo.ToString: string;
 begin
   Result := Format('Key: %s (Type: %s, Size: %d bits, Sign: %s, Decrypt: %s)',
     [KeyLabel, PKCS11KeyTypeToString(KeyType), KeySize,
-     BoolToStr(CanSign, True), BoolToStr(CanDecrypt, True)]);
+    BoolToStr(CanSign, True), BoolToStr(CanDecrypt, True)]);
 end;
 
 { TPKCS11TokenInfo }

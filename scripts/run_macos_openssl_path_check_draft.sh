@@ -5,12 +5,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+RUN_ID="${FAFAFA_MACOS_PATH_CHECK_RUN_ID:-$(date +%Y%m%d_%H%M%S)_$$}"
+MODULE_UNIT_OUTPUT_DIR="${FAFAFA_MACOS_PATH_CHECK_MODULE_UNIT_OUTPUT_DIR:-tmp/macos_path_check_module_units_${RUN_ID}}"
+MODULE_BIN_OUTPUT_DIR="${FAFAFA_MACOS_PATH_CHECK_MODULE_BIN_OUTPUT_DIR:-tmp/macos_path_check_module_bin_${RUN_ID}}"
+
 OPENSSL_ROOT=""
 MODULE_SET="PKCS7,PKCS12,CMS,Store,OCSP,TS,CT"
 WITH_MODULE_TESTS=true
 WITH_PHASE2_DRYRUN=true
 VERBOSE=false
 DRY_RUN=false
+FPC_EXE="${FAFAFA_FPC_EXE:-fpc}"
 
 OPENSSL_CANDIDATES=(
   "/opt/homebrew/opt/openssl@3"
@@ -112,6 +117,29 @@ if [[ "$OSTYPE" != darwin* ]]; then
   fi
 fi
 
+if [[ "$FPC_EXE" == */* ]]; then
+  if [[ "$FPC_EXE" != /* ]]; then
+    FPC_EXE="$PROJECT_ROOT/$FPC_EXE"
+  fi
+  if [[ ! -x "$FPC_EXE" ]]; then
+    if [[ "$DRY_RUN" == "true" ]]; then
+      echo "[WARN] configured FPC executable is not executable: $FPC_EXE (dry-run continues)"
+    else
+      echo "[FAIL] configured FPC executable is not executable: $FPC_EXE" >&2
+      exit 1
+    fi
+  fi
+else
+  if ! command -v "$FPC_EXE" >/dev/null 2>&1; then
+    if [[ "$DRY_RUN" == "true" ]]; then
+      echo "[WARN] FPC executable not found in PATH: $FPC_EXE (dry-run continues)"
+    else
+      echo "[FAIL] FPC executable not found in PATH: $FPC_EXE" >&2
+      exit 1
+    fi
+  fi
+fi
+
 if [[ "$DRY_RUN" == "false" ]]; then
   if [[ ! -f "$OPENSSL_ROOT/lib/libcrypto.dylib" ]]; then
     echo "[FAIL] missing libcrypto.dylib: $OPENSSL_ROOT/lib/libcrypto.dylib" >&2
@@ -143,20 +171,23 @@ run_cmd() {
 echo "========================================"
 echo "fafafa.ssl macOS OpenSSL Path Check (Draft)"
 echo "========================================"
+echo "run_id: $RUN_ID"
+echo "module unit output dir: $MODULE_UNIT_OUTPUT_DIR"
+echo "module bin output dir: $MODULE_BIN_OUTPUT_DIR"
 echo "openssl root: $OPENSSL_ROOT"
 echo "modules: $MODULE_SET"
 echo "module tests: $WITH_MODULE_TESTS"
 echo "phase2 dry-run: $WITH_PHASE2_DRYRUN"
 echo "dry-run: $DRY_RUN"
 
-run_cmd "fpc -iV"
+run_cmd "$FPC_EXE -iV"
 run_cmd "cd '$PROJECT_ROOT' && $ENV_PREFIX openssl version"
 run_cmd "cd '$PROJECT_ROOT' && test -f '$OPENSSL_ROOT/lib/libcrypto.dylib'"
 run_cmd "cd '$PROJECT_ROOT' && test -f '$OPENSSL_ROOT/lib/libssl.dylib'"
 run_cmd "cd '$PROJECT_ROOT' && test -f '$OPENSSL_ROOT/include/openssl/ssl.h'"
 
 if [[ "$WITH_MODULE_TESTS" == "true" ]]; then
-  module_cmd="cd '$PROJECT_ROOT' && $ENV_PREFIX bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
+  module_cmd="cd '$PROJECT_ROOT' && $ENV_PREFIX FAFAFA_FPC_EXE='$FPC_EXE' FAFAFA_FPC_UNIT_OUTPUT_DIR='$MODULE_UNIT_OUTPUT_DIR' FAFAFA_TEST_BIN_DIR='$MODULE_BIN_OUTPUT_DIR' bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
   if [[ "$VERBOSE" == "true" ]]; then
     module_cmd="$module_cmd --verbose"
   fi

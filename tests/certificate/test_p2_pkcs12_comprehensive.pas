@@ -372,6 +372,7 @@ begin
   begin
     WriteLn;
     WriteLn('🎉 所有测试通过！PKCS#12 模块工作正常');
+    WriteLn('[PASS] pkcs12 comprehensive completed');
     if SkippedTests > 0 then
       WriteLn(Format('   (%d 个函数在 OpenSSL 3.x 中不可用，这是预期的)', [SkippedTests]));
   end;

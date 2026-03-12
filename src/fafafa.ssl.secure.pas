@@ -264,9 +264,12 @@ end;
 
 function TSecureBytes.ToBytes: TBytes;
 begin
+  Result := nil;
+  if FLength <= 0 then
+    Exit;
+
   SetLength(Result, FLength);
-  if FLength > 0 then
-    Move(FData^, Result[0], FLength);
+  Move(FData^, Result[0], FLength);
 end;
 
 function TSecureBytes.Size: Integer;
@@ -284,7 +287,7 @@ end;
 
 class function TSecureRandom.Generate(ASize: Integer): TBytes;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   if ASize <= 0 then
     Exit;
 
@@ -516,6 +519,8 @@ var
   LCipher: PEVP_CIPHER;
   LLen, LCipherLen: Integer;
 begin
+  Result := nil;
+
   // Use AES-256-GCM for authenticated encryption
   if not Assigned(EVP_aes_256_gcm) then
     RaiseFunctionNotAvailable('EVP_aes_256_gcm');

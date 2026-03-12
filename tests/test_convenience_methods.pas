@@ -17,7 +17,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.context.builder,
   fafafa.ssl.cert.utils,
-  fafafa.ssl.openssl.backed;  // 确保 OpenSSL 后端注册
+  fafafa.ssl.openssl.lib;  // 确保 OpenSSL 后端注册
 
 var
   GTestsPassed: Integer = 0;

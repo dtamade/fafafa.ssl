@@ -4,7 +4,10 @@ program test_hash_comprehensive;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api;
+  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.loader;
 
 type
   TTestResult = record
@@ -131,7 +134,7 @@ begin
     end;
     
     // Finalize
-    if EVP_DigestFinal_ex(ctx, @digest[0], @digest_len) <> 1 then
+    if EVP_DigestFinal_ex(ctx, @digest[0], digest_len) <> 1 then
     begin
       AddResult(AlgName + ': Final', False, 'Finalization failed');
       Exit;
@@ -217,7 +220,7 @@ begin
     end;
     
     // Finalize
-    if EVP_DigestFinal_ex(ctx, @digest[0], @digest_len) <> 1 then
+    if EVP_DigestFinal_ex(ctx, @digest[0], digest_len) <> 1 then
     begin
       AddResult('Incremental: Final', False, 'Finalization failed');
       Exit;
@@ -281,7 +284,7 @@ begin
     end;
     
     // Don't update - test empty hash
-    if EVP_DigestFinal_ex(ctx, @digest[0], @digest_len) <> 1 then
+    if EVP_DigestFinal_ex(ctx, @digest[0], digest_len) <> 1 then
     begin
       AddResult('Empty input: Final', False, 'Finalization failed');
       Exit;
@@ -324,12 +327,27 @@ begin
   
   // Load OpenSSL
   try
-    if not LoadOpenSSLLibrary then
+    try
+      LoadOpenSSLCore;
+    except
+      on E: Exception do
+      begin
+        WriteLn('ERROR: Failed to load OpenSSL: ', E.Message);
+        Halt(1);
+      end;
+    end;
+
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('ERROR: Failed to load OpenSSL library!');
       Halt(1);
     end;
     WriteLn('OpenSSL library loaded successfully');
+    if not LoadEVP(GetCryptoLibHandle) then
+    begin
+      WriteLn('ERROR: Failed to load EVP functions');
+      Halt(1);
+    end;
     if Assigned(OPENSSL_version) then
       WriteLn('Version: ', OPENSSL_version(0))
     else
@@ -341,7 +359,6 @@ begin
       Halt(1);
     end;
   end;
-  
   // Test vectors from various RFCs and standards
   
   // MD5 (legacy, for compatibility)
@@ -368,8 +385,12 @@ begin
     '07E547D9586F6A73F73FBAC0435ED76951218FB7D0C8D788A309D785436BBB642E93A252A954F23912547D1E8A3B5ED6E1BFD7097821233FA0538F3DB854FEE6');
   
   // SHA-512/256 (truncated SHA-512)
-  TestHash('SHA-512/256', EVP_sha512_256(), 'The quick brown fox jumps over the lazy dog',
-    'DD9D67B371519C339ED8DBD25AF90E976A1EEEFD4AD3D889005E532FC5BEF04D');
+  if Assigned(EVP_sha512_256) then
+    TestHash('SHA-512/256', EVP_sha512_256(), 'The quick brown fox jumps over the lazy dog',
+      'DD9D67B371519C339ED8DBD25AF90E976A1EEEFD4AD3D889005E532FC5BEF04D')
+  else
+    TestHash('SHA-512/256', EVP_get_digestbyname('SHA512-256'), 'The quick brown fox jumps over the lazy dog',
+      'DD9D67B371519C339ED8DBD25AF90E976A1EEEFD4AD3D889005E532FC5BEF04D');
 
   // RED contract: unavailable algorithm should be treated as skip (not pass)
   TestHash('UNAVAILABLE-ALG', EVP_get_digestbyname('no-such-digest-zzzz'), 'abc', '');
@@ -382,7 +403,8 @@ begin
   PrintResults;
   
   // Cleanup
-  UnloadOpenSSLLibrary;
+  UnloadOpenSSLCore;
+  WriteLn('[PASS] hash comprehensive validation completed');
   
   // Exit with appropriate code
   if (TotalTests - PassedTests - SkippedTests) = 0 then

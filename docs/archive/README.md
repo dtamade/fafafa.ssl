@@ -51,6 +51,26 @@ Contains daily/weekly work session summaries:
 - ❌ Contributing code
 - ❌ Using the library
 
+## Active Backlog Boundary
+
+Archive content is **historical-only scope** and should not be mixed into active backlog execution.
+
+- `docs/archive/**` TODO/TBD/WIP markers are treated as historical context, not active implementation tasks.
+- Active repo-gap scans must exclude archive by default.
+- Archive cleanup/noise governance is tracked as a separate documentation maintenance lane.
+
+Recommended commands:
+
+```bash
+# Active backlog signal scan (exclude archive noise)
+rg -n "TODO|FIXME|TBD|placeholder|not implemented|待实现|未实现|WIP|DRAFT|草案" \
+  src tests scripts docs --glob '!docs/archive/**'
+
+# Optional archive-only audit
+rg -n "TODO|FIXME|TBD|placeholder|not implemented|待实现|未实现|WIP|DRAFT|草案" \
+  docs/archive
+```
+
 ## Current Documentation
 
 For up-to-date information, refer to the main project documentation:

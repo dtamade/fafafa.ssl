@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-02-08T00:56:51+08:00",
+  "fpc_version": "3.3.1",
+  "summary": {
+    "total": 75,
+    "passed": 36,
+    "failed": 35,
+    "skipped": 4,
+    "pass_rate": 50.7
+  },
+  "failed_files": ["examples/01_tls_client.pas","examples/02_generate_certificate.pas","examples/03_file_encryption.pas","examples/06_digital_signature.pas","examples/certificate_verification_example.pas","examples/demo_fluent_api.pas","examples/digital_signature/digital_signature.pas","examples/example_aes_gcm_aead.pas","examples/example_cert_pinning.pas","examples/example_https_api.pas","examples/example_json_api.pas","examples/example_streaming_operations.pas","examples/https_client/https_client_auth.pas","examples/https_client/https_client_post.pas","examples/https_client/https_client_session.pas","examples/https_client/https_client_simple.pas","examples/https_client_production.pas","examples/https_simple_get.pas","examples/password_hash/password_hash.pas","examples/password_hash_v2.pas","examples/pkcs7_basic_example.pas","examples/pkcs7_data_example.pas","examples/pkcs7_encrypt_decrypt_example.pas","examples/pkcs7_sign_verify_example.pas","examples/pkcs7_sign_verify_simple.pas","examples/practical_examples.pas","examples/probe_sockets.pas","examples/production/https_client_auth.pas","examples/production/https_client_post.pas","examples/production/https_client_session.pas","examples/production/https_client_simple.pas","examples/security_enhancements_demo.pas","examples/simple_ssl_connection.pas","examples/simple_test.pas","examples/validation/real_world_test.pas"]
+}

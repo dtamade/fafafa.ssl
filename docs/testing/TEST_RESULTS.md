@@ -1,5 +1,8 @@
 # OpenSSL 模块测试报告
 
+
+> **Historical snapshot:** This page captures a point-in-time testing or validation snapshot and may not reflect the current repository state. For current verification commands and active workflow guidance, start with `docs/testing/TESTING_README.md`.
+
 测试日期: 2025-09-30
 测试环境: Windows x64, Free Pascal 3.3.1, Lazarus
 OpenSSL 版本: 1.1.1h (22 Sep 2020)

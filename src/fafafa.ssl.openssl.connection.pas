@@ -58,10 +58,13 @@ type
     function InternalHandshake(AIsClient: Boolean): Boolean;
     function ValidatePostHandshake(AIsClient: Boolean): Boolean;
     procedure ApplyPreHandshakeOCSPStatusRequest(AIsClient: Boolean);
+    function OCSPResponseDecodeDependenciesAvailable: Boolean;
+    function OCSPResponseStatusDependencyAvailable: Boolean;
 
   protected
     { B51-M5: required OCSP stapling fail-closed policy helper }
     function ValidateRequiredOCSPStapling(AIsClient: Boolean): Boolean;
+    function EnsureOCSPModuleLoaded: Boolean; virtual;
 
     { 抽象方法实现 }
     function DoRead(var ABuffer; ACount: Integer): Integer; override;
@@ -126,6 +129,7 @@ const
 constructor TOpenSSLConnection.Create(AContext: ISSLContext; ASocket: THandle);
 var
   Ctx: PSSL_CTX;
+  LDefaultServerName: string;
 begin
   inherited Create(AContext);
   FSocket := ASocket;
@@ -144,10 +148,11 @@ begin
       'TOpenSSLConnection.Create'
     );
 
-  // Initialize per-connection server name from context default (backward compatibility)
+  // Initialize per-connection server name from client context default (backward compatibility)
   FServerName := '';
-  if (AContext.GetServerName <> '') then
-    SetServerName(AContext.GetServerName);
+  LDefaultServerName := GetLegacyContextDefaultServerName;
+  if LDefaultServerName <> '' then
+    SetServerName(LDefaultServerName);
 
   SSL_set_fd(FSSL, ASocket);
 end;
@@ -155,6 +160,7 @@ end;
 constructor TOpenSSLConnection.Create(AContext: ISSLContext; AStream: TStream);
 var
   Ctx: PSSL_CTX;
+  LDefaultServerName: string;
 begin
   inherited Create(AContext);
   FSocket := THandle(-1);
@@ -173,10 +179,11 @@ begin
       'TOpenSSLConnection.Create'
     );
 
-  // Initialize per-connection server name from context default (backward compatibility)
+  // Initialize per-connection server name from client context default (backward compatibility)
   FServerName := '';
-  if (AContext.GetServerName <> '') then
-    SetServerName(AContext.GetServerName);
+  LDefaultServerName := GetLegacyContextDefaultServerName;
+  if LDefaultServerName <> '' then
+    SetServerName(LDefaultServerName);
 
   // Ensure BIO API is available
   if not TOpenSSLLoader.IsModuleLoaded(osmBIO) then
@@ -216,9 +223,14 @@ procedure TOpenSSLConnection.SetServerName(const AServerName: string);
 begin
   FServerName := AServerName;
 
-  // Apply SNI on the underlying SSL handle (must be set before handshake)
-  if (FServerName <> '') and Assigned(SSL_set_tlsext_host_name) and Assigned(FSSL) then
-    SSL_set_tlsext_host_name(FSSL, PAnsiChar(AnsiString(FServerName)));
+  // Apply or clear SNI on the underlying SSL handle (must be set before handshake)
+  if Assigned(SSL_set_tlsext_host_name) and Assigned(FSSL) then
+  begin
+    if FServerName <> '' then
+      SSL_set_tlsext_host_name(FSSL, PAnsiChar(AnsiString(FServerName)))
+    else
+      SSL_set_tlsext_host_name(FSSL, nil);
+  end;
 end;
 
 function TOpenSSLConnection.GetServerName: string;
@@ -609,7 +621,7 @@ var
   Count, I: Integer;
   X509Cert: PX509;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   if FSSL = nil then
     Exit;
@@ -769,7 +781,7 @@ var
   RespLen: clong;
   RespPtr: PByte;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   if (FSSL = nil) or (not Assigned(SSL_get_tlsext_status_ocsp_resp)) then
     Exit;
 
@@ -781,6 +793,26 @@ begin
     SetLength(Result, RespLen);
     Move(RespPtr^, Result[0], RespLen);
   end;
+end;
+
+function TOpenSSLConnection.OCSPResponseDecodeDependenciesAvailable: Boolean;
+begin
+  Result := Assigned(d2i_OCSP_RESPONSE) and Assigned(OCSP_RESPONSE_free);
+end;
+
+function TOpenSSLConnection.OCSPResponseStatusDependencyAvailable: Boolean;
+begin
+  Result := Assigned(OCSP_RESPONSE_status);
+end;
+
+function TOpenSSLConnection.EnsureOCSPModuleLoaded: Boolean;
+begin
+  Result := TOpenSSLLoader.IsModuleLoaded(osmOCSP);
+  if Result then
+    Exit;
+
+  LoadOpenSSLOCSP(GetCryptoLibHandle);
+  Result := TOpenSSLLoader.IsModuleLoaded(osmOCSP);
 end;
 
 function TOpenSSLConnection.DoIsOCSPResponseVerified: Boolean;
@@ -808,10 +840,9 @@ begin
     Exit;
 
   // Ensure OCSP APIs are available
-  if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) then
-    LoadOpenSSLOCSP(GetCryptoLibHandle);
-
-  if (not TOpenSSLLoader.IsModuleLoaded(osmOCSP)) or (not Assigned(d2i_OCSP_RESPONSE)) then
+  if (not EnsureOCSPModuleLoaded) or
+    (not OCSPResponseDecodeDependenciesAvailable) or
+    (not OCSPResponseStatusDependencyAvailable) then
     Exit;
 
   DataPtr := @RespData[0];
@@ -908,17 +939,20 @@ begin
   if Length(RespData) = 0 then Exit;
 
   // Ensure OCSP APIs are available
-  if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) then
-    LoadOpenSSLOCSP(GetCryptoLibHandle);
-
-  // 解析 OCSP 响应
-  if not Assigned(d2i_OCSP_RESPONSE) then
+  if not EnsureOCSPModuleLoaded then
   begin
     Result := 'OCSP API not available';
     Exit;
   end;
 
-  if not Assigned(OCSP_RESPONSE_status) then
+  // 解析 OCSP 响应
+  if not OCSPResponseDecodeDependenciesAvailable then
+  begin
+    Result := 'OCSP API not available';
+    Exit;
+  end;
+
+  if not OCSPResponseStatusDependencyAvailable then
   begin
     Result := 'OCSP status API not available';
     Exit;
@@ -1194,9 +1228,11 @@ var
   VerifyFlags: TSSLCertVerifyFlags;
   ConnectionOptions: TSSLOptions;
   CertVerifyCacheEnabled: Boolean;
+  CertVerifyCacheSkipValidHitRefresh: Boolean;
   CertVerifyCache: TCertVerifyCache;
   CachedVerifyResult: TCertVerifyResult;
   PerformVerifyCall: Boolean;
+  UsedInvalidCacheHit: Boolean;
   RequirePeerCert: Boolean;
   PeerCert: ISSLCertificate;
   PeerX509: PX509;
@@ -1342,6 +1378,8 @@ begin
   VerifyFlags := FContext.GetCertVerifyFlags;
   ConnectionOptions := FContext.GetOptions;
   CertVerifyCacheEnabled := ssoEnableCertVerifyCache in ConnectionOptions;
+  CertVerifyCacheSkipValidHitRefresh :=
+    ssoSkipCertVerifyCacheValidHitRefresh in ConnectionOptions;
   if CertVerifyCacheEnabled then
     CertVerifyCache := GetGlobalCertVerifyCache
   else
@@ -1358,11 +1396,9 @@ begin
     IssuerNeedsFree := False;
 
     try
-      // Ensure OCSP APIs are loaded
-      if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) then
-        LoadOpenSSLOCSP(GetCryptoLibHandle);
-
-      if not TOpenSSLLoader.IsModuleLoaded(osmOCSP) then
+      // Reuse the connection-level OCSP module guard to avoid
+      // entry-point drift between stapling/status and revocation checks.
+      if not EnsureOCSPModuleLoaded then
       begin
         if Assigned(SSL_set_verify_result) then
           SSL_set_verify_result(FSSL, X509_V_ERR_OCSP_VERIFY_FAILED);
@@ -1407,7 +1443,7 @@ begin
       if Assigned(SSL_CTX_get_cert_store) then
         VerifyStore := SSL_CTX_get_cert_store(PSSL_CTX(GetNativeHandleSafe(FContext, 'TOpenSSLConnection.VerifyCertificateOCSP')));
 
-      if (IssuerX509 = nil) and (VerifyStore <> nil) and
+      if (VerifyStore <> nil) and
         Assigned(X509_STORE_CTX_new) and Assigned(X509_STORE_CTX_free) and
         Assigned(X509_STORE_CTX_init) and Assigned(X509_verify_cert) and
         Assigned(X509_STORE_CTX_get0_chain) then
@@ -1422,6 +1458,7 @@ begin
           if X509_STORE_CTX_init(StoreCtx, VerifyStore, PeerX509, PeerChain) = 1 then
           begin
             PerformVerifyCall := True;
+            UsedInvalidCacheHit := False;
 
             if CertVerifyCacheEnabled and (CertVerifyCache <> nil) then
             begin
@@ -1429,13 +1466,32 @@ begin
               begin
                 if not CachedVerifyResult.Valid then
                 begin
+                  if IssuerX509 = nil then
+                  begin
+                    PerformVerifyCall := False;
+                    UsedInvalidCacheHit := True;
+                    TSecurityLog.Debug('OpenSSL',
+                      'Cert verify cache hit (invalid result), skipping X509_verify_cert');
+                  end
+                  else
+                    TSecurityLog.Debug('OpenSSL',
+                      'Cert verify cache hit (invalid result), refreshing X509_verify_cert');
+                end
+                else if CertVerifyCacheSkipValidHitRefresh and (IssuerX509 <> nil) then
+                begin
                   PerformVerifyCall := False;
                   TSecurityLog.Debug('OpenSSL',
-                    'Cert verify cache hit (invalid result), skipping X509_verify_cert');
+                    'Cert verify cache hit (valid result), skipping X509_verify_cert');
                 end
                 else
-                  TSecurityLog.Debug('OpenSSL',
-                    'Cert verify cache hit (valid result), refreshing X509_verify_cert');
+                begin
+                  if CertVerifyCacheSkipValidHitRefresh and (IssuerX509 = nil) then
+                    TSecurityLog.Debug('OpenSSL',
+                      'Cert verify cache hit (valid result), refreshing X509_verify_cert (issuer unresolved)')
+                  else
+                    TSecurityLog.Debug('OpenSSL',
+                      'Cert verify cache hit (valid result), refreshing X509_verify_cert');
+                end;
               end
               else
                 TSecurityLog.Debug('OpenSSL',
@@ -1471,7 +1527,19 @@ begin
                 X509_STORE_CTX_set_error(StoreCtx, CachedVerifyResult.ErrorCode);
             end;
 
-            if VerifyRes = 1 then
+            if UsedInvalidCacheHit then
+            begin
+              if Assigned(SSL_set_verify_result) then
+              begin
+                if CachedVerifyResult.ErrorCode <> 0 then
+                  SSL_set_verify_result(FSSL, CachedVerifyResult.ErrorCode)
+                else
+                  SSL_set_verify_result(FSSL, X509_V_ERR_APPLICATION_VERIFICATION);
+              end;
+              Exit(False);
+            end;
+
+            if (VerifyRes = 1) and (IssuerX509 = nil) then
             begin
               VerifiedChain := X509_STORE_CTX_get0_chain(StoreCtx);
               if VerifiedChain <> nil then

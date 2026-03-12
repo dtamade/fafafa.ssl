@@ -32,7 +32,7 @@
 
 ## 4. 当前结果摘要
 
-基于 `test-reports/test_p2_store_comprehensive_result.txt`：
+基于 `docs/archive/reports/test-p2-history/test_p2_store_comprehensive_result.txt`：
 
 - 总测试数：56
 - 通过：56
@@ -40,8 +40,8 @@
 - 通过率：100%
 
 本轮（2026-02-07）聚焦回归：
-- Store 模块：`test-reports/test_report_20260207_022221.txt`（2/2，100%）
-- P2 聚焦回归：`test-reports/test_report_20260207_024912.txt`（15/15，100%）
+- Store 模块：`docs/archive/reports/test-report-history/test_report_20260207_022221.txt`（2/2，100%）
+- P2 聚焦回归：`docs/archive/reports/test-report-history/test_report_20260207_024912.txt`（15/15，100%）
 
 已覆盖的关键失败路径：
 - 无效 payload（`file:` URI 指向非证书文本）

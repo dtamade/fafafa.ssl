@@ -123,9 +123,8 @@ begin
     Ctx.SetVerifyMode([sslVerifyPeer]);
     WriteLn('  验证模式: 验证对端证书');
 
-    // 设置 SNI
-    Ctx.SetServerName('www.example.com');
-    WriteLn('  服务器名称: ', Ctx.GetServerName);
+    // SNI 迁移提示
+    WriteLn('  服务器名称: 在 CreateConnection 后通过 ISSLClientConnection.SetServerName 设置');
 
     // 设置 ALPN
     Ctx.SetALPNProtocols('http/1.1,http/2');
@@ -246,8 +245,9 @@ begin
   WriteLn('  Ctx: ISSLContext;');
   WriteLn('begin');
   WriteLn('  Ctx := CreateSSLContext(sslCtxClient);');
-  WriteLn('  Ctx.SetServerName(''www.example.com'');');
-  WriteLn('  // ... 使用 Ctx 创建连接');
+  WriteLn('  Conn := Ctx.CreateConnection(Socket);');
+  WriteLn('  (Conn as ISSLClientConnection).SetServerName(''www.example.com'');');
+  WriteLn('  // ... 然后再用 Conn 建立连接');
   WriteLn('end;');
   WriteLn('');
   WriteLn('// 显式选择库');

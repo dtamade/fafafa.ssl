@@ -5,7 +5,7 @@ program test_openssl_minimal;
 uses
   SysUtils,
   fafafa.ssl.base,
-  fafafa.ssl.openssl.backed;
+  fafafa.ssl.openssl.lib;
 
 var
   Lib: ISSLLibrary;

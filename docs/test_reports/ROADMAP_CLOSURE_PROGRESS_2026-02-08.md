@@ -23,15 +23,15 @@
 | 全模块编译门禁 | `python3 scripts/compile_all_modules.py` | ✅ `157/157` |
 | P2 核心模块回归 | `bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT` | ✅ `15/15` |
 
-相关证据：`test-reports/test_report_20260208_011843.txt`
+相关证据：`docs/archive/reports/test-report-history/test_report_20260208_011843.txt`
 
 ### 2) 示例编译通过率
 
 | 阶段 | 报告 | 通过/总数 | 通过率 |
 |------|------|-----------|--------|
-| 批次启动基线 | `test-reports/examples_compile_latest.json` | `36/75` | `50.7%` |
-| B79 后 | `test-reports/examples_compile_after_b79_partial.json` | `41/75` | `57.7%` |
-| B85 最新门禁 | `test-reports/examples_compile_gate_b85.json` | `62/75` | `87.3%` |
+| 批次启动基线 | `docs/archive/reports/examples-compile-history/examples_compile_latest.json` | `36/75` | `50.7%` |
+| B79 后 | `docs/archive/reports/examples-compile-history/examples_compile_after_b79_partial.json` | `41/75` | `57.7%` |
+| B85 最新门禁 | `docs/archive/reports/examples-compile-history/examples_compile_gate_b85.json` | `62/75` | `87.3%` |
 
 净提升（相对启动基线）：
 
@@ -80,7 +80,7 @@
 ### B84（Wave B：Linux 最小 CI 门禁闭环）✅
 
 - 新增脚本：`scripts/run_wave_b_ci_gate.sh`
-- 执行证据：`test-reports/wave_b_ci_gate_summary_20260208_022636.md`
+- 执行证据：`docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_022636.md`
 - 结果：overall `PASS`（compile=0, modules=0, examples exit=1 但 `pass_rate=87.3%` 达阈值）
 
 ### B85（Quick-win 持续修复）✅
@@ -121,9 +121,9 @@
 
 | 项目 | 报告 | 结果 |
 |------|------|------|
-| 示例门禁（B86） | `test-reports/examples_compile_gate_b86.json` | `66/75`（`92.9%`） |
-| 示例门禁（B87） | `test-reports/examples_compile_gate_b87.json` | `71/75`（`100.0%`，`failed=0`） |
-| Wave B Linux CI Gate | `test-reports/wave_b_ci_gate_summary_20260208_025426.md` | overall **PASS** |
+| 示例门禁（B86） | `docs/archive/reports/examples-compile-history/examples_compile_gate_b86.json` | `66/75`（`92.9%`） |
+| 示例门禁（B87） | `docs/archive/reports/examples-compile-history/examples_compile_gate_b87.json` | `71/75`（`100.0%`，`failed=0`） |
+| Wave B Linux CI Gate | `docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_025426.md` | overall **PASS** |
 
 ### 关键修复文件（B86-B87）
 
@@ -160,9 +160,9 @@
 
 | 项目 | 报告 | 结果 |
 |------|------|------|
-| 示例门禁（B88） | `test-reports/examples_compile_gate_b88.json` | `71/75`, `failed=0`, `pass_rate=100.0%`, `failed_files=[]` |
-| Wave B Linux CI Gate | `test-reports/wave_b_ci_gate_summary_20260208_034029.md` | overall PASS |
-| CI 示例报告 | `test-reports/examples_compile_ci_gate.json` | `failed_files=[]`（格式正确） |
+| 示例门禁（B88） | `docs/archive/reports/examples-compile-history/examples_compile_gate_b88.json` | `71/75`, `failed=0`, `pass_rate=100.0%`, `failed_files=[]` |
+| Wave B Linux CI Gate | `docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_034029.md` | overall PASS |
+| CI 示例报告 | `docs/archive/reports/examples-compile-history/examples_compile_ci_gate.json` | `failed_files=[]`（格式正确） |
 
 ### 当前状态
 
@@ -186,8 +186,8 @@
 ### 样例执行
 
 - 命令：
-  - `bash scripts/generate_wave_b_cross_platform_summary.sh --run-id 20260208_034029 --linux-summary test-reports/wave_b_ci_gate_summary_20260208_034029.md --macos-probe test-reports/wave_b_macos_gate_probe_20260208.json --output test-reports/wave_b_cross_platform_summary_20260208_034029.md`
-- 产物：`test-reports/wave_b_cross_platform_summary_20260208_034029.md`
+  - `bash scripts/generate_wave_b_cross_platform_summary.sh --run-id 20260208_034029 --linux-summary docs/archive/reports/wave-b-history/wave_b_ci_gate_summary_20260208_034029.md --macos-probe docs/archive/reports/wave-b-history/wave_b_macos_gate_probe_20260208.json --output docs/archive/reports/wave-b-history/wave_b_cross_platform_summary_20260208_034029.md`
+- 产物：`docs/archive/reports/wave-b-history/wave_b_cross_platform_summary_20260208_034029.md`
 
 ### 阶段结论
 
@@ -204,7 +204,7 @@
 
 - 新增 `scripts/run_wave_b_macos_gate.sh`（B2 macOS 门禁封装）。
 - 新增 `scripts/run_wave_b_windows_gate.ps1`（B2 Windows 门禁封装）。
-- macOS dry-run 演练产物：`test-reports/wave_b_macos_gate_summary_20260208_0350.md`。
+- macOS dry-run 演练产物：`docs/archive/reports/wave-b-history/wave_b_macos_gate_summary_20260208_0350.md`。
 
 ### 价值
 
@@ -227,7 +227,7 @@
 | 项目 | 命令/产物 | 结果 |
 |------|-----------|------|
 | macOS runner dry-run | `bash scripts/run_wave_b_macos_gate.sh --dry-run --run-id 20260208_041500 --output-dir test-reports` | 生成 `wave_b_macos_gate_summary_20260208_041500.md`，`overall=DRY_RUN` |
-| Cross-platform summary（修复后） | `test-reports/wave_b_cross_platform_summary_20260208_041500.md` | `macos=DRY_RUN`，不再显示 `READY` |
+| Cross-platform summary（修复后） | `docs/archive/reports/wave-b-history/wave_b_cross_platform_summary_20260208_041500.md` | `macos=DRY_RUN`，不再显示 `READY` |
 | Windows 实机能力 | `pwsh` | 当前 Linux 环境不可用，待 Windows runner 回填 |
 
 ### 当前状态
@@ -254,7 +254,7 @@
 
 - 新增 `scripts/check_wave_b_b2_closure_readiness.sh`，用于判定 B2 是否满足最终闭环条件。
 - 验证样例：
-  - `test-reports/wave_b_b2_closure_readiness_20260208_041500.md`（`closure_status=IN_PROGRESS`）
+  - `docs/archive/reports/wave-b-history/wave_b_b2_closure_readiness_20260208_041500.md`（`closure_status=IN_PROGRESS`）
   - `--strict` 模式在未闭环时返回 `exit=1`（符合门禁预期）
 - 结果：B2 状态已可脚本化判定，不再依赖人工阅读多个摘要文件。
 
@@ -272,7 +272,7 @@
 
 - 新增 `scripts/check_wave_b_b2_evidence_consistency.sh`。
 - 验证样例：
-  - `test-reports/wave_b_b2_evidence_consistency_20260208_041500.md`（`INCONSISTENT`）
+  - `docs/archive/reports/wave-b-history/wave_b_b2_evidence_consistency_20260208_041500.md`（`INCONSISTENT`）
   - strict 模式返回 `exit=1`（符合预期）
 - 价值：可在汇总前提前发现“跨批次 run_id 混用”导致的隐性证据污染。
 
@@ -289,7 +289,7 @@
 ## B97 交接包自动化（2026-02-08 04:38 +0800）
 
 - 交付：`scripts/prepare_wave_b_b2_handoff_bundle.sh`
-- 样例结果：`test-reports/wave_b_b2_handoff_bundle_20260208_041500.md`
+- 样例结果：`docs/archive/reports/wave-b-history/wave_b_b2_handoff_bundle_20260208_041500.md`
   - `handoff_state=NEEDS_EVIDENCE_SYNC`
   - strict 模式返回 `exit=1`（符合预期）
 - 价值：B2 交接不再依赖人工拼接，支持一键生成与一键阻断。
@@ -334,7 +334,7 @@
 - 新增执行脚本：`scripts/run_wave_c_b101_validation_playbook.sh`
 - 新增计划文档：`docs/plans/WAVE_C_B101_MINIMAL_INTEGRATION_VALIDATION_PLAN_2026-02-08.md`
 - 验证：
-  - `test-reports/wave_c_b101_validation_20260208_043500.md`（overall PASS）
+  - `docs/archive/reports/wave-c-quick-enablement-history/wave_c_b101_validation_20260208_043500.md`（overall PASS）
 - 结论：已具备进入 B102 的“接入前后同口径验证”执行骨架。
 
 ---

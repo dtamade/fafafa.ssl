@@ -1,13 +1,9 @@
-name: CI Matrix (Draft)
+name: CI Matrix Draft (Manual Only)
 
 # B63: GitHub Actions 多平台矩阵测试工作流草案
 # 状态: draft - 需要根据实际环境调整
 
 on:
-  push:
-    branches: [ master, main, develop ]
-  pull_request:
-    branches: [ master, main ]
   workflow_dispatch:
     inputs:
       skip_windows:
@@ -82,16 +78,17 @@ jobs:
 
     - name: Run P2 module tests
       run: |
-        mkdir -p bin test-reports
+        REPORTS_DIR="tmp/ci_matrix_draft_reports/linux-${{ matrix.openssl }}"
+        mkdir -p bin "$REPORTS_DIR"
         chmod +x scripts/run_all_module_tests.sh
-        ./scripts/run_all_module_tests.sh --verbose || true
+        FAFAFA_TEST_REPORTS_DIR="$REPORTS_DIR" ./scripts/run_all_module_tests.sh --verbose || true
 
     - name: Upload test reports
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: linux-openssl-${{ matrix.openssl }}-reports
-        path: test-reports/
+        path: tmp/ci_matrix_draft_reports/linux-${{ matrix.openssl }}/
         retention-days: 14
 
   # ============================================================================
@@ -129,10 +126,11 @@ jobs:
 
     - name: Run basic tests
       run: |
-        mkdir -p bin test-reports
+        REPORTS_DIR="tmp/ci_matrix_draft_reports/macos"
+        mkdir -p bin "$REPORTS_DIR"
         # 基础测试（macOS 路径可能需要调整）
-        fpc -Mobjfpc -Sh -Fu./src examples/hello_ssl.pas -o./bin/hello_ssl || true
-        ./bin/hello_ssl || true
+        fpc -Mobjfpc -Sh -Fu./src examples/hello_ssl.pas -o./bin/hello_ssl > "$REPORTS_DIR/hello_ssl_build.log" 2>&1 || true
+        ./bin/hello_ssl > "$REPORTS_DIR/hello_ssl_run.log" 2>&1 || true
 
     - name: Upload results
       if: always()
@@ -140,8 +138,7 @@ jobs:
       with:
         name: macos-reports
         path: |
-          test-reports/
-          *.log
+          tmp/ci_matrix_draft_reports/macos/
         retention-days: 14
 
   # ============================================================================
@@ -173,11 +170,12 @@ jobs:
 
     - name: Run WinSSL tests
       run: |
-        mkdir bin
-        mkdir test-reports
-        # WinSSL 后端测试
-        fpc -Mobjfpc -Sh -Fu.\src examples\hello_ssl.pas -o.\bin\hello_ssl.exe
-        .\bin\hello_ssl.exe
+        if not exist bin mkdir bin
+        set REPORTS_DIR=tmp\ci_matrix_draft_reports\windows
+        if not exist %REPORTS_DIR% mkdir %REPORTS_DIR%
+        rem WinSSL 后端测试
+        fpc -Mobjfpc -Sh -Fu.\src examples\hello_ssl.pas -o.\bin\hello_ssl.exe > %REPORTS_DIR%\hello_ssl_build.log 2>&1
+        .\bin\hello_ssl.exe > %REPORTS_DIR%\hello_ssl_run.log 2>&1
       shell: cmd
       continue-on-error: true
 
@@ -187,8 +185,7 @@ jobs:
       with:
         name: windows-reports
         path: |
-          test-reports/
-          *.log
+          tmp/ci_matrix_draft_reports/windows/
         retention-days: 14
 
   # ============================================================================

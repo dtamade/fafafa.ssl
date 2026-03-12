@@ -4,7 +4,7 @@ program test_openssl_blake2;
 
 uses
   SysUtils, DynLibs,
-  fafafa.ssl.openssl.types, fafafa.ssl.openssl.core, fafafa.ssl.openssl.blake2;
+  fafafa.ssl.openssl.api.types, fafafa.ssl.openssl.api.core, fafafa.ssl.openssl.api.blake2;
 
 var
   TestsPassed: Integer = 0;

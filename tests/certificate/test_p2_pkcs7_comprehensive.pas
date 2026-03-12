@@ -631,6 +631,7 @@ begin
   begin
     WriteLn;
     WriteLn('🎉 所有测试通过！PKCS#7 模块工作正常');
+    WriteLn('[PASS] pkcs7 comprehensive completed');
   end;
 
   UnloadOpenSSLCore;

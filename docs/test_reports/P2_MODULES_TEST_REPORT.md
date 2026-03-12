@@ -26,7 +26,7 @@ bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT
 - 通过率：100%
 
 脚本生成的详细报告（本次运行）：
-- `test-reports/test_report_20260207_025418.txt`
+- `docs/archive/reports/test-report-history/test_report_20260207_025418.txt`
 
 > 备注：`test-reports/` 下的运行日志是否纳入版本控制取决于团队策略；本文件只保存“结果摘要 + 可复现命令”。
 

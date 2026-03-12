@@ -228,7 +228,9 @@ begin
     WriteLn('╚════════════════════════════════════════════════════════════╝');
 
     if GTestsFailed > 0 then
-      ExitCode := 1;
+      ExitCode := 1
+    else
+      WriteLn('[PASS] cert utils try completed');
   except
     on E: Exception do
     begin

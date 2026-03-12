@@ -19,7 +19,7 @@ uses
   SysUtils,
   fafafa.ssl.base,
   fafafa.ssl.backend.selector,
-  fafafa.ssl.openssl.backed;  // 注册 OpenSSL 后端
+  fafafa.ssl.openssl.lib;  // 注册 OpenSSL 后端
 
 procedure TestDefaultRequirements;
 var

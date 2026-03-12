@@ -17,7 +17,8 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.context.builder,
   fafafa.ssl.cert.utils,
-  fafafa.ssl.exceptions;
+  fafafa.ssl.exceptions,
+  fafafa.ssl.freepascal.lib;
 
 var
   GTestsPassed: Integer = 0;
@@ -43,6 +44,26 @@ begin
   WriteLn('═══════════════════════════════════════════════════════════');
   WriteLn('  ', ATestName);
   WriteLn('═══════════════════════════════════════════════════════════');
+end;
+
+function HasWarningContaining(const AResult: TBuildValidationResult; const AText: string): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 0 to AResult.WarningCount - 1 do
+    if Pos(AText, AResult.Warnings[I]) > 0 then
+      Exit(True);
+end;
+
+function HasErrorContaining(const AResult: TBuildValidationResult; const AText: string): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 0 to AResult.ErrorCount - 1 do
+    if Pos(AText, AResult.Errors[I]) > 0 then
+      Exit(True);
 end;
 
 { Test 1: Valid client configuration }
@@ -331,7 +352,241 @@ begin
     WriteLn('    ', I + 1, '. ', LResult.Errors[I]);
 end;
 
-{ Test 12: Session timeout validation }
+{ Test 12: Server PKCS#11 key validation }
+procedure Test_ServerPKCS11Validation;
+var
+  LBuilder: ISSLContextBuilder;
+  LResult: TBuildValidationResult;
+  LCert, LKey: string;
+begin
+  TestHeader('Test 12: Server PKCS#11 Key Validation');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'pkcs11.local', 'PKCS11 Org', 30, LCert, LKey
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Exit;
+  end;
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithCertificatePEM(LCert)
+    .UsePKCS11('pkcs11:token=test;object=server-key;type=private');
+
+  LResult := LBuilder.ValidateServer;
+
+  Assert(LResult.IsValid, 'PKCS#11 private key counts as valid server key source');
+  Assert(not LResult.HasErrors, 'No missing private key error when PKCS#11 URI is present');
+end;
+
+{ Test 12.1: Server PKCS#11 override parity }
+procedure Test_ServerPKCS11Validation_ViaOverride;
+var
+  LBuilder: ISSLContextBuilder;
+  LResult: TBuildValidationResult;
+  LCert, LKey: string;
+begin
+  TestHeader('Test 12.1: Server PKCS#11 Validation Via Override');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'pkcs11-override.local', 'PKCS11 Override Org', 30, LCert, LKey
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Exit;
+  end;
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithCertificatePEM(LCert)
+    .Override('pkcs11_uri', 'pkcs11:token=test;object=server-key;type=private');
+
+  LResult := LBuilder.ValidateServer;
+
+  Assert(LResult.IsValid, 'Override pkcs11_uri counts as valid server key source');
+  Assert(not LResult.HasErrors,
+    'Override pkcs11_uri suppresses missing private key validation error');
+end;
+
+{ Test 12.2: Server PKCS#11 precedence warning with file key }
+procedure Test_ServerPKCS11Validation_WarnsWhenFileKeyAlsoPresent;
+var
+  LBuilder: ISSLContextBuilder;
+  LResult: TBuildValidationResult;
+  LCert, LKey: string;
+begin
+  TestHeader('Test 12.2: Server PKCS11 Warning With File Key');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'pkcs11-file-warning.local', 'PKCS11 File Warning Org', 30, LCert, LKey
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Exit;
+  end;
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithCertificatePEM(LCert)
+    .WithPrivateKey('/nonexistent/server.key')
+    .UsePKCS11('pkcs11:token=test;object=server-key;type=private');
+
+  LResult := LBuilder.ValidateServer;
+
+  Assert(LResult.IsValid, 'PKCS#11 + file private key remains a valid server config');
+  Assert(HasWarningContaining(LResult, 'PKCS#11 will be used'),
+    'Validation warns that PKCS#11 takes precedence over file private key');
+end;
+
+{ Test 12.3: Server PKCS#11 precedence warning via override with PEM key }
+procedure Test_ServerPKCS11Validation_ViaOverrideWarnsWhenPEMKeyAlsoPresent;
+var
+  LBuilder: ISSLContextBuilder;
+  LResult: TBuildValidationResult;
+  LCert, LKey: string;
+begin
+  TestHeader('Test 12.3: Server PKCS11 Warning Via Override With PEM Key');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'pkcs11-pem-warning.local', 'PKCS11 PEM Warning Org', 30, LCert, LKey
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Exit;
+  end;
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithCertificatePEM(LCert)
+    .WithPrivateKeyPEM(LKey)
+    .Override('pkcs11_uri', 'pkcs11:token=test;object=server-key;type=private');
+
+  LResult := LBuilder.ValidateServer;
+
+  Assert(LResult.IsValid, 'Override pkcs11_uri + PEM private key remains a valid server config');
+  Assert(HasWarningContaining(LResult, 'PKCS#11 will be used'),
+    'Override path warns that PKCS#11 takes precedence over PEM private key');
+end;
+
+{ Test 12.4: Server PKCS#11 still requires certificate }
+procedure Test_ServerPKCS11WithoutCertificateStillFails;
+var
+  LBuilder: ISSLContextBuilder;
+  LResult: TBuildValidationResult;
+begin
+  TestHeader('Test 12.4: Server PKCS11 Still Requires Certificate');
+
+  LBuilder := TSSLContextBuilder.Create
+    .UsePKCS11('pkcs11:token=test;object=server-key;type=private');
+
+  LResult := LBuilder.ValidateServer;
+
+  Assert(not LResult.IsValid, 'PKCS#11 without certificate is invalid for server config');
+  Assert(HasErrorContaining(LResult, 'requires a certificate'),
+    'Validation still requires an explicit certificate when PKCS#11 provides the private key');
+  Assert(not HasErrorContaining(LResult, 'requires a private key'),
+    'PKCS#11 key source should satisfy the private key requirement');
+end;
+
+{ Test 13: Server system roots satisfy CA validation }
+procedure Test_ServerSystemRootsValidation;
+var
+  LBuilder: ISSLContextBuilder;
+  LResult: TBuildValidationResult;
+  LCert, LKey: string;
+begin
+  TestHeader('Test 13: Server System Roots Validation');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'mTLS.local', 'Mutual TLS Org', 30, LCert, LKey
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Exit;
+  end;
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithCertificatePEM(LCert)
+    .WithPrivateKeyPEM(LKey)
+    .WithVerifyPeer
+    .WithSystemRoots;
+
+  LResult := LBuilder.ValidateServer;
+
+  Assert(LResult.IsValid, 'Server config with system roots remains valid');
+  Assert(not HasWarningContaining(LResult, 'no CA certificates configured'),
+    'System roots suppress missing CA warning for server validation');
+end;
+
+{ Test 13.1: Server system roots override parity }
+procedure Test_ServerSystemRootsValidation_ViaOverride;
+var
+  LBuilder: ISSLContextBuilder;
+  LResult: TBuildValidationResult;
+  LCert, LKey: string;
+begin
+  TestHeader('Test 13.1: Server System Roots Validation Via Override');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'mtls-override.local', 'Mutual TLS Override Org', 30, LCert, LKey
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Exit;
+  end;
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithCertificatePEM(LCert)
+    .WithPrivateKeyPEM(LKey)
+    .WithVerifyPeer
+    .Override('use_system_roots', 'true');
+
+  LResult := LBuilder.ValidateServer;
+
+  Assert(LResult.IsValid, 'Override use_system_roots keeps server config valid');
+  Assert(not HasWarningContaining(LResult, 'no CA certificates configured'),
+    'Override use_system_roots suppresses missing CA warning for server validation');
+end;
+
+
+{ Test 13.2: Server build preserves configured ServerName }
+procedure Test_ServerBuildWithValidation_PreservesServerName;
+var
+  LBuilder: ISSLContextBuilder;
+  LContext: ISSLContext;
+  LValidation: TBuildValidationResult;
+  LCert, LKey: string;
+begin
+  TestHeader('Test 13.2: Server Build Preserves ServerName');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'sni-server.local', 'SNI Server Org', 30, LCert, LKey
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Exit;
+  end;
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithCertificatePEM(LCert)
+    .WithPrivateKeyPEM(LKey)
+    .WithSNI('configured.server.local');
+
+  try
+    LContext := LBuilder.BuildServerWithValidation(LValidation);
+    Assert(LValidation.IsValid, 'Validation passes for server build with SNI');
+    Assert(LContext <> nil, 'Context is created for server build with SNI');
+    {$PUSH}{$WARN SYMBOL_DEPRECATED OFF}
+    Assert(LContext.GetServerName = 'configured.server.local',
+      'BuildServer preserves configured ServerName on context');
+    {$POP}
+  except
+    on E: Exception do
+    begin
+      WriteLn('  ✗ Unexpected exception: ', E.Message);
+      Inc(GTestsFailed);
+    end;
+  end;
+end;
+
+{ Test 14: Session timeout validation }
 procedure Test_SessionTimeout;
 var
   LBuilder: ISSLContextBuilder;
@@ -380,6 +635,14 @@ begin
     Test_BuildWithValidation_Failure;
     Test_PresetValidation;
     Test_MultipleErrors;
+    Test_ServerPKCS11Validation;
+    Test_ServerPKCS11Validation_ViaOverride;
+    Test_ServerPKCS11Validation_WarnsWhenFileKeyAlsoPresent;
+    Test_ServerPKCS11Validation_ViaOverrideWarnsWhenPEMKeyAlsoPresent;
+    Test_ServerPKCS11WithoutCertificateStillFails;
+    Test_ServerSystemRootsValidation;
+    Test_ServerSystemRootsValidation_ViaOverride;
+    Test_ServerBuildWithValidation_PreservesServerName;
     Test_SessionTimeout;
 
     // Print summary

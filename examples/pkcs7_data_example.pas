@@ -18,7 +18,8 @@ uses
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.pkcs7,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;
 
 procedure Main;
 var
@@ -31,10 +32,20 @@ begin
   WriteLn('=============================================================');
   WriteLn;
 
-  if not LoadOpenSSLLibrary then
-    raise Exception.Create('无法加载 OpenSSL');
+  try
+    LoadOpenSSLCore;
+  except
+    on E: Exception do
+      raise Exception.Create('无法加载 OpenSSL: ' + E.Message);
+  end;
 
-  WriteLn('OpenSSL: ', GetOpenSSLVersion);
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
+    raise Exception.Create('OpenSSL core 未保持已加载状态');
+
+  LoadOpenSSLBIO;
+  LoadPKCS7Functions;
+
+  WriteLn('OpenSSL: ', fafafa.ssl.openssl.api.core.GetOpenSSLVersionString);
   WriteLn('PKCS7_new: ', BoolToStr(Assigned(PKCS7_new), '可用', '不可用'));
   WriteLn('PKCS7_set_type: ', BoolToStr(Assigned(PKCS7_set_type), '可用', '不可用'));
   WriteLn('i2d_PKCS7_bio: ', BoolToStr(Assigned(i2d_PKCS7_bio), '可用', '不可用'));
@@ -70,6 +81,7 @@ begin
   WriteLn('提示：完整签名/验签、加解密工作流请参考：');
   WriteLn('- examples/pkcs7_sign_verify_simple.pas');
   WriteLn('- tests/certificate/test_p2_pkcs7_comprehensive.pas');
+  WriteLn('[PASS] pkcs7 data example completed');
 end;
 
 begin

@@ -19,7 +19,7 @@ uses
   fafafa.ssl.context.builder,
   fafafa.ssl.crypto.utils,
   fafafa.ssl.factory,
-  fafafa.ssl.openssl.backed;
+  fafafa.ssl.openssl.lib;
 
 const
   { 测试配置 }

@@ -72,6 +72,27 @@ type
     function GetVersionString: string; override;
   end;
 
+
+function CreateFailingSSLLibrary: ISSLLibrary;
+begin
+  Result := TFailingSSLLibrary.Create;
+end;
+
+function CreateAvailableWolfSSLLibraryV1: ISSLLibrary;
+begin
+  Result := TAvailableWolfSSLLibraryV1.Create;
+end;
+
+function CreateAvailableWolfSSLLibraryV2: ISSLLibrary;
+begin
+  Result := TAvailableWolfSSLLibraryV2.Create;
+end;
+
+function CreateAvailableMbedTLSSSLLibrary: ISSLLibrary;
+begin
+  Result := TAvailableMbedTLSSSLLibrary.Create;
+end;
+
 procedure Pass(const TestName: string);
 begin
   WriteLn('  [PASS] ', TestName);
@@ -279,7 +300,7 @@ begin
   WriteLn('测试 11: 注册覆盖后实例创建应使用最新注册的类');
   try
     TSSLFactory.ReleaseLibrary(sslWolfSSL);
-    TSSLFactory.RegisterLibrary(sslWolfSSL, TAvailableWolfSSLLibraryV1, 'WolfSSL test v1', 10);
+    TSSLFactory.RegisterLibrary(sslWolfSSL, TAvailableWolfSSLLibraryV1, 'WolfSSL test v1', 10, @CreateAvailableWolfSSLLibraryV1);
     Lib := TSSLFactory.GetLibrary(sslWolfSSL);
     if (Lib <> nil) and (Lib.GetVersionString = 'TestWolfSSL-V1') then
       Pass('Registration v1 used')
@@ -293,7 +314,7 @@ begin
     end;
 
     TSSLFactory.ReleaseLibrary(sslWolfSSL);
-    TSSLFactory.RegisterLibrary(sslWolfSSL, TAvailableWolfSSLLibraryV2, 'WolfSSL test v2', 20);
+    TSSLFactory.RegisterLibrary(sslWolfSSL, TAvailableWolfSSLLibraryV2, 'WolfSSL test v2', 20, @CreateAvailableWolfSSLLibraryV2);
     Lib := TSSLFactory.GetLibrary(sslWolfSSL);
     if (Lib <> nil) and (Lib.GetVersionString = 'TestWolfSSL-V2') then
       Pass('Registration override used (v2)')
@@ -320,8 +341,8 @@ begin
     TSSLFactory.ReleaseLibrary(sslMbedTLS);
     TSSLFactory.ReleaseLibrary(sslWolfSSL);
 
-    TSSLFactory.RegisterLibrary(sslMbedTLS, TAvailableMbedTLSSSLLibrary, 'MbedTLS test', 1500);
-    TSSLFactory.RegisterLibrary(sslWolfSSL, TAvailableWolfSSLLibraryV2, 'WolfSSL test', 2000);
+    TSSLFactory.RegisterLibrary(sslMbedTLS, TAvailableMbedTLSSSLLibrary, 'MbedTLS test', 1500, @CreateAvailableMbedTLSSSLLibrary);
+    TSSLFactory.RegisterLibrary(sslWolfSSL, TAvailableWolfSSLLibraryV2, 'WolfSSL test', 2000, @CreateAvailableWolfSSLLibraryV2);
 
     Best := TSSLFactory.DetectBestLibrary;
     if Best = sslWolfSSL then
@@ -342,7 +363,7 @@ begin
   WriteLn('测试 13: 初始化失败错误信息包含后端细节');
   try
     TSSLFactory.ReleaseLibrary(sslOpenSSL);
-    TSSLFactory.RegisterLibrary(sslOpenSSL, TFailingSSLLibrary, 'Failing OpenSSL (test)', 1000);
+    TSSLFactory.RegisterLibrary(sslOpenSSL, TFailingSSLLibrary, 'Failing OpenSSL (test)', 1000, @CreateFailingSSLLibrary);
 
     try
       Lib := CreateSSLLibrary(sslOpenSSL);

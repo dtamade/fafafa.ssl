@@ -248,7 +248,7 @@ function DefaultPKCS12Options: TPKCS12Options;
 implementation
 
 uses
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.lib,
   fafafa.ssl.freepascal.lib
   {$IFDEF WINDOWS}
   , fafafa.ssl.winssl.lib
@@ -262,6 +262,7 @@ uses
   ;
 
 // 从 fafafa.ssl.factory 导入实现
+{$PUSH}{$WARN SYMBOL_DEPRECATED OFF}
 function SSLFactory: TSSLFactory;
 begin
   Result := fafafa.ssl.factory.SSLFactory;
@@ -291,6 +292,7 @@ function CreateSSLConnection(AContext: ISSLContext; ASocket: THandle): ISSLConne
 begin
   Result := fafafa.ssl.factory.CreateSSLConnection(AContext, ASocket);
 end;
+{$POP}
 
 // 从 fafafa.ssl.base 导入实现
 function SSLErrorToString(AError: TSSLErrorCode): string;
@@ -335,9 +337,11 @@ begin
     Result.CipherList := SSL_DEFAULT_CIPHER_LIST;
     Result.CipherSuites := SSL_DEFAULT_TLS13_CIPHERSUITES;
     Result.EnableSessionTickets := True;
-    Result.LogLevel := sslLogError;
     TSSLFactory.NormalizeConfig(Result);
   end;
+
+  Result.LogLevel := sslLogNone;
+  Result.LogCallback := nil;
 end;
 
 

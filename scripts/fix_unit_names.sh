@@ -1,7 +1,9 @@
 #!/bin/bash
 # 批量修正旧单元名为新单元名
 
-cd /home/dtamade/projects/fafafa.ssl
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
 
 echo "=== 批量修正单元名 ==="
 echo ""
@@ -71,5 +73,4 @@ fi
 echo ""
 echo "备份文件: unit_names_backup_*.tar.gz"
 echo "如需恢复: tar -xzf unit_names_backup_*.tar.gz"
-
 

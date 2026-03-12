@@ -9,7 +9,8 @@ uses
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.pkcs7,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;
 
 begin
   WriteLn('=============================================================');
@@ -19,13 +20,23 @@ begin
 
   // Initialize OpenSSL
   WriteLn('1. 初始化 OpenSSL 库...');
-  if not LoadOpenSSLLibrary then
+  try
+    LoadOpenSSLCore;
+  except
+    on E: Exception do
+    begin
+      WriteLn('   ✗ 错误: 无法初始化 OpenSSL 库: ', E.Message);
+      Halt(1);
+    end;
+  end;
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
-    WriteLn('   ✗ 错误: 无法初始化 OpenSSL 库');
+    WriteLn('   ✗ 错误: OpenSSL core 未保持已加载状态');
     Halt(1);
   end;
+  LoadPKCS7Functions;
   WriteLn('   ✓ OpenSSL 库初始化成功');
-  WriteLn('   版本: ', GetOpenSSLVersion);
+  WriteLn('   版本: ', fafafa.ssl.openssl.api.core.GetOpenSSLVersionString);
   WriteLn('');
 
   // Test PKCS7 function availability
@@ -76,4 +87,5 @@ begin
   WriteLn('更多示例请参考:');
   WriteLn('- tests/certificate/test_pkcs7_sign_verify_workflow.pas');
   WriteLn('- tests/certificate/test_p2_pkcs7_*.pas');
+  WriteLn('[PASS] pkcs7 basic example completed');
 end.

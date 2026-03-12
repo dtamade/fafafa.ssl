@@ -156,6 +156,7 @@ end;
 
 function TSSLStream.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
 begin
+  Result := 0;
   // TLS/SSL 连接是流式的，不支持 seek。
   raise EStreamError.Create('TLS stream is not seekable');
 end;
@@ -181,7 +182,6 @@ end;
 
 class function TSSLConnector.FromContext(AContext: ISSLContext): TSSLConnector;
 begin
-  FillChar(Result, SizeOf(Result), 0);
   Result.FContext := AContext;
   Result.FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
   Result.FBlocking := True;
@@ -226,17 +226,14 @@ begin
   if FSessionReuse and (FSession <> nil) then
     AConn.SetSession(FSession);
 
-  if AServerName <> '' then
-  begin
-    if Supports(AConn, ISSLClientConnection, ClientConn) then
-      ClientConn.SetServerName(AServerName)
-    else
-      raise ESSLException.CreateWithContext(
-        'Backend does not support per-connection server name',
-        sslErrUnsupported,
-        'TSSLConnector.ApplyClientOptions'
-      );
-  end;
+  if Supports(AConn, ISSLClientConnection, ClientConn) then
+    ClientConn.SetServerName(AServerName)
+  else if AServerName <> '' then
+    raise ESSLException.CreateWithContext(
+      'Backend does not support per-connection server name',
+      sslErrUnsupported,
+      'TSSLConnector.ApplyClientOptions'
+    );
 end;
 
 function TSSLConnector.TryConnectSocket(ASocket: THandle; const AServerName: string;
@@ -365,7 +362,6 @@ end;
 
 class function TSSLAcceptor.FromContext(AContext: ISSLContext): TSSLAcceptor;
 begin
-  FillChar(Result, SizeOf(Result), 0);
   Result.FContext := AContext;
   Result.FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
   Result.FBlocking := True;

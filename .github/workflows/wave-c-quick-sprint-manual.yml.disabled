@@ -50,7 +50,7 @@ jobs:
             --run-id "$RUN_ID" \
             --strict \
             --full-gate \
-            --output "test-reports/wave_c_b101_validation_${RUN_ID}.md"
+            --output "tmp/wave_c_quick_sprint_reports/wave_c_b101_validation_${RUN_ID}.md"
 
       - name: Run Wave C quick sprint bundle
         shell: bash
@@ -64,7 +64,7 @@ jobs:
           bash scripts/run_wave_c_quick_sprint_bundle.sh \
             --run-id "$RUN_ID" \
             $STRICT_FLAG \
-            --output "test-reports/wave_c_quick_sprint_bundle_${RUN_ID}.md"
+            --output "tmp/wave_c_quick_sprint_reports/wave_c_quick_sprint_bundle_${RUN_ID}.md"
 
       - name: Upload Wave C sprint artifacts
         if: always()
@@ -72,14 +72,14 @@ jobs:
         with:
           name: wave-c-quick-sprint-${{ steps.runid.outputs.run_id }}
           path: |
-            test-reports/wave_c_b101_validation_${{ steps.runid.outputs.run_id }}.md
-            test-reports/wave_c_b107_threshold_eval_${{ steps.runid.outputs.run_id }}.md
-            test-reports/wave_c_b108_default_on_readiness_${{ steps.runid.outputs.run_id }}.md
-            test-reports/wave_c_b109_canary_rollout_${{ steps.runid.outputs.run_id }}.md
-            test-reports/wave_c_b110_rollback_drill_${{ steps.runid.outputs.run_id }}.md
-            test-reports/wave_c_quick_sprint_bundle_${{ steps.runid.outputs.run_id }}.md
-            test-reports/wave_c_b107_threshold_eval_${{ steps.runid.outputs.run_id }}.log
-            test-reports/wave_c_b108_default_on_readiness_${{ steps.runid.outputs.run_id }}.log
-            test-reports/wave_c_b109_canary_rollout_${{ steps.runid.outputs.run_id }}.log
-            test-reports/wave_c_b110_rollback_drill_${{ steps.runid.outputs.run_id }}.log
+            tmp/wave_c_quick_sprint_reports/wave_c_b101_validation_${{ steps.runid.outputs.run_id }}.md
+            tmp/wave_c_quick_sprint_reports/wave_c_b107_threshold_eval_${{ steps.runid.outputs.run_id }}.md
+            tmp/wave_c_quick_sprint_reports/wave_c_b108_default_on_readiness_${{ steps.runid.outputs.run_id }}.md
+            tmp/wave_c_quick_sprint_reports/wave_c_b109_canary_rollout_${{ steps.runid.outputs.run_id }}.md
+            tmp/wave_c_quick_sprint_reports/wave_c_b110_rollback_drill_${{ steps.runid.outputs.run_id }}.md
+            tmp/wave_c_quick_sprint_reports/wave_c_quick_sprint_bundle_${{ steps.runid.outputs.run_id }}.md
+            tmp/wave_c_quick_sprint_reports/wave_c_b107_threshold_eval_${{ steps.runid.outputs.run_id }}.log
+            tmp/wave_c_quick_sprint_reports/wave_c_b108_default_on_readiness_${{ steps.runid.outputs.run_id }}.log
+            tmp/wave_c_quick_sprint_reports/wave_c_b109_canary_rollout_${{ steps.runid.outputs.run_id }}.log
+            tmp/wave_c_quick_sprint_reports/wave_c_b110_rollback_drill_${{ steps.runid.outputs.run_id }}.log
           if-no-files-found: warn

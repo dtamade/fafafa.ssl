@@ -208,7 +208,7 @@ function TFreePascalCertificate.ReadAllBytes(AStream: TStream): TBytes;
 var
   LSize: Int64;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   if AStream = nil then
     Exit;
 
@@ -230,9 +230,12 @@ end;
 
 function TFreePascalCertificate.CopyBytes(const AData: TBytes): TBytes;
 begin
+  Result := nil;
+  if Length(AData) = 0 then
+    Exit;
+
   SetLength(Result, Length(AData));
-  if Length(AData) > 0 then
-    Move(AData[0], Result[0], Length(AData));
+  Move(AData[0], Result[0], Length(AData));
 end;
 
 procedure TFreePascalCertificate.RebuildInfo;
@@ -759,6 +762,10 @@ function TFreePascalCertificate.GetSubjectAltNames: TSSLStringArray;
 var
   I: Integer;
 begin
+  Result := nil;
+  if Length(FInfo.SubjectAltNames) = 0 then
+    Exit;
+
   SetLength(Result, Length(FInfo.SubjectAltNames));
   for I := 0 to High(FInfo.SubjectAltNames) do
     Result[I] := FInfo.SubjectAltNames[I];
@@ -1201,7 +1208,9 @@ end;
 
 function TFreePascalCertificateStore.VerifyCertificate(ACert: ISSLCertificate): Boolean;
 var
+  LCurrent: ISSLCertificate;
   LIssuer: ISSLCertificate;
+  LDepth: Integer;
 begin
   Result := False;
   if ACert = nil then
@@ -1213,21 +1222,34 @@ begin
   if Contains(ACert) then
     Exit(True);
 
-  if ACert.IsSelfSigned then
+  LCurrent := ACert;
+  for LDepth := 0 to 15 do
   begin
-    Result := FindByFingerprint(ACert.GetFingerprintSHA256) <> nil;
-    Exit;
+    if LCurrent = nil then
+      Exit(False);
+
+    if LCurrent.IsExpired then
+      Exit(False);
+
+    if LCurrent.IsSelfSigned then
+      Exit(FindByFingerprint(LCurrent.GetFingerprintSHA256) <> nil);
+
+    LIssuer := LCurrent.GetIssuerCertificate;
+    if LIssuer = nil then
+      LIssuer := FindBySubject(LCurrent.GetIssuer);
+    if LIssuer = nil then
+      Exit(False);
+
+    if LIssuer.IsExpired then
+      Exit(False);
+
+    LCurrent.SetIssuerCertificate(LIssuer);
+
+    if LIssuer.IsSelfSigned and Contains(LIssuer) then
+      Exit(True);
+
+    LCurrent := LIssuer;
   end;
-
-  LIssuer := FindBySubject(ACert.GetIssuer);
-  if LIssuer = nil then
-    Exit;
-
-  if LIssuer.IsExpired then
-    Exit;
-
-  ACert.SetIssuerCertificate(LIssuer);
-  Result := True;
 end;
 
 function TFreePascalCertificateStore.BuildCertificateChain(ACert: ISSLCertificate): TSSLCertificateArray;
@@ -1236,7 +1258,7 @@ var
   LIndex, I: Integer;
   LExists: Boolean;
 begin
-  SetLength(Result, 0);
+  Result := nil;
   if ACert = nil then
     Exit;
 
@@ -1293,13 +1315,16 @@ begin
   FillChar(FDefaultConfig, SizeOf(FDefaultConfig), 0);
   FDefaultConfig.LibraryType := sslFreePascal;
   FDefaultConfig.ContextType := sslCtxClient;
-  FDefaultConfig.ProtocolVersions := [sslProtocolTLS12, sslProtocolTLS13];
+  FDefaultConfig.ProtocolVersions := [sslProtocolTLS13];
   FDefaultConfig.PreferredVersion := sslProtocolTLS13;
   FDefaultConfig.VerifyMode := [sslVerifyPeer];
   FDefaultConfig.VerifyDepth := SSL_DEFAULT_VERIFY_DEPTH;
   FDefaultConfig.CipherList := SSL_DEFAULT_CIPHER_LIST;
   FDefaultConfig.CipherSuites := SSL_DEFAULT_TLS13_CIPHERSUITES;
   FDefaultConfig.Options := [ssoEnableSessionCache, ssoEnableSessionTickets, ssoEnableSNI, ssoEnableALPN];
+  FDefaultConfig.EnableCompression := False;
+  FDefaultConfig.EnableSessionTickets := True;
+  FDefaultConfig.EnableOCSPStapling := False;
   FDefaultConfig.BufferSize := SSL_DEFAULT_BUFFER_SIZE;
   FDefaultConfig.HandshakeTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
   FDefaultConfig.SessionCacheSize := SSL_DEFAULT_SESSION_CACHE_SIZE;
@@ -1376,8 +1401,12 @@ var
 begin
   LUpper := UpperCase(Trim(ACipherName));
   Result :=
+    (LUpper = 'TLS_AES_256_GCM_SHA384') or
     (LUpper = 'TLS_AES_128_GCM_SHA256') or
-    (LUpper = 'TLS_CHACHA20_POLY1305_SHA256');
+    (LUpper = 'TLS_CHACHA20_POLY1305_SHA256') or
+    (LUpper = 'TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256') or
+    (LUpper = 'TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256') or
+    (LUpper = 'TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384');
 end;
 
 function TFreePascalSSLLibrary.IsFeatureSupported(AFeature: TSSLFeature): Boolean;
@@ -1427,7 +1456,7 @@ begin
   Result.RenegotiationSupport := sslSupportNone;
   Result.PostHandshakeAuthSupport := sslSupportNone;
 
-  Result.SupportedCiphers := [sslCipherAES128GCM, sslCipherCHACHA20_POLY1305];
+  Result.SupportedCiphers := [sslCipherAES128GCM, sslCipherAES256GCM, sslCipherCHACHA20_POLY1305];
   Result.SupportedHashes := [sslHashSHA256, sslHashSHA384, sslHashSHA512];
   Result.SupportedKeyExchanges := [sslKexECDHE_RSA, sslKexECDHE_ECDSA];
 
@@ -1453,17 +1482,23 @@ begin
   Result.SupportsCallbacks := True;
 
   Result.CompatibilityLevel := 42;
-  Result.KnownIssues := 'TLS 1.3 pure-Pas server path supports ECDSA(P-256)/RSA CertificateVerify and currently focuses on SHA256 suites (TLS_AES_128_GCM_SHA256 / TLS_CHACHA20_POLY1305_SHA256); TLS_AES_256_GCM_SHA384 (SHA384 Finished) and PSK/resumption remain in progress.';
+  Result.KnownIssues := 'TLS 1.2 currently has a client-side local-socket path with CHACHA20/AES128/AES256 GCM interop, and both session-id + ticket-based resumption now interoperate with local OpenSSL plus a growing RSA-host external matrix; broader public-host/platform resumption coverage remains an open area. TLS 1.3 pure-Pas server path supports ECDSA(P-256)/RSA CertificateVerify with SHA256 signature schemes; TLS_AES_256_GCM_SHA384 handshake path is now wired, but SHA384 PSK resumption and broader post-handshake/runtime matrices still need more coverage; TLS 1.3 resumption now interoperates with local OpenSSL s_server and a real external site, but 0-RTT is still unsupported; encrypted private key support currently covers PBES2/PBKDF2-HMAC-SHA256 with AES-CBC plus legacy AES-CBC PEM encryption, while non-AES legacy PEM cipher families remain unsupported.';
 
   FCapabilitiesCache := Result;
   FCapabilitiesCached := True;
 end;
 
 procedure TFreePascalSSLLibrary.SetDefaultConfig(const AConfig: TSSLConfig);
+var
+  LConfig: TSSLConfig;
 begin
-  FDefaultConfig := AConfig;
-  FLogLevel := AConfig.LogLevel;
-  FLogCallback := AConfig.LogCallback;
+  LConfig := AConfig;
+  TSSLFactory.NormalizeLibraryDefaultOwnerFields(LConfig, sslFreePascal);
+  TSSLFactory.ValidateLibraryDefaultConfigFields(LConfig, 'TFreePascalSSLLibrary.SetDefaultConfig');
+  TSSLFactory.NormalizeConfig(LConfig);
+  FDefaultConfig := LConfig;
+  FLogLevel := LConfig.LogLevel;
+  FLogCallback := LConfig.LogCallback;
   InvalidateCapabilitiesCache;
 end;
 
@@ -1501,6 +1536,7 @@ end;
 procedure TFreePascalSSLLibrary.SetLogCallback(ACallback: TSSLLogCallback);
 begin
   FLogCallback := ACallback;
+  FDefaultConfig.LogCallback := ACallback;
 end;
 
 procedure TFreePascalSSLLibrary.Log(ALevel: TSSLLogLevel; const AMessage: string);
@@ -1509,6 +1545,8 @@ begin
 end;
 
 function TFreePascalSSLLibrary.CreateContext(AType: TSSLContextType): ISSLContext;
+var
+  LConfig: TSSLConfig;
 begin
   if not FInitialized then
     raise ESSLInitializationException.CreateWithContext(
@@ -1520,6 +1558,12 @@ begin
     );
 
   Result := TFreePascalContext.Create(Self, AType);
+  if Result <> nil then
+  begin
+    LConfig := FDefaultConfig;
+    LConfig.ContextType := AType;
+    TSSLFactory.ApplyConfigToContext(Result, LConfig);
+  end;
 end;
 
 function TFreePascalSSLLibrary.CreateCertificate: ISSLCertificate;
@@ -1559,7 +1603,7 @@ procedure RegisterFreePascalBackend;
 begin
   try
     TSSLFactory.RegisterLibrary(sslFreePascal, TFreePascalSSLLibrary,
-      'FreePascal Native TLS Backend (in progress)', 50);
+      'FreePascal Native TLS Backend (in progress)', 50, @CreateFreePascalSSLLibrary);
   except
   end;
 end;

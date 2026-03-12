@@ -6,6 +6,7 @@ uses
   SysUtils, DateUtils,
   benchmark_framework,
   fafafa.ssl.init,
+  fafafa.ssl.openssl.api.core,
   fafafa.ssl.crypto.utils,
   fafafa.ssl.aesgcm.pool;
 
@@ -232,7 +233,7 @@ begin
   try
     // Initialize OpenSSL before running benchmarks
     InitializeOpenSSL;
-    WriteLn('OpenSSL initialized: ', GetOpenSSLVersion);
+    WriteLn('OpenSSL initialized: ', GetOpenSSLVersionString);
     WriteLn('');
     
     RunAllBenchmarks;
