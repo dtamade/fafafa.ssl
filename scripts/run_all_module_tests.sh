@@ -15,6 +15,9 @@
 #   --verbose    显示详细输出
 #   --stop-on-fail  遇到失败立即停止
 #   --modules    指定要测试的模块（逗号分隔）
+#   --bin-dir DIR    指定测试可执行文件输出目录（默认: ./bin）
+#   --reports-dir DIR 指定测试报告输出目录（默认: ./test-reports）
+#   --fast-local  本地快速模式：输出到 ./tmp（避免污染 git 工作区）
 #############################################################################
 
 set -e
@@ -32,12 +35,95 @@ TESTS_DIR="$PROJECT_ROOT/tests"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 RUN_ID="${TIMESTAMP}_$$"
 DEFAULT_REPORTS_DIR="$PROJECT_ROOT/tmp/run_all_module_tests_reports_${RUN_ID}"
-REPORTS_DIR="${FAFAFA_TEST_REPORTS_DIR:-$DEFAULT_REPORTS_DIR}"
 DEFAULT_BIN_DIR="$PROJECT_ROOT/bin"
-BIN_DIR="${FAFAFA_TEST_BIN_DIR:-$DEFAULT_BIN_DIR}"
-DEFAULT_FPC_UNIT_OUTPUT_DIR="$PROJECT_ROOT/tmp/run_all_module_tests_units_${TIMESTAMP}_$$"
+DEFAULT_FPC_UNIT_OUTPUT_DIR="$PROJECT_ROOT/tmp/run_all_module_tests_units_${RUN_ID}"
+
+REPORTS_DIR_FROM_ENV=false
+BIN_DIR_FROM_ENV=false
+
+if [[ -n "${FAFAFA_TEST_REPORTS_DIR:-}" ]]; then
+  REPORTS_DIR="$FAFAFA_TEST_REPORTS_DIR"
+  REPORTS_DIR_FROM_ENV=true
+elif [[ -n "${FAFAFA_MODULE_TEST_REPORTS_DIR:-}" ]]; then
+  REPORTS_DIR="$FAFAFA_MODULE_TEST_REPORTS_DIR"
+  REPORTS_DIR_FROM_ENV=true
+else
+  REPORTS_DIR="$DEFAULT_REPORTS_DIR"
+fi
+
+if [[ -n "${FAFAFA_TEST_BIN_DIR:-}" ]]; then
+  BIN_DIR="$FAFAFA_TEST_BIN_DIR"
+  BIN_DIR_FROM_ENV=true
+elif [[ -n "${FAFAFA_MODULE_TEST_BIN_DIR:-}" ]]; then
+  BIN_DIR="$FAFAFA_MODULE_TEST_BIN_DIR"
+  BIN_DIR_FROM_ENV=true
+else
+  BIN_DIR="$DEFAULT_BIN_DIR"
+fi
+
 FPC_UNIT_OUTPUT_DIR="${FAFAFA_FPC_UNIT_OUTPUT_DIR:-$DEFAULT_FPC_UNIT_OUTPUT_DIR}"
 FPC_EXE="${FAFAFA_FPC_EXE:-fpc}"
+
+BIN_DIR_SET_BY_CLI=false
+REPORTS_DIR_SET_BY_CLI=false
+
+# 选项
+VERBOSE=false
+STOP_ON_FAIL=false
+SPECIFIC_MODULES=""
+FAST_LOCAL=false
+
+# 解析命令行参数
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --fast-local)
+      FAST_LOCAL=true
+      shift
+      ;;
+    --bin-dir)
+      BIN_DIR="$2"
+      BIN_DIR_SET_BY_CLI=true
+      shift 2
+      ;;
+    --reports-dir)
+      REPORTS_DIR="$2"
+      REPORTS_DIR_SET_BY_CLI=true
+      shift 2
+      ;;
+    --verbose)
+      VERBOSE=true
+      shift
+      ;;
+    --stop-on-fail)
+      STOP_ON_FAIL=true
+      shift
+      ;;
+    --modules)
+      SPECIFIC_MODULES="$2"
+      shift 2
+      ;;
+    *)
+      echo "未知选项: $1"
+      exit 1
+      ;;
+  esac
+done
+
+# 兼容：如果通过环境变量显式启用 fast-local，则默认输出到 tmp（除非 CLI 已指定 bin-dir/reports-dir）
+if [[ "$FAST_LOCAL" == "false" ]]; then
+  if [[ "${FAFAFA_FAST_LOCAL:-}" == "1" || "${FAFAFA_FAST_LOCAL:-}" == "true" ]]; then
+    FAST_LOCAL=true
+  fi
+fi
+
+if [[ "$FAST_LOCAL" == "true" ]]; then
+  if [[ "$BIN_DIR_SET_BY_CLI" == "false" && "$BIN_DIR_FROM_ENV" == "false" ]]; then
+    BIN_DIR="$PROJECT_ROOT/tmp/bin"
+  fi
+  if [[ "$REPORTS_DIR_SET_BY_CLI" == "false" && "$REPORTS_DIR_FROM_ENV" == "false" ]]; then
+    REPORTS_DIR="$PROJECT_ROOT/tmp/test-reports"
+  fi
+fi
 
 if [[ "$REPORTS_DIR" != /* ]]; then
   REPORTS_DIR="$PROJECT_ROOT/$REPORTS_DIR"
@@ -67,33 +153,6 @@ else
     exit 1
   fi
 fi
-
-# 选项
-VERBOSE=false
-STOP_ON_FAIL=false
-SPECIFIC_MODULES=""
-
-# 解析命令行参数
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --verbose)
-      VERBOSE=true
-      shift
-      ;;
-    --stop-on-fail)
-      STOP_ON_FAIL=true
-      shift
-      ;;
-    --modules)
-      SPECIFIC_MODULES="$2"
-      shift 2
-      ;;
-    *)
-      echo "未知选项: $1"
-      exit 1
-      ;;
-  esac
-done
 
 # 创建报告目录
 mkdir -p "$REPORTS_DIR"

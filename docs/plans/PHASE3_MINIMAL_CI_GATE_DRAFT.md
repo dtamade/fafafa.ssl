@@ -30,6 +30,9 @@ bash scripts/run_phase2_performance_baseline.sh --dry-run --iterations 200 --tls
 # 默认门禁
 bash scripts/run_minimal_ci_gate.sh
 
+# 本地快速模式（输出到 ./tmp，避免污染 git 工作区）
+bash scripts/run_minimal_ci_gate.sh --fast-local
+
 # 仅做命令检查（CI 配置联调阶段）
 bash scripts/run_minimal_ci_gate.sh --dry-run
 
@@ -55,6 +58,7 @@ bash scripts/run_minimal_ci_gate.sh --only-tls13-sign-bench \
 ```
 
 可用参数补充：
+- `--fast-local`：模块测试与报告输出到 `./tmp`，避免修改仓库中跟踪的 `bin/` / `test-reports/`；
 - `--skip-compile`：跳过 `compile_all_modules.py`；
 - `--skip-modules`：跳过 `run_all_module_tests.sh`；
 - `--skip-phase2-dryrun`：跳过 Phase2 baseline dry-run；

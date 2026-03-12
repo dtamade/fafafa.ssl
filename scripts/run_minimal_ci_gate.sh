@@ -19,6 +19,7 @@ WITH_MODULES=true
 MODULE_SET="PKCS7,PKCS12,CMS,Store,OCSP,TS,CT"
 WITH_TLS13_SIGN_PURITY_CHECK=false
 WITH_TLS13_SIGN_BENCH=false
+FAST_LOCAL=false
 TLS13_SIGN_BENCH_ITERATIONS="3"
 TLS13_SIGN_BENCH_WARMUP="1"
 TLS13_SIGN_BENCH_SCHEME="rsa_pkcs1_sha256"
@@ -37,6 +38,7 @@ usage() {
   scripts/run_minimal_ci_gate.sh [options]
 
 选项：
+  --fast-local                       本地快速模式：模块测试与报告输出到 ./tmp（避免污染 git 工作区）
   --modules LIST                     指定模块列表（默认: PKCS7,PKCS12,CMS,Store,OCSP,TS,CT）
   --skip-compile                     跳过 compile_all_modules 阶段
   --skip-modules                     跳过 run_all_module_tests 阶段
@@ -58,6 +60,10 @@ USAGE
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --fast-local)
+      FAST_LOCAL=true
+      shift
+      ;;
     --modules)
       MODULE_SET="$2"
       shift 2
@@ -134,6 +140,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ "$FAST_LOCAL" == "false" ]]; then
+  if [[ "${FAFAFA_FAST_LOCAL:-}" == "1" || "${FAFAFA_FAST_LOCAL:-}" == "true" ]]; then
+    FAST_LOCAL=true
+  fi
+fi
+
 if [[ ! "$TLS13_SIGN_BENCH_ITERATIONS" =~ ^[0-9]+$ ]] || [[ "$TLS13_SIGN_BENCH_ITERATIONS" -le 0 ]]; then
   echo "Invalid --tls13-sign-bench-iterations: $TLS13_SIGN_BENCH_ITERATIONS" >&2
   exit 1
@@ -172,6 +184,9 @@ fi
 
 if [[ "$WITH_MODULES" == "true" ]]; then
   module_cmd="cd '$PROJECT_ROOT' && FAFAFA_FPC_EXE='$FPC_EXE' FAFAFA_FPC_UNIT_OUTPUT_DIR='$MODULE_UNIT_OUTPUT_DIR' FAFAFA_TEST_BIN_DIR='$MODULE_BIN_OUTPUT_DIR' bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
+  if [[ "$FAST_LOCAL" == "true" ]]; then
+    module_cmd="$module_cmd --fast-local"
+  fi
   if [[ "$VERBOSE" == "true" ]]; then
     module_cmd="$module_cmd --verbose"
   fi
