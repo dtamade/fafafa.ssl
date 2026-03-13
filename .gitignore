@@ -124,6 +124,8 @@ examples/pkcs7_data_example
 examples/pkcs7_encrypt_decrypt_example
 examples/pkcs7_sign_verify_example
 examples/pkcs7_sign_verify_simple
+examples/*_contract
+examples/**/*_contract
 examples/practical_examples
 examples/probe_sockets
 examples/security_enhancements_demo
