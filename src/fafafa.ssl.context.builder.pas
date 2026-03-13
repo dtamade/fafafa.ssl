@@ -74,6 +74,10 @@ type
     function WithSessionCache(AEnabled: Boolean): ISSLContextBuilder;
     function WithSessionTimeout(ASeconds: Integer): ISSLContextBuilder;
 
+    // HTTP transport hooks (fafafa.ssl does not implement networking)
+    function WithHTTPHooks(AHTTPGet: TSSLHTTPGetCallback;
+      AHTTPPost: TSSLHTTPPostCallback): ISSLContextBuilder;
+
     // PKCS#11 support
     function UsePKCS11(const AURI: string): ISSLContextBuilder;
     function WithPKCS11PIN(const APIN: string): ISSLContextBuilder;
@@ -192,6 +196,10 @@ type
     FSessionCacheEnabled: Boolean;
     FSessionTimeout: Integer;
     FOptions: TSSLOptions;
+
+    // HTTP hooks (optional, only applied when backend supports ISSLHttpHooksAccess)
+    FHTTPGetCallback: TSSLHTTPGetCallback;
+    FHTTPPostCallback: TSSLHTTPPostCallback;
     
     // PKCS#11 fields
     FPKCS11URI: string;
@@ -238,6 +246,8 @@ type
     function WithALPN(const AProtocols: string): ISSLContextBuilder;
     function WithSessionCache(AEnabled: Boolean): ISSLContextBuilder;
     function WithSessionTimeout(ASeconds: Integer): ISSLContextBuilder;
+    function WithHTTPHooks(AHTTPGet: TSSLHTTPGetCallback;
+      AHTTPPost: TSSLHTTPPostCallback): ISSLContextBuilder;
     
     function WithOption(AOption: TSSLOption): ISSLContextBuilder;
     function WithOptions(AOptions: TSSLOptions): ISSLContextBuilder;
@@ -432,6 +442,9 @@ begin
   FSessionCacheEnabled := True;
   FSessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
   FOptions := [ssoEnableSNI, ssoDisableCompression, ssoDisableRenegotiation];
+
+  FHTTPGetCallback := nil;
+  FHTTPPostCallback := nil;
   
   // PKCS#11 defaults
   FPKCS11URI := '';
@@ -629,6 +642,14 @@ begin
   Result := Self;
 end;
 
+function TSSLContextBuilderImpl.WithHTTPHooks(AHTTPGet: TSSLHTTPGetCallback;
+  AHTTPPost: TSSLHTTPPostCallback): ISSLContextBuilder;
+begin
+  FHTTPGetCallback := AHTTPGet;
+  FHTTPPostCallback := AHTTPPost;
+  Result := Self;
+end;
+
 function TSSLContextBuilderImpl.WithOption(AOption: TSSLOption): ISSLContextBuilder;
 begin
   Include(FOptions, AOption);
@@ -729,6 +750,7 @@ end;
 function TSSLContextBuilderImpl.BuildClient: ISSLContext;
 var
   Store: ISSLCertificateStore;
+  LHttpHooks: ISSLHttpHooksAccess;
   SelectedBackend: TSSLLibraryType;
   MatchScore: Integer;
 begin
@@ -759,6 +781,12 @@ begin
   Result.SetVerifyMode(FVerifyMode);
   Result.SetVerifyDepth(FVerifyDepth);
   Result.SetOptions(FOptions);
+
+  if Supports(Result, ISSLHttpHooksAccess, LHttpHooks) then
+  begin
+    LHttpHooks.SetHTTPGetCallback(FHTTPGetCallback);
+    LHttpHooks.SetHTTPPostCallback(FHTTPPostCallback);
+  end;
   
   // Load certificates
   if FCertificateFile <> '' then
@@ -820,6 +848,7 @@ end;
 
 function TSSLContextBuilderImpl.BuildServer: ISSLContext;
 var
+  LHttpHooks: ISSLHttpHooksAccess;
   SelectedBackend: TSSLLibraryType;
   MatchScore: Integer;
 begin
@@ -848,6 +877,12 @@ begin
   Result.SetVerifyMode(FVerifyMode);
   Result.SetVerifyDepth(FVerifyDepth);
   Result.SetOptions(FOptions);
+
+  if Supports(Result, ISSLHttpHooksAccess, LHttpHooks) then
+  begin
+    LHttpHooks.SetHTTPGetCallback(FHTTPGetCallback);
+    LHttpHooks.SetHTTPPostCallback(FHTTPPostCallback);
+  end;
   
   // Server MUST have certificate and private key
   if (FCertificateFile = '') and (FCertificatePEM = '') then
@@ -1427,6 +1462,9 @@ begin
   LClone.FSessionCacheEnabled := FSessionCacheEnabled;
   LClone.FSessionTimeout := FSessionTimeout;
   LClone.FOptions := FOptions;
+
+  LClone.FHTTPGetCallback := FHTTPGetCallback;
+  LClone.FHTTPPostCallback := FHTTPPostCallback;
   
   // Copy PKCS#11 fields
   LClone.FPKCS11URI := FPKCS11URI;
@@ -1462,6 +1500,9 @@ begin
   FSessionCacheEnabled := True;
   FSessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
   FOptions := [ssoEnableSNI, ssoDisableCompression, ssoDisableRenegotiation];
+
+  FHTTPGetCallback := nil;
+  FHTTPPostCallback := nil;
   
   // Reset PKCS#11 fields
   FPKCS11URI := '';
