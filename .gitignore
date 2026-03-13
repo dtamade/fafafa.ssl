@@ -28,6 +28,10 @@ lib/
 *.log
 scripts/.local_tls_server.pid
 
+# Python bytecode
+__pycache__/
+*.pyc
+
 # 临时测试结果
 test_results.txt
 compile_results.txt
