@@ -40,7 +40,7 @@ uses
 
 type
   { TOpenSSLContext - OpenSSL 上下文类 }
-  TOpenSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess)
+  TOpenSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess, ISSLHttpHooksAccess)
   private
     FLibrary: ISSLLibrary;
     FContextType: TSSLContextType;
@@ -64,6 +64,8 @@ type
     FVerifyCallback: TSSLVerifyCallback;
     FPasswordCallback: TSSLPasswordCallback;
     FInfoCallback: TSSLInfoCallback;
+    FHTTPGetCallback: TSSLHTTPGetCallback;
+    FHTTPPostCallback: TSSLHTTPPostCallback;
     
     // 证书固定
     FPinValidator: TPinValidator;
@@ -142,6 +144,12 @@ type
     { ISSLContext - 回调设置 }
     procedure SetPasswordCallback(ACallback: TSSLPasswordCallback);
     procedure SetInfoCallback(ACallback: TSSLInfoCallback);
+
+    { ISSLHttpHooksAccess - HTTP hooks（可选） }
+    procedure SetHTTPGetCallback(ACallback: TSSLHTTPGetCallback);
+    function GetHTTPGetCallback: TSSLHTTPGetCallback;
+    procedure SetHTTPPostCallback(ACallback: TSSLHTTPPostCallback);
+    function GetHTTPPostCallback: TSSLHTTPPostCallback;
     
     { ISSLContext - 证书固定 }
     procedure AddCertificatePin(const AHash: TBytes; APinType: Integer;
@@ -1588,6 +1596,30 @@ begin
     SSL_CTX_set_info_callback(FSSLContext, @InfoCallbackThunk)
   else
     SSL_CTX_set_info_callback(FSSLContext, nil);
+end;
+
+// ============================================================================
+// ISSLHttpHooksAccess - HTTP hooks（可选）
+// ============================================================================
+
+procedure TOpenSSLContext.SetHTTPGetCallback(ACallback: TSSLHTTPGetCallback);
+begin
+  FHTTPGetCallback := ACallback;
+end;
+
+function TOpenSSLContext.GetHTTPGetCallback: TSSLHTTPGetCallback;
+begin
+  Result := FHTTPGetCallback;
+end;
+
+procedure TOpenSSLContext.SetHTTPPostCallback(ACallback: TSSLHTTPPostCallback);
+begin
+  FHTTPPostCallback := ACallback;
+end;
+
+function TOpenSSLContext.GetHTTPPostCallback: TSSLHTTPPostCallback;
+begin
+  Result := FHTTPPostCallback;
 end;
 
 // ============================================================================

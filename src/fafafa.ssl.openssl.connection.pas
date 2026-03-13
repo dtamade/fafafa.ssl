@@ -21,6 +21,7 @@ uses
   SysUtils, Classes, ctypes,
   fafafa.ssl.base,
   fafafa.ssl.errors,
+  fafafa.ssl.net.hooks,
   fafafa.ssl.ocsp,
   fafafa.ssl.x509,
   fafafa.ssl.connection.base,
@@ -1211,6 +1212,9 @@ var
   VerifyStore: PX509_STORE;
   OCSPStatus: Integer;
   OCSPTimeoutSec: Integer;
+  LHttpHooksAccess: ISSLHttpHooksAccess;
+  LHTTPHooks: TSSLHTTPHooks;
+  LHTTPHooksScope: TSSLHTTPHooksScope;
   PeerDER: TBytes;
   ParsedCert: TX509Certificate;
   PeerChain: PSTACK_OF_X509;
@@ -1506,8 +1510,25 @@ begin
           OCSPTimeoutSec := 1;
       end;
 
-      // Perform OCSP check (supports http/https responders)
-      OCSPStatus := CheckCertificateStatus(PeerX509, IssuerX509, OCSPUrl, OCSPTimeoutSec, VerifyStore);
+      // Perform OCSP check (HTTP transport via hooks; fafafa.ssl does not do networking).
+      LHTTPHooks := TSSLHTTPHooks.Empty;
+      if Supports(FContext, ISSLHttpHooksAccess, LHttpHooksAccess) then
+        LHTTPHooks := TSSLHTTPHooks.Create(
+          LHttpHooksAccess.GetHTTPGetCallback,
+          LHttpHooksAccess.GetHTTPPostCallback
+        );
+
+      if not LHTTPHooks.IsEmpty then
+      begin
+        LHTTPHooksScope := TSSLHTTPHooksScope.Push(LHTTPHooks);
+        try
+          OCSPStatus := CheckCertificateStatus(PeerX509, IssuerX509, OCSPUrl, OCSPTimeoutSec, VerifyStore);
+        finally
+          LHTTPHooksScope.Pop;
+        end;
+      end
+      else
+        OCSPStatus := CheckCertificateStatus(PeerX509, IssuerX509, OCSPUrl, OCSPTimeoutSec, VerifyStore);
       case OCSPStatus of
         V_OCSP_CERTSTATUS_GOOD:
           ; // OK
