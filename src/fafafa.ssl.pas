@@ -87,6 +87,8 @@ type
   TSSLPasswordCallback = fafafa.ssl.base.TSSLPasswordCallback;
   TSSLInfoCallback = fafafa.ssl.base.TSSLInfoCallback;
   TSSLDataCallback = fafafa.ssl.base.TSSLDataCallback;
+  TSSLHTTPGetCallback = fafafa.ssl.base.TSSLHTTPGetCallback;
+  TSSLHTTPPostCallback = fafafa.ssl.base.TSSLHTTPPostCallback;
   
   // 从 fafafa.ssl.base 导出
   ISSLLibrary = fafafa.ssl.base.ISSLLibrary;
@@ -96,6 +98,7 @@ type
   ISSLCertificate = fafafa.ssl.base.ISSLCertificate;
   ISSLCertificateStore = fafafa.ssl.base.ISSLCertificateStore;
   ISSLSession = fafafa.ssl.base.ISSLSession;
+  ISSLHttpHooksAccess = fafafa.ssl.base.ISSLHttpHooksAccess;
   
   // 从 fafafa.ssl.factory 导出
   TSSLFactory = fafafa.ssl.factory.TSSLFactory;

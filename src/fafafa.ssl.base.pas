@@ -575,6 +575,13 @@ type
                               const ASize: Integer;
                               const AIsOutgoing: Boolean) of object;
 
+  { HTTP GET 回调（由上层网络库实现，fafafa.ssl 不实现网络传输） }
+  TSSLHTTPGetCallback = function(const AURL: string; ATimeoutMs: Integer): TSSLDataResult of object;
+
+  { HTTP POST 回调（由上层网络库实现，fafafa.ssl 不实现网络传输） }
+  TSSLHTTPPostCallback = function(const AURL, AContentType: string;
+    const ABody: TBytes; ATimeoutMs: Integer): TSSLDataResult of object;
+
   // ============================================================================
   // 接口定义
   // ============================================================================
@@ -587,6 +594,7 @@ type
   ISSLSession = interface;
   ISSLLibrary = interface;
   ISSLNativeHandleAccess = interface;  // 原生句柄访问接口（可选）
+  ISSLHttpHooksAccess = interface;     // HTTP hooks 访问接口（可选）
 
   // 数组类型
   TSSLCertificateArray = array of ISSLCertificate;
@@ -692,6 +700,26 @@ type
     {** 检查原生句柄是否有效（非空且已初始化）
         @returns True 如果句柄有效 *}
     function IsNativeHandleValid: Boolean;
+  end;
+
+  {**
+   * ISSLHttpHooksAccess - HTTP 传输 hooks 访问接口（可选）
+   *
+   * fafafa.ssl 不实现网络通信。任何依赖 HTTP 的功能（例如 OCSP 在线检查、CT log list 下载）
+   * 必须通过上层注入的回调完成。
+   *
+   * 注入优先级由调用方决定；推荐：
+   *   1) 为 context/connection 设置专用 hooks（通过 Supports 获取本接口）
+   *   2) 未设置时回退到线程局部默认 hooks（见 fafafa.ssl.net.hooks）
+   *
+   * @since 1.3.0
+   *}
+  ISSLHttpHooksAccess = interface
+    ['{7F4F4D1D-7E3A-4C10-9F1F-8F61B3D9A5C2}']
+    procedure SetHTTPGetCallback(ACallback: TSSLHTTPGetCallback);
+    function GetHTTPGetCallback: TSSLHTTPGetCallback;
+    procedure SetHTTPPostCallback(ACallback: TSSLHTTPPostCallback);
+    function GetHTTPPostCallback: TSSLHTTPPostCallback;
   end;
 
   {**
@@ -2337,4 +2365,3 @@ begin
 end;
 
 end.
-
