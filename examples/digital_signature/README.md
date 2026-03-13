@@ -7,6 +7,7 @@ RSA 数字签名示例程序，演示如何使用 fafafa.ssl 库进行文件签�
 - ✅ **RSA 密钥对生成** - 支持 2048/4096 位密钥
 - ✅ **文件签名** - 使用 RSA + SHA-256 进行数字签名
 - ✅ **签名验证** - 验证文件完整性和真实性
+- ✅ **私钥密码保护** - 支持加密私钥 PEM（`-p/--password`）
 - ✅ **PEM 格式** - 标准的密钥存储格式
 
 ## 编译
@@ -28,6 +29,9 @@ digital_signature -g private.pem public.pem
 
 # 生成 4096 位密钥（更安全）
 digital_signature -g private.pem public.pem 4096
+
+# 生成密钥并用密码加密私钥（生产环境推荐）
+digital_signature -g private.pem public.pem 2048 -p mypass
 ```
 
 **输出文件：**
@@ -38,6 +42,9 @@ digital_signature -g private.pem public.pem 4096
 
 ```bash
 digital_signature -s document.txt document.sig private.pem
+
+# 如果私钥 PEM 是加密的，需要提供密码
+digital_signature -s document.txt document.sig private.pem -p mypass
 ```
 
 **参数说明：**
@@ -153,7 +160,7 @@ EVP_DigestVerifyFinal  // 完成验证
 
 - 不要将私钥提交到版本控制系统
 - 设置严格的文件权限（Unix: `chmod 600 private.pem`）
-- 考虑使用密码保护（生产环境推荐）
+- 生产环境建议使用密码保护（`digital_signature -g ... -p <password>`）
 - 定期轮换密钥
 
 ### 最佳实践
@@ -165,17 +172,16 @@ EVP_DigestVerifyFinal  // 完成验证
 
 ## 扩展功能
 
-### 添加密码保护（未实现）
+### 添加密码保护（已实现）
 
-修改密钥生成代码，添加密码保护：
+生成密钥时带上 `-p/--password`：
 
-```pascal
-// 使用密码保护私钥
-PEM_write_bio_PrivateKey(bio_priv, pkey, 
-  EVP_aes_256_cbc(),     // 加密算法
-  PAnsiChar(password),   // 密码
-  Length(password),      // 密码长度
-  nil, nil);
+```bash
+# 生成加密私钥 PEM（AES-256-CBC）
+digital_signature -g private.pem public.pem 2048 -p mypass
+
+# 使用加密私钥签名
+digital_signature -s document.txt document.sig private.pem -p mypass
 ```
 
 ### 时间戳签名（未实现）
@@ -207,7 +213,7 @@ PEM_write_bio_PrivateKey(bio_priv, pkey,
 **解决方法：**
 - 确认密钥文件格式为 PEM
 - 检查文件是否损坏
-- 如果私钥有密码保护，需要修改代码添加密码回调
+- 如果私钥有密码保护，使用 `-p/--password` 提供密码
 
 ### 错误：签名验证失败
 

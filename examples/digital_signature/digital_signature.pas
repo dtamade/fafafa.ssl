@@ -45,12 +45,12 @@ begin
   PrintHeader;
   WriteLn('Usage:');
   WriteLn('  Generate key pair:');
-  WriteLn('    digital_signature -g <private_key> <public_key> [key_bits]');
-  WriteLn('    Example: digital_signature -g private.pem public.pem 2048');
+  WriteLn('    digital_signature -g <private_key> <public_key> [key_bits] [-p <password>]');
+  WriteLn('    Example: digital_signature -g private.pem public.pem 2048 -p mypass');
   WriteLn;
   WriteLn('  Sign file:');
-  WriteLn('    digital_signature -s <file> <signature> <private_key>');
-  WriteLn('    Example: digital_signature -s document.txt document.sig private.pem');
+  WriteLn('    digital_signature -s <file> <signature> <private_key> [-p <password>]');
+  WriteLn('    Example: digital_signature -s document.txt document.sig private.pem -p mypass');
   WriteLn;
   WriteLn('  Verify signature:');
   WriteLn('    digital_signature -v <file> <signature> <public_key>');
@@ -60,22 +60,42 @@ begin
   WriteLn('  -g  Generate RSA key pair');
   WriteLn('  -s  Sign file');
   WriteLn('  -v  Verify signature');
+  WriteLn('  -p, --password  Password for private key (encrypt on -g, decrypt on -s)');
   WriteLn('  -h  Show help');
   WriteLn;
 end;
 
-function GenerateRSAKeyPair(const PrivateKeyFile, PublicKeyFile: string; KeyBits: Integer): Boolean;
+function TryGetPasswordOption(out APassword: string): Boolean;
+var
+  i: Integer;
+begin
+  Result := True;
+  APassword := '';
+
+  for i := 1 to ParamCount do
+  begin
+    if (ParamStr(i) = '-p') or (ParamStr(i) = '--password') then
+    begin
+      if i >= ParamCount then
+      begin
+        WriteLn('ERROR: -p/--password requires a value');
+        Exit(False);
+      end;
+      APassword := ParamStr(i + 1);
+      Exit(True);
+    end;
+  end;
+end;
+
+function GenerateRSAKeyPair(const PrivateKeyFile, PublicKeyFile: string; KeyBits: Integer;
+  const PrivateKeyPassword: string): Boolean;
 var
   pkey_ctx: PEVP_PKEY_CTX;
   pkey: PEVP_PKEY;
-  bio_priv, bio_pub: PBIO;
-  rsa: PRSA;
 begin
   Result := False;
   pkey := nil;
   pkey_ctx := nil;
-  bio_priv := nil;
-  bio_pub := nil;
   
   try
     WriteLn('Generating RSA key pair (', KeyBits, ' bits)...');
@@ -113,32 +133,22 @@ begin
     WriteLn('Key generated successfully');
     
     // Save private key
-    WriteLn('Saving private key to: ', PrivateKeyFile);
-    bio_priv := BIO_new_file(PAnsiChar(AnsiString(PrivateKeyFile)), 'wb');
-    if bio_priv = nil then
-    begin
-      WriteLn('ERROR: Failed to create private key file');
-      Exit;
-    end;
-    
-    if PEM_write_bio_PrivateKey(bio_priv, pkey, nil, nil, 0, nil, nil) = 0 then
+    if PrivateKeyPassword <> '' then
+      WriteLn('Saving encrypted private key to: ', PrivateKeyFile)
+    else
+      WriteLn('Saving private key to: ', PrivateKeyFile);
+
+    if not SavePrivateKeyToPEM(PrivateKeyFile, pkey, PrivateKeyPassword) then
     begin
       WriteLn('ERROR: Failed to write private key');
       Exit;
     end;
-    
+
     WriteLn('Private key saved');
     
     // Save public key
     WriteLn('Saving public key to: ', PublicKeyFile);
-    bio_pub := BIO_new_file(PAnsiChar(AnsiString(PublicKeyFile)), 'wb');
-    if bio_pub = nil then
-    begin
-      WriteLn('ERROR: Failed to create public key file');
-      Exit;
-    end;
-    
-    if PEM_write_bio_PUBKEY(bio_pub, pkey) = 0 then
+    if not SavePublicKeyToPEM(PublicKeyFile, pkey) then
     begin
       WriteLn('ERROR: Failed to write public key');
       Exit;
@@ -149,19 +159,17 @@ begin
     Result := True;
     
   finally
-    if bio_pub <> nil then BIO_free_all(bio_pub);
-    if bio_priv <> nil then BIO_free_all(bio_priv);
     if pkey <> nil then EVP_PKEY_free(pkey);
     if pkey_ctx <> nil then EVP_PKEY_CTX_free(pkey_ctx);
   end;
 end;
 
-function SignFile(const InputFile, SignatureFile, PrivateKeyFile: string): Boolean;
+function SignFile(const InputFile, SignatureFile, PrivateKeyFile: string;
+  const PrivateKeyPassword: string): Boolean;
 var
   md_ctx: PEVP_MD_CTX;
   pkey_ctx: PEVP_PKEY_CTX;
   pkey: PEVP_PKEY;
-  bio: PBIO;
   fs: TFileStream;
   buffer: array[0..4095] of Byte;
   bytes_read: Integer;
@@ -172,7 +180,6 @@ begin
   Result := False;
   md_ctx := nil;
   pkey := nil;
-  bio := nil;
   fs := nil;
   sig_file := nil;
   pkey_ctx := nil;
@@ -185,14 +192,7 @@ begin
     WriteLn;
     
     // Load private key
-    bio := BIO_new_file(PAnsiChar(AnsiString(PrivateKeyFile)), 'rb');
-    if bio = nil then
-    begin
-      WriteLn('ERROR: Failed to open private key file');
-      Exit;
-    end;
-    
-    pkey := PEM_read_bio_PrivateKey(bio, nil, nil, nil);
+    pkey := LoadPrivateKeyFromPEM(PrivateKeyFile, PrivateKeyPassword);
     if pkey = nil then
     begin
       WriteLn('ERROR: Failed to read private key');
@@ -265,7 +265,6 @@ begin
     if fs <> nil then fs.Free;
     if md_ctx <> nil then EVP_MD_CTX_free(md_ctx);
     if pkey <> nil then EVP_PKEY_free(pkey);
-    if bio <> nil then BIO_free_all(bio);
   end;
 end;
 
@@ -389,6 +388,7 @@ procedure Main;
 var
   mode: TOperationMode;
   key_bits: Integer;
+  password: string;
 begin
   PrintHeader;
   
@@ -445,6 +445,12 @@ begin
     WriteLn('[OK] PEM module loaded');
     WriteLn;
   end;
+
+  if not TryGetPasswordOption(password) then
+  begin
+    ExitCode := 1;
+    Exit;
+  end;
   
   // Execute operation
   case mode of
@@ -462,7 +468,7 @@ begin
         if ParamCount >= 4 then
           key_bits := StrToIntDef(ParamStr(4), DEFAULT_KEY_BITS);
         
-        if GenerateRSAKeyPair(ParamStr(2), ParamStr(3), key_bits) then
+        if GenerateRSAKeyPair(ParamStr(2), ParamStr(3), key_bits, password) then
         begin
           WriteLn;
           WriteLn('🎉 Key pair generated!');
@@ -486,7 +492,7 @@ begin
           Exit;
         end;
         
-        if SignFile(ParamStr(2), ParamStr(3), ParamStr(4)) then
+        if SignFile(ParamStr(2), ParamStr(3), ParamStr(4), password) then
         begin
           WriteLn;
           WriteLn('🎉 File signing complete!');
