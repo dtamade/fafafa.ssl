@@ -15,11 +15,25 @@
 ```bash
 # 在 Linux/macOS shell 中
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
-LINUX_SUMMARY="test-reports/wave_b_ci_gate_summary_20260208_034029.md"
-LINUX_EXAMPLES="test-reports/examples_compile_ci_gate.json"
+LINUX_SUMMARY="test-reports/wave_b_ci_gate_summary_${RUN_ID}.md"
+LINUX_EXAMPLES="test-reports/examples_compile_ci_gate_${RUN_ID}.json"
 ```
 
-> 说明：`LINUX_SUMMARY` 可替换为最新一次 Linux gate 报告。
+> 说明：三平台闭环脚本要求 **run_id 一致**。若要复用旧的 Linux 报告，请把 `RUN_ID` 设置成该报告文件名中的 run_id，并同步更新 `LINUX_EXAMPLES` 路径。
+
+---
+
+## 0. Linux baseline（可选，但推荐）
+
+```bash
+cd /path/to/fafafa.ssl
+
+bash scripts/run_wave_b_ci_gate.sh \
+  --run-id "$RUN_ID" \
+  --examples-threshold 80.0 \
+  --examples-report "$LINUX_EXAMPLES" \
+  --summary-out "$LINUX_SUMMARY"
+```
 
 ---
 
@@ -141,7 +155,8 @@ bash scripts/check_wave_b_b2_closure_readiness.sh \
 
 ## G. GitHub Actions 模板（B94）
 
-- 模板文件：`.github/workflows/wave-b-b2-manual.yml.disabled`
+- 模板文件：`.github/workflows/wave-b-b2-manual.yml`（启用版）
+- 备份：`.github/workflows/wave-b-b2-manual.yml.disabled`（历史模板）
 - 触发方式：`workflow_dispatch`（手动触发）
 - 覆盖链路：
   1. Linux baseline（可选）
@@ -149,13 +164,7 @@ bash scripts/check_wave_b_b2_closure_readiness.sh \
   3. Windows gate
   4. cross-platform summary + closure readiness
 
-启用方式（按需）：
-
-```bash
-cp .github/workflows/wave-b-b2-manual.yml.disabled .github/workflows/wave-b-b2-manual.yml
-```
-
-> 建议先在测试分支启用，再执行一次手动 workflow_dispatch 验证。
+> 若你在某个分支只保留 `.disabled` 版本，可手动拷贝启用后再触发一次 `workflow_dispatch` 进行验证。
 
 ---
 
