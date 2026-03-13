@@ -251,6 +251,57 @@ compile_test() {
   fi
 }
 
+# 以可移植方式运行测试（macOS 默认没有 GNU timeout）
+run_with_timeout() {
+  local timeout_seconds="$1"
+  local executable="$2"
+  local out_file="$3"
+
+  local timeout_bin=""
+  if command -v timeout >/dev/null 2>&1; then
+    timeout_bin="timeout"
+  elif command -v gtimeout >/dev/null 2>&1; then
+    timeout_bin="gtimeout"
+  fi
+
+  if [[ -n "$timeout_bin" ]]; then
+    local rc=0
+    set +e
+    "$timeout_bin" "$timeout_seconds" "$executable" >"$out_file" 2>&1
+    rc=$?
+    set -e
+
+    # 126/127: timeout 本身不可用（例如 macOS 无该命令，或被 PATH 注入的坏版本）
+    if [[ $rc -ne 126 && $rc -ne 127 ]]; then
+      return $rc
+    fi
+  fi
+
+  local rc=0
+  set +e
+  python3 - "$executable" "$timeout_seconds" "$out_file" <<'PY'
+import subprocess
+import sys
+from pathlib import Path
+
+executable = sys.argv[1]
+timeout_seconds = float(sys.argv[2])
+out_file = Path(sys.argv[3])
+
+out_file.parent.mkdir(parents=True, exist_ok=True)
+with out_file.open("wb") as f:
+    try:
+        p = subprocess.run([executable], stdout=f, stderr=subprocess.STDOUT, timeout=timeout_seconds, check=False)
+        sys.exit(p.returncode)
+    except subprocess.TimeoutExpired:
+        f.write(b"\n[timeout]\n")
+        sys.exit(124)
+PY
+  rc=$?
+  set -e
+  return $rc
+}
+
 # 运行测试程序
 run_test() {
   local test_name=$1
@@ -268,15 +319,19 @@ run_test() {
 
   # 运行测试并捕获输出（增加超时到60秒）
   local exit_code=0
-  if timeout 60 "$output_file" > "$result_file" 2>&1; then
+  if run_with_timeout 60 "$output_file" "$result_file"; then
     exit_code=0
     return 0
   else
     exit_code=$?
 
     # 解析测试结果以显示部分通过的情况
-    local passed=$(grep -oP "Passed:\s+\K\d+" "$result_file" 2>/dev/null || echo "0")
-    local total=$(grep -oP "Total Tests:\s+\K\d+" "$result_file" 2>/dev/null || echo "0")
+    local passed
+    passed="$(awk -F':' '/^Passed[[:space:]]*:/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}' "$result_file" 2>/dev/null || true)"
+    local total
+    total="$(awk -F':' '/^Total Tests[[:space:]]*:/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}' "$result_file" 2>/dev/null || true)"
+    [[ "$passed" =~ ^[0-9]+$ ]] || passed="0"
+    [[ "$total" =~ ^[0-9]+$ ]] || total="0"
 
     if [ $exit_code -eq 124 ]; then
       log_error "$test_name: 超时（60秒）"
