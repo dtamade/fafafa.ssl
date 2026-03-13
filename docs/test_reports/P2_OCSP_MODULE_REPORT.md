@@ -90,7 +90,7 @@ bash scripts/run_all_module_tests.sh --modules OCSP --verbose
 
 ## 6. 已知限制与说明
 
-- `SendOCSPRequest` 涉及网络请求（HTTP/HTTPS），线上验证受网络与 responder 状态影响。
+- `SendOCSPRequest` 需要上层提供 HTTP transport hooks（`fafafa.ssl.net.hooks`）；线上验证仍受网络与 responder 状态影响。
 - 为保证稳定性，P2 关键失败场景优先使用离线 deterministic 用例。
 - OpenSSL 3.x 场景下部分 1.x only 符号按测试分支跳过，不作为失败判据。
 

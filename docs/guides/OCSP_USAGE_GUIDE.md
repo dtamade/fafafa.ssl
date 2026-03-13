@@ -36,20 +36,32 @@ end;
 
 ## 3. 在线 OCSP 检查（工作流）
 
+> 注意：`fafafa.ssl` **不实现网络通信**。
+>
+> - `SendOCSPRequest` 仅负责把 OCSP request 编码为 DER，并通过 `fafafa.ssl.net.hooks` 调用上层提供的 HTTP POST。
+> - 是否支持 `http/https`、DNS、socket、TLS 验证（证书/主机名）等，全部由你的 hooks 传输实现决定。
+
 ```pascal
 uses
   SysUtils,
+  fafafa.ssl.base,
+  fafafa.ssl.net.hooks,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ocsp,
   fafafa.ssl.openssl.api.x509;
 
 var
+  Scope: TSSLHTTPHooksScope;
   Req: POCSP_REQUEST;
   Resp: POCSP_RESPONSE;
   Status: Integer;
   Cert, Issuer: PX509;
   TrustStore: PX509_STORE;
 begin
+  // 由上层注入 HTTP POST（示例：线程局部 hooks）
+  // Scope := TSSLHTTPHooksScope.Push(TSSLHTTPHooks.Create(nil, @YourTransport.HTTPPost));
+  // try
+
   Req := CreateOCSPRequest(Cert, Issuer);
   if Req = nil then
     raise Exception.Create('创建 OCSP 请求失败');
@@ -71,11 +83,15 @@ begin
   finally
     OCSP_REQUEST_free(Req);
   end;
+
+  // finally
+  //   Scope.Pop;
+  // end;
 end;
 ```
 
 说明：
-- `SendOCSPRequest` 支持 `http/https`，HTTPS 下会进行证书与主机名校验。
+- `SendOCSPRequest` 不实现 `http/https` 传输；HTTP 行为由你注入的 hooks 决定。
 - `VerifyOCSPResponse` 使用 fail-closed 逻辑，响应状态异常/签名校验失败都会返回 `False`。
 
 ---

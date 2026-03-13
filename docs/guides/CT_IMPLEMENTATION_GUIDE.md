@@ -173,13 +173,22 @@ end;
 
 ### 使用 TCTLogClient
 
+> 注意：`fafafa.ssl` 不实现网络通信；`LoadFromGoogleCTLogList` 会通过 `fafafa.ssl.net.hooks` 调用上层注入的 HTTP GET。
+
 ```pascal
 uses
+  fafafa.ssl.base,
+  fafafa.ssl.net.hooks,
   fafafa.ssl.ct.log;
 
 var
+  Scope: TSSLHTTPHooksScope;
   Client: TCTLogClient;
 begin
+  // 由上层注入 HTTP GET（示例：线程局部 hooks）
+  // Scope := TSSLHTTPHooksScope.Push(TSSLHTTPHooks.Create(@YourTransport.HTTPGet, nil));
+  // try
+
   // 创建客户端（带缓存）
   Client := TCTLogClient.Create('ct_cache.json', True);
   try
@@ -193,6 +202,10 @@ begin
   finally
     Client.Free;
   end;
+
+  // finally
+  //   Scope.Pop;
+  // end;
 end;
 ```
 

@@ -87,9 +87,9 @@ bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT
 
 以下能力存在网络依赖，默认不作为离线验收口径：
 
-- OCSP 在线请求发送（`SendOCSPRequest`）需要可达 OCSP URL。
+- OCSP 在线请求发送（`SendOCSPRequest`）需要上层提供 HTTP transport hooks（见 `fafafa.ssl.net.hooks`），线上验证仍受网络与 responder 状态影响。
 - TS 完整端到端（向 TSA 发送请求并获取真实响应）需要可达 TSA 服务。
-- CT 远端日志拉取（如在线日志源）需要外部网络与服务稳定性。
+- CT 远端日志拉取（如在线日志源）需要上层提供 HTTP GET hooks（`DownloadCTLogList` 通过 hooks 拉取），并依赖外部网络与服务稳定性。
 
 建议：
 - 将在线路径归类为“集成验证（Integration）”；
