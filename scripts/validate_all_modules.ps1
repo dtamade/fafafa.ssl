@@ -5,12 +5,13 @@
 # 策略: 分层验证，记录结果
 # ============================================================================
 
+[CmdletBinding()]
 param(
     [string]$ProjectRoot = "",
     [string]$RunId = "",
     [string]$OutputDir = "test-reports",
     [switch]$SkipCompile = $false,
-    [switch]$Verbose = $false
+    [int]$MinModuleCount = 50
 )
 
 $ErrorActionPreference = "Continue"
@@ -26,6 +27,8 @@ if ([string]::IsNullOrWhiteSpace($RunId)) {
 
 $ProjectRootAbs = (Resolve-Path $ProjectRoot).Path
 $srcDir = Join-Path $ProjectRootAbs "src"
+
+$IsVerbose = $PSBoundParameters.ContainsKey('Verbose')
 
 $outDirAbs = Join-Path $ProjectRootAbs $OutputDir
 if (!(Test-Path $outDirAbs)) {
@@ -45,99 +48,24 @@ $stats = @{
     Errors = @()
 }
 
-# 模块分类（根据 VALIDATION_ROADMAP.md）
-$moduleGroups = @{
-    "P0_Core" = @(
-        "fafafa.ssl.openssl.core.pas",
-        "fafafa.ssl.openssl.evp.pas",
-        "fafafa.ssl.openssl.hmac.pas",
-        "fafafa.ssl.openssl.kdf.pas",
-        "fafafa.ssl.openssl.rand.pas"
-    )
-    "P1_Asymmetric" = @(
-        "fafafa.ssl.openssl.rsa.pas",
-        "fafafa.ssl.openssl.ecdsa.pas",
-        "fafafa.ssl.openssl.dsa.pas"
-    )
-    "P1_PKI" = @(
-        "fafafa.ssl.openssl.x509.pas",
-        "fafafa.ssl.openssl.x509v3.pas",
-        "fafafa.ssl.openssl.pem.pas",
-        "fafafa.ssl.openssl.asn1.pas",
-        "fafafa.ssl.openssl.bio.pas"
-    )
-    "P1_BigNum" = @(
-        "fafafa.ssl.openssl.bn.pas"
-    )
-    "P2_KeyExchange" = @(
-        "fafafa.ssl.openssl.dh.pas",
-        "fafafa.ssl.openssl.ecdh.pas"
-    )
-    "P2_SSL" = @(
-        "fafafa.ssl.openssl.ssl.pas"
-    )
-    "P2_PKCS" = @(
-        "fafafa.ssl.openssl.pkcs7.pas",
-        "fafafa.ssl.openssl.pkcs12.pas",
-        "fafafa.ssl.openssl.pkcs.pas",
-        "fafafa.ssl.openssl.cms.pas"
-    )
-    "P2_Helpers" = @(
-        "fafafa.ssl.openssl.err.pas",
-        "fafafa.ssl.openssl.buffer.pas",
-        "fafafa.ssl.openssl.obj.pas",
-        "fafafa.ssl.openssl.stack.pas"
-    )
-    "P3_Ciphers" = @(
-        "fafafa.ssl.openssl.aes.pas",
-        "fafafa.ssl.openssl.des.pas",
-        "fafafa.ssl.openssl.chacha.pas",
-        "fafafa.ssl.openssl.aria.pas",
-        "fafafa.ssl.openssl.seed.pas",
-        "fafafa.ssl.openssl.legacy_ciphers.pas",
-        "fafafa.ssl.openssl.modes.pas"
-    )
-    "P3_Hash" = @(
-        "fafafa.ssl.openssl.sha.pas",
-        "fafafa.ssl.openssl.sha3.pas",
-        "fafafa.ssl.openssl.sha3.evp.pas",
-        "fafafa.ssl.openssl.blake2.pas",
-        "fafafa.ssl.openssl.md.pas"
-    )
-    "P3_MAC" = @(
-        "fafafa.ssl.openssl.cmac.pas",
-        "fafafa.ssl.openssl.cmac.evp.pas"
-    )
-    "P3_Special" = @(
-        "fafafa.ssl.openssl.sm.pas",
-        "fafafa.ssl.openssl.scrypt_whirlpool.pas"
-    )
-    "P4_Advanced" = @(
-        "fafafa.ssl.openssl.ocsp.pas",
-        "fafafa.ssl.openssl.ts.pas",
-        "fafafa.ssl.openssl.ct.pas",
-        "fafafa.ssl.openssl.store.pas",
-        "fafafa.ssl.openssl.srp.pas",
-        "fafafa.ssl.openssl.conf.pas",
-        "fafafa.ssl.openssl.param.pas",
-        "fafafa.ssl.openssl.engine.pas",
-        "fafafa.ssl.openssl.provider.pas"
-    )
-    "P5_Infrastructure" = @(
-        "fafafa.ssl.openssl.types.pas",
-        "fafafa.ssl.openssl.consts.pas",
-        "fafafa.ssl.openssl.api.pas",
-        "fafafa.ssl.openssl.crypto.pas",
-        "fafafa.ssl.openssl.utils.pas",
-        "fafafa.ssl.openssl.thread.pas",
-        "fafafa.ssl.openssl.async.pas",
-        "fafafa.ssl.openssl.lhash.pas",
-        "fafafa.ssl.openssl.txt_db.pas",
-        "fafafa.ssl.openssl.ui.pas",
-        "fafafa.ssl.openssl.dso.pas",
-        "fafafa.ssl.openssl.aead.pas",
-        "fafafa.ssl.openssl.comp.pas"
-    )
+# OpenSSL 模块来源：
+# - 当前仓库的 OpenSSL 单元命名以 `fafafa.ssl.openssl.*` 为前缀（包含 `fafafa.ssl.openssl.api*`）。
+# - 这里按文件系统动态扫描，避免硬编码清单与实际文件集漂移导致的“假阳性 PASS”。
+$allModules = @()
+if (Test-Path $srcDir) {
+    $allModules = Get-ChildItem -Path $srcDir -Filter "fafafa.ssl.openssl*.pas" -File | Sort-Object -Property Name
+}
+
+if ($allModules.Count -lt $MinModuleCount) {
+    Write-Host ("[FAIL] Too few OpenSSL modules detected in src/: {0} (min: {1}). Check ProjectRoot/src layout." -f $allModules.Count, $MinModuleCount) -ForegroundColor Red
+    exit 1
+}
+
+$stats.Total = $allModules.Count
+
+$moduleGroups = [ordered]@{
+    "OpenSSL_API" = $allModules | Where-Object { $_.Name -like "fafafa.ssl.openssl.api*.pas" }
+    "OpenSSL_Backend" = $allModules | Where-Object { $_.Name -like "fafafa.ssl.openssl.*.pas" -and $_.Name -notlike "fafafa.ssl.openssl.api*.pas" }
 }
 
 # 辅助函数：写日志
@@ -147,7 +75,7 @@ function Write-Log {
     $logMessage = "[$timestamp] [$Level] $Message"
     Add-Content -Path $compileLog -Value $logMessage
     
-    if ($Verbose -or $Level -eq "ERROR") {
+    if ($script:IsVerbose -or $Level -eq "ERROR") {
         switch ($Level) {
             "ERROR" { Write-Host $logMessage -ForegroundColor Red }
             "WARN"  { Write-Host $logMessage -ForegroundColor Yellow }
@@ -162,7 +90,6 @@ function Test-ModuleCompile {
     param([string]$ModulePath)
     
     $moduleName = Split-Path $ModulePath -Leaf
-    $stats.Total++
     
     Write-Log "Testing module: $moduleName" "INFO"
     
@@ -170,8 +97,13 @@ function Test-ModuleCompile {
     $fpcPath = "fpc"  # 假设FPC在PATH中
     
     try {
-        # 仅语法检查，不生成输出文件
-        $result = & $fpcPath -Sew -vn "$ModulePath" 2>&1
+        # 语法/编译检查：将单元输出隔离到 reports 目录，避免污染 src/
+        $unitOutDir = Join-Path $outDirAbs "validate_all_modules_units_${RunId}"
+        if (!(Test-Path $unitOutDir)) {
+            New-Item -ItemType Directory -Path $unitOutDir -Force | Out-Null
+        }
+
+        $result = & $fpcPath -Sew ("-Fu" + $srcDir) ("-FU" + $unitOutDir) "$ModulePath" 2>&1
         
         if ($LASTEXITCODE -eq 0) {
             Write-Log "✅ $moduleName - OK" "SUCCESS"
@@ -216,6 +148,12 @@ Write-Log "开始验证" "INFO"
 Write-Log "项目根目录: $ProjectRootAbs" "INFO"
 Write-Log "源码目录: $srcDir" "INFO"
 Write-Log "输出目录: $outDirAbs" "INFO"
+Write-Log ("检测到 OpenSSL 单元: {0} (min: {1})" -f $allModules.Count, $MinModuleCount) "INFO"
+
+if (-not (Get-Command fpc -ErrorAction SilentlyContinue)) {
+    Write-Log "❌ fpc not found in PATH" "ERROR"
+    exit 1
+}
 
 $results = @{}
 
@@ -228,15 +166,9 @@ if (!$SkipCompile) {
         $groupResults = @()
         
         foreach ($module in $moduleGroups[$group]) {
-            $modulePath = Join-Path $srcDir $module
-            
-            if (Test-Path $modulePath) {
-                $result = Test-ModuleCompile -ModulePath $modulePath
-                $groupResults += $result
-            } else {
-                Write-Log "⚠️ 文件不存在: $module" "WARN"
-                $stats.Warnings++
-            }
+            $modulePath = $module.FullName
+            $result = Test-ModuleCompile -ModulePath $modulePath
+            $groupResults += $result
         }
         
         $results[$group] = $groupResults
@@ -254,7 +186,7 @@ $report = @"
 # OpenSSL 模块验证报告
 
 **生成时间:** $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")  
-**验证范围:** 所有 OpenSSL 模块 (65个)  
+**验证范围:** 所有 OpenSSL 模块 ($($allModules.Count)个，min=$MinModuleCount)  
 **验证策略:** 分层快速验证
 
 ---
