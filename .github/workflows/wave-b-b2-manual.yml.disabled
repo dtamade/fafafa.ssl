@@ -132,6 +132,22 @@ jobs:
         shell: powershell
         run: |
           choco install -y freepascal
+          $fpcCandidates = @(
+            "C:\tools\freepascal\bin\i386-win32",
+            "C:\tools\freepascal\bin\x86_64-win64",
+            "C:\tools\freepascal\bin"
+          )
+          foreach ($p in $fpcCandidates) {
+            if (Test-Path $p) {
+              $env:PATH = "$p;$env:PATH"
+              $p | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+              Write-Host ("[INFO] Added to PATH: " + $p)
+            }
+          }
+          if (-not (Get-Command fpc -ErrorAction SilentlyContinue)) {
+            Write-Host "[ERROR] fpc not found in PATH after installation" -ForegroundColor Red
+            exit 1
+          }
           fpc -iV
 
           choco install -y openssl
