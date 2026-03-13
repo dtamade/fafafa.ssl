@@ -1,0 +1,586 @@
+program test_connection_builder_hostname_precedence;
+
+{$mode objfpc}{$H+}
+
+uses
+  SysUtils, Classes,
+  fafafa.ssl.base,
+  fafafa.ssl.connection.base,
+  fafafa.ssl.connection.builder;
+
+type
+  TMockClientConnection = class(TBaseSSLConnection, ISSLClientConnection)
+  private
+    FServerName: string;
+  protected
+    function DoRead(var ABuffer; ACount: Integer): Integer; override;
+    function DoWrite(const ABuffer; ACount: Integer): Integer; override;
+    function DoConnect: Boolean; override;
+    function DoAccept: Boolean; override;
+    function DoHandshakeInternal: TSSLHandshakeState; override;
+    function DoShutdown: Boolean; override;
+    procedure DoClose; override;
+    function DoRenegotiate: Boolean; override;
+    function DoGetError(ARet: Integer): TSSLErrorCode; override;
+    function DoWantRead: Boolean; override;
+    function DoWantWrite: Boolean; override;
+    function DoGetProtocolVersion: TSSLProtocolVersion; override;
+    function DoGetCipherName: string; override;
+    function DoGetPeerCertificate: ISSLCertificate; override;
+    function DoGetPeerCertificateChain: TSSLCertificateArray; override;
+    function DoGetVerifyResult: Integer; override;
+    function DoGetVerifyResultString: string; override;
+    function DoGetSession: ISSLSession; override;
+    procedure DoSetSession(ASession: ISSLSession); override;
+    function DoIsSessionReused: Boolean; override;
+    function DoGetSelectedALPNProtocol: string; override;
+    function DoGetState: string; override;
+    function DoGetNativeHandle: Pointer; override;
+  public
+    constructor Create(AContext: ISSLContext); override;
+
+    { ISSLClientConnection }
+    procedure SetServerName(const AServerName: string);
+    function GetServerName: string;
+  end;
+
+  TMockContext = class(TInterfacedObject, ISSLContext)
+  private
+    FContextType: TSSLContextType;
+    FServerName: string;
+  public
+    constructor Create(AContextType: TSSLContextType);
+
+    function GetContextType: TSSLContextType;
+
+    procedure SetProtocolVersions(AVersions: TSSLProtocolVersions);
+    function GetProtocolVersions: TSSLProtocolVersions;
+    procedure SetPreferredVersion(AVersion: TSSLProtocolVersion);
+    function GetPreferredVersion: TSSLProtocolVersion;
+
+    procedure LoadCertificate(const AFileName: string); overload;
+    procedure LoadCertificate(AStream: TStream); overload;
+    procedure LoadCertificate(ACert: ISSLCertificate); overload;
+
+    procedure LoadPrivateKey(const AFileName: string; const APassword: string = ''); overload;
+    procedure LoadPrivateKey(AStream: TStream; const APassword: string = ''); overload;
+
+    procedure LoadCertificatePEM(const APEM: string);
+    procedure LoadPrivateKeyPEM(const APEM: string; const APassword: string = '');
+
+    procedure LoadCAFile(const AFileName: string);
+    procedure LoadCAPath(const APath: string);
+
+    procedure SetCertificateStore(AStore: ISSLCertificateStore);
+
+    procedure SetVerifyMode(AMode: TSSLVerifyModes);
+    function GetVerifyMode: TSSLVerifyModes;
+    procedure SetVerifyDepth(ADepth: Integer);
+    function GetVerifyDepth: Integer;
+    procedure SetVerifyCallback(ACallback: TSSLVerifyCallback);
+
+    procedure SetCipherList(const ACipherList: string);
+    function GetCipherList: string;
+    procedure SetCipherSuites(const ACipherSuites: string);
+    function GetCipherSuites: string;
+
+    procedure SetSessionCacheMode(AEnabled: Boolean);
+    function GetSessionCacheMode: Boolean;
+    procedure SetSessionTimeout(ATimeout: Integer);
+    function GetSessionTimeout: Integer;
+    procedure SetSessionCacheSize(ASize: Integer);
+    function GetSessionCacheSize: Integer;
+
+    procedure SetOptions(const AOptions: TSSLOptions);
+    function GetOptions: TSSLOptions;
+
+    procedure SetServerName(const AServerName: string);
+    function GetServerName: string;
+
+    procedure SetALPNProtocols(const AProtocols: string);
+    function GetALPNProtocols: string;
+
+    procedure SetCertVerifyFlags(AFlags: TSSLCertVerifyFlags);
+    function GetCertVerifyFlags: TSSLCertVerifyFlags;
+
+    procedure SetPasswordCallback(ACallback: TSSLPasswordCallback);
+    procedure SetInfoCallback(ACallback: TSSLInfoCallback);
+
+    procedure AddCertificatePin(const AHash: TBytes; APinType: Integer;
+      const ADescription: string; AIsBackup: Boolean = False);
+    procedure AddCertificatePinBase64(const ABase64Hash: string; APinType: Integer;
+      const ADescription: string; AIsBackup: Boolean = False);
+    procedure SetCertificatePinningEnabled(AEnabled: Boolean);
+    function GetCertificatePinningEnabled: Boolean;
+    procedure ClearCertificatePins;
+
+    function CreateConnection(ASocket: THandle): ISSLConnection; overload;
+    function CreateConnection(AStream: TStream): ISSLConnection; overload;
+    function IsValid: Boolean;
+  end;
+
+var
+  TestsPassed: Integer = 0;
+  TestsFailed: Integer = 0;
+
+procedure Check(ACondition: Boolean; const AMessage: string);
+begin
+  if ACondition then
+  begin
+    Inc(TestsPassed);
+    WriteLn('[PASS] ', AMessage);
+  end
+  else
+  begin
+    Inc(TestsFailed);
+    WriteLn('[FAIL] ', AMessage);
+  end;
+end;
+
+procedure CheckEqualsStr(const AMessage, AExpected, AActual: string);
+begin
+  Check(AExpected = AActual, AMessage + ' (expected="' + AExpected + '", actual="' + AActual + '")');
+end;
+
+{ TMockClientConnection }
+
+constructor TMockClientConnection.Create(AContext: ISSLContext);
+begin
+  inherited Create(AContext);
+  FServerName := '';
+end;
+
+procedure TMockClientConnection.SetServerName(const AServerName: string);
+begin
+  FServerName := AServerName;
+end;
+
+function TMockClientConnection.GetServerName: string;
+begin
+  Result := FServerName;
+end;
+
+function TMockClientConnection.DoRead(var ABuffer; ACount: Integer): Integer;
+begin
+  Result := 0;
+end;
+
+function TMockClientConnection.DoWrite(const ABuffer; ACount: Integer): Integer;
+begin
+  Result := ACount;
+end;
+
+function TMockClientConnection.DoConnect: Boolean;
+begin
+  Result := True;
+end;
+
+function TMockClientConnection.DoAccept: Boolean;
+begin
+  Result := True;
+end;
+
+function TMockClientConnection.DoHandshakeInternal: TSSLHandshakeState;
+begin
+  Result := sslHsCompleted;
+end;
+
+function TMockClientConnection.DoShutdown: Boolean;
+begin
+  Result := True;
+end;
+
+procedure TMockClientConnection.DoClose;
+begin
+  // no-op
+end;
+
+function TMockClientConnection.DoRenegotiate: Boolean;
+begin
+  Result := False;
+end;
+
+function TMockClientConnection.DoGetError(ARet: Integer): TSSLErrorCode;
+begin
+  Result := sslErrNone;
+end;
+
+function TMockClientConnection.DoWantRead: Boolean;
+begin
+  Result := False;
+end;
+
+function TMockClientConnection.DoWantWrite: Boolean;
+begin
+  Result := False;
+end;
+
+function TMockClientConnection.DoGetProtocolVersion: TSSLProtocolVersion;
+begin
+  Result := sslProtocolTLS13;
+end;
+
+function TMockClientConnection.DoGetCipherName: string;
+begin
+  Result := 'MOCK-CIPHER';
+end;
+
+function TMockClientConnection.DoGetPeerCertificate: ISSLCertificate;
+begin
+  Result := nil;
+end;
+
+function TMockClientConnection.DoGetPeerCertificateChain: TSSLCertificateArray;
+begin
+  Result := nil;
+end;
+
+function TMockClientConnection.DoGetVerifyResult: Integer;
+begin
+  Result := 0;
+end;
+
+function TMockClientConnection.DoGetVerifyResultString: string;
+begin
+  Result := 'OK';
+end;
+
+function TMockClientConnection.DoGetSession: ISSLSession;
+begin
+  Result := nil;
+end;
+
+procedure TMockClientConnection.DoSetSession(ASession: ISSLSession);
+begin
+  // no-op
+end;
+
+function TMockClientConnection.DoIsSessionReused: Boolean;
+begin
+  Result := False;
+end;
+
+function TMockClientConnection.DoGetSelectedALPNProtocol: string;
+begin
+  Result := '';
+end;
+
+function TMockClientConnection.DoGetState: string;
+begin
+  Result := 'MOCK';
+end;
+
+function TMockClientConnection.DoGetNativeHandle: Pointer;
+begin
+  Result := nil;
+end;
+
+{ TMockContext }
+
+constructor TMockContext.Create(AContextType: TSSLContextType);
+begin
+  inherited Create;
+  FContextType := AContextType;
+  FServerName := '';
+end;
+
+function TMockContext.GetContextType: TSSLContextType;
+begin
+  Result := FContextType;
+end;
+
+procedure TMockContext.SetProtocolVersions(AVersions: TSSLProtocolVersions);
+begin
+  // no-op
+end;
+
+function TMockContext.GetProtocolVersions: TSSLProtocolVersions;
+begin
+  Result := [];
+end;
+
+procedure TMockContext.SetPreferredVersion(AVersion: TSSLProtocolVersion);
+begin
+  // no-op
+end;
+
+function TMockContext.GetPreferredVersion: TSSLProtocolVersion;
+begin
+  Result := sslProtocolUnknown;
+end;
+
+procedure TMockContext.LoadCertificate(const AFileName: string);
+begin
+  // no-op
+end;
+
+procedure TMockContext.LoadCertificate(AStream: TStream);
+begin
+  // no-op
+end;
+
+procedure TMockContext.LoadCertificate(ACert: ISSLCertificate);
+begin
+  // no-op
+end;
+
+procedure TMockContext.LoadPrivateKey(const AFileName: string; const APassword: string);
+begin
+  // no-op
+end;
+
+procedure TMockContext.LoadPrivateKey(AStream: TStream; const APassword: string);
+begin
+  // no-op
+end;
+
+procedure TMockContext.LoadCertificatePEM(const APEM: string);
+begin
+  // no-op
+end;
+
+procedure TMockContext.LoadPrivateKeyPEM(const APEM: string; const APassword: string);
+begin
+  // no-op
+end;
+
+procedure TMockContext.LoadCAFile(const AFileName: string);
+begin
+  // no-op
+end;
+
+procedure TMockContext.LoadCAPath(const APath: string);
+begin
+  // no-op
+end;
+
+procedure TMockContext.SetCertificateStore(AStore: ISSLCertificateStore);
+begin
+  // no-op
+end;
+
+procedure TMockContext.SetVerifyMode(AMode: TSSLVerifyModes);
+begin
+  // no-op
+end;
+
+function TMockContext.GetVerifyMode: TSSLVerifyModes;
+begin
+  Result := [];
+end;
+
+procedure TMockContext.SetVerifyDepth(ADepth: Integer);
+begin
+  // no-op
+end;
+
+function TMockContext.GetVerifyDepth: Integer;
+begin
+  Result := 0;
+end;
+
+procedure TMockContext.SetVerifyCallback(ACallback: TSSLVerifyCallback);
+begin
+  // no-op
+end;
+
+procedure TMockContext.SetCipherList(const ACipherList: string);
+begin
+  // no-op
+end;
+
+function TMockContext.GetCipherList: string;
+begin
+  Result := '';
+end;
+
+procedure TMockContext.SetCipherSuites(const ACipherSuites: string);
+begin
+  // no-op
+end;
+
+function TMockContext.GetCipherSuites: string;
+begin
+  Result := '';
+end;
+
+procedure TMockContext.SetSessionCacheMode(AEnabled: Boolean);
+begin
+  // no-op
+end;
+
+function TMockContext.GetSessionCacheMode: Boolean;
+begin
+  Result := False;
+end;
+
+procedure TMockContext.SetSessionTimeout(ATimeout: Integer);
+begin
+  // no-op
+end;
+
+function TMockContext.GetSessionTimeout: Integer;
+begin
+  Result := 0;
+end;
+
+procedure TMockContext.SetSessionCacheSize(ASize: Integer);
+begin
+  // no-op
+end;
+
+function TMockContext.GetSessionCacheSize: Integer;
+begin
+  Result := 0;
+end;
+
+procedure TMockContext.SetOptions(const AOptions: TSSLOptions);
+begin
+  // no-op
+end;
+
+function TMockContext.GetOptions: TSSLOptions;
+begin
+  Result := [];
+end;
+
+procedure TMockContext.SetServerName(const AServerName: string);
+begin
+  FServerName := AServerName;
+end;
+
+function TMockContext.GetServerName: string;
+begin
+  Result := FServerName;
+end;
+
+procedure TMockContext.SetALPNProtocols(const AProtocols: string);
+begin
+  // no-op
+end;
+
+function TMockContext.GetALPNProtocols: string;
+begin
+  Result := '';
+end;
+
+procedure TMockContext.SetCertVerifyFlags(AFlags: TSSLCertVerifyFlags);
+begin
+  // no-op
+end;
+
+function TMockContext.GetCertVerifyFlags: TSSLCertVerifyFlags;
+begin
+  Result := [];
+end;
+
+procedure TMockContext.SetPasswordCallback(ACallback: TSSLPasswordCallback);
+begin
+  // no-op
+end;
+
+procedure TMockContext.SetInfoCallback(ACallback: TSSLInfoCallback);
+begin
+  // no-op
+end;
+
+procedure TMockContext.AddCertificatePin(const AHash: TBytes; APinType: Integer;
+  const ADescription: string; AIsBackup: Boolean);
+begin
+  // no-op
+end;
+
+procedure TMockContext.AddCertificatePinBase64(const ABase64Hash: string; APinType: Integer;
+  const ADescription: string; AIsBackup: Boolean);
+begin
+  // no-op
+end;
+
+procedure TMockContext.SetCertificatePinningEnabled(AEnabled: Boolean);
+begin
+  // no-op
+end;
+
+function TMockContext.GetCertificatePinningEnabled: Boolean;
+begin
+  Result := False;
+end;
+
+procedure TMockContext.ClearCertificatePins;
+begin
+  // no-op
+end;
+
+function TMockContext.CreateConnection(ASocket: THandle): ISSLConnection;
+var
+  Conn: TMockClientConnection;
+begin
+  Conn := TMockClientConnection.Create(Self);
+  Conn.SetServerName(FServerName); // simulate context default inheritance
+  Result := Conn;
+end;
+
+function TMockContext.CreateConnection(AStream: TStream): ISSLConnection;
+begin
+  Result := CreateConnection(THandle(1));
+end;
+
+function TMockContext.IsValid: Boolean;
+begin
+  Result := True;
+end;
+
+procedure RunCases;
+var
+  Ctx: ISSLContext;
+  Builder: ISSLConnectionBuilder;
+  Conn: ISSLConnection;
+  Res: TSSLOperationResult;
+  ClientConn: ISSLClientConnection;
+begin
+  Ctx := TMockContext.Create(sslCtxClient);
+  Ctx.SetServerName('ctx.example.com');
+
+  WriteLn('=== Case 1: no WithHostname keeps context fallback ===');
+  Builder := TSSLConnectionBuilder.Create
+    .WithContext(Ctx)
+    .WithSocket(THandle(1));
+  Res := Builder.TryBuildClient(Conn);
+  Check(Res.Success, 'TryBuildClient should succeed');
+  Check(Supports(Conn, ISSLClientConnection, ClientConn), 'Connection supports ISSLClientConnection');
+  CheckEqualsStr('ServerName uses context fallback', 'ctx.example.com', ClientConn.GetServerName);
+
+  WriteLn('=== Case 2: WithHostname overrides context fallback ===');
+  Builder := TSSLConnectionBuilder.Create
+    .WithContext(Ctx)
+    .WithSocket(THandle(1))
+    .WithHostname('conn.example.com');
+  Res := Builder.TryBuildClient(Conn);
+  Check(Res.Success, 'TryBuildClient should succeed');
+  Check(Supports(Conn, ISSLClientConnection, ClientConn), 'Connection supports ISSLClientConnection');
+  CheckEqualsStr('ServerName overridden', 'conn.example.com', ClientConn.GetServerName);
+
+  WriteLn('=== Case 3: WithHostname(\"\") clears context fallback ===');
+  Builder := TSSLConnectionBuilder.Create
+    .WithContext(Ctx)
+    .WithSocket(THandle(1))
+    .WithHostname('');
+  Res := Builder.TryBuildClient(Conn);
+  Check(Res.Success, 'TryBuildClient should succeed');
+  Check(Supports(Conn, ISSLClientConnection, ClientConn), 'Connection supports ISSLClientConnection');
+  CheckEqualsStr('ServerName cleared', '', ClientConn.GetServerName);
+end;
+
+begin
+  WriteLn('[TEST] Connection builder hostname precedence');
+  RunCases;
+
+  WriteLn('---');
+  WriteLn('Passed: ', TestsPassed);
+  WriteLn('Failed: ', TestsFailed);
+
+  if TestsFailed = 0 then
+    Halt(0);
+  Halt(1);
+end.
+
