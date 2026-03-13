@@ -29,10 +29,44 @@ NC='\033[0m' # No Color
 # 配置
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TESTS_DIR="$PROJECT_ROOT/tests"
-BIN_DIR="$PROJECT_ROOT/bin"
-REPORTS_DIR="$PROJECT_ROOT/test-reports"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-REPORT_FILE="$REPORTS_DIR/test_report_$TIMESTAMP.txt"
+RUN_ID="${TIMESTAMP}_$$"
+DEFAULT_REPORTS_DIR="$PROJECT_ROOT/tmp/run_all_module_tests_reports_${RUN_ID}"
+REPORTS_DIR="${FAFAFA_TEST_REPORTS_DIR:-$DEFAULT_REPORTS_DIR}"
+DEFAULT_BIN_DIR="$PROJECT_ROOT/bin"
+BIN_DIR="${FAFAFA_TEST_BIN_DIR:-$DEFAULT_BIN_DIR}"
+DEFAULT_FPC_UNIT_OUTPUT_DIR="$PROJECT_ROOT/tmp/run_all_module_tests_units_${TIMESTAMP}_$$"
+FPC_UNIT_OUTPUT_DIR="${FAFAFA_FPC_UNIT_OUTPUT_DIR:-$DEFAULT_FPC_UNIT_OUTPUT_DIR}"
+FPC_EXE="${FAFAFA_FPC_EXE:-fpc}"
+
+if [[ "$REPORTS_DIR" != /* ]]; then
+  REPORTS_DIR="$PROJECT_ROOT/$REPORTS_DIR"
+fi
+
+if [[ "$BIN_DIR" != /* ]]; then
+  BIN_DIR="$PROJECT_ROOT/$BIN_DIR"
+fi
+
+if [[ "$FPC_UNIT_OUTPUT_DIR" != /* ]]; then
+  FPC_UNIT_OUTPUT_DIR="$PROJECT_ROOT/$FPC_UNIT_OUTPUT_DIR"
+fi
+
+REPORT_FILE="$REPORTS_DIR/test_report_$RUN_ID.txt"
+
+if [[ "$FPC_EXE" == */* ]]; then
+  if [[ "$FPC_EXE" != /* ]]; then
+    FPC_EXE="$PROJECT_ROOT/$FPC_EXE"
+  fi
+  if [[ ! -x "$FPC_EXE" ]]; then
+    echo "[FAIL] configured FPC executable is not executable: $FPC_EXE"
+    exit 1
+  fi
+else
+  if ! command -v "$FPC_EXE" >/dev/null 2>&1; then
+    echo "[FAIL] missing FPC executable in PATH: $FPC_EXE"
+    exit 1
+  fi
+fi
 
 # 选项
 VERBOSE=false
@@ -64,6 +98,7 @@ done
 # 创建报告目录
 mkdir -p "$REPORTS_DIR"
 mkdir -p "$BIN_DIR"
+mkdir -p "$FPC_UNIT_OUTPUT_DIR"
 
 # 初始化统计
 TOTAL_TESTS=0
@@ -93,7 +128,7 @@ compile_test() {
   local test_file=$1
   local test_name=$(basename "$test_file" .pas)
   local output_file="$BIN_DIR/$test_name"
-  local compile_log="$REPORTS_DIR/${test_name}_compile.log"
+  local compile_log="$REPORTS_DIR/${test_name}_${RUN_ID}_compile.log"
 
   if [ "$VERBOSE" = true ]; then
     log_info "编译 $test_name..."
@@ -136,11 +171,12 @@ compile_test() {
   fi
 
   # 编译并捕获输出
-  if fpc -Mobjfpc -Sh -O2 \
+  if "$FPC_EXE" -Mobjfpc -Sh -O2 \
     -Fu"$PROJECT_ROOT/src" \
     -Fu"$PROJECT_ROOT/src/openssl" \
     -Fu"$PROJECT_ROOT/src/winssl" \
     -Fu"$PROJECT_ROOT/tests" \
+    -FU"$FPC_UNIT_OUTPUT_DIR" \
     -Fi"$PROJECT_ROOT/src" \
     -FE"$BIN_DIR" \
     $platform_flags \
@@ -160,7 +196,7 @@ compile_test() {
 run_test() {
   local test_name=$1
   local output_file="$BIN_DIR/$test_name"
-  local result_file="$REPORTS_DIR/${test_name}_result.txt"
+  local result_file="$REPORTS_DIR/${test_name}_${RUN_ID}_result.txt"
 
   if [ ! -f "$output_file" ]; then
     log_error "$test_name: 可执行文件不存在"
@@ -235,6 +271,10 @@ ALL_MODULES="PKCS7 PKCS12 CMS Store OCSP TS CT SRP Comp Engine Provider"
 echo "========================================" | tee "$REPORT_FILE"
 echo "模块自动化测试报告" | tee -a "$REPORT_FILE"
 echo "时间: $(date)" | tee -a "$REPORT_FILE"
+echo "Run ID: $RUN_ID" | tee -a "$REPORT_FILE"
+echo "FPC executable: $FPC_EXE" | tee -a "$REPORT_FILE"
+echo "Binary output dir: $BIN_DIR" | tee -a "$REPORT_FILE"
+echo "FPC unit output dir: $FPC_UNIT_OUTPUT_DIR" | tee -a "$REPORT_FILE"
 echo "========================================" | tee -a "$REPORT_FILE"
 echo "" | tee -a "$REPORT_FILE"
 

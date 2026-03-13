@@ -5,6 +5,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+RUN_ID="${FAFAFA_MINIMAL_CI_GATE_RUN_ID:-$(date +%Y%m%d_%H%M%S)_$$}"
+COMPILE_UNIT_OUTPUT_DIR="${FAFAFA_MINIMAL_CI_GATE_COMPILE_UNIT_OUTPUT_DIR:-tmp/minimal_ci_gate_compile_units_${RUN_ID}}"
+MODULE_UNIT_OUTPUT_DIR="${FAFAFA_MINIMAL_CI_GATE_MODULE_UNIT_OUTPUT_DIR:-tmp/minimal_ci_gate_module_units_${RUN_ID}}"
+MODULE_BIN_OUTPUT_DIR="${FAFAFA_MINIMAL_CI_GATE_MODULE_BIN_OUTPUT_DIR:-tmp/minimal_ci_gate_module_bin_${RUN_ID}}"
+FPC_EXE="${FAFAFA_FPC_EXE:-fpc}"
+
 DRY_RUN=false
 VERBOSE=false
 WITH_PHASE2_DRYRUN=true
@@ -80,6 +86,7 @@ while [[ $# -gt 0 ]]; do
       WITH_COMPILE=false
       WITH_MODULES=false
       WITH_PHASE2_DRYRUN=false
+      WITH_TLS13_SIGN_PURITY_CHECK=false
       WITH_TLS13_SIGN_BENCH=true
       shift
       ;;
@@ -154,13 +161,17 @@ run_cmd() {
 echo "========================================"
 echo "fafafa.ssl Minimal CI Gate (Draft)"
 echo "========================================"
+echo "[INFO] run_id: $RUN_ID"
+echo "[INFO] compile unit output dir: $COMPILE_UNIT_OUTPUT_DIR"
+echo "[INFO] module unit output dir: $MODULE_UNIT_OUTPUT_DIR"
+echo "[INFO] module bin output dir: $MODULE_BIN_OUTPUT_DIR"
 
 if [[ "$WITH_COMPILE" == "true" ]]; then
-  run_cmd "cd '$PROJECT_ROOT' && python3 scripts/compile_all_modules.py"
+  run_cmd "cd '$PROJECT_ROOT' && python3 scripts/compile_all_modules.py --unit-output-dir '$COMPILE_UNIT_OUTPUT_DIR' --fpc-exe '$FPC_EXE'"
 fi
 
 if [[ "$WITH_MODULES" == "true" ]]; then
-  module_cmd="cd '$PROJECT_ROOT' && bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
+  module_cmd="cd '$PROJECT_ROOT' && FAFAFA_FPC_EXE='$FPC_EXE' FAFAFA_FPC_UNIT_OUTPUT_DIR='$MODULE_UNIT_OUTPUT_DIR' FAFAFA_TEST_BIN_DIR='$MODULE_BIN_OUTPUT_DIR' bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
   if [[ "$VERBOSE" == "true" ]]; then
     module_cmd="$module_cmd --verbose"
   fi
