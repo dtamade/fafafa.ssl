@@ -84,6 +84,12 @@ bash scripts/run_minimal_ci_gate.sh --only-tls13-sign-bench \
 # 默认 Wave B 门禁
 bash scripts/run_wave_b_ci_gate.sh
 
+# 本地快速模式（输出到 ./tmp，避免污染 git 工作区）
+bash scripts/run_wave_b_ci_gate.sh --fast-local
+
+# 自定义 reports 根目录（相对项目根目录；默认产物落在该目录下）
+bash scripts/run_wave_b_ci_gate.sh --reports-dir tmp/wave_b_ci_gate_reports_latest
+
 # Wave B 门禁 + TLS13 signer 纯 Pascal 依赖检查
 bash scripts/run_wave_b_ci_gate.sh --with-tls13-sign-purity-check
 
@@ -106,6 +112,8 @@ bash scripts/run_wave_b_ci_gate.sh \
 说明：
 - 当启用 `--with-tls13-sign-purity-check` / `--with-tls13-sign-bench` 时，任一步骤失败会将 Wave B gate 判定为失败；
 - summary 会追加 `tls13_signer_purity`、`tls13_servercertverify_bench` 步骤及 bench 指标小节。
+- `--fast-local` 会将 logs/summary/examples report 默认输出到 `./tmp`，避免污染 git 工作区；
+- `--reports-dir` 可将默认产物写入指定目录（相对项目根目录）。
 
 ---
 

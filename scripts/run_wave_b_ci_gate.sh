@@ -12,10 +12,12 @@ WITH_MODULES=true
 WITH_EXAMPLES=true
 MODULE_SET="PKCS7,PKCS12,CMS,Store,OCSP,TS,CT"
 EXAMPLES_THRESHOLD="80.0"
-EXAMPLES_REPORT_REL="test-reports/examples_compile_ci_gate.json"
+EXAMPLES_REPORT_REL=""
 SUMMARY_OUT_REL=""
 WITH_TLS13_SIGN_PURITY_CHECK=false
 WITH_TLS13_SIGN_BENCH=false
+FAST_LOCAL=false
+REPORTS_DIR_REL=""
 TLS13_SIGN_BENCH_ITERATIONS="3"
 TLS13_SIGN_BENCH_WARMUP="1"
 TLS13_SIGN_BENCH_SCHEME="rsa_pkcs1_sha256"
@@ -39,6 +41,8 @@ Wave B Linux CI Gate Runner
   scripts/run_wave_b_ci_gate.sh [options]
 
 选项：
+  --fast-local                     本地快速模式：logs/summary/examples report 默认输出到 ./tmp（避免污染 git 工作区）
+  --reports-dir DIR                reports 根目录（相对项目根目录）；默认产物将写入该目录
   --modules LIST                    指定模块列表（默认: PKCS7,PKCS12,CMS,Store,OCSP,TS,CT）
   --examples-threshold FLOAT        示例通过率阈值，默认 80.0
   --examples-report PATH            示例 JSON 输出路径（相对项目根目录）
@@ -63,6 +67,14 @@ USAGE
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --fast-local)
+      FAST_LOCAL=true
+      shift
+      ;;
+    --reports-dir)
+      REPORTS_DIR_REL="$2"
+      shift 2
+      ;;
     --modules)
       MODULE_SET="$2"
       shift 2
@@ -150,6 +162,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ "$FAST_LOCAL" == "false" ]]; then
+  if [[ "${FAFAFA_FAST_LOCAL:-}" == "1" || "${FAFAFA_FAST_LOCAL:-}" == "true" ]]; then
+    FAST_LOCAL=true
+  fi
+fi
+
 if [[ ! "$TLS13_SIGN_BENCH_ITERATIONS" =~ ^[0-9]+$ ]] || [[ "$TLS13_SIGN_BENCH_ITERATIONS" -le 0 ]]; then
   echo "Invalid --tls13-sign-bench-iterations: $TLS13_SIGN_BENCH_ITERATIONS" >&2
   exit 1
@@ -166,24 +184,94 @@ if [[ ! "$TLS13_SIGN_BENCH_TIMEOUT" =~ ^[0-9]+$ ]] || [[ "$TLS13_SIGN_BENCH_TIME
 fi
 
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
-if [[ -z "$SUMMARY_OUT_REL" ]]; then
-  SUMMARY_OUT_REL="test-reports/wave_b_ci_gate_summary_${RUN_ID}.md"
+
+if [[ -z "$REPORTS_DIR_REL" ]]; then
+  if [[ "$FAST_LOCAL" == "true" ]]; then
+    REPORTS_DIR_REL="tmp/wave_b_ci_gate_reports_${RUN_ID}"
+  else
+    REPORTS_DIR_REL="test-reports"
+  fi
 fi
 
-EXAMPLES_REPORT="$PROJECT_ROOT/$EXAMPLES_REPORT_REL"
-SUMMARY_OUT="$PROJECT_ROOT/$SUMMARY_OUT_REL"
-COMPILE_LOG="$PROJECT_ROOT/test-reports/wave_b_compile_${RUN_ID}.log"
-MODULE_LOG="$PROJECT_ROOT/test-reports/wave_b_modules_${RUN_ID}.log"
-EXAMPLES_LOG="$PROJECT_ROOT/test-reports/wave_b_examples_${RUN_ID}.log"
-PURITY_LOG="$PROJECT_ROOT/test-reports/wave_b_tls13_sign_purity_${RUN_ID}.log"
-BENCH_LOG="$PROJECT_ROOT/test-reports/wave_b_tls13_sign_bench_${RUN_ID}.log"
+if [[ "$REPORTS_DIR_REL" = /* ]]; then
+  echo "Invalid --reports-dir (must be relative to project root): $REPORTS_DIR_REL" >&2
+  exit 1
+fi
+
+if [[ -n "$EXAMPLES_REPORT_REL" && "$EXAMPLES_REPORT_REL" = /* ]]; then
+  echo "Invalid --examples-report (must be relative to project root): $EXAMPLES_REPORT_REL" >&2
+  exit 1
+fi
+
+if [[ -n "$SUMMARY_OUT_REL" && "$SUMMARY_OUT_REL" = /* ]]; then
+  echo "Invalid --summary-out (must be relative to project root): $SUMMARY_OUT_REL" >&2
+  exit 1
+fi
+
+resolve_rel_under_root() {
+  local rel="$1"
+  python3 - "$PROJECT_ROOT" "$rel" <<'PY'
+import os, sys
+root = os.path.abspath(sys.argv[1])
+rel = sys.argv[2]
+path = os.path.abspath(os.path.join(root, rel))
+if path != root and not path.startswith(root + os.sep):
+    raise SystemExit(2)
+print(path)
+PY
+}
+
+REPORTS_DIR="$(resolve_rel_under_root "$REPORTS_DIR_REL" || true)"
+if [[ -z "$REPORTS_DIR" ]]; then
+  echo "Invalid --reports-dir (must stay within project root): $REPORTS_DIR_REL" >&2
+  exit 1
+fi
+
+if [[ -z "$EXAMPLES_REPORT_REL" ]]; then
+  EXAMPLES_REPORT_REL="$REPORTS_DIR_REL/examples_compile_ci_gate.json"
+fi
+
+if [[ -z "$SUMMARY_OUT_REL" ]]; then
+  SUMMARY_OUT_REL="$REPORTS_DIR_REL/wave_b_ci_gate_summary_${RUN_ID}.md"
+fi
+
+EXAMPLES_REPORT="$(resolve_rel_under_root "$EXAMPLES_REPORT_REL" || true)"
+if [[ -z "$EXAMPLES_REPORT" ]]; then
+  echo "Invalid --examples-report (must stay within project root): $EXAMPLES_REPORT_REL" >&2
+  exit 1
+fi
+
+SUMMARY_OUT="$(resolve_rel_under_root "$SUMMARY_OUT_REL" || true)"
+if [[ -z "$SUMMARY_OUT" ]]; then
+  echo "Invalid --summary-out (must stay within project root): $SUMMARY_OUT_REL" >&2
+  exit 1
+fi
+
+COMPILE_LOG="$REPORTS_DIR/wave_b_compile_${RUN_ID}.log"
+MODULE_LOG="$REPORTS_DIR/wave_b_modules_${RUN_ID}.log"
+EXAMPLES_LOG="$REPORTS_DIR/wave_b_examples_${RUN_ID}.log"
+PURITY_LOG="$REPORTS_DIR/wave_b_tls13_sign_purity_${RUN_ID}.log"
+BENCH_LOG="$REPORTS_DIR/wave_b_tls13_sign_bench_${RUN_ID}.log"
 
 BENCH_JSON_OUT=""
 if [[ -n "$TLS13_SIGN_BENCH_JSON_OUT_REL" ]]; then
-  BENCH_JSON_OUT="$PROJECT_ROOT/$TLS13_SIGN_BENCH_JSON_OUT_REL"
+  if [[ "$TLS13_SIGN_BENCH_JSON_OUT_REL" = /* ]]; then
+    echo "Invalid --tls13-sign-bench-json-out (must be relative to project root): $TLS13_SIGN_BENCH_JSON_OUT_REL" >&2
+    exit 1
+  fi
+  BENCH_JSON_OUT="$(resolve_rel_under_root "$TLS13_SIGN_BENCH_JSON_OUT_REL" || true)"
+  if [[ -z "$BENCH_JSON_OUT" ]]; then
+    echo "Invalid --tls13-sign-bench-json-out (must stay within project root): $TLS13_SIGN_BENCH_JSON_OUT_REL" >&2
+    exit 1
+  fi
 fi
 
-mkdir -p "$PROJECT_ROOT/test-reports"
+mkdir -p "$REPORTS_DIR"
+mkdir -p "$(dirname "$EXAMPLES_REPORT")"
+mkdir -p "$(dirname "$SUMMARY_OUT")"
+if [[ -n "$BENCH_JSON_OUT" ]]; then
+  mkdir -p "$(dirname "$BENCH_JSON_OUT")"
+fi
 
 STEP_SHELL="/bin/bash"
 if [[ -x "/usr/bin/zsh" ]]; then
@@ -216,6 +304,9 @@ run_step() {
 }
 
 build_module_cmd="cd '$PROJECT_ROOT' && bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
+if [[ "$FAST_LOCAL" == "true" ]]; then
+  build_module_cmd="$build_module_cmd --fast-local"
+fi
 if [[ "$VERBOSE" == "true" ]]; then
   build_module_cmd="$build_module_cmd --verbose"
 fi
