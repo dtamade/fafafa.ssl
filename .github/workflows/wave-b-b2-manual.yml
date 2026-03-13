@@ -85,7 +85,7 @@ jobs:
       - name: Install dependencies
         shell: bash
         run: |
-          brew install freepascal openssl@3
+          brew install fpc openssl@3
 
       - name: Resolve OpenSSL path
         id: openssl
