@@ -310,10 +310,10 @@ get_module_tests() {
     "PKCS12") echo "test_p2_pkcs12 test_p2_pkcs12_comprehensive test_p2_pkcs12_create_parse" ;;
     "CMS") echo "test_p2_cms test_p2_cms_comprehensive" ;;
     "Store") echo "test_p2_store test_p2_store_comprehensive" ;;
-    "OCSP") echo "test_p2_ocsp test_p2_ocsp_comprehensive" ;;
+    "OCSP") echo "test_p2_ocsp test_p2_ocsp_comprehensive test_p2_ocsp_http_hooks" ;;
     "TS") echo "test_p2_ts test_p2_ts_comprehensive" ;;
     # P3 模块
-    "CT") echo "test_p2_ct test_p2_ct_comprehensive" ;;
+    "CT") echo "test_p2_ct test_p2_ct_comprehensive test_p2_ct_http_hooks" ;;
     "SRP") echo "test_p2_srp test_p2_srp_comprehensive" ;;
     "Comp") echo "test_p2_comp" ;;
     # P4 模块

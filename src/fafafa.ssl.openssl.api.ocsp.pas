@@ -6,6 +6,8 @@ interface
 
 uses
   SysUtils, Classes, dynlibs,
+  fafafa.ssl.base,
+  fafafa.ssl.net.hooks,
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.consts,
@@ -729,265 +731,45 @@ end;
 function SendOCSPRequest(ARequest: POCSP_REQUEST; const AOCSPUrl: string;
   ATimeout: Integer; ATrustStore: PX509_STORE): POCSP_RESPONSE;
 var
-  Host, Port, Path: PAnsiChar;
-  UseSSL: Integer;
-  Bio: PBIO;
-  ReqCtx: POCSP_REQ_CTX;
-  Resp: POCSP_RESPONSE;
-  LCtx: PSSL_CTX;
-  LSSL: PSSL;
-  LHostStr: string;
-  LHostPortA: AnsiString;
-  LPathA: AnsiString;
-  LDeadline: QWord;
-  LRet: Integer;
-  LPeer: PX509;
-  LHostA: AnsiString;
-
-  procedure FreeOpenSSLString(var P: PAnsiChar);
-  begin
-    if P = nil then
-      Exit;
-
-    if not Assigned(OPENSSL_free) and not Assigned(CRYPTO_free) then
-      LoadOpenSSLCrypto;
-
-    if Assigned(OPENSSL_free) then
-      OPENSSL_free(P)
-    else if Assigned(CRYPTO_free) then
-      CRYPTO_free(P, nil, 0);
-
-    P := nil;
-  end;
-
-  function IsValidIPv4(const S: string): Boolean;
-  var
-    Parts: TStringArray;
-    Part: string;
-    Value, I: Integer;
-  begin
-    Result := False;
-    Parts := S.Split(['.']);
-    if Length(Parts) <> 4 then
-      Exit;
-
-    for Part in Parts do
-    begin
-      if Part = '' then
-        Exit;
-      for I := 1 to Length(Part) do
-        if not (Part[I] in ['0'..'9']) then
-          Exit;
-
-      Value := StrToIntDef(Part, -1);
-      if (Value < 0) or (Value > 255) then
-        Exit;
-    end;
-
-    Result := True;
-  end;
-
-  function VerifyTLSHostName(const ASSL: PSSL; const AHost: string): Boolean;
-  var
-    LIsIP: Boolean;
-  begin
-    Result := False;
-
-    if (ASsl = nil) or (AHost = '') then
-      Exit;
-
-    if not TOpenSSLLoader.IsModuleLoaded(osmX509) then
-      LoadOpenSSLX509;
-
-    if not Assigned(SSL_get_verify_result) then
-      Exit;
-
-    if SSL_get_verify_result(ASsl) <> X509_V_OK then
-      Exit;
-
-    if not Assigned(SSL_get_peer_certificate) then
-      Exit;
-
-    LPeer := SSL_get_peer_certificate(ASsl);
-    if LPeer = nil then
-      Exit;
-
-    try
-      LIsIP := IsValidIPv4(AHost) or (Pos(':', AHost) > 0);
-      LHostA := AnsiString(AHost);
-
-      if LIsIP then
-      begin
-        if not Assigned(X509_check_ip_asc) then
-          Exit;
-        Result := (X509_check_ip_asc(LPeer, PAnsiChar(LHostA), 0) = 1);
-      end
-      else
-      begin
-        if not Assigned(X509_check_host) then
-          Exit;
-        Result := (X509_check_host(LPeer, PAnsiChar(LHostA), Length(LHostA), 0, nil) = 1);
-      end;
-
-    finally
-      if Assigned(X509_free) then
-        X509_free(LPeer);
-      LPeer := nil;
-    end;
-  end;
+  LReqLen: Integer;
+  LReqDER: TBytes;
+  LReqPtr: PByte;
+  LPostRes: TSSLDataResult;
+  LRespPtr: PByte;
 
 begin
   Result := nil;
-  Host := nil;
-  Port := nil;
-  Path := nil;
-  Bio := nil;
-  ReqCtx := nil;
-  Resp := nil;
-  LCtx := nil;
-  LSSL := nil;
 
   if (not TOpenSSLLoader.IsModuleLoaded(osmOCSP)) or (ARequest = nil) or (AOCSPUrl = '') then
     Exit;
 
-  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
-    LoadOpenSSLCore;
+  // Silence unused parameter hints: transport is provided by caller hooks.
+  if ATrustStore <> nil then ;
 
-  if not TOpenSSLLoader.IsModuleLoaded(osmBIO) then
-    LoadOpenSSLBIO;
-
-  if not TOpenSSLLoader.IsModuleLoaded(osmSSL) then
-    LoadOpenSSLSSL;
-
-  if not Assigned(OCSP_parse_url) then
+  // Need DER encode/decode helpers for hook-based transport.
+  if (not Assigned(i2d_OCSP_REQUEST)) or (not Assigned(d2i_OCSP_RESPONSE)) then
     Exit;
 
   // Normalize timeout
   if ATimeout <= 0 then
     ATimeout := 10;
 
-  // 解析 URL（Host/Port/Path 由 OpenSSL 分配，需 OPENSSL_free）
-  if OCSP_parse_url(PAnsiChar(AnsiString(AOCSPUrl)), @Host, @Port, @Path, @UseSSL) = 0 then
+  LReqLen := i2d_OCSP_REQUEST(ARequest, nil);
+  if LReqLen <= 0 then
     Exit;
 
-  try
-    LHostStr := '';
-    if Host <> nil then
-      LHostStr := string(Host);
+  SetLength(LReqDER, LReqLen);
+  LReqPtr := @LReqDER[0];
+  if i2d_OCSP_REQUEST(ARequest, @LReqPtr) <> LReqLen then
+    Exit;
 
-    if UseSSL <> 0 then
-    begin
-      if not Assigned(BIO_new_ssl_connect) or not Assigned(SSL_CTX_new) or not Assigned(TLS_client_method) then
-        Exit;
+  // HTTP transport is provided by caller/framework (fafafa.ssl.net.hooks).
+  LPostRes := SSLHTTPPost(AOCSPUrl, 'application/ocsp-request', LReqDER, ATimeout * 1000);
+  if (not LPostRes.Success) or (Length(LPostRes.Data) = 0) then
+    Exit;
 
-      LCtx := SSL_CTX_new(TLS_client_method());
-      if LCtx = nil then
-        Exit;
-
-      if Assigned(SSL_CTX_set_verify) then
-        SSL_CTX_set_verify(LCtx, SSL_VERIFY_PEER, nil);
-
-      // Avoid side effects on caller-provided store
-      if (ATrustStore <> nil) and Assigned(SSL_CTX_set1_cert_store) then
-        SSL_CTX_set1_cert_store(LCtx, ATrustStore)
-      else if Assigned(SSL_CTX_set_default_verify_paths) then
-        SSL_CTX_set_default_verify_paths(LCtx);
-
-      Bio := BIO_new_ssl_connect(LCtx);
-      if Bio = nil then
-        Exit;
-
-      // Configure SNI before handshake
-      BIO_get_ssl(Bio, @LSSL);
-
-      if (LSSL <> nil) and (Host <> nil) and Assigned(SSL_set_tlsext_host_name) then
-        SSL_set_tlsext_host_name(LSSL, Host);
-
-      // BIO_set_conn_hostname expects host:port
-      if (Host <> nil) and (Port <> nil) then
-        LHostPortA := AnsiString(string(Host) + ':' + string(Port))
-      else if Host <> nil then
-        LHostPortA := AnsiString(string(Host))
-      else
-        Exit;
-
-      BIO_set_conn_hostname(Bio, PAnsiChar(LHostPortA));
-
-      if BIO_do_connect(Bio) <= 0 then
-        Exit;
-
-      // Hostname verification for HTTPS
-      if (LSSL <> nil) and (LHostStr <> '') then
-        if not VerifyTLSHostName(LSSL, LHostStr) then
-          Exit;
-    end
-    else
-    begin
-      if not Assigned(BIO_new_connect) then
-        Exit;
-
-      Bio := BIO_new_connect(Host);
-      if Bio = nil then
-        Exit;
-
-      BIO_set_conn_port(Bio, Port);
-      if BIO_do_connect(Bio) <= 0 then
-        Exit;
-    end;
-
-    // 创建 OCSP 请求上下文
-    if not Assigned(OCSP_sendreq_new) or not Assigned(OCSP_sendreq_nbio) or not Assigned(OCSP_REQ_CTX_free) then
-      Exit;
-
-    if (Path <> nil) and (Path[0] <> #0) then
-      LPathA := AnsiString(string(Path))
-    else
-      LPathA := '/';
-
-    ReqCtx := OCSP_sendreq_new(Bio, PAnsiChar(LPathA), ARequest, -1);
-    if ReqCtx = nil then
-      Exit;
-
-    // 发送请求并接收响应（带超时）
-    LDeadline := GetTickCount64 + QWord(ATimeout) * 1000;
-
-    while True do
-    begin
-      LRet := OCSP_sendreq_nbio(@ReqCtx, @Resp);
-      if LRet = -1 then
-      begin
-        if GetTickCount64 >= LDeadline then
-          Break;
-        Sleep(10);
-        Continue;
-      end;
-      Break;
-    end;
-
-    if LRet = 1 then
-      Result := Resp
-    else
-    begin
-      if (Resp <> nil) and Assigned(OCSP_RESPONSE_free) then
-        OCSP_RESPONSE_free(Resp);
-      Resp := nil;
-      Result := nil;
-    end;
-
-  finally
-    if ReqCtx <> nil then
-      OCSP_REQ_CTX_free(ReqCtx);
-
-    if Bio <> nil then
-      BIO_free_all(Bio);
-
-    if (LCtx <> nil) and Assigned(SSL_CTX_free) then
-      SSL_CTX_free(LCtx);
-
-    FreeOpenSSLString(Host);
-    FreeOpenSSLString(Port);
-    FreeOpenSSLString(Path);
-  end;
+  LRespPtr := @LPostRes.Data[0];
+  Result := d2i_OCSP_RESPONSE(nil, @LRespPtr, Length(LPostRes.Data));
 end;
 
 function VerifyOCSPResponse(AResponse: POCSP_RESPONSE; ACert: PX509;

@@ -79,7 +79,8 @@ function Base64Decode(const Input: string): TBytes;
 implementation
 
 uses
-  fphttpclient, ssockets, sslsockets, opensslsockets,
+  fafafa.ssl.base,
+  fafafa.ssl.net.hooks,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.loader,
   fafafa.ssl.base64;
@@ -429,7 +430,13 @@ function TCTLogClient.FindLogByID(const LogID: string): TCTLogInfo;
 var
   I: Integer;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result.LogID := '';
+  Result.Key := '';
+  Result.URL := '';
+  Result.Description := '';
+  Result.OperatorName := '';
+  Result.MaxMergeDelay := 0;
+  Result.IsUsable := False;
   
   for I := 0 to High(FLogList) do
   begin
@@ -462,29 +469,25 @@ end;
 
 function DownloadCTLogList(const URL: string): string;
 var
-  HTTPClient: TFPHTTPClient;
+  LRes: TSSLDataResult;
 begin
   Result := '';
-  
-  try
-    HTTPClient := TFPHTTPClient.Create(nil);
-    try
-      HTTPClient.AllowRedirect := True;
-      Result := HTTPClient.Get(URL);
-    finally
-      HTTPClient.Free;
-    end;
-  except
-    on E: Exception do
-      Result := '';
-  end;
+
+  LRes := SSLHTTPGet(URL, 10000);
+  if not LRes.Success then
+    Exit('');
+  if Length(LRes.Data) = 0 then
+    Exit('');
+
+  SetString(Result, PAnsiChar(@LRes.Data[0]), Length(LRes.Data));
 end;
 
 function Base64Decode(const Input: string): TBytes;
 begin
+  Result := nil;
   // 使用项目的 Base64 解码功能
   if Input = '' then
-    SetLength(Result, 0)
+    Exit
   else
     Result := TBase64Utils.Decode(Input);
 end;

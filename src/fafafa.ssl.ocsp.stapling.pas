@@ -23,6 +23,7 @@ interface
 
 uses
   SysUtils, Classes, SyncObjs, DateUtils,
+  fafafa.ssl.base,
   fafafa.ssl.ocsp,
   fafafa.ssl.ocsp.cache,
   fafafa.ssl.x509,
