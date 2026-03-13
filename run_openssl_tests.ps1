@@ -9,8 +9,7 @@
 param(
   [string]$ProjectRoot = "",
   [string]$RunId = "",
-  [string]$OutputDir = "test-reports",
-  [switch]$Verbose
+  [string]$OutputDir = "test-reports"
 )
 
 $ErrorActionPreference = "Stop"
@@ -68,7 +67,7 @@ $exePath = Join-Path $BuildDir ($name + ".exe")
 
 Write-Host ("[BUILD] " + $TestFileRel) -ForegroundColor Yellow
 $compileOut = & fpc @UnitPaths ("-FE" + $BuildDir) ("-FU" + $BuildDir) $TestFileAbs 2>&1
-if ($Verbose) {
+if ($PSBoundParameters.ContainsKey('Verbose')) {
   $compileOut | ForEach-Object { Write-Host ("  " + $_) -ForegroundColor DarkGray }
 }
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path $exePath)) {
@@ -86,4 +85,3 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ("[PASS] " + $name) -ForegroundColor Green
 Write-Host "[WAVE-B-OPENSSL] PASS" -ForegroundColor Green
 exit 0
-

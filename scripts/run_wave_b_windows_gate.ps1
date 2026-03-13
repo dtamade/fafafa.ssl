@@ -37,7 +37,14 @@ function Invoke-WaveStep {
     return 0
   }
 
-  & powershell -ExecutionPolicy Bypass -Command $Command *> $LogPath
+  # Prefer PowerShell 7 (pwsh) for UTF-8 script compatibility; fallback to Windows PowerShell.
+  $psExe = "powershell"
+  if (Get-Command pwsh -ErrorAction SilentlyContinue) {
+    $psExe = "pwsh"
+  }
+
+  # Ensure logs are UTF-8 for artifact readability (avoid UTF-16 redirection by default).
+  & $psExe -NoProfile -ExecutionPolicy Bypass -Command $Command *>&1 | Out-File -FilePath $LogPath -Encoding utf8
   return $LASTEXITCODE
 }
 

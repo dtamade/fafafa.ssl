@@ -10,8 +10,7 @@
 param(
   [string]$ProjectRoot = "",
   [string]$RunId = "",
-  [string]$OutputDir = "test-reports",
-  [switch]$Verbose
+  [string]$OutputDir = "test-reports"
 )
 
 $ErrorActionPreference = "Stop"
@@ -70,7 +69,7 @@ function Invoke-CompileRun {
 
   Write-Host ("[BUILD] " + $PasRelPath) -ForegroundColor Yellow
   $compileOut = & fpc @UnitPaths ("-FE" + $BuildDir) ("-FU" + $BuildDir) $pasPath 2>&1
-  if ($Verbose) {
+  if ($PSBoundParameters.ContainsKey('Verbose')) {
     $compileOut | ForEach-Object { Write-Host ("  " + $_) -ForegroundColor DarkGray }
   }
   if ($LASTEXITCODE -ne 0 -or -not (Test-Path $exePath)) {
@@ -102,4 +101,3 @@ if ($failures -gt 0) {
 
 Write-Host "[WAVE-B-WINSSL] PASS" -ForegroundColor Green
 exit 0
-
