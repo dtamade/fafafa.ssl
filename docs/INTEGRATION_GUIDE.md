@@ -15,6 +15,36 @@
 
 ---
 
+## HTTP 传输 hooks（可选）
+
+有些功能需要 HTTP（例如 OCSP 在线检查、CT log list 下载）。`fafafa.ssl` 仍然**不实现网络通信**，而是通过 hooks 让上层注入 HTTP GET/POST。
+
+两种注入方式：
+
+1) **Builder 注入到 context（推荐）**
+
+```pascal
+uses
+  fafafa.ssl.base,
+  fafafa.ssl.context.builder;
+
+// 你的网络框架实现这两个回调（示例签名）
+// function HTTPGet(const AURL: string; ATimeoutMs: Integer): TSSLDataResult;
+// function HTTPPost(const AURL, AContentType: string; const ABody: TBytes; ATimeoutMs: Integer): TSSLDataResult;
+
+Ctx := TSSLContextBuilder.Create
+  .WithVerifyPeer
+  .WithSystemRoots
+  .WithHTTPHooks(@Transport.HTTPGet, @Transport.HTTPPost)
+  .BuildClient;
+```
+
+2) **线程局部注入**
+
+当你只想在某个调用范围内临时提供传输，可用 `fafafa.ssl.net.hooks` 的 `TSSLHTTPHooksScope.Push/Pop`。
+
+---
+
 ## 先选一个接入面
 
 ### 选项 A：直接用 `ISSLConnection`（更适合 event loop）
