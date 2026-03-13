@@ -41,9 +41,9 @@ function Invoke-WaveStep {
   return $LASTEXITCODE
 }
 
-$winsslCmd = "Set-Location '$ProjectRoot'; ./run_winssl_tests.ps1"
-$opensslCmd = "Set-Location '$ProjectRoot'; ./run_openssl_tests.ps1"
-$modulesCmd = "Set-Location '$ProjectRoot'; ./scripts/validate_all_modules.ps1"
+$winsslCmd = "Set-Location '$ProjectRoot'; ./run_winssl_tests.ps1 -ProjectRoot '$ProjectRoot' -RunId '$RunId' -OutputDir '$OutputDir'"
+$opensslCmd = "Set-Location '$ProjectRoot'; ./run_openssl_tests.ps1 -ProjectRoot '$ProjectRoot' -RunId '$RunId' -OutputDir '$OutputDir'"
+$modulesCmd = "Set-Location '$ProjectRoot'; ./scripts/validate_all_modules.ps1 -ProjectRoot '$ProjectRoot' -RunId '$RunId' -OutputDir '$OutputDir'"
 
 $winsslExit = Invoke-WaveStep -Name "winssl" -Command $winsslCmd -LogPath $WinsslLog
 $opensslExit = Invoke-WaveStep -Name "openssl" -Command $opensslCmd -LogPath $OpenSSLLog

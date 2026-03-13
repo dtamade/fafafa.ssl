@@ -6,24 +6,35 @@
 # ============================================================================
 
 param(
+    [string]$ProjectRoot = "",
+    [string]$RunId = "",
+    [string]$OutputDir = "test-reports",
     [switch]$SkipCompile = $false,
     [switch]$Verbose = $false
 )
 
 $ErrorActionPreference = "Continue"
-$projectRoot = "D:\projects\Pascal\lazarus\My\libs\fafafa.ssl"
-$srcDir = Join-Path $projectRoot "src"
-$reportDir = Join-Path $projectRoot "docs\validation"
 
-# 创建报告目录
-if (!(Test-Path $reportDir)) {
-    New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+    $ProjectRoot = Split-Path -Parent $ScriptDir
+}
+
+if ([string]::IsNullOrWhiteSpace($RunId)) {
+    $RunId = Get-Date -Format "yyyyMMdd_HHmmss"
+}
+
+$ProjectRootAbs = (Resolve-Path $ProjectRoot).Path
+$srcDir = Join-Path $ProjectRootAbs "src"
+
+$outDirAbs = Join-Path $ProjectRootAbs $OutputDir
+if (!(Test-Path $outDirAbs)) {
+    New-Item -ItemType Directory -Path $outDirAbs -Force | Out-Null
 }
 
 # 报告文件
-$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$compileLog = Join-Path $reportDir "compile_$timestamp.log"
-$reportFile = Join-Path $reportDir "validation_report_$timestamp.md"
+$compileLog = Join-Path $outDirAbs "validate_all_modules_compile_${RunId}.log"
+$reportFile = Join-Path $outDirAbs "validate_all_modules_report_${RunId}.md"
 
 # 初始化统计
 $stats = @{
@@ -125,8 +136,7 @@ $moduleGroups = @{
         "fafafa.ssl.openssl.ui.pas",
         "fafafa.ssl.openssl.dso.pas",
         "fafafa.ssl.openssl.aead.pas",
-        "fafafa.ssl.openssl.comp.pas",
-        "fafafa.ssl.openssl.rand_old.pas"
+        "fafafa.ssl.openssl.comp.pas"
     )
 }
 
@@ -203,8 +213,9 @@ Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
 Write-Log "开始验证" "INFO"
-Write-Log "项目根目录: $projectRoot" "INFO"
+Write-Log "项目根目录: $ProjectRootAbs" "INFO"
 Write-Log "源码目录: $srcDir" "INFO"
+Write-Log "输出目录: $outDirAbs" "INFO"
 
 $results = @{}
 
@@ -254,7 +265,7 @@ $report = @"
 - **编译成功:** $($stats.Success) ✅
 - **编译失败:** $($stats.Failed) ❌
 - **警告数量:** $($stats.Warnings) ⚠️
-- **成功率:** $([math]::Round($stats.Success / $stats.Total * 100, 2))%
+- **成功率:** $(if ($stats.Total -gt 0) { [math]::Round($stats.Success / $stats.Total * 100, 2) } else { 0 })%
 
 ---
 
@@ -355,7 +366,7 @@ Write-Host "============================================" -ForegroundColor Cyan
 Write-Host "总模块数: $($stats.Total)" -ForegroundColor White
 Write-Host "成功: $($stats.Success)" -ForegroundColor Green
 Write-Host "失败: $($stats.Failed)" -ForegroundColor $(if ($stats.Failed -eq 0) { "Green" } else { "Red" })
-Write-Host "成功率: $([math]::Round($stats.Success / $stats.Total * 100, 2))%" -ForegroundColor $(if ($stats.Failed -eq 0) { "Green" } else { "Yellow" })
+Write-Host "成功率: $(if ($stats.Total -gt 0) { [math]::Round($stats.Success / $stats.Total * 100, 2) } else { 0 })%" -ForegroundColor $(if ($stats.Failed -eq 0) { "Green" } else { "Yellow" })
 Write-Host "`n报告文件: $reportFile" -ForegroundColor Cyan
 Write-Host "============================================`n" -ForegroundColor Cyan
 
