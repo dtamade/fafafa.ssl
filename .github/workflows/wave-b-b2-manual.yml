@@ -58,6 +58,7 @@ jobs:
         run: |
           RUN_ID="${{ needs.setup.outputs.run_id }}"
           bash scripts/run_wave_b_ci_gate.sh \
+            --run-id "$RUN_ID" \
             --examples-threshold 80.0 \
             --examples-report "test-reports/examples_compile_ci_gate_${RUN_ID}.json" \
             --summary-out "test-reports/wave_b_ci_gate_summary_${RUN_ID}.md"

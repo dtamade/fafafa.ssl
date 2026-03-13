@@ -24,6 +24,7 @@ TLS13_SIGN_BENCH_SCHEME="rsa_pkcs1_sha256"
 TLS13_SIGN_BENCH_KEY="tests/certificate/test_certs/signer_key.pem"
 TLS13_SIGN_BENCH_TIMEOUT="120"
 TLS13_SIGN_BENCH_JSON_OUT_REL=""
+RUN_ID=""
 
 usage() {
   cat <<'USAGE'
@@ -43,6 +44,7 @@ Wave B Linux CI Gate Runner
 选项：
   --fast-local                     本地快速模式：logs/summary/examples report 默认输出到 ./tmp（避免污染 git 工作区）
   --reports-dir DIR                reports 根目录（相对项目根目录）；默认产物将写入该目录
+  --run-id ID                      指定 run_id（影响默认输出路径与 summary 内 Run ID 字段）
   --modules LIST                    指定模块列表（默认: PKCS7,PKCS12,CMS,Store,OCSP,TS,CT）
   --examples-threshold FLOAT        示例通过率阈值，默认 80.0
   --examples-report PATH            示例 JSON 输出路径（相对项目根目录）
@@ -73,6 +75,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --reports-dir)
       REPORTS_DIR_REL="$2"
+      shift 2
+      ;;
+    --run-id)
+      RUN_ID="$2"
       shift 2
       ;;
     --modules)
@@ -183,7 +189,14 @@ if [[ ! "$TLS13_SIGN_BENCH_TIMEOUT" =~ ^[0-9]+$ ]] || [[ "$TLS13_SIGN_BENCH_TIME
   exit 1
 fi
 
-RUN_ID="$(date +%Y%m%d_%H%M%S)"
+if [[ -n "$RUN_ID" && "$RUN_ID" =~ [^A-Za-z0-9._-] ]]; then
+  echo "Invalid --run-id (allow: A-Z a-z 0-9 . _ -): $RUN_ID" >&2
+  exit 1
+fi
+
+if [[ -z "$RUN_ID" ]]; then
+  RUN_ID="$(date +%Y%m%d_%H%M%S)"
+fi
 
 if [[ -z "$REPORTS_DIR_REL" ]]; then
   if [[ "$FAST_LOCAL" == "true" ]]; then

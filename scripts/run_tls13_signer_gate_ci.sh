@@ -60,6 +60,7 @@ echo "[tls13-gate] run_id=$RUN_ID"
 echo "[tls13-gate] output_dir=$OUTPUT_DIR_REL"
 
 bash scripts/run_wave_b_ci_gate.sh \
+  --run-id "$RUN_ID" \
   --only-tls13-sign-bench \
   --with-tls13-sign-purity-check \
   --summary-out "$SUMMARY_REL" \
