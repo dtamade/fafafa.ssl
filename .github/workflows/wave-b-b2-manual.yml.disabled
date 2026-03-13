@@ -140,11 +140,22 @@ jobs:
             "C:\Program Files\OpenSSL\bin",
             "C:\tools\openssl\bin"
           )
+          $found = $false
           foreach ($p in $candidates) {
             if (Test-Path $p) {
+              $found = $true
+              $env:PATH = "$p;$env:PATH"
               $p | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
               Write-Host ("[INFO] Added to PATH: " + $p)
             }
+          }
+          if (-not (Get-Command openssl -ErrorAction SilentlyContinue)) {
+            Write-Host "[ERROR] openssl not found in PATH after installation" -ForegroundColor Red
+            if (-not $found) {
+              Write-Host "[INFO] Checked paths:" -ForegroundColor Yellow
+              $candidates | ForEach-Object { Write-Host ("  - " + $_) -ForegroundColor Yellow }
+            }
+            exit 1
           }
           openssl version
 
