@@ -349,10 +349,12 @@ begin
       Result := sslErrHandshake;
       
     // 加密/解密错误
-    SEC_E_DECRYPT_FAILURE,
-    SEC_E_ENCRYPT_FAILURE,
+    SEC_E_DECRYPT_FAILURE:
+      Result := sslErrDecryptionFailed;
+    SEC_E_ENCRYPT_FAILURE:
+      Result := sslErrEncryptionFailed;
     SEC_E_MESSAGE_ALTERED:
-      Result := sslErrEncryption;
+      Result := sslErrProtocol;
       
     // 配置错误
     SEC_E_NO_CREDENTIALS,

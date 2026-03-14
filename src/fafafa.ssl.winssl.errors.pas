@@ -277,7 +277,7 @@ begin
 
     // 加密/解密错误
     LONG(SEC_E_DECRYPT_FAILURE):
-      Result := sslErrEncryption;
+      Result := sslErrDecryptionFailed;
 
   else
     // 未知错误映射到通用错误
@@ -772,4 +772,3 @@ finalization
   GErrorHandler := nil;
 
 end.
-
