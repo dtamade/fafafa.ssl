@@ -601,6 +601,7 @@ var
   SSL_get_peer_certificate: TSSL_get_peer_certificate = nil;
   SSL_get1_peer_certificate: TSSL_get1_peer_certificate = nil;  // OpenSSL 3.x version
   SSL_get_peer_cert_chain: TSSL_get_peer_cert_chain = nil;
+  SSL_get0_verified_chain: TSSL_get0_verified_chain = nil;
   
   // Verification result functions
   SSL_get_verify_result: TSSL_get_verify_result = nil;
@@ -908,6 +909,7 @@ begin
     SSL_get_peer_certificate := TSSL_get_peer_certificate(SSL_get1_peer_certificate);
   end;
   SSL_get_peer_cert_chain := TSSL_get_peer_cert_chain(GetProcedureAddress(LibSSLHandle, 'SSL_get_peer_cert_chain'));
+  SSL_get0_verified_chain := TSSL_get0_verified_chain(GetProcedureAddress(LibSSLHandle, 'SSL_get0_verified_chain'));
   
   // Verification result functions
   SSL_get_verify_result := TSSL_get_verify_result(GetProcedureAddress(LibSSLHandle, 'SSL_get_verify_result'));

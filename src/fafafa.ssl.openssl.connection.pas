@@ -843,6 +843,14 @@ begin
     if PeerChain <> nil then
       IssuerX509 := FindIssuerX509InChain(PeerX509, PeerChain);
 
+    // Prefer verified chain from handshake when available (avoids re-running X509_verify_cert)
+    if (IssuerX509 = nil) and Assigned(SSL_get0_verified_chain) then
+    begin
+      VerifiedChain := SSL_get0_verified_chain(FSSL);
+      if VerifiedChain <> nil then
+        IssuerX509 := FindIssuerX509InChain(PeerX509, VerifiedChain);
+    end;
+
     // Retrieve verify store from context
     VerifyStore := nil;
     if Assigned(SSL_CTX_get_cert_store) then
@@ -1405,6 +1413,14 @@ begin
 
       if PeerChain <> nil then
         IssuerX509 := FindIssuerX509InChain(PeerX509, PeerChain);
+
+      // Prefer verified chain from handshake when available (avoids re-running X509_verify_cert)
+      if (IssuerX509 = nil) and Assigned(SSL_get0_verified_chain) then
+      begin
+        VerifiedChain := SSL_get0_verified_chain(FSSL);
+        if VerifiedChain <> nil then
+          IssuerX509 := FindIssuerX509InChain(PeerX509, VerifiedChain);
+      end;
 
       // Fall back to verified chain building via X509_STORE if needed
       VerifyStore := nil;

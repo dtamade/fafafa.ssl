@@ -74,6 +74,7 @@ begin
     TestResult('SSL_set_accept_state', Assigned(SSL_set_accept_state));
     TestResult('SSL_get_peer_certificate', Assigned(SSL_get_peer_certificate));
     TestResult('SSL_get_peer_cert_chain', Assigned(SSL_get_peer_cert_chain));
+    TestResult('SSL_get0_verified_chain', Assigned(SSL_get0_verified_chain));
     TestResult('SSL_get_verify_result', Assigned(SSL_get_verify_result));
     TestResult('SSL_session_reused', Assigned(SSL_session_reused));
     WriteLn;
