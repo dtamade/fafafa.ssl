@@ -116,6 +116,11 @@ function Test-ModuleCompile {
             }
         } else {
             Write-Log "❌ $moduleName - FAILED" "ERROR"
+            if ($result) {
+                Write-Log "---- compiler output (tail) ----" "ERROR"
+                ($result | Select-Object -Last 60) | ForEach-Object { Write-Log ("  " + $_) "ERROR" }
+                Write-Log "---- end compiler output ----" "ERROR"
+            }
             $stats.Failed++
             $stats.Errors += $moduleName
             return @{

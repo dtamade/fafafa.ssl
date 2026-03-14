@@ -43,6 +43,14 @@ Write-Host ("project_root: " + $ProjectRootAbs) -ForegroundColor Gray
 Write-Host ("build_dir: " + $BuildDir) -ForegroundColor Gray
 Write-Host ""
 
+Write-Host "[INFO] fpc version" -ForegroundColor Gray
+try {
+  & fpc -iV
+} catch {
+  Write-Host "[WARN] failed to query fpc version" -ForegroundColor Yellow
+}
+Write-Host ""
+
 # Minimal, non-network, non-interactive tests.
 $TestFiles = @(
   "tests\\winssl\\test_winssl_api_basic.pas",
@@ -74,6 +82,7 @@ function Invoke-CompileRun {
   }
   if ($LASTEXITCODE -ne 0 -or -not (Test-Path $exePath)) {
     Write-Host ("[FAIL] compile failed: " + $PasRelPath) -ForegroundColor Red
+    $compileOut | Select-Object -Last 160 | ForEach-Object { Write-Host ("  " + $_) -ForegroundColor DarkGray }
     return 1
   }
 

@@ -42,6 +42,14 @@ Write-Host ("project_root: " + $ProjectRootAbs) -ForegroundColor Gray
 Write-Host ("build_dir: " + $BuildDir) -ForegroundColor Gray
 Write-Host ""
 
+Write-Host "[INFO] fpc version" -ForegroundColor Gray
+try {
+  & fpc -iV
+} catch {
+  Write-Host "[WARN] failed to query fpc version" -ForegroundColor Yellow
+}
+Write-Host ""
+
 Write-Host "[INFO] openssl.exe detection (best-effort)" -ForegroundColor Gray
 $openssl = Get-Command openssl -ErrorAction SilentlyContinue
 if ($openssl) {
@@ -72,6 +80,7 @@ if ($PSBoundParameters.ContainsKey('Verbose')) {
 }
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path $exePath)) {
   Write-Host ("[FAIL] compile failed: " + $TestFileRel) -ForegroundColor Red
+  $compileOut | Select-Object -Last 120 | ForEach-Object { Write-Host ("  " + $_) -ForegroundColor DarkGray }
   exit 1
 }
 
