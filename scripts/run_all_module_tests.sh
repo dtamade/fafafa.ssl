@@ -15,9 +15,10 @@
 #   --verbose    显示详细输出
 #   --stop-on-fail  遇到失败立即停止
 #   --modules    指定要测试的模块（逗号分隔）
-#   --bin-dir DIR    指定测试可执行文件输出目录（默认: ./bin）
-#   --reports-dir DIR 指定测试报告输出目录（默认: ./test-reports）
+#   --bin-dir DIR    指定测试可执行文件输出目录（默认: ./tmp/run_all_module_tests_bin_<run_id>）
+#   --reports-dir DIR 指定测试报告输出目录（默认: ./tmp/run_all_module_tests_reports_<run_id>）
 #   --fast-local  本地快速模式：输出到 ./tmp（避免污染 git 工作区）
+#   --dry-run   仅打印解析后的配置，不执行编译/测试
 #############################################################################
 
 set -e
@@ -35,7 +36,7 @@ TESTS_DIR="$PROJECT_ROOT/tests"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 RUN_ID="${TIMESTAMP}_$$"
 DEFAULT_REPORTS_DIR="$PROJECT_ROOT/tmp/run_all_module_tests_reports_${RUN_ID}"
-DEFAULT_BIN_DIR="$PROJECT_ROOT/bin"
+DEFAULT_BIN_DIR="$PROJECT_ROOT/tmp/run_all_module_tests_bin_${RUN_ID}"
 DEFAULT_FPC_UNIT_OUTPUT_DIR="$PROJECT_ROOT/tmp/run_all_module_tests_units_${RUN_ID}"
 
 REPORTS_DIR_FROM_ENV=false
@@ -72,6 +73,7 @@ VERBOSE=false
 STOP_ON_FAIL=false
 SPECIFIC_MODULES=""
 FAST_LOCAL=false
+DRY_RUN=false
 
 # 解析命令行参数
 while [[ $# -gt 0 ]]; do
@@ -101,6 +103,10 @@ while [[ $# -gt 0 ]]; do
     --modules)
       SPECIFIC_MODULES="$2"
       shift 2
+      ;;
+    --dry-run)
+      DRY_RUN=true
+      shift
       ;;
     *)
       echo "未知选项: $1"
@@ -135,6 +141,15 @@ fi
 
 if [[ "$FPC_UNIT_OUTPUT_DIR" != /* ]]; then
   FPC_UNIT_OUTPUT_DIR="$PROJECT_ROOT/$FPC_UNIT_OUTPUT_DIR"
+fi
+
+if [[ "$DRY_RUN" == "true" ]]; then
+  echo "Run ID: $RUN_ID"
+  echo "FPC executable: $FPC_EXE"
+  echo "Reports dir: $REPORTS_DIR"
+  echo "Binary output dir: $BIN_DIR"
+  echo "FPC unit output dir: $FPC_UNIT_OUTPUT_DIR"
+  exit 0
 fi
 
 REPORT_FILE="$REPORTS_DIR/test_report_$RUN_ID.txt"
