@@ -419,6 +419,8 @@ begin
           'libcrypto.so.1.1',         // OpenSSL 1.1.x
           'libcrypto.so.1.0.0',       // OpenSSL 1.0.x
           'libcrypto.so',             // 通用符号链接
+          'libcrypto.3.dylib',        // OpenSSL 3.x (macOS/Homebrew)
+          'libcrypto.1.1.dylib',      // OpenSSL 1.1.x (macOS/Homebrew)
           'libcrypto.dylib'           // macOS
           {$ENDIF}
         ]);
@@ -449,6 +451,8 @@ begin
           'libssl.so.1.1',
           'libssl.so.1.0.0',
           'libssl.so',
+          'libssl.3.dylib',           // OpenSSL 3.x (macOS/Homebrew)
+          'libssl.1.1.dylib',         // OpenSSL 1.1.x (macOS/Homebrew)
           'libssl.dylib'
           {$ENDIF}
         ]);
