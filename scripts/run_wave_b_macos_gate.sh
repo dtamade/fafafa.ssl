@@ -142,7 +142,7 @@ fi
 probe_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} bash scripts/detect_macos_openssl_enhanced.sh --json > '$PROBE_JSON_REL'"
 path_check_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} bash scripts/run_macos_openssl_path_check_draft.sh ${path_check_flag}"
 compile_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} python3 scripts/compile_all_modules.py"
-modules_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
+modules_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} bash scripts/run_all_module_tests.sh --modules $MODULE_SET --reports-dir '$OUTPUT_DIR_REL/module_tests_${RUN_ID}' --bin-dir 'tmp/module_tests_bin_${RUN_ID}'"
 examples_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} bash scripts/verify_examples_compile.sh -f json -o '$EXAMPLES_JSON_REL'"
 
 if [[ "$VERBOSE" == "true" ]]; then

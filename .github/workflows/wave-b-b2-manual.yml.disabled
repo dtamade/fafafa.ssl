@@ -118,8 +118,10 @@ jobs:
           name: wave-b-macos-${{ needs.setup.outputs.run_id }}
           path: |
             test-reports/wave_b_macos_gate_summary_${{ needs.setup.outputs.run_id }}.md
+            test-reports/wave_b_macos_gate_probe_${{ needs.setup.outputs.run_id }}.json
             test-reports/wave_b_macos_*.log
             test-reports/examples_compile_gate_macos_${{ needs.setup.outputs.run_id }}.json
+            test-reports/module_tests_${{ needs.setup.outputs.run_id }}
           if-no-files-found: warn
 
   windows-gate:
@@ -134,8 +136,8 @@ jobs:
         run: |
           choco install -y freepascal
           $fpcCandidates = @(
-            "C:\tools\freepascal\bin\i386-win32",
             "C:\tools\freepascal\bin\x86_64-win64",
+            "C:\tools\freepascal\bin\i386-win32",
             "C:\tools\freepascal\bin"
           )
           foreach ($p in $fpcCandidates) {
@@ -190,6 +192,8 @@ jobs:
           path: |
             test-reports/wave_b_windows_gate_summary_${{ needs.setup.outputs.run_id }}.md
             test-reports/wave_b_windows_*.log
+            test-reports/validate_all_modules_report_${{ needs.setup.outputs.run_id }}.md
+            test-reports/validate_all_modules_compile_${{ needs.setup.outputs.run_id }}.log
           if-no-files-found: warn
 
   summary:
