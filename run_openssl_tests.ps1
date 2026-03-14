@@ -29,6 +29,39 @@ if (-not (Test-Path $OutDirAbs)) {
   New-Item -Path $OutDirAbs -ItemType Directory -Force | Out-Null
 }
 
+function Get-FpcUnitPaths {
+  param(
+    [string]$SrcDir
+  )
+
+  $paths = @()
+  $paths += ("-Fu" + $SrcDir)
+
+  try {
+    $fpc = Get-Command fpc -ErrorAction SilentlyContinue
+    if (-not $fpc) { return $paths }
+
+    $binDir = Split-Path -Parent $fpc.Source
+    $root = (Resolve-Path (Join-Path $binDir "..\\..")).Path
+
+    $tp = (& fpc -iTP 2>$null).Trim()
+    $to = (& fpc -iTO 2>$null).Trim()
+    if ([string]::IsNullOrWhiteSpace($tp) -or [string]::IsNullOrWhiteSpace($to)) { return $paths }
+
+    $unitsBase = Join-Path $root ("units\\" + $tp + "-" + $to)
+    if (-not (Test-Path $unitsBase)) { return $paths }
+
+    $paths += ("-Fu" + $unitsBase)
+    Get-ChildItem -Path $unitsBase -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+      $paths += ("-Fu" + $_.FullName)
+    }
+  } catch {
+    return $paths
+  }
+
+  return $paths
+}
+
 $BuildDir = Join-Path $ProjectRootAbs ("tmp\\wave_b_openssl_" + $RunId)
 if (-not (Test-Path $BuildDir)) {
   New-Item -Path $BuildDir -ItemType Directory -Force | Out-Null
@@ -66,9 +99,7 @@ if (-not (Test-Path $TestFileAbs)) {
   exit 1
 }
 
-$UnitPaths = @(
-  ("-Fu" + $SrcDir)
-)
+$UnitPaths = Get-FpcUnitPaths -SrcDir $SrcDir
 
 $name = [IO.Path]::GetFileNameWithoutExtension($TestFileAbs)
 $exePath = Join-Path $BuildDir ($name + ".exe")

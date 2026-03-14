@@ -68,6 +68,41 @@ $moduleGroups = [ordered]@{
     "OpenSSL_Backend" = $allModules | Where-Object { $_.Name -like "fafafa.ssl.openssl.*.pas" -and $_.Name -notlike "fafafa.ssl.openssl.api*.pas" }
 }
 
+function Get-FpcUnitArgs {
+    param(
+        [string]$SrcDir
+    )
+
+    $args = @()
+    $args += ("-Fu" + $SrcDir)
+
+    try {
+        $fpc = Get-Command fpc -ErrorAction SilentlyContinue
+        if (-not $fpc) { return $args }
+
+        $binDir = Split-Path -Parent $fpc.Source
+        $root = (Resolve-Path (Join-Path $binDir "..\\..")).Path
+
+        $tp = (& fpc -iTP 2>$null).Trim()
+        $to = (& fpc -iTO 2>$null).Trim()
+        if ([string]::IsNullOrWhiteSpace($tp) -or [string]::IsNullOrWhiteSpace($to)) { return $args }
+
+        $unitsBase = Join-Path $root ("units\\" + $tp + "-" + $to)
+        if (-not (Test-Path $unitsBase)) { return $args }
+
+        $args += ("-Fu" + $unitsBase)
+        Get-ChildItem -Path $unitsBase -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+            $args += ("-Fu" + $_.FullName)
+        }
+    } catch {
+        return $args
+    }
+
+    return $args
+}
+
+$FpcUnitArgs = Get-FpcUnitArgs -SrcDir $srcDir
+
 # 辅助函数：写日志
 function Write-Log {
     param([string]$Message, [string]$Level = "INFO")
@@ -93,7 +128,7 @@ function Test-ModuleCompile {
     
     Write-Log "Testing module: $moduleName" "INFO"
     
-    # 基本语法检查（使用 fpc -Sew 仅检查语法）
+    # 轻量编译检查：隔离 -FU 产物目录，避免污染 src/；不因 warning 退出（Windows runner 默认会产生 UnicodeString 转换 warning）。
     $fpcPath = "fpc"  # 假设FPC在PATH中
     
     try {
@@ -103,7 +138,12 @@ function Test-ModuleCompile {
             New-Item -ItemType Directory -Path $unitOutDir -Force | Out-Null
         }
 
-        $result = & $fpcPath -Sew ("-Fu" + $srcDir) ("-FU" + $unitOutDir) "$ModulePath" 2>&1
+        $fpcArgs = @()
+        $fpcArgs += $script:FpcUnitArgs
+        $fpcArgs += ("-FU" + $unitOutDir)
+        $fpcArgs += "$ModulePath"
+
+        $result = & $fpcPath @fpcArgs 2>&1
         
         if ($LASTEXITCODE -eq 0) {
             Write-Log "✅ $moduleName - OK" "SUCCESS"
