@@ -15,7 +15,11 @@
 ### 运行命令
 
 ```bash
-bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT
+# 推荐：fast-local（输出到 ./tmp，避免污染 git 工作区）
+bash scripts/run_all_module_tests.sh --fast-local --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT
+
+# 若需要把报告落盘到 test-reports/（便于提交/归档），请显式指定输出目录
+bash scripts/run_all_module_tests.sh --reports-dir test-reports --bin-dir bin --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT
 ```
 
 ### 结果摘要

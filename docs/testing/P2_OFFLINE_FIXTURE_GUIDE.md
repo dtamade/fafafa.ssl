@@ -97,7 +97,8 @@
 生成/更新夹具后，运行：
 
 ```bash
-bash scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT
+# 推荐：fast-local（输出到 ./tmp，避免污染 git 工作区）
+bash scripts/run_all_module_tests.sh --fast-local --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT
 python3 scripts/compile_all_modules.py
 ```
 
@@ -105,5 +106,11 @@ python3 scripts/compile_all_modules.py
 
 ```bash
 cat docs/test_reports/P2_MODULES_TEST_REPORT.md
-ls -1 test-reports/test_report_*.txt | tail -n 3
+ls -1 tmp/test-reports/test_report_*.txt | tail -n 3
+```
+
+若需要把证据落盘到 `test-reports/`（便于提交/归档），请显式指定输出目录：
+
+```bash
+bash scripts/run_all_module_tests.sh --reports-dir test-reports --bin-dir bin --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT
 ```
