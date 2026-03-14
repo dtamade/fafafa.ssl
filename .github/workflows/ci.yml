@@ -5,83 +5,96 @@ on:
     branches: [ master, main, develop ]
   pull_request:
     branches: [ master, main ]
-  schedule:
-    # Run daily at 00:00 UTC
-    - cron: '0 0 * * *'
 
 env:
   FPC_VERSION: '3.2.2'
 
 jobs:
   # ============================================================================
-  # OpenSSL Module Tests - Linux 平台测试
-  # 注意：macOS 和 Windows 平台支持正在开发中
+  # Minimal Gate (Linux) - fast + repeatable + aligns with local smoke commands
   # ============================================================================
-  openssl-module-tests:
+  minimal-gate-linux:
+    name: Minimal Gate (Linux)
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Install Free Pascal and OpenSSL
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y fpc libssl-dev
-        fpc -iV
-        openssl version
+      - name: Install Free Pascal and OpenSSL
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fpc libssl-dev python3
+          fpc -iV
+          openssl version
 
-    - name: Create output directories
-      run: |
-        mkdir -p bin
-        mkdir -p test-reports
+      - name: Run minimal CI gate
+        shell: bash
+        run: |
+          RUN_ID="gh_${GITHUB_RUN_ID:-0}_${GITHUB_RUN_ATTEMPT:-0}"
+          echo "RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
 
-    - name: Run all module tests
-      run: |
-        chmod +x scripts/run_all_module_tests.sh
-        ./scripts/run_all_module_tests.sh --verbose
+          mkdir -p tmp/test-reports
+          FAFAFA_MINIMAL_CI_GATE_RUN_ID="$RUN_ID" \
+            bash scripts/run_minimal_ci_gate.sh --fast-local 2>&1 \
+            | tee "tmp/test-reports/minimal_ci_gate_${RUN_ID}.log"
 
-    - name: Upload test reports
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-reports
-        path: test-reports/
-        retention-days: 30
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minimal-gate-${{ env.RUN_ID }}
+          path: tmp/test-reports/
+          retention-days: 14
 
-    - name: Generate test summary
-      if: always()
-      run: |
-        echo "## 测试结果摘要" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        if [ -f test-reports/test_report_*.txt ]; then
-          LATEST_REPORT=$(ls -t test-reports/test_report_*.txt | head -1)
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          tail -30 "$LATEST_REPORT" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        fi
+      - name: Append step summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## Minimal CI Gate" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- run_id: \`${RUN_ID:-unknown}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if ls tmp/test-reports/test_report_*.txt >/dev/null 2>&1; then
+            LATEST_REPORT="$(ls -t tmp/test-reports/test_report_*.txt | head -1)"
+            echo "### Latest module test report (tail)" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+            tail -40 "$LATEST_REPORT" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if ls tmp/test-reports/minimal_ci_gate_*.log >/dev/null 2>&1; then
+            LATEST_LOG="$(ls -t tmp/test-reports/minimal_ci_gate_*.log | head -1)"
+            echo "### Minimal gate log (tail)" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+            tail -60 "$LATEST_LOG" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   # ============================================================================
-  # Code Quality Checks
+  # Code Quality Checks (Light) - keep it cheap and non-flaky
   # ============================================================================
   code-quality:
+    name: Code Quality (Light)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Check for TODO/FIXME
-      run: |
-        echo "=== Checking for TODO/FIXME markers ==="
-        grep -rn "TODO\|FIXME" src/*.pas || echo "No TODO/FIXME found"
+      - name: Check for TODO/FIXME
+        shell: bash
+        run: |
+          echo "=== Checking for TODO/FIXME markers (src/) ==="
+          grep -rn "TODO\\|FIXME" src || true
 
-    - name: Check line count statistics
-      run: |
-        echo "=== Source code statistics ==="
-        echo "Pascal source files:"
-        find src -name "*.pas" | wc -l
-        echo "Total lines:"
-        find src -name "*.pas" -exec cat {} \; | wc -l
-        echo "Test files:"
-        find tests -name "*.pas" | wc -l
+      - name: Source statistics
+        shell: bash
+        run: |
+          echo "=== Source code statistics ==="
+          echo "Pascal source files: $(find src -name '*.pas' | wc -l)"
+          echo "Test files: $(find tests -name '*.pas' | wc -l)"

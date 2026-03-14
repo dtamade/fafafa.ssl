@@ -1,4 +1,4 @@
-name: 🧪 Multi-Platform Tests
+name: 🧪 Multi-Platform Tests (Disabled)
 
 on:
   push:

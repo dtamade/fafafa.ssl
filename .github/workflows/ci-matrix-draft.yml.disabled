@@ -1,4 +1,4 @@
-name: CI Matrix (Draft)
+name: CI Matrix (Draft, Disabled)
 
 # B63: GitHub Actions 多平台矩阵测试工作流草案
 # 状态: draft - 需要根据实际环境调整
