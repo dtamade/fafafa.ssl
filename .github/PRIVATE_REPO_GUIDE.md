@@ -107,4 +107,37 @@ full-tests:
 
 ## 🎯 针对私有仓库的优化配置
 
-让我为您创建一个**轻量级**的工作流配置：
+目标：把 GitHub Actions 用量压到最低，但仍能阻断关键回归。
+
+### 推荐启用组合（低成本）
+
+1. 保留 `.github/workflows/ci.yml`（Linux minimal gate，PR/Push 阻断）
+2. 保留 `.github/workflows/tls13-signer-gate.yml`（仅在 TLS13 signer 相关变更触发）
+3. 保留 `.github/workflows/wave-b-b2-manual.yml`（手动触发，不占用日常额度）
+
+### 建议的触发限制（示例）
+
+将 `ci.yml` 的触发改为只在关键路径变化时运行（按需调整）：
+
+```yaml
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - '.github/workflows/**'
+```
+
+### 进一步节省（可选）
+
+- 只在 PR 上跑：移除 `push` 触发（或只保留 `master`）。
+- 把长时任务放到手动/夜间：性能基准、全量多平台矩阵等建议保留为 `.disabled` 模板，按需启用。

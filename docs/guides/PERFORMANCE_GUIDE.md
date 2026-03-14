@@ -270,11 +270,13 @@ cd tests/benchmarks
 **配置 CI 集成**（可选）：
 ```yaml
 # .github/workflows/ci.yml
-- name: Performance Tests
+# 建议：不要把长时基准放进默认 CI（避免不稳定与耗时）。
+# 如需集成，可在独立 workflow 中手动触发或仅在 nightly/release 触发。
+- name: Performance Tests (optional)
   run: |
     cd tests/benchmarks
     ./run_all_benchmarks.sh
-    # 检查回归（15% 阈值）
+    # 后续：加入稳定的回归判定与阈值策略（建议在独立 workflow 中实现）
 ```
 
 ---

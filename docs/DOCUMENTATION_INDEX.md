@@ -206,7 +206,11 @@
 ### 工具与维护
 - **[TOOLS.md](TOOLS.md)**
 - **[../tools/README.md](../tools/README.md)** - 能力矩阵可视化工具 🆕
-- **[../.github/workflows/ci-matrix-draft.yml](../.github/workflows/ci-matrix-draft.yml)** - GitHub Actions 多平台 CI 工作流 🆕
+- **[../.github/workflows/ci.yml](../.github/workflows/ci.yml)** - Linux minimal CI gate（启用）
+- **[../.github/workflows/wave-b-b2-manual.yml](../.github/workflows/wave-b-b2-manual.yml)** - Wave B/B2 跨平台手动门禁（启用）
+- **[../.github/workflows/tls13-signer-gate.yml](../.github/workflows/tls13-signer-gate.yml)** - TLS13 signer 专项门禁（启用）
+- **[../.github/workflows/test-all-platforms.yml.disabled](../.github/workflows/test-all-platforms.yml.disabled)** - 多平台全量 workflow 模板（默认禁用）
+- **[../.github/workflows/ci-matrix-draft.yml.disabled](../.github/workflows/ci-matrix-draft.yml.disabled)** - 多平台矩阵 workflow 草案（默认禁用）
 - **[../scripts/detect_macos_openssl_enhanced.sh](../scripts/detect_macos_openssl_enhanced.sh)** - macOS OpenSSL 增强检测脚本 🆕
 - **[../scripts/check_wave_c_local_first_continuity.sh](../scripts/check_wave_c_local_first_continuity.sh)** - Wave C 本地优先连续性检查脚本（B123） 🆕
 - **[../scripts/check_wave_c_local_drift_watch.sh](../scripts/check_wave_c_local_drift_watch.sh)** - Wave C 本地优先周期漂移检查脚本（B124） 🆕

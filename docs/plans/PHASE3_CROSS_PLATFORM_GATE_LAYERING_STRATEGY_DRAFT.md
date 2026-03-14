@@ -66,7 +66,7 @@ brew list openssl@3 >/dev/null
 `L1`（快速阻断）
 
 ```bash
-# 参考 test-all-platforms.yml 的 compile steps
+# 参考 .github/workflows/test-all-platforms.yml.disabled 的 compile steps
 for test in tests/test_*.pas; do
   if [[ ! "$test" =~ winssl ]]; then
     fpc -Fusrc -FEtests/bin "$test" || exit 1
@@ -105,7 +105,7 @@ fpc -iV
 `L1`（快速阻断）
 
 ```powershell
-# 参考 test-all-platforms.yml 的 lazbuild 阶段
+# 参考 .github/workflows/test-all-platforms.yml.disabled 的 lazbuild 阶段
 lazbuild tests/test_core_comprehensive.lpi
 lazbuild tests/test_p2_pkcs7_comprehensive.lpi
 lazbuild tests/test_p2_pkcs12_comprehensive.lpi

@@ -10,8 +10,8 @@
 
 ## 工作流文件
 
-- **路径**: `.github/workflows/ci-matrix-draft.yml`
-- **状态**: 草案，需要根据实际环境调整
+- **路径**: `.github/workflows/ci-matrix-draft.yml.disabled`
+- **状态**: 草案；默认禁用（需要移除 `.disabled` 后缀并提交后才会在 GitHub Actions 中生效）
 
 ## 工作流结构
 
@@ -84,6 +84,12 @@ on:
 ## 手动触发
 
 ```bash
+# 先启用（移除 .disabled 后缀并提交）
+mv .github/workflows/ci-matrix-draft.yml.disabled .github/workflows/ci-matrix-draft.yml
+git add .github/workflows/ci-matrix-draft.yml
+git commit -m "chore(ci): enable ci-matrix-draft workflow"
+git push
+
 # 使用 GitHub CLI
 gh workflow run ci-matrix-draft.yml
 

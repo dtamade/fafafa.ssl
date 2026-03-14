@@ -91,6 +91,7 @@ bash scripts/archive_ci_artifacts_draft.sh --profile release --run-id windows_${
 ## 5. CI 接入建议（Draft）
 
 - 复用 `test-all-platforms.yml` 的 Windows job：
+  - 注意：该 workflow 当前以模板形式保留为 `.github/workflows/test-all-platforms.yml.disabled`，需要时可按需启用。
   - L0/L1/L2 按现有 lazbuild + exe 执行流程。
   - L3 在 nightly/release 触发时追加。
 - 归档命名建议：

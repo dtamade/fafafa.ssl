@@ -108,7 +108,7 @@ scripts/verify_examples_compile.sh
 
 - `docs/guides/QUICKSTART_30SEC.md` - 30 秒示例索引
 - `docs/guides/COMMON_PITFALLS.md` - 常见陷阱指南
-- `.github/workflows/ci-matrix-draft.yml` - CI 工作流
+- `.github/workflows/ci-matrix-draft.yml.disabled` - CI 工作流草案（默认禁用）
 
 ## 变更历史
 

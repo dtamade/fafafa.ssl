@@ -301,24 +301,26 @@ Lib := CreateWinSSLLibrary();
 
 ## 🚀 CI/CD 支持
 
-### GitHub Actions
-项目使用 GitHub Actions 进行跨平台测试:
+### GitHub Actions（当前口径）
+默认启用的是 Linux minimal gate（`ci.yml`），其执行入口与本地 smoke 对齐：
 
 ```yaml
-# .github/workflows/test-all-platforms.yml
+# .github/workflows/ci.yml（节选）
 jobs:
-  test:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        fpc-version: ['3.2.2', '3.3.1']
-    runs-on: ${{ matrix.os }}
+  minimal-gate-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/run_minimal_ci_gate.sh --fast-local
 ```
 
 ### 当前状态
-- ✅ Windows CI: 已配置并运行
-- ✅ Linux CI: 已配置并运行
-- 🔄 macOS CI: 配置中
+- ✅ Linux minimal gate：启用（push/PR 自动触发）
+- ✅ TLS13 signer gate：启用（按路径触发 + 手动）
+- ✅ Wave B/B2 跨平台手动门禁：启用（workflow_dispatch）
+- ⏸ 全量多平台 workflow：默认禁用（模板保留：`.github/workflows/test-all-platforms.yml.disabled`）
+
+> 备注：历史多平台矩阵草案保留为 `.github/workflows/ci-matrix-draft.yml.disabled`，需要时可按需启用。
 
 ---
 

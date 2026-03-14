@@ -199,7 +199,8 @@ python3 scripts/compile_all_modules.py
 
 ## 最新执行更新（2026-02-08 04:26 +0800）
 
-- B94 已落地 Wave B/B2 手动流水线模板：`.github/workflows/wave-b-b2-manual.yml.disabled`
+- B94 已落地 Wave B/B2 手动流水线模板：`.github/workflows/wave-b-b2-manual.yml.disabled`（历史模板保留）
+- 2026-03-14：已启用版工作流为 `.github/workflows/wave-b-b2-manual.yml`（并保留 `.disabled` 备份）
 - 模板内已串联 cross-summary 与 closure readiness，两者可在一次 dispatch 内完成。
 
 ## 最新执行更新（2026-02-08 04:30 +0800）
