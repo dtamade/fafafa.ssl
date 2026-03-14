@@ -1,6 +1,7 @@
 unit fafafa.ssl.winssl.native_handle;
 
 {$mode ObjFPC}{$H+}
+{$CODEPAGE UTF8}
 
 interface
 

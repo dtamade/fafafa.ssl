@@ -14,6 +14,7 @@
 unit fafafa.ssl.winssl.session;
 
 {$mode objfpc}{$H+}
+{$CODEPAGE UTF8}
 
 interface
 
