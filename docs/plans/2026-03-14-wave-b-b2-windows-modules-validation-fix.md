@@ -34,4 +34,5 @@
 ## Expected Outputs / Acceptance
 - `test_validate_all_modules_module_scan_and_threshold_contract` => PASS
 - Windows gate 产物中 `wave_b_windows_modules_<run_id>.log` 不再充斥“文件不存在” warning
+- Windows gate 产物中 `validate_all_modules_report_<run_id>.md` 存在且可直接审查失败模块与统计
 - 若 runner 环境或脚本路径异常导致模块扫描不足，`modules` 步骤必须 `FAIL`（exit!=0）

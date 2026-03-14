@@ -15,12 +15,17 @@
 1) **统一 run_id**：所有平台 summary 与 examples report 统一使用同一 `RUN_ID`，避免文件名与内容漂移。
 2) **平台脚本稳健性**：
    - macOS：不依赖 GNU timeout（回退 python 超时执行）
+   - macOS：OpenSSL loader 优先尝试 `libcrypto.3.dylib/libssl.3.dylib`（避免误加载系统 `libcrypto.dylib/libssl.dylib` 导致 P2 模块符号缺失）
    - Windows：PowerShell common `-Verbose` 兼容；gate 子步骤优先 `pwsh`；日志 UTF-8
+   - Windows：优先使用 `x86_64-win64` FPC（若存在），避免 32-bit 安装缺少 FCL 单元导致 `Contnrs/SyncObjs` 缺失
    - Windows modules：模块清单动态扫描 + 最小数量阈值，防止假阳性 PASS
 3) **闭环证据产物**：
    - cross-platform summary
    - closure readiness
    - evidence consistency
+4) **证据可审查性**：
+   - macOS：上传 OpenSSL probe JSON + module-tests reports 目录（便于定位 P2 模块失败原因）
+   - Windows：上传 `validate_all_modules_report` 与编译日志（便于定位缺单元/缺符号等环境问题）
 
 ## Files (touched in this wave)
 - Workflows:
