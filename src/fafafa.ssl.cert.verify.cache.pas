@@ -138,46 +138,87 @@ var
   LCtx: PEVP_MD_CTX;
   LDigest: array[0..31] of Byte;
   LLen: Cardinal;
-  LDerBio: PBIO;
-  LDerData: array[0..4095] of Byte;
+  LDer: TBytes;
   LDerLen: Integer;
+  LDerPtr: PByte;
 begin
-  SetLength(Result, 32);
+  Result := nil;
 
-  // 1. 获取 DER 编码
-  LDerBio := BIO_new(BIO_s_mem());
-  if LDerBio = nil then
+  if ACert = nil then
+    Exit;
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
+    Exit;
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmEVP) then
+    LoadEVP(GetCryptoLibHandle);
+
+  if not TOpenSSLLoader.IsModuleLoaded(osmX509) then
+    LoadOpenSSLX509;
+
+  // Prefer OpenSSL built-in X509_digest when available (no BIO, avoids DER buffer limits).
+  if not Assigned(X509_digest) then
+    LoadOpenSSLX509;
+
+  if (Assigned(X509_digest)) and (Assigned(EVP_sha256)) then
+  begin
+    SetLength(Result, 32);
+    LLen := 0;
+    if X509_digest(ACert, EVP_sha256(), @Result[0], @LLen) <> 1 then
+    begin
+      SetLength(Result, 0);
+      Exit;
+    end;
+    if LLen <> 32 then
+      SetLength(Result, 0);
+    Exit;
+  end;
+
+  // Fallback: compute digest from DER encoding.
+  if not Assigned(i2d_X509) then
+    LoadOpenSSLX509;
+
+  if not Assigned(i2d_X509) then
+    Exit;
+
+  LDerLen := i2d_X509(ACert, nil);
+  if LDerLen <= 0 then
+    Exit;
+
+  SetLength(LDer, LDerLen);
+  if Length(LDer) <> LDerLen then
+    Exit;
+
+  LDerPtr := @LDer[0];
+  if i2d_X509(ACert, @LDerPtr) <> LDerLen then
+    Exit;
+
+  if (not Assigned(EVP_MD_CTX_new)) or (not Assigned(EVP_MD_CTX_free)) or
+    (not Assigned(EVP_DigestInit_ex)) or (not Assigned(EVP_DigestUpdate)) or
+    (not Assigned(EVP_DigestFinal_ex)) or (not Assigned(EVP_sha256)) then
+    Exit;
+
+  LCtx := EVP_MD_CTX_new();
+  if LCtx = nil then
     Exit;
 
   try
-    if i2d_X509_bio(LDerBio, ACert) <> 1 then
+    if EVP_DigestInit_ex(LCtx, EVP_sha256(), nil) <> 1 then
+      Exit;
+    if EVP_DigestUpdate(LCtx, @LDer[0], Cardinal(Length(LDer))) <> 1 then
       Exit;
 
-    LDerLen := BIO_read(LDerBio, @LDerData[0], SizeOf(LDerData));
-    if LDerLen <= 0 then
+    LLen := 32;
+    if EVP_DigestFinal_ex(LCtx, @LDigest[0], LLen) <> 1 then
       Exit;
 
-    // 2. 计算 SHA-256
-    LCtx := EVP_MD_CTX_new();
-    if LCtx = nil then
+    if LLen <> 32 then
       Exit;
 
-    try
-      if EVP_DigestInit_ex(LCtx, EVP_sha256(), nil) <> 1 then
-        Exit;
-      if EVP_DigestUpdate(LCtx, @LDerData[0], Cardinal(LDerLen)) <> 1 then
-        Exit;
-
-      LLen := 32;
-      if EVP_DigestFinal_ex(LCtx, @LDigest[0], LLen) <> 1 then
-        Exit;
-
-      Move(LDigest[0], Result[0], 32);
-    finally
-      EVP_MD_CTX_free(LCtx);
-    end;
+    SetLength(Result, 32);
+    Move(LDigest[0], Result[0], 32);
   finally
-    BIO_free(LDerBio);
+    EVP_MD_CTX_free(LCtx);
   end;
 end;
 
