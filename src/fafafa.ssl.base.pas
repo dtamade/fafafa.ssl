@@ -183,9 +183,10 @@ type
     ssoNoTLSv1,             // 禁用 TLSv1.0
     ssoNoTLSv1_1,           // 禁用 TLSv1.1
     ssoNoTLSv1_2,           // 禁用 TLSv1.2
-    ssoNoTLSv1_3,            // 禁用 TLSv1.3
-    ssoRequireOCSPStapling,  // 强制要求 OCSP 装订（追加到末尾以保持历史序号兼容）
-    ssoEnableCertVerifyCache  // 启用证书验证缓存（默认关闭）
+    ssoNoTLSv1_3,             // 禁用 TLSv1.3
+    ssoRequireOCSPStapling,   // 强制要求 OCSP 装订
+    ssoEnableCertVerifyCache, // 启用证书验证缓存（默认关闭）
+    ssoRequireCertificateTransparency // 强制要求 Certificate Transparency（追加到末尾以保持历史序号兼容）
   );
   TSSLOptions = set of TSSLOption;
 
@@ -209,6 +210,21 @@ type
     sslHsCompleted,       // 已完成
     sslHsFailed,          // 失败
     sslHsRenegotiating    // 重新协商中
+  );
+
+  { TLS 1.3 Early Data / 0-RTT 状态 }
+  TSSLEarlyDataStatus = (
+    sslEarlyDataNone,      // 未启用 / 未排队
+    sslEarlyDataQueued,    // 客户端已排队 early data
+    sslEarlyDataAccepted,  // 对端接受 early data
+    sslEarlyDataRejected   // 对端拒绝 early data
+  );
+
+  { TLS 1.3 Early Data 服务端策略 }
+  TSSLEarlyDataServerPolicy = (
+    sslEarlyDataServerReject,  // 默认拒绝
+    sslEarlyDataServerAccept,  // 实验性接受
+    sslEarlyDataServerIssueOnly // 仅签发支持 early-data 的 ticket，但不接受 resumed early data
   );
 
   { SSL 错误代码 }
@@ -400,6 +416,11 @@ type
     EnableCompression: Boolean;              // 启用压缩
     EnableSessionTickets: Boolean;           // 启用会话票据
     EnableOCSPStapling: Boolean;             // 启用OCSP装订
+    ClientEarlyDataEnabled: Boolean;         // TLS 1.3 客户端 early-data 默认开关
+    ServerEarlyDataPolicy: TSSLEarlyDataServerPolicy; // 服务端 early-data 默认策略
+    ServerMaxEarlyDataSize: Cardinal;        // 服务端 early-data 默认上限
+    ServerEarlyDataReplayStoreFile: string;  // 服务端 early-data replay-store file opt-in
+    ServerEarlyDataReplayStoreDirectory: string;  // 服务端 early-data replay-store directory opt-in
     
     // 日志配置
     LogLevel: TSSLLogLevel;                  // 日志级别
@@ -720,6 +741,25 @@ type
     function GetHTTPGetCallback: TSSLHTTPGetCallback;
     procedure SetHTTPPostCallback(ACallback: TSSLHTTPPostCallback);
     function GetHTTPPostCallback: TSSLHTTPPostCallback;
+  end;
+
+  {**
+   * ISSLServerOCSPStaplingContext - 服务端 stapled OCSP 响应材料访问接口（可选）
+   *
+   * 通过可选接口暴露“调用方提供的服务端 stapled OCSP response material”，
+   * 不改变核心 `ISSLContext` 的跨后端契约。
+   *
+   * 当前语义有意保持收敛：
+   * - 只接受调用方提供的 DER bytes / 文件
+   * - 不负责 online fetch / refresh / responder 调度
+   *}
+  ISSLServerOCSPStaplingContext = interface
+    ['{1C55CE81-C4E0-4A1E-A9E7-47A9D44C4BC1}']
+    procedure ClearServerStapledOCSPResponse;
+    procedure SetServerStapledOCSPResponse(const AResponseDER: TBytes);
+    procedure LoadServerStapledOCSPResponseFile(const AFileName: string);
+    function HasServerStapledOCSPResponse: Boolean;
+    function GetServerStapledOCSPResponse: TBytes;
   end;
 
   {**
@@ -1301,6 +1341,53 @@ type
   end;
 
   {**
+   * ISSLEarlyDataContext - TLS 1.3 Early Data 上下文扩展接口
+   *
+   * 通过可选接口暴露 0-RTT 的上下文级别配置，避免改变核心
+   * `ISSLContext` 的既有语义。
+   *}
+  ISSLEarlyDataContext = interface
+    ['{2E4A74D9-C5F4-4BBA-8B94-93A9B828B54F}']
+
+    {** 启用/禁用客户端 early data 能力 *}
+    procedure SetClientEarlyDataEnabled(AEnabled: Boolean);
+
+    {** 获取客户端 early data 是否启用 *}
+    function GetClientEarlyDataEnabled: Boolean;
+
+    {** 设置服务端 early data accept/reject 策略 *}
+    procedure SetServerEarlyDataPolicy(APolicy: TSSLEarlyDataServerPolicy);
+
+    {** 获取服务端 early data accept/reject 策略 *}
+    function GetServerEarlyDataPolicy: TSSLEarlyDataServerPolicy;
+
+    {** 设置服务端签发 ticket 时的 max_early_data_size *}
+    procedure SetServerMaxEarlyDataSize(ASize: Cardinal);
+
+    {** 获取服务端签发 ticket 时的 max_early_data_size *}
+    function GetServerMaxEarlyDataSize: Cardinal;
+  end;
+
+  {**
+   * ISSLEarlyDataConnection - TLS 1.3 Early Data 连接扩展接口
+   *
+   * 通过可选接口暴露客户端排队 early data 与连接级状态查询能力，
+   * 不改变既有 `ISSLConnection.Write(...)` 的含义。
+   *}
+  ISSLEarlyDataConnection = interface
+    ['{6DAF8835-5B8A-4D6F-97FC-D0ED700B4C72}']
+
+    {** 在握手前排队客户端 early data 负载 *}
+    function SetEarlyData(const AData: TBytes): TSSLOperationResult;
+
+    {** 获取当前连接的 early data 状态 *}
+    function GetEarlyDataStatus: TSSLEarlyDataStatus;
+
+    {** 获取当前连接可用的 max_early_data_size 限额 *}
+    function GetEarlyDataLimit: Cardinal;
+  end;
+
+  {**
    * ISSLDiagnostics - 连接诊断扩展接口
    *
    * 提供连接健康状态、性能指标等诊断信息。
@@ -1389,6 +1476,47 @@ type
 
     {** 获取 OCSP 响应状态 *}
     function GetOCSPResponseStatus: string;
+  end;
+
+  {**
+   * ISSLCertificateTransparency - Certificate Transparency / SCT 扩展接口
+   *
+   * 提供连接级 SCT list surface。
+   * 这只表示 surface / parser 能力，不等于完整 CT policy / cryptographic verification。
+   *}
+  ISSLCertificateTransparency = interface
+    ['{D3A0FA1A-7E5A-4FC5-9A86-0B5C7A7426D1}']
+
+    {** 是否拿到了可用的 SCT list surface *}
+    function GetCertificateTransparencyEnabled: Boolean;
+
+    {** 获取原始 SignedCertificateTimestampList 字节 *}
+    function GetSignedCertificateTimestampList: TBytes;
+
+    {** 获取解析出的 SCT 数量 *}
+    function GetSignedCertificateTimestampCount: Integer;
+
+    {** 获取 CT/SCT surface 状态描述 *}
+    function GetCertificateTransparencyStatus: string;
+  end;
+
+  {**
+   * ISSLCertificateTransparencyValidation - Certificate Transparency validation 扩展接口
+   *
+   * 提供连接级 CT cryptographic validation / policy surface。
+   * 这只表示 validation result/policy 可观测，不等于连接一定会对 validation 失败 fail-closed。
+   *}
+  ISSLCertificateTransparencyValidation = interface
+    ['{8D5D2D62-8C58-4C62-A8D8-59CF5D9110A0}']
+
+    {** 是否拿到了 CT validation 结果 *}
+    function HasCertificateTransparencyValidationResult: Boolean;
+
+    {** 默认 CT policy 是否满足 *}
+    function IsCertificateTransparencyPolicySatisfied: Boolean;
+
+    {** 获取 CT validation 状态描述 *}
+    function GetCertificateTransparencyValidationStatus: string;
   end;
 
   {**

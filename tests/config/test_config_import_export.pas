@@ -20,14 +20,43 @@ program test_config_import_export;
 uses
   SysUtils,
   fafafa.ssl.base,
+  fafafa.ssl.backend.selector,
   fafafa.ssl.context.builder,
   fafafa.ssl.cert.utils,
+  fafafa.ssl.freepascal.lib,
+  fafafa.ssl.pkcs11.types,
   fafafa.ssl.exceptions,
   fpjson, jsonparser;
 
 var
   GTestsPassed: Integer = 0;
   GTestsFailed: Integer = 0;
+
+function CreateUnavailableBackendBuilder: ISSLContextBuilder;
+begin
+  Result := TSSLContextBuilder.Create.WithBackend(sslWinSSL);
+end;
+
+function CreateImpossibleAutoBackendBuilder: ISSLContextBuilder;
+var
+  LRequirements: TSSLRequirements;
+begin
+  LRequirements := CreateDefaultRequirements(optBalanced);
+  LRequirements.MinSecurityScore := 95;
+  Result := TSSLContextBuilder.Create.WithAutoBackendSelection(LRequirements);
+end;
+
+const
+  SOFTHSM_MODULE_PATH = '/usr/lib/softhsm/libsofthsm2.so';
+
+function BuildClientFails(ABuilder: ISSLContextBuilder): Boolean;
+var
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+begin
+  LResult := ABuilder.TryBuildClient(LContext);
+  Result := not LResult.IsOk;
+end;
 
 procedure Assert(ACondition: Boolean; const AMessage: string);
 begin
@@ -449,6 +478,7 @@ begin
 
   // Create new builder from JSON and add certificate
   LBuilder := TSSLContextBuilder.Create
+    .WithBackend(sslFreePascal)
     .ImportFromJSON(LJSON)
     .WithCertificatePEM(LCert)
     .WithPrivateKeyPEM(LKey);
@@ -513,6 +543,627 @@ begin
   Assert(True, 'Options imported successfully');
 end;
 
+{ Test 19: JSON round-trip preserves explicit backend selection }
+procedure Test_JSONRoundTrip_PreservesExplicitBackendSelection;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+begin
+  TestHeader('Test 19: JSON Round-Trip Preserves Explicit Backend Selection');
+
+  LBuilder := CreateUnavailableBackendBuilder;
+  Assert(BuildClientFails(LBuilder), 'Original explicit unavailable backend fails to build');
+
+  LJSON := LBuilder.ExportToJSON;
+  LBuilder := TSSLContextBuilder.Create.ImportFromJSON(LJSON);
+
+  Assert(BuildClientFails(LBuilder), 'JSON round-trip preserves explicit unavailable backend selection');
+end;
+
+{ Test 20: INI round-trip preserves explicit backend selection }
+procedure Test_INIRoundTrip_PreservesExplicitBackendSelection;
+var
+  LBuilder: ISSLContextBuilder;
+  LINI: string;
+begin
+  TestHeader('Test 20: INI Round-Trip Preserves Explicit Backend Selection');
+
+  LBuilder := CreateUnavailableBackendBuilder;
+  Assert(BuildClientFails(LBuilder), 'Original explicit unavailable backend fails to build for INI round-trip');
+
+  LINI := LBuilder.ExportToINI;
+  LBuilder := TSSLContextBuilder.Create.ImportFromINI(LINI);
+
+  Assert(BuildClientFails(LBuilder), 'INI round-trip preserves explicit unavailable backend selection');
+end;
+
+{ Test 21: JSON round-trip preserves auto-backend requirements }
+procedure Test_JSONRoundTrip_PreservesAutoBackendRequirements;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+begin
+  TestHeader('Test 21: JSON Round-Trip Preserves Auto-Backend Requirements');
+
+  LBuilder := CreateImpossibleAutoBackendBuilder;
+  Assert(BuildClientFails(LBuilder), 'Original unmet auto-backend requirements fail to build');
+
+  LJSON := LBuilder.ExportToJSON;
+  LBuilder := TSSLContextBuilder.Create.ImportFromJSON(LJSON);
+
+  Assert(BuildClientFails(LBuilder), 'JSON round-trip preserves unmet auto-backend requirements');
+end;
+
+{ Test 22: INI round-trip preserves auto-backend requirements }
+procedure Test_INIRoundTrip_PreservesAutoBackendRequirements;
+var
+  LBuilder: ISSLContextBuilder;
+  LINI: string;
+begin
+  TestHeader('Test 22: INI Round-Trip Preserves Auto-Backend Requirements');
+
+  LBuilder := CreateImpossibleAutoBackendBuilder;
+  Assert(BuildClientFails(LBuilder), 'Original unmet auto-backend requirements fail to build for INI round-trip');
+
+  LINI := LBuilder.ExportToINI;
+  LBuilder := TSSLContextBuilder.Create.ImportFromINI(LINI);
+
+  Assert(BuildClientFails(LBuilder), 'INI round-trip preserves unmet auto-backend requirements');
+end;
+
+{ Test 23: JSON round-trip preserves PKCS#11 URI server key source }
+procedure Test_JSONRoundTrip_PreservesPKCS11URI;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+  LValidation: TBuildValidationResult;
+  LCert, LKey: string;
+begin
+  TestHeader('Test 23: JSON Round-Trip Preserves PKCS#11 URI');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'pkcs11-json.test', 'Test Org', 30, LCert, LKey
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Exit;
+  end;
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithCertificatePEM(LCert)
+    .UsePKCS11('pkcs11:token=TestToken;object=ServerKey;type=private');
+  LValidation := LBuilder.ValidateServer;
+  Assert(LValidation.IsValid, 'Original PKCS#11 URI server config is valid before JSON round-trip');
+
+  LJSON := LBuilder.ExportToJSON;
+  LBuilder := TSSLContextBuilder.Create.ImportFromJSON(LJSON);
+  LValidation := LBuilder.ValidateServer;
+
+  Assert(LValidation.IsValid, 'JSON round-trip preserves PKCS#11 URI server key source');
+  if (not LValidation.IsValid) and (LValidation.ErrorCount > 0) then
+    WriteLn('    Error: ', LValidation.Errors[0]);
+end;
+
+{ Test 24: INI round-trip preserves PKCS#11 URI server key source }
+procedure Test_INIRoundTrip_PreservesPKCS11URI;
+var
+  LBuilder: ISSLContextBuilder;
+  LINI: string;
+  LValidation: TBuildValidationResult;
+begin
+  TestHeader('Test 24: INI Round-Trip Preserves PKCS#11 URI');
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithCertificate('/tmp/pkcs11-ini-cert.pem')
+    .UsePKCS11('pkcs11:token=TestToken;object=ServerKey;type=private');
+  LValidation := LBuilder.ValidateServer;
+  Assert(LValidation.IsValid, 'Original PKCS#11 URI server config is valid before INI round-trip');
+
+  LINI := LBuilder.ExportToINI;
+  LBuilder := TSSLContextBuilder.Create.ImportFromINI(LINI);
+  LValidation := LBuilder.ValidateServer;
+
+  Assert(LValidation.IsValid, 'INI round-trip preserves PKCS#11 URI server key source');
+  if (not LValidation.IsValid) and (LValidation.ErrorCount > 0) then
+    WriteLn('    Error: ', LValidation.Errors[0]);
+end;
+
+{ Test 25: JSON round-trip preserves PKCS#11 environment PIN source semantics }
+procedure Test_JSONRoundTrip_PreservesPKCS11EnvironmentPINSource;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+  LCert, LKey: string;
+begin
+  TestHeader('Test 25: JSON Round-Trip Preserves PKCS#11 Environment PIN Source');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'pkcs11-json-env.test', 'Test Org', 30, LCert, LKey
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Exit;
+  end;
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithBackend(sslFreePascal)
+    .WithCertificatePEM(LCert)
+    .UsePKCS11('pkcs11:token=TestToken;object=ServerKey;type=private?module-path=' + SOFTHSM_MODULE_PATH)
+    .WithPKCS11PIN('PKCS11_IMPORT_EXPORT_MISSING_ENV')
+    .WithPKCS11PINMethod(pmEnvironment);
+
+  LJSON := LBuilder.ExportToJSON;
+  LBuilder := TSSLContextBuilder.Create.ImportFromJSON(LJSON);
+  LResult := LBuilder.TryBuildServer(LContext);
+
+  Assert(LResult.IsErr, 'JSON round-trip keeps PKCS#11 environment PIN source failure observable');
+  Assert(Pos('environment variable', LowerCase(LResult.ErrorMessage)) > 0,
+    'JSON round-trip preserves missing environment variable error semantics');
+end;
+
+{ Test 26: INI round-trip preserves PKCS#11 PIN file source semantics }
+procedure Test_INIRoundTrip_PreservesPKCS11PINFileSource;
+var
+  LBuilder: ISSLContextBuilder;
+  LINI: string;
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+  LMissingPINFile: string;
+begin
+  TestHeader('Test 26: INI Round-Trip Preserves PKCS#11 PIN File Source');
+
+  LMissingPINFile := IncludeTrailingPathDelimiter(GetTempDir(False)) + 'pkcs11_import_export_missing_pin.txt';
+  if FileExists(LMissingPINFile) then
+    DeleteFile(LMissingPINFile);
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithBackend(sslFreePascal)
+    .WithCertificate('tests/certificate/test_certs/signer_cert.pem')
+    .UsePKCS11('pkcs11:token=TestToken;object=ServerKey;type=private?module-path=' + SOFTHSM_MODULE_PATH)
+    .WithPKCS11PIN(LMissingPINFile)
+    .WithPKCS11PINMethod(pmFile);
+
+  LINI := LBuilder.ExportToINI;
+  LBuilder := TSSLContextBuilder.Create.ImportFromINI(LINI);
+  LResult := LBuilder.TryBuildServer(LContext);
+
+  Assert(LResult.IsErr, 'INI round-trip keeps PKCS#11 PIN file source failure observable');
+  if Pos('pin file', LowerCase(LResult.ErrorMessage)) = 0 then
+    WriteLn('    Error: ', LResult.ErrorMessage);
+  Assert(Pos('pin file', LowerCase(LResult.ErrorMessage)) > 0,
+    'INI round-trip preserves missing PIN file error semantics');
+end;
+
+{ Test 27: Manual JSON import accepts named PKCS#11 PIN method values }
+procedure Test_JSONImport_AcceptsNamedPKCS11PINMethod;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+begin
+  TestHeader('Test 27: Manual JSON Import Accepts Named PKCS#11 PIN Method');
+
+  LJSON :=
+    '{' +
+    '"certificate_file":"tests/certificate/test_certs/signer_cert.pem",' +
+    '"pkcs11_uri":"pkcs11:token=TestToken;object=ServerKey;type=private?module-path=' + SOFTHSM_MODULE_PATH + '",' +
+    '"pkcs11_pin":"PKCS11_MANUAL_JSON_ENV",' +
+    '"pkcs11_pin_method":"pmEnvironment"' +
+    '}';
+
+  try
+    LBuilder := TSSLContextBuilder.Create.ImportFromJSON(LJSON);
+    LResult := LBuilder.TryBuildServer(LContext);
+    Assert(LResult.IsErr, 'Manual JSON import keeps named PKCS#11 env PIN method observable');
+    Assert(Pos('environment variable', LowerCase(LResult.ErrorMessage)) > 0,
+      'Manual JSON import preserves named PKCS#11 env source semantics');
+  except
+    on E: Exception do
+      Assert(False, 'Manual JSON import with named pkcs11_pin_method crashed: ' + E.Message);
+  end;
+end;
+
+{ Test 28: Manual INI import accepts named PKCS#11 PIN method values }
+procedure Test_INIImport_AcceptsNamedPKCS11PINMethod;
+var
+  LBuilder: ISSLContextBuilder;
+  LINI: string;
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+  LMissingPINFile: string;
+begin
+  TestHeader('Test 28: Manual INI Import Accepts Named PKCS#11 PIN Method');
+
+  LMissingPINFile := IncludeTrailingPathDelimiter(GetTempDir(False)) + 'pkcs11_manual_ini_missing_pin.txt';
+  if FileExists(LMissingPINFile) then
+    DeleteFile(LMissingPINFile);
+
+  LINI :=
+    '[main]' + LineEnding +
+    'certificate_file=tests/certificate/test_certs/signer_cert.pem' + LineEnding +
+    'pkcs11_uri=pkcs11:token=TestToken;object=ServerKey;type=private?module-path=' + SOFTHSM_MODULE_PATH + LineEnding +
+    'pkcs11_pin=' + LMissingPINFile + LineEnding +
+    'pkcs11_pin_method=pmFile' + LineEnding;
+
+  try
+    LBuilder := TSSLContextBuilder.Create.ImportFromINI(LINI);
+    LResult := LBuilder.TryBuildServer(LContext);
+    Assert(LResult.IsErr, 'Manual INI import keeps named PKCS#11 file PIN method observable');
+    Assert(Pos('pin file', LowerCase(LResult.ErrorMessage)) > 0,
+      'Manual INI import preserves named PKCS#11 file source semantics');
+  except
+    on E: Exception do
+      Assert(False, 'Manual INI import with named pkcs11_pin_method crashed: ' + E.Message);
+  end;
+end;
+
+{ Test 29: Manual JSON import with pkcs11_pin only resets stale method to direct PIN }
+procedure Test_JSONImport_PKCS11PINOnly_DefaultsToValue;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+begin
+  TestHeader('Test 29: Manual JSON Import With pkcs11_pin Only Resets Stale Method To Direct PIN');
+
+  LJSON :=
+    '{' +
+    '"certificate_file":"tests/certificate/test_certs/signer_cert.pem",' +
+    '"pkcs11_uri":"pkcs11:token=TestToken;object=ServerKey;type=private?module-path=' + SOFTHSM_MODULE_PATH + '&pin-source=env:PKCS11_URI_JSON_SHOULD_NOT_RUN",' +
+    '"pkcs11_pin":"1234"' +
+    '}';
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithBackend(sslFreePascal)
+    .WithPKCS11PINMethod(pmEnvironment)
+    .ImportFromJSON(LJSON);
+  LResult := LBuilder.TryBuildServer(LContext);
+
+  Assert(LResult.IsErr, 'Manual JSON import with pkcs11_pin only still fails without a real token');
+  Assert(Pos('environment variable', LowerCase(LResult.ErrorMessage)) = 0,
+    'Manual JSON import with pkcs11_pin only clears stale environment-source semantics');
+end;
+
+{ Test 30: Manual INI import with pkcs11_pin only resets stale method to direct PIN }
+procedure Test_INIImport_PKCS11PINOnly_DefaultsToValue;
+var
+  LBuilder: ISSLContextBuilder;
+  LINI: string;
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+begin
+  TestHeader('Test 30: Manual INI Import With pkcs11_pin Only Resets Stale Method To Direct PIN');
+
+  LINI :=
+    '[main]' + LineEnding +
+    'certificate_file=tests/certificate/test_certs/signer_cert.pem' + LineEnding +
+    'pkcs11_uri=pkcs11:token=TestToken;object=ServerKey;type=private?module-path=' + SOFTHSM_MODULE_PATH + '&pin-source=env:PKCS11_URI_INI_SHOULD_NOT_RUN' + LineEnding +
+    'pkcs11_pin=1234' + LineEnding;
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithBackend(sslFreePascal)
+    .WithPKCS11PINMethod(pmFile)
+    .ImportFromINI(LINI);
+  LResult := LBuilder.TryBuildServer(LContext);
+
+  Assert(LResult.IsErr, 'Manual INI import with pkcs11_pin only still fails without a real token');
+  Assert(Pos('pin file', LowerCase(LResult.ErrorMessage)) = 0,
+    'Manual INI import with pkcs11_pin only clears stale file-source semantics');
+end;
+
+{ Test 31: Manual JSON import with certificate_pem clears stale certificate_file state }
+procedure Test_JSONImport_CertificatePEMClearsStaleFileState;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+  LExported: TJSONData;
+  LImportObj: TJSONObject;
+  LObj: TJSONObject;
+  LCertPEM, LKeyPEM: string;
+begin
+  TestHeader('Test 31: Manual JSON Import With certificate_pem Clears Stale certificate_file');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'json-cert-pem-clear.test', 'Test Org', 30, LCertPEM, LKeyPEM
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Exit;
+  end;
+
+  LImportObj := TJSONObject.Create;
+  try
+    LImportObj.Add('certificate_pem', LCertPEM);
+    LJSON := LImportObj.AsJSON;
+  finally
+    LImportObj.Free;
+  end;
+  LBuilder := TSSLContextBuilder.Create
+    .WithCertificate('/tmp/stale-cert-file.pem')
+    .ImportFromJSON(LJSON);
+
+  LExported := GetJSON(LBuilder.ExportToJSON);
+  try
+    LObj := TJSONObject(LExported);
+    Assert(LObj.Strings['certificate_file'] = '',
+      'Manual JSON certificate_pem import clears stale certificate_file state');
+    Assert(LObj.Strings['certificate_pem'] = LCertPEM,
+      'Manual JSON certificate_pem import preserves imported PEM payload');
+  finally
+    LExported.Free;
+  end;
+end;
+
+{ Test 32: Manual JSON import with private_key_pem clears stale private_key_file state }
+procedure Test_JSONImport_PrivateKeyPEMClearsStaleFileState;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+  LExported: TJSONData;
+  LImportObj: TJSONObject;
+  LObj: TJSONObject;
+  LCertPEM, LKeyPEM: string;
+begin
+  TestHeader('Test 32: Manual JSON Import With private_key_pem Clears Stale private_key_file');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'json-key-pem-clear.test', 'Test Org', 30, LCertPEM, LKeyPEM
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Exit;
+  end;
+
+  LImportObj := TJSONObject.Create;
+  try
+    LImportObj.Add('private_key_pem', LKeyPEM);
+    LJSON := LImportObj.AsJSON;
+  finally
+    LImportObj.Free;
+  end;
+  LBuilder := TSSLContextBuilder.Create
+    .WithPrivateKey('/tmp/stale-private-key.pem')
+    .ImportFromJSON(LJSON);
+
+  LExported := GetJSON(LBuilder.ExportToJSON);
+  try
+    LObj := TJSONObject(LExported);
+    Assert(LObj.Strings['private_key_file'] = '',
+      'Manual JSON private_key_pem import clears stale private_key_file state');
+    Assert(LObj.Strings['private_key_pem'] = LKeyPEM,
+      'Manual JSON private_key_pem import preserves imported PEM payload');
+  finally
+    LExported.Free;
+  end;
+end;
+
+{ Test 33: Early-data policy and max size survive JSON/INI round-trip }
+procedure Test_EarlyDataPolicyMaxSize_RoundTrip;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON, LJSONRoundTrip: string;
+  LINI, LINIRoundTrip: string;
+  LRoot: TJSONData;
+  LObj: TJSONObject;
+begin
+  TestHeader('Test 33: Early-Data Policy And Max Size Round-Trip');
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithClientEarlyData(True)
+    .WithServerEarlyDataPolicy(sslEarlyDataServerIssueOnly)
+    .WithServerMaxEarlyDataSize(4096);
+
+  LJSON := LBuilder.ExportToJSON;
+  LRoot := GetJSON(LJSON);
+  try
+    LObj := TJSONObject(LRoot);
+    Assert(LObj.Booleans['client_early_data_enabled'],
+      'JSON export preserves client_early_data_enabled');
+    Assert(LObj.Integers['server_early_data_policy'] = Ord(sslEarlyDataServerIssueOnly),
+      'JSON export preserves server_early_data_policy');
+    Assert(LObj.Integers['server_max_early_data_size'] = 4096,
+      'JSON export preserves server_max_early_data_size');
+  finally
+    LRoot.Free;
+  end;
+
+  LJSONRoundTrip := TSSLContextBuilder.Create
+    .ImportFromJSON(LJSON)
+    .ExportToJSON;
+  Assert(LJSON = LJSONRoundTrip,
+    'JSON round-trip preserves early-data policy/max-size fields');
+
+  LINI := LBuilder.ExportToINI;
+  Assert(Pos('server_max_early_data_size=4096', LINI) > 0,
+    'INI export preserves server_max_early_data_size');
+  LINIRoundTrip := TSSLContextBuilder.Create
+    .ImportFromINI(LINI)
+    .ExportToINI;
+  Assert(LINI = LINIRoundTrip,
+    'INI round-trip preserves early-data policy/max-size fields');
+end;
+
+{ Test 34: JSON round-trip preserves server OCSP stapled response file }
+procedure Test_JSONRoundTrip_PreservesServerOCSPStapledResponseFile;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON, LJSONRoundTrip: string;
+  LRoot: TJSONData;
+  LObj: TJSONObject;
+  LFileName: string;
+begin
+  TestHeader('Test 34: JSON Round-Trip Preserves Server OCSP Stapled Response File');
+
+  LFileName := 'tests/fixtures/p2/ocsp/ocsp_response_successful_basic_v1.der';
+  LBuilder := TSSLContextBuilder.Create
+    .Override('server_ocsp_stapled_response_file', LFileName);
+
+  LJSON := LBuilder.ExportToJSON;
+  LRoot := GetJSON(LJSON);
+  try
+    LObj := TJSONObject(LRoot);
+    Assert(LObj.IndexOfName('server_ocsp_stapled_response_file') >= 0,
+      'JSON export keeps server_ocsp_stapled_response_file visible');
+    if LObj.IndexOfName('server_ocsp_stapled_response_file') >= 0 then
+      Assert(LObj.Strings['server_ocsp_stapled_response_file'] = LFileName,
+        'JSON export preserves server_ocsp_stapled_response_file value');
+  finally
+    LRoot.Free;
+  end;
+
+  LJSONRoundTrip := TSSLContextBuilder.Create
+    .ImportFromJSON(LJSON)
+    .ExportToJSON;
+  Assert(LJSON = LJSONRoundTrip,
+    'JSON round-trip preserves server_ocsp_stapled_response_file');
+end;
+
+{ Test 35: INI round-trip preserves server OCSP stapled response file }
+procedure Test_INIRoundTrip_PreservesServerOCSPStapledResponseFile;
+var
+  LBuilder: ISSLContextBuilder;
+  LINI, LINIRoundTrip: string;
+  LFileName: string;
+begin
+  TestHeader('Test 35: INI Round-Trip Preserves Server OCSP Stapled Response File');
+
+  LFileName := 'tests/fixtures/p2/ocsp/ocsp_response_successful_basic_v1.der';
+  LBuilder := TSSLContextBuilder.Create
+    .Override('server_ocsp_stapled_response_file', LFileName);
+
+  LINI := LBuilder.ExportToINI;
+  Assert(Pos('server_ocsp_stapled_response_file=' + LFileName, LINI) > 0,
+    'INI export preserves server_ocsp_stapled_response_file');
+
+  LINIRoundTrip := TSSLContextBuilder.Create
+    .ImportFromINI(LINI)
+    .ExportToINI;
+  Assert(LINI = LINIRoundTrip,
+    'INI round-trip preserves server_ocsp_stapled_response_file');
+end;
+
+{ Test 36: JSON round-trip preserves server early-data replay store file }
+procedure Test_JSONRoundTrip_PreservesServerEarlyDataReplayStoreFile;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON, LJSONRoundTrip: string;
+  LRoot: TJSONData;
+  LObj: TJSONObject;
+  LFileName: string;
+begin
+  TestHeader('Test 36: JSON Round-Trip Preserves Server Early-Data Replay Store File');
+
+  LFileName := 'tmp/freepascal_tls13_early_data/builder_replay_store.bin';
+  LBuilder := TSSLContextBuilder.Create
+    .Override('server_early_data_replay_store_file', LFileName);
+
+  LJSON := LBuilder.ExportToJSON;
+  LRoot := GetJSON(LJSON);
+  try
+    LObj := TJSONObject(LRoot);
+    Assert(LObj.IndexOfName('server_early_data_replay_store_file') >= 0,
+      'JSON export keeps server_early_data_replay_store_file visible');
+    if LObj.IndexOfName('server_early_data_replay_store_file') >= 0 then
+      Assert(LObj.Strings['server_early_data_replay_store_file'] = LFileName,
+        'JSON export preserves server_early_data_replay_store_file value');
+  finally
+    LRoot.Free;
+  end;
+
+  LJSONRoundTrip := TSSLContextBuilder.Create
+    .ImportFromJSON(LJSON)
+    .ExportToJSON;
+  Assert(LJSON = LJSONRoundTrip,
+    'JSON round-trip preserves server_early_data_replay_store_file');
+end;
+
+{ Test 37: INI round-trip preserves server early-data replay store file }
+procedure Test_INIRoundTrip_PreservesServerEarlyDataReplayStoreFile;
+var
+  LBuilder: ISSLContextBuilder;
+  LINI, LINIRoundTrip: string;
+  LFileName: string;
+begin
+  TestHeader('Test 37: INI Round-Trip Preserves Server Early-Data Replay Store File');
+
+  LFileName := 'tmp/freepascal_tls13_early_data/builder_replay_store.bin';
+  LBuilder := TSSLContextBuilder.Create
+    .Override('server_early_data_replay_store_file', LFileName);
+
+  LINI := LBuilder.ExportToINI;
+  Assert(Pos('server_early_data_replay_store_file=' + LFileName, LINI) > 0,
+    'INI export preserves server_early_data_replay_store_file');
+
+  LINIRoundTrip := TSSLContextBuilder.Create
+    .ImportFromINI(LINI)
+    .ExportToINI;
+  Assert(LINI = LINIRoundTrip,
+    'INI round-trip preserves server_early_data_replay_store_file');
+end;
+
+{ Test 38: JSON round-trip preserves server early-data replay store directory }
+procedure Test_JSONRoundTrip_PreservesServerEarlyDataReplayStoreDirectory;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON, LJSONRoundTrip: string;
+  LRoot: TJSONData;
+  LObj: TJSONObject;
+  LDirectoryName: string;
+begin
+  TestHeader('Test 38: JSON Round-Trip Preserves Server Early-Data Replay Store Directory');
+
+  LDirectoryName := 'tmp/freepascal_tls13_early_data/builder_replay_store_dir';
+  LBuilder := TSSLContextBuilder.Create
+    .Override('server_early_data_replay_store_directory', LDirectoryName);
+
+  LJSON := LBuilder.ExportToJSON;
+  LRoot := GetJSON(LJSON);
+  try
+    LObj := TJSONObject(LRoot);
+    Assert(LObj.IndexOfName('server_early_data_replay_store_directory') >= 0,
+      'JSON export keeps server_early_data_replay_store_directory visible');
+    if LObj.IndexOfName('server_early_data_replay_store_directory') >= 0 then
+      Assert(LObj.Strings['server_early_data_replay_store_directory'] = LDirectoryName,
+        'JSON export preserves server_early_data_replay_store_directory value');
+  finally
+    LRoot.Free;
+  end;
+
+  LJSONRoundTrip := TSSLContextBuilder.Create
+    .ImportFromJSON(LJSON)
+    .ExportToJSON;
+  Assert(LJSON = LJSONRoundTrip,
+    'JSON round-trip preserves server_early_data_replay_store_directory');
+end;
+
+{ Test 39: INI round-trip preserves server early-data replay store directory }
+procedure Test_INIRoundTrip_PreservesServerEarlyDataReplayStoreDirectory;
+var
+  LBuilder: ISSLContextBuilder;
+  LINI, LINIRoundTrip: string;
+  LDirectoryName: string;
+begin
+  TestHeader('Test 39: INI Round-Trip Preserves Server Early-Data Replay Store Directory');
+
+  LDirectoryName := 'tmp/freepascal_tls13_early_data/builder_replay_store_dir';
+  LBuilder := TSSLContextBuilder.Create
+    .Override('server_early_data_replay_store_directory', LDirectoryName);
+
+  LINI := LBuilder.ExportToINI;
+  Assert(Pos('server_early_data_replay_store_directory=' + LDirectoryName, LINI) > 0,
+    'INI export preserves server_early_data_replay_store_directory');
+
+  LINIRoundTrip := TSSLContextBuilder.Create
+    .ImportFromINI(LINI)
+    .ExportToINI;
+  Assert(LINI = LINIRoundTrip,
+    'INI round-trip preserves server_early_data_replay_store_directory');
+end;
+
 { Main Test Runner }
 begin
   WriteLn;
@@ -548,6 +1199,27 @@ begin
     Test_Preset_ImportAndUse;
     Test_Export_SystemRoots;
     Test_Options_ExportImport;
+    Test_JSONRoundTrip_PreservesExplicitBackendSelection;
+    Test_INIRoundTrip_PreservesExplicitBackendSelection;
+    Test_JSONRoundTrip_PreservesAutoBackendRequirements;
+    Test_INIRoundTrip_PreservesAutoBackendRequirements;
+    Test_JSONRoundTrip_PreservesPKCS11URI;
+    Test_INIRoundTrip_PreservesPKCS11URI;
+    Test_JSONRoundTrip_PreservesPKCS11EnvironmentPINSource;
+    Test_INIRoundTrip_PreservesPKCS11PINFileSource;
+    Test_JSONImport_AcceptsNamedPKCS11PINMethod;
+    Test_INIImport_AcceptsNamedPKCS11PINMethod;
+    Test_JSONImport_PKCS11PINOnly_DefaultsToValue;
+    Test_INIImport_PKCS11PINOnly_DefaultsToValue;
+    Test_JSONImport_CertificatePEMClearsStaleFileState;
+    Test_JSONImport_PrivateKeyPEMClearsStaleFileState;
+    Test_EarlyDataPolicyMaxSize_RoundTrip;
+    Test_JSONRoundTrip_PreservesServerOCSPStapledResponseFile;
+    Test_INIRoundTrip_PreservesServerOCSPStapledResponseFile;
+    Test_JSONRoundTrip_PreservesServerEarlyDataReplayStoreFile;
+    Test_INIRoundTrip_PreservesServerEarlyDataReplayStoreFile;
+    Test_JSONRoundTrip_PreservesServerEarlyDataReplayStoreDirectory;
+    Test_INIRoundTrip_PreservesServerEarlyDataReplayStoreDirectory;
 
     // Print summary
     WriteLn;

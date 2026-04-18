@@ -55,6 +55,8 @@ type
   TSSLVerifyModes = fafafa.ssl.base.TSSLVerifyModes;
   TSSLContextType = fafafa.ssl.base.TSSLContextType;
   TSSLHandshakeState = fafafa.ssl.base.TSSLHandshakeState;
+  TSSLEarlyDataStatus = fafafa.ssl.base.TSSLEarlyDataStatus;
+  TSSLEarlyDataServerPolicy = fafafa.ssl.base.TSSLEarlyDataServerPolicy;
   TSSLErrorCode = fafafa.ssl.base.TSSLErrorCode;
   TSSLLogLevel = fafafa.ssl.base.TSSLLogLevel;
   TSSLKeyExchange = fafafa.ssl.base.TSSLKeyExchange;
@@ -95,10 +97,13 @@ type
   ISSLContext = fafafa.ssl.base.ISSLContext;
   ISSLConnection = fafafa.ssl.base.ISSLConnection;
   ISSLClientConnection = fafafa.ssl.base.ISSLClientConnection;
+  ISSLEarlyDataContext = fafafa.ssl.base.ISSLEarlyDataContext;
+  ISSLEarlyDataConnection = fafafa.ssl.base.ISSLEarlyDataConnection;
   ISSLCertificate = fafafa.ssl.base.ISSLCertificate;
   ISSLCertificateStore = fafafa.ssl.base.ISSLCertificateStore;
   ISSLSession = fafafa.ssl.base.ISSLSession;
   ISSLHttpHooksAccess = fafafa.ssl.base.ISSLHttpHooksAccess;
+  ISSLServerOCSPStaplingContext = fafafa.ssl.base.ISSLServerOCSPStaplingContext;
   
   // 从 fafafa.ssl.factory 导出
   TSSLFactory = fafafa.ssl.factory.TSSLFactory;
@@ -151,6 +156,15 @@ const
   sslCtxClient = fafafa.ssl.base.sslCtxClient;
   sslCtxServer = fafafa.ssl.base.sslCtxServer;
   sslCtxBoth = fafafa.ssl.base.sslCtxBoth;
+
+  // Early-data 状态与服务端策略常量
+  sslEarlyDataNone = fafafa.ssl.base.sslEarlyDataNone;
+  sslEarlyDataQueued = fafafa.ssl.base.sslEarlyDataQueued;
+  sslEarlyDataAccepted = fafafa.ssl.base.sslEarlyDataAccepted;
+  sslEarlyDataRejected = fafafa.ssl.base.sslEarlyDataRejected;
+  sslEarlyDataServerReject = fafafa.ssl.base.sslEarlyDataServerReject;
+  sslEarlyDataServerAccept = fafafa.ssl.base.sslEarlyDataServerAccept;
+  sslEarlyDataServerIssueOnly = fafafa.ssl.base.sslEarlyDataServerIssueOnly;
   
   // 错误代码常量
   sslErrNone = fafafa.ssl.base.sslErrNone;
@@ -338,9 +352,17 @@ begin
     Result.CipherList := SSL_DEFAULT_CIPHER_LIST;
     Result.CipherSuites := SSL_DEFAULT_TLS13_CIPHERSUITES;
     Result.EnableSessionTickets := True;
+    Result.ClientEarlyDataEnabled := False;
+    Result.ServerEarlyDataPolicy := sslEarlyDataServerReject;
+    Result.ServerMaxEarlyDataSize := 0;
+    Result.ServerEarlyDataReplayStoreFile := '';
+    Result.ServerEarlyDataReplayStoreDirectory := '';
     Result.LogLevel := sslLogError;
-    TSSLFactory.NormalizeConfig(Result);
   end;
+
+  Result.LogLevel := sslLogError;
+  Result.LogCallback := nil;
+  TSSLFactory.NormalizeConfig(Result);
 end;
 
 

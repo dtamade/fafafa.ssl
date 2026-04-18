@@ -11380,6 +11380,43 @@ begin
   Result := TSSLFactory.CreateContext(LConfig);
 end;
 
+function BuildBuilderDirectoryReplayStoreServerContext(const ADirectoryName: string): ISSLContext;
+begin
+  Result := TSSLContextBuilder.Create
+    .WithBackend(sslFreePascal)
+    .WithTLS13
+    .WithVerifyNone
+    .WithCertificate('tests/certificate/test_certs/signer_cert.pem')
+    .WithPrivateKey('tests/certificate/test_certs/signer_key.pem')
+    .WithSessionCache(True)
+    .WithSessionTimeout(7200)
+    .WithServerEarlyDataPolicy(sslEarlyDataServerAccept)
+    .WithServerMaxEarlyDataSize(8)
+    .WithServerEarlyDataReplayStoreDirectory(ADirectoryName)
+    .BuildServer;
+end;
+
+function BuildFactoryDirectoryReplayStoreServerContext(const ADirectoryName: string): ISSLContext;
+var
+  LConfig: TSSLConfig;
+begin
+  LConfig := CreateDefaultConfig(sslCtxServer);
+  LConfig.LibraryType := sslFreePascal;
+  LConfig.ContextType := sslCtxServer;
+  LConfig.PreferredVersion := sslProtocolTLS13;
+  LConfig.ProtocolVersions := [sslProtocolTLS13];
+  LConfig.VerifyMode := [];
+  LConfig.CertificateFile := 'tests/certificate/test_certs/signer_cert.pem';
+  LConfig.PrivateKeyFile := 'tests/certificate/test_certs/signer_key.pem';
+  LConfig.SessionCacheSize := 8;
+  LConfig.SessionTimeout := 7200;
+  Include(LConfig.Options, ssoEnableSessionCache);
+  LConfig.ServerEarlyDataPolicy := sslEarlyDataServerAccept;
+  LConfig.ServerMaxEarlyDataSize := 8;
+  LConfig.ServerEarlyDataReplayStoreDirectory := ADirectoryName;
+  Result := TSSLFactory.CreateContext(LConfig);
+end;
+
 procedure TestBuilderFileBackedReplayStoreRejectsCrossContextReplayThroughFactoryContext;
 var
   LCtx1: ISSLContext;
@@ -11535,6 +11572,168 @@ begin
     if Supports(LCtx2, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess2) then
       LReplayAccess2.ResetEarlyDataReplayLedger;
     CleanupReplayProviderStoreFiles(LFileName);
+  end;
+end;
+
+procedure TestBuilderDirectoryReplayStoreRejectsCrossContextReplayThroughFactoryContext;
+var
+  LCtx1: ISSLContext;
+  LCtx2: ISSLContext;
+  LReplayAccess1: IFreePascalEarlyDataReplayLedgerAccess;
+  LReplayAccess2: IFreePascalEarlyDataReplayLedgerAccess;
+  LResumptionCache2: IFreePascalResumptionCache;
+  LDirectoryName: string;
+  LSession: ISSLSession;
+  LConn: ISSLConnection;
+  LEarlyConn: ISSLEarlyDataConnection;
+  LAcceptStream: TScriptedEarlyDataClientStream;
+  LRejectStream: TScriptedEarlyDataClientStream;
+  LBuf: array[0..15] of Byte;
+  LRead: Integer;
+begin
+  LDirectoryName := BuildReplayProviderStoreDirectoryPath('builder_factory_directory_cross_context');
+  CleanupReplayProviderStoreDirectory(LDirectoryName);
+  try
+    LCtx1 := BuildBuilderDirectoryReplayStoreServerContext(LDirectoryName);
+    LCtx2 := BuildFactoryDirectoryReplayStoreServerContext(LDirectoryName);
+
+    AssertTrue((LCtx1 <> nil) and (LCtx2 <> nil),
+      'Mixed builder/factory directory replay-store test should create both FreePascal server contexts');
+    AssertTrue(Supports(LCtx1, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess1),
+      'Builder-built directory first context should expose replay-ledger access seam');
+    AssertTrue(Supports(LCtx2, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess2),
+      'Factory-built directory second context should expose replay-ledger access seam');
+    AssertTrue(Supports(LCtx2, IFreePascalResumptionCache, LResumptionCache2),
+      'Factory-built directory second context should expose resumption cache seam');
+
+    LSession := CaptureServerIssuedSession(LCtx1);
+    LResumptionCache2.StoreResumptionSession(LSession);
+
+    LAcceptStream := TScriptedEarlyDataClientStream.CreateResumed(LSession, BytesOf('DPNG'), True);
+    try
+      LConn := LCtx1.CreateConnection(LAcceptStream);
+      AssertTrue(Supports(LConn, ISSLEarlyDataConnection, LEarlyConn),
+        'Builder-built directory accepted connection should expose early-data interface');
+      AssertTrue(LConn.Accept,
+        'Builder-built directory replay store should allow the first resumed early-data attempt');
+      if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
+        AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
+          'Builder-built directory first resumed early-data attempt should still be accepted');
+      AssertTrue(LAcceptStream.ObservedServerAcceptedEarlyData,
+        'Builder-built directory first resumed early-data attempt should still advertise accepted early-data');
+      AssertTrue(DirectoryExists(LDirectoryName),
+        'Builder-built directory first resumed early-data attempt should materialize the replay store directory');
+    finally
+      LAcceptStream.Free;
+    end;
+
+    LRejectStream := TScriptedEarlyDataClientStream.CreateResumed(LSession, BytesOf('DRPL'), False);
+    try
+      LConn := LCtx2.CreateConnection(LRejectStream);
+      AssertTrue(Supports(LConn, ISSLEarlyDataConnection, LEarlyConn),
+        'Factory-built directory rejected connection should expose early-data interface');
+      AssertTrue(LConn.Accept,
+        'Factory-built directory replay rejection should still complete resumed handshake');
+      AssertTrue(LConn.IsSessionReused,
+        'Factory-built directory replay rejection should still reuse the session');
+      if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
+        AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
+          'Factory-built directory context should reject replayed early-data previously accepted by the builder-built context');
+      AssertTrue(not LRejectStream.ObservedServerAcceptedEarlyData,
+        'Mixed builder/factory directory replay rejection should suppress accepted early-data signalling');
+      LRead := LConn.Read(LBuf, SizeOf(LBuf));
+      AssertEqualsInt(0, LRead,
+        'Mixed builder/factory directory replay rejection should not surface discarded early bytes through Read');
+    finally
+      LRejectStream.Free;
+    end;
+  finally
+    if Supports(LCtx1, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess1) then
+      LReplayAccess1.ResetEarlyDataReplayLedger;
+    if Supports(LCtx2, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess2) then
+      LReplayAccess2.ResetEarlyDataReplayLedger;
+    CleanupReplayProviderStoreDirectory(LDirectoryName);
+  end;
+end;
+
+procedure TestFactoryConfigDirectoryReplayStoreRejectsCrossContextReplayThroughBuilderContext;
+var
+  LCtx1: ISSLContext;
+  LCtx2: ISSLContext;
+  LReplayAccess1: IFreePascalEarlyDataReplayLedgerAccess;
+  LReplayAccess2: IFreePascalEarlyDataReplayLedgerAccess;
+  LResumptionCache2: IFreePascalResumptionCache;
+  LDirectoryName: string;
+  LSession: ISSLSession;
+  LConn: ISSLConnection;
+  LEarlyConn: ISSLEarlyDataConnection;
+  LAcceptStream: TScriptedEarlyDataClientStream;
+  LRejectStream: TScriptedEarlyDataClientStream;
+  LBuf: array[0..15] of Byte;
+  LRead: Integer;
+begin
+  LDirectoryName := BuildReplayProviderStoreDirectoryPath('factory_builder_directory_cross_context');
+  CleanupReplayProviderStoreDirectory(LDirectoryName);
+  try
+    LCtx1 := BuildFactoryDirectoryReplayStoreServerContext(LDirectoryName);
+    LCtx2 := BuildBuilderDirectoryReplayStoreServerContext(LDirectoryName);
+
+    AssertTrue((LCtx1 <> nil) and (LCtx2 <> nil),
+      'Mixed factory/builder directory replay-store test should create both FreePascal server contexts');
+    AssertTrue(Supports(LCtx1, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess1),
+      'Factory-built directory first context should expose replay-ledger access seam');
+    AssertTrue(Supports(LCtx2, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess2),
+      'Builder-built directory second context should expose replay-ledger access seam');
+    AssertTrue(Supports(LCtx2, IFreePascalResumptionCache, LResumptionCache2),
+      'Builder-built directory second context should expose resumption cache seam');
+
+    LSession := CaptureServerIssuedSession(LCtx1);
+    LResumptionCache2.StoreResumptionSession(LSession);
+
+    LAcceptStream := TScriptedEarlyDataClientStream.CreateResumed(LSession, BytesOf('DFA1'), True);
+    try
+      LConn := LCtx1.CreateConnection(LAcceptStream);
+      AssertTrue(Supports(LConn, ISSLEarlyDataConnection, LEarlyConn),
+        'Factory-built directory accepted connection should expose early-data interface');
+      AssertTrue(LConn.Accept,
+        'Factory-built directory replay store should allow the first resumed early-data attempt');
+      if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
+        AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
+          'Factory-built directory first resumed early-data attempt should still be accepted');
+      AssertTrue(LAcceptStream.ObservedServerAcceptedEarlyData,
+        'Factory-built directory first resumed early-data attempt should still advertise accepted early-data');
+      AssertTrue(DirectoryExists(LDirectoryName),
+        'Factory-built directory first resumed early-data attempt should materialize the replay store directory');
+    finally
+      LAcceptStream.Free;
+    end;
+
+    LRejectStream := TScriptedEarlyDataClientStream.CreateResumed(LSession, BytesOf('DFR2'), False);
+    try
+      LConn := LCtx2.CreateConnection(LRejectStream);
+      AssertTrue(Supports(LConn, ISSLEarlyDataConnection, LEarlyConn),
+        'Builder-built directory rejected connection should expose early-data interface');
+      AssertTrue(LConn.Accept,
+        'Builder-built directory replay rejection should still complete resumed handshake');
+      AssertTrue(LConn.IsSessionReused,
+        'Builder-built directory replay rejection should still reuse the session');
+      if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
+        AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataRejected,
+          'Builder-built directory context should reject replayed early-data previously accepted by the factory-built context');
+      AssertTrue(not LRejectStream.ObservedServerAcceptedEarlyData,
+        'Mixed factory/builder directory replay rejection should suppress accepted early-data signalling');
+      LRead := LConn.Read(LBuf, SizeOf(LBuf));
+      AssertEqualsInt(0, LRead,
+        'Mixed factory/builder directory replay rejection should not surface discarded early bytes through Read');
+    finally
+      LRejectStream.Free;
+    end;
+  finally
+    if Supports(LCtx1, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess1) then
+      LReplayAccess1.ResetEarlyDataReplayLedger;
+    if Supports(LCtx2, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess2) then
+      LReplayAccess2.ResetEarlyDataReplayLedger;
+    CleanupReplayProviderStoreDirectory(LDirectoryName);
   end;
 end;
 
@@ -12159,6 +12358,8 @@ begin
   TestFactoryConfigFileBackedReplayStoreRetainsReplayTruthAcrossProcessRestartThroughBuilderContext;
   TestBuilderFileBackedReplayStoreRejectsCrossContextReplayThroughFactoryContext;
   TestFactoryConfigFileBackedReplayStoreRejectsCrossContextReplayThroughBuilderContext;
+  TestBuilderDirectoryReplayStoreRejectsCrossContextReplayThroughFactoryContext;
+  TestFactoryConfigDirectoryReplayStoreRejectsCrossContextReplayThroughBuilderContext;
   TestPublicPathFileBackedReplayStorePrunesExpiredPersistedEntriesAcrossBuilderAndFactoryContexts;
   TestBuilderFileBackedReplayStoreRejectsCrossContextReplay;
 

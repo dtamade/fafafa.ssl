@@ -299,10 +299,24 @@ type
     // 证书验证
     class function VerifyCertificateFile(const AFileName: string): Boolean;
     class function GetCertificateInfo(const AFileName: string): TSSLCertificateInfo;
-    
+
     // 工具方法
     class function GenerateRandomBytes(ACount: Integer): TBytes;
     class function HashData(const AData: TBytes; AHashType: TSSLHash): string;
+
+    // Early-data optional-interface helpers
+    class function SupportsEarlyDataContext(const AContext: ISSLContext): Boolean;
+    class function SupportsEarlyDataConnection(const AConnection: ISSLConnection): Boolean;
+    class function TryGetEarlyDataContext(const AContext: ISSLContext;
+      out AEarlyDataContext: ISSLEarlyDataContext): Boolean;
+    class function TryGetEarlyDataConnection(const AConnection: ISSLConnection;
+      out AEarlyDataConnection: ISSLEarlyDataConnection): Boolean;
+    class function ConfigureClientEarlyData(const AContext: ISSLContext;
+      AEnabled: Boolean = True): Boolean;
+    class function ConfigureServerEarlyData(const AContext: ISSLContext;
+      APolicy: TSSLEarlyDataServerPolicy; AMaxSize: Cardinal): Boolean;
+    class function GetEarlyDataStatus(const AConnection: ISSLConnection): TSSLEarlyDataStatus;
+    class function GetEarlyDataLimit(const AConnection: ISSLConnection): Cardinal;
   end;
 
   { 全局函数 - 便捷接口 }
@@ -330,6 +344,7 @@ uses
   fafafa.ssl.crypto.hash,
   fafafa.ssl.errors,
   fafafa.ssl.random,
+  fafafa.ssl.freepascal.context.material,
   fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.sha,
@@ -424,6 +439,111 @@ begin
 
   if AConfig.CipherSuites = '' then
     AConfig.CipherSuites := SSL_DEFAULT_TLS13_CIPHERSUITES;
+end;
+
+procedure ValidateRequestLoggingScope(const AConfig: TSSLConfig);
+begin
+  if AConfig.LogLevel <> sslLogError then
+    raise ESSLConfigurationException.CreateWithContext(
+      'LogLevel is library-scoped. Configure logging through ISSLLibrary defaults instead of TSSLFactory.CreateContext(const AConfig).',
+      sslErrConfiguration,
+      'TSSLFactory.CreateContext(const AConfig)',
+      0,
+      AConfig.LibraryType
+    );
+
+  if Assigned(AConfig.LogCallback) then
+    raise ESSLConfigurationException.CreateWithContext(
+      'LogCallback is library-scoped. Configure logging through ISSLLibrary defaults instead of TSSLFactory.CreateContext(const AConfig).',
+      sslErrConfiguration,
+      'TSSLFactory.CreateContext(const AConfig)',
+      0,
+      AConfig.LibraryType
+    );
+end;
+
+procedure ApplyEarlyDataContextConfig(const AContext: ISSLContext; const AConfig: TSSLConfig);
+var
+  LEarlyDataContext: ISSLEarlyDataContext;
+begin
+  if (AContext = nil) or (not Supports(AContext, ISSLEarlyDataContext, LEarlyDataContext)) then
+    Exit;
+
+  if LEarlyDataContext.GetClientEarlyDataEnabled <> AConfig.ClientEarlyDataEnabled then
+    LEarlyDataContext.SetClientEarlyDataEnabled(AConfig.ClientEarlyDataEnabled);
+
+  if LEarlyDataContext.GetServerEarlyDataPolicy <> AConfig.ServerEarlyDataPolicy then
+    LEarlyDataContext.SetServerEarlyDataPolicy(AConfig.ServerEarlyDataPolicy);
+
+  if LEarlyDataContext.GetServerMaxEarlyDataSize <> AConfig.ServerMaxEarlyDataSize then
+    LEarlyDataContext.SetServerMaxEarlyDataSize(AConfig.ServerMaxEarlyDataSize);
+end;
+
+procedure ApplyEarlyDataReplayStoreConfig(const AContext: ISSLContext;
+  const AConfig: TSSLConfig; const ACallSite: string);
+var
+  LInstaller: IFreePascalContextEarlyDataReplayInstaller;
+  LDirectoryInstaller: IFreePascalContextEarlyDataReplayDirectoryInstaller;
+begin
+  if (AContext = nil) or
+     (AContext.GetContextType <> sslCtxServer) then
+    Exit;
+
+  if (Trim(AConfig.ServerEarlyDataReplayStoreFile) <> '') and
+     (Trim(AConfig.ServerEarlyDataReplayStoreDirectory) <> '') then
+    raise ESSLConfigurationException.CreateWithContext(
+      'Configured server_early_data_replay_store_file and ' +
+      'server_early_data_replay_store_directory are mutually exclusive; configure not both',
+      sslErrConfiguration,
+      ACallSite,
+      0,
+      AConfig.LibraryType
+    );
+
+  if Trim(AConfig.ServerEarlyDataReplayStoreFile) <> '' then
+  begin
+    if not Supports(AContext, IFreePascalContextEarlyDataReplayInstaller, LInstaller) then
+      raise ESSLConfigurationException.CreateWithContext(
+        'Configured server_early_data_replay_store_file requires a backend that implements IFreePascalContextEarlyDataReplayInstaller',
+        sslErrConfiguration,
+        ACallSite,
+        0,
+        AConfig.LibraryType
+      );
+
+    if not LInstaller.InstallFileBackedReplayLedger(AConfig.ServerEarlyDataReplayStoreFile) then
+      raise ESSLConfigurationException.CreateWithContext(
+        'Configured server_early_data_replay_store_file could not install the requested replay store',
+        sslErrConfiguration,
+        ACallSite,
+        0,
+        AConfig.LibraryType
+      );
+  end;
+
+  if Trim(AConfig.ServerEarlyDataReplayStoreDirectory) <> '' then
+  begin
+    if not Supports(AContext, IFreePascalContextEarlyDataReplayDirectoryInstaller,
+      LDirectoryInstaller) then
+      raise ESSLConfigurationException.CreateWithContext(
+        'Configured server_early_data_replay_store_directory requires a backend that implements IFreePascalContextEarlyDataReplayDirectoryInstaller',
+        sslErrConfiguration,
+        ACallSite,
+        0,
+        AConfig.LibraryType
+      );
+
+    if not LDirectoryInstaller.InstallDirectoryBackedReplayLedger(
+      AConfig.ServerEarlyDataReplayStoreDirectory
+    ) then
+      raise ESSLConfigurationException.CreateWithContext(
+        'Configured server_early_data_replay_store_directory could not install the requested replay store',
+        sslErrConfiguration,
+        ACallSite,
+        0,
+        AConfig.LibraryType
+      );
+  end;
 end;
 
 class procedure TSSLFactory.NormalizeConfig(var AConfig: TSSLConfig);
@@ -560,7 +680,6 @@ end;
 class function TSSLFactory.IsLibraryAvailable(ALibType: TSSLLibraryType): Boolean;
 var
   LLib: ISSLLibrary;
-  LNeedInit: Boolean;
 begin
   Result := False;
   CheckInitialized;
@@ -572,56 +691,43 @@ begin
     Exit;
   end;
 
-  // 先检查缓存的库实例
   EnterCriticalSection(GFactoryLock);
   try
     if Assigned(FLibraries[ALibType]) then
-    begin
-      LLib := FLibraries[ALibType];
-      LNeedInit := Assigned(LLib) and not LLib.IsInitialized;
-    end
+      LLib := FLibraries[ALibType]
     else
     begin
-      // 检查是否已注册，如果是则创建实例
       if FRegistrationMap.Contains(Ord(ALibType)) then
       begin
         try
           LLib := CreateLibraryInstance(ALibType);
-          LNeedInit := Assigned(LLib);
         except
           LLib := nil;
-          LNeedInit := False;
         end;
       end
       else
-      begin
         LLib := nil;
-        LNeedInit := False;
+    end;
+
+    if Assigned(LLib) then
+    begin
+      if not LLib.IsInitialized then
+      begin
+        if not LLib.Initialize then
+        begin
+          if Assigned(FLibraries[ALibType]) and not FLibraries[ALibType].IsInitialized then
+            FLibraries[ALibType] := nil;
+          Exit(False);
+        end;
       end;
+
+      if not Assigned(FLibraries[ALibType]) then
+        FLibraries[ALibType] := LLib;
+
+      Result := LLib.IsInitialized;
     end;
   finally
     LeaveCriticalSection(GFactoryLock);
-  end;
-
-  // 在锁外调用 Initialize 以避免死锁
-  if Assigned(LLib) then
-  begin
-    if LNeedInit then
-      Result := LLib.Initialize
-    else
-      Result := LLib.IsInitialized;
-    
-    // 如果初始化成功，缓存实例
-    if Result then
-    begin
-      EnterCriticalSection(GFactoryLock);
-      try
-        if not Assigned(FLibraries[ALibType]) then
-          FLibraries[ALibType] := LLib;
-      finally
-        LeaveCriticalSection(GFactoryLock);
-      end;
-    end;
   end;
 end;
 
@@ -798,8 +904,9 @@ class function TSSLFactory.GetLibrary(ALibType: TSSLLibraryType): ISSLLibrary;
 var
   LDefaultLib: TSSLLibraryType;
   LDetected: TSSLLibraryType;
-  LNeedInit: Boolean;
 begin
+  CheckInitialized;
+
   if ALibType = sslAutoDetect then
   begin
     // First try to get the default library
@@ -816,34 +923,33 @@ begin
     else
       ALibType := LDefaultLib;
   end;
-  
-  // 先检查缓存的库实例
+
   EnterCriticalSection(GFactoryLock);
   try
     if Assigned(FLibraries[ALibType]) then
-    begin
-      Result := FLibraries[ALibType];
-      LNeedInit := not Result.IsInitialized;
-    end
+      Result := FLibraries[ALibType]
     else
-    begin
-      // 创建新实例
       Result := CreateLibraryInstance(ALibType);
-      LNeedInit := Assigned(Result);
-      if Assigned(Result) then
+
+    if Assigned(Result) then
+    begin
+      if not Result.IsInitialized then
+      begin
+        if not Result.Initialize then
+        begin
+          if Assigned(FLibraries[ALibType]) and not FLibraries[ALibType].IsInitialized then
+            FLibraries[ALibType] := nil;
+          raise ESSLInitializationException.CreateFmt(
+            'Failed to initialize %s library (LastError=%d, Details=%s)',
+            [SSL_LIBRARY_NAMES[ALibType], Result.GetLastError, Result.GetLastErrorString]);
+        end;
+      end;
+
+      if not Assigned(FLibraries[ALibType]) then
         FLibraries[ALibType] := Result;
     end;
   finally
     LeaveCriticalSection(GFactoryLock);
-  end;
-  
-  // 在锁外初始化以避免死锁
-  if Assigned(Result) and LNeedInit then
-  begin
-    if not Result.Initialize then
-      raise ESSLInitializationException.CreateFmt(
-        'Failed to initialize %s library (LastError=%d, Details=%s)',
-        [SSL_LIBRARY_NAMES[ALibType], Result.GetLastError, Result.GetLastErrorString]);
   end;
 end;
 
@@ -893,6 +999,10 @@ begin
 
     if LConfig.ALPNProtocols <> '' then
       Result.SetALPNProtocols(LConfig.ALPNProtocols);
+
+    ApplyEarlyDataContextConfig(Result, LConfig);
+    ApplyEarlyDataReplayStoreConfig(Result, LConfig,
+      'TSSLFactory.CreateContext(AContextType, ALibType)');
   end;
 end;
 
@@ -903,9 +1013,9 @@ var
 begin
   LConfig := AConfig;
   NormalizeConfigOptions(LConfig);
+  ValidateRequestLoggingScope(LConfig);
 
   LLib := GetLibrary(LConfig.LibraryType);
-  LLib.SetDefaultConfig(LConfig);
   Result := LLib.CreateContext(LConfig.ContextType);
   if Result = nil then
     Exit;
@@ -948,6 +1058,10 @@ begin
     
   if LConfig.ALPNProtocols <> '' then
     Result.SetALPNProtocols(LConfig.ALPNProtocols);
+
+  ApplyEarlyDataContextConfig(Result, LConfig);
+  ApplyEarlyDataReplayStoreConfig(Result, LConfig,
+    'TSSLFactory.CreateContext(const AConfig)');
 end;
 
 class function TSSLFactory.CreateCertificate(ALibType: TSSLLibraryType): ISSLCertificate;
@@ -1232,6 +1346,81 @@ begin
 
   Result := fafafa.ssl.crypto.hash.HashToHex(LHashBytes);
 end;
+
+class function TSSLHelper.SupportsEarlyDataContext(
+  const AContext: ISSLContext): Boolean;
+var
+  LEarlyDataContext: ISSLEarlyDataContext;
+begin
+  Result := Supports(AContext, ISSLEarlyDataContext, LEarlyDataContext);
+end;
+
+class function TSSLHelper.SupportsEarlyDataConnection(
+  const AConnection: ISSLConnection): Boolean;
+var
+  LEarlyDataConnection: ISSLEarlyDataConnection;
+begin
+  Result := Supports(AConnection, ISSLEarlyDataConnection, LEarlyDataConnection);
+end;
+
+class function TSSLHelper.TryGetEarlyDataContext(const AContext: ISSLContext;
+  out AEarlyDataContext: ISSLEarlyDataContext): Boolean;
+begin
+  Result := Supports(AContext, ISSLEarlyDataContext, AEarlyDataContext);
+end;
+
+class function TSSLHelper.TryGetEarlyDataConnection(
+  const AConnection: ISSLConnection;
+  out AEarlyDataConnection: ISSLEarlyDataConnection): Boolean;
+begin
+  Result := Supports(AConnection, ISSLEarlyDataConnection, AEarlyDataConnection);
+end;
+
+class function TSSLHelper.ConfigureClientEarlyData(const AContext: ISSLContext;
+  AEnabled: Boolean): Boolean;
+var
+  LEarlyDataContext: ISSLEarlyDataContext;
+begin
+  Result := TryGetEarlyDataContext(AContext, LEarlyDataContext);
+  if Result then
+    LEarlyDataContext.SetClientEarlyDataEnabled(AEnabled);
+end;
+
+class function TSSLHelper.ConfigureServerEarlyData(const AContext: ISSLContext;
+  APolicy: TSSLEarlyDataServerPolicy; AMaxSize: Cardinal): Boolean;
+var
+  LEarlyDataContext: ISSLEarlyDataContext;
+begin
+  Result := TryGetEarlyDataContext(AContext, LEarlyDataContext);
+  if Result then
+  begin
+    LEarlyDataContext.SetServerEarlyDataPolicy(APolicy);
+    LEarlyDataContext.SetServerMaxEarlyDataSize(AMaxSize);
+  end;
+end;
+
+class function TSSLHelper.GetEarlyDataStatus(
+  const AConnection: ISSLConnection): TSSLEarlyDataStatus;
+var
+  LEarlyDataConnection: ISSLEarlyDataConnection;
+begin
+  if TryGetEarlyDataConnection(AConnection, LEarlyDataConnection) then
+    Result := LEarlyDataConnection.GetEarlyDataStatus
+  else
+    Result := sslEarlyDataNone;
+end;
+
+class function TSSLHelper.GetEarlyDataLimit(
+  const AConnection: ISSLConnection): Cardinal;
+var
+  LEarlyDataConnection: ISSLEarlyDataConnection;
+begin
+  if TryGetEarlyDataConnection(AConnection, LEarlyDataConnection) then
+    Result := LEarlyDataConnection.GetEarlyDataLimit
+  else
+    Result := 0;
+end;
+
 initialization
   GSSLFactory := nil;
   GSSLHelper := nil;

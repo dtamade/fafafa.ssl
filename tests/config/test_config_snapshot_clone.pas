@@ -14,13 +14,48 @@ program test_config_snapshot_clone;
 
 uses
   SysUtils,
+  fpjson, jsonparser,
   fafafa.ssl.base,
+  fafafa.ssl.backend.selector,
   fafafa.ssl.context.builder,
-  fafafa.ssl.cert.utils;
+  fafafa.ssl.cert.utils,
+  fafafa.ssl.pkcs11.types,
+  fafafa.ssl.freepascal.lib;
 
 var
   GTestsPassed: Integer = 0;
   GTestsFailed: Integer = 0;
+
+function CreateRuntimeBuilder: ISSLContextBuilder;
+begin
+  Result := TSSLContextBuilder.Create.WithBackend(sslFreePascal);
+end;
+
+function CreateUnavailableBackendBuilder: ISSLContextBuilder;
+begin
+  Result := TSSLContextBuilder.Create.WithBackend(sslWinSSL);
+end;
+
+function CreateImpossibleAutoBackendBuilder: ISSLContextBuilder;
+var
+  LRequirements: TSSLRequirements;
+begin
+  LRequirements := CreateDefaultRequirements(optBalanced);
+  LRequirements.MinSecurityScore := 95;
+  Result := TSSLContextBuilder.Create.WithAutoBackendSelection(LRequirements);
+end;
+
+const
+  SOFTHSM_MODULE_PATH = '/usr/lib/softhsm/libsofthsm2.so';
+
+function BuildClientFails(ABuilder: ISSLContextBuilder): Boolean;
+var
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+begin
+  LResult := ABuilder.TryBuildClient(LContext);
+  Result := not LResult.IsOk;
+end;
 
 procedure Assert(ACondition: Boolean; const AMessage: string);
 begin
@@ -42,6 +77,11 @@ begin
   WriteLn('═══════════════════════════════════════════════════════════');
   WriteLn('  ', ATestName);
   WriteLn('═══════════════════════════════════════════════════════════');
+end;
+
+function ParseBuilderJSON(ABuilder: ISSLContextBuilder): TJSONObject;
+begin
+  Result := TJSONObject(GetJSON(ABuilder.ExportToJSON));
 end;
 
 { Test 1: Clone creates independent copy }
@@ -180,7 +220,7 @@ begin
     Exit;
   end;
 
-  LBuilder := TSSLContextBuilder.Create
+  LBuilder := CreateRuntimeBuilder
     .WithTLS13
     .WithVerifyNone
     .Reset  // Reset and continue chaining
@@ -360,7 +400,7 @@ begin
     Exit;
   end;
 
-  LBuilder := TSSLContextBuilder.Create
+  LBuilder := CreateRuntimeBuilder
     .WithCertificatePEM(LCert)
     .WithPrivateKeyPEM(LKey);
 
@@ -380,12 +420,82 @@ begin
 end;
 
 { Test 13: Preset clone }
+procedure Test_Clone_PreservesExplicitBackendSelection;
+var
+  LBuilder, LClone: ISSLContextBuilder;
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+begin
+  TestHeader('Test 13: Clone Preserves Explicit Backend Selection');
+
+  LBuilder := CreateUnavailableBackendBuilder;
+
+  LResult := LBuilder.TryBuildClient(LContext);
+  Assert(not LResult.IsOk, 'Original explicit unavailable backend fails to build');
+
+  LClone := LBuilder.Clone;
+  LResult := LClone.TryBuildClient(LContext);
+  Assert(not LResult.IsOk, 'Clone preserves explicit unavailable backend selection');
+end;
+
+{ Test 14: Reset clears explicit backend selection }
+procedure Test_Reset_ClearsExplicitBackendSelection;
+var
+  LBuilder: ISSLContextBuilder;
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+begin
+  TestHeader('Test 14: Reset Clears Explicit Backend Selection');
+
+  LBuilder := CreateUnavailableBackendBuilder.Reset;
+
+  LResult := LBuilder.TryBuildClient(LContext);
+  Assert(LResult.IsOk, 'Reset clears explicit backend and restores constructor defaults');
+  if LResult.IsOk then
+    Assert(LContext <> nil, 'Reset builder can create a context after clearing backend pin');
+end;
+
+{ Test 15: Merge preserves explicit backend selection }
+procedure Test_Merge_PreservesExplicitBackendSelection;
+var
+  LSource, LDestination: ISSLContextBuilder;
+begin
+  TestHeader('Test 15: Merge Preserves Explicit Backend Selection');
+
+  LSource := CreateUnavailableBackendBuilder;
+  Assert(BuildClientFails(LSource), 'Source explicit unavailable backend fails to build');
+
+  LDestination := TSSLContextBuilder.Create;
+  LDestination.Merge(LSource);
+
+  Assert(BuildClientFails(LDestination), 'Merge preserves explicit unavailable backend selection from source');
+end;
+
+{ Test 16: Merge preserves auto-backend requirements }
+procedure Test_Merge_PreservesAutoBackendRequirements;
+var
+  LSource, LDestination: ISSLContextBuilder;
+begin
+  TestHeader('Test 16: Merge Preserves Auto-Backend Requirements');
+
+  LSource := CreateImpossibleAutoBackendBuilder;
+  Assert(BuildClientFails(LSource), 'Source unmet auto-backend requirements fail to build');
+
+  LDestination := TSSLContextBuilder.Create.WithBackend(sslFreePascal);
+  Assert(not BuildClientFails(LDestination), 'Destination explicit runtime backend builds before merge');
+
+  LDestination.Merge(LSource);
+
+  Assert(BuildClientFails(LDestination), 'Merge preserves unmet auto-backend requirements from source');
+end;
+
+{ Test 17: Preset clone }
 procedure Test_Preset_Clone;
 var
   LDev1, LDev2: ISSLContextBuilder;
   LJSON1, LJSON2: string;
 begin
-  TestHeader('Test 13: Preset Clone');
+  TestHeader('Test 17: Preset Clone');
 
   LDev1 := TSSLContextBuilder.Development;
   LDev2 := LDev1.Clone;
@@ -404,13 +514,13 @@ begin
   Assert(LJSON1 <> LJSON2, 'Modifying preset clone does not affect original');
 end;
 
-{ Test 14: Merge with preset }
+{ Test 18: Merge with preset }
 procedure Test_Merge_WithPreset;
 var
   LBuilder: ISSLContextBuilder;
   LProd: ISSLContextBuilder;
 begin
-  TestHeader('Test 14: Merge With Preset');
+  TestHeader('Test 18: Merge With Preset');
 
   LBuilder := TSSLContextBuilder.Create
     .WithTLS12;
@@ -423,13 +533,13 @@ begin
   Assert(True, 'Merging with preset completes successfully');
 end;
 
-{ Test 15: Complex merge scenario }
+{ Test 19: Complex merge scenario }
 procedure Test_Complex_Merge;
 var
   LBase, LDev, LProd: ISSLContextBuilder;
   LFinal: string;
 begin
-  TestHeader('Test 15: Complex Merge Scenario');
+  TestHeader('Test 19: Complex Merge Scenario');
 
   // Start with development preset
   LBase := TSSLContextBuilder.Development.Clone;
@@ -447,6 +557,238 @@ begin
   LFinal := LBase.ExportToJSON;
 
   Assert(LFinal <> '', 'Complex merge produces valid configuration');
+end;
+
+{ Test 20: Merge preserves PKCS#11 URI server key source }
+procedure Test_Merge_PreservesPKCS11URI;
+var
+  LSource, LDestination: ISSLContextBuilder;
+  LValidation: TBuildValidationResult;
+  LCert, LKey: string;
+begin
+  TestHeader('Test 20: Merge Preserves PKCS#11 URI');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'pkcs11-merge.test', 'Test Org', 30, LCert, LKey
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Exit;
+  end;
+
+  LSource := TSSLContextBuilder.Create
+    .WithCertificatePEM(LCert)
+    .UsePKCS11('pkcs11:token=TestToken;object=ServerKey;type=private');
+  LValidation := LSource.ValidateServer;
+  Assert(LValidation.IsValid, 'Source PKCS#11 URI server config is valid before merge');
+
+  LDestination := TSSLContextBuilder.Create;
+  LDestination.Merge(LSource);
+  LValidation := LDestination.ValidateServer;
+
+  Assert(LValidation.IsValid, 'Merge preserves PKCS#11 URI server key source');
+  if (not LValidation.IsValid) and (LValidation.ErrorCount > 0) then
+    WriteLn('    Error: ', LValidation.Errors[0]);
+end;
+
+{ Test 21: Merge preserves PKCS#11 environment PIN source semantics }
+procedure Test_Merge_PreservesPKCS11EnvironmentPINSource;
+var
+  LSource, LDestination: ISSLContextBuilder;
+  LContext: ISSLContext;
+  LResult: TSSLOperationResult;
+  LCert, LKey: string;
+begin
+  TestHeader('Test 21: Merge Preserves PKCS#11 Environment PIN Source');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'pkcs11-merge-env.test', 'Test Org', 30, LCert, LKey
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Exit;
+  end;
+
+  LSource := TSSLContextBuilder.Create
+    .WithBackend(sslFreePascal)
+    .WithCertificatePEM(LCert)
+    .UsePKCS11('pkcs11:token=TestToken;object=ServerKey;type=private?module-path=' + SOFTHSM_MODULE_PATH)
+    .WithPKCS11PIN('PKCS11_MERGE_MISSING_ENV')
+    .WithPKCS11PINMethod(pmEnvironment);
+
+  LDestination := TSSLContextBuilder.Create;
+  LDestination.Merge(LSource);
+  LResult := LDestination.TryBuildServer(LContext);
+
+  Assert(LResult.IsErr, 'Merge keeps PKCS#11 environment PIN source failure observable');
+  Assert(Pos('environment variable', LowerCase(LResult.ErrorMessage)) > 0,
+    'Merge preserves missing environment variable error semantics');
+end;
+
+{ Test 22: Merge file sources clear stale PEM state }
+procedure Test_Merge_FileSources_ClearStalePEMState;
+var
+  LSource, LDestination: ISSLContextBuilder;
+  LObj: TJSONObject;
+begin
+  TestHeader('Test 22: Merge File Sources Clear Stale PEM State');
+
+  LDestination := TSSLContextBuilder.Create
+    .WithCertificatePEM('destination-cert-pem')
+    .WithPrivateKeyPEM('destination-private-key-pem');
+
+  LSource := TSSLContextBuilder.Create
+    .WithCertificate('/tmp/merged-cert-file.pem')
+    .WithPrivateKey('/tmp/merged-private-key.pem');
+
+  LDestination.Merge(LSource);
+
+  LObj := ParseBuilderJSON(LDestination);
+  try
+    Assert(LObj.Strings['certificate_file'] = '/tmp/merged-cert-file.pem',
+      'Merge keeps merged certificate_file export-visible');
+    Assert(LObj.Strings['certificate_pem'] = '',
+      'Merge(certificate_file) clears stale certificate_pem state');
+    Assert(LObj.Strings['private_key_file'] = '/tmp/merged-private-key.pem',
+      'Merge keeps merged private_key_file export-visible');
+    Assert(LObj.Strings['private_key_pem'] = '',
+      'Merge(private_key_file) clears stale private_key_pem state');
+  finally
+    LObj.Free;
+  end;
+end;
+
+{ Test 23: Merge PEM sources clear stale file state }
+procedure Test_Merge_PEMSources_ClearStaleFileState;
+var
+  LSource, LDestination: ISSLContextBuilder;
+  LObj: TJSONObject;
+begin
+  TestHeader('Test 23: Merge PEM Sources Clear Stale File State');
+
+  LDestination := TSSLContextBuilder.Create
+    .WithCertificate('/tmp/stale-destination-cert.pem')
+    .WithPrivateKey('/tmp/stale-destination-key.pem');
+
+  LSource := TSSLContextBuilder.Create
+    .WithCertificatePEM('merged-certificate-pem')
+    .WithPrivateKeyPEM('merged-private-key-pem');
+
+  LDestination.Merge(LSource);
+
+  LObj := ParseBuilderJSON(LDestination);
+  try
+    Assert(LObj.Strings['certificate_file'] = '',
+      'Merge(certificate_pem) clears stale certificate_file state');
+    Assert(LObj.Strings['certificate_pem'] = 'merged-certificate-pem',
+      'Merge keeps merged certificate_pem export-visible');
+    Assert(LObj.Strings['private_key_file'] = '',
+      'Merge(private_key_pem) clears stale private_key_file state');
+    Assert(LObj.Strings['private_key_pem'] = 'merged-private-key-pem',
+      'Merge keeps merged private_key_pem export-visible');
+  finally
+    LObj.Free;
+  end;
+end;
+
+{ Test 24: Clone/reset/merge preserve early-data policy and max size }
+procedure Test_Clone_ResetMerge_EarlyDataFields;
+var
+  LSource, LClone, LDestination: ISSLContextBuilder;
+  LObj: TJSONObject;
+begin
+  TestHeader('Test 24: Clone Reset Merge Preserve Early-Data Fields');
+
+  LSource := TSSLContextBuilder.Create
+    .WithClientEarlyData(True)
+    .WithServerEarlyDataPolicy(sslEarlyDataServerIssueOnly)
+    .WithServerMaxEarlyDataSize(2048)
+    .WithServerEarlyDataReplayStoreFile('/tmp/clone-replay-store.bin');
+
+  LClone := LSource.Clone;
+  LObj := ParseBuilderJSON(LClone);
+  try
+    Assert(LObj.Booleans['client_early_data_enabled'],
+      'Clone preserves client_early_data_enabled');
+    Assert(LObj.Integers['server_early_data_policy'] = Ord(sslEarlyDataServerIssueOnly),
+      'Clone preserves server_early_data_policy');
+    Assert(LObj.Integers['server_max_early_data_size'] = 2048,
+      'Clone preserves server_max_early_data_size');
+    Assert(LObj.Strings['server_early_data_replay_store_file'] = '/tmp/clone-replay-store.bin',
+      'Clone preserves server_early_data_replay_store_file');
+  finally
+    LObj.Free;
+  end;
+
+  LClone.Reset;
+  LObj := ParseBuilderJSON(LClone);
+  try
+    Assert(not LObj.Booleans['client_early_data_enabled'],
+      'Reset clears client_early_data_enabled');
+    Assert(LObj.Integers['server_early_data_policy'] = Ord(sslEarlyDataServerReject),
+      'Reset restores server_early_data_policy default');
+    Assert(LObj.Integers['server_max_early_data_size'] = 0,
+      'Reset restores server_max_early_data_size default');
+    Assert(LObj.Strings['server_early_data_replay_store_file'] = '',
+      'Reset clears server_early_data_replay_store_file');
+  finally
+    LObj.Free;
+  end;
+
+  LDestination := TSSLContextBuilder.Create
+    .WithServerEarlyDataPolicy(sslEarlyDataServerReject)
+    .WithServerMaxEarlyDataSize(0);
+  LDestination.Merge(LSource);
+  LObj := ParseBuilderJSON(LDestination);
+  try
+    Assert(LObj.Integers['server_early_data_policy'] = Ord(sslEarlyDataServerIssueOnly),
+      'Merge preserves server_early_data_policy');
+    Assert(LObj.Integers['server_max_early_data_size'] = 2048,
+      'Merge preserves server_max_early_data_size');
+    Assert(LObj.Strings['server_early_data_replay_store_file'] = '/tmp/clone-replay-store.bin',
+      'Merge preserves server_early_data_replay_store_file');
+  finally
+    LObj.Free;
+  end;
+end;
+
+procedure Test_Clone_ResetMerge_EarlyDataReplayStoreDirectoryField;
+var
+  LSource, LClone, LDestination: ISSLContextBuilder;
+  LObj: TJSONObject;
+begin
+  TestHeader('Test 25: Clone Reset Merge Preserve Early-Data Replay Store Directory');
+
+  LSource := TSSLContextBuilder.Create
+    .WithServerEarlyDataReplayStoreDirectory('/tmp/clone-replay-store-dir');
+
+  LClone := LSource.Clone;
+  LObj := ParseBuilderJSON(LClone);
+  try
+    Assert(LObj.Strings['server_early_data_replay_store_directory'] = '/tmp/clone-replay-store-dir',
+      'Clone preserves server_early_data_replay_store_directory');
+  finally
+    LObj.Free;
+  end;
+
+  LClone.Reset;
+  LObj := ParseBuilderJSON(LClone);
+  try
+    Assert(LObj.Strings['server_early_data_replay_store_directory'] = '',
+      'Reset clears server_early_data_replay_store_directory');
+  finally
+    LObj.Free;
+  end;
+
+  LDestination := TSSLContextBuilder.Create;
+  LDestination.Merge(LSource);
+  LObj := ParseBuilderJSON(LDestination);
+  try
+    Assert(LObj.Strings['server_early_data_replay_store_directory'] = '/tmp/clone-replay-store-dir',
+      'Merge preserves server_early_data_replay_store_directory');
+  finally
+    LObj.Free;
+  end;
 end;
 
 { Main Test Runner }
@@ -477,9 +819,19 @@ begin
     Test_Merge_Chaining;
     Test_Clone_Merge_Workflow;
     Test_Reset_Rebuild;
+    Test_Clone_PreservesExplicitBackendSelection;
+    Test_Reset_ClearsExplicitBackendSelection;
+    Test_Merge_PreservesExplicitBackendSelection;
+    Test_Merge_PreservesAutoBackendRequirements;
     Test_Preset_Clone;
     Test_Merge_WithPreset;
     Test_Complex_Merge;
+    Test_Merge_PreservesPKCS11URI;
+    Test_Merge_PreservesPKCS11EnvironmentPINSource;
+    Test_Merge_FileSources_ClearStalePEMState;
+    Test_Merge_PEMSources_ClearStaleFileState;
+    Test_Clone_ResetMerge_EarlyDataFields;
+    Test_Clone_ResetMerge_EarlyDataReplayStoreDirectoryField;
 
     // Print summary
     WriteLn;

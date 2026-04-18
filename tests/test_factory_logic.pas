@@ -440,6 +440,59 @@ begin
   WriteLn;
 end;
 
+procedure TestConfigEarlyDataFields;
+var
+  LConfig: TSSLConfig;
+begin
+  WriteLn('【测试 16】配置 Early Data 字段');
+  WriteLn('---');
+
+  FillChar(LConfig, SizeOf(LConfig), 0);
+
+  Assert(not LConfig.ClientEarlyDataEnabled, 'ClientEarlyDataEnabled 默认为 False');
+  Assert(LConfig.ServerEarlyDataPolicy = sslEarlyDataServerReject,
+    'ServerEarlyDataPolicy 默认为 Reject');
+  Assert(LConfig.ServerMaxEarlyDataSize = 0,
+    'ServerMaxEarlyDataSize 默认为 0');
+  Assert(LConfig.ServerEarlyDataReplayStoreFile = '',
+    'ServerEarlyDataReplayStoreFile 默认为空');
+  Assert(LConfig.ServerEarlyDataReplayStoreDirectory = '',
+    'ServerEarlyDataReplayStoreDirectory 默认为空');
+
+  LConfig.ClientEarlyDataEnabled := True;
+  Assert(LConfig.ClientEarlyDataEnabled, 'ClientEarlyDataEnabled 可设置为 True');
+
+  LConfig.ServerEarlyDataPolicy := sslEarlyDataServerIssueOnly;
+  Assert(LConfig.ServerEarlyDataPolicy = sslEarlyDataServerIssueOnly,
+    'ServerEarlyDataPolicy 可设置为 IssueOnly');
+
+  LConfig.ServerMaxEarlyDataSize := 42;
+  Assert(LConfig.ServerMaxEarlyDataSize = 42,
+    'ServerMaxEarlyDataSize 可设置');
+
+  LConfig.ServerEarlyDataReplayStoreFile := '/tmp/factory-replay-store.bin';
+  Assert(LConfig.ServerEarlyDataReplayStoreFile = '/tmp/factory-replay-store.bin',
+    'ServerEarlyDataReplayStoreFile 可设置');
+
+  LConfig.ServerEarlyDataReplayStoreDirectory := '/tmp/factory-replay-store-dir';
+  Assert(LConfig.ServerEarlyDataReplayStoreDirectory = '/tmp/factory-replay-store-dir',
+    'ServerEarlyDataReplayStoreDirectory 可设置');
+
+  TSSLFactory.NormalizeConfig(LConfig);
+  Assert(LConfig.ClientEarlyDataEnabled,
+    'NormalizeConfig 保留 ClientEarlyDataEnabled');
+  Assert(LConfig.ServerEarlyDataPolicy = sslEarlyDataServerIssueOnly,
+    'NormalizeConfig 保留 ServerEarlyDataPolicy');
+  Assert(LConfig.ServerMaxEarlyDataSize = 42,
+    'NormalizeConfig 保留 ServerMaxEarlyDataSize');
+  Assert(LConfig.ServerEarlyDataReplayStoreFile = '/tmp/factory-replay-store.bin',
+    'NormalizeConfig 保留 ServerEarlyDataReplayStoreFile');
+  Assert(LConfig.ServerEarlyDataReplayStoreDirectory = '/tmp/factory-replay-store-dir',
+    'NormalizeConfig 保留 ServerEarlyDataReplayStoreDirectory');
+
+  WriteLn;
+end;
+
 procedure PrintSummary;
 begin
   WriteLn('=========================================');
@@ -485,6 +538,7 @@ begin
     TestConfigStructureIntegrity;
     TestConfigBooleanFields;
     TestConfigStringFields;
+    TestConfigEarlyDataFields;
 
     WriteLn;
     PrintSummary;

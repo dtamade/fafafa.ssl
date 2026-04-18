@@ -14,7 +14,9 @@ unit fafafa.ssl.freepascal.context.material;
 interface
 
 uses
-  SysUtils;
+  SysUtils, Classes,
+  fafafa.ssl.base,
+  fafafa.ssl.freepascal.session;
 
 type
   IFreePascalContextMaterial = interface
@@ -23,6 +25,42 @@ type
     function HasPrivateKeyMaterial: Boolean;
     function GetCertificateMaterial: TBytes;
     function GetPrivateKeyMaterial: TBytes;
+  end;
+
+  IFreePascalContextTrustStore = interface
+    ['{54F5C1AC-2D4C-4A2C-A6E9-4B5953E4A7D1}']
+    function BuildVerificationStore: ISSLCertificateStore;
+  end;
+
+  IFreePascalContextRevocationMaterial = interface
+    ['{0ED2CC0C-5A69-4A77-AB60-894F17AA2C6D}']
+    procedure ClearCRLMaterial;
+    procedure AddCRLPEM(const APEM: string);
+    procedure AddCRLFile(const AFileName: string);
+    function BuildCRLStore: TStringList;
+  end;
+
+  IFreePascalContextServerStaplingMaterial = interface(ISSLServerOCSPStaplingContext)
+    ['{B60E1D7D-5C98-48D7-9AFB-0FA7DAD934B3}']
+  end;
+
+  IFreePascalContextEarlyDataReplayProviderInstaller = interface
+    ['{7C3E6876-E80C-4A25-90C1-D9AF1C05803F}']
+    function InstallReplayProviderBackedLedger(
+      AProvider: IFreePascalEarlyDataReplayProvider
+    ): Boolean;
+  end;
+
+  IFreePascalContextEarlyDataReplayInstaller = interface
+    ['{53F77AA1-47D8-4AF6-A06A-7F55086FF5A7}']
+    function InstallFileBackedReplayLedger(const AFileName: string): Boolean;
+  end;
+
+  IFreePascalContextEarlyDataReplayDirectoryInstaller = interface
+    ['{CAFC624D-75D0-4C30-84B2-52336D3FA59A}']
+    function InstallDirectoryBackedReplayLedger(
+      const ADirectoryName: string
+    ): Boolean;
   end;
 
 implementation
