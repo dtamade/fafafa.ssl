@@ -1355,6 +1355,34 @@ type
     constructor Create(const ADirectoryName: string);
   end;
 
+  TScriptedTempPromotionRenameDeniedDirectoryReplayStore = class(
+    TFreePascalDirectoryEarlyDataReplayStore)
+  private
+    FMainDirectoryName: string;
+    FTempDirectoryName: string;
+  protected
+    function RenamePathAt(
+      const ASourcePath: string;
+      const ADestPath: string
+    ): Boolean; override;
+  public
+    constructor Create(const ADirectoryName: string);
+  end;
+
+  TScriptedBackupPromotionRenameDeniedDirectoryReplayStore = class(
+    TFreePascalDirectoryEarlyDataReplayStore)
+  private
+    FMainDirectoryName: string;
+    FBackupDirectoryName: string;
+  protected
+    function RenamePathAt(
+      const ASourcePath: string;
+      const ADestPath: string
+    ): Boolean; override;
+  public
+    constructor Create(const ADirectoryName: string);
+  end;
+
   TSharedReplayProviderEntry = record
     Key: string;
     ExpiresAt: TDateTime;
@@ -1622,6 +1650,46 @@ begin
   end;
 
   if (ASourcePath = FBackupDirectoryName) and (ADestPath = FMainDirectoryName) then
+    Exit(False);
+
+  Result := inherited RenamePathAt(ASourcePath, ADestPath);
+end;
+
+constructor TScriptedTempPromotionRenameDeniedDirectoryReplayStore.Create(
+  const ADirectoryName: string
+);
+begin
+  inherited Create(ADirectoryName);
+  FMainDirectoryName := ADirectoryName;
+  FTempDirectoryName := ADirectoryName + '.tmpdir';
+end;
+
+function TScriptedTempPromotionRenameDeniedDirectoryReplayStore.RenamePathAt(
+  const ASourcePath: string;
+  const ADestPath: string
+): Boolean;
+begin
+  if (ASourcePath = FTempDirectoryName) and (ADestPath = FMainDirectoryName) then
+    Exit(False);
+
+  Result := inherited RenamePathAt(ASourcePath, ADestPath);
+end;
+
+constructor TScriptedBackupPromotionRenameDeniedDirectoryReplayStore.Create(
+  const ADirectoryName: string
+);
+begin
+  inherited Create(ADirectoryName);
+  FMainDirectoryName := ADirectoryName;
+  FBackupDirectoryName := ADirectoryName + '.bakdir';
+end;
+
+function TScriptedBackupPromotionRenameDeniedDirectoryReplayStore.RenamePathAt(
+  const ASourcePath: string;
+  const ADestPath: string
+): Boolean;
+begin
+  if (ASourcePath = FMainDirectoryName) and (ADestPath = FBackupDirectoryName) then
     Exit(False);
 
   Result := inherited RenamePathAt(ASourcePath, ADestPath);
@@ -4694,6 +4762,131 @@ begin
   end;
 end;
 
+procedure TestDirectoryReplayStoreFailsClosedOnDeterministicTempPromotionRenameDeniedAndRecovers;
+var
+  LDirectoryName: string;
+  LTempDirectoryName: string;
+  LBackupDirectoryName: string;
+  LScriptedStore: IFreePascalEarlyDataReplayStore;
+  LNormalStore1: IFreePascalEarlyDataReplayStore;
+  LNormalStore2: IFreePascalEarlyDataReplayStore;
+  LScriptedProvider: IFreePascalEarlyDataReplayProvider;
+  LNormalProvider1: IFreePascalEarlyDataReplayProvider;
+  LNormalProvider2: IFreePascalEarlyDataReplayProvider;
+  LScriptedLedger: IFreePascalManagedEarlyDataReplayLedger;
+  LNormalLedger1: IFreePascalManagedEarlyDataReplayLedger;
+  LNormalLedger2: IFreePascalManagedEarlyDataReplayLedger;
+  LBlockedSession: ISSLSession;
+begin
+  LBlockedSession := BuildManualSession('dir-temp-promotion-denied', 8);
+
+  LDirectoryName := BuildReplayProviderStoreDirectoryPath('temp_promotion_rename_denied_failclosed');
+  LTempDirectoryName := LDirectoryName + '.tmpdir';
+  LBackupDirectoryName := LDirectoryName + '.bakdir';
+  CleanupReplayProviderStoreDirectory(LDirectoryName);
+  try
+    LScriptedStore := TScriptedTempPromotionRenameDeniedDirectoryReplayStore.Create(LDirectoryName);
+    LScriptedProvider := TFreePascalStoreBackedEarlyDataReplayProvider.Create(LScriptedStore);
+    LScriptedLedger := TFreePascalProviderBackedEarlyDataReplayLedger.Create(LScriptedProvider, True, 8);
+    AssertTrue(not LScriptedLedger.TryAcquireEarlyDataSession(LBlockedSession),
+      'Deterministic directory temp-promotion rename denial should fail closed for a fresh blocked session');
+    AssertTrue(not DirectoryExists(LDirectoryName),
+      'Deterministic directory temp-promotion rename denial should keep the canonical main directory absent');
+    AssertTrue(not DirectoryExists(LTempDirectoryName),
+      'Deterministic directory temp-promotion rename denial should clean up the temp directory');
+    AssertTrue(not DirectoryExists(LBackupDirectoryName),
+      'Deterministic directory temp-promotion rename denial should not create a backup artifact');
+
+    LNormalStore1 := TFreePascalDirectoryEarlyDataReplayStore.Create(LDirectoryName);
+    LNormalProvider1 := TFreePascalStoreBackedEarlyDataReplayProvider.Create(LNormalStore1);
+    LNormalLedger1 := TFreePascalProviderBackedEarlyDataReplayLedger.Create(LNormalProvider1, True, 8);
+    AssertTrue(LNormalLedger1.TryAcquireEarlyDataSession(LBlockedSession),
+      'Provider rebuild after deterministic directory temp-promotion rename denial should still accept the blocked session');
+    AssertTrue(DirectoryExists(LDirectoryName),
+      'Recovery after deterministic directory temp-promotion rename denial should materialize the canonical main directory');
+    AssertTrue(not DirectoryExists(LBackupDirectoryName),
+      'Recovery after deterministic directory temp-promotion rename denial should not leave a backup artifact');
+
+    LNormalStore2 := TFreePascalDirectoryEarlyDataReplayStore.Create(LDirectoryName);
+    LNormalProvider2 := TFreePascalStoreBackedEarlyDataReplayProvider.Create(LNormalStore2);
+    LNormalLedger2 := TFreePascalProviderBackedEarlyDataReplayLedger.Create(LNormalProvider2, True, 8);
+    AssertTrue(not LNormalLedger2.TryAcquireEarlyDataSession(LBlockedSession),
+      'Fresh blocked session accepted after deterministic directory temp-promotion rename denial recovery should still replay-reject after provider rebuild');
+  finally
+    CleanupReplayProviderStoreDirectory(LDirectoryName);
+  end;
+end;
+
+procedure TestDirectoryReplayStoreFailsClosedOnDeterministicBackupPromotionRenameDeniedAndRecovers;
+var
+  LDirectoryName: string;
+  LTempDirectoryName: string;
+  LBackupDirectoryName: string;
+  LStore1: IFreePascalEarlyDataReplayStore;
+  LScriptedStore: IFreePascalEarlyDataReplayStore;
+  LStore2: IFreePascalEarlyDataReplayStore;
+  LStore3: IFreePascalEarlyDataReplayStore;
+  LProvider1: IFreePascalEarlyDataReplayProvider;
+  LScriptedProvider: IFreePascalEarlyDataReplayProvider;
+  LProvider2: IFreePascalEarlyDataReplayProvider;
+  LProvider3: IFreePascalEarlyDataReplayProvider;
+  LLedger1: IFreePascalManagedEarlyDataReplayLedger;
+  LScriptedLedger: IFreePascalManagedEarlyDataReplayLedger;
+  LLedger2: IFreePascalManagedEarlyDataReplayLedger;
+  LLedger3: IFreePascalManagedEarlyDataReplayLedger;
+  LExistingSession: ISSLSession;
+  LBlockedSession: ISSLSession;
+begin
+  LExistingSession := BuildManualSession('dir-backup-promotion-denied-existing', 8);
+  LBlockedSession := BuildManualSession('dir-backup-promotion-denied-blocked', 8);
+
+  LDirectoryName := BuildReplayProviderStoreDirectoryPath('backup_promotion_rename_denied_preserves_main_truth');
+  LTempDirectoryName := LDirectoryName + '.tmpdir';
+  LBackupDirectoryName := LDirectoryName + '.bakdir';
+  CleanupReplayProviderStoreDirectory(LDirectoryName);
+  try
+    LStore1 := TFreePascalDirectoryEarlyDataReplayStore.Create(LDirectoryName);
+    LProvider1 := TFreePascalStoreBackedEarlyDataReplayProvider.Create(LStore1);
+    LLedger1 := TFreePascalProviderBackedEarlyDataReplayLedger.Create(LProvider1, True, 8);
+    AssertTrue(LLedger1.TryAcquireEarlyDataSession(LExistingSession),
+      'Initial acquire should materialize canonical directory replay truth before deterministic backup-promotion denial');
+    AssertTrue(DirectoryExists(LDirectoryName),
+      'Initial acquire should materialize canonical directory replay truth before deterministic backup-promotion denial');
+
+    LScriptedStore := TScriptedBackupPromotionRenameDeniedDirectoryReplayStore.Create(LDirectoryName);
+    LScriptedProvider := TFreePascalStoreBackedEarlyDataReplayProvider.Create(LScriptedStore);
+    LScriptedLedger := TFreePascalProviderBackedEarlyDataReplayLedger.Create(LScriptedProvider, True, 8);
+    AssertTrue(not LScriptedLedger.TryAcquireEarlyDataSession(LBlockedSession),
+      'Deterministic directory backup-promotion denial should fail closed while preserving canonical main replay truth');
+    AssertTrue(DirectoryExists(LDirectoryName),
+      'Deterministic directory backup-promotion denial should preserve the canonical main directory');
+    AssertTrue(not DirectoryExists(LTempDirectoryName),
+      'Deterministic directory backup-promotion denial should clean up the temp directory');
+    AssertTrue(not DirectoryExists(LBackupDirectoryName),
+      'Deterministic directory backup-promotion denial should not leave a backup artifact');
+    AssertTrue(not LScriptedLedger.TryAcquireEarlyDataSession(LExistingSession),
+      'Deterministic directory backup-promotion denial should preserve the original replay truth immediately');
+
+    LStore2 := TFreePascalDirectoryEarlyDataReplayStore.Create(LDirectoryName);
+    LProvider2 := TFreePascalStoreBackedEarlyDataReplayProvider.Create(LStore2);
+    LLedger2 := TFreePascalProviderBackedEarlyDataReplayLedger.Create(LProvider2, True, 8);
+    AssertTrue(not LLedger2.TryAcquireEarlyDataSession(LExistingSession),
+      'Provider rebuild after deterministic directory backup-promotion denial should still reject the original replay truth');
+    AssertTrue(LLedger2.TryAcquireEarlyDataSession(LBlockedSession),
+      'Provider rebuild after deterministic directory backup-promotion denial should still accept the fresh blocked session');
+    AssertTrue(not DirectoryExists(LBackupDirectoryName),
+      'Recovery after deterministic directory backup-promotion denial should not leave a backup artifact');
+
+    LStore3 := TFreePascalDirectoryEarlyDataReplayStore.Create(LDirectoryName);
+    LProvider3 := TFreePascalStoreBackedEarlyDataReplayProvider.Create(LStore3);
+    LLedger3 := TFreePascalProviderBackedEarlyDataReplayLedger.Create(LProvider3, True, 8);
+    AssertTrue(not LLedger3.TryAcquireEarlyDataSession(LBlockedSession),
+      'Fresh blocked session accepted after deterministic directory backup-promotion denial recovery should still replay-reject after provider rebuild');
+  finally
+    CleanupReplayProviderStoreDirectory(LDirectoryName);
+  end;
+end;
+
 procedure TestDirectoryReplayStoreFailsClosedOnCorruptFallbackDirectoriesAcrossProviderRebuild;
   procedure AssertCorruptFallbackDirectoryFailsClosed(
     const ASuffix: string;
@@ -6330,6 +6523,183 @@ begin
         LBlockedSession,
         BytesOf('BRPL'),
         'Fresh blocked session accepted after runtime directory backup restore recovery should still replay-reject after rebuild'
+      );
+    finally
+      if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
+        LReplayAccess.ResetEarlyDataReplayLedger;
+    end;
+  finally
+    CleanupReplayProviderStoreDirectory(LDirectoryName);
+  end;
+end;
+
+procedure TestDirectoryReplayStoreFailsClosedOnDeterministicTempPromotionRenameDeniedAtRuntime;
+var
+  LCaptureCtx: ISSLContext;
+  LCtx: ISSLContext;
+  LReplayAccess: IFreePascalEarlyDataReplayLedgerAccess;
+  LScriptedStore: IFreePascalEarlyDataReplayStore;
+  LBlockedSession: ISSLSession;
+  LDirectoryName: string;
+  LTempDirectoryName: string;
+  LBackupDirectoryName: string;
+begin
+  LCaptureCtx := BuildAcceptingEarlyDataServerContext;
+  LBlockedSession := CaptureServerIssuedSession(LCaptureCtx);
+
+  LDirectoryName := BuildReplayProviderStoreDirectoryPath('runtime_temp_promotion_rename_denied_failclosed');
+  LTempDirectoryName := LDirectoryName + '.tmpdir';
+  LBackupDirectoryName := LDirectoryName + '.bakdir';
+  CleanupReplayProviderStoreDirectory(LDirectoryName);
+  try
+    LCtx := BuildAcceptingEarlyDataServerContext;
+    try
+      LScriptedStore := TScriptedTempPromotionRenameDeniedDirectoryReplayStore.Create(LDirectoryName);
+      AssertTrue(InstallStoreBackedReplayLedger(LCtx, LScriptedStore),
+        'Store-backed helper should install scripted directory store for deterministic temp-promotion rename denial runtime validation');
+      AssertResumedEarlyDataRejectedAtRuntime(
+        LCtx,
+        LBlockedSession,
+        BytesOf('BLOK'),
+        'Deterministic directory temp-promotion rename denial through the store-backed runtime path should reject early-data'
+      );
+      AssertTrue(not DirectoryExists(LDirectoryName),
+        'Runtime deterministic directory temp-promotion rename denial should keep the canonical main directory absent');
+      AssertTrue(not DirectoryExists(LTempDirectoryName),
+        'Runtime deterministic directory temp-promotion rename denial should clean up the temp directory');
+      AssertTrue(not DirectoryExists(LBackupDirectoryName),
+        'Runtime deterministic directory temp-promotion rename denial should not create a backup artifact');
+    finally
+      if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
+        LReplayAccess.ResetEarlyDataReplayLedger;
+    end;
+
+    LCtx := BuildDirectoryReplayStoreServerContext(LDirectoryName);
+    try
+      AssertResumedEarlyDataAcceptedAtRuntime(
+        LCtx,
+        LBlockedSession,
+        BytesOf('BOK!'),
+        'Runtime rebuild after deterministic directory temp-promotion rename denial should still accept the blocked session'
+      );
+      AssertTrue(DirectoryExists(LDirectoryName),
+        'Runtime recovery after deterministic directory temp-promotion rename denial should materialize the canonical main directory');
+      AssertTrue(not DirectoryExists(LBackupDirectoryName),
+        'Runtime recovery after deterministic directory temp-promotion rename denial should not leave a backup artifact');
+    finally
+      if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
+        LReplayAccess.ResetEarlyDataReplayLedger;
+    end;
+
+    LCtx := BuildDirectoryReplayStoreServerContext(LDirectoryName);
+    try
+      AssertResumedEarlyDataRejectedAtRuntime(
+        LCtx,
+        LBlockedSession,
+        BytesOf('BRPL'),
+        'Fresh blocked session accepted after deterministic directory temp-promotion rename denial recovery should still replay-reject after runtime rebuild'
+      );
+    finally
+      if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
+        LReplayAccess.ResetEarlyDataReplayLedger;
+    end;
+  finally
+    CleanupReplayProviderStoreDirectory(LDirectoryName);
+  end;
+end;
+
+procedure TestDirectoryReplayStoreFailsClosedOnDeterministicBackupPromotionRenameDeniedAtRuntime;
+var
+  LCaptureCtx: ISSLContext;
+  LCtx: ISSLContext;
+  LReplayAccess: IFreePascalEarlyDataReplayLedgerAccess;
+  LScriptedStore: IFreePascalEarlyDataReplayStore;
+  LExistingSession: ISSLSession;
+  LBlockedSession: ISSLSession;
+  LDirectoryName: string;
+  LTempDirectoryName: string;
+  LBackupDirectoryName: string;
+begin
+  LCaptureCtx := BuildAcceptingEarlyDataServerContext;
+  LExistingSession := CaptureServerIssuedSession(LCaptureCtx);
+  LBlockedSession := CaptureServerIssuedSession(LCaptureCtx);
+
+  LDirectoryName := BuildReplayProviderStoreDirectoryPath('runtime_backup_promotion_rename_denied_preserves_main_truth');
+  LTempDirectoryName := LDirectoryName + '.tmpdir';
+  LBackupDirectoryName := LDirectoryName + '.bakdir';
+  CleanupReplayProviderStoreDirectory(LDirectoryName);
+  try
+    LCtx := BuildDirectoryReplayStoreServerContext(LDirectoryName);
+    try
+      AssertResumedEarlyDataAcceptedAtRuntime(
+        LCtx,
+        LExistingSession,
+        BytesOf('EONE'),
+        'Initial runtime acquire should materialize canonical directory replay truth before deterministic backup-promotion denial'
+      );
+      AssertTrue(DirectoryExists(LDirectoryName),
+        'Initial runtime acquire should materialize canonical directory replay truth before deterministic backup-promotion denial');
+    finally
+      if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
+        LReplayAccess.ResetEarlyDataReplayLedger;
+    end;
+
+    LCtx := BuildAcceptingEarlyDataServerContext;
+    try
+      LScriptedStore := TScriptedBackupPromotionRenameDeniedDirectoryReplayStore.Create(LDirectoryName);
+      AssertTrue(InstallStoreBackedReplayLedger(LCtx, LScriptedStore),
+        'Store-backed helper should install scripted directory store for deterministic backup-promotion denial runtime validation');
+      AssertResumedEarlyDataRejectedAtRuntime(
+        LCtx,
+        LBlockedSession,
+        BytesOf('BLOK'),
+        'Deterministic directory backup-promotion denial through the store-backed runtime path should reject early-data without losing old truth'
+      );
+      AssertTrue(DirectoryExists(LDirectoryName),
+        'Runtime deterministic directory backup-promotion denial should preserve the canonical main directory');
+      AssertTrue(not DirectoryExists(LTempDirectoryName),
+        'Runtime deterministic directory backup-promotion denial should clean up the temp directory');
+      AssertTrue(not DirectoryExists(LBackupDirectoryName),
+        'Runtime deterministic directory backup-promotion denial should not leave a backup artifact');
+      AssertResumedEarlyDataRejectedAtRuntime(
+        LCtx,
+        LExistingSession,
+        BytesOf('EPRV'),
+        'Runtime deterministic directory backup-promotion denial should preserve the original replay truth immediately'
+      );
+    finally
+      if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
+        LReplayAccess.ResetEarlyDataReplayLedger;
+    end;
+
+    LCtx := BuildDirectoryReplayStoreServerContext(LDirectoryName);
+    try
+      AssertResumedEarlyDataRejectedAtRuntime(
+        LCtx,
+        LExistingSession,
+        BytesOf('EAGN'),
+        'Runtime rebuild after deterministic directory backup-promotion denial should still reject the original replay truth'
+      );
+      AssertResumedEarlyDataAcceptedAtRuntime(
+        LCtx,
+        LBlockedSession,
+        BytesOf('BOK!'),
+        'Runtime rebuild after deterministic directory backup-promotion denial should still accept the fresh blocked session'
+      );
+      AssertTrue(not DirectoryExists(LBackupDirectoryName),
+        'Runtime recovery after deterministic directory backup-promotion denial should not leave a backup artifact');
+    finally
+      if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
+        LReplayAccess.ResetEarlyDataReplayLedger;
+    end;
+
+    LCtx := BuildDirectoryReplayStoreServerContext(LDirectoryName);
+    try
+      AssertResumedEarlyDataRejectedAtRuntime(
+        LCtx,
+        LBlockedSession,
+        BytesOf('BRPL'),
+        'Fresh blocked session accepted after deterministic directory backup-promotion denial recovery should still replay-reject after runtime rebuild'
       );
     finally
       if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
@@ -11710,6 +12080,8 @@ begin
   TestDirectoryReplayStoreLeavesBackupResidueAfterCleanupFailureAndFailsClosedOnUndeletableStaleBackup;
   TestDirectoryReplayStorePreservesExistingTruthAcrossBackupAssistedReplaceFailure;
   TestDirectoryReplayStoreRecoversReplayTruthFromBackupAfterRestoreFailure;
+  TestDirectoryReplayStoreFailsClosedOnDeterministicTempPromotionRenameDeniedAndRecovers;
+  TestDirectoryReplayStoreFailsClosedOnDeterministicBackupPromotionRenameDeniedAndRecovers;
   TestDirectoryReplayStoreFailsClosedOnCorruptFallbackDirectoriesAcrossProviderRebuild;
   TestDirectoryReplayStoreFailsClosedWhenCorruptTempFallbackShadowsHealthyBackupFallback;
   TestDirectoryReplayStoreFailsClosedOnFilesystemPathBlockersAndRecovers;
@@ -11720,6 +12092,8 @@ begin
   TestDirectoryReplayStoreLeavesBackupResidueAfterCleanupFailureAndFailsClosedOnUndeletableStaleBackupAtRuntime;
   TestDirectoryReplayStorePreservesExistingTruthAcrossBackupAssistedReplaceFailureAtRuntime;
   TestDirectoryReplayStoreRecoversReplayTruthFromBackupAfterRestoreFailureAtRuntime;
+  TestDirectoryReplayStoreFailsClosedOnDeterministicTempPromotionRenameDeniedAtRuntime;
+  TestDirectoryReplayStoreFailsClosedOnDeterministicBackupPromotionRenameDeniedAtRuntime;
   TestDirectoryReplayStoreRetainsExistingAndAcceptedReplayTruthAcrossCrashWindowRestart;
   TestDirectoryReplayStoreFailsClosedOnCorruptFallbackDirectoriesAtRuntime;
   TestDirectoryReplayStoreFailsClosedWhenCorruptTempFallbackShadowsHealthyBackupFallbackAtRuntime;
