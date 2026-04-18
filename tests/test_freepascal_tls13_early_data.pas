@@ -1323,6 +1323,38 @@ type
     constructor Create(const ADirectoryName: string);
   end;
 
+  TScriptedExistingMainReplaceFailureDirectoryReplayStore = class(
+    TFreePascalDirectoryEarlyDataReplayStore)
+  private
+    FMainDirectoryName: string;
+    FTempDirectoryName: string;
+    FBackupDirectoryName: string;
+    FTempToMainRenameAttempts: Integer;
+  protected
+    function RenamePathAt(
+      const ASourcePath: string;
+      const ADestPath: string
+    ): Boolean; override;
+  public
+    constructor Create(const ADirectoryName: string);
+  end;
+
+  TScriptedBackupRestoreFailureDirectoryReplayStore = class(
+    TFreePascalDirectoryEarlyDataReplayStore)
+  private
+    FMainDirectoryName: string;
+    FTempDirectoryName: string;
+    FBackupDirectoryName: string;
+    FTempToMainRenameAttempts: Integer;
+  protected
+    function RenamePathAt(
+      const ASourcePath: string;
+      const ADestPath: string
+    ): Boolean; override;
+  public
+    constructor Create(const ADirectoryName: string);
+  end;
+
   TSharedReplayProviderEntry = record
     Key: string;
     ExpiresAt: TDateTime;
@@ -1538,6 +1570,61 @@ begin
     Exit(False);
 
   Result := inherited RemovePathTree(APath);
+end;
+
+constructor TScriptedExistingMainReplaceFailureDirectoryReplayStore.Create(
+  const ADirectoryName: string
+);
+begin
+  inherited Create(ADirectoryName);
+  FMainDirectoryName := ADirectoryName;
+  FTempDirectoryName := ADirectoryName + '.tmpdir';
+  FBackupDirectoryName := ADirectoryName + '.bakdir';
+  FTempToMainRenameAttempts := 0;
+end;
+
+function TScriptedExistingMainReplaceFailureDirectoryReplayStore.RenamePathAt(
+  const ASourcePath: string;
+  const ADestPath: string
+): Boolean;
+begin
+  if (ASourcePath = FTempDirectoryName) and (ADestPath = FMainDirectoryName) then
+  begin
+    Inc(FTempToMainRenameAttempts);
+    if FTempToMainRenameAttempts = 1 then
+      Exit(False);
+  end;
+
+  Result := inherited RenamePathAt(ASourcePath, ADestPath);
+end;
+
+constructor TScriptedBackupRestoreFailureDirectoryReplayStore.Create(
+  const ADirectoryName: string
+);
+begin
+  inherited Create(ADirectoryName);
+  FMainDirectoryName := ADirectoryName;
+  FTempDirectoryName := ADirectoryName + '.tmpdir';
+  FBackupDirectoryName := ADirectoryName + '.bakdir';
+  FTempToMainRenameAttempts := 0;
+end;
+
+function TScriptedBackupRestoreFailureDirectoryReplayStore.RenamePathAt(
+  const ASourcePath: string;
+  const ADestPath: string
+): Boolean;
+begin
+  if (ASourcePath = FTempDirectoryName) and (ADestPath = FMainDirectoryName) then
+  begin
+    Inc(FTempToMainRenameAttempts);
+    if FTempToMainRenameAttempts = 1 then
+      Exit(False);
+  end;
+
+  if (ASourcePath = FBackupDirectoryName) and (ADestPath = FMainDirectoryName) then
+    Exit(False);
+
+  Result := inherited RenamePathAt(ASourcePath, ADestPath);
 end;
 
 function TSharedReplayEntryStore.AcquireUpdateGuard(
@@ -4465,6 +4552,148 @@ begin
   end;
 end;
 
+procedure TestDirectoryReplayStorePreservesExistingTruthAcrossBackupAssistedReplaceFailure;
+var
+  LDirectoryName: string;
+  LTempDirectoryName: string;
+  LBackupDirectoryName: string;
+  LStore1: IFreePascalEarlyDataReplayStore;
+  LScriptedStore: IFreePascalEarlyDataReplayStore;
+  LStore2: IFreePascalEarlyDataReplayStore;
+  LStore3: IFreePascalEarlyDataReplayStore;
+  LProvider1: IFreePascalEarlyDataReplayProvider;
+  LScriptedProvider: IFreePascalEarlyDataReplayProvider;
+  LProvider2: IFreePascalEarlyDataReplayProvider;
+  LProvider3: IFreePascalEarlyDataReplayProvider;
+  LLedger1: IFreePascalManagedEarlyDataReplayLedger;
+  LScriptedLedger: IFreePascalManagedEarlyDataReplayLedger;
+  LLedger2: IFreePascalManagedEarlyDataReplayLedger;
+  LLedger3: IFreePascalManagedEarlyDataReplayLedger;
+  LExistingSession: ISSLSession;
+  LBlockedSession: ISSLSession;
+begin
+  LExistingSession := BuildManualSession('dir-replace-failed-existing', 8);
+  LBlockedSession := BuildManualSession('dir-replace-failed-blocked', 8);
+
+  LDirectoryName := BuildReplayProviderStoreDirectoryPath('backup_assisted_replace_failure_truth_preservation');
+  LTempDirectoryName := LDirectoryName + '.tmpdir';
+  LBackupDirectoryName := LDirectoryName + '.bakdir';
+  CleanupReplayProviderStoreDirectory(LDirectoryName);
+  try
+    LStore1 := TFreePascalDirectoryEarlyDataReplayStore.Create(LDirectoryName);
+    LProvider1 := TFreePascalStoreBackedEarlyDataReplayProvider.Create(LStore1);
+    LLedger1 := TFreePascalProviderBackedEarlyDataReplayLedger.Create(LProvider1, True, 8);
+    AssertTrue(LLedger1.TryAcquireEarlyDataSession(LExistingSession),
+      'Initial acquire should materialize canonical directory replay truth before scripted backup-assisted replace failure');
+    AssertTrue(DirectoryExists(LDirectoryName),
+      'Initial acquire should materialize canonical directory replay truth before scripted backup-assisted replace failure');
+
+    LScriptedStore := TScriptedExistingMainReplaceFailureDirectoryReplayStore.Create(LDirectoryName);
+    LScriptedProvider := TFreePascalStoreBackedEarlyDataReplayProvider.Create(LScriptedStore);
+    LScriptedLedger := TFreePascalProviderBackedEarlyDataReplayLedger.Create(LScriptedProvider, True, 8);
+    AssertTrue(not LScriptedLedger.TryAcquireEarlyDataSession(LBlockedSession),
+      'Backup-assisted directory replace failure should fail closed while preserving canonical replay truth');
+    AssertTrue(DirectoryExists(LDirectoryName),
+      'Backup-assisted directory replace failure should preserve the canonical directory replay truth');
+    AssertTrue(not DirectoryExists(LTempDirectoryName),
+      'Backup-assisted directory replace failure should clean up the temp directory');
+    AssertTrue(not DirectoryExists(LBackupDirectoryName),
+      'Backup-assisted directory replace failure should restore old truth without leaving a backup artifact');
+    AssertTrue(not LScriptedLedger.TryAcquireEarlyDataSession(LExistingSession),
+      'Backup-assisted directory replace failure should preserve the original replay truth immediately');
+
+    LStore2 := TFreePascalDirectoryEarlyDataReplayStore.Create(LDirectoryName);
+    LProvider2 := TFreePascalStoreBackedEarlyDataReplayProvider.Create(LStore2);
+    LLedger2 := TFreePascalProviderBackedEarlyDataReplayLedger.Create(LProvider2, True, 8);
+    AssertTrue(not LLedger2.TryAcquireEarlyDataSession(LExistingSession),
+      'Provider rebuild after backup-assisted directory replace failure should still reject the original replay truth');
+    AssertTrue(LLedger2.TryAcquireEarlyDataSession(LBlockedSession),
+      'Provider rebuild after backup-assisted directory replace failure should still accept the fresh blocked session');
+
+    LStore3 := TFreePascalDirectoryEarlyDataReplayStore.Create(LDirectoryName);
+    LProvider3 := TFreePascalStoreBackedEarlyDataReplayProvider.Create(LStore3);
+    LLedger3 := TFreePascalProviderBackedEarlyDataReplayLedger.Create(LProvider3, True, 8);
+    AssertTrue(not LLedger3.TryAcquireEarlyDataSession(LBlockedSession),
+      'Fresh blocked session accepted after directory replace recovery should still replay-reject after provider rebuild');
+  finally
+    CleanupReplayProviderStoreDirectory(LDirectoryName);
+  end;
+end;
+
+procedure TestDirectoryReplayStoreRecoversReplayTruthFromBackupAfterRestoreFailure;
+var
+  LDirectoryName: string;
+  LTempDirectoryName: string;
+  LBackupDirectoryName: string;
+  LStore1: IFreePascalEarlyDataReplayStore;
+  LScriptedStore: IFreePascalEarlyDataReplayStore;
+  LStore2: IFreePascalEarlyDataReplayStore;
+  LStore3: IFreePascalEarlyDataReplayStore;
+  LProvider1: IFreePascalEarlyDataReplayProvider;
+  LScriptedProvider: IFreePascalEarlyDataReplayProvider;
+  LProvider2: IFreePascalEarlyDataReplayProvider;
+  LProvider3: IFreePascalEarlyDataReplayProvider;
+  LLedger1: IFreePascalManagedEarlyDataReplayLedger;
+  LScriptedLedger: IFreePascalManagedEarlyDataReplayLedger;
+  LLedger2: IFreePascalManagedEarlyDataReplayLedger;
+  LLedger3: IFreePascalManagedEarlyDataReplayLedger;
+  LExistingSession: ISSLSession;
+  LBlockedSession: ISSLSession;
+begin
+  LExistingSession := BuildManualSession('dir-restore-failed-existing', 8);
+  LBlockedSession := BuildManualSession('dir-restore-failed-blocked', 8);
+
+  LDirectoryName := BuildReplayProviderStoreDirectoryPath('backup_restore_failure_recovery');
+  LTempDirectoryName := LDirectoryName + '.tmpdir';
+  LBackupDirectoryName := LDirectoryName + '.bakdir';
+  CleanupReplayProviderStoreDirectory(LDirectoryName);
+  try
+    LStore1 := TFreePascalDirectoryEarlyDataReplayStore.Create(LDirectoryName);
+    LProvider1 := TFreePascalStoreBackedEarlyDataReplayProvider.Create(LStore1);
+    LLedger1 := TFreePascalProviderBackedEarlyDataReplayLedger.Create(LProvider1, True, 8);
+    AssertTrue(LLedger1.TryAcquireEarlyDataSession(LExistingSession),
+      'Initial acquire should materialize canonical directory replay truth before scripted backup restore failure');
+    AssertTrue(DirectoryExists(LDirectoryName),
+      'Initial acquire should materialize canonical directory replay truth before scripted backup restore failure');
+
+    LScriptedStore := TScriptedBackupRestoreFailureDirectoryReplayStore.Create(LDirectoryName);
+    LScriptedProvider := TFreePascalStoreBackedEarlyDataReplayProvider.Create(LScriptedStore);
+    LScriptedLedger := TFreePascalProviderBackedEarlyDataReplayLedger.Create(LScriptedProvider, True, 8);
+    AssertTrue(not LScriptedLedger.TryAcquireEarlyDataSession(LBlockedSession),
+      'Directory backup restore failure should fail closed for the fresh blocked session');
+    AssertTrue(not DirectoryExists(LDirectoryName),
+      'Directory backup restore failure should leave the canonical main directory missing after restore fails');
+    AssertTrue(not DirectoryExists(LTempDirectoryName),
+      'Directory backup restore failure should clean up the temp directory');
+    AssertTrue(DirectoryExists(LBackupDirectoryName),
+      'Directory backup restore failure should preserve the backup directory artifact');
+    AssertTrue(not LScriptedLedger.TryAcquireEarlyDataSession(LExistingSession),
+      'Directory backup restore failure should still reject the original replay truth through the backup artifact');
+
+    LStore2 := TFreePascalDirectoryEarlyDataReplayStore.Create(LDirectoryName);
+    LProvider2 := TFreePascalStoreBackedEarlyDataReplayProvider.Create(LStore2);
+    LLedger2 := TFreePascalProviderBackedEarlyDataReplayLedger.Create(LProvider2, True, 8);
+    AssertTrue(not LLedger2.TryAcquireEarlyDataSession(LExistingSession),
+      'Provider rebuild after directory backup restore failure should still reject the original replay truth from the backup artifact');
+    AssertTrue(DirectoryExists(LBackupDirectoryName),
+      'Replay rejection after directory backup restore failure should not consume the backup artifact');
+    AssertTrue(LLedger2.TryAcquireEarlyDataSession(LBlockedSession),
+      'Provider rebuild after directory backup restore failure should still accept the fresh blocked session');
+    AssertTrue(DirectoryExists(LDirectoryName),
+      'Fresh acquire after directory backup restore failure should materialize the canonical main directory again');
+    AssertTrue(not DirectoryExists(LBackupDirectoryName),
+      'Successful recovery after directory backup restore failure should consume the backup artifact');
+
+    LStore3 := TFreePascalDirectoryEarlyDataReplayStore.Create(LDirectoryName);
+    LProvider3 := TFreePascalStoreBackedEarlyDataReplayProvider.Create(LStore3);
+    LLedger3 := TFreePascalProviderBackedEarlyDataReplayLedger.Create(LProvider3, True, 8);
+    AssertTrue(not LLedger3.TryAcquireEarlyDataSession(LBlockedSession),
+      'Fresh blocked session accepted after directory backup restore recovery should still replay-reject after provider rebuild');
+  finally
+    CleanupReplayProviderStoreDirectory(LDirectoryName);
+  end;
+end;
+
 procedure TestDirectoryReplayStoreFailsClosedOnCorruptFallbackDirectoriesAcrossProviderRebuild;
   procedure AssertCorruptFallbackDirectoryFailsClosed(
     const ASuffix: string;
@@ -5895,6 +6124,212 @@ begin
         LBlockedSession,
         BytesOf('BRPL'),
         'Fresh blocked session accepted after stale directory .bakdir residue recovery should still replay-reject after runtime rebuild'
+      );
+    finally
+      if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
+        LReplayAccess.ResetEarlyDataReplayLedger;
+    end;
+  finally
+    CleanupReplayProviderStoreDirectory(LDirectoryName);
+  end;
+end;
+
+procedure TestDirectoryReplayStorePreservesExistingTruthAcrossBackupAssistedReplaceFailureAtRuntime;
+var
+  LCaptureCtx: ISSLContext;
+  LCtx: ISSLContext;
+  LReplayAccess: IFreePascalEarlyDataReplayLedgerAccess;
+  LScriptedStore: IFreePascalEarlyDataReplayStore;
+  LExistingSession: ISSLSession;
+  LBlockedSession: ISSLSession;
+  LDirectoryName: string;
+  LTempDirectoryName: string;
+  LBackupDirectoryName: string;
+begin
+  LCaptureCtx := BuildAcceptingEarlyDataServerContext;
+  LExistingSession := CaptureServerIssuedSession(LCaptureCtx);
+  LBlockedSession := CaptureServerIssuedSession(LCaptureCtx);
+
+  LDirectoryName := BuildReplayProviderStoreDirectoryPath('runtime_backup_assisted_replace_failure_truth_preservation');
+  LTempDirectoryName := LDirectoryName + '.tmpdir';
+  LBackupDirectoryName := LDirectoryName + '.bakdir';
+  CleanupReplayProviderStoreDirectory(LDirectoryName);
+  try
+    LCtx := BuildDirectoryReplayStoreServerContext(LDirectoryName);
+    try
+      AssertResumedEarlyDataAcceptedAtRuntime(
+        LCtx,
+        LExistingSession,
+        BytesOf('EONE'),
+        'Initial runtime acquire should materialize canonical directory replay truth before scripted backup-assisted replace failure'
+      );
+      AssertTrue(DirectoryExists(LDirectoryName),
+        'Initial runtime acquire should materialize canonical directory replay truth before scripted backup-assisted replace failure');
+    finally
+      if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
+        LReplayAccess.ResetEarlyDataReplayLedger;
+    end;
+
+    LCtx := BuildAcceptingEarlyDataServerContext;
+    try
+      LScriptedStore := TScriptedExistingMainReplaceFailureDirectoryReplayStore.Create(LDirectoryName);
+      AssertTrue(InstallStoreBackedReplayLedger(LCtx, LScriptedStore),
+        'Store-backed helper should install scripted directory store for backup-assisted replace runtime validation');
+      AssertResumedEarlyDataRejectedAtRuntime(
+        LCtx,
+        LBlockedSession,
+        BytesOf('BLOK'),
+        'Backup-assisted directory replace failure through store-backed runtime path should reject early-data without losing old truth'
+      );
+      AssertTrue(DirectoryExists(LDirectoryName),
+        'Runtime backup-assisted directory replace failure should preserve the canonical main directory');
+      AssertTrue(not DirectoryExists(LTempDirectoryName),
+        'Runtime backup-assisted directory replace failure should clean up the temp directory');
+      AssertTrue(not DirectoryExists(LBackupDirectoryName),
+        'Runtime backup-assisted directory replace failure should not leave a backup artifact after restoring old truth');
+      AssertResumedEarlyDataRejectedAtRuntime(
+        LCtx,
+        LExistingSession,
+        BytesOf('EPRV'),
+        'Runtime backup-assisted directory replace failure should preserve the original replay truth immediately'
+      );
+    finally
+      if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
+        LReplayAccess.ResetEarlyDataReplayLedger;
+    end;
+
+    LCtx := BuildDirectoryReplayStoreServerContext(LDirectoryName);
+    try
+      AssertResumedEarlyDataRejectedAtRuntime(
+        LCtx,
+        LExistingSession,
+        BytesOf('EAGN'),
+        'Runtime rebuild after backup-assisted directory replace failure should still reject the original replay truth'
+      );
+      AssertResumedEarlyDataAcceptedAtRuntime(
+        LCtx,
+        LBlockedSession,
+        BytesOf('BOK!'),
+        'Runtime rebuild after backup-assisted directory replace failure should still accept the fresh blocked session'
+      );
+    finally
+      if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
+        LReplayAccess.ResetEarlyDataReplayLedger;
+    end;
+
+    LCtx := BuildDirectoryReplayStoreServerContext(LDirectoryName);
+    try
+      AssertResumedEarlyDataRejectedAtRuntime(
+        LCtx,
+        LBlockedSession,
+        BytesOf('BRPL'),
+        'Fresh blocked session accepted after directory replace recovery should still replay-reject after runtime rebuild'
+      );
+    finally
+      if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
+        LReplayAccess.ResetEarlyDataReplayLedger;
+    end;
+  finally
+    CleanupReplayProviderStoreDirectory(LDirectoryName);
+  end;
+end;
+
+procedure TestDirectoryReplayStoreRecoversReplayTruthFromBackupAfterRestoreFailureAtRuntime;
+var
+  LCaptureCtx: ISSLContext;
+  LCtx: ISSLContext;
+  LReplayAccess: IFreePascalEarlyDataReplayLedgerAccess;
+  LScriptedStore: IFreePascalEarlyDataReplayStore;
+  LExistingSession: ISSLSession;
+  LBlockedSession: ISSLSession;
+  LDirectoryName: string;
+  LTempDirectoryName: string;
+  LBackupDirectoryName: string;
+begin
+  LCaptureCtx := BuildAcceptingEarlyDataServerContext;
+  LExistingSession := CaptureServerIssuedSession(LCaptureCtx);
+  LBlockedSession := CaptureServerIssuedSession(LCaptureCtx);
+
+  LDirectoryName := BuildReplayProviderStoreDirectoryPath('runtime_backup_restore_failure_recovery');
+  LTempDirectoryName := LDirectoryName + '.tmpdir';
+  LBackupDirectoryName := LDirectoryName + '.bakdir';
+  CleanupReplayProviderStoreDirectory(LDirectoryName);
+  try
+    LCtx := BuildDirectoryReplayStoreServerContext(LDirectoryName);
+    try
+      AssertResumedEarlyDataAcceptedAtRuntime(
+        LCtx,
+        LExistingSession,
+        BytesOf('EONE'),
+        'Initial runtime acquire should materialize canonical directory replay truth before scripted backup restore failure'
+      );
+      AssertTrue(DirectoryExists(LDirectoryName),
+        'Initial runtime acquire should materialize canonical directory replay truth before scripted backup restore failure');
+    finally
+      if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
+        LReplayAccess.ResetEarlyDataReplayLedger;
+    end;
+
+    LCtx := BuildAcceptingEarlyDataServerContext;
+    try
+      LScriptedStore := TScriptedBackupRestoreFailureDirectoryReplayStore.Create(LDirectoryName);
+      AssertTrue(InstallStoreBackedReplayLedger(LCtx, LScriptedStore),
+        'Store-backed helper should install scripted directory store for backup restore failure runtime validation');
+      AssertResumedEarlyDataRejectedAtRuntime(
+        LCtx,
+        LBlockedSession,
+        BytesOf('BLOK'),
+        'Directory backup restore failure through store-backed runtime path should reject early-data without dropping old truth'
+      );
+      AssertTrue(not DirectoryExists(LDirectoryName),
+        'Runtime directory backup restore failure should leave the canonical main directory missing after restore fails');
+      AssertTrue(not DirectoryExists(LTempDirectoryName),
+        'Runtime directory backup restore failure should clean up the temp directory');
+      AssertTrue(DirectoryExists(LBackupDirectoryName),
+        'Runtime directory backup restore failure should preserve the backup directory artifact');
+      AssertResumedEarlyDataRejectedAtRuntime(
+        LCtx,
+        LExistingSession,
+        BytesOf('EPRV'),
+        'Runtime directory backup restore failure should still reject the original replay truth through the backup artifact'
+      );
+    finally
+      if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
+        LReplayAccess.ResetEarlyDataReplayLedger;
+    end;
+
+    LCtx := BuildDirectoryReplayStoreServerContext(LDirectoryName);
+    try
+      AssertResumedEarlyDataRejectedAtRuntime(
+        LCtx,
+        LExistingSession,
+        BytesOf('EAGN'),
+        'Runtime rebuild after directory backup restore failure should still reject the original replay truth'
+      );
+      AssertTrue(DirectoryExists(LBackupDirectoryName),
+        'Runtime replay rejection after directory backup restore failure should not consume the backup artifact');
+      AssertResumedEarlyDataAcceptedAtRuntime(
+        LCtx,
+        LBlockedSession,
+        BytesOf('BOK!'),
+        'Runtime rebuild after directory backup restore failure should still accept the fresh blocked session'
+      );
+      AssertTrue(DirectoryExists(LDirectoryName),
+        'Runtime recovery after directory backup restore failure should materialize the canonical main directory again');
+      AssertTrue(not DirectoryExists(LBackupDirectoryName),
+        'Runtime recovery after directory backup restore failure should consume the backup artifact');
+    finally
+      if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
+        LReplayAccess.ResetEarlyDataReplayLedger;
+    end;
+
+    LCtx := BuildDirectoryReplayStoreServerContext(LDirectoryName);
+    try
+      AssertResumedEarlyDataRejectedAtRuntime(
+        LCtx,
+        LBlockedSession,
+        BytesOf('BRPL'),
+        'Fresh blocked session accepted after runtime directory backup restore recovery should still replay-reject after rebuild'
       );
     finally
       if Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess) then
@@ -11273,6 +11708,8 @@ begin
   TestDirectoryReplayStorePreservesTempDirResidueAcrossRepeatedReplayRejects;
   TestDirectoryReplayStoreRecoversReplayTruthFromBackupDirectoryAcrossProviderRebuild;
   TestDirectoryReplayStoreLeavesBackupResidueAfterCleanupFailureAndFailsClosedOnUndeletableStaleBackup;
+  TestDirectoryReplayStorePreservesExistingTruthAcrossBackupAssistedReplaceFailure;
+  TestDirectoryReplayStoreRecoversReplayTruthFromBackupAfterRestoreFailure;
   TestDirectoryReplayStoreFailsClosedOnCorruptFallbackDirectoriesAcrossProviderRebuild;
   TestDirectoryReplayStoreFailsClosedWhenCorruptTempFallbackShadowsHealthyBackupFallback;
   TestDirectoryReplayStoreFailsClosedOnFilesystemPathBlockersAndRecovers;
@@ -11281,6 +11718,8 @@ begin
   TestDirectoryReplayStorePreservesTempDirResidueAcrossRepeatedReplayOnlyRestarts;
   TestDirectoryReplayStoreRetainsReplayTruthAcrossProcessRestartFromBackupDirectory;
   TestDirectoryReplayStoreLeavesBackupResidueAfterCleanupFailureAndFailsClosedOnUndeletableStaleBackupAtRuntime;
+  TestDirectoryReplayStorePreservesExistingTruthAcrossBackupAssistedReplaceFailureAtRuntime;
+  TestDirectoryReplayStoreRecoversReplayTruthFromBackupAfterRestoreFailureAtRuntime;
   TestDirectoryReplayStoreRetainsExistingAndAcceptedReplayTruthAcrossCrashWindowRestart;
   TestDirectoryReplayStoreFailsClosedOnCorruptFallbackDirectoriesAtRuntime;
   TestDirectoryReplayStoreFailsClosedWhenCorruptTempFallbackShadowsHealthyBackupFallbackAtRuntime;

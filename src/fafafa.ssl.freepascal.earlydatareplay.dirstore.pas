@@ -58,6 +58,10 @@ type
       out AEntry: TFreePascalEarlyDataReplayStoreEntry
     ): Boolean;
   protected
+    function RenamePathAt(
+      const ASourcePath: string;
+      const ADestPath: string
+    ): Boolean; virtual;
     function RemovePathTree(const APath: string): Boolean; virtual;
   public
     constructor Create(const ADirectoryName: string);
@@ -418,6 +422,14 @@ begin
   Result := RemoveDir(APath);
 end;
 
+function TFreePascalDirectoryEarlyDataReplayStore.RenamePathAt(
+  const ASourcePath: string;
+  const ADestPath: string
+): Boolean;
+begin
+  Result := RenameFile(ASourcePath, ADestPath);
+end;
+
 function TFreePascalDirectoryEarlyDataReplayStore.WriteSnapshotDirectory(
   const ADirectoryName: string;
   const AEntries: TFreePascalEarlyDataReplayStoreEntries
@@ -593,19 +605,19 @@ begin
 
     if PathExistsAt(FDirectoryName) then
     begin
-      if not RenameFile(FDirectoryName, LBackupDirectoryName) then
+      if not RenamePathAt(FDirectoryName, LBackupDirectoryName) then
         Exit(False);
 
-      if not RenameFile(LTempDirectoryName, FDirectoryName) then
+      if not RenamePathAt(LTempDirectoryName, FDirectoryName) then
       begin
-        RenameFile(LBackupDirectoryName, FDirectoryName);
+        RenamePathAt(LBackupDirectoryName, FDirectoryName);
         Exit(False);
       end;
 
       if PathExistsAt(LBackupDirectoryName) then
         RemovePathTree(LBackupDirectoryName);
     end
-    else if not RenameFile(LTempDirectoryName, FDirectoryName) then
+    else if not RenamePathAt(LTempDirectoryName, FDirectoryName) then
       Exit(False);
 
     Result := True;
