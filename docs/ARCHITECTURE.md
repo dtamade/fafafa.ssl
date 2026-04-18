@@ -530,8 +530,8 @@ fafafa.ssl 使用的设计模式：
 
 - **接口设计**: [API_DESIGN_GUIDE.md](reference/API_DESIGN_GUIDE.md)
 - **迁移指南**: [MIGRATION_GUIDE_V1.1.md](MIGRATION_GUIDE_V1.1.md)
-- **长期路线图**: `.claude/plans/misty-doodling-raven.md`
-- **重构报告**: `.claude/plans/refactoring-completion-report.md`
+- **当前路线图**: [ROADMAP.md](ROADMAP.md)
+- **当前 completeness 主线**: [plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md](plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md)
 
 ---
 

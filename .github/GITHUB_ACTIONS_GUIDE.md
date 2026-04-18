@@ -3,6 +3,7 @@
 本仓库当前以“低成本、可重复、证据可审查”为优先，工作流分为：
 
 - **默认自动门禁（Linux）**
+- **默认自动门禁（FreePascal TLS 1.3 focused）**
 - **专项门禁（TLS13 signer）**
 - **跨平台手动回填（Wave B/B2）**
 - **模板/草案（默认禁用，`.disabled`）**
@@ -13,7 +14,7 @@
 
 | 工作流文件 | 触发 | 用途 | 主要产物 |
 |---|---|---|---|
-| `.github/workflows/ci.yml` | push / PR | Linux minimal gate（默认门禁） | `tmp/test-reports/` |
+| `.github/workflows/ci.yml` | push / PR | Linux minimal gate + FreePascal TLS 1.3 focused gate（默认门禁） | `tmp/test-reports/` |
 | `.github/workflows/tls13-signer-gate.yml` | path-filter + 手动 | TLS13 signer purity/bench/snapshot | `test-reports/`, `artifacts/ci/` |
 | `.github/workflows/wave-b-b2-manual.yml` | 手动 | 三平台证据回填 + 汇总/闭环判定 | `test-reports/` |
 
@@ -35,7 +36,7 @@ GitHub 仓库 → **Actions**：
 > 前提：已安装并登录 `gh`。
 
 ```bash
-# 运行默认 Linux minimal gate
+# 运行默认 Linux minimal gate（也包含 FreePascal TLS 1.3 focused gate）
 gh workflow run ci.yml
 
 # 运行 TLS13 signer gate（可选覆盖 bench 参数）
@@ -69,5 +70,5 @@ git push
 
 ## 5) 排障建议
 
-- 本地优先：先跑 `bash scripts/run_minimal_ci_gate.sh --fast-local`，再看 CI 产物对齐。
+- 本地优先：先跑 `bash scripts/run_minimal_ci_gate.sh --fast-local`，再按需补 `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`。
 - `--fast-local` 相关脚本默认输出到 `./tmp`，避免污染 git 工作区。

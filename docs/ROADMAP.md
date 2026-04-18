@@ -8,7 +8,7 @@
 ## 当前状态
 
 - engineering_state: CLOSED_OUT_PENDING_APPROVAL
-- approval_gate: human decision required before reopening Wave C governance work
+- approval_gate: human decision required before reopening Wave C mainline work
 - product_mainline: `SSL/TLS backend completeness roadmap`
 - current_default_build: `python3 scripts/compile_all_modules.py`
 - current_default_gate: `bash scripts/run_minimal_ci_gate.sh --fast-local`

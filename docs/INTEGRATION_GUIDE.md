@@ -225,7 +225,84 @@ begin
 end;
 ```
 
+如果你要把 resumed session + TLS 1.3 early data 一起收口到 connector facade，可以这样写：
+
+```pascal
+uses
+  SysUtils, Classes,
+  fafafa.ssl,
+  fafafa.ssl.context.builder,
+  fafafa.ssl.tls;
+
+var
+  Ctx: ISSLContext;
+  Session: ISSLSession;
+  TLS: TSSLConnector;
+  InitialStream: TSSLStream;
+  Stream: TSSLStream;
+begin
+  Ctx := TSSLContextBuilder.Create
+    .WithTLS12And13
+    .WithVerifyPeer
+    .WithClientEarlyData(True)
+    .BuildClient;
+
+  InitialStream := TSSLConnector.FromContext(Ctx)
+    .ConnectStream(InitialTransport, 'example.com');
+  try
+    Session := InitialStream.Connection.GetSession;
+  finally
+    InitialStream.Free;
+  end;
+
+  TLS := TSSLConnector.FromContext(Ctx)
+    .WithSession(Session)
+    .WithEarlyData(BytesOf('PING'));
+
+  Stream := TLS.ConnectStream(ResumedTransport, 'example.com');
+  try
+    // handshake 成功后再继续应用层读写
+  finally
+    Stream.Free;
+  end;
+end;
+```
+
+这里有两个边界要记住：
+
+- context 仍然需要先通过 `WithClientEarlyData(True)`（或 `ISSLEarlyDataContext`）启用 client early-data
+- `TSSLConnector.WithEarlyData(...)` 只负责在 `Connect` 前 queue payload，不会偷偷修改 context 或绕过 session/resumption 前提
+
 你的 `TStream` 仍然负责底层连接的生命周期（打开/关闭/超时/取消）。
+
+如果你在 FreePascal server 侧想把 resumed early-data 的 anti-replay truth 从默认内存 ledger 接到一个 file-backed replay store，可以走 `TSSLConfig` / `TSSLFactory` 这条最小 opt-in：
+
+```pascal
+uses
+  fafafa.ssl;
+
+var
+  Config: TSSLConfig;
+  ServerCtx: ISSLContext;
+begin
+  Config := CreateDefaultConfig(sslCtxServer);
+  Config.LibraryType := sslFreePascal;
+  Config.CertificateFile := 'server.crt';
+  Config.PrivateKeyFile := 'server.key';
+  Config.ServerEarlyDataPolicy := sslEarlyDataServerAccept;
+  Config.ServerMaxEarlyDataSize := 16384;
+  Config.ServerEarlyDataReplayStoreFile := '/var/lib/myapp/early-data.replay';
+
+  ServerCtx := TSSLFactory.CreateContext(Config);
+end;
+```
+
+这条路径当前有四个边界：
+
+- `ServerEarlyDataReplayStoreFile` 只对 FreePascal server path 生效；未配置或空串时，默认仍然使用 in-memory single-process anti-replay ledger
+- 这只是 file-backed replay-store 的 opt-in seam，不代表默认已经提供 durability；默认 shipped path 仍然是单进程内存 anti-replay
+- callback / file-backed 路径上的本地 `enabled` / `capacity` toggle 用来控制当前 ledger gate，不应理解成会隐式 wipe 已共享或已持久化的 replay truth
+- 这条 opt-in 也不会把 `experimental` capability wording 自动升级成更强承诺；当前 shipped prototype 先验证 file-backed seam 与 config/factory parity，如果你需要更重的 provider/durability 语义，应单独评估
 
 ---
 

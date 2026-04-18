@@ -1,9 +1,12 @@
 # fafafa.ssl 项目架构设计
 
+> 当前路线图: [当前路线图](../ROADMAP.md)
+> 说明: 本页保留架构与抽象层设计说明；当前执行顺序和阶段判断以 `docs/ROADMAP.md` 为准。
+
 ## 1. 项目概览
 
 ### 1.1 目标
-创建一个统一的 SSL/TLS 抽象层，支持 OpenSSL、WolfSSL、MbedTLS、WinSSL(Schannel) 四种后端实现，为 Pascal 生态提供简单易用的 SSL/TLS 解决方案。
+创建一个统一的 SSL/TLS 抽象层，支持 OpenSSL、WolfSSL、MbedTLS、WinSSL(Schannel)、FreePascal 五种后端实现，为 Pascal 生态提供简单易用的 SSL/TLS 解决方案。
 
 ### 1.2 核心原则
 - **统一接口**：屏蔽不同库的 API 差异
@@ -15,16 +18,16 @@
 ## 2. 架构层次设计
 
 ```
-┌─────────────────────────────────────┐
-│          用户应用层                    │
-├─────────────────────────────────────┤
-│      fafafa.ssl 统一接口层            │  ← 核心抽象层
-├─────────────────────────────────────┤
-│     后端适配器层 (Adapter Layer)      │
-├─────────┬─────────┬─────────┬───────┤
-│ OpenSSL │ WolfSSL │ MbedTLS │WinSSL │  ← 原生库封装
-│ Wrapper │ Wrapper │ Wrapper │Wrapper│
-└─────────┴─────────┴─────────┴───────┘
+┌─────────────────────────────────────────────────────┐
+│                     用户应用层                       │
+├─────────────────────────────────────────────────────┤
+│                 fafafa.ssl 统一接口层               │
+├─────────────────────────────────────────────────────┤
+│              后端适配器层 (Adapter Layer)           │
+├────────────┬──────────┬──────────┬──────────┬───────┤
+│ OpenSSL    │ WolfSSL  │ MbedTLS  │ WinSSL   │ Free  │
+│ Wrapper    │ Wrapper  │ Wrapper  │ Wrapper  │ Pascal│
+└────────────┴──────────┴──────────┴──────────┴───────┘
 ```
 
 ## 3. 核心模块设计
@@ -84,6 +87,7 @@ end;
 |------|---------|---------|------|
 | `fafafa.ssl.openssl.*` | OpenSSL 实现（Linux/macOS 默认） | 默认启用 | ✅ 生产就绪 |
 | `fafafa.ssl.winssl.*` | Windows Schannel 实现（Windows 默认，100% 完成） | 默认启用（仅 Windows） | ✅ 生产就绪 |
+| `fafafa.ssl.freepascal.*` | 纯 FreePascal TLS 1.3 实现 | 默认可用 | 🔄 当前主线 |
 | `fafafa.ssl.mbedtls.*` | mbedTLS 实现（轻量 TLS） | `{$DEFINE ENABLE_MBEDTLS}` | 🔄 可选 |
 | `fafafa.ssl.wolfssl.*` | wolfSSL 实现（嵌入式/兼容性） | `{$DEFINE ENABLE_WOLFSSL}` | 🔄 可选 |
 

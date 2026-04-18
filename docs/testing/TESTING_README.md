@@ -1,8 +1,14 @@
 # fafafa.ssl Testing Documentation
 
-**Last Updated**: 2025-09-30  
-**Testing Phase**: Initial OpenSSL Backend Validation  
-**Status**: ✅ Core Functionality Validated
+**Last Updated**: 2026-03-27
+**Status**: 当前稳定验证入口请先看 [docs/ROADMAP.md](../ROADMAP.md)
+
+> 本页保留大量历史测试文档索引，但其中的模块数量、通过率和阶段描述包含历史口径。
+> 如果你要看当前可重复验证链路，请优先使用：
+>
+> - `python3 scripts/compile_all_modules.py`
+> - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+> - `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`
 
 ---
 

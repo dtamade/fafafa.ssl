@@ -24,6 +24,9 @@
 
 ## 🚀 快速开始
 
+如果你是在 `fafafa.ssl` 的客户端连接上直接使用 CT，先看下面这节。
+只有在你需要离线验证、自己控制日志存储，或直接操作 OpenSSL `PX509` / `PSSL` 句柄时，才需要继续往下看 `TSCTValidator` 这组底层 API。
+
 ### 1. 基本 SCT 验证
 
 ```pascal
@@ -39,13 +42,13 @@ var
 begin
   // 创建默认验证选项
   Options := CreateDefaultValidationOptions;
-  
+
   // 创建验证器
   Validator := TSCTValidator.Create(Options);
   try
     // 从 X.509 证书扩展验证 SCT
     Results := Validator.ValidateFromX509(Cert, Issuer);
-    
+
     // 检查是否满足策略要求
     if Validator.CheckPolicy(Results) then
       WriteLn('证书通过 CT 验证')
@@ -72,7 +75,7 @@ begin
   try
     // 从 TLS 扩展提取并验证 SCT
     Results := Validator.ValidateFromTLS(SSL, Cert, Issuer);
-    
+
     // 检查验证结果
     if Validator.CheckPolicy(Results) then
       WriteLn('TLS 连接通过 CT 验证');
@@ -81,6 +84,90 @@ begin
   end;
 end;
 ```
+
+---
+
+## 在 FreePascal client 上直接使用 CT runtime surface
+
+如果你已经在用 `ISSLContext` / `ISSLConnection`，最直接的方式不是自己构造 `TSCTValidator`，而是从连接对象读取 CT surface。
+
+```pascal
+uses
+  SysUtils,
+  fafafa.ssl,
+  fafafa.ssl.base,
+  fafafa.ssl.context.builder;
+
+var
+  Ctx: ISSLContext;
+  Conn: ISSLConnection;
+  ClientConn: ISSLClientConnection;
+  CT: ISSLCertificateTransparency;
+  CTValidation: ISSLCertificateTransparencyValidation;
+  Socket: THandle;
+begin
+  Ctx := TSSLContextBuilder.Create
+    .WithBackend(sslFreePascal)
+    .WithTLS13
+    .WithVerifyPeer
+    .WithSystemRoots
+    .WithCertificateTransparencyRequired(True)
+    .BuildClient;
+
+  Conn := Ctx.CreateConnection(Socket);
+  ClientConn := Conn as ISSLClientConnection;
+  ClientConn.SetServerName('example.com');
+
+  if not Conn.Connect then
+    raise Exception.Create('TLS handshake failed: ' + Conn.GetVerifyResultString);
+
+  if Supports(Conn, ISSLCertificateTransparency, CT) then
+  begin
+    WriteLn('CT enabled: ', CT.GetCertificateTransparencyEnabled);
+    WriteLn('SCT count: ', CT.GetSignedCertificateTimestampCount);
+    WriteLn('CT status: ', CT.GetCertificateTransparencyStatus);
+  end;
+
+  if Supports(Conn, ISSLCertificateTransparencyValidation, CTValidation) then
+  begin
+    WriteLn('CT validation: ', CTValidation.GetCertificateTransparencyValidationStatus);
+    WriteLn('CT policy satisfied: ', CTValidation.IsCertificateTransparencyPolicySatisfied);
+  end;
+end.
+```
+
+这条 runtime path 适合两种场景：
+
+- 你只想观察服务端是否提供了 SCT，以及默认 policy 是否满足。此时不要打开 `WithCertificateTransparencyRequired(True)`。
+- 你希望在 FreePascal client full-handshake 上把 CT 作为 fail-closed 条件。此时打开 `WithCertificateTransparencyRequired(True)`。
+
+### 理解 `WithCertificateTransparencyRequired(...)` 什么时候生效
+
+`WithCertificateTransparencyRequired(True)` 不会在所有连接上都拦截握手。当前行为是刻意收窄的：
+
+| 场景                             | 是否请求 SCT                                    | 是否执行 `required` gate |
+| -------------------------------- | ----------------------------------------------- | ------------------------ |
+| `sslVerifyPeer` + full handshake | 是                                              | 是                       |
+| `verify-none`                    | 否                                              | 否                       |
+| resumed session                  | 取决于握手前配置，但 resumed flight 不执行 gate | 否                       |
+
+在会执行 gate 的路径上，当前 fail-closed 条件只有三个：
+
+- 服务端没有提供 SCT list
+- CT validation 结果不可用
+- 默认 CT policy 不满足
+
+### 当前 FreePascal client 会从哪里 surface SCT
+
+当前 runtime surface 会优先使用 TLS `signed_certificate_timestamp` 扩展；如果这个扩展缺失，则会回退到 leaf X.509 里的 embedded SCT 扩展；如果这两处都为空，则会继续回退到 OCSP-delivered SCT source。
+
+当前不在这条 runtime path 里的内容有：
+
+- 自定义 CT policy 的连接级 enforcement
+- 所有 backend 的一致支持声明
+- 更大范围的 CT 日志分发/管理自动化
+
+如果你需要这些更底层或更自定义的行为，继续使用下面的 `TSCTValidator` / `TCTLogClient` API。
 
 ---
 
@@ -106,7 +193,7 @@ var
   Options: TSCTValidationOptions;
 begin
   Options := CreateDefaultValidationOptions;
-  
+
   // 自定义配置
   Options.RequireValidSCTs := True;      // 要求有效 SCT
   Options.MinimumSCTCount := 2;          // 至少 2 个 SCT
@@ -135,14 +222,14 @@ type
 
 ### 验证状态
 
-| 状态 | 值 | 含义 |
-|------|-----|------|
-| `SCT_VALIDATION_STATUS_NOT_SET` | 0 | 未设置 |
-| `SCT_VALIDATION_STATUS_UNKNOWN_LOG` | 1 | 未知日志 |
-| `SCT_VALIDATION_STATUS_VALID` | 2 | 有效 |
-| `SCT_VALIDATION_STATUS_INVALID` | 3 | 无效 |
-| `SCT_VALIDATION_STATUS_UNVERIFIED` | 4 | 未验证 |
-| `SCT_VALIDATION_STATUS_UNKNOWN_VERSION` | 5 | 未知版本 |
+| 状态                                    | 值  | 含义     |
+| --------------------------------------- | --- | -------- |
+| `SCT_VALIDATION_STATUS_NOT_SET`         | 0   | 未设置   |
+| `SCT_VALIDATION_STATUS_UNKNOWN_LOG`     | 1   | 未知日志 |
+| `SCT_VALIDATION_STATUS_VALID`           | 2   | 有效     |
+| `SCT_VALIDATION_STATUS_INVALID`         | 3   | 无效     |
+| `SCT_VALIDATION_STATUS_UNVERIFIED`      | 4   | 未验证   |
+| `SCT_VALIDATION_STATUS_UNKNOWN_VERSION` | 5   | 未知版本 |
 
 ### 处理验证结果
 
@@ -152,7 +239,7 @@ var
   I: Integer;
 begin
   Results := Validator.ValidateFromX509(Cert, Issuer);
-  
+
   for I := 0 to High(Results) do
   begin
     WriteLn('SCT #', I + 1);
@@ -160,7 +247,7 @@ begin
     WriteLn('  状态: ', GetSCTValidationStatusName(Results[I].Status));
     WriteLn('  日志: ', Results[I].LogName);
     WriteLn('  时间: ', FormatSCTTimestamp(Results[I].Timestamp));
-    
+
     if not Results[I].IsValid then
       WriteLn('  错误: ', Results[I].ErrorMessage);
   end;
@@ -195,7 +282,7 @@ begin
     // 从 Google CT 日志列表加载
     if Client.LoadFromGoogleCTLogList then
       WriteLn('成功加载 ', Client.GetUsableLogCount, ' 个可用日志');
-    
+
     // 获取日志存储（用于 SCT 验证）
     Validator := TSCTValidator.Create(Options);
     // 注意：当前实现中，日志存储由 Validator 内部管理
@@ -216,7 +303,7 @@ var
   LogInfo: TCTLogInfo;
 begin
   LogInfo := Client.FindLogByID('base64-encoded-log-id');
-  
+
   if LogInfo.LogID <> '' then
   begin
     WriteLn('日志名称: ', LogInfo.Description);
@@ -240,7 +327,7 @@ var
 begin
   Options := CreateDefaultValidationOptions;
   Options.LogStoreFile := '/custom/path/to/ct_logs.conf';
-  
+
   Validator := TSCTValidator.Create(Options);
   try
     // 验证器会自动加载指定的日志存储
@@ -261,13 +348,13 @@ var
   I: Integer;
 begin
   ValidCount := 0;
-  
+
   for I := 0 to High(Results) do
   begin
     if Results[I].IsValid then
       Inc(ValidCount);
   end;
-  
+
   // 自定义策略：至少 2 个有效 SCT
   Result := ValidCount >= 2;
 end;
@@ -290,6 +377,7 @@ fpc -Mobjfpc -Sh -Fu./src -Fi./src -FE./tests/ct tests/ct/test_ct_sct_validation
 ### 测试覆盖
 
 当前测试覆盖以下功能：
+
 - ✅ 创建默认验证选项
 - ✅ 创建 SCT 验证器
 - ✅ 获取 SCT 验证状态名称
@@ -304,15 +392,25 @@ fpc -Mobjfpc -Sh -Fu./src -Fi./src -FE./tests/ct tests/ct/test_ct_sct_validation
 
 ### 1. 始终验证 SCT
 
-在生产环境中，应该始终验证证书的 SCT，以确保证书已被记录到 CT 日志中。
+在生产环境中，优先启用 `verify-peer`，然后根据你的容错要求决定是“只观察”还是“直接 fail-closed”。
 
 ```pascal
-// 推荐：在证书验证流程中集成 CT 验证
-if not VerifyCertificateChain(Cert) then
-  Exit(False);
+// 观察 CT surface，但不把 CT 当作握手阻断条件
+Ctx := TSSLContextBuilder.Create
+  .WithBackend(sslFreePascal)
+  .WithTLS13
+  .WithVerifyPeer
+  .WithSystemRoots
+  .BuildClient;
 
-if not VerifySCT(Cert, Issuer) then
-  Exit(False);
+// 或者：把 CT 作为 fail-closed 条件
+Ctx := TSSLContextBuilder.Create
+  .WithBackend(sslFreePascal)
+  .WithTLS13
+  .WithVerifyPeer
+  .WithSystemRoots
+  .WithCertificateTransparencyRequired(True)
+  .BuildClient;
 ```
 
 ### 2. 使用合理的策略
@@ -355,12 +453,17 @@ begin
     if not Results[I].IsValid then
       LogError('SCT 验证失败: ' + Results[I].ErrorMessage);
   end;
-  
+
   // 根据策略决定是否继续
   if Options.RequireValidSCTs then
     Exit(False);
 end;
 ```
+
+如果你走的是连接级 runtime surface，失败语义更简单：
+
+- 不打开 `WithCertificateTransparencyRequired(True)` 时，CT validation 失败只会 surface 到连接状态，不会阻断握手
+- 打开 `WithCertificateTransparencyRequired(True)` 时，missing SCT / validation unavailable / policy failed 会让 FreePascal client full-handshake fail-closed
 
 ---
 
@@ -371,6 +474,7 @@ end;
 **原因**：CT 日志不在日志存储中
 
 **解决方案**：
+
 1. 更新 CT 日志列表
 2. 检查日志存储文件是否正确加载
 3. 考虑设置 `AllowUnknownLogs := True`（仅用于测试）
@@ -380,6 +484,7 @@ end;
 **原因**：缺少颁发者证书
 
 **解决方案**：
+
 1. 确保提供了正确的颁发者证书
 2. 检查证书链是否完整
 
@@ -388,6 +493,7 @@ end;
 **原因**：系统时间不准确或时钟漂移超过容差
 
 **解决方案**：
+
 1. 同步系统时间
 2. 增加 `ClockDriftTolerance` 值（不推荐）
 
@@ -416,14 +522,15 @@ end;
 
 ## 🔄 更新日志
 
-| 版本 | 日期 | 变更内容 |
-|------|------|---------|
-| 1.0 | 2026-01-30 | 初始版本，包含 SCT 验证和 CT 日志集成 |
+| 版本 | 日期       | 变更内容                              |
+| ---- | ---------- | ------------------------------------- |
+| 1.0  | 2026-01-30 | 初始版本，包含 SCT 验证和 CT 日志集成 |
 
 ---
 
-**文档维护**:  
-- 创建者: Claude Code (Sisyphus)  
-- 创建日期: 2026-01-30  
-- 版本: 1.0  
+**文档维护**:
+
+- 创建者: Claude Code (Sisyphus)
+- 创建日期: 2026-01-30
+- 版本: 1.0
 - 下次审查: 2026-03-01
