@@ -51,6 +51,66 @@
 - **流式 Builder**: TSSLContextBuilder, TSSLConnectionBuilder
 - **完整 Try 方法**: 无异常版本 API
 
+## Use replay-store opt-in for FreePascal early-data servers
+
+FreePascal 的 `0-RTT / early data` 目前仍是实验性能力，默认 shipped path 继续使用 `in-memory single-process anti-replay ledger`。如果你要让服务端 early-data replay truth 落到本地持久化路径，当前 public opt-in 只开放给 FreePascal server context。
+
+用 builder 时，可选这两个入口：
+
+- `WithServerEarlyDataReplayStoreFile(...)`
+- `WithServerEarlyDataReplayStoreDirectory(...)`
+
+用 config/factory 时，可选这两个字段：
+
+- `TSSLConfig.ServerEarlyDataReplayStoreFile`
+- `TSSLConfig.ServerEarlyDataReplayStoreDirectory`
+
+`file` 和 `directory` 是 mutually exclusive opt-ins，不能同时配置。
+
+Builder 示例：
+
+```pascal
+Ctx := TSSLContextBuilder.Create
+  .WithBackend(sslFreePascal)
+  .WithTLS13
+  .WithVerifyNone
+  .WithCertificate('tests/certificate/test_certs/signer_cert.pem')
+  .WithPrivateKey('tests/certificate/test_certs/signer_key.pem')
+  .WithSessionCache(True)
+  .WithSessionTimeout(7200)
+  .WithServerEarlyDataPolicy(sslEarlyDataServerAccept)
+  .WithServerMaxEarlyDataSize(8)
+  .WithServerEarlyDataReplayStoreDirectory('/var/lib/fafafa/replay-store')
+  .BuildServer;
+```
+
+Config/factory 示例：
+
+```pascal
+var
+  LConfig: TSSLConfig;
+begin
+  LConfig := CreateDefaultConfig(sslCtxServer);
+  LConfig.LibraryType := sslFreePascal;
+  LConfig.ContextType := sslCtxServer;
+  LConfig.PreferredVersion := sslProtocolTLS13;
+  LConfig.ProtocolVersions := [sslProtocolTLS13];
+  LConfig.VerifyMode := [];
+  LConfig.CertificateFile := 'tests/certificate/test_certs/signer_cert.pem';
+  LConfig.PrivateKeyFile := 'tests/certificate/test_certs/signer_key.pem';
+  LConfig.SessionCacheSize := 8;
+  LConfig.SessionTimeout := 7200;
+  Include(LConfig.Options, ssoEnableSessionCache);
+  LConfig.ServerEarlyDataPolicy := sslEarlyDataServerAccept;
+  LConfig.ServerMaxEarlyDataSize := 8;
+  LConfig.ServerEarlyDataReplayStoreFile := '/var/lib/fafafa/replay-store.bin';
+
+  Ctx := TSSLFactory.CreateContext(LConfig);
+end;
+```
+
+这条 opt-in 只解决单机可控的 replay-store truth，不代表默认路径已经持久化，也不代表已经进入 distributed readiness。
+
 ## 快速开始
 
 ### 安装要求

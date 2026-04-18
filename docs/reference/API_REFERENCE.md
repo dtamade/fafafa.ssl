@@ -1,16 +1,81 @@
 # fafafa.ssl API 参考文档
 
 > **版本**: v0.8  
-> **最后更新**: 2025-10-24
+> **最后更新**: 2026-04-19
 
 ## 目录
 
 - [核心接口](#核心接口)
+- [FreePascal early-data replay-store opt-in](#freepascal-early-data-replay-store-opt-in)
 - [OpenSSL 后端](#openssl-后端)
 - [WinSSL 后端](#winssl-后端)
 - [数据类型](#数据类型)
 - [错误处理](#错误处理)
 - [工具函数](#工具函数)
+
+---
+
+## FreePascal early-data replay-store opt-in
+
+FreePascal server-side `0-RTT / early data` 默认 shipped path 仍然使用 `in-memory single-process anti-replay ledger`。如果需要本地持久化 replay truth，当前 public API 已经开放两条 opt-in 路径，但默认行为和 capability caveat 不变。
+
+### Use `TSSLConfig` with `TSSLFactory.CreateContext(...)`
+
+`TSSLConfig` 目前提供两个 server-only replay-store 字段：
+
+- `TSSLConfig.ServerEarlyDataReplayStoreFile`
+- `TSSLConfig.ServerEarlyDataReplayStoreDirectory`
+
+这两个字段用于 `TSSLFactory.CreateContext(const AConfig)` 的 FreePascal server path。它们是 mutually exclusive 配置，不能同时设置；同时设置时，factory 会 fail fast。
+
+```pascal
+var
+  LConfig: TSSLConfig;
+begin
+  LConfig := CreateDefaultConfig(sslCtxServer);
+  LConfig.LibraryType := sslFreePascal;
+  LConfig.ContextType := sslCtxServer;
+  LConfig.PreferredVersion := sslProtocolTLS13;
+  LConfig.ProtocolVersions := [sslProtocolTLS13];
+  LConfig.VerifyMode := [];
+  LConfig.CertificateFile := 'tests/certificate/test_certs/signer_cert.pem';
+  LConfig.PrivateKeyFile := 'tests/certificate/test_certs/signer_key.pem';
+  LConfig.SessionCacheSize := 8;
+  LConfig.SessionTimeout := 7200;
+  Include(LConfig.Options, ssoEnableSessionCache);
+  LConfig.ServerEarlyDataPolicy := sslEarlyDataServerAccept;
+  LConfig.ServerMaxEarlyDataSize := 8;
+  LConfig.ServerEarlyDataReplayStoreDirectory := '/var/lib/fafafa/replay-store';
+
+  Ctx := TSSLFactory.CreateContext(LConfig);
+end;
+```
+
+### Use builder opt-ins for server contexts
+
+`TSSLContextBuilder` 目前提供两个对应入口：
+
+- `WithServerEarlyDataReplayStoreFile(...)`
+- `WithServerEarlyDataReplayStoreDirectory(...)`
+
+这两个 builder opt-in 也只适用于 FreePascal server context，同样 mutually exclusive；builder 在双配置时会 fail fast。
+
+```pascal
+Ctx := TSSLContextBuilder.Create
+  .WithBackend(sslFreePascal)
+  .WithTLS13
+  .WithVerifyNone
+  .WithCertificate('tests/certificate/test_certs/signer_cert.pem')
+  .WithPrivateKey('tests/certificate/test_certs/signer_key.pem')
+  .WithSessionCache(True)
+  .WithSessionTimeout(7200)
+  .WithServerEarlyDataPolicy(sslEarlyDataServerAccept)
+  .WithServerMaxEarlyDataSize(8)
+  .WithServerEarlyDataReplayStoreFile('/var/lib/fafafa/replay-store.bin')
+  .BuildServer;
+```
+
+这条 public opt-in 只暴露单机可控的 replay-store seam，不代表默认路径已经改成持久化，也不表示 distributed readiness 已完成。
 
 ---
 
