@@ -42,6 +42,8 @@ var
   LOffset: Integer;
   LCipherLen: Word;
   LSessionLen: Integer;
+  LTailLen: Integer;
+  LBodyLen: Integer;
 begin
   LHandshake := BuildTLS13ClientHelloHandshake(AServerName, AALPN, AKeyShare);
 
@@ -54,12 +56,22 @@ begin
   Inc(LOffset, LSessionLen);
 
   LCipherLen := ReadUInt16(LHandshake, LOffset);
-  AssertEqualsWord(2, LCipherLen,
-    'ClientHello builder should encode one cipher suite before single-cipher patching');
+  AssertEqualsWord(6, LCipherLen,
+    'ClientHello builder should encode three cipher suites before single-cipher patching');
   Inc(LOffset, 2);
 
+  LTailLen := Length(LHandshake) - (LOffset + LCipherLen);
+  LHandshake[LOffset - 2] := 0;
+  LHandshake[LOffset - 1] := 2;
   LHandshake[LOffset] := Byte(ACipherSuite shr 8);
   LHandshake[LOffset + 1] := Byte(ACipherSuite and $FF);
+  if LTailLen > 0 then
+    Move(LHandshake[LOffset + LCipherLen], LHandshake[LOffset + 2], LTailLen);
+  SetLength(LHandshake, Length(LHandshake) - (LCipherLen - 2));
+  LBodyLen := Length(LHandshake) - 4;
+  LHandshake[1] := Byte((LBodyLen shr 16) and $FF);
+  LHandshake[2] := Byte((LBodyLen shr 8) and $FF);
+  LHandshake[3] := Byte(LBodyLen and $FF);
 
   Result := BuildTLSPlaintext(TLS_CONTENT_TYPE_HANDSHAKE, LHandshake);
 end;

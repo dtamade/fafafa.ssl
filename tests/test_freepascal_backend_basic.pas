@@ -280,16 +280,72 @@ begin
     'FreePascal backend should advertise ECDHE_ECDSA once pure ECDSA signer is available');
   AssertTrue(not LCaps.RequiresExternalLibrary,
     'FreePascal backend should not require external TLS library');
-  AssertTrue(Pos('ECDSA', UpperCase(LCaps.KnownIssues)) > 0,
-    'FreePascal capability KnownIssues should mention ECDSA CertificateVerify support scope');
-  AssertTrue(Pos('SHA256', UpperCase(LCaps.KnownIssues)) > 0,
-    'FreePascal capability KnownIssues should mention current SHA256 suite focus');
-  AssertTrue(Pos('SHA384', UpperCase(LCaps.KnownIssues)) > 0,
-    'FreePascal capability KnownIssues should mention SHA384 path limitation explicitly');
-  AssertTrue(not LLib.IsCipherSupported('TLS_AES_256_GCM_SHA384'),
-    'FreePascal IsCipherSupported should reject TLS_AES_256_GCM_SHA384 while SHA384 Finished path remains pending');
-  AssertTrue(not IsCipherSupported(LCaps, sslCipherAES256GCM),
-    'FreePascal capability SupportedCiphers should not advertise AES256GCM while SHA384 Finished path remains pending');
+  AssertTrue(Pos('ECDSA', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop listing supported CertificateVerify algorithms as remaining issues');
+  AssertTrue(Pos('PSK/RESUMPTION REMAIN IN PROGRESS', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop claiming PSK/resumption is entirely pending');
+  AssertTrue(Pos('SERVER-SIDE RESUMPTION/PSK', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop listing server-side resumption/PSK once the server path closes');
+  AssertTrue(Pos('RESUMPTION', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop listing implemented session-resumption details');
+  AssertTrue(Pos('PSK', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop listing implemented PSK details');
+  AssertTrue(Pos('0-RTT', UpperCase(LCaps.KnownIssues)) > 0,
+    'FreePascal capability KnownIssues should still mention 0-RTT for experimental/support caveats');
+  AssertTrue(LCaps.ZeroRTTSupport = sslSupportExperimental,
+    'FreePascal capabilities should report experimental 0-RTT support once public early-data transport closes');
+  AssertTrue(LCaps.EarlyDataSupport = sslSupportExperimental,
+    'FreePascal capabilities should report experimental early-data support once public transport closes');
+  AssertTrue(Pos('ANTI-REPLAY', UpperCase(LCaps.KnownIssues)) > 0,
+    'FreePascal capability KnownIssues should mention conservative anti-replay limitations for experimental 0-RTT');
+  AssertTrue(LCaps.SupportsCertificateTransparency,
+    'FreePascal capabilities should advertise certificate-transparency support once client runtime surface is implemented');
+  AssertTrue(LCaps.CertTransparencySupport = sslSupportExperimental,
+    'FreePascal certificate-transparency support level should be experimental while remaining gaps are still bounded');
+  AssertTrue(LLib.IsFeatureSupported(sslFeatCertificateTransparency),
+    'FreePascal IsFeatureSupported should acknowledge certificate-transparency runtime support');
+  AssertTrue(LCaps.SupportsOCSPStapling,
+    'FreePascal capabilities should advertise OCSP stapling support once client runtime surface is implemented');
+  AssertTrue(LCaps.OCSPStaplingSupport = sslSupportExperimental,
+    'FreePascal OCSP stapling support level should be experimental while broader revocation gaps remain bounded');
+  AssertTrue(LLib.IsFeatureSupported(sslFeatOCSPStapling),
+    'FreePascal IsFeatureSupported should acknowledge OCSP stapling runtime support');
+  AssertTrue(Pos('OCSP', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop listing OCSP as a remaining gap once server stapling closes');
+  AssertTrue(Pos('SERVER-SIDE', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop listing server-side stapling as a remaining gap');
+  AssertTrue(Pos('STAPLING', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop listing stapling issuance as a remaining gap');
+  AssertTrue(Pos('ISSUANCE', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop listing issuance gaps once public closeout lands');
+  AssertTrue(Pos('REVOCATION EVIDENCE MATERIAL', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop claiming revocation evidence material plumbing is still pending');
+  AssertTrue(Pos('CRL-BACKED', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop listing CRL-backed client validation material as a remaining gap');
+  AssertTrue(Pos('CERTIFICATE VALIDATION', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop using generic certificate-validation gap wording once client-side parity closes');
+  AssertTrue(Pos('REMAINING GAPS INCLUDE OCSP STAPLING', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop listing OCSP stapling as a blanket remaining gap');
+  AssertTrue(Pos('ONLINE OCSP FETCH PARITY', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop claiming online OCSP fetch parity is still missing');
+  AssertTrue(Pos('OCSP STAPLING VALIDATION HARDENING', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop claiming OCSP stapling validation hardening is still pending');
+  AssertTrue(Pos('BROADER OCSP VALIDATION HARDENING', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop claiming broader OCSP validation hardening is still pending once Batch 4 closes');
+  AssertTrue(Pos('REMAINING GAPS INCLUDE OCSP STAPLING, CERTIFICATE TRANSPARENCY', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop listing OCSP stapling and Certificate Transparency as blanket remaining gaps');
+  AssertTrue(Pos('OCSP-DELIVERED', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop claiming OCSP-delivered CT source parity is still missing');
+  AssertTrue(Pos('TRANSPARENCY', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop mentioning Certificate Transparency once Batch 2 closes');
+  AssertTrue(Pos('BROADER CERTIFICATE VALIDATION HARDENING', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should stop claiming broader certificate validation hardening is still pending once Batch 5 closes');
+  AssertTrue(Pos('SHA384', UpperCase(LCaps.KnownIssues)) = 0,
+    'FreePascal capability KnownIssues should no longer claim SHA384 Finished is pending');
+  AssertTrue(LLib.IsCipherSupported('TLS_AES_256_GCM_SHA384'),
+    'FreePascal IsCipherSupported should accept TLS_AES_256_GCM_SHA384 after SHA384 parity closes');
+  AssertTrue(IsCipherSupported(LCaps, sslCipherAES256GCM),
+    'FreePascal capability SupportedCiphers should advertise AES256GCM after SHA384 parity closes');
 
   LStream := TMemoryStream.Create;
   try

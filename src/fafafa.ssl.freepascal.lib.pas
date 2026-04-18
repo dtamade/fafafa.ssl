@@ -291,6 +291,25 @@ begin
       FInfo.IsCA := LParser.IsCA;
       FInfo.PathLenConstraint := LParser.BasicConstraints.PathLenConstraint;
       FInfo.PathLength := LParser.BasicConstraints.PathLenConstraint;
+      FInfo.KeyUsage := 0;
+      if kuDigitalSignature in LParser.KeyUsage then
+        FInfo.KeyUsage := FInfo.KeyUsage or $0080;
+      if kuNonRepudiation in LParser.KeyUsage then
+        FInfo.KeyUsage := FInfo.KeyUsage or $0040;
+      if kuKeyEncipherment in LParser.KeyUsage then
+        FInfo.KeyUsage := FInfo.KeyUsage or $0020;
+      if kuDataEncipherment in LParser.KeyUsage then
+        FInfo.KeyUsage := FInfo.KeyUsage or $0010;
+      if kuKeyAgreement in LParser.KeyUsage then
+        FInfo.KeyUsage := FInfo.KeyUsage or $0008;
+      if kuKeyCertSign in LParser.KeyUsage then
+        FInfo.KeyUsage := FInfo.KeyUsage or $0004;
+      if kuCRLSign in LParser.KeyUsage then
+        FInfo.KeyUsage := FInfo.KeyUsage or $0002;
+      if kuEncipherOnly in LParser.KeyUsage then
+        FInfo.KeyUsage := FInfo.KeyUsage or $0001;
+      if kuDecipherOnly in LParser.KeyUsage then
+        FInfo.KeyUsage := FInfo.KeyUsage or $8000;
 
       LSANs := LParser.SubjectAltNames;
       SetLength(FInfo.SubjectAltNames, Length(LSANs));
@@ -603,15 +622,22 @@ end;
 
 function TFreePascalCertificate.VerifyEx(ACAStore: ISSLCertificateStore;
   AFlags: TSSLCertVerifyFlags; out AResult: TSSLCertVerifyResult): Boolean;
+var
+  LExtendedKeyUsage: TSSLStringArray;
+  I: Integer;
+  LHasServerAuth: Boolean;
 begin
   FillChar(AResult, SizeOf(AResult), 0);
   AResult.DetailedInfo := '';
+  AResult.ChainStatus := 0;
+  AResult.RevocationStatus := 0;
 
   if ACAStore = nil then
   begin
     AResult.Success := False;
     AResult.ErrorCode := 1;
     AResult.ErrorMessage := 'Certificate store is not configured';
+    AResult.DetailedInfo := 'FreePascal VerifyEx requires a configured certificate store';
     Exit(False);
   end;
 
@@ -621,22 +647,63 @@ begin
   begin
     AResult.ErrorCode := 0;
     AResult.ErrorMessage := '';
+    AResult.DetailedInfo := 'FreePascal certificate store verification passed';
   end
   else
   begin
     AResult.ErrorCode := 2;
     AResult.ErrorMessage := 'Certificate verification failed';
+    AResult.ChainStatus := 1;
+    AResult.DetailedInfo := 'FreePascal certificate store rejected the certificate chain';
   end;
 
-  if not (sslCertVerifyIgnoreExpiry in AFlags) then
+  if not (sslCertVerifyIgnoreExpiry in AFlags) and IsExpired then
   begin
-    if IsExpired then
+    Result := False;
+    AResult.Success := False;
+    AResult.ErrorCode := 3;
+    AResult.ErrorMessage := 'Certificate is expired';
+    AResult.DetailedInfo := 'Certificate validity period has ended';
+    Exit;
+  end;
+
+  if Result and (sslCertVerifyStrictChain in AFlags) then
+  begin
+    LExtendedKeyUsage := GetExtendedKeyUsage;
+    LHasServerAuth := False;
+    for I := 0 to High(LExtendedKeyUsage) do
+    begin
+      if SameText(Trim(LExtendedKeyUsage[I]), 'serverAuth') then
+      begin
+        LHasServerAuth := True;
+        Break;
+      end;
+    end;
+
+    if not LHasServerAuth then
     begin
       Result := False;
       AResult.Success := False;
-      AResult.ErrorCode := 3;
-      AResult.ErrorMessage := 'Certificate is expired';
+      AResult.ErrorCode := 4;
+      AResult.ErrorMessage := 'Strict chain verification requires serverAuth extended key usage';
+      AResult.ChainStatus := 2;
+      AResult.DetailedInfo :=
+        'sslCertVerifyStrictChain requested but the leaf certificate is missing serverAuth extended key usage';
+      Exit;
     end;
+  end;
+
+  if Result and ((sslCertVerifyCheckRevocation in AFlags) or
+    (sslCertVerifyCheckCRL in AFlags)) then
+  begin
+    Result := False;
+    AResult.Success := False;
+    AResult.ErrorCode := 5;
+    AResult.RevocationStatus := 2;
+    AResult.ErrorMessage := 'Certificate revocation/CRL verification is unavailable';
+    AResult.DetailedInfo :=
+      'FreePascal VerifyEx has no revocation material for sslCertVerifyCheckRevocation/sslCertVerifyCheckCRL';
+    Exit;
   end;
 end;
 
@@ -1376,6 +1443,7 @@ var
 begin
   LUpper := UpperCase(Trim(ACipherName));
   Result :=
+    (LUpper = 'TLS_AES_256_GCM_SHA384') or
     (LUpper = 'TLS_AES_128_GCM_SHA256') or
     (LUpper = 'TLS_CHACHA20_POLY1305_SHA256');
 end;
@@ -1385,6 +1453,8 @@ begin
   case AFeature of
     sslFeatSNI,
     sslFeatALPN,
+    sslFeatOCSPStapling,
+    sslFeatCertificateTransparency,
     sslFeatSessionTickets,
     sslFeatSessionCache:
       Result := True;
@@ -1402,8 +1472,8 @@ begin
   Result.SupportsTLS13 := True;
   Result.SupportsALPN := True;
   Result.SupportsSNI := True;
-  Result.SupportsOCSPStapling := False;
-  Result.SupportsCertificateTransparency := False;
+  Result.SupportsOCSPStapling := True;
+  Result.SupportsCertificateTransparency := True;
   Result.SupportsSessionTickets := True;
   Result.SupportsECDHE := True;
   Result.SupportsChaChaPoly := True;
@@ -1418,16 +1488,16 @@ begin
 
   Result.SNISupport := sslSupportExperimental;
   Result.ALPNSupport := sslSupportExperimental;
-  Result.OCSPStaplingSupport := sslSupportNone;
-  Result.CertTransparencySupport := sslSupportNone;
+  Result.OCSPStaplingSupport := sslSupportExperimental;
+  Result.CertTransparencySupport := sslSupportExperimental;
   Result.SessionTicketsSupport := sslSupportExperimental;
   Result.SessionCacheSupport := sslSupportExperimental;
-  Result.ZeroRTTSupport := sslSupportNone;
-  Result.EarlyDataSupport := sslSupportNone;
+  Result.ZeroRTTSupport := sslSupportExperimental;
+  Result.EarlyDataSupport := sslSupportExperimental;
   Result.RenegotiationSupport := sslSupportNone;
   Result.PostHandshakeAuthSupport := sslSupportNone;
 
-  Result.SupportedCiphers := [sslCipherAES128GCM, sslCipherCHACHA20_POLY1305];
+  Result.SupportedCiphers := [sslCipherAES128GCM, sslCipherAES256GCM, sslCipherCHACHA20_POLY1305];
   Result.SupportedHashes := [sslHashSHA256, sslHashSHA384, sslHashSHA512];
   Result.SupportedKeyExchanges := [sslKexECDHE_RSA, sslKexECDHE_ECDSA];
 
@@ -1452,8 +1522,9 @@ begin
   Result.SupportsCustomCipherSuites := True;
   Result.SupportsCallbacks := True;
 
-  Result.CompatibilityLevel := 42;
-  Result.KnownIssues := 'TLS 1.3 pure-Pas server path supports ECDSA(P-256)/RSA CertificateVerify and currently focuses on SHA256 suites (TLS_AES_128_GCM_SHA256 / TLS_CHACHA20_POLY1305_SHA256); TLS_AES_256_GCM_SHA384 (SHA384 Finished) and PSK/resumption remain in progress.';
+  Result.CompatibilityLevel := 64;
+  Result.KnownIssues :=
+    '0-RTT / early data is experimental and currently uses an in-memory single-process anti-replay ledger.';
 
   FCapabilitiesCache := Result;
   FCapabilitiesCached := True;
@@ -1501,6 +1572,7 @@ end;
 procedure TFreePascalSSLLibrary.SetLogCallback(ACallback: TSSLLogCallback);
 begin
   FLogCallback := ACallback;
+  FDefaultConfig.LogCallback := ACallback;
 end;
 
 procedure TFreePascalSSLLibrary.Log(ALevel: TSSLLogLevel; const AMessage: string);

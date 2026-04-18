@@ -11,8 +11,8 @@
  * - 派生应用流量密钥并实现应用数据记录收发（AES-128-GCM/CHACHA20-POLY1305）
  *
  * 当前限制：
- * - TLS 1.3 AES-256-GCM-SHA384（Finished/PSK 相关）路径待补齐
- * - 对端证书验证链与会话复用等高级能力待补齐
+ * - PSK / 会话复用等高级能力待补齐
+ * - 对端证书验证链等高级能力待补齐
  *}
 
 unit fafafa.ssl.freepascal.connection;
@@ -28,17 +28,18 @@ uses
   {$ELSE}
   Sockets,
   {$ENDIF}
-  SysUtils, Classes,
+  SysUtils, Classes, DateUtils,
   fafafa.ssl.base,
   fafafa.ssl.errors,
   fafafa.ssl.connection.base,
   fafafa.ssl.tls13.wire,
   fafafa.ssl.tls13.keyschedule,
   fafafa.ssl.tls13.appschedule,
-  fafafa.ssl.tls13.posthandshake;
+  fafafa.ssl.tls13.posthandshake,
+  fafafa.ssl.x509;
 
 type
-  TFreePascalConnection = class(TBaseSSLConnection, ISSLClientConnection)
+  TFreePascalConnection = class(TBaseSSLConnection, ISSLClientConnection, ISSLEarlyDataConnection)
   private
     FSocket: THandle;
     FStream: TStream;
@@ -50,9 +51,11 @@ type
     FX25519PrivateKey: TBytes;
     FX25519PublicKey: TBytes;
     FHandshakeSharedSecret: TBytes;
+    FEarlyDataSecrets: TTLS13EarlyDataSecrets;
     FHandshakeSecrets: TTLS13HandshakeSecrets;
     FServerFinishedKey: TBytes;
     FClientFinishedKey: TBytes;
+    FEarlyDataSeq: QWord;
     FServerHandshakeSeq: QWord;
     FClientHandshakeSeq: QWord;
 
@@ -64,6 +67,23 @@ type
     FSessionTicketCount: Integer;
     FLastSessionTicket: TTLS13NewSessionTicket;
     FIsServerMode: Boolean;
+    FCurrentSession: ISSLSession;
+    FConfiguredSession: ISSLSession;
+    FSessionReused: Boolean;
+    FPeerCertificate: ISSLCertificate;
+    FPeerCertificateChain: TSSLCertificateArray;
+    FOCSPResponse: TBytes;
+    FOCSPResponseVerified: Boolean;
+    FOCSPResponseStatus: string;
+    FSignedCertificateTimestampList: TBytes;
+    FSignedCertificateTimestampCount: Integer;
+    FCertificateTransparencyStatus: string;
+    FHasCertificateTransparencyValidationResult: Boolean;
+    FCertificateTransparencyPolicySatisfied: Boolean;
+    FCertificateTransparencyValidationStatus: string;
+    FEarlyDataStatus: TSSLEarlyDataStatus;
+    FEarlyDataLimit: Cardinal;
+    FEarlyDataPayload: TBytes;
 
     function SendData(const ABuffer; ASize: Integer): Integer;
     function RecvData(var ABuffer; ASize: Integer): Integer;
@@ -76,12 +96,52 @@ type
     function TryPopHandshakeMessage(var ABuffer: TBytes; out AMessage: TBytes): Boolean;
     function ProcessEncryptedServerFlight(ACipherSuite: Word; var ATranscriptData: TBytes): Boolean;
     function SendClientFinished(ACipherSuite: Word; var ATranscriptData: TBytes): Boolean;
-    function RecvApplicationDataFragment(out AFragment: TBytes): Boolean;
+    function RecvApplicationDataFragment(
+      out AFragment: TBytes;
+      AAllowNoRecord: Boolean = False
+    ): Boolean;
     function SendApplicationDataFragment(const AFragment: TBytes): Boolean;
     function ProcessPostHandshakeFragment(const AHandshakeFragment: TBytes): Boolean;
     function SendPostHandshakeKeyUpdate(ARequestPeerUpdate: Boolean): Boolean;
     procedure MarkUnsupported(const AOperation: string);
     procedure MarkPrecondition(const AOperation: string);
+    function SendClientEarlyDataRecord(ACipherSuite: Word): Boolean;
+    function GetBufferedStreamBytesAvailable: Int64;
+    function DrainBufferedApplicationRecords: Boolean;
+    procedure ClearOCSPStaplingState;
+    procedure ClearCertificateTransparencyState;
+    procedure RefreshCertificateTransparencyValidationState;
+    procedure ClearPeerCertificateCache;
+    function TryCachePeerCertificatesFromHandshake(
+      const AHandshakeMessage: TBytes;
+      ACertificateTransparencyRequested: Boolean;
+      out AError: string
+    ): Boolean;
+    function BuildPeerIntermediateStore: ISSLCertificateStore;
+    function TryResolvePeerIssuerCertificate(
+      out AIssuerCertificate: ISSLCertificate;
+      out AError: string
+    ): Boolean;
+    function TryLoadOCSPSignedCertificateTimestampList(
+      out ASignedCertificateTimestampList: TBytes;
+      out ASignedCertificateTimestampCount: Integer;
+      out AFound: Boolean;
+      out AError: string
+    ): Boolean;
+    function TryBuildPeerOCSPCertificatePair(
+      out ALeafCertificate, AIssuerCertificate: TX509Certificate;
+      out AError: string
+    ): Boolean;
+    function ValidateClientPeerCertificateTrust: Boolean;
+    function ValidateClientPeerCertificateFlags: Boolean;
+    function ValidateClientOCSPStapling: Boolean;
+    function ValidateClientOnlineOCSP: Boolean;
+    function ValidateClientCertificateTransparency: Boolean;
+    function ValidateServerCertificateVerify(
+      ACipherSuite: Word;
+      const AHandshakeMessage: TBytes;
+      const ATranscriptData: TBytes
+    ): Boolean;
   protected
     function DoRead(var ABuffer; ACount: Integer): Integer; override;
     function DoWrite(const ABuffer; ACount: Integer): Integer; override;
@@ -106,12 +166,26 @@ type
     function DoGetSelectedALPNProtocol: string; override;
     function DoGetState: string; override;
     function DoGetNativeHandle: Pointer; override;
+    function DoGetOCSPStaplingEnabled: Boolean; override;
+    function DoGetOCSPResponse: TBytes; override;
+    function DoIsOCSPResponseVerified: Boolean; override;
+    function DoGetOCSPResponseStatus: string; override;
+    function DoGetCertificateTransparencyEnabled: Boolean; override;
+    function DoGetSignedCertificateTimestampList: TBytes; override;
+    function DoGetSignedCertificateTimestampCount: Integer; override;
+    function DoGetCertificateTransparencyStatus: string; override;
+    function DoHasCertificateTransparencyValidationResult: Boolean; override;
+    function DoIsCertificateTransparencyPolicySatisfied: Boolean; override;
+    function DoGetCertificateTransparencyValidationStatus: string; override;
   public
     constructor Create(AContext: ISSLContext; ASocket: THandle); overload;
     constructor Create(AContext: ISSLContext; AStream: TStream); overload;
 
     procedure SetServerName(const AServerName: string);
     function GetServerName: string;
+    function SetEarlyData(const AData: TBytes): TSSLOperationResult;
+    function GetEarlyDataStatus: TSSLEarlyDataStatus;
+    function GetEarlyDataLimit: Cardinal;
   end;
 
 implementation
@@ -125,11 +199,381 @@ uses
   fafafa.ssl.tls13.recordcrypto,
   fafafa.ssl.tls13.aead,
   fafafa.ssl.tls13.x25519,
+  fafafa.ssl.factory,
   fafafa.ssl.tls13.servercertificate,
   fafafa.ssl.tls13.servercertverify,
+  fafafa.ssl.freepascal.session,
   fafafa.ssl.freepascal.context.material,
+  fafafa.ssl.ocsp,
+  fafafa.ssl.ocsp.stapling,
   fafafa.ssl.crypto.hash,
-  fafafa.ssl.x509;
+  fafafa.ssl.certchain,
+  fafafa.ssl.random,
+  fafafa.ssl.ct.sct,
+  fafafa.ssl.native_handle,
+  fafafa.ssl.net.hooks,
+  fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.api.ocsp,
+  fafafa.ssl.openssl.api.ct,
+  fafafa.ssl.openssl.api.stack,
+  fafafa.ssl.openssl.api.x509;
+
+const
+  X509_EXTENSION_EMBEDDED_SIGNED_CERTIFICATE_TIMESTAMP = '1.3.6.1.4.1.11129.2.4.2';
+
+function TryEnsureOpenSSLCTValidationAvailable(out AError: string): Boolean;
+begin
+  AError := '';
+  Result := False;
+
+  try
+    if not TSSLFactory.IsLibraryAvailable(sslOpenSSL) then
+    begin
+      AError := 'OpenSSL library is unavailable';
+      Exit;
+    end;
+
+    LoadCTFunctions;
+    LoadStackFunctions;
+  except
+    on E: Exception do
+    begin
+      AError := 'Failed to initialize OpenSSL CT validation modules: ' + E.Message;
+      Exit;
+    end;
+  end;
+
+  if not Assigned(o2i_SCT) or
+     not Assigned(CT_POLICY_EVAL_CTX_new) or
+     not Assigned(CT_POLICY_EVAL_CTX_free) or
+     not Assigned(CT_POLICY_EVAL_CTX_set1_cert) or
+     not Assigned(SCT_validate) or
+     not Assigned(SCT_get_validation_status) or
+     not Assigned(SCT_free) then
+  begin
+    AError := 'Required OpenSSL CT functions are unavailable';
+    Exit;
+  end;
+
+  Result := True;
+end;
+
+function TryCreateOpenSSLCertificateFromCertificate(
+  ACertificate: ISSLCertificate;
+  out AOpenSSLCertificate: ISSLCertificate;
+  out AX509: PX509;
+  out AError: string
+): Boolean;
+var
+  LDER: TBytes;
+  LHandle: Pointer;
+begin
+  AOpenSSLCertificate := nil;
+  AX509 := nil;
+  AError := '';
+  Result := False;
+
+  if ACertificate = nil then
+  begin
+    AError := 'Certificate is unavailable';
+    Exit;
+  end;
+
+  LDER := ACertificate.SaveToDER;
+  if Length(LDER) = 0 then
+  begin
+    AError := 'Certificate DER is empty';
+    Exit;
+  end;
+
+  try
+    AOpenSSLCertificate := TSSLFactory.CreateCertificate(sslOpenSSL);
+  except
+    on E: Exception do
+    begin
+      AError := 'Failed to create OpenSSL certificate: ' + E.Message;
+      Exit;
+    end;
+  end;
+
+  if (AOpenSSLCertificate = nil) or (not AOpenSSLCertificate.LoadFromDER(LDER)) then
+  begin
+    AError := 'Failed to materialize OpenSSL certificate from DER';
+    AOpenSSLCertificate := nil;
+    Exit;
+  end;
+
+  if not TryGetNativeHandle(AOpenSSLCertificate, LHandle) or (LHandle = nil) then
+  begin
+    AError := 'OpenSSL certificate native handle is unavailable';
+    AOpenSSLCertificate := nil;
+    Exit;
+  end;
+
+  AX509 := PX509(LHandle);
+  Result := True;
+end;
+
+function CountValidSignedCertificateTimestamps(
+  const AResults: TSCTValidationResultArray
+): Integer;
+var
+  I: Integer;
+begin
+  Result := 0;
+  for I := 0 to High(AResults) do
+    if AResults[I].IsValid then
+      Inc(Result);
+end;
+
+procedure PopulateSignedCertificateTimestampValidationResult(
+  ASCT: PSCT;
+  const AOptions: TSCTValidationOptions;
+  out AResult: TSCTValidationResult
+);
+begin
+  AResult.IsValid := False;
+  AResult.Status := SCT_VALIDATION_STATUS_NOT_SET;
+  AResult.ErrorMessage := '';
+  AResult.LogName := '';
+  AResult.Timestamp := 0;
+
+  if ASCT = nil then
+  begin
+    AResult.ErrorMessage := 'Null SCT';
+    Exit;
+  end;
+
+  if Assigned(SCT_get_timestamp) then
+    AResult.Timestamp := SCT_get_timestamp(ASCT);
+
+  if Assigned(SCT_get_validation_status) then
+    AResult.Status := SCT_get_validation_status(ASCT);
+
+  case AResult.Status of
+    SCT_VALIDATION_STATUS_VALID:
+      AResult.IsValid := True;
+    SCT_VALIDATION_STATUS_UNKNOWN_LOG:
+      begin
+        AResult.ErrorMessage := 'Unknown CT log';
+        AResult.IsValid := AOptions.AllowUnknownLogs;
+      end;
+    SCT_VALIDATION_STATUS_INVALID:
+      AResult.ErrorMessage := 'Invalid SCT signature';
+    SCT_VALIDATION_STATUS_UNVERIFIED:
+      AResult.ErrorMessage := 'SCT could not be verified';
+    SCT_VALIDATION_STATUS_UNKNOWN_VERSION:
+      AResult.ErrorMessage := 'Unknown SCT version';
+  else
+    AResult.ErrorMessage := 'Unknown validation status';
+  end;
+end;
+
+function CheckCertificateTransparencyPolicy(
+  const AResults: TSCTValidationResultArray;
+  const AOptions: TSCTValidationOptions
+): Boolean;
+var
+  LValidCount: Integer;
+begin
+  if Length(AResults) < AOptions.MinimumSCTCount then
+    Exit(False);
+
+  if AOptions.RequireValidSCTs then
+  begin
+    LValidCount := CountValidSignedCertificateTimestamps(AResults);
+    Exit(LValidCount >= AOptions.MinimumSCTCount);
+  end;
+
+  Result := Length(AResults) >= AOptions.MinimumSCTCount;
+end;
+
+function TryCollectSignedCertificateTimestampValidationResults(
+  const ASignedCertificateTimestampList: TBytes;
+  ALeafX509: PX509;
+  AIssuerX509: PX509;
+  const AOptions: TSCTValidationOptions;
+  out AResults: TSCTValidationResultArray;
+  out AError: string
+): Boolean;
+var
+  LEvalContext: PCT_POLICY_EVAL_CTX;
+  LCurrentTime: UInt64;
+  LListLength: Integer;
+  LOffset: Integer;
+  LSCTLength: Integer;
+  LCount: Integer;
+  I: Integer;
+  LSCT: PSCT;
+  LCursor: PByte;
+begin
+  SetLength(AResults, 0);
+  AError := '';
+  Result := False;
+
+  if (Length(ASignedCertificateTimestampList) = 0) or (ALeafX509 = nil) then
+  begin
+    AError := 'OpenSSL CT validation inputs are incomplete';
+    Exit;
+  end;
+
+  if not Assigned(CT_POLICY_EVAL_CTX_new) or
+     not Assigned(CT_POLICY_EVAL_CTX_free) or
+     not Assigned(CT_POLICY_EVAL_CTX_set1_cert) or
+     not Assigned(o2i_SCT) or
+     not Assigned(SCT_validate) or
+     not Assigned(SCT_get_validation_status) or
+     not Assigned(SCT_free) then
+  begin
+    AError := 'Required OpenSSL CT evaluation functions are unavailable';
+    Exit;
+  end;
+
+  if Length(ASignedCertificateTimestampList) < 2 then
+  begin
+    AError := 'SignedCertificateTimestampList is too short';
+    Exit;
+  end;
+
+  LListLength := ReadUInt16(ASignedCertificateTimestampList, 0);
+  if (LListLength <= 0) or (Length(ASignedCertificateTimestampList) <> 2 + LListLength) then
+  begin
+    AError := 'SignedCertificateTimestampList length is invalid';
+    Exit;
+  end;
+
+  LCount := 0;
+  LOffset := 2;
+  while LOffset < Length(ASignedCertificateTimestampList) do
+  begin
+    if LOffset + 2 > Length(ASignedCertificateTimestampList) then
+    begin
+      AError := 'Serialized SCT length is truncated';
+      Exit;
+    end;
+
+    LSCTLength := ReadUInt16(ASignedCertificateTimestampList, LOffset);
+    Inc(LOffset, 2);
+    if (LSCTLength <= 0) or (LOffset + LSCTLength > Length(ASignedCertificateTimestampList)) then
+    begin
+      AError := 'Serialized SCT length is invalid';
+      Exit;
+    end;
+
+    Inc(LCount);
+    Inc(LOffset, LSCTLength);
+  end;
+
+  SetLength(AResults, LCount);
+
+  LEvalContext := CT_POLICY_EVAL_CTX_new();
+  if LEvalContext = nil then
+  begin
+    AError := 'Failed to create OpenSSL CT evaluation context';
+    Exit;
+  end;
+
+  try
+    CT_POLICY_EVAL_CTX_set1_cert(LEvalContext, ALeafX509);
+
+    if (AIssuerX509 <> nil) and Assigned(CT_POLICY_EVAL_CTX_set1_issuer) then
+      CT_POLICY_EVAL_CTX_set1_issuer(LEvalContext, AIssuerX509);
+
+    if Assigned(CT_POLICY_EVAL_CTX_set_time) then
+    begin
+      LCurrentTime := UInt64(DateTimeToUnix(Now) * 1000);
+      LCurrentTime := LCurrentTime + UInt64(AOptions.ClockDriftTolerance);
+      CT_POLICY_EVAL_CTX_set_time(LEvalContext, LCurrentTime);
+    end;
+
+    LOffset := 2;
+    for I := 0 to LCount - 1 do
+    begin
+      LSCTLength := ReadUInt16(ASignedCertificateTimestampList, LOffset);
+      Inc(LOffset, 2);
+
+      LSCT := nil;
+      LCursor := @ASignedCertificateTimestampList[LOffset];
+      try
+        if o2i_SCT(@LSCT, @LCursor, NativeUInt(LSCTLength)) = nil then
+        begin
+          AResults[I].IsValid := False;
+          AResults[I].Status := SCT_VALIDATION_STATUS_NOT_SET;
+          AResults[I].ErrorMessage := 'Failed to decode SCT';
+          AResults[I].LogName := '';
+          AResults[I].Timestamp := 0;
+        end
+        else
+        begin
+          try
+            SCT_validate(LSCT, LEvalContext);
+          except
+            on E: Exception do
+            begin
+              AResults[I].IsValid := False;
+              AResults[I].Status := SCT_VALIDATION_STATUS_NOT_SET;
+              AResults[I].ErrorMessage := 'OpenSSL SCT_validate failed: ' + E.Message;
+              AResults[I].LogName := '';
+              AResults[I].Timestamp := 0;
+            end;
+          end;
+
+          PopulateSignedCertificateTimestampValidationResult(LSCT, AOptions, AResults[I]);
+        end;
+      finally
+        if LSCT <> nil then
+          SCT_free(LSCT);
+      end;
+
+      Inc(LOffset, LSCTLength);
+    end;
+  finally
+    CT_POLICY_EVAL_CTX_free(LEvalContext);
+  end;
+
+  Result := Length(AResults) > 0;
+end;
+
+function BuildCertificateTransparencyValidationStatus(
+  const AResults: TSCTValidationResultArray;
+  APolicySatisfied: Boolean
+): string;
+var
+  I: Integer;
+  LValidCount: Integer;
+  LStatuses: string;
+begin
+  if Length(AResults) = 0 then
+    Exit('Validation unavailable: validator returned no SCT results');
+
+  LValidCount := CountValidSignedCertificateTimestamps(AResults);
+  LStatuses := '';
+  for I := 0 to High(AResults) do
+  begin
+    if LStatuses <> '' then
+      LStatuses := LStatuses + ', ';
+    LStatuses := LStatuses + GetSCTValidationStatusName(AResults[I].Status);
+  end;
+
+  if APolicySatisfied then
+    Result := 'Policy satisfied'
+  else
+    Result := 'Policy failed';
+
+  Result := Format(
+    '%s (%d/%d valid SCTs; statuses=%s)',
+    [Result, LValidCount, Length(AResults), LStatuses]
+  );
+end;
+
+function TryLoadEmbeddedSignedCertificateTimestampList(
+  ACertificate: ISSLCertificate;
+  out ASignedCertificateTimestampList: TBytes;
+  out ASignedCertificateTimestampCount: Integer;
+  out AFound: Boolean;
+  out AError: string
+): Boolean; forward;
 
 function SelectPreferredProtocol(const AContext: ISSLContext): TSSLProtocolVersion;
 var
@@ -152,12 +596,200 @@ begin
   Result := sslProtocolUnknown;
 end;
 
+function HashTLS13TranscriptForSuite(ACipherSuite: Word; const ATranscriptData: TBytes): TBytes;
+begin
+  if TLS13CipherSuiteIsSHA256(ACipherSuite) then
+    Exit(SHA256(ATranscriptData));
+
+  if TLS13CipherSuiteIsSHA384(ACipherSuite) then
+    Exit(SHA384(ATranscriptData));
+
+  SetLength(Result, 0);
+end;
+
+function NormalizeHostForVerify(const S: string): string;
+var
+  LHost: string;
+  P, PEnd: SizeInt;
+  PortPart: string;
+  I: Integer;
+begin
+  LHost := Trim(S);
+
+  if (LHost <> '') and (LHost[1] = '[') then
+  begin
+    PEnd := Pos(']', LHost);
+    if PEnd > 0 then
+      LHost := Copy(LHost, 2, PEnd - 2);
+  end;
+
+  P := Pos('%', LHost);
+  if P > 0 then
+    LHost := Copy(LHost, 1, P - 1);
+
+  if (Pos(':', LHost) > 0) and (Pos(':', LHost) = LastDelimiter(':', LHost)) then
+  begin
+    P := Pos(':', LHost);
+    PortPart := Copy(LHost, P + 1, Length(LHost) - P);
+    if PortPart <> '' then
+    begin
+      for I := 1 to Length(PortPart) do
+        if not (PortPart[I] in ['0'..'9']) then
+        begin
+          PortPart := '';
+          Break;
+        end;
+      if PortPart <> '' then
+        LHost := Copy(LHost, 1, P - 1);
+    end;
+  end;
+
+  Result := LHost;
+end;
+
+function BytesEqual(const ALeft, ARight: TBytes): Boolean;
+begin
+  Result := (Length(ALeft) = Length(ARight));
+  if Result and (Length(ALeft) > 0) then
+    Result := CompareMem(@ALeft[0], @ARight[0], Length(ALeft));
+end;
+
+function ClientHelloHasExtension(const AHandshake: TBytes; AExtensionType: Word): Boolean;
+var
+  LOffset: Integer;
+  LBodyLen: Cardinal;
+  LBodyEnd: Integer;
+  LSessionIDLen: Integer;
+  LCipherSuitesLen: Integer;
+  LCompressionLen: Integer;
+  LExtensionsLen: Integer;
+  LExtensionsEnd: Integer;
+  LExtType: Word;
+  LExtLen: Word;
+begin
+  Result := False;
+
+  if (Length(AHandshake) < 4) or (AHandshake[0] <> TLS_HANDSHAKE_TYPE_CLIENT_HELLO) then
+    Exit;
+
+  LBodyLen := ReadUInt24(AHandshake, 1);
+  LBodyEnd := 4 + Integer(LBodyLen);
+  if Length(AHandshake) <> LBodyEnd then
+    Exit;
+
+  LOffset := 4 + 2 + 32;
+  if LOffset >= LBodyEnd then
+    Exit;
+
+  LSessionIDLen := AHandshake[LOffset];
+  Inc(LOffset);
+  Inc(LOffset, LSessionIDLen);
+  if LOffset + 2 > LBodyEnd then
+    Exit;
+
+  LCipherSuitesLen := ReadUInt16(AHandshake, LOffset);
+  Inc(LOffset, 2 + LCipherSuitesLen);
+  if LOffset + 1 > LBodyEnd then
+    Exit;
+
+  LCompressionLen := AHandshake[LOffset];
+  Inc(LOffset);
+  Inc(LOffset, LCompressionLen);
+  if LOffset + 2 > LBodyEnd then
+    Exit;
+
+  LExtensionsLen := ReadUInt16(AHandshake, LOffset);
+  Inc(LOffset, 2);
+  LExtensionsEnd := LOffset + LExtensionsLen;
+  if LExtensionsEnd <> LBodyEnd then
+    Exit;
+
+  while LOffset + 4 <= LExtensionsEnd do
+  begin
+    LExtType := ReadUInt16(AHandshake, LOffset);
+    LExtLen := ReadUInt16(AHandshake, LOffset + 2);
+    Inc(LOffset, 4);
+    if LOffset + Integer(LExtLen) > LExtensionsEnd then
+      Exit(False);
+    if LExtType = AExtensionType then
+      Exit(True);
+    Inc(LOffset, Integer(LExtLen));
+  end;
+end;
+
+function CloneCertificateArray(const ASource: TSSLCertificateArray): TSSLCertificateArray;
+var
+  I: Integer;
+begin
+  SetLength(Result, Length(ASource));
+  for I := 0 to High(ASource) do
+    if ASource[I] <> nil then
+      Result[I] := ASource[I].Clone
+    else
+      Result[I] := nil;
+end;
+
+function OCSPStaplingStateToString(
+  AStatus: TOCSPStaplingStatus;
+  const AErrorMessage: string
+): string;
+begin
+  case AStatus of
+    ossNotRequested:
+      Result := 'Not Requested';
+    ossRequested:
+      Result := 'Requested';
+    ossReceived:
+      Result := 'Received';
+    ossVerified:
+      Result := 'Verified';
+    ossVerificationFailed:
+      Result := 'Verification Failed';
+    ossNotProvided:
+      Result := 'No OCSP Response';
+    ossExpired:
+      Result := 'Expired';
+  else
+    Result := 'Unknown';
+  end;
+
+  if Trim(AErrorMessage) <> '' then
+    Result := Result + ': ' + Trim(AErrorMessage);
+end;
+
+function BuildTLS13EncryptedExtensionsHandshake(AAcceptEarlyData: Boolean): TBytes;
+var
+  LBody: TBytes;
+  LExtensions: TBytes;
+begin
+  SetLength(LExtensions, 0);
+  if AAcceptEarlyData then
+  begin
+    AppendUInt16(LExtensions, TLS_EXTENSION_EARLY_DATA);
+    AppendUInt16(LExtensions, 0);
+  end;
+
+  SetLength(LBody, 0);
+  AppendUInt16(LBody, Word(Length(LExtensions)));
+  AppendBytes(LBody, LExtensions);
+
+  SetLength(Result, 0);
+  AppendByte(Result, TLS_HANDSHAKE_TYPE_ENCRYPTED_EXTENSIONS);
+  AppendUInt24(Result, Length(LBody));
+  AppendBytes(Result, LBody);
+end;
+
 constructor TFreePascalConnection.Create(AContext: ISSLContext; ASocket: THandle);
 begin
   inherited Create(AContext);
   FSocket := ASocket;
   FStream := nil;
   FServerName := '';
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
+  if (AContext <> nil) and (AContext.GetContextType = sslCtxClient) and
+    (AContext.GetServerName <> '') then
+    FServerName := AContext.GetServerName;
+  {$POP}
   FProtocolVersion := SelectPreferredProtocol(AContext);
   FCipherName := '';
   FALPNProtocols := AContext.GetALPNProtocols;
@@ -165,20 +797,38 @@ begin
   SetLength(FX25519PrivateKey, 0);
   SetLength(FX25519PublicKey, 0);
   SetLength(FHandshakeSharedSecret, 0);
+  InitTLS13EarlyDataSecrets(FEarlyDataSecrets);
   InitTLS13HandshakeSecrets(FHandshakeSecrets);
   SetLength(FServerFinishedKey, 0);
   SetLength(FClientFinishedKey, 0);
+  FEarlyDataSeq := 0;
   FServerHandshakeSeq := 0;
   FClientHandshakeSeq := 0;
 
   InitTLS13ApplicationSecrets(FApplicationSecrets);
   FClientApplicationSeq := 0;
   FServerApplicationSeq := 0;
-  SetLength(FApplicationReadBuffer, 0);
   SetLength(FPostHandshakeBuffer, 0);
   FSessionTicketCount := 0;
   InitTLS13NewSessionTicket(FLastSessionTicket);
   FIsServerMode := False;
+  FCurrentSession := nil;
+  FConfiguredSession := nil;
+  FSessionReused := False;
+  FPeerCertificate := nil;
+  SetLength(FPeerCertificateChain, 0);
+  SetLength(FOCSPResponse, 0);
+  FOCSPResponseVerified := False;
+  FOCSPResponseStatus := 'Not Requested';
+  SetLength(FSignedCertificateTimestampList, 0);
+  FSignedCertificateTimestampCount := 0;
+  FCertificateTransparencyStatus := 'Not Requested';
+  FHasCertificateTransparencyValidationResult := False;
+  FCertificateTransparencyPolicySatisfied := False;
+  FCertificateTransparencyValidationStatus := 'Not Attempted';
+  FEarlyDataStatus := sslEarlyDataNone;
+  FEarlyDataLimit := 0;
+  SetLength(FEarlyDataPayload, 0);
 end;
 
 constructor TFreePascalConnection.Create(AContext: ISSLContext; AStream: TStream);
@@ -190,6 +840,11 @@ begin
   FSocket := -1;
   FStream := AStream;
   FServerName := '';
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
+  if (AContext <> nil) and (AContext.GetContextType = sslCtxClient) and
+    (AContext.GetServerName <> '') then
+    FServerName := AContext.GetServerName;
+  {$POP}
   FProtocolVersion := SelectPreferredProtocol(AContext);
   FCipherName := '';
   FALPNProtocols := AContext.GetALPNProtocols;
@@ -197,9 +852,11 @@ begin
   SetLength(FX25519PrivateKey, 0);
   SetLength(FX25519PublicKey, 0);
   SetLength(FHandshakeSharedSecret, 0);
+  InitTLS13EarlyDataSecrets(FEarlyDataSecrets);
   InitTLS13HandshakeSecrets(FHandshakeSecrets);
   SetLength(FServerFinishedKey, 0);
   SetLength(FClientFinishedKey, 0);
+  FEarlyDataSeq := 0;
   FServerHandshakeSeq := 0;
   FClientHandshakeSeq := 0;
 
@@ -211,6 +868,23 @@ begin
   FSessionTicketCount := 0;
   InitTLS13NewSessionTicket(FLastSessionTicket);
   FIsServerMode := False;
+  FCurrentSession := nil;
+  FConfiguredSession := nil;
+  FSessionReused := False;
+  FPeerCertificate := nil;
+  SetLength(FPeerCertificateChain, 0);
+  SetLength(FOCSPResponse, 0);
+  FOCSPResponseVerified := False;
+  FOCSPResponseStatus := 'Not Requested';
+  SetLength(FSignedCertificateTimestampList, 0);
+  FSignedCertificateTimestampCount := 0;
+  FCertificateTransparencyStatus := 'Not Requested';
+  FHasCertificateTransparencyValidationResult := False;
+  FCertificateTransparencyPolicySatisfied := False;
+  FCertificateTransparencyValidationStatus := 'Not Attempted';
+  FEarlyDataStatus := sslEarlyDataNone;
+  FEarlyDataLimit := 0;
+  SetLength(FEarlyDataPayload, 0);
 end;
 
 function TFreePascalConnection.SendData(const ABuffer; ASize: Integer): Integer;
@@ -313,6 +987,21 @@ begin
   Result := True;
 end;
 
+function TFreePascalConnection.GetBufferedStreamBytesAvailable: Int64;
+begin
+  Result := 0;
+  if FStream = nil then
+    Exit;
+
+  try
+    Result := FStream.Size - FStream.Position;
+  except
+    Result := 0;
+  end;
+  if Result < 0 then
+    Result := 0;
+end;
+
 procedure TFreePascalConnection.SetHandshakeError(ACode: TSSLErrorCode; const AMessage: string);
 begin
   FLastErrorCode := ACode;
@@ -377,6 +1066,9 @@ var
   LError: string;
   LTicket: TTLS13NewSessionTicket;
   LKeyUpdate: TTLS13KeyUpdateInfo;
+  LResumptionPSK: TBytes;
+  LSession: TFreePascalSession;
+  LTimeout: Integer;
 begin
   Result := False;
 
@@ -406,6 +1098,45 @@ begin
             Exit;
           end;
 
+          if (not FApplicationSecrets.Valid) or
+             (Length(FApplicationSecrets.MasterSecret) <> FApplicationSecrets.HashSize) or
+             (Length(FApplicationSecrets.TranscriptHash) <> FApplicationSecrets.HashSize) then
+          begin
+            SetHandshakeError(sslErrProtocol, 'Application transcript state is not ready for NewSessionTicket');
+            Exit;
+          end;
+
+          LResumptionPSK := TLS13DeriveResumptionPSKFromTranscriptHash(
+            FApplicationSecrets.CipherSuite,
+            FApplicationSecrets.MasterSecret,
+            FApplicationSecrets.TranscriptHash,
+            LTicket.TicketNonce
+          );
+          if Length(LResumptionPSK) <> FApplicationSecrets.HashSize then
+          begin
+            SetHandshakeError(sslErrProtocol, 'Failed to derive resumption PSK from NewSessionTicket');
+            Exit;
+          end;
+
+          if LTicket.TicketLifetime > Cardinal(High(Integer)) then
+            LTimeout := High(Integer)
+          else
+            LTimeout := Integer(LTicket.TicketLifetime);
+
+          LSession := TFreePascalSession.Create;
+          LSession.ConfigureResumption(
+            FApplicationSecrets.CipherSuite,
+            TLS13CipherSuiteToString(FApplicationSecrets.CipherSuite),
+            LTicket.TicketNonce,
+            LTicket.Ticket,
+            LResumptionPSK,
+            LTicket.TicketLifetime,
+            LTicket.TicketAgeAdd,
+            Now,
+            LTimeout,
+            LTicket.MaxEarlyDataSize
+          );
+          FCurrentSession := LSession;
           FLastSessionTicket := LTicket;
           Inc(FSessionTicketCount);
         end;
@@ -458,6 +1189,1037 @@ begin
   if Length(FPostHandshakeBuffer) > 131072 then
   begin
     SetHandshakeError(sslErrProtocol, 'Post-handshake buffer exceeded limit');
+    Exit;
+  end;
+
+  Result := True;
+end;
+
+function TFreePascalConnection.DrainBufferedApplicationRecords: Boolean;
+var
+  LFragment: TBytes;
+begin
+  Result := True;
+  if FStream = nil then
+    Exit;
+
+  while GetBufferedStreamBytesAvailable > 0 do
+  begin
+    if not RecvApplicationDataFragment(LFragment, True) then
+      Exit(False);
+    if Length(LFragment) > 0 then
+      AppendHandshakeBytes(FApplicationReadBuffer, LFragment);
+  end;
+end;
+
+procedure TFreePascalConnection.ClearOCSPStaplingState;
+begin
+  SetLength(FOCSPResponse, 0);
+  FOCSPResponseVerified := False;
+  FOCSPResponseStatus := 'Not Requested';
+end;
+
+procedure TFreePascalConnection.ClearCertificateTransparencyState;
+begin
+  SetLength(FSignedCertificateTimestampList, 0);
+  FSignedCertificateTimestampCount := 0;
+  FCertificateTransparencyStatus := 'Not Requested';
+  FHasCertificateTransparencyValidationResult := False;
+  FCertificateTransparencyPolicySatisfied := False;
+  FCertificateTransparencyValidationStatus := 'Not Attempted';
+end;
+
+procedure TFreePascalConnection.RefreshCertificateTransparencyValidationState;
+var
+  LError: string;
+  LLeafCertificate: ISSLCertificate;
+  LIssuerCertificate: ISSLCertificate;
+  LIssuerSource: ISSLCertificate;
+  LLeafX509: PX509;
+  LIssuerX509: PX509;
+  LOptions: TSCTValidationOptions;
+  LResults: TSCTValidationResultArray;
+begin
+  FHasCertificateTransparencyValidationResult := False;
+  FCertificateTransparencyPolicySatisfied := False;
+  FCertificateTransparencyValidationStatus := 'Not Attempted';
+
+  if Length(FSignedCertificateTimestampList) = 0 then
+    Exit;
+
+  if not TryEnsureOpenSSLCTValidationAvailable(LError) then
+  begin
+    FCertificateTransparencyValidationStatus := 'Validation unavailable: ' + LError;
+    Exit;
+  end;
+
+  if not TryCreateOpenSSLCertificateFromCertificate(
+    FPeerCertificate,
+    LLeafCertificate,
+    LLeafX509,
+    LError
+  ) then
+  begin
+    FCertificateTransparencyValidationStatus := 'Validation unavailable: ' + LError;
+    Exit;
+  end;
+
+  if not TryResolvePeerIssuerCertificate(LIssuerSource, LError) then
+  begin
+    FCertificateTransparencyValidationStatus := 'Validation unavailable: ' + LError;
+    Exit;
+  end;
+
+  if not TryCreateOpenSSLCertificateFromCertificate(
+    LIssuerSource,
+    LIssuerCertificate,
+    LIssuerX509,
+    LError
+  ) then
+  begin
+    FCertificateTransparencyValidationStatus := 'Validation unavailable: ' + LError;
+    Exit;
+  end;
+
+  LOptions := CreateDefaultValidationOptions;
+  try
+    if not TryCollectSignedCertificateTimestampValidationResults(
+      FSignedCertificateTimestampList,
+      LLeafX509,
+      LIssuerX509,
+      LOptions,
+      LResults,
+      LError
+    ) then
+    begin
+      FCertificateTransparencyValidationStatus := 'Validation unavailable: ' + LError;
+      Exit;
+    end;
+
+    FHasCertificateTransparencyValidationResult := True;
+    FCertificateTransparencyPolicySatisfied := CheckCertificateTransparencyPolicy(
+      LResults,
+      LOptions
+    );
+    FCertificateTransparencyValidationStatus := BuildCertificateTransparencyValidationStatus(
+      LResults,
+      FCertificateTransparencyPolicySatisfied
+    );
+  except
+    on E: Exception do
+    begin
+      FHasCertificateTransparencyValidationResult := False;
+      FCertificateTransparencyPolicySatisfied := False;
+      FCertificateTransparencyValidationStatus := 'Validation unavailable: ' + E.Message;
+    end;
+  end;
+end;
+
+procedure TFreePascalConnection.ClearPeerCertificateCache;
+begin
+  ClearOCSPStaplingState;
+  ClearCertificateTransparencyState;
+  FPeerCertificate := nil;
+  SetLength(FPeerCertificateChain, 0);
+end;
+
+function TFreePascalConnection.TryCachePeerCertificatesFromHandshake(
+  const AHandshakeMessage: TBytes;
+  ACertificateTransparencyRequested: Boolean;
+  out AError: string
+): Boolean;
+var
+  LCertificateInfo: TTLS13ServerCertificateInfo;
+  LCertificate: ISSLCertificate;
+  LEmbeddedSCTList: TBytes;
+  LEmbeddedSCTCount: Integer;
+  LEmbeddedSCTFound: Boolean;
+  LOCSPSCTList: TBytes;
+  LOCSPSCTCount: Integer;
+  LOCSPSCTFound: Boolean;
+  LOCSPSCTError: string;
+  I: Integer;
+begin
+  AError := '';
+  Result := False;
+  ClearPeerCertificateCache;
+
+  if not TryParseTLS13ServerCertificateHandshakeInfo(AHandshakeMessage, LCertificateInfo, AError) then
+    Exit;
+
+  FOCSPResponseStatus := 'No OCSP Response';
+  if ACertificateTransparencyRequested then
+    FCertificateTransparencyStatus := 'No SCT List';
+
+  if LCertificateInfo.HasLeafOCSPStapledResponse then
+  begin
+    FOCSPResponse := Copy(LCertificateInfo.LeafOCSPStapledResponse);
+    FOCSPResponseStatus := 'Received';
+  end;
+
+  if LCertificateInfo.HasLeafSignedCertificateTimestampList then
+  begin
+    FSignedCertificateTimestampList := Copy(LCertificateInfo.LeafSignedCertificateTimestampList);
+    FSignedCertificateTimestampCount := LCertificateInfo.LeafSignedCertificateTimestampCount;
+    FCertificateTransparencyStatus := Format(
+      'Received from TLS extension (%d SCTs)',
+      [FSignedCertificateTimestampCount]
+    );
+  end;
+
+  SetLength(FPeerCertificateChain, Length(LCertificateInfo.Certificates));
+  for I := 0 to High(LCertificateInfo.Certificates) do
+  begin
+    try
+      LCertificate := TSSLFactory.CreateCertificate(sslFreePascal);
+    except
+      on E: Exception do
+      begin
+        AError := Format('Failed to create peer certificate #%d: %s', [I + 1, E.Message]);
+        ClearPeerCertificateCache;
+        Exit;
+      end;
+    end;
+
+    if LCertificate = nil then
+    begin
+      AError := Format('Failed to create peer certificate #%d', [I + 1]);
+      ClearPeerCertificateCache;
+      Exit;
+    end;
+
+    if not LCertificate.LoadFromDER(LCertificateInfo.Certificates[I]) then
+    begin
+      AError := Format('Failed to load peer certificate #%d from DER', [I + 1]);
+      ClearPeerCertificateCache;
+      Exit;
+    end;
+
+    FPeerCertificateChain[I] := LCertificate;
+  end;
+
+  FPeerCertificate := FPeerCertificateChain[0];
+
+  if ACertificateTransparencyRequested and
+    (Length(FSignedCertificateTimestampList) = 0) and
+    (FPeerCertificate <> nil) then
+  begin
+    if not TryLoadEmbeddedSignedCertificateTimestampList(
+      FPeerCertificate,
+      LEmbeddedSCTList,
+      LEmbeddedSCTCount,
+      LEmbeddedSCTFound,
+      AError
+    ) then
+    begin
+      ClearPeerCertificateCache;
+      Exit;
+    end;
+
+    if LEmbeddedSCTFound then
+    begin
+      FSignedCertificateTimestampList := Copy(LEmbeddedSCTList);
+      FSignedCertificateTimestampCount := LEmbeddedSCTCount;
+      FCertificateTransparencyStatus := Format(
+        'Received from embedded X.509 extension (%d SCTs)',
+        [FSignedCertificateTimestampCount]
+      );
+    end;
+  end;
+
+  if ACertificateTransparencyRequested and
+    (Length(FSignedCertificateTimestampList) = 0) and
+    (Length(FOCSPResponse) > 0) then
+  begin
+    if not TryLoadOCSPSignedCertificateTimestampList(
+      LOCSPSCTList,
+      LOCSPSCTCount,
+      LOCSPSCTFound,
+      LOCSPSCTError
+    ) then
+    begin
+      if Trim(LOCSPSCTError) <> '' then
+        FCertificateTransparencyStatus :=
+          'OCSP-delivered signed_certificate_timestamp unavailable: ' + LOCSPSCTError;
+    end
+    else if LOCSPSCTFound then
+    begin
+      FSignedCertificateTimestampList := Copy(LOCSPSCTList);
+      FSignedCertificateTimestampCount := LOCSPSCTCount;
+      FCertificateTransparencyStatus := Format(
+        'Received from OCSP response (%d SCTs)',
+        [FSignedCertificateTimestampCount]
+      );
+    end;
+  end;
+
+  RefreshCertificateTransparencyValidationState;
+
+  Result := True;
+end;
+
+function TFreePascalConnection.BuildPeerIntermediateStore: ISSLCertificateStore;
+var
+  I: Integer;
+  LCertificate: ISSLCertificate;
+begin
+  Result := nil;
+
+  if Length(FPeerCertificateChain) <= 1 then
+    Exit;
+
+  try
+    Result := TSSLFactory.CreateCertificateStore(sslFreePascal);
+  except
+    Exit(nil);
+  end;
+
+  if Result = nil then
+    Exit;
+
+  for I := 1 to High(FPeerCertificateChain) do
+  begin
+    if FPeerCertificateChain[I] = nil then
+      Continue;
+
+    LCertificate := FPeerCertificateChain[I].Clone;
+    if LCertificate <> nil then
+      Result.AddCertificate(LCertificate);
+  end;
+
+  if Result.GetCount = 0 then
+    Result := nil;
+end;
+
+function TFreePascalConnection.TryResolvePeerIssuerCertificate(
+  out AIssuerCertificate: ISSLCertificate;
+  out AError: string
+): Boolean;
+var
+  LTrustStoreAccess: IFreePascalContextTrustStore;
+  LVerificationStore: ISSLCertificateStore;
+  LIssuerSubject: string;
+begin
+  AIssuerCertificate := nil;
+  AError := '';
+  Result := False;
+
+  if FPeerCertificate = nil then
+  begin
+    AError := 'Peer certificate is unavailable';
+    Exit;
+  end;
+
+  if (Length(FPeerCertificateChain) > 1) and (FPeerCertificateChain[1] <> nil) then
+  begin
+    AIssuerCertificate := FPeerCertificateChain[1];
+    Exit(True);
+  end;
+
+  LIssuerSubject := Trim(FPeerCertificate.GetIssuer);
+  if LIssuerSubject <> '' then
+  begin
+    if Supports(FContext, IFreePascalContextTrustStore, LTrustStoreAccess) then
+    begin
+      LVerificationStore := LTrustStoreAccess.BuildVerificationStore;
+      if LVerificationStore <> nil then
+      begin
+        AIssuerCertificate := LVerificationStore.FindBySubject(LIssuerSubject);
+        if AIssuerCertificate <> nil then
+          Exit(True);
+      end;
+    end;
+  end;
+
+  if SameText(Trim(FPeerCertificate.GetSubject), LIssuerSubject) then
+  begin
+    AIssuerCertificate := FPeerCertificate;
+    Exit(True);
+  end;
+
+  if LIssuerSubject = '' then
+    AError := 'Peer certificate issuer subject is empty'
+  else
+    AError := 'Issuer certificate is unavailable in peer chain and trust store';
+end;
+
+function TryLoadX509Certificate(
+  ACertificate: ISSLCertificate;
+  out AX509Certificate: TX509Certificate;
+  out AError: string
+): Boolean;
+var
+  LDER: TBytes;
+begin
+  AX509Certificate := nil;
+  AError := '';
+  Result := False;
+
+  if ACertificate = nil then
+  begin
+    AError := 'Certificate is nil';
+    Exit;
+  end;
+
+  LDER := ACertificate.SaveToDER;
+  if Length(LDER) = 0 then
+  begin
+    AError := 'Certificate DER is empty';
+    Exit;
+  end;
+
+  AX509Certificate := TX509Certificate.Create;
+  try
+    AX509Certificate.LoadFromDER(LDER);
+  except
+    on E: Exception do
+    begin
+      AX509Certificate.Free;
+      AX509Certificate := nil;
+      AError := 'Failed to parse certificate DER: ' + E.Message;
+      Exit;
+    end;
+  end;
+
+  Result := True;
+end;
+
+function TryLoadEmbeddedSignedCertificateTimestampList(
+  ACertificate: ISSLCertificate;
+  out ASignedCertificateTimestampList: TBytes;
+  out ASignedCertificateTimestampCount: Integer;
+  out AFound: Boolean;
+  out AError: string
+): Boolean;
+var
+  LX509Certificate: TX509Certificate;
+  I: Integer;
+begin
+  SetLength(ASignedCertificateTimestampList, 0);
+  ASignedCertificateTimestampCount := 0;
+  AFound := False;
+  AError := '';
+  Result := False;
+
+  if not TryLoadX509Certificate(ACertificate, LX509Certificate, AError) then
+  begin
+    AError := 'Failed to inspect embedded signed_certificate_timestamp: ' + AError;
+    Exit;
+  end;
+
+  try
+    for I := 0 to High(LX509Certificate.Extensions) do
+    begin
+      if SameText(
+        LX509Certificate.Extensions[I].OID,
+        X509_EXTENSION_EMBEDDED_SIGNED_CERTIFICATE_TIMESTAMP
+      ) then
+      begin
+        AFound := True;
+        ASignedCertificateTimestampList := Copy(LX509Certificate.Extensions[I].Value);
+        Break;
+      end;
+    end;
+  finally
+    LX509Certificate.Free;
+  end;
+
+  if not AFound then
+    Exit(True);
+
+  if not TryParseSignedCertificateTimestampList(
+    ASignedCertificateTimestampList,
+    ASignedCertificateTimestampCount,
+    AError
+  ) then
+  begin
+    AError := 'embedded signed_certificate_timestamp is invalid: ' + AError;
+    Exit;
+  end;
+
+  Result := True;
+end;
+
+function TFreePascalConnection.TryBuildPeerOCSPCertificatePair(
+  out ALeafCertificate, AIssuerCertificate: TX509Certificate;
+  out AError: string
+): Boolean;
+var
+  LIssuer: ISSLCertificate;
+begin
+  ALeafCertificate := nil;
+  AIssuerCertificate := nil;
+  AError := '';
+  Result := False;
+
+  if FPeerCertificate = nil then
+  begin
+    AError := 'Peer certificate is unavailable';
+    Exit;
+  end;
+
+  if not TryLoadX509Certificate(FPeerCertificate, ALeafCertificate, AError) then
+    Exit;
+
+  if not TryResolvePeerIssuerCertificate(LIssuer, AError) then
+  begin
+    ALeafCertificate.Free;
+    ALeafCertificate := nil;
+    Exit;
+  end;
+
+  if not TryLoadX509Certificate(LIssuer, AIssuerCertificate, AError) then
+  begin
+    ALeafCertificate.Free;
+    ALeafCertificate := nil;
+    Exit;
+  end;
+
+  Result := True;
+end;
+
+function TFreePascalConnection.TryLoadOCSPSignedCertificateTimestampList(
+  out ASignedCertificateTimestampList: TBytes;
+  out ASignedCertificateTimestampCount: Integer;
+  out AFound: Boolean;
+  out AError: string
+): Boolean;
+var
+  LOCSPResponse: TOCSPResponse;
+  LLeafCertificate: TX509Certificate;
+  LIssuerCertificate: TX509Certificate;
+  LCertID: TOCSPCertID;
+begin
+  SetLength(ASignedCertificateTimestampList, 0);
+  ASignedCertificateTimestampCount := 0;
+  AFound := False;
+  AError := '';
+  Result := False;
+
+  if Length(FOCSPResponse) = 0 then
+    Exit(True);
+
+  LOCSPResponse := TOCSPResponse.Create;
+  try
+    try
+      LOCSPResponse.LoadFromDER(FOCSPResponse);
+    except
+      on E: Exception do
+      begin
+        AError := 'Failed to parse OCSP response: ' + E.Message;
+        Exit;
+      end;
+    end;
+
+    if LOCSPResponse.ResponseStatus <> ocsprsSuccessful then
+    begin
+      AError := 'OCSP response status: ' +
+        OCSPResponseStatusToString(LOCSPResponse.ResponseStatus);
+      Exit;
+    end;
+
+    if not TryBuildPeerOCSPCertificatePair(LLeafCertificate, LIssuerCertificate, AError) then
+      Exit;
+
+    try
+      LCertID := TOCSPCertID.Create(LLeafCertificate, LIssuerCertificate);
+      AFound := LOCSPResponse.TryGetSignedCertificateTimestampList(
+        LCertID,
+        ASignedCertificateTimestampList,
+        ASignedCertificateTimestampCount
+      );
+      Result := True;
+    finally
+      LLeafCertificate.Free;
+      LIssuerCertificate.Free;
+    end;
+  finally
+    LOCSPResponse.Free;
+  end;
+end;
+
+function TFreePascalConnection.ValidateClientPeerCertificateTrust: Boolean;
+var
+  LVerifyMode: TSSLVerifyModes;
+  LVerifyFlags: TSSLCertVerifyFlags;
+  LOptions: TChainVerifyOptions;
+  LTrustStoreAccess: IFreePascalContextTrustStore;
+  LRevocationMaterialAccess: IFreePascalContextRevocationMaterial;
+  LTrustedStore: ISSLCertificateStore;
+  LIntermediateStore: ISSLCertificateStore;
+  LCRLStore: TStringList;
+  LVerifier: ISSLCertificateChainVerifier;
+  LVerifyResult: TChainVerifyResult;
+  LErrorMessage: string;
+begin
+  Result := False;
+
+  if FContext = nil then
+  begin
+    SetHandshakeError(sslErrInvalidParam, 'TLS context is not available for peer certificate trust verification');
+    Exit;
+  end;
+
+  LVerifyMode := FContext.GetVerifyMode;
+  if not (sslVerifyPeer in LVerifyMode) then
+    Exit(True);
+
+  if FSessionReused then
+    Exit(True);
+
+  if FPeerCertificate = nil then
+  begin
+    SetHandshakeError(sslErrCertificate, 'Peer certificate is required for client trust verification');
+    Exit;
+  end;
+
+  if not Supports(FContext, IFreePascalContextTrustStore, LTrustStoreAccess) then
+  begin
+    SetHandshakeError(sslErrUnsupported, 'FreePascal context does not expose trust-store access for client verification');
+    Exit;
+  end;
+
+  LTrustedStore := LTrustStoreAccess.BuildVerificationStore;
+  LIntermediateStore := BuildPeerIntermediateStore;
+  LCRLStore := nil;
+  if Supports(FContext, IFreePascalContextRevocationMaterial, LRevocationMaterialAccess) then
+    LCRLStore := LRevocationMaterialAccess.BuildCRLStore;
+  LVerifyFlags := FContext.GetCertVerifyFlags;
+
+  LOptions := [cvoCheckSignature, cvoCheckCAConstraints];
+  if sslCertVerifyAllowSelfSigned in LVerifyFlags then
+    Include(LOptions, cvoAllowSelfSigned);
+  if sslCertVerifyStrictChain in LVerifyFlags then
+  begin
+    Include(LOptions, cvoCheckKeyUsage);
+    Include(LOptions, cvoCheckExtKeyUsage);
+  end;
+  if (sslCertVerifyCheckRevocation in LVerifyFlags) or
+    (sslCertVerifyCheckCRL in LVerifyFlags) then
+    Include(LOptions, cvoCheckRevocation);
+
+  LVerifier := TSSLCertificateChainVerifier.Create;
+  try
+    LVerifier.SetOptions(LOptions);
+    if LTrustedStore <> nil then
+      LVerifier.SetTrustedStore(LTrustedStore);
+    if LIntermediateStore <> nil then
+      LVerifier.SetIntermediateStore(LIntermediateStore);
+    if LCRLStore <> nil then
+      LVerifier.SetCRLStore(LCRLStore);
+
+    LVerifyResult := LVerifier.VerifyCertificate(FPeerCertificate);
+  finally
+    LVerifier := nil;
+    if LCRLStore <> nil then
+      LCRLStore.Free;
+  end;
+
+  try
+    if not LVerifyResult.IsValid then
+    begin
+      LErrorMessage := Trim(LVerifyResult.ErrorMessage);
+      if LErrorMessage = '' then
+        LErrorMessage := 'Peer certificate is not trusted';
+      if LVerifyResult.RevocationStatus = 1 then
+        SetHandshakeError(
+          sslErrCertificateRevoked,
+          'Peer certificate trust verification failed: ' + LErrorMessage
+        )
+      else
+        SetHandshakeError(
+          sslErrCertificateUntrusted,
+          'Peer certificate trust verification failed: ' + LErrorMessage
+        );
+      Exit;
+    end;
+  finally
+    if Assigned(LVerifyResult.Warnings) then
+      LVerifyResult.Warnings.Free;
+  end;
+
+  Result := True;
+end;
+
+function TFreePascalConnection.ValidateClientPeerCertificateFlags: Boolean;
+var
+  LVerifyMode: TSSLVerifyModes;
+  LVerifyFlags: TSSLCertVerifyFlags;
+  LNormalizedHost: string;
+begin
+  Result := False;
+
+  if FContext = nil then
+  begin
+    SetHandshakeError(sslErrInvalidParam, 'TLS context is not available for peer certificate verification');
+    Exit;
+  end;
+
+  LVerifyMode := FContext.GetVerifyMode;
+  if not (sslVerifyPeer in LVerifyMode) then
+    Exit(True);
+
+  if FSessionReused then
+    Exit(True);
+
+  if FPeerCertificate = nil then
+  begin
+    SetHandshakeError(sslErrCertificate, 'Peer certificate is required for client verification');
+    Exit;
+  end;
+
+  LVerifyFlags := FContext.GetCertVerifyFlags;
+  if not (sslCertVerifyIgnoreHostname in LVerifyFlags) then
+  begin
+    LNormalizedHost := NormalizeHostForVerify(FServerName);
+    if LNormalizedHost = '' then
+    begin
+      SetHandshakeError(sslErrHostnameMismatch,
+        'Peer certificate hostname verification requires a non-empty server name');
+      Exit;
+    end;
+
+    if not FPeerCertificate.VerifyHostname(LNormalizedHost) then
+    begin
+      SetHandshakeError(sslErrHostnameMismatch,
+        Format('Peer certificate hostname mismatch for "%s"', [LNormalizedHost]));
+      Exit;
+    end;
+  end;
+
+  if not (sslCertVerifyIgnoreExpiry in LVerifyFlags) and FPeerCertificate.IsExpired then
+  begin
+    SetHandshakeError(sslErrCertificateExpired, 'Peer certificate is expired');
+    Exit;
+  end;
+
+  Result := True;
+end;
+
+function TFreePascalConnection.ValidateClientOCSPStapling: Boolean;
+var
+  LVerifyMode: TSSLVerifyModes;
+  LOptions: TSSLOptions;
+  LStaplingConfig: TOCSPStaplingConfig;
+  LStaplingClient: TOCSPStaplingClient;
+  LStaplingResult: TOCSPStaplingResult;
+  LLeafCertificate: TX509Certificate;
+  LIssuerCertificate: TX509Certificate;
+  LError: string;
+  LEnabled: Boolean;
+  LRequired: Boolean;
+begin
+  Result := False;
+
+  if FContext = nil then
+  begin
+    SetHandshakeError(sslErrInvalidParam, 'TLS context is not available for OCSP stapling validation');
+    Exit;
+  end;
+
+  LOptions := FContext.GetOptions;
+  LRequired := ssoRequireOCSPStapling in LOptions;
+  LEnabled := LRequired or (ssoEnableOCSPStapling in LOptions);
+  if not LEnabled then
+    Exit(True);
+
+  LVerifyMode := FContext.GetVerifyMode;
+  if not (sslVerifyPeer in LVerifyMode) then
+    Exit(True);
+
+  if FSessionReused then
+    Exit(True);
+
+  if Length(FOCSPResponse) = 0 then
+  begin
+    FOCSPResponseVerified := False;
+    FOCSPResponseStatus := 'No OCSP Response';
+    if LRequired then
+    begin
+      SetHandshakeError(sslErrCertificate, 'Required OCSP stapling response was not provided by the server');
+      Exit;
+    end;
+    Exit(True);
+  end;
+
+  if not TryBuildPeerOCSPCertificatePair(LLeafCertificate, LIssuerCertificate, LError) then
+  begin
+    FOCSPResponseVerified := False;
+    FOCSPResponseStatus := 'Verification Failed: ' + LError;
+    if LRequired then
+    begin
+      SetHandshakeError(sslErrCertificate, 'Required OCSP stapling verification context is unavailable: ' + LError);
+      Exit;
+    end;
+    Exit(True);
+  end;
+
+  LStaplingConfig := TOCSPStaplingConfig.Default;
+  LStaplingConfig.EnableClientRequest := True;
+  LStaplingConfig.RequireStapling := LRequired;
+  LStaplingConfig.UseCache := False;
+  LStaplingClient := TOCSPStaplingClient.Create(LStaplingConfig);
+  try
+    LStaplingResult := LStaplingClient.ProcessStapledResponse(
+      FOCSPResponse,
+      LLeafCertificate,
+      LIssuerCertificate
+    );
+    FOCSPResponseVerified := LStaplingResult.IsValid;
+    FOCSPResponseStatus := OCSPStaplingStateToString(
+      LStaplingResult.Status,
+      LStaplingResult.ErrorMessage
+    );
+
+    if not LStaplingClient.ValidateStaplingRequirement(True) then
+    begin
+      if LRequired then
+      begin
+        SetHandshakeError(
+          sslErrCertificate,
+          'Required OCSP stapling validation failed: ' + FOCSPResponseStatus
+        );
+        Exit;
+      end;
+    end;
+  finally
+    LStaplingClient.Free;
+    LLeafCertificate.Free;
+    LIssuerCertificate.Free;
+  end;
+
+  Result := True;
+end;
+
+function TFreePascalConnection.ValidateClientOnlineOCSP: Boolean;
+var
+  LVerifyMode: TSSLVerifyModes;
+  LVerifyFlags: TSSLCertVerifyFlags;
+  LLeafCertificate: TX509Certificate;
+  LIssuerCertificate: TX509Certificate;
+  LLeafOpenSSLCertificate: ISSLCertificate;
+  LIssuerOpenSSLCertificate: ISSLCertificate;
+  LIssuerSource: ISSLCertificate;
+  LLeafX509: PX509;
+  LIssuerX509: PX509;
+  LHTTPHooksAccess: ISSLHttpHooksAccess;
+  LHTTPHooks: TSSLHTTPHooks;
+  LHTTPHooksScope: TSSLHTTPHooksScope;
+  LOCSPURL: string;
+  LError: string;
+  LOCSPCheck: TOCSPCheckResult;
+  LTimeoutSec: Integer;
+begin
+  Result := False;
+
+  if FContext = nil then
+  begin
+    SetHandshakeError(sslErrInvalidParam, 'TLS context is not available for online OCSP verification');
+    Exit;
+  end;
+
+  LVerifyMode := FContext.GetVerifyMode;
+  if not (sslVerifyPeer in LVerifyMode) then
+    Exit(True);
+
+  if FSessionReused then
+    Exit(True);
+
+  LVerifyFlags := FContext.GetCertVerifyFlags;
+  if not (sslCertVerifyCheckOCSP in LVerifyFlags) then
+    Exit(True);
+
+  if FPeerCertificate = nil then
+  begin
+    SetHandshakeError(sslErrCertificate, 'Peer certificate is required for online OCSP verification');
+    Exit;
+  end;
+
+  if not TSSLFactory.IsLibraryAvailable(sslOpenSSL) then
+  begin
+    SetHandshakeError(sslErrUnsupported,
+      'Online OCSP verification requires the OpenSSL helper library');
+    Exit;
+  end;
+
+  if not TryBuildPeerOCSPCertificatePair(LLeafCertificate, LIssuerCertificate, LError) then
+  begin
+    SetHandshakeError(sslErrCertificate,
+      'Peer certificate online OCSP context is unavailable: ' + LError);
+    Exit;
+  end;
+
+  try
+    LOCSPURL := Trim(GetOCSPURLFromCertificate(LLeafCertificate));
+  finally
+    LLeafCertificate.Free;
+    LIssuerCertificate.Free;
+  end;
+
+  if LOCSPURL = '' then
+  begin
+    SetHandshakeError(sslErrVerificationFailed,
+      'Peer certificate OCSP responder URL was not found in AIA');
+    Exit;
+  end;
+
+  if not LoadOpenSSLOCSP(TOpenSSLLoader.GetLibraryHandle(osslLibCrypto)) then
+  begin
+    SetHandshakeError(sslErrUnsupported,
+      'Online OCSP verification helper is unavailable');
+    Exit;
+  end;
+
+  if not TryCreateOpenSSLCertificateFromCertificate(
+    FPeerCertificate,
+    LLeafOpenSSLCertificate,
+    LLeafX509,
+    LError
+  ) then
+  begin
+    SetHandshakeError(sslErrVerificationFailed,
+      'Online OCSP verification could not materialize peer certificate: ' + LError);
+    Exit;
+  end;
+
+  if not TryResolvePeerIssuerCertificate(LIssuerSource, LError) then
+  begin
+    SetHandshakeError(sslErrVerificationFailed,
+      'Online OCSP verification could not resolve issuer certificate: ' + LError);
+    Exit;
+  end;
+
+  if not TryCreateOpenSSLCertificateFromCertificate(
+    LIssuerSource,
+    LIssuerOpenSSLCertificate,
+    LIssuerX509,
+    LError
+  ) then
+  begin
+    SetHandshakeError(sslErrVerificationFailed,
+      'Online OCSP verification could not materialize issuer certificate: ' + LError);
+    Exit;
+  end;
+
+  LTimeoutSec := 10;
+  if FTimeout > 0 then
+  begin
+    LTimeoutSec := FTimeout div 1000;
+    if LTimeoutSec <= 0 then
+      LTimeoutSec := 1;
+  end;
+
+  LHTTPHooks := TSSLHTTPHooks.Empty;
+  if Supports(FContext, ISSLHttpHooksAccess, LHTTPHooksAccess) then
+    LHTTPHooks := TSSLHTTPHooks.Create(
+      LHTTPHooksAccess.GetHTTPGetCallback,
+      LHTTPHooksAccess.GetHTTPPostCallback
+    );
+
+  if not LHTTPHooks.IsEmpty then
+  begin
+    LHTTPHooksScope := TSSLHTTPHooksScope.Push(LHTTPHooks);
+    try
+      LOCSPCheck := CheckCertificateStatusDetailed(
+        LLeafX509,
+        LIssuerX509,
+        LOCSPURL,
+        LTimeoutSec,
+        nil
+      );
+    finally
+      LHTTPHooksScope.Pop;
+    end;
+  end
+  else
+    LOCSPCheck := CheckCertificateStatusDetailed(
+      LLeafX509,
+      LIssuerX509,
+      LOCSPURL,
+      LTimeoutSec,
+      nil
+    );
+
+  if not LOCSPCheck.Verified then
+  begin
+    LError := Trim(LOCSPCheck.ErrorMessage);
+    if LError = '' then
+      LError := 'OCSP verification failed';
+    SetHandshakeError(
+      sslErrVerificationFailed,
+      'Peer certificate online OCSP verification failed: ' + LError
+    );
+    Exit;
+  end;
+
+  case LOCSPCheck.CertStatus of
+    V_OCSP_CERTSTATUS_GOOD:
+      Result := True;
+    V_OCSP_CERTSTATUS_REVOKED:
+      SetHandshakeError(sslErrCertificateRevoked,
+        'Peer certificate has been revoked (OCSP)');
+    V_OCSP_CERTSTATUS_UNKNOWN:
+      SetHandshakeError(sslErrCertificateUnknown,
+        'Peer certificate OCSP status is unknown');
+  else
+    SetHandshakeError(sslErrVerificationFailed,
+      'Peer certificate OCSP verification failed');
+  end;
+end;
+
+function TFreePascalConnection.ValidateClientCertificateTransparency: Boolean;
+var
+  LVerifyMode: TSSLVerifyModes;
+  LStatus: string;
+begin
+  Result := False;
+
+  if FContext = nil then
+  begin
+    SetHandshakeError(sslErrInvalidParam, 'TLS context is not available for certificate transparency validation');
+    Exit;
+  end;
+
+  LVerifyMode := FContext.GetVerifyMode;
+  if not (sslVerifyPeer in LVerifyMode) then
+    Exit(True);
+
+  if FSessionReused then
+    Exit(True);
+
+  if not (ssoRequireCertificateTransparency in FContext.GetOptions) then
+    Exit(True);
+
+  if Length(FSignedCertificateTimestampList) = 0 then
+  begin
+    SetHandshakeError(
+      sslErrCertificate,
+      'Required certificate transparency SCT list was not provided by the server'
+    );
+    Exit;
+  end;
+
+  if not FHasCertificateTransparencyValidationResult then
+  begin
+    LStatus := Trim(FCertificateTransparencyValidationStatus);
+    if LStatus = '' then
+      LStatus := 'No validation result';
+    SetHandshakeError(
+      sslErrCertificate,
+      'Required certificate transparency validation is unavailable: ' + LStatus
+    );
+    Exit;
+  end;
+
+  if not FCertificateTransparencyPolicySatisfied then
+  begin
+    LStatus := Trim(FCertificateTransparencyValidationStatus);
+    if LStatus = '' then
+      LStatus := 'Policy not satisfied';
+    SetHandshakeError(
+      sslErrCertificate,
+      'Required certificate transparency policy failed: ' + LStatus
+    );
     Exit;
   end;
 
@@ -604,6 +2366,99 @@ begin
   Result := True;
 end;
 
+function TFreePascalConnection.ValidateServerCertificateVerify(
+  ACipherSuite: Word;
+  const AHandshakeMessage: TBytes;
+  const ATranscriptData: TBytes
+): Boolean;
+var
+  LVerifyMode: TSSLVerifyModes;
+  LSignatureScheme: Word;
+  LSignature: TBytes;
+  LTranscriptHash: TBytes;
+  LCertVerifyInput: TBytes;
+  LLeafCertificate: TX509Certificate;
+  LError: string;
+  LFailureCode: TSSLErrorCode;
+begin
+  Result := False;
+
+  if FContext = nil then
+  begin
+    SetHandshakeError(sslErrInvalidParam, 'TLS context is not available for CertificateVerify validation');
+    Exit;
+  end;
+
+  LVerifyMode := FContext.GetVerifyMode;
+  if not (sslVerifyPeer in LVerifyMode) then
+    Exit(True);
+
+  if FSessionReused then
+    Exit(True);
+
+  if not TryParseTLS13CertificateVerifyHandshake(
+    AHandshakeMessage,
+    LSignatureScheme,
+    LSignature,
+    LError
+  ) then
+  begin
+    SetHandshakeError(sslErrProtocol, 'Invalid CertificateVerify: ' + LError);
+    Exit;
+  end;
+
+  if FPeerCertificate = nil then
+  begin
+    SetHandshakeError(sslErrCertificate, 'Peer certificate is required for CertificateVerify validation');
+    Exit;
+  end;
+
+  if not TryLoadX509Certificate(FPeerCertificate, LLeafCertificate, LError) then
+  begin
+    SetHandshakeError(sslErrCertificate, 'Failed to parse peer certificate for CertificateVerify: ' + LError);
+    Exit;
+  end;
+
+  try
+    LTranscriptHash := HashTLS13TranscriptForSuite(ACipherSuite, ATranscriptData);
+    if Length(LTranscriptHash) = 0 then
+    begin
+      SetHandshakeError(
+        sslErrUnsupported,
+        'Unsupported TLS 1.3 cipher suite for CertificateVerify transcript hashing: ' +
+        TLS13CipherSuiteToString(ACipherSuite)
+      );
+      Exit;
+    end;
+
+    LCertVerifyInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+    if not TryVerifyTLS13CertificateVerifySignature(
+      LSignatureScheme,
+      LLeafCertificate.PublicKeyInfo,
+      LCertVerifyInput,
+      LSignature,
+      LError
+    ) then
+    begin
+      if Pos('unsupported', LowerCase(LError)) > 0 then
+        LFailureCode := sslErrUnsupported
+      else
+        LFailureCode := sslErrHandshake;
+
+      SetHandshakeError(
+        LFailureCode,
+        'Server CertificateVerify verification failed: ' + LError
+      );
+      Exit;
+    end;
+  finally
+    LLeafCertificate.Free;
+  end;
+
+  Result := True;
+end;
+
 function TFreePascalConnection.ProcessEncryptedServerFlight(ACipherSuite: Word; var ATranscriptData: TBytes): Boolean;
 var
   LHeader: TTLSRecordHeader;
@@ -618,14 +2473,28 @@ var
   LInnerContentType: Byte;
   LRecordIndex: Integer;
   LError: string;
+  LEncryptedExtensionsInfo: TTLS13EncryptedExtensionsInfo;
   LMsgType: Byte;
   LMsgLen: Cardinal;
   LVerifyData: TBytes;
   LTranscriptHash: TBytes;
+  LRequireCertificateFlight: Boolean;
+  LRequestCertificateTransparency: Boolean;
+  LSeenServerCertificate: Boolean;
+  LSeenServerCertificateVerify: Boolean;
 begin
   Result := False;
   SetLength(LHandshakeBuffer, 0);
   FServerHandshakeSeq := 0;
+  LRequireCertificateFlight :=
+    (not FSessionReused) and
+    (FContext <> nil) and
+    (sslVerifyPeer in FContext.GetVerifyMode);
+  LRequestCertificateTransparency :=
+    (FContext <> nil) and
+    (sslVerifyPeer in FContext.GetVerifyMode);
+  LSeenServerCertificate := False;
+  LSeenServerCertificateVerify := False;
 
   for LRecordIndex := 1 to 96 do
   begin
@@ -703,8 +2572,71 @@ begin
                 begin
                   LMsgType := LHandshakeMessage[0];
 
-                  if LMsgType = TLS_HANDSHAKE_TYPE_FINISHED then
+                  if LMsgType = TLS_HANDSHAKE_TYPE_ENCRYPTED_EXTENSIONS then
                   begin
+                    if not TryParseTLS13EncryptedExtensions(
+                      LHandshakeMessage,
+                      LEncryptedExtensionsInfo,
+                      LError
+                    ) then
+                    begin
+                      SetHandshakeError(sslErrProtocol, 'Invalid EncryptedExtensions: ' + LError);
+                      Exit;
+                    end;
+
+                    if FEarlyDataStatus = sslEarlyDataQueued then
+                    begin
+                      if LEncryptedExtensionsInfo.HasEarlyData then
+                        FEarlyDataStatus := sslEarlyDataAccepted
+                      else
+                        FEarlyDataStatus := sslEarlyDataRejected;
+                    end
+                    else if LEncryptedExtensionsInfo.HasEarlyData then
+                    begin
+                      SetHandshakeError(
+                        sslErrProtocol,
+                        'Server accepted early_data even though client did not queue early data'
+                      );
+                      Exit;
+                    end;
+
+                    AppendHandshakeBytes(ATranscriptData, LHandshakeMessage);
+                  end
+                  else if LMsgType = TLS_HANDSHAKE_TYPE_CERTIFICATE then
+                  begin
+                    if not TryCachePeerCertificatesFromHandshake(
+                      LHandshakeMessage,
+                      LRequestCertificateTransparency,
+                      LError
+                    ) then
+                    begin
+                      SetHandshakeError(sslErrProtocol, 'Invalid Certificate: ' + LError);
+                      Exit;
+                    end;
+
+                    LSeenServerCertificate := True;
+                    AppendHandshakeBytes(ATranscriptData, LHandshakeMessage);
+                  end
+                  else if LMsgType = TLS_HANDSHAKE_TYPE_CERTIFICATE_VERIFY then
+                  begin
+                    if not ValidateServerCertificateVerify(ACipherSuite, LHandshakeMessage, ATranscriptData) then
+                      Exit;
+
+                    LSeenServerCertificateVerify := True;
+                    AppendHandshakeBytes(ATranscriptData, LHandshakeMessage);
+                  end
+                  else if LMsgType = TLS_HANDSHAKE_TYPE_FINISHED then
+                  begin
+                    if LRequireCertificateFlight and
+                       ((not LSeenServerCertificate) or (not LSeenServerCertificateVerify)) then
+                    begin
+                      SetHandshakeError(
+                        sslErrProtocol,
+                        'Server full handshake missing Certificate or CertificateVerify before Finished'
+                      );
+                      Exit;
+                    end;
+
                     LMsgLen := ReadUInt24(LHandshakeMessage, 1);
                     if LMsgLen <> Cardinal(FHandshakeSecrets.HashSize) then
                     begin
@@ -720,8 +2652,9 @@ begin
                     if Integer(LMsgLen) > 0 then
                       Move(LHandshakeMessage[4], LVerifyData[0], Integer(LMsgLen));
 
-                    LTranscriptHash := SHA256(ATranscriptData);
-                    if not TLS13VerifyFinishedSHA256(
+                    LTranscriptHash := HashTLS13TranscriptForSuite(ACipherSuite, ATranscriptData);
+                    if not TLS13VerifyFinishedForCipherSuite(
+                      ACipherSuite,
                       FHandshakeSecrets.ServerHandshakeTrafficSecret,
                       LTranscriptHash,
                       LVerifyData
@@ -736,9 +2669,7 @@ begin
                     Exit;
                   end
                   else
-                  begin
                     AppendHandshakeBytes(ATranscriptData, LHandshakeMessage);
-                  end;
                 end;
               end;
 
@@ -775,6 +2706,8 @@ end;
 
 function TFreePascalConnection.SendClientFinished(ACipherSuite: Word; var ATranscriptData: TBytes): Boolean;
 var
+  LClientFlight: TBytes;
+  LTranscriptForFinished: TBytes;
   LTranscriptHash: TBytes;
   LVerifyData: TBytes;
   LFinishedHandshake: TBytes;
@@ -796,15 +2729,28 @@ begin
     Exit;
   end;
 
-  LTranscriptHash := SHA256(ATranscriptData);
-  LVerifyData := TLS13ComputeFinishedVerifyDataSHA256(FClientFinishedKey, LTranscriptHash);
+  SetLength(LClientFlight, 0);
+  if FEarlyDataStatus = sslEarlyDataAccepted then
+    AppendHandshakeBytes(LClientFlight, BuildTLS13EndOfEarlyDataHandshake);
+
+  LTranscriptForFinished := Copy(ATranscriptData, 0, Length(ATranscriptData));
+  if Length(LClientFlight) > 0 then
+    AppendHandshakeBytes(LTranscriptForFinished, LClientFlight);
+
+  LTranscriptHash := HashTLS13TranscriptForSuite(ACipherSuite, LTranscriptForFinished);
+  LVerifyData := TLS13ComputeFinishedVerifyDataForCipherSuite(
+    ACipherSuite,
+    FClientFinishedKey,
+    LTranscriptHash
+  );
 
   SetLength(LFinishedHandshake, 0);
   AppendByte(LFinishedHandshake, TLS_HANDSHAKE_TYPE_FINISHED);
   AppendUInt24(LFinishedHandshake, Length(LVerifyData));
   AppendHandshakeBytes(LFinishedHandshake, LVerifyData);
 
-  LInnerPlaintext := BuildTLS13InnerPlaintext(LFinishedHandshake, TLS_CONTENT_TYPE_HANDSHAKE);
+  AppendHandshakeBytes(LClientFlight, LFinishedHandshake);
+  LInnerPlaintext := BuildTLS13InnerPlaintext(LClientFlight, TLS_CONTENT_TYPE_HANDSHAKE);
 
   try
     LNonce := BuildTLS13RecordNonce(FHandshakeSecrets.ClientHandshakeIV, FClientHandshakeSeq);
@@ -842,10 +2788,17 @@ begin
     SetHandshakeError(sslErrIO, 'Failed to send encrypted client Finished record');
     Exit;
   end;
+
+  if FEarlyDataStatus = sslEarlyDataAccepted then
+    AppendHandshakeBytes(ATranscriptData, BuildTLS13EndOfEarlyDataHandshake);
+  AppendHandshakeBytes(ATranscriptData, LFinishedHandshake);
   Result := True;
 end;
 
-function TFreePascalConnection.RecvApplicationDataFragment(out AFragment: TBytes): Boolean;
+function TFreePascalConnection.RecvApplicationDataFragment(
+  out AFragment: TBytes;
+  AAllowNoRecord: Boolean
+): Boolean;
 var
   LHeader: TTLSRecordHeader;
   LPayloadBytes: TBytes;
@@ -873,6 +2826,11 @@ begin
   begin
     if not RecvTLSRecord(LHeader, LPayloadBytes, LRecordBytes) then
     begin
+      if AAllowNoRecord and (FStream <> nil) and (GetBufferedStreamBytesAvailable <= 0) then
+      begin
+        Result := True;
+        Exit;
+      end;
       SetHandshakeError(sslErrIO, 'Failed to receive TLS application record');
       Exit;
     end;
@@ -974,6 +2932,11 @@ begin
               begin
                 if not ProcessPostHandshakeFragment(LInnerFragment) then
                   Exit;
+                if AAllowNoRecord then
+                begin
+                  Result := True;
+                  Exit;
+                end;
                 Continue;
               end;
 
@@ -1143,13 +3106,24 @@ var
   LRecordIndex: Integer;
   LTranscriptData: TBytes;
   LKeyScheduleError: string;
+  LConfiguredResumption: IFreePascalResumptionSession;
+  LEarlyDataContext: ISSLEarlyDataContext;
+  LUseConfiguredSession: Boolean;
+  LPartialClientHello: TBytes;
+  LSessionAgeMs: Int64;
+  LWantEarlyData: Boolean;
+  LWantOCSPStapling: Boolean;
+  LWantCertificateTransparency: Boolean;
 begin
   Result := False;
   FSelectedALPNProtocol := '';
+  ClearPeerCertificateCache;
   SetLength(FHandshakeSharedSecret, 0);
+  InitTLS13EarlyDataSecrets(FEarlyDataSecrets);
   ClearTLS13HandshakeSecrets(FHandshakeSecrets);
   SetLength(FServerFinishedKey, 0);
   SetLength(FClientFinishedKey, 0);
+  FEarlyDataSeq := 0;
   FServerHandshakeSeq := 0;
   FClientHandshakeSeq := 0;
 
@@ -1161,6 +3135,9 @@ begin
   FSessionTicketCount := 0;
   InitTLS13NewSessionTicket(FLastSessionTicket);
   FIsServerMode := False;
+  FSessionReused := False;
+  if FEarlyDataStatus <> sslEarlyDataQueued then
+    FEarlyDataStatus := sslEarlyDataNone;
 
   try
     FX25519PrivateKey := GenerateX25519PrivateKey;
@@ -1175,7 +3152,70 @@ begin
     end;
   end;
 
-  LClientHelloHandshake := BuildTLS13ClientHelloHandshake(FServerName, FALPNProtocols, FX25519PublicKey);
+  LUseConfiguredSession :=
+    Supports(FConfiguredSession, IFreePascalResumptionSession, LConfiguredResumption) and
+    (FConfiguredSession <> nil) and
+    FConfiguredSession.IsValid and
+    FConfiguredSession.IsResumable and
+    (Length(LConfiguredResumption.GetTicket) > 0) and
+    (Length(LConfiguredResumption.GetResumptionPSK) > 0);
+  FSessionReused := False;
+  if LUseConfiguredSession then
+    FEarlyDataLimit := LConfiguredResumption.GetMaxEarlyDataSize
+  else
+    FEarlyDataLimit := 0;
+
+  LWantEarlyData :=
+    (FEarlyDataStatus = sslEarlyDataQueued) and
+    (Length(FEarlyDataPayload) > 0) and
+    LUseConfiguredSession and
+    (FEarlyDataLimit > 0) and
+    Supports(FContext, ISSLEarlyDataContext, LEarlyDataContext) and
+    LEarlyDataContext.GetClientEarlyDataEnabled;
+  LWantOCSPStapling :=
+    (FContext <> nil) and
+    ((ssoEnableOCSPStapling in FContext.GetOptions) or
+     (ssoRequireOCSPStapling in FContext.GetOptions));
+  LWantCertificateTransparency :=
+    (FContext <> nil) and
+    (sslVerifyPeer in FContext.GetVerifyMode);
+
+  if LUseConfiguredSession then
+  begin
+    LSessionAgeMs := MilliSecondsBetween(Now, FConfiguredSession.GetCreationTime);
+    if LSessionAgeMs < 0 then
+      LSessionAgeMs := 0;
+
+    LClientHelloHandshake := BuildTLS13ClientHelloHandshakeWithComputedPSKBinder(
+      FServerName,
+      FALPNProtocols,
+      FX25519PublicKey,
+      LConfiguredResumption.GetCipherSuite,
+      LConfiguredResumption.GetTicket,
+      Cardinal((QWord(LSessionAgeMs) + QWord(LConfiguredResumption.GetTicketAgeAdd)) and $FFFFFFFF),
+      LConfiguredResumption.GetResumptionPSK,
+      LPartialClientHello,
+      LWantEarlyData,
+      LWantOCSPStapling,
+      LWantCertificateTransparency
+    );
+
+    if Length(LClientHelloHandshake) = 0 then
+    begin
+      LUseConfiguredSession := False;
+      LWantEarlyData := False;
+    end
+  end;
+
+  if not LUseConfiguredSession then
+    LClientHelloHandshake := BuildTLS13ClientHelloHandshake(
+      FServerName,
+      FALPNProtocols,
+      FX25519PublicKey,
+      LWantOCSPStapling,
+      LWantCertificateTransparency
+    );
+
   LClientHelloRecord := BuildTLSPlaintext(TLS_CONTENT_TYPE_HANDSHAKE, LClientHelloHandshake);
 
   if not SendAll(LClientHelloRecord) then
@@ -1184,6 +3224,27 @@ begin
     FLastErrorString := 'Failed to send TLS ClientHello';
     RecordError(FLastErrorCode, FLastErrorString);
     Exit;
+  end;
+
+  if LWantEarlyData then
+  begin
+    if not TryDeriveTLS13ClientEarlyDataSecrets(
+      LConfiguredResumption.GetCipherSuite,
+      LConfiguredResumption.GetResumptionPSK,
+      LClientHelloHandshake,
+      FEarlyDataSecrets,
+      LKeyScheduleError
+    ) then
+    begin
+      SetHandshakeError(
+        sslErrUnsupported,
+        'TLS 1.3 client early-data key schedule derivation failed: ' + LKeyScheduleError
+      );
+      Exit;
+    end;
+
+    if not SendClientEarlyDataRecord(LConfiguredResumption.GetCipherSuite) then
+      Exit;
   end;
 
   for LRecordIndex := 1 to 8 do
@@ -1271,23 +3332,78 @@ begin
           if Length(LHandshake) > 0 then
             Move(LHandshake[0], LTranscriptData[Length(LClientHelloHandshake)], Length(LHandshake));
 
-          if not TryDeriveTLS13HandshakeSecrets(
-            LServerHello.SelectedCipherSuite,
-            FHandshakeSharedSecret,
-            LTranscriptData,
-            FHandshakeSecrets,
-            LKeyScheduleError
-          ) then
+          if LServerHello.HasPreSharedKey then
           begin
-            FLastErrorCode := sslErrUnsupported;
-            FLastErrorString := 'TLS 1.3 key schedule derivation failed: ' + LKeyScheduleError;
-            RecordError(FLastErrorCode, FLastErrorString);
-            Exit;
+            if (not LUseConfiguredSession) or (LConfiguredResumption = nil) then
+            begin
+              FLastErrorCode := sslErrProtocol;
+              FLastErrorString := 'Server selected pre_shared_key without a configured resumable session';
+              RecordError(FLastErrorCode, FLastErrorString);
+              Exit;
+            end;
+
+            if LServerHello.SelectedPSKIdentity <> 0 then
+            begin
+              FLastErrorCode := sslErrProtocol;
+              FLastErrorString := 'Server selected unsupported PSK identity index';
+              RecordError(FLastErrorCode, FLastErrorString);
+              Exit;
+            end;
+
+            if not TLS13CipherSuitesShareHash(
+              LServerHello.SelectedCipherSuite,
+              LConfiguredResumption.GetCipherSuite
+            ) then
+            begin
+              FLastErrorCode := sslErrProtocol;
+              FLastErrorString := 'Server selected pre_shared_key with incompatible hash path';
+              RecordError(FLastErrorCode, FLastErrorString);
+              Exit;
+            end;
+
+            if not TryDeriveTLS13HandshakeSecretsWithPSK(
+              LServerHello.SelectedCipherSuite,
+              FHandshakeSharedSecret,
+              LTranscriptData,
+              LConfiguredResumption.GetResumptionPSK,
+              FHandshakeSecrets,
+              LKeyScheduleError
+            ) then
+            begin
+              FLastErrorCode := sslErrUnsupported;
+              FLastErrorString := 'TLS 1.3 PSK key schedule derivation failed: ' + LKeyScheduleError;
+              RecordError(FLastErrorCode, FLastErrorString);
+              Exit;
+            end;
+
+            FSessionReused := True;
+          end
+          else
+          begin
+            if not TryDeriveTLS13HandshakeSecrets(
+              LServerHello.SelectedCipherSuite,
+              FHandshakeSharedSecret,
+              LTranscriptData,
+              FHandshakeSecrets,
+              LKeyScheduleError
+            ) then
+            begin
+              FLastErrorCode := sslErrUnsupported;
+              FLastErrorString := 'TLS 1.3 key schedule derivation failed: ' + LKeyScheduleError;
+              RecordError(FLastErrorCode, FLastErrorString);
+              Exit;
+            end;
           end;
 
           try
-            FServerFinishedKey := TLS13FinishedKeySHA256(FHandshakeSecrets.ServerHandshakeTrafficSecret);
-            FClientFinishedKey := TLS13FinishedKeySHA256(FHandshakeSecrets.ClientHandshakeTrafficSecret);
+            FServerFinishedKey := TLS13FinishedKeyForCipherSuite(
+              LServerHello.SelectedCipherSuite,
+              FHandshakeSecrets.ServerHandshakeTrafficSecret
+            );
+            FClientFinishedKey := TLS13FinishedKeyForCipherSuite(
+              LServerHello.SelectedCipherSuite,
+              FHandshakeSecrets.ClientHandshakeTrafficSecret
+            );
           except
             on E: Exception do
             begin
@@ -1302,6 +3418,21 @@ begin
           FClientHandshakeSeq := 0;
 
           if not ProcessEncryptedServerFlight(LServerHello.SelectedCipherSuite, LTranscriptData) then
+            Exit;
+
+          if not ValidateClientPeerCertificateTrust then
+            Exit;
+
+          if not ValidateClientPeerCertificateFlags then
+            Exit;
+
+          if not ValidateClientOCSPStapling then
+            Exit;
+
+          if not ValidateClientOnlineOCSP then
+            Exit;
+
+          if not ValidateClientCertificateTransparency then
             Exit;
 
           if not SendClientFinished(LServerHello.SelectedCipherSuite, LTranscriptData) then
@@ -1325,10 +3456,14 @@ begin
           SetLength(FPostHandshakeBuffer, 0);
           FSessionTicketCount := 0;
           InitTLS13NewSessionTicket(FLastSessionTicket);
-  FIsServerMode := False;
+          FIsServerMode := False;
 
           FProtocolVersion := sslProtocolTLS13;
           FCipherName := TLS13CipherSuiteToString(LServerHello.SelectedCipherSuite);
+          if FSessionReused and (FConfiguredSession <> nil) then
+            FCurrentSession := FConfiguredSession.Clone;
+          if not DrainBufferedApplicationRecords then
+            Exit;
           Result := True;
           Exit;
         end;
@@ -1354,6 +3489,67 @@ begin
   RecordError(FLastErrorCode, FLastErrorString);
 end;
 
+function TFreePascalConnection.SendClientEarlyDataRecord(ACipherSuite: Word): Boolean;
+var
+  LInnerPlaintext: TBytes;
+  LNonce: TBytes;
+  LEncrypted: TBytes;
+  LRecord: TBytes;
+  LError: string;
+begin
+  Result := False;
+
+  if Length(FEarlyDataPayload) = 0 then
+    Exit(True);
+
+  if not FEarlyDataSecrets.Valid then
+  begin
+    SetHandshakeError(sslErrProtocol, 'Client early-data keys are not available');
+    Exit;
+  end;
+
+  LInnerPlaintext := BuildTLS13InnerPlaintext(FEarlyDataPayload, TLS_CONTENT_TYPE_APPLICATION_DATA);
+
+  try
+    LNonce := BuildTLS13RecordNonce(FEarlyDataSecrets.ClientEarlyIV, FEarlyDataSeq);
+  except
+    on E: Exception do
+    begin
+      SetHandshakeError(sslErrProtocol, 'Failed to build client early-data nonce: ' + E.Message);
+      Exit;
+    end;
+  end;
+
+  if not TryTLS13AEADEncrypt(
+    ACipherSuite,
+    FEarlyDataSecrets.ClientEarlyKey,
+    LNonce,
+    BuildTLS13RecordAAD(Word(Length(LInnerPlaintext) + TLS13AEADTagLength(ACipherSuite))),
+    LInnerPlaintext,
+    LEncrypted,
+    LError
+  ) then
+  begin
+    SetHandshakeError(sslErrEncryptionFailed, 'Failed to encrypt client early-data record: ' + LError);
+    Exit;
+  end;
+
+  LRecord := BuildTLSPlaintext(TLS_CONTENT_TYPE_APPLICATION_DATA, LEncrypted);
+  if not SendAll(LRecord) then
+  begin
+    SetHandshakeError(sslErrIO, 'Failed to send client early-data record');
+    Exit;
+  end;
+
+  if not IncrementTLS13Sequence(FEarlyDataSeq) then
+  begin
+    SetHandshakeError(sslErrProtocol, 'Client early-data sequence overflow');
+    Exit;
+  end;
+
+  Result := True;
+end;
+
 function TFreePascalConnection.DoRead(var ABuffer; ACount: Integer): Integer;
 var
   LFragment: TBytes;
@@ -1372,6 +3568,9 @@ begin
 
   while Length(FApplicationReadBuffer) = 0 do
   begin
+    if (FStream <> nil) and (GetBufferedStreamBytesAvailable <= 0) then
+      Exit(0);
+
     if not RecvApplicationDataFragment(LFragment) then
       Exit(-1);
 
@@ -1426,6 +3625,7 @@ end;
 function TFreePascalConnection.DoConnect: Boolean;
 begin
   Result := False;
+  ClearPeerCertificateCache;
 
   if (FStream = nil) and (FSocket < 0) then
   begin
@@ -1489,11 +3689,19 @@ var
   LAlertLevel: Byte;
   LAlertDescription: Byte;
   LContextMaterial: IFreePascalContextMaterial;
+  LStaplingMaterial: IFreePascalContextServerStaplingMaterial;
+  LEarlyDataContext: ISSLEarlyDataContext;
+  LResumptionCache: IFreePascalResumptionCache;
+  LEarlyDataReplayAccess: IFreePascalEarlyDataReplayLedgerAccess;
+  LEarlyDataReplayLedger: IFreePascalEarlyDataReplayLedger;
   LCertificateBlob: TBytes;
   LPrivateKeyBlob: TBytes;
+  LServerStapledOCSPResponse: TBytes;
   LLeafCertificateDER: TBytes;
   LCertificateMessage: TBytes;
   LCertificateVerifyMessage: TBytes;
+  LCachedSession: ISSLSession;
+  LCachedResumption: IFreePascalResumptionSession;
   LSignatureScheme: Word;
   LSignatureSchemeError: string;
   LLeafCertificate: TX509Certificate;
@@ -1501,13 +3709,32 @@ var
   LCertVerifyInput: TBytes;
   LCertVerifySignature: TBytes;
   LSignatureLength: Integer;
+  LResumedHandshake: Boolean;
+  LEarlyDataOffered: Boolean;
+  LEarlyDataAccepted: Boolean;
+  LEarlyDataEndObserved: Boolean;
+  LBinderTranscript: TBytes;
+  LExpectedBinder: TBytes;
+  LTicketNonce: TBytes;
+  LTicket: TBytes;
+  LTicketExtensions: TBytes;
+  LTicketHandshake: TBytes;
+  LTicketAgeAddBytes: TBytes;
+  LTicketAgeAdd: Cardinal;
+  LTicketLifetime: Cardinal;
+  LIssuedMaxEarlyDataSize: Cardinal;
+  LIssuedSession: TFreePascalSession;
+  LEarlyDataBuffer: TBytes;
+  LClientRequestedOCSPStapling: Boolean;
 begin
   Result := False;
   FSelectedALPNProtocol := '';
   SetLength(FHandshakeSharedSecret, 0);
+  InitTLS13EarlyDataSecrets(FEarlyDataSecrets);
   ClearTLS13HandshakeSecrets(FHandshakeSecrets);
   SetLength(FServerFinishedKey, 0);
   SetLength(FClientFinishedKey, 0);
+  FEarlyDataSeq := 0;
   FServerHandshakeSeq := 0;
   FClientHandshakeSeq := 0;
 
@@ -1519,6 +3746,14 @@ begin
   FSessionTicketCount := 0;
   InitTLS13NewSessionTicket(FLastSessionTicket);
   FIsServerMode := False;
+  FCurrentSession := nil;
+  FSessionReused := False;
+  FEarlyDataStatus := sslEarlyDataNone;
+  FEarlyDataLimit := 0;
+  SetLength(FEarlyDataPayload, 0);
+  SetLength(LEarlyDataBuffer, 0);
+  SetLength(LServerStapledOCSPResponse, 0);
+  LClientRequestedOCSPStapling := False;
   LLeafKeyType := '';
 
   if FProtocolVersion <> sslProtocolTLS13 then
@@ -1581,6 +3816,10 @@ begin
             end;
 
             LClientHelloHandshake := LHandshakeMessage;
+            LClientRequestedOCSPStapling := ClientHelloHasExtension(
+              LClientHelloHandshake,
+              TLS_EXTENSION_STATUS_REQUEST
+            );
             Break;
           end;
 
@@ -1617,17 +3856,96 @@ begin
     Exit;
   end;
 
+  LResumedHandshake := False;
+  LEarlyDataOffered := False;
+  LEarlyDataAccepted := False;
+  LEarlyDataEndObserved := True;
   LSelectedCipherSuite := 0;
-  if TLS13ClientHelloOffersCipherSuite(LClientHello, TLS13_CIPHER_AES_128_GCM_SHA256) then
-    LSelectedCipherSuite := TLS13_CIPHER_AES_128_GCM_SHA256
-  else if TLS13ClientHelloOffersCipherSuite(LClientHello, TLS13_CIPHER_CHACHA20_POLY1305_SHA256) then
-    LSelectedCipherSuite := TLS13_CIPHER_CHACHA20_POLY1305_SHA256;
+  LCachedSession := nil;
+  LCachedResumption := nil;
+  if LClientHello.HasPreSharedKey and
+     Supports(FContext, IFreePascalResumptionCache, LResumptionCache) then
+  begin
+    if not TryBuildTLS13ClientHelloPSKBinderTranscript(LClientHelloHandshake, LBinderTranscript, LParseError) then
+    begin
+      SetHandshakeError(sslErrProtocol, 'Failed to rebuild ClientHello PSK binder transcript: ' + LParseError);
+      Exit;
+    end;
+
+    if LResumptionCache.TryGetResumptionSession(LClientHello.FirstPSKIdentity, LCachedSession) and
+       Supports(LCachedSession, IFreePascalResumptionSession, LCachedResumption) and
+       TLS13ClientHelloOffersCipherSuite(LClientHello, LCachedResumption.GetCipherSuite) then
+    begin
+      LExpectedBinder := TLS13ComputePSKBinderForCipherSuite(
+        LCachedResumption.GetCipherSuite,
+        LCachedResumption.GetResumptionPSK,
+        LBinderTranscript
+      );
+      if not BytesEqual(LExpectedBinder, LClientHello.FirstPSKBinder) then
+      begin
+        SetHandshakeError(sslErrHandshake, 'ClientHello PSK binder verification failed');
+        Exit;
+      end;
+
+      LSelectedCipherSuite := LCachedResumption.GetCipherSuite;
+      LResumedHandshake := True;
+
+      if LClientHello.HasEarlyData then
+      begin
+        if not TryDeriveTLS13ClientEarlyDataSecrets(
+          LCachedResumption.GetCipherSuite,
+          LCachedResumption.GetResumptionPSK,
+          LClientHelloHandshake,
+          FEarlyDataSecrets,
+          LKeyScheduleError
+        ) then
+        begin
+          SetHandshakeError(
+            sslErrUnsupported,
+            'TLS 1.3 server early-data key schedule derivation failed: ' + LKeyScheduleError
+          );
+          Exit;
+        end;
+
+        LEarlyDataOffered := True;
+        FEarlyDataLimit := LCachedResumption.GetMaxEarlyDataSize;
+        FEarlyDataStatus := sslEarlyDataRejected;
+        LEarlyDataEndObserved := False;
+        LEarlyDataReplayLedger := nil;
+
+        if Supports(FContext, IFreePascalEarlyDataReplayLedgerAccess, LEarlyDataReplayAccess) then
+          LEarlyDataReplayLedger := LEarlyDataReplayAccess.GetEarlyDataReplayLedger;
+        if (LEarlyDataReplayLedger = nil) and
+           Supports(FContext, IFreePascalEarlyDataReplayLedger, LEarlyDataReplayLedger) then;
+
+        if (FEarlyDataLimit > 0) and
+           Supports(FContext, ISSLEarlyDataContext, LEarlyDataContext) and
+           (LEarlyDataContext.GetServerEarlyDataPolicy = sslEarlyDataServerAccept) and
+           (LEarlyDataReplayLedger <> nil) and
+           LEarlyDataReplayLedger.TryAcquireEarlyDataSession(LCachedSession) then
+        begin
+          LEarlyDataAccepted := True;
+          FEarlyDataStatus := sslEarlyDataAccepted;
+        end;
+      end;
+    end;
+  end;
+
+  if not LResumedHandshake then
+  begin
+    if TLS13ClientHelloOffersCipherSuite(LClientHello, TLS13_CIPHER_AES_256_GCM_SHA384) then
+      LSelectedCipherSuite := TLS13_CIPHER_AES_256_GCM_SHA384
+    else if TLS13ClientHelloOffersCipherSuite(LClientHello, TLS13_CIPHER_CHACHA20_POLY1305_SHA256) then
+      LSelectedCipherSuite := TLS13_CIPHER_CHACHA20_POLY1305_SHA256
+    else if TLS13ClientHelloOffersCipherSuite(LClientHello, TLS13_CIPHER_AES_128_GCM_SHA256) then
+      LSelectedCipherSuite := TLS13_CIPHER_AES_128_GCM_SHA256;
+  end;
 
   if LSelectedCipherSuite = 0 then
   begin
     SetHandshakeError(
       sslErrUnsupported,
-      'No supported TLS 1.3 cipher suite intersection (requires TLS_AES_128_GCM_SHA256 or TLS_CHACHA20_POLY1305_SHA256 for current pure FreePascal path)'
+      'No supported TLS 1.3 cipher suite intersection (requires TLS_AES_256_GCM_SHA384 or TLS_CHACHA20_POLY1305_SHA256 or TLS_AES_128_GCM_SHA256 for current pure FreePascal path)'
     );
     Exit;
   end;
@@ -1635,37 +3953,50 @@ begin
   FProtocolVersion := sslProtocolTLS13;
   FCipherName := TLS13CipherSuiteToString(LSelectedCipherSuite);
 
-  if not Supports(FContext, IFreePascalContextMaterial, LContextMaterial) then
+  if not LResumedHandshake then
   begin
-    SetHandshakeError(sslErrUnsupported, 'FreePascal context does not expose certificate material interface');
-    Exit;
-  end;
+    if not Supports(FContext, IFreePascalContextMaterial, LContextMaterial) then
+    begin
+      SetHandshakeError(sslErrUnsupported, 'FreePascal context does not expose certificate material interface');
+      Exit;
+    end;
 
-  if not LContextMaterial.HasCertificateMaterial then
-  begin
-    SetHandshakeError(sslErrInvalidParam, 'Server context requires certificate material (LoadCertificate)');
-    Exit;
-  end;
+    if not LContextMaterial.HasCertificateMaterial then
+    begin
+      SetHandshakeError(sslErrInvalidParam, 'Server context requires certificate material (LoadCertificate)');
+      Exit;
+    end;
 
-  if not LContextMaterial.HasPrivateKeyMaterial then
-  begin
-    SetHandshakeError(sslErrInvalidParam, 'Server context requires private key material (LoadPrivateKey)');
-    Exit;
-  end;
+    if not LContextMaterial.HasPrivateKeyMaterial then
+    begin
+      SetHandshakeError(sslErrInvalidParam, 'Server context requires private key material (LoadPrivateKey)');
+      Exit;
+    end;
 
-  LCertificateBlob := LContextMaterial.GetCertificateMaterial;
-  LPrivateKeyBlob := LContextMaterial.GetPrivateKeyMaterial;
+    LCertificateBlob := LContextMaterial.GetCertificateMaterial;
+    LPrivateKeyBlob := LContextMaterial.GetPrivateKeyMaterial;
 
-  if not TryBuildTLS13ServerCertificateHandshake(LCertificateBlob, LCertificateMessage, LError) then
-  begin
-    SetHandshakeError(sslErrInvalidParam, 'Failed to build TLS 1.3 Certificate message: ' + LError);
-    Exit;
-  end;
+    if LClientRequestedOCSPStapling and
+       Supports(FContext, IFreePascalContextServerStaplingMaterial, LStaplingMaterial) and
+       LStaplingMaterial.HasServerStapledOCSPResponse then
+      LServerStapledOCSPResponse := LStaplingMaterial.GetServerStapledOCSPResponse;
 
-  if not TryExtractLeafCertificateDERFromBlob(LCertificateBlob, LLeafCertificateDER, LError) then
-  begin
-    SetHandshakeError(sslErrInvalidParam, 'Failed to extract leaf certificate for CertificateVerify metadata: ' + LError);
-    Exit;
+    if not TryBuildTLS13ServerCertificateHandshakeWithStapledOCSP(
+      LCertificateBlob,
+      LServerStapledOCSPResponse,
+      LCertificateMessage,
+      LError
+    ) then
+    begin
+      SetHandshakeError(sslErrInvalidParam, 'Failed to build TLS 1.3 Certificate message: ' + LError);
+      Exit;
+    end;
+
+    if not TryExtractLeafCertificateDERFromBlob(LCertificateBlob, LLeafCertificateDER, LError) then
+    begin
+      SetHandshakeError(sslErrInvalidParam, 'Failed to extract leaf certificate for CertificateVerify metadata: ' + LError);
+      Exit;
+    end;
   end;
   if not LClientHello.HasKeyShare then
   begin
@@ -1698,12 +4029,21 @@ begin
   end;
 
   try
-    LServerHelloHandshake := BuildTLS13ServerHelloHandshake(
-      LClientHello.LegacySessionID,
-      LSelectedCipherSuite,
-      FX25519PublicKey,
-      TLS13_GROUP_X25519
-    );
+    if LResumedHandshake then
+      LServerHelloHandshake := BuildTLS13ServerHelloHandshakeWithSelectedPSK(
+        LClientHello.LegacySessionID,
+        LSelectedCipherSuite,
+        FX25519PublicKey,
+        0,
+        TLS13_GROUP_X25519
+      )
+    else
+      LServerHelloHandshake := BuildTLS13ServerHelloHandshake(
+        LClientHello.LegacySessionID,
+        LSelectedCipherSuite,
+        FX25519PublicKey,
+        TLS13_GROUP_X25519
+      );
   except
     on E: Exception do
     begin
@@ -1725,7 +4065,23 @@ begin
   if Length(LServerHelloHandshake) > 0 then
     Move(LServerHelloHandshake[0], LTranscriptData[Length(LClientHelloHandshake)], Length(LServerHelloHandshake));
 
-  if not TryDeriveTLS13HandshakeSecrets(
+  if LResumedHandshake then
+  begin
+    if not TryDeriveTLS13HandshakeSecretsWithPSK(
+      LSelectedCipherSuite,
+      FHandshakeSharedSecret,
+      LTranscriptData,
+      LCachedResumption.GetResumptionPSK,
+      FHandshakeSecrets,
+      LKeyScheduleError
+    ) then
+    begin
+      SetHandshakeError(sslErrUnsupported, 'TLS 1.3 server PSK handshake key schedule derivation failed: ' + LKeyScheduleError);
+      Exit;
+    end;
+    FSessionReused := True;
+  end
+  else if not TryDeriveTLS13HandshakeSecrets(
     LSelectedCipherSuite,
     FHandshakeSharedSecret,
     LTranscriptData,
@@ -1738,8 +4094,14 @@ begin
   end;
 
   try
-    FServerFinishedKey := TLS13FinishedKeySHA256(FHandshakeSecrets.ServerHandshakeTrafficSecret);
-    FClientFinishedKey := TLS13FinishedKeySHA256(FHandshakeSecrets.ClientHandshakeTrafficSecret);
+    FServerFinishedKey := TLS13FinishedKeyForCipherSuite(
+      LSelectedCipherSuite,
+      FHandshakeSecrets.ServerHandshakeTrafficSecret
+    );
+    FClientFinishedKey := TLS13FinishedKeyForCipherSuite(
+      LSelectedCipherSuite,
+      FHandshakeSecrets.ClientHandshakeTrafficSecret
+    );
   except
     on E: Exception do
     begin
@@ -1758,144 +4120,156 @@ begin
     Exit;
   end;
 
-  SetLength(LEncryptedExtensionsBody, 0);
-  AppendUInt16(LEncryptedExtensionsBody, 0);
-
-  SetLength(LEncryptedExtensionsMessage, 0);
-  AppendByte(LEncryptedExtensionsMessage, TLS_HANDSHAKE_TYPE_ENCRYPTED_EXTENSIONS);
-  AppendUInt24(LEncryptedExtensionsMessage, Length(LEncryptedExtensionsBody));
-  AppendBytes(LEncryptedExtensionsMessage, LEncryptedExtensionsBody);
+  LEncryptedExtensionsMessage := BuildTLS13EncryptedExtensionsHandshake(LEarlyDataAccepted);
 
   SetLength(LServerFlightMessages, 0);
   AppendHandshakeBytes(LServerFlightMessages, LEncryptedExtensionsMessage);
   AppendHandshakeBytes(LTranscriptData, LEncryptedExtensionsMessage);
 
-  AppendHandshakeBytes(LServerFlightMessages, LCertificateMessage);
-  AppendHandshakeBytes(LTranscriptData, LCertificateMessage);
+  if not LResumedHandshake then
+  begin
+    AppendHandshakeBytes(LServerFlightMessages, LCertificateMessage);
+    AppendHandshakeBytes(LTranscriptData, LCertificateMessage);
 
-  LLeafCertificate := TX509Certificate.Create;
-  try
+    LLeafCertificate := TX509Certificate.Create;
     try
-      LLeafCertificate.LoadFromDER(LLeafCertificateDER);
-    except
-      on E: Exception do
+      try
+        LLeafCertificate.LoadFromDER(LLeafCertificateDER);
+      except
+        on E: Exception do
+        begin
+          SetHandshakeError(sslErrInvalidParam, 'Failed to parse leaf certificate DER: ' + E.Message);
+          Exit;
+        end;
+      end;
+
+      if SameText(LLeafCertificate.PublicKeyInfo.KeyType, 'RSA') then
       begin
-        SetHandshakeError(sslErrInvalidParam, 'Failed to parse leaf certificate DER: ' + E.Message);
+        LLeafKeyType := 'RSA';
+        LSignatureLength := (LLeafCertificate.PublicKeyInfo.KeySize + 7) div 8;
+        if LSignatureLength <= 0 then
+          LSignatureLength := Length(LLeafCertificate.PublicKeyInfo.RSAModulus);
+      end
+      else if SameText(LLeafCertificate.PublicKeyInfo.KeyType, 'ECDSA') then
+      begin
+        LLeafKeyType := 'ECDSA';
+        LSignatureLength := 72
+      end
+      else
+        LSignatureLength := 0;
+    finally
+      LLeafCertificate.Free;
+    end;
+
+    if LSignatureLength <= 0 then
+    begin
+      SetHandshakeError(sslErrUnsupported, 'Unsupported leaf certificate key type for TLS 1.3 CertificateVerify');
+      Exit;
+    end;
+
+    if not TrySelectTLS13ServerCertificateVerifySchemeForKeyTypeAndCipherSuite(
+      LClientHello,
+      LLeafKeyType,
+      LSelectedCipherSuite,
+      LSignatureScheme,
+      LSignatureSchemeError
+    ) then
+    begin
+      SetHandshakeError(sslErrUnsupported, LSignatureSchemeError);
+      Exit;
+    end;
+
+    if Length(LPrivateKeyBlob) = 0 then
+    begin
+      SetHandshakeError(sslErrInvalidParam, 'Server private key material is empty');
+      Exit;
+    end;
+
+    LTranscriptHash := HashTLS13TranscriptForSuite(LSelectedCipherSuite, LTranscriptData);
+    if Length(LTranscriptHash) = 0 then
+    begin
+      SetHandshakeError(
+        sslErrUnsupported,
+        'Unsupported TLS 1.3 cipher suite for server CertificateVerify transcript hashing: ' +
+        TLS13CipherSuiteToString(LSelectedCipherSuite)
+      );
+      Exit;
+    end;
+
+    LCertVerifyInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+    case LSignatureScheme of
+      TLS13_SIG_RSA_PSS_RSAE_SHA256,
+      TLS13_SIG_RSA_PSS_PSS_SHA256,
+      TLS13_SIG_RSA_PKCS1_SHA256,
+      TLS13_SIG_RSA_PSS_RSAE_SHA384,
+      TLS13_SIG_RSA_PSS_PSS_SHA384,
+      TLS13_SIG_RSA_PKCS1_SHA384,
+      TLS13_SIG_ECDSA_SECP256R1_SHA256:
+        begin
+          if not TryBuildTLS13CertificateVerifySignature(
+            LSignatureScheme,
+            LPrivateKeyBlob,
+            LCertVerifyInput,
+            LCertVerifySignature,
+            LError
+          ) then
+          begin
+            SetHandshakeError(sslErrUnsupported, 'CertificateVerify signer failed: ' + LError);
+            Exit;
+          end;
+
+          if SameText(LLeafKeyType, 'RSA') then
+          begin
+            if Length(LCertVerifySignature) <> LSignatureLength then
+            begin
+              SetHandshakeError(
+                sslErrHandshake,
+                Format('CertificateVerify signature length mismatch (expected=%d actual=%d)',
+                  [LSignatureLength, Length(LCertVerifySignature)])
+              );
+              Exit;
+            end;
+          end
+          else if SameText(LLeafKeyType, 'ECDSA') then
+          begin
+            if (Length(LCertVerifySignature) <= 0) or
+               (Length(LCertVerifySignature) > LSignatureLength) or
+               (LCertVerifySignature[0] <> $30) then
+            begin
+              SetHandshakeError(
+                sslErrHandshake,
+                Format('ECDSA CertificateVerify signature is invalid DER length (max=%d actual=%d)',
+                  [LSignatureLength, Length(LCertVerifySignature)])
+              );
+              Exit;
+            end;
+          end;
+        end;
+
+    else
+      begin
+        SetHandshakeError(
+          sslErrUnsupported,
+          Format('Unsupported CertificateVerify scheme selected: %s',
+            [TLS13SignatureSchemeToString(LSignatureScheme)])
+        );
         Exit;
       end;
     end;
 
-    if SameText(LLeafCertificate.PublicKeyInfo.KeyType, 'RSA') then
-    begin
-      LLeafKeyType := 'RSA';
-      LSignatureLength := (LLeafCertificate.PublicKeyInfo.KeySize + 7) div 8;
-      if LSignatureLength <= 0 then
-        LSignatureLength := Length(LLeafCertificate.PublicKeyInfo.RSAModulus);
-    end
-    else if SameText(LLeafCertificate.PublicKeyInfo.KeyType, 'ECDSA') then
-    begin
-      LLeafKeyType := 'ECDSA';
-      LSignatureLength := 72
-    end
-    else
-      LSignatureLength := 0;
-  finally
-    LLeafCertificate.Free;
+    LCertificateVerifyMessage := BuildTLS13CertificateVerifyHandshake(
+      LSignatureScheme,
+      LCertVerifySignature
+    );
+
+    AppendHandshakeBytes(LServerFlightMessages, LCertificateVerifyMessage);
+    AppendHandshakeBytes(LTranscriptData, LCertificateVerifyMessage);
   end;
 
-  if LSignatureLength <= 0 then
-  begin
-    SetHandshakeError(sslErrUnsupported, 'Unsupported leaf certificate key type for TLS 1.3 CertificateVerify');
-    Exit;
-  end;
-
-  if not TrySelectTLS13ServerCertificateVerifySchemeForKeyType(
-    LClientHello,
-    LLeafKeyType,
-    LSignatureScheme,
-    LSignatureSchemeError
-  ) then
-  begin
-    SetHandshakeError(sslErrUnsupported, LSignatureSchemeError);
-    Exit;
-  end;
-
-  if Length(LPrivateKeyBlob) = 0 then
-  begin
-    SetHandshakeError(sslErrInvalidParam, 'Server private key material is empty');
-    Exit;
-  end;
-
-  LTranscriptHash := SHA256(LTranscriptData);
-  LCertVerifyInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
-
-  case LSignatureScheme of
-    TLS13_SIG_RSA_PSS_RSAE_SHA256,
-    TLS13_SIG_RSA_PSS_PSS_SHA256,
-    TLS13_SIG_RSA_PKCS1_SHA256,
-    TLS13_SIG_ECDSA_SECP256R1_SHA256:
-      begin
-        if not TryBuildTLS13CertificateVerifySignature(
-          LSignatureScheme,
-          LPrivateKeyBlob,
-          LCertVerifyInput,
-          LCertVerifySignature,
-          LError
-        ) then
-        begin
-          SetHandshakeError(sslErrUnsupported, 'CertificateVerify signer failed: ' + LError);
-          Exit;
-        end;
-
-        if SameText(LLeafKeyType, 'RSA') then
-        begin
-          if Length(LCertVerifySignature) <> LSignatureLength then
-          begin
-            SetHandshakeError(
-              sslErrHandshake,
-              Format('CertificateVerify signature length mismatch (expected=%d actual=%d)',
-                [LSignatureLength, Length(LCertVerifySignature)])
-            );
-            Exit;
-          end;
-        end
-        else if SameText(LLeafKeyType, 'ECDSA') then
-        begin
-          if (Length(LCertVerifySignature) <= 0) or
-             (Length(LCertVerifySignature) > LSignatureLength) or
-             (LCertVerifySignature[0] <> $30) then
-          begin
-            SetHandshakeError(
-              sslErrHandshake,
-              Format('ECDSA CertificateVerify signature is invalid DER length (max=%d actual=%d)',
-                [LSignatureLength, Length(LCertVerifySignature)])
-            );
-            Exit;
-          end;
-        end;
-      end;
-
-  else
-    begin
-      SetHandshakeError(
-        sslErrUnsupported,
-        Format('Unsupported CertificateVerify scheme selected: %s',
-          [TLS13SignatureSchemeToString(LSignatureScheme)])
-      );
-      Exit;
-    end;
-  end;
-
-  LCertificateVerifyMessage := BuildTLS13CertificateVerifyHandshake(
-    LSignatureScheme,
-    LCertVerifySignature
-  );
-
-  AppendHandshakeBytes(LServerFlightMessages, LCertificateVerifyMessage);
-  AppendHandshakeBytes(LTranscriptData, LCertificateVerifyMessage);
-
-  LTranscriptHash := SHA256(LTranscriptData);
-  LVerifyData := TLS13ComputeFinishedVerifyDataFromTrafficSecretSHA256(
+  LTranscriptHash := HashTLS13TranscriptForSuite(LSelectedCipherSuite, LTranscriptData);
+  LVerifyData := TLS13ComputeFinishedVerifyDataFromTrafficSecretForCipherSuite(
+    LSelectedCipherSuite,
     FHandshakeSecrets.ServerHandshakeTrafficSecret,
     LTranscriptHash
   );
@@ -1972,6 +4346,65 @@ begin
         begin
           LAAD := BuildTLS13RecordAAD(LHeader.Length);
 
+          if LEarlyDataOffered and FEarlyDataSecrets.Valid then
+          begin
+            try
+              LNonce := BuildTLS13RecordNonce(FEarlyDataSecrets.ClientEarlyIV, FEarlyDataSeq);
+            except
+              on E: Exception do
+              begin
+                SetHandshakeError(sslErrProtocol, 'Failed to build client early-data nonce: ' + E.Message);
+                Exit;
+              end;
+            end;
+
+            if TryTLS13AEADDecrypt(
+              LSelectedCipherSuite,
+              FEarlyDataSecrets.ClientEarlyKey,
+              LNonce,
+              LAAD,
+              LPayloadBytes,
+              LPlaintext,
+              LError
+            ) then
+            begin
+              if not TryParseTLS13InnerPlaintext(LPlaintext, LInnerFragment, LInnerContentType) then
+              begin
+                SetHandshakeError(sslErrProtocol, 'Invalid TLSInnerPlaintext in client early-data record');
+                Exit;
+              end;
+
+              if LInnerContentType <> TLS_CONTENT_TYPE_APPLICATION_DATA then
+              begin
+                SetHandshakeError(
+                  sslErrProtocol,
+                  Format('Unexpected inner content type %d in client early-data record', [LInnerContentType])
+                );
+                Exit;
+              end;
+
+              if LEarlyDataAccepted then
+              begin
+                if Cardinal(Length(LEarlyDataBuffer) + Length(LInnerFragment)) > FEarlyDataLimit then
+                begin
+                  LEarlyDataAccepted := False;
+                  FEarlyDataStatus := sslEarlyDataRejected;
+                  SetLength(LEarlyDataBuffer, 0);
+                end
+                else
+                  AppendHandshakeBytes(LEarlyDataBuffer, LInnerFragment);
+              end;
+
+              if not IncrementTLS13Sequence(FEarlyDataSeq) then
+              begin
+                SetHandshakeError(sslErrProtocol, 'Client early-data sequence overflow');
+                Exit;
+              end;
+
+              Continue;
+            end;
+          end;
+
           try
             LNonce := BuildTLS13RecordNonce(FHandshakeSecrets.ClientHandshakeIV, FClientHandshakeSeq);
           except
@@ -2022,8 +4455,28 @@ begin
                   end;
 
                   LMsgType := LHandshakeMessage[0];
-                  if LMsgType = TLS_HANDSHAKE_TYPE_FINISHED then
+                  if LMsgType = TLS_HANDSHAKE_TYPE_END_OF_EARLY_DATA then
                   begin
+                    if not LEarlyDataAccepted then
+                    begin
+                      SetHandshakeError(sslErrProtocol, 'Server reject path must not receive EndOfEarlyData');
+                      Exit;
+                    end;
+
+                    LEarlyDataEndObserved := True;
+                    AppendHandshakeBytes(LTranscriptData, LHandshakeMessage);
+                  end
+                  else if LMsgType = TLS_HANDSHAKE_TYPE_FINISHED then
+                  begin
+                    if LEarlyDataAccepted and (not LEarlyDataEndObserved) then
+                    begin
+                      SetHandshakeError(
+                        sslErrProtocol,
+                        'Accepted early-data path must send EndOfEarlyData before Finished'
+                      );
+                      Exit;
+                    end;
+
                     LMsgLen := ReadUInt24(LHandshakeMessage, 1);
                     if LMsgLen <> Cardinal(FHandshakeSecrets.HashSize) then
                     begin
@@ -2039,8 +4492,9 @@ begin
                     if Integer(LMsgLen) > 0 then
                       Move(LHandshakeMessage[4], LVerifyData[0], Integer(LMsgLen));
 
-                    LTranscriptHash := SHA256(LTranscriptData);
-                    if not TLS13VerifyFinishedSHA256(
+                    LTranscriptHash := HashTLS13TranscriptForSuite(LSelectedCipherSuite, LTranscriptData);
+                    if not TLS13VerifyFinishedForCipherSuite(
+                      LSelectedCipherSuite,
                       FHandshakeSecrets.ClientHandshakeTrafficSecret,
                       LTranscriptHash,
                       LVerifyData
@@ -2055,9 +4509,7 @@ begin
                     Break;
                   end
                   else
-                  begin
                     AppendHandshakeBytes(LTranscriptData, LHandshakeMessage);
-                  end;
                 end;
 
                 if LClientFinishedReceived then
@@ -2126,12 +4578,130 @@ begin
 
   FClientApplicationSeq := 0;
   FServerApplicationSeq := 0;
-  SetLength(FApplicationReadBuffer, 0);
   SetLength(FPostHandshakeBuffer, 0);
+  FApplicationReadBuffer := Copy(LEarlyDataBuffer);
 
   FProtocolVersion := sslProtocolTLS13;
   FCipherName := TLS13CipherSuiteToString(LSelectedCipherSuite);
   FIsServerMode := True;
+  if LResumedHandshake and (LCachedSession <> nil) then
+    FCurrentSession := LCachedSession.Clone
+  else if Supports(FContext, IFreePascalResumptionCache, LResumptionCache) and
+          LResumptionCache.CanIssueSessionTickets then
+  begin
+    LTicketLifetime := Cardinal(FContext.GetSessionTimeout);
+    LTicketNonce := GenerateSecureRandomBytes(8);
+    LTicket := GenerateSecureRandomBytes(32);
+    LTicketAgeAddBytes := GenerateSecureRandomBytes(4);
+    LTicketAgeAdd :=
+      (Cardinal(LTicketAgeAddBytes[0]) shl 24) or
+      (Cardinal(LTicketAgeAddBytes[1]) shl 16) or
+      (Cardinal(LTicketAgeAddBytes[2]) shl 8) or
+      Cardinal(LTicketAgeAddBytes[3]);
+
+    LVerifyData := TLS13DeriveResumptionPSKFromTranscriptHash(
+      FApplicationSecrets.CipherSuite,
+      FApplicationSecrets.MasterSecret,
+      FApplicationSecrets.TranscriptHash,
+      LTicketNonce
+    );
+    if Length(LVerifyData) <> FApplicationSecrets.HashSize then
+    begin
+      SetHandshakeError(sslErrHandshake, 'Failed to derive server resumption PSK for NewSessionTicket');
+      Exit;
+    end;
+
+    LIssuedMaxEarlyDataSize := 0;
+    if Supports(FContext, ISSLEarlyDataContext, LEarlyDataContext) then
+      case LEarlyDataContext.GetServerEarlyDataPolicy of
+        sslEarlyDataServerReject:
+          LIssuedMaxEarlyDataSize := 0;
+        sslEarlyDataServerAccept,
+        sslEarlyDataServerIssueOnly:
+          LIssuedMaxEarlyDataSize := LEarlyDataContext.GetServerMaxEarlyDataSize;
+      end;
+
+    LIssuedSession := TFreePascalSession.Create;
+    LIssuedSession.ConfigureResumption(
+      FApplicationSecrets.CipherSuite,
+      TLS13CipherSuiteToString(FApplicationSecrets.CipherSuite),
+      LTicketNonce,
+      LTicket,
+      LVerifyData,
+      LTicketLifetime,
+      LTicketAgeAdd,
+      Now,
+      FContext.GetSessionTimeout,
+      LIssuedMaxEarlyDataSize
+    );
+    LResumptionCache.StoreResumptionSession(LIssuedSession);
+    FCurrentSession := LIssuedSession.Clone;
+
+    SetLength(LTicketExtensions, 0);
+    if LIssuedMaxEarlyDataSize > 0 then
+    begin
+      AppendUInt16(LTicketExtensions, TLS_EXTENSION_EARLY_DATA);
+      AppendUInt16(LTicketExtensions, 4);
+      AppendByte(LTicketExtensions, Byte((LIssuedMaxEarlyDataSize shr 24) and $FF));
+      AppendByte(LTicketExtensions, Byte((LIssuedMaxEarlyDataSize shr 16) and $FF));
+      AppendByte(LTicketExtensions, Byte((LIssuedMaxEarlyDataSize shr 8) and $FF));
+      AppendByte(LTicketExtensions, Byte(LIssuedMaxEarlyDataSize and $FF));
+    end;
+    LTicketHandshake := BuildTLS13NewSessionTicketHandshake(
+      LTicketLifetime,
+      LTicketAgeAdd,
+      LTicketNonce,
+      LTicket,
+      LTicketExtensions
+    );
+    LInnerPlaintext := BuildTLS13InnerPlaintext(LTicketHandshake, TLS_CONTENT_TYPE_HANDSHAKE);
+
+    try
+      LNonce := BuildTLS13RecordNonce(FApplicationSecrets.ServerApplicationIV, FServerApplicationSeq);
+    except
+      on E: Exception do
+      begin
+        SetHandshakeError(sslErrProtocol, 'Failed to build server post-handshake nonce: ' + E.Message);
+        Exit;
+      end;
+    end;
+
+    LAAD := BuildTLS13RecordAAD(Word(Length(LInnerPlaintext) + TLS13AEADTagLength(LSelectedCipherSuite)));
+    if not TryTLS13AEADEncrypt(
+      LSelectedCipherSuite,
+      FApplicationSecrets.ServerApplicationKey,
+      LNonce,
+      LAAD,
+      LInnerPlaintext,
+      LEncrypted,
+      LError
+    ) then
+    begin
+      SetHandshakeError(sslErrEncryptionFailed, 'Failed to encrypt NewSessionTicket: ' + LError);
+      Exit;
+    end;
+
+    LRecord := BuildTLSPlaintext(TLS_CONTENT_TYPE_APPLICATION_DATA, LEncrypted);
+    if not SendAll(LRecord) then
+    begin
+      SetHandshakeError(sslErrIO, 'Failed to send NewSessionTicket');
+      Exit;
+    end;
+    if not IncrementTLS13Sequence(FServerApplicationSeq) then
+    begin
+      SetHandshakeError(sslErrProtocol, 'Server application sequence overflow after NewSessionTicket');
+      Exit;
+    end;
+
+    InitTLS13NewSessionTicket(FLastSessionTicket);
+    FLastSessionTicket.Valid := True;
+    FLastSessionTicket.TicketLifetime := LTicketLifetime;
+    FLastSessionTicket.TicketAgeAdd := LTicketAgeAdd;
+    FLastSessionTicket.TicketNonce := Copy(LTicketNonce);
+    FLastSessionTicket.Ticket := Copy(LTicket);
+    FLastSessionTicket.Extensions := Copy(LTicketExtensions);
+    Inc(FSessionTicketCount);
+  end;
 
   Result := True;
 end;
@@ -2161,12 +4731,15 @@ end;
 
 procedure TFreePascalConnection.DoClose;
 begin
+  ClearPeerCertificateCache;
   SetLength(FX25519PrivateKey, 0);
   SetLength(FX25519PublicKey, 0);
   SetLength(FHandshakeSharedSecret, 0);
+  ClearTLS13EarlyDataSecrets(FEarlyDataSecrets);
   ClearTLS13HandshakeSecrets(FHandshakeSecrets);
   SetLength(FServerFinishedKey, 0);
   SetLength(FClientFinishedKey, 0);
+  FEarlyDataSeq := 0;
   FServerHandshakeSeq := 0;
   FClientHandshakeSeq := 0;
 
@@ -2178,6 +4751,9 @@ begin
   FSessionTicketCount := 0;
   InitTLS13NewSessionTicket(FLastSessionTicket);
   FIsServerMode := False;
+  FEarlyDataStatus := sslEarlyDataNone;
+  FEarlyDataLimit := 0;
+  SetLength(FEarlyDataPayload, 0);
 end;
 
 function TFreePascalConnection.DoRenegotiate: Boolean;
@@ -2230,12 +4806,15 @@ end;
 
 function TFreePascalConnection.DoGetPeerCertificate: ISSLCertificate;
 begin
-  Result := nil;
+  if FPeerCertificate <> nil then
+    Result := FPeerCertificate.Clone
+  else
+    Result := nil;
 end;
 
 function TFreePascalConnection.DoGetPeerCertificateChain: TSSLCertificateArray;
 begin
-  SetLength(Result, 0);
+  Result := CloneCertificateArray(FPeerCertificateChain);
 end;
 
 function TFreePascalConnection.DoGetVerifyResult: Integer;
@@ -2256,16 +4835,34 @@ end;
 
 function TFreePascalConnection.DoGetSession: ISSLSession;
 begin
-  Result := nil;
+  Result := FCurrentSession;
 end;
 
 procedure TFreePascalConnection.DoSetSession(ASession: ISSLSession);
+var
+  LResumptionSession: IFreePascalResumptionSession;
 begin
+  FConfiguredSession := nil;
+  FSessionReused := False;
+  FEarlyDataStatus := sslEarlyDataNone;
+  FEarlyDataLimit := 0;
+  SetLength(FEarlyDataPayload, 0);
+  ClearTLS13EarlyDataSecrets(FEarlyDataSecrets);
+  FEarlyDataSeq := 0;
+
+  if (ASession = nil) or (not ASession.IsValid) or (not ASession.IsResumable) then
+    Exit;
+
+  if not Supports(ASession, IFreePascalResumptionSession, LResumptionSession) then
+    Exit;
+
+  FConfiguredSession := ASession.Clone;
+  FEarlyDataLimit := LResumptionSession.GetMaxEarlyDataSize;
 end;
 
 function TFreePascalConnection.DoIsSessionReused: Boolean;
 begin
-  Result := False;
+  Result := FSessionReused;
 end;
 
 function TFreePascalConnection.DoGetSelectedALPNProtocol: string;
@@ -2290,6 +4887,61 @@ begin
   Result := nil;
 end;
 
+function TFreePascalConnection.DoGetOCSPStaplingEnabled: Boolean;
+begin
+  Result := Length(FOCSPResponse) > 0;
+end;
+
+function TFreePascalConnection.DoGetOCSPResponse: TBytes;
+begin
+  Result := Copy(FOCSPResponse);
+end;
+
+function TFreePascalConnection.DoIsOCSPResponseVerified: Boolean;
+begin
+  Result := FOCSPResponseVerified;
+end;
+
+function TFreePascalConnection.DoGetOCSPResponseStatus: string;
+begin
+  Result := FOCSPResponseStatus;
+end;
+
+function TFreePascalConnection.DoGetCertificateTransparencyEnabled: Boolean;
+begin
+  Result := Length(FSignedCertificateTimestampList) > 0;
+end;
+
+function TFreePascalConnection.DoGetSignedCertificateTimestampList: TBytes;
+begin
+  Result := Copy(FSignedCertificateTimestampList);
+end;
+
+function TFreePascalConnection.DoGetSignedCertificateTimestampCount: Integer;
+begin
+  Result := FSignedCertificateTimestampCount;
+end;
+
+function TFreePascalConnection.DoGetCertificateTransparencyStatus: string;
+begin
+  Result := FCertificateTransparencyStatus;
+end;
+
+function TFreePascalConnection.DoHasCertificateTransparencyValidationResult: Boolean;
+begin
+  Result := FHasCertificateTransparencyValidationResult;
+end;
+
+function TFreePascalConnection.DoIsCertificateTransparencyPolicySatisfied: Boolean;
+begin
+  Result := FCertificateTransparencyPolicySatisfied;
+end;
+
+function TFreePascalConnection.DoGetCertificateTransparencyValidationStatus: string;
+begin
+  Result := FCertificateTransparencyValidationStatus;
+end;
+
 procedure TFreePascalConnection.SetServerName(const AServerName: string);
 begin
   FServerName := AServerName;
@@ -2298,6 +4950,53 @@ end;
 function TFreePascalConnection.GetServerName: string;
 begin
   Result := FServerName;
+end;
+
+function TFreePascalConnection.SetEarlyData(const AData: TBytes): TSSLOperationResult;
+var
+  LEarlyDataContext: ISSLEarlyDataContext;
+  LResumptionSession: IFreePascalResumptionSession;
+begin
+  if (FContext = nil) or (FContext.GetContextType <> sslCtxClient) then
+    Exit(TSSLOperationResult.Err(sslErrInvalidParam, 'Early data is only available on client connections'));
+
+  if not Supports(FContext, ISSLEarlyDataContext, LEarlyDataContext) then
+    Exit(TSSLOperationResult.Err(sslErrUnsupported, 'Context does not expose early-data interface'));
+
+  if not LEarlyDataContext.GetClientEarlyDataEnabled then
+    Exit(TSSLOperationResult.Err(sslErrConfiguration, 'Client early data is disabled on the context'));
+
+  if (FConfiguredSession = nil) or
+     (not Supports(FConfiguredSession, IFreePascalResumptionSession, LResumptionSession)) or
+     (not FConfiguredSession.IsValid) or
+     (not FConfiguredSession.IsResumable) then
+    Exit(TSSLOperationResult.Err(sslErrInvalidParam, 'Early data requires a configured resumable session'));
+
+  FEarlyDataLimit := LResumptionSession.GetMaxEarlyDataSize;
+  if FEarlyDataLimit = 0 then
+    Exit(TSSLOperationResult.Err(sslErrInvalidParam, 'Configured session does not allow early data'));
+
+  if Cardinal(Length(AData)) > FEarlyDataLimit then
+    Exit(TSSLOperationResult.Err(sslErrInvalidParam, 'Early data payload exceeds max_early_data_size'));
+
+  FEarlyDataPayload := Copy(AData, 0, Length(AData));
+  if Length(FEarlyDataPayload) = 0 then
+    FEarlyDataStatus := sslEarlyDataNone
+  else
+    FEarlyDataStatus := sslEarlyDataQueued;
+  ClearTLS13EarlyDataSecrets(FEarlyDataSecrets);
+  FEarlyDataSeq := 0;
+  Result := TSSLOperationResult.Ok;
+end;
+
+function TFreePascalConnection.GetEarlyDataStatus: TSSLEarlyDataStatus;
+begin
+  Result := FEarlyDataStatus;
+end;
+
+function TFreePascalConnection.GetEarlyDataLimit: Cardinal;
+begin
+  Result := FEarlyDataLimit;
 end;
 
 end.

@@ -75,6 +75,71 @@ jobs:
           fi
 
   # ============================================================================
+  # FreePascal TLS 1.3 Completeness Gate - focused pure-Pascal mainline coverage
+  # ============================================================================
+  freepascal-tls13-completeness:
+    name: FreePascal TLS 1.3 Completeness
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Free Pascal and OpenSSL
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fpc libssl-dev python3
+          fpc -iV
+          openssl version
+
+      - name: Run focused FreePascal TLS 1.3 gate
+        shell: bash
+        run: |
+          RUN_ID="gh_${GITHUB_RUN_ID:-0}_${GITHUB_RUN_ATTEMPT:-0}"
+          echo "FP_TLS13_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+
+          mkdir -p tmp/test-reports
+          FAFAFA_FREEPASCAL_TLS13_COMPLETENESS_RUN_ID="$RUN_ID" \
+            bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local 2>&1 \
+            | tee "tmp/test-reports/freepascal_tls13_completeness_${RUN_ID}.log"
+
+      - name: Upload FreePascal TLS 1.3 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: freepascal-tls13-completeness-${{ env.FP_TLS13_RUN_ID }}
+          path: |
+            tmp/test-reports/freepascal_tls13_completeness_*
+          retention-days: 14
+
+      - name: Append step summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## FreePascal TLS 1.3 Completeness" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- run_id: \`${FP_TLS13_RUN_ID:-unknown}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if ls tmp/test-reports/freepascal_tls13_completeness_*.md >/dev/null 2>&1; then
+            LATEST_REPORT="$(ls -t tmp/test-reports/freepascal_tls13_completeness_*.md | head -1)"
+            echo "### Latest completeness report" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+            tail -40 "$LATEST_REPORT" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if ls tmp/test-reports/freepascal_tls13_completeness_*.log >/dev/null 2>&1; then
+            LATEST_LOG="$(ls -t tmp/test-reports/freepascal_tls13_completeness_*.log | head -1)"
+            echo "### Completeness gate log (tail)" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+            tail -60 "$LATEST_LOG" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # ============================================================================
   # Code Quality Checks (Light) - keep it cheap and non-flaky
   # ============================================================================
   code-quality:
