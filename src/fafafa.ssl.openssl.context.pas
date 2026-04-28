@@ -30,6 +30,7 @@ uses
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.api.ec,
   fafafa.ssl.openssl.api.pem,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.logging,
@@ -180,6 +181,11 @@ implementation
 
 uses
   fafafa.ssl.openssl.connection,
+  fafafa.ssl.openssl.loader,
+  fafafa.ssl.pem,
+  fafafa.ssl.openssl.api.pkcs,
+  fafafa.ssl.openssl.api.pkcs12,
+  fafafa.ssl.openssl.api.rsa,
   fafafa.ssl.memutils;  // Rust-quality: Secure memory handling
 
 var
@@ -188,6 +194,381 @@ var
   // 读操作（LookupContext）可以并发执行，只有写操作（Register/Unregister）需要独占
   // 性能提升：10-50 倍（多线程场景）
   GContextLock: TMultiReadExclusiveWriteSynchronizer = nil;
+
+procedure RequireContextCertificateMemoryBIOHelpers(const AMethodName: string);
+begin
+  if (not Assigned(BIO_new_mem_buf)) or (not Assigned(BIO_free)) then
+    RaiseSSLCertError(
+      'Required OpenSSL BIO helpers are unavailable for certificate load',
+      AMethodName
+    );
+end;
+
+procedure RequireContextPrivateKeyMemoryBIOHelpers(const AMethodName: string);
+begin
+  if (not Assigned(BIO_new_mem_buf)) or (not Assigned(BIO_free)) then
+    raise ESSLKeyException.CreateWithContext(
+      'Required OpenSSL BIO helpers are unavailable for private key load',
+      sslErrFunctionNotFound,
+      AMethodName,
+      0,
+      sslOpenSSL
+    );
+end;
+
+procedure RequireContextPrivateKeyFileBIOHelpers(const AMethodName: string);
+begin
+  if (not Assigned(BIO_new_file)) or (not Assigned(BIO_free)) then
+    raise ESSLKeyException.CreateWithContext(
+      'Required OpenSSL BIO file helpers are unavailable for private key load',
+      sslErrFunctionNotFound,
+      AMethodName,
+      0,
+      sslOpenSSL
+    );
+end;
+
+function ReadPrivateKeyFileBytes(const AFileName, AMethodName: string): TBytes;
+var
+  LStream: TFileStream;
+begin
+  SetLength(Result, 0);
+
+  try
+    LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
+    try
+      SetLength(Result, LStream.Size);
+      if LStream.Size > 0 then
+        LStream.ReadBuffer(Result[0], LStream.Size);
+    finally
+      LStream.Free;
+    end;
+  except
+    on E: Exception do
+      raise ESSLKeyException.CreateWithContext(
+        Format('Failed to read private key file: %s', [AFileName]),
+        sslErrLoadFailed,
+        AMethodName,
+        0,
+        sslOpenSSL
+      );
+  end;
+end;
+
+function ReadPrivateKeyStreamBytes(AStream: TStream): TBytes;
+var
+  LSize: Int64;
+begin
+  LSize := AStream.Size - AStream.Position;
+  SetLength(Result, LSize);
+  if LSize > 0 then
+    AStream.ReadBuffer(Result[0], LSize);
+end;
+
+function TryLoadPrivateKeyFromPEMBuffer(
+  const AData: TBytes;
+  const APassword: string;
+  out APKey: PEVP_PKEY
+): Boolean;
+var
+  LBIO: PBIO;
+  LPassA: AnsiString;
+  LPassPtr: PAnsiChar;
+begin
+  Result := False;
+  APKey := nil;
+
+  if (Length(AData) = 0) or (not IsPEMFormat(AData)) then
+    Exit;
+
+  if (not Assigned(PEM_read_bio_PrivateKey)) and
+     (not TOpenSSLLoader.IsModuleLoaded(osmPEM)) then
+    LoadOpenSSLPEM(GetCryptoLibHandle);
+
+  if (not Assigned(PEM_read_bio_PrivateKey)) or
+     (not Assigned(BIO_new_mem_buf)) or
+     (not Assigned(BIO_free)) then
+    Exit;
+
+  LBIO := BIO_new_mem_buf(@AData[0], Length(AData));
+  if LBIO = nil then
+    Exit;
+
+  LPassPtr := nil;
+  if APassword <> '' then
+  begin
+    LPassA := AnsiString(APassword);
+    LPassPtr := PAnsiChar(LPassA);
+  end;
+
+  try
+    APKey := PEM_read_bio_PrivateKey(LBIO, nil, nil, LPassPtr);
+    Result := APKey <> nil;
+  finally
+    if APassword <> '' then
+      SecureZeroString(LPassA);
+    BIO_free(LBIO);
+  end;
+end;
+
+function TryLoadPrivateKeyFromEncryptedDERPKCS8(
+  const AData: TBytes;
+  const APassword: string;
+  out APKey: PEVP_PKEY
+): Boolean;
+var
+  LPointer: PByte;
+  LPassA: AnsiString;
+  LPassPtr: PAnsiChar;
+  LEncryptedKey: fafafa.ssl.openssl.api.pkcs.PX509_SIG;
+  LPrivateKeyInfo: fafafa.ssl.openssl.api.pkcs.PPKCS8_PRIV_KEY_INFO;
+begin
+  Result := False;
+  APKey := nil;
+  LPassA := '';
+
+  if (Length(AData) = 0) or (not IsDERFormat(AData)) then
+    Exit;
+
+  if ((not Assigned(fafafa.ssl.openssl.api.pkcs.d2i_X509_SIG)) or
+      (not Assigned(fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY)) or
+      (not Assigned(fafafa.ssl.openssl.api.pkcs.X509_SIG_free)) or
+      (not Assigned(fafafa.ssl.openssl.api.pkcs.PKCS8_PRIV_KEY_INFO_free))) and
+     (not TOpenSSLLoader.IsModuleLoaded(osmPKCS)) then
+    LoadOpenSSLPKCS(GetCryptoLibHandle);
+
+  if (not Assigned(fafafa.ssl.openssl.api.pkcs12.PKCS8_decrypt)) and
+     (not TOpenSSLLoader.IsModuleLoaded(osmPKCS12)) then
+    LoadPKCS12Module(GetCryptoLibHandle);
+
+  if (not Assigned(fafafa.ssl.openssl.api.pkcs.d2i_X509_SIG)) or
+     (not Assigned(fafafa.ssl.openssl.api.pkcs12.PKCS8_decrypt)) or
+     (not Assigned(fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY)) or
+     (not Assigned(fafafa.ssl.openssl.api.pkcs.X509_SIG_free)) or
+     (not Assigned(fafafa.ssl.openssl.api.pkcs.PKCS8_PRIV_KEY_INFO_free)) then
+    Exit;
+
+  LPointer := @AData[0];
+  LEncryptedKey := fafafa.ssl.openssl.api.pkcs.d2i_X509_SIG(nil, @LPointer, Length(AData));
+  if LEncryptedKey = nil then
+    Exit;
+
+  LPassPtr := nil;
+  if APassword <> '' then
+  begin
+    LPassA := AnsiString(APassword);
+    LPassPtr := PAnsiChar(LPassA);
+  end;
+
+  try
+    LPrivateKeyInfo := fafafa.ssl.openssl.api.pkcs12.PKCS8_decrypt(
+      LEncryptedKey,
+      LPassPtr,
+      Length(LPassA)
+    );
+    if LPrivateKeyInfo = nil then
+      Exit;
+
+    try
+      APKey := fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY(LPrivateKeyInfo);
+      Result := APKey <> nil;
+    finally
+      fafafa.ssl.openssl.api.pkcs.PKCS8_PRIV_KEY_INFO_free(LPrivateKeyInfo);
+    end;
+  finally
+    if APassword <> '' then
+      SecureZeroString(LPassA);
+    fafafa.ssl.openssl.api.pkcs.X509_SIG_free(LEncryptedKey);
+  end;
+end;
+
+function TryLoadPrivateKeyFromDERPKCS8(
+  const AData: TBytes;
+  out APKey: PEVP_PKEY
+): Boolean;
+var
+  LPointer: PByte;
+  LPrivateKeyInfo: fafafa.ssl.openssl.api.pkcs.PPKCS8_PRIV_KEY_INFO;
+begin
+  Result := False;
+  APKey := nil;
+
+  if (Length(AData) = 0) or (not IsDERFormat(AData)) then
+    Exit;
+
+  if ((not Assigned(fafafa.ssl.openssl.api.pkcs.d2i_PKCS8_PRIV_KEY_INFO)) or
+      (not Assigned(fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY)) or
+      (not Assigned(fafafa.ssl.openssl.api.pkcs.PKCS8_PRIV_KEY_INFO_free))) and
+     (not TOpenSSLLoader.IsModuleLoaded(osmPKCS)) then
+    LoadOpenSSLPKCS(GetCryptoLibHandle);
+
+  if (not Assigned(fafafa.ssl.openssl.api.pkcs.d2i_PKCS8_PRIV_KEY_INFO)) or
+     (not Assigned(fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY)) or
+     (not Assigned(fafafa.ssl.openssl.api.pkcs.PKCS8_PRIV_KEY_INFO_free)) then
+    Exit;
+
+  LPointer := @AData[0];
+  LPrivateKeyInfo := fafafa.ssl.openssl.api.pkcs.d2i_PKCS8_PRIV_KEY_INFO(nil, @LPointer, Length(AData));
+  if LPrivateKeyInfo = nil then
+    Exit;
+
+  try
+    APKey := fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY(LPrivateKeyInfo);
+    Result := APKey <> nil;
+  finally
+    fafafa.ssl.openssl.api.pkcs.PKCS8_PRIV_KEY_INFO_free(LPrivateKeyInfo);
+  end;
+end;
+
+function TryLoadPrivateKeyFromDERPKCS1RSA(
+  const AData: TBytes;
+  out APKey: PEVP_PKEY
+): Boolean;
+var
+  LPointer: PByte;
+  LRSAKey: PRSA;
+begin
+  Result := False;
+  APKey := nil;
+
+  if (Length(AData) = 0) or (not IsDERFormat(AData)) then
+    Exit;
+
+  if (not Assigned(d2i_RSAPrivateKey)) and
+     (not TOpenSSLLoader.IsModuleLoaded(osmRSA)) then
+    LoadOpenSSLRSA;
+
+  if ((not Assigned(EVP_PKEY_new)) or
+      (not Assigned(EVP_PKEY_set1_RSA)) or
+      (not Assigned(EVP_PKEY_free))) and
+     (not TOpenSSLLoader.IsModuleLoaded(osmEVP)) then
+    LoadEVP(GetCryptoLibHandle);
+
+  if (not Assigned(d2i_RSAPrivateKey)) or
+     (not Assigned(RSA_free)) or
+     (not Assigned(EVP_PKEY_new)) or
+     (not Assigned(EVP_PKEY_set1_RSA)) or
+     (not Assigned(EVP_PKEY_free)) then
+    Exit;
+
+  LPointer := @AData[0];
+  LRSAKey := d2i_RSAPrivateKey(nil, @LPointer, Length(AData));
+  if LRSAKey = nil then
+    Exit;
+
+  try
+    APKey := EVP_PKEY_new();
+    if APKey = nil then
+      Exit;
+
+    if EVP_PKEY_set1_RSA(APKey, LRSAKey) <> 1 then
+    begin
+      EVP_PKEY_free(APKey);
+      APKey := nil;
+      Exit;
+    end;
+
+    Result := True;
+  finally
+    RSA_free(LRSAKey);
+  end;
+end;
+
+function TryLoadPrivateKeyFromDERSEC1EC(
+  const AData: TBytes;
+  out APKey: PEVP_PKEY
+): Boolean;
+var
+  LPointer: PByte;
+  LECKey: PEC_KEY;
+begin
+  Result := False;
+  APKey := nil;
+
+  if (Length(AData) = 0) or (not IsDERFormat(AData)) then
+    Exit;
+
+  if (not Assigned(d2i_ECPrivateKey)) and
+     (not TOpenSSLLoader.IsModuleLoaded(osmEC)) then
+    LoadECFunctions(GetCryptoLibHandle);
+
+  if ((not Assigned(EVP_PKEY_new)) or
+      (not Assigned(EVP_PKEY_set1_EC_KEY)) or
+      (not Assigned(EVP_PKEY_free))) and
+     (not TOpenSSLLoader.IsModuleLoaded(osmEVP)) then
+    LoadEVP(GetCryptoLibHandle);
+
+  if (not Assigned(d2i_ECPrivateKey)) or
+     (not Assigned(EC_KEY_free)) or
+     (not Assigned(EVP_PKEY_new)) or
+     (not Assigned(EVP_PKEY_set1_EC_KEY)) or
+     (not Assigned(EVP_PKEY_free)) then
+    Exit;
+
+  LPointer := @AData[0];
+  LECKey := d2i_ECPrivateKey(nil, @LPointer, Length(AData));
+  if LECKey = nil then
+    Exit;
+
+  try
+    APKey := EVP_PKEY_new();
+    if APKey = nil then
+      Exit;
+
+    if EVP_PKEY_set1_EC_KEY(APKey, LECKey) <> 1 then
+    begin
+      EVP_PKEY_free(APKey);
+      APKey := nil;
+      Exit;
+    end;
+
+    Result := True;
+  finally
+    EC_KEY_free(LECKey);
+  end;
+end;
+
+function ParsePrivateKeyBuffer(
+  const AData: TBytes;
+  const APassword: string;
+  out APKey: PEVP_PKEY
+): Boolean;
+begin
+  APKey := nil;
+  Result := TryLoadPrivateKeyFromPEMBuffer(AData, APassword, APKey);
+  if Result then
+    Exit;
+
+  Result := TryLoadPrivateKeyFromEncryptedDERPKCS8(AData, APassword, APKey);
+  if Result then
+    Exit;
+
+  Result := TryLoadPrivateKeyFromDERPKCS8(AData, APKey);
+  if Result then
+    Exit;
+
+  Result := TryLoadPrivateKeyFromDERPKCS1RSA(AData, APKey);
+  if Result then
+    Exit;
+
+  Result := TryLoadPrivateKeyFromDERSEC1EC(AData, APKey);
+end;
+
+procedure UseParsedPrivateKey(
+  ASSLContext: PSSL_CTX;
+  APKey: PEVP_PKEY;
+  const AMethodName, AErrorMessage: string
+);
+begin
+  if SSL_CTX_use_PrivateKey(ASSLContext, APKey) <> 1 then
+    raise ESSLKeyException.CreateWithContext(
+      AErrorMessage,
+      sslErrLoadFailed,
+      AMethodName,
+      Integer(GetLastOpenSSLError),
+      sslOpenSSL
+    );
+end;
 
 procedure EnsureContextRegistry;
 begin
@@ -740,7 +1121,8 @@ begin
   Size := AStream.Size - AStream.Position;
   SetLength(Data, Size);
   AStream.Read(Data[0], Size);
-  
+
+  RequireContextCertificateMemoryBIOHelpers('TOpenSSLContext.LoadCertificate');
   BIO := BIO_new_mem_buf(@Data[0], Size);
   try
     Cert := PEM_read_bio_X509(BIO, nil, nil, nil);
@@ -785,6 +1167,7 @@ end;
 
 procedure TOpenSSLContext.LoadPrivateKey(const AFileName: string; const APassword: string = '');
 var
+  Data: TBytes;
   FileNameA: AnsiString;
   PassA: AnsiString;
   BIO: PBIO;
@@ -801,10 +1184,9 @@ begin
 
   FileNameA := AnsiString(AFileName);
 
-  // 使用 PEM_read_bio_PrivateKey 支持加密私钥
   if APassword <> '' then
   begin
-    // 加密私钥：使用 BIO + PEM_read_bio_PrivateKey + 密码回调
+    RequireContextPrivateKeyFileBIOHelpers('TOpenSSLContext.LoadPrivateKey');
     BIO := BIO_new_file(PAnsiChar(FileNameA), 'r');
     if BIO = nil then
       raise ESSLKeyException.CreateWithContext(
@@ -814,61 +1196,96 @@ begin
         Integer(GetLastOpenSSLError),
         sslOpenSSL
       );
-    try
-      if not Assigned(PEM_read_bio_PrivateKey) then
-        LoadOpenSSLPEM(GetCryptoLibHandle);
-      if not Assigned(PEM_read_bio_PrivateKey) then
-        raise ESSLKeyException.CreateWithContext(
-          'OpenSSL PEM API not loaded',
-          sslErrFunctionNotFound,
-          'TOpenSSLContext.LoadPrivateKey',
-          0,
-          sslOpenSSL
-        );
 
-      PassA := AnsiString(APassword);
-      try
-        // 使用密码回调加载加密私钥
-        PKey := PEM_read_bio_PrivateKey(BIO, nil, nil, PAnsiChar(PassA));
-        if PKey = nil then
-          raise ESSLKeyException.CreateWithContext(
-            Format('Failed to parse encrypted private key from file: %s', [AFileName]),
-            sslErrParseFailed,
-            'TOpenSSLContext.LoadPrivateKey',
-            Integer(GetLastOpenSSLError),
-            sslOpenSSL
-          );
+    PKey := nil;
+    try
+      if (not Assigned(PEM_read_bio_PrivateKey)) and
+         (not TOpenSSLLoader.IsModuleLoaded(osmPEM)) then
+        LoadOpenSSLPEM(GetCryptoLibHandle);
+
+      if Assigned(PEM_read_bio_PrivateKey) then
+      begin
+        PassA := AnsiString(APassword);
         try
-          if SSL_CTX_use_PrivateKey(FSSLContext, PKey) <> 1 then
-            raise ESSLKeyException.CreateWithContext(
-              Format('Failed to use private key from file: %s', [AFileName]),
-              sslErrLoadFailed,
-              'TOpenSSLContext.LoadPrivateKey',
-              Integer(GetLastOpenSSLError),
-              sslOpenSSL
-            );
+          PKey := PEM_read_bio_PrivateKey(BIO, nil, nil, PAnsiChar(PassA));
         finally
-          EVP_PKEY_free(PKey);
+          SecureZeroString(PassA);
         end;
-      finally
-        // Rust-quality: Always securely zero password after use
-        SecureZeroString(PassA);
       end;
     finally
       BIO_free(BIO);
     end;
+
+    if PKey = nil then
+    begin
+      Data := ReadPrivateKeyFileBytes(AFileName, 'TOpenSSLContext.LoadPrivateKey');
+      if not ParsePrivateKeyBuffer(Data, APassword, PKey) then
+        raise ESSLKeyException.CreateWithContext(
+          Format('Failed to parse private key from file: %s', [AFileName]),
+          sslErrParseFailed,
+          'TOpenSSLContext.LoadPrivateKey',
+          Integer(GetLastOpenSSLError),
+          sslOpenSSL
+        );
+    end;
+
+    try
+      UseParsedPrivateKey(
+        FSSLContext,
+        PKey,
+        'TOpenSSLContext.LoadPrivateKey',
+        Format('Failed to use private key from file: %s', [AFileName])
+      );
+    finally
+      EVP_PKEY_free(PKey);
+    end;
   end
+  else if Assigned(SSL_CTX_use_PrivateKey_file) then
+  begin
+    if SSL_CTX_use_PrivateKey_file(FSSLContext, PAnsiChar(FileNameA), SSL_FILETYPE_PEM) <> 1 then
+    begin
+      Data := ReadPrivateKeyFileBytes(AFileName, 'TOpenSSLContext.LoadPrivateKey');
+      if not ParsePrivateKeyBuffer(Data, APassword, PKey) then
+        raise ESSLKeyException.CreateWithContext(
+          Format('Failed to parse private key from file: %s', [AFileName]),
+          sslErrParseFailed,
+          'TOpenSSLContext.LoadPrivateKey',
+          Integer(GetLastOpenSSLError),
+          sslOpenSSL
+        );
+      try
+        UseParsedPrivateKey(
+          FSSLContext,
+          PKey,
+          'TOpenSSLContext.LoadPrivateKey',
+          Format('Failed to use private key from file: %s', [AFileName])
+        );
+        finally
+          EVP_PKEY_free(PKey);
+        end;
+      end;
+    end
   else
   begin
-    // 非加密私钥：使用更快的 SSL_CTX_use_PrivateKey_file
-    if SSL_CTX_use_PrivateKey_file(FSSLContext, PAnsiChar(FileNameA), SSL_FILETYPE_PEM) <> 1 then
+    Data := ReadPrivateKeyFileBytes(AFileName, 'TOpenSSLContext.LoadPrivateKey');
+    if not ParsePrivateKeyBuffer(Data, APassword, PKey) then
       raise ESSLKeyException.CreateWithContext(
-        Format('Failed to load private key from file: %s', [AFileName]),
-        sslErrLoadFailed,
+        Format('Failed to parse private key from file: %s', [AFileName]),
+        sslErrParseFailed,
         'TOpenSSLContext.LoadPrivateKey',
         Integer(GetLastOpenSSLError),
         sslOpenSSL
       );
+    try
+      UseParsedPrivateKey(
+        FSSLContext,
+        PKey,
+        'TOpenSSLContext.LoadPrivateKey',
+        Format('Failed to use private key from file: %s', [AFileName])
+      );
+    finally
+      EVP_PKEY_free(PKey);
+    end;
   end;
 
   CheckPrivateKeyMatchesCertificate('TOpenSSLContext.LoadPrivateKey');
@@ -878,10 +1295,7 @@ end;
 procedure TOpenSSLContext.LoadPrivateKey(AStream: TStream; const APassword: string = '');
 var
   Data: TBytes;
-  Size: Int64;
-  BIO: PBIO;
   PKey: PEVP_PKEY;
-  PassA: AnsiString;
 begin
   Data := nil;  // P3-4: 显式初始化管理类型
   RequireValidContext('TOpenSSLContext.LoadPrivateKey');
@@ -889,64 +1303,25 @@ begin
   if AStream = nil then
     RaiseInvalidParameter('Stream');
 
-  Size := AStream.Size - AStream.Position;
-  SetLength(Data, Size);
-  AStream.Read(Data[0], Size);
-
-  BIO := BIO_new_mem_buf(@Data[0], Size);
-  if BIO = nil then
-    RaiseMemoryError('create BIO for private key');
+  Data := ReadPrivateKeyStreamBytes(AStream);
+  if not ParsePrivateKeyBuffer(Data, APassword, PKey) then
+    raise ESSLKeyException.CreateWithContext(
+      'Failed to parse private key from stream',
+      sslErrParseFailed,
+      'TOpenSSLContext.LoadPrivateKey',
+      Integer(GetLastOpenSSLError),
+      sslOpenSSL
+    );
   try
-    if not Assigned(PEM_read_bio_PrivateKey) then
-      LoadOpenSSLPEM(GetCryptoLibHandle);
-    if not Assigned(PEM_read_bio_PrivateKey) then
-      raise ESSLKeyException.CreateWithContext(
-        'OpenSSL PEM API not loaded (PEM_read_bio_PrivateKey is nil)',
-        sslErrFunctionNotFound,
-        'TOpenSSLContext.LoadPrivateKey',
-        0,
-        sslOpenSSL
-      );
-
-    // 若提供密码，通过userdata传递
-    if APassword <> '' then
-    begin
-      PassA := AnsiString(APassword);
-      if Assigned(SSL_CTX_set_default_passwd_cb_userdata) then
-        SSL_CTX_set_default_passwd_cb_userdata(FSSLContext, PAnsiChar(PassA));
-    end;
-
-    try
-      PKey := PEM_read_bio_PrivateKey(BIO, nil, nil, nil);
-      if PKey = nil then
-        raise ESSLKeyException.CreateWithContext(
-          'Failed to parse private key from stream',
-          sslErrParseFailed,
-          'TOpenSSLContext.LoadPrivateKey',
-          Integer(GetLastOpenSSLError),
-          sslOpenSSL
-        );
-      try
-        if SSL_CTX_use_PrivateKey(FSSLContext, PKey) <> 1 then
-          raise ESSLKeyException.CreateWithContext(
-            'Failed to use private key in context',
-            sslErrLoadFailed,
-            'TOpenSSLContext.LoadPrivateKey',
-            Integer(GetLastOpenSSLError),
-            sslOpenSSL
-          );
-
-        CheckPrivateKeyMatchesCertificate('TOpenSSLContext.LoadPrivateKey');
-      finally
-        EVP_PKEY_free(PKey);
-      end;
-    finally
-      // Rust-quality: Always securely zero password after use
-      if APassword <> '' then
-        SecureZeroString(PassA);
-    end;
+    UseParsedPrivateKey(
+      FSSLContext,
+      PKey,
+      'TOpenSSLContext.LoadPrivateKey',
+      'Failed to use private key in context'
+    );
+    CheckPrivateKeyMatchesCertificate('TOpenSSLContext.LoadPrivateKey');
   finally
-    BIO_free(BIO);
+    EVP_PKEY_free(PKey);
   end;
 end;
 
@@ -960,8 +1335,9 @@ begin
 
   if APEM = '' then
     RaiseInvalidParameter('Certificate PEM');
-  
+
   PemA := AnsiString(APEM);
+  RequireContextCertificateMemoryBIOHelpers('TOpenSSLContext.LoadCertificatePEM');
   BIO := BIO_new_mem_buf(PAnsiChar(PemA), Length(PemA));
   if BIO = nil then
     RaiseMemoryError('create BIO for PEM certificate');
@@ -973,7 +1349,7 @@ begin
         'Failed to parse certificate from PEM string',
         'TOpenSSLContext.LoadCertificatePEM'
       );
-    
+
     try
       if SSL_CTX_use_certificate(FSSLContext, Cert) <> 1 then
         RaiseSSLCertError(
@@ -1000,8 +1376,9 @@ begin
 
   if APEM = '' then
     RaiseInvalidParameter('Private key PEM');
-  
+
   PemA := AnsiString(APEM);
+  RequireContextPrivateKeyMemoryBIOHelpers('TOpenSSLContext.LoadPrivateKeyPEM');
   BIO := BIO_new_mem_buf(PAnsiChar(PemA), Length(PemA));
   if BIO = nil then
     RaiseMemoryError('create BIO for PEM private key');

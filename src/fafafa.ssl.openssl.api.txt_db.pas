@@ -134,6 +134,7 @@ var
 begin
   Result := nil;
   if not FileExists(FileName) then Exit;
+  if not Assigned(BIO_new_file) or not Assigned(BIO_free) then Exit;
   
   bio := BIO_new_file(PChar(FileName), 'r');
   if bio = nil then Exit;
@@ -152,6 +153,7 @@ var
 begin
   Result := False;
   if db = nil then Exit;
+  if not Assigned(BIO_new_file) or not Assigned(BIO_free) then Exit;
   
   bio := BIO_new_file(PChar(FileName), 'w');
   if bio = nil then Exit;

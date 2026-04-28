@@ -35,7 +35,10 @@ uses
   fafafa.ssl.openssl.api.x509v3,
   fafafa.ssl.openssl.api.hmac,
   fafafa.ssl.openssl.api.ts,
+  fafafa.ssl.openssl.api.pkcs,
   fafafa.ssl.openssl.api.pkcs12,
+  fafafa.ssl.openssl.api.ec,
+  fafafa.ssl.openssl.api.rsa,
   fafafa.ssl.openssl.api.ocsp,
   fafafa.ssl.openssl.certificate;
 
@@ -140,6 +143,7 @@ uses
   fafafa.ssl.openssl.context,
   fafafa.ssl.openssl.certstore,
   fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.pem,
   fafafa.ssl.factory;
 
 // ============================================================================
@@ -365,6 +369,195 @@ begin
   FillChar(FCapabilitiesCache, SizeOf(FCapabilitiesCache), 0);
 end;
 
+function OpenSSLEarlyDataSurfaceReady: Boolean;
+begin
+  Result := Assigned(SSL_CTX_set_max_early_data) and
+    Assigned(SSL_CTX_get_max_early_data) and
+    Assigned(SSL_set_max_early_data) and
+    Assigned(SSL_get_max_early_data) and
+    Assigned(SSL_get_early_data_status);
+end;
+
+function OpenSSLChaChaPolySurfaceReady: Boolean;
+const
+  CHACHA_TLS13_CIPHERSUITE = 'TLS_CHACHA20_POLY1305_SHA256';
+var
+  LCipherAnsi: AnsiString;
+  LMethod: PSSL_METHOD;
+  LCtx: PSSL_CTX;
+begin
+  Result := False;
+
+  if not Assigned(TLS_method) or not Assigned(SSL_CTX_new) then
+    Exit;
+
+  LMethod := TLS_method();
+  if LMethod = nil then
+    Exit;
+
+  LCtx := SSL_CTX_new(LMethod);
+  if LCtx = nil then
+    Exit;
+
+  try
+    LCipherAnsi := AnsiString(CHACHA_TLS13_CIPHERSUITE);
+
+    if Assigned(SSL_CTX_set_cipher_list) then
+      Result := SSL_CTX_set_cipher_list(LCtx, PAnsiChar(LCipherAnsi)) = 1;
+
+    if (not Result) and Assigned(SSL_CTX_set_ciphersuites) then
+      Result := SSL_CTX_set_ciphersuites(LCtx, PAnsiChar(LCipherAnsi)) = 1;
+  finally
+    if Assigned(SSL_CTX_free) then
+      SSL_CTX_free(LCtx);
+  end;
+end;
+
+function OpenSSLSNISurfaceReady: Boolean;
+begin
+  Result := Assigned(SSL_set_tlsext_host_name) or
+    Assigned(SSL_CTX_set_tlsext_servername_callback);
+end;
+
+function OpenSSLALPNSurfaceReady: Boolean;
+begin
+  Result := Assigned(SSL_CTX_set_alpn_protos) and
+    Assigned(SSL_get0_alpn_selected);
+end;
+
+function OpenSSLSessionTicketSurfaceReady: Boolean;
+begin
+  Result := Assigned(SSL_CTX_set_tlsext_ticket_key_cb) or
+    Assigned(SSL_set_session_ticket_ext_cb);
+end;
+
+function OpenSSLSessionCacheSurfaceReady: Boolean;
+begin
+  Result := Assigned(SSL_CTX_set_session_cache_mode) and
+    Assigned(SSL_CTX_get_session_cache_mode);
+end;
+
+function OpenSSLRenegotiationSurfaceReady: Boolean;
+begin
+  Result := Assigned(SSL_renegotiate);
+end;
+
+function OpenSSLOCSPStaplingSurfaceReady: Boolean;
+begin
+  Result := Assigned(SSL_CTX_set_tlsext_status_type) and
+    Assigned(SSL_CTX_set_tlsext_status_cb);
+end;
+
+function OpenSSLPostHandshakeAuthSurfaceReady: Boolean;
+begin
+  Result := Assigned(SSL_CTX_set_post_handshake_auth) and
+    Assigned(SSL_set_post_handshake_auth) and
+    Assigned(SSL_verify_client_post_handshake);
+end;
+
+function OpenSSLPKCS12SurfaceReady: Boolean;
+begin
+  Result := Assigned(PKCS12_create) and
+    Assigned(PKCS12_parse) and
+    Assigned(d2i_PKCS12_bio) and
+    Assigned(i2d_PKCS12_bio);
+end;
+
+function OpenSSLPrivateKeyFileSurfaceReady: Boolean;
+begin
+  Result := Assigned(SSL_CTX_use_PrivateKey_file);
+end;
+
+function OpenSSLPrivateKeyReadSurfaceReady: Boolean;
+begin
+  if (not Assigned(PEM_read_bio_PrivateKey)) and
+     (not TOpenSSLLoader.IsModuleLoaded(osmPEM)) then
+    LoadOpenSSLPEM(GetCryptoLibHandle);
+
+  Result := Assigned(PEM_read_bio_PrivateKey) and
+    Assigned(BIO_free) and
+    (Assigned(BIO_new_file) or Assigned(BIO_new_mem_buf));
+end;
+
+function OpenSSLPasswordProtectedKeySurfaceReady: Boolean;
+begin
+  Result := OpenSSLPrivateKeyReadSurfaceReady;
+end;
+
+function OpenSSLDERPKCS8PrivateKeySurfaceReady: Boolean;
+begin
+  if ((not Assigned(fafafa.ssl.openssl.api.pkcs.d2i_PKCS8_PRIV_KEY_INFO)) or
+      (not Assigned(fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY))) and
+     (not TOpenSSLLoader.IsModuleLoaded(osmPKCS)) then
+    LoadOpenSSLPKCS(GetCryptoLibHandle);
+
+  Result := Assigned(fafafa.ssl.openssl.api.pkcs.d2i_PKCS8_PRIV_KEY_INFO) and
+    Assigned(fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY);
+end;
+
+function OpenSSLEncryptedDERPKCS8PrivateKeySurfaceReady: Boolean;
+begin
+  if ((not Assigned(fafafa.ssl.openssl.api.pkcs.d2i_X509_SIG)) or
+      (not Assigned(fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY))) and
+     (not TOpenSSLLoader.IsModuleLoaded(osmPKCS)) then
+    LoadOpenSSLPKCS(GetCryptoLibHandle);
+
+  if (not Assigned(fafafa.ssl.openssl.api.pkcs12.PKCS8_decrypt)) and
+     (not TOpenSSLLoader.IsModuleLoaded(osmPKCS12)) then
+    LoadPKCS12Module(GetCryptoLibHandle);
+
+  Result := Assigned(fafafa.ssl.openssl.api.pkcs.d2i_X509_SIG) and
+    Assigned(fafafa.ssl.openssl.api.pkcs12.PKCS8_decrypt) and
+    Assigned(fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY);
+end;
+
+function OpenSSLDERPKCS1PrivateKeySurfaceReady: Boolean;
+begin
+  if (not Assigned(d2i_RSAPrivateKey)) and
+     (not TOpenSSLLoader.IsModuleLoaded(osmRSA)) then
+    LoadOpenSSLRSA;
+
+  if ((not Assigned(EVP_PKEY_new)) or
+      (not Assigned(EVP_PKEY_set1_RSA))) and
+     (not TOpenSSLLoader.IsModuleLoaded(osmEVP)) then
+    LoadEVP(GetCryptoLibHandle);
+
+  Result := Assigned(d2i_RSAPrivateKey) and
+    Assigned(EVP_PKEY_new) and
+    Assigned(EVP_PKEY_set1_RSA);
+end;
+
+function OpenSSLDERSEC1ECPrivateKeySurfaceReady: Boolean;
+begin
+  if (not Assigned(d2i_ECPrivateKey)) and
+     (not TOpenSSLLoader.IsModuleLoaded(osmEC)) then
+    LoadECFunctions(GetCryptoLibHandle);
+
+  if ((not Assigned(EVP_PKEY_new)) or
+      (not Assigned(EVP_PKEY_set1_EC_KEY))) and
+     (not TOpenSSLLoader.IsModuleLoaded(osmEVP)) then
+    LoadEVP(GetCryptoLibHandle);
+
+  Result := Assigned(d2i_ECPrivateKey) and
+    Assigned(EC_KEY_free) and
+    Assigned(EVP_PKEY_new) and
+    Assigned(EVP_PKEY_set1_EC_KEY);
+end;
+
+function OpenSSLDERPrivateKeySurfaceReady: Boolean;
+begin
+  Result := OpenSSLDERPKCS8PrivateKeySurfaceReady or
+    OpenSSLEncryptedDERPKCS8PrivateKeySurfaceReady or
+    OpenSSLDERPKCS1PrivateKeySurfaceReady or
+    OpenSSLDERSEC1ECPrivateKeySurfaceReady;
+end;
+
+function OpenSSLCertificateTransparencySurfaceReady(AVersionNumber: Cardinal): Boolean;
+begin
+  Result := (AVersionNumber >= $1010000F) and
+    TOpenSSLLoader.IsModuleLoaded(osmCT);
+end;
+
 // ============================================================================
 // ISSLLibrary - 初始化和清理
 // ============================================================================
@@ -508,14 +701,43 @@ const
   OSSL_TLS1_1_VERSION = $0302;
   OSSL_TLS1_2_VERSION = $0303;
   OSSL_TLS1_3_VERSION = $0304;
+  OSSL_DTLS1_VERSION = $FEFF;
+  OSSL_DTLS1_2_VERSION = $FEFD;
 begin
   case AProtocol of
     sslProtocolTLS10: Result := OSSL_TLS1_VERSION;
     sslProtocolTLS11: Result := OSSL_TLS1_1_VERSION;
     sslProtocolTLS12: Result := OSSL_TLS1_2_VERSION;
     sslProtocolTLS13: Result := OSSL_TLS1_3_VERSION;
+    sslProtocolDTLS10: Result := OSSL_DTLS1_VERSION;
+    sslProtocolDTLS12: Result := OSSL_DTLS1_2_VERSION;
   else
     Result := 0;
+  end;
+end;
+
+function RuntimeProbeMethodForProtocol(AProtocol: TSSLProtocolVersion): PSSL_METHOD;
+begin
+  Result := nil;
+
+  case AProtocol of
+    sslProtocolTLS10,
+    sslProtocolTLS11,
+    sslProtocolTLS12,
+    sslProtocolTLS13:
+      if Assigned(TLS_method) then
+        Result := TLS_method();
+
+    sslProtocolDTLS10,
+    sslProtocolDTLS12:
+      begin
+        if Assigned(DTLS_method) then
+          Result := DTLS_method();
+        if (Result = nil) and Assigned(DTLS_client_method) then
+          Result := DTLS_client_method();
+        if (Result = nil) and Assigned(DTLS_server_method) then
+          Result := DTLS_server_method();
+      end;
   end;
 end;
 
@@ -531,23 +753,40 @@ begin
   if LProtocolVersion = 0 then
     Exit;
 
-  if not Assigned(TLS_method) or not Assigned(SSL_CTX_new) or not Assigned(SSL_CTX_free) then
-  begin
-    case AProtocol of
-      sslProtocolTLS10:
-        Result := (AVersionNumber >= $10000000);
-      sslProtocolTLS11,
-      sslProtocolTLS12:
-        Result := (AVersionNumber >= $10001000);
-      sslProtocolTLS13:
-        Result := (AVersionNumber >= $1010100F);
-    else
-      Result := False;
-    end;
+  case AProtocol of
+    sslProtocolTLS10,
+    sslProtocolTLS11,
+    sslProtocolTLS12,
+    sslProtocolTLS13:
+      begin
+        if not Assigned(TLS_method) or not Assigned(SSL_CTX_new) or not Assigned(SSL_CTX_free) then
+        begin
+          case AProtocol of
+            sslProtocolTLS10:
+              Result := (AVersionNumber >= $10000000);
+            sslProtocolTLS11,
+            sslProtocolTLS12:
+              Result := (AVersionNumber >= $10001000);
+            sslProtocolTLS13:
+              Result := (AVersionNumber >= $1010100F);
+          else
+            Result := False;
+          end;
+          Exit;
+        end;
+      end;
+
+    sslProtocolDTLS10,
+    sslProtocolDTLS12:
+      begin
+        if not Assigned(SSL_CTX_new) or not Assigned(SSL_CTX_free) then
+          Exit;
+      end;
+  else
     Exit;
   end;
 
-  LMethod := TLS_method();
+  LMethod := RuntimeProbeMethodForProtocol(AProtocol);
   if LMethod = nil then
     Exit;
 
@@ -585,12 +824,10 @@ begin
     sslProtocolTLS10,
     sslProtocolTLS11,
     sslProtocolTLS12,
-    sslProtocolTLS13:
-      Result := RuntimeProbeProtocolSupport(AProtocol, FVersionNumber);
-
+    sslProtocolTLS13,
     sslProtocolDTLS10,
     sslProtocolDTLS12:
-      Result := Assigned(DTLS_method) or (FVersionNumber >= $10000000);
+      Result := RuntimeProbeProtocolSupport(AProtocol, FVersionNumber);
   end;
 end;
 function TOpenSSLLibrary.IsCipherSupported(const ACipherName: string): Boolean;
@@ -677,6 +914,26 @@ begin
     [Ord(AFeature), BoolToStr(Result, True)]));
 end;
 function TOpenSSLLibrary.GetCapabilities: TSSLBackendCapabilities;
+var
+  LTLS13Ready: Boolean;
+  LDTLS10Ready: Boolean;
+  LDTLS12Ready: Boolean;
+  LSNIReady: Boolean;
+  LALPNReady: Boolean;
+  LSessionCacheReady: Boolean;
+  LRenegotiationReady: Boolean;
+  LOCSPStaplingReady: Boolean;
+  LChaChaPolyReady: Boolean;
+  LPKCS12Ready: Boolean;
+  LCertificateTransparencyReady: Boolean;
+  LPrivateKeyFileReady: Boolean;
+  LPrivateKeyReadReady: Boolean;
+  LPEMPrivateKeyReady: Boolean;
+  LDERPKCS8PrivateKeyReady: Boolean;
+  LEncryptedDERPKCS8PrivateKeyReady: Boolean;
+  LDERPrivateKeyReady: Boolean;
+  LPKCS8PrivateKeyReady: Boolean;
+  LPasswordProtectedKeysReady: Boolean;
 begin
   // P2-2 + v1.2: 返回 OpenSSL 后端完整能力矩阵（带缓存）
 
@@ -690,32 +947,58 @@ begin
   // 生成能力矩阵
   FillChar(Result, SizeOf(Result), 0);
 
+  LTLS13Ready := IsProtocolSupported(sslProtocolTLS13);
+  LDTLS10Ready := IsProtocolSupported(sslProtocolDTLS10);
+  LDTLS12Ready := IsProtocolSupported(sslProtocolDTLS12);
+  LSNIReady := OpenSSLSNISurfaceReady;
+  LALPNReady := OpenSSLALPNSurfaceReady;
+  LSessionCacheReady := OpenSSLSessionCacheSurfaceReady;
+  LRenegotiationReady := OpenSSLRenegotiationSurfaceReady;
+  LOCSPStaplingReady := OpenSSLOCSPStaplingSurfaceReady;
+  LChaChaPolyReady := OpenSSLChaChaPolySurfaceReady;
+  LPKCS12Ready := OpenSSLPKCS12SurfaceReady;
+  LCertificateTransparencyReady := OpenSSLCertificateTransparencySurfaceReady(FVersionNumber);
+  LPrivateKeyFileReady := OpenSSLPrivateKeyFileSurfaceReady;
+  LPrivateKeyReadReady := OpenSSLPrivateKeyReadSurfaceReady;
+  LPEMPrivateKeyReady := LPrivateKeyFileReady or LPrivateKeyReadReady;
+  LDERPKCS8PrivateKeyReady := OpenSSLDERPKCS8PrivateKeySurfaceReady;
+  LEncryptedDERPKCS8PrivateKeyReady := OpenSSLEncryptedDERPKCS8PrivateKeySurfaceReady;
+  LDERPrivateKeyReady := LDERPKCS8PrivateKeyReady or
+    LEncryptedDERPKCS8PrivateKeyReady or
+    OpenSSLDERPKCS1PrivateKeySurfaceReady or
+    OpenSSLDERSEC1ECPrivateKeySurfaceReady;
+  LPKCS8PrivateKeyReady := LPEMPrivateKeyReady or
+    LDERPKCS8PrivateKeyReady or
+    LEncryptedDERPKCS8PrivateKeyReady;
+  LPasswordProtectedKeysReady := OpenSSLPasswordProtectedKeySurfaceReady or
+    LEncryptedDERPKCS8PrivateKeyReady;
+
   // ===== v1.1.0 保留字段（向后兼容）=====
 
-  // 检测 TLS 1.3 支持 (OpenSSL 1.1.1+)
-  Result.SupportsTLS13 := (FVersionNumber >= $1010100F);
+  // TLS 1.3 support must follow the runtime protocol probe
+  Result.SupportsTLS13 := LTLS13Ready;
 
   // OpenSSL 原生支持的特性
-  Result.SupportsALPN := True;
-  Result.SupportsSNI := True;
-  Result.SupportsSessionTickets := True;
+  Result.SupportsALPN := LALPNReady;
+  Result.SupportsSNI := LSNIReady;
+  Result.SupportsSessionTickets := OpenSSLSessionTicketSurfaceReady;
   Result.SupportsECDHE := True;
 
   // OCSP 装订支持
-  Result.SupportsOCSPStapling := True;
+  Result.SupportsOCSPStapling := LOCSPStaplingReady;
 
   // Certificate Transparency 需要 OpenSSL 1.1.0+
-  Result.SupportsCertificateTransparency := (FVersionNumber >= $1010000F);
+  Result.SupportsCertificateTransparency := LCertificateTransparencyReady;
 
-  // ChaCha20-Poly1305 需要 OpenSSL 1.1.0+
-  Result.SupportsChaChaPoly := (FVersionNumber >= $1010000F);
+  // ChaCha20-Poly1305 需要真实 ciphersuite parser ready
+  Result.SupportsChaChaPoly := LChaChaPolyReady;
 
-  // OpenSSL 原生支持 PEM 格式私钥
-  Result.SupportsPEMPrivateKey := True;
+  // 私钥格式支持要跟随当前真实加载表面，不能再按 OpenSSL 品牌静态发布
+  Result.SupportsPEMPrivateKey := LPEMPrivateKeyReady;
 
   // 支持的协议版本范围
   Result.MinTLSVersion := sslProtocolTLS10;  // 可通过配置禁用
-  if Result.SupportsTLS13 then
+  if LTLS13Ready then
     Result.MaxTLSVersion := sslProtocolTLS13
   else
     Result.MaxTLSVersion := sslProtocolTLS12;
@@ -728,26 +1011,46 @@ begin
   Result.BackendVersion := GetVersionString;
 
   // ----- 协议支持 -----
-  Result.SupportsDTLS := True;  // OpenSSL 支持 DTLS
+  Result.SupportsDTLS := LDTLS10Ready or LDTLS12Ready;
 
   // ----- 高级特性支持（带支持级别）-----
-  Result.SNISupport := sslSupportStable;
-  Result.ALPNSupport := sslSupportStable;
-  Result.OCSPStaplingSupport := sslSupportStable;
+  if LSNIReady then
+    Result.SNISupport := sslSupportStable
+  else
+    Result.SNISupport := sslSupportNone;
+
+  if LALPNReady then
+    Result.ALPNSupport := sslSupportStable
+  else
+    Result.ALPNSupport := sslSupportNone;
+
+  if LOCSPStaplingReady then
+    Result.OCSPStaplingSupport := sslSupportStable
+  else
+    Result.OCSPStaplingSupport := sslSupportNone;
 
   // Certificate Transparency: OpenSSL 1.1.0+ 为实验性，3.0+ 为稳定
-  if FVersionNumber >= $30000000 then
+  if not LCertificateTransparencyReady then
+    Result.CertTransparencySupport := sslSupportNone
+  else if FVersionNumber >= $30000000 then
     Result.CertTransparencySupport := sslSupportStable
   else if FVersionNumber >= $1010000F then
     Result.CertTransparencySupport := sslSupportExperimental
   else
     Result.CertTransparencySupport := sslSupportNone;
 
-  Result.SessionTicketsSupport := sslSupportStable;
-  Result.SessionCacheSupport := sslSupportStable;
+  if OpenSSLSessionTicketSurfaceReady then
+    Result.SessionTicketsSupport := sslSupportStable
+  else
+    Result.SessionTicketsSupport := sslSupportNone;
+
+  if LSessionCacheReady then
+    Result.SessionCacheSupport := sslSupportStable
+  else
+    Result.SessionCacheSupport := sslSupportNone;
 
   // 0-RTT 和 Early Data（仅 TLS 1.3）
-  if Result.SupportsTLS13 then
+  if LTLS13Ready and OpenSSLEarlyDataSurfaceReady then
   begin
     Result.ZeroRTTSupport := sslSupportStable;
     Result.EarlyDataSupport := sslSupportStable;
@@ -759,13 +1062,15 @@ begin
   end;
 
   // 重新协商（TLS 1.2）- OpenSSL 3.0 已弃用
-  if FVersionNumber >= $30000000 then
+  if not LRenegotiationReady then
+    Result.RenegotiationSupport := sslSupportNone
+  else if FVersionNumber >= $30000000 then
     Result.RenegotiationSupport := sslSupportDeprecated
   else
     Result.RenegotiationSupport := sslSupportStable;
 
   // 握手后认证（TLS 1.3）
-  if Result.SupportsTLS13 then
+  if LTLS13Ready and OpenSSLPostHandshakeAuthSurfaceReady then
     Result.PostHandshakeAuthSupport := sslSupportStable
   else
     Result.PostHandshakeAuthSupport := sslSupportNone;
@@ -781,7 +1086,7 @@ begin
     Result.SupportedCiphers := Result.SupportedCiphers + [sslCipher3DES];
 
   // ChaCha20-Poly1305 需要 OpenSSL 1.1.0+
-  if FVersionNumber >= $1010000F then
+  if Result.SupportsChaChaPoly then
     Result.SupportedCiphers := Result.SupportedCiphers + [sslCipherCHACHA20_POLY1305];
 
   // RC4 和 DES 在 OpenSSL 3.0+ 中不再支持
@@ -833,10 +1138,10 @@ begin
   Result.HasSecureMemoryWipe := True;         // OPENSSL_cleanse
 
   // ----- 证书和密钥支持 -----
-  Result.SupportsDERPrivateKey := True;
-  Result.SupportsPKCS8PrivateKey := True;
-  Result.SupportsPKCS12 := True;
-  Result.SupportsPasswordProtectedKeys := True;
+  Result.SupportsDERPrivateKey := LDERPrivateKeyReady;
+  Result.SupportsPKCS8PrivateKey := LPKCS8PrivateKeyReady;
+  Result.SupportsPKCS12 := LPKCS12Ready;
+  Result.SupportsPasswordProtectedKeys := LPasswordProtectedKeysReady;
 
   // ----- 扩展性 -----
   Result.SupportsCustomCipherSuites := True;
@@ -976,6 +1281,7 @@ end;
 procedure TOpenSSLLibrary.SetLogCallback(ACallback: TSSLLogCallback);
 begin
   FLogCallback := ACallback;
+  FDefaultConfig.LogCallback := ACallback;
 end;
 
 procedure TOpenSSLLibrary.Log(ALevel: TSSLLogLevel; const AMessage: string);

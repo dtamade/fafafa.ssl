@@ -123,6 +123,28 @@ type
     V_OCSP_RESPID_NAME              = 0;
     V_OCSP_RESPID_KEY               = 1;
 
+  type
+    TOCSPCheckFailureStage = (
+      ocspCheckNone,
+      ocspCheckDependenciesUnavailable,
+      ocspCheckRequestCreation,
+      ocspCheckTransport,
+      ocspCheckResponseStatus,
+      ocspCheckBasicResponse,
+      ocspCheckNonceValidation,
+      ocspCheckCryptographicVerification,
+      ocspCheckStatusLookup,
+      ocspCheckValidity
+    );
+
+    TOCSPCheckResult = record
+      CertStatus: Integer;
+      Verified: Boolean;
+      ResponseStatus: Integer;
+      FailureStage: TOCSPCheckFailureStage;
+      ErrorMessage: string;
+    end;
+
   // OCSP 函数类型
   type
     // OCSP 请求函数
@@ -372,6 +394,8 @@ function LoadOpenSSLOCSP(const ACryptoLib: THandle): Boolean;
 procedure UnloadOpenSSLOCSP;
 
 // 辅助函数
+function CheckCertificateStatusDetailed(ACert: PX509; AIssuer: PX509;
+  const AOCSPUrl: string; ATimeout: Integer = 10; AStore: PX509_STORE = nil): TOCSPCheckResult;
 function CheckCertificateStatus(ACert: PX509; AIssuer: PX509;
   const AOCSPUrl: string; ATimeout: Integer = 10; AStore: PX509_STORE = nil): Integer;
 function CreateOCSPRequest(ACert: PX509; AIssuer: PX509): POCSP_REQUEST;
@@ -379,6 +403,8 @@ function SendOCSPRequest(ARequest: POCSP_REQUEST; const AOCSPUrl: string;
   ATimeout: Integer = 10; ATrustStore: PX509_STORE = nil): POCSP_RESPONSE;
 function VerifyOCSPResponse(AResponse: POCSP_RESPONSE; ACert: PX509;
   AIssuer: PX509; AStore: PX509_STORE; ARequest: POCSP_REQUEST = nil): Boolean;
+function VerifyOCSPResponseDER(const AResponseDER, ACertDER, AIssuerDER: TBytes;
+  out AError: string): Boolean;
 
 implementation
 
@@ -522,20 +548,28 @@ begin
 end;
 
 // 辅助函数实现
-function CheckCertificateStatus(ACert: PX509; AIssuer: PX509;
-  const AOCSPUrl: string; ATimeout: Integer; AStore: PX509_STORE): Integer;
+function CheckCertificateStatusDetailed(ACert: PX509; AIssuer: PX509;
+  const AOCSPUrl: string; ATimeout: Integer; AStore: PX509_STORE): TOCSPCheckResult;
 var
   Req: POCSP_REQUEST;
   Resp: POCSP_RESPONSE;
   BasicResp: POCSP_BASICRESP;
   CertID: POCSP_CERTID;
   Certs: PSTACK_OF_X509;
-  Status, Reason: Integer;
+  LCertStatus, Reason: Integer;
   RevTime, ThisUpd, NextUpd: PASN1_GENERALIZEDTIME;
   LVerifyStore: PX509_STORE;
   LOwnsStore: Boolean;
   LNonceRes: Integer;
   LLib: THandle;
+
+  procedure Fail(AStage: TOCSPCheckFailureStage; const AMessage: string);
+  begin
+    Result.CertStatus := V_OCSP_CERTSTATUS_ERROR;
+    Result.Verified := False;
+    Result.FailureStage := AStage;
+    Result.ErrorMessage := AMessage;
+  end;
 
   function EnsureDependenciesLoaded: Boolean;
   begin
@@ -550,14 +584,12 @@ var
       end;
     end;
 
-    // BIO and Stack helpers are required for HTTP(S) transport and OCSP_BASICRESP_verify
     if not TOpenSSLLoader.IsModuleLoaded(osmBIO) then
       LoadOpenSSLBIO;
 
     if not TOpenSSLLoader.IsModuleLoaded(osmStack) then
       LoadStackFunctions;
 
-    // EVP_sha1 is used by OCSP_cert_to_id
     if not TOpenSSLLoader.IsModuleLoaded(osmEVP) then
     begin
       LLib := GetCryptoLibHandle;
@@ -568,72 +600,102 @@ var
     if not Assigned(EVP_sha1) then
       Exit(False);
 
-    // X509 store helpers may be needed if AStore is nil
     if not TOpenSSLLoader.IsModuleLoaded(osmX509) then
       LoadOpenSSLX509;
   end;
 
 begin
-  Result := V_OCSP_CERTSTATUS_ERROR;
+  Result.CertStatus := V_OCSP_CERTSTATUS_ERROR;
+  Result.Verified := False;
+  Result.ResponseStatus := -1;
+  Result.FailureStage := ocspCheckNone;
+  Result.ErrorMessage := '';
 
   if (not TOpenSSLLoader.IsModuleLoaded(osmOCSP)) or
     (ACert = nil) or (AIssuer = nil) or (AOCSPUrl = '') then
+  begin
+    Fail(ocspCheckDependenciesUnavailable, 'OCSP verification prerequisites are unavailable');
     Exit;
+  end;
 
   if not EnsureDependenciesLoaded then
+  begin
+    Fail(ocspCheckDependenciesUnavailable, 'OCSP verification prerequisites are unavailable');
     Exit;
+  end;
 
-  // Ensure required OCSP entry points exist
   if (not Assigned(OCSP_RESPONSE_status)) or
     (not Assigned(OCSP_RESPONSE_get1_basic)) or
     (not Assigned(OCSP_BASICRESP_verify)) or
     (not Assigned(OCSP_cert_to_id)) or
     (not Assigned(OCSP_resp_find_status)) or
     (not Assigned(OCSP_check_validity)) then
+  begin
+    Fail(ocspCheckDependenciesUnavailable, 'OCSP verification API is incomplete');
     Exit;
+  end;
 
-  // 创建 OCSP 请求
   Req := CreateOCSPRequest(ACert, AIssuer);
   if Req = nil then
+  begin
+    Fail(ocspCheckRequestCreation, 'Failed to create OCSP request');
     Exit;
+  end;
 
   try
-    // 发送 OCSP 请求（支持 http/https；https 时可复用验证 store）
     Resp := SendOCSPRequest(Req, AOCSPUrl, ATimeout, AStore);
     if Resp = nil then
+    begin
+      Fail(ocspCheckTransport, 'OCSP transport or response parsing failed');
       Exit;
+    end;
 
     try
-      // 检查响应状态
-      if OCSP_RESPONSE_status(Resp) <> OCSP_RESPONSE_STATUS_SUCCESSFUL then
+      Result.ResponseStatus := OCSP_RESPONSE_status(Resp);
+      if Result.ResponseStatus <> OCSP_RESPONSE_STATUS_SUCCESSFUL then
+      begin
+        Fail(
+          ocspCheckResponseStatus,
+          Format('OCSP responder returned unsuccessful response status (%d)', [Result.ResponseStatus])
+        );
         Exit;
+      end;
 
-      // 获取基本响应
       BasicResp := OCSP_RESPONSE_get1_basic(Resp);
       if BasicResp = nil then
+      begin
+        Fail(ocspCheckBasicResponse, 'OCSP basic response is unavailable');
         Exit;
+      end;
 
       try
-        // Nonce mismatch must fail (no nonce is acceptable: many responders omit it)
         if Assigned(OCSP_check_nonce) then
         begin
           LNonceRes := OCSP_check_nonce(Req, BasicResp);
           if LNonceRes = -1 then
+          begin
+            Fail(ocspCheckNonceValidation, 'OCSP nonce validation failed');
             Exit;
+          end;
         end;
 
-        // Verify response signature
         LVerifyStore := AStore;
         LOwnsStore := False;
 
         if LVerifyStore = nil then
         begin
           if not Assigned(X509_STORE_new) then
+          begin
+            Fail(ocspCheckDependenciesUnavailable, 'OCSP verification store helper is unavailable');
             Exit;
+          end;
 
           LVerifyStore := X509_STORE_new();
           if LVerifyStore = nil then
+          begin
+            Fail(ocspCheckDependenciesUnavailable, 'Failed to create OCSP verification store');
             Exit;
+          end;
 
           LOwnsStore := True;
           if Assigned(X509_STORE_set_default_paths) then
@@ -651,7 +713,13 @@ begin
 
           try
             if OCSP_BASICRESP_verify(BasicResp, Certs, LVerifyStore, 0) <> 1 then
+            begin
+              Fail(
+                ocspCheckCryptographicVerification,
+                'OCSP responder signature or delegated-responder verification failed'
+              );
               Exit;
+            end;
           finally
             if Certs <> nil then
               sk_X509_free(Certs);
@@ -661,22 +729,32 @@ begin
             X509_STORE_free(LVerifyStore);
         end;
 
-        // 创建证书 ID
         CertID := OCSP_cert_to_id(EVP_sha1(), ACert, AIssuer);
         if CertID = nil then
+        begin
+          Fail(ocspCheckStatusLookup, 'Failed to create OCSP certificate identifier');
           Exit;
+        end;
 
         try
-          // 查找证书状态
-          if OCSP_resp_find_status(BasicResp, CertID, @Status, @Reason,
+          if OCSP_resp_find_status(BasicResp, CertID, @LCertStatus, @Reason,
             @RevTime, @ThisUpd, @NextUpd) <> 1 then
+          begin
+            Fail(ocspCheckStatusLookup,
+              'OCSP responder did not return status for the peer certificate');
             Exit;
+          end;
 
-          // 检查有效期
           if OCSP_check_validity(ThisUpd, NextUpd, 300, -1) <> 1 then
+          begin
+            Fail(ocspCheckValidity, 'OCSP response validity check failed');
             Exit;
+          end;
 
-          Result := Status;
+          Result.CertStatus := LCertStatus;
+          Result.Verified := True;
+          Result.FailureStage := ocspCheckNone;
+          Result.ErrorMessage := '';
         finally
           OCSP_CERTID_free(CertID);
         end;
@@ -692,6 +770,18 @@ begin
   finally
     OCSP_REQUEST_free(Req);
   end;
+end;
+
+function CheckCertificateStatus(ACert: PX509; AIssuer: PX509;
+  const AOCSPUrl: string; ATimeout: Integer; AStore: PX509_STORE): Integer;
+var
+  LResult: TOCSPCheckResult;
+begin
+  LResult := CheckCertificateStatusDetailed(ACert, AIssuer, AOCSPUrl, ATimeout, AStore);
+  if LResult.Verified then
+    Result := LResult.CertStatus
+  else
+    Result := V_OCSP_CERTSTATUS_ERROR;
 end;
 
 function CreateOCSPRequest(ACert: PX509; AIssuer: PX509): POCSP_REQUEST;
@@ -855,6 +945,132 @@ begin
 
   finally
     OCSP_BASICRESP_free(BasicResp);
+  end;
+end;
+
+
+function VerifyOCSPResponseDER(const AResponseDER, ACertDER, AIssuerDER: TBytes;
+  out AError: string): Boolean;
+var
+  LCryptoLib: THandle;
+  LResponse: POCSP_RESPONSE;
+  LLeaf: PX509;
+  LIssuer: PX509;
+  LStore: PX509_STORE;
+  LResponsePtr: PByte;
+  LLeafPtr: PByte;
+  LIssuerPtr: PByte;
+begin
+  AError := '';
+  Result := False;
+  LResponse := nil;
+  LLeaf := nil;
+  LIssuer := nil;
+  LStore := nil;
+
+  if Length(AResponseDER) = 0 then
+  begin
+    AError := 'OCSP response bytes are empty';
+    Exit;
+  end;
+
+  if Length(ACertDER) = 0 then
+  begin
+    AError := 'Leaf certificate DER is empty';
+    Exit;
+  end;
+
+  if Length(AIssuerDER) = 0 then
+  begin
+    AError := 'Issuer certificate DER is empty';
+    Exit;
+  end;
+
+  try
+    try
+      LoadOpenSSLCore;
+      LoadOpenSSLX509;
+      LoadOpenSSLBIO;
+      LoadStackFunctions;
+    except
+      on E: Exception do
+      begin
+        AError := 'Failed to initialize OpenSSL verification modules: ' + E.Message;
+        Exit;
+      end;
+    end;
+
+    LCryptoLib := GetCryptoLibHandle;
+    if (LCryptoLib = 0) or (not LoadOpenSSLOCSP(LCryptoLib)) then
+    begin
+      AError := 'OpenSSL OCSP verification helper is unavailable';
+      Exit;
+    end;
+
+    if (not Assigned(d2i_OCSP_RESPONSE)) or
+       (not Assigned(d2i_X509)) or
+       (not Assigned(OCSP_RESPONSE_free)) or
+       (not Assigned(X509_free)) or
+       (not Assigned(X509_STORE_new)) or
+       (not Assigned(X509_STORE_free)) or
+       (not Assigned(X509_STORE_add_cert)) then
+    begin
+      AError := 'Required OpenSSL OCSP/X509 functions are unavailable';
+      Exit;
+    end;
+
+    LResponsePtr := @AResponseDER[0];
+    LResponse := d2i_OCSP_RESPONSE(nil, @LResponsePtr, Length(AResponseDER));
+    if LResponse = nil then
+    begin
+      AError := 'Failed to parse OCSP response DER for cryptographic verification';
+      Exit;
+    end;
+
+    LLeafPtr := @ACertDER[0];
+    LLeaf := d2i_X509(nil, @LLeafPtr, Length(ACertDER));
+    if LLeaf = nil then
+    begin
+      AError := 'Failed to parse leaf certificate DER for OCSP verification';
+      Exit;
+    end;
+
+    LIssuerPtr := @AIssuerDER[0];
+    LIssuer := d2i_X509(nil, @LIssuerPtr, Length(AIssuerDER));
+    if LIssuer = nil then
+    begin
+      AError := 'Failed to parse issuer certificate DER for OCSP verification';
+      Exit;
+    end;
+
+    LStore := X509_STORE_new();
+    if LStore = nil then
+    begin
+      AError := 'Failed to create OpenSSL OCSP verification store';
+      Exit;
+    end;
+
+    if Assigned(X509_STORE_set_default_paths) then
+      X509_STORE_set_default_paths(LStore);
+
+    if X509_STORE_add_cert(LStore, LIssuer) <> 1 then
+    begin
+      AError := 'Failed to seed issuer certificate into OCSP verification store';
+      Exit;
+    end;
+
+    Result := VerifyOCSPResponse(LResponse, LLeaf, LIssuer, LStore, nil);
+    if (not Result) and (AError = '') then
+      AError := 'OCSP response cryptographic verification failed';
+  finally
+    if LStore <> nil then
+      X509_STORE_free(LStore);
+    if LIssuer <> nil then
+      X509_free(LIssuer);
+    if LLeaf <> nil then
+      X509_free(LLeaf);
+    if LResponse <> nil then
+      OCSP_RESPONSE_free(LResponse);
   end;
 end;
 

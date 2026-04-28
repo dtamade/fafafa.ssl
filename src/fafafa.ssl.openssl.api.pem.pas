@@ -368,7 +368,11 @@ var
   Pwd: PAnsiChar;
 begin
   Result := nil;
-  if not TOpenSSLLoader.IsModuleLoaded(osmPEM) or not FileExists(AFileName) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPEM) or
+     not FileExists(AFileName) or
+     not Assigned(BIO_new_file) or
+     not Assigned(PEM_read_bio_PrivateKey) or
+     not Assigned(BIO_free) then
     Exit;
 
   Bio := BIO_new_file(PAnsiChar(AnsiString(AFileName)), 'r');
@@ -392,7 +396,11 @@ var
   Bio: PBIO;
 begin
   Result := nil;
-  if not TOpenSSLLoader.IsModuleLoaded(osmPEM) or not FileExists(AFileName) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPEM) or
+     not FileExists(AFileName) or
+     not Assigned(BIO_new_file) or
+     not Assigned(PEM_read_bio_PUBKEY) or
+     not Assigned(BIO_free) then
     Exit;
 
   Bio := BIO_new_file(PAnsiChar(AnsiString(AFileName)), 'r');
@@ -411,7 +419,11 @@ var
   Bio: PBIO;
 begin
   Result := nil;
-  if not TOpenSSLLoader.IsModuleLoaded(osmPEM) or not FileExists(AFileName) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPEM) or
+     not FileExists(AFileName) or
+     not Assigned(BIO_new_file) or
+     not Assigned(PEM_read_bio_X509) or
+     not Assigned(BIO_free) then
     Exit;
 
   Bio := BIO_new_file(PAnsiChar(AnsiString(AFileName)), 'r');
@@ -432,7 +444,11 @@ var
   Pwd: PAnsiChar;
 begin
   Result := False;
-  if not TOpenSSLLoader.IsModuleLoaded(osmPEM) or (AKey = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPEM) or
+     (AKey = nil) or
+     not Assigned(BIO_new_file) or
+     not Assigned(PEM_write_bio_PrivateKey) or
+     not Assigned(BIO_free) then
     Exit;
 
   Bio := BIO_new_file(PAnsiChar(AnsiString(AFileName)), 'w');
@@ -442,6 +458,8 @@ begin
   try
     if APassword <> '' then
     begin
+      if not Assigned(EVP_aes_256_cbc) then
+        Exit;
       Enc := EVP_aes_256_cbc();
       Pwd := PAnsiChar(AnsiString(APassword));
     end
@@ -463,7 +481,11 @@ var
   Bio: PBIO;
 begin
   Result := False;
-  if not TOpenSSLLoader.IsModuleLoaded(osmPEM) or (AKey = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPEM) or
+     (AKey = nil) or
+     not Assigned(BIO_new_file) or
+     not Assigned(PEM_write_bio_PUBKEY) or
+     not Assigned(BIO_free) then
     Exit;
 
   Bio := BIO_new_file(PAnsiChar(AnsiString(AFileName)), 'w');
@@ -482,7 +504,11 @@ var
   Bio: PBIO;
 begin
   Result := False;
-  if not TOpenSSLLoader.IsModuleLoaded(osmPEM) or (ACert = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPEM) or
+     (ACert = nil) or
+     not Assigned(BIO_new_file) or
+     not Assigned(PEM_write_bio_X509) or
+     not Assigned(BIO_free) then
     Exit;
 
   Bio := BIO_new_file(PAnsiChar(AnsiString(AFileName)), 'w');
@@ -502,7 +528,11 @@ var
   Pwd: PAnsiChar;
 begin
   Result := nil;
-  if not TOpenSSLLoader.IsModuleLoaded(osmPEM) or (Length(AData) = 0) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPEM) or
+     (Length(AData) = 0) or
+     not Assigned(BIO_new_mem_buf) or
+     not Assigned(PEM_read_bio_PrivateKey) or
+     not Assigned(BIO_free) then
     Exit;
 
   Bio := BIO_new_mem_buf(@AData[0], Length(AData));
@@ -526,7 +556,11 @@ var
   Bio: PBIO;
 begin
   Result := nil;
-  if not TOpenSSLLoader.IsModuleLoaded(osmPEM) or (Length(AData) = 0) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPEM) or
+     (Length(AData) = 0) or
+     not Assigned(BIO_new_mem_buf) or
+     not Assigned(PEM_read_bio_X509) or
+     not Assigned(BIO_free) then
     Exit;
 
   Bio := BIO_new_mem_buf(@AData[0], Length(AData));

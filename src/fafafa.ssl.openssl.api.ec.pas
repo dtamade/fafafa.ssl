@@ -131,6 +131,7 @@ const
 
 type
   // EC_KEY functions
+  Td2i_ECPrivateKey = function(key: PEC_KEY; in_: PPByte; len: NativeUInt): PEC_KEY; cdecl;
   TEC_KEY_new = function: PEC_KEY; cdecl;
   TEC_KEY_new_by_curve_name = function(nid: Integer): PEC_KEY; cdecl;
   TEC_KEY_free = procedure(key: PEC_KEY); cdecl;
@@ -285,6 +286,7 @@ type
 
 var
   // Function pointers - will be loaded dynamically
+  d2i_ECPrivateKey: Td2i_ECPrivateKey = nil;
   EC_KEY_new: TEC_KEY_new = nil;
   EC_KEY_new_by_curve_name: TEC_KEY_new_by_curve_name = nil;
   EC_KEY_free: TEC_KEY_free = nil;
@@ -324,7 +326,7 @@ var
   // ... declare all other function pointers
 
 // Helper functions
-function LoadECFunctions(ALibHandle: THandle): Boolean;
+function LoadECFunctions(ALibHandle: TOpenSSLLibHandle): Boolean;
 procedure UnloadECFunctions;
 function IsECLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmEC) instead';
 
@@ -342,8 +344,9 @@ uses
 
 const
   { EC Function Bindings - 批量加载函数绑定定义 }
-  EC_FUNCTION_BINDINGS: array[0..36] of TFunctionBinding = (
+  EC_FUNCTION_BINDINGS: array[0..37] of TFunctionBinding = (
     // EC_KEY functions
+    (Name: 'd2i_ECPrivateKey'; FuncPtr: @d2i_ECPrivateKey; Required: False),
     (Name: 'EC_KEY_new'; FuncPtr: @EC_KEY_new; Required: False),
     (Name: 'EC_KEY_new_by_curve_name'; FuncPtr: @EC_KEY_new_by_curve_name; Required: False),
     (Name: 'EC_KEY_free'; FuncPtr: @EC_KEY_free; Required: False),
@@ -386,7 +389,7 @@ const
     (Name: 'EC_POINT_get_affine_coordinates_GF2m'; FuncPtr: @EC_POINT_get_affine_coordinates; Required: False)
   );
 
-function LoadECFunctions(ALibHandle: THandle): Boolean;
+function LoadECFunctions(ALibHandle: TOpenSSLLibHandle): Boolean;
 var
   LLoadedCount: Integer;
 begin

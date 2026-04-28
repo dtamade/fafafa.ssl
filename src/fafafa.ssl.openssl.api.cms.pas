@@ -494,7 +494,13 @@ var
   Bio: PBIO;
 begin
   Result := nil;
-  if not TOpenSSLLoader.IsModuleLoaded(osmCMS) or (Length(AData) = 0) or (ACert = nil) or (AKey = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCMS) or
+     (Length(AData) = 0) or
+     (ACert = nil) or
+     (AKey = nil) or
+     not Assigned(BIO_new_mem_buf) or
+     not Assigned(CMS_sign) or
+     not Assigned(BIO_free) then
     Exit;
 
   Bio := BIO_new_mem_buf(@AData[0], Length(AData));
@@ -514,7 +520,14 @@ var
   DataBio, OutBio: PBIO;
 begin
   Result := False;
-  if not TOpenSSLLoader.IsModuleLoaded(osmCMS) or (Length(AData) = 0) or (ASignature = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCMS) or
+     (Length(AData) = 0) or
+     (ASignature = nil) or
+     not Assigned(BIO_new_mem_buf) or
+     not Assigned(BIO_new) or
+     not Assigned(BIO_s_null) or
+     not Assigned(CMS_verify) or
+     not Assigned(BIO_free) then
     Exit;
 
   DataBio := BIO_new_mem_buf(@AData[0], Length(AData));
@@ -536,7 +549,12 @@ var
   Bio: PBIO;
 begin
   Result := nil;
-  if not TOpenSSLLoader.IsModuleLoaded(osmCMS) or (Length(AData) = 0) or (ARecipients = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCMS) or
+     (Length(AData) = 0) or
+     (ARecipients = nil) or
+     not Assigned(BIO_new_mem_buf) or
+     not Assigned(CMS_encrypt) or
+     not Assigned(BIO_free) then
     Exit;
 
   // 默认使用 AES-256-CBC
@@ -564,7 +582,15 @@ var
 begin
   Result := nil;
   SetLength(Result, 0);
-  if not TOpenSSLLoader.IsModuleLoaded(osmCMS) or (AEncrypted = nil) or (AKey = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCMS) or
+     (AEncrypted = nil) or
+     (AKey = nil) or
+     not Assigned(BIO_new) or
+     not Assigned(BIO_s_null) or
+     not Assigned(BIO_s_mem) or
+     not Assigned(BIO_free) or
+     not Assigned(CMS_decrypt) or
+     not Assigned(BIO_read) then
     Exit;
 
   InBio := BIO_new(BIO_s_null());

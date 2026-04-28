@@ -373,6 +373,20 @@ begin
   RSA_check_key := TRSA_check_key(GetCryptoProcAddress('RSA_check_key'));
   RSA_check_key_ex := TRSA_check_key_ex(GetCryptoProcAddress('RSA_check_key_ex'));
 
+  // ASN.1 DER helpers
+  RSAPublicKey_dup := TRSAPublicKey_dup(GetCryptoProcAddress('RSAPublicKey_dup'));
+  RSAPrivateKey_dup := TRSAPrivateKey_dup(GetCryptoProcAddress('RSAPrivateKey_dup'));
+  i2d_RSAPublicKey := Ti2d_RSAPublicKey(GetCryptoProcAddress('i2d_RSAPublicKey'));
+  d2i_RSAPublicKey := Td2i_RSAPublicKey(GetCryptoProcAddress('d2i_RSAPublicKey'));
+  i2d_RSAPrivateKey := Ti2d_RSAPrivateKey(GetCryptoProcAddress('i2d_RSAPrivateKey'));
+  d2i_RSAPrivateKey := Td2i_RSAPrivateKey(GetCryptoProcAddress('d2i_RSAPrivateKey'));
+  i2d_RSA_PUBKEY := Ti2d_RSA_PUBKEY(GetCryptoProcAddress('i2d_RSA_PUBKEY'));
+  d2i_RSA_PUBKEY := Td2i_RSA_PUBKEY(GetCryptoProcAddress('d2i_RSA_PUBKEY'));
+  i2d_RSA_PUBKEY_bio := Ti2d_RSA_PUBKEY_bio(GetCryptoProcAddress('i2d_RSA_PUBKEY_bio'));
+  d2i_RSA_PUBKEY_bio := Td2i_RSA_PUBKEY_bio(GetCryptoProcAddress('d2i_RSA_PUBKEY_bio'));
+  i2d_RSA_PUBKEY_fp := Ti2d_RSA_PUBKEY_fp(GetCryptoProcAddress('i2d_RSA_PUBKEY_fp'));
+  d2i_RSA_PUBKEY_fp := Td2i_RSA_PUBKEY_fp(GetCryptoProcAddress('d2i_RSA_PUBKEY_fp'));
+
   Result := Assigned(RSA_new) and Assigned(RSA_free);
   TOpenSSLLoader.SetModuleLoaded(osmRSA, Result);
 end;
@@ -414,6 +428,20 @@ begin
   // Utility functions
   RSA_check_key := nil;
   RSA_check_key_ex := nil;
+
+  // ASN.1 DER helpers
+  RSAPublicKey_dup := nil;
+  RSAPrivateKey_dup := nil;
+  i2d_RSAPublicKey := nil;
+  d2i_RSAPublicKey := nil;
+  i2d_RSAPrivateKey := nil;
+  d2i_RSAPrivateKey := nil;
+  i2d_RSA_PUBKEY := nil;
+  d2i_RSA_PUBKEY := nil;
+  i2d_RSA_PUBKEY_bio := nil;
+  d2i_RSA_PUBKEY_bio := nil;
+  i2d_RSA_PUBKEY_fp := nil;
+  d2i_RSA_PUBKEY_fp := nil;
 
   TOpenSSLLoader.SetModuleLoaded(osmRSA, False);
 end;

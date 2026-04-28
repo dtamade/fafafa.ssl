@@ -75,6 +75,11 @@ type
   TSSL_set_session_ticket_ext = function(ssl: PSSL; ext_data: Pointer; ext_len: Integer): Integer; cdecl;
   TSSL_set_session_ticket_ext_cb = function(ssl: PSSL; cb: Pointer; arg: Pointer): Integer; cdecl;
 
+  { Post-handshake auth }
+  TSSL_CTX_set_post_handshake_auth = procedure(ctx: PSSL_CTX; val: Integer); cdecl;
+  TSSL_set_post_handshake_auth = procedure(ssl: PSSL; val: Integer); cdecl;
+  TSSL_verify_client_post_handshake = function(ssl: PSSL): Integer; cdecl;
+
   { PSK (Pre-Shared Key) }
   TSSL_CTX_use_psk_identity_hint = function(ctx: PSSL_CTX; const hint: PAnsiChar): Integer; cdecl;
   TSSL_use_psk_identity_hint = function(ssl: PSSL; const hint: PAnsiChar): Integer; cdecl;
@@ -209,6 +214,9 @@ var
   SSL_CTX_set_tlsext_ticket_key_cb: TSSL_CTX_set_tlsext_ticket_key_cb;
   SSL_set_session_ticket_ext: TSSL_set_session_ticket_ext;
   SSL_set_session_ticket_ext_cb: TSSL_set_session_ticket_ext_cb;
+  SSL_CTX_set_post_handshake_auth: TSSL_CTX_set_post_handshake_auth;
+  SSL_set_post_handshake_auth: TSSL_set_post_handshake_auth;
+  SSL_verify_client_post_handshake: TSSL_verify_client_post_handshake;
 
   { PSK }
   SSL_CTX_use_psk_identity_hint: TSSL_CTX_use_psk_identity_hint;
@@ -312,6 +320,117 @@ implementation
 uses
   fafafa.ssl.openssl.api.core;
 
+procedure ClearSSLFunctions;
+begin
+  SSL_CTX_set_min_proto_version := nil;
+  SSL_CTX_set_max_proto_version := nil;
+  SSL_CTX_get_min_proto_version := nil;
+  SSL_CTX_get_max_proto_version := nil;
+  SSL_set_min_proto_version := nil;
+  SSL_set_max_proto_version := nil;
+  SSL_get_min_proto_version := nil;
+  SSL_get_max_proto_version := nil;
+  SSL_version := nil;
+  SSL_client_version := nil;
+  SSL_is_dtls := nil;
+  SSL_CTX_set_options := nil;
+  SSL_CTX_clear_options := nil;
+  SSL_CTX_get_options := nil;
+  SSL_set_options := nil;
+  SSL_clear_options := nil;
+  SSL_get_options := nil;
+  SSL_CTX_set_mode := nil;
+  SSL_CTX_clear_mode := nil;
+  SSL_CTX_get_mode := nil;
+  SSL_set_mode := nil;
+  SSL_clear_mode := nil;
+  SSL_get_mode := nil;
+  SSL_CTX_set_cipher_list := nil;
+  SSL_CTX_set_ciphersuites := nil;
+  SSL_set_cipher_list := nil;
+  SSL_set_ciphersuites := nil;
+  SSL_get_ciphers := nil;
+  SSL_get_cipher_list := nil;
+  SSL_get_shared_ciphers := nil;
+  SSL_get_current_cipher := nil;
+  SSL_get_pending_cipher := nil;
+  SSL_CIPHER_get_name := nil;
+  SSL_CIPHER_get_bits := nil;
+  SSL_CIPHER_get_version := nil;
+  SSL_CIPHER_description := nil;
+  SSL_CIPHER_get_id := nil;
+  SSL_set_tlsext_host_name := nil;
+  SSL_get_servername := nil;
+  SSL_get_servername_type := nil;
+  SSL_CTX_set_tlsext_servername_callback := nil;
+  SSL_CTX_set_tlsext_servername_arg := nil;
+  SSL_CTX_set_alpn_protos := nil;
+  SSL_set_alpn_protos := nil;
+  SSL_CTX_set_alpn_select_cb := nil;
+  SSL_get0_alpn_selected := nil;
+  SSL_select_next_proto := nil;
+  SSL_CTX_set_tlsext_ticket_key_cb := nil;
+  SSL_set_session_ticket_ext := nil;
+  SSL_set_session_ticket_ext_cb := nil;
+  SSL_CTX_set_post_handshake_auth := nil;
+  SSL_set_post_handshake_auth := nil;
+  SSL_verify_client_post_handshake := nil;
+  SSL_CTX_use_psk_identity_hint := nil;
+  SSL_use_psk_identity_hint := nil;
+  SSL_CTX_set_psk_server_callback := nil;
+  SSL_set_psk_server_callback := nil;
+  SSL_CTX_set_psk_client_callback := nil;
+  SSL_set_psk_client_callback := nil;
+  SSL_CTX_set_info_callback := nil;
+  SSL_CTX_get_info_callback := nil;
+  SSL_set_info_callback := nil;
+  SSL_get_info_callback := nil;
+  SSL_state_string := nil;
+  SSL_state_string_long := nil;
+  SSL_CTX_set_tlsext_status_type := nil;
+  SSL_CTX_get_tlsext_status_type := nil;
+  SSL_set_tlsext_status_type := nil;
+  SSL_get_tlsext_status_type := nil;
+  SSL_set_tlsext_status_ocsp_resp := nil;
+  SSL_get_tlsext_status_ocsp_resp := nil;
+  SSL_CTX_set_tlsext_status_cb := nil;
+  SSL_CTX_set_tlsext_status_arg := nil;
+  SSL_CTX_set_max_early_data := nil;
+  SSL_CTX_get_max_early_data := nil;
+  SSL_set_max_early_data := nil;
+  SSL_get_max_early_data := nil;
+  SSL_get_early_data_status := nil;
+  SSL_CTX_set_keylog_callback := nil;
+  SSL_CTX_get_keylog_callback := nil;
+  SSL_CTX_set_record_padding_callback := nil;
+  SSL_CTX_get_record_padding_callback := nil;
+  SSL_CTX_set_record_padding_callback_arg := nil;
+  SSL_CTX_get_record_padding_callback_arg := nil;
+  SSL_CTX_set_block_padding := nil;
+  SSL_set_record_padding_callback := nil;
+  SSL_get_record_padding_callback := nil;
+  SSL_set_record_padding_callback_arg := nil;
+  SSL_get_record_padding_callback_arg := nil;
+  SSL_set_block_padding := nil;
+  SSL_get_stream_id := nil;
+  SSL_get_stream_type := nil;
+  SSL_is_stream_local := nil;
+  SSL_new_stream := nil;
+  SSL_accept_stream := nil;
+  SSL_get_accept_stream_queue_len := nil;
+  SSL_set_default_stream_mode := nil;
+  SSL_set_incoming_stream_policy := nil;
+  SSL_get0_connection := nil;
+  SSL_is_connection := nil;
+  SSL_get_stream_read_error_code := nil;
+  SSL_get_stream_write_error_code := nil;
+  SSL_get_conn_close_info := nil;
+  SSL_poll := nil;
+  SSL_set_async_callback := nil;
+  SSL_set_async_callback_arg := nil;
+  SSL_get_async_status := nil;
+end;
+
 function LoadOpenSSLSSL: Boolean;
 begin
   if TOpenSSLLoader.IsModuleLoaded(osmSSL) then
@@ -406,6 +525,72 @@ begin
   SSL_get0_alpn_selected := TSSL_get0_alpn_selected(GetSSLProcAddress('SSL_get0_alpn_selected'));
   SSL_select_next_proto := TSSL_select_next_proto(GetSSLProcAddress('SSL_select_next_proto'));
 
+  // Load session-ticket and PSK helpers used by feature/capability probes
+  SSL_CTX_set_tlsext_ticket_key_cb := TSSL_CTX_set_tlsext_ticket_key_cb(GetSSLProcAddress('SSL_CTX_set_tlsext_ticket_key_cb'));
+  SSL_set_session_ticket_ext := TSSL_set_session_ticket_ext(GetSSLProcAddress('SSL_set_session_ticket_ext'));
+  SSL_set_session_ticket_ext_cb := TSSL_set_session_ticket_ext_cb(GetSSLProcAddress('SSL_set_session_ticket_ext_cb'));
+  SSL_CTX_set_post_handshake_auth := TSSL_CTX_set_post_handshake_auth(GetSSLProcAddress('SSL_CTX_set_post_handshake_auth'));
+  SSL_set_post_handshake_auth := TSSL_set_post_handshake_auth(GetSSLProcAddress('SSL_set_post_handshake_auth'));
+  SSL_verify_client_post_handshake := TSSL_verify_client_post_handshake(GetSSLProcAddress('SSL_verify_client_post_handshake'));
+  SSL_CTX_use_psk_identity_hint := TSSL_CTX_use_psk_identity_hint(GetSSLProcAddress('SSL_CTX_use_psk_identity_hint'));
+  SSL_use_psk_identity_hint := TSSL_use_psk_identity_hint(GetSSLProcAddress('SSL_use_psk_identity_hint'));
+  SSL_CTX_set_psk_server_callback := TSSL_CTX_set_psk_server_callback(GetSSLProcAddress('SSL_CTX_set_psk_server_callback'));
+  SSL_set_psk_server_callback := TSSL_set_psk_server_callback(GetSSLProcAddress('SSL_set_psk_server_callback'));
+  SSL_CTX_set_psk_client_callback := TSSL_CTX_set_psk_client_callback(GetSSLProcAddress('SSL_CTX_set_psk_client_callback'));
+  SSL_set_psk_client_callback := TSSL_set_psk_client_callback(GetSSLProcAddress('SSL_set_psk_client_callback'));
+
+  // Load early-data helpers used by TLS 1.3 capability reporting
+  SSL_CTX_set_max_early_data := TSSL_CTX_set_max_early_data(GetSSLProcAddress('SSL_CTX_set_max_early_data'));
+  SSL_CTX_get_max_early_data := TSSL_CTX_get_max_early_data(GetSSLProcAddress('SSL_CTX_get_max_early_data'));
+  SSL_set_max_early_data := TSSL_set_max_early_data(GetSSLProcAddress('SSL_set_max_early_data'));
+  SSL_get_max_early_data := TSSL_get_max_early_data(GetSSLProcAddress('SSL_get_max_early_data'));
+  SSL_get_early_data_status := TSSL_get_early_data_status(GetSSLProcAddress('SSL_get_early_data_status'));
+
+  // Load keylog helpers
+  SSL_CTX_set_keylog_callback := TSSL_CTX_set_keylog_callback(GetSSLProcAddress('SSL_CTX_set_keylog_callback'));
+  SSL_CTX_get_keylog_callback := TSSL_CTX_get_keylog_callback(GetSSLProcAddress('SSL_CTX_get_keylog_callback'));
+
+  // Load record-padding helpers
+  SSL_CTX_set_record_padding_callback := TSSL_CTX_set_record_padding_callback(GetSSLProcAddress('SSL_CTX_set_record_padding_callback'));
+  SSL_CTX_get_record_padding_callback := TSSL_CTX_get_record_padding_callback(GetSSLProcAddress('SSL_CTX_get_record_padding_callback'));
+  SSL_CTX_set_record_padding_callback_arg := TSSL_CTX_set_record_padding_callback_arg(GetSSLProcAddress('SSL_CTX_set_record_padding_callback_arg'));
+  SSL_CTX_get_record_padding_callback_arg := TSSL_CTX_get_record_padding_callback_arg(GetSSLProcAddress('SSL_CTX_get_record_padding_callback_arg'));
+  SSL_CTX_set_block_padding := TSSL_CTX_set_block_padding(GetSSLProcAddress('SSL_CTX_set_block_padding'));
+  SSL_set_record_padding_callback := TSSL_set_record_padding_callback(GetSSLProcAddress('SSL_set_record_padding_callback'));
+  SSL_get_record_padding_callback := TSSL_get_record_padding_callback(GetSSLProcAddress('SSL_get_record_padding_callback'));
+  SSL_set_record_padding_callback_arg := TSSL_set_record_padding_callback_arg(GetSSLProcAddress('SSL_set_record_padding_callback_arg'));
+  SSL_get_record_padding_callback_arg := TSSL_get_record_padding_callback_arg(GetSSLProcAddress('SSL_get_record_padding_callback_arg'));
+  SSL_set_block_padding := TSSL_set_block_padding(GetSSLProcAddress('SSL_set_block_padding'));
+
+  // Load QUIC helpers
+  SSL_get_stream_id := TSSL_get_stream_id(GetSSLProcAddress('SSL_get_stream_id'));
+  SSL_get_stream_type := TSSL_get_stream_type(GetSSLProcAddress('SSL_get_stream_type'));
+  SSL_is_stream_local := TSSL_is_stream_local(GetSSLProcAddress('SSL_is_stream_local'));
+  SSL_new_stream := TSSL_new_stream(GetSSLProcAddress('SSL_new_stream'));
+  SSL_accept_stream := TSSL_accept_stream(GetSSLProcAddress('SSL_accept_stream'));
+  SSL_get_accept_stream_queue_len := TSSL_get_accept_stream_queue_len(GetSSLProcAddress('SSL_get_accept_stream_queue_len'));
+  SSL_set_default_stream_mode := TSSL_set_default_stream_mode(GetSSLProcAddress('SSL_set_default_stream_mode'));
+  SSL_set_incoming_stream_policy := TSSL_set_incoming_stream_policy(GetSSLProcAddress('SSL_set_incoming_stream_policy'));
+  SSL_get0_connection := TSSL_get0_connection(GetSSLProcAddress('SSL_get0_connection'));
+  SSL_is_connection := TSSL_is_connection(GetSSLProcAddress('SSL_is_connection'));
+  SSL_get_stream_read_error_code := TSSL_get_stream_read_error_code(GetSSLProcAddress('SSL_get_stream_read_error_code'));
+  SSL_get_stream_write_error_code := TSSL_get_stream_write_error_code(GetSSLProcAddress('SSL_get_stream_write_error_code'));
+  SSL_get_conn_close_info := TSSL_get_conn_close_info(GetSSLProcAddress('SSL_get_conn_close_info'));
+
+  // Load SSL_poll and async helpers
+  SSL_poll := TSSL_poll(GetSSLProcAddress('SSL_poll'));
+  SSL_set_async_callback := TSSL_set_async_callback(GetSSLProcAddress('SSL_set_async_callback'));
+  SSL_set_async_callback_arg := TSSL_set_async_callback_arg(GetSSLProcAddress('SSL_set_async_callback_arg'));
+  SSL_get_async_status := TSSL_get_async_status(GetSSLProcAddress('SSL_get_async_status'));
+
+  // Load info-callback and state-string helpers used by the OpenSSL context/connection layer
+  SSL_CTX_set_info_callback := TSSL_CTX_set_info_callback(GetSSLProcAddress('SSL_CTX_set_info_callback'));
+  SSL_CTX_get_info_callback := TSSL_CTX_get_info_callback(GetSSLProcAddress('SSL_CTX_get_info_callback'));
+  SSL_set_info_callback := TSSL_set_info_callback(GetSSLProcAddress('SSL_set_info_callback'));
+  SSL_get_info_callback := TSSL_get_info_callback(GetSSLProcAddress('SSL_get_info_callback'));
+  SSL_state_string := TSSL_state_string(GetSSLProcAddress('SSL_state_string'));
+  SSL_state_string_long := TSSL_state_string_long(GetSSLProcAddress('SSL_state_string_long'));
+
   // Load OCSP stapling extension functions (optional)
   SSL_CTX_set_tlsext_status_type := TSSL_CTX_set_tlsext_status_type(GetSSLProcAddress('SSL_CTX_set_tlsext_status_type'));
   SSL_CTX_get_tlsext_status_type := TSSL_CTX_get_tlsext_status_type(GetSSLProcAddress('SSL_CTX_get_tlsext_status_type'));
@@ -450,18 +635,7 @@ end;
 
 procedure UnloadOpenSSLSSL;
 begin
-  // Clear all function pointers
-  SSL_CTX_set_min_proto_version := nil;
-  SSL_CTX_set_max_proto_version := nil;
-  SSL_CTX_set_tlsext_status_type := nil;
-  SSL_CTX_get_tlsext_status_type := nil;
-  SSL_set_tlsext_status_type := nil;
-  SSL_get_tlsext_status_type := nil;
-  SSL_set_tlsext_status_ocsp_resp := nil;
-  SSL_get_tlsext_status_ocsp_resp := nil;
-  SSL_CTX_set_tlsext_status_cb := nil;
-  SSL_CTX_set_tlsext_status_arg := nil;
-  // ... clear all other function pointers ...
+  ClearSSLFunctions;
 
   TOpenSSLLoader.SetModuleLoaded(osmSSL, False);
 end;

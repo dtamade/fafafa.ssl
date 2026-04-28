@@ -16,7 +16,8 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl.openssl.base,
-  fafafa.ssl.openssl.api.consts;
+  fafafa.ssl.openssl.api.consts,
+  fafafa.ssl.openssl.loader;
 
 const
   AES_MAXNR = 14;
@@ -111,7 +112,7 @@ var
   AES_decrypt: TAES_decrypt = nil;
 
 // Helper functions
-function LoadAESFunctions(ALibHandle: THandle): Boolean;
+function LoadAESFunctions(ALibHandle: TOpenSSLLibHandle): Boolean;
 procedure UnloadAESFunctions;
 function IsAESLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmAES) instead';
 
@@ -126,8 +127,7 @@ function AESDecryptCTR(const Data: TBytes; const Key: TBytes; const IV: TBytes):
 implementation
 
 uses
-  fafafa.ssl.openssl.api,
-  fafafa.ssl.openssl.loader;
+  fafafa.ssl.openssl.api;
 
 const
   { AES 函数绑定数组 - 用于批量加载 }
@@ -135,31 +135,36 @@ const
 
 var
   AESFunctionBindings: array[0..AES_FUNCTION_COUNT-1] of TFunctionBinding = (
-    (Name: 'AES_set_encrypt_key'; FuncPtr: @AES_set_encrypt_key; Required: False),
-    (Name: 'AES_set_decrypt_key'; FuncPtr: @AES_set_decrypt_key; Required: False),
-    (Name: 'AES_ecb_encrypt';     FuncPtr: @AES_ecb_encrypt;     Required: False),
-    (Name: 'AES_cbc_encrypt';     FuncPtr: @AES_cbc_encrypt;     Required: False),
+    (Name: 'AES_set_encrypt_key'; FuncPtr: @AES_set_encrypt_key; Required: True),
+    (Name: 'AES_set_decrypt_key'; FuncPtr: @AES_set_decrypt_key; Required: True),
+    (Name: 'AES_ecb_encrypt';     FuncPtr: @AES_ecb_encrypt;     Required: True),
+    (Name: 'AES_cbc_encrypt';     FuncPtr: @AES_cbc_encrypt;     Required: True),
     (Name: 'AES_cfb128_encrypt';  FuncPtr: @AES_cfb128_encrypt;  Required: False),
     (Name: 'AES_cfb1_encrypt';    FuncPtr: @AES_cfb1_encrypt;    Required: False),
     (Name: 'AES_cfb8_encrypt';    FuncPtr: @AES_cfb8_encrypt;    Required: False),
     (Name: 'AES_ofb128_encrypt';  FuncPtr: @AES_ofb128_encrypt;  Required: False),
-    (Name: 'AES_ctr128_encrypt';  FuncPtr: @AES_ctr128_encrypt;  Required: False),
+    (Name: 'AES_ctr128_encrypt';  FuncPtr: @AES_ctr128_encrypt;  Required: True),
     (Name: 'AES_ige_encrypt';     FuncPtr: @AES_ige_encrypt;     Required: False),
     (Name: 'AES_bi_ige_encrypt';  FuncPtr: @AES_bi_ige_encrypt;  Required: False),
     (Name: 'AES_wrap_key';        FuncPtr: @AES_wrap_key;        Required: False),
     (Name: 'AES_unwrap_key';      FuncPtr: @AES_unwrap_key;      Required: False),
     (Name: 'AES_options';         FuncPtr: @AES_options;         Required: False),
-    (Name: 'AES_encrypt';         FuncPtr: @AES_encrypt;         Required: False),
-    (Name: 'AES_decrypt';         FuncPtr: @AES_decrypt;         Required: False)
+    (Name: 'AES_encrypt';         FuncPtr: @AES_encrypt;         Required: True),
+    (Name: 'AES_decrypt';         FuncPtr: @AES_decrypt;         Required: True)
   );
 
-function LoadAESFunctions(ALibHandle: THandle): Boolean;
+function LoadAESFunctions(ALibHandle: TOpenSSLLibHandle): Boolean;
 begin
   Result := False;
 
   if ALibHandle = 0 then Exit;
 
-  TOpenSSLLoader.LoadFunctions(ALibHandle, AESFunctionBindings);
+  if TOpenSSLLoader.LoadFunctions(ALibHandle, AESFunctionBindings) < 0 then
+  begin
+    TOpenSSLLoader.SetModuleLoaded(osmAES, False);
+    Exit(False);
+  end;
+
   TOpenSSLLoader.SetModuleLoaded(osmAES, True);
   Result := True;
 end;

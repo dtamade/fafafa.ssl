@@ -820,6 +820,7 @@ var
   EVP_PKEY_up_ref: TEVP_PKEY_up_ref = nil;
   EVP_PKEY_assign: TEVP_PKEY_assign = nil;
   EVP_PKEY_set1_RSA: TEVP_PKEY_set1_RSA = nil;
+  EVP_PKEY_set1_EC_KEY: TEVP_PKEY_set1_EC_KEY = nil;
   EVP_PKEY_get_id: TEVP_PKEY_get_id = nil;
   EVP_PKEY_id: TEVP_PKEY_get_id = nil;  // Alias for compatibility
   EVP_PKEY_get_bits: TEVP_PKEY_get_bits = nil;
@@ -888,7 +889,7 @@ uses
 
 const
   // EVP function bindings for batch loading
-  EVP_BINDINGS: array[0..96] of TFunctionBinding = (
+  EVP_BINDINGS: array[0..97] of TFunctionBinding = (
     // MD Context functions
     (Name: 'EVP_MD_CTX_new'; FuncPtr: @EVP_MD_CTX_new; Required: True),
     (Name: 'EVP_MD_CTX_free'; FuncPtr: @EVP_MD_CTX_free; Required: True),
@@ -971,6 +972,7 @@ const
     (Name: 'EVP_PKEY_up_ref'; FuncPtr: @EVP_PKEY_up_ref; Required: False),
     (Name: 'EVP_PKEY_assign'; FuncPtr: @EVP_PKEY_assign; Required: False),
     (Name: 'EVP_PKEY_set1_RSA'; FuncPtr: @EVP_PKEY_set1_RSA; Required: False),
+    (Name: 'EVP_PKEY_set1_EC_KEY'; FuncPtr: @EVP_PKEY_set1_EC_KEY; Required: False),
     (Name: 'EVP_PKEY_get_id'; FuncPtr: @EVP_PKEY_get_id; Required: False),
     (Name: 'EVP_PKEY_get_bits'; FuncPtr: @EVP_PKEY_get_bits; Required: False),
     (Name: 'EVP_PKEY_get_size'; FuncPtr: @EVP_PKEY_get_size; Required: False),

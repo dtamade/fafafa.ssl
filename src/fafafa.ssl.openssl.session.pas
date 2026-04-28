@@ -53,6 +53,21 @@ type
 
 implementation
 
+function HasSessionSerializeHelpers: Boolean;
+begin
+  Result := Assigned(i2d_SSL_SESSION_bio) and
+            Assigned(BIO_new) and
+            Assigned(BIO_s_mem) and
+            Assigned(BIO_free);
+end;
+
+function HasSessionDeserializeHelpers: Boolean;
+begin
+  Result := Assigned(d2i_SSL_SESSION_bio) and
+            Assigned(BIO_new_mem_buf) and
+            Assigned(BIO_free);
+end;
+
 constructor TOpenSSLSession.Create(ASession: PSSL_SESSION; AOwnsHandle: Boolean = True);
 begin
   inherited Create;
@@ -213,6 +228,9 @@ begin
   
   if FSession = nil then
     Exit;
+
+  if not HasSessionSerializeHelpers() then
+    Exit;
   
   BIO := BIO_new(BIO_s_mem());
   if BIO = nil then
@@ -241,6 +259,9 @@ begin
   Result := False;
   
   if Length(AData) = 0 then
+    Exit;
+
+  if not HasSessionDeserializeHelpers() then
     Exit;
   
   BIO := BIO_new_mem_buf(@AData[0], Length(AData));

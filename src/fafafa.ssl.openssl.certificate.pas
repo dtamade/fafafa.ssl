@@ -182,6 +182,21 @@ end;
 
 // StringsToArray 已移至 fafafa.ssl.utils（Phase 3.2）
 
+function HasCertificateFileBIOHelpers: Boolean;
+begin
+  Result := Assigned(BIO_new_file) and Assigned(BIO_free);
+end;
+
+function HasCertificateMemoryLoadBIOHelpers: Boolean;
+begin
+  Result := Assigned(BIO_new_mem_buf) and Assigned(BIO_free);
+end;
+
+function HasCertificateMemorySaveBIOHelpers: Boolean;
+begin
+  Result := Assigned(BIO_new) and Assigned(BIO_s_mem) and Assigned(BIO_free);
+end;
+
 constructor TOpenSSLCertificate.Create(AX509: PX509; AOwnsHandle: Boolean = True);
 begin
   inherited Create;
@@ -213,6 +228,8 @@ var
   FileNameA: AnsiString;
 begin
   Result := False;
+  if not HasCertificateFileBIOHelpers or not Assigned(PEM_read_bio_X509) then
+    Exit;
   if not FileExists(AFileName) then Exit;
   
   FileNameA := AnsiString(AFileName);
@@ -238,6 +255,10 @@ var
   BIO: PBIO;
 begin
   Result := False;
+  if not HasCertificateMemoryLoadBIOHelpers then
+    Exit;
+  if not Assigned(PEM_read_bio_X509) and not Assigned(d2i_X509_bio) then
+    Exit;
 
   // Validate stream
   if AStream = nil then
@@ -259,8 +280,10 @@ begin
     if FOwnsHandle and (FX509 <> nil) then
       X509_free(FX509);
 
-    FX509 := PEM_read_bio_X509(BIO, nil, nil, nil);
-    if FX509 = nil then
+    FX509 := nil;
+    if Assigned(PEM_read_bio_X509) then
+      FX509 := PEM_read_bio_X509(BIO, nil, nil, nil);
+    if (FX509 = nil) and Assigned(d2i_X509_bio) then
       FX509 := d2i_X509_bio(BIO, nil);
 
     FOwnsHandle := True;
@@ -275,6 +298,10 @@ var
   BIO: PBIO;
 begin
   Result := False;
+  if not HasCertificateMemoryLoadBIOHelpers then
+    Exit;
+  if not Assigned(PEM_read_bio_X509) and not Assigned(d2i_X509_bio) then
+    Exit;
   if (AData = nil) or (ASize <= 0) then
     Exit;
 
@@ -290,13 +317,15 @@ begin
   if BIO = nil then
     Exit;
   try
-    FX509 := PEM_read_bio_X509(BIO, nil, nil, nil);
+    FX509 := nil;
+    if Assigned(PEM_read_bio_X509) then
+      FX509 := PEM_read_bio_X509(BIO, nil, nil, nil);
   finally
     BIO_free(BIO);
   end;
 
   // If PEM failed, try DER format
-  if FX509 = nil then
+  if (FX509 = nil) and Assigned(d2i_X509_bio) then
   begin
     BIO := BIO_new_mem_buf(AData, ASize);
     if BIO = nil then
@@ -317,8 +346,14 @@ var
   PEMData: AnsiString;
   BIO: PBIO;
 begin
+  Result := False;
+  if not HasCertificateMemoryLoadBIOHelpers or not Assigned(PEM_read_bio_X509) then
+    Exit;
+
   PEMData := AnsiString(APEM);
   BIO := BIO_new_mem_buf(PAnsiChar(PEMData), Length(PEMData));
+  if BIO = nil then
+    Exit;
   try
     if FOwnsHandle and (FX509 <> nil) then
       X509_free(FX509);
@@ -345,7 +380,10 @@ var
   FileNameA: AnsiString;
 begin
   Result := False;
-  if FX509 = nil then Exit;
+  if (FX509 = nil) or
+     not HasCertificateFileBIOHelpers or
+     not Assigned(PEM_write_bio_X509) then
+    Exit;
   
   FileNameA := AnsiString(AFileName);
   BIO := BIO_new_file(PAnsiChar(FileNameA), 'w');
@@ -379,9 +417,14 @@ var
   Buf: PAnsiChar;
 begin
   Result := '';
-  if FX509 = nil then Exit;
+  if (FX509 = nil) or
+     not HasCertificateMemorySaveBIOHelpers or
+     not Assigned(PEM_write_bio_X509) then
+    Exit;
   
   BIO := BIO_new(BIO_s_mem());
+  if BIO = nil then
+    Exit;
   try
     if PEM_write_bio_X509(BIO, FX509) = 1 then
     begin
@@ -401,9 +444,14 @@ var
   Buf: PAnsiChar;
 begin
   SetLength(Result, 0);
-  if FX509 = nil then Exit;
+  if (FX509 = nil) or
+     not HasCertificateMemorySaveBIOHelpers or
+     not Assigned(i2d_X509_bio) then
+    Exit;
   
   BIO := BIO_new(BIO_s_mem());
+  if BIO = nil then
+    Exit;
   try
     if i2d_X509_bio(BIO, FX509) > 0 then
     begin

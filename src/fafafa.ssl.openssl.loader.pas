@@ -42,6 +42,8 @@ type
     osslLibSSL      // libssl (SSL/TLS库)
   );
 
+  TOpenSSLLibHandle = {$IFDEF WINDOWS}HMODULE{$ELSE}TLibHandle{$ENDIF};
+
   {**
    * OpenSSL API 模块枚举
    * 用于统一管理各模块的加载状态
@@ -486,11 +488,13 @@ class function TOpenSSLLoader.LoadFunctions(AHandle: {$IFDEF WINDOWS}HMODULE{$EL
 var
   I: Integer;
   LFunc: Pointer;
+  LRequiredMissing: Boolean;
 begin
   Result := 0;
   if AHandle = 0 then
     Exit;
 
+  LRequiredMissing := False;
   for I := Low(ABindings) to High(ABindings) do
   begin
     if ABindings[I].FuncPtr <> nil then
@@ -499,7 +503,16 @@ begin
       ABindings[I].FuncPtr^ := LFunc;
       if LFunc <> nil then
         Inc(Result);
+
+      if (LFunc = nil) and ABindings[I].Required then
+        LRequiredMissing := True;
     end;
+  end;
+
+  if LRequiredMissing then
+  begin
+    ClearFunctions(ABindings);
+    Result := -1;
   end;
 end;
 

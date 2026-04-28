@@ -136,7 +136,7 @@ var
   BLAKE2s_mac_Init: TBLAKE2s_mac_Init = nil;
 
 // Helper functions
-function LoadBLAKE2Functions(ALibHandle: THandle): Boolean;
+function LoadBLAKE2Functions(ALibHandle: TOpenSSLLibHandle): Boolean;
 procedure UnloadBLAKE2Functions;
 function IsBLAKE2Loaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmBLAKE2) instead';
 
@@ -173,7 +173,19 @@ const
     (Name: 'BLAKE2s_mac_Init';   FuncPtr: @BLAKE2s_mac_Init;   Required: False)
   );
 
-function LoadBLAKE2Functions(ALibHandle: THandle): Boolean;
+function BLAKE2ModuleSurfaceReady: Boolean;
+begin
+  Result := (((Assigned(BLAKE2b_Init) and Assigned(BLAKE2b_Update) and Assigned(BLAKE2b_Final)) or
+             Assigned(BLAKE2b)) and
+             ((Assigned(BLAKE2s_Init) and Assigned(BLAKE2s_Update) and Assigned(BLAKE2s_Final)) or
+             Assigned(BLAKE2s)) and
+             ((Assigned(BLAKE2b_Init_key) and Assigned(BLAKE2b_Update) and Assigned(BLAKE2b_Final)) or
+             Assigned(BLAKE2b)) and
+             ((Assigned(BLAKE2s_Init_key) and Assigned(BLAKE2s_Update) and Assigned(BLAKE2s_Final)) or
+             Assigned(BLAKE2s)));
+end;
+
+function LoadBLAKE2Functions(ALibHandle: TOpenSSLLibHandle): Boolean;
 begin
   Result := False;
 
@@ -182,8 +194,14 @@ begin
   // 使用批量加载模式
   TOpenSSLLoader.LoadFunctions(ALibHandle, BLAKE2_BINDINGS);
 
+  Result := BLAKE2ModuleSurfaceReady;
+  if not Result then
+  begin
+    UnloadBLAKE2Functions;
+    Exit(False);
+  end;
+
   TOpenSSLLoader.SetModuleLoaded(osmBLAKE2, True);
-  Result := True;
 end;
 
 procedure UnloadBLAKE2Functions;

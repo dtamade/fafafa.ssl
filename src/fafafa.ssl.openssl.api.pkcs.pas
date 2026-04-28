@@ -540,7 +540,12 @@ begin
   ACert := nil;
   ACAs := nil;
 
-  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS) or not FileExists(AFileName) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS) or
+     not FileExists(AFileName) or
+     not Assigned(BIO_new_file) or
+     not Assigned(d2i_PKCS12_bio) or
+     not Assigned(PKCS12_parse) or
+     not Assigned(BIO_free) then
     Exit;
 
   Bio := BIO_new_file(PAnsiChar(AnsiString(AFileName)), 'rb');
@@ -570,7 +575,13 @@ var
   P12: PPKCS12;
 begin
   Result := False;
-  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS) or (AKey = nil) or (ACert = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS) or
+     (AKey = nil) or
+     (ACert = nil) or
+     not Assigned(BIO_new_file) or
+     not Assigned(PKCS12_create) or
+     not Assigned(i2d_PKCS12_bio) or
+     not Assigned(BIO_free) then
     Exit;
 
   P12 := PKCS12_create(PAnsiChar(AnsiString(APassword)), nil, AKey, ACert, ACAs, 
@@ -599,7 +610,13 @@ var
   Bio: PBIO;
 begin
   Result := nil;
-  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS) or (Length(AData) = 0) or (ACert = nil) or (AKey = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS) or
+     (Length(AData) = 0) or
+     (ACert = nil) or
+     (AKey = nil) or
+     not Assigned(BIO_new_mem_buf) or
+     not Assigned(PKCS7_sign) or
+     not Assigned(BIO_free) then
     Exit;
 
   Bio := BIO_new_mem_buf(@AData[0], Length(AData));
@@ -619,7 +636,14 @@ var
   DataBio, OutBio: PBIO;
 begin
   Result := False;
-  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS) or (Length(AData) = 0) or (ASignature = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS) or
+     (Length(AData) = 0) or
+     (ASignature = nil) or
+     not Assigned(BIO_new_mem_buf) or
+     not Assigned(BIO_new) or
+     not Assigned(BIO_s_null) or
+     not Assigned(PKCS7_verify) or
+     not Assigned(BIO_free) then
     Exit;
 
   DataBio := BIO_new_mem_buf(@AData[0], Length(AData));

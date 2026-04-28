@@ -138,6 +138,9 @@ begin
   // 使用辅助函数安全获取原生句柄
   Ctx := PSSL_CTX(GetNativeHandleSafe(AContext, 'TOpenSSLConnection.Create'));
 
+  if not Assigned(SSL_new) then
+    RaiseFunctionNotAvailable('SSL_new');
+
   FSSL := SSL_new(Ctx);
   if FSSL = nil then
     RaiseSSLInitError(
@@ -147,8 +150,12 @@ begin
 
   // Initialize per-connection server name from context default (backward compatibility)
   FServerName := '';
-  if (AContext.GetServerName <> '') then
+  if (AContext <> nil) and (AContext.GetContextType = sslCtxClient) and
+    (AContext.GetServerName <> '') then
     SetServerName(AContext.GetServerName);
+
+  if not Assigned(SSL_set_fd) then
+    RaiseFunctionNotAvailable('SSL_set_fd');
 
   SSL_set_fd(FSSL, ASocket);
 end;
@@ -156,6 +163,17 @@ end;
 constructor TOpenSSLConnection.Create(AContext: ISSLContext; AStream: TStream);
 var
   Ctx: PSSL_CTX;
+  LConstructed: Boolean;
+
+  procedure CleanupUnattachedBIO(var ABIO: PBIO);
+  begin
+    if ABIO <> nil then
+    begin
+      if Assigned(BIO_free) then
+        BIO_free(ABIO);
+      ABIO := nil;
+    end;
+  end;
 begin
   inherited Create(AContext);
   FSocket := THandle(-1);
@@ -167,6 +185,9 @@ begin
   // 使用辅助函数安全获取原生句柄
   Ctx := PSSL_CTX(GetNativeHandleSafe(AContext, 'TOpenSSLConnection.Create'));
 
+  if not Assigned(SSL_new) then
+    RaiseFunctionNotAvailable('SSL_new');
+
   FSSL := SSL_new(Ctx);
   if FSSL = nil then
     RaiseSSLInitError(
@@ -174,34 +195,47 @@ begin
       'TOpenSSLConnection.Create'
     );
 
-  // Initialize per-connection server name from context default (backward compatibility)
-  FServerName := '';
-  if (AContext.GetServerName <> '') then
-    SetServerName(AContext.GetServerName);
+  LConstructed := False;
+  try
+    // Initialize per-connection server name from context default (backward compatibility)
+    FServerName := '';
+    if (AContext <> nil) and (AContext.GetContextType = sslCtxClient) and
+      (AContext.GetServerName <> '') then
+      SetServerName(AContext.GetServerName);
 
-  // Ensure BIO API is available
-  if not TOpenSSLLoader.IsModuleLoaded(osmBIO) then
-    LoadOpenSSLBIO;
+    // Ensure BIO API is available
+    if not TOpenSSLLoader.IsModuleLoaded(osmBIO) then
+      LoadOpenSSLBIO;
 
-  if (not Assigned(BIO_new)) or (not Assigned(BIO_s_mem)) or
-    (not Assigned(SSL_set_bio)) then
-    RaiseFunctionNotAvailable('OpenSSL BIO API (BIO_new/BIO_s_mem/SSL_set_bio)');
+    if (not Assigned(BIO_new)) or (not Assigned(BIO_s_mem)) or
+      (not Assigned(SSL_set_bio)) then
+      RaiseFunctionNotAvailable('OpenSSL BIO API (BIO_new/BIO_s_mem/SSL_set_bio)');
 
-  // Create separate memory BIOs for incoming and outgoing encrypted data
-  FBioRead := BIO_new(BIO_s_mem());
-  if FBioRead = nil then
-    RaiseMemoryError('create read BIO');
+    // Create separate memory BIOs for incoming and outgoing encrypted data
+    FBioRead := BIO_new(BIO_s_mem());
+    if FBioRead = nil then
+      RaiseMemoryError('create read BIO');
 
-  FBioWrite := BIO_new(BIO_s_mem());
-  if FBioWrite = nil then
-  begin
-    BIO_free(FBioRead);
-    FBioRead := nil;
-    RaiseMemoryError('create write BIO');
+    FBioWrite := BIO_new(BIO_s_mem());
+    if FBioWrite = nil then
+      RaiseMemoryError('create write BIO');
+
+    // Attach BIOs to SSL; SSL takes ownership and will free them in SSL_free
+    SSL_set_bio(FSSL, FBioRead, FBioWrite);
+    LConstructed := True;
+  finally
+    if not LConstructed then
+    begin
+      CleanupUnattachedBIO(FBioRead);
+      CleanupUnattachedBIO(FBioWrite);
+      if FSSL <> nil then
+      begin
+        if Assigned(SSL_free) then
+          SSL_free(FSSL);
+        FSSL := nil;
+      end;
+    end;
   end;
-
-  // Attach BIOs to SSL; SSL takes ownership and will free them in SSL_free
-  SSL_set_bio(FSSL, FBioRead, FBioWrite);
 end;
 
 destructor TOpenSSLConnection.Destroy;
@@ -209,7 +243,11 @@ begin
   if FConnected then
     DoShutdown;
   if FSSL <> nil then
-    SSL_free(FSSL);
+  begin
+    if Assigned(SSL_free) then
+      SSL_free(FSSL);
+    FSSL := nil;
+  end;
   inherited Destroy;
 end;
 
@@ -246,12 +284,21 @@ begin
         Exit;
     end;
 
+    if not Assigned(SSL_read) then
+      Exit;
+
     while True do
     begin
       LRet := SSL_read(FSSL, @ABuffer, ACount);
       if LRet > 0 then
       begin
         Result := LRet;
+        Exit;
+      end;
+
+      if not Assigned(SSL_get_error) then
+      begin
+        Result := -1;
         Exit;
       end;
 
@@ -291,8 +338,9 @@ begin
   else
   begin
     if not FConnected then Exit(-1);
+    if not Assigned(SSL_read) then Exit(-1);
     Result := SSL_read(FSSL, @ABuffer, ACount);
-    if Result < 0 then
+    if (Result < 0) and Assigned(SSL_get_error) then
       FLastSSLError := SSL_get_error(FSSL, Result);
   end;
 end;
@@ -314,6 +362,9 @@ begin
         Exit;
     end;
 
+    if not Assigned(SSL_write) then
+      Exit;
+
     while True do
     begin
       LRet := SSL_write(FSSL, @ABuffer, ACount);
@@ -322,6 +373,12 @@ begin
         // Flush any pending encrypted data to the underlying stream
         PumpBIOToStream;
         Result := LRet;
+        Exit;
+      end;
+
+      if not Assigned(SSL_get_error) then
+      begin
+        Result := -1;
         Exit;
       end;
 
@@ -361,8 +418,9 @@ begin
   else
   begin
     if not FConnected then Exit(-1);
+    if not Assigned(SSL_write) then Exit(-1);
     Result := SSL_write(FSSL, @ABuffer, ACount);
-    if Result < 0 then
+    if (Result < 0) and Assigned(SSL_get_error) then
       FLastSSLError := SSL_get_error(FSSL, Result);
   end;
 end;
@@ -380,6 +438,9 @@ begin
     Exit;
   end;
 
+  if not Assigned(SSL_connect) then
+    Exit(False);
+
   ApplyPreHandshakeOCSPStatusRequest(True);
 
   Ret := SSL_connect(FSSL);
@@ -394,7 +455,7 @@ begin
       Exit;
     end;
   end
-  else
+  else if Assigned(SSL_get_error) then
     FLastSSLError := SSL_get_error(FSSL, Ret);
   Result := FConnected;
 end;
@@ -412,6 +473,9 @@ begin
     Exit;
   end;
 
+  if not Assigned(SSL_accept) then
+    Exit(False);
+
   Ret := SSL_accept(FSSL);
   FConnected := (Ret = 1);
   if FConnected then
@@ -424,7 +488,7 @@ begin
       Exit;
     end;
   end
-  else
+  else if Assigned(SSL_get_error) then
     FLastSSLError := SSL_get_error(FSSL, Ret);
   Result := FConnected;
 end;
@@ -474,7 +538,7 @@ end;
 
 function TOpenSSLConnection.DoShutdown: Boolean;
 begin
-  if FSSL <> nil then
+  if (FSSL <> nil) and Assigned(SSL_shutdown) then
     SSL_shutdown(FSSL);
   FConnected := False;
   Result := True;
@@ -503,6 +567,9 @@ begin
     Exit;
 
   // 执行握手以完成重协商
+  if not Assigned(SSL_do_handshake) then
+    Exit;
+
   Ret := SSL_do_handshake(FSSL);
   Result := (Ret = 1);
 end;
@@ -555,7 +622,7 @@ var
   Ver: Integer;
 begin
   Result := sslProtocolTLS12;
-  if FSSL = nil then Exit;
+  if (FSSL = nil) or (not Assigned(SSL_version)) then Exit;
 
   Ver := SSL_version(FSSL);
   case Ver of
@@ -576,11 +643,13 @@ var
   Name: PAnsiChar;
 begin
   Result := '';
-  if FSSL = nil then Exit;
+  if (FSSL = nil) or (not Assigned(SSL_get_current_cipher)) then Exit;
 
   Cipher := SSL_get_current_cipher(FSSL);
   if Cipher <> nil then
   begin
+    if not Assigned(SSL_CIPHER_get_name) then
+      Exit;
     Name := SSL_CIPHER_get_name(Cipher);
     if Name <> nil then
       Result := string(Name);
@@ -593,7 +662,7 @@ var
 begin
   Result := nil;
 
-  if FSSL = nil then
+  if (FSSL = nil) or (not Assigned(SSL_get_peer_certificate)) then
     Exit;
 
   X509Cert := SSL_get_peer_certificate(FSSL);
@@ -612,7 +681,11 @@ var
 begin
   SetLength(Result, 0);
 
-  if FSSL = nil then
+  if (FSSL = nil) or
+     (not Assigned(SSL_get_peer_cert_chain)) or
+     (not Assigned(sk_X509_num)) or
+     (not Assigned(sk_X509_value)) or
+     (not Assigned(X509_up_ref)) then
     Exit;
 
   Chain := SSL_get_peer_cert_chain(FSSL);
@@ -638,7 +711,7 @@ end;
 
 function TOpenSSLConnection.DoGetVerifyResult: Integer;
 begin
-  if FSSL = nil then Exit(-1);
+  if (FSSL = nil) or (not Assigned(SSL_get_verify_result)) then Exit(-1);
   Result := SSL_get_verify_result(FSSL);
 end;
 
@@ -709,7 +782,7 @@ end;
 
 function TOpenSSLConnection.DoIsSessionReused: Boolean;
 begin
-  if FSSL = nil then Exit(False);
+  if (FSSL = nil) or (not Assigned(SSL_session_reused)) then Exit(False);
   Result := (SSL_session_reused(FSSL) = 1);
 end;
 
@@ -872,19 +945,25 @@ begin
 
         if X509_STORE_CTX_init(StoreCtx, VerifyStore, PeerX509, PeerChain) = 1 then
         begin
-          if X509_verify_cert(StoreCtx) = 1 then
-          begin
-            VerifiedChain := X509_STORE_CTX_get0_chain(StoreCtx);
-            if VerifiedChain <> nil then
+            if X509_verify_cert(StoreCtx) = 1 then
             begin
-              IssuerX509 := FindIssuerX509InChain(PeerX509, VerifiedChain);
-              if (IssuerX509 <> nil) and Assigned(X509_up_ref) then
+              VerifiedChain := X509_STORE_CTX_get0_chain(StoreCtx);
+              if VerifiedChain <> nil then
               begin
-                X509_up_ref(IssuerX509);
-                IssuerNeedsFree := True;
+                IssuerX509 := FindIssuerX509InChain(PeerX509, VerifiedChain);
+                if IssuerX509 <> nil then
+                begin
+                  if not Assigned(X509_up_ref) then
+                  begin
+                    IssuerX509 := nil;
+                    Exit(False);
+                  end;
+
+                  X509_up_ref(IssuerX509);
+                  IssuerNeedsFree := True;
+                end;
               end;
             end;
-          end;
         end;
       finally
         X509_STORE_CTX_free(StoreCtx);
@@ -975,19 +1054,25 @@ begin
     Exit;
 
   // Cipher suite information
-  Cipher := SSL_get_current_cipher(FSSL);
-  if Cipher <> nil then
+  if Assigned(SSL_get_current_cipher) then
   begin
-    // Cipher suite name
-    CipherName := SSL_CIPHER_get_name(Cipher);
-    if CipherName <> nil then
-      Result.CipherSuite := string(CipherName);
-
-    // Key size
-    if Assigned(SSL_CIPHER_get_bits) then
+    Cipher := SSL_get_current_cipher(FSSL);
+    if Cipher <> nil then
     begin
-      AlgBits := 0;
-      Result.KeySize := SSL_CIPHER_get_bits(Cipher, @AlgBits);
+      // Cipher suite name
+      if Assigned(SSL_CIPHER_get_name) then
+      begin
+        CipherName := SSL_CIPHER_get_name(Cipher);
+        if CipherName <> nil then
+          Result.CipherSuite := string(CipherName);
+      end;
+
+      // Key size
+      if Assigned(SSL_CIPHER_get_bits) then
+      begin
+        AlgBits := 0;
+        Result.KeySize := SSL_CIPHER_get_bits(Cipher, @AlgBits);
+      end;
     end;
   end;
 
@@ -1104,6 +1189,9 @@ begin
   Result := False;
 
   if (FSSL = nil) or (not HasStreamTransport) then
+    Exit;
+
+  if (not Assigned(SSL_do_handshake)) or (not Assigned(SSL_get_error)) then
     Exit;
 
   ApplyPreHandshakeOCSPStatusRequest(AIsClient);
@@ -1497,10 +1585,15 @@ begin
               if VerifiedChain <> nil then
               begin
                 IssuerX509 := FindIssuerX509InChain(PeerX509, VerifiedChain);
-                if (IssuerX509 <> nil) and Assigned(X509_up_ref) then
+                if IssuerX509 <> nil then
                 begin
-                  X509_up_ref(IssuerX509);
-                  IssuerNeedsFree := True;
+                  if not Assigned(X509_up_ref) then
+                    IssuerX509 := nil
+                  else
+                  begin
+                    X509_up_ref(IssuerX509);
+                    IssuerNeedsFree := True;
+                  end;
                 end;
               end;
             end;

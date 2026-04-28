@@ -303,17 +303,33 @@ const
   );
 
 procedure LoadPKCS12Module(ALibCrypto: THandle);
+var
+  LLoaded: Boolean;
 begin
+  if TOpenSSLLoader.IsModuleLoaded(osmPKCS12) then
+    Exit;
+
   if ALibCrypto = 0 then Exit;
 
   // 使用批量加载模式
   TOpenSSLLoader.LoadFunctions(ALibCrypto, PKCS12_BINDINGS);
+
+  LLoaded := Assigned(PKCS12_new) or
+    Assigned(PKCS12_create) or
+    Assigned(PKCS12_parse) or
+    Assigned(PKCS8_encrypt) or
+    Assigned(PKCS8_decrypt);
+  TOpenSSLLoader.SetModuleLoaded(osmPKCS12, LLoaded);
 end;
 
 procedure UnloadPKCS12Module;
 begin
+  if not TOpenSSLLoader.IsModuleLoaded(osmPKCS12) then
+    Exit;
+
   // 使用批量清除模式
   TOpenSSLLoader.ClearFunctions(PKCS12_BINDINGS);
+  TOpenSSLLoader.SetModuleLoaded(osmPKCS12, False);
 end;
 
 // 辅助函数实现

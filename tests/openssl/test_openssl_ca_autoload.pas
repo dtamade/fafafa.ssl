@@ -72,6 +72,7 @@ var
   LLib: ISSLLibrary;
   LCtx: ISSLContext;
   LConn: ISSLConnection;
+  LClientConn: ISSLClientConnection;
 begin
   WriteLn('Test 1: Client context should auto-load system CAs');
   WriteLn('---------------------------------------------------');
@@ -92,19 +93,18 @@ begin
 
   LCtx := LLib.CreateContext(sslCtxClient);
 
-  // Set server name on context
-  LCtx.SetServerName('www.google.com');
-
   // Act: Create a connection to a public HTTPS server
   // This will fail if system CAs are not loaded
   LConn := LCtx.CreateConnection(THandle(0));  // Dummy socket
+  LClientConn := LConn as ISSLClientConnection;
+  LClientConn.SetServerName('www.google.com');
 
   // Assert: Verify that context was created successfully
   // The actual TLS handshake would require a real socket,
   // but we can verify the context has verify mode set
   Test('Client context created successfully', Assigned(LCtx));
   Test('Connection created successfully', Assigned(LConn));
-  Test('Server name set correctly', LCtx.GetServerName = 'www.google.com');
+  Test('Server name set correctly', LClientConn.GetServerName = 'www.google.com');
 
   WriteLn;
 end;
@@ -187,6 +187,8 @@ procedure TestRealTLSConnectionWithAutoLoadedCAs;
 var
   LLib: ISSLLibrary;
   LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LClientConn: ISSLClientConnection;
   LHost: string;
 begin
   WriteLn('Test 4: Real TLS connection should work with auto-loaded CAs');
@@ -210,11 +212,13 @@ begin
   LCtx := LLib.CreateContext(sslCtxClient);
   LCtx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
   LHost := 'www.google.com';
-  LCtx.SetServerName(LHost);
+  LConn := LCtx.CreateConnection(THandle(0)); // Dummy socket for configuration-only check
+  LClientConn := LConn as ISSLClientConnection;
+  LClientConn.SetServerName(LHost);
 
   // Assert: Context configuration completed
   Test('Context configured for TLS 1.2/1.3', True);
-  Test('SNI hostname set', LCtx.GetServerName = LHost);
+  Test('SNI hostname set', LClientConn.GetServerName = LHost);
 
   WriteLn('  Full TLS handshake test requires socket implementation');
   WriteLn('  CA auto-loading will be verified in integration tests');

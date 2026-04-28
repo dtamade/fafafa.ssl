@@ -210,7 +210,10 @@ var
   gN: PSRP_gN;
 begin
   Result := nil;
-  if not Assigned(SRP_user_pwd_new) or not Assigned(SRP_create_verifier_BN) then Exit;
+  if not Assigned(SRP_user_pwd_new) or
+     not Assigned(SRP_user_pwd_free) or
+     not Assigned(SRP_create_verifier_BN) then
+    Exit;
   
   Result := SRP_user_pwd_new(PChar(Username));
   if Result = nil then Exit;
@@ -220,6 +223,14 @@ begin
     gN := SRP_get_default_gN(PChar(gN_id));
     
   if gN = nil then
+  begin
+    SRP_user_pwd_free(Result);
+    Result := nil;
+    Exit;
+  end;
+
+  if not Assigned(SRP_user_pwd_set_salt) or
+     not Assigned(SRP_user_pwd_set_verifier) then
   begin
     SRP_user_pwd_free(Result);
     Result := nil;

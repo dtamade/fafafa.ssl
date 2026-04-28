@@ -20,6 +20,11 @@
   - `StrictChainVerifyOptions` remains meaningful through explicit verifier / runtime flag paths, where EKU and caller-provided CRL material can fail closed.
   - The previous `VerifyChain BIO` failure was not an OpenSSL BIO regression; it was the generic helper accidentally inheriting strict-chain expectations.
 - Certchain revocation behavior should continue to distinguish revoked from unavailable CRL truth instead of warning and silently accepting when revocation checks are requested.
+- Batch 2 OpenSSL root cause:
+  - `LoadAESFunctions` / `LoadSHAFunctions` and same-pattern low-level loaders accepted `THandle`.
+  - On Linux, `THandle` is 4 bytes while `TLibHandle` is 8 bytes, so passing a dynamic library handle could truncate it and make `GetProcAddress` access an invalid handle.
+  - The correct fix is to expose/use a real OpenSSL dynamic-library handle type (`TOpenSSLLibHandle`) for these low-level load functions, not to special-case the failing test.
+- OpenSSL capability truth should keep following loaded helper surface, not version constants alone; the current OpenSSL focused sweep exercises capability drift, loader readiness, DER private-key context loading, and connection/context/session BIO guard behavior.
 
 ## 2026-04-19 Findings (Execution / FreePascal completeness docs-history absorption batch)
 - 当前最高 ROI 的第二批，不是继续碰 `src/`，而是把已经完成的 FreePascal completeness 主线对应的 docs truth 和 execution history 入库，减少后续继续/重扫的上下文成本。

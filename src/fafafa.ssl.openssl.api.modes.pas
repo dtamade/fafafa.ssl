@@ -259,10 +259,30 @@ begin
   AES_wrap_key := TAES_wrap_key(TOpenSSLLoader.GetFunction(LHandle, 'AES_wrap_key'));
   AES_unwrap_key := TAES_unwrap_key(TOpenSSLLoader.GetFunction(LHandle, 'AES_unwrap_key'));
   
-  // Note: Most mode operations are typically done through EVP interface
-  // Direct mode functions may not be exported in all OpenSSL versions
-  TOpenSSLLoader.SetModuleLoaded(osmModes, True); // Even if individual functions are nil
-  Result := True;
+  // Treat the direct-modes module as ready only when every exported helper surface
+  // has the symbols it needs. Partial availability must not publish a loaded state.
+  Result := Assigned(GCM128_new) and Assigned(GCM128_free) and
+            Assigned(GCM128_setiv) and Assigned(GCM128_aad) and
+            Assigned(GCM128_encrypt) and Assigned(GCM128_decrypt) and
+            Assigned(GCM128_finish) and Assigned(GCM128_tag) and
+            Assigned(CCM128_new) and Assigned(CCM128_free) and
+            Assigned(CCM128_init) and Assigned(CCM128_setiv) and
+            Assigned(CCM128_aad) and Assigned(CCM128_encrypt) and
+            Assigned(CCM128_decrypt) and Assigned(CCM128_tag) and
+            Assigned(XTS128_encrypt) and Assigned(XTS128_decrypt) and
+            Assigned(OCB128_new) and Assigned(OCB128_free) and
+            Assigned(OCB128_init) and Assigned(OCB128_setiv) and
+            Assigned(OCB128_aad) and Assigned(OCB128_encrypt) and
+            Assigned(OCB128_decrypt) and Assigned(OCB128_finish) and
+            Assigned(OCB128_tag) and
+            Assigned(AES_wrap_key) and Assigned(AES_unwrap_key);
+  if not Result then
+  begin
+    UnloadModesFunctions;
+    Exit(False);
+  end;
+
+  TOpenSSLLoader.SetModuleLoaded(osmModes, True);
 end;
 
 procedure UnloadModesFunctions;

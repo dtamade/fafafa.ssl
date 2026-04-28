@@ -22,7 +22,7 @@
 - [ ] Execute Batch 1 through Batch 5, each with focused verification, review conclusion, and commit.
 
 ### Status
-- In progress. Planning boundary and Batch 0A gate hardening are committed. Batch 1 cert-utils / certchain hardening is verified and ready for scoped review + commit.
+- In progress. Planning boundary, Batch 0A gate hardening, and Batch 1 cert-utils / certchain hardening are committed. Batch 2 OpenSSL core helper/capability hardening is verified and ready for scoped review + commit.
 
 ### Batch 0A: Default gate hardening
 - [x] Verify shell syntax for changed gate scripts and new contracts.
@@ -41,6 +41,14 @@
 - [x] Run `python3 scripts/compile_all_modules.py`.
 - [x] Run scoped diff hygiene.
 - [x] Review and commit scoped cert-utils / certchain batch.
+
+### Batch 2: OpenSSL core helper/capability hardening
+- [x] Run OpenSSL focused contract sweep over `tests/test_openssl_*.pas` plus `tests/openssl/test_openssl_features.pas` and `test_openssl_ca_autoload.pas`.
+- [x] Debug and fix `test_openssl_loader_required_symbol_contract` access violation.
+- [x] Re-run OpenSSL focused contract sweep.
+- [x] Run `python3 scripts/compile_all_modules.py`.
+- [x] Run scoped diff hygiene.
+- [x] Review and commit scoped OpenSSL core batch.
 
 ## 2026-04-19 Plan (Execution / FreePascal completeness docs-history absorption batch)
 

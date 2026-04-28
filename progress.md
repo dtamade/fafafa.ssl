@@ -81,6 +81,38 @@
   - PASS. Staged scope is cert-utils / certchain only: production changes in `src/fafafa.ssl.cert.utils.pas` and `src/fafafa.ssl.certchain.pas`, cert-utils contracts/plans, and working-memory updates.
   - No Wave C, SNI, TLS13 broad implementation, or OpenSSL loader/helper-surface files are staged in this batch.
 
+### Batch 2 OpenSSL core helper/capability verification
+
+- Initial focused sweep:
+  - Loop compiled and ran `tests/test_openssl_*.pas` plus `tests/openssl/test_openssl_features.pas` and `tests/openssl/test_openssl_ca_autoload.pas`.
+  - First result: failed at `tests/test_openssl_loader_required_symbol_contract.pas`.
+  - Failure detail: access violation in the AES missing-required-symbol section before assertions could complete.
+- Root cause investigation:
+  - `LoadAESFunctions(ALibHandle: THandle)` and same-pattern low-level loaders used `THandle`.
+  - On Linux, `SizeOf(THandle)=4` and `SizeOf(TLibHandle)=8`.
+  - Passing a dynamic library handle through `THandle` truncated it, so `GetProcAddress` could receive an invalid handle and crash.
+- Fix:
+  - Added `TOpenSSLLibHandle` in `src/fafafa.ssl.openssl.loader.pas`.
+  - Updated AES/SHA/EC/MD/DES/BLAKE2 loader entrypoints to accept `TOpenSSLLibHandle`.
+- Focused failing regression after fix:
+  - `tests/test_openssl_loader_required_symbol_contract.pas`
+  - Result: PASS, `Tests Passed: 13`, `Tests Failed: 0`
+- Full OpenSSL focused sweep after fix:
+  - Loop compiled and ran `tests/test_openssl_*.pas` plus `tests/openssl/test_openssl_features.pas` and `tests/openssl/test_openssl_ca_autoload.pas`.
+  - Result: PASS, `openssl contracts passed: 38`
+- Compile gate:
+  - `python3 scripts/compile_all_modules.py`
+  - Result: PASS, `编译成功: 185 (100.0%)`
+- Scoped hygiene:
+  - `git diff --cached --check`
+  - Result: PASS, no output.
+- Default local gate:
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - Result: PASS, compile gate `185/185`, module tests `17/17`, phase2 fast-local dry-run PASS.
+- Pre-commit review conclusion:
+  - PASS. Staged scope is OpenSSL core/helper/capability only: OpenSSL API loader/backend/context/connection/session files, OpenSSL focused contracts, OpenSSL historical plans, and working-memory updates.
+  - No Wave C scripts/reports, broad docs, builder/config/SNI implementation files, or TLS 1.3 implementation files are staged in this batch.
+
 ## 2026-04-19 Progress (Execution / FreePascal completeness docs-history absorption batch)
 
 - 已根据 scoped diff + 两个子代理的范围结论，确定第二批只吸收：

@@ -178,7 +178,7 @@ var
   SHA512_256: TSHA512_256 = nil;
 
 // Helper functions
-function LoadSHAFunctions(ALibHandle: THandle): Boolean;
+function LoadSHAFunctions(ALibHandle: TOpenSSLLibHandle): Boolean;
 procedure UnloadSHAFunctions;
 function IsSHALoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmSHA) instead';
 
@@ -201,31 +201,31 @@ const
   { SHA 函数绑定数组 - 用于批量加载 }
   SHA_FUNCTION_BINDINGS: array[0..29] of TFunctionBinding = (
     // SHA-1 functions
-    (Name: 'SHA1_Init';       FuncPtr: @SHA1_Init;       Required: False),
-    (Name: 'SHA1_Update';     FuncPtr: @SHA1_Update;     Required: False),
-    (Name: 'SHA1_Final';      FuncPtr: @SHA1_Final;      Required: False),
+    (Name: 'SHA1_Init';       FuncPtr: @SHA1_Init;       Required: True),
+    (Name: 'SHA1_Update';     FuncPtr: @SHA1_Update;     Required: True),
+    (Name: 'SHA1_Final';      FuncPtr: @SHA1_Final;      Required: True),
     (Name: 'SHA1';            FuncPtr: @SHA1;            Required: False),
     (Name: 'SHA1_Transform';  FuncPtr: @SHA1_Transform;  Required: False),
     // SHA-224 functions
     (Name: 'SHA224_Init';     FuncPtr: @SHA224_Init;     Required: False),
     (Name: 'SHA224_Update';   FuncPtr: @SHA224_Update;   Required: False),
     (Name: 'SHA224_Final';    FuncPtr: @SHA224_Final;    Required: False),
-    (Name: 'SHA224';          FuncPtr: @SHA224;          Required: False),
+    (Name: 'SHA224';          FuncPtr: @SHA224;          Required: True),
     // SHA-256 functions
-    (Name: 'SHA256_Init';     FuncPtr: @SHA256_Init;     Required: False),
-    (Name: 'SHA256_Update';   FuncPtr: @SHA256_Update;   Required: False),
-    (Name: 'SHA256_Final';    FuncPtr: @SHA256_Final;    Required: False),
+    (Name: 'SHA256_Init';     FuncPtr: @SHA256_Init;     Required: True),
+    (Name: 'SHA256_Update';   FuncPtr: @SHA256_Update;   Required: True),
+    (Name: 'SHA256_Final';    FuncPtr: @SHA256_Final;    Required: True),
     (Name: 'SHA256';          FuncPtr: @SHA256;          Required: False),
     (Name: 'SHA256_Transform'; FuncPtr: @SHA256_Transform; Required: False),
     // SHA-384 functions
-    (Name: 'SHA384_Init';     FuncPtr: @SHA384_Init;     Required: False),
-    (Name: 'SHA384_Update';   FuncPtr: @SHA384_Update;   Required: False),
-    (Name: 'SHA384_Final';    FuncPtr: @SHA384_Final;    Required: False),
+    (Name: 'SHA384_Init';     FuncPtr: @SHA384_Init;     Required: True),
+    (Name: 'SHA384_Update';   FuncPtr: @SHA384_Update;   Required: True),
+    (Name: 'SHA384_Final';    FuncPtr: @SHA384_Final;    Required: True),
     (Name: 'SHA384';          FuncPtr: @SHA384;          Required: False),
     // SHA-512 functions
-    (Name: 'SHA512_Init';     FuncPtr: @SHA512_Init;     Required: False),
-    (Name: 'SHA512_Update';   FuncPtr: @SHA512_Update;   Required: False),
-    (Name: 'SHA512_Final';    FuncPtr: @SHA512_Final;    Required: False),
+    (Name: 'SHA512_Init';     FuncPtr: @SHA512_Init;     Required: True),
+    (Name: 'SHA512_Update';   FuncPtr: @SHA512_Update;   Required: True),
+    (Name: 'SHA512_Final';    FuncPtr: @SHA512_Final;    Required: True),
     (Name: 'SHA512';          FuncPtr: @SHA512;          Required: False),
     (Name: 'SHA512_Transform'; FuncPtr: @SHA512_Transform; Required: False),
     // SHA-512/224 functions
@@ -239,14 +239,18 @@ const
     (Name: 'SHA512_256_Final';  FuncPtr: @SHA512_256_Final;  Required: False)
   );
 
-function LoadSHAFunctions(ALibHandle: THandle): Boolean;
+function LoadSHAFunctions(ALibHandle: TOpenSSLLibHandle): Boolean;
 begin
   Result := False;
 
   if ALibHandle = 0 then Exit;
 
   // 使用批量加载模式
-  TOpenSSLLoader.LoadFunctions(ALibHandle, SHA_FUNCTION_BINDINGS);
+  if TOpenSSLLoader.LoadFunctions(ALibHandle, SHA_FUNCTION_BINDINGS) < 0 then
+  begin
+    TOpenSSLLoader.SetModuleLoaded(osmSHA, False);
+    Exit(False);
+  end;
 
   TOpenSSLLoader.SetModuleLoaded(osmSHA, True);
   Result := True;
