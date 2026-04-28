@@ -542,6 +542,7 @@ begin
   if (AReq.MinSecurityScore > 0) and
      (ADetails.SecurityScore < AReq.MinSecurityScore) then
   begin
+    ADetails.MeetsMinimumRequirements := False;
     Result := 0;
     Exit;
   end;
@@ -549,6 +550,7 @@ begin
   if (AReq.MinPerformanceScore > 0) and
      (ADetails.PerformanceScore < AReq.MinPerformanceScore) then
   begin
+    ADetails.MeetsMinimumRequirements := False;
     Result := 0;
     Exit;
   end;
@@ -556,6 +558,7 @@ begin
   if (AReq.MinCompatibilityLevel > 0) and
      (ADetails.CompatibilityLevel < AReq.MinCompatibilityLevel) then
   begin
+    ADetails.MeetsMinimumRequirements := False;
     Result := 0;
     Exit;
   end;
@@ -649,6 +652,10 @@ begin
 
       // 计算匹配分数
       Score := CalculateTotalMatchScore(Caps, ARequirements, Details);
+
+      // Only qualifying backends may participate in final selection.
+      if (not Details.MeetsMinimumRequirements) or (Score <= 0) then
+        Continue;
 
       // 更新最佳匹配
       if Score > BestScore then

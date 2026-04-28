@@ -113,6 +113,26 @@
   - PASS. Staged scope is OpenSSL core/helper/capability only: OpenSSL API loader/backend/context/connection/session files, OpenSSL focused contracts, OpenSSL historical plans, and working-memory updates.
   - No Wave C scripts/reports, broad docs, builder/config/SNI implementation files, or TLS 1.3 implementation files are staged in this batch.
 
+### Batch 3A backend selector minimum-score filtering verification
+
+- Focused selector regression:
+  - `export PATH="/opt/fpcupdeluxe/fpc/bin/x86_64-linux:$PATH" && mkdir -p tmp/backend_selector_minimum_score_filtering && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/backend_selector_minimum_score_filtering -FEtmp/backend_selector_minimum_score_filtering -otmp/backend_selector_minimum_score_filtering/test_backend_selector_minimum_score_filtering tests/test_backend_selector_minimum_score_filtering.pas && ./tmp/backend_selector_minimum_score_filtering/test_backend_selector_minimum_score_filtering`
+  - Result: PASS, `Tests Passed: 1`, `Tests Failed: 0`
+- Adjacent selector/context-builder regressions:
+  - `tests/test_backend_selector_basic.pas`
+  - Result: PASS by process exit 0; current harness prints the security-priority unavailable case as informational and ends with `所有测试完成`.
+  - `tests/config/test_context_builder_try.pas`
+  - Result: PASS, `Tests Passed: 66`, `Failed: 0`
+- Compile gate:
+  - `export PATH="/opt/fpcupdeluxe/fpc/bin/x86_64-linux:$PATH" && python3 scripts/compile_all_modules.py`
+  - Result: PASS, `编译成功: 185 (100.0%)`
+- Scoped hygiene:
+  - `git diff --cached --check`
+  - Result: PASS, no output.
+- Pre-commit review conclusion:
+  - PASS. Staged scope is backend selector minimum-score filtering only: production change in `src/fafafa.ssl.backend.selector.pas`, focused regression, one historical plan, and working-memory updates.
+  - No SNI runtime files, config/PKCS#11 contracts, Wave C scripts/reports, TLS13 implementation, or broad docs are staged in this batch.
+
 ## 2026-04-19 Progress (Execution / FreePascal completeness docs-history absorption batch)
 
 - 已根据 scoped diff + 两个子代理的范围结论，确定第二批只吸收：

@@ -25,6 +25,13 @@
   - On Linux, `THandle` is 4 bytes while `TLibHandle` is 8 bytes, so passing a dynamic library handle could truncate it and make `GetProcAddress` access an invalid handle.
   - The correct fix is to expose/use a real OpenSSL dynamic-library handle type (`TOpenSSLLibHandle`) for these low-level load functions, not to special-case the failing test.
 - OpenSSL capability truth should keep following loaded helper surface, not version constants alone; the current OpenSSL focused sweep exercises capability drift, loader readiness, DER private-key context loading, and connection/context/session BIO guard behavior.
+- Batch 3A backend selector root cause:
+  - `CalculateTotalMatchScore(...)` returned `0` for unmet minimum security/performance/compatibility thresholds but could leave `MeetsMinimumRequirements = True` from the earlier required-feature phase.
+  - `SelectBestBackends(...)` previously allowed zero-score entries to leak into the returned match array.
+  - The narrow fix is to mark failed minimum-score thresholds as not meeting minimum requirements and skip non-qualifying or zero-score candidates before final selection.
+- This backend selector batch is intentionally smaller than the larger builder/config/SNI family:
+  - included: `src/fafafa.ssl.backend.selector.pas`, focused selector regression, and the backend selector plan
+  - excluded: context-builder import/export/merge parity, SNI runtime behavior, PKCS#11 docs/contracts, broad docs/API updates
 
 ## 2026-04-19 Findings (Execution / FreePascal completeness docs-history absorption batch)
 - 当前最高 ROI 的第二批，不是继续碰 `src/`，而是把已经完成的 FreePascal completeness 主线对应的 docs truth 和 execution history 入库，减少后续继续/重扫的上下文成本。
