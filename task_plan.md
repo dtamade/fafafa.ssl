@@ -86,6 +86,15 @@
 - [x] Run scoped diff hygiene.
 - [x] Review and commit scoped certificate / encoding BIO guard batch.
 
+### Batch 4B: OpenSSL helper guard contract absorption
+- [x] Verify CMS helper/symbol contracts.
+- [x] Verify PEM helper/symbol contracts.
+- [x] Verify PKCS / PKCS#12 helper/symbol contracts.
+- [x] Verify PKCS#7 helper/symbol contracts.
+- [x] Verify SRP optional-symbol and TXT_DB BIO helper contracts.
+- [x] Run scoped diff hygiene.
+- [x] Review and commit tests/plans-only OpenSSL helper contract batch.
+
 ## 2026-04-19 Plan (Execution / FreePascal completeness docs-history absorption batch)
 
 ### Goal

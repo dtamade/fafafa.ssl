@@ -24818,3 +24818,17 @@ Evidence:
 - Scoped review conclusion before commit:
   - PASS. Staged files are limited to certificate/encoding BIO guard implementation, matching focused contracts, plan files, and working-memory updates.
   - Focused BIO contracts are green, full module compile is 185/185, and `git diff --cached --check` is clean.
+
+## 2026-04-29 Progress (Batch 4B OpenSSL helper guard contract absorption)
+- Verified tests/plans-only OpenSSL helper guard batch:
+  - CMS: `test_cms_helper_bio_contract`, `test_cms_decrypt_symbol_contract`, `test_cms_encrypt_symbol_contract`, `test_cms_sign_symbol_contract`, `test_cms_verify_symbol_contract`: PASS
+  - PEM: `test_pem_helper_bio_contract`, `test_pem_certificate_symbol_contract`, `test_pem_encrypted_privatekey_cipher_symbol_contract`, `test_pem_key_read_symbol_contract`, `test_pem_key_save_symbol_contract`: PASS
+  - PKCS / PKCS#12: `test_pkcs_helper_bio_contract`, `test_pkcs12_create_symbol_contract`, `test_pkcs12_d2i_symbol_contract`, `test_pkcs12_i2d_symbol_contract`, `test_pkcs12_parse_symbol_contract`: PASS
+  - PKCS#7: `test_pkcs7_helper_bio_contract`, `test_pkcs7_sign_symbol_contract`, `test_pkcs7_verify_symbol_contract`: PASS
+  - SRP / TXT_DB: `test_srp_helper_optional_symbol_contract`, `test_txt_db_helper_bio_contract`: PASS
+- Scope decision:
+  - This batch is tests/plans-only; no `src/` files are included.
+  - Remaining OpenSSL DES/MD handle-type edits stay out for a separate source batch.
+- Scoped review conclusion before commit:
+  - PASS. Staged files are helper guard contract tests, matching plan files, and working-memory updates only.
+  - 20/20 focused OpenSSL helper contracts pass, and `git diff --cached --check` is clean.
