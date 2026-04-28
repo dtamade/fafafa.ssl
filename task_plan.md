@@ -95,6 +95,12 @@
 - [x] Run scoped diff hygiene.
 - [x] Review and commit tests/plans-only OpenSSL helper contract batch.
 
+### Batch 4C: OpenSSL DES/MD loader handle type cleanup
+- [x] Verify focused compile for `src/fafafa.ssl.openssl.api.des.pas`.
+- [x] Verify focused compile for `src/fafafa.ssl.openssl.api.md.pas`.
+- [x] Run scoped diff hygiene.
+- [x] Review and commit scoped OpenSSL handle type cleanup.
+
 ## 2026-04-19 Plan (Execution / FreePascal completeness docs-history absorption batch)
 
 ### Goal

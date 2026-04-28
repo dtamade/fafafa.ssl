@@ -10927,3 +10927,7 @@ Verification:
 - `cert.advanced`, `cert.builder.impl`, `cert.pinning`, and `encoding` can close as an independent batch because their tests exercise missing BIO helper behavior directly.
 - `cert.pinning` no longer needs a memory BIO for SPKI hashing; it can DER-encode the public key directly via `i2d_PUBKEY`, so nil `BIO_new` / `BIO_s_mem` / `BIO_free` no longer breaks public-key pin validation.
 - OCSP/CT/stapling changes are intentionally excluded from this batch; they carry behavior changes beyond BIO helper readiness and need their own verification surface.
+
+## 2026-04-29 Findings (Batch 4C OpenSSL DES/MD handle type cleanup)
+- DES and MD module loaders still used `THandle` even though the OpenSSL loader now carries native library handles through `TOpenSSLLibHandle`.
+- The fix is signature-only and keeps lookup behavior unchanged; its main value is preventing future 64-bit handle truncation drift in these optional modules.

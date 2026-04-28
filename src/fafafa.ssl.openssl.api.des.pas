@@ -191,7 +191,7 @@ var
   DES_decrypt3: TDES_decrypt3 = nil;
 
 // Helper functions
-function LoadDESFunctions(ALibHandle: THandle): Boolean;
+function LoadDESFunctions(ALibHandle: TOpenSSLLibHandle): Boolean;
 procedure UnloadDESFunctions;
 function IsDESLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmDES) instead';
 
@@ -247,7 +247,7 @@ const
     (Name: 'DES_decrypt3';          FuncPtr: @DES_decrypt3;          Required: False)
   );
 
-function LoadDESFunctions(ALibHandle: THandle): Boolean;
+function LoadDESFunctions(ALibHandle: TOpenSSLLibHandle): Boolean;
 begin
   Result := False;
 

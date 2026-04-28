@@ -24832,3 +24832,14 @@ Evidence:
 - Scoped review conclusion before commit:
   - PASS. Staged files are helper guard contract tests, matching plan files, and working-memory updates only.
   - 20/20 focused OpenSSL helper contracts pass, and `git diff --cached --check` is clean.
+
+## 2026-04-29 Progress (Batch 4C OpenSSL DES/MD handle type cleanup)
+- Reviewed source diff:
+  - `LoadDESFunctions` and `LoadMDFunctions` now accept `TOpenSSLLibHandle` instead of `THandle`.
+  - No behavior changes beyond matching the loader's native handle type.
+- Verification:
+  - focused compile of `src/fafafa.ssl.openssl.api.des.pas`: PASS
+  - focused compile of `src/fafafa.ssl.openssl.api.md.pas`: PASS
+- Scoped review conclusion before commit:
+  - PASS. Staged files are limited to DES/MD OpenSSL API handle type cleanup plus working-memory updates.
+  - Focused compiles pass and `git diff --cached --check` is clean.

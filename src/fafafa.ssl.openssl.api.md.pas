@@ -132,7 +132,7 @@ var
   RIPEMD160_Transform: TRIPEMD160_Transform = nil;
 
 // Helper functions
-function LoadMDFunctions(ALibHandle: THandle): Boolean;
+function LoadMDFunctions(ALibHandle: TOpenSSLLibHandle): Boolean;
 procedure UnloadMDFunctions;
 function IsMDLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmMD) instead';
 
@@ -179,7 +179,7 @@ const
     (Name: 'RIPEMD160_Transform'; FuncPtr: @RIPEMD160_Transform; Required: False)
   );
 
-function LoadMDFunctions(ALibHandle: THandle): Boolean;
+function LoadMDFunctions(ALibHandle: TOpenSSLLibHandle): Boolean;
 begin
   Result := False;
   if ALibHandle = 0 then Exit;
