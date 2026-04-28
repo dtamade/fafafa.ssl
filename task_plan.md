@@ -18,11 +18,11 @@
 - [x] Start read-only parallel explorers for OpenSSL/cert-utils, TLS 1.3, Wave C, and builder/config/SNI batching.
 - [x] Write this total-control plan and record the batch boundaries.
 - [x] Run baseline non-invasive verification.
-- [ ] Commit the planning/working-memory boundary if clean.
+- [x] Commit the planning/working-memory boundary if clean.
 - [ ] Execute Batch 1 through Batch 5, each with focused verification, review conclusion, and commit.
 
 ### Status
-- In progress. Baseline compile gate and minimal CI gate are fresh GREEN on the current dirty tree, so the next step is scoped planning-boundary commit, then topic batches.
+- In progress. Planning boundary and Batch 0A gate hardening are committed. Batch 1 cert-utils / certchain hardening is verified and ready for scoped review + commit.
 
 ### Batch 0A: Default gate hardening
 - [x] Verify shell syntax for changed gate scripts and new contracts.
@@ -32,6 +32,15 @@
 - [x] Verify phase2 dry-run fast-local paths stay under `tmp/`.
 - [x] Verify cleanup script covers new fast-local output directories while preserving safe dry-run defaults.
 - [x] Commit scoped gate hardening batch.
+
+### Batch 1: Cert-utils and certchain hardening
+- [x] Verify previously failing `test_cert_utils_verify_chain_bio_contract` is green.
+- [x] Verify adjacent `VerifyChain` bundled intermediate regressions are green.
+- [x] Run the full `tests/test_cert_utils_*_contract.pas` sweep.
+- [x] Run certchain-specific revocation / verify-flags focused regressions.
+- [x] Run `python3 scripts/compile_all_modules.py`.
+- [x] Run scoped diff hygiene.
+- [x] Review and commit scoped cert-utils / certchain batch.
 
 ## 2026-04-19 Plan (Execution / FreePascal completeness docs-history absorption batch)
 

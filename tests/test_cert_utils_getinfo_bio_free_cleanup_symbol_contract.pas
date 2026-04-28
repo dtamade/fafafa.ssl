@@ -1,0 +1,463 @@
+program test_cert_utils_getinfo_bio_free_cleanup_symbol_contract;
+
+{$mode ObjFPC}{$H+}
+
+uses
+  SysUtils, Classes,
+  fafafa.ssl.base,
+  fafafa.ssl.factory,
+  fafafa.ssl,
+  fafafa.ssl.cert.utils,
+  fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.bio,
+  fafafa.ssl.openssl.api.x509,
+  fafafa.ssl.openssl.api.pem,
+  fafafa.ssl.openssl.api.evp,
+  fafafa.ssl.openssl.api.stack,
+  fafafa.ssl.openssl.api.x509v3;
+
+const
+  CERT_FIXTURE_PATH = 'tests/certs/san-test.pem';
+
+var
+  GLib: ISSLLibrary = nil;
+  TotalTests: Integer = 0;
+  PassedTests: Integer = 0;
+  FailedTests: Integer = 0;
+  SkippedTests: Integer = 0;
+  GOriginalBIOFree: TBIO_free = nil;
+  GOriginalX509Free: TX509_free = nil;
+  GX509FreeCallCount: Integer = 0;
+  GUseLateBIOFreeLossStub: Boolean = False;
+
+procedure AssertTrue(const AName: string; ACondition: Boolean; const ADetail: string = '');
+begin
+  Inc(TotalTests);
+  if ACondition then
+  begin
+    Inc(PassedTests);
+    WriteLn('[PASS] ', AName);
+  end
+  else
+  begin
+    Inc(FailedTests);
+    WriteLn('[FAIL] ', AName);
+    if ADetail <> '' then
+      WriteLn('       ', ADetail);
+  end;
+end;
+
+procedure MarkSkip(const AName, AReason: string);
+begin
+  Inc(TotalTests);
+  Inc(SkippedTests);
+  WriteLn('[SKIP] [capability] ', AName, ' - ', AReason);
+end;
+
+procedure StubX509FreeDisableBIOFreeAfterFirstCall(x: PX509); cdecl;
+begin
+  Inc(GX509FreeCallCount);
+
+  if Assigned(GOriginalX509Free) then
+    GOriginalX509Free(x);
+
+  if GX509FreeCallCount = 1 then
+    BIO_free := nil;
+end;
+
+procedure RearmLateBIOFreeLossStub;
+begin
+  if not GUseLateBIOFreeLossStub then
+    Exit;
+
+  GX509FreeCallCount := 0;
+  BIO_free := GOriginalBIOFree;
+  X509_free := @StubX509FreeDisableBIOFreeAfterFirstCall;
+end;
+
+function LoadFixturePEM: string;
+var
+  LText: TStringList;
+begin
+  LText := TStringList.Create;
+  try
+    LText.LoadFromFile(CERT_FIXTURE_PATH);
+    Result := LText.Text;
+  finally
+    LText.Free;
+  end;
+end;
+
+procedure WarmupGetInfo(
+  const APEM: string;
+  out AExpectedSubject: string;
+  out AExpectedIssuer: string;
+  out AExpectedVersion: Integer;
+  out AExpectedNotBefore: TDateTime;
+  out AExpectedNotAfter: TDateTime;
+  out AExpectedSerialNumber: string;
+  out AExpectedSignatureAlgorithm: string;
+  out AExpectedPublicKeyType: string;
+  out AExpectedPublicKeyBits: Integer;
+  out AExpectedIsCA: Boolean;
+  out AExpectedKeyUsage: string;
+  AExpectedSubjectAltNames: TStrings
+);
+var
+  LInfo: TCertInfo;
+begin
+  LInfo := TCertificateUtils.GetInfo(APEM);
+  try
+    if LInfo.Subject = '' then
+      raise Exception.Create('GetInfo warmup returned empty subject');
+    if LInfo.Issuer = '' then
+      raise Exception.Create('GetInfo warmup returned empty issuer');
+    if LInfo.Version = 0 then
+      raise Exception.Create('GetInfo warmup returned zero version');
+    if LInfo.NotBefore = 0 then
+      raise Exception.Create('GetInfo warmup returned zero NotBefore');
+    if LInfo.NotAfter = 0 then
+      raise Exception.Create('GetInfo warmup returned zero NotAfter');
+    if LInfo.SerialNumber = '' then
+      raise Exception.Create('GetInfo warmup returned empty serial number');
+    if LInfo.PublicKeyType = '' then
+      raise Exception.Create('GetInfo warmup returned empty public key type');
+    if LInfo.PublicKeyBits = 0 then
+      raise Exception.Create('GetInfo warmup returned zero public key bits');
+    if LInfo.KeyUsage = '' then
+      raise Exception.Create('GetInfo warmup returned empty key usage');
+    if not Assigned(LInfo.SubjectAltNames) then
+      raise Exception.Create('GetInfo warmup returned nil SubjectAltNames');
+    if LInfo.SubjectAltNames.Count = 0 then
+      raise Exception.Create('GetInfo warmup returned empty SubjectAltNames');
+    AExpectedSubject := LInfo.Subject;
+    AExpectedIssuer := LInfo.Issuer;
+    AExpectedVersion := LInfo.Version;
+    AExpectedNotBefore := LInfo.NotBefore;
+    AExpectedNotAfter := LInfo.NotAfter;
+    AExpectedSerialNumber := LInfo.SerialNumber;
+    AExpectedSignatureAlgorithm := LInfo.SignatureAlgorithm;
+    AExpectedPublicKeyType := LInfo.PublicKeyType;
+    AExpectedPublicKeyBits := LInfo.PublicKeyBits;
+    AExpectedIsCA := LInfo.IsCA;
+    AExpectedKeyUsage := LInfo.KeyUsage;
+    AExpectedSubjectAltNames.Assign(LInfo.SubjectAltNames);
+  finally
+    if Assigned(LInfo.SubjectAltNames) then
+      LInfo.SubjectAltNames.Free;
+  end;
+end;
+
+procedure AssertBIOFreeCleanupGuardInfo(
+  const AName: string;
+  const AInfo: TCertInfo;
+  const AExpectedSubject: string;
+  const AExpectedIssuer: string;
+  const AExpectedVersion: Integer;
+  const AExpectedNotBefore: TDateTime;
+  const AExpectedNotAfter: TDateTime;
+  const AExpectedSerialNumber: string;
+  const AExpectedSignatureAlgorithm: string;
+  const AExpectedPublicKeyType: string;
+  const AExpectedPublicKeyBits: Integer;
+  const AExpectedIsCA: Boolean;
+  const AExpectedKeyUsage: string;
+  const AExpectedSubjectAltNames: TStrings
+);
+begin
+  AssertTrue(AName + ' should preserve subject', AInfo.Subject = AExpectedSubject,
+    'Subject=' + AInfo.Subject);
+  AssertTrue(AName + ' should preserve issuer', AInfo.Issuer = AExpectedIssuer,
+    'Issuer=' + AInfo.Issuer);
+  AssertTrue(AName + ' should preserve version', AInfo.Version = AExpectedVersion,
+    'Version=' + IntToStr(AInfo.Version));
+  AssertTrue(AName + ' should preserve NotBefore', AInfo.NotBefore = AExpectedNotBefore,
+    'NotBefore=' + DateTimeToStr(AInfo.NotBefore));
+  AssertTrue(AName + ' should preserve NotAfter', AInfo.NotAfter = AExpectedNotAfter,
+    'NotAfter=' + DateTimeToStr(AInfo.NotAfter));
+  AssertTrue(AName + ' should preserve serial number', AInfo.SerialNumber = AExpectedSerialNumber,
+    'SerialNumber=' + AInfo.SerialNumber);
+  AssertTrue(AName + ' should preserve signature algorithm',
+    AInfo.SignatureAlgorithm = AExpectedSignatureAlgorithm,
+    'SignatureAlgorithm=' + AInfo.SignatureAlgorithm);
+  AssertTrue(AName + ' should preserve public key type',
+    AInfo.PublicKeyType = AExpectedPublicKeyType,
+    'PublicKeyType=' + AInfo.PublicKeyType);
+  AssertTrue(AName + ' should preserve public key bits',
+    AInfo.PublicKeyBits = AExpectedPublicKeyBits,
+    'PublicKeyBits=' + IntToStr(AInfo.PublicKeyBits));
+  AssertTrue(AName + ' should preserve IsCA',
+    AInfo.IsCA = AExpectedIsCA,
+    'IsCA=' + BoolToStr(AInfo.IsCA, True));
+  AssertTrue(AName + ' should preserve key usage',
+    AInfo.KeyUsage = AExpectedKeyUsage,
+    'KeyUsage=' + AInfo.KeyUsage);
+  AssertTrue(AName + ' should allocate SubjectAltNames', Assigned(AInfo.SubjectAltNames),
+    'SubjectAltNames=nil');
+  if Assigned(AInfo.SubjectAltNames) then
+  begin
+    AssertTrue(AName + ' should preserve SubjectAltNames count',
+      AInfo.SubjectAltNames.Count = AExpectedSubjectAltNames.Count,
+      'Count=' + IntToStr(AInfo.SubjectAltNames.Count));
+    AssertTrue(AName + ' should preserve SubjectAltNames entries',
+      AInfo.SubjectAltNames.Text = AExpectedSubjectAltNames.Text,
+      'Actual=' + StringReplace(AInfo.SubjectAltNames.Text, LineEnding, ' | ', [rfReplaceAll]));
+  end;
+end;
+
+procedure AssertGetInfoSafeDegrade(
+  const AName, APEM, AExpectedSubject, AExpectedIssuer: string;
+  const AExpectedVersion: Integer;
+  const AExpectedNotBefore: TDateTime;
+  const AExpectedNotAfter: TDateTime;
+  const AExpectedSerialNumber: string;
+  const AExpectedSignatureAlgorithm: string;
+  const AExpectedPublicKeyType: string;
+  const AExpectedPublicKeyBits: Integer;
+  const AExpectedIsCA: Boolean;
+  const AExpectedKeyUsage: string;
+  const AExpectedSubjectAltNames: TStrings
+);
+var
+  LRaised: Boolean;
+  LDetail: string;
+  LInfo: TCertInfo;
+  LTryRaised: Boolean;
+  LTryDetail: string;
+  LTryInfo: TCertInfo;
+  LTryResult: Boolean;
+begin
+  LRaised := False;
+  LDetail := '';
+  RearmLateBIOFreeLossStub;
+  try
+    LInfo := TCertificateUtils.GetInfo(APEM);
+  except
+    on E: Exception do
+    begin
+      LRaised := True;
+      LDetail := E.ClassName + ': ' + E.Message;
+    end;
+  end;
+
+  AssertTrue(AName + ' should not raise', not LRaised, LDetail);
+  if not LRaised then
+  begin
+    try
+      AssertBIOFreeCleanupGuardInfo(
+        AName,
+        LInfo,
+        AExpectedSubject,
+        AExpectedIssuer,
+        AExpectedVersion,
+        AExpectedNotBefore,
+        AExpectedNotAfter,
+        AExpectedSerialNumber,
+        AExpectedSignatureAlgorithm,
+        AExpectedPublicKeyType,
+        AExpectedPublicKeyBits,
+        AExpectedIsCA,
+        AExpectedKeyUsage,
+        AExpectedSubjectAltNames
+      );
+    finally
+      if Assigned(LInfo.SubjectAltNames) then
+        LInfo.SubjectAltNames.Free;
+    end;
+  end;
+
+  LTryRaised := False;
+  LTryDetail := '';
+  LTryResult := False;
+  FillChar(LTryInfo, SizeOf(LTryInfo), 0);
+  RearmLateBIOFreeLossStub;
+  try
+    LTryResult := TCertificateUtils.TryGetInfo(APEM, LTryInfo);
+  except
+    on E: Exception do
+    begin
+      LTryRaised := True;
+      LTryDetail := E.ClassName + ': ' + E.Message;
+    end;
+  end;
+
+  AssertTrue(AName + ' Try wrapper should not raise', not LTryRaised, LTryDetail);
+  if not LTryRaised then
+  begin
+    try
+      AssertBIOFreeCleanupGuardInfo(
+        AName + ' Try wrapper',
+        LTryInfo,
+        AExpectedSubject,
+        AExpectedIssuer,
+        AExpectedVersion,
+        AExpectedNotBefore,
+        AExpectedNotAfter,
+        AExpectedSerialNumber,
+        AExpectedSignatureAlgorithm,
+        AExpectedPublicKeyType,
+        AExpectedPublicKeyBits,
+        AExpectedIsCA,
+        AExpectedKeyUsage,
+        AExpectedSubjectAltNames
+      );
+      AssertTrue(AName + ' Try wrapper should return True',
+        LTryResult,
+        'TryGetInfo returned False');
+    finally
+      if Assigned(LTryInfo.SubjectAltNames) then
+        LTryInfo.SubjectAltNames.Free;
+    end;
+  end;
+end;
+
+procedure TestGetInfoShouldFailGracefullyWhenBIOFreeBecomesUnavailableDuringCleanup;
+var
+  LFixturePEM: string;
+  LExpectedSubject: string;
+  LExpectedIssuer: string;
+  LExpectedVersion: Integer;
+  LExpectedNotBefore: TDateTime;
+  LExpectedNotAfter: TDateTime;
+  LExpectedSerialNumber: string;
+  LExpectedSignatureAlgorithm: string;
+  LExpectedPublicKeyType: string;
+  LExpectedPublicKeyBits: Integer;
+  LExpectedIsCA: Boolean;
+  LExpectedKeyUsage: string;
+  LExpectedSubjectAltNames: TStringList;
+  LOriginalBIOFree: TBIO_free;
+  LOriginalX509Free: TX509_free;
+begin
+  WriteLn;
+  WriteLn('=== Certificate utils GetInfo BIO_free cleanup symbol guard ===');
+
+  if (not Assigned(BIO_new_mem_buf)) or
+     (not Assigned(BIO_free)) or
+     (not Assigned(PEM_read_bio_X509)) or
+     (not Assigned(X509_get_subject_name)) or
+     (not Assigned(X509_get_issuer_name)) or
+     (not Assigned(X509_get_version)) or
+     (not Assigned(X509_get_notBefore)) or
+     (not Assigned(X509_get_notAfter)) or
+     (not Assigned(X509_get_serialNumber)) or
+     (not Assigned(X509_get_pubkey)) or
+     (not Assigned(EVP_PKEY_get_id)) or
+     (not Assigned(EVP_PKEY_get_bits)) or
+     (not Assigned(X509_get_ext_d2i)) or
+     (not Assigned(OPENSSL_sk_num)) or
+     (not Assigned(OPENSSL_sk_value)) or
+     (not Assigned(GENERAL_NAME_get0_value)) or
+     (not Assigned(GENERAL_NAMES_free)) or
+     (not Assigned(X509_free)) then
+  begin
+    MarkSkip('certificate utils getinfo BIO_free cleanup symbol contract',
+      'required baseline OpenSSL BIO/PEM/X509/EVP/stack/x509v3 helpers are unavailable');
+    Exit;
+  end;
+
+  LFixturePEM := LoadFixturePEM;
+  if LFixturePEM = '' then
+    raise Exception.Create('certificate fixture is empty');
+
+  LExpectedSubjectAltNames := TStringList.Create;
+  try
+    WarmupGetInfo(
+      LFixturePEM,
+      LExpectedSubject,
+      LExpectedIssuer,
+      LExpectedVersion,
+      LExpectedNotBefore,
+      LExpectedNotAfter,
+      LExpectedSerialNumber,
+      LExpectedSignatureAlgorithm,
+      LExpectedPublicKeyType,
+      LExpectedPublicKeyBits,
+      LExpectedIsCA,
+      LExpectedKeyUsage,
+      LExpectedSubjectAltNames
+    );
+
+    LOriginalBIOFree := BIO_free;
+    LOriginalX509Free := X509_free;
+    GOriginalBIOFree := LOriginalBIOFree;
+    GOriginalX509Free := LOriginalX509Free;
+    GUseLateBIOFreeLossStub := True;
+    try
+      AssertGetInfoSafeDegrade(
+        'GetInfo when BIO_free becomes unavailable during cleanup',
+        LFixturePEM,
+        LExpectedSubject,
+        LExpectedIssuer,
+        LExpectedVersion,
+        LExpectedNotBefore,
+        LExpectedNotAfter,
+        LExpectedSerialNumber,
+        LExpectedSignatureAlgorithm,
+        LExpectedPublicKeyType,
+        LExpectedPublicKeyBits,
+        LExpectedIsCA,
+        LExpectedKeyUsage,
+        LExpectedSubjectAltNames
+      );
+    finally
+      GUseLateBIOFreeLossStub := False;
+      BIO_free := LOriginalBIOFree;
+      X509_free := LOriginalX509Free;
+      GOriginalBIOFree := nil;
+      GOriginalX509Free := nil;
+      GX509FreeCallCount := 0;
+    end;
+  finally
+    LExpectedSubjectAltNames.Free;
+  end;
+end;
+
+begin
+  WriteLn('========================================');
+  WriteLn('Certificate Utils GetInfo BIO_free Cleanup Symbol Contract Test');
+  WriteLn('========================================');
+
+  try
+    GLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
+    if (not Assigned(GLib)) or (not GLib.Initialize) then
+      MarkSkip('certificate utils getinfo BIO_free cleanup symbol contract',
+        'failed to initialize OpenSSL library');
+
+    if SkippedTests = 0 then
+    begin
+      LoadOpenSSLCore();
+      LoadOpenSSLBIO();
+      LoadOpenSSLX509();
+      if not LoadOpenSSLPEM(GetCryptoLibHandle) then
+        raise Exception.Create('failed to load PEM support');
+      if not LoadEVP(GetCryptoLibHandle) then
+        raise Exception.Create('failed to load EVP support');
+      LoadStackFunctions();
+      LoadX509V3Functions(GetCryptoLibHandle);
+    end;
+
+    if SkippedTests = 0 then
+      TestGetInfoShouldFailGracefullyWhenBIOFreeBecomesUnavailableDuringCleanup;
+
+    WriteLn;
+    WriteLn('========================================');
+    WriteLn('Summary');
+    WriteLn('========================================');
+    WriteLn('Total tests: ', TotalTests);
+    WriteLn('Passed: ', PassedTests);
+    WriteLn('Failed: ', FailedTests);
+    WriteLn('Skipped: ', SkippedTests);
+
+    if FailedTests > 0 then
+      Halt(1);
+  except
+    on E: Exception do
+    begin
+      WriteLn('FATAL: ', E.ClassName + ': ' + E.Message);
+      Halt(2);
+    end;
+  end;
+end.

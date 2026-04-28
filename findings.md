@@ -15,6 +15,11 @@
   - `compile_all_modules.py` now requires 100% module compile success.
   - `run_minimal_ci_gate.sh` executes argv arrays instead of `eval`-built strings.
   - fast-local phase2 output is scoped under `tmp/`, keeping the dirty worktree stable during dry-runs.
+- Batch 1 belongs together as cert-utils / certchain hardening:
+  - `TCertificateUtils.VerifyChain(...)` is a generic chain helper with no CRL or EKU input channel, so it should use `DefaultChainVerifyOptions`.
+  - `StrictChainVerifyOptions` remains meaningful through explicit verifier / runtime flag paths, where EKU and caller-provided CRL material can fail closed.
+  - The previous `VerifyChain BIO` failure was not an OpenSSL BIO regression; it was the generic helper accidentally inheriting strict-chain expectations.
+- Certchain revocation behavior should continue to distinguish revoked from unavailable CRL truth instead of warning and silently accepting when revocation checks are requested.
 
 ## 2026-04-19 Findings (Execution / FreePascal completeness docs-history absorption batch)
 - 当前最高 ROI 的第二批，不是继续碰 `src/`，而是把已经完成的 FreePascal completeness 主线对应的 docs truth 和 execution history 入库，减少后续继续/重扫的上下文成本。

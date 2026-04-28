@@ -15,7 +15,7 @@ interface
 
 uses
   Classes, SysUtils, Math,
-  fafafa.ssl.base;
+  fafafa.ssl.base, fafafa.ssl.crl, fafafa.ssl.x509;
 
 type
   { 证书链验证选项 }
@@ -42,6 +42,7 @@ type
     TrustedRoot: Boolean;
     SelfSigned: Boolean;
     HostnameMatch: Boolean;
+    RevocationStatus: Cardinal;
     Warnings: TStringList;
   end;
   
@@ -100,6 +101,8 @@ type
     FTrustedStore: ISSLCertificateStore;
     FIntermediateStore: ISSLCertificateStore;
     FCRLStore: TStringList;
+    FLastRevocationStatus: Cardinal;
+    FLastRevocationError: string;
     
     function FindIssuer(ACert: ISSLCertificate): ISSLCertificate;
     function IsRootCertificate(ACert: ISSLCertificate): Boolean;
@@ -107,6 +110,8 @@ type
     function ValidatePathLength(const AChain: TSSLCertificateArray): Boolean;
     function MatchHostname(const ACertName, AHostname: string): Boolean;
     function ParseSubjectAltNames(ACert: ISSLCertificate): TStringList;
+    function CheckCertificateExtendedKeyUsage(ACert: ISSLCertificate;
+      AIsCA: Boolean): Boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -172,6 +177,8 @@ begin
   inherited Create;
   FOptions := DefaultChainVerifyOptions;
   FCRLStore := TStringList.Create;
+  FLastRevocationStatus := 0;
+  FLastRevocationError := '';
 end;
 
 destructor TSSLCertificateChainVerifier.Destroy;
@@ -212,7 +219,9 @@ end;
 
 procedure TSSLCertificateChainVerifier.SetCRLStore(ACRLs: TStringList);
 begin
-  FCRLStore.Assign(ACRLs);
+  FCRLStore.Clear;
+  if ACRLs <> nil then
+    FCRLStore.Assign(ACRLs);
 end;
 
 function TSSLCertificateChainVerifier.GetCRLStore: TStringList;
@@ -475,42 +484,146 @@ begin
   end;
 end;
 
-function TSSLCertificateChainVerifier.CheckCertificateRevocation(ACert: ISSLCertificate): Boolean;
+function TSSLCertificateChainVerifier.CheckCertificateExtendedKeyUsage(
+  ACert: ISSLCertificate; AIsCA: Boolean): Boolean;
 var
-  VerifyResult: TSSLCertVerifyResult;
-  Flags: TSSLCertVerifyFlags;
+  LUsage: TSSLStringArray;
+  I: Integer;
 begin
-  Result := True;
-  
+  Result := False;
+
   if ACert = nil then
     Exit;
-  
-  // 如果没有信任存储，则无法进行有意义的吊销检查
-  // 为保持向后兼容，这种情况下不认为证书已被吊销
-  if not Assigned(FTrustedStore) then
-    Exit;
-  
-  // 构造验证标志：请求检查吊销状态/CRL
-  Flags := [];
-  Include(Flags, sslCertVerifyCheckRevocation);
-  Include(Flags, sslCertVerifyCheckCRL);
-  
-  // 如果链验证选项中未启用时间检查，则在底层验证中忽略过期错误
-  if not (cvoCheckTime in FOptions) then
-    Include(Flags, sslCertVerifyIgnoreExpiry);
-  
-  // 如果允许自签名证书，则在底层验证中放宽自签名限制
-  if cvoAllowSelfSigned in FOptions then
-    Include(Flags, sslCertVerifyAllowSelfSigned);
-  
-  // 调用底层证书实现执行实际的撤销检查
-  if not ACert.VerifyEx(FTrustedStore, Flags, VerifyResult) then
+
+  if AIsCA or ACert.IsCA then
+    Exit(True);
+
+  LUsage := ACert.GetExtendedKeyUsage;
+  for I := 0 to High(LUsage) do
   begin
-    // 仅当底层明确标记为“已吊销”时才认为吊销检查失败
-    if VerifyResult.RevocationStatus = 1 then
-      Result := False
+    if SameText(Trim(LUsage[I]), 'serverAuth') then
+      Exit(True);
+  end;
+end;
+
+function TSSLCertificateChainVerifier.CheckCertificateRevocation(ACert: ISSLCertificate): Boolean;
+var
+  LCertificateDER: TBytes;
+  LCertificate: TX509Certificate;
+  LCRL: TX509CRL;
+  LCRLIndex: Integer;
+  LCertificateIssuer: string;
+  LHasApplicableCRL: Boolean;
+  LHasUsableCRL: Boolean;
+  LLastMaterialError: string;
+begin
+  Result := False;
+  FLastRevocationStatus := 0;
+  FLastRevocationError := '';
+
+  if ACert = nil then
+  begin
+    FLastRevocationStatus := 2;
+    FLastRevocationError := 'Certificate revocation/CRL verification requires a certificate';
+    Exit;
+  end;
+
+  if (FCRLStore = nil) or (FCRLStore.Count = 0) then
+  begin
+    FLastRevocationStatus := 2;
+    FLastRevocationError := 'No caller-provided CRL material is configured';
+    Exit;
+  end;
+
+  LCertificateDER := ACert.SaveToDER;
+  if Length(LCertificateDER) = 0 then
+  begin
+    FLastRevocationStatus := 2;
+    FLastRevocationError := 'Certificate revocation/CRL verification requires certificate DER material';
+    Exit;
+  end;
+
+  LCertificate := TX509Certificate.Create;
+  try
+    try
+      LCertificate.LoadFromDER(LCertificateDER);
+    except
+      on E: Exception do
+      begin
+        FLastRevocationStatus := 2;
+        FLastRevocationError := 'Failed to parse certificate DER for revocation/CRL verification: ' + E.Message;
+        Exit;
+      end;
+    end;
+
+    LCertificateIssuer := Trim(LCertificate.Issuer.ToString);
+    LHasApplicableCRL := False;
+    LHasUsableCRL := False;
+    LLastMaterialError := '';
+
+    for LCRLIndex := 0 to FCRLStore.Count - 1 do
+    begin
+      if Trim(FCRLStore[LCRLIndex]) = '' then
+        Continue;
+
+      LCRL := TX509CRL.Create;
+      try
+        try
+          LCRL.LoadFromPEM(FCRLStore[LCRLIndex]);
+        except
+          on E: Exception do
+          begin
+            LLastMaterialError := Format(
+              'Failed to parse configured CRL material #%d: %s',
+              [LCRLIndex + 1, E.Message]
+            );
+            Continue;
+          end;
+        end;
+
+        if not SameText(Trim(LCRL.Issuer.ToString), LCertificateIssuer) then
+          Continue;
+
+        LHasApplicableCRL := True;
+
+        if not LCRL.IsValid then
+        begin
+          if LCRL.IsExpired then
+            LLastMaterialError := 'Configured CRL material for certificate issuer is expired'
+          else
+            LLastMaterialError := 'Configured CRL material for certificate issuer is not yet valid';
+          Continue;
+        end;
+
+        LHasUsableCRL := True;
+        if LCRL.IsRevoked(LCertificate.SerialNumber) then
+        begin
+          FLastRevocationStatus := 1;
+          FLastRevocationError := 'Certificate has been revoked by caller-provided CRL material';
+          Exit(False);
+        end;
+      finally
+        LCRL.Free;
+      end;
+    end;
+
+    if LHasUsableCRL then
+    begin
+      FLastRevocationStatus := 0;
+      FLastRevocationError := '';
+      Result := True;
+      Exit;
+    end;
+
+    FLastRevocationStatus := 2;
+    if LLastMaterialError <> '' then
+      FLastRevocationError := LLastMaterialError
+    else if LHasApplicableCRL then
+      FLastRevocationError := 'Configured CRL material for certificate issuer is unavailable'
     else
-      Result := True; // 其他错误交由时间/签名等检查处理
+      FLastRevocationError := 'No applicable caller-provided CRL material found for certificate issuer';
+  finally
+    LCertificate.Free;
   end;
 end;
 
@@ -626,6 +739,7 @@ begin
     Result.TrustedRoot := False;
     Result.SelfSigned := IsSelfSigned(ACert);
     Result.HostnameMatch := False;
+    Result.RevocationStatus := 0;
     Result.Warnings := nil;
   end;
 end;
@@ -644,12 +758,10 @@ begin
   Result.TrustedRoot := False;
   Result.SelfSigned := False;
   Result.HostnameMatch := True;
+  Result.RevocationStatus := 0;
   Result.Warnings := TStringList.Create;
-  
-  // 如果启用了吊销检查但未配置 CRL 存储，给出提示性警告
-  if (cvoCheckRevocation in FOptions) and
-    ((FCRLStore = nil) or (FCRLStore.Count = 0)) then
-    Result.Warnings.Add('已启用吊销检查选项但未配置 CRL 存储，未对证书撤销状态进行验证。');
+  FLastRevocationStatus := 0;
+  FLastRevocationError := '';
   
   if Length(AChain) = 0 then
   begin
@@ -696,6 +808,19 @@ begin
         Exit;
       end;
     end;
+
+    if cvoCheckExtKeyUsage in FOptions then
+    begin
+      if not CheckCertificateExtendedKeyUsage(CurrentCert, i > 0) then
+      begin
+        Result.IsValid := False;
+        if i = 0 then
+          Result.ErrorMessage := 'Strict-chain verification requires serverAuth extended key usage on the leaf certificate'
+        else
+          Result.ErrorMessage := Format('Invalid extended key usage for certificate %d', [i]);
+        Exit;
+      end;
+    end;
     
     // 检查吊销状态
     if cvoCheckRevocation in FOptions then
@@ -703,7 +828,16 @@ begin
       if not CheckCertificateRevocation(CurrentCert) then
       begin
         Result.IsValid := False;
-        Result.ErrorMessage := Format('Certificate %d is revoked', [i]);
+        Result.RevocationStatus := FLastRevocationStatus;
+        if FLastRevocationStatus = 1 then
+          Result.ErrorMessage := Format('Certificate %d is revoked', [i])
+        else if FLastRevocationError <> '' then
+          Result.ErrorMessage := Format(
+            'Certificate %d revocation/CRL verification failed: %s',
+            [i, FLastRevocationError]
+          )
+        else
+          Result.ErrorMessage := Format('Certificate %d revocation/CRL status is unavailable', [i]);
         Exit;
       end;
     end;

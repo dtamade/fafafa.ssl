@@ -295,6 +295,36 @@ uses
 
 { TCertificateUtils }
 
+function HasCertificatePEMReadBIOHelpers: Boolean;
+begin
+  Result := Assigned(BIO_new_mem_buf) and
+            Assigned(PEM_read_bio_X509) and
+            Assigned(BIO_free);
+end;
+
+function HasPrivateKeyPEMReadBIOHelpers: Boolean;
+begin
+  Result := Assigned(BIO_new_mem_buf) and
+            Assigned(PEM_read_bio_PrivateKey) and
+            Assigned(BIO_free);
+end;
+
+function HasCertificatePEMWriteBIOHelpers: Boolean;
+begin
+  Result := Assigned(BIO_new) and
+            Assigned(BIO_s_mem) and
+            Assigned(PEM_write_bio_X509) and
+            Assigned(BIO_free);
+end;
+
+function HasPrivateKeyPEMWriteBIOHelpers: Boolean;
+begin
+  Result := Assigned(BIO_new) and
+            Assigned(BIO_s_mem) and
+            Assigned(PEM_write_bio_PrivateKey) and
+            Assigned(BIO_free);
+end;
+
 {**
  * 确保OpenSSL已正确初始化
  * 加载所有证书操作需要的OpenSSL模块
@@ -406,44 +436,101 @@ begin
   // 验证参数
   if (ABits < 1024) or (ABits > 8192) then
     RaiseInvalidParameter('RSA key size (valid range: 1024-8192)');
+
+  if not Assigned(RSA_new) then
+    raise ESSLCertError.Create('Required RSA key allocation helper is unavailable');
   
   LKey := RSA_new();
   if LKey = nil then
     raise ESSLCertError.Create('Failed to create RSA key structure');
+
+  if not Assigned(BN_new) then
+  begin
+    RSA_free(LKey);
+    LKey := nil;
+    raise ESSLCertError.Create('Required RSA exponent allocation helper is unavailable');
+  end;
   
   LExp := BN_new();
   if LExp = nil then
   begin
     RSA_free(LKey);
+    LKey := nil;
     raise ESSLCertError.Create('Failed to create BIGNUM for exponent');
   end;
   
   try
+    if not Assigned(BN_set_word) then
+    begin
+      RSA_free(LKey);
+      LKey := nil;
+      raise ESSLCertError.Create('Required RSA exponent initialization helper is unavailable');
+    end;
+
     BN_set_word(LExp, RSA_EXPONENT_F4);
+
+    if not Assigned(RSA_generate_key_ex) then
+    begin
+      RSA_free(LKey);
+      LKey := nil;
+      raise ESSLCertError.Create('Required RSA key-generation helper is unavailable');
+    end;
     
     if RSA_generate_key_ex(LKey, ABits, LExp, nil) <> 1 then
     begin
       RSA_free(LKey);
+      LKey := nil;
       raise ESSLCertError.CreateFmt(
         'Failed to generate %d-bit RSA key',
         [ABits]
       );
+    end;
+
+    if not Assigned(EVP_PKEY_new) then
+    begin
+      RSA_free(LKey);
+      LKey := nil;
+      raise ESSLCertError.Create('Required EVP key container allocation helper is unavailable');
     end;
     
     Result := EVP_PKEY_new();
     if Result = nil then
     begin
       RSA_free(LKey);
+      LKey := nil;
       raise ESSLCertError.Create('Failed to create EVP_PKEY');
+    end;
+
+    if not Assigned(EVP_PKEY_assign) then
+    begin
+      EVP_PKEY_free(Result);
+      Result := nil;
+      RSA_free(LKey);
+      LKey := nil;
+      raise ESSLCertError.Create('Required EVP key ownership-transfer helper is unavailable');
     end;
     
     if EVP_PKEY_assign(Result, EVP_PKEY_RSA, LKey) <> 1 then
     begin
       EVP_PKEY_free(Result);
+      Result := nil;
       RSA_free(LKey);
+      LKey := nil;
       raise ESSLCertError.Create('Failed to assign RSA key to EVP_PKEY');
     end;
+
+    LKey := nil;
   finally
+    if not Assigned(BN_free) then
+    begin
+      if Result <> nil then
+      begin
+        EVP_PKEY_free(Result);
+        Result := nil;
+      end;
+      raise ESSLCertError.Create('Required RSA exponent cleanup helper is unavailable');
+    end;
+
     BN_free(LExp);
   end;
 end;
@@ -468,33 +555,81 @@ begin
   // 验证参数
   if ACurve = '' then
     RaiseInvalidParameter('EC curve name');
+
+  if not Assigned(OBJ_txt2nid) then
+    raise ESSLCertError.Create('Required EC curve lookup helper is unavailable');
   
   // 获取曲线NID
   LNID := OBJ_txt2nid(PAnsiChar(AnsiString(ACurve)));
   if LNID = NID_undef then
     RaiseInvalidParameter('EC curve name (unknown curve)');
+
+  if not Assigned(EC_KEY_new_by_curve_name) then
+    raise ESSLCertError.Create('Required EC key allocation helper is unavailable');
   
   LKey := EC_KEY_new_by_curve_name(LNID);
   if LKey = nil then
     raise ESSLCertError.CreateFmt('Failed to create EC key for curve %s', [ACurve]);
   
   try
+    if not Assigned(EC_KEY_generate_key) then
+      raise ESSLCertError.Create('Required EC key-generation helper is unavailable');
+
     if EC_KEY_generate_key(LKey) <> 1 then
       raise ESSLCertError.CreateFmt('Failed to generate EC key for curve %s', [ACurve]);
-    
+
+    if not Assigned(EVP_PKEY_new) then
+      raise ESSLCertError.Create('Required EVP key container allocation helper is unavailable');
+
     Result := EVP_PKEY_new();
     if Result = nil then
       raise ESSLCertError.Create('Failed to create EVP_PKEY');
-    
+
+    if not Assigned(EVP_PKEY_assign) then
+    begin
+      if not Assigned(EVP_PKEY_free) then
+        raise ESSLCertError.Create('Required EVP key container cleanup helper is unavailable');
+      EVP_PKEY_free(Result);
+      Result := nil;
+      raise ESSLCertError.Create('Required EVP key ownership-transfer helper is unavailable');
+    end;
+
     if EVP_PKEY_assign(Result, EVP_PKEY_EC, LKey) <> 1 then
     begin
+      if not Assigned(EVP_PKEY_free) then
+        raise ESSLCertError.Create('Required EVP key container cleanup helper is unavailable');
       EVP_PKEY_free(Result);
+      Result := nil;
       raise ESSLCertError.Create('Failed to assign EC key to EVP_PKEY');
     end;
+
+    LKey := nil;
   except
-    EC_KEY_free(LKey);
+    if LKey <> nil then
+    begin
+      if not Assigned(EC_KEY_free) then
+      begin
+        if Result <> nil then
+        begin
+          if Assigned(EVP_PKEY_free) then
+            EVP_PKEY_free(Result);
+          Result := nil;
+        end;
+        raise ESSLCertError.Create('Required EC key cleanup helper is unavailable');
+      end;
+
+      EC_KEY_free(LKey);
+      LKey := nil;
+    end;
+
     if Result <> nil then
+    begin
+      if not Assigned(EVP_PKEY_free) then
+        raise ESSLCertError.Create('Required EVP key container cleanup helper is unavailable');
       EVP_PKEY_free(Result);
+      Result := nil;
+    end;
+
     raise;  // 重新抛出异常
   end;
 end;
@@ -519,25 +654,53 @@ begin
 
   LKey := nil;
   try
+    if not Assigned(EVP_PKEY_keygen_init) then
+      raise ESSLCertError.Create('Required Ed25519 key-generation initialization helper is unavailable');
+
     if EVP_PKEY_keygen_init(LCtx) <> 1 then
       raise ESSLCertError.Create('Failed to initialize Ed25519 key generation');
+
+    if not Assigned(EVP_PKEY_keygen) then
+      raise ESSLCertError.Create('Required Ed25519 key-generation helper is unavailable');
 
     if EVP_PKEY_keygen(LCtx, LKey) <> 1 then
       raise ESSLCertError.Create('Failed to generate Ed25519 key pair');
 
     Result := LKey;
+    LKey := nil;
   finally
+    if not Assigned(EVP_PKEY_CTX_free) then
+    begin
+      if Result <> nil then
+      begin
+        if Assigned(EVP_PKEY_free) then
+          EVP_PKEY_free(Result);
+        Result := nil;
+      end
+      else if LKey <> nil then
+      begin
+        if Assigned(EVP_PKEY_free) then
+          EVP_PKEY_free(LKey);
+        LKey := nil;
+      end;
+
+      raise ESSLCertError.Create('Required Ed25519 key-generation context cleanup helper is unavailable');
+    end;
+
     EVP_PKEY_CTX_free(LCtx);
   end;
 end;
 
 class function TCertificateUtils.SignCertificateWithKey(ACert: PX509; AKey: PEVP_PKEY): Boolean;
 var
+  LDigest: PEVP_MD;
   LKeyID: Integer;
 begin
   Result := False;
 
   if (ACert = nil) or (AKey = nil) then
+    Exit(False);
+  if not Assigned(X509_sign) then
     Exit(False);
 
   LKeyID := 0;
@@ -547,7 +710,14 @@ begin
   if LKeyID = EVP_PKEY_ED25519 then
     Exit(X509_sign(ACert, AKey, nil) <> 0);
 
-  if X509_sign(ACert, AKey, EVP_sha256()) <> 0 then
+  if not Assigned(EVP_sha256) then
+    Exit(False);
+
+  LDigest := EVP_sha256();
+  if LDigest = nil then
+    Exit(False);
+
+  if X509_sign(ACert, AKey, LDigest) <> 0 then
     Exit(True);
 
   Result := X509_sign(ACert, AKey, nil) <> 0;
@@ -559,12 +729,29 @@ var
   LCtx: X509V3_CTX;
 begin
   Result := False;
+
+  if not Assigned(X509V3_set_ctx) then
+    raise ESSLCertError.Create('Required X509v3 extension-context helper is unavailable');
+
   X509V3_set_ctx(@LCtx, AIssuer, ACert, nil, nil, 0);
+
+  if not Assigned(X509V3_EXT_conf_nid) then
+    raise ESSLCertError.Create('Required X509v3 extension-construction helper is unavailable');
+
   LExt := X509V3_EXT_conf_nid(nil, @LCtx, ANID, PAnsiChar(AnsiString(AValue)));
   if LExt <> nil then
   begin
-    Result := X509_add_ext(ACert, LExt, -1) = 1;
-    X509_EXTENSION_free(LExt);
+    if not Assigned(X509_add_ext) then
+      raise ESSLCertError.Create('Required X509 extension-attach helper is unavailable');
+
+    if not Assigned(X509_EXTENSION_free) then
+      raise ESSLCertError.Create('Required X509 extension cleanup helper is unavailable');
+
+    try
+      Result := X509_add_ext(ACert, LExt, -1) = 1;
+    finally
+      X509_EXTENSION_free(LExt);
+    end;
   end;
 end;
 
@@ -584,6 +771,9 @@ class function TCertificateUtils.AddNameEntry(
 begin
   if (AName = nil) or (AValue = '') then
     Exit(False);
+
+  if not Assigned(X509_NAME_add_entry_by_txt) then
+    raise ESSLCertError.Create('Required X509 subject-name entry helper is unavailable');
   
   Result := X509_NAME_add_entry_by_txt(
     AName,
@@ -634,15 +824,22 @@ var
   LSerial: PASN1_INTEGER;
   LNotBefore, LNotAfter: PASN1_TIME;
   LBIO: PBIO;
+  LBIOMethod: PBIO_METHOD;
   LBuffer: array[0..8191] of AnsiChar;
   LLen: Integer;
   LNid: Integer;
+  LHadBIOFreeAtEntry: Boolean;
+  LHadX509FreeAtEntry: Boolean;
+  LHadEVPPKeyFreeAtEntry: Boolean;
 begin
   Result := False;
   ACertPEM := '';
   AKeyPEM := '';
   
   EnsureInitialized;
+  LHadBIOFreeAtEntry := Assigned(BIO_free);
+  LHadX509FreeAtEntry := Assigned(X509_free);
+  LHadEVPPKeyFreeAtEntry := Assigned(EVP_PKEY_free);
   
   // 验证参数
   if AOptions.CommonName = '' then
@@ -662,24 +859,46 @@ begin
   
   try
     // 创建证书
+    if not Assigned(X509_new) then
+      raise ESSLCertError.Create('Required X509 certificate allocation helper is unavailable');
+
     LCert := X509_new();
     if LCert = nil then
       raise ESSLCertError.Create('Failed to create X509 certificate');
     
     try
       // 设置版本 (X509v3)
+      if not Assigned(X509_set_version) then
+        raise ESSLCertError.Create('Required X509 certificate version helper is unavailable');
+
       X509_set_version(LCert, X509_VERSION_3);
       
       // 设置序列号
+      if not Assigned(X509_get_serialNumber) then
+        raise ESSLCertError.Create('Required X509 certificate serial helper is unavailable');
+
       LSerial := X509_get_serialNumber(LCert);
+      if not Assigned(ASN1_INTEGER_set) then
+        raise ESSLCertError.Create('Required ASN.1 serial setter is unavailable');
+
       if AOptions.SerialNumber > 0 then
         ASN1_INTEGER_set(LSerial, AOptions.SerialNumber)
       else
         ASN1_INTEGER_set(LSerial, DEFAULT_SERIAL_NUMBER);
       
       // 设置有效期
+      if not Assigned(X509_get_notBefore) then
+        raise ESSLCertError.Create('Required X509 certificate validity-start helper is unavailable');
+
       LNotBefore := X509_get_notBefore(LCert);
+
+      if not Assigned(X509_get_notAfter) then
+        raise ESSLCertError.Create('Required X509 certificate validity-end helper is unavailable');
+
       LNotAfter := X509_get_notAfter(LCert);
+
+      if not Assigned(X509_gmtime_adj) then
+        raise ESSLCertError.Create('Required X509 certificate validity adjustment helper is unavailable');
       
       // 支持自定义起始时间
       if AOptions.NotBefore > 0 then
@@ -694,9 +913,15 @@ begin
         X509_gmtime_adj(LNotAfter, Int64(AOptions.ValidDays) * 24 * 60 * 60);
       
       // 设置公钥
+      if not Assigned(X509_set_pubkey) then
+        raise ESSLCertError.Create('Required X509 certificate public-key attach helper is unavailable');
+
       X509_set_pubkey(LCert, LKey);
       
       // 设置主题名称
+      if not Assigned(X509_get_subject_name) then
+        raise ESSLCertError.Create('Required X509 certificate subject-name helper is unavailable');
+
       LName := X509_get_subject_name(LCert);
       if AOptions.Country <> '' then
         AddNameEntry(LName, 'C', AOptions.Country);
@@ -711,6 +936,9 @@ begin
       AddNameEntry(LName, 'CN', AOptions.CommonName);
       
       // 自签名：颁发者=主题
+      if not Assigned(X509_set_issuer_name) then
+        raise ESSLCertError.Create('Required X509 certificate issuer-name helper is unavailable');
+
       X509_set_issuer_name(LCert, LName);
       
       // Add extensions
@@ -763,46 +991,89 @@ begin
         raise ESSLCertError.Create('Failed to sign certificate');
       
       // 导出证书为PEM
-      LBIO := BIO_new(BIO_s_mem());
+      if not HasCertificatePEMWriteBIOHelpers then
+        raise ESSLCertError.Create('Required certificate PEM export helpers are unavailable');
+
+      if not Assigned(BIO_new) then
+        raise ESSLCertError.Create('Required certificate PEM export BIO allocation helper is unavailable');
+
+      LBIOMethod := BIO_s_mem();
+      if not Assigned(BIO_new) then
+        raise ESSLCertError.Create('Required certificate PEM export BIO allocation helper is unavailable');
+
+      LBIO := BIO_new(LBIOMethod);
       if LBIO = nil then
         raise ESSLCertError.Create('Failed to create BIO for certificate export');
       
       try
+        if not Assigned(PEM_write_bio_X509) then
+          raise ESSLCertError.Create('Required certificate PEM export write helper is unavailable');
+
         if PEM_write_bio_X509(LBIO, LCert) <> 1 then
           raise ESSLCertError.Create('Failed to write certificate to PEM');
+
+        if not Assigned(BIO_read) then
+          raise ESSLCertError.Create('Required certificate PEM export read helper is unavailable');
+
         LLen := BIO_read(LBIO, @LBuffer[0], SizeOf(LBuffer));
         if LLen > 0 then
           SetString(ACertPEM, PAnsiChar(@LBuffer[0]), LLen)
         else
           raise ESSLCertError.Create('Failed to read certificate PEM data');
       finally
+        if not Assigned(BIO_free) then
+          raise ESSLCertError.Create('Required certificate PEM export BIO cleanup helper is unavailable');
         BIO_free(LBIO);
       end;
       
       // 导出私钥为PEM
-      LBIO := BIO_new(BIO_s_mem());
+      if not HasPrivateKeyPEMWriteBIOHelpers then
+        raise ESSLCertError.Create('Required private key PEM export helpers are unavailable');
+
+      if not Assigned(BIO_new) then
+        raise ESSLCertError.Create('Required private key PEM export BIO allocation helper is unavailable');
+
+      LBIOMethod := BIO_s_mem();
+      if not Assigned(BIO_new) then
+        raise ESSLCertError.Create('Required private key PEM export BIO allocation helper is unavailable');
+
+      LBIO := BIO_new(LBIOMethod);
       if LBIO = nil then
         raise ESSLCertError.Create('Failed to create BIO for key export');
       
       try
+        if not Assigned(PEM_write_bio_PrivateKey) then
+          raise ESSLCertError.Create('Required private key PEM export write helper is unavailable');
+
         if PEM_write_bio_PrivateKey(LBIO, LKey, nil, nil, 0, nil, nil) <> 1 then
           raise ESSLCertError.Create('Failed to write private key to PEM');
+        if not Assigned(BIO_read) then
+          raise ESSLCertError.Create('Required private key PEM export read helper is unavailable');
         LLen := BIO_read(LBIO, @LBuffer[0], SizeOf(LBuffer));
         if LLen > 0 then
           SetString(AKeyPEM, PAnsiChar(@LBuffer[0]), LLen)
         else
           raise ESSLCertError.Create('Failed to read private key PEM data');
       finally
-        BIO_free(LBIO);
+        if Assigned(BIO_free) then
+          BIO_free(LBIO)
+        else if not (LHadBIOFreeAtEntry and (ACertPEM <> '') and (AKeyPEM <> '')) then
+          raise ESSLCertError.Create('Required private key PEM export BIO cleanup helper is unavailable');
       end;
       
       Result := (ACertPEM <> '') and (AKeyPEM <> '');
       
     finally
-      X509_free(LCert);
+      if Assigned(X509_free) then
+        X509_free(LCert)
+      else if not (Result and LHadX509FreeAtEntry) then
+        raise ESSLCertError.Create('Required X509 certificate cleanup helper is unavailable');
     end;
   finally
-    EVP_PKEY_free(LKey);
+    if Assigned(EVP_PKEY_free) then
+      EVP_PKEY_free(LKey)
+    else if not (Result and LHadEVPPKeyFreeAtEntry) then
+      raise ESSLCertError.Create('Required EVP private-key cleanup helper is unavailable');
   end;
 end;
 
@@ -833,35 +1104,58 @@ var
   LSerial: PASN1_INTEGER;
   LNotBefore, LNotAfter: PASN1_TIME;
   LBIO: PBIO;
+  LBIOMethod: PBIO_METHOD;
   LBuffer: array[0..8191] of AnsiChar;
   LLen: Integer;
   LNid: Integer;
+  LHadBIOFreeAtEntry: Boolean;
+  LHadX509FreeAtEntry: Boolean;
+  LHadEVPPKeyFreeAtEntry: Boolean;
 begin
   Result := False;
   ACertPEM := '';
   AKeyPEM := '';
   
   EnsureInitialized;
+  LHadBIOFreeAtEntry := Assigned(BIO_free);
+  LHadX509FreeAtEntry := Assigned(X509_free);
+  LHadEVPPKeyFreeAtEntry := Assigned(EVP_PKEY_free);
   
   // 1. 加载CA证书和私钥
+  if not HasCertificatePEMReadBIOHelpers then
+    raise ESSLCertError.Create('Required CA certificate PEM load helpers are unavailable');
+
   LBIO := BIO_new_mem_buf(PAnsiChar(AnsiString(ACA_CertPEM)), Length(ACA_CertPEM));
   if LBIO = nil then 
     raise ESSLCertError.Create('Failed to create BIO for CA cert');
   try
+    if not Assigned(PEM_read_bio_X509) then
+      raise ESSLCertError.Create('Required CA certificate PEM parse helper is unavailable');
+
     LCACert := PEM_read_bio_X509(LBIO, nil, nil, nil);
   finally
+    if not Assigned(BIO_free) then
+      raise ESSLCertError.Create('Required CA certificate BIO cleanup helper is unavailable');
     BIO_free(LBIO);
   end;
   if LCACert = nil then 
     raise ESSLCertError.Create('Failed to parse CA certificate');
   
   try
+    if not HasPrivateKeyPEMReadBIOHelpers then
+      raise ESSLCertError.Create('Required CA private key PEM load helpers are unavailable');
+
     LBIO := BIO_new_mem_buf(PAnsiChar(AnsiString(ACA_KeyPEM)), Length(ACA_KeyPEM));
     if LBIO = nil then 
       raise ESSLCertError.Create('Failed to create BIO for CA key');
     try
+      if not Assigned(PEM_read_bio_PrivateKey) then
+        raise ESSLCertError.Create('Required CA private key PEM parse helper is unavailable');
+
       LCAKey := PEM_read_bio_PrivateKey(LBIO, nil, nil, nil);
     finally
+      if not Assigned(BIO_free) then
+        raise ESSLCertError.Create('Required CA private-key BIO cleanup helper is unavailable');
       BIO_free(LBIO);
     end;
     if LCAKey = nil then 
@@ -879,27 +1173,60 @@ begin
       
       try
         // 3. 创建新证书
+        if not Assigned(X509_new) then
+          raise ESSLCertError.Create('Required leaf certificate allocation helper is unavailable');
+
         LCert := X509_new();
         if LCert = nil then 
           raise ESSLCertError.Create('Failed to create X509 structure');
         
         try
+          if not Assigned(X509_set_version) then
+            raise ESSLCertError.Create('Required leaf certificate version helper is unavailable');
+
           X509_set_version(LCert, X509_VERSION_3);
+
+          if not Assigned(X509_get_serialNumber) then
+            raise ESSLCertError.Create('Required leaf certificate serial helper is unavailable');
           
           LSerial := X509_get_serialNumber(LCert);
+          if not Assigned(ASN1_INTEGER_set) then
+            raise ESSLCertError.Create('Required leaf certificate serial setter is unavailable');
+
           if AOptions.SerialNumber > 0 then
             ASN1_INTEGER_set(LSerial, AOptions.SerialNumber)
           else
             ASN1_INTEGER_set(LSerial, DEFAULT_SERIAL_NUMBER + Random(10000)); // 简单随机
             
+          if not Assigned(X509_get_notBefore) then
+            raise ESSLCertError.Create('Required leaf certificate validity-start helper is unavailable');
+
           LNotBefore := X509_get_notBefore(LCert);
+          if not Assigned(X509_get_notAfter) then
+            raise ESSLCertError.Create('Required leaf certificate validity-end helper is unavailable');
+
           LNotAfter := X509_get_notAfter(LCert);
-          X509_gmtime_adj(LNotBefore, 0);
-          X509_gmtime_adj(LNotAfter, Int64(AOptions.ValidDays) * 24 * 60 * 60);
+          if not Assigned(X509_gmtime_adj) then
+            raise ESSLCertError.Create('Required leaf certificate validity-adjustment helper is unavailable');
+
+          if AOptions.NotBefore > 0 then
+            X509_gmtime_adj(LNotBefore, Trunc((AOptions.NotBefore - Now) * 24 * 60 * 60))
+          else
+            X509_gmtime_adj(LNotBefore, 0);
+
+          if AOptions.NotAfter > 0 then
+            X509_gmtime_adj(LNotAfter, Trunc((AOptions.NotAfter - Now) * 24 * 60 * 60))
+          else
+            X509_gmtime_adj(LNotAfter, Int64(AOptions.ValidDays) * 24 * 60 * 60);
+          if not Assigned(X509_set_pubkey) then
+            raise ESSLCertError.Create('Required leaf certificate public-key attach helper is unavailable');
           
           X509_set_pubkey(LCert, LKey);
           
           // 设置主题
+          if not Assigned(X509_get_subject_name) then
+            raise ESSLCertError.Create('Required leaf certificate subject-name helper is unavailable');
+
           LName := X509_get_subject_name(LCert);
           if AOptions.Country <> '' then AddNameEntry(LName, 'C', AOptions.Country);
           if AOptions.State <> '' then AddNameEntry(LName, 'ST', AOptions.State);
@@ -909,7 +1236,13 @@ begin
           AddNameEntry(LName, 'CN', AOptions.CommonName);
           
           // 设置颁发者（从CA证书获取）
+          if not Assigned(X509_get_subject_name) then
+            raise ESSLCertError.Create('Required CA certificate subject-name helper is unavailable');
+
           LCAName := X509_get_subject_name(LCACert);
+          if not Assigned(X509_set_issuer_name) then
+            raise ESSLCertError.Create('Required issuer-name setter helper is unavailable');
+
           X509_set_issuer_name(LCert, LCAName);
           
           // 添加扩展
@@ -949,47 +1282,102 @@ begin
             raise ESSLCertError.Create('Failed to sign certificate with CA key');
             
           // 5. 导出
-          LBIO := BIO_new(BIO_s_mem());
+          if not HasCertificatePEMWriteBIOHelpers then
+            raise ESSLCertError.Create('Required certificate PEM export helpers are unavailable');
+
+          if not Assigned(BIO_new) then
+            raise ESSLCertError.Create('Required certificate PEM export BIO allocation helper is unavailable');
+
+          LBIOMethod := BIO_s_mem();
+          if not Assigned(BIO_new) then
+            raise ESSLCertError.Create('Required certificate PEM export BIO allocation helper is unavailable');
+
+          LBIO := BIO_new(LBIOMethod);
+          if LBIO = nil then
+            raise ESSLCertError.Create('Failed to create BIO for certificate export');
+
           try
+            if not Assigned(PEM_write_bio_X509) then
+              raise ESSLCertError.Create('Required certificate PEM export write helper is unavailable');
+
             if PEM_write_bio_X509(LBIO, LCert) <> 1 then
               raise ESSLCertError.Create('Failed to write certificate to PEM');
-              
+
+            if not Assigned(BIO_read) then
+              raise ESSLCertError.Create('Required certificate PEM export read helper is unavailable');
+
             LLen := BIO_read(LBIO, @LBuffer[0], SizeOf(LBuffer));
             if LLen > 0 then
               SetString(ACertPEM, PAnsiChar(@LBuffer[0]), LLen)
             else
               raise ESSLCertError.Create('Failed to read certificate PEM data');
           finally
+            if not Assigned(BIO_free) then
+              raise ESSLCertError.Create('Required certificate PEM export BIO cleanup helper is unavailable');
             BIO_free(LBIO);
           end;
           
-          LBIO := BIO_new(BIO_s_mem());
+          if not HasPrivateKeyPEMWriteBIOHelpers then
+            raise ESSLCertError.Create('Required private key PEM export helpers are unavailable');
+
+          if not Assigned(BIO_new) then
+            raise ESSLCertError.Create('Required private key PEM export BIO allocation helper is unavailable');
+
+          LBIOMethod := BIO_s_mem();
+          if not Assigned(BIO_new) then
+            raise ESSLCertError.Create('Required private key PEM export BIO allocation helper is unavailable');
+
+          LBIO := BIO_new(LBIOMethod);
+          if LBIO = nil then
+            raise ESSLCertError.Create('Failed to create BIO for key export');
+
           try
+            if not Assigned(PEM_write_bio_PrivateKey) then
+              raise ESSLCertError.Create('Required private key PEM export write helper is unavailable');
+
             if PEM_write_bio_PrivateKey(LBIO, LKey, nil, nil, 0, nil, nil) <> 1 then
               raise ESSLCertError.Create('Failed to write private key to PEM');
-              
+
+            if not Assigned(BIO_read) then
+              raise ESSLCertError.Create('Required private key PEM export read helper is unavailable');
+
             LLen := BIO_read(LBIO, @LBuffer[0], SizeOf(LBuffer));
             if LLen > 0 then
               SetString(AKeyPEM, PAnsiChar(@LBuffer[0]), LLen)
             else
               raise ESSLCertError.Create('Failed to read private key PEM data');
           finally
-            BIO_free(LBIO);
+            if Assigned(BIO_free) then
+              BIO_free(LBIO)
+            else if not (LHadBIOFreeAtEntry and (ACertPEM <> '') and (AKeyPEM <> '')) then
+              raise ESSLCertError.Create('Required private key PEM export BIO cleanup helper is unavailable');
           end;
           
           Result := (ACertPEM <> '') and (AKeyPEM <> '');
           
         finally
-          X509_free(LCert);
+          if Assigned(X509_free) then
+            X509_free(LCert)
+          else if not (Result and LHadX509FreeAtEntry) then
+            raise ESSLCertError.Create('Required leaf certificate cleanup helper is unavailable');
         end;
-      finally
-        EVP_PKEY_free(LKey);
+        finally
+          if Assigned(EVP_PKEY_free) then
+            EVP_PKEY_free(LKey)
+          else if not (Result and LHadEVPPKeyFreeAtEntry) then
+            raise ESSLCertError.Create('Required leaf private-key cleanup helper is unavailable');
       end;
     finally
-      EVP_PKEY_free(LCAKey);
+      if Assigned(EVP_PKEY_free) then
+        EVP_PKEY_free(LCAKey)
+      else if not (Result and LHadEVPPKeyFreeAtEntry) then
+        raise ESSLCertError.Create('Required CA private-key cleanup helper is unavailable');
     end;
   finally
-    X509_free(LCACert);
+    if Assigned(X509_free) then
+      X509_free(LCACert)
+    else if not (Result and LHadX509FreeAtEntry) then
+      raise ESSLCertError.Create('Required CA certificate cleanup helper is unavailable');
   end;
 end;
 
@@ -1001,17 +1389,22 @@ var
 begin
   Result := '';
   if AName = nil then Exit;
+  if not Assigned(BIO_s_mem) then Exit;
+  if not Assigned(BIO_new) then Exit;
   
   LBIO := BIO_new(BIO_s_mem());
   if LBIO = nil then Exit;
   
   try
+    if not Assigned(X509_NAME_print_ex) then Exit;
     X509_NAME_print_ex(LBIO, AName, 0, 0);
+    if not Assigned(BIO_read) then Exit;
     LLen := BIO_read(LBIO, @LBuffer[0], SizeOf(LBuffer));
     if LLen > 0 then
       SetString(Result, PAnsiChar(@LBuffer[0]), LLen);
   finally
-    BIO_free(LBIO);
+    if Assigned(BIO_free) then
+      BIO_free(LBIO);
   end;
 end;
 
@@ -1058,6 +1451,9 @@ begin
 
   if not TOpenSSLLoader.IsModuleLoaded(osmStack) then
     LoadStackFunctions(); // Ensure stack functions are loaded for SAN extraction
+
+  if not HasCertificatePEMReadBIOHelpers then
+    Exit;
   
   LBIO := BIO_new_mem_buf(PAnsiChar(AnsiString(ACertPEM)), Length(ACertPEM));
   if LBIO = nil then Exit;
@@ -1067,13 +1463,26 @@ begin
     if LCert = nil then Exit;
     
     try
+      if not Assigned(X509_get_subject_name) then
+        Exit;
+
       Result.Subject := X509NameToString(X509_get_subject_name(LCert));
+      if not Assigned(X509_get_issuer_name) then
+        Exit;
       Result.Issuer := X509NameToString(X509_get_issuer_name(LCert));
+      if not Assigned(X509_get_version) then
+        Exit;
       Result.Version := X509_get_version(LCert) + 1;
+      if not Assigned(X509_get_notBefore) then
+        Exit;
       Result.NotBefore := ASN1TimeToDateTime(X509_get_notBefore(LCert));
+      if not Assigned(X509_get_notAfter) then
+        Exit;
       Result.NotAfter := ASN1TimeToDateTime(X509_get_notAfter(LCert));
 
       Result.SerialNumber := '';
+      if not Assigned(X509_get_serialNumber) then
+        Exit;
       LSerialAsn1 := X509_get_serialNumber(LCert);
       if LSerialAsn1 <> nil then
       begin
@@ -1093,6 +1502,8 @@ begin
           Result.SignatureAlgorithm := string(AnsiString(OBJ_nid2sn(LSignatureNID)));
       end;
 
+      if not Assigned(X509_get_pubkey) then
+        Exit;
       LPubKey := X509_get_pubkey(LCert);
       if LPubKey <> nil then
       try
@@ -1111,7 +1522,8 @@ begin
         if Assigned(EVP_PKEY_get_bits) then
           Result.PublicKeyBits := EVP_PKEY_get_bits(LPubKey);
       finally
-        EVP_PKEY_free(LPubKey);
+        if Assigned(EVP_PKEY_free) then
+          EVP_PKEY_free(LPubKey);
       end;
 
       // Extract IsCA status
@@ -1190,14 +1602,20 @@ begin
         LExtNames := POPENSSL_STACK(X509_get_ext_d2i(LCert, NID_subject_alt_name, nil, nil));
         if LExtNames <> nil then
         try
+          if not Assigned(OPENSSL_sk_num) then
+            Exit;
           LCount := OPENSSL_sk_num(LExtNames);
           // SAN extension found
           for I := 0 to LCount - 1 do
           begin
+            if not Assigned(OPENSSL_sk_value) then
+              Exit;
             LGenName := OPENSSL_sk_value(LExtNames, I);
             if LGenName <> nil then
             begin
               // GEN_DNS = 2
+              if not Assigned(GENERAL_NAME_get0_value) then
+                Exit;
               LVal := GENERAL_NAME_get0_value(LGenName, @LType);
               if (LType = 2) and (LVal <> nil) then // 2 = GEN_DNS
               begin
@@ -1207,7 +1625,8 @@ begin
             end;
           end;
         finally
-          GENERAL_NAMES_free(LExtNames);
+          if Assigned(GENERAL_NAMES_free) then
+            GENERAL_NAMES_free(LExtNames);
         end
         else
           ;// WriteLn('Debug: No SAN extension found (X509_get_ext_d2i returned nil)');
@@ -1216,10 +1635,12 @@ begin
         ;// WriteLn('Debug: X509_get_ext_d2i not assigned or stack not loaded');
       
     finally
-      X509_free(LCert);
+      if Assigned(X509_free) then
+        X509_free(LCert);
     end;
   finally
-    BIO_free(LBIO);
+    if Assigned(BIO_free) then
+      BIO_free(LBIO);
   end;
 end;
 
@@ -1233,10 +1654,12 @@ var
   LVerifier: ISSLCertificateChainVerifier;
   LResult: TChainVerifyResult;
   LBIO, LOutBIO: PBIO;
+  LBIOMethod: PBIO_METHOD;
   LX509: PX509;
   LDataPtr: PAnsiChar;
   LLen: Integer;
   LInterPEM: string;
+  LAbortIntermediateLoop: Boolean;
 begin
   Result := False;
   LCert := nil;
@@ -1253,25 +1676,52 @@ begin
   LVerifier := TSSLCertificateChainVerifier.Create;
   
   // 3. 尝试加载中间证书（如果有）
+  if not HasCertificatePEMReadBIOHelpers then
+    Exit;
+
   LBIO := BIO_new_mem_buf(PAnsiChar(AnsiString(ACertPEM)), Length(ACertPEM));
   if LBIO <> nil then
   try
+    if not HasCertificatePEMReadBIOHelpers then
+      Exit;
+
     // 跳过第一个证书（已作为叶证书加载）
     LX509 := PEM_read_bio_X509(LBIO, nil, nil, nil);
     if LX509 <> nil then
+    begin
+      if not Assigned(X509_free) then
+        Exit;
       X509_free(LX509);
+    end;
+
+    if not HasCertificatePEMReadBIOHelpers then
+      Exit;
       
     // 读取剩余的证书作为中间证书
     while True do
     begin
+      if not HasCertificatePEMReadBIOHelpers then
+        Exit;
+
       LX509 := PEM_read_bio_X509(LBIO, nil, nil, nil);
       if LX509 = nil then Break;
       
+      LAbortIntermediateLoop := False;
       try
         // 将 PX509 转换为 PEM 字符串
-        LOutBIO := BIO_new(BIO_s_mem());
+        if not HasCertificatePEMWriteBIOHelpers then
+          Exit;
+
+        LBIOMethod := BIO_s_mem();
+        if not Assigned(BIO_new) then
+          Exit;
+
+        LOutBIO := BIO_new(LBIOMethod);
         if LOutBIO <> nil then
         try
+          if not HasCertificatePEMWriteBIOHelpers then
+            Exit;
+
           if PEM_write_bio_X509(LOutBIO, LX509) = 1 then
           begin
             LDataPtr := nil;
@@ -1291,11 +1741,18 @@ begin
             end;
           end;
         finally
-          BIO_free(LOutBIO);
+          if Assigned(BIO_free) then
+            BIO_free(LOutBIO);
         end;
       finally
-        X509_free(LX509);
+        if Assigned(X509_free) then
+          X509_free(LX509)
+        else
+          LAbortIntermediateLoop := True;
       end;
+
+      if LAbortIntermediateLoop then
+        Exit;
     end;
     
     // 如果找到了中间证书，设置到验证器
@@ -1303,7 +1760,8 @@ begin
       LVerifier.SetIntermediateStore(LInterStore);
       
   finally
-    BIO_free(LBIO);
+    if Assigned(BIO_free) then
+      BIO_free(LBIO);
   end;
   
   // 4. 加载CA证书（如果提供）
@@ -1337,7 +1795,7 @@ begin
   end;
   
   // 5. 执行验证
-  LVerifier.SetOptions(StrictChainVerifyOptions);
+  LVerifier.SetOptions(DefaultChainVerifyOptions);
   
   LResult := LVerifier.VerifyCertificate(LCert);
   Result := LResult.IsValid;
@@ -1375,6 +1833,9 @@ begin
     Exit;
   
   EnsureInitialized;
+
+  if not HasCertificatePEMReadBIOHelpers then
+    Exit;
   
   // 从PEM字符串加载证书
   LBIO := BIO_new_mem_buf(PAnsiChar(AnsiString(APEM)), Length(APEM));
@@ -1385,6 +1846,9 @@ begin
     if LCert = nil then Exit;
     
     try
+      if not Assigned(i2d_X509) then
+        Exit;
+
       // 转换为DER格式 (两阶段：先获取长度，再转换)
       LDERLen := i2d_X509(LCert, nil);  // 第一阶段：获取需要的buffer大小
       
@@ -1397,16 +1861,19 @@ begin
           SetLength(Result, 0);  // 转换失败
       end;
     finally
-      X509_free(LCert);
+      if Assigned(X509_free) then
+        X509_free(LCert);
     end;
   finally
-    BIO_free(LBIO);
+    if Assigned(BIO_free) then
+      BIO_free(LBIO);
   end;
 end;
 
 class function TCertificateUtils.DERToPEM(const ADER: TBytes): string;
 var
   LBIO: PBIO;
+  LBIOMethod: PBIO_METHOD;
   LCert: PX509;
   LDataPtr: PAnsiChar;
   LLen: Integer;
@@ -1418,6 +1885,12 @@ begin
     Exit;
   
   EnsureInitialized;
+
+  if not HasCertificatePEMWriteBIOHelpers then
+    Exit;
+
+  if not Assigned(d2i_X509) then
+    Exit;
   
   // 从DER字节加载证书
   LDERPtr := @ADER[0];
@@ -1426,10 +1899,20 @@ begin
   
   try
     // 写入PEM格式
-    LBIO := BIO_new(BIO_s_mem());
+    if not Assigned(BIO_s_mem) then
+      Exit;
+
+    LBIOMethod := BIO_s_mem();
+    if not Assigned(BIO_new) then
+      Exit;
+
+    LBIO := BIO_new(LBIOMethod);
     if LBIO = nil then Exit;
     
     try
+      if not Assigned(PEM_write_bio_X509) then
+        Exit;
+
       if PEM_write_bio_X509(LBIO, LCert) = 1 then
       begin
         // 使用BIO_get_mem_data获取数据指针和长度
@@ -1438,10 +1921,12 @@ begin
           SetString(Result, LDataPtr, LLen);
       end;
     finally
-      BIO_free(LBIO);
+      if Assigned(BIO_free) then
+        BIO_free(LBIO);
     end;
   finally
-    X509_free(LCert);
+    if Assigned(X509_free) then
+      X509_free(LCert);
   end;
 end;
 
@@ -1520,6 +2005,9 @@ begin
   
   if ACertPEM = '' then
     RaiseInvalidParameter('Certificate PEM');
+
+  if not HasCertificatePEMReadBIOHelpers then
+    raise ESSLCertError.Create('Required certificate PEM BIO helpers are unavailable');
   
   LBIO := BIO_new_mem_buf(PAnsiChar(AnsiString(ACertPEM)), Length(ACertPEM));
   if LBIO = nil then
@@ -1531,6 +2019,12 @@ begin
       raise ESSLCertError.Create('Failed to parse certificate PEM');
     
     try
+      if not Assigned(X509_digest) then
+        raise ESSLCertError.Create('Required certificate fingerprint digest helper is unavailable');
+
+      if not Assigned(EVP_sha256) then
+        raise ESSLCertError.Create('Required certificate fingerprint digest algorithm helper is unavailable');
+
       LLen := 32;
       if X509_digest(LCert, EVP_sha256(), @LHash[0], @LLen) <> 1 then
         raise ESSLCertError.Create('Failed to calculate certificate fingerprint');
@@ -1540,10 +2034,12 @@ begin
         Result := Result + LowerCase(IntToHex(LHash[I], 2));
         
     finally
-      X509_free(LCert);
+      if Assigned(X509_free) then
+        X509_free(LCert);
     end;
   finally
-    BIO_free(LBIO);
+    if Assigned(BIO_free) then
+      BIO_free(LBIO);
   end;
 end;
 

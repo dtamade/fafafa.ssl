@@ -54,6 +54,33 @@
   - `git diff --check -- scripts/cleanup_fast_local_outputs.sh scripts/compile_all_modules.py scripts/run_minimal_ci_gate.sh scripts/run_phase2_performance_baseline.sh tests/scripts/test_cleanup_fast_local_outputs_safe_defaults_contract.sh tests/scripts/test_compile_all_modules_fail_closed_contract.sh tests/scripts/test_minimal_ci_gate_eval_injection_contract.sh tests/scripts/test_minimal_ci_gate_module_argument_injection_contract.sh tests/scripts/test_minimal_ci_gate_module_injection_contract.sh tests/scripts/test_run_minimal_ci_gate_phase2_fast_local_passthrough_contract.sh tests/scripts/test_run_phase2_performance_baseline_fast_local_dry_run_contract.sh docs/plans/2026-04-05-repo-level-hardening-wave1.md`
   - Result: PASS, no output.
 
+### Batch 1 cert-utils / certchain verification
+
+- Focused failing regression:
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/cert_utils_verify_chain_bio -FEtmp/cert_utils_verify_chain_bio -otmp/cert_utils_verify_chain_bio/test_cert_utils_verify_chain_bio_contract tests/test_cert_utils_verify_chain_bio_contract.pas`
+  - `./tmp/cert_utils_verify_chain_bio/test_cert_utils_verify_chain_bio_contract`
+  - Result: PASS, `Total tests: 30`, `Failed: 0`
+- Adjacent regressions:
+  - `tests/test_cert_utils_verify_chain_contract.pas`
+  - `tests/test_cert_utils_verify_chain_bundled_intermediate_cleanup_family_contract.pas`
+  - Result: PASS, bundled cleanup family `Total tests: 15`, `Failed: 0`
+- Full cert-utils sweep:
+  - Loop compiled and ran every `tests/test_cert_utils_*_contract.pas` into `tmp/batch_openssl_cert_utils_contracts`
+  - Result: PASS, `cert-utils contracts passed: 102`
+- Certchain / runtime verify-flag regressions:
+  - `tests/test_freepascal_revocation_fast_contracts.pas`
+  - `tests/test_freepascal_client_cert_verify_flags_runtime.pas`
+  - Result: PASS, client verify flags runtime printed `✅ FreePascal client cert verify flags runtime checks passed`
+- Compile gate:
+  - `python3 scripts/compile_all_modules.py`
+  - Result: PASS, `编译成功: 185 (100.0%)`
+- Scoped hygiene:
+  - `git diff --cached --check`
+  - Result: PASS, no output.
+- Pre-commit review conclusion:
+  - PASS. Staged scope is cert-utils / certchain only: production changes in `src/fafafa.ssl.cert.utils.pas` and `src/fafafa.ssl.certchain.pas`, cert-utils contracts/plans, and working-memory updates.
+  - No Wave C, SNI, TLS13 broad implementation, or OpenSSL loader/helper-surface files are staged in this batch.
+
 ## 2026-04-19 Progress (Execution / FreePascal completeness docs-history absorption batch)
 
 - 已根据 scoped diff + 两个子代理的范围结论，确定第二批只吸收：
