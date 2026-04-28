@@ -11,11 +11,13 @@ uses
 
 var
   Builder: ISSLContextBuilder;
+  Builder2: ISSLContextBuilder;
   Context: ISSLContext;
   Cache: TOCSPResponseCache;
   Manager: TOCSPStaplingManager;
   Config: TOCSPStaplingConfig;
   Stats: TOCSPCacheStats;
+  JSON: string;
 begin
   WriteLn('=== OCSP Stapling Integration Test ===');
   WriteLn;
@@ -35,10 +37,9 @@ begin
     WriteLn('Test 2: OCSP Response Cache');
     Cache := TOCSPResponseCache.Create;
     try
-      WriteLn('  ✓ Cache created');
-      WriteLn('  - Initial count: ', Cache.Count);
-      
       Stats := Cache.GetStats;
+      WriteLn('  ✓ Cache created');
+      WriteLn('  - Initial count: ', Stats.TotalEntries);
       WriteLn('  - Total entries: ', Stats.TotalEntries);
       WriteLn('  - Hits: ', Stats.Hits);
       WriteLn('  - Misses: ', Stats.Misses);
@@ -79,15 +80,15 @@ begin
       .WithOCSPStapling(True)
       .WithOCSPStaplingRequired(True);
     
-    var JSON := Builder.ToJSON;
+    JSON := Builder.ExportToJSON;
     WriteLn('  ✓ Exported to JSON');
     WriteLn('  - Contains ocsp_stapling_enabled: ', 
       Pos('ocsp_stapling_enabled', JSON) > 0);
     WriteLn('  - Contains ocsp_stapling_required: ', 
       Pos('ocsp_stapling_required', JSON) > 0);
     
-    var Builder2 := TSSLContextBuilder.Create;
-    Builder2.FromJSON(JSON);
+    Builder2 := TSSLContextBuilder.Create;
+    Builder2.ImportFromJSON(JSON);
     WriteLn('  ✓ Imported from JSON');
     WriteLn;
     

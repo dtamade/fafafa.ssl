@@ -541,6 +541,7 @@ begin
       //   value  ANY }
       FillChar(Attr, SizeOf(Attr), 0);
       Attr.OID := AVANode.GetChild(0).AsOID;
+      Attr.Name := OIDToName(Attr.OID);
       Attr.Value := AVANode.GetChild(1).AsString;
 
       SetLength(AName.Attributes, Length(AName.Attributes) + 1);

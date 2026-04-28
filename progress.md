@@ -24843,3 +24843,21 @@ Evidence:
 - Scoped review conclusion before commit:
   - PASS. Staged files are limited to DES/MD OpenSSL API handle type cleanup plus working-memory updates.
   - Focused compiles pass and `git diff --cached --check` is clean.
+
+## 2026-04-29 Progress (Batch 5A OCSP / CT runtime hardening)
+- Focused verification:
+  - `tests/test_ocsp.pas`: PASS
+  - `tests/test_crl.pas`: PASS
+  - `tests/test_p2_ct.lpr`: PASS
+  - `tests/test_ocsp_stapling_integration.lpr`: PASS
+  - `tests/ct/test_ct_sct_validation.pas`: PASS
+  - `tests/test_freepascal_client_ct_sct_surface.pas`: PASS
+  - `tests/test_freepascal_client_ocsp_stapling_runtime.pas`: PASS
+- Full module compile:
+  - `python3 scripts/compile_all_modules.py`: PASS, 185/185 modules compiled.
+- Scope decision:
+  - Include OCSP/CT/stapling runtime source changes, CT/OpenSSL API drift tests, embedded SCT fixtures needed by the CT surface regression, and working-memory updates.
+  - Exclude revocation CRL fixture files and broader docs/API wording for later scoped batches.
+- Scoped review conclusion before commit:
+  - PASS. Staged files are limited to OCSP/CT/stapling runtime hardening, directly related tests/fixtures, and working-memory updates.
+  - Focused OCSP/CT tests are green, full module compile is 185/185, and `git diff --cached --check` is clean.

@@ -10931,3 +10931,10 @@ Verification:
 ## 2026-04-29 Findings (Batch 4C OpenSSL DES/MD handle type cleanup)
 - DES and MD module loaders still used `THandle` even though the OpenSSL loader now carries native library handles through `TOpenSSLLibHandle`.
 - The fix is signature-only and keeps lookup behavior unchanged; its main value is preventing future 64-bit handle truncation drift in these optional modules.
+
+## 2026-04-29 Findings (Batch 5A OCSP / CT runtime hardening)
+- `TOCSPResponse` now has a bounded SCT-list surface for `signed_certificate_timestamp` OCSP extensions.
+- `TSCTValidator.ValidateFromOCSP(...)` can consume that parsed SCT list and reuse existing SCT-list validation instead of returning an unconditional empty result.
+- `TOCSPStaplingClient.ProcessStapledResponse(...)` now rejects non-good certificate status and gates `ossVerified` behind `VerifyOCSPResponseDER(...)` instead of parse/freshness success alone.
+- The CT surface regression depends on embedded SCT PEM fixtures that were present only as untracked files, so this batch must include those fixtures to make the verified tests reproducible from a clean checkout.
+- Revocation CRL fixtures are intentionally excluded; they belong to the separate revocation-material batch.

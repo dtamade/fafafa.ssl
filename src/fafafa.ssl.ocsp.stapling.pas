@@ -92,7 +92,7 @@ type
     FLastResult: TOCSPStaplingResult;
     
     function VerifyStapledResponse(const AResponse: TBytes; 
-      ACert, AIssuerCert: TX509Certificate): Boolean;
+      ACert, AIssuerCert: TX509Certificate; out AError: string): Boolean;
     function CheckResponseFreshness(const AResponse: TOCSPResponse): Boolean;
   public
     constructor Create(AConfig: TOCSPStaplingConfig; ACache: TOCSPResponseCache = nil);
@@ -222,7 +222,8 @@ type
 implementation
 
 uses
-  fafafa.ssl.http.client;  // 假设有 HTTP 客户端模块
+  fafafa.ssl.http.client,  // 假设有 HTTP 客户端模块
+  fafafa.ssl.openssl.api.ocsp;
 
 // ========================================================================
 // TOCSPStaplingConfig
@@ -292,6 +293,7 @@ var
   CertID: TOCSPCertID;
   SingleResp: TOCSPSingleResponse;
   Idx: Integer;
+  LError: string;
 begin
   FillChar(Result, SizeOf(Result), 0);
   Result.Status := ossReceived;
@@ -346,6 +348,25 @@ begin
         FLastResult := Result;
         Exit;
       end;
+
+      if SingleResp.CertStatus <> ocspGood then
+      begin
+        Result.Status := ossVerificationFailed;
+        Result.ErrorMessage := 'OCSP certificate status: ' +
+          OCSPStatusToString(SingleResp.CertStatus);
+        FLastResult := Result;
+        Exit;
+      end;
+
+      if not VerifyStapledResponse(AResponse, ACert, AIssuerCert, LError) then
+      begin
+        Result.Status := ossVerificationFailed;
+        if Trim(LError) = '' then
+          LError := 'OCSP response cryptographic verification failed';
+        Result.ErrorMessage := LError;
+        FLastResult := Result;
+        Exit;
+      end;
       
       // 验证通过
       Result.Status := ossVerified;
@@ -379,16 +400,32 @@ begin
     Exit(True);
   
   // 如果要求 stapling,检查是否提供
-  Result := AStaplingProvided and (FLastResult.Status = ossVerified);
+  Result := AStaplingProvided and FLastResult.IsValid;
 end;
 
 function TOCSPStaplingClient.VerifyStapledResponse(const AResponse: TBytes;
-  ACert, AIssuerCert: TX509Certificate): Boolean;
-var
-  Res: TOCSPStaplingResult;
+  ACert, AIssuerCert: TX509Certificate; out AError: string): Boolean;
 begin
-  Res := ProcessStapledResponse(AResponse, ACert, AIssuerCert);
-  Result := Res.IsValid;
+  AError := '';
+
+  if ACert = nil then
+  begin
+    AError := 'Leaf certificate is unavailable for OCSP stapling verification';
+    Exit(False);
+  end;
+
+  if AIssuerCert = nil then
+  begin
+    AError := 'Issuer certificate is unavailable for OCSP stapling verification';
+    Exit(False);
+  end;
+
+  Result := VerifyOCSPResponseDER(
+    AResponse,
+    ACert.RawCertificate,
+    AIssuerCert.RawCertificate,
+    AError
+  );
 end;
 
 function TOCSPStaplingClient.CheckResponseFreshness(

@@ -90,6 +90,7 @@ implementation
 
 uses
   DateUtils,
+  fafafa.ssl.ocsp,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.loader;
 
@@ -267,10 +268,39 @@ begin
 end;
 
 function TSCTValidator.ValidateFromOCSP(OCSPResp: Pointer; Cert: PX509; Issuer: PX509): TSCTValidationResultArray;
+var
+  LOCSPResponse: TOCSPResponse;
+  LSignedCertificateTimestampList: TBytes;
+  LSignedCertificateTimestampCount: Integer;
+  LSCTs: PSCT_LIST;
+  LCursor: PByte;
 begin
-  // OCSP SCT 提取需要额外的 OCSP API 绑定
-  // 暂时返回空数组，待后续完善
   SetLength(Result, 0);
+
+  if (OCSPResp = nil) or (Cert = nil) then
+    Exit;
+  if not Assigned(o2i_SCT_LIST) or not Assigned(SCT_LIST_free) then
+    Exit;
+
+  LOCSPResponse := TOCSPResponse(OCSPResp);
+  if not LOCSPResponse.TryGetSignedCertificateTimestampList(
+    LSignedCertificateTimestampList,
+    LSignedCertificateTimestampCount
+  ) then
+    Exit;
+  if (Length(LSignedCertificateTimestampList) = 0) or (LSignedCertificateTimestampCount <= 0) then
+    Exit;
+
+  LSCTs := nil;
+  LCursor := @LSignedCertificateTimestampList[0];
+  if o2i_SCT_LIST(@LSCTs, @LCursor, NativeUInt(Length(LSignedCertificateTimestampList))) = nil then
+    Exit;
+
+  try
+    Result := ValidateSCTList(LSCTs, Cert, Issuer);
+  finally
+    SCT_LIST_free(LSCTs);
+  end;
 end;
 
 function TSCTValidator.ValidateSCTList(SCTs: PSCT_LIST; Cert: PX509; Issuer: PX509): TSCTValidationResultArray;

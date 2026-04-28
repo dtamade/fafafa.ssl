@@ -85,6 +85,9 @@ type
     HasNextUpdate: Boolean;
     RevokedTime: TDateTime;
     RevokeReason: TOCSPRevokeReason;
+    SignedCertificateTimestampList: TBytes;
+    SignedCertificateTimestampCount: Integer;
+    HasSignedCertificateTimestampList: Boolean;
   end;
 
   TOCSPSingleResponseArray = array of TOCSPSingleResponse;
@@ -122,6 +125,9 @@ type
     FResponderID: string;
     FNonce: TBytes;
     FRawResponse: TBytes;
+    FSignedCertificateTimestampList: TBytes;
+    FSignedCertificateTimestampCount: Integer;
+    FHasSignedCertificateTimestampList: Boolean;
 
     procedure ParseBasicOCSPResponse(ANode: TASN1Node);
     procedure ParseResponseData(ANode: TASN1Node);
@@ -134,12 +140,24 @@ type
 
     function GetCertStatus(const ACertID: TOCSPCertID): TOCSPCertStatus;
     function FindResponse(const ACertID: TOCSPCertID): Integer;
+    function TryGetSignedCertificateTimestampList(
+      out ASignedCertificateTimestampList: TBytes;
+      out ASignedCertificateTimestampCount: Integer
+    ): Boolean; overload;
+    function TryGetSignedCertificateTimestampList(
+      const ACertID: TOCSPCertID;
+      out ASignedCertificateTimestampList: TBytes;
+      out ASignedCertificateTimestampCount: Integer
+    ): Boolean; overload;
 
     property ResponseStatus: TOCSPResponseStatus read FResponseStatus;
     property Responses: TOCSPSingleResponseArray read FResponses;
     property ProducedAt: TDateTime read FProducedAt;
     property ResponderID: string read FResponderID;
     property Nonce: TBytes read FNonce;
+    property SignedCertificateTimestampList: TBytes read FSignedCertificateTimestampList;
+    property SignedCertificateTimestampCount: Integer read FSignedCertificateTimestampCount;
+    property HasSignedCertificateTimestampList: Boolean read FHasSignedCertificateTimestampList;
   end;
 
 // ========================================================================
@@ -164,8 +182,90 @@ implementation
 const
   OID_OCSP_BASIC = '1.3.6.1.5.5.7.48.1.1';  // id-pkix-ocsp-basic
   OID_OCSP_NONCE = '1.3.6.1.5.5.7.48.1.2';  // id-pkix-ocsp-nonce
+  OID_OCSP_SIGNED_CERTIFICATE_TIMESTAMP = '1.3.6.1.4.1.11129.2.4.5';
   OID_AIA = '1.3.6.1.5.5.7.1.1';            // Authority Info Access
   OID_OCSP = '1.3.6.1.5.5.7.48.1';          // OCSP access method
+
+// ========================================================================
+// 辅助函数: SCT list parsing
+// ========================================================================
+
+function ReadUInt16BE(const AData: TBytes; AOffset: Integer): Word;
+begin
+  Result := (Word(AData[AOffset]) shl 8) or Word(AData[AOffset + 1]);
+end;
+
+function TryParseSignedCertificateTimestampListBytes(
+  const AData: TBytes;
+  out ACount: Integer
+): Boolean;
+var
+  LListLength: Integer;
+  LOffset: Integer;
+  LSCTLength: Integer;
+begin
+  ACount := 0;
+  Result := False;
+
+  if Length(AData) < 2 then
+    Exit;
+
+  LListLength := ReadUInt16BE(AData, 0);
+  if (LListLength <= 0) or (Length(AData) <> 2 + LListLength) then
+    Exit;
+
+  LOffset := 2;
+  while LOffset < Length(AData) do
+  begin
+    if LOffset + 2 > Length(AData) then
+      Exit(False);
+
+    LSCTLength := ReadUInt16BE(AData, LOffset);
+    Inc(LOffset, 2);
+    if (LSCTLength <= 0) or (LOffset + LSCTLength > Length(AData)) then
+      Exit(False);
+
+    Inc(ACount);
+    Inc(LOffset, LSCTLength);
+  end;
+
+  Result := ACount > 0;
+end;
+
+function TryExtractSignedCertificateTimestampExtension(
+  AExtNode: TASN1Node;
+  out ASignedCertificateTimestampList: TBytes;
+  out ASignedCertificateTimestampCount: Integer
+): Boolean;
+var
+  LValueIndex: Integer;
+  LExtensionOID: string;
+  LRawValue: TBytes;
+begin
+  SetLength(ASignedCertificateTimestampList, 0);
+  ASignedCertificateTimestampCount := 0;
+  Result := False;
+
+  if (AExtNode = nil) or (not AExtNode.IsSequence) or (AExtNode.ChildCount < 2) then
+    Exit;
+
+  LExtensionOID := AExtNode.GetChild(0).AsOID;
+  if LExtensionOID <> OID_OCSP_SIGNED_CERTIFICATE_TIMESTAMP then
+    Exit;
+
+  LValueIndex := 1;
+  if (AExtNode.ChildCount > 2) and AExtNode.GetChild(1).IsBoolean then
+    LValueIndex := 2;
+  if AExtNode.ChildCount <= LValueIndex then
+    Exit;
+
+  LRawValue := AExtNode.GetChild(LValueIndex).AsOctetString;
+  if not TryParseSignedCertificateTimestampListBytes(LRawValue, ASignedCertificateTimestampCount) then
+    Exit;
+
+  ASignedCertificateTimestampList := Copy(LRawValue);
+  Result := True;
+end;
 
 // ========================================================================
 // 辅助函数: DER 编码
@@ -738,6 +838,9 @@ begin
   FProducedAt := 0;
   FResponderID := '';
   SetLength(FNonce, 0);
+  SetLength(FSignedCertificateTimestampList, 0);
+  FSignedCertificateTimestampCount := 0;
+  FHasSignedCertificateTimestampList := False;
 end;
 
 destructor TOCSPResponse.Destroy;
@@ -856,11 +959,12 @@ end;
 procedure TOCSPResponse.ParseResponseData(ANode: TASN1Node);
 var
   I, J, Index: Integer;
-  Child, ResponsesNode, SingleNode, ExtSeqNode, ExtNode: TASN1Node;
-  SingleResp: TOCSPSingleResponse;
+  Child, ResponsesNode, ExtSeqNode, ExtNode: TASN1Node;
   NameNode, RDNNode, AVNode: TASN1Node;
   NameStr: string;
   ExtOID: string;
+  LSignedCertificateTimestampList: TBytes;
+  LSignedCertificateTimestampCount: Integer;
 begin
   // ResponseData ::= SEQUENCE {
   //   version            [0] EXPLICIT Version DEFAULT v1,
@@ -992,6 +1096,16 @@ begin
                     FNonce := Copy(FNonce, 3, FNonce[2]);
                 end;
               end;
+            end
+            else if TryExtractSignedCertificateTimestampExtension(
+              ExtNode,
+              LSignedCertificateTimestampList,
+              LSignedCertificateTimestampCount
+            ) then
+            begin
+              FSignedCertificateTimestampList := Copy(LSignedCertificateTimestampList);
+              FSignedCertificateTimestampCount := LSignedCertificateTimestampCount;
+              FHasSignedCertificateTimestampList := True;
             end;
           end;
         end;
@@ -1003,7 +1117,10 @@ end;
 procedure TOCSPResponse.ParseSingleResponse(ANode: TASN1Node; var AResp: TOCSPSingleResponse);
 var
   Index: Integer;
-  CertStatusNode, RevokedNode: TASN1Node;
+  CertStatusNode, Child, ExtSeqNode, ExtNode: TASN1Node;
+  I: Integer;
+  LSignedCertificateTimestampList: TBytes;
+  LSignedCertificateTimestampCount: Integer;
 begin
   // SingleResponse ::= SEQUENCE {
   //   certID           CertID,
@@ -1062,6 +1179,9 @@ begin
 
   // nextUpdate (可选)
   AResp.HasNextUpdate := False;
+  AResp.HasSignedCertificateTimestampList := False;
+  SetLength(AResp.SignedCertificateTimestampList, 0);
+  AResp.SignedCertificateTimestampCount := 0;
   if (ANode.ChildCount > Index) and ANode.GetChild(Index).IsContextTag(0) then
   begin
     if ANode.GetChild(Index).ChildCount > 0 then
@@ -1070,6 +1190,33 @@ begin
       AResp.HasNextUpdate := True;
     end;
     Inc(Index);
+  end;
+
+  if (ANode.ChildCount > Index) and ANode.GetChild(Index).IsContextTag(1) then
+  begin
+    Child := ANode.GetChild(Index);
+    if Child.ChildCount > 0 then
+    begin
+      ExtSeqNode := Child.GetChild(0);
+      if ExtSeqNode.IsSequence then
+      begin
+        for I := 0 to ExtSeqNode.ChildCount - 1 do
+        begin
+          ExtNode := ExtSeqNode.GetChild(I);
+          if TryExtractSignedCertificateTimestampExtension(
+            ExtNode,
+            LSignedCertificateTimestampList,
+            LSignedCertificateTimestampCount
+          ) then
+          begin
+            AResp.SignedCertificateTimestampList := Copy(LSignedCertificateTimestampList);
+            AResp.SignedCertificateTimestampCount := LSignedCertificateTimestampCount;
+            AResp.HasSignedCertificateTimestampList := True;
+            Break;
+          end;
+        end;
+      end;
+    end;
   end;
 end;
 
@@ -1097,6 +1244,61 @@ begin
       Exit;
     end;
   end;
+end;
+
+function TOCSPResponse.TryGetSignedCertificateTimestampList(
+  out ASignedCertificateTimestampList: TBytes;
+  out ASignedCertificateTimestampCount: Integer
+): Boolean;
+var
+  I: Integer;
+begin
+  SetLength(ASignedCertificateTimestampList, 0);
+  ASignedCertificateTimestampCount := 0;
+
+  for I := 0 to High(FResponses) do
+  begin
+    if FResponses[I].HasSignedCertificateTimestampList then
+    begin
+      ASignedCertificateTimestampList := Copy(FResponses[I].SignedCertificateTimestampList);
+      ASignedCertificateTimestampCount := FResponses[I].SignedCertificateTimestampCount;
+      Exit(True);
+    end;
+  end;
+
+  if FHasSignedCertificateTimestampList then
+  begin
+    ASignedCertificateTimestampList := Copy(FSignedCertificateTimestampList);
+    ASignedCertificateTimestampCount := FSignedCertificateTimestampCount;
+    Exit(True);
+  end;
+
+  Result := False;
+end;
+
+function TOCSPResponse.TryGetSignedCertificateTimestampList(
+  const ACertID: TOCSPCertID;
+  out ASignedCertificateTimestampList: TBytes;
+  out ASignedCertificateTimestampCount: Integer
+): Boolean;
+var
+  LResponseIndex: Integer;
+begin
+  SetLength(ASignedCertificateTimestampList, 0);
+  ASignedCertificateTimestampCount := 0;
+
+  LResponseIndex := FindResponse(ACertID);
+  if (LResponseIndex >= 0) and FResponses[LResponseIndex].HasSignedCertificateTimestampList then
+  begin
+    ASignedCertificateTimestampList := Copy(FResponses[LResponseIndex].SignedCertificateTimestampList);
+    ASignedCertificateTimestampCount := FResponses[LResponseIndex].SignedCertificateTimestampCount;
+    Exit(True);
+  end;
+
+  Result := TryGetSignedCertificateTimestampList(
+    ASignedCertificateTimestampList,
+    ASignedCertificateTimestampCount
+  );
 end;
 
 // ========================================================================

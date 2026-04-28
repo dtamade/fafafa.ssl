@@ -101,6 +101,20 @@
 - [x] Run scoped diff hygiene.
 - [x] Review and commit scoped OpenSSL handle type cleanup.
 
+### Batch 5A: OCSP / CT runtime hardening
+- [x] Verify OCSP and CRL focused tests:
+  - `tests/test_ocsp.pas`
+  - `tests/test_crl.pas`
+- [x] Verify CT / stapling focused tests:
+  - `tests/test_p2_ct.lpr`
+  - `tests/test_ocsp_stapling_integration.lpr`
+  - `tests/ct/test_ct_sct_validation.pas`
+  - `tests/test_freepascal_client_ct_sct_surface.pas`
+  - `tests/test_freepascal_client_ocsp_stapling_runtime.pas`
+- [x] Run `python3 scripts/compile_all_modules.py`.
+- [x] Run scoped diff hygiene.
+- [x] Review and commit scoped OCSP / CT runtime batch.
+
 ## 2026-04-19 Plan (Execution / FreePascal completeness docs-history absorption batch)
 
 ### Goal
