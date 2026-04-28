@@ -100,6 +100,13 @@ DIR_PATTERNS=(
   "run_all_module_tests_bin_*"
   "run_all_module_tests_reports_*"
   "run_all_module_tests_units_*"
+  "phase2_bench_bin_*"
+  "phase2_bench_results_*"
+  "wave_c_b101_bench_bin_*"
+  "wave_c_b101_compile_units_*"
+  "wave_c_b101_module_reports_*"
+  "wave_c_b101_module_bin_*"
+  "wave_c_b101_module_units_*"
   "compile_all_modules_units_*"
   "bench_units_*"
 )

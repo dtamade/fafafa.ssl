@@ -11,6 +11,10 @@
 - FreePascal TLS 1.3 early-data is already closed out in the roadmap and should not be reopened without fresh failing evidence.
 - Broad docs should be last, because they depend on the behavior batches being verified first.
 - Fresh baseline is currently green on the dirty tree, so the backlog can be drained by scoped commits instead of first repairing a global build break.
+- Default gate hardening is a good first implementation batch because it protects every later verification step:
+  - `compile_all_modules.py` now requires 100% module compile success.
+  - `run_minimal_ci_gate.sh` executes argv arrays instead of `eval`-built strings.
+  - fast-local phase2 output is scoped under `tmp/`, keeping the dirty worktree stable during dry-runs.
 
 ## 2026-04-19 Findings (Execution / FreePascal completeness docs-history absorption batch)
 - 当前最高 ROI 的第二批，不是继续碰 `src/`，而是把已经完成的 FreePascal completeness 主线对应的 docs truth 和 execution history 入库，减少后续继续/重扫的上下文成本。

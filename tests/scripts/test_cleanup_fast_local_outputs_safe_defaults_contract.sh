@@ -14,12 +14,20 @@ mkdir -p "$SANDBOX_ROOT"
 
 mkdir -p "$SANDBOX_ROOT/minimal_ci_gate_compile_units_foo"
 mkdir -p "$SANDBOX_ROOT/wave_b_ci_gate_reports_foo"
+mkdir -p "$SANDBOX_ROOT/phase2_bench_bin_foo"
+mkdir -p "$SANDBOX_ROOT/phase2_bench_results_foo"
+mkdir -p "$SANDBOX_ROOT/wave_c_b101_bench_bin_foo"
+mkdir -p "$SANDBOX_ROOT/wave_c_b101_module_reports_foo"
 mkdir -p "$SANDBOX_ROOT/bin"
 mkdir -p "$SANDBOX_ROOT/test-reports"
 mkdir -p "$SANDBOX_ROOT/keep_me"
 
 echo "x" > "$SANDBOX_ROOT/minimal_ci_gate_compile_units_foo/sentinel.txt"
 echo "x" > "$SANDBOX_ROOT/wave_b_ci_gate_reports_foo/sentinel.txt"
+echo "x" > "$SANDBOX_ROOT/phase2_bench_bin_foo/sentinel.txt"
+echo "x" > "$SANDBOX_ROOT/phase2_bench_results_foo/sentinel.txt"
+echo "x" > "$SANDBOX_ROOT/wave_c_b101_bench_bin_foo/sentinel.txt"
+echo "x" > "$SANDBOX_ROOT/wave_c_b101_module_reports_foo/sentinel.txt"
 echo "x" > "$SANDBOX_ROOT/bin/fast_local.bin"
 echo "x" > "$SANDBOX_ROOT/test-reports/fast_local.log"
 echo "x" > "$SANDBOX_ROOT/keep_me/keep.txt"
@@ -58,7 +66,7 @@ if [[ "$exit_code_apply" -ne 0 ]]; then
   exit 1
 fi
 
-if [[ -d "$SANDBOX_ROOT/minimal_ci_gate_compile_units_foo" || -d "$SANDBOX_ROOT/wave_b_ci_gate_reports_foo" ]]; then
+if [[ -d "$SANDBOX_ROOT/minimal_ci_gate_compile_units_foo" || -d "$SANDBOX_ROOT/wave_b_ci_gate_reports_foo" || -d "$SANDBOX_ROOT/phase2_bench_bin_foo" || -d "$SANDBOX_ROOT/phase2_bench_results_foo" || -d "$SANDBOX_ROOT/wave_c_b101_bench_bin_foo" || -d "$SANDBOX_ROOT/wave_c_b101_module_reports_foo" ]]; then
   echo "[FAIL] --apply --all should delete known candidate dirs"
   exit 1
 fi
@@ -76,4 +84,3 @@ fi
 rm -rf "$SANDBOX_ROOT"
 
 echo "[PASS] cleanup_fast_local_outputs safe defaults contract passed"
-

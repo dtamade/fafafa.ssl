@@ -31,6 +31,29 @@
   - `export PATH="/opt/fpcupdeluxe/fpc/bin/x86_64-linux:$PATH" && bash scripts/run_minimal_ci_gate.sh --fast-local`
   - Result: PASS, module tests `17/17`, phase2 dry-run PASS, `[PASS] minimal CI gate finished`
 
+### Batch 0A gate hardening verification
+
+- Shell syntax:
+  - `bash -n scripts/run_minimal_ci_gate.sh scripts/run_phase2_performance_baseline.sh scripts/cleanup_fast_local_outputs.sh tests/scripts/test_compile_all_modules_fail_closed_contract.sh tests/scripts/test_minimal_ci_gate_eval_injection_contract.sh tests/scripts/test_minimal_ci_gate_module_argument_injection_contract.sh tests/scripts/test_minimal_ci_gate_module_injection_contract.sh tests/scripts/test_run_minimal_ci_gate_phase2_fast_local_passthrough_contract.sh tests/scripts/test_run_phase2_performance_baseline_fast_local_dry_run_contract.sh tests/scripts/test_cleanup_fast_local_outputs_safe_defaults_contract.sh`
+  - Result: PASS
+- `bash tests/scripts/test_compile_all_modules_fail_closed_contract.sh`
+  - Result: PASS, 99/100 compile success is rejected.
+- `bash tests/scripts/test_minimal_ci_gate_eval_injection_contract.sh`
+  - Result: PASS, injected shell content did not execute and no `eval "$cmd"` remains.
+- `bash tests/scripts/test_minimal_ci_gate_module_argument_injection_contract.sh`
+  - Result: PASS, module payload did not execute.
+- `bash tests/scripts/test_minimal_ci_gate_module_injection_contract.sh`
+  - Result: PASS, fake nested runner saw `--modules` as data.
+- `bash tests/scripts/test_run_phase2_performance_baseline_fast_local_dry_run_contract.sh`
+  - Result: PASS, fast-local phase2 dry-run keeps output under `tmp`.
+- `bash tests/scripts/test_run_minimal_ci_gate_phase2_fast_local_passthrough_contract.sh`
+  - Result: PASS, minimal gate forwards fast-local phase2 dry-run config without changing git status.
+- `bash tests/scripts/test_cleanup_fast_local_outputs_safe_defaults_contract.sh`
+  - Result: PASS, cleanup dry-run is safe and `--apply --all` removes known fast-local outputs only.
+- Hygiene:
+  - `git diff --check -- scripts/cleanup_fast_local_outputs.sh scripts/compile_all_modules.py scripts/run_minimal_ci_gate.sh scripts/run_phase2_performance_baseline.sh tests/scripts/test_cleanup_fast_local_outputs_safe_defaults_contract.sh tests/scripts/test_compile_all_modules_fail_closed_contract.sh tests/scripts/test_minimal_ci_gate_eval_injection_contract.sh tests/scripts/test_minimal_ci_gate_module_argument_injection_contract.sh tests/scripts/test_minimal_ci_gate_module_injection_contract.sh tests/scripts/test_run_minimal_ci_gate_phase2_fast_local_passthrough_contract.sh tests/scripts/test_run_phase2_performance_baseline_fast_local_dry_run_contract.sh docs/plans/2026-04-05-repo-level-hardening-wave1.md`
+  - Result: PASS, no output.
+
 ## 2026-04-19 Progress (Execution / FreePascal completeness docs-history absorption batch)
 
 - 已根据 scoped diff + 两个子代理的范围结论，确定第二批只吸收：

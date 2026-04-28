@@ -161,13 +161,19 @@ if [[ ! "$TLS13_SIGN_BENCH_TIMEOUT" =~ ^[0-9]+$ ]] || [[ "$TLS13_SIGN_BENCH_TIME
   exit 1
 fi
 
-run_cmd() {
-  local cmd="$1"
-  echo "[GATE] $cmd"
+run_project_cmd() {
+  local cmd_desc="$1"
+  shift
+
+  echo "[GATE] $cmd_desc"
   if [[ "$DRY_RUN" == "true" ]]; then
     return 0
   fi
-  eval "$cmd"
+
+  (
+    cd "$PROJECT_ROOT"
+    "$@"
+  )
 }
 
 echo "========================================"
@@ -179,30 +185,68 @@ echo "[INFO] module unit output dir: $MODULE_UNIT_OUTPUT_DIR"
 echo "[INFO] module bin output dir: $MODULE_BIN_OUTPUT_DIR"
 
 if [[ "$WITH_COMPILE" == "true" ]]; then
-  run_cmd "cd '$PROJECT_ROOT' && python3 scripts/compile_all_modules.py --unit-output-dir '$COMPILE_UNIT_OUTPUT_DIR' --fpc-exe '$FPC_EXE'"
+  run_project_cmd \
+    "cd '$PROJECT_ROOT' && python3 scripts/compile_all_modules.py --unit-output-dir '$COMPILE_UNIT_OUTPUT_DIR' --fpc-exe '$FPC_EXE'" \
+    python3 scripts/compile_all_modules.py \
+    --unit-output-dir "$COMPILE_UNIT_OUTPUT_DIR" \
+    --fpc-exe "$FPC_EXE"
 fi
 
 if [[ "$WITH_MODULES" == "true" ]]; then
-  module_cmd="cd '$PROJECT_ROOT' && FAFAFA_FPC_EXE='$FPC_EXE' FAFAFA_FPC_UNIT_OUTPUT_DIR='$MODULE_UNIT_OUTPUT_DIR' FAFAFA_TEST_BIN_DIR='$MODULE_BIN_OUTPUT_DIR' bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
+  module_cmd_desc="cd '$PROJECT_ROOT' && FAFAFA_FPC_EXE='$FPC_EXE' FAFAFA_FPC_UNIT_OUTPUT_DIR='$MODULE_UNIT_OUTPUT_DIR' FAFAFA_TEST_BIN_DIR='$MODULE_BIN_OUTPUT_DIR' bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
+  module_cmd=(
+    env
+    "FAFAFA_FPC_EXE=$FPC_EXE"
+    "FAFAFA_FPC_UNIT_OUTPUT_DIR=$MODULE_UNIT_OUTPUT_DIR"
+    "FAFAFA_TEST_BIN_DIR=$MODULE_BIN_OUTPUT_DIR"
+    bash scripts/run_all_module_tests.sh
+    --modules "$MODULE_SET"
+  )
   if [[ "$FAST_LOCAL" == "true" ]]; then
-    module_cmd="$module_cmd --fast-local"
+    module_cmd_desc="$module_cmd_desc --fast-local"
+    module_cmd+=(--fast-local)
   fi
   if [[ "$VERBOSE" == "true" ]]; then
-    module_cmd="$module_cmd --verbose"
+    module_cmd_desc="$module_cmd_desc --verbose"
+    module_cmd+=(--verbose)
   fi
-  run_cmd "$module_cmd"
+  run_project_cmd "$module_cmd_desc" "${module_cmd[@]}"
 fi
 
 if [[ "$WITH_PHASE2_DRYRUN" == "true" ]]; then
-  run_cmd "cd '$PROJECT_ROOT' && bash scripts/run_phase2_performance_baseline.sh --dry-run --iterations 200 --tls-iterations 50"
+  phase2_cmd_desc="cd '$PROJECT_ROOT' && bash scripts/run_phase2_performance_baseline.sh --dry-run --iterations 200 --tls-iterations 50"
+  phase2_cmd=(
+    bash scripts/run_phase2_performance_baseline.sh
+    --dry-run
+    --iterations 200
+    --tls-iterations 50
+  )
+  if [[ "$FAST_LOCAL" == "true" ]]; then
+    phase2_cmd_desc="$phase2_cmd_desc --fast-local --run-id '$RUN_ID'"
+    phase2_cmd+=(--fast-local --run-id "$RUN_ID")
+  fi
+  run_project_cmd "$phase2_cmd_desc" "${phase2_cmd[@]}"
 fi
 
 if [[ "$WITH_TLS13_SIGN_PURITY_CHECK" == "true" ]]; then
-  run_cmd "cd '$PROJECT_ROOT' && bash scripts/check_tls13_signer_pure_pascal.sh"
+  run_project_cmd \
+    "cd '$PROJECT_ROOT' && bash scripts/check_tls13_signer_pure_pascal.sh" \
+    bash scripts/check_tls13_signer_pure_pascal.sh
 fi
 
 if [[ "$WITH_TLS13_SIGN_BENCH" == "true" ]]; then
-  run_cmd "cd '$PROJECT_ROOT' && FAFAFA_TLS13_SIGN_BENCH_ITERATIONS='$TLS13_SIGN_BENCH_ITERATIONS' FAFAFA_TLS13_SIGN_BENCH_WARMUP='$TLS13_SIGN_BENCH_WARMUP' FAFAFA_TLS13_SIGN_BENCH_SCHEME='$TLS13_SIGN_BENCH_SCHEME' FAFAFA_TLS13_SIGN_BENCH_KEY='$TLS13_SIGN_BENCH_KEY' FAFAFA_TLS13_SIGN_BENCH_TIMEOUT='$TLS13_SIGN_BENCH_TIMEOUT' FAFAFA_TLS13_SIGN_BENCH_JSON_OUT='$TLS13_SIGN_BENCH_JSON_OUT' bash scripts/run_freepascal_tls13_servercertverify_bench.sh"
+  tls13_bench_cmd_desc="cd '$PROJECT_ROOT' && FAFAFA_TLS13_SIGN_BENCH_ITERATIONS='$TLS13_SIGN_BENCH_ITERATIONS' FAFAFA_TLS13_SIGN_BENCH_WARMUP='$TLS13_SIGN_BENCH_WARMUP' FAFAFA_TLS13_SIGN_BENCH_SCHEME='$TLS13_SIGN_BENCH_SCHEME' FAFAFA_TLS13_SIGN_BENCH_KEY='$TLS13_SIGN_BENCH_KEY' FAFAFA_TLS13_SIGN_BENCH_TIMEOUT='$TLS13_SIGN_BENCH_TIMEOUT' FAFAFA_TLS13_SIGN_BENCH_JSON_OUT='$TLS13_SIGN_BENCH_JSON_OUT' bash scripts/run_freepascal_tls13_servercertverify_bench.sh"
+  tls13_bench_cmd=(
+    env
+    "FAFAFA_TLS13_SIGN_BENCH_ITERATIONS=$TLS13_SIGN_BENCH_ITERATIONS"
+    "FAFAFA_TLS13_SIGN_BENCH_WARMUP=$TLS13_SIGN_BENCH_WARMUP"
+    "FAFAFA_TLS13_SIGN_BENCH_SCHEME=$TLS13_SIGN_BENCH_SCHEME"
+    "FAFAFA_TLS13_SIGN_BENCH_KEY=$TLS13_SIGN_BENCH_KEY"
+    "FAFAFA_TLS13_SIGN_BENCH_TIMEOUT=$TLS13_SIGN_BENCH_TIMEOUT"
+    "FAFAFA_TLS13_SIGN_BENCH_JSON_OUT=$TLS13_SIGN_BENCH_JSON_OUT"
+    bash scripts/run_freepascal_tls13_servercertverify_bench.sh
+  )
+  run_project_cmd "$tls13_bench_cmd_desc" "${tls13_bench_cmd[@]}"
 fi
 
 echo "[PASS] minimal CI gate finished"

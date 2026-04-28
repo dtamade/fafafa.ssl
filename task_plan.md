@@ -24,6 +24,15 @@
 ### Status
 - In progress. Baseline compile gate and minimal CI gate are fresh GREEN on the current dirty tree, so the next step is scoped planning-boundary commit, then topic batches.
 
+### Batch 0A: Default gate hardening
+- [x] Verify shell syntax for changed gate scripts and new contracts.
+- [x] Verify `compile_all_modules.py` fails closed on 99/100 success.
+- [x] Verify `run_minimal_ci_gate.sh` no longer executes shell payloads through module arguments.
+- [x] Verify minimal gate passes `--fast-local` through to phase2 dry-run without changing git status.
+- [x] Verify phase2 dry-run fast-local paths stay under `tmp/`.
+- [x] Verify cleanup script covers new fast-local output directories while preserving safe dry-run defaults.
+- [x] Commit scoped gate hardening batch.
+
 ## 2026-04-19 Plan (Execution / FreePascal completeness docs-history absorption batch)
 
 ### Goal

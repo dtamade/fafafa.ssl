@@ -5,14 +5,25 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BENCH_RUNNER="$PROJECT_ROOT/tests/benchmarks/run_all_benchmarks.sh"
-OUTPUT_DIR="$PROJECT_ROOT/tests/benchmarks/results"
-DOC_REPORT_DIR="$PROJECT_ROOT/docs/test_reports"
+RUN_ID="${FAFAFA_PHASE2_BASELINE_RUN_ID:-$(date +%Y%m%d_%H%M%S)_$$}"
+DEFAULT_OUTPUT_DIR="$PROJECT_ROOT/tests/benchmarks/results"
+DEFAULT_BENCH_BIN_DIR="$PROJECT_ROOT/tests/benchmarks/bin"
+DEFAULT_DOC_REPORT_DIR="$PROJECT_ROOT/docs/test_reports"
+
+OUTPUT_DIR="$DEFAULT_OUTPUT_DIR"
+BENCH_BIN_DIR="$DEFAULT_BENCH_BIN_DIR"
+DOC_REPORT_DIR="$DEFAULT_DOC_REPORT_DIR"
 
 ITERATIONS=500
 TLS_ITERATIONS=100
 SKIP_TLS=true
 VERBOSE=false
 DRY_RUN=false
+FAST_LOCAL=false
+
+OUTPUT_DIR_SET_BY_CLI=false
+BENCH_BIN_DIR_SET_BY_CLI=false
+DOC_REPORT_DIR_SET_BY_CLI=false
 
 usage() {
   cat <<'USAGE'
@@ -27,9 +38,13 @@ Phase 2 基准采集脚本（草案）
   scripts/run_phase2_performance_baseline.sh [options]
 
 选项：
+  --run-id ID          指定 run_id（默认: 时间戳 + pid）
   --iterations N      加密/随机类基准迭代次数（默认: 500）
   --tls-iterations N  TLS 握手基准迭代次数（默认: 100）
   --output DIR        基准输出目录（默认: tests/benchmarks/results）
+  --bin-dir DIR       benchmark 编译产物目录（默认: tests/benchmarks/bin）
+  --doc-reports-dir DIR 草案报告输出目录（默认: docs/test_reports）
+  --fast-local        本地快速模式：输出到 ./tmp（避免污染 git 工作区）
   --skip-tls          跳过 TLS 基准（默认开启）
   --with-tls          运行 TLS 基准（需要网络/本地 TLS 端点）
   --verbose           输出详细日志
@@ -40,6 +55,10 @@ USAGE
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --run-id)
+      RUN_ID="$2"
+      shift 2
+      ;;
     --iterations)
       ITERATIONS="$2"
       shift 2
@@ -50,7 +69,22 @@ while [[ $# -gt 0 ]]; do
       ;;
     --output)
       OUTPUT_DIR="$2"
+      OUTPUT_DIR_SET_BY_CLI=true
       shift 2
+      ;;
+    --bin-dir)
+      BENCH_BIN_DIR="$2"
+      BENCH_BIN_DIR_SET_BY_CLI=true
+      shift 2
+      ;;
+    --doc-reports-dir)
+      DOC_REPORT_DIR="$2"
+      DOC_REPORT_DIR_SET_BY_CLI=true
+      shift 2
+      ;;
+    --fast-local)
+      FAST_LOCAL=true
+      shift
       ;;
     --skip-tls)
       SKIP_TLS=true
@@ -85,9 +119,46 @@ if [[ ! -f "$BENCH_RUNNER" ]]; then
   exit 1
 fi
 
-mkdir -p "$OUTPUT_DIR" "$DOC_REPORT_DIR"
+if [[ "$FAST_LOCAL" == "false" ]]; then
+  if [[ "${FAFAFA_FAST_LOCAL:-}" == "1" || "${FAFAFA_FAST_LOCAL:-}" == "true" ]]; then
+    FAST_LOCAL=true
+  fi
+fi
 
-CMD=(bash "$BENCH_RUNNER" --iterations "$ITERATIONS" --tls-iterations "$TLS_ITERATIONS" --output "$OUTPUT_DIR")
+if [[ ! "$RUN_ID" =~ ^[0-9A-Za-z_.-]+$ ]]; then
+  echo "[FAIL] invalid --run-id: $RUN_ID (allowed: [0-9A-Za-z_.-])" >&2
+  exit 1
+fi
+
+if [[ "$FAST_LOCAL" == "true" ]]; then
+  if [[ "$OUTPUT_DIR_SET_BY_CLI" == "false" ]]; then
+    OUTPUT_DIR="$PROJECT_ROOT/tmp/phase2_bench_results_${RUN_ID}"
+  fi
+  if [[ "$BENCH_BIN_DIR_SET_BY_CLI" == "false" ]]; then
+    BENCH_BIN_DIR="$PROJECT_ROOT/tmp/phase2_bench_bin_${RUN_ID}"
+  fi
+  if [[ "$DOC_REPORT_DIR_SET_BY_CLI" == "false" ]]; then
+    DOC_REPORT_DIR="$PROJECT_ROOT/tmp/test-reports"
+  fi
+fi
+
+resolve_under_project_root() {
+  local path="$1"
+  if [[ "$path" != /* ]]; then
+    path="$PROJECT_ROOT/$path"
+  fi
+  if [[ "$path" != "$PROJECT_ROOT"/* ]]; then
+    echo "[FAIL] refusing to write outside project root: $path" >&2
+    exit 1
+  fi
+  echo "$path"
+}
+
+OUTPUT_DIR="$(resolve_under_project_root "$OUTPUT_DIR")"
+BENCH_BIN_DIR="$(resolve_under_project_root "$BENCH_BIN_DIR")"
+DOC_REPORT_DIR="$(resolve_under_project_root "$DOC_REPORT_DIR")"
+
+CMD=(bash "$BENCH_RUNNER" --iterations "$ITERATIONS" --tls-iterations "$TLS_ITERATIONS" --output "$OUTPUT_DIR" --bin-dir "$BENCH_BIN_DIR")
 if [[ "$SKIP_TLS" == "true" ]]; then
   CMD+=(--skip-tls)
 fi
@@ -95,14 +166,20 @@ if [[ "$VERBOSE" == "true" ]]; then
   CMD+=(--verbose)
 fi
 
-echo "[INFO] Phase 2 baseline command: ${CMD[*]}"
-
 if [[ "$DRY_RUN" == "true" ]]; then
+  echo "[INFO] run_id: $RUN_ID"
+  echo "[INFO] bench_runner: $BENCH_RUNNER"
+  echo "[INFO] bench_output_dir: $OUTPUT_DIR"
+  echo "[INFO] bench_bin_dir: $BENCH_BIN_DIR"
+  echo "[INFO] doc_reports_dir: $DOC_REPORT_DIR"
+  echo "[INFO] phase2_baseline_command: ${CMD[*]}"
   echo "[INFO] dry-run enabled, command not executed"
   exit 0
 fi
 
-"${CMD[@]}"
+mkdir -p "$OUTPUT_DIR" "$DOC_REPORT_DIR"
+
+(cd "$OUTPUT_DIR" && "${CMD[@]}")
 
 LATEST_SUMMARY=$(ls -t "$OUTPUT_DIR"/benchmark_summary_*.txt 2>/dev/null | head -1 || true)
 if [[ -z "$LATEST_SUMMARY" ]]; then

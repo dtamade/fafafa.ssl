@@ -262,7 +262,7 @@ def main():
         
         # 检查是否达标
         success_rate = success_count / len(compile_files) * 100
-        target_rate = 98.0
+        target_rate = 100.0
         
         print()
         if success_rate >= target_rate:
