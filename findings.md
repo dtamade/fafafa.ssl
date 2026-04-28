@@ -32,6 +32,13 @@
 - This backend selector batch is intentionally smaller than the larger builder/config/SNI family:
   - included: `src/fafafa.ssl.backend.selector.pas`, focused selector regression, and the backend selector plan
   - excluded: context-builder import/export/merge parity, SNI runtime behavior, PKCS#11 docs/contracts, broad docs/API updates
+- Batch 3B server-name isolation boundaries:
+  - Keep deprecated context-level `ServerName` observable on contexts for compatibility.
+  - Client connections may still inherit context `ServerName` as a legacy fallback.
+  - Server-side connections must not inherit context `ServerName`; SNI / hostname verification remains a client connection concern.
+  - `TSSLFactory.CreateContext(const AConfig)` is a one-shot config path and must not mutate cached library defaults.
+- `src/fafafa.ssl.tls.pas` is deliberately left out of Batch 3B because its current dirty hunk mixes connector empty-hostname precedence with unrelated early-data API changes; it needs a separate TLS/connector batch or a clean partial stage.
+- `src/fafafa.ssl.winssl.connection.pas` is also left out of this batch because its dirty file contains SNI guard changes mixed with WinSSL callback / API-call fixes. The MbedTLS/WolfSSL constructor guard can be committed cleanly now; WinSSL should close in a dedicated WinSSL batch.
 
 ## 2026-04-19 Findings (Execution / FreePascal completeness docs-history absorption batch)
 - 当前最高 ROI 的第二批，不是继续碰 `src/`，而是把已经完成的 FreePascal completeness 主线对应的 docs truth 和 execution history 入库，减少后续继续/重扫的上下文成本。

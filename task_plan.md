@@ -22,7 +22,7 @@
 - [ ] Execute Batch 1 through Batch 5, each with focused verification, review conclusion, and commit.
 
 ### Status
-- In progress. Planning boundary, Batch 0A gate hardening, Batch 1 cert-utils / certchain hardening, and Batch 2 OpenSSL core helper/capability hardening are committed. Batch 3A backend selector minimum-score filtering is verified and ready for scoped review + commit.
+- In progress. Planning boundary, Batch 0A gate hardening, Batch 1 cert-utils / certchain hardening, Batch 2 OpenSSL core helper/capability hardening, and Batch 3A backend selector minimum-score filtering are committed. Batch 3B server-name runtime/isolation is verified and ready for scoped review + commit.
 
 ### Batch 0A: Default gate hardening
 - [x] Verify shell syntax for changed gate scripts and new contracts.
@@ -57,7 +57,16 @@
   - `tests/config/test_context_builder_try.pas`
 - [x] Run `python3 scripts/compile_all_modules.py`.
 - [x] Run scoped diff hygiene.
-- [ ] Review and commit scoped backend selector batch.
+- [x] Review and commit scoped backend selector batch.
+
+### Batch 3B: Server-name runtime / factory isolation
+- [x] Verify `tests/test_context_builder_server_servername_runtime_consistency.pas`.
+- [x] Verify `tests/test_factory_config_server_name_isolation.pas`.
+- [x] Verify `tests/test_connection_builder_hostname_precedence.pas`.
+- [x] Verify `tests/test_freepascal_context_server_name_inheritance.pas`.
+- [x] Run `python3 scripts/compile_all_modules.py`.
+- [x] Run scoped diff hygiene.
+- [ ] Review and commit scoped server-name runtime/isolation batch.
 
 ## 2026-04-19 Plan (Execution / FreePascal completeness docs-history absorption batch)
 

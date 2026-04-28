@@ -156,7 +156,9 @@ begin
   FSocket := ASocket;
   FStream := nil;
   FWolfSSL := nil;
-  FServerName := AContext.GetServerName;
+  FServerName := '';
+  if (AContext <> nil) and (AContext.GetContextType = sslCtxClient) then
+    FServerName := AContext.GetServerName;
   FALPNProtocols := AContext.GetALPNProtocols;
   FNegotiatedALPN := '';
   FLastNativeError := 0;
@@ -183,7 +185,9 @@ begin
   FSocket := 0;
   FStream := AStream;
   FWolfSSL := nil;
-  FServerName := AContext.GetServerName;
+  FServerName := '';
+  if (AContext <> nil) and (AContext.GetContextType = sslCtxClient) then
+    FServerName := AContext.GetServerName;
   FALPNProtocols := AContext.GetALPNProtocols;
   FNegotiatedALPN := '';
   FLastNativeError := 0;

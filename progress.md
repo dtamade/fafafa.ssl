@@ -133,6 +133,32 @@
   - PASS. Staged scope is backend selector minimum-score filtering only: production change in `src/fafafa.ssl.backend.selector.pas`, focused regression, one historical plan, and working-memory updates.
   - No SNI runtime files, config/PKCS#11 contracts, Wave C scripts/reports, TLS13 implementation, or broad docs are staged in this batch.
 
+### Batch 3B server-name runtime / factory isolation verification
+
+- Focused server-name runtime contract:
+  - `export PATH="/opt/fpcupdeluxe/fpc/bin/x86_64-linux:$PATH" && mkdir -p tmp/context_builder_server_servername_runtime_consistency && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/context_builder_server_servername_runtime_consistency -FEtmp/context_builder_server_servername_runtime_consistency -otmp/context_builder_server_servername_runtime_consistency/test_context_builder_server_servername_runtime_consistency tests/test_context_builder_server_servername_runtime_consistency.pas && ./tmp/context_builder_server_servername_runtime_consistency/test_context_builder_server_servername_runtime_consistency`
+  - Result: PASS, `Tests Passed: 6`, `Tests Failed: 0`
+- Factory one-shot isolation contract:
+  - `tests/test_factory_config_server_name_isolation.pas`
+  - Result: PASS, `Tests Passed: 6`, `Tests Failed: 0`
+- Adjacent compatibility regressions:
+  - `tests/test_connection_builder_hostname_precedence.pas`
+  - Result: PASS, `Passed: 9`, `Failed: 0`
+  - `tests/test_freepascal_context_server_name_inheritance.pas`
+  - Result: PASS, `Tests Passed: 2`, `Tests Failed: 0`
+- Compile gate:
+  - `export PATH="/opt/fpcupdeluxe/fpc/bin/x86_64-linux:$PATH" && python3 scripts/compile_all_modules.py`
+  - Result: PASS, `编译成功: 185 (100.0%)`
+- Scope note:
+  - Excluded `src/fafafa.ssl.tls.pas` from this batch because current dirty hunks mix connector hostname precedence with early-data API changes.
+  - Excluded `src/fafafa.ssl.winssl.connection.pas` because current dirty hunks mix server-name guard changes with WinSSL callback/API-call fixes.
+- Scoped hygiene:
+  - `git diff --cached --check`
+  - Result: PASS, no output.
+- Pre-commit review conclusion:
+  - PASS. Staged scope is server-name runtime/factory isolation only: MbedTLS/WolfSSL constructor guards, focused FreePascal-backed server-name/factory regressions, compatibility labeling, matching historical plans, and working-memory updates.
+  - `src/fafafa.ssl.tls.pas`, `src/fafafa.ssl.winssl.connection.pas`, broad docs, Wave C scripts, TLS13 primitives, and PKCS#11 config work are not staged in this batch.
+
 ## 2026-04-19 Progress (Execution / FreePascal completeness docs-history absorption batch)
 
 - 已根据 scoped diff + 两个子代理的范围结论，确定第二批只吸收：

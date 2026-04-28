@@ -539,6 +539,8 @@ var
   ClientConn: ISSLClientConnection;
 begin
   Ctx := TMockContext.Create(sslCtxClient);
+  // INTENTIONAL_COMPAT: legacy context-level SNI coverage. This test keeps
+  // the deprecated context fallback observable on purpose for precedence checks.
   Ctx.SetServerName('ctx.example.com');
 
   WriteLn('=== Case 1: no WithHostname keeps context fallback ===');
@@ -583,4 +585,3 @@ begin
     Halt(0);
   Halt(1);
 end.
-
