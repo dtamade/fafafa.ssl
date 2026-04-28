@@ -1,5 +1,29 @@
 # Project Review Plan
 
+## 2026-04-29 Plan (Execution / Dirty worktree batched closeout)
+
+### Goal
+- Drain the current mixed dirty worktree into verified, topic-scoped commits without reverting user work or mixing unrelated families.
+
+### Files
+- `docs/plans/2026-04-29-dirty-worktree-batched-closeout.md`
+- `task_plan.md`
+- `findings.md`
+- `progress.md`
+- Later scoped batches: OpenSSL/cert-utils, TLS 1.3, builder/config/SNI, Wave C, docs/API/capability truth.
+
+### Steps
+- [x] Load repo instructions and current working-memory context.
+- [x] Freeze current state with `git status --short`, `git diff --stat`, and untracked inventory.
+- [x] Start read-only parallel explorers for OpenSSL/cert-utils, TLS 1.3, Wave C, and builder/config/SNI batching.
+- [x] Write this total-control plan and record the batch boundaries.
+- [x] Run baseline non-invasive verification.
+- [ ] Commit the planning/working-memory boundary if clean.
+- [ ] Execute Batch 1 through Batch 5, each with focused verification, review conclusion, and commit.
+
+### Status
+- In progress. Baseline compile gate and minimal CI gate are fresh GREEN on the current dirty tree, so the next step is scoped planning-boundary commit, then topic batches.
+
 ## 2026-04-19 Plan (Execution / FreePascal completeness docs-history absorption batch)
 
 ### Goal

@@ -1,5 +1,36 @@
 # Progress Log
 
+## 2026-04-29 Progress (Execution / Dirty worktree batched closeout)
+
+- Started continuous execution after user approval.
+- Release build strategy noted for any Rust commands; current repo work is FreePascal/shell and does not use Cargo.
+- Ran session catchup script:
+  - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+  - Result: no output.
+- Captured current dirty-worktree inventory:
+  - `git status --short`
+  - `git diff --stat`
+  - `git ls-files --others --exclude-standard`
+- Current tracked diff summary:
+  - 213 tracked files changed
+  - about 11,586 insertions and 2,151 deletions
+  - major areas: docs, scripts, src, tests, examples
+- Started read-only parallel explorers:
+  - OpenSSL/cert-utils hardening
+  - TLS 1.3 modified files/tests
+  - Wave C scripts/reports/plans
+  - builder/config/SNI/backend-selection
+- Added total-control plan:
+  - `docs/plans/2026-04-29-dirty-worktree-batched-closeout.md`
+- Planning-file hygiene:
+  - `git diff --check -- docs/plans/2026-04-29-dirty-worktree-batched-closeout.md task_plan.md findings.md progress.md`
+  - Result: PASS, no output.
+- Baseline verification:
+  - `export PATH="/opt/fpcupdeluxe/fpc/bin/x86_64-linux:$PATH" && python3 scripts/compile_all_modules.py`
+  - Result: PASS, `编译成功: 185 (100.0%)`
+  - `export PATH="/opt/fpcupdeluxe/fpc/bin/x86_64-linux:$PATH" && bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - Result: PASS, module tests `17/17`, phase2 dry-run PASS, `[PASS] minimal CI gate finished`
+
 ## 2026-04-19 Progress (Execution / FreePascal completeness docs-history absorption batch)
 
 - 已根据 scoped diff + 两个子代理的范围结论，确定第二批只吸收：

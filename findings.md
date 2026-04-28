@@ -1,5 +1,17 @@
 # Findings
 
+## 2026-04-29 Findings (Execution / Dirty worktree batched closeout)
+- The current risk is not a single failing feature; it is a mixed dirty worktree with unrelated work sharing the same staging surface.
+- The highest-value control is scoped batching:
+  - OpenSSL/cert-utils fail-closed hardening
+  - TLS 1.3 primitives
+  - builder/config/SNI/backend-selection
+  - Wave C script and historical-governance cleanup
+  - final docs/API/capability truth
+- FreePascal TLS 1.3 early-data is already closed out in the roadmap and should not be reopened without fresh failing evidence.
+- Broad docs should be last, because they depend on the behavior batches being verified first.
+- Fresh baseline is currently green on the dirty tree, so the backlog can be drained by scoped commits instead of first repairing a global build break.
+
 ## 2026-04-19 Findings (Execution / FreePascal completeness docs-history absorption batch)
 - 当前最高 ROI 的第二批，不是继续碰 `src/`，而是把已经完成的 FreePascal completeness 主线对应的 docs truth 和 execution history 入库，减少后续继续/重扫的上下文成本。
 - tracked docs 的安全边界已经足够明确：
