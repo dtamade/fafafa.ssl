@@ -24,6 +24,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.cert.builder,
   fafafa.ssl.errors,
+  fafafa.ssl.exceptions,
   fafafa.ssl.openssl.api.ocsp,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.pem;
@@ -145,17 +146,36 @@ uses
 
 { Helper functions }
 
-function ASN1TimeToDateTime(const ATime: PASN1_TIME): TDateTime;
-var
-  LTm: TM;
+procedure RequirePKCS12CreateBIOHelpers;
 begin
-  Result := 0;
-  if (ATime <> nil) and Assigned(ASN1_TIME_to_tm) then
-  begin
-    if ASN1_TIME_to_tm(ATime, @LTm) = 1 then
-      Result := EncodeDate(LTm.tm_year + 1900, LTm.tm_mon + 1, LTm.tm_mday) +
-                EncodeTime(LTm.tm_hour, LTm.tm_min, LTm.tm_sec, 0);
-  end;
+  if (not Assigned(BIO_new)) or
+     (not Assigned(BIO_s_mem)) or
+     (not Assigned(BIO_free)) then
+    raise ESSLException.Create(
+      'Required OpenSSL PKCS12 BIO export helpers are unavailable',
+      sslErrFunctionNotFound
+    );
+end;
+
+function HasPKCS12LoadBIOHelpers: Boolean;
+begin
+  Result := Assigned(BIO_new_mem_buf) and Assigned(BIO_free);
+end;
+
+procedure RequireCRLLoadBIOHelpers;
+begin
+  if (not Assigned(BIO_new_mem_buf)) or
+     (not Assigned(PEM_read_bio_X509_CRL)) or
+     (not Assigned(BIO_free)) then
+    raise ESSLException.Create(
+      'Required OpenSSL CRL BIO load helpers are unavailable',
+      sslErrFunctionNotFound
+    );
+end;
+
+function ASN1TimeToDateTime(const ATime: PASN1_TIME): TDateTime;
+begin
+  Result := fafafa.ssl.openssl.api.asn1.ASN1TimeToDateTime(ASN1_TIME(ATime));
 end;
 
 function DefaultPKCS12Options: TPKCS12Options;
@@ -326,6 +346,8 @@ begin
     X509_CRL_free(FCRL);
     FCRL := nil;
   end;
+
+  RequireCRLLoadBIOHelpers;
   
   // Parse PEM
   LBio := BIO_new_mem_buf(PAnsiChar(APEM), Length(APEM));
@@ -485,6 +507,7 @@ begin
   
   try
     // Write to memory BIO
+    RequirePKCS12CreateBIOHelpers;
     LBio := BIO_new(BIO_s_mem());
     if not Assigned(LBio) then
       RaiseMemoryError('BIO creation');
@@ -548,6 +571,9 @@ begin
   AKey := nil;
   
   if Length(APKCS12) = 0 then Exit;
+
+  if not HasPKCS12LoadBIOHelpers then
+    Exit;
   
   // Create BIO from bytes
   LBio := BIO_new_mem_buf(@APKCS12[0], Length(APKCS12));

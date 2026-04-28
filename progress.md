@@ -24802,3 +24802,19 @@ Evidence:
     - `tests/test_transformation_methods.pas`: 49/49 PASS
     - `python3 scripts/compile_all_modules.py`: 185/185 PASS
     - `git diff --cached --check`: PASS
+
+## 2026-04-29 Progress (Batch 4A certificate / encoding BIO guards)
+- Focused BIO contract sweep:
+  - `tests/test_cert_advanced_crl_bio_contract.pas`: PASS
+  - `tests/test_cert_advanced_pkcs12_bio_contract.pas`: PASS
+  - `tests/test_cert_builder_bio_contract.pas`: PASS
+  - `tests/test_cert_pinning_bio_contract.pas`: PASS
+  - `tests/test_encoding_base64_bio_contract.pas`: PASS
+- Full module compile:
+  - `python3 scripts/compile_all_modules.py`: PASS, 185/185 modules compiled.
+- Scope decision:
+  - Include only certificate/encoding BIO guard production files, focused tests, and matching plan files.
+  - Exclude OCSP/CT/stapling runtime changes and OpenSSL DES/MD handle-type cleanup for separate commits.
+- Scoped review conclusion before commit:
+  - PASS. Staged files are limited to certificate/encoding BIO guard implementation, matching focused contracts, plan files, and working-memory updates.
+  - Focused BIO contracts are green, full module compile is 185/185, and `git diff --cached --check` is clean.

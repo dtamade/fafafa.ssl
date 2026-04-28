@@ -139,6 +139,40 @@ type
 
 implementation
 
+procedure RequireCertificatePEMLoadHelpers;
+begin
+  if (not Assigned(BIO_new_mem_buf)) or
+     (not Assigned(BIO_free)) or
+     (not Assigned(PEM_read_bio_X509)) then
+    raise ESSLException.Create('Required OpenSSL certificate PEM load helpers are unavailable');
+end;
+
+procedure RequireCertificatePEMSaveHelpers;
+begin
+  if (not Assigned(BIO_new)) or
+     (not Assigned(BIO_s_mem)) or
+     (not Assigned(BIO_free)) or
+     (not Assigned(PEM_write_bio_X509)) then
+    raise ESSLException.Create('Required OpenSSL certificate PEM save helpers are unavailable');
+end;
+
+procedure RequirePrivateKeyPEMLoadHelpers;
+begin
+  if (not Assigned(BIO_new_mem_buf)) or
+     (not Assigned(BIO_free)) or
+     (not Assigned(PEM_read_bio_PrivateKey)) then
+    raise ESSLException.Create('Required OpenSSL private-key PEM load helpers are unavailable');
+end;
+
+procedure RequirePrivateKeyPEMSaveHelpers;
+begin
+  if (not Assigned(BIO_new)) or
+     (not Assigned(BIO_s_mem)) or
+     (not Assigned(BIO_free)) or
+     (not Assigned(PEM_write_bio_PrivateKey)) then
+    raise ESSLException.Create('Required OpenSSL private-key PEM save helpers are unavailable');
+end;
+
 { TCertificateImpl }
 
 constructor TCertificateImpl.Create(const APEM: string);
@@ -180,6 +214,8 @@ begin
   
   if FPEM = '' then
     raise ESSLException.Create('No PEM data available');
+
+  RequireCertificatePEMLoadHelpers;
   
   // Convert PEM to X509 handle
   LBio := BIO_new_mem_buf(PAnsiChar(FPEM), Length(FPEM));
@@ -206,6 +242,8 @@ begin
   
   if not Assigned(FX509) then
     raise ESSLException.Create('No X509 handle available');
+
+  RequireCertificatePEMSaveHelpers;
   
   // Convert X509 handle to PEM
   LBio := BIO_new(BIO_s_mem());
@@ -337,6 +375,8 @@ begin
   
   if FPEM = '' then
     raise ESSLException.Create('No PEM data available');
+
+  RequirePrivateKeyPEMLoadHelpers;
   
   LBio := BIO_new_mem_buf(PAnsiChar(FPEM), Length(FPEM));
   if not Assigned(LBio) then
@@ -362,6 +402,8 @@ begin
   
   if not Assigned(FEVPKey) then
     raise ESSLException.Create('No EVP_PKEY handle available');
+
+  RequirePrivateKeyPEMSaveHelpers;
   
   LBio := BIO_new(BIO_s_mem());
   if not Assigned(LBio) then

@@ -34,7 +34,6 @@ uses
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.evp, 
-  fafafa.ssl.openssl.api.bio,
   fafafa.ssl.errors, fafafa.ssl.exceptions, fafafa.ssl.logging;
 
 type
@@ -312,7 +311,6 @@ end;
 function TPinValidator.ExtractPublicKeyHash(ACert: PX509): TBytes;
 var
   PubKey: PEVP_PKEY;
-  Bio: PBIO;
   SPKIData: TBytes;
   Digest: array[0..31] of Byte;
   Ctx: PEVP_MD_CTX;
@@ -334,32 +332,20 @@ begin
   end;
 
   try
-    // Encode SPKI to DER format
-    Bio := BIO_new(BIO_s_mem());
-    if Bio = nil then
+    // Encode SPKI to DER format directly; no BIO buffering is required here.
+    SPKILen := i2d_PUBKEY(PubKey, nil);
+    if SPKILen <= 0 then
     begin
-      TSecurityLog.Error('CertPinning', 'Failed to create BIO');
+      TSecurityLog.Error('CertPinning', 'Failed to get public key length');
       Exit;
     end;
 
-    try
-      // 使用 i2d_PUBKEY 将公钥编码为 DER 格式
-      SPKILen := i2d_PUBKEY(PubKey, nil);
-      if SPKILen <= 0 then
-      begin
-        TSecurityLog.Error('CertPinning', 'Failed to get public key length');
-        Exit;
-      end;
-      
-      SetLength(SPKIData, SPKILen);
-      P := @SPKIData[0];
-      if i2d_PUBKEY(PubKey, @P) <= 0 then
-      begin
-        TSecurityLog.Error('CertPinning', 'Failed to encode public key');
-        Exit;
-      end;
-    finally
-      BIO_free(Bio);
+    SetLength(SPKIData, SPKILen);
+    P := @SPKIData[0];
+    if i2d_PUBKEY(PubKey, @P) <= 0 then
+    begin
+      TSecurityLog.Error('CertPinning', 'Failed to encode public key');
+      Exit;
     end;
 
     // Hash the SPKI

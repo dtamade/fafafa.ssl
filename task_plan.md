@@ -75,6 +75,17 @@
 - [x] Run scoped diff hygiene.
 - [x] Review and commit scoped builder/config contract batch.
 
+### Batch 4A: Certificate / encoding BIO guard contracts
+- [x] Verify focused BIO contracts:
+  - `tests/test_cert_advanced_crl_bio_contract.pas`
+  - `tests/test_cert_advanced_pkcs12_bio_contract.pas`
+  - `tests/test_cert_builder_bio_contract.pas`
+  - `tests/test_cert_pinning_bio_contract.pas`
+  - `tests/test_encoding_base64_bio_contract.pas`
+- [x] Run `python3 scripts/compile_all_modules.py`.
+- [x] Run scoped diff hygiene.
+- [x] Review and commit scoped certificate / encoding BIO guard batch.
+
 ## 2026-04-19 Plan (Execution / FreePascal completeness docs-history absorption batch)
 
 ### Goal

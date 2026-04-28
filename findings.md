@@ -10921,3 +10921,9 @@ Verification:
   - 默认仍是 in-memory single-process ledger
   - file-backed 与 directory-backed 都是 opt-in
   - capability wording 仍保持 experimental，不会误导成“默认已经持久化”
+
+## 2026-04-29 Findings (Batch 4A certificate / encoding BIO guards)
+- The remaining BIO guard work splits cleanly from OCSP/CT runtime changes.
+- `cert.advanced`, `cert.builder.impl`, `cert.pinning`, and `encoding` can close as an independent batch because their tests exercise missing BIO helper behavior directly.
+- `cert.pinning` no longer needs a memory BIO for SPKI hashing; it can DER-encode the public key directly via `i2d_PUBKEY`, so nil `BIO_new` / `BIO_s_mem` / `BIO_free` no longer breaks public-key pin validation.
+- OCSP/CT/stapling changes are intentionally excluded from this batch; they carry behavior changes beyond BIO helper readiness and need their own verification surface.
