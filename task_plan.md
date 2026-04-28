@@ -115,6 +115,12 @@
 - [x] Run scoped diff hygiene.
 - [x] Review and commit scoped OCSP / CT runtime batch.
 
+### Batch 5B: Revocation fixture completeness
+- [x] Verify `tests/test_freepascal_revocation_fast_contracts.pas`.
+- [x] Verify `tests/test_freepascal_client_cert_verify_flags_runtime.pas`.
+- [x] Run scoped diff hygiene.
+- [x] Review and commit revocation CRL fixtures.
+
 ## 2026-04-19 Plan (Execution / FreePascal completeness docs-history absorption batch)
 
 ### Goal

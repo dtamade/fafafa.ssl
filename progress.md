@@ -24861,3 +24861,14 @@ Evidence:
 - Scoped review conclusion before commit:
   - PASS. Staged files are limited to OCSP/CT/stapling runtime hardening, directly related tests/fixtures, and working-memory updates.
   - Focused OCSP/CT tests are green, full module compile is 185/185, and `git diff --cached --check` is clean.
+
+## 2026-04-29 Progress (Batch 5B revocation fixture completeness)
+- Verified fixture-dependent revocation tests:
+  - `tests/test_freepascal_revocation_fast_contracts.pas`: PASS
+  - `tests/test_freepascal_client_cert_verify_flags_runtime.pas`: PASS
+- Scope decision:
+  - Include only the missing CRL fixture PEM files and working-memory updates.
+  - Production revocation code and test sources are already tracked; no `src/` files are included in this batch.
+- Scoped review conclusion before commit:
+  - PASS. Staged files are limited to revocation CRL fixtures and working-memory updates.
+  - Both fixture-dependent revocation regressions pass, and `git diff --cached --check` is clean.
