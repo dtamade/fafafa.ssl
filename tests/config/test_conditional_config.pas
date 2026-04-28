@@ -16,13 +16,19 @@ uses
   SysUtils,
   fafafa.ssl.base,
   fafafa.ssl.context.builder,
-  fafafa.ssl.cert.utils;
+  fafafa.ssl.cert.utils,
+  fafafa.ssl.freepascal.lib;
 
 var
   GTestsPassed: Integer = 0;
   GTestsFailed: Integer = 0;
   GConfigExecuted: Boolean = False;
   GExecutionCount: Integer = 0;
+
+function CreateRuntimeBuilder: ISSLContextBuilder;
+begin
+  Result := TSSLContextBuilder.Create.WithBackend(sslFreePascal);
+end;
 
 procedure Assert(ACondition: Boolean; const AMessage: string);
 begin
@@ -333,7 +339,7 @@ begin
     Exit;
   end;
 
-  LBuilder := TSSLContextBuilder.Create
+  LBuilder := CreateRuntimeBuilder
     .When(True, @SetConfigFlag)
     .WithCertificatePEM(LCert)
     .WithPrivateKeyPEM(LKey);

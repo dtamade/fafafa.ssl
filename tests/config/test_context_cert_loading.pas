@@ -5,14 +5,15 @@ program test_context_cert_loading;
 uses
   Classes, SysUtils,
   fafafa.ssl,
-  
   fafafa.ssl.base,
-  fafafa.ssl.factory;
+  fafafa.ssl.factory,
+  fafafa.ssl.native_handle;
 
 var
   Factory: ISSLLibrary;
   Context: ISSLContext;
   Store: ISSLCertificateStore;
+  NativeHandle: Pointer;
   Passed, Failed: Integer;
 
 procedure WriteTestResult(const TestName: string; Success: Boolean);
@@ -64,7 +65,8 @@ begin
     // Test 3: Get native handle
     WriteLn('Test 3: Get native handle');
     if Context <> nil then
-      WriteTestResult('Native handle is not nil', Context.GetNativeHandle <> nil);
+      WriteTestResult('Native handle is not nil',
+        TryGetNativeHandle(Context, NativeHandle) and (NativeHandle <> nil));
     
     // Test 4: Certificate store integration
     WriteLn('Test 4: Set certificate store');

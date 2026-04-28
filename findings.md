@@ -39,6 +39,17 @@
   - `TSSLFactory.CreateContext(const AConfig)` is a one-shot config path and must not mutate cached library defaults.
 - `src/fafafa.ssl.tls.pas` is deliberately left out of Batch 3B because its current dirty hunk mixes connector empty-hostname precedence with unrelated early-data API changes; it needs a separate TLS/connector batch or a clean partial stage.
 - `src/fafafa.ssl.winssl.connection.pas` is also left out of this batch because its dirty file contains SNI guard changes mixed with WinSSL callback / API-call fixes. The MbedTLS/WolfSSL constructor guard can be committed cleanly now; WinSSL should close in a dedicated WinSSL batch.
+- Batch 3C is a tests/history absorption batch, not a production-code batch:
+  - the implementation surfaces for builder/config behavior are already present in current source
+  - the dirty worktree still contains the regression contracts and historical plans that prove those behaviors
+  - absorbing them now reduces repeated re-verification cost before broad docs/API cleanup
+- The builder/config contracts now cover:
+  - file-vs-PEM precedence for direct APIs, override, import/export, merge, and ApplyPreset paths
+  - explicit backend and auto-backend state replacement/serialization
+  - system roots with explicit backend contexts
+  - PKCS#11 URI/key-source validation and PIN method/order handling
+  - OCSP/CT override state synchronization
+  - request-safe default config / logging scope expectations
 
 ## 2026-04-19 Findings (Execution / FreePascal completeness docs-history absorption batch)
 - 当前最高 ROI 的第二批，不是继续碰 `src/`，而是把已经完成的 FreePascal completeness 主线对应的 docs truth 和 execution history 入库，减少后续继续/重扫的上下文成本。

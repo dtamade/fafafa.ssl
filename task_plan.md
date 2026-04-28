@@ -22,7 +22,7 @@
 - [ ] Execute Batch 1 through Batch 5, each with focused verification, review conclusion, and commit.
 
 ### Status
-- In progress. Planning boundary, Batch 0A gate hardening, Batch 1 cert-utils / certchain hardening, Batch 2 OpenSSL core helper/capability hardening, and Batch 3A backend selector minimum-score filtering are committed. Batch 3B server-name runtime/isolation is verified and ready for scoped review + commit.
+- In progress. Planning boundary, Batch 0A gate hardening, Batch 1 cert-utils / certchain hardening, Batch 2 OpenSSL core helper/capability hardening, Batch 3A backend selector minimum-score filtering, and Batch 3B server-name runtime/isolation are committed. Batch 3C builder/config regression contracts are verified and ready for scoped review + commit.
 
 ### Batch 0A: Default gate hardening
 - [x] Verify shell syntax for changed gate scripts and new contracts.
@@ -66,7 +66,14 @@
 - [x] Verify `tests/test_freepascal_context_server_name_inheritance.pas`.
 - [x] Run `python3 scripts/compile_all_modules.py`.
 - [x] Run scoped diff hygiene.
-- [ ] Review and commit scoped server-name runtime/isolation batch.
+- [x] Review and commit scoped server-name runtime/isolation batch.
+
+### Batch 3C: Builder/config regression contracts
+- [x] Run the complete `tests/config/*.pas` sweep.
+- [x] Run `tests/test_transformation_methods.pas`.
+- [x] Run `python3 scripts/compile_all_modules.py`.
+- [x] Run scoped diff hygiene.
+- [x] Review and commit scoped builder/config contract batch.
 
 ## 2026-04-19 Plan (Execution / FreePascal completeness docs-history absorption batch)
 

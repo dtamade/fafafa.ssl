@@ -5,7 +5,15 @@ program test_default_config;
 uses
   SysUtils,
   fafafa.ssl.base,
+  fafafa.ssl.factory,
+  fafafa.ssl.freepascal.lib,
   fafafa.ssl;
+
+type
+  TLogCallbackProbe = class
+  public
+    procedure HandleLog(ALevel: TSSLLogLevel; const AMessage: string);
+  end;
 
 procedure AssertTrue(const AName: string; AValue: Boolean);
 begin
@@ -16,6 +24,11 @@ begin
     WriteLn('  [FAIL] ', AName);
     Halt(1);
   end;
+end;
+
+procedure TLogCallbackProbe.HandleLog(ALevel: TSSLLogLevel; const AMessage: string);
+begin
+  if (ALevel = sslLogNone) and (AMessage = '') then;
 end;
 
 procedure TestDefaultConfigSecurityBaseline;
@@ -36,6 +49,46 @@ begin
   AssertTrue('VerifyDepth non-zero', Cfg.VerifyDepth > 0);
   AssertTrue('CipherList not empty', Cfg.CipherList <> '');
   AssertTrue('CipherSuites not empty', Cfg.CipherSuites <> '');
+  AssertTrue('ClientEarlyDataEnabled defaults to False', not Cfg.ClientEarlyDataEnabled);
+  AssertTrue('ServerEarlyDataPolicy defaults to Reject',
+    Cfg.ServerEarlyDataPolicy = sslEarlyDataServerReject);
+  AssertTrue('ServerMaxEarlyDataSize defaults to 0',
+    Cfg.ServerMaxEarlyDataSize = 0);
+  AssertTrue('ServerEarlyDataReplayStoreFile defaults to empty',
+    Cfg.ServerEarlyDataReplayStoreFile = '');
+end;
+
+procedure TestDefaultConfigIgnoresLibraryScopedLoggingDefaults;
+var
+  Lib: ISSLLibrary;
+  OriginalConfig: TSSLConfig;
+  LoggingConfig: TSSLConfig;
+  Cfg: TSSLConfig;
+  Probe: TLogCallbackProbe;
+  OriginalDefaultLibrary: TSSLLibraryType;
+begin
+  Lib := TSSLFactory.GetLibrary(sslFreePascal);
+  OriginalConfig := Lib.GetDefaultConfig;
+  OriginalDefaultLibrary := TSSLFactory.GetDefaultLibrary;
+  Probe := TLogCallbackProbe.Create;
+  try
+    LoggingConfig := OriginalConfig;
+    LoggingConfig.LogLevel := sslLogTrace;
+    LoggingConfig.LogCallback := @Probe.HandleLog;
+    Lib.SetDefaultConfig(LoggingConfig);
+    TSSLFactory.SetDefaultLibrary(sslFreePascal);
+
+    Cfg := CreateDefaultConfig(sslCtxClient);
+
+    AssertTrue('CreateDefaultConfig keeps request-safe LogLevel',
+      Cfg.LogLevel = sslLogError);
+    AssertTrue('CreateDefaultConfig clears library-scoped LogCallback',
+      not Assigned(Cfg.LogCallback));
+  finally
+    TSSLFactory.SetDefaultLibrary(OriginalDefaultLibrary);
+    Lib.SetDefaultConfig(OriginalConfig);
+    Probe.Free;
+  end;
 end;
 
 begin
@@ -44,6 +97,7 @@ begin
   WriteLn('========================================');
 
   TestDefaultConfigSecurityBaseline;
+  TestDefaultConfigIgnoresLibraryScopedLoggingDefaults;
 
   WriteLn('所有测试通过！✓');
 end.

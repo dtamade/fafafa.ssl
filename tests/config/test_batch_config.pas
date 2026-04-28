@@ -13,15 +13,22 @@ program test_batch_config;
 
 uses
   SysUtils,
+  fpjson, jsonparser,
   fafafa.ssl.base,
   fafafa.ssl.context.builder,
-  fafafa.ssl.cert.utils;
+  fafafa.ssl.cert.utils,
+  fafafa.ssl.freepascal.lib;
 
 var
   GTestsPassed: Integer = 0;
   GTestsFailed: Integer = 0;
   GConfigExecuted: Boolean = False;
   GExecutionCount: Integer = 0;
+
+function CreateRuntimeBuilder: ISSLContextBuilder;
+begin
+  Result := TSSLContextBuilder.Create.WithBackend(sslFreePascal);
+end;
 
 procedure Assert(ACondition: Boolean; const AMessage: string);
 begin
@@ -43,6 +50,11 @@ begin
   WriteLn('═══════════════════════════════════════════════════════════');
   WriteLn('  ', ATestName);
   WriteLn('═══════════════════════════════════════════════════════════');
+end;
+
+function ParseBuilderJSON(ABuilder: ISSLContextBuilder): TJSONObject;
+begin
+  Result := TJSONObject(GetJSON(ABuilder.ExportToJSON));
 end;
 
 { Global config procedures for testing }
@@ -362,7 +374,7 @@ begin
     Exit;
   end;
 
-  LBuilder := TSSLContextBuilder.Create
+  LBuilder := CreateRuntimeBuilder
     .Apply(@ConfigureProdEnvironment)
     .WithCertificatePEM(LCert)
     .WithPrivateKeyPEM(LKey);
@@ -415,6 +427,70 @@ begin
     'Complex pipeline executes all steps correctly');
 end;
 
+{ Test 19: ApplyPreset file sources clear stale PEM state }
+procedure Test_ApplyPreset_FileSources_ClearStalePEMState;
+var
+  LBuilder, LPreset: ISSLContextBuilder;
+  LObj: TJSONObject;
+begin
+  TestHeader('Test 19: ApplyPreset File Sources Clear Stale PEM State');
+
+  LPreset := TSSLContextBuilder.Create
+    .WithCertificate('/tmp/preset-cert-file.pem')
+    .WithPrivateKey('/tmp/preset-private-key.pem');
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithCertificatePEM('stale-builder-cert-pem')
+    .WithPrivateKeyPEM('stale-builder-private-key-pem')
+    .ApplyPreset(LPreset);
+
+  LObj := ParseBuilderJSON(LBuilder);
+  try
+    Assert(LObj.Strings['certificate_file'] = '/tmp/preset-cert-file.pem',
+      'ApplyPreset keeps preset certificate_file export-visible');
+    Assert(LObj.Strings['certificate_pem'] = '',
+      'ApplyPreset(certificate_file) clears stale certificate_pem state');
+    Assert(LObj.Strings['private_key_file'] = '/tmp/preset-private-key.pem',
+      'ApplyPreset keeps preset private_key_file export-visible');
+    Assert(LObj.Strings['private_key_pem'] = '',
+      'ApplyPreset(private_key_file) clears stale private_key_pem state');
+  finally
+    LObj.Free;
+  end;
+end;
+
+{ Test 20: ApplyPreset PEM sources clear stale file state }
+procedure Test_ApplyPreset_PEMSources_ClearStaleFileState;
+var
+  LBuilder, LPreset: ISSLContextBuilder;
+  LObj: TJSONObject;
+begin
+  TestHeader('Test 20: ApplyPreset PEM Sources Clear Stale File State');
+
+  LPreset := TSSLContextBuilder.Create
+    .WithCertificatePEM('preset-certificate-pem')
+    .WithPrivateKeyPEM('preset-private-key-pem');
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithCertificate('/tmp/stale-builder-cert-file.pem')
+    .WithPrivateKey('/tmp/stale-builder-private-key.pem')
+    .ApplyPreset(LPreset);
+
+  LObj := ParseBuilderJSON(LBuilder);
+  try
+    Assert(LObj.Strings['certificate_file'] = '',
+      'ApplyPreset(certificate_pem) clears stale certificate_file state');
+    Assert(LObj.Strings['certificate_pem'] = 'preset-certificate-pem',
+      'ApplyPreset keeps preset certificate_pem export-visible');
+    Assert(LObj.Strings['private_key_file'] = '',
+      'ApplyPreset(private_key_pem) clears stale private_key_file state');
+    Assert(LObj.Strings['private_key_pem'] = 'preset-private-key-pem',
+      'ApplyPreset keeps preset private_key_pem export-visible');
+  finally
+    LObj.Free;
+  end;
+end;
+
 { Main Test Runner }
 begin
   WriteLn;
@@ -448,6 +524,8 @@ begin
     Test_BuildAfterBatch;
     Test_Apply_Pipe_Equivalent;
     Test_Complex_Pipeline;
+    Test_ApplyPreset_FileSources_ClearStalePEMState;
+    Test_ApplyPreset_PEMSources_ClearStaleFileState;
 
     // Print summary
     WriteLn;

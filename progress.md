@@ -159,6 +159,18 @@
   - PASS. Staged scope is server-name runtime/factory isolation only: MbedTLS/WolfSSL constructor guards, focused FreePascal-backed server-name/factory regressions, compatibility labeling, matching historical plans, and working-memory updates.
   - `src/fafafa.ssl.tls.pas`, `src/fafafa.ssl.winssl.connection.pas`, broad docs, Wave C scripts, TLS13 primitives, and PKCS#11 config work are not staged in this batch.
 
+### Batch 3C builder/config regression contract verification
+
+- Complete config sweep:
+  - `export PATH="/opt/fpcupdeluxe/fpc/bin/x86_64-linux:$PATH" && mkdir -p tmp/config_batch_contracts && rc=0; count=0; for f in tests/config/*.pas; do name=$(basename "$f" .pas); log="tmp/config_batch_contracts/${name}.log"; if fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/config_batch_contracts -FEtmp/config_batch_contracts -otmp/config_batch_contracts/${name} "$f" >"$log" 2>&1 && "tmp/config_batch_contracts/${name}" >>"$log" 2>&1; then printf 'PASS %s\n' "$name"; count=$((count+1)); else printf 'FAIL %s\n' "$name"; tail -80 "$log"; rc=1; break; fi; done; printf 'config tests passed: %s\n' "$count"; exit $rc`
+  - Result: PASS, `config tests passed: 15`
+- Transformation methods:
+  - `tests/test_transformation_methods.pas`
+  - Result: PASS, `Tests Passed: 49`, `Tests Failed: 0`
+- Compile gate:
+  - `export PATH="/opt/fpcupdeluxe/fpc/bin/x86_64-linux:$PATH" && python3 scripts/compile_all_modules.py`
+  - Result: PASS, `编译成功: 185 (100.0%)`
+
 ## 2026-04-19 Progress (Execution / FreePascal completeness docs-history absorption batch)
 
 - 已根据 scoped diff + 两个子代理的范围结论，确定第二批只吸收：
@@ -24780,3 +24792,13 @@ Evidence:
   - directory-backed replay store is now a first-class public opt-in for FreePascal early-data server paths
   - default shipped behavior remains the in-memory single-process anti-replay ledger
   - the batch stayed scoped to public parity and contract hardening, without reopening persistence architecture
+
+## 2026-04-29 Progress (Batch 3C builder/config regression contracts)
+- Scoped review conclusion before commit:
+  - PASS. Staged files are limited to builder/config regression contract tests, related plan history, and working-memory evidence.
+  - No production `src/` files are staged in this batch.
+  - Fresh verification already passed:
+    - complete `tests/config/*.pas` sweep: 15/15 PASS
+    - `tests/test_transformation_methods.pas`: 49/49 PASS
+    - `python3 scripts/compile_all_modules.py`: 185/185 PASS
+    - `git diff --cached --check`: PASS

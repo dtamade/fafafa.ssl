@@ -13,6 +13,7 @@ program test_transformation_methods;
 
 uses
   SysUtils,
+  fpjson, jsonparser,
   fafafa.ssl.base,
   fafafa.ssl.context.builder,
   fafafa.ssl.cert.utils,
@@ -42,6 +43,21 @@ begin
   WriteLn('═══════════════════════════════════════════════════════════');
   WriteLn('  ', ATestName);
   WriteLn('═══════════════════════════════════════════════════════════');
+end;
+
+function JSONObjectHasOption(AObject: TJSONObject; AOption: TSSLOption): Boolean;
+var
+  LOptions: TJSONArray;
+  I: Integer;
+begin
+  Result := False;
+  if AObject.IndexOfName('options') < 0 then
+    Exit;
+
+  LOptions := AObject.Arrays['options'];
+  for I := 0 to LOptions.Count - 1 do
+    if LOptions.Integers[I] = Ord(AOption) then
+      Exit(True);
 end;
 
 { Global transformation functions for testing }
@@ -295,13 +311,42 @@ begin
     'Override replaces server_name');
 end;
 
-{ Test 14: Override supports method chaining }
+{ Test 14: Override server OCSP stapled response file }
+procedure Test_Override_ServerOCSPStapledResponseFile;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+  LData: TJSONData;
+  LObj: TJSONObject;
+  LFileName: string;
+begin
+  TestHeader('Test 14: Override Server OCSP Stapled Response File');
+
+  LFileName := 'tests/fixtures/p2/ocsp/ocsp_response_successful_basic_v1.der';
+  LBuilder := TSSLContextBuilder.Create
+    .Override('server_ocsp_stapled_response_file', LFileName);
+
+  LJSON := LBuilder.ExportToJSON;
+  LData := GetJSON(LJSON);
+  try
+    LObj := TJSONObject(LData);
+    Assert(LObj.IndexOfName('server_ocsp_stapled_response_file') >= 0,
+      'Override(server_ocsp_stapled_response_file) makes builder state export-visible');
+    if LObj.IndexOfName('server_ocsp_stapled_response_file') >= 0 then
+      Assert(LObj.Strings['server_ocsp_stapled_response_file'] = LFileName,
+        'Override(server_ocsp_stapled_response_file) stores the requested file path');
+  finally
+    LData.Free;
+  end;
+end;
+
+{ Test 15: Override supports method chaining }
 procedure Test_Override_Chaining;
 var
   LBuilder: ISSLContextBuilder;
   LJSON: string;
 begin
-  TestHeader('Test 14: Override Supports Method Chaining');
+  TestHeader('Test 15: Override Supports Method Chaining');
 
   LBuilder := TSSLContextBuilder.Create
     .Override('cipher_list', 'CIPHER-1')
@@ -311,6 +356,154 @@ begin
 
   Assert((Pos('CIPHER-1', LJSON) > 0) and (Pos('6666', LJSON) > 0),
     'Method chaining works after Override');
+end;
+
+{ Test 15: Override certificate_file clears stale certificate PEM }
+procedure Test_Override_CertificateFile_ClearsStalePEMState;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+  LData: TJSONData;
+  LObj: TJSONObject;
+  LCertPEM, LKeyPEM: string;
+begin
+  TestHeader('Test 15: Override certificate_file clears stale certificate PEM');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'override-cert-file.test', 'Test Org', 30, LCertPEM, LKeyPEM
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Inc(GTestsFailed);
+    Exit;
+  end;
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithCertificatePEM(LCertPEM)
+    .Override('certificate_file', '/tmp/override-cert-file.pem');
+
+  LJSON := LBuilder.ExportToJSON;
+  LData := GetJSON(LJSON);
+  try
+    LObj := TJSONObject(LData);
+    Assert(LObj.Strings['certificate_file'] = '/tmp/override-cert-file.pem',
+      'Override keeps overridden certificate_file state export-visible');
+    Assert(LObj.Strings['certificate_pem'] = '',
+      'Override(certificate_file) clears stale certificate_pem state');
+  finally
+    LData.Free;
+  end;
+end;
+
+{ Test 16: Override private_key_file clears stale private key PEM }
+procedure Test_Override_PrivateKeyFile_ClearsStalePEMState;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+  LData: TJSONData;
+  LObj: TJSONObject;
+  LCertPEM, LKeyPEM: string;
+begin
+  TestHeader('Test 16: Override private_key_file clears stale private key PEM');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'override-key-file.test', 'Test Org', 30, LCertPEM, LKeyPEM
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Inc(GTestsFailed);
+    Exit;
+  end;
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithPrivateKeyPEM(LKeyPEM)
+    .Override('private_key_file', '/tmp/override-private-key.pem');
+
+  LJSON := LBuilder.ExportToJSON;
+  LData := GetJSON(LJSON);
+  try
+    LObj := TJSONObject(LData);
+    Assert(LObj.Strings['private_key_file'] = '/tmp/override-private-key.pem',
+      'Override keeps overridden private_key_file state export-visible');
+    Assert(LObj.Strings['private_key_pem'] = '',
+      'Override(private_key_file) clears stale private_key_pem state');
+  finally
+    LData.Free;
+  end;
+end;
+
+{ Test 17: Override certificate_pem clears stale certificate file }
+procedure Test_Override_CertificatePEM_ClearsStaleFileState;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+  LData: TJSONData;
+  LObj: TJSONObject;
+  LCertPEM, LKeyPEM: string;
+begin
+  TestHeader('Test 17: Override certificate_pem clears stale certificate file');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'override-cert-pem.test', 'Test Org', 30, LCertPEM, LKeyPEM
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Inc(GTestsFailed);
+    Exit;
+  end;
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithCertificate('/tmp/stale-override-cert-file.pem')
+    .Override('certificate_pem', LCertPEM);
+
+  LJSON := LBuilder.ExportToJSON;
+  LData := GetJSON(LJSON);
+  try
+    LObj := TJSONObject(LData);
+    Assert(LObj.Strings['certificate_file'] = '',
+      'Override(certificate_pem) clears stale certificate_file state');
+    Assert(LObj.Strings['certificate_pem'] = LCertPEM,
+      'Override keeps overridden certificate_pem state export-visible');
+  finally
+    LData.Free;
+  end;
+end;
+
+{ Test 18: Override private_key_pem clears stale private key file }
+procedure Test_Override_PrivateKeyPEM_ClearsStaleFileState;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+  LData: TJSONData;
+  LObj: TJSONObject;
+  LCertPEM, LKeyPEM: string;
+begin
+  TestHeader('Test 18: Override private_key_pem clears stale private key file');
+
+  if not TCertificateUtils.TryGenerateSelfSignedSimple(
+    'override-key-pem.test', 'Test Org', 30, LCertPEM, LKeyPEM
+  ) then
+  begin
+    WriteLn('  ✗ Failed to generate test certificate');
+    Inc(GTestsFailed);
+    Exit;
+  end;
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithPrivateKey('/tmp/stale-override-private-key.pem')
+    .Override('private_key_pem', LKeyPEM);
+
+  LJSON := LBuilder.ExportToJSON;
+  LData := GetJSON(LJSON);
+  try
+    LObj := TJSONObject(LData);
+    Assert(LObj.Strings['private_key_file'] = '',
+      'Override(private_key_pem) clears stale private_key_file state');
+    Assert(LObj.Strings['private_key_pem'] = LKeyPEM,
+      'Override keeps overridden private_key_pem state export-visible');
+  finally
+    LData.Free;
+  end;
 end;
 
 { Test 15: Multiple Override calls }
@@ -435,14 +628,194 @@ begin
     'Can build context after transformation methods');
 end;
 
-{ Test 21: Cert verify cache is disabled by default }
+{ Test 21: Override applies PKCS#11 PIN method }
+procedure Test_Override_PKCS11PINMethod;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+begin
+  TestHeader('Test 21: Override Applies PKCS#11 PIN Method');
+
+  LBuilder := TSSLContextBuilder.Create
+    .UsePKCS11('pkcs11:token=TestToken;object=ServerKey;type=private')
+    .Override('pkcs11_pin', 'PKCS11_PIN_ENV')
+    .Override('pkcs11_pin_method', 'PMENVIRONMENT');
+
+  LJSON := LBuilder.ExportToJSON;
+
+  Assert(
+    (Pos('"pkcs11_pin_method"', LJSON) > 0) and
+    (Pos('PKCS11_PIN_ENV', LJSON) > 0),
+    'Override applies PKCS#11 env PIN method and keeps source state exportable'
+  );
+end;
+
+{ Test 22: Override preserves PKCS#11 PIN method when pin is set afterwards }
+procedure Test_Override_PKCS11PINMethod_OrderInsensitive;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+begin
+  TestHeader('Test 22: Override Preserves PKCS#11 PIN Method When Pin Follows');
+
+  LBuilder := TSSLContextBuilder.Create
+    .UsePKCS11('pkcs11:token=TestToken;object=ServerKey;type=private')
+    .Override('pkcs11_pin_method', 'pmEnvironment')
+    .Override('pkcs11_pin', 'PKCS11_PIN_ENV_ORDERED');
+
+  LJSON := LBuilder.ExportToJSON;
+
+  Assert(
+    (Pos('"pkcs11_pin_method"', LJSON) > 0) and
+    (Pos('PKCS11_PIN_ENV_ORDERED', LJSON) > 0),
+    'Override keeps explicit PKCS#11 env PIN method when pin value is assigned afterwards'
+  );
+end;
+
+{ Test 23: Override explicit_backend replaces stale auto-backend state }
+procedure Test_Override_ExplicitBackend_ReplacesAutoSelectionState;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+  LData: TJSONData;
+  LObj: TJSONObject;
+begin
+  TestHeader('Test 23: Override explicit_backend replaces stale auto-backend state');
+
+  LBuilder := TSSLContextBuilder.Create
+    .RequirePKCS11Support
+    .Override('explicit_backend', 'sslWinSSL');
+
+  LJSON := LBuilder.ExportToJSON;
+  LData := GetJSON(LJSON);
+  try
+    LObj := TJSONObject(LData);
+    Assert(LObj.IndexOfName('explicit_backend') >= 0,
+      'Override(explicit_backend) makes explicit backend state export-visible');
+    if LObj.IndexOfName('explicit_backend') >= 0 then
+      Assert(LObj.Integers['explicit_backend'] = Ord(sslWinSSL),
+      'Override(explicit_backend) stores the requested backend value');
+    Assert(LObj.IndexOfName('auto_select_backend') < 0,
+      'Override(explicit_backend) clears stale auto_select_backend state');
+  finally
+    LData.Free;
+  end;
+end;
+
+{ Test 24: Override OCSP required syncs enabled state }
+procedure Test_Override_OCSPRequired_SyncsEnabledState;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+  LData: TJSONData;
+  LObj: TJSONObject;
+begin
+  TestHeader('Test 24: Override OCSP required syncs enabled state');
+
+  LBuilder := TSSLContextBuilder.Create
+    .Override('ocsp_stapling_required', 'true');
+
+  LJSON := LBuilder.ExportToJSON;
+  LData := GetJSON(LJSON);
+  try
+    LObj := TJSONObject(LData);
+    Assert(LObj.Booleans['ocsp_stapling_required'],
+      'Override(ocsp_stapling_required) keeps required state export-visible');
+    Assert(LObj.Booleans['ocsp_stapling_enabled'],
+      'Override(ocsp_stapling_required) implies enabled state through OCSP sync');
+  finally
+    LData.Free;
+  end;
+end;
+
+{ Test 25: Override OCSP enabled false clears stale required state }
+procedure Test_Override_OCSPEnabledFalse_ClearsRequiredState;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+  LData: TJSONData;
+  LObj: TJSONObject;
+begin
+  TestHeader('Test 25: Override OCSP enabled false clears stale required state');
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithOCSPStaplingRequired(True)
+    .Override('ocsp_stapling_enabled', 'false');
+
+  LJSON := LBuilder.ExportToJSON;
+  LData := GetJSON(LJSON);
+  try
+    LObj := TJSONObject(LData);
+    Assert(not LObj.Booleans['ocsp_stapling_enabled'],
+      'Override(ocsp_stapling_enabled=false) clears enabled state');
+    Assert(not LObj.Booleans['ocsp_stapling_required'],
+      'Override(ocsp_stapling_enabled=false) clears stale required state through OCSP sync');
+  finally
+    LData.Free;
+  end;
+end;
+
+{ Test 26: Fluent OCSP disable clears stale required state }
+procedure Test_WithOCSPStaplingFalse_ClearsRequiredState;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+  LData: TJSONData;
+  LObj: TJSONObject;
+begin
+  TestHeader('Test 26: Fluent OCSP disable clears stale required state');
+
+  LBuilder := TSSLContextBuilder.Create
+    .WithOCSPStaplingRequired(True)
+    .WithOCSPStapling(False);
+
+  LJSON := LBuilder.ExportToJSON;
+  LData := GetJSON(LJSON);
+  try
+    LObj := TJSONObject(LData);
+    Assert(not LObj.Booleans['ocsp_stapling_enabled'],
+      'WithOCSPStapling(false) clears enabled state');
+    Assert(not LObj.Booleans['ocsp_stapling_required'],
+      'WithOCSPStapling(false) clears stale required state');
+  finally
+    LData.Free;
+  end;
+end;
+
+{ Test 27: Override CT required keeps state export-visible }
+procedure Test_Override_CertificateTransparencyRequired_ExportVisible;
+var
+  LBuilder: ISSLContextBuilder;
+  LJSON: string;
+  LData: TJSONData;
+  LObj: TJSONObject;
+begin
+  TestHeader('Test 27: Override CT required keeps state export-visible');
+
+  LBuilder := TSSLContextBuilder.Create
+    .Override('certificate_transparency_required', 'true');
+
+  LJSON := LBuilder.ExportToJSON;
+  LData := GetJSON(LJSON);
+  try
+    LObj := TJSONObject(LData);
+    Assert(LObj.Booleans['certificate_transparency_required'],
+      'Override(certificate_transparency_required) keeps required state export-visible');
+    Assert(JSONObjectHasOption(LObj, ssoRequireCertificateTransparency),
+      'Override(certificate_transparency_required) persists to exported options');
+  finally
+    LData.Free;
+  end;
+end;
+
+{ Test 27: Cert verify cache is disabled by default }
 procedure Test_WithCertVerifyCache_DefaultOff;
 var
   LBuilder: ISSLContextBuilder;
   LContext: ISSLContext;
   LResult: TSSLOperationResult;
 begin
-  TestHeader('Test 21: Cert Verify Cache Default Off');
+  TestHeader('Test 27: Cert Verify Cache Default Off');
 
   LBuilder := TSSLContextBuilder.CreateWithSafeDefaults;
   LResult := LBuilder.TryBuildClient(LContext);
@@ -455,14 +828,14 @@ begin
       'Cert verify cache option is disabled by default');
 end;
 
-{ Test 22: WithCertVerifyCache enables option }
+{ Test 28: WithCertVerifyCache enables option }
 procedure Test_WithCertVerifyCache_Enable;
 var
   LBuilder: ISSLContextBuilder;
   LContext: ISSLContext;
   LResult: TSSLOperationResult;
 begin
-  TestHeader('Test 22: Cert Verify Cache Enable');
+  TestHeader('Test 28: Cert Verify Cache Enable');
 
   LBuilder := TSSLContextBuilder.CreateWithSafeDefaults
     .WithCertVerifyCache(True);
@@ -476,14 +849,14 @@ begin
       'Cert verify cache option is persisted to context');
 end;
 
-{ Test 23: WithCertVerifyCache can be disabled explicitly }
+{ Test 29: WithCertVerifyCache can be disabled explicitly }
 procedure Test_WithCertVerifyCache_Disable;
 var
   LBuilder: ISSLContextBuilder;
   LContext: ISSLContext;
   LResult: TSSLOperationResult;
 begin
-  TestHeader('Test 23: Cert Verify Cache Disable');
+  TestHeader('Test 29: Cert Verify Cache Disable');
 
   LBuilder := TSSLContextBuilder.CreateWithSafeDefaults
     .WithCertVerifyCache(True)
@@ -526,13 +899,25 @@ begin
     Test_Override_CipherList;
     Test_Override_SessionTimeout;
     Test_Override_ServerName;
+    Test_Override_ServerOCSPStapledResponseFile;
     Test_Override_Chaining;
+    Test_Override_CertificateFile_ClearsStalePEMState;
+    Test_Override_PrivateKeyFile_ClearsStalePEMState;
+    Test_Override_CertificatePEM_ClearsStaleFileState;
+    Test_Override_PrivateKeyPEM_ClearsStaleFileState;
     Test_Multiple_Override;
     Test_Override_UnknownField;
     Test_Override_CaseInsensitive;
     Test_Combining_All;
     Test_Transformation_WithPresets;
     Test_BuildAfterTransformation;
+    Test_Override_PKCS11PINMethod;
+    Test_Override_PKCS11PINMethod_OrderInsensitive;
+    Test_Override_ExplicitBackend_ReplacesAutoSelectionState;
+    Test_Override_OCSPRequired_SyncsEnabledState;
+    Test_Override_OCSPEnabledFalse_ClearsRequiredState;
+    Test_WithOCSPStaplingFalse_ClearsRequiredState;
+    Test_Override_CertificateTransparencyRequired_ExportVisible;
     Test_WithCertVerifyCache_DefaultOff;
     Test_WithCertVerifyCache_Enable;
     Test_WithCertVerifyCache_Disable;

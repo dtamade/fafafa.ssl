@@ -17,11 +17,17 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.context.builder,
   fafafa.ssl.cert.utils,
+  fafafa.ssl.freepascal.lib,
   fafafa.ssl.exceptions;
 
 var
   GTestsPassed: Integer = 0;
   GTestsFailed: Integer = 0;
+
+function CreatePresetRuntimeBuilder(const ABuilder: ISSLContextBuilder): ISSLContextBuilder;
+begin
+  Result := ABuilder.WithBackend(sslFreePascal);
+end;
 
 procedure Assert(ACondition: Boolean; const AMessage: string);
 begin
@@ -64,7 +70,7 @@ begin
   Assert(LBuilder <> nil, 'Development preset supports method chaining');
 
   // Test 1.3: Can build client context (no cert required)
-  LResult := TSSLContextBuilder.Development
+  LResult := CreatePresetRuntimeBuilder(TSSLContextBuilder.Development)
     .WithSystemRoots
     .TryBuildClient(LContext);
   Assert(LResult.IsOk, 'Development preset can build client context');
@@ -95,7 +101,7 @@ begin
   Assert(LBuilder <> nil, 'Production preset supports method chaining');
 
   // Test 2.3: Can build client context
-  LResult := TSSLContextBuilder.Production
+  LResult := CreatePresetRuntimeBuilder(TSSLContextBuilder.Production)
     .WithSystemRoots
     .TryBuildClient(LContext);
   Assert(LResult.IsOk, 'Production preset can build client context');
@@ -107,7 +113,7 @@ begin
     'prod.example.com', 'Production Corp', 365, LCert, LKey
   ) then
   begin
-    LResult := TSSLContextBuilder.Production
+    LResult := CreatePresetRuntimeBuilder(TSSLContextBuilder.Production)
       .WithCertificatePEM(LCert)
       .WithPrivateKeyPEM(LKey)
       .TryBuildServer(LContext);
@@ -140,7 +146,7 @@ begin
   Assert(LBuilder <> nil, 'StrictSecurity preset supports method chaining');
 
   // Test 3.3: Can build client context
-  LResult := TSSLContextBuilder.StrictSecurity
+  LResult := CreatePresetRuntimeBuilder(TSSLContextBuilder.StrictSecurity)
     .WithSystemRoots
     .TryBuildClient(LContext);
   Assert(LResult.IsOk, 'StrictSecurity preset can build client context');
@@ -152,7 +158,7 @@ begin
     'secure.example.com', 'Secure Corp', 365, LCert, LKey
   ) then
   begin
-    LResult := TSSLContextBuilder.StrictSecurity
+    LResult := CreatePresetRuntimeBuilder(TSSLContextBuilder.StrictSecurity)
       .WithCertificatePEM(LCert)
       .WithPrivateKeyPEM(LKey)
       .TryBuildServer(LContext);
@@ -185,7 +191,7 @@ begin
   Assert(LBuilder <> nil, 'LegacyCompatibility preset supports method chaining');
 
   // Test 4.3: Can build client context
-  LResult := TSSLContextBuilder.LegacyCompatibility
+  LResult := CreatePresetRuntimeBuilder(TSSLContextBuilder.LegacyCompatibility)
     .WithSystemRoots
     .TryBuildClient(LContext);
   Assert(LResult.IsOk, 'LegacyCompatibility preset can build client context');
@@ -197,7 +203,7 @@ begin
     'legacy.example.com', 'Legacy Corp', 365, LCert, LKey
   ) then
   begin
-    LResult := TSSLContextBuilder.LegacyCompatibility
+    LResult := CreatePresetRuntimeBuilder(TSSLContextBuilder.LegacyCompatibility)
       .WithCertificatePEM(LCert)
       .WithPrivateKeyPEM(LKey)
       .TryBuildServer(LContext);
@@ -254,7 +260,7 @@ begin
   Assert(LBuilder <> nil, 'Can override Production preset protocols');
 
   // Test 6.3: Build with overridden settings
-  LResult := TSSLContextBuilder.Development
+  LResult := CreatePresetRuntimeBuilder(TSSLContextBuilder.Development)
     .WithVerifyPeer
     .WithSystemRoots
     .TryBuildClient(LContext);
@@ -274,19 +280,19 @@ begin
   TestHeader('Test 7: Error Handling');
 
   // Test 7.1: Server context without certificate should fail
-  LResult := TSSLContextBuilder.Production
+  LResult := CreatePresetRuntimeBuilder(TSSLContextBuilder.Production)
     .TryBuildServer(LContext);
   Assert(not LResult.IsOk, 'Server build without certificate fails gracefully');
   Assert(LContext = nil, 'Failed build does not return context');
   Assert(LResult.ErrorMessage <> '', 'Error message is provided');
 
   // Test 7.2: Development preset server without cert also fails
-  LResult := TSSLContextBuilder.Development
+  LResult := CreatePresetRuntimeBuilder(TSSLContextBuilder.Development)
     .TryBuildServer(LContext);
   Assert(not LResult.IsOk, 'Development server build without certificate fails');
 
   // Test 7.3: StrictSecurity preset server without cert fails
-  LResult := TSSLContextBuilder.StrictSecurity
+  LResult := CreatePresetRuntimeBuilder(TSSLContextBuilder.StrictSecurity)
     .TryBuildServer(LContext);
   Assert(not LResult.IsOk, 'StrictSecurity server build without certificate fails');
 
