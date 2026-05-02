@@ -123,9 +123,8 @@ begin
     Ctx.SetVerifyMode([sslVerifyPeer]);
     WriteLn('  验证模式: 验证对端证书');
 
-    // 设置 SNI
-    Ctx.SetServerName('www.example.com');
-    WriteLn('  服务器名称: ', Ctx.GetServerName);
+    // SNI/hostname 现在是连接级配置
+    WriteLn('  服务器名称: 在每个连接上通过 ISSLClientConnection.SetServerName 设置');
 
     // 设置 ALPN
     Ctx.SetALPNProtocols('http/1.1,http/2');
@@ -205,7 +204,6 @@ begin
   Config.PreferredVersion := sslProtocolTLS13;
   Config.VerifyMode := [sslVerifyPeer];
   Config.VerifyDepth := 10;
-  Config.ServerName := 'www.google.com';
   Config.ALPNProtocols := 'h2,http/1.1';
   Config.BufferSize := 16384;
   Config.HandshakeTimeout := 30000;
@@ -215,7 +213,7 @@ begin
   WriteLn('  上下文类型: 客户端');
   WriteLn('  协议版本: TLS 1.2 + 1.3');
   WriteLn('  验证深度: ', Config.VerifyDepth);
-  WriteLn('  服务器名称: ', Config.ServerName);
+  WriteLn('  服务器名称: 在连接上单独设置');
   WriteLn('  ALPN: ', Config.ALPNProtocols);
 
   WriteLn('');
@@ -226,7 +224,7 @@ begin
     if Assigned(Ctx) then
     begin
       WriteLn('成功！');
-      WriteLn('  服务器名称已设置: ', Ctx.GetServerName);
+      WriteLn('  SNI/hostname 仍需在创建连接后设置');
       WriteLn('  ALPN 已设置: ', Ctx.GetALPNProtocols);
     end
     else
@@ -244,10 +242,12 @@ begin
   WriteLn('// 最简单的用法：自动检测');
   WriteLn('var');
   WriteLn('  Ctx: ISSLContext;');
+  WriteLn('  Conn: ISSLConnection;');
   WriteLn('begin');
   WriteLn('  Ctx := CreateSSLContext(sslCtxClient);');
-  WriteLn('  Ctx.SetServerName(''www.example.com'');');
-  WriteLn('  // ... 使用 Ctx 创建连接');
+  WriteLn('  Conn := Ctx.CreateConnection(YourSocket);');
+  WriteLn('  (Conn as ISSLClientConnection).SetServerName(''www.example.com'');');
+  WriteLn('  // ... 然后再握手/读写');
   WriteLn('end;');
   WriteLn('');
   WriteLn('// 显式选择库');

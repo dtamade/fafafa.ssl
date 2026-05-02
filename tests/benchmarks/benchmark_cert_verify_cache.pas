@@ -13,26 +13,76 @@ uses
   fafafa.ssl.openssl.loader,
   fafafa.ssl.cert.verify.cache;
 
-const
-  ITERATIONS = 1000;
-
 var
   TestCert: PX509;
   Cache: TCertVerifyCache;
+  GIterations: Integer = 1000;
 
 function GetTickMs: QWord;
 begin
   Result := GetTickCount64;
 end;
 
+function SafeAverageMs(const ADurationMs: Double; AIterations: Integer): Double;
+begin
+  if AIterations <= 0 then
+    Exit(0.0);
+  Result := ADurationMs / AIterations;
+end;
+
+function SafeThroughput(const ADurationMs: Double; AIterations: Integer): Double;
+begin
+  if (ADurationMs <= 0.0) or (AIterations <= 0) then
+    Exit(0.0);
+  Result := AIterations * 1000.0 / ADurationMs;
+end;
+
+function ResolveProjectFile(const ARelativePath: string): string;
+var
+  RootHint: string;
+  CurrentDir: string;
+  Candidate: string;
+  ParentDir: string;
+begin
+  RootHint := GetEnvironmentVariable('FAFAFA_PROJECT_ROOT');
+  if RootHint <> '' then
+  begin
+    Candidate := ExpandFileName(IncludeTrailingPathDelimiter(RootHint) + ARelativePath);
+    if FileExists(Candidate) then
+      Exit(Candidate);
+  end;
+
+  Candidate := ExpandFileName(ARelativePath);
+  if FileExists(Candidate) then
+    Exit(Candidate);
+
+  CurrentDir := GetCurrentDir;
+  while CurrentDir <> '' do
+  begin
+    Candidate := ExpandFileName(IncludeTrailingPathDelimiter(CurrentDir) + ARelativePath);
+    if FileExists(Candidate) then
+      Exit(Candidate);
+
+    ParentDir := ExtractFileDir(ExcludeTrailingPathDelimiter(CurrentDir));
+    if ParentDir = CurrentDir then
+      Break;
+    CurrentDir := ParentDir;
+  end;
+
+  Result := ExpandFileName(ARelativePath);
+end;
+
 function LoadTestCert: PX509;
 var
   bio: PBIO;
+  CertPath: string;
 begin
-  bio := BIO_new_file('tests/certificate/test_certs/signer_cert.pem', 'r');
+  CertPath := ResolveProjectFile('tests/certificate/test_certs/signer_cert.pem');
+
+  bio := BIO_new_file(PAnsiChar(AnsiString(CertPath)), 'r');
   if bio = nil then
   begin
-    WriteLn('❌ Failed to open test certificate');
+    WriteLn('❌ Failed to open test certificate: ', CertPath);
     Halt(1);
   end;
 
@@ -62,7 +112,7 @@ begin
   Cache.Clear;
   StartTime := GetTickMs;
 
-  for i := 1 to ITERATIONS do
+  for i := 1 to GIterations do
   begin
     if not Cache.TryGet(TestCert, Result) then
     begin
@@ -78,17 +128,17 @@ begin
   EndTime := GetTickMs;
   Duration := EndTime - StartTime;
 
-  WriteLn('  Iterations: ', ITERATIONS);
+  WriteLn('  Iterations: ', GIterations);
   WriteLn('  Time: ', Format('%.1f', [Duration]), ' ms');
-  WriteLn('  Avg: ', Format('%.3f', [Duration / ITERATIONS]), ' ms/op');
-  WriteLn('  Throughput: ', Format('%.0f', [ITERATIONS * 1000.0 / Duration]), ' ops/s');
+  WriteLn('  Avg: ', Format('%.3f', [SafeAverageMs(Duration, GIterations)]), ' ms/op');
+  WriteLn('  Throughput: ', Format('%.0f', [SafeThroughput(Duration, GIterations)]), ' ops/s');
   WriteLn;
 
   // 测试 2：重复访问（缓存命中）
   WriteLn('Test 1.2: Repeated access (cache hit)');
   StartTime := GetTickMs;
 
-  for i := 1 to ITERATIONS do
+  for i := 1 to GIterations do
   begin
     if not Cache.TryGet(TestCert, Result) then
     begin
@@ -100,10 +150,10 @@ begin
   EndTime := GetTickMs;
   Duration := EndTime - StartTime;
 
-  WriteLn('  Iterations: ', ITERATIONS);
+  WriteLn('  Iterations: ', GIterations);
   WriteLn('  Time: ', Format('%.1f', [Duration]), ' ms');
-  WriteLn('  Avg: ', Format('%.3f', [Duration / ITERATIONS]), ' ms/op');
-  WriteLn('  Throughput: ', Format('%.0f', [ITERATIONS * 1000.0 / Duration]), ' ops/s');
+  WriteLn('  Avg: ', Format('%.3f', [SafeAverageMs(Duration, GIterations)]), ' ms/op');
+  WriteLn('  Throughput: ', Format('%.0f', [SafeThroughput(Duration, GIterations)]), ' ops/s');
   WriteLn;
 
   // 统计信息
@@ -122,6 +172,7 @@ var
   StartTime, EndTime: QWord;
   WithoutCache, WithCache: Double;
   Speedup: Double;
+  TimeSavedPercent: Double;
   Result: TCertVerifyResult;
 begin
   WriteLn('=== Benchmark 2: Speedup Factor ===');
@@ -131,7 +182,7 @@ begin
   WriteLn('Test 2.1: Without cache (simulated verification)');
   StartTime := GetTickMs;
 
-  for i := 1 to ITERATIONS do
+  for i := 1 to GIterations do
   begin
     // 模拟证书验证耗时（实际约 10-50ms）
     // 这里用轻量级操作模拟
@@ -158,7 +209,7 @@ begin
 
   StartTime := GetTickMs;
 
-  for i := 1 to ITERATIONS do
+  for i := 1 to GIterations do
   begin
     if not Cache.TryGet(TestCert, Result) then
       WriteLn('❌ Cache miss!');
@@ -176,9 +227,14 @@ begin
   else
     Speedup := 999.9;
 
+  if WithoutCache > 0 then
+    TimeSavedPercent := (WithoutCache - WithCache) * 100.0 / WithoutCache
+  else
+    TimeSavedPercent := 0.0;
+
   WriteLn('Speedup Factor: ', Format('%.1f', [Speedup]), 'x');
   WriteLn('Time Saved: ', Format('%.1f', [WithoutCache - WithCache]), ' ms (',
-    Format('%.1f', [(WithoutCache - WithCache) * 100.0 / WithoutCache]), '%)');
+    Format('%.1f', [TimeSavedPercent]), '%)');
   WriteLn;
 end;
 
@@ -186,6 +242,26 @@ begin
   WriteLn('================================================================================');
   WriteLn('Certificate Verify Cache Benchmark');
   WriteLn('================================================================================');
+  WriteLn;
+
+  if ParamCount > 0 then
+  begin
+    if (ParamStr(1) = '-h') or (ParamStr(1) = '--help') then
+    begin
+      WriteLn('Usage: ', ExtractFileName(ParamStr(0)), ' [iterations]');
+      WriteLn('Default iterations: 1000');
+      Halt(0);
+    end;
+
+    GIterations := StrToIntDef(ParamStr(1), 1000);
+    if GIterations <= 0 then
+    begin
+      WriteLn('❌ Iterations must be positive');
+      Halt(1);
+    end;
+  end;
+
+  WriteLn('Iterations: ', GIterations);
   WriteLn;
 
   // 初始化 OpenSSL

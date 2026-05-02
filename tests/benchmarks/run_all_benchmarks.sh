@@ -16,6 +16,7 @@
 #   --iterations N    每个测试的迭代次数（默认：1000）
 #   --baseline DIR    基线数据目录（默认：tests/benchmarks/baselines）
 #   --output DIR      输出目录（默认：tests/benchmarks/results）
+#   --bin-dir DIR     编译产物目录（默认：tests/benchmarks/bin）
 #   --skip-tls        跳过 TLS 握手测试（需要网络）
 #   --verbose         显示详细输出
 #   --help            显示帮助信息
@@ -78,6 +79,7 @@ show_help() {
   --tls-iterations N  TLS 握手测试的迭代次数（默认：100）
   --baseline DIR      基线数据目录（默认：tests/benchmarks/baselines）
   --output DIR        输出目录（默认：tests/benchmarks/results）
+  --bin-dir DIR       编译产物目录（默认：tests/benchmarks/bin）
   --skip-tls          跳过 TLS 握手测试（需要网络）
   --verbose           显示详细输出
   --help              显示此帮助信息
@@ -101,6 +103,11 @@ show_help() {
      - TLS 1.3 握手
      - TLS 1.2+1.3 握手
      - 会话复用
+
+  4. benchmark_cert_verify_cache     - 证书验证缓存性能测试 (Wave C)
+     - 首次访问（cache miss）
+     - 重复访问（cache hit）
+     - speedup factor 对照
 
 示例:
   $0                                    # 运行所有基准测试
@@ -131,6 +138,10 @@ while [[ $# -gt 0 ]]; do
       OUTPUT_DIR="$2"
       shift 2
       ;;
+    --bin-dir)
+      BIN_DIR="$2"
+      shift 2
+      ;;
     --skip-tls)
       SKIP_TLS=true
       shift
@@ -149,6 +160,18 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+resolve_path() {
+  local path="$1"
+  if [[ "$path" != /* ]]; then
+    path="$PROJECT_ROOT/$path"
+  fi
+  echo "$path"
+}
+
+BIN_DIR="$(resolve_path "$BIN_DIR")"
+BASELINE_DIR="$(resolve_path "$BASELINE_DIR")"
+OUTPUT_DIR="$(resolve_path "$OUTPUT_DIR")"
 
 # 创建必要的目录
 mkdir -p "$BIN_DIR"
@@ -218,14 +241,9 @@ run_benchmark() {
   TOTAL_BENCHMARKS=$((TOTAL_BENCHMARKS + 1))
 
   # 运行基准测试
-  if "$benchmark_bin" "$iterations" > "$OUTPUT_DIR/${benchmark_name}_${TIMESTAMP}.log" 2>&1; then
+  if (cd "$OUTPUT_DIR" && FAFAFA_PROJECT_ROOT="$PROJECT_ROOT" "$benchmark_bin" "$iterations") > "$OUTPUT_DIR/${benchmark_name}_${TIMESTAMP}.log" 2>&1; then
     log_success "$benchmark_name: 运行成功"
     PASSED_BENCHMARKS=$((PASSED_BENCHMARKS + 1))
-
-    # 移动生成的基线文件到输出目录
-    if [ -f "${benchmark_name%_*}_baseline.json" ]; then
-      mv "${benchmark_name%_*}_baseline.json" "$OUTPUT_DIR/${benchmark_name}_baseline_${TIMESTAMP}.json"
-    fi
 
     return 0
   else
@@ -303,6 +321,7 @@ echo "----------------------------------------------------------------"
 
 compile_benchmark "$BENCHMARKS_DIR/benchmark_crypto_comprehensive.pas" || true
 compile_benchmark "$BENCHMARKS_DIR/benchmark_random_pool.pas" || true
+compile_benchmark "$BENCHMARKS_DIR/benchmark_cert_verify_cache.pas" || true
 
 if [ "$SKIP_TLS" = false ]; then
   compile_benchmark "$BENCHMARKS_DIR/benchmark_tls_handshake.pas" || true
@@ -318,6 +337,7 @@ echo "----------------------------------------------------------------"
 
 run_benchmark "benchmark_crypto_comprehensive" "$ITERATIONS" || true
 run_benchmark "benchmark_random_pool" "$ITERATIONS" || true
+run_benchmark "benchmark_cert_verify_cache" "$ITERATIONS" || true
 
 if [ "$SKIP_TLS" = false ]; then
   run_benchmark "benchmark_tls_handshake" "$TLS_ITERATIONS" || true

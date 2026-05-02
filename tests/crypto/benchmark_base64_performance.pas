@@ -4,7 +4,8 @@ program benchmark_base64_performance;
 
 uses
   SysUtils, DateUtils,
-  fafafa.ssl.crypto.utils;
+  fafafa.ssl.crypto.utils,
+  fafafa.ssl.encoding;
 
 var
   LData: TBytes;
@@ -41,7 +42,7 @@ begin
   WriteLn('[1] Benchmarking Base64 Encode...');
   LStartTime := Now;
   for I := 1 to LIterations do
-    LEncoded := TCryptoUtils.Base64Encode(LData);
+    LEncoded := TEncodingUtils.Base64Encode(LData);
   LEndTime := Now;
   LEncodeTime := MilliSecondsBetween(LEndTime, LStartTime);
   LEncodeMBps := (LDataSize * LIterations / 1024 / 1024) / (LEncodeTime / 1000);
@@ -55,7 +56,7 @@ begin
   WriteLn('[2] Benchmarking Base64 Decode (Optimized)...');
   LStartTime := Now;
   for I := 1 to LIterations do
-    LDecoded := TCryptoUtils.Base64Decode(LEncoded);
+    LDecoded := TEncodingUtils.Base64Decode(LEncoded);
   LEndTime := Now;
   LDecodeTime := MilliSecondsBetween(LEndTime, LStartTime);
   LDecodeMBps := (LDataSize * LIterations / 1024 / 1024) / (LDecodeTime / 1000);
