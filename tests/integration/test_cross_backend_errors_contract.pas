@@ -123,6 +123,8 @@ begin
   if (Lib = nil) or (not Lib.Initialize) then Exit;
   Ctx := Lib.CreateContext(sslCtxClient);
   if Ctx = nil then Exit;
+  // INTENTIONAL_COMPAT: legacy context-level SNI coverage. This error contract
+  // intentionally drives the deprecated context fallback to compare backends.
   Ctx.SetServerName(Host);
   Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
   if not ConnectTCP(Host, 443, S) then Exit;
@@ -166,6 +168,8 @@ begin
     Ctx := Lib.CreateContext(sslCtxClient);
     if Ctx <> nil then
     begin
+      // INTENTIONAL_COMPAT: legacy context-level SNI coverage for the
+      // handshake-failure branch; keep legacy fallback visible on purpose.
       Ctx.SetServerName('www.google.com');
       Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
       if ConnectTCP('www.google.com', 80, Sfd) then

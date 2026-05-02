@@ -273,6 +273,8 @@ begin
 
   // Act: Perform valid operations
   LCtx := LLib.CreateContext(sslCtxClient);
+  // INTENTIONAL_API_SURFACE: context-level SNI setter coverage. This diagnostic
+  // case checks that valid context operations do not generate library errors.
   LCtx.SetServerName('www.google.com');
   LCtx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 

@@ -66,6 +66,7 @@ var
   Lib: ISSLLibrary;
   Context: ISSLContext;
   Connection: ISSLConnection;
+  ClientConn: ISSLClientConnection;
   Socket: TSocket;
   Request, Response: AnsiString;
   Buffer: array[0..16383] of Byte; // Larger buffer
@@ -94,7 +95,6 @@ begin
     try
       // Set protocol versions
       Context.SetProtocolVersions([sslProtocolTLS11, sslProtocolTLS12]);
-      Context.SetServerName(TEST_HOST);
       WriteLn('SSL context created and configured');
       WriteLn;
       
@@ -111,6 +111,8 @@ begin
         // Create SSL connection
         WriteLn('Creating SSL connection...');
         Connection := Context.CreateConnection(Socket);
+        ClientConn := Connection as ISSLClientConnection;
+        ClientConn.SetServerName(TEST_HOST);
         try
           // Perform SSL handshake
           WriteLn('Performing SSL handshake...');

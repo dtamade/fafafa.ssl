@@ -17,6 +17,7 @@ var
   SSLLib: ISSLLibrary;
   Context: ISSLContext;
   Connection: ISSLConnection;
+  ClientConn: ISSLClientConnection;
   Socket: THandle;
   ServerAddr: TSockAddrIn;
   HostEnt: PHostEnt;
@@ -89,9 +90,8 @@ begin
     // 创建 SSL 连接
     WriteLn('创建 SSL 连接...');
     Connection := Context.CreateConnection(Socket);
-    
-    // 设置服务器名称（用于 SNI）
-    Context.SetServerName('www.google.com');
+    ClientConn := Connection as ISSLClientConnection;
+    ClientConn.SetServerName('www.google.com');
     
     // 执行 SSL 握手
     WriteLn('执行 SSL 握手...');

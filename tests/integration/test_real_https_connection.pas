@@ -144,7 +144,6 @@ begin
     end;
 
     Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
-    Ctx.SetServerName(AHostname);
     if FileExists('/etc/ssl/certs/ca-certificates.crt') then
     begin
       Ctx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
@@ -160,6 +159,7 @@ begin
       WriteLn('    Create SSL connection failed');
       Exit;
     end;
+    (Conn as ISSLClientConnection).SetServerName(AHostname);
 
     if not Conn.Connect then
     begin
@@ -260,10 +260,10 @@ begin
 
     Ctx := Lib.CreateContext(sslCtxClient);
     Ctx.SetProtocolVersions([sslProtocolTLS13]);
-    Ctx.SetServerName('www.google.com');
     Ctx.SetVerifyMode([]);
 
     Conn := Ctx.CreateConnection(Sock);
+    (Conn as ISSLClientConnection).SetServerName('www.google.com');
     if Conn.Connect then
     begin
       ProtoVer := Conn.GetProtocolVersion;
@@ -316,10 +316,10 @@ begin
 
     Ctx := Lib.CreateContext(sslCtxClient);
     Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
-    Ctx.SetServerName('www.github.com');
     Ctx.SetVerifyMode([]);
 
     Conn := Ctx.CreateConnection(Sock);
+    (Conn as ISSLClientConnection).SetServerName('www.github.com');
     if Conn.Connect then
     begin
       Runner.Check('TLS handshake success', True);
@@ -386,6 +386,7 @@ var
   Lib: ISSLLibrary;
   Ctx: ISSLContext;
   Conn: ISSLConnection;
+  ClientConn: ISSLClientConnection;
   Sock: TSocket;
 begin
   WriteLn;
@@ -413,12 +414,12 @@ begin
 
     Ctx := Lib.CreateContext(sslCtxClient);
     Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
-    Ctx.SetServerName('www.cloudflare.com');
     Ctx.SetVerifyMode([]);
 
-    Runner.Check('Set SNI', Ctx.GetServerName = 'www.cloudflare.com');
-
     Conn := Ctx.CreateConnection(Sock);
+    ClientConn := Conn as ISSLClientConnection;
+    ClientConn.SetServerName('www.cloudflare.com');
+    Runner.Check('Set SNI', ClientConn.GetServerName = 'www.cloudflare.com');
     if Conn.Connect then
       Runner.Check('SNI handshake success', True)
     else
@@ -466,13 +467,13 @@ begin
 
     Ctx := Lib.CreateContext(sslCtxClient);
     Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
-    Ctx.SetServerName('www.google.com');
     Ctx.SetALPNProtocols('h2,http/1.1');
     Ctx.SetVerifyMode([]);
 
     Runner.Check('Set ALPN protocols', Ctx.GetALPNProtocols = 'h2,http/1.1');
 
     Conn := Ctx.CreateConnection(Sock);
+    (Conn as ISSLClientConnection).SetServerName('www.google.com');
     if Conn.Connect then
     begin
       Runner.Check('ALPN handshake success', True);

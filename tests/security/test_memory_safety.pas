@@ -205,6 +205,8 @@ begin
   begin
     Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     Ctx.SetOptions([ssoNoSSLv2, ssoNoSSLv3, ssoDisableCompression]);
+    // INTENTIONAL_API_SURFACE: context-level SNI setter coverage. This
+    // resource-management test stresses context configuration/release, not connection guidance.
     Ctx.SetServerName('test.example.com');
     Ctx.SetALPNProtocols('h2,http/1.1');
   end;

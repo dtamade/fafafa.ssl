@@ -148,7 +148,6 @@ begin
 
     // Create context
     LContext := LLib.CreateContext(sslCtxClient);
-    LContext.SetServerName(aHost);
     LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     LContext.SetVerifyMode([]);
 
@@ -158,6 +157,7 @@ begin
 
     // Create SSL connection
     LConn := LContext.CreateConnection(LSocket);
+    (LConn as ISSLClientConnection).SetServerName(aHost);
     if not LConn.Connect then
       Exit;
 
@@ -270,13 +270,13 @@ begin
     if LWinSSLLib.Initialize then
     begin
       LWinSSLCtx := LWinSSLLib.CreateContext(sslCtxClient);
-      LWinSSLCtx.SetServerName('www.google.com');
       LWinSSLCtx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
       LWinSSLCtx.SetVerifyMode([]);
 
       if ConnectToHost('www.google.com', 443, LWinSSLSocket) then
       begin
         LWinSSLConn := LWinSSLCtx.CreateConnection(LWinSSLSocket);
+        (LWinSSLConn as ISSLClientConnection).SetServerName('www.google.com');
         Test('WinSSL 握手成功', LWinSSLConn.Connect);
 
         if LWinSSLConn.IsConnected then
@@ -299,13 +299,13 @@ begin
     if LOpenSSLLib.Initialize then
     begin
       LOpenSSLCtx := LOpenSSLLib.CreateContext(sslCtxClient);
-      LOpenSSLCtx.SetServerName('www.google.com');
       LOpenSSLCtx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
       LOpenSSLCtx.SetVerifyMode([]);
 
       if ConnectToHost('www.google.com', 443, LOpenSSLSocket) then
       begin
         LOpenSSLConn := LOpenSSLCtx.CreateConnection(LOpenSSLSocket);
+        (LOpenSSLConn as ISSLClientConnection).SetServerName('www.google.com');
         Test('OpenSSL 握手成功', LOpenSSLConn.Connect);
 
         if LOpenSSLConn.IsConnected then
@@ -411,13 +411,13 @@ begin
     if LWinSSLLib.Initialize then
     begin
       LWinSSLCtx := LWinSSLLib.CreateContext(sslCtxClient);
-      LWinSSLCtx.SetServerName('www.google.com');
       LWinSSLCtx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
       LWinSSLCtx.SetVerifyMode([]);
 
       if ConnectToHost('www.google.com', 443, LWinSSLSocket) then
       begin
         LWinSSLConn := LWinSSLCtx.CreateConnection(LWinSSLSocket);
+        (LWinSSLConn as ISSLClientConnection).SetServerName('www.google.com');
         if LWinSSLConn.Connect then
         begin
           LWinSSLCert := LWinSSLConn.GetPeerCertificate;
@@ -445,13 +445,13 @@ begin
     if LOpenSSLLib.Initialize then
     begin
       LOpenSSLCtx := LOpenSSLLib.CreateContext(sslCtxClient);
-      LOpenSSLCtx.SetServerName('www.google.com');
       LOpenSSLCtx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
       LOpenSSLCtx.SetVerifyMode([]);
 
       if ConnectToHost('www.google.com', 443, LOpenSSLSocket) then
       begin
         LOpenSSLConn := LOpenSSLCtx.CreateConnection(LOpenSSLSocket);
+        (LOpenSSLConn as ISSLClientConnection).SetServerName('www.google.com');
         if LOpenSSLConn.Connect then
         begin
           LOpenSSLCert := LOpenSSLConn.GetPeerCertificate;
@@ -505,13 +505,13 @@ begin
     if LWinSSLLib.Initialize then
     begin
       LWinSSLCtx := LWinSSLLib.CreateContext(sslCtxClient);
-      LWinSSLCtx.SetServerName('www.google.com');
       LWinSSLCtx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
       LWinSSLCtx.SetVerifyMode([]);
 
       if ConnectToHost('www.google.com', 80, LWinSSLSocket) then
       begin
         LWinSSLConn := LWinSSLCtx.CreateConnection(LWinSSLSocket);
+        (LWinSSLConn as ISSLClientConnection).SetServerName('www.google.com');
         Test('WinSSL HTTP 端口握手失败（预期）', not LWinSSLConn.Connect);
         CloseSSLSocket(LWinSSLSocket);
         LWinSSLSocket := INVALID_SOCKET;
@@ -522,13 +522,13 @@ begin
     if LOpenSSLLib.Initialize then
     begin
       LOpenSSLCtx := LOpenSSLLib.CreateContext(sslCtxClient);
-      LOpenSSLCtx.SetServerName('www.google.com');
       LOpenSSLCtx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
       LOpenSSLCtx.SetVerifyMode([]);
 
       if ConnectToHost('www.google.com', 80, LOpenSSLSocket) then
       begin
         LOpenSSLConn := LOpenSSLCtx.CreateConnection(LOpenSSLSocket);
+        (LOpenSSLConn as ISSLClientConnection).SetServerName('www.google.com');
         Test('OpenSSL HTTP 端口握手失败（预期）', not LOpenSSLConn.Connect);
         CloseSSLSocket(LOpenSSLSocket);
         LOpenSSLSocket := INVALID_SOCKET;
@@ -537,26 +537,26 @@ begin
 
     // Test deprecated protocol (SSL 3.0)
     LWinSSLCtx := LWinSSLLib.CreateContext(sslCtxClient);
-    LWinSSLCtx.SetServerName('www.google.com');
     LWinSSLCtx.SetProtocolVersions([sslProtocolSSL3]);
     LWinSSLCtx.SetVerifyMode([]);
 
     if ConnectToHost('www.google.com', 443, LWinSSLSocket) then
     begin
       LWinSSLConn := LWinSSLCtx.CreateConnection(LWinSSLSocket);
+      (LWinSSLConn as ISSLClientConnection).SetServerName('www.google.com');
       Test('WinSSL SSL3 握手失败（预期）', not LWinSSLConn.Connect);
       CloseSSLSocket(LWinSSLSocket);
       LWinSSLSocket := INVALID_SOCKET;
     end;
 
     LOpenSSLCtx := LOpenSSLLib.CreateContext(sslCtxClient);
-    LOpenSSLCtx.SetServerName('www.google.com');
     LOpenSSLCtx.SetProtocolVersions([sslProtocolSSL3]);
     LOpenSSLCtx.SetVerifyMode([]);
 
     if ConnectToHost('www.google.com', 443, LOpenSSLSocket) then
     begin
       LOpenSSLConn := LOpenSSLCtx.CreateConnection(LOpenSSLSocket);
+      (LOpenSSLConn as ISSLClientConnection).SetServerName('www.google.com');
       Test('OpenSSL SSL3 握手失败（预期）', not LOpenSSLConn.Connect);
       CloseSSLSocket(LOpenSSLSocket);
       LOpenSSLSocket := INVALID_SOCKET;

@@ -106,8 +106,8 @@ begin
     WriteLn('配置 SSL 参数...');
     LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     LContext.SetVerifyMode([sslVerifyPeer]);
-    LContext.SetServerName('www.example.com');
     WriteLn('✅ SSL 参数配置成功');
+    WriteLn('  注: SNI/hostname 需要在具体连接上设置');
     
     // 测试从配置创建
     WriteLn;

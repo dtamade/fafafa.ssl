@@ -211,6 +211,8 @@ begin
   Ctx := Lib.CreateContext(sslCtxClient);
   if Ctx = nil then begin Runner.Check('创建上下文', False); Exit; end;
 
+  // INTENTIONAL_API_SURFACE: context-level SNI setter coverage. This input
+  // validation case exercises accepted setter values on the context API itself.
   Ctx.SetServerName('');
   Runner.Check('接受空服务器名称', Ctx.GetServerName = '');
 

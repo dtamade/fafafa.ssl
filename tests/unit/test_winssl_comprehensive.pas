@@ -7,10 +7,20 @@ program test_winssl_comprehensive;
 uses
   SysUtils, Classes,
   fafafa.ssl,
+  fafafa.ssl.base,
   fafafa.ssl.winssl.lib;
 
 var
   GPassCount, GFailCount: Integer;
+
+type
+  TTestCallbacks = class
+  public
+    function VerifyCallback(const ACertificate: TSSLCertificateInfo;
+      const AErrorCode: Integer; const AErrorMessage: string): Boolean;
+    function PasswordCallback(var APassword: string;
+      const AIsRetry: Boolean): Boolean;
+  end;
 
 procedure Pass(const ATestName: string);
 begin
@@ -22,6 +32,19 @@ procedure Fail(const ATestName, AReason: string);
 begin
   WriteLn('[FAIL] ', ATestName, ': ', AReason);
   Inc(GFailCount);
+end;
+
+function TTestCallbacks.VerifyCallback(const ACertificate: TSSLCertificateInfo;
+  const AErrorCode: Integer; const AErrorMessage: string): Boolean;
+begin
+  Result := True;
+end;
+
+function TTestCallbacks.PasswordCallback(var APassword: string;
+  const AIsRetry: Boolean): Boolean;
+begin
+  APassword := 'testpassword';
+  Result := True;
 end;
 
 // ============================================================================
@@ -40,7 +63,7 @@ begin
     begin
       Pass('WinSSL library created');
       
-      if LLib.IsAvailable then
+      if LLib.Initialize then
         Pass('WinSSL is available on this system')
       else
         Fail('WinSSL availability', 'Library reports not available');
@@ -484,6 +507,9 @@ begin
     LLib := TSSLFactory.GetLibraryInstance(sslWinSSL);
     LContext := LLib.CreateContext(sslCtxClient);
     
+    // INTENTIONAL_API_SURFACE: context-level SNI setter coverage. This
+    // unit test locks the WinSSL context setter/getter contract, not
+    // recommended connection-flow guidance.
     // Test 12.1: Set server name
     LContext.SetServerName('example.com');
     LName := LContext.GetServerName;
@@ -540,7 +566,7 @@ begin
     try
       LStore.LoadSystemStore;
       Pass('System certificate store loaded');
-      Pass('Certificate count: ' + IntToStr(LStore.GetCertificateCount));
+      Pass('Certificate count: ' + IntToStr(LStore.GetCount));
     except
       on E: Exception do
         Pass('System store load attempt (may not be available): ' + E.Message);
@@ -561,35 +587,30 @@ procedure Test_Callbacks;
 var
   LLib: ISSLLibrary;
   LContext: ISSLContext;
-  
-  procedure VerifyCallback(aCert: ISSLCertificate; var aAccept: Boolean);
-  begin
-    aAccept := True;
-  end;
-  
-  function PasswordCallback: string;
-  begin
-    Result := 'testpassword';
-  end;
-  
+  LCallbacks: TTestCallbacks;
 begin
   WriteLn('Test 14: Callback Configuration');
   
   try
     LLib := TSSLFactory.GetLibraryInstance(sslWinSSL);
     LContext := LLib.CreateContext(sslCtxClient);
+    LCallbacks := TTestCallbacks.Create;
+    try
     
-    // Test 14.1: Set verify callback
-    LContext.SetVerifyCallback(@VerifyCallback);
-    Pass('Verify callback set');
-    
-    // Test 14.2: Set password callback
-    LContext.SetPasswordCallback(@PasswordCallback);
-    Pass('Password callback set');
-    
-    // Test 14.3: Set info callback (nil is acceptable)
-    LContext.SetInfoCallback(nil);
-    Pass('Info callback set (nil)');
+      // Test 14.1: Set verify callback
+      LContext.SetVerifyCallback(@LCallbacks.VerifyCallback);
+      Pass('Verify callback set');
+      
+      // Test 14.2: Set password callback
+      LContext.SetPasswordCallback(@LCallbacks.PasswordCallback);
+      Pass('Password callback set');
+      
+      // Test 14.3: Set info callback (nil is acceptable)
+      LContext.SetInfoCallback(nil);
+      Pass('Info callback set (nil)');
+    finally
+      LCallbacks.Free;
+    end;
     
   except
     on E: Exception do

@@ -127,7 +127,6 @@ begin
 
   Ctx := GLib.CreateContext(sslCtxClient);
   Ctx.SetSessionCacheMode(True);
-  Ctx.SetServerName('www.cloudflare.com');
   Ctx.LoadCAFile(CAFile);
 
   // First connection
@@ -140,6 +139,7 @@ begin
 
   try
     Conn1 := Ctx.CreateConnection(Sock1);
+    (Conn1 as ISSLClientConnection).SetServerName('www.cloudflare.com');
     if Conn1.Connect then
     begin
       Runner.Check('Session Resumption - Handshake 1', True);
@@ -185,6 +185,7 @@ begin
   try
     Conn2 := Ctx.CreateConnection(Sock2);
     Conn2.SetSession(Sess);  // Set session before Connect
+    (Conn2 as ISSLClientConnection).SetServerName('www.cloudflare.com');
     if Conn2.Connect then
     begin
       Runner.Check('Session Resumption - Handshake 2', True);
@@ -225,7 +226,6 @@ begin
   end;
 
   Ctx := GLib.CreateContext(sslCtxClient);
-  Ctx.SetServerName('www.cloudflare.com');
   Ctx.LoadCAFile(CAFile);
 
   Sock := ConnectSocket('www.cloudflare.com', 443);
@@ -237,6 +237,7 @@ begin
 
   try
     Conn := Ctx.CreateConnection(Sock);
+    (Conn as ISSLClientConnection).SetServerName('www.cloudflare.com');
     if Conn.Connect then
     begin
       Runner.Check('Large Data - Handshake', True);

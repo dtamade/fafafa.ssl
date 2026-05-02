@@ -203,6 +203,8 @@ begin
   WriteLn('----------------------------------------');
 
   LLib.ClearError;
+  // INTENTIONAL_API_SURFACE: context-level SNI setter coverage. This
+  // diagnostic case validates no-error behavior of the context API itself.
   LCtx.SetServerName('www.example.com');
   LCtx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 

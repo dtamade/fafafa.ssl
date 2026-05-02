@@ -129,6 +129,8 @@ begin
   if not Lib.Initialize then Exit;
   Ctx := Lib.CreateContext(sslCtxClient);
   if Ctx = nil then Exit;
+  // INTENTIONAL_COMPAT: legacy context-level SNI coverage. This cross-backend
+  // contract compares inherited fallback behavior on purpose.
   Ctx.SetServerName(Host);
   Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
   Ctx.SetALPNProtocols('h2,http/1.1');
@@ -228,5 +230,4 @@ begin
     Runner.Free;
   end;
 end.
-
 
