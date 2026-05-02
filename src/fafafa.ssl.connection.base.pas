@@ -38,17 +38,21 @@ type
    * 实现的接口：
    * - ISSLConnection: 核心连接功能
    * - ISSLDiagnostics: 诊断功能
-   * - ISSLSessionResumption: 会话复用
-   * - ISSLCertificateVerification: 证书验证
-   * - ISSLOCSPStapling: OCSP 装订
-   * - ISSLConnectionInfo: 连接信息
-   *}
+ * - ISSLSessionResumption: 会话复用
+ * - ISSLCertificateVerification: 证书验证
+ * - ISSLOCSPStapling: OCSP 装订
+ * - ISSLCertificateTransparency: CT/SCT surface
+ * - ISSLCertificateTransparencyValidation: CT validation/policy surface
+ * - ISSLConnectionInfo: 连接信息
+ *}
   TBaseSSLConnection = class(TInterfacedObject,
     ISSLConnection,
     ISSLDiagnostics,
     ISSLSessionResumption,
     ISSLCertificateVerification,
     ISSLOCSPStapling,
+    ISSLCertificateTransparency,
+    ISSLCertificateTransparencyValidation,
     ISSLConnectionInfo)
   protected
     { 状态字段 }
@@ -162,6 +166,27 @@ type
     {** 获取 OCSP 响应状态 *}
     function DoGetOCSPResponseStatus: string; virtual;
 
+    {** 获取 CT/SCT surface 状态 *}
+    function DoGetCertificateTransparencyEnabled: Boolean; virtual;
+
+    {** 获取原始 SCT list *}
+    function DoGetSignedCertificateTimestampList: TBytes; virtual;
+
+    {** 获取 SCT 数量 *}
+    function DoGetSignedCertificateTimestampCount: Integer; virtual;
+
+    {** 获取 CT/SCT 状态描述 *}
+    function DoGetCertificateTransparencyStatus: string; virtual;
+
+    {** 是否有 CT validation 结果 *}
+    function DoHasCertificateTransparencyValidationResult: Boolean; virtual;
+
+    {** 默认 CT policy 是否满足 *}
+    function DoIsCertificateTransparencyPolicySatisfied: Boolean; virtual;
+
+    {** 获取 CT validation 状态描述 *}
+    function DoGetCertificateTransparencyValidationStatus: string; virtual;
+
     { ========== 辅助方法 ========== }
 
     {** 记录错误到历史 *}
@@ -246,6 +271,15 @@ type
     function GetOCSPResponse: TBytes;
     function IsOCSPResponseVerified: Boolean;
     function GetOCSPResponseStatus: string;
+
+    { CT / SCT surface }
+    function GetCertificateTransparencyEnabled: Boolean;
+    function GetSignedCertificateTimestampList: TBytes;
+    function GetSignedCertificateTimestampCount: Integer;
+    function GetCertificateTransparencyStatus: string;
+    function HasCertificateTransparencyValidationResult: Boolean;
+    function IsCertificateTransparencyPolicySatisfied: Boolean;
+    function GetCertificateTransparencyValidationStatus: string;
   end;
 
 implementation
@@ -667,6 +701,41 @@ begin
   Result := 'Not Supported';
 end;
 
+function TBaseSSLConnection.DoGetCertificateTransparencyEnabled: Boolean;
+begin
+  Result := False;
+end;
+
+function TBaseSSLConnection.DoGetSignedCertificateTimestampList: TBytes;
+begin
+  SetLength(Result, 0);
+end;
+
+function TBaseSSLConnection.DoGetSignedCertificateTimestampCount: Integer;
+begin
+  Result := 0;
+end;
+
+function TBaseSSLConnection.DoGetCertificateTransparencyStatus: string;
+begin
+  Result := 'Not Supported';
+end;
+
+function TBaseSSLConnection.DoHasCertificateTransparencyValidationResult: Boolean;
+begin
+  Result := False;
+end;
+
+function TBaseSSLConnection.DoIsCertificateTransparencyPolicySatisfied: Boolean;
+begin
+  Result := False;
+end;
+
+function TBaseSSLConnection.DoGetCertificateTransparencyValidationStatus: string;
+begin
+  Result := 'Not Supported';
+end;
+
 function TBaseSSLConnection.GetOCSPStaplingEnabled: Boolean;
 begin
   Result := DoGetOCSPStaplingEnabled;
@@ -685,6 +754,41 @@ end;
 function TBaseSSLConnection.GetOCSPResponseStatus: string;
 begin
   Result := DoGetOCSPResponseStatus;
+end;
+
+function TBaseSSLConnection.GetCertificateTransparencyEnabled: Boolean;
+begin
+  Result := DoGetCertificateTransparencyEnabled;
+end;
+
+function TBaseSSLConnection.GetSignedCertificateTimestampList: TBytes;
+begin
+  Result := DoGetSignedCertificateTimestampList;
+end;
+
+function TBaseSSLConnection.GetSignedCertificateTimestampCount: Integer;
+begin
+  Result := DoGetSignedCertificateTimestampCount;
+end;
+
+function TBaseSSLConnection.GetCertificateTransparencyStatus: string;
+begin
+  Result := DoGetCertificateTransparencyStatus;
+end;
+
+function TBaseSSLConnection.HasCertificateTransparencyValidationResult: Boolean;
+begin
+  Result := DoHasCertificateTransparencyValidationResult;
+end;
+
+function TBaseSSLConnection.IsCertificateTransparencyPolicySatisfied: Boolean;
+begin
+  Result := DoIsCertificateTransparencyPolicySatisfied;
+end;
+
+function TBaseSSLConnection.GetCertificateTransparencyValidationStatus: string;
+begin
+  Result := DoGetCertificateTransparencyValidationStatus;
 end;
 
 end.
