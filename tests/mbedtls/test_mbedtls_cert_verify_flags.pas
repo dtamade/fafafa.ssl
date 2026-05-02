@@ -69,9 +69,9 @@ begin
       LCtx := GLib.CreateContext(sslCtxClient);
       LCtx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
       LCtx.SetVerifyMode([sslVerifyPeer]);
-      LCtx.SetServerName('www.google.com');
 
       LConn := LCtx.CreateConnection(LSock);
+      (LConn as ISSLClientConnection).SetServerName('www.google.com');
       if LConn.Connect then
       begin
         if LConn.GetVerifyResult = 0 then
@@ -101,9 +101,9 @@ begin
       LCtx := GLib.CreateContext(sslCtxClient);
       // 不加载 CA，不启用验证
       LCtx.SetVerifyMode([]);
-      LCtx.SetServerName('www.google.com');
 
       LConn := LCtx.CreateConnection(LSock);
+      (LConn as ISSLClientConnection).SetServerName('www.google.com');
       if LConn.Connect then
       begin
         WriteLn('✅ Connected without verification');
@@ -155,9 +155,9 @@ begin
       LCtx := GLib.CreateContext(sslCtxClient);
       LCtx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
       LCtx.SetVerifyMode([sslVerifyPeer]);
-      LCtx.SetServerName('badssl.com'); // 错误的 SNI
 
       LConn := LCtx.CreateConnection(LSock);
+      (LConn as ISSLClientConnection).SetServerName('badssl.com'); // 错误的 SNI
       if LConn.Connect then
       begin
         WriteLn('✅ Handshake succeeded (verification is post-handshake)');
@@ -285,9 +285,9 @@ begin
         LCtx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
         LCtx.SetVerifyMode([sslVerifyPeer]);
         LCtx.SetVerifyDepth(LDepths[I]);
-        LCtx.SetServerName('www.google.com');
 
         LConn := LCtx.CreateConnection(LSock);
+        (LConn as ISSLClientConnection).SetServerName('www.google.com');
         if LConn.Connect then
         begin
           if LConn.GetVerifyResult = 0 then
@@ -351,9 +351,9 @@ begin
       LCtx := GLib.CreateContext(sslCtxClient);
       LCtx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
       LCtx.SetVerifyMode([sslVerifyPeer]);
-      LCtx.SetServerName('www.google.com');
 
       LConn := LCtx.CreateConnection(LSock);
+      (LConn as ISSLClientConnection).SetServerName('www.google.com');
       if LConn.Connect then
       begin
         LResult := LConn.GetVerifyResult;
@@ -388,9 +388,9 @@ begin
       LCtx := GLib.CreateContext(sslCtxClient);
       // 不加载 CA - 应该失败
       LCtx.SetVerifyMode([sslVerifyPeer]);
-      LCtx.SetServerName('www.google.com');
 
       LConn := LCtx.CreateConnection(LSock);
+      (LConn as ISSLClientConnection).SetServerName('www.google.com');
       if LConn.Connect then
       begin
         LResult := LConn.GetVerifyResult;

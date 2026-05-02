@@ -76,9 +76,9 @@ begin
     LCtx := LLib.CreateContext(sslCtxClient);
     LCtx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
     LCtx.SetVerifyMode([sslVerifyPeer]);
-    LCtx.SetServerName('www.google.com');
 
     LConn := LCtx.CreateConnection(LSock);
+    (LConn as ISSLClientConnection).SetServerName('www.google.com');
     if LConn.Connect then
     begin
       WriteLn('✅ TLS handshake successful');

@@ -28,6 +28,7 @@ var
   LLib: ISSLLibrary;  // 使用接口引用避免引用计数问题
   LCtx: TMbedTLSContext;
   LConn: ISSLConnection;
+  LClientConn: ISSLClientConnection;
   LMbedConn: TMbedTLSConnection;
   LSock: TSocketHandle;
   LRequest: AnsiString;
@@ -68,8 +69,7 @@ begin
     WriteLn('3. Creating SSL context...');
     LCtx := TMbedTLSContext.Create(LLib, sslCtxClient);
     LCtx.SetVerifyMode([]);
-    LCtx.SetServerName(TEST_HOST);
-    WriteLn('   ✅ Context created (SNI: ', TEST_HOST, ')');
+    WriteLn('   ✅ Context created');
     WriteLn;
 
     // 4. 创建 TCP Socket
@@ -92,7 +92,9 @@ begin
       // 5. 创建 SSL Connection
       WriteLn('5. Creating SSL connection...');
       LConn := LCtx.CreateConnection(LSock);
-      WriteLn('   ✅ SSL connection created');
+      LClientConn := LConn as ISSLClientConnection;
+      LClientConn.SetServerName(TEST_HOST);
+      WriteLn('   ✅ SSL connection created (SNI: ', TEST_HOST, ')');
 
       if LConn is TMbedTLSConnection then
         LMbedConn := TMbedTLSConnection(LConn as TObject)

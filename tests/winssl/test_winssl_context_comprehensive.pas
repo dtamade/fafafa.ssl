@@ -285,6 +285,9 @@ begin
 
     LContext := TSSLFactory.CreateContext(LConfig);
 
+    // INTENTIONAL_API_SURFACE: context-level SNI setter coverage. This
+    // comprehensive context test validates ISSLContext setter/getter behavior,
+    // not recommended connection-flow guidance.
     // 测试设置服务器名称
     LContext.SetServerName('example.com');
     Assert(LContext.GetServerName = 'example.com', '服务器名称设置为 example.com');
@@ -429,6 +432,7 @@ end;
 procedure TestContextValidity;
 var
   LContext: ISSLContext;
+  LNativeAccess: ISSLNativeHandleAccess;
   LConfig: TSSLConfig;
 begin
   WriteLn('【测试 10】上下文有效性检查');
@@ -446,7 +450,10 @@ begin
     Assert(LContext.IsValid, '上下文有效');
 
     // 测试获取原生句柄
-    Assert(LContext.GetNativeHandle <> nil, '原生句柄非空');
+    Assert(Supports(LContext, ISSLNativeHandleAccess, LNativeAccess),
+      '上下文支持原生句柄访问');
+    if LNativeAccess <> nil then
+      Assert(LNativeAccess.GetNativeHandle <> nil, '原生句柄非空');
 
   except
     on E: Exception do

@@ -71,12 +71,13 @@ begin
 
     // First handshake
     Ctx1 := Lib.CreateContext(sslCtxClient);
-    Ctx1.SetServerName(Host);
     Ctx1.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     if not ConnectToHost(Host, 443, S) then begin Check('TCP 连接到 ' + Host, False); Exit; end;
     try
       Conn := Ctx1.CreateConnection(S);
       Check('创建 SSL 连接对象(1)', Conn <> nil);
+      if Conn <> nil then
+        (Conn as ISSLClientConnection).SetServerName(Host);
       t1s := NowMs; ok := (Conn <> nil) and Conn.Connect; t1e := NowMs;
       Check('握手 #1 完成', ok, Format('耗时: %d ms', [t1e - t1s]));
       if ok then Conn.Shutdown;
@@ -86,12 +87,13 @@ begin
 
     // Second handshake (fresh context; true resumption尚未接入)
     Ctx2 := Lib.CreateContext(sslCtxClient);
-    Ctx2.SetServerName(Host);
     Ctx2.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     if not ConnectToHost(Host, 443, S) then begin Check('TCP 连接到 ' + Host, False); Exit; end;
     try
       Conn := Ctx2.CreateConnection(S);
       Check('创建 SSL 连接对象(2)', Conn <> nil);
+      if Conn <> nil then
+        (Conn as ISSLClientConnection).SetServerName(Host);
       t2s := NowMs; ok := (Conn <> nil) and Conn.Connect; t2e := NowMs;
       Check('握手 #2 完成', ok, Format('耗时: %d ms', [t2e - t2s]));
       if ok then Conn.Shutdown;
@@ -120,12 +122,13 @@ begin
   // Same-context resumption attempt (更贴近 SChannel 进程级缓存)
   BeginSection('会话复用（同一上下文复用）');
   Ctx1 := Lib.CreateContext(sslCtxClient);
-  Ctx1.SetServerName(Host);
   Ctx1.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
   if not ConnectToHost(Host, 443, S) then begin Check('TCP 连接', False); Exit; end;
   try
     Conn := Ctx1.CreateConnection(S);
     Check('创建 SSL 连接对象(3)', Conn <> nil);
+    if Conn <> nil then
+      (Conn as ISSLClientConnection).SetServerName(Host);
     t1s := NowMs; ok := (Conn <> nil) and Conn.Connect; t1e := NowMs;
     Check('握手 #3 完成', ok, Format('耗时: %d ms', [t1e - t1s]));
     if ok then Conn.Shutdown;
@@ -136,6 +139,8 @@ begin
   try
     Conn := Ctx1.CreateConnection(S);
     Check('创建 SSL 连接对象(4)', Conn <> nil);
+    if Conn <> nil then
+      (Conn as ISSLClientConnection).SetServerName(Host);
     t2s := NowMs; ok := (Conn <> nil) and Conn.Connect; t2e := NowMs;
     Check('握手 #4 完成', ok, Format('耗时: %d ms', [t2e - t2s]));
     if ok then Conn.Shutdown;
@@ -167,5 +172,4 @@ begin
   WriteLn; WriteLn('总计: ', Total, ' 通过: ', Passed, ' 失败: ', Failed);
   if Failed > 0 then Halt(1);
 end.
-
 

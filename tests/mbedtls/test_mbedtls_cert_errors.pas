@@ -65,9 +65,9 @@ begin
       LCtx := GLib.CreateContext(sslCtxClient);
       LCtx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
       LCtx.SetVerifyMode([sslVerifyPeer]);
-      LCtx.SetServerName('badssl.com'); // 故意错误的 SNI
 
       LConn := LCtx.CreateConnection(LSock);
+      (LConn as ISSLClientConnection).SetServerName('badssl.com'); // 故意错误的 SNI
       if LConn.Connect then
       begin
         WriteLn('✅ TLS handshake succeeded');
@@ -134,9 +134,9 @@ begin
       LCtx := GLib.CreateContext(sslCtxClient);
       // 故意不加载 CA 证书
       LCtx.SetVerifyMode([sslVerifyPeer]);
-      LCtx.SetServerName('www.google.com');
 
       LConn := LCtx.CreateConnection(LSock);
+      (LConn as ISSLClientConnection).SetServerName('www.google.com');
       if LConn.Connect then
       begin
         WriteLn('✅ TLS handshake succeeded');
@@ -200,9 +200,9 @@ begin
       LCtx := GLib.CreateContext(sslCtxClient);
       LCtx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
       LCtx.SetVerifyMode([sslVerifyPeer]);
-      LCtx.SetServerName('www.google.com');
 
       LConn := LCtx.CreateConnection(LSock);
+      (LConn as ISSLClientConnection).SetServerName('www.google.com');
       if LConn.Connect then
       begin
         WriteLn('✅ Connected');
@@ -278,9 +278,9 @@ begin
       LCtx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
       LCtx.SetVerifyMode([sslVerifyPeer]);
       LCtx.SetVerifyDepth(1); // 非常浅的深度
-      LCtx.SetServerName('www.google.com');
 
       LConn := LCtx.CreateConnection(LSock);
+      (LConn as ISSLClientConnection).SetServerName('www.google.com');
       if LConn.Connect then
       begin
         WriteLn('✅ Connected');
@@ -343,9 +343,9 @@ begin
       LCtx := GLib.CreateContext(sslCtxClient);
       LCtx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
       LCtx.SetVerifyMode([sslVerifyPeer]);
-      LCtx.SetServerName('expired.badssl.com');
 
       LConn := LCtx.CreateConnection(LSock);
+      (LConn as ISSLClientConnection).SetServerName('expired.badssl.com');
       if LConn.Connect then
       begin
         WriteLn('✅ TLS handshake succeeded');

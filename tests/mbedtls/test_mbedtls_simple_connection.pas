@@ -30,6 +30,7 @@ var
   LLib: ISSLLibrary;  // 使用接口引用避免引用计数问题
   LCtx: TMbedTLSContext;
   LConn: ISSLConnection;
+  LClientConn: ISSLClientConnection;
   LMbedConn: TMbedTLSConnection;
   LSock: TSocketHandle;
   LError: string;
@@ -67,7 +68,6 @@ begin
     WriteLn('3. Creating SSL context...');
     LCtx := TMbedTLSContext.Create(LLib, sslCtxClient);
     LCtx.SetVerifyMode([]);  // 暂不验证证书
-    LCtx.SetServerName(TEST_HOST);  // SNI 在 context 级别设置
     WriteLn('   ✅ Context created');
     WriteLn;
 
@@ -91,7 +91,9 @@ begin
       // 5. 创建 SSL Connection（传入 socket）
       WriteLn('5. Creating SSL connection...');
       LConn := LCtx.CreateConnection(LSock);
-      WriteLn('   ✅ SSL connection created');
+      LClientConn := LConn as ISSLClientConnection;
+      LClientConn.SetServerName(TEST_HOST);
+      WriteLn('   ✅ SSL connection created (SNI: ', TEST_HOST, ')');
       WriteLn;
 
       // 获取 MbedTLS 特定接口用于调试

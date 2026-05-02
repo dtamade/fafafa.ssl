@@ -76,9 +76,6 @@ begin
     Check('创建客户端上下文', Ctx <> nil);
     if Ctx = nil then Exit;
 
-    Ctx.SetServerName(Host);
-    Check('设置 SNI 主机名', True);
-
     Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     Check('设置协议版本 (TLS 1.2/1.3)', True);
 
@@ -92,6 +89,8 @@ begin
       Conn := Ctx.CreateConnection(S);
       Check('创建 SSL 连接对象', Conn <> nil);
       if Conn = nil then Exit;
+      (Conn as ISSLClientConnection).SetServerName(Host);
+      Check('设置 SNI 主机名', True);
 
       Handshook := Conn.Connect;
       Check('TLS 握手完成', Handshook);
@@ -119,5 +118,4 @@ begin
   WriteLn; WriteLn('总计: ', Total, ' 通过: ', Passed, ' 失败: ', Failed);
   if Failed > 0 then Halt(1);
 end.
-
 

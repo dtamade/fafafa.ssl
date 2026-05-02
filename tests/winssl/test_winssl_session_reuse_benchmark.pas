@@ -133,13 +133,13 @@ begin
 
     // 每次创建新的 Context（不复用凭据）
     LContext := LLib.CreateContext(sslCtxClient);
-    LContext.SetServerName(aHost);
     LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     LContext.SetVerifyMode([]);
 
     if ConnectToHost(aHost, 443, LSocket) then
     begin
       LConn := LContext.CreateConnection(LSocket);
+      (LConn as ISSLClientConnection).SetServerName(aHost);
 
       LStart := GetTimestamp;
       if LConn.Connect then
@@ -204,7 +204,6 @@ begin
 
   // 复用同一个 Context（复用凭据句柄）
   LContext := LLib.CreateContext(sslCtxClient);
-  LContext.SetServerName(aHost);
   LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
   LContext.SetVerifyMode([]);
 
@@ -213,6 +212,7 @@ begin
   if ConnectToHost(aHost, 443, LSocket) then
   begin
     LConn := LContext.CreateConnection(LSocket);
+    (LConn as ISSLClientConnection).SetServerName(aHost);
     if LConn.Connect then
     begin
       LSession := LConn.GetSession;
@@ -234,6 +234,7 @@ begin
       // 设置 Session 以启用复用
       if Assigned(LSession) then
         LConn.SetSession(LSession);
+      (LConn as ISSLClientConnection).SetServerName(aHost);
 
       LStart := GetTimestamp;
       if LConn.Connect then
@@ -250,7 +251,7 @@ begin
           Result.WithSessionReuse.MaxTime := LTime;
 
         // 检查是否真的复用了 Session
-        if LConn.IsSessionResumed then
+        if LConn.IsSessionReused then
           Inc(Result.WithSessionReuse.ReuseCount);
 
         LConn.Shutdown;

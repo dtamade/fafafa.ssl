@@ -210,10 +210,10 @@ begin
       // Create client context
       LCtx := GLib.CreateContext(sslCtxClient);
       LCtx.SetVerifyMode([]);  // Don't verify self-signed cert
-      LCtx.SetServerName('localhost');
 
       // Create connection
       LConn := LCtx.CreateConnection(LClientSock);
+      (LConn as ISSLClientConnection).SetServerName('localhost');
 
       // Connect (TLS handshake)
       WriteLn('[Client] Starting TLS handshake...');

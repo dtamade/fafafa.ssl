@@ -130,13 +130,13 @@ begin
     LSocket := INVALID_SOCKET;
 
     LContext := LLib.CreateContext(sslCtxClient);
-    LContext.SetServerName(aHost);
     LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     LContext.SetVerifyMode([]);
 
     if ConnectToHost(aHost, 443, LSocket) then
     begin
       LConn := LContext.CreateConnection(LSocket);
+      (LConn as ISSLClientConnection).SetServerName(aHost);
 
       LStart := GetTimestamp;
       if LConn.Connect then
@@ -202,13 +202,13 @@ begin
     LSocket := INVALID_SOCKET;
 
     LContext := LLib.CreateContext(sslCtxClient);
-    LContext.SetServerName(aHost);
     LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     LContext.SetVerifyMode([]);
 
     if ConnectToHost(aHost, 443, LSocket) then
     begin
       LConn := LContext.CreateConnection(LSocket);
+      (LConn as ISSLClientConnection).SetServerName(aHost);
 
       if LConn.Connect then
       begin
@@ -289,13 +289,13 @@ begin
     LSocket := INVALID_SOCKET;
 
     LContext := LLib.CreateContext(sslCtxClient);
-    LContext.SetServerName(aHost);
     LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     LContext.SetVerifyMode([]);
 
     if ConnectToHost(aHost, 443, LSocket) then
     begin
       LConn := LContext.CreateConnection(LSocket);
+      (LConn as ISSLClientConnection).SetServerName(aHost);
 
       if LConn.Connect then
       begin

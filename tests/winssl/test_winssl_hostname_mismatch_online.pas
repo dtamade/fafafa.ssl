@@ -61,7 +61,6 @@ begin
     Check('创建客户端上下文', Ctx <> nil);
     if Ctx = nil then Exit;
 
-    Ctx.SetServerName('wrong.host.badssl.com');
     Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 
     if not ConnectToHost('wrong.host.badssl.com', 443, S) then begin Check('TCP 连接', False); Exit; end;
@@ -69,6 +68,7 @@ begin
       Conn := Ctx.CreateConnection(S);
       Check('创建 SSL 连接对象', Conn <> nil);
       if Conn = nil then Exit;
+      (Conn as ISSLClientConnection).SetServerName('wrong.host.badssl.com');
 
       ok := Conn.Connect;
       Check('TLS 握手完成', ok);
@@ -103,5 +103,4 @@ begin
   WriteLn; WriteLn('总计: ', Total, ' 通过: ', Passed, ' 失败: ', Failed);
   if Failed > 0 then Halt(1);
 end.
-
 

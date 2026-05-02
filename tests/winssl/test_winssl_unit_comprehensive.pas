@@ -179,6 +179,9 @@ begin
   if LServerCtx <> nil then
     Test('Server context type correct', LServerCtx.GetContextType = sslCtxServer);
 
+  // INTENTIONAL_API_SURFACE: context-level SNI setter coverage. This
+  // context-management test checks the ISSLContext API itself rather than
+  // teaching recommended per-connection handshake flow.
   // Test 4: Set server name (SNI)
   try
     LClientCtx.SetServerName('www.example.com');

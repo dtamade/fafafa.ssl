@@ -241,11 +241,11 @@ begin
       // Create client context
       LCtx := GLib.CreateContext(sslCtxClient);
       LCtx.SetVerifyMode([]);  // Don't verify self-signed
-      LCtx.SetServerName('localhost');
       WriteLn('[Client] Context configured');
 
       // Create connection
       LConn := LCtx.CreateConnection(LClientSock);
+      (LConn as ISSLClientConnection).SetServerName('localhost');
       WriteLn('[Client] SSL connection created');
 
       // Get MbedTLS specific interface

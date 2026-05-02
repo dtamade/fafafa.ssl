@@ -168,10 +168,6 @@ begin
     if LContext = nil then
       Exit;
 
-    // Set SNI hostname (on context, not connection!)
-    LContext.SetServerName(aHost);
-    Test('设置 SNI 主机名', True);
-
     // Set protocol versions (TLS 1.2 and 1.3)
     LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     Test('设置协议版本 (TLS 1.2/1.3)', True);
@@ -190,6 +186,9 @@ begin
     Test('创建 SSL 连接对象', LConn <> nil);
     if LConn = nil then
       Exit;
+
+    (LConn as ISSLClientConnection).SetServerName(aHost);
+    Test('设置 SNI 主机名', True);
 
     // Perform TLS handshake
     LConnected := LConn.Connect;
@@ -260,11 +259,11 @@ begin
     LContext := LLib.CreateContext(sslCtxClient);
     LContext.SetProtocolVersions([sslProtocolTLS12]);
     LContext.SetVerifyMode([]);
-    LContext.SetServerName('www.google.com');
 
     if ConnectToHost('www.google.com', 443, LSocket) then
     begin
       LConn := LContext.CreateConnection(LSocket);
+      (LConn as ISSLClientConnection).SetServerName('www.google.com');
 
       if LConn.Connect then
       begin
@@ -283,11 +282,11 @@ begin
     LContext := LLib.CreateContext(sslCtxClient);
     LContext.SetProtocolVersions([sslProtocolTLS13]);
     LContext.SetVerifyMode([]);
-    LContext.SetServerName('www.cloudflare.com');
 
     if ConnectToHost('www.cloudflare.com', 443, LSocket) then
     begin
       LConn := LContext.CreateConnection(LSocket);
+      (LConn as ISSLClientConnection).SetServerName('www.cloudflare.com');
 
       if LConn.Connect then
       begin
@@ -309,11 +308,11 @@ begin
     LContext := LLib.CreateContext(sslCtxClient);
     LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     LContext.SetVerifyMode([]);
-    LContext.SetServerName('www.microsoft.com');
 
     if ConnectToHost('www.microsoft.com', 443, LSocket) then
     begin
       LConn := LContext.CreateConnection(LSocket);
+      (LConn as ISSLClientConnection).SetServerName('www.microsoft.com');
 
       if LConn.Connect then
       begin
@@ -358,11 +357,11 @@ begin
     LContext := LLib.CreateContext(sslCtxClient);
     LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     LContext.SetVerifyMode([]);
-    LContext.SetServerName('www.google.com');
 
     if ConnectToHost('www.google.com', 443, LSocket) then
     begin
       LConn := LContext.CreateConnection(LSocket);
+      (LConn as ISSLClientConnection).SetServerName('www.google.com');
 
       if LConn.Connect then
       begin
@@ -386,11 +385,11 @@ begin
     LContext := LLib.CreateContext(sslCtxClient);
     LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     LContext.SetVerifyMode([]);
-    LContext.SetServerName('www.microsoft.com');
 
     if ConnectToHost('www.microsoft.com', 443, LSocket) then
     begin
       LConn := LContext.CreateConnection(LSocket);
+      (LConn as ISSLClientConnection).SetServerName('www.microsoft.com');
 
       if LConn.Connect then
       begin
@@ -414,11 +413,11 @@ begin
     LContext := LLib.CreateContext(sslCtxClient);
     LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     LContext.SetVerifyMode([]);
-    LContext.SetServerName('api.github.com');
 
     if ConnectToHost('api.github.com', 443, LSocket) then
     begin
       LConn := LContext.CreateConnection(LSocket);
+      (LConn as ISSLClientConnection).SetServerName('api.github.com');
 
       if LConn.Connect then
       begin
@@ -470,11 +469,11 @@ begin
     LContext := LLib.CreateContext(sslCtxClient);
     LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     LContext.SetVerifyMode([]);
-    LContext.SetServerName('www.google.com');
 
     if ConnectToHost('www.google.com', 80, LSocket) then
     begin
       LConn := LContext.CreateConnection(LSocket);
+      (LConn as ISSLClientConnection).SetServerName('www.google.com');
 
       // TLS handshake should fail on HTTP port
       Test('HTTP 端口 TLS 握手失败', not LConn.Connect);
@@ -489,11 +488,11 @@ begin
     LContext := LLib.CreateContext(sslCtxClient);
     LContext.SetProtocolVersions([sslProtocolSSL3]);
     LContext.SetVerifyMode([]);
-    LContext.SetServerName('www.google.com');
 
     if ConnectToHost('www.google.com', 443, LSocket) then
     begin
       LConn := LContext.CreateConnection(LSocket);
+      (LConn as ISSLClientConnection).SetServerName('www.google.com');
 
       // SSL 3.0 is deprecated and should fail
       Test('SSL 3.0 握手失败（已废弃）', not LConn.Connect);
@@ -541,11 +540,11 @@ begin
       LContext := LLib.CreateContext(sslCtxClient);
       LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
       LContext.SetVerifyMode([]);
-      LContext.SetServerName('www.google.com');
 
       if ConnectToHost('www.google.com', 443, LSocket) then
       begin
         LConn := LContext.CreateConnection(LSocket);
+        (LConn as ISSLClientConnection).SetServerName('www.google.com');
 
         if LConn.Connect then
         begin

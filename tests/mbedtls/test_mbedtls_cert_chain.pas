@@ -80,11 +80,9 @@ begin
 
       LCtx.SetVerifyMode([sslVerifyPeer]); // 启用验证
 
-      // ✅ 设置 SNI - 必须在 CreateConnection 之前!
-      LCtx.SetServerName('www.google.com');
-      WriteLn('✅ SNI set to: www.google.com');
-
       LConn := LCtx.CreateConnection(LSock);
+      (LConn as ISSLClientConnection).SetServerName('www.google.com');
+      WriteLn('✅ SNI set to: www.google.com');
 
       if LConn.Connect then
       begin
@@ -222,9 +220,9 @@ begin
       LCtx := GLib.CreateContext(sslCtxClient);
       LCtx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
       LCtx.SetVerifyMode([sslVerifyPeer]);
-      LCtx.SetServerName('www.google.com'); // SNI
 
       LConn := LCtx.CreateConnection(LSock);
+      (LConn as ISSLClientConnection).SetServerName('www.google.com');
       if LConn.Connect then
       begin
         if LConn.GetVerifyResult = 0 then
@@ -281,9 +279,9 @@ begin
       LCtx := GLib.CreateContext(sslCtxClient);
       LCtx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
       LCtx.SetVerifyMode([sslVerifyPeer]);
-      LCtx.SetServerName('www.google.com'); // SNI
 
       LConn := LCtx.CreateConnection(LSock);
+      (LConn as ISSLClientConnection).SetServerName('www.google.com');
       if LConn.Connect then
       begin
         WriteLn('✅ Connected');
@@ -362,9 +360,9 @@ begin
       LCtx.LoadCAFile('/etc/ssl/certs/ca-certificates.crt');
       LCtx.SetVerifyMode([sslVerifyPeer]);
       LCtx.SetVerifyDepth(10); // 允许最多 10 级证书链
-      LCtx.SetServerName('www.google.com'); // SNI
 
       LConn := LCtx.CreateConnection(LSock);
+      (LConn as ISSLClientConnection).SetServerName('www.google.com');
       if LConn.Connect then
       begin
         WriteLn('✅ Connected with verify depth = 10');

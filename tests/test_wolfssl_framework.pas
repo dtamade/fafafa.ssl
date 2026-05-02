@@ -326,6 +326,9 @@ begin
       LCtx.SetVerifyDepth(5);
       Test('Verify depth set to 5', LCtx.GetVerifyDepth = 5);
 
+      // INTENTIONAL_API_SURFACE: context-level SNI setter coverage. This
+      // backend framework test validates WolfSSL context configuration, not
+      // recommended per-connection handshake guidance.
       // Test server name
       LCtx.SetServerName('example.com');
       Test('Server name set', LCtx.GetServerName = 'example.com');
