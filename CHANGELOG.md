@@ -11,6 +11,51 @@
 
 ---
 
+## [1.4.1] - 2026-05-02
+
+**补丁版本** - OpenSSL 后端 Early Data 支持
+
+### 修复
+
+#### OpenSSL 后端接口实现
+- **为 OpenSSL 后端添加 ISSLEarlyDataContext 实现**
+  - SetClientEarlyDataEnabled / GetClientEarlyDataEnabled
+  - SetServerEarlyDataPolicy / GetServerEarlyDataPolicy
+  - SetServerMaxEarlyDataSize / GetServerMaxEarlyDataSize
+  - 使用 OpenSSL API: SSL_CTX_set_max_early_data
+
+- **为 OpenSSL 后端添加 ISSLServerOCSPStaplingContext 实现**
+  - ClearServerStapledOCSPResponse
+  - SetServerStapledOCSPResponse
+  - LoadServerStapledOCSPResponseFile
+  - HasServerStapledOCSPResponse
+  - GetServerStapledOCSPResponse
+
+### 改进
+
+#### 测试覆盖
+- **新增 OpenSSL Early Data 单元测试**
+  - 8 个测试用例，100% 通过
+  - 接口支持测试
+  - Early Data 功能测试
+  - OCSP Stapling 功能测试
+  - 错误处理测试
+
+### 说明
+
+- v1.4.0 定义了 Early Data 接口，但仅 FreePascal 后端实现
+- v1.4.1 为 OpenSSL 后端添加完整实现
+- WinSSL、MbedTLS、WolfSSL 后端的 Early Data 支持将在后续版本添加
+- 目前 Early Data 功能在 FreePascal 和 OpenSSL 后端可用
+
+### 统计
+
+- 实现代码: +194 行
+- 测试代码: +331 行
+- 完整性: 89.5% → 92%
+
+---
+
 ## [1.4.0] - 2026-05-02
 
 **TLS 1.3 增强版本** - 完整的 TLS 1.3 支持、证书透明度和 0-RTT Early Data
