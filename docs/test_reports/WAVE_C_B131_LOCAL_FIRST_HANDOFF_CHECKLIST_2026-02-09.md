@@ -1,5 +1,11 @@
 # Wave C B131 Local-first Handoff Checklist（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 当前默认策略：交接时先确认 local-first 守护链仍健康；若涉及审批状态，再补看 `B148/B149`。
+- 历史定位：本页保留 2026-02-09 的最小交接清单，用于归档对照。
+
 ## 目标
 
 提供最小交接清单，确保新值班人可以在 5 分钟内接手 local-first 守护链路。

@@ -1,5 +1,10 @@
 # Wave C B142 Local Guard Status Export Result（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 历史定位：本页保留 2026-02-09 的状态导出样例，用于归档对照，不再代表默认执行入口。
+
 ## 目标
 
 输出 machine-readable 状态 JSON，供告警系统和看板消费。

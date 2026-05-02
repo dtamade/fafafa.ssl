@@ -1,5 +1,12 @@
 # Wave C B120 Post-Trigger Observability Result（2026-02-08）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_UNIFIED_BASELINE_STATUS_2026-03-15.md`
+- local-first / pre-CI 总览：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 当前默认策略：workflow 仍保持 `DISABLED`，不再把“触发后 15 分钟观察”作为默认推进入口。
+- 历史定位：本页保留 2026-02-08 的 post-trigger observability 样例，用于归档对照。
+
 ## 目标
 
 提供 workflow 触发后的 15 分钟观察检查工具与清单，确保上线后可快速判断是否稳定。

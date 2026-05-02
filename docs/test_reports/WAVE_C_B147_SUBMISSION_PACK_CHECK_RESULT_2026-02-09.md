@@ -1,5 +1,11 @@
 # Wave C B147 Submission Pack Check Result（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_B147_SUBMISSION_PACK_CHECK_RESULT_2026-03-16.md`
+- 链路总览：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 历史定位：本页保留 2026-02-09 的旧 pack check 样例，用于归档对照。
+
 ## 目标
 
 对 B146 提交包执行结构完整性与关键状态校验，确保提交材料可审阅。

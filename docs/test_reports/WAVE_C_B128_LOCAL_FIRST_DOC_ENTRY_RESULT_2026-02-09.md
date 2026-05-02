@@ -1,5 +1,10 @@
 # Wave C B128 Local-first Doc Entry Result（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 历史定位：本页保留 2026-02-09 的文档入口收口结果，用于归档对照，不再代表默认执行入口。
+
 ## 目标
 
 将 local-first 守护链路接入主入口文档，保证在 CI 暂缓场景下可快速发现并执行。
@@ -18,6 +23,7 @@ bash scripts/summarize_wave_c_local_guard_history.sh --run-id 20260209_032257 --
 ```
 
 结果：
+
 - B125：`overall PASS`
 - B126：`trend_state STABLE`
 

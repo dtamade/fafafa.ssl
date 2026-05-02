@@ -1,5 +1,10 @@
 # Wave C B126 Local Guard History Result（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 历史定位：本页保留 2026-02-09 的样例命令与输出，用于归档对照，不再代表默认执行入口。
+
 ## 目标
 
 汇总 local-first 守护历史，形成可观察趋势并支持连续自治决策。

@@ -1,5 +1,10 @@
 # Wave C B134 Local-first Closure Summary（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 历史定位：本页保留 2026-02-09 的阶段收口摘要，用于归档对照，不再代表默认执行入口。
+
 ## 阶段目标
 
 在 CI 暂缓前提下，完成 local-first 守护链路的连续自治闭环建设。

@@ -1,5 +1,11 @@
 # Wave C B122 CI Deferred / Local Mode（2026-02-08）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 当前默认策略：继续保持 workflow `DISABLED`，审批相关入口以 `B115/B116/B148/B149` 为准。
+- 历史定位：本页保留 2026-02-08 的 defer/disable 决策记录，用于归档对照。
+
 ## Decision
 
 - CI 暂缓执行（按用户指令）。

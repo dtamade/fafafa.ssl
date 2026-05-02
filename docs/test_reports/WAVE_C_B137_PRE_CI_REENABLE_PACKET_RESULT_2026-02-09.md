@@ -1,5 +1,10 @@
 # Wave C B137 Pre-CI Re-enable Packet Result（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 历史定位：本页保留 2026-02-09 的 pre-CI packet 样例，用于归档对照，不再代表默认执行入口。
+
 ## 目标
 
 将 B137 审批包脚本的执行结果固化为正式文档，作为“恢复 CI 前”审批输入。

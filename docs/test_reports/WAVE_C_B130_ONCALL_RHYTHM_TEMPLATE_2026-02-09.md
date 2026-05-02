@@ -1,5 +1,11 @@
 # Wave C B130 Oncall Rhythm Template（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 当前默认策略：oncall / pre-CI 节奏继续有效，但当前推荐把值班日志落到 `tmp/test-reports`。
+- 历史定位：本页保留 2026-02-09 的节奏模板，用于归档对照。
+
 ## 目标
 
 为 local-first 守护链路提供可直接落地的值班节奏模板（每日/每周/异常）。
@@ -35,6 +41,7 @@ bash scripts/summarize_wave_c_local_guard_history.sh --strict
 ```
 
 检查项：
+
 - `trend_state=STABLE`
 - 最近 7 天无 FAIL 记录
 
@@ -66,13 +73,13 @@ bash scripts/run_wave_c_local_guard_oncall_check.sh --strict
 
 ```cron
 # Daily quick oncall check
-0 9 * * * cd /path/to/fafafa.ssl && bash scripts/run_wave_c_local_guard_oncall_check.sh --strict --quiet >> test-reports/wave_c_oncall_quick.log 2>&1
+0 9 * * * cd /path/to/fafafa.ssl && mkdir -p tmp/test-reports && bash scripts/run_wave_c_local_guard_oncall_check.sh --strict --quiet >> tmp/test-reports/wave_c_oncall_quick.log 2>&1
 
 # Daily full local guard bundle
-30 17 * * * cd /path/to/fafafa.ssl && bash scripts/run_wave_c_local_first_guard_bundle.sh --strict >> test-reports/wave_c_oncall_bundle.log 2>&1
+30 17 * * * cd /path/to/fafafa.ssl && mkdir -p tmp/test-reports && bash scripts/run_wave_c_local_first_guard_bundle.sh --strict >> tmp/test-reports/wave_c_oncall_bundle.log 2>&1
 
 # Weekly trend summary
-0 10 * * 1 cd /path/to/fafafa.ssl && bash scripts/summarize_wave_c_local_guard_history.sh --strict >> test-reports/wave_c_oncall_weekly.log 2>&1
+0 10 * * 1 cd /path/to/fafafa.ssl && mkdir -p tmp/test-reports && bash scripts/summarize_wave_c_local_guard_history.sh --strict >> tmp/test-reports/wave_c_oncall_weekly.log 2>&1
 ```
 
 ## 结论

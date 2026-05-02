@@ -1,5 +1,10 @@
 # Wave C B136 Deliverables Overview（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 历史定位：本页保留 2026-02-09 的交付物总览，用于归档对照，不再代表默认执行入口。
+
 ## 目标
 
 汇总当前 local-first 阶段全部可交付物，便于用户快速接管与后续决策。

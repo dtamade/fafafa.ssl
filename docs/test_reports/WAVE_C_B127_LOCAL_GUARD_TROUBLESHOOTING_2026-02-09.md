@@ -1,5 +1,11 @@
 # Wave C B127 Local Guard Troubleshooting（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 当前默认策略：local-first / pre-CI 守护链优先查看 `tmp/test-reports` 下的新证据。
+- 历史定位：本页保留 2026-02-09 的故障定位顺序，用于归档对照。
+
 ## 目标
 
 为 local-first 守护链路提供故障速查手册，缩短异常定位与恢复时间。
@@ -74,10 +80,10 @@ bash scripts/check_wave_c_local_drift_watch.sh --strict
 ### 4) B126 趋势退化为 `DEGRADED`
 
 - 现象：历史中出现 FAIL
-- 处理：定位最近失败报告：
+- 处理：优先定位当前 `tmp/test-reports` 下的最近失败 bundle，必要时再回看 legacy `test-reports`：
 
 ```bash
-ls -1t test-reports/wave_c_b125_local_guard_bundle_*.md | head -3
+ls -1t tmp/test-reports/wave_c_b125_local_guard_bundle_*.md 2>/dev/null | head -3
 ```
 
 逐项检查对应 log（B123/B124）并修复后重跑 B125 strict。

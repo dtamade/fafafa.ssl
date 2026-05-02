@@ -1,5 +1,11 @@
 # Wave C B133 Local Guard Evidence Retention（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 当前归档语境：local guard 当前证据根目录以 `tmp/test-reports/` 为准，审批与收口导航以 2026-03-16 主链页为准。
+- 历史定位：本页保留 2026-02-09 的保留策略建议，用于归档对照，不再代表默认执行入口。
+
 ## 目标
 
 给出 local-first 守护证据归档与保留窗口建议，确保持续自治下的证据可追溯且不失控增长。

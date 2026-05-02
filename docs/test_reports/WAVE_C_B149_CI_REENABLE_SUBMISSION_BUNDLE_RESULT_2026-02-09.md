@@ -1,5 +1,11 @@
 # Wave C B149 CI Re-enable Submission Bundle Result（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_B149_CI_REENABLE_SUBMISSION_BUNDLE_RESULT_2026-03-16.md`
+- 链路总览：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 历史定位：本页保留 2026-02-09 的旧 submission bundle 样例，用于归档对照。
+
 ## 目标
 
 将 B146/B147/B148 串联为一键执行与打包报告，减少审批准备过程中的漏执行风险。

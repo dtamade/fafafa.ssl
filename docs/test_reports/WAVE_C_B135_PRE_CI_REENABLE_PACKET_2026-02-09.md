@@ -1,5 +1,11 @@
 # Wave C B135 Pre-CI Re-enable Packet（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 当前审批摘要：`docs/test_reports/WAVE_C_B148_CI_REENABLE_APPROVAL_BRIEF_RESULT_2026-03-15.md`
+- 历史定位：本页保留 2026-02-09 的 pre-CI 检查包草案，用于归档对照，不再代表默认执行入口。
+
 ## 目标
 
 在不启用 workflow 的前提下，准备“恢复 CI 前”检查包，便于后续审批决策。

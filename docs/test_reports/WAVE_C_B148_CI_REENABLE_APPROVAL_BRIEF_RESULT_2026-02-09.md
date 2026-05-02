@@ -1,5 +1,11 @@
 # Wave C B148 CI Re-enable Approval Brief Result（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_B148_CI_REENABLE_APPROVAL_BRIEF_RESULT_2026-03-15.md`
+- 链路总览：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 历史定位：本页保留 2026-02-09 的旧 approval brief 样例，用于归档对照。
+
 ## 目标
 
 基于 B146 提交包生成审批简报，压缩为可直接沟通的一页摘要。

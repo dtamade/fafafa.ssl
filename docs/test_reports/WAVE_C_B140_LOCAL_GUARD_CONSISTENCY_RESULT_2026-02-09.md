@@ -1,5 +1,10 @@
 # Wave C B140 Local Guard Consistency Result（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 历史定位：本页保留 2026-02-09 的一致性样例，用于归档对照，不再代表默认执行入口。
+
 ## 目标
 
 验证 local-first 守护的脚本、文档、索引与 workflow 状态一致性。

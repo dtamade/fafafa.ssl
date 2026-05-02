@@ -1,5 +1,10 @@
 # Wave C B141 Local Guard Operations Summary（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 历史定位：本页保留 2026-02-09 的运维摘要，用于归档对照，不再代表默认执行入口。
+
 ## 目标
 
 把 local-first 守护体系的“执行、一致性、清理策略”统一成运维视角摘要，便于日常操作。

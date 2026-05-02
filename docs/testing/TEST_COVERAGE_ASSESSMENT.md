@@ -6,6 +6,11 @@
 
 ---
 
+> 这是一个历史测试评估快照。若你要在当前工作树里复核验证入口，请优先使用：
+> `python3 scripts/compile_all_modules.py`、
+> `bash scripts/run_minimal_ci_gate.sh --fast-local`、
+> `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`。
+
 ## 📊 Executive Summary
 
 **Overall Test Maturity**: ⭐⭐⭐⭐⭐ **Production Ready**
@@ -14,13 +19,13 @@ The project has excellent test coverage with 152 test files covering all critica
 
 ### Key Metrics
 
-| Metric | Value | Status |
-|--------|-------|--------|
-| **Core Test Pass Rate** | 97.5% (39/40) | ✅ Excellent |
-| **Compilation Success** | 100% (75/75) | ✅ Perfect |
-| **Test Source Files** | 152 | ✅ Comprehensive |
-| **Automated Tests** | 4 core suites | ✅ Good |
-| **Example Programs** | 54 | ✅ Extensive |
+| Metric                  | Value         | Status           |
+| ----------------------- | ------------- | ---------------- |
+| **Core Test Pass Rate** | 97.5% (39/40) | ✅ Excellent     |
+| **Compilation Success** | 100% (75/75)  | ✅ Perfect       |
+| **Test Source Files**   | 152           | ✅ Comprehensive |
+| **Automated Tests**     | 4 core suites | ✅ Good          |
+| **Example Programs**    | 54            | ✅ Extensive     |
 
 ---
 
@@ -31,6 +36,7 @@ The project has excellent test coverage with 152 test files covering all critica
 **Status**: Excellent (97.5% pass rate)
 
 **Covered Areas**:
+
 - ✅ OpenSSL library loading
 - ✅ Module initialization
 - ✅ Version detection
@@ -38,6 +44,7 @@ The project has excellent test coverage with 152 test files covering all critica
 - ✅ Algorithm availability
 
 **Test Files**:
+
 - `test_openssl_simple.pas` - Basic loading
 - `test_hash_utils.pas` - Hash operations
 - `test_algorithm_availability.pas` - Algorithm detection
@@ -46,6 +53,7 @@ The project has excellent test coverage with 152 test files covering all critica
 **Pass Rate**: 39/40 (97.5%)
 
 **Known Issues**:
+
 - 1 minor failure: `OPENSSL_free` symbol loading (non-critical)
 - Fallback to `CRYPTO_free` works correctly
 
@@ -58,6 +66,7 @@ The project has excellent test coverage with 152 test files covering all critica
 **Location**: `tests/integration/`
 
 **Coverage**:
+
 - ✅ Cross-module workflows
 - ✅ TLS end-to-end scenarios
 - ✅ Backend comparisons (OpenSSL vs WinSSL)
@@ -73,6 +82,7 @@ The project has excellent test coverage with 152 test files covering all critica
 **Status**: Good (152 test files)
 
 **Categories**:
+
 - **Cryptography**: AES, RSA, EC, DSA, DH, ECDH
 - **Hashing**: SHA, BLAKE2, SM3, MD5, RIPEMD
 - **AEAD**: GCM, ChaCha20-Poly1305, CCM
@@ -81,6 +91,7 @@ The project has excellent test coverage with 152 test files covering all critica
 - **Utilities**: BIO, BN, ASN.1, PEM
 
 **Sample Test Files**:
+
 ```
 tests/test_aes_simple.pas
 tests/test_rsa_keygen_debug.pas
@@ -100,10 +111,12 @@ tests/test_phase6_sni.pas
 **Location**: `tests/performance/`
 
 **Tests**:
+
 - ✅ `benchmark_openssl.pas` - Core operations benchmarking
 - ✅ Library load/unload performance
 
 **Results** (from documentation):
+
 - Library load: < 1ms
 - SHA-256: 341 MB/s
 - AES-256-CBC: 446 MB/s
@@ -119,6 +132,7 @@ tests/test_phase6_sni.pas
 **Status**: Extensive (54 examples)
 
 **Coverage**:
+
 - Basic usage patterns
 - Real-world scenarios
 - Enterprise integration
@@ -131,6 +145,7 @@ tests/test_phase6_sni.pas
 ## 📋 Coverage Analysis by Module
 
 ### Priority 0 (Core) - 100% ✅
+
 - ✅ OpenSSL loading
 - ✅ EVP framework
 - ✅ Core types
@@ -139,6 +154,7 @@ tests/test_phase6_sni.pas
 - ✅ Memory management
 
 ### Priority 1 (High) - 100% ✅
+
 - ✅ AES encryption
 - ✅ RSA operations
 - ✅ SHA hashing
@@ -147,6 +163,7 @@ tests/test_phase6_sni.pas
 - ✅ Random number generation
 
 ### Priority 2 (Medium) - ~40% 🟡
+
 - ✅ PKCS#7 (90.9%)
 - ✅ PKCS#12 (100%)
 - ✅ ERR module (100%)
@@ -158,6 +175,7 @@ tests/test_phase6_sni.pas
 - ⚠️ SRP (81.8%)
 
 ### Priority 3 (Low) - 100% ✅
+
 - ✅ Additional algorithms
 - ✅ Legacy ciphers
 - ✅ Specialized functions
@@ -174,8 +192,9 @@ tests/test_phase6_sni.pas
    - Real-world scenario testing
 
 2. **Automated Test Suite**
-   - `build_linux.sh` - One-command compilation
-   - `run_tests_linux.sh` - Automated test execution
+   - `python3 scripts/compile_all_modules.py` - Current compile gate for the active worktree
+   - `bash scripts/run_minimal_ci_gate.sh --fast-local` - Current local-first minimal gate
+   - `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local` - Current Phase 2 entry probe
    - Clear pass/fail reporting
 
 3. **Performance Validation**
@@ -209,26 +228,26 @@ tests/test_phase6_sni.pas
 
 ### By Test Type
 
-| Type | Files | Coverage | Status |
-|------|-------|----------|--------|
-| **Core Tests** | 4 | 97.5% | ✅ Excellent |
-| **Unit Tests** | 152 | 90%+ | ✅ Good |
-| **Integration** | 10+ | 95%+ | ✅ Good |
-| **Performance** | 2 | 100% | ✅ Complete |
-| **Examples** | 54 | 100% | ✅ Complete |
+| Type            | Files | Coverage | Status       |
+| --------------- | ----- | -------- | ------------ |
+| **Core Tests**  | 4     | 97.5%    | ✅ Excellent |
+| **Unit Tests**  | 152   | 90%+     | ✅ Good      |
+| **Integration** | 10+   | 95%+     | ✅ Good      |
+| **Performance** | 2     | 100%     | ✅ Complete  |
+| **Examples**    | 54    | 100%     | ✅ Complete  |
 
 ### By Functionality
 
-| Category | Coverage | Status |
-|----------|----------|--------|
-| **Symmetric Crypto** | 100% | ✅ |
-| **Asymmetric Crypto** | 100% | ✅ |
-| **Hash Functions** | 100% | ✅ |
-| **AEAD Modes** | 100% | ✅ |
-| **PKI Basic** | 100% | ✅ |
-| **PKI Advanced** | 85% | 🟡 |
-| **SSL/TLS** | 100% | ✅ |
-| **Utilities** | 100% | ✅ |
+| Category              | Coverage | Status |
+| --------------------- | -------- | ------ |
+| **Symmetric Crypto**  | 100%     | ✅     |
+| **Asymmetric Crypto** | 100%     | ✅     |
+| **Hash Functions**    | 100%     | ✅     |
+| **AEAD Modes**        | 100%     | ✅     |
+| **PKI Basic**         | 100%     | ✅     |
+| **PKI Advanced**      | 85%      | 🟡     |
+| **SSL/TLS**           | 100%     | ✅     |
+| **Utilities**         | 100%     | ✅     |
 
 **Overall Coverage**: **~95%** ⭐⭐⭐⭐⭐
 
@@ -288,14 +307,14 @@ These improvements are nice-to-have but not required for v1.0.0 release:
 
 ### For v1.0.0 Release
 
-| Criterion | Status | Evidence |
-|-----------|--------|----------|
-| **Core functionality tested** | ✅ Yes | 97.5% pass rate |
-| **Critical bugs identified** | ✅ Yes | 1 minor, documented |
-| **Performance validated** | ✅ Yes | Benchmarks excellent |
-| **Real-world scenarios** | ✅ Yes | 54 examples |
-| **Documentation complete** | ✅ Yes | Comprehensive |
-| **Regression prevention** | ✅ Yes | Test suite in place |
+| Criterion                     | Status | Evidence             |
+| ----------------------------- | ------ | -------------------- |
+| **Core functionality tested** | ✅ Yes | 97.5% pass rate      |
+| **Critical bugs identified**  | ✅ Yes | 1 minor, documented  |
+| **Performance validated**     | ✅ Yes | Benchmarks excellent |
+| **Real-world scenarios**      | ✅ Yes | 54 examples          |
+| **Documentation complete**    | ✅ Yes | Comprehensive        |
+| **Regression prevention**     | ✅ Yes | Test suite in place  |
 
 **Verdict**: ✅ **READY FOR PRODUCTION USE**
 
@@ -303,13 +322,13 @@ These improvements are nice-to-have but not required for v1.0.0 release:
 
 ## 📊 Comparison with Industry Standards
 
-| Standard | Requirement | fafafa.ssl | Status |
-|----------|-------------|------------|--------|
-| **Core Coverage** | 80%+ | 100% | ✅ Exceeds |
-| **Pass Rate** | 95%+ | 97.5% | ✅ Exceeds |
-| **Integration Tests** | Required | ✅ Present | ✅ Meets |
-| **Performance Tests** | Recommended | ✅ Present | ✅ Exceeds |
-| **Documentation** | Required | ✅ Excellent | ✅ Exceeds |
+| Standard              | Requirement | fafafa.ssl   | Status     |
+| --------------------- | ----------- | ------------ | ---------- |
+| **Core Coverage**     | 80%+        | 100%         | ✅ Exceeds |
+| **Pass Rate**         | 95%+        | 97.5%        | ✅ Exceeds |
+| **Integration Tests** | Required    | ✅ Present   | ✅ Meets   |
+| **Performance Tests** | Recommended | ✅ Present   | ✅ Exceeds |
+| **Documentation**     | Required    | ✅ Excellent | ✅ Exceeds |
 
 ---
 
@@ -318,6 +337,7 @@ These improvements are nice-to-have but not required for v1.0.0 release:
 **Test maturity is excellent and exceeds industry standards for a v1.0.0 release.**
 
 The project demonstrates:
+
 - ✅ Comprehensive test coverage (95%+)
 - ✅ High reliability (97.5% pass rate)
 - ✅ Excellent performance validation
@@ -333,4 +353,3 @@ The project demonstrates:
 **Assessment completed**: 2025-10-28  
 **Next review**: After v1.0.0 release  
 **Assessor**: AI Engineer (Senior)
-

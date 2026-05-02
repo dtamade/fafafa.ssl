@@ -1,5 +1,10 @@
 # Wave C B124 Local Drift Watch Result（2026-02-09）
 
+## Current Wave C Chain
+
+- 当前默认入口：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 历史定位：本页保留 2026-02-09 的样例命令与输出，用于归档对照，不再代表默认执行入口。
+
 ## 目标
 
 在 local-first 模式下引入周期性漂移检查，持续验证 workflow 状态、证据时效与文档完整性。
