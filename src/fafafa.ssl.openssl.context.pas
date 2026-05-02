@@ -41,7 +41,8 @@ uses
 
 type
   { TOpenSSLContext - OpenSSL 上下文类 }
-  TOpenSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess, ISSLHttpHooksAccess)
+  TOpenSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess,
+    ISSLHttpHooksAccess, ISSLEarlyDataContext, ISSLServerOCSPStaplingContext)
   private
     FLibrary: ISSLLibrary;
     FContextType: TSSLContextType;
@@ -67,10 +68,18 @@ type
     FInfoCallback: TSSLInfoCallback;
     FHTTPGetCallback: TSSLHTTPGetCallback;
     FHTTPPostCallback: TSSLHTTPPostCallback;
-    
+
     // 证书固定
     FPinValidator: TPinValidator;
     FPinningEnabled: Boolean;
+
+    // Early Data 相关 (v1.4.1)
+    FClientEarlyDataEnabled: Boolean;
+    FServerEarlyDataPolicy: TSSLEarlyDataServerPolicy;
+    FServerMaxEarlyDataSize: Cardinal;
+
+    // Server OCSP Stapling 相关 (v1.4.1)
+    FServerStapledOCSPResponse: TBytes;
     
     procedure ApplyProtocolVersions;
     procedure ApplyVerifyMode;
@@ -151,7 +160,22 @@ type
     function GetHTTPGetCallback: TSSLHTTPGetCallback;
     procedure SetHTTPPostCallback(ACallback: TSSLHTTPPostCallback);
     function GetHTTPPostCallback: TSSLHTTPPostCallback;
-    
+
+    { ISSLEarlyDataContext - TLS 1.3 Early Data 配置 (v1.4.1) }
+    procedure SetClientEarlyDataEnabled(AEnabled: Boolean);
+    function GetClientEarlyDataEnabled: Boolean;
+    procedure SetServerEarlyDataPolicy(APolicy: TSSLEarlyDataServerPolicy);
+    function GetServerEarlyDataPolicy: TSSLEarlyDataServerPolicy;
+    procedure SetServerMaxEarlyDataSize(ASize: Cardinal);
+    function GetServerMaxEarlyDataSize: Cardinal;
+
+    { ISSLServerOCSPStaplingContext - 服务端 OCSP Stapling (v1.4.1) }
+    procedure ClearServerStapledOCSPResponse;
+    procedure SetServerStapledOCSPResponse(const AResponseDER: TBytes);
+    procedure LoadServerStapledOCSPResponseFile(const AFileName: string);
+    function HasServerStapledOCSPResponse: Boolean;
+    function GetServerStapledOCSPResponse: TBytes;
+
     { ISSLContext - 证书固定 }
     procedure AddCertificatePin(const AHash: TBytes; APinType: Integer;
       const ADescription: string; AIsBackup: Boolean = False);
@@ -834,11 +858,19 @@ begin
   FVerifyCallback := nil;
   FPasswordCallback := nil;
   FInfoCallback := nil;
-  
+
   // 初始化证书固定
   FPinValidator := TPinValidator.Create;
   FPinningEnabled := False;
-  
+
+  // 初始化 Early Data 配置 (v1.4.1)
+  FClientEarlyDataEnabled := False;
+  FServerEarlyDataPolicy := sslEarlyDataServerReject;
+  FServerMaxEarlyDataSize := 16384;  // 16KB 默认值
+
+  // 初始化 Server OCSP Stapling (v1.4.1)
+  SetLength(FServerStapledOCSPResponse, 0);
+
   // 创建 SSL_CTX
   Method := GetSSLMethod;
   if Method = nil then
@@ -2122,6 +2154,163 @@ function TOpenSSLContext.IsNativeHandleValid: Boolean;
 begin
   Result := (FSSLContext <> nil);
 end;
+
+// ============================================================================
+// ISSLEarlyDataContext - TLS 1.3 Early Data 配置 (v1.4.1)
+// ============================================================================
+
+procedure TOpenSSLContext.SetClientEarlyDataEnabled(AEnabled: Boolean);
+begin
+  RequireValidContext('SetClientEarlyDataEnabled');
+  FClientEarlyDataEnabled := AEnabled;
+
+  // 设置 SSL_CTX 的 max_early_data
+  if Assigned(SSL_CTX_set_max_early_data) then
+  begin
+    if AEnabled then
+      SSL_CTX_set_max_early_data(FSSLContext, FServerMaxEarlyDataSize)
+    else
+      SSL_CTX_set_max_early_data(FSSLContext, 0);
+  end;
+
+  TSecurityLog.Debug('OpenSSL', Format('Client early data %s',
+    [BoolToStr(AEnabled, 'enabled', 'disabled')]));
+end;
+
+function TOpenSSLContext.GetClientEarlyDataEnabled: Boolean;
+begin
+  Result := FClientEarlyDataEnabled;
+end;
+
+procedure TOpenSSLContext.SetServerEarlyDataPolicy(APolicy: TSSLEarlyDataServerPolicy);
+begin
+  RequireValidContext('SetServerEarlyDataPolicy');
+  FServerEarlyDataPolicy := APolicy;
+
+  // 根据策略设置 SSL_CTX
+  if Assigned(SSL_CTX_set_max_early_data) then
+  begin
+    case APolicy of
+      sslEarlyDataServerReject:
+        SSL_CTX_set_max_early_data(FSSLContext, 0);
+      sslEarlyDataServerAccept,
+      sslEarlyDataServerIssueOnly:
+        SSL_CTX_set_max_early_data(FSSLContext, FServerMaxEarlyDataSize);
+    end;
+  end;
+
+  TSecurityLog.Debug('OpenSSL', Format('Server early data policy set to %d', [Ord(APolicy)]));
+end;
+
+function TOpenSSLContext.GetServerEarlyDataPolicy: TSSLEarlyDataServerPolicy;
+begin
+  Result := FServerEarlyDataPolicy;
+end;
+
+procedure TOpenSSLContext.SetServerMaxEarlyDataSize(ASize: Cardinal);
+begin
+  RequireValidContext('SetServerMaxEarlyDataSize');
+  FServerMaxEarlyDataSize := ASize;
+
+  // 如果 early data 已启用，更新 SSL_CTX
+  if Assigned(SSL_CTX_set_max_early_data) and
+     ((FClientEarlyDataEnabled) or (FServerEarlyDataPolicy <> sslEarlyDataServerReject)) then
+  begin
+    SSL_CTX_set_max_early_data(FSSLContext, ASize);
+  end;
+
+  TSecurityLog.Debug('OpenSSL', Format('Server max early data size set to %d bytes', [ASize]));
+end;
+
+function TOpenSSLContext.GetServerMaxEarlyDataSize: Cardinal;
+begin
+  Result := FServerMaxEarlyDataSize;
+end;
+
+// ============================================================================
+// ISSLServerOCSPStaplingContext - 服务端 OCSP Stapling (v1.4.1)
+// ============================================================================
+
+procedure TOpenSSLContext.ClearServerStapledOCSPResponse;
+begin
+  RequireValidContext('ClearServerStapledOCSPResponse');
+  SetLength(FServerStapledOCSPResponse, 0);
+  TSecurityLog.Debug('OpenSSL', 'Server stapled OCSP response cleared');
+end;
+
+procedure TOpenSSLContext.SetServerStapledOCSPResponse(const AResponseDER: TBytes);
+begin
+  RequireValidContext('SetServerStapledOCSPResponse');
+
+  if Length(AResponseDER) = 0 then
+    raise ESSLInvalidArgument.Create(
+      'OCSP response cannot be empty',
+      sslErrInvalidParam
+    );
+
+  FServerStapledOCSPResponse := Copy(AResponseDER);
+
+  TSecurityLog.Debug('OpenSSL', Format('Server stapled OCSP response set (%d bytes)',
+    [Length(AResponseDER)]));
+end;
+
+procedure TOpenSSLContext.LoadServerStapledOCSPResponseFile(const AFileName: string);
+var
+  LStream: TFileStream;
+  LSize: Int64;
+begin
+  RequireValidContext('LoadServerStapledOCSPResponseFile');
+
+  if not FileExists(AFileName) then
+    raise ESSLException.CreateWithContext(
+      Format('OCSP response file not found: %s', [AFileName]),
+      sslErrLoadFailed,
+      'LoadServerStapledOCSPResponseFile'
+    );
+
+  try
+    LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
+    try
+      LSize := LStream.Size;
+      if LSize = 0 then
+        raise ESSLInvalidArgument.Create(
+          'OCSP response file is empty',
+          sslErrInvalidParam
+        );
+
+      SetLength(FServerStapledOCSPResponse, LSize);
+      LStream.ReadBuffer(FServerStapledOCSPResponse[0], LSize);
+
+      TSecurityLog.Info('OpenSSL', Format('Loaded server stapled OCSP response from %s (%d bytes)',
+        [AFileName, LSize]));
+    finally
+      LStream.Free;
+    end;
+  except
+    on E: ESSLException do
+      raise;
+    on E: Exception do
+      raise ESSLException.CreateWithContext(
+        Format('Failed to load OCSP response file: %s', [E.Message]),
+        sslErrLoadFailed,
+        'LoadServerStapledOCSPResponseFile'
+      );
+  end;
+end;
+
+function TOpenSSLContext.HasServerStapledOCSPResponse: Boolean;
+begin
+  Result := Length(FServerStapledOCSPResponse) > 0;
+end;
+
+function TOpenSSLContext.GetServerStapledOCSPResponse: TBytes;
+begin
+  Result := Copy(FServerStapledOCSPResponse);
+end;
+
+// ============================================================================
+// 便利方法 - 一键配置安全默认值
+// ============================================================================
 
 procedure TOpenSSLContext.ConfigureSecureDefaults;
 begin
