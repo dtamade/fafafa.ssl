@@ -1,6 +1,6 @@
 # 平台支持文档
 
-**最后更新**: 2026-01-18
+**最后更新**: 2026-03-25
 **版本**: 1.0
 
 ---
@@ -9,22 +9,39 @@
 
 fafafa.ssl 是一个跨平台的 SSL/TLS 抽象框架,支持多个操作系统和后端实现。
 
-| 平台 | 状态 | 后端支持 | 测试覆盖率 | CI/CD |
-|------|------|----------|-----------|-------|
-| **Windows** | ✅ 完全支持 | OpenSSL, WinSSL | 97.5% | ✅ |
-| **Linux** | ✅ 完全支持 | OpenSSL | 97.5% | ✅ |
-| **macOS** | 🔄 验证中 | OpenSSL | 待测试 | 🔄 配置中 |
+## 当前工程验证入口
+
+如果你是在继续当前工程的验证或收口，先看这两页，再按当前平台口径推进：
+
+- `docs/test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md`
+- `docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+
+当前默认 baseline 仍是 Linux local-first / pre-CI 链：
+
+- `python3 scripts/compile_all_modules.py`
+- `bash scripts/run_minimal_ci_gate.sh --fast-local`
+- `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
+
+Windows 保留现有 PowerShell 测试入口；macOS 当前更适合先做 focused smoke，再按 current-chain 判断是否需要继续扩展验证。全量多平台 workflow 仍以 template/manual 为主。
+
+| 平台        | 状态        | 后端支持        | 测试覆盖率 | CI/CD     |
+| ----------- | ----------- | --------------- | ---------- | --------- |
+| **Windows** | ✅ 完全支持 | OpenSSL, WinSSL | 97.5%      | ✅        |
+| **Linux**   | ✅ 完全支持 | OpenSSL         | 97.5%      | ✅        |
+| **macOS**   | 🔄 验证中   | OpenSSL         | 待测试     | 🔄 配置中 |
 
 ---
 
 ## 🪟 Windows 平台
 
 ### 支持状态
+
 - **状态**: ✅ 完全支持
 - **测试覆盖率**: 97.5% (39/40 核心测试通过)
 - **生产就绪度**: 99%+
 
 ### 支持的后端
+
 1. **OpenSSL** (推荐)
    - 版本: 1.1.x, 3.x
    - 动态库: `libssl-3-x64.dll`, `libcrypto-3-x64.dll`
@@ -39,6 +56,7 @@ fafafa.ssl 是一个跨平台的 SSL/TLS 抽象框架,支持多个操作系统�
 ### 安装指南
 
 #### 方式 1: 使用 OpenSSL
+
 ```powershell
 # 下载 OpenSSL for Windows
 # https://slproweb.com/products/Win32OpenSSL.html
@@ -51,6 +69,7 @@ openssl version
 ```
 
 #### 方式 2: 使用 WinSSL (无需安装)
+
 ```pascal
 // WinSSL 使用系统原生 Schannel,无需额外安装
 uses fafafa.ssl.factory;
@@ -58,13 +77,15 @@ uses fafafa.ssl.factory;
 var
   Lib: ISSLLibrary;
 begin
-  // 自动选择 WinSSL (如果可用)
+  // 自动选择当前优先级最高的可用后端
+  // Windows 常见结果是 WinSSL，但仍取决于注册状态与可用性
   Lib := CreateSSLLibrary();
   WriteLn('Backend: ', Lib.GetLibraryType);
 end;
 ```
 
 ### 编译和测试
+
 ```powershell
 # 编译核心测试
 cd tests
@@ -75,6 +96,7 @@ cd tests
 ```
 
 ### 已知问题
+
 - 无重大问题
 
 ---
@@ -82,19 +104,23 @@ cd tests
 ## 🐧 Linux 平台
 
 ### 支持状态
+
 - **状态**: ✅ 完全支持
 - **测试覆盖率**: 97.5% (39/40 核心测试通过)
 - **生产就绪度**: 99%+
 
 ### 支持的后端
-1. **OpenSSL** (唯一后端)
+
+1. **OpenSSL** (默认/最常见入口)
    - 版本: 1.1.x, 3.x
    - 动态库: `libssl.so.3`, `libcrypto.so.3`
    - 安装方式: 系统包管理器
+   - 说明: 如果工程编译并注册了 MbedTLS / WolfSSL，`CreateSSLLibrary()` 会按优先级选择可用后端，而不是把 Linux 固定到 OpenSSL
 
 ### 安装指南
 
 #### Ubuntu/Debian
+
 ```bash
 # 安装 Free Pascal
 sudo apt-get update
@@ -109,6 +135,7 @@ openssl version
 ```
 
 #### Fedora/RHEL/CentOS
+
 ```bash
 # 安装 Free Pascal
 sudo dnf install fpc
@@ -122,6 +149,7 @@ openssl version
 ```
 
 #### Arch Linux
+
 ```bash
 # 安装 Free Pascal
 sudo pacman -S fpc
@@ -135,18 +163,20 @@ openssl version
 ```
 
 ### 编译和测试
-```bash
-# 使用构建脚本
-chmod +x build_linux.sh
-./build_linux.sh
 
-# 或手动编译
-cd tests
-chmod +x run_core_tests.sh
-./run_core_tests.sh
+```bash
+# 当前默认编译门禁
+python3 scripts/compile_all_modules.py
+
+# 当前本地最小门禁
+bash scripts/run_minimal_ci_gate.sh --fast-local
+
+# 可选：只检查 Phase 2 基准入口
+bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local
 ```
 
 ### 已知问题
+
 - 无重大问题
 
 ---
@@ -154,19 +184,23 @@ chmod +x run_core_tests.sh
 ## 🍎 macOS 平台
 
 ### 支持状态
+
 - **状态**: 🔄 验证中
 - **测试覆盖率**: 待测试
 - **生产就绪度**: 待验证
 
 ### 支持的后端
-1. **OpenSSL** (唯一后端)
+
+1. **OpenSSL** (默认/最常见入口)
    - 版本: 1.1.x, 3.x (推荐 3.x)
    - 动态库: `libssl.3.dylib`, `libcrypto.3.dylib`
    - 安装方式: Homebrew
+   - 说明: 如果工程编译并注册了 MbedTLS / WolfSSL，`CreateSSLLibrary()` 会按优先级选择可用后端，而不是把 macOS 固定到 OpenSSL
 
 ### 安装指南
 
 #### 使用 Homebrew (推荐)
+
 ```bash
 # 安装 Free Pascal
 brew install fpc
@@ -183,6 +217,7 @@ openssl version
 ```
 
 #### 设置库路径
+
 ```bash
 # 对于 Apple Silicon (M1/M2)
 export DYLD_LIBRARY_PATH=/opt/homebrew/opt/openssl@3/lib:$DYLD_LIBRARY_PATH
@@ -195,43 +230,53 @@ echo 'export DYLD_LIBRARY_PATH=/opt/homebrew/opt/openssl@3/lib:$DYLD_LIBRARY_PAT
 ```
 
 ### 编译和测试
-```bash
-# 使用 macOS 构建脚本
-chmod +x build_macos.sh
-./build_macos.sh
 
-# 或手动编译
-cd tests
-fpc -Mobjfpc -Sh -Fu../src -Fi../src -FUlib -FEbin test_aes.pas
-./bin/test_aes
+```bash
+# 当前建议先做 focused compile smoke
+mkdir -p tmp/platform_support_macos
+fpc -B -Fu./src \
+    -FUtmp/platform_support_macos \
+    -FEtmp/platform_support_macos \
+    -otmp/platform_support_macos/test_openssl_simple \
+    tests/openssl/test_openssl_simple.pas
+./tmp/platform_support_macos/test_openssl_simple
 ```
+
+如需继续对齐当前工程验证状态，回到 `WAVE_C_CLOSEOUT_STATUS_2026-03-18.md` 与 `WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`，再决定是否进入额外的手动平台验证。
 
 ### 平台特定注意事项
 
 #### 1. OpenSSL 库路径
+
 macOS 上 Homebrew 安装的 OpenSSL 不在系统默认路径:
+
 - Apple Silicon: `/opt/homebrew/opt/openssl@3/`
 - Intel Mac: `/usr/local/opt/openssl@3/`
 
 需要设置 `DYLD_LIBRARY_PATH` 环境变量。
 
 #### 2. 架构差异
+
 - **Apple Silicon (M1/M2)**: ARM64 架构
 - **Intel Mac**: x86_64 架构
 
 确保 Free Pascal 和 OpenSSL 架构匹配。
 
 #### 3. 代码签名
+
 某些测试可能需要代码签名才能运行。如果遇到权限问题:
+
 ```bash
 # 临时允许运行
 xattr -d com.apple.quarantine ./bin/test_aes
 ```
 
 #### 4. 大小写敏感性
+
 macOS 默认文件系统不区分大小写 (APFS 可配置)。确保文件名大小写一致。
 
 ### 已知问题
+
 - 🔄 macOS 平台验证正在进行中
 - 待完成完整测试套件验证
 - CI/CD 配置待完成
@@ -241,7 +286,10 @@ macOS 默认文件系统不区分大小写 (APFS 可配置)。确保文件名大
 ## 🔧 平台选择指南
 
 ### 自动后端选择
-工厂方法会自动选择最佳可用后端:
+
+工厂方法会在已注册且当前可用的实现里，选择 highest-priority available backend，而不是按平台硬编码单一路径。
+
+当前注册优先级为：`WinSSL=200, MbedTLS=175, WolfSSL=150, OpenSSL=100`。
 
 ```pascal
 uses fafafa.ssl.factory;
@@ -249,9 +297,7 @@ uses fafafa.ssl.factory;
 var
   Lib: ISSLLibrary;
 begin
-  // 自动选择:
-  // - Windows: WinSSL (如果可用) 或 OpenSSL
-  // - Linux/macOS: OpenSSL
+  // 自动选择当前优先级最高、且真正可用的后端
   Lib := CreateSSLLibrary();
 
   WriteLn('使用后端: ', Lib.GetLibraryType);
@@ -259,6 +305,7 @@ end;
 ```
 
 ### 显式后端选择
+
 ```pascal
 // 强制使用 OpenSSL
 Lib := CreateOpenSSLLibrary();
@@ -269,26 +316,28 @@ Lib := CreateWinSSLLibrary();
 
 ### 后端对比
 
-| 特性 | OpenSSL | WinSSL |
-|------|---------|--------|
-| **平台** | Windows/Linux/macOS | 仅 Windows |
-| **依赖** | 需要 OpenSSL 库 | 零依赖 |
-| **TLS 版本** | 1.0-1.3 | 1.0-1.3 |
-| **性能** | 优秀 | 优秀 |
-| **证书管理** | 文件/内存 | 系统证书存储 |
-| **FIPS 模式** | 支持 | 支持 |
+| 特性          | OpenSSL             | WinSSL       |
+| ------------- | ------------------- | ------------ |
+| **平台**      | Windows/Linux/macOS | 仅 Windows   |
+| **依赖**      | 需要 OpenSSL 库     | 零依赖       |
+| **TLS 版本**  | 1.0-1.3             | 1.0-1.3      |
+| **性能**      | 优秀                | 优秀         |
+| **证书管理**  | 文件/内存           | 系统证书存储 |
+| **FIPS 模式** | 支持                | 支持         |
 
 ---
 
 ## 🧪 测试覆盖率
 
 ### 核心测试套件
+
 - **总测试**: 40 个核心测试
 - **Windows**: 39/40 通过 (97.5%)
 - **Linux**: 39/40 通过 (97.5%)
 - **macOS**: 待测试
 
 ### 测试类别
+
 1. **对称加密**: AES, DES, ChaCha20, Blowfish, Camellia
 2. **哈希函数**: SHA, SHA3, BLAKE2, SM3
 3. **AEAD 模式**: GCM, CCM
@@ -302,6 +351,7 @@ Lib := CreateWinSSLLibrary();
 ## 🚀 CI/CD 支持
 
 ### GitHub Actions（当前口径）
+
 默认启用的是 Linux minimal gate（`ci.yml`），其执行入口与本地 smoke 对齐：
 
 ```yaml
@@ -315,6 +365,7 @@ jobs:
 ```
 
 ### 当前状态
+
 - ✅ Linux minimal gate：启用（push/PR 自动触发）
 - ✅ TLS13 signer gate：启用（按路径触发 + 手动）
 - ✅ Wave B/B2 跨平台手动门禁：启用（workflow_dispatch）
@@ -337,6 +388,7 @@ jobs:
 ## 🤝 贡献
 
 如果您在特定平台上遇到问题或有改进建议,请:
+
 1. 查看 [故障排除文档](TROUBLESHOOTING.md)
 2. 搜索现有 [Issues](https://github.com/your-repo/fafafa.ssl/issues)
 3. 创建新 Issue 并提供详细信息:

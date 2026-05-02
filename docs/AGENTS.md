@@ -4,7 +4,7 @@
 核心 Pascal 源码位于 `src/`，按后端拆分为 `fafafa.ssl.openssl.*` 与 `fafafa.ssl.winssl.*`，公共抽象在 `fafafa.ssl.base`，日志与工具集中在 `fafafa.ssl.utils`。 `bin/` 中包含可复现的示例可执行文件，`lib/x86_64-{linux,win64}` 保存可直接引用的单元输出，除非必要不要手动改写。示例与复现脚本放在 `examples/`（生产示例使用 `examples/production`）。测试集中在 `tests/`，按诊断、集成、性能、单元分类，文件命名保持 `test_<领域>_<场景>.pas`，以便脚本检索。规范、审计和架构说明位于 `docs/` 或根目录报告，自动化脚本和工具分别放在 `scripts/`、`tools/`。
 
 ## 构建、测试与开发命令
-在仓库根目录执行 `chmod +x build_linux.sh && ./build_linux.sh`，即可用统一的 FPC 选项编译所有 Lazarus 包并检查依赖。修改核心单元后先运行 `python3 scripts/compile_all_modules.py` 做快速构建门禁，评审前执行 `python3 scripts/check_code_style.py src` 捕捉模式或缩进问题。Windows 贡献者可通过 `powershell -ExecutionPolicy Bypass -File run_all_tests.ps1` 自动编译运行每个 `test_openssl_*.pas`；Linux 开发者可用 `fpc -Fu./src -Fu./src/openssl tests/test_<name>.pas` 或自定义脚本逐个执行。
+在仓库根目录优先运行 `python3 scripts/compile_all_modules.py` 作为默认编译门禁；需要覆盖当前本地最小回归时，再运行 `bash scripts/run_minimal_ci_gate.sh --fast-local`。如果只想确认 Phase 2 入口是否仍可执行，可追加 `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`。`build_linux.sh` 仍保留为历史兼容入口，但不再是默认文档路径。评审前执行 `python3 scripts/check_code_style.py src` 捕捉模式或缩进问题。Windows 贡献者可通过 `powershell -ExecutionPolicy Bypass -File run_all_tests.ps1` 自动编译运行每个 `test_openssl_*.pas`；Linux 开发者可用 `fpc -Fu./src -Fu./src/openssl tests/test_<name>.pas` 或自定义脚本逐个执行。
 
 本地最小门禁（推荐 fast-local，不污染 git 工作区）：
 

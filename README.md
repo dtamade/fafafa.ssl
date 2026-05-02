@@ -1,23 +1,34 @@
-# fafafa.ssl - Production-Ready SSL/TLS Library
+# fafafa.ssl - Multi-backend SSL/TLS Library
 
 [![Version](https://img.shields.io/badge/Version-v1.3.0-blue)](https://github.com/dtamade/fafafa.ssl/releases/tag/v1.3.0)
-[![Production Ready](https://img.shields.io/badge/Production%20Ready-100%25-brightgreen)](https://github.com)
-[![Tests](https://img.shields.io/badge/Tests-100%25%20passed-success)](docs/testing/)
+[![Linux Minimal Gate](https://img.shields.io/badge/Linux%20minimal%20gate-passing-success)](docs/ROADMAP.md)
+[![Roadmap](https://img.shields.io/badge/Roadmap-active-blue)](docs/ROADMAP.md)
 [![OpenSSL](https://img.shields.io/badge/OpenSSL-1.1.1%2B%20%7C%203.0%2B-blue)](https://www.openssl.org/)
 [![TLS](https://img.shields.io/badge/TLS-1.2%20%7C%201.3-blue)](https://tools.ietf.org/html/rfc8446)
 [![FPC](https://img.shields.io/badge/FreePascal-3.2.0%2B-orange)](https://www.freepascal.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-**企业级 SSL/TLS 加密库** - 为 FreePascal 提供统一抽象 + 多后端实现（OpenSSL/WinSSL，且可选 MbedTLS/WolfSSL）
+**统一 SSL/TLS 加密库** - 为 FreePascal 提供统一抽象 + 多后端实现（OpenSSL / WinSSL / FreePascal，且可选 MbedTLS / WolfSSL）
+
+## 当前状态
+
+- 当前路线图入口：`docs/ROADMAP.md`
+- 当前默认构建命令：`python3 scripts/compile_all_modules.py`
+- 当前默认本地门禁：`bash scripts/run_minimal_ci_gate.sh --fast-local`
+- 当前 FreePascal TLS 1.3 focused gate：`bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`
+- 当前 Linux 基线已验证可重复；更广泛的功能完整度仍按 roadmap 持续收敛
 
 ## 核心特性
 
 ### 多后端支持
+
 - **OpenSSL 后端**: Linux/macOS/Windows，支持 OpenSSL 1.1.1+ 和 3.0+
 - **WinSSL 后端**: Windows 原生 Schannel，零依赖部署，自动使用系统证书
+- **FreePascal 后端**: 纯 Pascal TLS 1.3 主线，当前聚焦 completeness roadmap
 - **MbedTLS / WolfSSL**: 可选后端（需定义 `ENABLE_MBEDTLS` / `ENABLE_WOLFSSL`）
 
 ### v1.3.0 智能化版本 ✅
+
 - **自动后端选择**: 基于需求智能选择最佳后端（安全/性能/兼容性优先）
 - **Builder 集成**: WithSecurityFirst, RequireTLS13 等链式 API
 - **智能评分**: 40+ 维度评分算法，推荐原因自动生成
@@ -25,6 +36,7 @@
 - **完整指南**: 800+ 行后端选择使用指南
 
 ### v1.2.0 新增功能 🆕
+
 - **能力矩阵扩展**: 从 11 字段扩展到 40+ 字段，14 个类型安全的辅助查询函数
 - **极致性能**: 能力矩阵缓存，10,000x+ 性能提升（>10M ops/s）
 - **数据互操作**: JSON/XML 序列化支持，标准化数据交换
@@ -34,18 +46,21 @@
 - **WinSSL 跨平台测试契约**: `tests/winssl/*` 在非 Windows 平台输出 `[BLOCKED] [platform]` + `[SKIP] [platform]`，用于区分平台阻塞与真实失败。
 
 ### v1.0.0 核心功能
+
 - **PKCS#11 支持**: 硬件安全模块(HSM)集成，PIN 回调，私钥加载
 - **DANE/DNSSEC 支持**: DNS-Based Authentication，可选 ldns 库
 - **无锁并发优化**: TLockFreeRingBuffer, TBufferPool, TShardedSessionCache
-- **完整测试覆盖**: 415 个测试文件，100% 通过率
+- **可重复门禁**: Linux compile gate、P2 模块回归，以及 FreePascal TLS 1.3 focused gate
 
 ### 加密与安全
+
 - **TLS 协议**: TLS 1.2/1.3，自动协议协商
 - **加密算法**: AES-256-GCM, SHA-256/512, RSA-2048+, ECDSA
 - **证书管理**: X.509 解析/验证/生成，CRL/OCSP 吊销检查
 - **会话复用**: 70-90% 握手性能提升
 
 ### 开发体验
+
 - **简洁 API**: 1 行代码实现 HTTPS 连接
 - **Rust 风格 Result**: TSSLDataResult, TSSLOperationResult
 - **流式 Builder**: TSSLContextBuilder, TSSLConnectionBuilder
@@ -210,18 +225,21 @@ fpc -B -Mobjfpc -Sh -Fu./src -Fi./src -FU./lib your_app.pas -o./bin/your_app
 
 ## 文档
 
-| 文档 | 描述 |
-|------|------|
-| [快速入门](docs/guides/5_MINUTE_QUICKSTART.md) | 5 分钟快速入门 |
-| [后端选择指南](docs/BACKEND_SELECTION_GUIDE.md) | 自动后端选择完整指南（v1.3.0） |
-| [用户指南](docs/guides/USER_GUIDE.md) | 完整用户指南 |
-| [API 参考](docs/reference/API_REFERENCE.md) | API 参考文档 |
-| [WinSSL 指南](docs/guides/WINSSL_USER_GUIDE.md) | WinSSL 后端用户指南 |
-| [示例程序](examples/) | 57 个示例程序 |
-| [FAQ](docs/guides/FAQ.md) | 常见问题解答 |
-| [部署指南](docs/guides/DEPLOYMENT_GUIDE.md) | 生产部署指南 |
-| [Wave C Local-first Runbook](docs/test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md) | CI 暂缓时的一页执行手册 |
-| [Wave C Local Guard Troubleshooting](docs/test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md) | 本地守护链路故障速查 |
+| 文档                                                                                               | 描述                                          |
+| -------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| [快速入门](docs/guides/5_MINUTE_QUICKSTART.md)                                                     | 5 分钟快速入门                                |
+| [后端选择指南](docs/BACKEND_SELECTION_GUIDE.md)                                                    | 自动后端选择完整指南（v1.3.0）                |
+| [当前路线图](docs/ROADMAP.md)                                                                      | 当前稳定 roadmap / status 入口                |
+| [用户指南](docs/guides/USER_GUIDE.md)                                                              | 完整用户指南                                  |
+| [API 参考](docs/reference/API_REFERENCE.md)                                                        | API 参考文档                                  |
+| [OCSP 指南](docs/guides/OCSP_USAGE_GUIDE.md)                                                       | FreePascal stapling + OpenSSL 在线 OCSP       |
+| [CT 指南](docs/guides/CT_IMPLEMENTATION_GUIDE.md)                                                  | FreePascal runtime CT + 底层 validator        |
+| [WinSSL 指南](docs/guides/WINSSL_USER_GUIDE.md)                                                    | WinSSL 后端用户指南                           |
+| [示例程序](examples/)                                                                              | 57 个示例程序                                 |
+| [FAQ](docs/guides/FAQ.md)                                                                          | 常见问题解答                                  |
+| [部署指南](docs/guides/DEPLOYMENT_GUIDE.md)                                                        | 生产部署指南                                  |
+| [Wave C Closeout Status](docs/test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)                   | 当前 canonical 收口状态与“停在这里”入口       |
+| [Wave C Current Chain](docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md) | 当前 local-first / pre-CI / submission 总入口 |
 
 ## 核心 API
 
@@ -305,17 +323,17 @@ end;
 ### 运行测试
 
 ```bash
-# 完整 CI/CD 流程（构建+测试+性能）
-./ci_pipeline.sh all
+# Linux 核心编译门禁
+python3 scripts/compile_all_modules.py
 
-# 仅构建
-./ci_pipeline.sh build
+# 本地最小门禁（推荐，输出隔离到 ./tmp）
+bash scripts/run_minimal_ci_gate.sh --fast-local
 
-# 仅测试
-./ci_pipeline.sh test
+# P2 核心模块回归
+bash scripts/run_all_module_tests.sh --fast-local --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT
 
-# 性能基准测试
-./ci_pipeline.sh bench
+# Phase 2 性能入口探测（dry-run，不产生实际报告）
+bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local
 ```
 
 ### CI 暂缓时（Local-first 守护）
@@ -329,37 +347,38 @@ bash scripts/summarize_wave_c_local_guard_history.sh --strict
 ```
 
 更多细节：
-- 执行手册：`docs/test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md`
-- 故障速查：`docs/test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md`
+
+- 默认导航：先看 `docs/test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md`，再看 `docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`。
+- 历史手册仅作参考：`docs/test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md`、`docs/test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md`。
 
 ### 测试覆盖
 
-| 测试类型 | 数量 | 状态 |
-|---------|------|------|
-| 源文件 | 160 | - |
-| 测试文件 | 415 | 100% 通过 |
-| 示例程序 | 57 | - |
-| 代码行数 | 95,143 | - |
+| 测试类型 | 数量   | 状态      |
+| -------- | ------ | --------- |
+| 源文件   | 160    | -         |
+| 测试文件 | 415    | 100% 通过 |
+| 示例程序 | 57     | -         |
+| 代码行数 | 95,143 | -         |
 
 ## 性能指标
 
 ### 加密操作性能
 
-| 操作 | 数据大小 | 吞吐量 (ops/s) |
-|------|---------|---------------|
-| SHA-256 | 1KB | 200,000 |
-| SHA-512 | 1KB | 250,000 |
-| AES-256-GCM 加密 | 1KB | 83,333 |
-| AES-256-GCM 解密 | 1KB | 333,333 |
-| 安全随机数生成 | 1KB | 111,111 |
+| 操作             | 数据大小 | 吞吐量 (ops/s) |
+| ---------------- | -------- | -------------- |
+| SHA-256          | 1KB      | 200,000        |
+| SHA-512          | 1KB      | 250,000        |
+| AES-256-GCM 加密 | 1KB      | 83,333         |
+| AES-256-GCM 解密 | 1KB      | 333,333        |
+| 安全随机数生成   | 1KB      | 111,111        |
 
 ### 并发优化性能
 
-| 组件 | 性能 |
-|------|------|
-| TLockFreeRingBuffer | 16M+ ops/s |
+| 组件                 | 性能           |
+| -------------------- | -------------- |
+| TLockFreeRingBuffer  | 16M+ ops/s     |
 | TShardedSessionCache | 8-16x 并发提升 |
-| TBufferPool | 100% 命中率 |
+| TBufferPool          | 100% 命中率    |
 
 ## 安全特性
 

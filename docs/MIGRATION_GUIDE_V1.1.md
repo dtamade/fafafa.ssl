@@ -110,6 +110,7 @@ if Supports(Ctx, ISSLNativeHandleAccess, NativeAccess) then
 使用后端提供的辅助函数：
 
 **之前**:
+
 ```pascal
 uses
   fafafa.ssl.base,
@@ -126,6 +127,7 @@ end;
 ```
 
 **之后**:
+
 ```pascal
 uses
   fafafa.ssl.base,
@@ -249,18 +251,21 @@ type
 ### GetNativeHandleSafe
 
 **签名**:
+
 ```pascal
 function GetNativeHandleSafe(const AObject: IInterface;
                               const AContextMsg: string): Pointer;
 ```
 
 **说明**:
+
 - 安全获取原生句柄
 - 如果对象不支持 `ISSLNativeHandleAccess`，抛出异常
 - 如果句柄为 `nil`，抛出异常
 - `AContextMsg` 用于提供错误上下文（如 `'MyClass.MyMethod'`）
 
 **示例**:
+
 ```pascal
 uses fafafa.ssl.openssl.native_handle;
 
@@ -270,17 +275,20 @@ SSL_CTX := PSSL_CTX(GetNativeHandleSafe(Ctx, 'TMyApp.Initialize'));
 ### TryGetNativeHandle
 
 **签名**:
+
 ```pascal
 function TryGetNativeHandle(const AObject: IInterface;
                              out AHandle: Pointer): Boolean;
 ```
 
 **说明**:
+
 - 尝试获取原生句柄
 - 返回 `True` 如果成功，`False` 如果对象不支持或句柄为 `nil`
 - 不抛出异常
 
 **示例**:
+
 ```pascal
 uses fafafa.ssl.openssl.native_handle;
 
@@ -292,10 +300,10 @@ else
 
 ### 可用的辅助单元
 
-| 后端 | 辅助单元 |
-|------|---------|
+| 后端    | 辅助单元                           |
+| ------- | ---------------------------------- |
 | OpenSSL | `fafafa.ssl.openssl.native_handle` |
-| WinSSL | `fafafa.ssl.winssl.native_handle` |
+| WinSSL  | `fafafa.ssl.winssl.native_handle`  |
 | MbedTLS | `fafafa.ssl.mbedtls.native_handle` |
 | WolfSSL | `fafafa.ssl.wolfssl.native_handle` |
 
@@ -328,6 +336,7 @@ end;
 ### Q1: 为什么要做这个变更？
 
 **A**: 主要原因：
+
 1. **架构清晰** - 核心接口不应暴露特定实现细节
 2. **支持纯 Pascal** - 为未来的 FreePascal 原生 TLS 后端铺平道路
 3. **类型安全** - 通过接口查询防止运行时类型错误
@@ -339,6 +348,7 @@ end;
 ### Q3: 我该如何知道我的后端是否支持原生句柄？
 
 **A**: 使用 `Supports` 函数检查：
+
 ```pascal
 if Supports(Ctx, ISSLNativeHandleAccess) then
   WriteLn('Supports native handles')
@@ -353,6 +363,7 @@ else
 ### Q5: 我能同时使用支持和不支持原生句柄的后端吗？
 
 **A**: **可以**。这正是此设计的优势。您的代码可以动态检查并适配：
+
 ```pascal
 if Supports(Ctx, ISSLNativeHandleAccess, NativeAccess) then
   // 使用 C 库特定功能
@@ -468,12 +479,13 @@ begin
     WriteLn('ALPN is production-ready');
 
   // 检查功能是否可用（包括实验性）
-  if IsFeatureUsable(Caps.OCSPStaplingSupport) then
-    WriteLn('OCSP Stapling is available (might be experimental)');
+  if IsFeatureUsable(Caps.OCSPStaplingSupport) and
+     not IsFeatureDeprecated(Caps.OCSPStaplingSupport) then
+    WriteLn('OCSP Stapling can be used');
 
   // 检查功能是否已弃用
-  if IsFeatureDeprecated(Caps.CertTransparencySupport) then
-    WriteLn('Certificate Transparency is deprecated');
+  if IsFeatureDeprecated(Caps.RenegotiationSupport) then
+    WriteLn('TLS renegotiation is deprecated on this backend');
 end;
 ```
 
@@ -503,6 +515,7 @@ end;
 v1.1.1 引入了统一的辅助单元，简化了原生句柄访问：
 
 **之前（v1.1.0）**:
+
 ```pascal
 uses
   fafafa.ssl.openssl.native_handle;  // 需要记住后端特定单元
@@ -516,6 +529,7 @@ end;
 ```
 
 **之后（v1.1.1+）**:
+
 ```pascal
 uses
   fafafa.ssl.native_handle;  // 统一单元，适用于所有后端
@@ -614,24 +628,25 @@ end;
 ### 向后兼容性
 
 ✅ **完全向后兼容**：
+
 - v1.1.0 的所有 11 个字段保持不变
 - 新字段追加到记录末尾
 - 现有代码无需任何修改
 
 ### 后端特性对比 (v1.2.0)
 
-| 特性 | OpenSSL | WolfSSL | MbedTLS | WinSSL |
-|------|---------|---------|---------|--------|
-| **实现类型** | C Library | C Library | C Library | OS Native |
-| **安全评分** | 90/100 | 85/100 | 80/100 | 90/100 |
-| **性能评分** | 100/100 | 95/100 | 85/100 | 100/100 |
-| **TLS 1.3** | ✅ | ✅ | ✅ | ✅ (Win10+) |
-| **DTLS** | ✅ | ✅ | ✅ | ❌ |
-| **硬件加速** | ✅ | ✅ | ✅ | ✅ |
-| **系统证书** | ❌ | ❌ | ❌ | ✅ |
-| **PKCS#11** | ✅ | ⚠️ | ⚠️ | ✅ |
-| **TPM** | ❌ | ❌ | ❌ | ✅ |
-| **FIPS** | ✅ | ❌ | ❌ | ✅ |
+| 特性         | OpenSSL   | WolfSSL   | MbedTLS   | WinSSL      |
+| ------------ | --------- | --------- | --------- | ----------- |
+| **实现类型** | C Library | C Library | C Library | OS Native   |
+| **安全评分** | 90/100    | 85/100    | 80/100    | 90/100      |
+| **性能评分** | 100/100   | 95/100    | 85/100    | 100/100     |
+| **TLS 1.3**  | ✅        | ✅        | ✅        | ✅ (Win10+) |
+| **DTLS**     | ✅        | ✅        | ✅        | ❌          |
+| **硬件加速** | ✅        | ✅        | ✅        | ✅          |
+| **系统证书** | ❌        | ❌        | ❌        | ✅          |
+| **PKCS#11**  | ✅        | ⚠️        | ⚠️        | ✅          |
+| **TPM**      | ❌        | ❌        | ❌        | ✅          |
+| **FIPS**     | ✅        | ❌        | ❌        | ✅          |
 
 ### 相关文档
 

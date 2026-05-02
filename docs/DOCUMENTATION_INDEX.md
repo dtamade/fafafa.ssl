@@ -7,27 +7,45 @@
 
 ---
 
+## 🧭 当前工程入口（Wave C canonical chain）
+
+如果你是在继续当前工程收口、验证或回填证据，默认先看下面两页，再按当前命令推进：
+
+- **[ROADMAP.md](ROADMAP.md)** - 当前稳定 roadmap / status 入口
+- **[test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md](test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)** - Wave C 当前 canonical 收口状态 / stop-here 入口
+- **[test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md](test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md)** - Wave C 当前 local-first / pre-CI / submission 总入口
+- `python3 scripts/compile_all_modules.py`
+- `bash scripts/run_minimal_ci_gate.sh --fast-local`
+- `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local` - FreePascal TLS 1.3 + validation runtime focused gate
+- `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
+
+---
+
 ## 🚀 从这里开始（推荐）
-1. **[guides/GETTING_STARTED.md](guides/GETTING_STARTED.md)** - 入门（推荐入口与最小示例）
-2. **[guides/QUICKSTART.md](guides/QUICKSTART.md)** - 快速开始
-3. **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - 框架集成指南（如何把 TLS 接到你的网络框架）
-4. **[reference/API_REFERENCE.md](reference/API_REFERENCE.md)** - API 参考
-5. **[examples/README.md](../examples/README.md)** - 示例程序说明
-6. **[examples/EXAMPLES_INDEX.md](../examples/EXAMPLES_INDEX.md)** - 示例程序完整索引（按功能分类）
-7. **[testing/README_TESTING.md](testing/README_TESTING.md)** - 测试说明（入口）
-8. **[archive/CICD_SETUP.md](archive/CICD_SETUP.md)** - CI/CD 与本地流水线（归档）
-9. **[ARCHITECTURE.md](ARCHITECTURE.md)** - 架构设计文档 🆕
+
+1. **[ROADMAP.md](ROADMAP.md)** - 当前稳定 roadmap / status 入口 🆕
+2. **[test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md](test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)** - Wave C 当前 canonical 收口状态 / stop-here 入口 🆕
+3. **[test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md](test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md)** - Wave C 当前链路总入口 🆕
+4. **[guides/GETTING_STARTED.md](guides/GETTING_STARTED.md)** - 入门（推荐入口与最小示例）
+5. **[guides/QUICKSTART.md](guides/QUICKSTART.md)** - 快速开始
+6. **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - 框架集成指南（如何把 TLS 接到你的网络框架）
+7. **[reference/API_REFERENCE.md](reference/API_REFERENCE.md)** - API 参考
+8. **[examples/README.md](../examples/README.md)** - 示例程序说明
+9. **[examples/EXAMPLES_INDEX.md](../examples/EXAMPLES_INDEX.md)** - 示例程序完整索引（按功能分类）
+10. **[reference/ARCHITECTURE.md](reference/ARCHITECTURE.md)** - 架构设计文档 🆕
 
 ---
 
 ## 📚 主题索引
 
 ### 使用与集成
+
 - **[guides/QUICKSTART_30SEC.md](guides/QUICKSTART_30SEC.md)** - 30 秒快速示例索引 🆕
 - **[guides/USER_GUIDE.md](guides/USER_GUIDE.md)**
 - **[guides/DEPLOYMENT_GUIDE.md](guides/DEPLOYMENT_GUIDE.md)**
 - **[guides/STORE_USAGE_GUIDE.md](guides/STORE_USAGE_GUIDE.md)** - Store 跨平台使用指南 🆕
-- **[guides/OCSP_USAGE_GUIDE.md](guides/OCSP_USAGE_GUIDE.md)** - OCSP 使用指南（OpenSSL） 🆕
+- **[guides/OCSP_USAGE_GUIDE.md](guides/OCSP_USAGE_GUIDE.md)** - OCSP 使用指南（FreePascal stapling cryptographic verification + client online OCSP + OpenSSL helper） 🆕
+- **[guides/CT_IMPLEMENTATION_GUIDE.md](guides/CT_IMPLEMENTATION_GUIDE.md)** - CT 实现指南（FreePascal runtime SCT surface: TLS / embedded / OCSP-delivered + validator） 🆕
 - **[guides/TS_USAGE_GUIDE.md](guides/TS_USAGE_GUIDE.md)** - TS 使用指南（OpenSSL） 🆕
 - **[ZERO_DEPENDENCY_DEPLOYMENT.md](ZERO_DEPENDENCY_DEPLOYMENT.md)**
 - **[guides/MIGRATION_GUIDE.md](guides/MIGRATION_GUIDE.md)**
@@ -36,12 +54,14 @@
 - **[CAPABILITY_MATRIX_GUIDE.md](CAPABILITY_MATRIX_GUIDE.md)** - 能力矩阵使用指南（v1.2.0）🆕
 
 ### 构建与依赖
+
 - **[DEPENDENCIES.md](DEPENDENCIES.md)**
 - **[FCL_DEPENDENCIES.md](FCL_DEPENDENCIES.md)**
 - **[guides/LINUX_QUICKSTART.md](guides/LINUX_QUICKSTART.md)**
 - **[guides/WINSSL_QUICKSTART.md](guides/WINSSL_QUICKSTART.md)**
 
 ### API / 设计 / 约定
+
 - **[reference/API_DESIGN_GUIDE.md](reference/API_DESIGN_GUIDE.md)**
 - **[reference/P2_MINIMUM_API_CAPABILITY_MATRIX.md](reference/P2_MINIMUM_API_CAPABILITY_MATRIX.md)** - P2 最低可用 API 与能力矩阵字段映射 🆕
 - **[reference/OPENSSL_1_1_1_VS_3X_DIFF_AND_REGRESSION.md](reference/OPENSSL_1_1_1_VS_3X_DIFF_AND_REGRESSION.md)** - OpenSSL 1.1.1 vs 3.x 差异清单与回归策略 🆕
@@ -59,11 +79,13 @@
 - **ADRs**: **[adr/README.md](adr/README.md)**
 
 ### 安全
+
 - **[guides/SECURITY_GUIDE.md](guides/SECURITY_GUIDE.md)**
 - **[guides/SECURITY_AUDIT.md](guides/SECURITY_AUDIT.md)**
 - **[CA_CERTIFICATE_AUTO_LOADING.md](CA_CERTIFICATE_AUTO_LOADING.md)**
 
 ### 测试与验证
+
 - **[testing/TESTING_README.md](testing/TESTING_README.md)**
 - **[testing/TEST_PLAN.md](testing/TEST_PLAN.md)**
 - **[testing/TEST_RESULTS.md](testing/TEST_RESULTS.md)**
@@ -104,6 +126,34 @@
 - **[test_reports/ARCHIVE_AUDIT_WRITEBACK_CLOSURE_ACCEPTANCE_GATE_TEMPLATE.md](test_reports/ARCHIVE_AUDIT_WRITEBACK_CLOSURE_ACCEPTANCE_GATE_TEMPLATE.md)** - 回写覆盖率修复闭环验收门禁模板（Draft） 🆕
 - **[test_reports/PHASE2_BASELINE_EXECUTION_SUMMARY.md](test_reports/PHASE2_BASELINE_EXECUTION_SUMMARY.md)** - Phase 2 基线执行汇总 🆕
 - **[test_reports/PHASE2_BASELINE_COMPARISON_V1.md](test_reports/PHASE2_BASELINE_COMPARISON_V1.md)** - Phase 2 首轮基线对比结论 🆕
+
+### Current Wave C Chain
+
+以下条目是当前默认入口；历史结果页与历史手册仅作为参考，见后面的历史分区。
+
+- **[test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md](test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)** - Wave C 收口状态：等待人工审批，当前不再继续推进主流程 🆕
+- **[test_reports/WAVE_C_BASELINE_READINESS_MANIFEST_2026-03-19.md](test_reports/WAVE_C_BASELINE_READINESS_MANIFEST_2026-03-19.md)** - Wave C 当前 baseline / readiness 模块清单 🆕
+- **[test_reports/WAVE_C_LIVE_EVIDENCE_MANIFEST_2026-03-19.md](test_reports/WAVE_C_LIVE_EVIDENCE_MANIFEST_2026-03-19.md)** - Wave C 当前 live evidence 模块清单（按模块导航） 🆕
+- **[test_reports/WAVE_C_APPROVAL_SUBMISSION_MANIFEST_2026-03-19.md](test_reports/WAVE_C_APPROVAL_SUBMISSION_MANIFEST_2026-03-19.md)** - Wave C 当前 approval / submission 模块清单 🆕
+- **[test_reports/WAVE_C_UNIFIED_BASELINE_STATUS_2026-03-15.md](test_reports/WAVE_C_UNIFIED_BASELINE_STATUS_2026-03-15.md)** - Wave C 当前统一 baseline/B101 入口状态 🆕
+- **[test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md](test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md)** - Wave C 当前 local-first / pre-CI / submission 总入口 🆕
+- **[test_reports/WAVE_C_READINESS_REFRESH_2026-03-15.md](test_reports/WAVE_C_READINESS_REFRESH_2026-03-15.md)** - Wave C 当前流程 readiness 刷新结论 🆕
+- **[test_reports/WAVE_C_UNIFIED_THRESHOLD_REFRESH_2026-03-15.md](test_reports/WAVE_C_UNIFIED_THRESHOLD_REFRESH_2026-03-15.md)** - Wave C 新入口下的阈值刷新结论 🆕
+- **[test_reports/WAVE_C_B107_THRESHOLD_EVALUATION_RESULT_2026-03-15.md](test_reports/WAVE_C_B107_THRESHOLD_EVALUATION_RESULT_2026-03-15.md)** - Wave C B107 阈值评估结果（新入口） 🆕
+- **[test_reports/WAVE_C_B108_DEFAULT_ON_READINESS_RESULT_2026-03-15.md](test_reports/WAVE_C_B108_DEFAULT_ON_READINESS_RESULT_2026-03-15.md)** - Wave C B108 readiness 结果（新入口） 🆕
+- **[test_reports/WAVE_C_B109_CONTROLLED_CANARY_RESULT_2026-03-15.md](test_reports/WAVE_C_B109_CONTROLLED_CANARY_RESULT_2026-03-15.md)** - Wave C B109 canary 结果（新入口） 🆕
+- **[test_reports/WAVE_C_B110_ROLLBACK_DRILL_RESULT_2026-03-15.md](test_reports/WAVE_C_B110_ROLLBACK_DRILL_RESULT_2026-03-15.md)** - Wave C B110 rollback 结果（新入口） 🆕
+- **[test_reports/WAVE_C_B113_RELEASE_SIGNOFF_RECORD_2026-03-15.md](test_reports/WAVE_C_B113_RELEASE_SIGNOFF_RECORD_2026-03-15.md)** - Wave C B113 signoff record（新入口） 🆕
+- **[test_reports/WAVE_C_B113_SIGNOFF_PACK_RESULT_2026-03-15.md](test_reports/WAVE_C_B113_SIGNOFF_PACK_RESULT_2026-03-15.md)** - Wave C B113 signoff 结果（新入口） 🆕
+- **[test_reports/WAVE_C_B115_WORKFLOW_ENABLE_RESULT_2026-03-15.md](test_reports/WAVE_C_B115_WORKFLOW_ENABLE_RESULT_2026-03-15.md)** - Wave C B115 enable prereq 结果（新入口） 🆕
+- **[test_reports/WAVE_C_B116_ENABLEMENT_PACKET_RESULT_2026-03-15.md](test_reports/WAVE_C_B116_ENABLEMENT_PACKET_RESULT_2026-03-15.md)** - Wave C B116 enablement packet 结果（新入口） 🆕
+- **[test_reports/WAVE_C_B146_CI_REENABLE_SUBMISSION_PACK_RESULT_2026-03-16.md](test_reports/WAVE_C_B146_CI_REENABLE_SUBMISSION_PACK_RESULT_2026-03-16.md)** - Wave C B146 submission pack 结果（新入口） 🆕
+- **[test_reports/WAVE_C_B147_SUBMISSION_PACK_CHECK_RESULT_2026-03-16.md](test_reports/WAVE_C_B147_SUBMISSION_PACK_CHECK_RESULT_2026-03-16.md)** - Wave C B147 pack check 结果（新入口） 🆕
+- **[test_reports/WAVE_C_B148_CI_REENABLE_APPROVAL_BRIEF_RESULT_2026-03-15.md](test_reports/WAVE_C_B148_CI_REENABLE_APPROVAL_BRIEF_RESULT_2026-03-15.md)** - Wave C B148 approval brief 结果（新入口） 🆕
+- **[test_reports/WAVE_C_B149_CI_REENABLE_SUBMISSION_BUNDLE_RESULT_2026-03-16.md](test_reports/WAVE_C_B149_CI_REENABLE_SUBMISSION_BUNDLE_RESULT_2026-03-16.md)** - Wave C B149 submission bundle 结果（新入口） 🆕
+
+### Other Reports
+
 - **[archive/VALIDATION_ROADMAP.md](archive/VALIDATION_ROADMAP.md)**（归档）
 - **[validation/validation_report_20251003_013646.md](validation/validation_report_20251003_013646.md)**
 - **[test_reports/P2_PKCS12_TEST_REPORT.md](test_reports/P2_PKCS12_TEST_REPORT.md)**
@@ -118,6 +168,10 @@
 - **[test_reports/ROADMAP_CLOSURE_PROGRESS_2026-02-08.md](test_reports/ROADMAP_CLOSURE_PROGRESS_2026-02-08.md)** - 路线图收口进度报告（2026-02-08） 🆕
 - **[test_reports/WAVE_B_CI_GATE_PROGRESS_2026-02-08.md](test_reports/WAVE_B_CI_GATE_PROGRESS_2026-02-08.md)** - Wave B Linux CI 门禁执行记录（2026-02-08） 🆕
 - **[test_reports/WAVE_B_CROSS_PLATFORM_GATE_MANIFEST_2026-02-08.md](test_reports/WAVE_B_CROSS_PLATFORM_GATE_MANIFEST_2026-02-08.md)** - Wave B 跨平台门禁执行清单（2026-02-08） 🆕
+
+### 历史 Wave C 页面（仅归档参考）
+
+- **[test_reports/WAVE_C_B120_POST_TRIGGER_OBSERVABILITY_RESULT_2026-02-08.md](test_reports/WAVE_C_B120_POST_TRIGGER_OBSERVABILITY_RESULT_2026-02-08.md)** - Wave C 触发后观测结果（B120） 🆕
 - **[test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md](test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md)** - Wave C 一页式运行手册（B121） 🆕
 - **[test_reports/WAVE_C_B122_CI_DEFERRED_LOCAL_MODE_2026-02-08.md](test_reports/WAVE_C_B122_CI_DEFERRED_LOCAL_MODE_2026-02-08.md)** - Wave C CI 暂缓与本地优先决策记录（B122） 🆕
 - **[test_reports/WAVE_C_B123_LOCAL_FIRST_CONTINUITY_RESULT_2026-02-09.md](test_reports/WAVE_C_B123_LOCAL_FIRST_CONTINUITY_RESULT_2026-02-09.md)** - Wave C 本地优先连续性门禁结果（B123） 🆕
@@ -149,7 +203,11 @@
 - **[test_reports/WAVE_C_B149_CI_REENABLE_SUBMISSION_BUNDLE_RESULT_2026-02-09.md](test_reports/WAVE_C_B149_CI_REENABLE_SUBMISSION_BUNDLE_RESULT_2026-02-09.md)** - Wave C 恢复 CI 提交打包结果（B149） 🆕
 
 ### 路线图与计划
-- **[DEVELOPMENT_ROADMAP_2026.md](DEVELOPMENT_ROADMAP_2026.md)** - 2026 开发路线图 🆕
+
+- **[ROADMAP.md](ROADMAP.md)** - 当前稳定 roadmap / status 入口 🆕
+- **[plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md](plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md)** - 当前 backend completeness 主线 🆕
+- **[plans/2026-03-25-freepascal-tls13-client-session-resumption-psk.md](plans/2026-03-25-freepascal-tls13-client-session-resumption-psk.md)** - FreePascal TLS 1.3 client resumption / PSK 🆕
+- **[plans/2026-03-26-freepascal-tls13-server-session-resumption-psk.md](plans/2026-03-26-freepascal-tls13-server-session-resumption-psk.md)** - FreePascal TLS 1.3 server resumption / PSK 🆕
 - **[plans/Q1_2026_P2_VALIDATION_PLAN.md](plans/Q1_2026_P2_VALIDATION_PLAN.md)** - Q1 P2 验证执行计划 🆕
 - **[plans/PHASE3_MINIMAL_CI_GATE_DRAFT.md](plans/PHASE3_MINIMAL_CI_GATE_DRAFT.md)** - Phase 3 最小 CI 门禁草案 🆕
 - **[plans/PHASE3_OPENSSL_MATRIX_COMMAND_DRAFT.md](plans/PHASE3_OPENSSL_MATRIX_COMMAND_DRAFT.md)** - Phase 3 Linux OpenSSL 矩阵命令草案 🆕
@@ -204,6 +262,7 @@
 - **[plans/2026-02-08-roadmap-next-wave-plan.md](plans/2026-02-08-roadmap-next-wave-plan.md)** - 路线图下一波次执行计划 🆕
 
 ### 工具与维护
+
 - **[TOOLS.md](TOOLS.md)**
 - **[../tools/README.md](../tools/README.md)** - 能力矩阵可视化工具 🆕
 - **[../.github/workflows/ci.yml](../.github/workflows/ci.yml)** - Linux minimal CI gate（启用）
@@ -237,6 +296,7 @@
 ---
 
 ## 中文文档（docs/zh）
+
 - **[快速入门.md](zh/快速入门.md)**
 - **[编译指南.md](zh/编译指南.md)**
 - **[安装配置.md](zh/安装配置.md)**
@@ -245,13 +305,15 @@
 ---
 
 ## 🗄️ 历史归档（docs/archive）
+
 - **[archive/README.md](archive/README.md)**
 
 历史归档中包含大量阶段性报告、状态快照和工作记录。下面给出几个常用入口（示例）：
+
 - **[archive/reports/PROJECT_STATUS_2025-10-02.md](archive/reports/PROJECT_STATUS_2025-10-02.md)**
 - **[archive/phase_reports/PHASE_7_FINAL_REPORT.md](archive/phase_reports/PHASE_7_FINAL_REPORT.md)**
 - **[archive/reports/TDD_STATUS_AND_ROADMAP.md](archive/reports/TDD_STATUS_AND_ROADMAP.md)**
 
 ---
 
-**最后更新**: 2026-02-09 (B149)
+**最后更新**: 2026-03-18 (Wave C historical result navigation refresh)

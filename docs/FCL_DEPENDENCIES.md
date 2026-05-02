@@ -11,10 +11,12 @@
 **用途**: Base64编码/解码
 
 **使用模块**:
+
 - `fafafa.ssl.log.pas` - 日志输出中的二进制数据编码
 - `fafafa.ssl.utils.pas` - 工具函数中的Base64处理
 
 **依赖单元**:
+
 - `base64` - Base64编码/解码函数
 
 ### 2. fcl-json
@@ -22,9 +24,11 @@
 **用途**: JSON数据处理
 
 **使用模块**:
+
 - `fafafa.ssl.log.pas` - 结构化日志输出
 
 **依赖单元**:
+
 - `fpjson` - JSON数据结构
 - `jsonparser` - JSON解析器
 
@@ -33,9 +37,11 @@
 **用途**: Object Pascal扩展
 
 **使用模块**:
+
 - 大部分模块（提供`variants`等标准类型）
 
 **依赖单元**:
+
 - `variants` - Variant类型支持
 
 ## Linux环境配置
@@ -126,20 +132,22 @@ fpc \
 
 Lazarus会自动找到FCL路径。
 
-## 使用我们的构建脚本
+## 当前默认验证链路
 
-项目提供了预配置的构建脚本，自动处理路径配置：
+如果你是在当前工作树里确认 FCL 相关依赖是否齐全，优先跑当前验证链路，而不是回到历史 `build_linux.sh` / `run_tests_linux.sh`：
 
 ```bash
-# 编译所有模块
-./build_linux.sh
-
-# 运行测试
-./run_tests_linux.sh
-
-# 批量编译验证
+# 编译门禁：验证核心模块在当前环境可编译
 python3 scripts/compile_all_modules.py
+
+# 本地最小门禁：compile + P2 核心模块 + Phase 2 入口 dry-run
+bash scripts/run_minimal_ci_gate.sh --fast-local
+
+# 可选：只检查 Phase 2 基准入口是否仍可执行
+bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local
 ```
+
+历史 `build_linux.sh` 仍可作为兼容入口保留，但不再是默认文档路径。
 
 ## 常见问题
 
@@ -190,8 +198,8 @@ C:\lazarus\fpc\3.3.1\units\x86_64-win64\
 
 ## 版本兼容性
 
-| FPC版本 | fcl-base | fcl-json | 状态 |
-|---------|----------|----------|------|
+| FPC版本 | fcl-base | fcl-json | 状态    |
+| ------- | -------- | -------- | ------- |
 | 3.2.0   | ✓        | ✓        | ✅ 支持 |
 | 3.2.2   | ✓        | ✓        | ✅ 支持 |
 | 3.3.1   | ✓        | ✓        | ✅ 推荐 |

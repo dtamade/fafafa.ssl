@@ -308,11 +308,11 @@ begin
 
   // 创建客户端上下文
   Ctx := Lib.CreateContext(sslCtxClient);
-  Ctx.SetServerName('www.example.com');
   Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 
   // 创建连接...
   // Conn := Ctx.CreateConnection(Socket);
+  // (Conn as ISSLClientConnection).SetServerName('www.example.com');
   // Conn.Connect;
 end.
 ```
@@ -539,7 +539,6 @@ begin
 
   // 2. 连接到内部 API
   Ctx := Lib.CreateContext(sslCtxClient);
-  Ctx.SetServerName('api.internal.company.com');
 
   // 3. 无需配置 CA 证书！
   // WinSSL 自动使用 Windows 证书存储
@@ -550,6 +549,7 @@ begin
   // - 如果 GPO 配置了密码套件优先级，WinSSL 自动遵守
 
   // Conn := Ctx.CreateConnection(Socket);
+  // (Conn as ISSLClientConnection).SetServerName('api.internal.company.com');
   // Conn.Connect;  // 自动验证企业证书
 end.
 ```
@@ -617,10 +617,11 @@ begin
   Lib.Initialize;
 
   Ctx := Lib.CreateContext(sslCtxClient);
-  Ctx.SetServerName('updates.myapp.com');
 
   // 连接检查更新
   // Conn := Ctx.CreateConnection(Socket);
+  // (Conn as ISSLClientConnection).SetServerName('updates.myapp.com');
+  // Conn.Connect;
   // Response := FetchVersionInfo(Conn);
 
   Result := ParseUpdateAvailable(Response);
@@ -730,10 +731,10 @@ begin
   // 无需代码更改！
 
   Ctx := Lib.CreateContext(sslCtxClient);
-  Ctx.SetServerName('secure.example.com');
 
   // 连接时自动使用 FIPS 兼容的密码套件
   // Conn := Ctx.CreateConnection(Socket);
+  // (Conn as ISSLClientConnection).SetServerName('secure.example.com');
   // Conn.Connect;
 end.
 ```
@@ -1128,8 +1129,8 @@ if not ProxyConnectSuccessful(Socket) then
 
 // 4. 在隧道上建立 TLS
 Ctx := Lib.CreateContext(sslCtxClient);
-Ctx.SetServerName('api.example.com');
 Conn := Ctx.CreateConnection(Socket);  // Socket 现在是代理隧道
+(Conn as ISSLClientConnection).SetServerName('api.example.com');
 Conn.Connect;
 ```
 
@@ -1161,7 +1162,8 @@ dumpbin /DEPENDENTS MyApp.exe
 3. **SNI 检测**: 某些防火墙检查 SNI，确保正确设置
 
 ```pascal
-Ctx.SetServerName('api.example.com');  // 必须设置正确的 SNI
+Conn := Ctx.CreateConnection(Socket);
+(Conn as ISSLClientConnection).SetServerName('api.example.com');  // 必须在握手前把 SNI 设在连接上
 ```
 
 ---

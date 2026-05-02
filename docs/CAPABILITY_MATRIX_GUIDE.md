@@ -394,6 +394,7 @@ end;
 procedure ConfigureConnection(Conn: ISSLConnection);
 var
   Caps: TSSLBackendCapabilities;
+  ClientConn: ISSLClientConnection;
 begin
   Caps := Conn.GetContext.GetLibrary.GetCapabilities;
 
@@ -405,9 +406,10 @@ begin
   end;
 
   // 只在支持时启用 SNI
-  if IsFeatureStable(Caps.SNISupport) then
+  if IsFeatureStable(Caps.SNISupport) and
+     Supports(Conn, ISSLClientConnection, ClientConn) then
   begin
-    Conn.SetServerName('example.com');
+    ClientConn.SetServerName('example.com');
     WriteLn('SNI configured');
   end;
 end;
