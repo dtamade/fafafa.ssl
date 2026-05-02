@@ -25,6 +25,13 @@ function TryECDSASignP256SHA256(
   out AError: string
 ): Boolean;
 
+function TryECDSAVerifyP256SHA256(
+  const AMessageHash: TBytes;
+  const APublicPoint: TBytes;
+  const ASignatureDER: TBytes;
+  out AError: string
+): Boolean;
+
 implementation
 
 uses
@@ -59,6 +66,13 @@ const
     $00, $00, $00, $00, $00, $00, $00, $00,
     $00, $00, $00, $00, $FF, $FF, $FF, $FF,
     $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FC
+  );
+
+  P256_B: array[0..31] of Byte = (
+    $5A, $C6, $35, $D8, $AA, $3A, $93, $E7,
+    $B3, $EB, $BD, $55, $76, $98, $86, $BC,
+    $65, $1D, $06, $B0, $CC, $53, $B0, $F6,
+    $3B, $CE, $3C, $3E, $27, $D2, $60, $4B
   );
 
   P256_GX: array[0..31] of Byte = (
@@ -549,6 +563,90 @@ begin
   Result := TryP256ScalarMult(AScalar, LG, AResult, AError);
 end;
 
+function TryValidateP256Point(const APoint: TECPoint; out AError: string): Boolean;
+var
+  LP: TBytes;
+  LA: TBytes;
+  LB: TBytes;
+  LY2: TBytes;
+  LX2: TBytes;
+  LX3: TBytes;
+  LAx: TBytes;
+  LRhs: TBytes;
+  LTmp: TBytes;
+begin
+  AError := '';
+  Result := False;
+
+  if APoint.IsInfinity then
+  begin
+    AError := 'ECDSA public point must not be infinity';
+    Exit;
+  end;
+
+  LP := ConstToBytes(P256_FIELD_P);
+  LA := ConstToBytes(P256_A);
+  LB := ConstToBytes(P256_B);
+
+  if (CompareUnsignedBytes(APoint.X, LP) >= 0) or
+     (CompareUnsignedBytes(APoint.Y, LP) >= 0) then
+  begin
+    AError := 'ECDSA public point coordinates are out of range';
+    Exit;
+  end;
+
+  if not TryModMul(APoint.Y, APoint.Y, LP, LY2, AError) then
+    Exit;
+  if not TryModMul(APoint.X, APoint.X, LP, LX2, AError) then
+    Exit;
+  if not TryModMul(LX2, APoint.X, LP, LX3, AError) then
+    Exit;
+  if not TryModMul(LA, APoint.X, LP, LAx, AError) then
+    Exit;
+  if not TryModAdd(LX3, LAx, LP, LRhs, AError) then
+    Exit;
+  if not TryModAdd(LRhs, LB, LP, LTmp, AError) then
+    Exit;
+  LRhs := LTmp;
+
+  if not UnsignedBytesEqual(LY2, LRhs) then
+  begin
+    AError := 'ECDSA public point is not on secp256r1';
+    Exit;
+  end;
+
+  Result := True;
+end;
+
+function TryParseP256PublicPoint(
+  const APublicPoint: TBytes;
+  out APoint: TECPoint;
+  out AError: string
+): Boolean;
+begin
+  APoint := P256InfinityPoint;
+  AError := '';
+  Result := False;
+
+  if Length(APublicPoint) <> 65 then
+  begin
+    AError := 'ECDSA secp256r1 public point must be uncompressed 65-byte form';
+    Exit;
+  end;
+
+  if APublicPoint[0] <> $04 then
+  begin
+    AError := 'ECDSA secp256r1 public point must use uncompressed form';
+    Exit;
+  end;
+
+  APoint.X := StripLeadingZeroBytes(Copy(APublicPoint, 1, 32));
+  APoint.Y := StripLeadingZeroBytes(Copy(APublicPoint, 33, 32));
+  APoint.IsInfinity := False;
+
+  Result := TryValidateP256Point(APoint, AError);
+end;
+
 function Bits2OctetsP256(const AInput: TBytes): TBytes;
 var
   LN: TBytes;
@@ -637,6 +735,147 @@ begin
   finally
     LWriter.Free;
   end;
+end;
+
+function TryParseECDSASignatureDER(
+  const ASignatureDER: TBytes;
+  out AR, ASValue: TBytes;
+  out AError: string
+): Boolean;
+var
+  LReader: TASN1Reader;
+  LRoot: TASN1Node;
+  LOrder: TBytes;
+begin
+  SetLength(AR, 0);
+  SetLength(ASValue, 0);
+  AError := '';
+  Result := False;
+
+  if Length(ASignatureDER) = 0 then
+  begin
+    AError := 'ECDSA signature DER is empty';
+    Exit;
+  end;
+
+  LReader := TASN1Reader.Create(ASignatureDER);
+  try
+    try
+      LRoot := LReader.Parse;
+    except
+      on E: Exception do
+      begin
+        AError := 'ECDSA signature DER parse failed: ' + E.Message;
+        Exit;
+      end;
+    end;
+
+    try
+      if (LRoot = nil) or (not LRoot.IsSequence) or (LRoot.ChildCount <> 2) then
+      begin
+        AError := 'ECDSA signature DER must be ASN.1 SEQUENCE of two INTEGERs';
+        Exit;
+      end;
+
+      if (not LRoot.GetChild(0).IsInteger) or (not LRoot.GetChild(1).IsInteger) then
+      begin
+        AError := 'ECDSA signature DER fields must be INTEGERs';
+        Exit;
+      end;
+
+      AR := StripLeadingZeroBytes(LRoot.GetChild(0).AsBigInteger);
+      ASValue := StripLeadingZeroBytes(LRoot.GetChild(1).AsBigInteger);
+    finally
+      LRoot.Free;
+    end;
+  finally
+    LReader.Free;
+  end;
+
+  if IsZeroBytes(AR) or IsZeroBytes(ASValue) then
+  begin
+    AError := 'ECDSA signature DER r/s must be non-zero';
+    Exit;
+  end;
+
+  LOrder := ConstToBytes(P256_ORDER_N);
+  if (CompareUnsignedBytes(AR, LOrder) >= 0) or
+     (CompareUnsignedBytes(ASValue, LOrder) >= 0) then
+  begin
+    AError := 'ECDSA signature DER r/s must be less than curve order';
+    Exit;
+  end;
+
+  Result := True;
+end;
+
+function TryECDSAVerifyP256SHA256(
+  const AMessageHash: TBytes;
+  const APublicPoint: TBytes;
+  const ASignatureDER: TBytes;
+  out AError: string
+): Boolean;
+var
+  LOrder: TBytes;
+  LPublicPoint: TECPoint;
+  LR: TBytes;
+  LS: TBytes;
+  LE: TBytes;
+  LW: TBytes;
+  LU1: TBytes;
+  LU2: TBytes;
+  LPoint1: TECPoint;
+  LPoint2: TECPoint;
+  LSumPoint: TECPoint;
+  LXModN: TBytes;
+begin
+  AError := '';
+  Result := False;
+
+  if Length(AMessageHash) <> 32 then
+  begin
+    AError := 'ECDSA P-256 verifier requires SHA-256 hash input (32 bytes)';
+    Exit;
+  end;
+
+  if not TryParseECDSASignatureDER(ASignatureDER, LR, LS, AError) then
+    Exit;
+  if not TryParseP256PublicPoint(APublicPoint, LPublicPoint, AError) then
+    Exit;
+
+  LOrder := ConstToBytes(P256_ORDER_N);
+  LE := Bits2OctetsP256(AMessageHash);
+
+  if not TryModInvPrime(LS, LOrder, LW, AError) then
+    Exit;
+  if not TryModMul(LE, LW, LOrder, LU1, AError) then
+    Exit;
+  if not TryModMul(LR, LW, LOrder, LU2, AError) then
+    Exit;
+
+  if not TryP256ScalarMultBase(LU1, LPoint1, AError) then
+    Exit;
+  if not TryP256ScalarMult(LU2, LPublicPoint, LPoint2, AError) then
+    Exit;
+  if not TryP256PointAdd(LPoint1, LPoint2, LSumPoint, AError) then
+    Exit;
+
+  if LSumPoint.IsInfinity then
+  begin
+    AError := 'ECDSA verification point is infinity';
+    Exit;
+  end;
+
+  if not TryMod(LSumPoint.X, LOrder, LXModN, AError) then
+    Exit;
+
+  if not UnsignedBytesEqual(LXModN, LR) then
+  begin
+    AError := 'ECDSA signature does not match public key';
+    Exit;
+  end;
+
+  Result := True;
 end;
 
 function TryECDSASignP256SHA256(

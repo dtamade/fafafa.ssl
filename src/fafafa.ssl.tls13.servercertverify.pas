@@ -17,7 +17,8 @@ interface
 uses
   SysUtils,
   fafafa.ssl.tls13.wire,
-  fafafa.ssl.tls13.clienthello.parser;
+  fafafa.ssl.tls13.clienthello.parser,
+  fafafa.ssl.x509;
 
 function TrySelectTLS13ServerCertificateVerifyScheme(
   const AClientHello: TTLS13ClientHelloInfo;
@@ -28,6 +29,14 @@ function TrySelectTLS13ServerCertificateVerifyScheme(
 function TrySelectTLS13ServerCertificateVerifySchemeForKeyType(
   const AClientHello: TTLS13ClientHelloInfo;
   const ALeafKeyType: string;
+  out ASignatureScheme: Word;
+  out AError: string
+): Boolean;
+
+function TrySelectTLS13ServerCertificateVerifySchemeForKeyTypeAndCipherSuite(
+  const AClientHello: TTLS13ClientHelloInfo;
+  const ALeafKeyType: string;
+  ACipherSuite: Word;
   out ASignatureScheme: Word;
   out AError: string
 ): Boolean;
@@ -46,6 +55,21 @@ function BuildTLS13PlaceholderSignatureFromTranscriptHash(
   ATargetLength: Integer
 ): TBytes;
 
+function TryParseTLS13CertificateVerifyHandshake(
+  const AHandshakeMessage: TBytes;
+  out ASignatureScheme: Word;
+  out ASignature: TBytes;
+  out AError: string
+): Boolean;
+
+function TryVerifyTLS13CertificateVerifySignature(
+  ASignatureScheme: Word;
+  const APublicKeyInfo: TX509PublicKeyInfo;
+  const ACertificateVerifyInput: TBytes;
+  const ASignature: TBytes;
+  out AError: string
+): Boolean;
+
 function TryBuildTLS13CertificateVerifySignature(
   ASignatureScheme: Word;
   const APrivateKeyBlob: TBytes;
@@ -62,6 +86,7 @@ uses
   fafafa.ssl.pem,
   fafafa.ssl.crypto.hash,
   fafafa.ssl.random,
+  fafafa.ssl.tls13.keyschedule,
   fafafa.ssl.tls13.bigint,
   fafafa.ssl.tls13.ecdsa;
 
@@ -77,6 +102,13 @@ const
     $06, $09, $60, $86, $48, $01, $65, $03, $04, $02, $01,
     $05, $00,
     $04, $20
+  );
+
+  SHA384_DIGESTINFO_PREFIX: array[0..18] of Byte = (
+    $30, $41, $30, $0D,
+    $06, $09, $60, $86, $48, $01, $65, $03, $04, $02, $02,
+    $05, $00,
+    $04, $30
   );
 
 function BytesToAnsiString(const AData: TBytes): AnsiString;
@@ -131,6 +163,31 @@ begin
     Inc(Result);
     LFirst := LFirst shr 1;
   end;
+end;
+
+function CompareUnsignedBytes(const ALeft, ARight: TBytes): Integer;
+var
+  LLeft: TBytes;
+  LRight: TBytes;
+  I: Integer;
+begin
+  LLeft := StripLeadingZeroBytes(ALeft);
+  LRight := StripLeadingZeroBytes(ARight);
+
+  if Length(LLeft) < Length(LRight) then
+    Exit(-1);
+  if Length(LLeft) > Length(LRight) then
+    Exit(1);
+
+  for I := 0 to Length(LLeft) - 1 do
+  begin
+    if LLeft[I] < LRight[I] then
+      Exit(-1);
+    if LLeft[I] > LRight[I] then
+      Exit(1);
+  end;
+
+  Result := 0;
 end;
 
 function UnsignedBytesEqual(const ALeft, ARight: TBytes): Boolean;
@@ -1207,6 +1264,47 @@ begin
   end;
 end;
 
+function MGF1_SHA384(const ASeed: TBytes; AMaskLength: Integer): TBytes;
+var
+  LCounter: Cardinal;
+  LOffset: Integer;
+  LInput: TBytes;
+  LHash: TBytes;
+  LCopyLen: Integer;
+begin
+  if AMaskLength < 0 then
+    RaiseInvalidParameter('MGF1MaskLength');
+
+  SetLength(Result, AMaskLength);
+  if AMaskLength = 0 then
+    Exit;
+
+  SetLength(LInput, Length(ASeed) + 4);
+  if Length(ASeed) > 0 then
+    Move(ASeed[0], LInput[0], Length(ASeed));
+
+  LCounter := 0;
+  LOffset := 0;
+  while LOffset < AMaskLength do
+  begin
+    LInput[Length(ASeed)] := Byte((LCounter shr 24) and $FF);
+    LInput[Length(ASeed) + 1] := Byte((LCounter shr 16) and $FF);
+    LInput[Length(ASeed) + 2] := Byte((LCounter shr 8) and $FF);
+    LInput[Length(ASeed) + 3] := Byte(LCounter and $FF);
+
+    LHash := SHA384(LInput);
+    LCopyLen := Length(LHash);
+    if LCopyLen > AMaskLength - LOffset then
+      LCopyLen := AMaskLength - LOffset;
+
+    if LCopyLen > 0 then
+      Move(LHash[0], Result[LOffset], LCopyLen);
+
+    Inc(LOffset, LCopyLen);
+    Inc(LCounter);
+  end;
+end;
+
 function TryBuildRSAPSSEncodedMessageSHA256(
   const AMessage: TBytes;
   AModulusBitLength: Integer;
@@ -1291,6 +1389,90 @@ begin
   Result := True;
 end;
 
+function TryBuildRSAPSSEncodedMessageSHA384(
+  const AMessage: TBytes;
+  AModulusBitLength: Integer;
+  out AEncoded: TBytes;
+  out AError: string
+): Boolean;
+const
+  HASH_SIZE = 48;
+  SALT_SIZE = 48;
+var
+  LEMBits: Integer;
+  LEMLen: Integer;
+  LMHash: TBytes;
+  LSalt: TBytes;
+  LMPrime: TBytes;
+  LH: TBytes;
+  LDB: TBytes;
+  LDBMask: TBytes;
+  LMaskedDB: TBytes;
+  LPSLen: Integer;
+  I: Integer;
+  LUnusedBits: Integer;
+begin
+  SetLength(AEncoded, 0);
+  AError := '';
+  Result := False;
+
+  if AModulusBitLength <= 1 then
+  begin
+    AError := 'RSA modulus bit length is invalid for PSS';
+    Exit;
+  end;
+
+  LEMBits := AModulusBitLength - 1;
+  LEMLen := (LEMBits + 7) div 8;
+  if LEMLen < HASH_SIZE + SALT_SIZE + 2 then
+  begin
+    AError := 'RSA modulus too short for SHA-384 PSS encoding';
+    Exit;
+  end;
+
+  LMHash := SHA384(AMessage);
+
+  try
+    LSalt := GenerateSecureRandomBytes(SALT_SIZE);
+  except
+    on E: Exception do
+    begin
+      AError := 'Failed to generate RSA-PSS salt: ' + E.Message;
+      Exit;
+    end;
+  end;
+
+  SetLength(LMPrime, 8 + HASH_SIZE + SALT_SIZE);
+  FillChar(LMPrime[0], 8, 0);
+  Move(LMHash[0], LMPrime[8], HASH_SIZE);
+  Move(LSalt[0], LMPrime[8 + HASH_SIZE], SALT_SIZE);
+
+  LH := SHA384(LMPrime);
+
+  LPSLen := LEMLen - SALT_SIZE - HASH_SIZE - 2;
+  SetLength(LDB, LEMLen - HASH_SIZE - 1);
+  if Length(LDB) > 0 then
+    FillChar(LDB[0], Length(LDB), 0);
+  LDB[LPSLen] := 1;
+  Move(LSalt[0], LDB[LPSLen + 1], SALT_SIZE);
+
+  LDBMask := MGF1_SHA384(LH, Length(LDB));
+  SetLength(LMaskedDB, Length(LDB));
+  for I := 0 to Length(LDB) - 1 do
+    LMaskedDB[I] := LDB[I] xor LDBMask[I];
+
+  LUnusedBits := 8 * LEMLen - LEMBits;
+  if LUnusedBits > 0 then
+    LMaskedDB[0] := LMaskedDB[0] and ($FF shr LUnusedBits);
+
+  SetLength(AEncoded, LEMLen);
+  Move(LMaskedDB[0], AEncoded[0], Length(LMaskedDB));
+  Move(LH[0], AEncoded[Length(LMaskedDB)], HASH_SIZE);
+  AEncoded[LEMLen - 1] := $BC;
+
+  Result := True;
+end;
+
 function TryBuildRSAPKCS1v15EncodedMessageSHA256(
   const AMessage: TBytes;
   AModulusLength: Integer;
@@ -1339,6 +1521,597 @@ begin
   Move(LHash[0], AEncoded[LOffset], Length(LHash));
 
   Result := True;
+end;
+
+function TryBuildRSAPKCS1v15EncodedMessageSHA384(
+  const AMessage: TBytes;
+  AModulusLength: Integer;
+  out AEncoded: TBytes;
+  out AError: string
+): Boolean;
+var
+  LHash: TBytes;
+  LTLen: Integer;
+  LPSLen: Integer;
+  LOffset: Integer;
+  I: Integer;
+begin
+  SetLength(AEncoded, 0);
+  AError := '';
+  Result := False;
+
+  if AModulusLength <= 0 then
+  begin
+    AError := 'RSA modulus length is invalid';
+    Exit;
+  end;
+
+  LHash := SHA384(AMessage);
+  LTLen := Length(SHA384_DIGESTINFO_PREFIX) + Length(LHash);
+  if AModulusLength < LTLen + 11 then
+  begin
+    AError := 'RSA modulus is too short for PKCS#1 v1.5 SHA-384 encoding';
+    Exit;
+  end;
+
+  LPSLen := AModulusLength - LTLen - 3;
+  SetLength(AEncoded, AModulusLength);
+
+  AEncoded[0] := 0;
+  AEncoded[1] := 1;
+  for I := 0 to LPSLen - 1 do
+    AEncoded[2 + I] := $FF;
+
+  LOffset := 2 + LPSLen;
+  AEncoded[LOffset] := 0;
+  Inc(LOffset);
+
+  Move(SHA384_DIGESTINFO_PREFIX[0], AEncoded[LOffset], Length(SHA384_DIGESTINFO_PREFIX));
+  Inc(LOffset, Length(SHA384_DIGESTINFO_PREFIX));
+  Move(LHash[0], AEncoded[LOffset], Length(LHash));
+
+  Result := True;
+end;
+
+function BytesEqual(const ALeft, ARight: TBytes): Boolean;
+var
+  I: Integer;
+begin
+  if Length(ALeft) <> Length(ARight) then
+    Exit(False);
+
+  for I := 0 to Length(ALeft) - 1 do
+  begin
+    if ALeft[I] <> ARight[I] then
+      Exit(False);
+  end;
+
+  Result := True;
+end;
+
+function RSAKeyOctetLength(const AModulus: TBytes): Integer;
+var
+  LBitLength: Integer;
+begin
+  LBitLength := UnsignedBitLength(AModulus);
+  if LBitLength <= 0 then
+    Exit(0);
+  Result := (LBitLength + 7) div 8;
+end;
+
+function TryRecoverRSAEncodedMessage(
+  const ASignature: TBytes;
+  const AModulus: TBytes;
+  const APublicExponent: TBytes;
+  out AEncodedMessage: TBytes;
+  out AError: string
+): Boolean;
+var
+  LRecovered: TBytes;
+  LModulusLength: Integer;
+begin
+  SetLength(AEncodedMessage, 0);
+  AError := '';
+  Result := False;
+
+  LModulusLength := RSAKeyOctetLength(AModulus);
+  if LModulusLength <= 0 then
+  begin
+    AError := 'RSA public modulus is empty';
+    Exit;
+  end;
+
+  if Length(ASignature) <> LModulusLength then
+  begin
+    AError := Format('RSA signature length mismatch (expected=%d actual=%d)',
+      [LModulusLength, Length(ASignature)]);
+    Exit;
+  end;
+
+  if UnsignedIsZero(APublicExponent) then
+  begin
+    AError := 'RSA public exponent is empty';
+    Exit;
+  end;
+
+  if CompareUnsignedBytes(ASignature, AModulus) >= 0 then
+  begin
+    AError := 'RSA signature representative is out of range';
+    Exit;
+  end;
+
+  if not TryBigIntModExpFromUnsignedBytes(
+    ASignature,
+    APublicExponent,
+    AModulus,
+    LRecovered,
+    AError
+  ) then
+  begin
+    AError := 'RSA signature modular exponentiation failed: ' + AError;
+    Exit;
+  end;
+
+  if not TryBigIntToFixedLengthFromUnsignedBytes(
+    LRecovered,
+    LModulusLength,
+    AEncodedMessage,
+    AError
+  ) then
+  begin
+    AError := 'RSA encoded message sizing failed: ' + AError;
+    Exit;
+  end;
+
+  Result := True;
+end;
+
+function TryVerifyRSAPKCS1v15SignatureSHA256(
+  const AMessage: TBytes;
+  const ASignature: TBytes;
+  const AModulus: TBytes;
+  const APublicExponent: TBytes;
+  out AError: string
+): Boolean;
+var
+  LRecovered: TBytes;
+  LExpected: TBytes;
+begin
+  AError := '';
+  Result := False;
+
+  if not TryRecoverRSAEncodedMessage(ASignature, AModulus, APublicExponent, LRecovered, AError) then
+    Exit;
+
+  if not TryBuildRSAPKCS1v15EncodedMessageSHA256(AMessage, Length(LRecovered), LExpected, AError) then
+  begin
+    AError := 'RSA PKCS#1 v1.5 encoding failed: ' + AError;
+    Exit;
+  end;
+
+  if not BytesEqual(LRecovered, LExpected) then
+  begin
+    AError := 'RSA PKCS#1 v1.5 signature does not match transcript';
+    Exit;
+  end;
+
+  Result := True;
+end;
+
+function TryVerifyRSAPKCS1v15SignatureSHA384(
+  const AMessage: TBytes;
+  const ASignature: TBytes;
+  const AModulus: TBytes;
+  const APublicExponent: TBytes;
+  out AError: string
+): Boolean;
+var
+  LRecovered: TBytes;
+  LExpected: TBytes;
+begin
+  AError := '';
+  Result := False;
+
+  if not TryRecoverRSAEncodedMessage(ASignature, AModulus, APublicExponent, LRecovered, AError) then
+    Exit;
+
+  if not TryBuildRSAPKCS1v15EncodedMessageSHA384(AMessage, Length(LRecovered), LExpected, AError) then
+  begin
+    AError := 'RSA PKCS#1 v1.5 encoding failed: ' + AError;
+    Exit;
+  end;
+
+  if not BytesEqual(LRecovered, LExpected) then
+  begin
+    AError := 'RSA PKCS#1 v1.5 signature does not match transcript';
+    Exit;
+  end;
+
+  Result := True;
+end;
+
+function TryVerifyRSAPSSEncodedMessageSHA256(
+  const AMessage: TBytes;
+  const AEncodedMessage: TBytes;
+  AModulusBitLength: Integer;
+  out AError: string
+): Boolean;
+const
+  HASH_SIZE = 32;
+  SALT_SIZE = 32;
+var
+  LEMBits: Integer;
+  LEMLen: Integer;
+  LMaskedDB: TBytes;
+  LH: TBytes;
+  LDBMask: TBytes;
+  LDB: TBytes;
+  LMHash: TBytes;
+  LMPrime: TBytes;
+  LExpectedH: TBytes;
+  LSalt: TBytes;
+  LPSLen: Integer;
+  LUnusedBits: Integer;
+  LUnusedMask: Byte;
+  I: Integer;
+begin
+  AError := '';
+  Result := False;
+
+  if AModulusBitLength <= 1 then
+  begin
+    AError := 'RSA modulus bit length is invalid for PSS verification';
+    Exit;
+  end;
+
+  LEMBits := AModulusBitLength - 1;
+  LEMLen := (LEMBits + 7) div 8;
+  if Length(AEncodedMessage) <> LEMLen then
+  begin
+    AError := 'RSA-PSS encoded message length does not match modulus';
+    Exit;
+  end;
+
+  if LEMLen < HASH_SIZE + SALT_SIZE + 2 then
+  begin
+    AError := 'RSA modulus too short for SHA-256 PSS verification';
+    Exit;
+  end;
+
+  if AEncodedMessage[LEMLen - 1] <> $BC then
+  begin
+    AError := 'RSA-PSS trailer byte is invalid';
+    Exit;
+  end;
+
+  SetLength(LMaskedDB, LEMLen - HASH_SIZE - 1);
+  if Length(LMaskedDB) > 0 then
+    Move(AEncodedMessage[0], LMaskedDB[0], Length(LMaskedDB));
+  LH := Copy(AEncodedMessage, Length(LMaskedDB), HASH_SIZE);
+
+  LUnusedBits := 8 * LEMLen - LEMBits;
+  if LUnusedBits > 0 then
+  begin
+    LUnusedMask := Byte($FF shl (8 - LUnusedBits));
+    if (LMaskedDB[0] and LUnusedMask) <> 0 then
+    begin
+      AError := 'RSA-PSS leftmost masked bits are non-zero';
+      Exit;
+    end;
+  end;
+
+  LDBMask := MGF1_SHA256(LH, Length(LMaskedDB));
+  SetLength(LDB, Length(LMaskedDB));
+  for I := 0 to Length(LMaskedDB) - 1 do
+    LDB[I] := LMaskedDB[I] xor LDBMask[I];
+
+  if LUnusedBits > 0 then
+    LDB[0] := LDB[0] and ($FF shr LUnusedBits);
+
+  LPSLen := LEMLen - HASH_SIZE - SALT_SIZE - 2;
+  for I := 0 to LPSLen - 1 do
+  begin
+    if LDB[I] <> 0 then
+    begin
+      AError := 'RSA-PSS padding prefix is invalid';
+      Exit;
+    end;
+  end;
+
+  if LDB[LPSLen] <> 1 then
+  begin
+    AError := 'RSA-PSS salt delimiter is missing';
+    Exit;
+  end;
+
+  LSalt := Copy(LDB, LPSLen + 1, SALT_SIZE);
+  LMHash := SHA256(AMessage);
+
+  SetLength(LMPrime, 8 + HASH_SIZE + SALT_SIZE);
+  FillChar(LMPrime[0], 8, 0);
+  Move(LMHash[0], LMPrime[8], HASH_SIZE);
+  Move(LSalt[0], LMPrime[8 + HASH_SIZE], SALT_SIZE);
+  LExpectedH := SHA256(LMPrime);
+
+  if not BytesEqual(LH, LExpectedH) then
+  begin
+    AError := 'RSA-PSS signature hash does not match transcript';
+    Exit;
+  end;
+
+  Result := True;
+end;
+
+function TryVerifyRSAPSSEncodedMessageSHA384(
+  const AMessage: TBytes;
+  const AEncodedMessage: TBytes;
+  AModulusBitLength: Integer;
+  out AError: string
+): Boolean;
+const
+  HASH_SIZE = 48;
+  SALT_SIZE = 48;
+var
+  LEMBits: Integer;
+  LEMLen: Integer;
+  LMaskedDB: TBytes;
+  LH: TBytes;
+  LDBMask: TBytes;
+  LDB: TBytes;
+  LMHash: TBytes;
+  LMPrime: TBytes;
+  LExpectedH: TBytes;
+  LSalt: TBytes;
+  LPSLen: Integer;
+  LUnusedBits: Integer;
+  LUnusedMask: Byte;
+  I: Integer;
+begin
+  AError := '';
+  Result := False;
+
+  if AModulusBitLength <= 1 then
+  begin
+    AError := 'RSA modulus bit length is invalid for PSS verification';
+    Exit;
+  end;
+
+  LEMBits := AModulusBitLength - 1;
+  LEMLen := (LEMBits + 7) div 8;
+  if Length(AEncodedMessage) <> LEMLen then
+  begin
+    AError := 'RSA-PSS encoded message length does not match modulus';
+    Exit;
+  end;
+
+  if LEMLen < HASH_SIZE + SALT_SIZE + 2 then
+  begin
+    AError := 'RSA modulus too short for SHA-384 PSS verification';
+    Exit;
+  end;
+
+  if AEncodedMessage[LEMLen - 1] <> $BC then
+  begin
+    AError := 'RSA-PSS trailer byte is invalid';
+    Exit;
+  end;
+
+  SetLength(LMaskedDB, LEMLen - HASH_SIZE - 1);
+  if Length(LMaskedDB) > 0 then
+    Move(AEncodedMessage[0], LMaskedDB[0], Length(LMaskedDB));
+  LH := Copy(AEncodedMessage, Length(LMaskedDB), HASH_SIZE);
+
+  LUnusedBits := 8 * LEMLen - LEMBits;
+  if LUnusedBits > 0 then
+  begin
+    LUnusedMask := Byte($FF shl (8 - LUnusedBits));
+    if (LMaskedDB[0] and LUnusedMask) <> 0 then
+    begin
+      AError := 'RSA-PSS leftmost masked bits are non-zero';
+      Exit;
+    end;
+  end;
+
+  LDBMask := MGF1_SHA384(LH, Length(LMaskedDB));
+  SetLength(LDB, Length(LMaskedDB));
+  for I := 0 to Length(LMaskedDB) - 1 do
+    LDB[I] := LMaskedDB[I] xor LDBMask[I];
+
+  if LUnusedBits > 0 then
+    LDB[0] := LDB[0] and ($FF shr LUnusedBits);
+
+  LPSLen := LEMLen - HASH_SIZE - SALT_SIZE - 2;
+  for I := 0 to LPSLen - 1 do
+  begin
+    if LDB[I] <> 0 then
+    begin
+      AError := 'RSA-PSS padding prefix is invalid';
+      Exit;
+    end;
+  end;
+
+  if LDB[LPSLen] <> 1 then
+  begin
+    AError := 'RSA-PSS salt delimiter is missing';
+    Exit;
+  end;
+
+  LSalt := Copy(LDB, LPSLen + 1, SALT_SIZE);
+  LMHash := SHA384(AMessage);
+
+  SetLength(LMPrime, 8 + HASH_SIZE + SALT_SIZE);
+  FillChar(LMPrime[0], 8, 0);
+  Move(LMHash[0], LMPrime[8], HASH_SIZE);
+  Move(LSalt[0], LMPrime[8 + HASH_SIZE], SALT_SIZE);
+  LExpectedH := SHA384(LMPrime);
+
+  if not BytesEqual(LH, LExpectedH) then
+  begin
+    AError := 'RSA-PSS signature hash does not match transcript';
+    Exit;
+  end;
+
+  Result := True;
+end;
+
+function TryVerifyRSAPSSSignatureSHA256(
+  const AMessage: TBytes;
+  const ASignature: TBytes;
+  const AModulus: TBytes;
+  const APublicExponent: TBytes;
+  out AError: string
+): Boolean;
+var
+  LRecovered: TBytes;
+begin
+  AError := '';
+  Result := False;
+
+  if not TryRecoverRSAEncodedMessage(ASignature, AModulus, APublicExponent, LRecovered, AError) then
+    Exit;
+
+  Result := TryVerifyRSAPSSEncodedMessageSHA256(
+    AMessage,
+    LRecovered,
+    UnsignedBitLength(AModulus),
+    AError
+  );
+end;
+
+function TryVerifyRSAPSSSignatureSHA384(
+  const AMessage: TBytes;
+  const ASignature: TBytes;
+  const AModulus: TBytes;
+  const APublicExponent: TBytes;
+  out AError: string
+): Boolean;
+var
+  LRecovered: TBytes;
+begin
+  AError := '';
+  Result := False;
+
+  if not TryRecoverRSAEncodedMessage(ASignature, AModulus, APublicExponent, LRecovered, AError) then
+    Exit;
+
+  Result := TryVerifyRSAPSSEncodedMessageSHA384(
+    AMessage,
+    LRecovered,
+    UnsignedBitLength(AModulus),
+    AError
+  );
+end;
+
+function TryVerifyTLS13CertificateVerifySignature(
+  ASignatureScheme: Word;
+  const APublicKeyInfo: TX509PublicKeyInfo;
+  const ACertificateVerifyInput: TBytes;
+  const ASignature: TBytes;
+  out AError: string
+): Boolean;
+var
+  LMessageHash: TBytes;
+begin
+  AError := '';
+  Result := False;
+
+  if Length(ACertificateVerifyInput) = 0 then
+  begin
+    AError := 'CertificateVerify input is empty';
+    Exit;
+  end;
+
+  if Length(ASignature) = 0 then
+  begin
+    AError := 'CertificateVerify signature is empty';
+    Exit;
+  end;
+
+  case ASignatureScheme of
+    TLS13_SIG_RSA_PSS_RSAE_SHA256,
+    TLS13_SIG_RSA_PSS_PSS_SHA256,
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    TLS13_SIG_RSA_PSS_RSAE_SHA384,
+    TLS13_SIG_RSA_PSS_PSS_SHA384,
+    TLS13_SIG_RSA_PKCS1_SHA384:
+      begin
+        if not SameText(APublicKeyInfo.KeyType, 'RSA') then
+        begin
+          AError := 'Unsupported CertificateVerify key type for RSA signature scheme';
+          Exit;
+        end;
+
+        case ASignatureScheme of
+          TLS13_SIG_RSA_PSS_RSAE_SHA256,
+          TLS13_SIG_RSA_PSS_PSS_SHA256:
+            Result := TryVerifyRSAPSSSignatureSHA256(
+              ACertificateVerifyInput,
+              ASignature,
+              APublicKeyInfo.RSAModulus,
+              APublicKeyInfo.RSAExponent,
+              AError
+            );
+
+          TLS13_SIG_RSA_PSS_RSAE_SHA384,
+          TLS13_SIG_RSA_PSS_PSS_SHA384:
+            Result := TryVerifyRSAPSSSignatureSHA384(
+              ACertificateVerifyInput,
+              ASignature,
+              APublicKeyInfo.RSAModulus,
+              APublicKeyInfo.RSAExponent,
+              AError
+            );
+
+          TLS13_SIG_RSA_PKCS1_SHA256:
+            Result := TryVerifyRSAPKCS1v15SignatureSHA256(
+              ACertificateVerifyInput,
+              ASignature,
+              APublicKeyInfo.RSAModulus,
+              APublicKeyInfo.RSAExponent,
+              AError
+            );
+
+          TLS13_SIG_RSA_PKCS1_SHA384:
+            Result := TryVerifyRSAPKCS1v15SignatureSHA384(
+              ACertificateVerifyInput,
+              ASignature,
+              APublicKeyInfo.RSAModulus,
+              APublicKeyInfo.RSAExponent,
+              AError
+            );
+        end;
+
+        Exit;
+      end;
+
+    TLS13_SIG_ECDSA_SECP256R1_SHA256:
+      begin
+        if not SameText(APublicKeyInfo.KeyType, 'ECDSA') then
+        begin
+          AError := 'Unsupported CertificateVerify key type for ECDSA signature scheme';
+          Exit;
+        end;
+
+        if (not SameText(APublicKeyInfo.ECCurve, 'prime256v1')) and
+           (not SameText(APublicKeyInfo.ECCurve, 'secp256r1')) then
+        begin
+          AError := 'Unsupported ECDSA curve for CertificateVerify';
+          Exit;
+        end;
+
+        LMessageHash := SHA256(ACertificateVerifyInput);
+        Result := TryECDSAVerifyP256SHA256(
+          LMessageHash,
+          APublicKeyInfo.ECPoint,
+          ASignature,
+          AError
+        );
+        Exit;
+      end;
+  end;
+
+  AError := 'Unsupported CertificateVerify signature scheme: ' +
+    TLS13SignatureSchemeToString(ASignatureScheme);
 end;
 
 function TryRSASignWithPrivateExponent(
@@ -1451,6 +2224,12 @@ begin
     Exit(True);
   end;
 
+  if TLS13ClientHelloOffersSignatureScheme(AClientHello, TLS13_SIG_RSA_PSS_RSAE_SHA384) then
+  begin
+    ASignatureScheme := TLS13_SIG_RSA_PSS_RSAE_SHA384;
+    Exit(True);
+  end;
+
   if TLS13ClientHelloOffersSignatureScheme(AClientHello, TLS13_SIG_ECDSA_SECP256R1_SHA256) then
   begin
     ASignatureScheme := TLS13_SIG_ECDSA_SECP256R1_SHA256;
@@ -1463,9 +2242,21 @@ begin
     Exit(True);
   end;
 
+  if TLS13ClientHelloOffersSignatureScheme(AClientHello, TLS13_SIG_RSA_PKCS1_SHA384) then
+  begin
+    ASignatureScheme := TLS13_SIG_RSA_PKCS1_SHA384;
+    Exit(True);
+  end;
+
   if TLS13ClientHelloOffersSignatureScheme(AClientHello, TLS13_SIG_RSA_PSS_PSS_SHA256) then
   begin
     ASignatureScheme := TLS13_SIG_RSA_PSS_PSS_SHA256;
+    Exit(True);
+  end;
+
+  if TLS13ClientHelloOffersSignatureScheme(AClientHello, TLS13_SIG_RSA_PSS_PSS_SHA384) then
+  begin
+    ASignatureScheme := TLS13_SIG_RSA_PSS_PSS_SHA384;
     Exit(True);
   end;
 
@@ -1501,15 +2292,33 @@ begin
       Exit(True);
     end;
 
+    if TLS13ClientHelloOffersSignatureScheme(AClientHello, TLS13_SIG_RSA_PSS_RSAE_SHA384) then
+    begin
+      ASignatureScheme := TLS13_SIG_RSA_PSS_RSAE_SHA384;
+      Exit(True);
+    end;
+
     if TLS13ClientHelloOffersSignatureScheme(AClientHello, TLS13_SIG_RSA_PKCS1_SHA256) then
     begin
       ASignatureScheme := TLS13_SIG_RSA_PKCS1_SHA256;
       Exit(True);
     end;
 
+    if TLS13ClientHelloOffersSignatureScheme(AClientHello, TLS13_SIG_RSA_PKCS1_SHA384) then
+    begin
+      ASignatureScheme := TLS13_SIG_RSA_PKCS1_SHA384;
+      Exit(True);
+    end;
+
     if TLS13ClientHelloOffersSignatureScheme(AClientHello, TLS13_SIG_RSA_PSS_PSS_SHA256) then
     begin
       ASignatureScheme := TLS13_SIG_RSA_PSS_PSS_SHA256;
+      Exit(True);
+    end;
+
+    if TLS13ClientHelloOffersSignatureScheme(AClientHello, TLS13_SIG_RSA_PSS_PSS_SHA384) then
+    begin
+      ASignatureScheme := TLS13_SIG_RSA_PSS_PSS_SHA384;
       Exit(True);
     end;
 
@@ -1532,6 +2341,104 @@ begin
   AError := 'Unsupported leaf certificate key type for TLS 1.3 CertificateVerify';
 end;
 
+function TrySelectTLS13ServerCertificateVerifySchemeForKeyTypeAndCipherSuite(
+  const AClientHello: TTLS13ClientHelloInfo;
+  const ALeafKeyType: string;
+  ACipherSuite: Word;
+  out ASignatureScheme: Word;
+  out AError: string
+): Boolean;
+  function TrySelectFirstOfferedScheme(
+    const ACandidateSchemes: array of Word;
+    out ASelectedScheme: Word
+  ): Boolean;
+  var
+    I: Integer;
+  begin
+    ASelectedScheme := 0;
+    for I := Low(ACandidateSchemes) to High(ACandidateSchemes) do
+    begin
+      if TLS13ClientHelloOffersSignatureScheme(AClientHello, ACandidateSchemes[I]) then
+      begin
+        ASelectedScheme := ACandidateSchemes[I];
+        Exit(True);
+      end;
+    end;
+
+    Result := False;
+  end;
+var
+  LKeyType: string;
+begin
+  ASignatureScheme := 0;
+  AError := '';
+  Result := False;
+
+  LKeyType := UpperCase(Trim(ALeafKeyType));
+
+  if not AClientHello.HasSignatureAlgorithms then
+  begin
+    AError := 'ClientHello missing signature_algorithms extension';
+    Exit;
+  end;
+
+  if LKeyType = 'RSA' then
+  begin
+    if TLS13CipherSuiteIsSHA384(ACipherSuite) then
+    begin
+      if TrySelectFirstOfferedScheme([
+        TLS13_SIG_RSA_PSS_RSAE_SHA384,
+        TLS13_SIG_RSA_PKCS1_SHA384,
+        TLS13_SIG_RSA_PSS_PSS_SHA384
+      ], ASignatureScheme) then
+        Exit(True);
+
+      if TrySelectFirstOfferedScheme([
+        TLS13_SIG_RSA_PSS_RSAE_SHA256,
+        TLS13_SIG_RSA_PKCS1_SHA256,
+        TLS13_SIG_RSA_PSS_PSS_SHA256
+      ], ASignatureScheme) then
+        Exit(True);
+    end
+    else if TLS13CipherSuiteIsSHA256(ACipherSuite) then
+    begin
+      if TrySelectFirstOfferedScheme([
+        TLS13_SIG_RSA_PSS_RSAE_SHA256,
+        TLS13_SIG_RSA_PKCS1_SHA256,
+        TLS13_SIG_RSA_PSS_PSS_SHA256
+      ], ASignatureScheme) then
+        Exit(True);
+
+      if TrySelectFirstOfferedScheme([
+        TLS13_SIG_RSA_PSS_RSAE_SHA384,
+        TLS13_SIG_RSA_PKCS1_SHA384,
+        TLS13_SIG_RSA_PSS_PSS_SHA384
+      ], ASignatureScheme) then
+        Exit(True);
+    end
+    else
+      Exit(TrySelectTLS13ServerCertificateVerifySchemeForKeyType(
+        AClientHello,
+        ALeafKeyType,
+        ASignatureScheme,
+        AError
+      ));
+
+    AError := 'No supported TLS 1.3 CertificateVerify signature scheme from client for RSA key';
+    Exit;
+  end;
+
+  if LKeyType = 'ECDSA' then
+    Exit(TrySelectTLS13ServerCertificateVerifySchemeForKeyType(
+      AClientHello,
+      ALeafKeyType,
+      ASignatureScheme,
+      AError
+    ));
+
+  AError := 'Unsupported leaf certificate key type for TLS 1.3 CertificateVerify';
+end;
+
 function BuildTLS13ServerCertificateVerifyInputSHA256(
   const ATranscriptHash: TBytes
 ): TBytes;
@@ -1539,7 +2446,7 @@ var
   LContextBytes: TBytes;
   I: Integer;
 begin
-  if Length(ATranscriptHash) <> 32 then
+  if (Length(ATranscriptHash) <> 32) and (Length(ATranscriptHash) <> 48) then
     RaiseInvalidParameter('TLS13TranscriptHashSHA256');
 
   LContextBytes := TEncoding.ASCII.GetBytes(TLS13_SERVER_CERTVERIFY_CONTEXT);
@@ -1603,6 +2510,87 @@ begin
     Result[I] := Byte(ATranscriptHash[I mod LHashLen] xor Byte((I * 131) and $FF));
 end;
 
+function IsSupportedTLS13CertificateVerifyScheme(ASignatureScheme: Word): Boolean;
+begin
+  case ASignatureScheme of
+    TLS13_SIG_RSA_PSS_RSAE_SHA256,
+    TLS13_SIG_RSA_PSS_PSS_SHA256,
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    TLS13_SIG_RSA_PSS_RSAE_SHA384,
+    TLS13_SIG_RSA_PSS_PSS_SHA384,
+    TLS13_SIG_RSA_PKCS1_SHA384,
+    TLS13_SIG_ECDSA_SECP256R1_SHA256:
+      Result := True;
+  else
+    Result := False;
+  end;
+end;
+
+function TryParseTLS13CertificateVerifyHandshake(
+  const AHandshakeMessage: TBytes;
+  out ASignatureScheme: Word;
+  out ASignature: TBytes;
+  out AError: string
+): Boolean;
+var
+  LBodyLength: Cardinal;
+  LSignatureLength: Word;
+begin
+  ASignatureScheme := 0;
+  SetLength(ASignature, 0);
+  AError := '';
+  Result := False;
+
+  if Length(AHandshakeMessage) < 9 then
+  begin
+    AError := 'CertificateVerify handshake is too short';
+    Exit;
+  end;
+
+  if AHandshakeMessage[0] <> TLS_HANDSHAKE_TYPE_CERTIFICATE_VERIFY then
+  begin
+    AError := 'Handshake type is not CertificateVerify';
+    Exit;
+  end;
+
+  LBodyLength := ReadUInt24(AHandshakeMessage, 1);
+  if LBodyLength <> Cardinal(Length(AHandshakeMessage) - 4) then
+  begin
+    AError := 'CertificateVerify body length does not match handshake framing';
+    Exit;
+  end;
+
+  if LBodyLength < 5 then
+  begin
+    AError := 'CertificateVerify body is too short';
+    Exit;
+  end;
+
+  ASignatureScheme := ReadUInt16(AHandshakeMessage, 4);
+  if not IsSupportedTLS13CertificateVerifyScheme(ASignatureScheme) then
+  begin
+    AError := 'Unsupported CertificateVerify signature scheme: ' +
+      TLS13SignatureSchemeToString(ASignatureScheme);
+    Exit;
+  end;
+
+  LSignatureLength := ReadUInt16(AHandshakeMessage, 6);
+  if Integer(LSignatureLength) = 0 then
+  begin
+    AError := 'CertificateVerify signature is empty';
+    Exit;
+  end;
+
+  if Integer(LSignatureLength) <> Length(AHandshakeMessage) - 8 then
+  begin
+    AError := 'CertificateVerify signature length does not match body framing';
+    Exit;
+  end;
+
+  ASignature := Copy(AHandshakeMessage, 8, Integer(LSignatureLength));
+  Result := True;
+end;
+
 function TryBuildTLS13CertificateVerifySignature(
   ASignatureScheme: Word;
   const APrivateKeyBlob: TBytes;
@@ -1635,6 +2623,9 @@ begin
     TLS13_SIG_RSA_PSS_RSAE_SHA256,
     TLS13_SIG_RSA_PSS_PSS_SHA256,
     TLS13_SIG_RSA_PKCS1_SHA256,
+    TLS13_SIG_RSA_PSS_RSAE_SHA384,
+    TLS13_SIG_RSA_PSS_PSS_SHA384,
+    TLS13_SIG_RSA_PKCS1_SHA384,
     TLS13_SIG_ECDSA_SECP256R1_SHA256:
       ;
   else
@@ -1677,9 +2668,23 @@ begin
           Exit;
       end;
 
+    TLS13_SIG_RSA_PSS_RSAE_SHA384,
+    TLS13_SIG_RSA_PSS_PSS_SHA384:
+      begin
+        LModBits := UnsignedBitLength(LModulus);
+        if not TryBuildRSAPSSEncodedMessageSHA384(ACertificateVerifyInput, LModBits, LEM, AError) then
+          Exit;
+      end;
+
     TLS13_SIG_RSA_PKCS1_SHA256:
       begin
         if not TryBuildRSAPKCS1v15EncodedMessageSHA256(ACertificateVerifyInput, Length(LModulus), LEM, AError) then
+          Exit;
+      end;
+
+    TLS13_SIG_RSA_PKCS1_SHA384:
+      begin
+        if not TryBuildRSAPKCS1v15EncodedMessageSHA384(ACertificateVerifyInput, Length(LModulus), LEM, AError) then
           Exit;
       end;
   end;

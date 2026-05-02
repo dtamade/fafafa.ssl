@@ -14,6 +14,20 @@ uses
   fafafa.ssl.tls13.wire;
 
 type
+  TTLS13EarlyDataSecrets = record
+    Valid: Boolean;
+    CipherSuite: Word;
+    HashSize: Integer;
+    KeyLength: Integer;
+    IVLength: Integer;
+
+    TranscriptHash: TBytes;
+    EarlySecret: TBytes;
+    ClientEarlyTrafficSecret: TBytes;
+    ClientEarlyKey: TBytes;
+    ClientEarlyIV: TBytes;
+  end;
+
   TTLS13HandshakeSecrets = record
     Valid: Boolean;
     CipherSuite: Word;
@@ -36,13 +50,26 @@ type
     ServerHandshakeIV: TBytes;
   end;
 
+procedure InitTLS13EarlyDataSecrets(out ASecrets: TTLS13EarlyDataSecrets);
+procedure ClearTLS13EarlyDataSecrets(var ASecrets: TTLS13EarlyDataSecrets);
 procedure InitTLS13HandshakeSecrets(out ASecrets: TTLS13HandshakeSecrets);
 procedure ClearTLS13HandshakeSecrets(var ASecrets: TTLS13HandshakeSecrets);
 
 function TLS13CipherSuiteIsSHA256(ACipherSuite: Word): Boolean;
 function TLS13CipherSuiteIsSHA384(ACipherSuite: Word): Boolean;
+function TLS13CipherSuitesShareHash(ALeftCipherSuite, ARightCipherSuite: Word): Boolean;
 function TLS13CipherSuiteHashSize(ACipherSuite: Word): Integer;
 function TLS13CipherSuiteKeyLength(ACipherSuite: Word): Integer;
+function TLS13ComputePSKBinderForCipherSuite(
+  ACipherSuite: Word;
+  const APSK, APartialClientHello: TBytes
+): TBytes;
+function TryDeriveTLS13ClientEarlyDataSecrets(
+  ACipherSuite: Word;
+  const APSK, AClientHelloHandshake: TBytes;
+  out ASecrets: TTLS13EarlyDataSecrets;
+  out AError: string
+): Boolean;
 
 function TryDeriveTLS13HandshakeSecrets(
   ACipherSuite: Word;
@@ -52,11 +79,19 @@ function TryDeriveTLS13HandshakeSecrets(
   out AError: string
 ): Boolean;
 
+function TryDeriveTLS13HandshakeSecretsWithPSK(
+  ACipherSuite: Word;
+  const ASharedSecret, ATranscriptData, APSK: TBytes;
+  out ASecrets: TTLS13HandshakeSecrets;
+  out AError: string
+): Boolean;
+
 implementation
 
 uses
   fafafa.ssl.crypto.hash,
-  fafafa.ssl.tls13.primitives;
+  fafafa.ssl.tls13.primitives,
+  fafafa.ssl.tls13.finished;
 
 const
   TLS13_SHA256_HASH_SIZE = 32;
@@ -78,6 +113,21 @@ begin
   SetLength(ASecrets.ServerHandshakeIV, 0);
 end;
 
+procedure InitTLS13EarlyDataSecrets(out ASecrets: TTLS13EarlyDataSecrets);
+begin
+  FillChar(ASecrets, SizeOf(ASecrets), 0);
+  SetLength(ASecrets.TranscriptHash, 0);
+  SetLength(ASecrets.EarlySecret, 0);
+  SetLength(ASecrets.ClientEarlyTrafficSecret, 0);
+  SetLength(ASecrets.ClientEarlyKey, 0);
+  SetLength(ASecrets.ClientEarlyIV, 0);
+end;
+
+procedure ClearTLS13EarlyDataSecrets(var ASecrets: TTLS13EarlyDataSecrets);
+begin
+  InitTLS13EarlyDataSecrets(ASecrets);
+end;
+
 procedure ClearTLS13HandshakeSecrets(var ASecrets: TTLS13HandshakeSecrets);
 begin
   InitTLS13HandshakeSecrets(ASecrets);
@@ -93,6 +143,13 @@ end;
 function TLS13CipherSuiteIsSHA384(ACipherSuite: Word): Boolean;
 begin
   Result := ACipherSuite = TLS13_CIPHER_AES_256_GCM_SHA384;
+end;
+
+function TLS13CipherSuitesShareHash(ALeftCipherSuite, ARightCipherSuite: Word): Boolean;
+begin
+  Result :=
+    (TLS13CipherSuiteIsSHA256(ALeftCipherSuite) and TLS13CipherSuiteIsSHA256(ARightCipherSuite)) or
+    (TLS13CipherSuiteIsSHA384(ALeftCipherSuite) and TLS13CipherSuiteIsSHA384(ARightCipherSuite));
 end;
 
 function TLS13CipherSuiteHashSize(ACipherSuite: Word): Integer;
@@ -156,6 +213,116 @@ begin
   SetLength(Result, 0);
 end;
 
+function TLS13ComputePSKBinderForCipherSuite(
+  ACipherSuite: Word;
+  const APSK, APartialClientHello: TBytes
+): TBytes;
+var
+  LHashSize: Integer;
+  LZeroLength: TBytes;
+  LEmptyHash: TBytes;
+  LEarlySecret: TBytes;
+  LBinderKey: TBytes;
+  LPartialHash: TBytes;
+begin
+  SetLength(Result, 0);
+  LHashSize := TLS13CipherSuiteHashSize(ACipherSuite);
+  if (LHashSize <= 0) or (Length(APSK) <> LHashSize) then
+    Exit;
+
+  SetLength(LZeroLength, 0);
+  LEmptyHash := HashTranscriptForSuite(ACipherSuite, LZeroLength);
+  LEarlySecret := HKDFExtractForSuite(ACipherSuite, LZeroLength, APSK);
+  LBinderKey := HKDFExpandLabelForSuite(
+    ACipherSuite,
+    LEarlySecret,
+    'res binder',
+    LEmptyHash,
+    LHashSize
+  );
+  LPartialHash := HashTranscriptForSuite(ACipherSuite, APartialClientHello);
+  Result := TLS13ComputeFinishedVerifyDataFromTrafficSecretForCipherSuite(
+    ACipherSuite,
+    LBinderKey,
+    LPartialHash
+  );
+end;
+
+function TryDeriveTLS13ClientEarlyDataSecrets(
+  ACipherSuite: Word;
+  const APSK, AClientHelloHandshake: TBytes;
+  out ASecrets: TTLS13EarlyDataSecrets;
+  out AError: string
+): Boolean;
+var
+  LHashSize: Integer;
+  LKeyLength: Integer;
+  LZeroLength: TBytes;
+begin
+  InitTLS13EarlyDataSecrets(ASecrets);
+  AError := '';
+  Result := False;
+
+  LHashSize := TLS13CipherSuiteHashSize(ACipherSuite);
+  if LHashSize <= 0 then
+  begin
+    AError := Format(
+      'Unsupported TLS 1.3 cipher suite for client early-data key schedule: 0x%.4x',
+      [ACipherSuite]
+    );
+    Exit;
+  end;
+
+  if Length(APSK) <> LHashSize then
+  begin
+    AError := Format(
+      'TLS 1.3 early-data PSK length must be %d bytes for selected hash path (actual=%d)',
+      [LHashSize, Length(APSK)]
+    );
+    Exit;
+  end;
+
+  LKeyLength := TLS13CipherSuiteKeyLength(ACipherSuite);
+  if LKeyLength <= 0 then
+  begin
+    AError := 'Unsupported TLS 1.3 cipher suite key length';
+    Exit;
+  end;
+
+  SetLength(LZeroLength, 0);
+
+  ASecrets.Valid := True;
+  ASecrets.CipherSuite := ACipherSuite;
+  ASecrets.HashSize := LHashSize;
+  ASecrets.KeyLength := LKeyLength;
+  ASecrets.IVLength := TLS13_DEFAULT_IV_SIZE;
+  ASecrets.TranscriptHash := HashTranscriptForSuite(ACipherSuite, AClientHelloHandshake);
+  ASecrets.EarlySecret := HKDFExtractForSuite(ACipherSuite, LZeroLength, APSK);
+  ASecrets.ClientEarlyTrafficSecret := HKDFExpandLabelForSuite(
+    ACipherSuite,
+    ASecrets.EarlySecret,
+    'c e traffic',
+    ASecrets.TranscriptHash,
+    LHashSize
+  );
+  ASecrets.ClientEarlyKey := HKDFExpandLabelForSuite(
+    ACipherSuite,
+    ASecrets.ClientEarlyTrafficSecret,
+    'key',
+    LZeroLength,
+    LKeyLength
+  );
+  ASecrets.ClientEarlyIV := HKDFExpandLabelForSuite(
+    ACipherSuite,
+    ASecrets.ClientEarlyTrafficSecret,
+    'iv',
+    LZeroLength,
+    TLS13_DEFAULT_IV_SIZE
+  );
+
+  Result := True;
+end;
+
 function TryDeriveTLS13HandshakeSecrets(
   ACipherSuite: Word;
   const ASharedSecret: TBytes;
@@ -205,6 +372,122 @@ begin
   ASecrets.TranscriptHash := HashTranscriptForSuite(ACipherSuite, ATranscriptData);
 
   ASecrets.EarlySecret := HKDFExtractForSuite(ACipherSuite, LZeroLength, LZeroHash);
+  ASecrets.DerivedSecret := HKDFExpandLabelForSuite(
+    ACipherSuite,
+    ASecrets.EarlySecret,
+    'derived',
+    LEmptyHash,
+    LHashSize
+  );
+
+  ASecrets.HandshakeSecret := HKDFExtractForSuite(ACipherSuite, ASecrets.DerivedSecret, ASharedSecret);
+
+  ASecrets.ClientHandshakeTrafficSecret := HKDFExpandLabelForSuite(
+    ACipherSuite,
+    ASecrets.HandshakeSecret,
+    'c hs traffic',
+    ASecrets.TranscriptHash,
+    LHashSize
+  );
+
+  ASecrets.ServerHandshakeTrafficSecret := HKDFExpandLabelForSuite(
+    ACipherSuite,
+    ASecrets.HandshakeSecret,
+    's hs traffic',
+    ASecrets.TranscriptHash,
+    LHashSize
+  );
+
+  ASecrets.ClientHandshakeKey := HKDFExpandLabelForSuite(
+    ACipherSuite,
+    ASecrets.ClientHandshakeTrafficSecret,
+    'key',
+    LZeroLength,
+    LKeyLength
+  );
+
+  ASecrets.ServerHandshakeKey := HKDFExpandLabelForSuite(
+    ACipherSuite,
+    ASecrets.ServerHandshakeTrafficSecret,
+    'key',
+    LZeroLength,
+    LKeyLength
+  );
+
+  ASecrets.ClientHandshakeIV := HKDFExpandLabelForSuite(
+    ACipherSuite,
+    ASecrets.ClientHandshakeTrafficSecret,
+    'iv',
+    LZeroLength,
+    TLS13_DEFAULT_IV_SIZE
+  );
+
+  ASecrets.ServerHandshakeIV := HKDFExpandLabelForSuite(
+    ACipherSuite,
+    ASecrets.ServerHandshakeTrafficSecret,
+    'iv',
+    LZeroLength,
+    TLS13_DEFAULT_IV_SIZE
+  );
+
+  Result := True;
+end;
+
+function TryDeriveTLS13HandshakeSecretsWithPSK(
+  ACipherSuite: Word;
+  const ASharedSecret, ATranscriptData, APSK: TBytes;
+  out ASecrets: TTLS13HandshakeSecrets;
+  out AError: string
+): Boolean;
+var
+  LHashSize: Integer;
+  LKeyLength: Integer;
+  LZeroLength, LEmptyHash: TBytes;
+begin
+  InitTLS13HandshakeSecrets(ASecrets);
+  AError := '';
+  Result := False;
+
+  LHashSize := TLS13CipherSuiteHashSize(ACipherSuite);
+  if LHashSize <= 0 then
+  begin
+    AError := Format('Unsupported TLS 1.3 cipher suite for PSK handshake key schedule: 0x%.4x', [ACipherSuite]);
+    Exit;
+  end;
+
+  if Length(APSK) <> LHashSize then
+  begin
+    AError := Format(
+      'TLS 1.3 PSK length must be %d bytes for selected hash path (actual=%d)',
+      [LHashSize, Length(APSK)]
+    );
+    Exit;
+  end;
+
+  LKeyLength := TLS13CipherSuiteKeyLength(ACipherSuite);
+  if LKeyLength <= 0 then
+  begin
+    AError := 'Unsupported TLS 1.3 cipher suite key length';
+    Exit;
+  end;
+
+  if Length(ASharedSecret) <> 32 then
+  begin
+    AError := 'X25519 shared secret length must be 32 bytes';
+    Exit;
+  end;
+
+  SetLength(LZeroLength, 0);
+  LEmptyHash := HashTranscriptForSuite(ACipherSuite, LZeroLength);
+
+  ASecrets.Valid := True;
+  ASecrets.CipherSuite := ACipherSuite;
+  ASecrets.HashSize := LHashSize;
+  ASecrets.KeyLength := LKeyLength;
+  ASecrets.IVLength := TLS13_DEFAULT_IV_SIZE;
+  ASecrets.TranscriptHash := HashTranscriptForSuite(ACipherSuite, ATranscriptData);
+
+  ASecrets.EarlySecret := HKDFExtractForSuite(ACipherSuite, LZeroLength, APSK);
   ASecrets.DerivedSecret := HKDFExpandLabelForSuite(
     ACipherSuite,
     ASecrets.EarlySecret,

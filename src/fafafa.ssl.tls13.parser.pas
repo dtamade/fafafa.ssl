@@ -14,11 +14,18 @@ uses
   fafafa.ssl.tls13.wire;
 
 type
+  TTLS13EncryptedExtensionsInfo = record
+    Valid: Boolean;
+    HasEarlyData: Boolean;
+  end;
+
   TTLS13ServerHelloInfo = record
     Valid: Boolean;
     LegacyVersion: Word;
     SelectedVersion: Word;
     SelectedCipherSuite: Word;
+    HasPreSharedKey: Boolean;
+    SelectedPSKIdentity: Word;
     HasKeyShare: Boolean;
     KeyShareGroup: Word;
     KeyShareLength: Word;
@@ -27,8 +34,18 @@ type
 
 function TryExtractHandshakePayloadFromRecord(const ARecord: TBytes; out AHandshake: TBytes): Boolean;
 function TryParseServerHelloFromHandshake(const AHandshake: TBytes; out AInfo: TTLS13ServerHelloInfo): Boolean;
+function TryParseTLS13EncryptedExtensions(
+  const AHandshakeMessage: TBytes;
+  out AInfo: TTLS13EncryptedExtensionsInfo;
+  out AError: string
+): Boolean;
 
 implementation
+
+procedure InitEncryptedExtensionsInfo(out AInfo: TTLS13EncryptedExtensionsInfo);
+begin
+  FillChar(AInfo, SizeOf(AInfo), 0);
+end;
 
 procedure InitInfo(out AInfo: TTLS13ServerHelloInfo);
 begin
@@ -167,6 +184,14 @@ begin
           if LPeerShareLen > 0 then
             Move(AHandshake[LExtDataStart + 4], AInfo.PeerKeyShare[0], LPeerShareLen);
         end;
+
+      TLS_EXTENSION_PRE_SHARED_KEY:
+        begin
+          if LExtLen <> 2 then
+            Exit;
+          AInfo.HasPreSharedKey := True;
+          AInfo.SelectedPSKIdentity := ReadUInt16(AHandshake, LExtDataStart);
+        end;
     end;
 
     Inc(LOffset, LExtLen);
@@ -174,6 +199,92 @@ begin
 
   if LOffset <> LExtEnd then
     Exit;
+
+  AInfo.Valid := True;
+  Result := True;
+end;
+
+function TryParseTLS13EncryptedExtensions(
+  const AHandshakeMessage: TBytes;
+  out AInfo: TTLS13EncryptedExtensionsInfo;
+  out AError: string
+): Boolean;
+var
+  LBodyLen: Cardinal;
+  LOffset: Integer;
+  LExtensionsLen: Integer;
+  LExtensionsEnd: Integer;
+  LExtType: Word;
+  LExtLen: Word;
+begin
+  InitEncryptedExtensionsInfo(AInfo);
+  AError := '';
+  Result := False;
+
+  if Length(AHandshakeMessage) < 6 then
+  begin
+    AError := 'EncryptedExtensions handshake is too short';
+    Exit;
+  end;
+
+  if AHandshakeMessage[0] <> TLS_HANDSHAKE_TYPE_ENCRYPTED_EXTENSIONS then
+  begin
+    AError := Format(
+      'Unexpected handshake type %d for EncryptedExtensions parser',
+      [AHandshakeMessage[0]]
+    );
+    Exit;
+  end;
+
+  LBodyLen := ReadUInt24(AHandshakeMessage, 1);
+  if Length(AHandshakeMessage) <> 4 + Integer(LBodyLen) then
+  begin
+    AError := 'EncryptedExtensions length mismatch';
+    Exit;
+  end;
+
+  LOffset := 4;
+  LExtensionsLen := ReadUInt16(AHandshakeMessage, LOffset);
+  Inc(LOffset, 2);
+  LExtensionsEnd := LOffset + LExtensionsLen;
+  if LExtensionsEnd <> Length(AHandshakeMessage) then
+  begin
+    AError := 'EncryptedExtensions extension block length mismatch';
+    Exit;
+  end;
+
+  while LOffset + 4 <= LExtensionsEnd do
+  begin
+    LExtType := ReadUInt16(AHandshakeMessage, LOffset);
+    LExtLen := ReadUInt16(AHandshakeMessage, LOffset + 2);
+    Inc(LOffset, 4);
+
+    if LOffset + Integer(LExtLen) > LExtensionsEnd then
+    begin
+      AError := 'EncryptedExtensions extension exceeds extension block';
+      Exit;
+    end;
+
+    case LExtType of
+      TLS_EXTENSION_EARLY_DATA:
+        begin
+          if LExtLen <> 0 then
+          begin
+            AError := 'EncryptedExtensions early_data extension must be empty';
+            Exit;
+          end;
+          AInfo.HasEarlyData := True;
+        end;
+    end;
+
+    Inc(LOffset, Integer(LExtLen));
+  end;
+
+  if LOffset <> LExtensionsEnd then
+  begin
+    AError := 'EncryptedExtensions extension block has trailing bytes';
+    Exit;
+  end;
 
   AInfo.Valid := True;
   Result := True;

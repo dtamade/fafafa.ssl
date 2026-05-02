@@ -23,6 +23,12 @@ type
     TicketNonce: TBytes;
     Ticket: TBytes;
     Extensions: TBytes;
+    HasMaxEarlyDataSize: Boolean;
+    MaxEarlyDataSize: Cardinal;
+  end;
+
+  TTLS13EndOfEarlyDataInfo = record
+    Valid: Boolean;
   end;
 
   TTLS13KeyUpdateInfo = record
@@ -31,11 +37,25 @@ type
   end;
 
 procedure InitTLS13NewSessionTicket(out ATicket: TTLS13NewSessionTicket);
+procedure InitTLS13EndOfEarlyDataInfo(out AInfo: TTLS13EndOfEarlyDataInfo);
 procedure InitTLS13KeyUpdateInfo(out AInfo: TTLS13KeyUpdateInfo);
+function BuildTLS13NewSessionTicketHandshake(
+  ATicketLifetime: Cardinal;
+  ATicketAgeAdd: Cardinal;
+  const ATicketNonce: TBytes;
+  const ATicket: TBytes;
+  const AExtensions: TBytes
+): TBytes;
 
 function TryParseTLS13NewSessionTicket(
   const AHandshakeMessage: TBytes;
   out ATicket: TTLS13NewSessionTicket;
+  out AError: string
+): Boolean;
+function BuildTLS13EndOfEarlyDataHandshake: TBytes;
+function TryParseTLS13EndOfEarlyData(
+  const AHandshakeMessage: TBytes;
+  out AInfo: TTLS13EndOfEarlyDataInfo;
   out AError: string
 ): Boolean;
 
@@ -70,9 +90,98 @@ begin
   SetLength(ATicket.Extensions, 0);
 end;
 
+procedure InitTLS13EndOfEarlyDataInfo(out AInfo: TTLS13EndOfEarlyDataInfo);
+begin
+  FillChar(AInfo, SizeOf(AInfo), 0);
+end;
+
 procedure InitTLS13KeyUpdateInfo(out AInfo: TTLS13KeyUpdateInfo);
 begin
   FillChar(AInfo, SizeOf(AInfo), 0);
+end;
+
+function ParseNewSessionTicketExtensions(
+  const AExtensions: TBytes;
+  var ATicket: TTLS13NewSessionTicket;
+  out AError: string
+): Boolean;
+var
+  LOffset: Integer;
+  LExtType: Word;
+  LExtLen: Word;
+begin
+  AError := '';
+  Result := False;
+  LOffset := 0;
+
+  while LOffset + 4 <= Length(AExtensions) do
+  begin
+    LExtType := ReadUInt16(AExtensions, LOffset);
+    LExtLen := ReadUInt16(AExtensions, LOffset + 2);
+    Inc(LOffset, 4);
+
+    if LOffset + Integer(LExtLen) > Length(AExtensions) then
+    begin
+      AError := 'NewSessionTicket extension length exceeds extension block';
+      Exit;
+    end;
+
+    case LExtType of
+      TLS_EXTENSION_EARLY_DATA:
+        begin
+          if LExtLen = 4 then
+          begin
+            ATicket.HasMaxEarlyDataSize := True;
+            ATicket.MaxEarlyDataSize := ReadUInt32BE(AExtensions, LOffset);
+          end;
+        end;
+    end;
+
+    Inc(LOffset, Integer(LExtLen));
+  end;
+
+  if LOffset <> Length(AExtensions) then
+  begin
+    AError := 'NewSessionTicket extensions have trailing bytes';
+    Exit;
+  end;
+
+  Result := True;
+end;
+
+function BuildTLS13NewSessionTicketHandshake(
+  ATicketLifetime: Cardinal;
+  ATicketAgeAdd: Cardinal;
+  const ATicketNonce: TBytes;
+  const ATicket: TBytes;
+  const AExtensions: TBytes
+): TBytes;
+begin
+  if Length(ATicket) = 0 then
+    raise Exception.Create('NewSessionTicket ticket must not be empty');
+  if Length(ATicketNonce) > 255 then
+    raise Exception.Create('NewSessionTicket ticket_nonce length exceeds 255 bytes');
+
+  SetLength(Result, 0);
+  AppendByte(Result, TLS_HANDSHAKE_TYPE_NEW_SESSION_TICKET);
+  AppendUInt24(Result, 8 + 1 + Length(ATicketNonce) + 2 + Length(ATicket) + 2 + Length(AExtensions));
+
+  AppendByte(Result, Byte((ATicketLifetime shr 24) and $FF));
+  AppendByte(Result, Byte((ATicketLifetime shr 16) and $FF));
+  AppendByte(Result, Byte((ATicketLifetime shr 8) and $FF));
+  AppendByte(Result, Byte(ATicketLifetime and $FF));
+
+  AppendByte(Result, Byte((ATicketAgeAdd shr 24) and $FF));
+  AppendByte(Result, Byte((ATicketAgeAdd shr 16) and $FF));
+  AppendByte(Result, Byte((ATicketAgeAdd shr 8) and $FF));
+  AppendByte(Result, Byte(ATicketAgeAdd and $FF));
+
+  AppendByte(Result, Byte(Length(ATicketNonce)));
+  AppendBytes(Result, ATicketNonce);
+  AppendUInt16(Result, Word(Length(ATicket)));
+  AppendBytes(Result, ATicket);
+  AppendUInt16(Result, Word(Length(AExtensions)));
+  AppendBytes(Result, AExtensions);
 end;
 
 function TryParseTLS13NewSessionTicket(
@@ -190,7 +299,61 @@ begin
   if LExtLen > 0 then
     Move(AHandshakeMessage[LOffset], ATicket.Extensions[0], LExtLen);
 
+  if not ParseNewSessionTicketExtensions(ATicket.Extensions, ATicket, AError) then
+    Exit;
+
   ATicket.Valid := True;
+  Result := True;
+end;
+
+function BuildTLS13EndOfEarlyDataHandshake: TBytes;
+begin
+  SetLength(Result, 0);
+  AppendByte(Result, TLS_HANDSHAKE_TYPE_END_OF_EARLY_DATA);
+  AppendUInt24(Result, 0);
+end;
+
+function TryParseTLS13EndOfEarlyData(
+  const AHandshakeMessage: TBytes;
+  out AInfo: TTLS13EndOfEarlyDataInfo;
+  out AError: string
+): Boolean;
+var
+  LBodyLen: Cardinal;
+begin
+  InitTLS13EndOfEarlyDataInfo(AInfo);
+  AError := '';
+  Result := False;
+
+  if Length(AHandshakeMessage) < 4 then
+  begin
+    AError := 'Handshake message is too short';
+    Exit;
+  end;
+
+  if AHandshakeMessage[0] <> TLS_HANDSHAKE_TYPE_END_OF_EARLY_DATA then
+  begin
+    AError := Format('Unexpected handshake type %d for EndOfEarlyData parser', [AHandshakeMessage[0]]);
+    Exit;
+  end;
+
+  LBodyLen := ReadUInt24(AHandshakeMessage, 1);
+  if Length(AHandshakeMessage) <> 4 + Integer(LBodyLen) then
+  begin
+    AError := Format(
+      'EndOfEarlyData length mismatch (expected=%d actual=%d)',
+      [4 + Integer(LBodyLen), Length(AHandshakeMessage)]
+    );
+    Exit;
+  end;
+
+  if LBodyLen <> 0 then
+  begin
+    AError := Format('Invalid EndOfEarlyData body length %d', [Integer(LBodyLen)]);
+    Exit;
+  end;
+
+  AInfo.Valid := True;
   Result := True;
 end;
 

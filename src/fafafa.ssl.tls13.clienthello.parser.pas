@@ -32,14 +32,25 @@ type
     HasSupportedVersions: Boolean;
     HasSignatureAlgorithms: Boolean;
     HasKeyShare: Boolean;
+    HasEarlyData: Boolean;
     KeyShareGroup: Word;
     KeyShareLength: Word;
     PeerKeyShare: TBytes;
+    HasPreSharedKey: Boolean;
+    PSKIdentityCount: Integer;
+    FirstPSKIdentity: TBytes;
+    FirstPSKObfuscatedTicketAge: Cardinal;
+    FirstPSKBinder: TBytes;
   end;
 
 function TryParseTLS13ClientHelloFromHandshake(
   const AHandshake: TBytes;
   out AInfo: TTLS13ClientHelloInfo;
+  out AError: string
+): Boolean;
+function TryBuildTLS13ClientHelloPSKBinderTranscript(
+  const AHandshake: TBytes;
+  out APartialHandshake: TBytes;
   out AError: string
 ): Boolean;
 
@@ -58,6 +69,20 @@ begin
   SetLength(AInfo.SupportedVersions, 0);
   SetLength(AInfo.SignatureAlgorithms, 0);
   SetLength(AInfo.PeerKeyShare, 0);
+  SetLength(AInfo.FirstPSKIdentity, 0);
+  SetLength(AInfo.FirstPSKBinder, 0);
+end;
+
+function ReadUInt32BE(const AData: TBytes; AOffset: Integer): Cardinal;
+begin
+  if (AOffset < 0) or (AOffset + 3 >= Length(AData)) then
+    raise Exception.Create('Invalid uint32 offset');
+
+  Result :=
+    (Cardinal(AData[AOffset]) shl 24) or
+    (Cardinal(AData[AOffset + 1]) shl 16) or
+    (Cardinal(AData[AOffset + 2]) shl 8) or
+    Cardinal(AData[AOffset + 3]);
 end;
 
 function TLS13ClientHelloSupportsVersion(const AInfo: TTLS13ClientHelloInfo; AVersion: Word): Boolean;
@@ -259,6 +284,150 @@ begin
   AInfo.HasKeyShare := LFoundAny;
 end;
 
+procedure ParsePreSharedKeyExtension(
+  const AHandshake: TBytes;
+  ADataOffset, ADataLength: Integer;
+  var AInfo: TTLS13ClientHelloInfo;
+  out AError: string
+);
+var
+  LOffset: Integer;
+  LIdentitiesLen: Integer;
+  LIdentitiesEnd: Integer;
+  LIdentityLen: Integer;
+  LBindersLen: Integer;
+  LBindersEnd: Integer;
+  LBinderLen: Integer;
+  LIdentityCount: Integer;
+  LBinderCount: Integer;
+begin
+  AError := '';
+  if ADataLength < 4 then
+  begin
+    AError := 'pre_shared_key extension is too short';
+    Exit;
+  end;
+
+  LOffset := ADataOffset;
+  LIdentitiesLen := ReadUInt16(AHandshake, LOffset);
+  Inc(LOffset, 2);
+  LIdentitiesEnd := LOffset + LIdentitiesLen;
+  if LIdentitiesEnd + 2 > ADataOffset + ADataLength then
+  begin
+    AError := 'pre_shared_key identities length exceeds extension';
+    Exit;
+  end;
+
+  LIdentityCount := 0;
+  while LOffset < LIdentitiesEnd do
+  begin
+    if LOffset + 2 > LIdentitiesEnd then
+    begin
+      AError := 'pre_shared_key identity is missing length';
+      Exit;
+    end;
+
+    LIdentityLen := ReadUInt16(AHandshake, LOffset);
+    Inc(LOffset, 2);
+    if LOffset + LIdentityLen + 4 > LIdentitiesEnd then
+    begin
+      AError := 'pre_shared_key identity exceeds identities vector';
+      Exit;
+    end;
+
+    if LIdentityCount = 0 then
+    begin
+      SetLength(AInfo.FirstPSKIdentity, LIdentityLen);
+      if LIdentityLen > 0 then
+        Move(AHandshake[LOffset], AInfo.FirstPSKIdentity[0], LIdentityLen);
+      AInfo.FirstPSKObfuscatedTicketAge := ReadUInt32BE(AHandshake, LOffset + LIdentityLen);
+    end;
+
+    Inc(LOffset, LIdentityLen + 4);
+    Inc(LIdentityCount);
+  end;
+
+  if LOffset <> LIdentitiesEnd then
+  begin
+    AError := 'pre_shared_key identities vector has trailing bytes';
+    Exit;
+  end;
+
+  if LIdentityCount = 0 then
+  begin
+    AError := 'pre_shared_key identities vector must not be empty';
+    Exit;
+  end;
+
+  LBindersLen := ReadUInt16(AHandshake, LOffset);
+  Inc(LOffset, 2);
+  LBindersEnd := LOffset + LBindersLen;
+  if LBindersEnd <> ADataOffset + ADataLength then
+  begin
+    AError := 'pre_shared_key binders length mismatch';
+    Exit;
+  end;
+
+  LBinderCount := 0;
+  while LOffset < LBindersEnd do
+  begin
+    if LOffset + 1 > LBindersEnd then
+    begin
+      AError := 'pre_shared_key binder is missing length';
+      Exit;
+    end;
+
+    LBinderLen := AHandshake[LOffset];
+    Inc(LOffset);
+    if LOffset + LBinderLen > LBindersEnd then
+    begin
+      AError := 'pre_shared_key binder exceeds binders vector';
+      Exit;
+    end;
+
+    if LBinderCount = 0 then
+    begin
+      SetLength(AInfo.FirstPSKBinder, LBinderLen);
+      if LBinderLen > 0 then
+        Move(AHandshake[LOffset], AInfo.FirstPSKBinder[0], LBinderLen);
+    end;
+
+    Inc(LOffset, LBinderLen);
+    Inc(LBinderCount);
+  end;
+
+  if LBinderCount = 0 then
+  begin
+    AError := 'pre_shared_key binders vector must not be empty';
+    Exit;
+  end;
+
+  if LIdentityCount <> LBinderCount then
+  begin
+    AError := 'pre_shared_key identities/binders count mismatch';
+    Exit;
+  end;
+
+  AInfo.HasPreSharedKey := LIdentityCount > 0;
+  AInfo.PSKIdentityCount := LIdentityCount;
+end;
+
+procedure ParseEarlyDataExtension(
+  ADataLength: Integer;
+  var AInfo: TTLS13ClientHelloInfo;
+  out AError: string
+);
+begin
+  AError := '';
+  if ADataLength <> 0 then
+  begin
+    AError := 'early_data extension must be empty in ClientHello';
+    Exit;
+  end;
+
+  AInfo.HasEarlyData := True;
+end;
+
 function TryParseTLS13ClientHelloFromHandshake(
   const AHandshake: TBytes;
   out AInfo: TTLS13ClientHelloInfo;
@@ -279,10 +448,12 @@ var
   LExtDataOffset: Integer;
   I: Integer;
   LExtError: string;
+  LFoundPreSharedKeyExtension: Boolean;
 begin
   InitClientHelloInfo(AInfo);
   AError := '';
   Result := False;
+  LFoundPreSharedKeyExtension := False;
 
   if Length(AHandshake) < 4 then
   begin
@@ -405,6 +576,12 @@ begin
     LExtLen := ReadUInt16(AHandshake, LOffset + 2);
     Inc(LOffset, 4);
 
+    if LFoundPreSharedKeyExtension then
+    begin
+      AError := 'pre_shared_key must be the last ClientHello extension';
+      Exit;
+    end;
+
     if LOffset + Integer(LExtLen) > LExtensionsEnd then
     begin
       AError := 'Extension length exceeds extension block';
@@ -443,6 +620,27 @@ begin
             Exit;
           end;
         end;
+
+      TLS_EXTENSION_PRE_SHARED_KEY:
+        begin
+          ParsePreSharedKeyExtension(AHandshake, LExtDataOffset, LExtLen, AInfo, LExtError);
+          if LExtError <> '' then
+          begin
+            AError := LExtError;
+            Exit;
+          end;
+          LFoundPreSharedKeyExtension := True;
+        end;
+
+      TLS_EXTENSION_EARLY_DATA:
+        begin
+          ParseEarlyDataExtension(LExtLen, AInfo, LExtError);
+          if LExtError <> '' then
+          begin
+            AError := LExtError;
+            Exit;
+          end;
+        end;
     end;
 
     Inc(LOffset, Integer(LExtLen));
@@ -454,7 +652,226 @@ begin
     Exit;
   end;
 
+  if AInfo.HasEarlyData and (not AInfo.HasPreSharedKey) then
+  begin
+    AError := 'early_data requires pre_shared_key in ClientHello';
+    Exit;
+  end;
+
   AInfo.Valid := True;
+  Result := True;
+end;
+
+function TryBuildTLS13ClientHelloPSKBinderTranscript(
+  const AHandshake: TBytes;
+  out APartialHandshake: TBytes;
+  out AError: string
+): Boolean;
+var
+  LOffset: Integer;
+  LBodyLength: Cardinal;
+  LBodyEnd: Integer;
+  LSessionIdLen: Integer;
+  LCipherSuitesLength: Integer;
+  LCompressionMethodsLength: Integer;
+  LExtensionsLength: Integer;
+  LExtensionsEnd: Integer;
+  LExtType: Word;
+  LExtLen: Word;
+  LExtDataOffset: Integer;
+  LIdentitiesLen: Integer;
+  LIdentitiesEnd: Integer;
+  LBindersLen: Integer;
+  LBindersEnd: Integer;
+  LBinderOffset: Integer;
+  LBinderLen: Integer;
+  LFoundPSK: Boolean;
+begin
+  SetLength(APartialHandshake, 0);
+  AError := '';
+  Result := False;
+
+  if Length(AHandshake) < 4 then
+  begin
+    AError := 'Handshake message is too short';
+    Exit;
+  end;
+
+  if AHandshake[0] <> TLS_HANDSHAKE_TYPE_CLIENT_HELLO then
+  begin
+    AError := 'Handshake message is not ClientHello';
+    Exit;
+  end;
+
+  LBodyLength := ReadUInt24(AHandshake, 1);
+  if LBodyLength > Cardinal(High(Integer) - 4) then
+  begin
+    AError := 'ClientHello length is too large';
+    Exit;
+  end;
+
+  LBodyEnd := 4 + Integer(LBodyLength);
+  if Length(AHandshake) <> LBodyEnd then
+  begin
+    AError := 'ClientHello body length mismatch';
+    Exit;
+  end;
+
+  LOffset := 4 + 2 + 32;
+  if LOffset + 1 > LBodyEnd then
+  begin
+    AError := 'Missing legacy_session_id length';
+    Exit;
+  end;
+
+  LSessionIdLen := AHandshake[LOffset];
+  Inc(LOffset);
+  if LOffset + LSessionIdLen > LBodyEnd then
+  begin
+    AError := 'legacy_session_id exceeds ClientHello body';
+    Exit;
+  end;
+  Inc(LOffset, LSessionIdLen);
+
+  if LOffset + 2 > LBodyEnd then
+  begin
+    AError := 'Missing cipher_suites length';
+    Exit;
+  end;
+  LCipherSuitesLength := ReadUInt16(AHandshake, LOffset);
+  Inc(LOffset, 2);
+  if (LCipherSuitesLength < 2) or ((LCipherSuitesLength and 1) <> 0) then
+  begin
+    AError := 'cipher_suites length is invalid';
+    Exit;
+  end;
+  if LOffset + LCipherSuitesLength > LBodyEnd then
+  begin
+    AError := 'cipher_suites exceeds ClientHello body';
+    Exit;
+  end;
+  Inc(LOffset, LCipherSuitesLength);
+
+  if LOffset + 1 > LBodyEnd then
+  begin
+    AError := 'Missing legacy_compression_methods length';
+    Exit;
+  end;
+  LCompressionMethodsLength := AHandshake[LOffset];
+  Inc(LOffset);
+  if LOffset + LCompressionMethodsLength > LBodyEnd then
+  begin
+    AError := 'legacy_compression_methods exceeds ClientHello body';
+    Exit;
+  end;
+  Inc(LOffset, LCompressionMethodsLength);
+
+  if LOffset + 2 > LBodyEnd then
+  begin
+    AError := 'Missing extensions length';
+    Exit;
+  end;
+  LExtensionsLength := ReadUInt16(AHandshake, LOffset);
+  Inc(LOffset, 2);
+  LExtensionsEnd := LOffset + LExtensionsLength;
+  if LExtensionsEnd <> LBodyEnd then
+  begin
+    AError := 'extensions length mismatch';
+    Exit;
+  end;
+
+  APartialHandshake := Copy(AHandshake);
+  LFoundPSK := False;
+  while LOffset + 4 <= LExtensionsEnd do
+  begin
+    LExtType := ReadUInt16(AHandshake, LOffset);
+    LExtLen := ReadUInt16(AHandshake, LOffset + 2);
+    Inc(LOffset, 4);
+
+    if LOffset + Integer(LExtLen) > LExtensionsEnd then
+    begin
+      AError := 'Extension length exceeds extension block';
+      Exit;
+    end;
+
+    LExtDataOffset := LOffset;
+    if LExtType = TLS_EXTENSION_PRE_SHARED_KEY then
+    begin
+      if LOffset + Integer(LExtLen) <> LExtensionsEnd then
+      begin
+        AError := 'pre_shared_key must be the last ClientHello extension';
+        Exit;
+      end;
+
+      if LExtLen < 4 then
+      begin
+        AError := 'pre_shared_key extension is too short';
+        Exit;
+      end;
+
+      LIdentitiesLen := ReadUInt16(AHandshake, LExtDataOffset);
+      LIdentitiesEnd := LExtDataOffset + 2 + LIdentitiesLen;
+      if LIdentitiesEnd + 2 > LExtDataOffset + Integer(LExtLen) then
+      begin
+        AError := 'pre_shared_key identities length exceeds extension';
+        Exit;
+      end;
+      if LIdentitiesLen = 0 then
+      begin
+        AError := 'pre_shared_key identities vector must not be empty';
+        Exit;
+      end;
+
+      LBinderOffset := LIdentitiesEnd;
+      LBindersLen := ReadUInt16(AHandshake, LBinderOffset);
+      Inc(LBinderOffset, 2);
+      LBindersEnd := LBinderOffset + LBindersLen;
+      if LBindersEnd <> LExtDataOffset + Integer(LExtLen) then
+      begin
+        AError := 'pre_shared_key binders length mismatch';
+        Exit;
+      end;
+      if LBindersLen = 0 then
+      begin
+        AError := 'pre_shared_key binders vector must not be empty';
+        Exit;
+      end;
+
+      while LBinderOffset < LBindersEnd do
+      begin
+        if LBinderOffset + 1 > LBindersEnd then
+        begin
+          AError := 'pre_shared_key binder is missing length';
+          Exit;
+        end;
+
+        LBinderLen := AHandshake[LBinderOffset];
+        Inc(LBinderOffset);
+        if LBinderOffset + LBinderLen > LBindersEnd then
+        begin
+          AError := 'pre_shared_key binder exceeds binders vector';
+          Exit;
+        end;
+
+        if LBinderLen > 0 then
+          FillChar(APartialHandshake[LBinderOffset], LBinderLen, 0);
+        Inc(LBinderOffset, LBinderLen);
+      end;
+
+      LFoundPSK := True;
+      Break;
+    end;
+
+    Inc(LOffset, Integer(LExtLen));
+  end;
+
+  if not LFoundPSK then
+  begin
+    AError := 'ClientHello does not contain pre_shared_key';
+    SetLength(APartialHandshake, 0);
+    Exit;
+  end;
+
   Result := True;
 end;
 

@@ -42,6 +42,18 @@ type
 
 procedure InitTLS13ApplicationSecrets(out ASecrets: TTLS13ApplicationSecrets);
 procedure ClearTLS13ApplicationSecrets(var ASecrets: TTLS13ApplicationSecrets);
+function TLS13ComputeResumptionMasterSecretFromTranscriptHash(
+  ACipherSuite: Word;
+  const AMasterSecret, AHandshakeTranscriptHash: TBytes
+): TBytes;
+function TLS13DeriveResumptionPSKFromTranscriptHash(
+  ACipherSuite: Word;
+  const AMasterSecret, AHandshakeTranscriptHash, ATicketNonce: TBytes
+): TBytes;
+function TLS13DeriveResumptionPSK(
+  ACipherSuite: Word;
+  const AMasterSecret, AHandshakeTranscript, ATicketNonce: TBytes
+): TBytes;
 
 function TryDeriveTLS13ApplicationSecrets(
   ACipherSuite: Word;
@@ -100,6 +112,80 @@ end;
 procedure ClearTLS13ApplicationSecrets(var ASecrets: TTLS13ApplicationSecrets);
 begin
   InitTLS13ApplicationSecrets(ASecrets);
+end;
+
+function HashTranscriptForSuite(ACipherSuite: Word; const AData: TBytes): TBytes; forward;
+function HKDFExpandLabelForSuite(
+  ACipherSuite: Word;
+  const ASecret: TBytes;
+  const ALabel: string;
+  const AContext: TBytes;
+  ALength: Integer
+): TBytes; forward;
+
+function TLS13ComputeResumptionMasterSecretFromTranscriptHash(
+  ACipherSuite: Word;
+  const AMasterSecret, AHandshakeTranscriptHash: TBytes
+): TBytes;
+var
+  LHashSize: Integer;
+begin
+  SetLength(Result, 0);
+  LHashSize := TLS13CipherSuiteHashSize(ACipherSuite);
+  if (LHashSize <= 0) or (Length(AMasterSecret) <> LHashSize) or
+     (Length(AHandshakeTranscriptHash) <> LHashSize) then
+    Exit;
+
+  Result := HKDFExpandLabelForSuite(
+    ACipherSuite,
+    AMasterSecret,
+    'res master',
+    AHandshakeTranscriptHash,
+    LHashSize
+  );
+end;
+
+function TLS13DeriveResumptionPSKFromTranscriptHash(
+  ACipherSuite: Word;
+  const AMasterSecret, AHandshakeTranscriptHash, ATicketNonce: TBytes
+): TBytes;
+var
+  LHashSize: Integer;
+  LResumptionMasterSecret: TBytes;
+begin
+  SetLength(Result, 0);
+  LHashSize := TLS13CipherSuiteHashSize(ACipherSuite);
+  if LHashSize <= 0 then
+    Exit;
+
+  LResumptionMasterSecret := TLS13ComputeResumptionMasterSecretFromTranscriptHash(
+    ACipherSuite,
+    AMasterSecret,
+    AHandshakeTranscriptHash
+  );
+  if Length(LResumptionMasterSecret) <> LHashSize then
+    Exit;
+
+  Result := HKDFExpandLabelForSuite(
+    ACipherSuite,
+    LResumptionMasterSecret,
+    'resumption',
+    ATicketNonce,
+    LHashSize
+  );
+end;
+
+function TLS13DeriveResumptionPSK(
+  ACipherSuite: Word;
+  const AMasterSecret, AHandshakeTranscript, ATicketNonce: TBytes
+): TBytes;
+begin
+  Result := TLS13DeriveResumptionPSKFromTranscriptHash(
+    ACipherSuite,
+    AMasterSecret,
+    HashTranscriptForSuite(ACipherSuite, AHandshakeTranscript),
+    ATicketNonce
+  );
 end;
 
 function HashTranscriptForSuite(ACipherSuite: Word; const AData: TBytes): TBytes;
