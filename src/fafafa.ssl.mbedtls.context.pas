@@ -36,7 +36,8 @@ type
   TMbedTLSCertPinArray = array of TMbedTLSCertPin;
 
   { TMbedTLSContext - MbedTLS 上下文类 }
-  TMbedTLSContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess)
+  TMbedTLSContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess,
+    ISSLEarlyDataContext, ISSLServerOCSPStaplingContext)
   private
     FLibrary: ISSLLibrary;
     FContextType: TSSLContextType;
@@ -144,6 +145,21 @@ type
     procedure SetCertificatePinningEnabled(AEnabled: Boolean);
     function GetCertificatePinningEnabled: Boolean;
     procedure ClearCertificatePins;
+
+    { ISSLEarlyDataContext - TLS 1.3 Early Data (v1.4.2 存根) }
+    procedure SetClientEarlyDataEnabled(AEnabled: Boolean);
+    function GetClientEarlyDataEnabled: Boolean;
+    procedure SetServerEarlyDataPolicy(APolicy: TSSLEarlyDataServerPolicy);
+    function GetServerEarlyDataPolicy: TSSLEarlyDataServerPolicy;
+    procedure SetServerMaxEarlyDataSize(ASize: Cardinal);
+    function GetServerMaxEarlyDataSize: Cardinal;
+
+    { ISSLServerOCSPStaplingContext - 服务端 OCSP Stapling (v1.4.2 存根) }
+    procedure ClearServerStapledOCSPResponse;
+    procedure SetServerStapledOCSPResponse(const AResponseDER: TBytes);
+    procedure LoadServerStapledOCSPResponseFile(const AFileName: string);
+    function HasServerStapledOCSPResponse: Boolean;
+    function GetServerStapledOCSPResponse: TBytes;
 
     { 证书固定访问（供 Connection 使用）}
     function GetCertificatePins: TMbedTLSCertPinArray;
@@ -1017,6 +1033,88 @@ begin
   FVerifyMode := [sslVerifyPeer];
   FVerifyDepth := 4;
   ApplyVerifyMode;
+end;
+
+// ============================================================================
+// ISSLEarlyDataContext - 存根实现 (v1.4.2)
+// MbedTLS 3.x Early Data API 不完整，等待 MbedTLS 4.x
+// ============================================================================
+
+procedure TMbedTLSContext.SetClientEarlyDataEnabled(AEnabled: Boolean);
+begin
+  // 存根：MbedTLS 3.x 不支持 Early Data
+  raise ESSLException.Create(
+    'Early Data not supported by MbedTLS backend (API incomplete in MbedTLS 3.x)'
+  );
+end;
+
+function TMbedTLSContext.GetClientEarlyDataEnabled: Boolean;
+begin
+  Result := False;  // 始终返回 False
+end;
+
+procedure TMbedTLSContext.SetServerEarlyDataPolicy(APolicy: TSSLEarlyDataServerPolicy);
+begin
+  // 存根：MbedTLS 3.x 不支持 Early Data
+  raise ESSLException.Create(
+    'Early Data not supported by MbedTLS backend (API incomplete in MbedTLS 3.x)'
+  );
+end;
+
+function TMbedTLSContext.GetServerEarlyDataPolicy: TSSLEarlyDataServerPolicy;
+begin
+  Result := sslEarlyDataServerReject;  // 始终返回 Reject
+end;
+
+procedure TMbedTLSContext.SetServerMaxEarlyDataSize(ASize: Cardinal);
+begin
+  // 存根：MbedTLS 3.x 不支持 Early Data
+  raise ESSLException.Create(
+    'Early Data not supported by MbedTLS backend (API incomplete in MbedTLS 3.x)'
+  );
+end;
+
+function TMbedTLSContext.GetServerMaxEarlyDataSize: Cardinal;
+begin
+  Result := 0;  // 始终返回 0
+end;
+
+// ============================================================================
+// ISSLServerOCSPStaplingContext - 存根实现 (v1.4.2)
+// ============================================================================
+
+procedure TMbedTLSContext.ClearServerStapledOCSPResponse;
+begin
+  // 存根：MbedTLS 不支持手动设置 OCSP 响应
+  raise ESSLException.Create(
+    'Server OCSP Stapling not supported by MbedTLS backend'
+  );
+end;
+
+procedure TMbedTLSContext.SetServerStapledOCSPResponse(const AResponseDER: TBytes);
+begin
+  // 存根：MbedTLS 不支持手动设置 OCSP 响应
+  raise ESSLException.Create(
+    'Server OCSP Stapling not supported by MbedTLS backend'
+  );
+end;
+
+procedure TMbedTLSContext.LoadServerStapledOCSPResponseFile(const AFileName: string);
+begin
+  // 存根：MbedTLS 不支持手动设置 OCSP 响应
+  raise ESSLException.Create(
+    'Server OCSP Stapling not supported by MbedTLS backend'
+  );
+end;
+
+function TMbedTLSContext.HasServerStapledOCSPResponse: Boolean;
+begin
+  Result := False;  // 始终返回 False
+end;
+
+function TMbedTLSContext.GetServerStapledOCSPResponse: TBytes;
+begin
+  SetLength(Result, 0);  // 始终返回空数组
 end;
 
 end.
