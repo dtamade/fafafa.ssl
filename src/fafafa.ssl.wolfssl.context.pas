@@ -36,7 +36,8 @@ type
   TWolfSSLCertPinArray = array of TWolfSSLCertPin;
 
   { TWolfSSLContext - WolfSSL 上下文类 }
-  TWolfSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess)
+  TWolfSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess,
+    ISSLEarlyDataContext, ISSLServerOCSPStaplingContext)
   private
     FLibrary: ISSLLibrary;
     FContextType: TSSLContextType;
@@ -63,6 +64,14 @@ type
     // 证书固定
     FCertPins: TWolfSSLCertPinArray;
     FPinningEnabled: Boolean;
+
+    // Early Data 相关 (v1.4.2)
+    FClientEarlyDataEnabled: Boolean;
+    FServerEarlyDataPolicy: TSSLEarlyDataServerPolicy;
+    FServerMaxEarlyDataSize: Cardinal;
+
+    // Server OCSP Stapling 相关 (v1.4.2)
+    FServerStapledOCSPResponse: TBytes;
 
     function GetWolfSSLMethod: PWOLFSSL_METHOD;
     procedure ApplyVerifyMode;
@@ -136,6 +145,21 @@ type
     procedure SetCertificatePinningEnabled(AEnabled: Boolean);
     function GetCertificatePinningEnabled: Boolean;
     procedure ClearCertificatePins;
+
+    { ISSLEarlyDataContext - TLS 1.3 Early Data 配置 (v1.4.2) }
+    procedure SetClientEarlyDataEnabled(AEnabled: Boolean);
+    function GetClientEarlyDataEnabled: Boolean;
+    procedure SetServerEarlyDataPolicy(APolicy: TSSLEarlyDataServerPolicy);
+    function GetServerEarlyDataPolicy: TSSLEarlyDataServerPolicy;
+    procedure SetServerMaxEarlyDataSize(ASize: Cardinal);
+    function GetServerMaxEarlyDataSize: Cardinal;
+
+    { ISSLServerOCSPStaplingContext - 服务端 OCSP Stapling (v1.4.2) }
+    procedure ClearServerStapledOCSPResponse;
+    procedure SetServerStapledOCSPResponse(const AResponseDER: TBytes);
+    procedure LoadServerStapledOCSPResponseFile(const AFileName: string);
+    function HasServerStapledOCSPResponse: Boolean;
+    function GetServerStapledOCSPResponse: TBytes;
 
     { 证书固定访问（供 Connection 使用）}
     function GetCertificatePins: TWolfSSLCertPinArray;
@@ -346,6 +370,14 @@ begin
   // 初始化证书固定
   SetLength(FCertPins, 0);
   FPinningEnabled := False;
+
+  // 初始化 Early Data 配置 (v1.4.2)
+  FClientEarlyDataEnabled := False;
+  FServerEarlyDataPolicy := sslEarlyDataServerReject;
+  FServerMaxEarlyDataSize := 16384;  // 16KB 默认值
+
+  // 初始化 Server OCSP Stapling (v1.4.2)
+  SetLength(FServerStapledOCSPResponse, 0);
 
   // 创建 WolfSSL 上下文
   LMethod := GetWolfSSLMethod;
@@ -1591,6 +1623,145 @@ begin
     Result := 'No OCSP Response'
   else
     Result := 'Response Available';
+end;
+
+// ============================================================================
+// ISSLEarlyDataContext - TLS 1.3 Early Data 配置 (v1.4.2)
+// ============================================================================
+
+procedure TWolfSSLContext.SetClientEarlyDataEnabled(AEnabled: Boolean);
+begin
+  RequireValidContext('SetClientEarlyDataEnabled');
+  FClientEarlyDataEnabled := AEnabled;
+
+  // WolfSSL API: wolfSSL_CTX_set_max_early_data
+  if Assigned(wolfSSL_CTX_set_max_early_data) then
+  begin
+    if AEnabled then
+      wolfSSL_CTX_set_max_early_data(FWolfSSLCtx, FServerMaxEarlyDataSize)
+    else
+      wolfSSL_CTX_set_max_early_data(FWolfSSLCtx, 0);
+  end;
+end;
+
+function TWolfSSLContext.GetClientEarlyDataEnabled: Boolean;
+begin
+  Result := FClientEarlyDataEnabled;
+end;
+
+procedure TWolfSSLContext.SetServerEarlyDataPolicy(APolicy: TSSLEarlyDataServerPolicy);
+begin
+  RequireValidContext('SetServerEarlyDataPolicy');
+  FServerEarlyDataPolicy := APolicy;
+
+  // 根据策略设置 WolfSSL
+  if Assigned(wolfSSL_CTX_set_max_early_data) then
+  begin
+    case APolicy of
+      sslEarlyDataServerReject:
+        wolfSSL_CTX_set_max_early_data(FWolfSSLCtx, 0);
+      sslEarlyDataServerAccept,
+      sslEarlyDataServerIssueOnly:
+        wolfSSL_CTX_set_max_early_data(FWolfSSLCtx, FServerMaxEarlyDataSize);
+    end;
+  end;
+end;
+
+function TWolfSSLContext.GetServerEarlyDataPolicy: TSSLEarlyDataServerPolicy;
+begin
+  Result := FServerEarlyDataPolicy;
+end;
+
+procedure TWolfSSLContext.SetServerMaxEarlyDataSize(ASize: Cardinal);
+begin
+  RequireValidContext('SetServerMaxEarlyDataSize');
+  FServerMaxEarlyDataSize := ASize;
+
+  // 如果 early data 已启用，更新 WolfSSL
+  if Assigned(wolfSSL_CTX_set_max_early_data) and
+     ((FClientEarlyDataEnabled) or (FServerEarlyDataPolicy <> sslEarlyDataServerReject)) then
+  begin
+    wolfSSL_CTX_set_max_early_data(FWolfSSLCtx, ASize);
+  end;
+end;
+
+function TWolfSSLContext.GetServerMaxEarlyDataSize: Cardinal;
+begin
+  Result := FServerMaxEarlyDataSize;
+end;
+
+// ============================================================================
+// ISSLServerOCSPStaplingContext - 服务端 OCSP Stapling (v1.4.2)
+// ============================================================================
+
+procedure TWolfSSLContext.ClearServerStapledOCSPResponse;
+begin
+  RequireValidContext('ClearServerStapledOCSPResponse');
+  SetLength(FServerStapledOCSPResponse, 0);
+end;
+
+procedure TWolfSSLContext.SetServerStapledOCSPResponse(const AResponseDER: TBytes);
+begin
+  RequireValidContext('SetServerStapledOCSPResponse');
+
+  if Length(AResponseDER) = 0 then
+    raise ESSLInvalidArgument.Create(
+      'OCSP response cannot be empty',
+      sslErrInvalidParam
+    );
+
+  FServerStapledOCSPResponse := Copy(AResponseDER);
+end;
+
+procedure TWolfSSLContext.LoadServerStapledOCSPResponseFile(const AFileName: string);
+var
+  LStream: TFileStream;
+  LSize: Int64;
+begin
+  RequireValidContext('LoadServerStapledOCSPResponseFile');
+
+  if not FileExists(AFileName) then
+    raise ESSLException.CreateWithContext(
+      Format('OCSP response file not found: %s', [AFileName]),
+      sslErrLoadFailed,
+      'LoadServerStapledOCSPResponseFile'
+    );
+
+  try
+    LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
+    try
+      LSize := LStream.Size;
+      if LSize = 0 then
+        raise ESSLInvalidArgument.Create(
+          'OCSP response file is empty',
+          sslErrInvalidParam
+        );
+
+      SetLength(FServerStapledOCSPResponse, LSize);
+      LStream.ReadBuffer(FServerStapledOCSPResponse[0], LSize);
+    finally
+      LStream.Free;
+    end;
+  except
+    on E: ESSLException do
+      raise;
+    on E: Exception do
+      raise ESSLException.CreateWithContext(
+        Format('Failed to load OCSP response file: %s', [E.Message]),
+        sslErrLoadFailed,
+        'LoadServerStapledOCSPResponseFile'
+      );
+  end;
+end;
+
+function TWolfSSLContext.HasServerStapledOCSPResponse: Boolean;
+begin
+  Result := Length(FServerStapledOCSPResponse) > 0;
+end;
+
+function TWolfSSLContext.GetServerStapledOCSPResponse: TBytes;
+begin
+  Result := Copy(FServerStapledOCSPResponse);
 end;
 
 end.

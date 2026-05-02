@@ -57,6 +57,12 @@ type
   TwolfSSL_read = function(ssl: PWOLFSSL; buf: Pointer; sz: Integer): Integer; cdecl;
   TwolfSSL_write = function(ssl: PWOLFSSL; buf: Pointer; sz: Integer): Integer; cdecl;
 
+  // TLS 1.3 Early Data (v1.4.2)
+  TwolfSSL_write_early_data = function(ssl: PWOLFSSL; const buf: Pointer; sz: Integer; outSz: PInteger): Integer; cdecl;
+  TwolfSSL_read_early_data = function(ssl: PWOLFSSL; buf: Pointer; sz: Integer; outSz: PInteger): Integer; cdecl;
+  TwolfSSL_CTX_set_max_early_data = function(ctx: PWOLFSSL_CTX; sz: Cardinal): Integer; cdecl;
+  TwolfSSL_CTX_get_max_early_data = function(ctx: PWOLFSSL_CTX): Cardinal; cdecl;
+
   // 错误处理
   TwolfSSL_get_error = function(ssl: PWOLFSSL; ret: Integer): Integer; cdecl;
   TwolfSSL_ERR_error_string = function(err: Cardinal; buf: PAnsiChar): PAnsiChar; cdecl;
@@ -189,6 +195,12 @@ var
   wolfSSL_read: TwolfSSL_read = nil;
   wolfSSL_write: TwolfSSL_write = nil;
 
+  // TLS 1.3 Early Data (v1.4.2)
+  wolfSSL_write_early_data: TwolfSSL_write_early_data = nil;
+  wolfSSL_read_early_data: TwolfSSL_read_early_data = nil;
+  wolfSSL_CTX_set_max_early_data: TwolfSSL_CTX_set_max_early_data = nil;
+  wolfSSL_CTX_get_max_early_data: TwolfSSL_CTX_get_max_early_data = nil;
+
   wolfSSL_get_error: TwolfSSL_get_error = nil;
   wolfSSL_ERR_error_string: TwolfSSL_ERR_error_string = nil;
 
@@ -318,6 +330,28 @@ begin
   // I/O 函数
   wolfSSL_read := TwolfSSL_read(GetProc('wolfSSL_read'));
   wolfSSL_write := TwolfSSL_write(GetProc('wolfSSL_write'));
+
+  // TLS 1.3 Early Data (v1.4.2) - 可选 API，不存在时为 nil
+  try
+    wolfSSL_write_early_data := TwolfSSL_write_early_data(GetProc('wolfSSL_write_early_data'));
+  except
+    wolfSSL_write_early_data := nil;
+  end;
+  try
+    wolfSSL_read_early_data := TwolfSSL_read_early_data(GetProc('wolfSSL_read_early_data'));
+  except
+    wolfSSL_read_early_data := nil;
+  end;
+  try
+    wolfSSL_CTX_set_max_early_data := TwolfSSL_CTX_set_max_early_data(GetProc('wolfSSL_CTX_set_max_early_data'));
+  except
+    wolfSSL_CTX_set_max_early_data := nil;
+  end;
+  try
+    wolfSSL_CTX_get_max_early_data := TwolfSSL_CTX_get_max_early_data(GetProc('wolfSSL_CTX_get_max_early_data'));
+  except
+    wolfSSL_CTX_get_max_early_data := nil;
+  end;
 
   // 错误函数
   wolfSSL_get_error := TwolfSSL_get_error(GetProc('wolfSSL_get_error'));
