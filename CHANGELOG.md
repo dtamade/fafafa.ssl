@@ -9,7 +9,98 @@
 
 ## [Unreleased]
 
-## [Unreleased]
+---
+
+## [1.4.0] - 2026-05-02
+
+**TLS 1.3 增强版本** - 完整的 TLS 1.3 支持、证书透明度和 0-RTT Early Data
+
+### 新增功能
+
+#### TLS 1.3 协议增强
+- **完整的 TLS 1.3 实现**
+  - 应用调度支持 (`fafafa.ssl.tls13.appschedule`)
+  - 增强的 ClientHello 解析器 (`fafafa.ssl.tls13.clienthello.parser`)
+  - ECDSA 签名支持 (`fafafa.ssl.tls13.ecdsa`)
+  - 改进的 Finished 消息处理 (`fafafa.ssl.tls13.finished`)
+  - 增强的密钥调度 (`fafafa.ssl.tls13.keyschedule`)
+  - 通用 TLS 1.3 解析器工具 (`fafafa.ssl.tls13.parser`)
+  - 后握手消息支持 (`fafafa.ssl.tls13.posthandshake`)
+  - 增强的服务器证书处理 (`fafafa.ssl.tls13.servercertificate`)
+  - 显著改进的证书验证和签名验证 (`fafafa.ssl.tls13.servercertverify`)
+  - 更新的 ServerHello 处理 (`fafafa.ssl.tls13.serverhello`)
+  - Wire 协议工具 (`fafafa.ssl.tls13.wire`)
+
+#### 证书透明度 (CT) 支持
+- **CT/SCT 接口** (`fafafa.ssl.connection.base`)
+  - `ISSLCertificateTransparency` 接口
+  - `ISSLCertificateTransparencyValidation` 接口
+  - `GetCertificateTransparencyEnabled()` - 检查 CT 是否启用
+  - `GetSignedCertificateTimestampList()` - 获取 SCT 列表
+  - `GetSignedCertificateTimestampCount()` - 获取 SCT 数量
+  - `GetCertificateTransparencyStatus()` - 获取 CT 状态
+  - `HasCertificateTransparencyValidationResult()` - 检查验证结果
+  - `IsCertificateTransparencyPolicySatisfied()` - 检查策略满足
+  - `GetCertificateTransparencyValidationStatus()` - 获取验证状态
+
+#### 0-RTT Early Data API
+- **TLS 连接器增强** (`fafafa.ssl.tls`)
+  - `WithEarlyData()` - 设置 early data
+  - `TryQueueEarlyData()` - 队列 early data
+  - 改进的 `ApplyClientOptions()` - 处理空服务器名
+  - 修复 `TSSLStream.Seek()` - 返回 0 后抛出异常
+  - 正确初始化连接器字段
+
+### 改进
+
+#### 后端库更新
+- **MbedTLS** - 修复库加载和初始化
+- **WinSSL** - 改进连接处理、上下文管理和函数加载
+- **WolfSSL** - 更新库绑定
+
+#### 安全工具
+- **安全比较模块** (`fafafa.ssl.secure.compare`) - 防时序攻击的常量时间比较
+
+### 测试
+
+#### 新增测试
+- **TLS 1.3 测试套件** - 7 个新测试文件
+- **契约测试脚本** - 69 个新脚本
+- **功能测试** - 3 个新测试
+
+#### 更新测试
+- 18 个 MbedTLS 后端测试
+- 17 个 WinSSL 后端测试
+- 17 个集成和安全测试
+- 7 个基准测试和示例
+
+### 文档
+
+#### 新增文档
+- **项目规划文档** - 61 个规划和设计文档
+- **测试报告** - 29 个 Wave C 测试报告
+
+#### 更新文档
+- **用户指南** - 23 个文件更新
+- **API 参考** - 完整的 API 文档更新
+- **顶层文档** - README 和配置文档更新
+
+### 脚本和工具
+
+- 更新 28 个 Wave C 测试和 CI 脚本
+- 改进的验证 playbook
+- 增强的本地优先守护包
+
+### 统计
+
+- **总计**: 897 个文件，+166,527/-2,670 行
+
+### 兼容性
+
+- **FreePascal**: 3.2.0+
+- **OpenSSL**: 1.1.1+, 3.0+
+- **TLS 版本**: TLS 1.2, TLS 1.3
+- **平台**: Linux, macOS, Windows
 
 ---
 
