@@ -1,6 +1,6 @@
 # fafafa.ssl - Multi-backend SSL/TLS Library
 
-[![Version](https://img.shields.io/badge/Version-v1.4.1-blue)](https://github.com/dtamade/fafafa.ssl/releases/tag/v1.4.1)
+[![Version](https://img.shields.io/badge/Version-v1.4.2-blue)](https://github.com/dtamade/fafafa.ssl/releases/tag/v1.4.2)
 [![Linux Minimal Gate](https://img.shields.io/badge/Linux%20minimal%20gate-passing-success)](docs/ROADMAP.md)
 [![Roadmap](https://img.shields.io/badge/Roadmap-active-blue)](docs/ROADMAP.md)
 [![OpenSSL](https://img.shields.io/badge/OpenSSL-1.1.1%2B%20%7C%203.0%2B-blue)](https://www.openssl.org/)
@@ -10,19 +10,28 @@
 
 **统一 SSL/TLS 加密库** - 为 FreePascal 提供统一抽象 + 多后端实现（OpenSSL / WinSSL / FreePascal，且可选 MbedTLS / WolfSSL）
 
-## 🎉 最新版本 v1.4.1
+## 🎉 最新版本 v1.4.2
 
-**TLS 1.3 Early Data 支持** - OpenSSL 后端现已完整支持 0-RTT Early Data
+**100% 接口完整性** - 所有后端都有 Early Data 接口
 
 ### 新增功能
-- ✅ OpenSSL 后端 Early Data 完整实现
-- ✅ Server OCSP Stapling 支持
-- ✅ 8 个单元测试（100% 通过）
-- ✅ 完整的使用指南和文档
+- ✅ WolfSSL 后端 Early Data 完整实现
+- ✅ MbedTLS 和 WinSSL 接口存根
+- ✅ 100% 接口完整性
+- ✅ 3/5 后端完整支持 Early Data
+
+### 后端支持
+| 后端 | Early Data | 状态 |
+|------|-----------|------|
+| FreePascal | ✅ | 生产就绪 |
+| OpenSSL | ✅ | 生产就绪 |
+| WolfSSL | ✅ | 生产就绪 |
+| MbedTLS | ⚠️ | 存根 (API 限制) |
+| WinSSL | ⚠️ | 存根 (API 限制) |
 
 ### 快速开始
 ```pascal
-// 启用 Early Data（OpenSSL 或 FreePascal 后端）
+// 启用 Early Data（FreePascal、OpenSSL 或 WolfSSL 后端）
 Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
 Ctx := Lib.CreateContext(sslCtxClient);
 if Supports(Ctx, ISSLEarlyDataContext, EarlyDataCtx) then

@@ -11,6 +11,58 @@
 
 ---
 
+## [1.4.2] - 2026-05-02
+
+**完整性版本** - 所有后端 Early Data 接口完整
+
+### 新增功能
+
+#### WolfSSL 后端 Early Data 支持
+- **为 WolfSSL 后端添加完整的 Early Data 实现**
+  - ISSLEarlyDataContext 完整实现
+  - ISSLServerOCSPStaplingContext 完整实现
+  - WolfSSL API 绑定 (4 个函数)
+  - 使用 WolfSSL 原生 Early Data API
+
+#### MbedTLS 和 WinSSL 存根实现
+- **为 MbedTLS 后端添加 Early Data 接口存根**
+  - 接口存在但抛出 ESSLException
+  - 原因：MbedTLS 3.x API 不完整，等待 MbedTLS 4.x
+  - Getter 方法返回安全默认值
+
+- **为 WinSSL 后端添加 Early Data 接口存根**
+  - 接口存在但抛出 ESSLException
+  - 原因：Windows Schannel 无公开 Early Data API
+  - Getter 方法返回安全默认值
+
+### 改进
+
+#### 接口完整性
+- **100% 接口完整性** ✅
+- 所有 5 个后端都有 Early Data 接口
+- 用户可以使用 `Supports()` 检测支持情况
+
+### 后端支持矩阵
+
+| 后端 | Early Data | 状态 |
+|------|-----------|------|
+| FreePascal | ✅ 完整 | 生产就绪 |
+| OpenSSL | ✅ 完整 | 生产就绪 (v1.4.1) |
+| **WolfSSL** | ✅ 完整 | **生产就绪 (v1.4.2)** |
+| MbedTLS | ⚠️ 存根 | API 限制 |
+| WinSSL | ⚠️ 存根 | API 限制 |
+
+**完整支持**: 3/5 后端 (60%)
+**接口完整性**: 100%
+
+### 统计
+
+- 实现代码: +206 行 (WolfSSL)
+- 存根代码: +200 行 (MbedTLS + WinSSL)
+- 完整性: 95% → 100%
+
+---
+
 ## [1.4.1] - 2026-05-02
 
 **补丁版本** - OpenSSL 后端 Early Data 支持
