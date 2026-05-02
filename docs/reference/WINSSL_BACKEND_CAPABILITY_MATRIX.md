@@ -155,7 +155,7 @@ begin
 
   // 创建连接
   Conn := Ctx.CreateConnection(Socket);
-  Conn.SetServerName('example.com');
+  (Conn as ISSLClientConnection).SetServerName('example.com');
 
   if Conn.Connect then
   begin
@@ -183,15 +183,15 @@ begin
 
   // 第一次连接
   Conn1 := Ctx.CreateConnection(Socket1);
-  Conn1.SetServerName('api.example.com');
+  (Conn1 as ISSLClientConnection).SetServerName('api.example.com');
   Conn1.Connect;
   Session := Conn1.GetSession;  // 保存 Session
   Conn1.Shutdown;
 
   // 第二次连接（复用 Session）
   Conn2 := Ctx.CreateConnection(Socket2);
-  Conn2.SetServerName('api.example.com');
   Conn2.SetSession(Session);  // 设置 Session
+  (Conn2 as ISSLClientConnection).SetServerName('api.example.com');
   Conn2.Connect;
 
   if Conn2.IsSessionResumed then

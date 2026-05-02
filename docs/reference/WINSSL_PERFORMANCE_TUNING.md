@@ -44,6 +44,7 @@ begin
 
   // 第一次连接 - 完整握手
   LConn1 := LContext.CreateConnection(Socket1);
+  (LConn1 as ISSLClientConnection).SetServerName('api.example.com');
   if LConn1.Connect then
   begin
     WriteLn('第一次连接: ', MilliSecondsBetween(Now, LStartTime), ' ms');
@@ -56,6 +57,7 @@ begin
   // 第二次连接 - 复用 Session（快速握手）
   LConn2 := LContext.CreateConnection(Socket2);
   LConn2.SetSession(LSession);  // 设置 Session
+  (LConn2 as ISSLClientConnection).SetServerName('api.example.com');
   if LConn2.Connect then
   begin
     WriteLn('第二次连接: ', MilliSecondsBetween(Now, LStartTime), ' ms');
@@ -89,6 +91,7 @@ var
 begin
   LCache := TSessionCache.Create(36000);  // 10 小时
   try
+    // 假设 LConn1/LConn2 在创建时已经按 example.com 完成连接级 SNI 配置。
     // 首次连接
     if LConn1.Connect then
       LCache.Add('example.com', LConn1.GetSession);
@@ -160,6 +163,7 @@ begin
     // 从池中获取连接
     LConn := LPool.Acquire;
     try
+      // Acquire 返回的连接绑定到池的 FHost，并已完成连接级 SNI 配置。
       if LConn.IsConnected or LConn.Connect then
       begin
         LConn.WriteString('GET /api/data HTTP/1.1'#13#10#13#10);
@@ -353,6 +357,7 @@ end;
 for i := 1 to 1000 do
 begin
   LConn := LContext.CreateConnection(Socket);
+  (LConn as ISSLClientConnection).SetServerName('example.com');
   LConn.Connect;
   // 未调用 Shutdown，Session 未释放
 end;
@@ -361,6 +366,7 @@ end;
 for i := 1 to 1000 do
 begin
   LConn := LContext.CreateConnection(Socket);
+  (LConn as ISSLClientConnection).SetServerName('example.com');
   try
     if LConn.Connect then
     begin
@@ -446,6 +452,7 @@ begin
   LStart := Now;
 
   // 连接
+  // AConn 在调用前应已完成连接级 SNI 配置。
   if AConn.Connect then
   begin
     LConnected := Now;
@@ -540,16 +547,19 @@ var
   LSession: ISSLSession;
   LMetrics: array[0..99] of TConnectionMetrics;
   LAvgWithSession, LAvgWithoutSession: Int64;
+  LHost: string;
 begin
   WriteLn('=== Session 复用性能测试 ===');
 
   LContext := CreateWinSSLLibrary.CreateContext(sslCtxClient);
+  LHost := 'example.com';
 
   // 测试 1: 无 Session 复用
   WriteLn('测试 1: 无 Session 复用（100 次连接）');
   for var i := 0 to 99 do
   begin
-    LConn := LContext.CreateConnection(CreateSocket('example.com', 443));
+    LConn := LContext.CreateConnection(CreateSocket(LHost, 443));
+    (LConn as ISSLClientConnection).SetServerName(LHost);
     LMetrics[i] := MeasureConnection(LConn);
     LConn.Shutdown;
   end;
@@ -566,15 +576,17 @@ begin
   WriteLn('测试 2: 有 Session 复用（100 次连接）');
 
   // 首次连接获取 Session
-  LConn := LContext.CreateConnection(CreateSocket('example.com', 443));
+  LConn := LContext.CreateConnection(CreateSocket(LHost, 443));
+  (LConn as ISSLClientConnection).SetServerName(LHost);
   LConn.Connect;
   LSession := LConn.GetSession;
   LConn.Shutdown;
 
   for var i := 0 to 99 do
   begin
-    LConn := LContext.CreateConnection(CreateSocket('example.com', 443));
+    LConn := LContext.CreateConnection(CreateSocket(LHost, 443));
     LConn.SetSession(LSession);
+    (LConn as ISSLClientConnection).SetServerName(LHost);
     LMetrics[i] := MeasureConnection(LConn);
     LConn.Shutdown;
   end;

@@ -168,6 +168,11 @@ Ctx := TSSLContextBuilder.Create
 
 ## 下一步
 
+- 当前工程状态：`docs/test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md`
+- 当前验证链路：`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 默认编译门禁：`python3 scripts/compile_all_modules.py`
+- 本地最小门禁：`bash scripts/run_minimal_ci_gate.sh --fast-local`
+- Phase 2 入口探测：`bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
 - 详细文档：`docs/guides/QUICKSTART.md`
 - API 参考：`docs/reference/`
 - 测试用例：`tests/` 目录包含更多使用示例
@@ -185,5 +190,6 @@ bash scripts/summarize_wave_c_local_guard_history.sh --strict
 ```
 
 出现异常时：
-- 先看 `docs/test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md`
-- 再按手册顺序重跑 B123/B124/B125/B126
+- 先看 `docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- 需要回看历史故障定位顺序时，再看 `docs/test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md`
+- 再按 current-chain 页面的顺序重跑对应守护脚本

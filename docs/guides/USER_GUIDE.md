@@ -146,6 +146,7 @@ var
   LLib: ISSLLibrary;
   LContext: ISSLContext;
   LConn: ISSLConnection;
+  LClientConn: ISSLClientConnection;
   LResponse: string;
 begin
   // 1. 初始化库
@@ -167,11 +168,13 @@ begin
     // 5. 启用证书验证
     LContext.SetVerifyMode([sslVerifyPeer]);
     
-    // 6. 连接到服务器
+    // 6. 连接到服务器，并在连接级配置 SNI/hostname
     LConn := LContext.CreateConnection(ConnectToServer('example.com', 443));
+    LClientConn := LConn as ISSLClientConnection;
+    LClientConn.SetServerName('example.com');
     if LConn.Connect then
     begin
-      // 7. 验证证书主机名
+      // 7. 如需额外检查，可显式验证证书主机名
       if LConn.GetPeerCertificate.VerifyHostname('example.com') then
       begin
         // 8. 发送 HTTP 请求
@@ -583,4 +586,3 @@ LContext.SetCipherSuites('TLS_AES_128_GCM_SHA256'); // 硬件加速
 ---
 
 **反馈与支持**: [GitHub Issues](https://github.com/dtamade/fafafa.ssl/issues)
-

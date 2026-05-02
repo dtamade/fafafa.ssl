@@ -317,7 +317,7 @@ WriteLn(Format('TLS handshake: %dms', [ElapsedTime]));
 - [TLS 握手诊断工具](../tests/benchmarks/benchmark_tls_handshake_diagnostic.pas)
 - [会话复用示例](../examples/session_resumption_example.pas)
 - [性能基线数据](../tests/benchmarks/baselines/tls_handshake_baseline.json)
-- [CI 性能测试](../ci_pipeline.sh)
+- [Phase 2 基线入口脚本](../../scripts/run_phase2_performance_baseline.sh)
 
 ---
 
@@ -572,8 +572,14 @@ end;
 # 运行 random pool benchmark
 ./tests/benchmarks/bin/benchmark_random_pool
 
+# 运行 cert verify cache benchmark
+./tests/benchmarks/bin/benchmark_cert_verify_cache 500
+
 # 运行完整 benchmark 套件
-./tests/benchmarks/run_all_benchmarks.sh --iterations 1000
+bash ./tests/benchmarks/run_all_benchmarks.sh --iterations 1000 --output tmp/bench_results --bin-dir tmp/bench_bin
+
+# 运行 Wave C 基线入口（推荐，自动生成草案报告）
+bash scripts/run_phase2_performance_baseline.sh --fast-local --iterations 500 --skip-tls
 ```
 
 ### 技术实现

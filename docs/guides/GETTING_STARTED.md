@@ -6,7 +6,7 @@ fafafa.ssl 是一个 **SSL/TLS 库**：负责握手、加密传输、证书与�
 - 你需要自己创建/管理 TCP socket（或使用你喜欢的网络库）。
 - fafafa.ssl 只接管 “在已连接的传输之上跑 TLS”。
 
-## 1) 推荐入口（2025-12-31）
+## 1) 推荐入口（2026-03-24）
 
 ### 构建 TLS 配置（Context）
 使用 `fafafa.ssl.context.builder`：
@@ -126,6 +126,9 @@ end;
 
 - 看示例：`examples/`
 - 跑构建与测试：
-  - `bash build_linux.sh`
-  - `./ci_pipeline.sh build`
-  - `./ci_pipeline.sh test`
+  - `python3 scripts/compile_all_modules.py`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
+- 如果你要看当前 Wave C / local-first 入口，先看：
+  - `docs/test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md`
+  - `docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`

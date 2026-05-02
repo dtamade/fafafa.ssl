@@ -178,7 +178,7 @@ begin
 
   // 创建连接
   Conn := Ctx.CreateConnection(Socket);
-  Conn.SetServerName('example.com');
+  (Conn as ISSLClientConnection).SetServerName('example.com');
 
   if Conn.Connect then
   begin

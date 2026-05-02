@@ -42,23 +42,23 @@ begin
     .WithVerifyPeer                    // 验证对端证书
     .WithOCSPStapling(True)            // 启用 OCSP Stapling
     .WithSystemRootCerts;              // 使用系统根证书
-  
+
   Context := Builder.BuildClient;
-  
+
   // 2. 创建连接
   Connection := Context.CreateConnection(443);
-  
+
   // 3. 连接到服务器
   if Connection.Connect('example.com', 443) then
   begin
     WriteLn('连接成功!');
     WriteLn('协议版本: ', Connection.GetProtocolVersion);
     WriteLn('密码套件: ', Connection.GetCipherName);
-    
+
     // 4. 发送和接收数据
     Connection.Write('GET / HTTP/1.1'#13#10'Host: example.com'#13#10#13#10);
     // ... 读取响应
-    
+
     Connection.Disconnect;
   end;
 end.
@@ -75,93 +75,179 @@ SSL 上下文构建器,使用流式 API 配置 SSL/TLS 参数。
 #### 方法
 
 ##### WithTLS12And13
+
 ```pascal
 function WithTLS12And13: ISSLContextBuilder;
 ```
+
 启用 TLS 1.2 和 TLS 1.3 协议。
 
 **示例:**
+
 ```pascal
 Builder.WithTLS12And13;
 ```
 
 ##### WithVerifyPeer
+
 ```pascal
 function WithVerifyPeer: ISSLContextBuilder;
 ```
+
 启用对端证书验证。
 
 **示例:**
+
 ```pascal
 Builder.WithVerifyPeer;
 ```
 
 ##### WithCertificate
+
 ```pascal
 function WithCertificate(const ACertFile: string): ISSLContextBuilder;
 ```
+
 加载服务器证书。
 
 **参数:**
+
 - `ACertFile`: 证书文件路径 (PEM 格式)
 
 **示例:**
+
 ```pascal
 Builder.WithCertificate('server.crt');
 ```
 
 ##### WithPrivateKey
+
 ```pascal
 function WithPrivateKey(const AKeyFile: string): ISSLContextBuilder;
 ```
+
 加载私钥。
 
 **参数:**
+
 - `AKeyFile`: 私钥文件路径 (PEM 格式)
 
 **示例:**
+
 ```pascal
 Builder.WithPrivateKey('server.key');
 ```
 
 ##### WithOCSPStapling
+
 ```pascal
 function WithOCSPStapling(AEnabled: Boolean = True): ISSLContextBuilder;
 ```
-启用 OCSP Stapling。
+
+启用 OCSP stapling 相关的 context 选项。
 
 **参数:**
+
 - `AEnabled`: 是否启用 (默认 True)
 
+**说明:**
+
+- 在当前有 fresh evidence 的 client/runtime path 上，这会请求和消费 stapled OCSP response。
+- 不要把它理解成“所有 backend/server path 都会自动获取并附加 OCSP 响应”。
+
 **示例:**
+
 ```pascal
 Builder.WithOCSPStapling(True);
 ```
 
 ##### WithOCSPStaplingRequired
+
 ```pascal
 function WithOCSPStaplingRequired(ARequired: Boolean = True): ISSLContextBuilder;
 ```
+
 设置是否强制要求 OCSP Stapling。
 
 **参数:**
+
 - `ARequired`: 是否强制要求 (默认 True)
 
+**说明:**
+
+- 在当前支持的 client/runtime path 上，`verify-peer` 的 non-resumed full-handshake 才会对缺失或未通过当前有界校验的 stapled response fail-closed。
+- `verify-none` 和 resumed TLS 1.3 path 不会触发这条 required enforcement。
+- 这仍然属于 stapled-response path，不等于完整在线 revocation parity。
+
 **示例:**
+
 ```pascal
 Builder
   .WithOCSPStapling(True)
   .WithOCSPStaplingRequired(True);  // 强制要求 Stapling
 ```
 
+##### WithServerOCSPStapledResponseFile
+
+```pascal
+function WithServerOCSPStapledResponseFile(const AFile: string): ISSLContextBuilder;
+```
+
+为服务端 context 配置 caller-provided stapled OCSP response DER 文件。
+
+**参数:**
+
+- `AFile`: stapled OCSP response DER 文件路径
+
+**说明:**
+
+- 该配置在 `BuildServer` 时应用。
+- 如果 backend 实现了 `ISSLServerOCSPStaplingContext`，builder 会在构建阶段调用 `LoadServerStapledOCSPResponseFile(AFile)`。
+- 如果配置了该字段但 backend 不支持 `ISSLServerOCSPStaplingContext`，`BuildServer` 会直接抛出清晰配置错误，不会 silent ignore。
+- 这只负责 caller-provided material，不负责 online fetch、refresh，或 responder 调度。
+
+**示例:**
+
+```pascal
+Builder.WithServerOCSPStapledResponseFile('fixtures/ocsp/server_leaf.ocsp.der');
+```
+
+##### WithCertificateTransparencyRequired
+
+```pascal
+function WithCertificateTransparencyRequired(ARequired: Boolean = True): ISSLContextBuilder;
+```
+
+设置是否在当前 FreePascal client/runtime path 上强制要求 Certificate Transparency。
+
+**参数:**
+
+- `ARequired`: 是否强制要求 (默认 True)
+
+**说明:**
+
+- 在当前支持的 client/runtime path 上，`verify-peer` 的 non-resumed full-handshake 才会执行这条 required gate。
+- `verify-none` 和 resumed TLS 1.3 path 不会触发这条 required enforcement。
+- 一旦 gate 生效，missing SCT、validation unavailable、policy failed 都会 fail-closed。
+- 这只描述当前连接级 runtime surface，不等于所有 backend 都已经具备一致的 CT enforcement。
+
+**示例:**
+
+```pascal
+Builder.WithCertificateTransparencyRequired(True);
+```
+
 ##### BuildClient / BuildServer
+
 ```pascal
 function BuildClient: ISSLContext;
 function BuildServer: ISSLContext;
 ```
+
 构建客户端或服务端 SSL 上下文。
 
 **示例:**
+
 ```pascal
 ClientContext := Builder.BuildClient;
 ServerContext := Builder.BuildServer;
@@ -176,88 +262,111 @@ SSL/TLS 连接接口。
 #### 方法
 
 ##### Connect
+
 ```pascal
 function Connect(const AHost: string; APort: Word): Boolean;
 ```
+
 连接到服务器。
 
 **参数:**
+
 - `AHost`: 主机名或 IP 地址
 - `APort`: 端口号
 
 **返回值:**
+
 - `True`: 连接成功
 - `False`: 连接失败
 
 **示例:**
+
 ```pascal
 if Connection.Connect('example.com', 443) then
   WriteLn('连接成功');
 ```
 
 ##### Write
+
 ```pascal
 function Write(const AData: TBytes): Integer;
 function Write(const AData: string): Integer;
 ```
+
 发送数据。
 
 **参数:**
+
 - `AData`: 要发送的数据
 
 **返回值:**
+
 - 实际发送的字节数
 
 **示例:**
+
 ```pascal
 BytesSent := Connection.Write('Hello, World!');
 ```
 
 ##### Read
+
 ```pascal
 function Read(var ABuffer: TBytes; AMaxLen: Integer): Integer;
 ```
+
 接收数据。
 
 **参数:**
+
 - `ABuffer`: 接收缓冲区
 - `AMaxLen`: 最大接收字节数
 
 **返回值:**
+
 - 实际接收的字节数
 
 **示例:**
+
 ```pascal
 SetLength(Buffer, 4096);
 BytesRead := Connection.Read(Buffer, 4096);
 ```
 
 ##### GetOCSPStaplingEnabled
+
 ```pascal
 function GetOCSPStaplingEnabled: Boolean;
 ```
+
 检查是否启用了 OCSP Stapling。
 
 **返回值:**
+
 - `True`: 已启用
 - `False`: 未启用
 
 **示例:**
+
 ```pascal
 if Connection.GetOCSPStaplingEnabled then
   WriteLn('OCSP Stapling 已启用');
 ```
 
 ##### GetOCSPResponse
+
 ```pascal
 function GetOCSPResponse: TBytes;
 ```
+
 获取 OCSP 响应 (DER 编码)。
 
 **返回值:**
+
 - OCSP 响应的字节数组,未提供时返回空数组
 
 **示例:**
+
 ```pascal
 OCSPResponse := Connection.GetOCSPResponse;
 if Length(OCSPResponse) > 0 then
@@ -265,31 +374,39 @@ if Length(OCSPResponse) > 0 then
 ```
 
 ##### IsOCSPResponseVerified
+
 ```pascal
 function IsOCSPResponseVerified: Boolean;
 ```
+
 检查 OCSP 响应是否已验证。
 
 **返回值:**
+
 - `True`: 已验证且证书状态为 Good
 - `False`: 未验证或验证失败
 
 **示例:**
+
 ```pascal
 if Connection.IsOCSPResponseVerified then
   WriteLn('OCSP 响应已验证,证书有效');
 ```
 
 ##### GetOCSPResponseStatus
+
 ```pascal
 function GetOCSPResponseStatus: string;
 ```
+
 获取 OCSP 响应状态描述。
 
 **返回值:**
+
 - 状态描述字符串 (如 "Good", "Revoked", "Unknown", "Not Provided")
 
 **示例:**
+
 ```pascal
 WriteLn('OCSP 状态: ', Connection.GetOCSPResponseStatus);
 ```
@@ -301,6 +418,9 @@ WriteLn('OCSP 状态: ', Connection.GetOCSPResponseStatus);
 ### 概述
 
 OCSP Stapling 允许服务器在 TLS 握手期间提供 OCSP 响应,客户端无需单独查询 OCSP 服务器,提升性能和隐私。
+
+当前最可验证、最直接可用的路径是 client-side stapled-response request/consume。
+如果你要主动构造和发送 OCSP 请求，请改用 OpenSSL OCSP API 工作流，而不要把本节当成完整在线 revocation 文档。
 
 ### 客户端配置
 
@@ -315,16 +435,56 @@ Builder
 Context := Builder.BuildClient;
 ```
 
+在当前 client/runtime path 上：
+
+- `WithOCSPStapling(True)` 会请求 stapled response。
+- `WithOCSPStaplingRequired(True)` 会在 `verify-peer` 的 non-resumed full-handshake path 上，对缺失或未通过当前有界校验的 stapled response fail-closed。
+- 如果关闭 `verify-peer`，当前实现不会因为 `required` 被 fail-closed。
+- 对 resumed TLS 1.3 path，`required` 也不会因为 resumed flight 缺少新的 stapled response 被触发。
+
 ### 服务端配置
+
+当前 public server-side stapling path 是 bounded 的 caller-provided material 配置。
+不要把下面的配置理解成“库会自动在线获取并附加 OCSP 响应”。
 
 ```pascal
 Builder := TSSLContextBuilder.Create;
 Builder
   .WithCertificate('server.crt')
   .WithPrivateKey('server.key')
-  .WithOCSPStapling(True);             // 服务端自动获取和附加响应
+  .WithOCSPStapling(True)
+  .WithServerOCSPStapledResponseFile('fixtures/ocsp/server_leaf.ocsp.der');
 
 Context := Builder.BuildServer;
+```
+
+在当前 server/runtime path 上：
+
+- `WithServerOCSPStapledResponseFile(...)` 会在 `BuildServer` 时把 DER 文件加载到 `ISSLServerOCSPStaplingContext`。
+- 只有 `full handshake + client requested status_request + context configured stapled response` 三个条件同时满足时，服务端才会发出 stapled response。
+- 如果 backend 不支持 `ISSLServerOCSPStaplingContext`，但 builder 配置了 `server_ocsp_stapled_response_file`，构建会直接报错。
+
+### 服务端 stapling 上下文访问
+
+`ISSLServerOCSPStaplingContext` 是一个可选 public interface，用于访问服务端 stapled OCSP response material：
+
+```pascal
+procedure ClearServerStapledOCSPResponse;
+procedure SetServerStapledOCSPResponse(const AResponseDER: TBytes);
+procedure LoadServerStapledOCSPResponseFile(const AFileName: string);
+function HasServerStapledOCSPResponse: Boolean;
+function GetServerStapledOCSPResponse: TBytes;
+```
+
+示例：
+
+```pascal
+var
+  ServerStapling: ISSLServerOCSPStaplingContext;
+begin
+  if Supports(Context, ISSLServerOCSPStaplingContext, ServerStapling) then
+    WriteLn(Length(ServerStapling.GetServerStapledOCSPResponse));
+end;
 ```
 
 ### 检查 OCSP 状态
@@ -333,29 +493,31 @@ Context := Builder.BuildServer;
 Connection := Context.CreateConnection(443);
 if Connection.Connect('example.com', 443) then
 begin
-  // 检查是否启用
-  if Connection.GetOCSPStaplingEnabled then
-    WriteLn('OCSP Stapling 已启用');
-  
-  // 获取响应
-  OCSPResponse := Connection.GetOCSPResponse;
-  if Length(OCSPResponse) > 0 then
-    WriteLn('收到 OCSP 响应: ', Length(OCSPResponse), ' 字节');
-  
-  // 检查验证状态
-  if Connection.IsOCSPResponseVerified then
-    WriteLn('证书有效')
-  else
-    WriteLn('证书验证失败');
-  
-  // 获取状态描述
-  WriteLn('OCSP 状态: ', Connection.GetOCSPResponseStatus);
+  if Supports(Connection, ISSLOCSPStapling, OCSP) then
+  begin
+    if OCSP.GetOCSPStaplingEnabled then
+      WriteLn('OCSP Stapling 已启用');
+
+    OCSPResponse := OCSP.GetOCSPResponse;
+    if Length(OCSPResponse) > 0 then
+      WriteLn('收到 OCSP 响应: ', Length(OCSPResponse), ' 字节');
+
+    if OCSP.IsOCSPResponseVerified then
+      WriteLn('证书有效')
+    else
+      WriteLn('证书验证失败或未验证');
+
+    WriteLn('OCSP 状态: ', OCSP.GetOCSPResponseStatus);
+  end;
 end;
 ```
+
+如果你已经直接依赖 `Connection.GetOCSP*` 方法，也仍然可以继续用；`ISSLOCSPStapling` 更适合 capability-gated 访问。
 
 ### 性能指标
 
 **OCSP Stapling 缓存性能:**
+
 - Put 吞吐量: 86,207 ops/sec
 - Get 吞吐量: 134,228 ops/sec
 - 并发吞吐量 (4线程): 597,015 ops/sec
@@ -370,7 +532,75 @@ end;
 
 证书透明度 (Certificate Transparency) 是一种安全机制,通过公开日志记录所有 SSL/TLS 证书,防止恶意证书颁发。
 
-### 启用 CT 验证
+当前最直接、最可验证的路径是 FreePascal client/runtime CT surface。
+如果你只是想知道服务端有没有给出 SCT、默认 validation/policy 结果是什么，或者想把 CT 作为连接级 fail-closed 条件，先用这一条路径。
+只有在你需要更底层、更自定义的 CT 校验流程时，再直接使用 `TSCTValidator`。
+
+### 客户端 runtime 配置
+
+```pascal
+uses
+  fafafa.ssl.base,
+  fafafa.ssl.context.builder;
+
+var
+  Ctx: ISSLContext;
+  Conn: ISSLConnection;
+  CT: ISSLCertificateTransparency;
+  CTValidation: ISSLCertificateTransparencyValidation;
+begin
+  Ctx := TSSLContextBuilder.Create
+    .WithBackend(sslFreePascal)
+    .WithTLS13
+    .WithVerifyPeer
+    .WithSystemRoots
+    .WithCertificateTransparencyRequired(True)
+    .BuildClient;
+
+  Conn := Ctx.CreateConnection(Socket);
+  (Conn as ISSLClientConnection).SetServerName('example.com');
+
+  if not Conn.Connect then
+    raise Exception.Create(Conn.GetVerifyResultString);
+
+  if Supports(Conn, ISSLCertificateTransparency, CT) then
+  begin
+    WriteLn('CT enabled: ', CT.GetCertificateTransparencyEnabled);
+    WriteLn('SCT count: ', CT.GetSignedCertificateTimestampCount);
+    WriteLn('CT status: ', CT.GetCertificateTransparencyStatus);
+  end;
+
+  if Supports(Conn, ISSLCertificateTransparencyValidation, CTValidation) then
+  begin
+    WriteLn('CT validation: ', CTValidation.GetCertificateTransparencyValidationStatus);
+    WriteLn('CT policy satisfied: ', CTValidation.IsCertificateTransparencyPolicySatisfied);
+  end;
+end;
+```
+
+在当前 runtime path 上：
+
+- `ISSLCertificateTransparency` 暴露 SCT enabled/count/status 等 surface。
+- `ISSLCertificateTransparencyValidation` 暴露 validation result、policy satisfied 与状态文本。
+- `WithCertificateTransparencyRequired(True)` 只会在 `verify-peer` 的 non-resumed full-handshake path 上执行 fail-closed。
+- 如果关闭 `verify-peer`，当前实现不会因为 `required` 被 fail-closed。
+- 对 resumed TLS 1.3 path，`required` 也不会因为 resumed flight 没有新的 certificate/SCT material 被触发。
+
+当前 gate 生效时，只有三类 fail-closed 条件：
+
+- 服务端没有提供 SCT list
+- CT validation 结果不可用
+- 默认 CT policy 不满足
+
+当前 FreePascal client 会优先 surface TLS `signed_certificate_timestamp` 扩展；如果这个扩展缺失，则回退到 leaf X.509 里的 embedded SCT 扩展。
+
+当前不要把这条路径理解成“所有 CT source/backend 都已完成”。还没有写成已支持的范围包括：
+
+- OCSP-delivered SCT source
+- 自定义 CT policy 的连接级 enforcement
+- 所有 backend 的一致支持声明
+
+### 需要底层 CT validator 时，再用 `TSCTValidator`
 
 ```pascal
 uses
@@ -385,10 +615,10 @@ begin
   try
     // 配置验证策略
     Validator.SetPolicy(sctpRequireAtLeast2SCTs);
-    
+
     // 从证书验证 SCT
     Result := Validator.ValidateFromCertificate(Certificate);
-    
+
     if Result.IsValid then
       WriteLn('CT 验证通过')
     else
@@ -435,7 +665,7 @@ begin
     // 保存会话
     Session := Connection.GetSession;
     SessionCache.Put('example.com', 443, Session);
-    
+
     // 复用会话
     Session := SessionCache.Get('example.com', 443);
     if Session <> nil then
@@ -443,7 +673,7 @@ begin
       Connection.SetSession(Session);
       WriteLn('会话复用成功');
     end;
-    
+
     // 获取统计信息
     Stats := SessionCache.GetStats;
     WriteLn('会话数: ', Stats.TotalSessions);
@@ -470,6 +700,7 @@ if SessionCache.LoadFromFile('sessions.dat') then
 ### 性能指标
 
 **会话缓存性能:**
+
 - Put 吞吐量: 86,207 ops/sec
 - Get 吞吐量: 1,300,000 ops/sec
 - 平均延迟: < 0.1 ms
@@ -482,12 +713,14 @@ if SessionCache.LoadFromFile('sessions.dat') then
 ### OCSP Stapling 优化
 
 **延迟清理机制:**
+
 ```pascal
 // 默认配置已优化,每 100 次 Put 清理一次
 Cache := TOCSPResponseCache.Create(10000);
 ```
 
 **分片锁架构:**
+
 - 16 个独立分片
 - 并发吞吐量: 597K ops/sec (4线程)
 - 接近线性扩展
@@ -495,12 +728,14 @@ Cache := TOCSPResponseCache.Create(10000);
 ### 会话缓存优化
 
 **O(1) 哈希表查找:**
+
 ```pascal
 // 默认使用哈希表,查找延迟 < 0.1ms
 SessionCache := TSSLSessionCache.Create(1000);
 ```
 
 **自动过期清理:**
+
 ```pascal
 // 默认超时 5 分钟
 SessionCache := TSSLSessionCache.Create(1000, 300);  // 300 秒
@@ -518,6 +753,7 @@ Builder
   .WithTLS12And13                    // 使用现代协议
   .WithVerifyPeer                    // 验证证书
   .WithOCSPStapling(True)            // 启用 OCSP Stapling
+  .WithOCSPStaplingRequired(False)   // 高风险路径可改成 True
   .WithSystemRootCerts               // 使用系统根证书
   .WithOption(ssoNoSSLv2)            // 禁用旧协议
   .WithOption(ssoNoSSLv3);
@@ -533,7 +769,8 @@ Builder
   .WithCertificate('server.crt')
   .WithPrivateKey('server.key')
   .WithTLS12And13
-  .WithOCSPStapling(True)            // 自动获取 OCSP 响应
+  .WithOCSPStapling(True)
+  .WithServerOCSPStapledResponseFile('fixtures/ocsp/server_leaf.ocsp.der')
   .WithCipherList('HIGH:!aNULL:!MD5'); // 强密码套件
 
 Context := Builder.BuildServer;
@@ -567,9 +804,9 @@ var
 begin
   Context := TSSLContextBuilder.Create.BuildClient;
   Connection := Context.CreateConnection(443);
-  
+
   // 使用连接...
-  
+
   // 接口自动释放,无需手动 Free
 end;
 ```
@@ -585,6 +822,7 @@ end;
 **问题:** `Connection.Connect` 返回 False
 
 **解决方案:**
+
 ```pascal
 // 检查错误信息
 WriteLn('错误: ', Connection.GetLastError);
@@ -599,20 +837,29 @@ if not Connection.GetPeerCertificateVerified then
 **问题:** `GetOCSPResponse` 返回空数组
 
 **解决方案:**
-```pascal
-// 检查是否启用
-if not Connection.GetOCSPStaplingEnabled then
-  WriteLn('OCSP Stapling 未启用');
 
-// 检查服务器支持
-WriteLn('OCSP 状态: ', Connection.GetOCSPResponseStatus);
+```pascal
+if Supports(Connection, ISSLOCSPStapling, OCSP) then
+begin
+  if not OCSP.GetOCSPStaplingEnabled then
+    WriteLn('OCSP Stapling 未启用');
+
+  WriteLn('OCSP 状态: ', OCSP.GetOCSPResponseStatus);
+end;
 ```
+
+另外确认：
+
+- client path 已启用 `WithVerifyPeer` + `WithOCSPStapling(True)`
+- 如果你开了 `WithOCSPStaplingRequired(True)`，在 `verify-peer` 的 non-resumed full-handshake path 上，缺失或未通过当前有界校验的 response 会直接让握手失败
+- 不要默认假设服务端一定会提供 stapled response
 
 #### 3. 性能问题
 
 **问题:** 连接速度慢
 
 **解决方案:**
+
 ```pascal
 // 启用会话复用
 SessionCache := TSSLSessionCache.Create(1000);
@@ -629,6 +876,7 @@ Builder.WithOCSPStapling(True);
 **问题:** 内存占用过高
 
 **解决方案:**
+
 ```pascal
 // 限制缓存大小
 SessionCache := TSSLSessionCache.Create(100);  // 减少到 100
@@ -642,9 +890,9 @@ SessionCache.Clear;
 ## 更多资源
 
 - [GitHub 仓库](https://github.com/fafafa/fafafa.ssl)
-- [性能测试报告](docs/OCSP_PERFORMANCE_REPORT.md)
-- [CT 实现指南](docs/CT_IMPLEMENTATION_GUIDE.md)
-- [示例代码](examples/)
+- [OCSP 模块测试报告](../test_reports/P2_OCSP_MODULE_REPORT.md)
+- [CT 实现指南](../guides/CT_IMPLEMENTATION_GUIDE.md)
+- [示例代码](../../examples/)
 
 ---
 

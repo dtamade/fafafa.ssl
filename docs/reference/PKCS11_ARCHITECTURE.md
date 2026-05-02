@@ -24,8 +24,8 @@ This document describes the architecture of the PKCS#11 integration in the fafaf
 ┌─────────────────────────────────────────────────────────────┐
 │                   Backend Abstraction Layer                  │
 │  • IPKCS11Backend (interface)                               │
-│  • TPKCS11ProviderBackend (OpenSSL 3.x)                     │
-│  • TPKCS11EngineBackend (OpenSSL 1.1.1)                     │
+│  • TProviderBackend (OpenSSL 3.x)                           │
+│  • TEngineBackend (OpenSSL 1.1.1)                           │
 └─────────────────────────────────────────────────────────────┘
                             │
                             ▼
@@ -52,7 +52,6 @@ Defines all PKCS#11 data structures and types:
 - **TPKCS11URI**: RFC 7512 URI representation
   - Path attributes: token, object, id, type
   - Query attributes: pin-value, pin-source, module-path
-  
 - **TPKCS11Config**: Configuration for PKCS#11 operations
   - Module path, token label, key label
   - PIN method and value
@@ -88,12 +87,14 @@ class function TPKCS11URIParser.Validate(const AURI: TPKCS11URI): Boolean;
 ```
 
 **Features**:
+
 - Percent-encoding/decoding
 - Path and query attribute parsing
 - Validation against RFC 7512
 - URI generation from config
 
 **Example URIs**:
+
 ```
 pkcs11:token=MyToken;object=MyKey
 pkcs11:token=MyToken;object=MyKey?pin-value=1234
@@ -108,13 +109,15 @@ Unified interface for different OpenSSL versions:
 ```pascal
 IPKCS11Backend = interface
   function LoadPrivateKey(const AConfig: TPKCS11Config): PEVP_PKEY;
-  function GetBackendType: TPKCS11BackendType;
+  function LoadCertificate(const AConfig: TPKCS11Config): PX509;
   function IsAvailable: Boolean;
-  function GetLastError: string;
+  function GetName: string;
+  function GetVersion: string;
 end;
 ```
 
 **Backend Selection**:
+
 1. **Auto-detection**: Checks OpenSSL version and availability
 2. **Provider Backend**: OpenSSL 3.x (preferred)
 3. **ENGINE Backend**: OpenSSL 1.1.1 (fallback)
@@ -124,19 +127,24 @@ end;
 OpenSSL 3.x Provider API implementation:
 
 ```pascal
-TPKCS11ProviderBackend = class(TInterfacedObject, IPKCS11Backend)
+TProviderBackend = class(TBasePKCS11Backend)
   function LoadPrivateKey(const AConfig: TPKCS11Config): PEVP_PKEY;
+  function LoadCertificate(const AConfig: TPKCS11Config): PX509;
   function IsAvailable: Boolean;
+  function GetName: string;
+  function GetVersion: string;
 end;
 ```
 
 **Features**:
+
 - Uses `OSSL_PROVIDER_load` for pkcs11 provider
 - Constructs provider-specific URI format
 - Handles PIN via OSSL_PARAM
 - Automatic provider cleanup
 
 **URI Format**:
+
 ```
 pkcs11:token=MyToken;object=MyKey
 ```
@@ -146,19 +154,24 @@ pkcs11:token=MyToken;object=MyKey
 OpenSSL 1.1.1 ENGINE API implementation:
 
 ```pascal
-TPKCS11EngineBackend = class(TInterfacedObject, IPKCS11Backend)
+TEngineBackend = class(TBasePKCS11Backend)
   function LoadPrivateKey(const AConfig: TPKCS11Config): PEVP_PKEY;
+  function LoadCertificate(const AConfig: TPKCS11Config): PX509;
   function IsAvailable: Boolean;
+  function GetName: string;
+  function GetVersion: string;
 end;
 ```
 
 **Features**:
+
 - Uses `ENGINE_by_id('pkcs11')` for engine loading
 - Supports ENGINE control commands
 - PIN handling via ENGINE_ctrl_cmd_string
 - Automatic engine cleanup
 
 **URI Format**:
+
 ```
 pkcs11:token=MyToken;object=MyKey
 ```
@@ -176,6 +189,7 @@ end;
 ```
 
 **Features**:
+
 - Cross-platform library loading (Windows/Linux/macOS)
 - Function list caching
 - Thread-safe module management
@@ -191,12 +205,12 @@ TPKCS11Utils = class
   class function EnumerateSlots(const AModulePath: string): TPKCS11SlotInfoArray;
   class function EnumerateTokens(const AModulePath: string): TPKCS11TokenInfoArray;
   class function EnumerateKeys(const AModulePath, ATokenLabel, APIN: string): TPKCS11KeyInfoArray;
-  
+
   // Search
   class function FindTokenByLabel(const AModulePath, ALabel: string): TPKCS11TokenInfo;
   class function FindSlotByID(const AModulePath: string; ASlotID: CK_SLOT_ID): TPKCS11SlotInfo;
   class function FindKeyByLabel(const AModulePath, ATokenLabel, AKeyLabel, APIN: string): TPKCS11KeyInfo;
-  
+
   // Information
   class function GetModuleInfo(const AModulePath: string): TPKCS11ModuleInfo;
 end;
@@ -208,11 +222,11 @@ Secure PIN handling with multiple acquisition methods:
 
 ```pascal
 TPKCS11PINManager = class
-  class function GetPIN(AMethod: TPKCS11PINMethod; 
+  class function GetPIN(AMethod: TPKCS11PINMethod;
                        const AValue: string;
                        ACallback: TPKCS11PINCallback;
                        const ATokenLabel: string): string;
-  class function ValidatePIN(const APIN: string; 
+  class function ValidatePIN(const APIN: string;
                             AMinLength: Integer = 4;
                             AMaxLength: Integer = 32): Boolean;
   class procedure SecureZeroPIN(var APIN: string);
@@ -220,6 +234,7 @@ end;
 ```
 
 **PIN Methods**:
+
 1. **pmNone**: No PIN (for unprotected tokens)
 2. **pmValue**: Direct PIN value (use with caution)
 3. **pmEnvironment**: Read from environment variable
@@ -240,6 +255,7 @@ end;
 ```
 
 **Features**:
+
 - Automatic URI detection in LoadPrivateKey
 - Backend selection and initialization
 - Error handling and reporting
@@ -258,13 +274,24 @@ end;
 ```
 
 **Usage Example**:
+
 ```pascal
 Context := TSSLContextBuilder.Create
   .WithCertificate('server.crt')
-  .UsePKCS11('pkcs11:token=MyToken;object=MyKey')
+  .UsePKCS11('pkcs11:token=MyToken;object=MyKey;type=private')
   .WithPKCS11PIN('1234')
   .BuildServer;
 ```
+
+**Builder Runtime Contract**:
+
+- Supported in builder runtime:
+  - `pmNone`
+  - `pmValue`
+  - `pmEnvironment`
+  - `pmFile`
+- Builder callers can switch source modes with `WithPKCS11PINMethod(...)`
+- `pmCallback` and `pmInteractive` remain lower-level `TPKCS11Config` / backend integrations, not builder runtime paths
 
 ## Data Flow
 
@@ -360,8 +387,9 @@ Context := TSSLContextBuilder.Create
 ### Error Reporting
 
 All errors are reported through:
+
 - Exception raising (ESSLException)
-- GetLastError method on backends
+- Backend and factory exceptions during selection or key loading
 - Detailed error messages with context
 
 ## Performance Considerations

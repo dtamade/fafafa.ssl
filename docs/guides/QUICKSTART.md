@@ -116,7 +116,7 @@ begin
   // 第一次连接 - 完整握手
   Socket1 := ConnectToHost('api.example.com', 443);
   Conn1 := Ctx.CreateConnection(Socket1);
-  Conn1.SetServerName('api.example.com');
+  (Conn1 as ISSLClientConnection).SetServerName('api.example.com');
 
   if Conn1.Connect then
   begin
@@ -133,8 +133,8 @@ begin
   // 第二次连接 - 复用 Session
   Socket2 := ConnectToHost('api.example.com', 443);
   Conn2 := Ctx.CreateConnection(Socket2);
-  Conn2.SetServerName('api.example.com');
   Conn2.SetSession(Session);  // 设置之前保存的 Session
+  (Conn2 as ISSLClientConnection).SetServerName('api.example.com');
 
   if Conn2.Connect then
   begin
@@ -191,11 +191,12 @@ begin
     begin
       Socket := ConnectToHost(Host, 443);
       Conn := Ctx.CreateConnection(Socket);
-      Conn.SetServerName(Host);
 
       // 尝试复用缓存的 Session
       if SessionCache.ContainsKey(Host) then
         Conn.SetSession(SessionCache[Host]);
+
+      (Conn as ISSLClientConnection).SetServerName(Host);
 
       if Conn.Connect then
       begin
@@ -248,6 +249,9 @@ end.
 
 - 示例：`examples/`
 - 构建与测试：
-  - `bash build_linux.sh`
-  - `./ci_pipeline.sh build`
-  - `./ci_pipeline.sh test`
+  - `python3 scripts/compile_all_modules.py`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
+- 如果你要看当前 Wave C / local-first 入口，先看：
+  - `docs/test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md`
+  - `docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`

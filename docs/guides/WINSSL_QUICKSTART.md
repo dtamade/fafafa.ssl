@@ -3,12 +3,14 @@
 **WinSSL** 是 fafafa.ssl 项目的 Windows 原生 SSL/TLS 后端，基于 Windows Schannel API。它允许你的 Pascal/Lazarus 应用在 Windows 上实现 **零依赖** 的 HTTPS 客户端功能。
 
 **主要优势**:
+
 - ✅ **零依赖**: 不需要 OpenSSL DLL
 - ✅ **Windows 原生**: 使用系统 Schannel
 - ✅ **自动更新**: Windows Update 自动维护
 - ✅ **系统集成**: 直接使用系统证书存储
 
 **支持平台**:
+
 - Windows Vista+ (基本支持)
 - Windows 7+ (TLS 1.0/1.1/1.2)
 - Windows 10/11 (TLS 1.3)
@@ -44,7 +46,9 @@ begin
   Lib := CreateSSLLibrary(sslLibraryWinSSL);  // 1. 创建 WinSSL 库
   Lib.Initialize;                              // 2. 初始化
   Ctx := Lib.CreateContext(sslContextClient);  // 3. 创建客户端上下文
-  Ctx.SetServerName('www.example.com');        // 4. 设置 SNI 主机名
+  // 4. 创建连接后，在连接级设置 SNI 主机名（需要 Socket）
+  // Conn := Ctx.CreateConnection(Socket);
+  // (Conn as ISSLClientConnection).SetServerName('www.example.com');
 
   // 5. 连接并发送 HTTPS 请求（需要 Socket，见完整示例）
   // ...
@@ -90,6 +94,7 @@ var
   LLib: ISSLLibrary;
   LCtx: ISSLContext;
   LConn: ISSLConnection;
+  LClientConn: ISSLClientConnection;
   LSocket: TSocket;
   LAddr: TSockAddrIn;
   LHostEnt: PHostEnt;
@@ -114,7 +119,6 @@ begin
 
     // 3. 创建客户端上下文
     LCtx := LLib.CreateContext(sslContextClient);
-    LCtx.SetServerName(aHost);  // SNI 主机名
     LCtx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 
     // 4. 建立 TCP 连接
@@ -141,6 +145,8 @@ begin
 
       // 5. 创建 SSL 连接并执行 TLS 握手
       LConn := LCtx.CreateConnection(LSocket);
+      LClientConn := LConn as ISSLClientConnection;
+      LClientConn.SetServerName(aHost);
       if not LConn.Connect then
         raise Exception.Create('TLS handshake failed');
 
@@ -372,8 +378,9 @@ Ctx.SetProtocolVersions([sslProtocolTLS10, sslProtocolTLS11,
 ### 2. SNI（Server Name Indication）
 
 ```pascal
-// 必须设置 SNI，用于虚拟主机和多域名证书
-Ctx.SetServerName('www.example.com');
+// 必须在握手前设置 SNI，且要设置在连接上
+Conn := Ctx.CreateConnection(Socket);
+(Conn as ISSLClientConnection).SetServerName('www.example.com');
 
 // 对于 IP 地址连接，可以不设置 SNI
 // 但某些服务器可能拒绝没有 SNI 的连接
@@ -430,6 +437,7 @@ Ctx.LoadCAFile('custom-ca.crt');
 **原因**: Windows 版本太旧或 Schannel 不可用
 
 **解决方案**:
+
 ```pascal
 // 检查 Windows 版本
 var
@@ -449,12 +457,14 @@ end;
 ### 问题 2: "TLS handshake failed"
 
 **可能原因**:
+
 1. 服务器不支持客户端协议版本
 2. 证书验证失败（未实现时使用手动模式）
 3. 网络连接问题
 4. SNI 主机名错误
 
 **调试步骤**:
+
 ```pascal
 // 1. 启用详细日志
 {$DEFINE DEBUG_TLS}
@@ -476,14 +486,17 @@ WriteLn('SNI hostname: ', Ctx.GetServerName);
 **原因**: 服务器在握手期间关闭连接
 
 **常见情况**:
+
 - 服务器不支持客户端的协议版本
 - 服务器需要 SNI 但客户端未提供
 - 服务器拒绝没有客户端证书的连接
 
 **解决方案**:
+
 ```pascal
-// 1. 确保设置 SNI
-Ctx.SetServerName('www.example.com');
+// 1. 在握手前、连接级设置 SNI
+Conn := Ctx.CreateConnection(Socket);
+(Conn as ISSLClientConnection).SetServerName('www.example.com');
 
 // 2. 尝试更宽松的协议版本
 Ctx.SetProtocolVersions([sslProtocolTLS10, sslProtocolTLS11,
@@ -498,6 +511,7 @@ Ctx.SetProtocolVersions([sslProtocolTLS10, sslProtocolTLS11,
 **原因**: 接口对象过早释放或 Socket 无效
 
 **解决方案**:
+
 ```pascal
 // 1. 确保对象生命周期正确
 var
@@ -529,6 +543,7 @@ if LSocket = INVALID_SOCKET then
 **原因**: 控制台编码问题
 
 **解决方案**:
+
 ```pascal
 // 在程序开头添加
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
@@ -543,6 +558,7 @@ end;
 ### 问题 6: 内存泄漏
 
 **检查点**:
+
 ```pascal
 // 1. 接口对象自动管理，无需手动释放
 // ✅ 正确
@@ -565,22 +581,23 @@ WSACleanup;
 
 ### 功能对比
 
-| 特性 | WinSSL | OpenSSL | 说明 |
-|------|--------|---------|------|
-| **部署依赖** | ✅ 零依赖 | ❌ 需要 DLL | WinSSL 的核心优势 |
-| **Windows 平台** | ✅ 原生支持 | ⚠️ 第三方库 | WinSSL 更稳定 |
-| **Linux/macOS** | ❌ 不支持 | ✅ 完全支持 | OpenSSL 跨平台 |
-| **协议支持** | TLS 1.0-1.3 | SSL 2.0-TLS 1.3 | OpenSSL 更全面 |
-| **算法控制** | ⚠️ 系统决定 | ✅ 完全控制 | OpenSSL 更灵活 |
-| **证书存储** | ✅ 系统存储 | 📁 文件/内存 | 各有优势 |
-| **性能** | ✅ 硬件加速 | ✅ 优化良好 | 相当 |
-| **维护** | Windows Update | 手动更新 | WinSSL 自动 |
-| **API 复杂度** | 高 (SSPI) | 中 (EVP) | OpenSSL 更易用 |
-| **文档** | MSDN | 丰富社区 | OpenSSL 更好 |
+| 特性             | WinSSL         | OpenSSL         | 说明              |
+| ---------------- | -------------- | --------------- | ----------------- |
+| **部署依赖**     | ✅ 零依赖      | ❌ 需要 DLL     | WinSSL 的核心优势 |
+| **Windows 平台** | ✅ 原生支持    | ⚠️ 第三方库     | WinSSL 更稳定     |
+| **Linux/macOS**  | ❌ 不支持      | ✅ 完全支持     | OpenSSL 跨平台    |
+| **协议支持**     | TLS 1.0-1.3    | SSL 2.0-TLS 1.3 | OpenSSL 更全面    |
+| **算法控制**     | ⚠️ 系统决定    | ✅ 完全控制     | OpenSSL 更灵活    |
+| **证书存储**     | ✅ 系统存储    | 📁 文件/内存    | 各有优势          |
+| **性能**         | ✅ 硬件加速    | ✅ 优化良好     | 相当              |
+| **维护**         | Windows Update | 手动更新        | WinSSL 自动       |
+| **API 复杂度**   | 高 (SSPI)      | 中 (EVP)        | OpenSSL 更易用    |
+| **文档**         | MSDN           | 丰富社区        | OpenSSL 更好      |
 
 ### 使用建议
 
 **选择 WinSSL**:
+
 - ✅ Windows 专有应用
 - ✅ 要求零依赖部署
 - ✅ 企业环境（Windows 管理）
@@ -588,6 +605,7 @@ WSACleanup;
 - ✅ 简单的 HTTPS 客户端
 
 **选择 OpenSSL**:
+
 - ✅ 跨平台应用
 - ✅ 需要完整协议控制
 - ✅ 传统算法支持（Blowfish 等）
@@ -598,15 +616,15 @@ WSACleanup;
 
 **测试场景**: HTTPS GET 请求到 www.google.com
 
-| 指标 | WinSSL | OpenSSL |
-|------|--------|---------|
-| TLS 握手时间 | ~150ms | ~160ms |
-| 首字节时间 | ~180ms | ~190ms |
+| 指标          | WinSSL   | OpenSSL  |
+| ------------- | -------- | -------- |
+| TLS 握手时间  | ~150ms   | ~160ms   |
+| 首字节时间    | ~180ms   | ~190ms   |
 | 吞吐量 (加密) | ~80 MB/s | ~85 MB/s |
-| 内存占用 | ~2 MB | ~3 MB |
-| DLL 大小 | 0 (系统) | ~7 MB |
+| 内存占用      | ~2 MB    | ~3 MB    |
+| DLL 大小      | 0 (系统) | ~7 MB    |
 
-*注：性能数据为参考值，实际结果取决于硬件、网络和系统配置*
+_注：性能数据为参考值，实际结果取决于硬件、网络和系统配置_
 
 ### 代码迁移
 
@@ -623,6 +641,7 @@ Lib := CreateSSLLibrary(sslLibraryWinSSL);
 ```
 
 **自动选择后端**:
+
 ```pascal
 // 最佳实践：让工厂自动选择
 Lib := CreateSSLLibrary(sslLibraryAutoDetect);
@@ -651,7 +670,6 @@ begin
   LLib.Initialize;
 
   LCtx := LLib.CreateContext(sslContextClient);
-  LCtx.SetServerName(aHost);
   LCtx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 
   // 2. 自定义 Socket 选项
@@ -670,6 +688,7 @@ begin
 
   // 4. 创建 SSL 连接
   Result := LCtx.CreateConnection(LSocket);
+  (Result as ISSLClientConnection).SetServerName(aHost);
 end;
 ```
 
@@ -822,10 +841,12 @@ my_https_client/
 ### Lazarus 项目配置
 
 **编译器选项** → **路径**:
+
 - **Other unit files**: `lib/fafafa.ssl/src`
 - **Target file name**: `bin/my_https_client`
 
 **编译器选项** → **编译和链接**:
+
 - **Target CPU**: `x86_64`
 - **Target OS**: `win64`
 
@@ -836,6 +857,7 @@ my_https_client/
 ### Q1: WinSSL 支持哪些 Windows 版本？
 
 **A**:
+
 - Windows Vista+: 基本支持 (Schannel 可用)
 - Windows 7+: TLS 1.0/1.1/1.2
 - Windows 10 Build 20348+: TLS 1.3
@@ -860,12 +882,14 @@ my_https_client/
 ### Q6: 如何从 OpenSSL 迁移？
 
 **A**: 只需更改库创建代码：
+
 ```pascal
 // 从这个
 Lib := CreateSSLLibrary(sslLibraryOpenSSL);
 // 改为这个
 Lib := CreateSSLLibrary(sslLibraryWinSSL);
 ```
+
 其他代码保持不变。
 
 ### Q7: WinSSL 支持哪些密码套件？
@@ -875,6 +899,7 @@ Lib := CreateSSLLibrary(sslLibraryWinSSL);
 ### Q8: 如何调试 TLS 连接问题？
 
 **A**:
+
 1. 启用详细日志：`{$DEFINE DEBUG_TLS}`
 2. 使用 Wireshark 抓包分析
 3. 检查 Windows 事件查看器（Schannel 日志）
@@ -885,16 +910,19 @@ Lib := CreateSSLLibrary(sslLibraryWinSSL);
 ## 相关资源
 
 ### 文档
+
 - **WINSSL_HTTPS_TEST_REPORT.md** - 完整测试报告
 - **WORKING.md** - 项目工作日志
 - **README.md** - 项目概述
 
 ### 示例代码
+
 - **tests/test_winssl_https_client.pas** - 完整 HTTPS 客户端示例
 - **tests/test_winssl_handshake_debug.pas** - 低级握手调试
 - **examples/example_factory_usage.pas** - 工厂模式使用
 
 ### 外部资源
+
 - [Microsoft Schannel 文档](https://docs.microsoft.com/en-us/windows/win32/secauthn/secure-channel)
 - [TLS 1.2 规范 (RFC 5246)](https://tools.ietf.org/html/rfc5246)
 - [TLS 1.3 规范 (RFC 8446)](https://tools.ietf.org/html/rfc8446)
@@ -919,4 +947,4 @@ Lib := CreateSSLLibrary(sslLibraryWinSSL);
 
 ---
 
-*享受零依赖的 Windows HTTPS 开发！🚀*
+_享受零依赖的 Windows HTTPS 开发！🚀_

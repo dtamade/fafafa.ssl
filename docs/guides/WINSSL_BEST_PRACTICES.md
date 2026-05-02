@@ -81,7 +81,7 @@ LConn.Connect;
 **✅ 正确做法**:
 ```pascal
 // 设置服务器名称（SNI）并验证
-LConn.SetServerName('example.com');
+(LConn as ISSLClientConnection).SetServerName('example.com');
 if LConn.Connect then
 begin
   // 验证证书主机名

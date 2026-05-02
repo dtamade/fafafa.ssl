@@ -37,6 +37,7 @@ uses
 var
   LCtx: ISSLContext;
   LConn: ISSLConnection;
+  LClientConn: ISSLClientConnection;
   LSocket: TSocket;  // 你的框架提供的 socket
 begin
   // 创建 SSL 上下文
@@ -45,6 +46,8 @@ begin
 
   // 创建 SSL 连接（包装现有 socket）
   LConn := LCtx.CreateConnection(LSocket);
+  LClientConn := LConn as ISSLClientConnection;
+  LClientConn.SetServerName('example.com');  // 客户端 SNI/hostname 要设在连接上
 
   // 执行 SSL 握手
   if LConn.Connect then

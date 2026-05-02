@@ -1,6 +1,16 @@
 # Linux快速开始指南
 
-本指南帮助Linux用户快速搭建`fafafa.ssl`开发环境并运行第一个示例。
+本指南帮助 Linux 用户快速搭建 `fafafa.ssl` 开发环境并运行第一个示例。
+
+## 当前推荐入口
+
+如果你是在继续当前工程的验证或收口，先看这两页，再按下面的默认命令推进：
+
+- [Wave C 当前 canonical 收口状态](../test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)
+- [Wave C 当前 local-first / pre-CI 链路](../test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md)
+- `python3 scripts/compile_all_modules.py`
+- `bash scripts/run_minimal_ci_gate.sh --fast-local`
+- `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
 
 ## 系统要求
 
@@ -16,11 +26,11 @@
 - **Free Pascal Compiler (FPC)** ≥ 3.2.0
 - **OpenSSL** ≥ 3.0.0 (推荐) 或 1.1.1+
 - **Git** (克隆仓库)
+- **Python 3** (运行当前默认编译门禁)
 
 ### 可选软件
 
 - **Lazarus IDE** ≥ 2.2.0 (图形化开发)
-- **Python 3** (运行构建脚本)
 
 ---
 
@@ -36,18 +46,21 @@ sudo apt-get install -y \
     fp-units-fcl \
     libssl3 \
     libssl-dev \
-    git
+    git \
+    python3
 
 # 2. 克隆项目
 git clone https://github.com/yourusername/fafafa.ssl.git
 cd fafafa.ssl
 
-# 3. 构建项目
-chmod +x build_linux.sh run_tests_linux.sh
-./build_linux.sh
+# 3. 运行默认编译门禁
+python3 scripts/compile_all_modules.py
 
-# 4. 运行测试
-./run_tests_linux.sh
+# 4. 运行本地最小门禁
+bash scripts/run_minimal_ci_gate.sh --fast-local
+
+# 5. 可选：检查 Phase 2 入口
+bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local
 ```
 
 ### Fedora/RHEL
@@ -58,28 +71,29 @@ sudo dnf install -y \
     fpc \
     openssl \
     openssl-devel \
-    git
+    git \
+    python3
 
-# 2. 克隆和构建（同上）
+# 2. 克隆和验证（同上）
 git clone https://github.com/yourusername/fafafa.ssl.git
 cd fafafa.ssl
-chmod +x build_linux.sh run_tests_linux.sh
-./build_linux.sh
-./run_tests_linux.sh
+python3 scripts/compile_all_modules.py
+bash scripts/run_minimal_ci_gate.sh --fast-local
+bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local
 ```
 
 ### Arch Linux
 
 ```bash
 # 1. 安装依赖
-sudo pacman -S fpc openssl git
+sudo pacman -S --needed fpc openssl git python
 
-# 2. 克隆和构建（同上）
+# 2. 克隆和验证（同上）
 git clone https://github.com/yourusername/fafafa.ssl.git
 cd fafafa.ssl
-chmod +x build_linux.sh run_tests_linux.sh
-./build_linux.sh
-./run_tests_linux.sh
+python3 scripts/compile_all_modules.py
+bash scripts/run_minimal_ci_gate.sh --fast-local
+bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local
 ```
 
 ---
@@ -248,8 +262,8 @@ lazarus-ide
 # 解决方案1: 手动指定
 fpc -Fusrc your_program.pas
 
-# 解决方案2: 使用构建脚本
-./build_linux.sh
+# 解决方案2: 先确认当前默认编译门禁可通过
+python3 scripts/compile_all_modules.py
 ```
 
 ### Q: 运行时报 "libcrypto.so.3: cannot open shared object file"
@@ -284,11 +298,16 @@ ls /usr/lib/fpc/$(fpc -iV)/fcl-base/base64.ppu
 
 ```bash
 # 运行单个测试查看详细信息
-fpc -Fusrc tests/test_openssl_simple.pas
-./tests/test_openssl_simple
+mkdir -p tmp/linux_quickstart_test
+fpc -B -Fu./src -Fu./tests -Fu./tests/framework \
+    -FUtmp/linux_quickstart_test \
+    -FEtmp/linux_quickstart_test \
+    -otmp/linux_quickstart_test/test_openssl_simple \
+    tests/test_openssl_simple.pas
+./tmp/linux_quickstart_test/test_openssl_simple
 
-# 运行完整测试套件
-./run_tests_linux.sh
+# 运行当前最小门禁
+bash scripts/run_minimal_ci_gate.sh --fast-local
 ```
 
 ### Q: 如何指定OpenSSL路径？
@@ -315,6 +334,10 @@ fafafa.ssl/
 │   ├── 01_basic_ssl_client.pas
 │   ├── 02_certificate_validation.pas
 │   └── ...
+├── scripts/                # 自动化脚本
+│   ├── compile_all_modules.py      # 当前默认编译门禁
+│   ├── run_minimal_ci_gate.sh      # 当前默认本地最小门禁
+│   └── run_phase2_performance_baseline.sh  # Phase 2 入口探测
 ├── tests/                  # 测试套件
 │   ├── test_openssl_simple.pas
 │   └── ...
@@ -322,8 +345,7 @@ fafafa.ssl/
 │   ├── LINUX_QUICKSTART.md (本文档)
 │   ├── FCL_DEPENDENCIES.md
 │   └── ...
-├── build_linux.sh          # Linux构建脚本
-├── run_tests_linux.sh      # Linux测试脚本
+├── build_linux.sh          # 历史兼容构建脚本（非默认入口）
 ├── fafafa_ssl.lpk          # Lazarus包配置
 └── README.md               # 项目主文档
 ```
@@ -332,11 +354,11 @@ fafafa.ssl/
 
 ## 下一步
 
-1. **阅读主文档**: [README.md](../README.md)
-2. **浏览示例**: [examples/](../examples/)
-3. **查看API**: [docs/API_REFERENCE.md](API_REFERENCE.md)
-4. **了解架构**: [PROJECT_VISION.md](../PROJECT_VISION.md)
-5. **贡献代码**: [CONTRIBUTING.md](../CONTRIBUTING.md)
+1. **先看当前工程状态**: [Wave C 当前 canonical 收口状态](../test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)
+2. **再看当前验证链路**: [Wave C 当前 local-first / pre-CI 链路](../test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md)
+3. **浏览主文档**: [README.md](../README.md)
+4. **查看详细快速开始**: [QUICKSTART.md](QUICKSTART.md)
+5. **查看 API**: [API_REFERENCE.md](../reference/API_REFERENCE.md)
 
 ---
 
@@ -371,4 +393,3 @@ fpc -O3 -CX -XX -Xs -Fusrc your_program.pas
 **更新日期**: 2025-10-28  
 **适用版本**: fafafa.ssl v1.0.0-rc  
 **维护者**: fafafa.ssl团队
-

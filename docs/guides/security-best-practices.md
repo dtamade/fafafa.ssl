@@ -19,6 +19,7 @@
 ### 为什么需要证书固定？
 
 即使使用了标准的 TLS/SSL 验证，攻击者仍然可能通过以下方式进行中间人攻击：
+
 - 伪造的 CA 证书
 - 被入侵的 CA
 - 系统信任存储被篡改
@@ -111,10 +112,10 @@ begin
   try
     // 从证书文件加载
     Cert := LoadCertificateFromFile('server.crt');
-    
+
     // 提取公钥哈希
     PubKeyHash := Validator.ExtractPublicKeyHash(Cert);
-    
+
     // 转换为 Base64
     WriteLn('Public Key Pin: ', TEncodingUtils.BytesToBase64(PubKeyHash));
   finally
@@ -143,7 +144,7 @@ begin
       False
     );
     Pin.ExpiryDate := EncodeDate(2027, 12, 31);  // 设置过期时间
-    
+
     // 检查 Pin 是否有效
     if Pin.IsValid then
       WriteLn('Pin is valid')
@@ -203,7 +204,7 @@ begin
     if Validator.QueryTLSARecords('example.com', 443) then
     begin
       WriteLn('Found ', Validator.GetRecordCount, ' TLSA records');
-      
+
       // 验证证书
       if Validator.ValidateCertificate(Cert) then
         WriteLn('Certificate validated successfully')
@@ -234,14 +235,14 @@ begin
     // 3 1 1 表示：DANE-EE + SPKI + SHA-256
     SetLength(Hash, 32);
     // ... 填充哈希值 ...
-    
+
     Validator.AddTLSARecord(
       duDomainIssuedCert,    // Usage: 3
       dsSubjectPublicKeyInfo, // Selector: 1
       dmSHA256,               // Matching: 1
       Hash
     );
-    
+
     // 验证证书
     if Validator.ValidateCertificate(Cert) then
       WriteLn('Certificate validated successfully');
@@ -264,13 +265,13 @@ begin
   try
     // 要求 DNSSEC 验证
     Validator.RequireDNSSEC := True;
-    
+
     // 设置自定义 DNS 解析器
     Validator.SetDNSResolver('8.8.8.8');
-    
+
     // 设置 DNS 查询超时
     Validator.SetDNSTimeout(5000);  // 5 秒
-    
+
     // 验证 DNSSEC 链
     if Validator.VerifyDNSSEC then
       WriteLn('DNSSEC validation successful')
@@ -309,22 +310,22 @@ begin
   Config.PrivateKeyPath := '/path/to/key.pem';
   Config.CheckIntervalSeconds := 3600;  // 每小时检查一次
   Config.AutoReloadOnChange := True;    // 文件变化时自动重载
-  
+
   // 创建轮换管理器
   Manager := TCertificateRotationManager.Create(Config);
   try
     // 启动监控
     Manager.StartMonitoring;
-    
+
     // 检查证书过期时间
     var DaysRemaining: Integer;
     if Manager.CheckExpiry(DaysRemaining) then
       WriteLn('Certificate expires in ', DaysRemaining, ' days');
-    
+
     // 手动重载证书
     if Manager.ManualReload then
       WriteLn('Certificate reloaded successfully');
-    
+
     // 停止监控
     Manager.StopMonitoring;
   finally
@@ -348,18 +349,18 @@ begin
     Manager.RotationInterval := 90;  // 每 90 天轮换
     Manager.GracePeriod := 7;        // 7 天宽限期
     Manager.AutoRotate := True;      // 启用自动轮换
-    
+
     // 设置轮换策略
     Manager.Strategy := rsGraceful;  // 优雅轮换
-    
+
     // 设置回调
     Manager.OnRotationStart := @HandleRotationStart;
     Manager.OnRotationComplete := @HandleRotationComplete;
     Manager.OnRotationFailed := @HandleRotationFailed;
-    
+
     // 启动轮换管理器
     Manager.Start;
-    
+
     // 检查轮换状态
     WriteLn(Manager.GetRotationInfo);
   finally
@@ -408,33 +409,69 @@ end;
 
 ```pascal
 uses
+  SysUtils,
+  fafafa.ssl,
   fafafa.ssl.context.builder;
 
 var
   Ctx: ISSLContext;
+  Conn: ISSLConnection;
+  ClientConn: ISSLClientConnection;
 begin
   Ctx := TSSLContextBuilder.Create
     .WithVerifyPeer              // 验证对等方证书
-    .WithVerifyHostname          // 验证主机名
     .WithSystemRoots             // 使用系统信任存储
     .BuildClient;
+
+  Conn := Ctx.CreateConnection(Socket);
+  ClientConn := Conn as ISSLClientConnection;
+  ClientConn.SetServerName('example.com');
+
+  if not Conn.Connect then
+    raise Exception.Create('TLS handshake failed');
 end;
 ```
+
+也可以使用 `TSSLConnector.ConnectSocket(..., 'example.com')`，其本质同样是把 hostname/SNI 放到连接上，而不是 context 上。
 
 ### 3. 配置 OCSP Stapling
 
 ```pascal
 uses
+  fafafa.ssl.base,
   fafafa.ssl.context.builder;
 
 var
   Ctx: ISSLContext;
 begin
   Ctx := TSSLContextBuilder.Create
-    .WithOCSPStapling            // 启用 OCSP Stapling
+    .WithVerifyPeer
+    .WithOCSPStapling(True)              // 请求 stapled OCSP response
+    .WithOCSPStaplingRequired(False)     // 可选：高风险路径可改成 True
     .BuildClient;
 end;
 ```
+
+这条配置的当前语义是：
+
+- `WithOCSPStapling(True)` 会让 client 在握手里请求 stapled OCSP response。
+- `WithOCSPStaplingRequired(True)` 会在 `verify-peer` 的 non-resumed full-handshake path 上，对缺失或未通过当前有界校验的 stapled response fail-closed。
+- 如果关闭 `verify-peer`，当前实现不会因为 `required` 被 fail-closed。
+- 对 resumed TLS 1.3 path，`required` 也不会因为 resumed flight 缺少新的 stapled response 被触发。
+- 握手完成后，可以通过 `ISSLOCSPStapling` 读取 raw response、verified bit 和状态文本。
+
+示例：
+
+```pascal
+var
+  OCSP: ISSLOCSPStapling;
+begin
+  if Supports(Conn, ISSLOCSPStapling, OCSP) then
+    WriteLn(OCSP.GetOCSPResponseStatus);
+end;
+```
+
+这里的最佳实践是把三件事分开看：client stapled-response request/consume、可选的 client online OCSP check，以及服务端 caller-provided stapled-response issuance。当前 public server-side path 已经可以通过 `WithServerOCSPStapledResponseFile(...)` 或 `ISSLServerOCSPStaplingContext` 配置材料，但它仍然不负责在线抓取或刷新 OCSP response。就 FreePascal backend capability 而言，`KnownIssues` 已不再把 OCSP / CT / resumption 列为剩余缺口，当前只剩 `0-RTT / early data is experimental and currently uses an in-memory single-process anti-replay ledger.` 这条边界。
 
 ### 4. 使用会话恢复
 
@@ -529,7 +566,7 @@ Ctx := TSSLContextBuilder.Create
 - [ ] 设置了证书轮换机制
 - [ ] 定期检查证书过期时间
 - [ ] 不在代码中硬编码密钥和证书
-- [ ] 启用了 OCSP Stapling（如果支持）
+- [ ] 在需要 stapled response 的客户端路径上启用了 `VerifyPeer` + OCSP stapling，并按风险决定是否使用 `required`
 - [ ] 配置了适当的日志记录
 - [ ] 测试了证书更新流程
 

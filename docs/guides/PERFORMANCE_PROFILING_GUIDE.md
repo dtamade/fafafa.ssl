@@ -213,7 +213,7 @@ begin
     // 创建连接并握手
     Socket := ConnectTCP(Host, 443);
     Conn := Ctx.CreateConnection(Socket);
-    Conn.SetServerName(Host);
+    (Conn as ISSLClientConnection).SetServerName(Host);
     Conn.Connect;
     Conn.Shutdown;
     CloseSocket(Socket);

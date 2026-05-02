@@ -120,7 +120,7 @@ Conn.Connect;  // 可能失败或收到错误证书
 
 // ✅ 正确：设置 SNI
 Conn := Ctx.CreateConnection(Socket);
-Conn.SetServerName('api.example.com');  // 关键！
+(Conn as ISSLClientConnection).SetServerName('api.example.com');  // 关键！
 Conn.Connect;
 ```
 
@@ -135,14 +135,13 @@ Conn.Connect;
 **解决方案**：
 
 ```pascal
-// ✅ 正确：启用 hostname 验证
+// ✅ 正确：证书验证 + 连接级 hostname/SNI
 Ctx := TSSLContextBuilder.Create
-  .WithVerifyPeer           // 验证证书
-  .WithVerifyHostname       // 验证 hostname（关键！）
+  .WithVerifyPeer           // 验证证书链
   .WithSystemRoots
   .BuildClient;
 
-// 或使用 Connector（自动处理）
+// Connector 会在连接上设置 ServerName
 TLS := TSSLConnector.FromContext(Ctx);
 Stream := TLS.ConnectSocket(Socket, 'api.example.com');  // 自动设置 SNI + hostname 验证
 ```
@@ -169,9 +168,11 @@ Ctx := TSSLContextBuilder.Create
 // ✅ 生产：必须启用验证
 Ctx := TSSLContextBuilder.Create
   .WithVerifyPeer
-  .WithVerifyHostname
   .WithSystemRoots
   .BuildClient;
+
+TLS := TSSLConnector.FromContext(Ctx);
+Stream := TLS.ConnectSocket(Socket, 'api.example.com');
 {$ENDIF}
 ```
 
@@ -343,8 +344,7 @@ end;
 在部署前检查以下项目：
 
 - [ ] 启用了证书验证 (`WithVerifyPeer`)
-- [ ] 启用了 hostname 验证 (`WithVerifyHostname`)
-- [ ] 设置了 SNI (`SetServerName`)
+- [ ] 在连接上设置了 hostname / SNI (`SetServerName` 或 `ConnectSocket(..., host)`)
 - [ ] 使用 TLS 1.2 或更高版本
 - [ ] 正确处理了 OpenSSL 对象释放
 - [ ] 测试了目标平台的证书路径

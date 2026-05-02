@@ -573,6 +573,7 @@ var
   LContext: ISSLContext;
   LConnection: ISSLConnection;
   LResult: TSSLOperationResult;
+  LHost: string;
 begin
   // 1. 使用 Try* 构建上下文（不希望启动时崩溃）
   LResult := TSSLContextBuilder.Create
@@ -589,7 +590,10 @@ begin
 
   // 2. 使用异常连接（连接失败是例外情况）
   try
+    // 实际项目中应先从 AUrl 解析主机名，再据此建立或复用 LSocket。
+    LHost := 'api.example.com';
     LConnection := LContext.CreateConnection(LSocket);
+    (LConnection as ISSLClientConnection).SetServerName(LHost);
     if not LConnection.Connect then
       raise ESSLConnectionError.Create('Connection failed');
 

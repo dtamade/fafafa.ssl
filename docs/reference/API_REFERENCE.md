@@ -1,7 +1,9 @@
 # fafafa.ssl API 参考文档
 
-> **版本**: v0.8  
+> **版本**: rolling
 > **最后更新**: 2026-04-19
+> **当前路线图**: [当前路线图](../ROADMAP.md)
+> **说明**: 当前接口真相源以 `src/fafafa.ssl.base.pas` 为准；本页优先收敛最常用的 public API。
 
 ## 目录
 
@@ -96,11 +98,13 @@ ISSLLibrary = interface
   function GetLibraryType: TSSLLibraryType;
   function GetVersionString: string;
   function GetVersionNumber: Cardinal;
+  function GetCompileFlags: string;
   
   // 功能检测
   function IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
   function IsCipherSupported(const aCipherName: string): Boolean;
-  function IsFeatureSupported(const aFeatureName: string): Boolean;
+  function IsFeatureSupported(aFeature: TSSLFeature): Boolean;
+  function GetCapabilities: TSSLBackendCapabilities;
   
   // 错误处理
   function GetLastError: Integer;
@@ -335,8 +339,11 @@ end;
 var
   LConn: ISSLConnection;
   LData: string;
+  LServerName: string;
 begin
+  LServerName := 'example.com';
   LConn := LContext.CreateConnection(MySocket);
+  (LConn as ISSLClientConnection).SetServerName(LServerName);
   if LConn.Connect then
   begin
     // 发送 HTTP 请求
@@ -362,8 +369,11 @@ var
   LConn: ISSLConnection;
   LChunk: string;
   LFullData: string;
+  LServerName: string;
 begin
+  LServerName := 'example.com';
   LConn := LContext.CreateConnection(MySocket);
+  (LConn as ISSLClientConnection).SetServerName(LServerName);
   if LConn.Connect then
   begin
     LConn.WriteString('GET /large-file HTTP/1.1'#13#10#13#10);
@@ -387,15 +397,18 @@ end;
 var
   LConn: ISSLConnection;
   LRequest, LResponse: string;
+  LServerName: string;
 begin
+  LServerName := 'example.com';
   LConn := LContext.CreateConnection(MySocket);
+  (LConn as ISSLClientConnection).SetServerName(LServerName);
 
   try
     if not LConn.Connect then
       raise Exception.Create('连接失败');
 
     LRequest := 'GET / HTTP/1.1'#13#10 +
-                'Host: example.com'#13#10 +
+                'Host: ' + LServerName + #13#10 +
                 'Connection: close'#13#10#13#10;
 
     if not LConn.WriteString(LRequest) then
@@ -417,8 +430,11 @@ end;
 var
   LConn: ISSLConnection;
   LInfo: TSSLConnectionInfo;
+  LServerName: string;
 begin
+  LServerName := 'example.com';
   LConn := LContext.CreateConnection(MySocket);
+  (LConn as ISSLClientConnection).SetServerName(LServerName);
 
   if LConn.Connect then
   begin
@@ -447,9 +463,12 @@ var
   LConn: ISSLConnection;
   LInfo: TSSLConnectionInfo;
   LStartTime: TDateTime;
+  LServerName: string;
 begin
   LStartTime := Now;
+  LServerName := 'example.com';
   LConn := LContext.CreateConnection(MySocket);
+  (LConn as ISSLClientConnection).SetServerName(LServerName);
 
   if LConn.Connect then
   begin
@@ -522,6 +541,7 @@ begin
 
   // 第一次连接 - 完整握手
   LConn1 := LContext.CreateConnection(Socket1);
+  (LConn1 as ISSLClientConnection).SetServerName('api.example.com');
   if LConn1.Connect then
   begin
     WriteLn('第一次连接成功');
@@ -536,6 +556,7 @@ begin
   // 第二次连接 - 复用 Session
   LConn2 := LContext.CreateConnection(Socket2);
   LConn2.SetSession(LSession);  // 设置之前保存的 Session
+  (LConn2 as ISSLClientConnection).SetServerName('api.example.com');
 
   if LConn2.Connect then
   begin
@@ -576,6 +597,8 @@ begin
       // 尝试复用缓存的 Session
       if LSessionCache.ContainsKey(LHost) then
         LConn.SetSession(LSessionCache[LHost]);
+
+      (LConn as ISSLClientConnection).SetServerName(LHost);
 
       if LConn.Connect then
       begin
@@ -622,7 +645,9 @@ end;
 var
   LConn: ISSLConnection;
   LSession: ISSLSession;
+  LServerName: string;
 begin
+  LServerName := 'example.com';
   LConn := LContext.CreateConnection(MySocket);
 
   // 尝试设置 Session
@@ -630,6 +655,8 @@ begin
     LConn.SetSession(LSession)
   else
     WriteLn('警告: Session 无效或已过期，将执行完整握手');
+
+  (LConn as ISSLClientConnection).SetServerName(LServerName);
 
   if LConn.Connect then
   begin
@@ -650,8 +677,11 @@ end;
 var
   LConn: ISSLConnection;
   LSession: ISSLSession;
+  LServerName: string;
 begin
+  LServerName := 'example.com';
   LConn := LContext.CreateConnection(MySocket);
+  (LConn as ISSLClientConnection).SetServerName(LServerName);
 
   if LConn.Connect then
   begin
@@ -676,8 +706,11 @@ end;
 var
   LConn: ISSLConnection;
   LHealth: TSSLHealthStatus;
+  LServerName: string;
 begin
+  LServerName := 'example.com';
   LConn := LContext.CreateConnection(MySocket);
+  (LConn as ISSLClientConnection).SetServerName(LServerName);
 
   if LConn.Connect then
   begin
@@ -705,8 +738,11 @@ end;
 var
   LConn: ISSLConnection;
   LPerf: TSSLPerformanceMetrics;
+  LServerName: string;
 begin
+  LServerName := 'example.com';
   LConn := LContext.CreateConnection(MySocket);
+  (LConn as ISSLClientConnection).SetServerName(LServerName);
 
   if LConn.Connect then
   begin
@@ -735,8 +771,11 @@ var
   LConn: ISSLConnection;
   LDiag: TSSLDiagnosticInfo;
   I: Integer;
+  LServerName: string;
 begin
+  LServerName := 'example.com';
   LConn := LContext.CreateConnection(MySocket);
+  (LConn as ISSLClientConnection).SetServerName(LServerName);
 
   if LConn.Connect then
   begin
@@ -1209,6 +1248,7 @@ var
   LContext: ISSLContext;
   LConn: ISSLConnection;
   LCert: ISSLCertificate;
+  LServerName: string;
 begin
   // 创建并初始化库
   LLib := CreateOpenSSLLibrary;
@@ -1224,14 +1264,16 @@ begin
     LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     LContext.LoadCAFile('/etc/ssl/certs/ca-bundle.crt');
     LContext.SetVerifyMode([sslVerifyPeer]);
+    LServerName := 'example.com';
     
     // 创建连接
     LConn := LContext.CreateConnection(MySocket);
+    (LConn as ISSLClientConnection).SetServerName(LServerName);
     if LConn.Connect then
     begin
       // 验证证书
       LCert := LConn.GetPeerCertificate;
-      if LCert.VerifyHostname('example.com') then
+      if LCert.VerifyHostname(LServerName) then
       begin
         // 发送和接收数据
         LConn.WriteString('Hello, SSL!');
@@ -1717,5 +1759,3 @@ end.
 - v1.2 (2026-02-05): 添加能力矩阵 API（v1.2.0）
 - v0.8 (2025-10-24): 添加 VerifyEx 方法和 WinSSL 企业功能
 - v0.7 (2025-10-01): 初始 API 文档
-
-

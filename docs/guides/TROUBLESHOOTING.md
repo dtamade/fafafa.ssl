@@ -680,12 +680,14 @@ begin
   try
     // 首次连接
     LConn1 := LCtx.CreateConnection(Socket1);
+    (LConn1 as ISSLClientConnection).SetServerName('example.com');
     if LConn1.Connect then
       LSessionCache.Add('example.com', LConn1.GetSession);
 
     // 后续连接 - 快速复用
     LConn2 := LCtx.CreateConnection(Socket2);
     LConn2.SetSession(LSessionCache['example.com']);
+    (LConn2 as ISSLClientConnection).SetServerName('example.com');
     LConn2.Connect;  // 快速握手
   finally
     LSessionCache.Free;
@@ -991,4 +993,3 @@ nmap --script ssl-enum-ciphers -p 443 example.com
 ---
 
 **持续更新中** - 如有新问题，请提交 Issue 帮助我们改进此文档。
-

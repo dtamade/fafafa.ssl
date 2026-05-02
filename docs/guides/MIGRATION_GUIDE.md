@@ -154,6 +154,7 @@ begin
     LContext.LoadPrivateKey('key.pem');
     
     LConn := LContext.CreateConnection(ConnectToServer('example.com', 443));
+    (LConn as ISSLClientConnection).SetServerName('example.com');
     if LConn.Connect then
       // 使用连接...
       LConn.Shutdown;
@@ -205,6 +206,7 @@ begin
     LContext.SetProtocolVersions([sslProtocolTLS12]);
     
     LConn := LContext.CreateConnection(HTTPConnect('example.com', 443));
+    (LConn as ISSLClientConnection).SetServerName('example.com');
     if LConn.Connect then
     begin
       LConn.WriteString('GET / HTTP/1.1'#13#10 +
@@ -246,6 +248,7 @@ begin
   LContext.LoadPrivateKey('key.pem');
   
   LConn := LContext.CreateConnection(socket_fd);
+  (LConn as ISSLClientConnection).SetServerName('example.com');
   LConn.Connect;
 end;
 ```
@@ -531,4 +534,3 @@ LContext.SetVerifyDepth(3);  // 默认 10
 ---
 
 **迁移愉快！** 如有问题随时联系我们。
-
