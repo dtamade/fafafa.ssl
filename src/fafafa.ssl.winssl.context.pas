@@ -918,6 +918,8 @@ begin
 end;
 
 procedure TWinSSLContext.SetCertificateStore(AStore: ISSLCertificateStore);
+var
+  LStoreHandle: Pointer;
 begin
   { WinSSL/Schannel 说明：
     与 OpenSSL 不同，Schannel 不直接使用自定义证书存储进行 CA 验证。
@@ -937,7 +939,7 @@ begin
     Exit;  // nil 表示清除存储
 
   // 验证存储句柄有效性
-  if not TryGetNativeHandle(AStore, nil) then
+  if not TryGetNativeHandle(AStore, LStoreHandle) then
     raise ESSLCertificateException.CreateWithContext(
       'Invalid certificate store handle (does not support native handle access)',
       sslErrCertificate,
@@ -1233,8 +1235,16 @@ end;
 
 { P0-2: 获取 CA 证书存储句柄（供连接验证使用） }
 function TWinSSLContext.GetCAStoreHandle: HCERTSTORE;
+var
+  LStoreHandle: Pointer;
 begin
   Result := FCAStore;
+
+  if (Result = nil) and (FExternalCertStore <> nil) then
+  begin
+    if TryGetNativeHandle(FExternalCertStore, LStoreHandle) then
+      Result := HCERTSTORE(LStoreHandle);
+  end;
 end;
 
 { Phase 3.3: 获取库实例（供连接更新统计使用） }

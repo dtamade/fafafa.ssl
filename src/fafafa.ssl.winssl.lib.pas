@@ -20,6 +20,7 @@ interface
 uses
   Windows, SysUtils, Classes,
   fafafa.ssl.base,
+  fafafa.ssl.exceptions,
   // fafafa.ssl.factory 移到 implementation 以避免循环依赖
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
@@ -178,10 +179,11 @@ begin
 
   // 初始化 Windows 版本信息
   FillChar(FWindowsVersion, SizeOf(FWindowsVersion), 0);
-end;
+
   { v1.2.0: 初始化能力矩阵缓存 }
   FCapabilitiesCached := False;
   FillChar(FCapabilitiesCache, SizeOf(FCapabilitiesCache), 0);
+end;
 
 
 destructor TWinSSLLibrary.Destroy;
@@ -721,6 +723,7 @@ end;
 procedure TWinSSLLibrary.SetLogCallback(ACallback: TSSLLogCallback);
 begin
   FLogCallback := ACallback;
+  FDefaultConfig.LogCallback := ACallback;
 end;
 
 procedure TWinSSLLibrary.Log(ALevel: TSSLLogLevel; const AMessage: string);
@@ -737,10 +740,7 @@ begin
   // P0 后端语义统一：与 OpenSSL 后端保持一致的失败语义
   // 未初始化时抛出异常，而不是返回 nil
   if not FInitialized then
-    RaiseSSLInitError(
-      'Cannot create context: WinSSL library not initialized',
-      'TWinSSLLibrary.CreateContext'
-    );
+    raise ESSLInitError.Create('Cannot create context: WinSSL library not initialized');
 
   // 让异常传播 - 调用方必须显式处理错误
   Result := TWinSSLContext.Create(Self, AType);
@@ -759,10 +759,7 @@ function TWinSSLLibrary.CreateCertificate: ISSLCertificate;
 begin
   // P0 后端语义统一：与 OpenSSL 后端保持一致的失败语义
   if not FInitialized then
-    RaiseSSLInitError(
-      'Cannot create certificate: WinSSL library not initialized',
-      'TWinSSLLibrary.CreateCertificate'
-    );
+    raise ESSLInitError.Create('Cannot create certificate: WinSSL library not initialized');
 
   // 创建空证书对象，调用方可通过 LoadFromFile/LoadFromStream 等方法加载实际证书
   Result := TWinSSLCertificate.Create(nil, False);
@@ -772,10 +769,7 @@ function TWinSSLLibrary.CreateCertificateStore: ISSLCertificateStore;
 begin
   // P0 后端语义统一：与 OpenSSL 后端保持一致的失败语义
   if not FInitialized then
-    RaiseSSLInitError(
-      'Cannot create certificate store: WinSSL library not initialized',
-      'TWinSSLLibrary.CreateCertificateStore'
-    );
+    raise ESSLInitError.Create('Cannot create certificate store: WinSSL library not initialized');
 
   // 默认创建受信任根证书存储，调用方可根据需要重新打开其他系统存储
   Result := TWinSSLCertificateStore.Create(SSL_STORE_ROOT);

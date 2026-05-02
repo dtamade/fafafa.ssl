@@ -200,6 +200,9 @@ type
 
 implementation
 
+uses
+  fafafa.ssl.winssl.lib;
+
 // ============================================================================
 // TWinSSLSession - 会话实现
 // ============================================================================
@@ -474,7 +477,8 @@ begin
 
   // 从上下文获取服务器名称
   FServerName := '';
-  if AContext.GetServerName <> '' then
+  if (AContext <> nil) and (AContext.GetContextType = sslCtxClient) and
+    (AContext.GetServerName <> '') then
     FServerName := AContext.GetServerName;
 
   FRecvBufferUsed := 0;
@@ -500,7 +504,8 @@ begin
   FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
 
   FServerName := '';
-  if AContext.GetServerName <> '' then
+  if (AContext <> nil) and (AContext.GetContextType = sslCtxClient) and
+    (AContext.GetServerName <> '') then
     FServerName := AContext.GetServerName;
 
   FRecvBufferUsed := 0;
@@ -766,6 +771,7 @@ var
   LHostname: string;
   LServerNameW: PWideChar;
   LStatus: SECURITY_STATUS;
+  LVerifyCallback: TSSLVerifyCallback;
 
   function NormalizeHostForVerify(const S: string): string;
   var
@@ -937,10 +943,11 @@ begin
         if LPolicyStatus.dwError <> 0 then
         begin
           AVerifyError := Integer(LPolicyStatus.dwError);
+          LVerifyCallback := TWinSSLContext(FContext).GetVerifyCallback;
 
-          if Assigned(TWinSSLContext(FContext).GetVerifyCallback) then
+          if Assigned(LVerifyCallback) then
           begin
-            if TWinSSLContext(FContext).GetVerifyCallback(
+            if LVerifyCallback(
               DoGetPeerCertificate.GetInfo,
               AVerifyError,
               DoGetVerifyResultString
@@ -1128,7 +1135,7 @@ begin
   end
   else
   begin
-    Status := AcceptSecurityContext(
+    Status := AcceptSecurityContextW(
       LCredHandle,
       @FCtxtHandle,
       nil,

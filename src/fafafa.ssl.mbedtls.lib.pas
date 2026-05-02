@@ -578,6 +578,7 @@ end;
 procedure TMbedTLSLibrary.SetLogCallback(ACallback: TSSLLogCallback);
 begin
   FLogCallback := ACallback;
+  FDefaultConfig.LogCallback := ACallback;
 end;
 
 procedure TMbedTLSLibrary.Log(ALevel: TSSLLogLevel; const AMessage: string);

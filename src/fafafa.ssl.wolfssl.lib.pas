@@ -518,6 +518,7 @@ end;
 procedure TWolfSSLLibrary.SetLogCallback(ACallback: TSSLLogCallback);
 begin
   FLogCallback := ACallback;
+  FDefaultConfig.LogCallback := ACallback;
 end;
 
 procedure TWolfSSLLibrary.Log(ALevel: TSSLLogLevel; const AMessage: string);
