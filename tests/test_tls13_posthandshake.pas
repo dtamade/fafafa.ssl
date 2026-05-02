@@ -110,6 +110,39 @@ begin
   AssertBytesEqual(LExpectedExt, LTicket.Extensions, 'Ticket extensions mismatch');
 end;
 
+procedure TestParseTicketWithMaxEarlyDataSize;
+var
+  LMsg: TBytes;
+  LTicket: TTLS13NewSessionTicket;
+  LErr: string;
+  LExtensions: TBytes;
+begin
+  SetLength(LExtensions, 0);
+  AppendUInt16(LExtensions, TLS_EXTENSION_EARLY_DATA);
+  AppendUInt16(LExtensions, 4);
+  AppendByte(LExtensions, $00);
+  AppendByte(LExtensions, $00);
+  AppendByte(LExtensions, $40);
+  AppendByte(LExtensions, $00);
+
+  LMsg := BuildTLS13NewSessionTicketHandshake(
+    7200,
+    $01020304,
+    [$10, $11, $12],
+    [$AA, $BB, $CC, $DD],
+    LExtensions
+  );
+
+  AssertTrue(
+    TryParseTLS13NewSessionTicket(LMsg, LTicket, LErr),
+    'NewSessionTicket with max_early_data_size should parse'
+  );
+  AssertTrue(LTicket.HasMaxEarlyDataSize,
+    'Ticket should expose parsed max_early_data_size');
+  AssertEqualInt($00004000, LTicket.MaxEarlyDataSize,
+    'max_early_data_size mismatch');
+end;
+
 procedure TestRejectWrongType;
 var
   LMsg: TBytes;
@@ -189,14 +222,34 @@ begin
   AssertTrue(Pos('invalid keyupdate body length', LowerCase(LErr)) > 0, 'Expected invalid length error');
 end;
 
+procedure TestBuildAndParseEndOfEarlyData;
+var
+  LMsg: TBytes;
+  LInfo: TTLS13EndOfEarlyDataInfo;
+  LErr: string;
+begin
+  LMsg := BuildTLS13EndOfEarlyDataHandshake;
+  AssertTrue(TryParseTLS13EndOfEarlyData(LMsg, LInfo, LErr),
+    'EndOfEarlyData should parse');
+  AssertTrue(LInfo.Valid, 'Parsed EndOfEarlyData should be valid');
+
+  LMsg[0] := TLS_HANDSHAKE_TYPE_FINISHED;
+  AssertTrue(not TryParseTLS13EndOfEarlyData(LMsg, LInfo, LErr),
+    'Wrong handshake type must fail for EndOfEarlyData');
+  AssertTrue(Pos('unexpected handshake type', LowerCase(LErr)) > 0,
+    'Expected wrong-type error for EndOfEarlyData');
+end;
+
 begin
   WriteLn('Testing TLS 1.3 post-handshake parser...');
 
   TestParseValidTicket;
+  TestParseTicketWithMaxEarlyDataSize;
   TestRejectWrongType;
   TestRejectZeroTicketLen;
   TestParseValidKeyUpdate;
   TestRejectInvalidKeyUpdate;
+  TestBuildAndParseEndOfEarlyData;
 
   WriteLn('✅ TLS 1.3 post-handshake parser checks passed');
 end.

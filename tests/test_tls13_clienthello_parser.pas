@@ -179,15 +179,24 @@ begin
   AssertEqualsWord(TLS_LEGACY_VERSION, LInfo.LegacyVersion, 'legacy_version mismatch');
   AssertTrue(LInfo.HasSupportedVersions, 'supported_versions extension should exist');
   AssertTrue(TLS13ClientHelloSupportsVersion(LInfo, TLS13_VERSION), 'TLS 1.3 should be offered');
+  AssertTrue(TLS13ClientHelloOffersCipherSuite(LInfo, TLS13_CIPHER_AES_256_GCM_SHA384),
+    'AES256-GCM-SHA384 suite should be offered');
   AssertTrue(TLS13ClientHelloOffersCipherSuite(LInfo, TLS13_CIPHER_CHACHA20_POLY1305_SHA256),
     'CHACHA20 suite should be offered');
-
+  AssertTrue(TLS13ClientHelloOffersCipherSuite(LInfo, TLS13_CIPHER_AES_128_GCM_SHA256),
+    'AES128-GCM-SHA256 suite should be offered');
 
   AssertTrue(LInfo.HasSignatureAlgorithms, 'signature_algorithms extension should exist');
   AssertTrue(TLS13ClientHelloOffersSignatureScheme(LInfo, TLS13_SIG_RSA_PSS_RSAE_SHA256),
     'ClientHello should offer rsa_pss_rsae_sha256');
+  AssertTrue(TLS13ClientHelloOffersSignatureScheme(LInfo, TLS13_SIG_RSA_PSS_RSAE_SHA384),
+    'ClientHello should offer rsa_pss_rsae_sha384');
   AssertTrue(TLS13ClientHelloOffersSignatureScheme(LInfo, TLS13_SIG_ECDSA_SECP256R1_SHA256),
     'ClientHello should offer ecdsa_secp256r1_sha256');
+  AssertTrue(TLS13ClientHelloOffersSignatureScheme(LInfo, TLS13_SIG_RSA_PKCS1_SHA384),
+    'ClientHello should offer rsa_pkcs1_sha384');
+  AssertTrue(TLS13ClientHelloOffersSignatureScheme(LInfo, TLS13_SIG_RSA_PSS_PSS_SHA384),
+    'ClientHello should offer rsa_pss_pss_sha384');
   AssertTrue(LInfo.HasKeyShare, 'key_share should be parsed');
   AssertEqualsWord(TLS13_GROUP_X25519, LInfo.KeyShareGroup, 'key_share group mismatch');
   AssertEqualsWord(32, LInfo.KeyShareLength, 'key_share length mismatch');

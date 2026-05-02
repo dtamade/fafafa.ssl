@@ -219,12 +219,91 @@ begin
     'SHA384 server iv should be deterministic');
 end;
 
+procedure TestDeriveClientEarlyDataSecrets;
+var
+  LPsk: TBytes;
+  LClientHello: TBytes;
+  LSecrets, LSecrets2: TTLS13EarlyDataSecrets;
+  LError: string;
+begin
+  LPsk := HexToBytes('00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff');
+  LClientHello := StringToBytes('ClientHelloWithPSKAndEarlyData');
+
+  AssertTrue(
+    TryDeriveTLS13ClientEarlyDataSecrets(
+      TLS13_CIPHER_CHACHA20_POLY1305_SHA256,
+      LPsk,
+      LClientHello,
+      LSecrets,
+      LError
+    ),
+    'Client early-data secret derivation should succeed for CHACHA suite: ' + LError
+  );
+
+  AssertTrue(LSecrets.Valid, 'Early-data secrets should be marked valid');
+  AssertTrue(LSecrets.HashSize = 32, 'Early-data hash size should follow suite hash');
+  AssertTrue(LSecrets.KeyLength = 32, 'CHACHA early-data key length should be 32');
+  AssertTrue(LSecrets.IVLength = 12, 'Early-data IV length should be 12');
+  AssertTrue(Length(LSecrets.TranscriptHash) = 32, 'Early-data transcript hash length should be 32');
+  AssertTrue(Length(LSecrets.EarlySecret) = 32, 'Early secret length should be 32');
+  AssertTrue(Length(LSecrets.ClientEarlyTrafficSecret) = 32,
+    'Client early traffic secret length should be 32');
+  AssertTrue(Length(LSecrets.ClientEarlyKey) = 32, 'Client early-data key length should be 32');
+  AssertTrue(Length(LSecrets.ClientEarlyIV) = 12, 'Client early-data IV length should be 12');
+
+  AssertTrue(
+    TryDeriveTLS13ClientEarlyDataSecrets(
+      TLS13_CIPHER_CHACHA20_POLY1305_SHA256,
+      LPsk,
+      LClientHello,
+      LSecrets2,
+      LError
+    ),
+    'Client early-data secret re-derivation should stay deterministic: ' + LError
+  );
+
+  AssertBytesEqual(LSecrets.EarlySecret, LSecrets2.EarlySecret,
+    'Early secret should be deterministic');
+  AssertBytesEqual(LSecrets.ClientEarlyTrafficSecret, LSecrets2.ClientEarlyTrafficSecret,
+    'Client early traffic secret should be deterministic');
+  AssertBytesEqual(LSecrets.ClientEarlyKey, LSecrets2.ClientEarlyKey,
+    'Client early-data key should be deterministic');
+  AssertBytesEqual(LSecrets.ClientEarlyIV, LSecrets2.ClientEarlyIV,
+    'Client early-data iv should be deterministic');
+end;
+
+procedure TestRejectInvalidPSKLengthForEarlyData;
+var
+  LBadPSK: TBytes;
+  LClientHello: TBytes;
+  LSecrets: TTLS13EarlyDataSecrets;
+  LError: string;
+begin
+  LBadPSK := HexToBytes('00112233445566778899aabbccddeeff');
+  LClientHello := StringToBytes('ClientHelloWithPSKAndEarlyData');
+
+  AssertTrue(
+    not TryDeriveTLS13ClientEarlyDataSecrets(
+      TLS13_CIPHER_CHACHA20_POLY1305_SHA256,
+      LBadPSK,
+      LClientHello,
+      LSecrets,
+      LError
+    ),
+    'Client early-data derivation should fail closed for invalid PSK length'
+  );
+  AssertTrue(Pos('PSK', UpperCase(LError)) > 0,
+    'Invalid early-data PSK length should surface PSK-specific error text');
+end;
+
 begin
   WriteLn('Testing TLS 1.3 key schedule...');
 
   TestDeterministicVectorSHA256;
   TestChachaKeyLength;
   TestDeriveSHA384CipherPath;
+  TestDeriveClientEarlyDataSecrets;
+  TestRejectInvalidPSKLengthForEarlyData;
 
   WriteLn('✅ TLS 1.3 key schedule checks passed');
 end.

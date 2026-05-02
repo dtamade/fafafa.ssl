@@ -12,6 +12,11 @@ uses
   fafafa.ssl.pem,
   fafafa.ssl.tls13.servercertverify;
 
+const
+  TEST_TLS13_SIG_RSA_PKCS1_SHA384 = $0501;
+  TEST_TLS13_SIG_RSA_PSS_RSAE_SHA384 = $0805;
+  TEST_TLS13_SIG_RSA_PSS_PSS_SHA384 = $080A;
+
 function LoadFileBytes(const AFileName: string): TBytes;
 var
   LStream: TFileStream;
@@ -1997,6 +2002,72 @@ begin
     'keytype-unsupported message mismatch');
 end;
 
+procedure TestSelectSchemeByCertificateKeyTypeSupportsRSASHA384;
+var
+  LInfo: TTLS13ClientHelloInfo;
+  LScheme: Word;
+  LErr: string;
+begin
+  FillChar(LInfo, SizeOf(LInfo), 0);
+  LInfo.HasSignatureAlgorithms := True;
+  LInfo.SignatureAlgorithms := [
+    TEST_TLS13_SIG_RSA_PSS_RSAE_SHA384,
+    TEST_TLS13_SIG_RSA_PKCS1_SHA384,
+    TEST_TLS13_SIG_RSA_PSS_PSS_SHA384
+  ];
+
+  AssertTrue(
+    TrySelectTLS13ServerCertificateVerifySchemeForKeyType(LInfo, 'RSA', LScheme, LErr),
+    'keytype-rsa-sha384-only should succeed: ' + LErr
+  );
+  AssertEqualsWord(TEST_TLS13_SIG_RSA_PSS_RSAE_SHA384, LScheme,
+    'keytype-rsa-sha384-only selected scheme mismatch');
+end;
+
+procedure TestSelectSchemeByCertificateKeyTypePrefersSuiteHashFamily;
+var
+  LInfo: TTLS13ClientHelloInfo;
+  LScheme: Word;
+  LErr: string;
+begin
+  FillChar(LInfo, SizeOf(LInfo), 0);
+  LInfo.HasSignatureAlgorithms := True;
+  LInfo.SignatureAlgorithms := [
+    TLS13_SIG_RSA_PSS_RSAE_SHA256,
+    TEST_TLS13_SIG_RSA_PSS_RSAE_SHA384,
+    TLS13_SIG_RSA_PKCS1_SHA256,
+    TEST_TLS13_SIG_RSA_PKCS1_SHA384,
+    TLS13_SIG_RSA_PSS_PSS_SHA256,
+    TEST_TLS13_SIG_RSA_PSS_PSS_SHA384
+  ];
+
+  AssertTrue(
+    TrySelectTLS13ServerCertificateVerifySchemeForKeyTypeAndCipherSuite(
+      LInfo,
+      'RSA',
+      TLS13_CIPHER_AES_256_GCM_SHA384,
+      LScheme,
+      LErr
+    ),
+    'keytype-rsa-aes256-suite-aware should succeed: ' + LErr
+  );
+  AssertEqualsWord(TEST_TLS13_SIG_RSA_PSS_RSAE_SHA384, LScheme,
+    'keytype-rsa-aes256-suite-aware selected scheme mismatch');
+
+  AssertTrue(
+    TrySelectTLS13ServerCertificateVerifySchemeForKeyTypeAndCipherSuite(
+      LInfo,
+      'RSA',
+      TLS13_CIPHER_CHACHA20_POLY1305_SHA256,
+      LScheme,
+      LErr
+    ),
+    'keytype-rsa-chacha-suite-aware should succeed: ' + LErr
+  );
+  AssertEqualsWord(TLS13_SIG_RSA_PSS_RSAE_SHA256, LScheme,
+    'keytype-rsa-chacha-suite-aware selected scheme mismatch');
+end;
+
 procedure TestBuildCertVerifyInput;
 const
   CONTEXT = 'TLS 1.3, server CertificateVerify';
@@ -2023,6 +2094,36 @@ begin
   AssertTrue(LInput[64 + Length(CONTEXT)] = 0, 'Context separator must be 0x00');
   for I := 0 to 31 do
     AssertTrue(LInput[64 + Length(CONTEXT) + 1 + I] = LHash[I], 'Transcript hash bytes mismatch');
+end;
+
+procedure TestBuildCertVerifyInputAcceptsSHA384TranscriptHash;
+const
+  CONTEXT = 'TLS 1.3, server CertificateVerify';
+var
+  LHash: TBytes;
+  LInput: TBytes;
+  I: Integer;
+  LOffset: Integer;
+begin
+  SetLength(LHash, 48);
+  for I := 0 to 47 do
+    LHash[I] := Byte($80 + I);
+
+  LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LHash);
+  AssertEqualsInt(64 + Length(CONTEXT) + 1 + 48, Length(LInput),
+    'SHA384 CertificateVerify input length mismatch');
+
+  for I := 0 to 63 do
+    AssertTrue(LInput[I] = $20, 'SHA384 CertificateVerify input must start with 64 spaces');
+
+  LOffset := 64;
+  for I := 1 to Length(CONTEXT) do
+    AssertTrue(LInput[LOffset + I - 1] = Byte(Ord(CONTEXT[I])), 'SHA384 context string byte mismatch');
+
+  AssertTrue(LInput[64 + Length(CONTEXT)] = 0, 'SHA384 context separator must be 0x00');
+  for I := 0 to 47 do
+    AssertTrue(LInput[64 + Length(CONTEXT) + 1 + I] = LHash[I],
+      'SHA384 transcript hash bytes mismatch');
 end;
 
 procedure TestBuildCertificateVerifyHandshake;
@@ -2075,9 +2176,13 @@ procedure TestRealRSASignature;
 var
   LKeyBlob: TBytes;
   LTranscriptHash: TBytes;
+  LTranscriptHash384: TBytes;
   LInput: TBytes;
+  LInput384: TBytes;
   LSigPSSA, LSigPSSB: TBytes;
   LSigPKCS1A, LSigPKCS1B: TBytes;
+  LSigPSS384: TBytes;
+  LSigPKCS1384: TBytes;
   LErr: string;
   I, LDiff: Integer;
 begin
@@ -2089,6 +2194,12 @@ begin
     LTranscriptHash[I] := Byte($21 + I);
 
   LInput := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash);
+
+  SetLength(LTranscriptHash384, 48);
+  for I := 0 to 47 do
+    LTranscriptHash384[I] := Byte($61 + I);
+
+  LInput384 := BuildTLS13ServerCertificateVerifyInputSHA256(LTranscriptHash384);
 
   AssertTrue(
     TryBuildTLS13CertificateVerifySignature(
@@ -2147,6 +2258,30 @@ begin
     if LSigPKCS1A[I] <> LSigPKCS1B[I] then
       Inc(LDiff);
   AssertEqualsInt(0, LDiff, 'RSA-PKCS1 signatures should be deterministic for same input/key');
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TEST_TLS13_SIG_RSA_PSS_RSAE_SHA384,
+      LKeyBlob,
+      LInput384,
+      LSigPSS384,
+      LErr
+    ),
+    'RSA-PSS SHA384 signing failed: ' + LErr
+  );
+  AssertEqualsInt(256, Length(LSigPSS384), 'RSA-PSS SHA384 signature length should match 2048-bit key');
+
+  AssertTrue(
+    TryBuildTLS13CertificateVerifySignature(
+      TEST_TLS13_SIG_RSA_PKCS1_SHA384,
+      LKeyBlob,
+      LInput384,
+      LSigPKCS1384,
+      LErr
+    ),
+    'RSA-PKCS1 SHA384 signing failed: ' + LErr
+  );
+  AssertEqualsInt(256, Length(LSigPKCS1384), 'RSA-PKCS1 SHA384 signature length should match 2048-bit key');
 end;
 
 procedure TestSignerUnitHasNoExternalBigIntDependency;
@@ -5229,7 +5364,10 @@ begin
   TestSelectSchemeMatrixWaveF;
   TestSelectSchemeMatrixWaveJ;
   TestSelectSchemeByCertificateKeyType;
+  TestSelectSchemeByCertificateKeyTypeSupportsRSASHA384;
+  TestSelectSchemeByCertificateKeyTypePrefersSuiteHashFamily;
   TestBuildCertVerifyInput;
+  TestBuildCertVerifyInputAcceptsSHA384TranscriptHash;
   TestBuildCertificateVerifyHandshake;
   TestPlaceholderSignature;
   TestSignerUnitHasNoExternalBigIntDependency;

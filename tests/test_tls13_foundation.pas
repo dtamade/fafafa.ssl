@@ -88,7 +88,9 @@ var
   LOffset: Integer;
   LSessionLen: Integer;
   LCipherLen: Word;
-  LCipherSuite: Word;
+  LCipherSuite1: Word;
+  LCipherSuite2: Word;
+  LCipherSuite3: Word;
 begin
   LKeyShare := nil;
   SetLength(LKeyShare, 32);
@@ -114,13 +116,25 @@ begin
 
   LCipherLen := ReadUInt16(LHandshake, LOffset);
   Inc(LOffset, 2);
-  AssertEqualsWord(2, LCipherLen, 'ClientHello cipher_suites length should be 2 bytes (single suite)');
+  AssertEqualsWord(6, LCipherLen, 'ClientHello cipher_suites length should be 6 bytes (three suites)');
 
-  LCipherSuite := ReadUInt16(LHandshake, LOffset);
+  LCipherSuite1 := ReadUInt16(LHandshake, LOffset);
+  LCipherSuite2 := ReadUInt16(LHandshake, LOffset + 2);
+  LCipherSuite3 := ReadUInt16(LHandshake, LOffset + 4);
+  AssertEqualsWord(
+    TLS13_CIPHER_AES_256_GCM_SHA384,
+    LCipherSuite1,
+    'ClientHello should offer AES256-GCM-SHA384 first in pure FreePascal path'
+  );
   AssertEqualsWord(
     TLS13_CIPHER_CHACHA20_POLY1305_SHA256,
-    LCipherSuite,
-    'ClientHello should offer CHACHA20-POLY1305 first/only in pure FreePascal path'
+    LCipherSuite2,
+    'ClientHello should offer CHACHA20-POLY1305 second in pure FreePascal path'
+  );
+  AssertEqualsWord(
+    TLS13_CIPHER_AES_128_GCM_SHA256,
+    LCipherSuite3,
+    'ClientHello should offer AES128-GCM-SHA256 third in pure FreePascal path'
   );
 end;
 

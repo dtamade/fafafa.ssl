@@ -4,6 +4,8 @@ program test_tls13_finished;
 
 uses
   SysUtils,
+  fafafa.ssl.tls13.wire,
+  fafafa.ssl.tls13.primitives,
   fafafa.ssl.tls13.finished;
 
 procedure Fail(const AMessage: string);
@@ -99,10 +101,80 @@ begin
   );
 end;
 
+procedure TestFinishedVectorSHA384SuiteAware;
+var
+  LServerTrafficSecret: TBytes;
+  LTranscriptHash: TBytes;
+  LFinishedKey: TBytes;
+  LExpectedFinishedKey: TBytes;
+  LVerifyData: TBytes;
+  LExpectedVerifyData: TBytes;
+  LEmpty: TBytes;
+begin
+  LServerTrafficSecret := HexToBytes(
+    '00112233445566778899aabbccddeeff' +
+    '102132435465768798a9babcbddceeff' +
+    '55aa55aa55aa55aa55aa55aa55aa55aa'
+  );
+  LTranscriptHash := HexToBytes(
+    '8899aabbccddeeff0011223344556677' +
+    'fedcba98765432100123456789abcdef' +
+    '0102030405060708090a0b0c0d0e0f10'
+  );
+
+  SetLength(LEmpty, 0);
+  LExpectedFinishedKey := TLS13_HKDF_Expand_Label_SHA384(
+    LServerTrafficSecret,
+    'finished',
+    LEmpty,
+    48
+  );
+  LExpectedVerifyData := HMAC_SHA384(LExpectedFinishedKey, LTranscriptHash);
+
+  LFinishedKey := TLS13FinishedKeyForCipherSuite(
+    TLS13_CIPHER_AES_256_GCM_SHA384,
+    LServerTrafficSecret
+  );
+  AssertBytesEqual(LExpectedFinishedKey, LFinishedKey,
+    'SHA384 suite-aware finished key mismatch');
+
+  LVerifyData := TLS13ComputeFinishedVerifyDataFromTrafficSecretForCipherSuite(
+    TLS13_CIPHER_AES_256_GCM_SHA384,
+    LServerTrafficSecret,
+    LTranscriptHash
+  );
+  AssertBytesEqual(LExpectedVerifyData, LVerifyData,
+    'SHA384 suite-aware finished verify_data mismatch');
+  AssertTrue(Length(LVerifyData) = 48,
+    'SHA384 suite-aware verify_data length should be 48');
+
+  AssertTrue(
+    TLS13VerifyFinishedForCipherSuite(
+      TLS13_CIPHER_AES_256_GCM_SHA384,
+      LServerTrafficSecret,
+      LTranscriptHash,
+      LVerifyData
+    ),
+    'SHA384 suite-aware Finished verify should succeed'
+  );
+
+  LVerifyData[0] := LVerifyData[0] xor $01;
+  AssertTrue(
+    not TLS13VerifyFinishedForCipherSuite(
+      TLS13_CIPHER_AES_256_GCM_SHA384,
+      LServerTrafficSecret,
+      LTranscriptHash,
+      LVerifyData
+    ),
+    'SHA384 suite-aware Finished verify should fail when verify_data is modified'
+  );
+end;
+
 begin
   WriteLn('Testing TLS 1.3 finished verification helpers...');
 
   TestFinishedVector;
+  TestFinishedVectorSHA384SuiteAware;
 
   WriteLn('✅ TLS 1.3 finished checks passed');
 end.
