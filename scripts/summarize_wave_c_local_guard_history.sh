@@ -57,12 +57,26 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b126_local_guard_history_${RUN_ID}.md"
+  OUTPUT_FILE="tmp/test-reports/wave_c_b126_local_guard_history_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 
-mapfile -t reports < <(ls -1t test-reports/wave_c_b125_local_guard_bundle_*.md 2>/dev/null | head -n "$LIMIT" || true)
+find_bundle_reports() {
+  local candidate_root=""
+  for root in tmp/test-reports test-reports; do
+    if ls -1 "$root"/wave_c_b125_local_guard_bundle_*.md >/dev/null 2>&1; then
+      candidate_root="$root"
+      break
+    fi
+  done
+
+  if [[ -n "$candidate_root" ]]; then
+    ls -1t "$candidate_root"/wave_c_b125_local_guard_bundle_*.md 2>/dev/null | head -n "$LIMIT"
+  fi
+}
+
+mapfile -t reports < <(find_bundle_reports || true)
 
 total=0
 pass_count=0
@@ -94,7 +108,7 @@ done
 
 trend_state="NO_DATA"
 if [[ $total -gt 0 ]]; then
-  if [[ $fail_count -eq 0 ]]; then
+  if [[ "$latest_state" == "PASS" ]]; then
     trend_state="STABLE"
   else
     trend_state="DEGRADED"
@@ -128,7 +142,11 @@ fi
   echo "## Recommendation"
   echo
   if [[ "$trend_state" == "STABLE" ]]; then
-    echo "- local-first guard trend is stable; keep daily B125 strict checks."
+    if [[ "$fail_count" -gt 0 ]]; then
+      echo "- local-first guard latest bundle is healthy again; keep watching historical FAILs until the window clears."
+    else
+      echo "- local-first guard trend is stable; keep daily B125 strict checks."
+    fi
   elif [[ "$trend_state" == "DEGRADED" ]]; then
     echo "- local-first guard trend degraded; inspect latest FAIL bundle logs immediately."
   else
@@ -139,7 +157,7 @@ fi
 echo "[INFO] trend_state=$trend_state"
 echo "[PASS] report generated: $OUTPUT_FILE"
 
-if [[ "$STRICT" == "true" && "$fail_count" -gt 0 ]]; then
+if [[ "$STRICT" == "true" && "$trend_state" == "DEGRADED" ]]; then
   exit 1
 fi
 

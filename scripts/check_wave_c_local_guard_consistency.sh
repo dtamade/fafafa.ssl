@@ -51,7 +51,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b140_local_guard_consistency_${RUN_ID}.md"
+  OUTPUT_FILE="tmp/test-reports/wave_c_b140_local_guard_consistency_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"

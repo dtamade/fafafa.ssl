@@ -9,6 +9,8 @@ THRESHOLD_REPORT=""
 VALIDATION_REPORT=""
 STRICT=false
 OUTPUT_FILE=""
+THRESHOLD_REPORT_BASENAME=""
+VALIDATION_REPORT_BASENAME=""
 
 usage() {
   cat <<'USAGE'
@@ -95,6 +97,9 @@ if [[ -z "$READINESS_REPORT" || -z "$THRESHOLD_REPORT" || -z "$VALIDATION_REPORT
   exit 1
 fi
 
+THRESHOLD_REPORT_BASENAME="$(basename "$THRESHOLD_REPORT")"
+VALIDATION_REPORT_BASENAME="$(basename "$VALIDATION_REPORT")"
+
 extract_marked_value() {
   local file="$1"
   local key="$2"
@@ -152,10 +157,10 @@ fi
   echo "## Operator Commands"
   echo
   echo "1. 阈值评估"
-  echo "   bash scripts/evaluate_wave_c_b101_thresholds.sh --strict"
+  echo "   bash scripts/evaluate_wave_c_b101_thresholds.sh --reports-dir $REPORTS_DIR --report-glob 'wave_c_b101_validation_*.md' --require-full-gate --strict"
   echo
   echo "2. readiness 复核"
-  echo "   bash scripts/check_wave_c_default_on_readiness.sh --strict"
+  echo "   bash scripts/check_wave_c_default_on_readiness.sh --reports-dir $REPORTS_DIR --threshold-report $REPORTS_DIR/$THRESHOLD_REPORT_BASENAME --validation-report $REPORTS_DIR/$VALIDATION_REPORT_BASENAME --strict"
   echo
   echo "3. 失败时策略"
   echo "   - 保持 default-off"

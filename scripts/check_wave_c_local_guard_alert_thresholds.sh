@@ -57,11 +57,15 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$INPUT_JSON" ]]; then
+  INPUT_JSON="$(ls -1t tmp/test-reports/wave_c_b142_local_guard_status_*.json 2>/dev/null | head -1 || true)"
+fi
+
+if [[ -z "$INPUT_JSON" ]]; then
   INPUT_JSON="$(ls -1t test-reports/wave_c_b142_local_guard_status_*.json 2>/dev/null | head -1 || true)"
 fi
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b143_alert_thresholds_${RUN_ID}.md"
+  OUTPUT_FILE="tmp/test-reports/wave_c_b143_alert_thresholds_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"

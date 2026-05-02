@@ -51,10 +51,57 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b132_local_first_status_snapshot_${RUN_ID}.md"
+  OUTPUT_FILE="tmp/test-reports/wave_c_b132_local_first_status_snapshot_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
+
+find_latest_wave_c_report() {
+  local pattern="$1"
+  local candidate=""
+  for root in tmp/test-reports test-reports docs/test_reports; do
+    candidate="$(ls -1t "$root"/$pattern 2>/dev/null | head -1 || true)"
+    if [[ -n "$candidate" ]]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+  echo ""
+}
+
+extract_run_suffix() {
+  local file="$1"
+  local prefix="$2"
+  local name
+
+  name="$(basename "$file")"
+  name="${name#${prefix}}"
+  name="${name%.md}"
+  echo "$name"
+}
+
+find_latest_complete_local_guard_run() {
+  local root=""
+  local latest_b129=""
+  local run_suffix=""
+
+  for root in tmp/test-reports test-reports docs/test_reports; do
+    while IFS= read -r latest_b129; do
+      [[ -z "$latest_b129" ]] && continue
+      run_suffix="$(extract_run_suffix "$latest_b129" "wave_c_b129_oncall_check_")"
+
+      if [[ -f "$root/wave_c_b123_local_first_continuity_${run_suffix}.md" && \
+            -f "$root/wave_c_b124_local_drift_watch_${run_suffix}.md" && \
+            -f "$root/wave_c_b125_local_guard_bundle_${run_suffix}.md" && \
+            -f "$root/wave_c_b126_local_guard_history_${run_suffix}.md" ]]; then
+        echo "$root|$run_suffix"
+        return 0
+      fi
+    done < <(ls -1t "$root"/wave_c_b129_oncall_check_*.md 2>/dev/null || true)
+  done
+
+  echo ""
+}
 
 workflow_state="UNKNOWN"
 if [[ -f ".github/workflows/wave-c-quick-sprint-manual.yml.disabled" && ! -f ".github/workflows/wave-c-quick-sprint-manual.yml" ]]; then
@@ -63,11 +110,22 @@ elif [[ -f ".github/workflows/wave-c-quick-sprint-manual.yml" ]]; then
   workflow_state="ENABLED"
 fi
 
-latest_b123="$(ls -1t test-reports/wave_c_b123_local_first_continuity_*.md 2>/dev/null | head -1 || true)"
-latest_b124="$(ls -1t test-reports/wave_c_b124_local_drift_watch_*.md 2>/dev/null | head -1 || true)"
-latest_b125="$(ls -1t test-reports/wave_c_b125_local_guard_bundle_*.md 2>/dev/null | head -1 || true)"
-latest_b126="$(ls -1t test-reports/wave_c_b126_local_guard_history_*.md 2>/dev/null | head -1 || true)"
-latest_b129="$(ls -1t test-reports/wave_c_b129_oncall_check_*.md 2>/dev/null | head -1 || true)"
+complete_guard_run="$(find_latest_complete_local_guard_run)"
+
+if [[ -n "$complete_guard_run" ]]; then
+  IFS='|' read -r evidence_root evidence_run_suffix <<< "$complete_guard_run"
+  latest_b123="$evidence_root/wave_c_b123_local_first_continuity_${evidence_run_suffix}.md"
+  latest_b124="$evidence_root/wave_c_b124_local_drift_watch_${evidence_run_suffix}.md"
+  latest_b125="$evidence_root/wave_c_b125_local_guard_bundle_${evidence_run_suffix}.md"
+  latest_b126="$evidence_root/wave_c_b126_local_guard_history_${evidence_run_suffix}.md"
+  latest_b129="$evidence_root/wave_c_b129_oncall_check_${evidence_run_suffix}.md"
+else
+  latest_b123="$(find_latest_wave_c_report 'wave_c_b123_local_first_continuity_*.md')"
+  latest_b124="$(find_latest_wave_c_report 'wave_c_b124_local_drift_watch_*.md')"
+  latest_b125="$(find_latest_wave_c_report 'wave_c_b125_local_guard_bundle_*.md')"
+  latest_b126="$(find_latest_wave_c_report 'wave_c_b126_local_guard_history_*.md')"
+  latest_b129="$(find_latest_wave_c_report 'wave_c_b129_oncall_check_*.md')"
+fi
 
 extract_marked_state() {
   local file="$1"

@@ -55,15 +55,30 @@ if [[ -z "$RUN_ID" ]]; then
 fi
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b120_post_trigger_observability_${RUN_ID}.md"
+  OUTPUT_FILE="tmp/test-reports/wave_c_b120_post_trigger_observability_${RUN_ID}.md"
 fi
 
+mkdir -p "$(dirname "$OUTPUT_FILE")"
+
+resolve_wave_c_artifact() {
+  local name="$1"
+  local candidate=""
+  for root in tmp/test-reports test-reports docs/test_reports; do
+    candidate="$root/$name"
+    if [[ -f "$candidate" ]]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+  echo "tmp/test-reports/$name"
+}
+
 required=(
-  "test-reports/wave_c_b107_threshold_eval_${RUN_ID}.md"
-  "test-reports/wave_c_b108_default_on_readiness_${RUN_ID}.md"
-  "test-reports/wave_c_b109_canary_rollout_${RUN_ID}.md"
-  "test-reports/wave_c_b110_rollback_drill_${RUN_ID}.md"
-  "test-reports/wave_c_quick_sprint_bundle_${RUN_ID}.md"
+  "$(resolve_wave_c_artifact "wave_c_b107_threshold_eval_${RUN_ID}.md")"
+  "$(resolve_wave_c_artifact "wave_c_b108_default_on_readiness_${RUN_ID}.md")"
+  "$(resolve_wave_c_artifact "wave_c_b109_canary_rollout_${RUN_ID}.md")"
+  "$(resolve_wave_c_artifact "wave_c_b110_rollback_drill_${RUN_ID}.md")"
+  "$(resolve_wave_c_artifact "wave_c_quick_sprint_bundle_${RUN_ID}.md")"
 )
 
 missing=0

@@ -51,10 +51,34 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_JSON" ]]; then
-  OUTPUT_JSON="test-reports/wave_c_b142_local_guard_status_${RUN_ID}.json"
+  OUTPUT_JSON="tmp/test-reports/wave_c_b142_local_guard_status_${RUN_ID}.json"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_JSON")"
+
+find_latest_wave_c_report() {
+  local pattern="$1"
+  local candidate=""
+  for root in tmp/test-reports test-reports docs/test_reports; do
+    candidate="$(ls -1t "$root"/$pattern 2>/dev/null | head -1 || true)"
+    if [[ -n "$candidate" ]]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+  echo ""
+}
+
+extract_snapshot_evidence_file() {
+  local file="$1"
+  local label="$2"
+  if [[ -z "$file" || ! -f "$file" ]]; then
+    echo ""
+    return 0
+  fi
+
+  grep -E -- "^- ${label}:" "$file" | head -1 | sed -E "s/^- ${label}:[[:space:]]*//" || true
+}
 
 workflow_state="UNKNOWN"
 if [[ -f ".github/workflows/wave-c-quick-sprint-manual.yml.disabled" && ! -f ".github/workflows/wave-c-quick-sprint-manual.yml" ]]; then
@@ -63,10 +87,16 @@ elif [[ -f ".github/workflows/wave-c-quick-sprint-manual.yml" ]]; then
   workflow_state="ENABLED"
 fi
 
-latest_oncall="$(ls -1t test-reports/wave_c_b129_oncall_check_*.md 2>/dev/null | head -1 || true)"
-latest_snapshot="$(ls -1t test-reports/wave_c_b132_local_first_status_snapshot_*.md 2>/dev/null | head -1 || true)"
-latest_fullgate="$(ls -1t test-reports/wave_c_b138_pre_ci_reenable_full_gate_*.md 2>/dev/null | head -1 || true)"
-latest_consistency="$(ls -1t test-reports/wave_c_b140_local_guard_consistency_*.md 2>/dev/null | head -1 || true)"
+latest_snapshot="$(find_latest_wave_c_report 'wave_c_b132_local_first_status_snapshot_*.md')"
+latest_oncall="$(extract_snapshot_evidence_file "$latest_snapshot" "B129")"
+if [[ -n "$latest_oncall" && ! -f "$latest_oncall" ]]; then
+  latest_oncall=""
+fi
+if [[ -z "$latest_oncall" ]]; then
+  latest_oncall="$(find_latest_wave_c_report 'wave_c_b129_oncall_check_*.md')"
+fi
+latest_fullgate="$(find_latest_wave_c_report 'wave_c_b138_pre_ci_reenable_full_gate_*.md')"
+latest_consistency="$(find_latest_wave_c_report 'wave_c_b140_local_guard_consistency_*.md')"
 
 extract_marked_state() {
   local file="$1"

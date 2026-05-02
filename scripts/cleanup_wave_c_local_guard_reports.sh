@@ -63,17 +63,21 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b139_local_guard_cleanup_plan_${RUN_ID}.md"
+  OUTPUT_FILE="tmp/test-reports/wave_c_b139_local_guard_cleanup_plan_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 
 tier1_patterns=(
+  "tmp/test-reports/wave_c_b129_oncall_check_*.md"
+  "tmp/test-reports/wave_c_b125_local_guard_bundle_*.md"
   "test-reports/wave_c_b129_oncall_check_*.md"
   "test-reports/wave_c_b125_local_guard_bundle_*.md"
 )
 
 tier2_patterns=(
+  "tmp/test-reports/wave_c_b126_local_guard_history_*.md"
+  "tmp/test-reports/wave_c_b124_local_drift_watch_*.md"
   "test-reports/wave_c_b126_local_guard_history_*.md"
   "test-reports/wave_c_b124_local_drift_watch_*.md"
 )

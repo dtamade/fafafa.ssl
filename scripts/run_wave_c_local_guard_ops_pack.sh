@@ -51,16 +51,17 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b144_local_guard_ops_pack_${RUN_ID}.md"
+  OUTPUT_FILE="tmp/test-reports/wave_c_b144_local_guard_ops_pack_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 
-b138_report="test-reports/wave_c_b138_pre_ci_reenable_full_gate_${RUN_ID}.md"
-b140_report="test-reports/wave_c_b140_local_guard_consistency_${RUN_ID}.md"
-b142_json="test-reports/wave_c_b142_local_guard_status_${RUN_ID}.json"
-b143_report="test-reports/wave_c_b143_alert_thresholds_${RUN_ID}.md"
-b139_report="test-reports/wave_c_b139_local_guard_cleanup_plan_${RUN_ID}.md"
+OPS_DIR="tmp/test-reports"
+b138_report="$OPS_DIR/wave_c_b138_pre_ci_reenable_full_gate_${RUN_ID}.md"
+b140_report="$OPS_DIR/wave_c_b140_local_guard_consistency_${RUN_ID}.md"
+b142_json="$OPS_DIR/wave_c_b142_local_guard_status_${RUN_ID}.json"
+b143_report="$OPS_DIR/wave_c_b143_alert_thresholds_${RUN_ID}.md"
+b139_report="$OPS_DIR/wave_c_b139_local_guard_cleanup_plan_${RUN_ID}.md"
 
 run_step() {
   local cmd="$1"
@@ -74,11 +75,11 @@ run_step() {
   echo "$ec"
 }
 
-b138_log="test-reports/wave_c_b138_pre_ci_reenable_full_gate_${RUN_ID}.b144.log"
-b140_log="test-reports/wave_c_b140_local_guard_consistency_${RUN_ID}.b144.log"
-b142_log="test-reports/wave_c_b142_local_guard_status_${RUN_ID}.b144.log"
-b143_log="test-reports/wave_c_b143_alert_thresholds_${RUN_ID}.b144.log"
-b139_log="test-reports/wave_c_b139_local_guard_cleanup_plan_${RUN_ID}.b144.log"
+b138_log="$OPS_DIR/wave_c_b138_pre_ci_reenable_full_gate_${RUN_ID}.b144.log"
+b140_log="$OPS_DIR/wave_c_b140_local_guard_consistency_${RUN_ID}.b144.log"
+b142_log="$OPS_DIR/wave_c_b142_local_guard_status_${RUN_ID}.b144.log"
+b143_log="$OPS_DIR/wave_c_b143_alert_thresholds_${RUN_ID}.b144.log"
+b139_log="$OPS_DIR/wave_c_b139_local_guard_cleanup_plan_${RUN_ID}.b144.log"
 
 b138_exit=$(run_step "bash scripts/run_wave_c_pre_ci_reenable_full_gate.sh --run-id ${RUN_ID} --strict --output ${b138_report}" "$b138_log")
 b140_exit=$(run_step "bash scripts/check_wave_c_local_guard_consistency.sh --run-id ${RUN_ID} --strict --output ${b140_report}" "$b140_log")

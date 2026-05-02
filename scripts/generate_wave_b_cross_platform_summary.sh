@@ -148,7 +148,7 @@ read_platform_step_status() {
   ' "$file" || true
 }
 
-normalize_check_state() {
+parse_check_state() {
   local status="$1"
   status="$(echo "$status" | tr -d '`*' | tr '[:lower:]' '[:upper:]' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
   case "$status" in
@@ -156,9 +156,20 @@ normalize_check_state() {
       echo "$status"
       ;;
     *)
-      echo "TODO"
+      echo ""
       ;;
   esac
+}
+
+stable_check_state() {
+  local status="$1"
+  local parsed
+  parsed="$(parse_check_state "$status")"
+  if [[ -n "$parsed" ]]; then
+    echo "$parsed"
+  else
+    echo "PENDING"
+  fi
 }
 
 linux_overall="$(read_linux_summary_field "$PROJECT_ROOT/$LINUX_SUMMARY" "Overall Status")"
@@ -166,20 +177,17 @@ if [[ -z "$linux_overall" ]]; then
   linux_overall="UNKNOWN"
 fi
 
-linux_compile_check="TODO"
-linux_modules_check="TODO"
-linux_examples_check="TODO"
-linux_compile_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$LINUX_SUMMARY" "compile_all_modules")")"
-linux_modules_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$LINUX_SUMMARY" "run_all_module_tests")")"
-linux_examples_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$LINUX_SUMMARY" "verify_examples_compile")")"
-if [[ "$linux_compile_check" == "TODO" ]]; then
-  linux_compile_check="$(normalize_check_state "$linux_overall")"
+linux_compile_check="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$LINUX_SUMMARY" "compile_all_modules")")"
+linux_modules_check="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$LINUX_SUMMARY" "run_all_module_tests")")"
+linux_examples_check="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$LINUX_SUMMARY" "verify_examples_compile")")"
+if [[ -z "$linux_compile_check" ]]; then
+  linux_compile_check="$(stable_check_state "$linux_overall")"
 fi
-if [[ "$linux_modules_check" == "TODO" ]]; then
-  linux_modules_check="$(normalize_check_state "$linux_overall")"
+if [[ -z "$linux_modules_check" ]]; then
+  linux_modules_check="$(stable_check_state "$linux_overall")"
 fi
-if [[ "$linux_examples_check" == "TODO" ]]; then
-  linux_examples_check="$(normalize_check_state "$linux_overall")"
+if [[ -z "$linux_examples_check" ]]; then
+  linux_examples_check="$(stable_check_state "$linux_overall")"
 fi
 
 linux_examples_total="n/a"
@@ -249,36 +257,43 @@ if [[ -n "$WINDOWS_SUMMARY" && -f "$PROJECT_ROOT/$WINDOWS_SUMMARY" ]]; then
   fi
 fi
 
-macos_overall_check="TODO"
-case "$macos_state" in
-  PASS|FAIL|DRY_RUN)
-    macos_overall_check="$macos_state"
-    ;;
-esac
+macos_overall_check="$(stable_check_state "$macos_state")"
+windows_overall_check="$(stable_check_state "$windows_state")"
 
-windows_overall_check="TODO"
-case "$windows_state" in
-  PASS|FAIL|DRY_RUN)
-    windows_overall_check="$windows_state"
-    ;;
-esac
-
-macos_compile_check="TODO"
-macos_modules_check="TODO"
-macos_examples_check="TODO"
+macos_compile_check="PENDING"
+macos_modules_check="PENDING"
+macos_examples_check="PENDING"
 if [[ -n "$MACOS_SUMMARY" && -f "$PROJECT_ROOT/$MACOS_SUMMARY" ]]; then
-  macos_compile_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$MACOS_SUMMARY" "compile")")"
-  macos_modules_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$MACOS_SUMMARY" "modules")")"
-  macos_examples_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$MACOS_SUMMARY" "examples")")"
+  parsed_macos_compile="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$MACOS_SUMMARY" "compile")")"
+  parsed_macos_modules="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$MACOS_SUMMARY" "modules")")"
+  parsed_macos_examples="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$MACOS_SUMMARY" "examples")")"
+  if [[ -n "$parsed_macos_compile" ]]; then
+    macos_compile_check="$parsed_macos_compile"
+  fi
+  if [[ -n "$parsed_macos_modules" ]]; then
+    macos_modules_check="$parsed_macos_modules"
+  fi
+  if [[ -n "$parsed_macos_examples" ]]; then
+    macos_examples_check="$parsed_macos_examples"
+  fi
 fi
 
-windows_compile_check="TODO"
-windows_modules_check="TODO"
-windows_examples_check="TODO"
+windows_compile_check="PENDING"
+windows_modules_check="PENDING"
+windows_examples_check="PENDING"
 if [[ -n "$WINDOWS_SUMMARY" && -f "$PROJECT_ROOT/$WINDOWS_SUMMARY" ]]; then
-  windows_compile_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$WINDOWS_SUMMARY" "compile")")"
-  windows_modules_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$WINDOWS_SUMMARY" "modules")")"
-  windows_examples_check="$(normalize_check_state "$(read_platform_step_status "$PROJECT_ROOT/$WINDOWS_SUMMARY" "examples")")"
+  parsed_windows_compile="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$WINDOWS_SUMMARY" "compile")")"
+  parsed_windows_modules="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$WINDOWS_SUMMARY" "modules")")"
+  parsed_windows_examples="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$WINDOWS_SUMMARY" "examples")")"
+  if [[ -n "$parsed_windows_compile" ]]; then
+    windows_compile_check="$parsed_windows_compile"
+  fi
+  if [[ -n "$parsed_windows_modules" ]]; then
+    windows_modules_check="$parsed_windows_modules"
+  fi
+  if [[ -n "$parsed_windows_examples" ]]; then
+    windows_examples_check="$parsed_windows_examples"
+  fi
 fi
 
 if [[ "$DRY_RUN" == "true" ]]; then

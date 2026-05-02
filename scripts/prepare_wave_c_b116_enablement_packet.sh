@@ -3,7 +3,7 @@
 set -euo pipefail
 
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
-SIGNOFF_RECORD="docs/test_reports/WAVE_C_B113_RELEASE_SIGNOFF_RECORD_2026-02-08.md"
+SIGNOFF_RECORD=""
 PREREQ_REPORT=""
 OUTPUT_FILE=""
 
@@ -57,11 +57,19 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$PREREQ_REPORT" ]]; then
+  PREREQ_REPORT="$(ls -1t tmp/test-reports/wave_c_b115_workflow_enable_prereq_*.md 2>/dev/null | head -1 || true)"
+fi
+
+if [[ -z "$PREREQ_REPORT" ]]; then
   PREREQ_REPORT="$(ls -1t test-reports/wave_c_b115_workflow_enable_prereq_*.md 2>/dev/null | head -1 || true)"
 fi
 
+if [[ -z "$SIGNOFF_RECORD" ]]; then
+  SIGNOFF_RECORD="$(ls -1t docs/test_reports/WAVE_C_B113_RELEASE_SIGNOFF_RECORD_*.md 2>/dev/null | head -1 || true)"
+fi
+
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="docs/test_reports/WAVE_C_B116_ENABLEMENT_REQUEST_PACKET_2026-02-08.md"
+  OUTPUT_FILE="docs/test_reports/WAVE_C_B116_ENABLEMENT_REQUEST_PACKET_${RUN_ID}.md"
 fi
 
 extract_value_after_colon() {
@@ -79,6 +87,8 @@ enable_state="UNKNOWN"
 if [[ -n "$PREREQ_REPORT" && -f "$PREREQ_REPORT" ]]; then
   enable_state="$(extract_value_after_colon "$PREREQ_REPORT" "enable_state" | sed -E 's/\*\*//g')"
 fi
+
+mkdir -p "$(dirname "$OUTPUT_FILE")"
 
 {
   echo "# Wave C B116 Enablement Request Packet"

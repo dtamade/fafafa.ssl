@@ -65,16 +65,43 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$ONCALL_REPORT" ]]; then
-  ONCALL_REPORT="$(ls -1t test-reports/wave_c_b129_oncall_check_*.md 2>/dev/null | head -1 || true)"
+if [[ -z "$SNAPSHOT_REPORT" ]]; then
+  SNAPSHOT_REPORT="$(ls -1t tmp/test-reports/wave_c_b132_local_first_status_snapshot_*.md 2>/dev/null | head -1 || true)"
 fi
 
 if [[ -z "$SNAPSHOT_REPORT" ]]; then
   SNAPSHOT_REPORT="$(ls -1t test-reports/wave_c_b132_local_first_status_snapshot_*.md 2>/dev/null | head -1 || true)"
 fi
 
+extract_snapshot_evidence_file() {
+  local file="$1"
+  local label="$2"
+  if [[ -z "$file" || ! -f "$file" ]]; then
+    echo ""
+    return 0
+  fi
+
+  grep -E -- "^- ${label}:" "$file" | head -1 | sed -E "s/^- ${label}:[[:space:]]*//" || true
+}
+
+if [[ -z "$ONCALL_REPORT" ]]; then
+  ONCALL_REPORT="$(extract_snapshot_evidence_file "$SNAPSHOT_REPORT" "B129")"
+fi
+
+if [[ -n "$ONCALL_REPORT" && ! -f "$ONCALL_REPORT" ]]; then
+  ONCALL_REPORT=""
+fi
+
+if [[ -z "$ONCALL_REPORT" ]]; then
+  ONCALL_REPORT="$(ls -1t tmp/test-reports/wave_c_b129_oncall_check_*.md 2>/dev/null | head -1 || true)"
+fi
+
+if [[ -z "$ONCALL_REPORT" ]]; then
+  ONCALL_REPORT="$(ls -1t test-reports/wave_c_b129_oncall_check_*.md 2>/dev/null | head -1 || true)"
+fi
+
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b137_pre_ci_reenable_packet_${RUN_ID}.md"
+  OUTPUT_FILE="tmp/test-reports/wave_c_b137_pre_ci_reenable_packet_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"

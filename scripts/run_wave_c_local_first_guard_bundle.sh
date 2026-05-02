@@ -4,7 +4,7 @@ set -euo pipefail
 
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 STRICT=false
-REPORTS_DIR="test-reports"
+REPORTS_DIR="tmp/test-reports"
 OUTPUT_FILE=""
 
 usage() {
@@ -19,7 +19,7 @@ Wave C B125 Local-First Guard Bundle
 
 选项：
   --run-id ID       指定 run_id
-  --reports-dir DIR 报告目录（默认 test-reports）
+  --reports-dir DIR 报告目录（默认 tmp/test-reports）
   --output FILE     输出汇总报告
   --strict          任一步骤失败返回非 0
   --help            显示帮助

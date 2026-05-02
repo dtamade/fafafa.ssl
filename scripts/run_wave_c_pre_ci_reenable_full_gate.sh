@@ -51,18 +51,19 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b138_pre_ci_reenable_full_gate_${RUN_ID}.md"
+  OUTPUT_FILE="tmp/test-reports/wave_c_b138_pre_ci_reenable_full_gate_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 
-oncall_report="test-reports/wave_c_b129_oncall_check_${RUN_ID}.md"
-snapshot_report="test-reports/wave_c_b132_local_first_status_snapshot_${RUN_ID}.md"
-packet_report="test-reports/wave_c_b137_pre_ci_reenable_packet_${RUN_ID}.md"
+FULL_GATE_DIR="tmp/test-reports"
+oncall_report="$FULL_GATE_DIR/wave_c_b129_oncall_check_${RUN_ID}.md"
+snapshot_report="$FULL_GATE_DIR/wave_c_b132_local_first_status_snapshot_${RUN_ID}.md"
+packet_report="$FULL_GATE_DIR/wave_c_b137_pre_ci_reenable_packet_${RUN_ID}.md"
 
-oncall_log="test-reports/wave_c_b129_oncall_check_${RUN_ID}.b138.log"
-snapshot_log="test-reports/wave_c_b132_local_first_status_snapshot_${RUN_ID}.b138.log"
-packet_log="test-reports/wave_c_b137_pre_ci_reenable_packet_${RUN_ID}.b138.log"
+oncall_log="$FULL_GATE_DIR/wave_c_b129_oncall_check_${RUN_ID}.b138.log"
+snapshot_log="$FULL_GATE_DIR/wave_c_b132_local_first_status_snapshot_${RUN_ID}.b138.log"
+packet_log="$FULL_GATE_DIR/wave_c_b137_pre_ci_reenable_packet_${RUN_ID}.b138.log"
 
 run_step() {
   local cmd="$1"

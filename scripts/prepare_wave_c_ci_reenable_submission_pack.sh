@@ -5,22 +5,28 @@ set -euo pipefail
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 OUTPUT_FILE=""
 STRICT=false
+SIGNOFF_RECORD=""
+PREREQ_REPORT=""
+PACKET_REPORT=""
 
 usage() {
   cat <<'USAGE'
 Wave C B146 CI Re-enable Submission Pack
 
 用途：
-  生成恢复 CI 的提交包（不执行 enable）。
+ 基于 signoff/prereq/enablement packet 生成恢复 CI 的审批提交包（不执行 enable）。
 
 用法：
   scripts/prepare_wave_c_ci_reenable_submission_pack.sh [options]
 
 选项：
-  --run-id ID      指定 run_id
-  --output FILE    输出报告路径
-  --strict         状态非 READY_TO_SUBMIT 返回非 0
-  --help           显示帮助
+  --run-id ID            指定 run_id
+  --signoff-record FILE  指定 B113 signoff record
+  --prereq-report FILE   指定 B115 prereq report
+  --packet-report FILE   指定 B116 enablement packet
+  --output FILE          输出报告路径
+  --strict               状态非 READY_TO_SUBMIT 返回非 0
+  --help                 显示帮助
 USAGE
 }
 
@@ -28,6 +34,18 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --run-id)
       RUN_ID="$2"
+      shift 2
+      ;;
+    --signoff-record)
+      SIGNOFF_RECORD="$2"
+      shift 2
+      ;;
+    --prereq-report)
+      PREREQ_REPORT="$2"
+      shift 2
+      ;;
+    --packet-report)
+      PACKET_REPORT="$2"
       shift 2
       ;;
     --output)
@@ -51,16 +69,23 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b146_ci_reenable_submission_pack_${RUN_ID}.md"
+  OUTPUT_FILE="docs/test_reports/WAVE_C_B146_CI_REENABLE_SUBMISSION_PACK_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 
-latest_packet="$(ls -1t test-reports/wave_c_b137_pre_ci_reenable_packet_*.md 2>/dev/null | head -1 || true)"
-latest_fullgate="$(ls -1t test-reports/wave_c_b138_pre_ci_reenable_full_gate_*.md 2>/dev/null | head -1 || true)"
-latest_status_json="$(ls -1t test-reports/wave_c_b142_local_guard_status_*.json 2>/dev/null | head -1 || true)"
-latest_alert="$(ls -1t test-reports/wave_c_b143_alert_thresholds_*.md 2>/dev/null | head -1 || true)"
-latest_ops_pack="$(ls -1t test-reports/wave_c_b144_local_guard_ops_pack_*.md 2>/dev/null | head -1 || true)"
+if [[ -z "$SIGNOFF_RECORD" ]]; then
+  SIGNOFF_RECORD="$(ls -1t docs/test_reports/WAVE_C_B113_RELEASE_SIGNOFF_RECORD_*.md 2>/dev/null | head -1 || true)"
+fi
+if [[ -z "$PREREQ_REPORT" ]]; then
+  PREREQ_REPORT="$(ls -1t tmp/test-reports/wave_c_b115_workflow_enable_prereq_*.md 2>/dev/null | head -1 || true)"
+fi
+if [[ -z "$PREREQ_REPORT" ]]; then
+  PREREQ_REPORT="$(ls -1t test-reports/wave_c_b115_workflow_enable_prereq_*.md 2>/dev/null | head -1 || true)"
+fi
+if [[ -z "$PACKET_REPORT" ]]; then
+  PACKET_REPORT="$(ls -1t docs/test_reports/WAVE_C_B116_ENABLEMENT_REQUEST_PACKET_*.md 2>/dev/null | head -1 || true)"
+fi
 
 extract_marked_state() {
   local file="$1"
@@ -74,14 +99,14 @@ extract_marked_state() {
   echo "${value:-UNKNOWN}"
 }
 
-extract_json_value() {
+extract_value_after_colon() {
   local file="$1"
   local key="$2"
   if [[ -z "$file" || ! -f "$file" ]]; then
     echo "MISSING"
     return 0
   fi
-  sed -n -E "s/.*\"${key}\"[[:space:]]*:[[:space:]]*\"([^\"]*)\".*/\1/p" "$file" | head -1
+  grep -E -- "- ${key}:" "$file" | head -1 | sed -E "s/.*- ${key}:[[:space:]]*//" | sed -E 's/\*\*//g'
 }
 
 workflow_state="UNKNOWN"
@@ -91,14 +116,13 @@ elif [[ -f ".github/workflows/wave-c-quick-sprint-manual.yml" ]]; then
   workflow_state="ENABLED"
 fi
 
-packet_state="$(extract_marked_state "$latest_packet" "packet_state")"
-fullgate_state="$(extract_marked_state "$latest_fullgate" "overall")"
-alert_level="$(extract_marked_state "$latest_alert" "alert_level")"
-ops_pack_state="$(extract_marked_state "$latest_ops_pack" "overall")"
-status_overall="$(extract_json_value "$latest_status_json" "overall_state")"
+signoff_state="$(extract_value_after_colon "$SIGNOFF_RECORD" "signoff_state")"
+enable_state="$(extract_value_after_colon "$PREREQ_REPORT" "enable_state")"
+packet_signoff_state="$(extract_value_after_colon "$PACKET_REPORT" "signoff_state")"
+packet_enable_state="$(extract_value_after_colon "$PACKET_REPORT" "enable_state")"
 
 submission_state="READY_TO_SUBMIT"
-if [[ "$workflow_state" != "DISABLED" || "$packet_state" != "READY_FOR_APPROVAL" || "$fullgate_state" != "PASS" || "$alert_level" != "NONE" || "$ops_pack_state" != "PASS" || "$status_overall" != "HEALTHY" ]]; then
+if [[ "$workflow_state" != "DISABLED" || "$signoff_state" != "READY_FOR_APPROVAL" || "$enable_state" != "HOLD" || "$packet_signoff_state" == "MISSING" || "$packet_enable_state" == "MISSING" ]]; then
   submission_state="HOLD"
 fi
 
@@ -111,22 +135,19 @@ fi
   echo
   echo "## Inputs"
   echo
-  echo "- packet_report: ${latest_packet:-<none>}"
-  echo "- full_gate_report: ${latest_fullgate:-<none>}"
-  echo "- status_json: ${latest_status_json:-<none>}"
-  echo "- alert_report: ${latest_alert:-<none>}"
-  echo "- ops_pack_report: ${latest_ops_pack:-<none>}"
+  echo "- signoff_record: ${SIGNOFF_RECORD:-<none>}"
+  echo "- prereq_report: ${PREREQ_REPORT:-<none>}"
+  echo "- packet_report: ${PACKET_REPORT:-<none>}"
   echo
   echo "## Gate Checks"
   echo
   echo "| check | value | expected | result |"
   echo "|------|-------|----------|--------|"
   echo "| workflow_state | $workflow_state | DISABLED | $([[ "$workflow_state" == "DISABLED" ]] && echo PASS || echo FAIL) |"
-  echo "| packet_state | $packet_state | READY_FOR_APPROVAL | $([[ "$packet_state" == "READY_FOR_APPROVAL" ]] && echo PASS || echo FAIL) |"
-  echo "| fullgate_state | $fullgate_state | PASS | $([[ "$fullgate_state" == "PASS" ]] && echo PASS || echo FAIL) |"
-  echo "| status_overall | $status_overall | HEALTHY | $([[ "$status_overall" == "HEALTHY" ]] && echo PASS || echo FAIL) |"
-  echo "| alert_level | $alert_level | NONE | $([[ "$alert_level" == "NONE" ]] && echo PASS || echo FAIL) |"
-  echo "| ops_pack_state | $ops_pack_state | PASS | $([[ "$ops_pack_state" == "PASS" ]] && echo PASS || echo FAIL) |"
+  echo "| signoff_state | $signoff_state | READY_FOR_APPROVAL | $([[ "$signoff_state" == "READY_FOR_APPROVAL" ]] && echo PASS || echo FAIL) |"
+  echo "| enable_state | $enable_state | HOLD | $([[ "$enable_state" == "HOLD" ]] && echo PASS || echo FAIL) |"
+  echo "| packet_signoff_state | $packet_signoff_state | READY_FOR_APPROVAL | $([[ "$packet_signoff_state" == "READY_FOR_APPROVAL" ]] && echo PASS || echo FAIL) |"
+  echo "| packet_enable_state | $packet_enable_state | HOLD | $([[ "$packet_enable_state" == "HOLD" ]] && echo PASS || echo FAIL) |"
   echo
   echo "## Boundary"
   echo

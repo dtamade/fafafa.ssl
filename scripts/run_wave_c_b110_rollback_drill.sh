@@ -150,6 +150,8 @@ RECHECK_REPORT="$REPORTS_DIR/wave_c_b110_recheck_${RUN_ID}.md"
 set +e
 bash scripts/check_wave_c_default_on_readiness.sh \
   --reports-dir "$REPORTS_DIR" \
+  --threshold-report "$THRESHOLD_REPORT" \
+  --validation-report "$VALIDATION_REPORT" \
   --run-id "${RUN_ID}_recheck" \
   --output "$RECHECK_REPORT" > /tmp/wave_c_b110_recheck_${RUN_ID}.log 2>&1
 RECHECK_EXIT=$?

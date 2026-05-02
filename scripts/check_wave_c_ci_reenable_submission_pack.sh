@@ -57,11 +57,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$INPUT_FILE" ]]; then
-  INPUT_FILE="$(ls -1t test-reports/wave_c_b146_ci_reenable_submission_pack_*.md 2>/dev/null | head -1 || true)"
+  INPUT_FILE="$(ls -1t docs/test_reports/WAVE_C_B146_CI_REENABLE_SUBMISSION_PACK_*.md 2>/dev/null | head -1 || true)"
 fi
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b147_submission_pack_check_${RUN_ID}.md"
+  OUTPUT_FILE="docs/test_reports/WAVE_C_B147_SUBMISSION_PACK_CHECK_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
@@ -74,11 +74,10 @@ fi
 checks=(
   "submission_state"
   "workflow_state"
-  "packet_state"
-  "fullgate_state"
-  "status_overall"
-  "alert_level"
-  "ops_pack_state"
+  "signoff_state"
+  "enable_state"
+  "packet_signoff_state"
+  "packet_enable_state"
 )
 
 missing=0

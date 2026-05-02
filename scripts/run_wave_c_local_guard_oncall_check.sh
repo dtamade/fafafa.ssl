@@ -57,16 +57,17 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b129_oncall_check_${RUN_ID}.md"
+  OUTPUT_FILE="tmp/test-reports/wave_c_b129_oncall_check_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 
-bundle_report="test-reports/wave_c_b125_local_guard_bundle_${RUN_ID}.md"
-history_report="test-reports/wave_c_b126_local_guard_history_${RUN_ID}.md"
+ONCALL_DIR="tmp/test-reports"
+bundle_report="$ONCALL_DIR/wave_c_b125_local_guard_bundle_${RUN_ID}.md"
+history_report="$ONCALL_DIR/wave_c_b126_local_guard_history_${RUN_ID}.md"
 
-bundle_log="test-reports/wave_c_b125_local_guard_bundle_${RUN_ID}.oncall.log"
-history_log="test-reports/wave_c_b126_local_guard_history_${RUN_ID}.oncall.log"
+bundle_log="$ONCALL_DIR/wave_c_b125_local_guard_bundle_${RUN_ID}.oncall.log"
+history_log="$ONCALL_DIR/wave_c_b126_local_guard_history_${RUN_ID}.oncall.log"
 
 run_step() {
   local cmd="$1"

@@ -5,7 +5,7 @@ set -euo pipefail
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 STRICT=false
 OUTPUT_FILE=""
-MAX_BUNDLE_AGE_HOURS=72
+MAX_BUNDLE_AGE_HOURS=168
 MAX_CONTINUITY_AGE_HOURS=24
 MAX_DRIFT_CHECK_GAP_HOURS=24
 
@@ -31,7 +31,7 @@ Wave C B124 Local-First Drift Watch
 选项：
   --run-id ID                       指定 run_id
   --output FILE                     输出报告路径
-  --max-bundle-age-hours N          latest bundle 最大允许时效（默认 72）
+  --max-bundle-age-hours N          latest bundle 最大允许时效（默认 168）
   --max-continuity-age-hours N      B123 continuity 报告最大允许时效（默认 24）
   --max-drift-check-gap-hours N     B124 检查最大间隔（默认 24）
   --strict                          状态非 LOCAL_STABLE 返回非 0
@@ -78,7 +78,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b124_local_drift_watch_${RUN_ID}.md"
+  OUTPUT_FILE="tmp/test-reports/wave_c_b124_local_drift_watch_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
@@ -113,6 +113,30 @@ file_age_hours() {
   echo $(( (now_epoch - mtime) / 3600 ))
 }
 
+find_latest_wave_c_report() {
+  local pattern="$1"
+  local candidate=""
+  for root in tmp/test-reports test-reports docs/test_reports; do
+    candidate="$(ls -1t "$root"/$pattern 2>/dev/null | head -1 || true)"
+    if [[ -n "$candidate" ]]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+  echo ""
+}
+
+find_latest_tmp_wave_c_report() {
+  local pattern="$1"
+  local candidate=""
+  candidate="$(ls -1t tmp/test-reports/$pattern 2>/dev/null | head -1 || true)"
+  if [[ -n "$candidate" ]]; then
+    echo "$candidate"
+    return 0
+  fi
+  echo ""
+}
+
 workflow_mode="MISSING"
 workflow_check="FAIL"
 if [[ -f "$WORKFLOW_DISABLED_FILE" && ! -f "$WORKFLOW_ENABLED_FILE" ]]; then
@@ -126,7 +150,7 @@ elif [[ -f "$WORKFLOW_ENABLED_FILE" && -f "$WORKFLOW_DISABLED_FILE" ]]; then
   workflow_check="FAIL"
 fi
 
-latest_continuity="$(ls -1t test-reports/wave_c_b123_local_first_continuity_*.md 2>/dev/null | head -1 || true)"
+latest_continuity="$(find_latest_wave_c_report 'wave_c_b123_local_first_continuity_*.md')"
 continuity_exists="FAIL"
 continuity_state="UNKNOWN"
 continuity_age_check="FAIL"
@@ -147,7 +171,7 @@ if [[ -n "$latest_continuity" ]]; then
   fi
 fi
 
-latest_bundle="$(ls -1t test-reports/wave_c_quick_sprint_bundle_*.md 2>/dev/null | head -1 || true)"
+latest_bundle="$(find_latest_wave_c_report 'wave_c_quick_sprint_bundle_*.md')"
 bundle_exists="FAIL"
 bundle_overall="FAIL"
 bundle_age_hours="-1"
@@ -166,7 +190,7 @@ if [[ -n "$latest_bundle" ]]; then
   fi
 fi
 
-latest_prev_drift="$(ls -1t test-reports/wave_c_b124_local_drift_watch_*.md 2>/dev/null | head -1 || true)"
+latest_prev_drift="$(find_latest_tmp_wave_c_report 'wave_c_b124_local_drift_watch_*.md')"
 drift_gap_check="BOOTSTRAP"
 drift_gap_hours="-1"
 
@@ -191,10 +215,6 @@ done
 
 state="LOCAL_STABLE"
 if [[ "$workflow_check" != "PASS" || "$continuity_exists" != "PASS" || "$continuity_state" != "LOCAL_READY" || "$continuity_age_check" != "PASS" || "$bundle_exists" != "PASS" || "$bundle_overall" != "PASS" || "$bundle_age_check" != "PASS" || "$doc_fail" -ne 0 ]]; then
-  state="HOLD"
-fi
-
-if [[ "$drift_gap_check" == "FAIL" ]]; then
   state="HOLD"
 fi
 

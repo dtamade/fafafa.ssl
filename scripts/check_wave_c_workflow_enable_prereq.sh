@@ -4,8 +4,8 @@ set -euo pipefail
 
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 STRICT=false
-SIGNOFF_RECORD="docs/test_reports/WAVE_C_B113_RELEASE_SIGNOFF_RECORD_2026-02-08.md"
-ACCEPTANCE_REPORT="docs/test_reports/WAVE_C_B114_CLOSURE_ACCEPTANCE_RESULT_2026-02-08.md"
+SIGNOFF_RECORD=""
+ACCEPTANCE_REPORT=""
 WORKFLOW_TEMPLATE=".github/workflows/wave-c-quick-sprint-manual.yml.disabled"
 OUTPUT_FILE=""
 
@@ -69,7 +69,23 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b115_workflow_enable_prereq_${RUN_ID}.md"
+  OUTPUT_FILE="tmp/test-reports/wave_c_b115_workflow_enable_prereq_${RUN_ID}.md"
+fi
+
+if [[ -z "$SIGNOFF_RECORD" ]]; then
+  SIGNOFF_RECORD="$(ls -1t docs/test_reports/WAVE_C_B113_RELEASE_SIGNOFF_RECORD_*.md 2>/dev/null | head -1 || true)"
+fi
+
+if [[ -z "$ACCEPTANCE_REPORT" ]]; then
+  ACCEPTANCE_REPORT="$(ls -1t tmp/test-reports/wave_c_quick_sprint_bundle_*.md 2>/dev/null | head -1 || true)"
+fi
+
+if [[ -z "$ACCEPTANCE_REPORT" ]]; then
+  ACCEPTANCE_REPORT="$(ls -1t test-reports/wave_c_quick_sprint_bundle_*.md 2>/dev/null | head -1 || true)"
+fi
+
+if [[ -z "$ACCEPTANCE_REPORT" ]]; then
+  ACCEPTANCE_REPORT="$(ls -1t docs/test_reports/WAVE_C_B114_CLOSURE_ACCEPTANCE_RESULT_*.md 2>/dev/null | head -1 || true)"
 fi
 
 check_file_state() {
@@ -94,7 +110,9 @@ fi
 
 acceptance_hint="UNKNOWN"
 if [[ -f "$ACCEPTANCE_REPORT" ]]; then
-  if rg -q "Quick bundle overall" "$ACCEPTANCE_REPORT"; then
+  if rg -q -- "- overall: \*\*PASS\*\*" "$ACCEPTANCE_REPORT"; then
+    acceptance_hint="PASS"
+  elif rg -q "Quick bundle overall" "$ACCEPTANCE_REPORT"; then
     acceptance_hint="PASS"
   else
     acceptance_hint="FAIL"
@@ -117,6 +135,8 @@ enable_state="READY_FOR_ENABLE"
 if [[ "$signoff_check" != "PASS" || "$acceptance_check" != "PASS" || "$workflow_check" != "PASS" ]]; then
   enable_state="HOLD"
 fi
+
+mkdir -p "$(dirname "$OUTPUT_FILE")"
 
 {
   echo "# Wave C B115 Workflow Enable Prereq"

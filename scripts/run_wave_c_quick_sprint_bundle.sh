@@ -4,6 +4,9 @@ set -euo pipefail
 
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 REPORTS_DIR="test-reports"
+REPORT_GLOB="wave_c_b101_validation_*.md"
+REQUIRE_FULL_GATE=false
+VALIDATION_REPORT=""
 STRICT=false
 OUTPUT_FILE=""
 
@@ -20,6 +23,9 @@ Wave C Quick Sprint Bundle
 选项：
   --run-id ID         指定 run_id
   --reports-dir DIR   报告目录（默认 test-reports）
+  --report-glob GLOB  B101 报告匹配模式（默认 wave_c_b101_validation_*.md）
+  --require-full-gate B107 仅统计 full-gate B101 报告
+  --validation-report FILE 指定 B101 验证报告（默认最新）
   --output FILE       输出汇总报告
   --strict            任一步骤失败返回非 0
   --help              显示帮助
@@ -34,6 +40,18 @@ while [[ $# -gt 0 ]]; do
       ;;
     --reports-dir)
       REPORTS_DIR="$2"
+      shift 2
+      ;;
+    --report-glob)
+      REPORT_GLOB="$2"
+      shift 2
+      ;;
+    --require-full-gate)
+      REQUIRE_FULL_GATE=true
+      shift
+      ;;
+    --validation-report)
+      VALIDATION_REPORT="$2"
       shift 2
       ;;
     --output)
@@ -58,6 +76,10 @@ done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="$REPORTS_DIR/wave_c_quick_sprint_bundle_${RUN_ID}.md"
+fi
+
+if [[ -z "$VALIDATION_REPORT" ]]; then
+  VALIDATION_REPORT="$(ls -1t "$REPORTS_DIR"/wave_c_b101_validation_*.md 2>/dev/null | head -1 || true)"
 fi
 
 mkdir -p "$REPORTS_DIR"
@@ -86,19 +108,19 @@ canary_log="$REPORTS_DIR/wave_c_b109_canary_rollout_${RUN_ID}.log"
 rollback_log="$REPORTS_DIR/wave_c_b110_rollback_drill_${RUN_ID}.log"
 
 threshold_exit=$(run_step "b107_threshold" \
-  "bash scripts/evaluate_wave_c_b101_thresholds.sh --run-id ${RUN_ID} --strict --output ${threshold_report}" \
+  "bash scripts/evaluate_wave_c_b101_thresholds.sh --reports-dir ${REPORTS_DIR} --report-glob '${REPORT_GLOB}' $( [[ \"$REQUIRE_FULL_GATE\" == \"true\" ]] && printf '%s' '--require-full-gate' ) --run-id ${RUN_ID} --strict --output ${threshold_report}" \
   "$threshold_log")
 
 readiness_exit=$(run_step "b108_readiness" \
-  "bash scripts/check_wave_c_default_on_readiness.sh --run-id ${RUN_ID} --strict --output ${readiness_report}" \
+  "bash scripts/check_wave_c_default_on_readiness.sh --reports-dir ${REPORTS_DIR} --threshold-report ${threshold_report} --validation-report ${VALIDATION_REPORT} --run-id ${RUN_ID} --strict --output ${readiness_report}" \
   "$readiness_log")
 
 canary_exit=$(run_step "b109_canary" \
-  "bash scripts/prepare_wave_c_b109_canary_rollout.sh --run-id ${RUN_ID} --strict --threshold-report ${threshold_report} --readiness-report ${readiness_report} --output ${canary_report}" \
+  "bash scripts/prepare_wave_c_b109_canary_rollout.sh --reports-dir ${REPORTS_DIR} --run-id ${RUN_ID} --strict --threshold-report ${threshold_report} --readiness-report ${readiness_report} --validation-report ${VALIDATION_REPORT} --output ${canary_report}" \
   "$canary_log")
 
 rollback_exit=$(run_step "b110_rollback_drill" \
-  "bash scripts/run_wave_c_b110_rollback_drill.sh --run-id ${RUN_ID} --strict --threshold-report ${threshold_report} --readiness-report ${readiness_report} --rollout-report ${canary_report} --output ${rollback_report}" \
+  "bash scripts/run_wave_c_b110_rollback_drill.sh --reports-dir ${REPORTS_DIR} --run-id ${RUN_ID} --strict --threshold-report ${threshold_report} --readiness-report ${readiness_report} --rollout-report ${canary_report} --validation-report ${VALIDATION_REPORT} --output ${rollback_report}" \
   "$rollback_log")
 
 overall="PASS"

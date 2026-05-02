@@ -68,10 +68,22 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_c_b123_local_first_continuity_${RUN_ID}.md"
+  OUTPUT_FILE="tmp/test-reports/wave_c_b123_local_first_continuity_${RUN_ID}.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
+
+find_latest_quick_bundle() {
+  local candidate=""
+  for root in tmp/test-reports test-reports docs/test_reports; do
+    candidate="$(ls -1t "$root"/wave_c_quick_sprint_bundle_*.md 2>/dev/null | head -1 || true)"
+    if [[ -n "$candidate" ]]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+  echo ""
+}
 
 workflow_mode="MISSING"
 workflow_check="FAIL"
@@ -108,7 +120,7 @@ for doc in "${REQUIRED_DOCS[@]}"; do
   fi
 done
 
-latest_bundle="$(ls -1t test-reports/wave_c_quick_sprint_bundle_*.md 2>/dev/null | head -1 || true)"
+latest_bundle="$(find_latest_quick_bundle)"
 bundle_exists="FAIL"
 bundle_overall="FAIL"
 
