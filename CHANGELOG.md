@@ -11,6 +11,58 @@
 
 ---
 
+## [1.4.3] - 2026-05-02
+
+**紧急修复版本** - 修复 Early Data 客户端/服务端逻辑错误
+
+### 修复
+
+#### 🔴 严重问题修复
+
+- **修复 OpenSSL 后端客户端 Early Data 逻辑错误**
+  - 问题：`SetClientEarlyDataEnabled` 错误地调用了 `SSL_CTX_set_max_early_data`
+  - 问题：使用了服务端配置 `FServerMaxEarlyDataSize` 用于客户端
+  - 影响：可能导致客户端发送错误大小的 Early Data，服务端可能拒绝连接
+  - 修复：移除客户端的 `SSL_CTX_set_max_early_data` 调用
+  - 原理：OpenSSL 客户端应从服务端 session ticket 获取 max_early_data
+
+- **修复 WolfSSL 后端客户端 Early Data 逻辑错误**
+  - 问题：`SetClientEarlyDataEnabled` 错误地调用了 `wolfSSL_CTX_set_max_early_data`
+  - 问题：使用了服务端配置 `FServerMaxEarlyDataSize` 用于客户端
+  - 影响：可能导致客户端发送错误大小的 Early Data，服务端可能拒绝连接
+  - 修复：移除客户端的 `wolfSSL_CTX_set_max_early_data` 调用
+  - 原理：WolfSSL 客户端应从服务端 session ticket 获取 max_early_data
+
+- **修复 OpenSSL 后端 `SetServerMaxEarlyDataSize` 逻辑**
+  - 问题：错误地检查了 `FClientEarlyDataEnabled` 状态
+  - 修复：仅检查服务端策略 `FServerEarlyDataPolicy`
+
+- **修复 WolfSSL 后端 `SetServerMaxEarlyDataSize` 逻辑**
+  - 问题：错误地检查了 `FClientEarlyDataEnabled` 状态
+  - 修复：仅检查服务端策略 `FServerEarlyDataPolicy`
+
+### 影响
+
+- ✅ 修复了可能导致连接失败的严重逻辑错误
+- ✅ 代码现在符合 TLS 1.3 协议语义
+- ✅ 正确使用 OpenSSL/WolfSSL API
+
+### 升级建议
+
+**强烈建议所有使用 v1.4.1 或 v1.4.2 的用户立即升级到 v1.4.3**
+
+如果你使用了 Early Data 功能，此修复至关重要。
+
+### 技术细节
+
+在 TLS 1.3 Early Data 中：
+- **服务端**：使用 `SSL_CTX_set_max_early_data` 设置接受的最大 Early Data 大小
+- **客户端**：从服务端的 session ticket 中获取 max_early_data，不应主动设置
+
+v1.4.1 和 v1.4.2 错误地在客户端调用了 `SSL_CTX_set_max_early_data`，违反了协议语义。
+
+---
+
 ## [1.4.2] - 2026-05-02
 
 **完整性版本** - 所有后端 Early Data 接口完整
