@@ -54,8 +54,10 @@ type
     FBlocking: Boolean;
     FSession: ISSLSession;
     FSessionReuse: Boolean;
+    FEarlyData: TBytes;
 
     procedure ApplyClientOptions(AConn: ISSLConnection; const AServerName: string);
+    function TryQueueEarlyData(AConn: ISSLConnection): TSSLOperationResult;
   public
     class function FromContext(AContext: ISSLContext): TSSLConnector; static;
 
@@ -63,6 +65,7 @@ type
     function WithBlocking(ABlocking: Boolean): TSSLConnector;
     function WithSession(ASession: ISSLSession): TSSLConnector;
     function WithSessionReuse(AEnabled: Boolean): TSSLConnector;
+    function WithEarlyData(const AData: TBytes): TSSLConnector;
 
     function ConnectSocket(ASocket: THandle; const AServerName: string): TSSLStream;
     function TryConnectSocket(ASocket: THandle; const AServerName: string;
@@ -157,6 +160,7 @@ end;
 function TSSLStream.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
 begin
   // TLS/SSL 连接是流式的，不支持 seek。
+  Result := 0;
   raise EStreamError.Create('TLS stream is not seekable');
 end;
 
@@ -181,12 +185,19 @@ end;
 
 class function TSSLConnector.FromContext(AContext: ISSLContext): TSSLConnector;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result.FContext := nil;
+  Result.FTimeout := 0;
+  Result.FBlocking := False;
+  Result.FSession := nil;
+  Result.FSessionReuse := False;
+  SetLength(Result.FEarlyData, 0);
+
   Result.FContext := AContext;
   Result.FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
   Result.FBlocking := True;
   Result.FSession := nil;
   Result.FSessionReuse := True;
+  SetLength(Result.FEarlyData, 0);
 end;
 
 function TSSLConnector.WithTimeout(AMs: Integer): TSSLConnector;
@@ -213,6 +224,12 @@ begin
   Result.FSessionReuse := AEnabled;
 end;
 
+function TSSLConnector.WithEarlyData(const AData: TBytes): TSSLConnector;
+begin
+  Result := Self;
+  Result.FEarlyData := Copy(AData);
+end;
+
 procedure TSSLConnector.ApplyClientOptions(AConn: ISSLConnection; const AServerName: string);
 var
   ClientConn: ISSLClientConnection;
@@ -226,23 +243,37 @@ begin
   if FSessionReuse and (FSession <> nil) then
     AConn.SetSession(FSession);
 
-  if AServerName <> '' then
-  begin
-    if Supports(AConn, ISSLClientConnection, ClientConn) then
-      ClientConn.SetServerName(AServerName)
-    else
-      raise ESSLException.CreateWithContext(
-        'Backend does not support per-connection server name',
-        sslErrUnsupported,
-        'TSSLConnector.ApplyClientOptions'
-      );
-  end;
+  if Supports(AConn, ISSLClientConnection, ClientConn) then
+    ClientConn.SetServerName(AServerName)
+  else if AServerName <> '' then
+    raise ESSLException.CreateWithContext(
+      'Backend does not support per-connection server name',
+      sslErrUnsupported,
+      'TSSLConnector.ApplyClientOptions'
+    );
+end;
+
+function TSSLConnector.TryQueueEarlyData(AConn: ISSLConnection): TSSLOperationResult;
+var
+  EarlyDataConn: ISSLEarlyDataConnection;
+begin
+  if Length(FEarlyData) = 0 then
+    Exit(TSSLOperationResult.Ok);
+
+  if not Supports(AConn, ISSLEarlyDataConnection, EarlyDataConn) then
+    Exit(TSSLOperationResult.Err(
+      sslErrUnsupported,
+      'Connection does not expose early-data interface'
+    ));
+
+  Result := EarlyDataConn.SetEarlyData(FEarlyData);
 end;
 
 function TSSLConnector.TryConnectSocket(ASocket: THandle; const AServerName: string;
   out AStream: TSSLStream): TSSLOperationResult;
 var
   Conn: ISSLConnection;
+  QueueRes: TSSLOperationResult;
   VerifyRes: Integer;
   VerifyStr: string;
 begin
@@ -260,6 +291,16 @@ begin
       Exit(TSSLOperationResult.Err(sslErrConnection, 'Failed to create connection'));
 
     ApplyClientOptions(Conn, AServerName);
+    QueueRes := TryQueueEarlyData(Conn);
+    if not QueueRes.Success then
+    begin
+      try
+        Conn.Close;
+      except
+        // best-effort cleanup
+      end;
+      Exit(QueueRes);
+    end;
 
     if not Conn.Connect then
     begin
@@ -304,6 +345,7 @@ function TSSLConnector.TryConnectStream(ATransport: TStream; const AServerName: 
   out AStream: TSSLStream): TSSLOperationResult;
 var
   Conn: ISSLConnection;
+  QueueRes: TSSLOperationResult;
   VerifyRes: Integer;
   VerifyStr: string;
 begin
@@ -321,6 +363,16 @@ begin
       Exit(TSSLOperationResult.Err(sslErrConnection, 'Failed to create connection'));
 
     ApplyClientOptions(Conn, AServerName);
+    QueueRes := TryQueueEarlyData(Conn);
+    if not QueueRes.Success then
+    begin
+      try
+        Conn.Close;
+      except
+        // best-effort cleanup
+      end;
+      Exit(QueueRes);
+    end;
 
     if not Conn.Connect then
     begin
@@ -365,7 +417,10 @@ end;
 
 class function TSSLAcceptor.FromContext(AContext: ISSLContext): TSSLAcceptor;
 begin
-  FillChar(Result, SizeOf(Result), 0);
+  Result.FContext := nil;
+  Result.FTimeout := 0;
+  Result.FBlocking := False;
+
   Result.FContext := AContext;
   Result.FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
   Result.FBlocking := True;
