@@ -2164,14 +2164,9 @@ begin
   RequireValidContext('SetClientEarlyDataEnabled');
   FClientEarlyDataEnabled := AEnabled;
 
-  // 设置 SSL_CTX 的 max_early_data
-  if Assigned(SSL_CTX_set_max_early_data) then
-  begin
-    if AEnabled then
-      SSL_CTX_set_max_early_data(FSSLContext, FServerMaxEarlyDataSize)
-    else
-      SSL_CTX_set_max_early_data(FSSLContext, 0);
-  end;
+  // 注意：客户端不需要设置 max_early_data
+  // OpenSSL 客户端会从服务端的 session ticket 中获取 max_early_data 值
+  // 这里仅记录状态，不调用 SSL_CTX_set_max_early_data
 
   TSecurityLog.Debug('OpenSSL', Format('Client early data %s',
     [BoolToStr(AEnabled, 'enabled', 'disabled')]));
@@ -2212,9 +2207,9 @@ begin
   RequireValidContext('SetServerMaxEarlyDataSize');
   FServerMaxEarlyDataSize := ASize;
 
-  // 如果 early data 已启用，更新 SSL_CTX
+  // 如果服务端 early data 已启用，更新 SSL_CTX
   if Assigned(SSL_CTX_set_max_early_data) and
-     ((FClientEarlyDataEnabled) or (FServerEarlyDataPolicy <> sslEarlyDataServerReject)) then
+     (FServerEarlyDataPolicy <> sslEarlyDataServerReject) then
   begin
     SSL_CTX_set_max_early_data(FSSLContext, ASize);
   end;

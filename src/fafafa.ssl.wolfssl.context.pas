@@ -1634,14 +1634,9 @@ begin
   RequireValidContext('SetClientEarlyDataEnabled');
   FClientEarlyDataEnabled := AEnabled;
 
-  // WolfSSL API: wolfSSL_CTX_set_max_early_data
-  if Assigned(wolfSSL_CTX_set_max_early_data) then
-  begin
-    if AEnabled then
-      wolfSSL_CTX_set_max_early_data(FWolfSSLCtx, FServerMaxEarlyDataSize)
-    else
-      wolfSSL_CTX_set_max_early_data(FWolfSSLCtx, 0);
-  end;
+  // 注意：客户端不需要设置 max_early_data
+  // WolfSSL 客户端会从服务端的 session ticket 中获取 max_early_data 值
+  // 这里仅记录状态，不调用 wolfSSL_CTX_set_max_early_data
 end;
 
 function TWolfSSLContext.GetClientEarlyDataEnabled: Boolean;
@@ -1677,9 +1672,9 @@ begin
   RequireValidContext('SetServerMaxEarlyDataSize');
   FServerMaxEarlyDataSize := ASize;
 
-  // 如果 early data 已启用，更新 WolfSSL
+  // 如果服务端 early data 已启用，更新 WolfSSL
   if Assigned(wolfSSL_CTX_set_max_early_data) and
-     ((FClientEarlyDataEnabled) or (FServerEarlyDataPolicy <> sslEarlyDataServerReject)) then
+     (FServerEarlyDataPolicy <> sslEarlyDataServerReject) then
   begin
     wolfSSL_CTX_set_max_early_data(FWolfSSLCtx, ASize);
   end;
