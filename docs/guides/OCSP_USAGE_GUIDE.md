@@ -108,6 +108,7 @@ begin
   Ctx := TSSLContextBuilder.Create
     .WithCertificate('server.crt')
     .WithPrivateKey('server.key')
+    .WithVerifyNone
     .WithOCSPStapling(True)
     .WithServerOCSPStapledResponseFile('fixtures/ocsp/server_leaf.ocsp.der')
     .BuildServer;
@@ -123,12 +124,15 @@ end;
 - `WithServerOCSPStapledResponseFile(...)` 会在 `BuildServer` 时加载调用方提供的 DER 文件。
 - `ISSLServerOCSPStaplingContext` 暴露 clear / set bytes / load file / has / get 这组最小 public surface。
 - 服务端只会在 `full handshake + client requested status_request + context 已配置 stapled response` 三个条件同时满足时发出 stapled response。
+- `OpenSSL` 这条 server-side issuance path 现在已经有 focused TLS 1.3 runtime proof，不再只是 callback contract。
 - 如果 builder 配置了 `server_ocsp_stapled_response_file`，但 backend 不支持 `ISSLServerOCSPStaplingContext`，`BuildServer` 会直接报配置错误，不会 silent ignore。
 
 还需要明确的边界是：
 
 - 这条路径只负责 caller-provided material，不负责 online fetch、refresh，或 responder 调度。
 - 它是 server-side issuance path，不替代 client-side stapled-response verification 或 client online OCSP check。
+
+如果你的服务端并不做 mTLS，请像上面的示例一样显式加 `WithVerifyNone`。`TSSLContextBuilder.Create` 的默认 server verify 基线不是“无客户端证书也放行”，所以用它做最小 stapling smoke 时，最好把 verify 意图写明。
 
 ### WolfSSL 上的对应路径（实验性）
 

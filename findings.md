@@ -52,3 +52,11 @@
   - focused runtime test：PASS
   - `python3 scripts/compile_all_modules.py`：`185/185`
   - `bash scripts/run_minimal_ci_gate.sh --fast-local`：compile gate `185/185`，模块测试 `17/17`，phase2 baseline dry-run PASS
+- 文档侧还存在一个紧邻的 truth 漂移：`docs/BACKEND_CAPABILITY_MATRIX.md` 的 OpenSSL server OCSP stapling 条目仍停留在“能 load / 能 callback”，`docs/guides/OCSP_USAGE_GUIDE.md` 的 server 示例也没有写出 builder 默认 verify 基线。
+- docs truth 批次已补齐两点：
+  - `BACKEND_CAPABILITY_MATRIX` 现在明确 OpenSSL server stapling 已有 focused TLS 1.3 runtime proof，并补充了当前范围与边界
+  - `OCSP_USAGE_GUIDE` 的最小 server 示例现在显式写 `WithVerifyNone`，并说明 OpenSSL server-side issuance path 已不是“只有 callback contract”
+- `docs-write` 规范要求跑格式化。仓库里的 `yarn prettier --write ...` 在当前 shell 下会落到家目录解析相对路径，因此实际使用了底层 prettier 可执行文件配绝对路径完成格式化；最终 `BACKEND_CAPABILITY_MATRIX.md` 和新 plan 文件被格式化，`OCSP_USAGE_GUIDE.md` 内容未变化，`task_plan.md` 无需额外格式调整。
+- docs truth 批次的验证结果：
+  - `python3 scripts/compile_all_modules.py`：`185/185`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`：compile gate `185/185`，模块测试 `17/17`，phase2 baseline dry-run PASS

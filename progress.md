@@ -51,6 +51,23 @@
   - 结果：`185/185` 核心模块编译成功，`100.0%`
 - 运行 `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 新建 docs truth 批次计划：`docs/plans/2026-05-04-openssl-server-ocsp-runtime-doc-truth.md`
+- 检查 `docs/BACKEND_CAPABILITY_MATRIX.md` 与 `docs/guides/OCSP_USAGE_GUIDE.md`
+  - 结果：OpenSSL server OCSP stapling 的文档仍停在“native callback wiring / 可加载 DER”的层级，没有把刚完成的 runtime proof 和 builder verify 基线写明
+- 生产改动：
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`: OpenSSL 条目补 focused runtime proof、当前范围、边界
+  - `docs/guides/OCSP_USAGE_GUIDE.md`: server-side manual stapling 示例补 `.WithVerifyNone`，正文补 runtime-proof truth
+  - `task_plan.md`: 切到 docs truth 批次
+  - `docs/plans/2026-05-04-openssl-server-ocsp-runtime-doc-truth.md`: 新增本批计划
+- 按 `docs-write` 规范尝试格式化：
+  - 首次运行 `yarn prettier --write docs/BACKEND_CAPABILITY_MATRIX.md docs/guides/OCSP_USAGE_GUIDE.md task_plan.md docs/plans/2026-05-04-openssl-server-ocsp-runtime-doc-truth.md`
+  - 结果：当前 shell 把相对路径解析到家目录，出现 `No files matching the pattern` / `EROFS: read-only file system, open '/home/dtamade/task_plan.md'`
+  - 处理：改用 `/home/dtamade/node_modules/.bin/prettier --write <absolute-paths>`
+  - 结果：`docs/BACKEND_CAPABILITY_MATRIX.md` 和新 plan 文件格式化成功；`docs/guides/OCSP_USAGE_GUIDE.md` 为 `unchanged`
+- 运行 `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+- 运行 `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
 - 继续当前 closeout，先核对工作树与上一提交：
   - `git status --short` => 干净工作树
   - `git log --oneline -1` => `a5c56c2 fix(openssl,wolfssl): align early-data connection surfaces`

@@ -1,31 +1,29 @@
-# Task Plan - OpenSSL Server OCSP Stapling Runtime Proof
+# Task Plan - OpenSSL Server OCSP Runtime Doc Truth
 
 ## Goal
-给 `OpenSSL` 服务端 OCSP stapling issuance 补上真实 client/server 握手证据，确认当前 callback wiring 不只是结构闭合，而是真的能把 caller-provided stapled OCSP response 发到客户端 surface。
+把 `OpenSSL` 服务端 OCSP stapling 的文档 truth 同步到刚完成的 runtime proof：对外文档不再停留在 “native callback wiring 已接通”，而是明确说明 focused runtime 证据、builder file-load path 和当前边界。
 
 ## Current Batch
-1. 新增一个 `OpenSSL server <-> OpenSSL client` focused runtime contract，用本地 socket 跑真实 TLS 握手。
-2. 先锁 3 个最小场景：`requested + configured => client 收到 DER`，`not requested => absent`，`requested + no material => absent`。
-3. 再补 builder `WithServerOCSPStapledResponseFile(...)` 的 runtime path。
-4. 如果 runtime proof 暴露真实缺口，只在 `src/fafafa.ssl.openssl.*` 做最小修复，然后跑 focused runtime test、`python3 scripts/compile_all_modules.py`、`bash scripts/run_minimal_ci_gate.sh --fast-local`。
+1. 更新 `docs/BACKEND_CAPABILITY_MATRIX.md` 的 OpenSSL server OCSP stapling 条目，补 runtime-proof truth 和边界。
+2. 更新 `docs/guides/OCSP_USAGE_GUIDE.md` 的 server-side manual stapling 段落，补 `WithVerifyNone` 示例与 runtime-proof 说明。
+3. 新建一个 docs plan 文件并继续维护 `findings.md` / `progress.md`。
+4. 复跑 `python3 scripts/compile_all_modules.py`、`bash scripts/run_minimal_ci_gate.sh --fast-local`，按仓库节奏提交这一批 docs truth。
 
 ## Status
-- [complete] Runtime test design / RED
-- [complete] GREEN implementation or proof-only closeout
+- [complete] Doc targets confirmed
+- [complete] Doc truth updates
 - [complete] Verification
 - [complete] Review and commit
 
 ## Outcome
-- 本批最终用 scripted `TStream` TLS 1.3 对端完成 runtime proof，因为本地执行环境无法可靠创建 listen socket。
-- `OpenSSL` 真正的 runtime 缺口已经锁定并修复：服务端 stapling callback 注册需要走 `SSL_CTX_callback_ctrl(...)`，而不是继续把 callback 当普通 `SSL_CTX_ctrl(...)` 参数传入。
-- `BuildServer + WithServerOCSPStapledResponseFile(...)` 的 runtime path 已经补到 focused test；中途暴露的 builder `Accept` 失败是测试基线差异，原因是 builder 默认 `verify-peer`，测试里已显式改成 `WithVerifyNone` 以对齐 direct server smoke。
-- focused runtime、`python3 scripts/compile_all_modules.py`、`bash scripts/run_minimal_ci_gate.sh --fast-local` 全部通过。
+- `BACKEND_CAPABILITY_MATRIX` 不再只写 “可加载 / 可回调”，而是会明确 OpenSSL server stapling 已有 focused runtime proof。
+- `OCSP_USAGE_GUIDE` 会把 `WithVerifyNone` 写进最小 server 示例，避免把 builder 默认 verify 基线误读成“无客户端证书也照常握手”。
+- 这一批不改实现，只同步文档 truth，并且 `python3 scripts/compile_all_modules.py` / `bash scripts/run_minimal_ci_gate.sh --fast-local` 已复跑通过。
 
 ## Risks
-- OpenSSL TLS 1.3 runtime 可能带有兼容性 `ChangeCipherSpec` 或记录分片行为；因此本批优先用真实 OpenSSL client/server 握手，而不是继续扩 scripted parser。
-- 这批只补 runtime proof，不新增能力；如果测试直接转绿，本批生产代码可能零改动。
-- builder/runtime proof 若依赖本机 OpenSSL 特性，仍需在 focused test 里把 skip/fail 边界写清楚。
+- 如果文档继续省略 `WithVerifyNone`，调用方很容易把 builder 默认 verify 行为当成 stapling runtime 缺陷。
+- 这一批是 docs truth，对代码行为没有新改动，因此验证主要是确保门禁不被文档编辑扰动。
 
 ## Follow-up Queue
-1. 若这条 runtime proof 成立，再回头判断 `docs/BACKEND_CAPABILITY_MATRIX.md` 和 `OCSP guide` 是否需要把 OpenSSL 证据说明从“callback wiring”提升到“runtime verified”。
-2. WolfSSL 仍缺独立 runtime 握手证据，但它受当前主机 `libwolfssl.so` 可用性限制，需要另开条件允许的批次处理。
+1. WolfSSL 仍缺独立 runtime 握手证据，但它受当前主机 `libwolfssl.so` 可用性限制，需要另开条件允许的批次处理。
+2. 如果后续还有更多 server builder 文档示例，最好统一检查是否都需要显式写出 verify 基线。

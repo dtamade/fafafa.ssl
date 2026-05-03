@@ -8,20 +8,21 @@
 
 ## 快速参考
 
-| 功能 | FreePascal | OpenSSL | WinSSL | MbedTLS | WolfSSL |
-|------|-----------|---------|--------|---------|---------|
-| **TLS 1.2** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **TLS 1.3** | ✅ | ✅ | ✅ | ⚠️ | ✅ |
-| **Early Data (0-RTT)** | ✅ | ✅ | ❌ | ❌ | ⚠️ |
-| **Session Resumption** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **OCSP Stapling** | ✅ | ✅ | ⚠️ | ❌ | ⚠️ |
-| **Certificate Transparency** | ✅ | ✅ | ⚠️ | ⚠️ | ⚠️ |
-| **ALPN** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **SNI** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **PSK** | ✅ | ✅ | ⚠️ | ✅ | ✅ |
-| **PKCS#11** | ❌ | ✅ | ❌ | ❌ | ❌ |
+| 功能                         | FreePascal | OpenSSL | WinSSL | MbedTLS | WolfSSL |
+| ---------------------------- | ---------- | ------- | ------ | ------- | ------- |
+| **TLS 1.2**                  | ✅         | ✅      | ✅     | ✅      | ✅      |
+| **TLS 1.3**                  | ✅         | ✅      | ✅     | ⚠️      | ✅      |
+| **Early Data (0-RTT)**       | ✅         | ✅      | ❌     | ❌      | ⚠️      |
+| **Session Resumption**       | ✅         | ✅      | ✅     | ✅      | ✅      |
+| **OCSP Stapling**            | ✅         | ✅      | ⚠️     | ❌      | ⚠️      |
+| **Certificate Transparency** | ✅         | ✅      | ⚠️     | ⚠️      | ⚠️      |
+| **ALPN**                     | ✅         | ✅      | ✅     | ✅      | ✅      |
+| **SNI**                      | ✅         | ✅      | ✅     | ✅      | ✅      |
+| **PSK**                      | ✅         | ✅      | ⚠️     | ✅      | ✅      |
+| **PKCS#11**                  | ❌         | ✅      | ❌     | ❌      | ❌      |
 
 **图例**:
+
 - ✅ 完整支持
 - ⚠️ 部分支持或有限制（接口存在但功能受限）
 - ❌ 不支持
@@ -35,6 +36,7 @@
 **状态**: ✅ 完整支持（生产就绪）
 
 **功能**:
+
 - ✅ 客户端 Early Data
 - ✅ 服务端 Early Data
 - ✅ 重放防护（内存/文件/目录存储）
@@ -42,10 +44,12 @@
 - ✅ 可配置大小限制
 
 **限制**:
+
 - 默认使用内存存储（单进程）
 - 跨进程需要配置文件或目录存储
 
 **示例**:
+
 ```pascal
 Lib := TSSLFactory.GetLibraryInstance(sslFreePascal);
 Ctx := Lib.CreateContext(sslCtxClient);
@@ -58,6 +62,7 @@ if Supports(Ctx, ISSLEarlyDataContext, EarlyDataCtx) then
 **状态**: ✅ 完整支持（生产就绪，v1.4.1+）
 
 **功能**:
+
 - ✅ 客户端 Early Data
 - ✅ 服务端 Early Data
 - ✅ 策略配置
@@ -65,9 +70,11 @@ if Supports(Ctx, ISSLEarlyDataContext, EarlyDataCtx) then
 - ✅ 使用 OpenSSL 内置重放防护
 
 **要求**:
+
 - OpenSSL 1.1.1+ 或 3.0+
 
 **示例**:
+
 ```pascal
 Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
 Ctx := Lib.CreateContext(sslCtxClient);
@@ -80,15 +87,18 @@ if Supports(Ctx, ISSLEarlyDataContext, EarlyDataCtx) then
 **状态**: ❌ 不支持
 
 **原因**:
+
 - Windows Schannel 没有公开的 Early Data API
 - TLS 1.3 支持有限（Windows 10 1903+）
 - Microsoft 未提供完整文档
 
 **替代方案**:
+
 - 使用 OpenSSL 后端（推荐）
 - 使用 FreePascal 后端
 
 **检测**:
+
 ```pascal
 Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
 Ctx := Lib.CreateContext(sslCtxClient);
@@ -101,10 +111,12 @@ if not Supports(Ctx, ISSLEarlyDataContext) then
 **状态**: ❌ 不支持
 
 **原因**:
+
 - MbedTLS 3.x 的 Early Data API 尚未完善
 - 当前后端不会暴露 `ISSLEarlyDataContext` 可选接口，避免调用方命中存根异常
 
 **计划**:
+
 - 等待 MbedTLS 4.x 完善 API
 - 再补完整的 runtime/public contract
 
@@ -113,11 +125,13 @@ if not Supports(Ctx, ISSLEarlyDataContext) then
 **状态**: ⚠️ 实验性支持
 
 **原因**:
+
 - 当前已接通 `ISSLEarlyDataContext` 与 `ISSLEarlyDataConnection`
 - 依赖 WolfSSL TLS 1.3 early-data 原生 API
 - 当前证据以 focused contract + 全仓编译为主，未在本机完成独立的 end-to-end resumed-session runtime 验证
 
 **当前范围**:
+
 - ✅ 客户端 context enable / policy / max-size surface
 - ✅ 客户端连接级 queue / status / limit surface
 - ⚠️ 更广泛的 runtime readiness 仍应按实验性能力看待
@@ -131,28 +145,46 @@ if not Supports(Ctx, ISSLEarlyDataContext) then
 **状态**: ✅ 完整支持
 
 **功能**:
+
 - ✅ 加载 OCSP 响应
 - ✅ 从文件加载
 - ✅ 动态更新
 
 ### OpenSSL 后端
 
-**状态**: ✅ 完整支持（v1.4.1+）
+**状态**: ✅ 完整支持（v1.4.1+，含 focused runtime proof）
 
 **功能**:
+
 - ✅ 加载 OCSP 响应
 - ✅ 从文件加载
 - ✅ 动态更新
+- ✅ server-side native status callback wiring
+- ✅ focused TLS 1.3 runtime handshake proof（含 builder file-load path）
+
+**当前范围**:
+
+- ✅ `ISSLServerOCSPStaplingContext` public surface
+- ✅ `WithServerOCSPStapledResponseFile(...)`
+- ✅ `configured + requested => client surface 收到 stapled DER`
+- ✅ `not requested` / `no material` => client surface 保持空响应
+
+**边界**:
+
+- 只负责 caller-provided stapled OCSP response material
+- 不负责 online fetch、refresh，或 responder 调度
 
 ### WinSSL 后端
 
 **状态**: ⚠️ 部分支持
 
 **功能**:
+
 - ✅ 自动 OCSP Stapling（系统管理）
 - ❌ 手动加载响应（Schannel 限制）
 
 **检测**:
+
 ```pascal
 Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
 Ctx := Lib.CreateContext(sslCtxServer);
@@ -165,6 +197,7 @@ if not Supports(Ctx, ISSLServerOCSPStaplingContext) then
 **状态**: ❌ 不支持
 
 **原因**:
+
 - 当前后端不会暴露 `ISSLServerOCSPStaplingContext`
 - `server_ocsp_stapled_response_file` 配置会被 builder fail-fast 拦下，而不是 silent ignore
 
@@ -173,6 +206,7 @@ if not Supports(Ctx, ISSLServerOCSPStaplingContext) then
 **状态**: ⚠️ 实验性支持
 
 **当前范围**:
+
 - ✅ public optional context interface `ISSLServerOCSPStaplingContext`
 - ✅ builder `WithServerOCSPStapledResponseFile(...)`
 - ✅ caller-provided DER bytes / file material
@@ -181,6 +215,7 @@ if not Supports(Ctx, ISSLServerOCSPStaplingContext) then
 - ⚠️ 当前证据仍以 focused contract + compile gate 为主，本机未完成独立的 end-to-end runtime 握手验证
 
 **边界**:
+
 - 只负责 caller-provided stapled OCSP response material
 - 不负责 online fetch、refresh，或 responder 调度
 - 现阶段 capability 应按 `experimental` 看待，而不是生产稳定支持
@@ -194,6 +229,7 @@ if not Supports(Ctx, ISSLServerOCSPStaplingContext) then
 **状态**: ✅ 完整支持
 
 **功能**:
+
 - ✅ SCT 验证
 - ✅ CT 日志列表
 - ✅ 策略配置
@@ -203,6 +239,7 @@ if not Supports(Ctx, ISSLServerOCSPStaplingContext) then
 **状态**: ✅ 完整支持
 
 **功能**:
+
 - ✅ SCT 验证
 - ✅ CT 日志列表
 - ✅ 策略配置
@@ -212,6 +249,7 @@ if not Supports(Ctx, ISSLServerOCSPStaplingContext) then
 **状态**: ⚠️ 基础支持
 
 **功能**:
+
 - ✅ SCT 提取
 - ⚠️ 验证需要应用层实现
 
@@ -224,11 +262,13 @@ if not Supports(Ctx, ISSLServerOCSPStaplingContext) then
 **状态**: ✅ 完整支持
 
 **功能**:
+
 - ✅ 从 PKCS#11 令牌加载私钥
 - ✅ 支持 PIN 保护
 - ✅ URI 格式
 
 **示例**:
+
 ```pascal
 Ctx.LoadPrivateKey('pkcs11:token=MyToken;object=MyKey', 'PIN');
 ```
@@ -244,6 +284,7 @@ Ctx.LoadPrivateKey('pkcs11:token=MyToken;object=MyKey', 'PIN');
 ### FreePascal 后端
 
 **平台**:
+
 - ✅ Linux (x86_64, ARM64)
 - ✅ macOS (x86_64, ARM64)
 - ✅ Windows (x86_64)
@@ -254,6 +295,7 @@ Ctx.LoadPrivateKey('pkcs11:token=MyToken;object=MyKey', 'PIN');
 ### OpenSSL 后端
 
 **平台**:
+
 - ✅ Linux
 - ✅ macOS
 - ✅ Windows
@@ -265,6 +307,7 @@ Ctx.LoadPrivateKey('pkcs11:token=MyToken;object=MyKey', 'PIN');
 ### WinSSL 后端
 
 **平台**:
+
 - ✅ Windows 10+
 - ✅ Windows Server 2016+
 
@@ -273,6 +316,7 @@ Ctx.LoadPrivateKey('pkcs11:token=MyToken;object=MyKey', 'PIN');
 ### MbedTLS 后端
 
 **平台**:
+
 - ✅ Linux
 - ✅ 嵌入式系统
 - ⚠️ Windows（实验性）
@@ -282,6 +326,7 @@ Ctx.LoadPrivateKey('pkcs11:token=MyToken;object=MyKey', 'PIN');
 ### WolfSSL 后端
 
 **平台**:
+
 - ✅ Linux
 - ✅ 嵌入式系统
 - ✅ RTOS
@@ -294,38 +339,42 @@ Ctx.LoadPrivateKey('pkcs11:token=MyToken;object=MyKey', 'PIN');
 
 ### 握手性能（相对值）
 
-| 后端 | TLS 1.2 | TLS 1.3 | TLS 1.3 + 0-RTT |
-|------|---------|---------|-----------------|
-| FreePascal | 1.0x | 0.8x | 0.3x |
-| OpenSSL | 1.2x | 1.0x | 0.4x |
-| WinSSL | 0.9x | 0.7x | N/A |
-| MbedTLS | 0.8x | N/A | N/A |
-| WolfSSL | 1.1x | 0.9x | N/A |
+| 后端       | TLS 1.2 | TLS 1.3 | TLS 1.3 + 0-RTT |
+| ---------- | ------- | ------- | --------------- |
+| FreePascal | 1.0x    | 0.8x    | 0.3x            |
+| OpenSSL    | 1.2x    | 1.0x    | 0.4x            |
+| WinSSL     | 0.9x    | 0.7x    | N/A             |
+| MbedTLS    | 0.8x    | N/A     | N/A             |
+| WolfSSL    | 1.1x    | 0.9x    | N/A             |
 
 **注**: 基准为 FreePascal TLS 1.2，数值越小越快
 
 ### 吞吐量（相对值）
 
-| 后端 | 小数据 (<1KB) | 大数据 (>1MB) |
-|------|--------------|--------------|
-| FreePascal | 1.0x | 1.0x |
-| OpenSSL | 1.3x | 1.5x |
-| WinSSL | 1.1x | 1.2x |
-| MbedTLS | 0.9x | 0.8x |
-| WolfSSL | 1.2x | 1.3x |
+| 后端       | 小数据 (<1KB) | 大数据 (>1MB) |
+| ---------- | ------------- | ------------- |
+| FreePascal | 1.0x          | 1.0x          |
+| OpenSSL    | 1.3x          | 1.5x          |
+| WinSSL     | 1.1x          | 1.2x          |
+| MbedTLS    | 0.9x          | 0.8x          |
+| WolfSSL    | 1.2x          | 1.3x          |
 
 ---
 
 ## 选择建议
 
 ### 通用应用
+
 **推荐**: OpenSSL 后端
+
 - 最成熟
 - 功能最完整
 - 性能优秀
 
 ### Windows 应用
+
 **推荐**: WinSSL 后端
+
 - 无需额外依赖
 - 系统集成好
 - 自动更新
@@ -333,12 +382,16 @@ Ctx.LoadPrivateKey('pkcs11:token=MyToken;object=MyKey', 'PIN');
 **备选**: OpenSSL 后端（需要 Early Data）
 
 ### 嵌入式系统
+
 **推荐**: MbedTLS 或 WolfSSL 后端
+
 - 内存占用小
 - 适合资源受限环境
 
 ### 零依赖部署
+
 **推荐**: FreePascal 后端
+
 - 无外部依赖
 - 完整功能
 - 跨平台
@@ -348,15 +401,18 @@ Ctx.LoadPrivateKey('pkcs11:token=MyToken;object=MyKey', 'PIN');
 ## 版本历史
 
 ### v1.4.1 (2026-05-02)
+
 - ✅ OpenSSL 后端添加 Early Data 支持
 - ✅ OpenSSL 后端添加 Server OCSP Stapling 支持
 
 ### v1.4.0 (2026-05-02)
+
 - ✅ FreePascal 后端 Early Data 支持
 - ✅ 完整的 TLS 1.3 实现
 - ✅ Certificate Transparency 支持
 
 ### v1.3.0
+
 - ✅ WinSSL 后端
 - ✅ MbedTLS 后端
 - ✅ WolfSSL 后端
