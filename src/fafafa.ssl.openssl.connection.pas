@@ -1362,15 +1362,24 @@ procedure TOpenSSLConnection.ApplyPreHandshakeOCSPStatusRequest(AIsClient: Boole
 var
   Options: TSSLOptions;
   StatusType: Integer;
+  LServerStaplingContext: ISSLServerOCSPStaplingContext;
 begin
-  if (FSSL = nil) or (FContext = nil) or (not AIsClient) then
+  if (FSSL = nil) or (FContext = nil) then
     Exit;
 
   if not Assigned(SSL_set_tlsext_status_type) then
     Exit;
 
-  Options := FContext.GetOptions;
-  if ssoEnableOCSPStapling in Options then
+  if AIsClient then
+  begin
+    Options := FContext.GetOptions;
+    if ssoEnableOCSPStapling in Options then
+      StatusType := TLSEXT_STATUSTYPE_ocsp
+    else
+      StatusType := 0;
+  end
+  else if Supports(FContext, ISSLServerOCSPStaplingContext, LServerStaplingContext) and
+          LServerStaplingContext.HasServerStapledOCSPResponse then
     StatusType := TLSEXT_STATUSTYPE_ocsp
   else
     StatusType := 0;

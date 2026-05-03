@@ -36,3 +36,19 @@
   - 手工调用 callback 时会注入 caller-provided DER bytes
   - `ClearServerStapledOCSPResponse` 会注销 callback
   - `BuildServer + WithServerOCSPStapledResponseFile(...)` 会同时 load bytes 和注册 callback
+- 续接到 runtime-proof 批次后，发现本地 sandbox 不能稳定创建 listen socket；因此 `OpenSSL` runtime 证据改成 `tests/openssl/test_openssl_server_ocsp_stapling_runtime.pas` 里的 scripted `TStream` TLS 1.3 对端，而不是继续依赖 localhost TCP。
+- 这条 runtime test 真正打出的生产级 RED 不在 builder 或 DER file-load，而在 `src/fafafa.ssl.openssl.api.ssl.pas`：`SSL_CTX_set_tlsext_status_cb_impl` 之前错误地走了 `SSL_CTX_ctrl(...)`，而本机 `/usr/include/openssl/tls1.h` 宏要求的是 `SSL_CTX_callback_ctrl(...)`。修复后，real handshake 才开始实际调用 `SSL_set_tlsext_status_ocsp_resp(...)`。
+- 为了让 OpenSSL 服务端在真实握手里稳定进入 stapling issuance path，当前批次还把 `status_type=ocsp` 同步补到了两层：
+  - `src/fafafa.ssl.openssl.context.pas` 的 `ApplyServerOCSPStaplingConfiguration`
+  - `src/fafafa.ssl.openssl.connection.pas` 的 `ApplyPreHandshakeOCSPStatusRequest(False)`
+- builder runtime 期间出现的 `Accept` 失败不是新的生产 bug。定位结果是 `TSSLContextBuilder.Create` 默认带 `WithVerifyPeer`，而本批 direct server smoke 一直使用 `SetVerifyMode([])`；因此 runtime proof 里的 builder helper 必须显式 `WithVerifyNone`，否则脚本化客户端不提供证书时服务端会按预期拒绝握手。
+- `tests/openssl/test_openssl_server_ocsp_stapling_runtime.pas` 现在锁住了 5 个真实场景：
+  - direct `configured + requested => stapled DER surfaced`
+  - direct `configured + not requested => absent`
+  - direct `no material + requested => absent`
+  - builder `no file + requested => handshake succeeds, absent`
+  - builder `WithServerOCSPStapledResponseFile(...) + requested => stapled DER surfaced`
+- 本批收口验证结果：
+  - focused runtime test：PASS
+  - `python3 scripts/compile_all_modules.py`：`185/185`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`：compile gate `185/185`，模块测试 `17/17`，phase2 baseline dry-run PASS

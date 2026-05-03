@@ -791,10 +791,19 @@ begin
 end;
 
 function SSL_CTX_set_tlsext_status_cb_impl(ctx: PSSL_CTX; cb: Pointer): clong; cdecl;
+type
+  TSSL_CTX_callback_ctrl_local = function(ctx: PSSL_CTX; cmd: Integer;
+    fp: Pointer): clong; cdecl;
 const
   SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB = 63;
+var
+  LCallbackCtrl: TSSL_CTX_callback_ctrl_local;
 begin
-  if Assigned(SSL_CTX_ctrl) then
+  LCallbackCtrl := TSSL_CTX_callback_ctrl_local(
+    GetSSLProcAddress('SSL_CTX_callback_ctrl'));
+  if Assigned(LCallbackCtrl) then
+    Result := LCallbackCtrl(ctx, SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB, cb)
+  else if Assigned(SSL_CTX_ctrl) then
     Result := SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB, 0, cb)
   else
     Result := 0;

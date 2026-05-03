@@ -21,6 +21,36 @@
   - 结果：`185/185` 核心模块编译成功，`100.0%`。
 - 运行 `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`。
+- 续接 `OpenSSL server OCSP stapling runtime proof` 这一批：
+  - 读取 `task_plan.md` / `docs/plans/2026-05-04-openssl-server-ocsp-stapling-runtime-proof.md` / 相关 dirty files，确认上一段未收口状态是“direct 路径已绿，只剩 builder runtime 失败”。
+  - 结合上一段恢复的上下文，补记关键环境边界：本地 sandbox 不能可靠创建 listen socket，所以 focused runtime 已转为 scripted `TStream` TLS 1.3 对端。
+- 运行 `fpc -Fu./src tests/openssl/test_openssl_server_ocsp_stapling_runtime.pas -otmp/test_openssl_server_ocsp_stapling_runtime && ./tmp/test_openssl_server_ocsp_stapling_runtime`
+  - 初次结果：`FAIL: Builder-built server accept should succeed with stapled response file`
+  - 为定位 builder 失败，先给 runtime test 加了 native status-type 断言和更细失败信息。
+- 复跑 focused runtime test 时，先遇到一次编译级小问题：
+  - 错误：`Identifier not found "TLSEXT_STATUSTYPE_ocsp"`
+  - 处理：给测试补 `fafafa.ssl.openssl.api.consts`
+- 复跑 focused runtime test：
+  - 结果：`FAIL: Builder-built server accept should succeed with stapled response file (state=error verify=OK ctx_status=1 conn_status=1 status_call_delta=1)`
+  - 结论：builder + file-load 并不是“callback 根本没进”；native callback 已经被调用，握手失败另有原因。
+- 为切分 builder 通用问题和 file-load 专有问题，给 runtime test 再补了 `builder without stapled file` 场景。
+- 再次运行 focused runtime test：
+  - 结果：`FAIL: Builder-built server accept should succeed without stapled response file (state=error verify=OK ctx_status=0 conn_status=1)`
+  - 结论：builder 失败与 stapled file 无关，是 server builder 基线和 direct smoke 不一致。
+- 读取 `src/fafafa.ssl.context.builder.pas` 默认值后确认根因：
+  - `TSSLContextBuilder.Create` 默认 `FVerifyMode := [sslVerifyPeer]`
+  - direct helper `NewServerContext` 明确 `SetVerifyMode([])`
+  - 因此脚本化客户端不提供证书时，builder server 会按默认策略拒绝握手；这不是新的 OpenSSL stapling 生产 bug
+- 修正 focused runtime test helper：
+  - `NewServerContextFromBuilder` 显式加 `.WithVerifyNone`
+  - 保留 builder no-file / builder file-load 两个 runtime 场景，锁住真实 server-side behavior
+- 复跑 focused runtime test：
+  - 命令：`fpc -Fu./src tests/openssl/test_openssl_server_ocsp_stapling_runtime.pas -otmp/test_openssl_server_ocsp_stapling_runtime && ./tmp/test_openssl_server_ocsp_stapling_runtime`
+  - 结果：`PASS: OpenSSL server OCSP stapling runtime checks passed`
+- 运行 `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+- 运行 `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
 - 继续当前 closeout，先核对工作树与上一提交：
   - `git status --short` => 干净工作树
   - `git log --oneline -1` => `a5c56c2 fix(openssl,wolfssl): align early-data connection surfaces`

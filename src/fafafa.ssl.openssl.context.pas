@@ -1132,9 +1132,20 @@ begin
 end;
 
 procedure TOpenSSLContext.ApplyServerOCSPStaplingConfiguration;
+var
+  LStatusType: Integer;
 begin
   if (FSSLContext = nil) or (FContextType <> sslCtxServer) then
     Exit;
+
+  if Assigned(SSL_CTX_set_tlsext_status_type) then
+  begin
+    if HasServerStapledOCSPResponse then
+      LStatusType := TLSEXT_STATUSTYPE_ocsp
+    else
+      LStatusType := 0;
+    SSL_CTX_set_tlsext_status_type(FSSLContext, LStatusType);
+  end;
 
   if Assigned(SSL_CTX_set_tlsext_status_arg) then
   begin
