@@ -28,7 +28,7 @@ uses
 
 type
   { TWolfSSLConnection - WolfSSL SSL 连接类 }
-  TWolfSSLConnection = class(TBaseSSLConnection)
+  TWolfSSLConnection = class(TBaseSSLConnection, ISSLEarlyDataConnection)
   private
     FWolfSSLCtx: PWOLFSSL_CTX;
     FWolfSSL: PWOLFSSL;
@@ -38,11 +38,18 @@ type
     FALPNProtocols: string;
     FNegotiatedALPN: string;
     FLastNativeError: Integer;
+    FConfiguredSession: ISSLSession;
+    FEarlyDataPayload: TBytes;
+    FEarlyDataStatus: TSSLEarlyDataStatus;
+    FEarlyDataLimit: Cardinal;
 
     procedure SetupSocket;
     procedure SetupStream;
     procedure SetupSNI;
     procedure SetupALPN;
+    function ResolveEarlyDataLimitFromSession(const ASession: ISSLSession): Cardinal;
+    function SendQueuedEarlyData: Boolean;
+    procedure UpdateEarlyDataStatusFromNative;
 
   protected
     { 抽象方法实现 }
@@ -84,6 +91,11 @@ type
     { SNI/ALPN 设置 }
     procedure SetServerName(const AServerName: string);
     function GetServerName: string;
+
+    { ISSLEarlyDataConnection }
+    function SetEarlyData(const AData: TBytes): TSSLOperationResult;
+    function GetEarlyDataStatus: TSSLEarlyDataStatus;
+    function GetEarlyDataLimit: Cardinal;
 
     { 额外方法 }
     function GetNegotiatedProtocol: TSSLProtocolVersion;
@@ -162,6 +174,10 @@ begin
   FALPNProtocols := AContext.GetALPNProtocols;
   FNegotiatedALPN := '';
   FLastNativeError := 0;
+  FConfiguredSession := nil;
+  SetLength(FEarlyDataPayload, 0);
+  FEarlyDataStatus := sslEarlyDataNone;
+  FEarlyDataLimit := 0;
 
   if FWolfSSLCtx = nil then
     raise ESSLException.Create('Invalid WolfSSL context');
@@ -191,6 +207,10 @@ begin
   FALPNProtocols := AContext.GetALPNProtocols;
   FNegotiatedALPN := '';
   FLastNativeError := 0;
+  FConfiguredSession := nil;
+  SetLength(FEarlyDataPayload, 0);
+  FEarlyDataStatus := sslEarlyDataNone;
+  FEarlyDataLimit := 0;
 
   if AStream = nil then
     raise ESSLException.Create('Stream cannot be nil');
@@ -258,6 +278,84 @@ begin
       Length(FALPNProtocols), 0);  // 0 = WOLFSSL_ALPN_CONTINUE_ON_MISMATCH
 end;
 
+function TWolfSSLConnection.ResolveEarlyDataLimitFromSession(
+  const ASession: ISSLSession): Cardinal;
+var
+  LSession: PWOLFSSL_SESSION;
+  LNativeLimit: Integer;
+begin
+  Result := 0;
+
+  if (ASession <> nil) and Assigned(wolfSSL_SESSION_get_max_early_data) and
+     TryGetNativeHandle(ASession, Pointer(LSession)) and (LSession <> nil) then
+    Exit(wolfSSL_SESSION_get_max_early_data(LSession));
+
+  if (FWolfSSL <> nil) and Assigned(wolfSSL_get_max_early_data) then
+  begin
+    LNativeLimit := wolfSSL_get_max_early_data(FWolfSSL);
+    if LNativeLimit > 0 then
+      Exit(Cardinal(LNativeLimit));
+  end;
+
+  if (FWolfSSLCtx <> nil) and Assigned(wolfSSL_CTX_get_max_early_data) then
+    Result := wolfSSL_CTX_get_max_early_data(FWolfSSLCtx);
+end;
+
+procedure TWolfSSLConnection.UpdateEarlyDataStatusFromNative;
+var
+  LNativeStatus: Integer;
+begin
+  if (FWolfSSL = nil) or (not Assigned(wolfSSL_get_early_data_status)) then
+    Exit;
+
+  LNativeStatus := wolfSSL_get_early_data_status(FWolfSSL);
+  case LNativeStatus of
+    WOLFSSL_EARLY_DATA_ACCEPTED:
+      FEarlyDataStatus := sslEarlyDataAccepted;
+    WOLFSSL_EARLY_DATA_REJECTED:
+      FEarlyDataStatus := sslEarlyDataRejected;
+    WOLFSSL_EARLY_DATA_NOT_SENT:
+      begin
+        if FEarlyDataStatus = sslEarlyDataQueued then
+          FEarlyDataStatus := sslEarlyDataRejected
+        else
+          FEarlyDataStatus := sslEarlyDataNone;
+      end;
+  end;
+end;
+
+function TWolfSSLConnection.SendQueuedEarlyData: Boolean;
+var
+  LRet, LOutSz, LOffset: Integer;
+begin
+  Result := True;
+
+  if (FEarlyDataStatus <> sslEarlyDataQueued) or (Length(FEarlyDataPayload) = 0) then
+    Exit;
+
+  if (FWolfSSL = nil) or (not Assigned(wolfSSL_write_early_data)) then
+    Exit(False);
+
+  LOffset := 0;
+  while LOffset < Length(FEarlyDataPayload) do
+  begin
+    LOutSz := 0;
+    LRet := wolfSSL_write_early_data(FWolfSSL, @FEarlyDataPayload[LOffset],
+      Length(FEarlyDataPayload) - LOffset, @LOutSz);
+    if LRet = WOLFSSL_SUCCESS then
+    begin
+      Inc(LOffset, LOutSz);
+      Continue;
+    end;
+
+    if Assigned(wolfSSL_get_error) then
+      FLastNativeError := wolfSSL_get_error(FWolfSSL, LRet)
+    else
+      FLastNativeError := LRet;
+    Exit(False);
+  end;
+end;
+
 { 抽象方法实现 }
 
 function TWolfSSLConnection.DoRead(var ABuffer; ACount: Integer): Integer;
@@ -290,10 +388,15 @@ begin
   if FWolfSSL = nil then Exit;
   if not Assigned(wolfSSL_connect) then Exit;
 
+  if not SendQueuedEarlyData then
+    Exit(False);
+
   LResult := wolfSSL_connect(FWolfSSL);
   if LResult <> WOLFSSL_SUCCESS then
     FLastNativeError := wolfSSL_get_error(FWolfSSL, LResult);
   Result := LResult = WOLFSSL_SUCCESS;
+  if Result then
+    UpdateEarlyDataStatusFromNative;
 end;
 
 function TWolfSSLConnection.DoAccept: Boolean;
@@ -470,13 +573,21 @@ procedure TWolfSSLConnection.DoSetSession(ASession: ISSLSession);
 var
   LSession: PWOLFSSL_SESSION;
 begin
+  FConfiguredSession := ASession;
+  FEarlyDataLimit := 0;
+
   if ASession = nil then Exit;
   if FWolfSSL = nil then Exit;
   if not Assigned(wolfSSL_set_session) then Exit;
 
-  LSession := PWOLFSSL_SESSION(GetNativeHandleSafe(ASession, 'TWolfSSLConnection.DoSetSession'));
+  if not TryGetNativeHandle(ASession, Pointer(LSession)) then
+    Exit;
+
   if LSession <> nil then
-    wolfSSL_set_session(FWolfSSL, LSession);
+  begin
+    if wolfSSL_set_session(FWolfSSL, LSession) = WOLFSSL_SUCCESS then
+      FEarlyDataLimit := ResolveEarlyDataLimitFromSession(ASession);
+  end;
 end;
 
 function TWolfSSLConnection.DoIsSessionReused: Boolean;
@@ -600,6 +711,57 @@ end;
 function TWolfSSLConnection.GetServerName: string;
 begin
   Result := FServerName;
+end;
+
+function TWolfSSLConnection.SetEarlyData(
+  const AData: TBytes): TSSLOperationResult;
+var
+  LEarlyDataContext: ISSLEarlyDataContext;
+begin
+  if (FContext = nil) or (FContext.GetContextType <> sslCtxClient) then
+    Exit(TSSLOperationResult.Err(sslErrInvalidParam,
+      'Early data is only available on client connections'));
+
+  if not Supports(FContext, ISSLEarlyDataContext, LEarlyDataContext) then
+    Exit(TSSLOperationResult.Err(sslErrUnsupported,
+      'Context does not expose early-data interface'));
+
+  if not LEarlyDataContext.GetClientEarlyDataEnabled then
+    Exit(TSSLOperationResult.Err(sslErrConfiguration,
+      'Client early data is disabled on the context'));
+
+  if (FConfiguredSession = nil) or (not FConfiguredSession.IsValid) or
+     (not FConfiguredSession.IsResumable) then
+    Exit(TSSLOperationResult.Err(sslErrInvalidParam,
+      'Early data requires a configured resumable session'));
+
+  FEarlyDataLimit := ResolveEarlyDataLimitFromSession(FConfiguredSession);
+  if FEarlyDataLimit = 0 then
+    Exit(TSSLOperationResult.Err(sslErrInvalidParam,
+      'Configured session does not allow early data'));
+
+  if Cardinal(Length(AData)) > FEarlyDataLimit then
+    Exit(TSSLOperationResult.Err(sslErrInvalidParam,
+      'Early data payload exceeds max_early_data_size'));
+
+  FEarlyDataPayload := Copy(AData, 0, Length(AData));
+  if Length(FEarlyDataPayload) = 0 then
+    FEarlyDataStatus := sslEarlyDataNone
+  else
+    FEarlyDataStatus := sslEarlyDataQueued;
+  Result := TSSLOperationResult.Ok;
+end;
+
+function TWolfSSLConnection.GetEarlyDataStatus: TSSLEarlyDataStatus;
+begin
+  if FHandshakeComplete or FConnected then
+    UpdateEarlyDataStatusFromNative;
+  Result := FEarlyDataStatus;
+end;
+
+function TWolfSSLConnection.GetEarlyDataLimit: Cardinal;
+begin
+  Result := FEarlyDataLimit;
 end;
 
 { 额外方法 }

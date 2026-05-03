@@ -225,6 +225,8 @@ type
   TSSL_SESSION_get_ticket_lifetime_hint = function(const s: PSSL_SESSION): LongWord; cdecl;
   TSSL_SESSION_get0_ticket = procedure(const s: PSSL_SESSION; const tick: PPByte; len: Psize_t); cdecl;
   TSSL_SESSION_set1_ticket = function(s: PSSL_SESSION; const ext: PByte; ext_len: size_t): Integer; cdecl;
+  TSSL_SESSION_get_max_early_data = function(const s: PSSL_SESSION): UInt32; cdecl;
+  TSSL_SESSION_set_max_early_data = function(s: PSSL_SESSION; max_early_data: UInt32): Integer; cdecl;
   TSSL_copy_session_id = function(&to: PSSL; const from: PSSL): Integer; cdecl;
   
   { SSL Cipher Functions }
@@ -627,6 +629,8 @@ var
   SSL_SESSION_get0_cipher: TSSL_SESSION_get0_cipher = nil;
   SSL_SESSION_get0_peer: TSSL_SESSION_get0_peer = nil;
   SSL_SESSION_is_resumable: TSSL_SESSION_is_resumable = nil;
+  SSL_SESSION_get_max_early_data: TSSL_SESSION_get_max_early_data = nil;
+  SSL_SESSION_set_max_early_data: TSSL_SESSION_set_max_early_data = nil;
   
   // State and version functions
   SSL_get_state: TSSL_get_state = nil;
@@ -935,6 +939,8 @@ begin
   SSL_SESSION_get0_cipher := TSSL_SESSION_get0_cipher(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_get0_cipher'));
   SSL_SESSION_get0_peer := TSSL_SESSION_get0_peer(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_get0_peer'));
   SSL_SESSION_is_resumable := TSSL_SESSION_is_resumable(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_is_resumable'));
+  SSL_SESSION_get_max_early_data := TSSL_SESSION_get_max_early_data(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_get_max_early_data'));
+  SSL_SESSION_set_max_early_data := TSSL_SESSION_set_max_early_data(GetProcedureAddress(LibSSLHandle, 'SSL_SESSION_set_max_early_data'));
   
   // State and version functions
   SSL_get_state := TSSL_get_state(GetProcedureAddress(LibSSLHandle, 'SSL_get_state'));

@@ -43,7 +43,8 @@ uses
   fafafa.ssl.logging;
 
 type
-  TOpenSSLConnection = class(TBaseSSLConnection, ISSLClientConnection, ISSLNativeHandleAccess)
+  TOpenSSLConnection = class(TBaseSSLConnection, ISSLClientConnection,
+    ISSLEarlyDataConnection, ISSLNativeHandleAccess)
   private
     FSocket: THandle;
     FStream: TStream;
@@ -52,6 +53,10 @@ type
     FBioWrite: PBIO;
     FServerName: string;
     FLastSSLError: Integer;
+    FConfiguredSession: ISSLSession;
+    FEarlyDataPayload: TBytes;
+    FEarlyDataStatus: TSSLEarlyDataStatus;
+    FEarlyDataLimit: Cardinal;
 
     function HasStreamTransport: Boolean;
     function PumpStreamToBIO: Integer;
@@ -59,6 +64,9 @@ type
     function InternalHandshake(AIsClient: Boolean): Boolean;
     function ValidatePostHandshake(AIsClient: Boolean): Boolean;
     procedure ApplyPreHandshakeOCSPStatusRequest(AIsClient: Boolean);
+    function ResolveEarlyDataLimitFromSession(const ASession: ISSLSession): Cardinal;
+    function SendQueuedEarlyData: Boolean;
+    procedure UpdateEarlyDataStatusFromNative;
 
   protected
     { B51-M5: required OCSP stapling fail-closed policy helper }
@@ -104,6 +112,11 @@ type
     procedure SetServerName(const AServerName: string);
     function GetServerName: string;
 
+    { ISSLEarlyDataConnection }
+    function SetEarlyData(const AData: TBytes): TSSLOperationResult;
+    function GetEarlyDataStatus: TSSLEarlyDataStatus;
+    function GetEarlyDataLimit: Cardinal;
+
     { ISSLNativeHandleAccess }
     function GetNativeHandle: Pointer;
     function GetBackendType: TSSLLibraryType;
@@ -123,6 +136,9 @@ implementation
 
 const
   SSL_IO_BUFFER_SIZE = 8192;
+  SSL_EARLY_DATA_NOT_SENT = 0;
+  SSL_EARLY_DATA_REJECTED = 1;
+  SSL_EARLY_DATA_ACCEPTED = 2;
 
 constructor TOpenSSLConnection.Create(AContext: ISSLContext; ASocket: THandle);
 var
@@ -134,6 +150,10 @@ begin
   FBioRead := nil;
   FBioWrite := nil;
   FLastSSLError := 0;
+  FConfiguredSession := nil;
+  SetLength(FEarlyDataPayload, 0);
+  FEarlyDataStatus := sslEarlyDataNone;
+  FEarlyDataLimit := 0;
 
   // 使用辅助函数安全获取原生句柄
   Ctx := PSSL_CTX(GetNativeHandleSafe(AContext, 'TOpenSSLConnection.Create'));
@@ -181,6 +201,10 @@ begin
   FBioRead := nil;
   FBioWrite := nil;
   FLastSSLError := 0;
+  FConfiguredSession := nil;
+  SetLength(FEarlyDataPayload, 0);
+  FEarlyDataStatus := sslEarlyDataNone;
+  FEarlyDataLimit := 0;
 
   // 使用辅助函数安全获取原生句柄
   Ctx := PSSL_CTX(GetNativeHandleSafe(AContext, 'TOpenSSLConnection.Create'));
@@ -263,6 +287,115 @@ end;
 function TOpenSSLConnection.GetServerName: string;
 begin
   Result := FServerName;
+end;
+
+function TOpenSSLConnection.ResolveEarlyDataLimitFromSession(
+  const ASession: ISSLSession): Cardinal;
+var
+  LNativeSession: PSSL_SESSION;
+begin
+  Result := 0;
+
+  if (ASession <> nil) and Assigned(SSL_SESSION_get_max_early_data) and
+     TryGetNativeHandle(ASession, Pointer(LNativeSession)) and
+     (LNativeSession <> nil) then
+    Exit(SSL_SESSION_get_max_early_data(LNativeSession));
+
+  if (FSSL <> nil) and Assigned(SSL_get_max_early_data) then
+    Result := SSL_get_max_early_data(FSSL);
+end;
+
+procedure TOpenSSLConnection.UpdateEarlyDataStatusFromNative;
+var
+  LNativeStatus: Integer;
+begin
+  if (FSSL = nil) or (not Assigned(SSL_get_early_data_status)) then
+    Exit;
+
+  LNativeStatus := SSL_get_early_data_status(FSSL);
+  case LNativeStatus of
+    SSL_EARLY_DATA_ACCEPTED:
+      FEarlyDataStatus := sslEarlyDataAccepted;
+    SSL_EARLY_DATA_REJECTED:
+      FEarlyDataStatus := sslEarlyDataRejected;
+    SSL_EARLY_DATA_NOT_SENT:
+      begin
+        if FEarlyDataStatus = sslEarlyDataQueued then
+          FEarlyDataStatus := sslEarlyDataRejected
+        else
+          FEarlyDataStatus := sslEarlyDataNone;
+      end;
+  end;
+end;
+
+function TOpenSSLConnection.SendQueuedEarlyData: Boolean;
+var
+  LRet, LErr: Integer;
+  LWritten, LRemaining, LOffset: NativeUInt;
+begin
+  Result := True;
+
+  if (FEarlyDataStatus <> sslEarlyDataQueued) or (Length(FEarlyDataPayload) = 0) then
+    Exit;
+
+  if (FSSL = nil) or (not Assigned(SSL_write_early_data)) or
+     (not Assigned(SSL_get_error)) then
+    Exit(False);
+
+  if Assigned(SSL_set_connect_state) then
+    SSL_set_connect_state(FSSL);
+
+  LOffset := 0;
+  while LOffset < NativeUInt(Length(FEarlyDataPayload)) do
+  begin
+    LWritten := 0;
+    LRemaining := NativeUInt(Length(FEarlyDataPayload)) - LOffset;
+    LRet := SSL_write_early_data(FSSL, @FEarlyDataPayload[LOffset],
+      LRemaining, @LWritten);
+    if LRet = 1 then
+    begin
+      Inc(LOffset, LWritten);
+      if HasStreamTransport then
+        PumpBIOToStream;
+      Continue;
+    end;
+
+    LErr := SSL_get_error(FSSL, LRet);
+    FLastSSLError := LErr;
+    case LErr of
+      SSL_ERROR_WANT_READ:
+        begin
+          if HasStreamTransport then
+          begin
+            PumpBIOToStream;
+            if PumpStreamToBIO <= 0 then
+              Exit(False);
+          end
+          else
+            Exit(False);
+        end;
+      SSL_ERROR_WANT_WRITE:
+        begin
+          if HasStreamTransport then
+          begin
+            if PumpBIOToStream <= 0 then
+              Exit(False);
+          end
+          else
+            Exit(False);
+        end;
+      SSL_ERROR_ZERO_RETURN:
+        begin
+          if HasStreamTransport then
+            PumpBIOToStream;
+          Exit(False);
+        end;
+    else
+      if HasStreamTransport then
+        PumpBIOToStream;
+      Exit(False);
+    end;
+  end;
 end;
 
 { 抽象方法实现 }
@@ -431,17 +564,24 @@ var
 begin
   if FSSL = nil then Exit(False);
 
+  ApplyPreHandshakeOCSPStatusRequest(True);
+
   // For stream-based transport, run an internal blocking handshake
   if HasStreamTransport then
   begin
+    if not SendQueuedEarlyData then
+      Exit(False);
     Result := InternalHandshake(True);
+    if Result then
+      UpdateEarlyDataStatusFromNative;
     Exit;
   end;
 
   if not Assigned(SSL_connect) then
     Exit(False);
 
-  ApplyPreHandshakeOCSPStatusRequest(True);
+  if not SendQueuedEarlyData then
+    Exit(False);
 
   Ret := SSL_connect(FSSL);
   FConnected := (Ret = 1);
@@ -454,6 +594,7 @@ begin
       Result := False;
       Exit;
     end;
+    UpdateEarlyDataStatusFromNative;
   end
   else if Assigned(SSL_get_error) then
     FLastSSLError := SSL_get_error(FSSL, Ret);
@@ -767,6 +908,9 @@ procedure TOpenSSLConnection.DoSetSession(ASession: ISSLSession);
 var
   Sess: PSSL_SESSION;
 begin
+  FConfiguredSession := ASession;
+  FEarlyDataLimit := 0;
+
   if (FSSL = nil) or (ASession = nil) then
     Exit;
 
@@ -777,7 +921,59 @@ begin
   if not TryGetNativeHandle(ASession, Pointer(Sess)) then
     Exit;
 
-  SSL_set_session(FSSL, Sess);
+  if SSL_set_session(FSSL, Sess) = 1 then
+    FEarlyDataLimit := ResolveEarlyDataLimitFromSession(ASession);
+end;
+
+function TOpenSSLConnection.SetEarlyData(
+  const AData: TBytes): TSSLOperationResult;
+var
+  LEarlyDataContext: ISSLEarlyDataContext;
+begin
+  if (FContext = nil) or (FContext.GetContextType <> sslCtxClient) then
+    Exit(TSSLOperationResult.Err(sslErrInvalidParam,
+      'Early data is only available on client connections'));
+
+  if not Supports(FContext, ISSLEarlyDataContext, LEarlyDataContext) then
+    Exit(TSSLOperationResult.Err(sslErrUnsupported,
+      'Context does not expose early-data interface'));
+
+  if not LEarlyDataContext.GetClientEarlyDataEnabled then
+    Exit(TSSLOperationResult.Err(sslErrConfiguration,
+      'Client early data is disabled on the context'));
+
+  if (FConfiguredSession = nil) or (not FConfiguredSession.IsValid) or
+     (not FConfiguredSession.IsResumable) then
+    Exit(TSSLOperationResult.Err(sslErrInvalidParam,
+      'Early data requires a configured resumable session'));
+
+  FEarlyDataLimit := ResolveEarlyDataLimitFromSession(FConfiguredSession);
+  if FEarlyDataLimit = 0 then
+    Exit(TSSLOperationResult.Err(sslErrInvalidParam,
+      'Configured session does not allow early data'));
+
+  if Cardinal(Length(AData)) > FEarlyDataLimit then
+    Exit(TSSLOperationResult.Err(sslErrInvalidParam,
+      'Early data payload exceeds max_early_data_size'));
+
+  FEarlyDataPayload := Copy(AData, 0, Length(AData));
+  if Length(FEarlyDataPayload) = 0 then
+    FEarlyDataStatus := sslEarlyDataNone
+  else
+    FEarlyDataStatus := sslEarlyDataQueued;
+  Result := TSSLOperationResult.Ok;
+end;
+
+function TOpenSSLConnection.GetEarlyDataStatus: TSSLEarlyDataStatus;
+begin
+  if FHandshakeComplete or FConnected then
+    UpdateEarlyDataStatusFromNative;
+  Result := FEarlyDataStatus;
+end;
+
+function TOpenSSLConnection.GetEarlyDataLimit: Cardinal;
+begin
+  Result := FEarlyDataLimit;
 end;
 
 function TOpenSSLConnection.DoIsSessionReused: Boolean;

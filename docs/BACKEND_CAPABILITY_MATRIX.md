@@ -110,14 +110,17 @@ if not Supports(Ctx, ISSLEarlyDataContext) then
 
 ### WolfSSL 后端
 
-**状态**: ❌ 不支持（计划中）
+**状态**: ⚠️ 实验性支持
 
 **原因**:
-- WolfSSL 支持 TLS 1.3 Early Data
-- 需要绑定 WolfSSL 特定 API
+- 当前已接通 `ISSLEarlyDataContext` 与 `ISSLEarlyDataConnection`
+- 依赖 WolfSSL TLS 1.3 early-data 原生 API
+- 当前证据以 focused contract + 全仓编译为主，未在本机完成独立的 end-to-end resumed-session runtime 验证
 
-**计划**:
-- v1.5.0 添加支持
+**当前范围**:
+- ✅ 客户端 context enable / policy / max-size surface
+- ✅ 客户端连接级 queue / status / limit surface
+- ⚠️ 更广泛的 runtime readiness 仍应按实验性能力看待
 
 ---
 

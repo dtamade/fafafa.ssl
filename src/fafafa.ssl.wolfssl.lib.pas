@@ -429,6 +429,19 @@ begin
     Result.OCSPStaplingSupport := sslSupportNone;
   Result.CertTransparencySupport := sslSupportNone;
   Result.SessionTicketsSupport := sslSupportStable;
+  if FCapabilities.HasTLS13 and Assigned(wolfSSL_write_early_data) and
+     Assigned(wolfSSL_get_early_data_status) and
+     Assigned(wolfSSL_CTX_set_max_early_data) and
+     Assigned(wolfSSL_CTX_get_max_early_data) then
+  begin
+    Result.ZeroRTTSupport := sslSupportExperimental;
+    Result.EarlyDataSupport := sslSupportExperimental;
+  end
+  else
+  begin
+    Result.ZeroRTTSupport := sslSupportNone;
+    Result.EarlyDataSupport := sslSupportNone;
+  end;
 
   // 密码算法支持
   Result.SupportedCiphers := [

@@ -23,7 +23,7 @@ TLS 1.3 Early Data（0-RTT）允许客户端在 TLS 握手完成前发送应用�
 | OpenSSL | ✅ 完整支持 | ✅ 完整支持 | 生产就绪 (v1.4.1+) |
 | WinSSL | ❌ 不支持 | ❌ 不支持 | Schannel API 限制 |
 | MbedTLS | ❌ 不支持 | ❌ 不支持 | 计划中 |
-| WolfSSL | ❌ 不支持 | ❌ 不支持 | 计划中 |
+| WolfSSL | ⚠️ 实验性 | ⚠️ 实验性 | 原生 API 已接线，runtime 仍建议按实验性看待 |
 
 ---
 
@@ -79,8 +79,8 @@ begin
       WriteLn('Early Data accepted by server');
     sslEarlyDataRejected:
       WriteLn('Early Data rejected, will retry in normal data');
-    sslEarlyDataNotSent:
-      WriteLn('Early Data not sent (no session ticket)');
+  else
+    WriteLn('Early Data not queued or not accepted');
   end;
 end;
 ```
@@ -287,8 +287,8 @@ end;
 **解决**：
 ```pascal
 // 检查状态
-if EarlyDataConn.GetEarlyDataStatus = sslEarlyDataNotSent then
-  WriteLn('No session ticket available');
+if EarlyDataConn.GetEarlyDataStatus = sslEarlyDataNone then
+  WriteLn('No usable early-data session is currently configured');
 ```
 
 ### Early Data 被拒绝

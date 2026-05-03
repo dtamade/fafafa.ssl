@@ -58,8 +58,11 @@ type
   TwolfSSL_write = function(ssl: PWOLFSSL; buf: Pointer; sz: Integer): Integer; cdecl;
 
   // TLS 1.3 Early Data (v1.4.2)
+  TwolfSSL_set_max_early_data = function(ssl: PWOLFSSL; sz: Cardinal): Integer; cdecl;
+  TwolfSSL_get_max_early_data = function(ssl: PWOLFSSL): Integer; cdecl;
   TwolfSSL_write_early_data = function(ssl: PWOLFSSL; const buf: Pointer; sz: Integer; outSz: PInteger): Integer; cdecl;
   TwolfSSL_read_early_data = function(ssl: PWOLFSSL; buf: Pointer; sz: Integer; outSz: PInteger): Integer; cdecl;
+  TwolfSSL_get_early_data_status = function(const ssl: PWOLFSSL): Integer; cdecl;
   TwolfSSL_CTX_set_max_early_data = function(ctx: PWOLFSSL_CTX; sz: Cardinal): Integer; cdecl;
   TwolfSSL_CTX_get_max_early_data = function(ctx: PWOLFSSL_CTX): Cardinal; cdecl;
 
@@ -125,6 +128,7 @@ type
   // 会话序列化 (新增)
   TwolfSSL_i2d_SSL_SESSION = function(session: PWOLFSSL_SESSION; pp: PPByte): Integer; cdecl;
   TwolfSSL_d2i_SSL_SESSION = function(session: PPWOLFSSL_SESSION; const pp: PPByte; length: Integer): PWOLFSSL_SESSION; cdecl;
+  TwolfSSL_SESSION_get_max_early_data = function(session: PWOLFSSL_SESSION): Cardinal; cdecl;
 
   // ALPN 支持 (新增)
   TwolfSSL_UseALPN = function(ssl: PWOLFSSL; const protocol_name_list: PAnsiChar;
@@ -196,8 +200,11 @@ var
   wolfSSL_write: TwolfSSL_write = nil;
 
   // TLS 1.3 Early Data (v1.4.2)
+  wolfSSL_set_max_early_data: TwolfSSL_set_max_early_data = nil;
+  wolfSSL_get_max_early_data: TwolfSSL_get_max_early_data = nil;
   wolfSSL_write_early_data: TwolfSSL_write_early_data = nil;
   wolfSSL_read_early_data: TwolfSSL_read_early_data = nil;
+  wolfSSL_get_early_data_status: TwolfSSL_get_early_data_status = nil;
   wolfSSL_CTX_set_max_early_data: TwolfSSL_CTX_set_max_early_data = nil;
   wolfSSL_CTX_get_max_early_data: TwolfSSL_CTX_get_max_early_data = nil;
 
@@ -241,6 +248,7 @@ var
   // 会话序列化 (新增)
   wolfSSL_i2d_SSL_SESSION: TwolfSSL_i2d_SSL_SESSION = nil;
   wolfSSL_d2i_SSL_SESSION: TwolfSSL_d2i_SSL_SESSION = nil;
+  wolfSSL_SESSION_get_max_early_data: TwolfSSL_SESSION_get_max_early_data = nil;
 
   // ALPN 支持 (新增)
   wolfSSL_UseALPN: TwolfSSL_UseALPN = nil;
@@ -333,6 +341,16 @@ begin
 
   // TLS 1.3 Early Data (v1.4.2) - 可选 API，不存在时为 nil
   try
+    wolfSSL_set_max_early_data := TwolfSSL_set_max_early_data(GetProc('wolfSSL_set_max_early_data'));
+  except
+    wolfSSL_set_max_early_data := nil;
+  end;
+  try
+    wolfSSL_get_max_early_data := TwolfSSL_get_max_early_data(GetProc('wolfSSL_get_max_early_data'));
+  except
+    wolfSSL_get_max_early_data := nil;
+  end;
+  try
     wolfSSL_write_early_data := TwolfSSL_write_early_data(GetProc('wolfSSL_write_early_data'));
   except
     wolfSSL_write_early_data := nil;
@@ -341,6 +359,11 @@ begin
     wolfSSL_read_early_data := TwolfSSL_read_early_data(GetProc('wolfSSL_read_early_data'));
   except
     wolfSSL_read_early_data := nil;
+  end;
+  try
+    wolfSSL_get_early_data_status := TwolfSSL_get_early_data_status(GetProc('wolfSSL_get_early_data_status'));
+  except
+    wolfSSL_get_early_data_status := nil;
   end;
   try
     wolfSSL_CTX_set_max_early_data := TwolfSSL_CTX_set_max_early_data(GetProc('wolfSSL_CTX_set_max_early_data'));
@@ -415,6 +438,11 @@ begin
   // 会话序列化 (新增)
   wolfSSL_i2d_SSL_SESSION := TwolfSSL_i2d_SSL_SESSION(GetProc('wolfSSL_i2d_SSL_SESSION'));
   wolfSSL_d2i_SSL_SESSION := TwolfSSL_d2i_SSL_SESSION(GetProc('wolfSSL_d2i_SSL_SESSION'));
+  try
+    wolfSSL_SESSION_get_max_early_data := TwolfSSL_SESSION_get_max_early_data(GetProc('wolfSSL_SESSION_get_max_early_data'));
+  except
+    wolfSSL_SESSION_get_max_early_data := nil;
+  end;
 
   // ALPN 支持 (新增)
   wolfSSL_UseALPN := TwolfSSL_UseALPN(GetProc('wolfSSL_UseALPN'));
@@ -505,6 +533,13 @@ begin
   wolfSSL_shutdown := nil;
   wolfSSL_read := nil;
   wolfSSL_write := nil;
+  wolfSSL_set_max_early_data := nil;
+  wolfSSL_get_max_early_data := nil;
+  wolfSSL_write_early_data := nil;
+  wolfSSL_read_early_data := nil;
+  wolfSSL_get_early_data_status := nil;
+  wolfSSL_CTX_set_max_early_data := nil;
+  wolfSSL_CTX_get_max_early_data := nil;
   wolfSSL_get_error := nil;
   wolfSSL_ERR_error_string := nil;
   wolfSSL_CTX_use_certificate_file := nil;
@@ -543,6 +578,7 @@ begin
   // 会话序列化
   wolfSSL_i2d_SSL_SESSION := nil;
   wolfSSL_d2i_SSL_SESSION := nil;
+  wolfSSL_SESSION_get_max_early_data := nil;
 
   // ALPN 支持
   wolfSSL_UseALPN := nil;

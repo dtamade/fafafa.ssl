@@ -12,26 +12,25 @@
 
 ## 🎉 最新版本 v1.4.2
 
-**100% 接口完整性** - 所有后端都有 Early Data 接口
+**Early Data 契约已对齐** - 仅在真实支持的后端暴露 Early Data 接口
 
 ### 新增功能
-- ✅ WolfSSL 后端 Early Data 完整实现
-- ✅ MbedTLS 和 WinSSL 接口存根
-- ✅ 100% 接口完整性
-- ✅ 3/5 后端完整支持 Early Data
+- ✅ OpenSSL 连接级 Early Data 契约与运行时接口对齐
+- ⚠️ WolfSSL 连接级 Early Data 接口已对齐到原生 API（实验性）
+- ❌ MbedTLS 和 WinSSL 不再暴露不可用的 Early Data 接口
 
 ### 后端支持
 | 后端 | Early Data | 状态 |
 |------|-----------|------|
 | FreePascal | ✅ | 生产就绪 |
 | OpenSSL | ✅ | 生产就绪 |
-| WolfSSL | ✅ | 生产就绪 |
-| MbedTLS | ⚠️ | 存根 (API 限制) |
-| WinSSL | ⚠️ | 存根 (API 限制) |
+| WolfSSL | ⚠️ | 实验性 |
+| MbedTLS | ❌ | 不支持 |
+| WinSSL | ❌ | 不支持 |
 
 ### 快速开始
 ```pascal
-// 启用 Early Data（FreePascal、OpenSSL 或 WolfSSL 后端）
+// 启用 Early Data（OpenSSL 生产可用；WolfSSL 为实验性）
 Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
 Ctx := Lib.CreateContext(sslCtxClient);
 if Supports(Ctx, ISSLEarlyDataContext, EarlyDataCtx) then
