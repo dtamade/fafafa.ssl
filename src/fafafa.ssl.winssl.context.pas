@@ -31,8 +31,7 @@ uses
 
 type
   { TWinSSLContext - Windows Schannel 上下文类 }
-  TWinSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess,
-    ISSLEarlyDataContext, ISSLServerOCSPStaplingContext)
+  TWinSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess)
   private
     FLibrary: ISSLLibrary;
     FContextType: TSSLContextType;

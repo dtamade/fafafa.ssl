@@ -36,8 +36,7 @@ type
   TMbedTLSCertPinArray = array of TMbedTLSCertPin;
 
   { TMbedTLSContext - MbedTLS 上下文类 }
-  TMbedTLSContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess,
-    ISSLEarlyDataContext, ISSLServerOCSPStaplingContext)
+  TMbedTLSContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess)
   private
     FLibrary: ISSLLibrary;
     FContextType: TSSLContextType;

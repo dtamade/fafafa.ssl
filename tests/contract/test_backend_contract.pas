@@ -545,6 +545,73 @@ begin
   end;
 end;
 
+{**
+ * 契约测试 7: 明确不支持的可选接口不应暴露假阳性 Supports(...)
+ *
+ * 当前先锁定已经有明确存根/限制说明的后端：
+ * - MbedTLS: Early Data / manual server OCSP stapling
+ * - WinSSL: Early Data / manual server OCSP stapling
+ *}
+procedure TestContract_UnsupportedOptionalInterfacesAbsent(ABackend: TSSLLibraryType);
+var
+  LLib: ISSLLibrary;
+  LClientCtx: ISSLContext;
+  LServerCtx: ISSLContext;
+  LEarlyDataCtx: ISSLEarlyDataContext;
+  LServerStaplingCtx: ISSLServerOCSPStaplingContext;
+begin
+  PrintSubHeader(Format('Contract 7: Unsupported Optional Interfaces Absent - %s',
+    [SSL_LIBRARY_NAMES[ABackend]]));
+
+  if not (ABackend in [sslMbedTLS, sslWinSSL]) then
+  begin
+    AddSkip('Contract only applies to backends with explicit unsupported/stub optional interfaces');
+    Exit;
+  end;
+
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    AddSkip('Backend not available on this platform');
+    Exit;
+  end;
+
+  try
+    LLib := TSSLFactory.GetLibrary(ABackend);
+    LClientCtx := LLib.CreateContext(sslCtxClient);
+    LServerCtx := LLib.CreateContext(sslCtxServer);
+
+    if not Supports(LClientCtx, ISSLEarlyDataContext, LEarlyDataCtx) then
+    begin
+      WriteLn('  [PASS] Unsupported early-data context interface is absent');
+      AddResult('UnsupportedOptional_EarlyDataAbsent', ABackend, True);
+    end
+    else
+    begin
+      WriteLn('  [FAIL] Unsupported early-data context interface is still exposed');
+      AddResult('UnsupportedOptional_EarlyDataAbsent', ABackend, False,
+        'ISSLEarlyDataContext should not be exposed when backend only has stub/not-supported implementation');
+    end;
+
+    if not Supports(LServerCtx, ISSLServerOCSPStaplingContext, LServerStaplingCtx) then
+    begin
+      WriteLn('  [PASS] Unsupported server-OCSP-stapling context interface is absent');
+      AddResult('UnsupportedOptional_ServerOCSPStaplingAbsent', ABackend, True);
+    end
+    else
+    begin
+      WriteLn('  [FAIL] Unsupported server-OCSP-stapling interface is still exposed');
+      AddResult('UnsupportedOptional_ServerOCSPStaplingAbsent', ABackend, False,
+        'ISSLServerOCSPStaplingContext should not be exposed when backend only has stub/not-supported implementation');
+    end;
+  except
+    on E: Exception do
+    begin
+      WriteLn('  [FAIL] Exception: ', E.ClassName, ' - ', E.Message);
+      AddResult('UnsupportedOptionalInterfacesAbsent', ABackend, False, E.Message);
+    end;
+  end;
+end;
+
 procedure PrintSummary;
 var
   I: Integer;
@@ -619,6 +686,9 @@ begin
 
     // 6) Secure defaults (fail-closed)
     TestContract_Context_SecureDefaults(LBackend);
+
+    // 7) Unsupported optional interfaces must not lie via Supports(...)
+    TestContract_UnsupportedOptionalInterfacesAbsent(LBackend);
   end;
 
   PrintSummary;

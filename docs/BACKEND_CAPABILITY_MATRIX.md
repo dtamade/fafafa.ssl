@@ -2,7 +2,7 @@
 
 本文档详细说明各 SSL/TLS 后端的功能支持情况。
 
-**更新时间**: 2026-05-02 (v1.4.2)
+**更新时间**: 2026-05-04
 
 ---
 
@@ -12,9 +12,9 @@
 |------|-----------|---------|--------|---------|---------|
 | **TLS 1.2** | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **TLS 1.3** | ✅ | ✅ | ✅ | ⚠️ | ✅ |
-| **Early Data (0-RTT)** | ✅ | ✅ | ⚠️ | ⚠️ | ✅ |
+| **Early Data (0-RTT)** | ✅ | ✅ | ❌ | ❌ | ⚠️ |
 | **Session Resumption** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **OCSP Stapling** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **OCSP Stapling** | ✅ | ✅ | ⚠️ | ❌ | ❌ |
 | **Certificate Transparency** | ✅ | ✅ | ⚠️ | ⚠️ | ⚠️ |
 | **ALPN** | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **SNI** | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -98,15 +98,15 @@ if not Supports(Ctx, ISSLEarlyDataContext) then
 
 ### MbedTLS 后端
 
-**状态**: ❌ 不支持（计划中）
+**状态**: ❌ 不支持
 
 **原因**:
-- MbedTLS 3.x 开始支持 TLS 1.3
-- Early Data API 尚未完善
+- MbedTLS 3.x 的 Early Data API 尚未完善
+- 当前后端不会暴露 `ISSLEarlyDataContext` 可选接口，避免调用方命中存根异常
 
 **计划**:
 - 等待 MbedTLS 4.x 完善 API
-- 预计 v1.5.0 添加支持
+- 再补完整的 runtime/public contract
 
 ### WolfSSL 后端
 
@@ -148,6 +148,14 @@ if not Supports(Ctx, ISSLEarlyDataContext) then
 **功能**:
 - ✅ 自动 OCSP Stapling（系统管理）
 - ❌ 手动加载响应（Schannel 限制）
+
+**检测**:
+```pascal
+Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
+Ctx := Lib.CreateContext(sslCtxServer);
+if not Supports(Ctx, ISSLServerOCSPStaplingContext) then
+  WriteLn('Manual server OCSP stapling not supported on WinSSL');
+```
 
 ### MbedTLS / WolfSSL 后端
 
