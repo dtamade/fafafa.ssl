@@ -60,6 +60,24 @@
   - 结果：`185/185` 核心模块编译成功，`100.0%`
 - 运行 `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 延续上一轮未提交的 `OpenSSL` 第二批，检查工作树：
+  - `git status --short` => `src/fafafa.ssl.openssl.context.pas` 已修改，`tests/openssl/test_openssl_server_ocsp_stapling_callback_contract.pas` 为新增未跟踪文件
+  - `git log --oneline -2` => 头部提交为 `6b5b6da fix(wolfssl): align ocsp stapling surfaces`
+- 读取 `task_plan.md` / `findings.md` / `progress.md`，并用 `search_context` 复核 `TOpenSSLContext`、OpenSSL callback binding、focused contract 之间的真实关联。
+- 运行 `fpc -Fu./src tests/openssl/test_openssl_server_ocsp_stapling_callback_contract.pas -otmp/test_openssl_server_ocsp_stapling_callback_contract`
+  - 结果：真实 RED 为 `Forward declaration not solved "ApplyServerOCSPStaplingConfiguration;"`，说明当前 batch 的停点就是 context/native seam 未闭合，而不是测试误报。
+- 生产改动：
+  - `src/fafafa.ssl.openssl.context.pas`: 新增 `TOpenSSLContext.ApplyServerOCSPStaplingConfiguration`，并让 `ClearServerStapledOCSPResponse`、`SetServerStapledOCSPResponse`、`LoadServerStapledOCSPResponseFile` 都统一回到这条注册/注销 helper。
+- 复跑 focused contract：
+  - `fpc -Fu./src tests/openssl/test_openssl_server_ocsp_stapling_callback_contract.pas -otmp/test_openssl_server_ocsp_stapling_callback_contract`
+  - `./tmp/test_openssl_server_ocsp_stapling_callback_contract`
+  - 结果：`Passed: 11 / Failed: 0 / Skipped: 0`
+- 新建本批计划：`docs/plans/2026-05-04-openssl-server-ocsp-stapling-alignment.md`
+- 更新 `task_plan.md` / `findings.md`，把当前目标切到 `OpenSSL server OCSP stapling alignment`
+- 运行 `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+- 运行 `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
 - 提交：
   - `git commit -m "fix(openssl,wolfssl): align early-data connection surfaces"`
   - 结果：`a5c56c2 fix(openssl,wolfssl): align early-data connection surfaces`

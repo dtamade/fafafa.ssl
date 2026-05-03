@@ -28,3 +28,11 @@
   - `TWolfSSLConnection.DoGetOCSPStaplingEnabled` 已从“符号存在”收紧为“实际拿到 stapled response”
   - `TWolfSSLLibrary.GetCapabilities.OCSPStaplingSupport` 已固定为 `sslSupportExperimental`
 - 由于本机没有 `libwolfssl.so`，Pascal focused contract 仍只能给出 dependency skip；这批真正可执行的 RED/GREEN 证据来自新增的源码契约测试 + 全仓 compile/minimal gate。
+- `TOpenSSLContext` 早已具备 `FServerStapledOCSPResponse`、`SetServerStapledOCSPResponse(...)`、`LoadServerStapledOCSPResponseFile(...)` 和 builder file-load 入口，但在本批之前没有任何 native callback 注册逻辑消费这些 bytes，实际 server path 仍然是“只存不发”。
+- `src/fafafa.ssl.openssl.api.ssl.pas` 已经有 `SSL_CTX_set_tlsext_status_cb`、`SSL_CTX_set_tlsext_status_arg`、`SSL_set_tlsext_status_ocsp_resp` 的 binding，所以 `OpenSSL` 这条线的最小缺口不在 API 暴露，而在 `TOpenSSLContext` 没有把 public material seam 接到 native context seam。
+- `OpenSSL` stapling callback 不能把普通 `GetMem` 指针直接交给 `SSL_set_tlsext_status_ocsp_resp(...)`；要保持 allocator 兼容，必须走 `CRYPTO_malloc` / `OPENSSL_free` / `CRYPTO_free` 这一侧的内存语义。当前 batch 顶部 helper 已按这个方向实现。
+- 新增的 `tests/openssl/test_openssl_server_ocsp_stapling_callback_contract.pas` 证明了当前最小闭环：
+  - `SetServerStapledOCSPResponse(...)` 会注册 callback 和 arg
+  - 手工调用 callback 时会注入 caller-provided DER bytes
+  - `ClearServerStapledOCSPResponse` 会注销 callback
+  - `BuildServer + WithServerOCSPStapledResponseFile(...)` 会同时 load bytes 和注册 callback

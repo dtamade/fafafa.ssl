@@ -84,6 +84,7 @@ type
     procedure ApplyProtocolVersions;
     procedure ApplyVerifyMode;
     procedure ApplyOptions;
+    procedure ApplyServerOCSPStaplingConfiguration;
     function GetSSLMethod: PSSL_METHOD;
 
     { P0-1: 上下文验证守卫方法 - 消除代码重复 }
@@ -206,6 +207,7 @@ implementation
 uses
   fafafa.ssl.openssl.connection,
   fafafa.ssl.openssl.loader,
+  fafafa.ssl.openssl.api.crypto,
   fafafa.ssl.pem,
   fafafa.ssl.openssl.api.pkcs,
   fafafa.ssl.openssl.api.pkcs12,
@@ -250,6 +252,80 @@ begin
       0,
       sslOpenSSL
     );
+end;
+
+function OpenSSLOCSPResponseAlloc(ASize: size_t): PByte;
+var
+  LCryptoMalloc: TCRYPTO_malloc;
+begin
+  Result := nil;
+
+  if ASize = 0 then
+    Exit;
+
+  LCryptoMalloc := TCRYPTO_malloc(GetCryptoProcAddress('CRYPTO_malloc'));
+  if Assigned(LCryptoMalloc) then
+    Result := LCryptoMalloc(ASize,
+      PAnsiChar(AnsiString('fafafa.ssl.openssl.context')), 0);
+end;
+
+procedure OpenSSLOCSPResponseFree(ABuffer: Pointer);
+var
+  LOpenSSLFree: TOPENSSL_free;
+  LCryptoFree: TCRYPTO_free;
+begin
+  if ABuffer = nil then
+    Exit;
+
+  LOpenSSLFree := TOPENSSL_free(GetCryptoProcAddress('OPENSSL_free'));
+  if Assigned(LOpenSSLFree) then
+  begin
+    LOpenSSLFree(ABuffer);
+    Exit;
+  end;
+
+  LCryptoFree := TCRYPTO_free(GetCryptoProcAddress('CRYPTO_free'));
+  if Assigned(LCryptoFree) then
+    LCryptoFree(ABuffer, nil, 0);
+end;
+
+function OpenSSLServerOCSPStaplingStatusCallback(ssl: PSSL;
+  arg: Pointer): Integer; cdecl;
+var
+  LContext: TOpenSSLContext;
+  LResponse: TBytes;
+  LResponseCopy: PByte;
+begin
+  Result := SSL_TLSEXT_ERR_NOACK;
+
+  if (ssl = nil) or (arg = nil) then
+    Exit;
+
+  try
+    LContext := TOpenSSLContext(arg);
+    if not LContext.HasServerStapledOCSPResponse then
+      Exit;
+
+    LResponse := LContext.GetServerStapledOCSPResponse;
+    if Length(LResponse) = 0 then
+      Exit;
+
+    LResponseCopy := OpenSSLOCSPResponseAlloc(Length(LResponse));
+    if LResponseCopy = nil then
+      Exit(SSL_TLSEXT_ERR_ALERT_FATAL);
+
+    Move(LResponse[0], LResponseCopy^, Length(LResponse));
+    if Assigned(SSL_set_tlsext_status_ocsp_resp) and
+       (SSL_set_tlsext_status_ocsp_resp(ssl, LResponseCopy, Length(LResponse)) = 1) then
+      Result := SSL_TLSEXT_ERR_OK
+    else
+    begin
+      OpenSSLOCSPResponseFree(LResponseCopy);
+      Result := SSL_TLSEXT_ERR_ALERT_FATAL;
+    end;
+  except
+    Result := SSL_TLSEXT_ERR_ALERT_FATAL;
+  end;
 end;
 
 function ReadPrivateKeyFileBytes(const AFileName, AMethodName: string): TBytes;
@@ -908,6 +984,7 @@ begin
     SetCipherSuites(FCipherSuites);
 
   ApplyOptions;
+  ApplyServerOCSPStaplingConfiguration;
   
   TSecurityLog.Info('OpenSSL', Format('SSL Context created (Type: %d)', [Ord(FContextType)]));
 end;
@@ -1052,6 +1129,28 @@ begin
     SSL_CTX_set_verify(FSSLContext, Mode, nil);
   if Assigned(SSL_CTX_set_verify_depth) then
     SSL_CTX_set_verify_depth(FSSLContext, FVerifyDepth);
+end;
+
+procedure TOpenSSLContext.ApplyServerOCSPStaplingConfiguration;
+begin
+  if (FSSLContext = nil) or (FContextType <> sslCtxServer) then
+    Exit;
+
+  if Assigned(SSL_CTX_set_tlsext_status_arg) then
+  begin
+    if HasServerStapledOCSPResponse then
+      SSL_CTX_set_tlsext_status_arg(FSSLContext, Self)
+    else
+      SSL_CTX_set_tlsext_status_arg(FSSLContext, nil);
+  end;
+
+  if Assigned(SSL_CTX_set_tlsext_status_cb) then
+  begin
+    if HasServerStapledOCSPResponse then
+      SSL_CTX_set_tlsext_status_cb(FSSLContext, @OpenSSLServerOCSPStaplingStatusCallback)
+    else
+      SSL_CTX_set_tlsext_status_cb(FSSLContext, nil);
+  end;
 end;
 
 // ============================================================================
@@ -2230,6 +2329,7 @@ procedure TOpenSSLContext.ClearServerStapledOCSPResponse;
 begin
   RequireValidContext('ClearServerStapledOCSPResponse');
   SetLength(FServerStapledOCSPResponse, 0);
+  ApplyServerOCSPStaplingConfiguration;
   TSecurityLog.Debug('OpenSSL', 'Server stapled OCSP response cleared');
 end;
 
@@ -2244,6 +2344,7 @@ begin
     );
 
   FServerStapledOCSPResponse := Copy(AResponseDER);
+  ApplyServerOCSPStaplingConfiguration;
 
   TSecurityLog.Debug('OpenSSL', Format('Server stapled OCSP response set (%d bytes)',
     [Length(AResponseDER)]));
@@ -2275,6 +2376,7 @@ begin
 
       SetLength(FServerStapledOCSPResponse, LSize);
       LStream.ReadBuffer(FServerStapledOCSPResponse[0], LSize);
+      ApplyServerOCSPStaplingConfiguration;
 
       TSecurityLog.Info('OpenSSL', Format('Loaded server stapled OCSP response from %s (%d bytes)',
         [AFileName, LSize]));
