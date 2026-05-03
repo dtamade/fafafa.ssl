@@ -75,6 +75,7 @@ type
 
     function GetWolfSSLMethod: PWOLFSSL_METHOD;
     procedure ApplyVerifyMode;
+    procedure ApplyOCSPStaplingConfiguration;
     procedure RequireValidContext(const AMethodName: string);
 
   public
@@ -190,7 +191,8 @@ implementation
 
 uses
   fafafa.ssl.wolfssl.certificate,
-  fafafa.ssl.wolfssl.session;
+  fafafa.ssl.wolfssl.session,
+  fafafa.ssl.wolfssl.connection;
 
 const
   WOLFSSL_ERROR_UNSUPPORTED_RENEGOTIATION = -20001;
@@ -241,6 +243,43 @@ begin
       Result := LBytesWritten;
   except
     Result := -1;  // WOLFSSL_CBIO_ERR_GENERAL
+  end;
+end;
+
+function WolfSSLServerOCSPStaplingStatusCallback(ssl: PWOLFSSL;
+  arg: Pointer): Integer; cdecl;
+var
+  LContext: TWolfSSLContext;
+  LResponse: TBytes;
+  LResponseCopy: PByte;
+begin
+  Result := WOLFSSL_TLSEXT_ERR_NOACK;
+
+  if (ssl = nil) or (arg = nil) then
+    Exit;
+
+  try
+    LContext := TWolfSSLContext(arg);
+    if not LContext.HasServerStapledOCSPResponse then
+      Exit;
+
+    LResponse := LContext.GetServerStapledOCSPResponse;
+    if Length(LResponse) = 0 then
+      Exit;
+
+    GetMem(LResponseCopy, Length(LResponse));
+    Move(LResponse[0], LResponseCopy^, Length(LResponse));
+
+    if Assigned(wolfSSL_set_tlsext_status_ocsp_resp) and
+       (wolfSSL_set_tlsext_status_ocsp_resp(ssl, LResponseCopy, Length(LResponse)) <> 0) then
+      Result := WOLFSSL_TLSEXT_ERR_OK
+    else
+    begin
+      FreeMem(LResponseCopy);
+      Result := WOLFSSL_TLSEXT_ERR_ALERT_FATAL;
+    end;
+  except
+    Result := WOLFSSL_TLSEXT_ERR_ALERT_FATAL;
   end;
 end;
 
@@ -393,6 +432,7 @@ begin
 
   // 应用默认验证模式
   ApplyVerifyMode;
+  ApplyOCSPStaplingConfiguration;
 end;
 
 destructor TWolfSSLContext.Destroy;
@@ -464,6 +504,54 @@ procedure TWolfSSLContext.RequireValidContext(const AMethodName: string);
 begin
   if FWolfSSLCtx = nil then
     raise ESSLException.CreateFmt('%s: WolfSSL context is not valid', [AMethodName]);
+end;
+
+procedure TWolfSSLContext.ApplyOCSPStaplingConfiguration;
+var
+  LClientRequestsStapling: Boolean;
+begin
+  if FWolfSSLCtx = nil then
+    Exit;
+
+  LClientRequestsStapling :=
+    (FContextType <> sslCtxServer) and
+    ((ssoEnableOCSPStapling in FOptions) or
+     (ssoRequireOCSPStapling in FOptions));
+
+  if LClientRequestsStapling then
+  begin
+    if Assigned(wolfSSL_CTX_EnableOCSPStapling) then
+      wolfSSL_CTX_EnableOCSPStapling(FWolfSSLCtx);
+  end
+  else if (FContextType <> sslCtxServer) and Assigned(wolfSSL_CTX_DisableOCSPStapling) then
+    wolfSSL_CTX_DisableOCSPStapling(FWolfSSLCtx);
+
+  if FContextType <> sslCtxServer then
+    Exit;
+
+  if Assigned(wolfSSL_CTX_set_tlsext_status_arg) then
+  begin
+    if HasServerStapledOCSPResponse then
+      wolfSSL_CTX_set_tlsext_status_arg(FWolfSSLCtx, Self)
+    else
+      wolfSSL_CTX_set_tlsext_status_arg(FWolfSSLCtx, nil);
+  end;
+
+  if HasServerStapledOCSPResponse then
+  begin
+    if Assigned(wolfSSL_CTX_set_tlsext_status_cb) then
+      wolfSSL_CTX_set_tlsext_status_cb(FWolfSSLCtx,
+        @WolfSSLServerOCSPStaplingStatusCallback);
+    if Assigned(wolfSSL_CTX_EnableOCSPStapling) then
+      wolfSSL_CTX_EnableOCSPStapling(FWolfSSLCtx);
+  end
+  else
+  begin
+    if Assigned(wolfSSL_CTX_set_tlsext_status_cb) then
+      wolfSSL_CTX_set_tlsext_status_cb(FWolfSSLCtx, nil);
+    if Assigned(wolfSSL_CTX_DisableOCSPStapling) then
+      wolfSSL_CTX_DisableOCSPStapling(FWolfSSLCtx);
+  end;
 end;
 
 function TWolfSSLContext.GetContextType: TSSLContextType;
@@ -831,6 +919,7 @@ end;
 procedure TWolfSSLContext.SetOptions(const AOptions: TSSLOptions);
 begin
   FOptions := AOptions;
+  ApplyOCSPStaplingConfiguration;
 end;
 
 function TWolfSSLContext.GetOptions: TSSLOptions;
@@ -954,7 +1043,7 @@ end;
 function TWolfSSLContext.CreateConnection(ASocket: THandle): ISSLConnection;
 begin
   RequireValidContext('CreateConnection');
-  Result := TWolfSSLConnection.Create(Self, ASocket);
+  Result := fafafa.ssl.wolfssl.connection.TWolfSSLConnection.Create(Self, ASocket);
 end;
 
 function TWolfSSLContext.CreateConnection(AStream: TStream): ISSLConnection;
@@ -968,7 +1057,7 @@ begin
   if not Assigned(wolfSSL_CTX_SetIORecv) or not Assigned(wolfSSL_CTX_SetIOSend) then
     raise ESSLException.Create('Stream-based connections require WolfSSL I/O callbacks which are not available');
 
-  Result := TWolfSSLConnection.Create(Self, AStream);
+  Result := fafafa.ssl.wolfssl.connection.TWolfSSLConnection.Create(Self, AStream);
 end;
 
 { 状态查询 }
@@ -1693,6 +1782,7 @@ procedure TWolfSSLContext.ClearServerStapledOCSPResponse;
 begin
   RequireValidContext('ClearServerStapledOCSPResponse');
   SetLength(FServerStapledOCSPResponse, 0);
+  ApplyOCSPStaplingConfiguration;
 end;
 
 procedure TWolfSSLContext.SetServerStapledOCSPResponse(const AResponseDER: TBytes);
@@ -1706,6 +1796,7 @@ begin
     );
 
   FServerStapledOCSPResponse := Copy(AResponseDER);
+  ApplyOCSPStaplingConfiguration;
 end;
 
 procedure TWolfSSLContext.LoadServerStapledOCSPResponseFile(const AFileName: string);
@@ -1737,6 +1828,8 @@ begin
     finally
       LStream.Free;
     end;
+
+    ApplyOCSPStaplingConfiguration;
   except
     on E: ESSLException do
       raise;

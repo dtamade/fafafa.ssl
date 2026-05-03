@@ -14,7 +14,7 @@
 | **TLS 1.3** | ✅ | ✅ | ✅ | ⚠️ | ✅ |
 | **Early Data (0-RTT)** | ✅ | ✅ | ❌ | ❌ | ⚠️ |
 | **Session Resumption** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **OCSP Stapling** | ✅ | ✅ | ⚠️ | ❌ | ❌ |
+| **OCSP Stapling** | ✅ | ✅ | ⚠️ | ❌ | ⚠️ |
 | **Certificate Transparency** | ✅ | ✅ | ⚠️ | ⚠️ | ⚠️ |
 | **ALPN** | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **SNI** | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -160,9 +160,30 @@ if not Supports(Ctx, ISSLServerOCSPStaplingContext) then
   WriteLn('Manual server OCSP stapling not supported on WinSSL');
 ```
 
-### MbedTLS / WolfSSL 后端
+### MbedTLS 后端
 
-**状态**: ❌ 不支持（计划中）
+**状态**: ❌ 不支持
+
+**原因**:
+- 当前后端不会暴露 `ISSLServerOCSPStaplingContext`
+- `server_ocsp_stapled_response_file` 配置会被 builder fail-fast 拦下，而不是 silent ignore
+
+### WolfSSL 后端
+
+**状态**: ⚠️ 实验性支持
+
+**当前范围**:
+- ✅ public optional context interface `ISSLServerOCSPStaplingContext`
+- ✅ builder `WithServerOCSPStapledResponseFile(...)`
+- ✅ caller-provided DER bytes / file material
+- ✅ server-side native status callback wiring
+- ✅ client-side stapled-response request / consume surface
+- ⚠️ 当前证据仍以 focused contract + compile gate 为主，本机未完成独立的 end-to-end runtime 握手验证
+
+**边界**:
+- 只负责 caller-provided stapled OCSP response material
+- 不负责 online fetch、refresh，或 responder 调度
+- 现阶段 capability 应按 `experimental` 看待，而不是生产稳定支持
 
 ---
 
@@ -265,7 +286,7 @@ Ctx.LoadPrivateKey('pkcs11:token=MyToken;object=MyKey', 'PIN');
 - ✅ 嵌入式系统
 - ✅ RTOS
 
-**依赖**: WolfSSL 4.x+
+**依赖**: WolfSSL 5.0+
 
 ---
 

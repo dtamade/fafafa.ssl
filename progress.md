@@ -1,0 +1,85 @@
+# Progress - Backend Optional Interface Alignment
+
+## 2026-05-04
+- 读取 `.fusion/task_plan.md`、`.fusion/progress.md`，确认旧 `.fusion` 台账不是当前这轮 closeout 的充分真值源。
+- 检查 `docs/AGENTS.md` 与 memory，确认本仓库默认门禁为：
+  - `python3 scripts/compile_all_modules.py`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 大 TLS 1.3 家族另有 `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`
+- 读取 `src/fafafa.ssl.base.pas`、`src/fafafa.ssl.connection.base.pas`、各后端 context/lib，确认：
+  - FreePascal/OpenSSL/WolfSSL 对 early-data / server-stapling 有真实 surface。
+  - MbedTLS/WinSSL 的 context 暴露了同名可选接口，但方法主体仍是存根/抛异常。
+- 给 `tests/contract/test_backend_contract.pas` 补了 focused RED，锁住 `sslMbedTLS` / `sslWinSSL` 这两个明确 stub 后端的可选接口假阳性。
+- 运行 `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract && ./tmp/test_backend_contract`
+  - 初次结果：MbedTLS 在 `ISSLEarlyDataContext` / `ISSLServerOCSPStaplingContext` 上失败，证明当前 `Supports(...)` 假阳性真实存在。
+  - 修复后结果：`Passed: 43 / Failed: 0 / Skipped: 10`，focused contract 全绿。
+- 生产改动：
+  - `src/fafafa.ssl.mbedtls.context.pas`: 移除 `ISSLEarlyDataContext`、`ISSLServerOCSPStaplingContext` 接口声明。
+  - `src/fafafa.ssl.winssl.context.pas`: 移除 `ISSLEarlyDataContext`、`ISSLServerOCSPStaplingContext` 接口声明。
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`: 收紧 WinSSL/MbedTLS 的 Early Data / OCSP stapling 说明。
+- 运行 `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`。
+- 运行 `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`。
+- 继续当前 closeout，先核对工作树与上一提交：
+  - `git status --short` => 干净工作树
+  - `git log --oneline -1` => `a5c56c2 fix(openssl,wolfssl): align early-data connection surfaces`
+- 读取 memory / 当前计划文件，确认下一批最高价值缺口仍是 `WolfSSL` OCSP stapling，而不是重新展开大范围审计。
+- 用 `search_context` + 源码检索聚焦 `src/fafafa.ssl.wolfssl.*`、`src/fafafa.ssl.context.builder.pas`，确认：
+  - builder 会把 `server_ocsp_stapled_response_file` 加载进 `TWolfSSLContext.FServerStapledOCSPResponse`
+  - `TWolfSSLConnection` 只有 peer-side OCSP consume surface，没有 client request path
+  - `TWolfSSLContext` 没有 server callback / response injection 接线
+  - `TWolfSSLConnection.DoGetOCSPStaplingEnabled` 当前只是“API symbol exists”假阳性
+- 对照本地头文件 `/usr/include/wolfssl/ssl.h` 与示例 `/usr/share/doc/libwolfssl-dev/examples/client.c`，确认：
+  - `wolfSSL_UseOCSPStapling` 真实签名是 `(ssl, status_type, options)`
+  - 可用 status type / option 常量包括 `WOLFSSL_CSR_OCSP` 与 `WOLFSSL_CSR_OCSP_USE_NONCE`
+  - server-side 最小 callback seam 包括 `wolfSSL_CTX_set_tlsext_status_cb`、`wolfSSL_CTX_set_tlsext_status_arg`、`wolfSSL_set_tlsext_status_ocsp_resp`
+- 新建本批次计划：`docs/plans/2026-05-04-wolfssl-ocsp-stapling-alignment.md`
+- 更新 `task_plan.md` / `findings.md`，把当前目标切到 `WolfSSL OCSP stapling alignment`
+- 新增 focused Pascal contract：`tests/test_wolfssl_ocsp_stapling_contract.pas`
+  - 运行 `fpc -Fu./src tests/test_wolfssl_ocsp_stapling_contract.pas -otmp/test_wolfssl_ocsp_stapling_contract && ./tmp/test_wolfssl_ocsp_stapling_contract`
+  - 结果：本机 `WolfSSL` runtime 不可用，测试按预期给出 `[SKIP] backend not available on this platform`
+- 为补足无 runtime 主机上的 RED/GREEN，新增源码契约：
+  - `tests/scripts/test_wolfssl_ocsp_stapling_source_contract.sh`
+  - 初次运行：失败在 `wolfSSL_UseOCSPStapling` 绑定签名不匹配本地 header，形成结构化 RED
+- 生产改动：
+  - `src/fafafa.ssl.wolfssl.base.pas`: 新增 OCSP stapling status/callback 常量
+  - `src/fafafa.ssl.wolfssl.api.pas`: 修正 `wolfSSL_UseOCSPStapling` 签名；补 `wolfSSL_CTX_UseOCSPStapling`、`wolfSSL_set_tlsext_status_ocsp_resp`、`wolfSSL_CTX_set_tlsext_status_cb`、`wolfSSL_CTX_set_tlsext_status_arg`
+  - `src/fafafa.ssl.wolfssl.context.pas`: 增加 server stapling callback / native 注册逻辑；`SetOptions` 与 stapled-response material 更新时同步 native 配置；`CreateConnection(...)` 改走 `fafafa.ssl.wolfssl.connection.TWolfSSLConnection`
+  - `src/fafafa.ssl.wolfssl.connection.pas`: 增加 client pre-handshake stapling request；新增 required-policy 最小 fail-closed；`DoGetOCSPStaplingEnabled` 改为按实际响应判断
+  - `src/fafafa.ssl.wolfssl.lib.pas`: 把 OCSP stapling capability truth 收敛为 `sslSupportExperimental`
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`、`docs/guides/OCSP_USAGE_GUIDE.md`: 同步 WolfSSL OCSP stapling 的实验性 truth
+- 复跑源码契约：
+  - `bash -n tests/scripts/test_wolfssl_ocsp_stapling_source_contract.sh`
+  - `bash tests/scripts/test_wolfssl_ocsp_stapling_source_contract.sh`
+  - 结果：全部 PASS，已锁住 binding / callback / modern connection path / capability wording
+- 复跑 Pascal contract：
+  - `fpc -Fu./src tests/test_wolfssl_ocsp_stapling_contract.pas -otmp/test_wolfssl_ocsp_stapling_contract && ./tmp/test_wolfssl_ocsp_stapling_contract`
+  - 结果：编译通过；runtime 仍因 backend 不可用而 `[SKIP]`
+- 运行 `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+- 运行 `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 提交：
+  - `git commit -m "fix(openssl,wolfssl): align early-data connection surfaces"`
+  - 结果：`a5c56c2 fix(openssl,wolfssl): align early-data connection surfaces`
+- 新建 `docs/plans/2026-05-04-openssl-wolfssl-early-data-connection-alignment.md`，把这批范围锁定为 `OpenSSL` / `WolfSSL` client connection early-data gap。
+- 新增 focused contract `tests/test_openssl_wolfssl_early_data_connection_contract.pas`。
+- 首次运行：
+  - `fpc -Fu./src tests/test_openssl_wolfssl_early_data_connection_contract.pas -otmp/test_openssl_wolfssl_early_data_connection_contract && ./tmp/test_openssl_wolfssl_early_data_connection_contract`
+  - 结果：`OpenSSL helper detects ISSLEarlyDataConnection` / `OpenSSL connection exposes ISSLEarlyDataConnection` 失败，命中真实 RED；`WolfSSL` 在本机为 `[SKIP] backend not available on this platform`。
+- 生产改动：
+  - `src/fafafa.ssl.openssl.api.core.pas`: 补 `SSL_SESSION_get/set_max_early_data` binding。
+  - `src/fafafa.ssl.openssl.connection.pas`: 实现 `ISSLEarlyDataConnection`，补 session/limit/status/queued-payload 路径。
+  - `src/fafafa.ssl.wolfssl.api.pas`: 补 `wolfSSL_get/set_max_early_data`、`wolfSSL_get_early_data_status`、`wolfSSL_SESSION_get_max_early_data` binding。
+  - `src/fafafa.ssl.wolfssl.base.pas`: 补 native early-data status 常量。
+  - `src/fafafa.ssl.wolfssl.connection.pas`: 实现 `ISSLEarlyDataConnection`，补 session/limit/status/queued-payload 路径。
+  - `src/fafafa.ssl.wolfssl.lib.pas`: 把 `EarlyDataSupport` / `ZeroRTTSupport` 收敛到 `sslSupportExperimental`。
+  - `README.md`、`docs/BACKEND_CAPABILITY_MATRIX.md`、`docs/guides/EARLY_DATA_GUIDE.md`: 收紧 early-data truth，并移除 guide 中不存在的 `sslEarlyDataNotSent` 示例。
+- 修复后复跑 focused contract：
+  - `fpc -Fu./src tests/test_openssl_wolfssl_early_data_connection_contract.pas -otmp/test_openssl_wolfssl_early_data_connection_contract && ./tmp/test_openssl_wolfssl_early_data_connection_contract`
+  - 结果：`OpenSSL` 12 项断言全过；`WolfSSL` 仍因 backend 不可用而 `[SKIP]`，总计 `Passed: 12 / Failed: 0 / Skipped: 1`。
+- 运行 `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`，其中 `fafafa.ssl.wolfssl.api/lib/connection/context` 全部通过编译。
+- 运行 `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`。

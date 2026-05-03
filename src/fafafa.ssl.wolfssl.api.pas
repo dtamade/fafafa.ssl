@@ -158,8 +158,18 @@ type
   TwolfSSL_CTX_EnableOCSPStapling = function(ctx: PWOLFSSL_CTX): Integer; cdecl;
   TwolfSSL_CTX_DisableOCSPStapling = function(ctx: PWOLFSSL_CTX): Integer; cdecl;
   TwolfSSL_CTX_SetOCSP_OverrideURL = function(ctx: PWOLFSSL_CTX; const url: PAnsiChar): Integer; cdecl;
-  TwolfSSL_UseOCSPStapling = function(ssl: PWOLFSSL; options: Integer): Integer; cdecl;
+  TwolfSSL_UseOCSPStapling = function(ssl: PWOLFSSL; statusType: Byte;
+    options: Byte): Integer; cdecl;
+  TwolfSSL_CTX_UseOCSPStapling = function(ctx: PWOLFSSL_CTX; statusType: Byte;
+    options: Byte): Integer; cdecl;
   TwolfSSL_GetOCSP_Response = function(ssl: PWOLFSSL; resp: PPByte): Integer; cdecl;
+  TwolfSSL_tlsextStatusCb = function(ssl: PWOLFSSL; arg: Pointer): Integer; cdecl;
+  TwolfSSL_set_tlsext_status_ocsp_resp = function(ssl: PWOLFSSL; resp: PByte;
+    len: Integer): PtrInt; cdecl;
+  TwolfSSL_CTX_set_tlsext_status_cb = function(ctx: PWOLFSSL_CTX;
+    cb: TwolfSSL_tlsextStatusCb): Integer; cdecl;
+  TwolfSSL_CTX_set_tlsext_status_arg = function(ctx: PWOLFSSL_CTX;
+    arg: Pointer): PtrInt; cdecl;
 
   // I/O 回调类型定义（用于流支持）
   TwolfSSL_IORecvCallback = function(ssl: PWOLFSSL; buf: PAnsiChar; sz: Integer;
@@ -273,7 +283,11 @@ var
   wolfSSL_CTX_DisableOCSPStapling: TwolfSSL_CTX_DisableOCSPStapling = nil;
   wolfSSL_CTX_SetOCSP_OverrideURL: TwolfSSL_CTX_SetOCSP_OverrideURL = nil;
   wolfSSL_UseOCSPStapling: TwolfSSL_UseOCSPStapling = nil;
+  wolfSSL_CTX_UseOCSPStapling: TwolfSSL_CTX_UseOCSPStapling = nil;
   wolfSSL_GetOCSP_Response: TwolfSSL_GetOCSP_Response = nil;
+  wolfSSL_set_tlsext_status_ocsp_resp: TwolfSSL_set_tlsext_status_ocsp_resp = nil;
+  wolfSSL_CTX_set_tlsext_status_cb: TwolfSSL_CTX_set_tlsext_status_cb = nil;
+  wolfSSL_CTX_set_tlsext_status_arg: TwolfSSL_CTX_set_tlsext_status_arg = nil;
 
   // I/O 回调函数（用于流支持）
   wolfSSL_CTX_SetIORecv: TwolfSSL_CTX_SetIORecv = nil;
@@ -480,8 +494,16 @@ begin
     GetProc('wolfSSL_CTX_SetOCSP_OverrideURL'));
   wolfSSL_UseOCSPStapling := TwolfSSL_UseOCSPStapling(
     GetProc('wolfSSL_UseOCSPStapling'));
+  wolfSSL_CTX_UseOCSPStapling := TwolfSSL_CTX_UseOCSPStapling(
+    GetProc('wolfSSL_CTX_UseOCSPStapling'));
   wolfSSL_GetOCSP_Response := TwolfSSL_GetOCSP_Response(
     GetProc('wolfSSL_GetOCSP_Response'));
+  wolfSSL_set_tlsext_status_ocsp_resp := TwolfSSL_set_tlsext_status_ocsp_resp(
+    GetProc('wolfSSL_set_tlsext_status_ocsp_resp'));
+  wolfSSL_CTX_set_tlsext_status_cb := TwolfSSL_CTX_set_tlsext_status_cb(
+    GetProc('wolfSSL_CTX_set_tlsext_status_cb'));
+  wolfSSL_CTX_set_tlsext_status_arg := TwolfSSL_CTX_set_tlsext_status_arg(
+    GetProc('wolfSSL_CTX_set_tlsext_status_arg'));
 
   // I/O 回调函数（用于流支持）
   wolfSSL_CTX_SetIORecv := TwolfSSL_CTX_SetIORecv(
@@ -603,7 +625,11 @@ begin
   wolfSSL_CTX_DisableOCSPStapling := nil;
   wolfSSL_CTX_SetOCSP_OverrideURL := nil;
   wolfSSL_UseOCSPStapling := nil;
+  wolfSSL_CTX_UseOCSPStapling := nil;
   wolfSSL_GetOCSP_Response := nil;
+  wolfSSL_set_tlsext_status_ocsp_resp := nil;
+  wolfSSL_CTX_set_tlsext_status_cb := nil;
+  wolfSSL_CTX_set_tlsext_status_arg := nil;
 
   GWolfSSLLoaded := False;
 end;

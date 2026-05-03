@@ -47,9 +47,11 @@ type
     procedure SetupStream;
     procedure SetupSNI;
     procedure SetupALPN;
+    function ApplyPreHandshakeOCSPStaplingRequest: Boolean;
     function ResolveEarlyDataLimitFromSession(const ASession: ISSLSession): Cardinal;
     function SendQueuedEarlyData: Boolean;
     procedure UpdateEarlyDataStatusFromNative;
+    function ValidateRequiredOCSPStapling: Boolean;
 
   protected
     { 抽象方法实现 }
@@ -278,6 +280,42 @@ begin
       Length(FALPNProtocols), 0);  // 0 = WOLFSSL_ALPN_CONTINUE_ON_MISMATCH
 end;
 
+function TWolfSSLConnection.ApplyPreHandshakeOCSPStaplingRequest: Boolean;
+var
+  LOptions: TSSLOptions;
+begin
+  Result := True;
+
+  if (FWolfSSL = nil) or (FContext = nil) or
+     (FContext.GetContextType <> sslCtxClient) then
+    Exit;
+
+  LOptions := FContext.GetOptions;
+  if not ((ssoEnableOCSPStapling in LOptions) or
+          (ssoRequireOCSPStapling in LOptions)) then
+    Exit;
+
+  if Assigned(wolfSSL_CTX_EnableOCSPStapling) and (FWolfSSLCtx <> nil) and
+     (wolfSSL_CTX_EnableOCSPStapling(FWolfSSLCtx) <> WOLFSSL_SUCCESS) then
+  begin
+    FLastNativeError := WOLFSSL_FAILURE;
+    Exit(False);
+  end;
+
+  if not Assigned(wolfSSL_UseOCSPStapling) then
+  begin
+    FLastNativeError := WOLFSSL_FAILURE;
+    Exit(False);
+  end;
+
+  if wolfSSL_UseOCSPStapling(FWolfSSL, WOLFSSL_CSR_OCSP,
+     WOLFSSL_CSR_OCSP_USE_NONCE) <> WOLFSSL_SUCCESS then
+  begin
+    FLastNativeError := WOLFSSL_FAILURE;
+    Exit(False);
+  end;
+end;
+
 function TWolfSSLConnection.ResolveEarlyDataLimitFromSession(
   const ASession: ISSLSession): Cardinal;
 var
@@ -356,6 +394,21 @@ begin
   end;
 end;
 
+function TWolfSSLConnection.ValidateRequiredOCSPStapling: Boolean;
+begin
+  Result := True;
+
+  if (FContext = nil) or (FContext.GetContextType <> sslCtxClient) then
+    Exit;
+
+  if not (ssoRequireOCSPStapling in FContext.GetOptions) then
+    Exit;
+
+  Result := Length(DoGetOCSPResponse) > 0;
+  if not Result then
+    FLastNativeError := WOLFSSL_FAILURE;
+end;
+
 { 抽象方法实现 }
 
 function TWolfSSLConnection.DoRead(var ABuffer; ACount: Integer): Integer;
@@ -388,6 +441,9 @@ begin
   if FWolfSSL = nil then Exit;
   if not Assigned(wolfSSL_connect) then Exit;
 
+  if not ApplyPreHandshakeOCSPStaplingRequest then
+    Exit(False);
+
   if not SendQueuedEarlyData then
     Exit(False);
 
@@ -396,7 +452,10 @@ begin
     FLastNativeError := wolfSSL_get_error(FWolfSSL, LResult);
   Result := LResult = WOLFSSL_SUCCESS;
   if Result then
+  begin
     UpdateEarlyDataStatusFromNative;
+    Result := ValidateRequiredOCSPStapling;
+  end;
 end;
 
 function TWolfSSLConnection.DoAccept: Boolean;
@@ -647,8 +706,7 @@ end;
 
 function TWolfSSLConnection.DoGetOCSPStaplingEnabled: Boolean;
 begin
-  // WolfSSL OCSP Stapling 需要在编译时启用
-  Result := Assigned(wolfSSL_GetOCSP_Response);
+  Result := Length(DoGetOCSPResponse) > 0;
 end;
 
 function TWolfSSLConnection.DoGetOCSPResponse: TBytes;

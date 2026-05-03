@@ -227,7 +227,13 @@ begin
   FCapabilities.HasSessionTickets := True;
   FCapabilities.HasECDHE := True;
   FCapabilities.HasChaCha20 := True;
-  FCapabilities.HasOCSP := False;  // 需要额外配置
+  FCapabilities.HasOCSP :=
+    (Assigned(wolfSSL_CTX_EnableOCSPStapling) and
+     Assigned(wolfSSL_UseOCSPStapling) and
+     Assigned(wolfSSL_GetOCSP_Response)) or
+    (Assigned(wolfSSL_CTX_set_tlsext_status_cb) and
+     Assigned(wolfSSL_CTX_set_tlsext_status_arg) and
+     Assigned(wolfSSL_set_tlsext_status_ocsp_resp));
 
   Result := True;
 end;
@@ -424,7 +430,7 @@ begin
   Result.SNISupport := sslSupportStable;
   Result.ALPNSupport := sslSupportStable;
   if FCapabilities.HasOCSP then
-    Result.OCSPStaplingSupport := sslSupportStable
+    Result.OCSPStaplingSupport := sslSupportExperimental
   else
     Result.OCSPStaplingSupport := sslSupportNone;
   Result.CertTransparencySupport := sslSupportNone;

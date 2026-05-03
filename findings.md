@@ -1,0 +1,30 @@
+# Findings - Backend Optional Interface Alignment
+
+## 2026-05-04
+- `src/fafafa.ssl.mbedtls.context.pas` 与 `src/fafafa.ssl.winssl.context.pas` 当前仍把 `ISSLEarlyDataContext`、`ISSLServerOCSPStaplingContext` 写进类声明，但具体方法是存根或直接抛出不支持异常。
+- `src/fafafa.ssl.mbedtls.lib.pas` 与 `src/fafafa.ssl.winssl.lib.pas` 的能力矩阵已经明确把 OCSP stapling 记为 `False/sslSupportNone`；`EarlyDataSupport` 没有设置为可用，因此接口暴露与能力矩阵存在事实漂移。
+- `src/fafafa.ssl.connection.base.pas` 的连接级 OCSP/CT/CT validation surface 采用了“默认返回 not supported”的收敛模型，说明仓库对可选接口的一贯语义是“没能力就不暴露或返回 not supported”，而不是暴露后抛运行时异常。
+- `docs/BACKEND_CAPABILITY_MATRIX.md` 的总览表目前仍把 WinSSL/MbedTLS/WolfSSL 的 Early Data 和多后端 OCSP stapling 写成过宽的 ✅/⚠️，与当前实现不一致。
+- 新增的 `tests/contract/test_backend_contract.pas` 契约先在 MbedTLS 上打出 RED：不支持的 early-data / server-OCSP-stapling 可选接口仍被 `Supports(...)` 识别为真。
+- 最小 GREEN 只需要把 `TMbedTLSContext` / `TWinSSLContext` 从接口声明里移除 `ISSLEarlyDataContext` 与 `ISSLServerOCSPStaplingContext`；这样既不改其他 TLS 行为，也能让 `Supports(...)` 与能力矩阵重新一致。
+- 本机 Linux 验证覆盖了 MbedTLS 路径与全仓 185 核心模块编译，但 WinSSL 仍属于静态对称改动，未在 Windows 主机做 runtime 验证。
+- 更大的未收口区域仍存在：`OpenSSL` / `WolfSSL` 的 Early Data public/runtime completeness 需要单独审计，当前批次没有扩大到这条线。
+- `OpenSSL` context 早已暴露 `ISSLEarlyDataContext`，native binding 也已有 `SSL_write_early_data` / `SSL_get_early_data_status` / `SSL_get_max_early_data`，真实缺口是 connection class 没有实现 `ISSLEarlyDataConnection`，导致 helper surface 与能力宣称脱节。
+- `OpenSSL` 本地头文件还明确暴露了 `SSL_SESSION_get_max_early_data` / `SSL_SESSION_set_max_early_data`，仓库之前没绑定这个 session-level truth source，连接实现只能停在 context-level。
+- `WolfSSL` 本地头文件除了已有 `wolfSSL_write_early_data` / `wolfSSL_CTX_get_max_early_data`，还提供 `wolfSSL_get_max_early_data`、`wolfSSL_get_early_data_status`、`wolfSSL_SESSION_get_max_early_data`；因此 client connection 的 queue/status/limit surface 可以直接对齐到 native API，而不是继续把后端标成“计划中”。
+- 新增的 `tests/test_openssl_wolfssl_early_data_connection_contract.pas` 先在 `OpenSSL` 上打出 RED：context 支持 early-data，但 connection 不支持 `ISSLEarlyDataConnection`，helper 也因此返回 `False`。
+- 这批最小 GREEN 包括三件事：补 session/early-data native binding、给 `TOpenSSLConnection` / `TWolfSSLConnection` 加 `ISSLEarlyDataConnection`、以及把 `TWolfSSLLibrary.GetCapabilities.EarlyDataSupport` 从未设置状态收敛成 `sslSupportExperimental`。
+- `WolfSSL` 当前主机上 backend 不可用，所以 focused contract 对它只能给出 `[SKIP]`；但 `python3 scripts/compile_all_modules.py` 和最小门禁都已编到 `src/fafafa.ssl.wolfssl.connection.pas` / `src/fafafa.ssl.wolfssl.lib.pas`，可以证明接口和能力路径至少已静态闭合。
+- `docs/guides/EARLY_DATA_GUIDE.md` 之前还在示例中使用不存在的 `sslEarlyDataNotSent`，说明 guide 不只是 backend 状态过时，连 public enum truth 也漂了；这一处必须顺手修掉，否则调用方照抄会直接编译失败。
+- `TWolfSSLContext` 已经实现 `ISSLServerOCSPStaplingContext`，builder 也会把 `server_ocsp_stapled_response_file` 加载进 `FServerStapledOCSPResponse`；但当前仓库没有任何 server handshake / callback 接线消费这块字节数组，所以这条 public surface 仍然是“只存不发”。
+- `src/fafafa.ssl.wolfssl.api.pas` 里的 `wolfSSL_UseOCSPStapling` 绑定签名与本地 `/usr/include/wolfssl/ssl.h` 不一致：真实签名是 `(ssl, status_type, options)`，仓库里却只绑定了一个 `options` 参数，说明 client request path 目前不只是没调用，连 native seam 都是错的。
+- 本地头文件同时暴露了 `wolfSSL_set_tlsext_status_ocsp_resp`、`wolfSSL_CTX_set_tlsext_status_cb`、`wolfSSL_CTX_set_tlsext_status_arg`，这正是把 caller-provided stapled-response bytes 挂进服务端握手所需的最小 API；仓库当前未绑定这几项。
+- `TWolfSSLConnection.DoGetOCSPStaplingEnabled` 现在返回“`wolfSSL_GetOCSP_Response` 符号是否存在”，这和 `OpenSSL` / `FreePascal` 路径上“是否真的拿到了 stapled response”语义不一致，属于 connection surface 假阳性。
+- `TWolfSSLLibrary.GetCapabilities` 当前对 OCSP stapling 的 truth 也不对：一方面 `DetectCapabilities` 默认把 `HasOCSP := False`，会把能力压成 `none`；另一方面 `GetCapabilities` 一旦依赖 `HasOCSP`，支持级别又会跳成 `stable`。这两个端点都不符合当前最合理的“experimental”真值。
+- `TWolfSSLContext.CreateConnection(...)` 的真实返回路径之前没有走独立的 `src/fafafa.ssl.wolfssl.connection.pas`，而是继续实例化 `src/fafafa.ssl.wolfssl.context.pas` 里内嵌的旧版 `TWolfSSLConnection`。这意味着早前落在独立连接单元里的修复并不会进入真实 runtime path，必须先把 context 构造路径改到现代连接单元。
+- 本批次的最小闭环现在是：
+  - WolfSSL API binding 已对齐本地 header，client request 与 server status callback seam 都补齐
+  - `TWolfSSLContext.CreateConnection(...)` 已改走现代连接单元
+  - `TWolfSSLConnection.DoGetOCSPStaplingEnabled` 已从“符号存在”收紧为“实际拿到 stapled response”
+  - `TWolfSSLLibrary.GetCapabilities.OCSPStaplingSupport` 已固定为 `sslSupportExperimental`
+- 由于本机没有 `libwolfssl.so`，Pascal focused contract 仍只能给出 dependency skip；这批真正可执行的 RED/GREEN 证据来自新增的源码契约测试 + 全仓 compile/minimal gate。

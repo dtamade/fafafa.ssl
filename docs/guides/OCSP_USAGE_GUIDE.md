@@ -3,6 +3,7 @@
 本文覆盖两条不同的 OCSP 路径：
 
 - 如果你要消费 TLS 握手里的 stapled OCSP response，先看 FreePascal client runtime 路径。
+- 如果你要在 `WolfSSL` 上接通最小的 stapled-response request / manual issuance path，看第 3 节后半段的实验性说明。
 - 如果你要在 FreePascal client 上启用基于证书 AIA 的 online OCSP check，看后面的 client online 路径。
 - 如果你要主动构造、发送、验证 OCSP 请求，使用最后的 OpenSSL helper 工作流。
 
@@ -128,6 +129,35 @@ end;
 
 - 这条路径只负责 caller-provided material，不负责 online fetch、refresh，或 responder 调度。
 - 它是 server-side issuance path，不替代 client-side stapled-response verification 或 client online OCSP check。
+
+### WolfSSL 上的对应路径（实验性）
+
+`WolfSSL` 当前也已经接通了最小的 stapled-response public/runtime surface，但它仍然只能按实验性能力看待。
+
+最短配置形态是：
+
+```pascal
+Ctx := TSSLContextBuilder.Create
+  .WithBackend(sslWolfSSL)
+  .WithCertificate('server.crt')
+  .WithPrivateKey('server.key')
+  .WithOCSPStapling(True)
+  .WithServerOCSPStapledResponseFile(
+    'tests/fixtures/p2/ocsp/ocsp_response_successful_basic_v1.der')
+  .BuildServer;
+```
+
+当前 `WolfSSL` 路径已经对齐的点：
+
+- `WithOCSPStapling(True)` 会让 client connection 在握手前请求 `status_request`
+- `WithServerOCSPStapledResponseFile(...)` 会把 caller-provided DER material 装到 server context，并注册 native status callback
+- `ISSLOCSPStapling` 仍然是 client 读取 stapled response 的 surface
+- `ISSLServerOCSPStaplingContext` 仍然是 server 侧 clear / set bytes / load file / has / get 的 public surface
+
+当前仍然保留的边界是：
+
+- 这条路径只保证 request / consume / manual issuance 接线，不代表已经有充分的 runtime 生产证据
+- 它同样不负责 online fetch、refresh，或 responder 调度
 
 如果你还需要基于证书 AIA 主动发 online OCSP 请求，看下面的 FreePascal client online path。
 
