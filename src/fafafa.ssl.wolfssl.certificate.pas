@@ -933,7 +933,10 @@ end;
 constructor TWolfSSLCertificateStore.Create;
 begin
   inherited Create;
-  FX509Store := nil;
+  if Assigned(wolfSSL_X509_STORE_new) then
+    FX509Store := wolfSSL_X509_STORE_new()
+  else
+    FX509Store := nil;
   FCertificates := TInterfaceList.Create;
 end;
 

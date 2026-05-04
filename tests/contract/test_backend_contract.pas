@@ -1432,6 +1432,228 @@ begin
     FreeMem(LOwnedProbeHandle);
 end;
 
+procedure TestContract_CertificateNativeHandleInterfaceAligned(ABackend: TSSLLibraryType);
+const
+  CSignerCertFixture = 'tests/certificate/test_certs/signer_cert.pem';
+var
+  LLib: ISSLLibrary;
+  LCert: ISSLCertificate;
+  LNative: ISSLNativeHandleAccess;
+  LHelperHandle: Pointer;
+  LInterfaceHandle: Pointer;
+begin
+  PrintSubHeader(Format('Contract 16: Certificate native-handle interface alignment - %s',
+    [SSL_LIBRARY_NAMES[ABackend]]));
+
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    AddSkip('Backend not available on this platform');
+    Exit;
+  end;
+
+  if not FileExists(CSignerCertFixture) then
+  begin
+    AddResult('CertificateNativeHandleInterfaceAligned', ABackend, False,
+      'Certificate fixture not found: ' + CSignerCertFixture);
+    Exit;
+  end;
+
+  try
+    LLib := TSSLFactory.GetLibrary(ABackend);
+    LCert := LLib.CreateCertificate;
+    if LCert = nil then
+      raise Exception.Create('CreateCertificate returned nil');
+
+    if not LCert.LoadFromFile(CSignerCertFixture) then
+      raise Exception.Create('LoadFromFile returned False for certificate fixture');
+
+    if ABackend = sslFreePascal then
+    begin
+      if Supports(LCert, ISSLNativeHandleAccess, LNative) then
+      begin
+        WriteLn('  [FAIL] Pure backend certificate should not expose ISSLNativeHandleAccess');
+        AddResult('CertificateNativeHandleInterfaceAligned', ABackend, False,
+          'Pure FreePascal certificate unexpectedly exposes ISSLNativeHandleAccess');
+      end
+      else if TryGetNativeHandle(LCert, LHelperHandle) then
+      begin
+        WriteLn('  [FAIL] Pure backend certificate unexpectedly returned a native handle');
+        AddResult('CertificateNativeHandleInterfaceAligned', ABackend, False,
+          'Pure FreePascal certificate unexpectedly returns a native handle');
+      end
+      else
+      begin
+        WriteLn('  [PASS] Pure backend certificates keep ISSLNativeHandleAccess absent');
+        AddResult('CertificateNativeHandleInterfaceAligned', ABackend, True);
+      end;
+      Exit;
+    end;
+
+    if not Supports(LCert, ISSLNativeHandleAccess, LNative) then
+    begin
+      WriteLn('  [FAIL] C-library certificate does not expose ISSLNativeHandleAccess');
+      AddResult('CertificateNativeHandleInterfaceAligned', ABackend, False,
+        'C-library certificate does not expose ISSLNativeHandleAccess');
+    end
+    else if LNative.GetBackendType <> ABackend then
+    begin
+      WriteLn('  [FAIL] Native-handle backend type does not match certificate backend');
+      AddResult('CertificateNativeHandleInterfaceAligned', ABackend, False,
+        'ISSLNativeHandleAccess.GetBackendType does not match the certificate backend');
+    end
+    else if not LNative.IsNativeHandleValid then
+    begin
+      WriteLn('  [FAIL] Certificate native handle reports invalid');
+      AddResult('CertificateNativeHandleInterfaceAligned', ABackend, False,
+        'ISSLNativeHandleAccess.IsNativeHandleValid returned False');
+    end
+    else
+    begin
+      LInterfaceHandle := LNative.GetNativeHandle;
+      if LInterfaceHandle = nil then
+      begin
+        WriteLn('  [FAIL] Native-handle interface returned nil certificate handle');
+        AddResult('CertificateNativeHandleInterfaceAligned', ABackend, False,
+          'ISSLNativeHandleAccess.GetNativeHandle returned nil');
+      end
+      else if not TryGetNativeHandle(LCert, LHelperHandle) then
+      begin
+        WriteLn('  [FAIL] Helper failed to round-trip certificate native handle');
+        AddResult('CertificateNativeHandleInterfaceAligned', ABackend, False,
+          'TryGetNativeHandle returned False for a C-library certificate');
+      end
+      else if LHelperHandle = nil then
+      begin
+        WriteLn('  [FAIL] Helper returned nil certificate native handle');
+        AddResult('CertificateNativeHandleInterfaceAligned', ABackend, False,
+          'TryGetNativeHandle returned nil for a C-library certificate');
+      end
+      else if LHelperHandle <> LInterfaceHandle then
+      begin
+        WriteLn('  [FAIL] Helper did not round-trip certificate native handle');
+        AddResult('CertificateNativeHandleInterfaceAligned', ABackend, False,
+          'TryGetNativeHandle did not round-trip the certificate native handle');
+      end
+      else
+      begin
+        WriteLn('  [PASS] C-library certificates expose native-handle surface');
+        AddResult('CertificateNativeHandleInterfaceAligned', ABackend, True);
+      end;
+    end;
+  except
+    on E: Exception do
+    begin
+      WriteLn('  [FAIL] Exception: ', E.ClassName, ' - ', E.Message);
+      AddResult('CertificateNativeHandleInterfaceAligned', ABackend, False, E.Message);
+    end;
+  end;
+end;
+
+procedure TestContract_CertificateStoreNativeHandleInterfaceAligned(ABackend: TSSLLibraryType);
+var
+  LLib: ISSLLibrary;
+  LStore: ISSLCertificateStore;
+  LNative: ISSLNativeHandleAccess;
+  LHelperHandle: Pointer;
+  LInterfaceHandle: Pointer;
+begin
+  PrintSubHeader(Format('Contract 17: Certificate-store native-handle interface alignment - %s',
+    [SSL_LIBRARY_NAMES[ABackend]]));
+
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    AddSkip('Backend not available on this platform');
+    Exit;
+  end;
+
+  try
+    LLib := TSSLFactory.GetLibrary(ABackend);
+    LStore := LLib.CreateCertificateStore;
+    if LStore = nil then
+      raise Exception.Create('CreateCertificateStore returned nil');
+
+    if ABackend = sslFreePascal then
+    begin
+      if Supports(LStore, ISSLNativeHandleAccess, LNative) then
+      begin
+        WriteLn('  [FAIL] Pure backend certificate store should not expose ISSLNativeHandleAccess');
+        AddResult('CertificateStoreNativeHandleInterfaceAligned', ABackend, False,
+          'Pure FreePascal certificate store unexpectedly exposes ISSLNativeHandleAccess');
+      end
+      else if TryGetNativeHandle(LStore, LHelperHandle) then
+      begin
+        WriteLn('  [FAIL] Pure backend certificate store unexpectedly returned a native handle');
+        AddResult('CertificateStoreNativeHandleInterfaceAligned', ABackend, False,
+          'Pure FreePascal certificate store unexpectedly returns a native handle');
+      end
+      else
+      begin
+        WriteLn('  [PASS] Pure backend certificate stores keep ISSLNativeHandleAccess absent');
+        AddResult('CertificateStoreNativeHandleInterfaceAligned', ABackend, True);
+      end;
+      Exit;
+    end;
+
+    if not Supports(LStore, ISSLNativeHandleAccess, LNative) then
+    begin
+      WriteLn('  [FAIL] C-library certificate store does not expose ISSLNativeHandleAccess');
+      AddResult('CertificateStoreNativeHandleInterfaceAligned', ABackend, False,
+        'C-library certificate store does not expose ISSLNativeHandleAccess');
+    end
+    else if LNative.GetBackendType <> ABackend then
+    begin
+      WriteLn('  [FAIL] Native-handle backend type does not match certificate-store backend');
+      AddResult('CertificateStoreNativeHandleInterfaceAligned', ABackend, False,
+        'ISSLNativeHandleAccess.GetBackendType does not match the certificate-store backend');
+    end
+    else if not LNative.IsNativeHandleValid then
+    begin
+      WriteLn('  [FAIL] Certificate-store native handle reports invalid');
+      AddResult('CertificateStoreNativeHandleInterfaceAligned', ABackend, False,
+        'ISSLNativeHandleAccess.IsNativeHandleValid returned False');
+    end
+    else
+    begin
+      LInterfaceHandle := LNative.GetNativeHandle;
+      if LInterfaceHandle = nil then
+      begin
+        WriteLn('  [FAIL] Native-handle interface returned nil certificate-store handle');
+        AddResult('CertificateStoreNativeHandleInterfaceAligned', ABackend, False,
+          'ISSLNativeHandleAccess.GetNativeHandle returned nil');
+      end
+      else if not TryGetNativeHandle(LStore, LHelperHandle) then
+      begin
+        WriteLn('  [FAIL] Helper failed to round-trip certificate-store native handle');
+        AddResult('CertificateStoreNativeHandleInterfaceAligned', ABackend, False,
+          'TryGetNativeHandle returned False for a C-library certificate store');
+      end
+      else if LHelperHandle = nil then
+      begin
+        WriteLn('  [FAIL] Helper returned nil certificate-store native handle');
+        AddResult('CertificateStoreNativeHandleInterfaceAligned', ABackend, False,
+          'TryGetNativeHandle returned nil for a C-library certificate store');
+      end
+      else if LHelperHandle <> LInterfaceHandle then
+      begin
+        WriteLn('  [FAIL] Helper did not round-trip certificate-store native handle');
+        AddResult('CertificateStoreNativeHandleInterfaceAligned', ABackend, False,
+          'TryGetNativeHandle did not round-trip the certificate-store native handle');
+      end
+      else
+      begin
+        WriteLn('  [PASS] C-library certificate stores expose native-handle surface');
+        AddResult('CertificateStoreNativeHandleInterfaceAligned', ABackend, True);
+      end;
+    end;
+  except
+    on E: Exception do
+    begin
+      WriteLn('  [FAIL] Exception: ', E.ClassName, ' - ', E.Message);
+      AddResult('CertificateStoreNativeHandleInterfaceAligned', ABackend, False, E.Message);
+    end;
+  end;
+end;
+
 procedure PrintSummary;
 var
   I: Integer;
@@ -1533,6 +1755,12 @@ begin
 
     // 15) Session wrappers must expose native-handle truth consistently
     TestContract_SessionNativeHandleInterfaceAligned(LBackend);
+
+    // 16) Certificate wrappers must expose native-handle truth consistently
+    TestContract_CertificateNativeHandleInterfaceAligned(LBackend);
+
+    // 17) Certificate-store wrappers must expose native-handle truth consistently
+    TestContract_CertificateStoreNativeHandleInterfaceAligned(LBackend);
   end;
 
   PrintSummary;

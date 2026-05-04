@@ -1194,6 +1194,7 @@ begin
   inherited Create;
   FCACerts := nil;
   FCertificates := TInterfaceList.Create;
+  AllocateStore;
 end;
 
 destructor TMbedTLSCertificateStore.Destroy;

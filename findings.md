@@ -1,6 +1,27 @@
 # Findings - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- `certificate` / `certificate-store` native-handle completion audit 说明，前一轮“contract 1-15 全绿”还不是 broad goal 完成：
+  - `ISSLCertificate` / `ISSLCertificateStore` 仍是公开接口面，之前没有 cross-backend completion audit
+  - `Contract 16` / `Contract 17` 补上后，certificate 线直接全绿，但 store 线立即打出真实 RED
+- `Contract 16` 的关键真相是：不能拿空 certificate wrapper 当 probe。
+  - `OpenSSL.CreateCertificate` 会先分配 `X509`
+  - `WolfSSL` / `MbedTLS` / `WinSSL` 的空 certificate wrapper 初始 native handle 可以是 `nil`
+  - 所以 certificate native-handle truth 必须用已加载 fixture 验证，不能用“刚创建的空对象”误判
+- `Contract 17` 的真实漂移非常集中：
+  - `TMbedTLSCertificateStore.Create` 之前只建 `TInterfaceList`，没有调用 `AllocateStore`
+  - `TWolfSSLCertificateStore.Create` 之前也只建 `TInterfaceList`，`FX509Store` 一直保持 `nil`
+  - 因此两个 backend 虽然声明了 `ISSLNativeHandleAccess`，但公开 `CreateCertificateStore()` 返回对象时 `IsNativeHandleValid=False`
+- 最小正确修复是 constructor 级别补真实 native store 分配，而不是改接口定义或放宽契约：
+  - `TMbedTLSCertificateStore.Create` 直接调用 `AllocateStore`
+  - `TWolfSSLCertificateStore.Create` 在 `wolfSSL_X509_STORE_new` 可用时立即分配 `FX509Store`
+- 这批收口后，`Contract 16/17` 结果是：
+  - `OpenSSL` / `WolfSSL` / `MbedTLS` 的 certificate 与 certificate-store native-handle 契约全绿
+  - `FreePascal` 的 certificate / store 继续保持 `ISSLNativeHandleAccess` absent
+  - `WinSSL` 仍只在 Linux 上保留 unavailable/skip 边界，不外推成 Windows runtime proof
+- 这批没有扩大到 store 内容同步/verify parity：
+  - `MbedTLS` / `WolfSSL` store 内部把证书列表写回 native store 的完整语义仍值得后续专批审计
+  - 当前提交只锁住 public `CreateCertificateStore()` 返回对象的 native-handle availability truth
 - WinSSL 当前最容易把后续工作带偏的，已经不只是代码漂移，还有文档漂移：
   - `docs/reference/WINSSL_DESIGN.md` 仍写“100% 完成”，且顶层类型示例落后于当前源码
   - `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md` 仍把 `DTLS`、`OCSP Stapling`、`Session Ticket` 等写成已证实支持

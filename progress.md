@@ -1,6 +1,47 @@
 # Progress - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- 新开一批 `Certificate And Store Native-Handle Completion Audit`，目标是把 `ISSLCertificate` / `ISSLCertificateStore` 的 `ISSLNativeHandleAccess` public truth 补进跨后端 completion audit。
+- 计划与台账：
+  - 新增 `docs/plans/2026-05-04-backend-certificate-store-native-handle-completion-audit.md`
+  - `task_plan.md` 切到当前批次，明确先补 `Contract 16/17` 再按 RED 做最小修复
+- focused contract 新增：
+  - `tests/contract/test_backend_contract.pas`
+    - 新增 `Contract 16: Certificate native-handle interface alignment`
+    - 新增 `Contract 17: Certificate-store native-handle interface alignment`
+    - `Contract 16` 使用 `tests/certificate/test_certs/signer_cert.pem` 做 loaded certificate probe
+    - `Contract 17` 只检查 `CreateCertificateStore()` 返回对象的 native-handle truth，不向 WinSSL 系统 store 注入 fixture
+- 初次 isolated RED：
+  - `mkdir -p tmp/backend_contract_units`
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas`
+  - `./tmp/backend_contract_units/test_backend_contract`
+  - 结果：`Total Tests: 115 / Passed: 93 / Failed: 2 / Skipped: 20`
+  - 失败点：
+    - `CertificateStoreNativeHandleInterfaceAligned [WolfSSL]`
+    - `CertificateStoreNativeHandleInterfaceAligned [MbedTLS]`
+  - 共同错误：`ISSLNativeHandleAccess.IsNativeHandleValid returned False`
+- 最小生产修复：
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+    - `TMbedTLSCertificateStore.Create` 直接调用 `AllocateStore`
+  - `src/fafafa.ssl.wolfssl.certificate.pas`
+    - `TWolfSSLCertificateStore.Create` 在 `wolfSSL_X509_STORE_new` 可用时立即分配 `FX509Store`
+- focused GREEN：
+  - 同一条 isolated contract 复跑
+  - 结果：`Total Tests: 115 / Passed: 95 / Failed: 0 / Skipped: 20`
+  - `Contract 16` / `Contract 17` 全绿
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：
+    - compile gate `185/185`
+    - PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17`
+    - `run_phase2_performance_baseline.sh --dry-run` 通过
+    - 最终 `[PASS] minimal CI gate finished`
+- 提交前 review：
+  - 新增契约把 certificate/store native-handle public truth 正式锁进 cross-backend audit
+  - 真实生产漂移只落在 `MbedTLS` / `WolfSSL` store constructor 未分配 native store handle
+  - 修复保持在 constructor 边界，没有扩大到 verify / diagnostics / session resumption 等相邻接口面
 - 新开一批 `WinSSL Documentation Truth Alignment`，目标是把 `WINSSL_DESIGN.md` 和 `WINSSL_BACKEND_STATUS_REPORT.md` 收口到当前可验证真相，不再继续发布“100% 完成”或“运行时已证实”的过宽表述。
 - 文档审计：
   - 读取 `docs/reference/WINSSL_DESIGN.md`
