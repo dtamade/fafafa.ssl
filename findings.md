@@ -1,6 +1,22 @@
 # Findings - Backend Broad Completion Audit
 
 ## 2026-05-05
+- 当前台账如果继续停在 `Win64 Cross-Target Fresh Revalidation`，会把“下一步该做什么”表达错位；更准确的当前批次应当是 `WinSSL Windows Runtime Proof Handoff`。
+- `c10bf22` 之后，当前 Linux 主机上已经没有新的高价值 repo-side 收口项：
+  - broad audit 已证明 public contract / capability truth / repo gates / WinSSL source+bundle contract 全部闭合
+  - fresh `-Twin64` 交叉编译也已补齐
+  - 因此不该再在 Linux 上虚构新的实现批次来回应“继续”
+- 后续任何针对 broad objective 的 fresh 进展，都必须来自真实 Windows 主机上的运行时证据，而不是继续追加 Linux 侧 compile/source-contract 证明。
+- 这类 Windows runtime 证据至少要包含：
+  - quick smoke
+  - WinSSL minimal gate
+  - Wave B Windows gate summary + step logs
+  - broader suite 对握手、证书存储、session resumption、online/error mapping、mTLS 的逐项记录
+- Windows 主机上的 fresh failure 需要先分流：
+  - 环境问题：`lazbuild` / PowerShell / 出网 / 权限
+  - 入口问题：脚本或路径漂移
+  - 实现问题：真实 WinSSL runtime 行为缺口
+  只有最后一种，才值得重新打开 `src/fafafa.ssl.winssl.*` 生产修复批次。
 - broad objective 的 blocker 还可以再收紧一层：上轮 fresh audit 已确认 Linux 主机上的 public surface、capability truth、compile gate、minimal CI gate、以及 WinSSL source/bundle contracts 都没有新 drift，但还没有 fresh 复核 Win64 cross-target compile 本身。
 - 因为 `compile_all_modules.py` 默认跳过 WinSSL，所以如果不补显式 `-Twin64` 交叉编译，就仍然有一层“今天的 Linux 主机 compile proof 主要来自旧记录”的不确定性。
 - fresh `-Twin64` 交叉编译现在把这层不确定性也清掉了：
