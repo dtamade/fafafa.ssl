@@ -1,6 +1,36 @@
 # Progress - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- 新开一批 `Diagnostics Interface Completion Audit`，目标是把连接级 `ISSLDiagnostics` public surface 纳入 cross-backend completion audit。
+- 计划与台账：
+  - 新增 `docs/plans/2026-05-04-backend-diagnostics-interface-completion-audit.md`
+  - `task_plan.md` 切到当前批次，明确只审计 `ISSLDiagnostics`
+- focused contract 新增：
+  - `tests/contract/test_backend_contract.pas`
+    - 新增 `Contract 18: Diagnostics interface alignment`
+    - 检查：
+      - `Supports(LConn, ISSLDiagnostics, ...)`
+      - `HealthStatus.IsConnected` 与 `LConn.IsConnected`
+      - `IsHealthy` 与 `HealthStatus` 推导条件
+      - `DiagnosticInfo.HealthStatus` / `PerformanceMetrics` 与 direct getter 自洽
+- isolated completion audit：
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas`
+  - `./tmp/backend_contract_units/test_backend_contract`
+  - 结果：`Total Tests: 120 / Passed: 99 / Failed: 0 / Skipped: 21`
+  - 结论：`Contract 18` 在所有当前可用 backend 上直接全绿，无需生产代码改动
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：
+    - compile gate `185/185`
+    - PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17`
+    - `run_phase2_performance_baseline.sh --dry-run` 通过
+    - 最终 `[PASS] minimal CI gate finished`
+- 提交前 review：
+  - 这批是纯 completion audit，没有生产代码改动
+  - 共享基类 `TBaseSSLConnection` 给出的 diagnostics truth 已被 cross-backend contract 正式锁住
+  - 当前更适合继续推进的未审计 public surface 已收窄到 `ISSLConnectionInfo` / `ISSLSessionResumption` / `ISSLCertificateVerification`
 - 新开一批 `Certificate And Store Native-Handle Completion Audit`，目标是把 `ISSLCertificate` / `ISSLCertificateStore` 的 `ISSLNativeHandleAccess` public truth 补进跨后端 completion audit。
 - 计划与台账：
   - 新增 `docs/plans/2026-05-04-backend-certificate-store-native-handle-completion-audit.md`

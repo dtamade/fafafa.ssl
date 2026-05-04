@@ -1654,6 +1654,101 @@ begin
   end;
 end;
 
+procedure TestContract_DiagnosticsInterfaceAligned(ABackend: TSSLLibraryType);
+var
+  LLib: ISSLLibrary;
+  LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LDiag: ISSLDiagnostics;
+  LProbeStream: TMemoryStream;
+  LHealth: TSSLHealthStatus;
+  LPerf: TSSLPerformanceMetrics;
+  LInfo: TSSLDiagnosticInfo;
+  LExpectedHealthy: Boolean;
+begin
+  PrintSubHeader(Format('Contract 18: Diagnostics interface alignment - %s',
+    [SSL_LIBRARY_NAMES[ABackend]]));
+
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    AddSkip('Backend not available on this platform');
+    Exit;
+  end;
+
+  LProbeStream := TMemoryStream.Create;
+  try
+    try
+      LLib := TSSLFactory.GetLibrary(ABackend);
+      LCtx := LLib.CreateContext(sslCtxClient);
+      LConn := LCtx.CreateConnection(LProbeStream);
+
+      if not Supports(LConn, ISSLDiagnostics, LDiag) then
+      begin
+        WriteLn('  [FAIL] Connection does not expose ISSLDiagnostics');
+        AddResult('DiagnosticsInterfaceAligned', ABackend, False,
+          'Connection does not expose ISSLDiagnostics');
+        Exit;
+      end;
+
+      LHealth := LDiag.GetHealthStatus;
+      LPerf := LDiag.GetPerformanceMetrics;
+      LInfo := LDiag.GetDiagnosticInfo;
+      LExpectedHealthy := LHealth.IsConnected and LHealth.HandshakeComplete and
+        (LHealth.LastError = sslErrNone);
+
+      if LHealth.IsConnected <> LConn.IsConnected then
+      begin
+        WriteLn('  [FAIL] HealthStatus.IsConnected does not match connection state');
+        AddResult('DiagnosticsInterfaceAligned', ABackend, False,
+          'HealthStatus.IsConnected does not match ISSLConnection.IsConnected');
+      end
+      else if LPerf.SessionReused <> LConn.IsSessionReused then
+      begin
+        WriteLn('  [FAIL] PerformanceMetrics.SessionReused does not match connection state');
+        AddResult('DiagnosticsInterfaceAligned', ABackend, False,
+          'PerformanceMetrics.SessionReused does not match ISSLConnection.IsSessionReused');
+      end
+      else if LDiag.IsHealthy <> LExpectedHealthy then
+      begin
+        WriteLn('  [FAIL] IsHealthy does not match HealthStatus fields');
+        AddResult('DiagnosticsInterfaceAligned', ABackend, False,
+          'ISSLDiagnostics.IsHealthy does not match HealthStatus-derived expectation');
+      end
+      else if LInfo.HealthStatus.IsConnected <> LHealth.IsConnected then
+      begin
+        WriteLn('  [FAIL] DiagnosticInfo.HealthStatus drifted from direct health getter');
+        AddResult('DiagnosticsInterfaceAligned', ABackend, False,
+          'DiagnosticInfo.HealthStatus.IsConnected does not match GetHealthStatus');
+      end
+      else if LInfo.HealthStatus.HandshakeComplete <> LHealth.HandshakeComplete then
+      begin
+        WriteLn('  [FAIL] DiagnosticInfo.HandshakeComplete drifted from direct health getter');
+        AddResult('DiagnosticsInterfaceAligned', ABackend, False,
+          'DiagnosticInfo.HealthStatus.HandshakeComplete does not match GetHealthStatus');
+      end
+      else if LInfo.PerformanceMetrics.TotalBytesTransferred <> LPerf.TotalBytesTransferred then
+      begin
+        WriteLn('  [FAIL] DiagnosticInfo.PerformanceMetrics drifted from direct metrics getter');
+        AddResult('DiagnosticsInterfaceAligned', ABackend, False,
+          'DiagnosticInfo.PerformanceMetrics.TotalBytesTransferred does not match GetPerformanceMetrics');
+      end
+      else
+      begin
+        WriteLn('  [PASS] Connection diagnostics surface is self-consistent');
+        AddResult('DiagnosticsInterfaceAligned', ABackend, True);
+      end;
+    except
+      on E: Exception do
+      begin
+        WriteLn('  [FAIL] Exception: ', E.ClassName, ' - ', E.Message);
+        AddResult('DiagnosticsInterfaceAligned', ABackend, False, E.Message);
+      end;
+    end;
+  finally
+    LProbeStream.Free;
+  end;
+end;
+
 procedure PrintSummary;
 var
   I: Integer;
@@ -1761,6 +1856,9 @@ begin
 
     // 17) Certificate-store wrappers must expose native-handle truth consistently
     TestContract_CertificateStoreNativeHandleInterfaceAligned(LBackend);
+
+    // 18) Connection diagnostics surface must stay exposed and self-consistent
+    TestContract_DiagnosticsInterfaceAligned(LBackend);
   end;
 
   PrintSummary;

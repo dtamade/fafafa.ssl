@@ -1,25 +1,25 @@
-# Task Plan - Certificate And Store Native-Handle Completion Audit
+# Task Plan - Diagnostics Interface Completion Audit
 
 ## Goal
-把 `ISSLCertificate` / `ISSLCertificateStore` 上尚未进入 cross-backend completion audit 的 `ISSLNativeHandleAccess` public truth 补齐：基于 C 库 / OS-native 的 backend 需要暴露真实句柄，纯 Pascal backend 继续保持 absent。
+把连接级 `ISSLDiagnostics` public surface 纳入 cross-backend completion audit，确认五个 backend 的公开 connection 都暴露同一组诊断接口，并保持最基本的字段自洽。
 
 ## Current Batch
 1. 先补 focused contract：
-   - 在 `tests/contract/test_backend_contract.pas` 新增 `Contract 16` 与 `Contract 17`
-   - certificate 走 loaded fixture 探针
-   - certificate-store 走公开 `CreateCertificateStore()` 返回对象的 native-handle 探针
+   - 在 `tests/contract/test_backend_contract.pas` 新增 `Contract 18`
+   - 只审计 `ISSLDiagnostics`
+   - 用 `TMemoryStream` 创建公开 connection 对象，不依赖真实网络握手
 2. 跑 isolated backend contract：
    - `mkdir -p tmp/backend_contract_units`
    - `fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas`
    - `./tmp/backend_contract_units/test_backend_contract`
 3. 若 RED 命中真实漂移，只做最小生产修复：
-   - 优先收口在对应 backend 的 certificate / certstore 实现
-   - 不扩大到 diagnostics / session resumption / verify / connection info
+   - 优先收口在 `TBaseSSLConnection` 或对应 backend connection 实现
+   - 不扩大到 session resumption / certificate verification / connection info
 4. 复跑 focused contract + 仓库级 gate，回写台账并提交。
 
 ## Status
-- [completed] Contract 16/17 completion audit scaffolding
-- [completed] Focused RED/GREEN for certificate/store native-handle truth
+- [completed] Contract 18 diagnostics completion audit scaffolding
+- [completed] Focused RED/GREEN for diagnostics interface truth
 - [completed] Repository verification
 - [completed] Review and commit preparation
 
@@ -33,29 +33,31 @@
   - `bash scripts/run_minimal_ci_gate.sh --fast-local`
 
 ## Verification Summary
-- focused RED:
-  - 初次 `./tmp/backend_contract_units/test_backend_contract`
-  - 结果：`115` 项里 `93` 过、`2` 失败、`20` 跳过
-  - 失败点只剩：
-    - `CertificateStoreNativeHandleInterfaceAligned [WolfSSL]`
-    - `CertificateStoreNativeHandleInterfaceAligned [MbedTLS]`
-  - 共同信号：`ISSLNativeHandleAccess.IsNativeHandleValid returned False`
-- focused GREEN:
-  - 同一条 isolated contract 复跑后
-  - 结果：`115` 项里 `95` 过、`0` 失败、`20` 跳过
-  - 新增的 `Contract 16` / `Contract 17` 全绿
+- focused:
+  - `./tmp/backend_contract_units/test_backend_contract`
+  - 结果：`Total Tests: 120 / Passed: 99 / Failed: 0 / Skipped: 21`
+  - 新增的 `Contract 18: Diagnostics interface alignment` 在所有当前可用 backend 上直接全绿
 - repo gates:
   - `python3 scripts/compile_all_modules.py`
   - 结果：`185/185`，`100.0%`
   - `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185`，模块测试 `17/17`，phase2 baseline dry-run 通过，最终 `[PASS] minimal CI gate finished`
 
+## Verification Plan
+- focused:
+  - `mkdir -p tmp/backend_contract_units`
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas`
+  - `./tmp/backend_contract_units/test_backend_contract`
+- repo gates:
+  - `python3 scripts/compile_all_modules.py`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+
 ## Risks
-- certificate contract 不能复用空 wrapper 真值；`MbedTLS` / `WolfSSL` / `WinSSL` 的空 certificate 初始句柄允许为 `nil`。
-- store contract 不能为了探针去写入 WinSSL 系统证书存储；应只检查公开创建路径的 native-handle truth。
-- `TMbedTLSCertificateStore` / `TWolfSSLCertificateStore` 这批只补了公开创建路径的 native-handle validity；store 内容同步到 native store 的更深语义仍可单开后续批次审计。
+- `ISSLDiagnostics` 当前由 `TBaseSSLConnection` 统一实现，若 contract 出现 RED，很可能意味着某个 backend 没有真正回到共享 connection 语义。
+- 这批不能顺手扩大到 `ISSLSessionResumption` / `ISSLCertificateVerification` / `ISSLConnectionInfo`，否则 scope 会重新发散。
+- 这批是 completion audit，没有新增生产修复；真正还未审计的 public surface 继续留在后续批次推进。
 
 ## Follow-up Queue
-1. 如果这批只暴露 constructor/native-handle 漂移，优先做最小修复并提交。
-2. 如果 RED 继续暴露 store 内容未同步到 native store，再单开下一批做 certificate-store verify/load parity。
-3. 更广的 `ISSLDiagnostics` / `ISSLSessionResumption` / `ISSLCertificateVerification` / `ISSLConnectionInfo` 仍保持后续批次化推进。
+1. 如果 `ISSLDiagnostics` 直接全绿，就继续审计 `ISSLConnectionInfo`。
+2. 如果 diagnostics contract 暴露 shared-base drift，优先收口共享实现，再看是否影响 `ISSLConnectionInfo`。
+3. `ISSLSessionResumption` / `ISSLCertificateVerification` 继续保留在后续独立批次推进。

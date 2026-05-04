@@ -1,6 +1,20 @@
 # Findings - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- `ISSLDiagnostics` 是当前最适合作为下一批的未审计 public interface：
+  - 接口本身是 optional surface
+  - `TBaseSSLConnection` 已统一实现 `GetHealthStatus` / `IsHealthy` / `GetPerformanceMetrics` / `GetDiagnosticInfo`
+  - 因此最值得先确认的是“所有 backend connection 是否真的都暴露并继承了这套共享语义”
+- 新增 `Contract 18` 后，`ISSLDiagnostics` 这条线直接全绿，说明当前 diagnostics public truth 没有新的 backend-specific drift：
+  - `OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal` 的公开 connection 都支持 `ISSLDiagnostics`
+  - `HealthStatus.IsConnected` 与 `ISSLConnection.IsConnected` 一致
+  - `IsHealthy` 与 `HealthStatus` 推导条件一致
+  - `DiagnosticInfo.HealthStatus` / `PerformanceMetrics` 与 direct getter 保持自洽
+- 这批的正确结论是 completion audit closeout，而不是继续展开生产代码改造。
+- 因此下一条更合适的后续审计线，已经收窄到：
+  - `ISSLConnectionInfo`
+  - `ISSLSessionResumption`
+  - `ISSLCertificateVerification`
 - `certificate` / `certificate-store` native-handle completion audit 说明，前一轮“contract 1-15 全绿”还不是 broad goal 完成：
   - `ISSLCertificate` / `ISSLCertificateStore` 仍是公开接口面，之前没有 cross-backend completion audit
   - `Contract 16` / `Contract 17` 补上后，certificate 线直接全绿，但 store 线立即打出真实 RED
