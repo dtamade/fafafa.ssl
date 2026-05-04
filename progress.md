@@ -110,6 +110,43 @@
   - 结果：`185/185` 核心模块编译成功，`100.0%`
   - `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 新建计划：`docs/plans/2026-05-04-backend-context-optional-interface-completion-audit.md`
+- 更新 `task_plan.md`，把当前批次目标切到 `Backend Context Optional Interface Completion Audit`
+- 在 `tests/contract/test_backend_contract.pas` 增加 `Contract 12`，把 capability 与以下 surface 做成双向约束：
+  - `ISSLEarlyDataContext`
+  - `ISSLEarlyDataConnection`
+  - `ISSLServerOCSPStaplingContext`
+- 首次运行：
+  - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract && ./tmp/test_backend_contract`
+  - 结果：新的真实 RED 落在 `WolfSSL`
+    - `EarlyDataSupport=None but client context still exposes ISSLEarlyDataContext`
+    - `EarlyDataSupport=None but client connection still exposes ISSLEarlyDataConnection`
+- 结合源码和本机 runtime truth 复核：
+  - `src/fafafa.ssl.wolfssl.lib.pas` 当前只在 early-data native symbol 全部可用时才把 `EarlyDataSupport` 设为 `sslSupportExperimental`
+  - 本机 `/usr/include/wolfssl/ssl.h` 声明了 early-data API，但 `/usr/lib/x86_64-linux-gnu/libwolfssl.so` 没有导出 `wolfSSL_write_early_data`、`wolfSSL_get_early_data_status`、`wolfSSL_CTX_set_max_early_data`、`wolfSSL_CTX_get_max_early_data`
+  - 结论：当前主机上的 capability truth 仍应保持 `None`，问题在接口静态暴露
+- 生产改动：
+  - `src/fafafa.ssl.wolfssl.context.pas`
+    - `TWolfSSLContext` 移除 `ISSLEarlyDataContext`
+    - 新增 `TWolfSSLEarlyDataContext = class(TWolfSSLContext, ISSLEarlyDataContext)`
+    - `CreateConnection(...)` 按 `FLibrary.GetCapabilities.EarlyDataSupport` 选择 `TWolfSSLEarlyDataConnection` 或普通 `TWolfSSLConnection`
+  - `src/fafafa.ssl.wolfssl.connection.pas`
+    - `TWolfSSLConnection` 移除 `ISSLEarlyDataConnection`
+    - 新增 `TWolfSSLEarlyDataConnection = class(TWolfSSLConnection, ISSLEarlyDataConnection)`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+    - `CreateContext(...)` 按 `GetCapabilities.EarlyDataSupport` 选择 `TWolfSSLEarlyDataContext` 或普通 `TWolfSSLContext`
+- 修复后复跑 focused contract：
+  - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract && ./tmp/test_backend_contract`
+  - 结果：`Passed: 75 / Failed: 0 / Skipped: 15`
+  - `WolfSSL` 的 `Contract 12` 已变为：
+    - `Backend without early-data capability keeps ISSLEarlyDataContext absent`
+    - `Backend without early-data capability keeps ISSLEarlyDataConnection absent`
+    - `OCSP-capable backend exposes ISSLServerOCSPStaplingContext`
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
 - 提交前复验：
   - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract && ./tmp/test_backend_contract`
   - 结果：`Passed: 59 / Failed: 0 / Skipped: 13`

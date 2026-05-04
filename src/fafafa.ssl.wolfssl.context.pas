@@ -37,7 +37,7 @@ type
 
   { TWolfSSLContext - WolfSSL 上下文类 }
   TWolfSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess,
-    ISSLEarlyDataContext, ISSLServerOCSPStaplingContext)
+    ISSLServerOCSPStaplingContext)
   private
     FLibrary: ISSLLibrary;
     FContextType: TSSLContextType;
@@ -76,6 +76,7 @@ type
     function GetWolfSSLMethod: PWOLFSSL_METHOD;
     procedure ApplyVerifyMode;
     procedure ApplyOCSPStaplingConfiguration;
+    function HasEarlyDataCapability: Boolean;
     procedure RequireValidContext(const AMethodName: string);
 
   public
@@ -185,6 +186,10 @@ type
 
     { 便利方法 }
     procedure ConfigureSecureDefaults;
+  end;
+
+  { 仅在运行时 early-data capability 可用时才暴露该接口 }
+  TWolfSSLEarlyDataContext = class(TWolfSSLContext, ISSLEarlyDataContext)
   end;
 
 implementation
@@ -505,6 +510,12 @@ procedure TWolfSSLContext.RequireValidContext(const AMethodName: string);
 begin
   if FWolfSSLCtx = nil then
     raise ESSLException.CreateFmt('%s: WolfSSL context is not valid', [AMethodName]);
+end;
+
+function TWolfSSLContext.HasEarlyDataCapability: Boolean;
+begin
+  Result := (FLibrary <> nil) and
+    (FLibrary.GetCapabilities.EarlyDataSupport <> sslSupportNone);
 end;
 
 procedure TWolfSSLContext.ApplyOCSPStaplingConfiguration;
@@ -1051,7 +1062,10 @@ end;
 function TWolfSSLContext.CreateConnection(ASocket: THandle): ISSLConnection;
 begin
   RequireValidContext('CreateConnection');
-  Result := fafafa.ssl.wolfssl.connection.TWolfSSLConnection.Create(Self, ASocket);
+  if HasEarlyDataCapability then
+    Result := fafafa.ssl.wolfssl.connection.TWolfSSLEarlyDataConnection.Create(Self, ASocket)
+  else
+    Result := fafafa.ssl.wolfssl.connection.TWolfSSLConnection.Create(Self, ASocket);
 end;
 
 function TWolfSSLContext.CreateConnection(AStream: TStream): ISSLConnection;
@@ -1065,7 +1079,10 @@ begin
   if not Assigned(wolfSSL_CTX_SetIORecv) or not Assigned(wolfSSL_CTX_SetIOSend) then
     raise ESSLException.Create('Stream-based connections require WolfSSL I/O callbacks which are not available');
 
-  Result := fafafa.ssl.wolfssl.connection.TWolfSSLConnection.Create(Self, AStream);
+  if HasEarlyDataCapability then
+    Result := fafafa.ssl.wolfssl.connection.TWolfSSLEarlyDataConnection.Create(Self, AStream)
+  else
+    Result := fafafa.ssl.wolfssl.connection.TWolfSSLConnection.Create(Self, AStream);
 end;
 
 { 状态查询 }

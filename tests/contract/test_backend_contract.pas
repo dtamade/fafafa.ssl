@@ -944,6 +944,129 @@ begin
   end;
 end;
 
+procedure TestContract_ContextOptionalInterfacesAligned(ABackend: TSSLLibraryType);
+var
+  LLib: ISSLLibrary;
+  LCaps: TSSLBackendCapabilities;
+  LClientCtx: ISSLContext;
+  LServerCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LEarlyDataCtx: ISSLEarlyDataContext;
+  LEarlyDataConn: ISSLEarlyDataConnection;
+  LServerStaplingCtx: ISSLServerOCSPStaplingContext;
+  LProbeStream: TMemoryStream;
+begin
+  PrintSubHeader(Format('Contract 12: Context optional interface alignment - %s',
+    [SSL_LIBRARY_NAMES[ABackend]]));
+
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    AddSkip('Backend not available on this platform');
+    Exit;
+  end;
+
+  try
+    LLib := TSSLFactory.GetLibrary(ABackend);
+    LCaps := LLib.GetCapabilities;
+    LClientCtx := LLib.CreateContext(sslCtxClient);
+    LServerCtx := LLib.CreateContext(sslCtxServer);
+    LProbeStream := TMemoryStream.Create;
+    try
+      LConn := LClientCtx.CreateConnection(LProbeStream);
+
+      if LCaps.EarlyDataSupport <> sslSupportNone then
+      begin
+        if not Supports(LClientCtx, ISSLEarlyDataContext, LEarlyDataCtx) then
+        begin
+          WriteLn('  [FAIL] Early-data-capable backend does not expose ISSLEarlyDataContext');
+          AddResult('ContextOptional_EarlyDataAligned', ABackend, False,
+            'EarlyDataSupport<>None but client context does not expose ISSLEarlyDataContext');
+        end
+        else
+        begin
+          WriteLn('  [PASS] Early-data-capable backend exposes ISSLEarlyDataContext');
+          AddResult('ContextOptional_EarlyDataAligned', ABackend, True);
+        end;
+
+        if not Supports(LConn, ISSLEarlyDataConnection, LEarlyDataConn) then
+        begin
+          WriteLn('  [FAIL] Early-data-capable backend does not expose ISSLEarlyDataConnection');
+          AddResult('ContextOptional_EarlyDataConnectionAligned', ABackend, False,
+            'EarlyDataSupport<>None but client connection does not expose ISSLEarlyDataConnection');
+        end
+        else
+        begin
+          WriteLn('  [PASS] Early-data-capable backend exposes ISSLEarlyDataConnection');
+          AddResult('ContextOptional_EarlyDataConnectionAligned', ABackend, True);
+        end;
+      end
+      else
+      begin
+        if Supports(LClientCtx, ISSLEarlyDataContext, LEarlyDataCtx) then
+        begin
+          WriteLn('  [FAIL] Backend without early-data capability still exposes ISSLEarlyDataContext');
+          AddResult('ContextOptional_EarlyDataAligned', ABackend, False,
+            'EarlyDataSupport=None but client context still exposes ISSLEarlyDataContext');
+        end
+        else
+        begin
+          WriteLn('  [PASS] Backend without early-data capability keeps ISSLEarlyDataContext absent');
+          AddResult('ContextOptional_EarlyDataAligned', ABackend, True);
+        end;
+
+        if Supports(LConn, ISSLEarlyDataConnection, LEarlyDataConn) then
+        begin
+          WriteLn('  [FAIL] Backend without early-data capability still exposes ISSLEarlyDataConnection');
+          AddResult('ContextOptional_EarlyDataConnectionAligned', ABackend, False,
+            'EarlyDataSupport=None but client connection still exposes ISSLEarlyDataConnection');
+        end
+        else
+        begin
+          WriteLn('  [PASS] Backend without early-data capability keeps ISSLEarlyDataConnection absent');
+          AddResult('ContextOptional_EarlyDataConnectionAligned', ABackend, True);
+        end;
+      end;
+
+      if LCaps.OCSPStaplingSupport <> sslSupportNone then
+      begin
+        if not Supports(LServerCtx, ISSLServerOCSPStaplingContext, LServerStaplingCtx) then
+        begin
+          WriteLn('  [FAIL] OCSP-capable backend does not expose ISSLServerOCSPStaplingContext');
+          AddResult('ContextOptional_ServerOCSPAligned', ABackend, False,
+            'OCSPStaplingSupport<>None but server context does not expose ISSLServerOCSPStaplingContext');
+        end
+        else
+        begin
+          WriteLn('  [PASS] OCSP-capable backend exposes ISSLServerOCSPStaplingContext');
+          AddResult('ContextOptional_ServerOCSPAligned', ABackend, True);
+        end;
+      end
+      else
+      begin
+        if Supports(LServerCtx, ISSLServerOCSPStaplingContext, LServerStaplingCtx) then
+        begin
+          WriteLn('  [FAIL] Backend without OCSP capability still exposes ISSLServerOCSPStaplingContext');
+          AddResult('ContextOptional_ServerOCSPAligned', ABackend, False,
+            'OCSPStaplingSupport=None but server context still exposes ISSLServerOCSPStaplingContext');
+        end
+        else
+        begin
+          WriteLn('  [PASS] Backend without OCSP capability keeps ISSLServerOCSPStaplingContext absent');
+          AddResult('ContextOptional_ServerOCSPAligned', ABackend, True);
+        end;
+      end;
+    finally
+      LProbeStream.Free;
+    end;
+  except
+    on E: Exception do
+    begin
+      WriteLn('  [FAIL] Exception: ', E.ClassName, ' - ', E.Message);
+      AddResult('ContextOptionalInterfacesAligned', ABackend, False, E.Message);
+    end;
+  end;
+end;
+
 procedure PrintSummary;
 var
   I: Integer;
@@ -1033,6 +1156,9 @@ begin
 
     // 11) C-library backend connections must expose native-handle interface
     TestContract_ConnectionNativeHandleInterfaceAligned(LBackend);
+
+    // 12) Context optional surfaces must match backend capability truth
+    TestContract_ContextOptionalInterfacesAligned(LBackend);
   end;
 
   PrintSummary;

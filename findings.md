@@ -116,3 +116,23 @@
   - runtime: 不可用
   - Linux 单编: 受 Windows SDK 依赖阻塞
   - public contract: 仍可按结构对称性修正，并由 focused contract 设计锁住
+- 新增的 `Contract 12` 把 context-level 和 connection-level early-data public surface 一起锁进 capability 双向契约后，当前 Linux 主机在 `WolfSSL` 上打出了真实 RED：
+  - `EarlyDataSupport=None but client context still exposes ISSLEarlyDataContext`
+  - `EarlyDataSupport=None but client connection still exposes ISSLEarlyDataConnection`
+- 这不是 capability 写窄过头，而是当前 shared library 真值本来就是 `None`：
+  - `/usr/include/wolfssl/ssl.h` 虽然声明了 early-data 相关 API
+  - 但 `/usr/lib/x86_64-linux-gnu/libwolfssl.so` 当前并没有导出 `wolfSSL_write_early_data`、`wolfSSL_get_early_data_status`、`wolfSSL_CTX_set_max_early_data`、`wolfSSL_CTX_get_max_early_data`
+  - 因此 `TWolfSSLLibrary.GetCapabilities` 返回 `EarlyDataSupport=None` 是符合本机 runtime 的
+- `Supports(...)` 假阳性的根因是 Pascal 类声明静态挂接口，而不是方法体逻辑：
+  - `TWolfSSLContext` 之前无条件实现 `ISSLEarlyDataContext`
+  - `TWolfSSLConnection` 之前无条件实现 `ISSLEarlyDataConnection`
+  - 所以即便 capability 已经收敛到 `None`，调用方仍会通过 `Supports(...)` 误判后端可用
+- 这批最小且一致的 GREEN 是把接口暴露改成创建点按 capability 选择类，而不是把 capability 反向调宽：
+  - `TWolfSSLEarlyDataContext = class(TWolfSSLContext, ISSLEarlyDataContext)`
+  - `TWolfSSLEarlyDataConnection = class(TWolfSSLConnection, ISSLEarlyDataConnection)`
+  - `TWolfSSLLibrary.CreateContext(...)` 只在 `EarlyDataSupport <> sslSupportNone` 时返回 early-data context 子类
+  - `TWolfSSLContext.CreateConnection(...)` 只在同一 capability 条件下返回 early-data connection 子类
+- 收口后 `Contract 12` 已全绿：
+  - `WolfSSL` 在当前主机保持 `ISSLEarlyDataContext` / `ISSLEarlyDataConnection` absent
+  - `WolfSSL` 仍保留 `OCSPStaplingSupport<>None` 时的 `ISSLServerOCSPStaplingContext`
+  - 仓库级验证也通过：`185/185` compile、minimal CI gate PASS

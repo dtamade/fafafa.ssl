@@ -551,7 +551,10 @@ begin
   if not FInitialized then
     raise ESSLInitError.Create('Cannot create context: WolfSSL library not initialized');
 
-  Result := TWolfSSLContext.Create(Self, AType);
+  if GetCapabilities.EarlyDataSupport <> sslSupportNone then
+    Result := TWolfSSLEarlyDataContext.Create(Self, AType)
+  else
+    Result := TWolfSSLContext.Create(Self, AType);
 end;
 
 function TWolfSSLLibrary.CreateCertificate: ISSLCertificate;

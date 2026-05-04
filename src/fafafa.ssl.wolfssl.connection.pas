@@ -29,7 +29,7 @@ uses
 type
   { TWolfSSLConnection - WolfSSL SSL 连接类 }
   TWolfSSLConnection = class(TBaseSSLConnection, ISSLClientConnection,
-    ISSLEarlyDataConnection, ISSLOCSPStapling,
+    ISSLOCSPStapling,
     ISSLNativeHandleAccess)
   private
     FWolfSSLCtx: PWOLFSSL_CTX;
@@ -111,6 +111,10 @@ type
     function IsNativeHandleValid: Boolean;
     function GetLastError: Integer;
     function GetLastErrorString: string;
+  end;
+
+  { 仅在运行时 early-data capability 可用时才暴露该接口 }
+  TWolfSSLEarlyDataConnection = class(TWolfSSLConnection, ISSLEarlyDataConnection)
   end;
 
 implementation
