@@ -184,8 +184,12 @@ begin
     'FreePascal ZeroRTTSupport should move to experimental once public early-data transport is wired');
   Require(Caps.EarlyDataSupport = sslSupportExperimental,
     'FreePascal EarlyDataSupport should move to experimental once public early-data transport is wired');
+  Require(Pos('IN-MEMORY SINGLE-PROCESS', UpperCase(Caps.KnownIssues)) = 0,
+    'FreePascal KnownIssues should stop claiming the default early-data path is limited to an in-memory single-process ledger');
   Require(Pos('ANTI-REPLAY', UpperCase(Caps.KnownIssues)) > 0,
     'FreePascal KnownIssues should mention conservative anti-replay limitations for experimental 0-RTT');
+  Require(Pos('FAIL-CLOSED', UpperCase(Caps.KnownIssues)) > 0,
+    'FreePascal KnownIssues should mention fail-closed replay-store behavior once the default path is persistent');
   Require(Caps.SupportsCertificateTransparency,
     'FreePascal capabilities should advertise certificate-transparency support once client runtime surface is implemented');
   Require(Caps.CertTransparencySupport = sslSupportExperimental,

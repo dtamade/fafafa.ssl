@@ -1,5 +1,53 @@
 # Progress - WolfSSL Feature Capability Runtime Consistency
 
+## 2026-05-05
+- 新开一批 `FreePascal Early-Data Default Durable Shipped Path`，目标是在不扩 public API 的前提下，把 FreePascal server-side 默认 shipped path 从单进程内存 replay ledger 收口到默认 durable replay-store 路径，并同步文档真相。
+- 计划与台账：
+  - 新增 `docs/plans/2026-05-04-freepascal-early-data-default-durable-shipped-path.md`
+  - `task_plan.md` 切到当前批次
+- focused 编译 / 运行：
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/freepascal_tls13_early_data -FEtmp/freepascal_tls13_early_data -otmp/freepascal_tls13_early_data/test_freepascal_tls13_early_data tests/test_freepascal_tls13_early_data.pas`
+  - `./tmp/freepascal_tls13_early_data/test_freepascal_tls13_early_data`
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_units -otmp/capability_cache_units/test_capability_cache tests/test_capability_cache.pas`
+  - `./tmp/capability_cache_units/test_capability_cache`
+- 第一次 focused runtime 结果：
+  - `test_capability_cache` 直接通过，并打印新的 `KnownIssues: 0-RTT / early data is experimental and currently relies on a local persistent anti-replay replay-store path; if the path is unavailable or unwritable, resumed early data is rejected fail-closed.`
+  - `test_freepascal_tls13_early_data` 首次失败：`Accepted server connection should report accepted early-data status`
+- 根因探针：
+  - 运行 `env FAFAFA_SSL_FREEPASCAL_EARLY_DATA_REPLAY_STORE_DIR=tmp/default_replay_store_probe_20260505 ./tmp/freepascal_tls13_early_data/test_freepascal_tls13_early_data`
+  - 结果：同一个二进制在全新默认路径下直接 `✅ FreePascal TLS 1.3 early-data checks passed`
+  - 结论：失败来自宿主默认 durable replay-store 的历史残留，而不是新的生产逻辑漂移
+- 最小修复：
+  - `tests/test_freepascal_tls13_early_data.pas`
+    - 增加进程级默认 replay-store 基线目录初始化
+    - `ResetDefaultReplayStoreDirectoryForTesting` 改成恢复到该基线
+    - 保持单测局部 override seam 不变
+- 修复后复跑：
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/freepascal_tls13_early_data -FEtmp/freepascal_tls13_early_data -otmp/freepascal_tls13_early_data/test_freepascal_tls13_early_data tests/test_freepascal_tls13_early_data.pas`
+  - `./tmp/freepascal_tls13_early_data/test_freepascal_tls13_early_data`
+  - `./tmp/capability_cache_units/test_capability_cache`
+  - 结果：两组 focused tests 全绿
+- 文档真相同步：
+  - `docs/ROADMAP.md`
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - `README.md`
+  - `docs/reference/API_REFERENCE.md`
+  - `/home/dtamade/node_modules/.bin/prettier --write docs/ROADMAP.md docs/BACKEND_CAPABILITY_MATRIX.md README.md docs/reference/API_REFERENCE.md`
+- 仓库级验证：
+  - `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id early_data_default_durable_shipped_path_20260504`
+  - 结果：`[PASS] freepascal tls13 completeness gate finished`
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+- hygiene：
+  - `git diff --check -- docs/plans/2026-05-04-freepascal-early-data-default-durable-shipped-path.md src/fafafa.ssl.freepascal.earlydatareplay.pas src/fafafa.ssl.freepascal.context.pas src/fafafa.ssl.freepascal.lib.pas tests/test_freepascal_tls13_early_data.pas tests/test_capability_cache.pas docs/ROADMAP.md docs/BACKEND_CAPABILITY_MATRIX.md README.md docs/reference/API_REFERENCE.md task_plan.md findings.md progress.md`
+  - 结果：通过
+- 提交前 review：
+  - 生产改动边界保持在 FreePascal 默认 early-data ledger 装配和 capability wording，没有扩 public API
+  - fresh failure 只来自默认 durable path 测试被宿主历史状态污染，已经用测试基线隔离修复
+  - focused tests、completeness gate、compile gate 都没有暴露新的跨后端回归
+- 提交：
+  - `git commit -m "freepascal: ship durable default early-data replay path"`
+
 ## 2026-05-04
 - 新开一批 `Completion Audit And Capability Truth Alignment`，目标是不再盲目寻找下一个 interface 批次，而是核对 broad objective 还有哪些实现层 caveat 未闭合，并先收口最明确的 capability-matrix truth drift。
 - completion audit 读取与核对：

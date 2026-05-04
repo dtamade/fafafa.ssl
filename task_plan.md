@@ -1,60 +1,56 @@
-# Task Plan - Completion Audit And Capability Truth Alignment
+# Task Plan - FreePascal Early-Data Default Durable Shipped Path
 
 ## Goal
-对“各个后端的接口和实现都完整”做一次真实 completion audit，把当前已经锁住的 interface surface、仍未完成的 implementation caveat、以及文档里高估能力等级的条目区分清楚；本批先收口 `docs/BACKEND_CAPABILITY_MATRIX.md` 与代码/测试/路线图之间的 FreePascal capability truth drift。
+在不扩 public API 的前提下，把 FreePascal server-side early-data 默认 shipped path 从单进程内存 replay ledger 收口到默认 durable replay-store 路径，并同步修正 capability / roadmap / API docs 对这条默认路径的真相表述。
 
 ## Current Batch
-1. 先做 completion audit：
-   - 盘点 `src/fafafa.ssl.base.pas` 的 public interface 与 `tests/contract/test_backend_contract.pas` 的当前覆盖
-   - 核对 `docs/ROADMAP.md`、`tests/test_capability_cache.pas`、`src/fafafa.ssl.freepascal.lib.pas`
-   - 找出“接口已锁住，但实现/能力等级仍有限制”的真实剩余项
-2. 只收口当前最明确的 truth drift：
-   - 修改 `docs/BACKEND_CAPABILITY_MATRIX.md`
-   - 让 FreePascal `Early Data` / `OCSP Stapling` / `Certificate Transparency` 的文案与 runtime capability truth 一致
-3. 用 focused capability test 验证文档对应的真实代码发布值：
-   - `mkdir -p tmp/capability_cache_units`
-   - `fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_units -otmp/capability_cache_units/test_capability_cache tests/test_capability_cache.pas`
-   - `./tmp/capability_cache_units/test_capability_cache`
-4. 做 diff/format hygiene，回写台账并提交。
+1. 先补 focused RED：
+   - `tests/test_freepascal_tls13_early_data.pas` 锁住默认 server context 的 same-process / cross-process durable replay truth
+   - `tests/test_capability_cache.pas` 锁住 `KnownIssues` 不再声称默认路径是 `in-memory single-process anti-replay ledger`
+2. 最小 GREEN：
+   - `src/fafafa.ssl.freepascal.earlydatareplay.pas` 增加默认 replay-store 路径解析与 managed persistent provider
+   - `src/fafafa.ssl.freepascal.context.pas` 默认 server ledger 改走 durable path
+   - `src/fafafa.ssl.freepascal.lib.pas` 更新 capability wording
+3. 文档真相同步：
+   - `docs/ROADMAP.md`
+   - `docs/BACKEND_CAPABILITY_MATRIX.md`
+   - `README.md`
+   - `docs/reference/API_REFERENCE.md`
+4. 跑 focused tests / completeness gate / compile gate / diff hygiene，回写台账并提交。
 
 ## Status
-- [completed] Completion audit against current public surface and roadmap truth
-- [completed] Capability-matrix truth alignment
-- [completed] Focused capability verification
-- [in_progress] Review and commit preparation
+- [completed] RED: default durable-path contracts and capability wording assertions
+- [completed] GREEN: managed persistent default replay provider
+- [completed] Docs truth alignment
+- [completed] Verification, review, and commit
 
 ## Verification Plan
-- audit evidence:
-  - `docs/ROADMAP.md`
-  - `src/fafafa.ssl.freepascal.lib.pas`
-  - `tests/test_capability_cache.pas`
-  - `docs/BACKEND_CAPABILITY_MATRIX.md`
-- focused:
+- focused default early-data runtime:
+  - `mkdir -p tmp/freepascal_tls13_early_data`
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/freepascal_tls13_early_data -FEtmp/freepascal_tls13_early_data -otmp/freepascal_tls13_early_data/test_freepascal_tls13_early_data tests/test_freepascal_tls13_early_data.pas`
+  - `./tmp/freepascal_tls13_early_data/test_freepascal_tls13_early_data`
+- focused capability truth:
   - `mkdir -p tmp/capability_cache_units`
   - `fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_units -otmp/capability_cache_units/test_capability_cache tests/test_capability_cache.pas`
   - `./tmp/capability_cache_units/test_capability_cache`
+- repo verification:
+  - `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id early_data_default_durable_shipped_path_20260504`
+  - `python3 scripts/compile_all_modules.py`
 - hygiene:
-  - `yarn prettier --write docs/BACKEND_CAPABILITY_MATRIX.md`
-  - `git diff --check`
+  - `git diff --check -- docs/plans/2026-05-04-freepascal-early-data-default-durable-shipped-path.md src/fafafa.ssl.freepascal.earlydatareplay.pas src/fafafa.ssl.freepascal.context.pas src/fafafa.ssl.freepascal.lib.pas tests/test_freepascal_tls13_early_data.pas tests/test_capability_cache.pas docs/ROADMAP.md docs/BACKEND_CAPABILITY_MATRIX.md README.md docs/reference/API_REFERENCE.md task_plan.md findings.md progress.md`
 
 ## Batch Result
-- completion audit 结论：当前这轮 connection optional interface completion audit 已收尽，但 broad objective 仍未完成
-- 当前仍可证实的 implementation-level remaining gaps：
-  - `FreePascal` `0-RTT / early data` 仍是 `experimental`，默认 shipped path 仍局限于单进程内存 anti-replay ledger
-  - `WinSSL` 仍缺 Windows 主机上的 runtime proof；当前 Linux 侧只有 source-contract + Win64 cross-target compile evidence
-- focused capability truth 证据：
-  - `tests/test_capability_cache.pas` 运行通过，并直接验证 `KnownIssues = 0-RTT / early data is experimental...`
-  - 同一 focused test 也验证 `ZeroRTTSupport` / `EarlyDataSupport` / `OCSPStaplingSupport` / `CertTransparencySupport` 的 runtime truth
-- 文档收口结果：
-  - `docs/BACKEND_CAPABILITY_MATRIX.md` 不再把 FreePascal `Early Data` 写成“完整支持（生产就绪）”
-  - FreePascal `OCSP Stapling` / `Certificate Transparency` 也不再在快速参考表里写成 `✅`
+- default server-side FreePascal early-data shipped path 已切到本地持久化 replay-store 路径，并保住 `SetSessionCacheMode` / `SetSessionCacheSize` 的 managed clear 语义。
+- `KnownIssues`、`ROADMAP`、capability matrix、README、API reference 都已收口到“local persistent + fail-closed + experimental”的同一真相。
+- focused tests、`run_freepascal_tls13_completeness_gate.sh --fast-local --run-id early_data_default_durable_shipped_path_20260504`、`python3 scripts/compile_all_modules.py`、以及 `git diff --check` 都已通过。
+- 本批已提交，后续继续以这份批次结果作为 `WinSSL` runtime proof / FreePascal residual wording 复盘的起点。
 
 ## Risks
-- completion audit 不能把“contract 全绿”误当成“整体目标完成”；仍需单独识别 implementation caveat 与 runtime-proof 缺口。
-- 文档收口这批不能假装解决了 `FreePascal` early-data experimental caveat，也不能伪造 `WinSSL` 的 Windows runtime proof。
-- 只改最明确的 truth drift，不顺手重写整份能力矩阵。
+- 默认 durable path 不能通过“上下文创建时就强制落盘”来制造新初始化失败面；必须保持按需 materialize，并在不可写时 fail closed。
+- 默认路径改成持久化后，现有 default-ledger cache-sync 合同仍必须保持 green，不能把 disable / zero-capacity 语义退化成“只关本进程开关、不清 replay truth”。
+- 文档和 capability string 只能收口到本批 fresh evidence，不能顺手把 `experimental` 擅自提成 `stable`。
 
 ## Follow-up Queue
-1. 如果 completion audit 结论仍是 `FreePascal early-data experimental + WinSSL runtime proof missing`，下一步要在这两个 implementation gap 之间重新排优先级。
-2. 若需要继续在 Linux 主机推进实现层，就优先考虑 `FreePascal` early-data 默认 shipped path caveat。
+1. 这批已经去掉默认 `in-memory single-process` caveat；下一步应重新判断 `FreePascal early-data` 是否只剩 `experimental` / local-persistent / non-distributed wording，或 Linux 侧最高价值缺口是否已经转到 `WinSSL` runtime proof。
+2. 若 default durable path 落地后仍有 fresh RED，再决定是否要补 default-path filesystem blocker 专属合同。
 3. `WinSSL` 的 Windows runtime proof 仍需独立环境，不能在当前 Linux 主机上伪造完成。

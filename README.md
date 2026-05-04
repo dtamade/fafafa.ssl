@@ -15,20 +15,23 @@
 **Early Data 契约已对齐** - 仅在真实支持的后端暴露 Early Data 接口
 
 ### 新增功能
+
 - ✅ OpenSSL 连接级 Early Data 契约与运行时接口对齐
 - ⚠️ WolfSSL 连接级 Early Data 接口已对齐到原生 API（实验性）
 - ❌ MbedTLS 和 WinSSL 不再暴露不可用的 Early Data 接口
 
 ### 后端支持
-| 后端 | Early Data | 状态 |
-|------|-----------|------|
-| FreePascal | ✅ | 生产就绪 |
-| OpenSSL | ✅ | 生产就绪 |
-| WolfSSL | ⚠️ | 实验性 |
-| MbedTLS | ❌ | 不支持 |
-| WinSSL | ❌ | 不支持 |
+
+| 后端       | Early Data | 状态     |
+| ---------- | ---------- | -------- |
+| FreePascal | ✅         | 生产就绪 |
+| OpenSSL    | ✅         | 生产就绪 |
+| WolfSSL    | ⚠️         | 实验性   |
+| MbedTLS    | ❌         | 不支持   |
+| WinSSL     | ❌         | 不支持   |
 
 ### 快速开始
+
 ```pascal
 // 启用 Early Data（OpenSSL 生产可用；WolfSSL 为实验性）
 Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
@@ -99,7 +102,7 @@ if Supports(Ctx, ISSLEarlyDataContext, EarlyDataCtx) then
 
 ## Use replay-store opt-in for FreePascal early-data servers
 
-FreePascal 的 `0-RTT / early data` 目前仍是实验性能力，默认 shipped path 继续使用 `in-memory single-process anti-replay ledger`。如果你要让服务端 early-data replay truth 落到本地持久化路径，当前 public opt-in 只开放给 FreePascal server context。
+FreePascal 的 `0-RTT / early data` 目前仍是实验性能力，但默认 shipped path 已经会把服务端 replay truth 落到本地持久化 replay-store 路径。若该路径不可用或不可写，恢复的 early data 会 fail-closed reject。当前 public opt-in 仍只开放给 FreePascal server context，用来显式指定 replay-store 的落点。
 
 用 builder 时，可选这两个入口：
 

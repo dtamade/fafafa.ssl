@@ -57,6 +57,7 @@ const
   TEST_INVALID_REPLAY_PROVIDER_ENTRY_COUNT = 100001;
   TEST_INVALID_REPLAY_PROVIDER_KEY_LENGTH = 4097;
   TEST_REPLAY_PROVIDER_CONTEXT_PATH_INSTALLER = 'installer';
+  TEST_REPLAY_PROVIDER_CONTEXT_PATH_DEFAULT = 'default_shipped_path';
   TEST_REPLAY_PROVIDER_CONTEXT_PATH_BUILDER = 'builder';
   TEST_REPLAY_PROVIDER_CONTEXT_PATH_FACTORY = 'factory';
   TEST_REPLAY_PROVIDER_CONTEXT_PATH_DIRECTORY_STORE = 'directory_store';
@@ -67,6 +68,9 @@ const
   TEST_REPLAY_PROVIDER_RUNTIME_CRASH_ACCEPT_MODE = '--runtime-crash-accept';
   TEST_REPLAY_PROVIDER_RUNTIME_REPLAY_MODE = '--runtime-replay-probe';
   TEST_REPLAY_PROVIDER_SIMULATED_CRASH_EXIT_CODE = 86;
+
+var
+  GDefaultReplayStoreBaselineDirectory: string = '';
 
 function BytesEqual(const ALeft, ARight: TBytes): Boolean;
 var
@@ -1844,6 +1848,39 @@ begin
   Result := LDir + AName + '_' + IntToStr(Int64(GetTickCount64)) + '.store';
 end;
 
+procedure CleanupReplayProviderStoreDirectory(const ADirectoryName: string); forward;
+
+procedure InitializeDefaultReplayStoreBaselineDirectoryForTesting;
+begin
+  if GDefaultReplayStoreBaselineDirectory <> '' then
+    Exit;
+
+  GDefaultReplayStoreBaselineDirectory := BuildReplayProviderStoreDirectoryPath(
+    'default_shipped_path_process'
+  );
+  CleanupReplayProviderStoreDirectory(GDefaultReplayStoreBaselineDirectory);
+  SetDefaultFreePascalEarlyDataReplayStoreDirectoryForTesting(
+    GDefaultReplayStoreBaselineDirectory
+  );
+end;
+
+procedure PrepareDefaultReplayStoreDirectoryForTesting(
+  const ADirectoryName: string
+);
+begin
+  SetDefaultFreePascalEarlyDataReplayStoreDirectoryForTesting(ADirectoryName);
+end;
+
+procedure ResetDefaultReplayStoreDirectoryForTesting;
+begin
+  if GDefaultReplayStoreBaselineDirectory <> '' then
+    SetDefaultFreePascalEarlyDataReplayStoreDirectoryForTesting(
+      GDefaultReplayStoreBaselineDirectory
+    )
+  else
+    ResetDefaultFreePascalEarlyDataReplayStoreDirectoryForTesting;
+end;
+
 function BuildReplayProviderLockFilePath(const AFileName: string): string;
 begin
   if AFileName = '' then
@@ -2144,6 +2181,24 @@ begin
     Exit;
   end;
 
+  if LNormalizedContextPath = TEST_REPLAY_PROVIDER_CONTEXT_PATH_DEFAULT then
+  begin
+    PrepareDefaultReplayStoreDirectoryForTesting(AFileName);
+    Result := TSSLFactory.CreateContext(sslCtxServer, sslFreePascal);
+    AssertTrue(Result <> nil,
+      'Runtime replay probe helper default shipped path should create a FreePascal server context');
+    PrepareServerContextForEarlyData(Result);
+
+    AssertTrue(Supports(Result, ISSLEarlyDataContext, LEarlyCtx),
+      'Runtime replay probe helper default shipped path should expose early-data context interface');
+    if Supports(Result, ISSLEarlyDataContext, LEarlyCtx) then
+    begin
+      LEarlyCtx.SetServerEarlyDataPolicy(sslEarlyDataServerAccept);
+      LEarlyCtx.SetServerMaxEarlyDataSize(8);
+    end;
+    Exit;
+  end;
+
   if LNormalizedContextPath = TEST_REPLAY_PROVIDER_CONTEXT_PATH_BUILDER then
   begin
     Result := BuildBuilderFileBackedReplayStoreServerContext(AFileName);
@@ -2202,6 +2257,13 @@ begin
       DirectoryExists(AStoreName + '.bakdir')
     );
 
+  if LNormalizedContextPath = TEST_REPLAY_PROVIDER_CONTEXT_PATH_DEFAULT then
+    Exit(
+      DirectoryExists(AStoreName) or
+      DirectoryExists(AStoreName + '.tmpdir') or
+      DirectoryExists(AStoreName + '.bakdir')
+    );
+
   Result := FileExists(AStoreName) or
     FileExists(AStoreName + '.tmp') or
     FileExists(AStoreName + '.bak');
@@ -2219,6 +2281,9 @@ begin
     LNormalizedContextPath := TEST_REPLAY_PROVIDER_CONTEXT_PATH_INSTALLER;
 
   if LNormalizedContextPath = TEST_REPLAY_PROVIDER_CONTEXT_PATH_DIRECTORY_STORE then
+    Exit(DirectoryExists(AStoreName));
+
+  if LNormalizedContextPath = TEST_REPLAY_PROVIDER_CONTEXT_PATH_DEFAULT then
     Exit(DirectoryExists(AStoreName));
 
   Result := FileExists(AStoreName);
@@ -3409,6 +3474,141 @@ begin
   LCtx.SetSessionCacheSize(8);
   AssertTrue(LLedger.TryAcquireEarlyDataSession(LSession),
     'Restoring session cache size should restore default replay acquisition for the same session');
+end;
+
+procedure TestDefaultReplayStoreRejectsCrossContextReplay;
+var
+  LCtx1: ISSLContext;
+  LCtx2: ISSLContext;
+  LReplayAccess1: IFreePascalEarlyDataReplayLedgerAccess;
+  LReplayAccess2: IFreePascalEarlyDataReplayLedgerAccess;
+  LLedger1: IFreePascalEarlyDataReplayLedger;
+  LLedger2: IFreePascalEarlyDataReplayLedger;
+  LDirectoryName: string;
+  LSession: ISSLSession;
+begin
+  LDirectoryName := BuildReplayProviderStoreDirectoryPath('default_shipped_path');
+  CleanupReplayProviderStoreDirectory(LDirectoryName);
+  PrepareDefaultReplayStoreDirectoryForTesting(LDirectoryName);
+  try
+    LCtx1 := TSSLFactory.CreateContext(sslCtxServer, sslFreePascal);
+    LCtx2 := TSSLFactory.CreateContext(sslCtxServer, sslFreePascal);
+    AssertTrue((LCtx1 <> nil) and (LCtx2 <> nil),
+      'Default durable replay-store test should create both FreePascal server contexts');
+    PrepareServerContextForEarlyData(LCtx1);
+    PrepareServerContextForEarlyData(LCtx2);
+
+    AssertTrue(Supports(LCtx1, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess1),
+      'Default durable replay-store first context should expose replay-ledger access seam');
+    AssertTrue(Supports(LCtx2, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess2),
+      'Default durable replay-store second context should expose replay-ledger access seam');
+
+    LLedger1 := LReplayAccess1.GetEarlyDataReplayLedger;
+    LLedger2 := LReplayAccess2.GetEarlyDataReplayLedger;
+    AssertTrue((LLedger1 <> nil) and (LLedger2 <> nil),
+      'Default durable replay-store test should expose active replay ledgers on both contexts');
+
+    LSession := BuildManualSession('default-durable-cross-context', 8);
+    AssertTrue(LLedger1.TryAcquireEarlyDataSession(LSession),
+      'Default durable replay-store should accept the first valid session acquire');
+    AssertTrue(DirectoryExists(LDirectoryName),
+      'Default durable replay-store should materialize the canonical replay-store directory');
+    AssertTrue(not LLedger2.TryAcquireEarlyDataSession(LSession),
+      'Default durable replay-store should reject replay across server contexts without explicit config');
+  finally
+    ResetDefaultReplayStoreDirectoryForTesting;
+    CleanupReplayProviderStoreDirectory(LDirectoryName);
+  end;
+end;
+
+procedure TestDefaultReplayStoreRetainsReplayTruthAcrossProcessRestart;
+var
+  LCtx: ISSLContext;
+  LReplayAccess: IFreePascalEarlyDataReplayLedgerAccess;
+  LDirectoryName: string;
+  LSessionFileName: string;
+  LSession: ISSLSession;
+  LFreshSession: ISSLSession;
+  LSerialized: TBytes;
+  LConn: ISSLConnection;
+  LEarlyConn: ISSLEarlyDataConnection;
+  LAcceptStream: TScriptedEarlyDataClientStream;
+  LFreshAcceptStream: TScriptedEarlyDataClientStream;
+  LProcess: TProcess;
+begin
+  LDirectoryName := BuildReplayProviderStoreDirectoryPath('default_runtime_restart');
+  LSessionFileName := BuildReplayProviderMarkerFilePath(LDirectoryName, 'session.bin');
+  CleanupReplayProviderStoreDirectory(LDirectoryName);
+  PrepareDefaultReplayStoreDirectoryForTesting(LDirectoryName);
+  try
+    LCtx := BuildAcceptingEarlyDataServerContext;
+    AssertTrue(LCtx <> nil,
+      'Default durable runtime restart test should create a FreePascal server context');
+    AssertTrue(Supports(LCtx, IFreePascalEarlyDataReplayLedgerAccess, LReplayAccess),
+      'Default durable runtime restart test should expose replay-ledger access seam');
+
+    LSession := CaptureServerIssuedSession(LCtx);
+    LSerialized := LSession.Serialize;
+    AssertTrue(Length(LSerialized) > 0,
+      'Default durable runtime restart test should serialize the captured resumable session');
+    WriteBytesToFile(LSessionFileName, LSerialized);
+
+    LAcceptStream := TScriptedEarlyDataClientStream.CreateResumed(LSession, BytesOf('PING'), True);
+    try
+      LConn := LCtx.CreateConnection(LAcceptStream);
+      AssertTrue(Supports(LConn, ISSLEarlyDataConnection, LEarlyConn),
+        'Default durable runtime restart accepted connection should expose early-data interface');
+      AssertTrue(LConn.Accept,
+        'Default durable replay-store should accept the first resumed early-data attempt before restart');
+      AssertTrue(LConn.IsSessionReused,
+        'Default durable runtime restart test should reuse the captured session before restart');
+      if Supports(LConn, ISSLEarlyDataConnection, LEarlyConn) then
+        AssertTrue(LEarlyConn.GetEarlyDataStatus = sslEarlyDataAccepted,
+          'Default durable replay-store should still accept the first resumed early-data attempt before restart');
+      AssertTrue(LAcceptStream.ObservedServerAcceptedEarlyData,
+        'Default durable replay-store should advertise accepted early-data before restart');
+    finally
+      LAcceptStream.Free;
+    end;
+
+    AssertTrue(DirectoryExists(LDirectoryName),
+      'Default durable runtime restart test should materialize the replay-store directory before process restart');
+    AssertTrue(FileExists(LSessionFileName),
+      'Default durable runtime restart test should materialize the serialized session marker before process restart');
+
+    LProcess := TProcess.Create(nil);
+    try
+      LProcess.Executable := ParamStr(0);
+      LProcess.Parameters.Add(TEST_REPLAY_PROVIDER_RUNTIME_REPLAY_MODE);
+      LProcess.Parameters.Add(LDirectoryName);
+      LProcess.Parameters.Add(LSessionFileName);
+      LProcess.Parameters.Add(TEST_REPLAY_PROVIDER_CONTEXT_PATH_DEFAULT);
+      LProcess.Options := [];
+      LProcess.Execute;
+      LProcess.WaitOnExit;
+      AssertEqualsInt(0, LProcess.ExitCode,
+        'Default durable runtime replay probe should exit cleanly after rejecting replay in a new process');
+    finally
+      LProcess.Free;
+    end;
+
+    LFreshSession := CaptureServerIssuedSession(LCtx);
+    LFreshAcceptStream := TScriptedEarlyDataClientStream.CreateResumed(
+      LFreshSession,
+      BytesOf('PONG'),
+      True
+    );
+    try
+      LConn := LCtx.CreateConnection(LFreshAcceptStream);
+      AssertTrue(LConn.Accept,
+        'Default durable replay-store should still accept a fresh resumed session after restart replay rejection');
+    finally
+      LFreshAcceptStream.Free;
+    end;
+  finally
+    ResetDefaultReplayStoreDirectoryForTesting;
+    CleanupReplayProviderStoreDirectory(LDirectoryName);
+  end;
 end;
 
 procedure TestReplaceableReplayLedgerRejectsFirstUseEarlyData;
@@ -12242,6 +12442,8 @@ begin
 end;
 
 begin
+  InitializeDefaultReplayStoreBaselineDirectoryForTesting;
+
   if HandleReplayProviderChildMode then
     Halt(0);
 
@@ -12256,6 +12458,8 @@ begin
   TestClientConfiguredEarlyDataLimit;
   TestReplayLedgerSessionValidity;
   TestDefaultReplayLedgerTracksSessionCacheSettings;
+  TestDefaultReplayStoreRejectsCrossContextReplay;
+  TestDefaultReplayStoreRetainsReplayTruthAcrossProcessRestart;
   TestReplaceableReplayLedgerRejectsFirstUseEarlyData;
   TestProviderBackedReplayLedgerCoordinatesAcrossLedgers;
   TestProviderBackedReplayLedgerRejectsCrossContextReplay;

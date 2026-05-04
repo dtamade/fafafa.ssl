@@ -33,7 +33,7 @@
 
 ### FreePascal 后端
 
-**状态**: ⚠️ 实验性支持（public surface 已接通，但默认 shipped path 仍是单进程内存 anti-replay ledger）
+**状态**: ⚠️ 实验性支持（public surface 已接通，默认 shipped path 已切到本地持久化 replay-store 路径）
 
 **功能**:
 
@@ -46,8 +46,10 @@
 **限制**:
 
 - `TSSLBackendCapabilities.ZeroRTTSupport` / `EarlyDataSupport` 当前发布为 `sslSupportExperimental`
-- 默认使用内存 anti-replay ledger（单进程）
-- 跨进程 durability / restart truth 需要显式配置文件或目录 replay store
+- `TSSLBackendCapabilities.ZeroRTTSupport` / `EarlyDataSupport` 当前发布为 `sslSupportExperimental`
+- 默认 shipped path 已经把 replay truth 落到本地持久化 replay-store 路径
+- 如果默认路径不可用或不可写，resumed early data 会 fail-closed reject
+- 显式 file / directory replay-store opt-in 仍然用于 caller-controlled path placement
 
 **示例**:
 

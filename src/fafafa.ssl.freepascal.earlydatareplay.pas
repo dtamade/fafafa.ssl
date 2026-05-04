@@ -112,11 +112,47 @@ type
     procedure SetCapacity(ACapacity: Integer);
   end;
 
+  TFreePascalDefaultPersistentReplayProvider = class(TInterfacedObject,
+    IFreePascalEarlyDataReplayProvider,
+    IFreePascalManagedReplayProvider)
+  private
+    FStore: IFreePascalEarlyDataReplayStore;
+    FCapacity: Integer;
+
+    procedure PruneExpired(
+      var AEntries: TFreePascalEarlyDataReplayStoreEntries;
+      ANow: TDateTime
+    );
+  public
+    constructor Create(AStore: IFreePascalEarlyDataReplayStore);
+
+    function TryAcquireReplayKey(
+      const AKey: string;
+      AExpiresAt: TDateTime;
+      ANow: TDateTime
+    ): Boolean;
+    procedure Clear;
+    procedure SetCapacity(ACapacity: Integer);
+  end;
+
   TFreePascalInMemoryEarlyDataReplayLedger = class(TInterfacedObject,
     IFreePascalManagedEarlyDataReplayLedger)
   private
     // Default shipped wrapper only: retained replay truth now lives in the
     // shared in-memory store-backed path assembled below.
+    FDelegate: IFreePascalManagedEarlyDataReplayLedger;
+  public
+    constructor Create(AEnabled: Boolean; ACapacity: Integer);
+
+    procedure Clear;
+    procedure SetEnabled(AEnabled: Boolean);
+    procedure SetCapacity(ACapacity: Integer);
+    function TryAcquireEarlyDataSession(ASession: ISSLSession): Boolean;
+  end;
+
+  TFreePascalDefaultPersistentEarlyDataReplayLedger = class(TInterfacedObject,
+    IFreePascalManagedEarlyDataReplayLedger)
+  private
     FDelegate: IFreePascalManagedEarlyDataReplayLedger;
   public
     constructor Create(AEnabled: Boolean; ACapacity: Integer);
@@ -167,7 +203,23 @@ function InstallStoreBackedReplayLedger(
   AStore: IFreePascalEarlyDataReplayStore
 ): Boolean;
 
+function GetDefaultFreePascalEarlyDataReplayStoreDirectory: string;
+procedure SetDefaultFreePascalEarlyDataReplayStoreDirectoryForTesting(
+  const ADirectoryName: string
+);
+procedure ResetDefaultFreePascalEarlyDataReplayStoreDirectoryForTesting;
+
 implementation
+
+uses
+  fafafa.ssl.freepascal.earlydatareplay.dirstore;
+
+const
+  FREEPASCAL_DEFAULT_EARLY_DATA_REPLAY_STORE_ENV =
+    'FAFAFA_SSL_FREEPASCAL_EARLY_DATA_REPLAY_STORE_DIR';
+
+var
+  GDefaultReplayStoreDirectoryOverride: string = '';
 
 function TicketBytesToHex(const ATicket: TBytes): string;
 const
@@ -216,6 +268,70 @@ begin
   for I := 0 to ACapacity - 1 do
     AEntries[I] := AEntries[I + LOverflow];
   SetLength(AEntries, ACapacity);
+end;
+
+function NormalizeReplayStoreDirectory(const ADirectoryName: string): string;
+var
+  LValue: string;
+begin
+  LValue := Trim(ADirectoryName);
+  if LValue = '' then
+    Exit('');
+  Result := ExcludeTrailingPathDelimiter(ExpandFileName(LValue));
+end;
+
+function GetDefaultFreePascalEarlyDataReplayStoreDirectory: string;
+var
+  LBaseDirectory: string;
+  LHomeDirectory: string;
+begin
+  if GDefaultReplayStoreDirectoryOverride <> '' then
+    Exit(GDefaultReplayStoreDirectoryOverride);
+
+  LBaseDirectory := Trim(
+    GetEnvironmentVariable(FREEPASCAL_DEFAULT_EARLY_DATA_REPLAY_STORE_ENV)
+  );
+  if LBaseDirectory <> '' then
+    Exit(NormalizeReplayStoreDirectory(LBaseDirectory));
+
+  {$IFDEF WINDOWS}
+  LBaseDirectory := Trim(GetEnvironmentVariable('LOCALAPPDATA'));
+  if LBaseDirectory = '' then
+    LBaseDirectory := Trim(GetEnvironmentVariable('APPDATA'));
+  {$ELSE}
+  LBaseDirectory := Trim(GetEnvironmentVariable('XDG_STATE_HOME'));
+  if LBaseDirectory = '' then
+  begin
+    LHomeDirectory := Trim(GetEnvironmentVariable('HOME'));
+    if LHomeDirectory <> '' then
+      LBaseDirectory := IncludeTrailingPathDelimiter(ExpandFileName(LHomeDirectory)) +
+        '.local' + PathDelim + 'state';
+  end;
+  {$ENDIF}
+
+  if LBaseDirectory = '' then
+    LBaseDirectory := Trim(GetAppConfigDir(False));
+  if LBaseDirectory = '' then
+    LBaseDirectory := GetTempDir(False);
+
+  LBaseDirectory := NormalizeReplayStoreDirectory(LBaseDirectory);
+  Result := IncludeTrailingPathDelimiter(LBaseDirectory) +
+    'fafafa.ssl' + PathDelim + 'freepascal' + PathDelim +
+    'early-data-replay';
+end;
+
+procedure SetDefaultFreePascalEarlyDataReplayStoreDirectoryForTesting(
+  const ADirectoryName: string
+);
+begin
+  GDefaultReplayStoreDirectoryOverride := NormalizeReplayStoreDirectory(
+    ADirectoryName
+  );
+end;
+
+procedure ResetDefaultFreePascalEarlyDataReplayStoreDirectoryForTesting;
+begin
+  GDefaultReplayStoreDirectoryOverride := '';
 end;
 
 constructor TFreePascalSharedInMemoryReplayStoreGuard.Create(
@@ -413,6 +529,124 @@ begin
     LManagedStore.SetCapacity(ACapacity);
 end;
 
+constructor TFreePascalDefaultPersistentReplayProvider.Create(
+  AStore: IFreePascalEarlyDataReplayStore
+);
+begin
+  inherited Create;
+  FStore := AStore;
+  FCapacity := High(Integer);
+end;
+
+procedure TFreePascalDefaultPersistentReplayProvider.PruneExpired(
+  var AEntries: TFreePascalEarlyDataReplayStoreEntries;
+  ANow: TDateTime
+);
+var
+  I: Integer;
+  LWriteIndex: Integer;
+begin
+  LWriteIndex := 0;
+  for I := 0 to High(AEntries) do
+    if (AEntries[I].Key <> '') and
+       ((AEntries[I].ExpiresAt <= 0) or (AEntries[I].ExpiresAt > ANow)) then
+    begin
+      if LWriteIndex <> I then
+        AEntries[LWriteIndex] := AEntries[I];
+      Inc(LWriteIndex);
+    end;
+  SetLength(AEntries, LWriteIndex);
+end;
+
+function TFreePascalDefaultPersistentReplayProvider.TryAcquireReplayKey(
+  const AKey: string;
+  AExpiresAt: TDateTime;
+  ANow: TDateTime
+): Boolean;
+var
+  LEntries: TFreePascalEarlyDataReplayStoreEntries;
+  LGuard: IFreePascalEarlyDataReplayStoreGuard;
+  I: Integer;
+begin
+  Result := False;
+
+  if (FStore = nil) or (AKey = '') then
+    Exit;
+  if (AExpiresAt > 0) and (AExpiresAt <= ANow) then
+    Exit;
+
+  try
+    if not FStore.AcquireUpdateGuard(LGuard) then
+      Exit;
+    if LGuard = nil then
+      Exit;
+    if not FStore.LoadEntries(LEntries) then
+      Exit;
+
+    PruneExpired(LEntries, ANow);
+    for I := 0 to High(LEntries) do
+      if LEntries[I].Key = AKey then
+        Exit;
+
+    SetLength(LEntries, Length(LEntries) + 1);
+    LEntries[High(LEntries)].Key := AKey;
+    LEntries[High(LEntries)].ExpiresAt := AExpiresAt;
+    EnforceReplayStoreCapacity(LEntries, FCapacity);
+
+    Result := FStore.SaveEntries(LEntries);
+  except
+    Result := False;
+  end;
+end;
+
+procedure TFreePascalDefaultPersistentReplayProvider.Clear;
+var
+  LEntries: TFreePascalEarlyDataReplayStoreEntries;
+  LGuard: IFreePascalEarlyDataReplayStoreGuard;
+begin
+  if FStore = nil then
+    Exit;
+
+  try
+    if not FStore.AcquireUpdateGuard(LGuard) then
+      Exit;
+    if LGuard = nil then
+      Exit;
+    SetLength(LEntries, 0);
+    FStore.SaveEntries(LEntries);
+  except
+    // fail-closed: ledger-local enable/capacity gates remain authoritative
+  end;
+end;
+
+procedure TFreePascalDefaultPersistentReplayProvider.SetCapacity(
+  ACapacity: Integer
+);
+var
+  LEntries: TFreePascalEarlyDataReplayStoreEntries;
+  LGuard: IFreePascalEarlyDataReplayStoreGuard;
+begin
+  if ACapacity < 0 then
+    ACapacity := 0;
+  FCapacity := ACapacity;
+
+  if FStore = nil then
+    Exit;
+
+  try
+    if not FStore.AcquireUpdateGuard(LGuard) then
+      Exit;
+    if LGuard = nil then
+      Exit;
+    if not FStore.LoadEntries(LEntries) then
+      Exit;
+    EnforceReplayStoreCapacity(LEntries, FCapacity);
+    FStore.SaveEntries(LEntries);
+  except
+    // fail-closed: future acquires still observe the ledger-local capacity gate
+  end;
+end;
+
 constructor TFreePascalInMemoryEarlyDataReplayLedger.Create(
   AEnabled: Boolean;
   ACapacity: Integer
@@ -454,6 +688,57 @@ function TFreePascalInMemoryEarlyDataReplayLedger.TryAcquireEarlyDataSession(
 ): Boolean;
 begin
   Result := Assigned(FDelegate) and FDelegate.TryAcquireEarlyDataSession(ASession);
+end;
+
+constructor TFreePascalDefaultPersistentEarlyDataReplayLedger.Create(
+  AEnabled: Boolean;
+  ACapacity: Integer
+);
+var
+  LStore: IFreePascalEarlyDataReplayStore;
+  LProvider: IFreePascalEarlyDataReplayProvider;
+begin
+  inherited Create;
+  LStore := TFreePascalDirectoryEarlyDataReplayStore.Create(
+    GetDefaultFreePascalEarlyDataReplayStoreDirectory
+  );
+  LProvider := TFreePascalDefaultPersistentReplayProvider.Create(LStore);
+  FDelegate := TFreePascalProviderBackedEarlyDataReplayLedger.Create(
+    LProvider,
+    AEnabled,
+    ACapacity
+  );
+end;
+
+procedure TFreePascalDefaultPersistentEarlyDataReplayLedger.Clear;
+begin
+  if FDelegate <> nil then
+    FDelegate.Clear;
+end;
+
+procedure TFreePascalDefaultPersistentEarlyDataReplayLedger.SetEnabled(
+  AEnabled: Boolean
+);
+begin
+  if FDelegate <> nil then
+    FDelegate.SetEnabled(AEnabled);
+end;
+
+procedure TFreePascalDefaultPersistentEarlyDataReplayLedger.SetCapacity(
+  ACapacity: Integer
+);
+begin
+  if FDelegate <> nil then
+    FDelegate.SetCapacity(ACapacity);
+end;
+
+function TFreePascalDefaultPersistentEarlyDataReplayLedger.TryAcquireEarlyDataSession(
+  ASession: ISSLSession
+): Boolean;
+begin
+  Result := Assigned(FDelegate) and FDelegate.TryAcquireEarlyDataSession(
+    ASession
+  );
 end;
 
 constructor TFreePascalProviderBackedEarlyDataReplayLedger.Create(

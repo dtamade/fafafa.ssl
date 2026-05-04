@@ -1,7 +1,7 @@
 # fafafa.ssl API 参考文档
 
 > **版本**: rolling
-> **最后更新**: 2026-04-19
+> **最后更新**: 2026-05-05
 > **当前路线图**: [当前路线图](../ROADMAP.md)
 > **说明**: 当前接口真相源以 `src/fafafa.ssl.base.pas` 为准；本页优先收敛最常用的 public API。
 
@@ -19,7 +19,7 @@
 
 ## FreePascal early-data replay-store opt-in
 
-FreePascal server-side `0-RTT / early data` 默认 shipped path 仍然使用 `in-memory single-process anti-replay ledger`。如果需要本地持久化 replay truth，当前 public API 已经开放两条 opt-in 路径，但默认行为和 capability caveat 不变。
+FreePascal server-side `0-RTT / early data` 默认 shipped path 已经会把 replay truth 落到本地持久化 replay-store 路径。当前 capability 仍保持 `experimental`；如果默认路径不可用或不可写，恢复的 early data 会 fail-closed reject。public API 仍然开放 file / directory 两条 opt-in 路径，用来显式指定 replay-store 的落点。
 
 ### Use `TSSLConfig` with `TSSLFactory.CreateContext(...)`
 
@@ -93,28 +93,28 @@ ISSLLibrary = interface
   function Initialize: Boolean;
   procedure Finalize;
   function IsInitialized: Boolean;
-  
+
   // 库信息
   function GetLibraryType: TSSLLibraryType;
   function GetVersionString: string;
   function GetVersionNumber: Cardinal;
   function GetCompileFlags: string;
-  
+
   // 功能检测
   function IsProtocolSupported(aProtocol: TSSLProtocolVersion): Boolean;
   function IsCipherSupported(const aCipherName: string): Boolean;
   function IsFeatureSupported(aFeature: TSSLFeature): Boolean;
   function GetCapabilities: TSSLBackendCapabilities;
-  
+
   // 错误处理
   function GetLastError: Integer;
   function GetLastErrorString: string;
   procedure ClearError;
-  
+
   // 日志
   procedure SetLogCallback(aCallback: TSSLLogCallback);
   procedure Log(aLevel: TSSLLogLevel; const aMessage: string);
-  
+
   // 工厂方法
   function CreateContext(aType: TSSLContextType): ISSLContext;
   function CreateCertificate: ISSLCertificate;
@@ -123,6 +123,7 @@ end;
 ```
 
 **使用示例**:
+
 ```pascal
 var
   LLib: ISSLLibrary;
@@ -147,46 +148,46 @@ SSL/TLS 上下文接口，管理连接配置。
 ISSLContext = interface
   // 上下文类型
   function GetContextType: TSSLContextType;
-  
+
   // 协议版本
   procedure SetProtocolVersions(aVersions: TSSLProtocolVersions);
   function GetProtocolVersions: TSSLProtocolVersions;
-  
+
   // 证书与密钥
   procedure LoadCertificate(const aFileName: string); overload;
   procedure LoadCertificate(aStream: TStream); overload;
   procedure LoadCertificate(aCert: ISSLCertificate); overload;
   procedure LoadPrivateKey(const aFileName: string; const aPassword: string = ''); overload;
   procedure LoadPrivateKey(aStream: TStream; const aPassword: string = ''); overload;
-  
+
   // CA 证书
   procedure LoadCAFile(const aFileName: string);
   procedure LoadCAPath(const aPath: string);
   procedure SetCertificateStore(aStore: ISSLCertificateStore);
-  
+
   // 验证配置
   procedure SetVerifyMode(aMode: TSSLVerifyModes);
   function GetVerifyMode: TSSLVerifyModes;
   procedure SetVerifyDepth(aDepth: Integer);
   function GetVerifyDepth: Integer;
   procedure SetVerifyCallback(aCallback: TSSLVerifyCallback);
-  
+
   // 密码套件
   procedure SetCipherList(const aCipherList: string);
   function GetCipherList: string;
   procedure SetCipherSuites(const aCipherSuites: string);
   function GetCipherSuites: string;
-  
+
   // 会话管理
   procedure SetSessionCacheMode(aEnabled: Boolean);
   function GetSessionCacheMode: Boolean;
   procedure SetSessionTimeout(aTimeout: Integer);
   function GetSessionTimeout: Integer;
-  
+
   // 连接创建
   function CreateConnection(aSocket: THandle): ISSLConnection; overload;
   function CreateConnection(aStream: TStream): ISSLConnection; overload;
-  
+
   // 状态
   function IsValid: Boolean;
   function GetNativeHandle: Pointer;
@@ -194,6 +195,7 @@ end;
 ```
 
 **使用示例**:
+
 ```pascal
 var
   LContext: ISSLContext;
@@ -222,7 +224,7 @@ ISSLCertificate = interface
   function SaveToFile(const aFileName: string): Boolean;
   function SaveToPEM: string;
   function SaveToDER: TBytes;
-  
+
   // 证书信息
   function GetSubject: string;
   function GetIssuer: string;
@@ -231,21 +233,21 @@ ISSLCertificate = interface
   function GetNotAfter: TDateTime;
   function GetPublicKey: string;
   function GetVersion: Integer;
-  
+
   // 验证
   function Verify(aCAStore: ISSLCertificateStore): Boolean;
-  function VerifyEx(aCAStore: ISSLCertificateStore; 
+  function VerifyEx(aCAStore: ISSLCertificateStore;
     aFlags: TSSLCertVerifyFlags; out aResult: TSSLCertVerifyResult): Boolean;
   function VerifyHostname(const aHostname: string): Boolean;
   function IsExpired: Boolean;
   function IsSelfSigned: Boolean;
   function IsCA: Boolean;
-  
+
   // 扩展
   function GetSubjectAltNames: TStringList;
   function GetKeyUsage: TStringList;
   function GetExtendedKeyUsage: TStringList;
-  
+
   // 指纹
   function GetFingerprintSHA1: string;
   function GetFingerprintSHA256: string;
@@ -253,6 +255,7 @@ end;
 ```
 
 **使用示例**:
+
 ```pascal
 var
   LCert: ISSLCertificate;
@@ -263,7 +266,7 @@ begin
   begin
     WriteLn('主题: ', LCert.GetSubject);
     WriteLn('有效期至: ', DateTimeToStr(LCert.GetNotAfter));
-    
+
     // 增强验证
     if LCert.VerifyEx(LStore, [sslCertVerifyCheckRevocation], LResult) then
       WriteLn('验证成功')
@@ -286,7 +289,7 @@ ISSLConnection = interface
   function Accept: Boolean;
   procedure Shutdown;
   procedure Close;
-  
+
   // 数据传输
   function Read(var aBuffer; aCount: Integer): Integer;
   function Write(const aBuffer; aCount: Integer): Integer;
@@ -314,12 +317,12 @@ ISSLConnection = interface
   function GetProtocolVersion: TSSLProtocolVersion;
   function GetCipherName: string;
   function GetCipherBits: Integer;
-  
+
   // 证书信息
   function GetPeerCertificate: ISSLCertificate;
   function GetPeerCertificateChain: TSSLCertificateArray;
   function VerifyPeerCertificate: Boolean;
-  
+
   // 会话信息
   function GetSessionID: string;
   function IsSessionReused: Boolean;
@@ -335,6 +338,7 @@ end;
 **使用示例**:
 
 **基本用法**:
+
 ```pascal
 var
   LConn: ISSLConnection;
@@ -364,6 +368,7 @@ end;
 ```
 
 **读取大数据**:
+
 ```pascal
 var
   LConn: ISSLConnection;
@@ -393,6 +398,7 @@ end;
 ```
 
 **错误处理**:
+
 ```pascal
 var
   LConn: ISSLConnection;
@@ -426,6 +432,7 @@ end;
 ```
 
 **获取连接详细信息**:
+
 ```pascal
 var
   LConn: ISSLConnection;
@@ -458,6 +465,7 @@ end;
 ```
 
 **监控和诊断**:
+
 ```pascal
 var
   LConn: ISSLConnection;
@@ -526,6 +534,7 @@ WinSSL 后端通过以下类实现 Session 管理：
 #### 使用示例
 
 **基本 Session 复用**:
+
 ```pascal
 var
   LLib: ISSLLibrary;
@@ -574,6 +583,7 @@ end;
 ```
 
 **多连接 Session 缓存**:
+
 ```pascal
 var
   LLib: ISSLLibrary;
@@ -632,12 +642,12 @@ end;
 
 #### 与 OpenSSL 的差异
 
-| 特性 | WinSSL | OpenSSL |
-|------|--------|---------|
-| Session 存储 | 自动（凭据句柄缓存） | 手动（需要序列化） |
-| Session 有效期 | 系统策略控制 | 应用程序控制 |
-| 跨进程共享 | 不支持 | 支持（通过序列化） |
-| 性能提升 | 70-90% | 70-90% |
+| 特性           | WinSSL               | OpenSSL            |
+| -------------- | -------------------- | ------------------ |
+| Session 存储   | 自动（凭据句柄缓存） | 手动（需要序列化） |
+| Session 有效期 | 系统策略控制         | 应用程序控制       |
+| 跨进程共享     | 不支持               | 支持（通过序列化） |
+| 性能提升       | 70-90%               | 70-90%             |
 
 #### 错误处理
 
@@ -702,6 +712,7 @@ end;
 #### Phase 3.3: 监控和诊断示例
 
 **健康检查**:
+
 ```pascal
 var
   LConn: ISSLConnection;
@@ -734,6 +745,7 @@ end;
 ```
 
 **性能监控**:
+
 ```pascal
 var
   LConn: ISSLConnection;
@@ -766,6 +778,7 @@ end;
 ```
 
 **完整诊断**:
+
 ```pascal
 var
   LConn: ISSLConnection;
@@ -814,6 +827,7 @@ end;
 ```
 
 **全局统计监控**:
+
 ```pascal
 var
   LLib: ISSLLibrary;
@@ -852,6 +866,7 @@ end;
 ```
 
 **生产环境监控**:
+
 ```pascal
 var
   LLib: ISSLLibrary;
@@ -902,6 +917,7 @@ end;
 ## 数据类型
 
 ### TSSLLibraryType
+
 ```pascal
 TSSLLibraryType = (
   sslOpenSSL,  // OpenSSL 后端
@@ -911,6 +927,7 @@ TSSLLibraryType = (
 ```
 
 ### TSSLProtocolVersion
+
 ```pascal
 TSSLProtocolVersion = (
   sslProtocolSSL20,   // SSL 2.0 (已废弃)
@@ -924,6 +941,7 @@ TSSLProtocolVersions = set of TSSLProtocolVersion;
 ```
 
 ### TSSLContextType
+
 ```pascal
 TSSLContextType = (
   sslCtxClient,  // 客户端上下文
@@ -932,6 +950,7 @@ TSSLContextType = (
 ```
 
 ### TSSLVerifyMode
+
 ```pascal
 TSSLVerifyMode = (
   sslVerifyNone,       // 不验证
@@ -943,6 +962,7 @@ TSSLVerifyModes = set of TSSLVerifyMode;
 ```
 
 ### TSSLCertVerifyFlag
+
 ```pascal
 TSSLCertVerifyFlag = (
   sslCertVerifyDefault,         // 默认验证
@@ -958,6 +978,7 @@ TSSLCertVerifyFlags = set of TSSLCertVerifyFlag;
 ```
 
 ### TSSLCertVerifyResult
+
 ```pascal
 TSSLCertVerifyResult = record
   Success: Boolean;         // 验证是否成功
@@ -970,6 +991,7 @@ end;
 ```
 
 ### TSSLConnectionInfo
+
 ```pascal
 TSSLConnectionInfo = record
   ProtocolVersion: TSSLProtocolVersion;  // 协议版本
@@ -990,6 +1012,7 @@ end;
 ```
 
 **说明**:
+
 - `GetConnectionInfo` 方法返回此结构，包含连接的完整信息
 - 用于监控、诊断和安全审计
 - WinSSL 后端通过 `QueryContextAttributesW` API 获取这些信息
@@ -1000,6 +1023,7 @@ end;
 ### Phase 3.3: 监控和诊断类型
 
 #### TSSLStatistics
+
 ```pascal
 TSSLStatistics = record
   // 连接统计
@@ -1029,12 +1053,14 @@ end;
 ```
 
 **说明**:
+
 - 通过 `ISSLLibrary.GetStatistics` 获取全局统计信息
 - 性能统计使用高精度计时器（QueryPerformanceCounter）
 - Session 复用率自动计算：`SessionsReused / (SessionsReused + SessionsCreated) * 100`
 - 使用 `ISSLLibrary.ResetStatistics` 重置所有计数器
 
 #### TSSLHealthStatus
+
 ```pascal
 TSSLHealthStatus = record
   IsConnected: Boolean;           // 是否已连接
@@ -1048,11 +1074,13 @@ end;
 ```
 
 **说明**:
+
 - 通过 `ISSLConnection.GetHealthStatus` 获取连接健康状态
 - 用于快速诊断连接问题和监控连接状态
 - `ConnectionAge` 从连接创建时开始计算
 
 #### TSSLPerformanceMetrics
+
 ```pascal
 TSSLPerformanceMetrics = record
   HandshakeTime: Integer;         // 握手时间（毫秒）
@@ -1064,11 +1092,13 @@ end;
 ```
 
 **说明**:
+
 - 通过 `ISSLConnection.GetPerformanceMetrics` 获取性能指标
 - 用于性能分析和优化
 - `HandshakeTime` 使用高精度计时器测量
 
 #### TSSLErrorRecord
+
 ```pascal
 TSSLErrorRecord = record
   ErrorCode: TSSLErrorCode;       // 错误码
@@ -1078,10 +1108,12 @@ end;
 ```
 
 **说明**:
+
 - 用于错误历史跟踪
 - 连接维护最近 10 个错误的循环缓冲区
 
 #### TSSLDiagnosticInfo
+
 ```pascal
 TSSLDiagnosticInfo = record
   ConnectionInfo: TSSLConnectionInfo;      // 连接信息
@@ -1092,6 +1124,7 @@ end;
 ```
 
 **说明**:
+
 - 通过 `ISSLConnection.GetDiagnosticInfo` 获取完整诊断信息
 - 包含连接的所有监控和诊断数据
 - 用于故障排查和性能分析
@@ -1101,6 +1134,7 @@ end;
 ## 错误处理
 
 ### TSSLErrorCode
+
 ```pascal
 TSSLErrorCode = (
   sslErrNone,              // 无错误
@@ -1118,6 +1152,7 @@ TSSLErrorCode = (
 ```
 
 ### 错误处理函数
+
 ```pascal
 // OpenSSL
 function GetOpenSSLError: Cardinal;
@@ -1136,6 +1171,7 @@ function GetWinSSLErrorMessageEN(aErrorCode: DWORD): string;
 ## 工具函数
 
 ### OpenSSL 工具
+
 ```pascal
 // 库管理
 function OpenSSLAvailable: Boolean;
@@ -1155,6 +1191,7 @@ function GetProtocolName(aProtocol: TSSLProtocolVersion): string;
 ```
 
 ### WinSSL 工具
+
 ```pascal
 // 企业功能
 function IsFipsModeEnabled: Boolean;
@@ -1167,6 +1204,7 @@ function GetGroupPolicies: TStringList;
 ## 工厂函数
 
 ### 创建后端实例
+
 ```pascal
 // OpenSSL
 function CreateOpenSSLLibrary: ISSLLibrary;
@@ -1202,6 +1240,7 @@ TSSLInfoCallback = procedure(const aInfo: string) of object;
 ## 常量
 
 ### OpenSSL 常量
+
 ```pascal
 // 验证标志
 X509_V_FLAG_CRL_CHECK = $00000004;
@@ -1219,6 +1258,7 @@ SSL_OP_NO_TLSv1_3 = $20000000;
 ```
 
 ### WinSSL 常量
+
 ```pascal
 // 证书错误
 CERT_E_EXPIRED = LONG($800B0101);
@@ -1236,6 +1276,7 @@ CERT_CHAIN_REVOCATION_CHECK_CHAIN = $20000000;
 ## 使用示例
 
 ### 完整客户端示例
+
 ```pascal
 program ssl_client;
 
@@ -1257,7 +1298,7 @@ begin
     WriteLn('初始化失败');
     Exit;
   end;
-  
+
   try
     // 创建客户端上下文
     LContext := LLib.CreateContext(sslCtxClient);
@@ -1265,7 +1306,7 @@ begin
     LContext.LoadCAFile('/etc/ssl/certs/ca-bundle.crt');
     LContext.SetVerifyMode([sslVerifyPeer]);
     LServerName := 'example.com';
-    
+
     // 创建连接
     LConn := LContext.CreateConnection(MySocket);
     (LConn as ISSLClientConnection).SetServerName(LServerName);
@@ -1279,7 +1320,7 @@ begin
         LConn.WriteString('Hello, SSL!');
         WriteLn('收到: ', LConn.ReadString);
       end;
-      
+
       LConn.Shutdown;
     end;
   finally
@@ -1368,6 +1409,7 @@ function GetCapabilities: TSSLBackendCapabilities;
 **返回值**: 包含后端所有能力信息的记录。
 
 **使用示例**:
+
 ```pascal
 var
   Lib: ISSLLibrary;
@@ -1396,12 +1438,14 @@ function IsCipherSupported(const ACaps: TSSLBackendCapabilities;
 ```
 
 **参数**:
+
 - `ACaps`: 后端能力矩阵
 - `ACipher`: 要查询的加密算法
 
 **返回值**: 如果支持返回 `True`，否则返回 `False`。
 
 **使用示例**:
+
 ```pascal
 if IsCipherSupported(Caps, sslCipherCHACHA20_POLY1305) then
   WriteLn('ChaCha20-Poly1305 is supported');
@@ -1417,12 +1461,14 @@ function IsHashSupported(const ACaps: TSSLBackendCapabilities;
 ```
 
 **参数**:
+
 - `ACaps`: 后端能力矩阵
 - `AHash`: 要查询的哈希算法
 
 **返回值**: 如果支持返回 `True`，否则返回 `False`。
 
 **使用示例**:
+
 ```pascal
 if IsHashSupported(Caps, sslHashSHA256) then
   WriteLn('SHA-256 is supported');
@@ -1438,12 +1484,14 @@ function IsKeyExchangeSupported(const ACaps: TSSLBackendCapabilities;
 ```
 
 **参数**:
+
 - `ACaps`: 后端能力矩阵
 - `AKex`: 要查询的密钥交换算法
 
 **返回值**: 如果支持返回 `True`，否则返回 `False`。
 
 **使用示例**:
+
 ```pascal
 if IsKeyExchangeSupported(Caps, sslKexECDHE_RSA) then
   WriteLn('ECDHE-RSA is supported');
@@ -1462,11 +1510,13 @@ function IsFeatureStable(ASupport: TSSLFeatureSupportLevel): Boolean;
 ```
 
 **参数**:
+
 - `ASupport`: 功能支持级别
 
 **返回值**: 如果功能稳定返回 `True`。
 
 **使用示例**:
+
 ```pascal
 if IsFeatureStable(Caps.ALPNSupport) then
   WriteLn('ALPN is production-ready');
@@ -1481,6 +1531,7 @@ function IsFeatureUsable(ASupport: TSSLFeatureSupportLevel): Boolean;
 ```
 
 **参数**:
+
 - `ASupport`: 功能支持级别
 
 **返回值**: 如果功能可用返回 `True`（包括实验性和稳定）。
@@ -1494,6 +1545,7 @@ function IsFeatureDeprecated(ASupport: TSSLFeatureSupportLevel): Boolean;
 ```
 
 **参数**:
+
 - `ASupport`: 功能支持级别
 
 **返回值**: 如果功能已弃用返回 `True`。
@@ -1511,6 +1563,7 @@ function IsNativeBackend(const ACaps: TSSLBackendCapabilities): Boolean;
 ```
 
 **参数**:
+
 - `ACaps`: 后端能力矩阵
 
 **返回值**: 如果是纯 Pascal 实现返回 `True`。
@@ -1524,6 +1577,7 @@ function IsCLibraryBackend(const ACaps: TSSLBackendCapabilities): Boolean;
 ```
 
 **参数**:
+
 - `ACaps`: 后端能力矩阵
 
 **返回值**: 如果是 C 库绑定返回 `True`。
@@ -1537,6 +1591,7 @@ function RequiresExternalDependencies(const ACaps: TSSLBackendCapabilities): Boo
 ```
 
 **参数**:
+
 - `ACaps`: 后端能力矩阵
 
 **返回值**: 如果需要外部库返回 `True`。
@@ -1554,11 +1609,13 @@ function GetSecurityScore(const ACaps: TSSLBackendCapabilities): Integer;
 ```
 
 **参数**:
+
 - `ACaps`: 后端能力矩阵
 
 **返回值**: 安全评分（0-100），分数越高越安全。
 
 **评分因素**:
+
 - TLS 1.3 支持 (+20)
 - 恒定时间操作 (+20)
 - FIPS 模式 (+15)
@@ -1566,6 +1623,7 @@ function GetSecurityScore(const ACaps: TSSLBackendCapabilities): Integer;
 - 现代算法支持 (+30)
 
 **使用示例**:
+
 ```pascal
 var
   Score: Integer;
@@ -1591,16 +1649,19 @@ function GetPerformanceScore(const ACaps: TSSLBackendCapabilities): Integer;
 ```
 
 **参数**:
+
 - `ACaps`: 后端能力矩阵
 
 **返回值**: 性能评分（0-100），分数越高性能越好。
 
 **评分因素**:
+
 - 硬件加速 (+40)
 - SIMD 优化 (+30)
 - 汇编优化 (+30)
 
 **使用示例**:
+
 ```pascal
 var
   Score: Integer;
@@ -1630,11 +1691,13 @@ function GetCapabilitiesDescription(const ACaps: TSSLBackendCapabilities): strin
 ```
 
 **参数**:
+
 - `ACaps`: 后端能力矩阵
 
 **返回值**: 包含后端所有能力信息的多行文本。
 
 **使用示例**:
+
 ```pascal
 var
   Desc: string;
@@ -1756,6 +1819,7 @@ end.
 ---
 
 **版本历史**:
+
 - v1.2 (2026-02-05): 添加能力矩阵 API（v1.2.0）
 - v0.8 (2025-10-24): 添加 VerifyEx 方法和 WinSSL 企业功能
 - v0.7 (2025-10-01): 初始 API 文档

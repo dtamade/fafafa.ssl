@@ -1524,7 +1524,7 @@ begin
 
   Result.CompatibilityLevel := 64;
   Result.KnownIssues :=
-    '0-RTT / early data is experimental and currently uses an in-memory single-process anti-replay ledger.';
+    '0-RTT / early data is experimental and currently relies on a local persistent anti-replay replay-store path; if the path is unavailable or unwritable, resumed early data is rejected fail-closed.';
 
   FCapabilitiesCache := Result;
   FCapabilitiesCached := True;

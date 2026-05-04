@@ -236,10 +236,17 @@ begin
   FPinningEnabled := False;
   SetLength(FPins, 0);
   SetLength(FResumptionCache, 0);
-  FDefaultEarlyDataReplayLedger := TFreePascalInMemoryEarlyDataReplayLedger.Create(
-    FSessionCacheEnabled,
-    FSessionCacheSize
-  );
+  if AType in [sslCtxServer, sslCtxBoth] then
+    FDefaultEarlyDataReplayLedger :=
+      TFreePascalDefaultPersistentEarlyDataReplayLedger.Create(
+        FSessionCacheEnabled,
+        FSessionCacheSize
+      )
+  else
+    FDefaultEarlyDataReplayLedger := TFreePascalInMemoryEarlyDataReplayLedger.Create(
+      FSessionCacheEnabled,
+      FSessionCacheSize
+    );
   FActiveEarlyDataReplayLedger := FDefaultEarlyDataReplayLedger;
   SetLength(FCertificateData, 0);
   SetLength(FPrivateKeyData, 0);

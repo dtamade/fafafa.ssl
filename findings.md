@@ -1,5 +1,37 @@
 # Findings - WolfSSL Feature Capability Runtime Consistency
 
+## 2026-05-05
+- `FreePascal` early-data 默认 shipped path 这条 Linux 侧最高价值缺口已经落地到实现层，而不再只是文档收口：
+  - `src/fafafa.ssl.freepascal.context.pas` 默认 server / both context 现在装配 `TFreePascalDefaultPersistentEarlyDataReplayLedger`
+  - `src/fafafa.ssl.freepascal.earlydatareplay.pas` 新增默认 replay-store 路径解析、testing override seam、以及 backend-private managed persistent provider
+  - `src/fafafa.ssl.freepascal.lib.pas` 的 `KnownIssues` 已收口到 `local persistent replay-store path + fail-closed + experimental`
+- 默认路径解析当前遵循明确优先级：
+  - testing override
+  - 环境变量 `FAFAFA_SSL_FREEPASCAL_EARLY_DATA_REPLAY_STORE_DIR`
+  - Windows `LOCALAPPDATA` / `APPDATA`
+  - Unix `XDG_STATE_HOME` / `HOME/.local/state`
+  - `GetAppConfigDir(False)`
+  - `GetTempDir(False)`
+  - 最终 canonical suffix: `fafafa.ssl/freepascal/early-data-replay`
+- focused runtime 在第一次复跑时暴露的不是新的生产漂移，而是测试隔离问题：
+  - `tests/test_freepascal_tls13_early_data.pas` 里的 scripted server 初始票据是固定值
+  - 默认 shipped path 改成 durable 后，宿主机默认 replay-store 的历史 truth 会跨运行残留
+  - 因此旧测试第一次失败在 `Accepted server connection should report accepted early-data status`，本质上是被前一次运行留下的 replay truth 提前拒绝
+- 这个 fresh failure 的最小正确修法是“测试基线隔离”，不是回退生产实现：
+  - 测试进程启动时先把默认 replay-store 目录固定到 `tmp/...` 下的进程级基线
+  - `PrepareDefaultReplayStoreDirectoryForTesting(...)` 继续允许单测临时切目录
+  - `ResetDefaultReplayStoreDirectoryForTesting` 改成回到该基线，而不是回到宿主真实默认路径
+  - 这样既保住默认 durable shipped path 的真实行为，也避免默认路径测试被宿主状态污染
+- fresh evidence 现在证明：
+  - focused `test_freepascal_tls13_early_data` 通过
+  - focused `test_capability_cache` 通过，并直接打印新的 `KnownIssues`
+  - `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id early_data_default_durable_shipped_path_20260504` 通过
+  - `python3 scripts/compile_all_modules.py` 继续 `185/185`
+  - `git diff --check` 通过
+- broad objective 仍不能标记为“各个后端的接口和实现都完整”：
+  - Linux 侧这条 `FreePascal` 默认 shipped-path caveat 已经从 “in-memory single-process” 收窄到 “local persistent + fail-closed + experimental / non-distributed wording”
+  - 当前更硬的独立环境 blocker 仍是 `WinSSL` Windows 主机 runtime proof
+
 ## 2026-05-04
 - completion audit against the actual current state 明确证明：当前 broad objective 还没有达到“各个后端的接口和实现都完整”。
 - 这不是 interface surface 还没锁住，而是 implementation-level remaining gaps 仍然存在：
