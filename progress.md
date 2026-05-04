@@ -1,6 +1,38 @@
 # Progress - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- 新开一批 `WinSSL Documentation Truth Alignment`，目标是把 `WINSSL_DESIGN.md` 和 `WINSSL_BACKEND_STATUS_REPORT.md` 收口到当前可验证真相，不再继续发布“100% 完成”或“运行时已证实”的过宽表述。
+- 文档审计：
+  - 读取 `docs/reference/WINSSL_DESIGN.md`
+  - 读取 `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+  - 读取 `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - 读取 `src/fafafa.ssl.winssl.lib.pas`
+  - 结论：
+    - `WINSSL_DESIGN.md` 顶部状态和核心类型示例已落后于当前源码真相
+    - `WINSSL_BACKEND_STATUS_REPORT.md` 还在发布 `DTLS`、`OCSP Stapling`、`Session Ticket` 等过宽能力表述
+    - 当前真相必须按 public surface、cross-target compile、Windows runtime proof 三层来写
+- 最小文档修复：
+  - `docs/reference/WINSSL_DESIGN.md`
+    - 顶部状态改成 evidence-based 说明
+    - 把 `TWinSSLContext` 示例对齐到 `ISSLNativeHandleAccess` / `IWinSSLContextAccess`
+    - 明确 Linux 侧 compile proof 与 Windows runtime blocker 的边界
+    - TLS 1.3 版本判断说明收紧到 `Windows 10 build 18362+`
+  - `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+    - 从“功能表”改写成“当前证据报告”
+    - 只保留已证实的 source/compile truth
+    - 单列未证实的 Windows runtime 区域
+- 文档格式化：
+  - `/home/dtamade/node_modules/.bin/prettier --write /home/dtamade/projects/fafafa.ssl/docs/reference/WINSSL_DESIGN.md /home/dtamade/projects/fafafa.ssl/docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md /home/dtamade/projects/fafafa.ssl/task_plan.md /home/dtamade/projects/fafafa.ssl/findings.md /home/dtamade/projects/fafafa.ssl/progress.md /home/dtamade/projects/fafafa.ssl/docs/plans/2026-05-04-winssl-documentation-truth-alignment.md`
+  - 结果：两个 WinSSL 文档和新 plan 文件已格式化；台账文件内容无额外格式漂移
+- Verification / hygiene：
+  - `git diff --check`
+  - 结果：通过，无 whitespace / conflict 标记问题
+  - `git diff --stat`
+  - 结果：仅 `WINSSL_DESIGN.md`、`WINSSL_BACKEND_STATUS_REPORT.md`、`task_plan.md` 和新 plan 文件发生变更
+- 提交前 review：
+  - 这批只收口文档真相，没有触碰任何 WinSSL 生产代码
+  - 文档现在不再把 Linux 静态证据写成 Windows runtime proof
+  - 当前剩余 blocker 被写清楚为“需要 Windows 主机的 runtime 验证”
 - 新开一批 `WinSSL Context And Library Access Alignment`，目标是收口 `src/fafafa.ssl.winssl.connection.pas` 对 `FContext: ISSLContext` / `ISSLLibrary` 的不安全类硬转，改成 WinSSL 私有 internal access interface。
 - 先补 focused RED：
   - 新增 `tests/scripts/test_winssl_connection_context_access_contract.sh`

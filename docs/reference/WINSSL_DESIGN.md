@@ -1,34 +1,45 @@
 # Windows SSL (Schannel) 后端设计
 
-**状态**: Windows-bound（Linux 侧当前只能做 source-contract 审计）
-**最后更新**: 2026-01-19
+**状态**: Windows-bound（Linux 侧当前可做 source-contract + Win64 cross-target compile；Windows runtime proof 仍待独立环境）
+**最后更新**: 2026-05-04
 
 ## 1. 概述
 
 Windows SSL 后端基于 Windows 内置的 Schannel (Security Channel) API 实现，提供原生的 SSL/TLS 支持。
 
-**实现完成度**: 100%
-- Phase 1: 证书验证（自动模式）✅
-- Phase 2: 证书文件加载 ✅
-- Phase 3: 客户端证书（双向 TLS）✅
-- Phase 4: ALPN 协议协商 ✅
-- Phase 5: 服务器 TLS 握手 ✅
-- Phase 6: 会话复用优化 ✅
+**当前证据分层**:
+
+- **已确认的源码与编译面**:
+  - `src/fafafa.ssl.winssl.connection.pas` 是当前 canonical connection truth source
+  - `src/fafafa.ssl.winssl.session.pas` 只保留兼容 shim
+  - Linux 侧 source contract 已锁住 session/native-handle truth 和 context/library access seam
+  - 选定 WinSSL 用例与 `backend_comparison` 路径已能继续做 Win64 交叉编译
+- **已确认的仓库门禁**:
+  - `python3 scripts/compile_all_modules.py`：`185/185`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`：`[PASS]`
+- **仍未确认的区域**:
+  - Windows 主机上的真实握手、证书存储、会话复用、server/client runtime 行为
+  - 当前 Linux 主机不能把 `wine` 或交叉编译结果当成 runtime proof
+
+这意味着 WinSSL 的**代码结构和 compile surface 已持续收口**，但本文档不再把它表述成“当前环境已 100% 运行时证实”。
 
 ## 2. 优势
 
 ### 2.1 系统集成
+
 - **无额外依赖**：使用 Windows 内置 API，无需分发额外的 DLL
 - **自动更新**：通过 Windows Update 自动获取安全补丁
 - **证书存储**：直接访问 Windows 证书存储
 - **企业策略**：自动遵循企业 SSL/TLS 策略配置
 
 ### 2.2 性能优势
+
 - **原生优化**：针对 Windows 平台优化的实现
 - **硬件加速**：自动利用系统可用的加密硬件
 - **内存效率**：与系统内存管理器集成
 
 ### 2.3 兼容性
+
 - **协议支持**：支持 Windows 系统支持的所有 TLS 版本
 - **密码套件**：使用系统配置的密码套件
 - **FIPS 140-2**：在启用 FIPS 模式时自动合规
@@ -36,12 +47,14 @@ Windows SSL 后端基于 Windows 内置的 Schannel (Security Channel) API 实�
 ## 3. 技术实现
 
 ### 3.1 核心 Windows API
+
 - **SSPI (Security Support Provider Interface)**：主要接口
 - **Schannel.dll**：SSL/TLS 实现
 - **Crypt32.dll**：证书处理
 - **Secur32.dll**：安全上下文管理
 
 ### 3.2 关键结构和函数
+
 ```pascal
 // 主要 Windows API 函数
 AcquireCredentialsHandle()     // 获取凭据句柄
@@ -55,6 +68,7 @@ DeleteSecurityContext()       // 删除安全上下文
 ```
 
 ### 3.3 数据结构映射
+
 ```pascal
 type
   // Schannel 特定配置
@@ -67,7 +81,8 @@ type
   end;
 
   // 安全上下文包装
-  TWinSSLContext = class(TInterfacedObject, ISSLContext)
+  TWinSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess,
+    IWinSSLContextAccess)
   private
     FCredHandle: CredHandle;           // 凭据句柄
     FCtxtHandle: CtxtHandle;           // 上下文句柄
@@ -76,15 +91,22 @@ type
   end;
 ```
 
+说明:
+
+- `ISSLNativeHandleAccess` 是 public optional interface
+- `IWinSSLContextAccess` 是 WinSSL 内部 seam，只用于 connection 与 context 协作，不扩张 public `ISSLContext`
+
 ## 4. 实现细节
 
 ### 4.1 握手流程
+
 1. **凭据获取**：调用 `AcquireCredentialsHandle` 获取凭据
 2. **上下文初始化**：客户端调用 `InitializeSecurityContext`
 3. **握手数据交换**：处理握手数据包
 4. **上下文完成**：握手完成，建立安全连接
 
 ### 4.2 数据传输
+
 ```pascal
 // 加密发送数据
 function EncryptData(const AData: TBytes): TBytes;
@@ -92,10 +114,10 @@ begin
   // 准备安全缓冲区
   SetLength(LSecBuffers, 4);
   // SECBUFFER_STREAM_HEADER
-  // SECBUFFER_DATA  
+  // SECBUFFER_DATA
   // SECBUFFER_STREAM_TRAILER
   // SECBUFFER_EMPTY
-  
+
   // 调用 EncryptMessage
   LStatus := EncryptMessage(@FCtxtHandle, 0, @LSecBufferDesc, 0);
   // 处理结果...
@@ -112,6 +134,7 @@ end;
 ```
 
 ### 4.3 证书处理
+
 ```pascal
 // 加载证书
 function LoadCertificate(const ACertPath: string): PCCERT_CONTEXT;
@@ -120,13 +143,13 @@ var
   LCert: PCCERT_CONTEXT;
 begin
   // 打开证书存储
-  LStore := CertOpenStore(CERT_STORE_PROV_SYSTEM, 0, 0, 
+  LStore := CertOpenStore(CERT_STORE_PROV_SYSTEM, 0, 0,
     CERT_SYSTEM_STORE_CURRENT_USER, 'MY');
-  
+
   // 查找证书
   LCert := CertFindCertificateInStore(LStore, X509_ASN_ENCODING, 0,
     CERT_FIND_SUBJECT_STR, PWideChar(ACertPath), nil);
-    
+
   CertCloseStore(LStore, 0);
   Result := LCert;
 end;
@@ -135,6 +158,8 @@ end;
 ### 4.4 Session 管理架构
 
 WinSSL 后端的 Session 复用依赖 Windows Schannel 的凭据句柄缓存机制。当前真实实现已收敛到 `src/fafafa.ssl.winssl.connection.pas`；`src/fafafa.ssl.winssl.session.pas` 只保留兼容 shim，不再维护平行实现。
+
+这里的 session 流程描述反映的是**当前源码结构和设计意图**，不是 Linux 主机上已经拿到的 Windows runtime proof。
 
 #### 4.4.1 核心组件
 
@@ -192,6 +217,7 @@ end;
 ```
 
 当前边界：
+
 - `TWinSSLSession` 不暴露 `ISSLNativeHandleAccess`
 - Schannel session 仍由系统管理，不提供稳定的独立原生 session 句柄
 - Windows runtime proof 仍需要在 Windows 主机上执行
@@ -199,6 +225,7 @@ end;
 #### 4.4.2 Session 复用流程
 
 **第一次连接（完整握手）**:
+
 ```
 1. 客户端调用 AcquireCredentialsHandle 获取凭据句柄
 2. 调用 InitializeSecurityContext 开始握手
@@ -210,6 +237,7 @@ end;
 ```
 
 **后续连接（Session 复用）**:
+
 ```
 1. 从缓存管理器获取之前保存的 Session
 2. 使用相同的凭据句柄（Schannel 自动识别缓存）
@@ -262,6 +290,7 @@ end;
 ```
 
 **关键特性**:
+
 - **自动缓存**: Schannel 在凭据句柄内部自动缓存 Session
 - **透明复用**: 使用相同凭据句柄连接时，Schannel 自动尝试 Session 复用
 - **系统级缓存**: Session 数据存储在系统内存中，进程间不共享
@@ -300,6 +329,7 @@ end;
 #### 4.4.5 性能优化策略
 
 **1. 凭据句柄池化**:
+
 ```pascal
 // 为不同服务器维护独立的凭据句柄
 // 避免频繁创建和销毁凭据句柄
@@ -307,6 +337,7 @@ FCredHandlePool: TDictionary<string, CredHandle>;
 ```
 
 **2. Session 预热**:
+
 ```pascal
 // 在应用启动时预先建立连接，缓存 Session
 procedure WarmupSessions(const AHosts: TStringList);
@@ -328,6 +359,7 @@ end;
 ```
 
 **3. 智能过期清理**:
+
 ```pascal
 // 定期清理过期 Session，避免内存泄漏
 procedure TWinSSLSessionManager.ClearExpiredSessions;
@@ -360,6 +392,7 @@ end;
 ```
 
 **4. LRU 缓存策略**:
+
 ```pascal
 // 当缓存达到上限时，移除最少使用的 Session
 procedure TWinSSLSessionManager.EnforceCacheLimit;
@@ -426,14 +459,14 @@ end;
 
 #### 4.4.7 与 OpenSSL 的差异
 
-| 特性 | WinSSL (Schannel) | OpenSSL |
-|------|-------------------|---------|
+| 特性             | WinSSL (Schannel)    | OpenSSL              |
+| ---------------- | -------------------- | -------------------- |
 | **Session 存储** | 凭据句柄内部自动缓存 | 需要手动序列化和存储 |
-| **复用机制** | 透明自动复用 | 需要显式设置 Session |
-| **跨进程共享** | 不支持（进程隔离） | 支持（通过序列化） |
-| **有效期控制** | 系统策略控制 | 应用程序控制 |
-| **内存管理** | 系统自动管理 | 应用程序负责 |
-| **性能提升** | 70-90% | 70-90% |
+| **复用机制**     | 透明自动复用         | 需要显式设置 Session |
+| **跨进程共享**   | 不支持（进程隔离）   | 支持（通过序列化）   |
+| **有效期控制**   | 系统策略控制         | 应用程序控制         |
+| **内存管理**     | 系统自动管理         | 应用程序负责         |
+| **性能提升**     | 70-90%               | 70-90%               |
 
 #### 4.4.8 已知限制
 
@@ -447,6 +480,7 @@ end;
 ## 5. 错误处理
 
 ### 5.1 Windows 错误码映射
+
 ```pascal
 function MapSchannelError(AWinError: DWORD): TSSLErrorCode;
 begin
@@ -463,6 +497,7 @@ end;
 ```
 
 ### 5.2 错误上下文信息
+
 - 保留原始 Windows 错误码和消息
 - 提供操作上下文（握手、数据传输等）
 - 包含证书验证详情
@@ -470,6 +505,7 @@ end;
 ## 6. 配置选项
 
 ### 6.1 协议版本控制
+
 ```pascal
 // 设置支持的 TLS 版本
 procedure SetProtocolVersions(AVersions: TSSLProtocolVersionSet);
@@ -485,12 +521,13 @@ begin
     LProtocols := LProtocols or SP_PROT_TLS1_2;
   if sslProtocolTLS13 in AVersions then
     LProtocols := LProtocols or SP_PROT_TLS1_3;
-    
+
   FConfig.EnabledProtocols := LProtocols;
 end;
 ```
 
 ### 6.2 证书验证配置
+
 - 使用系统证书存储
 - 支持自定义证书验证回调
 - 企业证书策略集成
@@ -498,11 +535,14 @@ end;
 ## 7. 平台兼容性
 
 ### 7.1 Windows 版本支持
+
 - **Windows 7/Server 2008 R2**：TLS 1.0, 1.1, 1.2
 - **Windows 8/Server 2012**：增强的 TLS 1.2 支持
-- **Windows 10/Server 2016+**：TLS 1.3 支持
+- **Windows 10 1903+ / Server 2022+**：public capability 会发布 TLS 1.3 支持
+- **更细的可用性差异**：仍受具体 Windows build 和系统策略影响，需 Windows 主机 runtime 验证
 
 ### 7.2 运行时检测
+
 ```pascal
 function GetSystemTLSSupport: TSSLProtocolVersionSet;
 var
@@ -511,14 +551,14 @@ begin
   Result := [];
   LVersionInfo.dwOSVersionInfoSize := SizeOf(OSVERSIONINFO);
   GetVersionEx(LVersionInfo);
-  
+
   // 基于 Windows 版本确定支持的 TLS 版本
   if (LVersionInfo.dwMajorVersion >= 6) then
   begin
     Result := Result + [sslProtocolTLS10, sslProtocolTLS11, sslProtocolTLS12];
-    
-    // Windows 10 及以上支持 TLS 1.3
-    if (LVersionInfo.dwMajorVersion >= 10) then
+
+    // TLS 1.3 仅在 Windows 10 build 18362+ / Server 2022+ 发布为 supported
+    if (LVersionInfo.dwMajorVersion >= 10) and (LVersionInfo.dwBuildNumber >= 18362) then
       Result := Result + [sslProtocolTLS13];
   end;
 end;
@@ -527,22 +567,26 @@ end;
 ## 8. 性能优化
 
 ### 8.1 缓冲区管理
+
 - 重用安全缓冲区减少分配
 - 优化数据拷贝操作
 - 批量处理多个数据包
 
 ### 8.2 上下文缓存
+
 - 缓存握手结果用于会话复用
 - 延迟初始化非关键组件
 
 ## 9. 安全考虑
 
 ### 9.1 内存安全
+
 - 及时清零敏感数据
 - 正确释放 Windows 句柄和上下文
 - 防止敏感信息泄漏
 
 ### 9.2 企业集成
+
 - 遵循组策略设置
 - 支持域证书自动配置
 - FIPS 140-2 合规模式
@@ -550,16 +594,19 @@ end;
 ## 10. 测试策略
 
 ### 10.1 兼容性测试
+
 - 不同 Windows 版本的功能验证
 - 与其他后端的行为一致性测试
 - 企业环境下的策略遵循测试
 
 ### 10.2 性能基准
+
 - 与 OpenSSL 性能对比
 - 内存使用效率测试
 - 大量并发连接测试
 
 ---
+
 **文档版本**: 1.0  
 **创建时间**: 2025-09-28  
 **更新历史**: 初始版本

@@ -1,6 +1,16 @@
 # Findings - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- WinSSL 当前最容易把后续工作带偏的，已经不只是代码漂移，还有文档漂移：
+  - `docs/reference/WINSSL_DESIGN.md` 仍写“100% 完成”，且顶层类型示例落后于当前源码
+  - `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md` 仍把 `DTLS`、`OCSP Stapling`、`Session Ticket` 等写成已证实支持
+  - 这些表述已经和 `src/fafafa.ssl.winssl.lib.pas:GetCapabilities` 以及 `docs/BACKEND_CAPABILITY_MATRIX.md` 冲突
+- 对 WinSSL 来说，更准确的文档边界必须分成三层：
+  - public surface / capability truth
+  - Linux 上已拿到的 source contract 与 Win64 cross-target compile proof
+  - 仍需 Windows 主机的 runtime proof
+- 只要本机 `wine` 继续直接退出 `159`，且没有 `pwsh`，就不能把 Linux 上的静态证据写成 WinSSL runtime 已完成；文档必须显式保留这个 blocker。
+- `WINSSL_BACKEND_STATUS_REPORT.md` 最合理的角色不是功能许愿单，而是“当前证据报告”：哪些 surface 已锁住、哪些 compile path 已闭合、哪些 runtime 还没证。
 - `src/fafafa.ssl.winssl.connection.pas` 之前把 `FContext: ISSLContext` 和 `ISSLLibrary` 直接硬转成 `TWinSSLContext` / `TWinSSLLibrary`，真实风险不在运行时分支猜测，而在 compile surface 已经给出明确信号：
   - `Class types "ISSLContext" and "TWinSSLContext" are not related`
   - `Class types "ISSLLibrary" and "TWinSSLLibrary" are not related`

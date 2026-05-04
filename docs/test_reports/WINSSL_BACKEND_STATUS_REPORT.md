@@ -1,133 +1,84 @@
 # WinSSL 后端实现状态报告
 
-> **Batch**: B76
 > **Status**: draft
-> **Created**: 2026-02-07
+> **Updated**: 2026-05-04
 
 ## 概述
 
-本报告记录 WinSSL (Windows Schannel) 后端的当前实现状态。
+本报告只记录 **当前已经拿到证据的 WinSSL 真相**。它区分三层边界：
 
-## 实现状态
+1. public surface 和源码结构
+2. Linux 主机上可重复的 source/compile proof
+3. 仍然需要 Windows 主机的 runtime proof
 
-### 已实现模块
+这意味着报告不会再把“代码存在”直接写成“Windows runtime 已验证”。
 
-| 模块     | 文件                                                                   | 状态                   |
-| -------- | ---------------------------------------------------------------------- | ---------------------- |
-| API 绑定 | `fafafa.ssl.winssl.api.pas`                                            | ✅ 完成                |
-| 库加载   | `fafafa.ssl.winssl.lib.pas`                                            | ✅ 完成                |
-| 基础类型 | `fafafa.ssl.winssl.base.pas`                                           | ✅ 完成                |
-| 上下文   | `fafafa.ssl.winssl.context.pas`                                        | ✅ 完成                |
-| 连接     | `fafafa.ssl.winssl.connection.pas`                                     | ✅ 完成                |
-| 证书     | `fafafa.ssl.winssl.certificate.pas`                                    | ✅ 完成                |
-| 证书存储 | `fafafa.ssl.winssl.certstore.pas`                                      | ✅ 完成                |
-| 会话     | `fafafa.ssl.winssl.connection.pas`（`winssl.session.pas` 为兼容 shim） | ✅ source truth 已收敛 |
-| 原生句柄 | `fafafa.ssl.winssl.native_handle.pas`                                  | ✅ 完成                |
-| 错误处理 | `fafafa.ssl.winssl.errors.pas`                                         | ✅ 完成                |
-| 工具函数 | `fafafa.ssl.winssl.utils.pas`                                          | ✅ 完成                |
-| 企业功能 | `fafafa.ssl.winssl.enterprise.pas`                                     | ✅ 完成                |
+## 当前已证实
 
-### 测试状态
+### 源码与结构
 
-| 测试     | 文件                                | 平台    |
-| -------- | ----------------------------------- | ------- |
-| 快速验证 | `tests/quick_winssl_validation.ps1` | Windows |
-| 完整测试 | `tests/run_winssl_tests.ps1`        | Windows |
+| 区域     | 当前真相                                                                                                                              |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 上下文   | `src/fafafa.ssl.winssl.context.pas` 是当前 canonical context 实现，公开暴露 `ISSLNativeHandleAccess`                                  |
+| 连接     | `src/fafafa.ssl.winssl.connection.pas` 是当前 canonical connection 实现                                                               |
+| session  | `src/fafafa.ssl.winssl.connection.pas` 内的 `TWinSSLSession` 是当前 truth source；`src/fafafa.ssl.winssl.session.pas` 只保留兼容 shim |
+| 内部协作 | connection 不再把 `ISSLContext` / `ISSLLibrary` 硬转成 `TWinSSLContext` / `TWinSSLLibrary`，而是走 internal access interface          |
 
-Linux 侧现在还能补两类静态证据：
+### Linux 上已经复现的证据
 
-- 选定的 WinSSL / backend comparison 用例已经可以继续做 Win64 交叉编译验证。
-- `tests/integration/test_backend_comparison.pas` 现在也能成功交叉编译到 Win64，说明共享 replay-store 单元上的 target-conditioned compile drift 已被清掉。
-- 这能证明共享源码和目标平台编译面仍然闭合，但它不等于 runtime proof。
+| 证据                                                                       | 结果                                                                |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `tests/scripts/test_winssl_session_truth_source_contract.sh`               | session truth-source / fake native-handle surface 已锁住            |
+| `tests/scripts/test_winssl_connection_context_access_contract.sh`          | connection/context/library access seam 已锁住                       |
+| Win64 focused cross-target compile                                         | 通过，且 `ISSLContext`/`ISSLLibrary` 到具体类的不安全类型告警已消失 |
+| `tests/integration/test_backend_comparison.pas` Win64 cross-target compile | 通过，说明共享 replay-store compile drift 已清掉                    |
+| `python3 scripts/compile_all_modules.py`                                   | `185/185`                                                           |
+| `bash scripts/run_minimal_ci_gate.sh --fast-local`                         | `[PASS]`                                                            |
 
-**注意**: WinSSL 运行时测试仍然需要可用的 Windows 环境。本机 Linux 上的 `wine` 当前直接退出 `159`，且没有 `pwsh`，所以不能把本地 `wine` 执行结果当成 WinSSL runtime 证据。
+## 当前 capability truth
 
-## 功能覆盖
+以下表述以 `src/fafafa.ssl.winssl.lib.pas` 的 `GetCapabilities` 和 `docs/BACKEND_CAPABILITY_MATRIX.md` 为准。
 
-### TLS 协议
+| 能力                                 | 当前 truth                | 备注                                                                    |
+| ------------------------------------ | ------------------------- | ----------------------------------------------------------------------- |
+| TLS 1.2                              | 支持                      | Windows capability surface                                              |
+| TLS 1.3                              | 条件支持                  | 仅在 Windows 10 build `18362+` / 对应较新 Server build 发布为 supported |
+| DTLS                                 | 不支持                    | `GetCapabilities.SupportsDTLS=False`                                    |
+| Early Data (0-RTT)                   | 不支持                    | 当前不暴露 `ISSLEarlyDataContext` public surface                        |
+| caller-provided server OCSP stapling | 不支持                    | 当前不暴露 `ISSLServerOCSPStaplingContext` public surface               |
+| SNI                                  | 支持                      | public capability 已对齐                                                |
+| ALPN                                 | 条件支持                  | 受 Windows 版本影响                                                     |
+| Session resumption / tickets         | public capability 存在    | 真实 Windows runtime 行为仍需独立证明                                   |
+| Native handle access                 | context / connection 暴露 | session 不暴露 `ISSLNativeHandleAccess`                                 |
 
-| 功能     | 状态    | 说明              |
-| -------- | ------- | ----------------- |
-| TLS 1.2  | ✅ 支持 | 所有 Windows 版本 |
-| TLS 1.3  | ✅ 支持 | Windows 10 1903+  |
-| DTLS 1.2 | ✅ 支持 | Windows 10+       |
+## 当前还没有证实的部分
 
-### 证书功能
+- Windows 主机上的真实握手路径
+- 真实系统证书存储加载与企业策略交互
+- 真实 session resumption / session tickets 行为
+- 真实 server/client runtime 的 OCSP、证书验证、错误映射细节
 
-| 功能          | 状态    | 说明          |
-| ------------- | ------- | ------------- |
-| 系统证书存储  | ✅ 支持 | 原生集成      |
-| 证书链验证    | ✅ 支持 | CryptoAPI     |
-| OCSP          | ✅ 支持 | 自动检查      |
-| OCSP Stapling | ✅ 支持 | 服务器端      |
-| 证书固定      | ✅ 支持 | 通过回调      |
-| SNI           | ✅ 支持 | 客户端/服务器 |
+**原因**:
 
-### 会话管理
+- 本机 Linux 上的 `wine` 当前直接退出 `159`
+- 本机没有 `pwsh`
+- 因此本地环境不能承担 WinSSL runtime proof
 
-| 功能           | 状态    | 说明     |
-| -------------- | ------- | -------- |
-| Session 复用   | ✅ 支持 | 完整支持 |
-| Session Ticket | ✅ 支持 | TLS 1.2+ |
-| Session Cache  | ✅ 支持 | 系统管理 |
+## 结论
 
-### 高级功能
+现在对 WinSSL 更准确的说法是：
 
-| 功能       | 状态    | 说明         |
-| ---------- | ------- | ------------ |
-| ALPN       | ✅ 支持 | Windows 8.1+ |
-| 客户端证书 | ✅ 支持 | 双向 TLS     |
-| 智能卡     | ✅ 支持 | 原生支持     |
-| TPM        | ✅ 支持 | 硬件密钥     |
+- **代码结构和 compile surface 持续收口中，且当前已通过选定的 source contract 与 Win64 交叉编译验证**
+- **仓库级 Linux gate 继续全绿**
+- **真正剩余的高风险未证实区域，是 Windows 主机上的 runtime proof**
 
-## 与其他后端对比
+## 下一步
 
-| 特性      | WinSSL     | OpenSSL   | MbedTLS   |
-| --------- | ---------- | --------- | --------- |
-| 安装依赖  | 无         | 需要 DLL  | 需要 DLL  |
-| 系统集成  | 原生       | 独立      | 独立      |
-| 证书存储  | 系统存储   | 文件/内存 | 文件/内存 |
-| FIPS 模式 | 系统级     | 库级      | 无        |
-| 跨平台    | 仅 Windows | 全平台    | 全平台    |
-| PSK       | ❌         | ✅        | ✅        |
-| Ed25519   | ❌         | ✅        | ⚠️        |
-
-## 平台支持
-
-| Windows 版本        | 支持状态 | TLS 1.3 |
-| ------------------- | -------- | ------- |
-| Windows 11          | ✅ 完整  | ✅      |
-| Windows 10 1903+    | ✅ 完整  | ✅      |
-| Windows 10 1809-    | ✅ 支持  | ❌      |
-| Windows 8.1         | ✅ 支持  | ❌      |
-| Windows 7 SP1       | ⚠️ 部分  | ❌      |
-| Windows Server 2022 | ✅ 完整  | ✅      |
-| Windows Server 2019 | ✅ 支持  | ⚠️      |
-| Windows Server 2016 | ✅ 支持  | ❌      |
-
-## 优势
-
-1. **零依赖**: 无需安装额外 DLL
-2. **系统集成**: 自动使用 Windows 证书存储
-3. **自动更新**: 通过 Windows Update 获取安全更新
-4. **硬件支持**: 原生支持智能卡和 TPM
-5. **企业功能**: 支持组策略配置
-
-## 限制
-
-1. **仅 Windows**: 不支持其他操作系统
-2. **PSK 不支持**: Schannel 不支持预共享密钥
-3. **Ed25519 不支持**: 不支持 Edwards 曲线
-4. **调试困难**: 错误信息不如 OpenSSL 详细
-
-## 后续工作
-
-1. **Windows 平台测试**: 在 Windows CI 环境中运行完整测试
-2. **性能基准**: 与 OpenSSL 对比
-3. **文档完善**: 使用指南和示例
+1. 在可用的 Windows 主机或 CI 上运行 WinSSL runtime 测试
+2. 优先验证握手、证书链验证、session resumption、server/client 行为
+3. 继续保持 Linux 侧 source contract 和 Win64 compile 作为前置守门，不把它们误写成 runtime 证明
 
 ## 相关文档
 
-- `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md` - 能力矩阵
-- `docs/guides/WINSSL_QUICKSTART.md` - 快速开始
-- `examples/winssl_*.pas` - WinSSL 示例
+- [后端能力矩阵](../BACKEND_CAPABILITY_MATRIX.md)
+- [WinSSL 设计文档](../reference/WINSSL_DESIGN.md)
