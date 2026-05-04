@@ -50,12 +50,37 @@ type
     ErrorMessage: string;
   end;
 
+  THTTPHookStub = class
+  public
+    function HTTPGet(const AURL: string; ATimeoutMs: Integer): TSSLDataResult;
+    function HTTPPost(const AURL, AContentType: string;
+      const ABody: TBytes; ATimeoutMs: Integer): TSSLDataResult;
+  end;
+
 var
   GResults: array of TContractTestResult;
   GTestCount: Integer = 0;
   GPassCount: Integer = 0;
   GFailCount: Integer = 0;
   GSkipCount: Integer = 0;
+
+function THTTPHookStub.HTTPGet(const AURL: string;
+  ATimeoutMs: Integer): TSSLDataResult;
+var
+  LEmpty: TBytes;
+begin
+  SetLength(LEmpty, 0);
+  Result := TSSLDataResult.Ok(LEmpty);
+end;
+
+function THTTPHookStub.HTTPPost(const AURL, AContentType: string;
+  const ABody: TBytes; ATimeoutMs: Integer): TSSLDataResult;
+var
+  LEmpty: TBytes;
+begin
+  SetLength(LEmpty, 0);
+  Result := TSSLDataResult.Ok(LEmpty);
+end;
 
 procedure AddResult(const ATestName: string; ABackend: TSSLLibraryType;
   APassed: Boolean; const AErrorMsg: string = '');
@@ -1148,6 +1173,105 @@ begin
   end;
 end;
 
+procedure TestContract_ContextHTTPHooksInterfaceAligned(ABackend: TSSLLibraryType);
+var
+  LLib: ISSLLibrary;
+  LClientCtx: ISSLContext;
+  LServerCtx: ISSLContext;
+  LHooks: ISSLHttpHooksAccess;
+  LHookStub: THTTPHookStub;
+  LExpectedPresent: Boolean;
+
+  function ValidateContext(const ALabel: string; ACtx: ISSLContext;
+    out AError: string): Boolean;
+  var
+    LGet: TSSLHTTPGetCallback;
+    LPost: TSSLHTTPPostCallback;
+  begin
+    Result := False;
+    AError := '';
+
+    if not Supports(ACtx, ISSLHttpHooksAccess, LHooks) then
+    begin
+      if LExpectedPresent then
+        AError := ALabel + ' context does not expose ISSLHttpHooksAccess'
+      else
+        Result := True;
+      Exit;
+    end;
+
+    if not LExpectedPresent then
+    begin
+      AError := ALabel + ' context unexpectedly exposes ISSLHttpHooksAccess';
+      Exit;
+    end;
+
+    LHooks.SetHTTPGetCallback(@LHookStub.HTTPGet);
+    LHooks.SetHTTPPostCallback(@LHookStub.HTTPPost);
+    LGet := LHooks.GetHTTPGetCallback;
+    LPost := LHooks.GetHTTPPostCallback;
+
+    if not Assigned(LGet) then
+      AError := ALabel + ' HTTP GET callback round-trip lost assignment'
+    else if not Assigned(LPost) then
+      AError := ALabel + ' HTTP POST callback round-trip lost assignment'
+    else
+      Result := True;
+  end;
+
+var
+  LError: string;
+begin
+  PrintSubHeader(Format('Contract 14: Context HTTP hooks interface alignment - %s',
+    [SSL_LIBRARY_NAMES[ABackend]]));
+
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    AddSkip('Backend not available on this platform');
+    Exit;
+  end;
+
+  LExpectedPresent := ABackend in [sslOpenSSL, sslFreePascal];
+  LHookStub := THTTPHookStub.Create;
+
+  try
+    try
+      LLib := TSSLFactory.GetLibrary(ABackend);
+      LClientCtx := LLib.CreateContext(sslCtxClient);
+      LServerCtx := LLib.CreateContext(sslCtxServer);
+
+      if not ValidateContext('client', LClientCtx, LError) then
+      begin
+        WriteLn('  [FAIL] ', LError);
+        AddResult('ContextHTTPHooksInterfaceAligned', ABackend, False, LError);
+      end
+      else if not ValidateContext('server', LServerCtx, LError) then
+      begin
+        WriteLn('  [FAIL] ', LError);
+        AddResult('ContextHTTPHooksInterfaceAligned', ABackend, False, LError);
+      end
+      else if LExpectedPresent then
+      begin
+        WriteLn('  [PASS] HTTP-hooks backend contexts expose ISSLHttpHooksAccess');
+        AddResult('ContextHTTPHooksInterfaceAligned', ABackend, True);
+      end
+      else
+      begin
+        WriteLn('  [PASS] Backend without HTTP-hooks surface keeps ISSLHttpHooksAccess absent');
+        AddResult('ContextHTTPHooksInterfaceAligned', ABackend, True);
+      end;
+    except
+      on E: Exception do
+      begin
+        WriteLn('  [FAIL] Exception: ', E.ClassName, ' - ', E.Message);
+        AddResult('ContextHTTPHooksInterfaceAligned', ABackend, False, E.Message);
+      end;
+    end;
+  finally
+    LHookStub.Free;
+  end;
+end;
+
 procedure PrintSummary;
 var
   I: Integer;
@@ -1243,6 +1367,9 @@ begin
 
     // 13) C-library backend contexts must expose native-handle interface
     TestContract_ContextNativeHandleInterfaceAligned(LBackend);
+
+    // 14) HTTP-hooks-capable backends must expose context hook surface
+    TestContract_ContextHTTPHooksInterfaceAligned(LBackend);
   end;
 
   PrintSummary;

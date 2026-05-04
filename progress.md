@@ -258,6 +258,38 @@
   - builder 会把 `server_ocsp_stapled_response_file` 加载进 `TWolfSSLContext.FServerStapledOCSPResponse`
   - `TWolfSSLConnection` 只有 peer-side OCSP consume surface，没有 client request path
   - `TWolfSSLContext` 没有 server callback / response injection 接线
+- 新建计划：`docs/plans/2026-05-04-backend-http-hooks-interface-completion-audit.md`
+- 更新 `task_plan.md`，把当前目标切到 `Backend HTTP Hooks Interface Completion Audit`
+- 在 `tests/contract/test_backend_contract.pas` 新增：
+  - `THTTPHookStub`
+  - `Contract 14: Context HTTP hooks interface alignment`
+- focused audit：
+  - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract && ./tmp/test_backend_contract`
+  - 结果：`Total Tests: 100 / Passed: 83 / Failed: 0 / Skipped: 17`
+  - `Contract 14` 细项：
+    - `OpenSSL`: PASS，client/server context 暴露 `ISSLHttpHooksAccess`
+    - `FreePascal`: PASS，client/server context 暴露 `ISSLHttpHooksAccess`
+    - `WolfSSL`: PASS，保持接口 absent
+    - `MbedTLS`: PASS，保持接口 absent
+    - `WinSSL`: SKIP，backend not available on this platform
+  - 结论：这批没有新的生产代码漂移，属于 completion audit 收口，不需要额外 GREEN 生产改动
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 继续为下一批做上下文核对：
+  - 用 `search_context` 重新确认 `ISSLHttpHooksAccess` 只由 `TOpenSSLContext` / `TFreePascalContext` 暴露，与当前 contract truth 一致
+  - 同时确认 `src/fafafa.ssl.wolfssl.context.pas` 仍保留旧 `TWolfSSLConnection` 公开类型，而 `TWolfSSLContext.CreateConnection(...)` 已走 `src/fafafa.ssl.wolfssl.connection.pas` 的现代连接类，值得作为下一批 focused audit 入口
+- 本轮收口复核：
+  - `git diff --check`
+  - 结果：通过，无空白/冲突类问题
+  - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract && ./tmp/test_backend_contract`
+  - 结果：`Total Tests: 100 / Passed: 83 / Failed: 0 / Skipped: 17`，`Contract 14` 继续全绿
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185`、模块测试 `17/17`、phase2 baseline dry-run PASS、最终 `[PASS] minimal CI gate finished`
   - `TWolfSSLConnection.DoGetOCSPStaplingEnabled` 当前只是“API symbol exists”假阳性
 - 对照本地头文件 `/usr/include/wolfssl/ssl.h` 与示例 `/usr/share/doc/libwolfssl-dev/examples/client.c`，确认：
   - `wolfSSL_UseOCSPStapling` 真实签名是 `(ssl, status_type, options)`

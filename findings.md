@@ -147,3 +147,15 @@
   - `FreePascal` context 继续保持该接口 absent
   - `WinSSL` 仍因平台不可用而 skip，不把 Linux 结果外推成 Windows runtime 证明
 - 因此 context native-handle 这批的正确结论是 completion audit closeout，而不是继续展开新的实现修复。
+- `ISSLHttpHooksAccess` 的真实 public truth 目前比 capability 文档更窄，只有 `TOpenSSLContext` 与 `TFreePascalContext` 暴露该接口；`WolfSSL` / `MbedTLS` / `WinSSL` context 当前都保持 absent。
+- 这条 truth 不是孤立现象，而是当前使用面的既有边界：
+  - `tests/config/test_context_builder_http_hooks.pas` 已验证 OpenSSL builder 可注入 hooks
+  - `tests/test_freepascal_client_online_ocsp_runtime.pas` 已依赖 FreePascal context 暴露 hooks
+  - 其余 backend 没有现成调用面要求暴露 context-level HTTP hooks
+- 新增的 `Contract 14` 直接全绿，说明 context HTTP hooks 这条线没有新的生产代码漂移：
+  - `OpenSSL` / `FreePascal` 的 client/server context 都暴露 `ISSLHttpHooksAccess`
+  - `SetHTTPGetCallback` / `SetHTTPPostCallback` 后，getter 能稳定 round-trip
+  - `WolfSSL` / `MbedTLS` 继续保持接口 absent
+  - `WinSSL` 仍因平台不可用而 skip，不把 Linux 结果外推成 Windows runtime 证明
+- 因此 HTTP hooks 这批的正确结论也是 completion audit closeout，而不是继续展开新的实现修复。
+- 当前更值得继续审计的真实风险点转到了 `src/fafafa.ssl.wolfssl.context.pas`：接口区仍公开保留一套旧的 `TWolfSSLConnection` 类型声明，但 `TWolfSSLContext.CreateConnection(...)` 已切到 `fafafa.ssl.wolfssl.connection.TWolfSSLConnection`，存在 public API 残留与现代实现分叉的可能。
