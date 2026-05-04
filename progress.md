@@ -1,6 +1,44 @@
-# Progress - WolfSSL Feature Capability Runtime Consistency
+# Progress - C-Library KnownIssues Truth Alignment
 
 ## 2026-05-05
+- 新开一批 `C-Library KnownIssues Truth Alignment`，目标是在当前 Linux 主机上把 `WolfSSL` / `MbedTLS` capability `KnownIssues` 收口到真实剩余边界，不在这批里假装完成 `WinSSL` Windows runtime proof。
+- broad completion audit：
+  - 运行 `command -v pwsh`
+  - 结果：空
+  - 运行 `wine --version`
+  - 结果：退出 `159`
+  - 结论：当前主机仍不能承担 `WinSSL` 真实 Windows runtime proof
+  - 运行 `fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otest_backend_contract tests/contract/test_backend_contract.pas`
+  - 运行 `./tmp/backend_contract_units/test_backend_contract`
+  - 结果：`Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+  - 结论：当前 Linux 主机上，`OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal` 的 public interface 合同面全绿；`WinSSL` 仍全部因为平台不可用而跳过
+- focused RED：
+  - 新增 `tests/test_capability_cache.pas` 中的 `TestWolfSSLKnownIssuesAlignment` / `TestMbedTLSKnownIssuesAlignment`
+  - 首次运行 `fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_units -otest_capability_cache tests/test_capability_cache.pas`
+  - 运行 `./tmp/capability_cache_units/test_capability_cache`
+  - 结果：在 `WolfSSL KnownIssues 运行时对齐测试` 命中失败
+    - `KnownIssues: May require specific build options for full feature support`
+    - `Exception: WolfSSL KnownIssues should stop using the generic build-options placeholder`
+- 最小修复：
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+    - `KnownIssues` 改成 build/runtime helper-gated truth
+    - 明确 early-data 可能退化为 `none`
+    - 明确 OCSP stapling 仍按 experimental 理解
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+    - `KnownIssues` 改成 early-data / OCSP stapling / CT 当前不支持
+- 修复后复跑：
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_units -otest_capability_cache tests/test_capability_cache.pas`
+  - `./tmp/capability_cache_units/test_capability_cache`
+  - 结果：
+    - `FreePascal KnownIssues` 继续通过
+    - `WolfSSL KnownIssues runtime alignment verified`
+    - `MbedTLS KnownIssues runtime alignment verified`
+- 本批收口结论：
+  - 当前 Linux 主机可验证的 C-library capability wording drift 已闭合
+  - broad objective 仍然不能判定完成，因为 `WinSSL` 还缺真实 Windows runtime proof，且 `FreePascal` / `WolfSSL` 仍保留各自的 experimental caveat
+- 最终验证：
+  - 运行 `git diff --check -- docs/plans/2026-05-05-c-library-knownissues-truth-alignment.md tests/test_capability_cache.pas src/fafafa.ssl.wolfssl.lib.pas src/fafafa.ssl.mbedtls.lib.pas task_plan.md findings.md progress.md`
+  - 结果：通过
 - 新开一批 `Early-Data Host-Gated Truth Alignment`，目标是把当前仓库里 `early-data` 的 contract 和文档收口到真实 host/runtime truth，不在这批扩大到新的 backend 实现线。
 - 计划与台账：
   - 新增 `docs/plans/2026-05-05-early-data-host-gated-truth-alignment.md`

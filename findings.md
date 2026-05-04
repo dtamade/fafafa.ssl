@@ -1,6 +1,28 @@
-# Findings - WolfSSL Feature Capability Runtime Consistency
+# Findings - C-Library KnownIssues Truth Alignment
 
 ## 2026-05-05
+- broad objective 的 public interface completion audit 现在更清楚了：
+  - `tests/contract/test_backend_contract.pas` 已覆盖 `Contract 1-21`
+  - 当前 Linux 主机上，`OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal` 的 public interface 合同面是闭合的
+  - `WinSSL` 这条线并不是合同失败，而是当前主机无法提供真实 Windows runtime evidence
+- 因此当前剩余问题的重心，已经从“还有没有漏掉的公开接口漂移”转到了“capability / KnownIssues / runtime proof 真相是否准确”。
+- `WolfSSL` / `MbedTLS` 的 capability `KnownIssues` 之前仍然属于 public truth drift：
+  - `WolfSSL` 只写 `May require specific build options for full feature support`
+  - `MbedTLS` 只写 `Optimized for embedded systems, may lack some enterprise features`
+  - 这两条 wording 都没有把当前已验证的 capability 边界表达出来
+- 当前 Linux 主机上，`WolfSSL` 更准确的 runtime truth 是：
+  - capability object 仍会把 `OCSPStaplingSupport` 发布成 `experimental`
+  - current host 的 early-data helper set 缺失，所以 `EarlyDataSupport = none`
+  - 因此 `KnownIssues` 至少要明确 build/runtime helper 门控，以及 early-data 可能退化为 `none`
+- 当前 Linux 主机上，`MbedTLS` 更准确的 runtime truth 是：
+  - `EarlyDataSupport = none`
+  - `OCSPStaplingSupport = none`
+  - `CertTransparencySupport = none`
+  - 因此 `KnownIssues` 至少要明确 early-data / OCSP stapling / CT 当前不支持，而不是泛泛地说“可能缺少企业特性”
+- 这批 focused RED/GREEN 之后，当前 broad objective 仍然不能判定完成：
+  - `FreePascal` 仍保留 experimental early-data caveat
+  - `WolfSSL` 仍保留 helper-gated / experimental caveat
+  - `WinSSL` 仍缺真实 Windows runtime proof
 - WinSSL validation bundle 收口之后，当前还能继续推进、且不依赖外部主机的最高价值 repo-side 缺口，已经收窄到 early-data truth drift，而不是再开新的 backend 功能线。
 - 当前 Linux 主机上的 `WolfSSL` early-data 真相需要继续按“双层语义”记录：
   - backend family 只有在 build/runtime helper 完整时，才应发布实验性 early-data 能力

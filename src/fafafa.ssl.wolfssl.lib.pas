@@ -503,7 +503,9 @@ begin
 
   // 兼容性（WolfSSL 与 OpenSSL 兼容性较好）
   Result.CompatibilityLevel := 85;  // 85% 兼容性
-  Result.KnownIssues := 'May require specific build options for full feature support';
+  Result.KnownIssues :=
+    'Feature availability depends on build/runtime helpers; early-data may degrade to none ' +
+    'when required helpers are unavailable; OCSP stapling remains experimental.';
 
   { v1.2.0: 缓存能力矩阵 }
   FCapabilitiesCache := Result;

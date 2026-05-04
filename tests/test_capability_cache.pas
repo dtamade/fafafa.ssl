@@ -7,7 +7,9 @@ uses
   fafafa.ssl,
   fafafa.ssl.base,
   fafafa.ssl.factory,
-  fafafa.ssl.openssl.backed;
+  fafafa.ssl.openssl.backed,
+  fafafa.ssl.mbedtls.lib,
+  fafafa.ssl.wolfssl.lib;
 
 procedure Require(ACondition: Boolean; const AMessage: string);
 begin
@@ -243,6 +245,91 @@ begin
   WriteLn;
 end;
 
+procedure TestWolfSSLKnownIssuesAlignment;
+var
+  Lib: ISSLLibrary;
+  Caps: TSSLBackendCapabilities;
+  LUpper: string;
+begin
+  WriteLn('==============================================');
+  WriteLn('WolfSSL KnownIssues 运行时对齐测试');
+  WriteLn('==============================================');
+  WriteLn;
+
+  Lib := TSSLFactory.GetLibrary(sslWolfSSL);
+  if Lib = nil then
+  begin
+    WriteLn('  [SKIP] WolfSSL backend not available');
+    WriteLn;
+    Exit;
+  end;
+
+  Caps := Lib.GetCapabilities;
+  LUpper := UpperCase(Caps.KnownIssues);
+  WriteLn('  KnownIssues: ', Caps.KnownIssues);
+  WriteLn('  EarlyDataSupport: ', Ord(Caps.EarlyDataSupport));
+  WriteLn('  OCSPStaplingSupport: ', Ord(Caps.OCSPStaplingSupport));
+
+  Require(Pos('MAY REQUIRE SPECIFIC BUILD OPTIONS FOR FULL FEATURE SUPPORT', LUpper) = 0,
+    'WolfSSL KnownIssues should stop using the generic build-options placeholder');
+  Require((Pos('BUILD/RUNTIME', LUpper) > 0) or (Pos('BUILD OR RUNTIME', LUpper) > 0),
+    'WolfSSL KnownIssues should describe build/runtime-gated behavior');
+  Require(Pos('HELPER', LUpper) > 0,
+    'WolfSSL KnownIssues should mention helper-gated capability boundaries');
+  Require((Pos('EARLY-DATA', LUpper) > 0) or (Pos('EARLY DATA', LUpper) > 0),
+    'WolfSSL KnownIssues should mention early-data capability boundaries');
+  Require(Pos('OCSP', LUpper) > 0,
+    'WolfSSL KnownIssues should mention OCSP stapling remaining as experimental capability');
+
+  WriteLn('  ✓ WolfSSL KnownIssues runtime alignment verified');
+  WriteLn;
+end;
+
+procedure TestMbedTLSKnownIssuesAlignment;
+var
+  Lib: ISSLLibrary;
+  Caps: TSSLBackendCapabilities;
+  LUpper: string;
+begin
+  WriteLn('==============================================');
+  WriteLn('MbedTLS KnownIssues 运行时对齐测试');
+  WriteLn('==============================================');
+  WriteLn;
+
+  Lib := TSSLFactory.GetLibrary(sslMbedTLS);
+  if Lib = nil then
+  begin
+    WriteLn('  [SKIP] MbedTLS backend not available');
+    WriteLn;
+    Exit;
+  end;
+
+  Caps := Lib.GetCapabilities;
+  LUpper := UpperCase(Caps.KnownIssues);
+  WriteLn('  KnownIssues: ', Caps.KnownIssues);
+  WriteLn('  EarlyDataSupport: ', Ord(Caps.EarlyDataSupport));
+  WriteLn('  OCSPStaplingSupport: ', Ord(Caps.OCSPStaplingSupport));
+  WriteLn('  CertTransparencySupport: ', Ord(Caps.CertTransparencySupport));
+
+  Require(Caps.EarlyDataSupport = sslSupportNone,
+    'MbedTLS EarlyDataSupport should remain none on the current capability model');
+  Require(Caps.OCSPStaplingSupport = sslSupportNone,
+    'MbedTLS OCSPStaplingSupport should remain none on the current capability model');
+  Require(Caps.CertTransparencySupport = sslSupportNone,
+    'MbedTLS CertTransparencySupport should remain none on the current capability model');
+  Require(Pos('MAY LACK SOME ENTERPRISE FEATURES', LUpper) = 0,
+    'MbedTLS KnownIssues should stop using the generic enterprise-features placeholder');
+  Require((Pos('EARLY-DATA', LUpper) > 0) or (Pos('EARLY DATA', LUpper) > 0),
+    'MbedTLS KnownIssues should mention early-data unsupported truth');
+  Require(Pos('OCSP', LUpper) > 0,
+    'MbedTLS KnownIssues should mention OCSP stapling unsupported truth');
+  Require((Pos('TRANSPARENCY', LUpper) > 0) or (Pos('CT', LUpper) > 0),
+    'MbedTLS KnownIssues should mention certificate-transparency unsupported truth');
+
+  WriteLn('  ✓ MbedTLS KnownIssues runtime alignment verified');
+  WriteLn;
+end;
+
 begin
   WriteLn('fafafa.ssl - 能力矩阵缓存测试');
   WriteLn('==============================================');
@@ -254,6 +341,8 @@ begin
     TestCacheInvalidation;
     WriteLn;
     TestFreePascalKnownIssuesAlignment;
+    TestWolfSSLKnownIssuesAlignment;
+    TestMbedTLSKnownIssuesAlignment;
 
     WriteLn('==============================================');
     WriteLn('所有测试完成！');

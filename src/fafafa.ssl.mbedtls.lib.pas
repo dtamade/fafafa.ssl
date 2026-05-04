@@ -544,7 +544,9 @@ begin
 
   // 兼容性（MbedTLS 与 OpenSSL 兼容性中等，部分功能需要适配）
   Result.CompatibilityLevel := 75;  // 75% 兼容性
-  Result.KnownIssues := 'Optimized for embedded systems, may lack some enterprise features';
+  Result.KnownIssues :=
+    'Optimized for embedded systems; early-data, OCSP stapling, and certificate transparency ' +
+    'are not currently supported.';
 
   { v1.2.0: 缓存能力矩阵 }
   FCapabilitiesCache := Result;
