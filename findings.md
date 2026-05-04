@@ -70,3 +70,9 @@
   - public surface、builder file-load、client request / consume、server status callback wiring 均已接通
   - scripted `TStream` baseline handshake 已有本机 runtime 证据
   - `configured + requested => stapled DER` 仍受 host `wolfSSL` 版本约束，旧版主机显式 skip，不再误报成本地生产代码缺口
+- `MbedTLSConnection` / `TWolfSSLConnection` 早就各自带有 `SetServerName/GetServerName` 实现，但类声明没有挂 `ISSLClientConnection`。这会导致 capability 明明宣称 `SupportsSNI=True`，`Supports(Connection, ISSLClientConnection, ...)` 却返回 `False`，属于纯粹的 public interface 漂移。
+- 新增的 `Contract 8` 证明这不是文档问题而是真实 RED：
+  - `WolfSSL`: `SupportsSNI=True but connection does not expose ISSLClientConnection`
+  - `MbedTLS`: `SupportsSNI=True but connection does not expose ISSLClientConnection`
+- 这批的最小 GREEN 不需要重写 SNI 行为，只需要把现有的 `SetServerName/GetServerName` 公开挂进 `ISSLClientConnection`。
+- 收口后，`OpenSSL` / `FreePascal` / `WolfSSL` / `MbedTLS` 四条当前 Linux 可验证的 SNI-capable backend 已对齐到同一 public contract：capability、connection interface 和 round-trip 行为一致。

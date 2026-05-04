@@ -88,6 +88,33 @@
   - 结果：`185/185` 核心模块编译成功，`100.0%`
   - `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 继续后端 interface completeness 审计：
+  - 读取 `src/fafafa.ssl.mbedtls.connection.pas` / `src/fafafa.ssl.wolfssl.connection.pas` / `src/fafafa.ssl.openssl.connection.pas` / `src/fafafa.ssl.freepascal.connection.pas`
+  - 结论：`MbedTLS` / `WolfSSL` 的 connection 类都已有 `SetServerName/GetServerName`，但类声明没挂 `ISSLClientConnection`；`OpenSSL` / `FreePascal` 已挂。
+- 新增 focused contract：
+  - `tests/contract/test_backend_contract.pas`
+    - 新增 `Contract 8: Client connection SNI interface alignment`
+    - 语义：如果 `SupportsSNI=True`，client connection 必须暴露 `ISSLClientConnection`，且 `SetServerName/GetServerName` 能 round-trip
+- RED:
+  - 暂时去掉 `src/fafafa.ssl.mbedtls.connection.pas` / `src/fafafa.ssl.wolfssl.connection.pas` 上的 `ISSLClientConnection`
+  - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract`
+  - `./tmp/test_backend_contract`
+  - 结果：
+    - `WolfSSL`: `FAIL ... SupportsSNI=True but connection does not expose ISSLClientConnection`
+    - `MbedTLS`: `FAIL ... SupportsSNI=True but connection does not expose ISSLClientConnection`
+- GREEN:
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+    - `TMbedTLSConnection = class(TBaseSSLConnection, ISSLClientConnection)`
+  - `src/fafafa.ssl.wolfssl.connection.pas`
+    - `TWolfSSLConnection = class(TBaseSSLConnection, ISSLClientConnection, ISSLEarlyDataConnection, ISSLNativeHandleAccess)`
+  - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract`
+  - `./tmp/test_backend_contract`
+  - 结果：`Passed: 47 / Failed: 0 / Skipped: 11`，`Contract 8` 在 `OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal` 全部 PASS
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
 - 新建 docs truth 批次计划：`docs/plans/2026-05-04-openssl-server-ocsp-runtime-doc-truth.md`
 - 检查 `docs/BACKEND_CAPABILITY_MATRIX.md` 与 `docs/guides/OCSP_USAGE_GUIDE.md`
   - 结果：OpenSSL server OCSP stapling 的文档仍停在“native callback wiring / 可加载 DER”的层级，没有把刚完成的 runtime proof 和 builder verify 基线写明

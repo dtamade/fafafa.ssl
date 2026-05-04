@@ -28,7 +28,7 @@ uses
 
 type
   { TMbedTLSConnection - MbedTLS 连接类 }
-  TMbedTLSConnection = class(TBaseSSLConnection)
+  TMbedTLSConnection = class(TBaseSSLConnection, ISSLClientConnection)
   private
     FSSLConfig: Pmbedtls_ssl_config;
     FSSLContext: Pmbedtls_ssl_context;

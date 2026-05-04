@@ -612,6 +612,83 @@ begin
   end;
 end;
 
+procedure TestContract_ClientConnectionSNIInterfaceAligned(ABackend: TSSLLibraryType);
+var
+  LLib: ISSLLibrary;
+  LCaps: TSSLBackendCapabilities;
+  LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LClientConn: ISSLClientConnection;
+  LProbeStream: TMemoryStream;
+const
+  PROBE_SERVER_NAME = 'contract.example.test';
+begin
+  PrintSubHeader(Format('Contract 8: Client connection SNI interface alignment - %s',
+    [SSL_LIBRARY_NAMES[ABackend]]));
+
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    AddSkip('Backend not available on this platform');
+    Exit;
+  end;
+
+  LProbeStream := TMemoryStream.Create;
+  try
+    try
+      LLib := TSSLFactory.GetLibrary(ABackend);
+      LCaps := LLib.GetCapabilities;
+      LCtx := LLib.CreateContext(sslCtxClient);
+      LConn := LCtx.CreateConnection(LProbeStream);
+
+      if LCaps.SupportsSNI then
+      begin
+        if not Supports(LConn, ISSLClientConnection, LClientConn) then
+        begin
+          WriteLn('  [FAIL] SNI-capable backend does not expose ISSLClientConnection');
+          AddResult('ClientConnectionSNIInterfaceAligned', ABackend, False,
+            'SupportsSNI=True but connection does not expose ISSLClientConnection');
+          Exit;
+        end;
+
+        LClientConn.SetServerName(PROBE_SERVER_NAME);
+        if SameText(LClientConn.GetServerName, PROBE_SERVER_NAME) then
+        begin
+          WriteLn('  [PASS] SNI-capable backend exposes per-connection server-name surface');
+          AddResult('ClientConnectionSNIInterfaceAligned', ABackend, True);
+        end
+        else
+        begin
+          WriteLn('  [FAIL] ISSLClientConnection round-trip failed');
+          AddResult('ClientConnectionSNIInterfaceAligned', ABackend, False,
+            'ISSLClientConnection.GetServerName did not return the configured per-connection value');
+        end;
+      end
+      else
+      begin
+        if Supports(LConn, ISSLClientConnection, LClientConn) then
+        begin
+          WriteLn('  [FAIL] Backend without SNI capability still exposes ISSLClientConnection');
+          AddResult('ClientConnectionSNIInterfaceAligned', ABackend, False,
+            'SupportsSNI=False but connection still exposes ISSLClientConnection');
+        end
+        else
+        begin
+          WriteLn('  [PASS] Backend without SNI capability keeps ISSLClientConnection absent');
+          AddResult('ClientConnectionSNIInterfaceAligned', ABackend, True);
+        end;
+      end;
+    except
+      on E: Exception do
+      begin
+        WriteLn('  [FAIL] Exception: ', E.ClassName, ' - ', E.Message);
+        AddResult('ClientConnectionSNIInterfaceAligned', ABackend, False, E.Message);
+      end;
+    end;
+  finally
+    LProbeStream.Free;
+  end;
+end;
+
 procedure PrintSummary;
 var
   I: Integer;
@@ -689,6 +766,9 @@ begin
 
     // 7) Unsupported optional interfaces must not lie via Supports(...)
     TestContract_UnsupportedOptionalInterfacesAbsent(LBackend);
+
+    // 8) SNI-capable backends must expose the per-connection client interface
+    TestContract_ClientConnectionSNIInterfaceAligned(LBackend);
   end;
 
   PrintSummary;

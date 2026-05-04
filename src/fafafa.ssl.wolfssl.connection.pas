@@ -28,7 +28,8 @@ uses
 
 type
   { TWolfSSLConnection - WolfSSL SSL 连接类 }
-  TWolfSSLConnection = class(TBaseSSLConnection, ISSLEarlyDataConnection,
+  TWolfSSLConnection = class(TBaseSSLConnection, ISSLClientConnection,
+    ISSLEarlyDataConnection,
     ISSLNativeHandleAccess)
   private
     FWolfSSLCtx: PWOLFSSL_CTX;
