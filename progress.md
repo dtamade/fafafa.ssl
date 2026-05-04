@@ -1,6 +1,65 @@
 # Progress - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-05
+- 新开一批 `Early-Data Host-Gated Truth Alignment`，目标是把当前仓库里 `early-data` 的 contract 和文档收口到真实 host/runtime truth，不在这批扩大到新的 backend 实现线。
+- 计划与台账：
+  - 新增 `docs/plans/2026-05-05-early-data-host-gated-truth-alignment.md`
+  - `task_plan.md` 切到当前批次
+- 读取与核对：
+  - `task_plan.md`
+  - `docs/plans/2026-05-05-early-data-host-gated-truth-alignment.md`
+  - `tests/scripts/test_early_data_docs_truth_contract.sh`
+  - `tests/test_openssl_wolfssl_early_data_connection_contract.pas`
+  - `README.md`
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/guides/EARLY_DATA_GUIDE.md`
+- fresh drift 结论：
+  - `README.md` 顶部仍把 `FreePascal` early-data 写成 `生产就绪`
+  - `docs/guides/EARLY_DATA_GUIDE.md` 仍把 `FreePascal` 写成“完整支持 / 生产就绪”，并把 `WolfSSL` 写成无条件实验性
+  - `docs/BACKEND_CAPABILITY_MATRIX.md` 的 `WolfSSL` early-data 段落仍声称 interface surface 已无条件接通
+- 最小文档修复：
+  - `README.md`
+    - 顶部 early-data 表格改成 `FreePascal = 实验性`
+    - `WolfSSL = 按构建/运行时 helper 门控`
+    - 增加当前 host/runtime truth 说明
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
+    - 去掉 `FreePascal` early-data 限制里的重复行
+    - 把 `WolfSSL` 状态改成“受 build/runtime helper 门控的实验性支持”
+    - 写清 helper 缺失时 `sslSupportNone` + context/connection interface absent
+  - `docs/guides/EARLY_DATA_GUIDE.md`
+    - 支持矩阵改成 `FreePascal = 已接通但实验性`
+    - `WolfSSL = helper 完整时可用`
+    - 增加 quickstart 前提与 helper-gated fallback 说明
+- docs contract：
+  - `bash -n tests/scripts/test_early_data_docs_truth_contract.sh`
+  - 结果：通过
+  - 首次运行 `bash tests/scripts/test_early_data_docs_truth_contract.sh`
+  - 结果：命中 `README marks WolfSSL early-data as build/runtime gated`，说明 README 表格行距/填充还没收口到 shell contract 的 canonical 形态
+  - 最小修复：把 README 顶部 early-data 表格收成无额外 padding 的 canonical 表格行
+  - 再次运行 `bash tests/scripts/test_early_data_docs_truth_contract.sh`
+  - 结果：通过
+- focused Pascal contract：
+  - 首次运行 `fpc -B -Fu./src -Fu./tests -FUtmp/openssl_wolfssl_early_data_units -FEtmp/openssl_wolfssl_early_data_units -otest_openssl_wolfssl_early_data_connection_contract tests/test_openssl_wolfssl_early_data_connection_contract.pas`
+  - 结果：在 `tests/test_openssl_wolfssl_early_data_connection_contract.pas(185,3)` 命中 `Syntax error, ";" expected but "ELSE" found`
+  - 最小修复：删掉 `else if not TSSLFactory.IsLibraryAvailable(...)` 分支后面的多余分号，恢复 `else if ... else` 结构
+  - 复跑同一条 `fpc` 命令
+  - 结果：通过（仅保留仓库既有 warnings / notes）
+  - 运行 `./tmp/openssl_wolfssl_early_data_units/test_openssl_wolfssl_early_data_connection_contract`
+  - 结果：
+    - `OpenSSL` 12 项断言全过
+    - `WolfSSL` 在当前 host 继续证明为 capability `none`、`ISSLEarlyDataContext` absent、`ISSLEarlyDataConnection` absent
+    - Summary: `Total 16 / Passed 16 / Failed 0 / Skipped 0`
+- 文档格式 / contract 稳定性：
+  - 运行 `/home/dtamade/node_modules/.bin/prettier --write README.md docs/BACKEND_CAPABILITY_MATRIX.md docs/guides/EARLY_DATA_GUIDE.md docs/plans/2026-05-05-early-data-host-gated-truth-alignment.md task_plan.md findings.md progress.md`
+  - 结果：Markdown 文档格式统一；同时暴露出 shell contract 过度依赖 Markdown 表格 padding 的问题
+  - 最小修复：把 `tests/scripts/test_early_data_docs_truth_contract.sh` 的 README / guide 表格 regex 收口成“校验语义，忽略单元格对齐空格”
+- 最终验证：
+  - `bash -n tests/scripts/test_early_data_docs_truth_contract.sh`
+  - 结果：通过
+  - `bash tests/scripts/test_early_data_docs_truth_contract.sh`
+  - 结果：通过
+  - `git diff --check -- docs/plans/2026-05-05-early-data-host-gated-truth-alignment.md tests/scripts/test_early_data_docs_truth_contract.sh tests/test_openssl_wolfssl_early_data_connection_contract.pas README.md docs/BACKEND_CAPABILITY_MATRIX.md docs/guides/EARLY_DATA_GUIDE.md task_plan.md findings.md progress.md`
+  - 结果：通过
 - 新开一批 `WinSSL Windows Validation Bundle Truth Alignment`，目标是不再继续在 Linux 上猜 WinSSL runtime proof，而是先把 Windows validation bundle 自身收口到当前真实入口。
 - 计划与台账：
   - 新增 `docs/plans/2026-05-05-winssl-windows-validation-bundle-truth-alignment.md`

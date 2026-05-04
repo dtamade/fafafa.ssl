@@ -5,7 +5,10 @@ program test_openssl_wolfssl_early_data_connection_contract;
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
-  fafafa.ssl;
+  fafafa.ssl,
+  fafafa.ssl.openssl.backed,
+  fafafa.ssl.wolfssl.api,
+  fafafa.ssl.wolfssl.lib;
 
 type
   TMockSession = class(TInterfacedObject, ISSLSession)
@@ -165,17 +168,45 @@ begin
   WriteLn;
   WriteLn('=== ', LName, ' early-data connection contract ===');
 
-  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  if ABackend = sslWolfSSL then
+  begin
+    LLib := CreateWolfSSLLibrary;
+    if (LLib = nil) or (not LLib.Initialize) then
+    begin
+      Skip(LName, 'backend failed to initialize');
+      Exit;
+    end;
+  end
+  else if not TSSLFactory.IsLibraryAvailable(ABackend) then
   begin
     Skip(LName, 'backend not available on this platform');
     Exit;
+  end
+  else
+  begin
+    LLib := TSSLFactory.GetLibraryInstance(ABackend);
+    if (LLib = nil) or (not LLib.Initialize) then
+    begin
+      Skip(LName, 'backend failed to initialize');
+      Exit;
+    end;
   end;
 
-  LLib := TSSLFactory.GetLibraryInstance(ABackend);
-  if (LLib = nil) or (not LLib.Initialize) then
+  if LLib = nil then
   begin
     Skip(LName, 'backend failed to initialize');
     Exit;
+  end;
+
+  if ABackend = sslWolfSSL then
+  begin
+    if Assigned(wolfSSL_write_early_data) and
+       Assigned(wolfSSL_get_early_data_status) and
+       Assigned(wolfSSL_CTX_set_max_early_data) and
+       Assigned(wolfSSL_CTX_get_max_early_data) then
+      AExpectedSupport := sslSupportExperimental
+    else
+      AExpectedSupport := sslSupportNone;
   end;
 
   LCaps := LLib.GetCapabilities;
@@ -184,6 +215,27 @@ begin
     Format('expected=%d actual=%d', [Ord(AExpectedSupport), Ord(LCaps.EarlyDataSupport)]));
 
   LCtx := LLib.CreateContext(sslCtxClient);
+  if AExpectedSupport = sslSupportNone then
+  begin
+    CheckTrue(LName + ' context keeps ISSLEarlyDataContext absent when capability is none',
+      not Supports(LCtx, ISSLEarlyDataContext, LEarlyCtx),
+      'client context should keep ISSLEarlyDataContext absent when capability is none');
+
+    LStream := TMemoryStream.Create;
+    try
+      LConn := LCtx.CreateConnection(LStream);
+      CheckTrue(LName + ' helper keeps early-data connection absent when capability is none',
+        not TSSLHelper.SupportsEarlyDataConnection(LConn),
+        'TSSLHelper.SupportsEarlyDataConnection should be False when capability is none');
+      CheckTrue(LName + ' connection keeps ISSLEarlyDataConnection absent when capability is none',
+        not Supports(LConn, ISSLEarlyDataConnection, LEarlyConn),
+        'client connection should keep ISSLEarlyDataConnection absent when capability is none');
+    finally
+      LStream.Free;
+    end;
+    Exit;
+  end;
+
   CheckTrue(LName + ' context exposes ISSLEarlyDataContext',
     Supports(LCtx, ISSLEarlyDataContext, LEarlyCtx),
     'client context should expose ISSLEarlyDataContext');

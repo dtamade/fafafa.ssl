@@ -46,7 +46,6 @@
 **限制**:
 
 - `TSSLBackendCapabilities.ZeroRTTSupport` / `EarlyDataSupport` 当前发布为 `sslSupportExperimental`
-- `TSSLBackendCapabilities.ZeroRTTSupport` / `EarlyDataSupport` 当前发布为 `sslSupportExperimental`
 - 默认 shipped path 已经把 replay truth 落到本地持久化 replay-store 路径
 - 如果默认路径不可用或不可写，resumed early data 会 fail-closed reject
 - 显式 file / directory replay-store opt-in 仍然用于 caller-controlled path placement
@@ -125,19 +124,21 @@ if not Supports(Ctx, ISSLEarlyDataContext) then
 
 ### WolfSSL 后端
 
-**状态**: ⚠️ 实验性支持
+**状态**: ⚠️ 受 build/runtime helper 门控的实验性支持
 
 **原因**:
 
-- 当前已接通 `ISSLEarlyDataContext` 与 `ISSLEarlyDataConnection`
 - 依赖 WolfSSL TLS 1.3 early-data 原生 API
-- 当前证据以 focused contract + 全仓编译为主，未在本机完成独立的 end-to-end resumed-session runtime 验证
+- 当前证据以 focused contract + 全仓编译为主，尚未把所有主机都提升成 production-ready runtime proof
+- 只有在 build/runtime helper 完整时，context / connection 才会暴露 early-data 可选接口
 
 **当前范围**:
 
-- ✅ 客户端 context enable / policy / max-size surface
-- ✅ 客户端连接级 queue / status / limit surface
-- ⚠️ 更广泛的 runtime readiness 仍应按实验性能力看待
+- ⚠️ helper 完整时提供客户端 context enable / policy / max-size surface
+- ⚠️ helper 完整时提供客户端连接级 queue / status / limit surface
+- 如果当前 `wolfSSL` 动态库未导出 `wolfSSL_write_early_data`、`wolfSSL_get_early_data_status`、`wolfSSL_CTX_set_max_early_data`、`wolfSSL_CTX_get_max_early_data`，则 capability 发布为 `sslSupportNone`
+- 在上述 helper 缺失时，client context 不暴露 `ISSLEarlyDataContext`，client connection 也不暴露 `ISSLEarlyDataConnection`
+- 因此更广泛的 runtime readiness 仍应按实验性能力理解，而不是无条件假定可用
 
 ---
 

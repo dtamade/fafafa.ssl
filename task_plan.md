@@ -1,53 +1,47 @@
-# Task Plan - WinSSL Windows Validation Bundle Truth Alignment
+# Task Plan - Early-Data Host-Gated Truth Alignment
 
 ## Goal
-把 WinSSL 的 Windows runtime validation bundle 收口到当前仓库真相：`tests/windows` 文档只引用真实存在的入口，手动 PowerShell 验证脚本不再依赖启动 cwd，并把剩余 blocker 明确压缩到“缺 Windows 主机实跑证据”。
+把当前仓库里 `early-data` 的 contract 和文档收口到真实 host/runtime truth：`OpenSSL` 保持 stable，`FreePascal` 保持 experimental，`WinSSL` / `MbedTLS` 保持 none，`WolfSSL` 则明确改成“按 build/runtime helper 门控；helper 缺失时 capability 发布为 `none`，context/connection 不暴露 early-data 接口”。
 
 ## Current Batch
 1. 先补 focused RED：
-   - 新增 `tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
-   - 锁住 `tests/windows/*.md` 不能再引用 `Run-WindowsValidation.ps1`、`Run-QuickValidation.ps1`、`test_cert_load`、`test_factory_mode` 等旧模板名称
-   - 锁住 `tests/quick_winssl_validation.ps1` / `tests/run_winssl_tests.ps1` 必须自解析到 `tests/winssl`
+   - `tests/test_openssl_wolfssl_early_data_connection_contract.pas` 显式链接 `OpenSSL` / `WolfSSL` backend，并按 runtime helper truth 验证 `WolfSSL`
+   - 新增 `tests/scripts/test_early_data_docs_truth_contract.sh`
+   - 用 docs contract 锁住 `README.md` / `docs/BACKEND_CAPABILITY_MATRIX.md` / `docs/guides/EARLY_DATA_GUIDE.md` 的当前真相
 2. 最小 GREEN：
-   - `tests/quick_winssl_validation.ps1` 自动切到 `tests/winssl`
-   - `tests/run_winssl_tests.ps1` 自动切到 `tests/winssl`
-   - `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md` 改成当前真实验证顺序
-   - `tests/windows/VALIDATION_BUNDLE.md` 改成当前真实 bundle inventory / artifact map
-   - `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md` 补 checklist / bundle 入口
-3. 跑 focused contract / diff hygiene，回写台账并提交。
+   - 如果 Pascal contract 只暴露文档/contract drift，则不改 `src/`
+   - 把 README / capability matrix / early-data guide 收口到当前真相
+3. 跑 focused contract / docs contract / diff hygiene，回写台账并提交。
 
 ## Status
-- [completed] RED: validation-bundle drift contract
-- [completed] GREEN: script entrypoint truth alignment and docs rewrite
-- [completed] Verification, review, and commit
+- [completed] RED: host-gated early-data contract and docs truth contract
+- [completed] GREEN: docs truth alignment
+- [completed] Verification: focused Pascal contract, docs contract, and diff hygiene
+- [in_progress] Review and commit
+
+## Current Evidence
+- `bash tests/scripts/test_early_data_docs_truth_contract.sh` 已通过，README / guide / capability matrix 现在对齐到同一套 early-data 真相。
+- `git diff --check -- docs/plans/2026-05-05-early-data-host-gated-truth-alignment.md tests/scripts/test_early_data_docs_truth_contract.sh tests/test_openssl_wolfssl_early_data_connection_contract.pas README.md docs/BACKEND_CAPABILITY_MATRIX.md docs/guides/EARLY_DATA_GUIDE.md task_plan.md findings.md progress.md` 已通过。
+- `fpc -B -Fu./src -Fu./tests -FUtmp/openssl_wolfssl_early_data_units -FEtmp/openssl_wolfssl_early_data_units -otest_openssl_wolfssl_early_data_connection_contract tests/test_openssl_wolfssl_early_data_connection_contract.pas` 重新通过；期间修掉了测试文件里一个悬空 `else` 的语法错误。
+- `./tmp/openssl_wolfssl_early_data_units/test_openssl_wolfssl_early_data_connection_contract` 已通过，当前主机上的 `WolfSSL` 继续证明为 helper 缺失 => capability `none` + early-data interfaces absent。
 
 ## Verification Plan
-- focused validation-bundle contract:
-  - `bash -n tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
-  - `bash tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
-- existing Wave B Windows gate contract:
-  - `bash tests/scripts/test_wave_b_windows_gate_pwsh_and_verbose_contract.sh`
+- focused Pascal contract:
+  - `mkdir -p tmp/openssl_wolfssl_early_data_units`
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/openssl_wolfssl_early_data_units -FEtmp/openssl_wolfssl_early_data_units -otest_openssl_wolfssl_early_data_connection_contract tests/test_openssl_wolfssl_early_data_connection_contract.pas`
+  - `./tmp/openssl_wolfssl_early_data_units/test_openssl_wolfssl_early_data_connection_contract`
+- docs contract:
+  - `bash -n tests/scripts/test_early_data_docs_truth_contract.sh`
+  - `bash tests/scripts/test_early_data_docs_truth_contract.sh`
 - hygiene:
-  - `git diff --check -- docs/plans/2026-05-05-winssl-windows-validation-bundle-truth-alignment.md tests/scripts/test_winssl_windows_validation_bundle_contract.sh tests/quick_winssl_validation.ps1 tests/run_winssl_tests.ps1 tests/windows/WINDOWS_VALIDATION_CHECKLIST.md tests/windows/VALIDATION_BUNDLE.md docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md task_plan.md findings.md progress.md`
+  - `git diff --check -- docs/plans/2026-05-05-early-data-host-gated-truth-alignment.md tests/scripts/test_early_data_docs_truth_contract.sh tests/test_openssl_wolfssl_early_data_connection_contract.pas README.md docs/BACKEND_CAPABILITY_MATRIX.md docs/guides/EARLY_DATA_GUIDE.md task_plan.md findings.md progress.md`
 
 ## Risks
-- 这批不能顺手改 WinSSL 生产实现；如果 Windows runtime proof 未来暴露真实行为缺口，必须另起实现批次。
-- 文档必须区分三个层次：Linux source/compile proof、Windows runner/gate、Windows 主机 runtime proof；不能把它们混写成“已完整验证”。
-- `tests/*.ps1` 只允许做 cwd 自解析和入口收口，不能把脚本扩张成新的 orchestration 框架。
-
-## Batch Result
-- `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md` 和 `tests/windows/VALIDATION_BUNDLE.md` 已从旧模板收口到当前真实入口:
-  - `tests/quick_winssl_validation.ps1`
-  - `run_winssl_tests.ps1`
-  - `scripts/run_wave_b_windows_gate.ps1`
-  - `tests/run_winssl_tests.ps1`
-- `tests/run_winssl_tests.ps1` 现在不再重声明 common `-Verbose`，并且会自动切到 `tests/winssl`；`Backend Comparison Tests` 也已改回真实的 `tests/integration/test_backend_comparison.lpi`
-- `tests/quick_winssl_validation.ps1` 现在也会自动切到 `tests/winssl`，不再要求调用者先手动 `cd`
-- `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md` 已补当前 checklist / bundle 执行口径
-- 新增 `tests/scripts/test_winssl_windows_validation_bundle_contract.sh`，并且与现有 `test_wave_b_windows_gate_pwsh_and_verbose_contract.sh` 一起通过
-- 因此当前 broad objective 的 repo-side 剩余阻塞已进一步收紧到“等待真实 Windows 主机 runtime proof”
+- 这批不能把 `WolfSSL` 当前 host 的 helper 缺失，误写成 backend family 永久不支持 early-data。
+- 文档必须同时保住两层 truth：backend family 的实验性能力，以及当前 host/build 可能退化成 `none` 的 runtime 现实。
+- `FreePascal` 只能保持 experimental / local-persistent / fail-closed wording，不能被历史文档重新抬回 production ready。
 
 ## Follow-up Queue
-1. 这批完成后，下一步应在真实 Windows 主机按 checklist 跑 quick smoke、Wave B gate、broader suite，拿到 runtime 证据。
-2. 只有 Windows 主机实跑出现 fresh RED 时，才重开 `src/fafafa.ssl.winssl.*` 实现修复。
-3. 若 Windows host 不可用，broad objective 仍不能标记为“各个后端的接口和实现都完整”。
+1. 若这批后仍有 fresh RED，下一步只允许重开 early-data contract/docs 相邻 drift，不扩大到新的 TLS family。
+2. `WinSSL` broad blocker 仍然是 Windows 主机 runtime proof，不在这批范围内。
+3. 若 current host 的 `WolfSSL` helper set 未来升级，再考虑补独立 runtime proof，而不是先把 capability 调宽。

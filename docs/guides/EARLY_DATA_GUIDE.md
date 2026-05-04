@@ -5,10 +5,12 @@
 TLS 1.3 Early Data（0-RTT）允许客户端在 TLS 握手完成前发送应用数据，显著降低连接延迟。
 
 **性能提升**：
+
 - 首次连接：无改善（需要完整握手）
 - 恢复连接：延迟降低 1 RTT（约 50-100ms）
 
 **安全注意**：
+
 - Early Data 可能被重放攻击
 - 仅用于幂等操作（GET 请求等）
 - 不要用于状态改变操作（POST、PUT、DELETE）
@@ -17,17 +19,26 @@ TLS 1.3 Early Data（0-RTT）允许客户端在 TLS 握手完成前发送应用�
 
 ## 后端支持情况
 
-| 后端 | 客户端 Early Data | 服务端 Early Data | 状态 |
-|------|------------------|------------------|------|
-| FreePascal | ✅ 完整支持 | ✅ 完整支持 | 生产就绪 |
-| OpenSSL | ✅ 完整支持 | ✅ 完整支持 | 生产就绪 (v1.4.1+) |
-| WinSSL | ❌ 不支持 | ❌ 不支持 | Schannel API 限制 |
-| MbedTLS | ❌ 不支持 | ❌ 不支持 | 计划中 |
-| WolfSSL | ⚠️ 实验性 | ⚠️ 实验性 | 原生 API 已接线，runtime 仍建议按实验性看待 |
+| 后端       | 客户端 Early Data    | 服务端 Early Data    | 状态                       |
+| ---------- | -------------------- | -------------------- | -------------------------- |
+| FreePascal | ✅ 已接通（实验性）  | ✅ 已接通（实验性）  | 实验性                     |
+| OpenSSL    | ✅ 完整支持          | ✅ 完整支持          | 生产就绪 (v1.4.1+)         |
+| WinSSL     | ❌ 不支持            | ❌ 不支持            | Schannel API 限制          |
+| MbedTLS    | ❌ 不支持            | ❌ 不支持            | 当前不暴露 early-data 接口 |
+| WolfSSL    | ⚠️ helper 完整时可用 | ⚠️ helper 完整时可用 | 按构建/运行时 helper 门控  |
+
+在继续之前先认清当前边界：
+
+- 生产路径默认按 `OpenSSL` 理解。
+- `FreePascal` 的 client/server surface 已接通，但能力仍按 experimental 发布；默认 replay truth 落到本地持久化 replay-store，默认路径不可用或不可写时 fail-closed reject。
+- 若当前 `wolfSSL` 动态库未导出 early-data helpers：`wolfSSL_write_early_data`、`wolfSSL_get_early_data_status`、`wolfSSL_CTX_set_max_early_data`、`wolfSSL_CTX_get_max_early_data`，则 capability 会退化为 `none`，context / connection 都不会暴露 early-data 接口。
+- `WinSSL` / `MbedTLS` 当前不支持 early-data，因此示例里的 `Supports(...)` 检查必须保留。
 
 ---
 
 ## 快速开始
+
+本页代码示例默认使用 `OpenSSL`，因为这是当前唯一可直接按 production-ready 看待的 early-data 路径。切到 `FreePascal` 或 `WolfSSL` 前，先检查 capability 和可选接口是否真实存在。
 
 ### 客户端 Early Data
 
@@ -47,7 +58,7 @@ begin
   // 1. 创建上下文
   Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   Ctx := Lib.CreateContext(sslCtxClient);
-  
+
   // 2. 启用 Early Data
   if Supports(Ctx, ISSLEarlyDataContext, EarlyDataCtx) then
   begin
@@ -59,20 +70,20 @@ begin
     WriteLn('Early Data not supported by this backend');
     Exit;
   end;
-  
+
   // 3. 创建连接
   Conn := Ctx.CreateConnection(Socket);
-  
+
   // 4. 排队 Early Data
   if Supports(Conn, ISSLEarlyDataConnection, EarlyDataConn) then
   begin
     Request := TEncoding.UTF8.GetBytes('GET / HTTP/1.1'#13#10#13#10);
     EarlyDataConn.SetEarlyData(Request);
   end;
-  
+
   // 5. 握手（Early Data 会自动发送）
   Conn.Connect;
-  
+
   // 6. 检查 Early Data 状态
   case EarlyDataConn.GetEarlyDataStatus of
     sslEarlyDataAccepted:
@@ -100,23 +111,23 @@ begin
   // 1. 创建服务端上下文
   Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   Ctx := Lib.CreateContext(sslCtxServer);
-  
+
   // 2. 配置 Early Data 策略
   if Supports(Ctx, ISSLEarlyDataContext, EarlyDataCtx) then
   begin
     // 设置策略：接受 Early Data
     EarlyDataCtx.SetServerEarlyDataPolicy(sslEarlyDataServerAccept);
-    
+
     // 设置最大 Early Data 大小（16KB）
     EarlyDataCtx.SetServerMaxEarlyDataSize(16384);
-    
+
     WriteLn('Server Early Data configured');
   end;
-  
+
   // 3. 加载证书和密钥
   Ctx.LoadCertificate('server.crt');
   Ctx.LoadPrivateKey('server.key');
-  
+
   // 4. 接受连接...
 end;
 ```
@@ -134,6 +145,7 @@ EarlyDataCtx.SetServerEarlyDataPolicy(sslEarlyDataServerReject);
 ```
 
 **适用场景**：
+
 - 不需要 Early Data 性能优化
 - 安全要求高
 - 无法处理重放攻击
@@ -147,6 +159,7 @@ EarlyDataCtx.SetServerEarlyDataPolicy(sslEarlyDataServerAccept);
 ```
 
 **适用场景**：
+
 - 需要最低延迟
 - 应用层有重放防护
 - 仅处理幂等操作
@@ -162,6 +175,7 @@ EarlyDataCtx.SetServerEarlyDataPolicy(sslEarlyDataServerIssueOnly);
 ```
 
 **适用场景**：
+
 - 为未来启用 Early Data 做准备
 - 测试客户端兼容性
 
@@ -172,11 +186,13 @@ EarlyDataCtx.SetServerEarlyDataPolicy(sslEarlyDataServerIssueOnly);
 ### 1. 仅用于幂等操作
 
 ✅ **安全的操作**：
+
 - HTTP GET 请求
 - 只读 API 调用
 - 查询操作
 
 ❌ **不安全的操作**：
+
 - HTTP POST/PUT/DELETE
 - 状态改变操作
 - 支付、转账等
@@ -198,14 +214,14 @@ begin
   // 1. 检查 nonce 是否已使用
   if NonceCache.Contains(ARequest.Nonce) then
     Exit(False);  // 重放攻击
-  
+
   // 2. 检查时间戳（5秒窗口）
   if Abs(Now - ARequest.Timestamp) > 5 then
     Exit(False);  // 过期
-  
+
   // 3. 记录 nonce
   NonceCache.Add(ARequest.Nonce);
-  
+
   Result := True;
 end;
 ```
@@ -280,11 +296,13 @@ end;
 ### Early Data 未发送
 
 **原因**：
+
 - 没有会话票据（首次连接）
 - 服务端不支持 Early Data
 - 票据已过期
 
 **解决**：
+
 ```pascal
 // 检查状态
 if EarlyDataConn.GetEarlyDataStatus = sslEarlyDataNone then
@@ -294,11 +312,13 @@ if EarlyDataConn.GetEarlyDataStatus = sslEarlyDataNone then
 ### Early Data 被拒绝
 
 **原因**：
+
 - 服务端策略为 Reject
 - 检测到重放攻击
 - 超过大小限制
 
 **解决**：
+
 ```pascal
 // 自动重试
 if EarlyDataConn.GetEarlyDataStatus = sslEarlyDataRejected then
@@ -311,6 +331,7 @@ end;
 ### 性能未提升
 
 **检查**：
+
 1. 确认使用会话恢复
 2. 测量网络延迟（RTT）
 3. 确认服务端接受 Early Data
@@ -328,6 +349,7 @@ WriteLn('Connection latency: ', Latency, 'ms');
 ## 完整示例
 
 参见：
+
 - `examples/early_data_client.pas` - 客户端示例
 - `examples/early_data_server.pas` - 服务端示例
 - `examples/early_data_http.pas` - HTTP 应用示例

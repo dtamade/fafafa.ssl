@@ -1,6 +1,24 @@
 # Findings - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-05
+- WinSSL validation bundle 收口之后，当前还能继续推进、且不依赖外部主机的最高价值 repo-side 缺口，已经收窄到 early-data truth drift，而不是再开新的 backend 功能线。
+- 当前 Linux 主机上的 `WolfSSL` early-data 真相需要继续按“双层语义”记录：
+  - backend family 只有在 build/runtime helper 完整时，才应发布实验性 early-data 能力
+  - current host 的 `libwolfssl.so` 缺少 `wolfSSL_write_early_data`、`wolfSSL_get_early_data_status`、`wolfSSL_CTX_set_max_early_data`、`wolfSSL_CTX_get_max_early_data`
+  - 因此 current host 的 capability truth 仍然是 `sslSupportNone`，client context / connection 都必须保持 early-data interface absent
+- 这批真正的 drift 主要落在文档层，而不是 `src/`：
+  - `README.md` 顶部表格仍把 `FreePascal` early-data 写成 production ready，并把 `WolfSSL` 写成无条件实验性
+  - `docs/guides/EARLY_DATA_GUIDE.md` 的支持矩阵仍把 `FreePascal` 写成完整支持/生产就绪，且没有写清 `WolfSSL` 的 helper-gated fallback
+  - `docs/BACKEND_CAPABILITY_MATRIX.md` 的 `WolfSSL` early-data 段落仍把 interface surface 写成无条件已接通
+- 为了让 focused contract 真正命中当前 host truth，测试侧需要两条显式前提：
+  - `tests/test_openssl_wolfssl_early_data_connection_contract.pas` 必须显式 `uses` `fafafa.ssl.openssl.backed`、`fafafa.ssl.wolfssl.api`、`fafafa.ssl.wolfssl.lib`
+  - `WolfSSL` 路径必须直接 `CreateWolfSSLLibrary`，不能继续走 `TSSLFactory.IsLibraryAvailable(...)` 的旧判断链
+- focused Pascal contract 的首次失败不是新的 backend 行为漂移，而是测试文件里遗留了一个悬空 `else` 语法错误；修掉这个测试侧错误后，runtime 结论仍然稳定：
+  - `OpenSSL` early-data connection contract 继续全绿
+  - `WolfSSL` 在当前 host 继续证明为 capability `none` + context / connection interface absent
+- 这批完成后，repo-side 剩余的 early-data 风险会更纯粹地收敛成两类：
+  - 若未来 `wolfSSL` helper set 升级，需要补独立 runtime proof，而不是预先把 capability 调宽
+  - broad objective 仍不能完成，因为 `WinSSL` 还缺真实 Windows 主机 runtime evidence
 - completion audit 继续往 WinSSL runtime validation bundle 下钻后，确认 broad objective 还剩一个明确的 repo-side 收口点：
   - `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md` / `tests/windows/VALIDATION_BUNDLE.md` 仍然是旧模板，引用 `Run-WindowsValidation.ps1`、`Run-QuickValidation.ps1`、`test_cert_load`、`test_factory_mode` 等当前仓库并不使用的入口
   - `tests/quick_winssl_validation.ps1` / `tests/run_winssl_tests.ps1` 仍依赖调用者先切到正确 cwd，不能作为稳定的 Windows runtime validation entrypoint
