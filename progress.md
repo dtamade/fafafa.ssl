@@ -51,6 +51,28 @@
   - 结果：`185/185` 核心模块编译成功，`100.0%`
 - 运行 `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 新建本批计划：`docs/plans/2026-05-04-backend-ct-optional-interface-alignment.md`
+- 更新 `task_plan.md`，把当前目标切到 `Backend CT Optional Interface Alignment`
+- 新增 `tests/contract/test_backend_contract.pas` 的 `Contract 9: Client connection CT interface alignment`
+- 首次运行：
+  - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract && ./tmp/test_backend_contract`
+  - 结果：真实 RED 比预期更收敛
+    - `OpenSSL`: `SupportsCertificateTransparency=False but connection still exposes ISSLCertificateTransparency`
+    - `OpenSSL`: `CertTransparencySupport=None but connection still exposes ISSLCertificateTransparencyValidation`
+    - `WolfSSL`: 同样两项失败
+    - `MbedTLS`: 同样两项失败
+  - 结论：当前主机默认 runtime 下，问题不是“OpenSSL CT getter 仍是存根”，而是 `TBaseSSLConnection` 把 CT interface 无条件挂给了所有 connection。
+- 生产改动：
+  - `src/fafafa.ssl.connection.base.pas`: 移除基类上的 `ISSLCertificateTransparency` / `ISSLCertificateTransparencyValidation` 接口声明，保留共享 getter/stub 供显式支持的 backend 复用。
+  - `src/fafafa.ssl.freepascal.connection.pas`: 显式实现 `ISSLCertificateTransparency` / `ISSLCertificateTransparencyValidation`。
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`: 收紧 CT 总览行和分 backend 说明，不再继续把 `OpenSSL` / `WinSSL` / `MbedTLS` / `WolfSSL` 写成有 connection-level CT surface。
+- 修复后复跑 focused contract：
+  - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract && ./tmp/test_backend_contract`
+  - 结果：`Passed: 55 / Failed: 0 / Skipped: 12`
+- 运行 `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+- 运行 `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
 - 继续 `WolfSSL server OCSP runtime proof` 收口：
   - 运行 `dpkg -s libwolfssl-dev | rg '^Version:'`
   - 结果：`Version: 5.7.2-0.1+deb13u1`

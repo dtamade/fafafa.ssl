@@ -39,7 +39,9 @@ uses
   fafafa.ssl.x509;
 
 type
-  TFreePascalConnection = class(TBaseSSLConnection, ISSLClientConnection, ISSLEarlyDataConnection)
+  TFreePascalConnection = class(TBaseSSLConnection, ISSLClientConnection,
+    ISSLEarlyDataConnection, ISSLCertificateTransparency,
+    ISSLCertificateTransparencyValidation)
   private
     FSocket: THandle;
     FStream: TStream;

@@ -689,6 +689,114 @@ begin
   end;
 end;
 
+procedure TestContract_ClientConnectionCTInterfaceAligned(ABackend: TSSLLibraryType);
+var
+  LLib: ISSLLibrary;
+  LCaps: TSSLBackendCapabilities;
+  LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LCT: ISSLCertificateTransparency;
+  LCTValidation: ISSLCertificateTransparencyValidation;
+  LProbeStream: TMemoryStream;
+begin
+  PrintSubHeader(Format('Contract 9: Client connection CT interface alignment - %s',
+    [SSL_LIBRARY_NAMES[ABackend]]));
+
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    AddSkip('Backend not available on this platform');
+    Exit;
+  end;
+
+  LProbeStream := TMemoryStream.Create;
+  try
+    try
+      LLib := TSSLFactory.GetLibrary(ABackend);
+      LCaps := LLib.GetCapabilities;
+      LCtx := LLib.CreateContext(sslCtxClient);
+      LConn := LCtx.CreateConnection(LProbeStream);
+
+      if LCaps.SupportsCertificateTransparency then
+      begin
+        if not Supports(LConn, ISSLCertificateTransparency, LCT) then
+        begin
+          WriteLn('  [FAIL] CT-capable backend does not expose ISSLCertificateTransparency');
+          AddResult('ClientConnectionCTInterfaceAligned', ABackend, False,
+            'SupportsCertificateTransparency=True but connection does not expose ISSLCertificateTransparency');
+        end
+        else if SameText(LCT.GetCertificateTransparencyStatus, 'Not Supported') then
+        begin
+          WriteLn('  [FAIL] CT-capable backend still falls back to base CT stub');
+          AddResult('ClientConnectionCTInterfaceAligned', ABackend, False,
+            'SupportsCertificateTransparency=True but CT status still reports Not Supported');
+        end
+        else
+        begin
+          WriteLn('  [PASS] CT-capable backend exposes non-stub CT surface');
+          AddResult('ClientConnectionCTInterfaceAligned', ABackend, True);
+        end;
+      end
+      else
+      begin
+        if Supports(LConn, ISSLCertificateTransparency, LCT) then
+        begin
+          WriteLn('  [FAIL] Backend without CT capability still exposes ISSLCertificateTransparency');
+          AddResult('ClientConnectionCTInterfaceAligned', ABackend, False,
+            'SupportsCertificateTransparency=False but connection still exposes ISSLCertificateTransparency');
+        end
+        else
+        begin
+          WriteLn('  [PASS] Backend without CT capability keeps ISSLCertificateTransparency absent');
+          AddResult('ClientConnectionCTInterfaceAligned', ABackend, True);
+        end;
+      end;
+
+      if LCaps.CertTransparencySupport <> sslSupportNone then
+      begin
+        if not Supports(LConn, ISSLCertificateTransparencyValidation, LCTValidation) then
+        begin
+          WriteLn('  [FAIL] CT-validation-capable backend does not expose ISSLCertificateTransparencyValidation');
+          AddResult('ClientConnectionCTValidationInterfaceAligned', ABackend, False,
+            'CertTransparencySupport<>None but connection does not expose ISSLCertificateTransparencyValidation');
+        end
+        else if SameText(LCTValidation.GetCertificateTransparencyValidationStatus, 'Not Supported') then
+        begin
+          WriteLn('  [FAIL] CT-validation-capable backend still falls back to base validation stub');
+          AddResult('ClientConnectionCTValidationInterfaceAligned', ABackend, False,
+            'CertTransparencySupport<>None but CT validation status still reports Not Supported');
+        end
+        else
+        begin
+          WriteLn('  [PASS] CT-validation-capable backend exposes non-stub CT validation surface');
+          AddResult('ClientConnectionCTValidationInterfaceAligned', ABackend, True);
+        end;
+      end
+      else
+      begin
+        if Supports(LConn, ISSLCertificateTransparencyValidation, LCTValidation) then
+        begin
+          WriteLn('  [FAIL] Backend without CT validation capability still exposes ISSLCertificateTransparencyValidation');
+          AddResult('ClientConnectionCTValidationInterfaceAligned', ABackend, False,
+            'CertTransparencySupport=None but connection still exposes ISSLCertificateTransparencyValidation');
+        end
+        else
+        begin
+          WriteLn('  [PASS] Backend without CT validation capability keeps validation interface absent');
+          AddResult('ClientConnectionCTValidationInterfaceAligned', ABackend, True);
+        end;
+      end;
+    except
+      on E: Exception do
+      begin
+        WriteLn('  [FAIL] Exception: ', E.ClassName, ' - ', E.Message);
+        AddResult('ClientConnectionCTInterfaceAligned', ABackend, False, E.Message);
+      end;
+    end;
+  finally
+    LProbeStream.Free;
+  end;
+end;
+
 procedure PrintSummary;
 var
   I: Integer;
@@ -769,6 +877,9 @@ begin
 
     // 8) SNI-capable backends must expose the per-connection client interface
     TestContract_ClientConnectionSNIInterfaceAligned(LBackend);
+
+    // 9) CT-capable backends must expose non-stub CT optional interfaces
+    TestContract_ClientConnectionCTInterfaceAligned(LBackend);
   end;
 
   PrintSummary;

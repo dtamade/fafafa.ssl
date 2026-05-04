@@ -1,6 +1,18 @@
 # Findings - Backend Optional Interface Alignment
 
 ## 2026-05-04
+- `TBaseSSLConnection` 之前把 `ISSLCertificateTransparency` / `ISSLCertificateTransparencyValidation` 直接挂在基类类声明上，导致所有继承它的 connection 都会被 `Supports(...)` 识别成“支持 CT”，哪怕 backend capability 明确是 `False/None`。
+- 当前主机上的 `OpenSSL` 默认 capability truth 也不是“支持 CT”：
+  - `SupportsCertificateTransparency=False`
+  - `CertTransparencySupport=sslSupportNone`
+  - 说明仓库里虽然有底层 OpenSSL CT binding，但默认初始化并没有把它发布成当前 backend 的 connection-level CT 能力。
+- 因此这批最小且真实的 GREEN 不是给 `OpenSSL` 硬补一个新 surface，而是：
+  - 把 CT interface 从 `TBaseSSLConnection` 的类声明中移出
+  - 只让 `TFreePascalConnection` 继续显式实现 CT / validation interface
+  - 让 `OpenSSL` / `WolfSSL` / `MbedTLS` 在当前 capability truth 下保持 interface absent
+- 新增的 `Contract 9` 证明这不是文档问题，而是 public contract drift：
+  - RED 时 `OpenSSL` / `WolfSSL` / `MbedTLS` 都在 capability 为 `False/None` 的情况下仍暴露 CT / validation interface
+  - GREEN 后三者都已不再暴露，`FreePascal` 仍保留 non-stub CT surface
 - `src/fafafa.ssl.mbedtls.context.pas` 与 `src/fafafa.ssl.winssl.context.pas` 当前仍把 `ISSLEarlyDataContext`、`ISSLServerOCSPStaplingContext` 写进类声明，但具体方法是存根或直接抛出不支持异常。
 - `src/fafafa.ssl.mbedtls.lib.pas` 与 `src/fafafa.ssl.winssl.lib.pas` 的能力矩阵已经明确把 OCSP stapling 记为 `False/sslSupportNone`；`EarlyDataSupport` 没有设置为可用，因此接口暴露与能力矩阵存在事实漂移。
 - `src/fafafa.ssl.connection.base.pas` 的连接级 OCSP/CT/CT validation surface 采用了“默认返回 not supported”的收敛模型，说明仓库对可选接口的一贯语义是“没能力就不暴露或返回 not supported”，而不是暴露后抛运行时异常。

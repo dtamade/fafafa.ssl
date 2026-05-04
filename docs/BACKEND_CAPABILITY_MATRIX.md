@@ -15,7 +15,7 @@
 | **Early Data (0-RTT)**       | ✅         | ✅      | ❌     | ❌      | ⚠️      |
 | **Session Resumption**       | ✅         | ✅      | ✅     | ✅      | ✅      |
 | **OCSP Stapling**            | ✅         | ✅      | ⚠️     | ❌      | ⚠️      |
-| **Certificate Transparency** | ✅         | ✅      | ⚠️     | ⚠️      | ⚠️      |
+| **Certificate Transparency** | ✅         | ❌      | ❌     | ❌      | ❌      |
 | **ALPN**                     | ✅         | ✅      | ✅     | ✅      | ✅      |
 | **SNI**                      | ✅         | ✅      | ✅     | ✅      | ✅      |
 | **PSK**                      | ✅         | ✅      | ⚠️     | ✅      | ✅      |
@@ -228,32 +228,33 @@ if not Supports(Ctx, ISSLServerOCSPStaplingContext) then
 
 ### FreePascal 后端
 
-**状态**: ✅ 完整支持
+**状态**: ✅ 已暴露连接级 CT / validation surface
 
 **功能**:
 
 - ✅ SCT 验证
 - ✅ CT 日志列表
 - ✅ 策略配置
+- ✅ `ISSLCertificateTransparency` / `ISSLCertificateTransparencyValidation`
 
 ### OpenSSL 后端
 
-**状态**: ✅ 完整支持
+**状态**: ❌ 当前默认 backend capability 不暴露连接级 CT surface
 
-**功能**:
+**说明**:
 
-- ✅ SCT 验证
-- ✅ CT 日志列表
-- ✅ 策略配置
+- 仓库里已有底层 OpenSSL CT binding
+- 但当前默认 capability 仍是 `SupportsCertificateTransparency=False`
+- 因此 connection 不再对外暴露 `ISSLCertificateTransparency` / `ISSLCertificateTransparencyValidation`
 
 ### WinSSL / MbedTLS / WolfSSL 后端
 
-**状态**: ⚠️ 基础支持
+**状态**: ❌ 不支持
 
-**功能**:
+**说明**:
 
-- ✅ SCT 提取
-- ⚠️ 验证需要应用层实现
+- 当前 backend capability 为 `False/None`
+- connection 不暴露 CT / validation optional interface，避免 `Supports(...)` 假阳性
 
 ---
 
