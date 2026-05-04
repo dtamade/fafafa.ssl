@@ -110,6 +110,9 @@
   - 结果：`185/185` 核心模块编译成功，`100.0%`
   - `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 提交：
+  - `git commit -m "test(contracts): audit session native-handle alignment"`
+  - 结果：`21c8cc6 test(contracts): audit session native-handle alignment`
 - 新建计划：`docs/plans/2026-05-04-backend-context-native-handle-completion-audit.md`
 - 更新 `task_plan.md`，把当前批次目标切到 `Backend Context Native-Handle Completion Audit`
 - 在 `tests/contract/test_backend_contract.pas` 新增 `Contract 13: Context native-handle interface alignment`

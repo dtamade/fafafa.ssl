@@ -18,7 +18,7 @@
 - [completed] RED/audit contract
 - [completed] GREEN implementation（无生产改动，作为 completion audit 收口）
 - [completed] Verification
-- [in_progress] Review and commit
+- [completed] Review and commit
 
 ## Risks
 - `session` 级 native-handle 若只靠类声明判断，价值太低；因此 contract 需要至少验证 helper round-trip，而不是只看 `Supports(...)`。
