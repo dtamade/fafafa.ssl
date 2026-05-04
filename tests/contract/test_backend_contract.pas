@@ -28,17 +28,27 @@ uses
   fafafa.ssl.factory,
   fafafa.ssl.exceptions,
   fafafa.ssl.errors,
-  fafafa.ssl.freepascal.lib
+  fafafa.ssl.native_handle,
+  fafafa.ssl.freepascal.lib,
+  fafafa.ssl.freepascal.session
   {$IFDEF UNIX}
   , fafafa.ssl.openssl.backed  // 注册 OpenSSL 后端
+  , fafafa.ssl.openssl.base
+  , fafafa.ssl.openssl.api.core
+  , fafafa.ssl.openssl.session
   , fafafa.ssl.mbedtls.lib     // 注册 MbedTLS 后端
+  , fafafa.ssl.mbedtls.base
+  , fafafa.ssl.mbedtls.session
   , fafafa.ssl.wolfssl.lib     // 注册 WolfSSL 后端
+  , fafafa.ssl.wolfssl.base
+  , fafafa.ssl.wolfssl.session
   {$ENDIF}
   {$IFDEF WINDOWS}
   , fafafa.ssl.openssl.backed  // 注册 OpenSSL 后端
   , fafafa.ssl.winssl.lib      // 注册 WinSSL 后端
   , fafafa.ssl.mbedtls.lib     // 注册 MbedTLS 后端
   , fafafa.ssl.wolfssl.lib     // 注册 WolfSSL 后端
+  , fafafa.ssl.winssl.connection
   {$ENDIF}
   ;
 
@@ -1272,6 +1282,156 @@ begin
   end;
 end;
 
+procedure TestContract_SessionNativeHandleInterfaceAligned(ABackend: TSSLLibraryType);
+var
+  LLib: ISSLLibrary;
+  LSession: ISSLSession;
+  LOwnedProbeHandle: Pointer;
+
+  function CreateSessionProbe(out AOwnedRawHandle: Pointer): ISSLSession;
+  var
+    LOpenSSLSession: PSSL_SESSION;
+  begin
+    Result := nil;
+    AOwnedRawHandle := nil;
+
+    case ABackend of
+      sslOpenSSL:
+        begin
+          if not Assigned(SSL_SESSION_new) then
+            Exit(nil);
+
+          LOpenSSLSession := SSL_SESSION_new();
+          if LOpenSSLSession = nil then
+            Exit(nil);
+
+          Result := TOpenSSLSession.Create(LOpenSSLSession, Assigned(SSL_SESSION_free));
+        end;
+
+      sslMbedTLS:
+        begin
+          GetMem(AOwnedRawHandle, SizeOf(Byte));
+          PByte(AOwnedRawHandle)^ := 0;
+          Result := TMbedTLSSession.Create(Pmbedtls_ssl_session(AOwnedRawHandle), False);
+        end;
+
+      sslWolfSSL:
+        begin
+          GetMem(AOwnedRawHandle, SizeOf(Byte));
+          PByte(AOwnedRawHandle)^ := 0;
+          Result := TWolfSSLSession.Create(PWOLFSSL_SESSION(AOwnedRawHandle), False);
+        end;
+
+      sslFreePascal:
+        Result := TFreePascalSession.Create;
+    else
+      Result := nil;
+    end;
+  end;
+
+  function ValidateSession(ASession: ISSLSession; out AError: string): Boolean;
+  var
+    LNative: ISSLNativeHandleAccess;
+    LHelperHandle: Pointer;
+    LInterfaceHandle: Pointer;
+  begin
+    Result := False;
+    AError := '';
+
+    if ABackend = sslFreePascal then
+    begin
+      if Supports(ASession, ISSLNativeHandleAccess, LNative) then
+        AError := 'Pure backend session unexpectedly exposes ISSLNativeHandleAccess'
+      else if TryGetNativeHandle(ASession, LHelperHandle) then
+        AError := 'Pure backend session unexpectedly returns a native handle'
+      else
+        Result := True;
+      Exit;
+    end;
+
+    if not Supports(ASession, ISSLNativeHandleAccess, LNative) then
+      AError := 'C-library backend session does not expose ISSLNativeHandleAccess'
+    else if LNative.GetBackendType <> ABackend then
+      AError := 'ISSLNativeHandleAccess.GetBackendType does not match the session backend'
+    else if not LNative.IsNativeHandleValid then
+      AError := 'ISSLNativeHandleAccess.IsNativeHandleValid returned False'
+    else
+    begin
+      LInterfaceHandle := LNative.GetNativeHandle;
+      if LInterfaceHandle = nil then
+        AError := 'ISSLNativeHandleAccess.GetNativeHandle returned nil'
+      else if not TryGetNativeHandle(ASession, LHelperHandle) then
+        AError := 'TryGetNativeHandle returned False for a C-library session'
+      else if LHelperHandle = nil then
+        AError := 'TryGetNativeHandle returned nil for a C-library session'
+      else if LHelperHandle <> LInterfaceHandle then
+        AError := 'TryGetNativeHandle did not round-trip the native handle'
+      else
+        Result := True;
+    end;
+  end;
+
+var
+  LError: string;
+begin
+  PrintSubHeader(Format('Contract 15: Session native-handle interface alignment - %s',
+    [SSL_LIBRARY_NAMES[ABackend]]));
+
+  if ABackend = sslWinSSL then
+  begin
+    AddSkip('WinSSL session truth split requires a dedicated Windows-focused batch');
+    Exit;
+  end;
+
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    AddSkip('Backend not available on this platform');
+    Exit;
+  end;
+
+  LOwnedProbeHandle := nil;
+  LSession := nil;
+
+  try
+    LLib := TSSLFactory.GetLibrary(ABackend);
+    if LLib = nil then
+      raise Exception.Create('Failed to load backend library');
+
+    LSession := CreateSessionProbe(LOwnedProbeHandle);
+    if LSession = nil then
+    begin
+      AddSkip('Could not create session probe on this runtime');
+      Exit;
+    end;
+
+    if not ValidateSession(LSession, LError) then
+    begin
+      WriteLn('  [FAIL] ', LError);
+      AddResult('SessionNativeHandleInterfaceAligned', ABackend, False, LError);
+    end
+    else if ABackend = sslFreePascal then
+    begin
+      WriteLn('  [PASS] Pure backend sessions keep ISSLNativeHandleAccess absent');
+      AddResult('SessionNativeHandleInterfaceAligned', ABackend, True);
+    end
+    else
+    begin
+      WriteLn('  [PASS] C-library backend sessions expose native-handle surface');
+      AddResult('SessionNativeHandleInterfaceAligned', ABackend, True);
+    end;
+  except
+    on E: Exception do
+    begin
+      WriteLn('  [FAIL] Exception: ', E.ClassName, ' - ', E.Message);
+      AddResult('SessionNativeHandleInterfaceAligned', ABackend, False, E.Message);
+    end;
+  end;
+
+  LSession := nil;
+  if LOwnedProbeHandle <> nil then
+    FreeMem(LOwnedProbeHandle);
+end;
+
 procedure PrintSummary;
 var
   I: Integer;
@@ -1370,6 +1530,9 @@ begin
 
     // 14) HTTP-hooks-capable backends must expose context hook surface
     TestContract_ContextHTTPHooksInterfaceAligned(LBackend);
+
+    // 15) Session wrappers must expose native-handle truth consistently
+    TestContract_SessionNativeHandleInterfaceAligned(LBackend);
   end;
 
   PrintSummary;

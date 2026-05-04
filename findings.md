@@ -169,3 +169,15 @@
   - `wolfssl.context` 不再保留旧 `TWolfSSLConnection` 私有类/构造/析构
   - `TWolfSSLContext.CreateConnection(...)` 继续稳定走 `fafafa.ssl.wolfssl.connection.TWolfSSLConnection`
   - `python3 scripts/compile_all_modules.py` 与 minimal CI gate 继续全绿，说明删掉的是纯死代码而非隐式依赖路径
+- `ISSLNativeHandleAccess` 的迁移契约在 docs/实现侧已经覆盖到 context / connection，但 session-level 之前缺少 cross-backend focused contract，导致这条 surface 还没有被持续锁住。
+- 新增的 `Contract 15` 在当前 Linux 主机上直接全绿，说明 session native-handle 这条线没有新的生产代码漂移：
+  - `OpenSSL` session 通过 `SSL_SESSION_new` 拿到真实 session handle，`ISSLNativeHandleAccess` 与 `TryGetNativeHandle` round-trip 一致
+  - `WolfSSL` / `MbedTLS` 的 session wrapper 都能稳定携带 opaque native handle，`GetBackendType` / `GetNativeHandle` / helper round-trip 一致
+  - `FreePascal` session 继续保持 `ISSLNativeHandleAccess` absent，不会把纯 Pascal backend 伪装成有原生句柄
+- 因为 `WolfSSL` / `MbedTLS` 当前没有廉价、稳定的独立 session allocator，这批 contract 的边界是 wrapped-surface completion audit，而不是完整 session resumption runtime proof。
+- `WinSSL` session 仍然不能在这台 Linux 主机上被当作已证实：
+  - backend runtime 本机不可用
+  - 仓库里同时存在 `src/fafafa.ssl.winssl.session.pas` 与 `src/fafafa.ssl.winssl.connection.pas` 两套 session truth source
+  - 其中 `connection.pas` 内的 `TWinSSLSession` 虽实现 `ISSLNativeHandleAccess`，但 `GetNativeHandle=nil`、`IsNativeHandleValid=False`
+  - 因此本批对 `WinSSL` 明确 skip，留给后续 Windows/session truth-source 专批
+- 这批的正确结论是 completion audit closeout，而不是继续扩成 session runtime/恢复逻辑重构。

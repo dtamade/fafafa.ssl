@@ -258,6 +258,31 @@
   - builder 会把 `server_ocsp_stapled_response_file` 加载进 `TWolfSSLContext.FServerStapledOCSPResponse`
   - `TWolfSSLConnection` 只有 peer-side OCSP consume surface，没有 client request path
   - `TWolfSSLContext` 没有 server callback / response injection 接线
+- 继续当前 closeout，先核对工作树、memory 与 planning files，确认上一批 `b0315d7 refactor(wolfssl): remove stale context connection implementation` 已收口提交，下一块真实缺口收敛到 session-level native-handle contract。
+- 新建本批计划：`docs/plans/2026-05-04-backend-session-native-handle-completion-audit.md`
+- 更新 `task_plan.md`，把当前目标切到 `Backend Session Native-Handle Completion Audit`
+- 生产改动仅限 contract/台账：
+  - `tests/contract/test_backend_contract.pas`
+    - 新增 `Contract 15: Session native-handle interface alignment`
+    - 新增 session probe：
+      - `OpenSSL`: `SSL_SESSION_new`
+      - `WolfSSL` / `MbedTLS`: 最小 wrapped opaque-handle probe
+      - `FreePascal`: `TFreePascalSession.Create`
+    - `WinSSL` 明确 `[SKIP] WinSSL session truth split requires a dedicated Windows-focused batch`
+- focused contract：
+  - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract && ./tmp/test_backend_contract`
+  - 结果：`Passed: 87 / Failed: 0 / Skipped: 18`
+  - `Contract 15` 结果：
+    - `OpenSSL`: `[PASS] C-library backend sessions expose native-handle surface`
+    - `WolfSSL`: `[PASS] C-library backend sessions expose native-handle surface`
+    - `MbedTLS`: `[PASS] C-library backend sessions expose native-handle surface`
+    - `FreePascal`: `[PASS] Pure backend sessions keep ISSLNativeHandleAccess absent`
+    - `WinSSL`: `[SKIP] WinSSL session truth split requires a dedicated Windows-focused batch`
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
 - 新建计划：`docs/plans/2026-05-04-backend-http-hooks-interface-completion-audit.md`
 - 更新 `task_plan.md`，把当前目标切到 `Backend HTTP Hooks Interface Completion Audit`
 - 在 `tests/contract/test_backend_contract.pas` 新增：
