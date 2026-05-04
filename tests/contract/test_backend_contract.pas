@@ -797,6 +797,78 @@ begin
   end;
 end;
 
+procedure TestContract_ClientConnectionOCSPInterfaceAligned(ABackend: TSSLLibraryType);
+var
+  LLib: ISSLLibrary;
+  LCaps: TSSLBackendCapabilities;
+  LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LOCSP: ISSLOCSPStapling;
+  LProbeStream: TMemoryStream;
+begin
+  PrintSubHeader(Format('Contract 10: Client connection OCSP interface alignment - %s',
+    [SSL_LIBRARY_NAMES[ABackend]]));
+
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    AddSkip('Backend not available on this platform');
+    Exit;
+  end;
+
+  LProbeStream := TMemoryStream.Create;
+  try
+    try
+      LLib := TSSLFactory.GetLibrary(ABackend);
+      LCaps := LLib.GetCapabilities;
+      LCtx := LLib.CreateContext(sslCtxClient);
+      LConn := LCtx.CreateConnection(LProbeStream);
+
+      if LCaps.SupportsOCSPStapling then
+      begin
+        if not Supports(LConn, ISSLOCSPStapling, LOCSP) then
+        begin
+          WriteLn('  [FAIL] OCSP-capable backend does not expose ISSLOCSPStapling');
+          AddResult('ClientConnectionOCSPInterfaceAligned', ABackend, False,
+            'SupportsOCSPStapling=True but connection does not expose ISSLOCSPStapling');
+        end
+        else if SameText(LOCSP.GetOCSPResponseStatus, 'Not Supported') then
+        begin
+          WriteLn('  [FAIL] OCSP-capable backend still falls back to base OCSP stub');
+          AddResult('ClientConnectionOCSPInterfaceAligned', ABackend, False,
+            'SupportsOCSPStapling=True but OCSP status still reports Not Supported');
+        end
+        else
+        begin
+          WriteLn('  [PASS] OCSP-capable backend exposes non-stub OCSP surface');
+          AddResult('ClientConnectionOCSPInterfaceAligned', ABackend, True);
+        end;
+      end
+      else
+      begin
+        if Supports(LConn, ISSLOCSPStapling, LOCSP) then
+        begin
+          WriteLn('  [FAIL] Backend without OCSP capability still exposes ISSLOCSPStapling');
+          AddResult('ClientConnectionOCSPInterfaceAligned', ABackend, False,
+            'SupportsOCSPStapling=False but connection still exposes ISSLOCSPStapling');
+        end
+        else
+        begin
+          WriteLn('  [PASS] Backend without OCSP capability keeps ISSLOCSPStapling absent');
+          AddResult('ClientConnectionOCSPInterfaceAligned', ABackend, True);
+        end;
+      end;
+    except
+      on E: Exception do
+      begin
+        WriteLn('  [FAIL] Exception: ', E.ClassName, ' - ', E.Message);
+        AddResult('ClientConnectionOCSPInterfaceAligned', ABackend, False, E.Message);
+      end;
+    end;
+  finally
+    LProbeStream.Free;
+  end;
+end;
+
 procedure PrintSummary;
 var
   I: Integer;
@@ -880,6 +952,9 @@ begin
 
     // 9) CT-capable backends must expose non-stub CT optional interfaces
     TestContract_ClientConnectionCTInterfaceAligned(LBackend);
+
+    // 10) OCSP-capable backends must expose non-stub OCSP optional interface
+    TestContract_ClientConnectionOCSPInterfaceAligned(LBackend);
   end;
 
   PrintSummary;

@@ -14,7 +14,7 @@
 | **TLS 1.3**                  | ✅         | ✅      | ✅     | ⚠️      | ✅      |
 | **Early Data (0-RTT)**       | ✅         | ✅      | ❌     | ❌      | ⚠️      |
 | **Session Resumption**       | ✅         | ✅      | ✅     | ✅      | ✅      |
-| **OCSP Stapling**            | ✅         | ✅      | ⚠️     | ❌      | ⚠️      |
+| **OCSP Stapling**            | ✅         | ✅      | ❌     | ❌      | ⚠️      |
 | **Certificate Transparency** | ✅         | ❌      | ❌     | ❌      | ❌      |
 | **ALPN**                     | ✅         | ✅      | ✅     | ✅      | ✅      |
 | **SNI**                      | ✅         | ✅      | ✅     | ✅      | ✅      |
@@ -176,21 +176,14 @@ if not Supports(Ctx, ISSLEarlyDataContext) then
 
 ### WinSSL 后端
 
-**状态**: ⚠️ 部分支持
+**状态**: ❌ 不支持当前仓库的 OCSP stapling public surface
 
-**功能**:
+**说明**:
 
-- ✅ 自动 OCSP Stapling（系统管理）
-- ❌ 手动加载响应（Schannel 限制）
-
-**检测**:
-
-```pascal
-Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
-Ctx := Lib.CreateContext(sslCtxServer);
-if not Supports(Ctx, ISSLServerOCSPStaplingContext) then
-  WriteLn('Manual server OCSP stapling not supported on WinSSL');
-```
+- Schannel 可能有系统级自动行为，但当前 `GetCapabilities` 仍发布：
+  - `SupportsOCSPStapling=False`
+  - `OCSPStaplingSupport=sslSupportNone`
+- 因此 connection / context 不对外暴露仓库定义的 OCSP stapling optional interface
 
 ### MbedTLS 后端
 

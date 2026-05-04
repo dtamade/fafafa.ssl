@@ -110,6 +110,13 @@
   - 结果：`185/185` 核心模块编译成功，`100.0%`
   - `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 提交前复验：
+  - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract && ./tmp/test_backend_contract`
+  - 结果：`Passed: 59 / Failed: 0 / Skipped: 13`
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
 - 继续后端 interface completeness 审计：
   - 读取 `src/fafafa.ssl.mbedtls.connection.pas` / `src/fafafa.ssl.wolfssl.connection.pas` / `src/fafafa.ssl.openssl.connection.pas` / `src/fafafa.ssl.freepascal.connection.pas`
   - 结论：`MbedTLS` / `WolfSSL` 的 connection 类都已有 `SetServerName/GetServerName`，但类声明没挂 `ISSLClientConnection`；`OpenSSL` / `FreePascal` 已挂。
@@ -234,3 +241,42 @@
   - 结果：`185/185` 核心模块编译成功，`100.0%`，其中 `fafafa.ssl.wolfssl.api/lib/connection/context` 全部通过编译。
 - 运行 `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`。
+- 继续当前 closeout，先核对工作树与上一提交：
+  - `git status --short --branch` => `master...origin/master [ahead 9]`，当前未提交改动集中在：
+    - `tests/contract/test_backend_contract.pas`
+    - `src/fafafa.ssl.connection.base.pas`
+    - `src/fafafa.ssl.freepascal.connection.pas`
+    - `src/fafafa.ssl.openssl.connection.pas`
+    - `src/fafafa.ssl.wolfssl.connection.pas`
+    - `docs/BACKEND_CAPABILITY_MATRIX.md`
+    - `task_plan.md`
+    - `docs/plans/2026-05-04-backend-ocsp-connection-interface-alignment.md`
+  - 结合当前批次 plan，确认这是尚未提交的 `Backend OCSP Connection Interface Alignment`。
+- RED:
+  - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract`
+  - `./tmp/test_backend_contract`
+  - 结果：
+    - `MbedTLS`: `FAIL ... SupportsOCSPStapling=False but connection still exposes ISSLOCSPStapling`
+    - 这证明 `TBaseSSLConnection` 上的 `ISSLOCSPStapling` 声明会把 incapable backend 伪装成“支持 connection OCSP surface”。
+- GREEN:
+  - `tests/contract/test_backend_contract.pas`
+    - 新增 `Contract 10: Client connection OCSP interface alignment`
+  - `src/fafafa.ssl.connection.base.pas`
+    - 移除基类上的 `ISSLOCSPStapling`
+  - `src/fafafa.ssl.freepascal.connection.pas`
+    - `TFreePascalConnection = class(..., ISSLEarlyDataConnection, ISSLOCSPStapling, ...)`
+  - `src/fafafa.ssl.openssl.connection.pas`
+    - `TOpenSSLConnection = class(..., ISSLEarlyDataConnection, ISSLOCSPStapling, ISSLNativeHandleAccess)`
+  - `src/fafafa.ssl.wolfssl.connection.pas`
+    - `TWolfSSLConnection = class(..., ISSLEarlyDataConnection, ISSLOCSPStapling, ISSLNativeHandleAccess)`
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
+    - quick table 中 `WinSSL` 的 `OCSP Stapling` 从 `⚠️` 收紧为 `❌`
+    - WinSSL OCSP section 改成当前仓库 public surface 不支持
+- 复跑 focused contract：
+  - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract && ./tmp/test_backend_contract`
+  - 结果：`Passed: 59 / Failed: 0 / Skipped: 13`
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`

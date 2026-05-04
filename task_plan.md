@@ -1,29 +1,30 @@
-# Task Plan - Backend CT Optional Interface Alignment
+# Task Plan - Backend OCSP Connection Interface Alignment
 
 ## Goal
-把连接级 `ISSLCertificateTransparency` / `ISSLCertificateTransparencyValidation` public contract 收紧到真实实现边界：unsupported backend 不再暴露假阳性 interface，`FreePascal` / `OpenSSL` 的 capability 与 connection getter 语义保持一致。
+把连接级 `ISSLOCSPStapling` public contract 收紧到真实实现边界：unsupported backend 不再暴露假阳性 interface，`FreePascal` / `OpenSSL` / `WolfSSL` 的 capability 与 connection getter 语义保持一致。
 
 ## Current Batch
-1. 在 `tests/contract/test_backend_contract.pas` 增加跨后端 CT contract，锁住 capability、optional interface 暴露、以及 getter status 不再落回 `Not Supported` 存根。
-2. 对 `src/fafafa.ssl.connection.base.pas` 做最小收紧：移出基类上的 CT / validation interface 声明，但保留共享 getter/stub 供显式支持的 backend 复用。
-3. 只对 `src/fafafa.ssl.freepascal.connection.pas` / `src/fafafa.ssl.openssl.connection.pas` 做最小 GREEN，其中 `OpenSSL` 基于已有 CT binding 补 connection runtime surface。
+1. 在 `tests/contract/test_backend_contract.pas` 增加跨后端 OCSP contract，锁住 capability、optional interface 暴露、以及 getter status 不再落回 `Not Supported` 存根。
+2. 对 `src/fafafa.ssl.connection.base.pas` 做最小收紧：移出基类上的 `ISSLOCSPStapling` 接口声明，但保留共享 getter/stub 供显式支持的 backend 复用。
+3. 只对 `src/fafafa.ssl.freepascal.connection.pas` / `src/fafafa.ssl.openssl.connection.pas` / `src/fafafa.ssl.wolfssl.connection.pas` 做最小 GREEN，把现有 OCSP getter surface 公开挂进 `ISSLOCSPStapling`。
 4. 跑 focused contract、`python3 scripts/compile_all_modules.py`、`bash scripts/run_minimal_ci_gate.sh --fast-local`，然后按批次提交。
 
 ## Status
 - [completed] RED contract
 - [completed] GREEN implementation
 - [completed] Verification
-- [pending] Review and commit
+- [completed] Review and commit
 
 ## Outcome
-- `TBaseSSLConnection` 不再无条件暴露 `ISSLCertificateTransparency` / `ISSLCertificateTransparencyValidation`。
-- `FreePascal` 继续显式暴露并实现 CT / validation connection surface。
-- 当前默认 runtime truth 下，`OpenSSL` / `WolfSSL` / `MbedTLS` connection 都不再通过 `Supports(...)` 假阳性暴露 CT interface。
-- 新增的 cross-backend contract 已经锁住：没有 capability 的 backend 不能再靠基类存根冒充 CT surface。
+- `tests/contract/test_backend_contract.pas` 新增 `Contract 10`，锁住 capability、connection optional interface 暴露和 getter status 三者一致。
+- `TBaseSSLConnection` 不再无条件暴露 `ISSLOCSPStapling`；`FreePascal` / `OpenSSL` / `WolfSSL` 改为显式实现。
+- `MbedTLS` 在 focused RED 中真实暴露出 connection-level OCSP 假阳性；收口后 unsupported backend 已不再通过 `Supports(...)` 误判支持。
+- `docs/BACKEND_CAPABILITY_MATRIX.md` 已把 WinSSL 的 OCSP stapling truth 收紧到当前仓库真实 public surface。
 
 ## Risks
-- `OpenSSL` 仓库里仍有底层 CT binding，但默认 capability 目前没有把它发布成 connection surface；如果后续要重新打开这条线，必须一并补 capability、interface 和 runtime 证据，而不能只恢复接口声明。
+- `WinSSL` 本机仍无法做 runtime 验证；这批的 WinSSL 结论来自 capability truth 与类层级对称性，不是 Windows 主机实测。
+- 这批只收紧 public contract，没有扩展 `MbedTLS` / `WinSSL` 的新 OCSP 实现，也没有重开在线验证或 responder 调度。
 
 ## Follow-up Queue
 1. 如果这批收口后仍有 drift，再继续审计其它 connection-level optional/public surface。
-2. 如果要把 OpenSSL CT 重新升级为 user-facing capability，应单开一批去接通 `osmCT` 默认加载、connection getter 和 focused runtime proof。
+2. 后续再决定是否把 OpenSSL CT 从底层 binding 提升回默认 user-facing capability，并补 focused runtime proof。

@@ -40,11 +40,10 @@ type
    * - ISSLDiagnostics: 诊断功能
  * - ISSLSessionResumption: 会话复用
  * - ISSLCertificateVerification: 证书验证
- * - ISSLOCSPStapling: OCSP 装订
  * - ISSLConnectionInfo: 连接信息
  *
  * 说明:
- * - CT / CT validation getter/stub 仍保留在基类里，供显式支持这些可选接口
+ * - OCSP / CT / CT validation getter/stub 仍保留在基类里，供显式支持这些可选接口
  *   的后端连接类复用；但基类本身不再无条件暴露对应 interface。
  *}
   TBaseSSLConnection = class(TInterfacedObject,
@@ -52,7 +51,6 @@ type
     ISSLDiagnostics,
     ISSLSessionResumption,
     ISSLCertificateVerification,
-    ISSLOCSPStapling,
     ISSLConnectionInfo)
   protected
     { 状态字段 }

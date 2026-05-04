@@ -44,7 +44,7 @@ uses
 
 type
   TOpenSSLConnection = class(TBaseSSLConnection, ISSLClientConnection,
-    ISSLEarlyDataConnection, ISSLNativeHandleAccess)
+    ISSLEarlyDataConnection, ISSLOCSPStapling, ISSLNativeHandleAccess)
   private
     FSocket: THandle;
     FStream: TStream;

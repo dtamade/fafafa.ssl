@@ -29,7 +29,7 @@ uses
 type
   { TWolfSSLConnection - WolfSSL SSL 连接类 }
   TWolfSSLConnection = class(TBaseSSLConnection, ISSLClientConnection,
-    ISSLEarlyDataConnection,
+    ISSLEarlyDataConnection, ISSLOCSPStapling,
     ISSLNativeHandleAccess)
   private
     FWolfSSLCtx: PWOLFSSL_CTX;

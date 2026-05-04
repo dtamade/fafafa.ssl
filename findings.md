@@ -88,3 +88,17 @@
   - `MbedTLS`: `SupportsSNI=True but connection does not expose ISSLClientConnection`
 - 这批的最小 GREEN 不需要重写 SNI 行为，只需要把现有的 `SetServerName/GetServerName` 公开挂进 `ISSLClientConnection`。
 - 收口后，`OpenSSL` / `FreePascal` / `WolfSSL` / `MbedTLS` 四条当前 Linux 可验证的 SNI-capable backend 已对齐到同一 public contract：capability、connection interface 和 round-trip 行为一致。
+- `ISSLOCSPStapling` 和前面的 CT 批次是同型问题：基类 `TBaseSSLConnection` 已经带有共享 getter/stub，但如果同时把 interface 声明也挂在基类上，就会让 unsupported backend 在 `Supports(...)` 上出现假阳性。
+- 新增的 `Contract 10` 在当前 Linux 主机上直接打出了真实 RED：
+  - `MbedTLS`: `SupportsOCSPStapling=False but connection still exposes ISSLOCSPStapling`
+- 这说明问题不只是文档漂移，而是 public contract 漂移：调用方会在 capability 为 `False/sslSupportNone` 的后端上仍然拿到 `ISSLOCSPStapling`，随后只在运行时才撞到 `Not Supported` 存根。
+- 当前最小且一致的 GREEN 不是给 `MbedTLS` / `WinSSL` 新增 OCSP 能力，而是：
+  - 把 `ISSLOCSPStapling` 从 `TBaseSSLConnection` 的类声明中移出
+  - 只让 `TFreePascalConnection` / `TOpenSSLConnection` / `TWolfSSLConnection` 显式实现该 interface
+- `WinSSL` 虽然本机无法 runtime 验证，但它的 capability truth 仍是：
+  - `SupportsOCSPStapling=False`
+  - `OCSPStaplingSupport=sslSupportNone`
+  因此和 `MbedTLS` 一样，不应该继续暴露 connection-level `ISSLOCSPStapling`。
+- 这批收口后，当前仓库里连接级 OCSP public contract 已重新回到统一语义：
+  - capable backend 暴露 `ISSLOCSPStapling` 且 getter 不落回基类 `Not Supported`
+  - incapable backend 不再通过 `Supports(...)` 误判支持

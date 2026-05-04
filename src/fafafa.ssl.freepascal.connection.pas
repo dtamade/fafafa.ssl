@@ -40,7 +40,7 @@ uses
 
 type
   TFreePascalConnection = class(TBaseSSLConnection, ISSLClientConnection,
-    ISSLEarlyDataConnection, ISSLCertificateTransparency,
+    ISSLEarlyDataConnection, ISSLOCSPStapling, ISSLCertificateTransparency,
     ISSLCertificateTransparencyValidation)
   private
     FSocket: THandle;
