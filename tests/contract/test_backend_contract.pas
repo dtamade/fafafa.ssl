@@ -1982,6 +1982,120 @@ begin
   end;
 end;
 
+procedure TestContract_CertificateVerificationInterfaceAligned(ABackend: TSSLLibraryType);
+var
+  LLib: ISSLLibrary;
+  LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LCertVerify: ISSLCertificateVerification;
+  LProbeStream: TMemoryStream;
+  LCoreChain: TSSLCertificateArray;
+  LOptionalChain: TSSLCertificateArray;
+  I: Integer;
+begin
+  PrintSubHeader(Format('Contract 21: Certificate-verification interface alignment - %s',
+    [SSL_LIBRARY_NAMES[ABackend]]));
+
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    AddSkip('Backend not available on this platform');
+    Exit;
+  end;
+
+  LProbeStream := TMemoryStream.Create;
+  try
+    try
+      LLib := TSSLFactory.GetLibrary(ABackend);
+      LCtx := LLib.CreateContext(sslCtxClient);
+      LConn := LCtx.CreateConnection(LProbeStream);
+
+      if not Supports(LConn, ISSLCertificateVerification, LCertVerify) then
+      begin
+        WriteLn('  [FAIL] Connection does not expose ISSLCertificateVerification');
+        AddResult('CertificateVerificationInterfaceAligned', ABackend, False,
+          'Connection does not expose ISSLCertificateVerification');
+        Exit;
+      end;
+
+      if LCertVerify.GetVerifyResult <> LConn.GetVerifyResult then
+      begin
+        WriteLn('  [FAIL] Optional interface verify result drifted from core getter');
+        AddResult('CertificateVerificationInterfaceAligned', ABackend, False,
+          'ISSLCertificateVerification.GetVerifyResult does not match ISSLConnection.GetVerifyResult');
+        Exit;
+      end;
+
+      if LCertVerify.GetVerifyResultString <> LConn.GetVerifyResultString then
+      begin
+        WriteLn('  [FAIL] Optional interface verify result string drifted from core getter');
+        AddResult('CertificateVerificationInterfaceAligned', ABackend, False,
+          'ISSLCertificateVerification.GetVerifyResultString does not match ISSLConnection.GetVerifyResultString');
+        Exit;
+      end;
+
+      LCoreChain := LConn.GetPeerCertificateChain;
+      LOptionalChain := LCertVerify.GetPeerCertificateChain;
+
+      if Length(LOptionalChain) <> Length(LCoreChain) then
+      begin
+        WriteLn('  [FAIL] Optional interface peer certificate chain length drifted from core getter');
+        AddResult('CertificateVerificationInterfaceAligned', ABackend, False,
+          'ISSLCertificateVerification.GetPeerCertificateChain length does not match ISSLConnection.GetPeerCertificateChain');
+        Exit;
+      end;
+
+      for I := 0 to High(LCoreChain) do
+      begin
+        if (LOptionalChain[I] = nil) <> (LCoreChain[I] = nil) then
+        begin
+          WriteLn('  [FAIL] Optional interface peer certificate chain nilness drifted from core getter');
+          AddResult('CertificateVerificationInterfaceAligned', ABackend, False,
+            'ISSLCertificateVerification.GetPeerCertificateChain nil/non-nil result does not match ISSLConnection.GetPeerCertificateChain');
+          Exit;
+        end;
+
+        if LCoreChain[I] = nil then
+          Continue;
+
+        if LOptionalChain[I].GetSubject <> LCoreChain[I].GetSubject then
+        begin
+          WriteLn('  [FAIL] Optional interface peer certificate subject drifted from core getter');
+          AddResult('CertificateVerificationInterfaceAligned', ABackend, False,
+            'ISSLCertificateVerification.GetPeerCertificateChain subject does not match ISSLConnection.GetPeerCertificateChain');
+          Exit;
+        end;
+
+        if LOptionalChain[I].GetIssuer <> LCoreChain[I].GetIssuer then
+        begin
+          WriteLn('  [FAIL] Optional interface peer certificate issuer drifted from core getter');
+          AddResult('CertificateVerificationInterfaceAligned', ABackend, False,
+            'ISSLCertificateVerification.GetPeerCertificateChain issuer does not match ISSLConnection.GetPeerCertificateChain');
+          Exit;
+        end;
+
+        if LOptionalChain[I].GetSerialNumber <> LCoreChain[I].GetSerialNumber then
+        begin
+          WriteLn('  [FAIL] Optional interface peer certificate serial drifted from core getter');
+          AddResult('CertificateVerificationInterfaceAligned', ABackend, False,
+            'ISSLCertificateVerification.GetPeerCertificateChain serial does not match ISSLConnection.GetPeerCertificateChain');
+          Exit;
+        end;
+      end;
+
+      WriteLn('  [PASS] Certificate-verification surface is self-consistent');
+      AddResult('CertificateVerificationInterfaceAligned', ABackend, True);
+    except
+      on E: Exception do
+      begin
+        WriteLn('  [FAIL] Exception: ', E.ClassName, ' - ', E.Message);
+        AddResult('CertificateVerificationInterfaceAligned', ABackend, False, E.Message);
+      end;
+    end;
+  finally
+    LProbeStream.Free;
+  end;
+end;
+
 procedure PrintSummary;
 var
   I: Integer;
@@ -2098,6 +2212,9 @@ begin
 
     // 20) Session-resumption optional surface must stay exposed and self-consistent
     TestContract_SessionResumptionInterfaceAligned(LBackend);
+
+    // 21) Certificate-verification optional surface must stay exposed and self-consistent
+    TestContract_CertificateVerificationInterfaceAligned(LBackend);
   end;
 
   PrintSummary;

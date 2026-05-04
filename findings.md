@@ -1,6 +1,17 @@
 # Findings - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- `ISSLCertificateVerification` completion audit 同样确认是纯 contract closeout，而不是新的实现修复批次：
+  - 新增 `Contract 21` 后，当前 Linux 可验证 backend 全绿
+  - `OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal` 都没有暴露新的 certificate-verification drift
+- `ISSLCertificateVerification` 这条线的关键边界已经明确：
+  - 该 optional interface 与 core `ISSLConnection` 的 verify surface 高度重叠
+  - 因此当前 contract 只锁住同一 connection 对象上的 chain/result truth，不能把它误写成完整的 runtime trust/hostname/revocation 证明
+- `Contract 21` 当前锁住的 certificate-verification truth 包括：
+  - 所有公开 connection 都暴露 `ISSLCertificateVerification`
+  - `GetVerifyResult` / `GetVerifyResultString` 与 core getter 一致
+  - `GetPeerCertificateChain` 的长度与每个元素的 nilness / subject / issuer / serial 与 core getter 保持自洽
+- 在 `ISSLDiagnostics`、`ISSLConnectionInfo`、`ISSLSessionResumption`、`ISSLCertificateVerification` 都收口为 completion audit 后，这一轮明确排队的 connection optional public surface 已全部收尽；下一步更适合回到总盘点，而不是继续假设还有同级未审计接口。
 - `ISSLSessionResumption` completion audit 也确认是纯 contract closeout，而不是新的实现修复批次：
   - 新增 `Contract 20` 后，当前 Linux 可验证 backend 全绿
   - `OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal` 都没有暴露新的 session-resumption drift
