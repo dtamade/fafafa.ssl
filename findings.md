@@ -1,6 +1,18 @@
 # Findings - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- `ISSLSessionResumption` completion audit 也确认是纯 contract closeout，而不是新的实现修复批次：
+  - 新增 `Contract 20` 后，当前 Linux 可验证 backend 全绿
+  - `OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal` 都没有暴露新的 session-resumption drift
+- `ISSLSessionResumption` 这条线的关键边界已经明确：
+  - 该 optional interface 与 core `ISSLConnection` 的 session surface 高度重叠
+  - 因此当前 contract 只能锁住同一 connection 对象上的 getter/reused truth，不能把它误写成真实跨连接恢复成功 proof
+- `Contract 20` 当前锁住的 session-resumption truth 包括：
+  - 所有公开 connection 都暴露 `ISSLSessionResumption`
+  - `IsSessionReused` 与 core getter 一致
+  - `GetConnectionInfo.IsResumed` 与 `IsSessionReused` 一致
+  - `GetSession` 返回对象的 nilness、`IsValid`、`IsResumable`、协议/密码/超时/peer certificate nilness 与 core getter 保持自洽
+- 在 `ISSLDiagnostics`、`ISSLConnectionInfo`、`ISSLSessionResumption` 都收口为 completion audit 后，当前最高收益的剩余未审计 public surface 已进一步收窄到 `ISSLCertificateVerification`。
 - `ISSLConnectionInfo` completion audit 已确认是纯 contract closeout，而不是新的实现修复批次：
   - 新增 `Contract 19` 后，当前 Linux 可验证 backend 全绿
   - `OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal` 都没有暴露新的 connection-info drift

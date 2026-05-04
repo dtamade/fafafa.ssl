@@ -1861,6 +1861,127 @@ begin
   end;
 end;
 
+procedure TestContract_SessionResumptionInterfaceAligned(ABackend: TSSLLibraryType);
+var
+  LLib: ISSLLibrary;
+  LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LSessionResumption: ISSLSessionResumption;
+  LProbeStream: TMemoryStream;
+  LCoreSession: ISSLSession;
+  LOptionalSession: ISSLSession;
+  LCoreSessionCert: ISSLCertificate;
+  LOptionalSessionCert: ISSLCertificate;
+begin
+  PrintSubHeader(Format('Contract 20: Session-resumption interface alignment - %s',
+    [SSL_LIBRARY_NAMES[ABackend]]));
+
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    AddSkip('Backend not available on this platform');
+    Exit;
+  end;
+
+  LProbeStream := TMemoryStream.Create;
+  try
+    try
+      LLib := TSSLFactory.GetLibrary(ABackend);
+      LCtx := LLib.CreateContext(sslCtxClient);
+      LConn := LCtx.CreateConnection(LProbeStream);
+
+      if not Supports(LConn, ISSLSessionResumption, LSessionResumption) then
+      begin
+        WriteLn('  [FAIL] Connection does not expose ISSLSessionResumption');
+        AddResult('SessionResumptionInterfaceAligned', ABackend, False,
+          'Connection does not expose ISSLSessionResumption');
+        Exit;
+      end;
+
+      LCoreSession := LConn.GetSession;
+      LOptionalSession := LSessionResumption.GetSession;
+
+      if (LCoreSession = nil) <> (LOptionalSession = nil) then
+      begin
+        WriteLn('  [FAIL] Optional interface session getter drifted from core getter');
+        AddResult('SessionResumptionInterfaceAligned', ABackend, False,
+          'ISSLSessionResumption.GetSession nil/non-nil result does not match ISSLConnection.GetSession');
+      end
+      else if LSessionResumption.IsSessionReused <> LConn.IsSessionReused then
+      begin
+        WriteLn('  [FAIL] Optional interface reused flag drifted from core getter');
+        AddResult('SessionResumptionInterfaceAligned', ABackend, False,
+          'ISSLSessionResumption.IsSessionReused does not match ISSLConnection.IsSessionReused');
+      end
+      else if LConn.GetConnectionInfo.IsResumed <> LConn.IsSessionReused then
+      begin
+        WriteLn('  [FAIL] Connection-info resumed flag drifted from session getter');
+        AddResult('SessionResumptionInterfaceAligned', ABackend, False,
+          'ISSLConnection.GetConnectionInfo.IsResumed does not match ISSLConnection.IsSessionReused');
+      end
+      else if LCoreSession <> nil then
+      begin
+        LCoreSessionCert := LCoreSession.GetPeerCertificate;
+        LOptionalSessionCert := LOptionalSession.GetPeerCertificate;
+
+        if LOptionalSession.IsValid <> LCoreSession.IsValid then
+        begin
+          WriteLn('  [FAIL] Optional interface session validity drifted from core getter');
+          AddResult('SessionResumptionInterfaceAligned', ABackend, False,
+            'ISSLSessionResumption.GetSession.IsValid does not match ISSLConnection.GetSession');
+        end
+        else if LOptionalSession.IsResumable <> LCoreSession.IsResumable then
+        begin
+          WriteLn('  [FAIL] Optional interface session resumable flag drifted from core getter');
+          AddResult('SessionResumptionInterfaceAligned', ABackend, False,
+            'ISSLSessionResumption.GetSession.IsResumable does not match ISSLConnection.GetSession');
+        end
+        else if LOptionalSession.GetProtocolVersion <> LCoreSession.GetProtocolVersion then
+        begin
+          WriteLn('  [FAIL] Optional interface session protocol drifted from core getter');
+          AddResult('SessionResumptionInterfaceAligned', ABackend, False,
+            'ISSLSessionResumption.GetSession.GetProtocolVersion does not match ISSLConnection.GetSession');
+        end
+        else if LOptionalSession.GetCipherName <> LCoreSession.GetCipherName then
+        begin
+          WriteLn('  [FAIL] Optional interface session cipher drifted from core getter');
+          AddResult('SessionResumptionInterfaceAligned', ABackend, False,
+            'ISSLSessionResumption.GetSession.GetCipherName does not match ISSLConnection.GetSession');
+        end
+        else if LOptionalSession.GetTimeout <> LCoreSession.GetTimeout then
+        begin
+          WriteLn('  [FAIL] Optional interface session timeout drifted from core getter');
+          AddResult('SessionResumptionInterfaceAligned', ABackend, False,
+            'ISSLSessionResumption.GetSession.GetTimeout does not match ISSLConnection.GetSession');
+        end
+        else if (LOptionalSessionCert = nil) <> (LCoreSessionCert = nil) then
+        begin
+          WriteLn('  [FAIL] Optional interface session peer certificate presence drifted from core getter');
+          AddResult('SessionResumptionInterfaceAligned', ABackend, False,
+            'ISSLSessionResumption.GetSession.GetPeerCertificate nil/non-nil result does not match ISSLConnection.GetSession');
+        end
+        else
+        begin
+          WriteLn('  [PASS] Session-resumption surface is self-consistent');
+          AddResult('SessionResumptionInterfaceAligned', ABackend, True);
+        end;
+      end
+      else
+      begin
+        WriteLn('  [PASS] Session-resumption surface is self-consistent');
+        AddResult('SessionResumptionInterfaceAligned', ABackend, True);
+      end;
+    except
+      on E: Exception do
+      begin
+        WriteLn('  [FAIL] Exception: ', E.ClassName, ' - ', E.Message);
+        AddResult('SessionResumptionInterfaceAligned', ABackend, False, E.Message);
+      end;
+    end;
+  finally
+    LProbeStream.Free;
+  end;
+end;
+
 procedure PrintSummary;
 var
   I: Integer;
@@ -1974,6 +2095,9 @@ begin
 
     // 19) Connection-info optional surface must stay exposed and self-consistent
     TestContract_ConnectionInfoInterfaceAligned(LBackend);
+
+    // 20) Session-resumption optional surface must stay exposed and self-consistent
+    TestContract_SessionResumptionInterfaceAligned(LBackend);
   end;
 
   PrintSummary;
