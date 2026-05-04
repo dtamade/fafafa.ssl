@@ -1,32 +1,36 @@
-# Task Plan - Backend HTTP Hooks Interface Completion Audit
+# Task Plan - WolfSSL Context Stale Connection Removal
 
 ## Goal
-把 context-level `ISSLHttpHooksAccess` public contract 补成 cross-backend completion audit：当前真正依赖 context HTTP hooks 的后端必须显式暴露该接口，其余后端继续保持 absent。
+删除 `src/fafafa.ssl.wolfssl.context.pas` 里仍保留的旧 `TWolfSSLConnection` 私有残留实现，避免它继续和 `src/fafafa.ssl.wolfssl.connection.pas` 的现代连接类分叉。
 
 ## Current Batch
-1. 在 `tests/contract/test_backend_contract.pas` 增加 context-level HTTP hooks completion-audit contract，锁住 `ISSLHttpHooksAccess` 的 presence/absence 和最小 callback round-trip。
-2. 先跑 focused contract，判断当前剩余问题是“接口没挂上”还是 callback storage round-trip 漂移；只有出现真实 RED 才改生产代码。
-3. 跑 `python3 scripts/compile_all_modules.py`、`bash scripts/run_minimal_ci_gate.sh --fast-local`，把这批作为 completion audit 或最小修复批次收口提交。
+1. 先加一个 focused source contract，锁住 `wolfssl.context` 不再保留旧 `TWolfSSLConnection` 私有类实现，同时工厂路径继续指向 `wolfssl.connection.TWolfSSLConnection`。
+2. 只有契约打出真实 RED 后，才对 `src/fafafa.ssl.wolfssl.context.pas` 做最小改动：删除旧类声明与整段旧实现。
+3. 跑 `bash -n`、focused script contract、`python3 scripts/compile_all_modules.py`、`bash scripts/run_minimal_ci_gate.sh --fast-local`，然后收口提交。
 
 ## Status
 - [completed] RED/audit contract
-- [completed] GREEN implementation not needed
+- [completed] GREEN implementation
 - [completed] Verification
 - [completed] Review and commit
 
 ## Outcome
-- `Contract 14` 已把 context-level `ISSLHttpHooksAccess` 锁进 cross-backend completion audit。
-- 当前 Linux 主机上，`OpenSSL` / `FreePascal` 的 client/server context 都能稳定暴露 HTTP-hooks surface，callback setter/getter round-trip 正常；`WolfSSL` / `MbedTLS` 继续保持接口 absent；`WinSSL` 因平台不可用而显式 skip。
-- 这批没有命中新的生产代码漂移，属于 completion audit 收口。
+- `src/fafafa.ssl.wolfssl.context.pas` 里那套旧 `TWolfSSLConnection` 确认只是 `implementation` 私有残留，不是公开 API。
+- 当前唯一真实连接 truth source 已收敛回 `src/fafafa.ssl.wolfssl.connection.pas`：`TWolfSSLContext.CreateConnection(...)` 的 socket/stream 路径都继续走现代连接类。
+- 本批已删除：
+  - 旧 `TWolfSSLConnection` 私有类声明
+  - 旧构造/析构与整段私有连接实现
+  - 只服务于旧实现的 context 内部流回调和多余 `uses`
 - 验证已完成：
-  - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract && ./tmp/test_backend_contract` => `Passed: 83 / Failed: 0 / Skipped: 17`
+  - `bash -n tests/scripts/test_wolfssl_context_stale_connection_contract.sh`
+  - `bash tests/scripts/test_wolfssl_context_stale_connection_contract.sh` => 全部 PASS
   - `python3 scripts/compile_all_modules.py` => `185/185`
   - `bash scripts/run_minimal_ci_gate.sh --fast-local` => `[PASS] minimal CI gate finished`
 
 ## Risks
-- 这批全绿只说明 HTTP hooks 已和当前 direct-context truth 对齐，不代表整个 closeout 已结束。
-- 这批不重开 online OCSP / CT 运行时逻辑，只锁 context-level public surface。
+- 这批修的是 `implementation` 残留，不重开 WolfSSL 握手/OCSP/early-data 行为。
+- 删除旧私有实现时，不能误伤当前已收口好的现代工厂路径。
 
 ## Follow-up Queue
-1. 继续盘点其它尚未被 cross-backend contract 锁住的 optional/public surface，优先审计 `src/fafafa.ssl.wolfssl.context.pas` 中仍公开保留的旧 `TWolfSSLConnection` 类型是否构成真实 public completeness drift。
-2. 对只能靠平台 runtime 证明的 WinSSL 边界继续单列，不在 Linux 主机上做假完成结论。
+1. 如果这批确认并收掉旧 `TWolfSSLConnection` 残留，再继续盘点其它仍停留在旧实现路径上的重复私有类或死代码。
+2. 如果在删除旧实现时暴露额外 contract 漂移，再按最小边界补 focused contract，而不是顺手重构整个 WolfSSL backend。

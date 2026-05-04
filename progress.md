@@ -290,6 +290,36 @@
   - 结果：`185/185`
   - `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185`、模块测试 `17/17`、phase2 baseline dry-run PASS、最终 `[PASS] minimal CI gate finished`
+- 新建批次计划：`docs/plans/2026-05-04-wolfssl-context-stale-connection-removal.md`
+- 更新 `task_plan.md`，把当前目标切到 `WolfSSL Context Stale Connection Removal`
+- 新增 focused source contract：
+  - `tests/scripts/test_wolfssl_context_stale_connection_contract.sh`
+  - 初次运行：
+    - `bash -n tests/scripts/test_wolfssl_context_stale_connection_contract.sh` => PASS
+    - `bash tests/scripts/test_wolfssl_context_stale_connection_contract.sh`
+    - 结果：RED，旧 `TWolfSSLConnection` 私有类声明仍在 `src/fafafa.ssl.wolfssl.context.pas`
+- 进一步核对源码后修正边界判断：
+  - 旧 `TWolfSSLConnection` 位于 `implementation`，不是公开 API
+  - 真正要清的是私有残留死实现，不是导出兼容别名
+- 生产改动：
+  - `src/fafafa.ssl.wolfssl.context.pas`
+    - 删除旧 `TWolfSSLConnection` 私有类声明
+    - 删除旧构造/析构和整段私有连接实现
+    - 删除只服务旧实现的 context 内部流回调
+    - 删除多余的 `fafafa.ssl.wolfssl.certificate` / `fafafa.ssl.wolfssl.session` 依赖
+- focused contract 复跑：
+  - `bash -n tests/scripts/test_wolfssl_context_stale_connection_contract.sh` => PASS
+  - `bash tests/scripts/test_wolfssl_context_stale_connection_contract.sh`
+  - 结果：全部 PASS
+    - 旧私有类声明 absent
+    - 旧 socket/stream constructor absent
+    - 旧 destructor absent
+    - socket/stream factory path 继续走 modern `wolfssl.connection` unit
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185`、模块测试 `17/17`、phase2 baseline dry-run PASS、最终 `[PASS] minimal CI gate finished`
   - `TWolfSSLConnection.DoGetOCSPStaplingEnabled` 当前只是“API symbol exists”假阳性
 - 对照本地头文件 `/usr/include/wolfssl/ssl.h` 与示例 `/usr/share/doc/libwolfssl-dev/examples/client.c`，确认：
   - `wolfSSL_UseOCSPStapling` 真实签名是 `(ssl, status_type, options)`

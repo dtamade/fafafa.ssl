@@ -159,3 +159,13 @@
   - `WinSSL` 仍因平台不可用而 skip，不把 Linux 结果外推成 Windows runtime 证明
 - 因此 HTTP hooks 这批的正确结论也是 completion audit closeout，而不是继续展开新的实现修复。
 - 当前更值得继续审计的真实风险点转到了 `src/fafafa.ssl.wolfssl.context.pas`：接口区仍公开保留一套旧的 `TWolfSSLConnection` 类型声明，但 `TWolfSSLContext.CreateConnection(...)` 已切到 `fafafa.ssl.wolfssl.connection.TWolfSSLConnection`，存在 public API 残留与现代实现分叉的可能。
+- 进一步核对源码后确认，上面这条风险的边界需要修正：`src/fafafa.ssl.wolfssl.context.pas` 里的旧 `TWolfSSLConnection` 并不在 `interface`，而是在 `implementation` 的私有残留实现。
+- 因此这条线的真实问题不是 public API break，而是 single-truth-source 漂移：
+  - `TWolfSSLContext.CreateConnection(...)` 的 socket/stream 路径早已只走 `src/fafafa.ssl.wolfssl.connection.pas`
+  - 但 `wolfssl.context` 仍私藏一整套旧连接实现、旧流回调、以及多余依赖
+  - 继续保留它只会制造未来维护时的假分叉
+- 这批最小正确修复因此是删除 `implementation` 内的旧连接残留，而不是给 `wolfssl.context` 新增公开别名。
+- focused script contract 证明收口后只剩一条现代 truth source：
+  - `wolfssl.context` 不再保留旧 `TWolfSSLConnection` 私有类/构造/析构
+  - `TWolfSSLContext.CreateConnection(...)` 继续稳定走 `fafafa.ssl.wolfssl.connection.TWolfSSLConnection`
+  - `python3 scripts/compile_all_modules.py` 与 minimal CI gate 继续全绿，说明删掉的是纯死代码而非隐式依赖路径
