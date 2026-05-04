@@ -40,8 +40,9 @@ uses
 type
   { TWinSSLSession - Windows Schannel 会话实现
     P0-4: 安全化重构 - 不再持有 CtxtHandle，改为元数据模式
-    Schannel 的会话复用由系统自动管理，此类仅保存会话元数据 }
-  TWinSSLSession = class(TInterfacedObject, ISSLSession, ISSLNativeHandleAccess)
+    Schannel 的会话复用由系统自动管理，此类仅保存会话元数据。
+    WinSSL session 不暴露 ISSLNativeHandleAccess，因为没有稳定的独立原生 session 句柄。 }
+  TWinSSLSession = class(TInterfacedObject, ISSLSession)
   private
     FID: string;
     FCreationTime: TDateTime;
@@ -69,11 +70,6 @@ type
 
     function Serialize: TBytes;
     function Deserialize(const AData: TBytes): Boolean;
-
-    { ISSLNativeHandleAccess implementation }
-    function GetNativeHandle: Pointer;
-    function GetBackendType: TSSLLibraryType;
-    function IsNativeHandleValid: Boolean;
 
     function Clone: ISSLSession;
 
@@ -289,23 +285,6 @@ function TWinSSLSession.Deserialize(const AData: TBytes): Boolean;
 begin
   FSessionData := AData;
   Result := Length(FSessionData) > 0;
-end;
-
-function TWinSSLSession.GetNativeHandle: Pointer;
-begin
-  // Schannel 会话由系统自动管理
-  Result := nil;
-end;
-
-function TWinSSLSession.GetBackendType: TSSLLibraryType;
-begin
-  Result := sslWinSSL;
-end;
-
-function TWinSSLSession.IsNativeHandleValid: Boolean;
-begin
-  // WinSSL session 没有原生句柄
-  Result := False;
 end;
 
 function TWinSSLSession.Clone: ISSLSession;

@@ -1,30 +1,30 @@
-# Task Plan - Backend Session Native-Handle Completion Audit
+# Task Plan - WinSSL Session Truth-Source Collapse
 
 ## Goal
-把 session-level `ISSLNativeHandleAccess` public contract 补成有证据的 completion audit：C-library backend 的 session wrapper 必须稳定暴露 native-handle surface，纯 Pascal backend 继续保持 absent，同时不把 WinSSL 当前未厘清的 session truth split 混进这一批。
+收敛 WinSSL session 的重复 truth source，让 `src/fafafa.ssl.winssl.connection.pas` 成为唯一真实实现；`src/fafafa.ssl.winssl.session.pas` 只保留兼容 shim；同时去掉 WinSSL session 的假 native-handle surface，并用 source contract 锁住这条边界。
 
 ## Current Batch
-1. 先给 `tests/contract/test_backend_contract.pas` 增加 `Contract 15`，用最小 session probe 锁住 `OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal` 的 session native-handle truth。
-2. probe 只验证 public surface，不强行依赖完整握手：
-   - `OpenSSL` 用 `SSL_SESSION_new`
-   - `WolfSSL` / `MbedTLS` 用最小 wrapped opaque-handle probe
-   - `FreePascal` 继续要求接口 absent
-   - `WinSSL` 明确 skip，留给后续 Windows/session truth-source 专批
-3. 如果 focused contract 直接全绿，这批作为 completion audit 收口；只有出现真实 RED 才进入最小修复。
-4. 跑 `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract && ./tmp/test_backend_contract`、`python3 scripts/compile_all_modules.py`、`bash scripts/run_minimal_ci_gate.sh --fast-local`，然后更新台账并提交。
+1. 先补一个 focused source contract，锁住三件事：
+   - `winssl.connection.pas` 里的 `TWinSSLSession` 不再实现 `ISSLNativeHandleAccess`
+   - `winssl.session.pas` 不再保留独立 `TInterfacedObject` 实现，而是转成兼容 shim
+   - WinSSL 测试不再把 `ISSLSession` 当成有 `GetNativeHandle` 的旧接口
+2. 然后做最小生产改动：
+   - `src/fafafa.ssl.winssl.connection.pas` 去掉 session 级假 native-handle surface
+   - `src/fafafa.ssl.winssl.session.pas` 改成兼容 shim，避免外部直接引用该 unit 时断裂
+   - 收紧 WinSSL 相关测试/文档的旧 truth
+3. 跑 `bash -n`、focused source contract、`python3 scripts/compile_all_modules.py`、`bash scripts/run_minimal_ci_gate.sh --fast-local`，然后更新台账并提交。
 
 ## Status
-- [completed] 现状重载与目标收敛
-- [completed] RED/audit contract
-- [completed] GREEN implementation（无生产改动，作为 completion audit 收口）
+- [completed] 现状重载与风险收敛
+- [completed] RED/source contract + 最小修复
 - [completed] Verification
-- [completed] Review and commit
+- [in_progress] Review and commit
 
 ## Risks
-- `session` 级 native-handle 若只靠类声明判断，价值太低；因此 contract 需要至少验证 helper round-trip，而不是只看 `Supports(...)`。
-- `WolfSSL` / `MbedTLS` 当前缺少廉价、稳定的独立 session allocator；这批只能做 wrapped-surface audit，不把它包装成完整 session resumption runtime proof。
-- `WinSSL` 已发现 duplicate session truth source，这批不应在 Linux 主机上做过度结论。
+- 这批在 Linux 主机上无法做 WinSSL runtime proof，只能做 source-contract 收口，不能把结果包装成 Windows 运行时已验证。
+- `winssl.session.pas` 可能被仓库外代码直接引用，因此删除文件过于激进；兼容 shim 比直接删文件更保守。
+- WinSSL 旧文档里还保留了过时的 `ISSLSession` 形状，如果不一起收紧，后续还会继续误导。
 
 ## Follow-up Queue
-1. 如果 `Contract 15` 全绿，下一批优先考虑 WinSSL session truth split 的 source-contract / Windows-bound 审计。
-2. 如果 `Contract 15` 只在单个 backend 上出 RED，按最小边界补接口或 helper，而不是顺手重做整条 session/resumption 设计。
+1. 如果这批 source contract 收口完成，下一批应转到 Windows 主机上的 focused compile/runtime audit。
+2. 如果这批暴露出更多 WinSSL 旧测试依赖旧 session 形状，再按同一 truth-source 边界继续清理，而不是重开整个 WinSSL backend。

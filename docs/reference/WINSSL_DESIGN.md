@@ -1,6 +1,6 @@
 # Windows SSL (Schannel) 后端设计
 
-**状态**: ✅ 100% 完成（所有 6 个阶段）
+**状态**: Windows-bound（Linux 侧当前只能做 source-contract 审计）
 **最后更新**: 2026-01-19
 
 ## 1. 概述
@@ -134,62 +134,67 @@ end;
 
 ### 4.4 Session 管理架构
 
-WinSSL 后端实现了完整的 TLS Session 复用功能，通过 Windows Schannel 的凭据句柄缓存机制实现高性能连接复用。
+WinSSL 后端的 Session 复用依赖 Windows Schannel 的凭据句柄缓存机制。当前真实实现已收敛到 `src/fafafa.ssl.winssl.connection.pas`；`src/fafafa.ssl.winssl.session.pas` 只保留兼容 shim，不再维护平行实现。
 
 #### 4.4.1 核心组件
 
 ```pascal
 // Session 接口定义
 ISSLSession = interface
-  function GetSessionData: TBytes;
-  procedure SetSessionData(const aData: TBytes);
-  function IsValid: Boolean;
+  function GetID: string;
   function GetCreationTime: TDateTime;
-  function GetLastAccessTime: TDateTime;
+  function GetTimeout: Integer;
+  procedure SetTimeout(ATimeout: Integer);
+  function IsValid: Boolean;
+  function IsResumable: Boolean;
+  function GetProtocolVersion: TSSLProtocolVersion;
+  function GetCipherName: string;
+  function GetPeerCertificate: ISSLCertificate;
+  function Serialize: TBytes;
+  function Deserialize(const AData: TBytes): Boolean;
+  function Clone: ISSLSession;
 end;
 
-// WinSSL Session 实现
+// Canonical WinSSL session implementation
 TWinSSLSession = class(TInterfacedObject, ISSLSession)
 private
-  FSessionData: TBytes;           // Session 数据（Schannel 内部格式）
-  FCreationTime: TDateTime;       // 创建时间
-  FLastAccessTime: TDateTime;     // 最后访问时间
-  FIsValid: Boolean;              // 有效性标志
+  FID: string;
+  FCreationTime: TDateTime;
+  FTimeout: Integer;
+  FProtocolVersion: TSSLProtocolVersion;
+  FCipherName: string;
+  FSessionData: TBytes;
+  FPeerCertificate: ISSLCertificate;
+  FIsResumed: Boolean;
 public
   constructor Create;
-  destructor Destroy; override;
-
-  // ISSLSession 实现
-  function GetSessionData: TBytes;
-  procedure SetSessionData(const aData: TBytes);
-  function IsValid: Boolean;
-  function GetCreationTime: TDateTime;
-  function GetLastAccessTime: TDateTime;
+  procedure SetSessionMetadata(const AID: string;
+    AProtocol: TSSLProtocolVersion; const ACipher: string; AResumed: Boolean);
+  function WasResumed: Boolean;
 end;
 
 // Session 缓存管理器
 TWinSSLSessionManager = class
 private
-  FSessions: TDictionary<string, ISSLSession>;  // 主机名 -> Session 映射
-  FLock: TCriticalSection;                      // 线程安全锁
-  FMaxCacheSize: Integer;                       // 最大缓存数量
-  FDefaultTimeout: Integer;                     // 默认超时（秒）
+  FSessions: TStringList;
+  FLock: TCriticalSection;
+  FMaxSessions: Integer;
 public
   constructor Create;
   destructor Destroy; override;
 
-  // Session 管理
-  procedure AddSession(const AHostName: string; ASession: ISSLSession);
-  function GetSession(const AHostName: string): ISSLSession;
-  procedure RemoveSession(const AHostName: string);
-  procedure ClearExpiredSessions;
-  procedure ClearAllSessions;
-
-  // 配置
-  property MaxCacheSize: Integer read FMaxCacheSize write FMaxCacheSize;
-  property DefaultTimeout: Integer read FDefaultTimeout write FDefaultTimeout;
+  procedure AddSession(const AID: string; ASession: ISSLSession);
+  function GetSession(const AID: string): ISSLSession;
+  procedure RemoveSession(const AID: string);
+  procedure CleanupExpired;
+  procedure SetMaxSessions(AMax: Integer);
 end;
 ```
+
+当前边界：
+- `TWinSSLSession` 不暴露 `ISSLNativeHandleAccess`
+- Schannel session 仍由系统管理，不提供稳定的独立原生 session 句柄
+- Windows runtime proof 仍需要在 Windows 主机上执行
 
 #### 4.4.2 Session 复用流程
 

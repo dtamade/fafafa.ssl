@@ -534,19 +534,17 @@ end;
 procedure TestSessionNativeHandle;
 var
   LSession: ISSLSession;
-  LHandle: Pointer;
+  LNative: ISSLNativeHandleAccess;
 begin
-  WriteLn('【测试 15】Session 原生句柄');
+  WriteLn('【测试 15】Session 原生句柄接口边界');
   WriteLn('---');
 
   try
     LSession := TWinSSLSession.Create;
 
-    // 获取原生句柄
-    LHandle := LSession.GetNativeHandle;
-
-    // WinSSL Session 不持有句柄，应该返回 nil
-    Assert(LHandle = nil, 'WinSSL Session 不持有原生句柄');
+    // WinSSL Session 不应暴露 ISSLNativeHandleAccess
+    Assert(not Supports(LSession, ISSLNativeHandleAccess, LNative),
+      'WinSSL Session 不暴露 ISSLNativeHandleAccess');
 
   except
     on E: Exception do

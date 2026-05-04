@@ -181,3 +181,17 @@
   - 其中 `connection.pas` 内的 `TWinSSLSession` 虽实现 `ISSLNativeHandleAccess`，但 `GetNativeHandle=nil`、`IsNativeHandleValid=False`
   - 因此本批对 `WinSSL` 明确 skip，留给后续 Windows/session truth-source 专批
 - 这批的正确结论是 completion audit closeout，而不是继续扩成 session runtime/恢复逻辑重构。
+- 后续继续下钻 WinSSL 时，真实高风险点不是 session 恢复算法本身，而是 source truth split：
+  - `src/fafafa.ssl.winssl.connection.pas` 才是仓库内真实被测试和调用的 `TWinSSLSession` / `TWinSSLSessionManager`
+  - `src/fafafa.ssl.winssl.session.pas` 是一套未被当前仓库运行面采用的平行旧实现
+  - `tests/winssl/test_winssl_session_management.pas` 里甚至还保留了 `ISSLSession.GetNativeHandle` 这种过时假设
+- 这批最小正确修复不是在 Linux 上伪造 WinSSL runtime proof，而是先把 source truth 收敛：
+  - `src/fafafa.ssl.winssl.connection.pas` 的 `TWinSSLSession` 不再实现 `ISSLNativeHandleAccess`
+  - `src/fafafa.ssl.winssl.session.pas` 收敛为 compatibility shim，真实实现只剩 `winssl.connection.TWinSSLSession`
+  - WinSSL 测试与文档不再把 session 当成有原生句柄的对象
+- focused source contract 证明收口后只剩一个真实 session implementation truth source：
+  - `winssl.connection` 里的 `TWinSSLSession` 不再保留 `GetNativeHandle` / `GetBackendType` / `IsNativeHandleValid`
+  - `winssl.session` 不再有独立 `TInterfacedObject` session 实现
+  - `tests/winssl/test_winssl_session_management.pas` 改为断言 `ISSLNativeHandleAccess` absent
+  - `docs/reference/WINSSL_DESIGN.md` 与 `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md` 已同步到当前真相
+- 因此这批的正确结论是 WinSSL source-contract closeout：结构层面的重复实现和假 surface 已清掉，但 Windows runtime proof 仍需后续在 Windows 主机完成。

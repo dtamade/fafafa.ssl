@@ -113,6 +113,34 @@
 - 提交：
   - `git commit -m "test(contracts): audit session native-handle alignment"`
   - 结果：`21c8cc6 test(contracts): audit session native-handle alignment`
+- 继续当前 closeout，先核对工作树、最新提交、memory 与 planning files，确认 session native-handle 批次已收口，下一块最高价值缺口转到 `WinSSL session truth split`。
+- 新建本批计划：`docs/plans/2026-05-04-winssl-session-truth-source-collapse.md`
+- 更新 `task_plan.md`，把当前目标切到 `WinSSL Session Truth-Source Collapse`
+- 生产改动：
+  - `src/fafafa.ssl.winssl.connection.pas`
+    - `TWinSSLSession = class(TInterfacedObject, ISSLSession)`
+    - 删除 session 级 `ISSLNativeHandleAccess` 假 surface
+  - `src/fafafa.ssl.winssl.session.pas`
+    - 改成基于 `fafafa.ssl.winssl.connection.TWinSSLSession` 的 compatibility shim
+  - `tests/winssl/test_winssl_session_management.pas`
+    - `Session 原生句柄` 测试改为断言 `Supports(..., ISSLNativeHandleAccess)` 为 `False`
+  - `docs/reference/WINSSL_DESIGN.md`
+    - session 架构段收紧到当前 `ISSLSession` 形状与 canonical truth source
+  - `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+    - session 模块文件归属改到 `winssl.connection.pas`，并标明 `winssl.session.pas` 为兼容 shim
+  - 新增 `tests/scripts/test_winssl_session_truth_source_contract.sh`
+- focused source contract：
+  - `bash -n tests/scripts/test_winssl_session_truth_source_contract.sh`
+  - `bash tests/scripts/test_winssl_session_truth_source_contract.sh`
+  - 结果：10 个检查全部 PASS，锁住：
+    - `winssl.connection` session 不再暴露假 native-handle surface
+    - `winssl.session` 不再保留平行独立实现
+    - WinSSL 测试/文档已切回单一 truth source
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
 - 新建计划：`docs/plans/2026-05-04-backend-context-native-handle-completion-audit.md`
 - 更新 `task_plan.md`，把当前批次目标切到 `Backend Context Native-Handle Completion Audit`
 - 在 `tests/contract/test_backend_contract.pas` 新增 `Contract 13: Context native-handle interface alignment`

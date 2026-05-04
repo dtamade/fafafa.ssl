@@ -21,7 +21,7 @@
 | 连接 | `fafafa.ssl.winssl.connection.pas` | ✅ 完成 |
 | 证书 | `fafafa.ssl.winssl.certificate.pas` | ✅ 完成 |
 | 证书存储 | `fafafa.ssl.winssl.certstore.pas` | ✅ 完成 |
-| 会话 | `fafafa.ssl.winssl.session.pas` | ✅ 完成 |
+| 会话 | `fafafa.ssl.winssl.connection.pas`（`winssl.session.pas` 为兼容 shim） | ✅ source truth 已收敛 |
 | 原生句柄 | `fafafa.ssl.winssl.native_handle.pas` | ✅ 完成 |
 | 错误处理 | `fafafa.ssl.winssl.errors.pas` | ✅ 完成 |
 | 工具函数 | `fafafa.ssl.winssl.utils.pas` | ✅ 完成 |
