@@ -1,30 +1,42 @@
-# Task Plan - MbedTLS Renegotiate Explicit Unsupported Semantics
+# Task Plan - MbedTLS Feature Capability Runtime Consistency
 
 ## Goal
-让 MbedTLS connection 的 `Renegotiate` 不再是静默 `False`，而是给出显式 `sslErrUnsupported` 错误分类和稳定诊断文案，收掉当前 public method 的语义缺口。
+让 MbedTLS library 的 capability matrix 不再硬编码 `SNI` / `ALPN` / `SessionTickets` 可用，而是和真实 helper surface 对齐，收掉 `GetCapabilities` / `IsFeatureSupported` 的 runtime truth 漂移。
 
 ## Current Batch
 1. 先补 focused RED：
-   - 在 `tests/test_mbedtls_framework.pas` 增加 `Renegotiate` 的显式 unsupported contract
-   - 断言 `Renegotiate=False` 之外，还要断言 `GetError(-1)=sslErrUnsupported`
-   - 断言 `GetVerifyResultString` 至少包含 `renegotiation`
+   - 在 `tests/test_mbedtls_framework.pas` 里先手动 `LoadMbedTLSLibrary`
+   - 临时清空 `mbedtls_ssl_set_hostname`、`mbedtls_ssl_conf_alpn_protocols`、`mbedtls_ssl_get_session` / `mbedtls_ssl_set_session`
+   - 再让 `TMbedTLSLibrary.Initialize` 基于这组 helper-loss 状态做 capability 检测
+   - 断言 `SupportsSNI` / `SNISupport`、`SupportsALPN` / `ALPNSupport`、`SupportsSessionTickets` / `SessionTicketsSupport` 都应收敛到 `False/None`
 2. 然后做最小生产修复：
-   - `src/fafafa.ssl.mbedtls.connection.pas` 的 `DoRenegotiate` 记录 `sslErrUnsupported`
-   - `DoGetError` 在没有 native error 但已有语义错误时优先返回 `FLastErrorCode`
-   - `DoGetVerifyResultString` 在已有语义错误文案时优先返回 `FLastErrorString`
+   - `src/fafafa.ssl.mbedtls.lib.pas` 的 `DetectCapabilities` 不再硬编码 `HasSNI` / `HasALPN` / `HasSessionTickets`
+   - `GetCapabilities` 的 support-level 字段基于这些检测结果发布 `stable` 或 `none`
 3. 跑 focused framework test、`python3 scripts/compile_all_modules.py`、`bash scripts/run_minimal_ci_gate.sh --fast-local`，再写回台账并提交。
 
 ## Status
 - [completed] 计划与 RED 测试
-- [completed] MbedTLS renegotiate 语义修复
+- [completed] MbedTLS capability truth 修复
 - [completed] Verification
-- [completed] Review and commit ready
+- [completed] Review and commit
+
+## Verification Summary
+- focused framework contract:
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/mbedtls_framework_units -FEtmp/mbedtls_framework_units -otmp/mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+  - `./tmp/mbedtls_framework_units/test_mbedtls_framework`
+  - 结果：`Total: 96 / Passed: 96 / Failed: 0 / Rate: 100.0%`
+- compile gate:
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功
+- minimal CI gate:
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185`、模块回归 `17/17`、phase2 dry-run 通过，最终 `[PASS] minimal CI gate finished`
 
 ## Risks
-- 这批只收 public method 的错误语义，不实现真正的 renegotiation，也不扩大到 capability 矩阵或完整握手主线。
-- `GetVerifyResultString` 当前既承载 verify 结果，也承载若干语义错误文案；修复时只能优先返回已有语义错误，不能把正常 verify 路径打坏。
-- MbedTLS framework test 需要在 runtime 可用时稳定复现 RED；如果 host 依赖缺失，必须保持结构化 skip，不把 dependency 问题当成行为失败。
+- 这批只修 capability truth，不新增任何新的 SNI/ALPN/session feature 实现。
+- helper-loss RED 依赖 `LoadMbedTLSLibrary` 后的函数指针覆写；测试必须在 `finally` 中把库卸载回干净状态，不能污染后续 framework 场景。
+- `SessionTicketsSupport` 在这里以现有 session get/set helper surface 为 truth source，不把这批扩大成完整 session resumption runtime 审计。
 
 ## Follow-up Queue
-1. 如果这批收口完成，下一步继续看其它后端仍然存在的静默 `False` / 空 surface / 假 capability 漂移。
-2. WolfSSL / MbedTLS 的 capability-vs-runtime 漂移仍值得单开 focused contract 批次处理，但不和这批的 `Renegotiate` 语义修复混在一起。
+1. 如果这批收口完成，下一步继续看 WolfSSL 上同型的 capability hard-code 漂移。
+2. 更广的 backend completeness 仍要继续批次化推进，但每次只锁一组 capability/interface truth。

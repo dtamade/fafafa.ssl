@@ -1,6 +1,27 @@
-# Findings - MbedTLS Renegotiate Explicit Unsupported Semantics
+# Findings - MbedTLS Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- `TMbedTLSLibrary.DetectCapabilities` 之前把 `HasSNI` / `HasALPN` / `HasSessionTickets` 直接硬编码成 `True`，导致 library helper surface 缺失时，`GetCapabilities` 和 `IsFeatureSupported` 仍然会发布假阳性能力。
+- 这条漂移可以用 deterministic helper-loss contract 稳定复现，而不需要依赖不稳定 runtime：
+  - 先 `LoadMbedTLSLibrary`
+  - 暂时清空 `mbedtls_ssl_set_hostname`
+  - 暂时清空 `mbedtls_ssl_conf_alpn_protocols` / `mbedtls_ssl_get_alpn_protocol`
+  - 暂时清空 `mbedtls_ssl_get_session` / `mbedtls_ssl_set_session`
+  - 再让 `TMbedTLSLibrary.Initialize` 重新做 capability 检测
+- focused RED 直接给出了 9 个 false-positive 失败点，说明问题不在测试假设，而在 capability truth source：
+  - `SupportsSNI` / `SNISupport` / `sslFeatSNI`
+  - `SupportsALPN` / `ALPNSupport` / `sslFeatALPN`
+  - `SupportsSessionTickets` / `SessionTicketsSupport` / `sslFeatSessionTickets`
+- 最小正确修复不是去补新 feature，而是把 capability 发布收窄到真实 helper surface：
+  - `HasSNI := Assigned(mbedtls_ssl_set_hostname)`
+  - `HasALPN := Assigned(mbedtls_ssl_conf_alpn_protocols) and Assigned(mbedtls_ssl_get_alpn_protocol)`
+  - `HasSessionTickets := Assigned(mbedtls_ssl_get_session) and Assigned(mbedtls_ssl_set_session)`
+  - `GetCapabilities` 里的 `SNISupport` / `ALPNSupport` / `SessionTicketsSupport` 也必须跟同一组布尔值对齐为 `stable` 或 `none`
+- 这批明确不扩大到新的 SNI/ALPN/session runtime 实现，也不展开 session resumption 审计；目标只是把 public capability truth 从硬编码收成 fail-closed。
+- 收口后的证据闭环：
+  - focused framework test：`96/96`
+  - `python3 scripts/compile_all_modules.py`：`185/185`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`：`[PASS]`
 - `TMbedTLSConnection.DoRenegotiate` 之前只是静默返回 `False`，不会留下任何错误分类或诊断文案；这意味着 public `ISSLConnection.Renegotiate` 在 MbedTLS backend 上虽然形式可调用，但调用方拿不到“这条路径不支持”的稳定语义。
 - 这不是 renegotiation 功能未实现本身的问题，而是 public contract 不完整：同样的 `False` 结果既可能表示 handshake precondition、native failure，也可能表示 backend 根本不支持。如果没有显式 `sslErrUnsupported`，调用方和测试都无法区分。
 - 最小正确修复不是实现真正的 renegotiation，而是把这条路径收成显式 unsupported 语义：

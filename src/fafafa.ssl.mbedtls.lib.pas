@@ -226,9 +226,13 @@ begin
   FCapabilities.HasTLS13 := FCapabilities.VersionNumber >= MBEDTLS_MIN_VERSION;
 
   // MbedTLS 默认支持的功能
-  FCapabilities.HasSNI := True;
-  FCapabilities.HasALPN := True;
-  FCapabilities.HasSessionTickets := True;
+  FCapabilities.HasSNI := Assigned(mbedtls_ssl_set_hostname);
+  FCapabilities.HasALPN :=
+    Assigned(mbedtls_ssl_conf_alpn_protocols) and
+    Assigned(mbedtls_ssl_get_alpn_protocol);
+  FCapabilities.HasSessionTickets :=
+    Assigned(mbedtls_ssl_get_session) and
+    Assigned(mbedtls_ssl_set_session);
   FCapabilities.HasECDHE := True;
   FCapabilities.HasChaCha20 := True;
   FCapabilities.HasAESNI := True;
@@ -484,11 +488,20 @@ begin
     IsProtocolSupported(sslProtocolDTLS10) or IsProtocolSupported(sslProtocolDTLS12);
 
   // 功能支持级别
-  Result.SNISupport := sslSupportStable;
-  Result.ALPNSupport := sslSupportStable;
+  if FCapabilities.HasSNI then
+    Result.SNISupport := sslSupportStable
+  else
+    Result.SNISupport := sslSupportNone;
+  if FCapabilities.HasALPN then
+    Result.ALPNSupport := sslSupportStable
+  else
+    Result.ALPNSupport := sslSupportNone;
   Result.OCSPStaplingSupport := sslSupportNone;  // 需要手动实现
   Result.CertTransparencySupport := sslSupportNone;
-  Result.SessionTicketsSupport := sslSupportStable;
+  if FCapabilities.HasSessionTickets then
+    Result.SessionTicketsSupport := sslSupportStable
+  else
+    Result.SessionTicketsSupport := sslSupportNone;
 
   // 密码算法支持（MbedTLS 主要针对嵌入式，算法精简）
   Result.SupportedCiphers := [

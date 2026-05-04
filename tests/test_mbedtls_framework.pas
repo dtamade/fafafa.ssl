@@ -187,6 +187,76 @@ begin
   Test('MaxTLSVersion defined', Ord(LCaps.MaxTLSVersion) >= 0);
 end;
 
+procedure TestMbedTLSCapabilityHelperLossContract;
+var
+  LLib: ISSLLibrary;
+  LCaps: TSSLBackendCapabilities;
+  LOriginalSetHostname: Tmbedtls_ssl_set_hostname;
+  LOriginalGetALPN: Tmbedtls_ssl_get_alpn_protocol;
+  LOriginalConfALPN: Tmbedtls_ssl_conf_alpn_protocols;
+  LOriginalGetSession: Tmbedtls_ssl_get_session;
+  LOriginalSetSession: Tmbedtls_ssl_set_session;
+begin
+  WriteLn('');
+  WriteLn('=== MbedTLS Capability Helper-Loss Contract ===');
+
+  if not LoadMbedTLSLibrary then
+  begin
+    WriteLn('  (Skipped - MbedTLS library not available)');
+    Test('Capability helper-loss contract skipped', True);
+    Exit;
+  end;
+
+  LOriginalSetHostname := mbedtls_ssl_set_hostname;
+  LOriginalGetALPN := mbedtls_ssl_get_alpn_protocol;
+  LOriginalConfALPN := mbedtls_ssl_conf_alpn_protocols;
+  LOriginalGetSession := mbedtls_ssl_get_session;
+  LOriginalSetSession := mbedtls_ssl_set_session;
+
+  try
+    mbedtls_ssl_set_hostname := nil;
+    mbedtls_ssl_get_alpn_protocol := nil;
+    mbedtls_ssl_conf_alpn_protocols := nil;
+    mbedtls_ssl_get_session := nil;
+    mbedtls_ssl_set_session := nil;
+
+    LLib := CreateMbedTLSLibrary;
+    if not LLib.Initialize then
+    begin
+      WriteLn('  (Skipped - helper-loss capability init unavailable)');
+      Test('Capability helper-loss contract skipped', True);
+      Exit;
+    end;
+
+    try
+      LCaps := LLib.GetCapabilities;
+      Test('SNI helper loss clears SupportsSNI', not LCaps.SupportsSNI);
+      Test('SNI helper loss clears SNISupport', LCaps.SNISupport = sslSupportNone);
+      Test('SNI helper loss clears sslFeatSNI', not LLib.IsFeatureSupported(sslFeatSNI));
+
+      Test('ALPN helper loss clears SupportsALPN', not LCaps.SupportsALPN);
+      Test('ALPN helper loss clears ALPNSupport', LCaps.ALPNSupport = sslSupportNone);
+      Test('ALPN helper loss clears sslFeatALPN', not LLib.IsFeatureSupported(sslFeatALPN));
+
+      Test('Session helper loss clears SupportsSessionTickets', not LCaps.SupportsSessionTickets);
+      Test('Session helper loss clears SessionTicketsSupport',
+        LCaps.SessionTicketsSupport = sslSupportNone);
+      Test('Session helper loss clears sslFeatSessionTickets',
+        not LLib.IsFeatureSupported(sslFeatSessionTickets));
+    finally
+      LLib.Finalize;
+    end;
+  finally
+    if IsMbedTLSLoaded then
+      UnloadMbedTLSLibrary;
+    mbedtls_ssl_set_hostname := LOriginalSetHostname;
+    mbedtls_ssl_get_alpn_protocol := LOriginalGetALPN;
+    mbedtls_ssl_conf_alpn_protocols := LOriginalConfALPN;
+    mbedtls_ssl_get_session := LOriginalGetSession;
+    mbedtls_ssl_set_session := LOriginalSetSession;
+  end;
+end;
+
 procedure TestMbedTLSCertificateClass;
 var
   LCert: TMbedTLSCertificate;
@@ -503,6 +573,7 @@ begin
   TestMbedTLSProtocolMapping;
   TestMbedTLSLibraryCreation;
   TestMbedTLSCapabilities;
+  TestMbedTLSCapabilityHelperLossContract;
 
   // Certificate class tests (no library required)
   TestMbedTLSCertificateClass;

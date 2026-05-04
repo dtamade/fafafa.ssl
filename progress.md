@@ -1,6 +1,48 @@
-# Progress - MbedTLS Renegotiate Explicit Unsupported Semantics
+# Progress - MbedTLS Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- 新开一批 `MbedTLS Feature Capability Runtime Consistency`，目标是把 `GetCapabilities` / `IsFeatureSupported` 的 capability truth 收口到真实 helper surface，不再发布 `SNI` / `ALPN` / `SessionTickets` 的硬编码假阳性。
+- 先补 focused RED：
+  - `tests/test_mbedtls_framework.pas`
+    - 新增 `TestMbedTLSCapabilityHelperLossContract`
+    - 测试内先 `LoadMbedTLSLibrary`
+    - 保存并临时清空 `mbedtls_ssl_set_hostname`
+    - 保存并临时清空 `mbedtls_ssl_get_alpn_protocol` / `mbedtls_ssl_conf_alpn_protocols`
+    - 保存并临时清空 `mbedtls_ssl_get_session` / `mbedtls_ssl_set_session`
+    - 再 `CreateMbedTLSLibrary` + `Initialize`
+    - 断言 `Supports*` / `*Support` / `IsFeatureSupported` 都要在 helper-loss 下收敛
+- 运行 focused RED：
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/mbedtls_framework_units -FEtmp/mbedtls_framework_units -otmp/mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+  - `./tmp/mbedtls_framework_units/test_mbedtls_framework`
+  - 初次结果：`Total: 96 / Passed: 87 / Failed: 9 / Rate: 90.6%`
+  - 9 个失败项：
+    - `SNI helper loss clears SupportsSNI`
+    - `SNI helper loss clears SNISupport`
+    - `SNI helper loss clears sslFeatSNI`
+    - `ALPN helper loss clears SupportsALPN`
+    - `ALPN helper loss clears ALPNSupport`
+    - `ALPN helper loss clears sslFeatALPN`
+    - `Session helper loss clears SupportsSessionTickets`
+    - `Session helper loss clears SessionTicketsSupport`
+    - `Session helper loss clears sslFeatSessionTickets`
+- 最小生产修复：
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+    - `DetectCapabilities` 不再硬编码 `HasSNI` / `HasALPN` / `HasSessionTickets`
+    - 改为分别探测 `mbedtls_ssl_set_hostname`、`mbedtls_ssl_conf_alpn_protocols` + `mbedtls_ssl_get_alpn_protocol`、`mbedtls_ssl_get_session` + `mbedtls_ssl_set_session`
+    - `GetCapabilities` 的 `SNISupport` / `ALPNSupport` / `SessionTicketsSupport` 改成基于同一组 capability 布尔值发布 `stable` 或 `none`
+- 复跑 focused GREEN：
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/mbedtls_framework_units -FEtmp/mbedtls_framework_units -otmp/mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+  - `./tmp/mbedtls_framework_units/test_mbedtls_framework`
+  - 结果：`Total: 96 / Passed: 96 / Failed: 0 / Rate: 100.0%`
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 提交前 review：
+  - 这批只修 MbedTLS library capability truth，没有扩大到 connection/context runtime 行为
+  - RED 直接命中 helper-loss 假阳性，GREEN 则把 `GetCapabilities` 与 `IsFeatureSupported` 重新对齐到同一 truth source
+  - focused test、compile gate、minimal CI gate 都已闭合，可以安全提交
 - 新开一批 MbedTLS `Renegotiate` 语义收口，原因是：
   - `src/fafafa.ssl.mbedtls.connection.pas` 里的 `DoRenegotiate` 仍只是注释 `MbedTLS 重新协商需要额外实现` + `Result := False`
   - 这让 public `Renegotiate` 路径只有布尔失败，没有稳定错误分类或诊断文案
