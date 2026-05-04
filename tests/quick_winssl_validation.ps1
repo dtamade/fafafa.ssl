@@ -10,6 +10,16 @@ param(
 
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OriginalLocation = Get-Location
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$WinsslDir = Join-Path $ScriptDir "winssl"
+
+if (-not (Test-Path $WinsslDir)) {
+    throw "WinSSL test directory not found: $WinsslDir"
+}
+
+try {
+    Set-Location $WinsslDir
 
 Write-Host "================================================================================" -ForegroundColor Cyan
 Write-Host " WinSSL Quick Validation Script" -ForegroundColor Cyan  
@@ -180,7 +190,7 @@ if ($exitCode -eq 0) {
     Write-Host "✅ WinSSL certificate loading feature is FUNCTIONAL" -ForegroundColor Green
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor Cyan
-    Write-Host "  1. Run full test suite: .\run_winssl_tests.ps1" -ForegroundColor Gray
+    Write-Host "  1. From the repository root, run: powershell -ExecutionPolicy Bypass -File .\tests\run_winssl_tests.ps1" -ForegroundColor Gray
     Write-Host "  2. Test real-world scenarios (HTTPS client/server)" -ForegroundColor Gray
     Write-Host "  3. Update documentation with test results" -ForegroundColor Gray
     Write-Host ""
@@ -196,3 +206,7 @@ else {
 }
 
 exit $exitCode
+}
+finally {
+    Set-Location $OriginalLocation
+}

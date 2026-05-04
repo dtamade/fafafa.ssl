@@ -1,311 +1,190 @@
-# Windows Validation Checklist
+# WinSSL Windows 运行时验证清单
 
-**Version**: 1.0  
-**Date**: 2025-10-29  
-**Target**: fafafa.ssl Windows Production Readiness  
-**Validator**: [Your Name]  
-**Environment**: Windows 10/11 x64
+这份清单只服务于一件事: 在真实 Windows 主机上补齐 WinSSL 的 runtime proof。
 
----
+它不替代 Linux 上已经拿到的 source contract、Win64 cross-target compile，或 `python3 scripts/compile_all_modules.py` / `bash scripts/run_minimal_ci_gate.sh --fast-local` 这些仓库级证据。当前还缺的，是 Windows 主机上的真实握手、证书存储、session resumption，以及 server/client runtime 行为。
 
-## 📋 Pre-Validation Setup
+## 先明确当前边界
 
-### Environment Requirements
-- [ ] Windows 10/11 x64 (Build 19041 or later)
-- [ ] Lazarus IDE installed (3.0+ recommended)
-- [ ] OpenSSL 3.x installed (check with `openssl version`)
-- [ ] PowerShell 5.1+ available
-- [ ] Administrator privileges available (if needed)
+在开始 Windows 实跑前，先接受这几个前提:
 
-### File Verification
-- [ ] All source files present in `src/` directory
-- [ ] Test programs present in `tests/windows/` directory
-- [ ] `.lpi` project files configured correctly
-- [ ] PowerShell scripts executable
+- Linux 侧已经证明:
+  - source contract 持续收口
+  - 选定 WinSSL / backend comparison 路径可以继续做 Win64 交叉编译
+  - `python3 scripts/compile_all_modules.py`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+- 当前还没证明:
+  - Windows 主机上的真实握手路径
+  - Windows 系统证书存储和企业策略交互
+  - session resumption / tickets 的真实行为
+  - server/client runtime 的 OCSP、证书验证、错误映射细节
 
-### OpenSSL Configuration
-- [ ] `libssl-3-x64.dll` in PATH or test directory
-- [ ] `libcrypto-3-x64.dll` in PATH or test directory
-- [ ] OpenSSL config file accessible (if required)
-- [ ] No conflicting OpenSSL versions in PATH
+如果你只是想确认“仓库当前还有没有 repo-side 阻塞”，这份清单的意义就是把阻塞压缩到 Windows 主机实跑，而不是继续在 Linux 上猜。
 
----
+## 先准备 Windows 主机
 
-## 🧪 Validation Test Matrix
+从仓库根目录执行下面这些步骤。命令默认使用 `powershell`; 如果机器已经装了 `pwsh`，可以直接替换。
 
-### Phase 1: Quick Smoke Test (2 minutes)
+确认环境:
 
-**Script**: `Run-QuickValidation.ps1`
+- Windows 10/11 x64，或支持所需 TLS 能力的 Windows Server
+- `fpc` / Lazarus / `lazbuild` 可用
+- PowerShell 5.1+ 可用
+- 仓库完整 checkout 到本机
+- 如果要跑 online / HTTPS / revocation 相关测试，机器允许出网
 
-| Test | Expected Result | Status | Notes |
-|------|----------------|--------|-------|
-| OpenSSL library load | ✅ Success | [ ] | libssl-3-x64.dll found and loaded |
-| Version check | ✅ 3.x.x | [ ] | OpenSSL_version returns 3.x.x |
-| Basic initialization | ✅ Success | [ ] | OPENSSL_init_ssl succeeds |
-| Cleanup | ✅ No leaks | [ ] | Clean shutdown without errors |
+先看工具是否齐:
 
-**Success Criteria**: All 4 tests pass in < 2 minutes
-
----
-
-### Phase 2: Certificate Loading Tests (5-10 minutes)
-
-**Program**: `test_cert_load.exe`
-
-#### Scenario 1: Basic Certificate Operations
-- [ ] Load single PEM certificate
-- [ ] Load certificate chain
-- [ ] Load from memory buffer
-- [ ] Verify certificate attributes (subject, issuer, dates)
-
-#### Scenario 2: Multiple Format Support
-- [ ] Load PEM format certificates
-- [ ] Load DER format certificates
-- [ ] Load PKCS#12 bundles
-- [ ] Handle invalid format gracefully
-
-#### Scenario 3: Chain Validation
-- [ ] Load root CA certificate
-- [ ] Load intermediate CA certificate
-- [ ] Load end-entity certificate
-- [ ] Verify chain of trust
-
-#### Scenario 4: Error Handling
-- [ ] Invalid file path → proper error
-- [ ] Corrupted certificate → proper error
-- [ ] Expired certificate → detection works
-- [ ] Missing dependencies → clear error message
-
-#### Scenario 5: Resource Management
-- [ ] No memory leaks after 100 operations
-- [ ] Proper cleanup on error paths
-- [ ] Handle large certificate files (>1MB)
-- [ ] Concurrent certificate loading (if applicable)
-
-#### Scenario 6: Real-World Scenarios
-- [ ] Load Let's Encrypt certificate chain
-- [ ] Load self-signed certificate
-- [ ] Load wildcard certificate
-- [ ] Load certificate with extensions (SAN, etc.)
-
-**Success Criteria**: All scenarios pass with 0 errors
-
----
-
-### Phase 3: Factory Mode Validation (3-5 minutes)
-
-**Program**: `test_factory_mode.exe`
-
-#### Core Factory Operations
-- [ ] Create certificate factory instance
-- [ ] Configure factory with custom parameters
-- [ ] Batch certificate generation (10 certs)
-- [ ] Factory cleanup and resource release
-
-#### Factory Features
-- [ ] Custom certificate templates
-- [ ] Serial number management
-- [ ] Validity period configuration
-- [ ] Key type selection (RSA/ECC)
-
-#### Production Scenarios
-- [ ] Generate 100 certificates in sequence
-- [ ] Generate certificates with different key sizes
-- [ ] Generate certificates with extensions
-- [ ] Performance: < 1s per certificate
-
-**Success Criteria**: Factory creates valid certificates efficiently
-
----
-
-### Phase 4: Integration Tests (10-15 minutes)
-
-**Script**: `Run-WindowsValidation.ps1`
-
-#### OpenSSL Core Integration
-- [ ] All 65 OpenSSL modules load successfully
-- [ ] No DLL conflicts or version mismatches
-- [ ] Error handling works across all modules
-- [ ] Memory management correct in all paths
-
-#### Cross-Module Integration
-- [ ] Certificate + Key generation pipeline
-- [ ] Certificate + TLS connection
-- [ ] Certificate + File I/O
-- [ ] Certificate + Error reporting
-
-#### Real-World Workflows
-- [ ] TLS server certificate setup
-- [ ] TLS client certificate authentication
-- [ ] Certificate revocation checking
-- [ ] Certificate chain export/import
-
-**Success Criteria**: All integration tests pass
-
----
-
-### Phase 5: Performance Validation (5 minutes)
-
-#### Benchmarks
-- [ ] Certificate load time: < 10ms per cert
-- [ ] Memory usage: < 50MB for 100 certs
-- [ ] Startup time: < 500ms
-- [ ] Cleanup time: < 100ms
-
-#### Stress Tests
-- [ ] Load 1000 certificates sequentially
-- [ ] Handle 10 concurrent operations
-- [ ] Process 100MB certificate bundle
-- [ ] 24-hour stability test (optional)
-
-**Success Criteria**: Performance within acceptable ranges
-
----
-
-## 🔧 Troubleshooting Guide
-
-### Common Issues and Solutions
-
-#### Issue 1: OpenSSL DLL Not Found
-**Symptoms**: "libssl-3-x64.dll not found" error
-
-**Solutions**:
-1. Copy DLLs to test executable directory
-2. Add OpenSSL bin directory to PATH
-3. Install OpenSSL for Windows from official source
-4. Check DLL architecture matches (x64 vs x86)
-
-#### Issue 2: Access Violation / Crash
-**Symptoms**: Program crashes with AV or segfault
-
-**Solutions**:
-1. Check OpenSSL version compatibility (must be 3.x)
-2. Verify no mixing of OpenSSL 1.1 and 3.x DLLs
-3. Run in debug mode to identify specific function
-4. Check for null pointer dereferences
-
-#### Issue 3: Certificate Validation Fails
-**Symptoms**: Valid certificates reported as invalid
-
-**Solutions**:
-1. Check system time is correct
-2. Verify root CA certificates installed
-3. Check certificate chain order
-4. Ensure intermediate certificates included
-
-#### Issue 4: Memory Leaks Detected
-**Symptoms**: Growing memory usage over time
-
-**Solutions**:
-1. Check all X509_free() calls present
-2. Verify SSL_CTX cleanup
-3. Check error path cleanup
-4. Use HeapMemView or similar tool to identify leaks
-
-#### Issue 5: Performance Issues
-**Symptoms**: Tests run very slowly
-
-**Solutions**:
-1. Check antivirus not scanning DLLs repeatedly
-2. Disable debug logging if enabled
-3. Ensure running Release build, not Debug
-4. Check disk I/O not bottleneck (SSD preferred)
-
----
-
-## 📊 Validation Results Summary
-
-### Overall Status
-- [ ] **PASS** - All tests passed, production ready
-- [ ] **CONDITIONAL PASS** - Minor issues, documented workarounds
-- [ ] **FAIL** - Critical issues, not ready for production
-
-### Test Summary
-| Phase | Total Tests | Passed | Failed | Duration |
-|-------|-------------|--------|--------|----------|
-| Phase 1: Smoke Test | 4 | | | |
-| Phase 2: Certificate Loading | 24 | | | |
-| Phase 3: Factory Mode | 12 | | | |
-| Phase 4: Integration | 16 | | | |
-| Phase 5: Performance | 8 | | | |
-| **TOTAL** | **64** | | | |
-
-### Issues Found
-| ID | Severity | Description | Status | Workaround |
-|----|----------|-------------|--------|------------|
-| | | | | |
-
-### Performance Results
-| Metric | Expected | Actual | Status |
-|--------|----------|--------|--------|
-| Cert Load Time | < 10ms | | |
-| Memory Usage | < 50MB | | |
-| Startup Time | < 500ms | | |
-| Cleanup Time | < 100ms | | |
-
----
-
-## ✅ Sign-Off
-
-### Validator Certification
-```
-I certify that I have:
-- Executed all validation tests as specified
-- Documented all issues encountered
-- Verified all success criteria met
-- Reviewed the codebase for Windows-specific concerns
-
-Validator: _________________________
-Date: _____________________________
-Signature: ________________________
+```powershell
+fpc -iV
+lazbuild --version
+$PSVersionTable.PSVersion
 ```
 
-### Production Readiness Decision
-- [ ] **APPROVED** for Windows production deployment
-- [ ] **APPROVED WITH CONDITIONS** (see notes)
-- [ ] **NOT APPROVED** (critical issues found)
+## 按这个顺序跑
 
-**Notes**:
+### 1. 先跑 quick smoke
+
+Run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tests\quick_winssl_validation.ps1
 ```
 
+这一步的目标很小:
 
+- 创建或复用测试证书
+- 编译 `tests/winssl/test_winssl_certificate_loading.lpi`
+- 运行证书加载 smoke
 
+如果这一步失败，先别继续。先修:
 
+- `lazbuild` / FPC 不可用
+- 证书创建权限问题
+- WinSSL 证书加载基础路径问题
+
+### 2. 再跑 WinSSL minimal gate
+
+Run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\run_winssl_tests.ps1 -RunId winssl_min_20260505 -OutputDir test-reports
 ```
 
----
+这一步是最小 WinSSL-only runner。它会编译并运行:
 
-## 📝 Next Steps
+- `tests\winssl\test_winssl_api_basic.pas`
+- `tests\unit\test_winssl_comprehensive.pas`
 
-### If APPROVED
-1. [ ] Tag release version
-2. [ ] Update documentation with Windows specifics
-3. [ ] Create deployment package
-4. [ ] Notify stakeholders
+期望结果:
 
-### If CONDITIONAL PASS
-1. [ ] Document all workarounds
-2. [ ] Create issue tracking tickets
-3. [ ] Schedule follow-up validation
-4. [ ] Communicate limitations to users
+- 控制台最后出现 `[WAVE-B-WINSSL] PASS`
 
-### If FAILED
-1. [ ] Execute rollback plan (see ROLLBACK_PLAN.md)
-2. [ ] Create detailed bug reports
-3. [ ] Assign priority for fixes
-4. [ ] Schedule re-validation after fixes
+这一步适合先定位“是不是 WinSSL 自己先挂了”，不用把 OpenSSL 模块校验混进来。
 
----
+### 3. 再跑完整 Wave B Windows gate
 
-## 📚 Reference Documents
-- `VALIDATION_BUNDLE.md` - Complete file listing
-- `ROLLBACK_PLAN.md` - Rollback procedures
-- `WINDOWS_VALIDATION_REPORT.md` - Final report template
-- `Run-WindowsValidation.ps1` - Main test runner
-- `Run-QuickValidation.ps1` - Quick smoke test
+Run:
 
----
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run_wave_b_windows_gate.ps1 -RunId wave_b_windows_20260505 -OutputDir test-reports
+```
 
-**Document Version**: 1.0  
-**Last Updated**: 2025-10-29  
-**Maintained By**: fafafa.ssl Team
+这一步会统一串起:
+
+- `run_winssl_tests.ps1`
+- `run_openssl_tests.ps1`
+- `scripts/validate_all_modules.ps1`
+
+必须保留的产物:
+
+- `test-reports/wave_b_windows_gate_summary_<run_id>.md`
+- `test-reports/wave_b_windows_winssl_<run_id>.log`
+- `test-reports/wave_b_windows_openssl_<run_id>.log`
+- `test-reports/wave_b_windows_modules_<run_id>.log`
+- `test-reports/validate_all_modules_report_<run_id>.md`
+
+你需要的不是一句“跑过了”，而是这几份产物能明确告诉你哪一步过、哪一步挂。
+
+### 4. 最后跑 broader WinSSL suite
+
+Run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tests\run_winssl_tests.ps1
+```
+
+这一步是更宽的手动 Windows suite。脚本会自动切到 `tests/winssl`，不要求你先 `cd tests\winssl`。
+
+当前 wider suite 会覆盖这些项目:
+
+- `test_winssl_unit_comprehensive.lpi`
+- `test_winssl_integration_multi.lpi`
+- `test_backend_comparison.lpi`
+- `test_winssl_performance.lpi`
+- `test_winssl_handshake_debug.lpi`
+- `test_winssl_https_client.lpi`
+
+如果需要把控制台输出也落盘，建议在 PowerShell 里用:
+
+```powershell
+Start-Transcript -Path .\test-reports\winssl_runtime_suite_20260505.log
+powershell -ExecutionPolicy Bypass -File .\tests\run_winssl_tests.ps1
+Stop-Transcript
+```
+
+## 高风险区域要单独盯
+
+这些区域是 broad objective 还不能直接标记完成的原因。即使 gate 绿了，也要单独记结论:
+
+| 区域                         | 优先观察的用例                                                                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| 握手 / HTTPS client          | `tests/winssl/test_winssl_handshake_debug.lpi`, `tests/winssl/test_winssl_https_client.lpi`                  |
+| 系统证书存储                 | `tests/winssl/test_winssl_certstore.lpi`, `tests/winssl/test_winssl_certificate_loading.lpi`                 |
+| Session resumption / tickets | `tests/winssl/test_winssl_session_resumption.lpi`, `tests/winssl/test_winssl_session_management.lpi`         |
+| 错误映射 / online flow       | `tests/winssl/test_winssl_error_mapping_online.lpi`, `tests/winssl/test_winssl_hostname_mismatch_online.lpi` |
+| mTLS / enterprise behavior   | `tests/winssl/test_winssl_mtls_e2e_local.lpi`, `tests/winssl/test_winssl_enterprise.lpi`                     |
+
+## 什么时候算“这台 Windows 主机拿到有效证据”
+
+至少满足这些条件:
+
+- quick smoke 退出码为 `0`
+- `scripts/run_wave_b_windows_gate.ps1` 产出 summary 和三份 step log
+- wider suite 的通过/失败项被明确记录
+- 对高风险区域有逐项说明，而不是只写一句“整体通过”
+
+不要把下面这些情况误写成“WinSSL 已完整 runtime proof”:
+
+- 只有 Linux 交叉编译是绿的
+- 只有 `python3 scripts/compile_all_modules.py` 是绿的
+- 只跑了 quick smoke，没有 wider suite 证据
+- 有失败但没有明确说明是平台限制、环境问题，还是实现缺口
+
+## 常见阻塞
+
+### `lazbuild` 不存在
+
+先修 Lazarus / FPC 安装，再继续。不要把这个记成 WinSSL 实现失败。
+
+### 脚本提示缺文件或找不到 `.lpi`
+
+当前 `tests/quick_winssl_validation.ps1` 和 `tests/run_winssl_tests.ps1` 已经会自己切到 `tests/winssl`。如果这里再次出现路径问题，优先按“仓库入口漂移”排查，而不是先怀疑 WinSSL 运行时。
+
+### 只有某个 online 用例失败
+
+先记清楚:
+
+- 主机网络是否受限
+- 失败发生在 DNS、证书链、握手，还是业务响应
+- 是否只影响 online lane，而离线 lane 仍然通过
+
+### `pwsh` 不存在
+
+这不阻塞 checklist 本身。外层 gate 会优先选 `pwsh`，没有就回退到 `powershell`。
+
+## 相关文档
+
+- [WinSSL 当前状态报告](../../docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md)
+- [WinSSL bundle inventory](./VALIDATION_BUNDLE.md)
+- [WinSSL 设计文档](../../docs/reference/WINSSL_DESIGN.md)

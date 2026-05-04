@@ -74,11 +74,14 @@
 
 ## 下一步
 
-1. 在可用的 Windows 主机或 CI 上运行 WinSSL runtime 测试
-2. 优先验证握手、证书链验证、session resumption、server/client 行为
-3. 继续保持 Linux 侧 source contract 和 Win64 compile 作为前置守门，不把它们误写成 runtime 证明
+1. 在可用的 Windows 主机或 CI 上，按 [Windows 运行时验证清单](../../tests/windows/WINDOWS_VALIDATION_CHECKLIST.md) 执行 quick smoke -> WinSSL minimal gate -> Wave B Windows gate -> broader suite
+2. 保存 `test-reports/wave_b_windows_gate_summary_<run_id>.md` 和对应 step logs；需要 wider suite 证据时，补充 `tests/run_winssl_tests.ps1` 的 transcript
+3. 优先验证握手、证书链验证、session resumption、server/client 行为
+4. 继续保持 Linux 侧 source contract 和 Win64 compile 作为前置守门，不把它们误写成 runtime 证明
 
 ## 相关文档
 
 - [后端能力矩阵](../BACKEND_CAPABILITY_MATRIX.md)
 - [WinSSL 设计文档](../reference/WINSSL_DESIGN.md)
+- [Windows 运行时验证清单](../../tests/windows/WINDOWS_VALIDATION_CHECKLIST.md)
+- [Windows bundle inventory](../../tests/windows/VALIDATION_BUNDLE.md)

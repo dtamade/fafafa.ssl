@@ -1,56 +1,53 @@
-# Task Plan - FreePascal Early-Data Default Durable Shipped Path
+# Task Plan - WinSSL Windows Validation Bundle Truth Alignment
 
 ## Goal
-在不扩 public API 的前提下，把 FreePascal server-side early-data 默认 shipped path 从单进程内存 replay ledger 收口到默认 durable replay-store 路径，并同步修正 capability / roadmap / API docs 对这条默认路径的真相表述。
+把 WinSSL 的 Windows runtime validation bundle 收口到当前仓库真相：`tests/windows` 文档只引用真实存在的入口，手动 PowerShell 验证脚本不再依赖启动 cwd，并把剩余 blocker 明确压缩到“缺 Windows 主机实跑证据”。
 
 ## Current Batch
 1. 先补 focused RED：
-   - `tests/test_freepascal_tls13_early_data.pas` 锁住默认 server context 的 same-process / cross-process durable replay truth
-   - `tests/test_capability_cache.pas` 锁住 `KnownIssues` 不再声称默认路径是 `in-memory single-process anti-replay ledger`
+   - 新增 `tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
+   - 锁住 `tests/windows/*.md` 不能再引用 `Run-WindowsValidation.ps1`、`Run-QuickValidation.ps1`、`test_cert_load`、`test_factory_mode` 等旧模板名称
+   - 锁住 `tests/quick_winssl_validation.ps1` / `tests/run_winssl_tests.ps1` 必须自解析到 `tests/winssl`
 2. 最小 GREEN：
-   - `src/fafafa.ssl.freepascal.earlydatareplay.pas` 增加默认 replay-store 路径解析与 managed persistent provider
-   - `src/fafafa.ssl.freepascal.context.pas` 默认 server ledger 改走 durable path
-   - `src/fafafa.ssl.freepascal.lib.pas` 更新 capability wording
-3. 文档真相同步：
-   - `docs/ROADMAP.md`
-   - `docs/BACKEND_CAPABILITY_MATRIX.md`
-   - `README.md`
-   - `docs/reference/API_REFERENCE.md`
-4. 跑 focused tests / completeness gate / compile gate / diff hygiene，回写台账并提交。
+   - `tests/quick_winssl_validation.ps1` 自动切到 `tests/winssl`
+   - `tests/run_winssl_tests.ps1` 自动切到 `tests/winssl`
+   - `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md` 改成当前真实验证顺序
+   - `tests/windows/VALIDATION_BUNDLE.md` 改成当前真实 bundle inventory / artifact map
+   - `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md` 补 checklist / bundle 入口
+3. 跑 focused contract / diff hygiene，回写台账并提交。
 
 ## Status
-- [completed] RED: default durable-path contracts and capability wording assertions
-- [completed] GREEN: managed persistent default replay provider
-- [completed] Docs truth alignment
+- [completed] RED: validation-bundle drift contract
+- [completed] GREEN: script entrypoint truth alignment and docs rewrite
 - [completed] Verification, review, and commit
 
 ## Verification Plan
-- focused default early-data runtime:
-  - `mkdir -p tmp/freepascal_tls13_early_data`
-  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/freepascal_tls13_early_data -FEtmp/freepascal_tls13_early_data -otmp/freepascal_tls13_early_data/test_freepascal_tls13_early_data tests/test_freepascal_tls13_early_data.pas`
-  - `./tmp/freepascal_tls13_early_data/test_freepascal_tls13_early_data`
-- focused capability truth:
-  - `mkdir -p tmp/capability_cache_units`
-  - `fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_units -otmp/capability_cache_units/test_capability_cache tests/test_capability_cache.pas`
-  - `./tmp/capability_cache_units/test_capability_cache`
-- repo verification:
-  - `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id early_data_default_durable_shipped_path_20260504`
-  - `python3 scripts/compile_all_modules.py`
+- focused validation-bundle contract:
+  - `bash -n tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
+  - `bash tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
+- existing Wave B Windows gate contract:
+  - `bash tests/scripts/test_wave_b_windows_gate_pwsh_and_verbose_contract.sh`
 - hygiene:
-  - `git diff --check -- docs/plans/2026-05-04-freepascal-early-data-default-durable-shipped-path.md src/fafafa.ssl.freepascal.earlydatareplay.pas src/fafafa.ssl.freepascal.context.pas src/fafafa.ssl.freepascal.lib.pas tests/test_freepascal_tls13_early_data.pas tests/test_capability_cache.pas docs/ROADMAP.md docs/BACKEND_CAPABILITY_MATRIX.md README.md docs/reference/API_REFERENCE.md task_plan.md findings.md progress.md`
-
-## Batch Result
-- default server-side FreePascal early-data shipped path 已切到本地持久化 replay-store 路径，并保住 `SetSessionCacheMode` / `SetSessionCacheSize` 的 managed clear 语义。
-- `KnownIssues`、`ROADMAP`、capability matrix、README、API reference 都已收口到“local persistent + fail-closed + experimental”的同一真相。
-- focused tests、`run_freepascal_tls13_completeness_gate.sh --fast-local --run-id early_data_default_durable_shipped_path_20260504`、`python3 scripts/compile_all_modules.py`、以及 `git diff --check` 都已通过。
-- 本批已提交，后续继续以这份批次结果作为 `WinSSL` runtime proof / FreePascal residual wording 复盘的起点。
+  - `git diff --check -- docs/plans/2026-05-05-winssl-windows-validation-bundle-truth-alignment.md tests/scripts/test_winssl_windows_validation_bundle_contract.sh tests/quick_winssl_validation.ps1 tests/run_winssl_tests.ps1 tests/windows/WINDOWS_VALIDATION_CHECKLIST.md tests/windows/VALIDATION_BUNDLE.md docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md task_plan.md findings.md progress.md`
 
 ## Risks
-- 默认 durable path 不能通过“上下文创建时就强制落盘”来制造新初始化失败面；必须保持按需 materialize，并在不可写时 fail closed。
-- 默认路径改成持久化后，现有 default-ledger cache-sync 合同仍必须保持 green，不能把 disable / zero-capacity 语义退化成“只关本进程开关、不清 replay truth”。
-- 文档和 capability string 只能收口到本批 fresh evidence，不能顺手把 `experimental` 擅自提成 `stable`。
+- 这批不能顺手改 WinSSL 生产实现；如果 Windows runtime proof 未来暴露真实行为缺口，必须另起实现批次。
+- 文档必须区分三个层次：Linux source/compile proof、Windows runner/gate、Windows 主机 runtime proof；不能把它们混写成“已完整验证”。
+- `tests/*.ps1` 只允许做 cwd 自解析和入口收口，不能把脚本扩张成新的 orchestration 框架。
+
+## Batch Result
+- `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md` 和 `tests/windows/VALIDATION_BUNDLE.md` 已从旧模板收口到当前真实入口:
+  - `tests/quick_winssl_validation.ps1`
+  - `run_winssl_tests.ps1`
+  - `scripts/run_wave_b_windows_gate.ps1`
+  - `tests/run_winssl_tests.ps1`
+- `tests/run_winssl_tests.ps1` 现在不再重声明 common `-Verbose`，并且会自动切到 `tests/winssl`；`Backend Comparison Tests` 也已改回真实的 `tests/integration/test_backend_comparison.lpi`
+- `tests/quick_winssl_validation.ps1` 现在也会自动切到 `tests/winssl`，不再要求调用者先手动 `cd`
+- `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md` 已补当前 checklist / bundle 执行口径
+- 新增 `tests/scripts/test_winssl_windows_validation_bundle_contract.sh`，并且与现有 `test_wave_b_windows_gate_pwsh_and_verbose_contract.sh` 一起通过
+- 因此当前 broad objective 的 repo-side 剩余阻塞已进一步收紧到“等待真实 Windows 主机 runtime proof”
 
 ## Follow-up Queue
-1. 这批已经去掉默认 `in-memory single-process` caveat；下一步应重新判断 `FreePascal early-data` 是否只剩 `experimental` / local-persistent / non-distributed wording，或 Linux 侧最高价值缺口是否已经转到 `WinSSL` runtime proof。
-2. 若 default durable path 落地后仍有 fresh RED，再决定是否要补 default-path filesystem blocker 专属合同。
-3. `WinSSL` 的 Windows runtime proof 仍需独立环境，不能在当前 Linux 主机上伪造完成。
+1. 这批完成后，下一步应在真实 Windows 主机按 checklist 跑 quick smoke、Wave B gate、broader suite，拿到 runtime 证据。
+2. 只有 Windows 主机实跑出现 fresh RED 时，才重开 `src/fafafa.ssl.winssl.*` 实现修复。
+3. 若 Windows host 不可用，broad objective 仍不能标记为“各个后端的接口和实现都完整”。

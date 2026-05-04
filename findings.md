@@ -1,6 +1,24 @@
 # Findings - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-05
+- completion audit 继续往 WinSSL runtime validation bundle 下钻后，确认 broad objective 还剩一个明确的 repo-side 收口点：
+  - `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md` / `tests/windows/VALIDATION_BUNDLE.md` 仍然是旧模板，引用 `Run-WindowsValidation.ps1`、`Run-QuickValidation.ps1`、`test_cert_load`、`test_factory_mode` 等当前仓库并不使用的入口
+  - `tests/quick_winssl_validation.ps1` / `tests/run_winssl_tests.ps1` 仍依赖调用者先切到正确 cwd，不能作为稳定的 Windows runtime validation entrypoint
+- 这意味着“只差 Windows 主机实跑”这个结论之前还差半步：
+  - 生产实现线已经不该在 Linux 上盲目继续扩
+  - 但 runtime proof bundle 自身还需要先收口到当前真实入口链路
+- 这批的最小正确修法不是重开 `src/fafafa.ssl.winssl.*`，而是:
+  - 用 focused shell contract 锁住 validation bundle truth
+  - 让 `tests/quick_winssl_validation.ps1` / `tests/run_winssl_tests.ps1` 自解析到 `tests/winssl`
+  - 把 `tests/windows/*.md` 和 `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md` 都改成当前真实执行口径
+- fresh verification 已证明这条 repo-side 收口线闭合:
+  - `bash tests/scripts/test_winssl_windows_validation_bundle_contract.sh` 通过
+  - `bash tests/scripts/test_wave_b_windows_gate_pwsh_and_verbose_contract.sh` 继续通过
+  - `git diff --check` 通过
+- 更准确的当前结论是：
+  - WinSSL broad objective 还不能宣称完成
+  - 但仓库内“Windows validation bundle 自己就已经过期/跑不起来”这层阻塞已经清掉
+  - 剩余高风险未证实区域现在更纯粹地指向真实 Windows 主机 runtime evidence
 - `FreePascal` early-data 默认 shipped path 这条 Linux 侧最高价值缺口已经落地到实现层，而不再只是文档收口：
   - `src/fafafa.ssl.freepascal.context.pas` 默认 server / both context 现在装配 `TFreePascalDefaultPersistentEarlyDataReplayLedger`
   - `src/fafafa.ssl.freepascal.earlydatareplay.pas` 新增默认 replay-store 路径解析、testing override seam、以及 backend-private managed persistent provider

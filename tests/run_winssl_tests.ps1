@@ -3,13 +3,22 @@
 
 [CmdletBinding()]
 param(
-    [switch]$SkipCompile = $false,
-    [switch]$Verbose = $false
+    [switch]$SkipCompile = $false
 )
 
 $ErrorActionPreference = "Stop"
 $OriginalEncoding = [Console]::OutputEncoding
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OriginalLocation = Get-Location
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$WinsslDir = Join-Path $ScriptDir "winssl"
+
+if (-not (Test-Path $WinsslDir)) {
+    throw "WinSSL test directory not found: $WinsslDir"
+}
+
+try {
+    Set-Location $WinsslDir
 
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "  WinSSL 集成测试套件" -ForegroundColor Cyan
@@ -32,8 +41,8 @@ $tests = @(
     },
     @{
         Name = "Backend Comparison Tests"
-        Lpi = "test_backend_comparison.lpi"
-        Exe = "bin\test_backend_comparison.exe"
+        Lpi = "..\integration\test_backend_comparison.lpi"
+        Exe = "..\integration\bin\test_backend_comparison.exe"
         Description = "WinSSL vs OpenSSL 后端对比测试"
     },
     @{
@@ -74,7 +83,7 @@ if (-not $SkipCompile) {
 
             if ($LASTEXITCODE -eq 0) {
                 Write-Host " [OK]" -ForegroundColor Green
-                if ($Verbose) {
+                if ($PSBoundParameters.ContainsKey('Verbose')) {
                     Write-Host "    输出: $($output -join "`n    ")" -ForegroundColor Gray
                 }
             } else {
@@ -119,7 +128,7 @@ foreach ($test in $tests) {
         $duration = (Get-Date) - $startTime
 
         # 显示输出
-        if ($Verbose -or $exitCode -ne 0) {
+        if ($PSBoundParameters.ContainsKey('Verbose') -or $exitCode -ne 0) {
             Write-Host "  测试输出:" -ForegroundColor Gray
             Write-Host "  ---" -ForegroundColor Gray
             $output | ForEach-Object {
@@ -184,4 +193,9 @@ if ($failedTests -eq 0) {
 } else {
     Write-Host "⚠️ 有测试失败" -ForegroundColor Red
     exit 1
+}
+}
+finally {
+    [Console]::OutputEncoding = $OriginalEncoding
+    Set-Location $OriginalLocation
 }

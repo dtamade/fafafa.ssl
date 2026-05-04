@@ -1,6 +1,48 @@
 # Progress - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-05
+- 新开一批 `WinSSL Windows Validation Bundle Truth Alignment`，目标是不再继续在 Linux 上猜 WinSSL runtime proof，而是先把 Windows validation bundle 自身收口到当前真实入口。
+- 计划与台账：
+  - 新增 `docs/plans/2026-05-05-winssl-windows-validation-bundle-truth-alignment.md`
+  - `task_plan.md` 切到当前批次
+- completion audit 进一步下钻的发现：
+  - `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md` / `tests/windows/VALIDATION_BUNDLE.md` 仍引用 `Run-WindowsValidation.ps1`、`Run-QuickValidation.ps1`、`test_cert_load`、`test_factory_mode` 等旧模板名称
+  - `tests/quick_winssl_validation.ps1` / `tests/run_winssl_tests.ps1` 仍依赖调用者先切 cwd
+  - `tests/run_winssl_tests.ps1` 还保留自定义 `[switch]$Verbose`，并把 `test_backend_comparison.lpi` 错当成与 `tests/winssl` 同目录
+- focused RED / contract：
+  - 新增 `tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
+  - 首次运行 `bash tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
+  - 结果：在 `tests/windows/VALIDATION_BUNDLE.md` 上命中预期 drift，说明 bundle 文档还没有对齐当前入口真相
+- 最小修复：
+  - `tests/quick_winssl_validation.ps1`
+    - 增加 `$ScriptDir` / `$WinsslDir`
+    - 自动切到 `tests/winssl`
+  - `tests/run_winssl_tests.ps1`
+    - 去掉自定义 `[switch]$Verbose`
+    - 改用 `$PSBoundParameters.ContainsKey('Verbose')`
+    - 自动切到 `tests/winssl`
+    - `Backend Comparison Tests` 改回 `..\integration\test_backend_comparison.lpi`
+  - `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md`
+    - 改成 quick smoke -> WinSSL minimal gate -> Wave B Windows gate -> broader suite
+  - `tests/windows/VALIDATION_BUNDLE.md`
+    - 改成当前真实 inventory / artifact map / targeted lane map
+  - `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+    - 补 current checklist / bundle 执行口径
+- 文档格式：
+  - `/home/dtamade/node_modules/.bin/prettier --write docs/plans/2026-05-05-winssl-windows-validation-bundle-truth-alignment.md tests/windows/WINDOWS_VALIDATION_CHECKLIST.md tests/windows/VALIDATION_BUNDLE.md docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md task_plan.md findings.md`
+  - 结果：Windows 文档完成格式化，plan / status report 保持 `unchanged`
+- focused 验证：
+  - `bash -n tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
+  - 结果：通过
+  - `bash tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
+  - 结果：通过
+  - `bash tests/scripts/test_wave_b_windows_gate_pwsh_and_verbose_contract.sh`
+  - 结果：通过
+  - `git diff --check -- docs/plans/2026-05-05-winssl-windows-validation-bundle-truth-alignment.md tests/scripts/test_winssl_windows_validation_bundle_contract.sh tests/quick_winssl_validation.ps1 tests/run_winssl_tests.ps1 tests/windows/WINDOWS_VALIDATION_CHECKLIST.md tests/windows/VALIDATION_BUNDLE.md docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md task_plan.md findings.md progress.md`
+  - 结果：通过
+- 当前批次结论：
+  - repo-side 的 WinSSL Windows validation bundle 漂移已收口
+  - broad objective 仍未完成，但剩余阻塞更纯粹地收敛到“等待真实 Windows 主机 runtime proof”
 - 新开一批 `FreePascal Early-Data Default Durable Shipped Path`，目标是在不扩 public API 的前提下，把 FreePascal server-side 默认 shipped path 从单进程内存 replay ledger 收口到默认 durable replay-store 路径，并同步文档真相。
 - 计划与台账：
   - 新增 `docs/plans/2026-05-04-freepascal-early-data-default-durable-shipped-path.md`
