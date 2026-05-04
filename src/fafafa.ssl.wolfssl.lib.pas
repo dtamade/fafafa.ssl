@@ -223,8 +223,12 @@ begin
   FCapabilities.HasSNI := Assigned(wolfSSL_UseSNI);
 
   // WolfSSL 默认支持的功能
-  FCapabilities.HasALPN := True;  // 需要编译时启用
-  FCapabilities.HasSessionTickets := True;
+  FCapabilities.HasALPN :=
+    Assigned(wolfSSL_UseALPN) and
+    Assigned(wolfSSL_ALPN_GetProtocol);
+  FCapabilities.HasSessionTickets :=
+    Assigned(wolfSSL_get_session) and
+    Assigned(wolfSSL_set_session);
   FCapabilities.HasECDHE := True;
   FCapabilities.HasChaCha20 := True;
   FCapabilities.HasOCSP :=
@@ -427,14 +431,23 @@ begin
     IsProtocolSupported(sslProtocolDTLS10) or IsProtocolSupported(sslProtocolDTLS12);
 
   // 功能支持级别
-  Result.SNISupport := sslSupportStable;
-  Result.ALPNSupport := sslSupportStable;
+  if FCapabilities.HasSNI then
+    Result.SNISupport := sslSupportStable
+  else
+    Result.SNISupport := sslSupportNone;
+  if FCapabilities.HasALPN then
+    Result.ALPNSupport := sslSupportStable
+  else
+    Result.ALPNSupport := sslSupportNone;
   if FCapabilities.HasOCSP then
     Result.OCSPStaplingSupport := sslSupportExperimental
   else
     Result.OCSPStaplingSupport := sslSupportNone;
   Result.CertTransparencySupport := sslSupportNone;
-  Result.SessionTicketsSupport := sslSupportStable;
+  if FCapabilities.HasSessionTickets then
+    Result.SessionTicketsSupport := sslSupportStable
+  else
+    Result.SessionTicketsSupport := sslSupportNone;
   if FCapabilities.HasTLS13 and Assigned(wolfSSL_write_early_data) and
      Assigned(wolfSSL_get_early_data_status) and
      Assigned(wolfSSL_CTX_set_max_early_data) and

@@ -160,6 +160,76 @@ begin
   Test('MaxTLSVersion defined', Ord(LCaps.MaxTLSVersion) >= 0);
 end;
 
+procedure TestWolfSSLCapabilityHelperLossContract;
+var
+  LLib: ISSLLibrary;
+  LCaps: TSSLBackendCapabilities;
+  LOriginalUseSNI: TwolfSSL_UseSNI;
+  LOriginalUseALPN: TwolfSSL_UseALPN;
+  LOriginalGetALPN: TwolfSSL_ALPN_GetProtocol;
+  LOriginalGetSession: TwolfSSL_get_session;
+  LOriginalSetSession: TwolfSSL_set_session;
+begin
+  WriteLn('');
+  WriteLn('=== WolfSSL Capability Helper-Loss Contract ===');
+
+  if not LoadWolfSSLLibrary then
+  begin
+    WriteLn('  (Skipped - WolfSSL library not available)');
+    Test('Capability helper-loss contract skipped', True);
+    Exit;
+  end;
+
+  LOriginalUseSNI := wolfSSL_UseSNI;
+  LOriginalUseALPN := wolfSSL_UseALPN;
+  LOriginalGetALPN := wolfSSL_ALPN_GetProtocol;
+  LOriginalGetSession := wolfSSL_get_session;
+  LOriginalSetSession := wolfSSL_set_session;
+
+  try
+    wolfSSL_UseSNI := nil;
+    wolfSSL_UseALPN := nil;
+    wolfSSL_ALPN_GetProtocol := nil;
+    wolfSSL_get_session := nil;
+    wolfSSL_set_session := nil;
+
+    LLib := CreateWolfSSLLibrary;
+    if not LLib.Initialize then
+    begin
+      WriteLn('  (Skipped - helper-loss capability init unavailable)');
+      Test('Capability helper-loss contract skipped', True);
+      Exit;
+    end;
+
+    try
+      LCaps := LLib.GetCapabilities;
+      Test('SNI helper loss clears SupportsSNI', not LCaps.SupportsSNI);
+      Test('SNI helper loss clears SNISupport', LCaps.SNISupport = sslSupportNone);
+      Test('SNI helper loss clears sslFeatSNI', not LLib.IsFeatureSupported(sslFeatSNI));
+
+      Test('ALPN helper loss clears SupportsALPN', not LCaps.SupportsALPN);
+      Test('ALPN helper loss clears ALPNSupport', LCaps.ALPNSupport = sslSupportNone);
+      Test('ALPN helper loss clears sslFeatALPN', not LLib.IsFeatureSupported(sslFeatALPN));
+
+      Test('Session helper loss clears SupportsSessionTickets', not LCaps.SupportsSessionTickets);
+      Test('Session helper loss clears SessionTicketsSupport',
+        LCaps.SessionTicketsSupport = sslSupportNone);
+      Test('Session helper loss clears sslFeatSessionTickets',
+        not LLib.IsFeatureSupported(sslFeatSessionTickets));
+    finally
+      LLib.Finalize;
+    end;
+  finally
+    if IsWolfSSLLoaded then
+      UnloadWolfSSLLibrary;
+    wolfSSL_UseSNI := LOriginalUseSNI;
+    wolfSSL_UseALPN := LOriginalUseALPN;
+    wolfSSL_ALPN_GetProtocol := LOriginalGetALPN;
+    wolfSSL_get_session := LOriginalGetSession;
+    wolfSSL_set_session := LOriginalSetSession;
+  end;
+end;
+
 procedure TestWolfSSLCertificateClass;
 var
   LCert: TWolfSSLCertificate;
@@ -515,6 +585,7 @@ begin
   TestWolfSSLProtocolMapping;
   TestWolfSSLLibraryCreation;
   TestWolfSSLCapabilities;
+  TestWolfSSLCapabilityHelperLossContract;
 
   // Certificate class tests (no library required)
   TestWolfSSLCertificateClass;

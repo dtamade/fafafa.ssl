@@ -1,6 +1,46 @@
-# Progress - MbedTLS Feature Capability Runtime Consistency
+# Progress - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- 新开一批 `WolfSSL Feature Capability Runtime Consistency`，目标是把 `GetCapabilities` / `IsFeatureSupported` 的 capability truth 收口到真实 helper surface，不再发布 `SNI` / `ALPN` / `SessionTickets` 的硬编码假阳性。
+- 先补 focused RED：
+  - `tests/test_wolfssl_framework.pas`
+    - 新增 `TestWolfSSLCapabilityHelperLossContract`
+    - 测试内先 `LoadWolfSSLLibrary`
+    - 保存并临时清空 `wolfSSL_UseSNI`
+    - 保存并临时清空 `wolfSSL_UseALPN` / `wolfSSL_ALPN_GetProtocol`
+    - 保存并临时清空 `wolfSSL_get_session` / `wolfSSL_set_session`
+    - 再 `CreateWolfSSLLibrary` + `Initialize`
+    - 断言 `Supports*` / `*Support` / `IsFeatureSupported` 都要在 helper-loss 下收敛
+- 运行 focused RED：
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/wolfssl_framework_units -FEtmp/wolfssl_framework_units -otmp/wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+  - `./tmp/wolfssl_framework_units/test_wolfssl_framework`
+  - 初次结果：`Total: 110 / Passed: 103 / Failed: 7 / Rate: 93.6%`
+  - 7 个失败项：
+    - `SNI helper loss clears SNISupport`
+    - `ALPN helper loss clears SupportsALPN`
+    - `ALPN helper loss clears ALPNSupport`
+    - `ALPN helper loss clears sslFeatALPN`
+    - `Session helper loss clears SupportsSessionTickets`
+    - `Session helper loss clears SessionTicketsSupport`
+    - `Session helper loss clears sslFeatSessionTickets`
+- 最小生产修复：
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+    - `DetectCapabilities` 不再硬编码 `HasALPN` / `HasSessionTickets`
+    - 改为分别探测 `wolfSSL_UseALPN` + `wolfSSL_ALPN_GetProtocol`、`wolfSSL_get_session` + `wolfSSL_set_session`
+    - `GetCapabilities` 的 `SNISupport` / `ALPNSupport` / `SessionTicketsSupport` 改成基于同一组 capability 布尔值发布 `stable` 或 `none`
+- 复跑 focused GREEN：
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/wolfssl_framework_units -FEtmp/wolfssl_framework_units -otmp/wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+  - `./tmp/wolfssl_framework_units/test_wolfssl_framework`
+  - 结果：`Total: 110 / Passed: 110 / Failed: 0 / Rate: 100.0%`
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 提交前 review：
+  - 这批只修 WolfSSL library capability truth，没有扩大到 connection/context runtime 行为
+  - RED 直接命中 helper-loss 假阳性，GREEN 则把 `GetCapabilities` 与 `IsFeatureSupported` 重新对齐到同一 truth source
+  - focused test、compile gate、minimal CI gate 都已闭合，可以安全提交
 - 新开一批 `MbedTLS Feature Capability Runtime Consistency`，目标是把 `GetCapabilities` / `IsFeatureSupported` 的 capability truth 收口到真实 helper surface，不再发布 `SNI` / `ALPN` / `SessionTickets` 的硬编码假阳性。
 - 先补 focused RED：
   - `tests/test_mbedtls_framework.pas`

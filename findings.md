@@ -1,6 +1,28 @@
-# Findings - MbedTLS Feature Capability Runtime Consistency
+# Findings - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- `TWolfSSLLibrary.DetectCapabilities` 之前只有 `HasSNI` 按 helper surface 检测，`HasALPN` / `HasSessionTickets` 仍直接硬编码为 `True`；同时 `GetCapabilities` 还把 `SNISupport` / `ALPNSupport` / `SessionTicketsSupport` 无条件发布成 `stable`。
+- 这意味着 WolfSSL library 的 public capability truth 分成了两层漂移：
+  - `SupportsALPN` / `SupportsSessionTickets` 与 `IsFeatureSupported(...)` 直接跟着硬编码漂
+  - `SNISupport` / `ALPNSupport` / `SessionTicketsSupport` 又进一步脱离 capability 布尔值本身
+- deterministic helper-loss contract 稳定证明了这组漂移，不需要依赖不稳定 runtime：
+  - 暂时清空 `wolfSSL_UseSNI`
+  - 暂时清空 `wolfSSL_UseALPN` / `wolfSSL_ALPN_GetProtocol`
+  - 暂时清空 `wolfSSL_get_session` / `wolfSSL_set_session`
+  - 再让 `TWolfSSLLibrary.Initialize` 基于当前 helper state 做 capability 检测
+- focused RED 给出的 7 个失败点都落在真实 truth-source 漂移上：
+  - `SNISupport`
+  - `SupportsALPN` / `ALPNSupport` / `sslFeatALPN`
+  - `SupportsSessionTickets` / `SessionTicketsSupport` / `sslFeatSessionTickets`
+- 最小正确修复依然只是收紧 capability truth，而不是扩充 WolfSSL 新功能：
+  - `HasALPN := Assigned(wolfSSL_UseALPN) and Assigned(wolfSSL_ALPN_GetProtocol)`
+  - `HasSessionTickets := Assigned(wolfSSL_get_session) and Assigned(wolfSSL_set_session)`
+  - `SNISupport` / `ALPNSupport` / `SessionTicketsSupport` 基于同一组 capability 布尔值发布 `stable` 或 `none`
+- 这批明确不改 connection/context 的 SNI、ALPN、session runtime 行为，也不扩大成 session resumption 审计；目标只是让 library public truth fail-closed。
+- 收口后的证据闭环：
+  - focused framework test：`110/110`
+  - `python3 scripts/compile_all_modules.py`：`185/185`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`：`[PASS]`
 - `TMbedTLSLibrary.DetectCapabilities` 之前把 `HasSNI` / `HasALPN` / `HasSessionTickets` 直接硬编码成 `True`，导致 library helper surface 缺失时，`GetCapabilities` 和 `IsFeatureSupported` 仍然会发布假阳性能力。
 - 这条漂移可以用 deterministic helper-loss contract 稳定复现，而不需要依赖不稳定 runtime：
   - 先 `LoadMbedTLSLibrary`
