@@ -102,3 +102,17 @@
 - 这批收口后，当前仓库里连接级 OCSP public contract 已重新回到统一语义：
   - capable backend 暴露 `ISSLOCSPStapling` 且 getter 不落回基类 `Not Supported`
   - incapable backend 不再通过 `Supports(...)` 误判支持
+- `docs/MIGRATION_GUIDE_V1.1.md` 把旧 `ISSLConnection.GetNativeHandle` 的迁移目标定义成可选接口 `ISSLNativeHandleAccess`；这不只是 context/certificate/store 层约定，而是 connection-level public contract 的一部分。
+- 新增的 `Contract 11` 在当前 Linux 主机上打出了新的真实 RED：
+  - `MbedTLS`: `C-library backend connection does not expose ISSLNativeHandleAccess`
+- `TMbedTLSConnection` 本来就已经有 `DoGetNativeHandle`，只是类声明没挂 `ISSLNativeHandleAccess`；因此这不是“缺少 native seam”，而是纯粹的 optional-interface 漂移。
+- `TWinSSLConnection` 也同型：已有 `DoGetNativeHandle` 返回 `@FCtxtHandle`，但类声明没挂 `ISSLNativeHandleAccess`，所以在 Windows 主机上应当也是同型 contract drift。
+- 这批最小 GREEN 不需要改握手、session 或 helper 层，只需要：
+  - `TMbedTLSConnection = class(..., ISSLClientConnection, ISSLNativeHandleAccess)`
+  - `TWinSSLConnection = class(..., ISSLClientConnection, ISSLNativeHandleAccess)`
+  - 补齐 `GetBackendType` / `IsNativeHandleValid`
+- `FreePascal` connection 不实现 `ISSLNativeHandleAccess` 仍然是正确边界：纯 Pascal backend 不应该为了 API 对称而暴露假的 native handle。
+- Linux 主机上对 `src/fafafa.ssl.winssl.connection.pas` 的额外单编会卡在 `winssl.context.pas` 依赖 `unit Windows`，这说明当前 WinSSL 证据边界是：
+  - runtime: 不可用
+  - Linux 单编: 受 Windows SDK 依赖阻塞
+  - public contract: 仍可按结构对称性修正，并由 focused contract 设计锁住

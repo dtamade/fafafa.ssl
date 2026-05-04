@@ -117,6 +117,37 @@
   - 结果：`185/185` 核心模块编译成功，`100.0%`
   - `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 新建批次计划：`docs/plans/2026-05-04-backend-connection-native-handle-interface-alignment.md`
+- 更新 `task_plan.md`，把当前目标切到 `Backend Connection Native Handle Interface Alignment`
+- RED:
+  - `tests/contract/test_backend_contract.pas`
+    - 新增 `Contract 11: Connection native-handle interface alignment`
+  - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract && ./tmp/test_backend_contract`
+  - 结果：
+    - `MbedTLS`: `FAIL ... C-library backend connection does not expose ISSLNativeHandleAccess`
+    - `OpenSSL` / `WolfSSL` PASS
+    - `FreePascal` PASS（按预期保持 absent）
+    - `WinSSL` 在本机为 `[SKIP] backend not available on this platform`
+- GREEN:
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+    - `TMbedTLSConnection = class(TBaseSSLConnection, ISSLClientConnection, ISSLNativeHandleAccess)`
+    - 补 `GetBackendType => sslMbedTLS`
+    - 补 `IsNativeHandleValid => (FSSLContext <> nil)`
+  - `src/fafafa.ssl.winssl.connection.pas`
+    - `TWinSSLConnection = class(TBaseSSLConnection, ISSLClientConnection, ISSLNativeHandleAccess)`
+    - 补 `GetBackendType => sslWinSSL`
+    - 补 `IsNativeHandleValid => (FCtxtHandle.dwLower <> 0) or (FCtxtHandle.dwUpper <> 0)`
+- 复跑 focused contract：
+  - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract && ./tmp/test_backend_contract`
+  - 结果：`Passed: 63 / Failed: 0 / Skipped: 14`
+- WinSSL 额外静态尝试：
+  - `fpc -Fu./src src/fafafa.ssl.winssl.connection.pas`
+  - 结果：进入 `src/fafafa.ssl.winssl.context.pas` 后卡在 `Fatal: Can't find unit Windows`，属于 Linux 主机缺少 Windows SDK 依赖，不是本批 public contract 回归
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
 - 继续后端 interface completeness 审计：
   - 读取 `src/fafafa.ssl.mbedtls.connection.pas` / `src/fafafa.ssl.wolfssl.connection.pas` / `src/fafafa.ssl.openssl.connection.pas` / `src/fafafa.ssl.freepascal.connection.pas`
   - 结论：`MbedTLS` / `WolfSSL` 的 connection 类都已有 `SetServerName/GetServerName`，但类声明没挂 `ISSLClientConnection`；`OpenSSL` / `FreePascal` 已挂。

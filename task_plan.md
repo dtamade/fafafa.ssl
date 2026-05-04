@@ -1,30 +1,29 @@
-# Task Plan - Backend OCSP Connection Interface Alignment
+# Task Plan - Backend Connection Native Handle Interface Alignment
 
 ## Goal
-把连接级 `ISSLOCSPStapling` public contract 收紧到真实实现边界：unsupported backend 不再暴露假阳性 interface，`FreePascal` / `OpenSSL` / `WolfSSL` 的 capability 与 connection getter 语义保持一致。
+把连接级 `ISSLNativeHandleAccess` public contract 对齐到当前迁移文档和 helper 语义：基于 C 库的 backend connection 应显式暴露该可选接口，纯 Pascal backend 继续保持 absent。
 
 ## Current Batch
-1. 在 `tests/contract/test_backend_contract.pas` 增加跨后端 OCSP contract，锁住 capability、optional interface 暴露、以及 getter status 不再落回 `Not Supported` 存根。
-2. 对 `src/fafafa.ssl.connection.base.pas` 做最小收紧：移出基类上的 `ISSLOCSPStapling` 接口声明，但保留共享 getter/stub 供显式支持的 backend 复用。
-3. 只对 `src/fafafa.ssl.freepascal.connection.pas` / `src/fafafa.ssl.openssl.connection.pas` / `src/fafafa.ssl.wolfssl.connection.pas` 做最小 GREEN，把现有 OCSP getter surface 公开挂进 `ISSLOCSPStapling`。
+1. 在 `tests/contract/test_backend_contract.pas` 增加跨后端 native-handle contract，锁住 connection-level `ISSLNativeHandleAccess` 暴露、backend type、以及最小 native handle 可取性。
+2. 对 `src/fafafa.ssl.mbedtls.connection.pas` / `src/fafafa.ssl.winssl.connection.pas` 做最小 GREEN：让已有 `DoGetNativeHandle` 的 C-library connection 显式实现 `ISSLNativeHandleAccess`，并补齐 `GetBackendType` / `IsNativeHandleValid`。
+3. 保持 `FreePascal` connection 不实现该接口，避免纯 Pascal backend 出现伪 native handle surface。
 4. 跑 focused contract、`python3 scripts/compile_all_modules.py`、`bash scripts/run_minimal_ci_gate.sh --fast-local`，然后按批次提交。
 
 ## Status
 - [completed] RED contract
 - [completed] GREEN implementation
 - [completed] Verification
-- [completed] Review and commit
+- [in_progress] Review and commit
 
 ## Outcome
-- `tests/contract/test_backend_contract.pas` 新增 `Contract 10`，锁住 capability、connection optional interface 暴露和 getter status 三者一致。
-- `TBaseSSLConnection` 不再无条件暴露 `ISSLOCSPStapling`；`FreePascal` / `OpenSSL` / `WolfSSL` 改为显式实现。
-- `MbedTLS` 在 focused RED 中真实暴露出 connection-level OCSP 假阳性；收口后 unsupported backend 已不再通过 `Supports(...)` 误判支持。
-- `docs/BACKEND_CAPABILITY_MATRIX.md` 已把 WinSSL 的 OCSP stapling truth 收紧到当前仓库真实 public surface。
+- `tests/contract/test_backend_contract.pas` 新增 `Contract 11`，锁住 connection-level `ISSLNativeHandleAccess` 暴露、backend type 和最小 native handle 可取性。
+- `TMbedTLSConnection` / `TWinSSLConnection` 现在显式实现 `ISSLNativeHandleAccess`，复用基类 `GetNativeHandle`，并补齐 `GetBackendType` / `IsNativeHandleValid`。
+- `FreePascal` connection 继续保持该接口 absent，避免纯 Pascal backend 暴露伪 native handle。
 
 ## Risks
-- `WinSSL` 本机仍无法做 runtime 验证；这批的 WinSSL 结论来自 capability truth 与类层级对称性，不是 Windows 主机实测。
-- 这批只收紧 public contract，没有扩展 `MbedTLS` / `WinSSL` 的新 OCSP 实现，也没有重开在线验证或 responder 调度。
+- 这批没有 capability 字段可直接对照，主要依据是 `docs/MIGRATION_GUIDE_V1.1.md` 里“旧 `ISSLConnection.GetNativeHandle` 已迁到可选接口”的 public contract。
+- `WinSSL` 的对称修复在 Linux 主机上无法单元级编译到 `Windows` SDK 依赖；当前证据来自结构对称性和 focused contract 设计，不是 Windows 主机实测。
 
 ## Follow-up Queue
-1. 如果这批收口后仍有 drift，再继续审计其它 connection-level optional/public surface。
-2. 后续再决定是否把 OpenSSL CT 从底层 binding 提升回默认 user-facing capability，并补 focused runtime proof。
+1. 如果这批收口后仍有 drift，再继续审计其它未被 cross-backend contract 锁住的 optional/public surface。
+2. 如果 native-handle contract 被证明确实是文档过宽而非实现缺口，则要单开 docs truth 批次，而不是继续扩实现。

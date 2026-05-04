@@ -28,7 +28,8 @@ uses
 
 type
   { TMbedTLSConnection - MbedTLS 连接类 }
-  TMbedTLSConnection = class(TBaseSSLConnection, ISSLClientConnection)
+  TMbedTLSConnection = class(TBaseSSLConnection, ISSLClientConnection,
+    ISSLNativeHandleAccess)
   private
     FSSLConfig: Pmbedtls_ssl_config;
     FSSLContext: Pmbedtls_ssl_context;
@@ -88,6 +89,8 @@ type
     function GetNegotiatedProtocol: TSSLProtocolVersion;
     function GetNegotiatedCipher: string;
     function GetNegotiatedALPN: string;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
     function GetLastError: Integer;
     function GetLastErrorString: string;
   end;
@@ -543,6 +546,16 @@ end;
 function TMbedTLSConnection.GetNegotiatedALPN: string;
 begin
   Result := DoGetSelectedALPNProtocol;
+end;
+
+function TMbedTLSConnection.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslMbedTLS;
+end;
+
+function TMbedTLSConnection.IsNativeHandleValid: Boolean;
+begin
+  Result := (FSSLContext <> nil);
 end;
 
 function TMbedTLSConnection.GetLastError: Integer;

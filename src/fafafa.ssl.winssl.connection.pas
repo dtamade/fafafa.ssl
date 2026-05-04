@@ -104,7 +104,8 @@ type
   end;
 
   { TWinSSLConnection - WinSSL 连接类，继承自 TBaseSSLConnection }
-  TWinSSLConnection = class(TBaseSSLConnection, ISSLClientConnection)
+  TWinSSLConnection = class(TBaseSSLConnection, ISSLClientConnection,
+    ISSLNativeHandleAccess)
   private
     FSocket: THandle;
     FStream: TStream;
@@ -193,6 +194,10 @@ type
     { ISSLClientConnection }
     procedure SetServerName(const AServerName: string);
     function GetServerName: string;
+
+    { ISSLNativeHandleAccess }
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
 
     { 覆盖基类的 GetConnectionInfo 以提供更详细的信息 }
     function GetConnectionInfo: TSSLConnectionInfo; override;
@@ -1672,6 +1677,16 @@ end;
 function TWinSSLConnection.DoGetNativeHandle: Pointer;
 begin
   Result := @FCtxtHandle;
+end;
+
+function TWinSSLConnection.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslWinSSL;
+end;
+
+function TWinSSLConnection.IsNativeHandleValid: Boolean;
+begin
+  Result := (FCtxtHandle.dwLower <> 0) or (FCtxtHandle.dwUpper <> 0);
 end;
 
 // ============================================================================

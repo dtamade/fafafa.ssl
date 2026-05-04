@@ -869,6 +869,81 @@ begin
   end;
 end;
 
+procedure TestContract_ConnectionNativeHandleInterfaceAligned(ABackend: TSSLLibraryType);
+var
+  LLib: ISSLLibrary;
+  LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LNative: ISSLNativeHandleAccess;
+  LProbeStream: TMemoryStream;
+begin
+  PrintSubHeader(Format('Contract 11: Connection native-handle interface alignment - %s',
+    [SSL_LIBRARY_NAMES[ABackend]]));
+
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    AddSkip('Backend not available on this platform');
+    Exit;
+  end;
+
+  LProbeStream := TMemoryStream.Create;
+  try
+    try
+      LLib := TSSLFactory.GetLibrary(ABackend);
+      LCtx := LLib.CreateContext(sslCtxClient);
+      LConn := LCtx.CreateConnection(LProbeStream);
+
+      if ABackend = sslFreePascal then
+      begin
+        if Supports(LConn, ISSLNativeHandleAccess, LNative) then
+        begin
+          WriteLn('  [FAIL] Pure backend connection should not expose ISSLNativeHandleAccess');
+          AddResult('ConnectionNativeHandleInterfaceAligned', ABackend, False,
+            'Pure FreePascal connection unexpectedly exposes ISSLNativeHandleAccess');
+        end
+        else
+        begin
+          WriteLn('  [PASS] Pure backend connection keeps ISSLNativeHandleAccess absent');
+          AddResult('ConnectionNativeHandleInterfaceAligned', ABackend, True);
+        end;
+        Exit;
+      end;
+
+      if not Supports(LConn, ISSLNativeHandleAccess, LNative) then
+      begin
+        WriteLn('  [FAIL] C-library backend connection does not expose ISSLNativeHandleAccess');
+        AddResult('ConnectionNativeHandleInterfaceAligned', ABackend, False,
+          'C-library backend connection does not expose ISSLNativeHandleAccess');
+      end
+      else if LNative.GetBackendType <> ABackend then
+      begin
+        WriteLn('  [FAIL] Native-handle backend type does not match connection backend');
+        AddResult('ConnectionNativeHandleInterfaceAligned', ABackend, False,
+          'ISSLNativeHandleAccess.GetBackendType does not match the connection backend');
+      end
+      else if LNative.GetNativeHandle = nil then
+      begin
+        WriteLn('  [FAIL] Native-handle interface returned nil handle');
+        AddResult('ConnectionNativeHandleInterfaceAligned', ABackend, False,
+          'ISSLNativeHandleAccess.GetNativeHandle returned nil');
+      end
+      else
+      begin
+        WriteLn('  [PASS] C-library backend connection exposes native-handle surface');
+        AddResult('ConnectionNativeHandleInterfaceAligned', ABackend, True);
+      end;
+    except
+      on E: Exception do
+      begin
+        WriteLn('  [FAIL] Exception: ', E.ClassName, ' - ', E.Message);
+        AddResult('ConnectionNativeHandleInterfaceAligned', ABackend, False, E.Message);
+      end;
+    end;
+  finally
+    LProbeStream.Free;
+  end;
+end;
+
 procedure PrintSummary;
 var
   I: Integer;
@@ -955,6 +1030,9 @@ begin
 
     // 10) OCSP-capable backends must expose non-stub OCSP optional interface
     TestContract_ClientConnectionOCSPInterfaceAligned(LBackend);
+
+    // 11) C-library backend connections must expose native-handle interface
+    TestContract_ConnectionNativeHandleInterfaceAligned(LBackend);
   end;
 
   PrintSummary;
