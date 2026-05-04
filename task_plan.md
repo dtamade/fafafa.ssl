@@ -1,30 +1,29 @@
-# Task Plan - WinSSL Session Truth-Source Collapse
+# Task Plan - Win64 Cross-Target Compatibility Closeout
 
 ## Goal
-收敛 WinSSL session 的重复 truth source，让 `src/fafafa.ssl.winssl.connection.pas` 成为唯一真实实现；`src/fafafa.ssl.winssl.session.pas` 只保留兼容 shim；同时去掉 WinSSL session 的假 native-handle surface，并用 source contract 锁住这条边界。
+收口 Linux 侧剩余的 Win64 交叉编译漂移，确认选定的 WinSSL / backend-comparison 路径都能成功生成 Win64 二进制；同时把当前真实边界写清楚：源码与交叉编译面继续前进，但 WinSSL runtime proof 仍然需要可用的 Windows 运行环境。
 
 ## Current Batch
-1. 先补一个 focused source contract，锁住三件事：
-   - `winssl.connection.pas` 里的 `TWinSSLSession` 不再实现 `ISSLNativeHandleAccess`
-   - `winssl.session.pas` 不再保留独立 `TInterfacedObject` 实现，而是转成兼容 shim
-   - WinSSL 测试不再把 `ISSLSession` 当成有 `GetNativeHandle` 的旧接口
-2. 然后做最小生产改动：
-   - `src/fafafa.ssl.winssl.connection.pas` 去掉 session 级假 native-handle surface
-   - `src/fafafa.ssl.winssl.session.pas` 改成兼容 shim，避免外部直接引用该 unit 时断裂
-   - 收紧 WinSSL 相关测试/文档的旧 truth
-3. 跑 `bash -n`、focused source contract、`python3 scripts/compile_all_modules.py`、`bash scripts/run_minimal_ci_gate.sh --fast-local`，然后更新台账并提交。
+1. 先复核 Win64 交叉编译真值：
+   - 补拿 `tests/integration/test_backend_comparison.pas` 的最终退出码
+   - 确认当前 Linux 主机上 `wine` / `pwsh` 是否能承担 WinSSL runtime proof
+2. 然后做最小修复：
+   - 修 `src/fafafa.ssl.freepascal.earlydatareplay.fileprovider.pas`
+   - 修 `src/fafafa.ssl.freepascal.earlydatareplay.dirstore.pas`
+   - 不重开 FreePascal early-data provider 的行为逻辑
+3. 复跑交叉编译与仓库门禁，把新增 compile proof 和 runtime 边界写回台账、计划和状态文档。
 
 ## Status
 - [completed] 现状重载与风险收敛
-- [completed] RED/source contract + 最小修复
-- [completed] Verification
+- [completed] Win64 交叉编译漂移修复与验证
+- [completed] 台账/状态文档写回
 - [completed] Review and commit
 
 ## Risks
-- 这批在 Linux 主机上无法做 WinSSL runtime proof，只能做 source-contract 收口，不能把结果包装成 Windows 运行时已验证。
-- `winssl.session.pas` 可能被仓库外代码直接引用，因此删除文件过于激进；兼容 shim 比直接删文件更保守。
-- WinSSL 旧文档里还保留了过时的 `ISSLSession` 形状，如果不一起收紧，后续还会继续误导。
+- Linux 主机上的 `compile_all_modules.py` 只覆盖 host-target 编译，抓不到 `-Twin64` 下条件编译坍塌成空 `uses` 这类问题。
+- 当前本机 `wine` 直接退出 `159`、`pwsh` 缺失，因此即使 Win64 二进制能生成，也不能把 Linux 侧运行结果包装成 Windows runtime 已验证。
+- 这批只修共享 compile surface；如果复跑后暴露新的 Win64 目标错误，必须按 fresh RED 继续最小处理，不能提前宣布 WinSSL 全面完成。
 
 ## Follow-up Queue
-1. 如果这批 source contract 收口完成，下一批应转到 Windows 主机上的 focused compile/runtime audit。
-2. 如果这批暴露出更多 WinSSL 旧测试依赖旧 session 形状，再按同一 truth-source 边界继续清理，而不是重开整个 WinSSL backend。
+1. 如果这批交叉编译全部转绿，下一条硬阻塞就是 Windows 主机上的 focused runtime proof。
+2. 如果后续还有新的 `-Twin64` compile drift，优先继续补共享 target-conditioned surface，而不是重开无关的 backend 设计。

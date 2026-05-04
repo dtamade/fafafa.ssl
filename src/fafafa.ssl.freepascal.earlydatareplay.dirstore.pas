@@ -79,8 +79,10 @@ type
 
 implementation
 
+{$IFDEF UNIX}
 uses
-  {$IFDEF UNIX}Unix{$ENDIF};
+  Unix;
+{$ENDIF}
 
 const
   FREEPASCAL_DIRECTORY_REPLAY_STORE_VERSION = 1;

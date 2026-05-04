@@ -1,6 +1,16 @@
-# Findings - Backend Optional Interface Alignment
+# Findings - Win64 Cross-Target Compatibility Closeout
 
 ## 2026-05-04
+- `tests/integration/test_backend_comparison.pas` 虽然名字看起来是 backend comparison，但依赖链会进入 `fafafa.ssl.factory` -> `fafafa.ssl.freepascal.context` -> `fafafa.ssl.freepascal.earlydatareplay.fileprovider`，所以它能补到前面 WinSSL 定向 compile 用例没有覆盖到的 shared cross-target surface。
+- `src/fafafa.ssl.freepascal.earlydatareplay.fileprovider.pas` 的 `implementation uses` 之前写成 `{$IFDEF UNIX}Unix{$ENDIF};`；在 Linux host-target 下 `UNIX=True`，所以 `python3 scripts/compile_all_modules.py` 一直看不出问题；但在 `-Twin64` 下 `UNIX=False`，展开后会变成非法的 `uses ;`，这就是 `Syntax error, "identifier" expected but ";" found` 的直接根因。
+- `src/fafafa.ssl.freepascal.earlydatareplay.dirstore.pas` 也有同型写法和同型错误，说明这不是单点疏漏，而是 replay store 家族里重复存在的 target-conditioned empty-uses drift。
+- 这不是 FreePascal early-data provider 的行为 bug，而是 target-conditioned compile-surface drift；最小正确修复是把整个 `implementation uses` clause 放进 `{$IFDEF UNIX}` 块里，而不是改 provider 逻辑或重新设计锁文件路径。
+- 两个 shared replay-store 单元都修完后，`tests/integration/test_backend_comparison.pas` 的 Win64 交叉编译已经成功，说明这条 Linux 侧 compile proof 现在真正补齐到了 backend-comparison 集成面，而不再只是若干 WinSSL 定向用例。
+- 因此之前“Linux 侧只剩 Windows runtime proof”这个结论还差半步：在这次修复前，仓库里仍残留一个 Win64 cross-target compile blocker，只是它落在 FreePascal shared 单元而不是 WinSSL 单元本身。
+- 如果 `test_backend_comparison.pas` 修复后也能 Win64 交叉编译成功，那么 Linux 侧的更准确结论才是：
+  - 选定的 WinSSL / backend comparison 源码与 Win64 compile surface 已闭合
+  - 当前真实剩余硬阻塞是 Windows runtime proof
+  - 本机 `wine` 退出 `159` 且 `pwsh` 缺失，不能承担这个证明
 - `TBaseSSLConnection` 之前把 `ISSLCertificateTransparency` / `ISSLCertificateTransparencyValidation` 直接挂在基类类声明上，导致所有继承它的 connection 都会被 `Supports(...)` 识别成“支持 CT”，哪怕 backend capability 明确是 `False/None`。
 - 当前主机上的 `OpenSSL` 默认 capability truth 也不是“支持 CT”：
   - `SupportsCertificateTransparency=False`

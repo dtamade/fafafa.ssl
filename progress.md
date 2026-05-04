@@ -1,6 +1,49 @@
-# Progress - Backend Optional Interface Alignment
+# Progress - Win64 Cross-Target Compatibility Closeout
 
 ## 2026-05-04
+- 延续 `5123dd5 docs: finalize winssl session ledger` 之后的收口，先核对工作树、最新提交、`task_plan.md` / `findings.md` / `progress.md`、以及 `docs/plans/2026-03-20-winssl-cross-target-compile-drift.md`，确认前一轮 session truth-source closeout 已提交，下一步是把新增 Win64 compile proof 写回。
+- 复核环境边界：
+  - `wine --version`
+  - 结果：直接退出 `159`，无输出
+  - `command -v pwsh`
+  - 结果：未找到
+  - 结论：Linux 主机当前不能承担 WinSSL runtime proof
+- 复跑最后一条还没拿到最终退出码的 Win64 交叉编译：
+  - `fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -otmp/test_backend_comparison.exe tests/integration/test_backend_comparison.pas`
+  - 初次结果：失败于 `src/fafafa.ssl.freepascal.earlydatareplay.fileprovider.pas(65,28) Fatal: Syntax error, "identifier" expected but ";" found`
+- 定位根因：
+  - `nl -ba src/fafafa.ssl.freepascal.earlydatareplay.fileprovider.pas | sed -n '1,160p'`
+  - 结论：`implementation uses` 写成 `{$IFDEF UNIX}Unix{$ENDIF};`
+  - 这会在 `-Twin64` 下坍塌成非法的 `uses ;`
+- 最小修复：
+  - `src/fafafa.ssl.freepascal.earlydatareplay.fileprovider.pas`
+    - 把整个 `implementation uses Unix` 包进 `{$IFDEF UNIX}` 块
+    - 不改 early-data replay provider 的行为逻辑
+- 复跑同一条 Win64 交叉编译：
+  - `fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -otmp/test_backend_comparison.exe tests/integration/test_backend_comparison.pas`
+  - 第二次结果：继续推进到 `src/fafafa.ssl.freepascal.earlydatareplay.dirstore.pas(83,28)`，同样报 `Syntax error, "identifier" expected but ";" found`
+- 第二个根因与第一个同型：
+  - `nl -ba src/fafafa.ssl.freepascal.earlydatareplay.dirstore.pas | sed -n '1,160p'`
+  - 结论：`implementation uses` 同样写成 `{$IFDEF UNIX}Unix{$ENDIF};`
+- 补第二个最小修复：
+  - `src/fafafa.ssl.freepascal.earlydatareplay.dirstore.pas`
+    - 同样把 `implementation uses Unix` 包进 `{$IFDEF UNIX}` 块
+- 第三次复跑同一条 Win64 交叉编译：
+  - `fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -otmp/test_backend_comparison.exe tests/integration/test_backend_comparison.pas`
+  - 结果：成功链接 `tmp/test_backend_comparison.exe`
+  - 关键信号：编译穿过 `freepascal.earlydatareplay.fileprovider` / `dirstore` 后没有新的 fatal，只剩既有 warning / deprecated note
+- 文档格式化：
+  - `/home/dtamade/node_modules/.bin/prettier --write /home/dtamade/projects/fafafa.ssl/docs/plans/2026-05-04-win64-cross-target-compatibility-closeout.md /home/dtamade/projects/fafafa.ssl/docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md /home/dtamade/projects/fafafa.ssl/task_plan.md /home/dtamade/projects/fafafa.ssl/findings.md /home/dtamade/projects/fafafa.ssl/progress.md`
+  - 结果：相关 Markdown 格式化完成
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 提交前 review：
+  - 生产代码只改了两个 shared replay-store 单元的条件 `uses`
+  - 没有改 early-data replay provider 的行为、存储格式或 public API
+  - Win64 交叉编译、Linux compile gate、minimal CI gate 都已证明这批属于 compile-surface closeout，而不是行为回归
 - 读取 `.fusion/task_plan.md`、`.fusion/progress.md`，确认旧 `.fusion` 台账不是当前这轮 closeout 的充分真值源。
 - 检查 `docs/AGENTS.md` 与 memory，确认本仓库默认门禁为：
   - `python3 scripts/compile_all_modules.py`

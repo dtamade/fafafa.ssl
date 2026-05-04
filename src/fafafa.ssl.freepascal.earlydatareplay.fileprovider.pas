@@ -61,8 +61,10 @@ function InstallFileBackedReplayLedger(
 
 implementation
 
+{$IFDEF UNIX}
 uses
-  {$IFDEF UNIX}Unix{$ENDIF};
+  Unix;
+{$ENDIF}
 
 const
   FREEPASCAL_FILE_REPLAY_PROVIDER_VERSION = 1;
