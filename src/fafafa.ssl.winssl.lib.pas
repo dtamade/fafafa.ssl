@@ -28,7 +28,7 @@ uses
 
 type
   { TWinSSLLibrary - Windows Schannel 库管理类 }
-  TWinSSLLibrary = class(TInterfacedObject, ISSLLibrary)
+  TWinSSLLibrary = class(TInterfacedObject, ISSLLibrary, IWinSSLLibraryStatsAccess)
   private
     FInitialized: Boolean;
     FDefaultConfig: TSSLConfig;

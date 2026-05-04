@@ -31,7 +31,8 @@ uses
 
 type
   { TWinSSLContext - Windows Schannel 上下文类 }
-  TWinSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess)
+  TWinSSLContext = class(TInterfacedObject, ISSLContext, ISSLNativeHandleAccess,
+    IWinSSLContextAccess)
   private
     FLibrary: ISSLLibrary;
     FContextType: TSSLContextType;
@@ -184,6 +185,12 @@ type
 
     { Phase 3.3: 获取库实例（供连接更新统计使用） }
     function GetLibrary: ISSLLibrary;
+
+    { WinSSL 内部 access interface }
+    function GetWinSSLVerifyCallback: TSSLVerifyCallback;
+    function GetWinSSLInfoCallback: TSSLInfoCallback;
+    function GetWinSSLCAStoreHandle: Pointer;
+    function GetWinSSLLibrary: ISSLLibrary;
   end;
 
 implementation
@@ -1132,9 +1139,19 @@ begin
   Result := FVerifyCallback;
 end;
 
+function TWinSSLContext.GetWinSSLVerifyCallback: TSSLVerifyCallback;
+begin
+  Result := GetVerifyCallback;
+end;
+
 function TWinSSLContext.GetInfoCallback: TSSLInfoCallback;
 begin
   Result := FInfoCallback;
+end;
+
+function TWinSSLContext.GetWinSSLInfoCallback: TSSLInfoCallback;
+begin
+  Result := GetInfoCallback;
 end;
 
 // ============================================================================
@@ -1262,10 +1279,20 @@ begin
   end;
 end;
 
+function TWinSSLContext.GetWinSSLCAStoreHandle: Pointer;
+begin
+  Result := GetCAStoreHandle;
+end;
+
 { Phase 3.3: 获取库实例（供连接更新统计使用） }
 function TWinSSLContext.GetLibrary: ISSLLibrary;
 begin
   Result := FLibrary;
+end;
+
+function TWinSSLContext.GetWinSSLLibrary: ISSLLibrary;
+begin
+  Result := GetLibrary;
 end;
 
 // ============================================================================

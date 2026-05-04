@@ -18,7 +18,8 @@ unit fafafa.ssl.winssl.base;
 interface
 
 uses
-  Windows, SysUtils;
+  Windows, SysUtils,
+  fafafa.ssl.base;
 
 type
   // ============================================================================
@@ -166,6 +167,24 @@ type
     dwFlags: DWORD;                 // 会话标志
     cbSessionId: DWORD;             // 会话 ID 长度
     rgbSessionId: array[0..31] of Byte;  // 会话 ID (最大 32 字节)
+  end;
+
+  { WinSSL 内部上下文访问接口。
+    只用于 WinSSL connection 和 context 之间的内部协作，不扩张 public ISSLContext。 }
+  IWinSSLContextAccess = interface
+    ['{B954D24E-99FE-45D8-8B96-0C6C6B4347A1}']
+    function GetWinSSLVerifyCallback: TSSLVerifyCallback;
+    function GetWinSSLInfoCallback: TSSLInfoCallback;
+    function GetWinSSLCAStoreHandle: Pointer;
+    function GetWinSSLLibrary: ISSLLibrary;
+  end;
+
+  { WinSSL 内部 library 统计接口。
+    只用于 connection 更新库级统计，不扩张 public ISSLLibrary。 }
+  IWinSSLLibraryStatsAccess = interface
+    ['{9A49E0E3-0F6E-4E6D-8186-39E77EC7C8D0}']
+    procedure UpdateHandshakeStatistics(AHandshakeDuration: Integer; ASuccess: Boolean);
+    procedure UpdateSessionStatistics(ASessionReused: Boolean);
   end;
 
   // 证书链相关

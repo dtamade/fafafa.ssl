@@ -1,6 +1,21 @@
 # Findings - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- `src/fafafa.ssl.winssl.connection.pas` 之前把 `FContext: ISSLContext` 和 `ISSLLibrary` 直接硬转成 `TWinSSLContext` / `TWinSSLLibrary`，真实风险不在运行时分支猜测，而在 compile surface 已经给出明确信号：
+  - `Class types "ISSLContext" and "TWinSSLContext" are not related`
+  - `Class types "ISSLLibrary" and "TWinSSLLibrary" are not related`
+- focused source contract 的初次 RED 直接命中了这条风险：`winssl connection no longer hard-casts ISSLContext to TWinSSLContext` 失败，说明问题确实还存在于源码层，而不是只存在于某次编译告警噪声里。
+- 最小正确修复不是扩张 public `ISSLContext` / `ISSLLibrary`，而是在 WinSSL 私有边界内补 internal access interface：
+  - `IWinSSLContextAccess`
+  - `IWinSSLLibraryStatsAccess`
+  - `TWinSSLContext` / `TWinSSLLibrary` 显式实现它们
+  - `TWinSSLConnection` 统一通过 `Supports(...)` 查询 verify callback、info callback、CA store、library statistics updater
+- `Supports(...)` 路线还额外暴露了一个中间 compile truth：internal interface 必须带有效 GUID，否则接口查询本身就不成立；给这两个 internal access interface 补 GUID 后，Win64 交叉编译才真正通过。
+- 这批收口后，Win64 focused 编译里那两条“不相关 class types”告警已经消失，说明 connection/context/library 的协作边界重新回到了 interface-compatible 路径。
+- 这仍然不是 Windows runtime proof。当前 Linux 主机上，WinSSL 更准确的完成度结论是：
+  - source contract 已锁住不再硬转
+  - Win64 compile surface 已闭合
+  - Windows runtime 仍需独立环境证明
 - `TWolfSSLLibrary.DetectCapabilities` 之前只有 `HasSNI` 按 helper surface 检测，`HasALPN` / `HasSessionTickets` 仍直接硬编码为 `True`；同时 `GetCapabilities` 还把 `SNISupport` / `ALPNSupport` / `SessionTicketsSupport` 无条件发布成 `stable`。
 - 这意味着 WolfSSL library 的 public capability truth 分成了两层漂移：
   - `SupportsALPN` / `SupportsSessionTickets` 与 `IsFeatureSupported(...)` 直接跟着硬编码漂

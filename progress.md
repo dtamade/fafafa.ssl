@@ -1,6 +1,46 @@
 # Progress - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- 新开一批 `WinSSL Context And Library Access Alignment`，目标是收口 `src/fafafa.ssl.winssl.connection.pas` 对 `FContext: ISSLContext` / `ISSLLibrary` 的不安全类硬转，改成 WinSSL 私有 internal access interface。
+- 先补 focused RED：
+  - 新增 `tests/scripts/test_winssl_connection_context_access_contract.sh`
+  - 运行：
+    - `bash -n tests/scripts/test_winssl_connection_context_access_contract.sh`
+    - `bash tests/scripts/test_winssl_connection_context_access_contract.sh`
+  - 初次结果：`[FAIL] winssl connection no longer hard-casts ISSLContext to TWinSSLContext`
+- 最小生产修复：
+  - `src/fafafa.ssl.winssl.base.pas`
+    - 新增 `IWinSSLContextAccess` / `IWinSSLLibraryStatsAccess`
+    - 给两个 internal access interface 补 GUID，满足 `Supports(...)` 语义
+  - `src/fafafa.ssl.winssl.context.pas`
+    - `TWinSSLContext` 实现 `IWinSSLContextAccess`
+    - 新增 `GetWinSSLVerifyCallback` / `GetWinSSLInfoCallback` / `GetWinSSLCAStoreHandle` / `GetWinSSLLibrary`
+  - `src/fafafa.ssl.winssl.lib.pas`
+    - `TWinSSLLibrary` 实现 `IWinSSLLibraryStatsAccess`
+  - `src/fafafa.ssl.winssl.connection.pas`
+    - 新增 `TryGetContextAccess` / `TryGetLibraryStatsAccess`
+    - `NotifyInfoCallback` / `ValidatePeerCertificate` / `DoConnect` / `DoAccept` 全部改为走 `Supports(...)`
+    - 删除 `TWinSSLContext(FContext)` 和 `TWinSSLLibrary(...)` 类硬转路径
+- 复跑 focused GREEN：
+  - `bash -n tests/scripts/test_winssl_connection_context_access_contract.sh`
+  - `bash tests/scripts/test_winssl_connection_context_access_contract.sh`
+  - 结果：脚本全部 `[PASS]`
+- Win64 交叉编译验证：
+  - `mkdir -p tmp/winssl_session_mgmt_win64`
+  - 初次把 connection 改成 `Supports(...)` 后，编译暴露 internal access interface 缺少 GUID；补 GUID 后继续复跑。
+  - 最终命令：
+    - `fpc -Twin64 -B -Fu./src -Fu./tests -FUtmp/winssl_session_mgmt_win64 -FEtmp/winssl_session_mgmt_win64 -otmp/winssl_session_mgmt_win64/test_winssl_session_management.exe tests/winssl/test_winssl_session_management.pas > tmp/winssl_session_mgmt_win64/build.log 2>&1`
+    - `! rg 'Class types "ISSLContext" and "TWinSSLContext" are not related|Class types "ISSLLibrary" and "TWinSSLLibrary" are not related' tmp/winssl_session_mgmt_win64/build.log`
+  - 结果：命令退出 `0`，Win64 编译成功，且那两类不安全类型告警已消失
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 提交前 review：
+  - 这批只修 WinSSL 内部协作边界，没有扩张 public interface，也没有改握手或证书验证行为
+  - RED 直接命中源码里的硬转，GREEN 则把 connection/context/library 重新收回 interface-compatible 路径
+  - source contract、Win64 compile、compile gate、minimal CI gate 都已闭合，可以安全提交
 - 新开一批 `WolfSSL Feature Capability Runtime Consistency`，目标是把 `GetCapabilities` / `IsFeatureSupported` 的 capability truth 收口到真实 helper surface，不再发布 `SNI` / `ALPN` / `SessionTickets` 的硬编码假阳性。
 - 先补 focused RED：
   - `tests/test_wolfssl_framework.pas`

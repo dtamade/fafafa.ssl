@@ -156,6 +156,10 @@ type
     // 会话保存
     procedure SaveSessionAfterHandshake;
 
+    // WinSSL 内部 access interface helper
+    function TryGetContextAccess(out AContextAccess: IWinSSLContextAccess): Boolean;
+    function TryGetLibraryStatsAccess(out ALibraryStatsAccess: IWinSSLLibraryStatsAccess): Boolean;
+
   protected
     { TBaseSSLConnection 抽象方法实现 }
     function DoRead(var ABuffer; ACount: Integer): Integer; override;
@@ -704,11 +708,31 @@ end;
 
 procedure TWinSSLConnection.NotifyInfoCallback(AWhere: Integer; ARet: Integer; const AState: string);
 var
+  LContextAccess: IWinSSLContextAccess;
   LCallback: TSSLInfoCallback;
 begin
-  LCallback := TWinSSLContext(FContext).GetInfoCallback;
+  LCallback := nil;
+  if TryGetContextAccess(LContextAccess) then
+    LCallback := LContextAccess.GetWinSSLInfoCallback;
   if Assigned(LCallback) then
     LCallback(AWhere, ARet, AState);
+end;
+
+function TWinSSLConnection.TryGetContextAccess(out AContextAccess: IWinSSLContextAccess): Boolean;
+begin
+  Result := Supports(FContext, IWinSSLContextAccess, AContextAccess);
+end;
+
+function TWinSSLConnection.TryGetLibraryStatsAccess(
+  out ALibraryStatsAccess: IWinSSLLibraryStatsAccess): Boolean;
+var
+  LContextAccess: IWinSSLContextAccess;
+begin
+  ALibraryStatsAccess := nil;
+  if not TryGetContextAccess(LContextAccess) then
+    Exit(False);
+  Result := Supports(LContextAccess.GetWinSSLLibrary, IWinSSLLibraryStatsAccess,
+    ALibraryStatsAccess);
 end;
 
 procedure TWinSSLConnection.SaveSessionAfterHandshake;
@@ -741,6 +765,7 @@ end;
 
 function TWinSSLConnection.ValidatePeerCertificate(out AVerifyError: Integer): Boolean;
 var
+  LContextAccess: IWinSSLContextAccess;
   LVerifyMode: TSSLVerifyModes;
   LVerifyFlags: TSSLCertVerifyFlags;
   LNeedCert: Boolean;
@@ -857,11 +882,18 @@ begin
     FillChar(LChainPara, SizeOf(LChainPara), 0);
     LChainPara.cbSize := SizeOf(CERT_CHAIN_PARA);
 
+    if not TryGetContextAccess(LContextAccess) then
+    begin
+      AVerifyError := Integer(SEC_E_INTERNAL_ERROR);
+      Result := False;
+      Exit;
+    end;
+
     if not CertGetCertificateChain(
       nil,
       LCertContext,
       nil,
-      TWinSSLContext(FContext).GetCAStoreHandle,
+      HCERTSTORE(LContextAccess.GetWinSSLCAStoreHandle),
       @LChainPara,
       LChainFlags,
       nil,
@@ -927,7 +959,7 @@ begin
         if LPolicyStatus.dwError <> 0 then
         begin
           AVerifyError := Integer(LPolicyStatus.dwError);
-          LVerifyCallback := TWinSSLContext(FContext).GetVerifyCallback;
+          LVerifyCallback := LContextAccess.GetWinSSLVerifyCallback;
 
           if Assigned(LVerifyCallback) then
           begin
@@ -965,6 +997,7 @@ end;
 
 function TWinSSLConnection.DoConnect: Boolean;
 var
+  LLibraryStatsAccess: IWinSSLLibraryStatsAccess;
   LVerifyError: Integer;
 begin
   NotifyInfoCallback(1, 0, 'handshake_start');
@@ -990,11 +1023,10 @@ begin
 
   FHandshakeState := sslHsCompleted;
 
-  if FContext is TWinSSLContext then
+  if TryGetLibraryStatsAccess(LLibraryStatsAccess) then
   begin
-    TWinSSLLibrary(TWinSSLContext(FContext).GetLibrary).UpdateHandshakeStatistics(
-      Round(FHandshakeDuration), True);
-    TWinSSLLibrary(TWinSSLContext(FContext).GetLibrary).UpdateSessionStatistics(FSessionReused);
+    LLibraryStatsAccess.UpdateHandshakeStatistics(Round(FHandshakeDuration), True);
+    LLibraryStatsAccess.UpdateSessionStatistics(FSessionReused);
   end;
 
   NotifyInfoCallback(3, 0, 'handshake_done');
@@ -1003,6 +1035,7 @@ end;
 
 function TWinSSLConnection.DoAccept: Boolean;
 var
+  LLibraryStatsAccess: IWinSSLLibraryStatsAccess;
   LVerifyError: Integer;
   LFrequency: Int64;
 begin
@@ -1036,11 +1069,10 @@ begin
 
   SaveSessionAfterHandshake;
 
-  if FContext is TWinSSLContext then
+  if TryGetLibraryStatsAccess(LLibraryStatsAccess) then
   begin
-    TWinSSLLibrary(TWinSSLContext(FContext).GetLibrary).UpdateHandshakeStatistics(
-      Round(FHandshakeDuration), True);
-    TWinSSLLibrary(TWinSSLContext(FContext).GetLibrary).UpdateSessionStatistics(FSessionReused);
+    LLibraryStatsAccess.UpdateHandshakeStatistics(Round(FHandshakeDuration), True);
+    LLibraryStatsAccess.UpdateSessionStatistics(FSessionReused);
   end;
 
   NotifyInfoCallback(3, 0, 'handshake_done');
