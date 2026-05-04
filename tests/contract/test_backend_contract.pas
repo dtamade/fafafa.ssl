@@ -1067,6 +1067,87 @@ begin
   end;
 end;
 
+procedure TestContract_ContextNativeHandleInterfaceAligned(ABackend: TSSLLibraryType);
+var
+  LLib: ISSLLibrary;
+  LClientCtx: ISSLContext;
+  LServerCtx: ISSLContext;
+
+  function ValidateContext(const ALabel: string; ACtx: ISSLContext;
+    out AError: string): Boolean;
+  var
+    LNative: ISSLNativeHandleAccess;
+  begin
+    Result := False;
+    AError := '';
+
+    if ABackend = sslFreePascal then
+    begin
+      if Supports(ACtx, ISSLNativeHandleAccess, LNative) then
+        AError := ALabel + ' pure backend context unexpectedly exposes ISSLNativeHandleAccess'
+      else
+        Result := True;
+      Exit;
+    end;
+
+    if not Supports(ACtx, ISSLNativeHandleAccess, LNative) then
+      AError := ALabel + ' C-library backend context does not expose ISSLNativeHandleAccess'
+    else if LNative.GetBackendType <> ABackend then
+      AError := ALabel + ' ISSLNativeHandleAccess.GetBackendType does not match the context backend'
+    else if not LNative.IsNativeHandleValid then
+      AError := ALabel + ' ISSLNativeHandleAccess.IsNativeHandleValid returned False'
+    else if LNative.GetNativeHandle = nil then
+      AError := ALabel + ' ISSLNativeHandleAccess.GetNativeHandle returned nil'
+    else
+      Result := True;
+  end;
+
+var
+  LError: string;
+begin
+  PrintSubHeader(Format('Contract 13: Context native-handle interface alignment - %s',
+    [SSL_LIBRARY_NAMES[ABackend]]));
+
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    AddSkip('Backend not available on this platform');
+    Exit;
+  end;
+
+  try
+    LLib := TSSLFactory.GetLibrary(ABackend);
+    LClientCtx := LLib.CreateContext(sslCtxClient);
+    LServerCtx := LLib.CreateContext(sslCtxServer);
+
+    if not ValidateContext('client', LClientCtx, LError) then
+    begin
+      WriteLn('  [FAIL] ', LError);
+      AddResult('ContextNativeHandleInterfaceAligned', ABackend, False, LError);
+    end
+    else if not ValidateContext('server', LServerCtx, LError) then
+    begin
+      WriteLn('  [FAIL] ', LError);
+      AddResult('ContextNativeHandleInterfaceAligned', ABackend, False, LError);
+    end
+    else if ABackend = sslFreePascal then
+    begin
+      WriteLn('  [PASS] Pure backend contexts keep ISSLNativeHandleAccess absent');
+      AddResult('ContextNativeHandleInterfaceAligned', ABackend, True);
+    end
+    else
+    begin
+      WriteLn('  [PASS] C-library backend contexts expose native-handle surface');
+      AddResult('ContextNativeHandleInterfaceAligned', ABackend, True);
+    end;
+  except
+    on E: Exception do
+    begin
+      WriteLn('  [FAIL] Exception: ', E.ClassName, ' - ', E.Message);
+      AddResult('ContextNativeHandleInterfaceAligned', ABackend, False, E.Message);
+    end;
+  end;
+end;
+
 procedure PrintSummary;
 var
   I: Integer;
@@ -1159,6 +1240,9 @@ begin
 
     // 12) Context optional surfaces must match backend capability truth
     TestContract_ContextOptionalInterfacesAligned(LBackend);
+
+    // 13) C-library backend contexts must expose native-handle interface
+    TestContract_ContextNativeHandleInterfaceAligned(LBackend);
   end;
 
   PrintSummary;

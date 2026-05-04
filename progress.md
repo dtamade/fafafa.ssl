@@ -110,6 +110,27 @@
   - 结果：`185/185` 核心模块编译成功，`100.0%`
   - `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 新建计划：`docs/plans/2026-05-04-backend-context-native-handle-completion-audit.md`
+- 更新 `task_plan.md`，把当前批次目标切到 `Backend Context Native-Handle Completion Audit`
+- 在 `tests/contract/test_backend_contract.pas` 新增 `Contract 13: Context native-handle interface alignment`
+  - 约束：
+    - `OpenSSL` / `WolfSSL` / `MbedTLS` / `WinSSL` 这类 C-library backend context 必须支持 `ISSLNativeHandleAccess`
+    - `GetBackendType` / `IsNativeHandleValid` / `GetNativeHandle` 必须自洽
+    - `FreePascal` context 不得暴露该接口
+- 运行 focused contract：
+  - `fpc -Fu./src tests/contract/test_backend_contract.pas -otmp/test_backend_contract && ./tmp/test_backend_contract`
+  - 结果：这批没有新的生产代码漂移，`Contract 13` 直接全绿
+    - `OpenSSL`: context native-handle surface PASS
+    - `WolfSSL`: context native-handle surface PASS
+    - `MbedTLS`: context native-handle surface PASS
+    - `FreePascal`: context keeps `ISSLNativeHandleAccess` absent PASS
+    - `WinSSL`: backend unavailable on this platform => `[SKIP]`
+  - 汇总：`Passed: 79 / Failed: 0 / Skipped: 16`
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
 - 新建计划：`docs/plans/2026-05-04-backend-context-optional-interface-completion-audit.md`
 - 更新 `task_plan.md`，把当前批次目标切到 `Backend Context Optional Interface Completion Audit`
 - 在 `tests/contract/test_backend_contract.pas` 增加 `Contract 12`，把 capability 与以下 surface 做成双向约束：

@@ -136,3 +136,14 @@
   - `WolfSSL` 在当前主机保持 `ISSLEarlyDataContext` / `ISSLEarlyDataConnection` absent
   - `WolfSSL` 仍保留 `OCSPStaplingSupport<>None` 时的 `ISSLServerOCSPStaplingContext`
   - 仓库级验证也通过：`185/185` compile、minimal CI gate PASS
+- `docs/MIGRATION_GUIDE_V1.1.md` 对原生句柄迁移的 public contract 不只覆盖 connection，也明确覆盖 context：
+  - C-library backend context 应支持 `ISSLNativeHandleAccess`
+  - 纯 Pascal backend context 不应暴露伪 native handle
+  - 推荐调用方式就是 `Supports(Ctx, ISSLNativeHandleAccess, NativeAccess)`
+- 之前仓库只把这条契约锁到了 connection-level，context-level 还缺 cross-backend completion audit；因此新增 `Contract 13` 不是功能扩张，而是补齐迁移契约证据。
+- `Contract 13` 在当前 Linux 主机上直接全绿，说明 context native-handle 这条线没有新的生产代码漂移：
+  - `OpenSSL` / `WolfSSL` / `MbedTLS` 的 client/server context 都暴露 `ISSLNativeHandleAccess`
+  - `GetBackendType` / `IsNativeHandleValid` / `GetNativeHandle` 均与 backend truth 一致
+  - `FreePascal` context 继续保持该接口 absent
+  - `WinSSL` 仍因平台不可用而 skip，不把 Linux 结果外推成 Windows runtime 证明
+- 因此 context native-handle 这批的正确结论是 completion audit closeout，而不是继续展开新的实现修复。
