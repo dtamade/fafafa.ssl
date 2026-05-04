@@ -145,6 +145,7 @@ Ctx := TSSLContextBuilder.Create
   .WithBackend(sslWolfSSL)
   .WithCertificate('server.crt')
   .WithPrivateKey('server.key')
+  .WithVerifyNone
   .WithOCSPStapling(True)
   .WithServerOCSPStapledResponseFile(
     'tests/fixtures/p2/ocsp/ocsp_response_successful_basic_v1.der')
@@ -157,10 +158,11 @@ Ctx := TSSLContextBuilder.Create
 - `WithServerOCSPStapledResponseFile(...)` 会把 caller-provided DER material 装到 server context，并注册 native status callback
 - `ISSLOCSPStapling` 仍然是 client 读取 stapled response 的 surface
 - `ISSLServerOCSPStaplingContext` 仍然是 server 侧 clear / set bytes / load file / has / get 的 public surface
+- scripted `TStream` baseline handshake 已在本机跑通，`not requested` / `no material` / `builder no-file` 这些场景已有 focused runtime 证据
 
 当前仍然保留的边界是：
 
-- 这条路径只保证 request / consume / manual issuance 接线，不代表已经有充分的 runtime 生产证据
+- `configured + requested => stapled DER` 以及对应的 builder file-load emission proof 目前只在 `wolfSSL >= 5.9.1` 主机执行；当前 Debian 13 开发主机自带 `wolfSSL 5.7.2`，因此 focused runtime test 会显式 skip 这两条场景
 - 它同样不负责 online fetch、refresh，或 responder 调度
 
 如果你还需要基于证书 AIA 主动发 online OCSP 请求，看下面的 FreePascal client online path。

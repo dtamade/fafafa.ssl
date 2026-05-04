@@ -51,6 +51,43 @@
   - 结果：`185/185` 核心模块编译成功，`100.0%`
 - 运行 `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 继续 `WolfSSL server OCSP runtime proof` 收口：
+  - 运行 `dpkg -s libwolfssl-dev | rg '^Version:'`
+  - 结果：`Version: 5.7.2-0.1+deb13u1`
+  - 运行 `strings /usr/lib/x86_64-linux-gnu/libwolfssl.so | rg -m1 '^wolfSSL 5\\.'`
+  - 结果：`wolfSSL 5.7.2`
+- 复跑当前 runtime test 真值：
+  - `fpc -Fu./src tests/wolfssl/test_wolfssl_server_ocsp_stapling_runtime.pas -otmp/test_wolfssl_server_ocsp_stapling_runtime`
+  - `./tmp/test_wolfssl_server_ocsp_stapling_runtime`
+  - 初次结果：`FAIL: WolfSSL server handshake should invoke wolfSSL_set_tlsext_status_ocsp_resp when response is configured and requested (conn_status=1 status_call_delta=0 observed_leaf_stapled=False extra_handshakes=8,20)`
+  - 结论：删掉临时预注入后，旧版 `wolfSSL 5.7.2` 的真实现象是根本没有进入 emission callback
+- 生产改动：
+  - `tests/wolfssl/test_wolfssl_server_ocsp_stapling_runtime.pas`
+    - 新增 `wolfSSL_lib_version` 版本解析与 `5.9.1` 比较 helper
+    - 将 runtime test 拆成 baseline 层 + emission 层
+    - direct configured / builder file-load 两条 emission 场景在 `wolfSSL < 5.9.1` 上显式 `SKIP`
+    - 输出 host runtime version，并在最终 PASS 文案里报告 skipped emission 场景数量
+  - `task_plan.md`
+    - 把本批目标改写成 host-gated runtime truth，而不是强行要求所有 emission 场景在 `5.7.2` 上跑绿
+  - `docs/plans/2026-05-04-wolfssl-server-ocsp-runtime-proof.md`
+    - 增加当前主机版本、host-gated closeout 状态和更新后的 Done 条件
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
+    - 把 WolfSSL server OCSP stapling truth 更新为“baseline runtime 已验证，configured emission 按 `>=5.9.1` 门控”
+  - `docs/guides/OCSP_USAGE_GUIDE.md`
+    - WolfSSL 示例补 `.WithVerifyNone`
+    - 写明 baseline runtime 已验证，configured emission 在 `5.7.2` 主机上会显式 skip
+- 复跑 focused tests：
+  - `fpc -Fu./src tests/wolfssl/test_wolfssl_server_ocsp_stapling_runtime.pas -otmp/test_wolfssl_server_ocsp_stapling_runtime`
+  - `./tmp/test_wolfssl_server_ocsp_stapling_runtime`
+  - 结果：`Host wolfSSL version: 5.7.2`，两条 emission 场景显式 `SKIP`，最终 `PASS: WolfSSL server OCSP stapling runtime baseline checks passed (2 emission scenario(s) skipped)`
+  - `fpc -Fu./src tests/test_wolfssl_ocsp_stapling_contract.pas -otmp/test_wolfssl_ocsp_stapling_contract`
+  - `./tmp/test_wolfssl_ocsp_stapling_contract`
+  - 结果：`Passed: 10 / Failed: 0 / Skipped: 0`
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
 - 新建 docs truth 批次计划：`docs/plans/2026-05-04-openssl-server-ocsp-runtime-doc-truth.md`
 - 检查 `docs/BACKEND_CAPABILITY_MATRIX.md` 与 `docs/guides/OCSP_USAGE_GUIDE.md`
   - 结果：OpenSSL server OCSP stapling 的文档仍停在“native callback wiring / 可加载 DER”的层级，没有把刚完成的 runtime proof 和 builder verify 基线写明

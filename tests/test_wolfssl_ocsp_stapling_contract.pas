@@ -6,7 +6,8 @@ uses
   SysUtils, Classes,
   fafafa.ssl.base,
   fafafa.ssl,
-  fafafa.ssl.context.builder;
+  fafafa.ssl.context.builder,
+  fafafa.ssl.wolfssl.lib;
 
 const
   OCSP_FIXTURE_FILE = 'tests/fixtures/p2/ocsp/ocsp_response_successful_basic_v1.der';

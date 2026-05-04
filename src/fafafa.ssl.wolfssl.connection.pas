@@ -28,7 +28,8 @@ uses
 
 type
   { TWolfSSLConnection - WolfSSL SSL 连接类 }
-  TWolfSSLConnection = class(TBaseSSLConnection, ISSLEarlyDataConnection)
+  TWolfSSLConnection = class(TBaseSSLConnection, ISSLEarlyDataConnection,
+    ISSLNativeHandleAccess)
   private
     FWolfSSLCtx: PWOLFSSL_CTX;
     FWolfSSL: PWOLFSSL;
@@ -47,7 +48,9 @@ type
     procedure SetupStream;
     procedure SetupSNI;
     procedure SetupALPN;
+    function CompleteStreamHandshake(AIsClient: Boolean): Boolean;
     function ApplyPreHandshakeOCSPStaplingRequest: Boolean;
+    function ApplyPreHandshakeServerOCSPStaplingConfiguration: Boolean;
     function ResolveEarlyDataLimitFromSession(const ASession: ISSLSession): Cardinal;
     function SendQueuedEarlyData: Boolean;
     procedure UpdateEarlyDataStatusFromNative;
@@ -103,6 +106,8 @@ type
     function GetNegotiatedProtocol: TSSLProtocolVersion;
     function GetNegotiatedCipher: string;
     function GetNegotiatedALPN: string;
+    function GetBackendType: TSSLLibraryType;
+    function IsNativeHandleValid: Boolean;
     function GetLastError: Integer;
     function GetLastErrorString: string;
   end;
@@ -252,12 +257,24 @@ end;
 procedure TWolfSSLConnection.SetupStream;
 begin
   // 检查 I/O 回调是否可用
-  if not Assigned(wolfSSL_CTX_SetIORecv) or not Assigned(wolfSSL_CTX_SetIOSend) then
+  if ((not Assigned(wolfSSL_SSLSetIORecv)) or
+      (not Assigned(wolfSSL_SSLSetIOSend))) and
+     ((not Assigned(wolfSSL_CTX_SetIORecv)) or
+      (not Assigned(wolfSSL_CTX_SetIOSend))) then
     raise ESSLException.Create('WolfSSL I/O callbacks not available - stream connections not supported');
 
-  // 设置自定义 I/O 回调用于流操作
-  wolfSSL_CTX_SetIORecv(FWolfSSLCtx, @WolfSSL_StreamRecvCallback);
-  wolfSSL_CTX_SetIOSend(FWolfSSLCtx, @WolfSSL_StreamSendCallback);
+  // 优先在具体 SSL 对象上挂接 I/O 回调，避免晚于 wolfSSL_new(...)
+  // 才修改 ctx 时，当前连接仍回落到默认 socket I/O。
+  if Assigned(wolfSSL_SSLSetIORecv) and Assigned(wolfSSL_SSLSetIOSend) then
+  begin
+    wolfSSL_SSLSetIORecv(FWolfSSL, @WolfSSL_StreamRecvCallback);
+    wolfSSL_SSLSetIOSend(FWolfSSL, @WolfSSL_StreamSendCallback);
+  end
+  else
+  begin
+    wolfSSL_CTX_SetIORecv(FWolfSSLCtx, @WolfSSL_StreamRecvCallback);
+    wolfSSL_CTX_SetIOSend(FWolfSSLCtx, @WolfSSL_StreamSendCallback);
+  end;
 
   // 设置 I/O 上下文（传递流指针）
   if Assigned(wolfSSL_SetIOReadCtx) and Assigned(wolfSSL_SetIOWriteCtx) then
@@ -278,6 +295,42 @@ begin
   if (FALPNProtocols <> '') and Assigned(wolfSSL_UseALPN) then
     wolfSSL_UseALPN(FWolfSSL, PAnsiChar(AnsiString(FALPNProtocols)),
       Length(FALPNProtocols), 0);  // 0 = WOLFSSL_ALPN_CONTINUE_ON_MISMATCH
+end;
+
+function TWolfSSLConnection.CompleteStreamHandshake(AIsClient: Boolean): Boolean;
+const
+  MAX_STREAM_HANDSHAKE_ATTEMPTS = 64;
+var
+  LAttempt: Integer;
+  LResult: Integer;
+begin
+  Result := False;
+
+  if FWolfSSL = nil then
+    Exit;
+
+  for LAttempt := 1 to MAX_STREAM_HANDSHAKE_ATTEMPTS do
+  begin
+    if AIsClient then
+      LResult := wolfSSL_connect(FWolfSSL)
+    else
+      LResult := wolfSSL_accept(FWolfSSL);
+
+    if LResult = WOLFSSL_SUCCESS then
+    begin
+      FLastNativeError := 0;
+      Exit(True);
+    end;
+
+    if Assigned(wolfSSL_get_error) then
+      FLastNativeError := wolfSSL_get_error(FWolfSSL, LResult)
+    else
+      FLastNativeError := LResult;
+
+    if (FLastNativeError <> WOLFSSL_ERROR_WANT_READ) and
+       (FLastNativeError <> WOLFSSL_ERROR_WANT_WRITE) then
+      Exit(False);
+  end;
 end;
 
 function TWolfSSLConnection.ApplyPreHandshakeOCSPStaplingRequest: Boolean;
@@ -312,6 +365,41 @@ begin
      WOLFSSL_CSR_OCSP_USE_NONCE) <> WOLFSSL_SUCCESS then
   begin
     FLastNativeError := WOLFSSL_FAILURE;
+    Exit(False);
+  end;
+end;
+
+function TWolfSSLConnection.ApplyPreHandshakeServerOCSPStaplingConfiguration: Boolean;
+var
+  LServerStapling: ISSLServerOCSPStaplingContext;
+  LRet: PtrInt;
+begin
+  Result := True;
+
+  if (FWolfSSL = nil) or (FContext = nil) or
+     (FContext.GetContextType <> sslCtxServer) then
+    Exit;
+
+  if not Supports(FContext, ISSLServerOCSPStaplingContext, LServerStapling) then
+    Exit;
+
+  if not LServerStapling.HasServerStapledOCSPResponse then
+    Exit;
+
+  if Assigned(wolfSSL_EnableOCSPStapling) and
+     (wolfSSL_EnableOCSPStapling(FWolfSSL) <> WOLFSSL_SUCCESS) then
+  begin
+    FLastNativeError := WOLFSSL_FAILURE;
+    Exit(False);
+  end;
+
+  if not Assigned(wolfSSL_set_tlsext_status_type) then
+    Exit;
+
+  LRet := wolfSSL_set_tlsext_status_type(FWolfSSL, WOLFSSL_CSR_OCSP);
+  if LRet < 0 then
+  begin
+    FLastNativeError := Integer(LRet);
     Exit(False);
   end;
 end;
@@ -447,6 +535,17 @@ begin
   if not SendQueuedEarlyData then
     Exit(False);
 
+  if FStream <> nil then
+  begin
+    Result := CompleteStreamHandshake(True);
+    if Result then
+    begin
+      UpdateEarlyDataStatusFromNative;
+      Result := ValidateRequiredOCSPStapling;
+    end;
+    Exit;
+  end;
+
   LResult := wolfSSL_connect(FWolfSSL);
   if LResult <> WOLFSSL_SUCCESS then
     FLastNativeError := wolfSSL_get_error(FWolfSSL, LResult);
@@ -465,6 +564,15 @@ begin
   Result := False;
   if FWolfSSL = nil then Exit;
   if not Assigned(wolfSSL_accept) then Exit;
+
+  if not ApplyPreHandshakeServerOCSPStaplingConfiguration then
+    Exit(False);
+
+  if FStream <> nil then
+  begin
+    Result := CompleteStreamHandshake(False);
+    Exit;
+  end;
 
   LResult := wolfSSL_accept(FWolfSSL);
   if LResult <> WOLFSSL_SUCCESS then
@@ -839,13 +947,24 @@ begin
   Result := DoGetSelectedALPNProtocol;
 end;
 
+function TWolfSSLConnection.GetBackendType: TSSLLibraryType;
+begin
+  Result := sslWolfSSL;
+end;
+
+function TWolfSSLConnection.IsNativeHandleValid: Boolean;
+begin
+  Result := FWolfSSL <> nil;
+end;
+
 function TWolfSSLConnection.GetLastError: Integer;
 begin
-  Result := 0;
-  if (FWolfSSL <> nil) and Assigned(wolfSSL_get_error) then
+  if FLastNativeError <> 0 then
+    Result := FLastNativeError
+  else if (FWolfSSL <> nil) and Assigned(wolfSSL_get_error) then
     Result := wolfSSL_get_error(FWolfSSL, 0)
   else
-    Result := FLastNativeError;
+    Result := 0;
 end;
 
 function TWolfSSLConnection.GetLastErrorString: string;

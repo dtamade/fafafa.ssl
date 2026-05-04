@@ -212,13 +212,15 @@ if not Supports(Ctx, ISSLServerOCSPStaplingContext) then
 - ✅ caller-provided DER bytes / file material
 - ✅ server-side native status callback wiring
 - ✅ client-side stapled-response request / consume surface
-- ⚠️ 当前证据仍以 focused contract + compile gate 为主，本机未完成独立的 end-to-end runtime 握手验证
+- ✅ scripted `TStream` TLS 1.3 baseline handshake 已在本机验证
+- ⚠️ `configured + requested => stapled DER` 与 builder file-load emission proof 目前按 `wolfSSL >= 5.9.1` 门控；旧版本 host 会显式 skip 这些场景
 
 **边界**:
 
 - 只负责 caller-provided stapled OCSP response material
 - 不负责 online fetch、refresh，或 responder 调度
 - 现阶段 capability 应按 `experimental` 看待，而不是生产稳定支持
+- 当前 Debian 13 开发主机自带 `wolfSSL 5.7.2`，属于上述 emission gate 范围
 
 ---
 

@@ -60,3 +60,13 @@
 - docs truth 批次的验证结果：
   - `python3 scripts/compile_all_modules.py`：`185/185`
   - `bash scripts/run_minimal_ci_gate.sh --fast-local`：compile gate `185/185`，模块测试 `17/17`，phase2 baseline dry-run PASS
+- 把临时“直接预注入 response”探针撤掉后重新回跑 `tests/wolfssl/test_wolfssl_server_ocsp_stapling_runtime.pas`，当前主机上的真实失败形态更清楚了：`configured + requested` 场景不会进入 `wolfSSL_set_tlsext_status_ocsp_resp(...)`，`status_call_delta=0`，而 scripted client 仍只观测到额外握手类型 `8,20`（`EncryptedExtensions`、`Finished`），说明不是“已发出但解析不到”，而是旧版 WolfSSL 根本没走到 emission callback。
+- 本机 `WolfSSL` 版本已核对为 Debian 包 `5.7.2-0.1+deb13u1`，运行时字符串 `wolfSSL 5.7.2`。
+- `wolfSSL` 官方 `5.9.1` release notes 提到修复 “`OCSP_WANT_READ` 在 TLS 1.3 handshake message processing 中的处理”，这和当前 `5.7.2` 上“baseline handshake 已通，但 configured stapled response 不进入 emission path”的症状高度一致。
+- 因此这批最诚实的收口不是继续扩大 repo-side 代码改动，而是把 runtime test 分成两层：
+  - baseline 层始终执行：`no request`、`requested + no material`、`builder no-file`
+  - emission 层只在 `wolfSSL >= 5.9.1` 主机上执行：direct configured、builder file-load
+- 当前 `WolfSSL` server stapling truth 已更新为：
+  - public surface、builder file-load、client request / consume、server status callback wiring 均已接通
+  - scripted `TStream` baseline handshake 已有本机 runtime 证据
+  - `configured + requested => stapled DER` 仍受 host `wolfSSL` 版本约束，旧版主机显式 skip，不再误报成本地生产代码缺口

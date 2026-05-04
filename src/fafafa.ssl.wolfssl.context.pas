@@ -196,6 +196,7 @@ uses
 
 const
   WOLFSSL_ERROR_UNSUPPORTED_RENEGOTIATION = -20001;
+  WOLFSSL_SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE = 65;
 
 { WolfSSL I/O 回调函数（用于流支持）
   这些函数将在 TWolfSSLConnection.Create(AStream) 中注册 }
@@ -539,6 +540,11 @@ begin
 
   if HasServerStapledOCSPResponse then
   begin
+    if Assigned(wolfSSL_CTX_ctrl) then
+      wolfSSL_CTX_ctrl(FWolfSSLCtx, WOLFSSL_SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE,
+        WOLFSSL_CSR_OCSP, nil);
+    if Assigned(wolfSSL_CTX_EnableOCSP) then
+      wolfSSL_CTX_EnableOCSP(FWolfSSLCtx, 0);
     if Assigned(wolfSSL_CTX_set_tlsext_status_cb) then
       wolfSSL_CTX_set_tlsext_status_cb(FWolfSSLCtx,
         @WolfSSLServerOCSPStaplingStatusCallback);
@@ -551,6 +557,8 @@ begin
       wolfSSL_CTX_set_tlsext_status_cb(FWolfSSLCtx, nil);
     if Assigned(wolfSSL_CTX_DisableOCSPStapling) then
       wolfSSL_CTX_DisableOCSPStapling(FWolfSSLCtx);
+    if Assigned(wolfSSL_CTX_DisableOCSP) then
+      wolfSSL_CTX_DisableOCSP(FWolfSSLCtx);
   end;
 end;
 
