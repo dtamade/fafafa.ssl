@@ -351,6 +351,8 @@ procedure TestMbedTLSContextConfiguration;
 var
   LLib: ISSLLibrary;
   LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LErrMsg: string;
   LRaised: Boolean;
 begin
   WriteLn('');
@@ -391,6 +393,15 @@ begin
 
       LCtx.SetOptions([ssoEnableSNI, ssoEnableALPN]);
       Test('Options set', ssoEnableSNI in LCtx.GetOptions);
+
+      // Renegotiation explicit unsupported semantics
+      LConn := LCtx.CreateConnection(0);
+      Test('Renegotiate returns false before handshake', not LConn.Renegotiate);
+      Test('Renegotiate reports unsupported error class',
+        LConn.GetError(-1) = sslErrUnsupported);
+      LErrMsg := LConn.GetVerifyResultString;
+      Test('Renegotiate exposes non-empty diagnostic message',
+        Pos('renegotiation', LowerCase(LErrMsg)) > 0);
 
       LRaised := False;
       try

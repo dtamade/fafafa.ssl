@@ -1,6 +1,16 @@
-# Findings - WolfSSL Client Peer Certificate Chain Surface
+# Findings - MbedTLS Renegotiate Explicit Unsupported Semantics
 
 ## 2026-05-04
+- `TMbedTLSConnection.DoRenegotiate` 之前只是静默返回 `False`，不会留下任何错误分类或诊断文案；这意味着 public `ISSLConnection.Renegotiate` 在 MbedTLS backend 上虽然形式可调用，但调用方拿不到“这条路径不支持”的稳定语义。
+- 这不是 renegotiation 功能未实现本身的问题，而是 public contract 不完整：同样的 `False` 结果既可能表示 handshake precondition、native failure，也可能表示 backend 根本不支持。如果没有显式 `sslErrUnsupported`，调用方和测试都无法区分。
+- 最小正确修复不是实现真正的 renegotiation，而是把这条路径收成显式 unsupported 语义：
+  - `DoRenegotiate` 记录 `RecordError(sslErrUnsupported, ...)`
+  - `DoGetError` 在没有 native error 但已有语义错误时优先返回 `FLastErrorCode`
+  - `DoGetVerifyResultString` 在已有语义错误文案时优先返回 `FLastErrorString`
+- focused RED/GREEN 证明收口后，MbedTLS framework contract 与前面 WolfSSL 的同类 contract 重新一致：
+  - `Renegotiate` 仍然返回 `False`
+  - `GetError(-1)` 稳定返回 `sslErrUnsupported`
+  - `GetVerifyResultString` 稳定包含 `renegotiation`
 - 这批最初想用 scripted TLS 1.3 server harness 做 WolfSSL client full-handshake runtime RED，但当前主机 `libwolfssl-dev 5.7.2-0.1+deb13u1` / `wolfSSL 5.7.2` 上，真实信号只有 `Connect=False / verify=OK` 一类模糊结果，不能拿来当最终 completion proof。
 - 因此这批的可靠真相源必须收窄成 deterministic contract，而不是继续在当前 host 上反复追逐不稳定 runtime 行为：
   - 用真实 DER fixture 锁住 `LoadFromDER(...)`

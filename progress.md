@@ -1,6 +1,38 @@
-# Progress - WolfSSL Client Peer Certificate Chain Surface
+# Progress - MbedTLS Renegotiate Explicit Unsupported Semantics
 
 ## 2026-05-04
+- 新开一批 MbedTLS `Renegotiate` 语义收口，原因是：
+  - `src/fafafa.ssl.mbedtls.connection.pas` 里的 `DoRenegotiate` 仍只是注释 `MbedTLS 重新协商需要额外实现` + `Result := False`
+  - 这让 public `Renegotiate` 路径只有布尔失败，没有稳定错误分类或诊断文案
+- 先在 `tests/test_mbedtls_framework.pas` 补 focused RED：
+  - 在 `TestMbedTLSContextConfiguration` 里新增三条断言
+    - `Renegotiate returns false before handshake`
+    - `Renegotiate reports unsupported error class`
+    - `Renegotiate exposes non-empty diagnostic message`
+  - 运行：
+    - `fpc -B -Fu./src -Fu./tests -FUtmp/mbedtls_framework_units -FEtmp/mbedtls_framework_units -otmp/mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+    - `./tmp/mbedtls_framework_units/test_mbedtls_framework`
+  - 初次结果：`87` 项里 `85` 过、`2` 失败
+    - `Renegotiate reports unsupported error class: FAIL`
+    - `Renegotiate exposes non-empty diagnostic message: FAIL`
+- 最小生产修复：
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+    - `DoRenegotiate` 调用 `RecordError(sslErrUnsupported, 'TLS renegotiation is not supported by the current MbedTLS backend...')`
+    - `DoGetError` 在 `ARet < 0` 且已有 `FLastErrorCode` 时优先返回语义错误
+    - `DoGetVerifyResultString` 在已有 `FLastErrorString` 时优先返回语义文案
+- 复跑 focused framework test：
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/mbedtls_framework_units -FEtmp/mbedtls_framework_units -otmp/mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+  - `./tmp/mbedtls_framework_units/test_mbedtls_framework`
+  - 结果：`Total: 87 / Passed: 87 / Failed: 0 / Rate: 100.0%`
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 提交前 review：
+  - 这批没有扩大到 capability、builder 或真实 renegotiation 实现，只把 public failure semantics 收成了可诊断 contract
+  - focused RED/GREEN 说明修复点精确落在语义传播，而不是其它握手路径
+  - compile gate 和 minimal CI gate 都证明这批没有带出仓库级回归
 - 承接上一段尚未写回台账的 WolfSSL peer-chain 探索结果，先补记 host 事实：
   - `dpkg -s libwolfssl-dev | rg '^Version:'`
   - 结果：`Version: 5.7.2-0.1+deb13u1`

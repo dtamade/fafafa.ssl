@@ -331,12 +331,19 @@ end;
 
 function TMbedTLSConnection.DoRenegotiate: Boolean;
 begin
-  // MbedTLS 重新协商需要额外实现
+  RecordError(
+    sslErrUnsupported,
+    'TLS renegotiation is not supported by the current MbedTLS backend. ' +
+    'Close the connection and establish a new one instead.'
+  );
   Result := False;
 end;
 
 function TMbedTLSConnection.DoGetError(ARet: Integer): TSSLErrorCode;
 begin
+  if (ARet < 0) and (FLastErrorCode <> sslErrNone) then
+    Exit(FLastErrorCode);
+
   Result := MbedTLSErrorToSSLError(ARet);
 end;
 
@@ -427,6 +434,9 @@ var
   LBuf: array[0..511] of AnsiChar;
   LFlags: Cardinal;
 begin
+  if (FLastErrorCode <> sslErrNone) and (FLastErrorString <> '') then
+    Exit(FLastErrorString);
+
   Result := '';
   if FSSLContext = nil then Exit;
   if not Assigned(mbedtls_ssl_get_verify_result) then Exit;
