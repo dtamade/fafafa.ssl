@@ -1,6 +1,21 @@
 # Progress - Backend Broad Completion Audit
 
 ## 2026-05-05
+- 新开一批 `Win64 Cross-Target Fresh Revalidation`，目标是在当前 Linux 主机上补 fresh 的 WinSSL / backend-comparison Win64 交叉编译证据，不再只依赖旧批次记录。
+- 计划与台账：
+  - 新增 `docs/plans/2026-05-05-win64-cross-target-fresh-revalidation.md`
+  - `task_plan.md` 切到当前批次
+- fresh Win64 交叉编译：
+  - `mkdir -p tmp/winssl_session_mgmt_win64`
+  - `fpc -Twin64 -B -Fu./src -Fu./tests -FUtmp/winssl_session_mgmt_win64 -FEtmp/winssl_session_mgmt_win64 -otmp/winssl_session_mgmt_win64/test_winssl_session_management.exe tests/winssl/test_winssl_session_management.pas`
+  - 结果：通过，成功链接 `tmp/winssl_session_mgmt_win64/test_winssl_session_management.exe`
+  - `mkdir -p tmp/backend_comparison_win64`
+  - `fpc -Twin64 -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/backend_comparison_win64 -FEtmp/backend_comparison_win64 -otmp/backend_comparison_win64/test_backend_comparison.exe tests/integration/test_backend_comparison.pas`
+  - 结果：通过，成功链接 `tmp/backend_comparison_win64/test_backend_comparison.exe`
+- 这一批的审计结论：
+  - 当前 Linux 主机仍然具备 fresh Win64 cross-target compile capability
+  - 因此 broad objective 的 Linux 侧 repo proof 已经闭合
+  - 唯一剩余 requirement 继续收敛为真实 Windows 主机上的 `WinSSL` runtime proof
 - 新开一批 `Backend Broad Completion Audit`，目标是不再根据累计批次数或局部绿灯来猜测“各个后端的接口和实现都完整”，而是重新拉 fresh evidence 做总收口判断。
 - 计划与台账：
   - 新增 `docs/plans/2026-05-05-backend-broad-completion-audit.md`

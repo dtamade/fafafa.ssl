@@ -1,6 +1,14 @@
 # Findings - Backend Broad Completion Audit
 
 ## 2026-05-05
+- broad objective 的 blocker 还可以再收紧一层：上轮 fresh audit 已确认 Linux 主机上的 public surface、capability truth、compile gate、minimal CI gate、以及 WinSSL source/bundle contracts 都没有新 drift，但还没有 fresh 复核 Win64 cross-target compile 本身。
+- 因为 `compile_all_modules.py` 默认跳过 WinSSL，所以如果不补显式 `-Twin64` 交叉编译，就仍然有一层“今天的 Linux 主机 compile proof 主要来自旧记录”的不确定性。
+- fresh `-Twin64` 交叉编译现在把这层不确定性也清掉了：
+  - `tests/winssl/test_winssl_session_management.pas` 可以在当前 Linux 主机上成功交叉编译到 Win64
+  - `tests/integration/test_backend_comparison.pas` 也可以在当前 Linux 主机上成功交叉编译到 Win64
+- 这意味着 broad blocker 不需要再写成“缺 Windows runtime proof + 可能缺 cross-target compile freshness”；更准确的当前状态是：
+  - Linux 主机上的 public surface、capability truth、repo gate、source contract、bundle contract、Win64 compile proof 都闭合
+  - 剩下的唯一 requirement 就是 Windows 主机上的真实 runtime 证据
 - broad objective 不能再靠“前面已经做了很多批次”来推断完成；必须重新按 deliverable checklist 审计：
   - public interface contracts
   - capability / `KnownIssues` truth
