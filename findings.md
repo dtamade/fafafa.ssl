@@ -1,6 +1,17 @@
 # Findings - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- `ISSLConnectionInfo` completion audit 已确认是纯 contract closeout，而不是新的实现修复批次：
+  - 新增 `Contract 19` 后，当前 Linux 可验证 backend 全绿
+  - `OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal` 都没有暴露新的 connection-info drift
+- `Contract 19` 真正锁住的不是单一接口 presence，而是整组连接信息真相：
+  - 所有公开 connection 都暴露 `ISSLConnectionInfo`
+  - `ProtocolVersion` / `CipherSuite` / `ALPNProtocol` 与 core `ISSLConnection.GetConnectionInfo` 保持一致
+  - `GetSelectedALPNProtocol` / `GetStateString` / `GetContext` 与 direct getter 和创建时 context 保持最小自洽
+- 当前证据表明 `TBaseSSLConnection` 仍然是 `ISSLConnectionInfo` 的主要 truth source：
+  - `OpenSSL` override 的 `GetConnectionInfo` / `GetStateString` 没有偏离共享语义
+  - 本机 Linux 上 `WinSSL` 继续只有 unavailable/skip 证据，不能把它外推成 Windows runtime proof
+- 在 `ISSLDiagnostics` 和 `ISSLConnectionInfo` 都收口为 completion audit 后，下一条最高收益的未审计 public surface 已进一步收窄到 `ISSLSessionResumption`，`ISSLCertificateVerification` 保持后续独立批次。
 - `ISSLDiagnostics` 是当前最适合作为下一批的未审计 public interface：
   - 接口本身是 optional surface
   - `TBaseSSLConnection` 已统一实现 `GetHealthStatus` / `IsHealthy` / `GetPerformanceMetrics` / `GetDiagnosticInfo`

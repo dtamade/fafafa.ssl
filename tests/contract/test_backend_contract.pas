@@ -1749,6 +1749,118 @@ begin
   end;
 end;
 
+procedure TestContract_ConnectionInfoInterfaceAligned(ABackend: TSSLLibraryType);
+var
+  LLib: ISSLLibrary;
+  LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LConnInfoAccess: ISSLConnectionInfo;
+  LProbeStream: TMemoryStream;
+  LCoreInfo: TSSLConnectionInfo;
+  LOptionalInfo: TSSLConnectionInfo;
+  LOptionalCtx: ISSLContext;
+  LCoreCtx: ISSLContext;
+begin
+  PrintSubHeader(Format('Contract 19: Connection-info interface alignment - %s',
+    [SSL_LIBRARY_NAMES[ABackend]]));
+
+  if not TSSLFactory.IsLibraryAvailable(ABackend) then
+  begin
+    AddSkip('Backend not available on this platform');
+    Exit;
+  end;
+
+  LProbeStream := TMemoryStream.Create;
+  try
+    try
+      LLib := TSSLFactory.GetLibrary(ABackend);
+      LCtx := LLib.CreateContext(sslCtxClient);
+      LConn := LCtx.CreateConnection(LProbeStream);
+
+      if not Supports(LConn, ISSLConnectionInfo, LConnInfoAccess) then
+      begin
+        WriteLn('  [FAIL] Connection does not expose ISSLConnectionInfo');
+        AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+          'Connection does not expose ISSLConnectionInfo');
+        Exit;
+      end;
+
+      LCoreInfo := LConn.GetConnectionInfo;
+      LOptionalInfo := LConnInfoAccess.GetConnectionInfo;
+      LCoreCtx := LConn.GetContext;
+      LOptionalCtx := LConnInfoAccess.GetContext;
+
+      if LOptionalInfo.ProtocolVersion <> LCoreInfo.ProtocolVersion then
+      begin
+        WriteLn('  [FAIL] Optional interface protocol version drifted from core getter');
+        AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+          'ISSLConnectionInfo.GetConnectionInfo.ProtocolVersion does not match ISSLConnection.GetConnectionInfo');
+      end
+      else if LOptionalInfo.CipherSuite <> LCoreInfo.CipherSuite then
+      begin
+        WriteLn('  [FAIL] Optional interface cipher suite drifted from core getter');
+        AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+          'ISSLConnectionInfo.GetConnectionInfo.CipherSuite does not match ISSLConnection.GetConnectionInfo');
+      end
+      else if LOptionalInfo.ALPNProtocol <> LCoreInfo.ALPNProtocol then
+      begin
+        WriteLn('  [FAIL] Optional interface ALPN drifted from core getter');
+        AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+          'ISSLConnectionInfo.GetConnectionInfo.ALPNProtocol does not match ISSLConnection.GetConnectionInfo');
+      end
+      else if LConnInfoAccess.GetSelectedALPNProtocol <> LConn.GetSelectedALPNProtocol then
+      begin
+        WriteLn('  [FAIL] Optional interface ALPN getter drifted from core getter');
+        AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+          'ISSLConnectionInfo.GetSelectedALPNProtocol does not match ISSLConnection.GetSelectedALPNProtocol');
+      end
+      else if LConnInfoAccess.GetStateString <> LConn.GetStateString then
+      begin
+        WriteLn('  [FAIL] Optional interface state string drifted from core getter');
+        AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+          'ISSLConnectionInfo.GetStateString does not match ISSLConnection.GetStateString');
+      end
+      else if Trim(LConnInfoAccess.GetStateString) = '' then
+      begin
+        WriteLn('  [FAIL] Optional interface state string is empty');
+        AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+          'ISSLConnectionInfo.GetStateString returned an empty string');
+      end
+      else if (LOptionalCtx = nil) or (LCoreCtx = nil) then
+      begin
+        WriteLn('  [FAIL] Optional/core context getter returned nil');
+        AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+          'ISSLConnectionInfo.GetContext or ISSLConnection.GetContext returned nil');
+      end
+      else if LOptionalCtx.GetContextType <> LCoreCtx.GetContextType then
+      begin
+        WriteLn('  [FAIL] Optional interface context type drifted from core getter');
+        AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+          'ISSLConnectionInfo.GetContext.GetContextType does not match ISSLConnection.GetContext');
+      end
+      else if LOptionalCtx.GetContextType <> LCtx.GetContextType then
+      begin
+        WriteLn('  [FAIL] Optional interface context type drifted from creation context');
+        AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+          'ISSLConnectionInfo.GetContext.GetContextType does not match the creation context type');
+      end
+      else
+      begin
+        WriteLn('  [PASS] Connection-info surface is self-consistent');
+        AddResult('ConnectionInfoInterfaceAligned', ABackend, True);
+      end;
+    except
+      on E: Exception do
+      begin
+        WriteLn('  [FAIL] Exception: ', E.ClassName, ' - ', E.Message);
+        AddResult('ConnectionInfoInterfaceAligned', ABackend, False, E.Message);
+      end;
+    end;
+  finally
+    LProbeStream.Free;
+  end;
+end;
+
 procedure PrintSummary;
 var
   I: Integer;
@@ -1859,6 +1971,9 @@ begin
 
     // 18) Connection diagnostics surface must stay exposed and self-consistent
     TestContract_DiagnosticsInterfaceAligned(LBackend);
+
+    // 19) Connection-info optional surface must stay exposed and self-consistent
+    TestContract_ConnectionInfoInterfaceAligned(LBackend);
   end;
 
   PrintSummary;
