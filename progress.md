@@ -1,6 +1,58 @@
-# Progress - C-Library KnownIssues Truth Alignment
+# Progress - Backend Broad Completion Audit
 
 ## 2026-05-05
+- 新开一批 `Backend Broad Completion Audit`，目标是不再根据累计批次数或局部绿灯来猜测“各个后端的接口和实现都完整”，而是重新拉 fresh evidence 做总收口判断。
+- 计划与台账：
+  - 新增 `docs/plans/2026-05-05-backend-broad-completion-audit.md`
+  - `task_plan.md` 切到当前 broad audit 批次
+- 环境探针：
+  - `command -v pwsh`
+  - 结果：空 / exit `1`
+  - `wine --version`
+  - 结果：exit `159`
+- WinSSL repo-side bundle truth：
+  - `bash tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
+  - 结果：通过
+  - `bash tests/scripts/test_wave_b_windows_gate_pwsh_and_verbose_contract.sh`
+  - 结果：通过
+- backend public-interface contract fresh audit：
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas`
+  - `./tmp/backend_contract_units/test_backend_contract`
+  - 结果：`Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+  - 解释：
+    - `OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal` 的 `Contract 1-21` 全绿
+    - `WinSSL` 全部因为平台 unavailable 跳过
+    - `Contract 15` 还显式保留 `WinSSL session truth split requires a dedicated Windows-focused batch`
+- capability truth fresh audit：
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_units -otmp/capability_cache_units/test_capability_cache tests/test_capability_cache.pas`
+  - `./tmp/capability_cache_units/test_capability_cache`
+  - 结果：
+    - `FreePascal KnownIssues runtime alignment verified`
+    - `WolfSSL KnownIssues runtime alignment verified`
+    - `MbedTLS KnownIssues runtime alignment verified`
+- Linux 主机实现 gate：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185`
+  - `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id broad_completion_audit_20260505`
+  - summary：`tmp/test-reports/freepascal_tls13_completeness_broad_completion_audit_20260505.md`
+  - 结果：`17 passed / 0 failed`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：
+    - compile `185/185`
+    - 模块测试 `17/17`
+    - `run_phase2_performance_baseline.sh --dry-run` 可用
+    - 最终 `[PASS] minimal CI gate finished`
+- WinSSL repo-side source truth：
+  - `bash tests/scripts/test_winssl_connection_context_access_contract.sh`
+  - 结果：通过
+  - `bash tests/scripts/test_winssl_session_truth_source_contract.sh`
+  - 结果：通过
+  - `bash tests/scripts/test_winssl_context_external_store_contract.sh`
+  - 结果：通过
+- broad audit 结论：
+  - 当前 Linux 主机上已经没有新的 repo-side drift
+  - broad objective 仍未完成
+  - 唯一剩余 requirement 是真实 Windows 主机上的 `WinSSL` runtime proof
 - 新开一批 `C-Library KnownIssues Truth Alignment`，目标是在当前 Linux 主机上把 `WolfSSL` / `MbedTLS` capability `KnownIssues` 收口到真实剩余边界，不在这批里假装完成 `WinSSL` Windows runtime proof。
 - broad completion audit：
   - 运行 `command -v pwsh`

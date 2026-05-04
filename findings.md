@@ -1,6 +1,31 @@
-# Findings - C-Library KnownIssues Truth Alignment
+# Findings - Backend Broad Completion Audit
 
 ## 2026-05-05
+- broad objective 不能再靠“前面已经做了很多批次”来推断完成；必须重新按 deliverable checklist 审计：
+  - public interface contracts
+  - capability / `KnownIssues` truth
+  - Linux 主机可验证的实现 gate
+  - `WinSSL` 的真实 Windows runtime proof
+- 如果 `WinSSL` 仍然没有真实 Windows runtime evidence，那么即便 Linux 主机上的 public surface / compile / gate 全绿，broad objective 也不能标记完成。
+- fresh broad audit 现在把“已完成”和“未完成”的边界重新钉死了：
+  - `OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal`：
+    - public interface `Contract 1-21` 全绿
+    - capability truth fresh 继续对齐
+    - Linux 主机可验证的 compile / completeness / minimal CI gate 都全绿
+  - `WinSSL`：
+    - repo-side source contract 继续闭合
+    - validation bundle contract 继续闭合
+    - 但公开 runtime proof 仍然缺失
+- `WinSSL` 当前更准确的状态不是“实现大概完整，只差一点点”，而是：
+  - Linux 上的 source-contract、bundle docs、repo gate 已经尽量收口
+  - 仍然没有真实 Windows 主机上的握手、证书存储、session resumption、server/client runtime 行为证据
+  - 因此 broad objective 还没有完成，而且在当前 Linux 主机上也不能继续 productively 收口这一项
+- `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md` 当前已经把剩余 requirement 说清楚了：
+  - quick smoke
+  - `run_winssl_tests.ps1` minimal gate
+  - `scripts/run_wave_b_windows_gate.ps1`
+  - broader manual WinSSL suite
+  - 这些步骤缺任何一环，都不能把 WinSSL 写成“runtime proof complete”
 - broad objective 的 public interface completion audit 现在更清楚了：
   - `tests/contract/test_backend_contract.pas` 已覆盖 `Contract 1-21`
   - 当前 Linux 主机上，`OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal` 的 public interface 合同面是闭合的
