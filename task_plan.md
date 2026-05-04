@@ -18,7 +18,7 @@
 - [completed] 现状重载与风险收敛
 - [completed] RED/source contract + 最小修复
 - [completed] Verification
-- [in_progress] Review and commit
+- [completed] Review and commit
 
 ## Risks
 - 这批在 Linux 主机上无法做 WinSSL runtime proof，只能做 source-contract 收口，不能把结果包装成 Windows 运行时已验证。

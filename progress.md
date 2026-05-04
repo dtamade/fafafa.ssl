@@ -111,6 +111,9 @@
   - `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
 - 提交：
+  - `git commit -m "refactor(winssl): collapse session truth source"`
+  - 结果：`7d5b5c2 refactor(winssl): collapse session truth source`
+- 提交：
   - `git commit -m "test(contracts): audit session native-handle alignment"`
   - 结果：`21c8cc6 test(contracts): audit session native-handle alignment`
 - 继续当前 closeout，先核对工作树、最新提交、memory 与 planning files，确认 session native-handle 批次已收口，下一块最高价值缺口转到 `WinSSL session truth split`。
