@@ -12,10 +12,10 @@
 | ---------------------------- | ---------- | ------- | ------ | ------- | ------- |
 | **TLS 1.2**                  | ✅         | ✅      | ✅     | ✅      | ✅      |
 | **TLS 1.3**                  | ✅         | ✅      | ✅     | ⚠️      | ✅      |
-| **Early Data (0-RTT)**       | ✅         | ✅      | ❌     | ❌      | ⚠️      |
+| **Early Data (0-RTT)**       | ⚠️         | ✅      | ❌     | ❌      | ⚠️      |
 | **Session Resumption**       | ✅         | ✅      | ✅     | ✅      | ✅      |
-| **OCSP Stapling**            | ✅         | ✅      | ❌     | ❌      | ⚠️      |
-| **Certificate Transparency** | ✅         | ❌      | ❌     | ❌      | ❌      |
+| **OCSP Stapling**            | ⚠️         | ✅      | ❌     | ❌      | ⚠️      |
+| **Certificate Transparency** | ⚠️         | ❌      | ❌     | ❌      | ❌      |
 | **ALPN**                     | ✅         | ✅      | ✅     | ✅      | ✅      |
 | **SNI**                      | ✅         | ✅      | ✅     | ✅      | ✅      |
 | **PSK**                      | ✅         | ✅      | ⚠️     | ✅      | ✅      |
@@ -33,7 +33,7 @@
 
 ### FreePascal 后端
 
-**状态**: ✅ 完整支持（生产就绪）
+**状态**: ⚠️ 实验性支持（public surface 已接通，但默认 shipped path 仍是单进程内存 anti-replay ledger）
 
 **功能**:
 
@@ -45,8 +45,9 @@
 
 **限制**:
 
-- 默认使用内存存储（单进程）
-- 跨进程需要配置文件或目录存储
+- `TSSLBackendCapabilities.ZeroRTTSupport` / `EarlyDataSupport` 当前发布为 `sslSupportExperimental`
+- 默认使用内存 anti-replay ledger（单进程）
+- 跨进程 durability / restart truth 需要显式配置文件或目录 replay store
 
 **示例**:
 
@@ -142,13 +143,18 @@ if not Supports(Ctx, ISSLEarlyDataContext) then
 
 ### FreePascal 后端
 
-**状态**: ✅ 完整支持
+**状态**: ⚠️ 已暴露 public surface，capability 仍按 `experimental` 发布
 
 **功能**:
 
 - ✅ 加载 OCSP 响应
 - ✅ 从文件加载
 - ✅ 动态更新
+
+**边界**:
+
+- `TSSLBackendCapabilities.OCSPStaplingSupport` 当前发布为 `sslSupportExperimental`
+- 这表示 connection/context public surface 已闭合，不等于 broader revocation/runtime parity 已经全部升到 production-complete
 
 ### OpenSSL 后端
 
@@ -221,7 +227,7 @@ if not Supports(Ctx, ISSLEarlyDataContext) then
 
 ### FreePascal 后端
 
-**状态**: ✅ 已暴露连接级 CT / validation surface
+**状态**: ⚠️ 已暴露连接级 CT / validation surface，capability 仍按 `experimental` 发布
 
 **功能**:
 
@@ -229,6 +235,11 @@ if not Supports(Ctx, ISSLEarlyDataContext) then
 - ✅ CT 日志列表
 - ✅ 策略配置
 - ✅ `ISSLCertificateTransparency` / `ISSLCertificateTransparencyValidation`
+
+**边界**:
+
+- `TSSLBackendCapabilities.CertTransparencySupport` 当前发布为 `sslSupportExperimental`
+- 这里表达的是 public surface 已闭合，而不是把整个 CT family 写成 production-complete
 
 ### OpenSSL 后端
 
@@ -389,7 +400,8 @@ Ctx.LoadPrivateKey('pkcs11:token=MyToken;object=MyKey', 'PIN');
 **推荐**: FreePascal 后端
 
 - 无外部依赖
-- 完整功能
+- 功能面广
+- `0-RTT / early data`、OCSP stapling、CT 当前仍应按 experimental capability 理解
 - 跨平台
 
 ---

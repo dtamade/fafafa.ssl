@@ -1,49 +1,60 @@
-# Task Plan - Certificate-Verification Interface Completion Audit
+# Task Plan - Completion Audit And Capability Truth Alignment
 
 ## Goal
-把连接级 `ISSLCertificateVerification` public surface 纳入 cross-backend completion audit，确认各 backend 的公开 connection 都暴露该接口，并且证书链 / verify getter 与 core `ISSLConnection` 保持最小自洽。
+对“各个后端的接口和实现都完整”做一次真实 completion audit，把当前已经锁住的 interface surface、仍未完成的 implementation caveat、以及文档里高估能力等级的条目区分清楚；本批先收口 `docs/BACKEND_CAPABILITY_MATRIX.md` 与代码/测试/路线图之间的 FreePascal capability truth drift。
 
 ## Current Batch
-1. 先补 focused contract：
-   - 在 `tests/contract/test_backend_contract.pas` 新增 `Contract 21`
-   - 只审计 `ISSLCertificateVerification`
-   - 用 `TMemoryStream` 创建公开 connection 对象，不依赖真实网络握手
-2. 跑 isolated backend contract：
-   - `mkdir -p tmp/backend_contract_units`
-   - `fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas`
-   - `./tmp/backend_contract_units/test_backend_contract`
-3. 若 RED 命中真实漂移，只做最小生产修复：
-   - 优先收口在 `TBaseSSLConnection` 或 backend `DoGetPeerCertificateChain` / `DoGetVerifyResult` / `DoGetVerifyResultString`
-   - 不扩大到真实 runtime certificate validation parity 或 chain-building 重构
-4. 复跑 focused contract + 仓库级 gate，回写台账并提交。
+1. 先做 completion audit：
+   - 盘点 `src/fafafa.ssl.base.pas` 的 public interface 与 `tests/contract/test_backend_contract.pas` 的当前覆盖
+   - 核对 `docs/ROADMAP.md`、`tests/test_capability_cache.pas`、`src/fafafa.ssl.freepascal.lib.pas`
+   - 找出“接口已锁住，但实现/能力等级仍有限制”的真实剩余项
+2. 只收口当前最明确的 truth drift：
+   - 修改 `docs/BACKEND_CAPABILITY_MATRIX.md`
+   - 让 FreePascal `Early Data` / `OCSP Stapling` / `Certificate Transparency` 的文案与 runtime capability truth 一致
+3. 用 focused capability test 验证文档对应的真实代码发布值：
+   - `mkdir -p tmp/capability_cache_units`
+   - `fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_units -otmp/capability_cache_units/test_capability_cache tests/test_capability_cache.pas`
+   - `./tmp/capability_cache_units/test_capability_cache`
+4. 做 diff/format hygiene，回写台账并提交。
 
 ## Status
-- [completed] Contract 21 certificate-verification completion audit scaffolding
-- [completed] Focused completion audit for certificate-verification interface truth
-- [completed] Repository verification
-- [completed] Review and commit preparation for a pure completion-audit batch
+- [completed] Completion audit against current public surface and roadmap truth
+- [completed] Capability-matrix truth alignment
+- [completed] Focused capability verification
+- [in_progress] Review and commit preparation
 
 ## Verification Plan
+- audit evidence:
+  - `docs/ROADMAP.md`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `tests/test_capability_cache.pas`
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
 - focused:
-  - `mkdir -p tmp/backend_contract_units`
-  - `fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas`
-  - `./tmp/backend_contract_units/test_backend_contract`
-- repo gates:
-  - `python3 scripts/compile_all_modules.py`
-  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - `mkdir -p tmp/capability_cache_units`
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_units -otmp/capability_cache_units/test_capability_cache tests/test_capability_cache.pas`
+  - `./tmp/capability_cache_units/test_capability_cache`
+- hygiene:
+  - `yarn prettier --write docs/BACKEND_CAPABILITY_MATRIX.md`
+  - `git diff --check`
 
 ## Batch Result
-- `Contract 21` 已在当前 Linux 可验证 backend 上全绿：`Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
-- `python3 scripts/compile_all_modules.py` 结果为 `185/185`
-- `bash scripts/run_minimal_ci_gate.sh --fast-local` 结果为 `[PASS]`
-- 这批没有打出任何 production drift，因此只新增 completion-audit contract 和规划台账，不修改 backend 实现
+- completion audit 结论：当前这轮 connection optional interface completion audit 已收尽，但 broad objective 仍未完成
+- 当前仍可证实的 implementation-level remaining gaps：
+  - `FreePascal` `0-RTT / early data` 仍是 `experimental`，默认 shipped path 仍局限于单进程内存 anti-replay ledger
+  - `WinSSL` 仍缺 Windows 主机上的 runtime proof；当前 Linux 侧只有 source-contract + Win64 cross-target compile evidence
+- focused capability truth 证据：
+  - `tests/test_capability_cache.pas` 运行通过，并直接验证 `KnownIssues = 0-RTT / early data is experimental...`
+  - 同一 focused test 也验证 `ZeroRTTSupport` / `EarlyDataSupport` / `OCSPStaplingSupport` / `CertTransparencySupport` 的 runtime truth
+- 文档收口结果：
+  - `docs/BACKEND_CAPABILITY_MATRIX.md` 不再把 FreePascal `Early Data` 写成“完整支持（生产就绪）”
+  - FreePascal `OCSP Stapling` / `Certificate Transparency` 也不再在快速参考表里写成 `✅`
 
 ## Risks
-- `ISSLCertificateVerification` 与 core `ISSLConnection` 的 verify surface 高度重叠，contract 必须锁“optional interface truth”，而不是误写成完整的 runtime trust/hostname/revocation 证明。
-- 各 backend 在未握手状态下的 `GetPeerCertificateChain` / `GetVerifyResultString` 默认值未必完全一样；focused contract 只能要求 core getter 与 optional getter 在同一对象上自洽。
-- 这批不能顺手扩大到 runtime certificate validation parity、OCSP/CRL、CT 或 hostname 语义，否则 scope 会重新发散。
+- completion audit 不能把“contract 全绿”误当成“整体目标完成”；仍需单独识别 implementation caveat 与 runtime-proof 缺口。
+- 文档收口这批不能假装解决了 `FreePascal` early-data experimental caveat，也不能伪造 `WinSSL` 的 Windows runtime proof。
+- 只改最明确的 truth drift，不顺手重写整份能力矩阵。
 
 ## Follow-up Queue
-1. 回到剩余 public surface 总盘点，确认当前 completion audit 队列是否已收尽。
-2. 若后续 runtime 或 contract 再打出 certificate-verification drift，优先收口 `DoGetPeerCertificateChain` / `DoGetVerifyResult` / `DoGetVerifyResultString`。
-3. 若后续 runtime 或 contract 再打出 session-resumption 漂移，再回到 `DoGetSession` / `DoIsSessionReused` 做定点修复。
+1. 如果 completion audit 结论仍是 `FreePascal early-data experimental + WinSSL runtime proof missing`，下一步要在这两个 implementation gap 之间重新排优先级。
+2. 若需要继续在 Linux 主机推进实现层，就优先考虑 `FreePascal` early-data 默认 shipped path caveat。
+3. `WinSSL` 的 Windows runtime proof 仍需独立环境，不能在当前 Linux 主机上伪造完成。

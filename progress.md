@@ -1,6 +1,42 @@
 # Progress - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- 新开一批 `Completion Audit And Capability Truth Alignment`，目标是不再盲目寻找下一个 interface 批次，而是核对 broad objective 还有哪些实现层 caveat 未闭合，并先收口最明确的 capability-matrix truth drift。
+- completion audit 读取与核对：
+  - `src/fafafa.ssl.base.pas`
+  - `tests/contract/test_backend_contract.pas`
+  - `docs/ROADMAP.md`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `tests/test_capability_cache.pas`
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
+- audit 结论：
+  - `Contract 18-21` 已把当前 connection optional public surface 收尽
+  - broad objective 仍未完成，因为还有 implementation-level remaining gaps：
+    - `FreePascal` `0-RTT / early data` 仍按 `experimental` 发布，默认 shipped path 仍是单进程内存 anti-replay ledger
+    - `WinSSL` 仍缺 Windows 主机 runtime proof
+  - `docs/BACKEND_CAPABILITY_MATRIX.md` 存在直接 truth drift：把 FreePascal `Early Data` 写成“完整支持（生产就绪）”，且在快速参考表里把 `Early Data` / `OCSP Stapling` / `Certificate Transparency` 都写成 `✅`
+- 最小文档修复：
+  - `docs/BACKEND_CAPABILITY_MATRIX.md`
+    - FreePascal 快速参考里的 `Early Data` / `OCSP Stapling` / `Certificate Transparency` 改成 `⚠️`
+    - FreePascal `Early Data` 状态改成 experimental，并写清默认 shipped path caveat
+    - FreePascal `OCSP Stapling` / `Certificate Transparency` 明确成“public surface 已暴露，但 capability 仍按 experimental 发布”
+    - 零依赖部署建议不再写成“完整功能”
+- focused capability truth 验证：
+  - `mkdir -p tmp/capability_cache_units`
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/capability_cache_units -FEtmp/capability_cache_units -otmp/capability_cache_units/test_capability_cache tests/test_capability_cache.pas`
+  - `./tmp/capability_cache_units/test_capability_cache`
+  - 结果：
+    - `FreePascal KnownIssues runtime alignment verified`
+    - 直接打印并验证 `KnownIssues: 0-RTT / early data is experimental and currently uses an in-memory single-process anti-replay ledger.`
+    - 通过 `Require(...)` 锁住 `ZeroRTTSupport` / `EarlyDataSupport` / `OCSPStaplingSupport` / `CertTransparencySupport` 的 runtime truth
+- 文档格式 / hygiene：
+  - `/home/dtamade/node_modules/.bin/prettier --write /home/dtamade/projects/fafafa.ssl/docs/BACKEND_CAPABILITY_MATRIX.md`
+  - 结果：`unchanged`
+  - `git diff --check`
+  - 结果：通过
+- 提交前 review：
+  - 这批没有修改任何 backend 实现，只把 capability matrix 收回到代码、测试和路线图都已证明的真相
+  - completion audit 也明确了 broad objective 还没完成，当前更真实的下一步是 `FreePascal` early-data 默认 shipped path caveat 或 `WinSSL` Windows runtime proof，而不是继续盲开 interface contract
 - 新开一批 `Backend Certificate-Verification Interface Completion Audit`，目标是把连接级 `ISSLCertificateVerification` public surface 纳入 cross-backend completion audit。
 - 计划与台账：
   - 新增 `docs/plans/2026-05-04-backend-certificate-verification-interface-completion-audit.md`

@@ -1,6 +1,21 @@
 # Findings - WolfSSL Feature Capability Runtime Consistency
 
 ## 2026-05-04
+- completion audit against the actual current state 明确证明：当前 broad objective 还没有达到“各个后端的接口和实现都完整”。
+- 这不是 interface surface 还没锁住，而是 implementation-level remaining gaps 仍然存在：
+  - `FreePascal` `0-RTT / early data` 继续以 `sslSupportExperimental` 发布，`KnownIssues` 仍明确写着 “in-memory single-process anti-replay ledger”
+  - `WinSSL` 当前仍缺 Windows 主机上的 runtime proof；Linux 侧只能证明 source-contract 与 Win64 cross-target compile
+- 因此“contract 18-21 全绿”只能证明 connection optional public surface 已经闭合，不能外推成 overall completion。
+- `docs/BACKEND_CAPABILITY_MATRIX.md` 存在一组直接可证的 truth drift：
+  - `docs/ROADMAP.md`、`src/fafafa.ssl.freepascal.lib.pas`、`tests/test_capability_cache.pas` 都把 FreePascal `0-RTT / early data` 定义成 `experimental`
+  - 同一能力对象也把 `OCSPStaplingSupport` / `CertTransparencySupport` 发布为 `sslSupportExperimental`
+  - 但能力矩阵此前仍把 FreePascal `Early Data` 写成“完整支持（生产就绪）”，并在快速参考表中把 `Early Data` / `OCSP Stapling` / `Certificate Transparency` 都写成 `✅`
+- 这批最小正确动作不是重开新的 backend 行为线，而是先把 capability matrix 收回到当前真实证据：
+  - FreePascal `Early Data` 改成 `⚠️`
+  - FreePascal `OCSP Stapling` / `Certificate Transparency` 明确写成“public surface 已暴露，但 capability 仍按 experimental 发布”
+- 当前 completion audit 之后，更合适的后续排序是：
+  - Linux 主机可继续推进的实现缺口：`FreePascal` early-data 默认 shipped path caveat
+  - 独立环境 blocker：`WinSSL` Windows runtime proof
 - `ISSLCertificateVerification` completion audit 同样确认是纯 contract closeout，而不是新的实现修复批次：
   - 新增 `Contract 21` 后，当前 Linux 可验证 backend 全绿
   - `OpenSSL` / `WolfSSL` / `MbedTLS` / `FreePascal` 都没有暴露新的 certificate-verification drift
