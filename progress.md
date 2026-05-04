@@ -1,6 +1,57 @@
-# Progress - Win64 Cross-Target Compatibility Closeout
+# Progress - WolfSSL Client Peer Certificate Chain Surface
 
 ## 2026-05-04
+- 承接上一段尚未写回台账的 WolfSSL peer-chain 探索结果，先补记 host 事实：
+  - `dpkg -s libwolfssl-dev | rg '^Version:'`
+  - 结果：`Version: 5.7.2-0.1+deb13u1`
+  - `strings /usr/lib/x86_64-linux-gnu/libwolfssl.so | rg -m1 '^wolfSSL 5\\.'`
+  - 结果：`wolfSSL 5.7.2`
+  - `nm -D /usr/lib/x86_64-linux-gnu/libwolfssl.so | rg 'wolfSSL_(X509_d2i|d2i_X509)$|wolfSSL_get_(peer_chain|chain_count|chain_length|chain_cert)$'`
+  - 结论：peer-chain helpers 和 `wolfSSL_X509_d2i` 符号都存在，runtime 探索失败不是“符号缺失”
+- 承接上一段尚未写回台账的 exploratory runtime RED：
+  - 旧版 `tests/connection/test_wolfssl_client_peer_certificate_surface.pas` 先走 scripted TLS 1.3 full handshake
+  - 期间先修了两处测试侧问题：`BuildTLSCiphertextRecord` -> `BuildTLSPlaintext`，以及补 `fafafa.ssl.wolfssl.lib` / `TSSLFactory.IsLibraryAvailable(sslWolfSSL)` skip guard
+  - 但当前 host 上最终信号仍是 `Connect=False / verify=OK`，没有给出可信的 peer-chain RED，所以这条路径被明确降级成背景证据，不再作为 completion proof
+- 把 focused proof 收窄成 deterministic contract：
+  - `fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/wolfssl_peer_chain_surface_units -FEtmp/wolfssl_peer_chain_surface_units -otmp/wolfssl_peer_chain_surface_units/test_wolfssl_client_peer_certificate_surface tests/connection/test_wolfssl_client_peer_certificate_surface.pas`
+  - `./tmp/wolfssl_peer_chain_surface_units/test_wolfssl_client_peer_certificate_surface`
+  - 结果：`PASS: WolfSSL client peer certificate chain surface contract passed`
+  - 合同覆盖：
+    - `LoadFromDER(...)` 直接吃 leaf DER fixture
+    - 伪造 native peer chain helper 输出后，`GetPeerCertificateChain` materialize 出 leaf + issuer
+    - `wolfSSL_get_chain_cert := nil` 时 safe-degrade 回空数组
+- 为支持上面的 focused contract，生产侧最小修复为：
+  - `src/fafafa.ssl.wolfssl.base.pas`
+    - `WOLFSSL_ERROR_WANT_READ/WANT_WRITE/SYSCALL/SSL` 从 `-2/-3/-5/-85` 修成 `2/3/5/85`
+    - 新增 `PWOLFSSL_X509_CHAIN`
+  - `src/fafafa.ssl.wolfssl.api.pas`
+    - `TwolfSSL_X509_d2i` loader 改绑 `wolfSSL_X509_d2i`
+    - 新增 `wolfSSL_get_peer_chain` / `wolfSSL_get_chain_count` / `wolfSSL_get_chain_length` / `wolfSSL_get_chain_cert`
+  - `src/fafafa.ssl.wolfssl.connection.pas`
+    - `DoGetPeerCertificateChain` 改成用 native helper 拉 DER 并 materialize 证书数组
+- 复跑 WolfSSL framework test，发现一条相邻 contract drift：
+  - `./tmp/wolfssl_framework_units/test_wolfssl_framework`
+  - 初次结果：`101` 项里 `99` 过、`2` 失败
+  - 失败点：`Renegotiate reports unsupported error class` / `Renegotiate exposes non-empty diagnostic message`
+  - 源码复核：`TWolfSSLConnection.DoRenegotiate` 之前只是静默 `False`，不会留下错误分类或文案
+- 最小收口这个相邻 drift：
+  - `src/fafafa.ssl.wolfssl.connection.pas`
+    - `DoRenegotiate` 调用 `RecordError(sslErrUnsupported, ...)`
+    - `DoGetError` 在没有 native error 但已有语义错误时优先返回 `FLastErrorCode`
+    - `DoGetVerifyResultString` 在已有语义错误文案时优先返回 `FLastErrorString`
+  - 复跑：
+    - `fpc -B -Fu./src -Fu./tests -FUtmp/wolfssl_framework_units -FEtmp/wolfssl_framework_units -otmp/wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+    - `./tmp/wolfssl_framework_units/test_wolfssl_framework`
+    - 结果：`Total: 101 / Passed: 101 / Failed: 0 / Rate: 100.0%`
+- 仓库级验证：
+  - `python3 scripts/compile_all_modules.py`
+  - 结果：`185/185` 核心模块编译成功，`100.0%`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+- 提交前 review：
+  - peer-chain 改动保持在 WolfSSL backend 内部：新增 bindings、修 loader、materialize native chain
+  - 当前 host `wolfSSL 5.7.2` 的 full-handshake runtime 仍不可靠，所以本批 completion proof 明确以 deterministic contract 为准
+  - 额外收掉的 `Renegotiate` 漂移只是把 silent failure 变成 explicit unsupported，不改变任何握手能力
 - 延续 `5123dd5 docs: finalize winssl session ledger` 之后的收口，先核对工作树、最新提交、`task_plan.md` / `findings.md` / `progress.md`、以及 `docs/plans/2026-03-20-winssl-cross-target-compile-drift.md`，确认前一轮 session truth-source closeout 已提交，下一步是把新增 Win64 compile proof 写回。
 - 复核环境边界：
   - `wine --version`

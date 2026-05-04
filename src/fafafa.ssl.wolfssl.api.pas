@@ -143,6 +143,12 @@ type
   TwolfSSL_CIPHER_get_name = function(cipher: Pointer): PAnsiChar; cdecl;
   TwolfSSL_get_version = function(ssl: PWOLFSSL): PAnsiChar; cdecl;
   TwolfSSL_get_peer_certificate = function(ssl: PWOLFSSL): PWOLFSSL_X509; cdecl;
+  TwolfSSL_get_peer_chain = function(ssl: PWOLFSSL): PWOLFSSL_X509_CHAIN; cdecl;
+  TwolfSSL_get_chain_count = function(chain: PWOLFSSL_X509_CHAIN): Integer; cdecl;
+  TwolfSSL_get_chain_length = function(chain: PWOLFSSL_X509_CHAIN;
+    idx: Integer): Integer; cdecl;
+  TwolfSSL_get_chain_cert = function(chain: PWOLFSSL_X509_CHAIN;
+    idx: Integer): PByte; cdecl;
 
   // Buffer 加载 (新增 - 用于从内存加载证书/密钥)
   TwolfSSL_CTX_use_certificate_buffer = function(ctx: PWOLFSSL_CTX;
@@ -276,6 +282,10 @@ var
   wolfSSL_CIPHER_get_name: TwolfSSL_CIPHER_get_name = nil;
   wolfSSL_get_version: TwolfSSL_get_version = nil;
   wolfSSL_get_peer_certificate: TwolfSSL_get_peer_certificate = nil;
+  wolfSSL_get_peer_chain: TwolfSSL_get_peer_chain = nil;
+  wolfSSL_get_chain_count: TwolfSSL_get_chain_count = nil;
+  wolfSSL_get_chain_length: TwolfSSL_get_chain_length = nil;
+  wolfSSL_get_chain_cert: TwolfSSL_get_chain_cert = nil;
 
   // Buffer 加载 (新增)
   wolfSSL_CTX_use_certificate_buffer: TwolfSSL_CTX_use_certificate_buffer = nil;
@@ -429,7 +439,7 @@ begin
   wolfSSL_X509_get_next_altname := TwolfSSL_X509_get_next_altname(
     GetProc('wolfSSL_X509_get_next_altname'));
   wolfSSL_X509_free := TwolfSSL_X509_free(GetProc('wolfSSL_X509_free'));
-  wolfSSL_X509_d2i := TwolfSSL_X509_d2i(GetProc('wolfSSL_d2i_X509'));
+  wolfSSL_X509_d2i := TwolfSSL_X509_d2i(GetProc('wolfSSL_X509_d2i'));
   wolfSSL_X509_get_subject_name := TwolfSSL_X509_get_subject_name(
     GetProc('wolfSSL_X509_get_subject_name'));
   wolfSSL_X509_get_issuer_name := TwolfSSL_X509_get_issuer_name(
@@ -482,6 +492,14 @@ begin
   wolfSSL_get_version := TwolfSSL_get_version(GetProc('wolfSSL_get_version'));
   wolfSSL_get_peer_certificate := TwolfSSL_get_peer_certificate(
     GetProc('wolfSSL_get_peer_certificate'));
+  wolfSSL_get_peer_chain := TwolfSSL_get_peer_chain(
+    GetProc('wolfSSL_get_peer_chain'));
+  wolfSSL_get_chain_count := TwolfSSL_get_chain_count(
+    GetProc('wolfSSL_get_chain_count'));
+  wolfSSL_get_chain_length := TwolfSSL_get_chain_length(
+    GetProc('wolfSSL_get_chain_length'));
+  wolfSSL_get_chain_cert := TwolfSSL_get_chain_cert(
+    GetProc('wolfSSL_get_chain_cert'));
 
   // Buffer 加载 (新增)
   wolfSSL_CTX_use_certificate_buffer := TwolfSSL_CTX_use_certificate_buffer(
@@ -632,6 +650,10 @@ begin
   wolfSSL_CIPHER_get_name := nil;
   wolfSSL_get_version := nil;
   wolfSSL_get_peer_certificate := nil;
+  wolfSSL_get_peer_chain := nil;
+  wolfSSL_get_chain_count := nil;
+  wolfSSL_get_chain_length := nil;
+  wolfSSL_get_chain_cert := nil;
 
   // Buffer 加载
   wolfSSL_CTX_use_certificate_buffer := nil;

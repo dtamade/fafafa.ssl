@@ -1,6 +1,15 @@
-# Findings - Win64 Cross-Target Compatibility Closeout
+# Findings - WolfSSL Client Peer Certificate Chain Surface
 
 ## 2026-05-04
+- 这批最初想用 scripted TLS 1.3 server harness 做 WolfSSL client full-handshake runtime RED，但当前主机 `libwolfssl-dev 5.7.2-0.1+deb13u1` / `wolfSSL 5.7.2` 上，真实信号只有 `Connect=False / verify=OK` 一类模糊结果，不能拿来当最终 completion proof。
+- 因此这批的可靠真相源必须收窄成 deterministic contract，而不是继续在当前 host 上反复追逐不稳定 runtime 行为：
+  - 用真实 DER fixture 锁住 `LoadFromDER(...)`
+  - 覆盖 `wolfSSL_get_peer_chain` / `wolfSSL_get_chain_count` / `wolfSSL_get_chain_length` / `wolfSSL_get_chain_cert`
+  - 验证 `TWolfSSLConnection.GetPeerCertificateChain` 会 materialize 出 leaf + issuer 两张证书，并在 helper 缺失时 fail-closed 为 `[]`
+- `src/fafafa.ssl.wolfssl.base.pas` 之前把 `WOLFSSL_ERROR_WANT_READ` / `WOLFSSL_ERROR_WANT_WRITE` / `WOLFSSL_ERROR_SYSCALL` / `WOLFSSL_ERROR_SSL` 写成 `-2/-3/-5/-85`，这对应的不是 `wolfSSL_get_error()` 的返回值；本机 `/usr/include/wolfssl/ssl.h` 的真实值是 `2/3/5/85`，所以原常量会把 error mapping 和 framework test 都带偏。
+- `src/fafafa.ssl.wolfssl.api.pas` 里 `TwolfSSL_X509_d2i` 的类型签名是 `wolfSSL_X509_d2i(WOLFSSL_X509**, const unsigned char*, int)`，但 loader 之前却绑定到了 `wolfSSL_d2i_X509`；两者的第二个参数层级不同，这就是 `LoadFromDER(...)` / `LoadFromMemory(...)` AV 的根因。
+- `TWolfSSLConnection.DoGetPeerCertificateChain` 现在不再无条件返回空数组，而是会通过 native peer-chain helpers 拉 DER bytes，再用 `TWolfSSLCertificate.LoadFromMemory(...)` materialize；任何 helper 缺失、长度异常或单张证书加载失败都会 fail-closed 回到空数组。
+- 仓库级验证额外暴露了一个相邻漂移：`TWolfSSLConnection.DoRenegotiate` 之前只是静默返回 `False`，不会留下任何可诊断语义。最小正确收口不是实现 renegotiation，而是显式记录 `sslErrUnsupported` 和稳定诊断文案，让 framework contract 有真实错误分类可依赖。
 - `tests/integration/test_backend_comparison.pas` 虽然名字看起来是 backend comparison，但依赖链会进入 `fafafa.ssl.factory` -> `fafafa.ssl.freepascal.context` -> `fafafa.ssl.freepascal.earlydatareplay.fileprovider`，所以它能补到前面 WinSSL 定向 compile 用例没有覆盖到的 shared cross-target surface。
 - `src/fafafa.ssl.freepascal.earlydatareplay.fileprovider.pas` 的 `implementation uses` 之前写成 `{$IFDEF UNIX}Unix{$ENDIF};`；在 Linux host-target 下 `UNIX=True`，所以 `python3 scripts/compile_all_modules.py` 一直看不出问题；但在 `-Twin64` 下 `UNIX=False`，展开后会变成非法的 `uses ;`，这就是 `Syntax error, "identifier" expected but ";" found` 的直接根因。
 - `src/fafafa.ssl.freepascal.earlydatareplay.dirstore.pas` 也有同型写法和同型错误，说明这不是单点疏漏，而是 replay store 家族里重复存在的 target-conditioned empty-uses drift。

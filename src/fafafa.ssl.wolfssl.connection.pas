@@ -620,7 +620,11 @@ end;
 
 function TWolfSSLConnection.DoRenegotiate: Boolean;
 begin
-  // WolfSSL 重新协商需要额外实现
+  RecordError(
+    sslErrUnsupported,
+    'TLS renegotiation is not supported by the current WolfSSL backend. ' +
+    'Close the connection and establish a new one instead.'
+  );
   Result := False;
 end;
 
@@ -628,6 +632,9 @@ function TWolfSSLConnection.DoGetError(ARet: Integer): TSSLErrorCode;
 var
   LErr: Integer;
 begin
+  if (FLastNativeError = 0) and (FLastErrorCode <> sslErrNone) then
+    Exit(FLastErrorCode);
+
   if FWolfSSL = nil then
     Exit(sslErrGeneral);
 
@@ -707,9 +714,54 @@ begin
 end;
 
 function TWolfSSLConnection.DoGetPeerCertificateChain: TSSLCertificateArray;
+var
+  LChain: PWOLFSSL_X509_CHAIN;
+  LCount: Integer;
+  I: Integer;
+  LDERPtr: PByte;
+  LDERLen: Integer;
+  LCert: TWolfSSLCertificate;
 begin
-  // WolfSSL 获取证书链需要额外实现
   SetLength(Result, 0);
+
+  if FWolfSSL = nil then
+    Exit;
+
+  if (not Assigned(wolfSSL_get_peer_chain)) or
+     (not Assigned(wolfSSL_get_chain_count)) or
+     (not Assigned(wolfSSL_get_chain_length)) or
+     (not Assigned(wolfSSL_get_chain_cert)) then
+    Exit;
+
+  LChain := wolfSSL_get_peer_chain(FWolfSSL);
+  if LChain = nil then
+    Exit;
+
+  LCount := wolfSSL_get_chain_count(LChain);
+  if LCount <= 0 then
+    Exit;
+
+  SetLength(Result, LCount);
+  for I := 0 to LCount - 1 do
+  begin
+    LDERLen := wolfSSL_get_chain_length(LChain, I);
+    LDERPtr := wolfSSL_get_chain_cert(LChain, I);
+    if (LDERLen <= 0) or (LDERPtr = nil) then
+    begin
+      SetLength(Result, 0);
+      Exit;
+    end;
+
+    LCert := TWolfSSLCertificate.Create;
+    if not LCert.LoadFromMemory(LDERPtr, LDERLen) then
+    begin
+      LCert.Free;
+      SetLength(Result, 0);
+      Exit;
+    end;
+
+    Result[I] := LCert;
+  end;
 end;
 
 function TWolfSSLConnection.DoGetVerifyResult: Integer;
@@ -727,6 +779,9 @@ function TWolfSSLConnection.DoGetVerifyResultString: string;
 var
   LResult: Integer;
 begin
+  if (FLastErrorCode <> sslErrNone) and (FLastErrorString <> '') then
+    Exit(FLastErrorString);
+
   LResult := DoGetVerifyResult;
   if LResult = 0 then
     Result := 'OK'
