@@ -1,20 +1,18 @@
-# Task Plan - WinSSL Windows Runtime Proof Handoff
+# Task Plan - Wave B/B2 WinSSL Runtime Workflow Alignment
 
 ## Goal
-把 broad objective 的唯一剩余 requirement 切成一个可直接在真实 Windows 主机执行的批次，并把当前台账从旧的 Linux 侧 `-Twin64` 交叉编译结论切换到真实下一步：`WinSSL` 的 runtime proof。
+把当前手动 Windows CI workflow 对齐到最新 `WinSSL` runtime checklist，让仓库在没有本地 Windows 主机时，仍能通过 `wave-b-b2-manual.yml` 去推进 quick smoke、Wave B gate、broader suite 这条真实运行时证据链。
 
 ## Current Batch
-1. 复核当前 broad blocker 是否已经稳定收敛到 Windows runtime proof。
-2. 把 Windows 主机上的执行顺序、必留产物、验收标准写成正式计划。
-3. 明确当前 Linux 主机已没有新的 repo-side 收口项，不再虚构新的“继续”批次。
+1. 用 focused contract 证明当前 `wave-b-b2-manual.yml` 的 Windows job 仍低于最新 runtime checklist。
+2. 最小修改 workflow / docs，把 quick smoke、Wave B gate、broader suite transcript 接进现有 Windows lane。
+3. 复跑 focused contracts，并更新计划/台账。
 
 ## Status
-- [completed] Linux-side closure reconfirmed from existing evidence
-- [completed] Formalize the Windows-host runtime validation batch
-- [pending] Run quick smoke on a real Windows host
-- [pending] Run WinSSL minimal gate on a real Windows host
-- [pending] Run Wave B Windows gate and preserve artifacts
-- [pending] Run broader WinSSL suite and annotate high-risk areas
+- [pending] RED workflow contract for Windows runtime checklist alignment
+- [pending] Align wave-b-b2-manual Windows lane
+- [pending] Re-run workflow + bundle contracts
+- [pending] Record evidence and commit the batch
 
 ## Current Evidence
 - fresh broad completion audit 已证明：
@@ -33,29 +31,18 @@
 - 结论：
   - Linux 侧 public surface、capability truth、repo gates、source contract、Win64 compile proof 都已闭合
   - 唯一未闭合 requirement 是真实 Windows 主机上的 `WinSSL` runtime proof
-
-## Windows Host Execution Order
-1. `powershell -ExecutionPolicy Bypass -File .\tests\quick_winssl_validation.ps1`
-2. `powershell -ExecutionPolicy Bypass -File .\run_winssl_tests.ps1 -RunId winssl_min_20260505 -OutputDir test-reports`
-3. `powershell -ExecutionPolicy Bypass -File .\scripts\run_wave_b_windows_gate.ps1 -RunId wave_b_windows_20260505 -OutputDir test-reports`
-4. `Start-Transcript -Path .\test-reports\winssl_runtime_suite_20260505.log`
-5. `powershell -ExecutionPolicy Bypass -File .\tests\run_winssl_tests.ps1`
-6. `Stop-Transcript`
-
-## Acceptance Artifacts
-- `test-reports/wave_b_windows_gate_summary_<run_id>.md`
-- `test-reports/wave_b_windows_winssl_<run_id>.log`
-- `test-reports/wave_b_windows_openssl_<run_id>.log`
-- `test-reports/wave_b_windows_modules_<run_id>.log`
-- `test-reports/validate_all_modules_report_<run_id>.md`
-- `test-reports/winssl_runtime_suite_<run_id>.log` or equivalent transcript
+- 当前仓库已有的 Windows CI 入口是 `.github/workflows/wave-b-b2-manual.yml`，但从源码可见：
+  - 只跑 `scripts/run_wave_b_windows_gate.ps1`
+  - 还没显式安装/验证 `lazbuild`
+  - 还没把 quick smoke 和 broader suite transcript 纳入 artifact
+- 因此“有 Windows workflow”还不等于“这条 workflow 已覆盖当前 runtime checklist”。
 
 ## Risks
-- Linux 侧交叉编译和 source contract 不能替代 Windows runtime proof。
-- 只有 quick smoke 或只有 Wave B gate，不足以把 WinSSL 写成 runtime proof complete。
-- Windows 主机上的失败必须先分流成环境问题、入口脚本问题、还是实现缺口；只有最后一种才重开生产代码批次。
+- 这批只能把 CI lane 对齐到 checklist，不能替代真实 Windows runtime 结果本身。
+- 如果 workflow 只补命令不补 artifact，后续仍然没法做可审查闭环。
+- 如果只改 `.yml` 不同步 `.disabled` 模板和文档，后续容易再次漂移。
 
 ## Follow-up Queue
-1. 获取真实 Windows 主机或等价 CI 访问。
-2. 按 `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md` 执行并保留产物。
-3. 如果 Windows runtime 全绿，再回仓库更新台账并判断 broad objective 是否可标记完成。
+1. 触发对齐后的 `wave-b-b2-manual.yml` Windows lane。
+2. 审查 quick smoke / Wave B / broader suite artifacts。
+3. 只有当这些 Windows runtime 结果真实返回后，才继续判断 broad objective 是否可标记完成。
