@@ -153,21 +153,6 @@ type
     function GetCertificatePinningEnabled: Boolean;
     procedure ClearCertificatePins;
 
-    { ISSLEarlyDataContext - TLS 1.3 Early Data (v1.4.2 存根) }
-    procedure SetClientEarlyDataEnabled(AEnabled: Boolean);
-    function GetClientEarlyDataEnabled: Boolean;
-    procedure SetServerEarlyDataPolicy(APolicy: TSSLEarlyDataServerPolicy);
-    function GetServerEarlyDataPolicy: TSSLEarlyDataServerPolicy;
-    procedure SetServerMaxEarlyDataSize(ASize: Cardinal);
-    function GetServerMaxEarlyDataSize: Cardinal;
-
-    { ISSLServerOCSPStaplingContext - 服务端 OCSP Stapling (v1.4.2 存根) }
-    procedure ClearServerStapledOCSPResponse;
-    procedure SetServerStapledOCSPResponse(const AResponseDER: TBytes);
-    procedure LoadServerStapledOCSPResponseFile(const AFileName: string);
-    function HasServerStapledOCSPResponse: Boolean;
-    function GetServerStapledOCSPResponse: TBytes;
-
     { ISSLContext - 创建连接 }
     function CreateConnection(ASocket: THandle): ISSLConnection; overload;
     function CreateConnection(AStream: TStream): ISSLConnection; overload;
@@ -1293,89 +1278,6 @@ end;
 function TWinSSLContext.GetWinSSLLibrary: ISSLLibrary;
 begin
   Result := GetLibrary;
-end;
-
-// ============================================================================
-// ISSLEarlyDataContext - 存根实现 (v1.4.2)
-// Windows Schannel 没有公开的 Early Data API
-// ============================================================================
-
-procedure TWinSSLContext.SetClientEarlyDataEnabled(AEnabled: Boolean);
-begin
-  // 存根：Schannel 不支持 Early Data
-  raise ESSLException.Create(
-    'Early Data not supported by WinSSL backend (Schannel API limitation)'
-  );
-end;
-
-function TWinSSLContext.GetClientEarlyDataEnabled: Boolean;
-begin
-  Result := False;  // 始终返回 False
-end;
-
-procedure TWinSSLContext.SetServerEarlyDataPolicy(APolicy: TSSLEarlyDataServerPolicy);
-begin
-  // 存根：Schannel 不支持 Early Data
-  raise ESSLException.Create(
-    'Early Data not supported by WinSSL backend (Schannel API limitation)'
-  );
-end;
-
-function TWinSSLContext.GetServerEarlyDataPolicy: TSSLEarlyDataServerPolicy;
-begin
-  Result := sslEarlyDataServerReject;  // 始终返回 Reject
-end;
-
-procedure TWinSSLContext.SetServerMaxEarlyDataSize(ASize: Cardinal);
-begin
-  // 存根：Schannel 不支持 Early Data
-  raise ESSLException.Create(
-    'Early Data not supported by WinSSL backend (Schannel API limitation)'
-  );
-end;
-
-function TWinSSLContext.GetServerMaxEarlyDataSize: Cardinal;
-begin
-  Result := 0;  // 始终返回 0
-end;
-
-// ============================================================================
-// ISSLServerOCSPStaplingContext - 存根实现 (v1.4.2)
-// Schannel 自动管理 OCSP Stapling，不支持手动设置
-// ============================================================================
-
-procedure TWinSSLContext.ClearServerStapledOCSPResponse;
-begin
-  // 存根：Schannel 自动管理 OCSP
-  raise ESSLException.Create(
-    'Manual OCSP Stapling not supported by WinSSL backend (Schannel manages automatically)'
-  );
-end;
-
-procedure TWinSSLContext.SetServerStapledOCSPResponse(const AResponseDER: TBytes);
-begin
-  // 存根：Schannel 自动管理 OCSP
-  raise ESSLException.Create(
-    'Manual OCSP Stapling not supported by WinSSL backend (Schannel manages automatically)'
-  );
-end;
-
-procedure TWinSSLContext.LoadServerStapledOCSPResponseFile(const AFileName: string);
-begin
-  // 存根：Schannel 自动管理 OCSP
-  raise ESSLException.Create(
-    'Manual OCSP Stapling not supported by WinSSL backend (Schannel manages automatically)'
-  );
-end;
-
-function TWinSSLContext.HasServerStapledOCSPResponse: Boolean;
-begin
-  Result := False;  // 始终返回 False
-end;
-
-function TWinSSLContext.GetServerStapledOCSPResponse: TBytes;
-begin
-  SetLength(Result, 0);  // 始终返回空数组
 end;
 
 end.

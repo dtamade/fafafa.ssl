@@ -95,7 +95,7 @@ Ctx := TSSLContextBuilder.Create
 | Session 复用 | ✅ 支持 | 完整支持 |
 | Session Ticket | ✅ 支持 | TLS 1.2+ |
 | Session Cache | ✅ 支持 | 内置缓存 |
-| 0-RTT | ⚠️ 部分 | TLS 1.3 早期数据 |
+| 0-RTT | ⚠️ 部分 | TLS 1.3 早期数据（C 库层面有限；fafafa.ssl 封装层不暴露 ISSLEarlyDataContext） |
 
 ### 高级功能
 

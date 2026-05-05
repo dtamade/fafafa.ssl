@@ -65,7 +65,7 @@ v1.4.1 和 v1.4.2 错误地在客户端调用了 `SSL_CTX_set_max_early_data`，
 
 ## [1.4.2] - 2026-05-02
 
-**完整性版本** - 所有后端 Early Data 接口完整
+**完整性版本** - 所有后端 Early Data 接口声明对齐
 
 ### 新增功能
 
@@ -76,23 +76,19 @@ v1.4.1 和 v1.4.2 错误地在客户端调用了 `SSL_CTX_set_max_early_data`，
   - WolfSSL API 绑定 (4 个函数)
   - 使用 WolfSSL 原生 Early Data API
 
-#### MbedTLS 和 WinSSL 存根实现
-- **为 MbedTLS 后端添加 Early Data 接口存根**
-  - 接口存在但抛出 ESSLException
-  - 原因：MbedTLS 3.x API 不完整，等待 MbedTLS 4.x
-  - Getter 方法返回安全默认值
-
-- **为 WinSSL 后端添加 Early Data 接口存根**
-  - 接口存在但抛出 ESSLException
-  - 原因：Windows Schannel 无公开 Early Data API
-  - Getter 方法返回安全默认值
+#### MbedTLS 和 WinSSL 声明对齐
+- **MbedTLS/WinSSL 后端明确不暴露 Early Data / OCSP Stapling 接口**
+  - class 声明不含 ISSLEarlyDataContext / ISSLServerOCSPStaplingContext
+  - `Supports()` 正确返回 False
+  - 原因：MbedTLS 3.x API 不完整；Windows Schannel 无公开 Early Data API
+  - 已删除无法通过 Supports() 访问的存根方法（死代码）
 
 ### 改进
 
 #### 接口完整性
-- **100% 接口完整性** ✅
-- 所有 5 个后端都有 Early Data 接口
-- 用户可以使用 `Supports()` 检测支持情况
+- **接口声明对齐** ✅
+- 所有后端均已声明接口或明确标记不支持
+- 用户可以使用 `Supports()` 可靠检测支持情况
 
 ### 后端支持矩阵
 
@@ -101,17 +97,18 @@ v1.4.1 和 v1.4.2 错误地在客户端调用了 `SSL_CTX_set_max_early_data`，
 | FreePascal | ✅ 完整 | 生产就绪 |
 | OpenSSL | ✅ 完整 | 生产就绪 (v1.4.1) |
 | **WolfSSL** | ✅ 完整 | **生产就绪 (v1.4.2)** |
-| MbedTLS | ⚠️ 存根 | API 限制 |
-| WinSSL | ⚠️ 存根 | API 限制 |
+| MbedTLS | ❌ 不支持 | API 限制 (等待 4.x) |
+| WinSSL | ❌ 不支持 | API 限制 (Schannel) |
 
 **完整支持**: 3/5 后端 (60%)
-**接口完整性**: 100%
+**接口声明对齐**: 所有后端 Supports() 返回值与声明一致
 
 ### 统计
 
 - 实现代码: +206 行 (WolfSSL)
 - 存根代码: +200 行 (MbedTLS + WinSSL)
-- 完整性: 95% → 100%
+- 存根清理: -156 行 (MbedTLS + WinSSL 死代码移除)
+- 声明对齐: Supports() 返回值与 class 声明一致
 
 ---
 

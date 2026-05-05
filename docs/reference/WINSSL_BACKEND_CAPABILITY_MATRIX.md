@@ -81,7 +81,7 @@ Ctx := TSSLContextBuilder.Create
 | 证书链验证 | ✅ 支持 | 系统证书存储 |
 | CRL 检查 | ✅ 支持 | 自动下载 |
 | OCSP | ✅ 支持 | 自动检查 |
-| OCSP Stapling | ✅ 支持 | 服务器端 |
+| OCSP Stapling | ⚠️ 部分 | 服务器端（Schannel 系统级行为；fafafa.ssl 封装层不暴露 ISSLServerOCSPStaplingContext） |
 | 证书固定 | ✅ 支持 | 通过回调 |
 | SNI | ✅ 支持 | 客户端/服务器 |
 | 系统证书存储 | ✅ 支持 | 原生集成 |
@@ -93,7 +93,7 @@ Ctx := TSSLContextBuilder.Create
 | Session 复用 | ✅ 支持 | 完整支持 |
 | Session Ticket | ✅ 支持 | TLS 1.2+ |
 | Session Cache | ✅ 支持 | 系统管理 |
-| 0-RTT | ⚠️ 部分 | TLS 1.3 |
+| 0-RTT | ⚠️ 部分 | TLS 1.3（Schannel 有限支持；fafafa.ssl 封装层不暴露 ISSLEarlyDataContext） |
 
 ### 高级功能
 
