@@ -114,7 +114,6 @@ var
 // Helper functions
 function LoadAESFunctions(ALibHandle: TOpenSSLLibHandle): Boolean;
 procedure UnloadAESFunctions;
-function IsAESLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmAES) instead';
 
 // High-level helper functions
 function AESEncryptECB(const Data: TBytes; const Key: TBytes): TBytes;
@@ -175,10 +174,6 @@ begin
   TOpenSSLLoader.SetModuleLoaded(osmAES, False);
 end;
 
-function IsAESLoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmAES);
-end;
 
 function GetAESKeyBits(const Key: TBytes): Integer;
 begin

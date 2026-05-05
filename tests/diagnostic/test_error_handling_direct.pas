@@ -5,7 +5,7 @@ program test_error_handling_direct;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.err,
   fafafa.ssl.openssl.api.ssl,
@@ -41,7 +41,7 @@ begin
   WriteLn('----------------------------------');
 
   // Load OpenSSL
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     LoadOpenSSLCore;
 
   LoadOpenSSLSSL;
@@ -114,7 +114,7 @@ begin
   WriteLn('Test 2: Multiple errors accumulation');
   WriteLn('-------------------------------------');
 
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     LoadOpenSSLCore;
 
   LoadOpenSSLSSL;
@@ -179,7 +179,7 @@ begin
   WriteLn('Test 3: Error clearing');
   WriteLn('----------------------');
 
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     LoadOpenSSLCore;
 
   LoadOpenSSLSSL;

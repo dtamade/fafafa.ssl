@@ -5,7 +5,7 @@ program test_cleanup_fixes;
 uses
   SysUtils, Classes,
   fafafa.ssl.secure,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.rand;
 
 procedure TestSecureRandom;
@@ -73,7 +73,7 @@ begin
       LoadOpenSSLCore;
       WriteLn('OpenSSL loaded: ', GetOpenSSLVersionString);
       LoadOpenSSLRAND;
-      WriteLn('RAND module loaded: ', IsOpenSSLRANDLoaded);
+      WriteLn('RAND module loaded: ', TOpenSSLLoader.IsModuleLoaded(osmRAND));
     except
       on E: Exception do
         WriteLn('OpenSSL/RAND load error: ', E.Message);

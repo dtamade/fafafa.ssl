@@ -5,7 +5,7 @@ program test_openssl_load;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core;
 
 begin
   WriteLn('Testing OpenSSL library loading...');
@@ -15,7 +15,7 @@ begin
     // Try to load OpenSSL
     LoadOpenSSLCore;
     
-    if IsOpenSSLCoreLoaded then
+    if TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('SUCCESS: OpenSSL libraries loaded successfully!');
       

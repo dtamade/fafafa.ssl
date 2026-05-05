@@ -781,14 +781,12 @@ var
 // 库加载和初始化函数
 function LoadOpenSSLLibrary: Boolean;
 procedure UnloadOpenSSLLibrary;
-function IsOpenSSLLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmCore) instead';
 function GetOpenSSLVersion: string;
 function GetOpenSSLErrorString: string;
 function GetCryptoLibHandle: TLibHandle;
 function GetSSLLibHandle: TLibHandle;
 
 // Helper functions for module loading compatibility (for RAND, EVP, etc.)
-function IsCryptoLibraryLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmCore) instead';
 function GetCryptoProcAddress(const ProcName: string): Pointer;
 
 // 辅助函数
@@ -1125,10 +1123,6 @@ begin
   TOpenSSLLoader.SetModuleLoaded(osmCore, False);
 end;
 
-function IsOpenSSLLoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmCore);
-end;
 
 function GetOpenSSLVersion: string;
 var
@@ -1194,11 +1188,6 @@ end;
 function GetSSLLibHandle: TLibHandle;
 begin
   Result := TOpenSSLLoader.GetLibraryHandle(osslLibSSL);
-end;
-
-function IsCryptoLibraryLoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsLoaded(osslLibCrypto);
 end;
 
 function GetCryptoProcAddress(const ProcName: string): Pointer;

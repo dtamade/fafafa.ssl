@@ -5,7 +5,7 @@ program test_core_modules;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.types,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.rand,
   fafafa.ssl.openssl.api.bn;
@@ -19,7 +19,7 @@ begin
     WriteLn('正在加载 OpenSSL 库...');
     LoadOpenSSLCore;
     
-    if IsOpenSSLCoreLoaded then
+    if TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('✓ OpenSSL 库加载成功');
       

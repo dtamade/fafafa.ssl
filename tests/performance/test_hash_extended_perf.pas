@@ -4,7 +4,7 @@ program test_hash_extended_perf;
 
 uses
   SysUtils, DateUtils,
-  fafafa.ssl.openssl.api;
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api;
 
 const
   TEST_ITERATIONS = 1000;
@@ -145,7 +145,7 @@ begin
   WriteLn(Separator);
   
   // Load OpenSSL
-  if not IsOpenSSLLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     if not LoadOpenSSLLibrary then
     begin

@@ -4,7 +4,7 @@ program test_whirlpool;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp;
@@ -285,7 +285,7 @@ begin
     // Use modern API loading
     LoadOpenSSLCore();
     
-    if not IsOpenSSLCoreLoaded then
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('ERROR: Failed to load OpenSSL library');
       Halt(1);

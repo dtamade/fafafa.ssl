@@ -4,7 +4,7 @@ program test_openssl_simple;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.bio;
 
 procedure TestOpenSSLLoading;
@@ -18,7 +18,7 @@ begin
     LoadOpenSSLCore;
     LoadOpenSSLBIO;
     
-    if IsOpenSSLCoreLoaded then
+    if TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('OpenSSL libraries loaded successfully!');
       

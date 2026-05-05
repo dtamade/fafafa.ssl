@@ -122,7 +122,6 @@ var
 // Module loading functions
 function LoadOpenSSLEngine(const ACryptoLib: THandle): Boolean;
 procedure UnloadOpenSSLEngine;
-function IsOpenSSLEngineLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmEngine) instead';
 
 // Helper functions
 function InitializeEngine(const AEngineID: string): PENGINE;
@@ -184,15 +183,11 @@ begin
   TOpenSSLLoader.SetModuleLoaded(osmEngine, False);
 end;
 
-function IsOpenSSLEngineLoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmEngine);
-end;
 
 function InitializeEngine(const AEngineID: string): PENGINE;
 begin
   Result := nil;
-  if not IsOpenSSLEngineLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmEngine) then
     Exit;
 
   // Load builtin engines
@@ -218,7 +213,7 @@ end;
 function LoadEnginePrivateKey(AEngine: PENGINE; const AKeyID: string): PEVP_PKEY;
 begin
   Result := nil;
-  if not IsOpenSSLEngineLoaded or (AEngine = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmEngine) or (AEngine = nil) then
     Exit;
 
   if Assigned(ENGINE_load_private_key) then
@@ -228,7 +223,7 @@ end;
 function LoadEnginePublicKey(AEngine: PENGINE; const AKeyID: string): PEVP_PKEY;
 begin
   Result := nil;
-  if not IsOpenSSLEngineLoaded or (AEngine = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmEngine) or (AEngine = nil) then
     Exit;
 
   if Assigned(ENGINE_load_public_key) then
@@ -238,7 +233,7 @@ end;
 function SetEngineAsDefault(AEngine: PENGINE; AFlags: Cardinal): Boolean;
 begin
   Result := False;
-  if not IsOpenSSLEngineLoaded or (AEngine = nil) then
+  if not TOpenSSLLoader.IsModuleLoaded(osmEngine) or (AEngine = nil) then
     Exit;
 
   if Assigned(ENGINE_set_default) then
@@ -250,7 +245,7 @@ var
   Eng: PENGINE;
 begin
   Result := TStringList.Create;
-  if not IsOpenSSLEngineLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmEngine) then
     Exit;
 
   // Load builtin engines

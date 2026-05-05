@@ -9,7 +9,7 @@ program example_crypto_working;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp;
 
 function BytesToHex(const Data: array of Byte; Len: Integer): string;
@@ -226,7 +226,7 @@ begin
   try
     // 加载OpenSSL (使用test_evp_cipher的方式)
     LoadOpenSSLCore();
-    if not IsOpenSSLCoreLoaded then
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('✗ OpenSSL加载失败');
       Halt(1);

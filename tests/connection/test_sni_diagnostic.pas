@@ -4,7 +4,7 @@ program test_sni_diagnostic;
 
 uses
   SysUtils, DynLibs,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl;
 
 var
@@ -18,7 +18,7 @@ begin
   
   // Load OpenSSL core
   LoadOpenSSLCore();
-  if IsOpenSSLCoreLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     WriteLn('[OK] OpenSSL core loaded');
     WriteLn('Version: ', GetOpenSSLVersionString);

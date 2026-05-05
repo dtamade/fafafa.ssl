@@ -138,7 +138,6 @@ var
 // Helper functions
 function LoadBLAKE2Functions(ALibHandle: TOpenSSLLibHandle): Boolean;
 procedure UnloadBLAKE2Functions;
-function IsBLAKE2Loaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmBLAKE2) instead';
 
 // High-level helper functions
 function BLAKE2b256Hash(const Data: TBytes): TBytes;
@@ -212,10 +211,6 @@ begin
   TOpenSSLLoader.SetModuleLoaded(osmBLAKE2, False);
 end;
 
-function IsBLAKE2Loaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmBLAKE2);
-end;
 
 function BLAKE2b256Hash(const Data: TBytes): TBytes;
 var

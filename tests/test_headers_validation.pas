@@ -4,7 +4,7 @@ program test_headers_validation;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.bio,
@@ -80,12 +80,12 @@ begin
   if LoadOpenSSLLibrary then
   begin
     Test('LoadOpenSSLLibrary', True);
-    Test('IsCryptoLibraryLoaded', IsCryptoLibraryLoaded);
+    Test('TOpenSSLLoader.IsModuleLoaded(osmCore)', TOpenSSLLoader.IsModuleLoaded(osmCore));
     WriteLn('  Version: ', GetOpenSSLVersion);
     
     WriteLn;
     WriteLn('Function Pointers:');
-    if IsCryptoLibraryLoaded then
+    if TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       Test('BIO_new', Assigned(BIO_new));
       Test('BIO_free', Assigned(BIO_free));

@@ -18,7 +18,7 @@ uses
   SysUtils, Classes, TypInfo,
   fafafa.ssl.base,
   fafafa.ssl.factory,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.backed,
   fafafa.ssl.openssl.native_handle,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.bio,
@@ -71,13 +71,13 @@ begin
   
   try
     LoadOpenSSLCore;
-    Success := IsOpenSSLCoreLoaded;
+    Success := TOpenSSLLoader.IsModuleLoaded(osmCore);
     LogTest('LoadOpenSSLCore', Success, 
             '库句柄: ' + IntToStr(PtrInt(GetCryptoLibHandle)));
     
     if Success then
     begin
-      LogTest('IsOpenSSLCoreLoaded', IsOpenSSLCoreLoaded,
+      LogTest('TOpenSSLLoader.IsModuleLoaded(osmCore)', TOpenSSLLoader.IsModuleLoaded(osmCore),
               '加密库已加载');
     end;
   except

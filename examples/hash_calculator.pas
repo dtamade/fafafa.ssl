@@ -9,7 +9,7 @@ program hash_calculator;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp;
 
 const
@@ -143,7 +143,7 @@ begin
   // 初始化OpenSSL
   try
     LoadOpenSSLCore();
-    if not IsOpenSSLCoreLoaded then
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('错误: 无法加载OpenSSL');
       Halt(1);

@@ -97,7 +97,7 @@ type
 implementation
 
 uses
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core;
 
 { TOpenSSLCoreReal }
 
@@ -121,7 +121,7 @@ begin
   if not FLoaded then
   begin
     LoadOpenSSLCore;
-    FLoaded := IsOpenSSLCoreLoaded;
+    FLoaded := TOpenSSLLoader.IsModuleLoaded(osmCore);
     if FLoaded then
     begin
       FCryptoHandle := GetCryptoLibHandle;
@@ -134,7 +134,7 @@ end;
 
 function TOpenSSLCoreReal.IsLoaded: Boolean;
 begin
-  Result := FLoaded or IsOpenSSLCoreLoaded;
+  Result := FLoaded or TOpenSSLLoader.IsModuleLoaded(osmCore);
 end;
 
 function TOpenSSLCoreReal.GetCryptoLibHandle: TLibHandle;

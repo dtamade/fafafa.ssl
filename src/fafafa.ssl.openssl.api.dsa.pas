@@ -209,7 +209,6 @@ var
 
 function LoadOpenSSLDSA: Boolean;
 procedure UnloadOpenSSLDSA;
-function IsOpenSSLDSALoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmDSA) instead';
 
 implementation
 
@@ -290,9 +289,5 @@ begin
   TOpenSSLLoader.SetModuleLoaded(osmDSA, False);
 end;
 
-function IsOpenSSLDSALoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmDSA);
-end;
 
 end.

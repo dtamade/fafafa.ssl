@@ -4,7 +4,7 @@ program test_ssl_ctrl;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core;
 
 begin
   WriteLn('SSL_ctrl Loading Test');
@@ -14,7 +14,7 @@ begin
   // Load OpenSSL core
   LoadOpenSSLCore();
   
-  if IsOpenSSLCoreLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     WriteLn('[OK] OpenSSL core loaded successfully');
     WriteLn('Version: ', GetOpenSSLVersionString);

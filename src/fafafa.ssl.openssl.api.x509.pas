@@ -574,7 +574,6 @@ var
   
 procedure LoadOpenSSLX509;
 procedure UnloadOpenSSLX509;
-function IsOpenSSLX509Loaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmX509) instead';
 
 implementation
 
@@ -768,9 +767,5 @@ begin
   TOpenSSLLoader.SetModuleLoaded(osmX509, False);
 end;
 
-function IsOpenSSLX509Loaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmX509);
-end;
 
 end.

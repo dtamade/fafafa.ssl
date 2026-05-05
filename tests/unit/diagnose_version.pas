@@ -4,7 +4,7 @@ program diagnose_version;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core;
 
 var
   Version: string;
@@ -16,7 +16,7 @@ begin
   
   LoadOpenSSLCore;
   
-  if IsOpenSSLCoreLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     WriteLn('OpenSSL loaded successfully');
     Version := GetOpenSSLVersionString;

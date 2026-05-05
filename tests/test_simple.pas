@@ -4,7 +4,7 @@ program test_simple;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core;
 
 begin
   WriteLn('Simple OpenSSL Load Test');
@@ -16,7 +16,7 @@ begin
     LoadOpenSSLCore;
     
     WriteLn('Checking if loaded...');
-    if IsOpenSSLCoreLoaded then
+    if TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('[SUCCESS] OpenSSL loaded successfully!');
       WriteLn('Crypto handle: ', PtrInt(GetCryptoLibHandle));

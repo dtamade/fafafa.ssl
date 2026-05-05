@@ -4,7 +4,7 @@ program test_hash_utils;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.utils;
 
@@ -114,7 +114,7 @@ begin
   // Load OpenSSL
   WriteLn('Loading OpenSSL...');
   LoadOpenSSLCore;
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     WriteLn('ERROR: Failed to load OpenSSL library');
     WriteLn('Please ensure OpenSSL is installed on your system.');

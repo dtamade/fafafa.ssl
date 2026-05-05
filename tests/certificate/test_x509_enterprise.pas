@@ -27,7 +27,7 @@ program test_x509_enterprise;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.x509v3,
@@ -229,14 +229,14 @@ begin
 
   WriteLn('初始化 OpenSSL...');
   LoadOpenSSLCore;
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     WriteLn('❌ 错误：无法加载 OpenSSL 库');
     Halt(1);
   end;
 
   LoadOpenSSLX509;
-  if not IsOpenSSLX509Loaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmX509) then
   begin
     WriteLn('❌ 错误：无法加载 OpenSSL X509 模块');
     Halt(1);

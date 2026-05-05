@@ -22,7 +22,7 @@ program test_openssl_1_1_compatibility;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
@@ -58,7 +58,7 @@ begin
     // Force load OpenSSL 1.1.x
     LoadOpenSSLCoreWithVersion(sslVersion_1_1);
     
-    if not IsOpenSSLCoreLoaded then
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
       Exit;
       
     Version := GetOpenSSLVersion;

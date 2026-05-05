@@ -309,7 +309,6 @@ function ERR_PACK_INLINE(lib, func, reason: Integer): Cardinal; inline;
 
 function LoadOpenSSLERR: Boolean;
 procedure UnloadOpenSSLERR;
-function IsOpenSSLERRLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmERR) instead';
 
 // Error helper functions
 function GetFriendlyErrorMessage(AErrorCode: Cardinal): string;
@@ -540,10 +539,6 @@ begin
   TOpenSSLLoader.SetModuleLoaded(osmERR, False);
 end;
 
-function IsOpenSSLERRLoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmERR);
-end;
 
 function GetOpenSSLErrorCategory(AErrorCode: Cardinal): string;
 var

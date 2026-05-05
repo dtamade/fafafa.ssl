@@ -335,7 +335,6 @@ var
   
 procedure LoadOpenSSLBIO;
 procedure UnloadOpenSSLBIO;
-function IsOpenSSLBIOLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmBIO) instead';
 
 { Helper functions for BIO connection operations }
 function BIO_set_conn_hostname(b: PBIO; const hostname: PAnsiChar): clong;
@@ -452,10 +451,6 @@ begin
   TOpenSSLLoader.SetModuleLoaded(osmBIO, False);
 end;
 
-function IsOpenSSLBIOLoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmBIO);
-end;
 
 { Helper functions for BIO connection operations }
 function BIO_set_conn_hostname(b: PBIO; const hostname: PAnsiChar): clong;

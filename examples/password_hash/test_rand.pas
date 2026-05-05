@@ -4,7 +4,7 @@ program test_rand;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.api.rand;
 
 var
@@ -29,7 +29,7 @@ begin
   // Check crypto library
   WriteLn('[2] Checking crypto library handle...');
   WriteLn('Crypto lib handle: ', GetCryptoLibHandle);
-  WriteLn('Is loaded: ', IsCryptoLibraryLoaded);
+  WriteLn('Is loaded: ', TOpenSSLLoader.IsModuleLoaded(osmCore));
   
   // Try to load RAND_bytes manually
   WriteLn('[3] Testing GetCryptoProcAddress...');

@@ -5,6 +5,7 @@ program test_p2_pkcs7;
 uses
   SysUtils, ctypes,  // For clong type
   fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api,  // For MBSTRING_ASC constant
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.bio,
@@ -98,7 +99,7 @@ procedure Test_01_PKCS7_Functions_Loaded;
 const
   TEST_NAME = 'PKCS7 functions loaded';
 begin
-  if IsPKCS7Loaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmPKCS7) then
     Pass(TEST_NAME)
   else
     Fail(TEST_NAME, 'PKCS7 functions not loaded');

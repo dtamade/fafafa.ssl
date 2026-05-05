@@ -312,7 +312,6 @@ var
 
 function LoadOpenSSLRSA: Boolean;
 procedure UnloadOpenSSLRSA;
-function IsOpenSSLRSALoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmRSA) instead';
 
 implementation
 
@@ -446,9 +445,5 @@ begin
   TOpenSSLLoader.SetModuleLoaded(osmRSA, False);
 end;
 
-function IsOpenSSLRSALoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmRSA);
-end;
 
 end.

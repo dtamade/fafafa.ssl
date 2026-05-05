@@ -4,7 +4,7 @@ program test_p2_err;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.err;
 
 var
@@ -193,7 +193,7 @@ begin
     // 加载 OpenSSL
     LoadOpenSSLCore();
     
-    if not IsOpenSSLCoreLoaded then
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('[ERROR] Failed to load OpenSSL');
       Halt(1);

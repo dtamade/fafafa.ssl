@@ -28,7 +28,7 @@ program test_ssl_enterprise;
 
 uses
   SysUtils, Classes,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl,
   fafafa.ssl.openssl.api.err,
   fafafa.ssl.openssl.api.x509,
@@ -131,7 +131,7 @@ begin
   WriteLn;
   WriteLn('=== 错误处理和恢复测试 ===');
 
-  if not IsOpenSSLERRLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmERR) then
     LoadOpenSSLERR;
 
   Test('ERR_get_error API 可用', Assigned(ERR_get_error));
@@ -268,7 +268,7 @@ begin
 
   WriteLn('初始化 OpenSSL...');
   LoadOpenSSLCore;
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     WriteLn('❌ 错误：无法加载 OpenSSL 库');
     Halt(1);

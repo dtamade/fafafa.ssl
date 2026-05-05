@@ -5,7 +5,7 @@ program test_module_headers_quick;
 uses
   SysUtils,
   // Core modules
-  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.core,
@@ -171,8 +171,8 @@ begin
   
   if Loaded then
   begin
-    TestModule('IsCryptoLibraryLoaded', IsCryptoLibraryLoaded);
-    // TestModule('IsCryptoLibraryLoaded', IsCryptoLibraryLoaded);  // Not in current API
+    TestModule('TOpenSSLLoader.IsModuleLoaded(osmCore)', TOpenSSLLoader.IsModuleLoaded(osmCore));
+    // TestModule('TOpenSSLLoader.IsModuleLoaded(osmCore)', TOpenSSLLoader.IsModuleLoaded(osmCore));  // Not in current API
 
     // Test version
     TestModule('OpenSSL 版本获取', GetOpenSSLVersionString <> '');
@@ -186,7 +186,7 @@ begin
   WriteLn('验证关键函数指针...');
   WriteLn('----------------------------------------');
   
-  if IsCryptoLibraryLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     // BIO functions
     TestModule('BIO_new 函数指针', Assigned(BIO_new));
@@ -256,7 +256,7 @@ begin
   WriteLn('验证SSL/TLS函数指针...');
   WriteLn('----------------------------------------');
   
-  if IsCryptoLibraryLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     TestModule('SSL_CTX_new 函数指针', Assigned(SSL_CTX_new));
     TestModule('SSL_CTX_free 函数指针', Assigned(SSL_CTX_free));
@@ -297,7 +297,7 @@ begin
   TestLibraryLoading;
   
   // Phase 4: Function pointers (runtime check)
-  if IsCryptoLibraryLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     TestFunctionPointers;
     TestSSLFunctionPointers;
@@ -329,6 +329,6 @@ begin
     Halt(1);
   end;
   
-  if IsCryptoLibraryLoaded or IsCryptoLibraryLoaded then
+  if TOpenSSLLoader.IsModuleLoaded(osmCore) then
     UnloadOpenSSLLibrary;
 end.

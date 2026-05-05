@@ -165,7 +165,6 @@ var
 
 function LoadOpenSSLRAND: Boolean;
 procedure UnloadOpenSSLRAND;
-function IsOpenSSLRANDLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmRAND) instead';
 
 { Helper functions }
 function RAND_bytes_secure(buf: PByte; num: Integer): Boolean;
@@ -327,10 +326,6 @@ begin
   TOpenSSLLoader.SetModuleLoaded(osmRAND, False);
 end;
 
-function IsOpenSSLRANDLoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmRAND);
-end;
 
 { Helper functions }
 

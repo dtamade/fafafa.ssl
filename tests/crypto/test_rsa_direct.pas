@@ -8,7 +8,7 @@ program test_rsa_direct;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.rsa,
   fafafa.ssl.openssl.api.bn,
   fafafa.ssl.openssl.api.evp;
@@ -26,7 +26,7 @@ begin
     // 加载OpenSSL
     WriteLn('[1] Loading OpenSSL Core...');
     LoadOpenSSLCore();
-    if not IsOpenSSLCoreLoaded then
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('  ✗ Failed to load OpenS SSL');
       Halt(1);

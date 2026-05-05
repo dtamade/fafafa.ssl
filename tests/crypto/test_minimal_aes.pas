@@ -9,7 +9,7 @@ program test_minimal_aes;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp;
 
 var
@@ -29,7 +29,7 @@ begin
     // Step 1: Initialize OpenSSL
     WriteLn('[1] Loading OpenSSL...');
     LoadOpenSSLCore();
-    if not IsOpenSSLCoreLoaded then
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('✗ Failed to load OpenSSL');
       Halt(1);

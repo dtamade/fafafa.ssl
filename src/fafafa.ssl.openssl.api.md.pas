@@ -134,7 +134,6 @@ var
 // Helper functions
 function LoadMDFunctions(ALibHandle: TOpenSSLLibHandle): Boolean;
 procedure UnloadMDFunctions;
-function IsMDLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmMD) instead';
 
 // High-level helper functions
 function MD4Hash(const Data: TBytes): TBytes;
@@ -195,10 +194,6 @@ begin
   TOpenSSLLoader.SetModuleLoaded(osmMD, False);
 end;
 
-function IsMDLoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmMD);
-end;
 
 // Helper function implementations
 function MD4Hash(const Data: TBytes): TBytes;

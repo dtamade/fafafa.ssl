@@ -180,7 +180,6 @@ var
 // Helper functions
 function LoadSHAFunctions(ALibHandle: TOpenSSLLibHandle): Boolean;
 procedure UnloadSHAFunctions;
-function IsSHALoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmSHA) instead';
 
 // High-level helper functions
 function SHA1Hash(const Data: TBytes): TBytes;
@@ -264,10 +263,6 @@ begin
   TOpenSSLLoader.SetModuleLoaded(osmSHA, False);
 end;
 
-function IsSHALoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmSHA);
-end;
 
 // Helper function implementations
 function SHA1Hash(const Data: TBytes): TBytes;

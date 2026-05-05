@@ -328,7 +328,6 @@ var
 // Helper functions
 function LoadECFunctions(ALibHandle: TOpenSSLLibHandle): Boolean;
 procedure UnloadECFunctions;
-function IsECLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmEC) instead';
 
 // High-level helper functions
 function EC_KEY_new_secp256k1: PEC_KEY;
@@ -415,10 +414,6 @@ begin
   TOpenSSLLoader.SetModuleLoaded(osmEC, False);
 end;
 
-function IsECLoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmEC);
-end;
 
 // Helper functions
 function EC_KEY_new_secp256k1: PEC_KEY;

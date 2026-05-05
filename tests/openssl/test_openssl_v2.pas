@@ -6,7 +6,7 @@ uses
   SysUtils,
   fafafa.ssl.base,
   fafafa.ssl.factory,
-  fafafa.ssl.openssl.backed,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.backed,
   fafafa.ssl.openssl.native_handle,
   fafafa.ssl.openssl.api.core;
 
@@ -47,7 +47,7 @@ begin
   WriteLn('========== Test 1: Core Loading ==========');
   try
     LoadOpenSSLCore;
-    Test('LoadOpenSSLCore', IsOpenSSLCoreLoaded);
+    Test('LoadOpenSSLCore', TOpenSSLLoader.IsModuleLoaded(osmCore));
     Test('GetCryptoLibHandle', GetCryptoLibHandle <> 0, 
          'Handle=' + IntToStr(PtrInt(GetCryptoLibHandle)));
     Test('GetSSLLibHandle', GetSSLLibHandle <> 0,

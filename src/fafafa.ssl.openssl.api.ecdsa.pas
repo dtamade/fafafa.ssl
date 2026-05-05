@@ -119,7 +119,6 @@ var
 
 function LoadOpenSSLECDSA: Boolean;
 procedure UnloadOpenSSLECDSA;
-function IsOpenSSLECDSALoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmECDSA) instead';
 
 { Helper functions for ECDSA operations }
 function ECDSA_SignData(const AData: PByte; ADataLen: Integer; AKey: PEC_KEY; out ASignature: TBytes): Boolean;
@@ -201,10 +200,6 @@ begin
   TOpenSSLLoader.SetModuleLoaded(osmECDSA, False);
 end;
 
-function IsOpenSSLECDSALoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmECDSA);
-end;
 
 { Helper functions }
 

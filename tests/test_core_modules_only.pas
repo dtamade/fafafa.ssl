@@ -5,7 +5,7 @@ program test_core_modules_only;
 uses
   SysUtils,
   // Core - 这些肯定能编译
-  fafafa.ssl.openssl.api,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api,
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.consts,
   
@@ -122,7 +122,7 @@ begin
   if LoadOpenSSLLibrary then
   begin
     TestModule('OpenSSL 库加载成功', True);
-    TestModule('Crypto库已加载', IsCryptoLibraryLoaded);
+    TestModule('Crypto库已加载', TOpenSSLLoader.IsModuleLoaded(osmCore));
     // TestModule('SSL库已加载', IsSSLLibraryLoaded);  // 在ssl模块中定义
     WriteLn('  版本: ', GetOpenSSLVersion);
     
@@ -130,7 +130,7 @@ begin
     WriteLn('验证函数指针...');
     WriteLn('----------------------------------------');
     
-    if IsCryptoLibraryLoaded then
+    if TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       // BIO
       TestModule('BIO_new', Assigned(BIO_new));

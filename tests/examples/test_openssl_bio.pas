@@ -4,7 +4,7 @@ program test_openssl_bio;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.types,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.types,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.bio;
 
@@ -145,7 +145,7 @@ begin
   // Load BIO module
   Write('Loading BIO module... ');
   LoadOpenSSLBIO;
-  if not IsOpenSSLBIOLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmBIO) then
   begin
     WriteLn('FAILED');
     Halt(1);

@@ -290,7 +290,6 @@ var
 
 function LoadOpenSSLSSL: Boolean;
 procedure UnloadOpenSSLSSL;
-function IsOpenSSLSSLLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmSSL) instead';
 
 { Helper function - SSL_set_tlsext_host_name is a macro in OpenSSL, not a real function }
 function SSL_set_tlsext_host_name_impl(ssl: PSSL; const name: PAnsiChar): Integer; cdecl;
@@ -640,10 +639,6 @@ begin
   TOpenSSLLoader.SetModuleLoaded(osmSSL, False);
 end;
 
-function IsOpenSSLSSLLoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmSSL);
-end;
 
 function SSL_CTX_set_min_proto_version_impl(ctx: PSSL_CTX; version: Integer): Integer; cdecl;
 begin

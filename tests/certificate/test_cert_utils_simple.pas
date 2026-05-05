@@ -9,7 +9,7 @@ program test_cert_utils_simple;
 uses
   SysUtils,
   fafafa.ssl.cert.utils,
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core;
 
 var
   LOptions: TCertGenOptions;
@@ -24,7 +24,7 @@ begin
     // 初始化OpenSSL
     WriteLn('[1/3] Loading OpenSSL...');
     LoadOpenSSLCore;
-    if not IsOpenSSLCoreLoaded then
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('ERROR: Failed to load OpenSSL');
       Halt(1);

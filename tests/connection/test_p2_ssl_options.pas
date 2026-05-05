@@ -4,7 +4,7 @@ program test_p2_ssl_options;
 
 uses
   SysUtils, ctypes,
-  fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.ssl,
   fafafa.ssl.openssl.api.consts,
@@ -342,7 +342,7 @@ begin
     // 加载 OpenSSL
     LoadOpenSSLCore();
     
-    if not IsOpenSSLCoreLoaded then
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('[ERROR] Failed to load OpenSSL');
       Halt(1);

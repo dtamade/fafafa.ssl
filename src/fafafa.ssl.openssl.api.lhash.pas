@@ -130,7 +130,6 @@ var
 // Load and unload functions
 function LoadLHashFunctions: Boolean;
 procedure UnloadLHashFunctions;
-function IsLHashLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmLHash) instead';
 
 // High-level helper functions
 function CreateStringHashTable: POPENSSL_LHASH;
@@ -265,10 +264,6 @@ begin
   // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
 end;
 
-function IsLHashLoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmLHash);
-end;
 
 // Callback functions
 function HashStringWrapper(const p: Pointer): LongWord; cdecl;

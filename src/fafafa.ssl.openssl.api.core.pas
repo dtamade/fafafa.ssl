@@ -657,14 +657,12 @@ var
 procedure LoadOpenSSLCore;
 procedure LoadOpenSSLCoreWithVersion(AVersion: TOpenSSLVersion);
 procedure UnloadOpenSSLCore;
-function IsOpenSSLCoreLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmCore) instead';
 function GetSSLLibHandle: TLibHandle;
 function GetCryptoLibHandle: TLibHandle;
 function GetOpenSSLVersion: TOpenSSLVersion;
 function GetOpenSSLVersionString: string;
 
 // Helper functions for module loading
-function IsCryptoLibraryLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmCore) instead';
 function GetCryptoProcAddress(const ProcName: string): Pointer;
 function GetSSLProcAddress(const ProcName: string): Pointer;
 
@@ -994,12 +992,6 @@ begin
   // Continue resetting all function pointers...
 end;
 
-function IsOpenSSLCoreLoaded: Boolean;
-begin
-  // P0-1.1: 委托给 TOpenSSLLoader 检查状态
-  Result := TOpenSSLLoader.IsLoaded(osslLibSSL) and TOpenSSLLoader.IsLoaded(osslLibCrypto);
-end;
-
 function GetSSLLibHandle: TLibHandle;
 begin
   // P0-1.1: 委托给 TOpenSSLLoader
@@ -1010,12 +1002,6 @@ function GetCryptoLibHandle: TLibHandle;
 begin
   // P0-1.1: 委托给 TOpenSSLLoader
   Result := TOpenSSLLoader.GetLibraryHandle(osslLibCrypto);
-end;
-
-function IsCryptoLibraryLoaded: Boolean;
-begin
-  // P0-1.1: 委托给 TOpenSSLLoader
-  Result := TOpenSSLLoader.IsLoaded(osslLibCrypto);
 end;
 
 function GetCryptoProcAddress(const ProcName: string): Pointer;

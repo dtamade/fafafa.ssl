@@ -2,7 +2,7 @@ program test_tls_method;
 {$mode objfpc}{$H+}
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.base;
 var
   Method: PSSL_METHOD;
@@ -10,7 +10,7 @@ begin
   // Load OpenSSL core which includes SSL functions
   LoadOpenSSLCore();
   
-  if not IsOpenSSLCoreLoaded then
+  if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
   begin
     WriteLn('ERROR: Failed to load OpenSSL');
     Halt(1);

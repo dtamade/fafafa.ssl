@@ -12,7 +12,7 @@ program file_encrypt_tool;
 
 uses
   SysUtils, Classes, Math,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.rand;
 
@@ -210,7 +210,7 @@ begin
   try
     // 初始化OpenSSL
     LoadOpenSSLCore();
-    if not IsOpenSSLCoreLoaded then
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('错误: 无法加载OpenSSL');
       Halt(1);

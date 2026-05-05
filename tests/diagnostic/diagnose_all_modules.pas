@@ -4,7 +4,7 @@ program diagnose_all_modules;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.base,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.crypto,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.ssl,
@@ -505,7 +505,7 @@ begin
   // 初始化 OpenSSL
   try
     LoadOpenSSLCore;
-    if not IsOpenSSLCoreLoaded then
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       WriteLn('ERROR: Failed to load OpenSSL library!');
       WriteLn('Make sure OpenSSL 1.1.x or 3.x is installed and accessible.');

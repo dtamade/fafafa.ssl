@@ -505,7 +505,6 @@ var
   
 procedure LoadOpenSSLCrypto;
 procedure UnloadOpenSSLCrypto;
-function IsOpenSSLCryptoLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmCore) instead';
 
 implementation
 
@@ -554,11 +553,6 @@ procedure UnloadOpenSSLCrypto;
 begin
   // Clear all function pointers using batch unloading
   TOpenSSLLoader.ClearFunctions(CRYPTO_BINDINGS);
-end;
-
-function IsOpenSSLCryptoLoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmCore);  // Depends on core being loaded
 end;
 
 end.

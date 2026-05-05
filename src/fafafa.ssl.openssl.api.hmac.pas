@@ -61,7 +61,6 @@ var
 
 function LoadOpenSSLHMAC: Boolean;
 procedure UnloadOpenSSLHMAC;
-function IsOpenSSLHMACLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmHMAC) instead';
 
 { Helper functions }
 function HMAC_SHA1(const key: Pointer; key_len: Integer; const data: Pointer; data_len: size_t; digest: PByte): PByte;
@@ -131,10 +130,6 @@ begin
   TOpenSSLLoader.SetModuleLoaded(osmHMAC, False);
 end;
 
-function IsOpenSSLHMACLoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmHMAC);
-end;
 
 { Helper functions }
 

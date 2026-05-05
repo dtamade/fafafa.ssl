@@ -4,7 +4,7 @@ program test_load_modules;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.rand;
 
@@ -17,7 +17,7 @@ begin
   
   WriteLn('[1] Loading Core...');
   LoadOpenSSLCore();
-  WriteLn('  Core loaded: ', IsOpenSSLCoreLoaded);
+  WriteLn('  Core loaded: ', TOpenSSLLoader.IsModuleLoaded(osmCore));
   WriteLn;
   
   WriteLn('[2] Loading EVP...');

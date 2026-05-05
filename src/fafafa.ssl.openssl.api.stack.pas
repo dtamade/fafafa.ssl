@@ -167,7 +167,6 @@ var
 // Load and unload functions
 function LoadStackFunctions: Boolean;
 procedure UnloadStackFunctions;
-function IsStackLoaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmStack) instead';
 
 // High-level helper functions
 function CreateStringStack(const Strings: array of string): PSTACK_OF_OPENSSL_STRING;
@@ -314,10 +313,6 @@ begin
   // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
 end;
 
-function IsStackLoaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmStack);
-end;
 
 // High-level helper function implementations
 

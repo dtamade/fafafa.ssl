@@ -228,7 +228,6 @@ var
 // Load and unload functions
 function LoadPKCS7Functions: Boolean;
 procedure UnloadPKCS7Functions;
-function IsPKCS7Loaded: Boolean; deprecated 'Use TOpenSSLLoader.IsModuleLoaded(osmPKCS7) instead';
 
 // High-level helper functions
 function SignData(const AData: TBytes; ASignCert: PX509; APrivKey: PEVP_PKEY; 
@@ -374,10 +373,6 @@ begin
   // 注意: 库卸载由 TOpenSSLLoader 自动处理（在 finalization 部分）
 end;
 
-function IsPKCS7Loaded: Boolean;
-begin
-  Result := TOpenSSLLoader.IsModuleLoaded(osmPKCS7);
-end;
 
 // High-level helper function implementations
 

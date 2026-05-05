@@ -4,7 +4,7 @@ program test_aead_gcm;
 
 uses
   SysUtils,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.base;
@@ -355,7 +355,7 @@ begin
   // 加载 OpenSSL
   Write('加载 OpenSSL 库... ');
   LoadOpenSSLCore;
-  LoadSuccess := IsOpenSSLCoreLoaded;
+  LoadSuccess := TOpenSSLLoader.IsModuleLoaded(osmCore);
   if not LoadSuccess then
   begin
     WriteLn('失败');

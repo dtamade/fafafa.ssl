@@ -81,7 +81,7 @@ type
 implementation
 
 uses
-  fafafa.ssl.openssl.api.core;
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core;
 
 { TTestEncoding }
 
@@ -90,9 +90,9 @@ begin
   inherited SetUp;
   // Check if OpenSSL is available for Base64 tests
   try
-    if not IsOpenSSLCoreLoaded then
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
       LoadOpenSSLCore();
-    FOpenSSLAvailable := IsOpenSSLCoreLoaded;
+    FOpenSSLAvailable := TOpenSSLLoader.IsModuleLoaded(osmCore);
   except
     FOpenSSLAvailable := False;
   end;

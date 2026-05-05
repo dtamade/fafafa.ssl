@@ -5,7 +5,7 @@ program test_cert_utils_ed25519_contract;
 uses
   SysUtils,
   fafafa.ssl.base,
-  fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.loader, fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.cert.utils;
 
@@ -237,9 +237,9 @@ begin
 
   try
     LoadOpenSSLCore;
-    AssertTrue('OpenSSL core loaded', IsOpenSSLCoreLoaded, 'OpenSSL core not loaded');
+    AssertTrue('OpenSSL core loaded', TOpenSSLLoader.IsModuleLoaded(osmCore), 'OpenSSL core not loaded');
 
-    if not IsOpenSSLCoreLoaded then
+    if not TOpenSSLLoader.IsModuleLoaded(osmCore) then
     begin
       MarkSkip('Ed25519 certificate contracts', 'OpenSSL core unavailable');
     end
