@@ -9,6 +9,30 @@
 
 ## [Unreleased]
 
+### 修复
+
+#### 安全加固
+- **API 返回值检查**：`SSL_CTX_set_max_early_data` / `wolfSSL_CTX_set_max_early_data` 返回值未检查，失败时内部状态与字段不一致。现在仅在 API 成功时更新字段，失败抛出 ESSLException。
+- **Replay Store 文件锁加固**：`fmShareDenyNone` → `fmShareDenyWrite`，阻止并发写入者（fileprovider + dirstore）。
+- **MAX_OCSP_RESPONSE_SIZE 去重**：3 个后端本地 `const` 提取到 `fafafa.ssl.secure` 公共常量（1MB 限制）。
+- **FreePascal OCSP 空文件检查**：`LSize = 0` 时提前退出。
+
+#### 接口完整度对齐
+- **移除 MbedTLS/WinSSL 死方法**：11 个存根方法声明和实现无法通过 `Supports()` 访问（class 声明不含对应接口），属于死代码。删除后 `Supports()` 返回值与声明一致。
+- **文档 truth sync**：CHANGELOG "100% 接口完整性" → "接口声明对齐"；后端能力矩阵区分 C 库能力与封装层暴露。
+
+### 变更
+
+#### deprecated API 清理
+- **移除 28 个 IsXxxLoaded() 函数**：所有 deprecated 声明和实现已删除。调用方迁移到 `TOpenSSLLoader.IsModuleLoaded(osmXxx)`。
+- **ISSLContext SNI 方法保留**：`SetServerName`/`GetServerName` 仍标记 deprecated，30+ 处测试有意使用 context 级 SNI 继承，删除推迟到 v2.0 主版本升级。
+
+### 新增
+
+#### 测试加强
+- **WolfSSL 契约测试**：context 和 connection 级契约测试，覆盖 capability、optional interface、SNI/ALPN。无 libwolfssl.so 时自动 SKIP。
+- **编译警告基线**：`compile_all_modules.py` 新增 `--warn-limit` 参数；`run_minimal_ci_gate.sh` 通过 `FAFAFA_WARN_LIMIT` 环境变量传入。当前基线：368 warnings。
+
 ---
 
 ## [1.4.3] - 2026-05-02
