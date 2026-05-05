@@ -26,6 +26,7 @@ TLS13_SIGN_BENCH_SCHEME="rsa_pkcs1_sha256"
 TLS13_SIGN_BENCH_KEY="tests/certificate/test_certs/signer_key.pem"
 TLS13_SIGN_BENCH_TIMEOUT="120"
 TLS13_SIGN_BENCH_JSON_OUT=""
+WARN_LIMIT="${FAFAFA_WARN_LIMIT:-0}"
 
 usage() {
   cat <<'USAGE'
@@ -185,11 +186,17 @@ echo "[INFO] module unit output dir: $MODULE_UNIT_OUTPUT_DIR"
 echo "[INFO] module bin output dir: $MODULE_BIN_OUTPUT_DIR"
 
 if [[ "$WITH_COMPILE" == "true" ]]; then
-  run_project_cmd \
-    "cd '$PROJECT_ROOT' && python3 scripts/compile_all_modules.py --unit-output-dir '$COMPILE_UNIT_OUTPUT_DIR' --fpc-exe '$FPC_EXE'" \
-    python3 scripts/compile_all_modules.py \
-    --unit-output-dir "$COMPILE_UNIT_OUTPUT_DIR" \
+  compile_args=(
+    python3 scripts/compile_all_modules.py
+    --unit-output-dir "$COMPILE_UNIT_OUTPUT_DIR"
     --fpc-exe "$FPC_EXE"
+  )
+  compile_desc="cd '$PROJECT_ROOT' && python3 scripts/compile_all_modules.py --unit-output-dir '$COMPILE_UNIT_OUTPUT_DIR' --fpc-exe '$FPC_EXE'"
+  if [[ "$WARN_LIMIT" -gt 0 ]]; then
+    compile_args+=(--warn-limit "$WARN_LIMIT")
+    compile_desc="$compile_desc --warn-limit $WARN_LIMIT"
+  fi
+  run_project_cmd "$compile_desc" "${compile_args[@]}"
 fi
 
 if [[ "$WITH_MODULES" == "true" ]]; then

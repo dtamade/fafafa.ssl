@@ -177,6 +177,12 @@ def main():
         default="",
         help="指定 FPC 单元根目录（默认读取 FAFAFA_FPC_UNITS_BASE 或 ~/freePascal/...）",
     )
+    parser.add_argument(
+        "--warn-limit",
+        type=int,
+        default=0,
+        help="编译警告数上限；超过此值视为失败（0=不限制，默认: 0）",
+    )
     args = parser.parse_args()
 
     if args.timeout <= 0:
@@ -279,12 +285,22 @@ def main():
         target_rate = 100.0
         
         print()
+        result_code = 0
+
         if success_rate >= target_rate:
             print(f"✅ 编译成功率 {success_rate:.1f}% 达到目标 ({target_rate}%)")
-            return 0
         else:
             print(f"⚠️  编译成功率 {success_rate:.1f}% 未达到目标 ({target_rate}%)")
-            return 1
+            result_code = 1
+
+        if args.warn_limit > 0:
+            if total_warnings <= args.warn_limit:
+                print(f"✅ 编译警告数 {total_warnings} 在限制内 ({args.warn_limit})")
+            else:
+                print(f"⚠️  编译警告数 {total_warnings} 超过限制 ({args.warn_limit})")
+                result_code = 1
+
+        return result_code
     finally:
         if (
             unit_output_dir is not None
