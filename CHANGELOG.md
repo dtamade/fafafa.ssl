@@ -9,9 +9,34 @@
 
 ## [Unreleased]
 
+### 变更
+
+#### 安全加固（Batch 5）
+- **fmShareDenyNone 全量修复**：logging.pas 和 random.pas 的 `fmShareDenyNone` → `fmShareDenyWrite`，全局搜索确认 src/ 目录下无残留。
+- **证书/密钥大小限制**：新增 `MAX_CERTIFICATE_SIZE`（1MB）、`MAX_PRIVATE_KEY_SIZE`（64KB）、`MAX_CA_CHAIN_SIZE`（2MB）公共常量，添加 `GetFileSizeByName()` 工具函数。所有 5 个后端（OpenSSL、WolfSSL、MbedTLS、FreePascal、WinSSL）的 `LoadCertificate`/`LoadPrivateKey`/`LoadCAFile` 均强制执行大小检查。
+- **空文件名验证**：所有后端的文件路径参数为空字符串时抛出 `ESSLInvalidArgument`。
+- **PEM 字符串空值验证**：`LoadCertificatePEM`/`LoadPrivateKeyPEM` 已有空字符串检查保持不变。
+
+#### 版本号更新
+- **1.0.0 → 1.5.0**：接口版本号 10000 → 10500。Minor 版本递增反映 deprecated 公共 API 移除。
+
+#### deprecated 函数移除
+- **移除 6 个便捷函数**：`SSLFactory`、`SSLHelper`、`CreateSSLLibrary`、`CreateSSLContext`、`CreateSSLCertificate`、`CreateSSLConnection` 从 `fafafa.ssl.factory.pas` 和 `fafafa.ssl.pas` 删除。
+- **迁移所有调用方**：tests/ 和 examples/ 中的 91 处 `CreateSSLLibrary` → `TSSLFactory.GetLibraryInstance`、12 处 `CreateSSLContext` → `TSSLFactory.CreateContext`、3 处 `CreateSSLCertificate` → `TSSLFactory.CreateCertificate`。
+- **移除 GSSLFactory/GSSLHelper**：全局变量及其初始化/终结化代码清理。
+
+### 新增
+
+#### MbedTLS 契约测试
+- **test_mbedtls_context_contract**：context 创建、capability、ISSLNativeHandleAccess、确认 ISSLEarlyDataContext/ISSLServerOCSPStaplingContext 不暴露、SNI/ALPN。无 libmbedtls.so 时自动 SKIP。
+- **test_mbedtls_connection_contract**：connection 创建、ISSLClientConnection、确认 ISSLEarlyDataConnection 不暴露。
+
+#### 错误映射契约测试
+- **test_error_mapping_contract**：跨 5 后端验证 ClearError/GetLastError/GetLastErrorString 契约，SSLErrorToString 映射验证。
+
 ### 修复
 
-#### 安全加固
+#### 安全加固（Batch 1-4，延续）
 - **API 返回值检查**：`SSL_CTX_set_max_early_data` / `wolfSSL_CTX_set_max_early_data` 返回值未检查，失败时内部状态与字段不一致。现在仅在 API 成功时更新字段，失败抛出 ESSLException。
 - **Replay Store 文件锁加固**：`fmShareDenyNone` → `fmShareDenyWrite`，阻止并发写入者（fileprovider + dirstore）。
 - **MAX_OCSP_RESPONSE_SIZE 去重**：3 个后端本地 `const` 提取到 `fafafa.ssl.secure` 公共常量（1MB 限制）。
@@ -21,17 +46,13 @@
 - **移除 MbedTLS/WinSSL 死方法**：11 个存根方法声明和实现无法通过 `Supports()` 访问（class 声明不含对应接口），属于死代码。删除后 `Supports()` 返回值与声明一致。
 - **文档 truth sync**：CHANGELOG "100% 接口完整性" → "接口声明对齐"；后端能力矩阵区分 C 库能力与封装层暴露。
 
-### 变更
-
 #### deprecated API 清理
 - **移除 28 个 IsXxxLoaded() 函数**：所有 deprecated 声明和实现已删除。调用方迁移到 `TOpenSSLLoader.IsModuleLoaded(osmXxx)`。
-- **ISSLContext SNI 方法保留**：`SetServerName`/`GetServerName` 仍标记 deprecated，30+ 处测试有意使用 context 级 SNI 继承，删除推迟到 v2.0 主版本升级。
-
-### 新增
+- **ISSLContext SNI 方法保留**：`SetServerName`/`GetServerName` 仍标记 deprecated，context 级 SNI 作为 fallback 仍有语义意义，删除推迟到 v2.0 主版本升级。
 
 #### 测试加强
 - **WolfSSL 契约测试**：context 和 connection 级契约测试，覆盖 capability、optional interface、SNI/ALPN。无 libwolfssl.so 时自动 SKIP。
-- **编译警告基线**：`compile_all_modules.py` 新增 `--warn-limit` 参数；`run_minimal_ci_gate.sh` 通过 `FAFAFA_WARN_LIMIT` 环境变量传入。当前基线：368 warnings。
+- **编译警告基线**：`compile_all_modules.py` 新增 `--warn-limit` 参数；`run_minimal_ci_gate.sh` 通过 `FAFAFA_WARN_LIMIT` 环境变量传入。当前基线：320 warnings。
 
 ---
 
