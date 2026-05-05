@@ -2288,21 +2288,34 @@ begin
 end;
 
 procedure TOpenSSLContext.SetServerEarlyDataPolicy(APolicy: TSSLEarlyDataServerPolicy);
+var
+  LRet: Integer;
 begin
   RequireValidContext('SetServerEarlyDataPolicy');
-  FServerEarlyDataPolicy := APolicy;
 
   // 根据策略设置 SSL_CTX
   if Assigned(SSL_CTX_set_max_early_data) then
   begin
     case APolicy of
       sslEarlyDataServerReject:
-        SSL_CTX_set_max_early_data(FSSLContext, 0);
+        LRet := SSL_CTX_set_max_early_data(FSSLContext, 0);
       sslEarlyDataServerAccept,
       sslEarlyDataServerIssueOnly:
-        SSL_CTX_set_max_early_data(FSSLContext, FServerMaxEarlyDataSize);
+        LRet := SSL_CTX_set_max_early_data(FSSLContext, FServerMaxEarlyDataSize);
+    else
+      LRet := 1; // unknown policy: skip API call
     end;
+
+    if LRet <> 1 then
+      raise ESSLException.CreateWithContext(
+        Format('SSL_CTX_set_max_early_data failed (policy=%d, return=%d)',
+          [Ord(APolicy), LRet]),
+        sslErrGeneral,
+        'SetServerEarlyDataPolicy'
+      );
   end;
+
+  FServerEarlyDataPolicy := APolicy;
 
   TSecurityLog.Debug('OpenSSL', Format('Server early data policy set to %d', [Ord(APolicy)]));
 end;
@@ -2313,16 +2326,26 @@ begin
 end;
 
 procedure TOpenSSLContext.SetServerMaxEarlyDataSize(ASize: Cardinal);
+var
+  LRet: Integer;
 begin
   RequireValidContext('SetServerMaxEarlyDataSize');
-  FServerMaxEarlyDataSize := ASize;
 
   // 如果服务端 early data 已启用，更新 SSL_CTX
   if Assigned(SSL_CTX_set_max_early_data) and
      (FServerEarlyDataPolicy <> sslEarlyDataServerReject) then
   begin
-    SSL_CTX_set_max_early_data(FSSLContext, ASize);
+    LRet := SSL_CTX_set_max_early_data(FSSLContext, ASize);
+    if LRet <> 1 then
+      raise ESSLException.CreateWithContext(
+        Format('SSL_CTX_set_max_early_data failed (size=%d, return=%d)',
+          [ASize, LRet]),
+        sslErrGeneral,
+        'SetServerMaxEarlyDataSize'
+      );
   end;
+
+  FServerMaxEarlyDataSize := ASize;
 
   TSecurityLog.Debug('OpenSSL', Format('Server max early data size set to %d bytes', [ASize]));
 end;
@@ -2362,6 +2385,8 @@ begin
 end;
 
 procedure TOpenSSLContext.LoadServerStapledOCSPResponseFile(const AFileName: string);
+const
+  MAX_OCSP_RESPONSE_SIZE = 1024 * 1024; // 1MB
 var
   LStream: TFileStream;
   LSize: Int64;
@@ -2382,6 +2407,13 @@ begin
       if LSize = 0 then
         raise ESSLInvalidArgument.Create(
           'OCSP response file is empty',
+          sslErrInvalidParam
+        );
+
+      if LSize > MAX_OCSP_RESPONSE_SIZE then
+        raise ESSLInvalidArgument.Create(
+          Format('OCSP response file too large (%d bytes, max %d)',
+            [LSize, MAX_OCSP_RESPONSE_SIZE]),
           sslErrInvalidParam
         );
 

@@ -866,8 +866,11 @@ begin
 end;
 
 procedure TFreePascalContext.LoadServerStapledOCSPResponseFile(const AFileName: string);
+const
+  MAX_OCSP_RESPONSE_SIZE = 1024 * 1024; // 1MB
 var
   LStream: TFileStream;
+  LSize: Int64;
 begin
   if not FileExists(AFileName) then
     raise ESSLFileNotFoundException.CreateWithContext(
@@ -880,6 +883,13 @@ begin
 
   LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyNone);
   try
+    LSize := LStream.Size;
+    if LSize > MAX_OCSP_RESPONSE_SIZE then
+      raise ESSLInvalidArgument.Create(
+        Format('OCSP response file too large (%d bytes, max %d)',
+          [LSize, MAX_OCSP_RESPONSE_SIZE]),
+        sslErrInvalidParam
+      );
     SetServerStapledOCSPResponse(ReadStreamToBytes(LStream));
   finally
     LStream.Free;
