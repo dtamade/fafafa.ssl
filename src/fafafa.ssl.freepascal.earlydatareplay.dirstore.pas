@@ -337,7 +337,7 @@ begin
   for LAttempt := 1 to 2 do
   begin
     try
-      ALockStream := TFileStream.Create(LLockFileName, fmOpenReadWrite or fmShareDenyNone);
+      ALockStream := TFileStream.Create(LLockFileName, fmOpenReadWrite or fmShareDenyWrite);
       Exit(True);
     except
       if LAttempt = 2 then

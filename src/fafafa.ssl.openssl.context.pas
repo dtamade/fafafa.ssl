@@ -37,7 +37,8 @@ uses
   fafafa.ssl.pkcs11.uri,
   fafafa.ssl.pkcs11.types,
   fafafa.ssl.pkcs11.backend,
-  fafafa.ssl.cert.pinning;
+  fafafa.ssl.cert.pinning,
+  fafafa.ssl.secure;
 
 type
   { TOpenSSLContext - OpenSSL 上下文类 }
@@ -2384,8 +2385,6 @@ begin
 end;
 
 procedure TOpenSSLContext.LoadServerStapledOCSPResponseFile(const AFileName: string);
-const
-  MAX_OCSP_RESPONSE_SIZE = 1024 * 1024; // 1MB
 var
   LStream: TFileStream;
   LSize: Int64;

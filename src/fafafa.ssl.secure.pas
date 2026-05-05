@@ -104,6 +104,11 @@ function SecureCompareSecure(const A, B: TSecureBytes): Boolean;
 { Factory }
 function CreateSecureKeyStore: ISecureKeyStore;
 
+const
+  { Maximum allowed size for OCSP response files (1 MB).
+    Enforced by LoadServerStapledOCSPResponseFile across all backends. }
+  MAX_OCSP_RESPONSE_SIZE = 1024 * 1024;
+
 implementation
 
 uses

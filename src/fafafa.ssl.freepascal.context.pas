@@ -17,7 +17,8 @@ uses
   fafafa.ssl.logging,
   fafafa.ssl.freepascal.context.material,
   fafafa.ssl.freepascal.earlydatareplay,
-  fafafa.ssl.freepascal.session;
+  fafafa.ssl.freepascal.session,
+  fafafa.ssl.secure;
 
 type
   TFreePascalPin = record
@@ -866,8 +867,6 @@ begin
 end;
 
 procedure TFreePascalContext.LoadServerStapledOCSPResponseFile(const AFileName: string);
-const
-  MAX_OCSP_RESPONSE_SIZE = 1024 * 1024; // 1MB
 var
   LStream: TFileStream;
   LSize: Int64;
@@ -881,7 +880,7 @@ begin
       sslFreePascal
     );
 
-  LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyNone);
+  LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try
     LSize := LStream.Size;
     if LSize = 0 then

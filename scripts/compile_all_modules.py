@@ -214,6 +214,8 @@ def main():
         success_count = 0
         failed_count = 0
         failed_files = []
+        total_warnings = 0
+        warning_categories = {}  # category -> count
         
         # 逐个编译
         for i, pas_file in enumerate(compile_files, 1):
@@ -232,6 +234,13 @@ def main():
             if success:
                 print("✓ 成功")
                 success_count += 1
+                # 统计警告
+                warn_lines = [l for l in (stdout + stderr).split('\n') if 'Warning:' in l]
+                total_warnings += len(warn_lines)
+                for wl in warn_lines:
+                    # 提取警告类型（如 "Symbol deprecated", "Function result variable" 等）
+                    cat = wl.split('Warning:', 1)[-1].strip().split()[0] if 'Warning:' in wl else 'other'
+                    warning_categories[cat] = warning_categories.get(cat, 0) + 1
             else:
                 print("✗ 失败")
                 failed_count += 1
@@ -245,6 +254,11 @@ def main():
         print(f"总文件数: {len(compile_files)}")
         print(f"编译成功: {success_count} ({success_count/len(compile_files)*100:.1f}%)")
         print(f"编译失败: {failed_count} ({failed_count/len(compile_files)*100:.1f}%)")
+        print(f"编译警告: {total_warnings}")
+        if warning_categories:
+            top_warnings = sorted(warning_categories.items(), key=lambda x: -x[1])[:5]
+            for cat, cnt in top_warnings:
+                print(f"  - {cat}: {cnt}")
         print()
         
         # 显示失败文件

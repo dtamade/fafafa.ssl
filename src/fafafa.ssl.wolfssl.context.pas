@@ -23,7 +23,8 @@ uses
   fafafa.ssl.exceptions,
   fafafa.ssl.wolfssl.base,
   fafafa.ssl.wolfssl.native_handle,
-  fafafa.ssl.wolfssl.api;
+  fafafa.ssl.wolfssl.api,
+  fafafa.ssl.secure;
 
 type
   { 证书固定记录 }
@@ -1108,8 +1109,6 @@ begin
 end;
 
 procedure TWolfSSLContext.LoadServerStapledOCSPResponseFile(const AFileName: string);
-const
-  MAX_OCSP_RESPONSE_SIZE = 1024 * 1024; // 1MB
 var
   LStream: TFileStream;
   LSize: Int64;
