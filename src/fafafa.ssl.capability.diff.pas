@@ -120,6 +120,7 @@ begin
     Result := 'False';
 end;
 
+{$WARN 6018 OFF}
 function SupportLevelToStr(ALevel: TSSLFeatureSupportLevel): string;
 begin
   case ALevel of
@@ -131,7 +132,9 @@ begin
     Result := 'Unknown';
   end;
 end;
+{$WARN 6018 ON}
 
+{$WARN 6018 OFF}
 function ImplTypeToStr(AType: TSSLBackendImplType): string;
 begin
   case AType of
@@ -143,6 +146,7 @@ begin
     Result := 'Unknown';
   end;
 end;
+{$WARN 6018 ON}
 
 { CompareCapabilities }
 

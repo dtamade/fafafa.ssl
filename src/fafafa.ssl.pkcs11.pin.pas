@@ -144,6 +144,7 @@ begin
       CKR_PIN_INVALID);
 end;
 
+{$WARN 6018 OFF}
 class function TPKCS11PINManager.GetPIN(
   AMethod: TPKCS11PINMethod;
   const AValue: string;
@@ -217,6 +218,7 @@ begin
   if Result <> '' then
     ValidatePIN(Result);
 end;
+{$WARN 6018 ON}
 
 class function TPKCS11PINManager.ValidatePIN(const APIN: string; AMinLength: Integer; AMaxLength: Integer): Boolean;
 begin

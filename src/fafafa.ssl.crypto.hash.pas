@@ -11,6 +11,7 @@ unit fafafa.ssl.crypto.hash;
 {$WARN 5024 off}  // Parameter not used
 {$WARN 5025 off}  // Local variable not used
 { 禁用不可达代码警告 - case 语句的 else 分支是防御性代码 }
+{ 注意：此指令为文件级，因 FPC 6018 在函数级解析阶段才触发 }
 {$WARN 6018 off}  // Unreachable code
 
 {

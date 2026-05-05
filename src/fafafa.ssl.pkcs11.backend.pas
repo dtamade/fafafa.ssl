@@ -179,6 +179,7 @@ begin
       'Ensure OpenSSL 3.x (with Provider support) or OpenSSL 1.1.1 (with ENGINE support) is installed.');
 end;
 
+{$WARN 6018 OFF}
 class function TPKCS11BackendFactory.IsBackendAvailable(ABackendType: TPKCS11BackendType): Boolean;
 begin
   case ABackendType of
@@ -200,6 +201,7 @@ begin
     Result := False;
   end;
 end;
+{$WARN 6018 ON}
 
 { TBasePKCS11Backend }
 

@@ -738,6 +738,8 @@ begin
         if (Result = nil) and Assigned(DTLS_server_method) then
           Result := DTLS_server_method();
       end;
+  else
+    Result := nil;
   end;
 end;
 
@@ -828,6 +830,8 @@ begin
     sslProtocolDTLS10,
     sslProtocolDTLS12:
       Result := RuntimeProbeProtocolSupport(AProtocol, FVersionNumber);
+  else
+    Result := False;
   end;
 end;
 function TOpenSSLLibrary.IsCipherSupported(const ACipherName: string): Boolean;
@@ -874,6 +878,7 @@ begin
 end;
 
 { 类型安全版本（Phase 1.3 - Rust质量标准） }
+{$WARN 6018 OFF}
 function TOpenSSLLibrary.IsFeatureSupported(AFeature: TSSLFeature): Boolean;
 begin
   if not FInitialized then
@@ -913,6 +918,7 @@ begin
   InternalLog(sslLogDebug, Format('Feature support check (type-safe): %d = %s',
     [Ord(AFeature), BoolToStr(Result, True)]));
 end;
+{$WARN 6018 ON}
 function TOpenSSLLibrary.GetCapabilities: TSSLBackendCapabilities;
 var
   LTLS13Ready: Boolean;

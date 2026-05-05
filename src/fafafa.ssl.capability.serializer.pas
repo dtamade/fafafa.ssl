@@ -226,6 +226,8 @@ begin
   end;
 end;
 
+{ 6018 抑制范围含嵌套函数 FeatureSupportLevelToStr 等 — FPC 限制，函数级指令无法缩小到单个 case }
+{$WARN 6018 OFF}
 function CapabilitiesToJSON(const ACaps: TSSLBackendCapabilities;
                             const APretty: Boolean = True): string;
 var
@@ -333,6 +335,7 @@ begin
 
   Result := Result + '}';
 end;
+{$WARN 6018 ON}
 
 function JSONToCapabilities(const AJSON: string): TSSLBackendCapabilities;
 var
@@ -593,6 +596,8 @@ end;
 { XML 序列化 }
 { ============================================================================ }
 
+{ 6018 抑制范围含嵌套函数 — 同 CapabilitiesToJSON }
+{$WARN 6018 OFF}
 function CapabilitiesToXML(const ACaps: TSSLBackendCapabilities;
                           const APretty: Boolean = True): string;
 var
@@ -722,6 +727,7 @@ begin
 
   Result := Result + '</SSLBackendCapabilities>';
 end;
+{$WARN 6018 ON}
 
 function XMLToCapabilities(const AXML: string): TSSLBackendCapabilities;
 var

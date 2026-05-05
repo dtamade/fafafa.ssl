@@ -450,6 +450,8 @@ begin
       raise EPKCS11Exception.Create(
         'Interactive PIN is unsupported in TPKCS11Config.GetPIN; use TPKCS11PINManager',
         CKR_FUNCTION_NOT_SUPPORTED);
+  else
+    Result := '';
   end;
 end;
 

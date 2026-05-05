@@ -523,6 +523,7 @@ end;
 
 { Helper Functions }
 
+{$WARN 6018 OFF}
 function SSLVersionToString(AVersion: TSSLVersion): string;
 begin
   case AVersion of
@@ -534,6 +535,7 @@ begin
     Result := 'Unknown';
   end;
 end;
+{$WARN 6018 ON}
 
 function StringToSSLVersion(const AStr: string): TSSLVersion;
 var
@@ -552,6 +554,7 @@ begin
     raise Exception.CreateFmt('Unknown SSL version: %s', [AStr]);
 end;
 
+{$WARN 6018 OFF}
 function KeyTypeToString(AType: TKeyType): string;
 begin
   case AType of
@@ -566,7 +569,9 @@ begin
     Result := 'Unknown';
   end;
 end;
+{$WARN 6018 ON}
 
+{$WARN 6018 OFF}
 function CertificateFormatToString(AFormat: TCertificateFormat): string;
 begin
   case AFormat of
@@ -578,7 +583,9 @@ begin
     Result := 'Unknown';
   end;
 end;
+{$WARN 6018 ON}
 
+{$WARN 6018 OFF}
 function CipherModeToString(AMode: TCipherMode): string;
 begin
   case AMode of
@@ -591,7 +598,9 @@ begin
     Result := 'Unknown';
   end;
 end;
+{$WARN 6018 ON}
 
+{$WARN 6018 OFF}
 function EllipticCurveToNID(ACurve: TEllipticCurve): Integer;
 begin
   case ACurve of
@@ -607,7 +616,9 @@ begin
     Result := 0;
   end;
 end;
+{$WARN 6018 ON}
 
+{$WARN 6018 OFF}
 function EllipticCurveToString(ACurve: TEllipticCurve): string;
 begin
   case ACurve of
@@ -623,5 +634,6 @@ begin
     Result := 'Unknown';
   end;
 end;
+{$WARN 6018 ON}
 
 end.

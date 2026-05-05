@@ -731,6 +731,7 @@ begin
       Result[I] := nil;
 end;
 
+{$WARN 6018 OFF}
 function OCSPStaplingStateToString(
   AStatus: TOCSPStaplingStatus;
   const AErrorMessage: string
@@ -758,6 +759,7 @@ begin
   if Trim(AErrorMessage) <> '' then
     Result := Result + ': ' + Trim(AErrorMessage);
 end;
+{$WARN 6018 ON}
 
 function BuildTLS13EncryptedExtensionsHandshake(AAcceptEarlyData: Boolean): TBytes;
 var

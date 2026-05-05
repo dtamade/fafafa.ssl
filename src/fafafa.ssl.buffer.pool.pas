@@ -488,6 +488,8 @@ begin
       end;
       bcMedium:
         Result := FLargePool.Acquire;
+    else
+      ;
     end;
   end;
 

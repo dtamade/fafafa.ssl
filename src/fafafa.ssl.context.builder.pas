@@ -532,6 +532,7 @@ begin
     Exclude(FOptions, ssoRequireCertificateTransparency);
 end;
 
+{$WARN 6018 OFF}
 function PKCS11PINMethodToString(AMethod: TPKCS11PINMethod): string;
 begin
   case AMethod of
@@ -551,6 +552,7 @@ begin
     Result := 'unknown';
   end;
 end;
+{$WARN 6018 ON}
 
 function UnsupportedBuilderPKCS11PINMethodMessage(AMethod: TPKCS11PINMethod): string;
 begin
@@ -893,6 +895,8 @@ begin
       FOCSPStaplingRequired := True;
     ssoRequireCertificateTransparency:
       FCertificateTransparencyRequired := True;
+  else
+    ;
   end;
 
   SyncOCSPStaplingOptions;
@@ -922,6 +926,8 @@ begin
       FOCSPStaplingRequired := False;
     ssoRequireCertificateTransparency:
       FCertificateTransparencyRequired := False;
+  else
+    ;
   end;
 
   SyncOCSPStaplingOptions;

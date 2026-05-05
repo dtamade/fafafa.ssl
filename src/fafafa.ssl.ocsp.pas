@@ -1403,6 +1403,7 @@ begin
   Result := True;
 end;
 
+{$WARN 6018 OFF}
 function OCSPStatusToString(AStatus: TOCSPCertStatus): string;
 begin
   case AStatus of
@@ -1413,7 +1414,9 @@ begin
     Result := 'Invalid';
   end;
 end;
+{$WARN 6018 ON}
 
+{$WARN 6018 OFF}
 function OCSPResponseStatusToString(AStatus: TOCSPResponseStatus): string;
 begin
   case AStatus of
@@ -1427,5 +1430,6 @@ begin
     Result := 'Unknown';
   end;
 end;
+{$WARN 6018 ON}
 
 end.

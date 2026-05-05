@@ -54,6 +54,15 @@
 - **WolfSSL 契约测试**：context 和 connection 级契约测试，覆盖 capability、optional interface、SNI/ALPN。无 libwolfssl.so 时自动 SKIP。
 - **编译警告基线**：`compile_all_modules.py` 新增 `--warn-limit` 参数；`run_minimal_ci_gate.sh` 通过 `FAFAFA_WARN_LIMIT` 环境变量传入。当前基线：320 warnings。
 
+#### 编译警告削减（Batch 6）
+- **FPC 5093 修复**（Function result uninit）：~47 个源文件，在返回 managed 类型（TBytes、interface、string、dynamic array）的函数开头添加 `Result := nil;` / `Result := '';` / `Result := Default(T)`。警告从 163 处降至 152 处。
+- **FPC 6018 修复**（Unreachable code）：13 个源文件，对 case-else 防御性分支添加 `{$WARN 6018 OFF/ON}` 包裹。发现 FPC 要求此指令放在函数声明前才生效。28 处全部消除。
+- **FPC 6020 修复**（Case not handle all cases）：8 个文件添加 `else` 分支返回合理默认值。12 处全部消除。
+- **警告总量**：368 → 257（减少 111 处，降幅 30%）。
+
+#### 跨后端 GetCapabilities 契约测试
+- **test_capabilities_contract**：验证所有可用后端的 BackendType 一致性、MaxTLS>=TLS12、Min<=Max、SNI/ALPN/ECDHE 支持、BackendVersion 非空且非占位符、BackendImplType 枚举范围、CompatibilityLevel>0、Feature support level 有效。WinSSL 在 Windows 条件编译下纳入检查集合。运行结果：43/43 passed。
+
 ---
 
 ## [1.4.3] - 2026-05-02

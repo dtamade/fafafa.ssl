@@ -431,6 +431,7 @@ begin
       (LCipher = 'CHACHA20-POLY1305');
 end;
 
+{$WARN 6018 OFF}
 function TMbedTLSLibrary.IsFeatureSupported(AFeature: TSSLFeature): Boolean;
 begin
   if not FInitialized then
@@ -448,6 +449,7 @@ begin
     Result := False;
   end;
 end;
+{$WARN 6018 ON}
 
 function TMbedTLSLibrary.GetCapabilities: TSSLBackendCapabilities;
 begin

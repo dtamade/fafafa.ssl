@@ -343,6 +343,8 @@ begin
     sslProtocolTLS12: Result := True;
     sslProtocolTLS13: Result := FCapabilities.HasTLS13;
     sslProtocolDTLS10, sslProtocolDTLS12: Result := False;  // 暂不支持
+  else
+    Result := False;
   end;
 end;
 
@@ -374,6 +376,7 @@ begin
       (LCipher = 'CHACHA20-POLY1305');
 end;
 
+{$WARN 6018 OFF}
 function TWolfSSLLibrary.IsFeatureSupported(AFeature: TSSLFeature): Boolean;
 begin
   if not FInitialized then
@@ -391,6 +394,7 @@ begin
     Result := False;
   end;
 end;
+{$WARN 6018 ON}
 
 function TWolfSSLLibrary.GetCapabilities: TSSLBackendCapabilities;
 begin

@@ -101,6 +101,7 @@ begin
   end;
 end;
 
+{$WARN 6018 OFF}
 function GetModuleName(AModule: TOpenSSLModule): string;
 begin
   case AModule of
@@ -157,6 +158,7 @@ begin
     Result := 'Unknown';
   end;
 end;
+{$WARN 6018 ON}
 
 function GetModuleDependencyDescription(AModule: TOpenSSLModule): string;
 var

@@ -757,6 +757,7 @@ begin
     Result[I] := StrToInt('$' + Copy(CleanHex, I * 2 + 1, 2));
 end;
 
+{$WARN 6018 OFF}
 function CRLRevokeReasonToString(AReason: TCRLRevokeReason): string;
 begin
   case AReason of
@@ -774,6 +775,7 @@ begin
     Result := 'Unknown';
   end;
 end;
+{$WARN 6018 ON}
 
 // Base64 解码辅助函数 (从 fafafa.ssl.pem 简化)
 function DecodeBase64(const AInput: string): TBytes;

@@ -860,6 +860,8 @@ begin
   case AHashType of
     sslHashSHA1: Result := GetFingerprintSHA1;
     sslHashSHA256: Result := GetFingerprintSHA256;
+  else
+    Result := '';
   end;
 end;
 
