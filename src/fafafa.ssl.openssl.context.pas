@@ -2296,14 +2296,13 @@ begin
   // 根据策略设置 SSL_CTX
   if Assigned(SSL_CTX_set_max_early_data) then
   begin
+    LRet := 1;
     case APolicy of
       sslEarlyDataServerReject:
         LRet := SSL_CTX_set_max_early_data(FSSLContext, 0);
       sslEarlyDataServerAccept,
       sslEarlyDataServerIssueOnly:
         LRet := SSL_CTX_set_max_early_data(FSSLContext, FServerMaxEarlyDataSize);
-    else
-      LRet := 1; // unknown policy: skip API call
     end;
 
     if LRet <> 1 then

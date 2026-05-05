@@ -1028,14 +1028,13 @@ begin
   // 根据策略设置 WolfSSL
   if Assigned(wolfSSL_CTX_set_max_early_data) then
   begin
+    LRet := 1;
     case APolicy of
       sslEarlyDataServerReject:
         LRet := wolfSSL_CTX_set_max_early_data(FWolfSSLCtx, 0);
       sslEarlyDataServerAccept,
       sslEarlyDataServerIssueOnly:
         LRet := wolfSSL_CTX_set_max_early_data(FWolfSSLCtx, FServerMaxEarlyDataSize);
-    else
-      LRet := 1; // unknown policy: skip API call
     end;
 
     if LRet <> 1 then

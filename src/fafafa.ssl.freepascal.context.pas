@@ -884,6 +884,11 @@ begin
   LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyNone);
   try
     LSize := LStream.Size;
+    if LSize = 0 then
+      raise ESSLInvalidArgument.Create(
+        'OCSP response file is empty',
+        sslErrInvalidParam
+      );
     if LSize > MAX_OCSP_RESPONSE_SIZE then
       raise ESSLInvalidArgument.Create(
         Format('OCSP response file too large (%d bytes, max %d)',
