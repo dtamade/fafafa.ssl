@@ -78,7 +78,7 @@ begin
   WriteLn('---------------------------------------------------');
 
   // Arrange: Create OpenSSL library and client context
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) then
   begin
     SkipOpenSSLTestGroup('OpenSSL prerequisite', scDependency, 'library unavailable');
@@ -118,7 +118,7 @@ begin
   WriteLn('-------------------------------------------------------');
 
   // Arrange: Create OpenSSL library and server context
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) then
   begin
     SkipOpenSSLTestGroup('OpenSSL prerequisite', scDependency, 'library unavailable');
@@ -150,7 +150,7 @@ begin
   WriteLn('--------------------------------------------------------');
 
   // Arrange: Create OpenSSL library and client context
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) then
   begin
     SkipOpenSSLTestGroup('OpenSSL prerequisite', scDependency, 'library unavailable');
@@ -196,7 +196,7 @@ begin
   WriteLn('  Note: This test requires network connectivity and working system CAs');
 
   // Arrange: Create OpenSSL library and client context
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) then
   begin
     SkipOpenSSLTestGroup('OpenSSL prerequisite', scDependency, 'library unavailable');
@@ -236,7 +236,7 @@ begin
   WriteLn('--------------------------------------------------------------');
 
   // Arrange: Create OpenSSL library
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) then
   begin
     SkipOpenSSLTestGroup('OpenSSL prerequisite', scDependency, 'library unavailable');

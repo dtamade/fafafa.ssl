@@ -354,7 +354,7 @@ begin
   if FileExists(FFileName) then
   begin
     try
-      with TFileStream.Create(FFileName, fmOpenRead or fmShareDenyNone) do
+      with TFileStream.Create(FFileName, fmOpenRead or fmShareDenyWrite) do
       try
         FCurrentSize := Size;
       finally

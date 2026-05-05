@@ -8,7 +8,7 @@ uses
   fafafa.ssl.factory,
   fafafa.ssl,
   fafafa.ssl.cert,
-  fafafa.ssl.cert.builder,
+  fafafa.ssl.openssl.cert.builder,
   fafafa.ssl.cert.pinning,
   fafafa.ssl.crypto.utils,
   fafafa.ssl.openssl.base,

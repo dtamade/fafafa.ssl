@@ -13,7 +13,8 @@ program test_ocsp_crl_interface;
 
 uses
   SysUtils,
-  fafafa.ssl;
+  fafafa.ssl,
+  fafafa.ssl.factory;
 
 var
   LContext: ISSLContext;
@@ -91,7 +92,7 @@ procedure TestContextSetCertVerifyFlags;
 begin
   WriteLn('Testing ISSLContext.SetCertVerifyFlags...');
   try
-    LContext := CreateSSLContext(sslCtxClient);
+    LContext := TSSLFactory.CreateContext(sslCtxClient);
     if LContext <> nil then
     begin
       // Set verify flags
@@ -112,7 +113,7 @@ begin
         TestFail('GetCertVerifyFlags', 'CRL flag not set');
     end
     else
-      TestFail('CreateSSLContext', 'Returned nil');
+      TestFail('TSSLFactory.CreateContext', 'Returned nil');
   except
     on E: Exception do
       TestFail('Context SetCertVerifyFlags', E.Message);

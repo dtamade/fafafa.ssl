@@ -302,7 +302,7 @@ begin
   WriteLn('========================================');
 
   try
-    GLib := CreateSSLLibrary(sslOpenSSL);
+    GLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
     if (not Assigned(GLib)) or (not GLib.Initialize) then
       MarkSkip('openssl context bio contract', 'failed to initialize OpenSSL library');
 

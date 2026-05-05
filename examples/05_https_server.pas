@@ -219,7 +219,7 @@ begin
   
   // 初始化 SSL 库
   WriteLn('  初始化 SSL 库...');
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not LLib.Initialize then
   begin
     WriteLn('  ✗ 无法初始化 SSL 库');

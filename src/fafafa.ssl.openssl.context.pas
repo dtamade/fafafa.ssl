@@ -1215,8 +1215,22 @@ end;
 procedure TOpenSSLContext.LoadCertificate(const AFileName: string);
 var
   FileNameA: AnsiString;
+  LSize: Int64;
 begin
   RequireValidContext('TOpenSSLContext.LoadCertificate');
+
+  if AFileName = '' then
+    RaiseInvalidParameter('AFileName');
+
+  if not FileExists(AFileName) then
+    RaiseSSLCertError(Format('Certificate file not found: %s', [AFileName]),
+      'TOpenSSLContext.LoadCertificate');
+
+  LSize := GetFileSizeByName(AFileName);
+  if LSize > MAX_CERTIFICATE_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Certificate file exceeds maximum allowed size (%d > %d bytes): %s',
+      [LSize, MAX_CERTIFICATE_SIZE, AFileName]);
 
   if not Assigned(SSL_CTX_use_certificate_file) then
   begin
@@ -1261,7 +1275,17 @@ begin
   Data := nil;  // P3-4: 显式初始化管理类型
   RequireValidContext('TOpenSSLContext.LoadCertificate');
 
+  if AStream = nil then
+    RaiseInvalidParameter('AStream');
+
   Size := AStream.Size - AStream.Position;
+  if Size <= 0 then
+    RaiseInvalidParameter('Stream is empty');
+  if Size > MAX_CERTIFICATE_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Certificate stream exceeds maximum allowed size (%d > %d bytes)',
+      [Size, MAX_CERTIFICATE_SIZE]);
+
   SetLength(Data, Size);
   AStream.Read(Data[0], Size);
 
@@ -1315,8 +1339,12 @@ var
   PassA: AnsiString;
   BIO: PBIO;
   PKey: PEVP_PKEY;
+  LSize: Int64;
 begin
   RequireValidContext('TOpenSSLContext.LoadPrivateKey');
+
+  if AFileName = '' then
+    RaiseInvalidParameter('AFileName');
 
   // Check if this is a PKCS#11 URI
   if TPKCS11URIParser.IsPKCS11URI(AFileName) then
@@ -1324,6 +1352,16 @@ begin
     LoadPrivateKeyFromPKCS11(AFileName, APassword);
     Exit;
   end;
+
+  if not FileExists(AFileName) then
+    RaiseSSLCertError(Format('Private key file not found: %s', [AFileName]),
+      'TOpenSSLContext.LoadPrivateKey');
+
+  LSize := GetFileSizeByName(AFileName);
+  if LSize > MAX_PRIVATE_KEY_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Private key file exceeds maximum allowed size (%d > %d bytes): %s',
+      [LSize, MAX_PRIVATE_KEY_SIZE, AFileName]);
 
   FileNameA := AnsiString(AFileName);
 
@@ -1445,6 +1483,11 @@ begin
 
   if AStream = nil then
     RaiseInvalidParameter('Stream');
+
+  if AStream.Size - AStream.Position > MAX_PRIVATE_KEY_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Private key stream exceeds maximum allowed size (%d > %d bytes)',
+      [AStream.Size - AStream.Position, MAX_PRIVATE_KEY_SIZE]);
 
   Data := ReadPrivateKeyStreamBytes(AStream);
   if not ParsePrivateKeyBuffer(Data, APassword, PKey) then
@@ -1692,8 +1735,26 @@ end;
 procedure TOpenSSLContext.LoadCAFile(const AFileName: string);
 var
   FileNameA: AnsiString;
+  LSize: Int64;
 begin
   RequireValidContext('TOpenSSLContext.LoadCAFile');
+
+  if AFileName = '' then
+    RaiseInvalidParameter('AFileName');
+
+  if not FileExists(AFileName) then
+    raise ESSLCertificateLoadException.CreateWithContext(
+      Format('CA file not found: %s', [AFileName]),
+      sslErrLoadFailed,
+      'TOpenSSLContext.LoadCAFile',
+      0,
+      sslOpenSSL);
+
+  LSize := GetFileSizeByName(AFileName);
+  if LSize > MAX_CA_CHAIN_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'CA file exceeds maximum allowed size (%d > %d bytes): %s',
+      [LSize, MAX_CA_CHAIN_SIZE, AFileName]);
 
   if not Assigned(SSL_CTX_load_verify_locations) then
   begin

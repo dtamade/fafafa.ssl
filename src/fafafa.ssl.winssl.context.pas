@@ -22,6 +22,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.errors,      // 添加：RaiseInvalidParameter
   fafafa.ssl.exceptions,  // 新增：类型化异常
+  fafafa.ssl.secure,      // 安全常量与 GetFileSizeByName
   fafafa.ssl.logging,     // P1: 废弃协议警告
   fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.api,
@@ -522,14 +523,24 @@ end;
 procedure TWinSSLContext.LoadCertificate(const AFileName: string);
 var
   LFileStream: TFileStream;
+  LSize: Int64;
 begin
+  if AFileName = '' then
+    RaiseInvalidParameter('AFileName');
+
   if not FileExists(AFileName) then
     raise ESSLFileNotFoundException.CreateWithContext(
       Format('Certificate file not found: %s', [AFileName]),
       sslErrLoadFailed,
       'TWinSSLContext.LoadCertificate'
     );
-  
+
+  LSize := GetFileSizeByName(AFileName);
+  if LSize > MAX_CERTIFICATE_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Certificate file exceeds maximum allowed size (%d > %d bytes): %s',
+      [LSize, MAX_CERTIFICATE_SIZE, AFileName]);
+
   LFileStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try
     LoadCertificate(LFileStream);
@@ -661,14 +672,24 @@ end;
 procedure TWinSSLContext.LoadPrivateKey(const AFileName: string; const APassword: string);
 var
   LFileStream: TFileStream;
+  LSize: Int64;
 begin
+  if AFileName = '' then
+    RaiseInvalidParameter('AFileName');
+
   if not FileExists(AFileName) then
     raise ESSLFileNotFoundException.CreateWithContext(
       Format('Private key file not found: %s', [AFileName]),
       sslErrLoadFailed,
       'TWinSSLContext.LoadPrivateKey'
     );
-  
+
+  LSize := GetFileSizeByName(AFileName);
+  if LSize > MAX_PRIVATE_KEY_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Private key file exceeds maximum allowed size (%d > %d bytes): %s',
+      [LSize, MAX_PRIVATE_KEY_SIZE, AFileName]);
+
   LFileStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try
     LoadPrivateKey(LFileStream, APassword);
@@ -834,14 +855,24 @@ var
   LFileStream: TFileStream;
   LCertData: TBytes;
   LSize: Int64;
+  LFileSize: Int64;
   LCertContext: PCCERT_CONTEXT;
 begin
+  if AFileName = '' then
+    RaiseInvalidParameter('AFileName');
+
   if not FileExists(AFileName) then
     raise ESSLFileNotFoundException.CreateWithContext(
       Format('CA file not found: %s', [AFileName]),
       sslErrLoadFailed,
       'TWinSSLContext.LoadCAFile'
     );
+
+  LFileSize := GetFileSizeByName(AFileName);
+  if LFileSize > MAX_CA_CHAIN_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'CA file exceeds maximum allowed size (%d > %d bytes): %s',
+      [LFileSize, MAX_CA_CHAIN_SIZE, AFileName]);
 
   LFileStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try

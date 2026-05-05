@@ -16,7 +16,7 @@
       LConnection: ISSLConnection;
     begin
       // 创建客户端上下文
-      LContext := CreateSSLContext(sslCtxClient);
+      LContext := TSSLFactory.CreateContext(sslCtxClient);
       
       // 配置上下文
       LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
@@ -213,24 +213,8 @@ const
   ocspError = fafafa.ssl.cert.advanced.ocspError;
 
 // ============================================================================
-// 重新导出全局函数
+// 重新导出辅助函数
 // ============================================================================
-
-// 工厂函数
-function SSLFactory: TSSLFactory;
-  deprecated 'Use TSSLFactory class methods directly (no instance needed)';
-function SSLHelper: TSSLHelper;
-  deprecated 'Use TSSLHelper class methods directly (no instance needed)';
-
-// 快速创建函数
-function CreateSSLLibrary(ALibType: TSSLLibraryType = sslAutoDetect): ISSLLibrary;
-  deprecated 'Use TSSLFactory.GetLibraryInstance(...)';
-function CreateSSLContext(AType: TSSLContextType = sslCtxClient): ISSLContext;
-  deprecated 'Use TSSLFactory.CreateContext(...) or fafafa.ssl.context.builder';
-function CreateSSLCertificate: ISSLCertificate;
-  deprecated 'Use TSSLFactory.CreateCertificate(...)';
-function CreateSSLConnection(AContext: ISSLContext; ASocket: THandle): ISSLConnection;
-  deprecated 'Use AContext.CreateConnection(...) and per-connection SNI via ISSLClientConnection';
 
 // 辅助函数
 function SSLErrorToString(AError: TSSLErrorCode): string;
@@ -277,37 +261,6 @@ uses
   , fafafa.ssl.wolfssl.lib
   {$ENDIF}
   ;
-
-// 从 fafafa.ssl.factory 导入实现
-function SSLFactory: TSSLFactory;
-begin
-  Result := fafafa.ssl.factory.SSLFactory;
-end;
-
-function SSLHelper: TSSLHelper;
-begin
-  Result := fafafa.ssl.factory.SSLHelper;
-end;
-
-function CreateSSLLibrary(ALibType: TSSLLibraryType): ISSLLibrary;
-begin
-  Result := fafafa.ssl.factory.CreateSSLLibrary(ALibType);
-end;
-
-function CreateSSLContext(AType: TSSLContextType): ISSLContext;
-begin
-  Result := fafafa.ssl.factory.CreateSSLContext(AType);
-end;
-
-function CreateSSLCertificate: ISSLCertificate;
-begin
-  Result := fafafa.ssl.factory.CreateSSLCertificate;
-end;
-
-function CreateSSLConnection(AContext: ISSLContext; ASocket: THandle): ISSLConnection;
-begin
-  Result := fafafa.ssl.factory.CreateSSLConnection(AContext, ASocket);
-end;
 
 // 从 fafafa.ssl.base 导入实现
 function SSLErrorToString(AError: TSSLErrorCode): string;

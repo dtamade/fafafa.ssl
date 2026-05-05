@@ -11,7 +11,6 @@ uses
   fafafa.ssl;
 
 var
-  LFactory: TSSLFactory;
   LContext: ISSLContext;
   LConnection: ISSLConnection;
   LConfig: TSSLConfig;
@@ -39,11 +38,11 @@ procedure Test1_FactoryCreation;
 begin
   WriteLn('Test 1: Factory Creation');
   try
-    LFactory := SSLFactory;
-    if LFactory <> nil then
-      TestPassed('Factory creation')
+    // TSSLFactory is a class with class methods - no instance needed
+    if TSSLFactory.GetAvailableLibraries <> [] then
+      TestPassed('Factory creation (TSSLFactory available)')
     else
-      TestFailed('Factory creation', 'Factory is nil');
+      TestFailed('Factory creation', 'No SSL libraries available');
   except
     on E: Exception do
       TestFailed('Factory creation', E.Message);
@@ -58,11 +57,7 @@ var
 begin
   WriteLn('Test 2: Context Creation');
   try
-    if LFactory = nil then
-    begin
-      TestFailed('Context creation', 'Factory not initialized');
-      Exit;
-    end;
+    // TSSLFactory is a class - no instance initialization needed
     
     FillChar(LConfig, SizeOf(LConfig), 0);
     LConfig.LibraryType := sslOpenSSL;

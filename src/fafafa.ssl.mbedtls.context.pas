@@ -21,6 +21,7 @@ uses
   fafafa.ssl.base,
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
+  fafafa.ssl.secure,
   fafafa.ssl.mbedtls.base,
   fafafa.ssl.mbedtls.native_handle,
   fafafa.ssl.mbedtls.api;
@@ -401,11 +402,22 @@ end;
 { 证书和密钥管理 }
 
 procedure TMbedTLSContext.LoadCertificate(const AFileName: string);
+var
+  LSize: Int64;
 begin
   RequireValidContext('LoadCertificate');
 
+  if AFileName = '' then
+    raise ESSLInvalidArgument.Create('AFileName must not be empty');
+
   if not FileExists(AFileName) then
     raise ESSLCertError.CreateFmt('Certificate file not found: %s', [AFileName]);
+
+  LSize := GetFileSizeByName(AFileName);
+  if LSize > MAX_CERTIFICATE_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Certificate file exceeds maximum allowed size (%d > %d bytes): %s',
+      [LSize, MAX_CERTIFICATE_SIZE, AFileName]);
 
   // 分配证书链
   if FCertChain = nil then
@@ -436,6 +448,10 @@ begin
   LSize := AStream.Size - AStream.Position;
   if LSize <= 0 then
     raise ESSLCertError.Create('Stream is empty');
+  if LSize > MAX_CERTIFICATE_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Certificate stream exceeds maximum allowed size (%d > %d bytes)',
+      [LSize, MAX_CERTIFICATE_SIZE]);
 
   SetLength(LData, LSize + 1);  // +1 for null terminator (PEM needs it)
   AStream.ReadBuffer(LData[0], LSize);
@@ -491,11 +507,22 @@ begin
 end;
 
 procedure TMbedTLSContext.LoadPrivateKey(const AFileName: string; const APassword: string);
+var
+  LSize: Int64;
 begin
   RequireValidContext('LoadPrivateKey');
 
+  if AFileName = '' then
+    raise ESSLInvalidArgument.Create('AFileName must not be empty');
+
   if not FileExists(AFileName) then
     raise ESSLCertError.CreateFmt('Private key file not found: %s', [AFileName]);
+
+  LSize := GetFileSizeByName(AFileName);
+  if LSize > MAX_PRIVATE_KEY_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Private key file exceeds maximum allowed size (%d > %d bytes): %s',
+      [LSize, MAX_PRIVATE_KEY_SIZE, AFileName]);
 
   // 分配私钥上下文
   if FPrivateKey = nil then
@@ -527,6 +554,12 @@ begin
     raise ESSLCertError.Create('Stream is nil');
 
   LSize := AStream.Size - AStream.Position;
+  if LSize <= 0 then
+    raise ESSLCertError.Create('Stream is empty');
+  if LSize > MAX_PRIVATE_KEY_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Private key stream exceeds maximum allowed size (%d > %d bytes)',
+      [LSize, MAX_PRIVATE_KEY_SIZE]);
   if LSize <= 0 then
     raise ESSLCertError.Create('Stream is empty');
 
@@ -635,11 +668,22 @@ begin
 end;
 
 procedure TMbedTLSContext.LoadCAFile(const AFileName: string);
+var
+  LSize: Int64;
 begin
   RequireValidContext('LoadCAFile');
 
+  if AFileName = '' then
+    raise ESSLInvalidArgument.Create('AFileName must not be empty');
+
   if not FileExists(AFileName) then
     raise ESSLCertError.CreateFmt('CA file not found: %s', [AFileName]);
+
+  LSize := GetFileSizeByName(AFileName);
+  if LSize > MAX_CA_CHAIN_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'CA file exceeds maximum allowed size (%d > %d bytes): %s',
+      [LSize, MAX_CA_CHAIN_SIZE, AFileName]);
 
   // 分配 CA 证书
   if FCACerts = nil then

@@ -258,7 +258,7 @@ begin
   WriteLn('    LContext: ISSLContext;');
   WriteLn('  begin');
   WriteLn('    // 使用 WinSSL 后端（自动支持 FIPS）');
-  WriteLn('    LLib := CreateSSLLibrary(sslWinSSL);');
+  WriteLn('    LLib := TSSLFactory.GetLibraryInstance(sslWinSSL);');
   WriteLn('    LLib.Initialize;');
   WriteLn;
   WriteLn('    // 创建上下文');

@@ -6,7 +6,7 @@ uses
   SysUtils,
   fafafa.ssl.base,
   fafafa.ssl.factory,
-  fafafa.ssl.cert.builder,
+  fafafa.ssl.openssl.cert.builder,
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.x509,
   fafafa.ssl.openssl.api.stack,

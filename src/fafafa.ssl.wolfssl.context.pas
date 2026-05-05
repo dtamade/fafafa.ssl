@@ -465,11 +465,22 @@ end;
 { 证书和密钥管理 }
 
 procedure TWolfSSLContext.LoadCertificate(const AFileName: string);
+var
+  LSize: Int64;
 begin
   RequireValidContext('LoadCertificate');
 
+  if AFileName = '' then
+    raise ESSLInvalidArgument.Create('AFileName must not be empty');
+
   if not FileExists(AFileName) then
     raise ESSLCertError.CreateFmt('Certificate file not found: %s', [AFileName]);
+
+  LSize := GetFileSizeByName(AFileName);
+  if LSize > MAX_CERTIFICATE_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Certificate file exceeds maximum allowed size (%d > %d bytes): %s',
+      [LSize, MAX_CERTIFICATE_SIZE, AFileName]);
 
   if not Assigned(wolfSSL_CTX_use_certificate_file) then
     raise ESSLCertError.Create('wolfSSL_CTX_use_certificate_file not available');
@@ -496,6 +507,10 @@ begin
   SetLength(LBuffer, AStream.Size - AStream.Position);
   if Length(LBuffer) = 0 then
     raise ESSLCertError.Create('Stream is empty');
+  if Length(LBuffer) > MAX_CERTIFICATE_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Certificate stream exceeds maximum allowed size (%d > %d bytes)',
+      [Length(LBuffer), MAX_CERTIFICATE_SIZE]);
 
   AStream.ReadBuffer(LBuffer[0], Length(LBuffer));
 
@@ -540,11 +555,22 @@ begin
 end;
 
 procedure TWolfSSLContext.LoadPrivateKey(const AFileName: string; const APassword: string);
+var
+  LSize: Int64;
 begin
   RequireValidContext('LoadPrivateKey');
 
+  if AFileName = '' then
+    raise ESSLInvalidArgument.Create('AFileName must not be empty');
+
   if not FileExists(AFileName) then
     raise ESSLCertError.CreateFmt('Private key file not found: %s', [AFileName]);
+
+  LSize := GetFileSizeByName(AFileName);
+  if LSize > MAX_PRIVATE_KEY_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Private key file exceeds maximum allowed size (%d > %d bytes): %s',
+      [LSize, MAX_PRIVATE_KEY_SIZE, AFileName]);
 
   if not Assigned(wolfSSL_CTX_use_PrivateKey_file) then
     raise ESSLCertError.Create('wolfSSL_CTX_use_PrivateKey_file not available');
@@ -572,6 +598,10 @@ begin
   SetLength(LBuffer, AStream.Size - AStream.Position);
   if Length(LBuffer) = 0 then
     raise ESSLCertError.Create('Stream is empty');
+  if Length(LBuffer) > MAX_PRIVATE_KEY_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Private key stream exceeds maximum allowed size (%d > %d bytes)',
+      [Length(LBuffer), MAX_PRIVATE_KEY_SIZE]);
 
   AStream.ReadBuffer(LBuffer[0], Length(LBuffer));
 
@@ -639,11 +669,22 @@ begin
 end;
 
 procedure TWolfSSLContext.LoadCAFile(const AFileName: string);
+var
+  LSize: Int64;
 begin
   RequireValidContext('LoadCAFile');
 
+  if AFileName = '' then
+    raise ESSLInvalidArgument.Create('AFileName must not be empty');
+
   if not FileExists(AFileName) then
     raise ESSLCertError.CreateFmt('CA file not found: %s', [AFileName]);
+
+  LSize := GetFileSizeByName(AFileName);
+  if LSize > MAX_CA_CHAIN_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'CA file exceeds maximum allowed size (%d > %d bytes): %s',
+      [LSize, MAX_CA_CHAIN_SIZE, AFileName]);
 
   if not Assigned(wolfSSL_CTX_load_verify_locations) then
     raise ESSLCertError.Create('wolfSSL_CTX_load_verify_locations not available');

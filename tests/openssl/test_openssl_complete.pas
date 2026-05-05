@@ -20,7 +20,7 @@ begin
   
   // Test 1: Library Creation
   Write('[Test 1] Creating OpenSSL library... ');
-  Lib := CreateSSLLibrary(sslOpenSSL);
+  Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if Lib = nil then
   begin
     WriteLn('FAILED');

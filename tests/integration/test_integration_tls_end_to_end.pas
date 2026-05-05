@@ -29,7 +29,7 @@ begin
   WriteLn('=== Basic TLS Connection ===');
 
   try
-    Lib := CreateSSLLibrary;
+    Lib := TSSLFactory.GetLibraryInstance;
     Runner.Check('Create SSL library', Lib <> nil);
 
     if Lib <> nil then
@@ -72,7 +72,7 @@ begin
   WriteLn('=== Session Management ===');
 
   try
-    Lib := CreateSSLLibrary;
+    Lib := TSSLFactory.GetLibraryInstance;
     if Lib = nil then
     begin
       Runner.Check('Session management', False, 'Library creation failed');
@@ -117,7 +117,7 @@ begin
   WriteLn('=== Multiple Contexts ===');
 
   try
-    Lib := CreateSSLLibrary;
+    Lib := TSSLFactory.GetLibraryInstance;
     if Lib = nil then
     begin
       Runner.Check('Multiple contexts', False, 'Library creation failed');
@@ -165,7 +165,7 @@ begin
   WriteLn('=== Error Handling ===');
 
   try
-    Lib := CreateSSLLibrary;
+    Lib := TSSLFactory.GetLibraryInstance;
     if (Lib = nil) or (not Lib.Initialize) then
     begin
       Runner.Check('Error handling', False, 'Library setup failed');
@@ -212,7 +212,7 @@ begin
   WriteLn('=== Protocol Versions ===');
 
   try
-    Lib := CreateSSLLibrary;
+    Lib := TSSLFactory.GetLibraryInstance;
     if (Lib = nil) or (not Lib.Initialize) then
     begin
       Runner.Check('Protocol versions', False, 'Library setup failed');

@@ -76,7 +76,7 @@ begin
   WriteLn('--------------------------------------');
 
   // Arrange: Create OpenSSL library
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) then
   begin
     SkipOpenSSLTest('ErrorHandlingInitialization', scDependency, 'library unavailable');
@@ -112,7 +112,7 @@ begin
   WriteLn('---------------------------------------');
 
   // Arrange: Create OpenSSL library and context
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) then
   begin
     SkipOpenSSLTest('OpenSSL prerequisite', scDependency, 'library unavailable');
@@ -161,7 +161,7 @@ begin
   WriteLn('----------------------');
 
   // Arrange: Create OpenSSL library and context
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) then
   begin
     SkipOpenSSLTest('OpenSSL prerequisite', scDependency, 'library unavailable');
@@ -211,7 +211,7 @@ begin
   WriteLn('------------------------------------');
 
   // Arrange: Create OpenSSL library and context
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) then
   begin
     SkipOpenSSLTest('OpenSSL prerequisite', scDependency, 'library unavailable');
@@ -255,7 +255,7 @@ begin
   WriteLn('---------------------------------------------');
 
   // Arrange: Create OpenSSL library and context
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) then
   begin
     SkipOpenSSLTest('OpenSSL prerequisite', scDependency, 'library unavailable');

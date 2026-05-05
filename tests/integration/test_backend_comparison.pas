@@ -142,7 +142,7 @@ begin
 
   try
     // Create library
-    LLib := CreateSSLLibrary(aLibType);
+    LLib := TSSLFactory.GetLibraryInstance(aLibType);
     if not LLib.Initialize then
       Exit;
 
@@ -217,10 +217,10 @@ begin
   BeginSection('基础功能对比');
 
   // Test 1: Library creation
-  LWinSSL := CreateSSLLibrary(sslWinSSL);
+  LWinSSL := TSSLFactory.GetLibraryInstance(sslWinSSL);
   Test('WinSSL 库创建', LWinSSL <> nil);
 
-  LOpenSSL := CreateSSLLibrary(sslOpenSSL);
+  LOpenSSL := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   Test('OpenSSL 库创建', LOpenSSL <> nil);
 
   // Test 2: Initialization
@@ -266,7 +266,7 @@ begin
 
   try
     // WinSSL handshake
-    LWinSSLLib := CreateSSLLibrary(sslWinSSL);
+    LWinSSLLib := TSSLFactory.GetLibraryInstance(sslWinSSL);
     if LWinSSLLib.Initialize then
     begin
       LWinSSLCtx := LWinSSLLib.CreateContext(sslCtxClient);
@@ -295,7 +295,7 @@ begin
     end;
 
     // OpenSSL handshake
-    LOpenSSLLib := CreateSSLLibrary(sslOpenSSL);
+    LOpenSSLLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
     if LOpenSSLLib.Initialize then
     begin
       LOpenSSLCtx := LOpenSSLLib.CreateContext(sslCtxClient);
@@ -407,7 +407,7 @@ begin
 
   try
     // WinSSL certificate handling
-    LWinSSLLib := CreateSSLLibrary(sslWinSSL);
+    LWinSSLLib := TSSLFactory.GetLibraryInstance(sslWinSSL);
     if LWinSSLLib.Initialize then
     begin
       LWinSSLCtx := LWinSSLLib.CreateContext(sslCtxClient);
@@ -441,7 +441,7 @@ begin
     end;
 
     // OpenSSL certificate handling
-    LOpenSSLLib := CreateSSLLibrary(sslOpenSSL);
+    LOpenSSLLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
     if LOpenSSLLib.Initialize then
     begin
       LOpenSSLCtx := LOpenSSLLib.CreateContext(sslCtxClient);
@@ -501,7 +501,7 @@ begin
 
   try
     // Test invalid connection (HTTP port for HTTPS)
-    LWinSSLLib := CreateSSLLibrary(sslWinSSL);
+    LWinSSLLib := TSSLFactory.GetLibraryInstance(sslWinSSL);
     if LWinSSLLib.Initialize then
     begin
       LWinSSLCtx := LWinSSLLib.CreateContext(sslCtxClient);
@@ -518,7 +518,7 @@ begin
       end;
     end;
 
-    LOpenSSLLib := CreateSSLLibrary(sslOpenSSL);
+    LOpenSSLLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
     if LOpenSSLLib.Initialize then
     begin
       LOpenSSLCtx := LOpenSSLLib.CreateContext(sslCtxClient);
@@ -576,8 +576,8 @@ var
   LLib: ISSLLibrary;
   LCtx: ISSLContext;
 begin
-  Runner.Check('OpenSSL library creation', CreateSSLLibrary(sslOpenSSL) <> nil);
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  Runner.Check('OpenSSL library creation', TSSLFactory.GetLibraryInstance(sslOpenSSL) <> nil);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   Runner.Check('OpenSSL initialization', LLib.Initialize);
   Runner.Check('OpenSSL type correct', LLib.GetLibraryType = sslOpenSSL);
   Runner.Check('OpenSSL version string', Length(LLib.GetVersionString) > 0);

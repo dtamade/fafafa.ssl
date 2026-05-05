@@ -345,7 +345,7 @@ begin
     TSSLFactory.RegisterLibrary(sslOpenSSL, TFailingSSLLibrary, 'Failing OpenSSL (test)', 1000);
 
     try
-      Lib := CreateSSLLibrary(sslOpenSSL);
+      Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
       if Assigned(Lib) then
         Fail('Init failure details', '期望抛出异常但返回了实例')
       else
@@ -374,19 +374,19 @@ var
 begin
   WriteLn('测试 2: 创建库实例（自动检测）');
   try
-    Lib := CreateSSLLibrary;
+    Lib := TSSLFactory.GetLibraryInstance;
     if Assigned(Lib) then
     begin
       if Lib.IsInitialized then
-        Pass('CreateSSLLibrary with auto-detect')
+        Pass('TSSLFactory.GetLibraryInstance with auto-detect')
       else
-        Fail('CreateSSLLibrary', '库未初始化');
+        Fail('GetLibraryInstance', '库未初始化');
     end
     else
-      Fail('CreateSSLLibrary', '返回 nil');
+      Fail('GetLibraryInstance', '返回 nil');
   except
     on E: Exception do
-      Fail('CreateSSLLibrary', E.Message);
+      Fail('GetLibraryInstance', E.Message);
   end;
 end;
 
@@ -397,7 +397,7 @@ begin
   {$IFDEF WINDOWS}
   WriteLn('测试 3: 创建 WinSSL 库');
   try
-    Lib := CreateSSLLibrary(sslWinSSL);
+    Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);
     if Assigned(Lib) then
     begin
       WriteLn('    版本: ', Lib.GetVersionString);
@@ -425,7 +425,7 @@ var
 begin
   WriteLn('测试 4: 创建 OpenSSL 库');
   try
-    Lib := CreateSSLLibrary(sslOpenSSL);
+    Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
     if Assigned(Lib) then
     begin
       WriteLn('    版本: ', Lib.GetVersionString);
@@ -451,10 +451,10 @@ var
 begin
   WriteLn('测试 5: 创建 SSL 上下文');
   try
-    Ctx := CreateSSLContext(sslCtxClient);
+    Ctx := TSSLFactory.CreateContext(sslCtxClient);
     if Assigned(Ctx) then
     begin
-      Pass('CreateSSLContext with client type');
+      Pass('TSSLFactory.CreateContext with client type');
 
       Opts := Ctx.GetOptions;
       if (ssoDisableCompression in Opts) and (ssoDisableRenegotiation in Opts) then
@@ -463,10 +463,10 @@ begin
         Fail('Default options security baseline', 'Options missing required security flags');
     end
     else
-      Fail('CreateSSLContext', '上下文未创建');
+      Fail('TSSLFactory.CreateContext', '上下文未创建');
   except
     on E: Exception do
-      Fail('CreateSSLContext', E.Message);
+      Fail('TSSLFactory.CreateContext', E.Message);
   end;
 end;
 
@@ -524,7 +524,7 @@ var
 begin
   WriteLn('测试 8: 协议支持检查');
   try
-    Lib := CreateSSLLibrary;
+    Lib := TSSLFactory.GetLibraryInstance;
     if Assigned(Lib) then
     begin
       WriteLn('    TLS 1.2: ', Lib.IsProtocolSupported(sslProtocolTLS12));
@@ -545,7 +545,7 @@ var
 begin
   WriteLn('测试 9: 功能支持检查');
   try
-    Lib := CreateSSLLibrary;
+    Lib := TSSLFactory.GetLibraryInstance;
     if Assigned(Lib) then
     begin
       WriteLn('    SNI: ', Lib.IsFeatureSupported(sslFeatSNI));

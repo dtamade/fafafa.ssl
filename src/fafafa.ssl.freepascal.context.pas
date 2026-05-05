@@ -367,7 +367,11 @@ end;
 procedure TFreePascalContext.LoadCertificate(const AFileName: string);
 var
   LStream: TFileStream;
+  LSize: Int64;
 begin
+  if AFileName = '' then
+    RaiseInvalidParameter('AFileName');
+
   if not FileExists(AFileName) then
     raise ESSLFileNotFoundException.CreateWithContext(
       Format('Certificate file not found: %s', [AFileName]),
@@ -376,6 +380,12 @@ begin
       0,
       sslFreePascal
     );
+
+  LSize := GetFileSizeByName(AFileName);
+  if LSize > MAX_CERTIFICATE_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Certificate file exceeds maximum allowed size (%d > %d bytes): %s',
+      [LSize, MAX_CERTIFICATE_SIZE, AFileName]);
 
   LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try
@@ -388,6 +398,12 @@ end;
 
 procedure TFreePascalContext.LoadCertificate(AStream: TStream);
 begin
+  if AStream = nil then
+    RaiseInvalidParameter('AStream');
+  if AStream.Size - AStream.Position > MAX_CERTIFICATE_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Certificate stream exceeds maximum allowed size (%d > %d bytes)',
+      [AStream.Size - AStream.Position, MAX_CERTIFICATE_SIZE]);
   FCertificateData := ReadStreamToBytes(AStream);
 end;
 
@@ -401,7 +417,11 @@ end;
 procedure TFreePascalContext.LoadPrivateKey(const AFileName: string; const APassword: string);
 var
   LStream: TFileStream;
+  LSize: Int64;
 begin
+  if AFileName = '' then
+    RaiseInvalidParameter('AFileName');
+
   if not FileExists(AFileName) then
     raise ESSLFileNotFoundException.CreateWithContext(
       Format('Private key file not found: %s', [AFileName]),
@@ -410,6 +430,12 @@ begin
       0,
       sslFreePascal
     );
+
+  LSize := GetFileSizeByName(AFileName);
+  if LSize > MAX_PRIVATE_KEY_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Private key file exceeds maximum allowed size (%d > %d bytes): %s',
+      [LSize, MAX_PRIVATE_KEY_SIZE, AFileName]);
 
   LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try
@@ -424,6 +450,12 @@ end;
 
 procedure TFreePascalContext.LoadPrivateKey(AStream: TStream; const APassword: string);
 begin
+  if AStream = nil then
+    RaiseInvalidParameter('AStream');
+  if AStream.Size - AStream.Position > MAX_PRIVATE_KEY_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'Private key stream exceeds maximum allowed size (%d > %d bytes)',
+      [AStream.Size - AStream.Position, MAX_PRIVATE_KEY_SIZE]);
   FPrivateKeyData := ReadStreamToBytes(AStream);
   if APassword <> '' then;
 end;
@@ -451,7 +483,12 @@ begin
 end;
 
 procedure TFreePascalContext.LoadCAFile(const AFileName: string);
+var
+  LSize: Int64;
 begin
+  if AFileName = '' then
+    RaiseInvalidParameter('AFileName');
+
   if not FileExists(AFileName) then
     raise ESSLFileNotFoundException.CreateWithContext(
       Format('CA file not found: %s', [AFileName]),
@@ -460,6 +497,12 @@ begin
       0,
       sslFreePascal
     );
+
+  LSize := GetFileSizeByName(AFileName);
+  if LSize > MAX_CA_CHAIN_SIZE then
+    raise ESSLInvalidArgument.CreateFmt(
+      'CA file exceeds maximum allowed size (%d > %d bytes): %s',
+      [LSize, MAX_CA_CHAIN_SIZE, AFileName]);
 
   FCAFile := AFileName;
 end;

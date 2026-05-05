@@ -172,7 +172,7 @@ begin
 
   // 1. Create Context
   Ctx := TSSLFactory.CreateContext(sslCtxClient);
-  Check(Ctx <> nil, 'SSLFactory creates context');
+  Check(Ctx <> nil, 'TSSLFactory.CreateContext creates context');
 
   // 2. Test Validation: Missing Context
   Builder := TSSLConnectionBuilder.Create;

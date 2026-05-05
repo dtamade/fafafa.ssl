@@ -104,10 +104,25 @@ function SecureCompareSecure(const A, B: TSecureBytes): Boolean;
 { Factory }
 function CreateSecureKeyStore: ISecureKeyStore;
 
+{ Get file size by path without opening the file. Returns -1 if not found. }
+function GetFileSizeByName(const AFileName: string): Int64;
+
 const
   { Maximum allowed size for OCSP response files (1 MB).
     Enforced by LoadServerStapledOCSPResponseFile across all backends. }
   MAX_OCSP_RESPONSE_SIZE = 1024 * 1024;
+
+  { Maximum allowed size for PEM/DER certificate files (1 MB).
+    Enforced by LoadCertificate across all backends. }
+  MAX_CERTIFICATE_SIZE = 1024 * 1024;
+
+  { Maximum allowed size for PEM/DER private key files (64 KB).
+    Enforced by LoadPrivateKey across all backends. }
+  MAX_PRIVATE_KEY_SIZE = 64 * 1024;
+
+  { Maximum allowed size for CA certificate chain files (2 MB).
+    Enforced by LoadCACertificate across all backends. }
+  MAX_CA_CHAIN_SIZE = 2 * 1024 * 1024;
 
 implementation
 
@@ -802,6 +817,19 @@ end;
 function CreateSecureKeyStore: ISecureKeyStore;
 begin
   Result := TSecureKeyStoreImpl.Create;
+end;
+
+function GetFileSizeByName(const AFileName: string): Int64;
+var
+  LSR: TSearchRec;
+begin
+  if FindFirst(AFileName, faAnyFile, LSR) = 0 then
+  begin
+    Result := LSR.Size;
+    FindClose(LSR);
+  end
+  else
+    Result := -1;
 end;
 
 end.

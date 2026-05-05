@@ -56,7 +56,7 @@ begin
     if LibType in Available then
     begin
       try
-        Lib := CreateSSLLibrary(LibType);
+        Lib := TSSLFactory.GetLibraryInstance(LibType);
         WriteLn('  [', SSL_LIBRARY_NAMES[LibType], ']');
         WriteLn('    版本: ', Lib.GetVersionString);
         WriteLn('    编译标志: ', Lib.GetCompileFlags);
@@ -85,7 +85,7 @@ begin
 
   WriteLn('');
   WriteLn('使用自动检测创建库实例...');
-  Lib := CreateSSLLibrary;  // 默认参数 sslAutoDetect
+  Lib := TSSLFactory.GetLibraryInstance;  // 默认参数 sslAutoDetect
 
   if Assigned(Lib) then
   begin
@@ -104,7 +104,7 @@ begin
   PrintSeparator('创建客户端上下文');
 
   WriteLn('创建客户端上下文（自动检测库）...');
-  Ctx := CreateSSLContext(sslCtxClient);
+  Ctx := TSSLFactory.CreateContext(sslCtxClient);
 
   if Assigned(Ctx) then
   begin
@@ -244,7 +244,7 @@ begin
   WriteLn('  Ctx: ISSLContext;');
   WriteLn('  Conn: ISSLConnection;');
   WriteLn('begin');
-  WriteLn('  Ctx := CreateSSLContext(sslCtxClient);');
+  WriteLn('  Ctx := TSSLFactory.CreateContext(sslCtxClient);');
   WriteLn('  Conn := Ctx.CreateConnection(YourSocket);');
   WriteLn('  (Conn as ISSLClientConnection).SetServerName(''www.example.com'');');
   WriteLn('  // ... 然后再握手/读写');
@@ -255,9 +255,9 @@ begin
   WriteLn('  Lib: ISSLLibrary;');
   WriteLn('begin');
   WriteLn('  {$IFDEF WINDOWS}');
-  WriteLn('  Lib := CreateSSLLibrary(sslWinSSL);  // 使用 Windows 原生');
+  WriteLn('  Lib := TSSLFactory.GetLibraryInstance(sslWinSSL);  // 使用 Windows 原生');
   WriteLn('  {$ELSE}');
-  WriteLn('  Lib := CreateSSLLibrary(sslOpenSSL); // 使用 OpenSSL');
+  WriteLn('  Lib := TSSLFactory.GetLibraryInstance(sslOpenSSL); // 使用 OpenSSL');
   WriteLn('  {$ENDIF}');
   WriteLn('end;');
 end;

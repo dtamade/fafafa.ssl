@@ -235,7 +235,7 @@ begin
 
   try
     // Create WinSSL library
-    LLib := CreateSSLLibrary(sslWinSSL);
+    LLib := TSSLFactory.GetLibraryInstance(sslWinSSL);
     if not LLib.Initialize then
     begin
       WriteLn('Error: Failed to initialize WinSSL library');

@@ -21,7 +21,8 @@ program test_basic;
 uses
   SysUtils, Classes, 
   fafafa.ssl,
-  fafafa.ssl.base;  // 主库单元
+  fafafa.ssl.base,
+  fafafa.ssl.factory;  // 主库单元
 
 procedure PrintSeparator;
 begin
@@ -93,7 +94,7 @@ begin
   try
     // 测试简单创建
     WriteLn('创建客户端上下文...');
-    LContext := CreateSSLContext(sslCtxClient);
+    LContext := TSSLFactory.CreateContext(sslCtxClient);
     if Assigned(LContext) then
     begin
       WriteLn('✅ 客户端上下文创建成功');
@@ -144,7 +145,7 @@ begin
   try
     // 创建证书对象
     WriteLn('创建证书对象...');
-    LCert := CreateSSLCertificate;
+    LCert := TSSLFactory.CreateCertificate;
     if Assigned(LCert) then
     begin
       WriteLn('✅ 证书对象创建成功');
@@ -276,8 +277,8 @@ begin
   try
     for LCount := 1 to 10 do
     begin
-      LContext := CreateSSLContext(sslCtxClient);
-      LCert := CreateSSLCertificate;
+      LContext := TSSLFactory.CreateContext(sslCtxClient);
+      LCert := TSSLFactory.CreateCertificate;
       // 接口会自动释放
     end;
     
@@ -290,7 +291,7 @@ begin
     WriteLn('  已释放所有库');
     
     // 重新创建
-    LContext := CreateSSLContext(sslCtxClient);
+    LContext := TSSLFactory.CreateContext(sslCtxClient);
     if Assigned(LContext) then
       WriteLn('✅ 库自动重新初始化成功');
       

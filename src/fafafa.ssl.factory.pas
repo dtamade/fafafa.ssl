@@ -319,22 +319,6 @@ type
     class function GetEarlyDataLimit(const AConnection: ISSLConnection): Cardinal;
   end;
 
-  { 全局函数 - 便捷接口 }
-  function SSLFactory: TSSLFactory;
-    deprecated 'Use TSSLFactory class methods directly (no instance needed)';
-  function SSLHelper: TSSLHelper;
-    deprecated 'Use TSSLHelper class methods directly (no instance needed)';
-
-  // 快速创建函数
-  function CreateSSLLibrary(ALibType: TSSLLibraryType = sslAutoDetect): ISSLLibrary;
-    deprecated 'Use TSSLFactory.GetLibraryInstance(...)';
-  function CreateSSLContext(AType: TSSLContextType = sslCtxClient): ISSLContext;
-    deprecated 'Use TSSLFactory.CreateContext(...) or fafafa.ssl.context.builder';
-  function CreateSSLCertificate: ISSLCertificate;
-    deprecated 'Use TSSLFactory.CreateCertificate(...)';
-  function CreateSSLConnection(AContext: ISSLContext; ASocket: THandle): ISSLConnection;
-    deprecated 'Use AContext.CreateConnection(...) and per-connection SNI via ISSLClientConnection';
-
 implementation
 
 uses
@@ -352,8 +336,6 @@ uses
   fafafa.ssl.openssl.api.blake2;
 
 var
-  GSSLFactory: TSSLFactory;
-  GSSLHelper: TSSLHelper;
   GFactoryLock: TRTLCriticalSection;  // 工厂类的全局锁
   GFactoryLockInitialized: Boolean = False;
 
@@ -549,48 +531,6 @@ end;
 class procedure TSSLFactory.NormalizeConfig(var AConfig: TSSLConfig);
 begin
   NormalizeConfigOptions(AConfig);
-end;
-
-{ 全局函数实现 }
-
-function SSLFactory: TSSLFactory;
-begin
-  if GSSLFactory = nil then
-    GSSLFactory := TSSLFactory.Create;
-  Result := GSSLFactory;
-end;
-
-function SSLHelper: TSSLHelper;
-begin
-  if GSSLHelper = nil then
-    GSSLHelper := TSSLHelper.Create;
-  Result := GSSLHelper;
-end;
-
-function CreateSSLLibrary(ALibType: TSSLLibraryType): ISSLLibrary;
-begin
-  // 直接使用工厂获取库实例
-  // 这会自动检测最佳库（如果 ALibType = sslAutoDetect）
-  // 并自动初始化库
-  Result := TSSLFactory.GetLibraryInstance(ALibType);
-end;
-
-function CreateSSLContext(AType: TSSLContextType): ISSLContext;
-begin
-  Result := TSSLFactory.CreateContext(AType);
-end;
-
-function CreateSSLCertificate: ISSLCertificate;
-begin
-  Result := TSSLFactory.CreateCertificate;
-end;
-
-function CreateSSLConnection(AContext: ISSLContext; ASocket: THandle): ISSLConnection;
-begin
-  if Assigned(AContext) then
-    Result := AContext.CreateConnection(ASocket)
-  else
-    RaiseNotInitialized('SSL context');
 end;
 
 { TSSLFactory }
@@ -1422,14 +1362,10 @@ begin
 end;
 
 initialization
-  GSSLFactory := nil;
-  GSSLHelper := nil;
   // GFactoryLock 在 TSSLFactory.Initialize 中初始化
   TSSLFactory.Initialize;
-  
+
 finalization
   TSSLFactory.Finalize;
-  FreeAndNil(GSSLFactory);
-  FreeAndNil(GSSLHelper);
 
 end.

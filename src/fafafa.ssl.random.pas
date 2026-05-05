@@ -179,7 +179,7 @@ begin
     Exit;
 
   try
-    LFile := TFileStream.Create('/dev/urandom', fmOpenRead or fmShareDenyNone);
+    LFile := TFileStream.Create('/dev/urandom', fmOpenRead or fmShareDenyWrite);
     try
       LBytesRead := LFile.Read(ABuffer^, ACount);
       Result := (LBytesRead = ACount);

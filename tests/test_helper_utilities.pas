@@ -145,7 +145,7 @@ begin
   WriteLn;
 
   // Initialize OpenSSL properly (loads all required modules)
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
     SkipOpenSSLGroup('LoadCertificateFromFile', 4);
@@ -207,7 +207,7 @@ begin
   WriteLn;
 
   // Initialize OpenSSL properly (loads all required modules)
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
     SkipOpenSSLGroup('LoadCertificateFromMemory', 4);
@@ -257,7 +257,7 @@ begin
   WriteLn;
 
   // Initialize OpenSSL properly (loads all required modules)
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
     SkipOpenSSLGroup('LoadPrivateKeyFromFile', 4);
@@ -332,7 +332,7 @@ begin
   WriteLn;
 
   // Initialize OpenSSL properly (loads all required modules)
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
     SkipOpenSSLGroup('LoadPrivateKeyFromMemory', 4);
@@ -397,7 +397,7 @@ begin
   WriteLn;
 
   // Initialize OpenSSL properly (loads all required modules)
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
     SkipOpenSSLGroup('VerifyCertificate', 4);
@@ -467,7 +467,7 @@ begin
   WriteLn;
 
   // Initialize OpenSSL properly (loads all required modules)
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
     SkipOpenSSLGroup('GetCertificateInfo', 4);

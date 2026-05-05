@@ -98,7 +98,7 @@ begin
   WriteLn('Test 1: Invalid CA file error handling');
   WriteLn('---------------------------------------');
 
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) then
   begin
     SkipOpenSSLGroup('OpenSSL prerequisite', sgcDependency, 'library unavailable');
@@ -269,7 +269,7 @@ begin
   WriteLn('===========================================');
   WriteLn;
 
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
     SkipOpenSSLGroup('OpenSSL prerequisite', sgcDependency, 'not available or initialization failed');
@@ -438,7 +438,7 @@ begin
   WriteLn('Test 14: Phase B2.1 - Error extraction');
   WriteLn('---------------------------------------');
 
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
     SkipOpenSSLGroup('OpenSSL prerequisite', sgcDependency, 'not available or initialization failed');
@@ -522,7 +522,7 @@ begin
   WriteLn('===========================================');
   WriteLn;
 
-  LLib := CreateSSLLibrary(sslOpenSSL);
+  LLib := TSSLFactory.GetLibraryInstance(sslOpenSSL);
   if not Assigned(LLib) or not LLib.Initialize then
   begin
     SkipOpenSSLGroup('OpenSSL prerequisite', sgcDependency, 'not available or initialization failed');
