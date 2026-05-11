@@ -317,10 +317,10 @@ begin
 
   // 7. 确定差异级别
   if (Length(Result.AddedFeatures) = 0) and
-     (Length(Result.RemovedFeatures) = 0) and
-     (Length(Result.ChangedFields) = 0) and
-     (Abs(Result.SecurityScoreDiff) < 5) and
-     (Abs(Result.PerformanceScoreDiff) < 5) then
+    (Length(Result.RemovedFeatures) = 0) and
+    (Length(Result.ChangedFields) = 0) and
+    (Abs(Result.SecurityScoreDiff) < 5) and
+    (Abs(Result.PerformanceScoreDiff) < 5) then
   begin
     Result.DifferenceLevel := cdIdentical;
     Result.Summary := '两个后端完全相同';

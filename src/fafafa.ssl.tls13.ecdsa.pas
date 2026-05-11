@@ -589,7 +589,7 @@ begin
   LB := ConstToBytes(P256_B);
 
   if (CompareUnsignedBytes(APoint.X, LP) >= 0) or
-     (CompareUnsignedBytes(APoint.Y, LP) >= 0) then
+    (CompareUnsignedBytes(APoint.Y, LP) >= 0) then
   begin
     AError := 'ECDSA public point coordinates are out of range';
     Exit;
@@ -800,7 +800,7 @@ begin
 
   LOrder := ConstToBytes(P256_ORDER_N);
   if (CompareUnsignedBytes(AR, LOrder) >= 0) or
-     (CompareUnsignedBytes(ASValue, LOrder) >= 0) then
+    (CompareUnsignedBytes(ASValue, LOrder) >= 0) then
   begin
     AError := 'ECDSA signature DER r/s must be less than curve order';
     Exit;

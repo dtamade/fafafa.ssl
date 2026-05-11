@@ -226,7 +226,7 @@ begin
     Move(LResponse[0], LResponseCopy^, Length(LResponse));
 
     if Assigned(wolfSSL_set_tlsext_status_ocsp_resp) and
-       (wolfSSL_set_tlsext_status_ocsp_resp(ssl, LResponseCopy, Length(LResponse)) <> 0) then
+      (wolfSSL_set_tlsext_status_ocsp_resp(ssl, LResponseCopy, Length(LResponse)) <> 0) then
       Result := WOLFSSL_TLSEXT_ERR_OK
     else
     begin
@@ -381,7 +381,7 @@ begin
   LClientRequestsStapling :=
     (FContextType <> sslCtxServer) and
     ((ssoEnableOCSPStapling in FOptions) or
-     (ssoRequireOCSPStapling in FOptions));
+    (ssoRequireOCSPStapling in FOptions));
 
   if LClientRequestsStapling then
   begin
@@ -437,7 +437,7 @@ begin
 
   // 当首选版本不再可用时，自动回退为无偏好
   if (FPreferredVersion <> sslProtocolUnknown) and
-     not (FPreferredVersion in FProtocolVersions) then
+    not (FPreferredVersion in FProtocolVersions) then
     FPreferredVersion := sslProtocolUnknown;
 
   // WolfSSL 协议版本在创建时确定，运行时更改需要重建上下文
@@ -451,7 +451,7 @@ end;
 procedure TWolfSSLContext.SetPreferredVersion(AVersion: TSSLProtocolVersion);
 begin
   if (AVersion <> sslProtocolUnknown) and
-     not (AVersion in FProtocolVersions) then
+    not (AVersion in FProtocolVersions) then
     RaiseInvalidParameter('PreferredVersion');
 
   FPreferredVersion := AVersion;
@@ -1104,7 +1104,7 @@ begin
 
   // 如果服务端 early data 已启用，更新 WolfSSL
   if Assigned(wolfSSL_CTX_set_max_early_data) and
-     (FServerEarlyDataPolicy <> sslEarlyDataServerReject) then
+    (FServerEarlyDataPolicy <> sslEarlyDataServerReject) then
   begin
     LRet := wolfSSL_CTX_set_max_early_data(FWolfSSLCtx, ASize);
     if LRet <> 1 then

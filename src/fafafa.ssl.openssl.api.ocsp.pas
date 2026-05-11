@@ -1008,12 +1008,12 @@ begin
     end;
 
     if (not Assigned(d2i_OCSP_RESPONSE)) or
-       (not Assigned(d2i_X509)) or
-       (not Assigned(OCSP_RESPONSE_free)) or
-       (not Assigned(X509_free)) or
-       (not Assigned(X509_STORE_new)) or
-       (not Assigned(X509_STORE_free)) or
-       (not Assigned(X509_STORE_add_cert)) then
+      (not Assigned(d2i_X509)) or
+      (not Assigned(OCSP_RESPONSE_free)) or
+      (not Assigned(X509_free)) or
+      (not Assigned(X509_STORE_new)) or
+      (not Assigned(X509_STORE_free)) or
+      (not Assigned(X509_STORE_add_cert)) then
     begin
       AError := 'Required OpenSSL OCSP/X509 functions are unavailable';
       Exit;

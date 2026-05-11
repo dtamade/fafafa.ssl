@@ -1,3 +1,55 @@
+# Task Plan - v1.5.0 Release Formalization
+
+## Goal
+把 `v1.5.0` 的正式发布准备收口到可审查、可复跑、可签字的状态：先确认版本真相和本地发布门禁，再把 release workflow / release notes / README / changelog 对齐，补一份 release workflow 契约和最终 readiness 报告，最后只在用户明确批准后再打 tag。
+
+## Current Batch
+1. 复核 baseline 真相与本地 release 门禁。
+2. 落地 release workflow、release notes、版本文档对齐。
+3. 触发并收集 Wave B/B2 Windows runtime 证据。
+4. 生成 release readiness 报告，review 后提交。
+
+## Status
+- [completed] baseline truth / local release gates
+- [completed] release workflow + notes + docs alignment
+- [pending] Windows runtime proof refresh via Wave B/B2
+- [completed] readiness report drafted with `BLOCKED_PENDING_WINDOWS_RUNTIME_PROOF`
+- [in_progress] review and commit the local release-prep batch
+- [pending] push `glm51` and dispatch Wave B/B2 for real Windows artifacts
+
+## Notes
+- 版本真相已经在 `src/fafafa.ssl.base.pas`：`FAFAFA_SSL_VERSION_STRING = '1.5.0'`，`FAFAFA_SSL_INTERFACE_VERSION = 10500`
+- `CHANGELOG.md`、`README.md`、`fafafa_ssl.lpk`、`RELEASE_NOTES_V1.5.0.md` 已对齐到 `v1.5.0`
+- `.github/workflows/release.yml` 已启用，`.github/workflows/release.yml.disabled` 已同步成同一份当前模板
+- `python3 scripts/check_code_style.py src` 首轮打出 369 个缩进错误；已按 checker 实际报错做 44 个文件 / 369 行机械缩进修复，复跑通过
+- `docs/test_reports/RELEASE_READINESS_V1.5.0.md` 已生成，但状态保持为 `BLOCKED_PENDING_WINDOWS_RUNTIME_PROOF`
+- 远端 `origin/master` 还没有本地新版 Wave B/B2 workflow；刷新 Windows 证据链需要先推送当前 `glm51` 分支再触发 workflow
+
+## Verification Plan
+1. `git status --short`
+2. `git clean -nd`
+3. `git clean -ndX`
+4. `python3 scripts/compile_all_modules.py`
+5. `bash scripts/run_minimal_ci_gate.sh --fast-local`
+6. `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id release_1_5_0_20260512`
+7. `python3 scripts/check_code_style.py src`
+8. `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
+9. `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+10. `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`
+11. `bash tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
+12. `bash tests/scripts/test_active_roadmap_references_contract.sh`
+13. `gh workflow run .github/workflows/wave-b-b2-manual.yml --ref glm51 ...` and collect artifacts if Windows proof is still missing
+
+## Definition Of Done
+- release workflow contract passes
+- docs and package version align to `v1.5.0`
+- local gates are green
+- Wave B/B2 Windows evidence is captured or a concrete external blocker is recorded
+- `docs/test_reports/RELEASE_READINESS_V1.5.0.md` exists and says whether the batch is ready for tag approval
+- batch is committed after review
+
+---
+
 # Task Plan - Repo Hygiene And Ignore Consolidation
 
 ## Goal

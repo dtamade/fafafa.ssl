@@ -142,34 +142,34 @@ implementation
 procedure RequireCertificatePEMLoadHelpers;
 begin
   if (not Assigned(BIO_new_mem_buf)) or
-     (not Assigned(BIO_free)) or
-     (not Assigned(PEM_read_bio_X509)) then
+    (not Assigned(BIO_free)) or
+    (not Assigned(PEM_read_bio_X509)) then
     raise ESSLException.Create('Required OpenSSL certificate PEM load helpers are unavailable');
 end;
 
 procedure RequireCertificatePEMSaveHelpers;
 begin
   if (not Assigned(BIO_new)) or
-     (not Assigned(BIO_s_mem)) or
-     (not Assigned(BIO_free)) or
-     (not Assigned(PEM_write_bio_X509)) then
+    (not Assigned(BIO_s_mem)) or
+    (not Assigned(BIO_free)) or
+    (not Assigned(PEM_write_bio_X509)) then
     raise ESSLException.Create('Required OpenSSL certificate PEM save helpers are unavailable');
 end;
 
 procedure RequirePrivateKeyPEMLoadHelpers;
 begin
   if (not Assigned(BIO_new_mem_buf)) or
-     (not Assigned(BIO_free)) or
-     (not Assigned(PEM_read_bio_PrivateKey)) then
+    (not Assigned(BIO_free)) or
+    (not Assigned(PEM_read_bio_PrivateKey)) then
     raise ESSLException.Create('Required OpenSSL private-key PEM load helpers are unavailable');
 end;
 
 procedure RequirePrivateKeyPEMSaveHelpers;
 begin
   if (not Assigned(BIO_new)) or
-     (not Assigned(BIO_s_mem)) or
-     (not Assigned(BIO_free)) or
-     (not Assigned(PEM_write_bio_PrivateKey)) then
+    (not Assigned(BIO_s_mem)) or
+    (not Assigned(BIO_free)) or
+    (not Assigned(PEM_write_bio_PrivateKey)) then
     raise ESSLException.Create('Required OpenSSL private-key PEM save helpers are unavailable');
 end;
 

@@ -297,8 +297,8 @@ begin
   Result := 0;
 
   if (ASession <> nil) and Assigned(SSL_SESSION_get_max_early_data) and
-     TryGetNativeHandle(ASession, Pointer(LNativeSession)) and
-     (LNativeSession <> nil) then
+    TryGetNativeHandle(ASession, Pointer(LNativeSession)) and
+    (LNativeSession <> nil) then
     Exit(SSL_SESSION_get_max_early_data(LNativeSession));
 
   if (FSSL <> nil) and Assigned(SSL_get_max_early_data) then
@@ -339,7 +339,7 @@ begin
     Exit;
 
   if (FSSL = nil) or (not Assigned(SSL_write_early_data)) or
-     (not Assigned(SSL_get_error)) then
+    (not Assigned(SSL_get_error)) then
     Exit(False);
 
   if Assigned(SSL_set_connect_state) then
@@ -823,10 +823,10 @@ begin
   SetLength(Result, 0);
 
   if (FSSL = nil) or
-     (not Assigned(SSL_get_peer_cert_chain)) or
-     (not Assigned(sk_X509_num)) or
-     (not Assigned(sk_X509_value)) or
-     (not Assigned(X509_up_ref)) then
+    (not Assigned(SSL_get_peer_cert_chain)) or
+    (not Assigned(sk_X509_num)) or
+    (not Assigned(sk_X509_value)) or
+    (not Assigned(X509_up_ref)) then
     Exit;
 
   Chain := SSL_get_peer_cert_chain(FSSL);
@@ -943,7 +943,7 @@ begin
       'Client early data is disabled on the context'));
 
   if (FConfiguredSession = nil) or (not FConfiguredSession.IsValid) or
-     (not FConfiguredSession.IsResumable) then
+    (not FConfiguredSession.IsResumable) then
     Exit(TSSLOperationResult.Err(sslErrInvalidParam,
       'Early data requires a configured resumable session'));
 

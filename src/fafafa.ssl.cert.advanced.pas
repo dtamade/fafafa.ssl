@@ -149,8 +149,8 @@ uses
 procedure RequirePKCS12CreateBIOHelpers;
 begin
   if (not Assigned(BIO_new)) or
-     (not Assigned(BIO_s_mem)) or
-     (not Assigned(BIO_free)) then
+    (not Assigned(BIO_s_mem)) or
+    (not Assigned(BIO_free)) then
     raise ESSLException.Create(
       'Required OpenSSL PKCS12 BIO export helpers are unavailable',
       sslErrFunctionNotFound
@@ -165,8 +165,8 @@ end;
 procedure RequireCRLLoadBIOHelpers;
 begin
   if (not Assigned(BIO_new_mem_buf)) or
-     (not Assigned(PEM_read_bio_X509_CRL)) or
-     (not Assigned(BIO_free)) then
+    (not Assigned(PEM_read_bio_X509_CRL)) or
+    (not Assigned(BIO_free)) then
     raise ESSLException.Create(
       'Required OpenSSL CRL BIO load helpers are unavailable',
       sslErrFunctionNotFound

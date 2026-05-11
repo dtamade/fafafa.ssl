@@ -299,8 +299,8 @@ begin
   LWriteIndex := 0;
   for I := 0 to High(FResumptionCache) do
     if (FResumptionCache[I].Key <> '') and
-       (FResumptionCache[I].Session <> nil) and
-       FResumptionCache[I].Session.IsValid then
+      (FResumptionCache[I].Session <> nil) and
+      FResumptionCache[I].Session.IsValid then
     begin
       if LWriteIndex <> I then
         FResumptionCache[LWriteIndex] := FResumptionCache[I];
@@ -339,7 +339,7 @@ begin
   FProtocolVersions := AVersions;
 
   if (FPreferredVersion <> sslProtocolUnknown) and
-     not (FPreferredVersion in FProtocolVersions) then
+    not (FPreferredVersion in FProtocolVersions) then
     FPreferredVersion := sslProtocolUnknown;
 
   LogDeprecatedProtocolWarnings('FreePascal', AVersions);
@@ -353,7 +353,7 @@ end;
 procedure TFreePascalContext.SetPreferredVersion(AVersion: TSSLProtocolVersion);
 begin
   if (AVersion <> sslProtocolUnknown) and
-     not (AVersion in FProtocolVersions) then
+    not (AVersion in FProtocolVersions) then
     RaiseInvalidParameter('PreferredVersion');
 
   FPreferredVersion := AVersion;

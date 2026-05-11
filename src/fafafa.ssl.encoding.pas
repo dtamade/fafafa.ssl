@@ -219,13 +219,13 @@ implementation
 procedure RequireBase64EncodeBIOHelpers;
 begin
   if not Assigned(BIO_new) or
-     not Assigned(BIO_s_mem) or
-     not Assigned(BIO_f_base64) or
-     not Assigned(BIO_push) or
-     not Assigned(BIO_write) or
-     not Assigned(BIO_free) or
-     not Assigned(BIO_free_all) or
-     not Assigned(BIO_ctrl) then
+    not Assigned(BIO_s_mem) or
+    not Assigned(BIO_f_base64) or
+    not Assigned(BIO_push) or
+    not Assigned(BIO_write) or
+    not Assigned(BIO_free) or
+    not Assigned(BIO_free_all) or
+    not Assigned(BIO_ctrl) then
     raise ESSLCryptoError.Create(
       'Required BIO helpers are unavailable for Base64 encoding'
     );
@@ -234,13 +234,13 @@ end;
 procedure RequireBase64DecodeBIOHelpers;
 begin
   if not Assigned(BIO_new_mem_buf) or
-     not Assigned(BIO_new) or
-     not Assigned(BIO_f_base64) or
-     not Assigned(BIO_push) or
-     not Assigned(BIO_read) or
-     not Assigned(BIO_free) or
-     not Assigned(BIO_free_all) or
-     not Assigned(BIO_ctrl) then
+    not Assigned(BIO_new) or
+    not Assigned(BIO_f_base64) or
+    not Assigned(BIO_push) or
+    not Assigned(BIO_read) or
+    not Assigned(BIO_free) or
+    not Assigned(BIO_free_all) or
+    not Assigned(BIO_ctrl) then
     raise ESSLCryptoError.Create(
       'Required BIO helpers are unavailable for Base64 decoding'
     );

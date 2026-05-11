@@ -609,12 +609,12 @@ begin
     // Calculate SHA-256 digest for RFC3161 message imprint
     MD := EVP_sha256();
     if (MD = nil) or
-       (not Assigned(EVP_MD_CTX_new)) or
-       (not Assigned(EVP_DigestInit_ex)) or
-       (not Assigned(EVP_DigestUpdate)) or
-       (not Assigned(EVP_DigestFinal_ex)) or
-       (not Assigned(TS_MSG_IMPRINT_set_msg)) or
-       (not Assigned(TS_REQ_set_msg_imprint)) then
+      (not Assigned(EVP_MD_CTX_new)) or
+      (not Assigned(EVP_DigestInit_ex)) or
+      (not Assigned(EVP_DigestUpdate)) or
+      (not Assigned(EVP_DigestFinal_ex)) or
+      (not Assigned(TS_MSG_IMPRINT_set_msg)) or
+      (not Assigned(TS_REQ_set_msg_imprint)) then
     begin
       if Assigned(TS_MSG_IMPRINT_free) then
         TS_MSG_IMPRINT_free(MsgImprint);
@@ -639,7 +639,7 @@ begin
         DataPtr := @Data[0];
 
       if (EVP_DigestInit_ex(MDCtx, MD, nil) <> 1) or
-         (EVP_DigestUpdate(MDCtx, DataPtr, Cardinal(Length(Data))) <> 1) then
+        (EVP_DigestUpdate(MDCtx, DataPtr, Cardinal(Length(Data))) <> 1) then
       begin
         if Assigned(TS_MSG_IMPRINT_free) then
           TS_MSG_IMPRINT_free(MsgImprint);
@@ -863,7 +863,7 @@ begin
 
   // RFC3161 status gate
   if (StatusValue <> TS_STATUS_GRANTED) and
-     (StatusValue <> TS_STATUS_GRANTED_WITH_MODS) then
+    (StatusValue <> TS_STATUS_GRANTED_WITH_MODS) then
     Exit;
   
   // 创建验证上下?

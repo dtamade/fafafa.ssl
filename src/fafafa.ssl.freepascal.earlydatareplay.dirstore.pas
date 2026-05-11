@@ -284,7 +284,7 @@ begin
       if (LSearchRec.Attr and faDirectory) <> 0 then
         Exit(False);
       if (Length(LSearchRec.Name) <= Length(DIRECTORY_REPLAY_ENTRY_SUFFIX)) or
-         (Copy(
+        (Copy(
             LSearchRec.Name,
             Length(LSearchRec.Name) - Length(DIRECTORY_REPLAY_ENTRY_SUFFIX) + 1,
             Length(DIRECTORY_REPLAY_ENTRY_SUFFIX)
@@ -451,7 +451,7 @@ begin
     for I := 0 to High(AEntries) do
     begin
       if (AEntries[I].Key = '') or
-         (Length(AEntries[I].Key) > MAX_REPLAY_PROVIDER_KEY_LENGTH) then
+        (Length(AEntries[I].Key) > MAX_REPLAY_PROVIDER_KEY_LENGTH) then
         Exit(False);
 
       LFileName := IncludeTrailingPathDelimiter(ADirectoryName) +

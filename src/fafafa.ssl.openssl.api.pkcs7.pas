@@ -389,10 +389,10 @@ begin
   if not TOpenSSLLoader.IsModuleLoaded(osmPKCS7) then
     raise ESSLException.Create('PKCS7 functions not loaded');
   if not Assigned(BIO_new_mem_buf) or
-     not Assigned(BIO_new) or
-     not Assigned(BIO_s_mem) or
-     not Assigned(BIO_free) or
-     not Assigned(BIO_read) then
+    not Assigned(BIO_new) or
+    not Assigned(BIO_s_mem) or
+    not Assigned(BIO_free) or
+    not Assigned(BIO_read) then
     Exit;
   
   // Create input BIO from data
@@ -452,10 +452,10 @@ begin
   if not TOpenSSLLoader.IsModuleLoaded(osmPKCS7) then
     Exit;
   if not Assigned(BIO_new_mem_buf) or
-     not Assigned(BIO_new) or
-     not Assigned(BIO_s_mem) or
-     not Assigned(BIO_free) or
-     not Assigned(BIO_read) then
+    not Assigned(BIO_new) or
+    not Assigned(BIO_s_mem) or
+    not Assigned(BIO_free) or
+    not Assigned(BIO_read) then
     Exit;
   
   // Create input BIO from signed data
@@ -516,10 +516,10 @@ begin
   if not TOpenSSLLoader.IsModuleLoaded(osmPKCS7) then
     raise ESSLException.Create('PKCS7 functions not loaded');
   if not Assigned(BIO_new_mem_buf) or
-     not Assigned(BIO_new) or
-     not Assigned(BIO_s_mem) or
-     not Assigned(BIO_free) or
-     not Assigned(BIO_read) then
+    not Assigned(BIO_new) or
+    not Assigned(BIO_s_mem) or
+    not Assigned(BIO_free) or
+    not Assigned(BIO_read) then
     Exit;
   
   // Create input BIO from data
@@ -579,10 +579,10 @@ begin
   if not TOpenSSLLoader.IsModuleLoaded(osmPKCS7) then
     Exit;
   if not Assigned(BIO_new_mem_buf) or
-     not Assigned(BIO_new) or
-     not Assigned(BIO_s_mem) or
-     not Assigned(BIO_free) or
-     not Assigned(BIO_read) then
+    not Assigned(BIO_new) or
+    not Assigned(BIO_s_mem) or
+    not Assigned(BIO_free) or
+    not Assigned(BIO_read) then
     Exit;
   
   // Create input BIO from encrypted data

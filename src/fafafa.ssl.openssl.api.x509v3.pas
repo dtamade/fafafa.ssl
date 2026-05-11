@@ -298,10 +298,10 @@ begin
     LoadOpenSSLX509();
 
   if (not Assigned(BASIC_CONSTRAINTS_new)) or
-     (not Assigned(BASIC_CONSTRAINTS_free)) or
-     (not Assigned(X509V3_EXT_i2d)) or
-     (not Assigned(X509_add_ext)) or
-     (not Assigned(X509_EXTENSION_free)) then
+    (not Assigned(BASIC_CONSTRAINTS_free)) or
+    (not Assigned(X509V3_EXT_i2d)) or
+    (not Assigned(X509_add_ext)) or
+    (not Assigned(X509_EXTENSION_free)) then
     Exit;
 
   LBasicConstraints := BASIC_CONSTRAINTS_new();
@@ -319,11 +319,11 @@ begin
     if PathLen >= 0 then
     begin
       if (not Assigned(ASN1_INTEGER_new)) or
-         (not Assigned(ASN1_INTEGER_set)) then
+        (not Assigned(ASN1_INTEGER_set)) then
         LoadOpenSSLASN1(GetCryptoLibHandle);
 
       if (not Assigned(ASN1_INTEGER_new)) or
-         (not Assigned(ASN1_INTEGER_set)) then
+        (not Assigned(ASN1_INTEGER_set)) then
         Exit;
 
       LPathLenValue := ASN1_INTEGER_new();
@@ -376,8 +376,8 @@ begin
     LoadOpenSSLX509();
 
   if (not Assigned(X509V3_EXT_conf_nid)) or
-     (not Assigned(X509_add_ext)) or
-     (not Assigned(X509_EXTENSION_free)) then
+    (not Assigned(X509_add_ext)) or
+    (not Assigned(X509_EXTENSION_free)) then
     Exit;
 
   LUsageValue := '';
@@ -434,8 +434,8 @@ begin
     LoadOpenSSLX509();
 
   if (not Assigned(X509V3_EXT_conf_nid)) or
-     (not Assigned(X509_add_ext)) or
-     (not Assigned(X509_EXTENSION_free)) then
+    (not Assigned(X509_add_ext)) or
+    (not Assigned(X509_EXTENSION_free)) then
     Exit;
 
   LExt := X509V3_EXT_conf_nid(nil, nil, NID_ext_key_usage, PAnsiChar(LUsageValue));
@@ -470,8 +470,8 @@ begin
     LoadOpenSSLX509();
 
   if (not Assigned(X509V3_EXT_conf_nid)) or
-     (not Assigned(X509_add_ext)) or
-     (not Assigned(X509_EXTENSION_free)) then
+    (not Assigned(X509_add_ext)) or
+    (not Assigned(X509_EXTENSION_free)) then
     Exit;
 
   LExt := X509V3_EXT_conf_nid(nil, nil, NID_subject_alt_name, PAnsiChar(LDNSValue));

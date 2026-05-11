@@ -233,11 +233,11 @@ begin
   FCapabilities.HasChaCha20 := True;
   FCapabilities.HasOCSP :=
     (Assigned(wolfSSL_CTX_EnableOCSPStapling) and
-     Assigned(wolfSSL_UseOCSPStapling) and
-     Assigned(wolfSSL_GetOCSP_Response)) or
+    Assigned(wolfSSL_UseOCSPStapling) and
+    Assigned(wolfSSL_GetOCSP_Response)) or
     (Assigned(wolfSSL_CTX_set_tlsext_status_cb) and
-     Assigned(wolfSSL_CTX_set_tlsext_status_arg) and
-     Assigned(wolfSSL_set_tlsext_status_ocsp_resp));
+    Assigned(wolfSSL_CTX_set_tlsext_status_arg) and
+    Assigned(wolfSSL_set_tlsext_status_ocsp_resp));
 
   Result := True;
 end;
@@ -453,9 +453,9 @@ begin
   else
     Result.SessionTicketsSupport := sslSupportNone;
   if FCapabilities.HasTLS13 and Assigned(wolfSSL_write_early_data) and
-     Assigned(wolfSSL_get_early_data_status) and
-     Assigned(wolfSSL_CTX_set_max_early_data) and
-     Assigned(wolfSSL_CTX_get_max_early_data) then
+    Assigned(wolfSSL_get_early_data_status) and
+    Assigned(wolfSSL_CTX_set_max_early_data) and
+    Assigned(wolfSSL_CTX_get_max_early_data) then
   begin
     Result.ZeroRTTSupport := sslSupportExperimental;
     Result.EarlyDataSupport := sslSupportExperimental;

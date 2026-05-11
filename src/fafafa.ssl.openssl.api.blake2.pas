@@ -175,13 +175,13 @@ const
 function BLAKE2ModuleSurfaceReady: Boolean;
 begin
   Result := (((Assigned(BLAKE2b_Init) and Assigned(BLAKE2b_Update) and Assigned(BLAKE2b_Final)) or
-             Assigned(BLAKE2b)) and
-             ((Assigned(BLAKE2s_Init) and Assigned(BLAKE2s_Update) and Assigned(BLAKE2s_Final)) or
-             Assigned(BLAKE2s)) and
-             ((Assigned(BLAKE2b_Init_key) and Assigned(BLAKE2b_Update) and Assigned(BLAKE2b_Final)) or
-             Assigned(BLAKE2b)) and
-             ((Assigned(BLAKE2s_Init_key) and Assigned(BLAKE2s_Update) and Assigned(BLAKE2s_Final)) or
-             Assigned(BLAKE2s)));
+            Assigned(BLAKE2b)) and
+            ((Assigned(BLAKE2s_Init) and Assigned(BLAKE2s_Update) and Assigned(BLAKE2s_Final)) or
+            Assigned(BLAKE2s)) and
+            ((Assigned(BLAKE2b_Init_key) and Assigned(BLAKE2b_Update) and Assigned(BLAKE2b_Final)) or
+            Assigned(BLAKE2b)) and
+            ((Assigned(BLAKE2s_Init_key) and Assigned(BLAKE2s_Update) and Assigned(BLAKE2s_Final)) or
+            Assigned(BLAKE2s)));
 end;
 
 function LoadBLAKE2Functions(ALibHandle: TOpenSSLLibHandle): Boolean;

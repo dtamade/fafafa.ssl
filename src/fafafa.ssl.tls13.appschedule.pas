@@ -133,7 +133,7 @@ begin
   SetLength(Result, 0);
   LHashSize := TLS13CipherSuiteHashSize(ACipherSuite);
   if (LHashSize <= 0) or (Length(AMasterSecret) <> LHashSize) or
-     (Length(AHandshakeTranscriptHash) <> LHashSize) then
+    (Length(AHandshakeTranscriptHash) <> LHashSize) then
     Exit;
 
   Result := HKDFExpandLabelForSuite(

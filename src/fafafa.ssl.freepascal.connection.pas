@@ -247,12 +247,12 @@ begin
   end;
 
   if not Assigned(o2i_SCT) or
-     not Assigned(CT_POLICY_EVAL_CTX_new) or
-     not Assigned(CT_POLICY_EVAL_CTX_free) or
-     not Assigned(CT_POLICY_EVAL_CTX_set1_cert) or
-     not Assigned(SCT_validate) or
-     not Assigned(SCT_get_validation_status) or
-     not Assigned(SCT_free) then
+    not Assigned(CT_POLICY_EVAL_CTX_new) or
+    not Assigned(CT_POLICY_EVAL_CTX_free) or
+    not Assigned(CT_POLICY_EVAL_CTX_set1_cert) or
+    not Assigned(SCT_validate) or
+    not Assigned(SCT_get_validation_status) or
+    not Assigned(SCT_free) then
   begin
     AError := 'Required OpenSSL CT functions are unavailable';
     Exit;
@@ -421,12 +421,12 @@ begin
   end;
 
   if not Assigned(CT_POLICY_EVAL_CTX_new) or
-     not Assigned(CT_POLICY_EVAL_CTX_free) or
-     not Assigned(CT_POLICY_EVAL_CTX_set1_cert) or
-     not Assigned(o2i_SCT) or
-     not Assigned(SCT_validate) or
-     not Assigned(SCT_get_validation_status) or
-     not Assigned(SCT_free) then
+    not Assigned(CT_POLICY_EVAL_CTX_free) or
+    not Assigned(CT_POLICY_EVAL_CTX_set1_cert) or
+    not Assigned(o2i_SCT) or
+    not Assigned(SCT_validate) or
+    not Assigned(SCT_get_validation_status) or
+    not Assigned(SCT_free) then
   begin
     AError := 'Required OpenSSL CT evaluation functions are unavailable';
     Exit;
@@ -1103,8 +1103,8 @@ begin
           end;
 
           if (not FApplicationSecrets.Valid) or
-             (Length(FApplicationSecrets.MasterSecret) <> FApplicationSecrets.HashSize) or
-             (Length(FApplicationSecrets.TranscriptHash) <> FApplicationSecrets.HashSize) then
+            (Length(FApplicationSecrets.MasterSecret) <> FApplicationSecrets.HashSize) or
+            (Length(FApplicationSecrets.TranscriptHash) <> FApplicationSecrets.HashSize) then
           begin
             SetHandshakeError(sslErrProtocol, 'Application transcript state is not ready for NewSessionTicket');
             Exit;
@@ -2632,7 +2632,7 @@ begin
                   else if LMsgType = TLS_HANDSHAKE_TYPE_FINISHED then
                   begin
                     if LRequireCertificateFlight and
-                       ((not LSeenServerCertificate) or (not LSeenServerCertificateVerify)) then
+                      ((not LSeenServerCertificate) or (not LSeenServerCertificateVerify)) then
                     begin
                       SetHandshakeError(
                         sslErrProtocol,
@@ -3179,7 +3179,7 @@ begin
   LWantOCSPStapling :=
     (FContext <> nil) and
     ((ssoEnableOCSPStapling in FContext.GetOptions) or
-     (ssoRequireOCSPStapling in FContext.GetOptions));
+    (ssoRequireOCSPStapling in FContext.GetOptions));
   LWantCertificateTransparency :=
     (FContext <> nil) and
     (sslVerifyPeer in FContext.GetVerifyMode);
@@ -3868,7 +3868,7 @@ begin
   LCachedSession := nil;
   LCachedResumption := nil;
   if LClientHello.HasPreSharedKey and
-     Supports(FContext, IFreePascalResumptionCache, LResumptionCache) then
+    Supports(FContext, IFreePascalResumptionCache, LResumptionCache) then
   begin
     if not TryBuildTLS13ClientHelloPSKBinderTranscript(LClientHelloHandshake, LBinderTranscript, LParseError) then
     begin
@@ -3877,8 +3877,8 @@ begin
     end;
 
     if LResumptionCache.TryGetResumptionSession(LClientHello.FirstPSKIdentity, LCachedSession) and
-       Supports(LCachedSession, IFreePascalResumptionSession, LCachedResumption) and
-       TLS13ClientHelloOffersCipherSuite(LClientHello, LCachedResumption.GetCipherSuite) then
+      Supports(LCachedSession, IFreePascalResumptionSession, LCachedResumption) and
+      TLS13ClientHelloOffersCipherSuite(LClientHello, LCachedResumption.GetCipherSuite) then
     begin
       LExpectedBinder := TLS13ComputePSKBinderForCipherSuite(
         LCachedResumption.GetCipherSuite,
@@ -3920,13 +3920,13 @@ begin
         if Supports(FContext, IFreePascalEarlyDataReplayLedgerAccess, LEarlyDataReplayAccess) then
           LEarlyDataReplayLedger := LEarlyDataReplayAccess.GetEarlyDataReplayLedger;
         if (LEarlyDataReplayLedger = nil) and
-           Supports(FContext, IFreePascalEarlyDataReplayLedger, LEarlyDataReplayLedger) then;
+          Supports(FContext, IFreePascalEarlyDataReplayLedger, LEarlyDataReplayLedger) then;
 
         if (FEarlyDataLimit > 0) and
-           Supports(FContext, ISSLEarlyDataContext, LEarlyDataContext) and
-           (LEarlyDataContext.GetServerEarlyDataPolicy = sslEarlyDataServerAccept) and
-           (LEarlyDataReplayLedger <> nil) and
-           LEarlyDataReplayLedger.TryAcquireEarlyDataSession(LCachedSession) then
+          Supports(FContext, ISSLEarlyDataContext, LEarlyDataContext) and
+          (LEarlyDataContext.GetServerEarlyDataPolicy = sslEarlyDataServerAccept) and
+          (LEarlyDataReplayLedger <> nil) and
+          LEarlyDataReplayLedger.TryAcquireEarlyDataSession(LCachedSession) then
         begin
           LEarlyDataAccepted := True;
           FEarlyDataStatus := sslEarlyDataAccepted;
@@ -3981,8 +3981,8 @@ begin
     LPrivateKeyBlob := LContextMaterial.GetPrivateKeyMaterial;
 
     if LClientRequestedOCSPStapling and
-       Supports(FContext, IFreePascalContextServerStaplingMaterial, LStaplingMaterial) and
-       LStaplingMaterial.HasServerStapledOCSPResponse then
+      Supports(FContext, IFreePascalContextServerStaplingMaterial, LStaplingMaterial) and
+      LStaplingMaterial.HasServerStapledOCSPResponse then
       LServerStapledOCSPResponse := LStaplingMaterial.GetServerStapledOCSPResponse;
 
     if not TryBuildTLS13ServerCertificateHandshakeWithStapledOCSP(
@@ -4238,8 +4238,8 @@ begin
           else if SameText(LLeafKeyType, 'ECDSA') then
           begin
             if (Length(LCertVerifySignature) <= 0) or
-               (Length(LCertVerifySignature) > LSignatureLength) or
-               (LCertVerifySignature[0] <> $30) then
+              (Length(LCertVerifySignature) > LSignatureLength) or
+              (LCertVerifySignature[0] <> $30) then
             begin
               SetHandshakeError(
                 sslErrHandshake,
@@ -4971,9 +4971,9 @@ begin
     Exit(TSSLOperationResult.Err(sslErrConfiguration, 'Client early data is disabled on the context'));
 
   if (FConfiguredSession = nil) or
-     (not Supports(FConfiguredSession, IFreePascalResumptionSession, LResumptionSession)) or
-     (not FConfiguredSession.IsValid) or
-     (not FConfiguredSession.IsResumable) then
+    (not Supports(FConfiguredSession, IFreePascalResumptionSession, LResumptionSession)) or
+    (not FConfiguredSession.IsValid) or
+    (not FConfiguredSession.IsResumable) then
     Exit(TSSLOperationResult.Err(sslErrInvalidParam, 'Early data requires a configured resumable session'));
 
   FEarlyDataLimit := LResumptionSession.GetMaxEarlyDataSize;

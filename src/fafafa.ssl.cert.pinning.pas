@@ -500,7 +500,7 @@ begin
     case Pin.PinType of
       ptCertificate:
         if (Length(CertHash) > 0) and (Length(CertHash) = 32) and
-           ConstantTimeCompare(CertHash, Slice(Pin.Hash, 32)) then
+          ConstantTimeCompare(CertHash, Slice(Pin.Hash, 32)) then
         begin
           TSecurityLog.Info('CertPinning',
             Format('Certificate matched pin: %s', [Pin.Description]));
@@ -510,7 +510,7 @@ begin
 
       ptPublicKey:
         if (Length(PubKeyHash) > 0) and (Length(PubKeyHash) = 32) and
-           ConstantTimeCompare(PubKeyHash, Slice(Pin.Hash, 32)) then
+          ConstantTimeCompare(PubKeyHash, Slice(Pin.Hash, 32)) then
         begin
           TSecurityLog.Info('CertPinning',
             Format('Public key matched pin: %s', [Pin.Description]));
@@ -663,7 +663,7 @@ begin
     case Pin.PinType of
       ptCertificate:
         if (Length(CertHash) > 0) and (Length(CertHash) = 32) and
-           ConstantTimeCompare(CertHash, Slice(Pin.Hash, 32)) then
+          ConstantTimeCompare(CertHash, Slice(Pin.Hash, 32)) then
         begin
           AResult.Success := True;
           AResult.MatchedPinIndex := i;
@@ -674,7 +674,7 @@ begin
 
       ptPublicKey:
         if (Length(PubKeyHash) > 0) and (Length(PubKeyHash) = 32) and
-           ConstantTimeCompare(PubKeyHash, Slice(Pin.Hash, 32)) then
+          ConstantTimeCompare(PubKeyHash, Slice(Pin.Hash, 32)) then
         begin
           AResult.Success := True;
           AResult.MatchedPinIndex := i;

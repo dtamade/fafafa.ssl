@@ -471,7 +471,7 @@ end;
 function OpenSSLPrivateKeyReadSurfaceReady: Boolean;
 begin
   if (not Assigned(PEM_read_bio_PrivateKey)) and
-     (not TOpenSSLLoader.IsModuleLoaded(osmPEM)) then
+    (not TOpenSSLLoader.IsModuleLoaded(osmPEM)) then
     LoadOpenSSLPEM(GetCryptoLibHandle);
 
   Result := Assigned(PEM_read_bio_PrivateKey) and
@@ -488,7 +488,7 @@ function OpenSSLDERPKCS8PrivateKeySurfaceReady: Boolean;
 begin
   if ((not Assigned(fafafa.ssl.openssl.api.pkcs.d2i_PKCS8_PRIV_KEY_INFO)) or
       (not Assigned(fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY))) and
-     (not TOpenSSLLoader.IsModuleLoaded(osmPKCS)) then
+    (not TOpenSSLLoader.IsModuleLoaded(osmPKCS)) then
     LoadOpenSSLPKCS(GetCryptoLibHandle);
 
   Result := Assigned(fafafa.ssl.openssl.api.pkcs.d2i_PKCS8_PRIV_KEY_INFO) and
@@ -499,11 +499,11 @@ function OpenSSLEncryptedDERPKCS8PrivateKeySurfaceReady: Boolean;
 begin
   if ((not Assigned(fafafa.ssl.openssl.api.pkcs.d2i_X509_SIG)) or
       (not Assigned(fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY))) and
-     (not TOpenSSLLoader.IsModuleLoaded(osmPKCS)) then
+    (not TOpenSSLLoader.IsModuleLoaded(osmPKCS)) then
     LoadOpenSSLPKCS(GetCryptoLibHandle);
 
   if (not Assigned(fafafa.ssl.openssl.api.pkcs12.PKCS8_decrypt)) and
-     (not TOpenSSLLoader.IsModuleLoaded(osmPKCS12)) then
+    (not TOpenSSLLoader.IsModuleLoaded(osmPKCS12)) then
     LoadPKCS12Module(GetCryptoLibHandle);
 
   Result := Assigned(fafafa.ssl.openssl.api.pkcs.d2i_X509_SIG) and
@@ -514,12 +514,12 @@ end;
 function OpenSSLDERPKCS1PrivateKeySurfaceReady: Boolean;
 begin
   if (not Assigned(d2i_RSAPrivateKey)) and
-     (not TOpenSSLLoader.IsModuleLoaded(osmRSA)) then
+    (not TOpenSSLLoader.IsModuleLoaded(osmRSA)) then
     LoadOpenSSLRSA;
 
   if ((not Assigned(EVP_PKEY_new)) or
       (not Assigned(EVP_PKEY_set1_RSA))) and
-     (not TOpenSSLLoader.IsModuleLoaded(osmEVP)) then
+    (not TOpenSSLLoader.IsModuleLoaded(osmEVP)) then
     LoadEVP(GetCryptoLibHandle);
 
   Result := Assigned(d2i_RSAPrivateKey) and
@@ -530,12 +530,12 @@ end;
 function OpenSSLDERSEC1ECPrivateKeySurfaceReady: Boolean;
 begin
   if (not Assigned(d2i_ECPrivateKey)) and
-     (not TOpenSSLLoader.IsModuleLoaded(osmEC)) then
+    (not TOpenSSLLoader.IsModuleLoaded(osmEC)) then
     LoadECFunctions(GetCryptoLibHandle);
 
   if ((not Assigned(EVP_PKEY_new)) or
       (not Assigned(EVP_PKEY_set1_EC_KEY))) and
-     (not TOpenSSLLoader.IsModuleLoaded(osmEVP)) then
+    (not TOpenSSLLoader.IsModuleLoaded(osmEVP)) then
     LoadEVP(GetCryptoLibHandle);
 
   Result := Assigned(d2i_ECPrivateKey) and
@@ -1323,7 +1323,7 @@ begin
       Result.SetProtocolVersions(LConfig.ProtocolVersions);
 
     if (LConfig.PreferredVersion <> sslProtocolUnknown) and
-       (LConfig.PreferredVersion <> Result.GetPreferredVersion) then
+      (LConfig.PreferredVersion <> Result.GetPreferredVersion) then
       Result.SetPreferredVersion(LConfig.PreferredVersion);
 
     if (LConfig.VerifyMode <> []) and (LConfig.VerifyMode <> Result.GetVerifyMode) then

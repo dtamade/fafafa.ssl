@@ -1,3 +1,27 @@
+# Findings - v1.5.0 Release Formalization
+
+## 2026-05-12
+- Current tracked worktree started clean; `git clean -nd` was empty and `git clean -ndX` only reported ignored local `.ace-tool/`.
+- Latest local tag is `v1.4.3`.
+- Version source of truth is already updated in `src/fafafa.ssl.base.pas`: `FAFAFA_SSL_VERSION_STRING = '1.5.0'` and `FAFAFA_SSL_INTERFACE_VERSION = 10500`.
+- `fafafa_ssl.lpk` is still stale at package version `1.0.0`.
+- `README.md` still advertises `v1.4.2` in the badge and latest-version heading.
+- `CHANGELOG.md` still keeps the `v1.5.0` entries under `[Unreleased]`.
+- `RELEASE_NOTES_V1.5.0.md` does not exist yet.
+- `.github/workflows/release.yml.disabled` is still the old release template: it calls `build_linux.sh`, generates inline release notes, and includes old API examples.
+- `.github/workflows/release.yml` does not exist yet.
+- No focused release workflow contract exists yet, so this batch should add one.
+- The local `wave-b-b2-manual.yml` already has the current Windows runtime checklist lane: Lazarus / `lazbuild`, quick smoke, Wave B Windows gate, and broader WinSSL transcript.
+- `origin/master` still has the older Wave B/B2 workflow without the current Windows runtime checklist lane, and there is no remote `glm51` branch yet.
+- `gh` is installed and authenticated with `repo` and `workflow` scope, so GitHub workflow dispatch is feasible after pushing a branch that contains the updated workflow.
+- Expired CT/SCT and CRL fixtures were the real FreePascal completeness blocker. The refreshed fixtures preserve the valid embedded SCT bytes, malformed SCT raw bytes, revoked serial `03E9`, and nonmatching serial `03EA`, with validity extended to 2036-05-08.
+- Strict style gate was also a real release blocker: `python3 scripts/check_code_style.py src` reported 369 odd-indent errors across 44 source files. The fix is mechanical indentation-only and now the style gate passes.
+- Versioned release files are now aligned: `CHANGELOG.md` has `[1.5.0] - 2026-05-12`, `README.md` advertises `v1.5.0`, `fafafa_ssl.lpk` is `1.5.0`, and `RELEASE_NOTES_V1.5.0.md` exists.
+- Release automation is now current: `.github/workflows/release.yml` exists, `.github/workflows/release.yml.disabled` is synchronized to it, the workflow rejects non-`v1.5.0`, requires an already-existing approved tag, runs current gates, and uses `RELEASE_NOTES_V1.5.0.md` as the release body.
+- Focused release/workflow contracts are green locally. The remaining release-signoff blocker is still real Windows-host `WinSSL` runtime proof from Wave B/B2 artifacts, not Linux-side code or documentation drift.
+
+---
+
 # Findings - Repo Hygiene And Ignore Consolidation
 
 ## 2026-05-12

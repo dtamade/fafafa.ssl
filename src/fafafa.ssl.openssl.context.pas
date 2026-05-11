@@ -317,7 +317,7 @@ begin
 
     Move(LResponse[0], LResponseCopy^, Length(LResponse));
     if Assigned(SSL_set_tlsext_status_ocsp_resp) and
-       (SSL_set_tlsext_status_ocsp_resp(ssl, LResponseCopy, Length(LResponse)) = 1) then
+      (SSL_set_tlsext_status_ocsp_resp(ssl, LResponseCopy, Length(LResponse)) = 1) then
       Result := SSL_TLSEXT_ERR_OK
     else
     begin
@@ -383,12 +383,12 @@ begin
     Exit;
 
   if (not Assigned(PEM_read_bio_PrivateKey)) and
-     (not TOpenSSLLoader.IsModuleLoaded(osmPEM)) then
+    (not TOpenSSLLoader.IsModuleLoaded(osmPEM)) then
     LoadOpenSSLPEM(GetCryptoLibHandle);
 
   if (not Assigned(PEM_read_bio_PrivateKey)) or
-     (not Assigned(BIO_new_mem_buf)) or
-     (not Assigned(BIO_free)) then
+    (not Assigned(BIO_new_mem_buf)) or
+    (not Assigned(BIO_free)) then
     Exit;
 
   LBIO := BIO_new_mem_buf(@AData[0], Length(AData));
@@ -435,18 +435,18 @@ begin
       (not Assigned(fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY)) or
       (not Assigned(fafafa.ssl.openssl.api.pkcs.X509_SIG_free)) or
       (not Assigned(fafafa.ssl.openssl.api.pkcs.PKCS8_PRIV_KEY_INFO_free))) and
-     (not TOpenSSLLoader.IsModuleLoaded(osmPKCS)) then
+    (not TOpenSSLLoader.IsModuleLoaded(osmPKCS)) then
     LoadOpenSSLPKCS(GetCryptoLibHandle);
 
   if (not Assigned(fafafa.ssl.openssl.api.pkcs12.PKCS8_decrypt)) and
-     (not TOpenSSLLoader.IsModuleLoaded(osmPKCS12)) then
+    (not TOpenSSLLoader.IsModuleLoaded(osmPKCS12)) then
     LoadPKCS12Module(GetCryptoLibHandle);
 
   if (not Assigned(fafafa.ssl.openssl.api.pkcs.d2i_X509_SIG)) or
-     (not Assigned(fafafa.ssl.openssl.api.pkcs12.PKCS8_decrypt)) or
-     (not Assigned(fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY)) or
-     (not Assigned(fafafa.ssl.openssl.api.pkcs.X509_SIG_free)) or
-     (not Assigned(fafafa.ssl.openssl.api.pkcs.PKCS8_PRIV_KEY_INFO_free)) then
+    (not Assigned(fafafa.ssl.openssl.api.pkcs12.PKCS8_decrypt)) or
+    (not Assigned(fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY)) or
+    (not Assigned(fafafa.ssl.openssl.api.pkcs.X509_SIG_free)) or
+    (not Assigned(fafafa.ssl.openssl.api.pkcs.PKCS8_PRIV_KEY_INFO_free)) then
     Exit;
 
   LPointer := @AData[0];
@@ -500,12 +500,12 @@ begin
   if ((not Assigned(fafafa.ssl.openssl.api.pkcs.d2i_PKCS8_PRIV_KEY_INFO)) or
       (not Assigned(fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY)) or
       (not Assigned(fafafa.ssl.openssl.api.pkcs.PKCS8_PRIV_KEY_INFO_free))) and
-     (not TOpenSSLLoader.IsModuleLoaded(osmPKCS)) then
+    (not TOpenSSLLoader.IsModuleLoaded(osmPKCS)) then
     LoadOpenSSLPKCS(GetCryptoLibHandle);
 
   if (not Assigned(fafafa.ssl.openssl.api.pkcs.d2i_PKCS8_PRIV_KEY_INFO)) or
-     (not Assigned(fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY)) or
-     (not Assigned(fafafa.ssl.openssl.api.pkcs.PKCS8_PRIV_KEY_INFO_free)) then
+    (not Assigned(fafafa.ssl.openssl.api.pkcs.EVP_PKCS82PKEY)) or
+    (not Assigned(fafafa.ssl.openssl.api.pkcs.PKCS8_PRIV_KEY_INFO_free)) then
     Exit;
 
   LPointer := @AData[0];
@@ -536,20 +536,20 @@ begin
     Exit;
 
   if (not Assigned(d2i_RSAPrivateKey)) and
-     (not TOpenSSLLoader.IsModuleLoaded(osmRSA)) then
+    (not TOpenSSLLoader.IsModuleLoaded(osmRSA)) then
     LoadOpenSSLRSA;
 
   if ((not Assigned(EVP_PKEY_new)) or
       (not Assigned(EVP_PKEY_set1_RSA)) or
       (not Assigned(EVP_PKEY_free))) and
-     (not TOpenSSLLoader.IsModuleLoaded(osmEVP)) then
+    (not TOpenSSLLoader.IsModuleLoaded(osmEVP)) then
     LoadEVP(GetCryptoLibHandle);
 
   if (not Assigned(d2i_RSAPrivateKey)) or
-     (not Assigned(RSA_free)) or
-     (not Assigned(EVP_PKEY_new)) or
-     (not Assigned(EVP_PKEY_set1_RSA)) or
-     (not Assigned(EVP_PKEY_free)) then
+    (not Assigned(RSA_free)) or
+    (not Assigned(EVP_PKEY_new)) or
+    (not Assigned(EVP_PKEY_set1_RSA)) or
+    (not Assigned(EVP_PKEY_free)) then
     Exit;
 
   LPointer := @AData[0];
@@ -590,20 +590,20 @@ begin
     Exit;
 
   if (not Assigned(d2i_ECPrivateKey)) and
-     (not TOpenSSLLoader.IsModuleLoaded(osmEC)) then
+    (not TOpenSSLLoader.IsModuleLoaded(osmEC)) then
     LoadECFunctions(GetCryptoLibHandle);
 
   if ((not Assigned(EVP_PKEY_new)) or
       (not Assigned(EVP_PKEY_set1_EC_KEY)) or
       (not Assigned(EVP_PKEY_free))) and
-     (not TOpenSSLLoader.IsModuleLoaded(osmEVP)) then
+    (not TOpenSSLLoader.IsModuleLoaded(osmEVP)) then
     LoadEVP(GetCryptoLibHandle);
 
   if (not Assigned(d2i_ECPrivateKey)) or
-     (not Assigned(EC_KEY_free)) or
-     (not Assigned(EVP_PKEY_new)) or
-     (not Assigned(EVP_PKEY_set1_EC_KEY)) or
-     (not Assigned(EVP_PKEY_free)) then
+    (not Assigned(EC_KEY_free)) or
+    (not Assigned(EVP_PKEY_new)) or
+    (not Assigned(EVP_PKEY_set1_EC_KEY)) or
+    (not Assigned(EVP_PKEY_free)) then
     Exit;
 
   LPointer := @AData[0];
@@ -1180,7 +1180,7 @@ begin
 
   // 当首选版本不再可用时，自动回退为无偏好
   if (FPreferredVersion <> sslProtocolUnknown) and
-     not (FPreferredVersion in FProtocolVersions) then
+    not (FPreferredVersion in FProtocolVersions) then
     FPreferredVersion := sslProtocolUnknown;
 
   // P2: 使用共享辅助函数记录废弃协议警告
@@ -1197,7 +1197,7 @@ end;
 procedure TOpenSSLContext.SetPreferredVersion(AVersion: TSSLProtocolVersion);
 begin
   if (AVersion <> sslProtocolUnknown) and
-     not (AVersion in FProtocolVersions) then
+    not (AVersion in FProtocolVersions) then
     RaiseInvalidParameter('PreferredVersion');
 
   FPreferredVersion := AVersion;
@@ -1381,7 +1381,7 @@ begin
     PKey := nil;
     try
       if (not Assigned(PEM_read_bio_PrivateKey)) and
-         (not TOpenSSLLoader.IsModuleLoaded(osmPEM)) then
+        (not TOpenSSLLoader.IsModuleLoaded(osmPEM)) then
         LoadOpenSSLPEM(GetCryptoLibHandle);
 
       if Assigned(PEM_read_bio_PrivateKey) then
@@ -2394,7 +2394,7 @@ begin
 
   // 如果服务端 early data 已启用，更新 SSL_CTX
   if Assigned(SSL_CTX_set_max_early_data) and
-     (FServerEarlyDataPolicy <> sslEarlyDataServerReject) then
+    (FServerEarlyDataPolicy <> sslEarlyDataServerReject) then
   begin
     LRet := SSL_CTX_set_max_early_data(FSSLContext, ASize);
     if LRet <> 1 then

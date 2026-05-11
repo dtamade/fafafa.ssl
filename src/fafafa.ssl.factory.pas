@@ -386,7 +386,7 @@ begin
       Include(AConfig.Options, ssoNoTLSv1_3);
 
     if (AConfig.PreferredVersion <> sslProtocolUnknown) and
-       not (AConfig.PreferredVersion in AConfig.ProtocolVersions) then
+      not (AConfig.PreferredVersion in AConfig.ProtocolVersions) then
       AConfig.PreferredVersion := sslProtocolUnknown;
   end;
 
@@ -468,11 +468,11 @@ var
   LDirectoryInstaller: IFreePascalContextEarlyDataReplayDirectoryInstaller;
 begin
   if (AContext = nil) or
-     (AContext.GetContextType <> sslCtxServer) then
+    (AContext.GetContextType <> sslCtxServer) then
     Exit;
 
   if (Trim(AConfig.ServerEarlyDataReplayStoreFile) <> '') and
-     (Trim(AConfig.ServerEarlyDataReplayStoreDirectory) <> '') then
+    (Trim(AConfig.ServerEarlyDataReplayStoreDirectory) <> '') then
     raise ESSLConfigurationException.CreateWithContext(
       'Configured server_early_data_replay_store_file and ' +
       'server_early_data_replay_store_directory are mutually exclusive; configure not both',

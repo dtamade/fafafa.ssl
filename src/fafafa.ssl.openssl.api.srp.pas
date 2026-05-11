@@ -211,8 +211,8 @@ var
 begin
   Result := nil;
   if not Assigned(SRP_user_pwd_new) or
-     not Assigned(SRP_user_pwd_free) or
-     not Assigned(SRP_create_verifier_BN) then
+    not Assigned(SRP_user_pwd_free) or
+    not Assigned(SRP_create_verifier_BN) then
     Exit;
   
   Result := SRP_user_pwd_new(PChar(Username));
@@ -230,7 +230,7 @@ begin
   end;
 
   if not Assigned(SRP_user_pwd_set_salt) or
-     not Assigned(SRP_user_pwd_set_verifier) then
+    not Assigned(SRP_user_pwd_set_verifier) then
   begin
     SRP_user_pwd_free(Result);
     Result := nil;

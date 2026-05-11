@@ -264,7 +264,7 @@ begin
   // 检查 I/O 回调是否可用
   if ((not Assigned(wolfSSL_SSLSetIORecv)) or
       (not Assigned(wolfSSL_SSLSetIOSend))) and
-     ((not Assigned(wolfSSL_CTX_SetIORecv)) or
+    ((not Assigned(wolfSSL_CTX_SetIORecv)) or
       (not Assigned(wolfSSL_CTX_SetIOSend))) then
     raise ESSLException.Create('WolfSSL I/O callbacks not available - stream connections not supported');
 
@@ -333,7 +333,7 @@ begin
       FLastNativeError := LResult;
 
     if (FLastNativeError <> WOLFSSL_ERROR_WANT_READ) and
-       (FLastNativeError <> WOLFSSL_ERROR_WANT_WRITE) then
+      (FLastNativeError <> WOLFSSL_ERROR_WANT_WRITE) then
       Exit(False);
   end;
 end;
@@ -345,7 +345,7 @@ begin
   Result := True;
 
   if (FWolfSSL = nil) or (FContext = nil) or
-     (FContext.GetContextType <> sslCtxClient) then
+    (FContext.GetContextType <> sslCtxClient) then
     Exit;
 
   LOptions := FContext.GetOptions;
@@ -354,7 +354,7 @@ begin
     Exit;
 
   if Assigned(wolfSSL_CTX_EnableOCSPStapling) and (FWolfSSLCtx <> nil) and
-     (wolfSSL_CTX_EnableOCSPStapling(FWolfSSLCtx) <> WOLFSSL_SUCCESS) then
+    (wolfSSL_CTX_EnableOCSPStapling(FWolfSSLCtx) <> WOLFSSL_SUCCESS) then
   begin
     FLastNativeError := WOLFSSL_FAILURE;
     Exit(False);
@@ -367,7 +367,7 @@ begin
   end;
 
   if wolfSSL_UseOCSPStapling(FWolfSSL, WOLFSSL_CSR_OCSP,
-     WOLFSSL_CSR_OCSP_USE_NONCE) <> WOLFSSL_SUCCESS then
+    WOLFSSL_CSR_OCSP_USE_NONCE) <> WOLFSSL_SUCCESS then
   begin
     FLastNativeError := WOLFSSL_FAILURE;
     Exit(False);
@@ -382,7 +382,7 @@ begin
   Result := True;
 
   if (FWolfSSL = nil) or (FContext = nil) or
-     (FContext.GetContextType <> sslCtxServer) then
+    (FContext.GetContextType <> sslCtxServer) then
     Exit;
 
   if not Supports(FContext, ISSLServerOCSPStaplingContext, LServerStapling) then
@@ -392,7 +392,7 @@ begin
     Exit;
 
   if Assigned(wolfSSL_EnableOCSPStapling) and
-     (wolfSSL_EnableOCSPStapling(FWolfSSL) <> WOLFSSL_SUCCESS) then
+    (wolfSSL_EnableOCSPStapling(FWolfSSL) <> WOLFSSL_SUCCESS) then
   begin
     FLastNativeError := WOLFSSL_FAILURE;
     Exit(False);
@@ -418,7 +418,7 @@ begin
   Result := 0;
 
   if (ASession <> nil) and Assigned(wolfSSL_SESSION_get_max_early_data) and
-     TryGetNativeHandle(ASession, Pointer(LSession)) and (LSession <> nil) then
+    TryGetNativeHandle(ASession, Pointer(LSession)) and (LSession <> nil) then
     Exit(wolfSSL_SESSION_get_max_early_data(LSession));
 
   if (FWolfSSL <> nil) and Assigned(wolfSSL_get_max_early_data) then
@@ -728,9 +728,9 @@ begin
     Exit;
 
   if (not Assigned(wolfSSL_get_peer_chain)) or
-     (not Assigned(wolfSSL_get_chain_count)) or
-     (not Assigned(wolfSSL_get_chain_length)) or
-     (not Assigned(wolfSSL_get_chain_cert)) then
+    (not Assigned(wolfSSL_get_chain_count)) or
+    (not Assigned(wolfSSL_get_chain_length)) or
+    (not Assigned(wolfSSL_get_chain_cert)) then
     Exit;
 
   LChain := wolfSSL_get_peer_chain(FWolfSSL);
@@ -957,7 +957,7 @@ begin
       'Client early data is disabled on the context'));
 
   if (FConfiguredSession = nil) or (not FConfiguredSession.IsValid) or
-     (not FConfiguredSession.IsResumable) then
+    (not FConfiguredSession.IsResumable) then
     Exit(TSSLOperationResult.Err(sslErrInvalidParam,
       'Early data requires a configured resumable session'));
 

@@ -26,8 +26,8 @@ function XMLToCapabilities(const AXML: string): TSSLBackendCapabilities;
 
 { 文件操作 }
 procedure SaveCapabilitiesToFile(const ACaps: TSSLBackendCapabilities;
-                                 const AFileName: string;
-                                 const AFormat: string = 'json');  // 'json' or 'xml'
+                                const AFileName: string;
+                                const AFormat: string = 'json');  // 'json' or 'xml'
 function LoadCapabilitiesFromFile(const AFileName: string): TSSLBackendCapabilities;
 
 implementation
@@ -132,7 +132,7 @@ begin
     begin
       LOrdinal := StrToIntDef(Trim(LParts[I]), -1);
       if (LOrdinal >= Ord(Low(TSSLCipher))) and
-         (LOrdinal <= Ord(High(TSSLCipher))) then
+        (LOrdinal <= Ord(High(TSSLCipher))) then
         Include(Result, TSSLCipher(LOrdinal));
     end;
   finally
@@ -175,7 +175,7 @@ begin
     begin
       LOrdinal := StrToIntDef(Trim(LParts[I]), -1);
       if (LOrdinal >= Ord(Low(TSSLHash))) and
-         (LOrdinal <= Ord(High(TSSLHash))) then
+        (LOrdinal <= Ord(High(TSSLHash))) then
         Include(Result, TSSLHash(LOrdinal));
     end;
   finally
@@ -218,7 +218,7 @@ begin
     begin
       LOrdinal := StrToIntDef(Trim(LParts[I]), -1);
       if (LOrdinal >= Ord(Low(TSSLKeyExchange))) and
-         (LOrdinal <= Ord(High(TSSLKeyExchange))) then
+        (LOrdinal <= Ord(High(TSSLKeyExchange))) then
         Include(Result, TSSLKeyExchange(LOrdinal));
     end;
   finally
@@ -345,7 +345,7 @@ var
   function IntToProtocolVersion(AInt: Integer): TSSLProtocolVersion;
   begin
     if (AInt >= Ord(Low(TSSLProtocolVersion))) and
-       (AInt <= Ord(High(TSSLProtocolVersion))) then
+      (AInt <= Ord(High(TSSLProtocolVersion))) then
       Result := TSSLProtocolVersion(AInt)
     else
       Result := sslProtocolUnknown;
@@ -354,7 +354,7 @@ var
   function IntToLibraryType(AInt: Integer): TSSLLibraryType;
   begin
     if (AInt >= Ord(Low(TSSLLibraryType))) and
-       (AInt <= Ord(High(TSSLLibraryType))) then
+      (AInt <= Ord(High(TSSLLibraryType))) then
       Result := TSSLLibraryType(AInt)
     else
       Result := sslAutoDetect;
@@ -363,7 +363,7 @@ var
   function IntToBackendImplType(AInt: Integer): TSSLBackendImplType;
   begin
     if (AInt >= Ord(Low(TSSLBackendImplType))) and
-       (AInt <= Ord(High(TSSLBackendImplType))) then
+      (AInt <= Ord(High(TSSLBackendImplType))) then
       Result := TSSLBackendImplType(AInt)
     else
       Result := sslImplNative;
@@ -736,7 +736,7 @@ var
   function IntToProtocolVersion(AInt: Integer): TSSLProtocolVersion;
   begin
     if (AInt >= Ord(Low(TSSLProtocolVersion))) and
-       (AInt <= Ord(High(TSSLProtocolVersion))) then
+      (AInt <= Ord(High(TSSLProtocolVersion))) then
       Result := TSSLProtocolVersion(AInt)
     else
       Result := sslProtocolUnknown;
@@ -745,7 +745,7 @@ var
   function IntToLibraryType(AInt: Integer): TSSLLibraryType;
   begin
     if (AInt >= Ord(Low(TSSLLibraryType))) and
-       (AInt <= Ord(High(TSSLLibraryType))) then
+      (AInt <= Ord(High(TSSLLibraryType))) then
       Result := TSSLLibraryType(AInt)
     else
       Result := sslAutoDetect;
@@ -754,7 +754,7 @@ var
   function IntToBackendImplType(AInt: Integer): TSSLBackendImplType;
   begin
     if (AInt >= Ord(Low(TSSLBackendImplType))) and
-       (AInt <= Ord(High(TSSLBackendImplType))) then
+      (AInt <= Ord(High(TSSLBackendImplType))) then
       Result := TSSLBackendImplType(AInt)
     else
       Result := sslImplNative;
@@ -932,8 +932,8 @@ end;
 { ============================================================================ }
 
 procedure SaveCapabilitiesToFile(const ACaps: TSSLBackendCapabilities;
-                                 const AFileName: string;
-                                 const AFormat: string = 'json');
+                                const AFileName: string;
+                                const AFormat: string = 'json');
 var
   SL: TStringList;
   Content: string;

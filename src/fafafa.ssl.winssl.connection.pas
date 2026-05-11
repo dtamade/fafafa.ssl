@@ -1979,11 +1979,11 @@ begin
   QueryPerformanceCounter(FHandshakeStartCounter);
 
   dwSSPIFlags := ASC_REQ_SEQUENCE_DETECT or
-                 ASC_REQ_REPLAY_DETECT or
-                 ASC_REQ_CONFIDENTIALITY or
-                 ASC_RET_EXTENDED_ERROR or
-                 ASC_REQ_ALLOCATE_MEMORY or
-                 ASC_REQ_STREAM;
+                ASC_REQ_REPLAY_DETECT or
+                ASC_REQ_CONFIDENTIALITY or
+                ASC_RET_EXTENDED_ERROR or
+                ASC_REQ_ALLOCATE_MEMORY or
+                ASC_REQ_STREAM;
 
   if sslVerifyPeer in FContext.GetVerifyMode then
     dwSSPIFlags := dwSSPIFlags or ASC_REQ_MUTUAL_AUTH;

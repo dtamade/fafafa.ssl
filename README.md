@@ -1,6 +1,6 @@
 # fafafa.ssl - Multi-backend SSL/TLS Library
 
-[![Version](https://img.shields.io/badge/Version-v1.4.2-blue)](https://github.com/dtamade/fafafa.ssl/releases/tag/v1.4.2)
+[![Version](https://img.shields.io/badge/Version-v1.5.0-blue)](https://github.com/dtamade/fafafa.ssl/releases/tag/v1.5.0)
 [![Linux Minimal Gate](https://img.shields.io/badge/Linux%20minimal%20gate-passing-success)](docs/ROADMAP.md)
 [![Roadmap](https://img.shields.io/badge/Roadmap-active-blue)](docs/ROADMAP.md)
 [![OpenSSL](https://img.shields.io/badge/OpenSSL-1.1.1%2B%20%7C%203.0%2B-blue)](https://www.openssl.org/)
@@ -10,12 +10,14 @@
 
 **统一 SSL/TLS 加密库** - 为 FreePascal 提供统一抽象 + 多后端实现（OpenSSL / WinSSL / FreePascal，且可选 MbedTLS / WolfSSL）
 
-## 🎉 最新版本 v1.4.2
+## 最新版本 v1.5.0
 
-**Early Data 契约已对齐** - 仅在真实支持的后端暴露 Early Data 接口
+**正式发布候选** - deprecated helper API 已移除，接口版本号为 `10500`，发布门禁与 release workflow 已对齐到当前仓库入口。
 
 ### 新增功能
 
+- ✅ `FAFAFA_SSL_VERSION_STRING = '1.5.0'` / `FAFAFA_SSL_INTERFACE_VERSION = 10500`
+- ✅ deprecated 便捷函数已移除，调用方应使用 `TSSLFactory.*` 路径
 - ✅ OpenSSL 连接级 Early Data 契约与运行时接口对齐
 - ⚠️ WolfSSL 连接级 Early Data 仅在 helper 完整时暴露接口
 - ❌ MbedTLS 和 WinSSL 不再暴露不可用的 Early Data 接口
@@ -459,6 +461,12 @@ fafafa.ssl/
 详见 [CONTRIBUTING.md](CONTRIBUTING.md) 和 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
 ## 版本历史
+
+- **v1.5.0** (2026-05-12) - 正式发布候选
+  - 接口版本 `10500`
+  - 移除 deprecated helper API，统一迁移到 `TSSLFactory.*`
+  - 安全加固、跨后端契约测试、FreePascal TLS 1.3 completeness gate 收口
+  - WinSSL 稳定版发布仍以真实 Windows runtime proof 为硬门槛
 
 - **v1.3.0** (2026-02-05) - 智能化版本
   - 自动后端选择（智能评分算法）

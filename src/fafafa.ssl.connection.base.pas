@@ -338,7 +338,7 @@ begin
   begin
     // 移除最旧的条目
     Move(FErrorHistory[1], FErrorHistory[0],
-         (Length(FErrorHistory) - 1) * SizeOf(TSSLErrorRecord));
+        (Length(FErrorHistory) - 1) * SizeOf(TSSLErrorRecord));
     SetLength(FErrorHistory, Length(FErrorHistory));
     FErrorHistory[High(FErrorHistory)] := LEntry;
   end

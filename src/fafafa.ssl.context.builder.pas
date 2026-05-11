@@ -1221,7 +1221,7 @@ begin
   end;
 
   if (Trim(FServerEarlyDataReplayStoreFile) <> '') and
-     (Trim(FServerEarlyDataReplayStoreDirectory) <> '') then
+    (Trim(FServerEarlyDataReplayStoreDirectory) <> '') then
     raise ESSLException.Create(
       'Configured server_early_data_replay_store_file and ' +
       'server_early_data_replay_store_directory are mutually exclusive; configure not both'
@@ -1403,7 +1403,7 @@ begin
   if ABuilder.FPKCS11URI <> '' then
   begin
     if (ABuilder.FPKCS11PINMethod in [pmValue, pmEnvironment, pmFile]) and
-       (ABuilder.FPKCS11PIN = '') then
+      (ABuilder.FPKCS11PIN = '') then
       Result.AddError(
         MissingBuilderPKCS11PINSourceValueMessage(ABuilder.FPKCS11PINMethod)
       )
@@ -1839,7 +1839,7 @@ begin
       if Assigned(LPKCS11PINMethodData) then
       begin
         if (LPKCS11PINMethodData.JSONType = jtNumber) and
-           TryParsePKCS11PINMethodOrdinal(LPKCS11PINMethodData.AsInteger, LImportedPKCS11PINMethod) then
+          TryParsePKCS11PINMethodOrdinal(LPKCS11PINMethodData.AsInteger, LImportedPKCS11PINMethod) then
         begin
           FPKCS11PINMethod := LImportedPKCS11PINMethod;
           LHasImportedPKCS11PINMethod := True;
@@ -2525,11 +2525,11 @@ begin
       FServerMaxEarlyDataSize := Cardinal(LObj.Integers['server_max_early_data_size']);
 
     if (LObj.IndexOfName('server_early_data_replay_store_file') >= 0) and
-       (LObj.Strings['server_early_data_replay_store_file'] <> '') then
+      (LObj.Strings['server_early_data_replay_store_file'] <> '') then
       FServerEarlyDataReplayStoreFile := LObj.Strings['server_early_data_replay_store_file'];
 
     if (LObj.IndexOfName('server_early_data_replay_store_directory') >= 0) and
-       (LObj.Strings['server_early_data_replay_store_directory'] <> '') then
+      (LObj.Strings['server_early_data_replay_store_directory'] <> '') then
       FServerEarlyDataReplayStoreDirectory := LObj.Strings['server_early_data_replay_store_directory'];
 
     if LObj.IndexOfName('ocsp_stapling_enabled') >= 0 then
@@ -2539,7 +2539,7 @@ begin
       FOCSPStaplingRequired := LObj.Booleans['ocsp_stapling_required'];
 
     if (LObj.IndexOfName('server_ocsp_stapled_response_file') >= 0) and
-       (LObj.Strings['server_ocsp_stapled_response_file'] <> '') then
+      (LObj.Strings['server_ocsp_stapled_response_file'] <> '') then
       FServerOCSPStapledResponseFile := LObj.Strings['server_ocsp_stapled_response_file'];
 
     if LObj.IndexOfName('certificate_transparency_required') >= 0 then

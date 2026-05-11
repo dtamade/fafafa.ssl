@@ -390,13 +390,13 @@ begin
     Exit;
   LVersion := AData[4];
   if (LVersion <> FREEPASCAL_SESSION_VERSION_V1) and
-     (LVersion <> FREEPASCAL_SESSION_VERSION_V2) then
+    (LVersion <> FREEPASCAL_SESSION_VERSION_V2) then
     Exit;
   if (LVersion = FREEPASCAL_SESSION_VERSION_V1) and
-     (Length(AData) < 4 + 1 + 1 + 2 + 4 + 4 + 4 + 8) then
+    (Length(AData) < 4 + 1 + 1 + 2 + 4 + 4 + 4 + 8) then
     Exit;
   if (LVersion = FREEPASCAL_SESSION_VERSION_V2) and
-     (Length(AData) < 4 + 1 + 1 + 2 + 4 + 4 + 4 + 4 + 8) then
+    (Length(AData) < 4 + 1 + 1 + 2 + 4 + 4 + 4 + 4 + 8) then
     Exit;
 
   LOffset := 5;

@@ -461,7 +461,7 @@ begin
   LWriteIndex := 0;
   for I := 0 to High(AEntries) do
     if (AEntries[I].Key <> '') and
-       ((AEntries[I].ExpiresAt <= 0) or (AEntries[I].ExpiresAt > ANow)) then
+      ((AEntries[I].ExpiresAt <= 0) or (AEntries[I].ExpiresAt > ANow)) then
     begin
       if LWriteIndex <> I then
         AEntries[LWriteIndex] := AEntries[I];
@@ -549,7 +549,7 @@ begin
   LWriteIndex := 0;
   for I := 0 to High(AEntries) do
     if (AEntries[I].Key <> '') and
-       ((AEntries[I].ExpiresAt <= 0) or (AEntries[I].ExpiresAt > ANow)) then
+      ((AEntries[I].ExpiresAt <= 0) or (AEntries[I].ExpiresAt > ANow)) then
     begin
       if LWriteIndex <> I then
         AEntries[LWriteIndex] := AEntries[I];
@@ -783,7 +783,7 @@ begin
 
   LEffectiveTimeout := ASession.GetTimeout;
   if (LResumptionSession.GetTicketLifetime > 0) and
-     ((LEffectiveTimeout <= 0) or
+    ((LEffectiveTimeout <= 0) or
       (Integer(LResumptionSession.GetTicketLifetime) < LEffectiveTimeout)) then
     LEffectiveTimeout := Integer(LResumptionSession.GetTicketLifetime);
 

@@ -278,7 +278,7 @@ begin
   while I <= Length(LNormalized) do
   begin
     if (not HexCharToNibble(LNormalized[I], LNibbleHigh)) or
-       (not HexCharToNibble(LNormalized[I + 1], LNibbleLow)) then
+      (not HexCharToNibble(LNormalized[I + 1], LNibbleLow)) then
       raise EPKCS11Exception.Create('Invalid PKCS#11 object id hex encoding', CKR_ARGUMENTS_BAD);
 
     Result[LIndex] := (LNibbleHigh shl 4) or LNibbleLow;
@@ -461,7 +461,7 @@ function TPKCS11KeyInfo.ToString: string;
 begin
   Result := Format('Key: %s (Type: %s, Size: %d bits, Sign: %s, Decrypt: %s)',
     [KeyLabel, PKCS11KeyTypeToString(KeyType), KeySize,
-     BoolToStr(CanSign, True), BoolToStr(CanDecrypt, True)]);
+    BoolToStr(CanSign, True), BoolToStr(CanDecrypt, True)]);
 end;
 
 { TPKCS11TokenInfo }

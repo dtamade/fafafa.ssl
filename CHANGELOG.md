@@ -9,6 +9,12 @@
 
 ## [Unreleased]
 
+暂无未发布变更。
+
+---
+
+## [1.5.0] - 2026-05-12
+
 ### 变更
 
 #### 安全加固（Batch 5）
@@ -1035,4 +1041,3 @@ v1.4.1 和 v1.4.2 错误地在客户端调用了 `SSL_CTX_set_max_early_data`，
 [0.7.0]: https://github.com/dtamade/fafafa.ssl/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/dtamade/fafafa.ssl/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/dtamade/fafafa.ssl/releases/tag/v0.5.0
-

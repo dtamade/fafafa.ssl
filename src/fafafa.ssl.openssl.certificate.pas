@@ -381,8 +381,8 @@ var
 begin
   Result := False;
   if (FX509 = nil) or
-     not HasCertificateFileBIOHelpers or
-     not Assigned(PEM_write_bio_X509) then
+    not HasCertificateFileBIOHelpers or
+    not Assigned(PEM_write_bio_X509) then
     Exit;
   
   FileNameA := AnsiString(AFileName);
@@ -418,8 +418,8 @@ var
 begin
   Result := '';
   if (FX509 = nil) or
-     not HasCertificateMemorySaveBIOHelpers or
-     not Assigned(PEM_write_bio_X509) then
+    not HasCertificateMemorySaveBIOHelpers or
+    not Assigned(PEM_write_bio_X509) then
     Exit;
   
   BIO := BIO_new(BIO_s_mem());
@@ -445,8 +445,8 @@ var
 begin
   SetLength(Result, 0);
   if (FX509 = nil) or
-     not HasCertificateMemorySaveBIOHelpers or
-     not Assigned(i2d_X509_bio) then
+    not HasCertificateMemorySaveBIOHelpers or
+    not Assigned(i2d_X509_bio) then
     Exit;
   
   BIO := BIO_new(BIO_s_mem());

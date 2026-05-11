@@ -644,8 +644,8 @@ begin
   EnsureInitialized;
 
   if (not Assigned(EVP_PKEY_CTX_new_id)) or
-     (not Assigned(EVP_PKEY_keygen_init)) or
-     (not Assigned(EVP_PKEY_keygen)) then
+    (not Assigned(EVP_PKEY_keygen_init)) or
+    (not Assigned(EVP_PKEY_keygen)) then
     RaiseUnsupported('Ed25519 key type');
 
   LCtx := EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519, nil);
@@ -1446,7 +1446,7 @@ begin
   if not Assigned(EVP_PKEY_get_id) then
     LoadEVP(GetCryptoLibHandle);
   if (not Assigned(fafafa.ssl.openssl.api.asn1.ASN1_INTEGER_get_int64)) and
-     (not Assigned(fafafa.ssl.openssl.api.asn1.ASN1_INTEGER_get)) then
+    (not Assigned(fafafa.ssl.openssl.api.asn1.ASN1_INTEGER_get)) then
     fafafa.ssl.openssl.api.asn1.LoadOpenSSLASN1(GetCryptoLibHandle);
 
   if not TOpenSSLLoader.IsModuleLoaded(osmStack) then
@@ -1488,7 +1488,7 @@ begin
       begin
         LSerialInt64 := 0;
         if Assigned(fafafa.ssl.openssl.api.asn1.ASN1_INTEGER_get_int64) and
-           (fafafa.ssl.openssl.api.asn1.ASN1_INTEGER_get_int64(@LSerialInt64, ASN1_INTEGER(LSerialAsn1)) = 1) then
+          (fafafa.ssl.openssl.api.asn1.ASN1_INTEGER_get_int64(@LSerialInt64, ASN1_INTEGER(LSerialAsn1)) = 1) then
           Result.SerialNumber := IntToStr(LSerialInt64)
         else if Assigned(fafafa.ssl.openssl.api.asn1.ASN1_INTEGER_get) then
           Result.SerialNumber := IntToStr(fafafa.ssl.openssl.api.asn1.ASN1_INTEGER_get(ASN1_INTEGER(LSerialAsn1)));

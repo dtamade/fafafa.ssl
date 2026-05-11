@@ -532,10 +532,10 @@ begin
       end;
 
       if (not LRoot.GetChild(4).IsInteger) or
-         (not LRoot.GetChild(5).IsInteger) or
-         (not LRoot.GetChild(6).IsInteger) or
-         (not LRoot.GetChild(7).IsInteger) or
-         (not LRoot.GetChild(8).IsInteger) then
+        (not LRoot.GetChild(5).IsInteger) or
+        (not LRoot.GetChild(6).IsInteger) or
+        (not LRoot.GetChild(7).IsInteger) or
+        (not LRoot.GetChild(8).IsInteger) then
       begin
         AError := 'PKCS#1 RSA CRT fields are invalid';
         Exit;
@@ -548,10 +548,10 @@ begin
       AQInv := StripLeadingZeroBytes(LRoot.GetChild(8).AsBigInteger);
 
       if (Length(AP) = 0) or ((Length(AP) = 1) and (AP[0] = 0)) or
-         (Length(AQ) = 0) or ((Length(AQ) = 1) and (AQ[0] = 0)) or
-         (Length(ADP) = 0) or ((Length(ADP) = 1) and (ADP[0] = 0)) or
-         (Length(ADQ) = 0) or ((Length(ADQ) = 1) and (ADQ[0] = 0)) or
-         (Length(AQInv) = 0) or ((Length(AQInv) = 1) and (AQInv[0] = 0)) then
+        (Length(AQ) = 0) or ((Length(AQ) = 1) and (AQ[0] = 0)) or
+        (Length(ADP) = 0) or ((Length(ADP) = 1) and (ADP[0] = 0)) or
+        (Length(ADQ) = 0) or ((Length(ADQ) = 1) and (ADQ[0] = 0)) or
+        (Length(AQInv) = 0) or ((Length(AQInv) = 1) and (AQInv[0] = 0)) then
       begin
         AError := 'PKCS#1 RSA CRT components contain empty values';
         Exit;
@@ -1175,7 +1175,7 @@ begin
           pemPrivateKey:
             begin
               if TryParseECPrivateKeyPKCS8(LBlocks[I].Data, APrivateScalar, LCurveOID, LLastError) and
-                 (LCurveOID = OID_EC_SECP256R1) then
+                (LCurveOID = OID_EC_SECP256R1) then
                 Exit(True);
               if LLastError = '' then
                 LLastError := 'PKCS#8 EC key curve is not prime256v1';
@@ -1184,7 +1184,7 @@ begin
           pemECPrivateKey:
             begin
               if TryParseECPrivateKeySEC1(LBlocks[I].Data, APrivateScalar, LCurveOID, LLastError) and
-                 (LCurveOID = OID_EC_SECP256R1) then
+                (LCurveOID = OID_EC_SECP256R1) then
                 Exit(True);
               if LLastError = '' then
                 LLastError := 'SEC1 EC key curve is not prime256v1';
@@ -1213,11 +1213,11 @@ begin
   LKeyDER := Copy(APrivateKeyBlob, 0, Length(APrivateKeyBlob));
 
   if TryParseECPrivateKeyPKCS8(LKeyDER, APrivateScalar, LCurveOID, AError) and
-     (LCurveOID = OID_EC_SECP256R1) then
+    (LCurveOID = OID_EC_SECP256R1) then
     Exit(True);
 
   if TryParseECPrivateKeySEC1(LKeyDER, APrivateScalar, LCurveOID, AError) and
-     (LCurveOID = OID_EC_SECP256R1) then
+    (LCurveOID = OID_EC_SECP256R1) then
     Exit(True);
 
   AError := 'Unsupported DER private key format (expected EC prime256v1 PKCS#8 or SEC1)';
@@ -2093,7 +2093,7 @@ begin
         end;
 
         if (not SameText(APublicKeyInfo.ECCurve, 'prime256v1')) and
-           (not SameText(APublicKeyInfo.ECCurve, 'secp256r1')) then
+          (not SameText(APublicKeyInfo.ECCurve, 'secp256r1')) then
         begin
           AError := 'Unsupported ECDSA curve for CertificateVerify';
           Exit;
@@ -2690,7 +2690,7 @@ begin
   end;
 
   if (Length(LP) > 0) and (Length(LQ) > 0) and (Length(LDP) > 0) and
-     (Length(LDQ) > 0) and (Length(LQInv) > 0) then
+    (Length(LDQ) > 0) and (Length(LQInv) > 0) then
   begin
     LCRTErr := '';
     if TryValidateRSACRTComponents(LModulus, LPrivateExponent, LP, LQ, LDP, LDQ, LQInv, LCRTErr) then

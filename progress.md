@@ -1,3 +1,86 @@
+# Progress - v1.5.0 Release Formalization
+
+## 2026-05-12
+- session catch-up: no unsynced context was reported for this repo.
+- Baseline inspection:
+  - `git status --short`
+  - result: clean
+  - `git clean -nd`
+  - result: empty
+  - `git clean -ndX`
+  - result: only ignored local `.ace-tool/`
+  - `git describe --tags --abbrev=0`
+  - result: `v1.4.3`
+- Version truth:
+  - `src/fafafa.ssl.base.pas` already carries `FAFAFA_SSL_VERSION_STRING = '1.5.0'`
+  - `src/fafafa.ssl.base.pas` already carries `FAFAFA_SSL_INTERFACE_VERSION = 10500`
+  - `fafafa_ssl.lpk` is still stale at `1.0.0`
+  - `README.md` still advertises `v1.4.2`
+  - `CHANGELOG.md` still leaves the `v1.5.0` release notes under `[Unreleased]`
+- Release workflow truth:
+  - `.github/workflows/release.yml.disabled` is still the old inline-template release automation
+  - `.github/workflows/release.yml` is not present yet
+  - no dedicated release workflow contract exists yet
+- Runtime proof truth:
+  - local `wave-b-b2-manual.yml` already includes the current Windows runtime checklist lane
+  - `origin/master` still has the older workflow variant, so remote proof will likely require pushing the branch that carries the updated workflow before dispatching
+  - `gh auth status` is healthy and includes `workflow` scope
+
+## Release prep implementation
+- Fixture refresh:
+  - refreshed `tests/certificate/test_certs/ct_embedded_sct_leaf_cert.pem`
+  - refreshed `tests/certificate/test_certs/ct_embedded_sct_malformed_leaf_cert.pem`
+  - refreshed `tests/certificate/test_certs/revocation_revoked_crl.pem`
+  - refreshed `tests/certificate/test_certs/revocation_nonmatching_crl.pem`
+  - purpose: remove expired fixture blocker while preserving SCT / malformed-SCT / CRL serial semantics
+- Version/docs/workflow:
+  - `CHANGELOG.md`: added fresh `[Unreleased]` and cut `[1.5.0] - 2026-05-12`
+  - `README.md`: version badge, latest-version heading, and version history now point to `v1.5.0`
+  - `fafafa_ssl.lpk`: package version updated to `1.5.0`
+  - `RELEASE_NOTES_V1.5.0.md`: added
+  - `.github/workflows/release.yml`: added active v1.5.0 workflow
+  - `.github/workflows/release.yml.disabled`: refreshed to the same current template
+  - `tests/scripts/test_release_workflow_v1_5_0_contract.sh`: added
+- Style gate:
+  - first run `python3 scripts/check_code_style.py src --summary-only`: FAIL, 369 errors
+  - mechanical checker-aligned indentation fix: 44 files / 369 lines
+  - rerun `python3 scripts/check_code_style.py src`: PASS
+
+## Verification completed
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - RED before workflow creation: missing `.github/workflows/release.yml`
+  - GREEN after workflow/docs/contract fix
+- `python3 scripts/compile_all_modules.py`
+  - PASS: 185/185 compiled, 0 failed
+- `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - PASS: compile 185/185, module tests 17/17, Phase 2 dry-run path exercised
+- `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id release_1_5_0_20260512`
+  - PASS: 17 passed / 0 failed
+  - summary: `tmp/test-reports/freepascal_tls13_completeness_release_1_5_0_20260512.md`
+- `python3 scripts/check_code_style.py src`
+  - PASS after 369-line mechanical indentation fix
+- `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
+  - PASS: dry-run command generated without executing benchmarks
+- `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`
+  - PASS
+- `bash tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
+  - PASS
+- `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - PASS
+
+## Pending verification
+- `docs/test_reports/RELEASE_READINESS_V1.5.0.md` generated with status `BLOCKED_PENDING_WINDOWS_RUNTIME_PROOF`
+- final hygiene before commit:
+  - `git diff --check`: PASS
+  - `git clean -nd`: reports only intended new release-prep files
+  - `git clean -ndX`: reports ignored `.ace-tool/`, `scripts/__pycache__/`, and `tmp/`
+  - `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`: PASS
+- commit the local release-prep batch after review
+- push `glm51` and dispatch `.github/workflows/wave-b-b2-manual.yml`
+- collect or explicitly block on Windows runtime artifacts
+
+---
+
 # Progress - Repo Hygiene And Ignore Consolidation
 
 ## 2026-05-12
