@@ -181,9 +181,13 @@ require_fixed "RELEASE_NOTES_V1.5.0.md" "FAFAFA_SSL_INTERFACE_VERSION = 10500" \
   "release notes record interface version"
 require_fixed "RELEASE_NOTES_V1.5.0.md" "TSSLFactory.*" \
   "release notes document TSSLFactory migration"
+require_fixed "RELEASE_NOTES_V1.5.0.md" "TSSLHelper class remains available" \
+  "release notes clarify TSSLHelper remains public"
 require_fixed "RELEASE_NOTES_V1.5.0.md" "FreePascal: TLS 1.3 coverage is broader, but early-data remains experimental" \
   "release notes preserve FreePascal early-data caveat"
-require_fixed "RELEASE_NOTES_V1.5.0.md" "WinSSL: source contracts and validation bundle contracts are in place" \
-  "release notes preserve WinSSL runtime proof requirement"
+require_fixed "RELEASE_NOTES_V1.5.0.md" "Linux-only closeout" \
+  "release notes preserve Linux-only closeout policy"
+require_fixed "RELEASE_NOTES_V1.5.0.md" "WinSSL: source contracts and validation bundle contracts are in place. Windows runtime evidence is deferred outside this Linux-only closeout." \
+  "release notes defer WinSSL runtime proof outside the Linux-only closeout"
 
 printf '[PASS] v1.5.0 release workflow contract passed\n'

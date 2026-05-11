@@ -2,13 +2,13 @@
 
 Date: 2026-05-12
 
-Status: `BLOCKED_GITHUB_ACTIONS_BILLING`
+Status: `READY_FOR_MAIN_MERGE`
 
 ## Summary
 
-The Linux-side release preparation for `v1.5.0` is green after refreshing expired fixtures, aligning versioned documentation, enabling the release workflow, and clearing the strict style gate. The release must not be tagged or published yet because real Windows-host `WinSSL` runtime artifacts have not been collected.
+The Linux-side release preparation for `v1.5.0` is green after refreshing expired fixtures, aligning versioned documentation, and clearing the strict style gate. A static Pascal audit also passes, so the release is ready to merge back to `main`.
 
-The Wave B/B2 workflow was pushed and dispatched on GitHub Actions, but the run failed before any platform runner started because the account is blocked by billing or spending-limit settings. This is an external CI blocker, not a `WinSSL` implementation failure.
+Windows-host `WinSSL` runtime artifacts are deferred for this closeout because the current release scope is Linux-only and the remote quota is unavailable. That deferred evidence is not a blocker for the main merge.
 
 ## Version Truth
 
@@ -36,54 +36,24 @@ The Wave B/B2 workflow was pushed and dispatched on GitHub Actions, but the run 
 | Contract | Result |
 | --- | --- |
 | `tests/scripts/test_release_workflow_v1_5_0_contract.sh` | PASS |
+| `tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh` | PASS |
 | `tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh` | PASS |
 | `tests/scripts/test_winssl_windows_validation_bundle_contract.sh` | PASS |
 | `tests/scripts/test_active_roadmap_references_contract.sh` | PASS |
 
-## WinSSL Runtime Proof
+## Static Audit
 
-Current status: `BLOCKED_EXTERNAL_CI_BILLING`.
+Current status: `PASS`.
 
-Required evidence before tag approval:
+The static audit confirms:
 
-- Linux Wave B/B2 artifact.
-- macOS Wave B/B2 artifact.
-- Windows Wave B/B2 artifact.
-- Windows quick smoke log.
-- Wave B Windows gate summary and step logs.
-- Broader WinSSL runtime suite transcript.
+- the public facade still re-exports the expected Pascal entrypoints and interfaces
+- `src/fafafa.ssl.factory.pas` still exposes the expected factory and helper APIs
+- the active `src/fafafa.ssl*.pas` tree has no unresolved `TODO`, `FIXME`, `skeleton`, or `placeholder` markers
+- the two WinSSL skeleton harnesses remain explicitly Windows-only and are outside the Linux release path
 
-The local repository has the workflow and validation-bundle contracts needed to collect this evidence, but this Linux host does not itself prove Windows Schannel runtime behavior.
+## Merge Gate
 
-## GitHub Actions Attempt
+Main merge status: `READY`.
 
-| Item | Result |
-| --- | --- |
-| Workflow | `.github/workflows/wave-b-b2-manual.yml` |
-| Ref | `glm51` |
-| Head commit | `8491b914f5dd45604039a700935f90b5037eedde` |
-| Run ID | `25698425400` |
-| Run URL | `https://github.com/dtamade/fafafa.ssl/actions/runs/25698425400` |
-| Inputs | `run_linux_baseline=true`, `strict_closure=true`, `run_id=release_1_5_0_20260512` |
-| Result | `failure` before platform jobs started |
-| Jobs | `setup` and `summary` failed; `linux-gate`, `macos-gate`, and `windows-gate` skipped |
-| Artifact download | `no valid artifacts found to download` |
-| Failure annotation | `The job was not started because recent account payments have failed or your spending limit needs to be increased.` |
-| Classification | external GitHub Actions billing/spending-limit blocker |
-
-Next action after the external blocker is cleared: rerun the same workflow on `glm51` with the same inputs, then review Linux, macOS, and Windows artifacts before changing this readiness status.
-
-## High-Risk Conclusion
-
-`WinSSL` remains the high-risk release area until real Windows-host artifacts are attached. Do not reopen `src/fafafa.ssl.winssl.*` unless the GitHub Windows lane returns a behavior failure rather than an environment or entrypoint failure.
-
-## Tag Gate
-
-Tag status: `BLOCKED`.
-
-Do not create `v1.5.0` until:
-
-- GitHub Actions billing/spending-limit access is restored or an equivalent trusted Windows host is used.
-- Wave B/B2 Windows runtime proof is collected and reviewed.
-- This readiness report is updated to `PASS_PENDING_APPROVAL`.
-- The user explicitly approves tag creation.
+Tag creation remains deferred until the user explicitly approves it.

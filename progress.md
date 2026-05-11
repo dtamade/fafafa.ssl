@@ -1,3 +1,25 @@
+# Progress - v1.5.0 Linux Static Audit Closeout
+
+## 2026-05-12
+- session catch-up: no unsynced context was reported for this repo.
+- Current branch: `glm51`
+- Current closeout rule: Linux gates + static Pascal audit + merge back into `main`
+- Completed in this session so far:
+  - `python3 scripts/compile_all_modules.py` -> PASS, `185/185`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local` -> PASS, `17/17`
+  - release notes / readiness docs updated to Linux-only closeout wording
+  - new static audit report and contract added
+- Fresh verification in this resume:
+  - `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id release_1_5_0_20260512` -> PASS, `17 passed / 0 failed`
+  - `python3 scripts/check_code_style.py src` -> PASS
+  - `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local` -> PASS, dry-run command generated
+  - `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh` -> PASS
+  - `bash tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh` -> PASS
+- Final closeout path:
+  - run final diff/status hygiene
+  - commit this closeout batch after review
+  - merge the verified branch back into `main`
+
 # Progress - v1.5.0 Release Formalization
 
 ## 2026-05-12

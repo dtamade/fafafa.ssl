@@ -1,3 +1,18 @@
+# Findings - v1.5.0 Linux Static Audit Closeout
+
+## 2026-05-12
+- User changed release acceptance: GitHub quota is unavailable, so `v1.5.0` should close on Linux gates plus static review instead of waiting for remote Windows artifacts.
+- Final delivery must merge the verified code back into `main`, not just leave it on `glm51`.
+- Current branch `glm51` starts clean and already contains the prior release-prep commits `8491b91` and `d40bd48`.
+- Fresh local Linux gates already rerun in this batch:
+  - `python3 scripts/compile_all_modules.py`: PASS, `185/185`, `0 failed`
+  - `bash scripts/run_minimal_ci_gate.sh --fast-local`: PASS, compile `185/185`, module tests `17/17`, Phase 2 dry-run exercised
+- Static source scan found no `TODO`, `FIXME`, `skeleton`, or `placeholder` markers in active `src/fafafa.ssl*.pas`.
+- The only `skeleton` program names are `tests/winssl/test_winssl_mtls_skeleton.pas` and `tests/winssl/test_winssl_ocsp_crl_skeleton.pas`; both are Windows-only test harnesses, not Linux release implementation gaps.
+- Release notes previously risked implying `TSSLHelper` was removed. The implementation still publicly exports `TSSLHelper`; the correct release wording is that old global helper aliases/functions were removed while `TSSLHelper` remains available.
+- Added `tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh` and `docs/test_reports/STATIC_AUDIT_V1.5.0.md` to make the static review repeatable.
+- Fresh continuation verification completed: FreePascal TLS 1.3 completeness is PASS with `17 passed / 0 failed`, the source style gate is PASS, the Phase 2 dry-run is PASS, and both release/static-audit contracts are PASS.
+
 # Findings - v1.5.0 Release Formalization
 
 ## 2026-05-12

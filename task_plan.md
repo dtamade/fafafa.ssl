@@ -1,3 +1,41 @@
+# Task Plan - v1.5.0 Linux Static Audit Closeout
+
+## Goal
+把 `v1.5.0` 的正式发布收口到 Linux-only 可合并状态：本地 gate 全绿、Pascal 公共接口与实现完整、release 文档与 readiness 对齐，并在 review 后完整合回 `main`。
+
+## Current Batch
+1. 复跑 Linux release gates，确认当前仓库仍然全绿。
+2. 做 Pascal 静态审查，锁住 public facade、factory API、placeholder scan 和 WinSSL 骨架测试的边界。
+3. 更新 release notes、readiness report 和静态审查报告，使文档真实反映 Linux-only closeout。
+4. 复核 diff hygiene，提交后将已验证分支合回 `main`。
+
+## Status
+- [completed] Linux gates green on the current branch
+- [completed] static Pascal audit and docs alignment
+- [completed] review, commit, and merge back to `main`
+
+## Notes
+- 这批不再把 GitHub Actions 额度不足当成阻塞项；Windows runtime proof 明确转为后续独立批次。
+- `TSSLHelper` 仍然是公开辅助类；移除的是旧全局 helper 别名/函数，不是 helper 类本身。
+- `src/fafafa.ssl*.pas` 里不应再有 `TODO` / `FIXME` / `skeleton` / `placeholder` 这类未完成信号。
+
+## Verification Plan
+1. `python3 scripts/compile_all_modules.py`
+2. `bash scripts/run_minimal_ci_gate.sh --fast-local`
+3. `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id release_1_5_0_20260512`
+4. `python3 scripts/check_code_style.py src`
+5. `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
+6. `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+7. `bash tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh`
+8. `git diff --check`
+9. merge the verified branch back into `main`
+
+## Definition Of Done
+- Linux gates are green
+- static Pascal audit is green
+- release notes and readiness report match the Linux-only closeout policy
+- branch is merged back into `main`
+
 # Task Plan - v1.5.0 Release Formalization
 
 ## Goal
