@@ -1,3 +1,41 @@
+# Progress - Working-Memory, Artifact Hygiene, And WinSSL Workflow Closeout
+
+## 2026-05-12
+- session catch-up: no unsynced context was reported for this repo.
+- Baseline inspection:
+  - `git status --short`
+  - result: three untracked test binaries only
+  - `git diff --stat`
+  - result: empty
+  - `git ls-files --others --exclude-standard`
+  - result: the same three ELF test artifacts
+  - `file tests/contract/test_capabilities_contract tests/wolfssl/test_wolfssl_connection_contract tests/wolfssl/test_wolfssl_context_contract`
+  - result: all three are ELF executables
+- Cleanup:
+  - removed the three generated binaries from `tests/contract/` and `tests/wolfssl/`
+- Planning/truth alignment:
+  - added `docs/plans/2026-05-12-working-memory-and-artifact-hygiene-closeout.md`
+  - updated `task_plan.md` to reflect the current `HEAD` and next queue
+  - updated `findings.md` with the current blocker boundary
+- Workflow verification:
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`
+  - result: FAIL because the workflow did not install / verify Lazarus for `lazbuild`
+- Workflow fix in progress:
+  - patching `.github/workflows/wave-b-b2-manual.yml` and `.disabled` to install / verify Lazarus, run quick smoke, run the broader WinSSL suite transcript, and upload the new artifacts
+  - syncing `.github/README.md`, `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md`, and `tests/windows/VALIDATION_BUNDLE.md` to the same lane
+- Workflow verification after fix:
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`
+  - result: PASS
+  - `bash tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
+  - result: PASS
+  - `bash tests/scripts/test_wave_b_windows_gate_pwsh_and_verbose_contract.sh`
+  - result: PASS
+
+## Pending verification
+- final `git diff --check` over all touched files: PASS
+- final `git status --short`: only intended text-file edits remain
+- commit the batch after review
+
 # Progress - Backend Broad Completion Audit
 
 ## 2026-05-05

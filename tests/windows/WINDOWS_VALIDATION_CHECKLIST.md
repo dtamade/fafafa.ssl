@@ -21,6 +21,8 @@
 
 如果你只是想确认“仓库当前还有没有 repo-side 阻塞”，这份清单的意义就是把阻塞压缩到 Windows 主机实跑，而不是继续在 Linux 上猜。
 
+GitHub Actions 上可以用 `.github/workflows/wave-b-b2-manual.yml` 走同一条顺序：先 quick smoke，再 Wave B Windows gate，最后 broader WinSSL suite transcript。
+
 ## 先准备 Windows 主机
 
 从仓库根目录执行下面这些步骤。命令默认使用 `powershell`; 如果机器已经装了 `pwsh`，可以直接替换。

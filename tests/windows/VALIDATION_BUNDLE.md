@@ -10,6 +10,7 @@
 | ----------------------------------------------- | --------------------------- | --------------------------------------- |
 | `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md` | 当前执行清单                | 在 Windows 主机按步骤跑实机验证时       |
 | `tests/windows/VALIDATION_BUNDLE.md`            | 当前 inventory              | 想确认入口、产物和 targeted lane 映射时 |
+| `.github/workflows/wave-b-b2-manual.yml`        | GitHub Actions 手动 lane    | 想在云端走同一条 Windows runtime 顺序时 |
 | `tests/quick_winssl_validation.ps1`             | quick smoke                 | 先验证证书加载和基础编译路径            |
 | `run_winssl_tests.ps1`                          | minimal WinSSL-only runner  | 先隔离 WinSSL 最小 gate 是否通过        |
 | `run_openssl_tests.ps1`                         | minimal OpenSSL runner      | 作为 Wave B Windows gate 的相邻步骤     |

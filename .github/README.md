@@ -7,6 +7,7 @@
 ## ✅ 当前启用的工作流
 
 ### 1) `ci.yml`（默认启用）
+
 Linux 最小门禁（push / PR 自动触发）
 
 - 入口：`bash scripts/run_minimal_ci_gate.sh --fast-local`
@@ -14,12 +15,14 @@ Linux 最小门禁（push / PR 自动触发）
 - 覆盖：compile gate + P2 核心模块回归 + Phase2 baseline dry-run
 
 ### 2) `tls13-signer-gate.yml`
+
 TLS 1.3 signer 专项门禁（按路径触发 + `workflow_dispatch`）
 
 - 入口：`bash scripts/run_tls13_signer_gate_bundle.sh --strict`
 - 产物：`test-reports/` + `artifacts/ci/`
 
 ### 3) `ci.yml` 中的 FreePascal TLS 1.3 focused gate
+
 FreePascal TLS 1.3 completeness 主线门禁（push / PR 自动触发）
 
 - 入口：`bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`
@@ -27,9 +30,11 @@ FreePascal TLS 1.3 completeness 主线门禁（push / PR 自动触发）
 - 覆盖：`test_tls13_posthandshake`、`test_tls13_resumption`、`test_tls13_clienthello_parser`、`test_tls13_servercertverify`、`test_freepascal_client_certificateverify_runtime`、client/server resumption、`test_freepascal_tls13_early_data`、backend basic、capability cache
 
 ### 4) `wave-b-b2-manual.yml`
+
 Wave B/B2 跨平台手动门禁（`workflow_dispatch`）
 
 - 用途：Linux/macOS/Windows 证据回填 + cross summary + closure/consistency
+- Windows lane 现在会先安装并验证 Lazarus / `lazbuild`，再跑 quick smoke、Wave B Windows gate、broader WinSSL suite transcript
 - 产物：`test-reports/`（各平台摘要 + 汇总）
 
 ---

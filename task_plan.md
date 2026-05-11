@@ -1,3 +1,41 @@
+# Task Plan - Working-Memory, Artifact Hygiene, And WinSSL Workflow Closeout
+
+## Goal
+把当前工作树从“历史批次 + 本地产物残留”收口回 `HEAD` `e80100a` 的真实状态，清掉 3 个测试二进制残留，并把 `wave-b-b2-manual.yml` 的 Windows lane 对齐到 WinSSL runtime checklist。
+
+## Current Batch
+1. 清理 `tests/contract/` 与 `tests/wolfssl/` 下的无扩展名 ELF 测试产物。
+2. 新增本批 plan 文档，作为可恢复的工作记忆。
+3. 把 `task_plan.md` / `findings.md` / `progress.md` 顶部对齐到当前真相。
+4. 修复 `test_wave_b_b2_windows_runtime_workflow_contract.sh` 打出的 workflow RED。
+5. 复跑 focused contracts、diff hygiene，并提交。
+
+## Status
+- [completed] Freeze current state and remove generated test binaries
+- [completed] Resync working-memory files to current HEAD and next queue
+- [completed] Align Wave B/B2 Windows workflow to the runtime checklist
+- [completed] Verify diff hygiene and record results
+- [pending] Commit the batch
+
+## Current Evidence
+- `git log --oneline -1` shows current `HEAD` as `e80100a fix: batch 6 - compiler warning reduction and capabilities contract test`
+- `git status --short` initially listed only three untracked ELF test binaries:
+  - `tests/contract/test_capabilities_contract`
+  - `tests/wolfssl/test_wolfssl_connection_contract`
+  - `tests/wolfssl/test_wolfssl_context_contract`
+- `file` confirmed those artifacts are Linux ELF executables, not source files
+- `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh` produced a real RED: the workflow did not install or verify Lazarus / `lazbuild`
+- current product-side blocker remains real Windows runtime evidence, but the GitHub Actions lane can now be made capable of collecting it
+
+## Risks
+- Do not reopen `src/fafafa.ssl.winssl.*` in this batch.
+- Do not treat workflow readiness as a substitute for Windows runtime proof.
+- Keep the batch narrow so the commit stays reviewable.
+
+## Follow-up Queue
+1. Commit the closeout batch.
+2. Trigger the updated `wave-b-b2-manual.yml` on GitHub Actions when a real Windows runtime proof run is needed.
+
 # Task Plan - Wave B/B2 WinSSL Runtime Workflow Alignment
 
 ## Goal

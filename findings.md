@@ -1,3 +1,15 @@
+# Findings - Working-Memory, Artifact Hygiene, And WinSSL Workflow Closeout
+
+## 2026-05-12
+- Current `HEAD` is `e80100a fix: batch 6 - compiler warning reduction and capabilities contract test`.
+- The active worktree issue was not product drift; it was three generated ELF test binaries left under `tests/contract/` and `tests/wolfssl/`.
+- Those artifacts are safe to delete and should not be committed.
+- `task_plan.md` was lagging behind the current repo state, so this batch re-centered the working-memory files on the real truth instead of the older workflow batch.
+- A fresh contract run then proved the Windows workflow was still below the runtime checklist: it did not yet install / verify Lazarus for `lazbuild`-based checks.
+- That RED is actionable and belongs in this batch, because the repo already had a dedicated workflow-alignment plan and the current handoff still depends on a reviewable Windows lane.
+- After the workflow update, the three relevant contracts are now green again, so the Windows lane is back in sync with the runtime checklist.
+- I did not broaden `.gitignore` in this batch; the narrower fix is to remove the generated files and keep the closeout reviewable.
+
 # Findings - Backend Broad Completion Audit
 
 ## 2026-05-05

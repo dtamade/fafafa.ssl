@@ -134,7 +134,7 @@ jobs:
       - name: Install dependencies
         shell: powershell
         run: |
-          choco install -y freepascal
+          choco install -y freepascal lazarus
           $fpcCandidates = @(
             "C:\tools\freepascal\bin\x86_64-win64",
             "C:\tools\freepascal\bin\i386-win32",
@@ -152,6 +152,24 @@ jobs:
             exit 1
           }
           fpc -iV
+
+          $lazarusCandidates = @(
+            "C:\lazarus",
+            "C:\Program Files\Lazarus",
+            "C:\tools\lazarus"
+          )
+          foreach ($p in $lazarusCandidates) {
+            if (Test-Path $p) {
+              $env:PATH = "$p;$env:PATH"
+              $p | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+              Write-Host ("[INFO] Added to PATH: " + $p)
+            }
+          }
+          if (-not (Get-Command lazbuild -ErrorAction SilentlyContinue)) {
+            Write-Host "[ERROR] lazbuild not found in PATH after Lazarus installation" -ForegroundColor Red
+            exit 1
+          }
+          lazbuild --version
 
           choco install -y openssl
           $candidates = @(
@@ -178,11 +196,39 @@ jobs:
           }
           openssl version
 
+      - name: Run quick WinSSL smoke
+        shell: powershell
+        run: |
+          $runId = "${{ needs.setup.outputs.run_id }}"
+          New-Item -ItemType Directory -Force -Path test-reports | Out-Null
+          $quickLog = "test-reports/winssl_quick_smoke_${runId}.log"
+          powershell -ExecutionPolicy Bypass -File tests/quick_winssl_validation.ps1 *>&1 | Tee-Object -FilePath $quickLog
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
       - name: Run Windows Wave B gate
         shell: powershell
         run: |
           $runId = "${{ needs.setup.outputs.run_id }}"
-          powershell -ExecutionPolicy Bypass -File scripts/run_wave_b_windows_gate.ps1 -RunId $runId
+          powershell -ExecutionPolicy Bypass -File scripts/run_wave_b_windows_gate.ps1 -RunId $runId -OutputDir test-reports
+
+      - name: Run broader WinSSL runtime suite
+        shell: powershell
+        run: |
+          $runId = "${{ needs.setup.outputs.run_id }}"
+          New-Item -ItemType Directory -Force -Path test-reports | Out-Null
+          $exitCode = 0
+          Start-Transcript -Path "test-reports/winssl_runtime_suite_${runId}.log"
+          try {
+            powershell -ExecutionPolicy Bypass -File tests/run_winssl_tests.ps1
+            $exitCode = $LASTEXITCODE
+          } finally {
+            Stop-Transcript
+          }
+          if ($exitCode -ne 0) {
+            exit $exitCode
+          }
 
       - name: Upload Windows evidence
         if: always()
@@ -190,10 +236,12 @@ jobs:
         with:
           name: wave-b-windows-${{ needs.setup.outputs.run_id }}
           path: |
+            test-reports/winssl_quick_smoke_${{ needs.setup.outputs.run_id }}.log
             test-reports/wave_b_windows_gate_summary_${{ needs.setup.outputs.run_id }}.md
             test-reports/wave_b_windows_*.log
             test-reports/validate_all_modules_report_${{ needs.setup.outputs.run_id }}.md
             test-reports/validate_all_modules_compile_${{ needs.setup.outputs.run_id }}.log
+            test-reports/winssl_runtime_suite_${{ needs.setup.outputs.run_id }}.log
           if-no-files-found: warn
 
   summary:
