@@ -2,11 +2,13 @@
 
 Date: 2026-05-12
 
-Status: `BLOCKED_PENDING_WINDOWS_RUNTIME_PROOF`
+Status: `BLOCKED_GITHUB_ACTIONS_BILLING`
 
 ## Summary
 
-The Linux-side release preparation for `v1.5.0` is green after refreshing expired fixtures, aligning versioned documentation, enabling the release workflow, and clearing the strict style gate. The release must not be tagged or published yet because real Windows-host `WinSSL` runtime artifacts have not been collected in this batch.
+The Linux-side release preparation for `v1.5.0` is green after refreshing expired fixtures, aligning versioned documentation, enabling the release workflow, and clearing the strict style gate. The release must not be tagged or published yet because real Windows-host `WinSSL` runtime artifacts have not been collected.
+
+The Wave B/B2 workflow was pushed and dispatched on GitHub Actions, but the run failed before any platform runner started because the account is blocked by billing or spending-limit settings. This is an external CI blocker, not a `WinSSL` implementation failure.
 
 ## Version Truth
 
@@ -40,7 +42,7 @@ The Linux-side release preparation for `v1.5.0` is green after refreshing expire
 
 ## WinSSL Runtime Proof
 
-Current status: `PENDING`.
+Current status: `BLOCKED_EXTERNAL_CI_BILLING`.
 
 Required evidence before tag approval:
 
@@ -51,7 +53,25 @@ Required evidence before tag approval:
 - Wave B Windows gate summary and step logs.
 - Broader WinSSL runtime suite transcript.
 
-The local repository has the workflow and validation-bundle contracts needed to collect this evidence, but this Linux host does not itself prove Windows Schannel runtime behavior. The next action is to push the `glm51` branch and dispatch `.github/workflows/wave-b-b2-manual.yml` with `run_id=release_1_5_0_20260512`.
+The local repository has the workflow and validation-bundle contracts needed to collect this evidence, but this Linux host does not itself prove Windows Schannel runtime behavior.
+
+## GitHub Actions Attempt
+
+| Item | Result |
+| --- | --- |
+| Workflow | `.github/workflows/wave-b-b2-manual.yml` |
+| Ref | `glm51` |
+| Head commit | `8491b914f5dd45604039a700935f90b5037eedde` |
+| Run ID | `25698425400` |
+| Run URL | `https://github.com/dtamade/fafafa.ssl/actions/runs/25698425400` |
+| Inputs | `run_linux_baseline=true`, `strict_closure=true`, `run_id=release_1_5_0_20260512` |
+| Result | `failure` before platform jobs started |
+| Jobs | `setup` and `summary` failed; `linux-gate`, `macos-gate`, and `windows-gate` skipped |
+| Artifact download | `no valid artifacts found to download` |
+| Failure annotation | `The job was not started because recent account payments have failed or your spending limit needs to be increased.` |
+| Classification | external GitHub Actions billing/spending-limit blocker |
+
+Next action after the external blocker is cleared: rerun the same workflow on `glm51` with the same inputs, then review Linux, macOS, and Windows artifacts before changing this readiness status.
 
 ## High-Risk Conclusion
 
@@ -63,6 +83,7 @@ Tag status: `BLOCKED`.
 
 Do not create `v1.5.0` until:
 
+- GitHub Actions billing/spending-limit access is restored or an equivalent trusted Windows host is used.
 - Wave B/B2 Windows runtime proof is collected and reviewed.
 - This readiness report is updated to `PASS_PENDING_APPROVAL`.
 - The user explicitly approves tag creation.

@@ -19,6 +19,11 @@
 - Versioned release files are now aligned: `CHANGELOG.md` has `[1.5.0] - 2026-05-12`, `README.md` advertises `v1.5.0`, `fafafa_ssl.lpk` is `1.5.0`, and `RELEASE_NOTES_V1.5.0.md` exists.
 - Release automation is now current: `.github/workflows/release.yml` exists, `.github/workflows/release.yml.disabled` is synchronized to it, the workflow rejects non-`v1.5.0`, requires an already-existing approved tag, runs current gates, and uses `RELEASE_NOTES_V1.5.0.md` as the release body.
 - Focused release/workflow contracts are green locally. The remaining release-signoff blocker is still real Windows-host `WinSSL` runtime proof from Wave B/B2 artifacts, not Linux-side code or documentation drift.
+- Local release-prep batch was committed as `8491b91 chore: prepare v1.5.0 release` and pushed to `origin/glm51`.
+- Wave B/B2 was dispatched on `glm51` as GitHub Actions run `25698425400` with `run_linux_baseline=true`, `strict_closure=true`, and `run_id=release_1_5_0_20260512`.
+- That run failed before any platform runner executed: `setup` and `summary` failed, `linux-gate` / `macos-gate` / `windows-gate` were skipped, and artifact download returned `no valid artifacts found to download`.
+- The failure annotation says the job was not started because recent account payments failed or the spending limit needs to be increased. This is an external GitHub Actions billing/spending-limit blocker, not a workflow entrypoint failure and not a `WinSSL` implementation failure.
+- Therefore the release remains tag-blocked until billing access is restored or an equivalent trusted Windows host produces the required `WinSSL` runtime artifacts.
 
 ---
 

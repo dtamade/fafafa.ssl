@@ -69,15 +69,31 @@
   - PASS
 
 ## Pending verification
-- `docs/test_reports/RELEASE_READINESS_V1.5.0.md` generated with status `BLOCKED_PENDING_WINDOWS_RUNTIME_PROOF`
+- `docs/test_reports/RELEASE_READINESS_V1.5.0.md` generated, then updated to status `BLOCKED_GITHUB_ACTIONS_BILLING`
 - final hygiene before commit:
   - `git diff --check`: PASS
   - `git clean -nd`: reports only intended new release-prep files
   - `git clean -ndX`: reports ignored `.ace-tool/`, `scripts/__pycache__/`, and `tmp/`
   - `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`: PASS
-- commit the local release-prep batch after review
-- push `glm51` and dispatch `.github/workflows/wave-b-b2-manual.yml`
-- collect or explicitly block on Windows runtime artifacts
+- commit:
+  - `git commit -m "chore: prepare v1.5.0 release"`
+  - result: `8491b91 chore: prepare v1.5.0 release`
+- push:
+  - `git push -u origin glm51`
+  - result: `glm51` pushed and set to track `origin/glm51`
+- Wave B/B2 dispatch:
+  - `gh workflow run .github/workflows/wave-b-b2-manual.yml --ref glm51 -f run_linux_baseline=true -f strict_closure=true -f run_id=release_1_5_0_20260512`
+  - result: run created as `25698425400`
+  - URL: `https://github.com/dtamade/fafafa.ssl/actions/runs/25698425400`
+- Wave B/B2 watch:
+  - `gh run watch 25698425400 --exit-status`
+  - result: failure before runner execution
+  - annotation: `The job was not started because recent account payments have failed or your spending limit needs to be increased.`
+  - `setup` and `summary` failed; `linux-gate`, `macos-gate`, and `windows-gate` skipped
+  - `gh run download 25698425400 --dir tmp/gh-run-25698425400-artifacts`: `no valid artifacts found to download`
+- current blocker:
+  - GitHub Actions billing/spending-limit access must be restored, or an equivalent trusted Windows host must run the same validation chain
+  - release tag remains blocked because no Windows `WinSSL` runtime artifact exists
 
 ---
 

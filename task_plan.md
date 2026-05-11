@@ -12,18 +12,19 @@
 ## Status
 - [completed] baseline truth / local release gates
 - [completed] release workflow + notes + docs alignment
-- [pending] Windows runtime proof refresh via Wave B/B2
-- [completed] readiness report drafted with `BLOCKED_PENDING_WINDOWS_RUNTIME_PROOF`
-- [in_progress] review and commit the local release-prep batch
-- [pending] push `glm51` and dispatch Wave B/B2 for real Windows artifacts
+- [completed] readiness report drafted and updated with remote blocker evidence
+- [completed] local release-prep batch committed as `8491b91`
+- [completed] pushed `glm51` and dispatched Wave B/B2
+- [blocked] Windows runtime proof refresh is blocked by GitHub Actions billing/spending-limit settings
+- [pending] rerun Wave B/B2 after billing access is restored, then collect artifacts
 
 ## Notes
 - 版本真相已经在 `src/fafafa.ssl.base.pas`：`FAFAFA_SSL_VERSION_STRING = '1.5.0'`，`FAFAFA_SSL_INTERFACE_VERSION = 10500`
 - `CHANGELOG.md`、`README.md`、`fafafa_ssl.lpk`、`RELEASE_NOTES_V1.5.0.md` 已对齐到 `v1.5.0`
 - `.github/workflows/release.yml` 已启用，`.github/workflows/release.yml.disabled` 已同步成同一份当前模板
 - `python3 scripts/check_code_style.py src` 首轮打出 369 个缩进错误；已按 checker 实际报错做 44 个文件 / 369 行机械缩进修复，复跑通过
-- `docs/test_reports/RELEASE_READINESS_V1.5.0.md` 已生成，但状态保持为 `BLOCKED_PENDING_WINDOWS_RUNTIME_PROOF`
-- 远端 `origin/master` 还没有本地新版 Wave B/B2 workflow；刷新 Windows 证据链需要先推送当前 `glm51` 分支再触发 workflow
+- `docs/test_reports/RELEASE_READINESS_V1.5.0.md` 已生成，并已记录 GitHub run `25698425400` 的外部 billing blocker
+- `glm51` 已推送；刷新 Windows 证据链需要先恢复 GitHub Actions billing/spending-limit access，或使用等价可信 Windows 主机执行同一验证链
 
 ## Verification Plan
 1. `git status --short`
