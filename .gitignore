@@ -51,8 +51,12 @@ coverage/
 reports/audit/
 tools/test_audit/reports/
 
-# Claude Code 本地配置
+# Agent 本地配置 / 缓存
 .claude/
+.agents/
+.codex/
+.fusion/
+.ace-tool/
 
 # planning-with-files（本地工作记忆文件，路线图请同步到 docs/）
 task_plan.md
@@ -87,13 +91,20 @@ examples/temp_certs/
 !tests/certificate/test_certs/*.key
 !examples/*.crt
 !examples/*.key
-.ace-tool/
 
 # 测试二进制文件 (Linux/macOS 无扩展名)
 tests/test_*
 !tests/test_*.pas
 !tests/test_*.lpi
 !tests/test_*.md
+tests/**/test_*
+!tests/**/*.pas
+!tests/**/*.lpi
+!tests/**/*.lpr
+!tests/test_*.md
+!tests/**/test_*.md
+!tests/**/*.sh
+!tests/**/*.txt
 
 # 测试输出目录
 tests/bin/

@@ -1,3 +1,15 @@
+# Findings - Repo Hygiene And Ignore Consolidation
+
+## 2026-05-12
+- The repo is clean in terms of tracked changes, but it carries a large amount of ignored build output.
+- The largest easy win is `tmp/`, which alone is about `6.0G`.
+- Other clearly generated output directories include `bin/`, `tests/bin/`, `tests/lib/`, `examples/bin/`, `artifacts/`, and `tools/test_audit/bin/`.
+- The existing `.gitignore` only covered top-level `tests/test_*` executables, so nested `tests/**/test_*` binaries could still appear as untracked clutter.
+- The first broad cleanup pass removed generated output directories, but it also swept local ignored agent/config folders and `archive/` because the exclude list did not hold as expected.
+- I added explicit ignore entries for `.agents/`, `.codex/`, `.fusion/`, and `.ace-tool/` so local agent/cache directories stop polluting repo status checks.
+- `git check-ignore -v` now confirms nested `tests/**/test_*` executables are ignored while `tests/**/*.pas` and the current shell scripts remain visible, and benchmark report markdown is still ignored by the dedicated Bench/CI rule.
+- The remaining visible untracked item is the new hygiene plan doc, which is intentional and ready to commit.
+
 # Findings - Working-Memory, Artifact Hygiene, And WinSSL Workflow Closeout
 
 ## 2026-05-12

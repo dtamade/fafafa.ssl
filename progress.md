@@ -1,3 +1,36 @@
+# Progress - Repo Hygiene And Ignore Consolidation
+
+## 2026-05-12
+- session catch-up: no unsynced context was reported for this repo.
+- Inventory:
+  - `git clean -ndX` revealed large ignored output directories and many generated files
+  - `du -sh` showed the largest easy targets:
+    - `tmp/` ~ 6.0G
+    - `bin/` ~ 728M
+    - `tests/bin/` ~ 131M
+    - `examples/bin/` ~ 107M
+    - `tests/lib/` ~ 5.2M
+    - `artifacts/` ~ 1.7M
+    - `tools/test_audit/bin/` ~ 2.0M
+- Discovery:
+  - the current ignore rules did not cover nested `tests/**/test_*` executables
+- Planned cleanup:
+  - expand `.gitignore`
+  - remove safe ignored output directories
+- Cleanup result:
+  - generated output directories were removed
+  - local ignored agent/config folders and `archive/` were also swept on the first broad pass
+  - `.agents/` and `.codex/` are now explicitly ignored rather than shown as repo clutter
+- Validation:
+  - `git check-ignore -v` confirms nested `tests/**/test_*` executables are ignored
+  - `tests/**/*.pas` and the current shell scripts remain visible
+  - benchmark report markdown stays ignored by the dedicated Bench/CI rule
+
+## Pending verification
+- `git diff --check -- .gitignore task_plan.md findings.md progress.md docs/plans/2026-05-12-repo-hygiene-ignore-consolidation.md`: PASS
+- `git status --short`: only intended text-file edits remain
+- commit the organization batch
+
 # Progress - Working-Memory, Artifact Hygiene, And WinSSL Workflow Closeout
 
 ## 2026-05-12

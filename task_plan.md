@@ -1,3 +1,42 @@
+# Task Plan - Repo Hygiene And Ignore Consolidation
+
+## Goal
+收口仓库里的 build/output 噪音，补齐 nested `tests/**/test_*` 可执行文件的 ignore 规则，并安全清理已知输出目录，让工作树保持可复现、可审查。
+
+## Current Batch
+1. 扩展 `.gitignore`，覆盖 nested test binaries，但保留测试源码与文档可见。
+2. 清理安全的 ignored build/output 目录。
+3. 复核状态和 diff hygiene。
+4. 提交仓库整理批次。
+
+## Status
+- [completed] Inventory ignored/untracked noise and size the safe cleanup scope
+- [completed] Expand ignore coverage and clean safe generated outputs
+- [completed] Update working-memory records for the new hygiene batch
+- [completed] Verify diff hygiene and commit
+
+## Current Evidence
+- `git clean -ndX` showed the repository had a lot of ignored build output, including:
+  - `bin/` around `728M`
+  - `tests/bin/` around `131M`
+  - `tests/lib/` around `5.2M`
+  - `examples/bin/` around `107M`
+  - `artifacts/` around `1.7M`
+  - `tmp/` around `6.0G`
+  - `tools/test_audit/bin/` around `2.0M`
+- `tests/**/test_*` was not covered by the existing top-level test-binary ignore rule, so nested generated executables could still surface as untracked files.
+- The cleanup sweep removed generated output directories. The first broad pass also swept local ignored agent/config folders and `archive/`, so this batch now makes local agent/cache ignores explicit.
+- After the `.gitignore` update, `git check-ignore -v` confirms nested `tests/**/test_*` executables are ignored, test sources remain visible, and benchmark report markdown stays ignored.
+- `git clean -nd` only reports this new plan doc; `git clean -ndX` only reports `.agents/` and `.codex/` as ignored local caches.
+
+## Risks
+- Do not delete local agent/config folders or archived notes.
+- Do not broaden the cleanup into tracked source trees.
+- Preserve the test source files and docs under `tests/**`.
+
+## Follow-up Queue
+1. Commit the organization batch.
+
 # Task Plan - Working-Memory, Artifact Hygiene, And WinSSL Workflow Closeout
 
 ## Goal
