@@ -16,6 +16,8 @@ if ! command -v fpc >/dev/null 2>&1; then
   exit 0
 fi
 
+mkdir -p "$PROJECT_ROOT/tmp"
+
 before_status=""
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   before_status="$(git status --porcelain)"

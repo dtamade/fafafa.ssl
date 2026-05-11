@@ -25,11 +25,18 @@
   - `git check-ignore -v` confirms nested `tests/**/test_*` executables are ignored
   - `tests/**/*.pas` and the current shell scripts remain visible
   - benchmark report markdown stays ignored by the dedicated Bench/CI rule
+- Follow-up discovery:
+  - rootless working-memory ignore patterns were also catching archive docs with the same filenames
+  - `examples/digital_signature/private.pem` and `public.pem` were generated example outputs, not source assets
+  - `tests/scripts/test_example_digital_signature_password_protected_private_key_contract.sh` assumed `tmp/` already existed and needed a parent-directory create step
 
 ## Pending verification
-- `git diff --check -- .gitignore task_plan.md findings.md progress.md docs/plans/2026-05-12-repo-hygiene-ignore-consolidation.md`: PASS
-- `git status --short`: only intended text-file edits remain
-- commit the organization batch
+- `git check-ignore -v --no-index task_plan.md findings.md progress.md WARP.md docs/archive/old_reports/PROGRESS.md examples/digital_signature/private.pem examples/digital_signature/public.pem`: PASS; root-local files still match, archive `PROGRESS.md` no longer matches, generated PEM outputs remain ignored
+- `git diff --check`: PASS
+- `git status --short`: only intended ignore/table-log edits plus generated PEM deletions remain
+- `git clean -nd` and `git clean -ndX`: empty after removing the temporary `tmp/` parent left by the verification run
+- `bash tests/scripts/test_example_digital_signature_password_protected_private_key_contract.sh`: PASS after the script now creates the ignored `tmp/` parent itself
+- organization batch committed
 
 # Progress - Working-Memory, Artifact Hygiene, And WinSSL Workflow Closeout
 

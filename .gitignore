@@ -19,10 +19,9 @@ backup/
 lib/
 
 # IDE 配置文件
-*.lps
 *.layout
-.vscode/
-.idea/
+/.vscode/
+/.idea/
 
 # 日志文件
 *.log
@@ -52,19 +51,19 @@ reports/audit/
 tools/test_audit/reports/
 
 # Agent 本地配置 / 缓存
-.claude/
-.agents/
-.codex/
-.fusion/
-.ace-tool/
+/.claude/
+/.agents/
+/.codex/
+/.fusion/
+/.ace-tool/
 
 # planning-with-files（本地工作记忆文件，路线图请同步到 docs/）
-task_plan.md
-findings.md
-progress.md
+/task_plan.md
+/findings.md
+/progress.md
 
 # Warp
-WARP.md
+/WARP.md
 
 # GNU Global 标签文件
 GPATH
@@ -144,8 +143,4 @@ examples/simple_ssl_connection
 examples/simple_test
 examples/https_client/https_client_simple
 examples/production/https_client_simple
-bin/
 tmp/
-*.o
-*.ppu
-*.exe

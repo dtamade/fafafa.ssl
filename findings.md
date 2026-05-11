@@ -9,6 +9,10 @@
 - I added explicit ignore entries for `.agents/`, `.codex/`, `.fusion/`, and `.ace-tool/` so local agent/cache directories stop polluting repo status checks.
 - `git check-ignore -v` now confirms nested `tests/**/test_*` executables are ignored while `tests/**/*.pas` and the current shell scripts remain visible, and benchmark report markdown is still ignored by the dedicated Bench/CI rule.
 - The remaining visible untracked item is the new hygiene plan doc, which is intentional and ready to commit.
+- A follow-up review found the rootless `task_plan.md` / `findings.md` / `progress.md` / `WARP.md` patterns were too broad because they could match archive docs with the same names.
+- The example digital-signature `private.pem` / `public.pem` pair was generated output, so keeping it in the repository was the wrong default.
+- The digital-signature password-protected key contract also assumed the ignored `tmp/` parent already existed; after the artifact sweep removed `tmp/`, that script failed before reaching the example behavior.
+- The repo-hygiene follow-up batch is now committed.
 
 # Findings - Working-Memory, Artifact Hygiene, And WinSSL Workflow Closeout
 
@@ -20,7 +24,7 @@
 - A fresh contract run then proved the Windows workflow was still below the runtime checklist: it did not yet install / verify Lazarus for `lazbuild`-based checks.
 - That RED is actionable and belongs in this batch, because the repo already had a dedicated workflow-alignment plan and the current handoff still depends on a reviewable Windows lane.
 - After the workflow update, the three relevant contracts are now green again, so the Windows lane is back in sync with the runtime checklist.
-- I did not broaden `.gitignore` in this batch; the narrower fix is to remove the generated files and keep the closeout reviewable.
+- The follow-up scope stayed narrow: root-anchor the repo-local ignore entries, remove the generated sample PEM pair, and make the related contract recreate its ignored `tmp/` parent.
 
 # Findings - Backend Broad Completion Audit
 

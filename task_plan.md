@@ -4,15 +4,18 @@
 收口仓库里的 build/output 噪音，补齐 nested `tests/**/test_*` 可执行文件的 ignore 规则，并安全清理已知输出目录，让工作树保持可复现、可审查。
 
 ## Current Batch
-1. 扩展 `.gitignore`，覆盖 nested test binaries，但保留测试源码与文档可见。
-2. 清理安全的 ignored build/output 目录。
-3. 复核状态和 diff hygiene。
-4. 提交仓库整理批次。
+1. 收紧根目录专属 ignore 规则，避免把归档文档里的同名文件误判成工作记忆。
+2. 移除示例目录里仓库不该自带的生成型 PEM 成品。
+3. 修复数字签名示例契约对 `tmp/` 已存在的隐式假设。
+4. 复核状态和 diff hygiene。
+5. 提交仓库整理批次。
 
 ## Status
 - [completed] Inventory ignored/untracked noise and size the safe cleanup scope
 - [completed] Expand ignore coverage and clean safe generated outputs
 - [completed] Update working-memory records for the new hygiene batch
+- [completed] Root-anchor repo-local ignore entries and drop sample key artifacts
+- [completed] Make digital-signature contract create its ignored tmp parent
 - [completed] Verify diff hygiene and commit
 
 ## Current Evidence
@@ -28,14 +31,21 @@
 - The cleanup sweep removed generated output directories. The first broad pass also swept local ignored agent/config folders and `archive/`, so this batch now makes local agent/cache ignores explicit.
 - After the `.gitignore` update, `git check-ignore -v` confirms nested `tests/**/test_*` executables are ignored, test sources remain visible, and benchmark report markdown stays ignored.
 - `git clean -nd` only reports this new plan doc; `git clean -ndX` only reports `.agents/` and `.codex/` as ignored local caches.
+- The follow-up sweep found two more repo-hygiene nits:
+  - rootless `task_plan.md` / `findings.md` / `progress.md` / `WARP.md` ignore patterns can accidentally match archive docs such as `docs/archive/old_reports/PROGRESS.md`
+  - `examples/digital_signature/private.pem` and `public.pem` are generated outputs that the README already instructs users to create locally
+- `git check-ignore -v --no-index` now confirms the root-local working-memory files are matched only at the repo root, while `docs/archive/old_reports/PROGRESS.md` is no longer caught by those patterns.
+- `tests/scripts/test_example_digital_signature_password_protected_private_key_contract.sh` now creates `tmp/` itself, so it still works after a clean artifact sweep removes the ignored directory.
+- After the tmp parent fix and follow-up cleanup, `git clean -nd` and `git clean -ndX` are back to empty.
 
 ## Risks
 - Do not delete local agent/config folders or archived notes.
 - Do not broaden the cleanup into tracked source trees.
 - Preserve the test source files and docs under `tests/**`.
+- Keep the ignore rules root-scoped for repo-local files only.
 
 ## Follow-up Queue
-1. Commit the organization batch.
+1. Organization batch committed.
 
 # Task Plan - Working-Memory, Artifact Hygiene, And WinSSL Workflow Closeout
 
