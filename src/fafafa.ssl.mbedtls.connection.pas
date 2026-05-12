@@ -424,6 +424,7 @@ end;
 function TMbedTLSConnection.DoGetVerifyResult: Integer;
 begin
   Result := -1;
+  if not FHandshakeComplete then Exit;
   if FSSLContext = nil then Exit;
   if not Assigned(mbedtls_ssl_get_verify_result) then Exit;
 
@@ -437,6 +438,9 @@ var
 begin
   if (FLastErrorCode <> sslErrNone) and (FLastErrorString <> '') then
     Exit(FLastErrorString);
+
+  if not FHandshakeComplete then
+    Exit('Not verified');
 
   Result := 'Verification status unavailable';
   if FSSLContext = nil then Exit;

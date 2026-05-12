@@ -1,3 +1,21 @@
+# Findings - MbedTLS Pre-Handshake Verify Status Clarification
+
+## 2026-05-12
+- Fresh continuation review found the earlier MbedTLS helper-loss guard had not fully closed the public false-positive path:
+  - `DoGetVerifyResult` still queried `mbedtls_ssl_get_verify_result(FSSLContext)` on a fresh connection
+  - `DoGetVerifyResultString` still mapped `flags = 0` to `OK`
+  - therefore a never-handshaken MbedTLS connection could still surface `0/OK`
+- The new pre-handshake boundary is the stronger truth and should win ahead of helper-loss fallback:
+  - before `FHandshakeComplete`, verify status has not been established yet
+  - so the public contract must degrade to `GetVerifyResult = -1` and `GetVerifyResultString = Not verified`
+- Preserving the older helper-loss contract required a test seam, not weaker production ordering:
+  - once the pre-handshake guard was added, a fresh connection no longer reached the helper-loss string fallback
+  - a test-only subclass that marks `FHandshakeComplete := True` is the narrowest safe way to keep asserting post-handshake helper-loss degradation
+- The smallest safe repair stays narrowly scoped:
+  - pre-handshake short-circuits to `-1 / Not verified`
+  - completed-handshake helper-loss still degrades to `Verification status unavailable`
+  - no handshake or certificate-validation redesign was needed
+
 # Findings - WolfSSL Pre-Handshake Verify Status Clarification
 
 ## 2026-05-12

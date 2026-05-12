@@ -32,6 +32,7 @@ uses
   fafafa.ssl.mbedtls.api,
   fafafa.ssl.mbedtls.lib,
   fafafa.ssl.mbedtls.context,
+  fafafa.ssl.mbedtls.connection,
   fafafa.ssl.mbedtls.certificate,
   fafafa.ssl.mbedtls.session;
 
@@ -41,6 +42,11 @@ var
   GFailCount: Integer = 0;
 
 type
+  TTestMbedTLSConnection = class(TMbedTLSConnection)
+  public
+    procedure MarkHandshakeCompleteForTest;
+  end;
+
   TMockWrongBackendNativeHandle = class(TInterfacedObject, ISSLNativeHandleAccess)
   private
     FHandle: Pointer;
@@ -50,6 +56,11 @@ type
     function GetBackendType: TSSLLibraryType;
     function IsNativeHandleValid: Boolean;
   end;
+
+procedure TTestMbedTLSConnection.MarkHandshakeCompleteForTest;
+begin
+  FHandshakeComplete := True;
+end;
 
 constructor TMockWrongBackendNativeHandle.Create(AHandle: Pointer);
 begin
@@ -503,7 +514,7 @@ procedure TestMbedTLSVerifyResultHelperLossContract;
 var
   LLib: ISSLLibrary;
   LCtx: ISSLContext;
-  LConn: ISSLConnection;
+  LConn: TTestMbedTLSConnection;
   LStream: TMemoryStream;
   LVerifyResult: Integer;
   LVerifyText: string;
@@ -518,8 +529,15 @@ begin
   begin
     LCtx := LLib.CreateContext(sslCtxClient);
     LStream := TMemoryStream.Create;
+    LConn := nil;
     try
-      LConn := LCtx.CreateConnection(LStream);
+      LConn := TTestMbedTLSConnection.Create(
+        LCtx,
+        Pmbedtls_ssl_config(GetNativeHandleSafe(LCtx,
+          'TestMbedTLSVerifyResultHelperLossContract')),
+        LStream
+      );
+      LConn.MarkHandshakeCompleteForTest;
       LOriginalGetVerifyResult := mbedtls_ssl_get_verify_result;
       try
         mbedtls_ssl_get_verify_result := nil;
@@ -534,6 +552,8 @@ begin
         mbedtls_ssl_get_verify_result := LOriginalGetVerifyResult;
       end;
     finally
+      if Assigned(LConn) then
+        LConn.Free;
       LStream.Free;
       LLib.Finalize;
     end;
@@ -542,6 +562,40 @@ begin
   begin
     WriteLn('  (Skipped - MbedTLS library not available)');
     Test('VerifyResult helper-loss contract skipped', True);
+  end;
+end;
+
+procedure TestMbedTLSVerifyStatusBeforeHandshakeContract;
+var
+  LLib: ISSLLibrary;
+  LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LStream: TMemoryStream;
+begin
+  WriteLn('');
+  WriteLn('=== MbedTLS Pre-Handshake Verify Status Contract ===');
+
+  LLib := CreateMbedTLSLibrary;
+
+  if LLib.Initialize then
+  begin
+    LCtx := LLib.CreateContext(sslCtxClient);
+    LStream := TMemoryStream.Create;
+    try
+      LConn := LCtx.CreateConnection(LStream);
+      Test('Fresh MbedTLS connection does not report verify success before handshake',
+        LConn.GetVerifyResult = -1);
+      Test('Fresh MbedTLS connection reports not-verified diagnostic before handshake',
+        Pos('not verified', LowerCase(LConn.GetVerifyResultString)) > 0);
+    finally
+      LStream.Free;
+      LLib.Finalize;
+    end;
+  end
+  else
+  begin
+    WriteLn('  (Skipped - MbedTLS library not available)');
+    Test('Pre-handshake verify-status contract skipped', True);
   end;
 end;
 
@@ -633,6 +687,7 @@ begin
   TestMbedTLSContextCreation;
   TestMbedTLSContextConfiguration;
   TestMbedTLSVerifyResultHelperLossContract;
+  TestMbedTLSVerifyStatusBeforeHandshakeContract;
   TestMbedTLSFeatureSupport;
 
   PrintSummary;

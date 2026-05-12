@@ -1,3 +1,36 @@
+# Progress - MbedTLS Pre-Handshake Verify Status Clarification
+
+## 2026-05-12
+- Post-commit resume:
+  - worktree was clean at `52a46b1`
+  - continued along the same cross-backend verify-status drift family to check whether MbedTLS still leaked pre-handshake success after the helper-loss batch
+- New batch plan recorded in `docs/plans/2026-05-12-mbedtls-prehandshake-verify-status-clarification.md`
+- Focused RED contract added:
+  - `tests/test_mbedtls_framework.pas`
+  - new `TestMbedTLSVerifyStatusBeforeHandshakeContract`
+  - checks that a real fresh MbedTLS client stream connection must not report `0/OK` before handshake
+- RED verification:
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/mbedtls_framework_units -FEtmp/mbedtls_framework_units -otmp/mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas` -> PASS
+  - `./tmp/mbedtls_framework_units/test_mbedtls_framework` -> runtime FAIL before fix
+  - failure shape:
+    - `Fresh MbedTLS connection does not report verify success before handshake: FAIL`
+    - `Fresh MbedTLS connection reports not-verified diagnostic before handshake: FAIL`
+- Minimal implementation landed:
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+    - `DoGetVerifyResult` now exits with `-1` before handshake completion
+    - `DoGetVerifyResultString` now returns `Not verified` before handshake completion and preserves post-handshake unavailable fallback
+- Neighbor contract adjustment after the first fix attempt:
+  - the older helper-loss string contract began returning the stronger pre-handshake truth (`Not verified`) instead of the intended helper-loss fallback
+  - rather than weakening production ordering, `tests/test_mbedtls_framework.pas` now uses `TTestMbedTLSConnection.MarkHandshakeCompleteForTest`
+  - this keeps helper-loss assertions scoped to a simulated completed-handshake path while the fresh-connection contract owns the pre-handshake boundary
+- Focused GREEN verification:
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/mbedtls_framework_units -FEtmp/mbedtls_framework_units -otmp/mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas` -> PASS
+  - `./tmp/mbedtls_framework_units/test_mbedtls_framework` -> PASS (`100 passed / 0 failed`)
+  - `python3 scripts/compile_all_modules.py` -> PASS (`185/185`)
+  - `git diff --check` -> PASS
+- Ready for review/commit:
+  - diff scope is limited to the MbedTLS pre-handshake verify-status getter truth, the focused framework contract update, the new batch plan, and working-memory files
+
 # Progress - WolfSSL Pre-Handshake Verify Status Clarification
 
 ## 2026-05-12

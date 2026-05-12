@@ -1,3 +1,40 @@
+# Task Plan - MbedTLS Pre-Handshake Verify Status Clarification
+
+## Goal
+修复 `TMbedTLSConnection.GetVerifyResult` / `GetVerifyResultString` 在未握手前误报 verify success 的公共语义漂移。
+
+## Current Batch
+1. 写 focused RED，证明 fresh MbedTLS connection 仍会在 pre-handshake 路径返回 `0/OK`。
+2. 在 `src/fafafa.ssl.mbedtls.connection.pas` 做最小 getter 修法，明确 pre-handshake 为 `-1 / Not verified`。
+3. 跑 focused GREEN 与 compile gate。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] working-memory refreshed for the MbedTLS pre-handshake verify-status batch
+- [completed] focused RED contract authoring
+- [completed] minimal MbedTLS pre-handshake verify-status fix
+- [completed] focused verification and compile review
+
+## Current Evidence
+- focused RED:
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/mbedtls_framework_units -FEtmp/mbedtls_framework_units -otmp/mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+  - `./tmp/mbedtls_framework_units/test_mbedtls_framework`
+  - result before fix: FAIL on:
+    - `Fresh MbedTLS connection does not report verify success before handshake`
+    - `Fresh MbedTLS connection reports not-verified diagnostic before handshake`
+- minimal implementation:
+  - `tests/test_mbedtls_framework.pas`
+    - added `TestMbedTLSVerifyStatusBeforeHandshakeContract`
+    - added `TTestMbedTLSConnection.MarkHandshakeCompleteForTest` so the older helper-loss contract still exercises a completed-handshake helper-loss path after the new pre-handshake guard
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+    - `DoGetVerifyResult` now exits with `-1` before handshake completion
+    - `DoGetVerifyResultString` now returns `Not verified` before handshake completion while preserving post-handshake unavailable fallback
+- focused GREEN:
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/mbedtls_framework_units -FEtmp/mbedtls_framework_units -otmp/mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`: PASS
+  - `./tmp/mbedtls_framework_units/test_mbedtls_framework`: PASS, `100 passed / 0 failed`
+  - `python3 scripts/compile_all_modules.py`: PASS, `185/185`
+  - `git diff --check`: PASS
+
 # Task Plan - WolfSSL Pre-Handshake Verify Status Clarification
 
 ## Goal
