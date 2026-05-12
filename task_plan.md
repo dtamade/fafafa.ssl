@@ -1,3 +1,41 @@
+# Task Plan - WolfSSL Pre-Handshake Verify Status Clarification
+
+## Goal
+修复 `TWolfSSLConnection.GetVerifyResult` / `GetVerifyResultString` 在未握手前误报 verify success 的公共语义漂移。
+
+## Current Batch
+1. 写 focused RED，证明 fresh WolfSSL connection 仍会在 pre-handshake 路径返回 `0/OK`。
+2. 在 `src/fafafa.ssl.wolfssl.connection.pas` 做最小 getter 修法，明确 pre-handshake 为 `-1 / Not verified`。
+3. 跑 focused GREEN 与 compile gate。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] working-memory refreshed for the WolfSSL pre-handshake verify-status batch
+- [completed] focused RED contract authoring
+- [completed] minimal WolfSSL pre-handshake verify-status fix
+- [completed] focused verification and compile review
+
+## Current Evidence
+- focused RED:
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/wolfssl_framework_units -FEtmp/wolfssl_framework_units -otmp/wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`
+  - `./tmp/wolfssl_framework_units/test_wolfssl_framework`
+  - result before fix: FAIL on:
+    - `Fresh WolfSSL connection does not report verify success before handshake`
+    - `Fresh WolfSSL connection reports not-verified diagnostic before handshake`
+- minimal implementation:
+  - `tests/test_wolfssl_framework.pas`
+    - added `TestWolfSSLVerifyStatusBeforeHandshakeContract`
+    - uses a real WolfSSL client context + stream connection
+    - asserts pre-handshake `GetVerifyResult = -1` and `GetVerifyResultString` contains `not verified`
+  - `src/fafafa.ssl.wolfssl.connection.pas`
+    - `DoGetVerifyResult` now returns `-1` before handshake completion when no native verify error exists
+    - `DoGetVerifyResultString` now returns `Not verified` before handshake completion
+- focused GREEN:
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/wolfssl_framework_units -FEtmp/wolfssl_framework_units -otmp/wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas`: PASS
+  - `./tmp/wolfssl_framework_units/test_wolfssl_framework`: PASS, `112 passed / 0 failed`
+  - `python3 scripts/compile_all_modules.py`: PASS, `185/185`
+  - `git diff --check`: PASS
+
 # Task Plan - OpenSSL Pre-Handshake Verify Status Clarification
 
 ## Goal

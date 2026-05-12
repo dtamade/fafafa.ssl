@@ -1,3 +1,16 @@
+# Findings - WolfSSL Pre-Handshake Verify Status Clarification
+
+## 2026-05-12
+- Fresh continuation review found the same verify-status false-positive pattern also existed in `TWolfSSLConnection`:
+  - constructors initialized `FLastNativeError := 0`
+  - `DoGetVerifyResult` returned `FLastNativeError` whenever `FHandshakeComplete` was false
+  - `DoGetVerifyResultString` treated `0` as `OK`
+  - therefore a fresh never-handshaken connection could publicly surface `0/OK`
+- The smallest safe repair is again a pre-handshake guard, not a larger WolfSSL verification redesign:
+  - native error still wins when a real verify/handshake error exists
+  - but no error plus no completed handshake must degrade to `-1 / Not verified`
+  - completed successful handshakes keep the current `0 / OK` truth
+
 # Findings - OpenSSL Pre-Handshake Verify Status Clarification
 
 ## 2026-05-12

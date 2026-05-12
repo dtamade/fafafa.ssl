@@ -1,3 +1,32 @@
+# Progress - WolfSSL Pre-Handshake Verify Status Clarification
+
+## 2026-05-12
+- Post-commit resume:
+  - worktree was clean at `42143ae`
+  - continued along the same verify-status drift family to check whether WolfSSL still leaked pre-handshake success
+- New batch plan recorded in `docs/plans/2026-05-12-wolfssl-prehandshake-verify-status-clarification.md`
+- Focused RED contract added:
+  - `tests/test_wolfssl_framework.pas`
+  - new `TestWolfSSLVerifyStatusBeforeHandshakeContract`
+  - creates a real WolfSSL client context/stream connection and checks pre-handshake verify-result semantics
+- RED verification:
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/wolfssl_framework_units -FEtmp/wolfssl_framework_units -otmp/wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas` -> PASS
+  - `./tmp/wolfssl_framework_units/test_wolfssl_framework` -> runtime FAIL before fix
+  - failure shape:
+    - `Fresh WolfSSL connection does not report verify success before handshake: FAIL`
+    - `Fresh WolfSSL connection reports not-verified diagnostic before handshake: FAIL`
+- Minimal implementation landed:
+  - `src/fafafa.ssl.wolfssl.connection.pas`
+    - `DoGetVerifyResult` now degrades to `-1` before handshake completion when no native verify error exists
+    - `DoGetVerifyResultString` now returns `Not verified` before handshake completion
+- Focused GREEN verification:
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/wolfssl_framework_units -FEtmp/wolfssl_framework_units -otmp/wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas` -> PASS
+  - `./tmp/wolfssl_framework_units/test_wolfssl_framework` -> PASS (`112 passed / 0 failed`)
+  - `python3 scripts/compile_all_modules.py` -> PASS (`185/185`)
+  - `git diff --check` -> PASS
+- Ready for review/commit:
+  - diff scope is limited to WolfSSL pre-handshake verify-status getter truth, the framework contract, the new batch plan, and working-memory files
+
 # Progress - OpenSSL Pre-Handshake Verify Status Clarification
 
 ## 2026-05-12

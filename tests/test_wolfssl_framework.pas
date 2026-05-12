@@ -447,6 +447,40 @@ begin
   end;
 end;
 
+procedure TestWolfSSLVerifyStatusBeforeHandshakeContract;
+var
+  LLib: ISSLLibrary;
+  LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LStream: TMemoryStream;
+begin
+  WriteLn('');
+  WriteLn('=== WolfSSL Pre-Handshake Verify Status Contract ===');
+
+  LLib := CreateWolfSSLLibrary;
+
+  if LLib.Initialize then
+  begin
+    LCtx := LLib.CreateContext(sslCtxClient);
+    LStream := TMemoryStream.Create;
+    try
+      LConn := LCtx.CreateConnection(LStream);
+      Test('Fresh WolfSSL connection does not report verify success before handshake',
+        LConn.GetVerifyResult = -1);
+      Test('Fresh WolfSSL connection reports not-verified diagnostic before handshake',
+        Pos('not verified', LowerCase(LConn.GetVerifyResultString)) > 0);
+    finally
+      LStream.Free;
+      LLib.Finalize;
+    end;
+  end
+  else
+  begin
+    WriteLn('  (Skipped - WolfSSL library not available)');
+    Test('Pre-handshake verify-status contract skipped', True);
+  end;
+end;
+
 procedure TestWolfSSLFeatureSupport;
 var
   LLib: ISSLLibrary;
@@ -597,6 +631,7 @@ begin
   // Context tests (require WolfSSL library)
   TestWolfSSLContextCreation;
   TestWolfSSLContextConfiguration;
+  TestWolfSSLVerifyStatusBeforeHandshakeContract;
   TestWolfSSLFeatureSupport;
 
   PrintSummary;

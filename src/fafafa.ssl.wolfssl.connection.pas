@@ -771,11 +771,14 @@ function TWolfSSLConnection.DoGetVerifyResult: Integer;
 begin
   // WolfSSL 没有直接的 get_verify_result API
   // 使用 FLastNativeError 来跟踪验证错误
-  // 如果握手成功且没有错误，返回 0 表示验证通过
-  if FHandshakeComplete and (FLastNativeError = 0) then
-    Result := 0
-  else
-    Result := FLastNativeError;
+  // pre-handshake 路径不能伪装成验证通过
+  if FLastNativeError <> 0 then
+    Exit(FLastNativeError);
+
+  if not FHandshakeComplete then
+    Exit(-1);
+
+  Result := 0;
 end;
 
 function TWolfSSLConnection.DoGetVerifyResultString: string;
@@ -784,6 +787,9 @@ var
 begin
   if (FLastErrorCode <> sslErrNone) and (FLastErrorString <> '') then
     Exit(FLastErrorString);
+
+  if not FHandshakeComplete then
+    Exit('Not verified');
 
   LResult := DoGetVerifyResult;
   if LResult = 0 then
