@@ -1,3 +1,46 @@
+# Task Plan - sslCtxBoth Roleless Handshake Clarification
+
+## Goal
+修复 `sslCtxBoth` 在 role-less 握手入口上的公共合同漂移：`DoHandshake` 和 OpenSSL 未连接 stream `Read/Write` 当前会静默猜 client/server，缺少明确边界。
+
+## Current Batch
+1. 写 focused RED，证明 `sslCtxBoth` 走 `DoHandshake` 和 OpenSSL 隐式 stream handshake 时仍会偷偷猜角色。
+2. 在连接基类与 OpenSSL stream implicit handshake 入口做最小 fail-fast 修法，不扩到更大的 dual-role state 设计。
+3. 跑 focused GREEN 与相邻回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] working-memory refreshed for the sslCtxBoth roleless-handshake batch
+- [completed] focused RED regression added and observed
+- [completed] minimal handshake-boundary fix implemented
+- [completed] focused verification and neighbor regression review
+
+## Notes
+- 这批不改变显式 `Connect` / `Accept` 的语义。
+- 这批也不引入新的 “connection role” 持久状态；先把当前没有角色来源的公共入口收口成清晰 precondition。
+
+## Current Evidence
+- focused RED:
+  - `fpc -Fu./src -Fu./tests tests/test_sslctxboth_roleless_handshake_clarification.pas -otmp/test_sslctxboth_roleless_handshake_clarification && ./tmp/test_sslctxboth_roleless_handshake_clarification`
+  - result before fix: `17 passed / 7 failed`
+  - failure shape:
+    - FreePascal / OpenSSL / MbedTLS `sslCtxBoth` `DoHandshake` 没有给出 configuration boundary
+    - WolfSSL `sslCtxBoth` `DoHandshake` 甚至直接回到 `sslHsInProgress`
+    - OpenSSL dual-context stream `Read/Write` 的隐式握手没有记录明确 configuration error
+- minimal implementation:
+  - `src/fafafa.ssl.connection.base.pas`
+    - added shared dual-role handshake ambiguity helpers
+    - `DoHandshake` now fail-fast on `sslCtxBoth` with `sslErrConfiguration`
+  - `src/fafafa.ssl.openssl.connection.pas`
+    - stream `Read/Write` now reject disconnected `sslCtxBoth` implicit handshake paths
+    - `DoHandshake` log label now reports `Dual` instead of misleading `Server`
+- focused GREEN:
+  - `tests/test_sslctxboth_roleless_handshake_clarification.pas`: PASS, `24 passed / 0 failed`
+  - `tests/test_openssl_connection_stream_handshake_contract.pas`: PASS
+  - `tests/test_sslctxboth_client_capability_clarification.pas`: PASS, `28 passed / 0 failed / 1 skipped`
+  - `python3 scripts/compile_all_modules.py`: PASS, `185/185`
+  - `git diff --check`: PASS
+
 # Task Plan - sslCtxBoth Client Capability Clarification
 
 ## Goal

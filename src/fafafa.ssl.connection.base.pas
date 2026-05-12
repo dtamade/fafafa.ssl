@@ -32,6 +32,10 @@ function ContextTypeSupportsClientConnectionRole(
   AContextType: TSSLContextType): Boolean; inline;
 function ContextTypeSupportsServerConnectionRole(
   AContextType: TSSLContextType): Boolean; inline;
+function ContextTypeRequiresExplicitHandshakeRole(
+  AContextType: TSSLContextType): Boolean; inline;
+function RolelessHandshakeAmbiguityMessage(
+  const AEntryPoint: string): string; inline;
 
 type
   {**
@@ -299,6 +303,21 @@ begin
   Result := AContextType in [sslCtxServer, sslCtxBoth];
 end;
 
+function ContextTypeRequiresExplicitHandshakeRole(
+  AContextType: TSSLContextType): Boolean; inline;
+begin
+  Result := AContextType = sslCtxBoth;
+end;
+
+function RolelessHandshakeAmbiguityMessage(
+  const AEntryPoint: string): string; inline;
+begin
+  Result := Format(
+    '%s is ambiguous for sslCtxBoth. Use Connect or Accept to choose a role explicitly.',
+    [AEntryPoint]
+  );
+end;
+
 { TBaseSSLConnection }
 
 constructor TBaseSSLConnection.Create(AContext: ISSLContext);
@@ -438,6 +457,16 @@ end;
 
 function TBaseSSLConnection.DoHandshake: TSSLHandshakeState;
 begin
+  if (not FHandshakeComplete) and (FContext <> nil) and
+    ContextTypeRequiresExplicitHandshakeRole(FContext.GetContextType) then
+  begin
+    RecordError(
+      sslErrConfiguration,
+      RolelessHandshakeAmbiguityMessage('DoHandshake')
+    );
+    Exit(sslHsFailed);
+  end;
+
   if not FHandshakeComplete then
     FHandshakeStartTime := Now;
 

@@ -1,3 +1,21 @@
+# Findings - sslCtxBoth Roleless Handshake Clarification
+
+## 2026-05-12
+- Fresh post-commit review found a second `sslCtxBoth` truth gap one layer deeper than the client-capability batch:
+  - `ISSLConnection.DoHandshake` is a public non-blocking entrypoint with no client/server parameter
+  - but current backends still silently infer a role from `ContextType`
+  - that makes `sslCtxBoth` inherently ambiguous on this API surface
+- This ambiguity was not theoretical on the current host:
+  - FreePascal / OpenSSL / MbedTLS dual-context `DoHandshake` all failed without a clear configuration boundary
+  - WolfSSL dual-context `DoHandshake` even stayed in progress instead of surfacing a caller error
+  - OpenSSL stream `Read/Write` also contained a hidden role-less handshake path when the connection was still disconnected
+- The right repair for this batch is fail-fast, not another hidden default:
+  - explicit `Connect` still means client
+  - explicit `Accept` still means server
+  - but role-less `DoHandshake` and OpenSSL's disconnected implicit stream handshake do not have enough information for `sslCtxBoth`
+  - therefore the safe public contract is `sslErrConfiguration` with a message telling callers to choose `Connect` or `Accept` explicitly
+- This batch intentionally stopped short of introducing a new per-connection role state machine.
+
 # Findings - sslCtxBoth Client Capability Clarification
 
 ## 2026-05-12

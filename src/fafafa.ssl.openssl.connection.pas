@@ -415,6 +415,16 @@ begin
     // Ensure handshake completed
     if not FConnected then
     begin
+      if (FContext <> nil) and
+        ContextTypeRequiresExplicitHandshakeRole(FContext.GetContextType) then
+      begin
+        RecordError(
+          sslErrConfiguration,
+          RolelessHandshakeAmbiguityMessage('TLS read')
+        );
+        Exit;
+      end;
+
       if not InternalHandshake(FContext.GetContextType = sslCtxClient) then
         Exit;
     end;
@@ -493,6 +503,16 @@ begin
     // Ensure handshake completed
     if not FConnected then
     begin
+      if (FContext <> nil) and
+        ContextTypeRequiresExplicitHandshakeRole(FContext.GetContextType) then
+      begin
+        RecordError(
+          sslErrConfiguration,
+          RolelessHandshakeAmbiguityMessage('TLS write')
+        );
+        Exit;
+      end;
+
       if not InternalHandshake(FContext.GetContextType = sslCtxClient) then
         Exit;
     end;
@@ -664,7 +684,10 @@ function TOpenSSLConnection.DoHandshake: TSSLHandshakeState;
 var
   LRole: string;
 begin
-  if FContext.GetContextType = sslCtxClient then
+  if (FContext <> nil) and
+    ContextTypeRequiresExplicitHandshakeRole(FContext.GetContextType) then
+    LRole := 'Dual'
+  else if (FContext <> nil) and (FContext.GetContextType = sslCtxClient) then
     LRole := 'Client'
   else
     LRole := 'Server';

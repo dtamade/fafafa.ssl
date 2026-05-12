@@ -1,3 +1,43 @@
+# Progress - sslCtxBoth Roleless Handshake Clarification
+
+## 2026-05-12
+- Post-commit resume:
+  - worktree was clean at `7906828`
+  - narrowed the next residual `sslCtxBoth` risk to role-less handshake entrypoints instead of reopening broader connection capability work
+- New batch plan recorded in `docs/plans/2026-05-12-sslctxboth-roleless-handshake-clarification.md`
+- Focused RED contract added:
+  - `tests/test_sslctxboth_roleless_handshake_clarification.pas`
+  - covers public `DoHandshake` on dual-context stream connections across FreePascal / OpenSSL / WolfSSL / MbedTLS
+  - covers OpenSSL disconnected implicit stream `Write`
+  - covers OpenSSL disconnected implicit stream `Read`
+- RED verification:
+  - `fpc -Fu./src -Fu./tests tests/test_sslctxboth_roleless_handshake_clarification.pas -otmp/test_sslctxboth_roleless_handshake_clarification && ./tmp/test_sslctxboth_roleless_handshake_clarification`
+  - result before fix: compile PASS, runtime FAIL `7`
+  - failure shape:
+    - FreePascal / OpenSSL / MbedTLS dual-context `DoHandshake` failed without surfacing `sslErrConfiguration`
+    - WolfSSL dual-context `DoHandshake` stayed in progress instead of rejecting the ambiguous role-less path
+    - OpenSSL implicit dual-context stream `Read/Write` returned `-1` but did not record a configuration error
+- Minimal implementation landed:
+  - `src/fafafa.ssl.connection.base.pas`
+    - added shared dual-role role-less-handshake ambiguity helpers
+    - `DoHandshake` now fail-fast with `sslErrConfiguration` on `sslCtxBoth`
+  - `src/fafafa.ssl.openssl.connection.pas`
+    - disconnected stream `Read/Write` now reject `sslCtxBoth` implicit handshake paths with the same boundary
+    - `DoHandshake` log role now labels `sslCtxBoth` as `Dual`
+- GREEN verification:
+  - `tests/test_sslctxboth_roleless_handshake_clarification.pas` -> PASS (`24 passed / 0 failed`)
+  - `tests/test_openssl_connection_stream_handshake_contract.pas` -> PASS
+  - `tests/test_sslctxboth_client_capability_clarification.pas` -> PASS (`28 passed / 0 failed / 1 skipped`)
+  - `python3 scripts/compile_all_modules.py` -> PASS (`185/185`)
+  - `git diff --check` -> PASS
+- Pre-commit revalidation on current worktree:
+  - `tests/test_sslctxboth_roleless_handshake_clarification.pas` -> PASS (`24 passed / 0 failed`)
+  - `tests/test_openssl_connection_stream_handshake_contract.pas` -> PASS (`6 passed / 0 failed`)
+  - `python3 scripts/compile_all_modules.py` -> PASS (`185/185`)
+  - `git diff --check` -> PASS
+- Ready for review/commit:
+  - diff scope is limited to the new role-less-handshake boundary in the shared connection base/OpenSSL stream path, the new focused contract, the batch plan, and working-memory files
+
 # Progress - sslCtxBoth Client Capability Clarification
 
 ## 2026-05-12
