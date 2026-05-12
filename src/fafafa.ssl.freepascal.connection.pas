@@ -4825,18 +4825,24 @@ end;
 
 function TFreePascalConnection.DoGetVerifyResult: Integer;
 begin
-  if FLastErrorCode = sslErrNone then
-    Result := 0
-  else
-    Result := Ord(FLastErrorCode);
+  if FLastErrorCode <> sslErrNone then
+    Exit(Ord(FLastErrorCode));
+
+  if not FHandshakeComplete then
+    Exit(-1);
+
+  Result := 0;
 end;
 
 function TFreePascalConnection.DoGetVerifyResultString: string;
 begin
-  if FLastErrorString = '' then
-    Result := 'Not verified'
-  else
-    Result := FLastErrorString;
+  if FLastErrorString <> '' then
+    Exit(FLastErrorString);
+
+  if not FHandshakeComplete then
+    Exit('Not verified');
+
+  Result := 'OK';
 end;
 
 function TFreePascalConnection.DoGetSession: ISSLSession;

@@ -1,3 +1,31 @@
+# Progress - FreePascal Verify Result Status Clarification
+
+## 2026-05-12
+- Post-commit resume:
+  - worktree was clean at `33d62b5`
+  - selected the next bounded review target from cross-backend verify-result semantics instead of reopening the just-closed MbedTLS helper-loss batch
+- New batch plan recorded in `docs/plans/2026-05-12-freepascal-verify-result-status-clarification.md`
+- Focused RED contract added:
+  - `tests/test_freepascal_client_chain_trust_runtime.pas`
+  - new fresh-connection assertion proves pre-handshake verify result must not report success
+  - trusted CA-file success path now also asserts `GetVerifyResultString = OK`
+- RED verification:
+  - `fpc -B -Fu./src -Fu./tests -otmp/test_freepascal_client_chain_trust_runtime tests/test_freepascal_client_chain_trust_runtime.pas` -> PASS
+  - `./tmp/test_freepascal_client_chain_trust_runtime` -> runtime FAIL before fix
+  - failure shape:
+    - `Fresh connection must not report verify success before handshake (expected=-1 actual=0)`
+- Minimal implementation landed:
+  - `src/fafafa.ssl.freepascal.connection.pas`
+    - `DoGetVerifyResult` now degrades to `-1` before handshake when no verify error exists
+    - `DoGetVerifyResultString` now distinguishes pre-handshake `Not verified` from post-handshake `OK`
+- Focused GREEN verification:
+  - `fpc -B -Fu./src -Fu./tests -otmp/test_freepascal_client_chain_trust_runtime tests/test_freepascal_client_chain_trust_runtime.pas` -> PASS
+  - `./tmp/test_freepascal_client_chain_trust_runtime` -> PASS
+  - `python3 scripts/compile_all_modules.py` -> PASS (`185/185`)
+  - `git diff --check` -> PASS
+- Ready for review/commit:
+  - diff scope is limited to the FreePascal verify-result getter truth, the existing scripted trust runtime contract, the new batch plan, and working-memory files
+
 # Progress - MbedTLS Verify Result Helper Guard
 
 ## 2026-05-12

@@ -521,6 +521,28 @@ begin
   end;
 end;
 
+procedure TestVerifyResultDoesNotPretendSuccessBeforeHandshake;
+var
+  LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LStream: TMemoryStream;
+begin
+  LCtx := NewClientContext([sslCertVerifyDefault]);
+  LStream := TMemoryStream.Create;
+  try
+    LConn := LCtx.CreateConnection(LStream);
+    AssertTrue(LConn <> nil, 'Fresh FreePascal connection should be created');
+    AssertEqualsInt(-1, LConn.GetVerifyResult,
+      'Fresh connection must not report verify success before handshake');
+    AssertTrue(
+      ContainsTextInsensitive(LConn.GetVerifyResultString, 'not verified'),
+      'Fresh connection should surface not-verified diagnostic before handshake'
+    );
+  finally
+    LStream.Free;
+  end;
+end;
+
 procedure TestCASignedCertificateFailsWithoutTrust;
 var
   LMaterial: TServerMaterial;
@@ -568,6 +590,12 @@ begin
 
     AssertTrue(LConn.Connect,
       'Configured CA file should allow scripted CA-signed certificate to connect');
+    AssertEqualsInt(0, LConn.GetVerifyResult,
+      'Trusted scripted handshake should surface verify success');
+    AssertTrue(
+      SameText(LConn.GetVerifyResultString, 'OK'),
+      'Trusted scripted handshake should surface verify OK string'
+    );
   finally
     LStream.Free;
   end;
@@ -677,6 +705,7 @@ begin
 
   LCAPath := EnsureCAPathFixture;
 
+  TestVerifyResultDoesNotPretendSuccessBeforeHandshake;
   TestCASignedCertificateFailsWithoutTrust;
   TestCASignedCertificatePassesWithCAFile;
   TestCASignedCertificatePassesWithCAPath(LCAPath);

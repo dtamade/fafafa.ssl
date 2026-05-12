@@ -1,3 +1,38 @@
+# Task Plan - FreePascal Verify Result Status Clarification
+
+## Goal
+修复 `TFreePascalConnection.GetVerifyResult` / `GetVerifyResultString` 在 pre-handshake 与 successful-verified 路径上的公共语义漂移。
+
+## Current Batch
+1. 写 focused RED，证明 fresh connection 仍会误报 verify success，且成功握手后仍返回 `Not verified`。
+2. 在 `src/fafafa.ssl.freepascal.connection.pas` 做最小 getter 修法，区分 `Not verified` 与 `OK`。
+3. 跑 focused GREEN 与 compile gate。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] working-memory refreshed for the FreePascal verify-result status batch
+- [completed] focused RED contract authoring
+- [completed] minimal FreePascal verify-result status fix
+- [completed] focused verification and compile review
+
+## Current Evidence
+- focused RED:
+  - `fpc -B -Fu./src -Fu./tests -otmp/test_freepascal_client_chain_trust_runtime tests/test_freepascal_client_chain_trust_runtime.pas`
+  - `./tmp/test_freepascal_client_chain_trust_runtime`
+  - result before fix: FAIL on `Fresh connection must not report verify success before handshake (expected=-1 actual=0)`
+- minimal implementation:
+  - `tests/test_freepascal_client_chain_trust_runtime.pas`
+    - added fresh pre-handshake verify-result contract
+    - added successful CA-trusted handshake verify-string contract
+  - `src/fafafa.ssl.freepascal.connection.pas`
+    - `DoGetVerifyResult` now returns `-1` when no handshake has completed and no verify error exists
+    - `DoGetVerifyResultString` now returns `Not verified` before handshake and `OK` after a successful handshake with no verify error
+- focused GREEN:
+  - `fpc -B -Fu./src -Fu./tests -otmp/test_freepascal_client_chain_trust_runtime tests/test_freepascal_client_chain_trust_runtime.pas`: PASS
+  - `./tmp/test_freepascal_client_chain_trust_runtime`: PASS
+  - `python3 scripts/compile_all_modules.py`: PASS, `185/185`
+  - `git diff --check`: PASS
+
 # Task Plan - MbedTLS Verify Result Helper Guard
 
 ## Goal

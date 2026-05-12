@@ -1,3 +1,18 @@
+# Findings - FreePascal Verify Result Status Clarification
+
+## 2026-05-12
+- Fresh post-commit review found a concrete verify-status drift in `TFreePascalConnection` getter semantics:
+  - `DoGetVerifyResult` returned `0` whenever `FLastErrorCode = sslErrNone`
+  - `DoGetVerifyResultString` returned `Not verified` whenever `FLastErrorString = ''`
+  - a fresh never-handshaken connection therefore exposed a contradictory public state: integer success plus `Not verified`
+- The same getter split also poisoned successful trusted handshakes:
+  - after a clean handshake, `FLastErrorCode` still stayed `sslErrNone`
+  - but no success string was ever written, so `GetVerifyResultString` continued to say `Not verified`
+- The smallest safe repair is to key the getter boundary off `FHandshakeComplete`:
+  - no handshake and no verify error => `GetVerifyResult = -1`, `GetVerifyResultString = Not verified`
+  - handshake complete and no verify error => `GetVerifyResult = 0`, `GetVerifyResultString = OK`
+  - existing failure paths keep surfacing actual `FLastErrorCode` / `FLastErrorString`
+
 # Findings - MbedTLS Verify Result Helper Guard
 
 ## 2026-05-12
