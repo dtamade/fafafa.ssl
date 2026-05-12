@@ -1,3 +1,19 @@
+# Findings - Interface Design Audit
+
+## 2026-05-12
+- User asked for a complete interface review to find problematic design, with Chinese output.
+- Static review scope covers public Pascal API, factory/builder/facade entrypoints, backend connection declarations, and docs/source alignment.
+- `ISSLConnection` is too fat: session resumption, certificate verification details, diagnostics, OCSP, connection info, convenience string methods, timeout/blocking, and context access are all still in core.
+- The optional interfaces `ISSLDiagnostics`, `ISSLSessionResumption`, `ISSLCertificateVerification`, `ISSLOCSPStapling`, and `ISSLConnectionInfo` duplicate methods already present on core `ISSLConnection`, weakening capability-gated design.
+- `ISSLContext.SetServerName` is deprecated, but `TSSLFactory.CreateContext(...)` and `TSSLContextBuilder.BuildClient/BuildServer` still push `ServerName` into context state, including server contexts.
+- `ISSLServerConnection` appears in architecture/design docs but has no source declaration or implementation.
+- `TSSLConfig` mixes library, context, connection, and backend-private fields. `LogLevel` / `LogCallback` are rejected by factory, while `BufferSize` / `HandshakeTimeout` are present in defaults/debug output but are not consumed by the main context creation path.
+- `TSSLBackendCapabilities` has old boolean fields and newer support-level fields for the same features; serializer, diff, selector, and backend code can consume or emit both.
+- `fafafa.ssl` facade still exports factory/helper/connector plus legacy convenience helpers, so the canonical entrypoint is not crisp.
+- Formal report added at `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`.
+
+---
+
 # Findings - v1.5.0 Linux Static Audit Closeout
 
 ## 2026-05-12

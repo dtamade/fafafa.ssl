@@ -1,3 +1,31 @@
+# Task Plan - Interface Design Audit
+
+## Goal
+对 `fafafa.ssl` 的公开 Pascal 接口做一次完整静态审查，找出设计上有问题、边界不清或与文档不一致的地方，并形成可追溯的审查结论。
+
+## Current Batch
+1. 静态核对 `src/fafafa.ssl.base.pas`、连接基类、各后端连接类、factory、context builder 和 facade。
+2. 对比 `docs/ARCHITECTURE.md`、`docs/reference/INTERFACE_DESIGN_V2.md` 与源码真实 public surface。
+3. 生成 `docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`。
+4. 保留既有工作记忆历史，只追加本次审查摘要。
+
+## Status
+- [completed] interface discovery and evidence collection
+- [completed] audit report written
+- [completed] diff hygiene checked with `git diff --check`
+- [pending] final delivery to user
+
+## Notes
+- 本批次是静态设计审查，不改实现、不跑编译门禁。
+- 主要结论：core `ISSLConnection` 过胖，context-level SNI 已弃用但仍被高层入口写入，`TSSLConfig` 跨层混用且含 inert 字段，能力矩阵存在双真相，文档承诺了源码里不存在的 `ISSLServerConnection`。
+
+## Verification Plan
+1. `git diff --check`
+2. `git status --short`
+3. 手工复核报告引用的关键源码/文档行号
+
+---
+
 # Task Plan - v1.5.0 Linux Static Audit Closeout
 
 ## Goal
