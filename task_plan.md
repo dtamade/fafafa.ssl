@@ -1,3 +1,41 @@
+# Task Plan - Backend Selector Required-Feature Truth
+
+## Goal
+修复 backend selector 对 `RequiredFeatures` 的漏判/错判，让 `sslFeatSessionCache`、`sslFeatSessionTickets`、`sslFeatRenegotiation`、`sslFeatOCSPStapling`、`sslFeatCertificateTransparency` 等必需功能真正参与筛选，并以 capability support-level 作为真相源。
+
+## Current Batch
+1. 写 focused RED 合同，证明 `RequiredFeatures = [sslFeatRenegotiation]` 时 selector 仍会接受不满足的候选，且 `RequiredFeaturesTotal` 统计错误。
+2. 在 `src/fafafa.ssl.backend.selector.pas` 增加最小 feature helper，统一从 support-level 判断功能是否存在。
+3. 跑 focused verification、diff hygiene，并在 review 后提交。
+
+## Status
+- [completed] working-memory refreshed for the selector batch
+- [completed] RED regression added, corrected to minimal requirement truth, and observed
+- [completed] minimal selector fix implemented
+- [completed] focused verification and review
+
+## Notes
+- 这批不改 capability producer，不改 serializer/diff 文档，只修 public selector 行为。
+- `RequiredFeatures` 的 requirement 语义按“功能存在即可”处理：`stable / experimental / deprecated` 都算满足，只有 `none` 不满足。
+- 旧布尔字段保留兼容，但 selector 这条链不再把它们当主真相。
+- `TSSLBackendMatchDetails.RequiredFeaturesTotal/Matched` 当前实际统计的是所有 required 维度总数，不只是 `RequiredFeatures` 子集；focused 合同必须用最小 requirement 基线隔离 feature 参与度。
+
+## Current Evidence
+- first RED attempt exposed a test-model drift, not a production regression:
+  - `CreateDefaultRequirements(optBalanced)` 自带 `TLS12/TLS13` 和最低评分门槛，掩盖了单 feature requirement 的真值
+  - `RequiredFeaturesTotal/Matched` 命名偏窄，但实现会把协议/算法/平台 requirement 一起计入
+- corrected focused GREEN:
+  - `fpc -Fu./src -Fu./tests tests/test_backend_selector_required_feature_truth.pas -otmp/test_backend_selector_required_feature_truth && ./tmp/test_backend_selector_required_feature_truth`
+  - result: PASS, `8 passed / 0 failed`
+- neighbor regressions:
+  - `tests/test_backend_selector_minimum_score_filtering.pas`: PASS
+  - `tests/test_backend_selector_basic.pas`: compile+smoke PASS; historical informational output still says security-first selection failed on this host, but the harness has no failing assertion and exits `0`
+
+## Verification Plan
+1. `fpc -Fu./src -Fu./tests tests/test_backend_selector_required_feature_truth.pas -otmp/test_backend_selector_required_feature_truth && ./tmp/test_backend_selector_required_feature_truth`
+2. `git diff --check`
+3. `git status --short`
+
 # Task Plan - Factory Connection-Scope Clarification
 
 ## Goal

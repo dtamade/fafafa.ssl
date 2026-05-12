@@ -1,3 +1,20 @@
+# Findings - Backend Selector Required-Feature Truth
+
+## 2026-05-12
+- After the factory config-scope fix, the next highest-value product bug is in `src/fafafa.ssl.backend.selector.pas`, not another broad config refactor.
+- Fresh static review shows `CalculateRequiredFeaturesScore(...)` only counts `sslFeatSNI` and `sslFeatALPN`.
+- This means a caller can set `RequiredFeatures` to `SessionCache / SessionTickets / Renegotiation / OCSPStapling / CertificateTransparency`, and the selector will treat those requirements as if they were not requested.
+- That is a real public-behavior bug, not just documentation drift:
+  - `RequiredFeaturesTotal` / `RequiredFeaturesMatched` become inaccurate
+  - unsupported backends can still survive filtering
+  - the selector continues to read old boolean capability fields on the only two features it does check
+- The narrowest safe repair is to add a selector-local feature helper and evaluate required features from support-level truth, treating any non-`none` support level as satisfying presence requirements.
+- The first RED harness also surfaced a separate observability quirk:
+  - `TSSLBackendMatchDetails.RequiredFeaturesTotal/Matched` names imply "feature-only" accounting
+  - the current implementation actually counts all required dimensions (protocols / algorithms / platform requirements / features)
+  - focused selector contracts therefore need a minimal requirement baseline such as `TLS12 + single feature`, otherwise default score floors can masquerade as feature-filter failures
+- Removing the selector helper's dead `else` branch also cleared the fresh `Unreachable code` compiler warning emitted by FPC on this path.
+
 # Findings - Factory Connection-Scope Clarification
 
 ## 2026-05-12

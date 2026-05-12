@@ -338,6 +338,27 @@ function CalculateRequiredFeaturesScore(
 ): Integer;
 var
   RequiredCount, MatchedCount: Integer;
+  LFeature: TSSLFeature;
+
+  function CapabilitySatisfiesRequiredFeature(AFeature: TSSLFeature): Boolean;
+  begin
+    case AFeature of
+      sslFeatSNI:
+        Result := ACaps.SNISupport <> sslSupportNone;
+      sslFeatALPN:
+        Result := ACaps.ALPNSupport <> sslSupportNone;
+      sslFeatSessionCache:
+        Result := ACaps.SessionCacheSupport <> sslSupportNone;
+      sslFeatSessionTickets:
+        Result := ACaps.SessionTicketsSupport <> sslSupportNone;
+      sslFeatRenegotiation:
+        Result := ACaps.RenegotiationSupport <> sslSupportNone;
+      sslFeatOCSPStapling:
+        Result := ACaps.OCSPStaplingSupport <> sslSupportNone;
+      sslFeatCertificateTransparency:
+        Result := ACaps.CertTransparencySupport <> sslSupportNone;
+    end;
+  end;
 begin
   RequiredCount := 0;
   MatchedCount := 0;
@@ -380,17 +401,13 @@ begin
   end;
 
   // 检查功能支持
-  if sslFeatSNI in AReq.RequiredFeatures then
+  for LFeature := Low(TSSLFeature) to High(TSSLFeature) do
   begin
-    Inc(RequiredCount);
-    if ACaps.SupportsSNI then
-      Inc(MatchedCount);
-  end;
+    if not (LFeature in AReq.RequiredFeatures) then
+      Continue;
 
-  if sslFeatALPN in AReq.RequiredFeatures then
-  begin
     Inc(RequiredCount);
-    if ACaps.SupportsALPN then
+    if CapabilitySatisfiesRequiredFeature(LFeature) then
       Inc(MatchedCount);
   end;
 

@@ -1,3 +1,35 @@
+# Progress - Backend Selector Required-Feature Truth
+
+## 2026-05-12
+- session catch-up: no unsynced context was reported for this repo.
+- Current branch: `master`
+- Post-commit resume:
+  - previous batch `9be493b` already landed and the worktree resumed clean
+  - continued from the interface-audit follow-up queue instead of reopening earlier scope
+- New target selected from the audit findings:
+  - `src/fafafa.ssl.backend.selector.pas` only evaluates `sslFeatSNI` / `sslFeatALPN`
+  - `RequiredFeatures` entries for `SessionCache / SessionTickets / Renegotiation / OCSPStapling / CertificateTransparency` do not participate in required-feature scoring
+  - the selector path is therefore still consuming legacy boolean truth on the only two features it does evaluate
+- New batch plan recorded in `docs/plans/2026-05-12-backend-selector-required-feature-truth.md`
+- First RED attempt showed the initial contract shape was too broad:
+  - `CreateDefaultRequirements(optBalanced)` adds `TLS12/TLS13` plus minimum security/performance score floors
+  - `RequiredFeaturesTotal/Matched` also include those non-feature requirements, so a naive `= 1` assertion was testing the wrong thing
+- Contract corrected to a minimal `TLS12 + single feature` baseline:
+  - `sslFeatSessionCache` now proves selector only returns backends with `SessionCacheSupport <> sslSupportNone`
+  - `sslFeatRenegotiation` now proves selector only returns backends with `RenegotiationSupport <> sslSupportNone`
+- Minimal selector fix finalized:
+  - `src/fafafa.ssl.backend.selector.pas`
+    - added a selector-local `CapabilitySatisfiesRequiredFeature(...)` mapping for all `TSSLFeature` values
+    - switched required-feature scoring from legacy boolean truth to support-level truth
+    - removed the now-unreachable fallback branch that FPC warned about
+- Focused verification:
+  - `fpc -Fu./src -Fu./tests tests/test_backend_selector_required_feature_truth.pas -otmp/test_backend_selector_required_feature_truth && ./tmp/test_backend_selector_required_feature_truth`
+  - result: PASS, `8 passed / 0 failed`
+- Neighbor verification:
+  - `fpc -Fu./src -Fu./tests tests/test_backend_selector_minimum_score_filtering.pas -otmp/test_backend_selector_minimum_score_filtering && ./tmp/test_backend_selector_minimum_score_filtering` -> PASS
+  - `fpc -Fu./src -Fu./tests tests/test_backend_selector_basic.pas -otmp/test_backend_selector_basic && ./tmp/test_backend_selector_basic` -> compile+smoke PASS; still prints a non-fatal "安全优先需求 选择失败" informational line on this host
+- `git diff --check` -> PASS
+
 # Progress - Factory Connection-Scope Clarification
 
 ## 2026-05-12
