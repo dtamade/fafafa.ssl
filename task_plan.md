@@ -1,3 +1,40 @@
+# Task Plan - OpenSSL Pre-Handshake Verify Status Clarification
+
+## Goal
+修复 `TOpenSSLConnection.GetVerifyResult` / `GetVerifyResultString` 在未完成握手时的 verify-status 假阳性。
+
+## Current Batch
+1. 写 focused RED，证明 fresh OpenSSL stream connection 仍会在 pre-handshake 路径返回 `0/OK`。
+2. 在 `src/fafafa.ssl.openssl.connection.pas` 做最小 getter 修法，明确 pre-handshake 为 `Not verified`。
+3. 跑 focused GREEN 与 compile gate。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] working-memory refreshed for the OpenSSL pre-handshake verify-status batch
+- [completed] focused RED contract authoring
+- [completed] minimal OpenSSL pre-handshake verify-status fix
+- [completed] focused verification and compile review
+
+## Current Evidence
+- focused RED:
+  - `fpc -B -Fu./src -Fu./tests -otmp/test_openssl_connection_verify_result_contract tests/test_openssl_connection_verify_result_contract.pas`
+  - `./tmp/test_openssl_connection_verify_result_contract`
+  - result before fix: FAIL on:
+    - `Fresh OpenSSL connection should not report verify success before handshake`
+    - `Fresh OpenSSL connection should surface not-verified diagnostic before handshake`
+- minimal implementation:
+  - `tests/test_openssl_connection_verify_result_contract.pas`
+    - added fresh pre-handshake verify-result contract
+    - preserved existing helper-loss guard contract in the same focused unit
+  - `src/fafafa.ssl.openssl.connection.pas`
+    - `DoGetVerifyResult` now short-circuits to `-1` before handshake completion
+    - `DoGetVerifyResultString` now returns `Not verified` before handshake completion
+- focused GREEN:
+  - `fpc -B -Fu./src -Fu./tests -otmp/test_openssl_connection_verify_result_contract tests/test_openssl_connection_verify_result_contract.pas`: PASS
+  - `./tmp/test_openssl_connection_verify_result_contract`: PASS, `4 passed / 0 failed`
+  - `python3 scripts/compile_all_modules.py`: PASS, `185/185`
+  - `git diff --check`: PASS
+
 # Task Plan - FreePascal Verify Result Status Clarification
 
 ## Goal

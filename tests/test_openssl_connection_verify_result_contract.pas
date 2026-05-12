@@ -63,6 +63,48 @@ begin
   end;
 end;
 
+procedure TestFreshConnectionShouldNotReportVerifySuccessBeforeHandshake;
+var
+  LContext: ISSLContext;
+  LStream: TMemoryStream;
+  LConn: TOpenSSLConnection;
+begin
+  WriteLn;
+  WriteLn('=== OpenSSL pre-handshake verify status ===');
+
+  if (not Assigned(SSL_new)) or
+     (not Assigned(SSL_set_bio)) or
+     (not Assigned(BIO_new)) or
+     (not Assigned(BIO_s_mem)) then
+  begin
+    MarkSkip('openssl pre-handshake verify status contract',
+      'required baseline OpenSSL SSL/BIO helpers are unavailable');
+    Exit;
+  end;
+
+  LContext := GLib.CreateContext(sslCtxClient);
+  if LContext = nil then
+    raise Exception.Create('failed to create OpenSSL client context');
+
+  WarmupStreamConnectionConstructor(LContext);
+
+  LStream := TMemoryStream.Create;
+  LConn := nil;
+  try
+    LConn := TOpenSSLConnection.Create(LContext, LStream);
+    AssertTrue('Fresh OpenSSL connection should not report verify success before handshake',
+      LConn.GetVerifyResult = -1,
+      'expected fresh connection verify result to stay unavailable before handshake');
+    AssertTrue('Fresh OpenSSL connection should surface not-verified diagnostic before handshake',
+      SameText(LConn.GetVerifyResultString, 'Not verified'),
+      'expected pre-handshake verify string to stay Not verified');
+  finally
+    if Assigned(LConn) then
+      LConn.Free;
+    LStream.Free;
+  end;
+end;
+
 procedure TestGetVerifyResultShouldDegradeSafelyWhenHelperIsUnavailable;
 var
   LContext: ISSLContext;
@@ -147,6 +189,9 @@ begin
       if not LoadOpenSSLSSL then
         raise Exception.Create('failed to load SSL support');
     end;
+
+    if SkippedTests = 0 then
+      TestFreshConnectionShouldNotReportVerifySuccessBeforeHandshake;
 
     if SkippedTests = 0 then
       TestGetVerifyResultShouldDegradeSafelyWhenHelperIsUnavailable;

@@ -877,6 +877,9 @@ end;
 
 function TOpenSSLConnection.DoGetVerifyResult: Integer;
 begin
+  if not FHandshakeComplete then
+    Exit(-1);
+
   if (FSSL = nil) or (not Assigned(SSL_get_verify_result)) then Exit(-1);
   Result := SSL_get_verify_result(FSSL);
 end;
@@ -886,6 +889,12 @@ var
   Res: Integer;
   ErrStr: PAnsiChar;
 begin
+  if not FHandshakeComplete then
+  begin
+    Result := 'Not verified';
+    Exit;
+  end;
+
   Res := DoGetVerifyResult;
   if Res = X509_V_OK then
   begin

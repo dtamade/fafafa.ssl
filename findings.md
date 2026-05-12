@@ -1,3 +1,18 @@
+# Findings - OpenSSL Pre-Handshake Verify Status Clarification
+
+## 2026-05-12
+- Fresh continuation review found the same verify-status false-positive pattern had not been fully closed in `TOpenSSLConnection`:
+  - `DoGetVerifyResult` delegated straight to `SSL_get_verify_result(...)`
+  - `DoGetVerifyResultString` turned `X509_V_OK` into `OK`
+  - a freshly constructed stream connection could therefore surface `0/OK` before any handshake had happened
+- The already-landed helper-loss guard did not cover this path:
+  - helper-loss correctly degraded to `-1`
+  - but normal helper availability still allowed pre-handshake success leakage
+- The smallest safe repair is a pre-handshake guard, not a larger OpenSSL verification redesign:
+  - before `FHandshakeComplete`, `GetVerifyResult` should stay unavailable (`-1`)
+  - before `FHandshakeComplete`, `GetVerifyResultString` should stay `Not verified`
+  - once handshake completes, existing helper-based success/failure mapping remains intact
+
 # Findings - FreePascal Verify Result Status Clarification
 
 ## 2026-05-12

@@ -1,3 +1,32 @@
+# Progress - OpenSSL Pre-Handshake Verify Status Clarification
+
+## 2026-05-12
+- Post-commit resume:
+  - worktree was clean at `f27af7e`
+  - selected the next bounded review target from the same verify-status drift family to check whether OpenSSL still leaked pre-handshake success
+- New batch plan recorded in `docs/plans/2026-05-12-openssl-prehandshake-verify-status-clarification.md`
+- Focused RED contract added:
+  - `tests/test_openssl_connection_verify_result_contract.pas`
+  - new pre-handshake assertion proves a fresh stream connection must not report `0/OK`
+  - existing helper-loss contract stayed in place to guard the earlier OpenSSL batch
+- RED verification:
+  - `fpc -B -Fu./src -Fu./tests -otmp/test_openssl_connection_verify_result_contract tests/test_openssl_connection_verify_result_contract.pas` -> PASS
+  - `./tmp/test_openssl_connection_verify_result_contract` -> runtime FAIL before fix
+  - failure shape:
+    - `Fresh OpenSSL connection should not report verify success before handshake`
+    - `Fresh OpenSSL connection should surface not-verified diagnostic before handshake`
+- Minimal implementation landed:
+  - `src/fafafa.ssl.openssl.connection.pas`
+    - `DoGetVerifyResult` now degrades to `-1` before handshake completion
+    - `DoGetVerifyResultString` now returns `Not verified` before handshake completion
+- Focused GREEN verification:
+  - `fpc -B -Fu./src -Fu./tests -otmp/test_openssl_connection_verify_result_contract tests/test_openssl_connection_verify_result_contract.pas` -> PASS
+  - `./tmp/test_openssl_connection_verify_result_contract` -> PASS (`4 passed / 0 failed`)
+  - `python3 scripts/compile_all_modules.py` -> PASS (`185/185`)
+  - `git diff --check` -> PASS
+- Ready for review/commit:
+  - diff scope is limited to the OpenSSL pre-handshake verify-status getter truth, the focused verify-result contract unit, the new batch plan, and working-memory files
+
 # Progress - FreePascal Verify Result Status Clarification
 
 ## 2026-05-12
