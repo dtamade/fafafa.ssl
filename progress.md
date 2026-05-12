@@ -1,3 +1,55 @@
+# Progress - Early-Data Context Scope Clarification
+
+## 2026-05-12
+- session catch-up: no unsynced context was reported for this repo.
+- Current branch: `master`
+- Continued from the previous early-data scope queue after the replay-store client-scope batch landed cleanly.
+- New target selected:
+  - builder / factory / helper still leaked early-data values across context roles
+  - `BuildClient` and factory client paths observed server policy/max
+  - `BuildServer` and factory server paths observed client early-data flag
+  - public helper methods also mutated wrong-scope contexts
+- New batch plan recorded in `docs/plans/2026-05-12-early-data-context-scope-clarification.md`
+- Focused RED contract added:
+  - `tests/test_early_data_context_scope_clarification.pas`
+  - covers builder client/server builds
+  - covers factory default-config client/server creation
+  - covers factory one-shot client/server creation
+  - covers `TSSLHelper.ConfigureClientEarlyData(...)`
+  - covers `TSSLHelper.ConfigureServerEarlyData(...)`
+- RED verification:
+  - `fpc -Fu./src -Fu./tests tests/test_early_data_context_scope_clarification.pas -otmp/test_early_data_context_scope_clarification && ./tmp/test_early_data_context_scope_clarification`
+  - result before fix: compile PASS, runtime FAIL `14`
+  - failure shape:
+    - client contexts exposed configured server policy/max
+    - server contexts exposed configured client early-data flag
+    - public helper methods accepted wrong-scope contexts
+- Minimal implementation landed:
+  - `src/fafafa.ssl.context.builder.pas`
+    - added a scope-aware early-data application helper keyed off `AContext.GetContextType`
+    - `BuildClient` now applies only client early-data config
+    - `BuildServer` now applies only server early-data config
+  - `src/fafafa.ssl.factory.pas`
+    - `ApplyEarlyDataContextConfig(...)` now applies only the context-relevant subset
+    - `TSSLHelper.ConfigureClientEarlyData(...)` / `ConfigureServerEarlyData(...)` now return `False` on wrong-scope contexts and leave state unchanged
+  - `src/fafafa.ssl.debug.utils.pas`
+    - dump text now states which context roles each early-data scalar field actually applies to
+  - `tests/test_factory_config_early_data_isolation.pas`
+    - updated the one-shot server-context client-flag assertion to the new scope truth
+- Adjacent regression review exposed a test flake:
+  - `tests/test_factory_config_early_data_isolation.pas` initially failed on the default persistent replay-ledger separation assertion
+  - root cause was a fixed manual session label reused across reruns, not production replay-store leakage
+  - hardened by switching the one-shot separation probes to per-run unique session labels via `FormatDateTime(...)`
+- GREEN verification:
+  - `tests/test_early_data_context_scope_clarification.pas` -> PASS (`44 passed / 0 failed`)
+  - `tests/test_factory_config_early_data_isolation.pas` -> PASS (`60 passed / 0 failed`)
+  - `tests/config/test_context_builder_early_data_contract.pas` -> PASS
+  - `tests/test_early_data_public_api_contract.pas` -> PASS
+  - `tests/config/test_context_builder_try.pas` -> PASS (`66 passed / 0 failed`)
+  - `git diff --check` -> PASS
+- Ready for review/commit:
+  - diff scope limited to builder/factory/debug output, the new focused scope contract, and the adjacent replay-store regression hardening
+
 # Progress - Client Replay-Store Scope Clarification
 
 ## 2026-05-12

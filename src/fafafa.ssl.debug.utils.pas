@@ -332,9 +332,18 @@ begin
       '服务器名称: %s (客户端上下文默认 SNI；更推荐连接级设置，server factory context 不接受)',
       [AConfig.ServerName]
     );
-    LSB.AppendFormat('客户端 Early Data: %s', [BoolToStr(AConfig.ClientEarlyDataEnabled, '启用', '禁用')]);
-    LSB.AppendFormat('服务端 Early Data 策略: %d', [Ord(AConfig.ServerEarlyDataPolicy)]);
-    LSB.AppendFormat('服务端 Early Data 上限: %d', [AConfig.ServerMaxEarlyDataSize]);
+    LSB.AppendFormat(
+      '客户端 Early Data: %s (仅创建 client/both context 时应用)',
+      [BoolToStr(AConfig.ClientEarlyDataEnabled, '启用', '禁用')]
+    );
+    LSB.AppendFormat(
+      '服务端 Early Data 策略: %d (仅创建 server/both context 时应用)',
+      [Ord(AConfig.ServerEarlyDataPolicy)]
+    );
+    LSB.AppendFormat(
+      '服务端 Early Data 上限: %d (仅创建 server/both context 时应用)',
+      [AConfig.ServerMaxEarlyDataSize]
+    );
     LSB.AppendFormat(
       '服务端 Early Data Replay Store File: %s (server-scoped；client builder/factory context 不接受)',
       [AConfig.ServerEarlyDataReplayStoreFile]

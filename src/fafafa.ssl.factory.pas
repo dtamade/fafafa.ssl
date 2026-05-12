@@ -450,6 +450,18 @@ begin
   Result := AContextType in [sslCtxServer, sslCtxBoth];
 end;
 
+function ContextTypeSupportsClientEarlyData(
+  AContextType: TSSLContextType): Boolean;
+begin
+  Result := AContextType in [sslCtxClient, sslCtxBoth];
+end;
+
+function ContextTypeSupportsServerEarlyData(
+  AContextType: TSSLContextType): Boolean;
+begin
+  Result := AContextType in [sslCtxServer, sslCtxBoth];
+end;
+
 function ReplayStoreClientScopeMessage(
   const AField, ACallSite: string): string;
 begin
@@ -529,14 +541,18 @@ begin
   if (AContext = nil) or (not Supports(AContext, ISSLEarlyDataContext, LEarlyDataContext)) then
     Exit;
 
-  if LEarlyDataContext.GetClientEarlyDataEnabled <> AConfig.ClientEarlyDataEnabled then
+  if ContextTypeSupportsClientEarlyData(AContext.GetContextType) and
+    (LEarlyDataContext.GetClientEarlyDataEnabled <> AConfig.ClientEarlyDataEnabled) then
     LEarlyDataContext.SetClientEarlyDataEnabled(AConfig.ClientEarlyDataEnabled);
 
-  if LEarlyDataContext.GetServerEarlyDataPolicy <> AConfig.ServerEarlyDataPolicy then
-    LEarlyDataContext.SetServerEarlyDataPolicy(AConfig.ServerEarlyDataPolicy);
+  if ContextTypeSupportsServerEarlyData(AContext.GetContextType) then
+  begin
+    if LEarlyDataContext.GetServerMaxEarlyDataSize <> AConfig.ServerMaxEarlyDataSize then
+      LEarlyDataContext.SetServerMaxEarlyDataSize(AConfig.ServerMaxEarlyDataSize);
 
-  if LEarlyDataContext.GetServerMaxEarlyDataSize <> AConfig.ServerMaxEarlyDataSize then
-    LEarlyDataContext.SetServerMaxEarlyDataSize(AConfig.ServerMaxEarlyDataSize);
+    if LEarlyDataContext.GetServerEarlyDataPolicy <> AConfig.ServerEarlyDataPolicy then
+      LEarlyDataContext.SetServerEarlyDataPolicy(AConfig.ServerEarlyDataPolicy);
+  end;
 end;
 
 procedure ApplyEarlyDataReplayStoreConfig(const AContext: ISSLContext;
@@ -1403,23 +1419,31 @@ class function TSSLHelper.ConfigureClientEarlyData(const AContext: ISSLContext;
   AEnabled: Boolean): Boolean;
 var
   LEarlyDataContext: ISSLEarlyDataContext;
+  LScopeMatches: Boolean;
 begin
   Result := TryGetEarlyDataContext(AContext, LEarlyDataContext);
-  if Result then
+  LScopeMatches := Result and Assigned(AContext) and
+    ContextTypeSupportsClientEarlyData(AContext.GetContextType);
+  if LScopeMatches then
     LEarlyDataContext.SetClientEarlyDataEnabled(AEnabled);
+  Result := LScopeMatches;
 end;
 
 class function TSSLHelper.ConfigureServerEarlyData(const AContext: ISSLContext;
   APolicy: TSSLEarlyDataServerPolicy; AMaxSize: Cardinal): Boolean;
 var
   LEarlyDataContext: ISSLEarlyDataContext;
+  LScopeMatches: Boolean;
 begin
   Result := TryGetEarlyDataContext(AContext, LEarlyDataContext);
-  if Result then
+  LScopeMatches := Result and Assigned(AContext) and
+    ContextTypeSupportsServerEarlyData(AContext.GetContextType);
+  if LScopeMatches then
   begin
-    LEarlyDataContext.SetServerEarlyDataPolicy(APolicy);
     LEarlyDataContext.SetServerMaxEarlyDataSize(AMaxSize);
+    LEarlyDataContext.SetServerEarlyDataPolicy(APolicy);
   end;
+  Result := LScopeMatches;
 end;
 
 class function TSSLHelper.GetEarlyDataStatus(

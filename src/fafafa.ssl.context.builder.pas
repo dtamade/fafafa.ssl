@@ -722,6 +722,41 @@ begin
     );
 end;
 
+function ContextTypeSupportsClientScopedEarlyData(
+  AContextType: TSSLContextType): Boolean;
+begin
+  Result := AContextType in [sslCtxClient, sslCtxBoth];
+end;
+
+function ContextTypeSupportsServerScopedEarlyData(
+  AContextType: TSSLContextType): Boolean;
+begin
+  Result := AContextType in [sslCtxServer, sslCtxBoth];
+end;
+
+procedure ApplyScopedEarlyDataContextConfig(
+  const AContext: ISSLContext;
+  AClientEnabled: Boolean;
+  AServerPolicy: TSSLEarlyDataServerPolicy;
+  AServerMaxEarlyDataSize: Cardinal
+);
+var
+  LEarlyDataContext: ISSLEarlyDataContext;
+begin
+  if (AContext = nil) or
+    (not Supports(AContext, ISSLEarlyDataContext, LEarlyDataContext)) then
+    Exit;
+
+  if ContextTypeSupportsClientScopedEarlyData(AContext.GetContextType) then
+    LEarlyDataContext.SetClientEarlyDataEnabled(AClientEnabled);
+
+  if ContextTypeSupportsServerScopedEarlyData(AContext.GetContextType) then
+  begin
+    LEarlyDataContext.SetServerMaxEarlyDataSize(AServerMaxEarlyDataSize);
+    LEarlyDataContext.SetServerEarlyDataPolicy(AServerPolicy);
+  end;
+end;
+
 function TSSLContextBuilderImpl.GetSupportedPKCS11PINValue: string;
 begin
   case FPKCS11PINMethod of
@@ -1070,7 +1105,6 @@ end;
 function TSSLContextBuilderImpl.BuildClient: ISSLContext;
 var
   Store: ISSLCertificateStore;
-  LEarlyDataContext: ISSLEarlyDataContext;
   LHttpHooks: ISSLHttpHooksAccess;
   ContextBackend: TSSLLibraryType;
   SelectedBackend: TSSLLibraryType;
@@ -1175,18 +1209,17 @@ begin
   Result.SetSessionCacheMode(FSessionCacheEnabled);
   Result.SetSessionTimeout(FSessionTimeout);
 
-  if Supports(Result, ISSLEarlyDataContext, LEarlyDataContext) then
-  begin
-    LEarlyDataContext.SetClientEarlyDataEnabled(FClientEarlyDataEnabled);
-    LEarlyDataContext.SetServerEarlyDataPolicy(FServerEarlyDataPolicy);
-    LEarlyDataContext.SetServerMaxEarlyDataSize(FServerMaxEarlyDataSize);
-  end;
+  ApplyScopedEarlyDataContextConfig(
+    Result,
+    FClientEarlyDataEnabled,
+    FServerEarlyDataPolicy,
+    FServerMaxEarlyDataSize
+  );
 end;
 
 function TSSLContextBuilderImpl.BuildServer: ISSLContext;
 var
   Store: ISSLCertificateStore;
-  LEarlyDataContext: ISSLEarlyDataContext;
   LHttpHooks: ISSLHttpHooksAccess;
   LEarlyDataReplayInstaller: IFreePascalContextEarlyDataReplayInstaller;
   LEarlyDataReplayDirectoryInstaller: IFreePascalContextEarlyDataReplayDirectoryInstaller;
@@ -1337,12 +1370,12 @@ begin
   Result.SetSessionCacheMode(FSessionCacheEnabled);
   Result.SetSessionTimeout(FSessionTimeout);
 
-  if Supports(Result, ISSLEarlyDataContext, LEarlyDataContext) then
-  begin
-    LEarlyDataContext.SetClientEarlyDataEnabled(FClientEarlyDataEnabled);
-    LEarlyDataContext.SetServerEarlyDataPolicy(FServerEarlyDataPolicy);
-    LEarlyDataContext.SetServerMaxEarlyDataSize(FServerMaxEarlyDataSize);
-  end;
+  ApplyScopedEarlyDataContextConfig(
+    Result,
+    FClientEarlyDataEnabled,
+    FServerEarlyDataPolicy,
+    FServerMaxEarlyDataSize
+  );
 end;
 
 function TSSLContextBuilderImpl.TryBuildClient(out AContext: ISSLContext): TSSLOperationResult;

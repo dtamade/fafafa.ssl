@@ -318,7 +318,7 @@ begin
     OneShotConfig.ServerEarlyDataReplayStoreFile := ReplayStoreFile;
 
     OneShotCtx := TSSLFactory.CreateContext(OneShotConfig);
-    AssertClientEarlyDataState(OneShotCtx, True,
+    AssertClientEarlyDataState(OneShotCtx, False,
       'One-shot context');
     AssertServerEarlyDataState(OneShotCtx, sslEarlyDataServerIssueOnly, 7,
       'One-shot context');
@@ -330,7 +330,10 @@ begin
       Assert(ReplayLedger <> nil, 'One-shot context exposes an active replay ledger');
       if ReplayLedger <> nil then
       begin
-        Session := BuildManualSession('factory-one-shot', 8);
+        Session := BuildManualSession(
+          AnsiString('factory-one-shot-' + FormatDateTime('yyyymmddhhnnsszzz', Now)),
+          8
+        );
         Assert(ReplayLedger.TryAcquireEarlyDataSession(Session),
           'One-shot context applies configured replay-store file');
         Assert(FileExists(ReplayStoreFile),
@@ -452,7 +455,10 @@ begin
       Assert(ReplayLedger <> nil, 'One-shot directory replay-store context exposes an active replay ledger');
       if ReplayLedger <> nil then
       begin
-        Session := BuildManualSession('factory-one-shot-directory', 8);
+        Session := BuildManualSession(
+          AnsiString('factory-one-shot-directory-' + FormatDateTime('yyyymmddhhnnsszzz', Now)),
+          8
+        );
         Assert(ReplayLedger.TryAcquireEarlyDataSession(Session),
           'One-shot context applies configured replay-store directory');
         Assert(DirectoryExists(ReplayStoreDirectory),

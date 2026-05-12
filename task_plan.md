@@ -1,3 +1,70 @@
+# Task Plan - Early-Data Context Scope Clarification
+
+## Goal
+修复 early-data mixed-scope 下发漂移：`TSSLContextBuilder` / `TSSLConfig` 可以同时携带 client/server early-data 默认值，但 builder/factory/helper 当前会把 opposite-side 值也写进错误的 context。
+
+## Current Batch
+1. 写 focused RED，证明 builder / factory / public helper 会把 `ClientEarlyDataEnabled`、`ServerEarlyDataPolicy`、`ServerMaxEarlyDataSize` 泄漏到错误的 context type。
+2. 在 `src/fafafa.ssl.context.builder.pas`、`src/fafafa.ssl.factory.pas` 做最小 scope-aware application 修法，保持组合配置模型不变。
+3. 跑 focused GREEN、相邻 early-data 回归，并修掉回归里暴露出来的默认持久化 replay-ledger 测试脆弱点。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] working-memory refreshed for the early-data context-scope batch
+- [completed] RED regression added and observed
+- [completed] minimal builder/factory/helper scope fix implemented
+- [completed] adjacent replay-store test flake hardened
+- [completed] focused verification and neighbor regression review
+
+## Notes
+- 这批不是把组合 `TSSLConfig` / builder 拆掉，而是把“组合配置”与“具体 context 下发”分开：
+  - 组合对象仍可同时携带 client/server 默认值
+  - 具体 `sslCtxClient` / `sslCtxServer` / `sslCtxBoth` 创建时只应用对应子集
+- 这批不把 mixed-scope 改成 fail-fast，因为现有 builder / config round-trip / shared-default 用法本身就隐含“一个组合配置可供两侧复用”的设计。
+- `TSSLHelper.ConfigureClientEarlyData(...)` / `ConfigureServerEarlyData(...)` 现在也跟随 context type 收口，wrong-scope context 返回 `False`。
+- 相邻发现的测试脆弱点不是生产回归：
+  - `tests/test_factory_config_early_data_isolation.pas` 对默认持久化 replay-ledger 复用了固定 session label
+  - 多次重跑会被历史 residue 污染
+  - 现已改成每次运行唯一 label
+
+## Current Evidence
+- focused RED:
+  - `fpc -Fu./src -Fu./tests tests/test_early_data_context_scope_clarification.pas -otmp/test_early_data_context_scope_clarification && ./tmp/test_early_data_context_scope_clarification`
+  - result before fix: `30 passed / 14 failed`
+  - failure shape:
+    - `BuildClient` / factory client path 会观察到 server policy/max
+    - `BuildServer` / factory server path 会观察到 client early-data flag
+    - `TSSLHelper.ConfigureServerEarlyData(...)` 会错误接受 client context
+    - `TSSLHelper.ConfigureClientEarlyData(...)` 会错误接受 server context
+- minimal implementation:
+  - `src/fafafa.ssl.context.builder.pas`
+    - new scope-aware early-data application helper
+    - `BuildClient` 仅下发 client early-data flag
+    - `BuildServer` 仅下发 server policy/max
+  - `src/fafafa.ssl.factory.pas`
+    - `ApplyEarlyDataContextConfig(...)` now applies only the context-relevant subset
+    - `TSSLHelper.ConfigureClientEarlyData(...)` / `ConfigureServerEarlyData(...)` now refuse wrong-scope contexts
+  - `src/fafafa.ssl.debug.utils.pas`
+    - config dump now labels client/server early-data scalar fields with their actual application scope
+  - `tests/test_factory_config_early_data_isolation.pas`
+    - one-shot server-context assertion updated to the new scope truth
+    - default persistent replay-ledger probe labels now use per-run unique session ids
+- focused GREEN:
+  - `tests/test_early_data_context_scope_clarification.pas`: PASS, `44 passed / 0 failed`
+  - `tests/test_factory_config_early_data_isolation.pas`: PASS, `60 passed / 0 failed`
+  - `tests/config/test_context_builder_early_data_contract.pas`: PASS
+  - `tests/test_early_data_public_api_contract.pas`: PASS
+  - `tests/config/test_context_builder_try.pas`: PASS, `66 passed / 0 failed`
+
+## Verification Plan
+1. `fpc -Fu./src -Fu./tests tests/test_early_data_context_scope_clarification.pas -otmp/test_early_data_context_scope_clarification && ./tmp/test_early_data_context_scope_clarification`
+2. `fpc -Fu./src -Fu./tests tests/test_factory_config_early_data_isolation.pas -otmp/test_factory_config_early_data_isolation && ./tmp/test_factory_config_early_data_isolation`
+3. `fpc -Fu./src -Fu./tests tests/config/test_context_builder_early_data_contract.pas -otmp/test_context_builder_early_data_contract && ./tmp/test_context_builder_early_data_contract`
+4. `fpc -Fu./src -Fu./tests tests/test_early_data_public_api_contract.pas -otmp/test_early_data_public_api_contract && ./tmp/test_early_data_public_api_contract`
+5. `fpc -Fu./src -Fu./tests tests/config/test_context_builder_try.pas -otmp/test_context_builder_try && ./tmp/test_context_builder_try`
+6. `git diff --check`
+7. `git status --short`
+
 # Task Plan - Client Replay-Store Scope Clarification
 
 ## Goal

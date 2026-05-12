@@ -1,3 +1,30 @@
+# Findings - Early-Data Context Scope Clarification
+
+## 2026-05-12
+- Fresh deep review confirmed the broader mixed-scope early-data issue is real, but the right repair is not the same as the replay-store batch.
+- `TSSLContextBuilder` and `TSSLConfig` are structurally combination objects:
+  - they can legitimately carry both client early-data defaults and server early-data defaults at the same time
+  - existing clone/import/export/shared-default usage already leans on that combined shape
+- The actual bug was in context creation/application, not in the combined shape itself:
+  - `BuildClient` and factory client paths were also applying `ServerEarlyDataPolicy` / `ServerMaxEarlyDataSize`
+  - `BuildServer` and factory server paths were also applying `ClientEarlyDataEnabled`
+  - `TSSLHelper.ConfigureServerEarlyData(...)` mutated client contexts
+  - `TSSLHelper.ConfigureClientEarlyData(...)` mutated server contexts
+- Runtime-source review narrowed the real consumption points:
+  - client connections consult `GetClientEarlyDataEnabled`
+  - server-side FreePascal early-data accept/ticket issuance consult `GetServerEarlyDataPolicy` / `GetServerMaxEarlyDataSize`
+  - so opposite-side values on a concrete client/server context are leakage, not meaningful runtime truth
+- The narrowest safe repair was therefore scope-aware application, not fail-fast:
+  - keep builder/config as combined carrier objects
+  - only apply the client subset when creating `sslCtxClient`
+  - only apply the server subset when creating `sslCtxServer`
+  - apply both only for `sslCtxBoth`
+  - make the public helper methods respect the same context-type boundary
+- Neighbor regression reruns exposed a separate test-quality issue:
+  - `tests/test_factory_config_early_data_isolation.pas` reused fixed manual session labels when probing a default persistent replay-ledger
+  - repeated local reruns could therefore be polluted by stale replay truth
+  - switching those labels to per-run unique values hardened the regression without changing production behavior
+
 # Findings - Client Replay-Store Scope Clarification
 
 ## 2026-05-12
