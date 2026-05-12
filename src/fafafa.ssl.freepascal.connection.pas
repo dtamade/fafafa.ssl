@@ -790,7 +790,8 @@ begin
   FStream := nil;
   FServerName := '';
   {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-  if (AContext <> nil) and (AContext.GetContextType = sslCtxClient) and
+  if (AContext <> nil) and
+    ContextTypeSupportsClientConnectionRole(AContext.GetContextType) and
     (AContext.GetServerName <> '') then
     FServerName := AContext.GetServerName;
   {$POP}
@@ -845,7 +846,8 @@ begin
   FStream := AStream;
   FServerName := '';
   {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-  if (AContext <> nil) and (AContext.GetContextType = sslCtxClient) and
+  if (AContext <> nil) and
+    ContextTypeSupportsClientConnectionRole(AContext.GetContextType) and
     (AContext.GetServerName <> '') then
     FServerName := AContext.GetServerName;
   {$POP}
@@ -4961,7 +4963,8 @@ var
   LEarlyDataContext: ISSLEarlyDataContext;
   LResumptionSession: IFreePascalResumptionSession;
 begin
-  if (FContext = nil) or (FContext.GetContextType <> sslCtxClient) then
+  if (FContext = nil) or
+    (not ContextTypeSupportsClientConnectionRole(FContext.GetContextType)) then
     Exit(TSSLOperationResult.Err(sslErrInvalidParam, 'Early data is only available on client connections'));
 
   if not Supports(FContext, ISSLEarlyDataContext, LEarlyDataContext) then

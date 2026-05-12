@@ -170,7 +170,8 @@ begin
 
   // Initialize per-connection server name from context default (backward compatibility)
   FServerName := '';
-  if (AContext <> nil) and (AContext.GetContextType = sslCtxClient) and
+  if (AContext <> nil) and
+    ContextTypeSupportsClientConnectionRole(AContext.GetContextType) and
     (AContext.GetServerName <> '') then
     SetServerName(AContext.GetServerName);
 
@@ -223,7 +224,8 @@ begin
   try
     // Initialize per-connection server name from context default (backward compatibility)
     FServerName := '';
-    if (AContext <> nil) and (AContext.GetContextType = sslCtxClient) and
+    if (AContext <> nil) and
+      ContextTypeSupportsClientConnectionRole(AContext.GetContextType) and
       (AContext.GetServerName <> '') then
       SetServerName(AContext.GetServerName);
 
@@ -930,7 +932,8 @@ function TOpenSSLConnection.SetEarlyData(
 var
   LEarlyDataContext: ISSLEarlyDataContext;
 begin
-  if (FContext = nil) or (FContext.GetContextType <> sslCtxClient) then
+  if (FContext = nil) or
+    (not ContextTypeSupportsClientConnectionRole(FContext.GetContextType)) then
     Exit(TSSLOperationResult.Err(sslErrInvalidParam,
       'Early data is only available on client connections'));
 

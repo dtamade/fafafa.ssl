@@ -238,7 +238,8 @@ begin
   end;
 
   // Set server name (SNI) if configured
-  if (FContext <> nil) and (FContext.GetContextType = sslCtxClient) and
+  if (FContext <> nil) and
+    ContextTypeSupportsClientConnectionRole(FContext.GetContextType) and
     (FContext.GetServerName <> '') then
     SetServerName(FContext.GetServerName);
 end;

@@ -181,7 +181,8 @@ begin
   FStream := nil;
   FWolfSSL := nil;
   FServerName := '';
-  if (AContext <> nil) and (AContext.GetContextType = sslCtxClient) then
+  if (AContext <> nil) and
+    ContextTypeSupportsClientConnectionRole(AContext.GetContextType) then
     FServerName := AContext.GetServerName;
   FALPNProtocols := AContext.GetALPNProtocols;
   FNegotiatedALPN := '';
@@ -214,7 +215,8 @@ begin
   FStream := AStream;
   FWolfSSL := nil;
   FServerName := '';
-  if (AContext <> nil) and (AContext.GetContextType = sslCtxClient) then
+  if (AContext <> nil) and
+    ContextTypeSupportsClientConnectionRole(AContext.GetContextType) then
     FServerName := AContext.GetServerName;
   FALPNProtocols := AContext.GetALPNProtocols;
   FNegotiatedALPN := '';
@@ -345,7 +347,7 @@ begin
   Result := True;
 
   if (FWolfSSL = nil) or (FContext = nil) or
-    (FContext.GetContextType <> sslCtxClient) then
+    (not ContextTypeSupportsClientConnectionRole(FContext.GetContextType)) then
     Exit;
 
   LOptions := FContext.GetOptions;
@@ -382,7 +384,7 @@ begin
   Result := True;
 
   if (FWolfSSL = nil) or (FContext = nil) or
-    (FContext.GetContextType <> sslCtxServer) then
+    (not ContextTypeSupportsServerConnectionRole(FContext.GetContextType)) then
     Exit;
 
   if not Supports(FContext, ISSLServerOCSPStaplingContext, LServerStapling) then
@@ -491,7 +493,8 @@ function TWolfSSLConnection.ValidateRequiredOCSPStapling: Boolean;
 begin
   Result := True;
 
-  if (FContext = nil) or (FContext.GetContextType <> sslCtxClient) then
+  if (FContext = nil) or
+    (not ContextTypeSupportsClientConnectionRole(FContext.GetContextType)) then
     Exit;
 
   if not (ssoRequireOCSPStapling in FContext.GetOptions) then
@@ -944,7 +947,8 @@ function TWolfSSLConnection.SetEarlyData(
 var
   LEarlyDataContext: ISSLEarlyDataContext;
 begin
-  if (FContext = nil) or (FContext.GetContextType <> sslCtxClient) then
+  if (FContext = nil) or
+    (not ContextTypeSupportsClientConnectionRole(FContext.GetContextType)) then
     Exit(TSSLOperationResult.Err(sslErrInvalidParam,
       'Early data is only available on client connections'));
 

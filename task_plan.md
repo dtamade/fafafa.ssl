@@ -1,3 +1,60 @@
+# Task Plan - sslCtxBoth Client Capability Clarification
+
+## Goal
+修复 `sslCtxBoth` 在连接级 client capability 上的公共合同漂移：当前多个后端的 connection 构造和 early-data role gate 仍把它当成“不是 client”，与 `sslCtxBoth` 的公开语义不一致。
+
+## Current Batch
+1. 写 focused RED，锁定 `sslCtxBoth` 作为客户端使用时的两类失真：
+   - context fallback `ServerName` 没有继承到连接
+   - supporting backends 的 `SetEarlyData(...)` 先被错误 role gate 拒绝
+2. 在相关 connection units 做最小 capability-based 修法，不扩到更大的 dual-role handshake 设计。
+3. 跑 focused GREEN 与相邻 server-name / early-data 回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] working-memory refreshed for the sslCtxBoth client-capability batch
+- [completed] focused RED regression added and observed
+- [completed] minimal connection capability fix implemented
+- [completed] focused verification and neighbor regression review
+
+## Notes
+- 这批只收“client-capable runtime truth”，不重新定义 `sslCtxBoth` 的完整 dual-role 握手状态机。
+- 如果 fresh RED 证明 `DoHandshakeInternal` / implicit handshake 路径也存在真实 public drift，再单开下一批。
+
+## Current Evidence
+- focused RED:
+  - `fpc -Fu./src -Fu./tests tests/test_sslctxboth_client_capability_clarification.pas -otmp/test_sslctxboth_client_capability_clarification && ./tmp/test_sslctxboth_client_capability_clarification`
+  - result before fix: `21 passed / 7 failed / 1 skipped`
+  - failure shape:
+    - `sslCtxBoth` stream connections on FreePascal / OpenSSL / WolfSSL / MbedTLS lost context fallback `ServerName`
+    - `sslCtxBoth` socket connections on FreePascal lost the same fallback
+    - FreePascal / OpenSSL `SetEarlyData(...)` rejected `sslCtxBoth` with `Early data is only available on client connections`
+- minimal implementation:
+  - `src/fafafa.ssl.connection.base.pas`
+    - added shared client/server capability helpers for connection units
+  - `src/fafafa.ssl.freepascal.connection.pas`
+    - dual-context connections now inherit client fallback `ServerName`
+    - client early-data gate now accepts `sslCtxBoth`
+  - `src/fafafa.ssl.openssl.connection.pas`
+    - dual-context constructors now inherit client fallback `ServerName`
+    - client early-data gate now accepts `sslCtxBoth`
+  - `src/fafafa.ssl.wolfssl.connection.pas`
+    - dual-context constructors now inherit client fallback `ServerName`
+    - client/server pre-handshake OCSP capability gates now accept `sslCtxBoth`
+    - client early-data gate now accepts `sslCtxBoth`
+  - `src/fafafa.ssl.winssl.connection.pas`
+    - dual-context constructors now inherit client fallback `ServerName`
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+    - dual-context constructors now inherit client fallback `ServerName`
+- focused GREEN:
+  - `tests/test_sslctxboth_client_capability_clarification.pas`: PASS, `28 passed / 0 failed / 1 skipped`
+  - `tests/test_freepascal_context_server_name_inheritance.pas`: PASS
+  - `tests/test_early_data_public_api_contract.pas`: PASS
+  - `tests/test_factory_config_server_name_isolation.pas`: PASS
+  - `tests/test_openssl_wolfssl_early_data_connection_contract.pas`: PASS
+  - `python3 scripts/compile_all_modules.py`: PASS, `185/185`
+  - `git diff --check`: PASS
+
 # Task Plan - Early-Data Context Scope Clarification
 
 ## Goal

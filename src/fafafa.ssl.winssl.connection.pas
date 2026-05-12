@@ -465,7 +465,8 @@ begin
 
   // 从上下文获取服务器名称
   FServerName := '';
-  if (AContext <> nil) and (AContext.GetContextType = sslCtxClient) and
+  if (AContext <> nil) and
+    ContextTypeSupportsClientConnectionRole(AContext.GetContextType) and
     (AContext.GetServerName <> '') then
     FServerName := AContext.GetServerName;
 
@@ -492,7 +493,8 @@ begin
   FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
 
   FServerName := '';
-  if (AContext <> nil) and (AContext.GetContextType = sslCtxClient) and
+  if (AContext <> nil) and
+    ContextTypeSupportsClientConnectionRole(AContext.GetContextType) and
     (AContext.GetServerName <> '') then
     FServerName := AContext.GetServerName;
 

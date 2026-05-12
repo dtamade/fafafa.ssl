@@ -1,3 +1,50 @@
+# Progress - sslCtxBoth Client Capability Clarification
+
+## 2026-05-12
+- Post-commit resume:
+  - verified the worktree is already clean and the previous batch `fix: scope early-data config by context role` is present at `HEAD`
+  - selected the next bounded target from fresh source review instead of reopening completed early-data scope work
+- New batch plan recorded in `docs/plans/2026-05-12-sslctxboth-client-capability-clarification.md`
+- Focused RED contract added:
+  - `tests/test_sslctxboth_client_capability_clarification.pas`
+  - covers `sslCtxBoth` stream-connection ServerName fallback on FreePascal / OpenSSL / WolfSSL / MbedTLS
+  - covers `sslCtxBoth` socket-connection ServerName fallback on FreePascal
+  - covers `sslCtxBoth` client early-data role gate on supporting backends
+- RED verification:
+  - `fpc -Fu./src -Fu./tests tests/test_sslctxboth_client_capability_clarification.pas -otmp/test_sslctxboth_client_capability_clarification && ./tmp/test_sslctxboth_client_capability_clarification`
+  - result before fix: compile PASS, runtime FAIL `7`, skip `1`
+  - failure shape:
+    - FreePascal / OpenSSL / WolfSSL / MbedTLS stream connections dropped context fallback `ServerName` for `sslCtxBoth`
+    - FreePascal socket connections dropped the same fallback
+    - FreePascal / OpenSSL early-data connections rejected `sslCtxBoth` with `Early data is only available on client connections`
+    - WolfSSL early-data runtime case skipped on this host because the context did not expose `ISSLEarlyDataContext`
+- Minimal implementation landed:
+  - `src/fafafa.ssl.connection.base.pas`
+    - added shared `ContextTypeSupportsClientConnectionRole(...)` / `ContextTypeSupportsServerConnectionRole(...)`
+  - `src/fafafa.ssl.freepascal.connection.pas`
+    - socket/stream constructors now inherit context fallback `ServerName` for `sslCtxBoth`
+    - `SetEarlyData(...)` now treats `sslCtxBoth` as client-capable
+  - `src/fafafa.ssl.openssl.connection.pas`
+    - socket/stream constructors now inherit context fallback `ServerName` for `sslCtxBoth`
+    - `SetEarlyData(...)` now treats `sslCtxBoth` as client-capable
+  - `src/fafafa.ssl.wolfssl.connection.pas`
+    - socket/stream constructors now inherit context fallback `ServerName` for `sslCtxBoth`
+    - client/server OCSP preparation and `SetEarlyData(...)` now use capability gates
+  - `src/fafafa.ssl.winssl.connection.pas`
+    - socket/stream constructors now inherit context fallback `ServerName` for `sslCtxBoth`
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+    - stream constructor now inherits context fallback `ServerName` for `sslCtxBoth`
+- GREEN verification:
+  - `tests/test_sslctxboth_client_capability_clarification.pas` -> PASS (`28 passed / 0 failed / 1 skipped`)
+  - `tests/test_freepascal_context_server_name_inheritance.pas` -> PASS
+  - `tests/test_early_data_public_api_contract.pas` -> PASS
+  - `tests/test_factory_config_server_name_isolation.pas` -> PASS
+  - `tests/test_openssl_wolfssl_early_data_connection_contract.pas` -> PASS
+  - `python3 scripts/compile_all_modules.py` -> PASS (`185/185`)
+  - `git diff --check` -> PASS
+- Ready for review/commit:
+  - diff scope is limited to connection role helpers, dual-context client-capability fixes in connection units, the new focused contract, the batch plan, and working-memory files
+
 # Progress - Early-Data Context Scope Clarification
 
 ## 2026-05-12

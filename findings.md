@@ -1,3 +1,20 @@
+# Findings - sslCtxBoth Client Capability Clarification
+
+## 2026-05-12
+- Fresh deep review found that `sslCtxBoth` is not merely under-tested; multiple runtime connection units still treat it as "not a client" in places where the public enum semantics imply client capability.
+- The drift is currently concrete and reproducible on this Linux host:
+  - FreePascal / OpenSSL / WolfSSL / MbedTLS stream connections created from `sslCtxBoth` contexts do not inherit the context fallback `ServerName`
+  - FreePascal socket connections created from `sslCtxBoth` contexts also lose that fallback
+  - FreePascal / OpenSSL `ISSLEarlyDataConnection.SetEarlyData(...)` reject `sslCtxBoth` immediately with `Early data is only available on client connections`
+- The surrounding code shape explains why:
+  - builder/factory/helper layers already treat `sslCtxBoth` as both-capable for client-scoped and server-scoped early-data configuration
+  - but several connection units still gate client behavior on strict `GetContextType = sslCtxClient`
+  - WolfSSL also gates pre-handshake client/server OCSP stapling preparation on strict equality, so the same pattern can leak into other client/server scoped connection behavior
+- The narrowest safe repair for this batch is therefore capability-based connection gating:
+  - client-capable checks should accept `sslCtxClient` and `sslCtxBoth`
+  - server-capable checks should accept `sslCtxServer` and `sslCtxBoth`
+  - this batch still does not need a broader redesign of implicit handshake role selection
+
 # Findings - Early-Data Context Scope Clarification
 
 ## 2026-05-12

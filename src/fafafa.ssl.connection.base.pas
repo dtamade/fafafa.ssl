@@ -28,6 +28,11 @@ const
   { 字符串缓冲区大小 }
   SSL_STRING_BUFFER_SIZE = 8192;
 
+function ContextTypeSupportsClientConnectionRole(
+  AContextType: TSSLContextType): Boolean; inline;
+function ContextTypeSupportsServerConnectionRole(
+  AContextType: TSSLContextType): Boolean; inline;
+
 type
   {**
    * TBaseSSLConnection - SSL 连接抽象基类
@@ -281,6 +286,18 @@ type
   end;
 
 implementation
+
+function ContextTypeSupportsClientConnectionRole(
+  AContextType: TSSLContextType): Boolean; inline;
+begin
+  Result := AContextType in [sslCtxClient, sslCtxBoth];
+end;
+
+function ContextTypeSupportsServerConnectionRole(
+  AContextType: TSSLContextType): Boolean; inline;
+begin
+  Result := AContextType in [sslCtxServer, sslCtxBoth];
+end;
 
 { TBaseSSLConnection }
 
