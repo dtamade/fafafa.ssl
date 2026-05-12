@@ -1,3 +1,34 @@
+# Progress - WinSSL sslCtxBoth Verification Role Clarification
+
+## 2026-05-12
+- Post-commit resume:
+  - worktree was clean at `13c5520`
+  - selected the next real `sslCtxBoth` public risk from WinSSL verification instead of reopening the already-closed role-less handshake boundary
+- New batch plan recorded in `docs/plans/2026-05-12-winssl-sslctxboth-verification-role-clarification.md`
+- Focused RED source contract added:
+  - `tests/scripts/test_winssl_sslctxboth_verification_role_contract.sh`
+  - requires explicit peer-validation role state
+  - requires role-parameterized `ValidatePeerCertificate(...)`
+  - requires `DoConnect` / `DoAccept` / verify-result getter to reuse explicit role truth instead of `ContextType`
+- RED verification:
+  - `bash -n tests/scripts/test_winssl_sslctxboth_verification_role_contract.sh` -> PASS
+  - `bash tests/scripts/test_winssl_sslctxboth_verification_role_contract.sh` -> FAIL on missing explicit peer-validation role state and role-parameterized validation path
+- Minimal implementation landed:
+  - `src/fafafa.ssl.winssl.connection.pas`
+    - added `FPeerValidationRoleKnown` / `FPeerValidationRoleIsClient`
+    - added `RememberPeerValidationRole(...)` / `TryResolvePeerValidationRole(...)`
+    - changed `ValidatePeerCertificate(...)` to take explicit `AIsClient`
+    - wired `DoConnect` / `DoAccept` / `DoGetVerifyResult` / `PerformHandshake` to the explicit verification role
+    - fixed one Pascal `if ... then ... else` semicolon syntax slip exposed by Win64 compile
+- Focused GREEN verification:
+  - `bash tests/scripts/test_winssl_sslctxboth_verification_role_contract.sh` -> PASS
+  - `fpc -Twin64 -B -Fu./src -Fu./tests -FUtmp/winssl_role_client_win64 -FEtmp/winssl_role_client_win64 -otmp/winssl_role_client_win64/test_winssl_hostname_mismatch_online.exe tests/winssl/test_winssl_hostname_mismatch_online.pas` -> PASS
+  - `fpc -Twin64 -B -Fu./src -Fu./tests -FUtmp/winssl_role_server_win64 -FEtmp/winssl_role_server_win64 -otmp/winssl_role_server_win64/test_winssl_mtls_e2e_local.exe tests/winssl/test_winssl_mtls_e2e_local.pas` -> PASS
+  - `python3 scripts/compile_all_modules.py` -> PASS (`185/185`)
+  - `git diff --check` -> PASS
+- Ready for review/commit:
+  - diff scope is limited to WinSSL verification-role truth, the new focused source contract, the new batch plan, and working-memory files
+
 # Progress - sslCtxBoth Roleless Handshake Clarification
 
 ## 2026-05-12

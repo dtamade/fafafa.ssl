@@ -123,6 +123,8 @@ type
 
     // 最后一次操作状态
     FLastError: TSSLErrorCode;
+    FPeerValidationRoleKnown: Boolean;
+    FPeerValidationRoleIsClient: Boolean;
 
     // 高精度计时器
     FHandshakeStartCounter: Int64;
@@ -143,9 +145,12 @@ type
     procedure HandleExtraData(var AExtraBuffer: array of TSecBuffer;
       var AIoBuffer: array of Byte; var AIoBufferSize: DWORD; AStatus: SECURITY_STATUS);
     function SendOutputBuffer(const AOutBuffer: TSecBuffer): Boolean;
+    procedure RememberPeerValidationRole(AIsClient: Boolean);
+    function TryResolvePeerValidationRole(out AIsClient: Boolean): Boolean;
 
     // 证书验证
-    function ValidatePeerCertificate(out AVerifyError: Integer): Boolean;
+    function ValidatePeerCertificate(AIsClient: Boolean;
+      out AVerifyError: Integer): Boolean;
 
     // ALPN 支持
     function BuildALPNBuffer(const AProtocols: string; out ABuffer: TBytes): Boolean;
@@ -765,13 +770,47 @@ end;
 // 证书验证
 // ============================================================================
 
-function TWinSSLConnection.ValidatePeerCertificate(out AVerifyError: Integer): Boolean;
+procedure TWinSSLConnection.RememberPeerValidationRole(AIsClient: Boolean);
+begin
+  FPeerValidationRoleKnown := True;
+  FPeerValidationRoleIsClient := AIsClient;
+end;
+
+function TWinSSLConnection.TryResolvePeerValidationRole(
+  out AIsClient: Boolean): Boolean;
+begin
+  if FPeerValidationRoleKnown then
+  begin
+    AIsClient := FPeerValidationRoleIsClient;
+    Exit(True);
+  end;
+
+  if FContext = nil then
+    Exit(False);
+
+  case FContext.GetContextType of
+    sslCtxClient:
+      begin
+        AIsClient := True;
+        Exit(True);
+      end;
+    sslCtxServer:
+      begin
+        AIsClient := False;
+        Exit(True);
+      end;
+  end;
+
+  Result := False;
+end;
+
+function TWinSSLConnection.ValidatePeerCertificate(AIsClient: Boolean;
+  out AVerifyError: Integer): Boolean;
 var
   LContextAccess: IWinSSLContextAccess;
   LVerifyMode: TSSLVerifyModes;
   LVerifyFlags: TSSLCertVerifyFlags;
   LNeedCert: Boolean;
-  LContextType: TSSLContextType;
   LCertContext: PCCERT_CONTEXT;
   LChainPara: CERT_CHAIN_PARA;
   LChainContext: PCCERT_CHAIN_CONTEXT;
@@ -841,8 +880,7 @@ begin
     Exit;
   end;
 
-  LContextType := FContext.GetContextType;
-  LNeedCert := (LContextType = sslCtxClient) or (sslVerifyFailIfNoPeerCert in LVerifyMode);
+  LNeedCert := AIsClient or (sslVerifyFailIfNoPeerCert in LVerifyMode);
 
   LCertContext := nil;
   LStatus := QueryContextAttributesW(@FCtxtHandle, SECPKG_ATTR_REMOTE_CERT_CONTEXT, @LCertContext);
@@ -861,8 +899,7 @@ begin
   try
     LVerifyFlags := FContext.GetCertVerifyFlags;
 
-    if (LContextType = sslCtxClient) and
-      not (sslCertVerifyIgnoreHostname in LVerifyFlags) then
+    if AIsClient and not (sslCertVerifyIgnoreHostname in LVerifyFlags) then
     begin
       LHostname := NormalizeHostForVerify(FServerName);
       if LHostname = '' then
@@ -924,16 +961,15 @@ begin
       FillChar(LSSLExtra, SizeOf(LSSLExtra), 0);
       LSSLExtra.cbSize := SizeOf(SSL_EXTRA_CERT_CHAIN_POLICY_PARA);
 
-      if LContextType = sslCtxServer then
-        LSSLExtra.dwAuthType := AUTHTYPE_CLIENT
+      if AIsClient then
+        LSSLExtra.dwAuthType := AUTHTYPE_SERVER
       else
-        LSSLExtra.dwAuthType := AUTHTYPE_SERVER;
+        LSSLExtra.dwAuthType := AUTHTYPE_CLIENT;
 
       LSSLExtra.fdwChecks := 0;
       LServerNameW := nil;
       try
-        if (LContextType = sslCtxClient) and
-          not (sslCertVerifyIgnoreHostname in LVerifyFlags) then
+        if AIsClient and not (sslCertVerifyIgnoreHostname in LVerifyFlags) then
         begin
           LHostname := NormalizeHostForVerify(FServerName);
           if LHostname <> '' then
@@ -1003,6 +1039,7 @@ var
   LVerifyError: Integer;
 begin
   NotifyInfoCallback(1, 0, 'handshake_start');
+  RememberPeerValidationRole(True);
 
   Result := ClientHandshake;
   if not Result then
@@ -1014,7 +1051,7 @@ begin
 
   FConnected := True;
 
-  if not ValidatePeerCertificate(LVerifyError) then
+  if not ValidatePeerCertificate(True, LVerifyError) then
   begin
     FConnected := False;
     FHandshakeState := sslHsFailed;
@@ -1042,6 +1079,7 @@ var
   LFrequency: Int64;
 begin
   NotifyInfoCallback(1, 0, 'handshake_start');
+  RememberPeerValidationRole(False);
 
   Result := ServerHandshake;
   if not Result then
@@ -1053,7 +1091,7 @@ begin
 
   FConnected := True;
 
-  if not ValidatePeerCertificate(LVerifyError) then
+  if not ValidatePeerCertificate(False, LVerifyError) then
   begin
     FConnected := False;
     FHandshakeState := sslHsFailed;
@@ -1584,9 +1622,13 @@ end;
 
 function TWinSSLConnection.DoGetVerifyResult: Integer;
 var
+  LIsClient: Boolean;
   LVerifyError: Integer;
 begin
-  if ValidatePeerCertificate(LVerifyError) then
+  if not TryResolvePeerValidationRole(LIsClient) then
+    Exit(-1);
+
+  if ValidatePeerCertificate(LIsClient, LVerifyError) then
     Result := 0
   else
     Result := LVerifyError;
@@ -1708,6 +1750,7 @@ end;
 
 function TWinSSLConnection.PerformHandshake: TSSLHandshakeState;
 var
+  LIsClient: Boolean;
   LHandshakeOk: Boolean;
   LVerifyError: Integer;
 begin
@@ -1720,7 +1763,10 @@ begin
   FHandshakeState := sslHsInProgress;
   NotifyInfoCallback(1, 0, 'handshake_start');
 
-  if FContext.GetContextType = sslCtxClient then
+  LIsClient := (FContext <> nil) and (FContext.GetContextType = sslCtxClient);
+  RememberPeerValidationRole(LIsClient);
+
+  if LIsClient then
     LHandshakeOk := ClientHandshake
   else
     LHandshakeOk := ServerHandshake;
@@ -1735,7 +1781,7 @@ begin
 
   FConnected := True;
 
-  if not ValidatePeerCertificate(LVerifyError) then
+  if not ValidatePeerCertificate(LIsClient, LVerifyError) then
   begin
     FConnected := False;
     FHandshakeState := sslHsFailed;

@@ -1,3 +1,37 @@
+# Task Plan - WinSSL sslCtxBoth Verification Role Clarification
+
+## Goal
+修复 `sslCtxBoth` 在 `WinSSL` 显式 `Connect` / `Accept` 之后仍按 `ContextType` 猜证书校验角色的 public drift。
+
+## Current Batch
+1. 写 focused RED source contract，锁住 WinSSL dual-context verification path 仍按 `ContextType` 推导 role。
+2. 在 `src/fafafa.ssl.winssl.connection.pas` 做最小修法，把 verify role 改成显式来源，并让 verify-result getter 复用同一真相源。
+3. 跑 focused GREEN、Win64 compile proof、Linux compile gate。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] working-memory refreshed for the WinSSL verification-role batch
+- [completed] focused RED contract added and observed
+- [completed] minimal WinSSL verification-role fix implemented
+- [completed] focused verification and compile proof
+
+## Current Evidence
+- focused RED:
+  - `bash tests/scripts/test_winssl_sslctxboth_verification_role_contract.sh`
+  - result before fix: FAIL on missing explicit peer-validation role state, explicit role recorder/resolver, and role-parameterized `ValidatePeerCertificate(...)`
+- minimal implementation:
+  - `src/fafafa.ssl.winssl.connection.pas`
+    - added connection-local peer-validation role state and resolver
+    - `ValidatePeerCertificate(...)` now accepts explicit `AIsClient`
+    - `DoConnect` / `DoAccept` / verify-result getter now use explicit verification role truth instead of `ContextType`
+    - fixed a Pascal `if ... then ... else` semicolon slip caught by Win64 cross-compile while landing the change
+- focused GREEN:
+  - `bash tests/scripts/test_winssl_sslctxboth_verification_role_contract.sh`: PASS
+  - `fpc -Twin64 -B -Fu./src -Fu./tests -FUtmp/winssl_role_client_win64 -FEtmp/winssl_role_client_win64 -otmp/winssl_role_client_win64/test_winssl_hostname_mismatch_online.exe tests/winssl/test_winssl_hostname_mismatch_online.pas`: PASS
+  - `fpc -Twin64 -B -Fu./src -Fu./tests -FUtmp/winssl_role_server_win64 -FEtmp/winssl_role_server_win64 -otmp/winssl_role_server_win64/test_winssl_mtls_e2e_local.exe tests/winssl/test_winssl_mtls_e2e_local.pas`: PASS
+  - `python3 scripts/compile_all_modules.py`: PASS, `185/185`
+  - `git diff --check`: PASS
+
 # Task Plan - sslCtxBoth Roleless Handshake Clarification
 
 ## Goal

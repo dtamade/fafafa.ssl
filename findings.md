@@ -1,3 +1,24 @@
+# Findings - WinSSL sslCtxBoth Verification Role Clarification
+
+## 2026-05-12
+- Fresh post-commit review found the next `sslCtxBoth` public gap had moved into WinSSL's certificate-validation path:
+  - explicit `Connect` already means client handshake
+  - explicit `Accept` already means server handshake
+  - but `ValidatePeerCertificate(...)` still derived verification role from `FContext.GetContextType`
+- That made dual-context verification drift concrete:
+  - explicit `Connect` on `sslCtxBoth` could skip client-side hostname verification
+  - explicit `Connect` on `sslCtxBoth` could also treat peer certificate presence as optional unless `sslVerifyFailIfNoPeerCert` was set
+  - explicit `Accept` on `sslCtxBoth` could feed the wrong `AUTHTYPE_*` into `CERT_CHAIN_POLICY_SSL`
+  - `DoGetVerifyResult` / `DoGetVerifyResultString` had the same role-source bug because they recomputed verification through the same role-less path
+- The smallest safe repair was not a full dual-role state machine:
+  - add a narrow connection-local "peer validation role" truth source
+  - record it from explicit `Connect` / `Accept`
+  - reuse it in `ValidatePeerCertificate(...)` and verify-result getters
+  - keep the broader handshake-state design untouched
+- Win64 cross-compile was important evidence here:
+  - it not only revalidated the changed WinSSL compile surface
+  - it also caught a fresh Pascal `if ... then ... else` semicolon slip during landing, which was fixed before closing the batch
+
 # Findings - sslCtxBoth Roleless Handshake Clarification
 
 ## 2026-05-12
