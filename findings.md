@@ -1,3 +1,24 @@
+# Findings - Factory Connection-Scope Clarification
+
+## 2026-05-12
+- Deep review pivoted from the earlier SNI/server-name suspicion after re-checking runtime constructors: server-side connections already gate context `ServerName` inheritance on `sslCtxClient`, so that path is not the next real bug.
+- A fresher and higher-risk drift is in `TSSLConfig` scope truth:
+  - `BufferSize` / `HandshakeTimeout` are present in the public config record
+  - library defaults and `CreateDefaultConfig(...)` populate them with concrete values
+  - `TSSLDebugUtils.DumpSSLConfig(...)` prints them as if they are real active config
+  - but `TSSLFactory.CreateContext(...)` does not actually apply either field to runtime contexts/connections
+- This is more dangerous than doc drift because callers can reasonably believe a custom timeout or buffer size has taken effect when it has been silently ignored.
+- The narrowest safe repair is to fail fast at the factory boundary for scope-mismatched custom values, rather than expanding runtime surface mid-batch.
+- Fresh RED proved the drift was real:
+  - one-shot `TSSLFactory.CreateContext(const AConfig)` silently accepted custom `HandshakeTimeout` / `BufferSize`
+  - library-default `TSSLFactory.CreateContext(AContextType, ALibType)` silently accepted the same custom values after `ISSLLibrary.SetDefaultConfig(...)`
+- The landed fix keeps runtime behavior stable and only tightens the boundary:
+  - factory now raises `ESSLConfigurationException` when either field is customized away from `0` / factory default sentinel values
+  - config dump output now explicitly marks both fields as connection/transport scoped, not context-factory-applied runtime settings
+- Related regression checks stayed green:
+  - logging-scope clarification contract still passes
+  - default-config request-safe logging contract still passes
+
 # Findings - Interface Design Audit
 
 ## 2026-05-12

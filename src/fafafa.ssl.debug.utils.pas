@@ -320,8 +320,14 @@ begin
       BoolToStr(AConfig.PrivateKeyPassword <> '', '已设置', '未设置')
     ]);
     LSB.AppendFormat('CA文件: %s', [AConfig.CAFile]);
-    LSB.AppendFormat('缓冲区大小: %d', [AConfig.BufferSize]);
-    LSB.AppendFormat('握手超时: %d ms', [AConfig.HandshakeTimeout]);
+    LSB.AppendFormat(
+      '缓冲区大小: %d (transport/IO 层配置；factory context 创建不消费)',
+      [AConfig.BufferSize]
+    );
+    LSB.AppendFormat(
+      '握手超时: %d ms (连接层配置；使用 TSSLConnector/TSSLAcceptor/ISSLConnection)',
+      [AConfig.HandshakeTimeout]
+    );
     LSB.AppendFormat('服务器名称: %s', [AConfig.ServerName]);
     LSB.AppendFormat('客户端 Early Data: %s', [BoolToStr(AConfig.ClientEarlyDataEnabled, '启用', '禁用')]);
     LSB.AppendFormat('服务端 Early Data 策略: %d', [Ord(AConfig.ServerEarlyDataPolicy)]);

@@ -1,3 +1,44 @@
+# Task Plan - Factory Connection-Scope Clarification
+
+## Goal
+修复 `TSSLConfig.BufferSize` / `TSSLConfig.HandshakeTimeout` 在 factory/context 创建路径上的静默吞配置问题，让 `TSSLFactory.CreateContext(...)` 不再接受看起来可配、实际不生效的 connection-scoped 字段。
+
+## Current Batch
+1. 写 focused RED 合同，证明 one-shot request path 和 library-default path 都会静默接受自定义 `BufferSize` / `HandshakeTimeout`。
+2. 在 `src/fafafa.ssl.factory.pas` 做最小 fail-fast 作用域校验，不扩 runtime surface。
+3. 跑 focused test + diff hygiene。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] working-memory refreshed for the config-scope batch
+- [completed] RED regression added and observed
+- [completed] minimal factory scope validation implemented
+- [completed] focused verification and review
+
+## Notes
+- 这批不去“补实现” `BufferSize` / `HandshakeTimeout`，因为当前 context/runtime surface 没有一致的消费路径。
+- 修法以 fail-fast 为主，保持现有连接/后端行为不变。
+- `HandshakeTimeout` 的真实替代路径是 `TSSLConnector.WithTimeout(...)` / `TSSLAcceptor.WithTimeout(...)` / `ISSLConnection.SetTimeout(...)`。
+- `BufferSize` 不是 context factory 选项，应由 transport/IO 层自行管理。
+
+## Current Evidence
+- fresh RED:
+  - `fpc -Fu./src -Fu./tests tests/test_factory_connection_scope_clarification.pas -otmp/test_factory_connection_scope_clarification && ./tmp/test_factory_connection_scope_clarification`
+  - result before fix: 4 FAIL, all on "should raise ESSLConfigurationException"
+- minimal implementation:
+  - `src/fafafa.ssl.factory.pas` now rejects custom `HandshakeTimeout` / `BufferSize` on both one-shot request path and library-default path
+  - `src/fafafa.ssl.debug.utils.pas` now labels both fields as non-context runtime settings in config dumps
+- fresh GREEN:
+  - `tests/test_factory_connection_scope_clarification.pas`: PASS, `12 passed / 0 failed`
+  - `tests/test_factory_logging_scope_clarification.pas`: PASS
+  - `tests/config/test_default_config.pas`: PASS
+  - `git diff --check`: PASS
+
+## Verification Plan
+1. `fpc -Fu./src -Fu./tests tests/test_factory_connection_scope_clarification.pas -otmp/test_factory_connection_scope_clarification && ./tmp/test_factory_connection_scope_clarification`
+2. `git diff --check`
+3. `git status --short`
+
 # Task Plan - Interface Design Audit
 
 ## Goal

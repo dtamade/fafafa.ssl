@@ -444,6 +444,31 @@ begin
     );
 end;
 
+procedure ValidateConnectionCreationScope(const AConfig: TSSLConfig; const ACallSite: string);
+begin
+  if (AConfig.HandshakeTimeout <> 0) and
+    (AConfig.HandshakeTimeout <> SSL_DEFAULT_HANDSHAKE_TIMEOUT) then
+    raise ESSLConfigurationException.CreateWithContext(
+      'HandshakeTimeout is connection-scoped. Use TSSLConnector.WithTimeout, ' +
+      'TSSLAcceptor.WithTimeout, or ISSLConnection.SetTimeout instead of ' + ACallSite + '.',
+      sslErrConfiguration,
+      ACallSite,
+      0,
+      AConfig.LibraryType
+    );
+
+  if (AConfig.BufferSize <> 0) and
+    (AConfig.BufferSize <> SSL_DEFAULT_BUFFER_SIZE) then
+    raise ESSLConfigurationException.CreateWithContext(
+      'BufferSize is not a context-scoped factory option. Configure buffering in the surrounding ' +
+      'transport/IO layer instead of ' + ACallSite + '.',
+      sslErrConfiguration,
+      ACallSite,
+      0,
+      AConfig.LibraryType
+    );
+end;
+
 procedure ApplyEarlyDataContextConfig(const AContext: ISSLContext; const AConfig: TSSLConfig);
 var
   LEarlyDataContext: ISSLEarlyDataContext;
@@ -900,11 +925,13 @@ var
   LConfig: TSSLConfig;
 begin
   LLib := GetLibrary(ALibType);
+  LConfig := LLib.GetDefaultConfig;
+  NormalizeConfigOptions(LConfig);
+  ValidateConnectionCreationScope(LConfig, 'TSSLFactory.CreateContext(AContextType, ALibType)');
+
   Result := LLib.CreateContext(AContextType);
   if Result <> nil then
   begin
-    LConfig := LLib.GetDefaultConfig;
-    NormalizeConfigOptions(LConfig);
     if LConfig.Options <> [] then
       Result.SetOptions(LConfig.Options);
 
@@ -954,6 +981,7 @@ begin
   LConfig := AConfig;
   NormalizeConfigOptions(LConfig);
   ValidateRequestLoggingScope(LConfig);
+  ValidateConnectionCreationScope(LConfig, 'TSSLFactory.CreateContext(const AConfig)');
 
   LLib := GetLibrary(LConfig.LibraryType);
   Result := LLib.CreateContext(LConfig.ContextType);

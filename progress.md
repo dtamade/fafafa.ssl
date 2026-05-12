@@ -1,3 +1,40 @@
+# Progress - Factory Connection-Scope Clarification
+
+## 2026-05-12
+- session catch-up: no unsynced context was reported for this repo.
+- Current branch: `master`
+- Deep-review resume notes:
+  - revalidated the earlier context/server-name suspicion against actual runtime constructors
+  - confirmed `FreePascal` / `OpenSSL` / `WinSSL` / `WolfSSL` connections only inherit context `ServerName` when `AContext.GetContextType = sslCtxClient`
+  - therefore the server-side SNI warning path remains runtime-accurate and is not the next defect to fix
+- New target batch selected:
+  - `TSSLConfig.BufferSize` / `HandshakeTimeout` are exposed by the public config record
+  - library defaults and `CreateDefaultConfig(...)` populate them with concrete values
+  - `DumpSSLConfig(...)` renders them
+  - `TSSLFactory.CreateContext(...)` does not consume them
+- New batch plan recorded in `docs/plans/2026-05-12-factory-connection-scope-clarification.md`
+- Focused RED contract added:
+  - `tests/test_factory_connection_scope_clarification.pas`
+  - covers one-shot request path custom `HandshakeTimeout` / `BufferSize`
+  - covers library-default path custom `HandshakeTimeout` / `BufferSize`
+- RED verification:
+  - `fpc -Fu./src -Fu./tests tests/test_factory_connection_scope_clarification.pas -otmp/test_factory_connection_scope_clarification && ./tmp/test_factory_connection_scope_clarification`
+  - result before fix: compile PASS, runtime FAIL `4`, each expecting `ESSLConfigurationException` that was not raised
+- Minimal implementation landed:
+  - `src/fafafa.ssl.factory.pas`
+    - added factory boundary validation for custom `HandshakeTimeout` and `BufferSize`
+    - validation runs on both `CreateContext(const AConfig)` and `CreateContext(AContextType, ALibType)` effective-config paths
+  - `src/fafafa.ssl.debug.utils.pas`
+    - config dump text now marks both fields as connection/transport scoped instead of implying context runtime consumption
+- GREEN verification:
+  - `tests/test_factory_connection_scope_clarification.pas` -> PASS (`12 passed / 0 failed`)
+  - `tests/test_factory_logging_scope_clarification.pas` -> PASS
+  - `tests/config/test_default_config.pas` -> PASS
+  - `git diff --check` -> PASS
+- Ready for commit:
+  - diff scope reviewed
+  - only intended working-memory, factory/debug, and focused-test files remain changed
+
 # Progress - Interface Design Audit
 
 ## 2026-05-12
