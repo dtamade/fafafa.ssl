@@ -20,6 +20,7 @@ uses
   SysUtils,
   fafafa.ssl.base,
   fafafa.ssl.context.builder,
+  fafafa.ssl.cert.utils,
   fafafa.ssl.openssl.backed;  // 注册 OpenSSL 后端
 
 procedure TestSecurityFirst;
@@ -172,12 +173,28 @@ end;
 procedure TestServerContext;
 var
   Ctx: ISSLContext;
+  LCertPEM, LKeyPEM: string;
 begin
   WriteLn('=== 测试 7: 服务器上下文 (性能优先) ===');
 
   try
+    if not TCertificateUtils.TryGenerateSelfSignedSimple(
+      'builder-server.local',
+      'Builder Integration Test',
+      30,
+      LCertPEM,
+      LKeyPEM
+    ) then
+    begin
+      WriteLn('❌ 失败: 无法生成测试证书');
+      WriteLn;
+      Exit;
+    end;
+
     Ctx := TSSLContextBuilder.Create
       .WithPerformanceFirst
+      .WithCertificatePEM(LCertPEM)
+      .WithPrivateKeyPEM(LKeyPEM)
       .BuildServer;
 
     if Ctx <> nil then

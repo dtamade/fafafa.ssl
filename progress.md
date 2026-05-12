@@ -1532,6 +1532,28 @@
   - 结果：`185/185` 核心模块编译成功，`100.0%`
   - `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+# Progress - Builder Server Smoke Truth
+
+## 2026-05-12
+- Post-commit resume:
+  - previous selector threshold batch landed as `f19d796`
+  - continued directly into the remaining neighbor signal from builder integration smoke
+- Revalidated the boundary before editing:
+  - `BuildServer` in `src/fafafa.ssl.context.builder.pas` still correctly requires certificate material
+  - `ValidateServer` reports the same requirement
+  - docs and existing builder config tests already treat "no certificate" as an error for server contexts
+- Therefore the live issue was the smoke, not runtime:
+  - `tests/test_builder_integration.pas` test 7 used `.WithPerformanceFirst.BuildServer` without certificate/key material
+  - the script then printed the expected runtime failure inline, which made the overall integration smoke look unhealthy
+- Minimal smoke fix landed:
+  - added `fafafa.ssl.cert.utils`
+  - generated a temporary self-signed certificate/key in the server-context case
+  - used `WithCertificatePEM(...)` / `WithPrivateKeyPEM(...)` before `BuildServer`
+- Focused verification:
+  - `fpc -Fu./src -Fu./tests tests/test_builder_integration.pas -otmp/test_builder_integration && ./tmp/test_builder_integration`
+  - result: all eight smoke sections now report success
+  - `git diff --check` -> PASS
+
 # Progress - Security-First Selector Viability
 
 ## 2026-05-12
@@ -1567,4 +1589,5 @@
   - `tests/test_builder_integration.pas` -> `WithSecurityFirst` client-context creation now succeeds
   - `git diff --check` -> PASS
 - Residual neighbor signal:
-  - `tests/test_builder_integration.pas` test 7 still prints `Server context requires a certificate`; treated as a separate server-context semantics review candidate, not part of this selector threshold batch
+  - resolved in the follow-up builder server smoke truth batch
+  - no selector-side residual action remains from this specific neighbor signal

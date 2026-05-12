@@ -1,3 +1,17 @@
+# Findings - Builder Server Smoke Truth
+
+## 2026-05-12
+- The next neighbor signal after the security-first fix was not a runtime bug in `BuildServer`; it was a misleading integration smoke.
+- Source, docs, and existing builder contracts all agree on the current truth:
+  - server contexts require certificate material
+  - `BuildServer` without certificate should fail
+  - client-side auto-selection convenience methods are unrelated to that server-certificate precondition
+- `tests/test_builder_integration.pas` had been calling `.WithPerformanceFirst.BuildServer` without any certificate/key, then printing the expected failure as if it were part of the smoke output.
+- The smallest correct repair was to change the smoke itself:
+  - generate a temporary self-signed certificate/key pair
+  - feed them through `WithCertificatePEM(...)` / `WithPrivateKeyPEM(...)`
+  - keep runtime semantics unchanged
+
 # Findings - Security-First Selector Viability
 
 ## 2026-05-12

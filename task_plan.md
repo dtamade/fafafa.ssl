@@ -1,3 +1,36 @@
+# Task Plan - Builder Server Smoke Truth
+
+## Goal
+修复 `tests/test_builder_integration.pas` 的 server-context smoke 误导：当前脚本把一个缺少证书的 `BuildServer` 调用当成集成 smoke，导致输出看起来像 runtime 失败；应改成带临时自签名证书的真实成功路径。
+
+## Current Batch
+1. 复核 docs / builder validation / existing config tests，确认 `BuildServer` 缺证书失败是既有正确语义，不是 runtime regression。
+2. 最小修正 builder integration smoke，让 server-context case 带测试证书与私钥。
+3. 跑 focused verification、diff hygiene，并在 review 后提交。
+
+## Status
+- [completed] working-memory refreshed for the builder server smoke batch
+- [completed] server-context semantics revalidated against docs and existing builder contracts
+- [completed] misleading integration smoke updated to a real success path
+- [completed] focused verification and review
+
+## Notes
+- 这批只修测试真值，不改 `BuildServer` 运行时语义。
+- `Server context requires a certificate` 仍然是正确的 runtime/validation 结论。
+- 真实要修的是：集成 smoke 不该把一个注定失败的 server build 当成“成功路径”示例。
+
+## Current Evidence
+- semantics revalidated before the fix:
+  - `src/fafafa.ssl.context.builder.pas` 明确在 `BuildServer` 和 `ValidateServer` 上要求证书
+  - `docs/BACKEND_SELECTION_GUIDE.md` 的服务器示例也始终带 `WithCertificate(...)` / `WithPrivateKey(...)`
+  - `tests/config/test_context_builder_try.pas` 已覆盖“无证书失败、有证书成功”的 builder contract
+- minimal test-truth fix:
+  - `tests/test_builder_integration.pas` server-context smoke now generates a temporary self-signed certificate and private key via `TCertificateUtils.TryGenerateSelfSignedSimple(...)`
+  - the smoke then uses `WithCertificatePEM(...)` + `WithPrivateKeyPEM(...)` before `BuildServer`
+- focused verification:
+  - `fpc -Fu./src -Fu./tests tests/test_builder_integration.pas -otmp/test_builder_integration && ./tmp/test_builder_integration`
+  - result: all eight smoke cases now report success
+
 # Task Plan - Security-First Selector Viability
 
 ## Goal
