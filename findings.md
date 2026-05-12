@@ -1,3 +1,29 @@
+# Findings - Wave B/B2 Windows Runtime Evidence Consistency Hardening
+
+## 2026-05-13
+- 延续上一个 `WinSSL` Windows-runtime handoff 结论后，当前最高价值的 repo-side 风险不在 Linux 绿线，而在最终证据闭环的“假完整”空间：
+  - Windows job 明明已经生成 quick smoke 与 broader runtime suite transcript
+  - 但 final summary / consistency 路径只显式围绕 `wave_b_windows_gate_summary_<run_id>.md`
+- 这个缺口已经可以从现有仓库事实直接证明：
+  - `.github/workflows/wave-b-b2-manual.yml` 的 summary 阶段只构造 `WINDOWS_ARGS=(--windows-summary ...)`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh` 只认识 `windows_summary`，并把它当成一个可选 markdown artifact
+  - 脚本对 `winssl_quick_smoke_<run_id>.log` / `winssl_runtime_suite_<run_id>.log` 完全无感
+- 因而 strict consistency 目前存在真实的误判窗口：
+  - 只要 `windows_summary`、cross summary、closure report 存在且 run_id 看起来一致
+  - 即使 quick smoke / runtime transcript 丢失，最终 consistency 仍可能保持 `CONSISTENT`
+- 这批最小正确修法不是重新设计 Wave B/B2 全链路，而是：
+  - 让 evidence consistency 显式纳入这两份 Windows runtime artifacts
+  - 并在 `windows_summary` 存在时把它们提升为 required evidence
+  - 同时把 workflow / handoff bundle 的参数链写清楚，避免未来再次只传 `--windows-summary`
+- 修复后，Windows 证据链的 repo-side truth 更接近真实验收口径了：
+  - `check_wave_b_b2_evidence_consistency.sh --strict` 现在会在 `windows_summary` 已存在但 quick smoke / runtime transcript 缺失时返回非 0
+  - handoff bundle 本地 smoke 也已证明：缺这两份 artifact 时，不会再生成“看起来一致”的假闭环，而会明确落成 `consistency_status: INCONSISTENT`
+- 这批有意不扩大到 `cross summary` 或 `closure readiness` 的职责重构：
+  - cross summary 继续负责平台门禁摘要
+  - closure readiness 继续负责三平台 summary 状态
+  - runtime artifact 完整性则由 evidence consistency 作为最终 strict gate 收口
+- `.github/workflows/wave-b-b2-manual.yml.disabled` 与 live workflow 也同步更新，避免下次从模板恢复时把这次修复回退掉
+
 # Findings - Internal Context ServerName Warning Quarantine
 
 ## 2026-05-13

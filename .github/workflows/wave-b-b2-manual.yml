@@ -285,12 +285,19 @@ jobs:
           LINUX_EXAMPLES="test-reports/examples_compile_ci_gate_${RUN_ID}.json"
 
           MACOS_ARGS=()
-          WINDOWS_ARGS=()
+          WINDOWS_SUMMARY_ARGS=()
+          WINDOWS_EVIDENCE_ARGS=()
           if [[ -f "test-reports/wave_b_macos_gate_summary_${RUN_ID}.md" ]]; then
             MACOS_ARGS=(--macos-summary "test-reports/wave_b_macos_gate_summary_${RUN_ID}.md")
           fi
           if [[ -f "test-reports/wave_b_windows_gate_summary_${RUN_ID}.md" ]]; then
-            WINDOWS_ARGS=(--windows-summary "test-reports/wave_b_windows_gate_summary_${RUN_ID}.md")
+            WINDOWS_SUMMARY_ARGS=(
+              --windows-summary "test-reports/wave_b_windows_gate_summary_${RUN_ID}.md"
+            )
+            WINDOWS_EVIDENCE_ARGS=(
+              --windows-quick-log "test-reports/winssl_quick_smoke_${RUN_ID}.log"
+              --windows-runtime-transcript "test-reports/winssl_runtime_suite_${RUN_ID}.log"
+            )
           fi
 
           bash scripts/generate_wave_b_cross_platform_summary.sh \
@@ -298,14 +305,14 @@ jobs:
             --linux-summary "$LINUX_SUMMARY" \
             --linux-examples "$LINUX_EXAMPLES" \
             "${MACOS_ARGS[@]}" \
-            "${WINDOWS_ARGS[@]}" \
+            "${WINDOWS_SUMMARY_ARGS[@]}" \
             --output "test-reports/wave_b_cross_platform_summary_${RUN_ID}.md"
 
           bash scripts/check_wave_b_b2_closure_readiness.sh \
             --run-id "$RUN_ID" \
             --linux-summary "$LINUX_SUMMARY" \
             "${MACOS_ARGS[@]}" \
-            "${WINDOWS_ARGS[@]}" \
+            "${WINDOWS_SUMMARY_ARGS[@]}" \
             --output "test-reports/wave_b_b2_closure_readiness_${RUN_ID}.md"
 
           bash scripts/check_wave_b_b2_evidence_consistency.sh \
@@ -313,7 +320,8 @@ jobs:
             --linux-summary "$LINUX_SUMMARY" \
             --linux-examples "$LINUX_EXAMPLES" \
             "${MACOS_ARGS[@]}" \
-            "${WINDOWS_ARGS[@]}" \
+            "${WINDOWS_SUMMARY_ARGS[@]}" \
+            "${WINDOWS_EVIDENCE_ARGS[@]}" \
             --cross-summary "test-reports/wave_b_cross_platform_summary_${RUN_ID}.md" \
             --closure-report "test-reports/wave_b_b2_closure_readiness_${RUN_ID}.md" \
             --output "test-reports/wave_b_b2_evidence_consistency_${RUN_ID}.md"
@@ -324,7 +332,8 @@ jobs:
               --linux-summary "$LINUX_SUMMARY" \
               --linux-examples "$LINUX_EXAMPLES" \
               "${MACOS_ARGS[@]}" \
-              "${WINDOWS_ARGS[@]}" \
+              "${WINDOWS_SUMMARY_ARGS[@]}" \
+              "${WINDOWS_EVIDENCE_ARGS[@]}" \
               --cross-summary "test-reports/wave_b_cross_platform_summary_${RUN_ID}.md" \
               --closure-report "test-reports/wave_b_b2_closure_readiness_${RUN_ID}.md" \
               --strict \
@@ -334,7 +343,7 @@ jobs:
               --run-id "$RUN_ID" \
               --linux-summary "$LINUX_SUMMARY" \
               "${MACOS_ARGS[@]}" \
-              "${WINDOWS_ARGS[@]}" \
+              "${WINDOWS_SUMMARY_ARGS[@]}" \
               --strict \
               --dry-run
           fi

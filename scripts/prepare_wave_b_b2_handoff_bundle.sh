@@ -117,12 +117,17 @@ if [[ -z "$LINUX_SUMMARY" || ! -f "$(resolve_path "$LINUX_SUMMARY")" ]]; then
 fi
 
 MACOS_ARGS=()
-WINDOWS_ARGS=()
+WINDOWS_SUMMARY_ARGS=()
+WINDOWS_EVIDENCE_ARGS=()
 if [[ -f "$(resolve_path "$MACOS_SUMMARY")" ]]; then
   MACOS_ARGS=(--macos-summary "$MACOS_SUMMARY")
 fi
 if [[ -f "$(resolve_path "$WINDOWS_SUMMARY")" ]]; then
-  WINDOWS_ARGS=(--windows-summary "$WINDOWS_SUMMARY")
+  WINDOWS_SUMMARY_ARGS=(--windows-summary "$WINDOWS_SUMMARY")
+  WINDOWS_EVIDENCE_ARGS=(
+    --windows-quick-log "test-reports/winssl_quick_smoke_${RUN_ID}.log"
+    --windows-runtime-transcript "test-reports/winssl_runtime_suite_${RUN_ID}.log"
+  )
 fi
 
 if [[ "$DRY_RUN" == "true" ]]; then
@@ -130,7 +135,8 @@ if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] linux_summary=$LINUX_SUMMARY"
   echo "[DRY-RUN] linux_examples=$LINUX_EXAMPLES"
   echo "[DRY-RUN] macos_args=${MACOS_ARGS[*]:-<none>}"
-  echo "[DRY-RUN] windows_args=${WINDOWS_ARGS[*]:-<none>}"
+  echo "[DRY-RUN] windows_summary_args=${WINDOWS_SUMMARY_ARGS[*]:-<none>}"
+  echo "[DRY-RUN] windows_evidence_args=${WINDOWS_EVIDENCE_ARGS[*]:-<none>}"
   echo "[DRY-RUN] output_dir=$OUTPUT_DIR"
   echo "[DRY-RUN] strict=$STRICT"
   exit 0
@@ -143,14 +149,14 @@ bash "$PROJECT_ROOT/scripts/generate_wave_b_cross_platform_summary.sh" \
   --linux-summary "$LINUX_SUMMARY" \
   --linux-examples "$LINUX_EXAMPLES" \
   "${MACOS_ARGS[@]}" \
-  "${WINDOWS_ARGS[@]}" \
+  "${WINDOWS_SUMMARY_ARGS[@]}" \
   --output "$CROSS_SUMMARY"
 
 bash "$PROJECT_ROOT/scripts/check_wave_b_b2_closure_readiness.sh" \
   --run-id "$RUN_ID" \
   --linux-summary "$LINUX_SUMMARY" \
   "${MACOS_ARGS[@]}" \
-  "${WINDOWS_ARGS[@]}" \
+  "${WINDOWS_SUMMARY_ARGS[@]}" \
   --output "$CLOSURE_REPORT"
 
 bash "$PROJECT_ROOT/scripts/check_wave_b_b2_evidence_consistency.sh" \
@@ -158,7 +164,8 @@ bash "$PROJECT_ROOT/scripts/check_wave_b_b2_evidence_consistency.sh" \
   --linux-summary "$LINUX_SUMMARY" \
   --linux-examples "$LINUX_EXAMPLES" \
   "${MACOS_ARGS[@]}" \
-  "${WINDOWS_ARGS[@]}" \
+  "${WINDOWS_SUMMARY_ARGS[@]}" \
+  "${WINDOWS_EVIDENCE_ARGS[@]}" \
   --cross-summary "$CROSS_SUMMARY" \
   --closure-report "$CLOSURE_REPORT" \
   --output "$CONSISTENCY_REPORT"
@@ -211,7 +218,8 @@ if [[ "$STRICT" == "true" ]]; then
     --linux-summary "$LINUX_SUMMARY" \
     --linux-examples "$LINUX_EXAMPLES" \
     "${MACOS_ARGS[@]}" \
-    "${WINDOWS_ARGS[@]}" \
+    "${WINDOWS_SUMMARY_ARGS[@]}" \
+    "${WINDOWS_EVIDENCE_ARGS[@]}" \
     --cross-summary "$CROSS_SUMMARY" \
     --closure-report "$CLOSURE_REPORT" \
     --strict \
@@ -221,7 +229,7 @@ if [[ "$STRICT" == "true" ]]; then
     --run-id "$RUN_ID" \
     --linux-summary "$LINUX_SUMMARY" \
     "${MACOS_ARGS[@]}" \
-    "${WINDOWS_ARGS[@]}" \
+    "${WINDOWS_SUMMARY_ARGS[@]}" \
     --strict \
     --dry-run
 fi

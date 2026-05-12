@@ -1,3 +1,59 @@
+# Progress - Wave B/B2 Windows Runtime Evidence Consistency Hardening
+
+## 2026-05-13
+- continuation resync:
+  - worktree remained clean at the start of this batch
+  - reused the fresh `WinSSL` Windows-runtime handoff truth instead of reopening already-green Linux compile/runtime lanes
+- working-memory refresh:
+  - re-read `task_plan.md`, `findings.md`, `progress.md`
+  - re-read the existing Windows runtime handoff plan and the validation checklist
+  - rechecked current workflow, consistency checker, closure checker, cross-summary generator, and the existing Windows workflow contracts
+- repo-side gap confirmed:
+  - `windows-gate` uploads `winssl_quick_smoke_<run_id>.log` and `winssl_runtime_suite_<run_id>.log`
+  - but the summary stage only forwards `--windows-summary`
+  - and `scripts/check_wave_b_b2_evidence_consistency.sh` currently has no awareness of the two Windows runtime artifacts
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-b2-windows-runtime-evidence-consistency-hardening.md`
+- focused RED contract:
+  - added `tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh` -> FAIL before fix
+  - failure shape:
+    - report was still generated
+    - strict consistency did not reject missing `winssl_quick_smoke` / `winssl_runtime_suite` despite Windows summary being present
+- minimal implementation landed:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `--windows-quick-log` / `--windows-runtime-transcript`
+    - defaulted both paths from `run_id`
+    - added presence-only artifact rows for both Windows runtime artifacts
+    - made them required whenever `windows_summary` exists
+  - `.github/workflows/wave-b-b2-manual.yml`
+    - split `WINDOWS_SUMMARY_ARGS` and `WINDOWS_EVIDENCE_ARGS`
+    - passed `WINDOWS_EVIDENCE_ARGS` into both normal and strict evidence-consistency calls
+  - `.github/workflows/wave-b-b2-manual.yml.disabled`
+    - mirrored the same summary-stage fix to preserve template parity
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - now forwards the same explicit Windows runtime artifact args
+  - `tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`
+    - now locks the new summary-stage runtime-artifact argument chain
+- verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_winssl_windows_validation_bundle_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_windows_gate_pwsh_and_verbose_contract.sh` -> PASS
+  - `diff -u .github/workflows/wave-b-b2-manual.yml.disabled .github/workflows/wave-b-b2-manual.yml` -> no diff output
+  - `git diff --check` -> PASS
+- focused local handoff smoke:
+  - first attempt used `status` as a shell variable under `zsh` and failed with `read-only variable: status`
+  - second attempt renamed it to `exit_code` and succeeded
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh --run-id prepare_bundle_contract ... --windows-summary ... --output-dir ...` -> PASS
+  - emitted `wave_b_b2_evidence_consistency_prepare_bundle_contract.md` with:
+    - `consistency_status: **INCONSISTENT**`
+    - explicit missing rows for `windows_quick_log`
+    - explicit missing rows for `windows_runtime_transcript`
+
 # Progress - Internal Context ServerName Warning Quarantine
 
 ## 2026-05-13

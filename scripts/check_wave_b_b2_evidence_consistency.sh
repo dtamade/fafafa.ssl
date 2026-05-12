@@ -10,6 +10,8 @@ LINUX_SUMMARY=""
 LINUX_EXAMPLES_JSON=""
 MACOS_SUMMARY=""
 WINDOWS_SUMMARY=""
+WINDOWS_QUICK_LOG=""
+WINDOWS_RUNTIME_TRANSCRIPT=""
 CROSS_SUMMARY=""
 CLOSURE_REPORT=""
 OUTPUT_FILE=""
@@ -32,6 +34,9 @@ Wave B / B2 Evidence Consistency Checker
   --linux-examples FILE      Linux examples JSON 路径
   --macos-summary FILE       macOS summary 路径
   --windows-summary FILE     Windows summary 路径
+  --windows-quick-log FILE   Windows quick smoke 日志路径
+  --windows-runtime-transcript FILE
+                             Windows broader runtime transcript 路径
   --cross-summary FILE       Cross-platform summary 路径
   --closure-report FILE      Closure readiness 报告路径
   --output FILE              输出 markdown（默认 test-reports/wave_b_b2_evidence_consistency_<run_id>.md）
@@ -61,6 +66,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --windows-summary)
       WINDOWS_SUMMARY="$2"
+      shift 2
+      ;;
+    --windows-quick-log)
+      WINDOWS_QUICK_LOG="$2"
+      shift 2
+      ;;
+    --windows-runtime-transcript)
+      WINDOWS_RUNTIME_TRANSCRIPT="$2"
       shift 2
       ;;
     --cross-summary)
@@ -106,6 +119,12 @@ if [[ -z "$MACOS_SUMMARY" ]]; then
 fi
 if [[ -z "$WINDOWS_SUMMARY" ]]; then
   WINDOWS_SUMMARY="test-reports/wave_b_windows_gate_summary_${RUN_ID}.md"
+fi
+if [[ -z "$WINDOWS_QUICK_LOG" ]]; then
+  WINDOWS_QUICK_LOG="test-reports/winssl_quick_smoke_${RUN_ID}.log"
+fi
+if [[ -z "$WINDOWS_RUNTIME_TRANSCRIPT" ]]; then
+  WINDOWS_RUNTIME_TRANSCRIPT="test-reports/winssl_runtime_suite_${RUN_ID}.log"
 fi
 if [[ -z "$CROSS_SUMMARY" ]]; then
   CROSS_SUMMARY="test-reports/wave_b_cross_platform_summary_${RUN_ID}.md"
@@ -209,10 +228,37 @@ PY
   fi
 }
 
+check_presence_artifact() {
+  local label="$1"
+  local rel_path="$2"
+  local required="$3"
+  local abs_path
+  abs_path="$(resolve_path "$rel_path")"
+
+  if [[ ! -f "$abs_path" ]]; then
+    local missing_note="optional missing"
+    if [[ "$required" == "true" ]]; then
+      missing_note="missing"
+      required_missing=$((required_missing + 1))
+    fi
+    rows+=("| $label | $rel_path | NO | n/a | n/a | $missing_note |")
+    return 0
+  fi
+
+  rows+=("| $label | $rel_path | YES | n/a | n/a | presence-only evidence |")
+}
+
 check_markdown_artifact "linux_summary" "$LINUX_SUMMARY" true
 check_json_artifact "linux_examples_json" "$LINUX_EXAMPLES_JSON" true
 check_markdown_artifact "macos_summary" "$MACOS_SUMMARY" false
 check_markdown_artifact "windows_summary" "$WINDOWS_SUMMARY" false
+windows_runtime_required=false
+windows_summary_abs="$(resolve_path "$WINDOWS_SUMMARY")"
+if [[ -f "$windows_summary_abs" ]]; then
+  windows_runtime_required=true
+fi
+check_presence_artifact "windows_quick_log" "$WINDOWS_QUICK_LOG" "$windows_runtime_required"
+check_presence_artifact "windows_runtime_transcript" "$WINDOWS_RUNTIME_TRANSCRIPT" "$windows_runtime_required"
 check_markdown_artifact "cross_summary" "$CROSS_SUMMARY" true
 check_markdown_artifact "closure_report" "$CLOSURE_REPORT" true
 
