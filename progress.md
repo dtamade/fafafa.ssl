@@ -1,3 +1,32 @@
+# Progress - MbedTLS Verify Result Helper Guard
+
+## 2026-05-12
+- Post-commit resume:
+  - worktree was clean at `ee3fab3`
+  - selected the next bounded review target from fresh MbedTLS connection truth instead of reopening the already-closed WinSSL verification-role batch
+- New batch plan recorded in `docs/plans/2026-05-12-mbedtls-verify-result-helper-guard.md`
+- Focused RED contract added:
+  - `tests/test_mbedtls_framework.pas`
+  - new `TestMbedTLSVerifyResultHelperLossContract`
+  - creates a real client context/connection, temporarily clears `mbedtls_ssl_get_verify_result`, and checks verify-result degradation semantics
+- RED verification:
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/mbedtls_framework_units -FEtmp/mbedtls_framework_units -otmp/mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas` -> PASS
+  - `./tmp/mbedtls_framework_units/test_mbedtls_framework` -> runtime FAIL before fix
+  - failure shape:
+    - `VerifyResult helper loss degrades to -1: FAIL`
+    - `VerifyResultString helper loss exposes unavailable diagnostic: FAIL`
+- Minimal implementation landed:
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+    - `DoGetVerifyResult` now defaults to `-1` and exits early on nil context/helper instead of leaking `0/OK`
+    - `DoGetVerifyResultString` now defaults to `Verification status unavailable` and exits early on nil context/helper
+- Focused GREEN verification:
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/mbedtls_framework_units -FEtmp/mbedtls_framework_units -otmp/mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas` -> PASS
+  - `./tmp/mbedtls_framework_units/test_mbedtls_framework` -> PASS (`98 passed / 0 failed`)
+  - `python3 scripts/compile_all_modules.py` -> PASS (`185/185`)
+  - `git diff --check` -> PASS
+- Ready for review/commit:
+  - diff scope is limited to the MbedTLS verify-result guard, the focused framework contract, the new batch plan, and working-memory files
+
 # Progress - WinSSL sslCtxBoth Verification Role Clarification
 
 ## 2026-05-12

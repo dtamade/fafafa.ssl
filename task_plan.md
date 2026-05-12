@@ -1,3 +1,41 @@
+# Task Plan - MbedTLS Verify Result Helper Guard
+
+## Goal
+修复 `TMbedTLSConnection.GetVerifyResult` 在 helper 缺失时误报 `0/OK` 的 public contract drift。
+
+## Current Batch
+1. 写 focused RED，证明 MbedTLS verify-result helper 缺失时仍错误返回 success。
+2. 在 `src/fafafa.ssl.mbedtls.connection.pas` 做最小 guard 修法，并给 string getter 补稳定 unavailable 诊断。
+3. 跑 focused GREEN 与 compile gate。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] working-memory refreshed for the MbedTLS verify-result guard batch
+- [completed] focused RED contract authoring
+- [completed] minimal MbedTLS verify-result guard fix
+- [completed] focused verification and compile review
+
+## Current Evidence
+- focused RED:
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/mbedtls_framework_units -FEtmp/mbedtls_framework_units -otmp/mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`
+  - `./tmp/mbedtls_framework_units/test_mbedtls_framework`
+  - result before fix: runtime FAIL on:
+    - `VerifyResult helper loss degrades to -1`
+    - `VerifyResultString helper loss exposes unavailable diagnostic`
+- minimal implementation:
+  - `tests/test_mbedtls_framework.pas`
+    - added `TestMbedTLSVerifyResultHelperLossContract`
+    - temporarily clears `mbedtls_ssl_get_verify_result`
+    - asserts `GetVerifyResult = -1` and unavailable-style string degradation
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+    - `DoGetVerifyResult` now defaults to `-1` and exits early on nil helper/context
+    - `DoGetVerifyResultString` now defaults to `Verification status unavailable` and exits early on nil helper/context
+- focused GREEN:
+  - `fpc -B -Fu./src -Fu./tests -FUtmp/mbedtls_framework_units -FEtmp/mbedtls_framework_units -otmp/mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas`: PASS
+  - `./tmp/mbedtls_framework_units/test_mbedtls_framework`: PASS, `98 passed / 0 failed`
+  - `python3 scripts/compile_all_modules.py`: PASS, `185/185`
+  - `git diff --check`: PASS
+
 # Task Plan - WinSSL sslCtxBoth Verification Role Clarification
 
 ## Goal

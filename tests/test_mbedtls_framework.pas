@@ -499,6 +499,52 @@ begin
   end;
 end;
 
+procedure TestMbedTLSVerifyResultHelperLossContract;
+var
+  LLib: ISSLLibrary;
+  LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LStream: TMemoryStream;
+  LVerifyResult: Integer;
+  LVerifyText: string;
+  LOriginalGetVerifyResult: Tmbedtls_ssl_get_verify_result;
+begin
+  WriteLn('');
+  WriteLn('=== MbedTLS Verify Result Helper-Loss Contract ===');
+
+  LLib := CreateMbedTLSLibrary;
+
+  if LLib.Initialize then
+  begin
+    LCtx := LLib.CreateContext(sslCtxClient);
+    LStream := TMemoryStream.Create;
+    try
+      LConn := LCtx.CreateConnection(LStream);
+      LOriginalGetVerifyResult := mbedtls_ssl_get_verify_result;
+      try
+        mbedtls_ssl_get_verify_result := nil;
+
+        LVerifyResult := LConn.GetVerifyResult;
+        LVerifyText := LowerCase(LConn.GetVerifyResultString);
+
+        Test('VerifyResult helper loss degrades to -1', LVerifyResult = -1);
+        Test('VerifyResultString helper loss exposes unavailable diagnostic',
+          Pos('unavailable', LVerifyText) > 0);
+      finally
+        mbedtls_ssl_get_verify_result := LOriginalGetVerifyResult;
+      end;
+    finally
+      LStream.Free;
+      LLib.Finalize;
+    end;
+  end
+  else
+  begin
+    WriteLn('  (Skipped - MbedTLS library not available)');
+    Test('VerifyResult helper-loss contract skipped', True);
+  end;
+end;
+
 procedure TestMbedTLSFeatureSupport;
 var
   LLib: ISSLLibrary;
@@ -586,6 +632,7 @@ begin
   // Context tests (require MbedTLS library)
   TestMbedTLSContextCreation;
   TestMbedTLSContextConfiguration;
+  TestMbedTLSVerifyResultHelperLossContract;
   TestMbedTLSFeatureSupport;
 
   PrintSummary;

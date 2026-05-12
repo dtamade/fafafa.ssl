@@ -1,3 +1,18 @@
+# Findings - MbedTLS Verify Result Helper Guard
+
+## 2026-05-12
+- Fresh continuation review found a narrow but user-visible false-positive path in `TMbedTLSConnection`:
+  - `DoGetVerifyResult` initialized `Result := 0`
+  - when `FSSLContext = nil` or `mbedtls_ssl_get_verify_result` was unavailable, the method exited immediately
+  - that exposed public `GetVerifyResult = 0` even though verification status had not been queried at all
+- `DoGetVerifyResultString` drifted the same way:
+  - helper/context loss returned an empty string
+  - callers therefore got neither a failure code nor a usable diagnostic
+- The smallest safe repair is a guard-style degradation, not a verification redesign:
+  - helper loss should map to a non-success sentinel (`-1`)
+  - the string getter should expose a stable unavailable diagnostic
+  - this keeps the batch aligned with existing verify-result guard patterns in other backends without touching handshake or certificate-validation flow
+
 # Findings - WinSSL sslCtxBoth Verification Role Clarification
 
 ## 2026-05-12
