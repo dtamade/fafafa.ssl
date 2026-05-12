@@ -225,7 +225,6 @@ var
   Lib: ISSLLibrary;
   OriginalConfig: TSSLConfig;
   DefaultConfig: TSSLConfig;
-  ClientCtx: ISSLContext;
   ServerCtx1: ISSLContext;
   ServerCtx2: ISSLContext;
   ReplayStoreFile: string;
@@ -245,10 +244,6 @@ begin
     DefaultConfig.ServerEarlyDataReplayStoreFile := ReplayStoreFile;
     Lib.SetDefaultConfig(DefaultConfig);
 
-    ClientCtx := TSSLFactory.CreateContext(sslCtxClient, sslFreePascal);
-    AssertClientEarlyDataState(ClientCtx, True,
-      'Default-path client context');
-
     ServerCtx1 := TSSLFactory.CreateContext(sslCtxServer, sslFreePascal);
     ServerCtx2 := TSSLFactory.CreateContext(sslCtxServer, sslFreePascal);
     AssertServerEarlyDataState(ServerCtx1, sslEarlyDataServerIssueOnly, 11,
@@ -261,6 +256,21 @@ begin
       ReplayStoreFile,
       'Default-path replay-store config'
     );
+
+    try
+      TSSLFactory.CreateContext(sslCtxClient, sslFreePascal);
+      Assert(False,
+        'Default-path client context should reject server-scoped replay-store config');
+    except
+      on E: ESSLConfigurationException do
+      begin
+        Assert(Pos('server_early_data_replay_store_file', E.Message) > 0,
+          'Default-path client replay-store rejection should name server_early_data_replay_store_file');
+      end;
+      on E: Exception do
+        Assert(False,
+          'Default-path client replay-store rejection should raise configuration exception: ' + E.Message);
+    end;
   finally
     if Supports(ServerCtx1, IFreePascalEarlyDataReplayLedgerAccess, ReplayAccess) then
       ReplayAccess.ResetEarlyDataReplayLedger;

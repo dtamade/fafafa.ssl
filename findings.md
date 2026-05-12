@@ -1,3 +1,25 @@
+# Findings - Client Replay-Store Scope Clarification
+
+## 2026-05-12
+- Deep continuation review narrowed the next real early-data drift to the most explicit server-only opt-in, not the broader client/server early-data state surface:
+  - docs and public examples present `ServerEarlyDataReplayStoreFile` / `ServerEarlyDataReplayStoreDirectory` as FreePascal server-context opt-ins
+  - but `ValidateClient`, `BuildClient`, `TryBuildClient`, factory default-config client creation, and factory one-shot client creation all silently accepted those fields
+  - the client paths then dropped the replay-store request on the floor because no installer runs for client contexts
+- That made the public contract dangerously misleading:
+  - operators could believe a replay-store file/directory was in force
+  - client builds would still succeed with zero warning
+  - shared default configs could carry a server-only opt-in that client default-path creation silently ignored
+- The narrowest safe repair was to tighten only the boundary where the misleading acceptance happened:
+  - client builder validation now reports both replay-store fields as invalid
+  - `BuildClient` / `TryBuildClient` now fail fast on both fields
+  - factory client paths now raise `ESSLConfigurationException` instead of silently discarding the fields
+  - server replay-store install behavior remains unchanged
+- A neighboring regression exposed a useful truth-sync task:
+  - `tests/test_factory_config_early_data_isolation.pas` had encoded the old no-op behavior by expecting a default-path client context to still build when shared defaults contained `ServerEarlyDataReplayStoreFile`
+  - that contract is now updated to the stronger fail-fast truth while preserving the server-side replay-isolation assertions
+- This batch intentionally did not broaden the scope to all early-data client/server fields:
+  - `ClientEarlyDataEnabled` / `ServerEarlyDataPolicy` / `ServerMaxEarlyDataSize` still need a separate truth decision if we want to harden the rest of the mixed early-data config surface later
+
 # Findings - Factory ServerName Scope Clarification
 
 ## 2026-05-12

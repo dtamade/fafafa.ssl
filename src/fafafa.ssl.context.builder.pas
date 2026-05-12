@@ -673,6 +673,55 @@ begin
   end;
 end;
 
+function BuilderClientReplayStoreScopeMessage(
+  const AField, ACallSite: string): string;
+begin
+  Result := Format(
+    '%s is server-scoped. Client context builders do not install replay stores; remove it from %s.',
+    [AField, ACallSite]
+  );
+end;
+
+procedure AddClientReplayStoreScopeValidationErrors(
+  const ABuilder: TSSLContextBuilderImpl; var AValidation: TBuildValidationResult);
+begin
+  if Trim(ABuilder.FServerEarlyDataReplayStoreFile) <> '' then
+    AValidation.AddError(
+      BuilderClientReplayStoreScopeMessage(
+        'server_early_data_replay_store_file',
+        'ValidateClient'
+      )
+    );
+
+  if Trim(ABuilder.FServerEarlyDataReplayStoreDirectory) <> '' then
+    AValidation.AddError(
+      BuilderClientReplayStoreScopeMessage(
+        'server_early_data_replay_store_directory',
+        'ValidateClient'
+      )
+    );
+end;
+
+procedure EnsureClientReplayStoreScope(
+  const ABuilder: TSSLContextBuilderImpl; const ACallSite: string);
+begin
+  if Trim(ABuilder.FServerEarlyDataReplayStoreFile) <> '' then
+    raise ESSLConfigurationException.Create(
+      BuilderClientReplayStoreScopeMessage(
+        'server_early_data_replay_store_file',
+        ACallSite
+      )
+    );
+
+  if Trim(ABuilder.FServerEarlyDataReplayStoreDirectory) <> '' then
+    raise ESSLConfigurationException.Create(
+      BuilderClientReplayStoreScopeMessage(
+        'server_early_data_replay_store_directory',
+        ACallSite
+      )
+    );
+end;
+
 function TSSLContextBuilderImpl.GetSupportedPKCS11PINValue: string;
 begin
   case FPKCS11PINMethod of
@@ -1029,6 +1078,7 @@ var
 begin
   Store := nil;
   ContextBackend := sslAutoDetect;
+  EnsureClientReplayStoreScope(Self, 'BuildClient');
 
   // v1.3.0: 自动后端选择
   if FAutoSelectBackend then
@@ -1399,6 +1449,9 @@ begin
         'WithSNI configures deprecated context-level SNI; prefer per-connection SNI via ISSLClientConnection.SetServerName'
       );
   end;
+
+  if not AForServer then
+    AddClientReplayStoreScopeValidationErrors(ABuilder, Result);
 
   if ABuilder.FPKCS11URI <> '' then
   begin

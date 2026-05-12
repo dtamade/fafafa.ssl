@@ -335,8 +335,14 @@ begin
     LSB.AppendFormat('客户端 Early Data: %s', [BoolToStr(AConfig.ClientEarlyDataEnabled, '启用', '禁用')]);
     LSB.AppendFormat('服务端 Early Data 策略: %d', [Ord(AConfig.ServerEarlyDataPolicy)]);
     LSB.AppendFormat('服务端 Early Data 上限: %d', [AConfig.ServerMaxEarlyDataSize]);
-    LSB.AppendFormat('服务端 Early Data Replay Store File: %s', [AConfig.ServerEarlyDataReplayStoreFile]);
-    LSB.AppendFormat('服务端 Early Data Replay Store Directory: %s', [AConfig.ServerEarlyDataReplayStoreDirectory]);
+    LSB.AppendFormat(
+      '服务端 Early Data Replay Store File: %s (server-scoped；client builder/factory context 不接受)',
+      [AConfig.ServerEarlyDataReplayStoreFile]
+    );
+    LSB.AppendFormat(
+      '服务端 Early Data Replay Store Directory: %s (server-scoped；client builder/factory context 不接受)',
+      [AConfig.ServerEarlyDataReplayStoreDirectory]
+    );
 
     Result := LSB.ToString;
   finally

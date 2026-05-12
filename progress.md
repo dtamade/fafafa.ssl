@@ -1,3 +1,45 @@
+# Progress - Client Replay-Store Scope Clarification
+
+## 2026-05-12
+- session catch-up: no unsynced context was reported for this repo.
+- Current branch: `master`
+- Continued from the fresh early-data review queue instead of reopening broader interface audit scope.
+- New target selected:
+  - `ServerEarlyDataReplayStoreFile` / `ServerEarlyDataReplayStoreDirectory` are documented as server-only public opt-ins
+  - builder client validation/build paths and factory client paths still silently accepted them
+  - client creation then ignored the replay-store request because no client installer path exists
+- New batch plan recorded in `docs/plans/2026-05-12-client-replay-store-scope-clarification.md`
+- Focused RED contract added:
+  - `tests/test_early_data_replay_store_client_scope_clarification.pas`
+  - covers `ValidateClient`
+  - covers `TryBuildClient`
+  - covers factory default-config client path
+  - covers factory one-shot client path
+- RED verification:
+  - `fpc -Fu./src -Fu./tests tests/test_early_data_replay_store_client_scope_clarification.pas -otmp/test_early_data_replay_store_client_scope_clarification && ./tmp/test_early_data_replay_store_client_scope_clarification`
+  - result before fix: compile PASS, runtime FAIL `14`
+  - failure shape: every client path silently accepted server replay-store config
+- Minimal implementation landed:
+  - `src/fafafa.ssl.context.builder.pas`
+    - added client-scope validation errors for `server_early_data_replay_store_file`
+    - added client build fail-fast guard for both replay-store fields
+  - `src/fafafa.ssl.factory.pas`
+    - factory client paths now reject both replay-store fields with `ESSLConfigurationException`
+    - replay-store installer application now accepts server-capable `sslCtxBoth` contexts instead of only `sslCtxServer`
+  - `src/fafafa.ssl.debug.utils.pas`
+    - replay-store dump text now marks both fields as server-scoped and unavailable on client builder/factory contexts
+- Neighbor regression review:
+  - `tests/test_factory_config_early_data_isolation.pas` first failed because the historical contract still expected default-path client creation to succeed when shared defaults carried `ServerEarlyDataReplayStoreFile`
+  - updated that contract to the new fail-fast truth while keeping the server replay-isolation assertions intact
+- GREEN verification:
+  - `tests/test_early_data_replay_store_client_scope_clarification.pas` -> PASS (`14 passed / 0 failed`)
+  - `tests/test_factory_config_early_data_isolation.pas` -> PASS (`60 passed / 0 failed`)
+  - `tests/config/test_context_builder_try.pas` -> PASS (`66 passed / 0 failed`)
+  - `tests/config/test_config_validation.pas` -> PASS (`53 passed / 0 failed`)
+  - `git diff --check` -> PASS
+- Ready for review/commit:
+  - diff scope limited to builder/factory/debug output, the updated replay-store isolation contract, the new focused client-scope contract, and working-memory files
+
 # Progress - Backend Selector Required-Feature Truth
 
 ## 2026-05-12

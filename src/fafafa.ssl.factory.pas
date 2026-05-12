@@ -444,6 +444,21 @@ begin
     );
 end;
 
+function ContextTypeSupportsServerReplayStore(
+  AContextType: TSSLContextType): Boolean;
+begin
+  Result := AContextType in [sslCtxServer, sslCtxBoth];
+end;
+
+function ReplayStoreClientScopeMessage(
+  const AField, ACallSite: string): string;
+begin
+  Result := Format(
+    '%s is server-scoped. Client contexts do not install replay stores; remove it from %s.',
+    [AField, ACallSite]
+  );
+end;
+
 procedure ValidateConnectionCreationScope(const AConfig: TSSLConfig;
   AContextType: TSSLContextType; const ACallSite: string);
 begin
@@ -478,6 +493,33 @@ begin
       0,
       AConfig.LibraryType
     );
+
+  if not ContextTypeSupportsServerReplayStore(AContextType) then
+  begin
+    if Trim(AConfig.ServerEarlyDataReplayStoreFile) <> '' then
+      raise ESSLConfigurationException.CreateWithContext(
+        ReplayStoreClientScopeMessage(
+          'server_early_data_replay_store_file',
+          ACallSite
+        ),
+        sslErrConfiguration,
+        ACallSite,
+        0,
+        AConfig.LibraryType
+      );
+
+    if Trim(AConfig.ServerEarlyDataReplayStoreDirectory) <> '' then
+      raise ESSLConfigurationException.CreateWithContext(
+        ReplayStoreClientScopeMessage(
+          'server_early_data_replay_store_directory',
+          ACallSite
+        ),
+        sslErrConfiguration,
+        ACallSite,
+        0,
+        AConfig.LibraryType
+      );
+  end;
 end;
 
 procedure ApplyEarlyDataContextConfig(const AContext: ISSLContext; const AConfig: TSSLConfig);
@@ -504,7 +546,7 @@ var
   LDirectoryInstaller: IFreePascalContextEarlyDataReplayDirectoryInstaller;
 begin
   if (AContext = nil) or
-    (AContext.GetContextType <> sslCtxServer) then
+    (not ContextTypeSupportsServerReplayStore(AContext.GetContextType)) then
     Exit;
 
   if (Trim(AConfig.ServerEarlyDataReplayStoreFile) <> '') and

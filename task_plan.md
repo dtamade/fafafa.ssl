@@ -1,3 +1,55 @@
+# Task Plan - Client Replay-Store Scope Clarification
+
+## Goal
+修复 `server_early_data_replay_store_file` / `server_early_data_replay_store_directory` 在 client builder/factory 路径上的静默 no-op，让 server-only replay-store opt-in 变成明确的 scope contract。
+
+## Current Batch
+1. 写 focused RED，证明 `ValidateClient` / `TryBuildClient` / factory default-config client path / factory one-shot client path 都会静默接受 server replay-store 字段。
+2. 在 `src/fafafa.ssl.context.builder.pas` 和 `src/fafafa.ssl.factory.pas` 做最小 fail-fast scope 修法，不改 server replay-store runtime 安装链。
+3. 跑 focused GREEN、相邻 replay-store 回归、diff hygiene，并在 review 后提交。
+
+## Status
+- [completed] working-memory refreshed for the client replay-store scope batch
+- [completed] RED regression added and observed
+- [completed] minimal builder/factory scope fix implemented
+- [completed] focused verification and adjacent regression review
+
+## Notes
+- 这批只收 `ServerEarlyDataReplayStoreFile` / `ServerEarlyDataReplayStoreDirectory` 这两个最明确的 server-only opt-in。
+- 这批不扩到 `ClientEarlyDataEnabled` / `ServerEarlyDataPolicy` / `ServerMaxEarlyDataSize` 的 broader scope truth；先收最小高价值误导点。
+- shared default config 一旦携带 server replay-store opt-in，default-path client context 现在会 fail-fast；这比继续静默丢掉 replay-store 配置更符合 public truth。
+- factory 的 replay-store 安装边界现在按 server-capable context 处理，`sslCtxServer` / `sslCtxBoth` 继续允许。
+
+## Current Evidence
+- focused RED:
+  - `fpc -Fu./src -Fu./tests tests/test_early_data_replay_store_client_scope_clarification.pas -otmp/test_early_data_replay_store_client_scope_clarification && ./tmp/test_early_data_replay_store_client_scope_clarification`
+  - result before fix: `0 passed / 14 failed`
+  - failure shape: `ValidateClient` / `TryBuildClient` / factory default-path client / factory one-shot client 全都静默接受 server replay-store config
+- minimal implementation:
+  - `src/fafafa.ssl.context.builder.pas`
+    - `ValidateClient` now reports server replay-store fields as invalid on client builders
+    - `BuildClient` / `TryBuildClient` now fail fast on those fields
+  - `src/fafafa.ssl.factory.pas`
+    - client factory paths now reject server replay-store fields with `ESSLConfigurationException`
+    - replay-store installer application now treats `sslCtxBoth` as server-capable
+  - `src/fafafa.ssl.debug.utils.pas`
+    - config dump now labels replay-store fields as server-scoped and notes client builder/factory contexts do not accept them
+  - `tests/test_factory_config_early_data_isolation.pas`
+    - old default-path client no-op expectation updated to the new fail-fast truth
+- focused GREEN:
+  - `tests/test_early_data_replay_store_client_scope_clarification.pas`: PASS, `14 passed / 0 failed`
+  - `tests/test_factory_config_early_data_isolation.pas`: PASS, `60 passed / 0 failed`
+  - `tests/config/test_context_builder_try.pas`: PASS, `66 passed / 0 failed`
+  - `tests/config/test_config_validation.pas`: PASS, `53 passed / 0 failed`
+
+## Verification Plan
+1. `fpc -Fu./src -Fu./tests tests/test_early_data_replay_store_client_scope_clarification.pas -otmp/test_early_data_replay_store_client_scope_clarification && ./tmp/test_early_data_replay_store_client_scope_clarification`
+2. `fpc -Fu./src -Fu./tests tests/test_factory_config_early_data_isolation.pas -otmp/test_factory_config_early_data_isolation && ./tmp/test_factory_config_early_data_isolation`
+3. `fpc -Fu./src -Fu./tests tests/config/test_context_builder_try.pas -otmp/test_context_builder_try && ./tmp/test_context_builder_try`
+4. `fpc -Fu./src -Fu./tests tests/config/test_config_validation.pas -otmp/test_config_validation && ./tmp/test_config_validation`
+5. `git diff --check`
+6. `git status --short`
+
 # Task Plan - Factory ServerName Scope Clarification
 
 ## Goal
