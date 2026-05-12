@@ -1,3 +1,35 @@
+# Progress - WinSSL Pre-Handshake Verify Status Clarification
+
+## 2026-05-12
+- Post-commit resume:
+  - worktree was clean at `2e7ba4b`
+  - continued along the same cross-backend verify-status drift family to check whether WinSSL still exposed a misleading pre-handshake verification status
+- New batch plan recorded in `docs/plans/2026-05-12-winssl-prehandshake-verify-status-clarification.md`
+- Focused RED source contract added:
+  - `tests/scripts/test_winssl_prehandshake_verify_status_contract.sh`
+  - locks the expected WinSSL pre-handshake getter boundary around `sslHsNotStarted` / `sslHsInProgress`
+- RED verification:
+  - `bash -n tests/scripts/test_winssl_prehandshake_verify_status_contract.sh` -> PASS
+  - `bash tests/scripts/test_winssl_prehandshake_verify_status_contract.sh` -> FAIL before fix
+  - failure shape:
+    - missing explicit pre-handshake `-1` short-circuit in `DoGetVerifyResult`
+- Minimal implementation landed:
+  - `src/fafafa.ssl.winssl.connection.pas`
+    - `DoGetVerifyResult` now returns `-1` during `sslHsNotStarted` / `sslHsInProgress`
+    - `DoGetVerifyResultString` now returns `Not verified` during the same pre-handshake states
+    - failed/completed states still reuse the existing role-resolved validation path
+- Compile-proof environment hiccup:
+  - the first Win64 compile attempt failed because the new `-FU/-FE` output directories had not been created yet
+  - after `mkdir -p tmp/winssl_preverify_host_win64 tmp/winssl_preverify_revocation_win64`, both compile proofs ran cleanly
+- Focused GREEN verification:
+  - `bash tests/scripts/test_winssl_prehandshake_verify_status_contract.sh` -> PASS
+  - `fpc -Twin64 -B -Fu./src -Fu./tests -FUtmp/winssl_preverify_host_win64 -FEtmp/winssl_preverify_host_win64 -otmp/winssl_preverify_host_win64/test_winssl_hostname_mismatch_online.exe tests/winssl/test_winssl_hostname_mismatch_online.pas` -> PASS
+  - `fpc -Twin64 -B -Fu./src -Fu./tests -FUtmp/winssl_preverify_revocation_win64 -FEtmp/winssl_preverify_revocation_win64 -otmp/winssl_preverify_revocation_win64/test_winssl_revocation_online.exe tests/winssl/test_winssl_revocation_online.pas` -> PASS
+  - `python3 scripts/compile_all_modules.py` -> PASS (`185/185`)
+  - `git diff --check` -> PASS
+- Ready for review/commit:
+  - diff scope is limited to WinSSL pre-handshake verify-status semantics, the new focused source contract, the new batch plan, and working-memory files
+
 # Progress - MbedTLS Pre-Handshake Verify Status Clarification
 
 ## 2026-05-12

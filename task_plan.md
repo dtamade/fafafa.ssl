@@ -1,3 +1,39 @@
+# Task Plan - WinSSL Pre-Handshake Verify Status Clarification
+
+## Goal
+修复 `TWinSSLConnection.GetVerifyResult` / `GetVerifyResultString` 在未握手前暴露误导性 verify-status 诊断的公共语义漂移。
+
+## Current Batch
+1. 写 focused RED source contract，锁住 WinSSL pre-handshake getter 需要显式返回 `-1 / Not verified`。
+2. 在 `src/fafafa.ssl.winssl.connection.pas` 做最小 getter 修法，只收口 `sslHsNotStarted` / `sslHsInProgress`。
+3. 跑 focused GREEN、Win64 compile proof 与 compile gate。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] working-memory refreshed for the WinSSL pre-handshake verify-status batch
+- [completed] focused RED source contract authoring
+- [completed] minimal WinSSL pre-handshake verify-status fix
+- [completed] focused verification and compile review
+
+## Current Evidence
+- focused RED:
+  - `bash -n tests/scripts/test_winssl_prehandshake_verify_status_contract.sh`
+  - `bash tests/scripts/test_winssl_prehandshake_verify_status_contract.sh`
+  - result before fix: FAIL on missing explicit pre-handshake `-1` guard in `DoGetVerifyResult`
+- minimal implementation:
+  - `tests/scripts/test_winssl_prehandshake_verify_status_contract.sh`
+    - added focused source contract locking WinSSL pre-handshake getter semantics
+  - `src/fafafa.ssl.winssl.connection.pas`
+    - `DoGetVerifyResult` now short-circuits to `-1` for `sslHsNotStarted` / `sslHsInProgress`
+    - `DoGetVerifyResultString` now returns `Not verified` for the same pre-handshake states
+    - `sslHsFailed` / `sslHsCompleted` still reuse the existing role-resolved validation path
+- focused GREEN:
+  - `bash tests/scripts/test_winssl_prehandshake_verify_status_contract.sh`: PASS
+  - `fpc -Twin64 -B -Fu./src -Fu./tests -FUtmp/winssl_preverify_host_win64 -FEtmp/winssl_preverify_host_win64 -otmp/winssl_preverify_host_win64/test_winssl_hostname_mismatch_online.exe tests/winssl/test_winssl_hostname_mismatch_online.pas`: PASS
+  - `fpc -Twin64 -B -Fu./src -Fu./tests -FUtmp/winssl_preverify_revocation_win64 -FEtmp/winssl_preverify_revocation_win64 -otmp/winssl_preverify_revocation_win64/test_winssl_revocation_online.exe tests/winssl/test_winssl_revocation_online.pas`: PASS
+  - `python3 scripts/compile_all_modules.py`: PASS, `185/185`
+  - `git diff --check`: PASS
+
 # Task Plan - MbedTLS Pre-Handshake Verify Status Clarification
 
 ## Goal

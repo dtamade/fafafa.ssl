@@ -1,3 +1,18 @@
+# Findings - WinSSL Pre-Handshake Verify Status Clarification
+
+## 2026-05-12
+- Fresh continuation review found the next cross-backend verify-status drift in `TWinSSLConnection` was subtler than the OpenSSL / WolfSSL / MbedTLS false-positive pattern:
+  - a fresh WinSSL connection already tended to degrade `GetVerifyResult` to `-1`
+  - but `DoGetVerifyResultString` mapped that pre-handshake state to `Certificate not available`
+  - this publicly conflated “尚未验证” with “证书缺失/不可用”
+- The right boundary here is the WinSSL handshake state machine, not a broader validation redesign:
+  - `sslHsNotStarted` / `sslHsInProgress` mean verification has not finished yet
+  - those states should therefore surface `-1 / Not verified`
+  - `sslHsFailed` and `sslHsCompleted` should keep using the existing role-resolved validation path so real verification failures remain visible
+- This batch intentionally stayed Linux-safe:
+  - the RED proof is a focused source contract rather than fake runtime on a non-Windows host
+  - Win64 cross-compiles plus the repo compile gate were enough to prove the narrow getter change did not break the WinSSL surface
+
 # Findings - MbedTLS Pre-Handshake Verify Status Clarification
 
 ## 2026-05-12

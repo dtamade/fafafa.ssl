@@ -1625,6 +1625,9 @@ var
   LIsClient: Boolean;
   LVerifyError: Integer;
 begin
+  if (FHandshakeState = sslHsNotStarted) or (FHandshakeState = sslHsInProgress) then
+    Exit(-1);
+
   if not TryResolvePeerValidationRole(LIsClient) then
     Exit(-1);
 
@@ -1638,6 +1641,9 @@ function TWinSSLConnection.DoGetVerifyResultString: string;
 var
   VerifyResult: Integer;
 begin
+  if (FHandshakeState = sslHsNotStarted) or (FHandshakeState = sslHsInProgress) then
+    Exit('Not verified');
+
   VerifyResult := DoGetVerifyResult;
 
   case VerifyResult of
