@@ -1532,3 +1532,39 @@
   - 结果：`185/185` 核心模块编译成功，`100.0%`
   - `bash scripts/run_minimal_ci_gate.sh --fast-local`
   - 结果：compile gate `185/185` 通过；PKCS7/PKCS12/CMS/Store/OCSP/TS/CT 共 `17/17` 测试通过；phase2 baseline dry-run 通过；最终 `[PASS] minimal CI gate finished`
+# Progress - Security-First Selector Viability
+
+## 2026-05-12
+- Post-commit resume:
+  - previous selector required-feature batch landed as `ab4be9e`
+  - continued directly into the next neighbor signal from selector smoke coverage
+- New target selected from fresh verification:
+  - `tests/test_backend_selector_basic.pas` still prints a non-fatal "安全优先需求 选择失败"
+  - `CreateSecurityFirstRequirements` therefore remains a live candidate for truth drift
+- Fresh runtime diagnostics confirmed the failure boundary:
+  - available backends on this host: `OpenSSL`, `FreePascal`
+  - both satisfy the hard security-first cipher/hash/key-exchange requirement sets
+  - `OpenSSL` current `GetSecurityScore(...)` = `80`
+  - `CreateSecurityFirstRequirements.MinSecurityScore` is still `85`
+  - `SelectBestBackend(CreateSecurityFirstRequirements, ...)` currently returns no result
+- New batch plan recorded in `docs/plans/2026-05-12-security-first-selector-viability.md`
+- Focused RED contract added:
+  - `tests/test_backend_selector_security_first_viability.pas`
+  - proves at least one available backend satisfies the security-first hard protocol/algorithm requirements
+  - proves the current `MinSecurityScore` still exceeds the best eligible backend score
+  - proves selector therefore returns no backend
+- RED verification:
+  - `fpc -Fu./src -Fu./tests tests/test_backend_selector_security_first_viability.pas -otmp/test_backend_selector_security_first_viability && ./tmp/test_backend_selector_security_first_viability`
+  - result before fix: `1 passed / 2 failed`
+- Minimal implementation landed:
+  - `src/fafafa.ssl.backend.selector.pas`
+    - `CreateSecurityFirstRequirements.MinSecurityScore` lowered from `85` to `80`
+  - `docs/BACKEND_SELECTION_GUIDE.md`
+    - security-first threshold examples aligned from `85` to `80`
+- GREEN verification:
+  - `tests/test_backend_selector_security_first_viability.pas` -> PASS (`3 passed / 0 failed`)
+  - `tests/test_backend_selector_basic.pas` -> security-first smoke now succeeds (`MatchScore 84/100`, `最低安全评分要求: 80`)
+  - `tests/test_builder_integration.pas` -> `WithSecurityFirst` client-context creation now succeeds
+  - `git diff --check` -> PASS
+- Residual neighbor signal:
+  - `tests/test_builder_integration.pas` test 7 still prints `Server context requires a certificate`; treated as a separate server-context semantics review candidate, not part of this selector threshold batch

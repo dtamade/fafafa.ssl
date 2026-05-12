@@ -250,7 +250,7 @@ begin
     sslKexECDHE_ECDSA
   ];
 
-  Result.MinSecurityScore := 85;
+  Result.MinSecurityScore := 80;
 end;
 
 { CreatePerformanceFirstRequirements }

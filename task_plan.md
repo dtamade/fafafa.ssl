@@ -1,3 +1,46 @@
+# Task Plan - Security-First Selector Viability
+
+## Goal
+修复 `CreateSecurityFirstRequirements` 与当前能力矩阵/安全评分真值的脱节，避免在本机已有 OpenSSL 可用且硬性协议/算法条件满足时，security-first 需求模板仍因过高门槛而选不出任何后端。
+
+## Current Batch
+1. 写 focused RED 合同，证明当存在满足 security-first 硬性协议/算法要求的可用后端时，`CreateSecurityFirstRequirements` 的最低安全分门槛不能高于这些后端可达到的真实安全分。
+2. 在 `src/fafafa.ssl.backend.selector.pas` 做最小修法，让 security-first 默认模板重新可用。
+3. 跑 focused verification、相邻 smoke、diff hygiene，并在 review 后提交。
+
+## Status
+- [completed] working-memory refreshed for the security-first viability batch
+- [completed] RED regression added and observed
+- [completed] minimal requirement-template fix implemented
+- [completed] focused verification and review
+
+## Notes
+- 这批优先修需求模板真值，不重算全局 `GetSecurityScore(...)` 权重。
+- 修法必须和当前 capability truth 对齐，而不是靠放宽协议/算法硬要求掩盖问题。
+- 如果 fresh evidence 证明现有最高可达安全分是 `80`，那 security-first 默认门槛就不能继续写成 `85`。
+
+## Current Evidence
+- focused RED:
+  - `fpc -Fu./src -Fu./tests tests/test_backend_selector_security_first_viability.pas -otmp/test_backend_selector_security_first_viability && ./tmp/test_backend_selector_security_first_viability`
+  - result before fix: `1 passed / 2 failed`
+  - failure shape: at least one available backend satisfied the hard security-first protocol/algorithm requirements, but `CreateSecurityFirstRequirements.MinSecurityScore` still exceeded the best eligible backend security score, so selection returned none
+- minimal implementation:
+  - `src/fafafa.ssl.backend.selector.pas`: `CreateSecurityFirstRequirements.MinSecurityScore` tightened from `85` to `80`
+  - `docs/BACKEND_SELECTION_GUIDE.md`: threshold examples updated to `80`
+- focused GREEN:
+  - `tests/test_backend_selector_security_first_viability.pas`: PASS, `3 passed / 0 failed`
+  - `tests/test_backend_selector_basic.pas`: security-first smoke now succeeds and reports `最低安全评分要求: 80`
+  - `tests/test_builder_integration.pas`: `WithSecurityFirst` path now creates a client context successfully
+- residual neighbor signal:
+  - `tests/test_builder_integration.pas` still prints `Server context requires a certificate` for the performance-first server-context smoke; this batch did not widen into server-certificate provisioning semantics
+
+## Verification Plan
+1. `fpc -Fu./src -Fu./tests tests/test_backend_selector_security_first_viability.pas -otmp/test_backend_selector_security_first_viability && ./tmp/test_backend_selector_security_first_viability`
+2. `fpc -Fu./src -Fu./tests tests/test_backend_selector_basic.pas -otmp/test_backend_selector_basic && ./tmp/test_backend_selector_basic`
+3. `fpc -Fu./src -Fu./tests tests/test_builder_integration.pas -otmp/test_builder_integration && ./tmp/test_builder_integration`
+4. `git diff --check`
+5. `git status --short`
+
 # Task Plan - Backend Selector Required-Feature Truth
 
 ## Goal

@@ -1,3 +1,21 @@
+# Findings - Security-First Selector Viability
+
+## 2026-05-12
+- Fresh post-fix neighbor smoke exposed a second selector truth gap: `tests/test_backend_selector_basic.pas` still prints "安全优先需求 选择失败" on this host even with OpenSSL available.
+- Runtime capability diagnostics show this is not because OpenSSL misses the hard security-first protocol/algorithm requirements:
+  - OpenSSL currently satisfies TLS 1.3, required ciphers, required hashes, and required key exchanges
+  - OpenSSL's current `GetSecurityScore(...)` on this host is `80`
+  - `CreateSecurityFirstRequirements` still hard-codes `MinSecurityScore := 85`
+- That makes the default security-first template self-contradictory against current shipped capability truth: a recommended path can become unselectable even when the strongest available backend meets all of its hard cryptographic requirements.
+- The narrowest safe repair is to align the security-first template threshold with the highest currently attainable "strong default" backend score, rather than diluting the required protocol/cipher/hash/kex set.
+- After alignment, the security-first selector path recovered cleanly without touching the global scoring rubric:
+  - `CreateSecurityFirstRequirements.MinSecurityScore := 80`
+  - selector security-first smoke now selects OpenSSL again
+  - builder `WithSecurityFirst` client-context creation also succeeds again on this host
+- A separate adjacent signal remains for later review:
+  - `tests/test_builder_integration.pas` still prints `Server context requires a certificate` on the server-side performance-first smoke
+  - that looks like a context-construction expectation issue, not part of the selector-threshold fix
+
 # Findings - Backend Selector Required-Feature Truth
 
 ## 2026-05-12

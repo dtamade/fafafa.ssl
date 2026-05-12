@@ -226,8 +226,8 @@ begin
     sslKexECDHE_ECDSA
   ];
 
-  // 最低安全评分 85
-  Requirements.MinSecurityScore := 85;
+  // 最低安全评分 80
+  Requirements.MinSecurityScore := 80;
 
   // 优化目标：安全
   Requirements.OptimizationTarget := optSecurity;
@@ -354,7 +354,7 @@ Requirements := CreateSecurityFirstRequirements;
 // 要求 AES-256-GCM + ChaCha20
 // 要求 SHA-256+ 哈希
 // 要求前向保密密钥交换
-// 最低安全评分 85
+// 最低安全评分 80
 ```
 
 #### WithPerformanceFirst
