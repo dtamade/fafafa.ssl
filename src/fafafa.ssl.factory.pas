@@ -1029,7 +1029,7 @@ begin
 
     if LConfig.ServerName <> '' then
     begin
-      {$PUSH}{$WARN 6058 off}
+      {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
       Result.SetServerName(LConfig.ServerName);
       {$POP}
     end;
@@ -1093,7 +1093,11 @@ begin
     Result.SetCipherSuites(LConfig.CipherSuites);
     
   if LConfig.ServerName <> '' then
+  begin
+    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
     Result.SetServerName(LConfig.ServerName);
+    {$POP}
+  end;
     
   if LConfig.ALPNProtocols <> '' then
     Result.SetALPNProtocols(LConfig.ALPNProtocols);

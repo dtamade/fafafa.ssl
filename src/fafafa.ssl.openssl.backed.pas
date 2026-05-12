@@ -1350,8 +1350,10 @@ begin
     if (ssoEnableSessionCache in LConfig.Options) <> Result.GetSessionCacheMode then
       Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
 
+    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
     if (LConfig.ServerName <> '') and (LConfig.ServerName <> Result.GetServerName) then
       Result.SetServerName(LConfig.ServerName);
+    {$POP}
 
     if (LConfig.ALPNProtocols <> '') and (LConfig.ALPNProtocols <> Result.GetALPNProtocols) then
       Result.SetALPNProtocols(LConfig.ALPNProtocols);

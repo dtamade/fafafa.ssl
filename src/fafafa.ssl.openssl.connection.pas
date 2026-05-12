@@ -170,10 +170,12 @@ begin
 
   // Initialize per-connection server name from context default (backward compatibility)
   FServerName := '';
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   if (AContext <> nil) and
     ContextTypeSupportsClientConnectionRole(AContext.GetContextType) and
     (AContext.GetServerName <> '') then
     SetServerName(AContext.GetServerName);
+  {$POP}
 
   if not Assigned(SSL_set_fd) then
     RaiseFunctionNotAvailable('SSL_set_fd');
@@ -224,10 +226,12 @@ begin
   try
     // Initialize per-connection server name from context default (backward compatibility)
     FServerName := '';
+    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
     if (AContext <> nil) and
       ContextTypeSupportsClientConnectionRole(AContext.GetContextType) and
       (AContext.GetServerName <> '') then
       SetServerName(AContext.GetServerName);
+    {$POP}
 
     // Ensure BIO API is available
     if not TOpenSSLLoader.IsModuleLoaded(osmBIO) then

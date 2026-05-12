@@ -1,3 +1,42 @@
+# Task Plan - Internal Context ServerName Warning Quarantine
+
+## Goal
+收口内部兼容路径上的 `context-level ServerName` 弃用 warning，避免 focused 编译持续刷出已知兼容噪音。
+
+## Current Batch
+1. 写 focused compile contract，锁住 `factory` / `builder` / `OpenSSL` 兼容路径当前仍会发出 deprecated `ServerName` warning。
+2. 在实际兼容调用点补局部 warning quarantine，不改变 runtime 语义。
+3. 跑 focused GREEN、compile gate 与 diff hygiene。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] synced current repo state and reran high-value FreePascal runtime suites
+- [completed] focused RED compile evidence captured from `tests/test_builder_integration.pas`
+- [completed] local warning quarantine edits and focused verification
+- [completed] compile gate and diff hygiene
+
+## Current Evidence
+- runtime resync before the warning batch:
+  - `tests/test_freepascal_client_cert_verify_flags_runtime.pas`: PASS
+  - `tests/test_freepascal_client_session_resumption.pas`: PASS
+  - `tests/test_freepascal_client_certificateverify_runtime.pas`: PASS
+- focused RED:
+  - `mkdir -p tmp/builder_warning_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/builder_warning_contract -FEtmp/builder_warning_contract -otmp/builder_warning_contract/test_builder_integration tests/test_builder_integration.pas`
+  - result before fix: emitted deprecated `ISSLContext.Get/SetServerName` warnings from:
+    - `src/fafafa.ssl.factory.pas`
+    - `src/fafafa.ssl.context.builder.pas`
+    - `src/fafafa.ssl.openssl.connection.pas`
+    - `src/fafafa.ssl.openssl.backed.pas`
+- minimal implementation:
+  - new focused compile contract: `tests/scripts/test_internal_context_servername_warning_contract.sh`
+  - local warning quarantine added only around intentional compatibility calls in the four files above
+- focused GREEN:
+  - `bash -n tests/scripts/test_internal_context_servername_warning_contract.sh`: PASS
+  - `bash tests/scripts/test_internal_context_servername_warning_contract.sh`: PASS
+  - `./tmp/internal_context_servername_warning_contract/test_builder_integration`: PASS
+  - `python3 scripts/compile_all_modules.py`: PASS, `185/185`
+  - `git diff --check`: PASS
+
 # Task Plan - WinSSL Pre-Handshake Verify Status Clarification
 
 ## Goal

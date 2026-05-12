@@ -1,3 +1,25 @@
+# Findings - Internal Context ServerName Warning Quarantine
+
+## 2026-05-13
+- 连续复跑 `FreePascal` verify-flags / session-resumption / CertificateVerify runtime 套件后，没有打出新的运行时红灯，因此本轮继续深审时不应硬造新的 runtime 问题。
+- 但 focused 编译 `tests/test_builder_integration.pas` 暴露了一个真实且可重复的质量问题：
+  - `factory`
+  - `context builder`
+  - `OpenSSL connection`
+  - `OpenSSL backed config application`
+  这 4 处内部兼容路径仍会稳定打印 deprecated `context-level ServerName` warning
+- 这些 warning 不是用户代码误用，而是仓库自己为了保留 v1.x 兼容语义主动走了旧 API：
+  - `TSSLConfig.ServerName`
+  - `TSSLContextBuilder.WithSNI(...)`
+  - `TOpenSSLConnection` 从 context fallback 继承默认 `ServerName`
+- 因此这批的最小正确修法不是删除兼容行为，而是给这些“有意为之”的内部调用面补局部 warning quarantine：
+  - 只在调用点 `{$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}`
+  - 调用后立刻 `{$POP}`
+  - 不扩大到周边逻辑，也不改变 runtime SNI 语义
+- 新增 focused compile contract 后，warning 问题被真正锁成了可回归的仓库事实，而不是口头约定：
+  - 编译 `tests/test_builder_integration.pas`
+  - 明确禁止这 4 个文件再打印 deprecated `ISSLContext.Get/SetServerName` warning
+
 # Findings - WinSSL Pre-Handshake Verify Status Clarification
 
 ## 2026-05-12

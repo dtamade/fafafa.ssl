@@ -1200,7 +1200,11 @@ begin
 
   // SNI and ALPN
   if FServerName <> '' then
+  begin
+    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
     Result.SetServerName(FServerName);
+    {$POP}
+  end;
 
   if FALPNProtocols <> '' then
     Result.SetALPNProtocols(FALPNProtocols);
@@ -1361,7 +1365,11 @@ begin
     Result.SetCipherSuites(FTLS13Ciphersuites);
 
   if FServerName <> '' then
+  begin
+    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
     Result.SetServerName(FServerName);
+    {$POP}
+  end;
 
   if FALPNProtocols <> '' then
     Result.SetALPNProtocols(FALPNProtocols);

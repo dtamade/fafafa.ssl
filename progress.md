@@ -1,3 +1,42 @@
+# Progress - Internal Context ServerName Warning Quarantine
+
+## 2026-05-13
+- continuation resync:
+  - worktree remained clean before this batch
+  - reused current working-memory truth instead of reopening already-green verify-status lines
+- extra runtime review before pivoting away from runtime bug hunting:
+  - `mkdir -p tmp/freepascal_client_cert_verify_flags_runtime && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/freepascal_client_cert_verify_flags_runtime -FEtmp/freepascal_client_cert_verify_flags_runtime -otmp/freepascal_client_cert_verify_flags_runtime/test_freepascal_client_cert_verify_flags_runtime tests/test_freepascal_client_cert_verify_flags_runtime.pas && ./tmp/freepascal_client_cert_verify_flags_runtime/test_freepascal_client_cert_verify_flags_runtime` -> PASS
+  - `mkdir -p tmp/freepascal_client_session_resumption && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/freepascal_client_session_resumption -FEtmp/freepascal_client_session_resumption -otmp/freepascal_client_session_resumption/test_freepascal_client_session_resumption tests/test_freepascal_client_session_resumption.pas && ./tmp/freepascal_client_session_resumption/test_freepascal_client_session_resumption` -> PASS
+  - `mkdir -p tmp/freepascal_client_certificateverify_runtime && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/freepascal_client_certificateverify_runtime -FEtmp/freepascal_client_certificateverify_runtime -otmp/freepascal_client_certificateverify_runtime/test_freepascal_client_certificateverify_runtime tests/test_freepascal_client_certificateverify_runtime.pas && ./tmp/freepascal_client_certificateverify_runtime/test_freepascal_client_certificateverify_runtime` -> PASS
+  - conclusion: no fresh runtime failure surfaced on these high-value FreePascal paths
+- new batch plan recorded in `docs/plans/2026-05-13-internal-context-servername-warning-quarantine.md`
+- focused RED compile probe:
+  - first attempt failed only because `tmp/builder_warning_contract/` did not exist
+  - after `mkdir -p tmp/builder_warning_contract`, compiling `tests/test_builder_integration.pas` exposed stable deprecated warnings from:
+    - `src/fafafa.ssl.factory.pas`
+    - `src/fafafa.ssl.context.builder.pas`
+    - `src/fafafa.ssl.openssl.connection.pas`
+    - `src/fafafa.ssl.openssl.backed.pas`
+- minimal implementation landed:
+  - added `tests/scripts/test_internal_context_servername_warning_contract.sh`
+  - `src/fafafa.ssl.factory.pas`
+    - both `CreateContext(...)` compatibility `SetServerName(...)` calls now use local `{$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}` quarantine
+  - `src/fafafa.ssl.context.builder.pas`
+    - both compatibility `Result.SetServerName(FServerName)` calls now use the same local warning quarantine
+  - `src/fafafa.ssl.openssl.connection.pas`
+    - both constructor fallback reads from deprecated context-level `GetServerName` are now quarantined locally
+  - `src/fafafa.ssl.openssl.backed.pas`
+    - config-application fallback `GetServerName` / `SetServerName` comparison is now quarantined locally
+- focused GREEN verification:
+  - `bash -n tests/scripts/test_internal_context_servername_warning_contract.sh` -> PASS
+  - `bash tests/scripts/test_internal_context_servername_warning_contract.sh` -> PASS
+  - `./tmp/internal_context_servername_warning_contract/test_builder_integration` -> PASS
+  - `git diff --check` -> PASS
+- compile gate:
+  - `python3 scripts/compile_all_modules.py` -> PASS (`185/185`)
+- ready for review/commit:
+  - diff scope is limited to the focused warning contract, the four internal compatibility call sites, the new batch plan, and working-memory files
+
 # Progress - WinSSL Pre-Handshake Verify Status Clarification
 
 ## 2026-05-12
