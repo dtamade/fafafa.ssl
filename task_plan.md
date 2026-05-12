@@ -1,3 +1,47 @@
+# Task Plan - Factory ServerName Scope Clarification
+
+## Goal
+修复 `TSSLFactory.CreateContext(...)` 对 `TSSLConfig.ServerName` 的 server-side scope 漂移：当前 factory/config 路径会把 client-only `ServerName` 静默接受并写入 server context，但 server-side connections 明确忽略它。
+
+## Current Batch
+1. 写 focused RED 合同，证明 factory 的 one-shot config path 和 library-default path 都会接受 server-context `ServerName`。
+2. 在 `src/fafafa.ssl.factory.pas` 做最小 scope 校验，让 factory 在没有 warning surface 的情况下 fail-fast。
+3. 跑 focused verification、相邻回归、diff hygiene，并在 review 后提交。
+
+## Status
+- [completed] working-memory refreshed for the factory ServerName scope batch
+- [completed] RED regression added and observed
+- [completed] minimal factory scope fix implemented
+- [completed] focused verification and review
+
+## Notes
+- 这批不改 builder：`WithSNI` 在 server path 上继续保留兼容 + warning 语义。
+- 这批只收口 factory/config，因为它没有 builder 那样的 validation warning surface，继续静默接受会更误导。
+- 优先修 `sslCtxServer` 这条已被现有验证文案明确定义为“连接会忽略”的路径。
+
+## Current Evidence
+- focused RED:
+  - `fpc -Fu./src -Fu./tests tests/test_factory_server_name_scope_clarification.pas -otmp/test_factory_server_name_scope_clarification && ./tmp/test_factory_server_name_scope_clarification`
+  - result before fix: `4 passed / 2 failed`
+  - failure shape: client controls passed, while server default-config and one-shot config paths both silently accepted `ServerName` instead of rejecting it
+- minimal implementation:
+  - `src/fafafa.ssl.factory.pas`
+    - `ValidateConnectionCreationScope(...)` now receives the effective context type
+    - server-context `ServerName` now raises `ESSLConfigurationException` on factory/config creation paths
+  - `src/fafafa.ssl.debug.utils.pas`
+    - `DumpSSLConfig(...)` now labels `ServerName` as client-scoped and notes server factory contexts do not accept it
+- focused GREEN:
+  - `tests/test_factory_server_name_scope_clarification.pas`: PASS, `6 passed / 0 failed`
+  - `tests/test_factory_config_server_name_isolation.pas`: PASS
+  - `tests/config/test_config_validation.pas`: PASS, including the existing builder server-side warning contract
+
+## Verification Plan
+1. `fpc -Fu./src -Fu./tests tests/test_factory_server_name_scope_clarification.pas -otmp/test_factory_server_name_scope_clarification && ./tmp/test_factory_server_name_scope_clarification`
+2. `fpc -Fu./src -Fu./tests tests/test_factory_config_server_name_isolation.pas -otmp/test_factory_config_server_name_isolation && ./tmp/test_factory_config_server_name_isolation`
+3. `fpc -Fu./src -Fu./tests tests/config/test_config_validation.pas -otmp/test_config_validation && ./tmp/test_config_validation`
+4. `git diff --check`
+5. `git status --short`
+
 # Task Plan - Builder Server Smoke Truth
 
 ## Goal

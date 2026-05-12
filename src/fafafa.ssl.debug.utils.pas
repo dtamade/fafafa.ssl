@@ -328,7 +328,10 @@ begin
       '握手超时: %d ms (连接层配置；使用 TSSLConnector/TSSLAcceptor/ISSLConnection)',
       [AConfig.HandshakeTimeout]
     );
-    LSB.AppendFormat('服务器名称: %s', [AConfig.ServerName]);
+    LSB.AppendFormat(
+      '服务器名称: %s (客户端上下文默认 SNI；更推荐连接级设置，server factory context 不接受)',
+      [AConfig.ServerName]
+    );
     LSB.AppendFormat('客户端 Early Data: %s', [BoolToStr(AConfig.ClientEarlyDataEnabled, '启用', '禁用')]);
     LSB.AppendFormat('服务端 Early Data 策略: %d', [Ord(AConfig.ServerEarlyDataPolicy)]);
     LSB.AppendFormat('服务端 Early Data 上限: %d', [AConfig.ServerMaxEarlyDataSize]);

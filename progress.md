@@ -1591,3 +1591,33 @@
 - Residual neighbor signal:
   - resolved in the follow-up builder server smoke truth batch
   - no selector-side residual action remains from this specific neighbor signal
+# Progress - Factory ServerName Scope Clarification
+
+## 2026-05-12
+- Post-commit resume:
+  - previous builder integration smoke batch landed as `846e864`
+  - continued from the next interface-audit/config-truth candidate instead of reopening selector work
+- New target selected from fresh source review:
+  - `src/fafafa.ssl.context.builder.pas` already warns that server-side connections ignore deprecated context-level `WithSNI(...)`
+  - `src/fafafa.ssl.factory.pas` still applies `LConfig.ServerName` unconditionally in both `CreateContext(AContextType, ALibType)` and `CreateContext(const AConfig)`
+  - factory/config path therefore has no equivalent protection against silently accepted client-only `ServerName`
+- New batch plan recorded in `docs/plans/2026-05-12-factory-servername-scope-clarification.md`
+- Focused RED contract added:
+  - `tests/test_factory_server_name_scope_clarification.pas`
+  - client controls cover default-config and one-shot config `ServerName`
+  - server cases assert both factory paths should reject `ServerName`
+- RED verification:
+  - `fpc -Fu./src -Fu./tests tests/test_factory_server_name_scope_clarification.pas -otmp/test_factory_server_name_scope_clarification && ./tmp/test_factory_server_name_scope_clarification`
+  - result before fix: `4 passed / 2 failed`
+  - exact failure: both server factory paths accepted `ServerName` without raising `ESSLConfigurationException`
+- Minimal implementation landed:
+  - `src/fafafa.ssl.factory.pas`
+    - `ValidateConnectionCreationScope(...)` now takes the effective context type
+    - server-context `ServerName` is now rejected on both `CreateContext(AContextType, ALibType)` and `CreateContext(const AConfig)`
+  - `src/fafafa.ssl.debug.utils.pas`
+    - config dump now labels `ServerName` as a client-context default SNI field and notes server factory contexts do not accept it
+- GREEN verification:
+  - `tests/test_factory_server_name_scope_clarification.pas` -> PASS (`6 passed / 0 failed`)
+  - `tests/test_factory_config_server_name_isolation.pas` -> PASS
+  - `tests/config/test_config_validation.pas` -> PASS (`53 passed / 0 failed`)
+  - `git diff --check` -> PASS

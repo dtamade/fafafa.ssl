@@ -1,3 +1,21 @@
+# Findings - Factory ServerName Scope Clarification
+
+## 2026-05-12
+- A fresh continuation review found another config-scope truth gap adjacent to the earlier builder/server-name work:
+  - builder validation already warns that server-side connections ignore deprecated context-level SNI
+  - but factory/config creation still applies `TSSLConfig.ServerName` unconditionally on both default-config and one-shot config paths
+- That makes the public API inconsistent:
+  - `WithSNI(...)` on server configs is compatibility-preserved but explicitly warned
+  - `TSSLFactory.CreateContext(...)` has no warning surface, so the same client-only field is silently accepted
+- The narrowest safe repair is to tighten the factory boundary only:
+  - keep builder compatibility semantics unchanged
+  - reject server-context `ServerName` at factory creation time instead of silently storing an inert setting
+- Fresh RED/GREEN confirmed the split is now cleaner:
+  - client default-config and one-shot factory paths still preserve `ServerName`
+  - server default-config and one-shot factory paths now fail fast with `ESSLConfigurationException`
+  - builder `ValidateServer` warning semantics remained intact throughout
+- Updating `DumpSSLConfig(...)` to label `ServerName` as client-scoped also reduces future operator confusion when reading config dumps.
+
 # Findings - Builder Server Smoke Truth
 
 ## 2026-05-12

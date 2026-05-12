@@ -444,7 +444,8 @@ begin
     );
 end;
 
-procedure ValidateConnectionCreationScope(const AConfig: TSSLConfig; const ACallSite: string);
+procedure ValidateConnectionCreationScope(const AConfig: TSSLConfig;
+  AContextType: TSSLContextType; const ACallSite: string);
 begin
   if (AConfig.HandshakeTimeout <> 0) and
     (AConfig.HandshakeTimeout <> SSL_DEFAULT_HANDSHAKE_TIMEOUT) then
@@ -462,6 +463,16 @@ begin
     raise ESSLConfigurationException.CreateWithContext(
       'BufferSize is not a context-scoped factory option. Configure buffering in the surrounding ' +
       'transport/IO layer instead of ' + ACallSite + '.',
+      sslErrConfiguration,
+      ACallSite,
+      0,
+      AConfig.LibraryType
+    );
+
+  if (AContextType = sslCtxServer) and (Trim(AConfig.ServerName) <> '') then
+    raise ESSLConfigurationException.CreateWithContext(
+      'ServerName is client-scoped. Server-side connections ignore context-level ServerName; ' +
+      'remove it from ' + ACallSite + ' when creating server contexts.',
       sslErrConfiguration,
       ACallSite,
       0,
@@ -927,7 +938,8 @@ begin
   LLib := GetLibrary(ALibType);
   LConfig := LLib.GetDefaultConfig;
   NormalizeConfigOptions(LConfig);
-  ValidateConnectionCreationScope(LConfig, 'TSSLFactory.CreateContext(AContextType, ALibType)');
+  ValidateConnectionCreationScope(LConfig, AContextType,
+    'TSSLFactory.CreateContext(AContextType, ALibType)');
 
   Result := LLib.CreateContext(AContextType);
   if Result <> nil then
@@ -981,7 +993,8 @@ begin
   LConfig := AConfig;
   NormalizeConfigOptions(LConfig);
   ValidateRequestLoggingScope(LConfig);
-  ValidateConnectionCreationScope(LConfig, 'TSSLFactory.CreateContext(const AConfig)');
+  ValidateConnectionCreationScope(LConfig, LConfig.ContextType,
+    'TSSLFactory.CreateContext(const AConfig)');
 
   LLib := GetLibrary(LConfig.LibraryType);
   Result := LLib.CreateContext(LConfig.ContextType);
