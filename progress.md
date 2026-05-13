@@ -1,3 +1,41 @@
+# Progress - Wave B/B2 Ignore Inactive macOS Probe Consistency
+
+## 2026-05-13
+- continuation resync:
+  - resumed directly from the current macOS probe consistency lane
+  - kept scope inside static Wave B/B2 script review only
+- new bug located:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh` still tracked `test-reports/wave_b_macos_gate_probe_<run_id>.json` merely because the default file existed
+  - therefore a malformed inactive probe could flip `--strict` to failure even when cross summary used `macos_summary`
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-b2-ignore-inactive-macos-probe-consistency.md`
+- focused RED contract:
+  - added `tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh` -> FAIL before fix
+  - failure shape:
+    - strict consistency returned non-zero even though macOS summary was authoritative
+    - root cause was the fallback `elif [[ -f "$(resolve_path "$MACOS_PROBE")" ]]` tracking branch
+- minimal implementation landed:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - removed the fallback “default probe file exists => track probe” branch
+    - explicit `--macos-probe` and cross-summary-driven `PROBE_ONLY/PROBE_OK` tracking stay intact
+- mid-batch validation found a contract false positive:
+  - manual repro after the production fix showed:
+    - `consistency_status: CONSISTENT`
+    - no `| macos_probe |` row in the artifact matrix
+  - but the new contract still failed because `rg "macos_probe"` matched the batch run_id/path substring
+- contract hardening landed:
+  - `tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`
+    - narrowed the negative assertion to `^\\| macos_probe \\|`
+- verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 macOS Probe Consistency Hardening
 
 ## 2026-05-13

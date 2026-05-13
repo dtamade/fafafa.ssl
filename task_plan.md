@@ -1,3 +1,44 @@
+# Task Plan - Wave B/B2 Ignore Inactive macOS Probe Consistency
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 的过度跟踪问题，避免在 macOS summary 已经是权威证据时，仅因默认路径下存在一个无关或损坏的 `wave_b_macos_gate_probe_<run_id>.json` 就把 strict consistency 误判为 `INCONSISTENT`。
+
+## Current Batch
+1. 写 focused RED contract，证明 inactive stale macOS probe 当前仍会污染 strict consistency。
+2. 仅在 `check_wave_b_b2_evidence_consistency.sh` 内收紧 `macos_probe` 跟踪条件。
+3. 修正新 contract 自身的误报断言，避免把 run_id/path 里的 `macos_probe` 子串误判成 artifact row。
+4. 跑 focused 合同、active probe consistency 合同、handoff/workflow 回归与 diff hygiene。
+5. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] resumed current static review batch from the existing macOS probe consistency lane
+- [completed] focused RED proof for inactive stale macOS probe over-tracking
+- [completed] minimal macOS probe tracking-condition hardening
+- [completed] contract false-positive hardening for exact `macos_probe` row matching
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- focused RED:
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`: FAIL before fix
+  - failure shape:
+    - `check_wave_b_b2_evidence_consistency.sh --strict` still failed when only a malformed default-path macOS probe existed beside an authoritative macOS summary
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - removed the fallback branch that tracked `MACOS_PROBE` merely because the default file existed
+    - now tracks `macos_probe` only when the caller explicitly passes `--macos-probe`, or when cross summary explicitly reports `PROBE_ONLY/PROBE_OK`
+  - contract hardening:
+    - tightened the negative assertion to `^\\| macos_probe \\|`, so `run_id/path` substrings no longer create false failures
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 macOS Probe Consistency Hardening
 
 ## Goal

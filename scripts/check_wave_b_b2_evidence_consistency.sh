@@ -323,8 +323,6 @@ elif [[ -n "$cross_summary_macos_probe" ]]; then
   MACOS_PROBE="$cross_summary_macos_probe"
   macos_probe_required=true
   macos_probe_track=true
-elif [[ -f "$(resolve_path "$MACOS_PROBE")" ]]; then
-  macos_probe_track=true
 fi
 if [[ "$macos_probe_track" == "true" ]]; then
   check_json_artifact "macos_probe" "$MACOS_PROBE" "$macos_probe_required"

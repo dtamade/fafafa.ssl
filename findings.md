@@ -1,3 +1,25 @@
+# Findings - Wave B/B2 Ignore Inactive macOS Probe Consistency
+
+## 2026-05-13
+- 继续沿着同一条 `Wave B/B2` macOS probe consistency 链做静态深审后，发现上一批修法又露出一个相反方向的 repo-side 假红灯：
+  - `check_wave_b_b2_evidence_consistency.sh` 已经能在 probe-only 场景下显式列出 `macos_probe`
+  - 但它仍会在“macOS summary 已是权威证据”的场景里，仅因默认路径下刚好存在 `wave_b_macos_gate_probe_<run_id>.json` 就继续跟踪 probe
+  - 一旦这份默认 probe 是损坏 JSON，strict consistency 就会被错误打成 `INCONSISTENT`
+- 这说明上一批把 probe 证据接进 consistency 的修法还缺一条边界：
+  - active probe-only 场景应该显式跟踪 `macos_probe`
+  - authoritative macOS summary 场景则不应再被旁边一个无关默认 probe 文件污染
+- 这批最小正确修法不是删掉 `--macos-probe` 或 probe-only 推断，而是只收紧跟踪条件：
+  - 显式 `--macos-probe` 继续有效
+  - cross summary 明确给出 `PROBE_ONLY/PROBE_OK` 时继续跟踪
+  - 仅仅因为默认路径文件存在，不再自动把它列入 artifact matrix
+- 这批 focused RED 还顺手抓出了一个测试层误报：
+  - 新 contract 第一版用 `rg "macos_probe"` 检查报告里是否出现 probe 行
+  - 但这批的 `run_id=consistency_ignore_inactive_macos_probe` 本身就会把同名子串带进路径里
+  - 因而在生产脚本已正确忽略 inactive probe 后，contract 仍会假失败
+- 对应地，这批测试面的最小修法也要保持收口：
+  - 否定断言改成精确匹配表格行 `| macos_probe |`
+  - 防止后续静态审查再被路径/文件名里的同名子串误导
+
 # Findings - Wave B/B2 macOS Probe Consistency Hardening
 
 ## 2026-05-13
