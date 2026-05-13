@@ -1,3 +1,40 @@
+# Progress - Wave B/B2 Prepare Strict Metadata Truth
+
+## 2026-05-14
+- continuation resync:
+  - continued directly after committing the optional-runner-artifact download batch
+  - stayed on the same Wave B/B2 handoff/workflow static-review lane
+- new bug located:
+  - `prepare_wave_b_b2_handoff_bundle.sh --strict` writes closure/consistency reports via non-strict generation calls
+  - it only performs strict failure checks afterwards via `--strict --dry-run`
+  - this keeps the execution order correct, but leaves the generated closure/consistency markdown reports with stale `strict_mode: false`
+- new batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-prepare-strict-metadata-truth.md`
+- next implementation shape:
+  - add a focused prepare contract for strict-mode metadata truth
+  - then minimally synchronize the generated closure/consistency report metadata inside `prepare`
+- focused RED contract:
+  - added `tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh`
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh` -> FAIL before fix
+  - failure shape:
+    - strict prepare run still generated all three reports before exiting non-zero
+    - handoff bundle already recorded `strict_mode: true`
+    - closure/consistency reports still recorded `strict_mode: false`
+- minimal implementation landed:
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added `sync_report_strict_mode(...)`
+    - synchronized the generated closure and consistency markdown metadata to the effective top-level strict mode
+    - preserved the existing “generate first, fail later via strict dry-run checks” flow
+- verification:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh` -> PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_replay_command_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Optional Runner Artifact Download Tolerance
 
 ## 2026-05-14

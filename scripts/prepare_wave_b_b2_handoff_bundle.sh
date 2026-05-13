@@ -190,6 +190,28 @@ build_shell_command() {
   echo "${parts[*]}"
 }
 
+sync_report_strict_mode() {
+  local rel_path="$1"
+  local abs_path
+  abs_path="$(resolve_path "$rel_path")"
+  if [[ ! -f "$abs_path" ]]; then
+    return 0
+  fi
+
+  local tmp_path
+  tmp_path="${abs_path}.tmp.$$"
+  awk -v strict="$STRICT" '
+    {
+      if ($0 ~ /^- strict_mode: /) {
+        print "- strict_mode: " strict
+      } else {
+        print
+      }
+    }
+  ' "$abs_path" > "$tmp_path"
+  mv "$tmp_path" "$abs_path"
+}
+
 if [[ -z "$LINUX_SUMMARY" ]]; then
   LINUX_SUMMARY="$(cd "$PROJECT_ROOT" && ls -1t test-reports/wave_b_ci_gate_summary_*.md 2>/dev/null | head -1 || true)"
 fi
@@ -309,6 +331,9 @@ bash "$PROJECT_ROOT/scripts/check_wave_b_b2_evidence_consistency.sh" \
   --cross-summary "$CROSS_SUMMARY" \
   --closure-report "$CLOSURE_REPORT" \
   --output "$CONSISTENCY_REPORT"
+
+sync_report_strict_mode "$CLOSURE_REPORT"
+sync_report_strict_mode "$CONSISTENCY_REPORT"
 
 closure_status="$(grep -E '^- closure_status:' "$(resolve_path "$CLOSURE_REPORT")" | head -1 | sed -E 's/^- closure_status: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true)"
 consistency_status="$(grep -E '^- consistency_status:' "$(resolve_path "$CONSISTENCY_REPORT")" | head -1 | sed -E 's/^- consistency_status: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true)"

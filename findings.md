@@ -1,3 +1,23 @@
+# Findings - Wave B/B2 Prepare Strict Metadata Truth
+
+## 2026-05-14
+- 继续沿着 `strict_closure=true` 的 handoff 静态边界深审后，发现一个脚本级元数据漂移：
+  - `prepare_wave_b_b2_handoff_bundle.sh --strict` 为了保证“先写报告、再严格失败”，主流程不会把 `--strict` 直接传给 closure/consistency 的输出生成调用
+  - 但它最后又会用 `--strict --dry-run` 做真正的失败判定
+  - 这使得生成出来的 closure/consistency markdown 报告把 `strict_mode` 写成了 `false`
+- 这会制造一个真实的 repo-side 证据矛盾：
+  - handoff bundle 明明记录当前批次是 strict
+  - closure/consistency 报告却声称不是 strict
+  - 读报告的人很难区分“这是宽松模式下生成的报告”还是“严格模式下先写出来的失败前快照”
+- 这批最小正确修法不是把主流程改成直接 strict 生成，因为那会让脚本在写完所有报告前提前退出；正确做法是：
+  - 保持现有“先生成、后严格校验”的执行顺序
+  - 只在 `prepare` 里同步已经落盘的 `strict_mode` 元数据
+  - 让上传出来的三份报告对当前模式保持一致
+- 修完后 strict 模式的证据链更自洽了：
+  - `prepare --strict` 仍会先写全交接包，再以非 0 失败
+  - 但 closure/consistency/handoff bundle 三份报告现在都会明确记录 `strict_mode: true`
+  - 读报告的人不再需要猜“这是宽松生成 + 严格 dry-run”还是“真实宽松模式”
+
 # Findings - Wave B/B2 Optional Runner Artifact Download Tolerance
 
 ## 2026-05-14

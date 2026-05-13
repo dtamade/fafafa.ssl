@@ -1,3 +1,55 @@
+# Task Plan - Wave B/B2 Prepare Strict Metadata Truth
+
+## Goal
+收口 `prepare_wave_b_b2_handoff_bundle.sh --strict` 的报告元数据漂移，避免严格模式下生成出来的 closure/consistency markdown 仍把 `strict_mode` 写成 `false`。
+
+## Current Batch
+1. 写 focused contract，证明 `prepare --strict` 虽然会在最后按严格模式失败，但它先生成的 closure/consistency 报告仍错误标记 `strict_mode: false`。
+2. 仅在 `prepare_wave_b_b2_handoff_bundle.sh` 内最小修补已生成报告的 `strict_mode` 元数据。
+3. 跑 focused 合同与 handoff 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified strict-mode metadata drift after workflow strict-boundary review
+- [completed] wrote focused contract for prepare strict metadata truth
+- [completed] minimal prepare strict metadata synchronization
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 `prepare_wave_b_b2_handoff_bundle.sh` 为了保证 strict 失败前仍能先生成报告，主流程调用：
+  - `check_wave_b_b2_closure_readiness.sh` 时不带 `--strict`
+  - `check_wave_b_b2_evidence_consistency.sh` 时也不带 `--strict`
+- 真正的严格失败只发生在报告写完之后追加的：
+  - `check_wave_b_b2_evidence_consistency.sh --strict --dry-run`
+  - `check_wave_b_b2_closure_readiness.sh --strict --dry-run`
+- 结果就是当 `prepare` 自己是 `--strict` 时：
+  - handoff bundle 会写 `- strict_mode: true`
+  - 但 closure/consistency 两份落盘 markdown 仍会写 `- strict_mode: false`
+- 这会让同一批上传证据在严格模式元数据上自相矛盾。
+- focused RED:
+  - 新增 `tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh`
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh`: FAIL before fix
+  - failure shape:
+    - `prepare --strict` 的 handoff bundle 已经写 `strict_mode: true`
+    - 但 closure readiness 报告仍写 `strict_mode: false`
+    - consistency 报告同样保持旧的 `false`
+- minimal implementation:
+  - 新增 `tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh`
+  - 更新 `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added `sync_report_strict_mode(...)`
+    - after generating closure/consistency reports, `prepare` now rewrites their `- strict_mode:` line to the effective top-level `STRICT` value
+    - retained the existing execution order: generate all reports first, then run strict dry-run failure checks
+- focused GREEN:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh`: PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_replay_command_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Optional Runner Artifact Download Tolerance
 
 ## Goal
