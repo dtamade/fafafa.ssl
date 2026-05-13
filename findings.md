@@ -1,3 +1,25 @@
+# Findings - Wave B/B2 Consistency Closure Status Parse Truth
+
+## 2026-05-14
+- 继续沿着 `closure / consistency / handoff` 这一条静态报告链深审后，发现 `check_wave_b_b2_evidence_consistency.sh` 还有一条更隐蔽的 repo-side 假绿灯：
+  - `closure_report` 只要文件存在且 `run_id` 能对上
+  - 就算内部已经缺了 `closure_status`
+  - consistency 报告也仍会写成：
+    - `consistency_status: **CONSISTENT**`
+    - `runid_mismatch_or_parse_issue: 0`
+    - `closure_status_note:` 空白
+- 这不是“格式不完美”的小问题，而是会把坏掉的 closure 证据伪装成绿色：
+  - 上层 handoff bundle 仍会继续消费 `closure_status`
+  - 但底层 consistency 已经先把这份坏报告标绿
+  - 后续操作者很难从 report 表面看出 closure 元数据其实已经断裂
+- 这批最小正确修法不是扩大 strict 定义，而是把现有 `runid_mismatch_or_parse_issue` 语义补齐到 closure 元数据层：
+  - `closure_report` 除了 run_id 之外，还必须带有效 `closure_status`
+  - 允许值保持和当前 closure script 真相一致：`IN_PROGRESS` / `CLOSED`
+  - 缺失或非法时：
+    - `consistency_status` 必须落到 `INCONSISTENT`
+    - 顶层 `closure_status_note` 要显式写出 parse issue
+    - `closure_report` 那一行也不能继续写 `ok`
+
 # Findings - Wave B/B2 Closure Next Action Truth
 
 ## 2026-05-14

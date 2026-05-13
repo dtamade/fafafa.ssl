@@ -1,3 +1,43 @@
+# Progress - Wave B/B2 Consistency Closure Status Parse Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `343287c fix: align closure next action with handoff flow`
+  - continued directly on the same `Wave B/B2` shell/report static-review lane
+- Fresh review narrowed the next real issue:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh` still marked the report `CONSISTENT` when `closure_report` existed but was missing `closure_status`
+  - the top-level `closure_status_note` was left blank, so the parse failure was invisible in the report surface
+- Reproduced the false-green shape with a direct fixture run:
+  - crafted a minimal `closure.md` containing only `run_id`
+  - observed:
+    - `consistency_status: **CONSISTENT**`
+    - `runid_mismatch_or_parse_issue: 0`
+    - `closure_status_note:` empty
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-consistency-closure-status-parse.md`
+- Focused RED contract added:
+  - `tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `strict consistency should reject a closure report that is missing closure_status metadata`
+- Minimal implementation landed:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `is_valid_closure_status(...)`
+    - added `check_closure_report_artifact(...)`
+    - closure report now requires valid `closure_status` metadata in addition to a matching `run_id`
+    - missing/invalid `closure_status` now increments `runid_mismatch_or_parse_issue` and surfaces explicit notes in both top-level metadata and artifact matrix
+- GREEN verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_existing_report_run_id_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Closure Next Action Truth
 
 ## 2026-05-14

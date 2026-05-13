@@ -1,3 +1,52 @@
+# Task Plan - Wave B/B2 Consistency Closure Status Parse Truth
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 对 malformed `closure_report` 的假绿灯，避免 closure 报告缺少 `closure_status` 时仍被判为 `CONSISTENT`。
+
+## Current Batch
+1. 写 focused contract，证明缺少 `closure_status` 的 `closure_report` 仍会被 strict 误放行。
+2. 最小修改 `check_wave_b_b2_evidence_consistency.sh`，把 `closure_status` 缺失/非法视为 parse issue。
+3. 复跑 focused consistency 与 handoff 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified false-green consistency behavior for malformed closure report metadata
+- [completed] wrote focused contract for missing closure_status truth
+- [completed] minimal closure_report parse validation in consistency checker
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 直接构造的样本已经证明旧逻辑存在 repo-side 假绿灯：
+  - `closure_report` 文件存在、`run_id` 正常
+  - 但缺少 `closure_status`
+  - `check_wave_b_b2_evidence_consistency.sh` 仍输出：
+    - `consistency_status: **CONSISTENT**`
+    - `runid_mismatch_or_parse_issue: 0`
+    - `closure_status_note:` 空白
+- focused RED:
+  - 新增 `tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh`: FAIL before fix
+  - failure shape:
+    - strict consistency 错误接受了缺少 `closure_status` 的 `closure_report`
+- minimal implementation:
+  - 更新 `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `is_valid_closure_status(...)`
+    - added `check_closure_report_artifact(...)`
+    - `closure_report` 现在除 run_id 外，还要求 `closure_status` 存在且属于 `IN_PROGRESS` / `CLOSED`
+    - 缺失或非法时计入 `runid_mismatch_or_parse_issue`，并把顶层 `closure_status_note` 与 artifact row note 写成显式 parse issue
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_existing_report_run_id_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Closure Next Action Truth
 
 ## Goal

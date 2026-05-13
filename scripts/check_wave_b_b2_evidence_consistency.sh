@@ -280,6 +280,11 @@ parse_closure_status_md() {
   grep -E "^- closure_status:" "$file" | head -1 | sed -E 's/^- closure_status: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
 }
 
+is_valid_closure_status() {
+  local status="$1"
+  [[ "$status" == "IN_PROGRESS" || "$status" == "CLOSED" ]]
+}
+
 parse_cross_summary_linux_examples_path() {
   local file="$1"
   grep -E "^- linux_examples_json:" "$file" | head -1 | sed -E 's/^- linux_examples_json: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
@@ -469,6 +474,62 @@ check_presence_artifact() {
   rows+=("| $label | $rel_path | YES | n/a | n/a | presence-only evidence |")
 }
 
+check_closure_report_artifact() {
+  local rel_path="$1"
+  local required="$2"
+
+  local abs_path
+  abs_path="$(resolve_path "$rel_path")"
+
+  if [[ ! -f "$abs_path" ]]; then
+    rows+=("| closure_report | $rel_path | NO | n/a | NO | missing |")
+    if [[ "$required" == "true" ]]; then
+      required_missing=$((required_missing + 1))
+    fi
+    return 0
+  fi
+
+  local parsed
+  parsed="$(parse_run_id_md "$abs_path")"
+
+  local match="NO"
+  local note="run_id mismatch"
+  if [[ -n "$parsed" && "$parsed" == "$RUN_ID" ]]; then
+    match="YES"
+    note="ok"
+  elif [[ -z "$parsed" ]]; then
+    note="run_id not found"
+  fi
+
+  if [[ "$match" == "NO" ]]; then
+    runid_mismatch=$((runid_mismatch + 1))
+  fi
+
+  local parsed_closure_status
+  parsed_closure_status="$(parse_closure_status_md "$abs_path")"
+  if [[ -z "$parsed_closure_status" ]]; then
+    closure_status_note="closure_status missing"
+    runid_mismatch=$((runid_mismatch + 1))
+    if [[ "$note" == "ok" ]]; then
+      note="$closure_status_note"
+    else
+      note="$note; $closure_status_note"
+    fi
+  elif ! is_valid_closure_status "$parsed_closure_status"; then
+    closure_status_note="invalid closure_status: $parsed_closure_status"
+    runid_mismatch=$((runid_mismatch + 1))
+    if [[ "$note" == "ok" ]]; then
+      note="$closure_status_note"
+    else
+      note="$note; $closure_status_note"
+    fi
+  else
+    closure_status_note="$parsed_closure_status"
+  fi
+
+  rows+=("| closure_report | $rel_path | YES | ${parsed:-n/a} | $match | $note |")
+}
+
 check_markdown_artifact "linux_summary" "$LINUX_SUMMARY" true
 check_json_artifact "linux_examples_json" "$LINUX_EXAMPLES_JSON" true
 macos_summary_required=false
@@ -513,17 +574,12 @@ fi
 check_presence_artifact "windows_quick_log" "$WINDOWS_QUICK_LOG" "$windows_quick_log_required"
 check_presence_artifact "windows_runtime_transcript" "$WINDOWS_RUNTIME_TRANSCRIPT" "$windows_runtime_transcript_required"
 check_markdown_artifact "cross_summary" "$CROSS_SUMMARY" true
-check_markdown_artifact "closure_report" "$CLOSURE_REPORT" true
+closure_status_note="n/a"
+check_closure_report_artifact "$CLOSURE_REPORT" true
 
 consistency_status="CONSISTENT"
 if [[ "$required_missing" -gt 0 || "$runid_mismatch" -gt 0 ]]; then
   consistency_status="INCONSISTENT"
-fi
-
-closure_status_note="n/a"
-closure_abs="$(resolve_path "$CLOSURE_REPORT")"
-if [[ -f "$closure_abs" ]]; then
-  closure_status_note="$(parse_closure_status_md "$closure_abs")"
 fi
 
 if [[ "$DRY_RUN" == "true" ]]; then
