@@ -1,3 +1,43 @@
+# Task Plan - Wave B/B2 Consistency Windows Companion Path
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 在 custom `windows_summary` 场景下的 companion-path 漂移，让它在未显式传 `--windows-quick-log` / `--windows-runtime-transcript` 时，也能默认跟随 `windows_summary` 同目录寻找 sibling artifacts。
+
+## Current Batch
+1. 写 focused RED contract，证明 custom `windows_summary` 与 sibling runtime artifacts 已存在，但 direct consistency 仍误报缺失。
+2. 仅在 `check_wave_b_b2_evidence_consistency.sh` 内补一层 sibling-artifact 默认推导。
+3. 跑 focused 合同、linux examples active-path、macOS probe、Windows strict 与 handoff companion-path 回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] found the direct custom-windows companion-path drift after the linux examples active-path batch
+- [completed] focused RED contract for custom windows summary sibling artifacts
+- [completed] minimal windows companion-path default alignment in consistency checker
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- focused RED:
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh`: FAIL before fix
+  - failure shape:
+    - custom `windows_summary` existed
+    - sibling `winssl_quick_smoke_<run_id>.log` and `winssl_runtime_suite_<run_id>.log` also existed
+    - `check_wave_b_b2_evidence_consistency.sh --strict` still returned non-zero because it only checked `test-reports/...`
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `derive_sibling_artifact_path(...)`
+    - when Windows runtime artifact args are omitted, now derives them from `WINDOWS_SUMMARY` rather than hardcoding `test-reports/...`
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Consistency Cross Summary Linux Examples Path
 
 ## Goal

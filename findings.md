@@ -1,3 +1,21 @@
+# Findings - Wave B/B2 Consistency Windows Companion Path
+
+## 2026-05-13
+- 继续沿着同一个 `Wave B/B2` consistency public surface 深审后，发现 Windows runtime artifacts 还有一条 direct entrypoint 没对齐：
+  - `prepare_wave_b_b2_handoff_bundle.sh` 之前已经会在 custom `windows_summary` 场景下按 sibling path 推导 `quick smoke` / `runtime suite`
+  - 但 `check_wave_b_b2_evidence_consistency.sh` 本体仍把这两份 artifact 默认死写在 `test-reports/...`
+- 这会制造一个真实的 repo-side 假红灯：
+  - custom `windows_summary` 明明已经存在
+  - 同目录 sibling `winssl_quick_smoke_<run_id>.log` / `winssl_runtime_suite_<run_id>.log` 也已经存在
+  - direct consistency 却仍会因为去错目录而在 strict 模式下失败
+- 这批最小正确修法不是改 Windows strict 规则，而是把 companion-path 真值来源对齐到 `windows_summary`：
+  - 显式传入 `--windows-quick-log` / `--windows-runtime-transcript` 仍然优先
+  - 未显式传参时，默认 sibling path 跟随 `windows_summary`
+  - 默认 `test-reports/...` 主路径因为本来就同目录，所以行为保持不变
+- 这样能让 direct consistency 和 handoff entrypoint 的 Windows companion 语义重新对齐：
+  - 严格性不下降
+  - 只是停止对已经存在的 sibling evidence 制造假缺失
+
 # Findings - Wave B/B2 Consistency Cross Summary Linux Examples Path
 
 ## 2026-05-13

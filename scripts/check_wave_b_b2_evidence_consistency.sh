@@ -165,6 +165,18 @@ default_linux_examples_json_path() {
   fi
 }
 
+derive_sibling_artifact_path() {
+  local anchor_path="$1"
+  local filename="$2"
+  local anchor_dir
+  anchor_dir="$(dirname "$anchor_path")"
+  if [[ "$anchor_dir" == "." ]]; then
+    echo "$filename"
+  else
+    echo "$anchor_dir/$filename"
+  fi
+}
+
 if [[ "$RUN_ID_EXPLICIT" != "true" ]]; then
   RUN_ID="$(infer_run_id_from_linux_summary "$LINUX_SUMMARY")"
 fi
@@ -188,10 +200,10 @@ if [[ -z "$WINDOWS_SUMMARY" ]]; then
   WINDOWS_SUMMARY="test-reports/wave_b_windows_gate_summary_${RUN_ID}.md"
 fi
 if [[ -z "$WINDOWS_QUICK_LOG" ]]; then
-  WINDOWS_QUICK_LOG="test-reports/winssl_quick_smoke_${RUN_ID}.log"
+  WINDOWS_QUICK_LOG="$(derive_sibling_artifact_path "$WINDOWS_SUMMARY" "winssl_quick_smoke_${RUN_ID}.log")"
 fi
 if [[ -z "$WINDOWS_RUNTIME_TRANSCRIPT" ]]; then
-  WINDOWS_RUNTIME_TRANSCRIPT="test-reports/winssl_runtime_suite_${RUN_ID}.log"
+  WINDOWS_RUNTIME_TRANSCRIPT="$(derive_sibling_artifact_path "$WINDOWS_SUMMARY" "winssl_runtime_suite_${RUN_ID}.log")"
 fi
 if [[ -z "$CROSS_SUMMARY" ]]; then
   CROSS_SUMMARY="test-reports/wave_b_cross_platform_summary_${RUN_ID}.md"
