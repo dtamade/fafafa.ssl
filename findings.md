@@ -1,3 +1,21 @@
+# Findings - Wave B/B2 Consistency Cross Summary Run ID Inference
+
+## 2026-05-13
+- 继续沿着同一个 `Wave B/B2` consistency public surface 深审后，发现 `run_id` 还有一层更底层的时序漂移：
+  - `check_wave_b_b2_evidence_consistency.sh` 现在已经会从 `cross summary` 继承 active custom `linux_summary`
+  - 但它是在 `RUN_ID` 已经定成“显式参数或当前时间戳”之后才做这一步
+  - 结果就是 direct consistency 可能对着同一批现有证据，自己先制造出一个新的时间戳批次号
+- 这会制造一个真实的 repo-side 假红灯：
+  - 调用者只传已有的 `cross summary + closure report`
+  - 汇总面其实已经承认了 active custom `linux_summary`
+  - checker 却先生成新的 `RUN_ID`，随后把那份 active Linux summary、cross summary、closure report 一起记成 `run_id mismatch`
+- 这批最小正确修法不是放宽 mismatch 规则，也不是让调用者强制补 `--run-id`，而是继续把默认真值对齐到 active evidence：
+  - 显式 `--run-id` 仍然优先
+  - 否则先看 cross summary 是否已经声明 active `linux_summary`
+  - 再从那份 active Linux summary 推导真实 `run_id`
+  - 只有连 active Linux truth 都缺失时，才回退到时间戳
+- 这样能让 direct consistency 和同族 `generate/closure/prepare` 一样，默认围绕现有证据批次收口，而不是在已有链路里再凭空开一个新批次。
+
 # Findings - Wave B/B2 Consistency Cross Summary Windows Summary Required
 
 ## 2026-05-13

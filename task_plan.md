@@ -1,3 +1,56 @@
+# Task Plan - Wave B/B2 Consistency Cross Summary Run ID Inference
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 的 `RUN_ID` 推导时序缺口，避免 direct consistency 在只拿到现有 `cross summary + closure report` 时，先生成新的时间戳 `run_id`，再把同一批 active Linux evidence 误判成 mismatch。
+
+## Current Batch
+1. 写 focused RED contract，证明 cross summary 已声明 active custom `linux_summary`，但 direct consistency 在省略 `--run-id` / `--linux-summary` 时仍会错误生成新的 `RUN_ID`。
+2. 仅在 `check_wave_b_b2_evidence_consistency.sh` 内调整 `RUN_ID` 推导时序，让它能先消费 cross-summary-declared active Linux truth。
+3. 跑 focused 合同，以及 Linux/macOS/Windows active-path、Windows required、inactive macOS probe 回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified the next false-red gap after the active Windows required batch
+- [completed] focused RED contract for cross-summary-driven run_id inference
+- [completed] minimal run_id inference hardening in consistency checker
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- fresh repro already shows the bug shape:
+  - omitted `--run-id` and `--linux-summary`
+  - provided existing `--cross-summary` and `--closure-report`
+  - checker minted a timestamp `run_id`, then later inherited the active custom `linux_summary`
+  - resulting report counted `linux_summary`, `cross_summary`, and `closure_report` as `run_id mismatch`
+- target scope for this batch:
+  - keep active path inheritance semantics unchanged
+  - only move `RUN_ID` default truth closer to the inherited active Linux summary
+- focused RED:
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh`: FAIL before fix
+  - failure shape:
+    - cross summary already declared an active custom `linux_summary`
+    - direct consistency was invoked without `--run-id` / `--linux-summary`
+    - checker minted a fresh timestamp first and then marked aligned `linux_summary` / `cross_summary` / `closure_report` as mismatched
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - moved `parse_cross_summary_linux_summary_path(...)` ahead of `RUN_ID` defaulting
+    - added `infer_run_id_from_cross_summary_linux_summary(...)`
+    - `RUN_ID` now falls back in this order: explicit value -> explicit/inherited Linux summary -> cross-summary-declared active Linux summary -> timestamp
+    - synced `--help` text to the new default run_id truth
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Consistency Cross Summary Windows Summary Required
 
 ## Goal

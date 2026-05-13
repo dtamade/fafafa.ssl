@@ -1,3 +1,42 @@
+# Progress - Wave B/B2 Consistency Cross Summary Run ID Inference
+
+## 2026-05-13
+- continuation resync:
+  - continued directly after committing the active Windows required batch
+  - kept the scope inside the same static Wave B/B2 evidence-consistency script surface
+- new bug located:
+  - `check_wave_b_b2_evidence_consistency.sh` still finalizes `RUN_ID` too early
+  - when `--run-id` and `--linux-summary` are both omitted, it mints a timestamp before inheriting the active custom `linux_summary` from cross summary
+  - this turns aligned evidence into a false strict red via `linux_summary` / `cross_summary` / `closure_report` run_id mismatch
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-b2-consistency-cross-summary-run-id-inference.md`
+- next implementation shape:
+  - add a focused contract that only passes existing `cross summary + closure report`
+  - then move `RUN_ID` default truth to the inherited active Linux summary path instead of the pre-inheritance timestamp
+- focused RED contract:
+  - added `tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh` -> FAIL before fix
+  - failure shape:
+    - cross summary and closure report already belonged to `consistency_cross_summary_runid_truth`
+    - direct consistency still exited non-zero because it minted a fresh timestamp run_id first
+- minimal implementation landed:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `infer_run_id_from_cross_summary_linux_summary(...)`
+    - now falls back from explicit/inherited Linux summary to cross-summary-declared active Linux summary before timestamp generation
+    - synced the `--run-id` help text with the real fallback order
+- verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_summary_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_summary_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Consistency Cross Summary Windows Summary Required
 
 ## 2026-05-13

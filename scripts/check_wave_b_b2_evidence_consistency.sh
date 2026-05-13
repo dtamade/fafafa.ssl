@@ -38,7 +38,7 @@ Wave B / B2 Evidence Consistency Checker
   scripts/check_wave_b_b2_evidence_consistency.sh [options]
 
 选项：
-  --run-id ID                指定 run_id（默认优先从 Linux summary 推导，否则时间戳）
+  --run-id ID                指定 run_id（默认优先从 Linux summary 或 cross summary 的 active Linux summary 推导，否则时间戳）
   --linux-summary FILE       Linux summary 路径
   --linux-examples FILE      Linux examples JSON 路径
   --macos-probe FILE         macOS probe JSON 路径
@@ -163,6 +163,30 @@ infer_run_id_from_linux_summary() {
   parse_run_id_md "$abs_file"
 }
 
+parse_cross_summary_linux_summary_path() {
+  local file="$1"
+  grep -E "^- linux_summary:" "$file" | head -1 | sed -E 's/^- linux_summary: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
+}
+
+infer_run_id_from_cross_summary_linux_summary() {
+  local file="$1"
+  if [[ -z "$file" ]]; then
+    echo ""
+    return 0
+  fi
+
+  local abs_file
+  abs_file="$(resolve_path "$file")"
+  if [[ ! -f "$abs_file" ]]; then
+    echo ""
+    return 0
+  fi
+
+  local cross_summary_linux_summary
+  cross_summary_linux_summary="$(parse_cross_summary_linux_summary_path "$abs_file")"
+  infer_run_id_from_linux_summary "$cross_summary_linux_summary"
+}
+
 default_linux_examples_json_path() {
   local run_specific="test-reports/examples_compile_ci_gate_${RUN_ID}.json"
   local generic="test-reports/examples_compile_ci_gate.json"
@@ -189,6 +213,9 @@ derive_sibling_artifact_path() {
 
 if [[ "$RUN_ID_EXPLICIT" != "true" ]]; then
   RUN_ID="$(infer_run_id_from_linux_summary "$LINUX_SUMMARY")"
+  if [[ -z "$RUN_ID" ]]; then
+    RUN_ID="$(infer_run_id_from_cross_summary_linux_summary "$CROSS_SUMMARY")"
+  fi
 fi
 if [[ -z "$RUN_ID" ]]; then
   RUN_ID="$(date +%Y%m%d_%H%M%S)"
@@ -228,11 +255,6 @@ fi
 parse_closure_status_md() {
   local file="$1"
   grep -E "^- closure_status:" "$file" | head -1 | sed -E 's/^- closure_status: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
-}
-
-parse_cross_summary_linux_summary_path() {
-  local file="$1"
-  grep -E "^- linux_summary:" "$file" | head -1 | sed -E 's/^- linux_summary: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
 }
 
 parse_cross_summary_linux_examples_path() {
