@@ -1,3 +1,19 @@
+# Findings - Wave B/B2 Handoff Linux Next Actions Truth
+
+## 2026-05-14
+- 继续沿着 `cross summary -> closure -> consistency -> handoff bundle` 这条链往上审后，发现顶层 `prepare_wave_b_b2_handoff_bundle.sh` 还有同型缺口：
+  - 它已经能读到 `closure_report`
+  - 也已经根据 macOS / Windows platform state 生成 `Next Actions`
+  - 但 Linux platform state 仍完全没接进去
+- 这会制造一个真实的顶层交接误导：
+  - 当 Linux 是唯一阻塞平台时
+  - handoff bundle 会退化成只有 replay command
+  - 操作者看不到“当前真正该修的就是 Linux baseline”
+- 这批最小正确修法不是改 `handoff_state`，而是把 Linux state 也接入当前顶层动作生成逻辑：
+  - Linux 非 `PASS` 时显式提示修复或重跑 Linux baseline
+  - macOS / Windows 已 `PASS` 时继续避免错误提示
+  - replay command 继续保留，顶层 refresh 入口不变
+
 # Findings - Wave B Cross Summary Next Actions Truth
 
 ## 2026-05-14

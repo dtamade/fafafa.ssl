@@ -338,9 +338,11 @@ sync_report_strict_mode "$CONSISTENCY_REPORT"
 closure_status="$(grep -E '^- closure_status:' "$(resolve_path "$CLOSURE_REPORT")" | head -1 | sed -E 's/^- closure_status: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true)"
 consistency_status="$(grep -E '^- consistency_status:' "$(resolve_path "$CONSISTENCY_REPORT")" | head -1 | sed -E 's/^- consistency_status: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true)"
 closure_abs="$(resolve_path "$CLOSURE_REPORT")"
+linux_platform_state=""
 macos_platform_state=""
 windows_platform_state=""
 if [[ -f "$closure_abs" ]]; then
+  linux_platform_state="$(parse_closure_platform_state "$closure_abs" "linux")"
   macos_platform_state="$(parse_closure_platform_state "$closure_abs" "macos")"
   windows_platform_state="$(parse_closure_platform_state "$closure_abs" "windows")"
 fi
@@ -384,6 +386,9 @@ NEXT_ACTIONS=()
 if [[ "$handoff_state" == "CLOSED" ]]; then
   NEXT_ACTIONS+=("当前批次已闭环；如需复核，可重新执行 '$REPLAY_COMMAND'。")
 else
+  if [[ "$linux_platform_state" != "PASS" ]]; then
+    NEXT_ACTIONS+=("若 Linux 为 FAIL/READY/PENDING：修复或重跑 Linux baseline，并回填有效 Linux summary。")
+  fi
   if [[ "$macos_platform_state" != "PASS" ]]; then
     NEXT_ACTIONS+=("在 macOS runner 执行 live gate 并回填 macOS summary。")
   fi

@@ -1,3 +1,34 @@
+# Progress - Wave B/B2 Handoff Linux Next Actions Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `d2e16a4 fix: align cross summary next actions`
+  - continued upward on the same Wave B/B2 handoff report chain
+- Fresh review narrowed the next real issue:
+  - `prepare_wave_b_b2_handoff_bundle.sh` already consumed macOS / Windows platform state from `closure_report`
+  - but it still ignored Linux platform state entirely
+  - when Linux was the only blocking platform, the top-level bundle degraded to a replay-only instruction with no concrete Linux repair action
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-handoff-linux-next-actions-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_linux_next_actions_contract.sh`
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_linux_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_linux_next_actions_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `handoff bundle next actions should explicitly mention Linux FAIL when Linux baseline is the blocking platform`
+- Minimal implementation landed:
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - now parses `linux` platform state from `closure_report`
+    - Linux non-PASS states now receive explicit baseline guidance in `NEXT_ACTIONS`
+    - replay command and `handoff_state` logic were kept intact
+- GREEN verification:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh` -> PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_linux_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_linux_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B Cross Summary Next Actions Truth
 
 ## 2026-05-14
