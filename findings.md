@@ -1,3 +1,19 @@
+# Findings - Wave B/B2 Handoff Gate Repair State Truth
+
+## 2026-05-14
+- 继续深审顶层 `handoff bundle` 后，发现问题已经不只是动作提示，而是状态语义本身也开始漂移：
+  - 当前只要 consistency 还是绿的
+  - handoff bundle 就会默认落到 `READY_FOR_RUNNER`
+  - 即使某个平台 summary 已经明确写了 `FAIL`
+- 这会制造一个真实的顶层假状态：
+  - 操作者看到 `READY_FOR_RUNNER`
+  - 容易以为只是“还差 runner 侧证据”
+  - 实际上 gate 已经失败，应该先修，而不是继续等待补证据
+- 这批最小正确修法不是改 replay 或 `Next Actions`，而是把状态模型重新分层：
+  - `READY_FOR_RUNNER` 只保留给“证据一致，但仍缺 runner 证据”的场景
+  - 已有平台 summary 且状态为 `FAIL/READY/DRY_RUN` 时，落到新的 `NEEDS_GATE_REPAIR`
+  - `NEEDS_EVIDENCE_SYNC` 与 `CLOSED` 继续保持原有优先级
+
 # Findings - Wave B/B2 Handoff Linux Next Actions Truth
 
 ## 2026-05-14

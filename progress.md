@@ -1,3 +1,34 @@
+# Progress - Wave B/B2 Handoff Gate Repair State Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `85c6b49 fix: surface linux handoff next actions`
+  - continued on the same top-level handoff bundle surface
+- Fresh review narrowed the next real issue:
+  - after Linux next-action guidance was added, the top-level report still kept `handoff_state=READY_FOR_RUNNER`
+  - this remained wrong when an existing platform summary already reported `FAIL`
+  - the issue was therefore no longer wording-only; it was a state-model drift
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-handoff-gate-repair-state-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh`
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `handoff bundle should not stay READY_FOR_RUNNER when an existing platform summary already reports FAIL`
+- Minimal implementation landed:
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added `is_gate_repair_state(...)`
+    - `FAIL/READY/DRY_RUN` platform states now map to `NEEDS_GATE_REPAIR`
+    - `NEEDS_EVIDENCE_SYNC` and `CLOSED` precedence stayed unchanged
+- GREEN verification:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh` -> PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_linux_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Handoff Linux Next Actions Truth
 
 ## 2026-05-14

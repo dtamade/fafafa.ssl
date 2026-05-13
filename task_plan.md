@@ -1,3 +1,47 @@
+# Task Plan - Wave B/B2 Handoff Gate Repair State Truth
+
+## Goal
+收口 `prepare_wave_b_b2_handoff_bundle.sh` 的 `handoff_state` 语义漂移，避免已有平台 gate 已经失败时，顶层状态仍错误显示为 `READY_FOR_RUNNER`。
+
+## Current Batch
+1. 写 focused contract，证明 Linux `FAIL` 场景下 handoff_state 仍错误落在 `READY_FOR_RUNNER`。
+2. 最小修改 `prepare_wave_b_b2_handoff_bundle.sh`，新增 gate-repair 状态分支。
+3. 复跑 handoff 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified misleading READY_FOR_RUNNER semantics when an existing platform gate already failed
+- [completed] wrote focused contract for handoff gate-repair state truth
+- [completed] minimal NEEDS_GATE_REPAIR state split in handoff bundle
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前顶层 handoff bundle 在修复前存在更深一层状态误导：
+  - Linux summary 已存在且 `Overall Status: FAIL`
+  - consistency 仍是 `CONSISTENT`
+  - 结果 `handoff_state` 仍落到 `READY_FOR_RUNNER`
+- 这会把“需要修 gate”伪装成“只差 runner 证据”。
+- focused RED:
+  - 新增 `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh`
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh`: FAIL before fix
+  - failure shape:
+    - handoff bundle should not stay READY_FOR_RUNNER when an existing platform summary already reports FAIL
+- minimal implementation:
+  - 更新 `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added `is_gate_repair_state(...)`
+    - any `FAIL/READY/DRY_RUN` platform state now falls to `NEEDS_GATE_REPAIR`
+    - `NEEDS_EVIDENCE_SYNC` still wins when consistency is inconsistent
+    - `CLOSED` still wins when closure+consistency both green
+- focused GREEN:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh`: PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_linux_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Handoff Linux Next Actions Truth
 
 ## Goal

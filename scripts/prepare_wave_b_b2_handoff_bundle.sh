@@ -139,6 +139,11 @@ parse_closure_platform_state() {
   ' "$file" || true
 }
 
+is_gate_repair_state() {
+  local state="$1"
+  [[ "$state" == "FAIL" || "$state" == "READY" || "$state" == "DRY_RUN" ]]
+}
+
 infer_run_id_from_linux_summary() {
   local file="$1"
   if [[ -z "$file" ]]; then
@@ -350,6 +355,10 @@ fi
 handoff_state="READY_FOR_RUNNER"
 if [[ "$consistency_status" == "INCONSISTENT" ]]; then
   handoff_state="NEEDS_EVIDENCE_SYNC"
+elif is_gate_repair_state "$linux_platform_state" \
+  || is_gate_repair_state "$macos_platform_state" \
+  || is_gate_repair_state "$windows_platform_state"; then
+  handoff_state="NEEDS_GATE_REPAIR"
 fi
 if [[ "$closure_status" == "CLOSED" && "$consistency_status" == "CONSISTENT" ]]; then
   handoff_state="CLOSED"
