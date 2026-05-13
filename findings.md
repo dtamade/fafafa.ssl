@@ -1,3 +1,21 @@
+# Findings - Wave B/B2 Strict Input Description Truth
+
+## 2026-05-14
+- 继续沿着 `strict_closure=true` 的 workflow 静态边界深审后，发现输入面还有一条更直接的用户契约漂移：
+  - workflow 现在会把 `strict_closure=true` 映射到 `prepare_wave_b_b2_handoff_bundle.sh --strict`
+  - 这条 strict 路径已经不是单纯的 “B2 not closed”
+  - 它还会因为 evidence inconsistency 或 Windows runtime artifact 缺失而失败
+- 这会制造一个真实的用户误导：
+  - 操作者看到的是 “Fail workflow if B2 not closed”
+  - 实际运行时却可能在 `closure_status == CLOSED` 的情况下仍因 consistency strictness 失败
+  - 于是输入名和失败原因之间出现语义错位
+- 这批最小正确修法不是改输入名或 strict 逻辑，而是先把描述文字收口到真实语义：
+  - 保留兼容性的 `strict_closure` key
+  - 但 description 必须明确这是完整 handoff strict gate，而不只是 closure-only
+- 修完后 workflow 的输入面终于和内部实现说的是同一件事：
+  - 操作者再看到 strict 失败，就不会误以为“明明 closure 已 closed 为什么还失败”
+  - live 与 `.disabled` 模板的说明也继续保持一致
+
 # Findings - Wave B/B2 Prepare Strict Metadata Truth
 
 ## 2026-05-14

@@ -1,3 +1,37 @@
+# Progress - Wave B/B2 Strict Input Description Truth
+
+## 2026-05-14
+- continuation resync:
+  - continued directly after committing the prepare strict-metadata batch
+  - stayed on the same Wave B/B2 strict/workflow static-review lane
+- new bug located:
+  - workflow_dispatch input `strict_closure` still says `Fail workflow if B2 not closed`
+  - but the live implementation maps it to `prepare_wave_b_b2_handoff_bundle.sh --strict`
+  - current strict behavior also fails on evidence inconsistency, not only on closure incompleteness
+- new batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-strict-input-description-truth.md`
+- next implementation shape:
+  - add a focused workflow contract for strict input wording
+  - then minimally sync the input description in both live and disabled templates
+- focused RED contract:
+  - added `tests/scripts/test_wave_b_b2_strict_input_description_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_strict_input_description_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_strict_input_description_contract.sh` -> FAIL before fix
+  - failure shape:
+    - both live and disabled workflows still described `strict_closure` as closure-only
+    - this no longer matched the actual `prepare --strict` failure boundary
+- minimal implementation landed:
+  - `.github/workflows/wave-b-b2-manual.yml`
+  - `.github/workflows/wave-b-b2-manual.yml.disabled`
+    - synced `strict_closure` description to the full handoff strict semantics
+- verification:
+  - `bash -n tests/scripts/test_wave_b_b2_strict_input_description_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_strict_input_description_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_linux_baseline_required_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+  - `diff -u .github/workflows/wave-b-b2-manual.yml .github/workflows/wave-b-b2-manual.yml.disabled` -> PASS
+
 # Progress - Wave B/B2 Prepare Strict Metadata Truth
 
 ## 2026-05-14

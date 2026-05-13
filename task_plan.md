@@ -1,3 +1,55 @@
+# Task Plan - Wave B/B2 Strict Input Description Truth
+
+## Goal
+收口 workflow 输入 `strict_closure` 的描述漂移，避免它仍宣称“只在 B2 not closed 时失败”，而当前真实语义已经是完整 `prepare --strict` handoff 失败路径。
+
+## Current Batch
+1. 写 focused workflow contract，证明 `strict_closure` 的输入描述仍停留在 closure-only 旧语义。
+2. 最小修改 live 与 `.disabled` 模板的 `strict_closure` 描述文字。
+3. 跑 focused workflow 回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified stale strict_closure input wording after strict-boundary review
+- [completed] wrote focused workflow contract for strict input description truth
+- [completed] minimal live + disabled workflow input description sync
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 workflow 入口仍写：
+  - `strict_closure: description: Fail workflow if B2 not closed`
+- 但它实际映射到：
+  - `prepare_wave_b_b2_handoff_bundle.sh --strict`
+  - 而这条 strict 路径会同时因为：
+    - closure 未闭环
+    - evidence consistency 为 `INCONSISTENT`
+    - Windows runtime artifacts 缺失
+    - 其他 required evidence 缺失
+    触发非 0
+- 这会把一个已经变成“完整 handoff strict” 的输入，继续伪装成 “closure-only” 开关。
+- focused RED:
+  - 新增 `tests/scripts/test_wave_b_b2_strict_input_description_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_strict_input_description_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_strict_input_description_contract.sh`: FAIL before fix
+  - failure shape:
+    - live workflow 仍写 `description: Fail workflow if B2 not closed`
+    - `.disabled` 模板也保留相同的 closure-only 旧文案
+- minimal implementation:
+  - 新增 `tests/scripts/test_wave_b_b2_strict_input_description_contract.sh`
+  - 更新：
+    - `.github/workflows/wave-b-b2-manual.yml`
+    - `.github/workflows/wave-b-b2-manual.yml.disabled`
+  - live 与 disabled 双模板都把 `strict_closure` 描述改为：
+    - `Fail workflow if Wave B/B2 handoff is not fully closed and consistent`
+- focused GREEN:
+  - `bash -n tests/scripts/test_wave_b_b2_strict_input_description_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_strict_input_description_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_linux_baseline_required_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`: PASS
+  - `git diff --check`: PASS
+  - `diff -u .github/workflows/wave-b-b2-manual.yml .github/workflows/wave-b-b2-manual.yml.disabled`: PASS
+
 # Task Plan - Wave B/B2 Prepare Strict Metadata Truth
 
 ## Goal

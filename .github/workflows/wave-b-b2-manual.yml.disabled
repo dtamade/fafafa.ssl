@@ -12,7 +12,7 @@ on:
         required: false
         default: ""
       strict_closure:
-        description: Fail workflow if B2 not closed
+        description: Fail workflow if Wave B/B2 handoff is not fully closed and consistent
         required: false
         default: "false"
 
