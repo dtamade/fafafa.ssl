@@ -1,3 +1,54 @@
+# Task Plan - Wave B/B2 Handoff Report Chain Truth
+
+## Goal
+收口 `prepare_wave_b_b2_handoff_bundle.sh` 对下游报告元数据的盲信，避免 `closure_report` / `consistency_report` 缺失关键状态字段时，顶层 handoff bundle 仍产出正常状态，制造“坏报告链仍可继续”的假象。
+
+## Current Batch
+1. 写 focused contract，证明缺失 `consistency_status` 的 downstream report 会被顶层静默吞掉。
+2. 最小修改 `prepare_wave_b_b2_handoff_bundle.sh`，新增 report-chain metadata 校验与 `NEEDS_REPORT_REPAIR`。
+3. 复跑 handoff / consistency 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified silent trust of malformed downstream report metadata in handoff bundle
+- [completed] wrote focused contract for handoff report-chain truth
+- [completed] minimal NEEDS_REPORT_REPAIR state and report_chain_note surfacing in handoff bundle
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前顶层 handoff bundle 在修复前还有一层更深的假状态：
+  - `closure_report` 可以是 `CLOSED`
+  - `consistency_report` 可以缺失 `consistency_status`
+  - 顶层仍继续按普通链路消费，并落到正常 handoff state
+- 这会把“下游报告已坏”伪装成“handoff 还能继续推进”。
+- focused RED:
+  - 新增 `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh`
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh`: FAIL before fix
+  - failure shape:
+    - `handoff bundle should surface malformed downstream report metadata as NEEDS_REPORT_REPAIR instead of pretending the handoff can continue`
+- minimal implementation:
+  - 更新 `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added metadata parsers for `closure_status` / `consistency_status`
+    - added status allow-list validation
+    - malformed downstream report-chain metadata now falls to `NEEDS_REPORT_REPAIR`
+    - top-level report now emits `report_chain_note`
+    - normal `READY_FOR_RUNNER` / `NEEDS_EVIDENCE_SYNC` / `CLOSED` branches stay intact for valid chains
+- focused GREEN:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh`: PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_linux_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Handoff Gate Repair State Truth
 
 ## Goal

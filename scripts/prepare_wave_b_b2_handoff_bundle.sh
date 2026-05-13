@@ -119,6 +119,36 @@ parse_run_id_md() {
     | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
 }
 
+parse_metadata_value() {
+  local file="$1"
+  local key="$2"
+  grep -E "^- ${key}:" "$file" \
+    | head -1 \
+    | sed -E "s/^- ${key}: *//" \
+    | tr -d '`*' \
+    | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
+}
+
+parse_closure_status_md() {
+  local file="$1"
+  parse_metadata_value "$file" "closure_status"
+}
+
+parse_consistency_status_md() {
+  local file="$1"
+  parse_metadata_value "$file" "consistency_status"
+}
+
+is_valid_closure_status() {
+  local status="$1"
+  [[ "$status" == "IN_PROGRESS" || "$status" == "CLOSED" ]]
+}
+
+is_valid_consistency_status() {
+  local status="$1"
+  [[ "$status" == "CONSISTENT" || "$status" == "INCONSISTENT" ]]
+}
+
 parse_closure_platform_state() {
   local file="$1"
   local want_platform="$2"
@@ -193,6 +223,20 @@ build_shell_command() {
   done
   local IFS=' '
   echo "${parts[*]}"
+}
+
+join_by() {
+  local separator="$1"
+  shift
+  local joined=""
+  local item
+  for item in "$@"; do
+    if [[ -n "$joined" ]]; then
+      joined+="$separator"
+    fi
+    joined+="$item"
+  done
+  echo "$joined"
 }
 
 sync_report_strict_mode() {
@@ -340,9 +384,41 @@ bash "$PROJECT_ROOT/scripts/check_wave_b_b2_evidence_consistency.sh" \
 sync_report_strict_mode "$CLOSURE_REPORT"
 sync_report_strict_mode "$CONSISTENCY_REPORT"
 
-closure_status="$(grep -E '^- closure_status:' "$(resolve_path "$CLOSURE_REPORT")" | head -1 | sed -E 's/^- closure_status: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true)"
-consistency_status="$(grep -E '^- consistency_status:' "$(resolve_path "$CONSISTENCY_REPORT")" | head -1 | sed -E 's/^- consistency_status: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true)"
 closure_abs="$(resolve_path "$CLOSURE_REPORT")"
+consistency_abs="$(resolve_path "$CONSISTENCY_REPORT")"
+closure_status=""
+consistency_status=""
+report_chain_issues=()
+report_chain_note="ok"
+
+if [[ ! -f "$closure_abs" ]]; then
+  report_chain_issues+=("closure_report missing")
+else
+  closure_status="$(parse_closure_status_md "$closure_abs")"
+  if [[ -z "$closure_status" ]]; then
+    report_chain_issues+=("closure_status missing")
+  elif ! is_valid_closure_status "$closure_status"; then
+    report_chain_issues+=("invalid closure_status: $closure_status")
+  fi
+fi
+
+if [[ ! -f "$consistency_abs" ]]; then
+  report_chain_issues+=("consistency_report missing")
+else
+  consistency_status="$(parse_consistency_status_md "$consistency_abs")"
+  if [[ -z "$consistency_status" ]]; then
+    report_chain_issues+=("consistency_status missing")
+  elif ! is_valid_consistency_status "$consistency_status"; then
+    report_chain_issues+=("invalid consistency_status: $consistency_status")
+  fi
+fi
+
+if [[ ${#report_chain_issues[@]} -gt 0 ]]; then
+  report_chain_note="$(join_by "; " "${report_chain_issues[@]}")"
+fi
+
+closure_status_display="${closure_status:-n/a}"
+consistency_status_display="${consistency_status:-n/a}"
 linux_platform_state=""
 macos_platform_state=""
 windows_platform_state=""
@@ -353,14 +429,15 @@ if [[ -f "$closure_abs" ]]; then
 fi
 
 handoff_state="READY_FOR_RUNNER"
-if [[ "$consistency_status" == "INCONSISTENT" ]]; then
+if [[ ${#report_chain_issues[@]} -gt 0 ]]; then
+  handoff_state="NEEDS_REPORT_REPAIR"
+elif [[ "$consistency_status" == "INCONSISTENT" ]]; then
   handoff_state="NEEDS_EVIDENCE_SYNC"
 elif is_gate_repair_state "$linux_platform_state" \
   || is_gate_repair_state "$macos_platform_state" \
   || is_gate_repair_state "$windows_platform_state"; then
   handoff_state="NEEDS_GATE_REPAIR"
-fi
-if [[ "$closure_status" == "CLOSED" && "$consistency_status" == "CONSISTENT" ]]; then
+elif [[ "$closure_status" == "CLOSED" && "$consistency_status" == "CONSISTENT" ]]; then
   handoff_state="CLOSED"
 fi
 
@@ -394,6 +471,9 @@ fi
 NEXT_ACTIONS=()
 if [[ "$handoff_state" == "CLOSED" ]]; then
   NEXT_ACTIONS+=("当前批次已闭环；如需复核，可重新执行 '$REPLAY_COMMAND'。")
+elif [[ "$handoff_state" == "NEEDS_REPORT_REPAIR" ]]; then
+  NEXT_ACTIONS+=("修复或重建下游 report metadata（$report_chain_note），确保 closure / consistency status 字段完整且合法。")
+  NEXT_ACTIONS+=("修复后重新执行 '$REPLAY_COMMAND'。")
 else
   if [[ "$linux_platform_state" != "PASS" ]]; then
     NEXT_ACTIONS+=("若 Linux 为 FAIL/READY/PENDING：修复或重跑 Linux baseline，并回填有效 Linux summary。")
@@ -415,8 +495,9 @@ fi
   echo "- run_id: $RUN_ID"
   echo "- generated_at: $(date '+%Y-%m-%d %H:%M:%S %z')"
   echo "- handoff_state: **$handoff_state**"
-  echo "- closure_status: $closure_status"
-  echo "- consistency_status: $consistency_status"
+  echo "- closure_status: $closure_status_display"
+  echo "- consistency_status: $consistency_status_display"
+  echo "- report_chain_note: $report_chain_note"
   echo "- strict_mode: $STRICT"
   echo
   echo "## Artifacts"

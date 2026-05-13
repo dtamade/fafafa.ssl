@@ -1,3 +1,20 @@
+# Findings - Wave B/B2 Handoff Report Chain Truth
+
+## 2026-05-14
+- 继续沿着 `cross summary -> closure -> consistency -> handoff bundle` 这条静态链深审后，发现顶层 `prepare_wave_b_b2_handoff_bundle.sh` 还有一层更危险的 repo-side 盲点：
+  - 它会读取 `closure_report` / `consistency_report`
+  - 但此前只做“取值”，不做“合法性校验”
+  - 只要下游脚本返回 0，哪怕 status 字段已经缺失或写坏，顶层仍会继续给出普通 handoff state
+- 这不是文案漂移，而是一个真实的顶层假状态来源：
+  - 操作者看到的是 `READY_FOR_RUNNER` / `CLOSED` 一类正常状态
+  - 但底层 report metadata 其实已经断链
+  - 结果就是错误被静默吞掉，后续人只能看到一个“假正常”的交接包
+- 这批最小正确修法不是去扩大下游脚本责任，而是在 `prepare` 顶层补一层明确的 report-chain guard：
+  - `closure_status` 只允许 `IN_PROGRESS` / `CLOSED`
+  - `consistency_status` 只允许 `CONSISTENT` / `INCONSISTENT`
+  - 缺失/非法时统一落到新的 `NEEDS_REPORT_REPAIR`
+  - 并在顶层报告里显式写出 `report_chain_note`
+
 # Findings - Wave B/B2 Handoff Gate Repair State Truth
 
 ## 2026-05-14
