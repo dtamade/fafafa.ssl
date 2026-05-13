@@ -1,3 +1,41 @@
+# Task Plan - Wave B/B2 Handoff Bundle Windows Companion Path Hardening
+
+## Goal
+收口 `prepare_wave_b_b2_handoff_bundle.sh` 的 Windows companion artifact 路径推导缺陷：当调用者传入自定义 `--windows-summary` 路径时，默认 quick smoke / runtime transcript 也应跟随该 summary 同目录，而不是继续硬编码到 `test-reports/`。
+
+## Current Batch
+1. 写 focused RED contract，证明 handoff bundle 在自定义 Windows summary 路径下会错误去 `test-reports/` 查找 companion logs，导致假性 `INCONSISTENT`。
+2. 对 `prepare_wave_b_b2_handoff_bundle.sh` 做最小修法，只修 companion path 推导。
+3. 跑新 contract、handoff 相关旧 contract 与 diff hygiene。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] refreshed current repo state for the next static handoff micro-batch
+- [completed] focused RED companion-path contract
+- [completed] minimal handoff companion-path hardening
+- [completed] focused verification
+- [in_progress] review and commit closeout
+
+## Current Evidence
+- focused RED:
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: FAIL before fix
+  - failure shape:
+    - consistency report was generated
+    - but it did not stay `CONSISTENT` even though the custom Windows summary already had sibling quick log + runtime transcript
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added `derive_sibling_artifact_path(...)`
+    - when `windows_summary` exists, default `--windows-quick-log` / `--windows-runtime-transcript` now follow the summary directory instead of staying hardcoded at `test-reports/`
+- focused GREEN:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh`: PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B Cross-Platform Summary Absolute Input Hardening
 
 ## Goal

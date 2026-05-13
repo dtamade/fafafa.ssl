@@ -1,3 +1,23 @@
+# Findings - Wave B/B2 Handoff Bundle Windows Companion Path Hardening
+
+## 2026-05-13
+- 继续静态深审 `Wave B/B2` 脚本链时，发现 `prepare_wave_b_b2_handoff_bundle.sh` 仍保留了一条旧的路径假设：
+  - 只要 `windows_summary` 存在，它就会开启 Windows runtime artifact 校验
+  - 但默认 companion 路径仍死写为 `test-reports/winssl_quick_smoke_<run_id>.log` 与 `test-reports/winssl_runtime_suite_<run_id>.log`
+  - 这和前面已经补好的“支持自定义 summary 路径 / absolute path”语义不一致
+- 这个缺口会制造一种很误导的 repo-side 假失败：
+  - 调用者明明提供了自定义 `windows_summary`
+  - sibling quick log / runtime transcript 也真实存在于同目录
+  - handoff bundle 仍会因为去错目录而产出 `INCONSISTENT`
+- 最小正确修法不是继续扩 CLI，而是先把默认推导补齐到更一致的静态语义：
+  - 默认 companion artifacts 跟随 `windows_summary` 同目录
+  - 因而默认 `test-reports/...` 行为在仓库现有主路径上完全保持不变
+  - 只有自定义 summary 路径时，才获得更合理的 sibling-log 推导
+- 回归证明这批修法没有破坏已有收口：
+  - handoff bundle 的自定义 companion-path contract 变绿
+  - 之前的 absolute-output contract 继续通过
+  - evidence consistency 本体 contract 继续通过
+
 # Findings - Wave B Cross-Platform Summary Absolute Input Hardening
 
 ## 2026-05-13

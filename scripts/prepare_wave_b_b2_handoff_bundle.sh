@@ -111,6 +111,18 @@ resolve_path() {
   fi
 }
 
+derive_sibling_artifact_path() {
+  local anchor_path="$1"
+  local filename="$2"
+  local anchor_dir
+  anchor_dir="$(dirname "$anchor_path")"
+  if [[ "$anchor_dir" == "." ]]; then
+    echo "$filename"
+  else
+    echo "$anchor_dir/$filename"
+  fi
+}
+
 if [[ -z "$LINUX_SUMMARY" || ! -f "$(resolve_path "$LINUX_SUMMARY")" ]]; then
   echo "[ERROR] linux summary not found: $LINUX_SUMMARY" >&2
   exit 1
@@ -125,8 +137,8 @@ fi
 if [[ -f "$(resolve_path "$WINDOWS_SUMMARY")" ]]; then
   WINDOWS_SUMMARY_ARGS=(--windows-summary "$WINDOWS_SUMMARY")
   WINDOWS_EVIDENCE_ARGS=(
-    --windows-quick-log "test-reports/winssl_quick_smoke_${RUN_ID}.log"
-    --windows-runtime-transcript "test-reports/winssl_runtime_suite_${RUN_ID}.log"
+    --windows-quick-log "$(derive_sibling_artifact_path "$WINDOWS_SUMMARY" "winssl_quick_smoke_${RUN_ID}.log")"
+    --windows-runtime-transcript "$(derive_sibling_artifact_path "$WINDOWS_SUMMARY" "winssl_runtime_suite_${RUN_ID}.log")"
   )
 fi
 

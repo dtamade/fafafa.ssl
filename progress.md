@@ -1,3 +1,40 @@
+# Progress - Wave B/B2 Handoff Bundle Windows Companion Path Hardening
+
+## 2026-05-13
+- continuation resync:
+  - stayed inside the same static Wave B/B2 script family
+  - focused the next micro-batch on `prepare_wave_b_b2_handoff_bundle.sh`
+- new bug located:
+  - `prepare_wave_b_b2_handoff_bundle.sh` still hardcoded:
+    - `test-reports/winssl_quick_smoke_<run_id>.log`
+    - `test-reports/winssl_runtime_suite_<run_id>.log`
+  - even when the caller supplied a custom `--windows-summary` path
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-b2-handoff-bundle-windows-companion-path-hardening.md`
+- focused RED contract:
+  - added `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`
+  - contract creates:
+    - Linux summary + examples fixtures under repo tmp
+    - a custom Windows evidence directory
+    - custom Windows summary plus sibling quick log / runtime transcript
+    - custom handoff output directory
+  - then runs `prepare_wave_b_b2_handoff_bundle.sh` from `/tmp`
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> FAIL before fix
+  - failure shape:
+    - consistency report did not remain `CONSISTENT`
+    - because prepare script still pointed companion logs at repo `test-reports/`
+- minimal implementation landed:
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added `derive_sibling_artifact_path(...)`
+    - Windows companion artifacts now default to the same directory as the provided `windows_summary`
+- verification:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh` -> PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B Cross-Platform Summary Absolute Input Hardening
 
 ## 2026-05-13
