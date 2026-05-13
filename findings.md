@@ -1,3 +1,21 @@
+# Findings - Wave B/B2 Consistency Cross Summary Metadata Truth
+
+## 2026-05-14
+- 继续沿着 `cross summary -> consistency -> handoff bundle` 这条静态链往下深审后，发现 `check_wave_b_b2_evidence_consistency.sh` 还有一条与前两批同型的 repo-side 假绿灯：
+  - 它会读取 `cross_summary`
+  - 也会继承其中记录的 active evidence path
+  - 但此前只校验 `cross_summary` 的 `run_id`
+  - 不校验 `linux_summary` / `linux_examples_json` 这些关键 metadata 是否仍然存在
+- 这会制造一个真实的一致性假绿灯：
+  - 真实 linux evidence 仍在
+  - `cross_summary` 本身却已经损坏
+  - consistency 仍然会把这份坏报告标成 `CONSISTENT`
+- 这批最小正确修法不是改 cross summary 生成器，而是在 consistency checker 内把 `cross_summary` 也提升成“需要校验结构”的 artifact：
+  - 必须带 `linux_summary`
+  - 必须带 `linux_examples_json`
+  - 缺失时计入 `runid_mismatch_or_parse_issue`
+  - 并在 `cross_summary` 行显式暴露 parse issue
+
 # Findings - Wave B/B2 Handoff Closure Platform Matrix Truth
 
 ## 2026-05-14

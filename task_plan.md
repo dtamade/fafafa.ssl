@@ -1,3 +1,54 @@
+# Task Plan - Wave B/B2 Consistency Cross Summary Metadata Truth
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 对 `cross summary` 元数据的盲信，避免 `cross_summary` 缺失关键字段时，只要真实 evidence 还在，consistency 仍错误显示为 `CONSISTENT`。
+
+## Current Batch
+1. 写 focused contract，证明缺失 `linux_examples_json` 的 `cross_summary` 仍会被 consistency 静默吞掉。
+2. 最小修改 `check_wave_b_b2_evidence_consistency.sh`，把 `cross summary` 关键 metadata 校验接入 parse-issue 语义。
+3. 复跑 consistency / prepare / handoff 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified false-green trust of malformed cross summary metadata in consistency checker
+- [completed] wrote focused contract for cross summary metadata truth
+- [completed] minimal cross-summary metadata validation in consistency checker
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 consistency checker 在修复前还有一类更底层的假绿灯：
+  - `cross_summary` 文件存在且 `run_id` 正常
+  - 真实 `linux_examples_json` 也仍然存在
+  - 但 `cross_summary` 自己已经缺失 `linux_examples_json` metadata
+  - strict consistency 仍然会返回 `CONSISTENT`
+- 这会把“坏掉的 cross summary”伪装成“完整的一致性绿灯”。
+- focused RED:
+  - 新增 `tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_contract.sh`: FAIL before fix
+  - failure shape:
+    - `consistency should fail strict mode when cross summary is missing required linux_examples_json metadata even if the actual linux examples artifact still exists`
+- minimal implementation:
+  - 更新 `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added dedicated `check_cross_summary_artifact(...)`
+    - cross summary now validates required `linux_summary` / `linux_examples_json` metadata
+    - missing metadata now increments `runid_mismatch_or_parse_issue`
+    - cross summary row now exposes the parse issue instead of staying `ok`
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Handoff Closure Platform Matrix Truth
 
 ## Goal

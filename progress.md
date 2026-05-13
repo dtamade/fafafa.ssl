@@ -1,3 +1,45 @@
+# Progress - Wave B/B2 Consistency Cross Summary Metadata Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `a492b83 fix: validate handoff closure platform matrix`
+  - continued downward on the same Wave B/B2 report-chain static-review lane
+- Fresh review narrowed the next real issue:
+  - `check_wave_b_b2_evidence_consistency.sh` already consumed `cross_summary`
+  - but it still treated `cross_summary` as valid as long as the file existed and `run_id` matched
+  - malformed `cross summary` metadata could therefore hide behind otherwise-valid linux evidence and still produce `CONSISTENT`
+- Reproduced the false-green shape with a direct fixture run:
+  - crafted a `cross_summary.md` that omitted `linux_examples_json`
+  - kept real `linux_summary` and `examples.json` valid
+  - observed strict consistency still returned `CONSISTENT`
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-consistency-cross-summary-metadata-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `consistency should fail strict mode when cross summary is missing required linux_examples_json metadata even if the actual linux examples artifact still exists`
+- Minimal implementation landed:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `check_cross_summary_artifact(...)`
+    - cross summary now validates required `linux_summary` / `linux_examples_json` metadata
+    - missing metadata now increments `runid_mismatch_or_parse_issue`
+    - `cross_summary` row now exposes the parse issue instead of staying `ok`
+- GREEN verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_summary_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Handoff Closure Platform Matrix Truth
 
 ## 2026-05-14

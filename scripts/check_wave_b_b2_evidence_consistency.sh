@@ -530,6 +530,62 @@ check_closure_report_artifact() {
   rows+=("| closure_report | $rel_path | YES | ${parsed:-n/a} | $match | $note |")
 }
 
+check_cross_summary_artifact() {
+  local rel_path="$1"
+  local required="$2"
+
+  local abs_path
+  abs_path="$(resolve_path "$rel_path")"
+
+  if [[ ! -f "$abs_path" ]]; then
+    rows+=("| cross_summary | $rel_path | NO | n/a | NO | missing |")
+    if [[ "$required" == "true" ]]; then
+      required_missing=$((required_missing + 1))
+    fi
+    return 0
+  fi
+
+  local parsed
+  parsed="$(parse_run_id_md "$abs_path")"
+
+  local match="NO"
+  local note="run_id mismatch"
+  if [[ -n "$parsed" && "$parsed" == "$RUN_ID" ]]; then
+    match="YES"
+    note="ok"
+  elif [[ -z "$parsed" ]]; then
+    note="run_id not found"
+  fi
+
+  if [[ "$match" == "NO" ]]; then
+    runid_mismatch=$((runid_mismatch + 1))
+  fi
+
+  local parsed_linux_summary
+  parsed_linux_summary="$(parse_cross_summary_linux_summary_path "$abs_path")"
+  if [[ -z "$parsed_linux_summary" ]]; then
+    runid_mismatch=$((runid_mismatch + 1))
+    if [[ "$note" == "ok" ]]; then
+      note="linux_summary missing"
+    else
+      note="$note; linux_summary missing"
+    fi
+  fi
+
+  local parsed_linux_examples_json
+  parsed_linux_examples_json="$(parse_cross_summary_linux_examples_path "$abs_path")"
+  if [[ -z "$parsed_linux_examples_json" ]]; then
+    runid_mismatch=$((runid_mismatch + 1))
+    if [[ "$note" == "ok" ]]; then
+      note="linux_examples_json missing"
+    else
+      note="$note; linux_examples_json missing"
+    fi
+  fi
+
+  rows+=("| cross_summary | $rel_path | YES | ${parsed:-n/a} | $match | $note |")
+}
+
 check_markdown_artifact "linux_summary" "$LINUX_SUMMARY" true
 check_json_artifact "linux_examples_json" "$LINUX_EXAMPLES_JSON" true
 macos_summary_required=false
@@ -573,7 +629,7 @@ if [[ "$WINDOWS_RUNTIME_TRANSCRIPT_EXPLICIT" == "true" || "$windows_runtime_requ
 fi
 check_presence_artifact "windows_quick_log" "$WINDOWS_QUICK_LOG" "$windows_quick_log_required"
 check_presence_artifact "windows_runtime_transcript" "$WINDOWS_RUNTIME_TRANSCRIPT" "$windows_runtime_transcript_required"
-check_markdown_artifact "cross_summary" "$CROSS_SUMMARY" true
+check_cross_summary_artifact "$CROSS_SUMMARY" true
 closure_status_note="n/a"
 check_closure_report_artifact "$CLOSURE_REPORT" true
 
