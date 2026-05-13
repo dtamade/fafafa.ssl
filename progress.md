@@ -1,3 +1,38 @@
+# Progress - Wave B/B2 Consistency Generic Linux Examples Fallback
+
+## 2026-05-13
+- continuation resync:
+  - continued directly after committing the inactive macOS probe consistency batch
+  - kept the scope inside the same static Wave B/B2 script family
+- new bug located:
+  - `generate_wave_b_cross_platform_summary.sh` already consumed `test-reports/examples_compile_ci_gate.json` when run-specific JSON was absent
+  - but `check_wave_b_b2_evidence_consistency.sh` still defaulted only to `test-reports/examples_compile_ci_gate_<run_id>.json`
+  - strict consistency therefore returned non-zero even though cross summary had already proven the generic JSON was the active evidence path
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-b2-consistency-generic-linux-examples-fallback.md`
+- focused RED contract:
+  - added `tests/scripts/test_wave_b_b2_consistency_generic_linux_examples_fallback_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_generic_linux_examples_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_generic_linux_examples_fallback_contract.sh` -> FAIL before fix
+  - failure shape:
+    - cross summary emitted `- linux_examples_json: test-reports/examples_compile_ci_gate.json`
+    - consistency report still required `test-reports/examples_compile_ci_gate_<run_id>.json`
+- minimal implementation landed:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `default_linux_examples_json_path(...)`
+    - now uses the same `run-specific 优先、generic fallback` default resolution as `generate` / `prepare`
+- verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_generic_linux_examples_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_generic_linux_examples_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+- cleanup:
+  - restored tracked `test-reports/examples_compile_ci_gate.json` after an earlier ad-hoc repro had temporarily removed it from the working tree
+
 # Progress - Wave B/B2 Ignore Inactive macOS Probe Consistency
 
 ## 2026-05-13

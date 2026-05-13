@@ -151,6 +151,18 @@ infer_run_id_from_linux_summary() {
   parse_run_id_md "$abs_file"
 }
 
+default_linux_examples_json_path() {
+  local run_specific="test-reports/examples_compile_ci_gate_${RUN_ID}.json"
+  local generic="test-reports/examples_compile_ci_gate.json"
+  if [[ -f "$(resolve_path "$run_specific")" ]]; then
+    echo "$run_specific"
+  elif [[ -f "$(resolve_path "$generic")" ]]; then
+    echo "$generic"
+  else
+    echo "$run_specific"
+  fi
+}
+
 if [[ "$RUN_ID_EXPLICIT" != "true" ]]; then
   RUN_ID="$(infer_run_id_from_linux_summary "$LINUX_SUMMARY")"
 fi
@@ -162,7 +174,7 @@ if [[ -z "$LINUX_SUMMARY" ]]; then
   LINUX_SUMMARY="test-reports/wave_b_ci_gate_summary_${RUN_ID}.md"
 fi
 if [[ -z "$LINUX_EXAMPLES_JSON" ]]; then
-  LINUX_EXAMPLES_JSON="test-reports/examples_compile_ci_gate_${RUN_ID}.json"
+  LINUX_EXAMPLES_JSON="$(default_linux_examples_json_path)"
 fi
 if [[ -z "$MACOS_PROBE" ]]; then
   MACOS_PROBE="test-reports/wave_b_macos_gate_probe_${RUN_ID}.json"

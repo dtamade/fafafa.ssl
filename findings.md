@@ -1,3 +1,22 @@
+# Findings - Wave B/B2 Consistency Generic Linux Examples Fallback
+
+## 2026-05-13
+- 继续沿着同一组 `Wave B/B2` public script surface 做静态深审后，发现 `linux_examples_json` 还有一条 direct entrypoint 语义没有对齐：
+  - `generate_wave_b_cross_platform_summary.sh` 已经支持“run-specific 优先，generic fallback”
+  - `prepare_wave_b_b2_handoff_bundle.sh` 也已经沿用同一规则
+  - 但 `check_wave_b_b2_evidence_consistency.sh` 仍默认只认 `test-reports/examples_compile_ci_gate_<run_id>.json`
+- 这会制造一个真实的 repo-side 假不一致：
+  - cross summary 明明已经消费了 `test-reports/examples_compile_ci_gate.json`
+  - 直接跑 consistency 却仍把 linux examples 记成 missing
+  - strict 模式因此错误返回非 0
+- 这批最小正确修法不是回退前面 run-specific 优先的策略，也不是去改 producer 产物命名，而是把 direct consistency 入口补齐到同一默认规则：
+  - 显式 `--linux-examples` 继续优先
+  - 否则先找 `examples_compile_ci_gate_<run_id>.json`
+  - 缺失时再回退到旧 generic `examples_compile_ci_gate.json`
+- 这样能保持当前仓库对“新路径优先、旧路径兼容”的统一语义：
+  - run-specific 证据仍然是首选真值
+  - direct consistency 不再因为 generic fallback 仍在服役而制造假红灯
+
 # Findings - Wave B/B2 Ignore Inactive macOS Probe Consistency
 
 ## 2026-05-13

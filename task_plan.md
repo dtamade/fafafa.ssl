@@ -1,3 +1,43 @@
+# Task Plan - Wave B/B2 Consistency Generic Linux Examples Fallback
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 的 direct 调用缺口，让它在未显式传 `--linux-examples` 且只有旧 generic `test-reports/examples_compile_ci_gate.json` 存在时，也能与 `generate_wave_b_cross_platform_summary.sh` / `prepare_wave_b_b2_handoff_bundle.sh` 保持一致，不再误判为缺失。
+
+## Current Batch
+1. 写 focused RED contract，证明 cross summary 已经消费 generic Linux examples JSON，但 direct consistency 仍只认 run-specific 默认路径。
+2. 仅在 `check_wave_b_b2_evidence_consistency.sh` 内补齐 `run-specific 优先、generic fallback` 的默认解析。
+3. 跑 focused 合同、run-specific contract、run-id handoff contract 与 probe / windows strict 回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] found the direct consistency generic-fallback drift after the inactive probe batch
+- [completed] focused RED contract for generic linux examples fallback
+- [completed] minimal linux examples default-path alignment in consistency checker
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- focused RED:
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_generic_linux_examples_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_generic_linux_examples_fallback_contract.sh`: FAIL before fix
+  - failure shape:
+    - cross summary already emitted `- linux_examples_json: test-reports/examples_compile_ci_gate.json`
+    - but `check_wave_b_b2_evidence_consistency.sh --strict` still required `test-reports/examples_compile_ci_gate_<run_id>.json`
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_wave_b_b2_consistency_generic_linux_examples_fallback_contract.sh`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `default_linux_examples_json_path(...)`
+    - default precedence is now explicit `--linux-examples` > run-specific JSON > generic JSON fallback
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_generic_linux_examples_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_generic_linux_examples_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Ignore Inactive macOS Probe Consistency
 
 ## Goal
