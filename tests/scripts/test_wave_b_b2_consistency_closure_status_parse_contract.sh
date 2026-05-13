@@ -42,12 +42,29 @@ cat > "$WORK_DIR/cross_summary.md" <<EOF
 - run_id: $RUN_ID
 - linux_summary: $WORK_REL/linux_summary.md
 - linux_examples_json: $WORK_REL/examples.json
+
+## 1) Platform Evidence Status
+
+| platform | state | evidence |
+|----------|-------|----------|
+| linux | PASS | $WORK_REL/linux_summary.md |
+| macos | PENDING | no evidence |
+| windows | PENDING | no evidence |
 EOF
 
 cat > "$WORK_DIR/closure.md" <<EOF
 # Wave B / B2 Closure Readiness
 
 - run_id: $RUN_ID
+- strict_mode: false
+
+## Platform Status
+
+| platform | state | note | summary |
+|----------|-------|------|---------|
+| linux | PASS | ok | $WORK_REL/linux_summary.md |
+| macos | PENDING | no evidence | |
+| windows | PENDING | no evidence | |
 EOF
 
 set +e

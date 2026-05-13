@@ -1,3 +1,25 @@
+# Findings - Wave B/B2 Consistency Cross Summary Platform Matrix Truth
+
+## 2026-05-14
+- 继续沿着 `cross_summary -> consistency -> handoff` 这条静态链深审后，发现上一批虽然已经把 Linux metadata 和 active platform evidence metadata 补齐了，但 `cross_summary` 自己的三平台状态矩阵仍被 consistency 默认当真：
+  - 只要 `run_id` 对得上
+  - `linux_summary` / `linux_examples_json` 也还在
+  - 即使 `linux/macos/windows` 行已经缺失，或者 Linux state 写成非法值
+  - strict consistency 仍会继续给 `CONSISTENT`
+- 这会制造一个更底层的一致性假绿灯：
+  - 调用者以为 `cross_summary` 的平台真值已经纳入校验
+  - 实际上最关键的平台矩阵层仍可能已经断链
+  - consistency 却还在说整条证据链是绿的
+- 这批最小正确修法不是去放宽 strict 语义，而是在 consistency checker 内把 `cross_summary` 平台矩阵也提升成“需要校验结构”的 artifact：
+  - `linux/macos/windows` 三个平台 state 行都必须存在
+  - `linux` state 必须属于允许集合
+  - `linux` evidence 不能为空
+  - 缺失/非法时计入 `runid_mismatch_or_parse_issue`
+- 验证时还顺手暴露出一个很有价值的次级发现：
+  - 多个旧合同一直在复用“只有 metadata、没有平台矩阵”的极简 `cross_summary` 夹具
+  - 在新 guard 下，这些夹具自己已经不再合法
+  - 正确做法是升级测试基线，让合同继续只验证自己的目标故障，而不是为了兼容旧夹具去回退新 guard
+
 # Findings - Wave B/B2 Consistency Closure Platform Matrix Truth
 
 ## 2026-05-14

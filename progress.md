@@ -1,3 +1,57 @@
+# Progress - Wave B/B2 Consistency Cross Summary Platform Matrix Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `d3fc7dd fix: validate closure matrix in consistency`
+  - continued downward on the same `cross summary -> consistency -> handoff` static-review lane
+- Fresh review narrowed the next real issue:
+  - `check_wave_b_b2_evidence_consistency.sh` already validated cross-summary metadata and active platform evidence metadata
+  - but it still trusted the `cross_summary` platform state matrix itself
+  - malformed `cross_summary` platform rows could therefore still hide behind a green strict consistency result
+- Reproduced two false-green shapes with direct fixture runs:
+  - removed the `windows` row from `cross_summary` and observed strict consistency still returned `CONSISTENT`
+  - changed the `linux` row state to `BROKEN` and observed strict consistency still returned `CONSISTENT`
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-consistency-cross-summary-platform-matrix-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_matrix_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_matrix_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_matrix_contract.sh` -> FAIL before fix
+  - exact failure shapes:
+    - `consistency should fail strict mode when cross summary platform table is missing a required row`
+    - `consistency should fail strict mode when cross summary linux row uses an invalid platform state`
+- Minimal implementation landed:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added mandatory `cross_summary` platform-state parsing for `linux/macos/windows`
+    - `linux` state now gets allow-list validation
+    - missing Linux evidence now also counts as parse issue
+    - malformed platform rows now surface directly on the `cross_summary` artifact row
+- Verification surfaced legacy fixture drift:
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh` -> FAIL
+  - root cause: the old fixture used a minimal `cross_summary` without a platform table, so the new guard correctly added four extra parse issues and broke the test's single-fault assumption
+  - same stale fixture pattern also affected:
+    - `tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh`
+    - `tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh`
+- Legacy fixture repair landed:
+  - upgraded those three tests to provide valid `cross_summary` platform tables and valid `closure` platform tables
+  - preserved each contract's original target fault instead of weakening the new checker behavior
+- GREEN verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_matrix_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_matrix_contract.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_evidence_metadata_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_probe_missing_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_platform_matrix_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Consistency Closure Platform Matrix Truth
 
 ## 2026-05-14

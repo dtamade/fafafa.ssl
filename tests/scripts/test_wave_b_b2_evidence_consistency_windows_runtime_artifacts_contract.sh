@@ -45,6 +45,16 @@ cat > "$ROOT_DIR/$TEST_DIR/cross_summary.md" <<EOF
 # Wave B Cross-Platform Summary
 
 - run_id: $RUN_ID
+- linux_summary: $TEST_DIR/linux_summary.md
+- linux_examples_json: $TEST_DIR/examples.json
+
+## 1) Platform Evidence Status
+
+| platform | state | evidence |
+|----------|-------|----------|
+| linux | PASS | $TEST_DIR/linux_summary.md |
+| macos | PENDING | no evidence |
+| windows | PASS | summary: $TEST_DIR/windows_summary.md (overall=PASS) |
 EOF
 
 cat > "$ROOT_DIR/$TEST_DIR/closure_report.md" <<EOF
@@ -52,6 +62,15 @@ cat > "$ROOT_DIR/$TEST_DIR/closure_report.md" <<EOF
 
 - run_id: $RUN_ID
 - closure_status: **CLOSED**
+- strict_mode: false
+
+## Platform Status
+
+| platform | state | note | summary |
+|----------|-------|------|---------|
+| linux | PASS | ok | $TEST_DIR/linux_summary.md |
+| macos | PENDING | no evidence | |
+| windows | PASS | ok | $TEST_DIR/windows_summary.md |
 EOF
 
 cd "$ROOT_DIR"

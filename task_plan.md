@@ -1,3 +1,62 @@
+# Task Plan - Wave B/B2 Consistency Cross Summary Platform Matrix Truth
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 对 `cross_summary` 平台状态矩阵的盲信，避免 `linux/macos/windows` 平台行缺失或 `linux` state 非法时，strict consistency 仍错误显示为 `CONSISTENT`。
+
+## Current Batch
+1. 写 focused contract，证明 `cross_summary` 缺平台行和 Linux state 非法时，strict consistency 仍会静默吞掉。
+2. 最小修改 `check_wave_b_b2_evidence_consistency.sh`，把 `cross_summary` 平台矩阵完整性接入 parse-issue 语义。
+3. 复跑 consistency / handoff 邻近回归；若旧合同共享过时极简夹具，则只升级夹具基线，不回退新的 guard。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified false-green trust of malformed cross-summary platform matrix in consistency checker
+- [completed] wrote focused contract for cross-summary platform matrix truth
+- [completed] minimal cross-summary platform matrix validation in consistency checker
+- [completed] upgraded legacy consistency fixtures that became invalid under the stricter cross-summary contract
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 consistency checker 在修复前还有一类和前几批同型但更底层的假绿灯：
+  - `cross_summary` 文件存在
+  - `run_id` / Linux metadata 也都正常
+  - 但平台状态矩阵仍可能缺失 `linux/macos/windows` 行，或者 `linux` state 已经非法
+  - strict consistency 仍会继续返回 `CONSISTENT`
+- 这会把“坏掉的 cross summary 平台真值”伪装成一致性绿灯。
+- focused RED:
+  - 新增 `tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_matrix_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_matrix_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_matrix_contract.sh`: FAIL before fix
+  - failure shapes:
+    - `consistency should fail strict mode when cross summary platform table is missing a required row`
+    - `consistency should fail strict mode when cross summary linux row uses an invalid platform state`
+- minimal implementation:
+  - 更新 `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - `cross_summary` 现在要求 `linux/macos/windows` state 行都存在
+    - `linux` state 必须属于允许集合
+    - `linux` evidence 不能为空
+    - 缺失/非法时统一计入 `runid_mismatch_or_parse_issue`
+- regression handling:
+  - `tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh` 初次回归失败，原因不是实现回退，而是旧夹具里的 `cross_summary` 已不再满足新契约，导致一个 closure parse issue 被额外 4 个 cross-summary parse issue 污染
+  - 同类极简夹具还出现在：
+    - `tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh`
+    - `tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh`
+  - 最小正确修法是升级这些测试夹具，让它们保持“结构合法，只暴露目标故障”
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_matrix_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_matrix_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_evidence_metadata_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_probe_missing_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_platform_matrix_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Consistency Closure Platform Matrix Truth
 
 ## Goal

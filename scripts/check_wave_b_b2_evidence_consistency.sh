@@ -675,6 +675,34 @@ check_cross_summary_artifact() {
     fi
   fi
 
+  local linux_state
+  local linux_evidence
+  linux_state="$(parse_cross_summary_platform_state "$abs_path" "linux")"
+  linux_evidence="$(parse_cross_summary_platform_evidence "$abs_path" "linux")"
+  if [[ -z "$linux_state" ]]; then
+    runid_mismatch=$((runid_mismatch + 1))
+    if [[ "$note" == "ok" ]]; then
+      note="cross_summary platform state missing: linux"
+    else
+      note="$note; cross_summary platform state missing: linux"
+    fi
+  elif ! is_valid_cross_summary_platform_state "$linux_state"; then
+    runid_mismatch=$((runid_mismatch + 1))
+    if [[ "$note" == "ok" ]]; then
+      note="invalid linux state: $linux_state"
+    else
+      note="$note; invalid linux state: $linux_state"
+    fi
+  fi
+  if [[ -z "$linux_evidence" ]]; then
+    runid_mismatch=$((runid_mismatch + 1))
+    if [[ "$note" == "ok" ]]; then
+      note="cross_summary linux evidence missing"
+    else
+      note="$note; cross_summary linux evidence missing"
+    fi
+  fi
+
   local macos_state
   local macos_evidence
   local macos_summary_path
@@ -683,7 +711,14 @@ check_cross_summary_artifact() {
   macos_evidence="$(parse_cross_summary_platform_evidence "$abs_path" "macos")"
   macos_summary_path="$(parse_cross_summary_macos_summary_path "$abs_path")"
   macos_probe_path="$(parse_cross_summary_macos_probe_path "$abs_path")"
-  if [[ -n "$macos_state" ]] && ! is_valid_cross_summary_platform_state "$macos_state"; then
+  if [[ -z "$macos_state" ]]; then
+    runid_mismatch=$((runid_mismatch + 1))
+    if [[ "$note" == "ok" ]]; then
+      note="cross_summary platform state missing: macos"
+    else
+      note="$note; cross_summary platform state missing: macos"
+    fi
+  elif ! is_valid_cross_summary_platform_state "$macos_state"; then
     runid_mismatch=$((runid_mismatch + 1))
     if [[ "$note" == "ok" ]]; then
       note="invalid macos state: $macos_state"
@@ -730,7 +765,14 @@ check_cross_summary_artifact() {
   windows_state="$(parse_cross_summary_platform_state "$abs_path" "windows")"
   windows_evidence="$(parse_cross_summary_platform_evidence "$abs_path" "windows")"
   windows_summary_path="$(parse_cross_summary_windows_summary_path "$abs_path")"
-  if [[ -n "$windows_state" ]] && ! is_valid_cross_summary_platform_state "$windows_state"; then
+  if [[ -z "$windows_state" ]]; then
+    runid_mismatch=$((runid_mismatch + 1))
+    if [[ "$note" == "ok" ]]; then
+      note="cross_summary platform state missing: windows"
+    else
+      note="$note; cross_summary platform state missing: windows"
+    fi
+  elif ! is_valid_cross_summary_platform_state "$windows_state"; then
     runid_mismatch=$((runid_mismatch + 1))
     if [[ "$note" == "ok" ]]; then
       note="invalid windows state: $windows_state"

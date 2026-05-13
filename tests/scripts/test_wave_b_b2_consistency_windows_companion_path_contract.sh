@@ -54,7 +54,16 @@ cat > "$WORK_DIR/cross_summary.md" <<EOF
 # Wave B Cross-Platform Summary
 
 - run_id: $RUN_ID
+- linux_summary: $WORK_REL/linux_summary.md
 - linux_examples_json: $WORK_REL/examples.json
+
+## 1) Platform Evidence Status
+
+| platform | state | evidence |
+|----------|-------|----------|
+| linux | PASS | $WORK_REL/linux_summary.md |
+| macos | PENDING | no evidence |
+| windows | PASS | summary: $WINDOWS_SUMMARY_REL (overall=PASS) |
 EOF
 
 cat > "$WORK_DIR/closure.md" <<EOF
@@ -62,6 +71,15 @@ cat > "$WORK_DIR/closure.md" <<EOF
 
 - run_id: $RUN_ID
 - closure_status: **CLOSED**
+- strict_mode: false
+
+## Platform Status
+
+| platform | state | note | summary |
+|----------|-------|------|---------|
+| linux | PASS | ok | $WORK_REL/linux_summary.md |
+| macos | PENDING | no evidence | |
+| windows | PASS | ok | $WINDOWS_SUMMARY_REL |
 EOF
 
 set +e
