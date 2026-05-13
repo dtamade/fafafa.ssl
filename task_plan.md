@@ -1,3 +1,56 @@
+# Task Plan - Wave B/B2 Optional Runner Artifact Download Tolerance
+
+## Goal
+收口 `summary` job 在下载 macOS/Windows artifact 时的提前失败风险，避免 workflow 明明已经有 `prepare_wave_b_b2_handoff_bundle.sh` 的缺证据判定链，却在更前面的 `download-artifact` 步骤就因为 runner 产物缺失直接中断。
+
+## Current Batch
+1. 写 focused workflow contract，要求 Linux artifact download 保持严格，但 macOS/Windows artifact download 对缺失容错。
+2. 最小修改 live 与 `.disabled` 模板的 summary 下载步骤。
+3. 跑 focused workflow 回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified the pre-prepare artifact-download failure risk after Linux baseline cleanup
+- [completed] wrote focused workflow contracts for optional runner artifact download tolerance
+- [completed] minimal live + disabled workflow download-step hardening
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 `summary` job 已经把缺失平台证据的语义收敛到：
+  - `prepare_wave_b_b2_handoff_bundle.sh`
+  - cross summary / closure / consistency / handoff bundle
+- 但它在这之前仍有两步无容错下载：
+  - `Download macOS evidence`
+  - `Download Windows evidence`
+- 一旦上游 runner 因失败、无文件、或 `upload-artifact` 仅产生 `warn` 而没有真正 artifact，`download-artifact` 就可能先把 summary job 终止，后面的 `prepare` 根本不会运行。
+- 这和当前 repo truth 冲突：
+  - macOS/Windows 缺证据本来就应该由 handoff 链生成 `PENDING` / `READY_FOR_RUNNER` / `NEEDS_EVIDENCE_SYNC`
+  - Linux evidence 仍然是 required truth，不应被同样放宽
+- focused RED:
+  - 新增 `tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`: FAIL before fix
+  - failure shape:
+    - live workflow 的 `Download macOS evidence` / `Download Windows evidence` 仍无 `continue-on-error: true`
+    - summary job 仍可能在进入 `prepare` 之前就因 runner artifact 缺失而提前失败
+- minimal implementation:
+  - 新增 `tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`
+  - 更新：
+    - `.github/workflows/wave-b-b2-manual.yml`
+    - `.github/workflows/wave-b-b2-manual.yml.disabled`
+  - live 与 disabled 双模板都：
+    - `Download macOS evidence` 增加 `continue-on-error: true`
+    - `Download Windows evidence` 增加 `continue-on-error: true`
+    - 保持 `Download Linux evidence` 继续严格
+- focused GREEN:
+  - `bash -n tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_linux_baseline_required_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Linux Baseline Required Workflow Truth
 
 ## Goal

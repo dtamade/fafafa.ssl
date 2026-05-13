@@ -1,3 +1,23 @@
+# Findings - Wave B/B2 Optional Runner Artifact Download Tolerance
+
+## 2026-05-14
+- 继续沿着 `wave-b-b2-manual` workflow 的 handoff 静态契约线深审后，发现 summary job 还有一层“比 handoff 更早”的失败面：
+  - 它已经把 macOS/Windows 缺证据的判定语义交给 `prepare_wave_b_b2_handoff_bundle.sh`
+  - 但 `Download macOS evidence` / `Download Windows evidence` 仍是无容错 `download-artifact`
+  - 这样一来，只要 artifact 根本没生成，summary 就会在进入 handoff 判定前先失败
+- 这会制造一个真实的 repo-side 语义绕过：
+  - 本应由 handoff bundle 产出的 `PENDING` / `READY_FOR_RUNNER` / `NEEDS_EVIDENCE_SYNC`
+  - 被更前面的 artifact 下载错误直接截断
+  - 结果是 workflow 没法稳定产出交接报告，只留下一个过早失败的 summary job
+- 这批最小正确修法不是放宽 Linux truth，而是做分层容错：
+  - Linux artifact download 继续严格，因为 Linux summary/examples 是必需前提
+  - macOS / Windows artifact download 加 `continue-on-error: true`
+  - 让 summary 始终有机会进入 `prepare` 链，按现有缺证据语义收口
+- 修完后 summary 的失败边界终于和 handoff 语义对齐了：
+  - Linux 缺失仍会在 required truth 上硬失败
+  - macOS/Windows 缺失不再在 download 步骤被提前截断
+  - 交接报告可以继续稳定产出，并显式表达缺哪些非 Linux 证据
+
 # Findings - Wave B/B2 Linux Baseline Required Workflow Truth
 
 ## 2026-05-14

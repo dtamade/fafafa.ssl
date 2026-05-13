@@ -1,3 +1,39 @@
+# Progress - Wave B/B2 Optional Runner Artifact Download Tolerance
+
+## 2026-05-14
+- continuation resync:
+  - continued directly after committing the Linux-baseline-required workflow batch
+  - kept the scope inside the same Wave B/B2 workflow summary lane
+- new bug located:
+  - summary now always downloads Linux/macOS/Windows evidence before calling `prepare_wave_b_b2_handoff_bundle.sh`
+  - Linux evidence is required, but macOS/Windows evidence are still allowed to be absent and should be represented by the handoff reports
+  - however `Download macOS evidence` and `Download Windows evidence` still use plain `actions/download-artifact@v4`, which can fail before the handoff chain runs
+- new batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-optional-runner-artifact-download-tolerance.md`
+- next implementation shape:
+  - add a focused workflow contract for tolerant macOS/Windows artifact download and strict Linux artifact download
+  - then minimally harden the live + disabled summary download steps
+- focused RED contract:
+  - added `tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh` -> FAIL before fix
+  - failure shape:
+    - `Download macOS evidence` and `Download Windows evidence` still had no tolerance for missing artifacts
+    - summary could therefore fail before `prepare_wave_b_b2_handoff_bundle.sh` had a chance to render missing-evidence truth
+- minimal implementation landed:
+  - `.github/workflows/wave-b-b2-manual.yml`
+  - `.github/workflows/wave-b-b2-manual.yml.disabled`
+    - added `continue-on-error: true` to `Download macOS evidence`
+    - added `continue-on-error: true` to `Download Windows evidence`
+    - kept `Download Linux evidence` unchanged
+- verification:
+  - `bash -n tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_optional_runner_artifact_download_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_linux_baseline_required_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Linux Baseline Required Workflow Truth
 
 ## 2026-05-14
