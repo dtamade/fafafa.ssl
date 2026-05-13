@@ -1,3 +1,45 @@
+# Task Plan - Wave B/B2 Disabled Workflow Handoff Truth Sync
+
+## Goal
+收口 `.github/workflows/wave-b-b2-manual.yml.disabled` 与 live workflow 的 handoff summary 漂移，避免 disabled 模板恢复启用或被人工对照时重新带回旧的 `generate/closure/consistency` 平行实现。
+
+## Current Batch
+1. 扩大 workflow handoff contract，让它同时约束 live 与 `.disabled` 两个模板。
+2. 用 RED 证明 `.github/workflows/wave-b-b2-manual.yml.disabled` 仍停在旧的重复 summary 逻辑。
+3. 最小同步 disabled 模板到 `prepare_wave_b_b2_handoff_bundle.sh` 单一入口。
+4. 跑 focused workflow 回归，更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified disabled workflow drift after live workflow truth-source closeout
+- [completed] focused RED contract expansion for live + disabled templates
+- [completed] minimal disabled-template handoff truth sync
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- `tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh` 初版只约束 live workflow，无法阻止 `.github/workflows/wave-b-b2-manual.yml.disabled` 继续漂移。
+- fresh RED:
+  - 将该合同扩大为同时检查：
+    - `.github/workflows/wave-b-b2-manual.yml`
+    - `.github/workflows/wave-b-b2-manual.yml.disabled`
+  - `bash -n tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh`: FAIL before fix
+  - failure shape:
+    - `.github/workflows/wave-b-b2-manual.yml.disabled` 仍缺少 `PREPARE_ARGS`
+    - 仍保留 `MACOS_*ARGS` / `WINDOWS_EVIDENCE_ARGS`
+    - 仍直接调用 `generate/closure/consistency`
+    - 仍未上传 `wave_b_b2_handoff_bundle_<run_id>.md`
+- minimal implementation:
+  - 更新 `tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh`，让它统一校验 live + disabled 双模板
+  - 更新 `.github/workflows/wave-b-b2-manual.yml.disabled`
+    - summary step 改成 `PREPARE_ARGS -> prepare_wave_b_b2_handoff_bundle.sh`
+    - `strict_closure=true` 时映射到 `PREPARE_ARGS+=(--strict)`
+    - final upload 增加 `wave_b_b2_handoff_bundle_<run_id>.md`
+- focused GREEN:
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Workflow Handoff Truth Source
 
 ## Goal

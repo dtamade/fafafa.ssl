@@ -1,3 +1,17 @@
+# Findings - Wave B/B2 Disabled Workflow Handoff Truth Sync
+
+## 2026-05-14
+- 继续沿着同一条 workflow/handoff 静态契约线深审后，又发现一层很容易回流旧逻辑的 repo-side 漂移：
+  - live `.github/workflows/wave-b-b2-manual.yml` 已经切到 `prepare_wave_b_b2_handoff_bundle.sh`
+  - 但 `.github/workflows/wave-b-b2-manual.yml.disabled` 还停在旧的 `MACOS_*ARGS` / `WINDOWS_EVIDENCE_ARGS` + `generate/closure/consistency` 直连实现
+- 这不是“disabled 就可以不管”的噪音问题，而是一个真实模板漂移：
+  - 这个文件本身就是 repo 内的备用/恢复模板
+  - 后续一旦人工启用、复制、或对照回填，很容易把刚刚删掉的平行 handoff 逻辑重新带回去
+- 这批最小正确修法不是新增第二套 disabled 专属判断，而是让合同和模板都回到一个事实：
+  - workflow handoff contract 同时约束 live 与 disabled 两个模板
+  - disabled 模板的 summary step 同步到 `prepare` 单一入口
+  - handoff bundle artifact 上传语义也保持一致
+
 # Findings - Wave B/B2 Workflow Handoff Truth Source
 
 ## 2026-05-14

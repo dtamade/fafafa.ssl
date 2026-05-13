@@ -1,3 +1,36 @@
+# Progress - Wave B/B2 Disabled Workflow Handoff Truth Sync
+
+## 2026-05-14
+- continuation resync:
+  - continued immediately after committing the live workflow truth-source batch
+  - verified the worktree was clean before starting the next static review batch
+- new bug located:
+  - `.github/workflows/wave-b-b2-manual.yml.disabled` still kept the old duplicated summary logic
+  - live workflow already called `prepare_wave_b_b2_handoff_bundle.sh`, but the disabled template still hand-built `MACOS_*ARGS` / `WINDOWS_EVIDENCE_ARGS`
+  - the disabled template still directly called `generate_wave_b_cross_platform_summary.sh`, `check_wave_b_b2_closure_readiness.sh`, and `check_wave_b_b2_evidence_consistency.sh`
+- new batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-disabled-workflow-handoff-truth-sync.md`
+- focused RED contract:
+  - expanded `tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh` to validate both:
+    - `.github/workflows/wave-b-b2-manual.yml`
+    - `.github/workflows/wave-b-b2-manual.yml.disabled`
+  - `bash -n tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh` -> FAIL before fix
+  - failure shape:
+    - `.github/workflows/wave-b-b2-manual.yml.disabled` still lacked `PREPARE_ARGS`
+    - it still carried duplicated `MACOS_*ARGS` / `WINDOWS_EVIDENCE_ARGS`
+    - it still did not upload `wave_b_b2_handoff_bundle_<run_id>.md`
+- minimal implementation landed:
+  - `.github/workflows/wave-b-b2-manual.yml.disabled`
+    - renamed summary build step to include handoff bundle
+    - replaced duplicated summary orchestration with `PREPARE_ARGS` plus one `prepare_wave_b_b2_handoff_bundle.sh` call
+    - mapped `strict_closure=true` to `PREPARE_ARGS+=(--strict)`
+    - added `wave_b_b2_handoff_bundle_<run_id>.md` to final uploaded artifacts
+- verification:
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Workflow Handoff Truth Source
 
 ## 2026-05-14
