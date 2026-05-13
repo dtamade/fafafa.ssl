@@ -1,3 +1,35 @@
+# Progress - Wave B/B2 Handoff Bundle Replay Command
+
+## 2026-05-14
+- continuation resync:
+  - continued directly after committing the handoff bundle Windows artifact-list batch
+  - stayed on the same `prepare_wave_b_b2_handoff_bundle.sh` handoff-document surface
+- new bug located:
+  - handoff bundle artifact table already records custom evidence paths
+  - but `Next Actions` still emits a replay command with only `--run-id --strict`
+  - that command cannot reliably reproduce batches that used custom linux/windows paths or custom output directories
+- new batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-handoff-bundle-replay-command.md`
+- next implementation shape:
+  - add a focused replay-command contract for custom top-level paths
+  - then generate a shell-quoted replay command from the actual effective top-level args
+- focused RED contract:
+  - added `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_replay_command_contract.sh`
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_replay_command_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_replay_command_contract.sh` -> FAIL before fix
+  - failure shape:
+    - bundle artifact list already recorded custom linux/windows/output-dir truth
+    - but replay command still emitted only `--run-id ... --strict`
+- minimal implementation landed:
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added `build_shell_command(...)`
+    - replay command now preserves the batch-defining top-level args instead of relying on default-path rediscovery
+- verification:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_replay_command_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Handoff Bundle Windows Artifact List
 
 ## 2026-05-14

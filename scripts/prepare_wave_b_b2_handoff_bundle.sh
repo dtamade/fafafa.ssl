@@ -160,6 +160,16 @@ derive_sibling_artifact_path() {
   fi
 }
 
+build_shell_command() {
+  local parts=()
+  local part
+  for part in "$@"; do
+    parts+=("$(printf '%q' "$part")")
+  done
+  local IFS=' '
+  echo "${parts[*]}"
+}
+
 if [[ -z "$LINUX_SUMMARY" ]]; then
   LINUX_SUMMARY="$(cd "$PROJECT_ROOT" && ls -1t test-reports/wave_b_ci_gate_summary_*.md 2>/dev/null | head -1 || true)"
 fi
@@ -291,6 +301,22 @@ if [[ "$closure_status" == "CLOSED" && "$consistency_status" == "CONSISTENT" ]];
   handoff_state="CLOSED"
 fi
 
+REPLAY_ARGS=(
+  --run-id "$RUN_ID"
+  --linux-summary "$LINUX_SUMMARY"
+  --linux-examples "$LINUX_EXAMPLES"
+)
+if [[ "$MACOS_SUMMARY_EXPLICIT" == "true" || "$macos_summary_exists" == "true" ]]; then
+  REPLAY_ARGS+=(--macos-summary "$MACOS_SUMMARY")
+elif [[ "$MACOS_PROBE_EXPLICIT" == "true" || "$macos_probe_exists" == "true" ]]; then
+  REPLAY_ARGS+=(--macos-probe "$MACOS_PROBE")
+fi
+if [[ "$WINDOWS_SUMMARY_EXPLICIT" == "true" || "$windows_summary_exists" == "true" ]]; then
+  REPLAY_ARGS+=(--windows-summary "$WINDOWS_SUMMARY")
+fi
+REPLAY_ARGS+=(--output-dir "$OUTPUT_DIR" --strict)
+REPLAY_COMMAND="$(build_shell_command scripts/prepare_wave_b_b2_handoff_bundle.sh "${REPLAY_ARGS[@]}")"
+
 {
   echo "# Wave B / B2 Handoff Bundle"
   echo
@@ -335,7 +361,7 @@ fi
   echo
   echo "1. 在 macOS runner 执行 live gate 并回填 macOS summary。"
   echo "2. 在 Windows runner 执行 live gate 并回填 Windows summary。"
-  echo "3. 回填后重新执行 'scripts/prepare_wave_b_b2_handoff_bundle.sh --run-id $RUN_ID --strict'。"
+  echo "3. 回填后重新执行 '$REPLAY_COMMAND'。"
 } > "$(resolve_path "$BUNDLE_REPORT")"
 
 echo "[PASS] handoff bundle generated: $BUNDLE_REPORT"

@@ -1,3 +1,48 @@
+# Task Plan - Wave B/B2 Handoff Bundle Replay Command
+
+## Goal
+收口 `prepare_wave_b_b2_handoff_bundle.sh` 在 handoff bundle 里生成的 replay command 缺口，避免报告只剩 `--run-id --strict`，却丢掉本批次实际使用的自定义路径上下文。
+
+## Current Batch
+1. 写 focused RED contract，证明 custom linux/windows/output-dir 已参与当前批次，但 handoff bundle replay command 仍无法复现这条 truth。
+2. 仅在 `prepare_wave_b_b2_handoff_bundle.sh` 内生成保留关键 top-level args 的 replay command。
+3. 跑 focused 合同、handoff artifact-list、explicit-missing passthrough 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified the replay-command gap after the handoff bundle artifact-list batch
+- [completed] focused RED contract for replay command truth
+- [completed] minimal replay-command hardening
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- fresh repro already shows the bug shape:
+  - handoff bundle artifact table already records custom linux summary/examples/windows summary and custom output dir
+  - but `Next Actions` still tells the user to rerun only `scripts/prepare_wave_b_b2_handoff_bundle.sh --run-id <id> --strict`
+  - that command cannot reconstruct the same custom evidence chain
+- target scope for this batch:
+  - keep current evidence selection semantics unchanged
+  - only make the replay command preserve the batch-defining top-level args
+- focused RED:
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_replay_command_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_replay_command_contract.sh`: FAIL before fix
+  - failure shape:
+    - handoff bundle artifact table already recorded custom linux/windows/output-dir truth
+    - but `Next Actions` still emitted only `--run-id ... --strict`
+    - the replay command therefore could not reproduce the same custom evidence chain
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_replay_command_contract.sh`
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added `build_shell_command(...)` for shell-safe replay command rendering
+    - replay command now preserves `run_id`, `linux_summary`, `linux_examples`, `output_dir`, and active/explicit top-level macOS/Windows evidence args
+    - default no-evidence surfaces stay omitted, so replay guidance does not invent new explicit-missing semantics
+- focused GREEN:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_replay_command_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Handoff Bundle Windows Artifact List
 
 ## Goal

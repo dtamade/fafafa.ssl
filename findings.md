@@ -1,3 +1,19 @@
+# Findings - Wave B/B2 Handoff Bundle Replay Command
+
+## 2026-05-14
+- 继续沿着 `prepare_wave_b_b2_handoff_bundle.sh` 的静态交接面深审后，发现 handoff bundle 文档本身还有一条容易误导后续人工重跑的契约缺口：
+  - artifact 表已经记录了 custom `linux_summary`、custom `linux_examples`、custom `windows_summary`、以及 custom `output-dir`
+  - 但 `Next Actions` 里的重跑命令仍只写 `scripts/prepare_wave_b_b2_handoff_bundle.sh --run-id <id> --strict`
+  - 这会让下一次重跑重新走默认路径推导，而不是复现当前批次的真实 evidence chain
+- 这会制造一个真实的 repo-side 交接偏移：
+  - 报告表面上给了“下一步怎么做”
+  - 但命令本身并不携带当前批次最关键的路径上下文
+  - 一旦仓库里同 run_id 对应的默认文件和 custom 路径不一致，重跑结果就会漂移
+- 这批最小正确修法不是改 evidence 判定，而是让 replay command 真正基于当前批次的 top-level truth 生成：
+  - 始终保留 `linux_summary`、`linux_examples`、`output-dir`
+  - 对 macOS/Windows 只保留显式传入或当前 active evidence 已存在的 top-level args
+  - 不把默认 no-evidence 场景错误抬升成显式 missing
+
 # Findings - Wave B/B2 Handoff Bundle Windows Artifact List
 
 ## 2026-05-14
