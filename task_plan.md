@@ -1,3 +1,42 @@
+# Task Plan - Wave B Cross Summary macOS Probe Default Hardening
+
+## Goal
+收口 `generate_wave_b_cross_platform_summary.sh` 的 direct 调用缺口，让它在未显式传 `--macos-probe` 且没有 macOS summary 时，也能自动拾取 `test-reports/wave_b_macos_gate_probe_<run_id>.json`。
+
+## Current Batch
+1. 写 focused RED contract，证明 direct cross-summary 入口仍会忽略默认 macOS probe。
+2. 仅在 `generate_wave_b_cross_platform_summary.sh` 内补 run-specific probe 默认检测。
+3. 跑 focused 合同、现有 cross-summary 回归、handoff probe 回归与 diff hygiene。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] post-commit static sweep found the remaining direct cross-summary probe default gap
+- [completed] focused RED contract for default macOS probe pickup
+- [completed] minimal default probe detection in cross summary generator
+- [completed] focused verification
+- [in_progress] review and commit closeout
+
+## Current Evidence
+- focused RED:
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_macos_probe_default_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_macos_probe_default_contract.sh`: FAIL before fix
+  - failure shape:
+    - direct `generate_wave_b_cross_platform_summary.sh` still emitted `macos = PENDING / no evidence`
+    - even though `test-reports/wave_b_macos_gate_probe_<run_id>.json` already existed
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_wave_b_cross_platform_summary_macos_probe_default_contract.sh`
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+    - now defaults `MACOS_PROBE` to `test-reports/wave_b_macos_gate_probe_<run_id>.json` after run_id is known
+    - keeps macOS summary precedence unchanged
+- focused GREEN:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_macos_probe_default_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_macos_probe_default_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_no_todo_pending_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 macOS Probe Fallback Hardening
 
 ## Goal

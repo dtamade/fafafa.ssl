@@ -1,3 +1,37 @@
+# Progress - Wave B Cross Summary macOS Probe Default Hardening
+
+## 2026-05-13
+- continuation resync:
+  - performed one more static sweep after the macOS probe fallback commit
+  - checked whether the direct `generate_wave_b_cross_platform_summary.sh` public entrypoint still differed from handoff/workflow behavior
+- new bug located:
+  - the generator supported explicit `--macos-probe`
+  - but when callers omitted that flag, it still ignored the existing run-specific default probe path
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-cross-summary-macos-probe-default-hardening.md`
+- focused RED contract:
+  - added `tests/scripts/test_wave_b_cross_platform_summary_macos_probe_default_contract.sh`
+  - contract creates:
+    - a Linux summary
+    - Linux examples JSON
+    - `test-reports/wave_b_macos_gate_probe_<run_id>.json`
+  - then runs `generate_wave_b_cross_platform_summary.sh` from `/tmp` without `--macos-probe`
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_macos_probe_default_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_macos_probe_default_contract.sh` -> FAIL before fix
+  - failure shape:
+    - output still showed `macos = PENDING / no evidence`
+- minimal implementation landed:
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+    - added `default_macos_probe_path(...)`
+    - when `--macos-probe` is omitted, now defaults to `test-reports/wave_b_macos_gate_probe_<run_id>.json`
+- verification:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_macos_probe_default_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_macos_probe_default_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_no_todo_pending_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 macOS Probe Fallback Hardening
 
 ## 2026-05-13

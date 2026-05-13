@@ -1,3 +1,18 @@
+# Findings - Wave B Cross Summary macOS Probe Default Hardening
+
+## 2026-05-13
+- 在刚补完 handoff/workflow 的 macOS probe fallback 之后继续静态续审，发现 direct public entrypoint 还留着一半旧语义：
+  - `generate_wave_b_cross_platform_summary.sh` 已经支持显式 `--macos-probe`
+  - 但如果调用者不传这个参数，即使 run-specific `wave_b_macos_gate_probe_<run_id>.json` 已经存在，脚本仍会把 macOS 记成 `PENDING / no evidence`
+- 这说明上一批修法虽然收住了 handoff 与 workflow 汇总面，但 direct script surface 仍然不完整：
+  - 同一批仓库证据在 `prepare`/workflow 下能看到 `PROBE_ONLY`
+  - 直接跑 `generate` 却还会丢掉 probe-only 证据
+  - 对外表现成同一公共脚本族内部默认行为不一致
+- 这批最小正确修法就是把 default-path truth 补到 `generate` 自己身上：
+  - run_id 一旦确定
+  - `MACOS_PROBE` 未显式传入时，就默认指向 `test-reports/wave_b_macos_gate_probe_<run_id>.json`
+  - 仍保持 macOS summary 优先，不扩大到 closure/evidence 语义变更
+
 # Findings - Wave B/B2 macOS Probe Fallback Hardening
 
 ## 2026-05-13

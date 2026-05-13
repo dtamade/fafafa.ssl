@@ -29,7 +29,7 @@ Wave B Cross-Platform Summary Generator
   --run-id ID               指定 run_id（默认优先从 Linux summary 推导，否则时间戳）
   --linux-summary FILE      Linux gate summary（默认自动取最新 wave_b_ci_gate_summary_*.md）
   --linux-examples FILE     Linux examples json（默认优先 test-reports/examples_compile_ci_gate_<run_id>.json，fallback 到旧 generic 路径）
-  --macos-probe FILE        macOS probe json（可选）
+  --macos-probe FILE        macOS probe json（可选；默认优先 test-reports/wave_b_macos_gate_probe_<run_id>.json）
   --macos-summary FILE      macOS gate summary markdown（可选）
   --windows-summary FILE    Windows gate summary markdown（可选）
   --output FILE             输出文件（默认 test-reports/wave_b_cross_platform_summary_<run_id>.md）
@@ -132,6 +132,10 @@ default_linux_examples_json_path() {
   fi
 }
 
+default_macos_probe_path() {
+  echo "test-reports/wave_b_macos_gate_probe_${RUN_ID}.json"
+}
+
 if [[ -z "$LINUX_SUMMARY" ]]; then
   LINUX_SUMMARY="$(cd "$PROJECT_ROOT" && ls -1t test-reports/wave_b_ci_gate_summary_*.md 2>/dev/null | head -1 || true)"
 fi
@@ -143,6 +147,9 @@ if [[ -z "$RUN_ID" ]]; then
 fi
 if [[ -z "$LINUX_EXAMPLES_JSON" ]]; then
   LINUX_EXAMPLES_JSON="$(default_linux_examples_json_path)"
+fi
+if [[ -z "$MACOS_PROBE" ]]; then
+  MACOS_PROBE="$(default_macos_probe_path)"
 fi
 
 LINUX_SUMMARY_ABS="$(resolve_path "$LINUX_SUMMARY")"
