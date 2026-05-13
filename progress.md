@@ -1,3 +1,52 @@
+# Progress - Wave B/B2 Infer Run ID From Linux Summary
+
+## 2026-05-13
+- continuation resync:
+  - kept the work inside the same static Wave B/B2 script chain
+  - looked for the next shared default-parameter drift after the run-specific Linux examples batch
+- new bug located:
+  - `prepare_wave_b_b2_handoff_bundle.sh`, `generate_wave_b_cross_platform_summary.sh`, `check_wave_b_b2_closure_readiness.sh`, and `check_wave_b_b2_evidence_consistency.sh` all allowed Linux-summary-driven flows
+  - but when `--run-id` was omitted, they still minted a fresh timestamp run_id instead of inheriting the Linux summary run_id
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-b2-infer-run-id-from-linux-summary.md`
+- focused RED contract:
+  - added `tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh`
+  - contract creates:
+    - a Linux summary with `run_id: handoff_infer_run_id`
+    - a matching run-specific Linux examples JSON
+    - a custom output dir
+  - then runs `prepare_wave_b_b2_handoff_bundle.sh` from `/tmp` without `--run-id`
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh` -> FAIL before fix
+  - failure shape:
+    - expected `..._handoff_infer_run_id.md` artifacts were not produced
+    - the bundle was creating a fresh timestamp run_id instead
+- minimal implementation landed:
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+    - added explicit `RUN_ID_EXPLICIT` handling plus Linux-summary run_id inference
+  - `scripts/check_wave_b_b2_closure_readiness.sh`
+    - now derives output run_id from the Linux summary when `--run-id` is omitted
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - now derives default artifact path run_id from the Linux summary when available
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - now derives the handoff batch run_id from the Linux summary before composing output/report paths
+- verification:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh` -> PASS
+  - `bash -n scripts/check_wave_b_b2_closure_readiness.sh` -> PASS
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh` -> PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_linux_checklist.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_no_todo_pending_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_run_id_passthrough_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Run-Specific Linux Examples Default Hardening
 
 ## 2026-05-13

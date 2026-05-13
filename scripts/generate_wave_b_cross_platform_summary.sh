@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 RUN_ID=""
+RUN_ID_EXPLICIT=false
 LINUX_SUMMARY=""
 LINUX_EXAMPLES_JSON=""
 MACOS_PROBE=""
@@ -41,6 +42,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --run-id)
       RUN_ID="$2"
+      RUN_ID_EXPLICIT=true
       shift 2
       ;;
     --linux-summary)
@@ -83,10 +85,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$RUN_ID" ]]; then
-  RUN_ID="$(date +%Y%m%d_%H%M%S)"
-fi
-
 resolve_path() {
   local file="$1"
   if [[ "$file" = /* ]]; then
@@ -94,6 +92,32 @@ resolve_path() {
   else
     echo "$PROJECT_ROOT/$file"
   fi
+}
+
+parse_run_id_md() {
+  local file="$1"
+  grep -E "^- (Run ID|run_id):" "$file" \
+    | head -1 \
+    | sed -E 's/^- (Run ID|run_id): *//' \
+    | tr -d '`*' \
+    | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
+}
+
+infer_run_id_from_linux_summary() {
+  local file="$1"
+  if [[ -z "$file" ]]; then
+    echo ""
+    return 0
+  fi
+
+  local abs_file
+  abs_file="$(resolve_path "$file")"
+  if [[ ! -f "$abs_file" ]]; then
+    echo ""
+    return 0
+  fi
+
+  parse_run_id_md "$abs_file"
 }
 
 default_linux_examples_json_path() {
@@ -110,6 +134,12 @@ default_linux_examples_json_path() {
 
 if [[ -z "$LINUX_SUMMARY" ]]; then
   LINUX_SUMMARY="$(cd "$PROJECT_ROOT" && ls -1t test-reports/wave_b_ci_gate_summary_*.md 2>/dev/null | head -1 || true)"
+fi
+if [[ "$RUN_ID_EXPLICIT" != "true" ]]; then
+  RUN_ID="$(infer_run_id_from_linux_summary "$LINUX_SUMMARY")"
+fi
+if [[ -z "$RUN_ID" ]]; then
+  RUN_ID="$(date +%Y%m%d_%H%M%S)"
 fi
 if [[ -z "$LINUX_EXAMPLES_JSON" ]]; then
   LINUX_EXAMPLES_JSON="$(default_linux_examples_json_path)"

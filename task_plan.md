@@ -1,3 +1,52 @@
+# Task Plan - Wave B/B2 Infer Run ID From Linux Summary
+
+## Goal
+收口 `Wave B/B2` 脚本在未显式传 `--run-id` 时的默认 run_id 漂移，确保 `prepare` / `generate` / `closure` / `consistency` 都优先继承 Linux summary 中的 run_id，而不是各自产生新的时间戳批次。
+
+## Current Batch
+1. 写 focused RED contract，证明 handoff bundle 在只提供 Linux summary 时会把输出文件命名到新的时间戳 run_id，造成静态证据分叉。
+2. 统一四个共享脚本的 run_id 解析顺序：显式 `--run-id` > Linux summary 推导 > 时间戳 fallback。
+3. 跑 focused 合同、cross summary / handoff / evidence / run-id passthrough 旧合同与 diff hygiene。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] refreshed current repo state and identified the next shared Wave B/B2 run_id drift
+- [completed] focused RED contract for Linux-summary-driven run_id inference
+- [completed] minimal run_id inference unification across generate/closure/consistency/prepare
+- [in_progress] focused verification, review, and commit closeout
+
+## Current Evidence
+- focused RED:
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh`: FAIL before fix
+  - failure shape:
+    - handoff outputs were named under a fresh timestamp run_id instead of the Linux summary run_id
+    - consistency report therefore drifted to `INCONSISTENT`
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh`
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+  - `scripts/check_wave_b_b2_closure_readiness.sh`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - all now prefer explicit `--run-id`, otherwise infer from the Linux summary, then fall back to a timestamp only when inference is impossible
+- focused GREEN:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh`: PASS
+  - `bash -n scripts/check_wave_b_b2_closure_readiness.sh`: PASS
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh`: PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_linux_checklist.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_no_todo_pending_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_run_id_passthrough_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Run-Specific Linux Examples Default Hardening
 
 ## Goal

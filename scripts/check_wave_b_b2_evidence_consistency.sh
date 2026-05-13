@@ -5,7 +5,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-RUN_ID="$(date +%Y%m%d_%H%M%S)"
+RUN_ID=""
+RUN_ID_EXPLICIT=false
 LINUX_SUMMARY=""
 LINUX_EXAMPLES_JSON=""
 MACOS_SUMMARY=""
@@ -29,7 +30,7 @@ Wave B / B2 Evidence Consistency Checker
   scripts/check_wave_b_b2_evidence_consistency.sh [options]
 
 选项：
-  --run-id ID                指定 run_id（默认时间戳）
+  --run-id ID                指定 run_id（默认优先从 Linux summary 推导，否则时间戳）
   --linux-summary FILE       Linux summary 路径
   --linux-examples FILE      Linux examples JSON 路径
   --macos-summary FILE       macOS summary 路径
@@ -50,6 +51,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --run-id)
       RUN_ID="$2"
+      RUN_ID_EXPLICIT=true
       shift 2
       ;;
     --linux-summary)
@@ -108,6 +110,46 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+resolve_path() {
+  local file="$1"
+  if [[ "$file" = /* ]]; then
+    echo "$file"
+  else
+    echo "$PROJECT_ROOT/$file"
+  fi
+}
+
+parse_run_id_md() {
+  local file="$1"
+  local value=""
+  value="$(grep -E "^- (Run ID|run_id):" "$file" | head -1 | sed -E 's/^- (Run ID|run_id): *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true)"
+  echo "$value"
+}
+
+infer_run_id_from_linux_summary() {
+  local file="$1"
+  if [[ -z "$file" ]]; then
+    echo ""
+    return 0
+  fi
+
+  local abs_file
+  abs_file="$(resolve_path "$file")"
+  if [[ ! -f "$abs_file" ]]; then
+    echo ""
+    return 0
+  fi
+
+  parse_run_id_md "$abs_file"
+}
+
+if [[ "$RUN_ID_EXPLICIT" != "true" ]]; then
+  RUN_ID="$(infer_run_id_from_linux_summary "$LINUX_SUMMARY")"
+fi
+if [[ -z "$RUN_ID" ]]; then
+  RUN_ID="$(date +%Y%m%d_%H%M%S)"
+fi
+
 if [[ -z "$LINUX_SUMMARY" ]]; then
   LINUX_SUMMARY="test-reports/wave_b_ci_gate_summary_${RUN_ID}.md"
 fi
@@ -135,22 +177,6 @@ fi
 if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="test-reports/wave_b_b2_evidence_consistency_${RUN_ID}.md"
 fi
-
-resolve_path() {
-  local file="$1"
-  if [[ "$file" = /* ]]; then
-    echo "$file"
-  else
-    echo "$PROJECT_ROOT/$file"
-  fi
-}
-
-parse_run_id_md() {
-  local file="$1"
-  local value=""
-  value="$(grep -E "^- (Run ID|run_id):" "$file" | head -1 | sed -E 's/^- (Run ID|run_id): *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true)"
-  echo "$value"
-}
 
 parse_closure_status_md() {
   local file="$1"

@@ -5,7 +5,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-RUN_ID="$(date +%Y%m%d_%H%M%S)"
+RUN_ID=""
+RUN_ID_EXPLICIT=false
 LINUX_SUMMARY=""
 LINUX_EXAMPLES=""
 MACOS_SUMMARY=""
@@ -29,7 +30,7 @@ Wave B / B2 Handoff Bundle Preparer
   scripts/prepare_wave_b_b2_handoff_bundle.sh [options]
 
 选项：
-  --run-id ID                指定 run_id（默认时间戳）
+  --run-id ID                指定 run_id（默认优先从 Linux summary 推导，否则时间戳）
   --linux-summary FILE       Linux summary（默认自动取最新 wave_b_ci_gate_summary_*.md）
   --linux-examples FILE      Linux examples json（默认优先 test-reports/examples_compile_ci_gate_<run_id>.json，fallback 到旧 generic 路径）
   --macos-summary FILE       macOS summary（可选）
@@ -45,6 +46,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --run-id)
       RUN_ID="$2"
+      RUN_ID_EXPLICIT=true
       shift 2
       ;;
     --linux-summary)
@@ -87,21 +89,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$LINUX_SUMMARY" ]]; then
-  LINUX_SUMMARY="$(cd "$PROJECT_ROOT" && ls -1t test-reports/wave_b_ci_gate_summary_*.md 2>/dev/null | head -1 || true)"
-fi
-if [[ -z "$MACOS_SUMMARY" ]]; then
-  MACOS_SUMMARY="test-reports/wave_b_macos_gate_summary_${RUN_ID}.md"
-fi
-if [[ -z "$WINDOWS_SUMMARY" ]]; then
-  WINDOWS_SUMMARY="test-reports/wave_b_windows_gate_summary_${RUN_ID}.md"
-fi
-
-CROSS_SUMMARY="${OUTPUT_DIR}/wave_b_cross_platform_summary_${RUN_ID}.md"
-CLOSURE_REPORT="${OUTPUT_DIR}/wave_b_b2_closure_readiness_${RUN_ID}.md"
-CONSISTENCY_REPORT="${OUTPUT_DIR}/wave_b_b2_evidence_consistency_${RUN_ID}.md"
-BUNDLE_REPORT="${OUTPUT_DIR}/wave_b_b2_handoff_bundle_${RUN_ID}.md"
-
 resolve_path() {
   local file="$1"
   if [[ "$file" = /* ]]; then
@@ -109,6 +96,32 @@ resolve_path() {
   else
     echo "$PROJECT_ROOT/$file"
   fi
+}
+
+parse_run_id_md() {
+  local file="$1"
+  grep -E "^- (Run ID|run_id):" "$file" \
+    | head -1 \
+    | sed -E 's/^- (Run ID|run_id): *//' \
+    | tr -d '`*' \
+    | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
+}
+
+infer_run_id_from_linux_summary() {
+  local file="$1"
+  if [[ -z "$file" ]]; then
+    echo ""
+    return 0
+  fi
+
+  local abs_file
+  abs_file="$(resolve_path "$file")"
+  if [[ ! -f "$abs_file" ]]; then
+    echo ""
+    return 0
+  fi
+
+  parse_run_id_md "$abs_file"
 }
 
 default_linux_examples_json_path() {
@@ -134,6 +147,27 @@ derive_sibling_artifact_path() {
     echo "$anchor_dir/$filename"
   fi
 }
+
+if [[ -z "$LINUX_SUMMARY" ]]; then
+  LINUX_SUMMARY="$(cd "$PROJECT_ROOT" && ls -1t test-reports/wave_b_ci_gate_summary_*.md 2>/dev/null | head -1 || true)"
+fi
+if [[ "$RUN_ID_EXPLICIT" != "true" ]]; then
+  RUN_ID="$(infer_run_id_from_linux_summary "$LINUX_SUMMARY")"
+fi
+if [[ -z "$RUN_ID" ]]; then
+  RUN_ID="$(date +%Y%m%d_%H%M%S)"
+fi
+if [[ -z "$MACOS_SUMMARY" ]]; then
+  MACOS_SUMMARY="test-reports/wave_b_macos_gate_summary_${RUN_ID}.md"
+fi
+if [[ -z "$WINDOWS_SUMMARY" ]]; then
+  WINDOWS_SUMMARY="test-reports/wave_b_windows_gate_summary_${RUN_ID}.md"
+fi
+
+CROSS_SUMMARY="${OUTPUT_DIR}/wave_b_cross_platform_summary_${RUN_ID}.md"
+CLOSURE_REPORT="${OUTPUT_DIR}/wave_b_b2_closure_readiness_${RUN_ID}.md"
+CONSISTENCY_REPORT="${OUTPUT_DIR}/wave_b_b2_evidence_consistency_${RUN_ID}.md"
+BUNDLE_REPORT="${OUTPUT_DIR}/wave_b_b2_handoff_bundle_${RUN_ID}.md"
 
 if [[ -z "$LINUX_SUMMARY" || ! -f "$(resolve_path "$LINUX_SUMMARY")" ]]; then
   echo "[ERROR] linux summary not found: $LINUX_SUMMARY" >&2

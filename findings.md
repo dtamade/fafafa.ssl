@@ -1,3 +1,22 @@
+# Findings - Wave B/B2 Infer Run ID From Linux Summary
+
+## 2026-05-13
+- 继续静态深审 `Wave B/B2` 脚本链时，发现刚修好的 Linux examples 默认路径之外还有一条更底层的 shared drift：
+  - 多个脚本都支持“自动选最新 Linux summary”或“显式传 Linux summary”
+  - 但在未显式传 `--run-id` 时，它们仍会各自生成新的时间戳 run_id
+  - 这会把同一批 handoff 证据拆成“Linux summary 的旧 run_id”和“新生成报告的当前时间戳 run_id”
+- 这个缺口不是理论问题，而是会直接污染 repo-side 默认调用语义：
+  - `prepare_wave_b_b2_handoff_bundle.sh` 看起来像是在为现有 Linux 证据生成闭环包
+  - 实际却会把 cross summary / closure / consistency / bundle 统统命名成新的 run_id
+  - consistency 随后再把 linux_summary 标成 run_id mismatch，形成自造的 `INCONSISTENT`
+- 最小正确修法不是让 evidence consistency 放宽校验，而是把 run_id truth source 对齐：
+  - 显式 `--run-id` 仍然优先
+  - 未显式传参时，Linux summary 的 `- run_id:` 才应该是默认真值
+  - 只有连 summary run_id 都读不到时，才回退到时间戳
+- 这次 focused 合同证明修法覆盖到了完整 handoff 链，而不是只修单个脚本的输出名：
+  - cross / closure / consistency / bundle 四份产物都会继承 Linux summary run_id
+  - 在只有 Linux 证据但内部对齐的场景下，consistency 重新回到 `CONSISTENT`
+
 # Findings - Wave B/B2 Run-Specific Linux Examples Default Hardening
 
 ## 2026-05-13
