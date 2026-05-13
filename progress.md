@@ -1,3 +1,44 @@
+# Progress - Wave B Cross-Platform Summary Absolute Input Hardening
+
+## 2026-05-13
+- continuation resync:
+  - kept the work inside the same static Wave B/B2 script area after the absolute-output commit
+  - avoided expanding scope beyond the summary script
+- new bug probe:
+  - from `/tmp`, invoked `scripts/generate_wave_b_cross_platform_summary.sh` with absolute:
+    - `--linux-summary`
+    - `--linux-examples`
+    - `--macos-summary`
+    - `--output`
+  - result before fix: `[ERROR] Linux summary not found. Use --linux-summary to specify.`
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-cross-platform-summary-absolute-input-hardening.md`
+- focused RED contract:
+  - added `tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh`
+  - contract runs from `/tmp` with absolute:
+    - Linux summary
+    - Linux examples json
+    - macOS summary
+    - Windows summary
+    - output file
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh` -> FAIL before fix
+  - failure shape:
+    - `Linux summary not found`
+- minimal implementation landed:
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+    - moved `resolve_path(...)` before input existence checks
+    - added normalized absolute input variables for Linux/macOS/Windows sources
+    - switched all summary/json reads to the normalized absolute paths
+- verification:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_linux_checklist.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_no_todo_pending_contract.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Absolute Output Path Hardening
 
 ## 2026-05-13

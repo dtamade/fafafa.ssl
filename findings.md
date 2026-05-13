@@ -1,3 +1,20 @@
+# Findings - Wave B Cross-Platform Summary Absolute Input Hardening
+
+## 2026-05-13
+- 在刚修完 absolute output 之后继续静态审查，发现 `generate_wave_b_cross_platform_summary.sh` 还有一条同族缺陷：
+  - 输出路径已经能走 absolute path
+  - 但输入读取仍大量写死为 `"$PROJECT_ROOT/$SOME_PATH"`
+  - 因此 absolute `--linux-summary` / `--linux-examples` / `--macos-summary` / `--windows-summary` 在跨目录调用时会被误判为不存在
+- 这个缺陷在入口就能打出真实 RED，而不是“报告内容有点不对”那种软漂移：
+  - absolute `--linux-summary` 直接卡死在 `Linux summary not found`
+  - 后续 JSON、macOS summary、Windows summary 读取也都存在同类风险
+- 最小正确修法仍然是路径归一化，而不是重做状态机：
+  - 保留原有 option surface、原有输出格式、原有 checklist 计算
+  - 只把输入读取统一切到 `*_ABS` 变量
+- 回归结果说明这次修法没有破坏旧契约：
+  - 相对输入路径的三个已有 cross-platform summary contract 继续通过
+  - 上一批 absolute output contract 也继续通过
+
 # Findings - Wave B/B2 Absolute Output Path Hardening
 
 ## 2026-05-13

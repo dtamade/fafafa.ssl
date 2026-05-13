@@ -87,19 +87,6 @@ if [[ -z "$RUN_ID" ]]; then
   RUN_ID="$(date +%Y%m%d_%H%M%S)"
 fi
 
-if [[ -z "$LINUX_SUMMARY" ]]; then
-  LINUX_SUMMARY="$(cd "$PROJECT_ROOT" && ls -1t test-reports/wave_b_ci_gate_summary_*.md 2>/dev/null | head -1 || true)"
-fi
-
-if [[ -z "$LINUX_SUMMARY" || ! -f "$PROJECT_ROOT/$LINUX_SUMMARY" ]]; then
-  echo "[ERROR] Linux summary not found. Use --linux-summary to specify." >&2
-  exit 1
-fi
-
-if [[ -z "$OUTPUT_FILE" ]]; then
-  OUTPUT_FILE="test-reports/wave_b_cross_platform_summary_${RUN_ID}.md"
-fi
-
 resolve_path() {
   local file="$1"
   if [[ "$file" = /* ]]; then
@@ -108,6 +95,34 @@ resolve_path() {
     echo "$PROJECT_ROOT/$file"
   fi
 }
+
+if [[ -z "$LINUX_SUMMARY" ]]; then
+  LINUX_SUMMARY="$(cd "$PROJECT_ROOT" && ls -1t test-reports/wave_b_ci_gate_summary_*.md 2>/dev/null | head -1 || true)"
+fi
+
+LINUX_SUMMARY_ABS="$(resolve_path "$LINUX_SUMMARY")"
+LINUX_EXAMPLES_JSON_ABS="$(resolve_path "$LINUX_EXAMPLES_JSON")"
+MACOS_PROBE_ABS=""
+MACOS_SUMMARY_ABS=""
+WINDOWS_SUMMARY_ABS=""
+if [[ -n "$MACOS_PROBE" ]]; then
+  MACOS_PROBE_ABS="$(resolve_path "$MACOS_PROBE")"
+fi
+if [[ -n "$MACOS_SUMMARY" ]]; then
+  MACOS_SUMMARY_ABS="$(resolve_path "$MACOS_SUMMARY")"
+fi
+if [[ -n "$WINDOWS_SUMMARY" ]]; then
+  WINDOWS_SUMMARY_ABS="$(resolve_path "$WINDOWS_SUMMARY")"
+fi
+
+if [[ -z "$LINUX_SUMMARY" || ! -f "$LINUX_SUMMARY_ABS" ]]; then
+  echo "[ERROR] Linux summary not found. Use --linux-summary to specify." >&2
+  exit 1
+fi
+
+if [[ -z "$OUTPUT_FILE" ]]; then
+  OUTPUT_FILE="test-reports/wave_b_cross_platform_summary_${RUN_ID}.md"
+fi
 
 read_linux_summary_field() {
   local file="$1"
@@ -181,14 +196,14 @@ stable_check_state() {
   fi
 }
 
-linux_overall="$(read_linux_summary_field "$PROJECT_ROOT/$LINUX_SUMMARY" "Overall Status")"
+linux_overall="$(read_linux_summary_field "$LINUX_SUMMARY_ABS" "Overall Status")"
 if [[ -z "$linux_overall" ]]; then
   linux_overall="UNKNOWN"
 fi
 
-linux_compile_check="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$LINUX_SUMMARY" "compile_all_modules")")"
-linux_modules_check="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$LINUX_SUMMARY" "run_all_module_tests")")"
-linux_examples_check="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$LINUX_SUMMARY" "verify_examples_compile")")"
+linux_compile_check="$(parse_check_state "$(read_platform_step_status "$LINUX_SUMMARY_ABS" "compile_all_modules")")"
+linux_modules_check="$(parse_check_state "$(read_platform_step_status "$LINUX_SUMMARY_ABS" "run_all_module_tests")")"
+linux_examples_check="$(parse_check_state "$(read_platform_step_status "$LINUX_SUMMARY_ABS" "verify_examples_compile")")"
 if [[ -z "$linux_compile_check" ]]; then
   linux_compile_check="$(stable_check_state "$linux_overall")"
 fi
@@ -205,8 +220,8 @@ linux_examples_failed="n/a"
 linux_examples_skipped="n/a"
 linux_examples_rate="n/a"
 
-if [[ -f "$PROJECT_ROOT/$LINUX_EXAMPLES_JSON" ]]; then
-  parsed_linux_examples=$(python3 - "$PROJECT_ROOT/$LINUX_EXAMPLES_JSON" <<'PY'
+if [[ -f "$LINUX_EXAMPLES_JSON_ABS" ]]; then
+  parsed_linux_examples=$(python3 - "$LINUX_EXAMPLES_JSON_ABS" <<'PY'
 import json
 import sys
 p = sys.argv[1]
@@ -229,16 +244,16 @@ fi
 
 macos_state="PENDING"
 macos_note="no evidence"
-if [[ -n "$MACOS_SUMMARY" && -f "$PROJECT_ROOT/$MACOS_SUMMARY" ]]; then
-  macos_overall="$(read_platform_summary_overall "$PROJECT_ROOT/$MACOS_SUMMARY")"
+if [[ -n "$MACOS_SUMMARY" && -f "$MACOS_SUMMARY_ABS" ]]; then
+  macos_overall="$(read_platform_summary_overall "$MACOS_SUMMARY_ABS")"
   macos_state="$(normalize_platform_state "$macos_overall")"
   if [[ -n "$macos_overall" ]]; then
     macos_note="summary: $MACOS_SUMMARY (overall=$macos_overall)"
   else
     macos_note="summary: $MACOS_SUMMARY"
   fi
-elif [[ -n "$MACOS_PROBE" && -f "$PROJECT_ROOT/$MACOS_PROBE" ]]; then
-  probe_status=$(python3 - "$PROJECT_ROOT/$MACOS_PROBE" <<'PY'
+elif [[ -n "$MACOS_PROBE" && -f "$MACOS_PROBE_ABS" ]]; then
+  probe_status=$(python3 - "$MACOS_PROBE_ABS" <<'PY'
 import json
 import sys
 with open(sys.argv[1], 'r', encoding='utf-8') as f:
@@ -256,8 +271,8 @@ fi
 
 windows_state="PENDING"
 windows_note="no evidence"
-if [[ -n "$WINDOWS_SUMMARY" && -f "$PROJECT_ROOT/$WINDOWS_SUMMARY" ]]; then
-  windows_overall="$(read_platform_summary_overall "$PROJECT_ROOT/$WINDOWS_SUMMARY")"
+if [[ -n "$WINDOWS_SUMMARY" && -f "$WINDOWS_SUMMARY_ABS" ]]; then
+  windows_overall="$(read_platform_summary_overall "$WINDOWS_SUMMARY_ABS")"
   windows_state="$(normalize_platform_state "$windows_overall")"
   if [[ -n "$windows_overall" ]]; then
     windows_note="summary: $WINDOWS_SUMMARY (overall=$windows_overall)"
@@ -272,10 +287,10 @@ windows_overall_check="$(stable_check_state "$windows_state")"
 macos_compile_check="PENDING"
 macos_modules_check="PENDING"
 macos_examples_check="PENDING"
-if [[ -n "$MACOS_SUMMARY" && -f "$PROJECT_ROOT/$MACOS_SUMMARY" ]]; then
-  parsed_macos_compile="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$MACOS_SUMMARY" "compile")")"
-  parsed_macos_modules="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$MACOS_SUMMARY" "modules")")"
-  parsed_macos_examples="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$MACOS_SUMMARY" "examples")")"
+if [[ -n "$MACOS_SUMMARY" && -f "$MACOS_SUMMARY_ABS" ]]; then
+  parsed_macos_compile="$(parse_check_state "$(read_platform_step_status "$MACOS_SUMMARY_ABS" "compile")")"
+  parsed_macos_modules="$(parse_check_state "$(read_platform_step_status "$MACOS_SUMMARY_ABS" "modules")")"
+  parsed_macos_examples="$(parse_check_state "$(read_platform_step_status "$MACOS_SUMMARY_ABS" "examples")")"
   if [[ -n "$parsed_macos_compile" ]]; then
     macos_compile_check="$parsed_macos_compile"
   fi
@@ -290,10 +305,10 @@ fi
 windows_compile_check="PENDING"
 windows_modules_check="PENDING"
 windows_examples_check="PENDING"
-if [[ -n "$WINDOWS_SUMMARY" && -f "$PROJECT_ROOT/$WINDOWS_SUMMARY" ]]; then
-  parsed_windows_compile="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$WINDOWS_SUMMARY" "compile")")"
-  parsed_windows_modules="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$WINDOWS_SUMMARY" "modules")")"
-  parsed_windows_examples="$(parse_check_state "$(read_platform_step_status "$PROJECT_ROOT/$WINDOWS_SUMMARY" "examples")")"
+if [[ -n "$WINDOWS_SUMMARY" && -f "$WINDOWS_SUMMARY_ABS" ]]; then
+  parsed_windows_compile="$(parse_check_state "$(read_platform_step_status "$WINDOWS_SUMMARY_ABS" "compile")")"
+  parsed_windows_modules="$(parse_check_state "$(read_platform_step_status "$WINDOWS_SUMMARY_ABS" "modules")")"
+  parsed_windows_examples="$(parse_check_state "$(read_platform_step_status "$WINDOWS_SUMMARY_ABS" "examples")")"
   if [[ -n "$parsed_windows_compile" ]]; then
     windows_compile_check="$parsed_windows_compile"
   fi

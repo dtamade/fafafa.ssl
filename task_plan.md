@@ -1,3 +1,49 @@
+# Task Plan - Wave B Cross-Platform Summary Absolute Input Hardening
+
+## Goal
+收口 `scripts/generate_wave_b_cross_platform_summary.sh` 的 absolute 输入路径缺陷，确保 `--linux-summary`、`--linux-examples`、`--macos-summary`、`--macos-probe`、`--windows-summary` 在跨目录调用时都能正确解析，而不是被再次拼接到 `PROJECT_ROOT` 下。
+
+## Current Batch
+1. 写 focused RED contract，从 `/tmp` 调用 cross-platform summary 脚本，传 absolute 输入路径与 absolute 输出路径，证明当前入口检查和后续读取都会误判。
+2. 在脚本内补最小输入路径归一化，只统一读路径，不顺手扩成别的重构。
+3. 跑旧 contract 回归、新 absolute-input contract、上一批 absolute-output contract 与 diff hygiene。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] refreshed current repo state for the next static review micro-batch
+- [completed] focused RED absolute-input contract
+- [completed] minimal input-path hardening
+- [completed] focused verification
+- [in_progress] review and commit closeout
+
+## Current Evidence
+- focused RED:
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh`: FAIL before fix
+  - failure shape:
+    - script exited at the Linux summary existence guard
+    - even though `--linux-summary` pointed to a real absolute file
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh`
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+    - moved `resolve_path(...)` up to the input-normalization stage
+    - introduced:
+      - `LINUX_SUMMARY_ABS`
+      - `LINUX_EXAMPLES_JSON_ABS`
+      - `MACOS_PROBE_ABS`
+      - `MACOS_SUMMARY_ABS`
+      - `WINDOWS_SUMMARY_ABS`
+    - switched all metadata/step/json reads to the normalized absolute paths
+- focused GREEN:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_linux_checklist.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_no_todo_pending_contract.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Absolute Output Path Hardening
 
 ## Goal
