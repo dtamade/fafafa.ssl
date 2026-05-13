@@ -1,3 +1,53 @@
+# Progress - Wave B/B2 Explicit Missing Evidence Passthrough
+
+## 2026-05-14
+- continuation resync:
+  - continued directly after the explicit-artifact requiredness commit
+  - widened the static audit one hop upward from `evidence_consistency` into `prepare` and `generate`
+- new bug located:
+  - `prepare_wave_b_b2_handoff_bundle.sh` only forwards macOS/Windows evidence args when the target file already exists
+  - direct `generate_wave_b_cross_platform_summary.sh` also collapses explicit missing summary inputs into `no evidence`
+  - the combined effect is that explicit missing macOS/Windows evidence can disappear before consistency ever sees it
+- new batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-explicit-missing-evidence-passthrough.md`
+- next implementation shape:
+  - add one direct `generate` contract for explicit missing evidence visibility
+  - add one `prepare` contract for explicit missing evidence passthrough into downstream consistency truth
+- focused RED contracts:
+  - added `tests/scripts/test_wave_b_cross_platform_summary_explicit_missing_evidence_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_explicit_missing_evidence_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_explicit_missing_evidence_contract.sh` -> FAIL before fix
+  - added `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh` -> FAIL before fix
+  - failure shape:
+    - direct `generate` rendered explicit missing summary inputs as `no evidence`
+    - `prepare` swallowed explicit missing macOS/Windows summary args before downstream scripts saw them
+    - resulting `consistency` report stayed `CONSISTENT` and bundle state stayed `READY_FOR_RUNNER`
+- minimal implementation landed:
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+    - added `MACOS_PROBE_EXPLICIT`
+    - explicit missing `macos_summary`, `macos_probe`, and `windows_summary` now surface as missing-file evidence
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added explicit flags for macOS probe/summary and Windows summary
+    - explicit missing evidence is now forwarded downstream instead of being filtered out by `-f`
+    - explicit `windows_summary` still derives companion runtime logs for consistency
+- verification:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh` -> PASS
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_explicit_missing_evidence_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_explicit_summary_artifacts_required_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_explicit_windows_runtime_logs_required_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_macos_probe_default_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_existing_report_run_id_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Consistency Explicit Artifact Requiredness
 
 ## 2026-05-13

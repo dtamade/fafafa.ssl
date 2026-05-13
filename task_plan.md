@@ -1,3 +1,67 @@
+# Task Plan - Wave B/B2 Explicit Missing Evidence Passthrough
+
+## Goal
+收口 `prepare_wave_b_b2_handoff_bundle.sh` 与 `generate_wave_b_cross_platform_summary.sh` 对显式缺失 evidence path 的吞参/静默降级问题，避免调用者明明传了具体路径，下游摘要却仍写成 `no evidence`，甚至让 consistency 假绿。
+
+## Current Batch
+1. 写 focused RED contracts，复现 direct `generate` 与 `prepare` 入口对显式缺失 macOS/Windows evidence 的吞参与静默 `no evidence`。
+2. 仅在 `prepare` / `generate` 内补齐显式缺失 evidence 的透传与展示语义。
+3. 跑 focused 合同、explicit-required、run_id、inactive-probe 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified the explicit-missing passthrough gap after the explicit-artifact requiredness batch
+- [completed] focused RED contracts for generate/prepare explicit-missing evidence truth
+- [completed] minimal explicit-missing passthrough hardening in prepare/generate
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- fresh repro already shows the bug shape:
+  - `prepare` only forwards macOS/Windows args when the file already exists
+  - explicit missing `--macos-summary` / `--windows-summary` therefore disappear before reaching downstream scripts
+  - direct `generate` also renders explicit missing summary paths as plain `no evidence`
+  - resulting `consistency` report can stay `CONSISTENT` even though the caller explicitly requested missing summary evidence to be checked
+- target scope for this batch:
+  - explicit missing evidence must stay visible through `prepare -> generate/closure/consistency`
+  - direct `generate` should distinguish explicit missing file from default no-evidence state
+- focused RED:
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_explicit_missing_evidence_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_explicit_missing_evidence_contract.sh`: FAIL before fix
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`: FAIL before fix
+  - failure shape:
+    - direct `generate` collapsed explicit missing macOS/Windows evidence into generic `no evidence`
+    - `prepare` only forwarded macOS/Windows args when files already existed
+    - downstream `consistency` therefore stayed green and `handoff_state` stayed `READY_FOR_RUNNER`
+- minimal implementation:
+  - new focused contracts:
+    - `tests/scripts/test_wave_b_cross_platform_summary_explicit_missing_evidence_contract.sh`
+    - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+    - added `MACOS_PROBE_EXPLICIT`
+    - explicit missing `macos_summary`, explicit missing `macos_probe`, and explicit missing `windows_summary` now surface as `...(missing file)` instead of `no evidence`
+    - explicit missing `macos_summary` now keeps priority over probe fallback
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added explicit flags for `macos_probe`, `macos_summary`, and `windows_summary`
+    - explicit missing macOS/Windows evidence now continues to flow into downstream `generate` / `closure` / `consistency`
+    - explicit `windows_summary` still derives companion runtime logs for downstream consistency
+- focused GREEN:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh`: PASS
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_explicit_missing_evidence_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_explicit_summary_artifacts_required_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_explicit_windows_runtime_logs_required_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_macos_probe_default_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_existing_report_run_id_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Consistency Explicit Artifact Requiredness
 
 ## Goal

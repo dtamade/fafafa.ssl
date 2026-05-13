@@ -10,6 +10,7 @@ RUN_ID_EXPLICIT=false
 LINUX_SUMMARY=""
 LINUX_EXAMPLES_JSON=""
 MACOS_PROBE=""
+MACOS_PROBE_EXPLICIT=false
 MACOS_SUMMARY=""
 WINDOWS_SUMMARY=""
 OUTPUT_FILE=""
@@ -55,6 +56,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --macos-probe)
       MACOS_PROBE="$2"
+      MACOS_PROBE_EXPLICIT=true
       shift 2
       ;;
     --macos-summary)
@@ -296,13 +298,17 @@ fi
 
 macos_state="PENDING"
 macos_note="no evidence"
-if [[ -n "$MACOS_SUMMARY" && -f "$MACOS_SUMMARY_ABS" ]]; then
-  macos_overall="$(read_platform_summary_overall "$MACOS_SUMMARY_ABS")"
-  macos_state="$(normalize_platform_state "$macos_overall")"
-  if [[ -n "$macos_overall" ]]; then
-    macos_note="summary: $MACOS_SUMMARY (overall=$macos_overall)"
+if [[ -n "$MACOS_SUMMARY" ]]; then
+  if [[ -f "$MACOS_SUMMARY_ABS" ]]; then
+    macos_overall="$(read_platform_summary_overall "$MACOS_SUMMARY_ABS")"
+    macos_state="$(normalize_platform_state "$macos_overall")"
+    if [[ -n "$macos_overall" ]]; then
+      macos_note="summary: $MACOS_SUMMARY (overall=$macos_overall)"
+    else
+      macos_note="summary: $MACOS_SUMMARY"
+    fi
   else
-    macos_note="summary: $MACOS_SUMMARY"
+    macos_note="summary: $MACOS_SUMMARY (missing file)"
   fi
 elif [[ -n "$MACOS_PROBE" && -f "$MACOS_PROBE_ABS" ]]; then
   probe_status=$(python3 - "$MACOS_PROBE_ABS" <<'PY'
@@ -319,17 +325,23 @@ PY
     macos_state="PROBE_OK"
   fi
   macos_note="probe: $MACOS_PROBE (status=$probe_status)"
+elif [[ "$MACOS_PROBE_EXPLICIT" == "true" ]]; then
+  macos_note="probe: $MACOS_PROBE (missing file)"
 fi
 
 windows_state="PENDING"
 windows_note="no evidence"
-if [[ -n "$WINDOWS_SUMMARY" && -f "$WINDOWS_SUMMARY_ABS" ]]; then
-  windows_overall="$(read_platform_summary_overall "$WINDOWS_SUMMARY_ABS")"
-  windows_state="$(normalize_platform_state "$windows_overall")"
-  if [[ -n "$windows_overall" ]]; then
-    windows_note="summary: $WINDOWS_SUMMARY (overall=$windows_overall)"
+if [[ -n "$WINDOWS_SUMMARY" ]]; then
+  if [[ -f "$WINDOWS_SUMMARY_ABS" ]]; then
+    windows_overall="$(read_platform_summary_overall "$WINDOWS_SUMMARY_ABS")"
+    windows_state="$(normalize_platform_state "$windows_overall")"
+    if [[ -n "$windows_overall" ]]; then
+      windows_note="summary: $WINDOWS_SUMMARY (overall=$windows_overall)"
+    else
+      windows_note="summary: $WINDOWS_SUMMARY"
+    fi
   else
-    windows_note="summary: $WINDOWS_SUMMARY"
+    windows_note="summary: $WINDOWS_SUMMARY (missing file)"
   fi
 fi
 

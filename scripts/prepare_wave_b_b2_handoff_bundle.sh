@@ -10,8 +10,11 @@ RUN_ID_EXPLICIT=false
 LINUX_SUMMARY=""
 LINUX_EXAMPLES=""
 MACOS_PROBE=""
+MACOS_PROBE_EXPLICIT=false
 MACOS_SUMMARY=""
+MACOS_SUMMARY_EXPLICIT=false
 WINDOWS_SUMMARY=""
+WINDOWS_SUMMARY_EXPLICIT=false
 CROSS_SUMMARY=""
 CLOSURE_REPORT=""
 CONSISTENCY_REPORT=""
@@ -61,14 +64,17 @@ while [[ $# -gt 0 ]]; do
       ;;
     --macos-probe)
       MACOS_PROBE="$2"
+      MACOS_PROBE_EXPLICIT=true
       shift 2
       ;;
     --macos-summary)
       MACOS_SUMMARY="$2"
+      MACOS_SUMMARY_EXPLICIT=true
       shift 2
       ;;
     --windows-summary)
       WINDOWS_SUMMARY="$2"
+      WINDOWS_SUMMARY_EXPLICIT=true
       shift 2
       ;;
     --output-dir)
@@ -191,14 +197,38 @@ MACOS_SUMMARY_ARGS=()
 MACOS_CONSISTENCY_ARGS=()
 WINDOWS_SUMMARY_ARGS=()
 WINDOWS_EVIDENCE_ARGS=()
+macos_summary_exists=false
 if [[ -f "$(resolve_path "$MACOS_SUMMARY")" ]]; then
+  macos_summary_exists=true
+fi
+macos_probe_exists=false
+if [[ -f "$(resolve_path "$MACOS_PROBE")" ]]; then
+  macos_probe_exists=true
+fi
+windows_summary_exists=false
+if [[ -f "$(resolve_path "$WINDOWS_SUMMARY")" ]]; then
+  windows_summary_exists=true
+fi
+
+if [[ "$MACOS_SUMMARY_EXPLICIT" == "true" ]]; then
   MACOS_CROSS_ARGS=(--macos-summary "$MACOS_SUMMARY")
   MACOS_SUMMARY_ARGS=(--macos-summary "$MACOS_SUMMARY")
-elif [[ -f "$(resolve_path "$MACOS_PROBE")" ]]; then
+elif [[ "$macos_summary_exists" == "true" ]]; then
+  MACOS_CROSS_ARGS=(--macos-summary "$MACOS_SUMMARY")
+  MACOS_SUMMARY_ARGS=(--macos-summary "$MACOS_SUMMARY")
+elif [[ "$MACOS_PROBE_EXPLICIT" == "true" ]]; then
   MACOS_CROSS_ARGS=(--macos-probe "$MACOS_PROBE")
+elif [[ "$macos_probe_exists" == "true" ]]; then
+  MACOS_CROSS_ARGS=(--macos-probe "$MACOS_PROBE")
+fi
+
+if [[ "$MACOS_PROBE_EXPLICIT" == "true" ]]; then
+  MACOS_CONSISTENCY_ARGS=(--macos-probe "$MACOS_PROBE")
+elif [[ "$MACOS_SUMMARY_EXPLICIT" != "true" && "$macos_summary_exists" != "true" && "$macos_probe_exists" == "true" ]]; then
   MACOS_CONSISTENCY_ARGS=(--macos-probe "$MACOS_PROBE")
 fi
-if [[ -f "$(resolve_path "$WINDOWS_SUMMARY")" ]]; then
+
+if [[ "$WINDOWS_SUMMARY_EXPLICIT" == "true" || "$windows_summary_exists" == "true" ]]; then
   WINDOWS_SUMMARY_ARGS=(--windows-summary "$WINDOWS_SUMMARY")
   WINDOWS_EVIDENCE_ARGS=(
     --windows-quick-log "$(derive_sibling_artifact_path "$WINDOWS_SUMMARY" "winssl_quick_smoke_${RUN_ID}.log")"

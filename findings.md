@@ -1,3 +1,22 @@
+# Findings - Wave B/B2 Explicit Missing Evidence Passthrough
+
+## 2026-05-14
+- 继续沿着同一条 `Wave B/B2` shell 契约面深审后，发现还有一层更靠前的 truth drift：
+  - `check_wave_b_b2_evidence_consistency.sh` 已经学会了把显式 non-Linux evidence 当成 required
+  - 但 `prepare_wave_b_b2_handoff_bundle.sh` 仍只会在文件已存在时才把 `--macos-summary` / `--windows-summary` / `--macos-probe` 传给下游
+  - `generate_wave_b_cross_platform_summary.sh` 就算直接收到了显式缺失 summary，也仍会写成 `no evidence`
+- 这会制造一个真实的 repo-side 假绿灯/假摘要组合：
+  - 调用者明确给出某个缺失的 macOS/Windows summary path
+  - handoff bundle 自己的 artifact 列表能看到那条缺失路径
+  - 但 cross summary 却写成 `no evidence`
+  - consistency 甚至还可能因为没收到那条显式路径而保持 `CONSISTENT`
+- 这批最小正确修法不是再动 consistency 本身，而是把上游 truth source 补齐：
+  - `prepare` 必须保留显式缺失 evidence path，而不是因为文件不存在就丢参
+  - `generate` 必须把“显式缺失”展示成 missing-file truth，而不是和“默认没提供证据”混成一个 `no evidence`
+- 这样能让整条 `prepare -> cross summary -> closure -> consistency -> handoff bundle` 的报告面重新对齐：
+  - 调用者显式要求检查什么，就应该从最前面的摘要开始可见
+  - 不应等到更深层脚本、甚至根本等不到 consistency 才发现路径曾经被吞掉
+
 # Findings - Wave B/B2 Consistency Explicit Artifact Requiredness
 
 ## 2026-05-13
