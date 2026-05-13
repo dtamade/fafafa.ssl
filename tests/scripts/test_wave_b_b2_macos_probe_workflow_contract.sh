@@ -23,16 +23,16 @@ if [[ ! -f "$WORKFLOW" ]]; then
   fail "missing workflow: .github/workflows/wave-b-b2-manual.yml"
 fi
 
-require_match 'if \[\[ -f "test-reports/wave_b_macos_gate_summary_\$\{RUN_ID\}\.md" \]\]; then[\s\S]*MACOS_CROSS_ARGS=\(--macos-summary "test-reports/wave_b_macos_gate_summary_\$\{RUN_ID\}\.md"\)[\s\S]*MACOS_SUMMARY_ARGS=\(--macos-summary "test-reports/wave_b_macos_gate_summary_\$\{RUN_ID\}\.md"\)[\s\S]*elif \[\[ -f "test-reports/wave_b_macos_gate_probe_\$\{RUN_ID\}\.json" \]\]; then[\s\S]*MACOS_CROSS_ARGS=\(--macos-probe "test-reports/wave_b_macos_gate_probe_\$\{RUN_ID\}\.json"\)' \
-  'summary workflow should fall back to macOS probe evidence when no macOS summary is present'
+require_match 'run_wave_b_macos_gate\.sh' \
+  'workflow should keep the macOS Wave B gate entrypoint'
 
-require_match 'generate_wave_b_cross_platform_summary\.sh[\s\S]*"\$\{MACOS_CROSS_ARGS\[@\]\}"' \
-  'summary workflow should pass macOS summary/probe arguments into cross-platform summary generation'
+require_match 'wave_b_macos_gate_summary_\$\{\{ needs\.setup\.outputs\.run_id \}\}\.md' \
+  'workflow should upload the macOS gate summary artifact'
 
-require_match 'check_wave_b_b2_closure_readiness\.sh[\s\S]*"\$\{MACOS_SUMMARY_ARGS\[@\]\}"' \
-  'summary workflow should keep macOS summary-only arguments away from closure readiness when only a probe exists'
+require_match 'wave_b_macos_gate_probe_\$\{\{ needs\.setup\.outputs\.run_id \}\}\.json' \
+  'workflow should upload the macOS probe artifact for probe-fallback handling'
 
-require_match 'check_wave_b_b2_evidence_consistency\.sh[\s\S]*"\$\{MACOS_CONSISTENCY_ARGS\[@\]\}"' \
-  'summary workflow should pass macOS probe evidence into consistency checks when probe-only evidence is active'
+require_match 'prepare_wave_b_b2_handoff_bundle\.sh' \
+  'summary workflow should route macOS evidence through prepare_wave_b_b2_handoff_bundle.sh as the single handoff truth source'
 
 echo "[PASS] wave-b-b2 macOS probe workflow contract passed"

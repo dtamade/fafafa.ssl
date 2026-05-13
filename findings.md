@@ -1,3 +1,24 @@
+# Findings - Wave B/B2 Workflow Handoff Truth Source
+
+## 2026-05-14
+- 继续沿着 `Wave B/B2` handoff/workflow 这一条静态契约线深审后，发现现在最大的 repo-side 漂移点已经从脚本内部，转移到了 workflow 汇总入口本身：
+  - `.github/workflows/wave-b-b2-manual.yml` 的 `summary` job 仍在自己拼 `MACOS_*ARGS` / `WINDOWS_*ARGS`
+  - 并且直接串联 `generate -> closure -> consistency`
+  - 没有调用 `prepare_wave_b_b2_handoff_bundle.sh`
+- 这会制造一个真实的维护分叉：
+  - 近期对 handoff bundle 做过的 replay-command、next-actions、Windows companion artifact、explicit-missing passthrough 等修复，都只落在 `prepare` 单一入口里
+  - 但 workflow summary 仍停留在旧入口，自身不会生成 handoff bundle，也不会自动继承这些更新
+  - 结果就是“本地静态交接真相”和“workflow 产出的 summary truth”开始分裂
+- 这批最小正确修法不是再往 workflow 里补更多判断，而是反过来删掉这层重复逻辑：
+  - summary job 只负责整理下载到的证据文件
+  - 然后统一调用 `prepare_wave_b_b2_handoff_bundle.sh`
+  - strict 模式仅映射到 `prepare --strict`
+  - 最终 artifact upload 把 handoff bundle 一并纳入
+- 修完后的 repo truth 更干净了：
+  - workflow summary 不再重复 handoff 语义实现
+  - macOS probe fallback、Windows companion runtime artifacts、explicit missing passthrough、replay command、state-driven next actions 全都回到 `prepare` 单一入口
+  - 后续若再修 handoff 逻辑，workflow 不需要再同步补一份平行实现
+
 # Findings - Wave B/B2 Handoff Bundle Next Actions
 
 ## 2026-05-14

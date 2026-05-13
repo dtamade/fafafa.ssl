@@ -50,10 +50,7 @@ require_match 'wave_b_windows_gate_summary_\$\{\{ needs\.setup\.outputs\.run_id 
 require_match 'winssl_runtime_suite_\$\{\{ needs\.setup\.outputs\.run_id \}\}\.log' \
   'windows workflow should upload broader WinSSL suite transcript artifact'
 
-require_match 'WINDOWS_EVIDENCE_ARGS=\([\s\S]*--windows-quick-log "test-reports/winssl_quick_smoke_\$\{RUN_ID\}\.log"[\s\S]*--windows-runtime-transcript "test-reports/winssl_runtime_suite_\$\{RUN_ID\}\.log"[\s\S]*\)' \
-  'summary workflow should keep explicit Windows runtime artifact arguments for evidence consistency'
-
-require_match 'check_wave_b_b2_evidence_consistency\.sh[\s\S]*"\$\{WINDOWS_EVIDENCE_ARGS\[@\]\}"' \
-  'summary workflow should pass Windows runtime artifact arguments into evidence consistency checks'
+require_match 'prepare_wave_b_b2_handoff_bundle\.sh' \
+  'summary workflow should route Windows runtime evidence through prepare_wave_b_b2_handoff_bundle.sh as the single handoff truth source'
 
 echo "[PASS] wave-b-b2 windows runtime workflow contract passed"

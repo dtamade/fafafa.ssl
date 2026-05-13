@@ -1,3 +1,68 @@
+# Task Plan - Wave B/B2 Workflow Handoff Truth Source
+
+## Goal
+收口 `.github/workflows/wave-b-b2-manual.yml` 的 summary job 逻辑漂移，避免 workflow 继续手工拼装 `cross summary / closure / consistency`，却绕开已经收敛好的 `prepare_wave_b_b2_handoff_bundle.sh` 单一交接入口。
+
+## Current Batch
+1. 写 focused RED workflow contracts，证明 summary job 仍在复制 `MACOS_*ARGS` / `WINDOWS_*ARGS` 与三个下游脚本调用，且没有上传 handoff bundle。
+2. 仅在 workflow 和相关合同测试中改成统一走 `prepare_wave_b_b2_handoff_bundle.sh`。
+3. 跑 workflow 合同与 handoff 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] resynced branch, planning files, and current Wave B/B2 handoff lane state
+- [completed] wrote RED workflow contracts for single-source handoff summary
+- [completed] minimal workflow truth-source switch to prepare script
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 `summary` job 仍在 workflow 内重复维护：
+  - `MACOS_CROSS_ARGS`
+  - `MACOS_SUMMARY_ARGS`
+  - `MACOS_CONSISTENCY_ARGS`
+  - `WINDOWS_SUMMARY_ARGS`
+  - `WINDOWS_EVIDENCE_ARGS`
+- 它还直接调用了：
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+  - `scripts/check_wave_b_b2_closure_readiness.sh`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+- 但 repo 里更新更快、语义更完整的真相源已经是：
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - 该脚本会统一生成 cross/closure/consistency/handoff bundle，并承载 replay command、state-driven next actions、Windows companion artifact list、explicit missing passthrough
+- workflow 目前上传的最终 summary artifacts 仍只有：
+  - `wave_b_cross_platform_summary_<run_id>.md`
+  - `wave_b_b2_closure_readiness_<run_id>.md`
+  - `wave_b_b2_evidence_consistency_<run_id>.md`
+  - 缺少 `wave_b_b2_handoff_bundle_<run_id>.md`
+- focused RED:
+  - `bash -n tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh`: FAIL before fix
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`: FAIL before fix
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`: FAIL before fix
+- minimal implementation:
+  - 新增 `tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh`
+  - 更新：
+    - `tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`
+    - `tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`
+  - `.github/workflows/wave-b-b2-manual.yml`
+    - summary job 改为构造单个 `PREPARE_ARGS`
+    - `strict_closure=true` 时只映射到 `prepare --strict`
+    - 删除 workflow 内部重复的 `MACOS_*ARGS` / `WINDOWS_EVIDENCE_ARGS` 与三个 direct script calls
+    - final upload 新增 `wave_b_b2_handoff_bundle_<run_id>.md`
+- focused GREEN:
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_replay_command_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Handoff Bundle Next Actions
 
 ## Goal

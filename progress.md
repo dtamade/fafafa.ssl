@@ -1,3 +1,53 @@
+# Progress - Wave B/B2 Workflow Handoff Truth Source
+
+## 2026-05-14
+- continuation resync:
+  - continued directly on the same `Wave B/B2` static handoff/workflow lane
+  - verified the worktree is clean and the branch remains `master...origin/master [ahead 43]`
+- planning/memory refresh:
+  - skimmed repo working-memory and current `task_plan.md` / `findings.md` / `progress.md`
+  - confirmed the latest landed batches are replay-command, next-actions, explicit-missing passthrough, and Windows companion artifact indexing inside `prepare_wave_b_b2_handoff_bundle.sh`
+- new bug located:
+  - `.github/workflows/wave-b-b2-manual.yml` summary job still manually builds `MACOS_*ARGS` / `WINDOWS_*ARGS`
+  - it still calls `generate_wave_b_cross_platform_summary.sh`, `check_wave_b_b2_closure_readiness.sh`, and `check_wave_b_b2_evidence_consistency.sh` directly
+  - it still does not generate or upload `wave_b_b2_handoff_bundle_<run_id>.md`
+- new batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-workflow-handoff-truth-source.md`
+- next implementation shape:
+  - add focused workflow contract coverage for the unified `prepare_wave_b_b2_handoff_bundle.sh` entrypoint
+  - then minimally switch the workflow summary job to that single truth source and upload the handoff bundle artifact
+- focused RED contracts:
+  - added `tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh`
+  - updated:
+    - `tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`
+    - `tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh` -> FAIL before fix
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh` -> FAIL before fix
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh` -> FAIL before fix
+  - failure shape:
+    - workflow summary still hand-built duplicated `MACOS_*ARGS` / `WINDOWS_*ARGS`
+    - summary did not call `prepare_wave_b_b2_handoff_bundle.sh`
+    - summary did not upload `wave_b_b2_handoff_bundle_<run_id>.md`
+- minimal implementation landed:
+  - `.github/workflows/wave-b-b2-manual.yml`
+    - renamed summary build step to include handoff bundle
+    - replaced duplicated summary/closure/consistency orchestration with a single `PREPARE_ARGS` array and one `prepare_wave_b_b2_handoff_bundle.sh` call
+    - mapped `strict_closure=true` to `PREPARE_ARGS+=(--strict)`
+    - added `wave_b_b2_handoff_bundle_<run_id>.md` to final uploaded artifacts
+- verification:
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_replay_command_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Handoff Bundle Next Actions
 
 ## 2026-05-14

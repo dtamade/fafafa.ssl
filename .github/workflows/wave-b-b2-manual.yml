@@ -271,7 +271,7 @@ jobs:
           name: wave-b-windows-${{ needs.setup.outputs.run_id }}
           path: artifacts/windows
 
-      - name: Build summary + closure + consistency
+      - name: Build summary + closure + consistency + handoff bundle
         shell: bash
         run: |
           mkdir -p test-reports
@@ -283,78 +283,18 @@ jobs:
 
           LINUX_SUMMARY="test-reports/wave_b_ci_gate_summary_${RUN_ID}.md"
           LINUX_EXAMPLES="test-reports/examples_compile_ci_gate_${RUN_ID}.json"
-
-          MACOS_CROSS_ARGS=()
-          MACOS_SUMMARY_ARGS=()
-          MACOS_CONSISTENCY_ARGS=()
-          WINDOWS_SUMMARY_ARGS=()
-          WINDOWS_EVIDENCE_ARGS=()
-          if [[ -f "test-reports/wave_b_macos_gate_summary_${RUN_ID}.md" ]]; then
-            MACOS_CROSS_ARGS=(--macos-summary "test-reports/wave_b_macos_gate_summary_${RUN_ID}.md")
-            MACOS_SUMMARY_ARGS=(--macos-summary "test-reports/wave_b_macos_gate_summary_${RUN_ID}.md")
-          elif [[ -f "test-reports/wave_b_macos_gate_probe_${RUN_ID}.json" ]]; then
-            MACOS_CROSS_ARGS=(--macos-probe "test-reports/wave_b_macos_gate_probe_${RUN_ID}.json")
-            MACOS_CONSISTENCY_ARGS=(--macos-probe "test-reports/wave_b_macos_gate_probe_${RUN_ID}.json")
-          fi
-          if [[ -f "test-reports/wave_b_windows_gate_summary_${RUN_ID}.md" ]]; then
-            WINDOWS_SUMMARY_ARGS=(
-              --windows-summary "test-reports/wave_b_windows_gate_summary_${RUN_ID}.md"
-            )
-            WINDOWS_EVIDENCE_ARGS=(
-              --windows-quick-log "test-reports/winssl_quick_smoke_${RUN_ID}.log"
-              --windows-runtime-transcript "test-reports/winssl_runtime_suite_${RUN_ID}.log"
-            )
-          fi
-
-          bash scripts/generate_wave_b_cross_platform_summary.sh \
-            --run-id "$RUN_ID" \
-            --linux-summary "$LINUX_SUMMARY" \
-            --linux-examples "$LINUX_EXAMPLES" \
-            "${MACOS_CROSS_ARGS[@]}" \
-            "${WINDOWS_SUMMARY_ARGS[@]}" \
-            --output "test-reports/wave_b_cross_platform_summary_${RUN_ID}.md"
-
-          bash scripts/check_wave_b_b2_closure_readiness.sh \
-            --run-id "$RUN_ID" \
-            --linux-summary "$LINUX_SUMMARY" \
-            "${MACOS_SUMMARY_ARGS[@]}" \
-            "${WINDOWS_SUMMARY_ARGS[@]}" \
-            --output "test-reports/wave_b_b2_closure_readiness_${RUN_ID}.md"
-
-          bash scripts/check_wave_b_b2_evidence_consistency.sh \
-            --run-id "$RUN_ID" \
-            --linux-summary "$LINUX_SUMMARY" \
-            --linux-examples "$LINUX_EXAMPLES" \
-            "${MACOS_SUMMARY_ARGS[@]}" \
-            "${MACOS_CONSISTENCY_ARGS[@]}" \
-            "${WINDOWS_SUMMARY_ARGS[@]}" \
-            "${WINDOWS_EVIDENCE_ARGS[@]}" \
-            --cross-summary "test-reports/wave_b_cross_platform_summary_${RUN_ID}.md" \
-            --closure-report "test-reports/wave_b_b2_closure_readiness_${RUN_ID}.md" \
-            --output "test-reports/wave_b_b2_evidence_consistency_${RUN_ID}.md"
-
+          PREPARE_ARGS=(
+            --run-id "$RUN_ID"
+            --linux-summary "$LINUX_SUMMARY"
+            --linux-examples "$LINUX_EXAMPLES"
+            --output-dir "test-reports"
+          )
           if [[ "${{ github.event.inputs.strict_closure }}" == "true" ]]; then
-            bash scripts/check_wave_b_b2_evidence_consistency.sh \
-              --run-id "$RUN_ID" \
-              --linux-summary "$LINUX_SUMMARY" \
-              --linux-examples "$LINUX_EXAMPLES" \
-              "${MACOS_SUMMARY_ARGS[@]}" \
-              "${MACOS_CONSISTENCY_ARGS[@]}" \
-              "${WINDOWS_SUMMARY_ARGS[@]}" \
-              "${WINDOWS_EVIDENCE_ARGS[@]}" \
-              --cross-summary "test-reports/wave_b_cross_platform_summary_${RUN_ID}.md" \
-              --closure-report "test-reports/wave_b_b2_closure_readiness_${RUN_ID}.md" \
-              --strict \
-              --dry-run
-
-            bash scripts/check_wave_b_b2_closure_readiness.sh \
-              --run-id "$RUN_ID" \
-              --linux-summary "$LINUX_SUMMARY" \
-              "${MACOS_SUMMARY_ARGS[@]}" \
-              "${WINDOWS_SUMMARY_ARGS[@]}" \
-              --strict \
-              --dry-run
+            PREPARE_ARGS+=(--strict)
           fi
+
+          bash scripts/prepare_wave_b_b2_handoff_bundle.sh \
+            "${PREPARE_ARGS[@]}"
 
       - name: Upload final summary
         if: always()
@@ -365,4 +305,5 @@ jobs:
             test-reports/wave_b_cross_platform_summary_${{ needs.setup.outputs.run_id }}.md
             test-reports/wave_b_b2_closure_readiness_${{ needs.setup.outputs.run_id }}.md
             test-reports/wave_b_b2_evidence_consistency_${{ needs.setup.outputs.run_id }}.md
+            test-reports/wave_b_b2_handoff_bundle_${{ needs.setup.outputs.run_id }}.md
           if-no-files-found: warn
