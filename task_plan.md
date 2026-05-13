@@ -1,3 +1,54 @@
+# Task Plan - Wave B/B2 Consistency Existing Report Run ID Fallback
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 在 active Linux summary 缺失时的 `run_id` 次生污染，避免它明明拿到了现有 `cross summary + closure report`，却仍回退到新时间戳并把这两份报告一起误记成 mismatch。
+
+## Current Batch
+1. 写 focused RED contract，证明 active Linux summary 缺失后，direct consistency 仍会把现有 `cross summary` / `closure report` 的真实 `run_id` 污染成 mismatch。
+2. 仅在 `check_wave_b_b2_evidence_consistency.sh` 内增加从现有 markdown reports 自身回收 `run_id` 的 fallback。
+3. 跑 focused 合同、上一批 run_id inference 合同，以及 Linux/macOS/Windows 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified the next report-chain run_id fallback gap after the cross-summary-driven run_id batch
+- [completed] focused RED contract for existing-report run_id fallback
+- [completed] minimal report-chain run_id fallback hardening in consistency checker
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- fresh repro already shows the bug shape:
+  - active custom `linux_summary` had already been removed
+  - existing `cross summary` and `closure report` still both carried the real batch run_id
+  - direct consistency still minted a fresh timestamp run_id and added two fake mismatches on top of the real missing-summary error
+- target scope for this batch:
+  - keep strict failure on missing active Linux summary
+  - only stop polluting existing reports with a fresh timestamp when their own run_id is already available
+- focused RED:
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_existing_report_run_id_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_existing_report_run_id_fallback_contract.sh`: FAIL before fix
+  - failure shape:
+    - active custom `linux_summary` was missing
+    - existing `cross summary` and `closure report` still both carried the real batch run_id
+    - direct consistency minted a fresh timestamp and added two fake mismatches on top of the real missing-summary failure
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_wave_b_b2_consistency_existing_report_run_id_fallback_contract.sh`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `infer_run_id_from_markdown_artifact(...)`
+    - `RUN_ID` now falls back in this order: explicit value -> explicit/inherited Linux summary -> cross-summary-declared active Linux summary -> cross summary run_id -> closure report run_id -> timestamp
+    - synced `--help` text to the broader report-chain fallback order
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_existing_report_run_id_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_existing_report_run_id_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Consistency Cross Summary Run ID Inference
 
 ## Goal

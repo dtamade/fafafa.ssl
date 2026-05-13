@@ -1,3 +1,22 @@
+# Findings - Wave B/B2 Consistency Existing Report Run ID Fallback
+
+## 2026-05-13
+- 继续沿着同一个 `Wave B/B2` consistency public surface 深审后，发现上一批 `cross summary -> active Linux summary` 的 run_id 修法之下，还有一层次生噪音没收干净：
+  - 如果 active custom `linux_summary` 已经缺失
+  - 但现有 `cross summary` 和 `closure report` 还都在，并且自己带着真实 `run_id`
+  - checker 现在仍会回退到新的时间戳
+- 这会制造一个真实的 repo-side 误报放大器：
+  - 缺失 active Linux summary 本来已经足够让这批证据判成 `INCONSISTENT`
+  - 但 direct consistency 还会再把 `cross_summary` / `closure_report` 一起标成 `run_id mismatch`
+  - 结果报告里混入了两条脚本自己制造出来的噪音，而不是单纯反映真实缺口
+- 这批最小正确修法不是放宽 mismatch 规则，而是继续把默认真值对齐到现有报告链：
+  - 先看 active Linux summary
+  - 读不到时，再回收现有 `cross summary` / `closure report` 自己写下来的 `run_id`
+  - 只有现有报告链也没有真值时，才回退到时间戳
+- 这样能让 strict 失败原因保持干净：
+  - 缺哪个 active evidence，就报哪个缺口
+  - 不再额外把已经对齐的 summary-chain 一起污染成 mismatch
+
 # Findings - Wave B/B2 Consistency Cross Summary Run ID Inference
 
 ## 2026-05-13
