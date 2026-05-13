@@ -1,3 +1,48 @@
+# Task Plan - Wave B/B2 Run-Specific Linux Examples Default Hardening
+
+## Goal
+收口 `generate_wave_b_cross_platform_summary.sh` 与 `prepare_wave_b_b2_handoff_bundle.sh` 的 Linux examples JSON 默认路径漂移，确保在存在 `test-reports/examples_compile_ci_gate_<run_id>.json` 时优先消费 run-specific 产物，避免 handoff bundle 静默回落到陈旧 generic JSON。
+
+## Current Batch
+1. 写 focused RED contract，证明 `prepare_wave_b_b2_handoff_bundle.sh` 在未显式传 `--linux-examples` 时仍会把 generic JSON 注入 cross summary / consistency report。
+2. 让 `prepare` 与已部分修过的 `generate` 统一采用“run-specific 优先、generic fallback”的默认路径策略。
+3. 跑 focused 合同、cross-summary 回归合同、handoff 相关旧合同与 diff hygiene。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] refreshed current repo state and resumed the same static Wave B/B2 script chain
+- [completed] focused RED contract for run-specific linux examples preference
+- [completed] minimal default-path unification across generate and prepare
+- [completed] focused verification
+- [in_progress] review and commit closeout
+
+## Current Evidence
+- focused RED:
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh`: FAIL before fix
+  - failure shape:
+    - generated cross summary still recorded `linux_examples_json: test-reports/examples_compile_ci_gate.json`
+    - metrics therefore came from the generic JSON instead of the run-specific fixture
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh`
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+    - now prefers `test-reports/examples_compile_ci_gate_<run_id>.json`, falls back to the generic path only when needed
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - now mirrors the same default-path resolution instead of hardcoding the generic JSON
+- focused GREEN:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh`: PASS
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh`: PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_linux_checklist.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_no_todo_pending_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Handoff Bundle Windows Companion Path Hardening
 
 ## Goal

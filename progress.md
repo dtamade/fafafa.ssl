@@ -1,3 +1,47 @@
+# Progress - Wave B/B2 Run-Specific Linux Examples Default Hardening
+
+## 2026-05-13
+- continuation resync:
+  - stayed inside the same static Wave B/B2 script family
+  - kept scope away from Windows host/runtime discussion and focused on repo-side report plumbing only
+- new bug located:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh` already defaulted `linux_examples_json` to `test-reports/examples_compile_ci_gate_<run_id>.json`
+  - but `scripts/generate_wave_b_cross_platform_summary.sh` and especially `scripts/prepare_wave_b_b2_handoff_bundle.sh` could still prefer the generic `test-reports/examples_compile_ci_gate.json`
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-b2-run-specific-linux-examples-default-hardening.md`
+- focused RED contract:
+  - added `tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh`
+  - contract creates:
+    - a fixture Linux summary under repo tmp
+    - a run-specific JSON at `test-reports/examples_compile_ci_gate_<run_id>.json`
+    - a custom output dir
+  - then runs `prepare_wave_b_b2_handoff_bundle.sh` from `/tmp` without `--linux-examples`
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh` -> FAIL before fix
+  - failure shape:
+    - generated cross summary still pointed at `test-reports/examples_compile_ci_gate.json`
+    - the run-specific 75/75 metrics were therefore not consumed
+- minimal implementation landed:
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+    - added `default_linux_examples_json_path(...)`
+    - when `--linux-examples` is omitted, now prefers `test-reports/examples_compile_ci_gate_<run_id>.json` and only falls back to the generic path if needed
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - `LINUX_EXAMPLES` default changed from hardcoded generic path to deferred resolution
+    - added the same `default_linux_examples_json_path(...)`
+    - now injects the run-specific JSON into cross summary / consistency when present
+- verification:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh` -> PASS
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh` -> PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_linux_checklist.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_no_todo_pending_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Handoff Bundle Windows Companion Path Hardening
 
 ## 2026-05-13

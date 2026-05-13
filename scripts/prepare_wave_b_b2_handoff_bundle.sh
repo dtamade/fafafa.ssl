@@ -7,7 +7,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 LINUX_SUMMARY=""
-LINUX_EXAMPLES="test-reports/examples_compile_ci_gate.json"
+LINUX_EXAMPLES=""
 MACOS_SUMMARY=""
 WINDOWS_SUMMARY=""
 CROSS_SUMMARY=""
@@ -31,7 +31,7 @@ Wave B / B2 Handoff Bundle Preparer
 选项：
   --run-id ID                指定 run_id（默认时间戳）
   --linux-summary FILE       Linux summary（默认自动取最新 wave_b_ci_gate_summary_*.md）
-  --linux-examples FILE      Linux examples json（默认 test-reports/examples_compile_ci_gate.json）
+  --linux-examples FILE      Linux examples json（默认优先 test-reports/examples_compile_ci_gate_<run_id>.json，fallback 到旧 generic 路径）
   --macos-summary FILE       macOS summary（可选）
   --windows-summary FILE     Windows summary（可选）
   --output-dir DIR           输出目录（默认 test-reports）
@@ -111,6 +111,18 @@ resolve_path() {
   fi
 }
 
+default_linux_examples_json_path() {
+  local run_specific="test-reports/examples_compile_ci_gate_${RUN_ID}.json"
+  local generic="test-reports/examples_compile_ci_gate.json"
+  if [[ -f "$(resolve_path "$run_specific")" ]]; then
+    echo "$run_specific"
+  elif [[ -f "$(resolve_path "$generic")" ]]; then
+    echo "$generic"
+  else
+    echo "$run_specific"
+  fi
+}
+
 derive_sibling_artifact_path() {
   local anchor_path="$1"
   local filename="$2"
@@ -126,6 +138,9 @@ derive_sibling_artifact_path() {
 if [[ -z "$LINUX_SUMMARY" || ! -f "$(resolve_path "$LINUX_SUMMARY")" ]]; then
   echo "[ERROR] linux summary not found: $LINUX_SUMMARY" >&2
   exit 1
+fi
+if [[ -z "$LINUX_EXAMPLES" ]]; then
+  LINUX_EXAMPLES="$(default_linux_examples_json_path)"
 fi
 
 MACOS_ARGS=()

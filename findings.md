@@ -1,3 +1,21 @@
+# Findings - Wave B/B2 Run-Specific Linux Examples Default Hardening
+
+## 2026-05-13
+- 继续静态深审 `Wave B/B2` 脚本链时，发现 Linux examples JSON 默认路径还残留一条内部不一致：
+  - `scripts/check_wave_b_b2_evidence_consistency.sh` 已经默认使用 `test-reports/examples_compile_ci_gate_<run_id>.json`
+  - 但 `scripts/generate_wave_b_cross_platform_summary.sh` 与 `scripts/prepare_wave_b_b2_handoff_bundle.sh` 仍可能先吃旧 generic `test-reports/examples_compile_ci_gate.json`
+- 这个缺口会制造一种很隐蔽的 repo-side 假一致：
+  - run-specific JSON 明明已存在
+  - handoff bundle 却仍可能引用 generic JSON
+  - 最终 cross summary / consistency report 看上去完整，但实际消费的是旧批次 residue
+- 最小正确修法不是强制全链只认 run-specific，也不是现在就重写 `run_wave_b_ci_gate.sh`：
+  - 仓库里仍有 generic JSON 的历史与本地默认产物路径
+  - 因此当前安全策略应是“run-specific 优先，generic fallback”
+  - 这样能先堵住 stale-generic 漂移，同时保持现有非 workflow 调用可兼容
+- focused contract 说明这次修法真正压到了 handoff 链路，而不只是单脚本 dry-run：
+  - prepare 生成的 cross summary 会改写 `linux_examples_json`
+  - consistency report 也会同步跟踪 run-specific JSON 路径
+
 # Findings - Wave B/B2 Handoff Bundle Windows Companion Path Hardening
 
 ## 2026-05-13
