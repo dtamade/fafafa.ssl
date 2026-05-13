@@ -1,3 +1,34 @@
+# Progress - Wave B/B2 Closure Linux Next Actions Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `103f0d8 fix: clarify consistency next actions`
+  - continued on the same Wave B/B2 report-surface review lane
+- Fresh review narrowed the next real issue:
+  - `check_wave_b_b2_closure_readiness.sh` already knows how to classify Linux as `READY` when the summary exists but `Overall Status` is unreadable
+  - but `## Next Actions` still ignored Linux entirely and only mentioned macOS / Windows
+  - this drift became real once Linux baseline was made a required handoff truth source
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-closure-linux-next-actions-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_wave_b_b2_closure_linux_next_actions_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_closure_linux_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_linux_next_actions_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `closure next actions should explicitly mention Linux READY/FAIL states after Linux baseline became mandatory`
+- Minimal implementation landed:
+  - `scripts/check_wave_b_b2_closure_readiness.sh`
+    - added state-driven `NEXT_ACTIONS`
+    - Linux/macOS/Windows non-PASS states now receive explicit repair guidance
+    - `CLOSED` now emits a closure-complete / optional recheck message
+    - final rerun guidance still points to `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+- GREEN verification:
+  - `bash -n scripts/check_wave_b_b2_closure_readiness.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_linux_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Consistency Next Actions Truth
 
 ## 2026-05-14

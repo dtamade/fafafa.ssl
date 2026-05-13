@@ -1,3 +1,19 @@
+# Findings - Wave B/B2 Closure Linux Next Actions Truth
+
+## 2026-05-14
+- 继续沿着 `closure` 报告面深审后，发现上一轮虽然已经把最终 rerun 入口切到 `prepare_wave_b_b2_handoff_bundle.sh`，但 `Next Actions` 仍保留了另一层旧静态假设：
+  - 只提醒 macOS / Windows
+  - 不提醒 Linux
+  - 好像 Linux baseline 永远不会成为 closure 的当前阻塞项
+- 这与仓库当前真相已经冲突：
+  - Linux baseline 早已是必需前提
+  - `closure_readiness` 自己也能把 Linux summary 判成 `READY` / `FAIL` / `PENDING`
+  - 但报告动作面却继续把 Linux 非 `PASS` 藏起来
+- 这批最小正确修法不是改 `closure_status` 判定，而是把 `Next Actions` 绑定到现有平台状态矩阵：
+  - Linux 非 `PASS` 时，明确要求修复或重跑 Linux baseline
+  - macOS / Windows 非 `PASS` 时，也一并改成状态驱动的有效 summary 指引
+  - 最终仍统一回到 `prepare_wave_b_b2_handoff_bundle.sh` 刷新完整交接链
+
 # Findings - Wave B/B2 Consistency Next Actions Truth
 
 ## 2026-05-14

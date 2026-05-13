@@ -208,6 +208,22 @@ if [[ "$linux_state" == "PASS" && "$macos_state" == "PASS" && "$windows_state" =
   closure_status="CLOSED"
 fi
 
+NEXT_ACTIONS=()
+if [[ "$closure_status" == "CLOSED" ]]; then
+  NEXT_ACTIONS+=("当前三平台 summary 已闭环；如需刷新完整交接链，可复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'）。")
+else
+  if [[ "$linux_state" != "PASS" ]]; then
+    NEXT_ACTIONS+=("若 Linux 为 READY/FAIL/PENDING：修复或重跑 Linux baseline，并回填有效 Linux summary。")
+  fi
+  if [[ "$macos_state" != "PASS" ]]; then
+    NEXT_ACTIONS+=("若 macOS 为 READY/DRY_RUN/FAIL/PENDING：在 macOS runner 修复或执行 live gate，并回填有效 summary。")
+  fi
+  if [[ "$windows_state" != "PASS" ]]; then
+    NEXT_ACTIONS+=("若 Windows 为 READY/DRY_RUN/FAIL/PENDING：在 Windows runner 修复或执行 live gate，并回填有效 summary。")
+  fi
+  NEXT_ACTIONS+=("三平台 summary 全部 PASS 后，复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'），让 cross summary / consistency / handoff bundle 一起刷新。")
+fi
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] run_id=$RUN_ID"
   echo "[DRY-RUN] linux=$linux_state ($linux_note)"
@@ -248,9 +264,13 @@ cat > "$OUTPUT_ABS" <<EOF_REPORT
 
 ## Next Actions
 
-- 若 macOS 为 DRY_RUN/PENDING：在 macOS runner 执行 live gate 并回填 summary。
-- 若 Windows 为 PENDING：在 Windows runner 执行 live gate 并回填 summary。
-- 三平台 summary 回填后，复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'），让 cross summary / consistency / handoff bundle 一起刷新。
+EOF_REPORT
+
+for action in "${NEXT_ACTIONS[@]}"; do
+  echo "- $action"
+done >> "$OUTPUT_ABS"
+
+cat >> "$OUTPUT_ABS" <<'EOF_REPORT'
 EOF_REPORT
 
 echo "[PASS] readiness report generated: $OUTPUT_FILE"

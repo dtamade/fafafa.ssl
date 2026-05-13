@@ -1,3 +1,48 @@
+# Task Plan - Wave B/B2 Closure Linux Next Actions Truth
+
+## Goal
+收口 `check_wave_b_b2_closure_readiness.sh` 的 `Next Actions` 漂移，避免 Linux baseline 已成为必需前提后，closure 报告仍只提醒 macOS/Windows，而不提示 Linux 非 `PASS` 的修复动作。
+
+## Current Batch
+1. 写 focused contract，证明 Linux `READY` 场景下 closure 报告缺少 Linux next-action guidance。
+2. 最小修改 `check_wave_b_b2_closure_readiness.sh`，把 `Next Actions` 收口到按平台状态生成。
+3. 复跑 closure 与 handoff 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified stale static closure next-actions after Linux baseline became mandatory
+- [completed] wrote focused contract for Linux closure next-action truth
+- [completed] minimal state-driven closure next-actions guidance
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 closure 报告已经能把 Linux 无法解析 `Overall Status` 的 summary 识别成：
+  - `| linux | READY | summary exists but overall unknown | ... |`
+- 但修复前 `## Next Actions` 仍然只写：
+  - macOS runner
+  - Windows runner
+  - prepare 入口
+- 这会把当前最关键的 Linux baseline 修复动作直接藏掉。
+- focused RED:
+  - 新增 `tests/scripts/test_wave_b_b2_closure_linux_next_actions_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_closure_linux_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_linux_next_actions_contract.sh`: FAIL before fix
+  - failure shape:
+    - closure next actions should explicitly mention Linux READY/FAIL states after Linux baseline became mandatory
+- minimal implementation:
+  - 更新 `scripts/check_wave_b_b2_closure_readiness.sh`
+    - added state-driven `NEXT_ACTIONS`
+    - Linux/macOS/Windows 非 `PASS` 时分别给出对应修复动作
+    - `CLOSED` 时改为闭环完成/可选复核提示
+    - final rerun guidance continues to point to `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_closure_readiness.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_linux_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Consistency Next Actions Truth
 
 ## Goal
