@@ -1,3 +1,46 @@
+# Progress - Wave B/B2 Consistency Explicit Artifact Requiredness
+
+## 2026-05-13
+- continuation resync:
+  - continued directly after committing the report-chain run_id fallback batch
+  - kept the scope inside the same static Wave B/B2 evidence-consistency script surface
+- new bug located:
+  - explicit `--macos-summary <missing>` still left strict green
+  - explicit `--windows-summary <missing>` also still left strict green
+  - explicit `--windows-quick-log <missing>` plus `--windows-runtime-transcript <missing>` likewise stayed optional
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-b2-consistency-explicit-artifact-requiredness.md`
+- next implementation shape:
+  - add focused contracts for explicit summary evidence and explicit Windows runtime logs
+  - then treat explicit non-Linux evidence args as required inputs instead of optional hints
+- focused RED contracts:
+  - added `tests/scripts/test_wave_b_b2_consistency_explicit_summary_artifacts_required_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_explicit_summary_artifacts_required_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_explicit_summary_artifacts_required_contract.sh` -> FAIL before fix
+  - added `tests/scripts/test_wave_b_b2_consistency_explicit_windows_runtime_logs_required_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_explicit_windows_runtime_logs_required_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_explicit_windows_runtime_logs_required_contract.sh` -> FAIL before fix
+  - failure shape:
+    - explicit non-Linux evidence rows already showed `missing`
+    - but strict still returned `CONSISTENT`
+- minimal implementation landed:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - explicit `macos_summary` now counts as required
+    - explicit `windows_summary` now counts as required and activates sibling runtime strictness
+    - explicit `windows_quick_log` / `windows_runtime_transcript` now each count as required
+- verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_explicit_summary_artifacts_required_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_explicit_windows_runtime_logs_required_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_existing_report_run_id_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_summary_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_summary_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Consistency Existing Report Run ID Fallback
 
 ## 2026-05-13

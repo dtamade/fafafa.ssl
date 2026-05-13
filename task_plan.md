@@ -1,3 +1,59 @@
+# Task Plan - Wave B/B2 Consistency Explicit Artifact Requiredness
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 对显式非 Linux evidence 参数的 required 语义漂移，避免调用者明明传了 `--macos-summary` / `--windows-summary` / Windows runtime logs，strict 却仍给出假绿灯。
+
+## Current Batch
+1. 写 focused RED contracts，证明显式 macOS/Windows summary 与显式 Windows runtime logs 在 strict 下仍被静默降成 optional。
+2. 仅在 `check_wave_b_b2_evidence_consistency.sh` 内统一显式非 Linux evidence 的 required 语义。
+3. 跑 focused 合同、run_id 回归、active-path、Windows strict 与 inactive macOS probe 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified the explicit-artifact requiredness gap after the report-chain run_id fallback batch
+- [completed] focused RED contracts for explicit non-Linux evidence requiredness
+- [completed] minimal explicit-artifact requiredness hardening in consistency checker
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- fresh repros already show the bug shape:
+  - explicit `--macos-summary <missing>` still let strict return green
+  - explicit `--windows-summary <missing>` still let strict return green
+  - explicit `--windows-quick-log <missing>` and `--windows-runtime-transcript <missing>` also still stayed optional
+- target scope for this batch:
+  - explicit non-Linux evidence should become required because the caller asked to validate it
+  - explicit `windows_summary` should also activate the existing sibling runtime strictness
+- focused RED:
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_explicit_summary_artifacts_required_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_explicit_summary_artifacts_required_contract.sh`: FAIL before fix
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_explicit_windows_runtime_logs_required_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_explicit_windows_runtime_logs_required_contract.sh`: FAIL before fix
+  - failure shape:
+    - explicit `--macos-summary`, explicit `--windows-summary`, and explicit Windows runtime logs all still showed `missing`
+    - but `required_missing` stayed `0`
+    - strict therefore returned false green
+- minimal implementation:
+  - new focused contracts:
+    - `tests/scripts/test_wave_b_b2_consistency_explicit_summary_artifacts_required_contract.sh`
+    - `tests/scripts/test_wave_b_b2_consistency_explicit_windows_runtime_logs_required_contract.sh`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - explicit `macos_summary` now becomes required evidence
+    - explicit `windows_summary` now becomes required evidence and activates sibling runtime strictness
+    - explicit `windows_quick_log` / `windows_runtime_transcript` now each become required evidence even without a Windows summary
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_explicit_summary_artifacts_required_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_explicit_windows_runtime_logs_required_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_existing_report_run_id_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Consistency Existing Report Run ID Fallback
 
 ## Goal

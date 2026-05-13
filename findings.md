@@ -1,3 +1,21 @@
+# Findings - Wave B/B2 Consistency Explicit Artifact Requiredness
+
+## 2026-05-13
+- 继续沿着同一个 `Wave B/B2` consistency public surface 深审后，发现还有一组更直接的 CLI 契约漂移：
+  - 显式 `--macos-probe` 已经会变成 required
+  - 但显式 `--macos-summary` / `--windows-summary` / `--windows-quick-log` / `--windows-runtime-transcript` 现在却还能被 strict 静默放过
+- 这会制造一类真实的 repo-side 假绿灯：
+  - 调用者已经明确指定要核对的 evidence path
+  - 报告矩阵里虽然能看到 `missing`
+  - 但 `required_missing` 仍然保持 `0`，最终 `CONSISTENT`
+- 这批最小正确修法不是扩大 active-path 解析，而是把显式参数语义补齐到和 `macos_probe` 同一原则：
+  - 显式传入就代表“这份 evidence 应被检查”
+  - 缺失时必须计入 required
+  - 对 Windows 来说，显式 `windows_summary` 还应像 active Windows truth 一样激活 sibling runtime strictness
+- 这样能让 strict 模式重新对齐调用者意图：
+  - 不是只在 cross summary 已声明 active truth 时才严格
+  - 而是显式 CLI 也能真正驱动 required evidence 判定
+
 # Findings - Wave B/B2 Consistency Existing Report Run ID Fallback
 
 ## 2026-05-13

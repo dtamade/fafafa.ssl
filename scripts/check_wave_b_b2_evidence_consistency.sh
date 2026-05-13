@@ -472,7 +472,7 @@ check_presence_artifact() {
 check_markdown_artifact "linux_summary" "$LINUX_SUMMARY" true
 check_json_artifact "linux_examples_json" "$LINUX_EXAMPLES_JSON" true
 macos_summary_required=false
-if [[ -n "$cross_summary_macos_summary" ]]; then
+if [[ "$MACOS_SUMMARY_EXPLICIT" == "true" || -n "$cross_summary_macos_summary" ]]; then
   macos_summary_required=true
 fi
 macos_probe_required=false
@@ -490,20 +490,28 @@ if [[ "$macos_probe_track" == "true" ]]; then
 fi
 check_markdown_artifact "macos_summary" "$MACOS_SUMMARY" "$macos_summary_required"
 windows_summary_required=false
-if [[ -n "$cross_summary_windows_summary" ]]; then
+if [[ "$WINDOWS_SUMMARY_EXPLICIT" == "true" || -n "$cross_summary_windows_summary" ]]; then
   windows_summary_required=true
 fi
 check_markdown_artifact "windows_summary" "$WINDOWS_SUMMARY" "$windows_summary_required"
-windows_runtime_required=false
+windows_runtime_required_by_summary=false
 windows_summary_abs="$(resolve_path "$WINDOWS_SUMMARY")"
-if [[ -n "$cross_summary_windows_summary" ]]; then
-  windows_runtime_required=true
+if [[ "$WINDOWS_SUMMARY_EXPLICIT" == "true" || -n "$cross_summary_windows_summary" ]]; then
+  windows_runtime_required_by_summary=true
 fi
 if [[ -f "$windows_summary_abs" ]]; then
-  windows_runtime_required=true
+  windows_runtime_required_by_summary=true
 fi
-check_presence_artifact "windows_quick_log" "$WINDOWS_QUICK_LOG" "$windows_runtime_required"
-check_presence_artifact "windows_runtime_transcript" "$WINDOWS_RUNTIME_TRANSCRIPT" "$windows_runtime_required"
+windows_quick_log_required=false
+if [[ "$WINDOWS_QUICK_LOG_EXPLICIT" == "true" || "$windows_runtime_required_by_summary" == "true" ]]; then
+  windows_quick_log_required=true
+fi
+windows_runtime_transcript_required=false
+if [[ "$WINDOWS_RUNTIME_TRANSCRIPT_EXPLICIT" == "true" || "$windows_runtime_required_by_summary" == "true" ]]; then
+  windows_runtime_transcript_required=true
+fi
+check_presence_artifact "windows_quick_log" "$WINDOWS_QUICK_LOG" "$windows_quick_log_required"
+check_presence_artifact "windows_runtime_transcript" "$WINDOWS_RUNTIME_TRANSCRIPT" "$windows_runtime_transcript_required"
 check_markdown_artifact "cross_summary" "$CROSS_SUMMARY" true
 check_markdown_artifact "closure_report" "$CLOSURE_REPORT" true
 
