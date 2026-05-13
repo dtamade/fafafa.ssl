@@ -1,3 +1,37 @@
+# Progress - Wave B/B2 Consistency Cross Summary Windows Summary Required
+
+## 2026-05-13
+- continuation resync:
+  - continued directly after committing the active Linux summary batch
+  - stayed inside the same static Wave B/B2 evidence-consistency script surface
+- new bug located:
+  - cross summary already declared an active custom `windows_summary`
+  - after that active summary was removed, direct consistency still returned green
+  - root cause: even after path inheritance landed, the checker still treated the active Windows summary and sibling runtime artifacts as optional missing
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-b2-consistency-cross-summary-windows-summary-required.md`
+- focused RED contract:
+  - added `tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh` -> FAIL before fix
+  - failure shape:
+    - active custom Windows summary had already been recorded in cross summary
+    - after it was removed, `required_missing` still stayed `0`
+    - sibling runtime artifacts also stayed `optional missing`
+- minimal implementation landed:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - cross-summary-declared active `windows_summary` now becomes required evidence
+    - sibling runtime artifacts also become required under the same active Windows truth
+- verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_summary_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_summary_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Consistency Cross Summary Linux Summary Path
 
 ## 2026-05-13

@@ -1,3 +1,44 @@
+# Task Plan - Wave B/B2 Consistency Cross Summary Windows Summary Required
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 对 active custom `windows_summary` 的 required 语义缺口，避免在 `cross summary` 已承认 Windows summary 为 active evidence 时，summary 本体和 sibling runtime artifacts 仍被当成 optional missing。
+
+## Current Batch
+1. 写 focused RED contract，证明 `cross summary` 已声明 active custom `windows_summary`，但 direct consistency 仍把它和 companion runtime artifacts 记成 optional / green。
+2. 仅在 `check_wave_b_b2_evidence_consistency.sh` 内把 cross-summary-declared Windows summary 提升为 required evidence，并让 runtime strictness 跟着 active summary truth 走。
+3. 跑 focused 合同、active Windows summary path、Windows companion-path、linux/macOS active-path 与 inactive-probe 回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] found the required-semantics gap after the active Windows summary path batch
+- [completed] focused RED contract for active Windows required evidence
+- [completed] minimal Windows required-semantics hardening in consistency checker
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- focused RED:
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh`: FAIL before fix
+  - failure shape:
+    - `cross summary` already declared an active custom `windows_summary`
+    - that summary was then removed
+    - direct consistency still kept `required_missing=0` and left the two runtime artifacts as optional missing
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - active cross-summary-declared `windows_summary` is now required evidence
+    - when that active Windows truth exists, sibling `windows_quick_log` and `windows_runtime_transcript` also become required evidence even if the summary file is already missing
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Consistency Cross Summary Linux Summary Path
 
 ## Goal

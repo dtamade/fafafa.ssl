@@ -444,9 +444,16 @@ if [[ "$macos_probe_track" == "true" ]]; then
   check_json_artifact "macos_probe" "$MACOS_PROBE" "$macos_probe_required"
 fi
 check_markdown_artifact "macos_summary" "$MACOS_SUMMARY" "$macos_summary_required"
-check_markdown_artifact "windows_summary" "$WINDOWS_SUMMARY" false
+windows_summary_required=false
+if [[ -n "$cross_summary_windows_summary" ]]; then
+  windows_summary_required=true
+fi
+check_markdown_artifact "windows_summary" "$WINDOWS_SUMMARY" "$windows_summary_required"
 windows_runtime_required=false
 windows_summary_abs="$(resolve_path "$WINDOWS_SUMMARY")"
+if [[ -n "$cross_summary_windows_summary" ]]; then
+  windows_runtime_required=true
+fi
 if [[ -f "$windows_summary_abs" ]]; then
   windows_runtime_required=true
 fi

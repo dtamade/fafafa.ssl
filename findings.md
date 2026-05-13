@@ -1,3 +1,21 @@
+# Findings - Wave B/B2 Consistency Cross Summary Windows Summary Required
+
+## 2026-05-13
+- 继续沿着同一个 `Wave B/B2` consistency public surface 深审后，发现 Windows active-truth 还有一层 required 语义没有补完：
+  - 前一批已经让 direct consistency 能继承 active custom `windows_summary` path
+  - 但只要这份 active summary 随后消失，checker 仍会把它和 sibling runtime artifacts 记成 optional missing
+  - 于是 strict 模式还可能给出假绿灯
+- 这说明 Windows 问题其实分成了两层：
+  - 第一层是 active path truth 要继承
+  - 第二层是 active truth 一旦成立，required 语义也必须跟着走
+- 这批最小正确修法不是改 companion-path 推导，也不是放宽 runtime strict 规则，而是把 “active custom `windows_summary` 已被 cross summary 承认” 视为 strict 事实：
+  - `windows_summary` 本体成为 required evidence
+  - sibling `windows_quick_log` / `windows_runtime_transcript` 也同步成为 required evidence
+  - 即使 summary 文件已经缺失，也不能再退回 optional missing
+- 这样能让 Windows strictness 真正变成一个闭合的 active-evidence 语义：
+  - 不是只在 summary 文件刚好还在时才严格
+  - 而是只要 cross summary 已承认它在用，strict 就必须到底
+
 # Findings - Wave B/B2 Consistency Cross Summary Linux Summary Path
 
 ## 2026-05-13
