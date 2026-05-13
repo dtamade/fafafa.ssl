@@ -1,3 +1,53 @@
+# Task Plan - Wave B/B2 Handoff Closure Platform Matrix Truth
+
+## Goal
+收口 `prepare_wave_b_b2_handoff_bundle.sh` 对 `closure_report` 平台状态矩阵的盲信，避免 `linux/macos/windows` 任一平台状态行缺失或非法时，顶层 handoff 仍继续给出正常状态。
+
+## Current Batch
+1. 写 focused contract，证明 `closure_status=CLOSED` 但平台状态表不完整时，顶层仍会被误导。
+2. 最小修改 `prepare_wave_b_b2_handoff_bundle.sh`，把 closure 平台状态矩阵完整性接入 report-chain 校验。
+3. 复跑 handoff / consistency 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified blind trust of closure platform matrix completeness in handoff bundle
+- [completed] wrote focused contract for closure platform matrix truth
+- [completed] minimal platform-state matrix validation in handoff bundle
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前顶层 handoff bundle 在修复前还有一类更隐蔽的坏链路：
+  - `closure_status` 可以是 `CLOSED`
+  - `consistency_status` 可以是 `CONSISTENT`
+  - 但 `closure_report` 的平台状态表仍可能缺失 `linux/macos/windows` 某一行
+- 这会让顶层继续输出 `CLOSED` 或普通 next actions，却看不到 closure matrix 已经不可信。
+- focused RED:
+  - 新增 `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_platform_matrix_contract.sh`
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_platform_matrix_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_platform_matrix_contract.sh`: FAIL before fix
+  - failure shape:
+    - `handoff bundle should reject a closure report whose platform status table is incomplete`
+- minimal implementation:
+  - 更新 `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added closure platform-state allow-list validation
+    - linux/macos/windows row missing or invalid now becomes `NEEDS_REPORT_REPAIR`
+    - report-chain guidance now explicitly covers closure platform table completeness
+- focused GREEN:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh`: PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_platform_matrix_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_platform_matrix_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_linux_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Handoff Report Chain Truth
 
 ## Goal

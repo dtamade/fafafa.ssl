@@ -1,3 +1,20 @@
+# Findings - Wave B/B2 Handoff Closure Platform Matrix Truth
+
+## 2026-05-14
+- 继续沿着顶层 `prepare_wave_b_b2_handoff_bundle.sh` 深审后，发现上一批虽然已经开始校验 `closure_status` / `consistency_status`，但 `closure_report` 的平台状态表仍被默认当真：
+  - `linux`
+  - `macos`
+  - `windows`
+  - 任一平台行缺失或状态非法时，顶层平台语义其实已经断了
+- 这会制造另一类“假闭环”：
+  - closure 表面可以写 `CLOSED`
+  - consistency 也可以继续是 `CONSISTENT`
+  - 但 handoff bundle 其实已经失去平台级真相来源
+- 这批最小正确修法不是改 closure checker，而是在 `prepare` 顶层继续补齐 report-chain guard：
+  - 三个平台状态行必须齐全
+  - 状态必须属于允许集合
+  - 否则统一落到 `NEEDS_REPORT_REPAIR`，并把缺失平台写进 `report_chain_note`
+
 # Findings - Wave B/B2 Handoff Report Chain Truth
 
 ## 2026-05-14

@@ -174,6 +174,11 @@ is_gate_repair_state() {
   [[ "$state" == "FAIL" || "$state" == "READY" || "$state" == "DRY_RUN" ]]
 }
 
+is_valid_closure_platform_state() {
+  local state="$1"
+  [[ "$state" == "PASS" || "$state" == "FAIL" || "$state" == "READY" || "$state" == "DRY_RUN" || "$state" == "PENDING" ]]
+}
+
 infer_run_id_from_linux_summary() {
   local file="$1"
   if [[ -z "$file" ]]; then
@@ -413,12 +418,6 @@ else
   fi
 fi
 
-if [[ ${#report_chain_issues[@]} -gt 0 ]]; then
-  report_chain_note="$(join_by "; " "${report_chain_issues[@]}")"
-fi
-
-closure_status_display="${closure_status:-n/a}"
-consistency_status_display="${consistency_status:-n/a}"
 linux_platform_state=""
 macos_platform_state=""
 windows_platform_state=""
@@ -426,7 +425,27 @@ if [[ -f "$closure_abs" ]]; then
   linux_platform_state="$(parse_closure_platform_state "$closure_abs" "linux")"
   macos_platform_state="$(parse_closure_platform_state "$closure_abs" "macos")"
   windows_platform_state="$(parse_closure_platform_state "$closure_abs" "windows")"
+  for platform in linux macos windows; do
+    state=""
+    case "$platform" in
+      linux) state="$linux_platform_state" ;;
+      macos) state="$macos_platform_state" ;;
+      windows) state="$windows_platform_state" ;;
+    esac
+    if [[ -z "$state" ]]; then
+      report_chain_issues+=("${platform} platform state missing")
+    elif ! is_valid_closure_platform_state "$state"; then
+      report_chain_issues+=("invalid ${platform} platform state: $state")
+    fi
+  done
 fi
+
+if [[ ${#report_chain_issues[@]} -gt 0 ]]; then
+  report_chain_note="$(join_by "; " "${report_chain_issues[@]}")"
+fi
+
+closure_status_display="${closure_status:-n/a}"
+consistency_status_display="${consistency_status:-n/a}"
 
 handoff_state="READY_FOR_RUNNER"
 if [[ ${#report_chain_issues[@]} -gt 0 ]]; then
@@ -472,7 +491,7 @@ NEXT_ACTIONS=()
 if [[ "$handoff_state" == "CLOSED" ]]; then
   NEXT_ACTIONS+=("当前批次已闭环；如需复核，可重新执行 '$REPLAY_COMMAND'。")
 elif [[ "$handoff_state" == "NEEDS_REPORT_REPAIR" ]]; then
-  NEXT_ACTIONS+=("修复或重建下游 report metadata（$report_chain_note），确保 closure / consistency status 字段完整且合法。")
+  NEXT_ACTIONS+=("修复或重建下游 report metadata（$report_chain_note），确保 closure / consistency status 字段与 closure 平台状态表完整且合法。")
   NEXT_ACTIONS+=("修复后重新执行 '$REPLAY_COMMAND'。")
 else
   if [[ "$linux_platform_state" != "PASS" ]]; then

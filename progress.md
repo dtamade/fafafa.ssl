@@ -1,3 +1,41 @@
+# Progress - Wave B/B2 Handoff Closure Platform Matrix Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `38409bf fix: harden handoff report chain metadata`
+  - continued on the same top-level handoff bundle static-review lane
+- Fresh review narrowed the next real issue:
+  - `prepare_wave_b_b2_handoff_bundle.sh` now validated `closure_status` / `consistency_status`
+  - but it still trusted the `closure_report` platform status matrix blindly
+  - a malformed closure table could still erase the real platform truth while leaving top-level handoff in a normal state
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-handoff-closure-platform-matrix-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_platform_matrix_contract.sh`
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_platform_matrix_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_platform_matrix_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `handoff bundle should reject a closure report whose platform status table is incomplete`
+- Minimal implementation landed:
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added allow-list validation for `linux/macos/windows` closure platform states
+    - missing/invalid platform rows now fall to `NEEDS_REPORT_REPAIR`
+    - report-repair guidance now explicitly covers closure platform table completeness
+- GREEN verification:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh` -> PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_platform_matrix_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_platform_matrix_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_gate_repair_state_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_linux_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Handoff Report Chain Truth
 
 ## 2026-05-14
