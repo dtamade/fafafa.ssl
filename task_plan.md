@@ -1,3 +1,46 @@
+# Task Plan - Wave B/B2 Consistency Cross Summary Linux Examples Path
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 的 active-path 漂移，让它在未显式传 `--linux-examples` 时，能够从 `cross summary` 继承实际使用的 `linux_examples_json` 路径，而不是继续盯着默认 generic JSON。
+
+## Current Batch
+1. 写 focused RED contract，证明 cross summary 已经声明 custom `linux_examples_json`，但 consistency 仍可能因为 generic JSON 存在而给出假绿灯。
+2. 仅在 `check_wave_b_b2_evidence_consistency.sh` 内增加对 cross summary 中 active `linux_examples_json` 路径的解析与继承。
+3. 跑 focused 合同、generic fallback、run-specific、macOS probe、Windows strict 与 run_id infer 回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] found the next active-path truth drift after the generic fallback batch
+- [completed] focused RED contract for cross-summary-declared linux examples path
+- [completed] minimal linux examples active-path inheritance in consistency checker
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- focused RED:
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh`: FAIL before fix
+  - failure shape:
+    - cross summary already recorded a custom `linux_examples_json` path
+    - after that active JSON was intentionally corrupted
+    - `check_wave_b_b2_evidence_consistency.sh --strict` still stayed green because it tracked the default generic JSON instead
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `LINUX_EXAMPLES_EXPLICIT`
+    - added `parse_cross_summary_linux_examples_path(...)`
+    - when `--linux-examples` is not explicitly passed, now prefers the active path declared by cross summary before falling back to run-specific/generic defaults
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_generic_linux_examples_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Consistency Generic Linux Examples Fallback
 
 ## Goal

@@ -1,3 +1,22 @@
+# Findings - Wave B/B2 Consistency Cross Summary Linux Examples Path
+
+## 2026-05-13
+- 继续沿着同一组 `Wave B/B2` consistency public surface 深挖后，发现 `linux_examples_json` 还有更深一层 truth drift：
+  - `cross summary` 会明确写出当前实际使用的 `- linux_examples_json: ...`
+  - 但 `check_wave_b_b2_evidence_consistency.sh` 之前完全不会消费这条 active-path 事实
+  - 结果就是只要默认 generic JSON 还在，consistency 就可能绕过真正正在服役的 custom JSON
+- 这不是单纯的“默认路径不一致”，而是一扇真实的假绿灯窗口：
+  - cross summary 可能是拿 custom `linux_examples_json` 生成出来的
+  - 之后这份 active custom JSON 即使损坏
+  - consistency 仍可能继续对着旧 generic JSON 给出 `CONSISTENT`
+- 这批最小正确修法不是扩大 CLI，也不是去改 `generate/prepare` 的输出格式，而是把 consistency 的 truth source 补齐：
+  - 显式 `--linux-examples` 仍然优先
+  - 未显式传参时，先继承 cross summary 已声明的 active path
+  - 只有 cross summary 没提供时，才回退到现有的 run-specific > generic 默认规则
+- 这样能把 `linux_examples_json` 的逻辑拉到和 `macos_probe` 同一层级：
+  - evidence consistency 不只是看“某个默认文件是否存在”
+  - 而是优先校验当前汇总面已经承认的 active evidence path
+
 # Findings - Wave B/B2 Consistency Generic Linux Examples Fallback
 
 ## 2026-05-13

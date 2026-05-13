@@ -1,3 +1,44 @@
+# Progress - Wave B/B2 Consistency Cross Summary Linux Examples Path
+
+## 2026-05-13
+- continuation resync:
+  - continued directly after committing the generic linux examples fallback batch
+  - kept the scope inside the same static Wave B/B2 script family
+- context search note:
+  - an `ace-tool/search_context` call timed out while gathering code context for the next linux examples issue
+  - switched immediately to direct `rg`/`sed` evidence instead of waiting on the timeout path
+- new bug located:
+  - cross summary already recorded the active custom `linux_examples_json` path
+  - but `check_wave_b_b2_evidence_consistency.sh` still had no parser for that bullet
+  - if the active custom JSON later became invalid while a default generic JSON still existed, strict consistency could stay falsely green
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-b2-consistency-cross-summary-linux-examples-path.md`
+- focused RED contract:
+  - added `tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh` -> FAIL before fix
+  - failure shape:
+    - cross summary declared a custom `linux_examples_json`
+    - that active custom JSON was then corrupted on purpose
+    - consistency still returned 0 because it kept tracking the generic default JSON
+- minimal implementation landed:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `LINUX_EXAMPLES_EXPLICIT`
+    - added `parse_cross_summary_linux_examples_path(...)`
+    - now prefers cross-summary-declared active linux examples path whenever `--linux-examples` is omitted
+- verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_generic_linux_examples_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+- cleanup:
+  - removed one leftover `test-reports/wave_b_macos_gate_probe_handoff_macos_probe_consistency.json` test artifact before closeout
+
 # Progress - Wave B/B2 Consistency Generic Linux Examples Fallback
 
 ## 2026-05-13

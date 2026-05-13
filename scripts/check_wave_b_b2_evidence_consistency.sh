@@ -9,6 +9,7 @@ RUN_ID=""
 RUN_ID_EXPLICIT=false
 LINUX_SUMMARY=""
 LINUX_EXAMPLES_JSON=""
+LINUX_EXAMPLES_EXPLICIT=false
 MACOS_PROBE=""
 MACOS_PROBE_EXPLICIT=false
 MACOS_SUMMARY=""
@@ -63,6 +64,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --linux-examples)
       LINUX_EXAMPLES_JSON="$2"
+      LINUX_EXAMPLES_EXPLICIT=true
       shift 2
       ;;
     --macos-probe)
@@ -206,6 +208,11 @@ parse_closure_status_md() {
   grep -E "^- closure_status:" "$file" | head -1 | sed -E 's/^- closure_status: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
 }
 
+parse_cross_summary_linux_examples_path() {
+  local file="$1"
+  grep -E "^- linux_examples_json:" "$file" | head -1 | sed -E 's/^- linux_examples_json: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
+}
+
 parse_cross_summary_macos_probe_path() {
   local file="$1"
   awk -F'|' '
@@ -231,6 +238,16 @@ parse_cross_summary_macos_probe_path() {
 required_missing=0
 runid_mismatch=0
 rows=()
+cross_summary_abs="$(resolve_path "$CROSS_SUMMARY")"
+cross_summary_linux_examples=""
+cross_summary_macos_probe=""
+if [[ -f "$cross_summary_abs" ]]; then
+  cross_summary_linux_examples="$(parse_cross_summary_linux_examples_path "$cross_summary_abs")"
+  cross_summary_macos_probe="$(parse_cross_summary_macos_probe_path "$cross_summary_abs")"
+fi
+if [[ "$LINUX_EXAMPLES_EXPLICIT" != "true" && -n "$cross_summary_linux_examples" ]]; then
+  LINUX_EXAMPLES_JSON="$cross_summary_linux_examples"
+fi
 
 check_markdown_artifact() {
   local label="$1"
@@ -323,11 +340,6 @@ check_markdown_artifact "linux_summary" "$LINUX_SUMMARY" true
 check_json_artifact "linux_examples_json" "$LINUX_EXAMPLES_JSON" true
 macos_probe_required=false
 macos_probe_track=false
-cross_summary_abs="$(resolve_path "$CROSS_SUMMARY")"
-cross_summary_macos_probe=""
-if [[ -f "$cross_summary_abs" ]]; then
-  cross_summary_macos_probe="$(parse_cross_summary_macos_probe_path "$cross_summary_abs")"
-fi
 if [[ "$MACOS_PROBE_EXPLICIT" == "true" ]]; then
   macos_probe_required=true
   macos_probe_track=true
