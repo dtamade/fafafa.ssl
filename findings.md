@@ -1,3 +1,19 @@
+# Findings - Wave B/B2 Consistency Cross Summary Platform Evidence Metadata Truth
+
+## 2026-05-14
+- 继续沿着 `cross summary -> consistency` 这条静态链深审后，发现上一批虽然已经把 Linux metadata 校验接进来了，但 platform evidence truth 还有一层更细的 repo-side 假绿灯：
+  - `cross_summary` 可以把 macOS probe / Windows summary 标成 active
+  - 但 evidence path metadata 自己已经丢了
+  - consistency 之前仍会把这类坏行默默退化成“无 active metadata”，继续给 `CONSISTENT`
+- 这会制造一个更隐蔽的一致性假绿灯：
+  - 调用者以为 active platform truth 已参与一致性判断
+  - 实际上 `cross_summary` 那一层已经断链
+  - consistency 却没有把它当 parse issue
+- 这批最小正确修法不是去扩写默认路径推导，而是在 consistency checker 内把 active platform evidence metadata 明确校验：
+  - active macOS probe 必须能解析出 probe path
+  - active macOS summary / Windows summary 必须能解析出 summary path
+  - 显式 `probe: <path> (missing file)` 也必须继续被继承并要求
+
 # Findings - Wave B/B2 Consistency Cross Summary Metadata Truth
 
 ## 2026-05-14

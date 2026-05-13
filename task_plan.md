@@ -1,3 +1,57 @@
+# Task Plan - Wave B/B2 Consistency Cross Summary Platform Evidence Metadata Truth
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 对 `cross_summary` 平台 evidence 行的盲信，避免 active macOS probe / Windows summary metadata 丢失时，strict consistency 仍错误显示为 `CONSISTENT`。
+
+## Current Batch
+1. 写 focused contract，证明 active macOS probe / Windows summary metadata 丢失时，consistency 仍会静默吞掉。
+2. 最小修改 `check_wave_b_b2_evidence_consistency.sh`，把 `cross_summary` 平台 evidence metadata 校验接入 parse-issue 语义。
+3. 复跑 consistency / prepare / handoff 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified false-green trust of malformed active platform evidence metadata in cross summary
+- [completed] wrote focused contract for cross summary platform evidence metadata truth
+- [completed] minimal active platform evidence metadata validation in consistency checker
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 consistency checker 在修复前还有一类更细粒度的假绿灯：
+  - `cross_summary` 会把 macOS probe / Windows summary 标成 active
+  - 但 evidence path metadata 可以已经丢失
+  - strict consistency 仍然会继续返回 `CONSISTENT`
+- 这会把“坏掉的 active platform truth”伪装成一致性绿灯。
+- focused RED:
+  - 新增 `tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_evidence_metadata_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_evidence_metadata_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_evidence_metadata_contract.sh`: FAIL before fix
+  - failure shape:
+    - `consistency should fail strict mode when cross summary marks macOS probe evidence active but loses the probe path metadata`
+    - `consistency should fail strict mode when cross summary marks Windows evidence active but loses the summary path metadata`
+- minimal implementation:
+  - 更新 `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added cross-summary platform state/evidence parsers
+    - active macOS probe / macOS summary / Windows summary metadata now get explicit validation
+    - malformed active metadata now increments `runid_mismatch_or_parse_issue`
+    - explicit `probe: <path> (missing file)` now also gets inherited and required
+  - 新增 `tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_probe_missing_contract.sh` 锁住显式缺失 probe path 继承
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_evidence_metadata_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_evidence_metadata_contract.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_probe_missing_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_probe_missing_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Consistency Cross Summary Metadata Truth
 
 ## Goal

@@ -1,3 +1,44 @@
+# Progress - Wave B/B2 Consistency Cross Summary Platform Evidence Metadata Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `ccc0d0a fix: validate cross summary metadata in consistency`
+  - continued downward on the same `cross summary -> consistency` static-review lane
+- Fresh review narrowed the next real issue:
+  - Linux metadata now got validated
+  - but active macOS probe / Windows summary metadata could still disappear from `cross_summary`
+  - consistency then silently downgraded them into “no active metadata” and still returned `CONSISTENT`
+- Reproduced two false-green shapes with direct fixture runs:
+  - `macOS` row: `PROBE_ONLY` but evidence text no longer contained parseable `probe:` path
+  - `windows` row: `PASS` but evidence text no longer contained parseable `summary:` path
+  - both still returned strict `CONSISTENT` before the fix
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-consistency-cross-summary-platform-evidence-metadata-truth.md`
+- Focused RED contracts added:
+  - `tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_evidence_metadata_contract.sh`
+  - `tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_probe_missing_contract.sh`
+- Minimal implementation landed:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `parse_cross_summary_platform_state(...)`
+    - added `parse_cross_summary_platform_evidence(...)`
+    - active macOS probe / macOS summary / Windows summary metadata now gets explicit validation
+    - `parse_cross_summary_macos_probe_path(...)` now also accepts explicit `probe: <path> (missing file)` rows so missing probe artifacts stay required
+- GREEN verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_evidence_metadata_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_evidence_metadata_contract.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_probe_missing_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_probe_missing_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_summary_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_required_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Consistency Cross Summary Metadata Truth
 
 ## 2026-05-14

@@ -310,6 +310,45 @@ parse_cross_summary_macos_summary_path() {
   ' "$file" || true
 }
 
+parse_cross_summary_platform_state() {
+  local file="$1"
+  local want_platform="$2"
+  awk -F'|' -v target="$want_platform" '
+    {
+      if (NF >= 4) {
+        platform_col = $2
+        state_col = $3
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", platform_col)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", state_col)
+        gsub(/\*\*/, "", state_col)
+        if (tolower(platform_col) == tolower(target)) {
+          print toupper(state_col)
+          exit
+        }
+      }
+    }
+  ' "$file" || true
+}
+
+parse_cross_summary_platform_evidence() {
+  local file="$1"
+  local want_platform="$2"
+  awk -F'|' -v target="$want_platform" '
+    {
+      if (NF >= 4) {
+        platform_col = $2
+        evidence_col = $4
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", platform_col)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", evidence_col)
+        if (tolower(platform_col) == tolower(target)) {
+          print evidence_col
+          exit
+        }
+      }
+    }
+  ' "$file" || true
+}
+
 parse_cross_summary_windows_summary_path() {
   local file="$1"
   awk -F'|' '
@@ -336,20 +375,24 @@ parse_cross_summary_macos_probe_path() {
     {
       if (NF >= 4) {
         platform_col = $2
-        state_col = $3
         evidence_col = $4
         gsub(/^[[:space:]]+|[[:space:]]+$/, "", platform_col)
-        gsub(/^[[:space:]]+|[[:space:]]+$/, "", state_col)
         gsub(/^[[:space:]]+|[[:space:]]+$/, "", evidence_col)
-        if (tolower(platform_col) == "macos" && (state_col == "PROBE_ONLY" || state_col == "PROBE_OK") && evidence_col ~ /^probe: /) {
+        if (tolower(platform_col) == "macos" && evidence_col ~ /^probe: /) {
           sub(/^probe: /, "", evidence_col)
           sub(/ \(status=.*$/, "", evidence_col)
+          sub(/ \(missing file\)$/, "", evidence_col)
           print evidence_col
           exit
         }
       }
     }
   ' "$file" || true
+}
+
+is_valid_cross_summary_platform_state() {
+  local state="$1"
+  [[ "$state" == "PASS" || "$state" == "FAIL" || "$state" == "DRY_RUN" || "$state" == "READY" || "$state" == "PENDING" || "$state" == "PROBE_ONLY" || "$state" == "PROBE_OK" ]]
 }
 
 required_missing=0
@@ -580,6 +623,86 @@ check_cross_summary_artifact() {
       note="linux_examples_json missing"
     else
       note="$note; linux_examples_json missing"
+    fi
+  fi
+
+  local macos_state
+  local macos_evidence
+  local macos_summary_path
+  local macos_probe_path
+  macos_state="$(parse_cross_summary_platform_state "$abs_path" "macos")"
+  macos_evidence="$(parse_cross_summary_platform_evidence "$abs_path" "macos")"
+  macos_summary_path="$(parse_cross_summary_macos_summary_path "$abs_path")"
+  macos_probe_path="$(parse_cross_summary_macos_probe_path "$abs_path")"
+  if [[ -n "$macos_state" ]] && ! is_valid_cross_summary_platform_state "$macos_state"; then
+    runid_mismatch=$((runid_mismatch + 1))
+    if [[ "$note" == "ok" ]]; then
+      note="invalid macos state: $macos_state"
+    else
+      note="$note; invalid macos state: $macos_state"
+    fi
+  elif [[ "$macos_state" == "PROBE_ONLY" || "$macos_state" == "PROBE_OK" ]]; then
+    if [[ -z "$macos_probe_path" ]]; then
+      runid_mismatch=$((runid_mismatch + 1))
+      if [[ "$note" == "ok" ]]; then
+        note="macos probe metadata missing"
+      else
+        note="$note; macos probe metadata missing"
+      fi
+    fi
+  elif [[ -n "$macos_evidence" && "$macos_evidence" == summary:* ]]; then
+    if [[ -z "$macos_summary_path" ]]; then
+      runid_mismatch=$((runid_mismatch + 1))
+      if [[ "$note" == "ok" ]]; then
+        note="macos summary metadata missing"
+      else
+        note="$note; macos summary metadata missing"
+      fi
+    fi
+  elif [[ -n "$macos_evidence" && "$macos_evidence" == probe:* && -z "$macos_probe_path" ]]; then
+    runid_mismatch=$((runid_mismatch + 1))
+    if [[ "$note" == "ok" ]]; then
+      note="macos probe metadata missing"
+    else
+      note="$note; macos probe metadata missing"
+    fi
+  elif [[ -n "$macos_state" && "$macos_state" != "PENDING" ]]; then
+    runid_mismatch=$((runid_mismatch + 1))
+    if [[ "$note" == "ok" ]]; then
+      note="macos active evidence metadata missing"
+    else
+      note="$note; macos active evidence metadata missing"
+    fi
+  fi
+
+  local windows_state
+  local windows_evidence
+  local windows_summary_path
+  windows_state="$(parse_cross_summary_platform_state "$abs_path" "windows")"
+  windows_evidence="$(parse_cross_summary_platform_evidence "$abs_path" "windows")"
+  windows_summary_path="$(parse_cross_summary_windows_summary_path "$abs_path")"
+  if [[ -n "$windows_state" ]] && ! is_valid_cross_summary_platform_state "$windows_state"; then
+    runid_mismatch=$((runid_mismatch + 1))
+    if [[ "$note" == "ok" ]]; then
+      note="invalid windows state: $windows_state"
+    else
+      note="$note; invalid windows state: $windows_state"
+    fi
+  elif [[ -n "$windows_evidence" && "$windows_evidence" == summary:* ]]; then
+    if [[ -z "$windows_summary_path" ]]; then
+      runid_mismatch=$((runid_mismatch + 1))
+      if [[ "$note" == "ok" ]]; then
+        note="windows summary metadata missing"
+      else
+        note="$note; windows summary metadata missing"
+      fi
+    fi
+  elif [[ -n "$windows_state" && "$windows_state" != "PENDING" ]]; then
+    runid_mismatch=$((runid_mismatch + 1))
+    if [[ "$note" == "ok" ]]; then
+      note="windows active evidence metadata missing"
+    else
+      note="$note; windows active evidence metadata missing"
     fi
   fi
 
