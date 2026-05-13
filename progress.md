@@ -1,3 +1,21 @@
+# Progress - Wave B Cross Summary Run ID Help Sync
+
+## 2026-05-13
+- continuation resync:
+  - performed a post-commit static sweep after the run-id inference batch
+  - looked specifically for remaining help/usage drift on the same `Wave B/B2` script family
+- doc drift located:
+  - `scripts/generate_wave_b_cross_platform_summary.sh` still documented `--run-id` as `默认时间戳`
+  - the other three shared scripts were already updated to the new inference wording
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-cross-summary-run-id-help-sync.md`
+- minimal implementation landed:
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+    - synced `--run-id` help text to `默认优先从 Linux summary 推导，否则时间戳`
+- verification:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh` -> PASS
+  - `bash scripts/generate_wave_b_cross_platform_summary.sh --help | rg "默认优先从 Linux summary 推导，否则时间戳"` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Infer Run ID From Linux Summary
 
 ## 2026-05-13

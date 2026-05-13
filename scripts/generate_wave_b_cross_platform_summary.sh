@@ -26,7 +26,7 @@ Wave B Cross-Platform Summary Generator
   scripts/generate_wave_b_cross_platform_summary.sh [options]
 
 选项：
-  --run-id ID               指定 run_id（默认时间戳）
+  --run-id ID               指定 run_id（默认优先从 Linux summary 推导，否则时间戳）
   --linux-summary FILE      Linux gate summary（默认自动取最新 wave_b_ci_gate_summary_*.md）
   --linux-examples FILE     Linux examples json（默认优先 test-reports/examples_compile_ci_gate_<run_id>.json，fallback 到旧 generic 路径）
   --macos-probe FILE        macOS probe json（可选）

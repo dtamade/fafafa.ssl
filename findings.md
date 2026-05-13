@@ -1,3 +1,14 @@
+# Findings - Wave B Cross Summary Run ID Help Sync
+
+## 2026-05-13
+- 在刚修完 `Wave B/B2` run_id 继承逻辑后继续做静态扫尾，发现还有一条轻量但真实的契约漂移：
+  - `generate_wave_b_cross_platform_summary.sh` 的 `--help` 仍宣称 `--run-id` 默认值是“时间戳”
+  - 这和刚落地的实际行为已经不一致，因为脚本现在会优先从 Linux summary 推导 run_id
+- 这不是运行时 bug，但会误导后续人工调用与静态审查：
+  - 读 help 的人会误以为 omitted `--run-id` 必然创建新批次
+  - 实际上当前脚本已经按 Linux summary run_id 对齐
+- 最小正确修法就是文案同步，不应顺手再动逻辑或输出格式。
+
 # Findings - Wave B/B2 Infer Run ID From Linux Summary
 
 ## 2026-05-13

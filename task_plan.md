@@ -1,3 +1,35 @@
+# Task Plan - Wave B Cross Summary Run ID Help Sync
+
+## Goal
+收口 `generate_wave_b_cross_platform_summary.sh` 的帮助文本漂移，确保 `--run-id` 文案与当前“优先从 Linux summary 推导，否则回退时间戳”的实际行为一致。
+
+## Current Batch
+1. 静态检查 `Wave B/B2` 四个共享脚本的 `--run-id` usage 文案。
+2. 仅修 `generate_wave_b_cross_platform_summary.sh` 里残留的旧描述。
+3. 跑语法检查、`--help` 文案匹配和 diff hygiene。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] post-commit static sweep found the remaining run-id help drift
+- [completed] minimal help-text sync in cross summary generator
+- [completed] lightweight verification
+- [in_progress] review and commit closeout
+
+## Current Evidence
+- bug located:
+  - `scripts/check_wave_b_b2_closure_readiness.sh`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    already said `默认优先从 Linux summary 推导，否则时间戳`
+  - only `scripts/generate_wave_b_cross_platform_summary.sh` still said `默认时间戳`
+- minimal implementation:
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+    - synced the `--run-id` help text with the actual run-id inference behavior
+- focused GREEN:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh`: PASS
+  - `bash scripts/generate_wave_b_cross_platform_summary.sh --help | rg "默认优先从 Linux summary 推导，否则时间戳"`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Infer Run ID From Linux Summary
 
 ## Goal
