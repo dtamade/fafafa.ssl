@@ -1,3 +1,20 @@
+# Findings - Wave B/B2 Consistency Next Actions Truth
+
+## 2026-05-14
+- 继续沿着 `consistency` 报告面深审后，发现上一批修掉 closure 元数据假绿灯之后，还有一条更表层的 repo-side 误导没有收掉：
+  - 当只有 Linux evidence、`closure_status_note=IN_PROGRESS` 时
+  - consistency 报告会高亮 `CONSISTENT`
+  - 但正文没有任何 `Next Actions`
+  - 也没有说明这只表示 evidence consistency，而不代表 handoff 已闭环
+- 这会制造一个真实的操作偏差：
+  - 调用者看到绿色 `CONSISTENT`
+  - 可能直接把这份报告当成整条 Wave B/B2 handoff 的绿灯
+  - 却看不到 closure 仍未闭环、也看不到应该回到 `prepare_wave_b_b2_handoff_bundle.sh` 刷新完整交接链
+- 这批最小正确修法不是改 consistency gate 本身，而是把报告面补齐到当前 handoff 真相：
+  - `Next Actions` 基于 `consistency_status + closure_status_note` 动态生成
+  - `IN_PROGRESS` 时明确写出 handoff 尚未闭环
+  - 一律指回当前唯一真实的 prepare 入口，而不是让操作者自己猜下一步
+
 # Findings - Wave B/B2 Consistency Closure Status Parse Truth
 
 ## 2026-05-14

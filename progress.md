@@ -1,3 +1,39 @@
+# Progress - Wave B/B2 Consistency Next Actions Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `5db68bf fix: validate closure status in consistency report`
+  - continued on the same `Wave B/B2` consistency report surface instead of widening scope
+- Fresh review narrowed the next real issue:
+  - after the closure-status parse fix, a Linux-only sample now correctly showed `closure_status_note: IN_PROGRESS`
+  - but the report still had no `## Next Actions`
+  - the surface therefore still failed to explain that `CONSISTENT` only means evidence consistency, not a closed handoff
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-consistency-next-actions-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `consistency report should include next-action guidance when closure is still in progress`
+- Minimal implementation landed:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added state-driven `NEXT_ACTIONS`
+    - `IN_PROGRESS` cases now say the handoff is not closed yet
+    - all branches now point back to `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - no change to required-missing / parse-issue gate semantics
+- GREEN verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_existing_report_run_id_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Consistency Closure Status Parse Truth
 
 ## 2026-05-14

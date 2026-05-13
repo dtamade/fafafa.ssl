@@ -582,6 +582,23 @@ if [[ "$required_missing" -gt 0 || "$runid_mismatch" -gt 0 ]]; then
   consistency_status="INCONSISTENT"
 fi
 
+NEXT_ACTIONS=()
+if [[ "$consistency_status" != "CONSISTENT" ]]; then
+  if [[ "$closure_status_note" == "CLOSED" ]]; then
+    NEXT_ACTIONS+=("当前 closure 已闭环，但 evidence consistency 仍未对齐；修复缺失/不一致 evidence 后，复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'）。")
+  elif [[ "$closure_status_note" == "IN_PROGRESS" ]]; then
+    NEXT_ACTIONS+=("当前结果只表示 evidence consistency；closure_status_note=IN_PROGRESS，Wave B/B2 handoff 尚未闭环。")
+    NEXT_ACTIONS+=("回填/修复相关 evidence 后，复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'），让 cross summary / closure / consistency / handoff bundle 一起刷新。")
+  else
+    NEXT_ACTIONS+=("当前 evidence consistency 与 closure 元数据至少有一层未对齐；先修复相关 report/evidence 后，复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'）。")
+  fi
+elif [[ "$closure_status_note" == "CLOSED" ]]; then
+  NEXT_ACTIONS+=("当前 evidence consistency 已与 closure 状态对齐；如需刷新完整交接包，可复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'）。")
+else
+  NEXT_ACTIONS+=("当前结果只表示 evidence consistency；closure_status_note=$closure_status_note，Wave B/B2 handoff 尚未闭环。")
+  NEXT_ACTIONS+=("回填 runner evidence 后，复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'），让 cross summary / closure / consistency / handoff bundle 一起刷新。")
+fi
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] run_id=$RUN_ID"
   echo "[DRY-RUN] required_missing=$required_missing"
@@ -621,6 +638,12 @@ mkdir -p "$(dirname "$OUTPUT_ABS")"
   echo
   echo "- CONSISTENT 条件：required_missing=0 且 runid_mismatch_or_parse_issue=0"
   echo "- strict 模式：若非 CONSISTENT，脚本返回非 0"
+  echo
+  echo "## Next Actions"
+  echo
+  for action in "${NEXT_ACTIONS[@]}"; do
+    echo "- $action"
+  done
 } > "$OUTPUT_ABS"
 
 echo "[PASS] evidence consistency report generated: $OUTPUT_FILE"
