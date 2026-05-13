@@ -1,3 +1,22 @@
+# Findings - Wave B/B2 Consistency Cross Summary Linux Summary Path
+
+## 2026-05-13
+- 继续沿着同一个 `Wave B/B2` consistency public surface 深审后，发现 `linux_summary` 本体也还有一层 active-truth 漂移：
+  - `cross summary` 已经会明确写出 `- linux_summary: <custom path>`
+  - 但 `check_wave_b_b2_evidence_consistency.sh` 之前完全不会消费这条 active Linux 事实
+  - 结果就是只要默认 run-specific Linux summary 还在，consistency 就可能绕开真正正在服役的 custom Linux summary
+- 这会制造一个真实的 repo-side 假绿灯窗口：
+  - cross summary 可能已经承认某份 custom Linux summary 为当前真值
+  - 之后那份 active custom summary 即使消失
+  - consistency 仍可能继续对着默认 run-specific summary 给出 `CONSISTENT`
+- 这批最小正确修法不是重新设计 run-id，也不是去改 `generate` 的输出，而是继续把 checker 的 truth source 对齐到 active evidence：
+  - 显式 `--linux-summary` 仍然优先
+  - 未显式传参时，先继承 cross summary 已声明的 active custom `linux_summary`
+  - `linux_summary` 本来就是 required evidence，所以只要 active summary 缺失，就应直接反映为 `INCONSISTENT`
+- 这样能让 `linux_summary` 和前面已经补齐的 `linux_examples_json` / `macOS summary` / `windows_summary` 保持同一条原则：
+  - consistency 不该被一个默认文件名牵着走
+  - 而应优先校验汇总面已经承认的 active evidence path
+
 # Findings - Wave B/B2 Consistency Cross Summary macOS Summary Path
 
 ## 2026-05-13

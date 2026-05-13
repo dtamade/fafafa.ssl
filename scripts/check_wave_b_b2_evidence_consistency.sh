@@ -8,6 +8,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 RUN_ID=""
 RUN_ID_EXPLICIT=false
 LINUX_SUMMARY=""
+LINUX_SUMMARY_EXPLICIT=false
 LINUX_EXAMPLES_JSON=""
 LINUX_EXAMPLES_EXPLICIT=false
 MACOS_PROBE=""
@@ -64,6 +65,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --linux-summary)
       LINUX_SUMMARY="$2"
+      LINUX_SUMMARY_EXPLICIT=true
       shift 2
       ;;
     --linux-examples)
@@ -228,6 +230,11 @@ parse_closure_status_md() {
   grep -E "^- closure_status:" "$file" | head -1 | sed -E 's/^- closure_status: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
 }
 
+parse_cross_summary_linux_summary_path() {
+  local file="$1"
+  grep -E "^- linux_summary:" "$file" | head -1 | sed -E 's/^- linux_summary: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
+}
+
 parse_cross_summary_linux_examples_path() {
   local file="$1"
   grep -E "^- linux_examples_json:" "$file" | head -1 | sed -E 's/^- linux_examples_json: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
@@ -299,15 +306,20 @@ required_missing=0
 runid_mismatch=0
 rows=()
 cross_summary_abs="$(resolve_path "$CROSS_SUMMARY")"
+cross_summary_linux_summary=""
 cross_summary_linux_examples=""
 cross_summary_macos_summary=""
 cross_summary_windows_summary=""
 cross_summary_macos_probe=""
 if [[ -f "$cross_summary_abs" ]]; then
+  cross_summary_linux_summary="$(parse_cross_summary_linux_summary_path "$cross_summary_abs")"
   cross_summary_linux_examples="$(parse_cross_summary_linux_examples_path "$cross_summary_abs")"
   cross_summary_macos_summary="$(parse_cross_summary_macos_summary_path "$cross_summary_abs")"
   cross_summary_windows_summary="$(parse_cross_summary_windows_summary_path "$cross_summary_abs")"
   cross_summary_macos_probe="$(parse_cross_summary_macos_probe_path "$cross_summary_abs")"
+fi
+if [[ "$LINUX_SUMMARY_EXPLICIT" != "true" && -n "$cross_summary_linux_summary" ]]; then
+  LINUX_SUMMARY="$cross_summary_linux_summary"
 fi
 if [[ "$LINUX_EXAMPLES_EXPLICIT" != "true" && -n "$cross_summary_linux_examples" ]]; then
   LINUX_EXAMPLES_JSON="$cross_summary_linux_examples"

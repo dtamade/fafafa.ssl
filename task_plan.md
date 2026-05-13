@@ -1,3 +1,44 @@
+# Task Plan - Wave B/B2 Consistency Cross Summary Linux Summary Path
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 的 Linux active-path 漂移，让它在未显式传 `--linux-summary` 时，也能从 `cross summary` 继承实际使用的 custom `linux_summary` 路径，并在 active summary 缺失/漂移时不再给出假绿灯。
+
+## Current Batch
+1. 写 focused RED contract，证明 cross summary 已经声明 active custom `linux_summary`，但 direct consistency 仍会忽略它并保持 green。
+2. 仅在 `check_wave_b_b2_evidence_consistency.sh` 内增加对 cross summary 中 active `linux_summary` 路径的解析与继承。
+3. 跑 focused 合同、linux examples active-path、active macOS summary、active Windows summary、inactive macOS probe 回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] found the next active Linux truth drift after the active macOS summary batch
+- [completed] focused RED contract for cross-summary-declared custom linux summary
+- [completed] minimal active linux summary inheritance in consistency checker
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- focused RED:
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_summary_path_contract.sh`: FAIL before fix
+  - failure shape:
+    - cross summary already declared an active custom `linux_summary`
+    - that active summary was then removed
+    - direct consistency still stayed green because it tracked the default run-specific Linux summary path instead
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_summary_path_contract.sh`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `LINUX_SUMMARY_EXPLICIT`
+    - added `parse_cross_summary_linux_summary_path(...)`
+    - when `--linux-summary` is omitted, now inherits active Linux summary from cross summary
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_macos_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Consistency Cross Summary macOS Summary Path
 
 ## Goal
