@@ -93,4 +93,12 @@ if ! rg -n "^- handoff_state: \\*\\*NEEDS_EVIDENCE_SYNC\\*\\*$" "$BUNDLE_ABS" >/
   fail "handoff bundle should fall to NEEDS_EVIDENCE_SYNC when explicit missing evidence makes consistency inconsistent"
 fi
 
+if ! rg -n "^\\| winssl_quick_smoke_${RUN_ID}\\.log \\| $WINDOWS_QUICK_REL \\| NO \\|$" "$BUNDLE_ABS" >/dev/null; then
+  fail "handoff bundle should list the explicit Windows quick-smoke companion artifact even when it is missing"
+fi
+
+if ! rg -n "^\\| winssl_runtime_suite_${RUN_ID}\\.log \\| $WINDOWS_RUNTIME_REL \\| NO \\|$" "$BUNDLE_ABS" >/dev/null; then
+  fail "handoff bundle should list the explicit Windows runtime-suite companion artifact even when it is missing"
+fi
+
 echo "[PASS] prepare_wave_b_b2 handoff bundle explicit missing evidence contract passed"

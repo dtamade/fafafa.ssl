@@ -305,7 +305,25 @@ fi
   echo
   echo "| artifact | path | exists |"
   echo "|----------|------|--------|"
-  for p in "$LINUX_SUMMARY" "$LINUX_EXAMPLES" "$MACOS_PROBE" "$MACOS_SUMMARY" "$WINDOWS_SUMMARY" "$CROSS_SUMMARY" "$CLOSURE_REPORT" "$CONSISTENCY_REPORT"; do
+  BUNDLE_ARTIFACTS=(
+    "$LINUX_SUMMARY"
+    "$LINUX_EXAMPLES"
+    "$MACOS_PROBE"
+    "$MACOS_SUMMARY"
+    "$WINDOWS_SUMMARY"
+  )
+  if [[ ${#WINDOWS_EVIDENCE_ARGS[@]} -gt 0 ]]; then
+    BUNDLE_ARTIFACTS+=(
+      "${WINDOWS_EVIDENCE_ARGS[1]}"
+      "${WINDOWS_EVIDENCE_ARGS[3]}"
+    )
+  fi
+  BUNDLE_ARTIFACTS+=(
+    "$CROSS_SUMMARY"
+    "$CLOSURE_REPORT"
+    "$CONSISTENCY_REPORT"
+  )
+  for p in "${BUNDLE_ARTIFACTS[@]}"; do
     if [[ -f "$(resolve_path "$p")" ]]; then
       echo "| $(basename "$p") | $p | YES |"
     else

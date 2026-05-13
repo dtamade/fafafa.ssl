@@ -1,3 +1,41 @@
+# Progress - Wave B/B2 Handoff Bundle Windows Artifact List
+
+## 2026-05-14
+- continuation resync:
+  - continued directly after committing the explicit-missing passthrough batch
+  - stayed on the same `prepare_wave_b_b2_handoff_bundle.sh` static contract surface
+- new bug located:
+  - handoff bundle artifact list still omits `windows_quick_log` and `windows_runtime_transcript`
+  - this happens even when consistency already tracks those exact companion artifacts
+  - bundle index therefore lags behind the actual Windows evidence truth
+- new batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-handoff-bundle-windows-artifact-list.md`
+- next implementation shape:
+  - extend the existing companion-path contracts to require bundle artifact rows
+  - then add those Windows companion artifacts to the handoff bundle index
+- focused RED contracts:
+  - updated `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> FAIL before fix
+  - updated `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh` -> FAIL before fix
+  - failure shape:
+    - handoff bundle artifact list still omitted the Windows quick-smoke and runtime-suite rows
+    - this was true both for existing companion logs and for required-but-missing explicit companion logs
+- minimal implementation landed:
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - artifact list now uses a `BUNDLE_ARTIFACTS` array
+    - when Windows evidence args are active, the derived quick/runtime companion artifacts are appended into the bundle index
+- verification:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_explicit_missing_evidence_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_explicit_summary_artifacts_required_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_explicit_windows_runtime_logs_required_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_macos_probe_default_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Explicit Missing Evidence Passthrough
 
 ## 2026-05-14

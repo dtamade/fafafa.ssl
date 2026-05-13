@@ -1,3 +1,19 @@
+# Findings - Wave B/B2 Handoff Bundle Windows Artifact List
+
+## 2026-05-14
+- 继续沿着同一条 `prepare` 静态审查线深挖后，发现 handoff bundle 自己还有一层索引面缺口：
+  - `prepare_wave_b_b2_handoff_bundle.sh` 现在已经会为 Windows summary 推导 sibling `quick smoke` / `runtime suite`
+  - `check_wave_b_b2_evidence_consistency.sh` 也已经会把它们当成真实 evidence
+  - 但最终生成的 handoff bundle artifact 表里仍只列 `windows_summary`
+- 这会制造一个真实的 repo-side 索引不完整：
+  - 交接报告表面上像是完整索引
+  - 但真正决定 Windows strictness 的两份 companion logs 并没有被列出来
+  - 读 bundle 的人看不到这两份 artifact 是否存在，只能再去翻 consistency report
+- 这批最小正确修法不是改 strict 规则，而是让 bundle index 跟上现有 truth：
+  - 什么时候 `WINDOWS_EVIDENCE_ARGS` 已经激活
+  - bundle artifact list 就应同步列出 quick/runtime paths
+  - 缺失显示 `NO`，存在显示 `YES`
+
 # Findings - Wave B/B2 Explicit Missing Evidence Passthrough
 
 ## 2026-05-14

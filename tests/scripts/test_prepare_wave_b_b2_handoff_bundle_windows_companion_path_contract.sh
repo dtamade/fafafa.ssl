@@ -104,4 +104,12 @@ if ! rg -n "handoff_state: \\*\\*READY_FOR_RUNNER\\*\\*" "$HANDOFF_REPORT" >/dev
   fail "handoff state should remain READY_FOR_RUNNER when consistency is green but macOS evidence is still absent"
 fi
 
+if ! rg -n "\\| winssl_quick_smoke_${RUN_ID}\\.log \\| $WINDOWS_EVIDENCE_DIR/winssl_quick_smoke_${RUN_ID}\\.log \\| YES \\|" "$HANDOFF_REPORT" >/dev/null; then
+  fail "handoff bundle should list the Windows quick-smoke companion artifact when it exists"
+fi
+
+if ! rg -n "\\| winssl_runtime_suite_${RUN_ID}\\.log \\| $WINDOWS_EVIDENCE_DIR/winssl_runtime_suite_${RUN_ID}\\.log \\| YES \\|" "$HANDOFF_REPORT" >/dev/null; then
+  fail "handoff bundle should list the Windows runtime-suite companion artifact when it exists"
+fi
+
 echo "[PASS] prepare_wave_b_b2_handoff_bundle windows companion path contract passed"

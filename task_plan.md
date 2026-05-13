@@ -1,3 +1,52 @@
+# Task Plan - Wave B/B2 Handoff Bundle Windows Artifact List
+
+## Goal
+收口 `prepare_wave_b_b2_handoff_bundle.sh` 的 artifact 清单缺口，避免 handoff bundle 已经引用 Windows summary 和 consistency truth，却仍漏掉 companion quick/runtime logs。
+
+## Current Batch
+1. 扩 focused RED contracts，证明确有 Windows companion path truth 时，handoff bundle 仍不列 quick/runtime artifacts。
+2. 仅在 `prepare_wave_b_b2_handoff_bundle.sh` 内把 Windows companion artifacts 加进 bundle 清单。
+3. 跑 focused 合同、显式缺失 passthrough、consistency 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified the handoff bundle artifact-list gap after the explicit-missing passthrough batch
+- [completed] focused RED contracts for Windows companion artifact listing
+- [completed] minimal handoff bundle artifact-list hardening
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- fresh repro already shows the bug shape:
+  - handoff bundle already tracks `windows_summary`
+  - consistency report already tracks `windows_quick_log` / `windows_runtime_transcript`
+  - but bundle artifact list still omits those two companion runtime artifacts entirely
+- target scope for this batch:
+  - keep existing Windows companion derivation logic unchanged
+  - only bring the bundle index surface up to the same artifact truth
+- focused RED:
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: FAIL before fix
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`: FAIL before fix
+  - failure shape:
+    - consistency already tracked `windows_quick_log` / `windows_runtime_transcript`
+    - but handoff bundle artifact list still omitted both rows entirely
+    - the omission happened both when companion logs existed and when explicit Windows summary made them required-but-missing
+- minimal implementation:
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - artifact list now builds a `BUNDLE_ARTIFACTS` array
+    - when `WINDOWS_EVIDENCE_ARGS` is active, the bundle now lists both derived companion runtime artifacts
+    - existing/missing status is rendered through the same artifact loop as the rest of the bundle
+- focused GREEN:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_explicit_missing_evidence_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_explicit_summary_artifacts_required_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_explicit_windows_runtime_logs_required_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_macos_probe_default_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Explicit Missing Evidence Passthrough
 
 ## Goal
