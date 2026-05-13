@@ -1,3 +1,23 @@
+# Findings - Wave B/B2 macOS Probe Consistency Hardening
+
+## 2026-05-13
+- 在补完 handoff/workflow 的 macOS probe fallback 之后继续静态深审，发现 consistency report 仍然保留一个证据盲区：
+  - cross summary 已经能显示 `macos = PROBE_ONLY/PROBE_OK`
+  - handoff bundle 也已经会把 probe 列入 artifact list
+  - 但 `check_wave_b_b2_evidence_consistency.sh` 仍完全不知道这份 probe JSON
+- 这会制造一种“汇总面承认了 probe，审计面却看不见 probe”的 repo-side 假完整：
+  - handoff bundle 的 cross summary 说 macOS 证据来自 probe
+  - consistency 矩阵却不列出 `macos_probe`
+  - workflow summary job 也不会把 probe 传给 consistency 检查
+- 最小正确修法不是让 closure readiness 支持 probe，而是继续保持语义分层：
+  - cross summary 可以消费 macOS summary 或 macOS probe
+  - consistency 需要知道 macOS probe 是否存在且 JSON 合法
+  - closure readiness 仍只以 macOS summary 为闭环依据
+- 这批因此需要第三组参数面：
+  - `MACOS_CROSS_ARGS` 负责 cross summary
+  - `MACOS_SUMMARY_ARGS` 负责 closure/evidence 里的 macOS summary 传递
+  - `MACOS_CONSISTENCY_ARGS` 只在 probe-only 场景下把 probe 传给 consistency
+
 # Findings - Wave B Cross Summary macOS Probe Default Hardening
 
 ## 2026-05-13

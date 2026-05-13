@@ -32,4 +32,7 @@ require_match 'generate_wave_b_cross_platform_summary\.sh[\s\S]*"\$\{MACOS_CROSS
 require_match 'check_wave_b_b2_closure_readiness\.sh[\s\S]*"\$\{MACOS_SUMMARY_ARGS\[@\]\}"' \
   'summary workflow should keep macOS summary-only arguments away from closure readiness when only a probe exists'
 
+require_match 'check_wave_b_b2_evidence_consistency\.sh[\s\S]*"\$\{MACOS_CONSISTENCY_ARGS\[@\]\}"' \
+  'summary workflow should pass macOS probe evidence into consistency checks when probe-only evidence is active'
+
 echo "[PASS] wave-b-b2 macOS probe workflow contract passed"

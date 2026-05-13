@@ -9,6 +9,8 @@ RUN_ID=""
 RUN_ID_EXPLICIT=false
 LINUX_SUMMARY=""
 LINUX_EXAMPLES_JSON=""
+MACOS_PROBE=""
+MACOS_PROBE_EXPLICIT=false
 MACOS_SUMMARY=""
 WINDOWS_SUMMARY=""
 WINDOWS_QUICK_LOG=""
@@ -33,6 +35,7 @@ Wave B / B2 Evidence Consistency Checker
   --run-id ID                指定 run_id（默认优先从 Linux summary 推导，否则时间戳）
   --linux-summary FILE       Linux summary 路径
   --linux-examples FILE      Linux examples JSON 路径
+  --macos-probe FILE         macOS probe JSON 路径
   --macos-summary FILE       macOS summary 路径
   --windows-summary FILE     Windows summary 路径
   --windows-quick-log FILE   Windows quick smoke 日志路径
@@ -60,6 +63,11 @@ while [[ $# -gt 0 ]]; do
       ;;
     --linux-examples)
       LINUX_EXAMPLES_JSON="$2"
+      shift 2
+      ;;
+    --macos-probe)
+      MACOS_PROBE="$2"
+      MACOS_PROBE_EXPLICIT=true
       shift 2
       ;;
     --macos-summary)
@@ -156,6 +164,9 @@ fi
 if [[ -z "$LINUX_EXAMPLES_JSON" ]]; then
   LINUX_EXAMPLES_JSON="test-reports/examples_compile_ci_gate_${RUN_ID}.json"
 fi
+if [[ -z "$MACOS_PROBE" ]]; then
+  MACOS_PROBE="test-reports/wave_b_macos_gate_probe_${RUN_ID}.json"
+fi
 if [[ -z "$MACOS_SUMMARY" ]]; then
   MACOS_SUMMARY="test-reports/wave_b_macos_gate_summary_${RUN_ID}.md"
 fi
@@ -181,6 +192,28 @@ fi
 parse_closure_status_md() {
   local file="$1"
   grep -E "^- closure_status:" "$file" | head -1 | sed -E 's/^- closure_status: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
+}
+
+parse_cross_summary_macos_probe_path() {
+  local file="$1"
+  awk -F'|' '
+    {
+      if (NF >= 4) {
+        platform_col = $2
+        state_col = $3
+        evidence_col = $4
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", platform_col)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", state_col)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", evidence_col)
+        if (tolower(platform_col) == "macos" && (state_col == "PROBE_ONLY" || state_col == "PROBE_OK") && evidence_col ~ /^probe: /) {
+          sub(/^probe: /, "", evidence_col)
+          sub(/ \(status=.*$/, "", evidence_col)
+          print evidence_col
+          exit
+        }
+      }
+    }
+  ' "$file" || true
 }
 
 required_missing=0
@@ -276,6 +309,26 @@ check_presence_artifact() {
 
 check_markdown_artifact "linux_summary" "$LINUX_SUMMARY" true
 check_json_artifact "linux_examples_json" "$LINUX_EXAMPLES_JSON" true
+macos_probe_required=false
+macos_probe_track=false
+cross_summary_abs="$(resolve_path "$CROSS_SUMMARY")"
+cross_summary_macos_probe=""
+if [[ -f "$cross_summary_abs" ]]; then
+  cross_summary_macos_probe="$(parse_cross_summary_macos_probe_path "$cross_summary_abs")"
+fi
+if [[ "$MACOS_PROBE_EXPLICIT" == "true" ]]; then
+  macos_probe_required=true
+  macos_probe_track=true
+elif [[ -n "$cross_summary_macos_probe" ]]; then
+  MACOS_PROBE="$cross_summary_macos_probe"
+  macos_probe_required=true
+  macos_probe_track=true
+elif [[ -f "$(resolve_path "$MACOS_PROBE")" ]]; then
+  macos_probe_track=true
+fi
+if [[ "$macos_probe_track" == "true" ]]; then
+  check_json_artifact "macos_probe" "$MACOS_PROBE" "$macos_probe_required"
+fi
 check_markdown_artifact "macos_summary" "$MACOS_SUMMARY" false
 check_markdown_artifact "windows_summary" "$WINDOWS_SUMMARY" false
 windows_runtime_required=false

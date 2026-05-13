@@ -286,6 +286,7 @@ jobs:
 
           MACOS_CROSS_ARGS=()
           MACOS_SUMMARY_ARGS=()
+          MACOS_CONSISTENCY_ARGS=()
           WINDOWS_SUMMARY_ARGS=()
           WINDOWS_EVIDENCE_ARGS=()
           if [[ -f "test-reports/wave_b_macos_gate_summary_${RUN_ID}.md" ]]; then
@@ -293,6 +294,7 @@ jobs:
             MACOS_SUMMARY_ARGS=(--macos-summary "test-reports/wave_b_macos_gate_summary_${RUN_ID}.md")
           elif [[ -f "test-reports/wave_b_macos_gate_probe_${RUN_ID}.json" ]]; then
             MACOS_CROSS_ARGS=(--macos-probe "test-reports/wave_b_macos_gate_probe_${RUN_ID}.json")
+            MACOS_CONSISTENCY_ARGS=(--macos-probe "test-reports/wave_b_macos_gate_probe_${RUN_ID}.json")
           fi
           if [[ -f "test-reports/wave_b_windows_gate_summary_${RUN_ID}.md" ]]; then
             WINDOWS_SUMMARY_ARGS=(
@@ -324,6 +326,7 @@ jobs:
             --linux-summary "$LINUX_SUMMARY" \
             --linux-examples "$LINUX_EXAMPLES" \
             "${MACOS_SUMMARY_ARGS[@]}" \
+            "${MACOS_CONSISTENCY_ARGS[@]}" \
             "${WINDOWS_SUMMARY_ARGS[@]}" \
             "${WINDOWS_EVIDENCE_ARGS[@]}" \
             --cross-summary "test-reports/wave_b_cross_platform_summary_${RUN_ID}.md" \
@@ -336,6 +339,7 @@ jobs:
               --linux-summary "$LINUX_SUMMARY" \
               --linux-examples "$LINUX_EXAMPLES" \
               "${MACOS_SUMMARY_ARGS[@]}" \
+              "${MACOS_CONSISTENCY_ARGS[@]}" \
               "${WINDOWS_SUMMARY_ARGS[@]}" \
               "${WINDOWS_EVIDENCE_ARGS[@]}" \
               --cross-summary "test-reports/wave_b_cross_platform_summary_${RUN_ID}.md" \

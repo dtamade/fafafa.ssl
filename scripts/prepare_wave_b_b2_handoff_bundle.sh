@@ -188,6 +188,7 @@ fi
 
 MACOS_CROSS_ARGS=()
 MACOS_SUMMARY_ARGS=()
+MACOS_CONSISTENCY_ARGS=()
 WINDOWS_SUMMARY_ARGS=()
 WINDOWS_EVIDENCE_ARGS=()
 if [[ -f "$(resolve_path "$MACOS_SUMMARY")" ]]; then
@@ -195,6 +196,7 @@ if [[ -f "$(resolve_path "$MACOS_SUMMARY")" ]]; then
   MACOS_SUMMARY_ARGS=(--macos-summary "$MACOS_SUMMARY")
 elif [[ -f "$(resolve_path "$MACOS_PROBE")" ]]; then
   MACOS_CROSS_ARGS=(--macos-probe "$MACOS_PROBE")
+  MACOS_CONSISTENCY_ARGS=(--macos-probe "$MACOS_PROBE")
 fi
 if [[ -f "$(resolve_path "$WINDOWS_SUMMARY")" ]]; then
   WINDOWS_SUMMARY_ARGS=(--windows-summary "$WINDOWS_SUMMARY")
@@ -211,6 +213,7 @@ if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] macos_probe=$MACOS_PROBE"
   echo "[DRY-RUN] macos_cross_args=${MACOS_CROSS_ARGS[*]:-<none>}"
   echo "[DRY-RUN] macos_summary_args=${MACOS_SUMMARY_ARGS[*]:-<none>}"
+  echo "[DRY-RUN] macos_consistency_args=${MACOS_CONSISTENCY_ARGS[*]:-<none>}"
   echo "[DRY-RUN] windows_summary_args=${WINDOWS_SUMMARY_ARGS[*]:-<none>}"
   echo "[DRY-RUN] windows_evidence_args=${WINDOWS_EVIDENCE_ARGS[*]:-<none>}"
   echo "[DRY-RUN] output_dir=$OUTPUT_DIR"
@@ -240,6 +243,7 @@ bash "$PROJECT_ROOT/scripts/check_wave_b_b2_evidence_consistency.sh" \
   --linux-summary "$LINUX_SUMMARY" \
   --linux-examples "$LINUX_EXAMPLES" \
   "${MACOS_SUMMARY_ARGS[@]}" \
+  "${MACOS_CONSISTENCY_ARGS[@]}" \
   "${WINDOWS_SUMMARY_ARGS[@]}" \
   "${WINDOWS_EVIDENCE_ARGS[@]}" \
   --cross-summary "$CROSS_SUMMARY" \
@@ -294,6 +298,7 @@ if [[ "$STRICT" == "true" ]]; then
     --linux-summary "$LINUX_SUMMARY" \
     --linux-examples "$LINUX_EXAMPLES" \
     "${MACOS_SUMMARY_ARGS[@]}" \
+    "${MACOS_CONSISTENCY_ARGS[@]}" \
     "${WINDOWS_SUMMARY_ARGS[@]}" \
     "${WINDOWS_EVIDENCE_ARGS[@]}" \
     --cross-summary "$CROSS_SUMMARY" \

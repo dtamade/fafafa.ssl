@@ -1,3 +1,54 @@
+# Task Plan - Wave B/B2 macOS Probe Consistency Hardening
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 对 macOS probe-only 证据的盲区，确保当 cross summary 使用 `wave_b_macos_gate_probe_<run_id>.json` 时，consistency report 也会显式列出并校验这份 probe 证据。
+
+## Current Batch
+1. 写 focused RED contract，证明 handoff bundle 已经消费 macOS probe，但 consistency report 仍不列出它。
+2. 给 `check_wave_b_b2_evidence_consistency.sh` 增加 `--macos-probe` 支持。
+3. 让 `prepare_wave_b_b2_handoff_bundle.sh` 与 `wave-b-b2-manual.yml` 在 probe-only 场景下把 probe 传入 consistency，但不改 closure 的 summary-only 语义。
+4. 跑 focused 合同、workflow 文本合同、handoff/workflow 回归与 diff hygiene。
+5. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] found the consistency-report blind spot after the probe fallback batches
+- [completed] focused RED contracts for macOS probe consistency coverage
+- [completed] minimal macOS probe consistency propagation
+- [completed] focused verification
+- [in_progress] review and commit closeout
+
+## Current Evidence
+- focused RED:
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh`: FAIL before fix
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`: FAIL before fix
+  - failure shape:
+    - consistency report omitted a `macos_probe` row even though probe-only evidence was active
+    - workflow summary stage passed no probe argument into `check_wave_b_b2_evidence_consistency.sh`
+- implementation:
+  - new focused contract: `tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh`
+  - updated workflow contract: `tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `--macos-probe`
+    - now surfaces probe JSON in the artifact matrix
+    - can infer the active probe path from the cross summary when probe-only evidence is in use
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - now uses `MACOS_CONSISTENCY_ARGS` to pass probe-only evidence into consistency without widening closure args
+  - `.github/workflows/wave-b-b2-manual.yml`
+  - `.github/workflows/wave-b-b2-manual.yml.disabled`
+    - summary stage now mirrors the same `MACOS_CONSISTENCY_ARGS` split
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh`: PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `diff -u .github/workflows/wave-b-b2-manual.yml .github/workflows/wave-b-b2-manual.yml.disabled`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B Cross Summary macOS Probe Default Hardening
 
 ## Goal

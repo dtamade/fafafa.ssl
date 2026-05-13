@@ -1,3 +1,47 @@
+# Progress - Wave B/B2 macOS Probe Consistency Hardening
+
+## 2026-05-13
+- continuation resync:
+  - kept the work inside the same static Wave B/B2 script family
+  - followed the macOS probe chain one layer deeper after fixing handoff/workflow fallback and direct cross-summary defaults
+- new bug located:
+  - probe-only macOS evidence was now visible in cross summary and handoff artifact index
+  - but `check_wave_b_b2_evidence_consistency.sh` still never surfaced a `macos_probe` artifact row
+  - workflow summary stage also passed no macOS probe argument into consistency checks
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-b2-macos-probe-consistency-hardening.md`
+- focused RED contracts:
+  - added `tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh`
+  - updated `tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh` -> FAIL before fix
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh` -> FAIL before fix
+  - failure shape:
+    - consistency report lacked `macos_probe`
+    - workflow lacked `MACOS_CONSISTENCY_ARGS`
+- minimal implementation landed:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `MACOS_PROBE` / `MACOS_PROBE_EXPLICIT`
+    - added `--macos-probe`
+    - added `parse_cross_summary_macos_probe_path(...)`
+    - now tracks `macos_probe` as a JSON artifact when probe-only evidence is active
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added `MACOS_CONSISTENCY_ARGS`
+    - probe-only evidence now flows into consistency separately from closure args
+  - `.github/workflows/wave-b-b2-manual.yml`
+  - `.github/workflows/wave-b-b2-manual.yml.disabled`
+    - summary stage now also uses `MACOS_CONSISTENCY_ARGS`
+- verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh` -> PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_consistency_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> PASS
+  - `diff -u .github/workflows/wave-b-b2-manual.yml .github/workflows/wave-b-b2-manual.yml.disabled` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B Cross Summary macOS Probe Default Hardening
 
 ## 2026-05-13
