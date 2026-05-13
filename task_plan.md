@@ -1,3 +1,49 @@
+# Task Plan - Wave B/B2 Closure Next Action Truth
+
+## Goal
+收口 `check_wave_b_b2_closure_readiness.sh` 报告中的 `Next Actions` 入口漂移，避免 closure readiness 仍引导调用者去复跑 `generate_wave_b_cross_platform_summary.sh`，而不是当前真实的 `prepare_wave_b_b2_handoff_bundle.sh` 上层交接入口。
+
+## Current Batch
+1. 写 focused contract，证明 closure report 仍引用旧的 cross-summary 重跑入口。
+2. 最小修改 `check_wave_b_b2_closure_readiness.sh` 的 `Next Actions` 文案。
+3. 跑 focused closure/handoff 回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified stale closure-report rerun guidance after workflow handoff truth-source consolidation
+- [completed] wrote focused contract for closure next-action truth
+- [completed] minimal closure next-action wording sync
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 `check_wave_b_b2_closure_readiness.sh` 报告尾部仍写：
+  - `三平台 summary 回填后，复跑 'scripts/generate_wave_b_cross_platform_summary.sh'。`
+- 但 repo 里当前真实的上层收口入口已经变成：
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - workflow summary 也已经统一走 `prepare`
+- 继续保留旧文案会制造一个新的 report-side 误导：
+  - cross summary 单独复跑并不会刷新 consistency / handoff bundle
+  - 调用者会被引向一个已经不再是主入口的脚本
+- focused RED:
+  - 新增 `tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh`: FAIL before fix
+  - failure shape:
+    - closure readiness report still told operators to rerun `scripts/generate_wave_b_cross_platform_summary.sh`
+    - report output had no mention of the current `prepare` handoff entrypoint
+- minimal implementation:
+  - 新增 `tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh`
+  - 更新 `scripts/check_wave_b_b2_closure_readiness.sh`
+    - the final rerun guidance now points to the Wave B/B2 handoff bundle prepare flow instead of the stale cross-summary-only entrypoint
+    - kept closure readiness state evaluation unchanged
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_closure_readiness.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Strict Input Description Truth
 
 ## Goal

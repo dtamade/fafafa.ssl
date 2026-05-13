@@ -250,7 +250,7 @@ cat > "$OUTPUT_ABS" <<EOF_REPORT
 
 - 若 macOS 为 DRY_RUN/PENDING：在 macOS runner 执行 live gate 并回填 summary。
 - 若 Windows 为 PENDING：在 Windows runner 执行 live gate 并回填 summary。
-- 三平台 summary 回填后，复跑 'scripts/generate_wave_b_cross_platform_summary.sh'。
+- 三平台 summary 回填后，复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'），让 cross summary / consistency / handoff bundle 一起刷新。
 EOF_REPORT
 
 echo "[PASS] readiness report generated: $OUTPUT_FILE"

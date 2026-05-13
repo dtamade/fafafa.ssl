@@ -1,3 +1,36 @@
+# Progress - Wave B/B2 Closure Next Action Truth
+
+## 2026-05-14
+- continuation resync:
+  - continued directly after committing the strict input description batch
+  - stayed on the same Wave B/B2 report/workflow static-review lane
+- new bug located:
+  - `check_wave_b_b2_closure_readiness.sh` still tells the operator to rerun `scripts/generate_wave_b_cross_platform_summary.sh`
+  - but the current repo truth now uses `prepare_wave_b_b2_handoff_bundle.sh` as the upper handoff refresh entrypoint
+  - rerunning `generate` alone no longer refreshes the full handoff report chain
+- new batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-closure-next-action-truth.md`
+- next implementation shape:
+  - add a focused closure-report contract for the rerun guidance
+  - then minimally sync the closure-report wording to the prepare-based handoff truth
+- focused RED contract:
+  - added `tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh` -> FAIL before fix
+  - failure shape:
+    - closure report still directed operators to rerun `scripts/generate_wave_b_cross_platform_summary.sh`
+    - it did not mention the current prepare-based handoff refresh flow
+- minimal implementation landed:
+  - `scripts/check_wave_b_b2_closure_readiness.sh`
+    - replaced the stale cross-summary-only rerun guidance with prepare-based handoff refresh guidance
+    - adjusted the wording to avoid shell command substitution inside the report heredoc
+- verification:
+  - `bash -n scripts/check_wave_b_b2_closure_readiness.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_strict_metadata_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Strict Input Description Truth
 
 ## 2026-05-14

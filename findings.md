@@ -1,3 +1,22 @@
+# Findings - Wave B/B2 Closure Next Action Truth
+
+## 2026-05-14
+- 继续沿着 Wave B/B2 handoff 静态报告面深审后，发现 closure readiness 报告还有一条同类的 stale guidance：
+  - 它仍在告诉调用者“三平台 summary 回填后，复跑 `generate_wave_b_cross_platform_summary.sh`”
+  - 但现在 repo 的上层收口入口已经是 `prepare_wave_b_b2_handoff_bundle.sh`
+  - workflow summary 也已经不再直接走 `generate -> closure -> consistency`
+- 这会制造一个真实的操作误导：
+  - 调用者照着 closure report 去复跑 `generate`
+  - 只能刷新 cross summary
+  - 却不会同步刷新 consistency / handoff bundle / replay guidance
+- 这批最小正确修法不是改 closure 判定逻辑，而是把 closure report 的最后一步指向真实上层入口：
+  - 不再提示旧的 `generate_wave_b_cross_platform_summary.sh`
+  - 改成提示复跑 Wave B/B2 handoff bundle 准备流程
+- 修完后 closure report 的建议动作终于和 repo 当前结构一致了：
+  - closure 仍只负责表达三平台是否闭环
+  - 但它不再把操作者引向一个只能刷新 cross summary 的旧入口
+  - 而是把后续刷新交还给现在真正的上层收口流程
+
 # Findings - Wave B/B2 Strict Input Description Truth
 
 ## 2026-05-14
