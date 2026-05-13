@@ -384,6 +384,22 @@ if [[ -n "$WINDOWS_SUMMARY" && -f "$WINDOWS_SUMMARY_ABS" ]]; then
   fi
 fi
 
+NEXT_ACTIONS=()
+if [[ "$linux_overall" == "PASS" && "$macos_state" == "PASS" && "$windows_state" == "PASS" ]]; then
+  NEXT_ACTIONS+=("当前三平台 cross-platform evidence 已对齐；如需刷新完整交接链，可复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'）。")
+else
+  if [[ "$linux_overall" != "PASS" ]]; then
+    NEXT_ACTIONS+=("若 Linux 为 FAIL/READY/DRY_RUN/UNKNOWN：修复或重跑 Linux baseline，并回填有效 Linux summary 与 examples evidence。")
+  fi
+  if [[ "$macos_state" != "PASS" ]]; then
+    NEXT_ACTIONS+=("若 macOS 为 PROBE_ONLY/PROBE_OK/READY/FAIL/DRY_RUN/PENDING：在 macOS runner 修复或执行 live gate，并回填有效 macOS summary。")
+  fi
+  if [[ "$windows_state" != "PASS" ]]; then
+    NEXT_ACTIONS+=("若 Windows 为 READY/FAIL/DRY_RUN/PENDING：在 Windows runner 修复或执行 WinSSL/OpenSSL 对照回归，并回填有效 Windows summary。")
+  fi
+  NEXT_ACTIONS+=("相关 evidence 修复/回填后，复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'），让 cross summary / closure / consistency / handoff bundle 一起刷新。")
+fi
+
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] run_id=$RUN_ID"
   echo "[DRY-RUN] linux_summary=$LINUX_SUMMARY"
@@ -435,9 +451,10 @@ cat > "$OUTPUT_ABS" <<EOF_SUMMARY
 
 ## 4) Next Actions
 
-- 在 macOS runner 执行 B2 命令并回填 macos 证据文件。
-- 在 Windows runner 执行 WinSSL/OpenSSL 对照回归并回填 windows 证据文件。
-- 回填后重新运行本脚本，形成最终三平台对齐摘要。
 EOF_SUMMARY
+
+for action in "${NEXT_ACTIONS[@]}"; do
+  echo "- $action"
+done >> "$OUTPUT_ABS"
 
 echo "[PASS] wave-b cross-platform summary generated: $OUTPUT_FILE"

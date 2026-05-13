@@ -1,3 +1,51 @@
+# Task Plan - Wave B Cross Summary Next Actions Truth
+
+## Goal
+收口 `generate_wave_b_cross_platform_summary.sh` 的 `Next Actions` 漂移，避免它继续忽略 Linux mandatory baseline，并把操作者引向只刷新局部摘要的旧入口。
+
+## Current Batch
+1. 写 focused contract，锁住 Linux `FAIL` 与三平台 `PASS` 两种 next-action 真相。
+2. 最小修改 `generate_wave_b_cross_platform_summary.sh`，把 `Next Actions` 收口到状态驱动 + prepare 单一入口。
+3. 复跑 cross-summary 与 handoff 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified stale static cross-summary next-actions after handoff truth consolidation
+- [completed] wrote focused contract for cross-summary next-action truth
+- [completed] minimal state-driven cross-summary next-actions guidance
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 cross summary 在修复前仍保留固定模板：
+  - 只提醒 macOS / Windows
+  - 不提醒 Linux baseline
+  - 仍提示“重新运行本脚本，形成最终三平台对齐摘要”
+- 这与当前 repo truth 已经冲突：
+  - Linux baseline 是 handoff 必需前提
+  - 完整刷新入口已经是 `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - 三平台全 `PASS` 时也不该继续提示重跑平台 lane
+- focused RED:
+  - 新增 `tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh`: FAIL before fix
+  - failure shape:
+    - cross summary next actions should explicitly mention Linux FAIL when Linux baseline is the blocking platform
+- minimal implementation:
+  - 更新 `scripts/generate_wave_b_cross_platform_summary.sh`
+    - added state-driven `NEXT_ACTIONS`
+    - Linux 非 `PASS` 时显式提示修复或重跑 Linux baseline
+    - macOS / Windows 非 `PASS` 时分别给出对应 runner 修复动作
+    - 三平台全 `PASS` 时改为 aligned/optional refresh 提示
+    - final guidance now points to `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+- focused GREEN:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_no_todo_pending_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_linux_checklist.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Closure Linux Next Actions Truth
 
 ## Goal

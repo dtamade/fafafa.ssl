@@ -1,3 +1,20 @@
+# Findings - Wave B Cross Summary Next Actions Truth
+
+## 2026-05-14
+- 继续沿着 `cross summary -> closure -> consistency -> handoff bundle` 这一条静态报告链深审后，又发现 `generate_wave_b_cross_platform_summary.sh` 自己还有一层旧模板漂移：
+  - `Next Actions` 固定只提醒 macOS / Windows
+  - 不提醒 Linux
+  - 并且还继续提示“重新运行本脚本”
+- 这与当前 repo truth 已经明显脱节：
+  - Linux baseline 早已成为 handoff 必需前提
+  - 完整刷新入口已经统一收敛到 `prepare_wave_b_b2_handoff_bundle.sh`
+  - 三平台全 `PASS` 时，cross summary 也不该继续提示重跑平台 lane
+- 这批最小正确修法不是改 summary 的状态计算，而是把 `Next Actions` 绑定到现有状态矩阵：
+  - Linux 非 `PASS` 时显式提示修复 baseline
+  - macOS / Windows 非 `PASS` 时继续给出 runner 修复动作
+  - 三平台全 `PASS` 时改成 aligned/optional refresh 提示
+  - 报告统一指回 `prepare_wave_b_b2_handoff_bundle.sh`，不再让操作者只刷新局部摘要
+
 # Findings - Wave B/B2 Closure Linux Next Actions Truth
 
 ## 2026-05-14

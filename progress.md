@@ -1,3 +1,35 @@
+# Progress - Wave B Cross Summary Next Actions Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `f09d7b2 fix: surface linux closure next actions`
+  - continued directly on the same Wave B/B2 report-chain static-review lane
+- Fresh review narrowed the next real issue:
+  - `generate_wave_b_cross_platform_summary.sh` still ended with a fixed macOS / Windows template
+  - it did not mention Linux even when Linux was the blocking platform
+  - it also still told operators to rerun only the lower-level summary script instead of the current prepare-based handoff entrypoint
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-cross-summary-next-actions-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `cross summary next actions should explicitly mention Linux FAIL when Linux baseline is the blocking platform`
+- Minimal implementation landed:
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+    - added state-driven `NEXT_ACTIONS`
+    - Linux non-PASS states now receive explicit baseline guidance
+    - three-platform PASS now emits an aligned/optional refresh message
+    - final guidance now points to `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+- GREEN verification:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_no_todo_pending_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_linux_checklist.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Closure Linux Next Actions Truth
 
 ## 2026-05-14
