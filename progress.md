@@ -1,3 +1,42 @@
+# Progress - Wave B/B2 Consistency Cross Summary Windows Summary Path
+
+## 2026-05-13
+- continuation resync:
+  - continued directly after committing the windows companion-path batch
+  - kept the scope inside the same static Wave B/B2 evidence-consistency script surface
+- new bug located:
+  - cross summary already declared an active custom `windows_summary`
+  - but direct `check_wave_b_b2_evidence_consistency.sh` still ignored that active Windows path when `--windows-summary` was omitted
+  - strict consistency could therefore stay falsely green and skip required Windows runtime artifacts
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-b2-consistency-cross-summary-windows-summary-path.md`
+- focused RED contract:
+  - added `tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh` -> FAIL before fix
+  - failure shape:
+    - cross summary already recorded an active custom Windows summary path
+    - direct consistency still returned 0 and treated Windows runtime artifacts as optional
+- minimal implementation landed:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `WINDOWS_SUMMARY_EXPLICIT`
+    - added `WINDOWS_QUICK_LOG_EXPLICIT`
+    - added `WINDOWS_RUNTIME_TRANSCRIPT_EXPLICIT`
+    - added `parse_cross_summary_windows_summary_path(...)`
+    - now inherits active Windows summary truth from cross summary before deriving omitted runtime artifact paths
+- mid-batch validation:
+  - first pass of the new parser used an over-escaped awk regex and the focused contract remained red
+  - fixed it immediately by matching the trailing ` (overall=...)` suffix with the same single-backslash style already used in the macOS probe parser
+- verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Consistency Windows Companion Path
 
 ## 2026-05-13

@@ -1,3 +1,22 @@
+# Findings - Wave B/B2 Consistency Cross Summary Windows Summary Path
+
+## 2026-05-13
+- 继续沿着同一个 `Wave B/B2` consistency public surface 深审后，发现 Windows evidence 还有比 companion-path 更深一层的 truth drift：
+  - `cross summary` 已经会在 Windows 行写出 `summary: <custom path> (overall=...)`
+  - 但 `check_wave_b_b2_evidence_consistency.sh` 之前完全不会消费这条 active Windows 事实
+  - 结果就是只要 direct consistency 没显式传 `--windows-summary`，它就可能完全绕开 active custom Windows evidence
+- 这会制造一个真实的 repo-side 假绿灯窗口：
+  - cross summary 已经承认 Windows summary 存在
+  - 按现有 strict 语义，这意味着 sibling `quick smoke` / `runtime suite` 应该变成 required evidence
+  - 但 consistency 如果还盯着默认 `test-reports/wave_b_windows_gate_summary_<run_id>.md`，就会把这些 runtime artifacts 错当成 optional missing，最终保持 `CONSISTENT`
+- 这批最小正确修法不是改 strict 规则，而是把 Windows truth source 补齐到和 `linux_examples_json` / `macos_probe` 同等级：
+  - 显式 `--windows-summary` / `--windows-quick-log` / `--windows-runtime-transcript` 继续优先
+  - 未显式传参时，先继承 cross summary 已声明的 active custom `windows_summary`
+  - 再从这份 active summary 派生 sibling runtime artifact 路径
+- 这样能让 Windows runtime strictness 真正跟着 active evidence 走，而不是跟着一个默认文件名走：
+  - 有效堵住 direct consistency 绕开 active Windows evidence 的假绿灯空间
+  - 同时保留默认 `test-reports/...` 主路径行为不变
+
 # Findings - Wave B/B2 Consistency Windows Companion Path
 
 ## 2026-05-13

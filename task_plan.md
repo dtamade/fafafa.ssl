@@ -1,3 +1,47 @@
+# Task Plan - Wave B/B2 Consistency Cross Summary Windows Summary Path
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 的 Windows active-path 漂移，让它在未显式传 `--windows-summary` 时，也能从 `cross summary` 继承实际使用的 custom `windows_summary` 路径，并因此正确触发 Windows runtime artifact 严格校验。
+
+## Current Batch
+1. 写 focused RED contract，证明 cross summary 已经声明 active custom `windows_summary`，但 direct consistency 仍会忽略它并给出假绿灯。
+2. 仅在 `check_wave_b_b2_evidence_consistency.sh` 内增加对 cross summary 中 active `windows_summary` 路径的解析与继承。
+3. 跑 focused 合同、Windows companion-path、linux examples active-path、macOS probe 与 Windows strict 回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] found the next active Windows truth drift after the companion-path batch
+- [completed] focused RED contract for cross-summary-declared custom windows summary
+- [completed] minimal active windows summary inheritance in consistency checker
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- focused RED:
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh`: FAIL before fix
+  - failure shape:
+    - cross summary already declared an active custom `windows_summary`
+    - that active Windows evidence should have triggered runtime artifact strictness
+    - but direct consistency still ignored it and returned green
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added `WINDOWS_SUMMARY_EXPLICIT`
+    - added `WINDOWS_QUICK_LOG_EXPLICIT`
+    - added `WINDOWS_RUNTIME_TRANSCRIPT_EXPLICIT`
+    - added `parse_cross_summary_windows_summary_path(...)`
+    - when Windows args are omitted, now inherits active `windows_summary` from cross summary before deriving sibling runtime artifact paths
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_windows_summary_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_ignores_inactive_macos_probe_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Consistency Windows Companion Path
 
 ## Goal
