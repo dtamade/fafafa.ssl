@@ -1,3 +1,58 @@
+# Task Plan - Wave B/B2 Linux Baseline Required Workflow Truth
+
+## Goal
+收口 `wave-b-b2-manual` workflow 中 `run_linux_baseline` 的假可选分支，避免 handoff summary 已经强依赖 Linux summary，但 dispatch 输入仍宣称 Linux baseline 可以关闭，导致 workflow 走进必坏路径。
+
+## Current Batch
+1. 写 focused workflow contract，证明 Linux baseline 现在必须是 summary/handoff 的前提，而不是一个可安全关闭的开关。
+2. 最小修改 live 与 `.disabled` 模板，删除 `run_linux_baseline` 输入和相关条件分支。
+3. 跑 focused workflow 回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified the broken optional-linux branch after workflow handoff truth-source sync
+- [completed] wrote focused contracts for required Linux baseline truth
+- [completed] minimal live + disabled workflow cleanup for required Linux baseline
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 `summary` job 无条件构造：
+  - `LINUX_SUMMARY="test-reports/wave_b_ci_gate_summary_${RUN_ID}.md"`
+  - `LINUX_EXAMPLES="test-reports/examples_compile_ci_gate_${RUN_ID}.json"`
+  - 并把它们直接传给 `prepare_wave_b_b2_handoff_bundle.sh`
+- `prepare_wave_b_b2_handoff_bundle.sh` 又明确要求 Linux summary 必须存在，否则直接：
+  - `[ERROR] linux summary not found: ...`
+- 但 workflow 仍保留一条假可选分支：
+  - dispatch input: `run_linux_baseline`
+  - `linux-gate` job 有 `if: ${{ github.event.inputs.run_linux_baseline != 'false' }}`
+  - `Download Linux evidence` step 也有同样的条件
+- repo 内没有任何其他合同或文档要求支持 `run_linux_baseline=false` 的可工作路径；现状只会把用户引导进一个静态上必坏的 summary/handoff 路径。
+- focused RED:
+  - 新增 `tests/scripts/test_wave_b_b2_linux_baseline_required_workflow_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_linux_baseline_required_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_linux_baseline_required_workflow_contract.sh`: FAIL before fix
+  - failure shape:
+    - live workflow 仍暴露 `run_linux_baseline`
+    - `linux-gate` 与 `Download Linux evidence` 仍有 `run_linux_baseline != 'false'` 条件分支
+    - 这与 summary/handoff 必需 Linux truth 的现状冲突
+- minimal implementation:
+  - 新增 `tests/scripts/test_wave_b_b2_linux_baseline_required_workflow_contract.sh`
+  - 更新：
+    - `.github/workflows/wave-b-b2-manual.yml`
+    - `.github/workflows/wave-b-b2-manual.yml.disabled`
+  - live 与 disabled 双模板都：
+    - 删除 dispatch input `run_linux_baseline`
+    - 删除 `linux-gate` job 的条件分支
+    - 删除 `Download Linux evidence` step 的条件分支
+- focused GREEN:
+  - `bash -n tests/scripts/test_wave_b_b2_linux_baseline_required_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_linux_baseline_required_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`: PASS
+  - `git diff --check`: PASS
+  - `diff -u .github/workflows/wave-b-b2-manual.yml .github/workflows/wave-b-b2-manual.yml.disabled`: PASS
+
 # Task Plan - Wave B/B2 Disabled Workflow Handoff Truth Sync
 
 ## Goal

@@ -1,3 +1,40 @@
+# Progress - Wave B/B2 Linux Baseline Required Workflow Truth
+
+## 2026-05-14
+- continuation resync:
+  - continued directly after the disabled-workflow handoff-truth commit
+  - kept the scope inside the same Wave B/B2 workflow static-review lane
+- new bug located:
+  - workflow_dispatch still exposes `run_linux_baseline`
+  - `linux-gate` and `Download Linux evidence` still respect `run_linux_baseline != 'false'`
+  - but summary still unconditionally passes Linux summary/examples into `prepare_wave_b_b2_handoff_bundle.sh`, whose contract requires Linux summary to exist
+- new batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-linux-baseline-required-workflow-truth.md`
+- next implementation shape:
+  - add a focused workflow contract for “Linux baseline is a required truth source”
+  - then remove the stale optional-Linux input/condition from both live and disabled templates
+- focused RED contract:
+  - added `tests/scripts/test_wave_b_b2_linux_baseline_required_workflow_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_linux_baseline_required_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_linux_baseline_required_workflow_contract.sh` -> FAIL before fix
+  - failure shape:
+    - `wave-b-b2-manual.yml` still exposed `run_linux_baseline`
+    - Linux gate and Linux evidence download were still conditional
+    - this left a static path where summary always required Linux truth but workflow still allowed it to be skipped
+- minimal implementation landed:
+  - `.github/workflows/wave-b-b2-manual.yml`
+  - `.github/workflows/wave-b-b2-manual.yml.disabled`
+    - removed workflow_dispatch input `run_linux_baseline`
+    - removed the conditional guard from `linux-gate`
+    - removed the conditional guard from `Download Linux evidence`
+- verification:
+  - `bash tests/scripts/test_wave_b_b2_linux_baseline_required_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_handoff_bundle_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_linux_baseline_required_workflow_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+  - `diff -u .github/workflows/wave-b-b2-manual.yml .github/workflows/wave-b-b2-manual.yml.disabled` -> PASS
+
 # Progress - Wave B/B2 Disabled Workflow Handoff Truth Sync
 
 ## 2026-05-14

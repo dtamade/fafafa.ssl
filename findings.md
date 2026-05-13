@@ -1,3 +1,23 @@
+# Findings - Wave B/B2 Linux Baseline Required Workflow Truth
+
+## 2026-05-14
+- 继续沿着 `wave-b-b2-manual` workflow 静态契约线深审后，发现 handoff truth source 收口之后，又暴露出一条更基础的输入层漂移：
+  - workflow 仍提供 `run_linux_baseline`，暗示 Linux baseline gate 可以被安全关闭
+  - 但 summary/handoff 入口已经无条件依赖 `wave_b_ci_gate_summary_<run_id>.md` 和 `examples_compile_ci_gate_<run_id>.json`
+  - `prepare_wave_b_b2_handoff_bundle.sh` 也明确把 Linux summary 当作必需证据
+- 这会制造一个真实的假选项：
+  - 用户把 `run_linux_baseline` 设成 `false`
+  - `linux-gate` 与 Linux artifact download 被跳过
+  - summary job 仍继续执行，并在 `prepare` 处因为缺失 Linux summary 直接失败
+- 这批最小正确修法不是给这条坏分支加更多 fallback，而是删除这条假契约：
+  - Linux baseline 恢复成 workflow 的固定前提
+  - live 与 `.disabled` 模板一起移除 `run_linux_baseline`
+  - workflow contracts 明确禁止再出现这条可关闭分支
+- 修完后 workflow 的输入面与执行面重新一致了：
+  - 操作者不再看到一个事实上不能使用的 `false` 选项
+  - summary/handoff 所需的 Linux truth 也不再依赖隐式默认或跳过分支
+  - live 与 `.disabled` 模板仍保持完全一致
+
 # Findings - Wave B/B2 Disabled Workflow Handoff Truth Sync
 
 ## 2026-05-14
