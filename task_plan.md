@@ -1,3 +1,54 @@
+# Task Plan - Wave B/B2 macOS Probe Fallback Hardening
+
+## Goal
+收口 `prepare_wave_b_b2_handoff_bundle.sh` 与 `wave-b-b2-manual.yml` 在 macOS probe-only 场景下丢失证据的问题，确保没有 macOS summary 时，cross summary 仍能吸收 `wave_b_macos_gate_probe_<run_id>.json` 并显示 `PROBE_ONLY`。
+
+## Current Batch
+1. 写 focused RED contract，证明 handoff bundle 在只有 macOS probe 时仍会把 macOS 降成 `PENDING/no evidence`。
+2. 给 `prepare` 增加 `--macos-probe` 与默认 fallback，并把 workflow 汇总阶段也补成 summary-first / probe-fallback。
+3. 修掉参数转发里的二次缺口：`--macos-probe` 只能进 cross summary，不能再误传给 closure/evidence。
+4. 跑 focused 合同、workflow 文本合同、handoff/cross-summary 回归与 diff hygiene。
+5. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] refreshed current repo state and isolated the next macOS probe-only evidence gap
+- [completed] focused RED proof for handoff/workflow probe loss
+- [completed] minimal macOS probe fallback plus argument-surface split
+- [completed] focused verification
+- [in_progress] review and commit closeout
+
+## Current Evidence
+- focused RED:
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh`: PASS
+  - manual old-script repro against `git show HEAD:scripts/prepare_wave_b_b2_handoff_bundle.sh`: reproduced `macos = PENDING / no evidence` even though `test-reports/wave_b_macos_gate_probe_<run_id>.json` existed
+  - `git show HEAD:.github/workflows/wave-b-b2-manual.yml | rg ...macos-probe...`: no match
+  - failure shape:
+    - old prepare/workflow both dropped probe-only evidence because only `--macos-summary` was ever forwarded
+- implementation:
+  - new focused contract: `tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh`
+  - new workflow contract: `tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added `--macos-probe`
+    - now defaults to `test-reports/wave_b_macos_gate_probe_<run_id>.json`
+    - uses `MACOS_CROSS_ARGS` vs `MACOS_SUMMARY_ARGS` so probe-only evidence goes only to cross summary
+    - handoff artifact index now includes the macOS probe
+  - `.github/workflows/wave-b-b2-manual.yml`
+  - `.github/workflows/wave-b-b2-manual.yml.disabled`
+    - summary stage now mirrors the same summary-first / probe-fallback split
+- focused GREEN:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh`: PASS
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_no_todo_pending_contract.sh`: PASS
+  - `diff -u .github/workflows/wave-b-b2-manual.yml .github/workflows/wave-b-b2-manual.yml.disabled`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B Cross Summary Run ID Help Sync
 
 ## Goal

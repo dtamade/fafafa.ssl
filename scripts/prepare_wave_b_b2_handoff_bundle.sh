@@ -9,6 +9,7 @@ RUN_ID=""
 RUN_ID_EXPLICIT=false
 LINUX_SUMMARY=""
 LINUX_EXAMPLES=""
+MACOS_PROBE=""
 MACOS_SUMMARY=""
 WINDOWS_SUMMARY=""
 CROSS_SUMMARY=""
@@ -33,6 +34,7 @@ Wave B / B2 Handoff Bundle Preparer
   --run-id ID                指定 run_id（默认优先从 Linux summary 推导，否则时间戳）
   --linux-summary FILE       Linux summary（默认自动取最新 wave_b_ci_gate_summary_*.md）
   --linux-examples FILE      Linux examples json（默认优先 test-reports/examples_compile_ci_gate_<run_id>.json，fallback 到旧 generic 路径）
+  --macos-probe FILE         macOS probe json（可选；默认 test-reports/wave_b_macos_gate_probe_<run_id>.json）
   --macos-summary FILE       macOS summary（可选）
   --windows-summary FILE     Windows summary（可选）
   --output-dir DIR           输出目录（默认 test-reports）
@@ -55,6 +57,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --linux-examples)
       LINUX_EXAMPLES="$2"
+      shift 2
+      ;;
+    --macos-probe)
+      MACOS_PROBE="$2"
       shift 2
       ;;
     --macos-summary)
@@ -157,6 +163,9 @@ fi
 if [[ -z "$RUN_ID" ]]; then
   RUN_ID="$(date +%Y%m%d_%H%M%S)"
 fi
+if [[ -z "$MACOS_PROBE" ]]; then
+  MACOS_PROBE="test-reports/wave_b_macos_gate_probe_${RUN_ID}.json"
+fi
 if [[ -z "$MACOS_SUMMARY" ]]; then
   MACOS_SUMMARY="test-reports/wave_b_macos_gate_summary_${RUN_ID}.md"
 fi
@@ -177,11 +186,15 @@ if [[ -z "$LINUX_EXAMPLES" ]]; then
   LINUX_EXAMPLES="$(default_linux_examples_json_path)"
 fi
 
-MACOS_ARGS=()
+MACOS_CROSS_ARGS=()
+MACOS_SUMMARY_ARGS=()
 WINDOWS_SUMMARY_ARGS=()
 WINDOWS_EVIDENCE_ARGS=()
 if [[ -f "$(resolve_path "$MACOS_SUMMARY")" ]]; then
-  MACOS_ARGS=(--macos-summary "$MACOS_SUMMARY")
+  MACOS_CROSS_ARGS=(--macos-summary "$MACOS_SUMMARY")
+  MACOS_SUMMARY_ARGS=(--macos-summary "$MACOS_SUMMARY")
+elif [[ -f "$(resolve_path "$MACOS_PROBE")" ]]; then
+  MACOS_CROSS_ARGS=(--macos-probe "$MACOS_PROBE")
 fi
 if [[ -f "$(resolve_path "$WINDOWS_SUMMARY")" ]]; then
   WINDOWS_SUMMARY_ARGS=(--windows-summary "$WINDOWS_SUMMARY")
@@ -195,7 +208,9 @@ if [[ "$DRY_RUN" == "true" ]]; then
   echo "[DRY-RUN] run_id=$RUN_ID"
   echo "[DRY-RUN] linux_summary=$LINUX_SUMMARY"
   echo "[DRY-RUN] linux_examples=$LINUX_EXAMPLES"
-  echo "[DRY-RUN] macos_args=${MACOS_ARGS[*]:-<none>}"
+  echo "[DRY-RUN] macos_probe=$MACOS_PROBE"
+  echo "[DRY-RUN] macos_cross_args=${MACOS_CROSS_ARGS[*]:-<none>}"
+  echo "[DRY-RUN] macos_summary_args=${MACOS_SUMMARY_ARGS[*]:-<none>}"
   echo "[DRY-RUN] windows_summary_args=${WINDOWS_SUMMARY_ARGS[*]:-<none>}"
   echo "[DRY-RUN] windows_evidence_args=${WINDOWS_EVIDENCE_ARGS[*]:-<none>}"
   echo "[DRY-RUN] output_dir=$OUTPUT_DIR"
@@ -209,14 +224,14 @@ bash "$PROJECT_ROOT/scripts/generate_wave_b_cross_platform_summary.sh" \
   --run-id "$RUN_ID" \
   --linux-summary "$LINUX_SUMMARY" \
   --linux-examples "$LINUX_EXAMPLES" \
-  "${MACOS_ARGS[@]}" \
+  "${MACOS_CROSS_ARGS[@]}" \
   "${WINDOWS_SUMMARY_ARGS[@]}" \
   --output "$CROSS_SUMMARY"
 
 bash "$PROJECT_ROOT/scripts/check_wave_b_b2_closure_readiness.sh" \
   --run-id "$RUN_ID" \
   --linux-summary "$LINUX_SUMMARY" \
-  "${MACOS_ARGS[@]}" \
+  "${MACOS_SUMMARY_ARGS[@]}" \
   "${WINDOWS_SUMMARY_ARGS[@]}" \
   --output "$CLOSURE_REPORT"
 
@@ -224,7 +239,7 @@ bash "$PROJECT_ROOT/scripts/check_wave_b_b2_evidence_consistency.sh" \
   --run-id "$RUN_ID" \
   --linux-summary "$LINUX_SUMMARY" \
   --linux-examples "$LINUX_EXAMPLES" \
-  "${MACOS_ARGS[@]}" \
+  "${MACOS_SUMMARY_ARGS[@]}" \
   "${WINDOWS_SUMMARY_ARGS[@]}" \
   "${WINDOWS_EVIDENCE_ARGS[@]}" \
   --cross-summary "$CROSS_SUMMARY" \
@@ -256,7 +271,7 @@ fi
   echo
   echo "| artifact | path | exists |"
   echo "|----------|------|--------|"
-  for p in "$LINUX_SUMMARY" "$LINUX_EXAMPLES" "$MACOS_SUMMARY" "$WINDOWS_SUMMARY" "$CROSS_SUMMARY" "$CLOSURE_REPORT" "$CONSISTENCY_REPORT"; do
+  for p in "$LINUX_SUMMARY" "$LINUX_EXAMPLES" "$MACOS_PROBE" "$MACOS_SUMMARY" "$WINDOWS_SUMMARY" "$CROSS_SUMMARY" "$CLOSURE_REPORT" "$CONSISTENCY_REPORT"; do
     if [[ -f "$(resolve_path "$p")" ]]; then
       echo "| $(basename "$p") | $p | YES |"
     else
@@ -278,7 +293,7 @@ if [[ "$STRICT" == "true" ]]; then
     --run-id "$RUN_ID" \
     --linux-summary "$LINUX_SUMMARY" \
     --linux-examples "$LINUX_EXAMPLES" \
-    "${MACOS_ARGS[@]}" \
+    "${MACOS_SUMMARY_ARGS[@]}" \
     "${WINDOWS_SUMMARY_ARGS[@]}" \
     "${WINDOWS_EVIDENCE_ARGS[@]}" \
     --cross-summary "$CROSS_SUMMARY" \
@@ -289,7 +304,7 @@ if [[ "$STRICT" == "true" ]]; then
   bash "$PROJECT_ROOT/scripts/check_wave_b_b2_closure_readiness.sh" \
     --run-id "$RUN_ID" \
     --linux-summary "$LINUX_SUMMARY" \
-    "${MACOS_ARGS[@]}" \
+    "${MACOS_SUMMARY_ARGS[@]}" \
     "${WINDOWS_SUMMARY_ARGS[@]}" \
     --strict \
     --dry-run

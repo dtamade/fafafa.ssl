@@ -1,3 +1,22 @@
+# Findings - Wave B/B2 macOS Probe Fallback Hardening
+
+## 2026-05-13
+- 继续静态深审 `Wave B/B2` 脚本链时，发现 macOS probe-only 证据在 handoff 入口和 workflow 汇总入口里同时被丢弃：
+  - `generate_wave_b_cross_platform_summary.sh` 明确支持 `--macos-probe`
+  - 但 `prepare_wave_b_b2_handoff_bundle.sh` 和 `.github/workflows/wave-b-b2-manual.yml` 都只会传 `--macos-summary`
+  - 因而一旦 runner 只有 `wave_b_macos_gate_probe_<run_id>.json`、还没有 summary，cross summary 就会把 macOS 错误降成 `PENDING / no evidence`
+- 这个缺口不是文案问题，而是 repo-side 真实证据损失：
+  - docs/manifest 早就把 `PROBE_ONLY` 作为有效过渡状态
+  - 但 handoff bundle 和 workflow summary 阶段却没有把 probe 接进来
+  - 结果就是已有 probe 的阶段性证据在最终汇总里被静默抹掉
+- 最小正确修法不是扩 closure/evidence 的语义，而是先把参数面拆清楚：
+  - cross summary 可以消费 `--macos-summary` 或 `--macos-probe`
+  - closure readiness / evidence consistency 仍只应消费 macOS summary
+  - 因此需要分离 `MACOS_CROSS_ARGS` 与 `MACOS_SUMMARY_ARGS`，而不是复用一组 `MACOS_ARGS`
+- 这批回归时实际还抓到了一个很值钱的二次缺口：
+  - 直接把 `--macos-probe` 塞进旧的共享参数数组会让 `closure/evidence` 报 `Unknown option: --macos-probe`
+  - 说明这类“一个新证据入口横穿多脚本”的改动必须显式区分参数消费面，不能只在入口多加一个 option
+
 # Findings - Wave B Cross Summary Run ID Help Sync
 
 ## 2026-05-13

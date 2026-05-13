@@ -1,3 +1,57 @@
+# Progress - Wave B/B2 macOS Probe Fallback Hardening
+
+## 2026-05-13
+- continuation resync:
+  - stayed inside the same static Wave B/B2 script family
+  - looked for the next shared evidence-plumbing drift after the run-id/help sync batches
+- new bug located:
+  - `generate_wave_b_cross_platform_summary.sh` already supported `--macos-probe`
+  - but `prepare_wave_b_b2_handoff_bundle.sh` and the workflow summary stage only forwarded `--macos-summary`
+  - as a result, macOS probe-only evidence was silently downgraded to `PENDING / no evidence`
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-b2-macos-probe-fallback-hardening.md`
+- focused RED proof:
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh` -> PASS
+  - textual old-workflow probe:
+    - `git show HEAD:.github/workflows/wave-b-b2-manual.yml | rg ...macos-probe...` -> no match
+  - manual old-script repro:
+    - extracted `git show HEAD:scripts/prepare_wave_b_b2_handoff_bundle.sh` into a temp script with `PROJECT_ROOT` pinned back to this repo
+    - created:
+      - Linux summary
+      - Linux examples JSON
+      - `test-reports/wave_b_macos_gate_probe_handoff_macos_probe_contract.json`
+    - ran the old prepare entry from `/tmp`
+    - resulting cross summary still contained `| macos | PENDING | no evidence |`
+- minimal implementation landed:
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added `--macos-probe`
+    - added default probe fallback path
+    - first attempt reused a single `MACOS_ARGS` array
+  - mid-batch regression caught:
+    - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh` -> FAIL with `Unknown option: --macos-probe`
+    - root cause: probe arg was being forwarded into `check_wave_b_b2_closure_readiness.sh` / `check_wave_b_b2_evidence_consistency.sh`, which do not support that option
+  - final implementation:
+    - split into `MACOS_CROSS_ARGS` and `MACOS_SUMMARY_ARGS`
+    - probe-only evidence now goes exclusively to `generate_wave_b_cross_platform_summary.sh`
+  - `.github/workflows/wave-b-b2-manual.yml`
+  - `.github/workflows/wave-b-b2-manual.yml.disabled`
+    - summary stage now uses the same split argument strategy
+  - new contracts:
+    - `tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh`
+    - `tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`
+- verification:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_macos_probe_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_run_specific_linux_examples_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_no_todo_pending_contract.sh` -> PASS
+  - `diff -u .github/workflows/wave-b-b2-manual.yml .github/workflows/wave-b-b2-manual.yml.disabled` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B Cross Summary Run ID Help Sync
 
 ## 2026-05-13
