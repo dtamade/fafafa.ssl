@@ -1,3 +1,39 @@
+# Progress - Wave B/B2 Consistency Closure Platform Matrix Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `b5b7980 fix: validate active cross-summary platform evidence`
+  - continued on the same `closure -> consistency -> handoff` static-review lane
+- Fresh review narrowed the next real issue:
+  - `check_wave_b_b2_evidence_consistency.sh` now validated cross-summary platform evidence truth
+  - but it still trusted `closure_report` as long as `run_id` and `closure_status` looked valid
+  - malformed closure platform matrices could therefore still hide behind a green strict consistency result
+- Reproduced the false-green shape with a direct fixture run:
+  - crafted a `closure.md` with `closure_status=CLOSED`
+  - removed the `windows` platform row from `## Platform Status`
+  - observed strict consistency still returned `CONSISTENT`
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-consistency-closure-platform-matrix-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_wave_b_b2_consistency_closure_platform_matrix_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_closure_platform_matrix_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_platform_matrix_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `consistency should fail strict mode when closure report is missing a required platform state row`
+- Minimal implementation landed:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added closure platform-state parser and allow-list validation
+    - missing/invalid platform rows now increment `runid_mismatch_or_parse_issue`
+    - `closure_status_note` and `closure_report` row now surface closure matrix issues
+- GREEN verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_closure_platform_matrix_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_platform_matrix_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_platform_matrix_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Consistency Cross Summary Platform Evidence Metadata Truth
 
 ## 2026-05-14

@@ -1,3 +1,21 @@
+# Findings - Wave B/B2 Consistency Closure Platform Matrix Truth
+
+## 2026-05-14
+- 继续沿着 `closure -> consistency -> handoff` 这条静态链深审后，发现上一批虽然已经把 `cross_summary` 的 platform evidence truth 校验补齐，但 `closure_report` 自己的 platform matrix 仍被 consistency 默认当真：
+  - 只要 `closure_status` 在
+  - `run_id` 也对得上
+  - 即使 `linux/macos/windows` 某个平台行已经丢了
+  - consistency 仍会继续给 `CONSISTENT`
+- 这会制造另一个真实的一致性假绿灯：
+  - 调用者看到的是 closure 已对齐
+  - 但 closure 平台级真相其实已经断链
+  - 这类问题直到顶层 handoff 才会被拦下，consistency 自己却还在说绿
+- 这批最小正确修法不是改 closure checker，而是在 consistency checker 内把 `closure_report` 也提升成“需要校验平台矩阵结构”的 artifact：
+  - 三个平台状态行必须齐全
+  - 状态必须属于允许集合
+  - 缺失/非法时计入 `runid_mismatch_or_parse_issue`
+  - 并显式写进 `closure_status_note` 与 `closure_report` 行
+
 # Findings - Wave B/B2 Consistency Cross Summary Platform Evidence Metadata Truth
 
 ## 2026-05-14

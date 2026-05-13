@@ -280,9 +280,34 @@ parse_closure_status_md() {
   grep -E "^- closure_status:" "$file" | head -1 | sed -E 's/^- closure_status: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
 }
 
+parse_closure_platform_state() {
+  local file="$1"
+  local want_platform="$2"
+  awk -F'|' -v target="$want_platform" '
+    {
+      if (NF >= 4) {
+        platform_col = $2
+        state_col = $3
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", platform_col)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", state_col)
+        gsub(/\*\*/, "", state_col)
+        if (tolower(platform_col) == tolower(target)) {
+          print toupper(state_col)
+          exit
+        }
+      }
+    }
+  ' "$file" || true
+}
+
 is_valid_closure_status() {
   local status="$1"
   [[ "$status" == "IN_PROGRESS" || "$status" == "CLOSED" ]]
+}
+
+is_valid_closure_platform_state() {
+  local state="$1"
+  [[ "$state" == "PASS" || "$state" == "FAIL" || "$state" == "READY" || "$state" == "DRY_RUN" || "$state" == "PENDING" ]]
 }
 
 parse_cross_summary_linux_examples_path() {
@@ -568,6 +593,30 @@ check_closure_report_artifact() {
     fi
   else
     closure_status_note="$parsed_closure_status"
+    local platform_issues=()
+    local platform
+    local state
+    for platform in linux macos windows; do
+      state="$(parse_closure_platform_state "$abs_path" "$platform")"
+      if [[ -z "$state" ]]; then
+        platform_issues+=("closure platform state missing: $platform")
+      elif ! is_valid_closure_platform_state "$state"; then
+        platform_issues+=("invalid closure platform state: $platform=$state")
+      fi
+    done
+
+    if [[ ${#platform_issues[@]} -gt 0 ]]; then
+      local joined_issues
+      joined_issues="$(printf '%s; ' "${platform_issues[@]}")"
+      joined_issues="${joined_issues%; }"
+      closure_status_note="$joined_issues"
+      runid_mismatch=$((runid_mismatch + ${#platform_issues[@]}))
+      if [[ "$note" == "ok" ]]; then
+        note="$joined_issues"
+      else
+        note="$note; $joined_issues"
+      fi
+    fi
   fi
 
   rows+=("| closure_report | $rel_path | YES | ${parsed:-n/a} | $match | $note |")

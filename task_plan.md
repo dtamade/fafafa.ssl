@@ -1,3 +1,48 @@
+# Task Plan - Wave B/B2 Consistency Closure Platform Matrix Truth
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 对 `closure_report` 平台状态矩阵的盲信，避免 `closure_status` 正常但 closure 平台矩阵已损坏时，strict consistency 仍错误显示为 `CONSISTENT`。
+
+## Current Batch
+1. 写 focused contract，证明 closure 平台矩阵缺行时，strict consistency 仍会静默吞掉。
+2. 最小修改 `check_wave_b_b2_evidence_consistency.sh`，把 closure 平台矩阵完整性接入 parse-issue 语义。
+3. 复跑 consistency / handoff 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified false-green trust of malformed closure platform matrix in consistency checker
+- [completed] wrote focused contract for closure platform matrix truth
+- [completed] minimal closure platform matrix validation in consistency checker
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 consistency checker 在修复前还有一类与 handoff 顶层同型的假绿灯：
+  - `closure_status` 可以是 `CLOSED`
+  - `run_id` 也可以匹配
+  - 但 `closure_report` 的平台状态矩阵仍可能缺失 `linux/macos/windows` 某一行
+  - strict consistency 仍然会继续返回 `CONSISTENT`
+- 这会把“坏掉的 closure matrix”伪装成一致性绿灯。
+- focused RED:
+  - 新增 `tests/scripts/test_wave_b_b2_consistency_closure_platform_matrix_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_closure_platform_matrix_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_platform_matrix_contract.sh`: FAIL before fix
+  - failure shape:
+    - `consistency should fail strict mode when closure report is missing a required platform state row`
+- minimal implementation:
+  - 更新 `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - added closure platform-state parser and allow-list validation
+    - missing/invalid closure platform rows now increment `runid_mismatch_or_parse_issue`
+    - top-level `closure_status_note` and `closure_report` row now expose closure matrix issues
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_closure_platform_matrix_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_platform_matrix_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_platform_matrix_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Consistency Cross Summary Platform Evidence Metadata Truth
 
 ## Goal
