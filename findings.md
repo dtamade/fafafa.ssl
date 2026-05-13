@@ -1,3 +1,22 @@
+# Findings - Wave B/B2 Consistency Cross Summary macOS Summary Path
+
+## 2026-05-13
+- 继续沿着同一个 `Wave B/B2` consistency public surface 深审后，发现 macOS evidence 也有和 Windows 类似的一层 active-truth 漂移：
+  - `cross summary` 已经会在 macOS 行写出 `summary: <custom path> (overall=...)`
+  - 但 `check_wave_b_b2_evidence_consistency.sh` 之前完全不会消费这条 active macOS 事实
+  - 结果就是只要 direct consistency 没显式传 `--macos-summary`，它就可能继续盯着默认路径并保持 green
+- 这和 probe-only 场景不是一回事，问题恰好出在 summary truth 被静默绕开：
+  - cross summary 可能已经承认 macOS `PASS`
+  - 之后那份 active custom macOS summary 即使被删除或漂移
+  - consistency 仍可能继续报告 `CONSISTENT`
+- 这批最小正确修法不是放宽 inactive probe 边界，也不是把 summary/probe 逻辑混在一起，而是继续保持语义分层：
+  - probe-only 仍走 `macos_probe`
+  - active summary 则应走 `macos_summary`
+  - 未显式传参时，从 cross summary 继承 active custom `macOS summary` path
+- 对 strict 语义来说，这份 inherited active summary 也应被当成 required evidence：
+  - 否则 cross summary 已承认的 macOS evidence 仍能在 consistency 里被静默丢掉
+  - 但 inactive default probe 继续不应污染 summary 场景
+
 # Findings - Wave B/B2 Consistency Cross Summary Windows Summary Path
 
 ## 2026-05-13

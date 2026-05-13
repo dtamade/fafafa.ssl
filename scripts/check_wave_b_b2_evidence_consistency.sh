@@ -13,6 +13,7 @@ LINUX_EXAMPLES_EXPLICIT=false
 MACOS_PROBE=""
 MACOS_PROBE_EXPLICIT=false
 MACOS_SUMMARY=""
+MACOS_SUMMARY_EXPLICIT=false
 WINDOWS_SUMMARY=""
 WINDOWS_SUMMARY_EXPLICIT=false
 WINDOWS_QUICK_LOG=""
@@ -77,6 +78,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --macos-summary)
       MACOS_SUMMARY="$2"
+      MACOS_SUMMARY_EXPLICIT=true
       shift 2
       ;;
     --windows-summary)
@@ -231,6 +233,26 @@ parse_cross_summary_linux_examples_path() {
   grep -E "^- linux_examples_json:" "$file" | head -1 | sed -E 's/^- linux_examples_json: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
 }
 
+parse_cross_summary_macos_summary_path() {
+  local file="$1"
+  awk -F'|' '
+    {
+      if (NF >= 4) {
+        platform_col = $2
+        evidence_col = $4
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", platform_col)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", evidence_col)
+        if (tolower(platform_col) == "macos" && evidence_col ~ /^summary: /) {
+          sub(/^summary: /, "", evidence_col)
+          sub(/ \(overall=.*$/, "", evidence_col)
+          print evidence_col
+          exit
+        }
+      }
+    }
+  ' "$file" || true
+}
+
 parse_cross_summary_windows_summary_path() {
   local file="$1"
   awk -F'|' '
@@ -278,15 +300,20 @@ runid_mismatch=0
 rows=()
 cross_summary_abs="$(resolve_path "$CROSS_SUMMARY")"
 cross_summary_linux_examples=""
+cross_summary_macos_summary=""
 cross_summary_windows_summary=""
 cross_summary_macos_probe=""
 if [[ -f "$cross_summary_abs" ]]; then
   cross_summary_linux_examples="$(parse_cross_summary_linux_examples_path "$cross_summary_abs")"
+  cross_summary_macos_summary="$(parse_cross_summary_macos_summary_path "$cross_summary_abs")"
   cross_summary_windows_summary="$(parse_cross_summary_windows_summary_path "$cross_summary_abs")"
   cross_summary_macos_probe="$(parse_cross_summary_macos_probe_path "$cross_summary_abs")"
 fi
 if [[ "$LINUX_EXAMPLES_EXPLICIT" != "true" && -n "$cross_summary_linux_examples" ]]; then
   LINUX_EXAMPLES_JSON="$cross_summary_linux_examples"
+fi
+if [[ "$MACOS_SUMMARY_EXPLICIT" != "true" && -n "$cross_summary_macos_summary" ]]; then
+  MACOS_SUMMARY="$cross_summary_macos_summary"
 fi
 if [[ "$WINDOWS_SUMMARY_EXPLICIT" != "true" && -n "$cross_summary_windows_summary" ]]; then
   WINDOWS_SUMMARY="$cross_summary_windows_summary"
@@ -387,6 +414,10 @@ check_presence_artifact() {
 
 check_markdown_artifact "linux_summary" "$LINUX_SUMMARY" true
 check_json_artifact "linux_examples_json" "$LINUX_EXAMPLES_JSON" true
+macos_summary_required=false
+if [[ -n "$cross_summary_macos_summary" ]]; then
+  macos_summary_required=true
+fi
 macos_probe_required=false
 macos_probe_track=false
 if [[ "$MACOS_PROBE_EXPLICIT" == "true" ]]; then
@@ -400,7 +431,7 @@ fi
 if [[ "$macos_probe_track" == "true" ]]; then
   check_json_artifact "macos_probe" "$MACOS_PROBE" "$macos_probe_required"
 fi
-check_markdown_artifact "macos_summary" "$MACOS_SUMMARY" false
+check_markdown_artifact "macos_summary" "$MACOS_SUMMARY" "$macos_summary_required"
 check_markdown_artifact "windows_summary" "$WINDOWS_SUMMARY" false
 windows_runtime_required=false
 windows_summary_abs="$(resolve_path "$WINDOWS_SUMMARY")"
