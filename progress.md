@@ -1,3 +1,37 @@
+# Progress - Wave B/B2 Handoff Bundle Next Actions
+
+## 2026-05-14
+- continuation resync:
+  - continued directly after committing the handoff bundle replay-command batch
+  - stayed on the same handoff-document surface in `prepare_wave_b_b2_handoff_bundle.sh`
+- new bug located:
+  - `Next Actions` still uses a fixed template
+  - it tells the operator to run macOS/Windows even when a platform is already PASS
+  - it keeps those stale runner instructions even when the whole bundle is already CLOSED
+- new batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-handoff-bundle-next-actions.md`
+- next implementation shape:
+  - add one focused contract covering partial-green and fully-closed next-actions truth
+  - then derive next actions from closure/platform/runtime status instead of a static template
+- focused RED contract:
+  - added `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh`
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh` -> FAIL before fix
+  - failure shape:
+    - partial-green bundle still printed a stale Windows runner action after Windows had already passed
+    - fully closed bundle still printed stale macOS/Windows runner actions
+- minimal implementation landed:
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added `parse_closure_platform_state(...)`
+    - next actions now follow closure-platform truth plus Windows companion-runtime presence
+    - closed bundles now emit only an optional replay action
+- verification:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_replay_command_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Handoff Bundle Replay Command
 
 ## 2026-05-14

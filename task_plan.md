@@ -1,3 +1,48 @@
+# Task Plan - Wave B/B2 Handoff Bundle Next Actions
+
+## Goal
+收口 `prepare_wave_b_b2_handoff_bundle.sh` 的 `Next Actions` 模板误导问题，避免 bundle 在平台已经 PASS 或整体已 CLOSED 时，仍固定提示去跑 macOS/Windows runner。
+
+## Current Batch
+1. 写 focused RED contract，覆盖“Windows 已 PASS 但 macOS 未完成”与“整体 CLOSED”两种 stale next-actions 场景。
+2. 仅在 `prepare_wave_b_b2_handoff_bundle.sh` 内改成状态驱动的 `Next Actions` 生成。
+3. 跑 focused 合同、replay command、artifact list、explicit-missing 邻近回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified the stale next-actions gap after the replay-command batch
+- [completed] focused RED contract for state-driven next actions
+- [completed] minimal next-actions hardening
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- fresh repro already shows the bug shape:
+  - when Windows summary/logs are already green, bundle still says “在 Windows runner 执行 live gate”
+  - when macOS and Windows are both PASS and the package is `CLOSED`, bundle still prints both runner steps
+- target scope for this batch:
+  - keep evidence selection and replay command semantics unchanged
+  - only make `Next Actions` follow current closure/runtime truth instead of a fixed template
+- focused RED:
+  - `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh`: FAIL before fix
+  - failure shape:
+    - partial-green bundle still prompted a stale Windows live-gate action even when Windows was already PASS
+    - fully closed bundle still kept stale macOS/Windows runner instructions
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh`
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+    - added `parse_closure_platform_state(...)`
+    - `Next Actions` now derives from macOS/Windows closure states plus Windows companion-runtime presence
+    - `CLOSED` bundles now emit only an optional replay step
+    - Windows summary PASS but missing companion runtime artifacts now maps to a Windows-runtime-artifact action instead of a stale summary action
+- focused GREEN:
+  - `bash -n scripts/prepare_wave_b_b2_handoff_bundle.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_replay_command_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Handoff Bundle Replay Command
 
 ## Goal

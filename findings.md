@@ -1,3 +1,19 @@
+# Findings - Wave B/B2 Handoff Bundle Next Actions
+
+## 2026-05-14
+- 继续沿着 `prepare_wave_b_b2_handoff_bundle.sh` 的静态交接面深审后，发现 bundle 的 `Next Actions` 还有一层 stale-template 误导：
+  - 不管当前 truth 如何，它都会固定输出“跑 macOS runner”“跑 Windows runner”“回填后重跑”
+  - 即使 Windows 已经 PASS，甚至整个 bundle 已经 `CLOSED`，也不例外
+- 这会制造一个真实的 repo-side 交接误导：
+  - artifact 表和 status 区已经能看出哪些平台还缺证据
+  - 但 `Next Actions` 却给出过时、甚至错误的操作建议
+  - 读 bundle 的人可能会重复跑已经 green 的平台，而看不出真正缺的是 companion runtime artifacts 还是另一个平台
+- 这批最小正确修法不是改 handoff_state，而是把建议动作绑定到现有 truth：
+  - 缺 macOS 才提示 macOS
+  - 缺 Windows summary 才提示 Windows summary/live gate
+  - Windows summary 已 PASS 但 companion runtime artifacts 缺失时，提示补 Windows runtime artifacts
+  - `CLOSED` 时只保留闭环完成/可选复核提示
+
 # Findings - Wave B/B2 Handoff Bundle Replay Command
 
 ## 2026-05-14

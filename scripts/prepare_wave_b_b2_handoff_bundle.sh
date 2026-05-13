@@ -119,6 +119,26 @@ parse_run_id_md() {
     | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true
 }
 
+parse_closure_platform_state() {
+  local file="$1"
+  local want_platform="$2"
+  awk -F'|' -v target="$want_platform" '
+    {
+      if (NF >= 4) {
+        platform_col = $2
+        state_col = $3
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", platform_col)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", state_col)
+        gsub(/\*\*/, "", state_col)
+        if (tolower(platform_col) == tolower(target)) {
+          print toupper(state_col)
+          exit
+        }
+      }
+    }
+  ' "$file" || true
+}
+
 infer_run_id_from_linux_summary() {
   local file="$1"
   if [[ -z "$file" ]]; then
@@ -292,6 +312,13 @@ bash "$PROJECT_ROOT/scripts/check_wave_b_b2_evidence_consistency.sh" \
 
 closure_status="$(grep -E '^- closure_status:' "$(resolve_path "$CLOSURE_REPORT")" | head -1 | sed -E 's/^- closure_status: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true)"
 consistency_status="$(grep -E '^- consistency_status:' "$(resolve_path "$CONSISTENCY_REPORT")" | head -1 | sed -E 's/^- consistency_status: *//' | tr -d '`*' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' || true)"
+closure_abs="$(resolve_path "$CLOSURE_REPORT")"
+macos_platform_state=""
+windows_platform_state=""
+if [[ -f "$closure_abs" ]]; then
+  macos_platform_state="$(parse_closure_platform_state "$closure_abs" "macos")"
+  windows_platform_state="$(parse_closure_platform_state "$closure_abs" "windows")"
+fi
 
 handoff_state="READY_FOR_RUNNER"
 if [[ "$consistency_status" == "INCONSISTENT" ]]; then
@@ -316,6 +343,32 @@ if [[ "$WINDOWS_SUMMARY_EXPLICIT" == "true" || "$windows_summary_exists" == "tru
 fi
 REPLAY_ARGS+=(--output-dir "$OUTPUT_DIR" --strict)
 REPLAY_COMMAND="$(build_shell_command scripts/prepare_wave_b_b2_handoff_bundle.sh "${REPLAY_ARGS[@]}")"
+
+windows_quick_log_missing=false
+windows_runtime_transcript_missing=false
+if [[ ${#WINDOWS_EVIDENCE_ARGS[@]} -gt 0 ]]; then
+  if [[ ! -f "$(resolve_path "${WINDOWS_EVIDENCE_ARGS[1]}")" ]]; then
+    windows_quick_log_missing=true
+  fi
+  if [[ ! -f "$(resolve_path "${WINDOWS_EVIDENCE_ARGS[3]}")" ]]; then
+    windows_runtime_transcript_missing=true
+  fi
+fi
+
+NEXT_ACTIONS=()
+if [[ "$handoff_state" == "CLOSED" ]]; then
+  NEXT_ACTIONS+=("当前批次已闭环；如需复核，可重新执行 '$REPLAY_COMMAND'。")
+else
+  if [[ "$macos_platform_state" != "PASS" ]]; then
+    NEXT_ACTIONS+=("在 macOS runner 执行 live gate 并回填 macOS summary。")
+  fi
+  if [[ "$windows_platform_state" != "PASS" ]]; then
+    NEXT_ACTIONS+=("在 Windows runner 执行 live gate 并回填 Windows summary。")
+  elif [[ "$windows_quick_log_missing" == "true" || "$windows_runtime_transcript_missing" == "true" ]]; then
+    NEXT_ACTIONS+=("在 Windows runner 回填 WinSSL quick smoke 与 runtime suite artifacts。")
+  fi
+  NEXT_ACTIONS+=("回填后重新执行 '$REPLAY_COMMAND'。")
+fi
 
 {
   echo "# Wave B / B2 Handoff Bundle"
@@ -359,9 +412,9 @@ REPLAY_COMMAND="$(build_shell_command scripts/prepare_wave_b_b2_handoff_bundle.s
   echo
   echo "## Next Actions"
   echo
-  echo "1. 在 macOS runner 执行 live gate 并回填 macOS summary。"
-  echo "2. 在 Windows runner 执行 live gate 并回填 Windows summary。"
-  echo "3. 回填后重新执行 '$REPLAY_COMMAND'。"
+  for i in "${!NEXT_ACTIONS[@]}"; do
+    echo "$((i + 1)). ${NEXT_ACTIONS[$i]}"
+  done
 } > "$(resolve_path "$BUNDLE_REPORT")"
 
 echo "[PASS] handoff bundle generated: $BUNDLE_REPORT"
