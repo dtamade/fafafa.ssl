@@ -286,7 +286,8 @@ if [[ "$DRY_RUN" == "true" ]]; then
   exit 0
 fi
 
-mkdir -p "$(dirname "$PROJECT_ROOT/$OUTPUT_FILE")"
+OUTPUT_ABS="$(resolve_path "$OUTPUT_FILE")"
+mkdir -p "$(dirname "$OUTPUT_ABS")"
 
 {
   echo "# Wave B / B2 Evidence Consistency"
@@ -311,7 +312,7 @@ mkdir -p "$(dirname "$PROJECT_ROOT/$OUTPUT_FILE")"
   echo
   echo "- CONSISTENT 条件：required_missing=0 且 runid_mismatch_or_parse_issue=0"
   echo "- strict 模式：若非 CONSISTENT，脚本返回非 0"
-} > "$PROJECT_ROOT/$OUTPUT_FILE"
+} > "$OUTPUT_ABS"
 
 echo "[PASS] evidence consistency report generated: $OUTPUT_FILE"
 

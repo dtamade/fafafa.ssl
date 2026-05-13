@@ -1,3 +1,42 @@
+# Progress - Wave B/B2 Absolute Output Path Hardening
+
+## 2026-05-13
+- continuation resync:
+  - stayed on static review of the same Wave B/B2 script chain
+  - intentionally did not reopen runtime/environment discussion
+- new static path bug confirmed:
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+  - `scripts/check_wave_b_b2_closure_readiness.sh`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+  all wrote reports via `"$PROJECT_ROOT/$OUTPUT_FILE"` instead of honoring absolute output paths
+- new batch plan recorded in `docs/plans/2026-05-13-wave-b-b2-absolute-output-path-hardening.md`
+- focused RED contract:
+  - added `tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh`
+  - contract runs from `/tmp` with:
+    - relative project-local input fixtures
+    - absolute output files for cross summary / closure / consistency
+    - absolute `--output-dir` for `prepare_wave_b_b2_handoff_bundle.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh` -> FAIL before fix
+  - failure shape:
+    - `cross-platform summary should be written to absolute path`
+- minimal implementation landed:
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+    - added output-path `resolve_path(...)`
+    - now writes to `OUTPUT_ABS`
+  - `scripts/check_wave_b_b2_closure_readiness.sh`
+    - now resolves `OUTPUT_FILE` before mkdir/write
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - now resolves `OUTPUT_FILE` before mkdir/write
+- focused GREEN verification:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh` -> PASS
+  - `bash -n scripts/check_wave_b_b2_closure_readiness.sh` -> PASS
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Windows Runtime Evidence Consistency Hardening
 
 ## 2026-05-13

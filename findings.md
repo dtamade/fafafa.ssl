@@ -1,3 +1,22 @@
+# Findings - Wave B/B2 Absolute Output Path Hardening
+
+## 2026-05-13
+- 静态续审这组 `Wave B/B2` 脚本时，发现了一个纯 repo-side 的路径语义缺陷，和运行平台无关：
+  - 三份报告脚本都公开支持 `--output FILE`
+  - 但真正写文件时却统一用了 `"$PROJECT_ROOT/$OUTPUT_FILE"`
+  - 这导致 absolute `--output` 并不会写到调用者指定的位置，而会被错误镜像到仓库根下的伪路径
+- 这个缺陷不是只影响单脚本调用，而是会向上污染 `prepare_wave_b_b2_handoff_bundle.sh` 的 absolute `--output-dir` 语义：
+  - handoff bundle 自己会正确创建 absolute 输出目录
+  - 但子脚本若把 absolute report path 再拼一次 `PROJECT_ROOT`，交接链就会出现“脚本提示成功、目标绝对路径却没有文件”的假成功
+- 这批最小正确修法不是重做整套 path API，而是只把报告写出点归一化：
+  - `generate_wave_b_cross_platform_summary.sh` 新增本地 `resolve_path(...)`
+  - `check_wave_b_b2_closure_readiness.sh` 与 `check_wave_b_b2_evidence_consistency.sh` 复用已有 `resolve_path(...)`
+  - 只修 `OUTPUT_FILE` 的最终写出与目录创建，不顺手扩大到输入路径重构
+- focused contract 也证明了这次修法覆盖到了完整链路，而不只是单文件写出：
+  - 从 `/tmp` 执行
+  - 相对输入仍按项目根解析
+  - absolute output / absolute output-dir 现在都能真正落到目标位置
+
 # Findings - Wave B/B2 Windows Runtime Evidence Consistency Hardening
 
 ## 2026-05-13

@@ -1,3 +1,47 @@
+# Task Plan - Wave B/B2 Absolute Output Path Hardening
+
+## Goal
+收口 `Wave B/B2` 报告脚本链上的绝对输出路径缺陷，确保 `--output FILE` 与 `--output-dir DIR` 在传入 absolute path 时，文件真正写到目标绝对路径，而不是被错误拼接到 `PROJECT_ROOT` 下面。
+
+## Current Batch
+1. 写 focused RED contract，从 `/tmp` 调用三份报告脚本和 handoff bundle，给相对输入与绝对输出，证明当前 absolute output path 会落错位置。
+2. 对 `generate_wave_b_cross_platform_summary.sh`、`check_wave_b_b2_closure_readiness.sh`、`check_wave_b_b2_evidence_consistency.sh` 做最小修法，只修输出路径归一化。
+3. 跑 focused GREEN、现有 workflow contract 与 diff hygiene。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] refreshed current repo state for the next static script-only review batch
+- [completed] focused RED absolute-output contract
+- [completed] minimal output-path hardening
+- [completed] focused verification
+- [in_progress] review and commit closeout
+
+## Current Evidence
+- focused RED:
+  - `bash -n tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh`: FAIL before fix
+  - failure shape:
+    - `generate_wave_b_cross_platform_summary.sh` reported success
+    - but the expected absolute output file was missing
+    - root cause is the shared write pattern `"$PROJECT_ROOT/$OUTPUT_FILE"` in the report scripts
+- minimal implementation:
+  - new focused contract: `tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh`
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+    - added local `resolve_path(...)` for output path normalization
+    - writes report to `OUTPUT_ABS` instead of `"$PROJECT_ROOT/$OUTPUT_FILE"`
+  - `scripts/check_wave_b_b2_closure_readiness.sh`
+    - now normalizes `OUTPUT_FILE` through existing `resolve_path(...)`
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - now normalizes `OUTPUT_FILE` through existing `resolve_path(...)`
+- focused GREEN:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh`: PASS
+  - `bash -n scripts/check_wave_b_b2_closure_readiness.sh`: PASS
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Windows Runtime Evidence Consistency Hardening
 
 ## Goal

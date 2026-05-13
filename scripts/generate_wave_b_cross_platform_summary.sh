@@ -100,6 +100,15 @@ if [[ -z "$OUTPUT_FILE" ]]; then
   OUTPUT_FILE="test-reports/wave_b_cross_platform_summary_${RUN_ID}.md"
 fi
 
+resolve_path() {
+  local file="$1"
+  if [[ "$file" = /* ]]; then
+    echo "$file"
+  else
+    echo "$PROJECT_ROOT/$file"
+  fi
+}
+
 read_linux_summary_field() {
   local file="$1"
   local key="$2"
@@ -307,9 +316,10 @@ if [[ "$DRY_RUN" == "true" ]]; then
   exit 0
 fi
 
-mkdir -p "$(dirname "$PROJECT_ROOT/$OUTPUT_FILE")"
+OUTPUT_ABS="$(resolve_path "$OUTPUT_FILE")"
+mkdir -p "$(dirname "$OUTPUT_ABS")"
 
-cat > "$PROJECT_ROOT/$OUTPUT_FILE" <<EOF_SUMMARY
+cat > "$OUTPUT_ABS" <<EOF_SUMMARY
 # Wave B Cross-Platform Summary
 
 - run_id: $RUN_ID

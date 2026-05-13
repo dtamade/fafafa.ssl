@@ -187,9 +187,10 @@ if [[ "$DRY_RUN" == "true" ]]; then
   exit 0
 fi
 
-mkdir -p "$(dirname "$PROJECT_ROOT/$OUTPUT_FILE")"
+OUTPUT_ABS="$(resolve_path "$OUTPUT_FILE")"
+mkdir -p "$(dirname "$OUTPUT_ABS")"
 
-cat > "$PROJECT_ROOT/$OUTPUT_FILE" <<EOF_REPORT
+cat > "$OUTPUT_ABS" <<EOF_REPORT
 # Wave B / B2 Closure Readiness
 
 - run_id: $RUN_ID
