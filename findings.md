@@ -35,3 +35,8 @@
   - `check_code_style.py src` 通过
   - `run_phase2_performance_baseline.sh --dry-run --fast-local` 通过
   - 所以当前真正剩下的不是“继续判断项目是否健康”，而是把这份健康状态推送出去
+
+- 这一步已经完成：
+  - branch: `release/v1.5.0-prep-2026-05-15`
+  - tracking: `origin/release/v1.5.0-prep-2026-05-15`
+  - 当前仓库已经有一个明确的远端 handoff 点，可用于后续 merge / tag 审批，不必再依赖本地 `master ahead 94` 这个模糊状态

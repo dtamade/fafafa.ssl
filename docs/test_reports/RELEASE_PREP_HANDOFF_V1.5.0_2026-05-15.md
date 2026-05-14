@@ -2,7 +2,7 @@
 
 Date: 2026-05-15
 
-Status: `READY_FOR_REMOTE_HANDOFF`
+Status: `PUSHED_READY_FOR_APPROVAL`
 
 ## Summary
 
@@ -16,7 +16,8 @@ This handoff converts the current local `v1.5.0` release-control state into a pu
 | Release-prep branch | `release/v1.5.0-prep-2026-05-15` |
 | Base head before metadata batch | `5f23652` |
 | Release-prep metadata commit | `the branch HEAD commit that carries this handoff batch` |
-| Remote push status | `PENDING` |
+| Remote tracking branch | `origin/release/v1.5.0-prep-2026-05-15` |
+| Remote push status | `PUSHED` |
 
 ## Verification Set
 
@@ -43,5 +44,5 @@ Current rerun result:
 
 ## Remaining Gate
 
-- commit the metadata batch
-- push the release-prep branch to `origin`
+- merge approval
+- tag approval

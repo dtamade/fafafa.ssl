@@ -61,6 +61,17 @@
 
 ### Pending
 
-- short review conclusion
-- metadata commit
-- remote push and final handoff confirmation
+- none
+
+### Commit And Push
+
+- review conclusion:
+  - no new product behavior changes were introduced
+  - all release-control contracts and local gates remained green
+  - this batch only externalized the release-prep handoff branch and working-memory state
+- `git commit -m "docs: prepare v1.5.0 release-prep handoff"`
+  - result: `d4d5071`
+- `git push -u origin release/v1.5.0-prep-2026-05-15`
+  - result: PASS
+  - remote branch: `origin/release/v1.5.0-prep-2026-05-15`
+  - PR URL hint: `https://github.com/dtamade/fafafa.ssl/pull/new/release/v1.5.0-prep-2026-05-15`

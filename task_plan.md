@@ -9,18 +9,17 @@
 - [completed] 从 `master` HEAD 创建 `release/v1.5.0-prep-2026-05-15`
 - [completed] 写入 release-prep 计划、handoff 文档草稿与根 working-memory
 - [completed] 在 release-prep 分支上重跑完整 release-control gates
-- [in_progress] review、提交本批 metadata 更新并推送到 `origin`
+- [completed] review、提交本批 metadata 更新并推送到 `origin`
 
 ## Current Blocker
 
-- 当前没有产品实现 blocker；唯一剩余动作是把已 green 的本地状态变成远端可消费的 release-prep 分支。
+- 当前没有 blocker；这批 release-prep 推送收口已经完成。
 
 ## Current Queue
 
 1. 更新 `task_plan.md` / `findings.md` / `progress.md`，把目标切到 release-prep 推送收口。
 2. 新增 `docs/plans/2026-05-15-v1.5.0-release-prep-push.md` 与 `docs/test_reports/RELEASE_PREP_HANDOFF_V1.5.0_2026-05-15.md`。
-3. 给出简短 review 结论，提交本批 metadata 变更。
-4. 推送 `release/v1.5.0-prep-2026-05-15` 到 `origin`，记录最终 handoff 状态。
+3. 如需继续，下一批直接从远端 `release/v1.5.0-prep-2026-05-15` 进入 merge/tag 审批或新的产品实现线。
 
 ## Decision Locks
 
