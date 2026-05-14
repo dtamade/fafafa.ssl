@@ -1,3 +1,16 @@
+# Findings - Wave B/B2 Consistency Partial Linux Examples Truth
+
+## 2026-05-14
+- 继续沿着 `verify_examples_compile.sh -> linux_examples_json -> cross_summary -> consistency` 这条链往下深审后，又暴露出一条新的 consumer-side 假绿灯：
+  - producer 已经把 `stopped_early` / `remaining` / `tested` 写出来了
+  - 但 strict consistency 仍只把 `linux_examples_json` 当成“存在且 parse-valid”
+- 这意味着一份明确自证“只跑了一半”的 examples 报告，仍可能被当成完整 Linux 证据继续向上游流动。
+- 这批最小正确修法就是把 partial truth 接进 active `linux_examples_json` 校验，而不是回退 producer 新字段。
+- 修完后，这条证据链终于前后一致了：
+  - producer 暴露 partial truth
+  - strict consistency 也真正把 partial truth 当成不完整证据
+  - 不会再继续把“只跑了一半的 examples”送上去冒充完整 Linux baseline
+
 # Findings - Wave B Invalid Examples Threshold Truth
 
 ## 2026-05-14

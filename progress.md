@@ -1,3 +1,33 @@
+# Progress - Wave B/B2 Consistency Partial Linux Examples Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `a844452 fix: validate wave b examples threshold input`
+  - continued downward on the same `verify_examples_compile -> linux_examples_json -> consistency` static-review lane
+- Fresh review narrowed the next real issue:
+  - `verify_examples_compile.sh` now emits `tested/remaining/stopped_early`
+  - but `check_wave_b_b2_evidence_consistency.sh` still only checks that `linux_examples_json` exists and parses as json
+  - this leaves a strict false-green path for partial custom linux examples evidence
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-b2-consistency-partial-linux-examples-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_wave_b_b2_consistency_partial_linux_examples_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_partial_linux_examples_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_partial_linux_examples_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `strict consistency should fail when the active linux examples report is explicitly partial`
+- Minimal implementation landed:
+  - `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - `linux_examples_json` now keeps the old `json_valid=YES` green path for ordinary full-run json
+    - but parse-valid partial reports now surface as `json_valid=YES; partial_examples_report=YES (...)`
+    - those partial reports now correctly flip strict consistency to `INCONSISTENT`
+- GREEN verification:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_partial_linux_examples_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_partial_linux_examples_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_generic_linux_examples_fallback_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B Invalid Examples Threshold Truth
 
 ## 2026-05-14

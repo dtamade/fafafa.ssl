@@ -516,7 +516,83 @@ PY
     json_ok="YES"
   fi
 
-  rows+=("| $label | $rel_path | YES | n/a | n/a | json_valid=$json_ok |")
+  local note="json_valid=$json_ok"
+  if [[ "$json_ok" == "YES" && "$label" == "linux_examples_json" ]]; then
+    local partial_info
+    partial_info="$(python3 - "$abs_path" <<'PY'
+import json
+import sys
+
+def as_bool(value):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() == "true"
+    return False
+
+def as_float(value):
+    if value is None:
+        return None
+    if isinstance(value, str) and value.strip() == "":
+        return None
+    try:
+        return float(value)
+    except Exception:
+        return None
+
+with open(sys.argv[1], "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+summary = data.get("summary", {})
+reasons = []
+
+if as_bool(summary.get("stopped_early")):
+    reasons.append("stopped_early=true")
+
+remaining = as_float(summary.get("remaining"))
+if remaining is not None and remaining > 0:
+    if remaining.is_integer():
+        reasons.append(f"remaining={int(remaining)}")
+    else:
+        reasons.append(f"remaining={remaining}")
+
+total = as_float(summary.get("total"))
+tested = as_float(summary.get("tested"))
+skipped = as_float(summary.get("skipped"))
+if remaining is None and total is not None and tested is not None:
+    effective_total = total - (skipped or 0.0)
+    if tested < effective_total:
+        if tested.is_integer():
+            tested_text = str(int(tested))
+        else:
+            tested_text = str(tested)
+        if effective_total.is_integer():
+            total_text = str(int(effective_total))
+        else:
+            total_text = str(effective_total)
+        reasons.append(f"tested={tested_text}/{total_text}")
+
+if reasons:
+    print("YES")
+    print("; ".join(reasons))
+else:
+    print("NO")
+PY
+)"
+    local partial_flag
+    local partial_reason
+    partial_flag="$(echo "$partial_info" | sed -n '1p')"
+    partial_reason="$(echo "$partial_info" | sed -n '2p')"
+    if [[ "$partial_flag" == "YES" ]]; then
+      note="json_valid=YES; partial_examples_report=YES"
+      if [[ -n "$partial_reason" ]]; then
+        note="$note ($partial_reason)"
+      fi
+      runid_mismatch=$((runid_mismatch + 1))
+    fi
+  fi
+
+  rows+=("| $label | $rel_path | YES | n/a | n/a | $note |")
   if [[ "$json_ok" != "YES" ]]; then
     runid_mismatch=$((runid_mismatch + 1))
   fi

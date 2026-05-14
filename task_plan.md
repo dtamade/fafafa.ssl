@@ -1,3 +1,51 @@
+# Task Plan - Wave B/B2 Consistency Partial Linux Examples Truth
+
+## Goal
+收口 `check_wave_b_b2_evidence_consistency.sh` 对 partial `linux_examples_json` 的盲信，避免 strict consistency 继续吞掉 `stopped_early=true` / `remaining>0` 的半程 examples 证据。
+
+## Current Batch
+1. 写 focused contract，证明 partial custom `linux_examples_json` 当前仍会让 strict consistency 错误保持绿色。
+2. 最小修改脚本，只对 `linux_examples_json` 增加 partial-truth 校验。
+3. 复跑 focused 合同与 linux-examples 邻近 consistency 合同。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified partial linux_examples false-green path in wave b/b2 consistency
+- [completed] wrote focused contract for partial linux_examples truth
+- [completed] minimal partial-truth validation on active linux_examples_json
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- `verify_examples_compile.sh` 已经把 partial-run truth 编码进 JSON：
+  - `tested`
+  - `remaining`
+  - `stopped_early`
+- 但当前 `check_wave_b_b2_evidence_consistency.sh` 对 `linux_examples_json` 仍只校验：
+  - 文件存在
+  - JSON 可解析
+- 这会制造一条新的 strict 假绿灯：
+  - active custom `linux_examples_json` 即使显式 `stopped_early=true`
+  - 甚至 `remaining>0`
+  - strict consistency 仍可能继续返回 `CONSISTENT`
+- 这批最小正确修法不会改其他 artifact，只把 `linux_examples_json` 的 partial truth 接进来。
+- focused RED:
+  - 新增 `tests/scripts/test_wave_b_b2_consistency_partial_linux_examples_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_partial_linux_examples_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_partial_linux_examples_contract.sh`: FAIL before fix
+  - failure shape:
+    - `strict consistency should fail when the active linux examples report is explicitly partial`
+- minimal implementation:
+  - 更新 `scripts/check_wave_b_b2_evidence_consistency.sh`
+    - `linux_examples_json` 在 `json_valid=YES` 之后继续检查 `stopped_early` / `remaining` / 可推导的 `tested`
+    - partial report 现在会显式写成 `partial_examples_report=YES` 并计入 `INCONSISTENT`
+- focused GREEN:
+  - `bash -n scripts/check_wave_b_b2_evidence_consistency.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_b2_consistency_partial_linux_examples_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_partial_linux_examples_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_linux_examples_path_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_generic_linux_examples_fallback_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B Invalid Examples Threshold Truth
 
 ## Goal
