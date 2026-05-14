@@ -1,3 +1,37 @@
+# Progress - Wave C B129 Oncall Shell Hardening
+
+## 2026-05-15
+- Post-commit continue:
+  - after landing `9fc7346 fix: harden wave c b125 shell execution`, continued upward in the same local-guard chain to the next outer orchestration layer
+- Fresh review narrowed the next real issue:
+  - `scripts/run_wave_c_local_guard_oncall_check.sh` still drove B125/B126 through `eval "$cmd"`
+  - even with B125 fixed, B129 still reintroduced the same shell execution boundary around `RUN_ID` and derived output paths
+- Context gathering:
+  - no existing focused contract covered B129 shell execution
+  - selected `tests/scripts/test_export_wave_c_local_guard_status_json_tmp_lookup_contract.sh` as the nearest downstream regression guard because B142 consumes B129 evidence
+- New batch plan recorded in `docs/plans/2026-05-15-wave-c-b129-shell-hardening.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_run_wave_c_local_guard_oncall_check_run_id_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_run_wave_c_local_guard_oncall_check_run_id_injection_contract.sh` -> FAIL before fix
+    - exact failure: `fake nested B125/B126 runners should observe run-id values`
+- Root-cause refinement during the batch:
+  - after switching to argv execution, the first green attempt still failed because B129 had never created `tmp/test-reports`
+  - that meant step-log redirection could fail before the nested scripts ever ran
+  - this was a real product gap in the same file, so it was fixed inside the batch instead of papering over it in the contract
+- Minimal implementation:
+  - `tests/scripts/test_run_wave_c_local_guard_oncall_check_run_id_injection_contract.sh`
+    - added a focused contract that proves `run-id` must stay data-only through B129
+  - `scripts/run_wave_c_local_guard_oncall_check.sh`
+    - added `shell_join()` for display-only command text
+    - replaced `run_step() -> eval "$cmd"` with direct argv execution
+    - switched both B125/B126 invocations to explicit argv arrays
+    - added `mkdir -p "$ONCALL_DIR"` so step logs/reports always have a writable parent directory
+- Focused GREEN verification:
+  - `bash tests/scripts/test_run_wave_c_local_guard_oncall_check_run_id_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_export_wave_c_local_guard_status_json_tmp_lookup_contract.sh` -> PASS
+  - `bash -n scripts/run_wave_c_local_guard_oncall_check.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave C B125 Local-First Guard Bundle Shell Hardening
 
 ## 2026-05-15

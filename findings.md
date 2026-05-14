@@ -1,3 +1,21 @@
+# Findings - Wave C B129 Oncall Shell Hardening
+
+## 2026-05-15
+- 在 B125 收口后继续往上审查，B129 oncall 立刻暴露出同型但更外层的剩余执行面：
+  - `B125/B126` 两个 step 仍统一经过 `eval "$cmd"`
+  - 同一个 `RUN_ID` 继续同时进入 `--run-id` 和派生的 `--output` 路径
+- 这意味着即使底层 B125 已经安全，B129 仍会在自己的 orchestration 层重新把动态值暴露给 shell。
+- 这批最小正确修法仍然是保持 display 与 execution 分离：
+  - display 命令继续保留
+  - 真正执行切成 direct argv
+- 静态审查时还顺手抓到一个同文件真实小缺口：
+  - B129 自己没有先建 `tmp/test-reports`
+  - step log 重定向可能先于子脚本执行而失败
+- 修复后，B129 oncall 的剩余 shell 执行面已经被切掉，而且内部运行目录前提也补齐了：
+  - `run-id` 只作为 argv 数据透传给 B125/B126
+  - `tmp/test-reports` 在 step 执行前会被创建
+  - 下游 B142 tmp lookup 契约保持 green
+
 # Findings - Wave C B125 Local-First Guard Bundle Shell Hardening
 
 ## 2026-05-15

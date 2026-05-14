@@ -69,25 +69,60 @@ history_report="$ONCALL_DIR/wave_c_b126_local_guard_history_${RUN_ID}.md"
 bundle_log="$ONCALL_DIR/wave_c_b125_local_guard_bundle_${RUN_ID}.oncall.log"
 history_log="$ONCALL_DIR/wave_c_b126_local_guard_history_${RUN_ID}.oncall.log"
 
+mkdir -p "$ONCALL_DIR"
+
+shell_join() {
+  local parts=()
+  local part
+  for part in "$@"; do
+    parts+=("$(printf '%q' "$part")")
+  done
+  local IFS=' '
+  echo "${parts[*]}"
+}
+
 run_step() {
-  local cmd="$1"
+  local step_name="$1"
   local log="$2"
+  local cmd_desc="$3"
+  shift 3
+
+  echo "[wave-c-b129] [$step_name] $cmd_desc" >&2
 
   set +e
-  eval "$cmd" > "$log" 2>&1
+  "$@" > "$log" 2>&1
   local ec=$?
   set -e
 
+  echo "[wave-c-b129] [$step_name] exit=$ec log=$log" >&2
   echo "$ec"
 }
 
+b125_cmd_words=(
+  bash
+  scripts/run_wave_c_local_first_guard_bundle.sh
+  --run-id "$RUN_ID"
+  --strict
+  --output "$bundle_report"
+)
 bundle_exit=$(run_step \
-  "bash scripts/run_wave_c_local_first_guard_bundle.sh --run-id ${RUN_ID} --strict --output ${bundle_report}" \
-  "$bundle_log")
+  "b125_local_guard_bundle" \
+  "$bundle_log" \
+  "$(shell_join "${b125_cmd_words[@]}")" \
+  "${b125_cmd_words[@]}")
 
+b126_cmd_words=(
+  bash
+  scripts/summarize_wave_c_local_guard_history.sh
+  --run-id "$RUN_ID"
+  --strict
+  --output "$history_report"
+)
 history_exit=$(run_step \
-  "bash scripts/summarize_wave_c_local_guard_history.sh --run-id ${RUN_ID} --strict --output ${history_report}" \
-  "$history_log")
+  "b126_local_guard_history" \
+  "$history_log" \
+  "$(shell_join "${b126_cmd_words[@]}")" \
+  "${b126_cmd_words[@]}")
 
 workflow_state="UNKNOWN"
 if [[ -f ".github/workflows/wave-c-quick-sprint-manual.yml.disabled" && ! -f ".github/workflows/wave-c-quick-sprint-manual.yml" ]]; then
