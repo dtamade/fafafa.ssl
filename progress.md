@@ -1,3 +1,36 @@
+# Progress - Wave B macOS Path-Check Live Passthrough
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `311e7a4 fix: harden wave b linux shell quoting`
+  - continued static review from the Linux gate execution boundary back into the next highest-value macOS gate neighbor
+- Fresh review narrowed the next real issue:
+  - `run_wave_b_macos_gate.sh --path-check-live` still called `run_macos_openssl_path_check_draft.sh` without forwarding `--openssl-root`, `--modules`, or `--verbose`
+- One-off repro captured the gate-chain drift:
+  - direct path-check repro with inherited env `OPENSSL_ROOT=...` + `--skip-module-tests --skip-phase2-dryrun`
+    - result: script still exited `1` with `[FAIL] OpenSSL root not detected. Use --openssl-root DIR`
+  - fake macOS gate repro with `--path-check-live --openssl-root <custom> --modules OnlyThisOne`
+    - result: probe / compile / modules / examples all stayed green, but path-check still failed first, proving the live sub-step had drifted away from the gate's main truth
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-macos-path-check-live-passthrough.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_wave_b_macos_gate_path_check_live_passthrough_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_path_check_live_passthrough_contract.sh` -> FAIL before fix
+    - exact failure: `wave b macOS gate should stay green when live path-check receives the same custom openssl root and module settings`
+- Minimal implementation:
+  - `tests/scripts/test_wave_b_macos_gate_path_check_live_passthrough_contract.sh`
+    - added a focused contract that isolates gate-side passthrough truth for live path-check
+  - `scripts/run_wave_b_macos_gate.sh`
+    - updated `path_check_words` to pass `--openssl-root` when present
+    - updated `path_check_words` to always pass `--modules "$MODULE_SET"`
+    - updated `path_check_words` to pass `--verbose` when verbose mode is enabled
+- Focused GREEN verification:
+  - `bash tests/scripts/test_wave_b_macos_gate_path_check_live_passthrough_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_module_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_openssl_root_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh` -> PASS
+  - `bash -n scripts/run_wave_b_macos_gate.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B Linux Shell Quote Hardening
 
 ## 2026-05-14

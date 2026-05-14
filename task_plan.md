@@ -1,3 +1,42 @@
+# Task Plan - Wave B macOS Path-Check Live Passthrough
+
+## Goal
+收口 `run_wave_b_macos_gate.sh --path-check-live` 与 `run_macos_openssl_path_check_draft.sh` 之间的参数漂移，避免 live path-check 忽略 gate 的 `--openssl-root` / `--modules` / `--verbose` 真值。
+
+## Current Batch
+1. 写 focused contract，证明 live path-check 当前没有透传 gate 的自定义 root / modules / verbose。
+2. 最小修改 `run_wave_b_macos_gate.sh`，只给 path-check step 补参数透传。
+3. 复跑新合同和 macOS gate 邻近合同。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified macos path-check live passthrough drift in wave b gate
+- [completed] wrote focused contract for path-check live passthrough
+- [completed] minimal path-check argument passthrough alignment in macos gate producer
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 macOS gate 的 live path-check 原先只调用：
+  - `bash scripts/run_macos_openssl_path_check_draft.sh`
+  - dry-run 才额外追加 `--dry-run`
+- 一次性复现已经证明两层真实漂移：
+  - `--openssl-root` 会在 live path-check 中被忽略，path-check 直接报 `OpenSSL root not detected`
+  - `MODULE_SET` 与 `VERBOSE` 也没有传给 path-check 子脚本，因此 path-check 与 gate 主流程可能消费不同真值
+- focused contract 已锁住最小真实风险：
+  - `tests/scripts/test_wave_b_macos_gate_path_check_live_passthrough_contract.sh`
+    - live path-check 必须收到 `--openssl-root`
+    - 必须收到 `--modules`
+    - `VERBOSE=true` 时必须收到 `--verbose`
+    - macOS gate summary 里的 path-check 必须保持 PASS
+- 修复后验证结果：
+  - `bash -n tests/scripts/test_wave_b_macos_gate_path_check_live_passthrough_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_path_check_live_passthrough_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_module_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_openssl_root_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh`：PASS
+  - `bash -n scripts/run_wave_b_macos_gate.sh`：PASS
+  - `git diff --check`：PASS
+
 # Task Plan - Wave B Linux Shell Quote Hardening
 
 ## Goal

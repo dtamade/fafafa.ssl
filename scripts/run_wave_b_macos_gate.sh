@@ -223,6 +223,13 @@ probe_words=("${step_env_words[@]}" bash scripts/detect_macos_openssl_enhanced.s
 probe_cmd="$(build_step_command "${probe_words[@]}") > $(printf '%q' "$PROBE_JSON_REL")"
 
 path_check_words=("${step_env_words[@]}" bash scripts/run_macos_openssl_path_check_draft.sh)
+if [[ -n "$OPENSSL_ROOT" ]]; then
+  path_check_words+=(--openssl-root "$OPENSSL_ROOT")
+fi
+path_check_words+=(--modules "$MODULE_SET")
+if [[ "$VERBOSE" == "true" ]]; then
+  path_check_words+=(--verbose)
+fi
 if [[ "$PATH_CHECK_DRY_RUN" == "true" ]]; then
   path_check_words+=("--dry-run")
 fi

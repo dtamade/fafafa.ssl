@@ -1,3 +1,19 @@
+# Findings - Wave B macOS Path-Check Live Passthrough
+
+## 2026-05-14
+- 继续沿着 macOS gate 的 path-check live 邻近边界往下审查后，抓到一条 gate-chain 自身的真值漂移：
+  - gate 主流程已经拿到了 `OPENSSL_ROOT` / `MODULE_SET` / `VERBOSE`
+  - 但 path-check 子脚本原先没有收到这些 CLI 参数
+- 这不是抽象上的“参数没传全”，而是已经会制造真实分叉：
+  - live path-check 会忽略自定义 `openssl-root`
+  - path-check 与 modules step 可能消费不同模块集与 verbose 模式
+- 这批最小正确修法不是改 path-check 子脚本的内部契约，而是把 gate 自己已经持有的真值明确透传下去。
+- 生产修复后，macOS gate 的 live path-check 已重新和主流程对齐：
+  - `--openssl-root` 只要提供，就会传给 path-check
+  - `--modules` 总是传给 path-check
+  - `VERBOSE=true` 时也同步传给 path-check
+  - 之前的 shell-safe command assembly 仍保持成立
+
 # Findings - Wave B Linux Shell Quote Hardening
 
 ## 2026-05-14
