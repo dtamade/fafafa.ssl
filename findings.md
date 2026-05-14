@@ -1,3 +1,21 @@
+# Findings - Wave B Linux Examples Threshold Truth
+
+## 2026-05-14
+- 继续沿着 `verify_examples_compile.sh -> examples_compile_ci_gate.json -> wave_b_ci_gate_summary` 这条 Linux truth chain 深审后，发现 examples gate 还有一条 producer-side 语义漂移：
+  - `verify_examples_compile.sh` 会在 `failed > 0` 时 `exit 1`
+  - 但 `run_wave_b_ci_gate.sh` 的用户契约写的是“按通过率阈值判定”
+  - 修复前 Linux gate 同时要求“阈值达标 + helper 返回 0”
+- 这会制造一个典型的假失败：
+  - examples JSON 已经给出达标的 `pass_rate`
+  - helper 仍因为少量 failed files 返回 1
+  - Linux gate 就会继续把 `verify_examples_compile` step 和 `Overall Status` 判成 FAIL
+- 这不是更严格就更好，而是同一条链路里两个层次的真值被混在了一起：
+  - helper exit code 代表的是底层失败文件存在与否
+  - 上层 gate 真值应该是“是否达到当前约定阈值”
+- 这批最小正确修法不是改 helper，而是把 consumer 真值收口：
+  - 只要 JSON 可解析且 `pass_rate >= threshold`，examples gate 就判 `PASS`
+  - helper `exit 1` 继续留在 summary 的 exit code 列，作为 evidence，而不是最终 gate 判定
+
 # Findings - Wave B Linux Summary Dry-Run Truth
 
 ## 2026-05-14

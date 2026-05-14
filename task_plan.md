@@ -1,3 +1,51 @@
+# Task Plan - Wave B Linux Examples Threshold Truth
+
+## Goal
+收口 `scripts/run_wave_b_ci_gate.sh` 的 examples gate 语义漂移，避免 `examples pass_rate` 已达阈值时，Linux Wave B gate 仍错误落到 FAIL。
+
+## Current Batch
+1. 写 focused contract，证明 examples `pass_rate` 达阈值时，Linux gate 仍因为 helper `exit 1` 被判成 FAIL。
+2. 最小修改 `scripts/run_wave_b_ci_gate.sh`，把 examples step 的真值收口到阈值判定，而不是 helper 零失败。
+3. 复跑 Linux gate 邻近合同。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified examples-threshold semantic drift in Linux Wave B gate
+- [completed] wrote focused contract for threshold truth
+- [completed] minimal threshold-truth alignment in Linux gate producer
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 `scripts/run_wave_b_ci_gate.sh` 在修复前还有一条 producer-side 语义漂移：
+  - 用户契约写的是“示例编译门禁（按通过率阈值判定）”
+  - 默认阈值是 `80.0`
+  - 但实际实现还额外要求 `verify_examples_compile.sh` 返回码必须是 0
+- 这会制造一个很隐蔽的假失败：
+  - `examples pass_rate` 已经达阈值
+  - 但只要 helper 因少量 failed files `exit 1`
+  - Linux gate 仍会把 examples step 和 overall 判成 FAIL
+- 这与 repo 现有真相不一致：
+  - 路线图和脚本帮助都把 examples gate 定义成 threshold gate
+  - helper 退出码只表达“是否存在 failed files”，不是“是否达到上层门禁阈值”
+- focused RED:
+  - 新增 `tests/scripts/test_wave_b_ci_gate_examples_threshold_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_ci_gate_examples_threshold_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_threshold_contract.sh`: FAIL before fix
+  - failure shape:
+    - `wave b linux gate should stay green when examples pass_rate meets threshold even if helper reports failed files`
+- minimal implementation:
+  - 更新 `scripts/run_wave_b_ci_gate.sh`
+    - examples step 现在只要 JSON 可解析且 `pass_rate >= threshold` 就判成 `PASS`
+    - helper `exit 1` 继续保留在 summary 的 exit code 列，作为底层 evidence
+- focused GREEN:
+  - `bash -n scripts/run_wave_b_ci_gate.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_ci_gate_examples_threshold_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_threshold_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_dry_run_truth_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_run_id_passthrough_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_fast_local_clean_worktree_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B Linux Summary Dry-Run Truth
 
 ## Goal

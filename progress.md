@@ -1,3 +1,37 @@
+# Progress - Wave B Linux Examples Threshold Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `11b2399 fix: align wave b linux dry-run truth`
+  - continued on the same `verify_examples_compile.sh -> examples_compile_ci_gate.json -> wave_b_ci_gate_summary` review lane
+- Fresh review narrowed the next real issue:
+  - `run_wave_b_ci_gate.sh` advertises examples gating by pass-rate threshold
+  - but it still also required `verify_examples_compile.sh` to exit 0
+  - helper exit semantics and gate-threshold semantics were therefore mixed together
+- Reproduced the drift with a fake Linux gate fixture project:
+  - fake `verify_examples_compile.sh` wrote valid JSON with `pass_rate=94.7`
+  - helper still exited 1 because it simulated two failed files
+  - Linux gate summary still returned non-0 and marked `verify_examples_compile` plus overall as FAIL before the fix
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-linux-examples-threshold-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_wave_b_ci_gate_examples_threshold_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_ci_gate_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_threshold_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `wave b linux gate should stay green when examples pass_rate meets threshold even if helper reports failed files`
+- Minimal implementation landed:
+  - `scripts/run_wave_b_ci_gate.sh`
+    - examples step now treats valid JSON + `pass_rate >= threshold` as PASS
+    - helper exit code remains visible in the summary as evidence only
+- GREEN verification:
+  - `bash -n scripts/run_wave_b_ci_gate.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_ci_gate_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_dry_run_truth_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_run_id_passthrough_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_fast_local_clean_worktree_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B Linux Summary Dry-Run Truth
 
 ## 2026-05-14
