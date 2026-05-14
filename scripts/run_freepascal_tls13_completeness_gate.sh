@@ -114,13 +114,68 @@ TEST_FILES=(
   "tests/test_capability_cache.pas"
 )
 
-run_cmd() {
-  local cmd="$1"
-  echo "[GATE] $cmd"
+shell_join() {
+  local parts=()
+  local part
+  for part in "$@"; do
+    parts+=("$(printf '%q' "$part")")
+  done
+  local IFS=' '
+  echo "${parts[*]}"
+}
+
+run_test_case() {
+  local name="$1"
+  local file="$2"
+  local units_dir="$WORK_ROOT/${name}.units"
+  local bin_dir="$WORK_ROOT/${name}.bin"
+  local exe_path="$bin_dir/$name"
+  local compile_cmd_words=(
+    "$FPC_EXE"
+    -B
+    -Fu./src
+    -Fu./tests
+    -Fu./tests/framework
+    "-FU$units_dir"
+    "-FE$bin_dir"
+    "-o$exe_path"
+    "$file"
+  )
+  local run_cmd_words=(
+    "$exe_path"
+  )
+  local display_cmd
+  display_cmd="mkdir -p $(shell_join "$units_dir" "$bin_dir") && $(shell_join "${compile_cmd_words[@]}") && $(shell_join "${run_cmd_words[@]}")"
+
+  echo "[GATE] $display_cmd"
+
   if [[ "$DRY_RUN" == "true" ]]; then
     return 0
   fi
-  bash -c "$cmd"
+
+  mkdir -p "$PROJECT_ROOT/$units_dir" "$PROJECT_ROOT/$bin_dir"
+
+  set +e
+  (
+    cd "$PROJECT_ROOT"
+    "${compile_cmd_words[@]}"
+  )
+  local compile_ec=$?
+  local run_ec=0
+  if [[ "$compile_ec" == "0" ]]; then
+    (
+      cd "$PROJECT_ROOT"
+      "${run_cmd_words[@]}"
+    )
+    run_ec=$?
+  fi
+  set -e
+
+  if [[ "$compile_ec" != "0" ]]; then
+    return "$compile_ec"
+  fi
+
+  return "$run_ec"
 }
 
 mkdir -p "$PROJECT_ROOT/$REPORTS_DIR"
@@ -138,10 +193,7 @@ if [[ "$DRY_RUN" == "true" ]]; then
   for idx in "${!TEST_NAMES[@]}"; do
     name="${TEST_NAMES[$idx]}"
     file="${TEST_FILES[$idx]}"
-    units_dir="$WORK_ROOT/${name}.units"
-    bin_dir="$WORK_ROOT/${name}.bin"
-    cmd="cd '$PROJECT_ROOT' && mkdir -p '$units_dir' '$bin_dir' && '$FPC_EXE' -B -Fu./src -Fu./tests -Fu./tests/framework -FU'$units_dir' -FE'$bin_dir' -o'$bin_dir/$name' '$file' && '$bin_dir/$name'"
-    run_cmd "$cmd"
+    run_test_case "$name" "$file"
   done
   echo "[PASS] dry-run complete"
   exit 0
@@ -163,11 +215,8 @@ fail_count=0
 for idx in "${!TEST_NAMES[@]}"; do
   name="${TEST_NAMES[$idx]}"
   file="${TEST_FILES[$idx]}"
-  units_dir="$WORK_ROOT/${name}.units"
-  bin_dir="$WORK_ROOT/${name}.bin"
-  cmd="cd '$PROJECT_ROOT' && mkdir -p '$units_dir' '$bin_dir' && '$FPC_EXE' -B -Fu./src -Fu./tests -Fu./tests/framework -FU'$units_dir' -FE'$bin_dir' -o'$bin_dir/$name' '$file' && '$bin_dir/$name'"
 
-  if run_cmd "$cmd"; then
+  if run_test_case "$name" "$file"; then
     echo "| \`$name\` | PASS |" >> "$SUMMARY_FILE"
     pass_count=$((pass_count + 1))
   else

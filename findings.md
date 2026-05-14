@@ -1,3 +1,23 @@
+# Findings - FreePascal TLS 1.3 Completeness Gate Shell Hardening
+
+## 2026-05-15
+- 当前纯 Pascal 主线最核心的 focused gate 自己仍保留一条真实 shell 执行面：
+  - `run_freepascal_tls13_completeness_gate.sh` 仍通过 `bash -c "$cmd"` 执行每个 test lane
+  - `RUN_ID` / `WORK_ROOT` / `FPC_EXE` / `TEST_FILE` 会在真正执行前重新进入 shell 解释层
+- 这不是外围草案脚本问题，而是当前 roadmap / CI / release workflow 都在依赖的 focused gate 本体仍未进入新的 shell-hardening 标准。
+- 这批最小正确修法继续保持 display 与 execution 分离：
+  - display 命令继续保留
+  - 真正执行切成 direct argv
+  - `mkdir -p` 前置到 shell 外，不再依赖 `&&`
+- 这批也顺手抓到一个真实测试脆点：
+  - 既有 `test_freepascal_tls13_completeness_gate_contract.sh` 使用 `pipefail + grep -q` 检查长 dry-run 输出
+  - 在当前输出规模下会把命中误判成失败
+  - 这个问题属于合同本身，需要和生产修复一起收口
+- 修复后，focused gate 的执行真值已经回到单一安全面：
+  - `run-id` 只作为 argv 数据进入 tmp 路径与 fake fpc 参数
+  - `bash -c / eval` 不再参与执行
+  - 既有 dry-run、PATH 解析、summary 契约继续 green
+
 # Findings - Wave C B101 Validation Playbook Shell Hardening
 
 ## 2026-05-15

@@ -1,3 +1,37 @@
+# Progress - FreePascal TLS 1.3 Completeness Gate Shell Hardening
+
+## 2026-05-15
+- Fresh review narrowed the next real issue:
+  - `scripts/run_freepascal_tls13_completeness_gate.sh` still executed each test lane through `bash -c "$cmd"`
+  - that left the current focused gate itself below the shell-hardening bar already established for adjacent orchestration scripts
+- Existing regression surface:
+  - `tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh` already guarded dry-run output, CI wiring, PATH-resolved fake fpc, and summary truth
+  - no existing focused contract covered shell execution boundaries inside the gate
+- New batch plan recorded in `docs/plans/2026-05-15-freepascal-tls13-completeness-gate-shell-hardening.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_freepascal_tls13_completeness_gate_run_id_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_freepascal_tls13_completeness_gate_run_id_injection_contract.sh` -> FAIL before fix
+    - exact failure: `freepascal tls13 completeness gate should not execute shell content embedded in --run-id`
+  - `bash tests/scripts/test_freepascal_tls13_completeness_gate_no_shell_execution_contract.sh` -> FAIL before fix
+    - exact failure: `freepascal tls13 completeness gate should not rely on shell-string execution`
+- Minimal implementation:
+  - `tests/scripts/test_freepascal_tls13_completeness_gate_run_id_injection_contract.sh`
+    - added a focused contract for run-id payload passthrough without shell execution
+  - `tests/scripts/test_freepascal_tls13_completeness_gate_no_shell_execution_contract.sh`
+    - added a focused contract that blocks any continued `bash -c / eval` execution model
+  - `scripts/run_freepascal_tls13_completeness_gate.sh`
+    - added `shell_join()` for display-only command text
+    - replaced `bash -c "$cmd"` with direct argv execution
+    - moved per-test `mkdir -p` outside shell-string execution
+  - `tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+    - fixed a real contract fragility where `pipefail + grep -q` misclassified long dry-run output as failure
+- Focused GREEN verification:
+  - `bash tests/scripts/test_freepascal_tls13_completeness_gate_run_id_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_freepascal_tls13_completeness_gate_no_shell_execution_contract.sh` -> PASS
+  - `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh` -> PASS
+  - `bash -n scripts/run_freepascal_tls13_completeness_gate.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave C B101 Validation Playbook Shell Hardening
 
 ## 2026-05-15

@@ -42,14 +42,14 @@ for expected in \
   "tests/test_freepascal_backend_basic.pas" \
   "tests/test_capability_cache.pas"
 do
-  if ! printf '%s\n' "$output" | grep -Fq -- "$expected"; then
+  if ! grep -Fq -- "$expected" <<< "$output"; then
     echo "[FAIL] dry-run output must mention $expected"
     printf '%s\n' "$output"
     exit 1
   fi
 done
 
-if ! printf '%s\n' "$output" | grep -Fq -- "tmp/freepascal_tls13_completeness_"; then
+if ! grep -Fq -- "tmp/freepascal_tls13_completeness_" <<< "$output"; then
   echo "[FAIL] fast-local dry-run must keep binaries under tmp/freepascal_tls13_completeness_<run_id>"
   printf '%s\n' "$output"
   exit 1

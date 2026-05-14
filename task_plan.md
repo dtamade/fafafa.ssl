@@ -1,3 +1,39 @@
+# Task Plan - FreePascal TLS 1.3 Completeness Gate Shell Hardening
+
+## Goal
+收口 `scripts/run_freepascal_tls13_completeness_gate.sh` 的 `bash -c` / 字符串执行风险，避免当前 focused gate 继续把 `run-id` 等动态值暴露给 shell 解释层。
+
+## Current Batch
+1. 写 focused contract，证明 `run-id` payload 当前仍可从 focused gate 的命令串逃逸。
+2. 写 focused contract，明确脚本不得继续依赖 `bash -c` / `eval` 执行模型。
+3. 最小修改脚本，把 test lane 执行切到 direct argv，并保留 dry-run/operator-facing 文本。
+4. 复跑新合同、既有 completeness gate contract 和脚本语法检查。
+5. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified shell-string execution boundary in freepascal tls13 completeness gate
+- [completed] added focused contracts for run-id escape and no-shell execution
+- [completed] replaced focused gate shell-string execution with direct argv execution
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 focused gate 原先通过：
+  - `run_cmd() -> bash -c "$cmd"`
+  - 每个 test lane 都把 `RUN_ID` / `WORK_ROOT` / `FPC_EXE` / `TEST_FILE` 拼进字符串命令
+- focused contract 已锁住这条执行边界：
+  - `tests/scripts/test_freepascal_tls13_completeness_gate_run_id_injection_contract.sh`
+    - payload 不得执行
+    - fake fpc 必须把完整 `run-id` 当作参数路径数据消费
+  - `tests/scripts/test_freepascal_tls13_completeness_gate_no_shell_execution_contract.sh`
+    - focused gate 不得再依赖 `bash -c` / `eval`
+- 修复后验证结果：
+  - `bash -n tests/scripts/test_freepascal_tls13_completeness_gate_run_id_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_freepascal_tls13_completeness_gate_run_id_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_freepascal_tls13_completeness_gate_no_shell_execution_contract.sh`：PASS
+  - `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`：PASS
+  - `bash -n scripts/run_freepascal_tls13_completeness_gate.sh`：PASS
+  - `git diff --check`：PASS
+
 # Task Plan - Wave C B101 Validation Playbook Shell Hardening
 
 ## Goal
