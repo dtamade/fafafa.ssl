@@ -464,6 +464,27 @@ if [[ "$WITH_TLS13_SIGN_BENCH" == "true" && "$bench_status" != "PASS" ]]; then
   overall_status="FAIL"
 fi
 
+mode_label="live"
+if [[ "$DRY_RUN" == "true" ]]; then
+  mode_label="dry-run"
+  if [[ "$WITH_COMPILE" == "true" ]]; then
+    compile_status="DRY_RUN"
+  fi
+  if [[ "$WITH_MODULES" == "true" ]]; then
+    modules_status="DRY_RUN"
+  fi
+  if [[ "$WITH_EXAMPLES" == "true" ]]; then
+    examples_status="DRY_RUN"
+  fi
+  if [[ "$WITH_TLS13_SIGN_PURITY_CHECK" == "true" ]]; then
+    purity_status="DRY_RUN"
+  fi
+  if [[ "$WITH_TLS13_SIGN_BENCH" == "true" ]]; then
+    bench_status="DRY_RUN"
+  fi
+  overall_status="DRY_RUN"
+fi
+
 compile_log_rel="-"
 modules_log_rel="-"
 examples_log_rel="-"
@@ -496,6 +517,7 @@ cat > "$SUMMARY_OUT" <<EOF_SUMMARY
 
 - Run ID: \`$RUN_ID\`
 - Generated At: \`$(date '+%Y-%m-%d %H:%M:%S %z')\`
+- Mode: \`$mode_label\`
 - Project Root: \`$PROJECT_ROOT\`
 - Overall Status: **$overall_status**
 
@@ -543,7 +565,7 @@ EOF_SUMMARY
 echo "[WAVE-B] summary: $SUMMARY_OUT"
 
 auto_exit=1
-if [[ "$overall_status" == "PASS" ]]; then
+if [[ "$overall_status" == "PASS" || "$overall_status" == "DRY_RUN" ]]; then
   auto_exit=0
 fi
 

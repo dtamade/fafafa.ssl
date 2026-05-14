@@ -1,3 +1,42 @@
+# Progress - Wave B Linux Summary Dry-Run Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `a2b6f50 fix: normalize cross summary linux state`
+  - continued upward on the same `linux_summary -> cross_summary -> closure -> consistency -> handoff` static-review lane
+- Fresh review narrowed the next real issue:
+  - Linux gate summary is the direct producer for upstream Wave B truth
+  - but `scripts/run_wave_b_ci_gate.sh --dry-run` still emitted a summary whose enabled steps and overall looked fully `PASS`
+  - this meant an unexecuted dry-run report could masquerade as a real Linux green gate
+- Reproduced the fake-green shape with a direct dry-run summary:
+  - `Overall Status: **PASS**`
+  - `compile_all_modules / run_all_module_tests / verify_examples_compile`: all `PASS`
+  - `Examples Gate Metrics`: still `n/a`
+- Cross-checked repo truth:
+  - `scripts/run_wave_b_macos_gate.sh` already uses `DRY_RUN`
+  - `scripts/run_wave_b_windows_gate.ps1` already uses `DRY_RUN`
+  - Linux gate was the only producer still leaking fake `PASS`
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-linux-summary-dry-run-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_wave_b_ci_gate_dry_run_truth_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_ci_gate_dry_run_truth_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_dry_run_truth_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `dry-run linux gate summary should record Overall Status DRY_RUN instead of pretending the gate passed`
+- Minimal implementation landed:
+  - `scripts/run_wave_b_ci_gate.sh`
+    - dry-run now sets enabled step statuses to `DRY_RUN`
+    - overall now becomes `DRY_RUN`
+    - summary now records explicit `Mode: dry-run/live`
+    - dry-run still exits 0
+- GREEN verification:
+  - `bash -n scripts/run_wave_b_ci_gate.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_ci_gate_dry_run_truth_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_dry_run_truth_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_run_id_passthrough_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_fast_local_clean_worktree_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B Cross Summary Linux Overall State Truth
 
 ## 2026-05-14

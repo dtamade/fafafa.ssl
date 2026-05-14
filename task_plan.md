@@ -1,3 +1,53 @@
+# Task Plan - Wave B Linux Summary Dry-Run Truth
+
+## Goal
+收口 `scripts/run_wave_b_ci_gate.sh --dry-run` 的假绿 summary，避免一份未执行的 Linux gate 报告继续伪装成真实 `PASS` 证据。
+
+## Current Batch
+1. 写 focused contract，证明 Linux gate dry-run summary 仍错误写成 `PASS`。
+2. 最小修改 `scripts/run_wave_b_ci_gate.sh`，把 dry-run 下的 step/overall 真相对齐到 `DRY_RUN`。
+3. 复跑 Linux gate 邻近合同。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified fake-green dry-run summary in Linux Wave B gate producer
+- [completed] wrote focused contract for dry-run truth
+- [completed] minimal dry-run truth alignment in Linux gate producer
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 `scripts/run_wave_b_ci_gate.sh` 在修复前还有一条 producer-side 假绿链路：
+  - 传入 `--dry-run` 时
+  - summary 仍会把 compile/modules/examples 写成 `PASS`
+  - `Overall Status` 也会写成 `PASS`
+  - 但 examples metrics 同时仍是 `n/a`
+- 这会制造一份能被上层链消费的假证据：
+  - `cross_summary` / `closure` / `consistency` 只看 summary surface 时，会把它当成真实 Linux gate
+  - 而 dry-run 本来只是“命令预演”，不是“门禁已通过”
+- 对照真相：
+  - macOS gate dry-run 已经写 `DRY_RUN`
+  - Windows gate dry-run 也已经写 `DRY_RUN`
+  - 只有 Linux gate 还在继续假装 `PASS`
+- focused RED:
+  - 新增 `tests/scripts/test_wave_b_ci_gate_dry_run_truth_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_ci_gate_dry_run_truth_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_dry_run_truth_contract.sh`: FAIL before fix
+  - failure shape:
+    - `dry-run linux gate summary should record Overall Status DRY_RUN instead of pretending the gate passed`
+- minimal implementation:
+  - 更新 `scripts/run_wave_b_ci_gate.sh`
+    - dry-run 下启用的 step 统一写成 `DRY_RUN`
+    - overall 统一写成 `DRY_RUN`
+    - summary 新增 `Mode: dry-run/live`
+    - dry-run 返回 0 语义保持不变
+- focused GREEN:
+  - `bash -n scripts/run_wave_b_ci_gate.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_ci_gate_dry_run_truth_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_dry_run_truth_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_run_id_passthrough_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_fast_local_clean_worktree_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B Cross Summary Linux Overall State Truth
 
 ## Goal

@@ -1,3 +1,24 @@
+# Findings - Wave B Linux Summary Dry-Run Truth
+
+## 2026-05-14
+- 继续沿着 `linux_summary -> cross_summary -> closure -> consistency -> handoff` 这条静态链往最上游深审后，发现 Linux gate producer 自己还保留着一条更危险的假绿入口：
+  - `scripts/run_wave_b_ci_gate.sh --dry-run` 会落盘 summary
+  - 但这份 summary 仍把 compile/modules/examples 以及 overall 写成 `PASS`
+  - 与此同时，examples metrics 又仍是 `n/a`
+- 这不是 harmless 预览，而是一份会伪装成真实绿门禁的 producer-side 假证据：
+  - 上层脚本消费的是 summary surface
+  - 不会天然知道这其实只是 dry-run
+  - 结果就是“未执行的门禁”可以被误当作“已通过的 Linux baseline”
+- 当前 repo 真相本来已经更清楚：
+  - macOS gate dry-run 写 `DRY_RUN`
+  - Windows gate dry-run 也写 `DRY_RUN`
+  - Linux gate 继续写 `PASS` 只是链路内语义漂移
+- 这批最小正确修法不是阻止 dry-run 产出 summary，而是把 truth 写对：
+  - dry-run 下启用的 step 必须写 `DRY_RUN`
+  - overall 必须写 `DRY_RUN`
+  - summary 显式写出 `Mode: dry-run`
+  - 返回码仍保持 0，继续服务 cheap contract / fast-local 工作流
+
 # Findings - Wave B Cross Summary Linux Overall State Truth
 
 ## 2026-05-14
