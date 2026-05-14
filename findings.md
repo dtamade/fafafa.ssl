@@ -1,3 +1,21 @@
+# Findings - Wave C B144 Ops Pack Shell Hardening
+
+## 2026-05-15
+- 在 B138 收口后继续往上审查，B144 ops pack 继续暴露出同型的最外层 orchestration 执行面：
+  - `B138/B140/B142/B143/B139` 五个 step 仍统一经过 `eval "$cmd"`
+  - 同一个 `RUN_ID` 继续同时进入多份派生产物路径
+- 这意味着即使下游脚本已经安全，B144 仍会在最外层重新把动态值交给 shell 解释层。
+- 这批最小正确修法仍然保持 display 与 execution 分离：
+  - display 命令继续保留
+  - 真正执行切成 direct argv
+- 这批也确认了一个同文件真实前提：
+  - `OPS_DIR` 需要在 step 执行前创建
+  - 否则 step log/report 重定向可能先失败
+- 修复后，B144 ops pack 的剩余 shell 执行面已经被切掉：
+  - `run-id` 只作为 argv 数据透传给 B138/B140/B142/B143/B139
+  - `OPS_DIR` 在 step 执行前会被创建
+  - 既有 B144 tmp structure 契约保持 green
+
 # Findings - Wave C B138 Full Gate Shell Hardening
 
 ## 2026-05-15

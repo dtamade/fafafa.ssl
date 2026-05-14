@@ -1,3 +1,33 @@
+# Progress - Wave C B144 Ops Pack Shell Hardening
+
+## 2026-05-15
+- Post-commit continue:
+  - after landing `b685d51 fix: harden wave c b138 shell execution`, continued upward in the same local-guard orchestration chain to the next outer wrapper
+- Fresh review narrowed the next real issue:
+  - `scripts/run_wave_c_local_guard_ops_pack.sh` still drove B138/B140/B142/B143/B139 through `eval "$cmd"`
+  - even with B138 fixed, B144 still reintroduced the same shell execution boundary around `RUN_ID` and five derived output paths
+- Existing regression surface:
+  - `tests/scripts/test_run_wave_c_local_guard_ops_pack_tmp_structure_contract.sh` already guarded the tmp report/log naming contract
+  - no existing focused contract covered B144 shell execution
+- New batch plan recorded in `docs/plans/2026-05-15-wave-c-b144-shell-hardening.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_run_wave_c_b144_ops_pack_run_id_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_run_wave_c_b144_ops_pack_run_id_injection_contract.sh` -> FAIL before fix
+    - exact failure: `wave c B144 ops pack should not execute shell content embedded in --run-id`
+- Minimal implementation:
+  - `tests/scripts/test_run_wave_c_b144_ops_pack_run_id_injection_contract.sh`
+    - added a focused contract that proves `run-id` must remain data-only through B144
+  - `scripts/run_wave_c_local_guard_ops_pack.sh`
+    - added `shell_join()` for display-only command text
+    - replaced `run_step() -> eval "$cmd"` with direct argv execution
+    - switched B138/B140/B142/B143/B139 invocations to explicit argv arrays
+    - added `mkdir -p "$OPS_DIR"` so step logs/reports always have a writable parent directory
+- Focused GREEN verification:
+  - `bash tests/scripts/test_run_wave_c_b144_ops_pack_run_id_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_run_wave_c_local_guard_ops_pack_tmp_structure_contract.sh` -> PASS
+  - `bash -n scripts/run_wave_c_local_guard_ops_pack.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave C B138 Full Gate Shell Hardening
 
 ## 2026-05-15

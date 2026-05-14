@@ -1,3 +1,38 @@
+# Task Plan - Wave C B144 Ops Pack Shell Hardening
+
+## Goal
+收口 `scripts/run_wave_c_local_guard_ops_pack.sh` 的 `eval` / 字符串执行风险，避免 `run-id` 被当成 shell 语法执行。
+
+## Current Batch
+1. 写 focused contract，证明当前 B144 ops pack 的 `--run-id` 仍可从 `eval` 命令串中逃逸。
+2. 最小修改脚本，把 `B138/B140/B142/B143/B139` step 从 `eval "$cmd"` 切到 argv 执行。
+3. 复跑新合同、既有 `B144 tmp structure` 合同和脚本语法检查。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified eval-based execution boundary in wave c b144 ops pack
+- [completed] added focused contract for b144 run-id shell escape
+- [completed] replaced b144 step eval execution with direct argv execution
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 B144 ops pack 仍通过：
+  - `run_step() -> eval "$cmd"`
+  - `B138/B140/B142/B143/B139` 五个 step 都消费字符串命令
+- 这意味着虽然 B138 已经收口，B144 仍会在更外层重新把同一个 `RUN_ID` 暴露在：
+  - `--run-id ${RUN_ID}`
+  - 派生的 `b138_report/b140_report/b142_json/b143_report/b139_report`
+- focused contract 已锁住这条执行边界：
+  - `tests/scripts/test_run_wave_c_b144_ops_pack_run_id_injection_contract.sh`
+    - payload 不得执行
+    - fake nested B138/B140/B142/B143/B139 runner 必须收到完整 `run-id` 原始值
+- 修复后验证结果：
+  - `bash -n tests/scripts/test_run_wave_c_b144_ops_pack_run_id_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_run_wave_c_b144_ops_pack_run_id_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_run_wave_c_local_guard_ops_pack_tmp_structure_contract.sh`：PASS
+  - `bash -n scripts/run_wave_c_local_guard_ops_pack.sh`：PASS
+  - `git diff --check`：PASS
+
 # Task Plan - Wave C B138 Full Gate Shell Hardening
 
 ## Goal
