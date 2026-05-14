@@ -1,3 +1,46 @@
+# Task Plan - Wave B Linux Shell Quote Hardening
+
+## Goal
+收口 `scripts/run_wave_b_ci_gate.sh` 对 `--modules` 与 TLS13 bench 动态输入的 shell 拼接风险，避免调用方输入被当成 `bash -lc` 代码执行。
+
+## Current Batch
+1. 写两个 focused contracts，分别证明 `--modules` 与 `--tls13-sign-bench-scheme` 当前仍可注入 shell 语法。
+2. 最小修改脚本，把 step 执行切到 argv / env 数组，同时保留 dry-run 与 summary 语义。
+3. 复跑新合同和现有 Linux gate focused contracts。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified linux wave b gate shell injection risk in modules and tls13 bench paths
+- [completed] wrote focused contracts for linux modules and bench scheme injection
+- [completed] minimal argv/env execution alignment in linux gate producer
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 Linux 脚本原先仍通过 `run_step -> "$STEP_SHELL" -lc "$cmd"` 执行拼接字符串。
+- 一次性复现已经证明两条真实风险：
+  - `--modules "PKCS7; touch '$MARKER'; #"` 会执行 payload，且 nested runner 只收到被截断的 `PKCS7`
+  - `--tls13-sign-bench-scheme "rsa_pkcs1_sha256'; touch '$MARKER'; echo '"` 会执行 payload，且 gate 仍可 `exit 0`
+- focused contracts 已锁住两条注入边界：
+  - `tests/scripts/test_wave_b_ci_gate_module_injection_contract.sh`
+    - payload 不得执行
+    - nested runner 仍必须收到完整 `modules` 原始值
+  - `tests/scripts/test_wave_b_ci_gate_tls13_sign_bench_scheme_injection_contract.sh`
+    - payload 不得执行
+    - fake nested runner 仍必须观察到完整 `FAFAFA_TLS13_SIGN_BENCH_SCHEME` 原始值
+- 修复后验证结果：
+  - `bash -n tests/scripts/test_wave_b_ci_gate_module_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_module_injection_contract.sh`：PASS
+  - `bash -n tests/scripts/test_wave_b_ci_gate_tls13_sign_bench_scheme_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_tls13_sign_bench_scheme_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_dry_run_truth_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_threshold_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_invalid_examples_json_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_invalid_examples_threshold_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_run_id_passthrough_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_fast_local_clean_worktree_contract.sh`：PASS
+  - `bash -n scripts/run_wave_b_ci_gate.sh`：PASS
+  - `git diff --check`：PASS
+
 # Task Plan - Wave B Examples JSON Parse Failure Truth
 
 ## Goal

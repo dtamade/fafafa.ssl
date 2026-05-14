@@ -1,3 +1,47 @@
+# Progress - Wave B Linux Shell Quote Hardening
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `166517b fix: normalize invalid examples json gate handling`
+  - continued static review from the Linux examples-truth lane into the next adjacent execution-boundary issue
+- Fresh review narrowed the next real issue:
+  - `run_wave_b_ci_gate.sh` still executed dynamic step strings through `bash -lc`
+  - `--modules` and TLS13 bench inputs could still escape into shell syntax
+- One-off repro captured two concrete shell-injection paths:
+  - `bash scripts/run_wave_b_ci_gate.sh --skip-compile --skip-examples --modules "PKCS7; touch '$FLAG'; #"`
+    - result: payload executed, marker created, nested runner only saw truncated `PKCS7`, and the gate still exited `0`
+  - `bash scripts/run_wave_b_ci_gate.sh --only-tls13-sign-bench --tls13-sign-bench-scheme "rsa_pkcs1_sha256'; touch '$FLAG'; echo '"`
+    - result: payload executed before bench runner invocation and the gate still exited `0`
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-linux-shell-quote-hardening.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_wave_b_ci_gate_module_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_module_injection_contract.sh` -> FAIL before fix
+    - exact failure: `wave b linux gate should not execute shell content embedded in --modules`
+  - `bash -n tests/scripts/test_wave_b_ci_gate_tls13_sign_bench_scheme_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_tls13_sign_bench_scheme_injection_contract.sh` -> FAIL before fix
+    - exact failure: `wave b linux gate should not execute shell content embedded in --tls13-sign-bench-scheme`
+- Minimal implementation:
+  - `tests/scripts/test_wave_b_ci_gate_module_injection_contract.sh`
+    - added a focused contract for modules payload passthrough without shell execution
+  - `tests/scripts/test_wave_b_ci_gate_tls13_sign_bench_scheme_injection_contract.sh`
+    - added a focused contract for bench scheme env passthrough without shell execution
+  - `scripts/run_wave_b_ci_gate.sh`
+    - added `shell_join()` / `build_step_command()` helpers so displayed commands stay shell-readable without becoming the execution source of truth
+    - changed `run_step()` from `bash -lc` execution to `(cd "$PROJECT_ROOT" && "$@")`
+    - switched compile/modules/examples/purity to argv arrays
+    - switched TLS13 bench execution to an `env ... bash ...` word array so all dynamic bench inputs stay data-only
+- Focused GREEN verification:
+  - `bash tests/scripts/test_wave_b_ci_gate_module_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_tls13_sign_bench_scheme_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_dry_run_truth_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_invalid_examples_json_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_invalid_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_run_id_passthrough_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_fast_local_clean_worktree_contract.sh` -> PASS
+  - `bash -n scripts/run_wave_b_ci_gate.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B Examples JSON Parse Failure Truth
 
 ## 2026-05-14

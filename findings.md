@@ -1,3 +1,22 @@
+# Findings - Wave B Linux Shell Quote Hardening
+
+## 2026-05-14
+- 继续沿着 Linux gate 的动态输入边界往下审查后，发现这条线和之前的 macOS 问题同型，但危险面更大：
+  - `MODULE_SET` 直接插进 `build_module_cmd`
+  - TLS13 bench 的 iterations / warmup / scheme / key / timeout / json-out 直接插进 `bench_cmd`
+- 两条 focused 复现已经把风险坐实成真实可利用，而不是单纯的“写法不优雅”：
+  - `modules` payload 会作为 shell 语法执行
+  - `bench scheme` payload 会在 bench step 前执行，并让 gate 继续伪装成成功
+- 这批最小正确修法不是补黑名单，而是彻底停止“用字符串描述执行”：
+  - step command 只保留给 stderr / summary 展示
+  - 实际执行统一改成 `(cd "$PROJECT_ROOT" && "$@")`
+  - bench 相关动态值统一通过 `env "KEY=value"` 当数据传递
+- 生产修复后，Linux gate 的 dynamic command assembly 已重新回到单一安全真值：
+  - `run_step` 不再依赖 `bash -lc`
+  - `modules` 作为单个 argv 透传
+  - `FAFAFA_TLS13_SIGN_BENCH_SCHEME` 等 bench 输入只作为 env 数据透传
+  - dry-run / summary / examples threshold 真值保持不变
+
 # Findings - Wave B Examples JSON Parse Failure Truth
 
 ## 2026-05-14

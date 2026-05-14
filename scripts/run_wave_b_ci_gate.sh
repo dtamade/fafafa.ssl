@@ -265,6 +265,21 @@ print(summary.get('pass_rate', 0.0))
 PY
 }
 
+shell_join() {
+  local parts=()
+  local part
+  for part in "$@"; do
+    parts+=("$(printf '%q' "$part")")
+  done
+  local IFS=' '
+  echo "${parts[*]}"
+}
+
+build_step_command() {
+  local words=("$@")
+  echo "cd $(printf '%q' "$PROJECT_ROOT") && $(shell_join "${words[@]}")"
+}
+
 REPORTS_DIR="$(resolve_rel_under_root "$REPORTS_DIR_REL" || true)"
 if [[ -z "$REPORTS_DIR" ]]; then
   echo "Invalid --reports-dir (must stay within project root): $REPORTS_DIR_REL" >&2
@@ -317,17 +332,13 @@ if [[ -n "$BENCH_JSON_OUT" ]]; then
   mkdir -p "$(dirname "$BENCH_JSON_OUT")"
 fi
 
-STEP_SHELL="/bin/bash"
-if [[ -x "/usr/bin/zsh" ]]; then
-  STEP_SHELL="/usr/bin/zsh"
-fi
-
 run_step() {
   local step_name="$1"
-  local cmd="$2"
-  local log_file="$3"
+  local log_file="$2"
+  local cmd_desc="$3"
+  shift 3
 
-  echo "[WAVE-B] [$step_name] $cmd" >&2
+  echo "[WAVE-B] [$step_name] $cmd_desc" >&2
 
   if [[ "$DRY_RUN" == "true" ]]; then
     echo "[WAVE-B] [$step_name] dry-run skip" > "$log_file"
@@ -337,8 +348,10 @@ run_step() {
 
   local started ended elapsed exit_code
   started=$(date +%s)
-  set +e
-  "$STEP_SHELL" -lc "$cmd" > "$log_file" 2>&1
+  (
+    cd "$PROJECT_ROOT"
+    "$@"
+  ) > "$log_file" 2>&1
   exit_code=$?
   ended=$(date +%s)
   elapsed=$((ended - started))
@@ -347,18 +360,36 @@ run_step() {
   echo "$exit_code"
 }
 
-build_module_cmd="cd '$PROJECT_ROOT' && bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
+compile_cmd_words=(python3 scripts/compile_all_modules.py)
+compile_cmd="$(build_step_command "${compile_cmd_words[@]}")"
+
+module_cmd_words=(bash scripts/run_all_module_tests.sh --modules "$MODULE_SET")
 if [[ "$FAST_LOCAL" == "true" ]]; then
-  build_module_cmd="$build_module_cmd --fast-local"
+  module_cmd_words+=(--fast-local)
 fi
 if [[ "$VERBOSE" == "true" ]]; then
-  build_module_cmd="$build_module_cmd --verbose"
+  module_cmd_words+=(--verbose)
 fi
+build_module_cmd="$(build_step_command "${module_cmd_words[@]}")"
 
-compile_cmd="cd '$PROJECT_ROOT' && python3 scripts/compile_all_modules.py"
-examples_cmd="cd '$PROJECT_ROOT' && bash scripts/verify_examples_compile.sh -f json -o '$EXAMPLES_REPORT_REL'"
-purity_cmd="cd '$PROJECT_ROOT' && bash scripts/check_tls13_signer_pure_pascal.sh"
-bench_cmd="cd '$PROJECT_ROOT' && FAFAFA_TLS13_SIGN_BENCH_ITERATIONS='$TLS13_SIGN_BENCH_ITERATIONS' FAFAFA_TLS13_SIGN_BENCH_WARMUP='$TLS13_SIGN_BENCH_WARMUP' FAFAFA_TLS13_SIGN_BENCH_SCHEME='$TLS13_SIGN_BENCH_SCHEME' FAFAFA_TLS13_SIGN_BENCH_KEY='$TLS13_SIGN_BENCH_KEY' FAFAFA_TLS13_SIGN_BENCH_TIMEOUT='$TLS13_SIGN_BENCH_TIMEOUT' FAFAFA_TLS13_SIGN_BENCH_JSON_OUT='$BENCH_JSON_OUT' bash scripts/run_freepascal_tls13_servercertverify_bench.sh"
+examples_cmd_words=(bash scripts/verify_examples_compile.sh -f json -o "$EXAMPLES_REPORT_REL")
+examples_cmd="$(build_step_command "${examples_cmd_words[@]}")"
+
+purity_cmd_words=(bash scripts/check_tls13_signer_pure_pascal.sh)
+purity_cmd="$(build_step_command "${purity_cmd_words[@]}")"
+
+bench_cmd_words=(
+  env
+  "FAFAFA_TLS13_SIGN_BENCH_ITERATIONS=$TLS13_SIGN_BENCH_ITERATIONS"
+  "FAFAFA_TLS13_SIGN_BENCH_WARMUP=$TLS13_SIGN_BENCH_WARMUP"
+  "FAFAFA_TLS13_SIGN_BENCH_SCHEME=$TLS13_SIGN_BENCH_SCHEME"
+  "FAFAFA_TLS13_SIGN_BENCH_KEY=$TLS13_SIGN_BENCH_KEY"
+  "FAFAFA_TLS13_SIGN_BENCH_TIMEOUT=$TLS13_SIGN_BENCH_TIMEOUT"
+  "FAFAFA_TLS13_SIGN_BENCH_JSON_OUT=$BENCH_JSON_OUT"
+  bash
+  scripts/run_freepascal_tls13_servercertverify_bench.sh
+)
+bench_cmd="$(build_step_command "${bench_cmd_words[@]}")"
 
 compile_exit="0"
 modules_exit="0"
@@ -373,7 +404,7 @@ purity_status="SKIP"
 bench_status="SKIP"
 
 if [[ "$WITH_COMPILE" == "true" ]]; then
-  compile_exit=$(run_step "compile" "$compile_cmd" "$COMPILE_LOG")
+  compile_exit=$(run_step "compile" "$COMPILE_LOG" "$compile_cmd" "${compile_cmd_words[@]}")
   if [[ "$compile_exit" == "0" ]]; then
     compile_status="PASS"
   else
@@ -382,7 +413,7 @@ if [[ "$WITH_COMPILE" == "true" ]]; then
 fi
 
 if [[ "$WITH_MODULES" == "true" ]]; then
-  modules_exit=$(run_step "modules" "$build_module_cmd" "$MODULE_LOG")
+  modules_exit=$(run_step "modules" "$MODULE_LOG" "$build_module_cmd" "${module_cmd_words[@]}")
   if [[ "$modules_exit" == "0" ]]; then
     modules_status="PASS"
   else
@@ -391,7 +422,7 @@ if [[ "$WITH_MODULES" == "true" ]]; then
 fi
 
 if [[ "$WITH_EXAMPLES" == "true" ]]; then
-  examples_exit=$(run_step "examples" "$examples_cmd" "$EXAMPLES_LOG")
+  examples_exit=$(run_step "examples" "$EXAMPLES_LOG" "$examples_cmd" "${examples_cmd_words[@]}")
   if [[ "$examples_exit" == "0" ]]; then
     examples_status="PASS"
   else
@@ -400,7 +431,7 @@ if [[ "$WITH_EXAMPLES" == "true" ]]; then
 fi
 
 if [[ "$WITH_TLS13_SIGN_PURITY_CHECK" == "true" ]]; then
-  purity_exit=$(run_step "tls13_sign_purity" "$purity_cmd" "$PURITY_LOG")
+  purity_exit=$(run_step "tls13_sign_purity" "$PURITY_LOG" "$purity_cmd" "${purity_cmd_words[@]}")
   if [[ "$purity_exit" == "0" ]]; then
     purity_status="PASS"
   else
@@ -409,7 +440,7 @@ if [[ "$WITH_TLS13_SIGN_PURITY_CHECK" == "true" ]]; then
 fi
 
 if [[ "$WITH_TLS13_SIGN_BENCH" == "true" ]]; then
-  bench_exit=$(run_step "tls13_sign_bench" "$bench_cmd" "$BENCH_LOG")
+  bench_exit=$(run_step "tls13_sign_bench" "$BENCH_LOG" "$bench_cmd" "${bench_cmd_words[@]}")
   if [[ "$bench_exit" == "0" ]]; then
     bench_status="PASS"
   else
