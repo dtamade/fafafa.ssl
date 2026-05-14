@@ -1,3 +1,46 @@
+# Task Plan - Wave B macOS Shell Quote Hardening
+
+## Goal
+收口 `scripts/run_wave_b_macos_gate.sh` 对 `modules` / `openssl-root` 的 shell 拼接风险，避免调用方输入被当成 `bash -lc` 代码执行。
+
+## Current Batch
+1. 写 focused contracts，分别证明 `modules` 与 `openssl-root` 当前仍可注入 shell 语法。
+2. 最小修改脚本，改成 shell-safe 参数拼装。
+3. 复跑新合同和现有 macOS gate focused contracts。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified shell injection risk in macos wave b gate dynamic argument assembly
+- [completed] wrote focused contracts for modules and openssl-root injection
+- [completed] minimal shell-safe assembly alignment in macos gate producer
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 macOS 脚本仍把 `MODULE_SET` 与 `OPENSSL_ROOT` 直接拼进 `bash -lc` 字符串。
+- 一次性复现已经证明两个真实风险：
+  - `--modules "PKCS7; touch '$MARKER'; #"` 会执行 payload，且 gate 仍可 `exit 0`
+  - `--openssl-root "/tmp/ssl'; touch '$MARKER'; echo '"` 会在 step 前执行 payload
+- 仓库里已有 `printf '%q'` 先例，可直接作为本批最小 shell-safe 策略。
+- focused contracts 已锁住两条注入边界：
+  - `tests/scripts/test_wave_b_macos_gate_module_injection_contract.sh`
+    - payload 不得执行
+    - nested runner 仍必须收到完整 `modules` 原始值
+  - `tests/scripts/test_wave_b_macos_gate_openssl_root_injection_contract.sh`
+    - payload 不得执行
+    - fake probe 仍必须观察到完整 `OPENSSL_ROOT` 原始值
+- 修复后验证结果：
+  - `bash -n tests/scripts/test_wave_b_macos_gate_module_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_module_injection_contract.sh`：PASS
+  - `bash -n tests/scripts/test_wave_b_macos_gate_openssl_root_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_openssl_root_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_run_id_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_empty_run_id_fallback_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_output_dir_boundary_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_threshold_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh`：PASS
+  - `bash -n scripts/run_wave_b_macos_gate.sh`：PASS
+  - `git diff --check`：PASS
+
 # Task Plan - Wave B macOS Run ID Contract
 
 ## Goal

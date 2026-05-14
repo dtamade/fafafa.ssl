@@ -126,6 +126,21 @@ print(path)
 PY
 }
 
+shell_join() {
+  local parts=()
+  local part
+  for part in "$@"; do
+    parts+=("$(printf '%q' "$part")")
+  done
+  local IFS=' '
+  echo "${parts[*]}"
+}
+
+build_step_command() {
+  local words=("$@")
+  echo "cd $(printf '%q' "$PROJECT_ROOT") && $(shell_join "${words[@]}")"
+}
+
 OUTPUT_DIR="$(resolve_rel_under_root "$OUTPUT_DIR_REL" || true)"
 if [[ -z "$OUTPUT_DIR" ]]; then
   echo "Invalid --output-dir (must stay within project root): $OUTPUT_DIR_REL" >&2
@@ -148,9 +163,14 @@ if [[ -x "/usr/bin/zsh" ]]; then
   STEP_SHELL="/usr/bin/zsh"
 fi
 
-ENV_PREFIX=""
+step_env_words=()
 if [[ -n "$OPENSSL_ROOT" ]]; then
-  ENV_PREFIX="OPENSSL_ROOT='$OPENSSL_ROOT' DYLD_LIBRARY_PATH='$OPENSSL_ROOT/lib:${DYLD_LIBRARY_PATH:-}' PKG_CONFIG_PATH='$OPENSSL_ROOT/lib/pkgconfig:${PKG_CONFIG_PATH:-}' PATH='$OPENSSL_ROOT/bin:$PATH'"
+  step_env_words+=(
+    "OPENSSL_ROOT=$OPENSSL_ROOT"
+    "DYLD_LIBRARY_PATH=$OPENSSL_ROOT/lib:${DYLD_LIBRARY_PATH:-}"
+    "PKG_CONFIG_PATH=$OPENSSL_ROOT/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+    "PATH=$OPENSSL_ROOT/bin:$PATH"
+  )
 fi
 
 run_step() {
@@ -177,20 +197,32 @@ run_step() {
   echo "$exit_code"
 }
 
-path_check_flag="--dry-run"
-if [[ "$PATH_CHECK_DRY_RUN" == "false" ]]; then
-  path_check_flag=""
+probe_words=("${step_env_words[@]}" bash scripts/detect_macos_openssl_enhanced.sh --json)
+probe_cmd="$(build_step_command "${probe_words[@]}") > $(printf '%q' "$PROBE_JSON_REL")"
+
+path_check_words=("${step_env_words[@]}" bash scripts/run_macos_openssl_path_check_draft.sh)
+if [[ "$PATH_CHECK_DRY_RUN" == "true" ]]; then
+  path_check_words+=("--dry-run")
 fi
+path_check_cmd="$(build_step_command "${path_check_words[@]}")"
 
-probe_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} bash scripts/detect_macos_openssl_enhanced.sh --json > '$PROBE_JSON_REL'"
-path_check_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} bash scripts/run_macos_openssl_path_check_draft.sh ${path_check_flag}"
-compile_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} python3 scripts/compile_all_modules.py"
-modules_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} bash scripts/run_all_module_tests.sh --modules $MODULE_SET --reports-dir '$OUTPUT_DIR_REL/module_tests_${RUN_ID}' --bin-dir 'tmp/module_tests_bin_${RUN_ID}'"
-examples_cmd="cd '$PROJECT_ROOT' && ${ENV_PREFIX} bash scripts/verify_examples_compile.sh -f json -o '$EXAMPLES_JSON_REL'"
+compile_words=("${step_env_words[@]}" python3 scripts/compile_all_modules.py)
+compile_cmd="$(build_step_command "${compile_words[@]}")"
 
+modules_words=(
+  "${step_env_words[@]}"
+  bash scripts/run_all_module_tests.sh
+  --modules "$MODULE_SET"
+  --reports-dir "$OUTPUT_DIR_REL/module_tests_${RUN_ID}"
+  --bin-dir "tmp/module_tests_bin_${RUN_ID}"
+)
 if [[ "$VERBOSE" == "true" ]]; then
-  modules_cmd="$modules_cmd --verbose"
+  modules_words+=(--verbose)
 fi
+modules_cmd="$(build_step_command "${modules_words[@]}")"
+
+examples_words=("${step_env_words[@]}" bash scripts/verify_examples_compile.sh -f json -o "$EXAMPLES_JSON_REL")
+examples_cmd="$(build_step_command "${examples_words[@]}")"
 
 probe_exit=$(run_step "probe" "$probe_cmd" "$PROBE_LOG_REL")
 path_check_exit=$(run_step "path-check" "$path_check_cmd" "$PATH_CHECK_LOG_REL")

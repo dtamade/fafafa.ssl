@@ -1,3 +1,18 @@
+# Findings - Wave B macOS Shell Quote Hardening
+
+## 2026-05-14
+- 继续沿着 macOS gate 的动态输入边界往下审查后，问题已经从“输入校验缺失”推进到“shell 拼接本身不安全”：
+  - `MODULE_SET` 直接插进 `modules_cmd`
+  - `OPENSSL_ROOT` 直接插进 `ENV_PREFIX`
+- 这两条风险都已经被真实复现坐实：
+  - `modules` payload 可以作为 shell 语法执行
+  - `openssl-root` payload 可以作为环境前缀 shell 语法执行
+- 本批最小正确修法不该再追加字符白名单，而是把这两条动态值统一当数据做 shell-safe 拼装。
+- 生产修复后，macOS gate 的 dynamic command assembly 已重新回到单一安全真值：
+  - 新增 shell-safe word join helper，沿用仓库现有 `printf '%q'` 模式
+  - step command 不再手写单引号插值
+  - `modules` 与 `openssl-root` 都只作为数据进入 nested runner / step env
+
 # Findings - Wave B macOS Run ID Contract
 
 ## 2026-05-14

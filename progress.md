@@ -1,3 +1,46 @@
+# Progress - Wave B macOS Shell Quote Hardening
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `82c6390 fix: validate wave b macos run id`
+  - continued static review in the same macOS gate script to the next real execution-boundary issue
+- Fresh review narrowed the next real issue:
+  - `run_wave_b_macos_gate.sh` still assembles step commands with unquoted dynamic `modules` and `openssl-root` values
+- One-off repro captured two concrete shell-injection paths:
+  - `OSTYPE=darwin23 bash scripts/run_wave_b_macos_gate.sh --modules "PKCS7; touch '$MARKER'; #"`
+    - result: payload executed, marker created, and the gate still exited `0`
+  - `OSTYPE=darwin23 bash scripts/run_wave_b_macos_gate.sh --openssl-root "/tmp/ssl'; touch '$MARKER'; echo '"`
+    - result: payload executed from the environment prefix before step commands
+- Repo search found an existing quoting precedent:
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh` already uses `printf '%q'` in `build_shell_command()`
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-macos-shell-quote-hardening.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_wave_b_macos_gate_module_injection_contract.sh`
+  - `bash tests/scripts/test_wave_b_macos_gate_module_injection_contract.sh`
+  - result before fix: contract failed because the injected modules payload created its marker
+  - `bash -n tests/scripts/test_wave_b_macos_gate_openssl_root_injection_contract.sh`
+  - `bash tests/scripts/test_wave_b_macos_gate_openssl_root_injection_contract.sh`
+  - result before fix: contract failed because malicious openssl-root could not be treated as data while keeping the gate green
+- Minimal implementation:
+  - `tests/scripts/test_wave_b_macos_gate_module_injection_contract.sh`
+    - added a focused contract for modules payload passthrough without shell execution
+  - `tests/scripts/test_wave_b_macos_gate_openssl_root_injection_contract.sh`
+    - added a focused contract for openssl-root payload passthrough without shell execution
+  - `scripts/run_wave_b_macos_gate.sh`
+    - added shell-safe `shell_join()` / `build_step_command()` helpers using `printf '%q'`
+    - switched all step commands from handwritten string interpolation to quoted word assembly
+    - changed `OPENSSL_ROOT`-derived environment prefix from raw string concatenation to quoted env-word assembly
+- Focused GREEN verification:
+  - `bash tests/scripts/test_wave_b_macos_gate_module_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_openssl_root_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_run_id_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_empty_run_id_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_output_dir_boundary_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh` -> PASS
+  - `bash -n scripts/run_wave_b_macos_gate.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B macOS Run ID Contract
 
 ## 2026-05-14
