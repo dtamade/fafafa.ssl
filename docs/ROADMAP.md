@@ -9,6 +9,11 @@
 
 - engineering_state: CLOSED_OUT_PENDING_APPROVAL
 - approval_gate: human decision required before reopening Wave C mainline work
+- current_execution_control_plane: `release-control / v1.5.0 formalization`
+- current_release_plan: `docs/plans/2026-05-12-release-v1.5.0-formalization.md`
+- current_release_readiness: `docs/test_reports/RELEASE_READINESS_V1.5.0.md`
+- current_workflow_surface: `.github/README.md`
+- wave_c_role: `closeout / approval / historical reference only`
 - product_mainline: `SSL/TLS backend completeness roadmap`
 - current_default_build: `python3 scripts/compile_all_modules.py`
 - current_default_gate: `bash scripts/run_minimal_ci_gate.sh --fast-local`
@@ -18,6 +23,7 @@
 
 这几个状态需要分开理解：
 
+- 当前默认执行控制面是 `release-control / v1.5.0 formalization`，先看 release plan / readiness / workflow surface，再决定是否继续推进新的收口动作。
 - `Wave C` 现在主要是治理与审批状态页，不再代表当前产品功能主线。
 - 当前真正还在推进的实现主线，是 pure Pascal backend 的 SSL/TLS completeness。
 - `KnownIssues` 已不再把 OCSP / CT / validation / resumption 写成剩余 gap；这些线只有 fresh RED 才应重开。
@@ -28,10 +34,12 @@
 
 如果你想快速判断项目现在在哪个阶段，按这个顺序看：
 
-1. [Wave C Closeout Status](test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)
-2. [Wave C Current Chain](test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md)
-3. [SSL/TLS backend completeness roadmap](plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md)
-4. [GitHub Actions README](../.github/README.md)
+1. [v1.5.0 release formalization plan](plans/2026-05-12-release-v1.5.0-formalization.md)
+2. [Release readiness v1.5.0](test_reports/RELEASE_READINESS_V1.5.0.md)
+3. [GitHub Actions README](../.github/README.md)
+4. [SSL/TLS backend completeness roadmap](plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md)
+5. [Wave C Closeout Status](test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)
+6. [Wave C Current Chain](test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md)
 
 如果你只是想开始开发或验证：
 

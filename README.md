@@ -56,9 +56,13 @@ if Supports(Ctx, ISSLEarlyDataContext, EarlyDataCtx) then
 ## 当前状态
 
 - 当前路线图入口：`docs/ROADMAP.md`
+- 当前执行控制面：`docs/ROADMAP.md` -> `docs/plans/2026-05-12-release-v1.5.0-formalization.md` -> `docs/test_reports/RELEASE_READINESS_V1.5.0.md`
 - 当前默认构建命令：`python3 scripts/compile_all_modules.py`
 - 当前默认本地门禁：`bash scripts/run_minimal_ci_gate.sh --fast-local`
 - 当前 FreePascal TLS 1.3 focused gate：`bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`
+- 当前代码风格门禁：`python3 scripts/check_code_style.py src`
+- 当前 release workflow：`.github/workflows/release.yml`
+- Wave C 文档仅用于 closeout / approval / historical cross-check
 - 当前 Linux 基线已验证可重复；更广泛的功能完整度仍按 roadmap 持续收敛
 
 ## 核心特性
@@ -273,6 +277,8 @@ fpc -B -Mobjfpc -Sh -Fu./src -Fi./src -FU./lib your_app.pas -o./bin/your_app
 | [快速入门](docs/guides/5_MINUTE_QUICKSTART.md)                                                     | 5 分钟快速入门                                |
 | [后端选择指南](docs/BACKEND_SELECTION_GUIDE.md)                                                    | 自动后端选择完整指南（v1.3.0）                |
 | [当前路线图](docs/ROADMAP.md)                                                                      | 当前稳定 roadmap / status 入口                |
+| [Release Plan](docs/plans/2026-05-12-release-v1.5.0-formalization.md)                             | 当前 release-control 执行计划                 |
+| [Release Readiness](docs/test_reports/RELEASE_READINESS_V1.5.0.md)                                 | 当前 v1.5.0 release-control 收口结论          |
 | [用户指南](docs/guides/USER_GUIDE.md)                                                              | 完整用户指南                                  |
 | [API 参考](docs/reference/API_REFERENCE.md)                                                        | API 参考文档                                  |
 | [OCSP 指南](docs/guides/OCSP_USAGE_GUIDE.md)                                                       | FreePascal stapling + OpenSSL 在线 OCSP       |
@@ -281,8 +287,8 @@ fpc -B -Mobjfpc -Sh -Fu./src -Fi./src -FU./lib your_app.pas -o./bin/your_app
 | [示例程序](examples/)                                                                              | 57 个示例程序                                 |
 | [FAQ](docs/guides/FAQ.md)                                                                          | 常见问题解答                                  |
 | [部署指南](docs/guides/DEPLOYMENT_GUIDE.md)                                                        | 生产部署指南                                  |
-| [Wave C Closeout Status](docs/test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)                   | 当前 canonical 收口状态与“停在这里”入口       |
-| [Wave C Current Chain](docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md) | 当前 local-first / pre-CI / submission 总入口 |
+| [Wave C Closeout Status](docs/test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)                   | Wave C closeout / approval 参考入口           |
+| [Wave C Current Chain](docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md) | Wave C current-chain 历史/审批对照入口        |
 
 ## 核心 API
 
@@ -377,6 +383,9 @@ bash scripts/run_all_module_tests.sh --fast-local --modules PKCS7,PKCS12,CMS,Sto
 
 # Phase 2 性能入口探测（dry-run，不产生实际报告）
 bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local
+
+# 代码风格门禁
+python3 scripts/check_code_style.py src
 ```
 
 ### CI 暂缓时（Local-first 守护）
@@ -391,7 +400,8 @@ bash scripts/summarize_wave_c_local_guard_history.sh --strict
 
 更多细节：
 
-- 默认导航：先看 `docs/test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md`，再看 `docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`。
+- 默认导航：先看 `docs/ROADMAP.md`、`docs/plans/2026-05-12-release-v1.5.0-formalization.md`、`docs/test_reports/RELEASE_READINESS_V1.5.0.md`。
+- Wave C closeout / 审批参考：`docs/test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md`、`docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`。
 - 历史手册仅作参考：`docs/test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md`、`docs/test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md`。
 
 ### 测试覆盖

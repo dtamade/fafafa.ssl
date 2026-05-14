@@ -7,32 +7,36 @@
 
 ---
 
-## 🧭 当前工程入口（Wave C canonical chain）
+## 🧭 当前工程入口（release-control）
 
-如果你是在继续当前工程收口、验证或回填证据，默认先看下面两页，再按当前命令推进：
+如果你是在继续当前工程收口、验证或回填证据，默认先看下面四项，再按当前命令推进：
 
 - **[ROADMAP.md](ROADMAP.md)** - 当前稳定 roadmap / status 入口
-- **[test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md](test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)** - Wave C 当前 canonical 收口状态 / stop-here 入口
-- **[test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md](test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md)** - Wave C 当前 local-first / pre-CI / submission 总入口
+- **[plans/2026-05-12-release-v1.5.0-formalization.md](plans/2026-05-12-release-v1.5.0-formalization.md)** - 当前 release-control 执行计划
+- **[test_reports/RELEASE_READINESS_V1.5.0.md](test_reports/RELEASE_READINESS_V1.5.0.md)** - 当前 v1.5.0 release readiness / stop-here 结论
+- **[../.github/README.md](../.github/README.md)** - 当前 workflow surface
 - `python3 scripts/compile_all_modules.py`
 - `bash scripts/run_minimal_ci_gate.sh --fast-local`
 - `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local` - FreePascal TLS 1.3 + validation runtime focused gate
+- `python3 scripts/check_code_style.py src`
 - `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
+- Wave C closeout / 审批参考：`test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md`、`test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
 
 ---
 
 ## 🚀 从这里开始（推荐）
 
 1. **[ROADMAP.md](ROADMAP.md)** - 当前稳定 roadmap / status 入口 🆕
-2. **[test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md](test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)** - Wave C 当前 canonical 收口状态 / stop-here 入口 🆕
-3. **[test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md](test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md)** - Wave C 当前链路总入口 🆕
-4. **[guides/GETTING_STARTED.md](guides/GETTING_STARTED.md)** - 入门（推荐入口与最小示例）
-5. **[guides/QUICKSTART.md](guides/QUICKSTART.md)** - 快速开始
-6. **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - 框架集成指南（如何把 TLS 接到你的网络框架）
-7. **[reference/API_REFERENCE.md](reference/API_REFERENCE.md)** - API 参考
-8. **[examples/README.md](../examples/README.md)** - 示例程序说明
-9. **[examples/EXAMPLES_INDEX.md](../examples/EXAMPLES_INDEX.md)** - 示例程序完整索引（按功能分类）
-10. **[reference/ARCHITECTURE.md](reference/ARCHITECTURE.md)** - 架构设计文档 🆕
+2. **[plans/2026-05-12-release-v1.5.0-formalization.md](plans/2026-05-12-release-v1.5.0-formalization.md)** - 当前 release-control 执行计划 🆕
+3. **[test_reports/RELEASE_READINESS_V1.5.0.md](test_reports/RELEASE_READINESS_V1.5.0.md)** - 当前 v1.5.0 release readiness 结论 🆕
+4. **[../.github/README.md](../.github/README.md)** - 当前 workflow surface 🆕
+5. **[guides/GETTING_STARTED.md](guides/GETTING_STARTED.md)** - 入门（推荐入口与最小示例）
+6. **[guides/QUICKSTART.md](guides/QUICKSTART.md)** - 快速开始
+7. **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - 框架集成指南（如何把 TLS 接到你的网络框架）
+8. **[reference/API_REFERENCE.md](reference/API_REFERENCE.md)** - API 参考
+9. **[examples/README.md](../examples/README.md)** - 示例程序说明
+10. **[examples/EXAMPLES_INDEX.md](../examples/EXAMPLES_INDEX.md)** - 示例程序完整索引（按功能分类）
+11. **[reference/ARCHITECTURE.md](reference/ARCHITECTURE.md)** - 架构设计文档 🆕
 
 ---
 
@@ -127,9 +131,9 @@
 - **[test_reports/PHASE2_BASELINE_EXECUTION_SUMMARY.md](test_reports/PHASE2_BASELINE_EXECUTION_SUMMARY.md)** - Phase 2 基线执行汇总 🆕
 - **[test_reports/PHASE2_BASELINE_COMPARISON_V1.md](test_reports/PHASE2_BASELINE_COMPARISON_V1.md)** - Phase 2 首轮基线对比结论 🆕
 
-### Current Wave C Chain
+### Wave C closeout / 审批 / 历史参考
 
-以下条目是当前默认入口；历史结果页与历史手册仅作为参考，见后面的历史分区。
+以下条目不再是默认工程入口，仅在需要审批、closeout 或历史对照时使用。
 
 - **[test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md](test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)** - Wave C 收口状态：等待人工审批，当前不再继续推进主流程 🆕
 - **[test_reports/WAVE_C_BASELINE_READINESS_MANIFEST_2026-03-19.md](test_reports/WAVE_C_BASELINE_READINESS_MANIFEST_2026-03-19.md)** - Wave C 当前 baseline / readiness 模块清单 🆕

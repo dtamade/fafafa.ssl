@@ -9,20 +9,23 @@
 
 fafafa.ssl 是一个跨平台的 SSL/TLS 抽象框架,支持多个操作系统和后端实现。
 
-## 当前工程验证入口
+## 当前发布与平台验证入口
 
-如果你是在继续当前工程的验证或收口，先看这两页，再按当前平台口径推进：
+如果你是在继续当前工程的验证或收口，先看这三页，再按当前平台口径推进：
 
-- `docs/test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md`
-- `docs/test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- `docs/ROADMAP.md`
+- `docs/plans/2026-05-12-release-v1.5.0-formalization.md`
+- `docs/test_reports/RELEASE_READINESS_V1.5.0.md`
 
-当前默认 baseline 仍是 Linux local-first / pre-CI 链：
+当前默认本地 release baseline 是 Linux release-control 链：
 
 - `python3 scripts/compile_all_modules.py`
 - `bash scripts/run_minimal_ci_gate.sh --fast-local`
+- `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`
+- `python3 scripts/check_code_style.py src`
 - `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
 
-Windows 保留现有 PowerShell 测试入口；macOS 当前更适合先做 focused smoke，再按 current-chain 判断是否需要继续扩展验证。全量多平台 workflow 仍以 template/manual 为主。
+Wave C 页面现在只保留 closeout / approval / historical reference 角色，不再是默认工程入口。Windows 保留现有 PowerShell 测试入口；macOS 当前更适合先做 focused smoke，再按 release-control 状态决定是否需要继续扩展验证。全量多平台 workflow 仍以 template/manual 为主。
 
 | 平台        | 状态        | 后端支持        | 测试覆盖率 | CI/CD     |
 | ----------- | ----------- | --------------- | ---------- | --------- |
@@ -242,7 +245,7 @@ fpc -B -Fu./src \
 ./tmp/platform_support_macos/test_openssl_simple
 ```
 
-如需继续对齐当前工程验证状态，回到 `WAVE_C_CLOSEOUT_STATUS_2026-03-18.md` 与 `WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`，再决定是否进入额外的手动平台验证。
+如需继续对齐当前 release-control 状态，先回到 `ROADMAP.md`、`plans/2026-05-12-release-v1.5.0-formalization.md` 与 `test_reports/RELEASE_READINESS_V1.5.0.md`；只有在需要核对 Wave C closeout / approval 材料时，再回看 `WAVE_C_CLOSEOUT_STATUS_2026-03-18.md` 与 `WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`。
 
 ### 平台特定注意事项
 

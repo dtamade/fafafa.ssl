@@ -41,8 +41,8 @@ assert_contains "docs/README.md" \
   "docs/README.md lost the historical-only Wave C reference label"
 
 assert_contains "docs/DOCUMENTATION_INDEX.md" \
-  "### 历史 Wave C 页面（仅归档参考）" \
-  "Documentation index lost the historical-only Wave C section label"
+  "### Wave C closeout / 审批 / 历史参考" \
+  "Documentation index lost the Wave C closeout / historical section label"
 assert_contains "docs/DOCUMENTATION_INDEX.md" \
   "WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md" \
   "Documentation index lost the B121 historical page link"
