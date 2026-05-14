@@ -1,3 +1,21 @@
+# Findings - TLS13 Signer Gate Bundle Shell Hardening
+
+## 2026-05-15
+- 继续沿着刚修完的 Wave B / macOS 执行面往下扫后，抓到 TLS13 signer 这条链上一个更独立但同型的剩余执行边界：
+  - `run_tls13_signer_gate_bundle.sh` 的 `ci/snapshot/status/archive` step 仍统一经过 `eval "$cmd"`
+  - 内层 `run_tls13_signer_gate_ci.sh` 自己已经是 direct argv，所以 bundle 反而成了最外层的 shell 解释面
+- 这意味着问题不在内层 bench/purity 逻辑，而在 bundle 重新把这些已安全的输入包回 shell 字符串：
+  - `RUN_ID`
+  - `REPORTS_DIR`
+  - `ARCHIVE_PROFILE`
+  - `ARCHIVE_ROOT`
+- 这批最小正确修法不需要改 bundle 语义，只需要像前几批一样把“展示命令”和“真实执行”分开：
+  - 展示命令继续保留
+  - 真正执行统一改成 argv / `env "KEY=value"` 数据传递
+- 修复后，TLS13 signer bundle 的剩余 shell 执行面已经被切掉：
+  - `run-id` 只作为 env / argv 数据透传给 nested CI runner
+  - bundle 仍保持原来的 summary / overall / strict 语义
+
 # Findings - Wave B macOS Shell Execution Hardening
 
 ## 2026-05-15

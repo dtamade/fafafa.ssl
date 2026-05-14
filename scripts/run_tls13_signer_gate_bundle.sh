@@ -83,29 +83,76 @@ snapshot_log="$REPORTS_DIR/tls13_signer_gate_snapshot_${RUN_ID}.log"
 status_log="$REPORTS_DIR/tls13_signer_gate_status_${RUN_ID}.log"
 archive_log="$REPORTS_DIR/tls13_signer_gate_archive_${RUN_ID}.log"
 
+shell_join() {
+  local parts=()
+  local part
+  for part in "$@"; do
+    parts+=("$(printf '%q' "$part")")
+  done
+  local IFS=' '
+  echo "${parts[*]}"
+}
+
 run_step() {
-  local cmd="$1"
+  local step_name="$1"
   local log="$2"
+  local cmd_desc="$3"
+  shift 3
+
+  echo "[tls13-bundle] [$step_name] $cmd_desc" >&2
 
   set +e
-  eval "$cmd" > "$log" 2>&1
+  "$@" > "$log" 2>&1
   local ec=$?
   set -e
 
+  echo "[tls13-bundle] [$step_name] exit=$ec log=$log" >&2
   echo "$ec"
 }
 
+ci_cmd_words=(
+  env
+  "FAFAFA_TLS13_SIGNER_GATE_RUN_ID=$RUN_ID"
+  "FAFAFA_TLS13_SIGNER_GATE_OUTPUT_DIR=$REPORTS_DIR"
+  "FAFAFA_TLS13_SIGNER_GATE_ARCHIVE=0"
+  bash
+  scripts/run_tls13_signer_gate_ci.sh
+)
 ci_exit=$(run_step \
-  "FAFAFA_TLS13_SIGNER_GATE_RUN_ID='${RUN_ID}' FAFAFA_TLS13_SIGNER_GATE_OUTPUT_DIR='${REPORTS_DIR}' FAFAFA_TLS13_SIGNER_GATE_ARCHIVE=0 bash scripts/run_tls13_signer_gate_ci.sh" \
-  "$ci_log")
+  "signer_gate_ci" \
+  "$ci_log" \
+  "$(shell_join "${ci_cmd_words[@]}")" \
+  "${ci_cmd_words[@]}")
 
+snapshot_cmd_words=(
+  bash
+  scripts/generate_tls13_signer_gate_snapshot.sh
+  --run-id "$RUN_ID"
+  --output "$snapshot_report"
+  --summary "$ci_summary"
+  --bench-json "$ci_bench_json"
+  --history "$ci_history"
+)
 snapshot_exit=$(run_step \
-  "bash scripts/generate_tls13_signer_gate_snapshot.sh --run-id '${RUN_ID}' --output '${snapshot_report}' --summary '${ci_summary}' --bench-json '${ci_bench_json}' --history '${ci_history}'" \
-  "$snapshot_log")
+  "snapshot" \
+  "$snapshot_log" \
+  "$(shell_join "${snapshot_cmd_words[@]}")" \
+  "${snapshot_cmd_words[@]}")
 
+status_cmd_words=(
+  bash
+  scripts/export_tls13_signer_gate_status_json.sh
+  --run-id "$RUN_ID"
+  --output "$status_json"
+  --summary "$ci_summary"
+  --snapshot "$snapshot_report"
+  --bench-json "$ci_bench_json"
+)
 status_exit=$(run_step \
-  "bash scripts/export_tls13_signer_gate_status_json.sh --run-id '${RUN_ID}' --output '${status_json}' --summary '${ci_summary}' --snapshot '${snapshot_report}' --bench-json '${ci_bench_json}'" \
-  "$status_log")
+  "status_json" \
+  "$status_log" \
+  "$(shell_join "${status_cmd_words[@]}")" \
+  "${status_cmd_words[@]}")
 
 archive_exit="SKIP"
 archive_output="(disabled)"
@@ -113,9 +160,18 @@ archive_log_ref="(disabled)"
 if [[ "$ARCHIVE_ENABLED" == "1" ]]; then
   archive_output="$ARCHIVE_ROOT/$archive_run_id"
   archive_log_ref="$archive_log"
+  archive_cmd_words=(
+    bash
+    scripts/archive_ci_artifacts_draft.sh
+    --profile "$ARCHIVE_PROFILE"
+    --run-id "$archive_run_id"
+    --output-root "$ARCHIVE_ROOT"
+  )
   archive_exit=$(run_step \
-    "bash scripts/archive_ci_artifacts_draft.sh --profile '${ARCHIVE_PROFILE}' --run-id '${archive_run_id}' --output-root '${ARCHIVE_ROOT}'" \
-    "$archive_log")
+    "archive" \
+    "$archive_log" \
+    "$(shell_join "${archive_cmd_words[@]}")" \
+    "${archive_cmd_words[@]}")
 fi
 
 overall="PASS"

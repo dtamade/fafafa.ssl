@@ -1,3 +1,35 @@
+# Task Plan - TLS13 Signer Gate Bundle Shell Execution Hardening
+
+## Goal
+收口 `scripts/run_tls13_signer_gate_bundle.sh` 的 `eval` / 字符串执行风险，避免 `run-id` 等动态值被当成 shell 语法执行。
+
+## Current Batch
+1. 写 focused contract，证明当前 bundle 的 `--run-id` 仍可从 `eval` 命令串中逃逸。
+2. 最小修改脚本，把各 step 从 `eval "$cmd"` 切到 argv / `env "KEY=value"` 执行。
+3. 复跑新合同和脚本语法检查。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified eval-based execution boundary in tls13 signer gate bundle
+- [completed] added focused contract for tls13 signer bundle run-id shell escape
+- [completed] replaced bundle step eval execution with direct argv execution
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 bundle 脚本仍通过：
+  - `run_step() -> eval "$cmd"`
+  - `ci/snapshot/status/archive` 四个 step 全部消费字符串命令
+- `run_tls13_signer_gate_ci.sh` 自己已经是 direct argv，所以 bundle 当前成为这条链上剩余的最外层 shell 执行面。
+- focused contract 已锁住这条执行边界：
+  - `tests/scripts/test_tls13_signer_gate_bundle_run_id_injection_contract.sh`
+    - payload 不得执行
+    - fake nested CI runner 必须收到完整 `run-id` 原始值
+- 修复后验证结果：
+  - `bash -n tests/scripts/test_tls13_signer_gate_bundle_run_id_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_tls13_signer_gate_bundle_run_id_injection_contract.sh`：PASS
+  - `bash -n scripts/run_tls13_signer_gate_bundle.sh`：PASS
+  - `git diff --check`：PASS
+
 # Task Plan - Wave B macOS Shell Execution Hardening
 
 ## Goal

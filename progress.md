@@ -1,3 +1,33 @@
+# Progress - TLS13 Signer Gate Bundle Shell Hardening
+
+## 2026-05-15
+- Post-commit continue:
+  - after landing `cb87979 fix: harden wave b macos shell execution`, continued static review to the next isolated `eval`-based orchestration script instead of opening the larger Wave C family
+- Fresh review narrowed the next real issue:
+  - `scripts/run_tls13_signer_gate_bundle.sh` still drove `ci/snapshot/status/archive` through `eval "$cmd"`
+  - inner `scripts/run_tls13_signer_gate_ci.sh` was already direct argv, so the bundle was the remaining outer shell-execution boundary
+- Repo search / context:
+  - `ace-tool/search_context` succeeded on this batch and confirmed the bundle -> ci -> snapshot/status/archive chain
+  - no existing focused contract existed for the bundle shell-execution boundary
+- New batch plan recorded in `docs/plans/2026-05-15-tls13-signer-gate-bundle-shell-hardening.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_tls13_signer_gate_bundle_run_id_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_tls13_signer_gate_bundle_run_id_injection_contract.sh` -> FAIL before fix
+    - exact failure: `fake tls13 signer gate ci should observe the run-id env`
+- Minimal implementation:
+  - `tests/scripts/test_tls13_signer_gate_bundle_run_id_injection_contract.sh`
+    - added a focused contract that proves `--run-id` must stay data-only through the bundle
+    - tightened the malicious payload once the first draft revealed it was also corrupting log paths with `/`, which was a contract-design issue rather than a remaining product bug
+  - `scripts/run_tls13_signer_gate_bundle.sh`
+    - added `shell_join()` for display-only command text
+    - replaced `run_step() -> eval "$cmd"` with direct argv execution
+    - switched the `ci` step to `env ... bash scripts/run_tls13_signer_gate_ci.sh`
+    - switched `snapshot/status/archive` to explicit argv arrays
+- Focused GREEN verification:
+  - `bash tests/scripts/test_tls13_signer_gate_bundle_run_id_injection_contract.sh` -> PASS
+  - `bash -n scripts/run_tls13_signer_gate_bundle.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B macOS Shell Execution Hardening
 
 ## 2026-05-15
