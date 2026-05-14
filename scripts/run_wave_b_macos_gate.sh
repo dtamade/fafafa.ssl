@@ -83,6 +83,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if ! python3 - "$EXAMPLES_THRESHOLD" <<'PY' >/dev/null 2>&1
+import sys
+float(sys.argv[1])
+PY
+then
+  echo "Invalid --examples-threshold: $EXAMPLES_THRESHOLD" >&2
+  exit 1
+fi
+
 if [[ "$OSTYPE" != darwin* && "$DRY_RUN" != "true" ]]; then
   echo "[FAIL] this script is intended for macOS (current: $OSTYPE). Use --dry-run for rehearsal." >&2
   exit 1

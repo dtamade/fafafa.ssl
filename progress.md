@@ -1,3 +1,32 @@
+# Progress - Wave B macOS Invalid Examples Threshold
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `a2ff245 fix: honor wave b macos examples threshold`
+  - continued static review in the same macOS gate script instead of widening scope
+- Fresh review narrowed the next real issue:
+  - `run_wave_b_macos_gate.sh` still has no preflight validation for `--examples-threshold`
+  - sibling Linux gate already rejects this input before running any step
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-macos-invalid-examples-threshold.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_wave_b_macos_gate_invalid_examples_threshold_contract.sh`
+  - `bash -n scripts/run_wave_b_macos_gate.sh`
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_threshold_contract.sh`
+  - result before fix: contract failed because stderr did not report invalid threshold
+- One-off repro captured the deeper failure truth:
+  - `OSTYPE=darwin23 bash scripts/run_wave_b_macos_gate.sh --run-id repro --output-dir out --examples-threshold nope`
+  - result: `probe/path-check/compile/modules/examples` all executed, logs and examples JSON were written, then Python raised `ValueError: could not convert string to float: 'nope'`
+- Minimal implementation:
+  - `tests/scripts/test_wave_b_macos_gate_invalid_examples_threshold_contract.sh`
+    - added a focused macOS contract for invalid threshold preflight behavior
+  - `scripts/run_wave_b_macos_gate.sh`
+    - added numeric preflight validation for `--examples-threshold` immediately after option parsing
+- Focused GREEN verification:
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh` -> PASS
+  - `bash -n scripts/run_wave_b_macos_gate.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B macOS Examples Threshold Truth
 
 ## 2026-05-14

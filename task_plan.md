@@ -1,3 +1,35 @@
+# Task Plan - Wave B macOS Invalid Examples Threshold
+
+## Goal
+补齐 `scripts/run_wave_b_macos_gate.sh` 对非法 `--examples-threshold` 的前置数值校验，避免参数错误被混成普通 gate FAIL。
+
+## Current Batch
+1. 写 focused contract，证明 macOS gate 当前不会前置拒绝非法阈值。
+2. 最小修改脚本，把非法阈值拦在任何 gate step 之前。
+3. 复跑 focused 合同与脚本语法检查。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified missing invalid-threshold preflight validation in macos wave b gate
+- [completed] wrote focused contract for invalid examples threshold
+- [completed] minimal preflight validation alignment in macos gate producer
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- Linux 兄弟脚本已经有 `Invalid --examples-threshold` 的前置校验和 focused contract。
+- macOS 脚本当前没有对应校验，`EXAMPLES_THRESHOLD` 会直接进入后续 `float(...)` 比较逻辑。
+- 这类输入错误如果不在前面拦住，就会让 summary / step 执行状态掩盖真实问题。
+- focused contract `tests/scripts/test_wave_b_macos_gate_invalid_examples_threshold_contract.sh` 已锁住真实错误边界：
+  - 修复前脚本会先跑完 `probe/path-check/compile/modules/examples`
+  - 还会写出 examples JSON 和 step logs
+  - 最后才在 `float("nope")` 处抛 `ValueError`
+- 修复后验证结果：
+  - `bash -n tests/scripts/test_wave_b_macos_gate_invalid_examples_threshold_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_threshold_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh`：PASS
+  - `bash -n scripts/run_wave_b_macos_gate.sh`：PASS
+  - `git diff --check`：PASS
+
 # Task Plan - Wave B macOS Examples Threshold Truth
 
 ## Goal

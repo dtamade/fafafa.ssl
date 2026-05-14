@@ -1,3 +1,20 @@
+# Findings - Wave B macOS Invalid Examples Threshold
+
+## 2026-05-14
+- 紧接着修完 macOS gate 的阈值真值后，继续横向对照 Linux gate，确认还有一个输入校验漂移：
+  - Linux 已前置拒绝非法 `--examples-threshold`
+  - macOS 仍缺这层校验
+- 这意味着 macOS lane 可能会先执行 gate steps，再在阈值比较处因 `float(...)` 失败，最后把参数错误伪装成普通 gate FAIL。
+- 这批最小正确修法应该是把 invalid-threshold 也前置收口，而不是继续让后续步骤背锅。
+- focused contract 和一次性复现都证明了这个风险是真实的，不是理论上的风格差异：
+  - `probe/path-check/compile/modules/examples` 五个步骤都会先执行
+  - 相关 marker 和 report 文件已经落盘
+  - stderr 末尾才出现 `ValueError: could not convert string to float: 'nope'`
+- 最小修复后，macOS gate 和 Linux gate 重新对齐到同一契约：
+  - 非法阈值直接报 `Invalid --examples-threshold`
+  - 不再执行任何 gate step
+  - 不再产出 summary
+
 # Findings - Wave B macOS Examples Threshold Truth
 
 ## 2026-05-14
