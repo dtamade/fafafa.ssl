@@ -21,6 +21,7 @@ VERBOSE=false
 STOP_ON_ERROR=false
 OUTPUT_FORMAT="text"
 REPORT_FILE=""
+MACHINE_STDOUT_MODE=false
 
 # 帮助信息
 show_help() {
@@ -53,6 +54,18 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if [[ -z "$REPORT_FILE" && "$OUTPUT_FORMAT" != "text" ]]; then
+    MACHINE_STDOUT_MODE=true
+fi
+
+emit_runtime_line() {
+    if $MACHINE_STDOUT_MODE; then
+        printf '%b\n' "$1" >&2
+    else
+        printf '%b\n' "$1"
+    fi
+}
+
 # 检查 FPC
 if ! command -v fpc &> /dev/null; then
     echo -e "${RED}错误: 未找到 fpc 编译器${NC}"
@@ -60,9 +73,9 @@ if ! command -v fpc &> /dev/null; then
 fi
 
 FPC_VERSION=$(fpc -iV 2>/dev/null || echo "unknown")
-echo "FPC 版本: $FPC_VERSION"
-echo "项目根目录: $PROJECT_ROOT"
-echo ""
+emit_runtime_line "FPC 版本: $FPC_VERSION"
+emit_runtime_line "项目根目录: $PROJECT_ROOT"
+emit_runtime_line ""
 
 # 统计
 TOTAL=0
@@ -106,8 +119,8 @@ compile_file() {
     return $result
 }
 
-echo "开始编译验证..."
-echo "========================================"
+emit_runtime_line "开始编译验证..."
+emit_runtime_line "========================================"
 
 # 遍历所有示例文件
 for file in $(find "$EXAMPLES_DIR" -name "*.pas" -type f | sort); do
@@ -117,23 +130,23 @@ for file in $(find "$EXAMPLES_DIR" -name "*.pas" -type f | sort); do
     if should_skip "$file"; then
         ((SKIPPED++))
         SKIPPED_FILES+=("$relative_path")
-        $VERBOSE && echo -e "${YELLOW}[SKIP]${NC} $relative_path"
+        $VERBOSE && emit_runtime_line "${YELLOW}[SKIP]${NC} $relative_path"
         continue
     fi
 
     if compile_file "$file"; then
         ((PASSED++))
-        echo -e "${GREEN}[PASS]${NC} $relative_path"
+        emit_runtime_line "${GREEN}[PASS]${NC} $relative_path"
     else
         ((FAILED++))
         FAILED_FILES+=("$relative_path")
-        echo -e "${RED}[FAIL]${NC} $relative_path"
+        emit_runtime_line "${RED}[FAIL]${NC} $relative_path"
         $STOP_ON_ERROR && break
     fi
 done
 
-echo "========================================"
-echo ""
+emit_runtime_line "========================================"
+emit_runtime_line ""
 
 # 计算通过率
 TESTED=$((TOTAL - SKIPPED))

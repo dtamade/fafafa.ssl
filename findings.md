@@ -1,3 +1,21 @@
+# Findings - Verify Examples JSON Stdout Truth
+
+## 2026-05-14
+- 继续沿着 `verify_examples_compile.sh -> examples_compile_ci_gate.json -> wave_b_ci_gate_summary` 这条 Linux truth chain 深审后，下一条 producer-side 语义问题不在计数，而在输出契约：
+  - 帮助把 `-f json` / `-f markdown` 说明成格式化输出
+  - 但脚本仍把 banner、进度行、`[PASS]/[FAIL]` 和最终摘要一起写到 stdout
+- 这会制造一个直接的机器消费断点：
+  - 只要调用者不使用 `-o`
+  - `-f json` 拿到的就不是纯 JSON
+  - 上层若直接 `json.load(stdout)` 会立即失败
+- 这批最小正确修法不是改 summary 字段，也不是改 `failed > 0 -> exit 1`，而是把两类输出拆开：
+  - 非 text 且未写文件时，进度日志走 stderr
+  - stdout 只保留最终格式化结果
+- 这条修法的边界也比较干净：
+  - `-f json -o file` 这类现有 Wave B 消费方式不受影响
+  - `summary.total/passed/failed/skipped/pass_rate` 完全不变
+  - `failed > 0 -> exit 1` 的 helper 语义也完全不变
+
 # Findings - Wave B Linux Examples Threshold Truth
 
 ## 2026-05-14

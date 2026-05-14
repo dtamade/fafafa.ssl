@@ -1,3 +1,33 @@
+# Progress - Verify Examples JSON Stdout Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - current head already includes `59b531b fix: honor wave b examples threshold`
+  - working tree is clean, so the previous batch had already been closed before this turn resumed
+- Continued on the same `verify_examples_compile.sh -> examples_compile_ci_gate.json -> wave_b_ci_gate_summary` review lane
+- Fresh review narrowed the next real issue:
+  - `verify_examples_compile.sh` advertises `-f json` / `-f markdown` as output formats
+  - but it still prints runtime banner and progress lines to stdout before the final formatted summary
+  - so non-text stdout is not machine-readable unless the caller also uses `-o`
+- New batch plan recorded in `docs/plans/2026-05-14-verify-examples-json-stdout-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_verify_examples_compile_json_stdout_contract.sh`
+  - `bash -n tests/scripts/test_verify_examples_compile_json_stdout_contract.sh` -> PASS
+  - `bash tests/scripts/test_verify_examples_compile_json_stdout_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `verify_examples_compile -f json should emit parseable JSON to stdout`
+    - traced stdout started with `FPC 版本: 3.2.2`
+- Minimal implementation landed:
+  - `scripts/verify_examples_compile.sh`
+    - added `MACHINE_STDOUT_MODE`
+    - when `REPORT_FILE` is empty and `OUTPUT_FORMAT != text`, runtime banner/progress now go to stderr
+    - formatted JSON/Markdown summary remains on stdout
+- GREEN verification:
+  - `bash -n scripts/verify_examples_compile.sh` -> PASS
+  - `bash -n tests/scripts/test_verify_examples_compile_json_stdout_contract.sh` -> PASS
+  - `bash tests/scripts/test_verify_examples_compile_json_stdout_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B Linux Examples Threshold Truth
 
 ## 2026-05-14

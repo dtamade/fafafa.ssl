@@ -1,3 +1,52 @@
+# Task Plan - Verify Examples JSON Stdout Truth
+
+## Goal
+收口 `scripts/verify_examples_compile.sh` 的 stdout 契约，避免 `-f json` 直出时混入 banner / 进度日志，导致机器消费者拿不到纯 JSON。
+
+## Current Batch
+1. 写 focused contract，证明 `verify_examples_compile.sh -f json` 当前 stdout 不是可解析 JSON。
+2. 最小修改脚本的日志流向，只在“非 text 且未写文件”时把运行日志切到 stderr。
+3. 复跑 focused 合同与语法检查。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified stdout json contract drift in verify_examples_compile producer
+- [completed] wrote focused contract for machine-readable stdout truth
+- [completed] minimal stdout/stderr stream split in verify_examples_compile
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- `verify_examples_compile.sh` 的帮助把 `-f json` / `-f markdown` 定义成输出格式选项。
+- 但脚本当前仍把下面这些内容都写到 stdout：
+  - `FPC 版本`
+  - `项目根目录`
+  - `开始编译验证...`
+  - `[PASS]/[FAIL]/[SKIP]`
+  - 结尾的 JSON / Markdown 摘要
+- 这意味着只要调用者不传 `-o`，stdout 就不是纯格式输出：
+  - `-f json` 无法直接被 `json.load(...)` 消费
+  - `-f markdown` 也会混入 shell 日志
+- 这批最小正确修法不改统计/退出码，只收口流向：
+  - 非 text 且未写文件时，进度日志改走 stderr
+  - stdout 只保留格式化摘要本身
+- focused RED:
+  - 新增 `tests/scripts/test_verify_examples_compile_json_stdout_contract.sh`
+  - `bash -n tests/scripts/test_verify_examples_compile_json_stdout_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_json_stdout_contract.sh`: FAIL before fix
+  - failure shape:
+    - `verify_examples_compile -f json should emit parseable JSON to stdout`
+    - stdout 第 1 行就是 `FPC 版本: ...`
+- minimal implementation:
+  - 更新 `scripts/verify_examples_compile.sh`
+    - 新增 `MACHINE_STDOUT_MODE`
+    - 非 text 且未写文件时，runtime banner / progress 改走 stderr
+    - stdout 继续只承载最终 `json` / `markdown` 摘要
+- focused GREEN:
+  - `bash -n scripts/verify_examples_compile.sh`: PASS
+  - `bash -n tests/scripts/test_verify_examples_compile_json_stdout_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_json_stdout_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B Linux Examples Threshold Truth
 
 ## Goal
