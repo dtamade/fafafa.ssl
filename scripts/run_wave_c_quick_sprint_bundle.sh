@@ -89,16 +89,30 @@ readiness_report="$REPORTS_DIR/wave_c_b108_default_on_readiness_${RUN_ID}.md"
 canary_report="$REPORTS_DIR/wave_c_b109_canary_rollout_${RUN_ID}.md"
 rollback_report="$REPORTS_DIR/wave_c_b110_rollback_drill_${RUN_ID}.md"
 
+shell_join() {
+  local parts=()
+  local part
+  for part in "$@"; do
+    parts+=("$(printf '%q' "$part")")
+  done
+  local IFS=' '
+  echo "${parts[*]}"
+}
+
 run_step() {
-  local step="$1"
-  local cmd="$2"
-  local log="$3"
+  local step_name="$1"
+  local log="$2"
+  local cmd_desc="$3"
+  shift 3
+
+  echo "[wave-c-quick-sprint] [$step_name] $cmd_desc" >&2
 
   set +e
-  eval "$cmd" > "$log" 2>&1
+  "$@" > "$log" 2>&1
   local ec=$?
   set -e
 
+  echo "[wave-c-quick-sprint] [$step_name] exit=$ec log=$log" >&2
   echo "$ec"
 }
 
@@ -107,21 +121,61 @@ readiness_log="$REPORTS_DIR/wave_c_b108_default_on_readiness_${RUN_ID}.log"
 canary_log="$REPORTS_DIR/wave_c_b109_canary_rollout_${RUN_ID}.log"
 rollback_log="$REPORTS_DIR/wave_c_b110_rollback_drill_${RUN_ID}.log"
 
-threshold_exit=$(run_step "b107_threshold" \
-  "bash scripts/evaluate_wave_c_b101_thresholds.sh --reports-dir ${REPORTS_DIR} --report-glob '${REPORT_GLOB}' $( [[ \"$REQUIRE_FULL_GATE\" == \"true\" ]] && printf '%s' '--require-full-gate' ) --run-id ${RUN_ID} --strict --output ${threshold_report}" \
-  "$threshold_log")
+threshold_cmd_words=(
+  bash
+  scripts/evaluate_wave_c_b101_thresholds.sh
+  --reports-dir "$REPORTS_DIR"
+  --report-glob "$REPORT_GLOB"
+)
+if [[ "$REQUIRE_FULL_GATE" == "true" ]]; then
+  threshold_cmd_words+=(--require-full-gate)
+fi
+threshold_cmd_words+=(
+  --run-id "$RUN_ID"
+  --strict
+  --output "$threshold_report"
+)
 
-readiness_exit=$(run_step "b108_readiness" \
-  "bash scripts/check_wave_c_default_on_readiness.sh --reports-dir ${REPORTS_DIR} --threshold-report ${threshold_report} --validation-report ${VALIDATION_REPORT} --run-id ${RUN_ID} --strict --output ${readiness_report}" \
-  "$readiness_log")
+readiness_cmd_words=(
+  bash
+  scripts/check_wave_c_default_on_readiness.sh
+  --reports-dir "$REPORTS_DIR"
+  --threshold-report "$threshold_report"
+  --validation-report "$VALIDATION_REPORT"
+  --run-id "$RUN_ID"
+  --strict
+  --output "$readiness_report"
+)
 
-canary_exit=$(run_step "b109_canary" \
-  "bash scripts/prepare_wave_c_b109_canary_rollout.sh --reports-dir ${REPORTS_DIR} --run-id ${RUN_ID} --strict --threshold-report ${threshold_report} --readiness-report ${readiness_report} --validation-report ${VALIDATION_REPORT} --output ${canary_report}" \
-  "$canary_log")
+canary_cmd_words=(
+  bash
+  scripts/prepare_wave_c_b109_canary_rollout.sh
+  --reports-dir "$REPORTS_DIR"
+  --run-id "$RUN_ID"
+  --strict
+  --threshold-report "$threshold_report"
+  --readiness-report "$readiness_report"
+  --validation-report "$VALIDATION_REPORT"
+  --output "$canary_report"
+)
 
-rollback_exit=$(run_step "b110_rollback_drill" \
-  "bash scripts/run_wave_c_b110_rollback_drill.sh --reports-dir ${REPORTS_DIR} --run-id ${RUN_ID} --strict --threshold-report ${threshold_report} --readiness-report ${readiness_report} --rollout-report ${canary_report} --validation-report ${VALIDATION_REPORT} --output ${rollback_report}" \
-  "$rollback_log")
+rollback_cmd_words=(
+  bash
+  scripts/run_wave_c_b110_rollback_drill.sh
+  --reports-dir "$REPORTS_DIR"
+  --run-id "$RUN_ID"
+  --strict
+  --threshold-report "$threshold_report"
+  --readiness-report "$readiness_report"
+  --rollout-report "$canary_report"
+  --validation-report "$VALIDATION_REPORT"
+  --output "$rollback_report"
+)
+
+threshold_exit=$(run_step "b107_threshold" "$threshold_log" "$(shell_join "${threshold_cmd_words[@]}")" "${threshold_cmd_words[@]}")
+readiness_exit=$(run_step "b108_readiness" "$readiness_log" "$(shell_join "${readiness_cmd_words[@]}")" "${readiness_cmd_words[@]}")
+canary_exit=$(run_step "b109_canary" "$canary_log" "$(shell_join "${canary_cmd_words[@]}")" "${canary_cmd_words[@]}")
+rollback_exit=$(run_step "b110_rollback_drill" "$rollback_log" "$(shell_join "${rollback_cmd_words[@]}")" "${rollback_cmd_words[@]}")
 
 overall="PASS"
 if [[ "$threshold_exit" != "0" || "$readiness_exit" != "0" || "$canary_exit" != "0" || "$rollback_exit" != "0" ]]; then

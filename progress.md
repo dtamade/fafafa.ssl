@@ -1,3 +1,36 @@
+# Progress - Wave C Quick Sprint Bundle Shell Hardening
+
+## 2026-05-15
+- Post-commit continue:
+  - after landing `edacd7f fix: harden wave c b149 shell execution`, continued static review to the next highest-value Wave C orchestration wrapper
+- Fresh review narrowed the next real issue:
+  - `scripts/run_wave_c_quick_sprint_bundle.sh` still drove B107/B108/B109/B110 through `eval "$cmd"`
+  - even with those nested scripts stable, the bundle still reintroduced the same shell execution boundary around `RUN_ID`, report paths, and B107's `--require-full-gate` toggle
+- Existing regression surface:
+  - `tests/scripts/test_run_wave_c_quick_sprint_bundle_unified_inputs_contract.sh` already guarded the quick-sprint PASS/report contract
+  - `tests/scripts/test_check_wave_c_post_trigger_observability_tmp_reports_contract.sh` already guarded the downstream tmp artifact lookup contract
+  - no existing focused contract covered quick sprint bundle shell execution
+- New batch plan recorded in `docs/plans/2026-05-15-wave-c-quick-sprint-bundle-shell-hardening.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_run_wave_c_quick_sprint_bundle_run_id_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_run_wave_c_quick_sprint_bundle_run_id_injection_contract.sh` -> FAIL before fix
+    - exact failure: `quick sprint bundle should not execute shell content embedded in --run-id`
+- Minimal implementation:
+  - `tests/scripts/test_run_wave_c_quick_sprint_bundle_run_id_injection_contract.sh`
+    - added a focused contract that proves `run-id` must remain data-only through the bundle
+    - locked the `--require-full-gate` passthrough as part of the same boundary
+  - `scripts/run_wave_c_quick_sprint_bundle.sh`
+    - added `shell_join()` for display-only command text
+    - replaced `run_step() -> eval "$cmd"` with direct argv execution
+    - switched B107/B108/B109/B110 invocations to explicit argv arrays
+    - replaced inline `$( [[ ... ]] && printf ... )` shell insertion with conditional argv append
+- Focused GREEN verification:
+  - `bash tests/scripts/test_run_wave_c_quick_sprint_bundle_run_id_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_run_wave_c_quick_sprint_bundle_unified_inputs_contract.sh` -> PASS
+  - `bash tests/scripts/test_check_wave_c_post_trigger_observability_tmp_reports_contract.sh` -> PASS
+  - `bash -n scripts/run_wave_c_quick_sprint_bundle.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave C B149 Submission Bundle Shell Hardening
 
 ## 2026-05-15

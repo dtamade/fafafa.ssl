@@ -1,3 +1,38 @@
+# Task Plan - Wave C Quick Sprint Bundle Shell Hardening
+
+## Goal
+收口 `scripts/run_wave_c_quick_sprint_bundle.sh` 的 `eval` / 字符串执行风险，避免 `run-id` 等动态值被当成 shell 语法执行。
+
+## Current Batch
+1. 写 focused contract，证明当前 quick sprint bundle 的 `--run-id` 仍可从 `eval` 命令串中逃逸。
+2. 最小修改脚本，把 `B107/B108/B109/B110` step 从 `eval "$cmd"` 切到 argv 执行，并移除内联 shell 条件拼接。
+3. 复跑新合同、既有 unified contract、`B120 tmp reports` 邻近合同和脚本语法检查。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified eval-based execution boundary in wave c quick sprint bundle
+- [completed] added focused contract for quick sprint bundle run-id shell escape
+- [completed] replaced quick sprint bundle eval execution with direct argv execution
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 quick sprint bundle 原先通过：
+  - `run_step() -> eval "$cmd"`
+  - `B107/B108/B109/B110` 四个 step 都消费字符串命令
+  - B107 step 还把 `--require-full-gate` 通过 `$( [[ ... ]] && printf ... )` 内联 shell 拼接注入命令串
+- focused contract 已锁住这条执行边界：
+  - `tests/scripts/test_run_wave_c_quick_sprint_bundle_run_id_injection_contract.sh`
+    - payload 不得执行
+    - fake nested B107/B108/B109/B110 runner 必须收到完整 `run-id` 原始值
+    - `--require-full-gate` 仍需透传给 B107
+- 修复后验证结果：
+  - `bash -n tests/scripts/test_run_wave_c_quick_sprint_bundle_run_id_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_run_wave_c_quick_sprint_bundle_run_id_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_run_wave_c_quick_sprint_bundle_unified_inputs_contract.sh`：PASS
+  - `bash tests/scripts/test_check_wave_c_post_trigger_observability_tmp_reports_contract.sh`：PASS
+  - `bash -n scripts/run_wave_c_quick_sprint_bundle.sh`：PASS
+  - `git diff --check`：PASS
+
 # Task Plan - Wave C B149 Submission Bundle Shell Hardening
 
 ## Goal

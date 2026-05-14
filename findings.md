@@ -1,3 +1,20 @@
+# Findings - Wave C Quick Sprint Bundle Shell Hardening
+
+## 2026-05-15
+- 继续沿着 Wave C orchestration `eval` 家族往下审查后，quick sprint bundle 暴露出一条更宽的最外层执行面：
+  - `B107/B108/B109/B110` 四个 step 仍统一经过 `eval "$cmd"`
+  - 同一个 `RUN_ID` 会和 `reports-dir/report-glob/validation-report` 一起重新拼进 shell 命令
+  - B107 还额外通过 `$( [[ ... ]] && printf ... )` 把 `--require-full-gate` 注入命令串
+- 这意味着即使下游 threshold/readiness/canary/rollback 脚本本身稳定，quick sprint bundle 仍会在最外层重新把动态值交给 shell 解释层。
+- 这批最小正确修法仍然保持 display 与 execution 分离：
+  - display 命令继续保留
+  - 真正执行切成 direct argv
+  - `--require-full-gate` 改为条件追加 argv，而不是内联 shell 条件
+- 修复后，quick sprint bundle 的剩余 shell 执行面已经被切掉：
+  - `run-id` 只作为 argv 数据透传给 B107/B108/B109/B110
+  - `--require-full-gate` 继续稳定透传给 B107
+  - 既有 unified contract 与 B120 tmp artifact contract 保持 green
+
 # Findings - Wave C B149 Submission Bundle Shell Hardening
 
 ## 2026-05-15
