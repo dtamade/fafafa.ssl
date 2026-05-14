@@ -1,3 +1,21 @@
+# Findings - Verify Examples Report Write Truth
+
+## 2026-05-14
+- 继续深审 `verify_examples_compile.sh` 后，又发现一条更直接的 producer-side 假成功：
+  - `-o FILE` 写报告失败时
+  - 脚本仍会继续打印 `报告已保存到: ...`
+  - 并按 examples 编译结果返回成功
+- 这类问题比格式歧义更危险，因为它会伪造 artifact 已落盘的事实：
+  - 调用者以为报告已经生成
+  - 实际上文件根本不存在
+  - 后续脚本或人工排查会被一条假的成功提示误导
+- 这批最小正确修法不会扩行为，只修真值：
+  - 写入失败时直接非零退出
+  - 不再继续谎报“已保存”
+- 这样也把 report artifact 的存在性重新拉回到 CLI 语义里：
+  - “保存成功” 现在重新等价于“文件真的写出来了”
+  - 不会再出现 stderr 报错但 stdout 仍绿的分叉真相
+
 # Findings - Verify Examples Stop-On-Error Summary Truth
 
 ## 2026-05-14

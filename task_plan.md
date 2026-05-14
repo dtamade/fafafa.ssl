@@ -1,3 +1,52 @@
+# Task Plan - Verify Examples Report Write Truth
+
+## Goal
+收口 `scripts/verify_examples_compile.sh -o FILE` 的落盘真值，避免报告文件写失败时脚本仍然报成功。
+
+## Current Batch
+1. 写 focused contract，证明 `-o` 指向不存在父目录时，脚本当前仍会回显“报告已保存到”并返回 0。
+2. 最小修改脚本，让报告写失败时明确返回非零并停止。
+3. 复跑 focused 合同与 verify_examples 邻近合同。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified false-success report write path in verify_examples producer
+- [completed] wrote focused contract for report write truth
+- [completed] minimal fail-loud handling for report write errors
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前脚本在 `REPORT_FILE` 非空时会先尝试：
+  - `output_summary > "$REPORT_FILE"`
+  - 然后无条件打印 `报告已保存到: $REPORT_FILE`
+- 因为脚本没有 `set -e`，所以当父目录不存在时会出现一条很危险的假成功链：
+  - stderr 已经报 `No such file or directory`
+  - stdout 仍然说“报告已保存到”
+  - 如果 examples 本身没有失败，退出码仍是 `0`
+- 这批最小正确修法不扩成自动建目录，只收口真值：
+  - 报告写入失败时明确返回非零
+  - 不再继续打印保存成功
+- focused RED:
+  - 新增 `tests/scripts/test_verify_examples_compile_report_write_contract.sh`
+  - `bash -n tests/scripts/test_verify_examples_compile_report_write_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_report_write_contract.sh`: FAIL before fix
+  - failure shape:
+    - `verify_examples_compile should fail loudly when the requested report file cannot be written`
+    - stdout 仍然包含 `报告已保存到: reports/out.json`
+- minimal implementation:
+  - 更新 `scripts/verify_examples_compile.sh`
+    - `output_summary > "$REPORT_FILE"` 失败时立刻报错并 `exit 2`
+    - 只有真正写成功后才输出 `报告已保存到: ...`
+- focused GREEN:
+  - `bash -n scripts/verify_examples_compile.sh`: PASS
+  - `bash -n tests/scripts/test_verify_examples_compile_json_stdout_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_json_stdout_contract.sh`: PASS
+  - `bash -n tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh`: PASS
+  - `bash -n tests/scripts/test_verify_examples_compile_report_write_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_report_write_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Verify Examples Stop-On-Error Summary Truth
 
 ## Goal

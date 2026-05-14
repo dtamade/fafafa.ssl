@@ -251,8 +251,11 @@ EOF_MD
 }
 
 if [ -n "$REPORT_FILE" ]; then
-    output_summary > "$REPORT_FILE"
-    echo "报告已保存到: $REPORT_FILE"
+    if ! output_summary > "$REPORT_FILE"; then
+        echo -e "${RED}错误: 无法写入报告文件: $REPORT_FILE${NC}" >&2
+        exit 2
+    fi
+    emit_runtime_line "报告已保存到: $REPORT_FILE"
 else
     output_summary
 fi
