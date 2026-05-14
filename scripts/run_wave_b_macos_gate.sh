@@ -208,7 +208,7 @@ threshold = float("$EXAMPLES_THRESHOLD")
 print("true" if rate >= threshold else "false")
 PY
 )
-  if [[ "$examples_exit" == "0" && "$threshold_pass" == "true" ]]; then
+  if [[ "$threshold_pass" == "true" ]]; then
     examples_status="PASS"
   fi
 

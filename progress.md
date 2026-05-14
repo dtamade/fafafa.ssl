@@ -1,3 +1,30 @@
+# Progress - Wave B macOS Examples Threshold Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `0c44610 fix: reject partial linux examples evidence in consistency`
+  - continued the Wave B static review horizontally from Linux gate into macOS gate
+- Fresh review narrowed the next real issue:
+  - `run_wave_b_macos_gate.sh` still requires `examples_exit == 0` even after `pass_rate` meets threshold
+  - this is the same producer-side semantic drift that Linux gate had before its threshold-truth fix
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-macos-examples-threshold-truth.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh`
+  - `bash -n scripts/run_wave_b_macos_gate.sh`
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh`
+  - result before fix: fake helper reached `examples exit=1`, and the contract failed because macOS gate still marked the threshold-satisfying case as non-green
+- Minimal implementation:
+  - `tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh`
+    - added a focused contract that locks the threshold-truth scenario under a fake macOS gate workspace
+  - `scripts/run_wave_b_macos_gate.sh`
+    - changed examples PASS decision to depend only on `threshold_pass`
+    - kept helper exit code in the summary as evidence
+- Focused GREEN verification:
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh`
+  - result after fix: PASS, while preserving `examples exit=1` in the generated summary
+  - `bash -n scripts/run_wave_b_macos_gate.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Consistency Partial Linux Examples Truth
 
 ## 2026-05-14

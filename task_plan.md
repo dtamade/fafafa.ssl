@@ -1,3 +1,40 @@
+# Task Plan - Wave B macOS Examples Threshold Truth
+
+## Goal
+收口 `scripts/run_wave_b_macos_gate.sh` 对 examples gate 的阈值语义漂移，避免 helper `exit 1` 继续把达标门禁误判成 FAIL。
+
+## Current Batch
+1. 写 focused contract，证明 macOS gate 当前仍把“阈值达标 + helper exit 1”误判成 FAIL。
+2. 最小修改脚本，让 examples step 真值只收口到阈值判定。
+3. 复跑 focused 合同与脚本语法检查。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified examples-threshold semantic drift in macos wave b gate
+- [completed] wrote focused contract for macos threshold truth
+- [completed] minimal threshold-truth alignment in macos gate producer
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 `run_wave_b_macos_gate.sh` 仍保留着 Linux 旧逻辑同型问题：
+  - `pass_rate >= threshold`
+  - 还不够
+  - 仍额外要求 `examples_exit == 0`
+- 这会制造一个真实的假失败：
+  - examples JSON 已经证明门禁达标
+  - helper 仍因少量 failed files 返回 1
+  - macOS gate 继续把 examples step / overall 判成 FAIL
+- 这批最小正确修法不会改 helper，只把 gate 真值拉回阈值语义。
+- focused contract `tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh` 已锁住真实场景：
+  - fake helper 写出 `passed=71, failed=2, skipped=2, total=75, pass_rate=94.7`
+  - helper 保持 `exit 1`
+  - gate 仍必须把 examples / overall 判成 PASS
+- 修复后验证结果：
+  - `bash -n tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh`：PASS
+  - `bash -n scripts/run_wave_b_macos_gate.sh`：PASS
+  - `git diff --check`：PASS
+
 # Task Plan - Wave B/B2 Consistency Partial Linux Examples Truth
 
 ## Goal

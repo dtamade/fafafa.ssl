@@ -1,3 +1,18 @@
+# Findings - Wave B macOS Examples Threshold Truth
+
+## 2026-05-14
+- 继续从 Linux gate 横向看 macOS gate 后，发现 `run_wave_b_macos_gate.sh` 还保留着完全同型的 examples 语义漂移：
+  - helper exit code 仍被当成最终 gate 真值的一部分
+  - 阈值门禁和底层 failed-files 语义没有分层
+- 这意味着 macOS lane 也会出现 Linux 之前那种“门禁明明达标，但 summary 仍被判 FAIL”的假失败。
+- 这批最小正确修法就是把 macOS examples step 也重新拉回阈值语义。
+- 新增 focused contract 证明了假失败是真实存在的：
+  - fake macOS gate 中，examples helper 会写出 `pass_rate=94.7` 但故意 `exit 1`
+  - 修复前 summary 仍把 examples / overall 判成 FAIL
+- `run_wave_b_macos_gate.sh` 的最小正确实现与 Linux 对齐后，gate 真值重新分层：
+  - helper `exit 1` 继续保留在 summary 里作为 failed-files evidence
+  - examples step 是否 PASS 只由 `pass_rate >= threshold` 决定
+
 # Findings - Wave B/B2 Consistency Partial Linux Examples Truth
 
 ## 2026-05-14
