@@ -1,3 +1,19 @@
+# Findings - Wave C B101 Validation Playbook Shell Hardening
+
+## 2026-05-15
+- 继续沿着 Wave C orchestration `eval` 家族往下深审后，B101 validation playbook 暴露出两条更底层但仍可利用的真实执行边界：
+  - `MODULE_SET` 仍通过 `modules_cmd` 直接拼进 `run_all_module_tests` 字符串命令
+  - `BENCH_BIN_DIR` 仍同时进入 `mkdir -p && fpc ... -FE...` 与 benchmark 可执行路径字符串
+- 这说明即使脚本前半段已经通过 `resolve_under_project_root()` 把路径限制在仓库内，动态值在真正执行前仍会重新进入 shell 解释层。
+- 这批最小正确修法仍然保持 display 与 execution 分离：
+  - display 命令继续保留
+  - 真正执行切成 direct argv / `env "KEY=value"` 数组
+  - `mkdir -p` 提前到 shell 外，去掉 `&&` 串联
+- 修复后，B101 validation playbook 的剩余 shell 执行面已经被切掉：
+  - `MODULE_SET` 只作为单个 argv 透传给 module runner
+  - `BENCH_BIN_DIR` 只作为 argv / env 数据进入 mkdir、fpc 和 benchmark 可执行路径
+  - 既有 `fast-local` 与 `dry-run` 契约保持 green
+
 # Findings - Wave C Quick Sprint Bundle Shell Hardening
 
 ## 2026-05-15

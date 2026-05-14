@@ -1,3 +1,44 @@
+# Progress - Wave C B101 Validation Playbook Shell Hardening
+
+## 2026-05-15
+- Post-commit continue:
+  - after landing `ceb2748 fix: harden wave c quick sprint bundle shell execution`, continued static review into the remaining lower-level Wave C validation hotspot
+- Fresh review narrowed the next real issues:
+  - `scripts/run_wave_c_b101_validation_playbook.sh` still executed assembled commands through `( cd "$PROJECT_ROOT" && eval "$cmd" )`
+  - `--modules` still controlled the full-gate module-test command string
+  - `--bench-bin-dir` still controlled both the bench compile string and the benchmark executable path string
+- Existing regression surface:
+  - `tests/scripts/test_run_wave_c_b101_validation_playbook_fast_local_contract.sh` already guarded live fast-local execution truth
+  - `tests/scripts/test_run_wave_c_b101_validation_playbook_fast_local_dry_run_contract.sh` already guarded dry-run path resolution truth
+  - no existing focused contracts covered the remaining shell execution boundaries
+- New batch plan recorded in `docs/plans/2026-05-15-wave-c-b101-validation-playbook-shell-hardening.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_run_wave_c_b101_validation_playbook_modules_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_run_wave_c_b101_validation_playbook_modules_injection_contract.sh` -> FAIL before fix
+    - exact failure: `B101 validation playbook should not execute shell content embedded in --modules`
+  - `bash -n tests/scripts/test_run_wave_c_b101_validation_playbook_bench_bin_dir_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_run_wave_c_b101_validation_playbook_bench_bin_dir_injection_contract.sh` -> FAIL before fix
+    - exact failure: `B101 validation playbook should not execute shell content embedded in --bench-bin-dir`
+- Minimal implementation:
+  - `tests/scripts/test_run_wave_c_b101_validation_playbook_modules_injection_contract.sh`
+    - added a focused contract for modules payload passthrough without shell execution
+    - locked fast-local module env wiring in the same boundary
+  - `tests/scripts/test_run_wave_c_b101_validation_playbook_bench_bin_dir_injection_contract.sh`
+    - added a focused contract for bench-bin-dir payload passthrough without shell execution
+    - locked benchmark runner env passthrough in the same boundary
+  - `scripts/run_wave_c_b101_validation_playbook.sh`
+    - added `shell_join()` for display-only command text
+    - replaced `run_step() -> eval "$cmd"` with direct argv execution under project-root `cd`
+    - switched compile/modules/bench compile/bench run invocations to explicit argv / env arrays
+    - moved `mkdir -p "$BENCH_BIN_DIR"` outside shell-string execution so compile no longer depends on `&&`
+- Focused GREEN verification:
+  - `bash tests/scripts/test_run_wave_c_b101_validation_playbook_modules_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_run_wave_c_b101_validation_playbook_bench_bin_dir_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_run_wave_c_b101_validation_playbook_fast_local_contract.sh` -> PASS
+  - `bash tests/scripts/test_run_wave_c_b101_validation_playbook_fast_local_dry_run_contract.sh` -> PASS
+  - `bash -n scripts/run_wave_c_b101_validation_playbook.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave C Quick Sprint Bundle Shell Hardening
 
 ## 2026-05-15

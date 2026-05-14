@@ -160,19 +160,30 @@ MODULE_LOG="$REPORTS_DIR/wave_c_b101_modules_${RUN_ID}.log"
 BENCH_COMPILE_LOG="$REPORTS_DIR/wave_c_b101_bench_compile_${RUN_ID}.log"
 BENCH_RUN_LOG="$REPORTS_DIR/wave_c_b101_bench_run_${RUN_ID}.log"
 
+shell_join() {
+  local parts=()
+  local part
+  for part in "$@"; do
+    parts+=("$(printf '%q' "$part")")
+  done
+  local IFS=' '
+  echo "${parts[*]}"
+}
+
 run_step() {
   local label="$1"
-  local cmd="$2"
-  local log="$3"
+  local log="$2"
+  local cmd_desc="$3"
+  shift 3
 
   if [[ "$DRY_RUN" == "true" ]]; then
-    echo "[DRY-RUN] $label => $cmd"
+    echo "[DRY-RUN] $label => $cmd_desc"
     echo 0
     return 0
   fi
 
   set +e
-  ( cd "$PROJECT_ROOT" && eval "$cmd" ) > "$log" 2>&1
+  ( cd "$PROJECT_ROOT" && "$@" ) > "$log" 2>&1
   local ec=$?
   set -e
   echo "$ec"
@@ -201,23 +212,62 @@ if [[ "$DRY_RUN" == "false" ]]; then
 fi
 
 if [[ "$FULL_GATE" == "true" ]]; then
-  compile_cmd="python3 scripts/compile_all_modules.py"
+  compile_cmd_words=(
+    python3
+    scripts/compile_all_modules.py
+  )
   if [[ -n "$COMPILE_UNIT_OUTPUT_DIR" ]]; then
-    compile_cmd="$compile_cmd --unit-output-dir '$COMPILE_UNIT_OUTPUT_DIR'"
+    compile_cmd_words+=(
+      --unit-output-dir "$COMPILE_UNIT_OUTPUT_DIR"
+    )
   fi
-  compile_exit=$(run_step "compile_all_modules" "$compile_cmd" "$COMPILE_LOG")
+  compile_exit=$(run_step "compile_all_modules" "$COMPILE_LOG" "$(shell_join "${compile_cmd_words[@]}")" "${compile_cmd_words[@]}")
 
-  modules_cmd="bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
+  modules_cmd_words=()
   if [[ "$FAST_LOCAL" == "true" ]]; then
-    modules_cmd="FAFAFA_MODULE_TEST_REPORTS_DIR='$MODULE_REPORTS_DIR' FAFAFA_MODULE_TEST_BIN_DIR='$MODULE_BIN_DIR' FAFAFA_FPC_UNIT_OUTPUT_DIR='$MODULE_UNIT_DIR' $modules_cmd --fast-local"
+    modules_cmd_words+=(
+      env
+      "FAFAFA_MODULE_TEST_REPORTS_DIR=$MODULE_REPORTS_DIR"
+      "FAFAFA_MODULE_TEST_BIN_DIR=$MODULE_BIN_DIR"
+      "FAFAFA_FPC_UNIT_OUTPUT_DIR=$MODULE_UNIT_DIR"
+    )
   fi
-  modules_exit=$(run_step "run_all_module_tests" "$modules_cmd" "$MODULE_LOG")
+  modules_cmd_words+=(
+    bash
+    scripts/run_all_module_tests.sh
+    --modules "$MODULE_SET"
+  )
+  if [[ "$FAST_LOCAL" == "true" ]]; then
+    modules_cmd_words+=(--fast-local)
+  fi
+  modules_exit=$(run_step "run_all_module_tests" "$MODULE_LOG" "$(shell_join "${modules_cmd_words[@]}")" "${modules_cmd_words[@]}")
 fi
 
-bench_compile_exit=$(run_step "compile_benchmark_cert_cache" "mkdir -p '$BENCH_BIN_DIR' && fpc -Mobjfpc -Sh -O2 -Fu./src -Fu./src/openssl -Fu./tests/benchmarks -Fu./examples -Fi./src -FE'$BENCH_BIN_DIR' tests/benchmarks/benchmark_cert_verify_cache.pas" "$BENCH_COMPILE_LOG")
+bench_compile_cmd_words=(
+  fpc
+  -Mobjfpc
+  -Sh
+  -O2
+  -Fu./src
+  -Fu./src/openssl
+  -Fu./tests/benchmarks
+  -Fu./examples
+  -Fi./src
+  "-FE$BENCH_BIN_DIR"
+  tests/benchmarks/benchmark_cert_verify_cache.pas
+)
+if [[ "$DRY_RUN" == "false" ]]; then
+  mkdir -p "$BENCH_BIN_DIR"
+fi
+bench_compile_exit=$(run_step "compile_benchmark_cert_cache" "$BENCH_COMPILE_LOG" "$(shell_join "${bench_compile_cmd_words[@]}")" "${bench_compile_cmd_words[@]}")
 
 if [[ "$bench_compile_exit" == "0" ]]; then
-  bench_run_exit=$(run_step "run_benchmark_cert_cache" "FAFAFA_PROJECT_ROOT='$PROJECT_ROOT' '$BENCH_BIN_DIR/benchmark_cert_verify_cache'" "$BENCH_RUN_LOG")
+  bench_run_cmd_words=(
+    env
+    "FAFAFA_PROJECT_ROOT=$PROJECT_ROOT"
+    "$BENCH_BIN_DIR/benchmark_cert_verify_cache"
+  )
+  bench_run_exit=$(run_step "run_benchmark_cert_cache" "$BENCH_RUN_LOG" "$(shell_join "${bench_run_cmd_words[@]}")" "${bench_run_cmd_words[@]}")
 else
   bench_run_exit=127
 fi

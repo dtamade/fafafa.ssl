@@ -1,3 +1,44 @@
+# Task Plan - Wave C B101 Validation Playbook Shell Hardening
+
+## Goal
+收口 `scripts/run_wave_c_b101_validation_playbook.sh` 的 `eval` / 字符串执行风险，避免 `--modules` 与 `--bench-bin-dir` 被当成 shell 语法执行。
+
+## Current Batch
+1. 写两个 focused contract，分别证明 `--modules` 和 `--bench-bin-dir` 当前仍可从 `eval` 命令串逃逸。
+2. 最小修改脚本，把 `compile/modules/bench compile/bench run` 四条执行路径切到 argv / env 数组执行。
+3. 保持既有 `fast-local` 与 `dry-run` 契约，复跑 focused contract、现有 B101 fast-local 契约和脚本语法检查。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified eval-based execution boundaries in wave c b101 validation playbook
+- [completed] added focused contracts for modules and bench-bin-dir shell escape
+- [completed] replaced b101 eval execution with direct argv/env array execution
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 B101 validation playbook 原先通过：
+  - `run_step() -> ( cd \"$PROJECT_ROOT\" && eval \"$cmd\" )`
+  - `modules_cmd=\"bash scripts/run_all_module_tests.sh --modules $MODULE_SET\"`
+  - `bench_compile` 仍把 `BENCH_BIN_DIR` 拼进 `mkdir -p && fpc ... -FE...`
+  - `bench_run` 仍把 `BENCH_BIN_DIR` 拼进 `FAFAFA_PROJECT_ROOT=... '$BENCH_BIN_DIR/benchmark_cert_verify_cache'`
+- focused contract 已锁住这两条执行边界：
+  - `tests/scripts/test_run_wave_c_b101_validation_playbook_modules_injection_contract.sh`
+    - modules payload 不得执行
+    - fake module runner 必须收到完整 `MODULE_SET` 原始值
+    - `fast-local` 环境目录透传必须保持成立
+  - `tests/scripts/test_run_wave_c_b101_validation_playbook_bench_bin_dir_injection_contract.sh`
+    - bench-bin-dir payload 不得执行
+    - fake fpc 与 benchmark runner 必须把目录与 env 当作数据消费
+- 修复后验证结果：
+  - `bash -n tests/scripts/test_run_wave_c_b101_validation_playbook_modules_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_run_wave_c_b101_validation_playbook_modules_injection_contract.sh`：PASS
+  - `bash -n tests/scripts/test_run_wave_c_b101_validation_playbook_bench_bin_dir_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_run_wave_c_b101_validation_playbook_bench_bin_dir_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_run_wave_c_b101_validation_playbook_fast_local_contract.sh`：PASS
+  - `bash tests/scripts/test_run_wave_c_b101_validation_playbook_fast_local_dry_run_contract.sh`：PASS
+  - `bash -n scripts/run_wave_c_b101_validation_playbook.sh`：PASS
+  - `git diff --check`：PASS
+
 # Task Plan - Wave C Quick Sprint Bundle Shell Hardening
 
 ## Goal
