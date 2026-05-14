@@ -1,3 +1,21 @@
+# Findings - Wave C B138 Full Gate Shell Hardening
+
+## 2026-05-15
+- 顺着已经收好的 `B125 -> B129` local-guard 链继续往上看，B138 full gate 继续暴露出同型的最外层 orchestration 执行面：
+  - `B129/B132/B137` 三个 step 仍统一经过 `eval "$cmd"`
+  - 同一个 `RUN_ID` 继续同时进入 `--run-id` 和三份派生输出路径
+- 这意味着即使下游子脚本已经安全，B138 仍会在自己的最外层重新把动态值交给 shell 解释层。
+- 这批最小正确修法仍然保持 display 与 execution 分离：
+  - display 命令继续保留
+  - 真正执行切成 direct argv
+- 静态审查时顺手确认了另一个同文件真实前提：
+  - `FULL_GATE_DIR` 也需要在 step 前创建
+  - 否则 step log/report 重定向可能早于子脚本执行失败
+- 修复后，B138 full gate 的剩余 shell 执行面已经被切掉：
+  - `run-id` 只作为 argv 数据透传给 B129/B132/B137
+  - `tmp/test-reports` 在 step 执行前会被创建
+  - 既有 B138 tmp structure 契约保持 green
+
 # Findings - Wave C B129 Oncall Shell Hardening
 
 ## 2026-05-15

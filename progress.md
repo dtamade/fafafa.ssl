@@ -1,3 +1,33 @@
+# Progress - Wave C B138 Full Gate Shell Hardening
+
+## 2026-05-15
+- Post-commit continue:
+  - after landing `af246a3 fix: harden wave c b129 shell execution`, continued upward in the same Wave C chain to the next outer orchestration layer
+- Fresh review narrowed the next real issue:
+  - `scripts/run_wave_c_pre_ci_reenable_full_gate.sh` still drove B129/B132/B137 through `eval "$cmd"`
+  - even with B129 fixed, B138 still reintroduced the same shell execution boundary around `RUN_ID` and three derived report paths
+- Existing regression surface:
+  - `tests/scripts/test_wave_c_b138_tmp_structure_contract.sh` already guarded the tmp report/log naming contract
+  - no existing focused contract covered B138 shell execution
+- New batch plan recorded in `docs/plans/2026-05-15-wave-c-b138-shell-hardening.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_run_wave_c_b138_full_gate_run_id_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_run_wave_c_b138_full_gate_run_id_injection_contract.sh` -> FAIL before fix
+    - exact failure: `wave c B138 full gate should not execute shell content embedded in --run-id`
+- Minimal implementation:
+  - `tests/scripts/test_run_wave_c_b138_full_gate_run_id_injection_contract.sh`
+    - added a focused contract that proves `run-id` must remain data-only through B138
+  - `scripts/run_wave_c_pre_ci_reenable_full_gate.sh`
+    - added `shell_join()` for display-only command text
+    - replaced `run_step() -> eval "$cmd"` with direct argv execution
+    - switched B129/B132/B137 invocations to explicit argv arrays
+    - added `mkdir -p "$FULL_GATE_DIR"` so step logs/reports always have a writable parent directory
+- Focused GREEN verification:
+  - `bash tests/scripts/test_run_wave_c_b138_full_gate_run_id_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_c_b138_tmp_structure_contract.sh` -> PASS
+  - `bash -n scripts/run_wave_c_pre_ci_reenable_full_gate.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave C B129 Oncall Shell Hardening
 
 ## 2026-05-15

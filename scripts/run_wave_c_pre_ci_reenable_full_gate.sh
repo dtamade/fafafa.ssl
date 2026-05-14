@@ -65,29 +65,76 @@ oncall_log="$FULL_GATE_DIR/wave_c_b129_oncall_check_${RUN_ID}.b138.log"
 snapshot_log="$FULL_GATE_DIR/wave_c_b132_local_first_status_snapshot_${RUN_ID}.b138.log"
 packet_log="$FULL_GATE_DIR/wave_c_b137_pre_ci_reenable_packet_${RUN_ID}.b138.log"
 
+mkdir -p "$FULL_GATE_DIR"
+
+shell_join() {
+  local parts=()
+  local part
+  for part in "$@"; do
+    parts+=("$(printf '%q' "$part")")
+  done
+  local IFS=' '
+  echo "${parts[*]}"
+}
+
 run_step() {
-  local cmd="$1"
+  local step_name="$1"
   local log="$2"
+  local cmd_desc="$3"
+  shift 3
+
+  echo "[wave-c-b138] [$step_name] $cmd_desc" >&2
 
   set +e
-  eval "$cmd" > "$log" 2>&1
+  "$@" > "$log" 2>&1
   local ec=$?
   set -e
 
+  echo "[wave-c-b138] [$step_name] exit=$ec log=$log" >&2
   echo "$ec"
 }
 
+b129_cmd_words=(
+  bash
+  scripts/run_wave_c_local_guard_oncall_check.sh
+  --run-id "$RUN_ID"
+  --strict
+  --quiet
+  --output "$oncall_report"
+)
 oncall_exit=$(run_step \
-  "bash scripts/run_wave_c_local_guard_oncall_check.sh --run-id ${RUN_ID} --strict --quiet --output ${oncall_report}" \
-  "$oncall_log")
+  "b129_oncall" \
+  "$oncall_log" \
+  "$(shell_join "${b129_cmd_words[@]}")" \
+  "${b129_cmd_words[@]}")
 
+b132_cmd_words=(
+  bash
+  scripts/generate_wave_c_local_first_status_snapshot.sh
+  --run-id "$RUN_ID"
+  --strict
+  --output "$snapshot_report"
+)
 snapshot_exit=$(run_step \
-  "bash scripts/generate_wave_c_local_first_status_snapshot.sh --run-id ${RUN_ID} --strict --output ${snapshot_report}" \
-  "$snapshot_log")
+  "b132_snapshot" \
+  "$snapshot_log" \
+  "$(shell_join "${b132_cmd_words[@]}")" \
+  "${b132_cmd_words[@]}")
 
+b137_cmd_words=(
+  bash
+  scripts/prepare_wave_c_b137_pre_ci_reenable_packet.sh
+  --run-id "$RUN_ID"
+  --strict
+  --oncall-report "$oncall_report"
+  --snapshot-report "$snapshot_report"
+  --output "$packet_report"
+)
 packet_exit=$(run_step \
-  "bash scripts/prepare_wave_c_b137_pre_ci_reenable_packet.sh --run-id ${RUN_ID} --strict --oncall-report ${oncall_report} --snapshot-report ${snapshot_report} --output ${packet_report}" \
-  "$packet_log")
+  "b137_packet" \
+  "$packet_log" \
+  "$(shell_join "${b137_cmd_words[@]}")" \
+  "${b137_cmd_words[@]}")
 
 packet_state="UNKNOWN"
 if [[ -f "$packet_report" ]]; then
