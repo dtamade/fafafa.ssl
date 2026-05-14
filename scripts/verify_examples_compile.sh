@@ -54,6 +54,14 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+case "$OUTPUT_FORMAT" in
+    text|json|markdown) ;;
+    *)
+        echo -e "${RED}错误: 不支持的输出格式: $OUTPUT_FORMAT (允许: text, json, markdown)${NC}" >&2
+        exit 2
+        ;;
+esac
+
 if [[ -z "$REPORT_FILE" && "$OUTPUT_FORMAT" != "text" ]]; then
     MACHINE_STDOUT_MODE=true
 fi

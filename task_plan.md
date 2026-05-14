@@ -1,3 +1,51 @@
+# Task Plan - Verify Examples Format Validation Truth
+
+## Goal
+收口 `scripts/verify_examples_compile.sh` 的格式校验契约，避免未知 `--format` 被静默当成 text。
+
+## Current Batch
+1. 写 focused contract，证明 `-f yaml` 当前仍会静默输出 text 并返回成功。
+2. 最小修改参数校验逻辑，对非法格式直接报错退出。
+3. 复跑 focused 合同与 verify_examples 邻近合同。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified silent format fallback drift in verify_examples cli contract
+- [completed] wrote focused contract for invalid-format truth
+- [completed] minimal format allow-list validation
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 帮助文本只声明支持 `text/json/markdown`。
+- 但当前实现里，任何未知格式都会走 `output_summary()` 的默认 text 分支。
+- fake 环境复现表明：
+  - `bash scripts/verify_examples_compile.sh -f yaml`
+  - 当前仍会输出 text 摘要
+  - 退出码仍是 `0`
+- 这批最小正确修法不会扩输出格式，只把帮助和实现重新对齐：
+  - 非法格式直接报错
+  - 不再静默降级成 text
+- focused RED:
+  - 新增 `tests/scripts/test_verify_examples_compile_invalid_format_contract.sh`
+  - `bash -n tests/scripts/test_verify_examples_compile_invalid_format_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_invalid_format_contract.sh`: FAIL before fix
+  - failure shape:
+    - `verify_examples_compile should reject unsupported output formats instead of silently falling back to text`
+    - stdout 仍然直接输出了 text 摘要
+- minimal implementation:
+  - 更新 `scripts/verify_examples_compile.sh`
+    - 新增 `OUTPUT_FORMAT` allow-list 校验
+    - 非法格式现在直接报错并 `exit 2`
+- focused GREEN:
+  - `bash -n scripts/verify_examples_compile.sh`: PASS
+  - `bash -n tests/scripts/test_verify_examples_compile_invalid_format_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_invalid_format_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_pass_rate_without_bc_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_json_stdout_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_report_write_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Verify Examples Pass-Rate BC Independence
 
 ## Goal

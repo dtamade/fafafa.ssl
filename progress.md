@@ -1,3 +1,35 @@
+# Progress - Verify Examples Format Validation Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `855cc33 fix: remove verify examples bc dependency`
+  - continued the same `verify_examples_compile.sh` producer/cli audit lane
+- Fresh review narrowed the next real issue:
+  - help text only advertises `text/json/markdown`
+  - but unknown formats currently fall through to the text summary branch
+  - fake-env repro showed `-f yaml` still returned `0` with a text summary
+- New batch plan recorded in `docs/plans/2026-05-14-verify-examples-format-validation-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_verify_examples_compile_invalid_format_contract.sh`
+  - `bash -n tests/scripts/test_verify_examples_compile_invalid_format_contract.sh` -> PASS
+  - `bash tests/scripts/test_verify_examples_compile_invalid_format_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `verify_examples_compile should reject unsupported output formats instead of silently falling back to text`
+    - traced stdout still printed the text summary body
+- Minimal implementation landed:
+  - `scripts/verify_examples_compile.sh`
+    - added explicit `text/json/markdown` allow-list validation
+    - unsupported formats now exit `2` before any compile work begins
+- GREEN verification:
+  - `bash -n scripts/verify_examples_compile.sh` -> PASS
+  - `bash -n tests/scripts/test_verify_examples_compile_invalid_format_contract.sh` -> PASS
+  - `bash tests/scripts/test_verify_examples_compile_invalid_format_contract.sh` -> PASS
+  - `bash tests/scripts/test_verify_examples_compile_pass_rate_without_bc_contract.sh` -> PASS
+  - `bash tests/scripts/test_verify_examples_compile_json_stdout_contract.sh` -> PASS
+  - `bash tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh` -> PASS
+  - `bash tests/scripts/test_verify_examples_compile_report_write_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Verify Examples Pass-Rate BC Independence
 
 ## 2026-05-14

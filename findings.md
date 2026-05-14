@@ -1,3 +1,18 @@
+# Findings - Verify Examples Format Validation Truth
+
+## 2026-05-14
+- 继续深审 `verify_examples_compile.sh` 的 CLI 契约后，又发现一条静默漂移：
+  - 帮助写的是只支持 `text/json/markdown`
+  - 但未知格式实际会被静默降级成 text
+- 这类问题虽然不像坏 JSON 那么炸，但会持续误导调用者：
+  - 参数拼错不会被及时发现
+  - 自动化脚本可能以为自己拿到了请求格式
+  - 实际上只是默默落回 text
+- 这批最小正确修法就是补一层 allow-list 校验，把帮助和实现重新拉齐。
+- 修完后，这个 CLI 面的失败也变得更早、更可诊断：
+  - 参数拼错会立刻暴露
+  - 不会再把格式错误伪装成一次成功的 text 输出
+
 # Findings - Verify Examples Pass-Rate BC Independence
 
 ## 2026-05-14
