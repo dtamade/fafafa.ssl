@@ -134,8 +134,21 @@ compile_file() {
 emit_runtime_line "开始编译验证..."
 emit_runtime_line "========================================"
 
+if [[ ! -d "$EXAMPLES_DIR" ]]; then
+    echo -e "${RED}错误: examples 目录不存在或不可访问: $EXAMPLES_DIR${NC}" >&2
+    exit 2
+fi
+
 # 预扫描全量示例文件，避免 stop-on-error 时把半程结果误写成全量统计
-mapfile -t EXAMPLE_FILES < <(find "$EXAMPLES_DIR" -name "*.pas" -type f | sort)
+SCAN_FILE=$(mktemp)
+if ! find "$EXAMPLES_DIR" -name "*.pas" -type f -print > "$SCAN_FILE"; then
+    rm -f "$SCAN_FILE"
+    echo -e "${RED}错误: 无法扫描 examples 目录: $EXAMPLES_DIR${NC}" >&2
+    exit 2
+fi
+sort -o "$SCAN_FILE" "$SCAN_FILE"
+mapfile -t EXAMPLE_FILES < "$SCAN_FILE"
+rm -f "$SCAN_FILE"
 TOTAL=${#EXAMPLE_FILES[@]}
 
 for file in "${EXAMPLE_FILES[@]}"; do

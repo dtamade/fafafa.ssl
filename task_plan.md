@@ -1,3 +1,54 @@
+# Task Plan - Verify Examples Missing Directory Truth
+
+## Goal
+收口 `scripts/verify_examples_compile.sh` 在 `examples/` 目录缺失时的假成功，避免 `find` 已报错但脚本仍产出 `total=0` 的绿报告。
+
+## Current Batch
+1. 写 focused contract，证明缺失 `examples/` 目录时脚本当前仍会成功返回并产出 `total=0` JSON。
+2. 最小修改脚本，在 `examples/` 缺失或不可扫描时直接报错退出。
+3. 复跑 focused 合同与 verify_examples 邻近合同。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified missing-examples-dir false-success path in verify_examples producer
+- [completed] wrote focused contract for missing-directory truth
+- [completed] minimal fail-loud guard for examples directory existence/scanability
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前预扫描 examples 的方式是：
+  - `mapfile -t EXAMPLE_FILES < <(find "$EXAMPLES_DIR" -name "*.pas" -type f | sort)`
+- 当 `examples/` 目录不存在时，fake 环境复现出了一条很危险的假成功链：
+  - stderr 已经出现 `find: ... No such file or directory`
+  - stdout 仍生成一份合法 JSON
+  - `summary.total/tested/passed/failed/skipped/remaining` 全是 `0`
+  - 最终退出码仍是 `0`
+- 这批最小正确修法不会扩行为，只把 producer 真值写对：
+  - `examples/` 缺失时直接报错退出
+  - 不再把“扫描失败”伪装成“0 个 examples”
+- focused RED:
+  - 新增 `tests/scripts/test_verify_examples_compile_missing_examples_dir_contract.sh`
+  - `bash -n tests/scripts/test_verify_examples_compile_missing_examples_dir_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_missing_examples_dir_contract.sh`: FAIL before fix
+  - failure shape:
+    - `verify_examples_compile should fail loudly when the examples directory is missing`
+    - old stdout 仍生成 `total=0` 的 JSON
+- minimal implementation:
+  - 更新 `scripts/verify_examples_compile.sh`
+    - `examples/` 目录缺失时直接 `exit 2`
+    - `find` 扫描失败时也直接 `exit 2`
+    - 只有扫描成功后才继续生成 summary
+- focused GREEN:
+  - `bash -n scripts/verify_examples_compile.sh`: PASS
+  - `bash -n tests/scripts/test_verify_examples_compile_missing_examples_dir_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_missing_examples_dir_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_invalid_format_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_pass_rate_without_bc_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_json_stdout_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_report_write_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Verify Examples Format Validation Truth
 
 ## Goal

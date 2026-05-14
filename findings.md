@@ -1,3 +1,19 @@
+# Findings - Verify Examples Missing Directory Truth
+
+## 2026-05-14
+- 继续深审 `verify_examples_compile.sh` 后，又抓到一条很典型的 producer-side 假成功：
+  - `examples/` 目录都不存在了
+  - `find` 已经明确报错
+  - 但脚本仍然返回成功，并产出一份 `total=0` 的合法 JSON
+- 这类问题的危险点在于它会把“输入面已经断裂”伪装成“只是没有任何示例”：
+  - 调用者看不到真实失败边界
+  - 上游路径问题会被吞成空结果
+  - 后续排查很容易走偏
+- 这批最小正确修法就是把目录存在性/可扫描性提升成明确前置条件。
+- 修完后，`verify_examples_compile.sh` 的输入前提也更清楚了：
+  - “没有示例可编译” 只对应“目录存在但枚举结果为空”
+  - 不再把“目录压根不存在/扫描失败”混成同一个 `total=0` 语义
+
 # Findings - Verify Examples Format Validation Truth
 
 ## 2026-05-14
