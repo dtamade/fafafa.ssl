@@ -1,3 +1,19 @@
+# Findings - Verify Examples Pass-Rate BC Independence
+
+## 2026-05-14
+- 继续深审 `verify_examples_compile.sh` 后，又发现一条 producer-side 假成功：
+  - `pass_rate` 依赖 `bc`
+  - 一旦 `bc` 缺失或异常退出
+  - 脚本仍可能 `exit 0`，但 JSON 已经坏掉
+- 这条问题的危险点在于它不是“脚本直接失败”，而是“artifact 先悄悄损坏”：
+  - 生成者表面还是绿的
+  - 消费者要到更后面 `json.load(...)` 才炸
+  - 排查时很容易把锅甩到下游
+- 这批最小正确修法不是增加一层外部依赖检查，而是移除这条脆弱依赖本身。
+- 修完后，这条链路的责任边界也更清楚了：
+  - `pass_rate` 现在只依赖脚本本身已有的本地工具
+  - 不会再把一个可避免的环境缺件，延迟成下游 JSON 解析爆炸
+
 # Findings - Verify Examples Report Write Truth
 
 ## 2026-05-14

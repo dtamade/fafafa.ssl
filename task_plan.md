@@ -1,3 +1,49 @@
+# Task Plan - Verify Examples Pass-Rate BC Independence
+
+## Goal
+收口 `scripts/verify_examples_compile.sh` 对 `bc` 的脆弱依赖，避免 `bc` 异常时脚本继续成功却产出坏 JSON。
+
+## Current Batch
+1. 写 focused contract，证明 `bc` 不可用时脚本当前仍会 `exit 0`，但 JSON 的 `pass_rate` 已经坏掉。
+2. 最小修改 pass_rate 计算路径，移除 `bc` 依赖。
+3. 复跑 focused 合同与 verify_examples 邻近合同。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified bad-json fake-success path when bc is unavailable
+- [completed] wrote focused contract for bc-independent pass-rate truth
+- [completed] minimal pass-rate calculation hardening without bc
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前脚本用 `bc` 计算 `pass_rate`，但没有为 `bc` 缺失做任何 fail-loud 处理。
+- 在 fake `bc` 退出 `127` 的复现里，当前脚本会出现一条危险链路：
+  - stderr 出现 `bc missing`
+  - stdout JSON 变成 `"pass_rate":` 空值
+  - 最终退出码仍是 `0`
+- 这批最小正确修法不是额外引入依赖检查，而是直接拔掉脆弱点：
+  - `pass_rate` 改用更稳定的本地计算方式
+  - 保持一位小数格式
+- focused RED:
+  - 新增 `tests/scripts/test_verify_examples_compile_pass_rate_without_bc_contract.sh`
+  - `bash -n tests/scripts/test_verify_examples_compile_pass_rate_without_bc_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_pass_rate_without_bc_contract.sh`: FAIL before fix
+  - failure shape:
+    - `verify_examples_compile should keep emitting valid json with numeric pass_rate even when bc is unavailable`
+    - old stdout JSON had `"pass_rate":` 空值
+- minimal implementation:
+  - 更新 `scripts/verify_examples_compile.sh`
+    - `pass_rate` 计算从 `bc` 切到 `awk`
+    - 保持原有一位小数格式，不再依赖 `bc`
+- focused GREEN:
+  - `bash -n scripts/verify_examples_compile.sh`: PASS
+  - `bash -n tests/scripts/test_verify_examples_compile_pass_rate_without_bc_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_pass_rate_without_bc_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_json_stdout_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_report_write_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Verify Examples Report Write Truth
 
 ## Goal

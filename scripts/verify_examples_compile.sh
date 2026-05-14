@@ -171,7 +171,7 @@ if [ $REMAINING -lt 0 ]; then
     REMAINING=0
 fi
 if [ $TESTED -gt 0 ]; then
-    PASS_RATE=$(echo "scale=1; $PASSED * 100 / $TESTED" | bc)
+    PASS_RATE=$(awk "BEGIN {printf \"%.1f\", $PASSED * 100 / $TESTED}")
 else
     PASS_RATE="0"
 fi
