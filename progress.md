@@ -1,59 +1,35 @@
-# Progress - Release Control Plane Realignment
+# Progress - v1.5.0 Release-Prep Push
 
 ## 2026-05-15
 
 ### Context Recovery
 
 - `git status --short --branch`
-  - result: `## master...origin/master [ahead 93]`
-- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py /home/dtamade/projects/fafafa.ssl`
-  - result: no additional catchup output
-- `mcp__ace_tool__.search_context`
-  - result: failed because `ACE_TOKEN` was invalid
-  - action: switched to direct file inspection
+  - result: `## master...origin/master [ahead 94]`
+- `git branch -vv`
+  - result: current local `master` is ahead of `origin/master` by 94 commits
+  - note: historical branch `glm51` exists but is not selected for this batch
+- `git remote -v`
+  - result: remote `origin` points to `https://github.com/dtamade/fafafa.ssl`
+- `git describe --tags --abbrev=0`
+  - result: `v1.4.3`
+- `git log --oneline --decorate -5`
+  - result: latest head before this batch was `5f23652 docs: realign release control plane and planning workflow`
 
-### RED Verification
+### Branch Decision
 
-- `bash -n tests/scripts/test_release_control_entrypoint_convergence_contract.sh`
+- `git ls-remote --heads origin 'release/v1.5.0-prep-2026-05-15*'`
+  - result: no matching remote branch found
+- `git switch -c release/v1.5.0-prep-2026-05-15`
   - result: PASS
-- `bash tests/scripts/test_release_control_entrypoint_convergence_contract.sh`
-  - result: FAIL before doc edits
-  - failure: `README is missing the current release-control navigation line`
-- `bash tests/scripts/test_active_roadmap_references_contract.sh`
-  - result: FAIL before roadmap/doc edits
-  - failure: missing new `current_execution_control_plane` roadmap truth
-- `bash tests/scripts/test_platform_support_guidance_convergence_contract.sh`
-  - result: FAIL before platform doc edits
-  - failure: missing `当前发布与平台验证入口`
-- `bash tests/scripts/test_active_docs_historical_reference_labels_contract.sh`
-  - result: FAIL before index edits
-  - failure: missing the new Wave C closeout / historical section label
 
-### Implementation
+### In Progress
 
-- Replaced the old Wave C canonical-entry contract with:
-  - `tests/scripts/test_release_control_entrypoint_convergence_contract.sh`
-- Updated contracts:
-  - `tests/scripts/test_active_roadmap_references_contract.sh`
-  - `tests/scripts/test_platform_support_guidance_convergence_contract.sh`
-  - `tests/scripts/test_active_docs_historical_reference_labels_contract.sh`
-- Realigned active docs:
-  - `README.md`
-  - `docs/README.md`
-  - `docs/DOCUMENTATION_INDEX.md`
-  - `docs/PLATFORM_SUPPORT.md`
-  - `docs/ROADMAP.md`
-  - `.github/README.md`
-- Refreshed release-control plan truth:
-  - `docs/plans/2026-05-12-release-v1.5.0-formalization.md`
-- Added current batch plan:
-  - `docs/plans/2026-05-15-release-control-plane-realignment.md`
-- Reset root working-memory files to current-control-plane format:
-  - `task_plan.md`
-  - `findings.md`
-  - `progress.md`
+- rewrite root working-memory to the release-prep push goal
+- add a dedicated repo plan for the release-prep batch
+- add a handoff document draft that will be finalized after verification + push
 
-### GREEN Verification
+### Verification
 
 - `bash tests/scripts/test_release_control_entrypoint_convergence_contract.sh`
   - result: PASS
@@ -65,10 +41,26 @@
   - result: PASS
 - `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
   - result: PASS
+- `python3 scripts/compile_all_modules.py`
+  - result: PASS
+  - summary: `185/185 compiled`, `0 failed`
+- `bash scripts/run_minimal_ci_gate.sh --fast-local`
+  - result: PASS
+  - run_id: `20260515_064455_1850480`
+  - summary: module tests `17/17`, nested phase2 dry-run exercised
+- `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id release_prep_20260515`
+  - result: PASS
+  - summary file: `tmp/test-reports/freepascal_tls13_completeness_release_prep_20260515.md`
+- `python3 scripts/check_code_style.py src`
+  - result: PASS
+- `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
+  - result: PASS
+  - run_id: `20260515_064842_1859245`
 - `git diff --check`
   - result: PASS
 
 ### Pending
 
-- final review conclusion
-- git commit for this batch
+- short review conclusion
+- metadata commit
+- remote push and final handoff confirmation
