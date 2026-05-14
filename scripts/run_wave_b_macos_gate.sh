@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-RUN_ID="$(date +%Y%m%d_%H%M%S)"
+RUN_ID=""
 MODULE_SET="PKCS7,PKCS12,CMS,Store,OCSP,TS,CT"
 EXAMPLES_THRESHOLD="80.0"
 OUTPUT_DIR_REL="test-reports"
@@ -90,6 +90,15 @@ PY
 then
   echo "Invalid --examples-threshold: $EXAMPLES_THRESHOLD" >&2
   exit 1
+fi
+
+if [[ -n "$RUN_ID" && "$RUN_ID" =~ [^A-Za-z0-9._-] ]]; then
+  echo "Invalid --run-id (allow: A-Z a-z 0-9 . _ -): $RUN_ID" >&2
+  exit 1
+fi
+
+if [[ -z "$RUN_ID" ]]; then
+  RUN_ID="$(date +%Y%m%d_%H%M%S)"
 fi
 
 if [[ "$OUTPUT_DIR_REL" = /* ]]; then

@@ -1,3 +1,43 @@
+# Task Plan - Wave B macOS Run ID Contract
+
+## Goal
+收口 `scripts/run_wave_b_macos_gate.sh` 的 `run-id` 输入契约，避免非法字符打断 step command，也避免空 `run-id` 继续落成空后缀产物。
+
+## Current Batch
+1. 写两个 focused contracts，分别证明 invalid run-id 早拒绝缺失，以及 empty run-id 默认回退缺失。
+2. 最小修改脚本，让 `run-id` 校验/回退在任何 step 之前完成。
+3. 复跑新合同和现有 macOS gate focused contracts。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified invalid and empty run-id contract drift in macos wave b gate
+- [completed] wrote focused contracts for invalid run-id and empty run-id fallback
+- [completed] minimal run-id contract alignment in macos gate producer
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 macOS 脚本对 `run-id` 仍缺少 Linux 同等级别的输入约束。
+- 一次性复现已经证明两个真实问题：
+  - `bad'quote` 会打断 `bash -lc` 单引号命令串，并留下半套 logs/summary
+  - `--run-id ""` 会产出 `wave_b_macos_*_.log/json/md` 和空 `run_id` summary
+- focused contracts 已锁住两条 run-id 契约：
+  - `tests/scripts/test_wave_b_macos_gate_invalid_run_id_contract.sh`
+    - 非法 `run-id` 必须在任何 step 之前被拒绝
+    - 不得落任何 report 文件
+  - `tests/scripts/test_wave_b_macos_gate_empty_run_id_fallback_contract.sh`
+    - 空 `run-id` 必须自动回退到生成值
+    - summary 与 examples json 必须使用同一非空 fallback run-id
+- 修复后验证结果：
+  - `bash -n tests/scripts/test_wave_b_macos_gate_invalid_run_id_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_run_id_contract.sh`：PASS
+  - `bash -n tests/scripts/test_wave_b_macos_gate_empty_run_id_fallback_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_empty_run_id_fallback_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_output_dir_boundary_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_threshold_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh`：PASS
+  - `bash -n scripts/run_wave_b_macos_gate.sh`：PASS
+  - `git diff --check`：PASS
+
 # Task Plan - Wave B macOS Output Dir Boundary
 
 ## Goal

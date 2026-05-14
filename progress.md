@@ -1,3 +1,42 @@
+# Progress - Wave B macOS Run ID Contract
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `8562f15 fix: constrain wave b macos output dir`
+  - continued static review in the same macOS gate script to the next input-boundary neighbor
+- Fresh review narrowed the next real issue:
+  - `run_wave_b_macos_gate.sh` still lacks Linux-equivalent run-id validation and empty-value fallback
+- One-off repro captured two concrete failures:
+  - `OSTYPE=darwin23 bash scripts/run_wave_b_macos_gate.sh --run-id "bad'quote"`
+    - result: step command quoting broke, `probe/examples` failed inconsistently, and partial logs/summary were still written
+  - `OSTYPE=darwin23 bash scripts/run_wave_b_macos_gate.sh --run-id ''`
+    - result: script exited `0`, but emitted `wave_b_macos_*_.log/json/md` and a blank `- run_id:` summary field
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-macos-run-id-contract.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_wave_b_macos_gate_invalid_run_id_contract.sh`
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_run_id_contract.sh`
+  - result before fix: contract failed because stderr did not explain invalid run-id
+  - `bash -n tests/scripts/test_wave_b_macos_gate_empty_run_id_fallback_contract.sh`
+  - `bash tests/scripts/test_wave_b_macos_gate_empty_run_id_fallback_contract.sh`
+  - result before fix: contract failed because `wave_b_macos_gate_summary_.md` was still emitted
+- Minimal implementation:
+  - `tests/scripts/test_wave_b_macos_gate_invalid_run_id_contract.sh`
+    - added a focused contract for invalid run-id early rejection
+  - `tests/scripts/test_wave_b_macos_gate_empty_run_id_fallback_contract.sh`
+    - added a focused contract for empty run-id fallback semantics
+  - `scripts/run_wave_b_macos_gate.sh`
+    - changed `RUN_ID` default initialization to empty
+    - added Linux-aligned invalid-character rejection
+    - added preflight fallback to generated timestamp when run-id is empty
+- Focused GREEN verification:
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_run_id_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_empty_run_id_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_output_dir_boundary_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh` -> PASS
+  - `bash -n scripts/run_wave_b_macos_gate.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B macOS Output Dir Boundary
 
 ## 2026-05-14

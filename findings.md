@@ -1,3 +1,21 @@
+# Findings - Wave B macOS Run ID Contract
+
+## 2026-05-14
+- 继续沿着 macOS gate 的输入边界往下审查后，`run-id` 这条线也已经被坐实为真实问题，而不只是风格不一致：
+  - 非法字符目前不会被前置拒绝
+  - 单引号会直接破坏 step command 的 shell quoting
+- 空 `run-id` 也是单独的契约漂移：
+  - 当前脚本不会回退到默认时间戳
+  - 会直接产出空后缀文件和空 `run_id` summary
+- 这批最小正确修法应当与 Linux gate 对齐：
+  - 非法 `run-id` 直接拒绝
+  - 空 `run-id` 视为未提供，自动回退到默认值
+- 生产修复后，macOS gate 的 run-id 真值已经重新分层稳定：
+  - `RUN_ID` 初始化为空
+  - 参数解析后先做非法字符拒绝
+  - 只有合法且非空的值才会参与文件名和 `bash -lc` 命令拼接
+  - 空值统一在前置阶段回退成时间戳，后续 summary / logs / json 都只消费最终值
+
 # Findings - Wave B macOS Output Dir Boundary
 
 ## 2026-05-14
