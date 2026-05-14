@@ -92,12 +92,37 @@ then
   exit 1
 fi
 
+if [[ "$OUTPUT_DIR_REL" = /* ]]; then
+  echo "Invalid --output-dir (must be relative to project root): $OUTPUT_DIR_REL" >&2
+  exit 1
+fi
+
 if [[ "$OSTYPE" != darwin* && "$DRY_RUN" != "true" ]]; then
   echo "[FAIL] this script is intended for macOS (current: $OSTYPE). Use --dry-run for rehearsal." >&2
   exit 1
 fi
 
-OUTPUT_DIR="$PROJECT_ROOT/$OUTPUT_DIR_REL"
+resolve_rel_under_root() {
+  local rel="$1"
+  python3 - "$PROJECT_ROOT" "$rel" <<'PY'
+import os
+import sys
+
+root = os.path.abspath(sys.argv[1])
+rel = sys.argv[2]
+path = os.path.abspath(os.path.join(root, rel))
+if path != root and not path.startswith(root + os.sep):
+    raise SystemExit(2)
+print(path)
+PY
+}
+
+OUTPUT_DIR="$(resolve_rel_under_root "$OUTPUT_DIR_REL" || true)"
+if [[ -z "$OUTPUT_DIR" ]]; then
+  echo "Invalid --output-dir (must stay within project root): $OUTPUT_DIR_REL" >&2
+  exit 1
+fi
+
 mkdir -p "$OUTPUT_DIR"
 
 PROBE_LOG_REL="$OUTPUT_DIR_REL/wave_b_macos_probe_${RUN_ID}.log"

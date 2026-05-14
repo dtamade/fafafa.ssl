@@ -1,3 +1,33 @@
+# Progress - Wave B macOS Output Dir Boundary
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `eba566e fix: validate wave b macos examples threshold input`
+  - continued static review in the same script to the next input-boundary neighbor
+- Fresh review narrowed the next real issue:
+  - `run_wave_b_macos_gate.sh` accepts `--output-dir ../../...`
+  - artifacts are then written outside the fake project root
+- One-off repro captured the concrete risk:
+  - `OSTYPE=darwin23 bash scripts/run_wave_b_macos_gate.sh --run-id repro --output-dir ../../tmp/macos-output-escape-proof`
+  - result: probe/log/examples json/summary all appeared in the external escape directory and the script still exited `0`
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-macos-output-dir-boundary.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_wave_b_macos_gate_output_dir_boundary_contract.sh`
+  - `bash tests/scripts/test_wave_b_macos_gate_output_dir_boundary_contract.sh`
+  - result before fix: contract failed because the escaping output-dir was accepted instead of rejected
+- Minimal implementation:
+  - `tests/scripts/test_wave_b_macos_gate_output_dir_boundary_contract.sh`
+    - added a focused contract for output-dir escape rejection
+  - `scripts/run_wave_b_macos_gate.sh`
+    - added `--output-dir` relative-path validation
+    - added project-root boundary resolution and rejection for escaping paths
+- Focused GREEN verification:
+  - `bash tests/scripts/test_wave_b_macos_gate_output_dir_boundary_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh` -> PASS
+  - `bash -n scripts/run_wave_b_macos_gate.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B macOS Invalid Examples Threshold
 
 ## 2026-05-14

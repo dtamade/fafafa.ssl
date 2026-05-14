@@ -1,3 +1,37 @@
+# Task Plan - Wave B macOS Output Dir Boundary
+
+## Goal
+补齐 `scripts/run_wave_b_macos_gate.sh` 对 `--output-dir` 的边界约束，避免产物写出项目根外。
+
+## Current Batch
+1. 写 focused contract，证明 macOS gate 当前接受越界 `output-dir`。
+2. 最小修改脚本，把非法输出目录拦在任何 gate step 之前。
+3. 复跑 focused 合同、既有 macOS gate 合同与脚本语法检查。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified output-dir escape risk in macos wave b gate
+- [completed] wrote focused contract for output-dir boundary
+- [completed] minimal output-dir boundary alignment in macos gate producer
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 macOS 脚本接受 `--output-dir ../../...`，并会把 probe/log/examples json/summary 写到 fake 项目根之外。
+- 一次性复现已证明这不是理论风险：
+  - 越界目录里实际落下了 `wave_b_macos_gate_probe_*.json`
+  - `wave_b_macos_gate_summary_*.md` 也会写到外部目录
+  - gate 甚至可能整体 `exit 0`
+- focused contract `tests/scripts/test_wave_b_macos_gate_output_dir_boundary_contract.sh` 已锁住最小真实风险：
+  - 非法 `output-dir` 必须在任何 step 之前被拒绝
+  - 外部 escape 目录里不能出现任何新产物
+- 修复后验证结果：
+  - `bash -n tests/scripts/test_wave_b_macos_gate_output_dir_boundary_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_output_dir_boundary_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_threshold_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh`：PASS
+  - `bash -n scripts/run_wave_b_macos_gate.sh`：PASS
+  - `git diff --check`：PASS
+
 # Task Plan - Wave B macOS Invalid Examples Threshold
 
 ## Goal

@@ -1,3 +1,18 @@
+# Findings - Wave B macOS Output Dir Boundary
+
+## 2026-05-14
+- 继续沿着 macOS gate 的输入边界往下审查后，发现 `--output-dir` 还有比 `run-id` 更直接的真实风险：
+  - 当前脚本没有“relative + stay within project root”约束
+  - `../../...` 会把 gate 产物写出 fake 项目根
+- 一次性复现已经证明：
+  - probe/log/examples json/summary 全都能落到外部目录
+  - 脚本在这个场景下仍可能 `exit 0`
+- 这批最小正确修法不是重构 gate，而是把 output-dir 的边界校验前置到任何文件写入之前。
+- 修复后，macOS gate 在这条输入边界上已和 Linux gate 对齐到同一语义：
+  - 绝对路径会被拒绝
+  - `..` 越界路径会被拒绝
+  - 只有留在项目根内的相对目录才会被接受
+
 # Findings - Wave B macOS Invalid Examples Threshold
 
 ## 2026-05-14
