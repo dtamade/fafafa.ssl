@@ -129,15 +129,52 @@ if [[ "$DRY_RUN" == "false" ]]; then
   fi
 fi
 
-ENV_PREFIX="OPENSSL_ROOT='$OPENSSL_ROOT' DYLD_LIBRARY_PATH='$OPENSSL_ROOT/lib:${DYLD_LIBRARY_PATH:-}' PKG_CONFIG_PATH='$OPENSSL_ROOT/lib/pkgconfig:${PKG_CONFIG_PATH:-}' PATH='$OPENSSL_ROOT/bin:$PATH'"
+shell_join() {
+  local parts=()
+  local part
+  for part in "$@"; do
+    parts+=("$(printf '%q' "$part")")
+  done
+  local IFS=' '
+  echo "${parts[*]}"
+}
+
+build_display_command() {
+  shell_join "$@"
+}
+
+build_project_command() {
+  echo "cd $(printf '%q' "$PROJECT_ROOT") && $(shell_join "$@")"
+}
+
+env_assignments=(
+  "OPENSSL_ROOT=$OPENSSL_ROOT"
+  "DYLD_LIBRARY_PATH=$OPENSSL_ROOT/lib:${DYLD_LIBRARY_PATH:-}"
+  "PKG_CONFIG_PATH=$OPENSSL_ROOT/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+  "PATH=$OPENSSL_ROOT/bin:$PATH"
+)
 
 run_cmd() {
-  local cmd="$1"
-  echo "[MACOS-CHECK] $cmd"
+  local cmd_desc="$1"
+  shift
+  echo "[MACOS-CHECK] $cmd_desc"
   if [[ "$DRY_RUN" == "true" ]]; then
     return 0
   fi
-  eval "$cmd"
+  "$@"
+}
+
+run_project_cmd() {
+  local cmd_desc="$1"
+  shift
+  echo "[MACOS-CHECK] $cmd_desc"
+  if [[ "$DRY_RUN" == "true" ]]; then
+    return 0
+  fi
+  (
+    cd "$PROJECT_ROOT"
+    "$@"
+  )
 }
 
 echo "========================================"
@@ -149,22 +186,40 @@ echo "module tests: $WITH_MODULE_TESTS"
 echo "phase2 dry-run: $WITH_PHASE2_DRYRUN"
 echo "dry-run: $DRY_RUN"
 
-run_cmd "fpc -iV"
-run_cmd "cd '$PROJECT_ROOT' && $ENV_PREFIX openssl version"
-run_cmd "cd '$PROJECT_ROOT' && test -f '$OPENSSL_ROOT/lib/libcrypto.dylib'"
-run_cmd "cd '$PROJECT_ROOT' && test -f '$OPENSSL_ROOT/lib/libssl.dylib'"
-run_cmd "cd '$PROJECT_ROOT' && test -f '$OPENSSL_ROOT/include/openssl/ssl.h'"
+fpc_cmd_words=(fpc -iV)
+run_cmd "$(build_display_command "${fpc_cmd_words[@]}")" "${fpc_cmd_words[@]}"
+
+openssl_cmd_words=(env "${env_assignments[@]}" openssl version)
+run_project_cmd "$(build_project_command "${openssl_cmd_words[@]}")" "${openssl_cmd_words[@]}"
+
+check_libcrypto_words=(test -f "$OPENSSL_ROOT/lib/libcrypto.dylib")
+run_project_cmd "$(build_project_command "${check_libcrypto_words[@]}")" "${check_libcrypto_words[@]}"
+
+check_libssl_words=(test -f "$OPENSSL_ROOT/lib/libssl.dylib")
+run_project_cmd "$(build_project_command "${check_libssl_words[@]}")" "${check_libssl_words[@]}"
+
+check_ssl_header_words=(test -f "$OPENSSL_ROOT/include/openssl/ssl.h")
+run_project_cmd "$(build_project_command "${check_ssl_header_words[@]}")" "${check_ssl_header_words[@]}"
 
 if [[ "$WITH_MODULE_TESTS" == "true" ]]; then
-  module_cmd="cd '$PROJECT_ROOT' && $ENV_PREFIX bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
+  module_cmd_words=(env "${env_assignments[@]}" bash scripts/run_all_module_tests.sh --modules "$MODULE_SET")
   if [[ "$VERBOSE" == "true" ]]; then
-    module_cmd="$module_cmd --verbose"
+    module_cmd_words+=(--verbose)
   fi
-  run_cmd "$module_cmd"
+  run_project_cmd "$(build_project_command "${module_cmd_words[@]}")" "${module_cmd_words[@]}"
 fi
 
 if [[ "$WITH_PHASE2_DRYRUN" == "true" ]]; then
-  run_cmd "cd '$PROJECT_ROOT' && $ENV_PREFIX bash scripts/run_phase2_performance_baseline.sh --dry-run --iterations 200 --tls-iterations 50"
+  phase2_cmd_words=(
+    env
+    "${env_assignments[@]}"
+    bash
+    scripts/run_phase2_performance_baseline.sh
+    --dry-run
+    --iterations 200
+    --tls-iterations 50
+  )
+  run_project_cmd "$(build_project_command "${phase2_cmd_words[@]}")" "${phase2_cmd_words[@]}"
 fi
 
 echo "[PASS] macOS openssl path check draft finished"

@@ -1,3 +1,21 @@
+# Findings - macOS OpenSSL Path Check Shell Hardening
+
+## 2026-05-15
+- 继续沿着 macOS gate 上一批刚刚打通的 path-check live 真值往下审查后，抓到更底层的一条真实执行边界风险：
+  - `run_macos_openssl_path_check_draft.sh` 自己仍保留 `eval "$cmd"`
+  - `ENV_PREFIX` 和 `module_cmd` 仍直接拼接 `OPENSSL_ROOT` / `MODULE_SET`
+- 这让上层刚透传下来的真实参数重新暴露在 shell 解释层：
+  - `modules` payload 可以作为 shell 语法执行
+  - `openssl-root` payload 可以从 env 前缀和后续命令串里逃逸
+- 这批最小正确修法不是继续补字符校验，而是直接切掉字符串执行模型：
+  - `run_cmd` / `run_project_cmd` 只接收 argv
+  - 展示命令继续保留，但只作为 `printf '%q'` 生成的 operator-facing 文本
+  - 真正执行统一走 argv / `env "KEY=value"` 数据传递
+- 生产修复后，macOS path-check 的动态执行真值已经重新回到单一安全面：
+  - `eval` 不再参与执行
+  - `OPENSSL_ROOT` 只作为 env / argv 数据进入 `openssl` 与 `test`
+  - `MODULE_SET` 只作为单个 argv 进入 nested module runner
+
 # Findings - Wave B macOS Path-Check Live Passthrough
 
 ## 2026-05-14

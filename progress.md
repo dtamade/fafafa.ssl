@@ -1,3 +1,42 @@
+# Progress - macOS OpenSSL Path Check Shell Hardening
+
+## 2026-05-15
+- Post-commit resume:
+  - previous batch landed as `3df8d86 fix: align wave b macos path-check passthrough`
+  - continued static review downward from the macOS gate passthrough seam into the path-check script's own execution model
+- Fresh review narrowed the next real issue:
+  - `run_macos_openssl_path_check_draft.sh` still built `ENV_PREFIX` as a string and executed commands through `eval`
+  - that left both `--modules` and `--openssl-root` exposed to shell interpretation
+- One-off repro captured two concrete shell-injection paths:
+  - fake path-check repro with `--modules "PKCS7; touch '$FLAG'; #"`
+    - result: payload executed before the fake nested module runner consumed its args
+  - fake path-check repro with a crafted `--openssl-root` path containing quote-break payload
+    - result: script no longer treated the root as plain data and could not complete with fake green tools
+- New batch plan recorded in `docs/plans/2026-05-15-macos-openssl-path-check-shell-hardening.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_macos_openssl_path_check_module_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_macos_openssl_path_check_module_injection_contract.sh` -> FAIL before fix
+    - exact failure: `macOS path-check should not execute shell content embedded in --modules`
+  - `bash -n tests/scripts/test_macos_openssl_path_check_openssl_root_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_macos_openssl_path_check_openssl_root_injection_contract.sh` -> FAIL before fix
+    - exact failure: `macOS path-check should treat openssl-root payload as data and complete with fake green tools`
+- Minimal implementation:
+  - `tests/scripts/test_macos_openssl_path_check_module_injection_contract.sh`
+    - added a focused contract for modules payload passthrough without shell execution
+  - `tests/scripts/test_macos_openssl_path_check_openssl_root_injection_contract.sh`
+    - added a focused contract for openssl-root payload passthrough without shell execution
+  - `scripts/run_macos_openssl_path_check_draft.sh`
+    - replaced `ENV_PREFIX` string execution with `env_assignments` word arrays
+    - added `shell_join()` / `build_display_command()` / `build_project_command()` for display-only command text
+    - changed `run_cmd()` and added `run_project_cmd()` so execution now happens through argv arrays instead of `eval`
+    - switched openssl/module/phase2 invocations to explicit `env ... cmd ...` word arrays
+- Focused GREEN verification:
+  - `bash tests/scripts/test_macos_openssl_path_check_module_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_macos_openssl_path_check_openssl_root_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_path_check_live_passthrough_contract.sh` -> PASS
+  - `bash -n scripts/run_macos_openssl_path_check_draft.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B macOS Path-Check Live Passthrough
 
 ## 2026-05-14
