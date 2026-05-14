@@ -1,3 +1,51 @@
+# Task Plan - Wave B Invalid Examples Threshold Truth
+
+## Goal
+收口 `scripts/run_wave_b_ci_gate.sh --examples-threshold` 的输入校验真值，避免非法阈值被误报成一次普通 gate 失败。
+
+## Current Batch
+1. 写 focused contract，证明非法阈值当前仍会执行 compile/modules/examples，并把问题伪装成 examples gate FAIL。
+2. 最小修改脚本，把阈值解析失败前移到参数阶段。
+3. 复跑 focused 合同与 Wave B gate 邻近合同。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified invalid-threshold misclassification in wave b linux gate
+- [completed] wrote focused contract for invalid examples-threshold truth
+- [completed] minimal early validation for examples-threshold
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 `run_wave_b_ci_gate.sh` 不校验 `--examples-threshold`。
+- fake gate 复现表明：
+  - 传入 `--examples-threshold nope`
+  - compile/modules/examples 仍会全部执行
+  - stderr 中途出现 Python `ValueError`
+  - summary 仍被写出，且把 `verify_examples_compile` 标成 `FAIL`
+- 这批最小正确修法不会改阈值语义，只把错误分类写对：
+  - 非法阈值在参数阶段直接报错退出
+  - 不再伪装成一次 gate 失败
+- focused RED:
+  - 新增 `tests/scripts/test_wave_b_ci_gate_invalid_examples_threshold_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_ci_gate_invalid_examples_threshold_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_invalid_examples_threshold_contract.sh`: FAIL before fix
+  - failure shape:
+    - `wave b linux gate should explain that the examples threshold is invalid`
+    - old stderr 只有后置 Python `ValueError`
+- minimal implementation:
+  - 更新 `scripts/run_wave_b_ci_gate.sh`
+    - `--examples-threshold` 现在在参数阶段做 float 校验
+    - 非法时直接报错并退出，不再继续执行 gate step
+- focused GREEN:
+  - `bash -n scripts/run_wave_b_ci_gate.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_ci_gate_invalid_examples_threshold_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_invalid_examples_threshold_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_threshold_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_dry_run_truth_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_run_id_passthrough_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_fast_local_clean_worktree_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Verify Examples Missing Directory Truth
 
 ## Goal

@@ -1,3 +1,19 @@
+# Findings - Wave B Invalid Examples Threshold Truth
+
+## 2026-05-14
+- 继续从 `verify_examples_compile` 往上追到 `run_wave_b_ci_gate.sh` 后，抓到一条真实的入口契约漂移：
+  - `--examples-threshold` 帮助要求是 float
+  - 但脚本没有前置校验
+  - 非法值会在门禁执行中途才炸成 Python `ValueError`
+- 这会把“用户输入非法”误分类成“examples gate 失败”：
+  - compile/modules/examples 都已经跑了
+  - summary 还会被写出来
+  - 操作者看到的是一份假的 gate FAIL，而不是参数错误
+- 这批最小正确修法就是把阈值合法性前移到参数阶段。
+- 修完后，这条 gate 入口的错误分类也重新清楚了：
+  - 参数错误现在只会表现成参数错误
+  - 不会再污染 examples step / overall 的门禁真相
+
 # Findings - Verify Examples Missing Directory Truth
 
 ## 2026-05-14

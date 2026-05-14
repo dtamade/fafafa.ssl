@@ -1,3 +1,35 @@
+# Progress - Wave B Invalid Examples Threshold Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `398f063 fix: fail loudly when verify examples input is missing`
+  - continued upward from `verify_examples_compile.sh` into `run_wave_b_ci_gate.sh`
+- Fresh review narrowed the next real issue:
+  - `--examples-threshold` currently accepts arbitrary strings
+  - fake gate repro showed invalid threshold values still triggered compile/modules/examples
+  - the failure only surfaced later as a Python `ValueError`, and the summary misclassified it as examples gate `FAIL`
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-invalid-examples-threshold-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_wave_b_ci_gate_invalid_examples_threshold_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_ci_gate_invalid_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_invalid_examples_threshold_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `wave b linux gate should explain that the examples threshold is invalid`
+    - traced stderr only contained the late Python `ValueError`
+- Minimal implementation landed:
+  - `scripts/run_wave_b_ci_gate.sh`
+    - now validates `--examples-threshold` as a float during argument validation
+    - invalid thresholds now fail before any gate step is executed
+- GREEN verification:
+  - `bash -n scripts/run_wave_b_ci_gate.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_ci_gate_invalid_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_invalid_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_dry_run_truth_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_run_id_passthrough_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_fast_local_clean_worktree_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Verify Examples Missing Directory Truth
 
 ## 2026-05-14

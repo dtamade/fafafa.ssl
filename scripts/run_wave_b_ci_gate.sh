@@ -189,6 +189,15 @@ if [[ ! "$TLS13_SIGN_BENCH_TIMEOUT" =~ ^[0-9]+$ ]] || [[ "$TLS13_SIGN_BENCH_TIME
   exit 1
 fi
 
+if ! python3 - "$EXAMPLES_THRESHOLD" <<'PY' >/dev/null 2>&1
+import sys
+float(sys.argv[1])
+PY
+then
+  echo "Invalid --examples-threshold: $EXAMPLES_THRESHOLD" >&2
+  exit 1
+fi
+
 if [[ -n "$RUN_ID" && "$RUN_ID" =~ [^A-Za-z0-9._-] ]]; then
   echo "Invalid --run-id (allow: A-Z a-z 0-9 . _ -): $RUN_ID" >&2
   exit 1
