@@ -91,15 +91,30 @@ b146_report="docs/test_reports/WAVE_C_B146_CI_REENABLE_SUBMISSION_PACK_${RUN_ID}
 b147_report="docs/test_reports/WAVE_C_B147_SUBMISSION_PACK_CHECK_${RUN_ID}.md"
 b148_report="docs/test_reports/WAVE_C_B148_CI_REENABLE_APPROVAL_BRIEF_${RUN_ID}.md"
 
+shell_join() {
+  local parts=()
+  local part
+  for part in "$@"; do
+    parts+=("$(printf '%q' "$part")")
+  done
+  local IFS=' '
+  echo "${parts[*]}"
+}
+
 run_step() {
-  local cmd="$1"
+  local step_name="$1"
   local log="$2"
+  local cmd_desc="$3"
+  shift 3
+
+  echo "[wave-c-b149] [$step_name] $cmd_desc" >&2
 
   set +e
-  eval "$cmd" > "$log" 2>&1
+  "$@" > "$log" 2>&1
   local ec=$?
   set -e
 
+  echo "[wave-c-b149] [$step_name] exit=$ec log=$log" >&2
   echo "$ec"
 }
 
@@ -133,9 +148,35 @@ if [[ -z "$APPROVAL_INPUT" ]]; then
   APPROVAL_INPUT="$PACKET_REPORT"
 fi
 
-b146_exit=$(run_step "bash scripts/prepare_wave_c_ci_reenable_submission_pack.sh --run-id ${RUN_ID} --signoff-record ${SIGNOFF_RECORD} --prereq-report ${PREREQ_REPORT} --packet-report ${PACKET_REPORT} --strict --output ${b146_report}" "$b146_log")
-b147_exit=$(run_step "bash scripts/check_wave_c_ci_reenable_submission_pack.sh --run-id ${RUN_ID} --strict --input ${b146_report} --output ${b147_report}" "$b147_log")
-b148_exit=$(run_step "bash scripts/generate_wave_c_ci_reenable_approval_brief.sh --run-id ${RUN_ID} --input ${APPROVAL_INPUT} --output ${b148_report}" "$b148_log")
+b146_cmd_words=(
+  bash
+  scripts/prepare_wave_c_ci_reenable_submission_pack.sh
+  --run-id "$RUN_ID"
+  --signoff-record "$SIGNOFF_RECORD"
+  --prereq-report "$PREREQ_REPORT"
+  --packet-report "$PACKET_REPORT"
+  --strict
+  --output "$b146_report"
+)
+b147_cmd_words=(
+  bash
+  scripts/check_wave_c_ci_reenable_submission_pack.sh
+  --run-id "$RUN_ID"
+  --strict
+  --input "$b146_report"
+  --output "$b147_report"
+)
+b148_cmd_words=(
+  bash
+  scripts/generate_wave_c_ci_reenable_approval_brief.sh
+  --run-id "$RUN_ID"
+  --input "$APPROVAL_INPUT"
+  --output "$b148_report"
+)
+
+b146_exit=$(run_step "b146_submission_pack" "$b146_log" "$(shell_join "${b146_cmd_words[@]}")" "${b146_cmd_words[@]}")
+b147_exit=$(run_step "b147_pack_check" "$b147_log" "$(shell_join "${b147_cmd_words[@]}")" "${b147_cmd_words[@]}")
+b148_exit=$(run_step "b148_approval_brief" "$b148_log" "$(shell_join "${b148_cmd_words[@]}")" "${b148_cmd_words[@]}")
 
 overall="PASS"
 if [[ "$b146_exit" != "0" || "$b147_exit" != "0" || "$b148_exit" != "0" ]]; then

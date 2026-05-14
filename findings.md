@@ -1,3 +1,18 @@
+# Findings - Wave C B149 Submission Bundle Shell Hardening
+
+## 2026-05-15
+- 在 B144 之上继续往 workflow re-enable submission 这条链往上审查后，B149 暴露出同型的最外层 orchestration 执行面：
+  - `B146/B147/B148` 三个 step 仍统一经过 `eval "$cmd"`
+  - 同一个 `RUN_ID` 会和 `signoff/prereq/packet/approval` 相关路径一起重新拼进 shell 命令
+- 这意味着即使下游 `prepare/check/brief` 子脚本本身已经足够稳定，B149 仍会在 bundle 自己这一层重新把动态值交给 shell 解释层。
+- 这批最小正确修法仍然保持 display 与 execution 分离：
+  - display 命令继续保留
+  - 真正执行切成 direct argv
+- 修复后，B149 submission bundle 的剩余 shell 执行面已经被切掉：
+  - `run-id` 只作为 argv 数据透传给 B146/B147/B148
+  - 既有 unified contract 继续 green
+  - 默认日志目录与报告命名保持不变
+
 # Findings - Wave C B144 Ops Pack Shell Hardening
 
 ## 2026-05-15

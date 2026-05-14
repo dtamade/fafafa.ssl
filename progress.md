@@ -1,3 +1,35 @@
+# Progress - Wave C B149 Submission Bundle Shell Hardening
+
+## 2026-05-15
+- Post-commit continue:
+  - after landing `41a139d fix: harden wave c b144 shell execution`, continued upward in the same CI re-enable submission chain to the next outer wrapper
+- Fresh review narrowed the next real issue:
+  - `scripts/run_wave_c_ci_reenable_submission_bundle.sh` still drove B146/B147/B148 through `eval "$cmd"`
+  - even with those nested scripts stable, B149 still reintroduced the same shell execution boundary around `RUN_ID` and multiple derived input/output paths
+- Existing regression surface:
+  - `tests/scripts/test_run_wave_c_ci_reenable_submission_bundle_unified_contract.sh` already guarded the bundle's PASS/report/log contract
+  - no existing focused contract covered B149 shell execution
+- Tooling note:
+  - attempted `ace-tool/search_context` for this batch
+  - call failed because `ACE_TOKEN` was invalid, so the batch proceeded from direct file inspection plus existing wave-C hardening pattern
+- New batch plan recorded in `docs/plans/2026-05-15-wave-c-b149-shell-hardening.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_run_wave_c_b149_submission_bundle_run_id_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_run_wave_c_b149_submission_bundle_run_id_injection_contract.sh` -> FAIL before fix
+    - exact failure: `wave c B149 submission bundle should not execute shell content embedded in --run-id`
+- Minimal implementation:
+  - `tests/scripts/test_run_wave_c_b149_submission_bundle_run_id_injection_contract.sh`
+    - added a focused contract that proves `run-id` must remain data-only through B149
+  - `scripts/run_wave_c_ci_reenable_submission_bundle.sh`
+    - added `shell_join()` for display-only command text
+    - replaced `run_step() -> eval "$cmd"` with direct argv execution
+    - switched B146/B147/B148 invocations to explicit argv arrays
+- Focused GREEN verification:
+  - `bash tests/scripts/test_run_wave_c_b149_submission_bundle_run_id_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_run_wave_c_ci_reenable_submission_bundle_unified_contract.sh` -> PASS
+  - `bash -n scripts/run_wave_c_ci_reenable_submission_bundle.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave C B144 Ops Pack Shell Hardening
 
 ## 2026-05-15
