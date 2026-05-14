@@ -1,3 +1,44 @@
+# Progress - Wave B Cross Summary Linux Overall State Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `13b2aed fix: validate cross summary platform matrix`
+  - continued upward on the same `producer -> cross_summary -> consistency` static-review lane
+- Fresh review narrowed the next real issue:
+  - `check_wave_b_b2_evidence_consistency.sh` now rejected invalid Linux platform states in `cross_summary`
+  - but `generate_wave_b_cross_platform_summary.sh` still emitted raw Linux `Overall Status` values
+  - missing or malformed Linux overall therefore still produced an invalid `cross_summary` before the consumer even ran
+- Reproduced the producer-side drift with direct fixture runs:
+  - missing Linux `Overall Status` produced `| linux | UNKNOWN | ... |`
+  - invalid Linux `Overall Status: BROKEN` produced `| linux | BROKEN | ... |`
+  - checklist `overall` row also leaked the same invalid values
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-cross-summary-linux-overall-state-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_wave_b_cross_platform_summary_linux_overall_state_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_linux_overall_state_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_linux_overall_state_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `cross summary should normalize a Linux summary without Overall Status into linux state READY`
+- Minimal implementation landed:
+  - `scripts/generate_wave_b_cross_platform_summary.sh`
+    - Linux overall now uses normalized legal platform-state output
+    - checklist overall row no longer leaks `UNKNOWN/BROKEN`
+    - stale Linux `UNKNOWN` guidance was removed from `Next Actions`
+- GREEN verification:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh` -> PASS
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_linux_overall_state_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_linux_overall_state_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_explicit_missing_evidence_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_no_todo_pending_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_linux_checklist.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_existing_report_run_id_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B/B2 Consistency Cross Summary Platform Matrix Truth
 
 ## 2026-05-14

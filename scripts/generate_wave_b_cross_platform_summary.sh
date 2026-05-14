@@ -250,10 +250,8 @@ stable_check_state() {
   fi
 }
 
-linux_overall="$(read_linux_summary_field "$LINUX_SUMMARY_ABS" "Overall Status")"
-if [[ -z "$linux_overall" ]]; then
-  linux_overall="UNKNOWN"
-fi
+linux_overall_raw="$(read_linux_summary_field "$LINUX_SUMMARY_ABS" "Overall Status")"
+linux_overall="$(normalize_platform_state "$linux_overall_raw")"
 
 linux_compile_check="$(parse_check_state "$(read_platform_step_status "$LINUX_SUMMARY_ABS" "compile_all_modules")")"
 linux_modules_check="$(parse_check_state "$(read_platform_step_status "$LINUX_SUMMARY_ABS" "run_all_module_tests")")"
@@ -389,7 +387,7 @@ if [[ "$linux_overall" == "PASS" && "$macos_state" == "PASS" && "$windows_state"
   NEXT_ACTIONS+=("当前三平台 cross-platform evidence 已对齐；如需刷新完整交接链，可复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'）。")
 else
   if [[ "$linux_overall" != "PASS" ]]; then
-    NEXT_ACTIONS+=("若 Linux 为 FAIL/READY/DRY_RUN/UNKNOWN：修复或重跑 Linux baseline，并回填有效 Linux summary 与 examples evidence。")
+    NEXT_ACTIONS+=("若 Linux 为 FAIL/READY/DRY_RUN：修复或重跑 Linux baseline，并回填有效 Linux summary 与 examples evidence。")
   fi
   if [[ "$macos_state" != "PASS" ]]; then
     NEXT_ACTIONS+=("若 macOS 为 PROBE_ONLY/PROBE_OK/READY/FAIL/DRY_RUN/PENDING：在 macOS runner 修复或执行 live gate，并回填有效 macOS summary。")

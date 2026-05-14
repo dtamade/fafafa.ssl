@@ -1,3 +1,20 @@
+# Findings - Wave B Cross Summary Linux Overall State Truth
+
+## 2026-05-14
+- 继续沿着 `producer -> cross_summary -> consistency` 这条静态链深审后，发现 consumer 侧虽然已经补上了 `cross_summary` Linux state 的合法性校验，但生成器自己还保留着一条更上游的状态漂移：
+  - Linux summary 存在时
+  - `Overall Status` 缺失会写出 `UNKNOWN`
+  - 非法值如 `BROKEN` 也会被原样透传
+  - 结果就是 producer 端仍能制造一个 consumer 明确不接受的坏矩阵
+- 这不是单纯的显示问题，而是同一 repo 内不同层对“合法 Linux platform state”已经说了两套话：
+  - `closure` 早就把 unknown overall 收口成了 `READY`
+  - `consistency` 现在也要求 `cross_summary` Linux state 必须在固定允许集合里
+  - 只有 `generate_wave_b_cross_platform_summary.sh` 还在输出 `UNKNOWN/BROKEN`
+- 这批最小正确修法不是去放宽 consumer，而是把 producer 重新拉回现有真相：
+  - Linux overall 先正规化，再写入 platform row 与 checklist overall
+  - 缺失/非法 overall 统一落到合法非绿态 `READY`
+  - 对应的 Linux `Next Actions` 文案也不再继续传播 `UNKNOWN`
+
 # Findings - Wave B/B2 Consistency Cross Summary Platform Matrix Truth
 
 ## 2026-05-14

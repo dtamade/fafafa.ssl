@@ -1,3 +1,56 @@
+# Task Plan - Wave B Cross Summary Linux Overall State Truth
+
+## Goal
+收口 `generate_wave_b_cross_platform_summary.sh` 对 Linux `Overall Status` 的原样透传，避免生成器在 Linux overall 缺失或非法时，直接写出 `UNKNOWN/BROKEN` 这类不在 repo 合法平台状态集合内的值。
+
+## Current Batch
+1. 写 focused contract，证明 Linux overall 缺失或非法时，cross summary 仍会直接产出坏 Linux state。
+2. 最小修改 `generate_wave_b_cross_platform_summary.sh`，把 Linux overall 正规化到现有合法 platform state。
+3. 复跑 generator 邻近合同和依赖该输出的 consumer/prepare 回归。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified producer-side Linux overall state drift in cross-summary generator
+- [completed] wrote focused contract for legal Linux platform-state normalization
+- [completed] minimal Linux overall normalization in cross-summary generator
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 `generate_wave_b_cross_platform_summary.sh` 在修复前还有一个直接的 producer-side 漂移：
+  - Linux summary 存在时
+  - 若 `Overall Status` 缺失，会把 `UNKNOWN` 写进 `cross_summary`
+  - 若 `Overall Status` 非法，例如 `BROKEN`，也会被原样透传
+  - 这与刚刚收紧后的 consumer 合法状态集合已经冲突
+- 这会制造一个更前置的坏链路：
+  - consumer 侧虽然已经能拦住坏 `cross_summary`
+  - 但 producer 自己仍会继续制造这种坏报告
+  - 调用者看到的是生成器和 checker 的状态语义不一致
+- focused RED:
+  - 新增 `tests/scripts/test_wave_b_cross_platform_summary_linux_overall_state_contract.sh`
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_linux_overall_state_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_linux_overall_state_contract.sh`: FAIL before fix
+  - failure shape:
+    - `cross summary should normalize a Linux summary without Overall Status into linux state READY`
+- minimal implementation:
+  - 更新 `scripts/generate_wave_b_cross_platform_summary.sh`
+    - Linux overall 现在和 macOS/windows/closure 对齐，先正规化再写入 report
+    - checklist overall 行不再透传 `UNKNOWN/BROKEN`
+    - Linux `Next Actions` 文案不再继续暴露过时的 `UNKNOWN`
+- focused GREEN:
+  - `bash -n scripts/generate_wave_b_cross_platform_summary.sh`: PASS
+  - `bash -n tests/scripts/test_wave_b_cross_platform_summary_linux_overall_state_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_linux_overall_state_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_explicit_missing_evidence_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_no_todo_pending_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_linux_checklist.sh`: PASS
+  - `bash tests/scripts/test_wave_b_cross_platform_summary_absolute_input_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_consistency_existing_report_run_id_fallback_contract.sh`: PASS
+  - `bash tests/scripts/test_prepare_wave_b_b2_infer_run_id_from_linux_summary_contract.sh`: PASS
+  - `bash tests/scripts/test_wave_b_b2_absolute_output_path_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Wave B/B2 Consistency Cross Summary Platform Matrix Truth
 
 ## Goal
