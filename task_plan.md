@@ -1,3 +1,43 @@
+# Task Plan - Linux OpenSSL Matrix Shell Hardening
+
+## Goal
+收口 `scripts/run_linux_openssl_matrix_draft.sh` 的 `eval` / 字符串执行风险，避免 `--modules` 与 `--openssl3-lib-dir` 被当成 shell 语法执行。
+
+## Current Batch
+1. 写两个 focused contracts，分别证明 `--modules` 与 `--openssl3-lib-dir` 当前仍可注入 shell 语法。
+2. 最小修改脚本，把 `eval` / 字符串执行切到 argv / env 数组。
+3. 复跑新合同和脚本语法检查。
+4. 更新 working-memory，然后 review 并提交。
+
+## Status
+- [completed] identified shell injection risk in linux openssl matrix modules and openssl3-lib-dir paths
+- [completed] wrote focused contracts for linux matrix modules and openssl3-lib-dir injection
+- [completed] minimal argv/env execution alignment in linux openssl matrix producer
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前脚本原先仍通过：
+  - `run_cmd() -> eval "$cmd"`
+  - `prefix="LD_LIBRARY_PATH='...'"` 字符串前缀
+  - `module_cmd="bash scripts/run_all_module_tests.sh --modules $MODULE_SET"`
+- 一次性复现已经证明两条真实风险：
+  - `--modules "PKCS7; touch '$FLAG'; #"` 会执行 payload，且脚本仍可 `exit 0`
+  - `--openssl3-lib-dir "<payload with quote break>"` 会从 `LD_LIBRARY_PATH=...` 字符串前缀逃逸，且脚本仍可 `exit 0`
+- focused contracts 已锁住两条注入边界：
+  - `tests/scripts/test_linux_openssl_matrix_module_injection_contract.sh`
+    - payload 不得执行
+    - nested module runner 仍必须收到完整 `modules` 原始值
+  - `tests/scripts/test_linux_openssl_matrix_openssl3_lib_dir_injection_contract.sh`
+    - payload 不得执行
+    - fake openssl 仍必须观察到完整 `LD_LIBRARY_PATH` 原始值
+- 修复后验证结果：
+  - `bash -n tests/scripts/test_linux_openssl_matrix_module_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_linux_openssl_matrix_module_injection_contract.sh`：PASS
+  - `bash -n tests/scripts/test_linux_openssl_matrix_openssl3_lib_dir_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_linux_openssl_matrix_openssl3_lib_dir_injection_contract.sh`：PASS
+  - `bash -n scripts/run_linux_openssl_matrix_draft.sh`：PASS
+  - `git diff --check`：PASS
+
 # Task Plan - macOS OpenSSL Path Check Shell Hardening
 
 ## Goal

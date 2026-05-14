@@ -1,3 +1,41 @@
+# Progress - Linux OpenSSL Matrix Shell Hardening
+
+## 2026-05-15
+- Post-commit resume:
+  - previous batch landed as `db71f54 fix: harden macos openssl path check shell execution`
+  - continued static review inside the same helper-script family to the next sibling execution-boundary issue
+- Fresh review narrowed the next real issue:
+  - `run_linux_openssl_matrix_draft.sh` still used `eval` plus string-built `LD_LIBRARY_PATH=...` prefix and `module_cmd`
+  - that left both `--modules` and `--openssl3-lib-dir` exposed to shell interpretation
+- One-off repro captured two concrete shell-injection paths:
+  - fake linux matrix repro with `--modules "PKCS7; touch '$FLAG'; #"`
+    - result: payload executed in both system-default and openssl3 profiles, nested module runner only saw truncated `PKCS7`, and the script still exited `0`
+  - fake linux matrix repro with `--openssl3-lib-dir "<payload with quote break>"`
+    - result: payload executed from the `LD_LIBRARY_PATH=...` prefix in the openssl3 profile and the script still exited `0`
+- New batch plan recorded in `docs/plans/2026-05-15-linux-openssl-matrix-shell-hardening.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_linux_openssl_matrix_module_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_linux_openssl_matrix_module_injection_contract.sh` -> FAIL before fix
+    - exact failure: `linux openssl matrix should not execute shell content embedded in --modules`
+  - `bash -n tests/scripts/test_linux_openssl_matrix_openssl3_lib_dir_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_linux_openssl_matrix_openssl3_lib_dir_injection_contract.sh` -> FAIL before fix
+    - exact failure: `linux openssl matrix should not execute shell content embedded in --openssl3-lib-dir`
+- Minimal implementation:
+  - `tests/scripts/test_linux_openssl_matrix_module_injection_contract.sh`
+    - added a focused contract for modules payload passthrough without shell execution
+  - `tests/scripts/test_linux_openssl_matrix_openssl3_lib_dir_injection_contract.sh`
+    - added a focused contract for openssl3-lib-dir payload passthrough without shell execution
+  - `scripts/run_linux_openssl_matrix_draft.sh`
+    - added `shell_join()` / `build_display_command()` / `build_project_command()` for display-only command text
+    - changed `run_cmd()` and added `run_project_cmd()` so execution now happens through argv arrays instead of `eval`
+    - replaced profile-level string prefix with `profile_env_assignments` arrays and explicit `env ...` word assembly
+    - switched openssl/compile/modules/phase2 invocations to argv / env arrays
+- Focused GREEN verification:
+  - `bash tests/scripts/test_linux_openssl_matrix_module_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_linux_openssl_matrix_openssl3_lib_dir_injection_contract.sh` -> PASS
+  - `bash -n scripts/run_linux_openssl_matrix_draft.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - macOS OpenSSL Path Check Shell Hardening
 
 ## 2026-05-15

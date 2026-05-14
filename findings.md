@@ -1,3 +1,21 @@
+# Findings - Linux OpenSSL Matrix Shell Hardening
+
+## 2026-05-15
+- 继续沿着 OpenSSL helper family 往下审查后，Linux 版本矩阵脚本暴露出和刚修完的 macOS path-check 同型的真实执行边界问题：
+  - `run_linux_openssl_matrix_draft.sh` 仍保留 `eval "$cmd"`
+  - `MODULE_SET` 和 `OPENSSL3_LIB_DIR` 都直接进入字符串命令
+- 这不是纸面风险，已经被 focused 复现坐实：
+  - `modules` payload 可以作为 shell 语法执行
+  - `openssl3-lib-dir` payload 可以从 `LD_LIBRARY_PATH=...` 前缀逃逸
+- 这批最小正确修法同样不该继续补黑名单，而是直接切掉字符串执行模型：
+  - profile 级环境前缀改成 `env "KEY=value"` 数据传递
+  - project 内命令执行统一走 `(cd "$PROJECT_ROOT" && "$@")`
+  - 展示命令继续存在，但只作为 `printf '%q'` 生成的 operator-facing 文本
+- 生产修复后，Linux OpenSSL matrix 的动态执行真值已经重新回到单一安全面：
+  - `eval` 不再参与执行
+  - `MODULE_SET` 只作为单个 argv 进入 nested module runner
+  - `OPENSSL3_LIB_DIR` 只通过 `LD_LIBRARY_PATH` env 数据进入 profile 执行
+
 # Findings - macOS OpenSSL Path Check Shell Hardening
 
 ## 2026-05-15

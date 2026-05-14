@@ -115,62 +115,114 @@ if [[ -z "$OPENSSL3_LIB_DIR" ]]; then
   OPENSSL3_LIB_DIR="$(find_lib_dir "libcrypto.so.3" "${OPENSSL3_CANDIDATES[@]}" || true)"
 fi
 
+shell_join() {
+  local parts=()
+  local part
+  for part in "$@"; do
+    parts+=("$(printf '%q' "$part")")
+  done
+  local IFS=' '
+  echo "${parts[*]}"
+}
+
+build_display_command() {
+  shell_join "$@"
+}
+
+build_project_command() {
+  echo "cd $(printf '%q' "$PROJECT_ROOT") && $(shell_join "$@")"
+}
+
 run_cmd() {
-  local cmd="$1"
-  echo "    [CMD] $cmd"
+  local cmd_desc="$1"
+  shift
+  echo "    [CMD] $cmd_desc"
   if [[ "$DRY_RUN" == "true" ]]; then
     return 0
   fi
-  eval "$cmd"
+  "$@"
+}
+
+run_project_cmd() {
+  local cmd_desc="$1"
+  shift
+  echo "    [CMD] $cmd_desc"
+  if [[ "$DRY_RUN" == "true" ]]; then
+    return 0
+  fi
+  (
+    cd "$PROJECT_ROOT"
+    "$@"
+  )
 }
 
 run_profile() {
   local profile="$1"
   local lib_dir="$2"
   local ld_path="${LD_LIBRARY_PATH:-}"
-  local prefix=""
+  local profile_env_assignments=()
 
   echo ""
   echo "==== Profile: $profile ===="
 
   if [[ -n "$lib_dir" ]]; then
     echo "  lib dir: $lib_dir"
-    prefix="LD_LIBRARY_PATH='$lib_dir:${ld_path}'"
+    profile_env_assignments=("LD_LIBRARY_PATH=$lib_dir:${ld_path}")
   else
     echo "  lib dir: (system default)"
   fi
 
-  if [[ -n "$prefix" ]]; then
-    run_cmd "cd '$PROJECT_ROOT' && $prefix openssl version"
+  local openssl_cmd_words=()
+  if [[ ${#profile_env_assignments[@]} -gt 0 ]]; then
+    openssl_cmd_words=(env "${profile_env_assignments[@]}" openssl version)
   else
-    run_cmd "cd '$PROJECT_ROOT' && openssl version"
+    openssl_cmd_words=(openssl version)
   fi
+  run_project_cmd "$(build_project_command "${openssl_cmd_words[@]}")" "${openssl_cmd_words[@]}"
 
   if [[ "$WITH_COMPILE" == "true" ]]; then
-    if [[ -n "$prefix" ]]; then
-      run_cmd "cd '$PROJECT_ROOT' && $prefix python3 scripts/compile_all_modules.py"
+    local compile_cmd_words=()
+    if [[ ${#profile_env_assignments[@]} -gt 0 ]]; then
+      compile_cmd_words=(env "${profile_env_assignments[@]}" python3 scripts/compile_all_modules.py)
     else
-      run_cmd "cd '$PROJECT_ROOT' && python3 scripts/compile_all_modules.py"
+      compile_cmd_words=(python3 scripts/compile_all_modules.py)
     fi
+    run_project_cmd "$(build_project_command "${compile_cmd_words[@]}")" "${compile_cmd_words[@]}"
   fi
 
-  local module_cmd="bash scripts/run_all_module_tests.sh --modules $MODULE_SET"
-  if [[ "$VERBOSE" == "true" ]]; then
-    module_cmd="$module_cmd --verbose"
-  fi
-
-  if [[ -n "$prefix" ]]; then
-    run_cmd "cd '$PROJECT_ROOT' && $prefix $module_cmd"
+  local module_cmd_words=()
+  if [[ ${#profile_env_assignments[@]} -gt 0 ]]; then
+    module_cmd_words=(env "${profile_env_assignments[@]}" bash scripts/run_all_module_tests.sh --modules "$MODULE_SET")
   else
-    run_cmd "cd '$PROJECT_ROOT' && $module_cmd"
+    module_cmd_words=(bash scripts/run_all_module_tests.sh --modules "$MODULE_SET")
   fi
+  if [[ "$VERBOSE" == "true" ]]; then
+    module_cmd_words+=(--verbose)
+  fi
+  run_project_cmd "$(build_project_command "${module_cmd_words[@]}")" "${module_cmd_words[@]}"
 
   if [[ "$WITH_PHASE2_DRYRUN" == "true" ]]; then
-    if [[ -n "$prefix" ]]; then
-      run_cmd "cd '$PROJECT_ROOT' && $prefix bash scripts/run_phase2_performance_baseline.sh --dry-run --iterations 200 --tls-iterations 50"
+    local phase2_cmd_words=()
+    if [[ ${#profile_env_assignments[@]} -gt 0 ]]; then
+      phase2_cmd_words=(
+        env
+        "${profile_env_assignments[@]}"
+        bash
+        scripts/run_phase2_performance_baseline.sh
+        --dry-run
+        --iterations 200
+        --tls-iterations 50
+      )
     else
-      run_cmd "cd '$PROJECT_ROOT' && bash scripts/run_phase2_performance_baseline.sh --dry-run --iterations 200 --tls-iterations 50"
+      phase2_cmd_words=(
+        bash
+        scripts/run_phase2_performance_baseline.sh
+        --dry-run
+        --iterations 200
+        --tls-iterations 50
+      )
     fi
+    run_project_cmd "$(build_project_command "${phase2_cmd_words[@]}")" "${phase2_cmd_words[@]}"
   fi
 }
 
