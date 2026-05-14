@@ -1,3 +1,35 @@
+# Progress - Verify Examples Stop-On-Error Summary Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `b387d41 fix: preserve verify examples json stdout`
+  - continued the same `verify_examples_compile.sh` producer-side audit instead of switching scope
+- Fresh review narrowed the next real issue:
+  - `--stop-on-error` aborts execution after the first failed example
+  - but summary still exposes only `total/passed/failed/skipped/pass_rate`
+  - in practice that makes a partial run look too much like a full-corpus report
+- New batch plan recorded in `docs/plans/2026-05-14-verify-examples-stop-on-error-summary-truth.md`
+- Focused RED contract added:
+  - `tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh`
+  - `bash -n tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh` -> PASS
+  - `bash tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh` -> FAIL before fix
+  - exact failure:
+    - `stop-on-error json summary should expose full total plus tested/remaining/stopped_early truth`
+    - traced old summary: `{'total': 2, 'passed': 1, 'failed': 1, 'skipped': 0, 'pass_rate': 50.0}`
+- Minimal implementation landed:
+  - `scripts/verify_examples_compile.sh`
+    - pre-scans the full example list so `summary.total` stays corpus-wide even after an early stop
+    - computes `tested = passed + failed`
+    - adds `remaining` and `stopped_early`
+    - extends text/json/markdown summaries to expose the partial-run truth
+- GREEN verification:
+  - `bash -n scripts/verify_examples_compile.sh` -> PASS
+  - `bash -n tests/scripts/test_verify_examples_compile_json_stdout_contract.sh` -> PASS
+  - `bash tests/scripts/test_verify_examples_compile_json_stdout_contract.sh` -> PASS
+  - `bash -n tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh` -> PASS
+  - `bash tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Verify Examples JSON Stdout Truth
 
 ## 2026-05-14

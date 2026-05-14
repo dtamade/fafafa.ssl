@@ -1,3 +1,58 @@
+# Task Plan - Verify Examples Stop-On-Error Summary Truth
+
+## Goal
+收口 `scripts/verify_examples_compile.sh --stop-on-error` 的 summary 真值，避免提前终止后的半程结果继续伪装成全量 examples 统计。
+
+## Current Batch
+1. 写 focused contract，证明 stop-on-error 目前仍把 partial summary 写成“看起来像全量”的 `total/passed/failed/skipped/pass_rate`。
+2. 最小修改脚本，让 summary 显式暴露 `tested/remaining/stopped_early`，并把 `total` 对齐到全量 examples 数。
+3. 复跑 focused 合同与语法检查。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified partial-summary truth drift in verify_examples stop-on-error mode
+- [completed] wrote focused contract for stop-on-error summary truth
+- [completed] minimal partial-truth surfacing in verify_examples summary
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- `verify_examples_compile.sh -s` 在首个失败后会直接 `break`。
+- 修复前 JSON/text/markdown summary 仍只暴露：
+  - `total`
+  - `passed`
+  - `failed`
+  - `skipped`
+  - `pass_rate`
+- 但在 stop-on-error 场景里，这组字段会被误读成全量 truth：
+  - `total` 其实只是“走到哪算到哪”
+  - 后面未处理文件不会被显式暴露
+  - `pass_rate` 的分母也只是半程 tested 数
+- 这批最小正确修法会把 partial truth 显式写出来：
+  - `total` = 全量 examples 数
+  - `tested` = 实际尝试编译数
+  - `remaining` = 未处理数
+  - `stopped_early` = 是否提前终止
+- focused RED:
+  - 新增 `tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh`
+  - `bash -n tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh`: FAIL before fix
+  - failure shape:
+    - `stop-on-error json summary should expose full total plus tested/remaining/stopped_early truth`
+    - old summary was `{'total': 2, 'passed': 1, 'failed': 1, 'skipped': 0, 'pass_rate': 50.0}`
+- minimal implementation:
+  - 更新 `scripts/verify_examples_compile.sh`
+    - 预扫描全量 examples，先确定完整 `total`
+    - `pass_rate` 分母改为显式 `tested = passed + failed`
+    - 新增 `remaining` 与 `stopped_early`
+    - text/json/markdown 摘要统一暴露 partial-run 真值
+- focused GREEN:
+  - `bash -n scripts/verify_examples_compile.sh`: PASS
+  - `bash -n tests/scripts/test_verify_examples_compile_json_stdout_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_json_stdout_contract.sh`: PASS
+  - `bash -n tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh`: PASS
+  - `bash tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh`: PASS
+  - `git diff --check`: PASS
+
 # Task Plan - Verify Examples JSON Stdout Truth
 
 ## Goal

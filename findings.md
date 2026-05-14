@@ -1,3 +1,22 @@
+# Findings - Verify Examples Stop-On-Error Summary Truth
+
+## 2026-05-14
+- 继续深审 `verify_examples_compile.sh` 本体后，`--stop-on-error` 又露出一条 producer-side 真值漂移：
+  - 脚本在首个失败后会直接停止
+  - 但 summary 仍只给出一组看起来像全量统计的 `total/passed/failed/skipped/pass_rate`
+- 这会制造一个很隐蔽的半程假真相：
+  - 使用者不知道后面还有多少 examples 没被处理
+  - `total` 很容易被误读成目录全量
+  - `pass_rate` 的分母其实只是已尝试编译的样本
+- 这批最小正确修法不会取消 stop-on-error，而是把 partial truth 显式编码出来：
+  - `total` 对齐全量 examples 数
+  - 新增 `tested`
+  - 新增 `remaining`
+  - 新增 `stopped_early`
+- 顺手也把一个长期隐含的口径歧义收掉了：
+  - `pass_rate` 现在显式按 `tested = passed + failed` 计算
+  - 不再通过 `total - skipped` 这种只在“全量跑完”时才隐式成立的公式来表达
+
 # Findings - Verify Examples JSON Stdout Truth
 
 ## 2026-05-14

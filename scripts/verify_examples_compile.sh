@@ -79,9 +79,13 @@ emit_runtime_line ""
 
 # 统计
 TOTAL=0
+TESTED=0
 PASSED=0
 FAILED=0
 SKIPPED=0
+REMAINING=0
+STOPPED_EARLY=false
+declare -a EXAMPLE_FILES
 declare -a FAILED_FILES
 declare -a SKIPPED_FILES
 
@@ -122,14 +126,23 @@ compile_file() {
 emit_runtime_line "开始编译验证..."
 emit_runtime_line "========================================"
 
-# 遍历所有示例文件
-for file in $(find "$EXAMPLES_DIR" -name "*.pas" -type f | sort); do
-    relative_path="${file#$PROJECT_ROOT/}"
-    ((TOTAL++))
+# 预扫描全量示例文件，避免 stop-on-error 时把半程结果误写成全量统计
+mapfile -t EXAMPLE_FILES < <(find "$EXAMPLES_DIR" -name "*.pas" -type f | sort)
+TOTAL=${#EXAMPLE_FILES[@]}
 
+for file in "${EXAMPLE_FILES[@]}"; do
+    relative_path="${file#$PROJECT_ROOT/}"
     if should_skip "$file"; then
         ((SKIPPED++))
         SKIPPED_FILES+=("$relative_path")
+    fi
+done
+
+# 遍历所有示例文件
+for file in "${EXAMPLE_FILES[@]}"; do
+    relative_path="${file#$PROJECT_ROOT/}"
+
+    if should_skip "$file"; then
         $VERBOSE && emit_runtime_line "${YELLOW}[SKIP]${NC} $relative_path"
         continue
     fi
@@ -141,7 +154,10 @@ for file in $(find "$EXAMPLES_DIR" -name "*.pas" -type f | sort); do
         ((FAILED++))
         FAILED_FILES+=("$relative_path")
         emit_runtime_line "${RED}[FAIL]${NC} $relative_path"
-        $STOP_ON_ERROR && break
+        if $STOP_ON_ERROR; then
+            STOPPED_EARLY=true
+            break
+        fi
     fi
 done
 
@@ -149,7 +165,11 @@ emit_runtime_line "========================================"
 emit_runtime_line ""
 
 # 计算通过率
-TESTED=$((TOTAL - SKIPPED))
+TESTED=$((PASSED + FAILED))
+REMAINING=$((TOTAL - SKIPPED - TESTED))
+if [ $REMAINING -lt 0 ]; then
+    REMAINING=0
+fi
 if [ $TESTED -gt 0 ]; then
     PASS_RATE=$(echo "scale=1; $PASSED * 100 / $TESTED" | bc)
 else
@@ -172,9 +192,12 @@ output_summary() {
   "fpc_version": "$FPC_VERSION",
   "summary": {
     "total": $TOTAL,
+    "tested": $TESTED,
     "passed": $PASSED,
     "failed": $FAILED,
     "skipped": $SKIPPED,
+    "remaining": $REMAINING,
+    "stopped_early": $STOPPED_EARLY,
     "pass_rate": $PASS_RATE
   },
   "failed_files": [${failed_json}]
@@ -193,9 +216,12 @@ EOF_JSON
 | 指标 | 数值 |
 |------|------|
 | 总计 | $TOTAL |
+| 已测试 | $TESTED |
 | 通过 | $PASSED |
 | 失败 | $FAILED |
 | 跳过 | $SKIPPED |
+| 未处理 | $REMAINING |
+| 提前终止 | $STOPPED_EARLY |
 | 通过率 | ${PASS_RATE}% |
 
 EOF_MD
@@ -208,9 +234,12 @@ EOF_MD
             echo "编译验证摘要"
             echo "============"
             echo "总计: $TOTAL"
+            echo "已测试: $TESTED"
             echo "通过: $PASSED"
             echo "失败: $FAILED"
             echo "跳过: $SKIPPED"
+            echo "未处理: $REMAINING"
+            echo "提前终止: $STOPPED_EARLY"
             echo "通过率: ${PASS_RATE}%"
             if [ ${#FAILED_FILES[@]} -gt 0 ]; then
                 echo ""
