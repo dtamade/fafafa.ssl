@@ -1,3 +1,50 @@
+# Task Plan - Wave B Examples JSON Parse Failure Truth
+
+## Goal
+统一 macOS / Linux gate 在 examples JSON 损坏时的 operator-facing 真值，避免 macOS 硬中止、Linux 泄 traceback、summary 行为继续漂移。
+
+## Current Batch
+1. 写 macOS / Linux focused contracts，分别证明坏 JSON 场景下当前仍会异常中止或泄 traceback。
+2. 最小修改两条 gate，只收口 examples JSON 解析失败路径。
+3. 复跑新合同与现有 macOS / Linux gate focused contracts。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified cross-platform examples-json parse failure drift in wave b gates
+- [completed] wrote focused contracts for macos and linux invalid examples json
+- [completed] minimal parse-failure truth alignment in both gate producers
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前两条 gate 在坏 JSON 场景下已经出现同型但不一致的 operator-facing 行为：
+  - macOS 会在 `json.load` 处直接异常中止，不产出 summary
+  - Linux 会泄 traceback，但仍产出 FAIL summary
+- 这批的目标不是改 helper，而是统一 gate 自己如何消费损坏的 report。
+- focused contracts 已锁住两条 parse-failure 真值：
+  - `tests/scripts/test_wave_b_macos_gate_invalid_examples_json_contract.sh`
+    - bad JSON + helper `exit 0` 仍必须产出 FAIL summary
+    - stderr 不得泄 traceback
+  - `tests/scripts/test_wave_b_ci_gate_invalid_examples_json_contract.sh`
+    - bad JSON + helper `exit 0` 仍必须产出 FAIL summary
+    - stderr 不得泄 traceback
+- 修复后验证结果：
+  - `bash -n tests/scripts/test_wave_b_macos_gate_invalid_examples_json_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_json_contract.sh`：PASS
+  - `bash -n tests/scripts/test_wave_b_ci_gate_invalid_examples_json_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_invalid_examples_json_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_module_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_openssl_root_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_run_id_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_empty_run_id_fallback_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_output_dir_boundary_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_threshold_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_threshold_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_invalid_examples_threshold_contract.sh`：PASS
+  - `bash -n scripts/run_wave_b_macos_gate.sh`：PASS
+  - `bash -n scripts/run_wave_b_ci_gate.sh`：PASS
+  - `git diff --check`：PASS
+
 # Task Plan - Wave B macOS Shell Quote Hardening
 
 ## Goal

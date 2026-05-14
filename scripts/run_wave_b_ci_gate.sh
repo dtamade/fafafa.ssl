@@ -243,6 +243,28 @@ print(path)
 PY
 }
 
+parse_examples_summary_json() {
+  local report_path="$1"
+  python3 - "$report_path" <<'PY'
+import json
+import sys
+
+report_path = sys.argv[1]
+try:
+    with open(report_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    summary = data.get('summary', {})
+except Exception:
+    raise SystemExit(1)
+
+print(summary.get('total', 0))
+print(summary.get('passed', 0))
+print(summary.get('failed', 0))
+print(summary.get('skipped', 0))
+print(summary.get('pass_rate', 0.0))
+PY
+}
+
 REPORTS_DIR="$(resolve_rel_under_root "$REPORTS_DIR_REL" || true)"
 if [[ -z "$REPORTS_DIR" ]]; then
   echo "Invalid --reports-dir (must stay within project root): $REPORTS_DIR_REL" >&2
@@ -403,27 +425,15 @@ examples_rate="n/a"
 examples_json_ok="false"
 
 if [[ "$WITH_EXAMPLES" == "true" && "$DRY_RUN" == "false" && -f "$EXAMPLES_REPORT" ]]; then
-  parsed=$(python3 - "$EXAMPLES_REPORT" <<'PY'
-import json
-import sys
-p = sys.argv[1]
-with open(p, 'r', encoding='utf-8') as f:
-    d = json.load(f)
-s = d.get('summary', {})
-print(s.get('total', 0))
-print(s.get('passed', 0))
-print(s.get('failed', 0))
-print(s.get('skipped', 0))
-print(s.get('pass_rate', 0.0))
-PY
-)
-  if [[ -n "$parsed" ]]; then
+  if parsed="$(parse_examples_summary_json "$EXAMPLES_REPORT" 2>/dev/null)"; then
     examples_total=$(echo "$parsed" | sed -n '1p')
     examples_passed=$(echo "$parsed" | sed -n '2p')
     examples_failed=$(echo "$parsed" | sed -n '3p')
     examples_skipped=$(echo "$parsed" | sed -n '4p')
     examples_rate=$(echo "$parsed" | sed -n '5p')
     examples_json_ok="true"
+  else
+    echo "[WAVE-B] [examples] invalid json report=$EXAMPLES_REPORT_REL" >&2
   fi
 fi
 

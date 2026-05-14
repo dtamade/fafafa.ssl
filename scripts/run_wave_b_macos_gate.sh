@@ -141,6 +141,28 @@ build_step_command() {
   echo "cd $(printf '%q' "$PROJECT_ROOT") && $(shell_join "${words[@]}")"
 }
 
+parse_examples_summary_json() {
+  local report_path="$1"
+  python3 - "$report_path" <<'PY'
+import json
+import sys
+
+report_path = sys.argv[1]
+try:
+    with open(report_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    summary = data.get('summary', {})
+except Exception:
+    raise SystemExit(1)
+
+print(summary.get('total', 0))
+print(summary.get('passed', 0))
+print(summary.get('failed', 0))
+print(summary.get('skipped', 0))
+print(summary.get('pass_rate', 0.0))
+PY
+}
+
 OUTPUT_DIR="$(resolve_rel_under_root "$OUTPUT_DIR_REL" || true)"
 if [[ -z "$OUTPUT_DIR" ]]; then
   echo "Invalid --output-dir (must stay within project root): $OUTPUT_DIR_REL" >&2
@@ -230,31 +252,24 @@ compile_exit=$(run_step "compile" "$compile_cmd" "$COMPILE_LOG_REL")
 modules_exit=$(run_step "modules" "$modules_cmd" "$MODULES_LOG_REL")
 examples_exit=$(run_step "examples" "$examples_cmd" "$EXAMPLES_LOG_REL")
 
-examples_total="0"
-examples_passed="0"
-examples_failed="0"
-examples_skipped="0"
-examples_rate="0.0"
+examples_total="n/a"
+examples_passed="n/a"
+examples_failed="n/a"
+examples_skipped="n/a"
+examples_rate="n/a"
+examples_json_ok="false"
 
 if [[ "$DRY_RUN" == "false" && -f "$PROJECT_ROOT/$EXAMPLES_JSON_REL" ]]; then
-  parsed=$(python3 - "$PROJECT_ROOT/$EXAMPLES_JSON_REL" <<'PY'
-import json
-import sys
-with open(sys.argv[1], 'r', encoding='utf-8') as f:
-    d = json.load(f)
-s = d.get('summary', {})
-print(s.get('total', 0))
-print(s.get('passed', 0))
-print(s.get('failed', 0))
-print(s.get('skipped', 0))
-print(s.get('pass_rate', 0.0))
-PY
-)
-  examples_total="$(echo "$parsed" | sed -n '1p')"
-  examples_passed="$(echo "$parsed" | sed -n '2p')"
-  examples_failed="$(echo "$parsed" | sed -n '3p')"
-  examples_skipped="$(echo "$parsed" | sed -n '4p')"
-  examples_rate="$(echo "$parsed" | sed -n '5p')"
+  if parsed="$(parse_examples_summary_json "$PROJECT_ROOT/$EXAMPLES_JSON_REL" 2>/dev/null)"; then
+    examples_total="$(echo "$parsed" | sed -n '1p')"
+    examples_passed="$(echo "$parsed" | sed -n '2p')"
+    examples_failed="$(echo "$parsed" | sed -n '3p')"
+    examples_skipped="$(echo "$parsed" | sed -n '4p')"
+    examples_rate="$(echo "$parsed" | sed -n '5p')"
+    examples_json_ok="true"
+  else
+    echo "[WAVE-B-MACOS] [examples] invalid json report=$EXAMPLES_JSON_REL" >&2
+  fi
 fi
 
 probe_status="FAIL"
@@ -277,14 +292,17 @@ else
   [[ "$compile_exit" == "0" ]] && compile_status="PASS"
   [[ "$modules_exit" == "0" ]] && modules_status="PASS"
 
-  threshold_pass=$(python3 - <<PY
+  examples_status="FAIL"
+  if [[ "$examples_json_ok" == "true" ]]; then
+    threshold_pass=$(python3 - <<PY
 rate = float("$examples_rate")
 threshold = float("$EXAMPLES_THRESHOLD")
 print("true" if rate >= threshold else "false")
 PY
 )
-  if [[ "$threshold_pass" == "true" ]]; then
-    examples_status="PASS"
+    if [[ "$threshold_pass" == "true" ]]; then
+      examples_status="PASS"
+    fi
   fi
 
   if [[ "$probe_status" == "PASS" && "$path_check_status" == "PASS" && "$compile_status" == "PASS" && "$modules_status" == "PASS" && "$examples_status" == "PASS" ]]; then

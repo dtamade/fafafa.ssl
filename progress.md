@@ -1,3 +1,52 @@
+# Progress - Wave B Examples JSON Parse Failure Truth
+
+## 2026-05-14
+- Post-commit resume:
+  - previous batch landed as `7df5752 fix: harden wave b macos shell quoting`
+  - continued static review from shell safety into the next examples-truth boundary
+- Fresh review narrowed the next real issue:
+  - `run_wave_b_macos_gate.sh` and `run_wave_b_ci_gate.sh` both treat invalid examples json as a Python failure mode instead of stable gate truth
+- One-off repro captured the cross-platform drift:
+  - macOS fake gate with helper `exit 0` + invalid json:
+    - result: gate exited `1`, leaked `JSONDecodeError`, and failed before summary generation
+  - Linux fake gate with helper `exit 0` + invalid json:
+    - result: gate exited `1`, leaked `JSONDecodeError`, but still emitted FAIL summary with `n/a` metrics
+- New batch plan recorded in `docs/plans/2026-05-14-wave-b-examples-json-parse-failure-truth.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_wave_b_macos_gate_invalid_examples_json_contract.sh`
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_json_contract.sh`
+  - result before fix: contract failed because macOS gate still did not emit a summary
+  - `bash -n tests/scripts/test_wave_b_ci_gate_invalid_examples_json_contract.sh`
+  - `bash tests/scripts/test_wave_b_ci_gate_invalid_examples_json_contract.sh`
+  - result before fix: contract failed because linux gate still leaked traceback
+- Minimal implementation:
+  - `tests/scripts/test_wave_b_macos_gate_invalid_examples_json_contract.sh`
+    - added a focused macOS contract for invalid examples JSON truth
+  - `tests/scripts/test_wave_b_ci_gate_invalid_examples_json_contract.sh`
+    - added a focused Linux contract for invalid examples JSON truth
+  - `scripts/run_wave_b_macos_gate.sh`
+    - added `parse_examples_summary_json()` helper that fails silently on bad JSON
+    - switched examples metrics defaults from `0/0.0` to `n/a`
+    - made threshold evaluation conditional on `examples_json_ok`
+  - `scripts/run_wave_b_ci_gate.sh`
+    - added the same parse helper and replaced raw `json.load` command substitution
+    - kept existing `n/a` metrics truth while removing traceback leakage
+- Focused GREEN verification:
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_json_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_invalid_examples_json_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_module_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_openssl_root_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_run_id_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_empty_run_id_fallback_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_output_dir_boundary_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_ci_gate_invalid_examples_threshold_contract.sh` -> PASS
+  - `bash -n scripts/run_wave_b_macos_gate.sh` -> PASS
+  - `bash -n scripts/run_wave_b_ci_gate.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Wave B macOS Shell Quote Hardening
 
 ## 2026-05-14

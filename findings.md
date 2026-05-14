@@ -1,3 +1,20 @@
+# Findings - Wave B Examples JSON Parse Failure Truth
+
+## 2026-05-14
+- 继续沿着 Wave B gate 的 examples 真值往下审查后，发现现在已经不是单独的 macOS 漂移，而是跨平台同型问题：
+  - macOS gate 会在坏 JSON 上硬中止
+  - Linux gate 会在坏 JSON 上泄 traceback
+- 两边的共同错误在于：都把“helper 产出坏 JSON”视成了 Python 实现细节异常，而不是需要被 gate 自己消化并转成稳定 FAIL summary 的门禁真值。
+- 这批最小正确修法应当统一为：
+  - 无 traceback
+  - summary 继续产出
+  - examples metrics 统一 `n/a`
+  - overall 统一 FAIL
+- 生产修复后，两条 gate 的 examples parse-failure truth 已经统一：
+  - 解析 helper JSON 统一走可失败但不炸脚本的 helper
+  - 只有 `examples_json_ok=true` 时才继续阈值判断
+  - 否则 examples step 保持 FAIL，summary metrics 保持 `n/a`
+
 # Findings - Wave B macOS Shell Quote Hardening
 
 ## 2026-05-14
