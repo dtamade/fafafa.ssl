@@ -68,25 +68,58 @@ drift_report="$REPORTS_DIR/wave_c_b124_local_drift_watch_${RUN_ID}.md"
 continuity_log="$REPORTS_DIR/wave_c_b123_local_first_continuity_${RUN_ID}.log"
 drift_log="$REPORTS_DIR/wave_c_b124_local_drift_watch_${RUN_ID}.log"
 
+shell_join() {
+  local parts=()
+  local part
+  for part in "$@"; do
+    parts+=("$(printf '%q' "$part")")
+  done
+  local IFS=' '
+  echo "${parts[*]}"
+}
+
 run_step() {
-  local cmd="$1"
+  local step_name="$1"
   local log="$2"
+  local cmd_desc="$3"
+  shift 3
+
+  echo "[wave-c-b125] [$step_name] $cmd_desc" >&2
 
   set +e
-  eval "$cmd" > "$log" 2>&1
+  "$@" > "$log" 2>&1
   local ec=$?
   set -e
 
+  echo "[wave-c-b125] [$step_name] exit=$ec log=$log" >&2
   echo "$ec"
 }
 
+b123_cmd_words=(
+  bash
+  scripts/check_wave_c_local_first_continuity.sh
+  --run-id "$RUN_ID"
+  --strict
+  --output "$continuity_report"
+)
 continuity_exit=$(run_step \
-  "bash scripts/check_wave_c_local_first_continuity.sh --run-id ${RUN_ID} --strict --output ${continuity_report}" \
-  "$continuity_log")
+  "b123_local_first_continuity" \
+  "$continuity_log" \
+  "$(shell_join "${b123_cmd_words[@]}")" \
+  "${b123_cmd_words[@]}")
 
+b124_cmd_words=(
+  bash
+  scripts/check_wave_c_local_drift_watch.sh
+  --run-id "$RUN_ID"
+  --strict
+  --output "$drift_report"
+)
 drift_exit=$(run_step \
-  "bash scripts/check_wave_c_local_drift_watch.sh --run-id ${RUN_ID} --strict --output ${drift_report}" \
-  "$drift_log")
+  "b124_local_drift_watch" \
+  "$drift_log" \
+  "$(shell_join "${b124_cmd_words[@]}")" \
+  "${b124_cmd_words[@]}")
 
 overall="PASS"
 if [[ "$continuity_exit" != "0" || "$drift_exit" != "0" ]]; then

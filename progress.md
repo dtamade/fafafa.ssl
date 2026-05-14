@@ -1,3 +1,33 @@
+# Progress - Wave C B125 Local-First Guard Bundle Shell Hardening
+
+## 2026-05-15
+- Post-commit continue:
+  - after landing `58db26b fix: harden tls13 signer gate bundle shell execution`, continued static review into the Wave C `eval` family and deliberately picked the lowest-level/highest-leverage bundle first
+- Fresh review narrowed the next real issue:
+  - `scripts/run_wave_c_local_first_guard_bundle.sh` still drove B123/B124 through `eval "$cmd"`
+  - the same `RUN_ID` value flowed into both `--run-id` and derived `--output` paths, so one dynamic input still controlled the full shell string
+- Context gathering:
+  - existing repo contract `tests/scripts/test_run_wave_c_local_first_guard_bundle_tmp_default_contract.sh` already covered tmp default output structure
+  - `ace-tool/search_context` was unavailable for this batch because `ACE_TOKEN` had become invalid again, so the batch proceeded from direct file inspection
+- New batch plan recorded in `docs/plans/2026-05-15-wave-c-b125-shell-hardening.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_run_wave_c_local_first_guard_bundle_run_id_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_run_wave_c_local_first_guard_bundle_run_id_injection_contract.sh` -> FAIL before fix
+    - exact failure: `wave c B125 bundle should not execute shell content embedded in --run-id`
+- Minimal implementation:
+  - `tests/scripts/test_run_wave_c_local_first_guard_bundle_run_id_injection_contract.sh`
+    - added a focused contract that proves `run-id` must remain data-only through the B125 bundle
+  - `scripts/run_wave_c_local_first_guard_bundle.sh`
+    - added `shell_join()` for display-only command text
+    - replaced `run_step() -> eval "$cmd"` with direct argv execution
+    - switched both B123/B124 invocations to explicit argv arrays
+- Focused GREEN verification:
+  - `bash tests/scripts/test_run_wave_c_local_first_guard_bundle_run_id_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_run_wave_c_local_first_guard_bundle_tmp_default_contract.sh` -> PASS
+  - note: the tmp-default contract remains green even though the live fixture still produces `overall=FAIL`, because that contract only verifies default tmp output placement and step-path truth
+  - `bash -n scripts/run_wave_c_local_first_guard_bundle.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - TLS13 Signer Gate Bundle Shell Hardening
 
 ## 2026-05-15

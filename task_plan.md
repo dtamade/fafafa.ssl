@@ -1,3 +1,39 @@
+# Task Plan - Wave C B125 Local-First Guard Bundle Shell Hardening
+
+## Goal
+收口 `scripts/run_wave_c_local_first_guard_bundle.sh` 的 `eval` / 字符串执行风险，避免 `run-id` 被当成 shell 语法执行。
+
+## Current Batch
+1. 写 focused contract，证明当前 B125 bundle 的 `--run-id` 仍可从 `eval` 命令串中逃逸。
+2. 最小修改脚本，把 `B123/B124` step 从 `eval "$cmd"` 切到 argv 执行。
+3. 复跑新合同、既有 tmp-default 合同和脚本语法检查。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified eval-based execution boundary in wave c b125 bundle
+- [completed] added focused contract for b125 run-id shell escape
+- [completed] replaced b125 step eval execution with direct argv execution
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前 B125 bundle 仍通过：
+  - `run_step() -> eval "$cmd"`
+  - `B123/B124` 两个 step 都消费字符串命令
+- 这让 `RUN_ID` 同时暴露在：
+  - `--run-id ${RUN_ID}`
+  - `--output ${continuity_report}` / `--output ${drift_report}`
+- 作为 Wave C local-guard 链的更底层 bundle，B125 一旦继续保留 `eval`，上层 `B129 oncall` / `ops pack` 仍会继承这条真实执行面。
+- focused contract 已锁住这条执行边界：
+  - `tests/scripts/test_run_wave_c_local_first_guard_bundle_run_id_injection_contract.sh`
+    - payload 不得执行
+    - fake nested B123/B124 runner 必须收到完整 `run-id` 原始值
+- 修复后验证结果：
+  - `bash -n tests/scripts/test_run_wave_c_local_first_guard_bundle_run_id_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_run_wave_c_local_first_guard_bundle_run_id_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_run_wave_c_local_first_guard_bundle_tmp_default_contract.sh`：PASS
+  - `bash -n scripts/run_wave_c_local_first_guard_bundle.sh`：PASS
+  - `git diff --check`：PASS
+
 # Task Plan - TLS13 Signer Gate Bundle Shell Execution Hardening
 
 ## Goal

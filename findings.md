@@ -1,3 +1,18 @@
+# Findings - Wave C B125 Local-First Guard Bundle Shell Hardening
+
+## 2026-05-15
+- 继续沿着上一轮收敛出来的 `Wave C eval` 家族往下看后，最底层且杠杆最大的一个剩余执行面落在 `run_wave_c_local_first_guard_bundle.sh`：
+  - `B123/B124` 两个 step 仍统一经过 `eval "$cmd"`
+  - `RUN_ID` 同时进入 `--run-id` 和派生的 `--output` 路径
+- 这不是单纯的书写风格问题，而是 local-guard 链的底层 bundle 继续把动态值暴露给 shell 解释层：
+  - 一旦这里不收口，上层 `B129 oncall` / `ops pack` 仍会继承这条真实执行面
+- 这批最小正确修法和前几轮一致：
+  - operator-facing 命令文本继续保留
+  - 真正执行改成 direct argv
+- 修复后，B125 这条底层 bundle 的执行真值已经回到单一安全面：
+  - `run-id` 只作为 argv 数据进入 B123/B124
+  - 既有 tmp 默认目录契约保持不变
+
 # Findings - TLS13 Signer Gate Bundle Shell Hardening
 
 ## 2026-05-15
