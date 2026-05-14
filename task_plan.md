@@ -1,3 +1,42 @@
+# Task Plan - Wave B macOS Shell Execution Hardening
+
+## Goal
+收口 `scripts/run_wave_b_macos_gate.sh` 仍通过 login shell 执行 step 的底座风险，避免 `zsh` 启动文件继续介入 gate 真正执行。
+
+## Current Batch
+1. 写 focused contract，证明当前 macOS gate step 执行仍会受 `ZDOTDIR/.zshenv` 影响。
+2. 最小修改脚本，把 step 执行从 `"$STEP_SHELL" -lc "$cmd"` 切到 argv / 直接进程执行，同时保留 operator-facing 命令文本。
+3. 复跑新合同和现有 macOS gate 邻近合同。
+4. 更新 working-memory，并在 review 后提交。
+
+## Status
+- [completed] identified shell-startup-file execution boundary in macos wave b gate
+- [completed] added focused contract for shell startup hook interference
+- [completed] replaced login-shell step execution with direct argv execution
+- [completed] focused verification and review closeout
+
+## Current Evidence
+- 当前脚本虽然已经把 `modules` / `openssl-root` 的动态值做了 shell-safe 拼装，但每个 step 仍通过：
+  - `STEP_SHELL="/usr/bin/zsh"`（存在时优先）
+  - `run_step() -> "$STEP_SHELL" -lc "$cmd"`
+- 这意味着 gate 真值仍依赖 shell 启动语义，而不是直接依赖目标 argv：
+  - `zsh -lc` 会读取 `ZDOTDIR/.zshenv`
+  - operator-facing 展示字符串和真实执行底座仍是同一份 shell 文本
+- focused contract 已锁住这条更底层的执行面：
+  - `tests/scripts/test_wave_b_macos_gate_shell_startup_hook_contract.sh`
+    - fake green runners 下 gate 仍必须保持 PASS
+    - `ZDOTDIR/.zshenv` 不得在 step 执行时被读取并触发 payload
+- 修复后验证结果：
+  - `bash -n tests/scripts/test_wave_b_macos_gate_shell_startup_hook_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_shell_startup_hook_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_path_check_live_passthrough_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_module_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_openssl_root_injection_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh`：PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_json_contract.sh`：PASS
+  - `bash -n scripts/run_wave_b_macos_gate.sh`：PASS
+  - `git diff --check`：PASS
+
 # Task Plan - Linux OpenSSL Matrix Shell Hardening
 
 ## Goal

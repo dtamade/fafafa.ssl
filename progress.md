@@ -1,3 +1,38 @@
+# Progress - Wave B macOS Shell Execution Hardening
+
+## 2026-05-15
+- Post-commit resume:
+  - previous batch landed as `bc812e0 fix: harden linux openssl matrix shell execution`
+  - continued static review upward to the next unresolved sibling in the same Wave B/macOS execution family
+- Fresh review narrowed the next real issue:
+  - `scripts/run_wave_b_macos_gate.sh` no longer had raw argument injection, but every step still executed through `"$STEP_SHELL" -lc "$cmd"`
+  - because `/usr/bin/zsh` exists on this host, the live path still depended on `zsh -lc` startup semantics
+- Tooling note:
+  - attempted `ace-tool/search_context` twice for this file family
+  - both calls timed out, so the batch continued from direct file inspection plus existing working-memory evidence
+- New batch plan recorded in `docs/plans/2026-05-15-wave-b-macos-shell-execution-hardening.md`
+- Focused RED verification:
+  - `bash -n tests/scripts/test_wave_b_macos_gate_shell_startup_hook_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_shell_startup_hook_contract.sh` -> FAIL before fix
+    - exact failure: `wave b macOS gate should not source zsh startup hooks while executing steps`
+- Minimal implementation:
+  - `tests/scripts/test_wave_b_macos_gate_shell_startup_hook_contract.sh`
+    - added a focused contract that proves `ZDOTDIR/.zshenv` can currently interfere with step execution
+  - `scripts/run_wave_b_macos_gate.sh`
+    - removed `STEP_SHELL` / `-lc` execution from `run_step()`
+    - kept display command text, but switched real execution to `(cd "$PROJECT_ROOT" && "$@")`
+    - added per-step stdout routing so probe still writes JSON to `wave_b_macos_gate_probe_<run_id>.json` while stderr stays in the probe log
+    - replaced string-style env-prefix execution with explicit `env ...` argv word arrays when `OPENSSL_ROOT` is present
+- Focused GREEN verification:
+  - `bash tests/scripts/test_wave_b_macos_gate_shell_startup_hook_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_path_check_live_passthrough_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_module_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_openssl_root_injection_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh` -> PASS
+  - `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_json_contract.sh` -> PASS
+  - `bash -n scripts/run_wave_b_macos_gate.sh` -> PASS
+  - `git diff --check` -> PASS
+
 # Progress - Linux OpenSSL Matrix Shell Hardening
 
 ## 2026-05-15

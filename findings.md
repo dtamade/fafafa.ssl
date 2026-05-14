@@ -1,3 +1,21 @@
+# Findings - Wave B macOS Shell Execution Hardening
+
+## 2026-05-15
+- 继续沿着上一批已经做完 shell-safe 参数拼装的 macOS gate 往下深审后，发现真正还没收口的是更底层的执行模型：
+  - `run_wave_b_macos_gate.sh` 每个 step 仍通过 `"$STEP_SHELL" -lc "$cmd"` 执行
+  - 当 `/usr/bin/zsh` 存在时，真实执行会走 `zsh -lc`
+- 这意味着当前风险已经不是“某个输入有没有转义好”，而是 gate 真值仍会受 shell 启动语义影响：
+  - `ZDOTDIR/.zshenv` 这类启动文件会在 step 执行前介入
+  - operator-facing 展示字符串和真实执行底座仍是同一份 shell 文本
+- 这批最小正确修法与 Linux gate / macOS path-check 已完成的收口方向一致：
+  - 展示命令继续保留，只作为 operator-facing 文本
+  - 真正执行统一改成 `(cd "$PROJECT_ROOT" && "$@")`
+  - probe step 额外把 stdout 单独落到 JSON 文件，stderr 留在 step log
+- 修复后，macOS gate 的 step 真值终于完全脱离 login shell：
+  - `STEP_SHELL` 和 `-lc` 不再参与执行
+  - `ZDOTDIR/.zshenv` 不再能介入 step
+  - 既有 modules / openssl-root / path-check / examples 邻近契约保持不变
+
 # Findings - Linux OpenSSL Matrix Shell Hardening
 
 ## 2026-05-15

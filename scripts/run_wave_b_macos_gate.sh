@@ -180,14 +180,9 @@ EXAMPLES_LOG_REL="$OUTPUT_DIR_REL/wave_b_macos_examples_${RUN_ID}.log"
 EXAMPLES_JSON_REL="$OUTPUT_DIR_REL/examples_compile_gate_macos_${RUN_ID}.json"
 SUMMARY_REL="$OUTPUT_DIR_REL/wave_b_macos_gate_summary_${RUN_ID}.md"
 
-STEP_SHELL="/bin/bash"
-if [[ -x "/usr/bin/zsh" ]]; then
-  STEP_SHELL="/usr/bin/zsh"
-fi
-
-step_env_words=()
+step_env_assignments=()
 if [[ -n "$OPENSSL_ROOT" ]]; then
-  step_env_words+=(
+  step_env_assignments+=(
     "OPENSSL_ROOT=$OPENSSL_ROOT"
     "DYLD_LIBRARY_PATH=$OPENSSL_ROOT/lib:${DYLD_LIBRARY_PATH:-}"
     "PKG_CONFIG_PATH=$OPENSSL_ROOT/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
@@ -197,21 +192,38 @@ fi
 
 run_step() {
   local step_name="$1"
-  local cmd="$2"
+  local cmd_desc="$2"
   local log_rel="$3"
+  local stdout_rel="$4"
+  shift 4
   local log_abs="$PROJECT_ROOT/$log_rel"
+  local stdout_abs=""
 
-  echo "[WAVE-B-MACOS] [$step_name] $cmd" >&2
+  if [[ -n "$stdout_rel" ]]; then
+    stdout_abs="$PROJECT_ROOT/$stdout_rel"
+  fi
+
+  echo "[WAVE-B-MACOS] [$step_name] $cmd_desc" >&2
 
   if [[ "$DRY_RUN" == "true" ]]; then
-    echo "[DRY-RUN] $cmd" > "$log_abs"
+    echo "[DRY-RUN] $cmd_desc" > "$log_abs"
     echo 0
     return 0
   fi
 
   local exit_code=0
   set +e
-  "$STEP_SHELL" -lc "$cmd" > "$log_abs" 2>&1
+  if [[ -n "$stdout_abs" ]]; then
+    (
+      cd "$PROJECT_ROOT"
+      "$@"
+    ) > "$stdout_abs" 2> "$log_abs"
+  else
+    (
+      cd "$PROJECT_ROOT"
+      "$@"
+    ) > "$log_abs" 2>&1
+  fi
   exit_code=$?
   set -e
 
@@ -219,10 +231,18 @@ run_step() {
   echo "$exit_code"
 }
 
-probe_words=("${step_env_words[@]}" bash scripts/detect_macos_openssl_enhanced.sh --json)
+if [[ ${#step_env_assignments[@]} -gt 0 ]]; then
+  probe_words=(env "${step_env_assignments[@]}" bash scripts/detect_macos_openssl_enhanced.sh --json)
+else
+  probe_words=(bash scripts/detect_macos_openssl_enhanced.sh --json)
+fi
 probe_cmd="$(build_step_command "${probe_words[@]}") > $(printf '%q' "$PROBE_JSON_REL")"
 
-path_check_words=("${step_env_words[@]}" bash scripts/run_macos_openssl_path_check_draft.sh)
+if [[ ${#step_env_assignments[@]} -gt 0 ]]; then
+  path_check_words=(env "${step_env_assignments[@]}" bash scripts/run_macos_openssl_path_check_draft.sh)
+else
+  path_check_words=(bash scripts/run_macos_openssl_path_check_draft.sh)
+fi
 if [[ -n "$OPENSSL_ROOT" ]]; then
   path_check_words+=(--openssl-root "$OPENSSL_ROOT")
 fi
@@ -235,29 +255,47 @@ if [[ "$PATH_CHECK_DRY_RUN" == "true" ]]; then
 fi
 path_check_cmd="$(build_step_command "${path_check_words[@]}")"
 
-compile_words=("${step_env_words[@]}" python3 scripts/compile_all_modules.py)
+if [[ ${#step_env_assignments[@]} -gt 0 ]]; then
+  compile_words=(env "${step_env_assignments[@]}" python3 scripts/compile_all_modules.py)
+else
+  compile_words=(python3 scripts/compile_all_modules.py)
+fi
 compile_cmd="$(build_step_command "${compile_words[@]}")"
 
-modules_words=(
-  "${step_env_words[@]}"
-  bash scripts/run_all_module_tests.sh
-  --modules "$MODULE_SET"
-  --reports-dir "$OUTPUT_DIR_REL/module_tests_${RUN_ID}"
-  --bin-dir "tmp/module_tests_bin_${RUN_ID}"
-)
+if [[ ${#step_env_assignments[@]} -gt 0 ]]; then
+  modules_words=(
+    env
+    "${step_env_assignments[@]}"
+    bash scripts/run_all_module_tests.sh
+    --modules "$MODULE_SET"
+    --reports-dir "$OUTPUT_DIR_REL/module_tests_${RUN_ID}"
+    --bin-dir "tmp/module_tests_bin_${RUN_ID}"
+  )
+else
+  modules_words=(
+    bash scripts/run_all_module_tests.sh
+    --modules "$MODULE_SET"
+    --reports-dir "$OUTPUT_DIR_REL/module_tests_${RUN_ID}"
+    --bin-dir "tmp/module_tests_bin_${RUN_ID}"
+  )
+fi
 if [[ "$VERBOSE" == "true" ]]; then
   modules_words+=(--verbose)
 fi
 modules_cmd="$(build_step_command "${modules_words[@]}")"
 
-examples_words=("${step_env_words[@]}" bash scripts/verify_examples_compile.sh -f json -o "$EXAMPLES_JSON_REL")
+if [[ ${#step_env_assignments[@]} -gt 0 ]]; then
+  examples_words=(env "${step_env_assignments[@]}" bash scripts/verify_examples_compile.sh -f json -o "$EXAMPLES_JSON_REL")
+else
+  examples_words=(bash scripts/verify_examples_compile.sh -f json -o "$EXAMPLES_JSON_REL")
+fi
 examples_cmd="$(build_step_command "${examples_words[@]}")"
 
-probe_exit=$(run_step "probe" "$probe_cmd" "$PROBE_LOG_REL")
-path_check_exit=$(run_step "path-check" "$path_check_cmd" "$PATH_CHECK_LOG_REL")
-compile_exit=$(run_step "compile" "$compile_cmd" "$COMPILE_LOG_REL")
-modules_exit=$(run_step "modules" "$modules_cmd" "$MODULES_LOG_REL")
-examples_exit=$(run_step "examples" "$examples_cmd" "$EXAMPLES_LOG_REL")
+probe_exit=$(run_step "probe" "$probe_cmd" "$PROBE_LOG_REL" "$PROBE_JSON_REL" "${probe_words[@]}")
+path_check_exit=$(run_step "path-check" "$path_check_cmd" "$PATH_CHECK_LOG_REL" "" "${path_check_words[@]}")
+compile_exit=$(run_step "compile" "$compile_cmd" "$COMPILE_LOG_REL" "" "${compile_words[@]}")
+modules_exit=$(run_step "modules" "$modules_cmd" "$MODULES_LOG_REL" "" "${modules_words[@]}")
+examples_exit=$(run_step "examples" "$examples_cmd" "$EXAMPLES_LOG_REL" "" "${examples_words[@]}")
 
 examples_total="n/a"
 examples_passed="n/a"
