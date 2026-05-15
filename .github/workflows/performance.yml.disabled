@@ -113,7 +113,7 @@ jobs:
           $report | Out-File -FilePath "Performance-Report-${{ matrix.os }}.md" -Encoding UTF8
 
       - name: 📤 Upload benchmark results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Performance-Report-${{ matrix.os }}
           path: Performance-Report-*.md

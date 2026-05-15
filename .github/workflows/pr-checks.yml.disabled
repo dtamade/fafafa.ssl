@@ -148,7 +148,7 @@ jobs:
           git diff --name-only HEAD~1 HEAD | sed 's/.*\.//' | sort | uniq -c | sort -rn
 
       - name: 📤 Save stats as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: PR-Code-Stats
           path: |

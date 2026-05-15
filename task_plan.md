@@ -44,33 +44,39 @@
   - 退出期 `EAccessViolation` 未再复现
 - [completed] 新增 workflow checkout Node24 contract，并先在当前模板上观测到红灯
 - [completed] 仓库内全部 workflow / workflow template 的 `actions/checkout@v3/v4` 已升级到 `actions/checkout@v5`
-- [in_progress] 准备第六次 commit/push，并验证 workflow 升级后远端 CI / signer 继续通过
+- [completed] 第六次提交 `d56637f` 推送后，远端 runs 继续通过：
+  - `TLS13 Signer Gate` run `25904745243` SUCCESS
+  - `CI` run `25904745247` SUCCESS
+  - `actions/checkout@v4` 相关 Node20 annotation 已消失
+- [completed] 新增 workflow upload-artifact Node24 contract，并先在当前模板上观测到红灯
+- [completed] 仓库内全部 workflow / workflow template 的 `actions/upload-artifact@v4` 已升级到 `actions/upload-artifact@v6`
+- [in_progress] 准备第七次 commit/push，并验证 workflow artifact 升级后远端 CI / signer 继续通过
 
 ## Current Blocker
 
 - 当前没有新的本地语法/contract blocker。
-- 运行时主阻塞已经解除，当前批次只剩 workflow hygiene 收口与远端复核。
-- 需要确认升级到 `actions/checkout@v5` 后，活跃 workflow 继续绿且 Node20 弃用 annotation 不再出现。
+- 运行时主阻塞已经解除，当前批次只剩 workflow hygiene 第二波收口与远端复核。
+- 需要确认升级到 `actions/upload-artifact@v6` 后，活跃 workflow 继续绿且 artifact 侧 Node20 弃用 annotation 不再出现。
 
 ## Current Queue
 
-1. 更新 root working-memory 与新的 workflow hygiene plan doc，记录 checkout Node24 合同与升级理由。
-2. 给出第六批简短 review 结论后 commit。
+1. 更新 root working-memory 与 workflow hygiene plan doc，补入 artifact Node24 合同与升级理由。
+2. 给出第七批简短 review 结论后 commit。
 3. `git push origin master`。
-4. 盯住新的 `CI` / `TLS13 Signer Gate` runs，确认 workflow 升级后继续成功。
-5. 若仍出现新的 GitHub Actions runtime annotation，再单独复核其他第三方 actions。
+4. 盯住新的 `CI` / `TLS13 Signer Gate` runs，确认 artifact 升级后继续成功。
+5. 若仍出现新的 GitHub Actions runtime annotation，再单独复核 `softprops/action-gh-release` 等剩余第三方 actions。
 
 ## Decision Locks
 
 - 不创建 `v1.5.0` tag，不发 GitHub Release。
 - Windows/WinSSL 继续保持 `static-only / deferred runtime proof`，不混入本批。
-- 本批只修真实已复现的 CI/runtime blocker，不扩展到新功能或重新开 PR 流。
+- 本批只修真实已复现的 CI/runtime blocker 与 workflow runtime hygiene，不扩展到新功能或重新开 PR 流。
 - 发布主线仍以当前 `master` 为准。
 
 ## Stop Condition
 
 - 根 working-memory 与新 plan doc 已同步当前真相
-- runtime-fix contracts 与 workflow checkout contract 继续通过
-- 第五批 runtime 修复和第六批 workflow hygiene commit / push 完成
+- runtime-fix contracts、workflow checkout contract、workflow upload-artifact contract 继续通过
+- 第五批 runtime 修复、第六批 checkout hygiene、第七批 artifact hygiene commit / push 完成
 - 新远端 `CI` / `TLS13 Signer Gate` runs 继续通过
-- checkout Node20 弃用告警不再由仓库内 `actions/checkout@v3/v4` 引起
+- checkout / upload-artifact 的 Node20 弃用告警不再由仓库内旧版本 actions 引起

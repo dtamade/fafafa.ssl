@@ -60,7 +60,7 @@ jobs:
 
       - name: Upload Linux evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: wave-b-linux-${{ needs.setup.outputs.run_id }}
           path: |
@@ -108,7 +108,7 @@ jobs:
 
       - name: Upload macOS evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: wave-b-macos-${{ needs.setup.outputs.run_id }}
           path: |
@@ -227,7 +227,7 @@ jobs:
 
       - name: Upload Windows evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: wave-b-windows-${{ needs.setup.outputs.run_id }}
           path: |
@@ -294,7 +294,7 @@ jobs:
 
       - name: Upload final summary
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: wave-b-summary-${{ needs.setup.outputs.run_id }}
           path: |

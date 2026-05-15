@@ -134,7 +134,7 @@ jobs:
 
       - name: 📊 Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Test-Results-Windows-FPC${{ matrix.fpc-version }}
           path: |
@@ -213,7 +213,7 @@ jobs:
 
       - name: 📊 Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Test-Results-Linux-FPC${{ matrix.fpc-version }}
           path: tests/bin/*.exe

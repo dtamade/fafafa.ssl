@@ -68,7 +68,7 @@ jobs:
 
       - name: Upload Wave C sprint artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: wave-c-quick-sprint-${{ steps.runid.outputs.run_id }}
           path: |

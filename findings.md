@@ -135,3 +135,23 @@
 - 新增 focused contract 后，checkout 升级可以被持续守护：
   - `tests/scripts/test_workflow_checkout_node24_contract.sh` 会拒绝 `.github/workflows` 下残留的 `actions/checkout@v3/v4`
   - 同时强制当前活跃 workflow 与需同步模板显式使用 `actions/checkout@v5`
+
+- 第六次提交 `d56637f` 后，远端 runs 说明 checkout 方向是对的，但 workflow hygiene 还没完全结束：
+  - `TLS13 Signer Gate` run `25904745243` SUCCESS
+  - `CI` run `25904745247` SUCCESS
+  - 新 annotation 不再指向 `actions/checkout@v4`
+  - 但 signer run 新暴露出 `actions/upload-artifact@v4` 仍运行在 Node20 兼容层
+
+- 这意味着当前最优策略不是停下，而是顺着同一条 hygiene 主线继续收第二层：
+  - 先用 focused contract 抓出 `.github/workflows` 里残留的 `actions/upload-artifact@v4`
+  - 再统一升级 workflow / template，避免未来启用旧模板时重新带回 artifact 侧告警
+
+- 这批选择 `actions/upload-artifact@v6` 而不是 `v5`：
+  - `v6` 已默认切到 Node24 runtime
+  - `v5` 需要额外启用 Node24 切换，不适合作为仓库默认基线
+  - 因此仓库级卫生标准直接锁到 `v6` 更稳妥
+
+- 新增 artifact contract 后，workflow runtime hygiene 扩展成双合同面：
+  - `tests/scripts/test_workflow_checkout_node24_contract.sh` 负责 checkout
+  - `tests/scripts/test_workflow_upload_artifact_node24_contract.sh` 负责 artifact
+  - 两者组合后，当前活跃 workflow 与同步模板都能被持续守护在 Node24 默认线

@@ -44,7 +44,7 @@ jobs:
 
     - name: Upload compile results
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: compile-gate-results
         path: |
@@ -88,7 +88,7 @@ jobs:
 
     - name: Upload test reports
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: linux-openssl-${{ matrix.openssl }}-reports
         path: test-reports/
@@ -136,7 +136,7 @@ jobs:
 
     - name: Upload results
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: macos-reports
         path: |
@@ -183,7 +183,7 @@ jobs:
 
     - name: Upload results
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: windows-reports
         path: |
@@ -223,7 +223,7 @@ jobs:
         done
 
     - name: Upload combined reports
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: all-platform-reports
         path: all-reports/

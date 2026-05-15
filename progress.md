@@ -393,6 +393,76 @@
 - `git diff --check`
   - result: PASS
 
+### Sixth Push Success Revalidation
+
+- `gh run list --branch master --limit 8 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - signer run=`25904745243`
+    - ci run=`25904745247`
+    - both runs target head=`d56637f`
+
+- `gh run watch 25904745243 --exit-status`
+  - result: PASS
+  - summary:
+    - `tls13-signer-gate` SUCCESS in 1m42s
+    - checkout upgrade did not regress signer workflow
+    - new annotation surfaced `actions/upload-artifact@v4` as the remaining Node20 source
+
+- `gh run watch 25904745247 --exit-status`
+  - result: PASS
+  - summary:
+    - `Minimal Gate (Linux)` SUCCESS in 1m48s
+    - `FreePascal TLS 1.3 Completeness` SUCCESS in 2m41s
+    - `Code Quality (Light)` SUCCESS
+
+### Seventh-Order RED Contract
+
+- `bash tests/scripts/test_workflow_upload_artifact_node24_contract.sh`
+  - result before seventh fix: FAIL
+  - summary:
+    - `.github/workflows/ci-matrix-draft.yml.disabled` still used `actions/upload-artifact@v4`
+    - contract expanded to cover all workflow files, not only active ones
+
+### Seventh-Order Repairs
+
+- add `tests/scripts/test_workflow_upload_artifact_node24_contract.sh`
+  - purpose: ensure `.github/workflows` no longer keeps `actions/upload-artifact@v3/v4/v5` and active/synced templates use `actions/upload-artifact@v6`
+
+- update `.github/workflows/*.yml` and `.github/workflows/*.yml.disabled`
+  - change: upgrade every `actions/upload-artifact@v4` reference to `actions/upload-artifact@v6`
+  - note: active workflows updated include `ci.yml`, `release.yml`, `tls13-signer-gate.yml`, `wave-b-b2-manual.yml`
+  - note: synchronized templates updated include `release.yml.disabled` and `wave-b-b2-manual.yml.disabled`
+  - note: dormant templates were also upgraded to prevent future re-enable drift
+
+### Local Revalidation After Seventh Fix
+
+- `bash tests/scripts/test_workflow_upload_artifact_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_checkout_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+  - result: PASS
+
+- `cmp -s .github/workflows/release.yml .github/workflows/release.yml.disabled`
+  - result: PASS
+  - summary: release workflow templates remain synchronized
+
+- `cmp -s .github/workflows/wave-b-b2-manual.yml .github/workflows/wave-b-b2-manual.yml.disabled`
+  - result: PASS
+  - summary: wave-b manual workflow templates remain synchronized
+
+- `git diff --check`
+  - result: PASS
+
 ### Third-Order Remote Revalidation
 
 - `gh run list --branch master --limit 8 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`

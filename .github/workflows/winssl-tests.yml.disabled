@@ -305,7 +305,7 @@ jobs:
           Write-Host $Report
 
       - name: 📤 Upload WinSSL Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: WinSSL-Test-Report
           path: Winssl-Test-Report.md

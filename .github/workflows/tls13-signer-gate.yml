@@ -100,7 +100,7 @@ jobs:
 
       - name: Upload TLS13 signer artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: tls13-signer-gate-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
