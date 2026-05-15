@@ -24,6 +24,11 @@
   - `release/v1.5.0-prep-2026-05-15` 只是额外多出 direct-merge 之前的两批 PR 文档元数据
   - 所以 direct merge 的语义是“把 release-prep 的最终文档收口带回本地主线”，不是把一条陌生分支强行接进来
 
+- direct merge 已经在本地 `master` 上落地：
+  - merge commit: `ddd475b`
+  - merge message: `merge: finalize v1.5.0 direct merge route`
+  - 当前剩余动作只是不带新变更地 push 到 `origin/master` 并核对远端状态
+
 - release-prep 分支已经是稳定外显点，但目前远端还没有 PR：
   - `release/v1.5.0-prep-2026-05-15` 已经存在并跟踪 `origin/release/v1.5.0-prep-2026-05-15`
   - `gh pr list --head release/v1.5.0-prep-2026-05-15 --state all` 返回空数组

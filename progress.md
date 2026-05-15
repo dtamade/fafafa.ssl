@@ -59,7 +59,7 @@
 - rewrite approval packet to historical closed state
 - rewrite root working-memory to direct merge batch
 - commit direct-merge metadata
-- merge to `master` and push
+- push `master` and verify remote status
 
 ### Direct Merge Focused Verification
 
@@ -73,6 +73,32 @@
   - result: PASS
 - `git status --short`
   - result: only expected direct-merge doc and working-memory changes are present
+
+### Direct Merge Metadata Commit
+
+- review conclusion:
+  - no production-code behavior changed in this batch
+  - this batch only switched delivery route from PR approval to direct merge
+  - focused release-control contracts remained green
+- `git commit -m "docs: switch v1.5.0 to direct merge route"`
+  - result: `2de9ded`
+- `git push`
+  - result: PASS
+  - remote update: `34a83c6..2de9ded`
+
+### Merge To master
+
+- review conclusion:
+  - this merge does not introduce a new implementation batch
+  - it only brings the finalized release-prep control-plane history back to `master`
+  - the real remaining risk stays external to the repo: GitHub Actions billing/startup failure
+- `git switch master`
+  - result: PASS
+- `git merge --no-ff release/v1.5.0-prep-2026-05-15 -m "merge: finalize v1.5.0 direct merge route"`
+  - result: PASS
+  - merge commit: `ddd475b`
+- `git branch -vv`
+  - result: local `master` is now `ahead 100` vs `origin/master`
 
 ### Focused Verification
 
