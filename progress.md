@@ -163,3 +163,74 @@
 
 - `bash tests/scripts/test_wolfssl_loader_fallback_contract.sh`
   - result after second fix: PASS
+
+### Long-Run Local Completeness Revalidation
+
+- `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id local_ci_runtime_repair_20260515`
+  - result: PASS
+  - summary:
+    - FreePascal capability-cache test compiled and ran successfully
+    - `FreePascal KnownIssues 运行时对齐测试` PASS
+    - `WolfSSL KnownIssues 运行时对齐测试` PASS
+    - `MbedTLS KnownIssues 运行时对齐测试` PASS
+    - final line: `[PASS] freepascal tls13 completeness gate finished`
+
+### Third-Order Remote Revalidation
+
+- `gh run list --branch master --limit 8 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - signer run=`25902255923` on head=`18f154f` => `success`
+    - ci run=`25902255941` on head=`18f154f` => `failure`
+
+- `gh run view 25902255941 --json databaseId,displayTitle,headSha,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - only `FreePascal TLS 1.3 Completeness` failed
+    - `Minimal Gate (Linux)` PASS
+    - `Code Quality (Light)` PASS
+
+- `gh run view 25902255941 --log-failed | tail -n 220`
+  - result: PASS
+  - summary:
+    - failure still lands in `WolfSSL KnownIssues 运行时对齐测试`
+    - key error still reads `Failed to load WolfSSL library: libwolfssl.so`
+
+### Third-Order RED/Process Gap
+
+- `nl -ba .github/workflows/ci.yml | sed -n '1,260p'`
+  - result: PASS
+  - summary:
+    - line `29`: minimal gate install step includes `libwolfssl-dev`
+    - line `93`: completeness job install step still omitted `libwolfssl-dev`
+
+- `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+  - result before third fix: FAIL
+  - summary:
+    - upgraded contract extracts the `freepascal-tls13-completeness` job's install step
+    - reproduced real gap: `sudo apt-get install -y fpc libssl-dev python3`
+
+### Third-Order Repairs
+
+- update `tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+  - change: extract the `freepascal-tls13-completeness` job and its install step with `python3`, then assert `libwolfssl-dev` exists inside that specific block rather than anywhere in `ci.yml`
+
+- update `.github/workflows/ci.yml`
+  - change: completeness job install line now includes `libwolfssl-dev`
+
+### Local Revalidation After Third Fix
+
+- `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wolfssl_loader_fallback_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS

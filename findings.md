@@ -57,3 +57,22 @@
 - Windows/WinSSL 仍保持 `static-only`：
   - 用户明确不要走 Windows 条件
   - 这批只处理 Linux / GitHub Actions 可直接复核的 CI/runtime blocker
+
+- 第二次推送 `18f154f` 后，远端状态继续收敛：
+  - signer run `25902255923`（head `18f154f`）已经 SUCCESS
+  - CI run `25902255941` 仍 FAIL，且仍落在 `WolfSSL KnownIssues 运行时对齐测试`
+
+- 但这次不能再把 `25902255941` 直接归因为 “loader fallback 仍未生效”：
+  - 当前仓库里的 `.github/workflows/ci.yml` 真实内容显示：
+    - `Minimal Gate (Linux)` 的 install step 包含 `libwolfssl-dev`
+    - `freepascal-tls13-completeness` 的 install step 却仍是 `fpc libssl-dev python3`
+  - 旧版 `tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh` 只对整份 `ci.yml` 做 `grep -Fq libwolfssl-dev`
+  - 这会产生假绿：只要别的 job 装了 `libwolfssl-dev`，contract 就会放行，即使 completeness job 自己没装
+
+- 因此第三批修复的真实根因是“workflow + contract 双重盲区”：
+  - workflow 漏装：completeness job 确实缺 `libwolfssl-dev`
+  - contract 漏检：没有把断言限定在 `freepascal-tls13-completeness` job 的 install step
+
+- 本地长跑 `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id local_ci_runtime_repair_20260515` 已 PASS：
+  - FreePascal / WolfSSL / MbedTLS KnownIssues 运行时对齐全部通过
+  - 这至少证明：在“依赖存在”的前提下，当前 loader fallback 与 completeness 脚本链路是可工作的

@@ -20,22 +20,25 @@
 - [completed] 新增可执行 signer summary contract 与 WolfSSL loader fallback contract
 - [completed] 修复 `.github/workflows/tls13-signer-gate.yml` 的 Python heredoc 正文缩进
 - [completed] 修复 `src/fafafa.ssl.wolfssl.api.pas`，让 loader 在 Linux 上回退扫描常见库路径与版本化 `libwolfssl.so*`
-- [in_progress] 复跑 focused 验证、准备第二次 commit/push，并跟踪新的远端 runs
+- [completed] 复核第二次 push 远端 runs：signer run `25902255923` 已全绿，但 CI run `25902255941` 仍在 completeness job 报 `Failed to load WolfSSL library: libwolfssl.so`
+- [completed] 发现 `tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh` 的盲区：它只对整份 `ci.yml` 做 `libwolfssl-dev` 粗粒度 grep，误把 `Minimal Gate (Linux)` 的安装步骤当成了 completeness job 的保障
+- [completed] 把 completeness contract 升级为 job-local install-step 断言，并先在当前 `ci.yml` 上观测到红灯
+- [completed] 修复 `.github/workflows/ci.yml` 的 `freepascal-tls13-completeness` job 安装步骤，补回 `libwolfssl-dev`
+- [in_progress] 复跑 focused 验证、准备第三次 commit/push，并跟踪新的远端 runs
 
 ## Current Blocker
 
 - 当前没有新的本地语法/contract blocker。
-- 剩余风险集中在第二次 push 后的远端 completeness / signer runs 是否真正吃到：
-  - workflow Python body 缩进修复
-  - WolfSSL loader fallback 修复
+- 剩余风险已经收敛成第三次 push 后远端 completeness job 是否转绿。
+- signer workflow 已经在 head `18f154f` 的远端 run `25902255923` 上验证通过。
 
 ## Current Queue
 
-1. 更新 root working-memory 与 plan doc，写入 `d3ebeee` 之后的二次远端真相。
+1. 更新 root working-memory 与 plan doc，写入 `18f154f` 之后的三次远端真相与 contract 盲区结论。
 2. 复跑 focused contracts 与 `git diff --check`。
-3. 给出第二批简短 review 结论后 commit。
+3. 给出第三批简短 review 结论后 commit。
 4. 再次 `git push origin master`。
-5. 盯住新的 `CI` / `TLS13 Signer Gate` runs，确认第二层问题已消除。
+5. 盯住新的 `CI` run，确认 completeness 依赖缺口不再复现。
 
 ## Decision Locks
 
@@ -49,5 +52,5 @@
 - 根 working-memory 与新 plan doc 已同步当前真相
 - focused contract tests 继续通过
 - `run_tls13_signer_gate_ci.sh` 与 `run_tls13_signer_gate_bundle.sh --strict` 通过
-- 第二批 commit / push 完成
-- 新远端 workflow run 已创建并完成二次状态核对
+- 第三批 commit / push 完成
+- 新远端 `CI` run 已创建并完成三次状态核对

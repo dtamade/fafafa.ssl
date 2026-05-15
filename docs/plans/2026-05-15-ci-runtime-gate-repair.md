@@ -48,8 +48,11 @@
 4. 若仍有 blocker：
    - 提升 signer summary contract 到“真实执行 fake payload”
    - 给 WolfSSL loader 加 Linux fallback 路径 / versioned soname 扫描
-5. 更新 working-memory，做简短 review，commit 并 push。
-6. 观察新的 `CI` / `TLS13 Signer Gate` 远端 run，确认二阶 blocker 已消除。
+5. 若第二次 push 后 completeness 仍红：
+   - 先重新核对当前 `ci.yml` 的 job-local install step，而不是直接假设 loader fallback 失败
+   - 确保 contract 断言落在 `freepascal-tls13-completeness` job 自己的 install step，而不是整份 workflow 粗粒度 grep
+6. 更新 working-memory，做简短 review，commit 并 push。
+7. 观察新的 `CI` / `TLS13 Signer Gate` 远端 run，确认三阶 blocker 已消除。
 
 ## Commands
 
@@ -73,4 +76,5 @@ git diff --check
 - wolfssl loader fallback contract 通过，source 明确包含 Linux fallback 搜索逻辑
 - bench contract 通过，并在 fake compiler 失败时能看到真实编译诊断
 - 本地 signer gate CI 与 bundle `--strict` 都恢复 PASS
-- 第二次 push 后新的远端 runs 在真实执行层面不再复现旧的 5 个 blocker
+- 若第二次 push 后 completeness 仍红，contract 能进一步抓出 job-local 依赖缺口，而不是被其他 job 的安装行误导
+- 第三次 push 后新的远端 runs 在真实执行层面不再复现旧的 blocker

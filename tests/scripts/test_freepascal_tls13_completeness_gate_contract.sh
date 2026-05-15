@@ -55,13 +55,50 @@ if ! grep -Fq -- "tmp/freepascal_tls13_completeness_" <<< "$output"; then
   exit 1
 fi
 
+ci_completeness_job="$(
+  python3 - <<'PY'
+from pathlib import Path
+import re
+import sys
+
+text = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+job_match = re.search(
+    r"(?ms)^  freepascal-tls13-completeness:\n(?P<body>.*?)(?=^  [a-z0-9][a-z0-9_-]*:\n|\Z)",
+    text,
+)
+if not job_match:
+    sys.exit(1)
+
+install_match = re.search(
+    r"(?ms)^      - name: Install Free Pascal and OpenSSL\n(?P<body>.*?)(?=^      - name: |\Z)",
+    job_match.group("body"),
+)
+if not install_match:
+    sys.exit(2)
+
+print(install_match.group("body"), end="")
+PY
+)"
+ci_extract_status=$?
+
+if [[ "$ci_extract_status" -eq 1 ]]; then
+  echo "[FAIL] ci.yml must define the freepascal-tls13-completeness job"
+  exit 1
+fi
+
+if [[ "$ci_extract_status" -eq 2 ]]; then
+  echo "[FAIL] ci.yml completeness job must keep an explicit Install Free Pascal and OpenSSL step"
+  exit 1
+fi
+
 if ! grep -Fq -- "scripts/run_freepascal_tls13_completeness_gate.sh" ".github/workflows/ci.yml"; then
   echo "[FAIL] ci.yml must call scripts/run_freepascal_tls13_completeness_gate.sh"
   exit 1
 fi
 
-if ! grep -Fq -- "libwolfssl-dev" ".github/workflows/ci.yml"; then
-  echo "[FAIL] ci.yml completeness workflow must install libwolfssl-dev for WolfSSL-backed runtime coverage"
+if ! grep -Fq -- "libwolfssl-dev" <<< "$ci_completeness_job"; then
+  echo "[FAIL] ci.yml completeness job install step must include libwolfssl-dev for WolfSSL-backed runtime coverage"
+  printf '%s\n' "$ci_completeness_job"
   exit 1
 fi
 
