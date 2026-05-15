@@ -1,53 +1,43 @@
-# Task Plan - v1.5.0 Direct Merge
+# Task Plan - CI Runtime Gate Repair
 
 ## Goal
 
-把已经推送到远端的 `release/v1.5.0-prep-2026-05-15` 在不继续使用 GitHub PR 审批流的前提下，直接合并回本地 `master` 并推送到 `origin/master`，同时保留完整的决策与外部阻塞记录。
+修复 GitHub Actions 恢复执行后暴露出来的真实远端阻塞：FreePascal completeness 缺 WolfSSL runtime 依赖、TLS13 signer workflow 的 here-doc summary 语法损坏，以及 signer bench 编译旗标/诊断可见性问题；随后完成本地验证、提交并推送到 `master` 复核远端状态。
 
 ## Current Status
 
-- [completed] `release/v1.5.0-prep-2026-05-15` 已推送到 `origin`
-- [completed] PR `#13` 已关闭，不再作为当前交付路线
-- [completed] 写入 direct-merge 计划、关闭说明与根 working-memory
-- [completed] 跑 focused contract checks
-- [completed] 提交 direct-merge metadata
-- [completed] 已合并到本地 `master`
-- [completed] 推送 `origin/master` 并完成最终远端状态核对
+- [completed] 复核远端失败证据（CI run `25893971783` / signer run `25901035350`）
+- [completed] 把 3 个真实问题写成 focused contract tests，并先观测到红灯
+- [completed] 修复 `.github/workflows/ci.yml` / `release.yml` / `release.yml.disabled` 的 WolfSSL 依赖缺口
+- [completed] 修复 `.github/workflows/tls13-signer-gate.yml` 的 here-doc terminator 缩进
+- [completed] 修复 `scripts/run_freepascal_tls13_servercertverify_bench.sh` 的 `-Criot` 与编译诊断吞没问题
+- [completed] 本地 focused contracts、bench、`run_tls13_signer_gate_ci.sh`、bundle `--strict` 已通过
+- [in_progress] 更新 working-memory、清理临时产物、提交并推送，然后观察新的远端 runs
 
 ## Current Blocker
 
-- 当前没有本地代码 blocker；如果要求远端 workflow 变绿，主要外部 blocker 仍是 GitHub Actions 账户计费/额度问题。
+- 当前没有本地代码 blocker。
+- 剩余风险只在远端重新执行是否与本地验证一致，需要 push 后核对 GitHub Actions 新 run。
 
 ## Current Queue
 
-1. 新增 `docs/plans/2026-05-15-v1.5.0-direct-merge.md`。
-2. 更新 `docs/test_reports/PR_APPROVAL_PACKET_V1.5.0_2026-05-15.md` 与根 working-memory，记录 PR `#13` 已关闭并转入 direct merge。
-3. 跑 focused contract checks 与 `git diff --check`。
-1. 如需继续发布，下一批单独处理 `tag/release` 路线。
-2. 如需让 GitHub checks 变绿，先恢复 GitHub Actions 账户计费/额度。
+1. 写入 `docs/plans/2026-05-15-ci-runtime-gate-repair.md` 与根 working-memory。
+2. 清理本批生成的临时 `test-reports` 产物，保持提交面干净。
+3. 复跑 `git diff --check` 与 focused contracts（如文档更新影响）。
+4. 给出简短 review 结论后 commit。
+5. `git push origin master`，确认新的 `CI` 与 `TLS13 Signer Gate` run 已创建并核对首轮结果。
 
 ## Decision Locks
 
-- 承载分支：`release/v1.5.0-prep-2026-05-15`
-- 当前路线：关闭 PR，直接合并到 `master`
-- 推送边界：先更新 release-prep 分支元数据，再直接更新 `origin/master`
-- 发布边界：不创建 `v1.5.0` tag，不发 GitHub Release
-- 默认入口：`docs/ROADMAP.md` -> `docs/plans/2026-05-12-release-v1.5.0-formalization.md` -> `docs/test_reports/RELEASE_READINESS_V1.5.0.md` -> `.github/README.md`
-- 默认 focused gates：`test_release_control_entrypoint_convergence_contract.sh` -> `test_active_roadmap_references_contract.sh` -> `test_release_workflow_v1_5_0_contract.sh` -> `git diff --check`
-- Windows/WinSSL：继续保持 `deferred / static-only follow-up` 身份，不在本批伪装成已完成的运行时证据
-- 当前 PR 历史记录：`#13` 已关闭，作为 direct merge 前的历史审批尝试保留
-- 当前本地 `master`：已创建 merge commit `ddd475b`
-- 当前远端 `master`：已接收 direct merge 路线与收口文档
-- 当前 GitHub check 风险：即使 direct merge 到 `master`，push-triggered workflows 仍可能因账户计费/额度问题无法启动
-- PR body 更新路径：`gh pr edit` 因 classic Projects GraphQL 字段报错不可用，历史刷新需改走 `gh api repos/.../pulls/13 --method PATCH`
+- 不创建 `v1.5.0` tag，不发 GitHub Release。
+- Windows/WinSSL 继续保持 `static-only / deferred runtime proof`，不混入本批。
+- 本批只修真实已复现的 CI/runtime blocker，不扩展到新功能或重新开 PR 流。
+- 发布主线仍以当前 `master` 为准。
 
 ## Stop Condition
 
-- `tests/scripts/test_release_control_entrypoint_convergence_contract.sh` 通过
-- `tests/scripts/test_active_roadmap_references_contract.sh` 通过
-- `tests/scripts/test_release_workflow_v1_5_0_contract.sh` 通过
-- `git diff --check` 通过
-- PR `#13` 已关闭且未合并
-- direct-merge metadata commit 已创建并推送到 `origin/release/v1.5.0-prep-2026-05-15`
-- `master` merge commit 已创建并推送到 `origin/master`
-- GitHub-side startup failure 已记录为外部 blocker，而不是本地 release-control 失败
+- 根 working-memory 与新 plan doc 已同步当前真相
+- focused contract tests 继续通过
+- `run_tls13_signer_gate_ci.sh` 与 `run_tls13_signer_gate_bundle.sh --strict` 通过
+- commit / push 完成
+- 新远端 workflow run 已创建并完成首轮状态核对

@@ -113,6 +113,8 @@ for workflow in ".github/workflows/release.yml" ".github/workflows/release.yml.d
     "$workflow runs the current minimal CI gate"
   require_match "$workflow" 'bash scripts/run_freepascal_tls13_completeness_gate\.sh --fast-local' \
     "$workflow runs the FreePascal TLS 1.3 completeness gate"
+  require_match "$workflow" 'libwolfssl-dev' \
+    "$workflow installs WolfSSL runtime dependencies for completeness coverage"
   require_match "$workflow" 'python3 scripts/check_code_style\.py src' \
     "$workflow runs the style gate"
   require_match "$workflow" 'bash scripts/run_phase2_performance_baseline\.sh --dry-run --fast-local' \

@@ -1,0 +1,68 @@
+# 2026-05-15 CI Runtime Gate Repair
+
+## Goal
+
+修复 GitHub Actions 恢复执行后暴露出的真实 CI/runtime 阻塞，并把验证链路收口到可重复的本地 contracts + 远端 rerun。
+
+## Architecture
+
+- `CI -> FreePascal TLS 1.3 Completeness`
+  - 实际会跑到 WolfSSL runtime 对齐测试
+  - 所以 workflow 不能只装 `fpc + libssl-dev + python3`
+  - 必须同时装 `libwolfssl-dev`
+
+- `Release v1.5.0`
+  - 同样调用 `run_freepascal_tls13_completeness_gate.sh`
+  - 必须与 active CI 维持同一套 runtime 依赖，不然 release lane 会复现 completeness 红灯
+
+- `TLS13 Signer Gate`
+  - 远端失败分两层：
+    - bundle 内层 bench 红灯
+    - workflow summary shell 语法损坏
+  - bench 红灯不是 signer 算法逻辑回归，而是 bench 编译脚本：
+    - `-Criot` 触发 compile-time range-check error
+    - 编译输出被吞掉，难以定位
+
+## Files
+
+- `.github/workflows/ci.yml`
+- `.github/workflows/release.yml`
+- `.github/workflows/release.yml.disabled`
+- `.github/workflows/tls13-signer-gate.yml`
+- `scripts/run_freepascal_tls13_servercertverify_bench.sh`
+- `tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+- `tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+- `tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
+- `tests/scripts/test_tls13_servercertverify_bench_contract.sh`
+- `task_plan.md`
+- `findings.md`
+- `progress.md`
+
+## Steps
+
+1. 用当前远端 run 真相补 focused contracts，让问题先红。
+2. 最小修补 workflow 依赖、signer summary here-doc、bench compile flags / diagnostics。
+3. 本地复跑 contracts、bench、`run_tls13_signer_gate_ci.sh`、bundle `--strict`。
+4. 更新 working-memory，做简短 review，commit 并 push。
+5. 观察新的 `CI` / `TLS13 Signer Gate` 远端 run，确认真实 blocker 已切换为绿色或新的具体失败。
+
+## Commands
+
+```bash
+bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh
+bash tests/scripts/test_release_workflow_v1_5_0_contract.sh
+bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh
+bash tests/scripts/test_tls13_servercertverify_bench_contract.sh
+bash scripts/run_freepascal_tls13_servercertverify_bench.sh
+bash scripts/run_tls13_signer_gate_ci.sh
+bash scripts/run_tls13_signer_gate_bundle.sh --run-id local_bundle_repair_20260515 --reports-dir test-reports --strict
+git diff --check
+```
+
+## Expected Outputs
+
+- completeness / release workflow contracts 通过，并显式要求 `libwolfssl-dev`
+- signer workflow contract 通过，提取出的 append-step-summary shell 可 `bash -n`
+- bench contract 通过，并在 fake compiler 失败时能看到真实编译诊断
+- 本地 signer gate CI 与 bundle `--strict` 都恢复 PASS
+- push 后新的远端 runs 在真实执行层面不再复现旧的 3 个 blocker

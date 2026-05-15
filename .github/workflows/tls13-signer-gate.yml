@@ -166,5 +166,5 @@ jobs:
             print(f"- CRT_avg_ms: `{bench.get('crt_avg_ms', '')}`")
             print(f"- D_avg_ms: `{bench.get('d_avg_ms', '')}`")
             print(f"- Speedup_D_over_CRT: `{bench.get('speedup_d_over_crt', '')}`")
-            PY
+          PY
           fi

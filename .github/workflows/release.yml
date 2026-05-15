@@ -56,7 +56,7 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install -y fpc libssl-dev python3
+          sudo apt-get install -y fpc libssl-dev libwolfssl-dev python3
           fpc -iV
           openssl version
 

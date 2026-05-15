@@ -1,180 +1,105 @@
-# Progress - v1.5.0 Direct Merge
+# Progress - CI Runtime Gate Repair
 
 ## 2026-05-15
-
-### Direct Merge Decision
-
-- user decision:
-  - skip the PR route
-  - close `#13`
-  - merge `release/v1.5.0-prep-2026-05-15` directly into local `master`
 
 ### Context Recovery
 
 - `git status --short --branch`
-  - result: `## release/v1.5.0-prep-2026-05-15...origin/release/v1.5.0-prep-2026-05-15`
-- `git rev-parse --short HEAD`
-  - result: `2b31832`
-- `git branch --show-current`
-  - result: `release/v1.5.0-prep-2026-05-15`
-
-### Working-Memory Recovery
-
+  - result: `## master...origin/master` with only local repair changes / generated reports in progress
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
   - result: no output
-- `sed -n '1,220p' docs/test_reports/RELEASE_PREP_HANDOFF_V1.5.0_2026-05-15.md`
-  - result: confirmed `PUSHED_READY_FOR_APPROVAL`
-- `sed -n '1,220p' docs/test_reports/RELEASE_READINESS_V1.5.0.md`
-  - result: confirmed `READY_FOR_MAIN_MERGE`
-- `sed -n '1,180p' docs/ROADMAP.md`
-  - result: confirmed `CLOSED_OUT_PENDING_APPROVAL` and current control plane
 
-### GitHub PR Reality
+### Remote Failure Revalidation
 
-- `gh pr list --head release/v1.5.0-prep-2026-05-15 --state all --json number,title,state,baseRefName,headRefName,url`
-  - result: `[]`
-- `.github/pull_request_template.md` / `.github/PULL_REQUEST_TEMPLATE/`
-  - result: no PR template found
-- `gh api repos/dtamade/fafafa.ssl/branches/master/protection -H 'Accept: application/vnd.github+json'`
-  - result: `403`
-  - note: branch protection cannot be auto-discovered via current API access level
+- `gh run view 25893971783 --json databaseId,displayTitle,headSha,conclusion,jobs`
+  - result: PASS
+  - summary:
+    - run=`25893971783`
+    - head=`2eb563f`
+    - `Minimal Gate (Linux)` PASS
+    - `FreePascal TLS 1.3 Completeness` FAIL
+    - `Code Quality (Light)` PASS
 
-### Tooling Constraint
+- `gh run view 25893971783 --log-failed | tail -n 80`
+  - result: PASS
+  - summary:
+    - failure lands in `WolfSSL KnownIssues 运行时对齐测试`
+    - key error: `Failed to initialize WolfSSL library ... Failed to load WolfSSL library: libwolfssl.so`
 
-- `mcp__ace_tool__.search_context`
+- `gh run view 25901035350 --json databaseId,displayTitle,headSha,conclusion,jobs`
+  - result: PASS
+  - summary:
+    - run=`25901035350`
+    - head=`2eb563f`
+    - `tls13-signer-gate` job failed in bundle step + append-step-summary step
+
+- `gh run view 25901035350 --log-failed | tail -n 120`
+  - result: PASS
+  - summary:
+    - bundle step shows `signer_gate_ci exit=1`
+    - bundle report ends `overall=FAIL overall_state=ATTENTION`
+    - summary step shows broken here-doc terminator and `syntax error: unexpected end of file`
+
+### RED Contracts Before Fix
+
+- `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
   - result: FAIL
-  - error: `ACE_TOKEN` 失效或无效
+  - summary: `ci.yml completeness workflow must install libwolfssl-dev`
 
-### PR Closure
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result: FAIL
+  - summary: `release.yml installs WolfSSL runtime dependencies for completeness coverage`
 
-- `gh pr close 13 --comment "Superseded by the user-approved direct merge route. We are closing this PR and merging the release-prep branch locally into master instead."`
+- `bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
+  - result: FAIL
+  - summary: extracted append-step-summary shell did not parse cleanly because `PY` terminator was indented
+
+- `bash tests/scripts/test_tls13_servercertverify_bench_contract.sh`
+  - result: FAIL
+  - summary: bench script still forced `-Criot` / hid compile diagnostics
+
+### Production Fixes Applied
+
+- update `.github/workflows/ci.yml`
+  - change: completeness job install line now includes `libwolfssl-dev`
+- update `.github/workflows/release.yml`
+  - change: release workflow install line now includes `libwolfssl-dev`
+- update `.github/workflows/release.yml.disabled`
+  - change: disabled release template kept in sync with active workflow
+- update `.github/workflows/tls13-signer-gate.yml`
+  - change: heredoc terminator `PY` is flush-left in the extracted shell script
+- update `scripts/run_freepascal_tls13_servercertverify_bench.sh`
+  - change: remove `-Criot`
+  - change: stop redirecting compile output to `/dev/null`
+
+### Local Revalidation After Fix
+
+- `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
   - result: PASS
-- `gh pr view 13 --json number,title,state,url,mergeStateStatus,reviewDecision,headRefName,baseRefName`
-  - result: PASS
-  - summary: state=`CLOSED`, base=`master`, head=`release/v1.5.0-prep-2026-05-15`
 
-### In Progress
-
-- add direct-merge plan doc
-- rewrite approval packet to historical closed state
-- rewrite root working-memory to direct merge batch
-- commit direct-merge metadata
-- push `master` and verify remote status
-
-### Direct Merge Focused Verification
-
-- `bash tests/scripts/test_release_control_entrypoint_convergence_contract.sh`
-  - result: PASS
-- `bash tests/scripts/test_active_roadmap_references_contract.sh`
-  - result: PASS
 - `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
   - result: PASS
+
+- `bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_tls13_servercertverify_bench_contract.sh`
+  - result: PASS
+
+- `bash scripts/run_freepascal_tls13_servercertverify_bench.sh`
+  - result: PASS
+  - metrics:
+    - `CRT_avg_ms=120.1000`
+    - `D_avg_ms=567.1000`
+    - `Speedup_D_over_CRT=4.72x`
+
+- `bash scripts/run_tls13_signer_gate_ci.sh`
+  - result: PASS
+  - run_id: `20260515_131250`
+
+- `bash scripts/run_tls13_signer_gate_bundle.sh --run-id local_bundle_repair_20260515 --reports-dir test-reports --strict`
+  - result: PASS
+  - summary: `overall=PASS overall_state=HEALTHY`
+
 - `git diff --check`
   - result: PASS
-- `git status --short`
-  - result: only expected direct-merge doc and working-memory changes are present
-
-### Direct Merge Metadata Commit
-
-- review conclusion:
-  - no production-code behavior changed in this batch
-  - this batch only switched delivery route from PR approval to direct merge
-  - focused release-control contracts remained green
-- `git commit -m "docs: switch v1.5.0 to direct merge route"`
-  - result: `2de9ded`
-- `git push`
-  - result: PASS
-  - remote update: `34a83c6..2de9ded`
-
-### Merge To master
-
-- review conclusion:
-  - this merge does not introduce a new implementation batch
-  - it only brings the finalized release-prep control-plane history back to `master`
-  - the real remaining risk stays external to the repo: GitHub Actions billing/startup failure
-- `git switch master`
-  - result: PASS
-- `git merge --no-ff release/v1.5.0-prep-2026-05-15 -m "merge: finalize v1.5.0 direct merge route"`
-  - result: PASS
-  - merge commit: `ddd475b`
-- `git branch -vv`
-  - result: local `master` is now `ahead 100` vs `origin/master`
-
-### Push To origin/master
-
-- `git push origin master`
-  - result: PASS
-  - remote update: `e849b04..340455d`
-- `git status --short --branch`
-  - result: `## master...origin/master`
-- `gh run list --branch master --limit 5 --json databaseId,displayTitle,event,headBranch,headSha,status,conclusion,url`
-  - result: PASS
-  - summary: new push-triggered runs were created for head `340455d`
-- `gh run view 25893904523`
-  - result: FAIL
-  - summary: `master CI` jobs were not started because recent account payments failed or spending limit needs to be increased
-- `gh run view 25893904525`
-  - result: FAIL
-  - summary: `master TLS13 Signer Gate` job was not started for the same billing/limit reason
-
-### Focused Verification
-
-- `bash tests/scripts/test_release_control_entrypoint_convergence_contract.sh`
-  - result: PASS
-- `bash tests/scripts/test_active_roadmap_references_contract.sh`
-  - result: PASS
-- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
-  - result: PASS
-- `git diff --check`
-  - result: PASS
-- `git status --short`
-  - result: only expected doc and working-memory changes are present
-
-### Commit And Push
-
-- review conclusion:
-  - no production-code behavior changed in this batch
-  - focused release-control contracts remained green
-  - this batch only added PR approval assets and moved the branch into a reviewable approval state
-- `git commit -m "docs: prepare v1.5.0 PR approval packet"`
-  - result: `9c8ce1c`
-- `git push`
-  - result: PASS
-  - remote update: `2b31832..9c8ce1c`
-
-### PR Creation
-
-- `gh pr create --base master --head release/v1.5.0-prep-2026-05-15 --title "release: request v1.5.0 merge approval" --body-file docs/test_reports/PR_APPROVAL_PACKET_V1.5.0_2026-05-15.md`
-  - result: PASS
-  - PR: `#13`
-  - URL: `https://github.com/dtamade/fafafa.ssl/pull/13`
-- `gh pr view release/v1.5.0-prep-2026-05-15 --json number,title,state,url,mergeStateStatus,reviewDecision,headRefName,baseRefName`
-  - result: FAIL
-  - error: `no pull requests found for branch "release/v1.5.0-prep-2026-05-15"`
-- `gh pr view 13 --json number,title,state,url,mergeStateStatus,reviewDecision,headRefName,baseRefName`
-  - result: PASS
-  - summary: base=`master`, head=`release/v1.5.0-prep-2026-05-15`, state=`OPEN`, mergeStateStatus=`UNSTABLE`
-
-### GitHub-side Blocker
-
-- `gh pr checks 13`
-  - result: FAIL
-  - note: all affected jobs failed before startup, not after running branch code
-  - failing jobs:
-    - `Minimal Gate (Linux)`
-    - `FreePascal TLS 1.3 Completeness`
-    - `Code Quality (Light)`
-    - `tls13-signer-gate`
-  - shared annotation: recent account payments failed or spending limit needs to be increased
-
-### PR Body Refresh
-
-- `gh pr edit 13 --title "release: request v1.5.0 merge approval" --body-file docs/test_reports/PR_APPROVAL_PACKET_V1.5.0_2026-05-15.md`
-  - result: FAIL
-  - error: GraphQL classic Projects deprecation on `repository.pullRequest.projectCards`
-- `gh api repos/dtamade/fafafa.ssl/pulls/13 --method PATCH --raw-field title='release: request v1.5.0 merge approval' --raw-field body=\"$BODY\"`
-  - result: PASS
-  - note: REST API workaround successfully updated the PR title/body
-- `gh api repos/dtamade/fafafa.ssl/pulls/13 --jq '{updated_at: .updated_at, title: .title, body: .body}'`
-  - result: PASS
-  - summary: remote PR body now matches the checked-in approval packet including PR metadata and billing blocker note

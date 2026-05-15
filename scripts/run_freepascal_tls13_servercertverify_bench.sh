@@ -442,9 +442,11 @@ PAS
 
 cd "$ROOT_DIR"
 
-fpc -MObjFPC -Scghi -O2 -Criot -g -gl -vewnhibq \
+# Keep the bench on optimized diagnostics without -Criot, which trips compile-time
+# range checks in hash constants and hides the real signer runtime path we want to measure.
+fpc -MObjFPC -Scghi -O2 -g -gl -vewnhibq \
   -Fu./src -Fu./src/openssl -Fu./src/mbedtls -Fu./src/schannel -Fu./src/wolfssl -Fu./src/freepascal -Fu./src/tls13 \
-  -o"$WORKDIR/bench_tls13_servercertverify" "$WORKDIR/bench_tls13_servercertverify.pas" >/dev/null
+  -o"$WORKDIR/bench_tls13_servercertverify" "$WORKDIR/bench_tls13_servercertverify.pas"
 
 echo "[bench] compiled: $WORKDIR/bench_tls13_servercertverify"
 echo "[bench] scheme=$SCHEME iterations=$ITERATIONS warmup=$WARMUP key=$KEY_FILE"

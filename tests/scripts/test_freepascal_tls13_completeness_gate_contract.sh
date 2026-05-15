@@ -60,6 +60,11 @@ if ! grep -Fq -- "scripts/run_freepascal_tls13_completeness_gate.sh" ".github/wo
   exit 1
 fi
 
+if ! grep -Fq -- "libwolfssl-dev" ".github/workflows/ci.yml"; then
+  echo "[FAIL] ci.yml completeness workflow must install libwolfssl-dev for WolfSSL-backed runtime coverage"
+  exit 1
+fi
+
 tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/tls13_gate_contract.XXXXXX")"
 trap 'rm -rf "$tmp_root"' EXIT
 
