@@ -245,6 +245,93 @@
     - `MbedTLS KnownIssues 运行时对齐测试` PASS
     - final line: `[PASS] freepascal tls13 completeness gate finished`
 
+### Fifth-Order Remote Revalidation
+
+- `gh run list --branch master --limit 6 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest run is CI `25902932655` on head `30467e4`
+    - latest signer success remains `25902255923`
+    - no newer remote run has superseded the shutdown-crash evidence yet
+
+- `gh run view 25902932655 --json databaseId,displayTitle,headSha,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - only `FreePascal TLS 1.3 Completeness` failed
+    - `Minimal Gate (Linux)` PASS
+    - `Code Quality (Light)` PASS
+
+- `gh run view 25902932655 --log-failed | tail -n 120`
+  - result: PASS
+  - summary:
+    - `FreePascal KnownIssues runtime alignment` PASS
+    - `WolfSSL KnownIssues runtime alignment` PASS
+    - `MbedTLS KnownIssues runtime alignment` PASS
+    - the job prints `所有测试完成！`
+    - immediately afterward the process throws two `EAccessViolation` exceptions and exits 1
+
+### Fifth-Order RED Contract
+
+- `bash tests/scripts/test_optional_backend_shutdown_unregister_contract.sh`
+  - result before fifth fix: FAIL
+  - summary:
+    - factory lacked a shutdown-safe unregister helper
+    - optional backend units still unregistered through the normal `Finalize` path during `finalization`
+
+### Fifth-Order Repairs
+
+- add `tests/scripts/test_optional_backend_shutdown_unregister_contract.sh`
+  - purpose: lock in the shutdown-safe unregister design for optional backends
+
+- update `src/fafafa.ssl.factory.pas`
+  - change: add `TSSLFactory.UnregisterLibraryForProcessShutdown`
+  - change: process-shutdown helper now removes factory-held library references and registration entries without re-entering backend `Finalize`
+
+- update `src/fafafa.ssl.mbedtls.lib.pas`
+  - change: add sticky `GSkipFinalizeOnDestroy` guard for shutdown-time destroy
+  - change: destructor now skips `Finalize` when process-shutdown unregister is active
+  - change: `finalization` now calls `UnregisterMbedTLSBackendForProcessShutdown`
+
+- update `src/fafafa.ssl.wolfssl.lib.pas`
+  - change: add sticky `GSkipFinalizeOnDestroy` guard for shutdown-time destroy
+  - change: destructor now skips `Finalize` when process-shutdown unregister is active
+  - change: `finalization` now calls `UnregisterWolfSSLBackendForProcessShutdown`
+
+### Local Revalidation After Fifth Fix
+
+- `bash tests/scripts/test_optional_backend_shutdown_unregister_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wolfssl_loader_fallback_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+- `python3 scripts/compile_all_modules.py`
+  - result: PASS
+  - summary:
+    - compiled 185/185 core Pascal modules successfully
+    - both `src/fafafa.ssl.wolfssl.lib.pas` and `src/fafafa.ssl.mbedtls.lib.pas` compiled cleanly after the shutdown-safe changes
+
+- `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id local_shutdown_unregister_20260515`
+  - result: PASS
+  - summary:
+    - `FreePascal KnownIssues 运行时对齐测试` PASS
+    - `WolfSSL KnownIssues 运行时对齐测试` PASS
+    - `MbedTLS KnownIssues 运行时对齐测试` PASS
+    - final line: `[PASS] freepascal tls13 completeness gate finished`
+    - local run did not reproduce the remote shutdown-time `EAccessViolation`
+
 ### Third-Order Remote Revalidation
 
 - `gh run list --branch master --limit 8 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`

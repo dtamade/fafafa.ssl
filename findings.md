@@ -94,3 +94,25 @@
   - `ci.yml` 里两个 install step 文本高度相似
   - 这批第一次补 `libmbedtls-dev` 时误命中了 `Minimal Gate (Linux)` 而不是 completeness job
   - 新的 job-local contract 立即把这个误命中抓了出来，说明当前 contract 粒度是有效的
+
+- 最新远端 CI run `25902932655`（head `30467e4`）说明依赖缺口已经补齐：
+  - `FreePascal KnownIssues runtime alignment` PASS
+  - `WolfSSL KnownIssues runtime alignment` PASS
+  - `MbedTLS KnownIssues runtime alignment` PASS
+  - 失败发生在打印 `所有测试完成！` 之后，而不是任何一个测试主体内部
+
+- 因此当前最可信的根因不是新的 capability/runtime 回归，而是进程退出期清理：
+  - `src/fafafa.ssl.mbedtls.lib.pas` / `src/fafafa.ssl.wolfssl.lib.pas` 的 `finalization` 会调用 `Unregister...Backend`
+  - 这会走到 `src/fafafa.ssl.factory.pas` 的 `TSSLFactory.UnregisterLibrary -> ReleaseLibrary -> ISSLLibrary.Finalize`
+  - 在 GitHub runner 的退出期再次触发 backend `Finalize/Unload`，高度可疑会导致双清理或失序清理下的 `EAccessViolation`
+
+- 这批修法选择的是最小 shutdown-safe 路径，而不是扩大正常运行时语义：
+  - `TSSLFactory` 新增 `UnregisterLibraryForProcessShutdown`
+  - `TMbedTLSLibrary` / `TWolfSSLLibrary` 新增 `GSkipFinalizeOnDestroy`
+  - backend unit 的 `finalization` 改走 shutdown-safe 注销，仅移除工厂持有引用与注册项，避免在进程退出期再进入 backend `Finalize`
+
+- 本地验证支持这条修法，但还不等于远端已证实：
+  - `python3 scripts/compile_all_modules.py` 185/185 编译成功
+  - `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id local_shutdown_unregister_20260515` PASS
+  - 本地 long-run gate 在打印 `所有测试完成！` 后未再出现退出期异常
+  - 是否彻底消除 GitHub runner 上的 `EAccessViolation` 仍需第五次 push 复核

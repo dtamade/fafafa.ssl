@@ -2,7 +2,7 @@
 
 ## Goal
 
-修复 GitHub Actions 恢复执行后暴露出来的真实远端阻塞：FreePascal completeness 缺 WolfSSL runtime 依赖、TLS13 signer workflow 的 here-doc summary 语法损坏，以及 signer bench 编译旗标/诊断可见性问题；随后完成本地验证、提交并推送到 `master` 复核远端状态。
+修复 GitHub Actions 恢复执行后暴露出来的真实远端阻塞，并继续把 completeness lane 收口到最新的退出期崩溃：先解决 WolfSSL / MbedTLS runtime 依赖与 signer workflow 问题，再修复 `FreePascal TLS 1.3 Completeness` 在所有测试完成后触发的 shutdown-time `EAccessViolation`，随后完成本地验证、提交并推送到 `master` 复核远端状态。
 
 ## Current Status
 
@@ -30,21 +30,29 @@
   - `FreePascal TLS 1.3 Completeness` 失败点已经从 WolfSSL 前移到 `MbedTLS KnownIssues 运行时对齐测试`
 - [completed] 把 completeness/release contracts 升级到显式要求 `libmbedtls-dev`，并先观测到红灯
 - [completed] 修复 `.github/workflows/ci.yml` 的 completeness job 与 `release.yml` / `release.yml.disabled` 的安装步骤，补上 `libmbedtls-dev`
-- [in_progress] 复跑 focused 验证、准备第四次 commit/push，并跟踪新的远端 CI run
+- [completed] 第四次提交 `30467e4` 推送后，远端 CI run `25902932655` 继续收敛：
+  - `FreePascal KnownIssues` PASS
+  - `WolfSSL KnownIssues` PASS
+  - `MbedTLS KnownIssues` PASS
+  - 在打印 `所有测试完成！` 后进程退出期抛出两次 `EAccessViolation`
+- [completed] 新增 shutdown-safe focused contract，并先在当前源码上观测到红灯
+- [completed] 在 `TSSLFactory` / `TMbedTLSLibrary` / `TWolfSSLLibrary` 上实现 process-shutdown 安全注销路径
+- [completed] 本地 shutdown contract、compile-all 与 `run_freepascal_tls13_completeness_gate.sh --fast-local` 继续通过
+- [in_progress] 准备第五次 commit/push，并验证远端 completeness job 的退出期异常是否消失
 
 ## Current Blocker
 
 - 当前没有新的本地语法/contract blocker。
-- 剩余风险已经收敛成第四次 push 后远端 completeness job 是否转绿。
-- signer workflow 已经在 head `18f154f` 的远端 run `25902255923` 上验证通过。
+- 最新远端失败已收敛到 `25902932655` 的退出期 `EAccessViolation`，而不是测试主体逻辑或缺库问题。
+- 本地 long-run gate 已继续通过，但远端 GitHub runner 上是否完全消除 shutdown-time 崩溃仍需第五次 push 复核。
 
 ## Current Queue
 
-1. 更新 root working-memory 与 plan doc，写入 `8d052dd` 之后的四次远端真相与 `mbedtls` 依赖缺口结论。
-2. 复跑 focused contracts 与 `git diff --check`。
-3. 给出第四批简短 review 结论后 commit。
-4. 再次 `git push origin master`。
-5. 盯住新的 `CI` run，确认 completeness 依赖缺口不再复现。
+1. 更新 root working-memory 与 plan doc，写入 `25902932655` 的 shutdown-time `EAccessViolation` 真相与本地修复证据。
+2. 给出第五批简短 review 结论后 commit。
+3. `git push origin master`。
+4. 盯住新的 `CI` run，确认 completeness job 不再在打印 `所有测试完成！` 后崩溃。
+5. 若远端仍复现退出期异常，再回头深挖 `TMbedTLSLibrary.InitializeRNG/FinalizeRNG` 与裸内存上下文方案。
 
 ## Decision Locks
 
@@ -56,7 +64,7 @@
 ## Stop Condition
 
 - 根 working-memory 与新 plan doc 已同步当前真相
-- focused contract tests 继续通过
-- `run_tls13_signer_gate_ci.sh` 与 `run_tls13_signer_gate_bundle.sh --strict` 通过
-- 第四批 commit / push 完成
-- 新远端 `CI` run 已创建并完成四次状态核对
+- focused contract tests 与 shutdown contract 继续通过
+- `python3 scripts/compile_all_modules.py` 与 `run_freepascal_tls13_completeness_gate.sh --fast-local` 通过
+- 第五批 commit / push 完成
+- 新远端 `CI` run 已创建并验证退出期 `EAccessViolation` 不再复现

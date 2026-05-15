@@ -31,11 +31,15 @@
 - `.github/workflows/tls13-signer-gate.yml`
 - `scripts/run_freepascal_tls13_servercertverify_bench.sh`
 - `src/fafafa.ssl.wolfssl.api.pas`
+- `src/fafafa.ssl.factory.pas`
+- `src/fafafa.ssl.mbedtls.lib.pas`
+- `src/fafafa.ssl.wolfssl.lib.pas`
 - `tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
 - `tests/scripts/test_release_workflow_v1_5_0_contract.sh`
 - `tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
 - `tests/scripts/test_tls13_servercertverify_bench_contract.sh`
 - `tests/scripts/test_wolfssl_loader_fallback_contract.sh`
+- `tests/scripts/test_optional_backend_shutdown_unregister_contract.sh`
 - `task_plan.md`
 - `findings.md`
 - `progress.md`
@@ -55,8 +59,14 @@
    - 把新的缺库错误当作真实 blocker 继续收敛，不回退到已经转绿的旧问题
    - 同步检查 `release.yml` / `release.yml.disabled` 是否缺同一运行时依赖
    - 对重复结构的 workflow step，优先用 job-local contract 防止补丁误命中相邻 job
-7. 更新 working-memory，做简短 review，commit 并 push。
-8. 观察新的 `CI` / `TLS13 Signer Gate` 远端 run，确认四阶 blocker 已消除。
+7. 若第四次 push 后 completeness 在“所有测试完成！”之后才失败：
+   - 视为 shutdown/finalization 问题，而不是 capability/runtime 主逻辑失败
+   - 优先检查 `mbedtls` / `wolfssl` backend unit 的 `finalization -> Unregister -> Finalize` 调用链
+   - 用 focused contract 锁住 shutdown-safe unregister 设计
+8. 在 `TSSLFactory` 增加 process-shutdown 安全注销入口，并让可选 backend 在析构时可跳过 `Finalize`。
+9. 复跑 focused contracts、`compile_all_modules.py` 与本地 completeness gate，确认本地长跑无回退。
+10. 更新 working-memory，做简短 review，commit 并 push。
+11. 观察新的 `CI` / `TLS13 Signer Gate` 远端 run，确认五阶 blocker 已消除。
 
 ## Commands
 
@@ -66,9 +76,12 @@ bash tests/scripts/test_release_workflow_v1_5_0_contract.sh
 bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh
 bash tests/scripts/test_tls13_servercertverify_bench_contract.sh
 bash tests/scripts/test_wolfssl_loader_fallback_contract.sh
+bash tests/scripts/test_optional_backend_shutdown_unregister_contract.sh
 bash scripts/run_freepascal_tls13_servercertverify_bench.sh
 bash scripts/run_tls13_signer_gate_ci.sh
 bash scripts/run_tls13_signer_gate_bundle.sh --run-id local_bundle_repair_20260515 --reports-dir test-reports --strict
+python3 scripts/compile_all_modules.py
+bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id local_shutdown_unregister_20260515
 git diff --check
 ```
 
@@ -82,4 +95,6 @@ git diff --check
 - 本地 signer gate CI 与 bundle `--strict` 都恢复 PASS
 - 若第二次 push 后 completeness 仍红，contract 能进一步抓出 job-local 依赖缺口，而不是被其他 job 的安装行误导
 - 若第三次 push 后 completeness 前移到 MbedTLS，contract 与 workflow 会同步补上 `libmbedtls-dev`
-- 第四次 push 后新的远端 runs 在真实执行层面不再复现旧的 blocker
+- 若第四次 push 后远端在 `所有测试完成！` 后才崩溃，focused contract 会迫使 optional backend 走 shutdown-safe unregister 设计
+- 本地 `compile_all_modules.py` 与 `run_freepascal_tls13_completeness_gate.sh --fast-local` 会继续通过，且不在退出期复现新的异常
+- 第五次 push 后新的远端 runs 在真实执行层面不再复现 shutdown-time `EAccessViolation`

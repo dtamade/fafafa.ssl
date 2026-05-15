@@ -122,6 +122,9 @@ uses
   fafafa.ssl.mbedtls.context,
   fafafa.ssl.mbedtls.certificate;
 
+var
+  GSkipFinalizeOnDestroy: Boolean = False;
+
 const
   // MbedTLS 上下文结构体大小（估算值，实际大小取决于编译配置）
   // Use large buffers for safety - MbedTLS 3.x structures can be quite large
@@ -173,7 +176,7 @@ end;
 
 destructor TMbedTLSLibrary.Destroy;
 begin
-  if FInitialized then
+  if FInitialized and (not GSkipFinalizeOnDestroy) then
     Finalize;
   inherited Destroy;
 end;
@@ -657,10 +660,16 @@ begin
   TSSLFactory.UnregisterLibrary(sslMbedTLS);
 end;
 
+procedure UnregisterMbedTLSBackendForProcessShutdown;
+begin
+  GSkipFinalizeOnDestroy := True;
+  TSSLFactory.UnregisterLibraryForProcessShutdown(sslMbedTLS);
+end;
+
 initialization
   RegisterMbedTLSBackend;
 
 finalization
-  UnregisterMbedTLSBackend;
+  UnregisterMbedTLSBackendForProcessShutdown;
 
 end.

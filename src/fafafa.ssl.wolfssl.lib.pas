@@ -109,6 +109,9 @@ uses
   fafafa.ssl.wolfssl.context,
   fafafa.ssl.wolfssl.certificate;
 
+var
+  GSkipFinalizeOnDestroy: Boolean = False;
+
 function CreateWolfSSLLibrary: ISSLLibrary;
 begin
   Result := TWolfSSLLibrary.Create;
@@ -152,7 +155,7 @@ end;
 
 destructor TWolfSSLLibrary.Destroy;
 begin
-  if FInitialized then
+  if FInitialized and (not GSkipFinalizeOnDestroy) then
     Finalize;
   inherited Destroy;
 end;
@@ -618,10 +621,16 @@ begin
   TSSLFactory.UnregisterLibrary(sslWolfSSL);
 end;
 
+procedure UnregisterWolfSSLBackendForProcessShutdown;
+begin
+  GSkipFinalizeOnDestroy := True;
+  TSSLFactory.UnregisterLibraryForProcessShutdown(sslWolfSSL);
+end;
+
 initialization
   RegisterWolfSSLBackend;
 
 finalization
-  UnregisterWolfSSLBackend;
+  UnregisterWolfSSLBackendForProcessShutdown;
 
 end.

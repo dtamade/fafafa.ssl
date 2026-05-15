@@ -138,6 +138,7 @@ type
      * @param ALibType 库类型标识
      *}
     class procedure UnregisterLibrary(ALibType: TSSLLibraryType);
+    class procedure UnregisterLibraryForProcessShutdown(ALibType: TSSLLibraryType);
 
     { ==================== 库检测与查询 ==================== }
 
@@ -706,6 +707,24 @@ begin
       // 从 Map 中删除
       FRegistrationMap.Remove(Ord(ALibType));
     end;
+  finally
+    LeaveCriticalSection(GFactoryLock);
+  end;
+end;
+
+class procedure TSSLFactory.UnregisterLibraryForProcessShutdown(ALibType: TSSLLibraryType);
+begin
+  if (not FInitialized) or (not GFactoryLockInitialized) then
+    Exit;
+
+  EnterCriticalSection(GFactoryLock);
+  try
+    // 进程退出期只摘除注册和工厂持有的接口引用，避免再次进入后端 Finalize。
+    if Assigned(FLibraries[ALibType]) then
+      FLibraries[ALibType] := nil;
+
+    if Assigned(FRegistrationMap) and FRegistrationMap.Contains(Ord(ALibType)) then
+      FRegistrationMap.Remove(Ord(ALibType));
   finally
     LeaveCriticalSection(GFactoryLock);
   end;
