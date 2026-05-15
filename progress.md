@@ -48,9 +48,6 @@
 
 ### Pending
 
-- PR approval asset commit
-- branch push
-- PR creation or update
 - final PR metadata sync
 
 ### Focused Verification
@@ -65,3 +62,52 @@
   - result: PASS
 - `git status --short`
   - result: only expected doc and working-memory changes are present
+
+### Commit And Push
+
+- review conclusion:
+  - no production-code behavior changed in this batch
+  - focused release-control contracts remained green
+  - this batch only added PR approval assets and moved the branch into a reviewable approval state
+- `git commit -m "docs: prepare v1.5.0 PR approval packet"`
+  - result: `9c8ce1c`
+- `git push`
+  - result: PASS
+  - remote update: `2b31832..9c8ce1c`
+
+### PR Creation
+
+- `gh pr create --base master --head release/v1.5.0-prep-2026-05-15 --title "release: request v1.5.0 merge approval" --body-file docs/test_reports/PR_APPROVAL_PACKET_V1.5.0_2026-05-15.md`
+  - result: PASS
+  - PR: `#13`
+  - URL: `https://github.com/dtamade/fafafa.ssl/pull/13`
+- `gh pr view release/v1.5.0-prep-2026-05-15 --json number,title,state,url,mergeStateStatus,reviewDecision,headRefName,baseRefName`
+  - result: FAIL
+  - error: `no pull requests found for branch "release/v1.5.0-prep-2026-05-15"`
+- `gh pr view 13 --json number,title,state,url,mergeStateStatus,reviewDecision,headRefName,baseRefName`
+  - result: PASS
+  - summary: base=`master`, head=`release/v1.5.0-prep-2026-05-15`, state=`OPEN`, mergeStateStatus=`UNSTABLE`
+
+### GitHub-side Blocker
+
+- `gh pr checks 13`
+  - result: FAIL
+  - note: all affected jobs failed before startup, not after running branch code
+  - failing jobs:
+    - `Minimal Gate (Linux)`
+    - `FreePascal TLS 1.3 Completeness`
+    - `Code Quality (Light)`
+    - `tls13-signer-gate`
+  - shared annotation: recent account payments failed or spending limit needs to be increased
+
+### PR Body Refresh
+
+- `gh pr edit 13 --title "release: request v1.5.0 merge approval" --body-file docs/test_reports/PR_APPROVAL_PACKET_V1.5.0_2026-05-15.md`
+  - result: FAIL
+  - error: GraphQL classic Projects deprecation on `repository.pullRequest.projectCards`
+- `gh api repos/dtamade/fafafa.ssl/pulls/13 --method PATCH --raw-field title='release: request v1.5.0 merge approval' --raw-field body=\"$BODY\"`
+  - result: PASS
+  - note: REST API workaround successfully updated the PR title/body
+- `gh api repos/dtamade/fafafa.ssl/pulls/13 --jq '{updated_at: .updated_at, title: .title, body: .body}'`
+  - result: PASS
+  - summary: remote PR body now matches the checked-in approval packet including PR metadata and billing blocker note

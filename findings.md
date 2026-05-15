@@ -27,6 +27,27 @@
   - 这不是仓库事实问题，而是环境级检索工具失效
   - 本批继续依赖现有文档、shell 读取和 git/GitHub truth 完成，不等待该工具恢复
 
+- merge-approval PR 已经创建出来：
+  - PR: `#13`
+  - URL: `https://github.com/dtamade/fafafa.ssl/pull/13`
+  - state: `OPEN`
+  - `mergeStateStatus`: `UNSTABLE`
+
+- 当前 `UNSTABLE` 不是代码或 workflow 文本回归：
+  - `gh pr checks 13` 显示 `Minimal Gate (Linux)`、`FreePascal TLS 1.3 Completeness`、`Code Quality (Light)`、`tls13-signer-gate` 全都没有真正启动
+  - 四个 job 的共同 annotation 都是“recent account payments have failed or your spending limit needs to be increased”
+  - 所以当前 PR 自动检查失败属于 GitHub Actions 账户计费/额度外部阻塞，不是这批分支内容把 CI 跑坏了
+
+- `gh pr view` 的稳妥取数方式应记录下来：
+  - 直接 `gh pr view release/v1.5.0-prep-2026-05-15 --json ...` 返回 `no pull requests found for branch`
+  - 改用 PR 编号 `gh pr view 13 --json ...` 成功
+  - 后续继续自动化时，优先记录 PR 编号再查询，避免 branch-name lookup 漂移
+
+- `gh pr edit` 在当前仓库环境下也不可靠：
+  - `gh pr edit 13 --body-file ...` 返回 classic Projects GraphQL 字段报错
+  - 改用 `gh api repos/dtamade/fafafa.ssl/pulls/13 --method PATCH` 成功更新 title/body
+  - 所以后续若还要脚本化刷新 PR 正文，优先走 REST API 而不是 `gh pr edit`
+
 - 当前项目的“停滞感”主要不是来自新的代码故障，而是来自交付边界没有外显：
   - `docs/ROADMAP.md` 已经锁定 `release-control / v1.5.0 formalization`
   - `docs/test_reports/RELEASE_READINESS_V1.5.0.md` 已经写明 `READY_FOR_MAIN_MERGE`

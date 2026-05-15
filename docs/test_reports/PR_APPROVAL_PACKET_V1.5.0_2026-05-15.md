@@ -12,6 +12,8 @@ This PR requests merge approval for the already-pushed `v1.5.0` release-prep bra
 
 - base branch: `master`
 - head branch: `release/v1.5.0-prep-2026-05-15`
+- pull request: `#13`
+- pull request url: `https://github.com/dtamade/fafafa.ssl/pull/13`
 - requested action: merge approval only
 - explicitly not included:
   - `v1.5.0` tag creation
@@ -51,6 +53,16 @@ Current verified release-control evidence already attached to this branch:
 - `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local` - PASS
 - `git diff --check` - PASS
 
+## GitHub Automation Status
+
+- current PR state: `OPEN`
+- current `mergeStateStatus`: `UNSTABLE`
+- current GitHub-side blocker:
+  - the PR-triggered workflows were not started
+  - GitHub reported: recent account payments failed or the spending limit needs to be increased
+  - this is an external repository/account constraint, not a local release-control regression in this branch
+- until GitHub Actions billing is repaired, the local verification set above remains the usable review evidence for this approval batch
+
 ## Boundary
 
 - This PR does not merge automatically.
@@ -66,6 +78,7 @@ Current verified release-control evidence already attached to this branch:
 - confirm release-control and readiness documents still agree
 - confirm no production-code batch was mixed into this approval-only batch
 - confirm `no-tag / no-release / Windows deferred` boundaries remain explicit
+- confirm the current GitHub Actions failures are billing-related startup failures rather than branch-local code/test failures
 
 ## After Merge
 
