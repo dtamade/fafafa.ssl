@@ -116,3 +116,22 @@
   - `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id local_shutdown_unregister_20260515` PASS
   - 本地 long-run gate 在打印 `所有测试完成！` 后未再出现退出期异常
   - 是否彻底消除 GitHub runner 上的 `EAccessViolation` 仍需第五次 push 复核
+
+- 第五次提交 `45dabb4` 后，远端 CI run `25903921296` 已经证明 shutdown-time 崩溃真正消失：
+  - `FreePascal TLS 1.3 Completeness` SUCCESS
+  - `Minimal Gate (Linux)` SUCCESS
+  - `Code Quality (Light)` SUCCESS
+
+- 运行时主阻塞解除后，当前最高价值的小批次变成 workflow hygiene：
+  - GitHub Actions 远端日志提示 `actions/checkout@v4` 仍运行在 Node20 兼容层，并带来 deprecation annotation
+  - 仓库内不只活跃 workflow，多个 dormant template 也仍保留 `actions/checkout@v3/v4`
+  - 如果只修活跃 workflow，未来重启旧模板时还会把同类告警重新带回仓库
+
+- 这批选择 `actions/checkout@v5` 而不是更激进地跳到 `v6`：
+  - `v5` 已明确切到 Node24 runtime，足以消除当前 deprecation 来源
+  - 对现有 workflow 语义变化最小，适合做低风险收口
+  - `v6` 还带有凭据持久化路径变化，当前批次没有必要顺手扩大
+
+- 新增 focused contract 后，checkout 升级可以被持续守护：
+  - `tests/scripts/test_workflow_checkout_node24_contract.sh` 会拒绝 `.github/workflows` 下残留的 `actions/checkout@v3/v4`
+  - 同时强制当前活跃 workflow 与需同步模板显式使用 `actions/checkout@v5`

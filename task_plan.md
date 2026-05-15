@@ -38,21 +38,27 @@
 - [completed] 新增 shutdown-safe focused contract，并先在当前源码上观测到红灯
 - [completed] 在 `TSSLFactory` / `TMbedTLSLibrary` / `TWolfSSLLibrary` 上实现 process-shutdown 安全注销路径
 - [completed] 本地 shutdown contract、compile-all 与 `run_freepascal_tls13_completeness_gate.sh --fast-local` 继续通过
-- [in_progress] 准备第五次 commit/push，并验证远端 completeness job 的退出期异常是否消失
+- [completed] 第五次提交 `45dabb4` 推送后，远端 CI run `25903921296` SUCCESS：
+  - `FreePascal TLS 1.3 Completeness` SUCCESS
+  - `Minimal Gate (Linux)` SUCCESS
+  - 退出期 `EAccessViolation` 未再复现
+- [completed] 新增 workflow checkout Node24 contract，并先在当前模板上观测到红灯
+- [completed] 仓库内全部 workflow / workflow template 的 `actions/checkout@v3/v4` 已升级到 `actions/checkout@v5`
+- [in_progress] 准备第六次 commit/push，并验证 workflow 升级后远端 CI / signer 继续通过
 
 ## Current Blocker
 
 - 当前没有新的本地语法/contract blocker。
-- 最新远端失败已收敛到 `25902932655` 的退出期 `EAccessViolation`，而不是测试主体逻辑或缺库问题。
-- 本地 long-run gate 已继续通过，但远端 GitHub runner 上是否完全消除 shutdown-time 崩溃仍需第五次 push 复核。
+- 运行时主阻塞已经解除，当前批次只剩 workflow hygiene 收口与远端复核。
+- 需要确认升级到 `actions/checkout@v5` 后，活跃 workflow 继续绿且 Node20 弃用 annotation 不再出现。
 
 ## Current Queue
 
-1. 更新 root working-memory 与 plan doc，写入 `25902932655` 的 shutdown-time `EAccessViolation` 真相与本地修复证据。
-2. 给出第五批简短 review 结论后 commit。
+1. 更新 root working-memory 与新的 workflow hygiene plan doc，记录 checkout Node24 合同与升级理由。
+2. 给出第六批简短 review 结论后 commit。
 3. `git push origin master`。
-4. 盯住新的 `CI` run，确认 completeness job 不再在打印 `所有测试完成！` 后崩溃。
-5. 若远端仍复现退出期异常，再回头深挖 `TMbedTLSLibrary.InitializeRNG/FinalizeRNG` 与裸内存上下文方案。
+4. 盯住新的 `CI` / `TLS13 Signer Gate` runs，确认 workflow 升级后继续成功。
+5. 若仍出现新的 GitHub Actions runtime annotation，再单独复核其他第三方 actions。
 
 ## Decision Locks
 
@@ -64,7 +70,7 @@
 ## Stop Condition
 
 - 根 working-memory 与新 plan doc 已同步当前真相
-- focused contract tests 与 shutdown contract 继续通过
-- `python3 scripts/compile_all_modules.py` 与 `run_freepascal_tls13_completeness_gate.sh --fast-local` 通过
-- 第五批 commit / push 完成
-- 新远端 `CI` run 已创建并验证退出期 `EAccessViolation` 不再复现
+- runtime-fix contracts 与 workflow checkout contract 继续通过
+- 第五批 runtime 修复和第六批 workflow hygiene commit / push 完成
+- 新远端 `CI` / `TLS13 Signer Gate` runs 继续通过
+- checkout Node20 弃用告警不再由仓库内 `actions/checkout@v3/v4` 引起

@@ -332,6 +332,67 @@
     - final line: `[PASS] freepascal tls13 completeness gate finished`
     - local run did not reproduce the remote shutdown-time `EAccessViolation`
 
+### Fifth Push Success Revalidation
+
+- `gh run watch 25903921296 --exit-status`
+  - result: PASS
+  - summary:
+    - `FreePascal TLS 1.3 Completeness` SUCCESS in 2m36s
+    - `Minimal Gate (Linux)` SUCCESS in 3m11s
+    - `Code Quality (Light)` SUCCESS
+
+- `gh run view 25903921296 --json databaseId,displayTitle,headSha,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - run=`25903921296`
+    - head=`45dabb4`
+    - overall conclusion: `success`
+    - previous shutdown-time `EAccessViolation` no longer reproduced on GitHub runner
+
+### Sixth-Order RED Contract
+
+- `bash tests/scripts/test_workflow_checkout_node24_contract.sh`
+  - result before sixth fix: FAIL
+  - summary:
+    - `.github/workflows/basic-checks.yml.disabled` still used `actions/checkout@v4`
+    - contract then expanded to cover all workflow files, not just active ones
+
+### Sixth-Order Repairs
+
+- add `tests/scripts/test_workflow_checkout_node24_contract.sh`
+  - purpose: ensure `.github/workflows` no longer keeps `actions/checkout@v3/v4` and active/synced templates use `actions/checkout@v5`
+
+- update `.github/workflows/*.yml` and `.github/workflows/*.yml.disabled`
+  - change: upgrade every `actions/checkout@v3` / `actions/checkout@v4` reference to `actions/checkout@v5`
+  - note: active workflows updated include `ci.yml`, `release.yml`, `tls13-signer-gate.yml`, `wave-b-b2-manual.yml`
+  - note: synchronized templates updated include `release.yml.disabled` and `wave-b-b2-manual.yml.disabled`
+  - note: dormant templates were also upgraded to prevent future re-enable drift
+
+### Local Revalidation After Sixth Fix
+
+- `bash tests/scripts/test_workflow_checkout_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+  - result: PASS
+
+- `cmp -s .github/workflows/release.yml .github/workflows/release.yml.disabled`
+  - result: PASS
+  - summary: release workflow templates remain synchronized
+
+- `cmp -s .github/workflows/wave-b-b2-manual.yml .github/workflows/wave-b-b2-manual.yml.disabled`
+  - result: PASS
+  - summary: wave-b manual workflow templates remain synchronized
+
+- `git diff --check`
+  - result: PASS
+
 ### Third-Order Remote Revalidation
 
 - `gh run list --branch master --limit 8 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
