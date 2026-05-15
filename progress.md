@@ -1,74 +1,137 @@
-# Progress - Release Control Plane Realignment
+# Progress - v1.5.0 Direct Merge
 
 ## 2026-05-15
+
+### Direct Merge Decision
+
+- user decision:
+  - skip the PR route
+  - close `#13`
+  - merge `release/v1.5.0-prep-2026-05-15` directly into local `master`
 
 ### Context Recovery
 
 - `git status --short --branch`
-  - result: `## master...origin/master [ahead 93]`
-- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py /home/dtamade/projects/fafafa.ssl`
-  - result: no additional catchup output
+  - result: `## release/v1.5.0-prep-2026-05-15...origin/release/v1.5.0-prep-2026-05-15`
+- `git rev-parse --short HEAD`
+  - result: `2b31832`
+- `git branch --show-current`
+  - result: `release/v1.5.0-prep-2026-05-15`
+
+### Working-Memory Recovery
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+  - result: no output
+- `sed -n '1,220p' docs/test_reports/RELEASE_PREP_HANDOFF_V1.5.0_2026-05-15.md`
+  - result: confirmed `PUSHED_READY_FOR_APPROVAL`
+- `sed -n '1,220p' docs/test_reports/RELEASE_READINESS_V1.5.0.md`
+  - result: confirmed `READY_FOR_MAIN_MERGE`
+- `sed -n '1,180p' docs/ROADMAP.md`
+  - result: confirmed `CLOSED_OUT_PENDING_APPROVAL` and current control plane
+
+### GitHub PR Reality
+
+- `gh pr list --head release/v1.5.0-prep-2026-05-15 --state all --json number,title,state,baseRefName,headRefName,url`
+  - result: `[]`
+- `.github/pull_request_template.md` / `.github/PULL_REQUEST_TEMPLATE/`
+  - result: no PR template found
+- `gh api repos/dtamade/fafafa.ssl/branches/master/protection -H 'Accept: application/vnd.github+json'`
+  - result: `403`
+  - note: branch protection cannot be auto-discovered via current API access level
+
+### Tooling Constraint
+
 - `mcp__ace_tool__.search_context`
-  - result: failed because `ACE_TOKEN` was invalid
-  - action: switched to direct file inspection
+  - result: FAIL
+  - error: `ACE_TOKEN` 失效或无效
 
-### RED Verification
+### PR Closure
 
-- `bash -n tests/scripts/test_release_control_entrypoint_convergence_contract.sh`
+- `gh pr close 13 --comment "Superseded by the user-approved direct merge route. We are closing this PR and merging the release-prep branch locally into master instead."`
   - result: PASS
-- `bash tests/scripts/test_release_control_entrypoint_convergence_contract.sh`
-  - result: FAIL before doc edits
-  - failure: `README is missing the current release-control navigation line`
-- `bash tests/scripts/test_active_roadmap_references_contract.sh`
-  - result: FAIL before roadmap/doc edits
-  - failure: missing new `current_execution_control_plane` roadmap truth
-- `bash tests/scripts/test_platform_support_guidance_convergence_contract.sh`
-  - result: FAIL before platform doc edits
-  - failure: missing `当前发布与平台验证入口`
-- `bash tests/scripts/test_active_docs_historical_reference_labels_contract.sh`
-  - result: FAIL before index edits
-  - failure: missing the new Wave C closeout / historical section label
+- `gh pr view 13 --json number,title,state,url,mergeStateStatus,reviewDecision,headRefName,baseRefName`
+  - result: PASS
+  - summary: state=`CLOSED`, base=`master`, head=`release/v1.5.0-prep-2026-05-15`
 
-### Implementation
+### In Progress
 
-- Replaced the old Wave C canonical-entry contract with:
-  - `tests/scripts/test_release_control_entrypoint_convergence_contract.sh`
-- Updated contracts:
-  - `tests/scripts/test_active_roadmap_references_contract.sh`
-  - `tests/scripts/test_platform_support_guidance_convergence_contract.sh`
-  - `tests/scripts/test_active_docs_historical_reference_labels_contract.sh`
-- Realigned active docs:
-  - `README.md`
-  - `docs/README.md`
-  - `docs/DOCUMENTATION_INDEX.md`
-  - `docs/PLATFORM_SUPPORT.md`
-  - `docs/ROADMAP.md`
-  - `.github/README.md`
-- Refreshed release-control plan truth:
-  - `docs/plans/2026-05-12-release-v1.5.0-formalization.md`
-- Added current batch plan:
-  - `docs/plans/2026-05-15-release-control-plane-realignment.md`
-- Reset root working-memory files to current-control-plane format:
-  - `task_plan.md`
-  - `findings.md`
-  - `progress.md`
+- add direct-merge plan doc
+- rewrite approval packet to historical closed state
+- rewrite root working-memory to direct merge batch
+- commit direct-merge metadata
+- merge to `master` and push
 
-### GREEN Verification
+### Direct Merge Focused Verification
 
 - `bash tests/scripts/test_release_control_entrypoint_convergence_contract.sh`
   - result: PASS
 - `bash tests/scripts/test_active_roadmap_references_contract.sh`
-  - result: PASS
-- `bash tests/scripts/test_platform_support_guidance_convergence_contract.sh`
-  - result: PASS
-- `bash tests/scripts/test_active_docs_historical_reference_labels_contract.sh`
   - result: PASS
 - `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
   - result: PASS
 - `git diff --check`
   - result: PASS
+- `git status --short`
+  - result: only expected direct-merge doc and working-memory changes are present
 
-### Pending
+### Focused Verification
 
-- final review conclusion
-- git commit for this batch
+- `bash tests/scripts/test_release_control_entrypoint_convergence_contract.sh`
+  - result: PASS
+- `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - result: PASS
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result: PASS
+- `git diff --check`
+  - result: PASS
+- `git status --short`
+  - result: only expected doc and working-memory changes are present
+
+### Commit And Push
+
+- review conclusion:
+  - no production-code behavior changed in this batch
+  - focused release-control contracts remained green
+  - this batch only added PR approval assets and moved the branch into a reviewable approval state
+- `git commit -m "docs: prepare v1.5.0 PR approval packet"`
+  - result: `9c8ce1c`
+- `git push`
+  - result: PASS
+  - remote update: `2b31832..9c8ce1c`
+
+### PR Creation
+
+- `gh pr create --base master --head release/v1.5.0-prep-2026-05-15 --title "release: request v1.5.0 merge approval" --body-file docs/test_reports/PR_APPROVAL_PACKET_V1.5.0_2026-05-15.md`
+  - result: PASS
+  - PR: `#13`
+  - URL: `https://github.com/dtamade/fafafa.ssl/pull/13`
+- `gh pr view release/v1.5.0-prep-2026-05-15 --json number,title,state,url,mergeStateStatus,reviewDecision,headRefName,baseRefName`
+  - result: FAIL
+  - error: `no pull requests found for branch "release/v1.5.0-prep-2026-05-15"`
+- `gh pr view 13 --json number,title,state,url,mergeStateStatus,reviewDecision,headRefName,baseRefName`
+  - result: PASS
+  - summary: base=`master`, head=`release/v1.5.0-prep-2026-05-15`, state=`OPEN`, mergeStateStatus=`UNSTABLE`
+
+### GitHub-side Blocker
+
+- `gh pr checks 13`
+  - result: FAIL
+  - note: all affected jobs failed before startup, not after running branch code
+  - failing jobs:
+    - `Minimal Gate (Linux)`
+    - `FreePascal TLS 1.3 Completeness`
+    - `Code Quality (Light)`
+    - `tls13-signer-gate`
+  - shared annotation: recent account payments failed or spending limit needs to be increased
+
+### PR Body Refresh
+
+- `gh pr edit 13 --title "release: request v1.5.0 merge approval" --body-file docs/test_reports/PR_APPROVAL_PACKET_V1.5.0_2026-05-15.md`
+  - result: FAIL
+  - error: GraphQL classic Projects deprecation on `repository.pullRequest.projectCards`
+- `gh api repos/dtamade/fafafa.ssl/pulls/13 --method PATCH --raw-field title='release: request v1.5.0 merge approval' --raw-field body=\"$BODY\"`
+  - result: PASS
+  - note: REST API workaround successfully updated the PR title/body
+- `gh api repos/dtamade/fafafa.ssl/pulls/13 --jq '{updated_at: .updated_at, title: .title, body: .body}'`
+  - result: PASS
+  - summary: remote PR body now matches the checked-in approval packet including PR metadata and billing blocker note
