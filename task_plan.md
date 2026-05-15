@@ -24,19 +24,25 @@
 - [completed] 发现 `tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh` 的盲区：它只对整份 `ci.yml` 做 `libwolfssl-dev` 粗粒度 grep，误把 `Minimal Gate (Linux)` 的安装步骤当成了 completeness job 的保障
 - [completed] 把 completeness contract 升级为 job-local install-step 断言，并先在当前 `ci.yml` 上观测到红灯
 - [completed] 修复 `.github/workflows/ci.yml` 的 `freepascal-tls13-completeness` job 安装步骤，补回 `libwolfssl-dev`
-- [in_progress] 复跑 focused 验证、准备第三次 commit/push，并跟踪新的远端 runs
+- [completed] 第三次提交 `8d052dd` 推送后，远端 CI run `25902644127` 继续收敛：
+  - `Minimal Gate (Linux)` PASS
+  - `Code Quality (Light)` PASS
+  - `FreePascal TLS 1.3 Completeness` 失败点已经从 WolfSSL 前移到 `MbedTLS KnownIssues 运行时对齐测试`
+- [completed] 把 completeness/release contracts 升级到显式要求 `libmbedtls-dev`，并先观测到红灯
+- [completed] 修复 `.github/workflows/ci.yml` 的 completeness job 与 `release.yml` / `release.yml.disabled` 的安装步骤，补上 `libmbedtls-dev`
+- [in_progress] 复跑 focused 验证、准备第四次 commit/push，并跟踪新的远端 CI run
 
 ## Current Blocker
 
 - 当前没有新的本地语法/contract blocker。
-- 剩余风险已经收敛成第三次 push 后远端 completeness job 是否转绿。
+- 剩余风险已经收敛成第四次 push 后远端 completeness job 是否转绿。
 - signer workflow 已经在 head `18f154f` 的远端 run `25902255923` 上验证通过。
 
 ## Current Queue
 
-1. 更新 root working-memory 与 plan doc，写入 `18f154f` 之后的三次远端真相与 contract 盲区结论。
+1. 更新 root working-memory 与 plan doc，写入 `8d052dd` 之后的四次远端真相与 `mbedtls` 依赖缺口结论。
 2. 复跑 focused contracts 与 `git diff --check`。
-3. 给出第三批简短 review 结论后 commit。
+3. 给出第四批简短 review 结论后 commit。
 4. 再次 `git push origin master`。
 5. 盯住新的 `CI` run，确认 completeness 依赖缺口不再复现。
 
@@ -52,5 +58,5 @@
 - 根 working-memory 与新 plan doc 已同步当前真相
 - focused contract tests 继续通过
 - `run_tls13_signer_gate_ci.sh` 与 `run_tls13_signer_gate_bundle.sh --strict` 通过
-- 第三批 commit / push 完成
-- 新远端 `CI` run 已创建并完成三次状态核对
+- 第四批 commit / push 完成
+- 新远端 `CI` run 已创建并完成四次状态核对

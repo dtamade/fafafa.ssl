@@ -51,8 +51,12 @@
 5. 若第二次 push 后 completeness 仍红：
    - 先重新核对当前 `ci.yml` 的 job-local install step，而不是直接假设 loader fallback 失败
    - 确保 contract 断言落在 `freepascal-tls13-completeness` job 自己的 install step，而不是整份 workflow 粗粒度 grep
-6. 更新 working-memory，做简短 review，commit 并 push。
-7. 观察新的 `CI` / `TLS13 Signer Gate` 远端 run，确认三阶 blocker 已消除。
+6. 若第三次 push 后 completeness 继续前移到新的 backend：
+   - 把新的缺库错误当作真实 blocker 继续收敛，不回退到已经转绿的旧问题
+   - 同步检查 `release.yml` / `release.yml.disabled` 是否缺同一运行时依赖
+   - 对重复结构的 workflow step，优先用 job-local contract 防止补丁误命中相邻 job
+7. 更新 working-memory，做简短 review，commit 并 push。
+8. 观察新的 `CI` / `TLS13 Signer Gate` 远端 run，确认四阶 blocker 已消除。
 
 ## Commands
 
@@ -77,4 +81,5 @@ git diff --check
 - bench contract 通过，并在 fake compiler 失败时能看到真实编译诊断
 - 本地 signer gate CI 与 bundle `--strict` 都恢复 PASS
 - 若第二次 push 后 completeness 仍红，contract 能进一步抓出 job-local 依赖缺口，而不是被其他 job 的安装行误导
-- 第三次 push 后新的远端 runs 在真实执行层面不再复现旧的 blocker
+- 若第三次 push 后 completeness 前移到 MbedTLS，contract 与 workflow 会同步补上 `libmbedtls-dev`
+- 第四次 push 后新的远端 runs 在真实执行层面不再复现旧的 blocker

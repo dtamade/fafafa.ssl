@@ -102,6 +102,12 @@ if ! grep -Fq -- "libwolfssl-dev" <<< "$ci_completeness_job"; then
   exit 1
 fi
 
+if ! grep -Fq -- "libmbedtls-dev" <<< "$ci_completeness_job"; then
+  echo "[FAIL] ci.yml completeness job install step must include libmbedtls-dev for MbedTLS-backed runtime coverage"
+  printf '%s\n' "$ci_completeness_job"
+  exit 1
+fi
+
 tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/tls13_gate_contract.XXXXXX")"
 trap 'rm -rf "$tmp_root"' EXIT
 

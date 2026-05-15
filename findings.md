@@ -76,3 +76,21 @@
 - 本地长跑 `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id local_ci_runtime_repair_20260515` 已 PASS：
   - FreePascal / WolfSSL / MbedTLS KnownIssues 运行时对齐全部通过
   - 这至少证明：在“依赖存在”的前提下，当前 loader fallback 与 completeness 脚本链路是可工作的
+
+- 第三次推送 `8d052dd` 后，远端 CI run `25902644127` 的真相继续收敛：
+  - `WolfSSL KnownIssues 运行时对齐测试` 已经 PASS
+  - 新的唯一失败点变成 `MbedTLS KnownIssues 运行时对齐测试`
+  - 关键错误：`Failed to initialize MbedTLS library (LastError=-1, Details=Failed to load MbedTLS libraries)`
+
+- 这说明当前主问题不再是 WolfSSL loader：
+  - 远端 runner 已经真正装到了 `libwolfssl-dev` 并成功跑过 WolfSSL runtime alignment
+  - 当前 completeness lane 下一层真实依赖缺口是 `libmbedtls-dev`
+
+- release 路线必须和 completeness lane 同步补上 `libmbedtls-dev`：
+  - `release.yml` / `release.yml.disabled` 同样会执行 `run_freepascal_tls13_completeness_gate.sh`
+  - 如果只修 CI，不修 release，未来 tag/release 会原样复现 MbedTLS 缺库红灯
+
+- workflow 结构重复会让“看似正确的补丁”打偏到相邻 job：
+  - `ci.yml` 里两个 install step 文本高度相似
+  - 这批第一次补 `libmbedtls-dev` 时误命中了 `Minimal Gate (Linux)` 而不是 completeness job
+  - 新的 job-local contract 立即把这个误命中抓了出来，说明当前 contract 粒度是有效的

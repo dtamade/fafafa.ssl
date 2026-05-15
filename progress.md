@@ -104,6 +104,76 @@
 - `git diff --check`
   - result: PASS
 
+### Fourth-Order Remote Revalidation
+
+- `gh run watch 25902644127 --exit-status`
+  - result: FAIL
+  - summary:
+    - `Minimal Gate (Linux)` PASS
+    - `Code Quality (Light)` PASS
+    - `FreePascal TLS 1.3 Completeness` FAIL in 2m28s
+
+- `gh run view 25902644127 --json databaseId,displayTitle,headSha,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - run=`25902644127`
+    - head=`8d052dd`
+    - only job failure is `FreePascal TLS 1.3 Completeness`
+
+- `gh run view 25902644127 --log-failed | tail -n 260`
+  - result: PASS
+  - summary:
+    - `WolfSSL KnownIssues runtime alignment` now passes on GitHub runner
+    - failure has moved to `MbedTLS KnownIssues runtime alignment`
+    - key error: `Failed to initialize MbedTLS library (LastError=-1, Details=Failed to load MbedTLS libraries)`
+
+### Fourth-Order RED Contracts
+
+- `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+  - result before fourth fix: FAIL
+  - summary:
+    - completeness job install step still lacked `libmbedtls-dev`
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result before fourth fix: FAIL
+  - summary:
+    - release workflows still lacked `libmbedtls-dev`
+
+### Fourth-Order Repairs
+
+- update `tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+  - change: completeness job install-step contract now also requires `libmbedtls-dev`
+
+- update `tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - change: release workflow contract now also requires `libmbedtls-dev`
+
+- update `.github/workflows/ci.yml`
+  - change: `freepascal-tls13-completeness` install step now includes `libmbedtls-dev`
+  - note: the first attempt accidentally hit `minimal-gate-linux`; the strengthened job-local contract caught the mis-target and the final patch was narrowed to the completeness job
+
+- update `.github/workflows/release.yml`
+  - change: install step now includes `libmbedtls-dev`
+
+- update `.github/workflows/release.yml.disabled`
+  - change: disabled release template kept in sync with the active workflow
+
+### Local Revalidation After Fourth Fix
+
+- `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wolfssl_loader_fallback_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
 ### First Push Revalidation
 
 - `git commit -m "fix: repair ci runtime gate blockers"`
