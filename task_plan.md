@@ -12,20 +12,30 @@
 - [completed] 修复 `.github/workflows/tls13-signer-gate.yml` 的 here-doc terminator 缩进
 - [completed] 修复 `scripts/run_freepascal_tls13_servercertverify_bench.sh` 的 `-Criot` 与编译诊断吞没问题
 - [completed] 本地 focused contracts、bench、`run_tls13_signer_gate_ci.sh`、bundle `--strict` 已通过
-- [in_progress] 更新 working-memory、清理临时产物、提交并推送，然后观察新的远端 runs
+- [completed] 首次提交 `d3ebeee` 并推送到 `master`，创建远端 runs `25901775672` / `25901775676`
+- [completed] 二次远端取证：
+  - signer workflow 的 bundle 主步骤已经转绿
+  - signer workflow 仍因 summary Python body 缩进触发 `IndentationError`
+  - completeness workflow 仍然报 `Failed to load WolfSSL library: libwolfssl.so`
+- [completed] 新增可执行 signer summary contract 与 WolfSSL loader fallback contract
+- [completed] 修复 `.github/workflows/tls13-signer-gate.yml` 的 Python heredoc 正文缩进
+- [completed] 修复 `src/fafafa.ssl.wolfssl.api.pas`，让 loader 在 Linux 上回退扫描常见库路径与版本化 `libwolfssl.so*`
+- [in_progress] 复跑 focused 验证、准备第二次 commit/push，并跟踪新的远端 runs
 
 ## Current Blocker
 
-- 当前没有本地代码 blocker。
-- 剩余风险只在远端重新执行是否与本地验证一致，需要 push 后核对 GitHub Actions 新 run。
+- 当前没有新的本地语法/contract blocker。
+- 剩余风险集中在第二次 push 后的远端 completeness / signer runs 是否真正吃到：
+  - workflow Python body 缩进修复
+  - WolfSSL loader fallback 修复
 
 ## Current Queue
 
-1. 写入 `docs/plans/2026-05-15-ci-runtime-gate-repair.md` 与根 working-memory。
-2. 清理本批生成的临时 `test-reports` 产物，保持提交面干净。
-3. 复跑 `git diff --check` 与 focused contracts（如文档更新影响）。
-4. 给出简短 review 结论后 commit。
-5. `git push origin master`，确认新的 `CI` 与 `TLS13 Signer Gate` run 已创建并核对首轮结果。
+1. 更新 root working-memory 与 plan doc，写入 `d3ebeee` 之后的二次远端真相。
+2. 复跑 focused contracts 与 `git diff --check`。
+3. 给出第二批简短 review 结论后 commit。
+4. 再次 `git push origin master`。
+5. 盯住新的 `CI` / `TLS13 Signer Gate` runs，确认第二层问题已消除。
 
 ## Decision Locks
 
@@ -39,5 +49,5 @@
 - 根 working-memory 与新 plan doc 已同步当前真相
 - focused contract tests 继续通过
 - `run_tls13_signer_gate_ci.sh` 与 `run_tls13_signer_gate_bundle.sh --strict` 通过
-- commit / push 完成
-- 新远端 workflow run 已创建并完成首轮状态核对
+- 第二批 commit / push 完成
+- 新远端 workflow run 已创建并完成二次状态核对

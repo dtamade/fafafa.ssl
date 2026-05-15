@@ -142,29 +142,29 @@ jobs:
 
           if [[ -n "$LATEST_STATUS" ]]; then
             python3 - "$LATEST_STATUS" >> "$GITHUB_STEP_SUMMARY" <<'PY'
-            import json
-            import sys
+          import json
+          import sys
 
-            path = sys.argv[1]
-            with open(path, 'r', encoding='utf-8') as f:
-                d = json.load(f)
+          path = sys.argv[1]
+          with open(path, 'r', encoding='utf-8') as f:
+              d = json.load(f)
 
-            bench = d.get('bench', {})
+          bench = d.get('bench', {})
 
-            print("")
-            print("### Gate Status")
-            print(f"- overall_state: `{d.get('overall_state', '')}`")
-            print(f"- summary_overall: `{d.get('summary_overall', '')}`")
-            print(f"- snapshot_state: `{d.get('snapshot_state', '')}`")
-            print(f"- purity_status: `{d.get('purity_status', '')}`")
-            print(f"- bench_status: `{d.get('bench_status', '')}`")
-            print("")
-            print("### Bench Metrics")
-            print(f"- scheme: `{bench.get('scheme', '')}`")
-            print(f"- iterations: `{bench.get('iterations', '')}`")
-            print(f"- warmup: `{bench.get('warmup', '')}`")
-            print(f"- CRT_avg_ms: `{bench.get('crt_avg_ms', '')}`")
-            print(f"- D_avg_ms: `{bench.get('d_avg_ms', '')}`")
-            print(f"- Speedup_D_over_CRT: `{bench.get('speedup_d_over_crt', '')}`")
+          print("")
+          print("### Gate Status")
+          print(f"- overall_state: `{d.get('overall_state', '')}`")
+          print(f"- summary_overall: `{d.get('summary_overall', '')}`")
+          print(f"- snapshot_state: `{d.get('snapshot_state', '')}`")
+          print(f"- purity_status: `{d.get('purity_status', '')}`")
+          print(f"- bench_status: `{d.get('bench_status', '')}`")
+          print("")
+          print("### Bench Metrics")
+          print(f"- scheme: `{bench.get('scheme', '')}`")
+          print(f"- iterations: `{bench.get('iterations', '')}`")
+          print(f"- warmup: `{bench.get('warmup', '')}`")
+          print(f"- CRT_avg_ms: `{bench.get('crt_avg_ms', '')}`")
+          print(f"- D_avg_ms: `{bench.get('d_avg_ms', '')}`")
+          print(f"- Speedup_D_over_CRT: `{bench.get('speedup_d_over_crt', '')}`")
           PY
           fi

@@ -333,6 +333,68 @@ begin
   Result := GetProcAddress(GWolfSSLHandle, AProcName);
 end;
 
+{$IFDEF LINUX}
+function TryLoadWolfSSLLibraryFromPattern(const ADirectory, APattern: string): TLibHandle;
+var
+  LSearch: TSearchRec;
+  LResult: Integer;
+  LPath: string;
+begin
+  Result := NilHandle;
+
+  if not DirectoryExists(ADirectory) then
+    Exit;
+
+  LResult := FindFirst(IncludeTrailingPathDelimiter(ADirectory) + APattern, faAnyFile, LSearch);
+  if LResult <> 0 then
+    Exit;
+
+  try
+    repeat
+      if (LSearch.Name <> '.') and (LSearch.Name <> '..') then
+      begin
+        LPath := IncludeTrailingPathDelimiter(ADirectory) + LSearch.Name;
+        Result := LoadLibrary(LPath);
+        if Result <> NilHandle then
+          Exit;
+      end;
+      LResult := FindNext(LSearch);
+    until LResult <> 0;
+  finally
+    FindClose(LSearch);
+  end;
+end;
+
+function TryLoadWolfSSLLibraryFromCommonLocations: TLibHandle;
+const
+  CANDIDATE_DIRS: array[0..4] of string = (
+    '/usr/lib/x86_64-linux-gnu',
+    '/lib/x86_64-linux-gnu',
+    '/usr/lib64',
+    '/lib64',
+    '/usr/local/lib'
+  );
+var
+  I: Integer;
+begin
+  Result := NilHandle;
+
+  for I := Low(CANDIDATE_DIRS) to High(CANDIDATE_DIRS) do
+  begin
+    Result := LoadLibrary(IncludeTrailingPathDelimiter(CANDIDATE_DIRS[I]) + WOLFSSL_LIB_NAME);
+    if Result <> NilHandle then
+      Exit;
+  end;
+
+  for I := Low(CANDIDATE_DIRS) to High(CANDIDATE_DIRS) do
+  begin
+    Result := TryLoadWolfSSLLibraryFromPattern(CANDIDATE_DIRS[I], 'libwolfssl.so*');
+    if Result <> NilHandle then
+      Exit;
+  end;
+end;
+{$ENDIF}
+
 function LoadWolfSSLLibrary: Boolean;
 begin
   Result := False;
@@ -341,6 +403,10 @@ begin
     Exit(True);
 
   GWolfSSLHandle := LoadLibrary(WOLFSSL_LIB_NAME);
+  {$IFDEF LINUX}
+  if GWolfSSLHandle = NilHandle then
+    GWolfSSLHandle := TryLoadWolfSSLLibraryFromCommonLocations;
+  {$ENDIF}
   if GWolfSSLHandle = NilHandle then
     Exit(False);
 

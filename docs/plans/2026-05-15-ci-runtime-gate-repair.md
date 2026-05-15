@@ -30,10 +30,12 @@
 - `.github/workflows/release.yml.disabled`
 - `.github/workflows/tls13-signer-gate.yml`
 - `scripts/run_freepascal_tls13_servercertverify_bench.sh`
+- `src/fafafa.ssl.wolfssl.api.pas`
 - `tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
 - `tests/scripts/test_release_workflow_v1_5_0_contract.sh`
 - `tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
 - `tests/scripts/test_tls13_servercertverify_bench_contract.sh`
+- `tests/scripts/test_wolfssl_loader_fallback_contract.sh`
 - `task_plan.md`
 - `findings.md`
 - `progress.md`
@@ -42,9 +44,12 @@
 
 1. 用当前远端 run 真相补 focused contracts，让问题先红。
 2. 最小修补 workflow 依赖、signer summary here-doc、bench compile flags / diagnostics。
-3. 本地复跑 contracts、bench、`run_tls13_signer_gate_ci.sh`、bundle `--strict`。
-4. 更新 working-memory，做简短 review，commit 并 push。
-5. 观察新的 `CI` / `TLS13 Signer Gate` 远端 run，确认真实 blocker 已切换为绿色或新的具体失败。
+3. 首次 push 后继续读新远端 run，识别二阶真实失败。
+4. 若仍有 blocker：
+   - 提升 signer summary contract 到“真实执行 fake payload”
+   - 给 WolfSSL loader 加 Linux fallback 路径 / versioned soname 扫描
+5. 更新 working-memory，做简短 review，commit 并 push。
+6. 观察新的 `CI` / `TLS13 Signer Gate` 远端 run，确认二阶 blocker 已消除。
 
 ## Commands
 
@@ -53,6 +58,7 @@ bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh
 bash tests/scripts/test_release_workflow_v1_5_0_contract.sh
 bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh
 bash tests/scripts/test_tls13_servercertverify_bench_contract.sh
+bash tests/scripts/test_wolfssl_loader_fallback_contract.sh
 bash scripts/run_freepascal_tls13_servercertverify_bench.sh
 bash scripts/run_tls13_signer_gate_ci.sh
 bash scripts/run_tls13_signer_gate_bundle.sh --run-id local_bundle_repair_20260515 --reports-dir test-reports --strict
@@ -63,6 +69,8 @@ git diff --check
 
 - completeness / release workflow contracts 通过，并显式要求 `libwolfssl-dev`
 - signer workflow contract 通过，提取出的 append-step-summary shell 可 `bash -n`
+- signer workflow contract 通过，并能真实执行 fake status payload
+- wolfssl loader fallback contract 通过，source 明确包含 Linux fallback 搜索逻辑
 - bench contract 通过，并在 fake compiler 失败时能看到真实编译诊断
 - 本地 signer gate CI 与 bundle `--strict` 都恢复 PASS
-- push 后新的远端 runs 在真实执行层面不再复现旧的 3 个 blocker
+- 第二次 push 后新的远端 runs 在真实执行层面不再复现旧的 5 个 blocker

@@ -37,6 +37,23 @@
   - `run_tls13_signer_gate_ci.sh` PASS（run_id=`20260515_131250`）
   - `run_tls13_signer_gate_bundle.sh --strict` PASS（run_id=`local_bundle_repair_20260515`）
 
+- 首次修复推送 `d3ebeee` 后，远端真相又进一步收敛：
+  - signer run `25901775672`
+    - `Run TLS13 signer gate bundle` 已经 PASS
+    - `Append step summary` 仍 FAIL
+    - 新错误不再是 shell EOF，而是 Python heredoc 正文带 2 个前导空格导致 `IndentationError`
+  - CI run `25901775676`
+    - completeness job 仍 FAIL
+    - 关键错误仍是 `Failed to load WolfSSL library: libwolfssl.so`
+    - 这说明“只补 workflow apt 依赖”还不够，WolfSSL loader 本身也需要 fallback
+
+- 因此第二批根因修法应分两条落地：
+  - workflow 层：
+    - signer summary 的 heredoc terminator 与 Python body 都必须输出成真正可执行的脚本
+  - Pascal runtime 层：
+    - `src/fafafa.ssl.wolfssl.api.pas` 不能只赌 `LoadLibrary('libwolfssl.so')`
+    - 在 Linux 上需要回退扫描常见系统库目录与版本化 `libwolfssl.so*`
+
 - Windows/WinSSL 仍保持 `static-only`：
   - 用户明确不要走 Windows 条件
   - 这批只处理 Linux / GitHub Actions 可直接复核的 CI/runtime blocker

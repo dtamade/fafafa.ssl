@@ -103,3 +103,63 @@
 
 - `git diff --check`
   - result: PASS
+
+### First Push Revalidation
+
+- `git commit -m "fix: repair ci runtime gate blockers"`
+  - result: PASS
+  - commit: `d3ebeee`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `2eb563f..d3ebeee`
+
+- `gh run list --branch master --limit 8 --json ...`
+  - result: PASS
+  - summary:
+    - signer run=`25901775672`
+    - ci run=`25901775676`
+    - both runs target head=`d3ebeee`
+
+- `gh run view 25901775672 --log-failed | tail -n 160`
+  - result: PASS
+  - summary:
+    - bundle main step is now green
+    - append-step-summary still fails
+    - current error: `IndentationError: unexpected indent`
+
+- `gh run view 25901775676 --log-failed | tail -n 160`
+  - result: PASS
+  - summary:
+    - completeness job still fails at `Failed to load WolfSSL library: libwolfssl.so`
+
+### Second-Order Repairs
+
+- update `tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
+  - change: contract now executes the extracted summary shell against a fake JSON payload instead of only checking `bash -n`
+
+- `bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
+  - result before second fix: FAIL
+  - summary: reproduced `IndentationError` from indented Python heredoc body
+
+- update `.github/workflows/tls13-signer-gate.yml`
+  - change: Python heredoc body now renders without extra leading spaces in the executed shell script
+
+- add `tests/scripts/test_wolfssl_loader_fallback_contract.sh`
+  - purpose: force the WolfSSL loader source to include Linux fallback search paths / versioned soname scanning
+
+- `bash tests/scripts/test_wolfssl_loader_fallback_contract.sh`
+  - result before second fix: FAIL
+  - summary: `src/fafafa.ssl.wolfssl.api.pas` only attempted `LoadLibrary(WOLFSSL_LIB_NAME)`
+
+- update `src/fafafa.ssl.wolfssl.api.pas`
+  - change: on Linux, loader now:
+    - tries the canonical bare name first
+    - then tries explicit common library directories
+    - then scans versioned `libwolfssl.so*` candidates
+
+- `bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
+  - result after second fix: PASS
+
+- `bash tests/scripts/test_wolfssl_loader_fallback_contract.sh`
+  - result after second fix: PASS
