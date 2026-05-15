@@ -1,6 +1,31 @@
-# Findings - v1.5.0 Release-Prep Push
+# Findings - v1.5.0 PR Approval
 
 ## 2026-05-15
+
+- release-prep 分支已经是稳定外显点，但目前远端还没有 PR：
+  - `release/v1.5.0-prep-2026-05-15` 已经存在并跟踪 `origin/release/v1.5.0-prep-2026-05-15`
+  - `gh pr list --head release/v1.5.0-prep-2026-05-15 --state all` 返回空数组
+  - 这说明现在的实际缺口不是代码修复，而是 merge approval 入口还没建立
+
+- 仓库没有现成 PR 模板：
+  - `.github/pull_request_template.md` 不存在
+  - `.github/PULL_REQUEST_TEMPLATE/` 目录也不存在
+  - 所以本批需要在仓库内新增一个 approval packet 作为单一 PR 正文真相源
+
+- GitHub branch protection 无法通过当前 API 自动发现：
+  - `gh api repos/dtamade/fafafa.ssl/branches/master/protection` 返回 `403`
+  - 返回信息是需要 GitHub Pro 或 public repo
+  - 所以这批不能把“自动探测保护规则”当成执行前提，应该改用显式 checklist 和人工审批边界
+
+- `RELEASE_READINESS_V1.5.0.md` 的 `READY_FOR_MAIN_MERGE` 属于旧措辞，不等于要改目标分支：
+  - 当前仓库默认分支仍然是 `master`
+  - 这个状态在本批应解释为“ready to merge back to the default mainline branch”
+  - 为避免触碰已有 contract wording，本批在 approval packet 中解释映射关系，而不去重写 readiness 报告
+
+- `mcp__ace_tool__.search_context` 当前不可用：
+  - 返回 `ACE_TOKEN` 失效/无效
+  - 这不是仓库事实问题，而是环境级检索工具失效
+  - 本批继续依赖现有文档、shell 读取和 git/GitHub truth 完成，不等待该工具恢复
 
 - 当前项目的“停滞感”主要不是来自新的代码故障，而是来自交付边界没有外显：
   - `docs/ROADMAP.md` 已经锁定 `release-control / v1.5.0 formalization`

@@ -1,77 +1,67 @@
-# Progress - v1.5.0 Release-Prep Push
+# Progress - v1.5.0 PR Approval
 
 ## 2026-05-15
 
 ### Context Recovery
 
 - `git status --short --branch`
-  - result: `## master...origin/master [ahead 94]`
-- `git branch -vv`
-  - result: current local `master` is ahead of `origin/master` by 94 commits
-  - note: historical branch `glm51` exists but is not selected for this batch
-- `git remote -v`
-  - result: remote `origin` points to `https://github.com/dtamade/fafafa.ssl`
-- `git describe --tags --abbrev=0`
-  - result: `v1.4.3`
-- `git log --oneline --decorate -5`
-  - result: latest head before this batch was `5f23652 docs: realign release control plane and planning workflow`
+  - result: `## release/v1.5.0-prep-2026-05-15...origin/release/v1.5.0-prep-2026-05-15`
+- `git rev-parse --short HEAD`
+  - result: `2b31832`
+- `git branch --show-current`
+  - result: `release/v1.5.0-prep-2026-05-15`
 
-### Branch Decision
+### Working-Memory Recovery
 
-- `git ls-remote --heads origin 'release/v1.5.0-prep-2026-05-15*'`
-  - result: no matching remote branch found
-- `git switch -c release/v1.5.0-prep-2026-05-15`
-  - result: PASS
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+  - result: no output
+- `sed -n '1,220p' docs/test_reports/RELEASE_PREP_HANDOFF_V1.5.0_2026-05-15.md`
+  - result: confirmed `PUSHED_READY_FOR_APPROVAL`
+- `sed -n '1,220p' docs/test_reports/RELEASE_READINESS_V1.5.0.md`
+  - result: confirmed `READY_FOR_MAIN_MERGE`
+- `sed -n '1,180p' docs/ROADMAP.md`
+  - result: confirmed `CLOSED_OUT_PENDING_APPROVAL` and current control plane
+
+### GitHub PR Reality
+
+- `gh pr list --head release/v1.5.0-prep-2026-05-15 --state all --json number,title,state,baseRefName,headRefName,url`
+  - result: `[]`
+- `.github/pull_request_template.md` / `.github/PULL_REQUEST_TEMPLATE/`
+  - result: no PR template found
+- `gh api repos/dtamade/fafafa.ssl/branches/master/protection -H 'Accept: application/vnd.github+json'`
+  - result: `403`
+  - note: branch protection cannot be auto-discovered via current API access level
+
+### Tooling Constraint
+
+- `mcp__ace_tool__.search_context`
+  - result: FAIL
+  - error: `ACE_TOKEN` 失效或无效
 
 ### In Progress
 
-- rewrite root working-memory to the release-prep push goal
-- add a dedicated repo plan for the release-prep batch
-- add a handoff document draft that will be finalized after verification + push
+- add PR approval plan doc
+- add PR approval packet doc
+- rewrite root working-memory to PR approval batch
+- rerun focused contracts
+- create the merge-approval PR after commit + push
 
-### Verification
+### Pending
+
+- PR approval asset commit
+- branch push
+- PR creation or update
+- final PR metadata sync
+
+### Focused Verification
 
 - `bash tests/scripts/test_release_control_entrypoint_convergence_contract.sh`
   - result: PASS
 - `bash tests/scripts/test_active_roadmap_references_contract.sh`
   - result: PASS
-- `bash tests/scripts/test_platform_support_guidance_convergence_contract.sh`
-  - result: PASS
-- `bash tests/scripts/test_active_docs_historical_reference_labels_contract.sh`
-  - result: PASS
 - `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
   - result: PASS
-- `python3 scripts/compile_all_modules.py`
-  - result: PASS
-  - summary: `185/185 compiled`, `0 failed`
-- `bash scripts/run_minimal_ci_gate.sh --fast-local`
-  - result: PASS
-  - run_id: `20260515_064455_1850480`
-  - summary: module tests `17/17`, nested phase2 dry-run exercised
-- `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local --run-id release_prep_20260515`
-  - result: PASS
-  - summary file: `tmp/test-reports/freepascal_tls13_completeness_release_prep_20260515.md`
-- `python3 scripts/check_code_style.py src`
-  - result: PASS
-- `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
-  - result: PASS
-  - run_id: `20260515_064842_1859245`
 - `git diff --check`
   - result: PASS
-
-### Pending
-
-- none
-
-### Commit And Push
-
-- review conclusion:
-  - no new product behavior changes were introduced
-  - all release-control contracts and local gates remained green
-  - this batch only externalized the release-prep handoff branch and working-memory state
-- `git commit -m "docs: prepare v1.5.0 release-prep handoff"`
-  - result: `d4d5071`
-- `git push -u origin release/v1.5.0-prep-2026-05-15`
-  - result: PASS
-  - remote branch: `origin/release/v1.5.0-prep-2026-05-15`
-  - PR URL hint: `https://github.com/dtamade/fafafa.ssl/pull/new/release/v1.5.0-prep-2026-05-15`
+- `git status --short`
+  - result: only expected doc and working-memory changes are present
