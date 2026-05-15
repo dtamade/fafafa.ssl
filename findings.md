@@ -1,6 +1,28 @@
-# Findings - v1.5.0 PR Approval
+# Findings - v1.5.0 Direct Merge
 
 ## 2026-05-15
+
+- 用户已经明确选择“不走 PR”，所以当前正确路线变成 direct merge：
+  - PR 不是技术必需，只是审批入口
+  - 在当前仓库状态下，release-prep 分支上的代码与文档真相已经成立
+  - 所以关闭 `#13` 并直接合并回 `master` 是更短路径
+
+- PR `#13` 已经关闭且不再是当前路线：
+  - PR: `#13`
+  - URL: `https://github.com/dtamade/fafafa.ssl/pull/13`
+  - state: `CLOSED`
+  - 关闭原因：superseded by direct merge route
+
+- direct merge 不会消除外部 GitHub Actions blocker：
+  - PR checks 先前没有启动，是因为账户付款/额度问题
+  - 即使改成直接 push 到 `master`，push-triggered workflows 仍然可能因为同一个外部问题而无法启动
+  - 所以当前要区分“交付路径切换”与“GitHub Actions 账户恢复”这两件事
+
+- 本地 `master` 仍然是 release-prep 的真实承载底座：
+  - 当前本地 `master` 在 merge 前停在 `5f23652`
+  - 它本来就领先 `origin/master` 94 个提交
+  - `release/v1.5.0-prep-2026-05-15` 只是额外多出 direct-merge 之前的两批 PR 文档元数据
+  - 所以 direct merge 的语义是“把 release-prep 的最终文档收口带回本地主线”，不是把一条陌生分支强行接进来
 
 - release-prep 分支已经是稳定外显点，但目前远端还没有 PR：
   - `release/v1.5.0-prep-2026-05-15` 已经存在并跟踪 `origin/release/v1.5.0-prep-2026-05-15`

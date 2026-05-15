@@ -2,11 +2,11 @@
 
 Date: 2026-05-15
 
-Status: `REQUEST_MERGE_APPROVAL`
+Status: `CLOSED_SUPERSEDED_BY_DIRECT_MERGE`
 
 ## Summary
 
-This PR requests merge approval for the already-pushed `v1.5.0` release-prep branch. The purpose of this batch is to externalize the current release-control truth into a reviewable GitHub PR without creating the `v1.5.0` tag and without publishing a GitHub Release.
+This document records the approval packet that was used to open PR `#13` for the already-pushed `v1.5.0` release-prep branch. The PR was later closed without merge because the user chose to skip the PR route and merge the release-prep branch locally into `master` instead.
 
 ## PR Intent
 
@@ -15,6 +15,7 @@ This PR requests merge approval for the already-pushed `v1.5.0` release-prep bra
 - pull request: `#13`
 - pull request url: `https://github.com/dtamade/fafafa.ssl/pull/13`
 - requested action: merge approval only
+- final outcome: PR closed without merge; superseded by direct merge route
 - explicitly not included:
   - `v1.5.0` tag creation
   - GitHub Release publication
@@ -55,13 +56,22 @@ Current verified release-control evidence already attached to this branch:
 
 ## GitHub Automation Status
 
-- current PR state: `OPEN`
+- current PR state: `CLOSED`
 - current `mergeStateStatus`: `UNSTABLE`
 - current GitHub-side blocker:
   - the PR-triggered workflows were not started
   - GitHub reported: recent account payments failed or the spending limit needs to be increased
   - this is an external repository/account constraint, not a local release-control regression in this branch
 - until GitHub Actions billing is repaired, the local verification set above remains the usable review evidence for this approval batch
+
+## Closure
+
+- closure decision: user-approved direct merge route
+- closure result: PR `#13` closed without merge
+- reason:
+  - PR approval flow is not required for this repo state
+  - the real remaining external blocker is still GitHub Actions billing, not local branch correctness
+  - direct merge keeps the release-control truth unchanged while removing the unnecessary PR approval layer
 
 ## Boundary
 

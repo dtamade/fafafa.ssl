@@ -1,6 +1,13 @@
-# Progress - v1.5.0 PR Approval
+# Progress - v1.5.0 Direct Merge
 
 ## 2026-05-15
+
+### Direct Merge Decision
+
+- user decision:
+  - skip the PR route
+  - close `#13`
+  - merge `release/v1.5.0-prep-2026-05-15` directly into local `master`
 
 ### Context Recovery
 
@@ -38,17 +45,34 @@
   - result: FAIL
   - error: `ACE_TOKEN` 失效或无效
 
+### PR Closure
+
+- `gh pr close 13 --comment "Superseded by the user-approved direct merge route. We are closing this PR and merging the release-prep branch locally into master instead."`
+  - result: PASS
+- `gh pr view 13 --json number,title,state,url,mergeStateStatus,reviewDecision,headRefName,baseRefName`
+  - result: PASS
+  - summary: state=`CLOSED`, base=`master`, head=`release/v1.5.0-prep-2026-05-15`
+
 ### In Progress
 
-- add PR approval plan doc
-- add PR approval packet doc
-- rewrite root working-memory to PR approval batch
-- rerun focused contracts
-- create the merge-approval PR after commit + push
+- add direct-merge plan doc
+- rewrite approval packet to historical closed state
+- rewrite root working-memory to direct merge batch
+- commit direct-merge metadata
+- merge to `master` and push
 
-### Pending
+### Direct Merge Focused Verification
 
-- final PR metadata sync
+- `bash tests/scripts/test_release_control_entrypoint_convergence_contract.sh`
+  - result: PASS
+- `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - result: PASS
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result: PASS
+- `git diff --check`
+  - result: PASS
+- `git status --short`
+  - result: only expected direct-merge doc and working-memory changes are present
 
 ### Focused Verification
 
