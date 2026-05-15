@@ -29,6 +29,17 @@
   - merge message: `merge: finalize v1.5.0 direct merge route`
   - 当前剩余动作只是不带新变更地 push 到 `origin/master` 并核对远端状态
 
+- `origin/master` 也已经完成 direct merge 收口：
+  - `git push origin master` 成功，把 `master` 从 `e849b04` 推到了 `340455d`
+  - 本地 `git status --short --branch` 已回到 `## master...origin/master`
+  - 这说明“不走 PR”的路线已经真正落到远端主线，而不只是本地 merge
+
+- push 到 `master` 之后，GitHub Actions 失败形态与 PR 时完全一致：
+  - `master CI` run `25893904523` 中 `Minimal Gate (Linux)`、`FreePascal TLS 1.3 Completeness`、`Code Quality (Light)` 都没有真正启动
+  - `master TLS13 Signer Gate` run `25893904525` 中 `tls13-signer-gate` 也没有真正启动
+  - 两条 run 的共同 annotation 仍然是账户付款/额度问题
+  - 所以 direct merge 证明了：交付路径变了，但外部 GitHub Actions blocker 没有变
+
 - release-prep 分支已经是稳定外显点，但目前远端还没有 PR：
   - `release/v1.5.0-prep-2026-05-15` 已经存在并跟踪 `origin/release/v1.5.0-prep-2026-05-15`
   - `gh pr list --head release/v1.5.0-prep-2026-05-15 --state all` 返回空数组

@@ -12,7 +12,7 @@
 - [completed] 跑 focused contract checks
 - [completed] 提交 direct-merge metadata
 - [completed] 已合并到本地 `master`
-- [in_progress] 推送 `origin/master` 并做最终远端状态核对
+- [completed] 推送 `origin/master` 并完成最终远端状态核对
 
 ## Current Blocker
 
@@ -23,9 +23,8 @@
 1. 新增 `docs/plans/2026-05-15-v1.5.0-direct-merge.md`。
 2. 更新 `docs/test_reports/PR_APPROVAL_PACKET_V1.5.0_2026-05-15.md` 与根 working-memory，记录 PR `#13` 已关闭并转入 direct merge。
 3. 跑 focused contract checks 与 `git diff --check`。
-1. push `origin/master`
-2. 核对 `master` 与 `origin/master` 同步状态
-3. 记录最终收口结论：PR 已关闭、direct merge 已完成、GitHub Actions billing 仍是外部风险
+1. 如需继续发布，下一批单独处理 `tag/release` 路线。
+2. 如需让 GitHub checks 变绿，先恢复 GitHub Actions 账户计费/额度。
 
 ## Decision Locks
 
@@ -38,6 +37,7 @@
 - Windows/WinSSL：继续保持 `deferred / static-only follow-up` 身份，不在本批伪装成已完成的运行时证据
 - 当前 PR 历史记录：`#13` 已关闭，作为 direct merge 前的历史审批尝试保留
 - 当前本地 `master`：已创建 merge commit `ddd475b`
+- 当前远端 `master`：已接收 direct merge 路线与收口文档
 - 当前 GitHub check 风险：即使 direct merge 到 `master`，push-triggered workflows 仍可能因账户计费/额度问题无法启动
 - PR body 更新路径：`gh pr edit` 因 classic Projects GraphQL 字段报错不可用，历史刷新需改走 `gh api repos/.../pulls/13 --method PATCH`
 
