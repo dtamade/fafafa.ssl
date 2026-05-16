@@ -83,25 +83,38 @@
   - checkout / upload-artifact / download-artifact contracts PASS
   - signer / completeness contracts PASS
   - `release.yml` 与 `release.yml.disabled` 继续保持同步
-- [in_progress] 准备第九次 commit/push，收口 release/tooling/cache Node24 hygiene 第四波
+- [completed] 第九次提交 `7485034` 已完成，release/tooling/cache Node24 hygiene 第四波已经推送到 `master`
+- [completed] 远端自动 `CI` run `25962132252` SUCCESS：
+  - `Code Quality (Light)` SUCCESS
+  - `Minimal Gate (Linux)` SUCCESS
+  - `FreePascal TLS 1.3 Completeness` SUCCESS
+  - 这证明第四波 hygiene 没有误伤自动主线，但不代表 dormant Windows workflows 已被远端实际执行
+- [completed] 重新审查 `gcarreno/setup-lazarus@v3.4.1` 后确认存在可行静态替代路径：
+  - `test-all-platforms.yml.disabled` 不依赖该 action 的独有功能
+  - 仓库内 `wave-b-b2-manual.yml` 已经有可复用的 Windows 手工安装 FPC/Lazarus 模式
+- [completed] 新增 workflow Lazarus setup Node24 contract，并先在当前模板上观测到红灯
+- [completed] `test-all-platforms.yml.disabled` 已移除 `gcarreno/setup-lazarus@v3`，改为手工安装 `freepascal` / `lazarus` 并显式校验 `fpc` / `lazbuild` / `lazarus`
+- [completed] 第十波 workflow hygiene 本地复核通过：
+  - `lazarus setup` / `cache` / `setup-python` / `release` contracts PASS
+  - 现有 checkout / upload-artifact / download-artifact / signer / completeness contracts继续 PASS
+- [in_progress] 准备第十次 commit/push，收口最后一条 Node20 action 替代
 
 ## Current Blocker
 
 - 当前没有新的本地语法/contract blocker。
-- 运行时主阻塞已经解除；剩余 workflow hygiene 里唯一仍未收掉的明确 Node20 项是 `gcarreno/setup-lazarus@v3.4.1`。
-- 这不是漏改：
-  - 截至 `2026-05-16`，上游最新 release 仍是 `v3.4.1`
-  - 其 `action.yml` 仍声明 `runs.using: 'node20'`
-  - 当前未观察到更高 major / Node24 线可供直接升级
-- 因此当前剩余 blocker 是“上游暂未提供 Node24 版本”，不是本仓库仍有可直接升级却未升级的 action。
+- 运行时主阻塞已经解除。
+- 当前没有已知仍停留在 Node20 默认线且可在仓库内继续直接清理的 GitHub Action 残留。
+- 当前剩余边界只在验证层：
+  - `release.yml`、`code-quality.yml.disabled`、`test-all-platforms.yml.disabled`、`winssl-tests.yml.disabled` 这几条被改到的路径没有在本轮远端自动 push run 中被实际执行
+  - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
 
 ## Current Queue
 
-1. 更新 root working-memory 与 workflow hygiene plan doc，写入第四波真相与 `setup-lazarus` 剩余状态。
-2. 给出第九批简短 review 结论后 commit。
+1. 更新 root working-memory 与 workflow hygiene plan doc，写入第五波真相并撤销 `setup-lazarus` 阻塞结论。
+2. 给出第十批简短 review 结论后 commit。
 3. `git push origin master`。
-4. 轻量复核 push 后的自动远端 run，确认自动主线未被第四波 hygiene 误伤。
-5. `gcarreno/setup-lazarus` 若未来发布 Node24 线，再补最后一波；否则它继续作为已知上游阻塞记录。
+4. 轻量复核 push 后的自动远端 run，确认自动主线未被第五波 hygiene 误伤。
+5. 若未来用户要把 dormant Windows workflows 变回活跃路线，再单独补 Windows runtime 证据；当前继续保持静态审查边界。
 
 ## Decision Locks
 
@@ -114,6 +127,6 @@
 
 - 根 working-memory 与新 plan doc 已同步当前真相
 - release / setup-python / cache contracts 与既有 workflow contracts 继续通过
-- 第九批 release/tooling/cache hygiene commit / push 完成
-- `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 `softprops/action-gh-release`、`actions/setup-python`、`actions/cache`
-- `gcarreno/setup-lazarus@v3.4.1` 的 Node20 状态被明确记录为上游剩余阻塞，而不是本仓库漏修
+- 第十批 Lazarus setup 替代 batch commit / push 完成
+- `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
+- `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用

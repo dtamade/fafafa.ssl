@@ -753,3 +753,56 @@
 
 - `git diff --check`
   - result: PASS
+
+### Tenth-Order Route Review
+
+- `sed -n '1,170p' .github/workflows/test-all-platforms.yml.disabled`
+  - result: PASS
+  - summary:
+    - the only remaining `gcarreno/setup-lazarus@v3` usage lived in the disabled Windows matrix workflow
+    - that step only prepared FPC/Lazarus and did not rely on unique upstream behavior
+
+- `sed -n '120,220p' .github/workflows/wave-b-b2-manual.yml`
+  - result: PASS
+  - summary:
+    - the repo already contained a Windows manual install pattern using `choco install -y freepascal lazarus`
+    - that pattern also handled PATH probing for FPC/Lazarus binaries
+
+- `gh api 'repos/gcarreno/setup-lazarus/contents/action.yml?ref=v3.4.1' --jq '.content' | tr -d '\n' | base64 -d | sed -n '1,120p'`
+  - result: PASS
+  - summary:
+    - latest observed `gcarreno/setup-lazarus` action metadata still used `runs.using: 'node20'`
+    - but the repo no longer needs to wait for an upstream Node24 line
+
+### Tenth-Order RED Contract
+
+- `bash tests/scripts/test_workflow_lazarus_setup_node24_contract.sh`
+  - result before tenth fix: FAIL
+  - summary:
+    - `.github/workflows/test-all-platforms.yml.disabled` still kept `gcarreno/setup-lazarus@v3`
+
+### Tenth-Order Repairs
+
+- add `tests/scripts/test_workflow_lazarus_setup_node24_contract.sh`
+  - purpose: ensure `.github/workflows` no longer keeps `gcarreno/setup-lazarus` and the dormant Windows matrix workflow installs FreePascal/Lazarus directly while verifying the required binaries
+
+- update `.github/workflows/test-all-platforms.yml.disabled`
+  - change: replace `gcarreno/setup-lazarus@v3` with a PowerShell install step based on the repo's existing Windows install pattern
+  - change: the workflow now installs `freepascal` and `lazarus` via `choco`, probes PATH candidates, and explicitly verifies `fpc`, `lazbuild`, and `lazarus`
+
+### Local Revalidation After Tenth Fix
+
+- `bash tests/scripts/test_workflow_lazarus_setup_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_cache_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_setup_python_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS

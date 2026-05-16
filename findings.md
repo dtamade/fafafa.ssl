@@ -202,8 +202,12 @@
   - `setup-python@v5` 与 `cache@v4` 虽在 dormant workflow，但都有明确官方 Node24 后继线
   - 所以它们不需要先等远端 annotation 点名，再做被动修复
 
-- `gcarreno/setup-lazarus@v3.4.1` 是当前唯一不能被我们直接收掉的剩余 Node20 项：
-  - 上游最新观察到的 release 仍在 `v3.4.1`
-  - 其 `action.yml` 仍声明 `runs.using: 'node20'`
-  - 当前未发现 `v4` 或其它官方 Node24 线
-  - 这应被记录为“上游阻塞”，而不是继续在本仓库里盲目改版本号
+- `gcarreno/setup-lazarus@v3.4.1` 最初看起来像上游阻塞，但继续静态审查后发现这是可以在仓库内彻底替掉的：
+  - 目标 workflow 只有 `test-all-platforms.yml.disabled` 命中它
+  - 该 step 只需要把 FPC/Lazarus 装进 PATH，并不依赖 action 的额外封装能力
+  - 仓库里现成的 `wave-b-b2-manual.yml` Windows 安装段已经证明可以用 `choco install -y freepascal lazarus` + PATH 探测来替代
+
+- 因此 `setup-lazarus` 这条剩余项的真正问题不是“上游没发 Node24 我们就没办法”，而是之前的路线图过早接受了“上游阻塞”这个结论：
+  - 这是一个典型的 workflow/process 审查问题
+  - 正确做法是先问：这个 third-party action 在本仓库里是否真的不可替代
+  - 本次答案是否定的，所以最终应优先本地去依赖化，而不是等待上游
