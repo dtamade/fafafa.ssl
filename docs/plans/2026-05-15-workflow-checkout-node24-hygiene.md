@@ -2,7 +2,7 @@
 
 ## Goal
 
-清理仓库中 GitHub Actions workflow / template 里残留的 Node20-era JavaScript actions，分五波收口：先修 `actions/checkout`，再修 `actions/upload-artifact`，第三波修 `actions/download-artifact`，第四波修 `softprops/action-gh-release`、`actions/setup-python`、`actions/cache`，第五波去掉不可替代性不足的 `gcarreno/setup-lazarus`，并保证现有活跃 workflow 与同步模板不回退。
+清理仓库中 GitHub Actions workflow / template 里残留的 Node20-era JavaScript actions，并在此基础上继续做供应链硬化：先修 `actions/checkout`，再修 `actions/upload-artifact`，第三波修 `actions/download-artifact`，第四波修 `softprops/action-gh-release`、`actions/setup-python`、`actions/cache`，第五波去掉不可替代性不足的 `gcarreno/setup-lazarus`，第六波把所有外部 action 从浮动 major tag 收紧到 full commit SHA，并保证现有活跃 workflow 与同步模板不回退。
 
 ## Architecture
 
@@ -15,6 +15,9 @@
   - `actions/setup-python@v5`
   - `actions/cache@v4`
   - `gcarreno/setup-lazarus@v3`
+- 在版本线清理完成后，又暴露出下一层供应链风险：
+  - 所有 action 仍是 `@v5` / `@v6` / `@v7` / `@v3` 这种浮动 major tag
+  - 这需要进一步 pin 到 full commit SHA
 - 活跃 workflow 绿了以后，最高价值的问题已不是运行时逻辑，而是 workflow runtime hygiene
 - 只修活跃 workflow 不够：
   - `release.yml.disabled`
@@ -47,6 +50,7 @@
 - `tests/scripts/test_workflow_setup_python_node24_contract.sh`
 - `tests/scripts/test_workflow_cache_node24_contract.sh`
 - `tests/scripts/test_workflow_lazarus_setup_node24_contract.sh`
+- `tests/scripts/test_workflow_action_sha_pinning_contract.sh`
 - `task_plan.md`
 - `findings.md`
 - `progress.md`
@@ -64,10 +68,12 @@
 9. 将 `softprops/action-gh-release`、`actions/setup-python`、`actions/cache` 升级到各自 Node24 默认线。
 10. 为 `gcarreno/setup-lazarus` 添加 focused contract，并验证它是否真的不可替代。
 11. 将 `test-all-platforms.yml.disabled` 中的 `setup-lazarus` 改成仓库内已有的 Windows 手工安装模式。
-12. 复跑关键 workflow contracts，确认 release / signer / completeness 没有回退。
-13. 检查同步模板仍保持一致。
-14. 更新 working-memory，review，commit 并 push。
-15. `download-artifact` 这波只做静态闭环；如未来要补 runtime 证据，单独 dispatch `wave-b-b2-manual.yml`。
+12. 收集当前 major tags 对应的真实 commit SHA，并新增 SHA pinning contract。
+13. 将所有 workflow / template 的外部 action 收紧到 full commit SHA，并保留版本注释。
+14. 复跑关键 workflow contracts，确认 release / signer / completeness 没有回退。
+15. 检查同步模板仍保持一致。
+16. 更新 working-memory，review，commit 并 push。
+17. `download-artifact` 这波只做静态闭环；如未来要补 runtime 证据，单独 dispatch `wave-b-b2-manual.yml`。
 
 ## Commands
 
@@ -78,6 +84,7 @@ bash tests/scripts/test_workflow_download_artifact_node24_contract.sh
 bash tests/scripts/test_workflow_setup_python_node24_contract.sh
 bash tests/scripts/test_workflow_cache_node24_contract.sh
 bash tests/scripts/test_workflow_lazarus_setup_node24_contract.sh
+bash tests/scripts/test_workflow_action_sha_pinning_contract.sh
 bash tests/scripts/test_release_workflow_v1_5_0_contract.sh
 bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh
 bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh
@@ -89,6 +96,6 @@ git diff --check
 ## Expected Outputs
 
 - `.github/workflows` 下不再残留 `actions/checkout@v3/v4`、`actions/upload-artifact@v3/v4/v5`、`actions/download-artifact@v3/v4/v5/v6`、`actions/setup-python@v1-v5`、`actions/cache@v1-v4`，不再在 release workflow 里保留 `softprops/action-gh-release@v2`，也不再保留 `gcarreno/setup-lazarus`
-- 活跃 workflow 和同步模板显式使用 `actions/checkout@v5`、`actions/upload-artifact@v6`、`actions/download-artifact@v7`、`softprops/action-gh-release@v3`、`actions/setup-python@v6`、`actions/cache@v5`
+- 活跃 workflow 和同步模板显式使用 SHA pinned 的 `actions/checkout`、`actions/upload-artifact`、`actions/download-artifact`、`softprops/action-gh-release`、`actions/setup-python`、`actions/cache`
 - release / signer / completeness 合同继续通过
 - 不再把无关自动 workflow 的绿灯误判成 `download-artifact` 的 runtime 证明

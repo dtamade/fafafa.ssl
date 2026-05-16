@@ -16,6 +16,8 @@ pass() {
 
 [[ -d "$WORKFLOWS_DIR" ]] || fail "missing workflows directory: .github/workflows"
 
+expected_sha="93cb6efe18208431cddfb8368fd83d5badbf9bfd"
+
 mapfile -t workflow_files < <(find "$WORKFLOWS_DIR" -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yml.disabled' \) | sort)
 [[ "${#workflow_files[@]}" -gt 0 ]] || fail "no workflow files found under .github/workflows"
 
@@ -27,7 +29,7 @@ for workflow in "${workflow_files[@]}"; do
 done
 pass "all workflow files avoid actions/checkout@v3 and @v4"
 
-required_v5_workflows=(
+required_checkout_workflows=(
   ".github/workflows/ci.yml"
   ".github/workflows/release.yml"
   ".github/workflows/release.yml.disabled"
@@ -36,13 +38,13 @@ required_v5_workflows=(
   ".github/workflows/wave-b-b2-manual.yml.disabled"
 )
 
-for rel in "${required_v5_workflows[@]}"; do
+for rel in "${required_checkout_workflows[@]}"; do
   abs="$ROOT_DIR/$rel"
   [[ -f "$abs" ]] || fail "missing expected workflow: $rel"
-  if rg -n 'uses:\s*actions/checkout@v5\b' "$abs" >/dev/null; then
-    pass "$rel uses actions/checkout@v5"
+  if rg -n "uses:\\s*actions/checkout@${expected_sha}\\b" "$abs" >/dev/null; then
+    pass "$rel uses the pinned actions/checkout commit"
   else
-    fail "$rel must use actions/checkout@v5"
+    fail "$rel must use actions/checkout@${expected_sha}"
   fi
 done
 

@@ -16,6 +16,8 @@ pass() {
 
 [[ -d "$WORKFLOWS_DIR" ]] || fail "missing workflows directory: .github/workflows"
 
+expected_sha="a309ff8b426b58ec0e2a45f0f869d46889d02405"
+
 mapfile -t workflow_files < <(find "$WORKFLOWS_DIR" -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yml.disabled' \) | sort)
 [[ "${#workflow_files[@]}" -gt 0 ]] || fail "no workflow files found under .github/workflows"
 
@@ -27,17 +29,17 @@ for workflow in "${workflow_files[@]}"; do
 done
 pass "all workflow files avoid actions/setup-python@v1 through @v5"
 
-required_v6_workflows=(
+required_setup_python_workflows=(
   ".github/workflows/code-quality.yml.disabled"
 )
 
-for rel in "${required_v6_workflows[@]}"; do
+for rel in "${required_setup_python_workflows[@]}"; do
   abs="$ROOT_DIR/$rel"
   [[ -f "$abs" ]] || fail "missing expected workflow: $rel"
-  if rg -n 'uses:\s*actions/setup-python@v6\b' "$abs" >/dev/null; then
-    pass "$rel uses actions/setup-python@v6"
+  if rg -n "uses:\\s*actions/setup-python@${expected_sha}\\b" "$abs" >/dev/null; then
+    pass "$rel uses the pinned actions/setup-python commit"
   else
-    fail "$rel must use actions/setup-python@v6"
+    fail "$rel must use actions/setup-python@${expected_sha}"
   fi
 done
 

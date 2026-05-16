@@ -211,3 +211,18 @@
   - 这是一个典型的 workflow/process 审查问题
   - 正确做法是先问：这个 third-party action 在本仓库里是否真的不可替代
   - 本次答案是否定的，所以最终应优先本地去依赖化，而不是等待上游
+
+- 清掉 Node20 action 之后，workflow 供应链风险并没有自动归零：
+  - major tag 仍然是浮动引用
+  - 上游仓库只要移动 `v5` / `v6` / `v7` / `v3` 这些 tag，本仓库的执行语义就会变
+  - 这类漂移不会在本地 diff 或 code review 里自然出现，因此它是下一层更隐蔽、但更像 workflow/process 问题的风险
+
+- 对当前仓库来说，把外部 action pin 到 full commit SHA 是低风险高收益的下一步：
+  - action 家族已经收敛，数量有限
+  - 当前 `.github/workflows` 只依赖 6 个外部 action 家族
+  - 因此完全可以先固定在当前已经验证过的 tag 对应 commit，再用注释保留可读版本号
+
+- 这波取证时选择的是“当前 major tag 真实指向的 commit”，而不是手工抄最新 release tag：
+  - 这样能保证 pin 后语义尽量贴近当前仓库已经在使用的行为
+  - 同时把未来不受控的 tag 漂移切断
+  - 这比“顺手升级到一个更高 release 再 pin”更稳

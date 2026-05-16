@@ -16,6 +16,8 @@ pass() {
 
 [[ -d "$WORKFLOWS_DIR" ]] || fail "missing workflows directory: .github/workflows"
 
+expected_sha="27d5ce7f107fe9357f9df03efb73ab90386fccae"
+
 mapfile -t workflow_files < <(find "$WORKFLOWS_DIR" -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yml.disabled' \) | sort)
 [[ "${#workflow_files[@]}" -gt 0 ]] || fail "no workflow files found under .github/workflows"
 
@@ -27,18 +29,18 @@ for workflow in "${workflow_files[@]}"; do
 done
 pass "all workflow files avoid actions/cache@v1 through @v4"
 
-required_v5_workflows=(
+required_cache_workflows=(
   ".github/workflows/test-all-platforms.yml.disabled"
   ".github/workflows/winssl-tests.yml.disabled"
 )
 
-for rel in "${required_v5_workflows[@]}"; do
+for rel in "${required_cache_workflows[@]}"; do
   abs="$ROOT_DIR/$rel"
   [[ -f "$abs" ]] || fail "missing expected workflow: $rel"
-  if rg -n 'uses:\s*actions/cache@v5\b' "$abs" >/dev/null; then
-    pass "$rel uses actions/cache@v5"
+  if rg -n "uses:\\s*actions/cache@${expected_sha}\\b" "$abs" >/dev/null; then
+    pass "$rel uses the pinned actions/cache commit"
   else
-    fail "$rel must use actions/cache@v5"
+    fail "$rel must use actions/cache@${expected_sha}"
   fi
 done
 

@@ -16,6 +16,8 @@ pass() {
 
 [[ -d "$WORKFLOWS_DIR" ]] || fail "missing workflows directory: .github/workflows"
 
+expected_sha="37930b1c2abaa49bbe596cd826c3c89aef350131"
+
 mapfile -t workflow_files < <(find "$WORKFLOWS_DIR" -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yml.disabled' \) | sort)
 [[ "${#workflow_files[@]}" -gt 0 ]] || fail "no workflow files found under .github/workflows"
 
@@ -27,7 +29,7 @@ for workflow in "${workflow_files[@]}"; do
 done
 pass "all workflow files avoid actions/download-artifact@v3 through @v6"
 
-required_v7_workflows=(
+required_download_workflows=(
   ".github/workflows/ci-matrix-draft.yml.disabled"
   ".github/workflows/performance.yml.disabled"
   ".github/workflows/test-all-platforms.yml.disabled"
@@ -35,13 +37,13 @@ required_v7_workflows=(
   ".github/workflows/wave-b-b2-manual.yml.disabled"
 )
 
-for rel in "${required_v7_workflows[@]}"; do
+for rel in "${required_download_workflows[@]}"; do
   abs="$ROOT_DIR/$rel"
   [[ -f "$abs" ]] || fail "missing expected workflow: $rel"
-  if rg -n 'uses:\s*actions/download-artifact@v7\b' "$abs" >/dev/null; then
-    pass "$rel uses actions/download-artifact@v7"
+  if rg -n "uses:\\s*actions/download-artifact@${expected_sha}\\b" "$abs" >/dev/null; then
+    pass "$rel uses the pinned actions/download-artifact commit"
   else
-    fail "$rel must use actions/download-artifact@v7"
+    fail "$rel must use actions/download-artifact@${expected_sha}"
   fi
 done
 

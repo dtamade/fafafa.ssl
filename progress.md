@@ -824,3 +824,100 @@
     - `Minimal Gate (Linux)` SUCCESS
     - `FreePascal TLS 1.3 Completeness` SUCCESS
     - the final static workflow replacement batch did not regress the auto-triggered Linux CI path
+
+### Eleventh-Order Route Review
+
+- `gh api repos/actions/checkout/commits/v5 --jq '[.sha,.commit.committer.date,.commit.message] | @tsv'`
+  - result: PASS
+  - summary: current `actions/checkout@v5` resolves to `93cb6efe18208431cddfb8368fd83d5badbf9bfd`
+
+- `gh api repos/actions/upload-artifact/commits/v6 --jq '[.sha,.commit.committer.date,.commit.message] | @tsv'`
+  - result: PASS
+  - summary: current `actions/upload-artifact@v6` resolves to `b7c566a772e6b6bfb58ed0dc250532a479d7789f`
+
+- `gh api repos/actions/download-artifact/commits/v7 --jq '[.sha,.commit.committer.date,.commit.message] | @tsv'`
+  - result: PASS
+  - summary: current `actions/download-artifact@v7` resolves to `37930b1c2abaa49bbe596cd826c3c89aef350131`
+
+- `gh api repos/softprops/action-gh-release/commits/v3 --jq '[.sha,.commit.committer.date,.commit.message] | @tsv'`
+  - result: PASS
+  - summary: current `softprops/action-gh-release@v3` resolves to `b4309332981a82ec1c5618f44dd2e27cc8bfbfda`
+
+- `gh api repos/actions/setup-python/commits/v6 --jq '[.sha,.commit.committer.date,.commit.message] | @tsv'`
+  - result: PASS
+  - summary: current `actions/setup-python@v6` resolves to `a309ff8b426b58ec0e2a45f0f869d46889d02405`
+
+- `gh api repos/actions/cache/commits/v5 --jq '[.sha,.commit.committer.date,.commit.message] | @tsv'`
+  - result: PASS
+  - summary: current `actions/cache@v5` resolves to `27d5ce7f107fe9357f9df03efb73ab90386fccae`
+
+- `rg -o "uses:\\s*[^ ]+@[A-Za-z0-9._-]+" -N .github/workflows | sort -u`
+  - result: PASS
+  - summary:
+    - confirmed the repo currently depends on only 6 external action families
+    - every one was still using a floating major tag before this batch
+
+### Eleventh-Order RED Contract
+
+- `bash tests/scripts/test_workflow_action_sha_pinning_contract.sh`
+  - result before eleventh fix: FAIL
+  - summary:
+    - workflow uses lines were not pinned to full commit SHAs
+    - first reproduced failure landed on `.github/workflows/phase_c_tests.yml.disabled:14`
+
+### Eleventh-Order Repairs
+
+- add `tests/scripts/test_workflow_action_sha_pinning_contract.sh`
+  - purpose: ensure every external workflow `uses:` line is pinned to a 40-char commit SHA, avoids floating major tags/branch refs, and matches the audited action family SHAs
+
+- bulk update `.github/workflows/*.yml` and `.github/workflows/*.yml.disabled`
+  - change: replace floating major tags with full commit SHAs for:
+    - `actions/checkout`
+    - `actions/upload-artifact`
+    - `actions/download-artifact`
+    - `softprops/action-gh-release`
+    - `actions/setup-python`
+    - `actions/cache`
+  - note: kept inline version comments like `# v5` / `# v6` / `# v7` / `# v3` for readability
+
+- update workflow family contracts
+  - change: checkout/upload/download/setup-python/cache/release contracts now assert the pinned SHAs instead of the old floating major tags
+
+### Local Revalidation After Eleventh Fix
+
+- `bash tests/scripts/test_workflow_action_sha_pinning_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_checkout_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_upload_artifact_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_download_artifact_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_setup_python_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_cache_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_lazarus_setup_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+  - result: PASS
+
+- `cmp -s .github/workflows/release.yml .github/workflows/release.yml.disabled`
+  - result: PASS
+  - summary: release workflow templates remained synchronized after SHA pinning
+
+- `git diff --check`
+  - result: PASS

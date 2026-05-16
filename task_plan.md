@@ -103,21 +103,43 @@
   - `Minimal Gate (Linux)` SUCCESS
   - `FreePascal TLS 1.3 Completeness` SUCCESS
   - 这证明最后一批静态 workflow 替代没有误伤自动主线
+- [completed] 继续审查后确认当前 workflow 还存在一层供应链风险：
+  - 虽然 action 家族都已经收敛到 Node24 / 非 Node20 版本线
+  - 但所有 workflow 仍使用浮动 major tag（如 `@v5` / `@v6` / `@v7` / `@v3`）
+  - 这意味着上游 tag 漂移仍可在不改本仓库代码的前提下改变执行语义
+- [completed] 通过 GitHub API 取证了当前 major tags 对应的真实 commit SHA：
+  - `actions/checkout@v5` -> `93cb6efe18208431cddfb8368fd83d5badbf9bfd`
+  - `actions/upload-artifact@v6` -> `b7c566a772e6b6bfb58ed0dc250532a479d7789f`
+  - `actions/download-artifact@v7` -> `37930b1c2abaa49bbe596cd826c3c89aef350131`
+  - `softprops/action-gh-release@v3` -> `b4309332981a82ec1c5618f44dd2e27cc8bfbfda`
+  - `actions/setup-python@v6` -> `a309ff8b426b58ec0e2a45f0f869d46889d02405`
+  - `actions/cache@v5` -> `27d5ce7f107fe9357f9df03efb73ab90386fccae`
+- [completed] 新增 workflow action SHA pinning contract，并先在当前模板上观测到红灯
+- [completed] 仓库内全部 workflow / workflow template 的外部 action 已改为 full commit SHA pinning，并保留版本注释
+- [completed] 第十一波 workflow hygiene 本地复核通过：
+  - 新增 `tests/scripts/test_workflow_action_sha_pinning_contract.sh` PASS
+  - checkout / upload-artifact / download-artifact / setup-python / cache / lazarus / release contracts PASS
+  - signer / completeness contracts继续 PASS
+  - `release.yml` 与 `release.yml.disabled` 继续保持同步
+- [in_progress] 准备第十一次 commit/push，收口 workflow action SHA pinning batch
 
 ## Current Blocker
 
 - 当前没有新的本地语法/contract blocker。
 - 运行时主阻塞已经解除。
 - 当前没有已知仍停留在 Node20 默认线且可在仓库内继续直接清理的 GitHub Action 残留。
+- 当前也没有未 pin 到 commit SHA 的外部 GitHub Action 残留。
 - 当前剩余边界只在验证层：
   - `release.yml`、`code-quality.yml.disabled`、`test-all-platforms.yml.disabled`、`winssl-tests.yml.disabled` 这几条被改到的路径没有在本轮远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
 
 ## Current Queue
 
-1. 更新 root working-memory 与 workflow hygiene plan doc，写入第五波真相并撤销 `setup-lazarus` 阻塞结论。
-2. 若未来用户要把 dormant Windows workflows 变回活跃路线，再单独补 Windows runtime 证据；当前继续保持静态审查边界。
-3. 若后续再出现新的 GitHub Actions runtime annotation，再从远端真实注解反推是否还有新的 action/version hygiene 需要跟进。
+1. 更新 root working-memory 与 workflow hygiene plan doc，写入第十一波 SHA pinning 真相。
+2. 给出第十一次批次的简短 review 结论后 commit。
+3. `git push origin master`。
+4. 轻量复核 push 后的自动远端 run，确认 SHA pinning 没有误伤自动主线。
+5. 若未来用户要把 dormant Windows workflows 变回活跃路线，再单独补 Windows runtime 证据；当前继续保持静态审查边界。
 
 ## Decision Locks
 
@@ -130,6 +152,7 @@
 
 - 根 working-memory 与新 plan doc 已同步当前真相
 - release / setup-python / cache contracts 与既有 workflow contracts 继续通过
-- 第十批 Lazarus setup 替代 batch commit / push 完成
+- 第十一批 workflow action SHA pinning batch commit / push 完成
 - `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
 - `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
+- `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用

@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: 🔧 Setup FPC (Linux)
         if: matrix.os == 'ubuntu-latest'
@@ -113,7 +113,7 @@ jobs:
           $report | Out-File -FilePath "Performance-Report-${{ matrix.os }}.md" -Encoding UTF8
 
       - name: 📤 Upload benchmark results
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: Performance-Report-${{ matrix.os }}
           path: Performance-Report-*.md
@@ -130,7 +130,7 @@ jobs:
 
     steps:
       - name: 📥 Download all reports
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           path: benchmark-reports/
 

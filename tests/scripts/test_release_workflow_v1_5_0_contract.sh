@@ -4,6 +4,8 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$repo_root"
 
+release_action_sha="b4309332981a82ec1c5618f44dd2e27cc8bfbfda"
+
 pass() {
   printf '[PASS] %s\n' "$1"
 }
@@ -123,8 +125,8 @@ for workflow in ".github/workflows/release.yml" ".github/workflows/release.yml.d
     "$workflow runs the Phase 2 dry-run gate"
   require_match "$workflow" 'body_path: RELEASE_NOTES_V1\.5\.0\.md' \
     "$workflow uses the checked-in v1.5.0 release notes"
-  require_match "$workflow" 'uses:\s*softprops/action-gh-release@v3\b' \
-    "$workflow uses softprops/action-gh-release@v3 for the Node24 release runtime"
+  require_match "$workflow" "uses:\\s*softprops/action-gh-release@${release_action_sha}\\b" \
+    "$workflow uses the pinned softprops/action-gh-release commit for the Node24 release runtime"
   require_match "$workflow" 'tar -czf "\$\{ARCHIVE_NAME\}\.tar\.gz"' \
     "$workflow creates a source archive"
   require_literal "$workflow" "--exclude='./bin'" \

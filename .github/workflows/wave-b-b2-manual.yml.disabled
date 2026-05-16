@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Install dependencies
         shell: bash
@@ -60,7 +60,7 @@ jobs:
 
       - name: Upload Linux evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: wave-b-linux-${{ needs.setup.outputs.run_id }}
           path: |
@@ -76,7 +76,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Install dependencies
         shell: bash
@@ -108,7 +108,7 @@ jobs:
 
       - name: Upload macOS evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: wave-b-macos-${{ needs.setup.outputs.run_id }}
           path: |
@@ -124,7 +124,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Install dependencies
         shell: powershell
@@ -227,7 +227,7 @@ jobs:
 
       - name: Upload Windows evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: wave-b-windows-${{ needs.setup.outputs.run_id }}
           path: |
@@ -245,24 +245,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Download Linux evidence
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: wave-b-linux-${{ needs.setup.outputs.run_id }}
           path: artifacts/linux
 
       - name: Download macOS evidence
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: wave-b-macos-${{ needs.setup.outputs.run_id }}
           path: artifacts/macos
 
       - name: Download Windows evidence
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: wave-b-windows-${{ needs.setup.outputs.run_id }}
           path: artifacts/windows
@@ -294,7 +294,7 @@ jobs:
 
       - name: Upload final summary
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: wave-b-summary-${{ needs.setup.outputs.run_id }}
           path: |
