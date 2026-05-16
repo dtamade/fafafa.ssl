@@ -260,3 +260,23 @@
 - permissions 这一层收口后，下一条更细的 workflow 安全面已经收缩到 checkout credential persistence：
   - 很多 job 只是拉代码和跑脚本，并不需要在后续 git 命令里保留认证信息
   - 因此 `persist-credentials: false` 是下一条值得继续静态审查的 least-privilege 方向
+
+- checkout credential persistence 这条线已经被远端自动主线实证收口：
+  - 推送 `6421420` 后，`TLS13 Signer Gate` run `25969736945` SUCCESS，`CI` run `25969736933` SUCCESS
+  - `Upload TLS13 signer artifacts`、`Upload evidence`、`Upload FreePascal TLS 1.3 evidence`、`Append step summary` 全部继续通过
+  - 这说明对当前仓库的活跃 workflow 来说，显式 `persist-credentials: false` 不会打坏 checkout 之后的真实主线
+
+- 继续静态钻 dormant workflow 时，又抓到一个和默认 checkout 行为直接相关的真 bug：
+  - `pr-checks.yml.disabled` 的 `pr-info`、`test-coverage-check`、`code-stats` 都执行 `git diff HEAD~1 HEAD`
+  - 但 `actions/checkout` 默认只抓一个提交；如果恢复启用，这些 job 会因为缺父提交而失败
+  - 这不是风格问题，而是 dormant workflow 被重新启用后可静态确定复现的 correctness 缺口
+
+- 这次修法故意没有把整个 `pr-checks` 模板一刀切成 `fetch-depth: 2`：
+  - 只有真正依赖 `HEAD~1` 的 3 个 job 被加深历史
+  - `quick-build` 与 `pr-report` 保持最小 checkout 深度
+  - 这种“按用途收最小历史”比统一 `fetch-depth: 0` 更符合我们当前的 least-privilege / least-data 方向
+
+- 当前下一条最可能继续挖出 dormant bug 的面，已经不是版本或权限，而是事件上下文假设：
+  - `pr-checks.yml.disabled` 同时支持 `pull_request` 和 `workflow_dispatch`
+  - 但多处 shell 仍直接读取 `github.event.pull_request.*` / `github.event.number`
+  - 这类字段在手动 dispatch 下并不天然存在，值得继续静态收敛

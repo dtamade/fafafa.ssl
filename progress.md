@@ -265,6 +265,167 @@
     - `FreePascal TLS 1.3 Completeness` SUCCESS
     - `Upload evidence`, `Upload FreePascal TLS 1.3 evidence`, and `Append step summary` remained green under `contents: read`
 
+### Thirteenth-Order Route Review
+
+- `rg -n "uses:\\s*actions/checkout@|persist-credentials|fetch-depth|submodules|git |gh |GITHUB_TOKEN|github-token|git push|git fetch|git tag|git describe|git rev-parse|git archive|git ls-remote" .github/workflows -g '*.yml' -g '*.yml.disabled'`
+  - result: PASS
+  - summary:
+    - checkout persisted credentials were still implicit everywhere
+    - no active workflow step required reusing checkout-provisioned GitHub credentials after the initial clone
+
+- `bash tests/scripts/test_workflow_checkout_credentials_contract.sh`
+  - result before thirteenth fix: FAIL
+  - summary:
+    - first reproduced failure landed on `.github/workflows/basic-checks.yml.disabled`
+    - the workflow tree lacked an explicit guardrail for `persist-credentials: false`
+
+### Thirteenth-Order Repairs
+
+- add `tests/scripts/test_workflow_checkout_credentials_contract.sh`
+  - purpose: ensure every checkout step explicitly sets `persist-credentials: false`
+
+- update workflow checkout steps
+  - change: all active and dormant checkout steps now set `persist-credentials: false`
+  - note: existing `fetch-depth: 0` cases in `release.yml`, `release.yml.disabled`, and `test-all-platforms.yml.disabled` were preserved
+
+### Local Revalidation After Thirteenth Fix
+
+- `bash tests/scripts/test_workflow_checkout_credentials_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_permissions_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_action_sha_pinning_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_checkout_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_upload_artifact_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_download_artifact_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_setup_python_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_cache_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_lazarus_setup_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+  - result: PASS
+
+- `cmp -s .github/workflows/release.yml .github/workflows/release.yml.disabled`
+  - result: PASS
+  - summary: release workflow templates remained synchronized after checkout credential hardening
+
+- `cmp -s .github/workflows/wave-b-b2-manual.yml .github/workflows/wave-b-b2-manual.yml.disabled`
+  - result: PASS
+  - summary: manual gate workflow template remained synchronized after checkout credential hardening
+
+- `git diff --check`
+  - result: PASS
+
+### Thirteenth Push Success Revalidation
+
+- `git commit -m "chore: disable checkout credential persistence"`
+  - result: PASS
+  - commit: `6421420`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `bc4bf24..6421420`
+
+- `gh run list --branch master --limit 8 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest runs for head `6421420` were `CI` run `25969736933` and `TLS13 Signer Gate` run `25969736945`
+
+- `gh run watch 25969736945 --exit-status`
+  - result: PASS
+  - summary:
+    - `tls13-signer-gate` job SUCCESS
+    - checkout no longer persisted credentials, and bundle/artifact/summary steps remained green
+
+- `gh run watch 25969736933 --exit-status`
+  - result: PASS
+  - summary:
+    - `Code Quality (Light)` SUCCESS
+    - `Minimal Gate (Linux)` SUCCESS
+    - `FreePascal TLS 1.3 Completeness` SUCCESS
+    - checkout no longer persisted credentials, and active CI artifact/summary steps remained green
+
+### Fourteenth-Order Route Review
+
+- `rg -n "fetch-depth:\\s*0|fetch-depth|git diff|git rev-parse|git describe|git log|git tag|git archive|git clone" .github/workflows -g '*.yml' -g '*.yml.disabled'`
+  - result: PASS
+  - summary:
+    - `pr-checks.yml.disabled` contained multiple `git diff HEAD~1 HEAD` calls
+    - those jobs still relied on checkout defaults instead of explicitly fetching enough history
+
+- `bash tests/scripts/test_workflow_pr_checks_history_contract.sh`
+  - result before fourteenth fix: FAIL
+  - summary:
+    - first reproduced failure landed on `pr-info`
+    - the dormant PR workflow did not guarantee parent-commit availability for `HEAD~1` diff checks
+
+### Fourteenth-Order Repairs
+
+- add `tests/scripts/test_workflow_pr_checks_history_contract.sh`
+  - purpose: ensure only the `pr-info`, `test-coverage-check`, and `code-stats` jobs in `pr-checks.yml.disabled` fetch two commits for `HEAD~1` diff checks, while unrelated jobs keep minimal history
+
+- update `.github/workflows/pr-checks.yml.disabled`
+  - change: add `fetch-depth: 2` to the `pr-info`, `test-coverage-check`, and `code-stats` checkout steps
+  - note: `quick-build` and `pr-report` intentionally remain without extra history
+
+### Local Revalidation After Fourteenth Fix
+
+- `bash tests/scripts/test_workflow_pr_checks_history_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_checkout_credentials_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_permissions_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+### Fourteenth Push Success Revalidation
+
+- `git commit -m "chore: fix pr checks checkout history depth"`
+  - result: PASS
+  - commit: `3d4c322`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `6421420..3d4c322`
+
+- `gh run list --branch master --limit 6 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest run for head `3d4c322` was `CI` run `25969897201`
+
+- `gh run watch 25969897201 --exit-status`
+  - result: PASS
+  - summary:
+    - `Code Quality (Light)` SUCCESS
+    - `Minimal Gate (Linux)` SUCCESS
+    - `FreePascal TLS 1.3 Completeness` SUCCESS
+    - this batch only touched dormant `pr-checks.yml.disabled`, and the auto-triggered active CI path remained green
+
 ### Fourth-Order Remote Revalidation
 
 - `gh run watch 25902644127 --exit-status`

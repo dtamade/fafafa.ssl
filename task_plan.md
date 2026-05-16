@@ -143,6 +143,33 @@
   - `CI` run `25967632737` SUCCESS
   - `Code Quality (Light)` / `Minimal Gate (Linux)` / `FreePascal TLS 1.3 Completeness` 全部 SUCCESS
   - `Upload evidence` / `Upload TLS13 signer artifacts` / `Append step summary` 在只读 token 下继续通过
+- [completed] 审查 checkout credential surface 后确认新的 least-privilege 收紧点：
+  - 所有 checkout step 之前都在使用 `persist-credentials` 默认值
+  - 但当前 workflow 树里没有需要在 checkout 之后复用 GitHub 凭据的 `git push` / 认证 fetch 主线
+- [completed] 新增 workflow checkout credential contract，并先在当前模板上观测到红灯
+- [completed] 仓库内全部 checkout step 已显式收紧为 `persist-credentials: false`
+- [completed] 第十三波 checkout credential hardening 本地复核通过：
+  - 新增 `tests/scripts/test_workflow_checkout_credentials_contract.sh` PASS
+  - workflow permissions / SHA pinning / checkout / upload-artifact / download-artifact / setup-python / cache / lazarus / release contracts继续 PASS
+  - signer / completeness contracts继续 PASS
+- [completed] 第十三次提交 `6421420` 已完成，checkout credential hardening batch 已推送到 `master`
+- [completed] 第十三次 push 后的远端复核通过：
+  - `TLS13 Signer Gate` run `25969736945` SUCCESS
+  - `CI` run `25969736933` SUCCESS
+  - `Code Quality (Light)` / `Minimal Gate (Linux)` / `FreePascal TLS 1.3 Completeness` 全部 SUCCESS
+  - 这证明显式关闭 checkout credential persistence 没有误伤当前自动主线
+- [completed] 继续静态审查 dormant workflow 后发现 `pr-checks.yml.disabled` 的真实历史深度缺口：
+  - `pr-info` / `test-coverage-check` / `code-stats` 都直接执行 `git diff HEAD~1 HEAD`
+  - 但对应 checkout 没有保证拿到父提交，恢复启用后会出现静态确定性的假失败
+- [completed] 新增 pr-checks history contract，并先在当前模板上观测到红灯
+- [completed] `pr-checks.yml.disabled` 中真正依赖 `HEAD~1` 的 3 个 job 已显式收紧为 `fetch-depth: 2`
+- [completed] 第十四波 dormant PR workflow 历史深度修复本地复核通过：
+  - 新增 `tests/scripts/test_workflow_pr_checks_history_contract.sh` PASS
+  - `quick-build` / `pr-report` 没有被顺手放大 checkout 历史
+- [completed] 第十四次提交 `3d4c322` 已完成，pr-checks history depth batch 已推送到 `master`
+- [completed] 第十四次 push 后的远端复核通过：
+  - `CI` run `25969897201` SUCCESS
+  - 这次改动命中的是 dormant workflow，自动主线继续全绿；`pr-checks.yml.disabled` 仍保持 `static-only`
 
 ## Current Blocker
 
@@ -151,14 +178,15 @@
 - 当前没有已知仍停留在 Node20 默认线且可在仓库内继续直接清理的 GitHub Action 残留。
 - 当前也没有未 pin 到 commit SHA 的外部 GitHub Action 残留。
 - 当前也没有未显式声明 `permissions:` 的 workflow 残留。
+- 当前也没有未显式关闭 credential persistence 的 checkout step 残留。
 - 当前剩余边界只在验证层：
-  - `release.yml`、`code-quality.yml.disabled`、`test-all-platforms.yml.disabled`、`winssl-tests.yml.disabled` 这几条被改到的路径没有在本轮远端自动 push run 中被实际执行
+  - `release.yml`、`code-quality.yml.disabled`、`test-all-platforms.yml.disabled`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled` 这些被改到的路径没有在本轮远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
 
 ## Current Queue
 
-1. 继续静态审查 `actions/checkout` 的 credential surface，优先确认哪些 jobs 可以显式加 `persist-credentials: false`。
-2. 继续对 manual / dormant workflows 做 least-privilege 收敛，优先看是否还有过宽 `fetch-depth` 或可去掉的 token 依赖。
+1. 继续静态审查混合 `workflow_dispatch` 与 `github.event.pull_request.*` / `github.event.number` 的模板，优先找事件上下文不匹配的 dormant bug。
+2. 继续对 manual / dormant workflows 做 least-privilege 与 correctness 收敛，优先看是否还有过宽 `fetch-depth` 或隐式事件假设。
 3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把它们误报成当前 runtime blocker。
 
 ## Decision Locks
@@ -174,6 +202,8 @@
 - release / setup-python / cache contracts 与既有 workflow contracts 继续通过
 - 第十一批 workflow action SHA pinning batch commit / push 完成，且自动远端主线复核通过
 - 第十二批 workflow token permissions hardening batch commit / push 完成，且自动远端主线复核通过
+- 第十三批 checkout credential hardening batch commit / push 完成，且自动远端主线复核通过
+- 第十四批 dormant PR workflow history-depth batch commit / push 完成，且自动远端主线复核通过
 - `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
 - `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
 - `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用
