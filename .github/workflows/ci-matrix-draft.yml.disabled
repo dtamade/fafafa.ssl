@@ -19,6 +19,9 @@ on:
         required: false
         default: 'false'
 
+permissions:
+  contents: read
+
 env:
   FPC_VERSION: '3.2.2'
 

@@ -17,6 +17,9 @@ on:
           - winssl
           - performance
 
+permissions:
+  contents: read
+
 jobs:
   winssl-integration:
     name: 🪟 WinSSL Integration Tests

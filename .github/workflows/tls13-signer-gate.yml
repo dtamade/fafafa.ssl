@@ -54,6 +54,9 @@ on:
         required: false
         default: '180'
 
+permissions:
+  contents: read
+
 concurrency:
   group: tls13-signer-gate-${{ github.ref }}
   cancel-in-progress: true

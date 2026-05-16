@@ -18,6 +18,9 @@ on:
           - ssl
           - memory
 
+permissions:
+  contents: read
+
 jobs:
   benchmark:
     name: ⚡ Performance Tests

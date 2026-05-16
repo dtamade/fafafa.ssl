@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ master, main ]
 
+permissions:
+  contents: read
+
 env:
   FPC_VERSION: '3.2.2'
 

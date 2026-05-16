@@ -7,6 +7,9 @@ on:
     branches: [ master, main, develop ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   FPC_VERSION: "3.2.2"
 
