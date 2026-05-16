@@ -242,3 +242,21 @@
   - 代码、push、远端 CI 可能已经全部完成
   - 但 `task_plan.md` / `progress.md` 如果不及时同步，下一次 continuation 仍会从过期 queue 起跑
   - 因此 planning files 不能只记录“准备做什么”，也必须记录“远端最终如何收口”
+
+- 在 action 版本线、SHA pinning 都收口后，workflow 剩余最高价值的安全面确实前移到了 `GITHUB_TOKEN` 权限：
+  - 静态扫描显示，除了 `release.yml` / `release.yml.disabled` 的 `contents: write` 之外，其余 workflow / template 此前都没有显式 `permissions:`
+  - 这意味着真实权限边界取决于仓库默认设置，而不是受仓库代码审查控制
+
+- 对这个仓库当前非 release workflow 来说，显式 `permissions: contents: read` 已经足够覆盖活跃链路：
+  - 当前步骤面主要是 `checkout`、本地脚本执行、artifact 上传下载、cache 和 step summary
+  - 推送 `a24b983` 后，`TLS13 Signer Gate` run `25967632738` 与 `CI` run `25967632737` 全绿
+  - 其中 `Upload evidence`、`Upload TLS13 signer artifacts`、`Append step summary` 也继续成功
+  - 因此可以合理确认：把默认 token 收紧到只读没有误伤当前自动主线
+
+- 新增 `tests/scripts/test_workflow_permissions_contract.sh` 的价值不只是抓这一次缺口：
+  - 它把“workflow 必须显式声明权限”变成了持续守护面
+  - 以后即使仓库默认 `GITHUB_TOKEN` 设置被人改宽，只要 YAML 不跟着扩权，当前主线就不会静默漂移
+
+- permissions 这一层收口后，下一条更细的 workflow 安全面已经收缩到 checkout credential persistence：
+  - 很多 job 只是拉代码和跑脚本，并不需要在后续 git 命令里保留认证信息
+  - 因此 `persist-credentials: false` 是下一条值得继续静态审查的 least-privilege 方向

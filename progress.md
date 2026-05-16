@@ -148,6 +148,123 @@
 - update `docs/plans/2026-05-15-workflow-checkout-node24-hygiene.md`
   - change: add closeout note that the SHA pinning wave shipped and the auto-triggered Linux CI path stayed green
 
+### Twelfth-Order Route Review
+
+- `rg -n "^permissions:|^[[:space:]]+permissions:|contents:|actions:|id-token:|pull-requests:|issues:|packages:" .github/workflows -g '*.yml' -g '*.yml.disabled'`
+  - result: PASS
+  - summary:
+    - only `release.yml` and `release.yml.disabled` declared explicit `permissions:`
+    - the rest of the workflow tree still depended on repository-default `GITHUB_TOKEN` permissions
+
+- `bash tests/scripts/test_workflow_permissions_contract.sh`
+  - result before twelfth fix: FAIL
+  - summary:
+    - first reproduced failure landed on `.github/workflows/basic-checks.yml.disabled`
+    - the workflow tree lacked an explicit-permissions guardrail
+
+### Twelfth-Order Repairs
+
+- add `tests/scripts/test_workflow_permissions_contract.sh`
+  - purpose: ensure every workflow explicitly declares `permissions:` and that release keeps `contents: write` while all non-release workflows stay on `contents: read`
+
+- update `.github/workflows/ci.yml`
+  - change: add explicit `permissions: contents: read`
+
+- update `.github/workflows/tls13-signer-gate.yml`
+  - change: add explicit `permissions: contents: read`
+
+- update `.github/workflows/wave-b-b2-manual.yml`
+  - change: add explicit `permissions: contents: read`
+
+- update dormant workflow templates
+  - change: add explicit `permissions: contents: read` to:
+    - `basic-checks.yml.disabled`
+    - `ci-matrix-draft.yml.disabled`
+    - `code-quality.yml.disabled`
+    - `linux-ci.yml.disabled`
+    - `performance.yml.disabled`
+    - `phase_c_tests.yml.disabled`
+    - `pr-checks.yml.disabled`
+    - `test-all-platforms.yml.disabled`
+    - `wave-b-b2-manual.yml.disabled`
+    - `wave-c-quick-sprint-manual.yml.disabled`
+    - `winssl-tests.yml.disabled`
+
+### Local Revalidation After Twelfth Fix
+
+- `bash tests/scripts/test_workflow_permissions_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_action_sha_pinning_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_checkout_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_upload_artifact_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_download_artifact_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_setup_python_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_cache_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_lazarus_setup_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+  - result: PASS
+
+- `cmp -s .github/workflows/release.yml .github/workflows/release.yml.disabled`
+  - result: PASS
+  - summary: release workflow templates remained synchronized after permissions hardening
+
+- `cmp -s .github/workflows/wave-b-b2-manual.yml .github/workflows/wave-b-b2-manual.yml.disabled`
+  - result: PASS
+  - summary: manual gate workflow template remained synchronized after permissions hardening
+
+- `git diff --check`
+  - result: PASS
+
+### Twelfth Push Success Revalidation
+
+- `git commit -m "chore: restrict workflow token permissions"`
+  - result: PASS
+  - commit: `a24b983`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `5aef6ed..a24b983`
+
+- `gh run list --branch master --limit 8 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest runs for head `a24b983` were `CI` run `25967632737` and `TLS13 Signer Gate` run `25967632738`
+
+- `gh run watch 25967632738 --exit-status`
+  - result: PASS
+  - summary:
+    - `tls13-signer-gate` job SUCCESS
+    - `Upload TLS13 signer artifacts` and `Append step summary` remained green under `contents: read`
+
+- `gh run watch 25967632737 --exit-status`
+  - result: PASS
+  - summary:
+    - `Code Quality (Light)` SUCCESS
+    - `Minimal Gate (Linux)` SUCCESS
+    - `FreePascal TLS 1.3 Completeness` SUCCESS
+    - `Upload evidence`, `Upload FreePascal TLS 1.3 evidence`, and `Append step summary` remained green under `contents: read`
+
 ### Fourth-Order Remote Revalidation
 
 - `gh run watch 25902644127 --exit-status`

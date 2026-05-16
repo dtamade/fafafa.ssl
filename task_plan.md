@@ -127,6 +127,22 @@
   - `CI` run `25967316614` SUCCESS
   - `Code Quality (Light)` / `Minimal Gate (Linux)` / `FreePascal TLS 1.3 Completeness` 全部 SUCCESS
   - 这证明 SHA pinning 没有误伤自动主线，但 dormant Windows / release 路径仍保持 `static-only`
+- [completed] 审查 workflow `permissions:` 面后确认新的默认权限风险：
+  - 除 `release.yml` / `release.yml.disabled` 外，其余 workflow / template 都未显式声明 `permissions:`
+  - 这会让它们继续继承仓库默认 `GITHUB_TOKEN` 权限，而不是由仓库内 YAML 明确锁定
+- [completed] 新增 workflow permissions contract，并先在当前模板上观测到红灯
+- [completed] 仓库内全部非 release workflow / workflow template 已显式收紧为 `permissions: contents: read`
+- [completed] 第十二波 workflow 权限硬化本地复核通过：
+  - 新增 `tests/scripts/test_workflow_permissions_contract.sh` PASS
+  - workflow SHA pinning / checkout / upload-artifact / download-artifact / setup-python / cache / lazarus / release contracts继续 PASS
+  - signer / completeness contracts继续 PASS
+  - `release.yml` 与 `release.yml.disabled`、`wave-b-b2-manual.yml` 与 `wave-b-b2-manual.yml.disabled` 继续保持同步
+- [completed] 第十二次提交 `a24b983` 已完成，workflow token permissions hardening batch 已推送到 `master`
+- [completed] 第十二次 push 后的远端复核通过：
+  - `TLS13 Signer Gate` run `25967632738` SUCCESS
+  - `CI` run `25967632737` SUCCESS
+  - `Code Quality (Light)` / `Minimal Gate (Linux)` / `FreePascal TLS 1.3 Completeness` 全部 SUCCESS
+  - `Upload evidence` / `Upload TLS13 signer artifacts` / `Append step summary` 在只读 token 下继续通过
 
 ## Current Blocker
 
@@ -134,14 +150,15 @@
 - 运行时主阻塞已经解除。
 - 当前没有已知仍停留在 Node20 默认线且可在仓库内继续直接清理的 GitHub Action 残留。
 - 当前也没有未 pin 到 commit SHA 的外部 GitHub Action 残留。
+- 当前也没有未显式声明 `permissions:` 的 workflow 残留。
 - 当前剩余边界只在验证层：
   - `release.yml`、`code-quality.yml.disabled`、`test-all-platforms.yml.disabled`、`winssl-tests.yml.disabled` 这几条被改到的路径没有在本轮远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
 
 ## Current Queue
 
-1. 继续静态审查 `.github/workflows` 的 `permissions:` 面，优先找默认写权限或 job 级过宽权限。
-2. 若发现可安全收紧的权限，先补 focused contract，再做最小权限修复。
+1. 继续静态审查 `actions/checkout` 的 credential surface，优先确认哪些 jobs 可以显式加 `persist-credentials: false`。
+2. 继续对 manual / dormant workflows 做 least-privilege 收敛，优先看是否还有过宽 `fetch-depth` 或可去掉的 token 依赖。
 3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把它们误报成当前 runtime blocker。
 
 ## Decision Locks
@@ -156,6 +173,7 @@
 - 根 working-memory 与新 plan doc 已同步当前真相
 - release / setup-python / cache contracts 与既有 workflow contracts 继续通过
 - 第十一批 workflow action SHA pinning batch commit / push 完成，且自动远端主线复核通过
+- 第十二批 workflow token permissions hardening batch commit / push 完成，且自动远端主线复核通过
 - `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
 - `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
 - `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用
