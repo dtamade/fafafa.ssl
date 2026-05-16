@@ -26,25 +26,33 @@ jobs:
 
       - name: 🔍 Check PR title
         run: |
-          PR_TITLE="${{ github.event.pull_request.title }}"
-          echo "PR Title: $PR_TITLE"
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_TITLE="${{ github.event.pull_request.title }}"
+            echo "PR Title: $PR_TITLE"
 
-          # 检查 PR 标题是否符合规范
-          if [[ "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?:\ .+ ]]; then
-            echo "✅ PR title follows conventional commits"
+            # 检查 PR 标题是否符合规范
+            if [[ "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?:\ .+ ]]; then
+              echo "✅ PR title follows conventional commits"
+            else
+              echo "⚠️  PR title should follow conventional commits format"
+              echo "   Example: feat: 添加新功能 或 fix: 修复bug"
+            fi
           else
-            echo "⚠️  PR title should follow conventional commits format"
-            echo "   Example: feat: 添加新功能 或 fix: 修复bug"
+            echo "ℹ️  Manual dispatch: no PR title available"
           fi
 
       - name: 📝 Check PR description
         run: |
-          PR_BODY="${{ github.event.pull_request.body }}"
-          if [[ -n "$PR_BODY" ]]; then
-            echo "✅ PR has description"
-            echo "Description length: ${#PR_BODY} characters"
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_BODY="${{ github.event.pull_request.body }}"
+            if [[ -n "$PR_BODY" ]]; then
+              echo "✅ PR has description"
+              echo "Description length: ${#PR_BODY} characters"
+            else
+              echo "⚠️  PR should have a description"
+            fi
           else
-            echo "⚠️  PR should have a description"
+            echo "ℹ️  Manual dispatch: no PR description available"
           fi
 
       - name: 🔍 Check modified files
@@ -185,11 +193,19 @@ jobs:
 
       - name: 📊 Generate PR report
         run: |
-          PR_NUMBER="${{ github.event.number }}"
-          PR_TITLE="${{ github.event.pull_request.title }}"
-          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
-          BRANCH="${{ github.head_ref }}"
-          BASE_BRANCH="${{ github.base_ref }}"
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_NUMBER="${{ github.event.number }}"
+            PR_TITLE="${{ github.event.pull_request.title }}"
+            PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+            BRANCH="${{ github.head_ref }}"
+            BASE_BRANCH="${{ github.base_ref }}"
+          else
+            PR_NUMBER="manual"
+            PR_TITLE="Manual dispatch"
+            PR_AUTHOR="${{ github.actor }}"
+            BRANCH="${{ github.ref_name }}"
+            BASE_BRANCH="manual-dispatch"
+          fi
 
           echo "## 🔍 PR #$PR_NUMBER - $PR_TITLE" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
