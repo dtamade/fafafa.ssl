@@ -34,6 +34,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      with:
+        persist-credentials: false
 
     - name: Install FPC
       run: |
@@ -76,6 +78,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      with:
+        persist-credentials: false
 
     - name: Install dependencies
       run: |
@@ -108,6 +112,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      with:
+        persist-credentials: false
 
     - name: Install FPC via Homebrew
       run: |
@@ -158,6 +164,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      with:
+        persist-credentials: false
 
     - name: Install FPC
       run: |
@@ -240,6 +248,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      with:
+        persist-credentials: false
 
     - name: Check TODO/FIXME
       run: |

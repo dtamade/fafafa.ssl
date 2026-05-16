@@ -44,6 +44,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
 
       - name: Install dependencies
         shell: bash
@@ -80,6 +82,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
 
       - name: Install dependencies
         shell: bash
@@ -128,6 +132,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
 
       - name: Install dependencies
         shell: powershell
@@ -249,6 +255,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
 
       - name: Download Linux evidence
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
