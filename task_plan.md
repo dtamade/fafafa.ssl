@@ -97,7 +97,12 @@
 - [completed] 第十波 workflow hygiene 本地复核通过：
   - `lazarus setup` / `cache` / `setup-python` / `release` contracts PASS
   - 现有 checkout / upload-artifact / download-artifact / signer / completeness contracts继续 PASS
-- [in_progress] 准备第十次 commit/push，收口最后一条 Node20 action 替代
+- [completed] 第十次提交 `57ca127` 已完成，最后一条 Node20 action 替代 batch 已推送到 `master`
+- [completed] 远端自动 `CI` run `25962420047` SUCCESS：
+  - `Code Quality (Light)` SUCCESS
+  - `Minimal Gate (Linux)` SUCCESS
+  - `FreePascal TLS 1.3 Completeness` SUCCESS
+  - 这证明最后一批静态 workflow 替代没有误伤自动主线
 
 ## Current Blocker
 
@@ -111,10 +116,8 @@
 ## Current Queue
 
 1. 更新 root working-memory 与 workflow hygiene plan doc，写入第五波真相并撤销 `setup-lazarus` 阻塞结论。
-2. 给出第十批简短 review 结论后 commit。
-3. `git push origin master`。
-4. 轻量复核 push 后的自动远端 run，确认自动主线未被第五波 hygiene 误伤。
-5. 若未来用户要把 dormant Windows workflows 变回活跃路线，再单独补 Windows runtime 证据；当前继续保持静态审查边界。
+2. 若未来用户要把 dormant Windows workflows 变回活跃路线，再单独补 Windows runtime 证据；当前继续保持静态审查边界。
+3. 若后续再出现新的 GitHub Actions runtime annotation，再从远端真实注解反推是否还有新的 action/version hygiene 需要跟进。
 
 ## Decision Locks
 

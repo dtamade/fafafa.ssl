@@ -806,3 +806,21 @@
 
 - `git diff --check`
   - result: PASS
+
+### Tenth Push Success Revalidation
+
+- `git commit -m "chore: inline lazarus setup workflow"`
+  - result: PASS
+  - commit: `57ca127`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `7485034..57ca127`
+
+- `gh run watch 25962420047 --exit-status`
+  - result: PASS
+  - summary:
+    - `Code Quality (Light)` SUCCESS
+    - `Minimal Gate (Linux)` SUCCESS
+    - `FreePascal TLS 1.3 Completeness` SUCCESS
+    - the final static workflow replacement batch did not regress the auto-triggered Linux CI path
