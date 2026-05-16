@@ -522,3 +522,111 @@
 
 - `git diff --check`
   - result: PASS
+
+### Eighth-Order Route Review
+
+- `gh api 'repos/actions/download-artifact/releases?per_page=6' --jq '.[] | [.tag_name, .published_at, (.body // \"\")[:240]] | @tsv'`
+  - result: PASS
+  - summary:
+    - latest observed `actions/download-artifact` release is `v8.0.1` (`2026-03-11`)
+    - official `v7.0.0` release states it is the first default `node24` line
+    - old plan target `download-artifact@v5` is stale and incorrect for Node24-default hygiene
+
+- `gh api 'repos/actions/upload-artifact/releases?per_page=6' --jq '.[] | [.tag_name, .published_at, (.body // \"\")[:240]] | @tsv'`
+  - result: PASS
+  - summary:
+    - latest observed `actions/upload-artifact` release is `v7.0.1`
+    - official `v6.0.0` release states it is the first default `node24` line
+
+- `gh api 'repos/actions/checkout/releases?per_page=6' --jq '.[] | [.tag_name, .published_at, (.body // \"\")[:240]] | @tsv'`
+  - result: PASS
+  - summary:
+    - latest observed `actions/checkout` release is `v6.0.2`
+    - official `v5.0.0` release states it upgrades checkout to `node24`
+
+- `curl -fsSL https://raw.githubusercontent.com/actions/download-artifact/v8.0.1/action.yml | sed -n '1,80p'`
+  - result: PASS
+  - summary: `runs.using: 'node24'`
+
+- `curl -fsSL https://raw.githubusercontent.com/actions/upload-artifact/v7.0.1/action.yml | sed -n '1,80p'`
+  - result: PASS
+  - summary: `runs.using: 'node24'`
+
+- `curl -fsSL https://raw.githubusercontent.com/actions/checkout/v6.0.2/action.yml | sed -n '1,120p'`
+  - result: PASS
+  - summary: `runs.using: node24`
+
+- `rg -n \"download-artifact|upload-artifact|checkout@v|softprops/action-gh-release|setup-python@|actions/cache@|gcarreno/setup-lazarus@\" .github/workflows`
+  - result: PASS
+  - summary:
+    - `actions/download-artifact@v4` remained only in `wave-b-b2-manual.yml` and dormant templates
+    - this means push-triggered `CI` / `TLS13 Signer Gate` cannot validate the changed runtime path
+
+### Eighth-Order RED Contract
+
+- `bash tests/scripts/test_workflow_download_artifact_node24_contract.sh`
+  - result before eighth fix: FAIL
+  - summary:
+    - `.github/workflows/ci-matrix-draft.yml.disabled` still used `actions/download-artifact@v4`
+    - contract intentionally treats `v3` through `v6` as pre-Node24-default baselines
+
+### Eighth-Order Repairs
+
+- add `tests/scripts/test_workflow_download_artifact_node24_contract.sh`
+  - purpose: ensure `.github/workflows` no longer keeps `actions/download-artifact@v3` through `@v6` and the active/manual + dormant download workflows use `actions/download-artifact@v7`
+
+- update `.github/workflows/wave-b-b2-manual.yml`
+  - change: upgrade all three `actions/download-artifact@v4` steps to `actions/download-artifact@v7`
+
+- update `.github/workflows/wave-b-b2-manual.yml.disabled`
+  - change: keep the disabled template synchronized at `actions/download-artifact@v7`
+
+- update `.github/workflows/ci-matrix-draft.yml.disabled`
+  - change: upgrade the summary job download step to `actions/download-artifact@v7`
+
+- update `.github/workflows/performance.yml.disabled`
+  - change: upgrade the report-collection step to `actions/download-artifact@v7`
+
+- update `.github/workflows/test-all-platforms.yml.disabled`
+  - change: upgrade the artifact aggregation step to `actions/download-artifact@v7`
+
+### Local Revalidation After Eighth Fix
+
+- `bash tests/scripts/test_workflow_download_artifact_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_upload_artifact_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_checkout_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+  - result: PASS
+
+- `cmp -s .github/workflows/wave-b-b2-manual.yml .github/workflows/wave-b-b2-manual.yml.disabled`
+  - result: PASS
+  - summary: wave-b manual workflow templates remain synchronized after the download-artifact sweep
+
+- `git diff --check`
+  - result: PASS
+
+### Eighth-Order Verification Boundary
+
+- `sed -n '246,268p' .github/workflows/wave-b-b2-manual.yml`
+  - result: PASS
+  - summary:
+    - the upgraded `actions/download-artifact` steps live inside `wave-b-b2-manual.yml`
+    - this workflow is `workflow_dispatch`, so push-triggered runs will not exercise the changed action path
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - worktree contains only the expected workflow/template + contract edits for the eighth batch
+    - no unrelated repo drift needs to be carried into the commit

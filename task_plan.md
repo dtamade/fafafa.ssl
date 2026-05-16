@@ -50,21 +50,32 @@
   - `actions/checkout@v4` 相关 Node20 annotation 已消失
 - [completed] 新增 workflow upload-artifact Node24 contract，并先在当前模板上观测到红灯
 - [completed] 仓库内全部 workflow / workflow template 的 `actions/upload-artifact@v4` 已升级到 `actions/upload-artifact@v6`
-- [in_progress] 准备第七次 commit/push，并验证 workflow artifact 升级后远端 CI / signer 继续通过
+- [completed] 第七次提交 `863dca2` 已完成，workflow artifact hygiene 第二波已经收口到 `master`
+- [completed] 重新审查 workflow hygiene 路线后确认旧计划存在版本真相偏差：
+  - 截至 `2026-05-16`，官方 first-party actions 的 Node24 默认线分别是 `actions/checkout@v5`、`actions/upload-artifact@v6`、`actions/download-artifact@v7`
+  - 旧的 “download-artifact 升到 `v5`” 目标已经过时，不能继续执行
+- [completed] 新增 workflow download-artifact Node24 contract，并先在当前模板上观测到红灯
+- [completed] 仓库内全部 workflow / workflow template 的 `actions/download-artifact@v4` 已升级到 `actions/download-artifact@v7`
+- [completed] workflow hygiene 第三波本地复核通过：
+  - `download-artifact` / `upload-artifact` / `checkout` contracts PASS
+  - `release` / `signer` / `completeness` contracts PASS
+  - `wave-b-b2-manual.yml` 与 `wave-b-b2-manual.yml.disabled` 继续保持同步
+- [in_progress] 准备第八次 commit/push，收口 `download-artifact` hygiene 第三波
 
 ## Current Blocker
 
 - 当前没有新的本地语法/contract blocker。
-- 运行时主阻塞已经解除，当前批次只剩 workflow hygiene 第二波收口与远端复核。
-- 需要确认升级到 `actions/upload-artifact@v6` 后，活跃 workflow 继续绿且 artifact 侧 Node20 弃用 annotation 不再出现。
+- 运行时主阻塞已经解除，`download-artifact` 残留也已静态清理完毕。
+- 由于本次改动命中的 action 只存在于 `wave-b-b2-manual.yml`（`workflow_dispatch`）与多个 `.disabled` 模板，`CI` / `TLS13 Signer Gate` 这类自动 workflow 不能作为这一波的 runtime 复核手段。
+- 当前剩余动作是更新 working-memory 并完成第八次 commit/push；`download-artifact` 的 runtime 证据继续保持 `static-only / deferred manual dispatch`。
 
 ## Current Queue
 
-1. 更新 root working-memory 与 workflow hygiene plan doc，补入 artifact Node24 合同与升级理由。
-2. 给出第七批简短 review 结论后 commit。
+1. 更新 root working-memory 与 workflow hygiene plan doc，写入第三波真相、版本边界与验证边界。
+2. 给出第八批简短 review 结论后 commit。
 3. `git push origin master`。
-4. 盯住新的 `CI` / `TLS13 Signer Gate` runs，确认 artifact 升级后继续成功。
-5. 若仍出现新的 GitHub Actions runtime annotation，再单独复核 `softprops/action-gh-release` 等剩余第三方 actions。
+4. 若未来要补 `download-artifact` runtime 证据，只能单独 dispatch `wave-b-b2-manual.yml`；不再误把 `CI` / `TLS13 Signer Gate` 当成验证代理。
+5. 若后续再出现新的 GitHub Actions runtime annotation，再单独复核 `softprops/action-gh-release` 等剩余第三方 actions。
 
 ## Decision Locks
 
@@ -76,7 +87,7 @@
 ## Stop Condition
 
 - 根 working-memory 与新 plan doc 已同步当前真相
-- runtime-fix contracts、workflow checkout contract、workflow upload-artifact contract 继续通过
-- 第五批 runtime 修复、第六批 checkout hygiene、第七批 artifact hygiene commit / push 完成
-- 新远端 `CI` / `TLS13 Signer Gate` runs 继续通过
-- checkout / upload-artifact 的 Node20 弃用告警不再由仓库内旧版本 actions 引起
+- runtime-fix contracts、workflow checkout contract、workflow upload-artifact contract、workflow download-artifact contract 继续通过
+- 第八批 `download-artifact` hygiene commit / push 完成
+- `.github/workflows` 下不再残留 pre-Node24-default 的 `actions/download-artifact`
+- 不再把与改动无关的自动 workflow 绿灯误记为 `download-artifact` 的 runtime 证明

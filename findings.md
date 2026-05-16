@@ -155,3 +155,23 @@
   - `tests/scripts/test_workflow_checkout_node24_contract.sh` 负责 checkout
   - `tests/scripts/test_workflow_upload_artifact_node24_contract.sh` 负责 artifact
   - 两者组合后，当前活跃 workflow 与同步模板都能被持续守护在 Node24 默认线
+
+- 重新审查 workflow hygiene 路线后，旧的 `download-artifact@v5` 目标已被今天的官方 release 真相推翻：
+  - 截至 `2026-05-16`，`actions/download-artifact` 最新 release 是 `v8.0.1`
+  - 官方 `v7.0.0` release 明确写明：这是默认跑在 `node24` 的第一条主线
+  - 旧计划里的 `v5` 不仅不是最新，也不是 `download-artifact` 的 Node24 默认线，继续照它执行会把错误基线固化进仓库
+
+- 对这个仓库来说，`download-artifact` 最小安全修法应锁到 `v7` 而不是直接跳 `v8`：
+  - `v7` 已经满足 Node24 默认 runtime
+  - `v8` 还引入了 ESM、digest mismatch 默认报错、非 zip 下载解压策略变化
+  - 当前 workflow 只需要收 Node20 弃用源，不需要顺手扩大 artifact 语义变化
+
+- 这批暴露出的流程问题不是代码问题，而是验证路径问题：
+  - 当前仓库里实际使用 `actions/download-artifact` 的活跃 workflow 是 `wave-b-b2-manual.yml`
+  - 它是 `workflow_dispatch`，不会随着 push 自动运行
+  - 其他残留点都在 `.disabled` 模板
+  - 因此拿 `CI` / `TLS13 Signer Gate` 的绿灯来证明 `download-artifact` 升级是错误的验证代理
+
+- 新增 `tests/scripts/test_workflow_download_artifact_node24_contract.sh` 后，第三波 hygiene 的静态边界终于完整：
+  - 它会拒绝 `.github/workflows` 下残留的 `actions/download-artifact@v3` 到 `@v6`
+  - 同时强制当前活跃 manual workflow 与相关 dormant templates 使用 `actions/download-artifact@v7`
