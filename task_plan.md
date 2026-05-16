@@ -170,6 +170,22 @@
 - [completed] 第十四次 push 后的远端复核通过：
   - `CI` run `25969897201` SUCCESS
   - 这次改动命中的是 dormant workflow，自动主线继续全绿；`pr-checks.yml.disabled` 仍保持 `static-only`
+- [completed] 继续静态审查事件上下文后确认新的 dormant correctness 缺口：
+  - `pr-checks.yml.disabled` 同时支持 `pull_request` 与 `workflow_dispatch`
+  - 但 `Check PR title` / `Check PR description` / `PR Report` 直接读取 `github.event.pull_request.*`、`github.event.number`、`github.head_ref`、`github.base_ref`
+  - 手动触发时这些字段并不天然存在，会产生空值或误导性摘要
+- [completed] 新增 pr-checks dispatch context contract，并先在当前模板上观测到红灯
+- [completed] `pr-checks.yml.disabled` 已为 `workflow_dispatch` 手动触发路径补上显式 fallback：
+  - PR 标题检查改为手动模式提示，不再假装校验不存在的 PR 标题
+  - PR 描述检查改为手动模式提示，不再误报缺描述
+  - PR report 在手动模式下改用 `manual` / `Manual dispatch` / `github.actor` / `github.ref_name` / `manual-dispatch`
+- [completed] 第十五波 dormant PR dispatch context 修复本地复核通过：
+  - 新增 `tests/scripts/test_workflow_pr_checks_dispatch_context_contract.sh` PASS
+  - `pr-checks` history / checkout credential contracts继续 PASS
+- [completed] 第十五次提交 `cbd86d0` 已完成，pr-checks dispatch context batch 已推送到 `master`
+- [completed] 第十五次 push 后的远端复核通过：
+  - `CI` run `25970607766` SUCCESS
+  - 这次改动命中的是 dormant workflow，自动主线继续全绿；`pr-checks.yml.disabled` 仍保持 `static-only`
 
 ## Current Blocker
 
@@ -179,14 +195,15 @@
 - 当前也没有未 pin 到 commit SHA 的外部 GitHub Action 残留。
 - 当前也没有未显式声明 `permissions:` 的 workflow 残留。
 - 当前也没有未显式关闭 credential persistence 的 checkout step 残留。
+- 当前也没有已知仍混用 `workflow_dispatch` 与未加 fallback 的 PR-only 上下文残留。
 - 当前剩余边界只在验证层：
   - `release.yml`、`code-quality.yml.disabled`、`test-all-platforms.yml.disabled`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled` 这些被改到的路径没有在本轮远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
 
 ## Current Queue
 
-1. 继续静态审查混合 `workflow_dispatch` 与 `github.event.pull_request.*` / `github.event.number` 的模板，优先找事件上下文不匹配的 dormant bug。
-2. 继续对 manual / dormant workflows 做 least-privilege 与 correctness 收敛，优先看是否还有过宽 `fetch-depth` 或隐式事件假设。
+1. 继续静态审查 mixed-trigger workflow 的输入模型，优先找 `workflow_dispatch` 与 push/pull_request 共存时的默认值或上下文假设缺口。
+2. 继续对 manual / dormant workflows 做 least-privilege 与 correctness 收敛，优先看是否还有过宽 `fetch-depth`、隐式事件假设或只在手动模式下缺少输入回退。
 3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把它们误报成当前 runtime blocker。
 
 ## Decision Locks
@@ -204,6 +221,7 @@
 - 第十二批 workflow token permissions hardening batch commit / push 完成，且自动远端主线复核通过
 - 第十三批 checkout credential hardening batch commit / push 完成，且自动远端主线复核通过
 - 第十四批 dormant PR workflow history-depth batch commit / push 完成，且自动远端主线复核通过
+- 第十五批 dormant PR dispatch-context batch commit / push 完成，且自动远端主线复核通过
 - `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
 - `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
 - `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用

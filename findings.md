@@ -280,3 +280,17 @@
   - `pr-checks.yml.disabled` 同时支持 `pull_request` 和 `workflow_dispatch`
   - 但多处 shell 仍直接读取 `github.event.pull_request.*` / `github.event.number`
   - 这类字段在手动 dispatch 下并不天然存在，值得继续静态收敛
+
+- 这条事件上下文假设已经被收口成一条具体、已修复的 dormant bug：
+  - `pr-checks.yml.disabled` 的 PR title / description / report 三个步骤之前都默认当前一定有 PR 上下文
+  - 推送 `cbd86d0` 后，自动 `CI` run `25970607766` 继续 SUCCESS，说明这次上下文修补没有误伤主线
+
+- 这次修法的关键不是“把空值吞掉”，而是把 manual 模式变成显式语义：
+  - 标题检查与描述检查在 `workflow_dispatch` 下明确输出“manual dispatch: no PR ...”
+  - 报告步骤在 manual 模式下改用 `manual` / `Manual dispatch` / `github.actor` / `github.ref_name` / `manual-dispatch`
+  - 这样未来如果有人真的手动运行这条模板，不会看到看似成功但实际基于空 PR 数据拼出来的误导性摘要
+
+- 继续往下做 dormant workflow correctness 时，最值得优先看的仍是 mixed-trigger 输入模型：
+  - 不是所有问题都会表现成语法错或版本旧
+  - 很多问题其实是 “push / pull_request / workflow_dispatch 三种上下文共存时，某个分支默认以为自己拿到了另一种事件的数据”
+  - 当前仓库已经证明这种问题可以用 focused contract 很快抓住并小步修复

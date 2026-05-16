@@ -426,6 +426,66 @@
     - `FreePascal TLS 1.3 Completeness` SUCCESS
     - this batch only touched dormant `pr-checks.yml.disabled`, and the auto-triggered active CI path remained green
 
+### Fifteenth-Order Route Review
+
+- `rg -n "workflow_dispatch|github\\.event\\.pull_request\\.|github\\.event\\.number|github\\.head_ref|github\\.base_ref" .github/workflows -g '*.yml' -g '*.yml.disabled'`
+  - result: PASS
+  - summary:
+    - only `pr-checks.yml.disabled` mixed `workflow_dispatch` with direct PR-only context reads
+    - the risky reads landed in PR title/description/report steps
+
+- `bash tests/scripts/test_workflow_pr_checks_dispatch_context_contract.sh`
+  - result before fifteenth fix: FAIL
+  - summary:
+    - manual-dispatch guard fragments were missing from `pr-checks.yml.disabled`
+
+### Fifteenth-Order Repairs
+
+- add `tests/scripts/test_workflow_pr_checks_dispatch_context_contract.sh`
+  - purpose: ensure `pr-checks.yml.disabled` guards PR-only context reads when `workflow_dispatch` is enabled, and that manual mode emits explicit fallback metadata
+
+- update `.github/workflows/pr-checks.yml.disabled`
+  - change: `Check PR title` now branches on `github.event_name` and emits a manual-dispatch notice instead of reading a missing PR title
+  - change: `Check PR description` now branches on `github.event_name` and emits a manual-dispatch notice instead of misreporting a missing PR body
+  - change: `Generate PR report` now uses explicit manual-dispatch fallback values for PR number/title/author/branch/base-branch
+
+### Local Revalidation After Fifteenth Fix
+
+- `bash tests/scripts/test_workflow_pr_checks_dispatch_context_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_pr_checks_history_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_checkout_credentials_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+### Fifteenth Push Success Revalidation
+
+- `git commit -m "chore: guard pr checks dispatch context"`
+  - result: PASS
+  - commit: `cbd86d0`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `5080404..cbd86d0`
+
+- `gh run list --branch master --limit 6 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest run for head `cbd86d0` was `CI` run `25970607766`
+
+- `gh run watch 25970607766 --exit-status`
+  - result: PASS
+  - summary:
+    - `Code Quality (Light)` SUCCESS
+    - `Minimal Gate (Linux)` SUCCESS
+    - `FreePascal TLS 1.3 Completeness` SUCCESS
+    - this batch only touched dormant `pr-checks.yml.disabled`, and the auto-triggered active CI path remained green
+
 ### Fourth-Order Remote Revalidation
 
 - `gh run watch 25902644127 --exit-status`
