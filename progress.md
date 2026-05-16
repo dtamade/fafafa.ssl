@@ -1303,3 +1303,124 @@
 
 - `git diff --check`
   - result: PASS
+
+### Fifteenth Docs Closeout
+
+- `git diff -- task_plan.md findings.md progress.md docs/plans/2026-05-15-workflow-checkout-node24-hygiene.md`
+  - result: PASS
+  - summary:
+    - only planning/docs truth-sync remained after the fifteenth dispatch-context repair
+    - the diff just backfilled the new contract, remote run id, and closeout narrative
+
+- `git diff --check`
+  - result: PASS
+
+### Fifteenth Docs Closeout Push Success Revalidation
+
+- `git commit -m "docs: sync pr checks dispatch closeout"`
+  - result: PASS
+  - commit: `083c057`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `cbd86d0..083c057`
+
+- `gh run list --branch master --limit 8 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest run for head `083c057` was `CI` run `25970738320`
+
+- `gh run watch 25970738320 --exit-status`
+  - result: PASS
+  - summary:
+    - `Code Quality (Light)` SUCCESS
+    - `Minimal Gate (Linux)` SUCCESS
+    - `FreePascal TLS 1.3 Completeness` SUCCESS
+    - this docs-only truth-sync batch did not regress the auto-triggered Linux CI path
+
+### Sixteenth-Order Route Review
+
+- `rg -n "workflow_dispatch|pull_request|push:" .github/workflows -g '*.yml' -g '*.yml.disabled'`
+  - result: PASS
+  - summary:
+    - after the PR-context repair, the remaining mixed-trigger surface narrowed to templates using `github.event.inputs.*`
+    - `performance.yml.disabled` stood out because its declared runner matrix looked broader than its checked-in build/run logic
+
+- `rg -n "github\\.event\\.pull_request|github\\.event\\.number|github\\.head_ref|github\\.base_ref|github\\.event\\.inputs" .github/workflows -g '*.yml' -g '*.yml.disabled'`
+  - result: PASS
+  - summary:
+    - no new unguarded PR-only context reads remained
+    - the next truth-check focus moved from PR context to manual-input defaults and platform/shell semantics
+
+- `sed -n '1,220p' .github/workflows/performance.yml.disabled`
+  - result: PASS
+  - summary:
+    - the dormant performance template still claimed `ubuntu-latest` / `windows-latest` / `macos-latest`
+    - build used `lazbuild tests/test_performance_comparison.lpi`
+    - run/report steps used PowerShell syntax and `.exe` paths, which would fail on Linux/macOS default bash runners
+
+- `sed -n '1,220p' tests/test_performance_comparison.lpi`
+  - result: PASS
+  - summary:
+    - the checked-in Lazarus project pins `TargetCPU` to `x86_64` and `TargetOS` to `linux`
+    - that made the workflow's cross-platform matrix a static truth bug rather than a speculative future risk
+
+### Sixteenth-Order RED Contract
+
+- `bash tests/scripts/test_workflow_performance_linux_truth_contract.sh`
+  - result before sixteenth fix: FAIL
+  - summary:
+    - the workflow was missing the expected Linux-only truth markers such as `os: [ubuntu-latest]`
+
+### Sixteenth-Order Repairs
+
+- add `tests/scripts/test_workflow_performance_linux_truth_contract.sh`
+  - purpose: ensure the dormant performance workflow keeps runner scope, shell semantics, build entrypoint, and summary claims aligned to the real checked-in benchmark surface
+
+- update `.github/workflows/performance.yml.disabled`
+  - change: narrow the benchmark matrix to `ubuntu-latest` until other platforms have real toolchain and runtime proof
+  - change: compile `tests/test_performance_comparison.pas` directly with `fpc` instead of the Linux-locked Lazarus project file
+  - change: replace PowerShell-only run/report steps with explicit bash steps and dynamic report enumeration
+
+### Local Revalidation After Sixteenth Fix
+
+- `bash tests/scripts/test_workflow_performance_linux_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_action_sha_pinning_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_checkout_credentials_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_upload_artifact_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_download_artifact_node24_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+### Sixteenth Push Success Revalidation
+
+- `git commit -m "chore: tighten dormant performance workflow truth"`
+  - result: PASS
+  - commit: `1d4f346`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `083c057..1d4f346`
+
+- `gh run list --branch master --limit 6 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest run for head `1d4f346` was `CI` run `25970919173`
+
+- `gh run watch 25970919173 --exit-status`
+  - result: PASS
+  - summary:
+    - `Code Quality (Light)` SUCCESS
+    - `Minimal Gate (Linux)` SUCCESS
+    - `FreePascal TLS 1.3 Completeness` SUCCESS
+    - this batch only touched dormant `performance.yml.disabled`, and the auto-triggered active CI path remained green

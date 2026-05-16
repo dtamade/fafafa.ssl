@@ -294,3 +294,27 @@
   - 不是所有问题都会表现成语法错或版本旧
   - 很多问题其实是 “push / pull_request / workflow_dispatch 三种上下文共存时，某个分支默认以为自己拿到了另一种事件的数据”
   - 当前仓库已经证明这种问题可以用 focused contract 很快抓住并小步修复
+
+- 第十五波 dispatch-context 修复的 docs closeout 已经被远端主线再次证实：
+  - `083c057` 只是 planning/docs truth sync
+  - 但对应 `CI` run `25970738320` 继续 SUCCESS
+  - 这再次说明及时同步 working-memory 不只是“记笔记”，也是 continuation workflow 的一部分真实收口
+
+- 继续沿 dormant workflow truth 往下挖时，`performance.yml.disabled` 暴露出一条比输入默认值更硬的 correctness bug：
+  - workflow 宣称 `ubuntu-latest` / `windows-latest` / `macos-latest` 三平台 matrix
+  - 但 build step 使用的 `tests/test_performance_comparison.lpi` 在项目里把 `TargetOS` 固定成了 `linux`
+  - run / report steps 又直接写成 PowerShell 语法和 `.exe` 路径，Linux/macOS 默认 `bash` runner 一旦恢复启用会静态确定失败
+
+- 这类 dormant truth 问题比“参数没用上”更危险：
+  - summary step 之前还硬编码写出 Windows / Linux / macOS 全部完成
+  - 但 workflow 自己并没有给 Windows/macOS 建立真实 toolchain 或 runtime proof
+  - 对当前仓库来说，先把模板声明范围收回到真实支持面，比继续保留假矩阵更安全
+
+- 这次最小可信修法不是去“猜着补齐三平台”，而是先把 truth 收紧：
+  - `performance.yml.disabled` 的 matrix 先只保留 `ubuntu-latest`
+  - benchmark 改为直接 `fpc` 编译 `tests/test_performance_comparison.pas`，不再依赖 Linux-locked Lazarus project
+  - summary 改为动态枚举实际下载到的 report，不再硬编码“all platforms success”
+
+- 新增 `tests/scripts/test_workflow_performance_linux_truth_contract.sh` 后，这条 dormant workflow truth 也进入了持续守护面：
+  - 它要求 workflow 的 runner 声明、build 入口、shell 语义和 summary 结论彼此一致
+  - 推送 `1d4f346` 后，自动 `CI` run `25970919173` 继续 SUCCESS，说明这次 truth 收紧没有误伤活跃 Linux 主线

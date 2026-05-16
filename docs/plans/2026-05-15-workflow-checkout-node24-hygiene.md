@@ -27,6 +27,9 @@
 - 在 checkout 与历史深度收口后，又暴露出下一层 mixed-trigger 上下文风险：
   - `pr-checks.yml.disabled` 同时支持 `pull_request` 与 `workflow_dispatch`
   - 但多个 shell 步骤默认自己一定拿到了 PR 上下文
+- 在 mixed-trigger 上下文风险收口后，又暴露出下一层 dormant workflow truth 风险：
+  - `performance.yml.disabled` 声称 `ubuntu-latest` / `windows-latest` / `macos-latest` 三平台 matrix
+  - 但 benchmark project file 目标仍锁在 `linux`，run / report 步骤又直接写成 PowerShell 语法
 - 活跃 workflow 绿了以后，最高价值的问题已不是运行时逻辑，而是 workflow runtime hygiene
 - 只修活跃 workflow 不够：
   - `release.yml.disabled`
@@ -64,6 +67,7 @@
 - `tests/scripts/test_workflow_checkout_credentials_contract.sh`
 - `tests/scripts/test_workflow_pr_checks_history_contract.sh`
 - `tests/scripts/test_workflow_pr_checks_dispatch_context_contract.sh`
+- `tests/scripts/test_workflow_performance_linux_truth_contract.sh`
 - `task_plan.md`
 - `findings.md`
 - `progress.md`
@@ -96,6 +100,8 @@
 24. 新增 PR history contract，并只给真正依赖父提交的 job 补 `fetch-depth: 2`。
 25. 审查 mixed-trigger `pr-checks` 模板里 `workflow_dispatch` 与 PR-only 上下文的兼容性。
 26. 新增 dispatch-context contract，并为手动触发路径补上显式 fallback 元数据。
+27. 审查 dormant `performance` 模板的 runner 声明、toolchain、project target 与 shell 语义是否一致。
+28. 新增 performance linux-truth contract，并把模板声明范围收紧到真实可支持的 Linux-only benchmark lane。
 
 ## Commands
 
@@ -111,6 +117,7 @@ bash tests/scripts/test_workflow_permissions_contract.sh
 bash tests/scripts/test_workflow_checkout_credentials_contract.sh
 bash tests/scripts/test_workflow_pr_checks_history_contract.sh
 bash tests/scripts/test_workflow_pr_checks_dispatch_context_contract.sh
+bash tests/scripts/test_workflow_performance_linux_truth_contract.sh
 bash tests/scripts/test_release_workflow_v1_5_0_contract.sh
 bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh
 bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh
@@ -127,6 +134,7 @@ git diff --check
 - 所有 checkout step 显式使用 `persist-credentials: false`
 - `pr-checks.yml.disabled` 中真正依赖 `HEAD~1` 的 job 显式使用 `fetch-depth: 2`
 - `pr-checks.yml.disabled` 中 mixed-trigger 手动路径不再直接依赖 PR-only 上下文
+- `performance.yml.disabled` 不再硬写虚假的全平台 benchmark 覆盖面，改为 Linux-only truth
 - release / signer / completeness 合同继续通过
 - 不再把无关自动 workflow 的绿灯误判成 `download-artifact` 的 runtime 证明
 
@@ -144,3 +152,5 @@ git diff --check
   - 后续又补上了显式 `permissions:` 收紧；`a24b983` 对应的 `TLS13 Signer Gate` run `25967632738` 与 `CI` run `25967632737` 继续 SUCCESS
   - 再后续又补上 checkout credential hardening 与 dormant `pr-checks` 历史深度修复；`6421420` 对应的 `TLS13 Signer Gate` run `25969736945`、`CI` run `25969736933`，以及 `3d4c322` 对应的 `CI` run `25969897201` 继续 SUCCESS
   - 最新又补上 dormant `pr-checks` 的 dispatch-context fallback；`cbd86d0` 对应的 `CI` run `25970607766` 继续 SUCCESS
+  - 随后 docs closeout `083c057` 也通过了 `CI` run `25970738320`，说明 working-memory truth sync 没有带偏自动主线
+  - 最新又补上 dormant `performance` workflow 的 Linux-only truth 收紧；`1d4f346` 对应的 `CI` run `25970919173` 继续 SUCCESS

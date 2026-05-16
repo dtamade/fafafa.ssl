@@ -186,6 +186,28 @@
 - [completed] 第十五次 push 后的远端复核通过：
   - `CI` run `25970607766` SUCCESS
   - 这次改动命中的是 dormant workflow，自动主线继续全绿；`pr-checks.yml.disabled` 仍保持 `static-only`
+- [completed] 第十五波 docs closeout 已同步入库并推送：
+  - `task_plan.md` / `findings.md` / `progress.md` / `docs/plans/2026-05-15-workflow-checkout-node24-hygiene.md` 已补齐 dispatch-context batch 真相
+- [completed] 第十五次 docs closeout 提交 `083c057` 已完成，并推送到 `master`
+- [completed] 第十五次 docs closeout push 后的远端复核通过：
+  - `CI` run `25970738320` SUCCESS
+  - 这次改动只同步 planning/docs，但自动主线继续全绿，说明 continuation truth sync 没有漂移
+- [completed] 继续深挖 dormant workflow truth 后确认新的静态 correctness 缺口：
+  - `performance.yml.disabled` 声称 `ubuntu-latest` / `windows-latest` / `macos-latest` 三平台 matrix
+  - 但 benchmark build 使用 Linux-locked `tests/test_performance_comparison.lpi`
+  - run / report steps 又直接写 PowerShell 语法和 `.exe` 路径，Linux/macOS 默认 `bash` runner 恢复启用后会静态确定失败
+- [completed] 新增 performance workflow linux-truth contract，并先在当前模板上观测到红灯
+- [completed] `performance.yml.disabled` 已收紧为 Linux-only truthful runner：
+  - matrix 只保留 `ubuntu-latest`
+  - benchmark 改为直接 `fpc` 编译 `tests/test_performance_comparison.pas`
+  - comparison summary 改为动态枚举实际下载到的 report，不再硬编码 all-platform success
+- [completed] 第十六波 dormant performance truth 修复本地复核通过：
+  - 新增 `tests/scripts/test_workflow_performance_linux_truth_contract.sh` PASS
+  - workflow action SHA pinning / checkout credential / upload-artifact / download-artifact contracts继续 PASS
+- [completed] 第十六次提交 `1d4f346` 已完成，performance truth batch 已推送到 `master`
+- [completed] 第十六次 push 后的远端复核通过：
+  - `CI` run `25970919173` SUCCESS
+  - 这次改动命中的是 dormant `performance.yml.disabled`，自动主线继续全绿；performance lane 仍保持 `static-only`
 
 ## Current Blocker
 
@@ -196,20 +218,22 @@
 - 当前也没有未显式声明 `permissions:` 的 workflow 残留。
 - 当前也没有未显式关闭 credential persistence 的 checkout step 残留。
 - 当前也没有已知仍混用 `workflow_dispatch` 与未加 fallback 的 PR-only 上下文残留。
+- 当前也没有已知仍虚报为“跨平台可跑”但实际 shell / toolchain / project target 不匹配的 dormant performance lane 残留。
 - 当前剩余边界只在验证层：
   - `release.yml`、`code-quality.yml.disabled`、`test-all-platforms.yml.disabled`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled` 这些被改到的路径没有在本轮远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
 
 ## Current Queue
 
-1. 继续静态审查 mixed-trigger workflow 的输入模型，优先找 `workflow_dispatch` 与 push/pull_request 共存时的默认值或上下文假设缺口。
-2. 继续对 manual / dormant workflows 做 least-privilege 与 correctness 收敛，优先看是否还有过宽 `fetch-depth`、隐式事件假设或只在手动模式下缺少输入回退。
+1. 继续静态审查 dormant/manual workflow 的 truth surface，优先找“声明的平台/事件覆盖面”与真实 shell、toolchain、project target 不一致的模板。
+2. 继续静态审查 mixed-trigger workflow 的输入模型，优先找 `workflow_dispatch` 与 push/pull_request 共存时的默认值、`github.event.inputs` 回退或手动模式语义缺口。
 3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把它们误报成当前 runtime blocker。
 
 ## Decision Locks
 
 - 不创建 `v1.5.0` tag，不发 GitHub Release。
 - Windows/WinSSL 继续保持 `static-only / deferred runtime proof`，不混入本批。
+- dormant workflow 不允许继续声称比已提交 toolchain / shell / project target 更宽的运行覆盖面。
 - 本批只修真实已复现的 CI/runtime blocker 与 workflow runtime hygiene，不扩展到新功能或重新开 PR 流。
 - 发布主线仍以当前 `master` 为准。
 
@@ -222,6 +246,7 @@
 - 第十三批 checkout credential hardening batch commit / push 完成，且自动远端主线复核通过
 - 第十四批 dormant PR workflow history-depth batch commit / push 完成，且自动远端主线复核通过
 - 第十五批 dormant PR dispatch-context batch commit / push 完成，且自动远端主线复核通过
+- 第十六批 dormant performance truth batch commit / push 完成，且自动远端主线复核通过
 - `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
 - `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
 - `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用
