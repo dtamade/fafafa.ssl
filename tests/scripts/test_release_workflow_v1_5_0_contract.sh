@@ -123,6 +123,8 @@ for workflow in ".github/workflows/release.yml" ".github/workflows/release.yml.d
     "$workflow runs the Phase 2 dry-run gate"
   require_match "$workflow" 'body_path: RELEASE_NOTES_V1\.5\.0\.md' \
     "$workflow uses the checked-in v1.5.0 release notes"
+  require_match "$workflow" 'uses:\s*softprops/action-gh-release@v3\b' \
+    "$workflow uses softprops/action-gh-release@v3 for the Node24 release runtime"
   require_match "$workflow" 'tar -czf "\$\{ARCHIVE_NAME\}\.tar\.gz"' \
     "$workflow creates a source archive"
   require_literal "$workflow" "--exclude='./bin'" \
@@ -153,6 +155,8 @@ for workflow in ".github/workflows/release.yml" ".github/workflows/release.yml.d
     "$workflow no longer uses the old build_linux.sh release path"
   require_absent "$workflow" 'run_tests_linux\.sh' \
     "$workflow no longer uses the old run_tests_linux.sh release path"
+  require_absent "$workflow" 'softprops/action-gh-release@v2\b' \
+    "$workflow no longer keeps the Node20 release action line"
   require_absent "$workflow" 'release_notes\.md' \
     "$workflow no longer generates inline release notes"
   require_absent "$workflow" 'CreateSSLContext\(' \

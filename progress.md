@@ -630,3 +630,126 @@
   - summary:
     - worktree contains only the expected workflow/template + contract edits for the eighth batch
     - no unrelated repo drift needs to be carried into the commit
+
+### Ninth-Order Route Review
+
+- `gh api 'repos/softprops/action-gh-release/releases?per_page=6' --jq '.[] | [.tag_name, .published_at, (.body // \"\")[:240]] | @tsv'`
+  - result: PASS
+  - summary:
+    - latest observed `softprops/action-gh-release` release is `v3.0.0`
+    - official `v3.0.0` release note states the runtime moved from Node 20 to Node 24
+
+- `gh api 'repos/actions/setup-python/releases?per_page=6' --jq '.[] | [.tag_name, .published_at, (.body // \"\")[:240]] | @tsv'`
+  - result: PASS
+  - summary:
+    - latest observed `actions/setup-python` release is `v6.2.0`
+    - official `v6.0.0` release note states `Upgrade to node 24`
+
+- `gh api 'repos/actions/cache/releases?per_page=10' --jq '.[] | [.tag_name, .published_at, (.body // \"\")[:240]] | @tsv'`
+  - result: PASS
+  - summary:
+    - latest observed `actions/cache` release is `v5.0.5`
+    - official `v5.0.0` release note states `actions/cache@v5` runs on Node.js 24
+
+- `gh api 'repos/gcarreno/setup-lazarus/releases?per_page=10' --jq '.[] | [.tag_name, .published_at, (.body // \"\")[:240]] | @tsv'`
+  - result: PASS
+  - summary:
+    - latest observed `gcarreno/setup-lazarus` release is `v3.4.1`
+    - no newer Node24 major line was observed
+
+- `gh api 'repos/softprops/action-gh-release/contents/action.yml?ref=v2' --jq '.content' | tr -d '\n' | base64 -d | sed -n '1,120p'`
+  - result: PASS
+  - summary: `runs.using: "node20"`
+
+- `gh api 'repos/softprops/action-gh-release/contents/action.yml?ref=v3' --jq '.content' | tr -d '\n' | base64 -d | sed -n '1,120p'`
+  - result: PASS
+  - summary: `runs.using: "node24"`
+
+- `curl -fsSL https://raw.githubusercontent.com/actions/setup-python/v6.0.0/action.yml | sed -n '1,120p'`
+  - result: PASS
+  - summary: `runs.using: 'node24'`
+
+- `curl -fsSL https://raw.githubusercontent.com/actions/cache/v4.3.0/action.yml | sed -n '1,160p'`
+  - result: PASS
+  - summary: `runs.using: 'node20'`
+
+- `gh api 'repos/gcarreno/setup-lazarus/contents/action.yml?ref=v3.4.1' --jq '.content' | tr -d '\n' | base64 -d | sed -n '1,120p'`
+  - result: PASS
+  - summary: `runs.using: 'node20'`
+
+### Ninth-Order RED Contracts
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result before ninth fix: FAIL
+  - summary:
+    - release workflow still used `softprops/action-gh-release@v2`
+    - strengthened contract now requires `@v3` and rejects the Node20 line
+
+- `bash tests/scripts/test_workflow_setup_python_node24_contract.sh`
+  - result before ninth fix: FAIL
+  - summary:
+    - `.github/workflows/code-quality.yml.disabled` still used `actions/setup-python@v5`
+
+- `bash tests/scripts/test_workflow_cache_node24_contract.sh`
+  - result before ninth fix: FAIL
+  - summary:
+    - `.github/workflows/test-all-platforms.yml.disabled` still used `actions/cache@v4`
+
+### Ninth-Order Repairs
+
+- update `tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - change: release workflow contract now explicitly requires `softprops/action-gh-release@v3` and rejects `@v2`
+
+- add `tests/scripts/test_workflow_setup_python_node24_contract.sh`
+  - purpose: ensure `.github/workflows` no longer keeps `actions/setup-python@v1` through `@v5` and the current dormant code-quality workflow uses `actions/setup-python@v6`
+
+- add `tests/scripts/test_workflow_cache_node24_contract.sh`
+  - purpose: ensure `.github/workflows` no longer keeps `actions/cache@v1` through `@v4` and the current dormant Windows workflows use `actions/cache@v5`
+
+- update `.github/workflows/release.yml`
+  - change: upgrade `softprops/action-gh-release@v2` to `@v3`
+
+- update `.github/workflows/release.yml.disabled`
+  - change: keep the disabled release template synchronized at `softprops/action-gh-release@v3`
+
+- update `.github/workflows/code-quality.yml.disabled`
+  - change: upgrade `actions/setup-python@v5` to `@v6`
+
+- update `.github/workflows/test-all-platforms.yml.disabled`
+  - change: upgrade both `actions/cache@v4` steps to `@v5`
+
+- update `.github/workflows/winssl-tests.yml.disabled`
+  - change: upgrade the `actions/cache@v4` step to `@v5`
+
+### Local Revalidation After Ninth Fix
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_setup_python_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_cache_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_download_artifact_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_upload_artifact_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_checkout_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh`
+  - result: PASS
+
+- `cmp -s .github/workflows/release.yml .github/workflows/release.yml.disabled`
+  - result: PASS
+  - summary: release workflow templates remain synchronized after the gh-release upgrade
+
+- `git diff --check`
+  - result: PASS

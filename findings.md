@@ -175,3 +175,35 @@
 - 新增 `tests/scripts/test_workflow_download_artifact_node24_contract.sh` 后，第三波 hygiene 的静态边界终于完整：
   - 它会拒绝 `.github/workflows` 下残留的 `actions/download-artifact@v3` 到 `@v6`
   - 同时强制当前活跃 manual workflow 与相关 dormant templates 使用 `actions/download-artifact@v7`
+
+- 第八批结束后，`task_plan.md` 再次暴露出一个流程问题：
+  - 代码、push、远端 CI 都已经完成
+  - 但计划文件仍停在 “准备第八次 commit/push”
+  - 这说明我们的 workflow hygiene 收口除了修代码，还要把 planning files 当成真实交付物；否则后续 continuation 会被过期 queue 误导
+
+- 继续核对剩余 action 家族后，当前仍有直接升级路径的 Node20 风险只剩三类：
+  - `softprops/action-gh-release@v2`
+  - `actions/setup-python@v5`
+  - `actions/cache@v4`
+  - 它们都不是“看起来旧但其实安全”的假问题
+
+- `softprops/action-gh-release` 的官方真相非常直接：
+  - `v2` 的 `action.yml` 仍是 `runs.using: "node20"`
+  - 官方 `v3.0.0` release note 明确写明：runtime 从 Node20 迁到 Node24
+  - 因此 `release.yml` / `release.yml.disabled` 里的 `@v2` 是活跃 release 路径上的真实 hygiene 缺口
+
+- `actions/setup-python` 与 `actions/cache` 也都存在明确的 Node24 默认线：
+  - `actions/setup-python@v6.0.0` release note 明确写明 upgrade to node 24，且 `action.yml` 为 `node24`
+  - `actions/cache@v5.0.0` release note 明确写明 `@v5` runs on Node.js 24，而 `v4.3.0` 的 `action.yml` 仍是 `node20`
+  - 因此 `code-quality.yml.disabled` 里的 `setup-python@v5` 与 dormant Windows workflows 里的 `cache@v4` 都应继续收掉
+
+- 这批和 `download-artifact` 不同，验证边界更简单：
+  - `softprops/action-gh-release@v2` 命中活跃 `release.yml`
+  - `setup-python@v5` 与 `cache@v4` 虽在 dormant workflow，但都有明确官方 Node24 后继线
+  - 所以它们不需要先等远端 annotation 点名，再做被动修复
+
+- `gcarreno/setup-lazarus@v3.4.1` 是当前唯一不能被我们直接收掉的剩余 Node20 项：
+  - 上游最新观察到的 release 仍在 `v3.4.1`
+  - 其 `action.yml` 仍声明 `runs.using: 'node20'`
+  - 当前未发现 `v4` 或其它官方 Node24 线
+  - 这应被记录为“上游阻塞”，而不是继续在本仓库里盲目改版本号

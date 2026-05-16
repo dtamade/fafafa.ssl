@@ -60,22 +60,48 @@
   - `download-artifact` / `upload-artifact` / `checkout` contracts PASS
   - `release` / `signer` / `completeness` contracts PASS
   - `wave-b-b2-manual.yml` 与 `wave-b-b2-manual.yml.disabled` 继续保持同步
-- [in_progress] 准备第八次 commit/push，收口 `download-artifact` hygiene 第三波
+- [completed] 第八次提交 `5c200bf` 已完成，`download-artifact` hygiene 第三波已经推送到 `master`
+- [completed] 远端自动 `CI` run `25952317087` SUCCESS：
+  - `Code Quality (Light)` SUCCESS
+  - `Minimal Gate (Linux)` SUCCESS
+  - `FreePascal TLS 1.3 Completeness` SUCCESS
+  - 这只证明自动主线未被误伤，不作为 `wave-b-b2-manual.yml` 中 `download-artifact` 路径的 runtime 证明
+- [completed] 重新核对剩余 action 家族后确认当前真正仍有升级路径的 Node20 风险点：
+  - `softprops/action-gh-release@v2`（活跃 `release.yml` / `release.yml.disabled`）
+  - `actions/setup-python@v5`（`code-quality.yml.disabled`）
+  - `actions/cache@v4`（`test-all-platforms.yml.disabled` / `winssl-tests.yml.disabled`）
+- [completed] 新增/强化本地合同并先观测到红灯：
+  - `tests/scripts/test_release_workflow_v1_5_0_contract.sh` 现在显式要求 `softprops/action-gh-release@v3`
+  - 新增 `tests/scripts/test_workflow_setup_python_node24_contract.sh`
+  - 新增 `tests/scripts/test_workflow_cache_node24_contract.sh`
+- [completed] 仓库内全部可升级的剩余 action 已收口到 Node24 基线：
+  - `softprops/action-gh-release@v3`
+  - `actions/setup-python@v6`
+  - `actions/cache@v5`
+- [completed] 第九波 workflow hygiene 本地复核通过：
+  - release / setup-python / cache contracts PASS
+  - checkout / upload-artifact / download-artifact contracts PASS
+  - signer / completeness contracts PASS
+  - `release.yml` 与 `release.yml.disabled` 继续保持同步
+- [in_progress] 准备第九次 commit/push，收口 release/tooling/cache Node24 hygiene 第四波
 
 ## Current Blocker
 
 - 当前没有新的本地语法/contract blocker。
-- 运行时主阻塞已经解除，`download-artifact` 残留也已静态清理完毕。
-- 由于本次改动命中的 action 只存在于 `wave-b-b2-manual.yml`（`workflow_dispatch`）与多个 `.disabled` 模板，`CI` / `TLS13 Signer Gate` 这类自动 workflow 不能作为这一波的 runtime 复核手段。
-- 当前剩余动作是更新 working-memory 并完成第八次 commit/push；`download-artifact` 的 runtime 证据继续保持 `static-only / deferred manual dispatch`。
+- 运行时主阻塞已经解除；剩余 workflow hygiene 里唯一仍未收掉的明确 Node20 项是 `gcarreno/setup-lazarus@v3.4.1`。
+- 这不是漏改：
+  - 截至 `2026-05-16`，上游最新 release 仍是 `v3.4.1`
+  - 其 `action.yml` 仍声明 `runs.using: 'node20'`
+  - 当前未观察到更高 major / Node24 线可供直接升级
+- 因此当前剩余 blocker 是“上游暂未提供 Node24 版本”，不是本仓库仍有可直接升级却未升级的 action。
 
 ## Current Queue
 
-1. 更新 root working-memory 与 workflow hygiene plan doc，写入第三波真相、版本边界与验证边界。
-2. 给出第八批简短 review 结论后 commit。
+1. 更新 root working-memory 与 workflow hygiene plan doc，写入第四波真相与 `setup-lazarus` 剩余状态。
+2. 给出第九批简短 review 结论后 commit。
 3. `git push origin master`。
-4. 若未来要补 `download-artifact` runtime 证据，只能单独 dispatch `wave-b-b2-manual.yml`；不再误把 `CI` / `TLS13 Signer Gate` 当成验证代理。
-5. 若后续再出现新的 GitHub Actions runtime annotation，再单独复核 `softprops/action-gh-release` 等剩余第三方 actions。
+4. 轻量复核 push 后的自动远端 run，确认自动主线未被第四波 hygiene 误伤。
+5. `gcarreno/setup-lazarus` 若未来发布 Node24 线，再补最后一波；否则它继续作为已知上游阻塞记录。
 
 ## Decision Locks
 
@@ -87,7 +113,7 @@
 ## Stop Condition
 
 - 根 working-memory 与新 plan doc 已同步当前真相
-- runtime-fix contracts、workflow checkout contract、workflow upload-artifact contract、workflow download-artifact contract 继续通过
-- 第八批 `download-artifact` hygiene commit / push 完成
-- `.github/workflows` 下不再残留 pre-Node24-default 的 `actions/download-artifact`
-- 不再把与改动无关的自动 workflow 绿灯误记为 `download-artifact` 的 runtime 证明
+- release / setup-python / cache contracts 与既有 workflow contracts 继续通过
+- 第九批 release/tooling/cache hygiene commit / push 完成
+- `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 `softprops/action-gh-release`、`actions/setup-python`、`actions/cache`
+- `gcarreno/setup-lazarus@v3.4.1` 的 Node20 状态被明确记录为上游剩余阻塞，而不是本仓库漏修
