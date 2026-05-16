@@ -30,7 +30,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest]
         fpc: [ '3.2.2' ]
 
     steps:
@@ -39,83 +39,57 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: 🔧 Setup FPC (Linux)
-        if: matrix.os == 'ubuntu-latest'
+      - name: 🔧 Setup benchmark toolchain
+        shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install -y fpc
+          sudo apt-get install -y fpc libssl-dev time
           fpc -iV
-
-      - name: 🔧 Setup FPC (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          choco install freepascal
-          fpc -iV
-
-      - name: 📦 Install dependencies (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libssl-dev time
-
-      - name: 📦 Install dependencies (macOS)
-        if: matrix.os == 'macos-latest'
-        run: |
-          brew install openssl@3
+          openssl version
 
       - name: 🏗️ Build benchmark program
+        shell: bash
         run: |
           echo "=== Building Performance Benchmark ==="
-          lazbuild tests/test_performance_comparison.lpi
+          mkdir -p tests/bin
+          fpc -Fusrc -FEtests/bin tests/test_performance_comparison.pas
 
       - name: ⚡ Run performance benchmarks
+        shell: bash
         run: |
-          Write-Host "=== Running Performance Benchmarks ===" -ForegroundColor Green
-          if (Test-Path "tests\bin\test_performance_comparison.exe") {
-            .\tests\bin\test_performance_comparison.exe
-          } else {
-            echo "⚠️  Benchmark executable not found, building from source..."
+          BENCHMARK_SCOPE="${{ github.event.inputs.benchmark }}"
+          BENCHMARK_SCOPE="${BENCHMARK_SCOPE:-all}"
+          echo "=== Running Performance Benchmarks (${BENCHMARK_SCOPE}) ==="
+
+          if [[ ! -x "./tests/bin/test_performance_comparison" ]]; then
+            echo "[INFO] Benchmark executable not found, building from source..."
             fpc -Fusrc -FEtests/bin tests/test_performance_comparison.pas
-            .\tests\bin\test_performance_comparison.exe
-          }
+          fi
+
+          ./tests/bin/test_performance_comparison
 
       - name: 📊 Generate benchmark report
+        shell: bash
         run: |
-          $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
-          $report = @"
+          BENCHMARK_SCOPE="${{ github.event.inputs.benchmark }}"
+          BENCHMARK_SCOPE="${BENCHMARK_SCOPE:-all}"
+          TIMESTAMP="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          REPORT="Performance-Report-${{ matrix.os }}.md"
+
+          cat > "$REPORT" <<EOF
           # ⚡ Performance Benchmark Report
 
-          **Generated**: $(Get-Date)
-          **Platform**: ${{ matrix.os }}
-          **FPC Version**: ${{ matrix.fpc }}
+          - Generated: ${TIMESTAMP}
+          - Platform: ${{ matrix.os }}
+          - FPC Version: ${{ matrix.fpc }}
+          - Benchmark selection: ${BENCHMARK_SCOPE}
 
-          ## 📈 Performance Results
+          ## Execution Notes
 
-          ### Crypto Operations
-          - AES-256 encryption: ~XXX MB/s
-          - SHA-256 hashing: ~XXX MB/s
-          - RSA-2048 operations: ~XXX ops/sec
-
-          ### SSL/TLS Performance
-          - TLS handshake: ~XXX ms
-          - Session creation: ~XXX ms
-          - Data encryption: ~XXX MB/s
-
-          ### Memory Usage
-          - Peak memory: ~XXX MB
-          - Memory per connection: ~XXX KB
-
-          ## 🎯 Recommendations
-
-          1. ✅ Performance is within acceptable ranges
-          2. 🔄 Consider optimization for high-throughput scenarios
-          3. 💡 Session reuse can improve performance by ~30%
-
-          ---
-          Report generated on: $timestamp
-          "@
-
-          $report | Out-File -FilePath "Performance-Report-${{ matrix.os }}.md" -Encoding UTF8
+          - This dormant workflow currently keeps Linux as the only truthful benchmark runner.
+          - The benchmark source is compiled directly with \`fpc\` because the checked-in Lazarus project targets Linux only.
+          - Restore Windows or macOS only after those lanes have their own dependency setup and runtime proof.
+          EOF
 
       - name: 📤 Upload benchmark results
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
@@ -140,27 +114,35 @@ jobs:
           path: benchmark-reports/
 
       - name: 📊 Generate comparison report
+        shell: bash
         run: |
-          echo "## ⚡ fafafa.ssl Performance Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Benchmarks completed across all platforms:" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ⚡ fafafa.ssl Performance Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Benchmarks completed for the currently supported dormant runner set:" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          echo "| Platform | Status | Report |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|--------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Windows | ✅ | [Download](./benchmark-reports/) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Linux | ✅ | [Download](./benchmark-reports/) |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS | ✅ | [Download](./benchmark-reports/) |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Report |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|----------|--------|" >> "$GITHUB_STEP_SUMMARY"
 
-          echo "### 📈 Key Findings" >> $GITHUB_STEP_SUMMARY
-          echo "- Consistent performance across all platforms" >> $GITHUB_STEP_SUMMARY
-          echo "- WinSSL backend shows optimal performance on Windows" >> $GITHUB_STEP_SUMMARY
-          echo "- OpenSSL backend provides cross-platform compatibility" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          mapfile -t reports < <(find benchmark-reports -name "Performance-Report-*.md" | sort)
+          if [[ "${#reports[@]}" -eq 0 ]]; then
+            echo "[ERROR] no performance reports were downloaded"
+            exit 1
+          fi
 
-          echo "### 🎯 Recommendations" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Use WinSSL for Windows deployments (zero dependencies)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Use OpenSSL for cross-platform applications" >> $GITHUB_STEP_SUMMARY
-          echo "- 🔄 Enable session reuse for better performance" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          for report in "${reports[@]}"; do
+            platform="$(basename "$report" .md)"
+            platform="${platform#Performance-Report-}"
+            echo "| ${platform} | \`$(basename "$report")\` |" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 📈 Key Findings" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Current dormant workflow truth is Linux-only until other runners have real toolchain and runtime proof" >> "$GITHUB_STEP_SUMMARY"
+          echo "- The benchmark binary is compiled directly from source instead of a Linux-locked Lazarus project file" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "### 🎯 Recommendations" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Re-enable Windows or macOS only after those lanes gain dedicated dependency setup and runtime evidence" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Keep using Linux as the truthful benchmark baseline for dormant static review" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
