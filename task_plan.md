@@ -121,7 +121,12 @@
   - checkout / upload-artifact / download-artifact / setup-python / cache / lazarus / release contracts PASS
   - signer / completeness contracts继续 PASS
   - `release.yml` 与 `release.yml.disabled` 继续保持同步
-- [in_progress] 准备第十一次 commit/push，收口 workflow action SHA pinning batch
+- [completed] 第十一次提交 `5a03f1c` 已完成，workflow action SHA pinning batch 已推送到 `master`
+- [completed] 第十一次 push 后的远端复核通过：
+  - `TLS13 Signer Gate` run `25967316650` SUCCESS
+  - `CI` run `25967316614` SUCCESS
+  - `Code Quality (Light)` / `Minimal Gate (Linux)` / `FreePascal TLS 1.3 Completeness` 全部 SUCCESS
+  - 这证明 SHA pinning 没有误伤自动主线，但 dormant Windows / release 路径仍保持 `static-only`
 
 ## Current Blocker
 
@@ -135,11 +140,9 @@
 
 ## Current Queue
 
-1. 更新 root working-memory 与 workflow hygiene plan doc，写入第十一波 SHA pinning 真相。
-2. 给出第十一次批次的简短 review 结论后 commit。
-3. `git push origin master`。
-4. 轻量复核 push 后的自动远端 run，确认 SHA pinning 没有误伤自动主线。
-5. 若未来用户要把 dormant Windows workflows 变回活跃路线，再单独补 Windows runtime 证据；当前继续保持静态审查边界。
+1. 继续静态审查 `.github/workflows` 的 `permissions:` 面，优先找默认写权限或 job 级过宽权限。
+2. 若发现可安全收紧的权限，先补 focused contract，再做最小权限修复。
+3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把它们误报成当前 runtime blocker。
 
 ## Decision Locks
 
@@ -152,7 +155,7 @@
 
 - 根 working-memory 与新 plan doc 已同步当前真相
 - release / setup-python / cache contracts 与既有 workflow contracts 继续通过
-- 第十一批 workflow action SHA pinning batch commit / push 完成
+- 第十一批 workflow action SHA pinning batch commit / push 完成，且自动远端主线复核通过
 - `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
 - `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
 - `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用

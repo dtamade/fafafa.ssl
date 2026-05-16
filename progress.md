@@ -104,6 +104,50 @@
 - `git diff --check`
   - result: PASS
 
+### Eleventh Push Success Revalidation
+
+- `git commit -m "chore: pin workflow actions to commits"`
+  - result: PASS
+  - commit: `5a03f1c`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `57ca127..5a03f1c`
+
+- `gh run view 25967316650 --json databaseId,workflowName,status,conclusion,headSha,url,jobs`
+  - result: PASS
+  - summary:
+    - run=`25967316650`
+    - workflow=`TLS13 Signer Gate`
+    - head=`5a03f1c`
+    - `tls13-signer-gate` job SUCCESS
+
+- `gh run view 25967316614 --json databaseId,workflowName,status,conclusion,headSha,url,jobs`
+  - result: PASS
+  - summary:
+    - run=`25967316614`
+    - workflow=`CI`
+    - head=`5a03f1c`
+    - `Code Quality (Light)` SUCCESS
+    - `Minimal Gate (Linux)` SUCCESS
+    - `FreePascal TLS 1.3 Completeness` SUCCESS
+
+### Planning Sync Closure
+
+- update `task_plan.md`
+  - change: close out the eleventh SHA pinning batch with the real commit/push/run outcomes
+  - change: move the next queue from stale push follow-up to `permissions:`-focused workflow review
+
+- update `findings.md`
+  - change: record that SHA pinning preserved CI behavior on remote runs
+  - change: record the next highest-value audit surface as workflow `permissions:`
+
+- update `progress.md`
+  - change: persist the actual `5a03f1c` commit/push and remote run evidence so later continuation does not restart from stale queue state
+
+- update `docs/plans/2026-05-15-workflow-checkout-node24-hygiene.md`
+  - change: add closeout note that the SHA pinning wave shipped and the auto-triggered Linux CI path stayed green
+
 ### Fourth-Order Remote Revalidation
 
 - `gh run watch 25902644127 --exit-status`

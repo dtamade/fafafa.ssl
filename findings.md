@@ -226,3 +226,19 @@
   - 这样能保证 pin 后语义尽量贴近当前仓库已经在使用的行为
   - 同时把未来不受控的 tag 漂移切断
   - 这比“顺手升级到一个更高 release 再 pin”更稳
+
+- 第十一次提交 `5a03f1c` 推送后的远端证据已经闭环：
+  - `TLS13 Signer Gate` run `25967316650` SUCCESS
+  - `CI` run `25967316614` SUCCESS
+  - `Code Quality (Light)`、`Minimal Gate (Linux)`、`FreePascal TLS 1.3 Completeness` 全部 SUCCESS
+  - 这说明本轮 SHA pinning 只是收紧供应链引用，没有误伤当前自动主线执行语义
+
+- 当前最值得继续深挖的风险面已经从 action 版本/引用漂移前移到 `permissions:`：
+  - action 已经收敛到 Node24 默认线并 pin 到 commit SHA
+  - 剩余更像 workflow/process 问题的高价值面，是仓库是否还在使用默认过宽 token 权限
+  - 这条线同样适合先做静态 contract，再做最小权限收紧
+
+- 本轮还再次暴露出一个流程问题：
+  - 代码、push、远端 CI 可能已经全部完成
+  - 但 `task_plan.md` / `progress.md` 如果不及时同步，下一次 continuation 仍会从过期 queue 起跑
+  - 因此 planning files 不能只记录“准备做什么”，也必须记录“远端最终如何收口”
