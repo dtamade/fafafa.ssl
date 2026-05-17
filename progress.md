@@ -107,6 +107,48 @@
     - no matching auto `CI` run was observed within the quick check window
     - this batch only changed docs/contracts, so the closeout did not block on waiting for a new remote run
 
+### v1.5.0 Release Attempt And Portability Failure
+
+- `git tag -a v1.5.0 -m "Release v1.5.0" && git push origin v1.5.0`
+  - result: PASS
+  - summary:
+    - created and pushed `v1.5.0` tag from head `b841405`
+
+- `gh run view 25991512715 --json databaseId,workflowName,displayTitle,headSha,event,status,conclusion,url,jobs`
+  - result: PASS
+  - summary:
+    - release workflow `Release v1.5.0` was triggered from the tag push
+    - job `Validate and publish v1.5.0` entered `in_progress`
+
+- `gh run watch 25991512715 --exit-status`
+  - result: FAIL
+  - summary:
+    - run `25991512715` failed in `Run release gates`
+    - earlier steps `Checkout` / `Resolve release version` / `Install dependencies` / `Verify version metadata` all succeeded
+
+- `gh run view 25991512715 --job 76398395316 --log-failed`
+  - result: PASS
+  - summary:
+    - `python3 scripts/compile_all_modules.py` completed
+    - minimal gate, FreePascal completeness, style check, and Phase 2 dry-run all ran through inside the same step
+    - terminal failure was `tests/scripts/test_release_workflow_v1_5_0_contract.sh: line 35: rg: command not found`
+    - first hard release blocker is the contract script's unconditional `rg` dependency, not the release workflow's publish logic
+
+- `tmpbin=$(mktemp -d); ...; PATH="$tmpbin" bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result: FAIL
+  - summary:
+    - local red reproduction matched the GitHub runner failure
+    - the contract broke immediately when `rg` was unavailable
+
+- add `tests/scripts/test_release_workflow_v1_5_0_contract_no_rg_fallback.sh`
+  - purpose:
+    - lock the new portability expectation that the release workflow contract must pass without `rg`
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract_no_rg_fallback.sh`
+  - result before fix: FAIL
+  - summary:
+    - new focused contract observed the same missing-`rg` red state before the script repair
+
 ### Windows Runtime Failure Revalidation
 
 - `gh run view 25985356670 --log-failed`

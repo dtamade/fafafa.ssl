@@ -6,6 +6,14 @@
 
 ## Current Status
 
+- [completed] 用户已明确批准创建 `v1.5.0` tag / GitHub Release：
+  - 当前 release 执行已不再卡在审批门
+  - 允许直接推进 tag push 与 `release.yml`
+- [in_progress] 第一次正式 release run `25991512715` 已把新的第一硬故障收口到 release workflow contract 的 runner 依赖假设：
+  - `Checkout` / `Resolve release version` / `Install dependencies` / `Verify version metadata` 全部 `SUCCESS`
+  - `Run release gates` 在最后一个 `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh` 处失败
+  - 根因不是编译、completeness、style、dry-run 或 release notes 真值，而是合同脚本直接依赖 `rg`
+  - Ubuntu release runner 没有安装 `ripgrep`，因此脚本在 line 35 直接报 `rg: command not found`
 - [completed] 当前跨平台 runtime 主线已经在同一 head `b95044d` 上闭环：
   - manual run `25989095571` 的 `windows-gate` / `macos-gate` / `linux-gate` / `summary` 全部 `SUCCESS`
   - 默认 `CI` run `25989090032` 同样 `SUCCESS`
@@ -788,21 +796,25 @@
 - 当前没有新的 runtime blocker：
   - manual run `25989095571` 已证明 `windows-gate` / `macos-gate` / `linux-gate` 全绿
   - 默认 `CI` run `25989090032` 已证明当前 head 没有误伤自动主线
-- 当前真正剩余的 release gate 是人工审批，而不是技术验证：
-  - latest tag 仍是 `v1.4.3`
-  - `v1.5.0` tag / GitHub Release 未经用户明确批准不得创建
+- 当前新的第一硬阻塞已经从审批门前移到 release contract portability：
+  - run `25991512715` 已证明 release workflow 主体可走到最后一段 contract gate
+  - 当前失败点是 `tests/scripts/test_release_workflow_v1_5_0_contract.sh` 对 `rg` 的硬依赖
+  - 由于 GitHub Release 尚未发布成功，当前 `v1.5.0` tag 需要在修复后重指向新的 head 再重跑
 
 ## Current Queue
 
-1. 等待用户明确批准是否创建 `v1.5.0` tag / GitHub Release。
-2. 如果用户暂不发版，就从新的产品实现线重新选下一条 high-value queue，不再重开这条已经闭环的 release-control truth-sync lane。
+1. 把 `tests/scripts/test_release_workflow_v1_5_0_contract.sh` 修成 “有 `rg` 用 `rg`，无 `rg` 回退到 Python/grep”。
+2. 新增 focused contract，锁定 “无 `rg` 的 release runner 也必须通过”。
+3. 本地通过 focused contracts 与 `git diff --check` 后提交并推送到 `master`。
+4. 把尚未成功发布的 `v1.5.0` tag 重指到修复后的 head，重新触发 `release.yml`。
+5. 若 rerun 全绿，再把当前 release-control 收口为 `v1.5.0` 已正式发布。
 
 ## Verification Discipline
 
 - 当前这条 truth-sync lane 只做窄验证：
   - 受影响 release-control contracts
   - `git diff --check`
-  - 不重跑 compile/completeness/minimal gates，因为当前批次只同步文档与 contracts
+  - 不在本地重复整条 compile/completeness/minimal gates，因为远端失败已经证明主链可走到最后一个 contract step
 - 不重复 dispatch `wave-b-b2-manual.yml`，因为当前 head 已有 fresh green runtime proof；只有后续改动可能影响 runtime 边界时才重派。
 - 不重复重跑与本批无关的 cached-green workflow 治理合同。
 

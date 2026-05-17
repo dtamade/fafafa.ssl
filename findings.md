@@ -22,6 +22,18 @@
   - latest tag 仍是 `v1.4.3`
   - 仍未得到用户对 `v1.5.0` tag / GitHub Release 的明确批准
 
+- 用户在 `2026-05-17` 已明确批准正式发布 `v1.5.0` 后，第一条真实 release run `25991512715` 暴露出的故障不是发布主体逻辑，而是 release contract 的 runner portability 盲区：
+  - `Release v1.5.0` workflow 的 `Checkout`、`Resolve release version`、`Install dependencies`、`Verify version metadata` 全部通过
+  - `python3 scripts/compile_all_modules.py`、minimal gate、FreePascal completeness、style、Phase 2 dry-run 也都在同一个 `Run release gates` step 内跑到了最后
+  - 真正失败点是 `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - 该脚本默认直接调用 `rg` 做 multiline regex 检查，但 `release.yml` 没有安装 `ripgrep`
+  - 因此 runner 上报的是环境 portability 故障：`rg: command not found`
+
+- 这次 release 失败有一个重要路线结论：
+  - 当前 release 主链并没有被 compile/completeness/style/performance dry-run 卡住
+  - 失败点已经前移到“最后一条 release-control contract 是否能在 GitHub runner 默认工具集上运行”
+  - 最小正确修法是让 contract 自身具备 `rg` 缺失时的 Python/grep fallback，而不是为了一个合同去扩大 release workflow 的依赖面
+
 - 第一次 Windows manual run `25985103443`（`windows-gate`）暴露的第一硬故障不是 WinSSL 逻辑，而是 workflow shell 入口：
   - `Run quick WinSSL smoke` 在真正测试前就失败
   - 根因是 workflow 用 `powershell` 执行 UTF-8/Unicode-heavy WinSSL 脚本

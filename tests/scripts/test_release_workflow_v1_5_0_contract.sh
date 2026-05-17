@@ -5,6 +5,11 @@ repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$repo_root"
 
 release_action_sha="b4309332981a82ec1c5618f44dd2e27cc8bfbfda"
+have_rg=0
+
+if command -v rg >/dev/null 2>&1; then
+  have_rg=1
+fi
 
 pass() {
   printf '[PASS] %s\n' "$1"
@@ -32,11 +37,27 @@ require_match() {
   local file="$1"
   local pattern="$2"
   local name="$3"
-  if rg -n --multiline --multiline-dotall "$pattern" "$file" >/dev/null; then
+  if (( have_rg )); then
+    if rg -n --multiline --multiline-dotall "$pattern" "$file" >/dev/null; then
+      pass "$name"
+      return
+    fi
+  elif python3 - "$file" "$pattern" <<'PY'
+import pathlib
+import re
+import sys
+
+file_path = pathlib.Path(sys.argv[1])
+pattern = sys.argv[2]
+content = file_path.read_text(encoding="utf-8")
+sys.exit(0 if re.search(pattern, content, re.MULTILINE | re.DOTALL) else 1)
+PY
+  then
     pass "$name"
-  else
-    fail "$name" "pattern not found in $file: $pattern"
+    return
   fi
+
+  fail "$name" "pattern not found in $file: $pattern"
 }
 
 require_fixed() {
@@ -54,22 +75,45 @@ require_literal() {
   local file="$1"
   local expected="$2"
   local name="$3"
-  if rg -n --fixed-strings -- "$expected" "$file" >/dev/null; then
+  if (( have_rg )); then
+    if rg -n --fixed-strings -- "$expected" "$file" >/dev/null; then
+      pass "$name"
+      return
+    fi
+  elif grep -Fq -- "$expected" "$file"; then
     pass "$name"
-  else
-    fail "$name" "expected text not found in $file: $expected"
+    return
   fi
+
+  fail "$name" "expected text not found in $file: $expected"
 }
 
 require_absent() {
   local file="$1"
   local pattern="$2"
   local name="$3"
-  if rg -n --multiline --multiline-dotall "$pattern" "$file" >/dev/null; then
+  if (( have_rg )); then
+    if rg -n --multiline --multiline-dotall "$pattern" "$file" >/dev/null; then
+      fail "$name" "unexpected pattern still present in $file: $pattern"
+    fi
+  elif python3 - "$file" "$pattern" <<'PY'
+import pathlib
+import re
+import sys
+
+file_path = pathlib.Path(sys.argv[1])
+pattern = sys.argv[2]
+content = file_path.read_text(encoding="utf-8")
+sys.exit(0 if re.search(pattern, content, re.MULTILINE | re.DOTALL) else 1)
+PY
+  then
     fail "$name" "unexpected pattern still present in $file: $pattern"
   else
     pass "$name"
+    return
   fi
+
+  pass "$name"
 }
 
 printf '[TEST] v1.5.0 release workflow contract\n'
