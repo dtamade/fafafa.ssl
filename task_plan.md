@@ -1,20 +1,29 @@
-# Task Plan - Cross-Platform Runtime Proof And Release-Control Truth
+# Task Plan - Post-Release Route Selection Truth Sync
 
 ## Goal
 
-当前主目标已经切换为把 GitHub Actions 已经跑绿的跨平台 runtime truth 同步回 release-control 控制面：以 head `b95044d` 上的 manual run `25989095571` 和 CI run `25989090032` 为真相源，更新计划、readiness、release notes、workflow 文档与相关 contracts，并在用户明确批准前停在 `v1.5.0` tag / release 审批门。
+当前主目标已经切换为把 `v1.5.0` 正式发布后的真相同步回默认控制面：以 `master` head `9d0e330`、已发布 tag `v1.5.0 -> e775ac5`、release run `25991977801` 与当前 `docs/ROADMAP.md` 为真相源，收口 `task_plan.md / findings.md / progress.md` 及 active entrypoint docs 的 `post-release route selection` 叙事，并把下一条产品实现线明确交回 `SSL/TLS backend completeness roadmap`。
 
 ## Current Status
 
 - [completed] 用户已明确批准创建 `v1.5.0` tag / GitHub Release：
   - 当前 release 执行已不再卡在审批门
   - 允许直接推进 tag push 与 `release.yml`
-- [in_progress] 第一次正式 release run `25991512715` 已把新的第一硬故障收口到 release workflow contract 的 runner 依赖假设：
+- [completed] `v1.5.0` 已正式发布，当前没有新的 runtime / release blocker：
+  - `Release v1.5.0` run `25991977801` 已 `SUCCESS`
+  - 已发布 tag 仍指向 `e775ac5`
+  - `master` 当前位于记录 release closeout 的 `9d0e330`
+- [in_progress] 当前批次只剩发布后控制面真相同步：
+  - `docs/ROADMAP.md` / `docs/README.md` / `docs/DOCUMENTATION_INDEX.md` / `.github/README.md` 已切向 `post-release route selection`
+  - `task_plan.md` / `findings.md` / `progress.md` 已在当前工作树里同步到新的控制面真相
+  - 受影响窄验证已通过，当前只剩 review 结论与 commit/push 收口
+  - 当前真正的下一步不是重开发布验证，而是把 product mainline 重新对齐到 backend completeness roadmap
+- [completed] 第一次正式 release run `25991512715` 曾把第一硬故障收口到 release workflow contract 的 runner 依赖假设，后续已由 `f7173f9` 修复：
   - `Checkout` / `Resolve release version` / `Install dependencies` / `Verify version metadata` 全部 `SUCCESS`
   - `Run release gates` 在最后一个 `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh` 处失败
   - 根因不是编译、completeness、style、dry-run 或 release notes 真值，而是合同脚本直接依赖 `rg`
   - Ubuntu release runner 没有安装 `ripgrep`，因此脚本在 line 35 直接报 `rg: command not found`
-- [in_progress] 第二次正式 release run `25991710335` 已把新的第一硬故障前移到 source archive 输出路径：
+- [completed] 第二次正式 release run `25991710335` 曾把第一硬故障前移到 source archive 输出路径，后续已由 `e775ac5` 修复：
   - 新的 release run 已不再卡在 `rg` portability 问题
   - 公开 job 页面显示失败步骤已前移到 `Create source archive`
   - 当前最可疑根因是 workflow 在归档 `.` 的同时把输出 tarball 直接写在 repo 根目录，导致 `tar` 自咬
@@ -28,10 +37,11 @@
   - manual run `25989095571` 的 `windows-gate` / `macos-gate` / `linux-gate` / `summary` 全部 `SUCCESS`
   - 默认 `CI` run `25989090032` 同样 `SUCCESS`
   - 这说明当前 release-control 不再有新的 Windows/macOS/Linux runtime blocker
-- [completed] 当前真正的流程漂移已经从 runtime 故障收口到控制面真相同步，并已完成修正：
-  - `docs/test_reports/RELEASE_READINESS_V1.5.0.md` 已改为 `PASS_PENDING_APPROVAL`
-  - `docs/plans/2026-05-12-release-v1.5.0-formalization.md` / `RELEASE_NOTES_V1.5.0.md` / `.github/README.md` 已切到当前 green runtime truth
-  - `tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh` 与 `tests/scripts/test_release_workflow_v1_5_0_contract.sh` 已同步到新的 release-control truth
+- [completed] 当前真正的流程漂移已经从 runtime 故障收口到控制面真相同步：
+  - `docs/test_reports/RELEASE_READINESS_V1.5.0.md` 现已稳定为 `RELEASED`
+  - `docs/plans/2026-05-12-release-v1.5.0-formalization.md` / `RELEASE_NOTES_V1.5.0.md` 已作为已完成 release-control 证据保留
+  - 当前 active entrypoint docs 已切到 `post-release route selection`
+  - 本批只补齐 working-memory 与 roadmap entrypoint 的最后收口
 
 - [completed] 当前路线已经从“Windows/WinSSL 保持 `static-only`”纠偏为“GitHub manual workflow 可提供真实 Windows runtime 证据”：
   - 仓库公开后，`wave-b-b2-manual.yml` 已可真实 dispatch
@@ -70,7 +80,7 @@
   - `Run quick WinSSL smoke` SUCCESS
   - `Run Windows Wave B gate` FAIL，但失败已经不再是“日志不足”
   - workflow 日志已明确记录 `[INFO] Preferred FPC path: C:\tools\freepascal\bin\i386-win32` 与 `[INFO] fpc resolved to: C:\tools\freepascal\bin\i386-win32\fpc.exe`
-- [in_progress] 当前新的第一硬故障已经收口到 `Run Windows Wave B gate` 的两个真实代码/脚本问题：
+- [completed] 当前新的第一硬故障曾收口到 `Run Windows Wave B gate` 的两个真实代码/脚本问题，后续已在第六批修复收口：
   - `wave_b_windows_winssl_*.log` 现在明确显示 `tests\unit\test_winssl_comprehensive.pas` 的 14 个断言都因 `Windows Schannel is not registered` 失败
   - `wave_b_windows_modules_*.log` 现在明确显示 `scripts/validate_all_modules.ps1` 在当前 Windows/FPC 安装布局下没有把 `Contnrs` / `DateUtils` / `SyncObjs` 所在 unit roots 纳入 `-Fu`
   - 这说明当前优先级已经从“让日志更 truthful”前移到“修复 WinSSL backend 注册缺口 + 修复 Windows unit root 探测缺口”
@@ -84,7 +94,7 @@
   - `Run quick WinSSL smoke` SUCCESS
   - `Run Windows Wave B gate` SUCCESS
   - 当前新的第一硬阻塞已经从 Wave B Windows gate 前移到 `Run broader WinSSL runtime suite`
-- [in_progress] 当前新的第一硬故障已经前移到 `Run broader WinSSL runtime suite` 的两个真实测试缺口：
+- [completed] 当前新的第一硬故障曾前移到 `Run broader WinSSL runtime suite` 的两个真实测试缺口，后续已在第七批修复收口：
   - `tests/winssl/test_winssl_integration_multi.pas` 在 `TestProtocolNegotiation` 的 TLS 1.3-only 子用例里，于 `CreateConnection` 阶段抛出 `ESSLInitializationException`，原生错误为 `0x80090331`（`SEC_E_ALGORITHM_MISMATCH`）
   - `tests/integration/test_backend_comparison.pas` 仍然沿工厂路径直接调用 `TSSLFactory.GetLibraryInstance(sslWinSSL)`，但没有像 `test_winssl_comprehensive.pas` 那样先注册 backend，导致 broader suite 里直接抛 `Windows Schannel is not registered`
   - 这说明当前优先级已经从 Wave B gate 继续前移到“补 broader suite 的 WinSSL 注册缺口 + 把 TLS 1.3-only 平台条件异常收进测试契约”
@@ -99,7 +109,7 @@
   - `Run Windows Wave B gate` SUCCESS
   - `Backend Comparison Tests` 已经不再报 `Windows Schannel is not registered`
   - `WinSSL Integration Tests (Multi-Scenario)` 的 TLS 1.3-only 子用例也不再在原位置把 broader suite 直接炸停
-- [in_progress] 当前新的第一硬故障已经前移到 broader suite 更深一层的两个真实边界：
+- [completed] 当前新的第一硬故障曾前移到 broader suite 更深一层的两个真实边界，后续已在第八到第十批修复中收口：
   - `tests/winssl/test_winssl_integration_multi.pas` 现在暴露出更深的测试问题：TLS 1.3-only 可选失败识别仍过窄、`HTTP 端口 TLS 握手失败` 负路径没有把 `ESSLProtocolException` 视为预期结果、`中等数据传输` 的 1024-byte 阈值在当前 runner 上过于脆弱
   - `tests/integration/test_backend_comparison.pas` 现在已经能跑进真实 WinSSL 握手，但在 `src/fafafa.ssl.winssl.connection.pas -> src/fafafa.ssl.winssl.lib.pas:UpdateHandshakeStatistics` 的统计更新路径上触发 `EAccessViolation`
   - 这说明当前优先级已经从“修 broader suite 入口缺口”继续前移到“补 expected-failure 测试语义 + 让库级统计更新退化为 best-effort，而不是反向打崩握手”
@@ -803,42 +813,43 @@
 
 ## Current Blocker
 
-- 当前没有新的 runtime blocker：
+- 当前没有新的 runtime blocker，也没有新的 release blocker：
   - manual run `25989095571` 已证明 `windows-gate` / `macos-gate` / `linux-gate` 全绿
-  - 默认 `CI` run `25989090032` 已证明当前 head 没有误伤自动主线
-- 当前新的第一硬阻塞已经从审批门前移到 release contract portability：
-  - run `25991512715` 已证明 release workflow 主体可走到最后一段 contract gate
-  - 当前失败点是 `tests/scripts/test_release_workflow_v1_5_0_contract.sh` 对 `rg` 的硬依赖
-  - 由于 GitHub Release 尚未发布成功，当前 `v1.5.0` tag 需要在修复后重指向新的 head 再重跑
-- 当前没有新的 release blocker：
-  - `v1.5.0` release workflow run `25991977801` 已 `SUCCESS`
-  - GitHub Release 与 source archive 都已发布完成
+  - 默认 `CI` run `25989090032` 已证明自动主线正常
+  - `Release v1.5.0` run `25991977801` 已完成正式发布
+- 当前没有技术性 blocker；唯一剩余动作是批次收口：
+  - active entrypoint docs 与 working-memory 已在本地同步到 `post-release route selection`
+  - 窄验证已通过
+  - 只待给出简短 review 结论并 commit/push
+- 当前批次完成后，下一条真正要开的实施线是 `docs/plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md` 的 Phase 1 completeness audit，而不是重开发布或 WinSSL 验证
 
 ## Current Queue
 
-1. `release-control / v1.5.0 formalization` 这条线已经闭环，下一步应重新选择新的产品实现主线。
-2. 不再围绕 `v1.5.0` 做重复 tag/release 验证，除非后续发现真实发布回归。
+1. 给出简短 review 结论后提交并推送当前 truth-sync batch。
+2. 下一批进入 `SSL/TLS backend completeness roadmap` 的 Phase 1 completeness audit，优先产出 backend matrix 与第一条 bounded implementation lane。
 
 ## Verification Discipline
 
 - 当前这条 truth-sync lane 只做窄验证：
-  - 受影响 release-control contracts
+  - `tests/scripts/test_active_roadmap_references_contract.sh`
+  - `tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh`
   - `git diff --check`
-  - 不在本地重复整条 compile/completeness/minimal gates，因为远端失败已经证明主链可走到最后一个 contract step
-- 不重复 dispatch `wave-b-b2-manual.yml`，因为当前 head 已有 fresh green runtime proof；只有后续改动可能影响 runtime 边界时才重派。
-- 不重复重跑与本批无关的 cached-green workflow 治理合同。
+- 不在本地重复整条 compile/completeness/minimal gates，因为当前批次只改 docs / contracts / working-memory，而已发布 truth 与跨平台 runtime truth 都已绿色闭环。
+- 不重复 dispatch `wave-b-b2-manual.yml`，因为当前 head 已有 fresh green runtime proof；只有后续改动真正影响 runtime 边界时才重派。
+- 不重复重跑 `release.yml` 或与本批无关的 cached-green workflow 治理合同。
 
 ## Decision Locks
 
-- 不创建 `v1.5.0` tag，不发 GitHub Release。
+- 不重开 `v1.5.0` tag / GitHub Release / `release.yml`。
 - 不重新回到 “Windows/WinSSL static-only” 或 “Linux-only closeout” 叙事；当前 truth source 是 GitHub Actions 的最新 manual + CI green evidence。
+- Windows/WinSSL 如再涉及运行时真相，默认仍以 GitHub Actions 为 truth source，而不是本地条件叙事。
 - 不扩到 release/tag/PR 流；继续直接在 `master` 以小批次收口。
 - 不顺手扩大到无关 runtime surface、无关 dormant workflow、或新的架构重写。
-- 每个有效批次都要在提交前补齐 working-memory 文件，并在提交后记录新的 truth source 或剩余审批门。
+- 每个有效批次都要在提交前补齐 working-memory 文件，并在提交后记录新的 truth source 或下一条明确路线。
 
 ## Stop Condition
 
-- working-memory 文件、release-control 文档与 contracts 都同步到 `v1.5.0` 正式发布后的真相。
+- working-memory 文件与 active entrypoint docs 都同步到 `post-release route selection` 真相。
 - 本批受影响 contracts 与 `git diff --check` 继续通过。
 - 当前批次已提交并推送到 `master`。
-- `v1.5.0` tag / GitHub Release / source archive 都已发布完成。
+- 下一条产品实现线已经明确交回 `SSL/TLS backend completeness roadmap`。

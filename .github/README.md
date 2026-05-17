@@ -1,6 +1,6 @@
 # GitHub Actions CI/CD
 
-本仓库以“可重复 + 可审查”为优先。当前默认执行控制面是 `release-control / v1.5.0 formalization`：先看 release readiness、active release workflow 和当前 GitHub runtime truth，再决定是否需要新的门禁执行。
+本仓库以“可重复 + 可审查”为优先。当前默认执行控制面已经切到 `post-release route selection`：`v1.5.0` 已正式发布，先看 roadmap、release readiness、已发布 workflow truth 和下一条产品主线，再决定是否需要新的门禁执行。
 
 ---
 
@@ -71,6 +71,6 @@ git add .github/workflows/<file>.yml
 
 - 日常开发：依赖 `ci.yml`（Minimal Gate）
 - 触及 pure Pascal TLS 1.3 主线：同时关注 `ci.yml` 里的 FreePascal focused gate
-- 准备 `v1.5.0` release-control 收口：先看 `docs/test_reports/RELEASE_READINESS_V1.5.0.md`，再看 `release.yml`
+- 查看已发布 `v1.5.0` 的 release truth：先看 `docs/test_reports/RELEASE_READINESS_V1.5.0.md`，再看 `release.yml`
 - 触及 TLS13 signer：额外关注 `tls13-signer-gate.yml`
 - 需要新的跨平台证据：只在当前 head 尚无 fresh green proof，或本批改动可能影响跨平台运行时时，再手动触发 `wave-b-b2-manual.yml`

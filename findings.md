@@ -2,6 +2,22 @@
 
 ## 2026-05-17
 
+- `v1.5.0` 现在已经是正式发布态，而不是待批准态：
+  - `master` 当前 head 是记录 release closeout 的 `9d0e330`
+  - 已发布 tag `v1.5.0` 仍指向 `e775ac5`
+  - GitHub Release 与 source archive 已在线，不应再把审批门或 release portability 写成当前 blocker
+
+- 当前残余问题不在生产代码、不在 runtime，也不在 release workflow，而在发布后控制面漂移：
+  - `docs/ROADMAP.md` 一度同时出现 `current_release_status: RELEASED` 与 `engineering_state: CLOSED_OUT_PENDING_APPROVAL`
+  - `docs/README.md`、`docs/DOCUMENTATION_INDEX.md`、`.github/README.md` 仍把 `release-control / v1.5.0 formalization` 写成当前默认入口
+  - `task_plan.md` 仍把早已解决的 `rg` portability / archive staging 问题写成当前 blocker
+  - 如果不收口这些控制面文件，后续批次会继续从错误入口启动
+
+- 因此当前最小正确动作不是重开发布链，也不是重跑 Windows/WinSSL，而是：
+  - 只做 active entrypoint + working-memory 的 post-release truth sync
+  - 只跑受影响 docs/contracts 的窄验证
+  - 收口后把下一条实现线明确交还给 `SSL/TLS backend completeness roadmap`
+
 - Windows/WinSSL 不应再被整体描述为 `static-only`：
   - 仓库公开后，GitHub Actions 已能真实执行 `wave-b-b2-manual.yml`
   - 当前剩余问题是 Windows runner 上的真实 runtime/blocker，而不是“没有验证条件”

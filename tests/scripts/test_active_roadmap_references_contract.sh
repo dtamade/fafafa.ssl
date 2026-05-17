@@ -41,16 +41,18 @@ reject_regex() {
 }
 
 require_file "docs/ROADMAP.md" "docs/ROADMAP.md must exist as the stable active roadmap entrypoint"
-require_fixed "docs/ROADMAP.md" "engineering_state: CLOSED_OUT_PENDING_APPROVAL" \
-  "docs/ROADMAP.md must describe the current Wave C engineering state"
-require_fixed "docs/ROADMAP.md" "approval_gate: human decision required before reopening Wave C mainline work" \
-  "docs/ROADMAP.md must document the explicit approval gate"
-require_fixed "docs/ROADMAP.md" 'current_execution_control_plane: `release-control / v1.5.0 formalization`' \
-  "docs/ROADMAP.md must declare the current release-control execution plane"
+require_fixed "docs/ROADMAP.md" "engineering_state: RELEASED" \
+  "docs/ROADMAP.md must describe the post-release engineering state"
+require_fixed "docs/ROADMAP.md" "approval_gate: explicit scope selection required before the next implementation batch" \
+  "docs/ROADMAP.md must document the post-release scope-selection gate"
+require_fixed "docs/ROADMAP.md" 'current_execution_control_plane: `post-release route selection`' \
+  "docs/ROADMAP.md must declare the current post-release execution plane"
 require_fixed "docs/ROADMAP.md" 'current_release_plan: `docs/plans/2026-05-12-release-v1.5.0-formalization.md`' \
   "docs/ROADMAP.md must point to the active release-control plan"
 require_fixed "docs/ROADMAP.md" 'current_release_readiness: `docs/test_reports/RELEASE_READINESS_V1.5.0.md`' \
   "docs/ROADMAP.md must point to the active release readiness report"
+require_fixed "docs/ROADMAP.md" 'current_release_status: `RELEASED`' \
+  "docs/ROADMAP.md must expose the released status"
 require_fixed "docs/ROADMAP.md" 'wave_c_role: `closeout / approval / historical reference only`' \
   "docs/ROADMAP.md must limit Wave C to closeout / approval / history"
 

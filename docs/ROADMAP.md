@@ -7,15 +7,16 @@
 
 ## 当前状态
 
-- engineering_state: CLOSED_OUT_PENDING_APPROVAL
-- approval_gate: human decision required before reopening Wave C mainline work
-- current_execution_control_plane: `release-control / v1.5.0 formalization`
+- engineering_state: RELEASED
+- approval_gate: explicit scope selection required before the next implementation batch
+- current_execution_control_plane: `post-release route selection`
 - current_release_plan: `docs/plans/2026-05-12-release-v1.5.0-formalization.md`
 - current_release_readiness: `docs/test_reports/RELEASE_READINESS_V1.5.0.md`
 - current_release_status: `RELEASED`
 - current_workflow_surface: `.github/README.md`
 - wave_c_role: `closeout / approval / historical reference only`
 - product_mainline: `SSL/TLS backend completeness roadmap`
+- next_route_candidate: `docs/plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md`
 - current_default_build: `python3 scripts/compile_all_modules.py`
 - current_default_gate: `bash scripts/run_minimal_ci_gate.sh --fast-local`
 - current_focused_gate: `bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`
@@ -24,13 +25,15 @@
 
 这几个状态需要分开理解：
 
-- 当前默认执行控制面是 `release-control / v1.5.0 formalization`，先看 release plan / readiness / workflow surface，再决定是否继续推进新的收口动作。
+- 当前默认执行控制面已经从 `release-control / v1.5.0 formalization` 切到 `post-release route selection`：
+  - `v1.5.0` 的发布链已经闭环
+  - 当前先看 roadmap / release readiness / workflow surface / product mainline roadmap，再决定下一条实现线
 - 当前 release-control 的技术门禁已经闭环：
   - manual `wave-b-b2-manual.yml` run `25989095571` 在 head `b95044d` 上的 `windows-gate` / `macos-gate` / `linux-gate` / `summary` 全部 `SUCCESS`
   - 默认 `CI` run `25989090032` 在同一 head 上也已 `SUCCESS`
   - `Release v1.5.0` run `25991977801` 也已在 head `e775ac5` 上 `SUCCESS`
   - `v1.5.0` GitHub Release 已发布，source archive `fafafa-ssl-v1.5.0-source.tar.gz` 已上传
-- `Wave C` 现在主要是治理与审批状态页，不再代表当前产品功能主线。
+- `Wave C` 现在只是 closeout / 历史参考，不再承载当前审批门或默认实施入口。
 - 当前真正还在推进的实现主线，是 pure Pascal backend 的 SSL/TLS completeness。
 - `KnownIssues` 已不再把 OCSP / CT / validation / resumption 写成剩余 gap；这些线只有 fresh RED 才应重开。
 
@@ -42,8 +45,8 @@
 
 1. [v1.5.0 release formalization plan](plans/2026-05-12-release-v1.5.0-formalization.md)
 2. [Release readiness v1.5.0](test_reports/RELEASE_READINESS_V1.5.0.md)
-3. [GitHub Actions README](../.github/README.md)
-4. [SSL/TLS backend completeness roadmap](plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md)
+3. [SSL/TLS backend completeness roadmap](plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md)
+4. [GitHub Actions README](../.github/README.md)
 5. [Wave C Closeout Status](test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md)
 6. [Wave C Current Chain](test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md)
 
@@ -94,7 +97,7 @@ bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local
 
 下一条最值得开的实现线：
 
-1. `release-control / v1.5.0 formalization` 这条线已经完成，不再建议重开；下一步应明确切回新的产品实现线，而不是继续围绕 `v1.5.0` 做重复发布验证。
+1. `release-control / v1.5.0 formalization` 这条线已经完成，不再建议重开；当前默认工作是从 product mainline 里选下一条实现线，而不是继续围绕 `v1.5.0` 做重复发布验证。
 2. 如果还要继续扩 early-data，不再建议无 fresh RED 地继续开 directory-store family；当前 blocker queue 已经收口，剩余只有更深的 crash-window / write-interruption drift 值得在 fresh failing evidence 出现时再重开，而不是现在回头重开现有 file-backed `.bak` family、managed boundary 或现有 parity 接线。
 3. capability 等级继续保持 `experimental`；当前剩余 caveat 已经收口到 local persistent 路径、fail-closed 行为，以及尚未承诺 distributed / cross-host replay coordination。
 4. OCSP / CT / validation 只在 fresh failing evidence 出现时重开，不再作为默认 future queue。

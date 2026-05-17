@@ -11,6 +11,65 @@
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
   - result: no output
 
+### Post-Release Control Plane Drift Revalidation
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - current head is `9d0e330`
+    - branch is `master...origin/master`
+    - current worktree contains a 5-file docs/contract truth-sync batch that has not been committed yet
+
+- `git log --oneline --decorate -5`
+  - result: PASS
+  - summary:
+    - `master` head is `9d0e330` (`docs: record v1.5.0 release closeout`)
+    - published tag `v1.5.0` remains on `e775ac5`
+    - the release lane is already closed out; current work is post-release control-plane sync
+
+- `git rev-parse HEAD && git rev-parse v1.5.0^{}`
+  - result: PASS
+  - summary:
+    - `HEAD=9d0e330b655212e7d0665d59df01bfddf57676ef`
+    - `v1.5.0=e775ac5c5886373bedba1313ae7c6230ea82cd6c`
+
+- `git diff -- .github/README.md docs/DOCUMENTATION_INDEX.md docs/README.md docs/ROADMAP.md tests/scripts/test_active_roadmap_references_contract.sh`
+  - result: PASS
+  - summary:
+    - current uncommitted batch switches the active entrypoint wording from `release-control / v1.5.0 formalization` to `post-release route selection`
+    - the contract now asserts `engineering_state: RELEASED`, the post-release scope-selection gate, and the released status
+
+- `rg -n "release-control|CLOSED_OUT_PENDING_APPROVAL|human decision required before reopening|post-release|approval_gate|current_execution_control_plane" .github/README.md docs/README.md docs/DOCUMENTATION_INDEX.md docs/ROADMAP.md tests/scripts/test_active_roadmap_references_contract.sh task_plan.md findings.md progress.md`
+  - result: PASS
+  - summary:
+    - confirmed active docs already carry the new post-release control-plane wording
+    - confirmed `task_plan.md` / `findings.md` / `progress.md` still retain stale release-control blocker narratives and need this batch's working-memory sync
+
+- `rg -n "release-control / historical|release-control 执行计划|当前主目标已经切换|PASS_PENDING_APPROVAL|READY_FOR_MAIN_MERGE" docs/README.md docs/DOCUMENTATION_INDEX.md task_plan.md findings.md progress.md`
+  - result: PASS
+  - summary:
+    - found two residual active-entrypoint drifts outside the original 5-file batch:
+      - `docs/README.md` still said `release-control / historical`
+      - `.github/README.md` still had a "准备 v1.5.0 release-control 收口" usage hint
+    - found the top of `task_plan.md` / `findings.md` / `progress.md` still anchored on pre-release states such as `PASS_PENDING_APPROVAL`
+
+### Post-Release Truth Sync Verification
+
+- `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - result: PASS
+  - summary:
+    - active roadmap / docs entrypoints now converge on the released post-release control plane
+
+- `bash tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh`
+  - result: PASS
+  - summary:
+    - release readiness, static audit, release notes, and public Pascal facade truth remain intact after the post-release entrypoint sync
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current truth-sync batch has no whitespace or patch-format drift
+
 ### Release-Control Truth Revalidation
 
 - `gh api repos/dtamade/fafafa.ssl/actions/runs/25989095571 --jq '{id:.id,head_sha:.head_sha,status:.status,conclusion:.conclusion,event:.event,name:.name,display_title:.display_title}'`

@@ -7,20 +7,21 @@ fafafa.ssl 是 Free Pascal 的高性能 SSL/TLS 库，支持 OpenSSL、WinSSL、
 
 ---
 
-## 当前工程入口（release-control）
+## 当前工程入口（post-release）
 
-如果你是在继续当前工程的验证/收口，而不是单纯查 API，默认先走 release-control 这条链路：
+如果你是在继续当前工程的发布后收口、路线选择或下一条实现线准备，而不是单纯查 API，默认先走 post-release 这条链路：
 
 - 当前路线图：[ROADMAP.md](ROADMAP.md)
-- 当前 release-control plan：`plans/2026-05-12-release-v1.5.0-formalization.md`
-- 当前 release readiness：`test_reports/RELEASE_READINESS_V1.5.0.md`
+- 当前已发布 release-control plan：`plans/2026-05-12-release-v1.5.0-formalization.md`
+- 当前已发布 release readiness：`test_reports/RELEASE_READINESS_V1.5.0.md`
+- 下一条产品主线候选：`plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md`
 - 当前 workflow surface：`../.github/README.md`
 - 当前构建命令：`python3 scripts/compile_all_modules.py`
 - 当前最小门禁：`bash scripts/run_minimal_ci_gate.sh --fast-local`
 - 当前 FreePascal TLS 1.3 focused gate：`bash scripts/run_freepascal_tls13_completeness_gate.sh --fast-local`（TLS 1.3 + validation runtime focused lanes）
 - 当前代码风格门禁：`python3 scripts/check_code_style.py src`
 - Phase 2 入口探测：`bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`
-- Wave C closeout / 审批参考：`test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md`、`test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
+- Wave C closeout / 历史参考：`test_reports/WAVE_C_CLOSEOUT_STATUS_2026-03-18.md`、`test_reports/WAVE_C_LOCAL_FIRST_AND_PRE_CI_CHAIN_STATUS_2026-03-16.md`
 - 历史参考：`test_reports/WAVE_C_B121_ONE_PAGE_RUNBOOK_2026-02-08.md`、`test_reports/WAVE_C_B127_LOCAL_GUARD_TROUBLESHOOTING_2026-02-09.md`
 
 ---
@@ -90,11 +91,11 @@ docs/
 
 | 文档                                                                                                                                           | 说明                                                 |
 | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| [README.md](README.md)                                                                                                                         | 文档中心与当前 release-control 工程入口              |
+| [README.md](README.md)                                                                                                                         | 文档中心与当前 post-release 工程入口                 |
 | [ROADMAP.md](ROADMAP.md)                                                                                                                       | 当前稳定 roadmap / status 入口                       |
-| [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)                                                                                               | 文档全索引与 release-control / historical 分区       |
-| [plans/2026-05-12-release-v1.5.0-formalization.md](plans/2026-05-12-release-v1.5.0-formalization.md)                                         | 当前 release-control 执行计划                        |
-| [test_reports/RELEASE_READINESS_V1.5.0.md](test_reports/RELEASE_READINESS_V1.5.0.md)                                                         | 当前 v1.5.0 release readiness 结论                   |
+| [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)                                                                                               | 文档全索引与 post-release / historical 分区          |
+| [plans/2026-05-12-release-v1.5.0-formalization.md](plans/2026-05-12-release-v1.5.0-formalization.md)                                         | 已完成的 v1.5.0 release-control 执行计划             |
+| [test_reports/RELEASE_READINESS_V1.5.0.md](test_reports/RELEASE_READINESS_V1.5.0.md)                                                         | 已发布的 v1.5.0 release readiness 结论               |
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)                                                                                                   | **框架集成指南** - 如何集成到其他网络框架            |
 | [guides/QUICKSTART.md](guides/QUICKSTART.md)                                                                                                   | 5 分钟快速上手                                       |
 | [guides/USER_GUIDE.md](guides/USER_GUIDE.md)                                                                                                   | 完整用户指南                                         |

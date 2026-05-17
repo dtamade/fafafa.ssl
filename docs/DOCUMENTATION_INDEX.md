@@ -7,13 +7,14 @@
 
 ---
 
-## 🧭 当前工程入口（release-control）
+## 🧭 当前工程入口（post-release）
 
-如果你是在继续当前工程收口、验证或回填证据，默认先看下面四项，再按当前命令推进：
+如果你是在继续当前工程的发布后收口、路线选择或下一条实现线准备，默认先看下面几项，再按当前命令推进：
 
 - **[ROADMAP.md](ROADMAP.md)** - 当前稳定 roadmap / status 入口
-- **[plans/2026-05-12-release-v1.5.0-formalization.md](plans/2026-05-12-release-v1.5.0-formalization.md)** - 当前 release-control 执行计划
-- **[test_reports/RELEASE_READINESS_V1.5.0.md](test_reports/RELEASE_READINESS_V1.5.0.md)** - 当前 v1.5.0 release readiness / stop-here 结论
+- **[plans/2026-05-12-release-v1.5.0-formalization.md](plans/2026-05-12-release-v1.5.0-formalization.md)** - 已完成的 v1.5.0 release-control 执行计划
+- **[test_reports/RELEASE_READINESS_V1.5.0.md](test_reports/RELEASE_READINESS_V1.5.0.md)** - 已发布的 v1.5.0 release readiness 结论
+- **[plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md](plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md)** - 下一条产品主线候选
 - **[../.github/README.md](../.github/README.md)** - 当前 workflow surface
 - `python3 scripts/compile_all_modules.py`
 - `bash scripts/run_minimal_ci_gate.sh --fast-local`
@@ -27,16 +28,17 @@
 ## 🚀 从这里开始（推荐）
 
 1. **[ROADMAP.md](ROADMAP.md)** - 当前稳定 roadmap / status 入口 🆕
-2. **[plans/2026-05-12-release-v1.5.0-formalization.md](plans/2026-05-12-release-v1.5.0-formalization.md)** - 当前 release-control 执行计划 🆕
-3. **[test_reports/RELEASE_READINESS_V1.5.0.md](test_reports/RELEASE_READINESS_V1.5.0.md)** - 当前 v1.5.0 release readiness 结论 🆕
+2. **[test_reports/RELEASE_READINESS_V1.5.0.md](test_reports/RELEASE_READINESS_V1.5.0.md)** - 已发布的 v1.5.0 release readiness 结论 🆕
+3. **[plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md](plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md)** - 下一条产品主线候选 🆕
 4. **[../.github/README.md](../.github/README.md)** - 当前 workflow surface 🆕
-5. **[guides/GETTING_STARTED.md](guides/GETTING_STARTED.md)** - 入门（推荐入口与最小示例）
-6. **[guides/QUICKSTART.md](guides/QUICKSTART.md)** - 快速开始
-7. **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - 框架集成指南（如何把 TLS 接到你的网络框架）
-8. **[reference/API_REFERENCE.md](reference/API_REFERENCE.md)** - API 参考
-9. **[examples/README.md](../examples/README.md)** - 示例程序说明
-10. **[examples/EXAMPLES_INDEX.md](../examples/EXAMPLES_INDEX.md)** - 示例程序完整索引（按功能分类）
-11. **[reference/ARCHITECTURE.md](reference/ARCHITECTURE.md)** - 架构设计文档 🆕
+5. **[plans/2026-05-12-release-v1.5.0-formalization.md](plans/2026-05-12-release-v1.5.0-formalization.md)** - 已完成的 release-control 执行计划 🆕
+6. **[guides/GETTING_STARTED.md](guides/GETTING_STARTED.md)** - 入门（推荐入口与最小示例）
+7. **[guides/QUICKSTART.md](guides/QUICKSTART.md)** - 快速开始
+8. **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - 框架集成指南（如何把 TLS 接到你的网络框架）
+9. **[reference/API_REFERENCE.md](reference/API_REFERENCE.md)** - API 参考
+10. **[examples/README.md](../examples/README.md)** - 示例程序说明
+11. **[examples/EXAMPLES_INDEX.md](../examples/EXAMPLES_INDEX.md)** - 示例程序完整索引（按功能分类）
+12. **[reference/ARCHITECTURE.md](reference/ARCHITECTURE.md)** - 架构设计文档 🆕
 
 ---
 
