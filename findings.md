@@ -598,3 +598,17 @@
 - 这说明当前 `wave-b-b2` 线上最值得继续补的，已经从 “mismatch 是否处理” 前移到 “missing 分支是否对称”：
   - handoff bundle 这边下一站更值钱的是 `closure_report run_id missing` / `consistency_report run_id missing` focused contracts
   - consistency 这一层的 closure report top-note truth 已经收口
+
+- 随后的 docs closeout `87ee953` 对应 `CI` run `25983461905` 继续 SUCCESS：
+  - `Code Quality (Light)`、`Minimal Gate (Linux)`、`FreePascal TLS 1.3 Completeness` 全部 SUCCESS
+  - 说明这条 wave-b truth sync 路线继续没有把自动主线带偏
+
+- 沿着上一条 queue 把 `prepare_wave_b_b2_handoff_bundle.sh` 的 `run_id missing` 分支补成 focused contract 后，当前结论是“coverage gap 已补齐”，不是又发现了新的 prod bug：
+  - 脚本本身已经会把 `closure_report run_id missing` 和 `consistency_report run_id missing` 都降级到 `NEEDS_REPORT_REPAIR`
+  - 缺口在于合同之前只锁住了 mismatch，没有把 missing 一起钉死
+  - 现在 `test_prepare_wave_b_b2_handoff_bundle_report_run_id_contract.sh` 已同时覆盖 missing / mismatch，对 `report_chain_note` 的 truthful 对称性也形成了持续守护
+
+- 因而当前 `wave-b-b2` 线上更合理的下一跳，不再是重复追 `run_id missing`，而是再往外一圈补“整个 report 文件缺失”这条分支的 focused contracts：
+  - `closure_report missing`
+  - `consistency_report missing`
+  - 目标仍是确认 `NEEDS_REPORT_REPAIR`、`report_chain_note` 和 next actions 保持同一条 truth

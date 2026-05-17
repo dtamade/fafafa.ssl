@@ -186,3 +186,5 @@ git diff --check
   - 最新又补上 `prepare_wave_b_b2_handoff_bundle.sh` 的 report-chain `run_id` metadata 收紧；closure / consistency report 串批次时现在会 truthful 地降级到 `NEEDS_REPORT_REPAIR`
   - 对应代码批次提交 `7a496b7` 已推送，并记录自动 `CI` run `25983122179`
   - 最新又补上 `check_wave_b_b2_evidence_consistency.sh` 的 closure-report `run_id` 顶层 note 收紧；`run_id missing/mismatch` 不再被顶层 `CLOSED` 掩盖，对应代码批次提交 `853540f` 已推送，并记录自动 `CI` run `25983419528`
+  - 随后 docs closeout `87ee953` 对应 `CI` run `25983461905` 继续 SUCCESS，说明 wave-b truth sync 没有误伤自动主线
+  - 最新又补上 `prepare_wave_b_b2_handoff_bundle.sh` 的 report `run_id missing` focused contract；当前确认这是 coverage 缺口而不是新的生产脚本 bug，`closure_report` / `consistency_report` 缺失 `run_id` 时已被持续守护为 `NEEDS_REPORT_REPAIR`

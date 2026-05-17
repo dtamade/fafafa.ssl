@@ -2357,3 +2357,62 @@
     - latest observed run for head `853540f` was `CI` run `25983419528`
     - status at record time: `in_progress`
     - per the incremental verification discipline, this consistency-note truth batch recorded the run id without a blocking watch
+
+### Twenty-Seventh Docs Closeout Revalidation
+
+- `gh run list --branch master --limit 4 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - initial observation showed docs closeout head `87ee953` as `CI` run `25983461905` in progress
+    - subsequent retry confirmed both `25983419528` (`853540f`) and `25983461905` (`87ee953`) finished `success`
+
+- `gh run view 25983461905 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt,jobs`
+  - result: PASS
+  - summary:
+    - run=`25983461905`
+    - workflow=`CI`
+    - head=`87ee953`
+    - `Code Quality (Light)` SUCCESS
+    - `Minimal Gate (Linux)` SUCCESS
+    - `FreePascal TLS 1.3 Completeness` SUCCESS
+
+### Twenty-Eighth-Order Route Review
+
+- `sed -n '420,520p' task_plan.md`
+  - result: PASS
+  - summary:
+    - current queue explicitly pointed to `prepare_wave_b_b2_handoff_bundle.sh` report `run_id missing` focused contracts
+    - route stayed on wave-b handoff metadata truth instead of reopening earlier workflow hygiene lanes
+
+- `sed -n '560,620p' findings.md`
+  - result: PASS
+  - summary:
+    - prior findings already narrowed the next highest-value gap to the missing branch symmetry
+    - no evidence suggested a new runtime or workflow regression outside this contract surface
+
+### Twenty-Eighth-Order Contract Expansion
+
+- update `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_run_id_contract.sh`
+  - change: add `closure_report run_id missing` scenario
+  - change: add `consistency_report run_id missing` scenario
+  - change: keep the same `NEEDS_REPORT_REPAIR` + `report_chain_note` truth assertions used for mismatch
+
+### Local Revalidation After Twenty-Eighth Contract Expansion
+
+- `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_run_id_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_run_id_contract.sh`
+  - result: PASS
+  - summary:
+    - `closure_missing`
+    - `closure_mismatch`
+    - `consistency_missing`
+    - `consistency_mismatch`
+    - all generated handoff bundles downgraded to `NEEDS_REPORT_REPAIR` with the expected note
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS

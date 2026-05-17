@@ -177,7 +177,9 @@ run_scenario() {
   fi
 }
 
+run_scenario "closure_missing" "" "$RUN_ID" "closure_report run_id missing"
 run_scenario "closure_mismatch" "$BAD_RUN_ID" "$RUN_ID" "closure_report run_id mismatch"
+run_scenario "consistency_missing" "$RUN_ID" "" "consistency_report run_id missing"
 run_scenario "consistency_mismatch" "$RUN_ID" "$BAD_RUN_ID" "consistency_report run_id mismatch"
 
 echo "[PASS] prepare_wave_b_b2 handoff bundle report run-id contract passed"
