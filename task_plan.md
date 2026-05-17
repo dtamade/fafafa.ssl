@@ -1,8 +1,8 @@
-# Task Plan - Post-Release Route Selection Truth Sync
+# Task Plan - WinSSL Capability Truth Alignment And Route Refresh
 
 ## Goal
 
-当前主目标已经切换为把 `v1.5.0` 正式发布后的真相同步回默认控制面：以 `master` head `9d0e330`、已发布 tag `v1.5.0 -> e775ac5`、release run `25991977801` 与当前 `docs/ROADMAP.md` 为真相源，收口 `task_plan.md / findings.md / progress.md` 及 active entrypoint docs 的 `post-release route selection` 叙事，并把下一条产品实现线明确交回 `SSL/TLS backend completeness roadmap`。
+当前主目标已经切换为用 live 源码/测试重新校准产品主线：先确认 `docs/plans/2026-03-25-...` 里的原始 `TLS_AES_256_GCM_SHA384` parity lane 已不是第一缺口，再把新暴露出的 WinSSL capability truth drift 收口为一个小批次修复。当前批次聚焦两件事：修 `src/fafafa.ssl.winssl.lib.pas` 的 `IsCipherSupported` 假阳性与 `SessionCacheSupport` 缺失，并把这条路线修正写回 roadmap / capability docs / working-memory。
 
 ## Current Status
 
@@ -13,11 +13,15 @@
   - `Release v1.5.0` run `25991977801` 已 `SUCCESS`
   - 已发布 tag 仍指向 `e775ac5`
   - `master` 当前位于记录 release closeout 的 `9d0e330`
-- [in_progress] 当前批次只剩发布后控制面真相同步：
-  - `docs/ROADMAP.md` / `docs/README.md` / `docs/DOCUMENTATION_INDEX.md` / `.github/README.md` 已切向 `post-release route selection`
-  - `task_plan.md` / `findings.md` / `progress.md` 已在当前工作树里同步到新的控制面真相
-  - 受影响窄验证已通过，当前只剩 review 结论与 commit/push 收口
-  - 当前真正的下一步不是重开发布验证，而是把 product mainline 重新对齐到 backend completeness roadmap
+- [completed] live 重新审查已经证明原始 `TLS_AES_256_GCM_SHA384` parity lane 不再是当前第一缺口：
+  - `tests/test_tls13_finished.pas` 已包含 SHA384 suite-aware Finished contract
+  - `tests/test_tls13_clienthello_parser.pas` / `tests/test_tls13_foundation.pas` 已覆盖三套 TLS 1.3 advertize 顺序
+  - `src/fafafa.ssl.freepascal.lib.pas` 已支持 `TLS_AES_256_GCM_SHA384` 与 `sslCipherAES256GCM`
+- [in_progress] 当前批次已经收口到 WinSSL capability truth drift：
+  - 新增 `tests/scripts/test_winssl_capability_source_contract.sh`
+  - 已先观测到红灯：`TWinSSLLibrary.IsCipherSupported` 对任意 cipher name 都返回 `True`
+  - 已修复 source：未知/fake cipher / empty name 不再放行，`SessionCacheSupport` 现在显式发布为 `sslSupportStable`
+  - 已同步 `tests/test_capability_matrix_v12.pas` 到正确语义，剩余 only docs/working-memory closeout + commit/push
 - [completed] 第一次正式 release run `25991512715` 曾把第一硬故障收口到 release workflow contract 的 runner 依赖假设，后续已由 `f7173f9` 修复：
   - `Checkout` / `Resolve release version` / `Install dependencies` / `Verify version metadata` 全部 `SUCCESS`
   - `Run release gates` 在最后一个 `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh` 处失败
@@ -813,29 +817,28 @@
 
 ## Current Blocker
 
-- 当前没有新的 runtime blocker，也没有新的 release blocker：
-  - manual run `25989095571` 已证明 `windows-gate` / `macos-gate` / `linux-gate` 全绿
-  - 默认 `CI` run `25989090032` 已证明自动主线正常
-  - `Release v1.5.0` run `25991977801` 已完成正式发布
-- 当前没有技术性 blocker；唯一剩余动作是批次收口：
-  - active entrypoint docs 与 working-memory 已在本地同步到 `post-release route selection`
-  - 窄验证已通过
-  - 只待给出简短 review 结论并 commit/push
-- 当前批次完成后，下一条真正要开的实施线是 `docs/plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md` 的 Phase 1 completeness audit，而不是重开发布或 WinSSL 验证
+- 当前没有 release/runtime blocker；当前唯一剩余动作是 WinSSL capability truth 批次收口：
+  - source fix 与 focused red/green 已完成
+  - 还需把路线修正写回 working-memory / capability docs，并完成 commit/push
+- 当前第一开发路线问题已经明确：
+  - `docs/plans/2026-03-25-...` 的原始 SHA384 parity task 已经历史化
+  - 下一条真正值得继续的产品线应从“backend capability truth alignment beyond SHA384 parity”继续，而不是重做这条旧 lane
 
 ## Current Queue
 
-1. 给出简短 review 结论后提交并推送当前 truth-sync batch。
-2. 下一批进入 `SSL/TLS backend completeness roadmap` 的 Phase 1 completeness audit，优先产出 backend matrix 与第一条 bounded implementation lane。
+1. 同步 roadmap / WinSSL capability docs / working-memory 到当前 live truth。
+2. 跑窄验证：`bash tests/scripts/test_winssl_capability_source_contract.sh`、`tests/test_capability_matrix_v12.pas` focused compile+run、`git diff --check`。
+3. 给出简短 review 结论后提交并推送当前 capability-truth batch。
+4. 下一批从 backend capability truth alignment 继续，而不是重开 SHA384 parity。
 
 ## Verification Discipline
 
 - 当前这条 truth-sync lane 只做窄验证：
-  - `tests/scripts/test_active_roadmap_references_contract.sh`
-  - `tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh`
+  - `tests/scripts/test_winssl_capability_source_contract.sh`
+  - `tests/test_capability_matrix_v12.pas` focused compile+run
   - `git diff --check`
-- 不在本地重复整条 compile/completeness/minimal gates，因为当前批次只改 docs / contracts / working-memory，而已发布 truth 与跨平台 runtime truth 都已绿色闭环。
-- 不重复 dispatch `wave-b-b2-manual.yml`，因为当前 head 已有 fresh green runtime proof；只有后续改动真正影响 runtime 边界时才重派。
+- 不在本地重复整条 compile/completeness/minimal gates，因为当前批次只改 WinSSL capability source truth + docs/working-memory，且用户明确不希望重复重跑大治理验证。
+- 不重复 dispatch `wave-b-b2-manual.yml`，除非本批完成后需要用 GitHub Windows runner 对新的 WinSSL capability 语义做远端补证。
 - 不重复重跑 `release.yml` 或与本批无关的 cached-green workflow 治理合同。
 
 ## Decision Locks
@@ -843,13 +846,14 @@
 - 不重开 `v1.5.0` tag / GitHub Release / `release.yml`。
 - 不重新回到 “Windows/WinSSL static-only” 或 “Linux-only closeout” 叙事；当前 truth source 是 GitHub Actions 的最新 manual + CI green evidence。
 - Windows/WinSSL 如再涉及运行时真相，默认仍以 GitHub Actions 为 truth source，而不是本地条件叙事。
+- 不再把 `docs/plans/2026-03-25-...` 的原始 SHA384 parity task 当作当前未做主线。
 - 不扩到 release/tag/PR 流；继续直接在 `master` 以小批次收口。
 - 不顺手扩大到无关 runtime surface、无关 dormant workflow、或新的架构重写。
 - 每个有效批次都要在提交前补齐 working-memory 文件，并在提交后记录新的 truth source 或下一条明确路线。
 
 ## Stop Condition
 
-- working-memory 文件与 active entrypoint docs 都同步到 `post-release route selection` 真相。
+- working-memory 文件、WinSSL capability docs 与 completeness roadmap note 都同步到当前 live truth。
 - 本批受影响 contracts 与 `git diff --check` 继续通过。
 - 当前批次已提交并推送到 `master`。
-- 下一条产品实现线已经明确交回 `SSL/TLS backend completeness roadmap`。
+- 下一条产品实现线不再被旧 SHA384 parity plan 误导。

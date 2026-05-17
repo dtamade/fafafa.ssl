@@ -434,11 +434,37 @@ begin
 end;
 
 function TWinSSLLibrary.IsCipherSupported(const ACipherName: string): Boolean;
+var
+  LCipher: string;
+  LSupportsChaCha: Boolean;
 begin
-  // Windows Schannel 的密码套件支持由系统策略决定
-  // 这里简单返回 True，实际支持在握手时由系统确定
-  Result := True;
-  InternalLog(sslLogDebug, Format('Cipher support check: %s (deferred to system)', [ACipherName]));
+  if not FInitialized then
+    Exit(False);
+
+  LCipher := UpperCase(Trim(ACipherName));
+  if LCipher = '' then
+    Exit(False);
+
+  Result :=
+    (LCipher = 'TLS_AES_128_GCM_SHA256') or
+    (LCipher = 'TLS_AES_256_GCM_SHA384') or
+    (LCipher = 'AES128') or
+    (LCipher = 'AES256') or
+    (LCipher = 'AES128-GCM') or
+    (LCipher = 'AES256-GCM') or
+    (LCipher = 'AES128_GCM') or
+    (LCipher = 'AES256_GCM');
+
+  LSupportsChaCha := (FWindowsVersion.Major >= 10) and (FWindowsVersion.Build >= 18362);
+  if (not Result) and LSupportsChaCha then
+    Result :=
+      (LCipher = 'TLS_CHACHA20_POLY1305_SHA256') or
+      (LCipher = 'CHACHA20_POLY1305') or
+      (LCipher = 'CHACHA20-POLY1305');
+
+  InternalLog(sslLogDebug, Format('Cipher support check: %s = %s', [
+    ACipherName, BoolToStr(Result, True)
+  ]));
 end;
 
 { 类型安全版本（Phase 1.3 - Rust质量标准） }
@@ -534,6 +560,11 @@ begin
   Result.OCSPStaplingSupport := sslSupportNone;
   Result.CertTransparencySupport := sslSupportNone;
   Result.SessionTicketsSupport := sslSupportStable;
+  Result.SessionCacheSupport := sslSupportStable;
+  Result.ZeroRTTSupport := sslSupportNone;
+  Result.EarlyDataSupport := sslSupportNone;
+  Result.RenegotiationSupport := sslSupportNone;
+  Result.PostHandshakeAuthSupport := sslSupportNone;
 
   // 密码算法支持（Schannel 由系统决定）
   Result.SupportedCiphers := [

@@ -92,7 +92,7 @@ Ctx := TSSLContextBuilder.Create
 |------|----------|------|
 | Session 复用 | ✅ 支持 | 完整支持 |
 | Session Ticket | ✅ 支持 | TLS 1.2+ |
-| Session Cache | ✅ 支持 | 系统管理 |
+| Session Cache | ✅ 支持 | 系统管理；`SessionCacheSupport=sslSupportStable` |
 | 0-RTT | ⚠️ 部分 | TLS 1.3（Schannel 有限支持；fafafa.ssl 封装层不暴露 ISSLEarlyDataContext） |
 
 ### 高级功能
@@ -238,6 +238,7 @@ end.
 3. **Ed25519 不支持**: 不支持 Edwards 曲线
 4. **API 限制**: 某些高级功能需要特定 Windows 版本
 5. **调试困难**: 错误信息不如 OpenSSL 详细
+6. **Capability truth**: `IsCipherSupported(...)` 现在只对 capability-matrix 中的已知 cipher family 返回 `True`；未知/fake cipher name 会被拒绝，而不是再以“系统握手期再决定”为由放行
 
 ## 故障排除
 

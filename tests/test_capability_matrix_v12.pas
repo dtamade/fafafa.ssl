@@ -121,24 +121,12 @@ begin
     WriteLn('  FakeCipher(TLS_FAKE_AES_128_GCM_SHA256): ', LKnownBad);
     WriteLn('  EmptyName(""): ', LEmptyName);
 
-    if AType = sslWinSSL then
-    begin
-      RecordContract('WinSSL known-good deferred true semantics', LKnownGood,
-        'WinSSL currently defers cipher enforcement to runtime handshake policy');
-      RecordContract('WinSSL fake-cipher deferred true semantics', LKnownBad,
-        'WinSSL currently defers cipher enforcement to runtime handshake policy');
-      RecordContract('WinSSL empty-name deferred true semantics', LEmptyName,
-        'WinSSL currently defers cipher enforcement to runtime handshake policy');
-    end
-    else
-    begin
-      RecordContract(ABackendName + ' known-good cipher accepted', LKnownGood,
-        'Known TLS1.3 cipher should be accepted');
-      RecordContract(ABackendName + ' fake cipher rejected', not LKnownBad,
-        'Unknown fake cipher should be rejected');
-      RecordContract(ABackendName + ' empty name rejected', not LEmptyName,
-        'Empty cipher name should be rejected');
-    end;
+    RecordContract(ABackendName + ' known-good cipher accepted', LKnownGood,
+      'Known TLS1.3 cipher should be accepted');
+    RecordContract(ABackendName + ' fake cipher rejected', not LKnownBad,
+      'Unknown fake cipher should be rejected');
+    RecordContract(ABackendName + ' empty name rejected', not LEmptyName,
+      'Empty cipher name should be rejected');
     WriteLn;
 
     WriteLn('[Performance & Security Features]');

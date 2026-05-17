@@ -11,6 +11,87 @@
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
   - result: no output
 
+### Backend Mainline Re-Audit And WinSSL Capability Drift
+
+- `sed -n '1,260p' docs/plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md`
+  - result: PASS
+  - summary:
+    - the historical plan still treated `TLS_AES_256_GCM_SHA384` parity as the next implementation lane
+    - this needed live-source revalidation before continuing
+
+- `rg -n "TLS_AES_256_GCM_SHA384|AES256GCM|SHA384 Finished|KnownIssues|IsCipherSupported|SupportedCiphers|TLS_CHACHA20_POLY1305_SHA256|TLS_AES_128_GCM_SHA256" src tests docs | head -n 300`
+  - result: PASS
+  - summary:
+    - live source/test evidence already showed SHA384 suite-aware Finished helpers, three-suite ClientHello advertize, and FreePascal AES256 capability/runtime alignment
+    - this proved the original SHA384 parity lane is no longer the first unresolved gap
+
+- `sed -n '430,610p' src/fafafa.ssl.winssl.lib.pas`
+  - result: PASS
+  - summary:
+    - found a real WinSSL capability bug:
+      - `TWinSSLLibrary.IsCipherSupported` returned unconditional `True`
+      - `SupportsSessionCache` was effectively true, but `SessionCacheSupport` was not explicitly published as stable
+
+- `sed -n '96,150p' tests/test_capability_matrix_v12.pas`
+  - result: PASS
+  - summary:
+    - found an old contract branch that intentionally recorded WinSSL fake-cipher acceptance as current truth
+    - this confirmed the drift was codified, not accidental
+
+### WinSSL Capability Red Proof
+
+- add `tests/scripts/test_winssl_capability_source_contract.sh`
+  - purpose:
+    - require WinSSL source truth to reject unconditional fake-cipher acceptance
+    - require explicit empty-name rejection
+    - require `SessionCacheSupport := sslSupportStable`
+
+- update `tests/test_capability_matrix_v12.pas`
+  - change:
+    - remove the old WinSSL-only "deferred true semantics" exception
+    - require the same known-good / fake / empty-name behavior as the other backends
+
+- `bash tests/scripts/test_winssl_capability_source_contract.sh`
+  - result before fix: FAIL
+  - summary:
+    - red observed on `WinSSL IsCipherSupported must not unconditionally accept every cipher name`
+
+### WinSSL Capability Repairs Applied
+
+- update `src/fafafa.ssl.winssl.lib.pas`
+  - change:
+    - `IsCipherSupported` now rejects empty names
+    - `IsCipherSupported` now uses an explicit capability-aware allowlist for AES128/AES256/AES-GCM and version-gated ChaCha20
+    - fake/unknown cipher names are no longer accepted
+    - `SessionCacheSupport := sslSupportStable`
+    - `ZeroRTTSupport` / `EarlyDataSupport` / `RenegotiationSupport` / `PostHandshakeAuthSupport` are now explicit
+
+- update `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - change:
+    - document `SessionCacheSupport=sslSupportStable`
+    - document that `IsCipherSupported(...)` now rejects unknown/fake cipher names
+
+- update `docs/plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md`
+  - change:
+    - mark the original SHA384 parity lane as historical audit input rather than the next unresolved implementation task
+
+### WinSSL Capability Revalidation
+
+- `bash tests/scripts/test_winssl_capability_source_contract.sh`
+  - result: PASS
+  - summary:
+    - WinSSL source truth now rejects unconditional fake-cipher acceptance and publishes stable `SessionCacheSupport`
+
+- `mkdir -p tmp/test_capability_matrix_v12 && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_capability_matrix_v12 -FEtmp/test_capability_matrix_v12 -otmp/test_capability_matrix_v12/test_capability_matrix_v12 tests/test_capability_matrix_v12.pas && ./tmp/test_capability_matrix_v12/test_capability_matrix_v12`
+  - result: PASS
+  - summary:
+    - focused capability-matrix test compiled successfully
+    - OpenSSL branch passed on the current Linux host
+    - WinSSL backend remained unavailable on Linux as expected, so no local runtime Windows claim was made
+
+- `git diff --check`
+  - result: PASS
+
 ### Post-Release Control Plane Drift Revalidation
 
 - `git status --short --branch`

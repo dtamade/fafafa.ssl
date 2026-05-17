@@ -1,5 +1,7 @@
 # SSL/TLS Backend Completeness Roadmap And FreePascal TLS 1.3 AES256/SHA384 Parity Implementation Plan
 
+> **Status 2026-05-17:** 这份计划的原始 Phase 2 `TLS_AES_256_GCM_SHA384` parity lane 已不再是当前第一缺口。live 源码/测试已经包含三套 TLS 1.3 ClientHello advertize、suite-aware SHA384 Finished helper，以及 FreePascal `IsCipherSupported('TLS_AES_256_GCM_SHA384')` / `SupportedCiphers` 对齐。当前继续推进时，应把它当作历史审计输入，而不是直接照单执行；新的 bounded continuation 应先修 backend capability truth drift，再从 SHA384 之外的 pure Pascal backlog 继续收口。
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** 把仓库主线从“旧 family 收口”切换到“SSL/TLS 接口与后端完整度推进”，并完成第一批 pure Pascal backend 向 rustls 级别能力收敛的实现：打通 `TLS_AES_256_GCM_SHA384`。

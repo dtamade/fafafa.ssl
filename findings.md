@@ -2,6 +2,21 @@
 
 ## 2026-05-17
 
+- `docs/plans/2026-03-25-ssl-tls-backend-completeness-roadmap-and-freepascal-tls13-aes256-sha384-parity.md` 的原始主线已经部分历史化：
+  - live 源码/测试已经存在 `TLS_AES_256_GCM_SHA384` 的 ClientHello advertize、suite-aware Finished、FreePascal `IsCipherSupported` 与 `SupportedCiphers` 对齐
+  - 这说明“继续照单执行 SHA384 parity”已经不是当前最优路线，继续这么做只会重复实现已落地能力
+
+- 当前真正暴露出来的 backend completeness 问题，是 WinSSL capability truth drift，而不是 pure Pascal SHA384 parity：
+  - `src/fafafa.ssl.winssl.lib.pas` 的 `TWinSSLLibrary.IsCipherSupported` 之前对任意 cipher name 都返回 `True`
+  - 这会让 fake cipher / empty name 探测、capability API 语义、以及后续 selector / 调用方判断一起失真
+  - 同一个 unit 里 `SupportsSessionCache=True`，但 `SessionCacheSupport` 没有显式同步到 `sslSupportStable`
+  - 这会让 feature-level truth 与旧布尔字段脱节
+
+- 这批最小正确修法因此是 capability truth alignment，而不是重写 WinSSL runtime：
+  - 用 focused source contract 先把 fake-cipher acceptance 与 `SessionCacheSupport` 缺口钉成红灯
+  - 再把 WinSSL cipher query 收窄到已知 capability-matrix cipher family，并显式发布 `SessionCacheSupport`
+  - 同时把旧的 “WinSSL deferred true semantics” runtime contract 改成正确语义
+
 - `v1.5.0` 现在已经是正式发布态，而不是待批准态：
   - `master` 当前 head 是记录 release closeout 的 `9d0e330`
   - 已发布 tag `v1.5.0` 仍指向 `e775ac5`
