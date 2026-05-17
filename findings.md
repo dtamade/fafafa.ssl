@@ -612,3 +612,7 @@
   - `closure_report missing`
   - `consistency_report missing`
   - 目标仍是确认 `NEEDS_REPORT_REPAIR`、`report_chain_note` 和 next actions 保持同一条 truth
+
+- 这次提交 `fb8664a` 只扩大了 focused contract 覆盖面，没有修改生产脚本状态机：
+  - 因此远端自动 `CI` run `25983594565` 只需要作为增量 run id 记账
+  - 除非它把自动主线打红，否则不需要把这类 coverage batch 升级成阻塞式盯跑

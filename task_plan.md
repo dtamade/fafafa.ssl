@@ -484,6 +484,10 @@
   - `test_prepare_wave_b_b2_handoff_bundle_report_run_id_contract.sh` PASS
   - `test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh` PASS
   - `git diff --check` PASS
+- [completed] 第二十八次提交 `fb8664a` 已完成，wave-b handoff report run_id missing coverage batch 已推送到 `master`
+- [completed] 第二十八次 push 已记录远端自动 run：
+  - `CI` run `25983594565`
+  - 该批只扩 focused contract，不扩生产脚本语义；按增量验证纪律记录 run id，不同步阻塞式等待整条自动主线收口
 
 ## Current Blocker
 
@@ -518,10 +522,9 @@
 
 ## Current Queue
 
-1. 先提交并推送当前 `wave-b-b2` handoff report `run_id missing` coverage batch，并记录自动 `CI` run id；该批只扩 focused contract，不扩生产脚本语义。
-2. 如果继续沿 `wave-b-b2` 这条线做静态加深，下一跳优先补 `prepare_wave_b_b2_handoff_bundle.sh` 的 `closure_report missing` / `consistency_report missing` focused contracts，确认“报告文件缺失”与“metadata 缺失/串批次”一样会给出对称 truthful 的 `report_chain_note` 与 next actions。
-3. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
-4. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
+1. 如果继续沿 `wave-b-b2` 这条线做静态加深，下一跳优先补 `prepare_wave_b_b2_handoff_bundle.sh` 的 `closure_report missing` / `consistency_report missing` focused contracts，确认“报告文件缺失”与“metadata 缺失/串批次”一样会给出对称 truthful 的 `report_chain_note` 与 next actions。
+2. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
+3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
 
 ## Verification Discipline
 

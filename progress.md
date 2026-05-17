@@ -104,6 +104,28 @@
 - `git diff --check`
   - result: PASS
 
+### Twenty-Eighth Push Recording
+
+- `git commit -m "test: cover wave-b handoff missing run ids"`
+  - result: PASS
+  - commit: `fb8664a`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `87ee953..fb8664a`
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - worktree returned to `## master...origin/master`
+
+- `gh run list --branch master --limit 4 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest observed run for head `fb8664a` was `CI` run `25983594565`
+    - status at record time: `in_progress`
+    - per the incremental verification discipline, this contract-expansion batch recorded the run id without a blocking watch
+
 ### Eleventh Push Success Revalidation
 
 - `git commit -m "chore: pin workflow actions to commits"`
