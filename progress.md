@@ -2134,3 +2134,92 @@
     - latest observed run for head `94e1817` was `CI` run `25981696547`
     - status at record time: `in_progress`
     - per the incremental verification discipline, this adjacent truth batch recorded the run id without a blocking watch
+
+### Twenty-Fifth-Order Route Review
+
+- `sed -n '1,320p' .github/workflows/wave-b-b2-manual.yml`
+  - result: PASS
+  - summary:
+    - the workflow itself remained an orchestration layer for runner execution, artifact upload/download, and `prepare_wave_b_b2_handoff_bundle.sh`
+    - no new YAML-side fixed summary/capability claim was found in the manual workflow wrapper
+
+- `sed -n '1,320p' .github/workflows/wave-b-b2-manual.yml.disabled`
+  - result: PASS
+  - summary:
+    - the dormant template stayed synchronized with the active manual workflow
+    - no additional over-claim was found in the template copy either
+
+- `rg -n "CLOSED|已闭环|已对齐|handoff|consistency" .github/workflows/wave-b-b2-manual.yml .github/workflows/wave-b-b2-manual.yml.disabled scripts/prepare_wave_b_b2_handoff_bundle.sh scripts/check_wave_b_b2_evidence_consistency.sh scripts/generate_wave_b_cross_platform_summary.sh scripts/check_wave_b_b2_closure_readiness.sh`
+  - result: PASS
+  - summary:
+    - remaining candidate wording surface narrowed to the closed branches in `generate_wave_b_cross_platform_summary.sh` and `check_wave_b_b2_closure_readiness.sh`
+    - `prepare_wave_b_b2_handoff_bundle.sh` and `check_wave_b_b2_evidence_consistency.sh` still looked appropriately scoped for their aggregation level
+
+### Twenty-Fifth-Order RED Contracts
+
+- `bash tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh`
+  - result before twenty-fifth fix: FAIL
+  - summary:
+    - closed cross summary still said `当前三平台 cross-platform evidence 已对齐`
+
+- `bash tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh`
+  - result before twenty-fifth fix: FAIL
+  - summary:
+    - closed closure readiness still said `当前三平台 summary 已闭环`
+
+### Twenty-Fifth-Order Repairs
+
+- update `tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh`
+  - change: require closed wording to narrow to `platform summary 状态已对齐`
+  - change: require an explicit reminder that full handoff truth still depends on `closure / consistency / handoff bundle`
+  - change: forbid the old `cross-platform evidence 已对齐` over-claim
+
+- update `tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh`
+  - change: expand the contract to cover both `IN_PROGRESS` and `CLOSED` scenarios
+  - change: require `closure_status: **CLOSED**` to remain compatible while forbidding full-handoff over-claim wording
+  - change: require an explicit reminder that full handoff truth still depends on `consistency / handoff bundle`
+
+- update `scripts/generate_wave_b_cross_platform_summary.sh`
+  - change: narrow the closed next action from `cross-platform evidence 已对齐` to `platform summary 状态已对齐`
+  - change: explicitly state that this is only summary-scope truth
+
+- update `scripts/check_wave_b_b2_closure_readiness.sh`
+  - change: narrow the closed next action from `summary 已闭环` to `summary 状态已闭环`
+  - change: explicitly state that full handoff closure still depends on `consistency / handoff bundle`
+
+### Local Revalidation After Twenty-Fifth Fix
+
+- `bash tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_closure_linux_next_actions_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+### Twenty-Fifth Push Recording
+
+- `git commit -m "chore: tighten wave-b handoff summary wording"`
+  - result: PASS
+  - commit: `fb28511`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `7e4d858..fb28511`
+
+- `gh run list --branch master --limit 4 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest observed run for head `fb28511` was `CI` run `25982459723`
+    - status at record time: `in_progress`
+    - per the incremental verification discipline, this manual/handoff-script batch recorded the run id without a blocking watch

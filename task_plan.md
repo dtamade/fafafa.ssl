@@ -405,6 +405,27 @@
 - [completed] 第二十四次 push 已记录远端自动 run：
   - `CI` run `25981696547`
   - 按新的增量验证纪律，这批只记录 run id，不同步阻塞式等待整条自动主线收口
+- [completed] route-local completion audit 已确认 `wave-b-b2-manual.yml(.disabled)` 自身没有新的固定 summary/capability claim：
+  - workflow summary job 只是汇总 artifacts 并调用 `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - 当前同类 over-claim 真正落点在脚本生成的 markdown，而不是 YAML 常量
+- [completed] 强化 wave-b focused contracts，并先在当前脚本上观测到红灯：
+  - `tests/scripts/test_wave_b_cross_platform_summary_next_actions_contract.sh` 现在拒绝 closed 场景把 summary 对齐写成 `cross-platform evidence 已对齐`
+  - `tests/scripts/test_wave_b_b2_closure_next_actions_contract.sh` 现在覆盖 `IN_PROGRESS` + `CLOSED` 两种场景，并拒绝把 summary-only closure 写成整条 handoff 已闭环
+- [completed] `scripts/generate_wave_b_cross_platform_summary.sh` 与 `scripts/check_wave_b_b2_closure_readiness.sh` 已收紧 closed wording：
+  - cross summary 只声明 `platform summary 状态已对齐`
+  - closure readiness 只声明 `summary 状态已闭环`
+  - 两者都显式提示：完整交接仍需结合 `closure / consistency / handoff bundle` 判断
+- [completed] 第二十五波 wave-b handoff summary wording 修复本地复核通过：
+  - `test_wave_b_cross_platform_summary_next_actions_contract.sh` PASS
+  - `test_wave_b_b2_closure_next_actions_contract.sh` PASS
+  - `test_wave_b_b2_closure_linux_next_actions_contract.sh` PASS
+  - `test_wave_b_b2_consistency_next_actions_contract.sh` PASS
+  - `test_prepare_wave_b_b2_handoff_bundle_next_actions_contract.sh` PASS
+  - `git diff --check` PASS
+- [completed] 第二十五次提交 `fb28511` 已完成，wave-b handoff summary wording batch 已推送到 `master`
+- [completed] 第二十五次 push 已记录远端自动 run：
+  - `CI` run `25982459723`
+  - 该批命中的是 manual/handoff 脚本文案层，按增量验证纪律只记录 run id，不同步阻塞式等待整条自动主线收口
 
 ## Current Blocker
 
@@ -423,14 +444,17 @@
 - 当前也没有已知仍保留“manual skip 生效但 summary 不承认 skipped 语义”的 dormant ci-matrix lane 残留。
 - 当前也没有已知仍保留 `pr-checks` 硬编码全绿状态表、或在 workflow 内伪装 branch-protection / review policy 的残留。
 - 当前也没有已知仍保留 `basic-checks` 硬编码成功三连、或 `linux-ci` 把单一 Ubuntu lane 冒充成 integration-ready 的残留。
+- 当前也没有已知仍把 summary 层 truth 伪装成 full handoff closure 的 `wave-b-b2` 脚本文案残留：
+  - `cross-platform summary` 与 `closure readiness` 的 closed wording 已回收到 summary scope
+  - `prepare_wave_b_b2_handoff_bundle.sh` / `check_wave_b_b2_evidence_consistency.sh` 继续保留更高层聚合职责
 - 当前剩余边界只在验证层：
   - `release.yml`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled`、`wave-b-b2-manual.yml.disabled` 等 dormant/manual 路径没有在远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
-- 当前没有新的同等级 YAML-summary 热点 blocker；最近两条 `test-all-platforms` 固定 coverage/support 断言与 `linux-ci` 证据文案过界都已被收掉
+- 当前没有新的同等级 YAML/script summary 热点 blocker；最近相邻的 `test-all-platforms` 固定 coverage/support、`linux-ci` 证据文案，以及 `wave-b-b2` closed wording 过界都已被收掉
 
 ## Current Queue
 
-1. 继续做一次 route-local 静态审查，但重点前移到 `wave-b-b2-manual.yml(.disabled)` 及其 handoff/closure 脚本，确认脚本生成 summary 是否也存在超出当前 run 证据范围的能力结论。
+1. 如果继续沿 `wave-b-b2` 这条线做静态加深，优先审 `prepare_wave_b_b2_handoff_bundle.sh` / `check_wave_b_b2_evidence_consistency.sh` 的 report-metadata parse 与降级状态边界，而不是重复审已经收掉的 closed wording。
 2. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
 3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
 
@@ -475,6 +499,7 @@
 - 第二十二批 dormant basic/linux summary truth batch commit / push 完成，且自动远端主线复核通过
 - 第二十三批 dormant multi-platform summary claim batch commit / push 完成，且远端自动 run 已记录
 - 第二十四批 dormant Linux evidence wording batch commit / push 完成，且远端自动 run 已记录
+- 第二十五批 wave-b handoff summary wording batch commit / push 完成，且远端自动 run 已记录
 - `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
 - `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
 - `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用

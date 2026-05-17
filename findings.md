@@ -523,3 +523,32 @@
   - 纯 YAML 里的固定 summary claim 基本已经收得差不多
   - 下一站更值得审的是 `wave-b-b2-manual.yml(.disabled)` 及其 handoff/closure 脚本
   - 因为那一条 lane 的 summary 不是写在 YAML 常量里，而是由 `prepare_wave_b_b2_handoff_bundle.sh` 等脚本生成
+
+- 对 `wave-b-b2` 做完 completion audit 后，真实边界进一步明确了：
+  - `.github/workflows/wave-b-b2-manual.yml(.disabled)` 自身主要负责 runner 编排、artifact 上传下载、以及调用 `prepare_wave_b_b2_handoff_bundle.sh`
+  - 本轮没有在 YAML 里再发现新的固定能力宣告或假 summary 常量
+  - 同类 over-claim 的真实落点就是脚本生成的 markdown next actions
+
+- `generate_wave_b_cross_platform_summary.sh` closed 分支原先确实说大了：
+  - 它只知道 Linux/macOS/Windows summary/probe/examples 这些局部证据
+  - 却写成“当前三平台 cross-platform evidence 已对齐”
+  - 这会把 summary 对齐偷换成更高层的 evidence/handoff truth
+
+- `check_wave_b_b2_closure_readiness.sh` closed 分支也确实说大了：
+  - 它的 `closure_status=CLOSED` 只建立在三平台 summary 全 PASS
+  - 并不验证 `consistency_status`、Windows companion artifacts、或完整 report chain
+  - 因此 next action 不能再把这个状态表述成像“整条交接链已闭环”
+
+- 对这两处的最小安全修法是“保留状态机、收紧文案”，而不是改名或重写聚合逻辑：
+  - 保留 `closure_status=CLOSED` 兼容现有 `prepare_wave_b_b2_handoff_bundle.sh` / consistency contracts
+  - 仅把 closed wording 收窄为 `summary` / `platform summary` scope
+  - 同时显式补一句“完整交接仍需结合 `closure / consistency / handoff bundle` 判断”
+
+- completion audit 还确认了更高层聚合职责目前没有同类问题：
+  - `check_wave_b_b2_evidence_consistency.sh` 只宣称 consistency 与 closure 对齐
+  - `prepare_wave_b_b2_handoff_bundle.sh` 只有在 `closure_status=CLOSED`、`consistency_status=CONSISTENT` 且 report chain 合法时才会给出 `handoff_state=CLOSED`
+  - 所以这一轮真正需要动的是 cross-summary / closure wording，而不是 handoff bundle 状态机
+
+- 因此如果下一轮还要沿 `wave-b-b2` 深挖，重点应该前移到 report metadata parse / downgrade semantics：
+  - 比如 malformed closure-platform matrix、缺 metadata、或 run_id mismatch 的降级路径是否都能 truthful 地落到 `NEEDS_REPORT_REPAIR` / `NEEDS_EVIDENCE_SYNC`
+  - 而不是回头重复审已经收掉的 closed wording
