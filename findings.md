@@ -421,3 +421,32 @@
     - MbedTLS
     - WinSSL
   - 需要决定它们是否也应统一切到 no-inheritance
+
+- dedicated cross-backend RED 已经把这条 shared shim 分歧真正钉死：
+  - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+    初始明确证明：
+    - FreePascal 新 client connection 已经是空 `ServerName`
+    - OpenSSL / WolfSSL / MbedTLS 仍会继承 `"client.example.com"`
+    - WinSSL 在当前 Linux host 上因为 backend unavailable 被跳过，但源码仍走 shared helper
+  - 所以这不是文档误判，而是当时真实存在的跨 backend runtime 分歧
+
+- 当前这条分歧已经被最小实现改动收掉：
+  - `src/fafafa.ssl.context.compat.pas`
+    不再读取 deprecated context-level `GetServerName`
+  - helper 现在保留为 shared seam，但对任意非空 context 一律返回 `''`
+  - 这让 OpenSSL / WolfSSL / MbedTLS / WinSSL 与 FreePascal 统一进入 no-inheritance 规则
+
+- 这也暴露出一个工作流层面的真实教训：
+  - `tests/scripts/test_context_server_name_compat_shim_contract.sh`
+    曾经正确地守住 “五个 backend 都走 shared helper”
+  - 但在 FreePascal 先行切到 no-inheritance 之后，它变成了过时契约，开始错误阻塞当前批次
+  - 当前已把它改回当前真相：
+    - shared helper 只要求出现在 OpenSSL / WolfSSL / MbedTLS / WinSSL
+    - FreePascal 明确禁止再走 helper
+    - helper 与所有 backend 都禁止直接读 `(AContext|FContext).GetServerName`
+
+- 因而 `context-level ServerName` 主线的阻塞点再次前移：
+  - “shared client fallback divergence” 已不再是未决问题
+  - 当前剩下的更尖锐问题回到了最后一个 direct server-context legacy-state control case：
+    - 高层 builder / factory 是否还要继续保留 context state 可见性
+    - 即便这份 state 已经不再对任何新 client connection 产生 inherited fallback

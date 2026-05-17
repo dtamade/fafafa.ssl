@@ -151,6 +151,16 @@
     - `tests/test_factory_server_name_scope_clarification.pas`
     - `tests/test_factory_config_server_name_isolation.pas`
     - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+- [completed] Shared client fallback divergence 已完成跨 backend 对齐：
+  - `src/fafafa.ssl.context.compat.pas` 现在对任意非空 context 都返回 `''`
+  - OpenSSL / WolfSSL / MbedTLS / WinSSL 虽然仍走 shared seam，但新 client connection 不再继承 deprecated context-level `ServerName`
+  - FreePascal 继续保持早先的 no-inheritance 规则，且不再依赖 shared helper
+  - dedicated cross-backend contract:
+    - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+  - source contract 已同步到当前真相：
+    - `tests/scripts/test_context_server_name_compat_shim_contract.sh`
+      现在要求 shared helper 只出现在 OpenSSL / WolfSSL / MbedTLS / WinSSL
+      并禁止 FreePascal/helper/backend source 重新引入 direct context getter fallback
 
 ## Scope
 
@@ -178,15 +188,15 @@
 
 ## Current Queue
 
-1. 继续选择下一条 `sslCtxClient` behavior migration RED：
-   - 第一优先级改为剩余 shared client fallback backends：
-     - `src/fafafa.ssl.openssl.connection.pas`
-     - `src/fafafa.ssl.wolfssl.connection.pas`
-     - `src/fafafa.ssl.mbedtls.connection.pas`
-     - `src/fafafa.ssl.winssl.connection.pas`
-   - 然后再决定它们是否统一跟随 FreePascal 的 no-inheritance 规则
-   - 最后再回到 direct server-context control case 的最终去留
-2. 在 dedicated client-side RED 明确后，再评估最终 public surface cleanup：
+1. 继续选择最后一个 direct server-context legacy-state control case 的 behavior RED：
+   - 第一优先级回到：
+     - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+     - `tests/test_factory_server_name_scope_clarification.pas`
+     - `tests/test_factory_config_server_name_isolation.pas`
+   - 需要决定：
+     - 既然所有 client connection 都已不再继承 deprecated context-level `ServerName`
+     - builder / factory 是否还值得继续保留 “context state 仍可写入并可读回” 这层 legacy state
+2. 在 direct server-context control case 明确后，再评估最终 public surface cleanup：
    - `TSSLConfig.ServerName` 是否继续留在当前 record 上
    - builder `WithSNI(...)` 是否继续保留当前命名/入口
 3. 在 capability 与 SNI 迁移边界都稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。

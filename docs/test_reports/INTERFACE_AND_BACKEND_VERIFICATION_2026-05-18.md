@@ -689,6 +689,56 @@
     - OpenSSL / WolfSSL / MbedTLS / WinSSL 仍在 shared shim 上保留 inherited client fallback
   - 所以下一批真正该做的是跨 backend 的 shared client fallback 对齐，而不是继续围着旧 server-side control case 打转
 
+## 增量收口：shared client fallback 跨 backend 对齐
+
+- 上一轮路线判断现在已经完成闭环：
+  - 新增 `tests/test_cross_backend_client_context_server_name_clarification.pas`
+  - 先直接跨 backend 打 RED，明确证明：
+    - FreePascal 新 client connection 已经不继承 context-level `ServerName`
+    - OpenSSL / WolfSSL / MbedTLS 仍会继承 `"client.example.com"`
+    - WinSSL 在当前 Linux host 上因为 backend unavailable 被跳过，但源码仍在 shared helper 路径上
+
+- 这说明当时的分歧不是“测试写法问题”，而是真正存在的 shared-seam runtime 差异：
+  - FreePascal 已经切进 no-inheritance
+  - 其余 shared-helper backend 还停在 inherited fallback
+
+- 当前修法保持非常克制，只动 shared seam：
+  - `src/fafafa.ssl.context.compat.pas`
+    - 不再读取 deprecated context-level `GetServerName`
+    - 对任意非空 context 一律返回 `''`
+  - 这意味着 OpenSSL / WolfSSL / MbedTLS / WinSSL 仍可保留 shared seam 控制面
+  - 但 shared seam 已经不再把 legacy state 自动流入新 client connection
+
+- source contract 也必须跟着真相更新，否则它本身会变成错误阻塞：
+  - `tests/scripts/test_context_server_name_compat_shim_contract.sh`
+    - 现在要求 helper 只出现在：
+      - OpenSSL
+      - WolfSSL
+      - MbedTLS
+      - WinSSL
+    - 明确禁止 FreePascal 重新走 helper
+    - 并禁止 helper 与所有 backend source 直接读 `(AContext|FContext).GetServerName`
+
+- focused 结果说明这条 shared client fallback 分歧已经真正被收掉：
+  - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+    - RED -> GREEN
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+    - PASS
+  - `tests/test_factory_server_name_scope_clarification.pas`
+    - PASS
+  - `tests/test_factory_config_server_name_isolation.pas`
+    - PASS
+  - `tests/test_sslctxboth_client_capability_clarification.pas`
+    - PASS
+  - `bash tests/scripts/test_context_server_name_compat_shim_contract.sh`
+    - RED -> GREEN
+
+- 这一步再次把主线往前推了一格：
+  - “shared client fallback divergence” 已经不是未决问题
+  - 当前剩下的更尖锐边界回到了最后一个 direct server-context legacy-state control case：
+    - builder / factory 为什么还要继续保留 context state
+    - 当这份 state 已经不再对任何新 client connection 产生 inherited fallback
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -701,13 +751,23 @@
   - PASS
 - `bash tests/scripts/test_cross_backend_network_contracts_no_context_level_sni_guidance.sh`
   - PASS
+- `bash tests/scripts/test_context_server_name_compat_shim_contract.sh`
+  - PASS
 - `tests/integration/test_cross_backend_consistency_contract.pas`
   - PASS
 - `tests/integration/test_cross_backend_errors_contract.pas`
   - PASS
+- `tests/test_cross_backend_client_context_server_name_clarification.pas`
+  - PASS
+- `tests/test_context_builder_server_servername_runtime_consistency.pas`
+  - PASS
 - `bash tests/scripts/test_tls_connector_early_data_no_context_level_sni_guidance.sh`
   - PASS
+- `tests/test_factory_config_server_name_isolation.pas`
+  - PASS
 - `tests/test_tls_connector_early_data_contract.pas`
+  - PASS
+- `tests/test_sslctxboth_client_capability_clarification.pas`
   - PASS
 - `git diff --check`
   - PASS
@@ -722,14 +782,13 @@
 
 ### 下一批最值得做的事
 
-1. 再决定 `sslCtxClient` behavior migration 的第一条 RED
-   - 第一优先级改为剩余 shared client fallback backends：
-     - OpenSSL
-     - WolfSSL
-     - MbedTLS
-     - WinSSL
-   - 再决定它们是否应统一跟随 FreePascal 的 no-inheritance 规则
-   - 最后再回到 direct server-context control case 的去留
+1. 直接进入最后一个 direct server-context legacy-state control case 的 RED
+   - 第一优先级回到：
+     - `test_context_builder_server_servername_runtime_consistency`
+     - `test_factory_server_name_scope_clarification`
+     - `test_factory_config_server_name_isolation`
+   - 决定 builder / factory 是否还应该继续保留 context-level `ServerName` 这份 context-only legacy state
+   - 再决定 public surface 是否也该进一步收口
 
 2. `TSSLConfig` 拆层与 capability model presence bits 仍然排在后面
    - 它们是更大的设计债，不是当前 SNI 迁移主线的下一刀

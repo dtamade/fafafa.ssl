@@ -35,14 +35,14 @@ Current caveat discovered by live focused retest:
 
 - FreePascal client runtime no longer consumes deprecated context-level `ServerName` at connection-creation time
 - so `BuildClient.WithSNI(...)` / factory client `ServerName` still preserve context state, but they no longer imply connection inheritance on FreePascal
-- this means the remaining migration question is no longer only server-side cleanup; it is whether the shared client fallback still kept by OpenSSL / WolfSSL / MbedTLS / WinSSL should be cut to match FreePascal
+- the shared client fallback divergence that remained in OpenSSL / WolfSSL / MbedTLS / WinSSL has now also been cut
+- this moves the remaining migration question back to whether the last direct server-context legacy-state control case should continue to survive now that no client backend inherits it anymore
 
 ### 2. Backend fallback read paths
 
-以下 backend connection constructor 仍会把 context-level `ServerName` 兼容继承到连接实例：
+以下 constructor path 仍保留 shared seam 痕迹，但不再把 context-level `ServerName` 兼容继承到连接实例：
 
 - `src/fafafa.ssl.openssl.connection.pas`
-- `src/fafafa.ssl.freepascal.connection.pas`
 - `src/fafafa.ssl.wolfssl.connection.pas`
 - `src/fafafa.ssl.mbedtls.connection.pas`
 - `src/fafafa.ssl.winssl.connection.pas`
@@ -50,8 +50,10 @@ Current caveat discovered by live focused retest:
 当前最新真相是：
 
 - direct deprecated `AContext.GetServerName` / `FContext.GetServerName` 读取已经从这五个 backend 的构造路径移除
-- 兼容读取现在统一经由 `src/fafafa.ssl.context.compat.pas`
-- compatibility truth 仍然保留，但控制面已经从五份散点实现收成一条 shared seam
+- OpenSSL / WolfSSL / MbedTLS / WinSSL 仍统一经由 `src/fafafa.ssl.context.compat.pas`
+- `src/fafafa.ssl.freepascal.connection.pas` 已经不再调用 shared helper
+- shared helper 现在对任意非空 context 返回 `''`，因此它保留的是 no-inheritance seam，而不是 inherited fallback
+- compatibility truth 仍然保留在 context API surface 本身，但它已经不再自动流入新的 client connection
 
 ### 3. Tests that intentionally lock the compatibility boundary
 
@@ -175,6 +177,17 @@ Delivered fourth cut:
 - explicit override and explicit empty clear semantics remained intact
 - adjacent connector precedence contract stayed green, so the remaining higher-level intentional fallback surface is now concentrated in connector-side input contracts plus the server builder compatibility test
 
+Delivered fifth cut:
+
+- `src/fafafa.ssl.context.compat.pas` now returns `''` for any non-nil context
+- OpenSSL / WolfSSL / MbedTLS / WinSSL still route through the shared helper, but the helper no longer forwards deprecated context-level `ServerName`
+- `src/fafafa.ssl.freepascal.connection.pas` remains off the helper, so all current client-capable backends now follow the same no-inheritance rule
+- new focused cross-backend contract `tests/test_cross_backend_client_context_server_name_clarification.pas` proved the previous divergence and then turned green after the helper cut
+- `tests/scripts/test_context_server_name_compat_shim_contract.sh` was updated to the new truth:
+  - helper required in OpenSSL / WolfSSL / MbedTLS / WinSSL
+  - helper forbidden in FreePascal
+  - direct context getter fallback forbidden in helper and backend sources
+
 ### Phase D: Final Surface Cleanup
 
 **Target:** finish interface shape cleanup once migration risk is low enough.
@@ -251,6 +264,7 @@ Delivered fifth cut:
   - Phase C `sslCtxBoth` ambiguity cut complete
   - Phase C FreePascal client runtime fallback cut complete
   - Phase C client connection-builder explicit-hostname cut complete
+  - Phase C shared client fallback cut complete
   - Phase E first WinSSL client-flow migration cut complete
   - Phase E residual ambiguous test-surface classification cut complete
   - Phase E cross-backend network contract migration cut complete
@@ -265,21 +279,20 @@ Delivered fifth cut:
 
 Choose one bounded implementation family only:
 
-1. **`sslCtxClient` behavior migration RED selection**
-   - start with the remaining shared fallback backends:
-     - `src/fafafa.ssl.openssl.connection.pas`
-     - `src/fafafa.ssl.wolfssl.connection.pas`
-     - `src/fafafa.ssl.mbedtls.connection.pas`
-     - `src/fafafa.ssl.winssl.connection.pas`
-   - decide whether they should follow FreePascal's no-inheritance rule for `sslCtxClient`
-   - only after that, re-evaluate whether the last direct server-context control case still deserves to survive
+1. **Last direct server-context control-case RED selection**
+   - start with:
+     - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+     - `tests/test_factory_server_name_scope_clarification.pas`
+     - `tests/test_factory_config_server_name_isolation.pas`
+   - decide whether deprecated context-level `ServerName` should still survive as context-only legacy state in builder/factory paths now that no client backend inherits it anymore
+   - only after that, re-evaluate the final public surface shape (`TSSLConfig.ServerName`, `WithSNI(...)`, and related docs)
 2. **Final surface cleanup prep**
    - re-evaluate whether `TSSLConfig.ServerName` and builder `WithSNI(...)` still need their current naming/placement now that builder/factory/runtime paths all expose compatibility warnings
 3. **Wider public-surface cleanup**
    - stage follow-up work only after the first behavior-migration RED is pinned and verified
-Recommended first pick: **cut the remaining shared client fallback in OpenSSL / WolfSSL / MbedTLS / WinSSL to match FreePascal, or explicitly document why that divergence must remain**.
+Recommended first pick: **resolve whether deprecated context-level `ServerName` should remain as context-only legacy state in builder/factory paths now that cross-backend client inheritance is fully gone**.
 
-Builder/factory/shared-shim warning work, residual test-surface classification, connector-side contract cleanup, and the `sslCtxBoth` ambiguity cut are no longer the blocker; the next highest-value work is resolving the cross-backend client fallback divergence that FreePascal-focused retests surfaced.
+Builder/factory/shared-shim warning work, residual test-surface classification, connector-side contract cleanup, the `sslCtxBoth` ambiguity cut, and the shared client fallback divergence are no longer the blocker; the next highest-value work is resolving the final direct server-context legacy-state control case.
 
 ## Verification
 

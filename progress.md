@@ -146,6 +146,92 @@
 - `git diff --check`
   - result: PASS
 
+### Shared Client Context SNI Fallback Cut
+
+- add `docs/plans/2026-05-18-shared-client-context-sni-fallback-cut.md`
+  - purpose:
+    - define the bounded cross-backend alignment batch after the FreePascal-only no-inheritance cut
+    - keep scope on the shared seam instead of reopening unrelated release or Windows lanes
+
+- add `tests/test_cross_backend_client_context_server_name_clarification.pas`
+  - purpose:
+    - prove that all currently available client-capable backends preserve deprecated context state on the context object itself
+    - but no longer auto-inherit that state into new client connections
+
+- update `src/fafafa.ssl.context.compat.pas`
+  - change:
+    - keep `GetContextLevelServerNameCompatibilityValue(...)` as the shared control seam
+    - stop reading deprecated context-level `GetServerName`
+    - return `''` for any non-nil context so shared-helper backends also follow the no-inheritance rule
+
+- `bash -n tests/scripts/test_context_server_name_compat_shim_contract.sh && bash tests/scripts/test_context_server_name_compat_shim_contract.sh`
+  - result: RED
+  - summary:
+    - stale source contract still required `src/fafafa.ssl.freepascal.connection.pas` to use the shared helper
+    - this contradicted the earlier FreePascal no-inheritance runtime cut and blocked the current batch for the wrong reason
+
+- update `tests/scripts/test_context_server_name_compat_shim_contract.sh`
+  - change:
+    - require the shared helper only in OpenSSL / WolfSSL / MbedTLS / WinSSL
+    - fail if FreePascal reintroduces the shared helper
+    - fail if the helper itself or any backend source reintroduces direct `(AContext|FContext).GetServerName` fallback reads
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the shared client fallback cut, the stale-contract correction, and the new next-route recommendation into repo working memory
+
+- update `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - change:
+    - mark the shared client fallback cut as delivered
+    - move the next recommended batch back to the final direct server-context legacy-state control case
+
+- update `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - change:
+    - add a dedicated closeout section for the shared client fallback cut
+    - refresh the route summary so the next session does not reopen the already-closed cross-backend fallback divergence
+
+- `bash -n tests/scripts/test_context_server_name_compat_shim_contract.sh && bash tests/scripts/test_context_server_name_compat_shim_contract.sh`
+  - result: RED -> GREEN
+  - summary:
+    - updated source contract now matches current truth
+    - shared-helper backends still route through one seam, FreePascal stays off the seam, and direct context getter fallback stays forbidden everywhere
+
+- `mkdir -p tmp/test_cross_backend_client_context_server_name_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_cross_backend_client_context_server_name_clarification -FEtmp/test_cross_backend_client_context_server_name_clarification -otmp/test_cross_backend_client_context_server_name_clarification/test_cross_backend_client_context_server_name_clarification tests/test_cross_backend_client_context_server_name_clarification.pas && ./tmp/test_cross_backend_client_context_server_name_clarification/test_cross_backend_client_context_server_name_clarification`
+  - result: PASS
+  - summary:
+    - focused cross-backend contract finished `20 passed, 0 failed, 1 skipped`
+    - FreePascal / OpenSSL / WolfSSL / MbedTLS all keep deprecated context state on the context but no longer inherit it into new client connections
+    - WinSSL stayed source-covered and runtime-skipped on Linux because the backend is unavailable on this host
+
+- `mkdir -p tmp/test_context_builder_server_servername_runtime_consistency && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_context_builder_server_servername_runtime_consistency -FEtmp/test_context_builder_server_servername_runtime_consistency -otmp/test_context_builder_server_servername_runtime_consistency/test_context_builder_server_servername_runtime_consistency tests/test_context_builder_server_servername_runtime_consistency.pas && ./tmp/test_context_builder_server_servername_runtime_consistency/test_context_builder_server_servername_runtime_consistency`
+  - result: PASS
+  - summary:
+    - focused builder/runtime consistency suite finished `6 passed, 0 failed`
+    - the shared seam cut did not regress the remaining direct server-context control assertions
+
+- `mkdir -p tmp/test_factory_server_name_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_server_name_scope_clarification -FEtmp/test_factory_server_name_scope_clarification -otmp/test_factory_server_name_scope_clarification/test_factory_server_name_scope_clarification tests/test_factory_server_name_scope_clarification.pas && ./tmp/test_factory_server_name_scope_clarification/test_factory_server_name_scope_clarification`
+  - result: PASS
+  - summary:
+    - focused factory scope suite finished `6 passed, 0 failed`
+    - client default-config / one-shot `ServerName` remains context-only state on FreePascal after the shared seam cut
+
+- `mkdir -p tmp/test_factory_config_server_name_isolation && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_config_server_name_isolation -FEtmp/test_factory_config_server_name_isolation -otmp/test_factory_config_server_name_isolation/test_factory_config_server_name_isolation tests/test_factory_config_server_name_isolation.pas && ./tmp/test_factory_config_server_name_isolation/test_factory_config_server_name_isolation`
+  - result: PASS
+  - summary:
+    - focused factory isolation suite finished `6 passed, 0 failed`
+    - one-shot/default config isolation remains green while FreePascal connections stay no-inheritance
+
+- `mkdir -p tmp/test_sslctxboth_client_capability_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_sslctxboth_client_capability_clarification -FEtmp/test_sslctxboth_client_capability_clarification -otmp/test_sslctxboth_client_capability_clarification/test_sslctxboth_client_capability_clarification tests/test_sslctxboth_client_capability_clarification.pas && ./tmp/test_sslctxboth_client_capability_clarification/test_sslctxboth_client_capability_clarification`
+  - result: PASS
+  - summary:
+    - focused dual-role clarification suite finished `28 passed, 0 failed, 1 skipped`
+    - the shared seam cut did not reopen the already-closed `sslCtxBoth` no-inheritance boundary
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current shared client fallback cut batch has no whitespace or patch-format issues
+
 ### FreePascal Client Context SNI Fallback Cut
 
 - add `docs/plans/2026-05-18-freepascal-client-context-sni-fallback-cut.md`

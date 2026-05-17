@@ -21,9 +21,6 @@ function GetContextLevelServerNameCompatibilityValue(
 
 implementation
 
-uses
-  fafafa.ssl.connection.base;
-
 function GetContextLevelServerNameCompatibilityValue(
   const AContext: ISSLContext
 ): string;
@@ -32,17 +29,9 @@ begin
   if AContext = nil then
     Exit;
 
-  if not ContextTypeSupportsClientConnectionRole(AContext.GetContextType) then
-    Exit;
-
-  // sslCtxBoth already requires explicit role selection at handshake time,
-  // so it should not silently inherit deprecated client-side SNI fallback.
-  if ContextTypeRequiresExplicitHandshakeRole(AContext.GetContextType) then
-    Exit;
-
-  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-  Result := AContext.GetServerName;
-  {$POP}
+  // New connections must now receive hostname/SNI explicitly on the
+  // connection. Deprecated context-level ServerName may still remain visible on
+  // the context API itself, but it no longer auto-flows into new connections.
 end;
 
 end.
