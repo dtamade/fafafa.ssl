@@ -727,6 +727,11 @@
   - `runid_mismatch_or_parse_issue=1`
   - 以及 closed-closure guidance 不被误带回 IN_PROGRESS / generic 分支
 
+- 这次提交 `f84f042` 再次证明当前 `cross_summary run_id` 在 closed-closure guidance 这条线也只是 coverage gap，不是 prod bug：
+  - 脚本行为本身没变
+  - focused contract 只是把 `closure_status_note=CLOSED` 和 closed-closure next-actions truth 固化下来
+  - 因此远端自动 `CI` run `25984594664` 继续按增量 run id 记账即可
+
 - 因而当前 `wave-b-b2` 线上更合理的下一跳，已经从 cross-summary run_id closed guidance 前移到 cross-summary missing closed guidance：
   - 优先补 `check_wave_b_b2_evidence_consistency.sh` 的 cross-summary missing 在 `closure_status=CLOSED` 分支下的 focused next-actions contract
   - 目标是确认缺失 cross-summary 时，next actions 也继续落在 “closure 已闭环，但 evidence consistency 未对齐” 这条 truthful guidance

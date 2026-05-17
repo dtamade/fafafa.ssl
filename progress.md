@@ -414,6 +414,29 @@
 - `git diff --check`
   - result: PASS
 
+### Thirty-Third Push Recording
+
+- `git commit -m "test: cover closed cross-summary run id guidance"`
+  - result: PASS
+  - commit: `f84f042`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `0a38a0d..f84f042`
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - worktree returned to `## master...origin/master`
+
+- `gh run list --branch master --limit 5 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest observed run for head `f84f042` was `CI` run `25984594664`
+    - status at record time: `in_progress`
+    - previous docs closeout head `0a38a0d` had already finished `success` as run `25984425968`
+    - per the incremental verification discipline, this cross-summary run-id closed-guidance batch recorded the run id without a blocking watch
+
 ### Eleventh Push Success Revalidation
 
 - `git commit -m "chore: pin workflow actions to commits"`
