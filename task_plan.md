@@ -47,6 +47,10 @@
   - 新增 `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
   - intentional compatibility tests 已统一纳入 `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
   - 当前已明确下一批应优先做 builder surface narrowing，而不是直接硬删 backend fallback
+- [completed] `context-level ServerName` Phase B 的第一刀 builder surface narrowing 已收口：
+  - `TSSLContextBuilderImpl.ExportToJSON/INI` 在保留 `server_name` 兼容载荷时，会显式导出 `server_name_mode=deprecated_context_sni`
+  - `ImportFromJSON/INI` 继续接受 legacy-only `server_name` 输入，并在回导出时自动补上兼容 marker
+  - focused config regressions 证明这是 additive compatibility de-emphasis，不是 runtime 行为删改
 
 ## Scope
 
@@ -74,12 +78,13 @@
 
 ## Current Queue
 
-1. 开启 `context-level ServerName` 兼容迁移的第一批实现：
-   - 优先做 builder surface narrowing
-   - 不要回退到 warning 噪音治理
-   - 也不要第一刀就直接硬删五个 backend constructor fallback
-2. 在 capability 与 SNI 迁移边界稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。
-3. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
+1. 完成 `context-level ServerName` Phase B 的第二刀：
+   - 收窄 `factory/config` 写入面
+   - 让 `TSSLConfig.ServerName` / `TSSLFactory.CreateContext(...)` 也更明确地表现为 compatibility-only，而不是继续像推荐主路径
+   - 继续不要回退到 warning 噪音治理，也不要提前硬删 backend fallback
+2. 在 Phase B 的高层 surface 稳定后，再评估 Phase C 的 shared compatibility shim extraction。
+3. 在 capability 与 SNI 迁移边界都稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。
+4. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
 
 ## Verification Discipline
 

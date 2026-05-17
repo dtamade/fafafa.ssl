@@ -146,3 +146,13 @@
   - 这次映射证明不只最初那几份测试在锁兼容语义，`test_context_builder_server_servername_runtime_consistency.pas` 与 `test_sslctxboth_client_capability_clarification.pas` 也同样在锁住旧 fallback
   - 已经把这些文件纳入 `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
   - 以后做迁移时，谁要改掉这些行为，就必须先面对这些标签与合同，而不是“顺手改了再说”
+
+- `context-level ServerName` 的 builder surface 第一刀已经证明可以安全缩窄：
+  - `ExportToJSON(...)` / `ExportToINI(...)` 现在在保留 `server_name` 的同时，额外导出 `server_name_mode=deprecated_context_sni`
+  - `ImportFromJSON(...)` / `ImportFromINI(...)` 显式接受这个 marker 但不让它改变 runtime state
+  - legacy-only `server_name` JSON/INI 载荷在 re-export 时会被自动升级成“带兼容 marker 的旧语义”
+
+- 这条线也顺手暴露了一个测试工作流细节：
+  - builder JSON 导出使用 `FormatJSON`
+  - 对这种输出做 substring 硬匹配会把空格/换行格式误判成行为回归
+  - 新 focused test 已改为解析 JSON 字段值本身，避免后续在格式噪音上反复红灯

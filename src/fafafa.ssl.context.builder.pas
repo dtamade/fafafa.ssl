@@ -1635,6 +1635,9 @@ begin
       Result.Add(Ord(LFeature));
 end;
 
+const
+  CONTEXT_SERVER_NAME_COMPAT_MODE = 'deprecated_context_sni';
+
 procedure JSONArrayToProtocolVersions(AArray: TJSONArray; out AProtocols: TSSLProtocolVersions);
 var
   I: Integer;
@@ -1817,6 +1820,8 @@ begin
 
     // Advanced options
     LRoot.Add('server_name', FServerName);
+    if FServerName <> '' then
+      LRoot.Add('server_name_mode', CONTEXT_SERVER_NAME_COMPAT_MODE);
     LRoot.Add('alpn_protocols', FALPNProtocols);
     LRoot.Add('session_cache_enabled', FSessionCacheEnabled);
     LRoot.Add('session_timeout', FSessionTimeout);
@@ -1967,6 +1972,10 @@ begin
       // Advanced options
       if IndexOfName('server_name') >= 0 then
         FServerName := Strings['server_name'];
+      if IndexOfName('server_name_mode') >= 0 then
+      begin
+        // Compatibility metadata only; keep accepting it without changing runtime state.
+      end;
       if IndexOfName('alpn_protocols') >= 0 then
         FALPNProtocols := Strings['alpn_protocols'];
       if IndexOfName('session_cache_enabled') >= 0 then
@@ -2106,6 +2115,8 @@ begin
     // Advanced options
     LLines.Add('[Advanced]');
     LLines.Add('server_name=' + FServerName);
+    if FServerName <> '' then
+      LLines.Add('server_name_mode=' + CONTEXT_SERVER_NAME_COMPAT_MODE);
     LLines.Add('alpn_protocols=' + FALPNProtocols);
     if FSessionCacheEnabled then
       LLines.Add('session_cache_enabled=true')
@@ -2279,6 +2290,10 @@ begin
           FTLS13Ciphersuites := LValue
         else if LKey = 'server_name' then
           FServerName := LValue
+        else if LKey = 'server_name_mode' then
+        begin
+          // Compatibility metadata only; keep accepting it without changing runtime state.
+        end
         else if LKey = 'alpn_protocols' then
           FALPNProtocols := LValue
         else if LKey = 'session_cache_enabled' then

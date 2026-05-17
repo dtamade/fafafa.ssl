@@ -306,5 +306,77 @@
   - summary:
     - no remaining deprecated-warning matches were left in the focused compile log after the quarantine change
 
+### Context Builder ServerName Compatibility Marker
+
+- resumed compile/run session `74931` for `tests/config/test_context_builder_server_name_compat_marker.pas`
+  - result: RED
+  - summary:
+    - initial run failed 5 assertions
+    - builder export lacked any explicit compatibility marker for `server_name`
+    - legacy JSON import failure also exposed a brittle substring-style assertion against pretty-printed JSON
+
+- add `tests/config/test_context_builder_server_name_compat_marker.pas`
+  - purpose:
+    - lock builder JSON/INI export behavior so `server_name` remains backward compatible but is visibly marked as deprecated context-level SNI compatibility
+    - ensure legacy JSON/INI payloads with bare `server_name` still import and re-export with the new marker
+
+- update `src/fafafa.ssl.context.builder.pas`
+  - change:
+    - add `CONTEXT_SERVER_NAME_COMPAT_MODE = 'deprecated_context_sni'`
+    - emit `server_name_mode` in JSON/INI export whenever `server_name` is non-empty
+    - explicitly accept/ignore `server_name_mode` during JSON/INI import so compatibility metadata does not affect runtime state
+
+- update `tests/config/test_context_builder_server_name_compat_marker.pas`
+  - change:
+    - parse JSON for the legacy-import assertions instead of substring-matching formatted output
+    - keep the INI assertions string-based because INI export is line-oriented and stable
+
+- `mkdir -p tmp/test_context_builder_server_name_compat_marker && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_context_builder_server_name_compat_marker -FEtmp/test_context_builder_server_name_compat_marker -otmp/test_context_builder_server_name_compat_marker/test_context_builder_server_name_compat_marker tests/config/test_context_builder_server_name_compat_marker.pas && ./tmp/test_context_builder_server_name_compat_marker/test_context_builder_server_name_compat_marker`
+  - result: RED -> GREEN
+  - summary:
+    - all 8 assertions passed after the builder export/import compatibility marker patch
+    - compile emitted only pre-existing repo warning families
+
+- `mkdir -p tmp/test_config_import_export && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_config_import_export -FEtmp/test_config_import_export -otmp/test_config_import_export/test_config_import_export tests/config/test_config_import_export.pas && ./tmp/test_config_import_export/test_config_import_export`
+  - result: PASS
+  - summary:
+    - focused config import/export suite finished `96 passed, 0 failed`
+    - the new `server_name_mode` field did not break existing JSON/INI round-trip coverage
+
+- `mkdir -p tmp/test_context_builder_merge_advanced_option_snapshot_semantics && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_context_builder_merge_advanced_option_snapshot_semantics -FEtmp/test_context_builder_merge_advanced_option_snapshot_semantics -otmp/test_context_builder_merge_advanced_option_snapshot_semantics/test_context_builder_merge_advanced_option_snapshot_semantics tests/config/test_context_builder_merge_advanced_option_snapshot_semantics.pas && ./tmp/test_context_builder_merge_advanced_option_snapshot_semantics/test_context_builder_merge_advanced_option_snapshot_semantics`
+  - result: PASS
+  - summary:
+    - merge snapshot semantics stayed green (`13 passed, 0 failed`)
+    - additive compatibility metadata did not alter empty-field or option-clearing behavior
+
+- `mkdir -p tmp/test_config_snapshot_clone && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_config_snapshot_clone -FEtmp/test_config_snapshot_clone -otmp/test_config_snapshot_clone/test_config_snapshot_clone tests/config/test_config_snapshot_clone.pas && ./tmp/test_config_snapshot_clone/test_config_snapshot_clone`
+  - result: PASS
+  - summary:
+    - clone/reset/merge suite stayed green (`57 passed, 0 failed`)
+    - builder snapshots continue to round-trip after the compatibility marker addition
+
+- update `docs/plans/2026-05-18-context-builder-servername-compatibility-marker.md`
+  - change:
+    - record the bounded Phase B first-cut plan, touched files, command sequence, and expected outputs for the builder compatibility marker batch
+
+- update `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - change:
+    - mark Phase B builder surface first cut as delivered
+    - move the next recommended batch to `factory/config surface narrowing`
+
+- update `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - change:
+    - add a dedicated builder-surface compatibility-marker closeout section
+    - refresh the "next batch" recommendation so future sessions do not restart from discovery
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the new builder-surface result into the persistent repo-level working memory
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remained at batch closeout
+
 - `git diff --check`
   - result: PASS

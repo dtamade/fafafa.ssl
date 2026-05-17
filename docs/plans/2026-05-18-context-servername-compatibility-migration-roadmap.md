@@ -94,6 +94,12 @@ Suggested first implementation candidates:
 2. decide whether builder clone/snapshot/import/export should keep or de-emphasize that field
 3. add focused contracts before any behavioral deletion
 
+Delivered first cut:
+
+- builder JSON/INI import/export now keeps `server_name` for compatibility but also emits `server_name_mode=deprecated_context_sni`
+- legacy JSON/INI payloads that only carry `server_name` still import, and re-export with the new compatibility marker
+- focused regressions proved clone/reset/merge/import-export behavior stayed green
+
 ### Phase C: Replace Backend Inherited Fallback With Explicit Compatibility Shim
 
 **Target:** stop each backend constructor from silently reading deprecated context state directly.
@@ -123,7 +129,10 @@ Candidates:
 
 - capability truth line: closed for current scope
 - document/interface drift line: largely closed for current scope
-- context-level ServerName migration: discovery complete, migration not yet implemented
+- context-level ServerName migration:
+  - Phase A discovery/lockpoint mapping complete
+  - Phase B builder surface first cut complete
+  - factory/config write-surface narrowing still pending
 - `TSSLConfig` cross-layer slimming: intentionally deferred until SNI migration stabilizes
 
 ### What This Means Operationally
@@ -135,16 +144,16 @@ Candidates:
 
 Choose one bounded implementation family only:
 
-1. **Builder surface narrowing**
-   - make builder’s deprecated context-level SNI path more explicitly compatibility-only
-   - do not touch backend constructors yet
+1. **Factory/config surface narrowing**
+   - carry the same compatibility-only framing into `TSSLConfig.ServerName` and `TSSLFactory.CreateContext(...)`
+   - avoid changing backend constructors yet
 2. **Shared compatibility shim extraction**
    - prepare one shared helper for context-to-connection fallback
    - leave public behavior unchanged in the first patch
 
-Recommended first pick: **Builder surface narrowing**.
+Recommended first pick: **Factory/config surface narrowing**.
 
-It changes fewer runtime surfaces than backend constructor work, and it reduces future reintroduction risk before we touch the deeper fallback path.
+It completes Phase B on the remaining high-level write surface before we touch the deeper fallback path in backend constructors.
 
 ## Verification
 

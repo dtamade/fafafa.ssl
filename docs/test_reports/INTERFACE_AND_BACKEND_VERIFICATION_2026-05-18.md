@@ -215,6 +215,34 @@
   - 我们已经把 SNI 迁移从一团历史行为，压成了一条有 phase、有锁点、有执行顺序的主路线
   - 下次继续时，不需要再重新考古“哪些行为是现状，哪些是故意保留”
 
+## 增量收口：builder surface narrowing compatibility marker
+
+- 迁移路线图冻结后，这轮已经落下 Phase B 的第一刀实现：
+  - `src/fafafa.ssl.context.builder.pas`
+    - JSON/INI export 继续保留 `server_name`
+    - 但只要该字段非空，就会额外导出 `server_name_mode=deprecated_context_sni`
+  - `ImportFromJSON(...)` / `ImportFromINI(...)`
+    - 显式接受这个 marker
+    - 但把它视为纯 compatibility metadata，不影响 runtime state
+
+- 这一步的意义不是改变当前兼容行为，而是：
+  - 把 builder 继续暴露旧语义这件事，从“看起来像正常推荐字段”改成“显式自带 deprecated compatibility 标记”
+  - 同时保持 legacy-only JSON/INI 输入还可以无痛导入
+
+- focused RED -> GREEN 结果说明这刀是安全的：
+  - 新增 `tests/config/test_context_builder_server_name_compat_marker.pas`
+    - 直接检查 JSON/INI export 是否带 `server_name_mode`
+    - 直接检查 bare `server_name` 的 legacy JSON/INI 输入在 re-export 时会自动升级出 marker
+  - 邻接回归：
+    - `tests/config/test_config_import_export.pas` PASS (`96 passed, 0 failed`)
+    - `tests/config/test_context_builder_merge_advanced_option_snapshot_semantics.pas` PASS (`13 passed, 0 failed`)
+    - `tests/config/test_config_snapshot_clone.pas` PASS (`57 passed, 0 failed`)
+
+- 这条线还顺手收敛了一个测试方法问题：
+  - builder JSON 导出是 pretty-printed
+  - 所以新测试对 JSON 一律解析字段值，而不是做 substring 硬匹配
+  - 这样以后不会因为空格/换行格式差异把兼容行为误报成回归
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -238,15 +266,16 @@
 
 ### 下一批最值得做的事
 
-1. 开始 **context-level SNI compatibility migration** 的第一批实现
-   - 首选 builder surface narrowing
-   - warning quarantine 与 capability 真相线都已完成，不要再回到旧收口
+1. 完成 **context-level SNI compatibility migration** 的 Phase B 第二刀
+   - 让 `TSSLConfig.ServerName` / `TSSLFactory.CreateContext(...)` 也显式表现为 compatibility-only
+   - builder surface 已经收窄，不要再回到 warning quarantine 或 capability 旧收口
    - backend constructor fallback 暂不第一刀直删
 
-2. 再决定是否拆 `TSSLConfig`
-   - 当前它更多是设计债，不是第一优先级实现 bug
+2. 再决定是否进入 shared compatibility shim extraction
+   - 只有在高层写入面收干净后，才值得把五个 backend constructor 的 fallback 提成共享 seam
 
-3. 如果未来要让 serializer 在“纯 legacy-only in-memory capability record”上也做到完全无歧义输出，需要先给 capability model 增加 presence/truth 元信息
+3. `TSSLConfig` 拆层与 capability model presence bits 仍然排在后面
+   - 它们是更大的设计债，不是这条 Phase B 主线的下一刀
 
 ## 总结
 
