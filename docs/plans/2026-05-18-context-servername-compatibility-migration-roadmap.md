@@ -26,7 +26,7 @@
   - server path 已 fail-fast 拒绝 `ServerName`
 - `TSSLContextBuilderImpl.WithSNI(...)`
   - `BuildClient` 仍把 `FServerName` 写回 context
-  - `BuildServer` 也仍保留这个兼容写入，但 validation 已明确 warning “server-side connections ignore it”
+  - `BuildServer` 现在只保留 compatibility warning，并忽略这份 client-only state
 - `TSSLConnector`
   - 已经走正确方向：把 hostname 设置到 `ISSLClientConnection.SetServerName(...)`
   - 是目标语义的现成参考实现
@@ -118,6 +118,12 @@ Delivered third cut:
 - `docs/reference/API_REFERENCE.md` now explicitly classifies `TSSLContextBuilder.WithSNI(...)` as compatibility-only
 - focused builder warning regressions and adjacent validation/runtime consistency tests stayed green
 
+Delivered fourth cut:
+
+- `TSSLContextBuilderImpl.BuildServer` no longer writes `WithSNI(...)` into the built server context
+- server-side builder warning and validation wording now explicitly say `BuildServer ignores it and server-side connections ignore it`
+- focused RED -> GREEN proved the built server context no longer retains the client-only `ServerName`, while adjacent warning/validation coverage stayed green
+
 ### Phase C: Replace Backend Inherited Fallback With Explicit Compatibility Shim
 
 **Target:** stop each backend constructor from silently reading deprecated context state directly.
@@ -184,6 +190,7 @@ Delivered second cut:
   - Phase B builder surface first cut complete
   - Phase B factory/config write-surface narrowing complete
   - builder runtime warning alignment complete
+  - Phase B server-side BuildServer ignore cut complete
   - Phase C shared compatibility shim first cut complete
   - Phase E first WinSSL client-flow migration cut complete
   - Phase E residual ambiguous test-surface classification cut complete
@@ -198,16 +205,16 @@ Delivered second cut:
 
 Choose one bounded implementation family only:
 
-1. **Behavior migration RED selection**
-   - decide which intentional-compat tests will be rewritten before any real fallback deletion
+1. **Client-side behavior migration RED selection**
+   - decide which client-side intentional-compat tests will be rewritten before any real fallback deletion
    - explicitly define new precedence between builder/factory/context and per-connection hostname paths
 2. **Final surface cleanup prep**
    - re-evaluate whether `TSSLConfig.ServerName` and builder `WithSNI(...)` still need their current naming/placement now that builder/factory/runtime paths all expose compatibility warnings
 3. **Wider public-surface cleanup**
    - stage follow-up work only after the first behavior-migration RED is pinned and verified
-Recommended first pick: **Behavior migration RED selection**.
+Recommended first pick: **Client-side behavior migration RED selection**.
 
-Builder/factory/shared-shim warning work and residual test-surface classification are no longer the blocker; the next highest-value work is choosing the first real behavior-migration RED.
+Builder/factory/shared-shim warning work, residual test-surface classification, and the first server-side dead-compat cut are no longer the blocker; the next highest-value work is choosing the first client-side behavior-migration RED.
 
 ## Verification
 

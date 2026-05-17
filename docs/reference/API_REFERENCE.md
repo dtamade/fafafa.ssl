@@ -20,7 +20,7 @@
 ## Client SNI Compatibility Note
 
 - `TSSLConfig.ServerName` 仍然保留为向后兼容入口，但它表示的是 deprecated context-level SNI compatibility，不是推荐主路径。
-- `TSSLContextBuilder.WithSNI(...)` 也仍然保留为 compatibility-only 入口；`BuildClient` / `BuildServer` 会在应用它时发出 warning。
+- `TSSLContextBuilder.WithSNI(...)` 也仍然保留为 compatibility-only 入口；`BuildClient` 会在应用它时发出 warning，`BuildServer` 会发出 warning 并忽略它。
 - `TSSLFactory.CreateContext(...)` 在 client / both context 上仍会应用这个字段以保持兼容；同时会发出 warning，提醒调用方迁移。
 - 新代码请优先使用 `TSSLConnectionBuilder.WithHostname(...)`、`ISSLClientConnection.SetServerName(...)`，或直接走 `TSSLConnector.Connect*(..., ServerName)`。
 

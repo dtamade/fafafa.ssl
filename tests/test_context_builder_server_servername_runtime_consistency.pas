@@ -66,13 +66,13 @@ begin
     'Client connection inherits the builder-configured ServerName');
 end;
 
-procedure Test_BuilderServerWithSNI_PreservesServerName;
+procedure Test_BuilderServerWithSNI_IsIgnoredForServerContexts;
 var
   Ctx: ISSLContext;
   CertPEM: string;
   KeyPEM: string;
 begin
-  TestHeader('Builder BuildServer keeps context ServerName but not server connection SNI');
+  TestHeader('Builder BuildServer ignores legacy WithSNI on server contexts');
 
   if not TCertificateUtils.TryGenerateSelfSignedSimple(
     'builder-server.local', 'Test Org', 30, CertPEM, KeyPEM
@@ -86,10 +86,10 @@ begin
     .WithSNI('builder-server.example.com')
     .BuildServer;
 
-  Assert(Ctx.GetServerName = 'builder-server.example.com',
-    'BuildServer preserves explicit WithSNI ServerName on the built context');
+  Assert(Ctx.GetServerName = '',
+    'BuildServer no longer preserves explicit WithSNI ServerName on the built context');
   Assert(ConnectionServerName(Ctx) = '',
-    'Server connection ignores the builder-configured client-only ServerName');
+    'Server connection still ignores the builder-configured client-only ServerName');
 end;
 
 procedure Test_DirectServerContext_IgnoresLegacyContextServerName;
@@ -113,7 +113,7 @@ end;
 begin
   try
     Test_BuilderClientWithSNI_PreservesServerName;
-    Test_BuilderServerWithSNI_PreservesServerName;
+    Test_BuilderServerWithSNI_IsIgnoredForServerContexts;
     Test_DirectServerContext_IgnoresLegacyContextServerName;
 
     WriteLn;

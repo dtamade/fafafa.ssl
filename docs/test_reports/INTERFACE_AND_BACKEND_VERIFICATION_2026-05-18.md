@@ -421,6 +421,33 @@
 
 - 这一步完成后，残余活跃 context-level `SetServerName(...)` 命中已经基本不再混着普通客户端流指导语义，而主要是 intentional compatibility / API-surface coverage
 
+## 增量收口：BuildServer WithSNI dead compatibility 收口
+
+- 残余分类完成后，第一条真正适合落地的 behavior migration 并不是直接打 client fallback，而是先收掉一个 server-only dead compatibility：
+  - `TSSLContextBuilder.BuildServer` 之前会一边 warning “server-side connections ignore it”，一边仍把 `WithSNI(...)` 写进 built context
+  - 这会制造一个没有真实 server-side 消费者、但还在 runtime state 里残留的 client-only `ServerName`
+
+- 这批已经把这条裂缝收掉：
+  - `BuildServer` 继续保留 compatibility warning
+  - 但 built server context 不再保留 `WithSNI(...)` 对应的 `ServerName`
+  - `ValidateServer` 也同步改成明确术语：
+    - `BuildServer ignores it and server-side connections ignore it`
+
+- focused RED -> GREEN 证据：
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+    - 初始 1 条断言失败，直接证明 built server context 之前还保留 legacy `ServerName`
+    - 修复后 `6 passed, 0 failed`
+  - `tests/test_context_builder_server_name_compatibility_warning.pas`
+    - 初始 2 条断言失败，直接证明 warning 术语与 runtime truth 还不一致
+    - 修复后 `14 passed, 0 failed`
+  - `tests/config/test_config_validation.pas`
+    - 初始 1 条断言失败
+    - 修复后 `53 passed, 0 failed`
+
+- 这一步的意义不是“完成了 SNI 迁移”，而是：
+  - 第一条真正的 behavior migration 已经开始进入生产代码，而不是继续停留在路线图层
+  - 下一步可以把注意力集中到 client-side intentional fallback 收缩，而不必反复处理这个 server-only dead compatibility
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -444,7 +471,7 @@
 
 ### 下一批最值得做的事
 
-1. 再决定 behavior migration 的第一条 RED
+1. 再决定 client-side behavior migration 的第一条 RED
    - 明确哪些 intentional-compat tests 会被改写
    - 明确新优先级应该怎样从 context-level 迁到 per-connection hostname 路径
 

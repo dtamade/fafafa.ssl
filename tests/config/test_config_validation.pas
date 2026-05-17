@@ -186,8 +186,9 @@ begin
   Assert(LResult.HasWarnings, 'Server WithSNI produces a warning');
   Assert(
     WarningsContain(LResult, 'deprecated') and
+      WarningsContain(LResult, 'BuildServer ignores it') and
       WarningsContain(LResult, 'server-side connections ignore'),
-    'Warning explains that server-side connections ignore deprecated context-level SNI'
+    'Warning explains that BuildServer and server-side connections ignore deprecated context-level SNI'
   );
   Assert(
     not WarningsContain(LResult, 'ISSLClientConnection.SetServerName'),

@@ -118,11 +118,15 @@ begin
       .BuildServer;
 
     Assert(LCtx <> nil, 'BuildServer still succeeds');
+    Assert(LCtx.GetServerName = '',
+      'BuildServer no longer retains the deprecated client-only ServerName on server contexts');
     Assert(LLogger.CallCount > 0, 'BuildServer WithSNI emits a warning');
     Assert(Pos('WithSNI', LLogger.LastMessage) > 0,
       'BuildServer warning names WithSNI');
+    Assert(Pos('BuildServer ignores it', LLogger.LastMessage) > 0,
+      'BuildServer warning explains that the built server context ignores legacy WithSNI');
     Assert(Pos('server-side connections ignore it', LLogger.LastMessage) > 0,
-      'BuildServer warning explains the server-side ignore semantics');
+      'BuildServer warning also explains the server-side connection ignore semantics');
     Assert(Pos('TSSLContextBuilderImpl.BuildServer', LLogger.LastMessage) > 0,
       'BuildServer warning identifies the builder callsite');
   finally

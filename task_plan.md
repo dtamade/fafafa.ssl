@@ -62,7 +62,8 @@
   - direct deprecated `AContext.GetServerName` / `FContext.GetServerName` 读取已从五个 backend 本地构造路径移除
   - focused source contract 与跨 backend fallback runtime regressions 均保持绿色
 - [completed] `context-level ServerName` 的 builder runtime warning 已与 validation / factory 对齐：
-  - `TSSLContextBuilderImpl.BuildClient` / `BuildServer` 在应用 `WithSNI(...)` 兼容写入前，都会发出显式 warning
+  - `TSSLContextBuilderImpl.BuildClient` 会在应用 `WithSNI(...)` 兼容写入前发出显式 warning
+  - `TSSLContextBuilderImpl.BuildServer` 会发出显式 warning；当前后续批次已进一步收口为 warning + ignore
   - `docs/reference/API_REFERENCE.md` 已把 `WithSNI(...)` 也降格成 compatibility-only 入口
   - focused builder warning regressions、validation regressions 与 runtime consistency regressions 均保持绿色
 - [completed] 第一批明确属于普通 WinSSL 客户端连接流的测试已迁到 per-connection SNI：
@@ -81,6 +82,13 @@
     已显式标记为 `INTENTIONAL_API_SURFACE`
   - `tests/winssl/test_winssl_mtls_skeleton.pas` 的真实握手路径已迁到 per-connection SNI
   - focused residual contract 绿灯，Linux-safe / Win64 focused 编译验证已通过
+- [completed] 第一条真正的 behavior migration 已经以 server-side builder dead-compat cut 落地：
+  - `TSSLContextBuilderImpl.BuildServer` 保留 `WithSNI(...)` compatibility warning，但不再把它写回 built context
+  - `ValidateServer` / runtime warning / API note 已同步改成 `BuildServer ignores it and server-side connections ignore it`
+  - focused RED -> GREEN：
+    - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+    - `tests/test_context_builder_server_name_compatibility_warning.pas`
+    - `tests/config/test_config_validation.pas`
 
 ## Scope
 
@@ -108,10 +116,10 @@
 
 ## Current Queue
 
-1. 设计并钉住第一条真正的 behavior migration RED：
-   - 明确哪些 intentional-compat tests 会被改写
+1. 继续选择第一条 client-side behavior migration RED：
+   - 优先评估直接锁 inherited context fallback 的 intentional tests
    - 明确 connector / connection-builder / factory / builder 四层的新优先级和失败语义
-2. 在 dedicated RED 明确后，再评估最终 public surface cleanup：
+2. 在 dedicated client-side RED 明确后，再评估最终 public surface cleanup：
    - `TSSLConfig.ServerName` 是否继续留在当前 record 上
    - builder `WithSNI(...)` 是否继续保留当前命名/入口
 3. 在 capability 与 SNI 迁移边界都稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。

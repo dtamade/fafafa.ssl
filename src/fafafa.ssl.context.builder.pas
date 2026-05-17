@@ -197,8 +197,8 @@ begin
     TSecurityLog.Warning(
       'ContextBuilder',
       Format(
-        '%s is applying WithSNI as deprecated context-level ServerName compatibility on a server context; ' +
-        'server-side connections ignore it.',
+        '%s received WithSNI as deprecated context-level ServerName compatibility on a server context; ' +
+        'BuildServer ignores it and server-side connections ignore it.',
         [ACallSite]
       )
     )
@@ -1400,15 +1400,10 @@ begin
     Result.SetCipherSuites(FTLS13Ciphersuites);
 
   if FServerName <> '' then
-  begin
     LogBuilderContextLevelServerNameCompatibilityWarning(
       'TSSLContextBuilderImpl.BuildServer',
       True
     );
-    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-    Result.SetServerName(FServerName);
-    {$POP}
-  end;
 
   if FALPNProtocols <> '' then
     Result.SetALPNProtocols(FALPNProtocols);
@@ -1522,7 +1517,7 @@ begin
   begin
     if AForServer then
       Result.AddWarning(
-        'WithSNI stores deprecated context-level ServerName compatibility on server contexts; server-side connections ignore it'
+        'WithSNI is deprecated context-level ServerName compatibility on server contexts; BuildServer ignores it and server-side connections ignore it'
       )
     else
       Result.AddWarning(

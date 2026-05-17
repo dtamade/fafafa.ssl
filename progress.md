@@ -228,6 +228,86 @@
   - summary:
     - no whitespace or patch-format issues remained after the residual classification batch
 
+### BuildServer WithSNI Ignore Behavior Migration
+
+- add `docs/plans/2026-05-18-buildserver-withsni-ignore-behavior-migration.md`
+  - purpose:
+    - define the first true behavior-migration cut after residual classification closed
+    - keep scope bounded to the server-side builder dead-compat path instead of reopening client fallback
+
+- update focused RED tests:
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+  - `tests/test_context_builder_server_name_compatibility_warning.pas`
+  - `tests/config/test_config_validation.pas`
+  - change:
+    - expect `BuildServer.WithSNI(...)` to stop retaining `ServerName` on the built server context
+    - expect warning / validation wording to say `BuildServer ignores it and server-side connections ignore it`
+
+- `mkdir -p tmp/test_context_builder_server_servername_runtime_consistency && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_context_builder_server_servername_runtime_consistency -FEtmp/test_context_builder_server_servername_runtime_consistency -otmp/test_context_builder_server_servername_runtime_consistency/test_context_builder_server_servername_runtime_consistency tests/test_context_builder_server_servername_runtime_consistency.pas && ./tmp/test_context_builder_server_servername_runtime_consistency/test_context_builder_server_servername_runtime_consistency`
+  - result: RED
+  - summary:
+    - initial run failed 1 assertion
+    - `BuildServer` still retained the deprecated client-only `ServerName` on the built server context
+
+- `mkdir -p tmp/test_context_builder_server_name_compatibility_warning && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_context_builder_server_name_compatibility_warning -FEtmp/test_context_builder_server_name_compatibility_warning -otmp/test_context_builder_server_name_compatibility_warning/test_context_builder_server_name_compatibility_warning tests/test_context_builder_server_name_compatibility_warning.pas && ./tmp/test_context_builder_server_name_compatibility_warning/test_context_builder_server_name_compatibility_warning`
+  - result: RED
+  - summary:
+    - initial run failed 2 assertions
+    - warning wording still described the old apply/ignore split and did not match the desired runtime truth
+
+- `mkdir -p tmp/test_config_validation && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_config_validation -FEtmp/test_config_validation -otmp/test_config_validation/test_config_validation tests/config/test_config_validation.pas && ./tmp/test_config_validation/test_config_validation`
+  - result: RED
+  - summary:
+    - initial run failed 1 assertion
+    - validation wording still described server-side ignore semantics without the new `BuildServer ignores it` truth
+
+- update `src/fafafa.ssl.context.builder.pas`
+  - change:
+    - `BuildServer` no longer calls `Result.SetServerName(FServerName)`
+    - builder server warning now says `BuildServer ignores it and server-side connections ignore it`
+    - `ValidateServer` warning wording now follows the same ignore semantics
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - clarify that `BuildClient` applies `WithSNI(...)` with warning, while `BuildServer` warns and ignores it
+
+- `mkdir -p tmp/test_context_builder_server_servername_runtime_consistency && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_context_builder_server_servername_runtime_consistency -FEtmp/test_context_builder_server_servername_runtime_consistency -otmp/test_context_builder_server_servername_runtime_consistency/test_context_builder_server_servername_runtime_consistency tests/test_context_builder_server_servername_runtime_consistency.pas && ./tmp/test_context_builder_server_servername_runtime_consistency/test_context_builder_server_servername_runtime_consistency`
+  - result: RED -> GREEN
+  - summary:
+    - final run finished `6 passed, 0 failed`
+    - built server contexts no longer retain the deprecated client-only `ServerName`
+
+- `mkdir -p tmp/test_context_builder_server_name_compatibility_warning && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_context_builder_server_name_compatibility_warning -FEtmp/test_context_builder_server_name_compatibility_warning -otmp/test_context_builder_server_name_compatibility_warning/test_context_builder_server_name_compatibility_warning tests/test_context_builder_server_name_compatibility_warning.pas && ./tmp/test_context_builder_server_name_compatibility_warning/test_context_builder_server_name_compatibility_warning`
+  - result: RED -> GREEN
+  - summary:
+    - final run finished `14 passed, 0 failed`
+    - builder warning text now matches the actual ignore behavior
+
+- `mkdir -p tmp/test_config_validation && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_config_validation -FEtmp/test_config_validation -otmp/test_config_validation/test_config_validation tests/config/test_config_validation.pas && ./tmp/test_config_validation/test_config_validation`
+  - result: RED -> GREEN
+  - summary:
+    - final run finished `53 passed, 0 failed`
+    - validation wording is aligned with the new runtime truth
+
+- update `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - change:
+    - record the first server-side behavior-migration cut
+    - move the next recommended batch to client-side behavior-migration RED selection
+
+- update `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - change:
+    - add a dedicated BuildServer dead-compat closeout section
+    - refresh the next-step recommendation toward client-side fallback migration
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the first behavior-migration cut into the persistent repo working memory
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remained after the BuildServer ignore batch
+
 ### Context ServerName Shared Compatibility Shim
 
 - add `docs/plans/2026-05-18-context-servername-shared-compatibility-shim.md`

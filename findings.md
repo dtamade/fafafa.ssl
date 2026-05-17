@@ -130,7 +130,8 @@
   - 高层写入面：
     - factory client path 仍会把 `TSSLConfig.ServerName` 写回 context
     - factory server path 已经禁止 `ServerName`
-    - builder `BuildClient` / `BuildServer` 仍都会保留 `WithSNI(...) -> context.SetServerName(...)` 的兼容写入
+    - builder `BuildClient` 仍会保留 `WithSNI(...) -> context.SetServerName(...)` 的 client-side 兼容写入
+    - builder `BuildServer` 现在只保留 warning / compatibility metadata，不再把 `WithSNI(...)` 写回 built context
     - connector 已经是正确方向，直接把 hostname 写到 `ISSLClientConnection.SetServerName(...)`
   - backend 继承面：
     - OpenSSL / FreePascal / WolfSSL / MbedTLS / WinSSL 五个 connection constructor 仍会从 context fallback 读取 `GetServerName`
@@ -262,6 +263,11 @@
 - focused contract 与编译证据共同说明：当前剩余活跃 context-level `SetServerName(...)` 命中已经基本不再混着普通客户端流指导语义，而主要是 intentional compatibility / API-surface coverage
 
 - 因而 SNI 主线的下一步已经可以正式前移到：
-  - 选择第一组要改写的 intentional-compat tests
-  - 定义第一条真正的 behavior migration RED
-  - 而不是继续做 residual 分类考古
+  - 选择第一组要改写的 client-side intentional-compat tests
+  - 定义第一条 client-side fallback behavior migration RED
+  - 而不是继续做 residual 分类考古或重复处理 server-only dead compatibility
+
+- 第一条真正的 behavior migration 已经不再停留在路线图上：
+  - `BuildServer.WithSNI(...)` 现在只会发 warning，并明确说明 `BuildServer ignores it and server-side connections ignore it`
+  - built server context 不再保留这份 client-only `ServerName`
+  - 这说明迁移主线已经可以从“先清 dead compatibility”继续推进到 client-side fallback 真正收缩
