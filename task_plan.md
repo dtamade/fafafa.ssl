@@ -488,6 +488,25 @@
 - [completed] 第二十八次 push 已记录远端自动 run：
   - `CI` run `25983594565`
   - 该批只扩 focused contract，不扩生产脚本语义；按增量验证纪律记录 run id，不同步阻塞式等待整条自动主线收口
+- [completed] 第二十八次 push 对应远端自动 run `25983594565` 已 SUCCESS：
+  - 说明只扩 focused contract 的 coverage batch 继续没有误伤自动主线
+- [completed] 第二十八次 docs closeout 提交 `c3dfa78` 已完成，wave-b missing-run-id closeout 已同步推送到 `master`
+- [completed] 第二十八次 docs closeout push 对应远端自动 run `25983622375` 已 SUCCESS：
+  - `Code Quality (Light)` SUCCESS
+  - `Minimal Gate (Linux)` SUCCESS
+  - `FreePascal TLS 1.3 Completeness` SUCCESS
+  - 说明这条 wave-b truth sync 继续保持闭环
+- [completed] 继续沿 `wave-b-b2` 的 handoff report-file missing 分支静态加深后，确认这里同样不是新的生产脚本 bug，而是 focused contract 覆盖缺口：
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh` 已经会把 `closure_report missing` / `consistency_report missing` 降级到 `NEEDS_REPORT_REPAIR`
+  - 缺口在于此前没有合同把整个 report 文件缺失和 metadata 缺失/串批次一起固定成同一条 truth
+- [completed] 新增 `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_missing_report_contract.sh`：
+  - `closure_report missing` 现在必须降级为 `NEEDS_REPORT_REPAIR`
+  - `consistency_report missing` 现在也必须降级为 `NEEDS_REPORT_REPAIR`
+  - 同时要求 `report_chain_note` 和 generic report-repair next actions 对这两条分支保持 truthful
+- [completed] 第二十九波 wave-b handoff missing-report coverage 本地复核通过：
+  - `test_prepare_wave_b_b2_handoff_bundle_missing_report_contract.sh` PASS
+  - `test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh` PASS
+  - `git diff --check` PASS
 
 ## Current Blocker
 
@@ -512,6 +531,9 @@
 - 当前也没有已知仍会因为 closure / consistency report `run_id` 缺失或串批次而把 `wave-b-b2` handoff 误判成正常 report chain 的残留：
   - handoff bundle 现在会把这类 report metadata 漂移降级到 `NEEDS_REPORT_REPAIR`
   - focused contract 也已经同时覆盖 missing / mismatch 两条分支
+- 当前也没有已知仍会因为 closure / consistency report 文件缺失而把 `wave-b-b2` handoff 误判成正常 report chain、`NEEDS_EVIDENCE_SYNC`、或其他非 report-repair 状态的残留：
+  - handoff bundle 现在会把这类下游 report 缺失统一降级到 `NEEDS_REPORT_REPAIR`
+  - focused contract 也已同时覆盖 `closure_report missing` / `consistency_report missing`
 - 当前也没有已知仍会因为 `closure_report run_id missing/mismatch` 而把 consistency 顶层 `closure_status_note` 误报成 `CLOSED` 的残留：
   - consistency 现在会把这类 issue 直接反映到顶层 `closure_status_note`
   - next actions 也会回到 generic metadata-misaligned 分支
@@ -522,9 +544,10 @@
 
 ## Current Queue
 
-1. 如果继续沿 `wave-b-b2` 这条线做静态加深，下一跳优先补 `prepare_wave_b_b2_handoff_bundle.sh` 的 `closure_report missing` / `consistency_report missing` focused contracts，确认“报告文件缺失”与“metadata 缺失/串批次”一样会给出对称 truthful 的 `report_chain_note` 与 next actions。
-2. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
-3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
+1. 先提交并推送当前 `wave-b-b2` handoff missing-report coverage batch，并记录自动 `CI` run id；该批只扩 focused contract，不扩生产脚本语义。
+2. 如果继续沿 `wave-b-b2` 这条线做静态加深，下一跳优先补 `check_wave_b_b2_evidence_consistency.sh` 的 `closure_report missing` focused contract，确认顶层 `closure_status_note`、row note、next actions 在“closure report 整个缺失”时也保持 truthful。
+3. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
+4. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
 
 ## Verification Discipline
 

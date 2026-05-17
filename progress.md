@@ -126,6 +126,51 @@
     - status at record time: `in_progress`
     - per the incremental verification discipline, this contract-expansion batch recorded the run id without a blocking watch
 
+### Twenty-Eighth Remote Closeout Revalidation
+
+- `gh run list --branch master --limit 4 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - `fb8664a` -> `CI` run `25983594565` finished `success`
+    - `c3dfa78` -> `CI` run `25983622375` finished `success`
+
+### Twenty-Ninth-Order Route Review
+
+- `sed -n '520,548p' task_plan.md`
+  - result: PASS
+  - summary:
+    - current queue explicitly pointed to `prepare_wave_b_b2_handoff_bundle.sh` `closure_report missing` / `consistency_report missing` focused contracts
+    - route stayed on wave-b handoff report-chain truth instead of reopening unrelated workflow governance lanes
+
+- `sed -n '605,645p' findings.md`
+  - result: PASS
+  - summary:
+    - prior findings already narrowed the next highest-value gap to missing report-file symmetry
+    - no evidence suggested a new runtime or workflow regression outside this contract surface
+
+### Twenty-Ninth-Order Contract Expansion
+
+- add `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_missing_report_contract.sh`
+  - purpose: require `NEEDS_REPORT_REPAIR` when closure or consistency report file is missing, and keep `report_chain_note` plus generic report-repair next actions truthful
+
+### Local Revalidation After Twenty-Ninth Contract Expansion
+
+- `bash -n tests/scripts/test_prepare_wave_b_b2_handoff_bundle_missing_report_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_missing_report_contract.sh`
+  - result: PASS
+  - summary:
+    - `closure_report_missing`
+    - `consistency_report_missing`
+    - both generated handoff bundles downgraded to `NEEDS_REPORT_REPAIR` with the expected note and next-actions branch
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
 ### Eleventh Push Success Revalidation
 
 - `git commit -m "chore: pin workflow actions to commits"`

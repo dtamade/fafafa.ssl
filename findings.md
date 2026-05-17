@@ -616,3 +616,16 @@
 - 这次提交 `fb8664a` 只扩大了 focused contract 覆盖面，没有修改生产脚本状态机：
   - 因此远端自动 `CI` run `25983594565` 只需要作为增量 run id 记账
   - 除非它把自动主线打红，否则不需要把这类 coverage batch 升级成阻塞式盯跑
+
+- 随后的 docs closeout `c3dfa78` 对应 `CI` run `25983622375` 继续 SUCCESS：
+  - `Code Quality (Light)`、`Minimal Gate (Linux)`、`FreePascal TLS 1.3 Completeness` 全部 SUCCESS
+  - 说明 wave-b truth sync 继续没有带偏自动主线
+
+- 再往前把 `prepare_wave_b_b2_handoff_bundle.sh` 的“整个 report 文件缺失”分支补成 focused contract 后，当前结论仍然是“coverage gap 已补齐”，不是新的 prod bug：
+  - 脚本本身已经会把 `closure_report missing` 和 `consistency_report missing` 都降级到 `NEEDS_REPORT_REPAIR`
+  - 缺口只在于此前没有合同固定 `report_chain_note` 与 generic report-repair next actions 的对称 truth
+  - 现在 `test_prepare_wave_b_b2_handoff_bundle_missing_report_contract.sh` 已把这两条分支钉住
+
+- 因而当前 `wave-b-b2` 线上更合理的下一跳，已经从 handoff bundle 前移到 consistency 顶层摘要面：
+  - 优先补 `check_wave_b_b2_evidence_consistency.sh` 的 `closure_report missing` focused contract
+  - 目标是确认顶层 `closure_status_note`、row note 和 next actions 在“closure report 整个缺失”时，也不会回落到误导性的 `CLOSED/IN_PROGRESS` 叙事
