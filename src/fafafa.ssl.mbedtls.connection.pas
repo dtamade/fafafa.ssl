@@ -238,10 +238,12 @@ begin
   end;
 
   // Set server name (SNI) if configured
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   if (FContext <> nil) and
     ContextTypeSupportsClientConnectionRole(FContext.GetContextType) and
     (FContext.GetServerName <> '') then
     SetServerName(FContext.GetServerName);
+  {$POP}
 end;
 
 procedure TMbedTLSConnection.FreeSSLContext;

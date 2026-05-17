@@ -181,9 +181,11 @@ begin
   FStream := nil;
   FWolfSSL := nil;
   FServerName := '';
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   if (AContext <> nil) and
     ContextTypeSupportsClientConnectionRole(AContext.GetContextType) then
     FServerName := AContext.GetServerName;
+  {$POP}
   FALPNProtocols := AContext.GetALPNProtocols;
   FNegotiatedALPN := '';
   FLastNativeError := 0;
@@ -215,9 +217,11 @@ begin
   FStream := AStream;
   FWolfSSL := nil;
   FServerName := '';
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   if (AContext <> nil) and
     ContextTypeSupportsClientConnectionRole(AContext.GetContextType) then
     FServerName := AContext.GetServerName;
+  {$POP}
   FALPNProtocols := AContext.GetALPNProtocols;
   FNegotiatedALPN := '';
   FLastNativeError := 0;

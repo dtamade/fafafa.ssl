@@ -35,6 +35,10 @@
   - 反序列化现在在检测到 v1.2 `*Support` 字段时，会用 support-level truth 覆盖冲突的 legacy boolean
   - capability diff 不再忽略 `SNISupport` / `ALPNSupport` / `OCSPStaplingSupport` / `CertTransparencySupport` / `SessionTicketsSupport` 以及 support-only 的 v1.2 字段
   - 新增 focused regression 证明红灯已转绿，且旧 round-trip 兼容仍保持
+- [completed] `context-level ServerName` 内部 warning quarantine 已按 live 证据收窄：
+  - `tests/contract/test_capabilities_contract.pas` 已固定为当前 deprecated warning compile probe
+  - `wolfssl` / `mbedtls` / `winssl` 的兼容 fallback 读取点已加局部 warning quarantine
+  - 没有改动 factory / builder / runtime compatibility 语义
 
 ## Scope
 
@@ -65,9 +69,9 @@
 1. 决定 serializer 输出面是否还需要“受控归一化”：
    - 当前 runtime / deserializer / diff 的主真相已对齐
    - 但对“手工构造且本身不一致的 in-memory capability record”，序列化仍基本保持原样输出
-2. 为 context-level `ServerName` 兼容路径单独建迁移计划：
-   - 不在 capability 真相批次里混做
-   - 明确 factory / builder / connection constructors / tests 的拆迁顺序
+2. 为 context-level `ServerName` 兼容路径继续保留迁移计划，但不要回退到 warning 噪音治理：
+   - warning quarantine 已完成，不再重复围绕旧 compile 入口开工
+   - 下一步只讨论 compatibility migration 本身：factory / builder / connection constructors / tests 的拆迁顺序
 3. 在 capability 与 SNI 迁移边界稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。
 
 ## Verification Discipline

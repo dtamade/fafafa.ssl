@@ -471,10 +471,12 @@ begin
 
   // 从上下文获取服务器名称
   FServerName := '';
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   if (AContext <> nil) and
     ContextTypeSupportsClientConnectionRole(AContext.GetContextType) and
     (AContext.GetServerName <> '') then
     FServerName := AContext.GetServerName;
+  {$POP}
 
   FRecvBufferUsed := 0;
   FDecryptedBufferUsed := 0;
@@ -499,10 +501,12 @@ begin
   FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
 
   FServerName := '';
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   if (AContext <> nil) and
     ContextTypeSupportsClientConnectionRole(AContext.GetContextType) and
     (AContext.GetServerName <> '') then
     FServerName := AContext.GetServerName;
+  {$POP}
 
   FRecvBufferUsed := 0;
   FDecryptedBufferUsed := 0;

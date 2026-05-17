@@ -122,6 +122,43 @@
     - PASS
     - 说明这次修的是 precedence / truth，对既有 JSON/XML round-trip 没有打穿
 
+## 增量收口：internal context ServerName warning quarantine
+
+- 继续沿着 SNI 主线静态审查后，确认 warning 治理这条线也存在“旧计划入口失真”的问题：
+  - 旧计划点名的 `factory` / `builder` / `openssl.connection` / `openssl.backed` 已不再是当前 live compile 噪音主来源
+  - `tests/test_builder_integration.pas` 也不再稳定暴露 `ISSLContext.Get/SetServerName` deprecated warning
+
+- 当前真正有效的 compile probe 是：
+  - `tests/contract/test_capabilities_contract.pas`
+  - 这条 compile path 在修复前会稳定打出：
+    - `src/fafafa.ssl.wolfssl.connection.pas` 的两处 `ISSLContext.GetServerName` deprecated warning
+    - `src/fafafa.ssl.mbedtls.connection.pas` 的两处 `ISSLContext.GetServerName` deprecated warning
+
+- `WinSSL` 在当前 Linux host 上不走这条 live compile path，但源码静态审查也确认：
+  - `src/fafafa.ssl.winssl.connection.pas` 仍有两处 direct `AContext.GetServerName` 兼容读取
+  - 它们也应与其他 backend 一样被局部 quarantine，而不是等到 Windows lane 再反复重提
+
+- 本批修法保持非常克制：
+  - 不改 factory / builder
+  - 不改 runtime fallback 兼容语义
+  - 只在 `wolfssl` / `mbedtls` / `winssl` 的内部兼容读取点加局部 `{$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}` / `{$POP}`
+
+- focused contract 也同步收敛到当前真相：
+  - `tests/scripts/test_internal_context_servername_warning_contract.sh`
+    - 改为编译 `tests/contract/test_capabilities_contract.pas`
+    - grep `wolfssl` / `mbedtls` 的 deprecated warning 必须不存在
+    - 对 `WinSSL` 增加静态 source guard
+    - 并在 contract 内直接运行编译出的 `test_capabilities_contract`
+
+- 验证结果：
+  - `bash tests/scripts/test_internal_context_servername_warning_contract.sh`
+    - PASS
+  - focused compile log 中不再出现上述 `GetServerName` deprecated warning
+
+- 这一步的意义不是“完成了 SNI 迁移”，而是：
+  - 把当前仍然需要保留的兼容路径从“反复刷 warning 的噪音源”收成“显式承认的内部兼容区”
+  - 让下一步真正的 compatibility migration 可以在更干净的 compile 基线上继续推进
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -151,6 +188,7 @@
 
 2. 设计一份 **context-level SNI compatibility migration plan**
    - 先定义 compatibility shim 和 deprecation boundary
+   - warning quarantine 已完成，不要再回到旧的 compile 噪音治理
    - 再分批清理 factory / builder / connection constructor / tests
 
 3. 再决定是否拆 `TSSLConfig`

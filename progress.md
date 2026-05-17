@@ -199,3 +199,47 @@
   - summary:
     - existing JSON/XML round-trip test remained green after the precedence fix
     - confirms this batch tightened truth precedence without regressing the current serialization/deserialization compatibility path
+
+### Internal Context ServerName Warning Quarantine
+
+- `mkdir -p tmp/internal_context_servername_warning_probe && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/internal_context_servername_warning_probe -FEtmp/internal_context_servername_warning_probe -otmp/internal_context_servername_warning_probe/test_capabilities_contract tests/contract/test_capabilities_contract.pas 2>&1 | tee tmp/internal_context_servername_warning_probe/compile.log`
+  - result: RED
+  - summary:
+    - live compile probe emitted deprecated `ISSLContext.GetServerName` warnings from `src/fafafa.ssl.wolfssl.connection.pas` and `src/fafafa.ssl.mbedtls.connection.pas`
+    - this confirmed the old `test_builder_integration`-based warning contract had drifted away from the current noise source
+
+- update `tests/scripts/test_internal_context_servername_warning_contract.sh`
+  - change:
+    - switch the compile probe from `tests/test_builder_integration.pas` to `tests/contract/test_capabilities_contract.pas`
+    - check that `wolfssl.connection` / `mbedtls.connection` no longer emit deprecated `GetServerName` warnings
+    - add a static `WinSSL` source guard by requiring local warning quarantine markers in `src/fafafa.ssl.winssl.connection.pas`
+    - run the compiled `test_capabilities_contract` binary as part of the contract
+
+- update `src/fafafa.ssl.wolfssl.connection.pas`
+  - change:
+    - add local deprecated-warning quarantine around the two constructor fallback reads of `AContext.GetServerName`
+
+- update `src/fafafa.ssl.mbedtls.connection.pas`
+  - change:
+    - add local deprecated-warning quarantine around the internal SNI fallback read from `FContext.GetServerName`
+
+- update `src/fafafa.ssl.winssl.connection.pas`
+  - change:
+    - add local deprecated-warning quarantine around both constructor fallback reads of `AContext.GetServerName`
+
+- `bash -n tests/scripts/test_internal_context_servername_warning_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_internal_context_servername_warning_contract.sh`
+  - result: GREEN
+  - summary:
+    - internal warning contract passed after the local quarantines landed
+    - the compiled `test_capabilities_contract` binary still executed successfully inside the contract
+
+- `rg -n "deprecated" tmp/internal_context_servername_warning_contract/build.log`
+  - result: PASS
+  - summary:
+    - no remaining deprecated-warning matches were left in the focused compile log after the quarantine change
+
+- `git diff --check`
+  - result: PASS
