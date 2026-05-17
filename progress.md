@@ -395,6 +395,80 @@
   - summary:
     - current early-data contract cleanup batch has no whitespace or patch-format issues
 
+### FreePascal Client Context ServerName Expectation Sync
+
+- add `docs/plans/2026-05-18-freepascal-client-context-servername-expectation-sync.md`
+  - purpose:
+    - define the bounded sync batch that fixes stale FreePascal-focused contracts after the earlier client runtime fallback cut
+    - keep the work on truth-sync instead of reopening unrelated server-side or release lanes
+
+- `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - result: PASS
+  - summary:
+    - current intentional compatibility label set is now only the direct server-context control case
+
+- `mkdir -p tmp/test_context_builder_server_servername_runtime_consistency && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_context_builder_server_servername_runtime_consistency -FEtmp/test_context_builder_server_servername_runtime_consistency -otmp/test_context_builder_server_servername_runtime_consistency/test_context_builder_server_servername_runtime_consistency tests/test_context_builder_server_servername_runtime_consistency.pas && ./tmp/test_context_builder_server_servername_runtime_consistency/test_context_builder_server_servername_runtime_consistency`
+  - result: RED
+  - summary:
+    - `BuildClient.WithSNI(...)` still preserved context state
+    - but FreePascal client connections no longer inherited that state
+    - the focused contract was still asserting pre-cut behavior
+
+- `mkdir -p tmp/test_factory_server_name_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_server_name_scope_clarification -FEtmp/test_factory_server_name_scope_clarification -otmp/test_factory_server_name_scope_clarification/test_factory_server_name_scope_clarification tests/test_factory_server_name_scope_clarification.pas && ./tmp/test_factory_server_name_scope_clarification/test_factory_server_name_scope_clarification`
+  - result: RED
+  - summary:
+    - client default-config / one-shot config still preserved context state
+    - but FreePascal client connections no longer inherited that state
+    - factory focused contract was still asserting pre-cut connection fallback
+
+- `mkdir -p tmp/test_factory_config_server_name_isolation && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_config_server_name_isolation -FEtmp/test_factory_config_server_name_isolation -otmp/test_factory_config_server_name_isolation/test_factory_config_server_name_isolation tests/test_factory_config_server_name_isolation.pas && ./tmp/test_factory_config_server_name_isolation/test_factory_config_server_name_isolation`
+  - result: RED
+  - summary:
+    - default-path / one-shot isolation contract showed the same stale inherited-connection expectation
+
+- update FreePascal-focused contracts:
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+  - `tests/test_factory_server_name_scope_clarification.pas`
+  - `tests/test_factory_config_server_name_isolation.pas`
+  - change:
+    - keep context-state assertions intact
+    - replace inherited-connection assertions with explicit empty-ServerName expectations on FreePascal connections
+
+- update `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - change:
+    - record that live retest exposed stale FreePascal-focused expectations
+    - move the next recommendation to the remaining shared client fallback backends instead of the old server-side control case
+
+- update `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - change:
+    - add a dedicated closeout section for the FreePascal expectation-sync batch
+    - restate the main unresolved seam as cross-backend shared client fallback divergence
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the FreePascal expectation correction and the corrected next route into persistent repo working memory
+
+- `mkdir -p tmp/test_context_builder_server_servername_runtime_consistency && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_context_builder_server_servername_runtime_consistency -FEtmp/test_context_builder_server_servername_runtime_consistency -otmp/test_context_builder_server_servername_runtime_consistency/test_context_builder_server_servername_runtime_consistency tests/test_context_builder_server_servername_runtime_consistency.pas && ./tmp/test_context_builder_server_servername_runtime_consistency/test_context_builder_server_servername_runtime_consistency`
+  - result: RED -> GREEN
+  - summary:
+    - client-side assertion now matches live FreePascal runtime truth
+    - server-side control assertions remained green
+
+- `mkdir -p tmp/test_factory_server_name_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_server_name_scope_clarification -FEtmp/test_factory_server_name_scope_clarification -otmp/test_factory_server_name_scope_clarification/test_factory_server_name_scope_clarification tests/test_factory_server_name_scope_clarification.pas && ./tmp/test_factory_server_name_scope_clarification/test_factory_server_name_scope_clarification`
+  - result: RED -> GREEN
+  - summary:
+    - FreePascal factory client contract now correctly treats `ServerName` as context-only state, not inherited connection fallback
+
+- `mkdir -p tmp/test_factory_config_server_name_isolation && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_config_server_name_isolation -FEtmp/test_factory_config_server_name_isolation -otmp/test_factory_config_server_name_isolation/test_factory_config_server_name_isolation tests/test_factory_config_server_name_isolation.pas && ./tmp/test_factory_config_server_name_isolation/test_factory_config_server_name_isolation`
+  - result: RED -> GREEN
+  - summary:
+    - default-path / one-shot isolation contract now reflects the same context-only boundary on FreePascal
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current FreePascal expectation-sync batch has no whitespace or patch-format issues
+
 ### Residual Context SNI Classification And WinSSL mTLS Skeleton Cleanup
 
 - add `docs/plans/2026-05-18-residual-context-sni-classification-and-mtls-skeleton-cleanup.md`

@@ -645,6 +645,50 @@
   - `tests/test_context_builder_server_servername_runtime_consistency.pas`
   - 再决定 `TSSLConfig.ServerName` / `WithSNI(...)` 这类 public compatibility surface 何时继续收紧
 
+## 增量收口：FreePascal client context-ServerName focused contracts 与 runtime 真相重新对齐
+
+- 在继续审最后那条 server-side control case 时，live focused retest 反而先暴露出一个更实在的问题：
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+  - `tests/test_factory_server_name_scope_clarification.pas`
+  - `tests/test_factory_config_server_name_isolation.pas`
+  - 这三份 FreePascal-focused 合同仍然在断言：
+    - `BuildClient.WithSNI(...)` 会让新连接继承 context `ServerName`
+    - factory client `ServerName` config 会让新连接继承 context `ServerName`
+
+- 但这已经不是 live runtime truth：
+  - `src/fafafa.ssl.freepascal.connection.pas` 之前那一刀已经把 socket / stream client constructor 的 inherited context fallback 切掉了
+  - 所以 FreePascal 现在的真实边界是：
+    - deprecated context state 仍然会留在 context 上
+    - 但新 client connection 不再自动继承它
+
+- 这批因此没有改生产代码，而是修正 focused contracts 自身的失真：
+  - `test_context_builder_server_servername_runtime_consistency`
+    - `BuildClient` 继续断言 built context 保留 `ServerName`
+    - 但 FreePascal client connection 现在明确断言为 `''`
+  - `test_factory_server_name_scope_clarification`
+    - client default-config / one-shot config 继续断言 context 保留 `ServerName`
+    - 但 FreePascal client connection 现在明确断言为 `''`
+  - `test_factory_config_server_name_isolation`
+    - default-path / one-shot path 继续覆盖 context state isolation
+    - 但不再错误宣称 FreePascal connection 会继承旧 fallback
+
+- focused 证据：
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+    - RED -> GREEN
+  - `tests/test_factory_server_name_scope_clarification.pas`
+    - RED -> GREEN
+  - `tests/test_factory_config_server_name_isolation.pas`
+    - RED -> GREEN
+  - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+    - PASS
+
+- 这一步把路线判断也一起纠正了：
+  - 当前最先暴露出来的问题已经不再是“要不要继续保留 direct server context 的 legacy state”
+  - 而是：
+    - FreePascal 已经进入 no-inheritance
+    - OpenSSL / WolfSSL / MbedTLS / WinSSL 仍在 shared shim 上保留 inherited client fallback
+  - 所以下一批真正该做的是跨 backend 的 shared client fallback 对齐，而不是继续围着旧 server-side control case 打转
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -679,9 +723,13 @@
 ### 下一批最值得做的事
 
 1. 再决定 `sslCtxClient` behavior migration 的第一条 RED
-   - 第一优先级改为 `tests/test_context_builder_server_servername_runtime_consistency.pas`
-   - 再决定最后这条 intentional compatibility control case 应该继续保留多少 server-side 兼容语义
-   - 明确 public compatibility surface 还能保留到什么边界
+   - 第一优先级改为剩余 shared client fallback backends：
+     - OpenSSL
+     - WolfSSL
+     - MbedTLS
+     - WinSSL
+   - 再决定它们是否应统一跟随 FreePascal 的 no-inheritance 规则
+   - 最后再回到 direct server-context control case 的去留
 
 2. `TSSLConfig` 拆层与 capability model presence bits 仍然排在后面
    - 它们是更大的设计债，不是当前 SNI 迁移主线的下一刀

@@ -55,12 +55,12 @@
   - `TSSLFactory.CreateContext(AContextType, ALibType)` 与 `TSSLFactory.CreateContext(const AConfig)` 在 client-side 兼容写入 `TSSLConfig.ServerName` 时，都会发出显式 warning
   - warning 直接点名 `TSSLConfig.ServerName` 是 deprecated context-level SNI compatibility，并把调用方导向 `ISSLClientConnection.SetServerName(...)` / `TSSLConnector.Connect*(..., ServerName)`
   - `src/fafafa.ssl.base.pas` 与 `docs/reference/API_REFERENCE.md` 已把该字段降格成 compatibility-only 入口
-  - focused factory regressions 证明这次收口没有改掉现有兼容继承行为
+  - focused factory regressions 证明当时这次收口没有直接改掉现有兼容写入行为；后续 FreePascal runtime cut 已让该 backend 的 client connection 不再继承
 - [completed] `context-level ServerName` Phase C 的第一刀 shared compatibility shim 已收口：
   - 新增 `src/fafafa.ssl.context.compat.pas`
   - OpenSSL / FreePascal / WolfSSL / MbedTLS / WinSSL 的 constructor fallback 已统一改走 `GetContextLevelServerNameCompatibilityValue(...)`
   - direct deprecated `AContext.GetServerName` / `FContext.GetServerName` 读取已从五个 backend 本地构造路径移除
-  - focused source contract 与跨 backend fallback runtime regressions 均保持绿色
+  - focused source contract 与当时的跨 backend fallback runtime regressions 均保持绿色；后续 FreePascal 已先行切到 no-inheritance
 - [completed] `context-level ServerName` 的 builder runtime warning 已与 validation / factory 对齐：
   - `TSSLContextBuilderImpl.BuildClient` 会在应用 `WithSNI(...)` 兼容写入前发出显式 warning
   - `TSSLContextBuilderImpl.BuildServer` 会发出显式 warning；当前后续批次已进一步收口为 warning + ignore
@@ -140,6 +140,17 @@
     - `bash tests/scripts/test_tls_connector_early_data_no_context_level_sni_guidance.sh`
     - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
     - `tests/test_tls_connector_early_data_contract.pas`
+- [completed] FreePascal-focused client context-ServerName contracts 已与 live runtime truth 重新对齐：
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+  - `tests/test_factory_server_name_scope_clarification.pas`
+  - `tests/test_factory_config_server_name_isolation.pas`
+    不再错误宣称 FreePascal 新连接会继承 deprecated context-level `ServerName`
+  - 它们现在继续覆盖 context state 仍被保留，但 client connection 已明确不再自动继承
+  - focused 验证：
+    - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+    - `tests/test_factory_server_name_scope_clarification.pas`
+    - `tests/test_factory_config_server_name_isolation.pas`
+    - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
 
 ## Scope
 
@@ -168,9 +179,13 @@
 ## Current Queue
 
 1. 继续选择下一条 `sslCtxClient` behavior migration RED：
-   - 第一优先级改为 `tests/test_context_builder_server_servername_runtime_consistency.pas`
-   - 然后再评估最后一条 intentional compatibility control case 应继续保留多少 server-side 兼容语义
-   - 明确 public compatibility surface 的最终边界与失败语义
+   - 第一优先级改为剩余 shared client fallback backends：
+     - `src/fafafa.ssl.openssl.connection.pas`
+     - `src/fafafa.ssl.wolfssl.connection.pas`
+     - `src/fafafa.ssl.mbedtls.connection.pas`
+     - `src/fafafa.ssl.winssl.connection.pas`
+   - 然后再决定它们是否统一跟随 FreePascal 的 no-inheritance 规则
+   - 最后再回到 direct server-context control case 的最终去留
 2. 在 dedicated client-side RED 明确后，再评估最终 public surface cleanup：
    - `TSSLConfig.ServerName` 是否继续留在当前 record 上
    - builder `WithSNI(...)` 是否继续保留当前命名/入口

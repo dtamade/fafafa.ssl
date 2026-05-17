@@ -52,7 +52,7 @@ var
   LDefaultConfig: TSSLConfig;
   LCtx: ISSLContext;
 begin
-  TestHeader('Client default-config ServerName remains supported');
+  TestHeader('Client default-config ServerName remains context-only on FreePascal');
 
   LLib := TSSLFactory.GetLibrary(sslFreePascal);
   LOriginalConfig := LLib.GetDefaultConfig;
@@ -64,8 +64,8 @@ begin
     LCtx := TSSLFactory.CreateContext(sslCtxClient, sslFreePascal);
     Assert(LCtx.GetServerName = 'client-default.example.com',
       'Client default-config context preserves ServerName');
-    Assert(ConnectionServerName(LCtx) = 'client-default.example.com',
-      'Client default-config connection inherits ServerName');
+    Assert(ConnectionServerName(LCtx) = '',
+      'FreePascal client default-config connection no longer inherits context ServerName');
   finally
     LLib.SetDefaultConfig(LOriginalConfig);
   end;
@@ -114,7 +114,7 @@ var
   LConfig: TSSLConfig;
   LCtx: ISSLContext;
 begin
-  TestHeader('Client one-shot ServerName remains supported');
+  TestHeader('Client one-shot ServerName remains context-only on FreePascal');
 
   LConfig := CreateDefaultConfig(sslCtxClient);
   LConfig.LibraryType := sslFreePascal;
@@ -124,8 +124,8 @@ begin
   LCtx := TSSLFactory.CreateContext(LConfig);
   Assert(LCtx.GetServerName = 'client-oneshot.example.com',
     'Client one-shot context preserves ServerName');
-  Assert(ConnectionServerName(LCtx) = 'client-oneshot.example.com',
-    'Client one-shot connection inherits ServerName');
+  Assert(ConnectionServerName(LCtx) = '',
+    'FreePascal client one-shot connection no longer inherits context ServerName');
 end;
 
 procedure Test_OneShot_ServerServerName_IsRejected;

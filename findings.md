@@ -23,10 +23,10 @@
   - 第一段先做横向验证，确认 public surface / docs / backend truth 是否一致
   - 第二段只修高价值且边界清晰的问题，避免把结构性设计债误当成一批次即可完成的大重构
 
-- 第一批 live 代码交叉验证已经确认：context-level `ServerName` 不只是“deprecated 但没人用了”的旧接口，而是仍然被当前实现主动传播：
+- 第一批 live 代码交叉验证当时确认：context-level `ServerName` 不只是“deprecated 但没人用了”的旧接口，而是仍然被实现主动传播：
   - `TSSLFactory.CreateContext(...)` 与 `TSSLContextBuilderImpl.Build*` 仍在对 context 调 `SetServerName(...)`
-  - OpenSSL / WinSSL / FreePascal / MbedTLS / WolfSSL 的 connection 构造器仍会把 `AContext.GetServerName` 复制到连接实例
-  - 现有测试 `tests/test_factory_server_name_scope_clarification.pas` 与 `tests/test_sslctxboth_client_capability_clarification.pas` 还把这种 fallback 继承锁成当前预期
+  - 当时 OpenSSL / WinSSL / FreePascal / MbedTLS / WolfSSL 的 connection 构造器都会把 context-level `ServerName` 带进连接实例
+  - 现有测试 `tests/test_factory_server_name_scope_clarification.pas` 与 `tests/test_sslctxboth_client_capability_clarification.pas` 当时也把这种 fallback 继承锁成预期
   - 这说明 SNI 问题已经从“接口设计异味”演变成了“实现层 + 合同层一起固化的历史语义”
 
 - `TSSLConfig.BufferSize` / `HandshakeTimeout` 当前更像“跨层暴露但带显式路障”的设计债，而不是隐藏 bug：
@@ -52,10 +52,10 @@
   - 当前修法是把活跃文档改回“当前只公开 `ISSLClientConnection`，服务端特性主要走 optional context interfaces”
   - 并新增 `tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`，防止这类承诺漂移再次回流
 
-- focused 验证结果进一步支持当前路线判断：
+- focused 验证结果在当时进一步支持了当前路线判断：
   - `tests/test_factory_connection_scope_clarification.pas` PASS，证明 `BufferSize` / `HandshakeTimeout` 是显式 scope gate，而不是静默失效
-  - `tests/test_factory_server_name_scope_clarification.pas` PASS，证明 client-side context `ServerName` 仍被正式支持为兼容路径
-  - `tests/test_sslctxboth_client_capability_clarification.pas` PASS，证明多 backend 连接构造器仍主动继承 context-level `ServerName` fallback
+  - `tests/test_factory_server_name_scope_clarification.pas` PASS，证明 client-side context `ServerName` 当时仍被正式支持为兼容路径
+  - `tests/test_sslctxboth_client_capability_clarification.pas` PASS，证明多 backend 连接构造器当时仍主动继承 context-level `ServerName` fallback
   - 因此“删除 context-level SNI fallback”必须被当作一次兼容性迁移，而不是局部 bugfix
 
 - capability 双真相的 runtime 半边已经可以安全收口，而且应该先收 runtime、后碰 serializer：
@@ -194,10 +194,10 @@
     - 要求五个 backend 都调用 shared helper
     - 要求五个 backend 不再直接读取 `AContext.GetServerName` / `FContext.GetServerName`
 
-- runtime regression 也证明 shared shim 没有误伤现有兼容真相：
+- runtime regression 在那一批也证明 shared shim 没有误伤当时的兼容真相：
   - `tests/test_sslctxboth_client_capability_clarification.pas` 继续绿色
   - `tests/test_factory_server_name_scope_clarification.pas` 继续绿色
-  - 这说明 “context -> connection 的 fallback 仍存在” 与 “deprecated read 已被集中治理” 这两件事现在可以同时成立
+  - 这说明在那一时点，“context -> connection 的 fallback 仍存在” 与 “deprecated read 已被集中治理” 这两件事可以同时成立
 
 - 因而 SNI 主线的剩余问题已经再次前移：
   - backend constructor 不再是散点收口对象
@@ -397,3 +397,27 @@
 - 所以下一条最合理的 bounded review 已再次前移：
   - 首选应转向 `tests/test_context_builder_server_servername_runtime_consistency.pas`
   - 再决定 public compatibility surface 还能保留到什么边界
+
+- 但对这条 server-side control case 做 live focused retest 后，先暴露出来的反而是三份 FreePascal-focused contracts 已经失真：
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+  - `tests/test_factory_server_name_scope_clarification.pas`
+  - `tests/test_factory_config_server_name_isolation.pas`
+  - 它们都还在教 “deprecated context-level ServerName 会被 FreePascal 新连接继承”
+
+- 这与当前 live runtime truth 冲突：
+  - `src/fafafa.ssl.freepascal.connection.pas` 之前已经切掉 socket / stream client constructor 的 inherited context fallback
+  - 所以当前 FreePascal 真相是：
+    - context state 仍会保留
+    - client connection 不再自动继承
+
+- 这说明当前最先需要修的不是 direct server-context control case 本身，而是把这些 focused contracts 拉回真相：
+  - 让它们继续覆盖 deprecated context state 是否还存在
+  - 但停止错误宣称 FreePascal connection 仍会继承旧 fallback
+
+- 这也重新排序了下一批主线：
+  - 真正剩下的高价值实现问题已经前移到 shared shim 的其余四个 backend：
+    - OpenSSL
+    - WolfSSL
+    - MbedTLS
+    - WinSSL
+  - 需要决定它们是否也应统一切到 no-inheritance

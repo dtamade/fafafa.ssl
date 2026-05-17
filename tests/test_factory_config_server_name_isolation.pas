@@ -50,7 +50,7 @@ var
   DefaultConfig: TSSLConfig;
   Ctx: ISSLContext;
 begin
-  TestHeader('Explicit SetDefaultConfig persists to default CreateContext path');
+  TestHeader('Explicit SetDefaultConfig keeps context-only ServerName on FreePascal');
 
   Lib := TSSLFactory.GetLibrary(sslFreePascal);
   OriginalConfig := Lib.GetDefaultConfig;
@@ -63,8 +63,8 @@ begin
 
     Assert(Ctx.GetServerName = 'default.example.com',
       'Default-path context inherits explicit library default ServerName');
-    Assert(ConnectionServerName(Ctx) = 'default.example.com',
-      'Default-path connection inherits explicit library default ServerName');
+    Assert(ConnectionServerName(Ctx) = '',
+      'Default-path FreePascal connection no longer inherits explicit library default ServerName');
   finally
     Lib.SetDefaultConfig(OriginalConfig);
   end;
@@ -78,7 +78,7 @@ var
   OneShotCtx: ISSLContext;
   FreshCtx: ISSLContext;
 begin
-  TestHeader('One-shot factory config does not leak into shared defaults');
+  TestHeader('One-shot factory config keeps context-only ServerName on FreePascal');
 
   Lib := TSSLFactory.GetLibrary(sslFreePascal);
   OriginalConfig := Lib.GetDefaultConfig;
@@ -91,8 +91,8 @@ begin
     OneShotCtx := TSSLFactory.CreateContext(OneShotConfig);
     Assert(OneShotCtx.GetServerName = 'sticky.example.com',
       'One-shot context applies configured ServerName');
-    Assert(ConnectionServerName(OneShotCtx) = 'sticky.example.com',
-      'One-shot connection inherits configured ServerName');
+    Assert(ConnectionServerName(OneShotCtx) = '',
+      'One-shot FreePascal connection no longer inherits configured ServerName');
 
     FreshCtx := TSSLFactory.CreateContext(sslCtxClient, sslFreePascal);
     Assert(FreshCtx.GetServerName = '',

@@ -53,7 +53,7 @@ procedure Test_BuilderClientWithSNI_PreservesServerName;
 var
   Ctx: ISSLContext;
 begin
-  TestHeader('Builder BuildClient keeps explicit WithSNI ServerName');
+  TestHeader('Builder BuildClient keeps explicit WithSNI context state only');
 
   Ctx := TSSLContextBuilder.Create
     .WithBackend(sslFreePascal)
@@ -62,8 +62,8 @@ begin
 
   Assert(Ctx.GetServerName = 'builder-client.example.com',
     'BuildClient preserves explicit WithSNI ServerName on the built context');
-  Assert(ConnectionServerName(Ctx) = 'builder-client.example.com',
-    'Client connection inherits the builder-configured ServerName');
+  Assert(ConnectionServerName(Ctx) = '',
+    'FreePascal client connection no longer inherits the builder-configured context ServerName');
 end;
 
 procedure Test_BuilderServerWithSNI_IsIgnoredForServerContexts;
