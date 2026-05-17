@@ -104,6 +104,16 @@
   - 它们已从 `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh` 的 intentional-compat 集合中移除
   - 新增 `tests/scripts/test_cross_backend_network_contracts_no_context_level_sni_guidance.sh`，直接守住“不再教 `Ctx.SetServerName(...)`”
   - focused compile/runtime shape 保持绿色；本机 live network path 仍因 `FAFAFA_RUN_NETWORK_TESTS!=1` 保持 gate skip
+- [completed] FreePascal 客户端连接已不再继承 deprecated context-level `ServerName` fallback：
+  - `src/fafafa.ssl.freepascal.connection.pas` 的 socket / stream 两个 client 构造器都已移除 shared compat shim 读取
+  - `tests/test_freepascal_context_server_name_inheritance.pas` 已翻成 negative regression：builder/direct context path 都不再把 `ServerName` 自动带进新连接
+  - 新增 `tests/scripts/test_freepascal_client_connections_no_context_servername_fallback.sh`
+  - `tests/test_freepascal_context_server_name_inheritance.pas` 已从 intentional-compat label 集合中移除
+  - focused RED -> GREEN：
+    - `bash tests/scripts/test_freepascal_client_connections_no_context_servername_fallback.sh`
+    - `tests/test_freepascal_context_server_name_inheritance.pas`
+    - `tests/test_connection_builder_hostname_precedence.pas`
+    - `tests/test_tls_connector_hostname_override_precedence.pas`
 
 ## Scope
 
@@ -132,8 +142,8 @@
 ## Current Queue
 
 1. 继续选择下一条 `sslCtxClient` behavior migration RED：
-   - 第一优先级改为 `tests/test_freepascal_context_server_name_inheritance.pas`
-   - 然后再评估 `tests/test_connection_builder_hostname_precedence.pas` / `tests/test_tls_connector_hostname_override_precedence.pas` 是否仍需要继续锁 inherited context fallback
+   - 第一优先级改为 `tests/test_connection_builder_hostname_precedence.pas`
+   - 然后再评估 `tests/test_tls_connector_hostname_override_precedence.pas` 是否仍需要继续锁 inherited context fallback
    - 明确 connector / connection-builder / factory / builder 四层的新优先级和失败语义
 2. 在 dedicated client-side RED 明确后，再评估最终 public surface cleanup：
    - `TSSLConfig.ServerName` 是否继续留在当前 record 上

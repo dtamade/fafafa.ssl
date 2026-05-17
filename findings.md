@@ -306,3 +306,30 @@
 - 这一步之后，下一条最自然的 `sslCtxClient` behavior migration RED 更清楚了：
   - 首选应转向 `tests/test_freepascal_context_server_name_inheritance.pas`
   - 因为它比 precedence/override 类测试更直接地锁住 inherited context fallback 本体
+
+- 这条 dedicated FreePascal runtime fallback 现在已经被真正切掉：
+  - `src/fafafa.ssl.freepascal.connection.pas` 的 socket / stream client 构造器都不再读取 `GetContextLevelServerNameCompatibilityValue(AContext)`
+  - 新建 FreePascal client connection 的 `ServerName` 默认回到空字符串
+  - 调用方如果要走 FreePascal client path，必须显式在 connection 上 `SetServerName(...)`
+
+- 这批证明了“builder/factory 仍写 deprecated context-level state”与“某个 backend 已不再消费这份 state”可以同时成立：
+  - `TSSLContextBuilder.BuildClient.WithSNI(...)` 仍会发 compatibility warning
+  - direct context `SetServerName(...)` 也仍然是 deprecated surface
+  - 但 FreePascal runtime 已不再把这份 state 静默带进新连接
+
+- 因而 intentional compatibility label 集合再次收窄：
+  - 现在真正还在锁 inherited fallback / compatibility precedence 的只剩：
+    - `tests/test_connection_builder_hostname_precedence.pas`
+    - `tests/test_tls_connector_hostname_override_precedence.pas`
+    - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+  - `tests/test_freepascal_context_server_name_inheritance.pas` 已经从“保留兼容”翻成“禁止再继承”
+
+- 邻接 focused evidence 也说明这刀没有误伤下一层计划中的 mock precedence contracts：
+  - `tests/test_connection_builder_hostname_precedence.pas` 继续绿色
+  - `tests/test_tls_connector_hostname_override_precedence.pas` 继续绿色
+  - 这意味着下一刀可以更直接地瞄准 `tests/test_connection_builder_hostname_precedence.pas`
+
+- 所以当前最合理的下一条 `sslCtxClient` behavior migration RED 已经前移：
+  - 不再是 `tests/test_freepascal_context_server_name_inheritance.pas`
+  - 而是 `tests/test_connection_builder_hostname_precedence.pas`
+  - 因为它现在成了剩余 intentional client-side inherited fallback 中最直接的下层契约

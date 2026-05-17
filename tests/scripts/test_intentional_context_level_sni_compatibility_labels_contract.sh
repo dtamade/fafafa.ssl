@@ -10,7 +10,6 @@ cd "$PROJECT_ROOT"
 declare -a files=(
   "tests/test_connection_builder_hostname_precedence.pas"
   "tests/test_tls_connector_hostname_override_precedence.pas"
-  "tests/test_freepascal_context_server_name_inheritance.pas"
   "tests/test_context_builder_server_servername_runtime_consistency.pas"
 )
 

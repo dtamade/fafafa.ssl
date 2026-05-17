@@ -146,6 +146,84 @@
 - `git diff --check`
   - result: PASS
 
+### FreePascal Client Context SNI Fallback Cut
+
+- add `docs/plans/2026-05-18-freepascal-client-context-sni-fallback-cut.md`
+  - purpose:
+    - define the first dedicated `sslCtxClient` behavior-migration batch after the cross-backend contract cleanup
+    - keep scope on FreePascal runtime constructors instead of reopening all backends or shared shim consumers
+
+- update `tests/test_freepascal_context_server_name_inheritance.pas`
+  - change:
+    - flip the dedicated FreePascal regression from inherited-fallback expectations to explicit no-inheritance expectations
+    - locally suppress the deprecated direct-context setter warning at the negative-coverage callsite
+
+- add `tests/scripts/test_freepascal_client_connections_no_context_servername_fallback.sh`
+  - purpose:
+    - fail if `src/fafafa.ssl.freepascal.connection.pas` still reads `GetContextLevelServerNameCompatibilityValue(AContext)`
+    - keep the new FreePascal runtime cut guarded by a cheap source contract
+
+- update `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - change:
+    - remove `tests/test_freepascal_context_server_name_inheritance.pas`
+    - keep the intentional label set aligned with the smaller remaining compatibility boundary
+
+- `bash tests/scripts/test_freepascal_client_connections_no_context_servername_fallback.sh`
+  - result: RED
+  - summary:
+    - initial failure proved the two FreePascal client constructors still read shared context-level `ServerName` compatibility fallback
+
+- `mkdir -p tmp/test_freepascal_context_server_name_inheritance && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_context_server_name_inheritance -FEtmp/test_freepascal_context_server_name_inheritance -otmp/test_freepascal_context_server_name_inheritance/test_freepascal_context_server_name_inheritance tests/test_freepascal_context_server_name_inheritance.pas && ./tmp/test_freepascal_context_server_name_inheritance/test_freepascal_context_server_name_inheritance`
+  - result: RED
+  - summary:
+    - both negative assertions failed
+    - builder `WithSNI(...)` and direct context `SetServerName(...)` were still being inherited by new FreePascal client connections
+
+- update `src/fafafa.ssl.freepascal.connection.pas`
+  - change:
+    - remove `GetContextLevelServerNameCompatibilityValue(AContext)` reads from the socket and stream client constructors
+    - leave `FServerName` empty until callers explicitly set per-connection hostname/SNI
+
+- `bash tests/scripts/test_freepascal_client_connections_no_context_servername_fallback.sh`
+  - result: RED -> GREEN
+  - summary:
+    - FreePascal client constructors no longer read context-level `ServerName` compatibility fallback
+
+- `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - result: PASS
+  - summary:
+    - the intentional compatibility label set stayed green after removing the dedicated FreePascal runtime regression
+
+- `mkdir -p tmp/test_freepascal_context_server_name_inheritance && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_context_server_name_inheritance -FEtmp/test_freepascal_context_server_name_inheritance -otmp/test_freepascal_context_server_name_inheritance/test_freepascal_context_server_name_inheritance tests/test_freepascal_context_server_name_inheritance.pas && ./tmp/test_freepascal_context_server_name_inheritance/test_freepascal_context_server_name_inheritance`
+  - result: RED -> GREEN
+  - summary:
+    - dedicated FreePascal regression now proves both socket and stream client connections no longer inherit context-level `ServerName`
+
+- `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+  - result: PASS
+  - summary:
+    - remaining intentional mock precedence contract stayed green
+    - no production change in this batch accidentally rewrote the next planned compatibility surface
+
+- `mkdir -p tmp/test_tls_connector_hostname_override_precedence && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_tls_connector_hostname_override_precedence -FEtmp/test_tls_connector_hostname_override_precedence -otmp/test_tls_connector_hostname_override_precedence/test_tls_connector_hostname_override_precedence tests/test_tls_connector_hostname_override_precedence.pas && ./tmp/test_tls_connector_hostname_override_precedence/test_tls_connector_hostname_override_precedence`
+  - result: PASS
+  - summary:
+    - remaining connector override precedence contract stayed green
+
+- update `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - change:
+    - remove `tests/test_freepascal_context_server_name_inheritance.pas` from the intentional compatibility set
+    - record the new FreePascal client runtime cut and move the next recommendation to `tests/test_connection_builder_hostname_precedence.pas`
+
+- update `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - change:
+    - add a dedicated closeout section for the FreePascal client fallback cut
+    - shrink the intentional compatibility set and refresh the next recommended batch
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the dedicated FreePascal runtime cut into persistent repo working memory
+
 ### Residual Context SNI Classification And WinSSL mTLS Skeleton Cleanup
 
 - add `docs/plans/2026-05-18-residual-context-sni-classification-and-mtls-skeleton-cleanup.md`

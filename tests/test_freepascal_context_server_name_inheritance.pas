@@ -33,13 +33,13 @@ begin
   WriteLn('=== ', AName, ' ===');
 end;
 
-procedure Test_BuilderContextServerName_InheritedBySocketConnection;
+procedure Test_BuilderContextServerName_NotInheritedBySocketConnection;
 var
   Ctx: ISSLContext;
   Conn: ISSLConnection;
   ClientConn: ISSLClientConnection;
 begin
-  TestHeader('Builder context server name is inherited by socket connection');
+  TestHeader('Builder context server name is not inherited by socket connection');
 
   Ctx := TSSLContextBuilder.Create
     .WithBackend(sslFreePascal)
@@ -50,31 +50,31 @@ begin
   Conn := Ctx.CreateConnection(THandle(-1));
   ClientConn := Conn as ISSLClientConnection;
 
-  Assert(ClientConn.GetServerName = 'ctx.example.com',
-    'Socket connection inherits context server name from builder');
+  Assert(ClientConn.GetServerName = '',
+    'Socket connection no longer inherits context server name from builder');
 end;
 
-procedure Test_DirectContextServerName_InheritedByStreamConnection;
+procedure Test_DirectContextServerName_NotInheritedByStreamConnection;
 var
   Ctx: ISSLContext;
   Conn: ISSLConnection;
   ClientConn: ISSLClientConnection;
   Stream: TMemoryStream;
 begin
-  TestHeader('Direct context server name is inherited by stream connection');
+  TestHeader('Direct context server name is not inherited by stream connection');
 
   Ctx := TSSLFactory.CreateContext(sslCtxClient, sslFreePascal);
-  // INTENTIONAL_COMPAT: legacy context-level SNI coverage. This regression
-  // keeps the deprecated direct-context path observable across backends.
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   Ctx.SetServerName('stream.example.com');
+  {$POP}
 
   Stream := TMemoryStream.Create;
   try
     Conn := Ctx.CreateConnection(Stream);
     ClientConn := Conn as ISSLClientConnection;
 
-    Assert(ClientConn.GetServerName = 'stream.example.com',
-      'Stream connection inherits context server name from direct context API');
+    Assert(ClientConn.GetServerName = '',
+      'Stream connection no longer inherits context server name from direct context API');
 
     ClientConn := nil;
     Conn := nil;
@@ -85,8 +85,8 @@ end;
 
 begin
   try
-    Test_BuilderContextServerName_InheritedBySocketConnection;
-    Test_DirectContextServerName_InheritedByStreamConnection;
+    Test_BuilderContextServerName_NotInheritedBySocketConnection;
+    Test_DirectContextServerName_NotInheritedByStreamConnection;
 
     WriteLn;
     WriteLn('Tests Passed: ', GTestsPassed);

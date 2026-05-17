@@ -193,7 +193,6 @@ type
 implementation
 
 uses
-  fafafa.ssl.context.compat,
   fafafa.ssl.tls13.clienthello,
   fafafa.ssl.tls13.clienthello.parser,
   fafafa.ssl.tls13.parser,
@@ -785,16 +784,12 @@ begin
 end;
 
 constructor TFreePascalConnection.Create(AContext: ISSLContext; ASocket: THandle);
-var
-  LCompatibilityServerName: string;
 begin
   inherited Create(AContext);
   FSocket := ASocket;
   FStream := nil;
+  // Client hostname/SNI must now be set explicitly on the connection.
   FServerName := '';
-  LCompatibilityServerName := GetContextLevelServerNameCompatibilityValue(AContext);
-  if LCompatibilityServerName <> '' then
-    FServerName := LCompatibilityServerName;
   FProtocolVersion := SelectPreferredProtocol(AContext);
   FCipherName := '';
   FALPNProtocols := AContext.GetALPNProtocols;
@@ -837,8 +832,6 @@ begin
 end;
 
 constructor TFreePascalConnection.Create(AContext: ISSLContext; AStream: TStream);
-var
-  LCompatibilityServerName: string;
 begin
   inherited Create(AContext);
   if AStream = nil then
@@ -847,9 +840,6 @@ begin
   FSocket := -1;
   FStream := AStream;
   FServerName := '';
-  LCompatibilityServerName := GetContextLevelServerNameCompatibilityValue(AContext);
-  if LCompatibilityServerName <> '' then
-    FServerName := LCompatibilityServerName;
   FProtocolVersion := SelectPreferredProtocol(AContext);
   FCipherName := '';
   FALPNProtocols := AContext.GetALPNProtocols;

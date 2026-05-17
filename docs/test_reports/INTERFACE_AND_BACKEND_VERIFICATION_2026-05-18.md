@@ -204,7 +204,6 @@
     - 现在覆盖：
       - `test_connection_builder_hostname_precedence`
       - `test_tls_connector_hostname_override_precedence`
-      - `test_freepascal_context_server_name_inheritance`
       - `test_context_builder_server_servername_runtime_consistency`
   - 这些测试现在都必须带 `INTENTIONAL_COMPAT:` 标签
 
@@ -509,6 +508,46 @@
   - cross-backend 网络合同不再继续给 `sslCtxClient` inherited fallback 当假锁点
   - 下一步真正的 client-side behavior migration 可以更直接地瞄准 `tests/test_freepascal_context_server_name_inheritance.pas`
 
+## 增量收口：FreePascal 客户端连接不再继承 context-level SNI fallback
+
+- 接着把第一条 dedicated `sslCtxClient` behavior migration 落到真实 backend 上之后，FreePascal 这条 inherited fallback 已经不再只是路线图候选：
+  - `src/fafafa.ssl.freepascal.connection.pas`
+  - socket / stream 两个 client 构造器都不再读取 `GetContextLevelServerNameCompatibilityValue(AContext)`
+
+- 这意味着：
+  - `TSSLContextBuilder.BuildClient.WithSNI(...)` 仍然会留下 deprecated compatibility warning
+  - direct context `SetServerName(...)` 也仍然是 deprecated surface
+  - 但 FreePascal runtime 已经不再静默消费这份 context state
+  - 调用方如果真要走 FreePascal client path，必须显式对 connection 调 `SetServerName(...)`
+
+- dedicated regression 也已经从“保留继承”翻成“禁止继承”：
+  - `tests/test_freepascal_context_server_name_inheritance.pas`
+    - builder socket path 现在要求 `GetServerName = ''`
+    - direct-context stream path 现在也要求 `GetServerName = ''`
+  - 这份文件已经从 `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh` 移除
+
+- focused 证据：
+  - `tests/scripts/test_freepascal_client_connections_no_context_servername_fallback.sh`
+    - RED -> GREEN
+    - 先直接钉出两处 compat read，再守住它们已经从 FreePascal 构造器中消失
+  - `tests/test_freepascal_context_server_name_inheritance.pas`
+    - RED -> GREEN
+    - 说明 dedicated FreePascal runtime regression 已经真正翻到 no-fallback 语义
+  - `tests/test_connection_builder_hostname_precedence.pas`
+    - PASS
+  - `tests/test_tls_connector_hostname_override_precedence.pas`
+    - PASS
+    - 说明剩余 intentional mock precedence surface 仍然稳定，没有被这刀顺带打穿
+
+- 这一步之后，remaining client-side intentional compatibility surface 再次缩小：
+  - `test_connection_builder_hostname_precedence`
+  - `test_tls_connector_hostname_override_precedence`
+  - `test_context_builder_server_servername_runtime_consistency`
+
+- 因而下一批最合理的 RED 不再是 FreePascal 专项测试，而是：
+  - `tests/test_connection_builder_hostname_precedence.pas`
+  - 因为它现在成了最直接、最下层、仍明确保留 inherited fallback 的 client-side mock precedence 契约
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -539,8 +578,8 @@
 ### 下一批最值得做的事
 
 1. 再决定 `sslCtxClient` behavior migration 的第一条 RED
-   - 第一优先级改为 `tests/test_freepascal_context_server_name_inheritance.pas`
-   - 再明确哪些 precedence-style intentional-compat tests 会被改写
+   - 第一优先级改为 `tests/test_connection_builder_hostname_precedence.pas`
+   - 再明确 `tests/test_tls_connector_hostname_override_precedence.pas` 是否还要继续保留 inherited fallback 作为 intentional mock 输入
    - 明确新优先级应该怎样从 context-level 迁到 per-connection hostname 路径
 
 2. `TSSLConfig` 拆层与 capability model presence bits 仍然排在后面
