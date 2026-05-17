@@ -76,11 +76,34 @@
   - `tests/winssl/test_winssl_integration_multi.pas` 现在暴露出更深的测试问题：TLS 1.3-only 可选失败识别仍过窄、`HTTP 端口 TLS 握手失败` 负路径没有把 `ESSLProtocolException` 视为预期结果、`中等数据传输` 的 1024-byte 阈值在当前 runner 上过于脆弱
   - `tests/integration/test_backend_comparison.pas` 现在已经能跑进真实 WinSSL 握手，但在 `src/fafafa.ssl.winssl.connection.pas -> src/fafafa.ssl.winssl.lib.pas:UpdateHandshakeStatistics` 的统计更新路径上触发 `EAccessViolation`
   - 这说明当前优先级已经从“修 broader suite 入口缺口”继续前移到“补 expected-failure 测试语义 + 让库级统计更新退化为 best-effort，而不是反向打崩握手”
-- [in_progress] 当前第八批 Windows runtime 修复已落地本地工作树，等待提交/推送后做第八次 manual run 复证：
+- [completed] 第八批 Windows runtime 修复已提交 `9aaadeb` 并在第八次 manual run `25987503677` 的 `windows-gate` 上得到远端复证：
   - 新增 `tests/scripts/test_winssl_integration_multi_expected_failure_contract.sh`
   - 新增 `tests/scripts/test_winssl_connection_safe_statistics_update_contract.sh`
   - `tests/winssl/test_winssl_integration_multi.pas` 现在会把 HTTP/SSL3 负路径异常视为预期失败，并把中等响应阈值收紧到当前 runner 可复现的稳定范围
   - `src/fafafa.ssl.winssl.connection.pas` 现在会通过 `TryUpdateLibraryStatistics` 把库级统计更新降为 best-effort，不再允许 observability 路径打崩成功握手
+- [completed] 第八次手动 runtime run `25987503677` 已证明第八批修复命中了前一轮的真实故障点：
+  - `Install dependencies` SUCCESS
+  - `Run quick WinSSL smoke` SUCCESS
+  - `Run Windows Wave B gate` SUCCESS
+  - `Run broader WinSSL runtime suite` 仍 FAIL，但 `UpdateHandshakeStatistics` 的 `EAccessViolation` 已消失
+  - `WinSSL Integration Tests (Multi-Scenario)` 中：
+    - `HTTP 端口 TLS 握手失败` 已转为 PASS
+    - `中等数据传输 (~10KB)` 已转为 PASS
+    - 新的未处理崩点前移到 `SSL 3.0 握手失败（已废弃）`，且异常发生在 `CreateConnection` 阶段而不是 `Connect`
+  - `Backend Comparison Tests` 中：
+    - 旧的实现层崩溃已经消失
+    - 新的首要问题变成 live internet exact compare 假设过强，以及 `HTTP/SSL3` 负路径异常没有被视为 expected failure
+- [in_progress] 当前第九批 Windows runtime 修复已落地本地工作树，等待提交/推送后做第九次 manual run 复证：
+  - 新增 `tests/scripts/test_winssl_integration_multi_negative_path_wrap_contract.sh`
+  - 新增 `tests/scripts/test_backend_comparison_online_stability_contract.sh`
+  - 更新 `tests/winssl/test_winssl_integration_multi.pas`：
+    - 扩宽 `IsExpectedHandshakeFailure` 到 `SEC_E_ALGORITHM_MISMATCH`
+    - 新增 `TestExpectedHandshakeFailurePath`
+    - 把 `HTTP 端口` / `SSL3` 负路径统一收进 helper，覆盖 `CreateConnection` 抛异常的情况
+  - 更新 `tests/integration/test_backend_comparison.pas`：
+    - 删除 live response 的 MD5/长度完全一致假设，改为按 HTTP status class 比较
+    - 把 `HTTP 端口` / `SSL3` 负路径异常视为 expected failure
+    - 补上 `StrUtils`，让新的 `PosEx` 解析逻辑在 Pascal 编译面保持闭环
 - [completed] 复核远端失败证据（CI run `25893971783` / signer run `25901035350`）
 - [completed] 把 3 个真实问题写成 focused contract tests，并先观测到红灯
 - [completed] 修复 `.github/workflows/ci.yml` / `release.yml` / `release.yml.disabled` 的 WolfSSL 依赖缺口
@@ -714,27 +737,28 @@
 ## Current Blocker
 
 - 当前第一硬阻塞已经重新锁定在真实 Windows runtime lane，而不是静态治理或旧的 workflow hygiene：
-  - manual run `25987105283` 中 `Install dependencies` SUCCESS
-  - manual run `25987105283` 中 `Run quick WinSSL smoke` SUCCESS
-  - manual run `25987105283` 中 `Run Windows Wave B gate` SUCCESS
+  - manual run `25987503677` 中 `Install dependencies` SUCCESS
+  - manual run `25987503677` 中 `Run quick WinSSL smoke` SUCCESS
+  - manual run `25987503677` 中 `Run Windows Wave B gate` SUCCESS
   - 当前唯一首要失败步骤已经前移到 `Run broader WinSSL runtime suite`
 - `Run broader WinSSL runtime suite` 当前拆成两个已定位的真实问题：
-  - `tests/winssl/test_winssl_integration_multi.pas` 当前已把旧崩点前移到更深的测试语义缺口：TLS 1.3-only optional-path 仍被记成 FAIL，HTTP-port negative-path 仍会因未捕获的 `ESSLProtocolException` 退出 `217`，中等数据传输阈值也对当前 runner 过于脆弱
-  - `tests/integration/test_backend_comparison.pas` 当前已跨过 registration 缺口，但 WinSSL 握手成功后会在库级统计更新路径触发 `EAccessViolation`
+  - `tests/winssl/test_winssl_integration_multi.pas` 当前新的未处理崩点已经收窄到 `SSL 3.0` 负路径：`ESSLInitializationException` 会在 `CreateConnection` 阶段抛出，说明仅把 `Connect` 放进 expected-failure 保护还不够
+  - `tests/integration/test_backend_comparison.pas` 当前新的首要缺口已经从实现崩溃前移到测试语义：live internet exact MD5/长度比对过脆，`HTTP/SSL3` 负路径异常也仍未完全被视为 expected failure
 - 当前本地没有新的语法/contract blocker：
   - 新增 focused contracts 已过
   - 受影响相邻 contract 已过
+  - `fpc -Fu./src -Fu./tests -Fu./tests/integration -Fu./tests/framework tests/integration/test_backend_comparison.pas` 已通过
   - `git diff --check` 已过
   - 当前只差提交、推送和下一次真实 Windows manual run 复证
 - macOS lane 仍然失败，但它不是当前这条 WinSSL runtime proof 主线的第一硬阻塞点。
 
 ## Current Queue
 
-1. 同步 `task_plan.md` / `findings.md` / `progress.md` / 计划文档到 run `25987105283` 的最新真相。
-2. 提交当前第八批 Windows runtime 修复并推送到 `master`。
+1. 同步 `task_plan.md` / `findings.md` / `progress.md` / 计划文档到 run `25987503677` 和当前第九批本地修复的最新真相。
+2. 提交当前第九批 Windows runtime 修复并推送到 `master`。
 3. 重新 dispatch `wave-b-b2-manual.yml`，继续以 GitHub Windows runner 为唯一 truth source。
-4. 新 run 中优先检查 broader suite 的 `WinSSL Integration Tests (Multi-Scenario)` 是否不再因 expected-failure 语义缺口退出 `217`。
-5. 同一 run 中检查 broader suite 的 `Backend Comparison Tests` 是否不再在 `UpdateHandshakeStatistics` 路径触发 `EAccessViolation`；如果两项都已转绿，只沿新的第一硬边界继续收口。
+4. 新 run 中优先检查 broader suite 的 `WinSSL Integration Tests (Multi-Scenario)` 是否不再在 `SSL3` negative-path 的 `CreateConnection` 阶段因未包裹异常而退出 `217`。
+5. 同一 run 中检查 broader suite 的 `Backend Comparison Tests` 是否已从 exact compare / negative-path 语义缺口继续前移到新的第一硬边界；如果两项都已转绿，只沿新的第一硬边界继续收口。
 
 ## Verification Discipline
 
@@ -757,7 +781,8 @@
 
 ## Stop Condition
 
-- 当前第八批修复的代码、计划、发现、进度文件都与 run `25987105283` 保持一致。
+- 当前第九批修复的代码、计划、发现、进度文件都与 run `25987503677` 保持一致。
 - 本批 focused contracts 与 `git diff --check` 继续通过。
+- 当前批次的最小 Pascal 编译面验证继续通过。
 - 当前批次已提交并推送到 `master`。
 - 新的 `wave-b-b2-manual.yml` run 已 dispatch，且新的第一硬阻塞点已经被记录到 working-memory 文件中。

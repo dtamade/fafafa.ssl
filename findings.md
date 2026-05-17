@@ -929,3 +929,36 @@
 - 因而当前 `wave-b-b2` 线上更合理的下一跳，已经从 cross-summary metadata/path closed guidance 前移到 cross-summary active path/evidence closed guidance：
   - 优先补 custom `linux_summary` 缺失、custom `linux_examples_json` 失效、custom `macos_summary` 缺失、active `windows_summary` 缺 sibling runtime artifacts 等分支在 `closure_status=CLOSED` 下的 focused next-actions contract
   - 目标是确认这类 active path/evidence 异常在 closure 已闭环时，也继续落在 same closed-closure guidance，而不是混回 generic 或 IN_PROGRESS 分支
+
+- 手动 Windows runtime run `25987503677`（head `9aaadeb`）证明上一轮“统计更新降级为 best-effort”的修法真实命中了故障点：
+  - `Run quick WinSSL smoke` SUCCESS
+  - `Run Windows Wave B gate` SUCCESS
+  - `Run broader WinSSL runtime suite` 仍 FAIL，但旧的 `UpdateHandshakeStatistics` `EAccessViolation` 已不再出现
+
+- `test_winssl_integration_multi.pas` 在 `25987503677` 上暴露出的新边界，不再是 HTTP-port 或 medium-size threshold：
+  - `HTTP 端口 TLS 握手失败` 已 PASS
+  - `中等数据传输 (~10KB)` 已 PASS
+  - 当前真正未处理的是 `SSL 3.0 握手失败（已废弃）`
+  - 且异常在 `TWinSSLContext.CreateConnection` / `EnsureCredentialsAcquired` 阶段就抛出 `ESSLInitializationException`，不是等到 `Connect`
+  - 因此 expected-failure 保护必须覆盖 connection creation，而不能只包 `Connect`
+
+- `test_backend_comparison.pas` 在 `25987503677` 上暴露出的新边界，也已经从实现缺陷前移到测试假设过强：
+  - 旧的 WinSSL registration 缺口已消失
+  - 旧的库级统计更新 `EAccessViolation` 已消失
+  - live internet 响应在同一次 run 中出现 `MD5` 不同、长度不同，不适合继续当作 exact-equality 回归标准
+  - `HTTP/SSL3` 负路径上 `ESSLProtocolException` 仍可能是预期结果，测试不能再假设一定是简单的 `not Connect`
+
+- 当前第九批本地修法因此保持在 tests/contracts 面，而不是扩大到新的 WinSSL 生产实现：
+  - `tests/winssl/test_winssl_integration_multi.pas`
+    - 新增 `TestExpectedHandshakeFailurePath`
+    - 把 `HTTP` / `SSL3` negative-path 统一收进 helper，覆盖 `CreateConnection` 抛异常的情况
+    - 把 `SEC_E_ALGORITHM_MISMATCH` 继续视为 expected handshake failure
+  - `tests/integration/test_backend_comparison.pas`
+    - 删除 live response `MD5` / 长度完全一致断言
+    - 改成比较 HTTP status class 是否同类且有效
+    - 把 `HTTP` / `SSL3` negative-path 异常视为 expected failure
+
+- 这批本地静态收口里还顺手发现了一个真实编译面依赖：
+  - `test_backend_comparison.pas` 新增 `GetHTTPStatusClass` 后使用了 `PosEx`
+  - 对应 `uses` 需要补 `StrUtils`
+  - 否则 focused contract 可以全绿，但 Pascal 编译会在新 helper 上翻车

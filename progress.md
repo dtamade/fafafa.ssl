@@ -259,6 +259,127 @@
   - summary:
     - dispatched fourth manual Windows runtime proof run on head `df94ba8`
 
+### Eighth Windows Manual Runtime Revalidation
+
+- `gh run view 25987503677 --json databaseId,status,conclusion,headSha,url,jobs`
+  - result: PASS after retry
+  - summary:
+    - run=`25987503677`
+    - head=`9aaadebdbe9231edc8da60c4d7ed68db4640e3e8`
+    - `linux-gate` SUCCESS
+    - `macos-gate` FAIL（旧 lane）
+    - `windows-gate` FAIL，但 `Install dependencies` / `Run quick WinSSL smoke` / `Run Windows Wave B gate` 全部 SUCCESS
+    - 当前唯一首要失败步骤仍是 `Run broader WinSSL runtime suite`
+
+- `gh run view 25987503677 --job 76387527130 --log-failed`
+  - result: PASS
+  - summary:
+    - `WinSSL Integration Tests (Multi-Scenario)` 中：
+      - `HTTP 端口 TLS 握手失败` PASS
+      - `中等数据传输 (~10KB)` PASS
+      - `TLS 1.3 协商（异常）` 仍记为 FAIL，但未再把 suite 直接炸停在旧位置
+      - 新的未处理崩点前移到 `SSL 3.0 握手失败（已废弃）`
+      - 异常为 `ESSLInitializationException`
+      - `EnsureCredentialsAcquired` line `365` -> `CreateConnection` line `1235` -> `TestErrorScenarios` line `550`
+    - `Backend Comparison Tests` 中：
+      - 旧的 `UpdateHandshakeStatistics` `EAccessViolation` 已消失
+      - live internet exact compare 仍出现 `MD5` 不同、长度不同
+      - `错误处理对比` 里 `ESSLProtocolException: Invalid TLS token received, possible protocol mismatch`
+      - 堆栈落到 `TestErrorHandling` line `529`
+
+### Ninth-Order RED/Green Contracts And Static Revalidation
+
+- `bash tests/scripts/test_winssl_integration_multi_tls13_optional_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_integration_multi_expected_failure_contract.sh`
+  - result before ninth fix: FAIL
+  - summary:
+    - 旧 contract 还只认可直接 `IsExpectedHandshakeFailure(E)` 断言
+    - 当前实现已把 `HTTP` / `SSL3` negative-path 收敛到 centralized helper，需要同步 contract 真相
+
+- `bash tests/scripts/test_winssl_integration_multi_negative_path_wrap_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_backend_comparison_factory_registration_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_backend_comparison_online_stability_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_connection_safe_statistics_update_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_integration_multi_no_context_level_sni_guidance_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_performance_and_backend_comparison_no_context_level_sni_guidance_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+### Ninth-Order Repairs Applied
+
+- add `tests/scripts/test_winssl_integration_multi_negative_path_wrap_contract.sh`
+  - purpose: require HTTP/SSL3 negative-path coverage to stay centralized behind a helper that also protects `CreateConnection`
+
+- add `tests/scripts/test_backend_comparison_online_stability_contract.sh`
+  - purpose: forbid live internet exact MD5/length assumptions and require normalized status/negative-path semantics
+
+- update `tests/winssl/test_winssl_integration_multi.pas`
+  - change: extend `IsExpectedHandshakeFailure`
+  - change: add `TestExpectedHandshakeFailurePath`
+  - change: route both `HTTP 端口` and `SSL 3.0` negative paths through the helper so `CreateConnection` exceptions stay expected
+
+- update `tests/integration/test_backend_comparison.pas`
+  - change: remove `md5` dependency and exact-content compare
+  - change: add `DescribeException`, `IsExpectedNegativePathFailure`, `GetHTTPStatusClass`
+  - change: compare live responses by HTTP status class instead of exact MD5/length
+  - change: treat `HTTP` / `SSL3` negative-path exceptions as expected failures
+  - change: add `StrUtils` so the new `PosEx` parsing compiles
+
+- update `tests/scripts/test_winssl_integration_multi_expected_failure_contract.sh`
+  - change: accept either direct `IsExpectedHandshakeFailure(E)` assertions or the centralized `TestExpectedHandshakeFailurePath` helper as contract-satisfying truth
+
+### Local Revalidation After Ninth Fix
+
+- `bash tests/scripts/test_winssl_integration_multi_expected_failure_contract.sh`
+  - result: PASS
+
+- `fpc -Fu./src -Fu./tests -Fu./tests/integration -Fu./tests/framework tests/integration/test_backend_comparison.pas`
+  - result: PASS
+  - summary:
+    - linked `tests/integration/test_backend_comparison`
+    - warnings were pre-existing repo warnings; no new compile error remained in the touched test surface
+
+- `bash tests/scripts/test_winssl_integration_multi_tls13_optional_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_integration_multi_expected_failure_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_integration_multi_negative_path_wrap_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_backend_comparison_factory_registration_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_backend_comparison_online_stability_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_connection_safe_statistics_update_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_integration_multi_no_context_level_sni_guidance_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_performance_and_backend_comparison_no_context_level_sni_guidance_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
 - `gh run view 25985958467 --json databaseId,status,conclusion,jobs,url`
   - result: PASS
   - summary:

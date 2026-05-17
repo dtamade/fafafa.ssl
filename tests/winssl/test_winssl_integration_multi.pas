@@ -72,7 +72,24 @@ end;
 function IsExpectedHandshakeFailure(E: Exception): Boolean;
 begin
   Result := (E is ESSLConnectionException) or
-            (E is ESSLCertificateException);
+            (E is ESSLCertificateException) or
+            ((E is ESSLInitializationException) and
+             (Cardinal(ESSLException(E).NativeError) = SEC_E_ALGORITHM_MISMATCH));
+end;
+
+procedure TestExpectedHandshakeFailurePath(const aTestName, aHost: string;
+  aContext: ISSLContext; aSocket: TSocket);
+var
+  LConn: ISSLConnection;
+begin
+  try
+    LConn := aContext.CreateConnection(aSocket);
+    (LConn as ISSLClientConnection).SetServerName(aHost);
+    Test(aTestName, not LConn.Connect);
+  except
+    on E: Exception do
+      Test(aTestName, IsExpectedHandshakeFailure(E), DescribeException(E));
+  end;
 end;
 
 function InitWinsock: Boolean;
@@ -523,16 +540,9 @@ begin
 
     if ConnectToHost('www.google.com', 80, LSocket) then
     begin
-      LConn := LContext.CreateConnection(LSocket);
-      (LConn as ISSLClientConnection).SetServerName('www.google.com');
-
-      try
-        // TLS handshake should fail on HTTP port
-        Test('HTTP 端口 TLS 握手失败', not LConn.Connect);
-      except
-        on E: Exception do
-          Test('HTTP 端口 TLS 握手失败', IsExpectedHandshakeFailure(E), DescribeException(E));
-      end;
+      // TLS handshake should fail on HTTP port
+      TestExpectedHandshakeFailurePath('HTTP 端口 TLS 握手失败', 'www.google.com',
+        LContext, LSocket);
 
       closesocket(LSocket);
       LSocket := INVALID_SOCKET;
@@ -547,16 +557,9 @@ begin
 
     if ConnectToHost('www.google.com', 443, LSocket) then
     begin
-      LConn := LContext.CreateConnection(LSocket);
-      (LConn as ISSLClientConnection).SetServerName('www.google.com');
-
-      try
-        // SSL 3.0 is deprecated and should fail
-        Test('SSL 3.0 握手失败（已废弃）', not LConn.Connect);
-      except
-        on E: Exception do
-          Test('SSL 3.0 握手失败（已废弃）', IsExpectedHandshakeFailure(E), DescribeException(E));
-      end;
+      // SSL 3.0 is deprecated and should fail
+      TestExpectedHandshakeFailurePath('SSL 3.0 握手失败（已废弃）', 'www.google.com',
+        LContext, LSocket);
 
       closesocket(LSocket);
       LSocket := INVALID_SOCKET;

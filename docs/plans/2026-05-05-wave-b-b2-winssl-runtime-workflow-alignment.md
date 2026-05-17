@@ -225,6 +225,57 @@ Next truth step:
 - dispatch `wave-b-b2-manual.yml`
 - confirm both deeper broader-suite boundaries move again before touching wider surfaces
 
+## Task 10: Fix the post-statistics broader-suite truths exposed by run `25987503677`
+
+Observed runtime update:
+
+- `Install dependencies` SUCCESS
+- `Run quick WinSSL smoke` SUCCESS
+- `Run Windows Wave B gate` SUCCESS
+- `Run broader WinSSL runtime suite` still FAIL, but the previous statistics-path crash is gone
+- current deeper failures are now narrower and test-driven:
+  - `tests/winssl/test_winssl_integration_multi.pas`
+    - `HTTP 端口 TLS 握手失败` now PASS
+    - `中等数据传输 (~10KB)` now PASS
+    - the new unhandled crash is `SSL 3.0 握手失败（已废弃）`
+    - the exception happens during `CreateConnection`, not only during `Connect`
+  - `tests/integration/test_backend_comparison.pas`
+    - live internet exact compare still fails on `MD5` and byte length drift
+    - `HTTP/SSL3` negative-path tests can still throw `ESSLProtocolException` instead of simply returning `not Connect`
+
+Changes for this batch:
+
+- add `tests/scripts/test_winssl_integration_multi_negative_path_wrap_contract.sh`
+- add `tests/scripts/test_backend_comparison_online_stability_contract.sh`
+- update `tests/winssl/test_winssl_integration_multi.pas` to centralize HTTP/SSL3 negative-path checks behind `TestExpectedHandshakeFailurePath`, so expected-failure handling also covers `CreateConnection`
+- update `tests/integration/test_backend_comparison.pas` to:
+  - compare live responses by HTTP status class rather than exact `MD5` / length
+  - treat `HTTP` / `SSL3` negative-path exceptions as expected failures
+  - keep the current runner-stable medium-response threshold
+- keep scope on tests/contracts only; do not widen into new WinSSL production changes without fresh runtime evidence
+
+Verification for this batch:
+
+```bash
+bash tests/scripts/test_winssl_integration_multi_tls13_optional_contract.sh
+bash tests/scripts/test_winssl_integration_multi_expected_failure_contract.sh
+bash tests/scripts/test_winssl_integration_multi_negative_path_wrap_contract.sh
+bash tests/scripts/test_backend_comparison_factory_registration_contract.sh
+bash tests/scripts/test_backend_comparison_online_stability_contract.sh
+bash tests/scripts/test_winssl_connection_safe_statistics_update_contract.sh
+bash tests/scripts/test_winssl_integration_multi_no_context_level_sni_guidance_contract.sh
+bash tests/scripts/test_winssl_performance_and_backend_comparison_no_context_level_sni_guidance_contract.sh
+fpc -Fu./src -Fu./tests -Fu./tests/integration -Fu./tests/framework tests/integration/test_backend_comparison.pas
+git diff --check
+```
+
+Next truth step:
+
+- push the batch to `master`
+- dispatch `wave-b-b2-manual.yml`
+- confirm `WinSSL Integration Tests (Multi-Scenario)` no longer exits on the SSL3 `CreateConnection` path
+- confirm `Backend Comparison Tests` no longer fail on live-response exactness or negative-path exception assumptions before touching wider surfaces
+
 ### Definition Of Done
 
 - 当前手动 Windows workflow 被锁定为覆盖 quick smoke + Wave B gate + broader suite transcript

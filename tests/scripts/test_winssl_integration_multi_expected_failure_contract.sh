@@ -17,9 +17,10 @@ if ! rg -F --quiet -- 'function IsExpectedHandshakeFailure' "$FILE"; then
   fail "test_winssl_integration_multi.pas should classify expected handshake/protocol failures explicitly"
 fi
 
-expected_fail_count="$(rg -F --count -- 'IsExpectedHandshakeFailure(E)' "$FILE")"
-if [[ "$expected_fail_count" -lt 2 ]]; then
-  fail "expected failure helper should be used for both HTTP-port and SSL3 negative-path assertions"
+direct_expected_fail_count="$(rg -F --count -- 'IsExpectedHandshakeFailure(E)' "$FILE")"
+helper_expected_fail_count="$(rg -F --count -- "TestExpectedHandshakeFailurePath('" "$FILE")"
+if [[ "$direct_expected_fail_count" -lt 2 && "$helper_expected_fail_count" -lt 2 ]]; then
+  fail "expected failure classification should cover both HTTP-port and SSL3 negative-path assertions, either directly or through the centralized helper"
 fi
 
 if rg -F --quiet -- 'Length(LResponse) >= 1024' "$FILE"; then
