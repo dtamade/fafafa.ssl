@@ -761,3 +761,25 @@
 - 因而当前 `wave-b-b2` 线上更合理的下一跳，已经从 `cross_summary missing` closed guidance 前移到 `cross_summary` metadata/path issue 的 closed guidance：
   - 优先补 `linux_examples_json missing`、macOS probe metadata 丢失、Windows active evidence metadata 丢失等分支在 `closure_status=CLOSED` 下的 focused next-actions contract
   - 目标是确认这类 cross-summary 元数据/路径异常在 closure 已闭环时，也继续落在 same closed-closure guidance，而不是混回 generic 或 IN_PROGRESS 分支
+
+- 再往下一层补 `cross_summary` metadata/path issue 在 `closure_status=CLOSED` 分支下的 focused next-actions contract 后，当前结论仍然是“coverage gap 已补齐”，不是新的 prod bug：
+  - `check_wave_b_b2_evidence_consistency.sh` 本身已经会把 `linux_examples_json missing`、macOS probe metadata 丢失、Windows active evidence metadata 丢失计入 `runid_mismatch_or_parse_issue`
+  - valid closure report 的 `closure_status_note` 也已经会继续保持 `CLOSED`
+  - next actions 早就会 truthful 地说“当前 closure 已闭环，但 evidence consistency 仍未对齐”
+  - 缺口只在于此前没有 focused contract 把这三类 `cross_summary` 元数据/路径异常在 closed-guidance 这层 truth 固定下来
+
+- 新增 `test_wave_b_b2_consistency_cross_summary_metadata_closed_next_actions_contract.sh` 后，这组 closed-guidance 元数据/路径分支也进入了持续守护：
+  - 它同时钉住 `linux_examples_json missing`
+  - `macos probe metadata missing`
+  - `windows active evidence metadata missing`
+  - `closure_status_note=CLOSED`
+  - 以及 closed-closure guidance 不被误带回 IN_PROGRESS / generic 分支
+
+- 这次提交 `2cde68a` 再次证明当前 `cross_summary` metadata/path issue 在 closed-closure guidance 这条线也只是 coverage gap，不是 prod bug：
+  - 脚本行为本身没变
+  - focused contract 只是把 parse 计数、`closure_status_note=CLOSED` 和 closed-closure next-actions truth 固化下来
+  - 因此远端自动 `CI` run `25984912652` 继续按增量 run id 记账即可
+
+- 因而当前 `wave-b-b2` 线上更合理的下一跳，已经从 cross-summary metadata/path closed guidance 前移到 cross-summary active path/evidence closed guidance：
+  - 优先补 custom `linux_summary` 缺失、custom `linux_examples_json` 失效、custom `macos_summary` 缺失、active `windows_summary` 缺 sibling runtime artifacts 等分支在 `closure_status=CLOSED` 下的 focused next-actions contract
+  - 目标是确认这类 active path/evidence 异常在 closure 已闭环时，也继续落在 same closed-closure guidance，而不是混回 generic 或 IN_PROGRESS 分支

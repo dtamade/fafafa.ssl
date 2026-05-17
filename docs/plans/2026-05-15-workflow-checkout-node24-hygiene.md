@@ -207,4 +207,6 @@ git diff --check
   - 最新又补上 `check_wave_b_b2_evidence_consistency.sh` 的 cross-summary run_id closed-guidance focused contract；当前确认这里同样是 coverage 缺口而不是新的生产脚本 bug
   - 最新又补上 `check_wave_b_b2_evidence_consistency.sh` 的 cross-summary missing closed-guidance focused contract；当前确认这里同样只是 coverage 缺口，而不是新的生产脚本 bug
   - 对应 coverage batch 提交 `e2df815` 已推送，并记录自动 `CI` run `25984769630`
-  - 当前 continuation queue 已前移到 cross-summary metadata/path issue 在 `closure_status=CLOSED` 分支下的 focused next-actions truth，对 `linux_examples_json missing`、macOS probe metadata 丢失、Windows active evidence metadata 丢失这几类 closed-closure guidance 对称性继续静态加深
+  - 最新又补上 `check_wave_b_b2_evidence_consistency.sh` 的 cross-summary metadata/path issue closed-guidance focused contract；当前确认这里同样只是 coverage 缺口，而不是新的生产脚本 bug
+  - 对应 coverage batch 提交 `2cde68a` 已推送，并记录自动 `CI` run `25984912652`
+  - 当前 continuation queue 已前移到 cross-summary active path/evidence issue 在 `closure_status=CLOSED` 分支下的 focused next-actions truth，对 custom `linux_summary` 缺失、custom `linux_examples_json` 失效、custom `macos_summary` 缺失、active `windows_summary` 缺 sibling runtime artifacts 这几类 closed-closure guidance 对称性继续静态加深

@@ -163,6 +163,65 @@
     - status at record time: `in_progress`
     - per the incremental verification discipline, this contract-expansion batch recorded the run id without a blocking watch
 
+### Thirty-Fifth-Order Route Review
+
+- `sed -n '736,872p' scripts/check_wave_b_b2_evidence_consistency.sh`
+  - result: PASS
+  - summary:
+    - `linux_examples_json missing`、`macos probe metadata missing`、`windows active evidence metadata missing` 都只会增加 parse-issue 计数
+    - valid closure report 不会把这些 cross-summary 元数据/路径问题改写成非 `CLOSED` 的 closure note
+
+- `sed -n '1,260p' tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_contract.sh`
+  - result: PASS
+  - summary:
+    - the existing neighboring contract already covered `linux_examples_json missing` under `closure_status=IN_PROGRESS`
+    - the missing symmetry was the closed-closure guidance path for this metadata/path issue family
+
+### Thirty-Fifth-Order Contract Expansion
+
+- add `tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_closed_next_actions_contract.sh`
+  - purpose: require `linux_examples_json missing`、`macos probe metadata missing`、`windows active evidence metadata missing` to keep `closure_status_note=CLOSED` and closed-closure next-actions truth when the closure report is otherwise valid
+
+### Local Revalidation After Thirty-Fifth Contract Expansion
+
+- `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_closed_next_actions_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_closed_next_actions_contract.sh`
+  - result: PASS
+  - summary:
+    - all three scenarios still downgraded consistency to `INCONSISTENT`
+    - `closure_status_note` stayed `CLOSED`
+    - next actions stayed on the closed-closure guidance path
+
+- `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_platform_evidence_metadata_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+### Thirty-Fifth Push Recording
+
+- `git commit -m "test: cover closed cross-summary metadata guidance"`
+  - result: PASS
+  - commit: `2cde68a`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `b65099b..2cde68a`
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - worktree returned to `## master...origin/master`
+
+- `gh run list --branch master --limit 5 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest observed run for head `2cde68a` was `CI` run `25984912652`
+    - status at record time: `in_progress`
+    - per the incremental verification discipline, this contract-expansion batch recorded the run id without a blocking watch
+
 ### Twenty-Eighth Push Recording
 
 - `git commit -m "test: cover wave-b handoff missing run ids"`
