@@ -240,6 +240,42 @@
 - [completed] 第十八次 push 后的远端复核通过：
   - `CI` run `25979777225` SUCCESS
   - 这次改动命中的是 dormant `ci-matrix-draft.yml.disabled`，自动主线继续全绿；ci-matrix lane 仍保持 `static-only`
+- [completed] 继续静态审查 dormant Windows / quality truth surface 后确认新的双模板缺口：
+  - `winssl-tests.yml.disabled` 同时存在 3 个静态确定问题：
+    - `workflow_dispatch.test_suite` 已定义但完全未被消费
+    - setup 只安装 `freepascal`，后续却多次直接调用 `lazbuild`
+    - 仍维护一套过时 inline Pascal 测试，且路径指向不存在的 `tests/test_winssl_comprehensive.lpi` / `tests\bin\test_winssl_comprehensive.exe`
+  - `code-quality.yml.disabled` 也存在 3 个静态确定问题：
+    - `build-check` 声称覆盖 `3.2.2` / `3.3.1` 双 FPC 版本矩阵，但安装步骤完全没消费矩阵值
+    - workflow 直接调用 `lazbuild`，却没有安装或验证 Lazarus / `lazbuild`
+    - `quality-report` 硬编码 coverage、grade 和 `WinSSL Backend: 100%`，结论大于真实可证明范围
+- [completed] 新增 focused contracts，并先在当前模板上观测到红灯：
+  - `tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  - `tests/scripts/test_workflow_code_quality_truth_contract.sh`
+- [completed] `winssl-tests.yml.disabled` 已收紧为 truthful Windows script-based lane：
+  - 删除未消费的 `test_suite` 输入
+  - 安装并显式验证 `fpc` / `lazbuild`
+  - 删除过时 inline Pascal 测试，改为复用仓库真实脚本 `tests/quick_winssl_validation.ps1` 与 `tests/run_winssl_tests.ps1`
+  - summary 改为只汇报当前 run 的脚本结果和 transcript 证据，不再声称 `PRODUCTION READY`
+- [completed] `code-quality.yml.disabled` 已收紧为 truthful system-toolchain lane：
+  - 删除未生效的假 FPC 版本矩阵
+  - build-check 改为显式安装并输出当前 runner 的 `fpc` / `lazbuild`
+  - quality summary 改为读取 `needs.*.result`，不再硬编码 coverage / grade / backend completeness
+- [completed] 第十九波 dormant workflow truth 修复本地复核通过：
+  - 新增 `test_workflow_winssl_tests_truth_contract.sh` PASS
+  - 新增 `test_workflow_code_quality_truth_contract.sh` PASS
+  - `test_workflow_cache_node24_contract.sh` PASS
+  - `test_workflow_setup_python_node24_contract.sh` PASS
+  - `test_workflow_permissions_contract.sh` PASS
+  - `test_workflow_action_sha_pinning_contract.sh` PASS
+  - `git diff --check` PASS
+- [completed] 第十九次提交 `9331faa` 已完成，dormant workflow truth batch 已推送到 `master`
+- [completed] 第十九次 push 后的远端复核通过：
+  - `CI` run `25980352095` SUCCESS
+  - `Code Quality (Light)` SUCCESS
+  - `Minimal Gate (Linux)` SUCCESS
+  - `FreePascal TLS 1.3 Completeness` SUCCESS
+  - 这次改动命中的是 dormant `winssl-tests.yml.disabled` 与 `code-quality.yml.disabled`，自动主线继续全绿；Windows / dormant lane 仍保持 `static-only`
 
 ## Current Blocker
 
@@ -253,15 +289,16 @@
 - 当前也没有已知仍虚报为“跨平台可跑”但实际 shell / toolchain / project target 不匹配的 dormant performance lane 残留。
 - 当前也没有已知仍保留假 FPC 版本矩阵、缺 artifact 却硬写成功 summary 的 dormant `test-all-platforms` 残留。
 - 当前也没有已知仍保留假 OpenSSL 版本矩阵、但实际只跑 system OpenSSL 的 dormant `ci-matrix-draft` Linux lane 残留。
+- 当前也没有已知仍保留未消费 dispatch 输入、缺 Lazarus 却调用 `lazbuild`、或硬编码 `PRODUCTION READY` / 固定 grade 的 `winssl-tests` / `code-quality` 残留。
 - 当前剩余边界只在验证层：
-  - `release.yml`、`code-quality.yml.disabled`、`test-all-platforms.yml.disabled`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled` 这些被改到的路径没有在本轮远端自动 push run 中被实际执行
+  - `release.yml`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled`、`wave-b-b2-manual.yml.disabled` 等 dormant/manual 路径没有在远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
 
 ## Current Queue
 
-1. 继续静态审查 dormant/manual workflow 的 truth surface，优先找仍保留假矩阵、假成功 summary、或声明覆盖面大于真实 runner/toolchain 的模板，下一站重点看 `winssl-tests.yml.disabled` 和 `code-quality.yml.disabled`。
-2. 继续静态审查 mixed-trigger workflow 的输入模型，优先找 `workflow_dispatch` 与 push/pull_request 共存时的默认值、`github.event.inputs` 回退或手动模式语义缺口。
-3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把它们误报成当前 runtime blocker。
+1. 继续静态审查 mixed-trigger / manual workflow 的输入模型，优先找 `workflow_dispatch` 默认值、`github.event.inputs` 回退、skip 开关和手动模式语义缺口。
+2. 继续静态审查 dormant/manual workflow 的 truth surface，但重点从“旧 action / 假矩阵”转向“输入模型、summary 语义、和实际脚本真源是否一致”。
+3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
 
 ## Decision Locks
 
@@ -283,6 +320,7 @@
 - 第十六批 dormant performance truth batch commit / push 完成，且自动远端主线复核通过
 - 第十七批 dormant multi-platform truth batch commit / push 完成，且自动远端主线复核通过
 - 第十八批 dormant ci-matrix truth batch commit / push 完成，且自动远端主线复核通过
+- 第十九批 dormant winssl/code-quality truth batch commit / push 完成，且自动远端主线复核通过
 - `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
 - `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
 - `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用

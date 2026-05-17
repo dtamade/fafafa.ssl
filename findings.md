@@ -358,3 +358,37 @@
   - 它会阻止假的 OpenSSL 3.0/3.1/3.2 矩阵重新回流
   - 也会阻止 artifact 名称继续借 `matrix.openssl` 冒充多版本验证
   - 推送 `5b55193` 后，自动 `CI` run `25979777225` 继续 SUCCESS，说明这次收紧没有误伤当前活跃 Linux 主线
+
+- 继续静态审查 `winssl-tests.yml.disabled` 时，又抓到一组更贴近“真源漂移”的 dormant bug：
+  - `workflow_dispatch.test_suite` 已定义但完全未消费
+  - setup 只安装 `freepascal`，却直接调用 `lazbuild`
+  - workflow 维护了一套过时 inline Pascal 测试，甚至还指向不存在的 `tests/test_winssl_comprehensive.lpi` / `tests\bin\test_winssl_comprehensive.exe`
+
+- 对这条 Windows dormant lane，最小可信修法不是继续补那套过时 inline 测试，而是回到仓库已有真源：
+  - `tests/quick_winssl_validation.ps1`
+  - `tests/run_winssl_tests.ps1`
+  - 这样 workflow 声明、仓库脚本和未来人工运行路径才能重新对齐
+
+- `winssl-tests.yml.disabled` 的 summary 之前最大的问题不是“文案夸张”，而是把未执行的能力写成结论：
+  - `All WinSSL tests PASSED`
+  - `WinSSL backend is PRODUCTION READY`
+  - `Zero-dependency Windows deployment SUPPORTED`
+  - 对当前用户约束下的 dormant/static 审查来说，这类结论必须退回到“当前 run 观察到了什么 transcript”这一层
+
+- `code-quality.yml.disabled` 则暴露出另一种同样典型的 dormant truth drift：
+  - `build-check` 声称覆盖 `3.2.2` / `3.3.1` 双版本矩阵，但 workflow 从未消费 `matrix.fpc`
+  - workflow 直接调用 `lazbuild`，却没有安装或验证 Lazarus / `lazbuild`
+  - `quality-report` 即使在 `if: always()` 下运行，也硬编码 `~85%`、`Overall Grade: A`、`WinSSL Backend: 100%`
+
+- 这批 code-quality 的最小可信修法也延续了同一个原则：
+  - 不去凭空补一个“真实双版本矩阵”
+  - 直接收回到 runner system toolchain truth
+  - summary 只汇报 `needs.*.result` 和当前工具链事实，不再输出固定 grade / 覆盖率 / 后端完备度
+
+- 新增 `test_workflow_winssl_tests_truth_contract.sh` 与 `test_workflow_code_quality_truth_contract.sh` 后，这两条 dormant lane 也进入了持续守护面：
+  - 它们会阻止未消费 dispatch 输入、缺 Lazarus 却调用 `lazbuild`、以及硬编码生产级结论重新回流
+  - 推送 `9331faa` 后，自动 `CI` run `25980352095` 继续 SUCCESS，说明这次收紧没有误伤当前活跃 Linux 主线
+
+- 当前 workflow 审查的高价值面已经继续前移：
+  - 旧 action 版本、SHA pinning、permissions、checkout persistence、假矩阵、假 summary 这一层已经基本收口
+  - 下一站更值得深挖的是 mixed-trigger/manual workflow 的输入模型和手动模式语义边界

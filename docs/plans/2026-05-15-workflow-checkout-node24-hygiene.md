@@ -172,3 +172,4 @@ git diff --check
   - 最新又补上 dormant `performance` workflow 的 Linux-only truth 收紧；`1d4f346` 对应的 `CI` run `25970919173` 继续 SUCCESS
   - 再随后又补上 dormant `test-all-platforms` 的 multi-platform truth 收紧；`b7c76aa` 对应的 `CI` run `25979379612` 继续 SUCCESS
   - 再随后又补上 dormant `ci-matrix-draft` 的 system-OpenSSL truth 收紧；`5b55193` 对应的 `CI` run `25979777225` 继续 SUCCESS
+  - 最新又补上 dormant `winssl-tests` / `code-quality` 的真源与 summary truth 收紧；`9331faa` 对应的 `CI` run `25980352095` 继续 SUCCESS

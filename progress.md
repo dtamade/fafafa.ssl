@@ -1578,3 +1578,123 @@
     - `Minimal Gate (Linux)` SUCCESS
     - `FreePascal TLS 1.3 Completeness` SUCCESS
     - this batch only touched dormant `ci-matrix-draft.yml.disabled`, and the auto-triggered active CI path remained green
+
+### Nineteenth-Order Route Review
+
+- `sed -n '1,260p' .github/workflows/winssl-tests.yml.disabled`
+  - result: PASS
+  - summary:
+    - the workflow still defined `workflow_dispatch.test_suite` but never consumed it
+    - setup only installed `freepascal` even though later steps called `lazbuild`
+    - the file still carried obsolete inline Pascal test programs and stale `tests/test_winssl_comprehensive.lpi` / `tests\bin\test_winssl_comprehensive.exe` paths
+
+- `sed -n '1,260p' .github/workflows/code-quality.yml.disabled`
+  - result: PASS
+  - summary:
+    - `build-check` still declared a fake `3.2.2` / `3.3.1` FPC matrix
+    - the workflow called `lazbuild` without installing Lazarus
+    - `quality-report` still hardcoded coverage / grade / backend completeness claims
+
+- `sed -n '1,260p' tests/quick_winssl_validation.ps1`
+  - result: PASS
+  - summary:
+    - the repo already had a maintained quick WinSSL smoke script that validates `lazbuild` and compiles the certificate-loading test from `tests/winssl`
+
+- `sed -n '1,320p' tests/run_winssl_tests.ps1`
+  - result: PASS
+  - summary:
+    - the repo already had a broader WinSSL runtime suite script that compiles and runs the maintained `tests/winssl` projects
+
+- `sed -n '1,260p' tests/unit/test_winssl_comprehensive.lpi`
+  - result: PASS
+  - summary:
+    - the maintained Lazarus project lived under `tests/unit/`, not `tests/`
+    - the old dormant workflow path was therefore statically stale
+
+### Nineteenth-Order RED Contracts
+
+- `bash tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  - result before nineteenth fix: FAIL
+  - summary:
+    - missing truthful fragment `choco install -y freepascal lazarus`
+
+- `bash tests/scripts/test_workflow_code_quality_truth_contract.sh`
+  - result before nineteenth fix: FAIL
+  - summary:
+    - missing truthful fragment `sudo apt-get install -y fpc lazarus`
+
+### Nineteenth-Order Repairs
+
+- add `tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  - purpose: ensure the dormant WinSSL workflow uses the repo's maintained WinSSL scripts, installs/verifies `lazbuild`, and no longer hardcodes production-ready conclusions
+
+- add `tests/scripts/test_workflow_code_quality_truth_contract.sh`
+  - purpose: ensure the dormant code-quality workflow does not keep a fake FPC version matrix, missing Lazarus setup, or hardcoded quality grades
+
+- update `.github/workflows/winssl-tests.yml.disabled`
+  - change: remove the dead `workflow_dispatch.test_suite` input
+  - change: install and verify `fpc` / `lazbuild`
+  - change: replace obsolete inline Pascal tests with `tests/quick_winssl_validation.ps1` and `tests/run_winssl_tests.ps1`
+  - change: rewrite the summary to report only the current run outcomes and transcript evidence
+
+- update `.github/workflows/code-quality.yml.disabled`
+  - change: remove the fake `3.2.2` / `3.3.1` FPC matrix
+  - change: install and print the runner `fpc` / `lazbuild` truth before build steps
+  - change: rewrite `quality-report` to use `needs.*.result` instead of hardcoded coverage / grade / backend completeness
+
+### Local Revalidation After Nineteenth Fix
+
+- `bash tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_code_quality_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_cache_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_setup_python_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_permissions_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_action_sha_pinning_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+- `python3 - <<'PY' ... import yaml ...`
+  - result: FAIL
+  - summary:
+    - local environment did not have `PyYAML` (`ModuleNotFoundError: No module named 'yaml'`)
+
+- `ruby -e 'require "yaml"; ...'`
+  - result: FAIL
+  - summary:
+    - local environment did not have `ruby`
+    - focused contracts plus `git diff --check` remained the structural guardrails for this batch
+
+### Nineteenth Push Success Revalidation
+
+- `git commit -m "chore: tighten dormant workflow truth surfaces"`
+  - result: PASS
+  - commit: `9331faa`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `b6afeac..9331faa`
+
+- `gh run list --branch master --limit 8 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest run for head `9331faa` was `CI` run `25980352095`
+
+- `gh run watch 25980352095 --exit-status`
+  - result: PASS
+  - summary:
+    - `Code Quality (Light)` SUCCESS
+    - `Minimal Gate (Linux)` SUCCESS
+    - `FreePascal TLS 1.3 Completeness` SUCCESS
+    - this batch only touched dormant `winssl-tests.yml.disabled` and `code-quality.yml.disabled`, and the auto-triggered active CI path remained green
