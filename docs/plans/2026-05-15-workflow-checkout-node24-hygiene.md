@@ -185,3 +185,4 @@ git diff --check
   - 这次 completion audit 还确认：`wave-b-b2-manual.yml(.disabled)` 自身主要是 orchestration wrapper，真实的 over-claim 落点在脚本生成的 markdown next actions，而不是 workflow YAML 常量
   - 最新又补上 `prepare_wave_b_b2_handoff_bundle.sh` 的 report-chain `run_id` metadata 收紧；closure / consistency report 串批次时现在会 truthful 地降级到 `NEEDS_REPORT_REPAIR`
   - 对应代码批次提交 `7a496b7` 已推送，并记录自动 `CI` run `25983122179`
+  - 最新又补上 `check_wave_b_b2_evidence_consistency.sh` 的 closure-report `run_id` 顶层 note 收紧；`run_id missing/mismatch` 不再被顶层 `CLOSED` 掩盖，对应代码批次提交 `853540f` 已推送，并记录自动 `CI` run `25983419528`

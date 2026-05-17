@@ -446,6 +446,27 @@
 - [completed] 第二十六次 push 已记录远端自动 run：
   - `CI` run `25983122179`
   - 该批命中的是 manual/handoff report-chain metadata 层，按增量验证纪律只记录 run id，不同步阻塞式等待整条自动主线收口
+- [completed] 继续沿 `consistency` 层静态加深后，确认新的 truth bug 不在 count，而在顶层 note / next-actions 分支：
+  - `scripts/check_wave_b_b2_evidence_consistency.sh` 修复前会把 closure report 的 `run_id` 缺失/串批次记进 row note 与 `runid_mismatch_or_parse_issue`
+  - 但顶层 `closure_status_note` 仍可能保留 `CLOSED`
+  - 这会把 next actions 错带到“当前 closure 已闭环”的分支
+- [completed] 新增 focused contract，并先在当前脚本上观测到红灯：
+  - `tests/scripts/test_wave_b_b2_consistency_closure_report_run_id_contract.sh` 现在显式要求 `closure_report run_id missing/mismatch` 时顶层 `closure_status_note` 不能继续是 `CLOSED`
+  - 同时 next actions 必须回到“closure 元数据至少有一层未对齐”的通用修复分支
+- [completed] `scripts/check_wave_b_b2_evidence_consistency.sh` 已收紧 closure report issue 聚合逻辑：
+  - `closure_report run_id missing/mismatch`、`closure_status missing/invalid`、closure platform matrix 问题统一先进入 `closure_report_issues`
+  - 若 `closure_report_issues` 非空，则顶层 `closure_status_note` 直接输出 joined issues，而不再被 `CLOSED/IN_PROGRESS` 掩盖
+- [completed] 第二十七波 wave-b consistency closure-report run_id truth 修复本地复核通过：
+  - `test_wave_b_b2_consistency_closure_report_run_id_contract.sh` PASS
+  - `test_wave_b_b2_consistency_closure_status_parse_contract.sh` PASS
+  - `test_wave_b_b2_consistency_closure_platform_matrix_contract.sh` PASS
+  - `test_wave_b_b2_consistency_existing_report_run_id_fallback_contract.sh` PASS
+  - `test_wave_b_b2_consistency_next_actions_contract.sh` PASS
+  - `git diff --check` PASS
+- [completed] 第二十七次提交 `853540f` 已完成，wave-b consistency closure-report run_id truth batch 已推送到 `master`
+- [completed] 第二十七次 push 已记录远端自动 run：
+  - `CI` run `25983419528`
+  - 该批命中的是 consistency 顶层 note / next-actions truth，按增量验证纪律只记录 run id，不同步阻塞式等待整条自动主线收口
 
 ## Current Blocker
 
@@ -469,14 +490,17 @@
   - `prepare_wave_b_b2_handoff_bundle.sh` / `check_wave_b_b2_evidence_consistency.sh` 继续保留更高层聚合职责
 - 当前也没有已知仍会因为 closure / consistency report `run_id` 串批次而把 `wave-b-b2` handoff 误判成正常 report chain 的残留：
   - handoff bundle 现在会把这类 report metadata 漂移降级到 `NEEDS_REPORT_REPAIR`
+- 当前也没有已知仍会因为 `closure_report run_id missing/mismatch` 而把 consistency 顶层 `closure_status_note` 误报成 `CLOSED` 的残留：
+  - consistency 现在会把这类 issue 直接反映到顶层 `closure_status_note`
+  - next actions 也会回到 generic metadata-misaligned 分支
 - 当前剩余边界只在验证层：
   - `release.yml`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled`、`wave-b-b2-manual.yml.disabled` 等 dormant/manual 路径没有在远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
-- 当前没有新的同等级 YAML/script/report-chain 热点 blocker；最近相邻的 `test-all-platforms` 固定 coverage/support、`linux-ci` 证据文案、`wave-b-b2` closed wording，以及 handoff report run_id 漂移都已被收掉
+- 当前没有新的同等级 YAML/script/report-chain/consistency-note 热点 blocker；最近相邻的 `test-all-platforms` 固定 coverage/support、`linux-ci` 证据文案、`wave-b-b2` closed wording、handoff report run_id 漂移，以及 consistency 顶层 `closure_status_note` 误导都已被收掉
 
 ## Current Queue
 
-1. 如果继续沿 `wave-b-b2` 这条线做静态加深，优先补 report metadata 的剩余“缺失分支”合同，例如 `closure_report run_id missing` / `consistency_report run_id missing`，以及 consistency 顶层 note/count 是否对这些 parse issue 保持 truthful。
+1. 如果继续沿 `wave-b-b2` 这条线做静态加深，优先补 `prepare_wave_b_b2_handoff_bundle.sh` 的 report `run_id missing` focused contracts，把当前已验证的 mismatch 分支扩展到缺失分支，并确认 handoff bundle 的 `report_chain_note` 对缺失/串批次保持对称 truthful。
 2. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
 3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
 
@@ -523,6 +547,7 @@
 - 第二十四批 dormant Linux evidence wording batch commit / push 完成，且远端自动 run 已记录
 - 第二十五批 wave-b handoff summary wording batch commit / push 完成，且远端自动 run 已记录
 - 第二十六批 wave-b handoff report-chain run_id batch commit / push 完成，且远端自动 run 已记录
+- 第二十七批 wave-b consistency closure-report run_id truth batch commit / push 完成，且远端自动 run 已记录
 - `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
 - `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
 - `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用

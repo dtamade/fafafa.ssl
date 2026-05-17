@@ -2289,3 +2289,71 @@
     - latest observed run for head `7a496b7` was `CI` run `25983122179`
     - status at record time: `in_progress`
     - per the incremental verification discipline, this manual/handoff metadata batch recorded the run id without a blocking watch
+
+### Twenty-Seventh-Order Route Review
+
+- `sed -n '630,705p' scripts/check_wave_b_b2_evidence_consistency.sh`
+  - result: PASS
+  - summary:
+    - the closure-report row already tracked `run_id` mismatch/not-found in row notes and in `runid_mismatch_or_parse_issue`
+    - but the top-level `closure_status_note` still reused `CLOSED` whenever `closure_status` parsed cleanly
+
+- `sed -n '928,948p' scripts/check_wave_b_b2_evidence_consistency.sh`
+  - result: PASS
+  - summary:
+    - when `consistency_status != CONSISTENT`, the next-actions branch key is `closure_status_note`
+    - so a stale top-level `CLOSED` note could still incorrectly route users into the “closure 已闭环” guidance path
+
+### Twenty-Seventh-Order RED Contract
+
+- `bash tests/scripts/test_wave_b_b2_consistency_closure_report_run_id_contract.sh`
+  - result before twenty-seventh fix: FAIL
+  - summary:
+    - top-level `closure_status_note` still failed to surface `closure_report run_id missing`
+
+### Twenty-Seventh-Order Repairs
+
+- add `tests/scripts/test_wave_b_b2_consistency_closure_report_run_id_contract.sh`
+  - purpose: require top-level note + row note + next-actions truth when closure report `run_id` is missing or mismatched
+
+- update `scripts/check_wave_b_b2_evidence_consistency.sh`
+  - change: collect closure-report metadata/status/platform issues into `closure_report_issues`
+  - change: if any issue exists, drive top-level `closure_status_note` from the joined issues instead of leaving it at `CLOSED`
+  - change: keep the existing `runid_mismatch_or_parse_issue` counting semantics intact
+
+### Local Revalidation After Twenty-Seventh Fix
+
+- `bash tests/scripts/test_wave_b_b2_consistency_closure_report_run_id_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_closure_status_parse_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_closure_platform_matrix_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_existing_report_run_id_fallback_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+### Twenty-Seventh Push Recording
+
+- `git commit -m "chore: tighten wave-b consistency run id notes"`
+  - result: PASS
+  - commit: `853540f`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `e3d9e3d..853540f`
+
+- `gh run list --branch master --limit 4 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest observed run for head `853540f` was `CI` run `25983419528`
+    - status at record time: `in_progress`
+    - per the incremental verification discipline, this consistency-note truth batch recorded the run id without a blocking watch

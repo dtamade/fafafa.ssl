@@ -575,3 +575,26 @@
 - 这次修复还说明当前 `wave-b-b2` 线下一步最值得继续补的是“缺失分支”，而不是再追 wording：
   - `run_id mismatch` 已经有了 focused contract
   - 接下来更像相邻高价值面的，是 `run_id missing` 这种 parse-hole 是否也都有对称合同
+
+- 沿这条线继续下钻后，`check_wave_b_b2_evidence_consistency.sh` 暴露出一个更细的 truth bug：
+  - 修复前它确实会把 `closure_report run_id missing/mismatch` 计入 `runid_mismatch_or_parse_issue`
+  - 但顶层 `closure_status_note` 仍可能保留 `CLOSED`
+  - 这会进一步把 next actions 错带到“当前 closure 已闭环，但 evidence consistency 仍未对齐”
+
+- 这个问题的关键不在计数，而在“顶层摘要被旧状态掩盖”：
+  - row 级别已经能看到 `run_id not found` / `run_id mismatch`
+  - 但如果顶部 note 仍是 `CLOSED`
+  - 后续只看摘要的人会被误导，以为 closure report 本身是可信的，只是 evidence 没对齐
+
+- 对这类问题的最小安全修法，仍然不需要重写 next-actions 状态机：
+  - 只把 closure report 相关 issue 先汇总进一个局部 `closure_report_issues`
+  - 如果这个集合非空，顶层 `closure_status_note` 直接输出 joined issues
+  - 这样现有 next-actions 分支自然会走到 generic metadata-misaligned 路径，而不是 `CLOSED` 分支
+
+- 新增 `test_wave_b_b2_consistency_closure_report_run_id_contract.sh` 后，这个 consistency 顶层摘要面也进入了持续守护：
+  - 它覆盖 `closure_report run_id missing` 和 `closure_report run_id mismatch`
+  - 同时要求顶层 `closure_status_note`、row note、`runid_mismatch_or_parse_issue` 和 next actions 保持同一条 truth
+
+- 这说明当前 `wave-b-b2` 线上最值得继续补的，已经从 “mismatch 是否处理” 前移到 “missing 分支是否对称”：
+  - handoff bundle 这边下一站更值钱的是 `closure_report run_id missing` / `consistency_report run_id missing` focused contracts
+  - consistency 这一层的 closure report top-note truth 已经收口
