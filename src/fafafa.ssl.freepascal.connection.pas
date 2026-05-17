@@ -193,6 +193,7 @@ type
 implementation
 
 uses
+  fafafa.ssl.context.compat,
   fafafa.ssl.tls13.clienthello,
   fafafa.ssl.tls13.clienthello.parser,
   fafafa.ssl.tls13.parser,
@@ -784,17 +785,16 @@ begin
 end;
 
 constructor TFreePascalConnection.Create(AContext: ISSLContext; ASocket: THandle);
+var
+  LCompatibilityServerName: string;
 begin
   inherited Create(AContext);
   FSocket := ASocket;
   FStream := nil;
   FServerName := '';
-  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-  if (AContext <> nil) and
-    ContextTypeSupportsClientConnectionRole(AContext.GetContextType) and
-    (AContext.GetServerName <> '') then
-    FServerName := AContext.GetServerName;
-  {$POP}
+  LCompatibilityServerName := GetContextLevelServerNameCompatibilityValue(AContext);
+  if LCompatibilityServerName <> '' then
+    FServerName := LCompatibilityServerName;
   FProtocolVersion := SelectPreferredProtocol(AContext);
   FCipherName := '';
   FALPNProtocols := AContext.GetALPNProtocols;
@@ -837,6 +837,8 @@ begin
 end;
 
 constructor TFreePascalConnection.Create(AContext: ISSLContext; AStream: TStream);
+var
+  LCompatibilityServerName: string;
 begin
   inherited Create(AContext);
   if AStream = nil then
@@ -845,12 +847,9 @@ begin
   FSocket := -1;
   FStream := AStream;
   FServerName := '';
-  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-  if (AContext <> nil) and
-    ContextTypeSupportsClientConnectionRole(AContext.GetContextType) and
-    (AContext.GetServerName <> '') then
-    FServerName := AContext.GetServerName;
-  {$POP}
+  LCompatibilityServerName := GetContextLevelServerNameCompatibilityValue(AContext);
+  if LCompatibilityServerName <> '' then
+    FServerName := LCompatibilityServerName;
   FProtocolVersion := SelectPreferredProtocol(AContext);
   FCipherName := '';
   FALPNProtocols := AContext.GetALPNProtocols;

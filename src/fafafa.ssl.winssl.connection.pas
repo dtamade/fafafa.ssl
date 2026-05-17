@@ -212,6 +212,7 @@ type
 implementation
 
 uses
+  fafafa.ssl.context.compat,
   fafafa.ssl.winssl.lib;
 
 // ============================================================================
@@ -462,6 +463,8 @@ end;
 // ============================================================================
 
 constructor TWinSSLConnection.Create(AContext: ISSLContext; ASocket: THandle);
+var
+  LCompatibilityServerName: string;
 begin
   inherited Create(AContext);
   FSocket := ASocket;
@@ -471,12 +474,9 @@ begin
 
   // 从上下文获取服务器名称
   FServerName := '';
-  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-  if (AContext <> nil) and
-    ContextTypeSupportsClientConnectionRole(AContext.GetContextType) and
-    (AContext.GetServerName <> '') then
-    FServerName := AContext.GetServerName;
-  {$POP}
+  LCompatibilityServerName := GetContextLevelServerNameCompatibilityValue(AContext);
+  if LCompatibilityServerName <> '' then
+    FServerName := LCompatibilityServerName;
 
   FRecvBufferUsed := 0;
   FDecryptedBufferUsed := 0;
@@ -493,6 +493,8 @@ begin
 end;
 
 constructor TWinSSLConnection.Create(AContext: ISSLContext; AStream: TStream);
+var
+  LCompatibilityServerName: string;
 begin
   inherited Create(AContext);
   FSocket := INVALID_HANDLE_VALUE;
@@ -501,12 +503,9 @@ begin
   FTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
 
   FServerName := '';
-  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-  if (AContext <> nil) and
-    ContextTypeSupportsClientConnectionRole(AContext.GetContextType) and
-    (AContext.GetServerName <> '') then
-    FServerName := AContext.GetServerName;
-  {$POP}
+  LCompatibilityServerName := GetContextLevelServerNameCompatibilityValue(AContext);
+  if LCompatibilityServerName <> '' then
+    FServerName := LCompatibilityServerName;
 
   FRecvBufferUsed := 0;
   FDecryptedBufferUsed := 0;

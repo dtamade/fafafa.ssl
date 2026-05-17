@@ -134,6 +134,9 @@ type
 
 implementation
 
+uses
+  fafafa.ssl.context.compat;
+
 const
   SSL_IO_BUFFER_SIZE = 8192;
   SSL_EARLY_DATA_NOT_SENT = 0;
@@ -143,6 +146,7 @@ const
 constructor TOpenSSLConnection.Create(AContext: ISSLContext; ASocket: THandle);
 var
   Ctx: PSSL_CTX;
+  LCompatibilityServerName: string;
 begin
   inherited Create(AContext);
   FSocket := ASocket;
@@ -170,12 +174,9 @@ begin
 
   // Initialize per-connection server name from context default (backward compatibility)
   FServerName := '';
-  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-  if (AContext <> nil) and
-    ContextTypeSupportsClientConnectionRole(AContext.GetContextType) and
-    (AContext.GetServerName <> '') then
-    SetServerName(AContext.GetServerName);
-  {$POP}
+  LCompatibilityServerName := GetContextLevelServerNameCompatibilityValue(AContext);
+  if LCompatibilityServerName <> '' then
+    SetServerName(LCompatibilityServerName);
 
   if not Assigned(SSL_set_fd) then
     RaiseFunctionNotAvailable('SSL_set_fd');
@@ -187,6 +188,7 @@ constructor TOpenSSLConnection.Create(AContext: ISSLContext; AStream: TStream);
 var
   Ctx: PSSL_CTX;
   LConstructed: Boolean;
+  LCompatibilityServerName: string;
 
   procedure CleanupUnattachedBIO(var ABIO: PBIO);
   begin
@@ -226,12 +228,9 @@ begin
   try
     // Initialize per-connection server name from context default (backward compatibility)
     FServerName := '';
-    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-    if (AContext <> nil) and
-      ContextTypeSupportsClientConnectionRole(AContext.GetContextType) and
-      (AContext.GetServerName <> '') then
-      SetServerName(AContext.GetServerName);
-    {$POP}
+    LCompatibilityServerName := GetContextLevelServerNameCompatibilityValue(AContext);
+    if LCompatibilityServerName <> '' then
+      SetServerName(LCompatibilityServerName);
 
     // Ensure BIO API is available
     if not TOpenSSLLoader.IsModuleLoaded(osmBIO) then

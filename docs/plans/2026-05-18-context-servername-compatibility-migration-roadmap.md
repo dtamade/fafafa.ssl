@@ -33,7 +33,7 @@
 
 ### 2. Backend fallback read paths
 
-以下 backend connection constructor 仍会把 `AContext.GetServerName` 复制到连接实例：
+以下 backend connection constructor 仍会把 context-level `ServerName` 兼容继承到连接实例：
 
 - `src/fafafa.ssl.openssl.connection.pas`
 - `src/fafafa.ssl.freepascal.connection.pas`
@@ -41,7 +41,11 @@
 - `src/fafafa.ssl.mbedtls.connection.pas`
 - `src/fafafa.ssl.winssl.connection.pas`
 
-这说明当前 compatibility truth 不是单一入口残留，而是 5 backend 共同实现的历史语义。
+当前最新真相是：
+
+- direct deprecated `AContext.GetServerName` / `FContext.GetServerName` 读取已经从这五个 backend 的构造路径移除
+- 兼容读取现在统一经由 `src/fafafa.ssl.context.compat.pas`
+- compatibility truth 仍然保留，但控制面已经从五份散点实现收成一条 shared seam
 
 ### 3. Tests that intentionally lock the compatibility boundary
 
@@ -120,6 +124,13 @@ Precondition:
 
 - Phase B has already made “new recommended usage” clear and tested
 
+Delivered first cut:
+
+- add `src/fafafa.ssl.context.compat.pas`
+- OpenSSL / FreePascal / WolfSSL / MbedTLS / WinSSL constructor fallback now all route through `GetContextLevelServerNameCompatibilityValue(...)`
+- backend-local direct deprecated reads were removed from the targeted constructor paths
+- focused source contract and runtime regressions proved behavior stayed intact
+
 ### Phase D: Final Surface Cleanup
 
 **Target:** finish interface shape cleanup once migration risk is low enough.
@@ -140,7 +151,7 @@ Candidates:
   - Phase A discovery/lockpoint mapping complete
   - Phase B builder surface first cut complete
   - Phase B factory/config write-surface narrowing complete
-  - next mainline is Phase C shared compatibility shim extraction
+  - Phase C shared compatibility shim first cut complete
 - `TSSLConfig` cross-layer slimming: intentionally deferred until SNI migration stabilizes
 
 ### What This Means Operationally
@@ -152,15 +163,15 @@ Candidates:
 
 Choose one bounded implementation family only:
 
-1. **Shared compatibility shim extraction**
-   - prepare one shared helper for context-to-connection fallback
-   - leave public behavior unchanged in the first patch
-2. **Final surface cleanup prep**
+1. **Final surface cleanup prep**
    - re-evaluate whether `TSSLConfig.ServerName` and builder `WithSNI(...)` still need their current naming/placement once the shared shim exists
+2. **Behavior migration RED selection**
+   - decide which intentional-compat tests will be rewritten before any real fallback deletion
+   - explicitly define new precedence between builder/factory/context and per-connection hostname paths
 
-Recommended first pick: **Shared compatibility shim extraction**.
+Recommended first pick: **Final surface cleanup prep**.
 
-Phase B is now closed for the current additive-compatibility scope; the next highest-value work is consolidating the backend fallback seam before any real behavioral deletion.
+Phase C first cut is now closed for the current additive-compatibility scope; the next highest-value work is choosing the public-surface cleanup cut before any real behavioral deletion.
 
 ## Verification
 

@@ -280,6 +280,39 @@
   - factory/config runtime path 会发 explicit warning
   - 下一步真正高价值的收口点，已经不是继续修高层文案，而是把 backend constructor 里的 fallback 读取提成 shared compatibility shim
 
+## 增量收口：backend shared compatibility shim
+
+- 在 Phase B 的高层写入面收窄之后，backend constructor fallback 仍然有一个明显的结构问题：
+  - OpenSSL / FreePascal / WolfSSL / MbedTLS / WinSSL 五个实现各自 direct read deprecated context `GetServerName`
+  - 这让 compile warning、后续迁移、以及行为删改的控制面继续分散
+
+- 这轮 Phase C 第一刀只做 seam consolidation，不做 behavior migration：
+  - 新增 `src/fafafa.ssl.context.compat.pas`
+    - 提供 `GetContextLevelServerNameCompatibilityValue(...)`
+    - 统一封装 client-role gate、deprecated read、以及 local warning suppression
+  - 五个 backend constructor fallback 全部改走 shared helper
+  - direct deprecated `AContext.GetServerName` / `FContext.GetServerName` 读取从目标构造路径中移除
+
+- 这一步最关键的设计约束是“side effect 不变”：
+  - OpenSSL / MbedTLS 仍继续走 `SetServerName(...)`
+  - FreePascal / WolfSSL / WinSSL 仍继续走字段赋值路径
+  - 所以这批不是在偷删兼容，而是在把兼容读取的真实入口压成一条可继续治理的 seam
+
+- focused source contract 和 runtime regressions 都说明这刀是安全的：
+  - `tests/scripts/test_context_server_name_compat_shim_contract.sh`
+    - RED -> GREEN
+    - 直接钉住 shared helper 存在、五个 backend 已接入、backend-local direct read 已移除
+  - `tests/test_sslctxboth_client_capability_clarification.pas`
+    - PASS (`28 passed, 0 failed, 1 skipped`)
+    - 跨 backend context-to-connection fallback 兼容真相保持不变
+  - `tests/test_factory_server_name_scope_clarification.pas`
+    - PASS (`6 passed, 0 failed`)
+    - factory/client compatibility behavior 在 backend seam 提取后仍保持绿色
+
+- 这也把主线再次往前推进了一步：
+  - backend constructor 已不再是五份分散的 direct deprecated reads
+  - 下一批真正该讨论的是 public/high-level surface cleanup 和 behavior migration RED，而不是再回头逐个 backend 做重复治理
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -303,12 +336,13 @@
 
 ### 下一批最值得做的事
 
-1. 进入 **context-level SNI compatibility migration** 的 Phase C
-   - 把五个 backend constructor 的 context fallback 提成 shared compatibility shim
-   - 第一刀只提 seam，不删兼容行为
+1. 进入 **context-level SNI compatibility migration** 的 Phase D 准备
+   - 现在 shared compatibility shim 已经存在
+   - 下一步应评估 `TSSLConfig.ServerName` / builder `WithSNI(...)` 的最终 surface cleanup 切口
 
-2. 再决定是否进入最终 surface cleanup
-   - 等 shared shim 稳住后，再判断 `TSSLConfig.ServerName` / `WithSNI(...)` 是否继续保留当前位置与命名
+2. 再决定 behavior migration 的第一条 RED
+   - 明确哪些 intentional-compat tests 会被改写
+   - 明确新优先级应该怎样从 context-level 迁到 per-connection hostname 路径
 
 3. `TSSLConfig` 拆层与 capability model presence bits 仍然排在后面
    - 它们是更大的设计债，不是当前 SNI 迁移主线的下一刀

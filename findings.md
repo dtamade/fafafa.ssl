@@ -173,3 +173,31 @@
   - builder import/export 会加 marker
   - factory/config runtime path 会发 warning
   - 剩余的真正主问题已经转移到 backend constructor fallback 仍分散在五个实现里
+
+- `context-level ServerName` Phase C 的第一刀已经把“分散在五个 backend 的 direct deprecated read”收成了共享 seam：
+  - 新增 `src/fafafa.ssl.context.compat.pas`
+  - helper 统一封装：
+    - client-role gate
+    - deprecated `ISSLContext.GetServerName` 读取
+    - local warning suppression
+  - 这使得 deprecated context fallback 的控制面重新回到一处，而不是继续散落在 OpenSSL / FreePascal / WolfSSL / MbedTLS / WinSSL 五份构造器里
+
+- 这次 shared shim 提取刻意保持 backend side effect 不变：
+  - OpenSSL / MbedTLS 继续走 `SetServerName(...)`
+  - FreePascal / WolfSSL / WinSSL 继续走字段赋值路径
+  - 因此这批是 seam consolidation，不是 behavior migration
+
+- focused source contract 证明 Phase C 第一刀已经真正落地，而不是只在文档里说说：
+  - `tests/scripts/test_context_server_name_compat_shim_contract.sh`
+    - 要求 shared helper 存在
+    - 要求五个 backend 都调用 shared helper
+    - 要求五个 backend 不再直接读取 `AContext.GetServerName` / `FContext.GetServerName`
+
+- runtime regression 也证明 shared shim 没有误伤现有兼容真相：
+  - `tests/test_sslctxboth_client_capability_clarification.pas` 继续绿色
+  - `tests/test_factory_server_name_scope_clarification.pas` 继续绿色
+  - 这说明 “context -> connection 的 fallback 仍存在” 与 “deprecated read 已被集中治理” 这两件事现在可以同时成立
+
+- 因而 SNI 主线的剩余问题已经再次前移：
+  - backend constructor 不再是散点收口对象
+  - 下一批应该讨论的是 public/high-level surface cleanup，而不是重新逐个 backend 找 direct fallback read

@@ -56,6 +56,11 @@
   - warning 直接点名 `TSSLConfig.ServerName` 是 deprecated context-level SNI compatibility，并把调用方导向 `ISSLClientConnection.SetServerName(...)` / `TSSLConnector.Connect*(..., ServerName)`
   - `src/fafafa.ssl.base.pas` 与 `docs/reference/API_REFERENCE.md` 已把该字段降格成 compatibility-only 入口
   - focused factory regressions 证明这次收口没有改掉现有兼容继承行为
+- [completed] `context-level ServerName` Phase C 的第一刀 shared compatibility shim 已收口：
+  - 新增 `src/fafafa.ssl.context.compat.pas`
+  - OpenSSL / FreePascal / WolfSSL / MbedTLS / WinSSL 的 constructor fallback 已统一改走 `GetContextLevelServerNameCompatibilityValue(...)`
+  - direct deprecated `AContext.GetServerName` / `FContext.GetServerName` 读取已从五个 backend 本地构造路径移除
+  - focused source contract 与跨 backend fallback runtime regressions 均保持绿色
 
 ## Scope
 
@@ -83,12 +88,12 @@
 
 ## Current Queue
 
-1. 开始 `context-level ServerName` Phase C：
-   - 把五个 backend constructor 里的 context fallback 读取提成 shared compatibility shim
-   - 第一刀只做 shared seam，不改 public behavior，也不直接删除 fallback
-2. 在 shared shim 落稳后，再评估最终 surface cleanup：
+1. 在 shared shim 落稳后，开始 `context-level ServerName` Phase D 准备：
    - 缩减 `TSSLConfig.ServerName` 的职责
    - 再判断 builder `WithSNI(...)` 是否还需要保留当前命名/入口
+2. 若要真正删除兼容行为，先补 dedicated RED：
+   - 明确哪些 intentional-compat tests 会被改写
+   - 明确 connector / connection-builder / factory / builder 四层的新优先级和失败语义
 3. 在 capability 与 SNI 迁移边界都稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。
 4. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
 

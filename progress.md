@@ -146,6 +146,64 @@
 - `git diff --check`
   - result: PASS
 
+### Context ServerName Shared Compatibility Shim
+
+- add `docs/plans/2026-05-18-context-servername-shared-compatibility-shim.md`
+  - purpose:
+    - define the bounded Phase C batch before code changes
+    - keep the next execution order anchored on shared seam extraction instead of broader migration
+
+- add `tests/scripts/test_context_server_name_compat_shim_contract.sh`
+  - purpose:
+    - force a RED on missing shared helper adoption
+    - guard both helper presence and backend source migration away from local direct context `GetServerName` reads
+
+- `bash -n tests/scripts/test_context_server_name_compat_shim_contract.sh && bash tests/scripts/test_context_server_name_compat_shim_contract.sh`
+  - result: RED
+  - summary:
+    - initial failure proved `src/fafafa.ssl.context.compat.pas` did not exist yet
+    - shared compatibility seam had not been extracted
+
+- add `src/fafafa.ssl.context.compat.pas`
+  - change:
+    - introduce `GetContextLevelServerNameCompatibilityValue(...)`
+    - centralize client-role gate, deprecated read, and warning suppression in one place
+
+- update backend constructors:
+  - `src/fafafa.ssl.openssl.connection.pas`
+  - `src/fafafa.ssl.freepascal.connection.pas`
+  - `src/fafafa.ssl.wolfssl.connection.pas`
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+  - `src/fafafa.ssl.winssl.connection.pas`
+  - change:
+    - replace local direct context `GetServerName` fallback reads with shared helper usage
+    - preserve each backend's original side effect path (`SetServerName(...)` vs field assignment)
+
+- `mkdir -p tmp/test_sslctxboth_client_capability_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_sslctxboth_client_capability_clarification -FEtmp/test_sslctxboth_client_capability_clarification -otmp/test_sslctxboth_client_capability_clarification/test_sslctxboth_client_capability_clarification tests/test_sslctxboth_client_capability_clarification.pas && ./tmp/test_sslctxboth_client_capability_clarification/test_sslctxboth_client_capability_clarification`
+  - result: RED
+  - summary:
+    - first compile failed because the new helper referenced `ContextTypeSupportsClientConnectionRole` from the wrong unit
+    - fixed by importing `fafafa.ssl.connection.base` inside `src/fafafa.ssl.context.compat.pas`
+
+- `bash -n tests/scripts/test_context_server_name_compat_shim_contract.sh && bash tests/scripts/test_context_server_name_compat_shim_contract.sh`
+  - result: PASS
+  - summary:
+    - shared helper now exists
+    - all five backend constructor paths route fallback through the shared seam
+    - backend-local direct context `GetServerName` reads are gone from the targeted files
+
+- `mkdir -p tmp/test_sslctxboth_client_capability_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_sslctxboth_client_capability_clarification -FEtmp/test_sslctxboth_client_capability_clarification -otmp/test_sslctxboth_client_capability_clarification/test_sslctxboth_client_capability_clarification tests/test_sslctxboth_client_capability_clarification.pas && ./tmp/test_sslctxboth_client_capability_clarification/test_sslctxboth_client_capability_clarification`
+  - result: PASS
+  - summary:
+    - cross-backend context-to-connection ServerName fallback remains intact after seam extraction
+    - final run finished `28 passed, 0 failed, 1 skipped`
+
+- `mkdir -p tmp/test_factory_server_name_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_server_name_scope_clarification -FEtmp/test_factory_server_name_scope_clarification -otmp/test_factory_server_name_scope_clarification/test_factory_server_name_scope_clarification tests/test_factory_server_name_scope_clarification.pas && ./tmp/test_factory_server_name_scope_clarification/test_factory_server_name_scope_clarification`
+  - result: PASS
+  - summary:
+    - factory/client compatibility behavior remains intact after backend shim extraction
+    - final run finished `6 passed, 0 failed`
+
 ### Context ServerName Compatibility Roadmap Freeze
 
 - `rg -n "SetServerName\\(|GetServerName\\(|WithSNI\\(|ServerName\\b" src tests docs | sed -n '1,320p'`

@@ -98,6 +98,7 @@ type
 implementation
 
 uses
+  fafafa.ssl.context.compat,
   fafafa.ssl.mbedtls.certificate,
   fafafa.ssl.mbedtls.session;
 
@@ -205,6 +206,7 @@ end;
 procedure TMbedTLSConnection.AllocateSSLContext;
 var
   LRet: Integer;
+  LCompatibilityServerName: string;
 begin
   if FSSLContext <> nil then
     FreeSSLContext;
@@ -238,12 +240,9 @@ begin
   end;
 
   // Set server name (SNI) if configured
-  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-  if (FContext <> nil) and
-    ContextTypeSupportsClientConnectionRole(FContext.GetContextType) and
-    (FContext.GetServerName <> '') then
-    SetServerName(FContext.GetServerName);
-  {$POP}
+  LCompatibilityServerName := GetContextLevelServerNameCompatibilityValue(FContext);
+  if LCompatibilityServerName <> '' then
+    SetServerName(LCompatibilityServerName);
 end;
 
 procedure TMbedTLSConnection.FreeSSLContext;
