@@ -191,3 +191,4 @@ git diff --check
   - 对应 coverage batch 提交 `fb8664a` 已推送，并记录自动 `CI` run `25983594565`
   - 随后 docs closeout `c3dfa78` 对应 `CI` run `25983622375` 继续 SUCCESS，说明 `fb8664a` 的 truth sync closeout 也保持了自动主线全绿
   - 最新又补上 `prepare_wave_b_b2_handoff_bundle.sh` 的 missing-report focused contract；当前确认 `closure_report` / `consistency_report` 整个文件缺失时，同样只是 coverage 缺口而不是新的生产脚本 bug
+  - 对应 coverage batch 提交 `aed5dbd` 已推送，并记录自动 `CI` run `25983742832`

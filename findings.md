@@ -629,3 +629,7 @@
 - 因而当前 `wave-b-b2` 线上更合理的下一跳，已经从 handoff bundle 前移到 consistency 顶层摘要面：
   - 优先补 `check_wave_b_b2_evidence_consistency.sh` 的 `closure_report missing` focused contract
   - 目标是确认顶层 `closure_status_note`、row note 和 next actions 在“closure report 整个缺失”时，也不会回落到误导性的 `CLOSED/IN_PROGRESS` 叙事
+
+- 这次提交 `aed5dbd` 同样只扩大了 focused contract 覆盖面，没有修改生产脚本状态机：
+  - 因此远端自动 `CI` run `25983742832` 继续按增量 run id 记账即可
+  - 除非自动主线转红，否则不需要把这类 coverage batch 升级成阻塞式盯跑

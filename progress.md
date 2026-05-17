@@ -171,6 +171,29 @@
 - `git diff --check`
   - result: PASS
 
+### Twenty-Ninth Push Recording
+
+- `git commit -m "test: cover wave-b handoff missing reports"`
+  - result: PASS
+  - commit: `aed5dbd`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `c3dfa78..aed5dbd`
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - worktree returned to `## master...origin/master`
+
+- `gh run list --branch master --limit 4 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS after retry
+  - summary:
+    - first two attempts hit transient `EOF`; direct `curl` fallback also saw a transient TLS EOF
+    - final retry succeeded and latest observed run for head `aed5dbd` was `CI` run `25983742832`
+    - status at record time: `in_progress`
+    - per the incremental verification discipline, this missing-report coverage batch recorded the run id without a blocking watch
+
 ### Eleventh Push Success Revalidation
 
 - `git commit -m "chore: pin workflow actions to commits"`
