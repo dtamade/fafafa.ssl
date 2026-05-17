@@ -276,6 +276,53 @@ Next truth step:
 - confirm `WinSSL Integration Tests (Multi-Scenario)` no longer exits on the SSL3 `CreateConnection` path
 - confirm `Backend Comparison Tests` no longer fail on live-response exactness or negative-path exception assumptions before touching wider surfaces
 
+## Task 11: Fix the controlled broader-suite classification drift exposed by run `25988526125`
+
+Observed runtime update:
+
+- `Install dependencies` SUCCESS
+- `Run quick WinSSL smoke` SUCCESS
+- `Run Windows Wave B gate` SUCCESS
+- `Run broader WinSSL runtime suite` still FAIL, but all remaining failures are now controlled assertion mismatches
+- current remaining failures are:
+  - `tests/winssl/test_winssl_integration_multi.pas`
+    - `TLS 1.3 协商（异常）` FAIL
+    - `SSL 3.0 握手失败（已废弃）` FAIL
+    - both report the same native truth: `0x80090331`
+  - `tests/integration/test_backend_comparison.pas`
+    - only `OpenSSL SSL3 握手失败（预期）` remains FAIL
+    - the safer test semantic is now “handshake fails” or “connects but does not actually negotiate `SSL3`”
+
+Changes for this batch:
+
+- update `tests/winssl/test_winssl_integration_multi.pas` to centralize concrete `0x80090331` detection behind `HasAlgorithmMismatchNativeError`
+- update `tests/integration/test_backend_comparison.pas` to add `TestDeprecatedProtocolFailurePath`
+- update `tests/scripts/test_winssl_integration_multi_tls13_optional_contract.sh` to require the centralized concrete native-error helper
+- update `tests/scripts/test_backend_comparison_online_stability_contract.sh` to accept deprecated-protocol coverage through the helper
+- keep scope on tests/contracts only; do not widen into WinSSL/OpenSSL production semantics without fresh runtime evidence
+
+Verification for this batch:
+
+```bash
+bash tests/scripts/test_winssl_integration_multi_tls13_optional_contract.sh
+bash tests/scripts/test_winssl_integration_multi_expected_failure_contract.sh
+bash tests/scripts/test_winssl_integration_multi_negative_path_wrap_contract.sh
+bash tests/scripts/test_backend_comparison_factory_registration_contract.sh
+bash tests/scripts/test_backend_comparison_online_stability_contract.sh
+bash tests/scripts/test_winssl_connection_safe_statistics_update_contract.sh
+bash tests/scripts/test_winssl_integration_multi_no_context_level_sni_guidance_contract.sh
+bash tests/scripts/test_winssl_performance_and_backend_comparison_no_context_level_sni_guidance_contract.sh
+fpc -Fu./src -Fu./tests -Fu./tests/integration -Fu./tests/framework tests/integration/test_backend_comparison.pas
+git diff --check
+```
+
+Next truth step:
+
+- push the batch to `master`
+- dispatch `wave-b-b2-manual.yml`
+- confirm `WinSSL Integration Tests (Multi-Scenario)` no longer records the `0x80090331` TLS1.3/SSL3 branches as FAIL
+- confirm `Backend Comparison Tests` no longer fail on the remaining `OpenSSL SSL3` assertion before widening scope
+
 ### Definition Of Done
 
 - 当前手动 Windows workflow 被锁定为覆盖 quick smoke + Wave B gate + broader suite transcript

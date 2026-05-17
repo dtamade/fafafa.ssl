@@ -17,8 +17,12 @@ if ! rg -F --quiet -- 'function IsOptionalTLS13OnlyFailure' "$FILE"; then
   fail "test_winssl_integration_multi.pas should classify TLS 1.3-only Schannel platform failures explicitly"
 fi
 
-if ! rg -F --quiet -- 'SEC_E_ALGORITHM_MISMATCH' "$FILE"; then
-  fail "test_winssl_integration_multi.pas should guard the TLS 1.3-only path against SEC_E_ALGORITHM_MISMATCH"
+if ! rg -F --quiet -- 'function HasAlgorithmMismatchNativeError' "$FILE"; then
+  fail "test_winssl_integration_multi.pas should centralize Schannel algorithm-mismatch native-error detection"
+fi
+
+if ! rg -F --quiet -- '$80090331' "$FILE"; then
+  fail "test_winssl_integration_multi.pas should guard the TLS 1.3-only path against the concrete 0x80090331 algorithm-mismatch native error"
 fi
 
 tls13_block="$(sed -n '/Test 2: TLS 1.3/,/Test 3: Auto-negotiation/p' "$FILE")"

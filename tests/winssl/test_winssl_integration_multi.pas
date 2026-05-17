@@ -63,10 +63,15 @@ begin
     Result := E.Message;
 end;
 
+function HasAlgorithmMismatchNativeError(E: ESSLException): Boolean;
+begin
+  Result := Cardinal(E.NativeError) = $80090331;
+end;
+
 function IsOptionalTLS13OnlyFailure(E: Exception): Boolean;
 begin
   Result := (E is ESSLException) and
-            (Cardinal(ESSLException(E).NativeError) = SEC_E_ALGORITHM_MISMATCH);
+            HasAlgorithmMismatchNativeError(ESSLException(E));
 end;
 
 function IsExpectedHandshakeFailure(E: Exception): Boolean;
@@ -74,7 +79,7 @@ begin
   Result := (E is ESSLConnectionException) or
             (E is ESSLCertificateException) or
             ((E is ESSLInitializationException) and
-             (Cardinal(ESSLException(E).NativeError) = SEC_E_ALGORITHM_MISMATCH));
+             HasAlgorithmMismatchNativeError(ESSLException(E)));
 end;
 
 procedure TestExpectedHandshakeFailurePath(const aTestName, aHost: string;

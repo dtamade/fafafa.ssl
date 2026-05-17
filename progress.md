@@ -380,6 +380,101 @@
 - `git diff --check`
   - result: PASS
 
+### Ninth Push Recording
+
+- `git commit -m "test: harden winssl broader suite online stability"`
+  - result: PASS
+  - commit: `16a6b71`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `9aaadeb..16a6b71`
+
+- `gh workflow run .github/workflows/wave-b-b2-manual.yml -f run_id=codex_winssl_20260517_183430 -f strict_closure=false`
+  - result: PASS
+  - summary:
+    - dispatched the ninth Windows runtime truth run on head `16a6b71`
+
+### Ninth Windows Manual Runtime Revalidation
+
+- `curl ... /actions/runs/25988526125`
+  - result: PASS after retry
+  - summary:
+    - run=`25988526125`
+    - head=`16a6b713267a7c546ececcddf2df87d446bca7ec`
+    - initial status became `completed/failure`
+
+- `curl ... /actions/runs/25988526125/jobs?per_page=100`
+  - result: PASS
+  - summary:
+    - `windows-gate` job=`76390359582`
+    - `linux-gate` SUCCESS
+    - `macos-gate` FAIL（旧 lane）
+    - `summary` SUCCESS
+
+- `gh run view 25988526125 --job 76390359582 --log-failed`
+  - result: PASS
+  - summary:
+    - `WinSSL Integration Tests (Multi-Scenario)` now exits with controlled failures instead of an unhandled crash
+    - only failing assertions are:
+      - `TLS 1.3 协商（异常）`
+      - `SSL 3.0 握手失败（已废弃）`
+    - both report `0x80090331`
+    - `Backend Comparison Tests` now pass the live-response compare and WinSSL negative-path coverage
+    - only remaining failure is `OpenSSL SSL3 握手失败（预期）`
+
+### Tenth-Order Repairs Applied
+
+- update `tests/winssl/test_winssl_integration_multi.pas`
+  - change: add `HasAlgorithmMismatchNativeError`
+  - change: classify TLS1.3/SSL3 algorithm-mismatch branches by concrete native error `0x80090331`
+
+- update `tests/integration/test_backend_comparison.pas`
+  - change: add `TestDeprecatedProtocolFailurePath`
+  - change: accept deprecated-protocol safety as either handshake failure or successful negotiation to a protocol other than `SSL3`
+  - change: keep `CreateConnection + Connect` inside the helper so WinSSL create-stage failures remain expected
+
+- update `tests/scripts/test_winssl_integration_multi_tls13_optional_contract.sh`
+  - change: require a centralized concrete `0x80090331` helper
+
+- update `tests/scripts/test_backend_comparison_online_stability_contract.sh`
+  - change: allow SSL3 coverage to be expressed through the centralized deprecated-protocol helper
+
+### Local Revalidation After Tenth Fix
+
+- `bash tests/scripts/test_winssl_integration_multi_tls13_optional_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_integration_multi_expected_failure_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_integration_multi_negative_path_wrap_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_backend_comparison_factory_registration_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_backend_comparison_online_stability_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_connection_safe_statistics_update_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_integration_multi_no_context_level_sni_guidance_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_performance_and_backend_comparison_no_context_level_sni_guidance_contract.sh`
+  - result: PASS
+
+- `fpc -Fu./src -Fu./tests -Fu./tests/integration -Fu./tests/framework tests/integration/test_backend_comparison.pas`
+  - result: PASS
+  - summary:
+    - linked `tests/integration/test_backend_comparison`
+    - the new helper placement now compiles on Linux as well
+
+- `git diff --check`
+  - result: PASS
+
 - `gh run view 25985958467 --json databaseId,status,conclusion,jobs,url`
   - result: PASS
   - summary:

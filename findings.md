@@ -962,3 +962,35 @@
   - `test_backend_comparison.pas` 新增 `GetHTTPStatusClass` 后使用了 `PosEx`
   - 对应 `uses` 需要补 `StrUtils`
   - 否则 focused contract 可以全绿，但 Pascal 编译会在新 helper 上翻车
+
+- 手动 Windows runtime run `25988526125`（head `16a6b71`）证明第九批修法已经把 broader-suite 问题继续收窄：
+  - 不再有未处理异常炸掉整个 suite
+  - 当前失败已经从“崩点”降为“受控 FAIL 的测试语义”
+
+- `test_winssl_integration_multi.pas` 在 `25988526125` 上暴露出两个同源失败：
+  - `TLS 1.3 协商（异常）` FAIL
+  - `SSL 3.0 握手失败（已废弃）` FAIL
+  - 两者打印出的 native truth 都是 `0x80090331`
+  - 这说明当前更可信的问题不是测试流程漏包，而是 `SEC_E_ALGORITHM_MISMATCH` 的静态常量判断不够稳，应该直接按 concrete native error 做 helper 判定
+
+- `test_backend_comparison.pas` 在 `25988526125` 上只剩一个失败：
+  - `OpenSSL SSL3 握手失败（预期）` FAIL
+  - 其余 live-response compare、WinSSL HTTP、OpenSSL HTTP、WinSSL SSL3 路径都已转绿
+  - 这说明当前更合理的断言语义是：
+    - 握手失败，算 PASS
+    - 如果连接成功，但实际协商协议不是 `SSL3`，也算 PASS
+    - 只有真的协商到 `SSL3` 才应算 FAIL
+
+- 当前第十批本地修法因此仍然保持在 tests/contracts 面：
+  - `tests/winssl/test_winssl_integration_multi.pas`
+    - 新增 `HasAlgorithmMismatchNativeError`
+    - 用 concrete native error `0x80090331` 统一驱动 TLS1.3/SSL3 expected-failure 分类
+  - `tests/integration/test_backend_comparison.pas`
+    - 新增 `TestDeprecatedProtocolFailurePath`
+    - 统一表达 “失败或未真正降到 SSL3 都算安全结果”
+    - helper 继续覆盖 `CreateConnection` 和 `Connect` 两段，避免把 WinSSL 的 create-stage 漏口引回来
+
+- 这批本地修法又抓出一个很典型的平台编译陷阱：
+  - `test_backend_comparison.pas` 在 Linux 编译面虽然不会运行 Windows 分支，但依然会编译整个过程体
+  - 只把 helper 放进 `{$IFDEF WINDOWS}` 会让 Linux 编译在调用点找不到标识符
+  - 正确做法是把 helper 放到 `Windows/Linux socket stub` 定义之后，让两侧都能看到同一个声明

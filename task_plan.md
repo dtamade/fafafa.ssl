@@ -93,7 +93,7 @@
   - `Backend Comparison Tests` 中：
     - 旧的实现层崩溃已经消失
     - 新的首要问题变成 live internet exact compare 假设过强，以及 `HTTP/SSL3` 负路径异常没有被视为 expected failure
-- [in_progress] 当前第九批 Windows runtime 修复已落地本地工作树，等待提交/推送后做第九次 manual run 复证：
+- [completed] 第九批 Windows runtime 修复已提交 `16a6b71` 并在第九次 manual run `25988526125` 的 `windows-gate` 上得到远端复证：
   - 新增 `tests/scripts/test_winssl_integration_multi_negative_path_wrap_contract.sh`
   - 新增 `tests/scripts/test_backend_comparison_online_stability_contract.sh`
   - 更新 `tests/winssl/test_winssl_integration_multi.pas`：
@@ -104,6 +104,28 @@
     - 删除 live response 的 MD5/长度完全一致假设，改为按 HTTP status class 比较
     - 把 `HTTP 端口` / `SSL3` 负路径异常视为 expected failure
     - 补上 `StrUtils`，让新的 `PosEx` 解析逻辑在 Pascal 编译面保持闭环
+- [completed] 第九次手动 runtime run `25988526125` 已证明第九批修复继续把故障边界前移到纯测试语义层：
+  - `Install dependencies` SUCCESS
+  - `Run quick WinSSL smoke` SUCCESS
+  - `Run Windows Wave B gate` SUCCESS
+  - `Run broader WinSSL runtime suite` 仍 FAIL，但不再有未处理崩溃
+  - `WinSSL Integration Tests (Multi-Scenario)` 现在只剩 2 个受控 FAIL：
+    - `TLS 1.3 协商（异常）` FAIL
+    - `SSL 3.0 握手失败（已废弃）` FAIL
+    - 两者的 native truth 都指向 `0x80090331`
+  - `Backend Comparison Tests` 已经跨过 live-response compare 与 WinSSL SSL3 负路径问题，只剩 `OpenSSL SSL3 握手失败（预期）` 1 个 FAIL
+- [in_progress] 当前第十批 Windows runtime 修复已落地本地工作树，等待提交/推送后做第十次 manual run 复证：
+  - 更新 `tests/winssl/test_winssl_integration_multi.pas`：
+    - 新增 `HasAlgorithmMismatchNativeError`
+    - 改为直接按 concrete native error `0x80090331` 判断 TLS1.3/SSL3 的 algorithm mismatch
+  - 更新 `tests/integration/test_backend_comparison.pas`：
+    - 新增 `TestDeprecatedProtocolFailurePath`
+    - 对 `WinSSL/OpenSSL SSL3` 统一接受两种安全结果：握手失败，或成功但实际未协商到 `SSL3`
+    - helper 覆盖 `CreateConnection + Connect` 全路径，不重新引入 WinSSL 的 create-stage 漏口
+  - 更新 `tests/scripts/test_winssl_integration_multi_tls13_optional_contract.sh`
+    - 要求集中化的 `0x80090331` 检测 helper
+  - 更新 `tests/scripts/test_backend_comparison_online_stability_contract.sh`
+    - 允许 `SSL3` 断言通过 centralized deprecated-protocol helper 表达，而不是强绑 `not Connect`
 - [completed] 复核远端失败证据（CI run `25893971783` / signer run `25901035350`）
 - [completed] 把 3 个真实问题写成 focused contract tests，并先观测到红灯
 - [completed] 修复 `.github/workflows/ci.yml` / `release.yml` / `release.yml.disabled` 的 WolfSSL 依赖缺口
@@ -737,13 +759,13 @@
 ## Current Blocker
 
 - 当前第一硬阻塞已经重新锁定在真实 Windows runtime lane，而不是静态治理或旧的 workflow hygiene：
-  - manual run `25987503677` 中 `Install dependencies` SUCCESS
-  - manual run `25987503677` 中 `Run quick WinSSL smoke` SUCCESS
-  - manual run `25987503677` 中 `Run Windows Wave B gate` SUCCESS
+  - manual run `25988526125` 中 `Install dependencies` SUCCESS
+  - manual run `25988526125` 中 `Run quick WinSSL smoke` SUCCESS
+  - manual run `25988526125` 中 `Run Windows Wave B gate` SUCCESS
   - 当前唯一首要失败步骤已经前移到 `Run broader WinSSL runtime suite`
 - `Run broader WinSSL runtime suite` 当前拆成两个已定位的真实问题：
-  - `tests/winssl/test_winssl_integration_multi.pas` 当前新的未处理崩点已经收窄到 `SSL 3.0` 负路径：`ESSLInitializationException` 会在 `CreateConnection` 阶段抛出，说明仅把 `Connect` 放进 expected-failure 保护还不够
-  - `tests/integration/test_backend_comparison.pas` 当前新的首要缺口已经从实现崩溃前移到测试语义：live internet exact MD5/长度比对过脆，`HTTP/SSL3` 负路径异常也仍未完全被视为 expected failure
+  - `tests/winssl/test_winssl_integration_multi.pas` 当前只剩 `TLS1.3-only` 与 `SSL3-only` 两个 algorithm-mismatch 分支被误记成 FAIL；它们已经不再崩 suite，而是纯分类错误
+  - `tests/integration/test_backend_comparison.pas` 当前只剩 `OpenSSL SSL3` 的断言语义过强；更合理的期望是“失败”或“成功但实际未降到 SSL3”都算安全结果
 - 当前本地没有新的语法/contract blocker：
   - 新增 focused contracts 已过
   - 受影响相邻 contract 已过
@@ -754,11 +776,11 @@
 
 ## Current Queue
 
-1. 同步 `task_plan.md` / `findings.md` / `progress.md` / 计划文档到 run `25987503677` 和当前第九批本地修复的最新真相。
-2. 提交当前第九批 Windows runtime 修复并推送到 `master`。
+1. 同步 `task_plan.md` / `findings.md` / `progress.md` / 计划文档到 run `25988526125` 和当前第十批本地修复的最新真相。
+2. 提交当前第十批 Windows runtime 修复并推送到 `master`。
 3. 重新 dispatch `wave-b-b2-manual.yml`，继续以 GitHub Windows runner 为唯一 truth source。
-4. 新 run 中优先检查 broader suite 的 `WinSSL Integration Tests (Multi-Scenario)` 是否不再在 `SSL3` negative-path 的 `CreateConnection` 阶段因未包裹异常而退出 `217`。
-5. 同一 run 中检查 broader suite 的 `Backend Comparison Tests` 是否已从 exact compare / negative-path 语义缺口继续前移到新的第一硬边界；如果两项都已转绿，只沿新的第一硬边界继续收口。
+4. 新 run 中优先检查 broader suite 的 `WinSSL Integration Tests (Multi-Scenario)` 是否不再把 `0x80090331` 的 TLS1.3/SSL3 分支记成 FAIL。
+5. 同一 run 中检查 broader suite 的 `Backend Comparison Tests` 是否已跨过 `OpenSSL SSL3` 的单点断言问题；如果两项都已转绿，只沿新的第一硬边界继续收口。
 
 ## Verification Discipline
 
@@ -781,7 +803,7 @@
 
 ## Stop Condition
 
-- 当前第九批修复的代码、计划、发现、进度文件都与 run `25987503677` 保持一致。
+- 当前第十批修复的代码、计划、发现、进度文件都与 run `25988526125` 保持一致。
 - 本批 focused contracts 与 `git diff --check` 继续通过。
 - 当前批次的最小 Pascal 编译面验证继续通过。
 - 当前批次已提交并推送到 `master`。

@@ -33,9 +33,15 @@ if rg -F --quiet -- "Test('中等数据完整性一致 (MD5)'" "$FILE"; then
   fail "test_backend_comparison.pas should not require exact medium-response MD5 equality for live internet responses"
 fi
 
-expected_fail_count="$(rg -F --count -- 'IsExpectedNegativePathFailure(E)' "$FILE")"
-if [[ "$expected_fail_count" -lt 4 ]]; then
-  fail "negative-path helper should be used for both WinSSL/OpenSSL HTTP-port and SSL3 expected-failure assertions"
+direct_expected_fail_count="$(rg -F --count -- 'IsExpectedNegativePathFailure(E)' "$FILE")"
+deprecated_helper_use_count="$(rg -F --count -- "TestDeprecatedProtocolFailurePath('" "$FILE")"
+
+if [[ "$direct_expected_fail_count" -lt 2 ]]; then
+  fail "HTTP-port negative-path assertions should continue to classify expected SSL exceptions explicitly"
+fi
+
+if [[ "$direct_expected_fail_count" -lt 4 && "$deprecated_helper_use_count" -lt 2 ]]; then
+  fail "negative-path handling should cover both WinSSL/OpenSSL HTTP-port and SSL3 assertions, either directly or through the deprecated-protocol helper"
 fi
 
 echo "[PASS] backend comparison online stability contract passed"

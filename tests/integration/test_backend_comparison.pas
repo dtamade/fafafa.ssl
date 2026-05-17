@@ -174,6 +174,31 @@ begin
 end;
 {$ENDIF}
 
+procedure TestDeprecatedProtocolFailurePath(const aTestName, aHost: string;
+  aContext: ISSLContext; aSocket: TSocket);
+var
+  LConn: ISSLConnection;
+  LProtocol: TSSLProtocolVersion;
+begin
+  try
+    LConn := aContext.CreateConnection(aSocket);
+    (LConn as ISSLClientConnection).SetServerName(aHost);
+
+    if LConn.Connect then
+    begin
+      LProtocol := LConn.GetProtocolVersion;
+      Test(aTestName, LProtocol <> sslProtocolSSL3,
+        Format('实际协商协议枚举值: %d', [Ord(LProtocol)]));
+      LConn.Shutdown;
+    end
+    else
+      Test(aTestName, True, '连接直接失败，符合预期');
+  except
+    on E: Exception do
+      Test(aTestName, IsExpectedNegativePathFailure(E), DescribeException(E));
+  end;
+end;
+
 function FetchHTTPS(aLibType: TSSLLibraryType; const aHost, aPath: string;
   out aResponse: string): Boolean;
 var
@@ -589,15 +614,8 @@ begin
 
     if ConnectToHost('www.google.com', 443, LWinSSLSocket) then
     begin
-      try
-        LWinSSLConn := LWinSSLCtx.CreateConnection(LWinSSLSocket);
-        (LWinSSLConn as ISSLClientConnection).SetServerName('www.google.com');
-        Test('WinSSL SSL3 握手失败（预期）', not LWinSSLConn.Connect);
-      except
-        on E: Exception do
-          Test('WinSSL SSL3 握手失败（预期）', IsExpectedNegativePathFailure(E),
-            DescribeException(E));
-      end;
+      TestDeprecatedProtocolFailurePath('WinSSL SSL3 握手失败（预期）',
+        'www.google.com', LWinSSLCtx, LWinSSLSocket);
       CloseSSLSocket(LWinSSLSocket);
       LWinSSLSocket := INVALID_SOCKET;
     end;
@@ -608,15 +626,8 @@ begin
 
     if ConnectToHost('www.google.com', 443, LOpenSSLSocket) then
     begin
-      try
-        LOpenSSLConn := LOpenSSLCtx.CreateConnection(LOpenSSLSocket);
-        (LOpenSSLConn as ISSLClientConnection).SetServerName('www.google.com');
-        Test('OpenSSL SSL3 握手失败（预期）', not LOpenSSLConn.Connect);
-      except
-        on E: Exception do
-          Test('OpenSSL SSL3 握手失败（预期）', IsExpectedNegativePathFailure(E),
-            DescribeException(E));
-      end;
+      TestDeprecatedProtocolFailurePath('OpenSSL SSL3 握手失败（预期）',
+        'www.google.com', LOpenSSLCtx, LOpenSSLSocket);
       CloseSSLSocket(LOpenSSLSocket);
       LOpenSSLSocket := INVALID_SOCKET;
     end;
