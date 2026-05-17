@@ -34,6 +34,17 @@
   - 失败点已经前移到“最后一条 release-control contract 是否能在 GitHub runner 默认工具集上运行”
   - 最小正确修法是让 contract 自身具备 `rg` 缺失时的 Python/grep fallback，而不是为了一个合同去扩大 release workflow 的依赖面
 
+- 第二次 release run `25991710335` 又继续把失败边界前移了一层：
+  - `rg` portability 修复后，公开 job 页面显示新的失败步骤已经变成 `Create source archive`
+  - 这说明 release 主链已经真正穿过了 `Run release gates`
+  - 当前更可能的根因不是发布权限，而是归档路径本身：workflow 一边归档 `.`，一边把 `${ARCHIVE_NAME}.tar.gz` 直接写在 repo 根目录
+  - 这类写法容易让 `tar` 在扫描 `.` 时把刚生成的 archive 自己也卷进去，产生自引用 / file changed 边界
+
+- 当前这条 release lane 的最小正确修法因此是归档 staging，而不是再扩大发布权限或改 release action：
+  - 先把 tarball 写到 `RUNNER_TEMP` 或等价的 repo 外路径
+  - 归档完成后再 `mv` 回工作目录，保持 upload / publish step 的既有输入名不变
+  - 同时用 focused contract 把“不能直接往被归档目录里写 tarball”固定下来
+
 - 第一次 Windows manual run `25985103443`（`windows-gate`）暴露的第一硬故障不是 WinSSL 逻辑，而是 workflow shell 入口：
   - `Run quick WinSSL smoke` 在真正测试前就失败
   - 根因是 workflow 用 `powershell` 执行 UTF-8/Unicode-heavy WinSSL 脚本

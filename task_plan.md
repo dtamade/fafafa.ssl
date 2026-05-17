@@ -14,6 +14,10 @@
   - `Run release gates` 在最后一个 `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh` 处失败
   - 根因不是编译、completeness、style、dry-run 或 release notes 真值，而是合同脚本直接依赖 `rg`
   - Ubuntu release runner 没有安装 `ripgrep`，因此脚本在 line 35 直接报 `rg: command not found`
+- [in_progress] 第二次正式 release run `25991710335` 已把新的第一硬故障前移到 source archive 输出路径：
+  - 新的 release run 已不再卡在 `rg` portability 问题
+  - 公开 job 页面显示失败步骤已前移到 `Create source archive`
+  - 当前最可疑根因是 workflow 在归档 `.` 的同时把输出 tarball 直接写在 repo 根目录，导致 `tar` 自咬
 - [completed] 当前跨平台 runtime 主线已经在同一 head `b95044d` 上闭环：
   - manual run `25989095571` 的 `windows-gate` / `macos-gate` / `linux-gate` / `summary` 全部 `SUCCESS`
   - 默认 `CI` run `25989090032` 同样 `SUCCESS`
@@ -800,14 +804,19 @@
   - run `25991512715` 已证明 release workflow 主体可走到最后一段 contract gate
   - 当前失败点是 `tests/scripts/test_release_workflow_v1_5_0_contract.sh` 对 `rg` 的硬依赖
   - 由于 GitHub Release 尚未发布成功，当前 `v1.5.0` tag 需要在修复后重指向新的 head 再重跑
+- 当前新的第一硬阻塞已经进一步前移到 source archive 生成路径：
+  - run `25991710335` 说明 `rg` portability 已经收口
+  - 当前失败步骤是 `Create source archive`
+  - 由于 GitHub Release 尚未发布成功，当前 `v1.5.0` tag 仍需要在这次修复后继续重指向新的 head 再重跑
 
 ## Current Queue
 
-1. 把 `tests/scripts/test_release_workflow_v1_5_0_contract.sh` 修成 “有 `rg` 用 `rg`，无 `rg` 回退到 Python/grep”。
-2. 新增 focused contract，锁定 “无 `rg` 的 release runner 也必须通过”。
-3. 本地通过 focused contracts 与 `git diff --check` 后提交并推送到 `master`。
-4. 把尚未成功发布的 `v1.5.0` tag 重指到修复后的 head，重新触发 `release.yml`。
-5. 若 rerun 全绿，再把当前 release-control 收口为 `v1.5.0` 已正式发布。
+1. 把 `release.yml` / `release.yml.disabled` 的 source archive 输出改到 `RUNNER_TEMP`，打完再移回工作目录。
+2. 新增 focused contract，锁定 tarball 不能直接写进被归档目录。
+3. 更新 release workflow contract，使其守护新的 staged-archive truth。
+4. 本地通过 focused contracts 与 `git diff --check` 后提交并推送到 `master`。
+5. 把尚未成功发布的 `v1.5.0` tag 重指到修复后的 head，重新触发 `release.yml`。
+6. 若 rerun 全绿，再把当前 release-control 收口为 `v1.5.0` 已正式发布。
 
 ## Verification Discipline
 

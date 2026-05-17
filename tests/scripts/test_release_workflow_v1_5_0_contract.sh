@@ -171,8 +171,12 @@ for workflow in ".github/workflows/release.yml" ".github/workflows/release.yml.d
     "$workflow uses the checked-in v1.5.0 release notes"
   require_match "$workflow" "uses:\\s*softprops/action-gh-release@${release_action_sha}\\b" \
     "$workflow uses the pinned softprops/action-gh-release commit for the Node24 release runtime"
-  require_match "$workflow" 'tar -czf "\$\{ARCHIVE_NAME\}\.tar\.gz"' \
-    "$workflow creates a source archive"
+  require_match "$workflow" 'archive_tmp="\$\{RUNNER_TEMP:-/tmp\}/\$\{ARCHIVE_NAME\}\.tar\.gz"' \
+    "$workflow stages the source archive outside the repo tree"
+  require_match "$workflow" 'tar -czf "\$archive_tmp"' \
+    "$workflow creates the staged source archive"
+  require_match "$workflow" 'mv "\$archive_tmp" "\$\{ARCHIVE_NAME\}\.tar\.gz"' \
+    "$workflow moves the staged source archive back after creation"
   require_literal "$workflow" "--exclude='./bin'" \
     "$workflow excludes bin/"
   require_literal "$workflow" "--exclude='./tmp'" \
@@ -197,6 +201,8 @@ for workflow in ".github/workflows/release.yml" ".github/workflows/release.yml.d
     "$workflow excludes Pascal unit outputs"
   require_literal "$workflow" "--exclude='*.exe'" \
     "$workflow excludes compiled executables"
+  require_absent "$workflow" 'tar -czf "\$\{ARCHIVE_NAME\}\.tar\.gz"' \
+    "$workflow no longer writes the archive directly inside the archived tree"
   require_absent "$workflow" 'build_linux\.sh' \
     "$workflow no longer uses the old build_linux.sh release path"
   require_absent "$workflow" 'run_tests_linux\.sh' \

@@ -149,6 +149,73 @@
   - summary:
     - new focused contract observed the same missing-`rg` red state before the script repair
 
+- update `tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - change:
+    - add `rg`-present fast path
+    - add Python/grep fallback for release runners without `rg`
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract_no_rg_fallback.sh`
+  - result after first fix: PASS
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result after first fix: PASS
+
+- `git commit -m "test: harden release contract without rg"`
+  - result: PASS
+  - commit: `f7173f9`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `b841405..f7173f9`
+
+- `git tag -f -a v1.5.0 -m "Release v1.5.0" f7173f9386f7d3d66873338f5d7d5384da39f65f && git push --force origin refs/tags/v1.5.0`
+  - result: PASS
+  - summary:
+    - retargeted the unreleased `v1.5.0` tag from the failed release head to `f7173f9`
+
+- `gh run view 25991710335 --json ...`
+  - result: PASS
+  - summary:
+    - new `Release v1.5.0` run `25991710335` started on head `f7173f9`
+    - job `Validate and publish v1.5.0` progressed past `Install dependencies` and `Verify version metadata`
+
+- `web open https://github.com/dtamade/fafafa.ssl/actions/runs/25991710335/job/76398948162`
+  - result: PASS
+  - summary:
+    - public job page showed the second failure moved forward to `Create source archive`
+
+- add `tests/scripts/test_release_workflow_v1_5_0_archive_outside_tree_contract.sh`
+  - purpose:
+    - require release archive staging outside the repo tree before moving the tarball back for upload/publish
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_archive_outside_tree_contract.sh`
+  - result before second fix: FAIL
+  - summary:
+    - current release workflow still wrote `tar -czf "${ARCHIVE_NAME}.tar.gz"` directly inside the archived tree
+
+- update `.github/workflows/release.yml`
+  - change:
+    - stage archive output at `archive_tmp="${RUNNER_TEMP:-/tmp}/${ARCHIVE_NAME}.tar.gz"`
+    - tar into `"$archive_tmp"`
+    - move the completed archive back to `${ARCHIVE_NAME}.tar.gz` for the upload/publish steps
+
+- update `.github/workflows/release.yml.disabled`
+  - change:
+    - keep the disabled template synchronized with the active release workflow
+
+- update `tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - change:
+    - require staged archive creation instead of direct in-tree tar output
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_archive_outside_tree_contract.sh`
+  - result after second fix: PASS
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result after second fix: PASS
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract_no_rg_fallback.sh`
+  - result after second fix: PASS
+
 ### Windows Runtime Failure Revalidation
 
 - `gh run view 25985356670 --log-failed`
