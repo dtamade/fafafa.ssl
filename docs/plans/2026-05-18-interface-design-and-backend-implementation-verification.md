@@ -89,3 +89,19 @@ bash tests/scripts/<new_contract>.sh
 fpc -B -Fu./src -Fu./tests -Fu./tests/framework ...
 git diff --check
 ```
+
+## Execution Status
+
+- 已完成批次 1：文档 public interface 真相收口
+  - 去掉活跃文档中并不存在的 `ISSLServerConnection`
+  - 新增 `tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
+
+- 已完成批次 2：runtime capability bool/support truth alignment
+  - 新增 `NormalizeLegacyCapabilityBooleans(...)`
+  - OpenSSL / FreePascal / WinSSL / MbedTLS / WolfSSL 统一在 `GetCapabilities` 返回前归一化 legacy boolean
+  - focused contracts 已切到 `*Support` truth，并新增 compatibility projection 一致性断言
+
+- 下一批建议
+  1. 收口 serializer / deserializer / diff 的双真相
+  2. 单独规划 context-level `ServerName` 兼容迁移
+  3. 最后再处理 `TSSLConfig` 跨层字段瘦身

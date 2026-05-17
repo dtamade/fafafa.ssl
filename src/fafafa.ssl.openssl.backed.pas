@@ -1157,6 +1157,8 @@ begin
   Result.CompatibilityLevel := 100;  // OpenSSL 是参考实现，完全兼容
   Result.KnownIssues := '';
 
+  NormalizeLegacyCapabilityBooleans(Result);
+
   InternalLog(sslLogDebug, Format('GetCapabilities: TLS1.3=%s, ALPN=%s, SNI=%s',
     [
       BoolToStr(Result.SupportsTLS13, True),

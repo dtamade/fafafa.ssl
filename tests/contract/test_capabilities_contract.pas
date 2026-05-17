@@ -5,7 +5,8 @@
  * 验证所有可用后端 GetCapabilities 返回合理值：
  * - MaxTLSVersion >= TLS12
  * - MinTLSVersion <= MaxTLSVersion
- * - SupportsSNI / SupportsALPN 为 True（主要后端）
+ * - major backend 的 SNI / ALPN support-level 非 none
+ * - legacy boolean 与 support-level 兼容视图保持一致
  * - BackendType 与后端一致
  * - Capability 字段完整性（无零值异常）
  *}
@@ -77,6 +78,11 @@ begin
   WriteLn('  [SKIP] ', AReason);
 end;
 
+function FeatureLevelPresent(ALevel: TSSLFeatureSupportLevel): Boolean;
+begin
+  Result := ALevel <> sslSupportNone;
+end;
+
 procedure TestCapabilities(ABackend: TSSLLibraryType);
 var
   LLib: ISSLLibrary;
@@ -122,15 +128,15 @@ begin
 
   // 4. SNI support (major backends should support SNI)
   if ABackend in MajorSNIWatchBackends then
-    WriteResult('SupportsSNI = True',
-      LCaps.SupportsSNI,
-      Format('SupportsSNI=%s', [BoolToStr(LCaps.SupportsSNI, True)]));
+    WriteResult('SNISupport <> None',
+      FeatureLevelPresent(LCaps.SNISupport),
+      Format('SNISupport=%d', [Ord(LCaps.SNISupport)]));
 
   // 5. ALPN support (major backends should support ALPN)
   if ABackend in MajorSNIWatchBackends then
-    WriteResult('SupportsALPN = True',
-      LCaps.SupportsALPN,
-      Format('SupportsALPN=%s', [BoolToStr(LCaps.SupportsALPN, True)]));
+    WriteResult('ALPNSupport <> None',
+      FeatureLevelPresent(LCaps.ALPNSupport),
+      Format('ALPNSupport=%d', [Ord(LCaps.ALPNSupport)]));
 
   // 6. BackendVersion non-empty and not placeholder
   WriteResult('BackendVersion non-empty',
@@ -166,6 +172,31 @@ begin
     (Ord(LCaps.ALPNSupport) >= Ord(Low(TSSLFeatureSupportLevel))) and
     (Ord(LCaps.ALPNSupport) <= Ord(High(TSSLFeatureSupportLevel))),
     Format('ALPNSupport=%d', [Ord(LCaps.ALPNSupport)]));
+
+  WriteResult('SupportsSNI matches SNISupport',
+    LCaps.SupportsSNI = FeatureLevelPresent(LCaps.SNISupport),
+    Format('SupportsSNI=%s SNISupport=%d',
+      [BoolToStr(LCaps.SupportsSNI, True), Ord(LCaps.SNISupport)]));
+
+  WriteResult('SupportsALPN matches ALPNSupport',
+    LCaps.SupportsALPN = FeatureLevelPresent(LCaps.ALPNSupport),
+    Format('SupportsALPN=%s ALPNSupport=%d',
+      [BoolToStr(LCaps.SupportsALPN, True), Ord(LCaps.ALPNSupport)]));
+
+  WriteResult('SupportsOCSPStapling matches OCSPStaplingSupport',
+    LCaps.SupportsOCSPStapling = FeatureLevelPresent(LCaps.OCSPStaplingSupport),
+    Format('SupportsOCSPStapling=%s OCSPStaplingSupport=%d',
+      [BoolToStr(LCaps.SupportsOCSPStapling, True), Ord(LCaps.OCSPStaplingSupport)]));
+
+  WriteResult('SupportsCertificateTransparency matches CertTransparencySupport',
+    LCaps.SupportsCertificateTransparency = FeatureLevelPresent(LCaps.CertTransparencySupport),
+    Format('SupportsCertificateTransparency=%s CertTransparencySupport=%d',
+      [BoolToStr(LCaps.SupportsCertificateTransparency, True), Ord(LCaps.CertTransparencySupport)]));
+
+  WriteResult('SupportsSessionTickets matches SessionTicketsSupport',
+    LCaps.SupportsSessionTickets = FeatureLevelPresent(LCaps.SessionTicketsSupport),
+    Format('SupportsSessionTickets=%s SessionTicketsSupport=%d',
+      [BoolToStr(LCaps.SupportsSessionTickets, True), Ord(LCaps.SessionTicketsSupport)]));
 end;
 
 var

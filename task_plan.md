@@ -27,6 +27,10 @@
 - [completed] 当前批次已落一条边界清晰的最小修复：
   - 修正文档中不存在的 `ISSLServerConnection` 承诺
   - 新增 `tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
+- [completed] 第二条边界清晰的 capability 真相修复已经落地：
+  - 在 `src/fafafa.ssl.base.pas` 新增 `NormalizeLegacyCapabilityBooleans(...)`
+  - OpenSSL / FreePascal / WinSSL / MbedTLS / WolfSSL 的 `GetCapabilities` 统一在返回前用 `*Support` 字段回填 legacy boolean 兼容视图
+  - capability focused contracts 已切到 “runtime truth 以 support-level 为准，legacy boolean 只是 compatibility projection”
 
 ## Scope
 
@@ -54,12 +58,13 @@
 
 ## Current Queue
 
-1. 建立本轮 plan / findings / progress 入口，并新增 `docs/plans/2026-05-18-interface-design-and-backend-implementation-verification.md`。
-2. 重新审查 public interface 与文档承诺，确认旧 audit 中的设计问题是否仍存在、是否已扩散到实现层。
-3. 对各 backend 的 `GetCapabilities` / `IsCipherSupported` / selector-facing truth 做横向对照，找出双真相、假阳性、未消费字段、文档漂移。
-4. 选择高价值、边界清晰、可用 focused contract 守住的问题做最小修复。
-5. 运行窄验证，更新文档与 working-memory，形成后续不重复拉起的稳定入口。
-6. 产出综合审查报告，并把下一批路线压缩成明确结论。
+1. 收口 serializer / deserializer / diff 层的 capability 双真相：
+   - 保持 legacy boolean 输入兼容
+   - 但明确 runtime / diff / selector 的真相源仍是 `*Support`
+2. 为 context-level `ServerName` 兼容路径单独建迁移计划：
+   - 不在 capability 真相批次里混做
+   - 明确 factory / builder / connection constructors / tests 的拆迁顺序
+3. 在 capability 与 SNI 迁移边界稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。
 
 ## Verification Discipline
 

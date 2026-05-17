@@ -145,3 +145,37 @@
 
 - `git diff --check`
   - result: PASS
+
+### Capability Runtime Truth Alignment
+
+- `git diff -- src/fafafa.ssl.base.pas src/fafafa.ssl.freepascal.lib.pas src/fafafa.ssl.openssl.backed.pas src/fafafa.ssl.winssl.lib.pas src/fafafa.ssl.mbedtls.lib.pas src/fafafa.ssl.wolfssl.lib.pas`
+  - result: PASS
+  - summary:
+    - confirmed this batch adds one shared normalization helper in `fafafa.ssl.base`
+    - confirmed all five live capability sources now normalize legacy boolean truth from the v1.2 support-level fields before caching/returning
+
+- `git diff -- tests/contract/test_capabilities_contract.pas tests/contract/test_backend_contract.pas tests/scripts/test_capability_legacy_bool_normalization_contract.sh`
+  - result: PASS
+  - summary:
+    - confirmed the new source contract guards helper adoption across all major backends
+    - confirmed contract assertions now trust `*Support` as runtime truth and also require bool/support-level projection consistency
+
+- `bash -n tests/scripts/test_capability_legacy_bool_normalization_contract.sh && bash tests/scripts/test_capability_legacy_bool_normalization_contract.sh`
+  - result: PASS
+  - summary:
+    - the shared normalization helper is declared in `src/fafafa.ssl.base.pas`
+    - OpenSSL / FreePascal / WinSSL / MbedTLS / WolfSSL all invoke `NormalizeLegacyCapabilityBooleans(Result);` in `GetCapabilities`
+
+- `mkdir -p tmp/test_capabilities_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_capabilities_contract -FEtmp/test_capabilities_contract -otmp/test_capabilities_contract/test_capabilities_contract tests/contract/test_capabilities_contract.pas && ./tmp/test_capabilities_contract/test_capabilities_contract`
+  - result: PASS
+  - summary:
+    - focused capability contract finished `63 passed, 0 failed, 1 skipped`
+    - major backends now pass support-level-first truth checks and all bool/support-level consistency assertions
+    - compile emitted only pre-existing repo warning families; no new normalization-related failures appeared
+
+- `mkdir -p tmp/test_backend_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_backend_contract -FEtmp/test_backend_contract -otmp/test_backend_contract/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/test_backend_contract/test_backend_contract`
+  - result: PASS
+  - summary:
+    - focused backend contract finished `111 passed, 0 failed, 24 skipped`
+    - optional interface alignment for SNI / CT / OCSP now follows the support-level truth and remains green across available backends
+    - Windows Schannel remains intentionally skipped on this Linux host, consistent with the repo's current platform boundary

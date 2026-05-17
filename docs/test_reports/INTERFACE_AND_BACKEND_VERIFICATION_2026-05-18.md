@@ -58,6 +58,40 @@
 - 新增 `tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
   - 静态守护“活跃文档不能再承诺源码里不存在的 public interface”。
 
+## 增量收口：runtime capability bool/support 真相对齐
+
+- `src/fafafa.ssl.base.pas` 新增 `NormalizeLegacyCapabilityBooleans(...)`
+  - 规则非常明确：runtime truth 以 `SNISupport` / `ALPNSupport` / `OCSPStaplingSupport` / `CertTransparencySupport` / `SessionTicketsSupport` 为准。
+  - legacy boolean 现在只作为 compatibility projection，由 shared helper 统一回填。
+
+- 以下 backend 的 `GetCapabilities` 已接入统一归一化：
+  - OpenSSL
+  - FreePascal
+  - WinSSL
+  - MbedTLS
+  - WolfSSL
+
+- focused contracts 已同步切换到 support-level truth：
+  - `tests/contract/test_capabilities_contract.pas`
+    - major backend 的 capability presence 改为检查 `SNISupport` / `ALPNSupport <> None`
+    - 新增 SNI / ALPN / OCSP / CT / SessionTickets 的 bool/support-level 一致性断言
+  - `tests/contract/test_backend_contract.pas`
+    - SNI / CT / OCSP optional interface alignment 改为信 `*Support <> None`
+
+- 这一步的意义不是删除 legacy 字段，而是先把 runtime 侧的双真相压成单一来源：
+  - backend 不再各自手填一套可能漂移的旧布尔值
+  - contract 也不再把 legacy boolean 当作主真相字段
+
+- focused 验证：
+  - `bash tests/scripts/test_capability_legacy_bool_normalization_contract.sh`
+    - PASS
+  - `tests/contract/test_capabilities_contract.pas`
+    - PASS (`63 passed, 0 failed, 1 skipped`)
+  - `tests/contract/test_backend_contract.pas`
+    - PASS (`111 passed, 0 failed, 24 skipped`)
+  - `git diff --check`
+    - PASS
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -81,9 +115,9 @@
 
 ### 下一批最值得做的事
 
-1. 给 capability model 建一个**单一真相规则**
-   - 明确 legacy boolean 只是兼容派生字段
-   - focused contract 覆盖 bool/support-level 一致性
+1. 收口 serializer / deserializer / diff 层的 capability 双真相
+   - runtime `GetCapabilities` 这一层已经完成 support-level 主真相化
+   - 下一步要解决的是旧输入兼容、序列化输出、diff 比较的规则统一
 
 2. 设计一份 **context-level SNI compatibility migration plan**
    - 先定义 compatibility shim 和 deprecation boundary

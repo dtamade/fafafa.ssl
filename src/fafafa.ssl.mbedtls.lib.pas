@@ -553,6 +553,8 @@ begin
     'Optimized for embedded systems; early-data, OCSP stapling, and certificate transparency ' +
     'are not currently supported.';
 
+  NormalizeLegacyCapabilityBooleans(Result);
+
   { v1.2.0: 缓存能力矩阵 }
   FCapabilitiesCache := Result;
   FCapabilitiesCached := True;

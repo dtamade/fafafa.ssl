@@ -1526,6 +1526,8 @@ begin
   Result.KnownIssues :=
     '0-RTT / early data is experimental and currently relies on a local persistent anti-replay replay-store path; if the path is unavailable or unwritable, resumed early data is rejected fail-closed.';
 
+  NormalizeLegacyCapabilityBooleans(Result);
+
   FCapabilitiesCache := Result;
   FCapabilitiesCached := True;
 end;

@@ -614,6 +614,8 @@ begin
   Result.CompatibilityLevel := 90;  // 90% 兼容性
   Result.KnownIssues := 'Feature availability depends on Windows version; does not support PEM private keys directly';
 
+  NormalizeLegacyCapabilityBooleans(Result);
+
   InternalLog(sslLogDebug, Format('GetCapabilities: TLS1.3=%s, ALPN=%s, SNI=%s (Win %d.%d.%d)',
     [
       BoolToStr(Result.SupportsTLS13, True),

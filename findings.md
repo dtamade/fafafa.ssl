@@ -57,3 +57,19 @@
   - `tests/test_factory_server_name_scope_clarification.pas` PASS，证明 client-side context `ServerName` 仍被正式支持为兼容路径
   - `tests/test_sslctxboth_client_capability_clarification.pas` PASS，证明多 backend 连接构造器仍主动继承 context-level `ServerName` fallback
   - 因此“删除 context-level SNI fallback”必须被当作一次兼容性迁移，而不是局部 bugfix
+
+- capability 双真相的 runtime 半边已经可以安全收口，而且应该先收 runtime、后碰 serializer：
+  - `src/fafafa.ssl.base.pas` 新增 `NormalizeLegacyCapabilityBooleans(...)`
+  - 它统一把 `SupportsSNI` / `SupportsALPN` / `SupportsOCSPStapling` / `SupportsCertificateTransparency` / `SupportsSessionTickets` 视为对应 `*Support <> sslSupportNone` 的兼容投影
+  - OpenSSL / FreePascal / WinSSL / MbedTLS / WolfSSL 的 `GetCapabilities` 现在都在返回前走同一条归一化路径
+  - 这样 runtime live truth 不再分散在各 backend 自己手填的 legacy boolean 上
+
+- capability focused contracts 也已经切换到 support-level truth：
+  - `tests/contract/test_capabilities_contract.pas` 对 major backend 的 SNI / ALPN 改为检查 `SNISupport` / `ALPNSupport <> None`
+  - 同时新增 bool/support-level 一致性断言，直接钉住兼容投影必须同步
+  - `tests/contract/test_backend_contract.pas` 对 SNI / CT / OCSP optional interface alignment 也改为信 `*Support <> None`
+  - 这说明“runtime truth 以 support-level 为准”已经不只是设计意见，而是被合同固定下来的行为规范
+
+- 但 capability 双真相还没有全系统收完：
+  - serializer / deserializer / diff 仍然同时 round-trip 和比较两套字段
+  - 下一批应该设计“旧输入兼容、内部真相单一”的规则，而不是现在就删除 legacy boolean 字段

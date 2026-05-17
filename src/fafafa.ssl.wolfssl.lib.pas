@@ -514,6 +514,8 @@ begin
     'Feature availability depends on build/runtime helpers; early-data may degrade to none ' +
     'when required helpers are unavailable; OCSP stapling remains experimental.';
 
+  NormalizeLegacyCapabilityBooleans(Result);
+
   { v1.2.0: 缓存能力矩阵 }
   FCapabilitiesCache := Result;
   FCapabilitiesCached := True;

@@ -127,6 +127,11 @@ begin
   WriteLn('--- ', ATitle, ' ---');
 end;
 
+function FeatureLevelPresent(ALevel: TSSLFeatureSupportLevel): Boolean;
+begin
+  Result := ALevel <> sslSupportNone;
+end;
+
 {**
  * Helpers
  *}
@@ -675,13 +680,13 @@ begin
       LCtx := LLib.CreateContext(sslCtxClient);
       LConn := LCtx.CreateConnection(LProbeStream);
 
-      if LCaps.SupportsSNI then
+      if FeatureLevelPresent(LCaps.SNISupport) then
       begin
         if not Supports(LConn, ISSLClientConnection, LClientConn) then
         begin
           WriteLn('  [FAIL] SNI-capable backend does not expose ISSLClientConnection');
           AddResult('ClientConnectionSNIInterfaceAligned', ABackend, False,
-            'SupportsSNI=True but connection does not expose ISSLClientConnection');
+            'SNISupport<>None but connection does not expose ISSLClientConnection');
           Exit;
         end;
 
@@ -704,7 +709,7 @@ begin
         begin
           WriteLn('  [FAIL] Backend without SNI capability still exposes ISSLClientConnection');
           AddResult('ClientConnectionSNIInterfaceAligned', ABackend, False,
-            'SupportsSNI=False but connection still exposes ISSLClientConnection');
+            'SNISupport=None but connection still exposes ISSLClientConnection');
         end
         else
         begin
@@ -751,19 +756,19 @@ begin
       LCtx := LLib.CreateContext(sslCtxClient);
       LConn := LCtx.CreateConnection(LProbeStream);
 
-      if LCaps.SupportsCertificateTransparency then
+      if FeatureLevelPresent(LCaps.CertTransparencySupport) then
       begin
         if not Supports(LConn, ISSLCertificateTransparency, LCT) then
         begin
           WriteLn('  [FAIL] CT-capable backend does not expose ISSLCertificateTransparency');
           AddResult('ClientConnectionCTInterfaceAligned', ABackend, False,
-            'SupportsCertificateTransparency=True but connection does not expose ISSLCertificateTransparency');
+            'CertTransparencySupport<>None but connection does not expose ISSLCertificateTransparency');
         end
         else if SameText(LCT.GetCertificateTransparencyStatus, 'Not Supported') then
         begin
           WriteLn('  [FAIL] CT-capable backend still falls back to base CT stub');
           AddResult('ClientConnectionCTInterfaceAligned', ABackend, False,
-            'SupportsCertificateTransparency=True but CT status still reports Not Supported');
+            'CertTransparencySupport<>None but CT status still reports Not Supported');
         end
         else
         begin
@@ -777,7 +782,7 @@ begin
         begin
           WriteLn('  [FAIL] Backend without CT capability still exposes ISSLCertificateTransparency');
           AddResult('ClientConnectionCTInterfaceAligned', ABackend, False,
-            'SupportsCertificateTransparency=False but connection still exposes ISSLCertificateTransparency');
+            'CertTransparencySupport=None but connection still exposes ISSLCertificateTransparency');
         end
         else
         begin
@@ -858,19 +863,19 @@ begin
       LCtx := LLib.CreateContext(sslCtxClient);
       LConn := LCtx.CreateConnection(LProbeStream);
 
-      if LCaps.SupportsOCSPStapling then
+      if FeatureLevelPresent(LCaps.OCSPStaplingSupport) then
       begin
         if not Supports(LConn, ISSLOCSPStapling, LOCSP) then
         begin
           WriteLn('  [FAIL] OCSP-capable backend does not expose ISSLOCSPStapling');
           AddResult('ClientConnectionOCSPInterfaceAligned', ABackend, False,
-            'SupportsOCSPStapling=True but connection does not expose ISSLOCSPStapling');
+            'OCSPStaplingSupport<>None but connection does not expose ISSLOCSPStapling');
         end
         else if SameText(LOCSP.GetOCSPResponseStatus, 'Not Supported') then
         begin
           WriteLn('  [FAIL] OCSP-capable backend still falls back to base OCSP stub');
           AddResult('ClientConnectionOCSPInterfaceAligned', ABackend, False,
-            'SupportsOCSPStapling=True but OCSP status still reports Not Supported');
+            'OCSPStaplingSupport<>None but OCSP status still reports Not Supported');
         end
         else
         begin
@@ -884,7 +889,7 @@ begin
         begin
           WriteLn('  [FAIL] Backend without OCSP capability still exposes ISSLOCSPStapling');
           AddResult('ClientConnectionOCSPInterfaceAligned', ABackend, False,
-            'SupportsOCSPStapling=False but connection still exposes ISSLOCSPStapling');
+            'OCSPStaplingSupport=None but connection still exposes ISSLOCSPStapling');
         end
         else
         begin

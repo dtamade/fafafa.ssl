@@ -1905,6 +1905,11 @@ function IsFeatureUsable(ASupport: TSSLFeatureSupportLevel): Boolean;
     @returns True 如果已弃用 *}
 function IsFeatureDeprecated(ASupport: TSSLFeatureSupportLevel): Boolean;
 
+{** 用 v1.2 support-level 字段回填 legacy boolean 兼容视图
+    @param ACaps 后端能力矩阵
+    @note runtime truth 以 support-level 字段为准；legacy boolean 仅作兼容派生 *}
+procedure NormalizeLegacyCapabilityBooleans(var ACaps: TSSLBackendCapabilities);
+
 {** 检查是否为原生 FreePascal 后端
     @param ACaps 后端能力矩阵
     @returns True 如果为纯 Pascal 实现 *}
@@ -2346,6 +2351,15 @@ end;
 function IsFeatureDeprecated(ASupport: TSSLFeatureSupportLevel): Boolean;
 begin
   Result := ASupport = sslSupportDeprecated;
+end;
+
+procedure NormalizeLegacyCapabilityBooleans(var ACaps: TSSLBackendCapabilities);
+begin
+  ACaps.SupportsSNI := ACaps.SNISupport <> sslSupportNone;
+  ACaps.SupportsALPN := ACaps.ALPNSupport <> sslSupportNone;
+  ACaps.SupportsOCSPStapling := ACaps.OCSPStaplingSupport <> sslSupportNone;
+  ACaps.SupportsCertificateTransparency := ACaps.CertTransparencySupport <> sslSupportNone;
+  ACaps.SupportsSessionTickets := ACaps.SessionTicketsSupport <> sslSupportNone;
 end;
 
 function IsNativeBackend(const ACaps: TSSLBackendCapabilities): Boolean;
