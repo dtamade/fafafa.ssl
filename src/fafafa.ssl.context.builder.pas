@@ -70,6 +70,10 @@ type
     function WithSafeDefaults: ISSLContextBuilder;  // Modern secure defaults
 
     // Advanced options
+    { Compatibility-only context-level SNI.
+      New client code should prefer per-connection hostname/SNI via
+      TSSLConnectionBuilder.WithHostname(...) or
+      ISSLClientConnection.SetServerName(...). }
     function WithSNI(const AServerName: string): ISSLContextBuilder;
     function WithALPN(const AProtocols: string): ISSLContextBuilder;
     function WithSessionCache(AEnabled: Boolean): ISSLContextBuilder;
@@ -181,7 +185,34 @@ uses
   fafafa.ssl.factory,
   fafafa.ssl.exceptions,
   fafafa.ssl.freepascal.context.material,
+  fafafa.ssl.logging,
   fpjson, jsonparser;  // JSON support for Phase 2.1.3
+
+procedure LogBuilderContextLevelServerNameCompatibilityWarning(
+  const ACallSite: string;
+  AForServer: Boolean
+);
+begin
+  if AForServer then
+    TSecurityLog.Warning(
+      'ContextBuilder',
+      Format(
+        '%s is applying WithSNI as deprecated context-level ServerName compatibility on a server context; ' +
+        'server-side connections ignore it.',
+        [ACallSite]
+      )
+    )
+  else
+    TSecurityLog.Warning(
+      'ContextBuilder',
+      Format(
+        '%s is applying WithSNI for deprecated context-level SNI compatibility; ' +
+        'prefer per-connection hostname via TSSLConnectionBuilder.WithHostname, ' +
+        'ISSLClientConnection.SetServerName, or TSSLConnector.Connect*(..., ServerName).',
+        [ACallSite]
+      )
+    );
+end;
 
 type
   { Internal builder implementation }
@@ -1201,6 +1232,10 @@ begin
   // SNI and ALPN
   if FServerName <> '' then
   begin
+    LogBuilderContextLevelServerNameCompatibilityWarning(
+      'TSSLContextBuilderImpl.BuildClient',
+      False
+    );
     {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
     Result.SetServerName(FServerName);
     {$POP}
@@ -1366,6 +1401,10 @@ begin
 
   if FServerName <> '' then
   begin
+    LogBuilderContextLevelServerNameCompatibilityWarning(
+      'TSSLContextBuilderImpl.BuildServer',
+      True
+    );
     {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
     Result.SetServerName(FServerName);
     {$POP}
@@ -1483,11 +1522,11 @@ begin
   begin
     if AForServer then
       Result.AddWarning(
-        'WithSNI stores deprecated context-level ServerName on server contexts; server-side connections ignore it'
+        'WithSNI stores deprecated context-level ServerName compatibility on server contexts; server-side connections ignore it'
       )
     else
       Result.AddWarning(
-        'WithSNI configures deprecated context-level SNI; prefer per-connection SNI via ISSLClientConnection.SetServerName'
+        'WithSNI configures deprecated context-level SNI compatibility; prefer per-connection hostname via TSSLConnectionBuilder.WithHostname or ISSLClientConnection.SetServerName'
       );
   end;
 

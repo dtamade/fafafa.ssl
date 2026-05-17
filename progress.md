@@ -204,6 +204,61 @@
     - factory/client compatibility behavior remains intact after backend shim extraction
     - final run finished `6 passed, 0 failed`
 
+### Builder ServerName Compatibility Warning
+
+- add `docs/plans/2026-05-18-builder-servername-compatibility-warning.md`
+  - purpose:
+    - define the next bounded builder-surface batch after the shared shim landed
+    - keep the repo-level route anchored on runtime compatibility warning alignment instead of broader surface redesign
+
+- add `tests/test_context_builder_server_name_compatibility_warning.pas`
+  - purpose:
+    - prove builder runtime path still silently applies `WithSNI(...)`
+    - lock the exact warning expectations for `BuildClient`, `BuildServer`, and the no-SNI quiet path
+
+- `mkdir -p tmp/test_context_builder_server_name_compatibility_warning && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_context_builder_server_name_compatibility_warning -FEtmp/test_context_builder_server_name_compatibility_warning -otmp/test_context_builder_server_name_compatibility_warning/test_context_builder_server_name_compatibility_warning tests/test_context_builder_server_name_compatibility_warning.pas && ./tmp/test_context_builder_server_name_compatibility_warning/test_context_builder_server_name_compatibility_warning`
+  - result: RED
+  - summary:
+    - initial run failed 8 assertions
+    - `BuildClient` / `BuildServer` both still silently applied `WithSNI(...)`
+    - no runtime warning named `WithSNI`, no compatibility-only phrasing, and no builder callsite evidence existed yet
+
+- update `src/fafafa.ssl.context.builder.pas`
+  - change:
+    - add `LogBuilderContextLevelServerNameCompatibilityWarning(...)`
+    - emit runtime warning before `BuildClient` / `BuildServer` apply `FServerName` to the context
+    - align validation wording so client/server `WithSNI(...)` warnings follow the same compatibility terminology
+    - add a short interface comment marking `WithSNI(...)` as compatibility-only
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - extend the `Client SNI Compatibility Note` so it explicitly includes `TSSLContextBuilder.WithSNI(...)`
+    - point new code toward `TSSLConnectionBuilder.WithHostname(...)` in addition to the per-connection APIs already documented
+
+- `mkdir -p tmp/test_context_builder_server_name_compatibility_warning && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_context_builder_server_name_compatibility_warning -FEtmp/test_context_builder_server_name_compatibility_warning -otmp/test_context_builder_server_name_compatibility_warning/test_context_builder_server_name_compatibility_warning tests/test_context_builder_server_name_compatibility_warning.pas && ./tmp/test_context_builder_server_name_compatibility_warning/test_context_builder_server_name_compatibility_warning`
+  - result: RED -> GREEN
+  - summary:
+    - final run passed all 12 assertions
+    - builder runtime path no longer stays silent when `WithSNI(...)` is applied
+    - the quiet path without `WithSNI(...)` remains quiet
+
+- `mkdir -p tmp/test_config_validation && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_config_validation -FEtmp/test_config_validation -otmp/test_config_validation/test_config_validation tests/config/test_config_validation.pas && ./tmp/test_config_validation/test_config_validation`
+  - result: PASS
+  - summary:
+    - validation warning semantics stayed aligned after the builder wording update
+    - final run finished `53 passed, 0 failed`
+
+- `mkdir -p tmp/test_context_builder_server_servername_runtime_consistency && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_context_builder_server_servername_runtime_consistency -FEtmp/test_context_builder_server_servername_runtime_consistency -otmp/test_context_builder_server_servername_runtime_consistency/test_context_builder_server_servername_runtime_consistency tests/test_context_builder_server_servername_runtime_consistency.pas && ./tmp/test_context_builder_server_servername_runtime_consistency/test_context_builder_server_servername_runtime_consistency`
+  - result: PASS
+  - summary:
+    - builder client/server compatibility behavior remained intact after adding runtime warnings
+    - final run finished `6 passed, 0 failed`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remained after the builder warning batch
+
 ### Context ServerName Compatibility Roadmap Freeze
 
 - `rg -n "SetServerName\\(|GetServerName\\(|WithSNI\\(|ServerName\\b" src tests docs | sed -n '1,320p'`

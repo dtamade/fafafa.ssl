@@ -111,6 +111,13 @@ Delivered second cut:
 - `src/fafafa.ssl.base.pas` and `docs/reference/API_REFERENCE.md` now describe the field as compatibility-only instead of a normal recommended path
 - focused regressions proved scope, isolation, and logging-scope behavior stayed green
 
+Delivered third cut:
+
+- `TSSLContextBuilderImpl.BuildClient` / `BuildServer` no longer silently apply `WithSNI(...)`
+- builder runtime path now emits explicit compatibility warnings through `TSecurityLog.Warning('ContextBuilder', ...)`
+- `docs/reference/API_REFERENCE.md` now explicitly classifies `TSSLContextBuilder.WithSNI(...)` as compatibility-only
+- focused builder warning regressions and adjacent validation/runtime consistency tests stayed green
+
 ### Phase C: Replace Backend Inherited Fallback With Explicit Compatibility Shim
 
 **Target:** stop each backend constructor from silently reading deprecated context state directly.
@@ -151,6 +158,7 @@ Candidates:
   - Phase A discovery/lockpoint mapping complete
   - Phase B builder surface first cut complete
   - Phase B factory/config write-surface narrowing complete
+  - builder runtime warning alignment complete
   - Phase C shared compatibility shim first cut complete
 - `TSSLConfig` cross-layer slimming: intentionally deferred until SNI migration stabilizes
 
@@ -164,7 +172,7 @@ Candidates:
 Choose one bounded implementation family only:
 
 1. **Final surface cleanup prep**
-   - re-evaluate whether `TSSLConfig.ServerName` and builder `WithSNI(...)` still need their current naming/placement once the shared shim exists
+   - re-evaluate whether `TSSLConfig.ServerName` and builder `WithSNI(...)` still need their current naming/placement now that builder/factory/runtime paths all expose compatibility warnings
 2. **Behavior migration RED selection**
    - decide which intentional-compat tests will be rewritten before any real fallback deletion
    - explicitly define new precedence between builder/factory/context and per-connection hostname paths

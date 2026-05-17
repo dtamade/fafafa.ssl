@@ -313,6 +313,39 @@
   - backend constructor 已不再是五份分散的 direct deprecated reads
   - 下一批真正该讨论的是 public/high-level surface cleanup 和 behavior migration RED，而不是再回头逐个 backend 做重复治理
 
+## 增量收口：builder runtime compatibility warning
+
+- shared shim 落地后，高层 surface 还剩最后一个明显不对称：
+  - `ValidateClient` / `ValidateServer` 已经会对 `WithSNI(...)` 发 deprecated compatibility warning
+  - 但真实 `BuildClient` / `BuildServer` 路径此前仍然静默应用同一份兼容写入
+  - 这让 builder 的 validation truth 与 runtime truth 分裂，也让 `WithSNI(...)` 继续像一个正常主路径
+
+- 这轮修法把 builder 的 runtime truth 收回到和 validation 同一条线上：
+  - `src/fafafa.ssl.context.builder.pas`
+    - 新增 `LogBuilderContextLevelServerNameCompatibilityWarning(...)`
+    - `BuildClient` 在应用 `WithSNI(...)` 时，显式提示这是 deprecated context-level SNI compatibility
+    - `BuildServer` 在应用 `WithSNI(...)` 时，显式提示这只是 deprecated context-level ServerName compatibility，且 server-side connections ignore it
+  - `ValidateClient` / `ValidateServer` 也同步沿用同样的 compatibility 术语
+  - `ISSLContextBuilder.WithSNI(...)` 的接口注释与 `docs/reference/API_REFERENCE.md` 也已经一起降格成 compatibility-only 入口
+
+- focused RED -> GREEN 证明这个缺口是真问题，而且已经被最小收口：
+  - `tests/test_context_builder_server_name_compatibility_warning.pas`
+    - 初始 8 条断言失败，直接证明 builder runtime path 原先完全静默
+    - 修复后 `12 passed, 0 failed`
+  - `tests/config/test_config_validation.pas`
+    - PASS (`53 passed, 0 failed`)
+    - 说明 validation 语义在文案对齐后仍保持绿色
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+    - PASS (`6 passed, 0 failed`)
+    - 说明 builder client/server 当前兼容行为没有被 runtime warning 误伤
+
+- 这一步的价值不是再加一层日志，而是把 high-level write surfaces 的状态真正统一了：
+  - builder import/export 有 compatibility marker
+  - builder runtime path 有 warning
+  - factory/config runtime path 有 warning
+  - backend fallback 有 shared shim
+  - 因此接下来终于可以直接讨论第一条 behavior migration RED，而不是继续清理“沉默兼容入口”
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -336,9 +369,9 @@
 
 ### 下一批最值得做的事
 
-1. 进入 **context-level SNI compatibility migration** 的 Phase D 准备
-   - 现在 shared compatibility shim 已经存在
-   - 下一步应评估 `TSSLConfig.ServerName` / builder `WithSNI(...)` 的最终 surface cleanup 切口
+1. 进入 **context-level SNI compatibility migration** 的 behavior migration RED 选择
+   - 现在 builder/factory/runtime/shared-shim 都已经显式暴露 compatibility 边界
+   - 下一步应明确哪一组 intentional compatibility tests 先改，来启动第一条真实行为迁移
 
 2. 再决定 behavior migration 的第一条 RED
    - 明确哪些 intentional-compat tests 会被改写

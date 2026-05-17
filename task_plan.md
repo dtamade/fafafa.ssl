@@ -61,6 +61,10 @@
   - OpenSSL / FreePascal / WolfSSL / MbedTLS / WinSSL 的 constructor fallback 已统一改走 `GetContextLevelServerNameCompatibilityValue(...)`
   - direct deprecated `AContext.GetServerName` / `FContext.GetServerName` 读取已从五个 backend 本地构造路径移除
   - focused source contract 与跨 backend fallback runtime regressions 均保持绿色
+- [completed] `context-level ServerName` 的 builder runtime warning 已与 validation / factory 对齐：
+  - `TSSLContextBuilderImpl.BuildClient` / `BuildServer` 在应用 `WithSNI(...)` 兼容写入前，都会发出显式 warning
+  - `docs/reference/API_REFERENCE.md` 已把 `WithSNI(...)` 也降格成 compatibility-only 入口
+  - focused builder warning regressions、validation regressions 与 runtime consistency regressions 均保持绿色
 
 ## Scope
 
@@ -88,12 +92,12 @@
 
 ## Current Queue
 
-1. 在 shared shim 落稳后，开始 `context-level ServerName` Phase D 准备：
-   - 缩减 `TSSLConfig.ServerName` 的职责
-   - 再判断 builder `WithSNI(...)` 是否还需要保留当前命名/入口
-2. 若要真正删除兼容行为，先补 dedicated RED：
+1. 若要真正删除兼容行为，先补 dedicated RED：
    - 明确哪些 intentional-compat tests 会被改写
    - 明确 connector / connection-builder / factory / builder 四层的新优先级和失败语义
+2. 在 dedicated RED 明确后，再评估最终 public surface cleanup：
+   - `TSSLConfig.ServerName` 是否继续留在当前 record 上
+   - builder `WithSNI(...)` 是否继续保留当前命名/入口
 3. 在 capability 与 SNI 迁移边界都稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。
 4. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
 

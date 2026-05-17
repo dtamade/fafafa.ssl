@@ -201,3 +201,25 @@
 - 因而 SNI 主线的剩余问题已经再次前移：
   - backend constructor 不再是散点收口对象
   - 下一批应该讨论的是 public/high-level surface cleanup，而不是重新逐个 backend 找 direct fallback read
+
+- 继续往前收后，builder surface 的一个真实缺口也已经被证实并修掉：
+  - `ValidateClient` / `ValidateServer` 早就会对 `WithSNI(...)` 发 deprecated compatibility warning
+  - 但真实 `BuildClient` / `BuildServer` 路径此前仍然会静默应用它
+  - 这造成 builder 的 validation truth 与 runtime truth 不对齐，也让 `WithSNI(...)` 看起来仍像正常主路径
+
+- 当前修法把 builder 的 public/runtime/validation 三层重新对齐到了同一套术语：
+  - `BuildClient` 现在会显式 warning：
+    - `WithSNI` 是 deprecated context-level SNI compatibility
+    - 推荐迁移到 `TSSLConnectionBuilder.WithHostname(...)` / `ISSLClientConnection.SetServerName(...)` / `TSSLConnector.Connect*(..., ServerName)`
+  - `BuildServer` 现在会显式 warning：
+    - `WithSNI` 只是 deprecated context-level ServerName compatibility
+    - server-side connections ignore it
+  - `ValidateClient` / `ValidateServer` 也同步沿用这条术语线，不再只在 validation 里单独说一套
+
+- 这使得 `context-level ServerName` 的高层 surface 已经基本不再“静默”：
+  - builder import/export 会打 compatibility marker
+  - builder runtime path 会发 warning
+  - factory/config runtime path 会发 warning
+  - backend constructor fallback 已收成 shared shim
+
+- 因而真正剩下的已经不是“哪里还在默默保留旧语义”，而是“哪一组 intentional compatibility tests 先改，才能开始第一条真实 behavior migration RED”
