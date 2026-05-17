@@ -81,6 +81,32 @@
   - summary:
     - repo root has no `package.json`, so no repo-local prettier pass was run for this markdown-only truth-sync batch
 
+### Release-Control Truth Sync Closeout
+
+- `git commit -m "docs: sync release-control truth to green runtime evidence"`
+  - result: PASS
+  - commit: `8fad8d5`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `b95044d..8fad8d5`
+
+- `git rev-parse HEAD`
+  - result: PASS
+  - summary:
+    - current head is `8fad8d5949fc9246a02fe3ac3f26fd329bff5975`
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - worktree returned to clean state after push
+
+- `gh run list --workflow ci.yml --limit 5 --json databaseId,headSha,status,conclusion,displayTitle,event,url | jq -r '.[] | select(.headSha=="8fad8d5f422ebfd0da49496716ef767ef0748b0d") | [.databaseId,.status,.conclusion,.event,.url] | @tsv'`
+  - result: PASS
+  - summary:
+    - no matching auto `CI` run was observed within the quick check window
+    - this batch only changed docs/contracts, so the closeout did not block on waiting for a new remote run
+
 ### Windows Runtime Failure Revalidation
 
 - `gh run view 25985356670 --log-failed`

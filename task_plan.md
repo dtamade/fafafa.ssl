@@ -10,10 +10,10 @@
   - manual run `25989095571` 的 `windows-gate` / `macos-gate` / `linux-gate` / `summary` 全部 `SUCCESS`
   - 默认 `CI` run `25989090032` 同样 `SUCCESS`
   - 这说明当前 release-control 不再有新的 Windows/macOS/Linux runtime blocker
-- [in_progress] 当前真正的残余问题已经从 runtime 故障切换成控制面真相漂移：
-  - `docs/test_reports/RELEASE_READINESS_V1.5.0.md` 仍写着 `READY_FOR_MAIN_MERGE`
-  - `docs/plans/2026-05-12-release-v1.5.0-formalization.md` / `RELEASE_NOTES_V1.5.0.md` / `.github/README.md` 仍保留 Linux-only 或 deferred WinSSL 叙事
-  - `tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh` 与 `tests/scripts/test_release_workflow_v1_5_0_contract.sh` 仍把旧叙事固化成 contract truth
+- [completed] 当前真正的流程漂移已经从 runtime 故障收口到控制面真相同步，并已完成修正：
+  - `docs/test_reports/RELEASE_READINESS_V1.5.0.md` 已改为 `PASS_PENDING_APPROVAL`
+  - `docs/plans/2026-05-12-release-v1.5.0-formalization.md` / `RELEASE_NOTES_V1.5.0.md` / `.github/README.md` 已切到当前 green runtime truth
+  - `tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh` 与 `tests/scripts/test_release_workflow_v1_5_0_contract.sh` 已同步到新的 release-control truth
 
 - [completed] 当前路线已经从“Windows/WinSSL 保持 `static-only`”纠偏为“GitHub manual workflow 可提供真实 Windows runtime 证据”：
   - 仓库公开后，`wave-b-b2-manual.yml` 已可真实 dispatch
@@ -788,20 +788,14 @@
 - 当前没有新的 runtime blocker：
   - manual run `25989095571` 已证明 `windows-gate` / `macos-gate` / `linux-gate` 全绿
   - 默认 `CI` run `25989090032` 已证明当前 head 没有误伤自动主线
-- 当前第一硬问题是 release-control 控制面与 contracts 还在讲旧故事：
-  - readiness / release plan / release notes / workflow docs 仍把 WinSSL runtime proof 当作 deferred follow-up
-  - 如果不修，这些旧文字与旧合同会继续把后续工作流拉回一个已经失效的 Linux-only 发布标准
 - 当前真正剩余的 release gate 是人工审批，而不是技术验证：
   - latest tag 仍是 `v1.4.3`
   - `v1.5.0` tag / GitHub Release 未经用户明确批准不得创建
 
 ## Current Queue
 
-1. 同步 `task_plan.md` / `findings.md` / `progress.md` 到 head `b95044d`、manual run `25989095571`、CI run `25989090032` 的最新真相。
-2. 更新 `docs/test_reports/RELEASE_READINESS_V1.5.0.md`、`docs/plans/2026-05-12-release-v1.5.0-formalization.md`、`docs/ROADMAP.md`、`RELEASE_NOTES_V1.5.0.md`、`.github/README.md`，去掉 Linux-only / deferred WinSSL 旧叙事。
-3. 更新相关 contracts，让 release-control truth 与当前 green runtime evidence 一致。
-4. 做一次窄验证并提交推送。
-5. 把剩余 gate 明确收口为“等待用户批准创建 `v1.5.0` tag / release”。
+1. 等待用户明确批准是否创建 `v1.5.0` tag / GitHub Release。
+2. 如果用户暂不发版，就从新的产品实现线重新选下一条 high-value queue，不再重开这条已经闭环的 release-control truth-sync lane。
 
 ## Verification Discipline
 
