@@ -1,6 +1,6 @@
 # GitHub Actions CI/CD
 
-本仓库以“可重复 + 可审查”为优先。当前默认执行控制面是 `release-control / v1.5.0 formalization`：先跑 Linux 本地 release gates，再看 active release workflow；跨平台与专项门禁按需启用或手动触发。
+本仓库以“可重复 + 可审查”为优先。当前默认执行控制面是 `release-control / v1.5.0 formalization`：先看 release readiness、active release workflow 和当前 GitHub runtime truth，再决定是否需要新的门禁执行。
 
 ---
 
@@ -43,6 +43,8 @@ Wave B/B2 跨平台手动门禁（`workflow_dispatch`）
 
 - 用途：Linux/macOS/Windows 证据回填 + cross summary + closure/consistency
 - Windows lane 现在会先安装并验证 Lazarus / `lazbuild`，再跑 quick smoke、Wave B Windows gate、broader WinSSL suite transcript
+- 最新已确认真相：manual run `25989095571` 在 head `b95044d` 上的 `windows-gate` / `macos-gate` / `linux-gate` / `summary` 全部 `SUCCESS`
+- 当前不应为“再确认一次”重复派发这条 workflow；只有当提交改动可能影响它的运行时边界时才重新 dispatch
 - 产物：`test-reports/`（各平台摘要 + 汇总）
 
 ---
@@ -68,6 +70,6 @@ git add .github/workflows/<file>.yml
 
 - 日常开发：依赖 `ci.yml`（Minimal Gate）
 - 触及 pure Pascal TLS 1.3 主线：同时关注 `ci.yml` 里的 FreePascal focused gate
-- 准备 `v1.5.0` release-control 收口：关注 `release.yml`
+- 准备 `v1.5.0` release-control 收口：先看 `docs/test_reports/RELEASE_READINESS_V1.5.0.md`，再看 `release.yml`
 - 触及 TLS13 signer：额外关注 `tls13-signer-gate.yml`
-- 需要跨平台证据：手动触发 `wave-b-b2-manual.yml`
+- 需要新的跨平台证据：只在当前 head 尚无 fresh green proof，或本批改动可能影响跨平台运行时时，再手动触发 `wave-b-b2-manual.yml`

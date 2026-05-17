@@ -4,7 +4,7 @@ Release date: 2026-05-12
 
 ## Release Status
 
-`v1.5.0` is the stable release candidate for the current API surface. This is a Linux-only closeout: do not publish a tag until `docs/test_reports/RELEASE_READINESS_V1.5.0.md` records passing Linux gates, passing static Pascal audit, and explicit human approval. Windows runtime evidence is deferred outside this release batch.
+`v1.5.0` is the stable release candidate for the current API surface. GitHub Actions cross-platform runtime evidence is already green on the current head. Do not publish a tag until `docs/test_reports/RELEASE_READINESS_V1.5.0.md` records passing local gates, passing static Pascal audit, passing runtime evidence, and explicit human approval.
 
 ## Version Truth
 
@@ -51,7 +51,7 @@ The context-level SNI compatibility methods remain deprecated but available unti
 - FreePascal: TLS 1.3 coverage is broader, but early-data remains experimental. The default shipped path uses a local persistent replay store and fails closed when the replay-store path is unavailable.
 - WolfSSL: early-data exposure is gated by build/runtime helper availability.
 - MbedTLS: early-data, OCSP stapling, and CT remain unsupported in the current wrapper truth.
-- WinSSL: source contracts and validation bundle contracts are in place. Windows runtime evidence is deferred outside this Linux-only closeout.
+- WinSSL: source contracts and validation bundle contracts are in place. GitHub Actions Windows runtime proof is green on the current head and is recorded in release readiness.
 
 ## Verification Snapshot
 
@@ -62,6 +62,7 @@ The context-level SNI compatibility methods remain deprecated but available unti
 - `bash scripts/run_phase2_performance_baseline.sh --dry-run --fast-local`: PASS.
 - Release workflow and Windows validation bundle contracts: PASS locally.
 - Static Pascal audit: PASS, no active source placeholder markers or facade omissions found.
-- Wave B/B2 Windows runtime proof: deferred because GitHub Actions quota is unavailable and this closeout is Linux-only.
+- Wave B/B2 cross-platform runtime proof: PASS on `wave-b-b2-manual.yml` run `25989095571` (`windows-gate` / `macos-gate` / `linux-gate` / `summary` all green).
+- Default CI: PASS on run `25989090032` for the same head.
 
 The final truth source for publish/no-publish is `docs/test_reports/RELEASE_READINESS_V1.5.0.md`.

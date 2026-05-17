@@ -11,6 +11,76 @@
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
   - result: no output
 
+### Release-Control Truth Revalidation
+
+- `gh api repos/dtamade/fafafa.ssl/actions/runs/25989095571 --jq '{id:.id,head_sha:.head_sha,status:.status,conclusion:.conclusion,event:.event,name:.name,display_title:.display_title}'`
+  - result: PASS
+  - summary:
+    - manual workflow run `25989095571`
+    - head=`b95044d9edc0d28f02f83588927bcb51cb825bfe`
+    - `status=completed`
+    - `conclusion=success`
+
+- `gh api repos/dtamade/fafafa.ssl/actions/runs/25989090032 --jq '{id:.id,head_sha:.head_sha,status:.status,conclusion:.conclusion,event:.event,name:.name,display_title:.display_title}'`
+  - result: PASS
+  - summary:
+    - default `CI` run `25989090032`
+    - head=`b95044d9edc0d28f02f83588927bcb51cb825bfe`
+    - `status=completed`
+    - `conclusion=success`
+
+- `gh api repos/dtamade/fafafa.ssl/actions/runs/25989095571/jobs --paginate --jq '.jobs[] | {id:.id,name:.name,status:.status,conclusion:.conclusion}'`
+  - result: PASS
+  - summary:
+    - `setup` job `76391869663` SUCCESS
+    - `windows-gate` job `76391874980` SUCCESS
+    - `macos-gate` job `76391874985` SUCCESS
+    - `linux-gate` job `76391874990` SUCCESS
+    - `summary` job `76392143064` SUCCESS
+
+- `git tag --list 'v*' --sort=-v:refname | head -n 5`
+  - result: PASS
+  - summary:
+    - latest existing tag remains `v1.4.3`
+
+- `rg -n "25988847598|25989095571|25989090032|PASS_PENDING_APPROVAL|READY_FOR_MAIN_MERGE|deferred|quota|macos" task_plan.md findings.md progress.md docs/test_reports/RELEASE_READINESS_V1.5.0.md docs/plans/2026-05-12-release-v1.5.0-formalization.md docs/ROADMAP.md .github/README.md`
+  - result: PASS
+  - summary:
+    - confirmed current working-memory and release-control docs still contained stale `READY_FOR_MAIN_MERGE` / Linux-only / deferred-WinSSL wording
+    - confirmed `task_plan.md` still treated `macos-gate` as the current blocker even though `25989095571` is green
+
+### Release-Control Truth Sync Verification
+
+- `bash tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh`
+  - result: PASS
+  - summary:
+    - readiness status now matches `PASS_PENDING_APPROVAL`
+    - release notes now match the current cross-platform runtime truth
+
+- `bash tests/scripts/test_release_workflow_v1_5_0_contract.sh`
+  - result: PASS
+  - summary:
+    - release workflow contract still matches the checked-in release workflow
+    - updated release notes truth did not break release-control invariants
+
+- `bash tests/scripts/test_active_roadmap_references_contract.sh`
+  - result: PASS
+  - summary:
+    - active roadmap/readiness/plan entrypoints still converge on the intended in-repo docs
+
+- `git diff --check`
+  - result: PASS
+
+- `command -v yarn >/dev/null && echo YARN_OK || echo YARN_MISSING`
+  - result: PASS
+  - summary:
+    - `yarn` exists locally
+
+- `test -f package.json && echo PACKAGE_JSON_OK || echo PACKAGE_JSON_MISSING`
+  - result: PASS
+  - summary:
+    - repo root has no `package.json`, so no repo-local prettier pass was run for this markdown-only truth-sync batch
+
 ### Windows Runtime Failure Revalidation
 
 - `gh run view 25985356670 --log-failed`

@@ -1,14 +1,14 @@
 # Release Readiness v1.5.0
 
-Date: 2026-05-12
+Date: 2026-05-17
 
-Status: `READY_FOR_MAIN_MERGE`
+Status: `PASS_PENDING_APPROVAL`
 
 ## Summary
 
-The Linux-side release preparation for `v1.5.0` is green after refreshing expired fixtures, aligning versioned documentation, and clearing the strict style gate. A static Pascal audit also passes, so the release is ready to merge back to `main`.
+The local release-control gates for `v1.5.0` are green, the static Pascal audit passes, and the current GitHub Actions runtime truth is also green on the same head. There is no active technical blocker left on the current release surface.
 
-Windows-host `WinSSL` runtime artifacts are deferred for this closeout because the current release scope is Linux-only and the remote quota is unavailable. That deferred evidence is not a blocker for the main merge.
+What remains is the explicit human approval gate for creating the `v1.5.0` tag and GitHub Release. The latest existing tag is still `v1.4.3`.
 
 ## Version Truth
 
@@ -20,6 +20,13 @@ Windows-host `WinSSL` runtime artifacts are deferred for this closeout because t
 | Lazarus package version | `1.5.0` |
 | Changelog | `[1.5.0] - 2026-05-12` |
 | README current version | `v1.5.0` |
+
+## GitHub Runtime Evidence
+
+| Surface | Result | Evidence |
+| --- | --- | --- |
+| Manual cross-platform runtime workflow | PASS | `wave-b-b2-manual.yml` run `25989095571` on head `b95044d` completed with `windows-gate` / `macos-gate` / `linux-gate` / `summary` all `SUCCESS` |
+| Default CI workflow | PASS | `CI` run `25989090032` on head `b95044d` completed `SUCCESS` |
 
 ## Local Release Gates
 
@@ -52,8 +59,8 @@ The static audit confirms:
 - the active `src/fafafa.ssl*.pas` tree has no unresolved `TODO`, `FIXME`, `skeleton`, or `placeholder` markers
 - the two WinSSL skeleton harnesses remain explicitly Windows-only and are outside the Linux release path
 
-## Merge Gate
+## Approval Gate
 
-Main merge status: `READY`.
+Release-control status: `PASS_PENDING_APPROVAL`.
 
-Tag creation remains deferred until the user explicitly approves it.
+Do not create the `v1.5.0` tag or GitHub Release until the user explicitly approves it.

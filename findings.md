@@ -6,6 +6,22 @@
   - 仓库公开后，GitHub Actions 已能真实执行 `wave-b-b2-manual.yml`
   - 当前剩余问题是 Windows runner 上的真实 runtime/blocker，而不是“没有验证条件”
 
+- 当前 runtime 主线已经在同一 head `b95044d` 上闭环：
+  - manual run `25989095571` 的 `windows-gate` / `macos-gate` / `linux-gate` / `summary` 全部 `SUCCESS`
+  - 默认 `CI` run `25989090032` 也在同一 head 上 `SUCCESS`
+  - 这意味着当前 release-control 不再有新的跨平台 runtime blocker
+
+- 当前真正的流程漂移不在生产代码，而在控制面文档和 contracts：
+  - `docs/test_reports/RELEASE_READINESS_V1.5.0.md` 仍写 `READY_FOR_MAIN_MERGE`
+  - `docs/plans/2026-05-12-release-v1.5.0-formalization.md`、`RELEASE_NOTES_V1.5.0.md`、`.github/README.md` 仍保留 Linux-only / deferred WinSSL 叙事
+  - `tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh` 与 `tests/scripts/test_release_workflow_v1_5_0_contract.sh` 还把这些旧叙事锁成合同
+  - 如果不一起修，后续 release-control 会继续被旧标准误导，即使运行时真相已经变了
+
+- 当前更准确的 release readiness 状态应是 `PASS_PENDING_APPROVAL`：
+  - 本地 release gates、static audit、manual cross-platform runtime、默认 CI 都已通过
+  - latest tag 仍是 `v1.4.3`
+  - 仍未得到用户对 `v1.5.0` tag / GitHub Release 的明确批准
+
 - 第一次 Windows manual run `25985103443`（`windows-gate`）暴露的第一硬故障不是 WinSSL 逻辑，而是 workflow shell 入口：
   - `Run quick WinSSL smoke` 在真正测试前就失败
   - 根因是 workflow 用 `powershell` 执行 UTF-8/Unicode-heavy WinSSL 脚本

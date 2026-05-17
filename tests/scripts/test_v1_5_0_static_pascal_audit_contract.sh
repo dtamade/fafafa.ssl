@@ -85,17 +85,17 @@ require_fixed "docs/test_reports/STATIC_AUDIT_V1.5.0.md" "TSSLFactory" \
   "static audit report mentions the public facade"
 require_fixed "docs/test_reports/STATIC_AUDIT_V1.5.0.md" "WinSSL skeleton harnesses" \
   "static audit report documents the Windows-only skeleton tests"
-require_fixed "docs/test_reports/RELEASE_READINESS_V1.5.0.md" 'Status: `READY_FOR_MAIN_MERGE`' \
-  "release readiness is ready for main merge"
+require_fixed "docs/test_reports/RELEASE_READINESS_V1.5.0.md" 'Status: `PASS_PENDING_APPROVAL`' \
+  "release readiness records pass pending approval"
 require_fixed "docs/test_reports/RELEASE_READINESS_V1.5.0.md" "Static Audit" \
   "release readiness references the static audit"
 
-require_fixed "RELEASE_NOTES_V1.5.0.md" "Linux-only closeout" \
-  "release notes describe the Linux-only closeout"
+require_fixed "RELEASE_NOTES_V1.5.0.md" "GitHub Actions cross-platform runtime evidence is already green on the current head" \
+  "release notes describe the current cross-platform runtime truth"
 require_fixed "RELEASE_NOTES_V1.5.0.md" "TSSLHelper class remains available" \
   "release notes clarify TSSLHelper remains public"
-require_fixed "RELEASE_NOTES_V1.5.0.md" "Windows runtime evidence is deferred" \
-  "release notes defer Windows runtime proof"
+require_fixed "RELEASE_NOTES_V1.5.0.md" "GitHub Actions Windows runtime proof is green on the current head" \
+  "release notes record the current WinSSL runtime proof"
 
 require_fixed "src/fafafa.ssl.pas" "TSSLFactory = fafafa.ssl.factory.TSSLFactory;" \
   "main facade re-exports TSSLFactory"

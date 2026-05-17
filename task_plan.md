@@ -1,10 +1,19 @@
-# Task Plan - Windows Runtime Proof And Workflow Truth
+# Task Plan - Cross-Platform Runtime Proof And Release-Control Truth
 
 ## Goal
 
-当前主目标已经切换为用 GitHub Actions 的真实 Windows runner 持续推进 WinSSL runtime proof：先让 `wave-b-b2-manual.yml` 真正跑过 quick smoke、Wave B Windows gate、broader WinSSL suite，再把每次暴露出的第一硬故障收口到 focused contract + 最小修复，不再把 Windows/WinSSL 笼统停在 `static-only` 假设上。
+当前主目标已经切换为把 GitHub Actions 已经跑绿的跨平台 runtime truth 同步回 release-control 控制面：以 head `b95044d` 上的 manual run `25989095571` 和 CI run `25989090032` 为真相源，更新计划、readiness、release notes、workflow 文档与相关 contracts，并在用户明确批准前停在 `v1.5.0` tag / release 审批门。
 
 ## Current Status
+
+- [completed] 当前跨平台 runtime 主线已经在同一 head `b95044d` 上闭环：
+  - manual run `25989095571` 的 `windows-gate` / `macos-gate` / `linux-gate` / `summary` 全部 `SUCCESS`
+  - 默认 `CI` run `25989090032` 同样 `SUCCESS`
+  - 这说明当前 release-control 不再有新的 Windows/macOS/Linux runtime blocker
+- [in_progress] 当前真正的残余问题已经从 runtime 故障切换成控制面真相漂移：
+  - `docs/test_reports/RELEASE_READINESS_V1.5.0.md` 仍写着 `READY_FOR_MAIN_MERGE`
+  - `docs/plans/2026-05-12-release-v1.5.0-formalization.md` / `RELEASE_NOTES_V1.5.0.md` / `.github/README.md` 仍保留 Linux-only 或 deferred WinSSL 叙事
+  - `tests/scripts/test_v1_5_0_static_pascal_audit_contract.sh` 与 `tests/scripts/test_release_workflow_v1_5_0_contract.sh` 仍把旧叙事固化成 contract truth
 
 - [completed] 当前路线已经从“Windows/WinSSL 保持 `static-only`”纠偏为“GitHub manual workflow 可提供真实 Windows runtime 证据”：
   - 仓库公开后，`wave-b-b2-manual.yml` 已可真实 dispatch
@@ -132,12 +141,18 @@
   - `Run Windows Wave B gate` SUCCESS
   - `Run broader WinSSL runtime suite` SUCCESS
   - 当前整个 manual workflow 的失败原因已经不再是 `windows-gate`
-- [in_progress] 当前第十一批修复已落地本地工作树，等待提交/推送后做下一次 manual run 复证：
+- [completed] 当前第十一批可移植性修复已提交 `b95044d` 并在下一次 manual run `25989095571` 上完成远端复证：
   - 更新 `scripts/verify_examples_compile.sh`
     - 去掉 `mapfile`
     - 改用 Bash 3.2 兼容的 `while IFS= read -r file; do ... done`
   - 新增 `tests/scripts/test_verify_examples_compile_bash32_compat_contract.sh`
     - 防止脚本重新依赖 `mapfile`，继续在 macOS runner 上产出 `total=0`
+- [completed] 第十一次手动 runtime run `25989095571` 已证明跨平台 runtime workflow 在当前 head `b95044d` 上整体闭环：
+  - `windows-gate` SUCCESS
+  - `macos-gate` SUCCESS
+  - `linux-gate` SUCCESS
+  - `summary` SUCCESS
+  - 当前整个 `wave-b-b2-manual.yml` 已不再有新的运行时阻塞
 - [completed] 复核远端失败证据（CI run `25893971783` / signer run `25901035350`）
 - [completed] 把 3 个真实问题写成 focused contract tests，并先观测到红灯
 - [completed] 修复 `.github/workflows/ci.yml` / `release.yml` / `release.yml.disabled` 的 WolfSSL 依赖缺口
@@ -770,61 +785,44 @@
 
 ## Current Blocker
 
-- 当前第一硬阻塞已经从 `windows-gate` 前移到 `macos-gate`：
-  - manual run `25988847598` 中 `windows-gate` SUCCESS
-  - manual run `25988847598` 中 `linux-gate` SUCCESS
-  - manual run `25988847598` 的唯一当前失败 job 是 `macos-gate`
-- `macos-gate` 的真实失败点已经定位到 `examples` 子步骤，而不是 OpenSSL 路径、compile、或 modules：
-  - `wave_b_macos_gate_summary_codex_winssl_20260517_190215.md` 记录：
-    - `probe` PASS
-    - `path-check` PASS
-    - `compile` PASS
-    - `modules` PASS
-    - `examples` FAIL
-  - `wave_b_macos_examples_codex_winssl_20260517_190215.log` 记录：
-    - `scripts/verify_examples_compile.sh: line 150: mapfile: command not found`
-  - `examples_compile_gate_macos_codex_winssl_20260517_190215.json` 因此落成：
-    - `total=0`
-    - `pass_rate=0`
-- 当前本地没有新的语法/contract blocker：
-  - 新增 focused contracts 已过
-  - 受影响相邻 contract 已过
-  - `bash -n scripts/verify_examples_compile.sh` 已通过
-  - `git diff --check` 已过
-  - 当前只差提交、推送和下一次真实 manual run 复证
-- 旧的 “Windows/WinSSL 只能静态审查” 叙事已经可以正式关闭：当前 GitHub Windows runner 已经把这条主线跑绿。
+- 当前没有新的 runtime blocker：
+  - manual run `25989095571` 已证明 `windows-gate` / `macos-gate` / `linux-gate` 全绿
+  - 默认 `CI` run `25989090032` 已证明当前 head 没有误伤自动主线
+- 当前第一硬问题是 release-control 控制面与 contracts 还在讲旧故事：
+  - readiness / release plan / release notes / workflow docs 仍把 WinSSL runtime proof 当作 deferred follow-up
+  - 如果不修，这些旧文字与旧合同会继续把后续工作流拉回一个已经失效的 Linux-only 发布标准
+- 当前真正剩余的 release gate 是人工审批，而不是技术验证：
+  - latest tag 仍是 `v1.4.3`
+  - `v1.5.0` tag / GitHub Release 未经用户明确批准不得创建
 
 ## Current Queue
 
-1. 同步 `task_plan.md` / `findings.md` / `progress.md` / 计划文档到 run `25988847598` 和当前第十一批本地修复的最新真相。
-2. 提交当前第十一批可移植性修复并推送到 `master`。
-3. 重新 dispatch `wave-b-b2-manual.yml`，继续以 GitHub Windows runner 为唯一 truth source。
-4. 新 run 中优先检查 `macos-gate` 的 `examples` 子步骤是否不再因 `mapfile` 缺失而产出 `total=0`。
-5. 如果 `macos-gate` 转绿，再看整个 manual workflow 是否还有新的第一硬边界；如果没有，就把 `wave-b-b2-manual.yml` 的当前主线收口为跨平台 runtime 证据已闭环。
+1. 同步 `task_plan.md` / `findings.md` / `progress.md` 到 head `b95044d`、manual run `25989095571`、CI run `25989090032` 的最新真相。
+2. 更新 `docs/test_reports/RELEASE_READINESS_V1.5.0.md`、`docs/plans/2026-05-12-release-v1.5.0-formalization.md`、`docs/ROADMAP.md`、`RELEASE_NOTES_V1.5.0.md`、`.github/README.md`，去掉 Linux-only / deferred WinSSL 旧叙事。
+3. 更新相关 contracts，让 release-control truth 与当前 green runtime evidence 一致。
+4. 做一次窄验证并提交推送。
+5. 把剩余 gate 明确收口为“等待用户批准创建 `v1.5.0` tag / release”。
 
 ## Verification Discipline
 
-- 当前这条 Windows runtime lane 只做窄验证：
-  - 本批新加 focused contracts
-  - 受影响相邻 contract
+- 当前这条 truth-sync lane 只做窄验证：
+  - 受影响 release-control contracts
   - `git diff --check`
-  - 若本机存在 `pwsh`，补 PowerShell 语法解析；若不存在，直接记录缺口，不反复绕
-  - 每个有意义批次只发起 1 次真实 `wave-b-b2-manual.yml` manual run
-- 不重复重跑与本批无关的 cached-green workflow 治理合同，除非本批再次修改 `.github/workflows/*.yml*`。
-- 不把 Linux 自动 CI 绿灯、也不把 dormant template 绿灯，当成 Windows WinSSL runtime proof。
+  - 不重跑 compile/completeness/minimal gates，因为当前批次只同步文档与 contracts
+- 不重复 dispatch `wave-b-b2-manual.yml`，因为当前 head 已有 fresh green runtime proof；只有后续改动可能影响 runtime 边界时才重派。
+- 不重复重跑与本批无关的 cached-green workflow 治理合同。
 
 ## Decision Locks
 
 - 不创建 `v1.5.0` tag，不发 GitHub Release。
-- 不重新回到 “Windows/WinSSL static-only” 叙事；当前 truth source 就是 GitHub Actions 的 manual Windows lane。
+- 不重新回到 “Windows/WinSSL static-only” 或 “Linux-only closeout” 叙事；当前 truth source 是 GitHub Actions 的最新 manual + CI green evidence。
 - 不扩到 release/tag/PR 流；继续直接在 `master` 以小批次收口。
 - 不顺手扩大到无关 runtime surface、无关 dormant workflow、或新的架构重写。
-- 每个有效批次都要在提交前补齐 working-memory 文件，并在提交后记录新的 run id / failure boundary。
+- 每个有效批次都要在提交前补齐 working-memory 文件，并在提交后记录新的 truth source 或剩余审批门。
 
 ## Stop Condition
 
-- 当前第十一批修复的代码、计划、发现、进度文件都与 run `25988847598` 保持一致。
-- 本批 focused contracts 与 `git diff --check` 继续通过。
-- 当前批次受影响脚本的 focused contracts 与 `bash -n` 继续通过。
+- working-memory 文件、release-control 文档与 contracts 都同步到 head `b95044d`、manual run `25989095571`、CI run `25989090032` 的真相。
+- 本批受影响 contracts 与 `git diff --check` 继续通过。
 - 当前批次已提交并推送到 `master`。
-- 新的 `wave-b-b2-manual.yml` run 已 dispatch，且新的第一硬阻塞点已经被记录到 working-memory 文件中。
+- 当前剩余 gate 已被明确记录为“等待用户批准创建 `v1.5.0` tag / release”。
