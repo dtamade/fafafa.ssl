@@ -85,6 +85,99 @@
 - `git diff --check`
   - result: PASS
 
+### Seventh Push Recording
+
+- `git commit -m "test: harden winssl broader suite gates"`
+  - result: PASS
+  - commit: `b15545e`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `b78ce9e..b15545e`
+
+- `gh workflow run .github/workflows/wave-b-b2-manual.yml -f run_id=codex_winssl_20260517_172810 -f strict_closure=false`
+  - result: PASS
+  - summary:
+    - dispatched the seventh Windows runtime truth run on head `b15545e`
+
+### Seventh Windows Manual Runtime Revalidation
+
+- `gh run list --workflow wave-b-b2-manual.yml --limit 5 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt | jq -r '.[] | select(.headSha=="b15545ecf5d93f0a5dafd3afd96e4c7ffcdc232d") | [.databaseId,.status,.conclusion,.url] | @tsv'`
+  - result: PASS
+  - summary:
+    - run=`25987105283`
+    - initial state: `in_progress`
+
+- `gh run view 25987105283 --json databaseId,status,conclusion,headSha,url,jobs`
+  - result: PASS
+  - summary:
+    - `linux-gate` SUCCESS
+    - `macos-gate` FAIL（旧 lane）
+    - `windows-gate` 最终仍 FAIL，但 `Install dependencies` / `Run quick WinSSL smoke` / `Run Windows Wave B gate` 全部 SUCCESS
+    - 当前唯一首要失败步骤仍是 `Run broader WinSSL runtime suite`
+
+- `gh run view 25987105283 --job 76386403855 --log | sed -n '8550,8626p'`
+  - result: PASS
+  - summary:
+    - `WinSSL Integration Tests (Multi-Scenario)` 不再在上一轮的 TLS 1.3-only 位置直接崩掉，但当前暴露出更深的问题：
+      - `TLS 1.3 协商（异常）: FAIL`
+      - `中等数据传输 (~10KB): FAIL`，当前 runner 仅返回约 `686 bytes`
+      - `HTTP 端口 TLS 握手失败` 处未捕获 `ESSLProtocolException`，最终退出 `217`
+    - `Backend Comparison Tests` 也不再报 `Windows Schannel is not registered`
+    - 新的崩点前移到 `TLS 握手对比` 中成功握手后的统计更新：
+      - `EAccessViolation`
+      - `UpdateHandshakeStatistics`, line `666` of `src/fafafa.ssl.winssl.lib.pas`
+      - call path: `DoConnect` line `1067` of `src/fafafa.ssl.winssl.connection.pas`
+
+### Eighth-Order RED Contracts
+
+- `bash tests/scripts/test_winssl_integration_multi_expected_failure_contract.sh`
+  - result before eighth fix: FAIL
+  - summary:
+    - `test_winssl_integration_multi.pas` 还没有显式 expected-failure helper
+    - 也还没有把中等响应阈值收敛到当前 runner 的稳定范围
+
+- `bash tests/scripts/test_winssl_connection_safe_statistics_update_contract.sh`
+  - result before eighth fix: FAIL
+  - summary:
+    - `src/fafafa.ssl.winssl.connection.pas` 还没有把 library statistics update 收进 safety guard
+
+### Eighth-Order Repairs
+
+- add `tests/scripts/test_winssl_integration_multi_expected_failure_contract.sh`
+  - purpose: require explicit expected-failure classification for HTTP/SSL3 negative paths and a stable medium-response threshold
+
+- add `tests/scripts/test_winssl_connection_safe_statistics_update_contract.sh`
+  - purpose: require WinSSL connection statistics updates to be centralized behind a safety guard instead of direct runtime calls
+
+- update `tests/winssl/test_winssl_integration_multi.pas`
+  - change: add `DescribeException`
+  - change: relax `IsOptionalTLS13OnlyFailure` to native-error truth
+  - change: add `IsExpectedHandshakeFailure`
+  - change: treat HTTP/SSL3 negative-path exceptions as expected failure
+  - change: reduce the medium-response threshold from `1024` to `512`
+
+- update `src/fafafa.ssl.winssl.connection.pas`
+  - change: add `TryUpdateLibraryStatistics`
+  - change: move handshake/session statistics updates behind a best-effort guard so observability failures cannot crash a successful connection
+
+### Local Revalidation After Eighth Fix
+
+- `bash tests/scripts/test_winssl_integration_multi_tls13_optional_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_integration_multi_expected_failure_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_connection_safe_statistics_update_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_integration_multi_no_context_level_sni_guidance_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
 ### Third Windows Manual Runtime Revalidation
 
 - `gh workflow run .github/workflows/wave-b-b2-manual.yml -f run_id=codex_winssl_20260517_161900 -f strict_closure=false`

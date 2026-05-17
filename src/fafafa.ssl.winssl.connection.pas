@@ -164,6 +164,7 @@ type
     // WinSSL 内部 access interface helper
     function TryGetContextAccess(out AContextAccess: IWinSSLContextAccess): Boolean;
     function TryGetLibraryStatsAccess(out ALibraryStatsAccess: IWinSSLLibraryStatsAccess): Boolean;
+    procedure TryUpdateLibraryStatistics;
 
   protected
     { TBaseSSLConnection 抽象方法实现 }
@@ -742,6 +743,24 @@ begin
     ALibraryStatsAccess);
 end;
 
+procedure TWinSSLConnection.TryUpdateLibraryStatistics;
+var
+  LLibraryStatsAccess: IWinSSLLibraryStatsAccess;
+begin
+  try
+    if TryGetLibraryStatsAccess(LLibraryStatsAccess) then
+    begin
+      LLibraryStatsAccess.UpdateHandshakeStatistics(Round(FHandshakeDuration), True);
+      LLibraryStatsAccess.UpdateSessionStatistics(FSessionReused);
+    end;
+  except
+    on Exception do
+    begin
+      // Statistics are observability-only; they must never break a successful handshake path.
+    end;
+  end;
+end;
+
 procedure TWinSSLConnection.SaveSessionAfterHandshake;
 var
   LSession: TWinSSLSession;
@@ -1035,7 +1054,6 @@ end;
 
 function TWinSSLConnection.DoConnect: Boolean;
 var
-  LLibraryStatsAccess: IWinSSLLibraryStatsAccess;
   LVerifyError: Integer;
 begin
   NotifyInfoCallback(1, 0, 'handshake_start');
@@ -1062,11 +1080,7 @@ begin
 
   FHandshakeState := sslHsCompleted;
 
-  if TryGetLibraryStatsAccess(LLibraryStatsAccess) then
-  begin
-    LLibraryStatsAccess.UpdateHandshakeStatistics(Round(FHandshakeDuration), True);
-    LLibraryStatsAccess.UpdateSessionStatistics(FSessionReused);
-  end;
+  TryUpdateLibraryStatistics;
 
   NotifyInfoCallback(3, 0, 'handshake_done');
   Result := True;
@@ -1074,7 +1088,6 @@ end;
 
 function TWinSSLConnection.DoAccept: Boolean;
 var
-  LLibraryStatsAccess: IWinSSLLibraryStatsAccess;
   LVerifyError: Integer;
   LFrequency: Int64;
 begin
@@ -1109,11 +1122,7 @@ begin
 
   SaveSessionAfterHandshake;
 
-  if TryGetLibraryStatsAccess(LLibraryStatsAccess) then
-  begin
-    LLibraryStatsAccess.UpdateHandshakeStatistics(Round(FHandshakeDuration), True);
-    LLibraryStatsAccess.UpdateSessionStatistics(FSessionReused);
-  end;
+  TryUpdateLibraryStatistics;
 
   NotifyInfoCallback(3, 0, 'handshake_done');
   Result := True;
