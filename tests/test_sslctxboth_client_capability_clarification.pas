@@ -68,7 +68,7 @@ begin
 
   if not TSSLFactory.IsLibraryAvailable(ABackend) then
   begin
-    Skip(LName + ' dual-context stream ServerName fallback',
+    Skip(LName + ' dual-context stream ServerName ambiguity cut',
       'backend not available on this platform');
     Exit;
   end;
@@ -79,8 +79,9 @@ begin
   if LCtx = nil then
     Exit;
 
-  // INTENTIONAL_COMPAT: legacy context-level SNI coverage. This dual-context
-  // regression keeps inherited context ServerName fallback observable on purpose.
+  // BEHAVIOR_MIGRATION_RED: sslCtxBoth already requires an explicit handshake
+  // role, so its deprecated context-level ServerName should no longer auto-flow
+  // into new client-capable connections.
   {$PUSH}{$WARN 6058 off}
   LCtx.SetServerName('both.example.com');
   {$POP}
@@ -94,9 +95,9 @@ begin
       Supports(LConn, ISSLClientConnection, LClientConn),
       'stream connection should remain client-capable for per-connection ServerName');
     if Supports(LConn, ISSLClientConnection, LClientConn) then
-      CheckTrue(LName + ' dual-context stream connection inherits context ServerName fallback',
-        LClientConn.GetServerName = 'both.example.com',
-        'expected both.example.com, actual="' + LClientConn.GetServerName + '"');
+      CheckTrue(LName + ' dual-context stream connection no longer inherits context ServerName fallback',
+        LClientConn.GetServerName = '',
+        'expected empty ServerName, actual="' + LClientConn.GetServerName + '"');
   finally
     LStream.Free;
   end;
@@ -114,8 +115,8 @@ begin
   if LCtx = nil then
     Exit;
 
-  // INTENTIONAL_COMPAT: legacy context-level SNI coverage. This dual-context
-  // socket path also keeps inherited context ServerName fallback observable.
+  // BEHAVIOR_MIGRATION_RED: socket-based sslCtxBoth connections should follow
+  // the same no-implicit-fallback rule as stream-based ones.
   {$PUSH}{$WARN 6058 off}
   LCtx.SetServerName('both.example.com');
   {$POP}
@@ -127,9 +128,9 @@ begin
     Supports(LConn, ISSLClientConnection, LClientConn),
     'socket connection should remain client-capable for per-connection ServerName');
   if Supports(LConn, ISSLClientConnection, LClientConn) then
-    CheckTrue('FreePascal dual-context socket connection inherits context ServerName fallback',
-      LClientConn.GetServerName = 'both.example.com',
-      'expected both.example.com, actual="' + LClientConn.GetServerName + '"');
+    CheckTrue('FreePascal dual-context socket connection no longer inherits context ServerName fallback',
+      LClientConn.GetServerName = '',
+      'expected empty ServerName, actual="' + LClientConn.GetServerName + '"');
 end;
 
 procedure TestDualContextClientEarlyDataRoleGate(ABackend: TSSLLibraryType);

@@ -12,7 +12,6 @@ declare -a files=(
   "tests/test_tls_connector_hostname_override_precedence.pas"
   "tests/test_freepascal_context_server_name_inheritance.pas"
   "tests/test_context_builder_server_servername_runtime_consistency.pas"
-  "tests/test_sslctxboth_client_capability_clarification.pas"
   "tests/integration/test_cross_backend_consistency_contract.pas"
   "tests/integration/test_cross_backend_errors_contract.pas"
 )

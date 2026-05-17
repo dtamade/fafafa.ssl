@@ -89,6 +89,14 @@
     - `tests/test_context_builder_server_servername_runtime_consistency.pas`
     - `tests/test_context_builder_server_name_compatibility_warning.pas`
     - `tests/config/test_config_validation.pas`
+- [completed] 第一条 client-side fallback behavior migration 已经以 `sslCtxBoth` ambiguity cut 落地：
+  - shared compatibility shim 不再把 dual-role `sslCtxBoth` 的 deprecated context-level `ServerName` 继承进新连接
+  - `sslCtxBoth` 仍 exposes `ISSLClientConnection`，但调用方若选择 client role，必须显式在 connection 上设置 `ServerName`
+  - `tests/test_sslctxboth_client_capability_clarification.pas` 已不再属于 intentional-compat label 集合
+  - focused RED -> GREEN：
+    - `tests/test_sslctxboth_client_capability_clarification.pas`
+    - `tests/test_sslctxboth_roleless_handshake_clarification.pas`
+    - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
 
 ## Scope
 
@@ -116,8 +124,8 @@
 
 ## Current Queue
 
-1. 继续选择第一条 client-side behavior migration RED：
-   - 优先评估直接锁 inherited context fallback 的 intentional tests
+1. 继续选择下一条 `sslCtxClient` behavior migration RED：
+   - 优先评估 direct context / builder client 上直接锁 inherited context fallback 的 intentional tests
    - 明确 connector / connection-builder / factory / builder 四层的新优先级和失败语义
 2. 在 dedicated client-side RED 明确后，再评估最终 public surface cleanup：
    - `TSSLConfig.ServerName` 是否继续留在当前 record 上

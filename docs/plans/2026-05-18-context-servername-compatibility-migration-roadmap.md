@@ -55,7 +55,6 @@
 - `tests/test_tls_connector_hostname_override_precedence.pas`
 - `tests/test_freepascal_context_server_name_inheritance.pas`
 - `tests/test_context_builder_server_servername_runtime_consistency.pas`
-- `tests/test_sslctxboth_client_capability_clarification.pas`
 - `tests/integration/test_cross_backend_consistency_contract.pas`
 - `tests/integration/test_cross_backend_errors_contract.pas`
 
@@ -144,6 +143,12 @@ Delivered first cut:
 - backend-local direct deprecated reads were removed from the targeted constructor paths
 - focused source contract and runtime regressions proved behavior stayed intact
 
+Delivered second cut:
+
+- `GetContextLevelServerNameCompatibilityValue(...)` now returns empty for `sslCtxBoth`
+- dual-role contexts still expose client-capable connections where appropriate, but deprecated context-level `ServerName` no longer auto-flows into that ambiguous role
+- focused RED -> GREEN proved the `sslCtxBoth` fallback cut landed without regressing the existing roleless-handshake fail-fast boundary
+
 ### Phase D: Final Surface Cleanup
 
 **Target:** finish interface shape cleanup once migration risk is low enough.
@@ -192,6 +197,7 @@ Delivered second cut:
   - builder runtime warning alignment complete
   - Phase B server-side BuildServer ignore cut complete
   - Phase C shared compatibility shim first cut complete
+  - Phase C `sslCtxBoth` ambiguity cut complete
   - Phase E first WinSSL client-flow migration cut complete
   - Phase E residual ambiguous test-surface classification cut complete
 - `TSSLConfig` cross-layer slimming: intentionally deferred until SNI migration stabilizes
@@ -205,16 +211,16 @@ Delivered second cut:
 
 Choose one bounded implementation family only:
 
-1. **Client-side behavior migration RED selection**
-   - decide which client-side intentional-compat tests will be rewritten before any real fallback deletion
+1. **`sslCtxClient` behavior migration RED selection**
+   - decide which remaining `sslCtxClient` intentional-compat tests will be rewritten before any real fallback deletion
    - explicitly define new precedence between builder/factory/context and per-connection hostname paths
 2. **Final surface cleanup prep**
    - re-evaluate whether `TSSLConfig.ServerName` and builder `WithSNI(...)` still need their current naming/placement now that builder/factory/runtime paths all expose compatibility warnings
 3. **Wider public-surface cleanup**
    - stage follow-up work only after the first behavior-migration RED is pinned and verified
-Recommended first pick: **Client-side behavior migration RED selection**.
+Recommended first pick: **`sslCtxClient` behavior migration RED selection**.
 
-Builder/factory/shared-shim warning work, residual test-surface classification, and the first server-side dead-compat cut are no longer the blocker; the next highest-value work is choosing the first client-side behavior-migration RED.
+Builder/factory/shared-shim warning work, residual test-surface classification, the first server-side dead-compat cut, and the `sslCtxBoth` ambiguity cut are no longer the blocker; the next highest-value work is choosing the first `sslCtxClient` behavior-migration RED.
 
 ## Verification
 

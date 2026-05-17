@@ -308,6 +308,80 @@
   - summary:
     - no whitespace or patch-format issues remained after the BuildServer ignore batch
 
+### sslCtxBoth Context SNI Ambiguity Cut
+
+- add `docs/plans/2026-05-18-sslctxboth-context-sni-ambiguity-cut.md`
+  - purpose:
+    - define the first bounded client-side fallback migration cut
+    - keep the scope on `sslCtxBoth` role ambiguity instead of reopening all client fallback paths
+
+- update `tests/test_sslctxboth_client_capability_clarification.pas`
+  - change:
+    - move the dual-context stream/socket expectations from inherited context fallback to explicit no-fallback semantics
+    - keep the `ISSLClientConnection` exposure checks and early-data role-gate checks intact
+
+- update `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - change:
+    - remove `tests/test_sslctxboth_client_capability_clarification.pas` from the intentional-compat label set
+    - this file is no longer expected to preserve legacy inherited fallback
+
+- `mkdir -p tmp/test_sslctxboth_client_capability_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_sslctxboth_client_capability_clarification -FEtmp/test_sslctxboth_client_capability_clarification -otmp/test_sslctxboth_client_capability_clarification/test_sslctxboth_client_capability_clarification tests/test_sslctxboth_client_capability_clarification.pas && ./tmp/test_sslctxboth_client_capability_clarification/test_sslctxboth_client_capability_clarification`
+  - result: RED
+  - summary:
+    - initial run failed 5 assertions
+    - FreePascal / OpenSSL / WolfSSL / MbedTLS dual-context stream paths and the FreePascal socket path all still inherited `both.example.com`
+
+- `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - result: PASS
+  - summary:
+    - the remaining intentional-compat label set stayed stable after removing the `sslCtxBoth` file
+
+- `mkdir -p tmp/test_sslctxboth_roleless_handshake_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_sslctxboth_roleless_handshake_clarification -FEtmp/test_sslctxboth_roleless_handshake_clarification -otmp/test_sslctxboth_roleless_handshake_clarification/test_sslctxboth_roleless_handshake_clarification tests/test_sslctxboth_roleless_handshake_clarification.pas && ./tmp/test_sslctxboth_roleless_handshake_clarification/test_sslctxboth_roleless_handshake_clarification`
+  - result: PASS
+  - summary:
+    - adjacent roleless-handshake boundary was already green before the shim change
+    - this confirmed the intended semantic anchor for the ambiguity cut
+
+- update `src/fafafa.ssl.context.compat.pas`
+  - change:
+    - `GetContextLevelServerNameCompatibilityValue(...)` now returns empty for `sslCtxBoth`
+    - add a short comment tying this to the existing explicit-role handshake rule
+
+- `mkdir -p tmp/test_sslctxboth_client_capability_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_sslctxboth_client_capability_clarification -FEtmp/test_sslctxboth_client_capability_clarification -otmp/test_sslctxboth_client_capability_clarification/test_sslctxboth_client_capability_clarification tests/test_sslctxboth_client_capability_clarification.pas && ./tmp/test_sslctxboth_client_capability_clarification/test_sslctxboth_client_capability_clarification`
+  - result: RED -> GREEN
+  - summary:
+    - final run finished `28 passed, 0 failed, 1 skipped`
+    - dual-role contexts no longer inherit deprecated context-level `ServerName` fallback
+
+- `mkdir -p tmp/test_sslctxboth_roleless_handshake_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_sslctxboth_roleless_handshake_clarification -FEtmp/test_sslctxboth_roleless_handshake_clarification -otmp/test_sslctxboth_roleless_handshake_clarification/test_sslctxboth_roleless_handshake_clarification tests/test_sslctxboth_roleless_handshake_clarification.pas && ./tmp/test_sslctxboth_roleless_handshake_clarification/test_sslctxboth_roleless_handshake_clarification`
+  - result: PASS
+  - summary:
+    - roleless-handshake fail-fast behavior remained intact after the ambiguity cut
+
+- `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - result: PASS
+  - summary:
+    - the remaining intentional-compat label set stayed green after the `sslCtxBoth` removal
+
+- update `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - change:
+    - record the `sslCtxBoth` ambiguity cut under the shared-compatibility-shim track
+    - move the next recommended batch to `sslCtxClient` behavior migration RED selection
+
+- update `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - change:
+    - add a dedicated `sslCtxBoth` ambiguity-cut closeout section
+    - refresh the next-step recommendation toward `sslCtxClient` fallback migration
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the first client-side fallback migration cut into persistent repo working memory
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remained after the `sslCtxBoth` ambiguity cut
+
 ### Context ServerName Shared Compatibility Shim
 
 - add `docs/plans/2026-05-18-context-servername-shared-compatibility-shim.md`

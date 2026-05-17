@@ -35,6 +35,11 @@ begin
   if not ContextTypeSupportsClientConnectionRole(AContext.GetContextType) then
     Exit;
 
+  // sslCtxBoth already requires explicit role selection at handshake time,
+  // so it should not silently inherit deprecated client-side SNI fallback.
+  if ContextTypeRequiresExplicitHandshakeRole(AContext.GetContextType) then
+    Exit;
+
   {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   Result := AContext.GetServerName;
   {$POP}

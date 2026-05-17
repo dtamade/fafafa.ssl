@@ -206,7 +206,6 @@
       - `test_tls_connector_hostname_override_precedence`
       - `test_freepascal_context_server_name_inheritance`
       - `test_context_builder_server_servername_runtime_consistency`
-      - `test_sslctxboth_client_capability_clarification`
       - `test_cross_backend_consistency_contract`
       - `test_cross_backend_errors_contract`
   - 这些测试现在都必须带 `INTENTIONAL_COMPAT:` 标签
@@ -448,6 +447,33 @@
   - 第一条真正的 behavior migration 已经开始进入生产代码，而不是继续停留在路线图层
   - 下一步可以把注意力集中到 client-side intentional fallback 收缩，而不必反复处理这个 server-only dead compatibility
 
+## 增量收口：sslCtxBoth dual-role context 不再继承 context-level SNI fallback
+
+- 下一条最小的 client-side behavior migration 也已经落地，而且范围仍然很克制：
+  - `sslCtxBoth` 早就已经在握手层要求显式选择 role
+  - 但 shared compatibility shim 之前仍会把 deprecated context-level `ServerName` 静默继承给新连接
+  - 这会让 dual-role context 一边拒绝猜 handshake role，一边又继续猜 client-side SNI fallback
+
+- 当前修法只动 shared shim：
+  - `GetContextLevelServerNameCompatibilityValue(...)` 现在遇到 `sslCtxBoth` 会直接返回空字符串
+  - dual-role connection 仍然保留 `ISSLClientConnection` surface
+  - 但调用方如果真要走 client role，必须在 connection 上显式 `SetServerName(...)`
+
+- focused RED -> GREEN 证据：
+  - `tests/test_sslctxboth_client_capability_clarification.pas`
+    - 初始 5 条断言失败，证明四个 backend 的 dual-context stream path 和 FreePascal socket path 之前都还在继承旧 fallback
+    - 修复后 `28 passed, 0 failed, 1 skipped`
+  - `tests/test_sslctxboth_roleless_handshake_clarification.pas`
+    - PASS (`24 passed, 0 failed`)
+    - 说明既有 roleless-handshake fail-fast 边界保持不变
+  - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+    - PASS
+    - 说明 `sslCtxBoth` 已经从 intentional compatibility label 集合里移除，其余保留集合仍然稳定
+
+- 这一步完成后，下一条真正需要继续收缩的 client-side fallback 已经更明确：
+  - `sslCtxBoth` 不再是未处理的兼容面
+  - 剩下主要是 `sslCtxClient` direct / builder / factory 这组 still-intentional inherited fallback
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -471,7 +497,7 @@
 
 ### 下一批最值得做的事
 
-1. 再决定 client-side behavior migration 的第一条 RED
+1. 再决定 `sslCtxClient` behavior migration 的第一条 RED
    - 明确哪些 intentional-compat tests 会被改写
    - 明确新优先级应该怎样从 context-level 迁到 per-connection hostname 路径
 

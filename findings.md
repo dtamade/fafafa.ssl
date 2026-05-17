@@ -271,3 +271,12 @@
   - `BuildServer.WithSNI(...)` 现在只会发 warning，并明确说明 `BuildServer ignores it and server-side connections ignore it`
   - built server context 不再保留这份 client-only `ServerName`
   - 这说明迁移主线已经可以从“先清 dead compatibility”继续推进到 client-side fallback 真正收缩
+
+- 第一条 client-side fallback behavior migration 也已经有了一个很小但真实的落点：
+  - `sslCtxBoth` 既然已经在握手层要求显式选择 role，就不该再静默继承 deprecated context-level client SNI fallback
+  - shared compatibility shim 现在会对 `sslCtxBoth` 直接返回空字符串
+  - 因而 dual-role context 仍保持 client-capable connection surface，但 inherited `ServerName` fallback 已经不再自动生效
+
+- 这让剩余 client-side 迁移面再次收窄：
+  - `sslCtxBoth` 不再需要挂在 intentional compatibility label 集合里
+  - 下一步真正要碰的就是 `sslCtxClient` direct / builder / factory 这组还在显式锁 inherited fallback 的测试与路径
