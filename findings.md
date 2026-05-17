@@ -450,3 +450,40 @@
   - 当前剩下的更尖锐问题回到了最后一个 direct server-context legacy-state control case：
     - 高层 builder / factory 是否还要继续保留 context state 可见性
     - 即便这份 state 已经不再对任何新 client connection 产生 inherited fallback
+
+- 这条最后一个 direct server-context legacy-state control case 现在也已经完成收口：
+  - `src/fafafa.ssl.context.builder.pas`
+    的 `BuildClient` 不再把 `WithSNI(...)` 写回 built client context
+  - `src/fafafa.ssl.factory.pas`
+    的 client default-config / one-shot `CreateContext(...)` 路径
+    不再把 `TSSLConfig.ServerName` 写回新建 context
+  - warning 文案也同步切成：
+    - `BuildClient ignores it...`
+    - `CreateContext ignores it for new contexts...`
+
+- 这意味着 deprecated context-level `ServerName` 已不再通过任何高层新建入口流入新的 context state：
+  - builder 高层入口不会再保留它
+  - factory 高层入口不会再保留它
+  - 所有 client backend 也早已不再把它继承进新 client connection
+  - 当前剩下的最后 compatibility surface，已经只剩 direct `ISSLContext.SetServerName/GetServerName` 本身和显式 API-surface coverage
+
+- focused evidence 也说明这不是文案改动，而是真正的行为收口：
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+    PASS (`6 passed, 0 failed`)
+  - `tests/test_factory_server_name_scope_clarification.pas`
+    PASS (`6 passed, 0 failed`)
+  - `tests/test_factory_config_server_name_isolation.pas`
+    PASS (`6 passed, 0 failed`)
+  - `tests/test_factory_server_name_compatibility_warning.pas`
+    PASS (`16 passed, 0 failed`)
+  - `tests/config/test_config_validation.pas`
+    PASS (`53 passed, 0 failed`)
+  - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+    PASS (`20 passed, 0 failed, 1 skipped`)
+
+- 因而当前下一条最有价值的路线已经不再是“builder / factory 还要不要继续保留 context state”：
+  - 这个问题已经被代码和 focused regressions 一起回答为“不再保留”
+  - 现在真正该进入的是 final public surface cleanup prep：
+    - `TSSLConfig.ServerName` 是否继续保留当前字段位置
+    - `WithSNI(...)` 是否继续保留当前命名/入口
+    - direct `ISSLContext.SetServerName/GetServerName` 这条最后 compatibility surface 未来如何降级/替代

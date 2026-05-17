@@ -45,14 +45,14 @@ begin
   Result := LClientConn.GetServerName;
 end;
 
-procedure Test_DefaultConfig_ClientServerName_RemainsSupported;
+procedure Test_DefaultConfig_ClientServerName_IsIgnored;
 var
   LLib: ISSLLibrary;
   LOriginalConfig: TSSLConfig;
   LDefaultConfig: TSSLConfig;
   LCtx: ISSLContext;
 begin
-  TestHeader('Client default-config ServerName remains context-only on FreePascal');
+  TestHeader('Client default-config ServerName is ignored on FreePascal');
 
   LLib := TSSLFactory.GetLibrary(sslFreePascal);
   LOriginalConfig := LLib.GetDefaultConfig;
@@ -62,10 +62,10 @@ begin
     LLib.SetDefaultConfig(LDefaultConfig);
 
     LCtx := TSSLFactory.CreateContext(sslCtxClient, sslFreePascal);
-    Assert(LCtx.GetServerName = 'client-default.example.com',
-      'Client default-config context preserves ServerName');
+    Assert(LCtx.GetServerName = '',
+      'Client default-config context no longer preserves ServerName');
     Assert(ConnectionServerName(LCtx) = '',
-      'FreePascal client default-config connection no longer inherits context ServerName');
+      'FreePascal client default-config connection still keeps empty ServerName');
   finally
     LLib.SetDefaultConfig(LOriginalConfig);
   end;
@@ -109,12 +109,12 @@ begin
   end;
 end;
 
-procedure Test_OneShot_ClientServerName_RemainsSupported;
+procedure Test_OneShot_ClientServerName_IsIgnored;
 var
   LConfig: TSSLConfig;
   LCtx: ISSLContext;
 begin
-  TestHeader('Client one-shot ServerName remains context-only on FreePascal');
+  TestHeader('Client one-shot ServerName is ignored on FreePascal');
 
   LConfig := CreateDefaultConfig(sslCtxClient);
   LConfig.LibraryType := sslFreePascal;
@@ -122,10 +122,10 @@ begin
   LConfig.ServerName := 'client-oneshot.example.com';
 
   LCtx := TSSLFactory.CreateContext(LConfig);
-  Assert(LCtx.GetServerName = 'client-oneshot.example.com',
-    'Client one-shot context preserves ServerName');
+  Assert(LCtx.GetServerName = '',
+    'Client one-shot context no longer preserves ServerName');
   Assert(ConnectionServerName(LCtx) = '',
-    'FreePascal client one-shot connection no longer inherits context ServerName');
+    'FreePascal client one-shot connection still keeps empty ServerName');
 end;
 
 procedure Test_OneShot_ServerServerName_IsRejected;
@@ -160,9 +160,9 @@ end;
 
 begin
   try
-    Test_DefaultConfig_ClientServerName_RemainsSupported;
+    Test_DefaultConfig_ClientServerName_IsIgnored;
     Test_DefaultConfig_ServerServerName_IsRejected;
-    Test_OneShot_ClientServerName_RemainsSupported;
+    Test_OneShot_ClientServerName_IsIgnored;
     Test_OneShot_ServerServerName_IsRejected;
 
     WriteLn;

@@ -82,11 +82,15 @@ begin
     LCtx := TSSLFactory.CreateContext(sslCtxClient, sslFreePascal);
 
     Assert(LCtx <> nil, 'Default-config client context still builds');
+    Assert(LCtx.GetServerName = '',
+      'Default-config client context no longer retains deprecated ServerName state');
     Assert(LLogger.CallCount > 0, 'Default-config client ServerName emits a warning');
     Assert(Pos('TSSLConfig.ServerName', LLogger.LastMessage) > 0,
       'Default-config warning names TSSLConfig.ServerName');
     Assert(Pos('deprecated context-level SNI compatibility', LLogger.LastMessage) > 0,
       'Default-config warning marks context-level SNI as compatibility-only');
+    Assert(Pos('CreateContext ignores it', LLogger.LastMessage) > 0,
+      'Default-config warning explains that the built context ignores deprecated ServerName');
     Assert(Pos('TSSLFactory.CreateContext(AContextType, ALibType)', LLogger.LastMessage) > 0,
       'Default-config warning identifies the factory callsite');
   finally
@@ -118,11 +122,15 @@ begin
     LCtx := TSSLFactory.CreateContext(LConfig);
 
     Assert(LCtx <> nil, 'One-shot client context still builds');
+    Assert(LCtx.GetServerName = '',
+      'One-shot client context no longer retains deprecated ServerName state');
     Assert(LLogger.CallCount > 0, 'One-shot client ServerName emits a warning');
     Assert(Pos('TSSLConfig.ServerName', LLogger.LastMessage) > 0,
       'One-shot warning names TSSLConfig.ServerName');
     Assert(Pos('deprecated context-level SNI compatibility', LLogger.LastMessage) > 0,
       'One-shot warning marks context-level SNI as compatibility-only');
+    Assert(Pos('CreateContext ignores it', LLogger.LastMessage) > 0,
+      'One-shot warning explains that the built context ignores deprecated ServerName');
     Assert(Pos('TSSLFactory.CreateContext(const AConfig)', LLogger.LastMessage) > 0,
       'One-shot warning identifies the factory callsite');
   finally

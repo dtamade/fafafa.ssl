@@ -77,11 +77,15 @@ begin
       .BuildClient;
 
     Assert(LCtx <> nil, 'BuildClient still succeeds');
+    Assert(LCtx.GetServerName = '',
+      'BuildClient no longer retains the deprecated client-side ServerName on built contexts');
     Assert(LLogger.CallCount > 0, 'BuildClient WithSNI emits a warning');
     Assert(Pos('WithSNI', LLogger.LastMessage) > 0,
       'BuildClient warning names WithSNI');
     Assert(Pos('deprecated context-level SNI compatibility', LLogger.LastMessage) > 0,
       'BuildClient warning marks context-level SNI as compatibility-only');
+    Assert(Pos('BuildClient ignores it', LLogger.LastMessage) > 0,
+      'BuildClient warning explains that the built client context ignores legacy WithSNI');
     Assert(Pos('TSSLContextBuilderImpl.BuildClient', LLogger.LastMessage) > 0,
       'BuildClient warning identifies the builder callsite');
   finally

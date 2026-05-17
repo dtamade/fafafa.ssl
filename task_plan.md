@@ -161,6 +161,21 @@
     - `tests/scripts/test_context_server_name_compat_shim_contract.sh`
       现在要求 shared helper 只出现在 OpenSSL / WolfSSL / MbedTLS / WinSSL
       并禁止 FreePascal/helper/backend source 重新引入 direct context getter fallback
+- [completed] High-level context `ServerName` write surfaces 已完成 `warning + ignore` 收口：
+  - `src/fafafa.ssl.context.builder.pas`
+    的 `BuildClient` 不再把 `WithSNI(...)` 写回 built client context
+  - `src/fafafa.ssl.factory.pas`
+    的 client default-config / one-shot `CreateContext(...)` 路径
+    不再把 `TSSLConfig.ServerName` 写回新建 context
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+  - `tests/test_factory_server_name_scope_clarification.pas`
+  - `tests/test_factory_config_server_name_isolation.pas`
+    已翻成 built context `GetServerName = ''` 的新真相
+  - focused 验证：
+    - `tests/test_context_builder_server_name_compatibility_warning.pas`
+    - `tests/test_factory_server_name_compatibility_warning.pas`
+    - `tests/config/test_config_validation.pas`
+    - `tests/test_cross_backend_client_context_server_name_clarification.pas`
 
 ## Scope
 
@@ -188,17 +203,15 @@
 
 ## Current Queue
 
-1. 继续选择最后一个 direct server-context legacy-state control case 的 behavior RED：
-   - 第一优先级回到：
-     - `tests/test_context_builder_server_servername_runtime_consistency.pas`
-     - `tests/test_factory_server_name_scope_clarification.pas`
-     - `tests/test_factory_config_server_name_isolation.pas`
-   - 需要决定：
-     - 既然所有 client connection 都已不再继承 deprecated context-level `ServerName`
-     - builder / factory 是否还值得继续保留 “context state 仍可写入并可读回” 这层 legacy state
-2. 在 direct server-context control case 明确后，再评估最终 public surface cleanup：
-   - `TSSLConfig.ServerName` 是否继续留在当前 record 上
-   - builder `WithSNI(...)` 是否继续保留当前命名/入口
+1. 进入 final public surface cleanup prep：
+   - 当前 builder / factory 的高层输入都已经是 `warning + ignore`
+   - direct `ISSLContext.SetServerName/GetServerName` 已成为最后仍可观察的 context-level compatibility surface
+   - 下一步优先评估：
+     - `TSSLConfig.ServerName` 是否还应继续留在当前 record 上
+     - builder `WithSNI(...)` 是否还应继续保留当前命名/挂载位置
+2. 在 public surface prep 明确后，再决定 direct context compatibility API 的后续收口方式：
+   - direct `SetServerName/GetServerName` 是否继续原样保留
+   - 是否需要新的替代入口、文档降格和 focused source contract
 3. 在 capability 与 SNI 迁移边界都稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。
 4. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
 

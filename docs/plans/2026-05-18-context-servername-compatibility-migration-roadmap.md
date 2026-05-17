@@ -22,21 +22,26 @@
 ### 1. Public / high-level write paths
 
 - `TSSLFactory.CreateContext(...)`
-  - client path 仍会把 `TSSLConfig.ServerName` 写回 context
+  - client path 继续接受 `TSSLConfig.ServerName`
+  - 但现在只发 compatibility warning，并忽略这份输入，不再把它写回新建 context
   - server path 已 fail-fast 拒绝 `ServerName`
 - `TSSLContextBuilderImpl.WithSNI(...)`
-  - `BuildClient` 仍把 `FServerName` 写回 context
+  - `BuildClient` 现在只保留 compatibility warning，并忽略这份输入
   - `BuildServer` 现在只保留 compatibility warning，并忽略这份 client-only state
 - `TSSLConnector`
   - 已经走正确方向：把 hostname 设置到 `ISSLClientConnection.SetServerName(...)`
   - 是目标语义的现成参考实现
+- direct `ISSLContext.SetServerName/GetServerName`
+  - 当前仍保留为最后仍可观察的 context-level compatibility surface
 
 Current caveat discovered by live focused retest:
 
-- FreePascal client runtime no longer consumes deprecated context-level `ServerName` at connection-creation time
-- so `BuildClient.WithSNI(...)` / factory client `ServerName` still preserve context state, but they no longer imply connection inheritance on FreePascal
-- the shared client fallback divergence that remained in OpenSSL / WolfSSL / MbedTLS / WinSSL has now also been cut
-- this moves the remaining migration question back to whether the last direct server-context legacy-state control case should continue to survive now that no client backend inherits it anymore
+- all client backends now follow the same no-inheritance rule
+- builder / factory high-level write paths no longer preserve deprecated context-level `ServerName` state on newly built contexts
+- this moves the remaining migration question forward to the final public surface cleanup:
+  - whether `TSSLConfig.ServerName` should keep its current naming / placement
+  - whether `WithSNI(...)` should keep its current naming / placement
+  - how long the direct context compatibility API should remain
 
 ### 2. Backend fallback read paths
 
@@ -57,14 +62,21 @@ Current caveat discovered by live focused retest:
 
 ### 3. Tests that intentionally lock the compatibility boundary
 
-#### Compatibility should remain observable for now
+#### High-level write surfaces are now warning + ignore
 
 - `tests/test_context_builder_server_servername_runtime_consistency.pas`
-
-#### Scope / warning semantics already tightened
-
 - `tests/test_factory_server_name_scope_clarification.pas`
+- `tests/test_factory_config_server_name_isolation.pas`
+- `tests/test_context_builder_server_name_compatibility_warning.pas`
+- `tests/test_factory_server_name_compatibility_warning.pas`
 - `tests/config/test_config_validation.pas`
+
+#### Compatibility remains observable only through direct context API / explicit API-surface coverage
+
+- `tests/test_cross_backend_client_context_server_name_clarification.pas`
+- `tests/mbedtls/test_mbedtls_context_contract.pas`
+- `tests/wolfssl/test_wolfssl_context_contract.pas`
+- `tests/winssl/test_winssl_library_basic.pas`
 
 ## Roadmap
 
@@ -125,6 +137,20 @@ Delivered fourth cut:
 - `TSSLContextBuilderImpl.BuildServer` no longer writes `WithSNI(...)` into the built server context
 - server-side builder warning and validation wording now explicitly say `BuildServer ignores it and server-side connections ignore it`
 - focused RED -> GREEN proved the built server context no longer retains the client-only `ServerName`, while adjacent warning/validation coverage stayed green
+
+Delivered fifth cut:
+
+- `TSSLContextBuilderImpl.BuildClient` no longer writes `WithSNI(...)` into the built client context
+- factory default-config path and one-shot config path no longer write `TSSLConfig.ServerName` into newly built client contexts
+- runtime / validation / API wording now consistently says the high-level builder/factory paths ignore deprecated context-level `ServerName` inputs for new contexts
+- focused RED -> GREEN proved:
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+  - `tests/test_factory_server_name_scope_clarification.pas`
+  - `tests/test_factory_config_server_name_isolation.pas`
+  - `tests/test_context_builder_server_name_compatibility_warning.pas`
+  - `tests/test_factory_server_name_compatibility_warning.pas`
+  - `tests/config/test_config_validation.pas`
+  all align to the new `warning + ignore` truth
 
 ### Phase C: Replace Backend Inherited Fallback With Explicit Compatibility Shim
 
@@ -260,6 +286,7 @@ Delivered fifth cut:
   - Phase B factory/config write-surface narrowing complete
   - builder runtime warning alignment complete
   - Phase B server-side BuildServer ignore cut complete
+  - Phase B client-side high-level ignore cut complete
   - Phase C shared compatibility shim first cut complete
   - Phase C `sslCtxBoth` ambiguity cut complete
   - Phase C FreePascal client runtime fallback cut complete
@@ -273,26 +300,24 @@ Delivered fifth cut:
 ### What This Means Operationally
 
 - we are no longer blocked on “what is true now”
-- we are now blocked on “which compatibility cut to implement first”
+- we are no longer blocked on “which high-level path still preserves context state”
+- we are now blocked on “how to clean up the remaining public compatibility surface”
 
 ## Next Recommended Batch
 
 Choose one bounded implementation family only:
 
-1. **Last direct server-context control-case RED selection**
-   - start with:
-     - `tests/test_context_builder_server_servername_runtime_consistency.pas`
-     - `tests/test_factory_server_name_scope_clarification.pas`
-     - `tests/test_factory_config_server_name_isolation.pas`
-   - decide whether deprecated context-level `ServerName` should still survive as context-only legacy state in builder/factory paths now that no client backend inherits it anymore
-   - only after that, re-evaluate the final public surface shape (`TSSLConfig.ServerName`, `WithSNI(...)`, and related docs)
-2. **Final surface cleanup prep**
-   - re-evaluate whether `TSSLConfig.ServerName` and builder `WithSNI(...)` still need their current naming/placement now that builder/factory/runtime paths all expose compatibility warnings
+1. **Final surface cleanup prep**
+   - re-evaluate whether `TSSLConfig.ServerName` and builder `WithSNI(...)` still need their current naming/placement now that builder/factory/runtime paths are all `warning + ignore`
+   - define the next focused contracts/docs that distinguish compatibility-only public surface from recommended client-flow surface
+2. **Direct context compatibility API cleanup staging**
+   - decide how long direct `ISSLContext.SetServerName/GetServerName` should remain
+   - decide whether it needs a clearer replacement path, narrower docs, or dedicated source contracts before any further shrink
 3. **Wider public-surface cleanup**
-   - stage follow-up work only after the first behavior-migration RED is pinned and verified
-Recommended first pick: **resolve whether deprecated context-level `ServerName` should remain as context-only legacy state in builder/factory paths now that cross-backend client inheritance is fully gone**.
+   - stage follow-up work only after the compatibility-only public surface has a stable prep plan
+Recommended first pick: **final public surface cleanup prep around `TSSLConfig.ServerName`, `WithSNI(...)`, and the remaining direct context compatibility API**.
 
-Builder/factory/shared-shim warning work, residual test-surface classification, connector-side contract cleanup, the `sslCtxBoth` ambiguity cut, and the shared client fallback divergence are no longer the blocker; the next highest-value work is resolving the final direct server-context legacy-state control case.
+Builder/factory/shared-shim warning work, residual test-surface classification, connector-side contract cleanup, the `sslCtxBoth` ambiguity cut, the shared client fallback divergence, and the final high-level direct-state control cut are no longer the blocker; the next highest-value work is shaping the final public compatibility surface.
 
 ## Verification
 

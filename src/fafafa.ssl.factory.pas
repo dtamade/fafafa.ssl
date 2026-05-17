@@ -477,9 +477,9 @@ begin
   TSecurityLog.Warning(
     'Factory',
     Format(
-      '%s is applying TSSLConfig.ServerName for deprecated context-level SNI compatibility; ' +
-      'prefer per-connection SNI via ISSLClientConnection.SetServerName or ' +
-      'TSSLConnector.Connect*(..., ServerName).',
+      '%s received TSSLConfig.ServerName as deprecated context-level SNI compatibility; ' +
+      'CreateContext ignores it for new contexts; prefer per-connection SNI via ' +
+      'ISSLClientConnection.SetServerName or TSSLConnector.Connect*(..., ServerName).',
       [ACallSite]
     )
   );
@@ -1060,14 +1060,9 @@ begin
     Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
 
     if LConfig.ServerName <> '' then
-    begin
       LogContextLevelServerNameCompatibilityWarning(
         'TSSLFactory.CreateContext(AContextType, ALibType)'
       );
-      {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-      Result.SetServerName(LConfig.ServerName);
-      {$POP}
-    end;
 
     if LConfig.ALPNProtocols <> '' then
       Result.SetALPNProtocols(LConfig.ALPNProtocols);
@@ -1128,14 +1123,9 @@ begin
     Result.SetCipherSuites(LConfig.CipherSuites);
     
   if LConfig.ServerName <> '' then
-  begin
     LogContextLevelServerNameCompatibilityWarning(
       'TSSLFactory.CreateContext(const AConfig)'
     );
-    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-    Result.SetServerName(LConfig.ServerName);
-    {$POP}
-  end;
     
   if LConfig.ALPNProtocols <> '' then
     Result.SetALPNProtocols(LConfig.ALPNProtocols);

@@ -1338,3 +1338,57 @@
 
 - `git diff --check`
   - result: PASS
+
+### High-Level Context ServerName Ignore Cut
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+  - result: PASS
+  - summary:
+    - recovery script produced no extra unsynced context to merge
+    - current session could continue directly from the live worktree and planning files
+
+- `mkdir -p tmp/test_factory_server_name_compatibility_warning && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_server_name_compatibility_warning -FEtmp/test_factory_server_name_compatibility_warning -otmp/test_factory_server_name_compatibility_warning/test_factory_server_name_compatibility_warning tests/test_factory_server_name_compatibility_warning.pas && ./tmp/test_factory_server_name_compatibility_warning/test_factory_server_name_compatibility_warning`
+  - result: PASS
+  - summary:
+    - focused factory warning suite finished `16 passed, 0 failed`
+    - default-config and one-shot client paths both emit the compatibility warning
+    - built client contexts no longer retain deprecated `ServerName` state
+
+- `mkdir -p tmp/test_config_validation && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_config_validation -FEtmp/test_config_validation -otmp/test_config_validation/test_config_validation tests/config/test_config_validation.pas && ./tmp/test_config_validation/test_config_validation`
+  - result: PASS
+  - summary:
+    - focused config validation suite finished `53 passed, 0 failed`
+    - builder validation wording and compatibility guidance stayed green after the high-level ignore cut
+
+- `mkdir -p tmp/test_cross_backend_client_context_server_name_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_cross_backend_client_context_server_name_clarification -FEtmp/test_cross_backend_client_context_server_name_clarification -otmp/test_cross_backend_client_context_server_name_clarification/test_cross_backend_client_context_server_name_clarification tests/test_cross_backend_client_context_server_name_clarification.pas && ./tmp/test_cross_backend_client_context_server_name_clarification/test_cross_backend_client_context_server_name_clarification`
+  - result: PASS
+  - summary:
+    - focused cross-backend contract finished `20 passed, 0 failed, 1 skipped`
+    - direct context API still keeps deprecated `ServerName` observable on the context itself
+    - new client connections across available backends still do not inherit that state
+
+- update `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - change:
+    - sync current truth so builder/factory high-level paths are `warning + ignore`
+    - move the next recommended batch from the old direct-state control case to final public surface cleanup prep
+
+- update `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - change:
+    - add a dedicated closeout section for the high-level context `ServerName` ignore cut
+    - refresh the route summary so future sessions do not reopen the already-closed builder/factory legacy-state question
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the new truth that deprecated context-level `ServerName` no longer enters new contexts through builder/factory high-level paths
+    - record that direct `ISSLContext.SetServerName/GetServerName` is now the last remaining observable compatibility surface
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current high-level ignore cut batch has no whitespace or patch-format issues
+
+- `git status --short`
+  - result: PASS
+  - summary:
+    - worktree contains the expected builder/factory/test/doc updates for the current batch
+    - new plan file `docs/plans/2026-05-18-high-level-context-servername-ignore-cut.md` is ready to be added at commit time

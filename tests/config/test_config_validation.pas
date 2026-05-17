@@ -129,8 +129,10 @@ begin
   Assert(LResult.IsValid, 'Client config with WithSNI remains valid for backward compatibility');
   Assert(LResult.HasWarnings, 'Deprecated context-level SNI produces a warning');
   Assert(
-    WarningsContain(LResult, 'deprecated') and WarningsContain(LResult, 'ISSLClientConnection.SetServerName'),
-    'Warning points callers to per-connection SNI'
+    WarningsContain(LResult, 'deprecated') and
+      WarningsContain(LResult, 'BuildClient ignores it') and
+      WarningsContain(LResult, 'ISSLClientConnection.SetServerName'),
+    'Warning explains that BuildClient ignores deprecated context-level SNI and points callers to per-connection SNI'
   );
 end;
 

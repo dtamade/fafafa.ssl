@@ -49,21 +49,21 @@ begin
   end;
 end;
 
-procedure Test_BuilderClientWithSNI_PreservesServerName;
+procedure Test_BuilderClientWithSNI_IsIgnoredForClientContexts;
 var
   Ctx: ISSLContext;
 begin
-  TestHeader('Builder BuildClient keeps explicit WithSNI context state only');
+  TestHeader('Builder BuildClient ignores legacy WithSNI on client contexts');
 
   Ctx := TSSLContextBuilder.Create
     .WithBackend(sslFreePascal)
     .WithSNI('builder-client.example.com')
     .BuildClient;
 
-  Assert(Ctx.GetServerName = 'builder-client.example.com',
-    'BuildClient preserves explicit WithSNI ServerName on the built context');
+  Assert(Ctx.GetServerName = '',
+    'BuildClient no longer preserves explicit WithSNI ServerName on the built context');
   Assert(ConnectionServerName(Ctx) = '',
-    'FreePascal client connection no longer inherits the builder-configured context ServerName');
+    'FreePascal client connection still keeps empty ServerName after BuildClient ignores WithSNI');
 end;
 
 procedure Test_BuilderServerWithSNI_IsIgnoredForServerContexts;
@@ -112,7 +112,7 @@ end;
 
 begin
   try
-    Test_BuilderClientWithSNI_PreservesServerName;
+    Test_BuilderClientWithSNI_IsIgnoredForClientContexts;
     Test_BuilderServerWithSNI_IsIgnoredForServerContexts;
     Test_DirectServerContext_IgnoresLegacyContextServerName;
 

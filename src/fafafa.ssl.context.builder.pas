@@ -206,8 +206,9 @@ begin
     TSecurityLog.Warning(
       'ContextBuilder',
       Format(
-        '%s is applying WithSNI for deprecated context-level SNI compatibility; ' +
-        'prefer per-connection hostname via TSSLConnectionBuilder.WithHostname, ' +
+        '%s received WithSNI as deprecated context-level SNI compatibility on a client context; ' +
+        'BuildClient ignores it and new client connections start without inherited ServerName. ' +
+        'Prefer per-connection hostname via TSSLConnectionBuilder.WithHostname, ' +
         'ISSLClientConnection.SetServerName, or TSSLConnector.Connect*(..., ServerName).',
         [ACallSite]
       )
@@ -1231,15 +1232,10 @@ begin
 
   // SNI and ALPN
   if FServerName <> '' then
-  begin
     LogBuilderContextLevelServerNameCompatibilityWarning(
       'TSSLContextBuilderImpl.BuildClient',
       False
     );
-    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-    Result.SetServerName(FServerName);
-    {$POP}
-  end;
 
   if FALPNProtocols <> '' then
     Result.SetALPNProtocols(FALPNProtocols);
@@ -1521,7 +1517,7 @@ begin
       )
     else
       Result.AddWarning(
-        'WithSNI configures deprecated context-level SNI compatibility; prefer per-connection hostname via TSSLConnectionBuilder.WithHostname or ISSLClientConnection.SetServerName'
+        'WithSNI is deprecated context-level SNI compatibility on client contexts; BuildClient ignores it; prefer per-connection hostname via TSSLConnectionBuilder.WithHostname or ISSLClientConnection.SetServerName'
       );
   end;
 
