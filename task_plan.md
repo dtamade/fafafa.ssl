@@ -65,6 +65,13 @@
   - `TSSLContextBuilderImpl.BuildClient` / `BuildServer` 在应用 `WithSNI(...)` 兼容写入前，都会发出显式 warning
   - `docs/reference/API_REFERENCE.md` 已把 `WithSNI(...)` 也降格成 compatibility-only 入口
   - focused builder warning regressions、validation regressions 与 runtime consistency regressions 均保持绿色
+- [completed] 第一批明确属于普通 WinSSL 客户端连接流的测试已迁到 per-connection SNI：
+  - `tests/winssl/test_winssl_error_mapping_online.pas`
+  - `tests/winssl/test_winssl_https_client.pas`
+  - `tests/winssl/test_winssl_revocation_online.pas`
+  - `tests/winssl/test_winssl_mtls_e2e_local.pas`
+  - 这些文件不再通过 context-level `SetServerName(...)` 教客户端连接流
+  - focused source contract 绿灯，Win64 交叉编译也已通过
 
 ## Scope
 
@@ -92,14 +99,19 @@
 
 ## Current Queue
 
-1. 若要真正删除兼容行为，先补 dedicated RED：
+1. 继续把剩余活跃 `context-level SetServerName(...)` 使用点分成两类：
+   - intentional compatibility / API-surface coverage：补显式标签
+   - 普通客户端连接流：继续迁到 per-connection SNI
+2. 优先处理下一批边界最清晰的剩余普通流：
+   - `tests/winssl/test_winssl_mtls_skeleton.pas` 的真实握手路径
+3. 在分类稳定后，再补第一条真正的 behavior migration RED：
    - 明确哪些 intentional-compat tests 会被改写
    - 明确 connector / connection-builder / factory / builder 四层的新优先级和失败语义
-2. 在 dedicated RED 明确后，再评估最终 public surface cleanup：
+4. 在 dedicated RED 明确后，再评估最终 public surface cleanup：
    - `TSSLConfig.ServerName` 是否继续留在当前 record 上
    - builder `WithSNI(...)` 是否继续保留当前命名/入口
-3. 在 capability 与 SNI 迁移边界都稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。
-4. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
+5. 在 capability 与 SNI 迁移边界都稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。
+6. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
 
 ## Verification Discipline
 

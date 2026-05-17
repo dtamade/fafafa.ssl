@@ -223,3 +223,27 @@
   - backend constructor fallback 已收成 shared shim
 
 - 因而真正剩下的已经不是“哪里还在默默保留旧语义”，而是“哪一组 intentional compatibility tests 先改，才能开始第一条真实 behavior migration RED”
+
+- 第一批普通 WinSSL 客户端连接流的分类与迁移也已经有了实锤：
+  - `tests/winssl/test_winssl_error_mapping_online.pas`
+  - `tests/winssl/test_winssl_https_client.pas`
+  - `tests/winssl/test_winssl_revocation_online.pas`
+  - `tests/winssl/test_winssl_mtls_e2e_local.pas`
+  - 这些文件都属于真实客户端连接/握手/验证流，不是 intentional compatibility，也不是 context API-surface coverage
+
+- 这四个文件当前已经统一改成：
+  - 先 `CreateConnection(...)`
+  - 再拿 `ISSLClientConnection`
+  - 然后在 `Connect` / `DoHandshake` 前设置 `ServerName`
+  - 因此这些文件不再继续把 deprecated context-level SNI 当成正常客户端流的指导方式
+
+- 验证证据也说明这不是纸面改动：
+  - focused shell contract 已经证明这四个文件不再含 `Ctx/Context/LCtx/LContext.SetServerName(...)`
+  - 本地 Linux 直接编 `test_winssl_https_client.pas` 仍会因为 `fafafa.ssl.winssl.lib` 依赖 `Windows` 单元而失败，这不是本批引入的新问题，而是该测试本身的平台边界
+  - 改走 `fpc -Twin64` 后，这四个文件的 Win64 交叉编译都成功完成
+
+- 这轮收口之后，剩余活跃 context-level `SetServerName(...)` 命中已经更接近“故意保留”的集合：
+  - connector / precedence / cross-backend compatibility tests
+  - backend context contracts / framework tests
+  - WinSSL comprehensive / library-basic / skeleton 这类更偏 API-surface 或未完成分类的文件
+  - 剩下真正还像普通客户端流的主要残留，已经缩到 `test_winssl_mtls_skeleton.pas` 的握手路径这类更小的面

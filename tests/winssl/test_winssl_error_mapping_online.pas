@@ -50,7 +50,7 @@ end;
 
 procedure TestExpiredBadSSL;
 var
-  Lib: ISSLLibrary; Ctx: ISSLContext; Conn: ISSLConnection; S: TSocket;
+  Lib: ISSLLibrary; Ctx: ISSLContext; Conn: ISSLConnection; ClientConn: ISSLClientConnection; S: TSocket;
   runNet: Boolean; ok: Boolean; vr: Integer; vrs: string;
 begin
   BeginSection('证书错误映射（在线）');
@@ -72,7 +72,6 @@ begin
     if Ctx = nil then Exit;
 
     // 默认启用对等验证，以便 GetVerifyResult 反映链状态
-    Ctx.SetServerName('expired.badssl.com');
     Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 
     if not ConnectToHost('expired.badssl.com', 443, S) then begin
@@ -82,6 +81,12 @@ begin
       Conn := Ctx.CreateConnection(S);
       Check('创建 SSL 连接对象', Conn <> nil);
       if Conn = nil then Exit;
+
+      Check('连接支持 ISSLClientConnection',
+        Supports(Conn, ISSLClientConnection, ClientConn));
+      if not Supports(Conn, ISSLClientConnection, ClientConn) then Exit;
+
+      ClientConn.SetServerName('expired.badssl.com');
 
       ok := Conn.Connect;
       Check('TLS 握手完成（允许带过期证书）', ok);
@@ -115,5 +120,4 @@ begin
   WriteLn; WriteLn('总计: ', Total, ' 通过: ', Passed, ' 失败: ', Failed);
   if Failed > 0 then Halt(1);
 end.
-
 

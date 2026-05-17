@@ -259,6 +259,68 @@
   - summary:
     - no whitespace or patch-format issues remained after the builder warning batch
 
+### WinSSL Client Flow SNI Guidance Cleanup
+
+- add `docs/plans/2026-05-18-winssl-client-flow-sni-guidance-cleanup.md`
+  - purpose:
+    - define a bounded batch over a small set of ordinary WinSSL client-flow tests
+    - separate normal client-flow guidance from intentional compatibility/API-surface coverage
+
+- add `tests/scripts/test_winssl_client_flow_tests_no_context_level_sni_guidance_contract.sh`
+  - purpose:
+    - fail if selected WinSSL client-flow tests still teach context-level SNI through local context variables
+
+- `bash -n tests/scripts/test_winssl_client_flow_tests_no_context_level_sni_guidance_contract.sh && bash tests/scripts/test_winssl_client_flow_tests_no_context_level_sni_guidance_contract.sh`
+  - result: RED
+  - summary:
+    - initial failure proved `tests/winssl/test_winssl_error_mapping_online.pas` still used `Ctx.SetServerName('expired.badssl.com')`
+    - the selected WinSSL client-flow files were still carrying deprecated context-level SNI guidance
+
+- update selected WinSSL client-flow tests:
+  - `tests/winssl/test_winssl_error_mapping_online.pas`
+  - `tests/winssl/test_winssl_https_client.pas`
+  - `tests/winssl/test_winssl_revocation_online.pas`
+  - `tests/winssl/test_winssl_mtls_e2e_local.pas`
+  - change:
+    - replace local context-level `SetServerName(...)` with per-connection `ISSLClientConnection.SetServerName(...)`
+    - preserve existing protocol/verification/handshake assertions
+
+- `bash -n tests/scripts/test_winssl_client_flow_tests_no_context_level_sni_guidance_contract.sh && bash tests/scripts/test_winssl_client_flow_tests_no_context_level_sni_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - the selected WinSSL client-flow tests no longer use context-level SNI guidance
+
+- `mkdir -p tmp/test_winssl_https_client && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_winssl_https_client -FEtmp/test_winssl_https_client -otmp/test_winssl_https_client/test_winssl_https_client tests/winssl/test_winssl_https_client.pas`
+  - result: EXPECTED PLATFORM FAILURE
+  - summary:
+    - direct Linux-target compile still fails in `src/fafafa.ssl.winssl.lib.pas` because the WinSSL library depends on the `Windows` unit
+    - this confirms the selected files should be verified through Win64 cross-compile or Windows runtime evidence, not native Linux-target compile
+
+- `fpc -Twin64 -B -Fu./src -Fu./tests -Fu./tests/framework -otmp/test_winssl_error_mapping_online.exe tests/winssl/test_winssl_error_mapping_online.pas`
+  - result: PASS
+  - summary:
+    - Win64 cross-compile completed successfully after the per-connection SNI change
+
+- `fpc -Twin64 -B -Fu./src -Fu./tests -Fu./tests/framework -otmp/test_winssl_revocation_online.exe tests/winssl/test_winssl_revocation_online.pas`
+  - result: PASS
+  - summary:
+    - Win64 cross-compile completed successfully after the per-connection SNI change
+
+- `fpc -Twin64 -B -Fu./src -Fu./tests -Fu./tests/framework -otmp/test_winssl_mtls_e2e_local.exe tests/winssl/test_winssl_mtls_e2e_local.pas`
+  - result: PASS
+  - summary:
+    - Win64 cross-compile completed successfully after the per-connection SNI change
+
+- `fpc -Twin64 -B -Fu./src -Fu./tests -Fu./tests/framework -otmp/test_winssl_https_client.exe tests/winssl/test_winssl_https_client.pas`
+  - result: PASS
+  - summary:
+    - Win64 cross-compile completed successfully after the per-connection SNI change
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remained after the WinSSL client-flow cleanup batch
+
 ### Context ServerName Compatibility Roadmap Freeze
 
 - `rg -n "SetServerName\\(|GetServerName\\(|WithSNI\\(|ServerName\\b" src tests docs | sed -n '1,320p'`

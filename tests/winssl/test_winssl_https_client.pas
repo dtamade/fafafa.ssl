@@ -17,6 +17,7 @@ var
   SSLLib: ISSLLibrary;
   Context: ISSLContext;
   Connection: ISSLConnection;
+  ClientConnection: ISSLClientConnection;
   Socket: TSocket;
   Host: string;
   Port: Word;
@@ -201,9 +202,6 @@ begin
   // Test 4: 配置上下文
   WriteLn('Test 4: Configuring context...');
   try
-    // 设置 SNI 服务器名称
-    Context.SetServerName(Host);
-    
     // 设置协议版本
     Context.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
     
@@ -260,6 +258,22 @@ begin
       {$ENDIF}
       Halt(1);
     end;
+  end;
+
+  if Supports(Connection, ISSLClientConnection, ClientConnection) then
+  begin
+    ClientConnection.SetServerName(Host);
+    TestPass('Configure connection SNI (' + Host + ')');
+  end
+  else
+  begin
+    TestFail('Configure connection SNI', 'Connection does not support ISSLClientConnection');
+    {$IFDEF WINDOWS}
+    closesocket(Socket);
+    {$ELSE}
+    CloseSocket(Socket);
+    {$ENDIF}
+    Halt(1);
   end;
   
   // Test 7: 执行 TLS 握手

@@ -52,7 +52,7 @@ function EnvDefault(const name: string): string; begin Result := GetEnvironmentV
 
 procedure Test_mTLS_E2E_Local;
 var
-  Lib: ISSLLibrary; Ctx: ISSLContext; Conn: ISSLConnection;
+  Lib: ISSLLibrary; Ctx: ISSLContext; Conn: ISSLConnection; ClientConn: ISSLClientConnection;
   Host, Pfx, PfxPass, CaFile: string; Port: Integer; S: TSocket; ok: Boolean;
 begin
   BeginSection('WinSSL mTLS E2E (local s_server)');
@@ -80,7 +80,6 @@ begin
     if Ctx = nil then Exit;
 
     Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
-    Ctx.SetServerName(Host);
     try
       Ctx.LoadPrivateKey(Pfx, PfxPass);
       Check('加载客户端 PFX 证书与私钥', True);
@@ -101,6 +100,14 @@ begin
     try
       Conn := Ctx.CreateConnection(THandle(S));
       Check('创建 SSL 连接对象', Conn <> nil);
+      if Conn = nil then Exit;
+
+      Check('连接支持 ISSLClientConnection',
+        Supports(Conn, ISSLClientConnection, ClientConn));
+      if not Supports(Conn, ISSLClientConnection, ClientConn) then Exit;
+
+      ClientConn.SetServerName(Host);
+
       ok := (Conn <> nil) and (Conn.DoHandshake = sslHsCompleted);
       Check('mTLS 握手', ok);
       if ok then Conn.Shutdown;
@@ -119,7 +126,6 @@ begin
   WriteLn; WriteLn('总计: ', Total, ' 通过: ', Passed, ' 失败: ', Failed);
   if Failed > 0 then Halt(1);
 end.
-
 
 
 

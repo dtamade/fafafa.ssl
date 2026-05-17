@@ -346,6 +346,40 @@
   - backend fallback 有 shared shim
   - 因此接下来终于可以直接讨论第一条 behavior migration RED，而不是继续清理“沉默兼容入口”
 
+## 增量收口：WinSSL 普通客户端流迁到 per-connection SNI
+
+- 在 builder/factory/runtime/shared-shim 都显式化之后，剩余活跃 `SetServerName(...)` 命中里还混着一批真正的普通客户端连接流：
+  - `test_winssl_error_mapping_online`
+  - `test_winssl_https_client`
+  - `test_winssl_revocation_online`
+  - `test_winssl_mtls_e2e_local`
+  - 这些文件的共同点是：它们都在做真实客户端连接/握手/验证，不是在证明 legacy compatibility，也不是在做 context API-surface 契约
+
+- 这批已经把它们统一迁到正确方向：
+  - 先 `CreateConnection(...)`
+  - 再拿 `ISSLClientConnection`
+  - 然后在 `Connect` / `DoHandshake` 前调用 `SetServerName(...)`
+  - 原有测试关注点保持不变：
+    - 证书错误映射
+    - HTTPS 基本连通
+    - 吊销错误
+    - 本地 mTLS 握手
+
+- focused 证据也足够扎实：
+  - `tests/scripts/test_winssl_client_flow_tests_no_context_level_sni_guidance_contract.sh`
+    - RED -> GREEN
+    - 直接守住“这些普通流文件不再教 context-level SNI”
+  - 本地 Linux-target 直接编 `test_winssl_https_client.pas`
+    - 仍然会卡在 `fafafa.ssl.winssl.lib` 对 `Windows` 单元的依赖
+    - 这说明此类文件的本地静态编译验证本来就该走 Win64/Windows 路径
+  - `fpc -Twin64` 对四个文件的交叉编译全部成功
+
+- 这步完成之后，剩余活跃 context-level `SetServerName(...)` 命中已经明显更接近“故意保留”的集合：
+  - precedence / connector / cross-backend compatibility contracts
+  - backend context contracts / framework tests
+  - WinSSL comprehensive / library-basic / skeleton 这类更偏 API-surface 或未完成分类的文件
+  - 因而下一步已经不是继续随机扫普通流，而是把剩余活跃测试面彻底分清 intentional 与 ordinary
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -369,9 +403,9 @@
 
 ### 下一批最值得做的事
 
-1. 进入 **context-level SNI compatibility migration** 的 behavior migration RED 选择
-   - 现在 builder/factory/runtime/shared-shim 都已经显式暴露 compatibility 边界
-   - 下一步应明确哪一组 intentional compatibility tests 先改，来启动第一条真实行为迁移
+1. 继续 **残余活跃测试面分类**
+   - 现在一批真正的 WinSSL 普通客户端流已经迁完
+   - 下一步应把剩余 context-level `SetServerName(...)` 命中明确分成 intentional compatibility / API-surface coverage 与 residual ordinary flow
 
 2. 再决定 behavior migration 的第一条 RED
    - 明确哪些 intentional-compat tests 会被改写

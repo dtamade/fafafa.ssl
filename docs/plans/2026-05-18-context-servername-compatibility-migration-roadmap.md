@@ -148,6 +148,20 @@ Candidates:
 - revisit builder `WithSNI(...)` naming/scope
 - update docs/reference after runtime truth actually changes
 
+### Phase E: Residual Test-Surface Classification And Migration
+
+**Target:** make the remaining active `context-level SetServerName(...)` hits obviously intentional or migrate them out of normal client-flow guidance.
+
+Delivered first cut:
+
+- four ordinary WinSSL client-flow tests moved from context-level SNI to per-connection SNI:
+  - `test_winssl_error_mapping_online`
+  - `test_winssl_https_client`
+  - `test_winssl_revocation_online`
+  - `test_winssl_mtls_e2e_local`
+- focused shell contract now proves those files no longer teach context-level SNI
+- Win64 cross-compile proof succeeded for the selected files
+
 ## Progress Report
 
 ### Workstream status
@@ -160,6 +174,7 @@ Candidates:
   - Phase B factory/config write-surface narrowing complete
   - builder runtime warning alignment complete
   - Phase C shared compatibility shim first cut complete
+  - Phase E first WinSSL client-flow migration cut complete
 - `TSSLConfig` cross-layer slimming: intentionally deferred until SNI migration stabilizes
 
 ### What This Means Operationally
@@ -176,10 +191,12 @@ Choose one bounded implementation family only:
 2. **Behavior migration RED selection**
    - decide which intentional-compat tests will be rewritten before any real fallback deletion
    - explicitly define new precedence between builder/factory/context and per-connection hostname paths
+3. **Residual active test classification**
+   - label remaining API-surface / compatibility coverage explicitly
+   - continue migrating any leftover normal client-flow files such as the real handshake path inside `test_winssl_mtls_skeleton`
+Recommended first pick: **Residual active test classification**.
 
-Recommended first pick: **Final surface cleanup prep**.
-
-Phase C first cut is now closed for the current additive-compatibility scope; the next highest-value work is choosing the public-surface cleanup cut before any real behavioral deletion.
+Builder/factory/shared-shim warning work is no longer the blocker; the next highest-value work is shrinking the ambiguous residual test surface before choosing the first real behavior-migration RED.
 
 ## Verification
 
