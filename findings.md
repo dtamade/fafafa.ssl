@@ -711,6 +711,26 @@
   - focused contract 只是把 row note、parse 计数和 IN_PROGRESS 分支的 next-actions truth 固化下来
   - 因此远端自动 `CI` run `25984350085` 继续按增量 run id 记账即可
 
+- `0a38a0d` 对应的 docs closeout run `25984425968` 已经 SUCCESS：
+  - `Code Quality (Light)`、`Minimal Gate (Linux)`、`FreePascal TLS 1.3 Completeness` 全部 SUCCESS
+  - 说明上一轮 cross-summary-runid closeout 也没有把自动主线带偏
+
+- 再往下一层补 `cross_summary run_id` 在 `closure_status=CLOSED` 分支下的 focused next-actions contract 后，当前结论仍然是“coverage gap 已补齐”，不是新的 prod bug：
+  - `check_wave_b_b2_evidence_consistency.sh` 本身已经会把这类情况带到 closed-closure guidance
+  - valid closure report 的 `closure_status_note` 会继续保持 `CLOSED`
+  - next actions 也已经会 truthful 地说“closure 已闭环，但 evidence consistency 仍未对齐”
+  - 缺口只在于此前没有 focused contract 把 closed-closure guidance 这层 truth 固定下来
+
+- 新增 `test_wave_b_b2_consistency_cross_summary_run_id_closed_next_actions_contract.sh` 后，这个 closed-guidance 分支也进入了持续守护：
+  - 它同时钉住 `closure_status_note=CLOSED`
+  - cross-summary row note
+  - `runid_mismatch_or_parse_issue=1`
+  - 以及 closed-closure guidance 不被误带回 IN_PROGRESS / generic 分支
+
+- 因而当前 `wave-b-b2` 线上更合理的下一跳，已经从 cross-summary run_id closed guidance 前移到 cross-summary missing closed guidance：
+  - 优先补 `check_wave_b_b2_evidence_consistency.sh` 的 cross-summary missing 在 `closure_status=CLOSED` 分支下的 focused next-actions contract
+  - 目标是确认缺失 cross-summary 时，next actions 也继续落在 “closure 已闭环，但 evidence consistency 未对齐” 这条 truthful guidance
+
 - 因而当前 `wave-b-b2` 线上更合理的下一跳，已经从 cross-summary run_id 基本计数前移到 closed-closure guidance：
   - 优先补 cross-summary run_id issue 在 `closure_status=CLOSED` 分支下的 focused next-actions contract
   - 目标是确认它会继续落在 “closure 已闭环，但 evidence consistency 未对齐” 这条 truthful guidance，而不是混回 generic 或 IN_PROGRESS 分支

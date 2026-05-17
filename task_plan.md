@@ -582,6 +582,22 @@
 - [completed] 第三十二次 push 已记录远端自动 run：
   - `CI` run `25984350085`
   - 该批只扩 focused contract，不扩生产脚本语义；按增量验证纪律记录 run id，不同步阻塞式等待整条自动主线收口
+- [completed] 第三十二次 docs closeout push 对应远端自动 run `25984425968` 已 SUCCESS：
+  - `Code Quality (Light)` SUCCESS
+  - `Minimal Gate (Linux)` SUCCESS
+  - `FreePascal TLS 1.3 Completeness` SUCCESS
+  - 说明 cross-summary-runid closeout 没有误伤自动主线
+- [completed] 继续沿 `wave-b-b2` 的 consistency cross-summary run_id closed-closure guidance 分支静态加深后，确认这里当前同样不是新的生产脚本 bug，而是 focused contract 覆盖缺口：
+  - 当 valid closure report 让 `closure_status_note=CLOSED` 时，cross-summary 顶层 `run_id` 缺失/串批次仍会把 consistency 判成 `INCONSISTENT`
+  - 但 next actions 会继续 truthful 地落在“closure 已闭环，但 evidence consistency 未对齐”这条 closed-closure guidance
+- [completed] 新增 `tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_closed_next_actions_contract.sh`：
+  - `cross_summary run_id missing` / `mismatch` 时，顶层 `closure_status_note` 必须保持 `CLOSED`
+  - next actions 必须继续输出 “当前 closure 已闭环，但 evidence consistency 仍未对齐”
+  - 不允许误落回 `IN_PROGRESS` 或 generic metadata-misaligned 分支
+- [completed] 第三十三波 wave-b consistency cross-summary run_id closed-guidance coverage 本地复核通过：
+  - `test_wave_b_b2_consistency_cross_summary_run_id_closed_next_actions_contract.sh` PASS
+  - `test_wave_b_b2_consistency_cross_summary_run_id_contract.sh` PASS
+  - `git diff --check` PASS
 
 ## Current Blocker
 
@@ -630,9 +646,10 @@
 
 ## Current Queue
 
-1. 如果继续沿 `wave-b-b2` 这条线做静态加深，下一跳优先补 `check_wave_b_b2_evidence_consistency.sh` 的 cross-summary run_id issue 在 `closure_status=CLOSED` 分支下的 focused next-actions contract，确认它会继续走 “closure 已闭环但 evidence consistency 未对齐” 的 truthful guidance。
-2. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
-3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
+1. 先提交并推送当前 `wave-b-b2` consistency cross-summary run_id closed-guidance coverage batch，并记录自动 `CI` run id；该批只扩 focused contract，不扩生产脚本语义。
+2. 如果继续沿 `wave-b-b2` 这条线做静态加深，下一跳优先补 `check_wave_b_b2_evidence_consistency.sh` 的 cross-summary missing 在 `closure_status=CLOSED` 分支下的 focused next-actions contract，确认缺失 cross-summary 时也继续走 “closure 已闭环但 evidence consistency 未对齐” 的 truthful guidance。
+3. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
+4. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
 
 ## Verification Discipline
 

@@ -381,6 +381,39 @@
     - previous docs closeout head `e85cf18` had already finished `success` as run `25984086002`
     - per the incremental verification discipline, this cross-summary run-id coverage batch recorded the run id without a blocking watch
 
+### Thirty-Third-Order Route Review
+
+- `sed -n '1,220p' tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_contract.sh`
+  - result: PASS
+  - summary:
+    - existing neighboring contract already covered the IN_PROGRESS branch for cross-summary run_id issues
+    - new focused contract could isolate only the CLOSED guidance branch without widening the production surface
+
+- `sed -n '927,942p' scripts/check_wave_b_b2_evidence_consistency.sh`
+  - result: PASS
+  - summary:
+    - when `consistency_status != CONSISTENT` and `closure_status_note == CLOSED`, next actions already route to the closed-closure guidance
+    - no immediate evidence of a production bug before adding a focused contract
+
+### Thirty-Third-Order Contract Expansion
+
+- add `tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_closed_next_actions_contract.sh`
+  - purpose: require preserved `closure_status_note=CLOSED`, preserved `runid_mismatch_or_parse_issue=1`, and preserved closed-closure guidance when cross-summary run_id is missing or mismatched
+
+### Local Revalidation After Thirty-Third Contract Expansion
+
+- `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_closed_next_actions_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_closed_next_actions_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
 ### Eleventh Push Success Revalidation
 
 - `git commit -m "chore: pin workflow actions to commits"`
