@@ -781,6 +781,36 @@
   - `tests/test_cross_backend_client_context_server_name_clarification.pas`
     - PASS (`20 passed, 0 failed, 1 skipped`)
 
+## 增量收口：OpenSSL direct library default-config ServerName alignment
+
+- 在继续做 final public surface cleanup prep 之前，又摸出一个此前没被 focused 合同覆盖的高层漏口：
+  - `src/fafafa.ssl.openssl.backed.pas`
+    的 `TOpenSSLLibrary.CreateContext(...)`
+    仍然会把 `FDefaultConfig.ServerName` 写回新建 context
+  - 这意味着 generic factory 和 builder 虽然已经统一成 `warning + ignore`
+  - 但 direct OpenSSL library path 还在偷偷保留旧注入语义
+
+- 当前修法把这条 backend-specific 入口也收回到了和主线一致的真相：
+  - `TOpenSSLLibrary.CreateContext(sslCtxClient)`
+    - 不再把 `FDefaultConfig.ServerName` 写回 built context
+    - 如果配置了 library log callback，会发出明确的 compatibility warning
+  - `TOpenSSLLibrary.CreateContext(sslCtxServer)`
+    - 若 default-config 带 `ServerName`，现在会 fail-fast 抛 `ESSLConfigurationException`
+  - reject 也已经是真正的 fail-fast：
+    - 不再先创建 context 再抛错
+
+- 这一步的意义不只是“再修一个 OpenSSL 特例”：
+  - 现在 builder、generic factory、direct OpenSSL library 这三条仍算高层的新建入口，都已经不再把 deprecated `ServerName` 流入新 context
+  - 因而剩下的 public-surface 主问题，才真正只剩最后的 compatibility API 形状，而不是还有某个 backend-specific 高层口子在漏
+
+- focused 结果说明这条新发现的实现分歧已经真正收掉：
+  - `tests/test_openssl_library_default_config_server_name_clarification.pas`
+    - RED (`3 passed, 8 failed`) -> GREEN (`13 passed, 0 failed`)
+  - 邻接 retest：
+    - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+      PASS (`20 passed, 0 failed, 1 skipped`)
+    - 说明 OpenSSL direct-library 对齐没有碰坏当前 cross-backend no-inheritance 真相
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -800,6 +830,8 @@
 - `tests/integration/test_cross_backend_errors_contract.pas`
   - PASS
 - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+  - PASS
+- `tests/test_openssl_library_default_config_server_name_clarification.pas`
   - PASS
 - `tests/test_context_builder_server_servername_runtime_consistency.pas`
   - PASS
@@ -832,6 +864,7 @@
 
 1. 进入 final public surface cleanup prep
    - builder / factory 的高层写入面已经全部变成 `warning + ignore`
+   - direct OpenSSL library default-config path 也已完成对齐
    - direct `ISSLContext.SetServerName/GetServerName` 已成为最后仍可观察的 context-level compatibility surface
    - 下一步应优先评估：
      - `TSSLConfig.ServerName` 是否继续保留当前字段位置

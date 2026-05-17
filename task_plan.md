@@ -176,6 +176,15 @@
     - `tests/test_factory_server_name_compatibility_warning.pas`
     - `tests/config/test_config_validation.pas`
     - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+- [completed] OpenSSL backend-specific direct library default-config path 已与当前高层真相对齐：
+  - `src/fafafa.ssl.openssl.backed.pas`
+    的 `TOpenSSLLibrary.CreateContext(...)`
+    不再把 `FDefaultConfig.ServerName` 写回新建 client context
+  - 同一路径在 server context 下若 default-config 带 `ServerName`，现在会 fail-fast reject
+  - direct OpenSSL library path 若配置了 log callback，也会发出 compatibility warning
+  - focused 验证：
+    - `tests/test_openssl_library_default_config_server_name_clarification.pas`
+    - `tests/test_cross_backend_client_context_server_name_clarification.pas`
 
 ## Scope
 
@@ -205,6 +214,7 @@
 
 1. 进入 final public surface cleanup prep：
    - 当前 builder / factory 的高层输入都已经是 `warning + ignore`
+   - OpenSSL backend-specific direct library default-config path 也已完成对齐
    - direct `ISSLContext.SetServerName/GetServerName` 已成为最后仍可观察的 context-level compatibility surface
    - 下一步优先评估：
      - `TSSLConfig.ServerName` 是否还应继续留在当前 record 上

@@ -487,3 +487,38 @@
     - `TSSLConfig.ServerName` 是否继续保留当前字段位置
     - `WithSNI(...)` 是否继续保留当前命名/入口
     - direct `ISSLContext.SetServerName/GetServerName` 这条最后 compatibility surface 未来如何降级/替代
+
+- 继续往下摸 public surface 时，又暴露出一个此前没被 focused 合同覆盖的漏口：
+  - `src/fafafa.ssl.openssl.backed.pas`
+    的 `TOpenSSLLibrary.CreateContext(...)`
+    仍会把 `FDefaultConfig.ServerName` 写回新建 context
+  - 这不是 generic factory 残留，而是 backend-specific direct library 入口自己的漂移
+  - 其余 `freepascal` / `mbedtls` / `wolfssl` / `winssl` library `CreateContext(...)` 当前并没有这条 `ServerName` 注入逻辑
+
+- 这意味着当时的“high-level write surfaces 已全部收口”还差最后一块：
+  - generic factory 已经是 `warning + ignore`
+  - builder 已经是 `warning + ignore`
+  - 但 direct OpenSSL library default-config path 还停留在 “默默写回 context”
+
+- 当前这条 OpenSSL direct-library 漏口也已经被收掉：
+  - `TOpenSSLLibrary.CreateContext(sslCtxClient)`
+    - 不再把 `FDefaultConfig.ServerName` 写回 built context
+    - 若配置了 library log callback，会发出明确 compatibility warning
+  - `TOpenSSLLibrary.CreateContext(sslCtxServer)`
+    - 若 default-config 带 `ServerName`，现在会 fail-fast 抛 `ESSLConfigurationException`
+  - server misuse 的 reject 也已经前移到真正的 fail-fast：
+    - 不再先创建 context 再抛错
+
+- focused evidence 说明这次不是只改了 OpenSSL 文案，而是补上了一个真实未覆盖实现面：
+  - 新增 `tests/test_openssl_library_default_config_server_name_clarification.pas`
+    - RED (`3 passed, 8 failed`) -> GREEN (`13 passed, 0 failed`)
+    - 直接钉住 client ignore+warning、server reject、no-ServerName quiet
+  - 邻接 retest：
+    - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+      PASS (`20 passed, 0 failed, 1 skipped`)
+    - 说明这次 direct library 对齐没有碰坏当前 cross-backend no-inheritance 真相
+
+- 因而当前路线图又收紧了一层：
+  - “high-level write surfaces” 现在不仅包括 builder / generic factory
+  - 也包括 direct OpenSSL library default-config path，且这几条都已经不再把 deprecated `ServerName` 流入新 context
+  - 剩下的 public-surface 主问题，确实只剩最后的 compatibility API 形状，而不是还有某个 backend-specific 高层入口继续偷写旧 state

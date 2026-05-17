@@ -1312,15 +1312,25 @@ begin
       'TOpenSSLLibrary.CreateContext'
     );
 
+  LConfig := FDefaultConfig;
+  LConfig.ContextType := AType;
+
+  if (AType = sslCtxServer) and (Trim(LConfig.ServerName) <> '') then
+    raise ESSLConfigurationException.CreateWithContext(
+      'ServerName is client-scoped. Server-side connections ignore context-level ServerName; ' +
+      'remove it from TOpenSSLLibrary.CreateContext when creating server contexts.',
+      sslErrConfiguration,
+      'TOpenSSLLibrary.CreateContext',
+      0,
+      sslOpenSSL
+    );
+
   // Let exceptions propagate - caller must handle errors explicitly
   Result := TOpenSSLContext.Create(Self, AType);
 
   // Apply default config (already normalized in constructor/SetDefaultConfig)
   if Result <> nil then
   begin
-    LConfig := FDefaultConfig;
-    LConfig.ContextType := AType;
-
     if (LConfig.ProtocolVersions <> []) and (LConfig.ProtocolVersions <> Result.GetProtocolVersions) then
       Result.SetProtocolVersions(LConfig.ProtocolVersions);
 
@@ -1352,10 +1362,13 @@ begin
     if (ssoEnableSessionCache in LConfig.Options) <> Result.GetSessionCacheMode then
       Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
 
-    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
-    if (LConfig.ServerName <> '') and (LConfig.ServerName <> Result.GetServerName) then
-      Result.SetServerName(LConfig.ServerName);
-    {$POP}
+    if LConfig.ServerName <> '' then
+      InternalLog(
+        sslLogWarning,
+        'TOpenSSLLibrary.CreateContext received TSSLConfig.ServerName as deprecated context-level ' +
+        'SNI compatibility; CreateContext ignores it for new contexts; prefer per-connection SNI via ' +
+        'ISSLClientConnection.SetServerName or TSSLConnector.Connect*(..., ServerName).'
+      );
 
     if (LConfig.ALPNProtocols <> '') and (LConfig.ALPNProtocols <> Result.GetALPNProtocols) then
       Result.SetALPNProtocols(LConfig.ALPNProtocols);

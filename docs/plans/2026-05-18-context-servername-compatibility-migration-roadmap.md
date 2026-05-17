@@ -28,6 +28,10 @@
 - `TSSLContextBuilderImpl.WithSNI(...)`
   - `BuildClient` 现在只保留 compatibility warning，并忽略这份输入
   - `BuildServer` 现在只保留 compatibility warning，并忽略这份 client-only state
+- `ISSLLibrary.SetDefaultConfig + TOpenSSLLibrary.CreateContext(...)`
+  - OpenSSL backend-specific direct library path 现在也已与上面两条高层入口对齐
+  - client path 会发出 library warning，并忽略 deprecated `ServerName`
+  - server path 会 fail-fast 拒绝 `ServerName`
 - `TSSLConnector`
   - 已经走正确方向：把 hostname 设置到 `ISSLClientConnection.SetServerName(...)`
   - 是目标语义的现成参考实现
@@ -151,6 +155,16 @@ Delivered fifth cut:
   - `tests/test_factory_server_name_compatibility_warning.pas`
   - `tests/config/test_config_validation.pas`
   all align to the new `warning + ignore` truth
+
+Delivered sixth cut:
+
+- `TOpenSSLLibrary.CreateContext(...)` no longer preserves `FDefaultConfig.ServerName` on newly built client contexts
+- the OpenSSL backend-specific direct library path now emits a warning through the library log callback when client default-config still carries deprecated `ServerName`
+- `TOpenSSLLibrary.CreateContext(sslCtxServer)` now fail-fast rejects default-config `ServerName` before creating the context
+- focused RED -> GREEN proved:
+  - `tests/test_openssl_library_default_config_server_name_clarification.pas`
+  - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+  so the remaining high-level write-surface drift is no longer hiding inside the OpenSSL direct library entry
 
 ### Phase C: Replace Backend Inherited Fallback With Explicit Compatibility Shim
 
@@ -287,6 +301,7 @@ Delivered fifth cut:
   - builder runtime warning alignment complete
   - Phase B server-side BuildServer ignore cut complete
   - Phase B client-side high-level ignore cut complete
+  - Phase B OpenSSL direct-library default-config alignment complete
   - Phase C shared compatibility shim first cut complete
   - Phase C `sslCtxBoth` ambiguity cut complete
   - Phase C FreePascal client runtime fallback cut complete

@@ -1392,3 +1392,60 @@
   - summary:
     - worktree contains the expected builder/factory/test/doc updates for the current batch
     - new plan file `docs/plans/2026-05-18-high-level-context-servername-ignore-cut.md` is ready to be added at commit time
+
+### OpenSSL Library Default-Config ServerName Alignment
+
+- add `docs/plans/2026-05-18-openssl-library-default-config-servername-alignment.md`
+  - purpose:
+    - define the bounded backend-specific alignment batch for the remaining OpenSSL direct-library default-config `ServerName` drift
+    - keep scope on `ISSLLibrary.SetDefaultConfig + TOpenSSLLibrary.CreateContext(...)` instead of reopening the whole public-surface family
+
+- add `tests/test_openssl_library_default_config_server_name_clarification.pas`
+  - purpose:
+    - prove the OpenSSL direct-library client default-config path still preserved deprecated `ServerName`
+    - prove the OpenSSL direct-library server default-config path was not rejecting client-scoped `ServerName` yet
+
+- `mkdir -p tmp/test_openssl_library_default_config_server_name_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_library_default_config_server_name_clarification -FEtmp/test_openssl_library_default_config_server_name_clarification -otmp/test_openssl_library_default_config_server_name_clarification/test_openssl_library_default_config_server_name_clarification tests/test_openssl_library_default_config_server_name_clarification.pas && ./tmp/test_openssl_library_default_config_server_name_clarification/test_openssl_library_default_config_server_name_clarification`
+  - result: RED
+  - summary:
+    - initial run failed `8` assertions
+    - OpenSSL direct-library client path still preserved deprecated default `ServerName`
+    - OpenSSL direct-library server path still created a context instead of rejecting the client-scoped field
+    - no direct-library warning existed yet
+
+- update `src/fafafa.ssl.openssl.backed.pas`
+  - change:
+    - move the server-scope validation into a true fail-fast check before context creation
+    - stop applying `FDefaultConfig.ServerName` to new client contexts
+    - emit an OpenSSL library warning through the library log callback when client default-config still carries deprecated `ServerName`
+
+- `mkdir -p tmp/test_openssl_library_default_config_server_name_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_library_default_config_server_name_clarification -FEtmp/test_openssl_library_default_config_server_name_clarification -otmp/test_openssl_library_default_config_server_name_clarification/test_openssl_library_default_config_server_name_clarification tests/test_openssl_library_default_config_server_name_clarification.pas && ./tmp/test_openssl_library_default_config_server_name_clarification/test_openssl_library_default_config_server_name_clarification`
+  - result: RED -> GREEN
+  - summary:
+    - focused OpenSSL direct-library clarification suite finished `13 passed, 0 failed`
+    - client default-config `ServerName` is now warning + ignore
+    - server default-config `ServerName` now fails fast before context creation
+
+- `mkdir -p tmp/test_cross_backend_client_context_server_name_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_cross_backend_client_context_server_name_clarification -FEtmp/test_cross_backend_client_context_server_name_clarification -otmp/test_cross_backend_client_context_server_name_clarification/test_cross_backend_client_context_server_name_clarification tests/test_cross_backend_client_context_server_name_clarification.pas && ./tmp/test_cross_backend_client_context_server_name_clarification/test_cross_backend_client_context_server_name_clarification`
+  - result: PASS
+  - summary:
+    - adjacent cross-backend contract stayed green (`20 passed, 0 failed, 1 skipped`)
+    - the OpenSSL direct-library alignment did not regress the current no-inheritance truth on new client connections
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - extend the client SNI compatibility note so it also covers the direct OpenSSL library default-config path
+
+- update `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - change:
+    - record the OpenSSL direct-library alignment as the last remaining high-level write-surface closeout
+    - keep the next recommended batch on final public surface cleanup prep
+
+- update `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - change:
+    - add a dedicated closeout section for the OpenSSL direct-library default-config alignment
+    - refresh the route summary so future sessions do not re-open this backend-specific leak
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the new truth that builder, generic factory, and direct OpenSSL library paths no longer inject deprecated `ServerName` into newly created contexts
