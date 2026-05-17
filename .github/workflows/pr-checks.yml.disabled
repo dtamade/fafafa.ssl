@@ -217,23 +217,16 @@ jobs:
           echo "### ✅ Status" >> $GITHUB_STEP_SUMMARY
           echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| PR Information | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Quick Build | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Test Coverage | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Code Statistics | ✅ Complete |" >> $GITHUB_STEP_SUMMARY
+          echo "| PR Information | ${{ needs.pr-info.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Quick Build | ${{ needs.quick-build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Coverage | ${{ needs.test-coverage-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Statistics | ${{ needs.code-stats.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "### 📊 Quick Stats" >> $GITHUB_STEP_SUMMARY
-          echo "- Reviewers required: 2" >> $GITHUB_STEP_SUMMARY
-          echo "- Checks required: 4" >> $GITHUB_STEP_SUMMARY
-          echo "- Auto-merge: Disabled" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### 📋 Next Steps" >> $GITHUB_STEP_SUMMARY
-          echo "1. 👥 Request review from team members" >> $GITHUB_STEP_SUMMARY
-          echo "2. 🧪 Wait for CI/CD tests to complete" >> $GITHUB_STEP_SUMMARY
-          echo "3. 📝 Address any feedback" >> $GITHUB_STEP_SUMMARY
-          echo "4. ✅ Merge when approved" >> $GITHUB_STEP_SUMMARY
+          echo "### 📌 Notes" >> $GITHUB_STEP_SUMMARY
+          echo "- This report reflects workflow job results from this run only." >> $GITHUB_STEP_SUMMARY
+          echo "- Review branch-protection, reviewer, and merge policy settings in repository configuration instead of assuming them here." >> $GITHUB_STEP_SUMMARY
+          echo "- Investigate any result other than \`success\` in the corresponding job logs above." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "---" >> $GITHUB_STEP_SUMMARY
