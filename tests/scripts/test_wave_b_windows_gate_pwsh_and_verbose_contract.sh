@@ -33,6 +33,14 @@ for f in run_openssl_tests.ps1 run_winssl_tests.ps1; do
   fi
 done
 
+if ! rg -F --quiet -- '$runOutput = & $exePath 2>&1' "$ROOT_DIR/run_winssl_tests.ps1"; then
+  fail "run_winssl_tests.ps1 should capture failing test stdout/stderr for Wave B evidence"
+fi
+
+if ! rg -F --quiet -- '[INFO] no runtime output captured from test executable' "$ROOT_DIR/run_winssl_tests.ps1"; then
+  fail "run_winssl_tests.ps1 should emit an explicit note when a failing test produces no output"
+fi
+
 win_gate="$ROOT_DIR/scripts/run_wave_b_windows_gate.ps1"
 if [[ ! -f "$win_gate" ]]; then
   fail "missing file: scripts/run_wave_b_windows_gate.ps1"

@@ -39,19 +39,22 @@ jobs:
             "C:\tools\freepascal\bin\x86_64-win64",
             "C:\tools\freepascal\bin\i386-win32",
             "C:\tools\freepascal\bin"
-          )
-          foreach ($p in $fpcCandidates) {
-            if (Test-Path $p) {
-              $env:PATH = "$p;$env:PATH"
-              $p | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-              Write-Host ("[INFO] Added FPC path: " + $p)
-            }
+          ) | Where-Object { Test-Path $_ }
+          if (-not $fpcCandidates) {
+            Write-Host "[ERROR] no FreePascal candidate path found after installation" -ForegroundColor Red
+            exit 1
           }
-          if (-not (Get-Command fpc -ErrorAction SilentlyContinue)) {
+          $fpcPreferredDir = $fpcCandidates | Select-Object -First 1
+          $env:PATH = "$fpcPreferredDir;$env:PATH"
+          $fpcPreferredDir | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          Write-Host ("[INFO] Preferred FPC path: " + $fpcPreferredDir)
+          $fpcCommand = Get-Command fpc -ErrorAction SilentlyContinue
+          if (-not $fpcCommand) {
             Write-Host "[ERROR] fpc not found in PATH after installation" -ForegroundColor Red
             exit 1
           }
-          fpc -iV
+          Write-Host ("[INFO] fpc resolved to: " + $fpcCommand.Source)
+          & $fpcCommand.Source -iV
 
           $lazarusCandidates = @(
             "C:\lazarus",

@@ -33,7 +33,20 @@
   - 结合 live 源码审查，当前最可疑根因是 `src/fafafa.ssl.winssl.api.pas` 把 SSPI 的 `AcceptSecurityContext` 误绑定成了不存在的 `AcceptSecurityContextW`
   - 本地已新增 `tests/scripts/test_winssl_acceptsecuritycontext_import_contract.sh`
   - 本地已把 live 绑定与调用点改为未后缀的 `AcceptSecurityContext`
-  - 下一步是提交、push，并第四次 dispatch `wave-b-b2-manual.yml` 观察新的 Windows 第一硬故障边界
+  - 该修复已通过 `df94ba8` 推送并在第四次 manual run `25985958467` 上完成远端复证
+- [completed] 第四次手动 runtime run `25985958467` 已证明 `AcceptSecurityContext` 绑定修正真实生效：
+  - `Run quick WinSSL smoke` SUCCESS
+  - quick smoke 内部 `test_winssl_certificate_loading.exe` 22/22 PASS
+  - 旧的 `0xC0000139` 进程启动级崩点已经消失
+- [in_progress] 当前新的第一硬故障已经前移到 `Run Windows Wave B gate` 的两个 runner-truth 问题：
+  - `wave_b_windows_winssl_*.log` 中 `test_winssl_api_basic` PASS，但 `tests\unit\test_winssl_comprehensive.pas` 运行失败且日志信息不足
+  - `wave_b_windows_modules_*.log` 中 OpenSSL 模块验证误走到了 `ppc386` / `i386-win32`，并因 `Contnrs` / `DateUtils` / `SyncObjs` 缺失失败
+  - 这暴露出 Windows workflow 的 FPC 路径优先级和最小 WinSSL runner 的失败输出粒度都还不够 truthful
+- [in_progress] 当前批次已经为这两个 runner-truth 问题补上 focused contract 与修法：
+  - 新增 `tests/scripts/test_workflow_windows_fpc_preference_contract.sh`
+  - `wave-b-b2-manual.yml(.disabled)` / `winssl-tests.yml.disabled` / `test-all-platforms.yml.disabled` 已改为显式选择单一 preferred FPC path，并记录实际解析到的 `fpc`
+  - `run_winssl_tests.ps1` 已改为显式捕获失败测试 stdout/stderr，在没有输出时也写出 `[INFO] no runtime output captured from test executable`
+  - 下一步是提交、push，并第五次 dispatch `wave-b-b2-manual.yml` 观察 `Run Windows Wave B gate` 的新边界
 - [completed] 复核远端失败证据（CI run `25893971783` / signer run `25901035350`）
 - [completed] 把 3 个真实问题写成 focused contract tests，并先观测到红灯
 - [completed] 修复 `.github/workflows/ci.yml` / `release.yml` / `release.yml.disabled` 的 WolfSSL 依赖缺口

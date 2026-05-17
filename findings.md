@@ -51,6 +51,30 @@
   - `src/fafafa.ssl.winssl.connection.pas` 的 live 调用点同步改成 `AcceptSecurityContext`
   - 本地 `python3 scripts/compile_all_modules.py` 仍保持 `185/185` 通过
 
+- 第四次 Windows manual run `25985958467` 已经证明 `AcceptSecurityContext` 修法真实生效：
+  - `Run quick WinSSL smoke` SUCCESS
+  - quick smoke 中 `test_winssl_certificate_loading.exe` 完整输出 22/22 PASS
+  - 这说明当前 Windows runtime 已经跨过了 `0xC0000139` 启动级崩点
+
+- 新的第一硬故障已经从 quick smoke 前移到 `Run Windows Wave B gate` 的 runner-truth 问题，而不是 WinSSL 证书加载实现本身：
+  - WinSSL minimal runner:
+    - `test_winssl_api_basic` PASS
+    - `tests\unit\test_winssl_comprehensive.pas` runtime FAIL
+    - 当前日志只有 `exit=1`，不足以定位真实测试失败原因
+  - OpenSSL modules runner:
+    - `validate_all_modules.ps1` 在 Windows runner 上用了 `C:\tools\freepascal\bin\i386-win32\ppc386.exe`
+    - 随后因 `Contnrs` / `DateUtils` / `SyncObjs` 缺失失败
+
+- 这个 `ppc386` 误命中不是底层 Pascal 代码退化，而是 workflow/toolchain 路径优先级 bug：
+  - 现有 Windows workflow 把 `x86_64-win64`、`i386-win32`、`bin` 都用“循环 prepend”方式塞入 PATH
+  - 因为最后一次 prepend 优先级最高，实际会把更泛化或更低优先级的路径顶到前面
+  - 结果是后续步骤里 `Get-Command fpc` 并不稳定指向预期的 64 位编译器
+
+- 当前第三批修法聚焦在“让下一次 run 的 Windows gate 更 truthful”：
+  - 新增 `tests/scripts/test_workflow_windows_fpc_preference_contract.sh`
+  - workflow / dormant templates 改为只选择一个 preferred FPC path，并把最终解析到的 `fpc` 路径写进日志
+  - `run_winssl_tests.ps1` 改为显式捕获失败测试 stdout/stderr；如果失败时完全没有输出，也会写出明确提示
+
 ## 2026-05-15
 
 - GitHub Actions 账户额度不再是当前 blocker：

@@ -110,6 +110,23 @@ Changes for this batch:
 - re-run `python3 scripts/compile_all_modules.py`
 - push and dispatch another `wave-b-b2-manual.yml` run to verify whether quick smoke now gets past process startup
 
+## Task 6: Fix the next Wave B Windows gate truth exposed by run `25985958467`
+
+Observed runtime update:
+
+- quick smoke now fully passes on Windows
+- `Run Windows Wave B gate` becomes the next first hard blocker
+- substep evidence shows two separate issues:
+  - WinSSL minimal runner does not surface failing test output clearly enough
+  - Windows workflow path precedence lets later steps resolve `fpc` to `i386-win32` / `ppc386`
+
+Changes for this batch:
+
+- add `tests/scripts/test_workflow_windows_fpc_preference_contract.sh`
+- update `run_winssl_tests.ps1` so failing child-process stdout/stderr is captured into the Wave B log
+- update the active/dormant Windows workflows to choose one preferred FPC path and log the resolved `fpc`
+- push and dispatch another `wave-b-b2-manual.yml` run so the next Windows failure boundary is no longer blurred by toolchain/path ambiguity
+
 ### Definition Of Done
 
 - 当前手动 Windows workflow 被锁定为覆盖 quick smoke + Wave B gate + broader suite transcript

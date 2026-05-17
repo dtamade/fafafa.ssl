@@ -118,9 +118,17 @@ function Invoke-CompileRun {
   }
 
   Write-Host ("[RUN  ] " + $name) -ForegroundColor Yellow
-  & $exePath
-  if ($LASTEXITCODE -ne 0) {
-    Write-Host ("[FAIL] runtime failed: " + $name + " (exit=" + $LASTEXITCODE + ")") -ForegroundColor Red
+  $runOutput = & $exePath 2>&1
+  $runExitCode = $LASTEXITCODE
+  if ($PSBoundParameters.ContainsKey('Verbose') -or $runExitCode -ne 0) {
+    if ($runOutput) {
+      $runOutput | ForEach-Object { Write-Host ("  " + $_) -ForegroundColor DarkGray }
+    } else {
+      Write-Host "  [INFO] no runtime output captured from test executable" -ForegroundColor DarkGray
+    }
+  }
+  if ($runExitCode -ne 0) {
+    Write-Host ("[FAIL] runtime failed: " + $name + " (exit=" + $runExitCode + ")") -ForegroundColor Red
     return 1
   }
   Write-Host ("[PASS] " + $name) -ForegroundColor Green

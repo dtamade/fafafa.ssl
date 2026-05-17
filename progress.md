@@ -159,6 +159,97 @@
 - `git diff --check`
   - result: PASS
 
+### Fourth Windows Manual Runtime Revalidation
+
+- `gh workflow run .github/workflows/wave-b-b2-manual.yml -f run_id=codex_winssl_20260517_163236 -f strict_closure=false`
+  - result: PASS
+  - summary:
+    - dispatched fourth manual Windows runtime proof run on head `df94ba8`
+
+- `gh run view 25985958467 --json databaseId,status,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - run=`25985958467`
+    - `windows-gate` moved beyond the previous quick-smoke startup crash
+    - new failure boundary is `Run Windows Wave B gate`
+
+- `gh run view 25985958467 --job 76383196848 --log | tail -n 260`
+  - result: PASS
+  - summary:
+    - quick smoke now fully succeeds
+    - `test_winssl_certificate_loading.exe` reports 22/22 PASS
+    - `Run Windows Wave B gate` fails after running its internal WinSSL/OpenSSL/modules substeps
+
+- `gh run download 25985958467 -n wave-b-windows-codex_winssl_20260517_163236 -D tmp/gh-run-25985958467`
+  - result: PASS
+
+- `sed -n '1,240p' tmp/gh-run-25985958467/wave_b_windows_gate_summary_codex_winssl_20260517_163236.md`
+  - result: PASS
+  - summary:
+    - `winssl` step exit=`1`
+    - `openssl` step exit=`0`
+    - `modules` step exit=`1`
+
+- `sed -n '1,260p' tmp/gh-run-25985958467/wave_b_windows_winssl_codex_winssl_20260517_163236.log`
+  - result: PASS
+  - summary:
+    - `test_winssl_api_basic` PASS
+    - `tests\\unit\\test_winssl_comprehensive.pas` runtime failed with exit `1`
+
+- `sed -n '1,260p' tmp/gh-run-25985958467/wave_b_windows_modules_codex_winssl_20260517_163236.log`
+  - result: PASS
+  - summary:
+    - OpenSSL module validation used `C:\tools\freepascal\bin\i386-win32\ppc386.exe`
+    - failures were `Can't find unit Contnrs`, `Can't find unit DateUtils`, `Can't find unit SyncObjs`
+
+### Third RED Proof And Workflow/Runner Audit
+
+- `python3 - <<'PY' ... '[RED-path]' / '[RED-output]' ...`
+  - result: PASS
+  - summary:
+    - current workflow lacked explicit preferred-FPC-path selection
+    - current minimal WinSSL runner did not capture failing test stdout/stderr
+
+### Third Production Fixes Applied
+
+- add `tests/scripts/test_workflow_windows_fpc_preference_contract.sh`
+  - change: require Windows workflows/templates to choose and log one preferred FPC path
+
+- update `tests/scripts/test_wave_b_windows_gate_pwsh_and_verbose_contract.sh`
+  - change: require `run_winssl_tests.ps1` to capture failing child-process output
+
+- update `.github/workflows/wave-b-b2-manual.yml`
+  - change: choose one preferred FPC path and log resolved `fpc`
+
+- update `.github/workflows/wave-b-b2-manual.yml.disabled`
+  - change: keep dormant template in sync with active Windows path-preference logic
+
+- update `.github/workflows/winssl-tests.yml.disabled`
+  - change: keep dormant WinSSL workflow on the same preferred-FPC-path truth
+
+- update `.github/workflows/test-all-platforms.yml.disabled`
+  - change: keep dormant multi-platform workflow on the same preferred-FPC-path truth
+
+- update `run_winssl_tests.ps1`
+  - change: capture test stdout/stderr and emit an explicit note when a failing executable produces no output
+
+### Third Local Revalidation After Fix
+
+- `bash tests/scripts/test_workflow_windows_fpc_preference_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_windows_gate_pwsh_and_verbose_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
 ## 2026-05-15
 
 ### Context Recovery
