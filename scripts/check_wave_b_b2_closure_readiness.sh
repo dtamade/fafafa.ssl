@@ -210,7 +210,7 @@ fi
 
 NEXT_ACTIONS=()
 if [[ "$closure_status" == "CLOSED" ]]; then
-  NEXT_ACTIONS+=("当前三平台 summary 已闭环；如需刷新完整交接链，可复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'）。")
+  NEXT_ACTIONS+=("当前三平台 summary 状态已闭环；这只代表 closure summary 层 truth，完整交接仍需结合 consistency / handoff bundle 判断；如需刷新完整交接链，可复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'）。")
 else
   if [[ "$linux_state" != "PASS" ]]; then
     NEXT_ACTIONS+=("若 Linux 为 READY/FAIL/PENDING：修复或重跑 Linux baseline，并回填有效 Linux summary。")

@@ -124,8 +124,16 @@ if [[ ! -f "$CLOSED_REPORT" ]]; then
   fail "expected closed cross summary report"
 fi
 
-if ! rg -n "当前三平台 cross-platform evidence 已对齐" "$CLOSED_REPORT" >/dev/null; then
-  fail "closed cross summary should acknowledge the aligned three-platform state"
+if ! rg -n "当前三平台 platform summary 状态已对齐" "$CLOSED_REPORT" >/dev/null; then
+  fail "closed cross summary should narrow the closed wording to aligned platform summaries"
+fi
+
+if ! rg -n "完整交接仍需结合 closure / consistency / handoff bundle 判断" "$CLOSED_REPORT" >/dev/null; then
+  fail "closed cross summary should remind operators that full handoff closure still depends on closure/consistency/handoff bundle"
+fi
+
+if rg -n "当前三平台 cross-platform evidence 已对齐" "$CLOSED_REPORT" >/dev/null; then
+  fail "closed cross summary should no longer over-claim that cross-platform evidence is already aligned"
 fi
 
 if rg -n "macOS runner|Windows runner" "$CLOSED_REPORT" >/dev/null; then

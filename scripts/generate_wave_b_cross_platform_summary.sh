@@ -384,7 +384,7 @@ fi
 
 NEXT_ACTIONS=()
 if [[ "$linux_overall" == "PASS" && "$macos_state" == "PASS" && "$windows_state" == "PASS" ]]; then
-  NEXT_ACTIONS+=("当前三平台 cross-platform evidence 已对齐；如需刷新完整交接链，可复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'）。")
+  NEXT_ACTIONS+=("当前三平台 platform summary 状态已对齐；这只代表 summary 层 truth，完整交接仍需结合 closure / consistency / handoff bundle 判断；如需刷新完整交接链，可复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'）。")
 else
   if [[ "$linux_overall" != "PASS" ]]; then
     NEXT_ACTIONS+=("若 Linux 为 FAIL/READY/DRY_RUN：修复或重跑 Linux baseline，并回填有效 Linux summary 与 examples evidence。")
