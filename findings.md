@@ -633,3 +633,24 @@
 - 这次提交 `aed5dbd` 同样只扩大了 focused contract 覆盖面，没有修改生产脚本状态机：
   - 因此远端自动 `CI` run `25983742832` 继续按增量 run id 记账即可
   - 除非自动主线转红，否则不需要把这类 coverage batch 升级成阻塞式盯跑
+
+- 继续往 consistency 顶层摘要面下钻后，`check_wave_b_b2_evidence_consistency.sh` 暴露出一个更细的 truth bug：
+  - `closure_report` 整个文件缺失时，row 已经是 `missing`
+  - `required_missing` 也会正确变成 `1`
+  - 但修复前顶层 `closure_status_note` 仍是 `n/a`
+  - 这会让只看摘要的人看不到“closure report 根本没生成”这个关键事实
+
+- 这个问题的最小安全修法仍然不需要改状态机：
+  - 只在 `check_closure_report_artifact()` 的 missing 分支把顶层 `closure_status_note` 设成 `closure_report missing`
+  - 保持现有计数语义：这仍是 required-missing 问题，不额外算作 parse mismatch
+
+- 新增 `test_wave_b_b2_consistency_closure_report_missing_contract.sh` 后，这条缺失分支也进入了持续守护：
+  - 它同时钉住顶层 `closure_status_note`
+  - `closure_report` row 的 `missing`
+  - `required_missing=1`
+  - `runid_mismatch_or_parse_issue=0`
+  - 以及 generic metadata-misaligned next actions
+
+- 因而当前 `wave-b-b2` 线上更合理的下一跳，已经从 closure-report missing 前移到 cross-summary missing：
+  - 优先补 `check_wave_b_b2_evidence_consistency.sh` 的 `cross_summary missing` focused contract
+  - 目标是确认 cross-summary 整个文件缺失时，row note、`required_missing` 和 next actions 也不会漂成含糊的默认态

@@ -511,6 +511,20 @@
 - [completed] 第二十九次 push 已记录远端自动 run：
   - `CI` run `25983742832`
   - 该批只扩 focused contract，不扩生产脚本语义；按增量验证纪律记录 run id，不同步阻塞式等待整条自动主线收口
+- [completed] 继续沿 `wave-b-b2` 的 consistency closure-report missing 分支静态加深后，确认这里有一个真实的顶层摘要缺口：
+  - `scripts/check_wave_b_b2_evidence_consistency.sh` 在 `closure_report` 整个文件缺失时，会把 row 标成 `missing` 并把 consistency 判成 `INCONSISTENT`
+  - 但修复前顶层 `closure_status_note` 仍停在 `n/a`，没有把 closure-report 缺失真相抬到摘要层
+- [completed] 新增 focused contract，并先在当前脚本上观测到红灯：
+  - `tests/scripts/test_wave_b_b2_consistency_closure_report_missing_contract.sh` 现在显式要求 `closure_report missing` 时顶层 `closure_status_note` 必须输出 `closure_report missing`
+  - 同时 row note、`required_missing`、`runid_mismatch_or_parse_issue` 与 next actions 都要维持同一条 truth
+- [completed] `scripts/check_wave_b_b2_evidence_consistency.sh` 已做最小修法：
+  - `closure_report` 缺失时，顶层 `closure_status_note` 现在直接输出 `closure_report missing`
+  - 保持既有计数语义不变：仍计入 `required_missing`，不额外算作 parse mismatch
+- [completed] 第三十波 wave-b consistency closure-report missing truth 修复本地复核通过：
+  - `test_wave_b_b2_consistency_closure_report_missing_contract.sh` PASS
+  - `test_wave_b_b2_consistency_closure_report_run_id_contract.sh` PASS
+  - `test_wave_b_b2_consistency_next_actions_contract.sh` PASS
+  - `git diff --check` PASS
 
 ## Current Blocker
 
@@ -541,6 +555,9 @@
 - 当前也没有已知仍会因为 `closure_report run_id missing/mismatch` 而把 consistency 顶层 `closure_status_note` 误报成 `CLOSED` 的残留：
   - consistency 现在会把这类 issue 直接反映到顶层 `closure_status_note`
   - next actions 也会回到 generic metadata-misaligned 分支
+- 当前也没有已知仍会因为 `closure_report` 整个文件缺失而让 consistency 顶层 `closure_status_note` 停留在 `n/a` 的残留：
+  - consistency 现在会把这类 issue 直接反映为 `closure_report missing`
+  - next actions 仍保持 generic metadata-misaligned 分支
 - 当前剩余边界只在验证层：
   - `release.yml`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled`、`wave-b-b2-manual.yml.disabled` 等 dormant/manual 路径没有在远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
@@ -548,9 +565,10 @@
 
 ## Current Queue
 
-1. 如果继续沿 `wave-b-b2` 这条线做静态加深，下一跳优先补 `check_wave_b_b2_evidence_consistency.sh` 的 `closure_report missing` focused contract，确认顶层 `closure_status_note`、row note、next actions 在“closure report 整个缺失”时也保持 truthful。
-2. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
-3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
+1. 先提交并推送当前 `wave-b-b2` consistency closure-report missing truth batch，并记录自动 `CI` run id；该批只补顶层摘要 truth，不扩状态机范围。
+2. 如果继续沿 `wave-b-b2` 这条线做静态加深，下一跳优先补 `check_wave_b_b2_evidence_consistency.sh` 的 `cross_summary missing` focused contract，确认 cross-summary 整个文件缺失时 row note、`required_missing` 与 next actions 也保持 truthful。
+3. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
+4. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
 
 ## Verification Discipline
 

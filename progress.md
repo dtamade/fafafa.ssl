@@ -194,6 +194,53 @@
     - status at record time: `in_progress`
     - per the incremental verification discipline, this missing-report coverage batch recorded the run id without a blocking watch
 
+### Thirtieth-Order Route Review
+
+- `sed -n '540,568p' task_plan.md`
+  - result: PASS
+  - summary:
+    - current queue explicitly pointed to `check_wave_b_b2_evidence_consistency.sh` `closure_report missing` focused contract
+    - route stayed on consistency top-note truth instead of reopening broader workflow governance work
+
+- `sed -n '1,240p' tests/scripts/test_wave_b_b2_consistency_closure_report_run_id_contract.sh`
+  - result: PASS
+  - summary:
+    - existing neighboring contract already covered `closure_report run_id missing/mismatch`
+    - new missing-file contract could reuse the same expectations around top note and generic next-actions truth
+
+### Thirtieth-Order RED Contract
+
+- `bash -n tests/scripts/test_wave_b_b2_consistency_closure_report_missing_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_closure_report_missing_contract.sh`
+  - result before thirtieth fix: FAIL
+  - summary:
+    - top-level `closure_status_note` still failed to surface `closure_report missing`
+
+### Thirtieth-Order Repairs
+
+- add `tests/scripts/test_wave_b_b2_consistency_closure_report_missing_contract.sh`
+  - purpose: require top-level note + row note + required-missing semantics + next-actions truth when the closure report file is missing
+
+- update `scripts/check_wave_b_b2_evidence_consistency.sh`
+  - change: when `closure_report` is missing, set top-level `closure_status_note=closure_report missing`
+  - change: keep missing-file semantics on `required_missing`, not `runid_mismatch_or_parse_issue`
+
+### Local Revalidation After Thirtieth Fix
+
+- `bash tests/scripts/test_wave_b_b2_consistency_closure_report_missing_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_closure_report_run_id_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_next_actions_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
 ### Eleventh Push Success Revalidation
 
 - `git commit -m "chore: pin workflow actions to commits"`

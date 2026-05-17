@@ -626,6 +626,7 @@ check_closure_report_artifact() {
   abs_path="$(resolve_path "$rel_path")"
 
   if [[ ! -f "$abs_path" ]]; then
+    closure_status_note="closure_report missing"
     rows+=("| closure_report | $rel_path | NO | n/a | NO | missing |")
     if [[ "$required" == "true" ]]; then
       required_missing=$((required_missing + 1))
