@@ -633,6 +633,72 @@
 - `git diff --check`
   - result: PASS
 
+### Sixth Windows Manual Runtime Revalidation
+
+- `gh run view 25986661765 --json databaseId,headSha,status,conclusion,url,jobs`
+  - result: PASS
+  - summary:
+    - run=`25986661765`
+    - head=`b78ce9e7ef53b7ad4482d47cf071e6c95dc31f4e`
+    - `windows-gate` 继续前移
+    - `Run broader WinSSL runtime suite` 成为新的第一硬阻塞
+
+- `gh run view 25986661765 --job 76385161266 --log | rg -n -C 6 "Failed to acquire credentials handle|SSL backend Windows Schannel is not registered|TestProtocolNegotiation|TestBasicFunctionality|SEC_E_ALGORITHM_MISMATCH"`
+  - result: PASS
+  - summary:
+    - broader suite 的 `WinSSL Integration Tests (Multi-Scenario)` 在 `TestProtocolNegotiation` 的 TLS 1.3-only 子用例里，于 `CreateConnection` 阶段抛出 `ESSLInitializationException`
+    - 关键原生错误是 `0x80090331` / `SEC_E_ALGORITHM_MISMATCH`
+    - broader suite 的 `Backend Comparison Tests` 仍在 `TestBasicFunctionality` 里抛 `SSL backend Windows Schannel is not registered`
+
+### Seventh-Order RED Contracts
+
+- `bash tests/scripts/test_backend_comparison_factory_registration_contract.sh`
+  - result before seventh fix: FAIL
+  - summary:
+    - `tests/integration/test_backend_comparison.pas` 还没有引入 `fafafa.ssl.winssl.lib`
+    - 也还没有显式 WinSSL backend registration guard
+
+- `bash tests/scripts/test_winssl_integration_multi_tls13_optional_contract.sh`
+  - result before seventh fix: FAIL
+  - summary:
+    - `tests/winssl/test_winssl_integration_multi.pas` 还没有显式分类 TLS 1.3-only 的可选平台失败
+    - TLS 1.3-only block 也还没有把 `SEC_E_ALGORITHM_MISMATCH` 收进 try/except
+
+### Seventh-Order Repairs
+
+- add `tests/scripts/test_backend_comparison_factory_registration_contract.sh`
+  - purpose: require `test_backend_comparison.pas` to import `fafafa.ssl.winssl.lib` and register WinSSL before factory-based tests run on Windows
+
+- add `tests/scripts/test_winssl_integration_multi_tls13_optional_contract.sh`
+  - purpose: require `test_winssl_integration_multi.pas` to catch TLS 1.3-only Schannel optional failures and keep them on the existing “可能不支持” path
+
+- update `tests/integration/test_backend_comparison.pas`
+  - change: import `fafafa.ssl.winssl.lib` on Windows
+  - change: add `EnsureWinSSLBackendRegistered`
+  - change: call the registration guard before Windows-side backend comparison tests begin
+
+- update `tests/winssl/test_winssl_integration_multi.pas`
+  - change: import `fafafa.ssl.exceptions` + `fafafa.ssl.winssl.base`
+  - change: add helper functions to classify and describe optional TLS 1.3-only Schannel failures
+  - change: wrap the TLS 1.3-only negotiation subtest so `SEC_E_ALGORITHM_MISMATCH` becomes a platform-conditional pass instead of an unhandled exception
+
+### Local Revalidation After Seventh Fix
+
+- `bash tests/scripts/test_backend_comparison_factory_registration_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_integration_multi_tls13_optional_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_integration_multi_no_context_level_sni_guidance_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_performance_and_backend_comparison_no_context_level_sni_guidance_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
 ### Twenty-Ninth Push Recording
 
 - `git commit -m "test: cover wave-b handoff missing reports"`

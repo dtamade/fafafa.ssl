@@ -96,6 +96,30 @@
   - 为 `scripts/validate_all_modules.ps1` 补 `units`、`lib\fpc\*\units`、`fpc\*\units` 三类布局的 fallback 探测
   - 同时新增 focused contracts，持续守护这两个刚暴露出来的真实缺口
 
+- 第六次 Windows manual run `25986661765` 已证明第四批 Wave B gate 修法真实生效：
+  - `Install dependencies` SUCCESS
+  - `Run quick WinSSL smoke` SUCCESS
+  - `Run Windows Wave B gate` SUCCESS
+  - 当前新的第一硬阻塞已经前移到 `Run broader WinSSL runtime suite`
+
+- broader suite 里的 `Backend Comparison Tests` 不是新的工厂实现问题，而是同类注册缺口换了一个测试入口重现：
+  - 远端日志显示 `tests/integration/test_backend_comparison.pas` 在 `TestBasicFunctionality` 里直接走 `TSSLFactory.GetLibraryInstance(sslWinSSL)`
+  - 该文件此前没有像 `tests/unit/test_winssl_comprehensive.pas` 那样显式调用 `RegisterWinSSLBackend`
+  - 因此最小正确修法仍然是补显式 backend registration guard，而不是继续改 factory 本体
+
+- broader suite 里的 `WinSSL Integration Tests (Multi-Scenario)` 也不是整体 WinSSL 网络路径回归：
+  - 同一份远端日志中，Google / GitHub API / Cloudflare / Microsoft 四个 HTTPS 场景都已完整 PASS
+  - `TestProtocolNegotiation` 的 TLS 1.2-only 子用例 PASS，TLS 1.2/1.3 mixed 自动协商之前的主要握手路径也已被前面的场景覆盖
+  - 当前唯一炸点是 TLS 1.3-only 子用例在 `CreateConnection` 阶段直接抛 `ESSLInitializationException`，原生错误为 `0x80090331`（`SEC_E_ALGORITHM_MISMATCH`）
+  - 这说明当前更合理的修法是让测试把这种 Schannel 平台条件路径收进“可能不支持 TLS 1.3 only”的通过分支，而不是把 broader suite 直接打成未捕获异常退出
+
+- 当前第七批修法因此保持在测试契约层，而不是扩大到 WinSSL 生产实现：
+  - 新增 `tests/scripts/test_backend_comparison_factory_registration_contract.sh`
+  - 新增 `tests/scripts/test_winssl_integration_multi_tls13_optional_contract.sh`
+  - `tests/integration/test_backend_comparison.pas` 现在会在 Windows 入口显式注册 WinSSL backend
+  - `tests/winssl/test_winssl_integration_multi.pas` 现在会把 TLS 1.3-only 下的 `SEC_E_ALGORITHM_MISMATCH` 视为平台条件化结果
+  - 这样可以继续把 GitHub Windows runner 上的新故障边界前移，而不在没有额外证据时过早改动 Schannel 实现
+
 ## 2026-05-15
 
 - GitHub Actions 账户额度不再是当前 blocker：

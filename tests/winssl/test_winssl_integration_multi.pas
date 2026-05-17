@@ -7,6 +7,8 @@ uses
   Windows, SysUtils, Classes, WinSock2,
   
   fafafa.ssl.base,
+  fafafa.ssl.exceptions,
+  fafafa.ssl.winssl.base,
   fafafa.ssl.winssl.lib;
 
 var
@@ -37,6 +39,27 @@ begin
     if aDetails <> '' then
       WriteLn('    原因: ', aDetails);
   end;
+end;
+
+function FormatNativeErrorHex(const AValue: Integer): string;
+begin
+  Result := '0x' + IntToHex(Cardinal(AValue), 8);
+end;
+
+function DescribeSSLException(E: ESSLException): string;
+begin
+  Result := E.Message;
+  if E.NativeError <> 0 then
+    Result := Result + ' [native=' + FormatNativeErrorHex(E.NativeError) + ']';
+  if E.Context <> '' then
+    Result := Result + ' [context=' + E.Context + ']';
+end;
+
+function IsOptionalTLS13OnlyFailure(E: Exception): Boolean;
+begin
+  Result := (E is ESSLException) and
+            (ESSLException(E).LibraryType = sslWinSSL) and
+            (Cardinal(ESSLException(E).NativeError) = SEC_E_ALGORITHM_MISMATCH);
 end;
 
 function InitWinsock: Boolean;
@@ -285,23 +308,38 @@ begin
 
     if ConnectToHost('www.cloudflare.com', 443, LSocket) then
     begin
-      LConn := LContext.CreateConnection(LSocket);
-      (LConn as ISSLClientConnection).SetServerName('www.cloudflare.com');
+      try
+        LConn := LContext.CreateConnection(LSocket);
+        (LConn as ISSLClientConnection).SetServerName('www.cloudflare.com');
 
-      if LConn.Connect then
-      begin
-        LProtocol := LConn.GetProtocolVersion;
-        Test('TLS 1.3 协商（如果支持）', LProtocol = sslProtocolTLS13);
-        LConn.Shutdown;
-      end
-      else
-      begin
-        // TLS 1.3 may not be supported on older Windows versions
-        Test('TLS 1.3 协商（可能不支持）', True, '平台可能不支持 TLS 1.3');
+        if LConn.Connect then
+        begin
+          LProtocol := LConn.GetProtocolVersion;
+          Test('TLS 1.3 协商（如果支持）', LProtocol = sslProtocolTLS13);
+          LConn.Shutdown;
+        end
+        else
+        begin
+          // TLS 1.3 may not be supported on older Windows versions
+          Test('TLS 1.3 协商（可能不支持）', True, '平台可能不支持 TLS 1.3');
+        end;
+      except
+        on E: Exception do
+        begin
+          if IsOptionalTLS13OnlyFailure(E) then
+            Test('TLS 1.3 协商（可能不支持）', True,
+              'Schannel 平台不支持 TLS 1.3 only 凭据获取: ' +
+              DescribeSSLException(ESSLException(E)))
+          else
+            Test('TLS 1.3 协商（异常）', False, E.Message);
+        end;
       end;
 
-      closesocket(LSocket);
-      LSocket := INVALID_SOCKET;
+      if LSocket <> INVALID_SOCKET then
+      begin
+        closesocket(LSocket);
+        LSocket := INVALID_SOCKET;
+      end;
     end;
 
     // Test 3: Auto-negotiation (TLS 1.2 and 1.3)

@@ -145,6 +145,42 @@ Changes for this batch:
 - update `scripts/validate_all_modules.ps1` to probe `units`, `lib\fpc\*\units`, and `fpc\*\units` fallback layouts instead of aborting on one exact-path miss
 - push and dispatch another `wave-b-b2-manual.yml` run to verify whether the WinSSL minimal runner and the OpenSSL module validation both move forward on real Windows
 
+## Task 8: Fix the broader-suite truths exposed by run `25986661765`
+
+Observed runtime update:
+
+- `Install dependencies` SUCCESS
+- `Run quick WinSSL smoke` SUCCESS
+- `Run Windows Wave B gate` SUCCESS
+- `Run broader WinSSL runtime suite` FAIL
+- failure details now narrow to two broader-suite tests:
+  - `tests/winssl/test_winssl_integration_multi.pas` crashes in the TLS 1.3-only negotiation subtest with `0x80090331` / `SEC_E_ALGORITHM_MISMATCH`
+  - `tests/integration/test_backend_comparison.pas` still throws `Windows Schannel is not registered`
+
+Changes for this batch:
+
+- add `tests/scripts/test_backend_comparison_factory_registration_contract.sh`
+- add `tests/scripts/test_winssl_integration_multi_tls13_optional_contract.sh`
+- update `tests/integration/test_backend_comparison.pas` to import `fafafa.ssl.winssl.lib`, define `EnsureWinSSLBackendRegistered`, and call it from the Windows entry path
+- update `tests/winssl/test_winssl_integration_multi.pas` to catch TLS 1.3-only `SEC_E_ALGORITHM_MISMATCH` as an optional Schannel platform result instead of letting the suite abort on an unhandled exception
+- keep scope on tests/contracts only; do not expand to WinSSL production implementation without new evidence
+
+Verification for this batch:
+
+```bash
+bash tests/scripts/test_backend_comparison_factory_registration_contract.sh
+bash tests/scripts/test_winssl_integration_multi_tls13_optional_contract.sh
+bash tests/scripts/test_winssl_integration_multi_no_context_level_sni_guidance_contract.sh
+bash tests/scripts/test_winssl_performance_and_backend_comparison_no_context_level_sni_guidance_contract.sh
+git diff --check
+```
+
+Next truth step:
+
+- push the batch to `master`
+- dispatch `wave-b-b2-manual.yml`
+- confirm the broader suite no longer fails on these two exact boundaries before widening scope again
+
 ### Definition Of Done
 
 - 当前手动 Windows workflow 被锁定为覆盖 quick smoke + Wave B gate + broader suite transcript

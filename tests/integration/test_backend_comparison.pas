@@ -19,6 +19,7 @@ uses
   fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl,
+  {$IFDEF WINDOWS}fafafa.ssl.winssl.lib,{$ENDIF}
   test_openssl_base;
 
 var
@@ -48,6 +49,19 @@ end;
 procedure CleanupWinsock;
 begin
   WSACleanup;
+end;
+
+procedure EnsureWinSSLBackendRegistered;
+begin
+  try
+    RegisterWinSSLBackend;
+  except
+    on E: Exception do
+    begin
+      WriteLn('ERROR: WinSSL backend registration failed: ', E.Message);
+      Halt(1);
+    end;
+  end;
 end;
 
 function ConnectToHost(const aHost: string; aPort: Word; out aSocket: TSocket): Boolean;
@@ -611,6 +625,8 @@ begin
       WriteLn('ERROR: Winsock init failed');
       Halt(1);
     end;
+
+    EnsureWinSSLBackendRegistered;
 
     try
       TestBasicFunctionality;

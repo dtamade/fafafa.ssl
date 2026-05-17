@@ -47,11 +47,25 @@
   - `wave_b_windows_winssl_*.log` 现在明确显示 `tests\unit\test_winssl_comprehensive.pas` 的 14 个断言都因 `Windows Schannel is not registered` 失败
   - `wave_b_windows_modules_*.log` 现在明确显示 `scripts/validate_all_modules.ps1` 在当前 Windows/FPC 安装布局下没有把 `Contnrs` / `DateUtils` / `SyncObjs` 所在 unit roots 纳入 `-Fu`
   - 这说明当前优先级已经从“让日志更 truthful”前移到“修复 WinSSL backend 注册缺口 + 修复 Windows unit root 探测缺口”
-- [in_progress] 当前第六批 Windows runtime 修复已落地本地工作树，等待提交/推送后做第六次 manual run 复证：
+- [completed] 第六批 Windows runtime 修复已提交 `b78ce9e` 并在第六次 manual run `25986661765` 上完成远端复证：
   - 新增 `tests/scripts/test_winssl_comprehensive_factory_registration_contract.sh`
   - 新增 `tests/scripts/test_validate_all_modules_windows_unit_fallback_contract.sh`
   - `tests/unit/test_winssl_comprehensive.pas` 现在会在工厂测试前显式调用 `RegisterWinSSLBackend`
   - `scripts/validate_all_modules.ps1` 现在会从 `units`、`lib\fpc\*\units`、`fpc\*\units` 三类布局探测实际 unit roots，而不再在单一路径 miss 时直接放弃
+- [completed] 第六次手动 runtime run `25986661765` 已证明第六批 Windows runtime 修复真实生效：
+  - `Install dependencies` SUCCESS
+  - `Run quick WinSSL smoke` SUCCESS
+  - `Run Windows Wave B gate` SUCCESS
+  - 当前新的第一硬阻塞已经从 Wave B Windows gate 前移到 `Run broader WinSSL runtime suite`
+- [in_progress] 当前新的第一硬故障已经前移到 `Run broader WinSSL runtime suite` 的两个真实测试缺口：
+  - `tests/winssl/test_winssl_integration_multi.pas` 在 `TestProtocolNegotiation` 的 TLS 1.3-only 子用例里，于 `CreateConnection` 阶段抛出 `ESSLInitializationException`，原生错误为 `0x80090331`（`SEC_E_ALGORITHM_MISMATCH`）
+  - `tests/integration/test_backend_comparison.pas` 仍然沿工厂路径直接调用 `TSSLFactory.GetLibraryInstance(sslWinSSL)`，但没有像 `test_winssl_comprehensive.pas` 那样先注册 backend，导致 broader suite 里直接抛 `Windows Schannel is not registered`
+  - 这说明当前优先级已经从 Wave B gate 继续前移到“补 broader suite 的 WinSSL 注册缺口 + 把 TLS 1.3-only 平台条件异常收进测试契约”
+- [in_progress] 当前第七批 Windows runtime 修复已落地本地工作树，等待提交/推送后做第七次 manual run 复证：
+  - 新增 `tests/scripts/test_backend_comparison_factory_registration_contract.sh`
+  - 新增 `tests/scripts/test_winssl_integration_multi_tls13_optional_contract.sh`
+  - `tests/integration/test_backend_comparison.pas` 现在会在 Windows 入口显式调用 `RegisterWinSSLBackend`
+  - `tests/winssl/test_winssl_integration_multi.pas` 现在会把 TLS 1.3-only 下的 `SEC_E_ALGORITHM_MISMATCH` 视为平台条件化结果，而不是让 broader suite 直接因未捕获异常中断
 - [completed] 复核远端失败证据（CI run `25893971783` / signer run `25901035350`）
 - [completed] 把 3 个真实问题写成 focused contract tests，并先观测到红灯
 - [completed] 修复 `.github/workflows/ci.yml` / `release.yml` / `release.yml.disabled` 的 WolfSSL 依赖缺口
@@ -685,25 +699,27 @@
 ## Current Blocker
 
 - 当前第一硬阻塞已经重新锁定在真实 Windows runtime lane，而不是静态治理或旧的 workflow hygiene：
-  - manual run `25986225431` 中 `Install dependencies` SUCCESS
-  - manual run `25986225431` 中 `Run quick WinSSL smoke` SUCCESS
-  - 当前唯一首要失败步骤是 `Run Windows Wave B gate`
-- `Run Windows Wave B gate` 当前拆成两个已定位的真实问题：
-  - WinSSL minimal runner 中的 `tests/unit/test_winssl_comprehensive.pas` 在调用 `TSSLFactory.GetLibraryInstance(sslWinSSL)` 前没有注册 backend，导致日志里 14 个断言都报 `Windows Schannel is not registered`
-  - `scripts/validate_all_modules.ps1` 在当前 Windows/FPC 安装布局下没有把 `Contnrs` / `DateUtils` / `SyncObjs` 所在 unit roots 纳入 `-Fu`，因此模块验证仍报缺标准单元
+  - manual run `25986661765` 中 `Install dependencies` SUCCESS
+  - manual run `25986661765` 中 `Run quick WinSSL smoke` SUCCESS
+  - manual run `25986661765` 中 `Run Windows Wave B gate` SUCCESS
+  - 当前唯一首要失败步骤已经前移到 `Run broader WinSSL runtime suite`
+- `Run broader WinSSL runtime suite` 当前拆成两个已定位的真实问题：
+  - `tests/winssl/test_winssl_integration_multi.pas` 的 TLS 1.3-only 子用例只把 `Connect=false` 当成“平台可能不支持 TLS 1.3”，但在当前 Windows runner 上真实失败路径更早，`CreateConnection` 直接抛出 `SEC_E_ALGORITHM_MISMATCH`
+  - `tests/integration/test_backend_comparison.pas` 仍未在 factory path 前注册 WinSSL backend，因此 broader suite 里的 backend comparison 直接抛 `Windows Schannel is not registered`
 - 当前本地没有新的语法/contract blocker：
   - 新增 focused contracts 已过
+  - 受影响相邻 contract 已过
   - `git diff --check` 已过
   - 当前只差提交、推送和下一次真实 Windows manual run 复证
 - macOS lane 仍然失败，但它不是当前这条 WinSSL runtime proof 主线的第一硬阻塞点。
 
 ## Current Queue
 
-1. 同步 `task_plan.md` / `findings.md` / `progress.md` / 计划文档到 run `25986225431` 的最新真相。
-2. 提交当前第六批 Windows runtime 修复并推送到 `master`。
+1. 同步 `task_plan.md` / `findings.md` / `progress.md` / 计划文档到 run `25986661765` 的最新真相。
+2. 提交当前第七批 Windows runtime 修复并推送到 `master`。
 3. 重新 dispatch `wave-b-b2-manual.yml`，继续以 GitHub Windows runner 为唯一 truth source。
-4. 新 run 中优先检查 `wave_b_windows_winssl_*.log` 是否消除 `Windows Schannel is not registered`。
-5. 同一 run 中检查 `wave_b_windows_modules_*.log` 是否消除 `Contnrs` / `DateUtils` / `SyncObjs` 缺失；如果仍失败，只沿新暴露出的第一硬边界继续收口。
+4. 新 run 中优先检查 broader suite 的 `WinSSL Integration Tests (Multi-Scenario)` 是否不再因 `TLS 1.3 only` 的 `SEC_E_ALGORITHM_MISMATCH` 未捕获异常而退出 `217`。
+5. 同一 run 中检查 broader suite 的 `Backend Comparison Tests` 是否消除 `Windows Schannel is not registered`；如果两项都已转绿，只沿新的第一硬边界继续收口。
 
 ## Verification Discipline
 
@@ -726,7 +742,7 @@
 
 ## Stop Condition
 
-- 当前第六批修复的代码、计划、发现、进度文件都与 run `25986225431` 保持一致。
+- 当前第七批修复的代码、计划、发现、进度文件都与 run `25986661765` 保持一致。
 - 本批 focused contracts 与 `git diff --check` 继续通过。
 - 当前批次已提交并推送到 `master`。
 - 新的 `wave-b-b2-manual.yml` run 已 dispatch，且新的第一硬阻塞点已经被记录到 working-memory 文件中。
