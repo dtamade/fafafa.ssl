@@ -209,18 +209,23 @@ jobs:
       run: |
         echo "## CI Matrix Test Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
-        echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          SKIP_MACOS="${{ github.event.inputs.skip_macos }}"
+          SKIP_WINDOWS="${{ github.event.inputs.skip_windows }}"
+        else
+          SKIP_MACOS="n/a"
+          SKIP_WINDOWS="n/a"
+        fi
 
-        # 检查各平台结果
-        for dir in all-reports/*/; do
-          platform=$(basename "$dir")
-          if ls "$dir"/*.txt 2>/dev/null | head -1 | xargs grep -q "PASS\|SUCCESS" 2>/dev/null; then
-            echo "| $platform | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| $platform | ⚠️ Check logs |" >> $GITHUB_STEP_SUMMARY
-          fi
-        done
+        echo "| Platform | Job Result | Manual Skip Input |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|------------|-------------------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Linux(system OpenSSL) | ${{ needs.linux-matrix.result }} | n/a |" >> $GITHUB_STEP_SUMMARY
+        echo "| macOS | ${{ needs.macos-test.result }} | ${SKIP_MACOS} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Windows | ${{ needs.windows-test.result }} | ${SKIP_WINDOWS} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Notes" >> $GITHUB_STEP_SUMMARY
+        echo "- Manual skip inputs only apply to workflow_dispatch runs; push/pull_request lanes always use the workflow defaults." >> $GITHUB_STEP_SUMMARY
+        echo "- Review uploaded artifacts per lane when a job result is not \`success\`." >> $GITHUB_STEP_SUMMARY
 
     - name: Upload combined reports
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6

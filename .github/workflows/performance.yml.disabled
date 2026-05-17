@@ -6,17 +6,6 @@ on:
   pull_request:
     branches: [ master ]
   workflow_dispatch:
-    inputs:
-      benchmark:
-        description: 'Benchmark to run'
-        required: true
-        default: 'all'
-        type: choice
-        options:
-          - all
-          - crypto
-          - ssl
-          - memory
 
 permissions:
   contents: read
@@ -57,9 +46,7 @@ jobs:
       - name: ⚡ Run performance benchmarks
         shell: bash
         run: |
-          BENCHMARK_SCOPE="${{ github.event.inputs.benchmark }}"
-          BENCHMARK_SCOPE="${BENCHMARK_SCOPE:-all}"
-          echo "=== Running Performance Benchmarks (${BENCHMARK_SCOPE}) ==="
+          echo "=== Running full performance benchmark suite ==="
 
           if [[ ! -x "./tests/bin/test_performance_comparison" ]]; then
             echo "[INFO] Benchmark executable not found, building from source..."
@@ -71,8 +58,6 @@ jobs:
       - name: 📊 Generate benchmark report
         shell: bash
         run: |
-          BENCHMARK_SCOPE="${{ github.event.inputs.benchmark }}"
-          BENCHMARK_SCOPE="${BENCHMARK_SCOPE:-all}"
           TIMESTAMP="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           REPORT="Performance-Report-${{ matrix.os }}.md"
 
@@ -82,12 +67,13 @@ jobs:
           - Generated: ${TIMESTAMP}
           - Platform: ${{ matrix.os }}
           - FPC Version: ${{ matrix.fpc }}
-          - Benchmark selection: ${BENCHMARK_SCOPE}
+          - Benchmark scope: full checked-in comparison suite
 
           ## Execution Notes
 
           - This dormant workflow currently keeps Linux as the only truthful benchmark runner.
           - The benchmark source is compiled directly with \`fpc\` because the checked-in Lazarus project targets Linux only.
+          - This dormant Linux benchmark workflow does not expose per-category dispatch inputs until the benchmark binary supports them.
           - Restore Windows or macOS only after those lanes have their own dependency setup and runtime proof.
           EOF
 
