@@ -324,6 +324,40 @@
     - status at record time: `in_progress`
     - per the incremental verification discipline, this cross-summary missing coverage batch recorded the run id without a blocking watch
 
+### Thirty-Second-Order Route Review
+
+- `sed -n '560,590p' task_plan.md`
+  - result: PASS
+  - summary:
+    - current queue explicitly pointed to `check_wave_b_b2_evidence_consistency.sh` `cross_summary run_id missing/mismatch` focused contract
+    - route stayed on consistency cross-summary metadata truth instead of reopening earlier closure-report or handoff-bundle lanes
+
+- `sed -n '700,740p' scripts/check_wave_b_b2_evidence_consistency.sh`
+  - result: PASS
+  - summary:
+    - missing/mismatched cross-summary run_id already mapped to row notes `run_id not found` / `run_id mismatch`
+    - `runid_mismatch_or_parse_issue` already incremented by one for either branch
+    - no immediate evidence of a production bug before adding a focused contract
+
+### Thirty-Second-Order Contract Expansion
+
+- add `tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_contract.sh`
+  - purpose: require truthful row notes, `runid_mismatch_or_parse_issue=1`, preserved `closure_status_note=IN_PROGRESS`, and preserved IN_PROGRESS next-actions guidance when the cross-summary top-level run_id is missing or mismatched
+
+### Local Revalidation After Thirty-Second Contract Expansion
+
+- `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
 ### Eleventh Push Success Revalidation
 
 - `git commit -m "chore: pin workflow actions to commits"`

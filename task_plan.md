@@ -557,6 +557,27 @@
 - [completed] 第三十一次 push 已记录远端自动 run：
   - `CI` run `25984057687`
   - 该批只扩 focused contract，不扩生产脚本语义；按增量验证纪律记录 run id，不同步阻塞式等待整条自动主线收口
+- [completed] 第三十一次 push 对应远端自动 run `25984057687` 已 SUCCESS：
+  - 说明 cross-summary missing coverage batch 继续没有误伤自动主线
+- [completed] 第三十一次 docs closeout 提交 `e85cf18` 已完成，cross-summary-missing closeout 已同步推送到 `master`
+- [completed] 第三十一次 docs closeout push 对应远端自动 run `25984086002` 已 SUCCESS：
+  - `Code Quality (Light)` SUCCESS
+  - `Minimal Gate (Linux)` SUCCESS
+  - `FreePascal TLS 1.3 Completeness` SUCCESS
+  - 说明这条 cross-summary truth sync 继续保持闭环
+- [completed] 继续沿 `wave-b-b2` 的 consistency cross-summary run_id missing/mismatch 分支静态加深后，确认这里当前同样不是新的生产脚本 bug，而是 focused contract 覆盖缺口：
+  - `scripts/check_wave_b_b2_evidence_consistency.sh` 已经会把 cross-summary 顶层 `run_id` 缺失/串批次计入 `runid_mismatch_or_parse_issue`
+  - cross-summary row note 也已经 truthful 地输出 `run_id not found` / `run_id mismatch`
+  - valid closure report 的 `closure_status_note=IN_PROGRESS` 也不会被 cross-summary 顶层元数据问题污染
+- [completed] 新增 `tests/scripts/test_wave_b_b2_consistency_cross_summary_run_id_contract.sh`：
+  - `cross_summary run_id missing` 现在必须记为 row note `run_id not found`
+  - `cross_summary run_id mismatch` 现在必须记为 row note `run_id mismatch`
+  - 两种情况都必须记入 `runid_mismatch_or_parse_issue=1`
+  - 同时要求 `closure_status_note=IN_PROGRESS` 与对应 next actions 保持 truthful
+- [completed] 第三十二波 wave-b consistency cross-summary run_id coverage 本地复核通过：
+  - `test_wave_b_b2_consistency_cross_summary_run_id_contract.sh` PASS
+  - `test_wave_b_b2_consistency_cross_summary_run_id_inference_contract.sh` PASS
+  - `git diff --check` PASS
 
 ## Current Blocker
 
@@ -594,6 +615,10 @@
   - `required_missing` 现在会正确加 1
   - cross-summary row 会直接标成 `missing`
   - 在 `closure_status_note=IN_PROGRESS` 的常见分支下，next actions 会继续保持 “先补 evidence，再复跑 handoff bundle” 的 truthful guidance
+- 当前也没有已知仍会因为 `cross_summary` 顶层 `run_id` 缺失或串批次而让 consistency 的 row note、`runid_mismatch_or_parse_issue` 或 `IN_PROGRESS` 分支 next actions 漂成不 truthful 的默认态：
+  - cross-summary row 现在会分别输出 `run_id not found` / `run_id mismatch`
+  - `runid_mismatch_or_parse_issue` 会正确加 1
+  - valid closure report 的 `closure_status_note` 仍保持自身 truth
 - 当前剩余边界只在验证层：
   - `release.yml`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled`、`wave-b-b2-manual.yml.disabled` 等 dormant/manual 路径没有在远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
@@ -601,9 +626,10 @@
 
 ## Current Queue
 
-1. 如果继续沿 `wave-b-b2` 这条线做静态加深，下一跳优先补 `check_wave_b_b2_evidence_consistency.sh` 的 `cross_summary run_id missing/mismatch` focused contract，确认 row note 与 `runid_mismatch_or_parse_issue` 在 cross-summary 顶层 run_id 漂移时也保持对称 truthful。
-2. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
-3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
+1. 先提交并推送当前 `wave-b-b2` consistency cross-summary run_id coverage batch，并记录自动 `CI` run id；该批只扩 focused contract，不扩生产脚本语义。
+2. 如果继续沿 `wave-b-b2` 这条线做静态加深，下一跳优先补 `check_wave_b_b2_evidence_consistency.sh` 的 cross-summary run_id issue 在 `closure_status=CLOSED` 分支下的 focused next-actions contract，确认它会继续走 “closure 已闭环但 evidence consistency 未对齐” 的 truthful guidance。
+3. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
+4. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
 
 ## Verification Discipline
 
