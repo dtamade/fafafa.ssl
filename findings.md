@@ -73,3 +73,22 @@
 - 但 capability 双真相还没有全系统收完：
   - serializer / deserializer / diff 仍然同时 round-trip 和比较两套字段
   - 下一批应该设计“旧输入兼容、内部真相单一”的规则，而不是现在就删除 legacy boolean 字段
+
+- serializer / deserializer / diff 线上的 live 问题已经被精确缩小到两处，而且都不是假问题：
+  - `JSONToCapabilities(...)` / `XMLToCapabilities(...)` 原先会并列接受 legacy boolean 与 `*Support`，但对冲突输入没有裁决规则
+  - `CompareCapabilities(...)` 原先几乎完全忽略 v1.2 support-level 差异，只看 legacy boolean，因此会漏掉 `experimental -> stable` 这类真实 capability 变化
+  - 这两个问题都已经由新的 focused regression 先打出红灯
+
+- 当前修法明确了 capability compatibility boundary：
+  - 对反序列化输入：
+    - 如果 payload 里出现了某个 `*Support` 字段，就以它为真相，并回填对应 legacy boolean
+    - 如果 payload 只有旧 boolean，没有 `*Support`，则继续保留旧输入兼容，不擅自猜测 support-level
+  - 对 capability diff：
+    - paired feature 先比较 `*Support`
+    - support-level-only 的 `SessionCacheSupport` / `ZeroRTTSupport` / `EarlyDataSupport` / `RenegotiationSupport` / `PostHandshakeAuthSupport` 也开始进入 diff
+    - 只有在没有 support-level truth 可用时，legacy boolean 才作为 diff fallback
+
+- 这也带来一个清晰的剩余边界：
+  - 对“手工构造但内部已经不一致”的 `TSSLBackendCapabilities`，`CapabilitiesToJSON/XML` 目前仍偏向原样输出
+  - 这不是 runtime live backend 的当前缺口，也不是反序列化/比对链路的 blocker
+  - 但如果后续要把 capability model 彻底收成单真相，还需要决定 serializer 输出面是否做额外的受控归一化

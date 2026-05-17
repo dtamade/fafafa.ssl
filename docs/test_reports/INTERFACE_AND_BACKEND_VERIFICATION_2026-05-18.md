@@ -92,6 +92,36 @@
   - `git diff --check`
     - PASS
 
+## 增量收口：deserializer precedence 与 diff support-level truth
+
+- 这轮继续往下审，确认 `serializer / deserializer / diff` 线不是“概念上双真相”，而是已经有两处具体行为缺口：
+  1. `JSONToCapabilities(...)` / `XMLToCapabilities(...)`
+     - 对同时带 legacy boolean 与 `*Support` 的 payload，没有真相优先级
+     - 冲突输入会把旧布尔值错误保留下来
+  2. `CompareCapabilities(...)`
+     - 原先几乎只比较 legacy boolean
+     - 会漏掉 `SNISupport`、`EarlyDataSupport` 这类 v1.2 support-level 真实变化
+
+- 本批修复后的规则：
+  - 反序列化时：
+    - 若 payload 包含某个 `*Support` 字段，则该字段为真相源，并回填对应 legacy boolean
+    - 若 payload 只有旧 boolean，则继续保持旧输入兼容，不强行猜测 support-level
+  - diff 时：
+    - paired capability 优先比较 `*Support`
+    - support-level-only capability 也纳入 diff
+    - legacy boolean 只作为没有 support-level truth 时的 fallback
+
+- 新增 focused regressions：
+  - `tests/test_capability_deserialization_truth_precedence.pas`
+    - 先红后绿，钉住“support-level 覆盖冲突 legacy boolean”
+  - `tests/test_capability_diff_support_level_truth.pas`
+    - 先红后绿，钉住“diff 不能忽略 support-level 变化”
+
+- 兼容确认：
+  - 现有 `tests/test_capability_deserialization_roundtrip.pas`
+    - PASS
+    - 说明这次修的是 precedence / truth，对既有 JSON/XML round-trip 没有打穿
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -116,8 +146,8 @@
 ### 下一批最值得做的事
 
 1. 收口 serializer / deserializer / diff 层的 capability 双真相
-   - runtime `GetCapabilities` 这一层已经完成 support-level 主真相化
-   - 下一步要解决的是旧输入兼容、序列化输出、diff 比较的规则统一
+   - runtime `GetCapabilities`、deserializer precedence、diff truth 已经完成主真相化
+   - 剩下的问题主要是：serializer 输出面是否还要对“手工构造但不一致”的 capability record 做受控归一化
 
 2. 设计一份 **context-level SNI compatibility migration plan**
    - 先定义 compatibility shim 和 deprecation boundary

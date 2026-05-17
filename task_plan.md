@@ -31,6 +31,10 @@
   - 在 `src/fafafa.ssl.base.pas` 新增 `NormalizeLegacyCapabilityBooleans(...)`
   - OpenSSL / FreePascal / WinSSL / MbedTLS / WolfSSL 的 `GetCapabilities` 统一在返回前用 `*Support` 字段回填 legacy boolean 兼容视图
   - capability focused contracts 已切到 “runtime truth 以 support-level 为准，legacy boolean 只是 compatibility projection”
+- [completed] serializer / deserializer / diff 线上的两处具体真 bug 已完成收口：
+  - 反序列化现在在检测到 v1.2 `*Support` 字段时，会用 support-level truth 覆盖冲突的 legacy boolean
+  - capability diff 不再忽略 `SNISupport` / `ALPNSupport` / `OCSPStaplingSupport` / `CertTransparencySupport` / `SessionTicketsSupport` 以及 support-only 的 v1.2 字段
+  - 新增 focused regression 证明红灯已转绿，且旧 round-trip 兼容仍保持
 
 ## Scope
 
@@ -58,9 +62,9 @@
 
 ## Current Queue
 
-1. 收口 serializer / deserializer / diff 层的 capability 双真相：
-   - 保持 legacy boolean 输入兼容
-   - 但明确 runtime / diff / selector 的真相源仍是 `*Support`
+1. 决定 serializer 输出面是否还需要“受控归一化”：
+   - 当前 runtime / deserializer / diff 的主真相已对齐
+   - 但对“手工构造且本身不一致的 in-memory capability record”，序列化仍基本保持原样输出
 2. 为 context-level `ServerName` 兼容路径单独建迁移计划：
    - 不在 capability 真相批次里混做
    - 明确 factory / builder / connection constructors / tests 的拆迁顺序

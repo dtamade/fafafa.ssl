@@ -101,7 +101,12 @@ git diff --check
   - OpenSSL / FreePascal / WinSSL / MbedTLS / WolfSSL 统一在 `GetCapabilities` 返回前归一化 legacy boolean
   - focused contracts 已切到 `*Support` truth，并新增 compatibility projection 一致性断言
 
+- 已完成批次 3：serializer / deserializer / diff truth precedence
+  - 反序列化在检测到 v1.2 `*Support` 字段时，已改为以 support-level 为真相并回填 legacy boolean
+  - capability diff 已补上 support-level truth，比对不再只盯 legacy boolean
+  - 旧 round-trip 测试仍保持绿色
+
 - 下一批建议
-  1. 收口 serializer / deserializer / diff 的双真相
+  1. 决定 serializer 输出面是否需要对“手工构造但不一致的 capability record”做受控归一化
   2. 单独规划 context-level `ServerName` 兼容迁移
   3. 最后再处理 `TSSLConfig` 跨层字段瘦身

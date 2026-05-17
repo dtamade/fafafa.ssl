@@ -52,6 +52,32 @@ begin
   Result := SameText(AValue, 'true');
 end;
 
+function FeatureLevelPresent(ALevel: TSSLFeatureSupportLevel): Boolean;
+begin
+  Result := ALevel <> sslSupportNone;
+end;
+
+procedure ApplySupportLevelTruth(
+  var ACaps: TSSLBackendCapabilities;
+  const AHasSNISupport,
+        AHasALPNSupport,
+        AHasOCSPStaplingSupport,
+        AHasCertTransparencySupport,
+        AHasSessionTicketsSupport: Boolean);
+begin
+  if AHasSNISupport then
+    ACaps.SupportsSNI := FeatureLevelPresent(ACaps.SNISupport);
+  if AHasALPNSupport then
+    ACaps.SupportsALPN := FeatureLevelPresent(ACaps.ALPNSupport);
+  if AHasOCSPStaplingSupport then
+    ACaps.SupportsOCSPStapling := FeatureLevelPresent(ACaps.OCSPStaplingSupport);
+  if AHasCertTransparencySupport then
+    ACaps.SupportsCertificateTransparency :=
+      FeatureLevelPresent(ACaps.CertTransparencySupport);
+  if AHasSessionTicketsSupport then
+    ACaps.SupportsSessionTickets := FeatureLevelPresent(ACaps.SessionTicketsSupport);
+end;
+
 function EscapeJSON(const S: string): string;
 var
   I: Integer;
@@ -341,6 +367,11 @@ function JSONToCapabilities(const AJSON: string): TSSLBackendCapabilities;
 var
   LValue: string;
   LIsString: Boolean;
+  LHasSNISupport: Boolean;
+  LHasALPNSupport: Boolean;
+  LHasOCSPStaplingSupport: Boolean;
+  LHasCertTransparencySupport: Boolean;
+  LHasSessionTicketsSupport: Boolean;
 
   function IntToProtocolVersion(AInt: Integer): TSSLProtocolVersion;
   begin
@@ -478,6 +509,11 @@ var
 
 begin
   FillChar(Result, SizeOf(Result), 0);
+  LHasSNISupport := False;
+  LHasALPNSupport := False;
+  LHasOCSPStaplingSupport := False;
+  LHasCertTransparencySupport := False;
+  LHasSessionTicketsSupport := False;
 
   // v1.1.0 字段
   if ExtractJSONValue('supportsTLS13', LValue, LIsString) then
@@ -515,15 +551,30 @@ begin
 
   // 功能支持级别
   if ExtractJSONValue('sniSupport', LValue, LIsString) then
+  begin
     Result.SNISupport := StrToFeatureSupportLevel(LValue);
+    LHasSNISupport := True;
+  end;
   if ExtractJSONValue('alpnSupport', LValue, LIsString) then
+  begin
     Result.ALPNSupport := StrToFeatureSupportLevel(LValue);
+    LHasALPNSupport := True;
+  end;
   if ExtractJSONValue('ocspStaplingSupport', LValue, LIsString) then
+  begin
     Result.OCSPStaplingSupport := StrToFeatureSupportLevel(LValue);
+    LHasOCSPStaplingSupport := True;
+  end;
   if ExtractJSONValue('certTransparencySupport', LValue, LIsString) then
+  begin
     Result.CertTransparencySupport := StrToFeatureSupportLevel(LValue);
+    LHasCertTransparencySupport := True;
+  end;
   if ExtractJSONValue('sessionTicketsSupport', LValue, LIsString) then
+  begin
     Result.SessionTicketsSupport := StrToFeatureSupportLevel(LValue);
+    LHasSessionTicketsSupport := True;
+  end;
   if ExtractJSONValue('sessionCacheSupport', LValue, LIsString) then
     Result.SessionCacheSupport := StrToFeatureSupportLevel(LValue);
   if ExtractJSONValue('zeroRTTSupport', LValue, LIsString) then
@@ -590,6 +641,14 @@ begin
     Result.CompatibilityLevel := StrToIntDef(LValue, 0);
   if ExtractJSONValue('knownIssues', LValue, LIsString) then
     Result.KnownIssues := LValue;
+
+  // v1.2 support-level 字段一旦出现，就以它为真相源回填 legacy boolean
+  ApplySupportLevelTruth(Result,
+    LHasSNISupport,
+    LHasALPNSupport,
+    LHasOCSPStaplingSupport,
+    LHasCertTransparencySupport,
+    LHasSessionTicketsSupport);
 end;
 
 { ============================================================================ }
@@ -732,6 +791,11 @@ end;
 function XMLToCapabilities(const AXML: string): TSSLBackendCapabilities;
 var
   LValue: string;
+  LHasSNISupport: Boolean;
+  LHasALPNSupport: Boolean;
+  LHasOCSPStaplingSupport: Boolean;
+  LHasCertTransparencySupport: Boolean;
+  LHasSessionTicketsSupport: Boolean;
 
   function IntToProtocolVersion(AInt: Integer): TSSLProtocolVersion;
   begin
@@ -813,6 +877,11 @@ var
 
 begin
   FillChar(Result, SizeOf(Result), 0);
+  LHasSNISupport := False;
+  LHasALPNSupport := False;
+  LHasOCSPStaplingSupport := False;
+  LHasCertTransparencySupport := False;
+  LHasSessionTicketsSupport := False;
 
   // v1.1.0 字段
   if ExtractXMLValue('supportsTLS13', LValue) then
@@ -850,15 +919,30 @@ begin
 
   // 功能支持级别
   if ExtractXMLValue('sniSupport', LValue) then
+  begin
     Result.SNISupport := StrToFeatureSupportLevel(Trim(LValue));
+    LHasSNISupport := True;
+  end;
   if ExtractXMLValue('alpnSupport', LValue) then
+  begin
     Result.ALPNSupport := StrToFeatureSupportLevel(Trim(LValue));
+    LHasALPNSupport := True;
+  end;
   if ExtractXMLValue('ocspStaplingSupport', LValue) then
+  begin
     Result.OCSPStaplingSupport := StrToFeatureSupportLevel(Trim(LValue));
+    LHasOCSPStaplingSupport := True;
+  end;
   if ExtractXMLValue('certTransparencySupport', LValue) then
+  begin
     Result.CertTransparencySupport := StrToFeatureSupportLevel(Trim(LValue));
+    LHasCertTransparencySupport := True;
+  end;
   if ExtractXMLValue('sessionTicketsSupport', LValue) then
+  begin
     Result.SessionTicketsSupport := StrToFeatureSupportLevel(Trim(LValue));
+    LHasSessionTicketsSupport := True;
+  end;
   if ExtractXMLValue('sessionCacheSupport', LValue) then
     Result.SessionCacheSupport := StrToFeatureSupportLevel(Trim(LValue));
   if ExtractXMLValue('zeroRTTSupport', LValue) then
@@ -925,6 +1009,14 @@ begin
     Result.CompatibilityLevel := StrToIntDef(Trim(LValue), 0);
   if ExtractXMLValue('knownIssues', LValue) then
     Result.KnownIssues := LValue;
+
+  // v1.2 support-level 字段一旦出现，就以它为真相源回填 legacy boolean
+  ApplySupportLevelTruth(Result,
+    LHasSNISupport,
+    LHasALPNSupport,
+    LHasOCSPStaplingSupport,
+    LHasCertTransparencySupport,
+    LHasSessionTicketsSupport);
 end;
 
 { ============================================================================ }

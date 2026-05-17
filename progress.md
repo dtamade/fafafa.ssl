@@ -179,3 +179,23 @@
     - focused backend contract finished `111 passed, 0 failed, 24 skipped`
     - optional interface alignment for SNI / CT / OCSP now follows the support-level truth and remains green across available backends
     - Windows Schannel remains intentionally skipped on this Linux host, consistent with the repo's current platform boundary
+
+### Serializer / Deserializer / Diff Truth Alignment
+
+- `mkdir -p tmp/test_capability_deserialization_truth_precedence && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_capability_deserialization_truth_precedence -FEtmp/test_capability_deserialization_truth_precedence -otmp/test_capability_deserialization_truth_precedence/test_capability_deserialization_truth_precedence tests/test_capability_deserialization_truth_precedence.pas && ./tmp/test_capability_deserialization_truth_precedence/test_capability_deserialization_truth_precedence`
+  - result: RED -> GREEN
+  - summary:
+    - initial failure proved `JSONToCapabilities(...)` kept `supportsSNI=true` even when `sniSupport="none"` was present in the same payload
+    - after the fix, JSON/XML deserialization now lets v1.2 `*Support` fields override conflicting legacy boolean inputs while preserving legacy-only input compatibility
+
+- `mkdir -p tmp/test_capability_diff_support_level_truth && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_capability_diff_support_level_truth -FEtmp/test_capability_diff_support_level_truth -otmp/test_capability_diff_support_level_truth/test_capability_diff_support_level_truth tests/test_capability_diff_support_level_truth.pas && ./tmp/test_capability_diff_support_level_truth/test_capability_diff_support_level_truth`
+  - result: RED -> GREEN
+  - summary:
+    - initial failure proved `CompareCapabilities(...)` completely missed `SNISupport` / `EarlyDataSupport` changes when legacy boolean values did not change
+    - after the fix, diff now compares support-level truth first and uses legacy boolean only as a compatibility fallback
+
+- `mkdir -p tmp/test_capability_deserialization_roundtrip && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_capability_deserialization_roundtrip -FEtmp/test_capability_deserialization_roundtrip -otmp/test_capability_deserialization_roundtrip/test_capability_deserialization_roundtrip tests/test_capability_deserialization_roundtrip.pas && ./tmp/test_capability_deserialization_roundtrip/test_capability_deserialization_roundtrip`
+  - result: PASS
+  - summary:
+    - existing JSON/XML round-trip test remained green after the precedence fix
+    - confirms this batch tightened truth precedence without regressing the current serialization/deserialization compatibility path

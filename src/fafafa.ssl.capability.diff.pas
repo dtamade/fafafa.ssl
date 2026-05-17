@@ -120,6 +120,11 @@ begin
     Result := 'False';
 end;
 
+function FeatureLevelPresent(ALevel: TSSLFeatureSupportLevel): Boolean;
+begin
+  Result := ALevel <> sslSupportNone;
+end;
+
 {$WARN 6018 OFF}
 function SupportLevelToStr(ALevel: TSSLFeatureSupportLevel): string;
 begin
@@ -147,6 +152,67 @@ begin
   end;
 end;
 {$WARN 6018 ON}
+
+procedure CompareProjectedCapability(
+  var ADiff: TCapabilityDiffResult;
+  var AChanges: Integer;
+  const ALevelFieldName,
+        ALegacyFieldName,
+        AFeatureName: string;
+  const ALevel1, ALevel2: TSSLFeatureSupportLevel;
+  const ALegacyBool1, ALegacyBool2: Boolean);
+begin
+  if ALevel1 <> ALevel2 then
+  begin
+    AddFieldChange(ADiff.ChangedFields, ALevelFieldName,
+      SupportLevelToStr(ALevel1),
+      SupportLevelToStr(ALevel2));
+    Inc(AChanges);
+
+    if FeatureLevelPresent(ALevel2) and not FeatureLevelPresent(ALevel1) then
+      AddFeature(ADiff.AddedFeatures, AFeatureName)
+    else if FeatureLevelPresent(ALevel1) and not FeatureLevelPresent(ALevel2) then
+      AddFeature(ADiff.RemovedFeatures, AFeatureName);
+    Exit;
+  end;
+
+  if ALegacyBool1 <> ALegacyBool2 then
+  begin
+    AddFieldChange(ADiff.ChangedFields, ALegacyFieldName,
+      BoolToStr(ALegacyBool1),
+      BoolToStr(ALegacyBool2));
+    Inc(AChanges);
+
+    if not FeatureLevelPresent(ALevel1) then
+    begin
+      if ALegacyBool2 and not ALegacyBool1 then
+        AddFeature(ADiff.AddedFeatures, AFeatureName)
+      else if ALegacyBool1 and not ALegacyBool2 then
+        AddFeature(ADiff.RemovedFeatures, AFeatureName);
+    end;
+  end;
+end;
+
+procedure CompareSupportLevelCapability(
+  var ADiff: TCapabilityDiffResult;
+  var AChanges: Integer;
+  const AFieldName,
+        AFeatureName: string;
+  const ALevel1, ALevel2: TSSLFeatureSupportLevel);
+begin
+  if ALevel1 <> ALevel2 then
+  begin
+    AddFieldChange(ADiff.ChangedFields, AFieldName,
+      SupportLevelToStr(ALevel1),
+      SupportLevelToStr(ALevel2));
+    Inc(AChanges);
+
+    if FeatureLevelPresent(ALevel2) and not FeatureLevelPresent(ALevel1) then
+      AddFeature(ADiff.AddedFeatures, AFeatureName)
+    else if FeatureLevelPresent(ALevel1) and not FeatureLevelPresent(ALevel2) then
+      AddFeature(ADiff.RemovedFeatures, AFeatureName);
+  end;
+end;
 
 { CompareCapabilities }
 
@@ -224,38 +290,43 @@ begin
       AddFeature(Result.RemovedFeatures, 'Some key exchange algorithms');
   end;
 
-  // 4. 比较功能支持
-  if ACaps1.SupportsSNI <> ACaps2.SupportsSNI then
-  begin
-    AddFieldChange(Result.ChangedFields, 'SupportsSNI',
-      BoolToStr(ACaps1.SupportsSNI),
-      BoolToStr(ACaps2.SupportsSNI));
-    Inc(Changes);
-  end;
-
-  if ACaps1.SupportsALPN <> ACaps2.SupportsALPN then
-  begin
-    AddFieldChange(Result.ChangedFields, 'SupportsALPN',
-      BoolToStr(ACaps1.SupportsALPN),
-      BoolToStr(ACaps2.SupportsALPN));
-    Inc(Changes);
-  end;
-
-  if ACaps1.SupportsOCSPStapling <> ACaps2.SupportsOCSPStapling then
-  begin
-    AddFieldChange(Result.ChangedFields, 'SupportsOCSPStapling',
-      BoolToStr(ACaps1.SupportsOCSPStapling),
-      BoolToStr(ACaps2.SupportsOCSPStapling));
-    Inc(Changes);
-  end;
-
-  if ACaps1.SupportsCertificateTransparency <> ACaps2.SupportsCertificateTransparency then
-  begin
-    AddFieldChange(Result.ChangedFields, 'SupportsCertificateTransparency',
-      BoolToStr(ACaps1.SupportsCertificateTransparency),
-      BoolToStr(ACaps2.SupportsCertificateTransparency));
-    Inc(Changes);
-  end;
+  // 4. 比较功能支持（v1.2 support-level 为真相，legacy boolean 仅作兼容回退）
+  CompareProjectedCapability(Result, Changes,
+    'SNISupport', 'SupportsSNI', 'SNI support',
+    ACaps1.SNISupport, ACaps2.SNISupport,
+    ACaps1.SupportsSNI, ACaps2.SupportsSNI);
+  CompareProjectedCapability(Result, Changes,
+    'ALPNSupport', 'SupportsALPN', 'ALPN support',
+    ACaps1.ALPNSupport, ACaps2.ALPNSupport,
+    ACaps1.SupportsALPN, ACaps2.SupportsALPN);
+  CompareProjectedCapability(Result, Changes,
+    'OCSPStaplingSupport', 'SupportsOCSPStapling', 'OCSP stapling support',
+    ACaps1.OCSPStaplingSupport, ACaps2.OCSPStaplingSupport,
+    ACaps1.SupportsOCSPStapling, ACaps2.SupportsOCSPStapling);
+  CompareProjectedCapability(Result, Changes,
+    'CertTransparencySupport', 'SupportsCertificateTransparency',
+    'Certificate transparency support',
+    ACaps1.CertTransparencySupport, ACaps2.CertTransparencySupport,
+    ACaps1.SupportsCertificateTransparency, ACaps2.SupportsCertificateTransparency);
+  CompareProjectedCapability(Result, Changes,
+    'SessionTicketsSupport', 'SupportsSessionTickets', 'Session tickets support',
+    ACaps1.SessionTicketsSupport, ACaps2.SessionTicketsSupport,
+    ACaps1.SupportsSessionTickets, ACaps2.SupportsSessionTickets);
+  CompareSupportLevelCapability(Result, Changes,
+    'SessionCacheSupport', 'Session cache support',
+    ACaps1.SessionCacheSupport, ACaps2.SessionCacheSupport);
+  CompareSupportLevelCapability(Result, Changes,
+    'ZeroRTTSupport', '0-RTT support',
+    ACaps1.ZeroRTTSupport, ACaps2.ZeroRTTSupport);
+  CompareSupportLevelCapability(Result, Changes,
+    'EarlyDataSupport', 'Early data support',
+    ACaps1.EarlyDataSupport, ACaps2.EarlyDataSupport);
+  CompareSupportLevelCapability(Result, Changes,
+    'RenegotiationSupport', 'Renegotiation support',
+    ACaps1.RenegotiationSupport, ACaps2.RenegotiationSupport);
+  CompareSupportLevelCapability(Result, Changes,
+    'PostHandshakeAuthSupport', 'Post-handshake authentication support',
+    ACaps1.PostHandshakeAuthSupport, ACaps2.PostHandshakeAuthSupport);
 
   // 5. 比较平台特性
   if ACaps1.SupportsPKCS11 <> ACaps2.SupportsPKCS11 then
