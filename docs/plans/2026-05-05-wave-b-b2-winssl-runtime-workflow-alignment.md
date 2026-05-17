@@ -323,6 +323,52 @@ Next truth step:
 - confirm `WinSSL Integration Tests (Multi-Scenario)` no longer records the `0x80090331` TLS1.3/SSL3 branches as FAIL
 - confirm `Backend Comparison Tests` no longer fail on the remaining `OpenSSL SSL3` assertion before widening scope
 
+## Task 12: Fix the macOS examples gate portability truth exposed by run `25988847598`
+
+Observed runtime update:
+
+- `windows-gate` SUCCESS
+- `linux-gate` SUCCESS
+- the current workflow failure no longer comes from WinSSL runtime proof
+- `macos-gate` is now the only active failing lane
+- macOS evidence shows:
+  - `probe` PASS
+  - `path-check` PASS
+  - `compile` PASS
+  - `modules` PASS
+  - `examples` FAIL
+  - `wave_b_macos_examples_*.log` reports `mapfile: command not found`
+  - `examples_compile_gate_macos_*.json` therefore records `total=0` and `pass_rate=0`
+
+Changes for this batch:
+
+- update `scripts/verify_examples_compile.sh` to replace `mapfile` with a Bash 3.2-compatible read loop
+- add `tests/scripts/test_verify_examples_compile_bash32_compat_contract.sh`
+- re-run the existing `verify_examples_compile.sh` truth contracts plus the macOS examples-threshold gate contract
+- keep scope on the examples gate portability issue only; do not reopen the now-green Windows/WinSSL runtime lane
+
+Verification for this batch:
+
+```bash
+bash -n scripts/verify_examples_compile.sh
+bash tests/scripts/test_verify_examples_compile_bash32_compat_contract.sh
+bash tests/scripts/test_verify_examples_compile_missing_examples_dir_contract.sh
+bash tests/scripts/test_verify_examples_compile_invalid_format_contract.sh
+bash tests/scripts/test_verify_examples_compile_pass_rate_without_bc_contract.sh
+bash tests/scripts/test_verify_examples_compile_json_stdout_contract.sh
+bash tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh
+bash tests/scripts/test_verify_examples_compile_report_write_contract.sh
+bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh
+git diff --check
+```
+
+Next truth step:
+
+- push the batch to `master`
+- dispatch `wave-b-b2-manual.yml`
+- confirm `macos-gate` no longer produces `examples total=0 / pass_rate=0`
+- if macOS turns green too, reassess whether the manual workflow has any remaining first hard blocker at all
+
 ### Definition Of Done
 
 - 当前手动 Windows workflow 被锁定为覆盖 quick smoke + Wave B gate + broader suite transcript

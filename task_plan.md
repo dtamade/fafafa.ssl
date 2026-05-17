@@ -114,7 +114,7 @@
     - `SSL 3.0 握手失败（已废弃）` FAIL
     - 两者的 native truth 都指向 `0x80090331`
   - `Backend Comparison Tests` 已经跨过 live-response compare 与 WinSSL SSL3 负路径问题，只剩 `OpenSSL SSL3 握手失败（预期）` 1 个 FAIL
-- [in_progress] 当前第十批 Windows runtime 修复已落地本地工作树，等待提交/推送后做第十次 manual run 复证：
+- [completed] 第十批 Windows runtime 修复已提交 `d7d09ad` 并在第十次 manual run `25988847598` 的 `windows-gate` 上得到远端复证：
   - 更新 `tests/winssl/test_winssl_integration_multi.pas`：
     - 新增 `HasAlgorithmMismatchNativeError`
     - 改为直接按 concrete native error `0x80090331` 判断 TLS1.3/SSL3 的 algorithm mismatch
@@ -126,6 +126,18 @@
     - 要求集中化的 `0x80090331` 检测 helper
   - 更新 `tests/scripts/test_backend_comparison_online_stability_contract.sh`
     - 允许 `SSL3` 断言通过 centralized deprecated-protocol helper 表达，而不是强绑 `not Connect`
+- [completed] 第十次手动 runtime run `25988847598` 已证明当前 Windows/WinSSL 主线已经穿过 broader suite：
+  - `Install dependencies` SUCCESS
+  - `Run quick WinSSL smoke` SUCCESS
+  - `Run Windows Wave B gate` SUCCESS
+  - `Run broader WinSSL runtime suite` SUCCESS
+  - 当前整个 manual workflow 的失败原因已经不再是 `windows-gate`
+- [in_progress] 当前第十一批修复已落地本地工作树，等待提交/推送后做下一次 manual run 复证：
+  - 更新 `scripts/verify_examples_compile.sh`
+    - 去掉 `mapfile`
+    - 改用 Bash 3.2 兼容的 `while IFS= read -r file; do ... done`
+  - 新增 `tests/scripts/test_verify_examples_compile_bash32_compat_contract.sh`
+    - 防止脚本重新依赖 `mapfile`，继续在 macOS runner 上产出 `total=0`
 - [completed] 复核远端失败证据（CI run `25893971783` / signer run `25901035350`）
 - [completed] 把 3 个真实问题写成 focused contract tests，并先观测到红灯
 - [completed] 修复 `.github/workflows/ci.yml` / `release.yml` / `release.yml.disabled` 的 WolfSSL 依赖缺口
@@ -758,29 +770,37 @@
 
 ## Current Blocker
 
-- 当前第一硬阻塞已经重新锁定在真实 Windows runtime lane，而不是静态治理或旧的 workflow hygiene：
-  - manual run `25988526125` 中 `Install dependencies` SUCCESS
-  - manual run `25988526125` 中 `Run quick WinSSL smoke` SUCCESS
-  - manual run `25988526125` 中 `Run Windows Wave B gate` SUCCESS
-  - 当前唯一首要失败步骤已经前移到 `Run broader WinSSL runtime suite`
-- `Run broader WinSSL runtime suite` 当前拆成两个已定位的真实问题：
-  - `tests/winssl/test_winssl_integration_multi.pas` 当前只剩 `TLS1.3-only` 与 `SSL3-only` 两个 algorithm-mismatch 分支被误记成 FAIL；它们已经不再崩 suite，而是纯分类错误
-  - `tests/integration/test_backend_comparison.pas` 当前只剩 `OpenSSL SSL3` 的断言语义过强；更合理的期望是“失败”或“成功但实际未降到 SSL3”都算安全结果
+- 当前第一硬阻塞已经从 `windows-gate` 前移到 `macos-gate`：
+  - manual run `25988847598` 中 `windows-gate` SUCCESS
+  - manual run `25988847598` 中 `linux-gate` SUCCESS
+  - manual run `25988847598` 的唯一当前失败 job 是 `macos-gate`
+- `macos-gate` 的真实失败点已经定位到 `examples` 子步骤，而不是 OpenSSL 路径、compile、或 modules：
+  - `wave_b_macos_gate_summary_codex_winssl_20260517_190215.md` 记录：
+    - `probe` PASS
+    - `path-check` PASS
+    - `compile` PASS
+    - `modules` PASS
+    - `examples` FAIL
+  - `wave_b_macos_examples_codex_winssl_20260517_190215.log` 记录：
+    - `scripts/verify_examples_compile.sh: line 150: mapfile: command not found`
+  - `examples_compile_gate_macos_codex_winssl_20260517_190215.json` 因此落成：
+    - `total=0`
+    - `pass_rate=0`
 - 当前本地没有新的语法/contract blocker：
   - 新增 focused contracts 已过
   - 受影响相邻 contract 已过
-  - `fpc -Fu./src -Fu./tests -Fu./tests/integration -Fu./tests/framework tests/integration/test_backend_comparison.pas` 已通过
+  - `bash -n scripts/verify_examples_compile.sh` 已通过
   - `git diff --check` 已过
-  - 当前只差提交、推送和下一次真实 Windows manual run 复证
-- macOS lane 仍然失败，但它不是当前这条 WinSSL runtime proof 主线的第一硬阻塞点。
+  - 当前只差提交、推送和下一次真实 manual run 复证
+- 旧的 “Windows/WinSSL 只能静态审查” 叙事已经可以正式关闭：当前 GitHub Windows runner 已经把这条主线跑绿。
 
 ## Current Queue
 
-1. 同步 `task_plan.md` / `findings.md` / `progress.md` / 计划文档到 run `25988526125` 和当前第十批本地修复的最新真相。
-2. 提交当前第十批 Windows runtime 修复并推送到 `master`。
+1. 同步 `task_plan.md` / `findings.md` / `progress.md` / 计划文档到 run `25988847598` 和当前第十一批本地修复的最新真相。
+2. 提交当前第十一批可移植性修复并推送到 `master`。
 3. 重新 dispatch `wave-b-b2-manual.yml`，继续以 GitHub Windows runner 为唯一 truth source。
-4. 新 run 中优先检查 broader suite 的 `WinSSL Integration Tests (Multi-Scenario)` 是否不再把 `0x80090331` 的 TLS1.3/SSL3 分支记成 FAIL。
-5. 同一 run 中检查 broader suite 的 `Backend Comparison Tests` 是否已跨过 `OpenSSL SSL3` 的单点断言问题；如果两项都已转绿，只沿新的第一硬边界继续收口。
+4. 新 run 中优先检查 `macos-gate` 的 `examples` 子步骤是否不再因 `mapfile` 缺失而产出 `total=0`。
+5. 如果 `macos-gate` 转绿，再看整个 manual workflow 是否还有新的第一硬边界；如果没有，就把 `wave-b-b2-manual.yml` 的当前主线收口为跨平台 runtime 证据已闭环。
 
 ## Verification Discipline
 
@@ -803,8 +823,8 @@
 
 ## Stop Condition
 
-- 当前第十批修复的代码、计划、发现、进度文件都与 run `25988526125` 保持一致。
+- 当前第十一批修复的代码、计划、发现、进度文件都与 run `25988847598` 保持一致。
 - 本批 focused contracts 与 `git diff --check` 继续通过。
-- 当前批次的最小 Pascal 编译面验证继续通过。
+- 当前批次受影响脚本的 focused contracts 与 `bash -n` 继续通过。
 - 当前批次已提交并推送到 `master`。
 - 新的 `wave-b-b2-manual.yml` run 已 dispatch，且新的第一硬阻塞点已经被记录到 working-memory 文件中。

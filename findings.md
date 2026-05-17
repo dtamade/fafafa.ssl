@@ -994,3 +994,27 @@
   - `test_backend_comparison.pas` 在 Linux 编译面虽然不会运行 Windows 分支，但依然会编译整个过程体
   - 只把 helper 放进 `{$IFDEF WINDOWS}` 会让 Linux 编译在调用点找不到标识符
   - 正确做法是把 helper 放到 `Windows/Linux socket stub` 定义之后，让两侧都能看到同一个声明
+
+- 手动 Windows runtime run `25988847598`（head `d7d09ad`）已经给出新的项目真相：
+  - `windows-gate` SUCCESS
+  - `linux-gate` SUCCESS
+  - `summary` SUCCESS
+  - 当前整体 workflow 失败不再来自 Windows/WinSSL 主线，而只剩 `macos-gate`
+
+- `macos-gate` 的真实失败点不是模块、编译或 OpenSSL 根路径，而是 examples compile gate 的 Bash 兼容性：
+  - `wave_b_macos_gate_summary_codex_winssl_20260517_190215.md` 显示只有 `examples` step FAIL
+  - `wave_b_macos_examples_codex_winssl_20260517_190215.log` 明确报 `mapfile: command not found`
+  - 远端 bash 版本是 `3.2.2`
+  - 这让 `verify_examples_compile.sh` 在扫描成功后却没把任何样本装进数组，最终产出 `total=0` / `pass_rate=0`
+
+- 当前第十一批修法因此属于一个非常窄的可移植性修复：
+  - `scripts/verify_examples_compile.sh`
+    - 去掉 `mapfile`
+    - 改为 `while IFS= read -r file; do ... done`
+  - 新增 `tests/scripts/test_verify_examples_compile_bash32_compat_contract.sh`
+    - 禁止脚本重新依赖 `mapfile`
+    - 强制用 Bash 3.2 兼容的读取循环装载 example 列表
+
+- 这也说明当前项目的主要未闭环点已经发生切换：
+  - Windows/WinSSL runtime proof 已经不再是 blocker
+  - 当前更高价值的剩余工作是把 `wave-b-b2-manual.yml` 的 macOS examples gate 也收口成真实跨平台 runtime 绿灯

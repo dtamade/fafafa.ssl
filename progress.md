@@ -475,6 +475,104 @@
 - `git diff --check`
   - result: PASS
 
+### Tenth Push Recording
+
+- `git commit -m "test: tighten winssl broader suite classifications"`
+  - result: PASS
+  - commit: `d7d09ad`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `16a6b71..d7d09ad`
+
+- `gh workflow run .github/workflows/wave-b-b2-manual.yml -f run_id=codex_winssl_20260517_190215 -f strict_closure=false`
+  - result: PASS
+  - summary:
+    - dispatched the tenth Windows/runtime truth run on head `d7d09ad`
+
+### Tenth Manual Runtime Revalidation
+
+- `curl ... /actions/runs?per_page=20`
+  - result: PASS
+  - summary:
+    - run=`25988847598`
+    - initial status: `queued` -> `in_progress` -> `completed/failure`
+    - head=`d7d09ad6c7f303c878a7feac9bbc028a6294184a`
+
+- `curl ... /actions/runs/25988847598/jobs?per_page=100`
+  - result: PASS
+  - summary:
+    - `windows-gate` SUCCESS
+    - `linux-gate` SUCCESS
+    - `macos-gate` FAIL
+    - `summary` SUCCESS
+
+- `curl ... /actions/runs/25988847598/jobs?per_page=100 | jq ... steps`
+  - result: PASS
+  - summary:
+    - `windows-gate` step `Run broader WinSSL runtime suite` SUCCESS
+    - this is the first remote proof in the current lane that the Windows/WinSSL broader suite is green
+
+- `gh run view 25988847598 --job 76391211204 --log-failed`
+  - result: PASS
+  - summary:
+    - `macos-gate` failed after `probe/path-check/compile/modules` all reported `exit=0`
+    - the only failing area was the `examples` step
+
+- `gh run download 25988847598 -n wave-b-macos-codex_winssl_20260517_190215 -D tmp/gh-run-25988847598-macos`
+  - result: PASS
+
+- `sed -n '1,260p' tmp/gh-run-25988847598-macos/wave_b_macos_gate_summary_codex_winssl_20260517_190215.md`
+  - result: PASS
+  - summary:
+    - `examples` step FAIL
+    - examples metrics recorded `total=0`, `pass_rate=0`
+
+- `sed -n '1,240p' tmp/gh-run-25988847598-macos/wave_b_macos_examples_codex_winssl_20260517_190215.log`
+  - result: PASS
+  - summary:
+    - macOS runner hit `scripts/verify_examples_compile.sh: line 150: mapfile: command not found`
+
+### Eleventh-Order Repairs Applied
+
+- update `scripts/verify_examples_compile.sh`
+  - change: replace `mapfile` with a Bash 3.2-compatible `while IFS= read -r file` loop
+
+- add `tests/scripts/test_verify_examples_compile_bash32_compat_contract.sh`
+  - purpose: keep `verify_examples_compile.sh` portable to the macOS runner's Bash 3.2 shell
+
+### Local Revalidation After Eleventh Fix
+
+- `bash -n scripts/verify_examples_compile.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_verify_examples_compile_bash32_compat_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_verify_examples_compile_missing_examples_dir_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_verify_examples_compile_invalid_format_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_verify_examples_compile_pass_rate_without_bc_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_verify_examples_compile_json_stdout_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_verify_examples_compile_stop_on_error_summary_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_verify_examples_compile_report_write_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
 - `gh run view 25985958467 --json databaseId,status,conclusion,jobs,url`
   - result: PASS
   - summary:

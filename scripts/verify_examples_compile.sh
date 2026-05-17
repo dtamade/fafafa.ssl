@@ -147,7 +147,10 @@ if ! find "$EXAMPLES_DIR" -name "*.pas" -type f -print > "$SCAN_FILE"; then
     exit 2
 fi
 sort -o "$SCAN_FILE" "$SCAN_FILE"
-mapfile -t EXAMPLE_FILES < "$SCAN_FILE"
+EXAMPLE_FILES=()
+while IFS= read -r file; do
+    EXAMPLE_FILES+=("$file")
+done < "$SCAN_FILE"
 rm -f "$SCAN_FILE"
 TOTAL=${#EXAMPLE_FILES[@]}
 
