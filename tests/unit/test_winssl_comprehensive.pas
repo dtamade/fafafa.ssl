@@ -47,6 +47,19 @@ begin
   Result := True;
 end;
 
+procedure EnsureWinSSLBackendRegistered;
+begin
+  try
+    RegisterWinSSLBackend;
+  except
+    on E: Exception do
+    begin
+      WriteLn('[FAIL] WinSSL backend registration: ', E.Message);
+      Halt(1);
+    end;
+  end;
+end;
+
 // ============================================================================
 // Test 1: Library Creation and Availability
 // ============================================================================
@@ -631,6 +644,8 @@ begin
   
   GPassCount := 0;
   GFailCount := 0;
+
+  EnsureWinSSLBackendRegistered;
   
   Test_Library_Creation;
   Test_Context_Creation;

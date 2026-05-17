@@ -127,6 +127,24 @@ Changes for this batch:
 - update the active/dormant Windows workflows to choose one preferred FPC path and log the resolved `fpc`
 - push and dispatch another `wave-b-b2-manual.yml` run so the next Windows failure boundary is no longer blurred by toolchain/path ambiguity
 
+## Task 7: Fix the next real Windows runtime gaps exposed by run `25986225431`
+
+Observed runtime update:
+
+- quick smoke still passes on Windows
+- `Run Windows Wave B gate` is still the first hard blocker
+- but the new logs collapse the ambiguity down to two concrete defects:
+  - `tests/unit/test_winssl_comprehensive.pas` fails because the WinSSL backend is not registered before factory-based calls
+  - `scripts/validate_all_modules.ps1` still misses standard unit roots on the current Windows/FPC layout, surfacing as `Contnrs` / `DateUtils` / `SyncObjs` misses
+
+Changes for this batch:
+
+- add `tests/scripts/test_winssl_comprehensive_factory_registration_contract.sh`
+- add `tests/scripts/test_validate_all_modules_windows_unit_fallback_contract.sh`
+- update `tests/unit/test_winssl_comprehensive.pas` to call `RegisterWinSSLBackend` before factory-based assertions
+- update `scripts/validate_all_modules.ps1` to probe `units`, `lib\fpc\*\units`, and `fpc\*\units` fallback layouts instead of aborting on one exact-path miss
+- push and dispatch another `wave-b-b2-manual.yml` run to verify whether the WinSSL minimal runner and the OpenSSL module validation both move forward on real Windows
+
 ### Definition Of Done
 
 - 当前手动 Windows workflow 被锁定为覆盖 quick smoke + Wave B gate + broader suite transcript

@@ -80,19 +80,112 @@ function Get-FpcUnitArgs {
         $fpc = Get-Command fpc -ErrorAction SilentlyContinue
         if (-not $fpc) { return $args }
 
+        function Add-UniqueUnitBase {
+            param(
+                [System.Collections.ArrayList]$Bases,
+                [string]$Candidate
+            )
+
+            if ([string]::IsNullOrWhiteSpace($Candidate)) { return }
+            if ((Test-Path $Candidate) -and (-not $Bases.Contains($Candidate))) {
+                [void]$Bases.Add($Candidate)
+            }
+        }
+
+        function Add-UnitBasesFromRoot {
+            param(
+                [System.Collections.ArrayList]$Bases,
+                [string]$UnitsRoot,
+                [string]$TargetProcessor,
+                [string]$TargetOs
+            )
+
+            if (-not (Test-Path $UnitsRoot)) { return }
+
+            if (-not [string]::IsNullOrWhiteSpace($TargetProcessor) -and -not [string]::IsNullOrWhiteSpace($TargetOs)) {
+                Add-UniqueUnitBase -Bases $Bases -Candidate (Join-Path $UnitsRoot ($TargetProcessor + "-" + $TargetOs))
+            }
+
+            Get-ChildItem -Path $UnitsRoot -Directory -ErrorAction SilentlyContinue |
+                Where-Object { [string]::IsNullOrWhiteSpace($TargetOs) -or $_.Name -like ("*-" + $TargetOs) } |
+                ForEach-Object {
+                    Add-UniqueUnitBase -Bases $Bases -Candidate $_.FullName
+                }
+        }
+
+        function Get-UnitSearchEntries {
+            param(
+                [string]$UnitsBase
+            )
+
+            $entries = @()
+            if (-not (Test-Path $UnitsBase)) { return $entries }
+
+            $entries += ("-Fu" + $UnitsBase)
+            Get-ChildItem -Path $UnitsBase -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+                $entries += ("-Fu" + $_.FullName)
+            }
+
+            return $entries
+        }
+
         $binDir = Split-Path -Parent $fpc.Source
-        $root = (Resolve-Path (Join-Path $binDir "..\\..")).Path
+        $tp = (& $fpc.Source -iTP 2>$null).Trim()
+        $to = (& $fpc.Source -iTO 2>$null).Trim()
 
-        $tp = (& fpc -iTP 2>$null).Trim()
-        $to = (& fpc -iTO 2>$null).Trim()
-        if ([string]::IsNullOrWhiteSpace($tp) -or [string]::IsNullOrWhiteSpace($to)) { return $args }
+        $rootCandidates = New-Object System.Collections.ArrayList
+        foreach ($candidate in @(
+            (Join-Path $binDir "..\\.."),
+            (Join-Path $binDir "..\\..\\..")
+        )) {
+            try {
+                $resolved = (Resolve-Path $candidate -ErrorAction Stop).Path
+                if (-not $rootCandidates.Contains($resolved)) {
+                    [void]$rootCandidates.Add($resolved)
+                }
+            } catch {
+                continue
+            }
+        }
 
-        $unitsBase = Join-Path $root ("units\\" + $tp + "-" + $to)
-        if (-not (Test-Path $unitsBase)) { return $args }
+        $lazbuild = Get-Command lazbuild -ErrorAction SilentlyContinue
+        if ($lazbuild) {
+            foreach ($candidate in @(
+                (Split-Path -Parent $lazbuild.Source),
+                (Join-Path (Split-Path -Parent $lazbuild.Source) "..")
+            )) {
+                try {
+                    $resolved = (Resolve-Path $candidate -ErrorAction Stop).Path
+                    if (-not $rootCandidates.Contains($resolved)) {
+                        [void]$rootCandidates.Add($resolved)
+                    }
+                } catch {
+                    continue
+                }
+            }
+        }
 
-        $args += ("-Fu" + $unitsBase)
-        Get-ChildItem -Path $unitsBase -Directory -ErrorAction SilentlyContinue | ForEach-Object {
-            $args += ("-Fu" + $_.FullName)
+        $unitBases = New-Object System.Collections.ArrayList
+        foreach ($root in $rootCandidates) {
+            Add-UnitBasesFromRoot -Bases $unitBases -UnitsRoot (Join-Path $root "units") -TargetProcessor $tp -TargetOs $to
+
+            $libFpcRoot = Join-Path $root "lib\\fpc"
+            if (Test-Path $libFpcRoot) {
+                Get-ChildItem -Path $libFpcRoot -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+                    Add-UnitBasesFromRoot -Bases $unitBases -UnitsRoot (Join-Path $_.FullName "units") -TargetProcessor $tp -TargetOs $to
+                }
+            }
+
+            $fpcBundleRoot = Join-Path $root "fpc"
+            if (Test-Path $fpcBundleRoot) {
+                Get-ChildItem -Path $fpcBundleRoot -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+                    Add-UnitBasesFromRoot -Bases $unitBases -UnitsRoot (Join-Path $_.FullName "units") -TargetProcessor $tp -TargetOs $to
+                }
+            }
+        }
+
+        foreach ($unitsBase in $unitBases) {
+            $args += Get-UnitSearchEntries -UnitsBase $unitsBase
         }
     } catch {
         return $args

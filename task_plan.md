@@ -28,7 +28,7 @@
   - 已修复 `tests/winssl/test_winssl_handshake_debug.lpi`
   - 已修复 `tests/winssl/test_winssl_https_client.lpi`
   - 已修复 `tests/integration/test_backend_comparison.lpi`
-- [in_progress] 当前新的第一硬故障已经前移到 quick smoke 的进程启动阶段：
+- [completed] 当前新的第一硬故障曾前移到 quick smoke 的进程启动阶段，并已被收口：
   - 远端 quick smoke 运行 `test_winssl_certificate_loading.exe` 后立刻以 `-1073741511` (`0xC0000139`) 退出
   - 结合 live 源码审查，当前最可疑根因是 `src/fafafa.ssl.winssl.api.pas` 把 SSPI 的 `AcceptSecurityContext` 误绑定成了不存在的 `AcceptSecurityContextW`
   - 本地已新增 `tests/scripts/test_winssl_acceptsecuritycontext_import_contract.sh`
@@ -38,15 +38,20 @@
   - `Run quick WinSSL smoke` SUCCESS
   - quick smoke 内部 `test_winssl_certificate_loading.exe` 22/22 PASS
   - 旧的 `0xC0000139` 进程启动级崩点已经消失
-- [in_progress] 当前新的第一硬故障已经前移到 `Run Windows Wave B gate` 的两个 runner-truth 问题：
-  - `wave_b_windows_winssl_*.log` 中 `test_winssl_api_basic` PASS，但 `tests\unit\test_winssl_comprehensive.pas` 运行失败且日志信息不足
-  - `wave_b_windows_modules_*.log` 中 OpenSSL 模块验证误走到了 `ppc386` / `i386-win32`，并因 `Contnrs` / `DateUtils` / `SyncObjs` 缺失失败
-  - 这暴露出 Windows workflow 的 FPC 路径优先级和最小 WinSSL runner 的失败输出粒度都还不够 truthful
-- [in_progress] 当前批次已经为这两个 runner-truth 问题补上 focused contract 与修法：
-  - 新增 `tests/scripts/test_workflow_windows_fpc_preference_contract.sh`
-  - `wave-b-b2-manual.yml(.disabled)` / `winssl-tests.yml.disabled` / `test-all-platforms.yml.disabled` 已改为显式选择单一 preferred FPC path，并记录实际解析到的 `fpc`
-  - `run_winssl_tests.ps1` 已改为显式捕获失败测试 stdout/stderr，在没有输出时也写出 `[INFO] no runtime output captured from test executable`
-  - 下一步是提交、push，并第五次 dispatch `wave-b-b2-manual.yml` 观察 `Run Windows Wave B gate` 的新边界
+- [completed] 第五次手动 runtime run `25986225431` 已把 `Run Windows Wave B gate` 的失败边界继续收紧：
+  - `Install dependencies` SUCCESS
+  - `Run quick WinSSL smoke` SUCCESS
+  - `Run Windows Wave B gate` FAIL，但失败已经不再是“日志不足”
+  - workflow 日志已明确记录 `[INFO] Preferred FPC path: C:\tools\freepascal\bin\i386-win32` 与 `[INFO] fpc resolved to: C:\tools\freepascal\bin\i386-win32\fpc.exe`
+- [in_progress] 当前新的第一硬故障已经收口到 `Run Windows Wave B gate` 的两个真实代码/脚本问题：
+  - `wave_b_windows_winssl_*.log` 现在明确显示 `tests\unit\test_winssl_comprehensive.pas` 的 14 个断言都因 `Windows Schannel is not registered` 失败
+  - `wave_b_windows_modules_*.log` 现在明确显示 `scripts/validate_all_modules.ps1` 在当前 Windows/FPC 安装布局下没有把 `Contnrs` / `DateUtils` / `SyncObjs` 所在 unit roots 纳入 `-Fu`
+  - 这说明当前优先级已经从“让日志更 truthful”前移到“修复 WinSSL backend 注册缺口 + 修复 Windows unit root 探测缺口”
+- [in_progress] 当前第六批 Windows runtime 修复已落地本地工作树，等待提交/推送后做第六次 manual run 复证：
+  - 新增 `tests/scripts/test_winssl_comprehensive_factory_registration_contract.sh`
+  - 新增 `tests/scripts/test_validate_all_modules_windows_unit_fallback_contract.sh`
+  - `tests/unit/test_winssl_comprehensive.pas` 现在会在工厂测试前显式调用 `RegisterWinSSLBackend`
+  - `scripts/validate_all_modules.ps1` 现在会从 `units`、`lib\fpc\*\units`、`fpc\*\units` 三类布局探测实际 unit roots，而不再在单一路径 miss 时直接放弃
 - [completed] 复核远端失败证据（CI run `25893971783` / signer run `25901035350`）
 - [completed] 把 3 个真实问题写成 focused contract tests，并先观测到红灯
 - [completed] 修复 `.github/workflows/ci.yml` / `release.yml` / `release.yml.disabled` 的 WolfSSL 依赖缺口
@@ -679,105 +684,49 @@
 
 ## Current Blocker
 
-- 当前没有新的本地语法/contract blocker。
-- 运行时主阻塞已经解除。
-- 当前没有已知仍停留在 Node20 默认线且可在仓库内继续直接清理的 GitHub Action 残留。
-- 当前也没有未 pin 到 commit SHA 的外部 GitHub Action 残留。
-- 当前也没有未显式声明 `permissions:` 的 workflow 残留。
-- 当前也没有未显式关闭 credential persistence 的 checkout step 残留。
-- 当前也没有已知仍混用 `workflow_dispatch` 与未加 fallback 的 PR-only 上下文残留。
-- 当前也没有已知仍虚报为“跨平台可跑”但实际 shell / toolchain / project target 不匹配的 dormant performance lane 残留。
-- 当前也没有已知仍保留假 FPC 版本矩阵、缺 artifact 却硬写成功 summary 的 dormant `test-all-platforms` 残留。
-- 当前也没有已知仍保留假 OpenSSL 版本矩阵、但实际只跑 system OpenSSL 的 dormant `ci-matrix-draft` Linux lane 残留。
-- 当前也没有已知仍保留未消费 dispatch 输入、缺 Lazarus 却调用 `lazbuild`、或硬编码 `PRODUCTION READY` / 固定 grade 的 `winssl-tests` / `code-quality` 残留。
-- 当前也没有已知仍保留“手动输入只改标签、不改执行范围”的 dormant performance lane 残留。
-- 当前也没有已知仍保留“manual skip 生效但 summary 不承认 skipped 语义”的 dormant ci-matrix lane 残留。
-- 当前也没有已知仍保留 `pr-checks` 硬编码全绿状态表、或在 workflow 内伪装 branch-protection / review policy 的残留。
-- 当前也没有已知仍保留 `basic-checks` 硬编码成功三连、或 `linux-ci` 把单一 Ubuntu lane 冒充成 integration-ready 的残留。
-- 当前也没有已知仍把 summary 层 truth 伪装成 full handoff closure 的 `wave-b-b2` 脚本文案残留：
-  - `cross-platform summary` 与 `closure readiness` 的 closed wording 已回收到 summary scope
-  - `prepare_wave_b_b2_handoff_bundle.sh` / `check_wave_b_b2_evidence_consistency.sh` 继续保留更高层聚合职责
-- 当前也没有已知仍会因为 closure / consistency report `run_id` 缺失或串批次而把 `wave-b-b2` handoff 误判成正常 report chain 的残留：
-  - handoff bundle 现在会把这类 report metadata 漂移降级到 `NEEDS_REPORT_REPAIR`
-  - focused contract 也已经同时覆盖 missing / mismatch 两条分支
-- 当前也没有已知仍会因为 closure / consistency report 文件缺失而把 `wave-b-b2` handoff 误判成正常 report chain、`NEEDS_EVIDENCE_SYNC`、或其他非 report-repair 状态的残留：
-  - handoff bundle 现在会把这类下游 report 缺失统一降级到 `NEEDS_REPORT_REPAIR`
-  - focused contract 也已同时覆盖 `closure_report missing` / `consistency_report missing`
-- 当前也没有已知仍会因为 `closure_report run_id missing/mismatch` 而把 consistency 顶层 `closure_status_note` 误报成 `CLOSED` 的残留：
-  - consistency 现在会把这类 issue 直接反映到顶层 `closure_status_note`
-  - next actions 也会回到 generic metadata-misaligned 分支
-- 当前也没有已知仍会因为 `closure_report` 整个文件缺失而让 consistency 顶层 `closure_status_note` 停留在 `n/a` 的残留：
-  - consistency 现在会把这类 issue 直接反映为 `closure_report missing`
-  - next actions 仍保持 generic metadata-misaligned 分支
-- 当前也没有已知仍会因为 `cross_summary` 整个文件缺失而让 consistency 把 `required_missing`、row note 或 next actions 漂成不 truthful 的默认态：
-  - `required_missing` 现在会正确加 1
-  - cross-summary row 会直接标成 `missing`
-  - 在 `closure_status_note=IN_PROGRESS` 的常见分支下，next actions 会继续保持 “先补 evidence，再复跑 handoff bundle” 的 truthful guidance
-- 当前也没有已知仍会因为 `cross_summary` 顶层 `run_id` 缺失或串批次而让 consistency 的 row note、`runid_mismatch_or_parse_issue` 或 `IN_PROGRESS` 分支 next actions 漂成不 truthful 的默认态：
-  - cross-summary row 现在会分别输出 `run_id not found` / `run_id mismatch`
-  - `runid_mismatch_or_parse_issue` 会正确加 1
-  - valid closure report 的 `closure_status_note` 仍保持自身 truth
-- 当前也没有已知仍会因为 `cross_summary` 整个文件缺失且 `closure_status=CLOSED`，而把 consistency 的 next actions 误带回 `IN_PROGRESS` 或 generic metadata-misaligned 分支的残留：
-  - valid closure report 的 `closure_status_note` 现在会继续保持 `CLOSED`
-  - closed-closure guidance 已被 focused contract 持续守护
-- 当前也没有已知仍会因为 `cross_summary` 的 `linux_examples_json` 元数据缺失、macOS probe metadata 丢失、或 Windows active evidence metadata 丢失且 `closure_status=CLOSED`，而把 consistency 的 next actions 误带回 `IN_PROGRESS` 或 generic metadata-misaligned 分支的残留：
-  - valid closure report 的 `closure_status_note` 现在会继续保持 `CLOSED`
-  - closed-closure guidance 已被 focused contract 持续守护
-- 当前剩余边界只在验证层：
-  - `release.yml`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled`、`wave-b-b2-manual.yml.disabled` 等 dormant/manual 路径没有在远端自动 push run 中被实际执行
-  - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
-- 当前没有新的同等级 YAML/script/report-chain/consistency-note 热点 blocker；最近相邻的 `test-all-platforms` 固定 coverage/support、`linux-ci` 证据文案、`wave-b-b2` closed wording、handoff report run_id 漂移，以及 consistency 顶层 `closure_status_note` 误导都已被收掉
+- 当前第一硬阻塞已经重新锁定在真实 Windows runtime lane，而不是静态治理或旧的 workflow hygiene：
+  - manual run `25986225431` 中 `Install dependencies` SUCCESS
+  - manual run `25986225431` 中 `Run quick WinSSL smoke` SUCCESS
+  - 当前唯一首要失败步骤是 `Run Windows Wave B gate`
+- `Run Windows Wave B gate` 当前拆成两个已定位的真实问题：
+  - WinSSL minimal runner 中的 `tests/unit/test_winssl_comprehensive.pas` 在调用 `TSSLFactory.GetLibraryInstance(sslWinSSL)` 前没有注册 backend，导致日志里 14 个断言都报 `Windows Schannel is not registered`
+  - `scripts/validate_all_modules.ps1` 在当前 Windows/FPC 安装布局下没有把 `Contnrs` / `DateUtils` / `SyncObjs` 所在 unit roots 纳入 `-Fu`，因此模块验证仍报缺标准单元
+- 当前本地没有新的语法/contract blocker：
+  - 新增 focused contracts 已过
+  - `git diff --check` 已过
+  - 当前只差提交、推送和下一次真实 Windows manual run 复证
+- macOS lane 仍然失败，但它不是当前这条 WinSSL runtime proof 主线的第一硬阻塞点。
 
 ## Current Queue
 
-1. 如果继续沿 `wave-b-b2` 这条线做静态加深，下一跳优先补 `check_wave_b_b2_evidence_consistency.sh` 的 cross-summary active path/evidence issue 在 `closure_status=CLOSED` 分支下的 focused next-actions contract，确认 custom `linux_summary` 缺失、custom `linux_examples_json` 失效、custom `macos_summary` 缺失、active `windows_summary` 缺 sibling runtime artifacts 这类问题也继续走 “closure 已闭环但 evidence consistency 未对齐” 的 truthful guidance。
-2. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
-3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
+1. 同步 `task_plan.md` / `findings.md` / `progress.md` / 计划文档到 run `25986225431` 的最新真相。
+2. 提交当前第六批 Windows runtime 修复并推送到 `master`。
+3. 重新 dispatch `wave-b-b2-manual.yml`，继续以 GitHub Windows runner 为唯一 truth source。
+4. 新 run 中优先检查 `wave_b_windows_winssl_*.log` 是否消除 `Windows Schannel is not registered`。
+5. 同一 run 中检查 `wave_b_windows_modules_*.log` 是否消除 `Contnrs` / `DateUtils` / `SyncObjs` 缺失；如果仍失败，只沿新暴露出的第一硬边界继续收口。
 
 ## Verification Discipline
 
-- `test_workflow_action_sha_pinning_contract.sh`、`test_workflow_checkout_credentials_contract.sh`、`test_workflow_permissions_contract.sh` 这类 workflow 治理基线合同，进入“缓存绿灯”集合：
-  - 最近一次统一绿灯基线：`6615b69`
-  - 只在修改 `.github/workflows/*.yml*` 中对应治理面，或修改这些合同脚本本身时才重跑
-- dormant summary-truth 小批次默认只做增量验证：
-  - 运行本批新加的 focused contract
-  - 如同一 workflow 家族已有相邻 truth contract，再补 1 个最近邻合同即可
-  - 始终保留 `git diff --check`
-- docs closeout 批次默认不重复跑本地治理合同：
-  - 只做 `git diff --check`
-  - 提交并推送
-  - 记录远端 run id，但不再同步阻塞式 `gh run watch`，除非该批触碰活跃 workflow / runtime 路径，或最新自动 CI 已转红
-- 只有触碰活跃 workflow、Pascal runtime、或会影响自动主线语义的批次，才需要完整远端收口观察。
+- 当前这条 Windows runtime lane 只做窄验证：
+  - 本批新加 focused contracts
+  - 受影响相邻 contract
+  - `git diff --check`
+  - 若本机存在 `pwsh`，补 PowerShell 语法解析；若不存在，直接记录缺口，不反复绕
+  - 每个有意义批次只发起 1 次真实 `wave-b-b2-manual.yml` manual run
+- 不重复重跑与本批无关的 cached-green workflow 治理合同，除非本批再次修改 `.github/workflows/*.yml*`。
+- 不把 Linux 自动 CI 绿灯、也不把 dormant template 绿灯，当成 Windows WinSSL runtime proof。
 
 ## Decision Locks
 
 - 不创建 `v1.5.0` tag，不发 GitHub Release。
-- Windows/WinSSL 继续保持 `static-only / deferred runtime proof`，不混入本批。
-- dormant workflow 不允许继续声称比已提交 toolchain / shell / project target 更宽的运行覆盖面。
-- 本批只修 dormant/manual workflow 的 truth/evidence 边界与相邻 hygiene 问题，不扩展到新功能或重新开 PR 流。
-- 发布主线仍以当前 `master` 为准。
+- 不重新回到 “Windows/WinSSL static-only” 叙事；当前 truth source 就是 GitHub Actions 的 manual Windows lane。
+- 不扩到 release/tag/PR 流；继续直接在 `master` 以小批次收口。
+- 不顺手扩大到无关 runtime surface、无关 dormant workflow、或新的架构重写。
+- 每个有效批次都要在提交前补齐 working-memory 文件，并在提交后记录新的 run id / failure boundary。
 
 ## Stop Condition
 
-- 根 working-memory 与新 plan doc 已同步当前真相
-- release / setup-python / cache contracts 与既有 workflow contracts 继续通过
-- 第十一批 workflow action SHA pinning batch commit / push 完成，且自动远端主线复核通过
-- 第十二批 workflow token permissions hardening batch commit / push 完成，且自动远端主线复核通过
-- 第十三批 checkout credential hardening batch commit / push 完成，且自动远端主线复核通过
-- 第十四批 dormant PR workflow history-depth batch commit / push 完成，且自动远端主线复核通过
-- 第十五批 dormant PR dispatch-context batch commit / push 完成，且自动远端主线复核通过
-- 第十六批 dormant performance truth batch commit / push 完成，且自动远端主线复核通过
-- 第十七批 dormant multi-platform truth batch commit / push 完成，且自动远端主线复核通过
-- 第十八批 dormant ci-matrix truth batch commit / push 完成，且自动远端主线复核通过
-- 第十九批 dormant winssl/code-quality truth batch commit / push 完成，且自动远端主线复核通过
-- 第二十批 manual workflow input truth batch commit / push 完成，且自动远端主线复核通过
-- 第二十一批 pr-checks summary truth batch commit / push 完成，且自动远端主线复核通过
-- 第二十二批 dormant basic/linux summary truth batch commit / push 完成，且自动远端主线复核通过
-- 第二十三批 dormant multi-platform summary claim batch commit / push 完成，且远端自动 run 已记录
-- 第二十四批 dormant Linux evidence wording batch commit / push 完成，且远端自动 run 已记录
-- 第二十五批 wave-b handoff summary wording batch commit / push 完成，且远端自动 run 已记录
-- 第二十六批 wave-b handoff report-chain run_id batch commit / push 完成，且远端自动 run 已记录
-- 第二十七批 wave-b consistency closure-report run_id truth batch commit / push 完成，且远端自动 run 已记录
-- `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
-- `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
-- `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用
+- 当前第六批修复的代码、计划、发现、进度文件都与 run `25986225431` 保持一致。
+- 本批 focused contracts 与 `git diff --check` 继续通过。
+- 当前批次已提交并推送到 `master`。
+- 新的 `wave-b-b2-manual.yml` run 已 dispatch，且新的第一硬阻塞点已经被记录到 working-memory 文件中。

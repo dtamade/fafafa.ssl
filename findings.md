@@ -75,6 +75,27 @@
   - workflow / dormant templates 改为只选择一个 preferred FPC path，并把最终解析到的 `fpc` 路径写进日志
   - `run_winssl_tests.ps1` 改为显式捕获失败测试 stdout/stderr；如果失败时完全没有输出，也会写出明确提示
 
+- 第五次 Windows manual run `25986225431` 已经证明第三批 truth-improvement 修法真实生效：
+  - `Install dependencies` SUCCESS
+  - `Run quick WinSSL smoke` SUCCESS
+  - `Run Windows Wave B gate` 的失败日志现在已经足够具体，可以直接定位源码/脚本缺口
+
+- 当前 WinSSL minimal runner 的真实问题不是交互输入，而是 backend 根本没注册：
+  - `wave_b_windows_winssl_*.log` 明确显示 `tests\unit\test_winssl_comprehensive.pas` 的 14 个断言都报 `Windows Schannel is not registered`
+  - 该测试文件在调用 `TSSLFactory.GetLibraryInstance(sslWinSSL)` 前只 `uses fafafa.ssl.winssl.lib`，但没有显式调用 `RegisterWinSSLBackend`
+  - 因此最小正确修法是让该测试在进入工厂路径前先注册 WinSSL backend，而不是继续猜 PowerShell/ReadLn 行为
+
+- 当前 OpenSSL modules runner 的真实问题也已经从“workflow 路径优先级不 truthful”前移到“Windows unit root 探测不够稳健”：
+  - workflow 日志已经明确记录当前 runner 实际解析到的是 `C:\tools\freepascal\bin\i386-win32\fpc.exe`
+  - 这说明第三批 workflow 修法至少把“最终用了哪个 fpc”讲清楚了
+  - 但 `validate_all_modules.ps1` 仍过于依赖单一 `units\<tp>-<to>` 路径假设
+  - 在当前安装布局下，这会漏掉 `Contnrs` / `DateUtils` / `SyncObjs` 所在 unit roots
+
+- 当前第四批修法选择的是两个最小 live-truth 修正：
+  - 为 `tests/unit/test_winssl_comprehensive.pas` 补显式 `RegisterWinSSLBackend` 启动保护
+  - 为 `scripts/validate_all_modules.ps1` 补 `units`、`lib\fpc\*\units`、`fpc\*\units` 三类布局的 fallback 探测
+  - 同时新增 focused contracts，持续守护这两个刚暴露出来的真实缺口
+
 ## 2026-05-15
 
 - GitHub Actions 账户额度不再是当前 blocker：

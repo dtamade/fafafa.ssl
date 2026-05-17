@@ -250,6 +250,100 @@
 - `git diff --check`
   - result: PASS
 
+### Fifth Windows Manual Runtime Revalidation
+
+- `gh run view 25986225431 --json databaseId,status,conclusion,headSha,url,jobs`
+  - result: PASS
+  - summary:
+    - run=`25986225431`
+    - head=`33fe665`
+    - `windows-gate` 最终还是 FAIL
+    - 但 `Install dependencies` 与 `Run quick WinSSL smoke` 都已经 SUCCESS
+
+- `gh run view 25986225431 --job 76383936208 --log | tail -n 320`
+  - result: PASS
+  - summary:
+    - quick smoke 再次完整跑过 22/22 PASS
+    - `Run Windows Wave B gate` 的失败日志已经足够具体，不再只剩 `exit=1`
+
+- `gh run download 25986225431 -n wave-b-windows-codex_winssl_20260517_164536 -D tmp/gh-run-25986225431`
+  - result: PASS
+
+- `sed -n '1,220p' tmp/gh-run-25986225431/wave_b_windows_gate_summary_codex_winssl_20260517_164536.md`
+  - result: PASS
+  - summary:
+    - `winssl` exit=`1`
+    - `openssl` exit=`0`
+    - `modules` exit=`1`
+
+- `sed -n '1,260p' tmp/gh-run-25986225431/wave_b_windows_winssl_codex_winssl_20260517_164536.log`
+  - result: PASS
+  - summary:
+    - `test_winssl_api_basic` PASS
+    - `tests\\unit\\test_winssl_comprehensive.pas` 的 14 个断言全部因 `Windows Schannel is not registered` 失败
+
+- `sed -n '1,260p' tmp/gh-run-25986225431/wave_b_windows_modules_codex_winssl_20260517_164536.log`
+  - result: PASS
+  - summary:
+    - 当前 runner 实际仍用 `C:\tools\freepascal\bin\i386-win32\ppc386.exe`
+    - failures 聚焦到 `Contnrs` / `DateUtils` / `SyncObjs`
+
+- `gh run view 25986225431 --job 76383936208 --log | rg -n "Preferred FPC path|fpc resolved to|ppc386|x86_64-win64|i386-win32|lazbuild --version|Added to PATH"`
+  - result: PASS
+  - summary:
+    - workflow 现在已经明确记录 `[INFO] Preferred FPC path: C:\tools\freepascal\bin\i386-win32`
+    - workflow 现在已经明确记录 `[INFO] fpc resolved to: C:\tools\freepascal\bin\i386-win32\fpc.exe`
+    - 这证明第三批 workflow 修法已经把“真实用了哪个 fpc”讲清楚
+
+### Fourth RED Proof And Source Audit
+
+- `python3 - <<'PY' ... git show 33fe665:tests/unit/test_winssl_comprehensive.pas ...`
+  - result: PASS
+  - summary:
+    - historical pre-fix head 不包含 `RegisterWinSSLBackend`
+    - 也不包含 `EnsureWinSSLBackendRegistered`
+
+- `python3 - <<'PY' ... git show 33fe665:scripts/validate_all_modules.ps1 ...`
+  - result: PASS
+  - summary:
+    - historical pre-fix head 不包含新的 unit-root fallback helper
+    - 历史实现仍保留 `if (-not (Test-Path $unitsBase)) { return $args }`
+
+### Fourth Production Fixes Applied
+
+- add `tests/scripts/test_winssl_comprehensive_factory_registration_contract.sh`
+  - change: require the factory-based WinSSL comprehensive test to register the backend explicitly before running
+
+- add `tests/scripts/test_validate_all_modules_windows_unit_fallback_contract.sh`
+  - change: require Windows module validation to probe fallback unit roots instead of depending on one exact target path
+
+- update `tests/unit/test_winssl_comprehensive.pas`
+  - change: add `EnsureWinSSLBackendRegistered` and call `RegisterWinSSLBackend` before the factory-based WinSSL assertions run
+
+- update `scripts/validate_all_modules.ps1`
+  - change: discover unit roots from `units` / `lib\\fpc\\*\\units` / `fpc\\*\\units`
+  - change: stop aborting unit-path discovery on a single exact-path miss
+
+### Fourth Local Revalidation After Fix
+
+- `bash tests/scripts/test_winssl_comprehensive_factory_registration_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_validate_all_modules_windows_unit_fallback_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_validate_all_modules_module_scan_and_threshold_contract.sh`
+  - result: PASS
+
+- `command -v pwsh >/dev/null && pwsh -NoProfile -Command ... || echo 'pwsh-unavailable'`
+  - result: PASS
+  - summary:
+    - local Linux host 当前没有 `pwsh`
+    - 因此本批没有做 PowerShell parser-level 语法校验，只记录环境缺口
+
+- `git diff --check`
+  - result: PASS
+
 ## 2026-05-15
 
 ### Context Recovery
