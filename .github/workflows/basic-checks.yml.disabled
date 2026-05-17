@@ -22,6 +22,7 @@ jobs:
           persist-credentials: false
 
       - name: 🔍 Check file structure
+        id: file-structure
         run: |
           echo "=== Checking project structure ==="
           echo "✅ Source files: $(find src/ -name "*.pas" | wc -l)"
@@ -29,6 +30,7 @@ jobs:
           echo "✅ Documentation: $(find . -name "*.md" | wc -l)"
 
       - name: 📋 Check required files
+        id: required-files
         run: |
           echo "=== Checking required files ==="
           REQUIRED_FILES=(
@@ -48,6 +50,7 @@ jobs:
           done
 
       - name: 🔍 Check Pascal syntax (basic)
+        id: basic-syntax
         run: |
           echo "=== Basic Pascal syntax check ==="
           # 检查是否有明显的语法错误
@@ -62,20 +65,24 @@ jobs:
           fi
 
       - name: 📊 Generate report
+        if: always()
         run: |
           echo "## 🔍 fafafa.ssl Basic Code Check Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Date**: $(date)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### ✅ File Structure" >> $GITHUB_STEP_SUMMARY
+          echo "### 📁 File Inventory" >> $GITHUB_STEP_SUMMARY
           echo "- Source files: $(find src/ -name "*.pas" | wc -l)" >> $GITHUB_STEP_SUMMARY
           echo "- Test files: $(find tests/ -name "*.pas" | wc -l)" >> $GITHUB_STEP_SUMMARY
           echo "- Documentation: $(find . -name "*.md" | wc -l)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🎯 Status" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Project structure valid" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Required files present" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Basic syntax check passed" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎯 Step Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+          echo "| Check file structure | ${{ steps.file-structure.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Check required files | ${{ steps.required-files.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Basic Pascal syntax | ${{ steps.basic-syntax.outcome }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Note**: Full compilation requires FPC environment" >> $GITHUB_STEP_SUMMARY
+          echo "**Note**: This report reflects step results from this run only." >> $GITHUB_STEP_SUMMARY
+          echo "**Note**: Full compilation requires an FPC environment and is outside this basic check workflow." >> $GITHUB_STEP_SUMMARY
           echo "See [Basic CI Guide](./BASIC_CI_GUIDE.md) for setup instructions" >> $GITHUB_STEP_SUMMARY

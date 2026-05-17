@@ -136,19 +136,21 @@ jobs:
           retention-days: 7
 
   check-success:
-    name: ✅ All Checks Passed
+    name: 🧾 Linux CI Result Summary
     needs: [build-and-test]
     runs-on: ubuntu-latest
     if: always()
     
     steps:
-      - name: 🎉 Success
-        if: ${{ needs.build-and-test.result == 'success' }}
+      - name: 🧾 Record Linux CI result
         run: |
-          echo "✅ All Linux CI checks passed!"
-          echo "🎯 Project is ready for integration"
+          echo "## 🐧 fafafa.ssl Linux CI Result" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Build & Test job result: ${{ needs.build-and-test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Scope: ubuntu-latest build-and-test lane from this run only." >> $GITHUB_STEP_SUMMARY
+          echo "- Review the \`build-and-test\` logs and \`test-results-linux\` artifact for details." >> $GITHUB_STEP_SUMMARY
       
-      - name: ⚠️ Failure
+      - name: ⚠️ Enforce upstream result
         if: ${{ needs.build-and-test.result != 'success' }}
         run: |
           echo "❌ Some checks failed"
