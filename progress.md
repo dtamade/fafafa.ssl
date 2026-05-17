@@ -1994,3 +1994,21 @@
     - `Minimal Gate (Linux)` SUCCESS
     - `FreePascal TLS 1.3 Completeness` SUCCESS
     - this batch only touched dormant `basic-checks.yml.disabled` and `linux-ci.yml.disabled`, and the auto-triggered active CI path remained green
+
+### Verification Workflow Correction
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - worktree was clean before locking the new verification discipline
+
+- update `task_plan.md`
+  - change: add a durable `Verification Discipline` section that turns workflow governance contracts into cached baselines instead of per-batch ritual reruns
+  - change: define delta-only verification for dormant summary batches and non-blocking docs closeout handling
+
+- update `findings.md`
+  - change: record that repeated reruns of SHA pinning / checkout credentials / permissions contracts were a workflow problem, not a new code-risk discovery
+  - change: lock the new surface-based rerun policy
+
+- update `progress.md`
+  - change: persist this workflow correction so later continuation does not drift back into repetitive governance-script reruns

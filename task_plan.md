@@ -392,6 +392,21 @@
 2. 继续静态审查 mixed-trigger / manual workflow 的 summary truth，但重点转向“summary 是否真实反映 `needs.*.result`、artifact 真相和当前 lane 范围，而不是固定能力宣告”。
 3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
 
+## Verification Discipline
+
+- `test_workflow_action_sha_pinning_contract.sh`、`test_workflow_checkout_credentials_contract.sh`、`test_workflow_permissions_contract.sh` 这类 workflow 治理基线合同，进入“缓存绿灯”集合：
+  - 最近一次统一绿灯基线：`6615b69`
+  - 只在修改 `.github/workflows/*.yml*` 中对应治理面，或修改这些合同脚本本身时才重跑
+- dormant summary-truth 小批次默认只做增量验证：
+  - 运行本批新加的 focused contract
+  - 如同一 workflow 家族已有相邻 truth contract，再补 1 个最近邻合同即可
+  - 始终保留 `git diff --check`
+- docs closeout 批次默认不重复跑本地治理合同：
+  - 只做 `git diff --check`
+  - 提交并推送
+  - 记录远端 run id，但不再同步阻塞式 `gh run watch`，除非该批触碰活跃 workflow / runtime 路径，或最新自动 CI 已转红
+- 只有触碰活跃 workflow、Pascal runtime、或会影响自动主线语义的批次，才需要完整远端收口观察。
+
 ## Decision Locks
 
 - 不创建 `v1.5.0` tag，不发 GitHub Release。

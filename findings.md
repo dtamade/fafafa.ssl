@@ -475,3 +475,14 @@
   - 但 summary 末尾仍固定输出 `Core modules (P0): 6/6`、`High priority (P1): 14/14`、`Medium priority (P2): 11/11`、`Low priority (P3): 15/15`
   - 还固定输出 `WinSSL backend: Full support`
   - 这些断言都大于当前 run 可直接证明的范围
+
+- 这轮还暴露出一个明确的流程问题：我们把“缓存绿灯的治理合同”当成了每一批都要陪跑的固定动作。
+  - 重复最多的是 `test_workflow_action_sha_pinning_contract.sh`、`test_workflow_checkout_credentials_contract.sh`、`test_workflow_permissions_contract.sh`
+  - 它们大多是轻量静态合同，不是最重的编译/运行时脚本
+  - 但重复执行仍然会浪费节奏、污染 progress 记录，也会让真正的新增风险面不够突出
+
+- 纠偏后的验证策略应该按“影响面”而不是按“习惯动作”来决定：
+  - workflow 治理基线合同一旦在某个 head 统一绿灯，就进入缓存集合
+  - 后续只有在触碰对应治理面或合同脚本本身时才重跑
+  - dormant summary-only 批次只跑新合同、最近邻合同和 `git diff --check`
+  - docs closeout 批次不再同步阻塞等待整条自动 CI，除非触碰活跃链路或自动 CI 已红
