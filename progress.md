@@ -378,5 +378,69 @@
   - summary:
     - no whitespace or patch-format issues remained at batch closeout
 
+### Factory Config ServerName Compatibility Warning
+
+- add `tests/test_factory_server_name_compatibility_warning.pas`
+  - purpose:
+    - lock the second Phase B cut so factory/client `TSSLConfig.ServerName` compatibility no longer stays silent
+    - prove both default-config and one-shot factory paths emit an explicit deprecation warning while preserving current behavior
+
+- `mkdir -p tmp/test_factory_server_name_compatibility_warning && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_server_name_compatibility_warning -FEtmp/test_factory_server_name_compatibility_warning -otmp/test_factory_server_name_compatibility_warning/test_factory_server_name_compatibility_warning tests/test_factory_server_name_compatibility_warning.pas && ./tmp/test_factory_server_name_compatibility_warning/test_factory_server_name_compatibility_warning`
+  - result: RED
+  - summary:
+    - initial run failed 8 assertions
+    - both factory client paths still silently applied `TSSLConfig.ServerName`
+    - no warning named `TSSLConfig.ServerName`, no compatibility-only phrasing, and no explicit callsite evidence existed yet
+
+- update `src/fafafa.ssl.factory.pas`
+  - change:
+    - add `LogContextLevelServerNameCompatibilityWarning(...)`
+    - emit `TSecurityLog.Warning('Factory', ...)` right before client-side compatibility writes in both `CreateContext` overloads
+    - message explicitly names `TSSLConfig.ServerName`, marks it as deprecated context-level SNI compatibility, and points callers at `ISSLClientConnection.SetServerName(...)` / `TSSLConnector.Connect*(..., ServerName)`
+
+- update `src/fafafa.ssl.base.pas`
+  - change:
+    - mark `TSSLConfig.ServerName` field comment as deprecated compatibility-only context-level SNI
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - add `Client SNI Compatibility Note`
+    - document that factory still applies `TSSLConfig.ServerName` only for compatibility and now emits a warning
+
+- `mkdir -p tmp/test_factory_server_name_compatibility_warning && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_server_name_compatibility_warning -FEtmp/test_factory_server_name_compatibility_warning -otmp/test_factory_server_name_compatibility_warning/test_factory_server_name_compatibility_warning tests/test_factory_server_name_compatibility_warning.pas && ./tmp/test_factory_server_name_compatibility_warning/test_factory_server_name_compatibility_warning`
+  - result: RED -> GREEN
+  - summary:
+    - all 12 assertions passed after the warning patch
+    - default-config client path and one-shot config path now both emit the expected compatibility warning
+    - client config without `ServerName` remains quiet
+
+- `mkdir -p tmp/test_factory_server_name_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_server_name_scope_clarification -FEtmp/test_factory_server_name_scope_clarification -otmp/test_factory_server_name_scope_clarification/test_factory_server_name_scope_clarification tests/test_factory_server_name_scope_clarification.pas && ./tmp/test_factory_server_name_scope_clarification/test_factory_server_name_scope_clarification`
+  - result: PASS
+  - summary:
+    - client default-config and one-shot `ServerName` compatibility behavior remains intact
+    - server-side rejection behavior remains intact
+
+- `mkdir -p tmp/test_factory_config_server_name_isolation && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_config_server_name_isolation -FEtmp/test_factory_config_server_name_isolation -otmp/test_factory_config_server_name_isolation/test_factory_config_server_name_isolation tests/test_factory_config_server_name_isolation.pas && ./tmp/test_factory_config_server_name_isolation/test_factory_config_server_name_isolation`
+  - result: PASS
+  - summary:
+    - one-shot `ServerName` still does not leak into shared defaults
+    - explicit default-config compatibility inheritance remains intact
+
+- `mkdir -p tmp/test_factory_logging_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_logging_scope_clarification -FEtmp/test_factory_logging_scope_clarification -otmp/test_factory_logging_scope_clarification/test_factory_logging_scope_clarification tests/test_factory_logging_scope_clarification.pas && ./tmp/test_factory_logging_scope_clarification/test_factory_logging_scope_clarification`
+  - result: PASS
+  - summary:
+    - request config still rejects `LogLevel` / `LogCallback`
+    - library default logging round-trip and dispatch behavior stayed green after the new factory warning hook
+
+- `bash tests/scripts/test_active_docs_no_context_level_sni_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - active docs still do not teach deprecated context-level SNI as the recommended path
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remained after the factory/config warning batch
+
 - `git diff --check`
   - result: PASS

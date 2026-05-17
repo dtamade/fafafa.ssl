@@ -17,6 +17,14 @@
 
 ---
 
+## Client SNI Compatibility Note
+
+- `TSSLConfig.ServerName` 仍然保留为向后兼容入口，但它表示的是 deprecated context-level SNI compatibility，不是推荐主路径。
+- `TSSLFactory.CreateContext(...)` 在 client / both context 上仍会应用这个字段以保持兼容；同时会发出 warning，提醒调用方迁移。
+- 新代码请优先使用 `ISSLClientConnection.SetServerName(...)`，或直接走 `TSSLConnector.Connect*(..., ServerName)`。
+
+---
+
 ## FreePascal early-data replay-store opt-in
 
 FreePascal server-side `0-RTT / early data` 默认 shipped path 已经会把 replay truth 落到本地持久化 replay-store 路径。当前 capability 仍保持 `experimental`；如果默认路径不可用或不可写，恢复的 early data 会 fail-closed reject。public API 仍然开放 file / directory 两条 opt-in 路径，用来显式指定 replay-store 的落点。

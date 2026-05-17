@@ -243,6 +243,43 @@
   - 所以新测试对 JSON 一律解析字段值，而不是做 substring 硬匹配
   - 这样以后不会因为空格/换行格式差异把兼容行为误报成回归
 
+## 增量收口：factory/config compatibility warning
+
+- 在 builder surface 收窄之后，factory/config 这条高层写入面原先仍然有一个明显缺口：
+  - `TSSLFactory.CreateContext(AContextType, ALibType)` 的 client default-config path 会静默吃掉 `TSSLConfig.ServerName`
+  - `TSSLFactory.CreateContext(const AConfig)` 的 one-shot client path 也一样静默
+  - 这会让 `TSSLConfig.ServerName` 看起来仍像是正常推荐主路径，而不是兼容入口
+
+- 这轮修法保持兼容行为不变，只把它们显式降格：
+  - `src/fafafa.ssl.factory.pas`
+    - 新增 `LogContextLevelServerNameCompatibilityWarning(...)`
+    - 在两条 client-side compatibility write 路径上发出 `TSecurityLog.Warning('Factory', ...)`
+    - warning 文本直接点名：
+      - `TSSLConfig.ServerName`
+      - `deprecated context-level SNI compatibility`
+      - 推荐迁移到 `ISSLClientConnection.SetServerName(...)` / `TSSLConnector.Connect*(..., ServerName)`
+  - `src/fafafa.ssl.base.pas`
+    - `TSSLConfig.ServerName` 字段注释改成 compatibility-only
+  - `docs/reference/API_REFERENCE.md`
+    - 新增 `Client SNI Compatibility Note`
+
+- focused RED -> GREEN 结果说明第二刀也是安全的：
+  - 新增 `tests/test_factory_server_name_compatibility_warning.pas`
+    - 先红后绿，直接钉住：
+      - default-config client path 要发 warning
+      - one-shot client path 要发 warning
+      - 没有 `ServerName` 时保持安静
+  - 邻接回归：
+    - `tests/test_factory_server_name_scope_clarification.pas` PASS
+    - `tests/test_factory_config_server_name_isolation.pas` PASS
+    - `tests/test_factory_logging_scope_clarification.pas` PASS
+    - `tests/scripts/test_active_docs_no_context_level_sni_guidance_contract.sh` PASS
+
+- 这一步完成后，`context-level ServerName` 的高层写入面已经不再“沉默”：
+  - builder export/import 会带 compatibility marker
+  - factory/config runtime path 会发 explicit warning
+  - 下一步真正高价值的收口点，已经不是继续修高层文案，而是把 backend constructor 里的 fallback 读取提成 shared compatibility shim
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -266,16 +303,15 @@
 
 ### 下一批最值得做的事
 
-1. 完成 **context-level SNI compatibility migration** 的 Phase B 第二刀
-   - 让 `TSSLConfig.ServerName` / `TSSLFactory.CreateContext(...)` 也显式表现为 compatibility-only
-   - builder surface 已经收窄，不要再回到 warning quarantine 或 capability 旧收口
-   - backend constructor fallback 暂不第一刀直删
+1. 进入 **context-level SNI compatibility migration** 的 Phase C
+   - 把五个 backend constructor 的 context fallback 提成 shared compatibility shim
+   - 第一刀只提 seam，不删兼容行为
 
-2. 再决定是否进入 shared compatibility shim extraction
-   - 只有在高层写入面收干净后，才值得把五个 backend constructor 的 fallback 提成共享 seam
+2. 再决定是否进入最终 surface cleanup
+   - 等 shared shim 稳住后，再判断 `TSSLConfig.ServerName` / `WithSNI(...)` 是否继续保留当前位置与命名
 
 3. `TSSLConfig` 拆层与 capability model presence bits 仍然排在后面
-   - 它们是更大的设计债，不是这条 Phase B 主线的下一刀
+   - 它们是更大的设计债，不是当前 SNI 迁移主线的下一刀
 
 ## 总结
 

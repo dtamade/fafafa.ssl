@@ -411,7 +411,7 @@ type
     SessionTimeout: Integer;                // 会话超时（秒）
     
     // 高级配置
-    ServerName: string;                      // SNI服务器名称
+    ServerName: string;                      // Deprecated compatibility-only context-level SNI; prefer ISSLClientConnection.SetServerName
     ALPNProtocols: string;                   // ALPN协议列表（逗号分隔）
     EnableCompression: Boolean;              // 启用压缩
     EnableSessionTickets: Boolean;           // 启用会话票据

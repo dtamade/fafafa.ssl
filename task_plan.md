@@ -51,6 +51,11 @@
   - `TSSLContextBuilderImpl.ExportToJSON/INI` 在保留 `server_name` 兼容载荷时，会显式导出 `server_name_mode=deprecated_context_sni`
   - `ImportFromJSON/INI` 继续接受 legacy-only `server_name` 输入，并在回导出时自动补上兼容 marker
   - focused config regressions 证明这是 additive compatibility de-emphasis，不是 runtime 行为删改
+- [completed] `context-level ServerName` Phase B 的第二刀 factory/config surface narrowing 已收口：
+  - `TSSLFactory.CreateContext(AContextType, ALibType)` 与 `TSSLFactory.CreateContext(const AConfig)` 在 client-side 兼容写入 `TSSLConfig.ServerName` 时，都会发出显式 warning
+  - warning 直接点名 `TSSLConfig.ServerName` 是 deprecated context-level SNI compatibility，并把调用方导向 `ISSLClientConnection.SetServerName(...)` / `TSSLConnector.Connect*(..., ServerName)`
+  - `src/fafafa.ssl.base.pas` 与 `docs/reference/API_REFERENCE.md` 已把该字段降格成 compatibility-only 入口
+  - focused factory regressions 证明这次收口没有改掉现有兼容继承行为
 
 ## Scope
 
@@ -78,11 +83,12 @@
 
 ## Current Queue
 
-1. 完成 `context-level ServerName` Phase B 的第二刀：
-   - 收窄 `factory/config` 写入面
-   - 让 `TSSLConfig.ServerName` / `TSSLFactory.CreateContext(...)` 也更明确地表现为 compatibility-only，而不是继续像推荐主路径
-   - 继续不要回退到 warning 噪音治理，也不要提前硬删 backend fallback
-2. 在 Phase B 的高层 surface 稳定后，再评估 Phase C 的 shared compatibility shim extraction。
+1. 开始 `context-level ServerName` Phase C：
+   - 把五个 backend constructor 里的 context fallback 读取提成 shared compatibility shim
+   - 第一刀只做 shared seam，不改 public behavior，也不直接删除 fallback
+2. 在 shared shim 落稳后，再评估最终 surface cleanup：
+   - 缩减 `TSSLConfig.ServerName` 的职责
+   - 再判断 builder `WithSNI(...)` 是否还需要保留当前命名/入口
 3. 在 capability 与 SNI 迁移边界都稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。
 4. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
 

@@ -100,6 +100,13 @@ Delivered first cut:
 - legacy JSON/INI payloads that only carry `server_name` still import, and re-export with the new compatibility marker
 - focused regressions proved clone/reset/merge/import-export behavior stayed green
 
+Delivered second cut:
+
+- factory default-config path and one-shot config path still preserve `TSSLConfig.ServerName` compatibility, but they now emit an explicit runtime warning through `TSecurityLog.Warning('Factory', ...)`
+- warning text directly identifies `TSSLConfig.ServerName` as deprecated context-level SNI compatibility and redirects callers to `ISSLClientConnection.SetServerName(...)` / `TSSLConnector.Connect*(..., ServerName)`
+- `src/fafafa.ssl.base.pas` and `docs/reference/API_REFERENCE.md` now describe the field as compatibility-only instead of a normal recommended path
+- focused regressions proved scope, isolation, and logging-scope behavior stayed green
+
 ### Phase C: Replace Backend Inherited Fallback With Explicit Compatibility Shim
 
 **Target:** stop each backend constructor from silently reading deprecated context state directly.
@@ -132,7 +139,8 @@ Candidates:
 - context-level ServerName migration:
   - Phase A discovery/lockpoint mapping complete
   - Phase B builder surface first cut complete
-  - factory/config write-surface narrowing still pending
+  - Phase B factory/config write-surface narrowing complete
+  - next mainline is Phase C shared compatibility shim extraction
 - `TSSLConfig` cross-layer slimming: intentionally deferred until SNI migration stabilizes
 
 ### What This Means Operationally
@@ -144,16 +152,15 @@ Candidates:
 
 Choose one bounded implementation family only:
 
-1. **Factory/config surface narrowing**
-   - carry the same compatibility-only framing into `TSSLConfig.ServerName` and `TSSLFactory.CreateContext(...)`
-   - avoid changing backend constructors yet
-2. **Shared compatibility shim extraction**
+1. **Shared compatibility shim extraction**
    - prepare one shared helper for context-to-connection fallback
    - leave public behavior unchanged in the first patch
+2. **Final surface cleanup prep**
+   - re-evaluate whether `TSSLConfig.ServerName` and builder `WithSNI(...)` still need their current naming/placement once the shared shim exists
 
-Recommended first pick: **Factory/config surface narrowing**.
+Recommended first pick: **Shared compatibility shim extraction**.
 
-It completes Phase B on the remaining high-level write surface before we touch the deeper fallback path in backend constructors.
+Phase B is now closed for the current additive-compatibility scope; the next highest-value work is consolidating the backend fallback seam before any real behavioral deletion.
 
 ## Verification
 

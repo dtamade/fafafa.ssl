@@ -472,6 +472,19 @@ begin
   );
 end;
 
+procedure LogContextLevelServerNameCompatibilityWarning(const ACallSite: string);
+begin
+  TSecurityLog.Warning(
+    'Factory',
+    Format(
+      '%s is applying TSSLConfig.ServerName for deprecated context-level SNI compatibility; ' +
+      'prefer per-connection SNI via ISSLClientConnection.SetServerName or ' +
+      'TSSLConnector.Connect*(..., ServerName).',
+      [ACallSite]
+    )
+  );
+end;
+
 procedure ValidateConnectionCreationScope(const AConfig: TSSLConfig;
   AContextType: TSSLContextType; const ACallSite: string);
 begin
@@ -1048,6 +1061,9 @@ begin
 
     if LConfig.ServerName <> '' then
     begin
+      LogContextLevelServerNameCompatibilityWarning(
+        'TSSLFactory.CreateContext(AContextType, ALibType)'
+      );
       {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
       Result.SetServerName(LConfig.ServerName);
       {$POP}
@@ -1113,6 +1129,9 @@ begin
     
   if LConfig.ServerName <> '' then
   begin
+    LogContextLevelServerNameCompatibilityWarning(
+      'TSSLFactory.CreateContext(const AConfig)'
+    );
     {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
     Result.SetServerName(LConfig.ServerName);
     {$POP}

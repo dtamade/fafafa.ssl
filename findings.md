@@ -156,3 +156,20 @@
   - builder JSON 导出使用 `FormatJSON`
   - 对这种输出做 substring 硬匹配会把空格/换行格式误判成行为回归
   - 新 focused test 已改为解析 JSON 字段值本身，避免后续在格式噪音上反复红灯
+
+- `context-level ServerName` 的 factory/config 第二刀也已经证明可以安全收口：
+  - `TSSLFactory.CreateContext(AContextType, ALibType)` 与 `TSSLFactory.CreateContext(const AConfig)` 在 client-side 兼容写入 `TSSLConfig.ServerName` 时，不再静默
+  - 当前会通过 `TSecurityLog.Warning('Factory', ...)` 显式提示：
+    - `TSSLConfig.ServerName` 只是 deprecated context-level SNI compatibility
+    - 推荐主路径是 `ISSLClientConnection.SetServerName(...)` / `TSSLConnector.Connect*(..., ServerName)`
+  - default-config path 与 one-shot config path 都已被 focused tests 钉住
+
+- 这一步也顺手把 public-facing truth 对齐到了一个更一致的状态：
+  - `src/fafafa.ssl.base.pas` 的 `TSSLConfig.ServerName` 字段注释已经明确写成 compatibility-only
+  - `docs/reference/API_REFERENCE.md` 也新增了 client SNI compatibility note
+  - active docs contract 继续绿色，说明这次文档补充没有把旧 context-level SNI 路线重新教回去
+
+- 因此 `context-level ServerName` 的高层写入面已经不再是“静默主路径”：
+  - builder import/export 会加 marker
+  - factory/config runtime path 会发 warning
+  - 剩余的真正主问题已经转移到 backend constructor fallback 仍分散在五个实现里
