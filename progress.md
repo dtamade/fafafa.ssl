@@ -224,6 +224,67 @@
   - change:
     - sync the dedicated FreePascal runtime cut into persistent repo working memory
 
+### Connection Builder Explicit Hostname Cut
+
+- add `docs/plans/2026-05-18-connection-builder-explicit-hostname-cut.md`
+  - purpose:
+    - define the next bounded client-side behavior-migration batch after the FreePascal runtime cut
+    - keep scope on `TSSLConnectionBuilder.TryBuildClient` instead of reopening connector or shared backend compatibility shims
+
+- update `tests/test_connection_builder_hostname_precedence.pas`
+  - change:
+    - flip case 1 from “preserve context fallback” to “clear context fallback”
+    - keep case 2 explicit override and case 3 explicit empty clear intact
+    - locally suppress the deprecated context setter warning at the mock setup callsite
+
+- update `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - change:
+    - remove `tests/test_connection_builder_hostname_precedence.pas`
+    - keep the intentional compatibility label set aligned with the smaller remaining boundary
+
+- `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+  - result: RED
+  - summary:
+    - only case 1 failed
+    - `TryBuildClient` was still preserving inherited context fallback when no explicit hostname was provided
+
+- update `src/fafafa.ssl.connection.builder.pas`
+  - change:
+    - when the built client connection supports `ISSLClientConnection`, `TryBuildClient` now always owns per-connection hostname state
+    - if `WithHostname(...)` was not called, it explicitly clears `ServerName` to `''`
+    - explicit override / explicit empty clear behavior remains unchanged
+
+- `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+  - result: RED -> GREEN
+  - summary:
+    - all 9 assertions passed
+    - client builder path no longer preserves inherited context fallback
+
+- `mkdir -p tmp/test_tls_connector_hostname_override_precedence && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_tls_connector_hostname_override_precedence -FEtmp/test_tls_connector_hostname_override_precedence -otmp/test_tls_connector_hostname_override_precedence/test_tls_connector_hostname_override_precedence tests/test_tls_connector_hostname_override_precedence.pas && ./tmp/test_tls_connector_hostname_override_precedence/test_tls_connector_hostname_override_precedence`
+  - result: PASS
+  - summary:
+    - connector override precedence stayed green
+    - the builder-path cut did not regress the next higher-level client override surface
+
+- `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - result: PASS
+  - summary:
+    - the intentional compatibility label set stayed green after removing the builder precedence test
+
+- update `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - change:
+    - remove `tests/test_connection_builder_hostname_precedence.pas` from the intentional compatibility set
+    - record the builder explicit-hostname cut and move the next recommendation to `tests/test_tls_connector_hostname_override_precedence.pas`
+
+- update `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - change:
+    - add a dedicated closeout section for the connection-builder explicit-hostname cut
+    - shrink the remaining client-side intentional compatibility surface again
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the builder explicit-hostname cut into persistent repo working memory
+
 ### Residual Context SNI Classification And WinSSL mTLS Skeleton Cleanup
 
 - add `docs/plans/2026-05-18-residual-context-sni-classification-and-mtls-skeleton-cleanup.md`

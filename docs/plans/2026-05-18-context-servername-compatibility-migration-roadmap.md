@@ -51,7 +51,6 @@
 
 #### Compatibility should remain observable for now
 
-- `tests/test_connection_builder_hostname_precedence.pas`
 - `tests/test_tls_connector_hostname_override_precedence.pas`
 - `tests/test_context_builder_server_servername_runtime_consistency.pas`
 
@@ -154,6 +153,14 @@ Delivered third cut:
 - new focused source contract `tests/scripts/test_freepascal_client_connections_no_context_servername_fallback.sh` now guards the FreePascal runtime cut
 - adjacent mock precedence contracts stayed green, so the remaining client-side intentional fallback surface is now concentrated in builder/connector mock precedence tests
 
+Delivered fourth cut:
+
+- `src/fafafa.ssl.connection.builder.pas` no longer preserves inherited context fallback on the client builder path
+- if a built client connection supports `ISSLClientConnection` and callers did not provide `WithHostname(...)`, `TryBuildClient` now explicitly clears `ServerName` to `''`
+- `tests/test_connection_builder_hostname_precedence.pas` was flipped from intentional compatibility coverage to no-fallback precedence coverage
+- explicit override and explicit empty clear semantics remained intact
+- adjacent connector precedence contract stayed green, so the remaining higher-level intentional fallback surface is now concentrated in connector-side input contracts plus the server builder compatibility test
+
 ### Phase D: Final Surface Cleanup
 
 **Target:** finish interface shape cleanup once migration risk is low enough.
@@ -215,6 +222,7 @@ Delivered third cut:
   - Phase C shared compatibility shim first cut complete
   - Phase C `sslCtxBoth` ambiguity cut complete
   - Phase C FreePascal client runtime fallback cut complete
+  - Phase C client connection-builder explicit-hostname cut complete
   - Phase E first WinSSL client-flow migration cut complete
   - Phase E residual ambiguous test-surface classification cut complete
   - Phase E cross-backend network contract migration cut complete
@@ -230,14 +238,14 @@ Delivered third cut:
 Choose one bounded implementation family only:
 
 1. **`sslCtxClient` behavior migration RED selection**
-   - start with `tests/test_connection_builder_hostname_precedence.pas`
-   - then decide whether `tests/test_tls_connector_hostname_override_precedence.pas` should keep or drop context-level fallback as an intentional mock precedence input
+   - start with `tests/test_tls_connector_hostname_override_precedence.pas`
+   - then decide whether `tests/test_tls_connector_early_data_contract.pas` should keep or drop inherited context fallback as an intentional connector-side input
    - explicitly define new precedence between builder/factory/context and per-connection hostname paths
 2. **Final surface cleanup prep**
    - re-evaluate whether `TSSLConfig.ServerName` and builder `WithSNI(...)` still need their current naming/placement now that builder/factory/runtime paths all expose compatibility warnings
 3. **Wider public-surface cleanup**
    - stage follow-up work only after the first behavior-migration RED is pinned and verified
-Recommended first pick: **`tests/test_connection_builder_hostname_precedence.pas` as the next `sslCtxClient` behavior-migration RED**.
+Recommended first pick: **`tests/test_tls_connector_hostname_override_precedence.pas` as the next `sslCtxClient` behavior-migration RED**.
 
 Builder/factory/shared-shim warning work, residual test-surface classification, the first server-side dead-compat cut, and the `sslCtxBoth` ambiguity cut are no longer the blocker; the next highest-value work is choosing the first `sslCtxClient` behavior-migration RED.
 

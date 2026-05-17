@@ -539,18 +539,18 @@ var
   ClientConn: ISSLClientConnection;
 begin
   Ctx := TMockContext.Create(sslCtxClient);
-  // INTENTIONAL_COMPAT: legacy context-level SNI coverage. This test keeps
-  // the deprecated context fallback observable on purpose for precedence checks.
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   Ctx.SetServerName('ctx.example.com');
+  {$POP}
 
-  WriteLn('=== Case 1: no WithHostname keeps context fallback ===');
+  WriteLn('=== Case 1: no WithHostname clears context fallback ===');
   Builder := TSSLConnectionBuilder.Create
     .WithContext(Ctx)
     .WithSocket(THandle(1));
   Res := Builder.TryBuildClient(Conn);
   Check(Res.Success, 'TryBuildClient should succeed');
   Check(Supports(Conn, ISSLClientConnection, ClientConn), 'Connection supports ISSLClientConnection');
-  CheckEqualsStr('ServerName uses context fallback', 'ctx.example.com', ClientConn.GetServerName);
+  CheckEqualsStr('ServerName no longer uses context fallback', '', ClientConn.GetServerName);
 
   WriteLn('=== Case 2: WithHostname overrides context fallback ===');
   Builder := TSSLConnectionBuilder.Create
@@ -562,7 +562,7 @@ begin
   Check(Supports(Conn, ISSLClientConnection, ClientConn), 'Connection supports ISSLClientConnection');
   CheckEqualsStr('ServerName overridden', 'conn.example.com', ClientConn.GetServerName);
 
-  WriteLn('=== Case 3: WithHostname(\"\") clears context fallback ===');
+  WriteLn('=== Case 3: WithHostname(\"\") still clears context fallback ===');
   Builder := TSSLConnectionBuilder.Create
     .WithContext(Ctx)
     .WithSocket(THandle(1))

@@ -333,3 +333,26 @@
   - 不再是 `tests/test_freepascal_context_server_name_inheritance.pas`
   - 而是 `tests/test_connection_builder_hostname_precedence.pas`
   - 因为它现在成了剩余 intentional client-side inherited fallback 中最直接的下层契约
+
+- 这条 `TSSLConnectionBuilder` mock precedence 契约现在也已经从“保留 fallback”翻成了“默认清空 fallback”：
+  - `src/fafafa.ssl.connection.builder.pas` 的 `TryBuildClient` 在连接支持 `ISSLClientConnection` 时，会始终接管 per-connection hostname state
+  - 若调用方没有 `WithHostname(...)`，builder 会显式写入空字符串，而不是继续保留 inherited context fallback
+  - 若调用方显式 `WithHostname('conn.example.com')` 或 `WithHostname('')`，仍分别保留 override / clear 语义
+
+- 这说明 `TSSLConnectionBuilder` 现在已经和更早之前收紧的 FreePascal runtime 一样，站到了“explicit per-connection hostname”这边：
+  - builder 不再是 context-level SNI fallback 的隐式透传通道
+  - connector mock precedence 成了剩余更靠上的 intentional 输入面
+
+- focused evidence 也说明这刀是纯 builder 语义收口，而不是误伤 connector：
+  - `tests/test_connection_builder_hostname_precedence.pas` RED -> GREEN
+  - `tests/test_tls_connector_hostname_override_precedence.pas` 继续绿色
+  - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh` 继续绿色
+
+- 因而当前剩余最直接的 client-side intentional compatibility surface 再次收窄：
+  - `tests/test_tls_connector_hostname_override_precedence.pas`
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+  - 以及单独分类管理的 `tests/test_tls_connector_early_data_contract.pas`
+
+- 所以下一条最合理的 `sslCtxClient` behavior migration RED 已再次前移：
+  - 首选应转向 `tests/test_tls_connector_hostname_override_precedence.pas`
+  - 然后再评估 `tests/test_tls_connector_early_data_contract.pas` 是否还需要继续以 inherited context fallback 作为 intentional 输入

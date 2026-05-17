@@ -256,18 +256,21 @@ begin
       Exit;
     end;
 
-    // Set per-connection server name for SNI/hostname verification if explicitly configured.
-    // Note: WithHostname('') is treated as an explicit clear to override context fallback.
-    if FHostnameSet then
+    // Client builder path owns per-connection hostname state. If callers do not
+    // provide one explicitly, clear any inherited context fallback instead of
+    // silently preserving deprecated context-level SNI state.
+    if Supports(AConnection, ISSLClientConnection, ClientConn) then
     begin
-      if Supports(AConnection, ISSLClientConnection, ClientConn) then
+      if FHostnameSet then
         ClientConn.SetServerName(FHostname)
       else
-      begin
-        AConnection := nil;
-        Result := TSSLOperationResult.Err(sslErrUnsupported, 'Backend does not support per-connection server name');
-        Exit;
-      end;
+        ClientConn.SetServerName('');
+    end
+    else if FHostnameSet then
+    begin
+      AConnection := nil;
+      Result := TSSLOperationResult.Err(sslErrUnsupported, 'Backend does not support per-connection server name');
+      Exit;
     end;
     
     // Configure connection

@@ -114,6 +114,17 @@
     - `tests/test_freepascal_context_server_name_inheritance.pas`
     - `tests/test_connection_builder_hostname_precedence.pas`
     - `tests/test_tls_connector_hostname_override_precedence.pas`
+- [completed] `TSSLConnectionBuilder` 客户端路径已不再保留 inherited context fallback：
+  - `src/fafafa.ssl.connection.builder.pas` 的 `TryBuildClient` 现在在连接支持 `ISSLClientConnection` 且未调用 `WithHostname(...)` 时，会显式 `SetServerName('')`
+  - `tests/test_connection_builder_hostname_precedence.pas` 已翻成 no-fallback precedence contract：
+    - 未调用 `WithHostname(...)` -> 不再保留 context fallback
+    - `WithHostname('conn.example.com')` -> 继续显式覆盖
+    - `WithHostname('')` -> 继续显式清空
+  - `tests/test_connection_builder_hostname_precedence.pas` 已从 intentional-compat label 集合中移除
+  - focused RED -> GREEN：
+    - `tests/test_connection_builder_hostname_precedence.pas`
+    - `tests/test_tls_connector_hostname_override_precedence.pas`
+    - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
 
 ## Scope
 
@@ -142,8 +153,8 @@
 ## Current Queue
 
 1. 继续选择下一条 `sslCtxClient` behavior migration RED：
-   - 第一优先级改为 `tests/test_connection_builder_hostname_precedence.pas`
-   - 然后再评估 `tests/test_tls_connector_hostname_override_precedence.pas` 是否仍需要继续锁 inherited context fallback
+   - 第一优先级改为 `tests/test_tls_connector_hostname_override_precedence.pas`
+   - 然后再评估 `tests/test_tls_connector_early_data_contract.pas` 是否还需要继续从 inherited context fallback 起步
    - 明确 connector / connection-builder / factory / builder 四层的新优先级和失败语义
 2. 在 dedicated client-side RED 明确后，再评估最终 public surface cleanup：
    - `TSSLConfig.ServerName` 是否继续留在当前 record 上
