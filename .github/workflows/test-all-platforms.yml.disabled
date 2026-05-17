@@ -361,9 +361,7 @@ jobs:
             echo "- $(basename "$artifact_dir")" >> $GITHUB_STEP_SUMMARY
           done
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📋 Test Coverage" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Core modules (P0): 6/6" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ High priority (P1): 14/14" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Medium priority (P2): 11/11" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Low priority (P3): 15/15" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ WinSSL backend: Full support" >> $GITHUB_STEP_SUMMARY
+          echo "### Notes" >> $GITHUB_STEP_SUMMARY
+          echo "- This dormant template reports platform job results and downloaded artifacts from this run only." >> $GITHUB_STEP_SUMMARY
+          echo "- Review platform-specific logs and artifacts before asserting backend completeness or exact module/category coverage." >> $GITHUB_STEP_SUMMARY
+          echo "- WinSSL support should be judged from the Windows lane evidence, not from a fixed summary claim." >> $GITHUB_STEP_SUMMARY

@@ -27,6 +27,9 @@ required_fragments = [
     'LINUX_RESULT="${{ needs.test-linux.result }}"',
     'MACOS_RESULT="${{ needs.test-macos.result }}"',
     'find test-results -mindepth 1 -maxdepth 1 -type d | sort',
+    'echo "### Notes" >> $GITHUB_STEP_SUMMARY',
+    'echo "- This dormant template reports platform job results and downloaded artifacts from this run only." >> $GITHUB_STEP_SUMMARY',
+    'echo "- Review platform-specific logs and artifacts before asserting backend completeness or exact module/category coverage." >> $GITHUB_STEP_SUMMARY',
 ]
 
 forbidden_fragments = [
@@ -39,6 +42,11 @@ forbidden_fragments = [
     "| macOS | ✅ | 3.3.1 |",
     "Test-Results-Windows-FPC${{ matrix.fpc-version }}",
     "Test-Results-Linux-FPC${{ matrix.fpc-version }}",
+    'echo "- ✅ Core modules (P0): 6/6" >> $GITHUB_STEP_SUMMARY',
+    'echo "- ✅ High priority (P1): 14/14" >> $GITHUB_STEP_SUMMARY',
+    'echo "- ✅ Medium priority (P2): 11/11" >> $GITHUB_STEP_SUMMARY',
+    'echo "- ✅ Low priority (P3): 15/15" >> $GITHUB_STEP_SUMMARY',
+    'echo "- ✅ WinSSL backend: Full support" >> $GITHUB_STEP_SUMMARY',
 ]
 
 for fragment in required_fragments:
