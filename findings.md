@@ -680,3 +680,12 @@
 - 因而当前 `wave-b-b2` 线上更合理的下一跳，已经从 cross-summary missing 前移到 cross-summary 顶层 run_id 漂移：
   - 优先补 `check_wave_b_b2_evidence_consistency.sh` 的 `cross_summary run_id missing/mismatch` focused contract
   - 目标是确认 row note 与 `runid_mismatch_or_parse_issue` 在 cross-summary 顶层元数据漂移时也保持对称 truthful
+
+- `90db460` 对应的 docs closeout run `25983958292` 已经 SUCCESS：
+  - `Code Quality (Light)`、`Minimal Gate (Linux)`、`FreePascal TLS 1.3 Completeness` 全部 SUCCESS
+  - 说明上一轮 closure-missing closeout 也没有把自动主线带偏
+
+- 这次提交 `00428c8` 再次证明当前 `cross_summary missing` 这条线只是 coverage gap，不是 prod bug：
+  - 脚本行为本身没变
+  - focused contract 只是把 `required_missing`、row note 和 next-actions truth 固化下来
+  - 因此远端自动 `CI` run `25984057687` 继续按增量 run id 记账即可

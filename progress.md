@@ -301,6 +301,29 @@
 - `git diff --check`
   - result: PASS
 
+### Thirty-First Push Recording
+
+- `git commit -m "test: cover missing cross-summary consistency"`
+  - result: PASS
+  - commit: `00428c8`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `90db460..00428c8`
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - worktree returned to `## master...origin/master`
+
+- `gh run list --branch master --limit 5 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - previous docs closeout head `90db460` had already finished `success` as run `25983958292`
+    - latest observed run for head `00428c8` was `CI` run `25984057687`
+    - status at record time: `in_progress`
+    - per the incremental verification discipline, this cross-summary missing coverage batch recorded the run id without a blocking watch
+
 ### Eleventh Push Success Revalidation
 
 - `git commit -m "chore: pin workflow actions to commits"`
