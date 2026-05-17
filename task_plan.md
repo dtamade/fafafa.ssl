@@ -331,6 +331,38 @@
   - `Minimal Gate (Linux)` SUCCESS
   - `FreePascal TLS 1.3 Completeness` SUCCESS
   - 这次改动命中的是 dormant `pr-checks.yml.disabled`，自动主线继续全绿；pr-checks lane 仍保持 `static-only`
+- [completed] 第二十一次 docs closeout 已同步入库并推送：
+  - `task_plan.md` / `findings.md` / `progress.md` / `docs/plans/2026-05-15-workflow-checkout-node24-hygiene.md` 已补齐 pr-checks summary truth batch 真相
+- [completed] 第二十一次 docs closeout 提交 `81a7b50` 已完成，并推送到 `master`
+- [completed] 第二十一次 docs closeout push 后的远端复核通过：
+  - `CI` run `25980995605` SUCCESS
+  - 这次改动只同步 planning/docs，但自动主线继续全绿，说明 continuation truth sync 没有漂移
+- [completed] 继续静态审查 dormant summary-heavy workflow 后确认新的双模板 truth 缺口：
+  - `basic-checks.yml.disabled` 的 `Generate report` 仍硬编码 `Project structure valid` / `Required files present` / `Basic syntax check passed`
+  - 同一个 summary step 也没有 `if: always()`，一旦前置检查失败就不会留下 truthful 报告
+  - `linux-ci.yml.disabled` 的 `check-success` 仍用 `✅ All Checks Passed` 和 `Project is ready for integration` 把 Ubuntu lane 结果泛化成更大的结论
+- [completed] 新增 focused contracts，并先在当前模板上观测到红灯：
+  - `tests/scripts/test_workflow_basic_checks_summary_truth_contract.sh`
+  - `tests/scripts/test_workflow_linux_ci_summary_truth_contract.sh`
+- [completed] `basic-checks.yml.disabled` 与 `linux-ci.yml.disabled` 已收紧为 truthful summary lanes：
+  - `basic-checks` 为三个前置检查补上 step id，并在 summary 中直接读取 `steps.file-structure.outcome`、`steps.required-files.outcome`、`steps.basic-syntax.outcome`
+  - `basic-checks` 的报告 step 改为 `if: always()`，失败时也会留下 step-result 摘要
+  - `linux-ci` 的收口 job 改名为 `Linux CI Result Summary`
+  - `linux-ci` 的 summary 改为只汇报 `needs.build-and-test.result` 与当前 Ubuntu lane / artifact 的真实范围，不再声称 `ready for integration`
+- [completed] 第二十二波 dormant workflow summary truth 修复本地复核通过：
+  - `test_workflow_basic_checks_summary_truth_contract.sh` PASS
+  - `test_workflow_linux_ci_summary_truth_contract.sh` PASS
+  - `test_workflow_action_sha_pinning_contract.sh` PASS
+  - `test_workflow_checkout_credentials_contract.sh` PASS
+  - `test_workflow_permissions_contract.sh` PASS
+  - `git diff --check` PASS
+- [completed] 第二十二次提交 `6615b69` 已完成，basic/linux summary truth batch 已推送到 `master`
+- [completed] 第二十二次 push 后的远端复核通过：
+  - `CI` run `25981061685` SUCCESS
+  - `Code Quality (Light)` SUCCESS
+  - `Minimal Gate (Linux)` SUCCESS
+  - `FreePascal TLS 1.3 Completeness` SUCCESS
+  - 这次改动命中的是 dormant `basic-checks.yml.disabled` 与 `linux-ci.yml.disabled`，自动主线继续全绿；两条 lane 仍保持 `static-only`
 
 ## Current Blocker
 
@@ -348,15 +380,16 @@
 - 当前也没有已知仍保留“手动输入只改标签、不改执行范围”的 dormant performance lane 残留。
 - 当前也没有已知仍保留“manual skip 生效但 summary 不承认 skipped 语义”的 dormant ci-matrix lane 残留。
 - 当前也没有已知仍保留 `pr-checks` 硬编码全绿状态表、或在 workflow 内伪装 branch-protection / review policy 的残留。
+- 当前也没有已知仍保留 `basic-checks` 硬编码成功三连、或 `linux-ci` 把单一 Ubuntu lane 冒充成 integration-ready 的残留。
 - 当前剩余边界只在验证层：
   - `release.yml`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled`、`wave-b-b2-manual.yml.disabled` 等 dormant/manual 路径没有在远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
-  - 当前下一条更明确的 summary truth 缺口已经前移到 `basic-checks.yml.disabled` 与 `linux-ci.yml.disabled`
+  - 当前下一条更明确的 summary truth 缺口已经前移到 `test-all-platforms.yml.disabled` 的固定覆盖率/WinSSL 完整支持断言
 
 ## Current Queue
 
-1. 继续静态审查 dormant summary-heavy workflow，下一站优先看 `basic-checks.yml.disabled` 与 `linux-ci.yml.disabled` 里的硬编码成功结论和泛化状态断言。
-2. 继续静态审查 mixed-trigger / manual workflow 的 summary truth，但重点转向“summary 是否真实反映 job result，而不是把环境假设或仓库策略写成事实”。
+1. 继续静态审查 dormant summary-heavy workflow，下一站优先收 `test-all-platforms.yml.disabled` 里固定覆盖率数字与 `WinSSL backend: Full support` 这类超出当前 run 可证明范围的断言。
+2. 继续静态审查 mixed-trigger / manual workflow 的 summary truth，但重点转向“summary 是否真实反映 `needs.*.result`、artifact 真相和当前 lane 范围，而不是固定能力宣告”。
 3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
 
 ## Decision Locks
@@ -382,6 +415,7 @@
 - 第十九批 dormant winssl/code-quality truth batch commit / push 完成，且自动远端主线复核通过
 - 第二十批 manual workflow input truth batch commit / push 完成，且自动远端主线复核通过
 - 第二十一批 pr-checks summary truth batch commit / push 完成，且自动远端主线复核通过
+- 第二十二批 dormant basic/linux summary truth batch commit / push 完成，且自动远端主线复核通过
 - `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
 - `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
 - `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用

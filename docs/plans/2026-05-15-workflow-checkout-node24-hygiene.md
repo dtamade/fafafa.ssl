@@ -175,3 +175,5 @@ git diff --check
   - 最新又补上 dormant `winssl-tests` / `code-quality` 的真源与 summary truth 收紧；`9331faa` 对应的 `CI` run `25980352095` 继续 SUCCESS
   - 最新又补上 dormant `performance` / `ci-matrix-draft` 的 manual-input truth 收紧；`c8b3000` 对应的 `CI` run `25980651893` 继续 SUCCESS
   - 最新又补上 dormant `pr-checks` 的 summary truth 收紧；`b98625e` 对应的 `CI` run `25980879737` 继续 SUCCESS
+  - 随后 `pr-checks` summary truth docs closeout `81a7b50` 也通过了 `CI` run `25980995605`，说明 working-memory truth sync 继续保持稳定
+  - 最新又补上 dormant `basic-checks` / `linux-ci` 的 summary truth 收紧；`6615b69` 对应的 `CI` run `25981061685` 继续 SUCCESS

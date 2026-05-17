@@ -1884,3 +1884,113 @@
     - `Minimal Gate (Linux)` SUCCESS
     - `FreePascal TLS 1.3 Completeness` SUCCESS
     - this batch only touched dormant `pr-checks.yml.disabled`, and the auto-triggered active CI path remained green
+
+### Twenty-First Docs Closeout Revalidation
+
+- `git commit -m "docs: sync pr checks summary truth closeout"`
+  - result: PASS
+  - commit: `81a7b50`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `b98625e..81a7b50`
+
+- `gh run list --branch master --limit 8 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest run for head `81a7b50` was `CI` run `25980995605`
+
+- `gh run watch 25980995605 --exit-status`
+  - result: PASS
+  - summary:
+    - `Code Quality (Light)` SUCCESS
+    - `Minimal Gate (Linux)` SUCCESS
+    - `FreePascal TLS 1.3 Completeness` SUCCESS
+    - this batch only synced planning/docs, and the auto-triggered active CI path remained green
+
+### Twenty-Second-Order Route Review
+
+- `sed -n '1,220p' .github/workflows/basic-checks.yml.disabled`
+  - result: PASS
+  - summary:
+    - `Generate report` still hardcoded `Project structure valid` / `Required files present` / `Basic syntax check passed`
+    - the report step also lacked `if: always()`, so failures would skip the summary entirely
+
+- `sed -n '1,260p' .github/workflows/linux-ci.yml.disabled`
+  - result: PASS
+  - summary:
+    - the `check-success` job still used `✅ All Checks Passed`
+    - the success step still claimed `Project is ready for integration`, which was broader than the single Ubuntu lane this workflow actually proved
+
+### Twenty-Second-Order RED Contracts
+
+- `bash tests/scripts/test_workflow_basic_checks_summary_truth_contract.sh`
+  - result before twenty-second fix: FAIL
+  - summary:
+    - missing truthful fragment `if: always()`
+
+- `bash tests/scripts/test_workflow_linux_ci_summary_truth_contract.sh`
+  - result before twenty-second fix: FAIL
+  - summary:
+    - missing truthful fragment `name: 🧾 Linux CI Result Summary`
+
+### Twenty-Second-Order Repairs
+
+- add `tests/scripts/test_workflow_basic_checks_summary_truth_contract.sh`
+  - purpose: ensure the dormant basic checks workflow reports `steps.*.outcome` truth and still emits a summary when a preceding check fails
+
+- add `tests/scripts/test_workflow_linux_ci_summary_truth_contract.sh`
+  - purpose: ensure the dormant Linux CI workflow reports the real `needs.build-and-test.result` scope instead of claiming integration-ready success
+
+- update `.github/workflows/basic-checks.yml.disabled`
+  - change: assign ids to the three pre-summary checks
+  - change: make the report step `if: always()`
+  - change: replace hardcoded success prose with a step-result table driven by `steps.*.outcome`
+
+- update `.github/workflows/linux-ci.yml.disabled`
+  - change: rename `check-success` to `Linux CI Result Summary`
+  - change: replace the integration-ready success prose with a scope-limited summary derived from `needs.build-and-test.result`
+  - change: keep the failure-enforcement step so the job still fails when the upstream lane fails
+
+### Local Revalidation After Twenty-Second Fix
+
+- `bash tests/scripts/test_workflow_basic_checks_summary_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_linux_ci_summary_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_action_sha_pinning_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_checkout_credentials_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_permissions_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+### Twenty-Second Push Success Revalidation
+
+- `git commit -m "chore: tighten dormant workflow summaries"`
+  - result: PASS
+  - commit: `6615b69`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `81a7b50..6615b69`
+
+- `gh run list --branch master --limit 8 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest run for head `6615b69` was `CI` run `25981061685`
+
+- `gh run watch 25981061685 --exit-status`
+  - result: PASS
+  - summary:
+    - `Code Quality (Light)` SUCCESS
+    - `Minimal Gate (Linux)` SUCCESS
+    - `FreePascal TLS 1.3 Completeness` SUCCESS
+    - this batch only touched dormant `basic-checks.yml.disabled` and `linux-ci.yml.disabled`, and the auto-triggered active CI path remained green

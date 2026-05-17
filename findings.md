@@ -445,3 +445,33 @@
 - 当前下一条更明确的 dormant summary truth 缺口已经前移到：
   - `basic-checks.yml.disabled` 的 `Generate report` 仍硬编码 `Project structure valid` / `Required files present` / `Basic syntax check passed`
   - `linux-ci.yml.disabled` 的 `check-success` 仍硬编码 `Project is ready for integration`
+
+- `basic-checks.yml.disabled` 这条 summary 问题的关键不只是三行 `✅` 写死了，而是失败时连 truthful summary 都不会留下：
+  - `Generate report` 缺 `if: always()`
+  - 一旦 `Check required files` 或基础语法检查提前失败，用户看到的只会是 step log，没有统一摘要
+
+- 对 `basic-checks` 来说，最小可信修法不需要引入额外脚本：
+  - 给三个前置检查补 step id
+  - summary 直接读取 `steps.file-structure.outcome`、`steps.required-files.outcome`、`steps.basic-syntax.outcome`
+  - 再把 report step 改成 `if: always()` 即可
+
+- `linux-ci.yml.disabled` 的问题则不是“不会失败”，而是把单一 lane 结果说大了：
+  - `check-success` job 名直接叫 `All Checks Passed`
+  - 成功 step 还输出 `Project is ready for integration`
+  - 但当前 workflow 只证明了这一次 `ubuntu-latest` 的 `build-and-test` lane 结果，不能替代更大的集成结论
+
+- 对 `linux-ci` 来说，最小可信修法是把收口 job 退回到 result summary：
+  - summary 直接读取 `needs.build-and-test.result`
+  - 文案明确 scope 只到 `ubuntu-latest build-and-test lane from this run only`
+  - 再指向对应 logs / artifact，而不是下 integration-ready 结论
+
+- 新增 `test_workflow_basic_checks_summary_truth_contract.sh` 与 `test_workflow_linux_ci_summary_truth_contract.sh` 后，这两条 dormant lane 也进入了持续守护面：
+  - 它们会阻止 `basic-checks` 回流到“写死三条 success 且失败时无 summary”
+  - 也会阻止 `linux-ci` 再次把单一 Ubuntu lane 包装成 `All Checks Passed` / `ready for integration`
+  - 推送 `6615b69` 后，自动 `CI` run `25981061685` 继续 SUCCESS，说明这次收紧没有误伤当前活跃 Linux 主线
+
+- 当前下一条更明确的 dormant summary truth 缺口已经继续前移到 `test-all-platforms.yml.disabled`：
+  - 虽然平台结果表已经改成真实 `needs.*.result`
+  - 但 summary 末尾仍固定输出 `Core modules (P0): 6/6`、`High priority (P1): 14/14`、`Medium priority (P2): 11/11`、`Low priority (P3): 15/15`
+  - 还固定输出 `WinSSL backend: Full support`
+  - 这些断言都大于当前 run 可直接证明的范围
