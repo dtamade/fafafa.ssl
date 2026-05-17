@@ -159,6 +159,33 @@
   - 把当前仍然需要保留的兼容路径从“反复刷 warning 的噪音源”收成“显式承认的内部兼容区”
   - 让下一步真正的 compatibility migration 可以在更干净的 compile 基线上继续推进
 
+## 增量收口：capability serialization truth projection
+
+- 继续深挖 capability 双真相后，确认 serializer 输出面也确实存在 live 外部漂移：
+  - `CapabilitiesToJSON(...)` / `CapabilitiesToXML(...)` 之前直接输出 record 里的 legacy boolean
+  - 这意味着一个已经携带 support-level truth 的 record，仍可能导出自相矛盾的 payload，例如：
+    - `supportsSNI=false`
+    - `sniSupport="stable"`
+
+- 这个问题不能靠 round-trip 测试掩盖：
+  - 因为现有 deserializer precedence 会在读回时再次用 `*Support` 覆盖 legacy boolean
+  - 所以本批新增的是直接检查输出字符串的 focused RED，而不是只跑 serialize -> deserialize
+
+- 当前修法：
+  - `src/fafafa.ssl.capability.serializer.pas`
+    - 新增内部 helper，先判断 record 是否已携带任意 v1.2 support-level truth
+    - 若是，则在 JSON/XML 输出前先回填一份本地 legacy boolean compatibility projection
+  - 这一步只修“support-level-aware record 的输出 truth”
+  - 不去假装解决“纯 legacy-only in-memory record 缺少 presence bit”这条本来就无法从 record 本身判定的歧义
+
+- focused 验证：
+  - `tests/test_capability_serialization_truth_projection.pas`
+    - RED -> GREEN
+    - 直接钉住 JSON/XML 不得再导出 bool/support-level 自相矛盾
+  - `tests/test_capability_deserialization_roundtrip.pas`
+    - PASS
+    - 说明外部输出 truth 收口后，既有 round-trip 兼容链路仍保持绿色
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -182,17 +209,15 @@
 
 ### 下一批最值得做的事
 
-1. 收口 serializer / deserializer / diff 层的 capability 双真相
-   - runtime `GetCapabilities`、deserializer precedence、diff truth 已经完成主真相化
-   - 剩下的问题主要是：serializer 输出面是否还要对“手工构造但不一致”的 capability record 做受控归一化
-
-2. 设计一份 **context-level SNI compatibility migration plan**
+1. 设计一份 **context-level SNI compatibility migration plan**
    - 先定义 compatibility shim 和 deprecation boundary
    - warning quarantine 已完成，不要再回到旧的 compile 噪音治理
    - 再分批清理 factory / builder / connection constructor / tests
 
-3. 再决定是否拆 `TSSLConfig`
+2. 再决定是否拆 `TSSLConfig`
    - 当前它更多是设计债，不是第一优先级实现 bug
+
+3. 如果未来要让 serializer 在“纯 legacy-only in-memory capability record”上也做到完全无歧义输出，需要先给 capability model 增加 presence/truth 元信息
 
 ## 总结
 

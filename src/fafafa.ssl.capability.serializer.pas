@@ -57,6 +57,33 @@ begin
   Result := ALevel <> sslSupportNone;
 end;
 
+function HasAnySupportLevelTruth(const ACaps: TSSLBackendCapabilities): Boolean;
+begin
+  Result :=
+    FeatureLevelPresent(ACaps.SNISupport) or
+    FeatureLevelPresent(ACaps.ALPNSupport) or
+    FeatureLevelPresent(ACaps.OCSPStaplingSupport) or
+    FeatureLevelPresent(ACaps.CertTransparencySupport) or
+    FeatureLevelPresent(ACaps.SessionTicketsSupport) or
+    FeatureLevelPresent(ACaps.SessionCacheSupport) or
+    FeatureLevelPresent(ACaps.ZeroRTTSupport) or
+    FeatureLevelPresent(ACaps.EarlyDataSupport) or
+    FeatureLevelPresent(ACaps.RenegotiationSupport) or
+    FeatureLevelPresent(ACaps.PostHandshakeAuthSupport);
+end;
+
+procedure PrepareCapabilitiesForSerialization(
+  const ASource: TSSLBackendCapabilities;
+  out APrepared: TSSLBackendCapabilities);
+begin
+  APrepared := ASource;
+
+  // Only normalize when the record already carries v1.2 support-level truth.
+  // Pure legacy-only in-memory records still remain ambiguous without presence bits.
+  if HasAnySupportLevelTruth(APrepared) then
+    NormalizeLegacyCapabilityBooleans(APrepared);
+end;
+
 procedure ApplySupportLevelTruth(
   var ACaps: TSSLBackendCapabilities;
   const AHasSNISupport,
@@ -257,6 +284,7 @@ end;
 function CapabilitiesToJSON(const ACaps: TSSLBackendCapabilities;
                             const APretty: Boolean = True): string;
 var
+  LCaps: TSSLBackendCapabilities;
   Indent: string;
   NL: string;
 
@@ -280,6 +308,8 @@ var
   end;
 
 begin
+  PrepareCapabilitiesForSerialization(ACaps, LCaps);
+
   if APretty then
   begin
     Indent := '  ';
@@ -294,70 +324,70 @@ begin
   Result := '{' + NL;
 
   // v1.1.0 字段
-  Result := Result + AddField('supportsTLS13', BoolToJSONStr(ACaps.SupportsTLS13));
-  Result := Result + AddField('supportsALPN', BoolToJSONStr(ACaps.SupportsALPN));
-  Result := Result + AddField('supportsSNI', BoolToJSONStr(ACaps.SupportsSNI));
-  Result := Result + AddField('supportsOCSPStapling', BoolToJSONStr(ACaps.SupportsOCSPStapling));
-  Result := Result + AddField('supportsCertificateTransparency', BoolToJSONStr(ACaps.SupportsCertificateTransparency));
-  Result := Result + AddField('supportsSessionTickets', BoolToJSONStr(ACaps.SupportsSessionTickets));
-  Result := Result + AddField('supportsECDHE', BoolToJSONStr(ACaps.SupportsECDHE));
-  Result := Result + AddField('supportsChaChaPoly', BoolToJSONStr(ACaps.SupportsChaChaPoly));
-  Result := Result + AddField('supportsPEMPrivateKey', BoolToJSONStr(ACaps.SupportsPEMPrivateKey));
-  Result := Result + AddField('minTLSVersion', IntToStr(Ord(ACaps.MinTLSVersion)));
-  Result := Result + AddField('maxTLSVersion', IntToStr(Ord(ACaps.MaxTLSVersion)));
+  Result := Result + AddField('supportsTLS13', BoolToJSONStr(LCaps.SupportsTLS13));
+  Result := Result + AddField('supportsALPN', BoolToJSONStr(LCaps.SupportsALPN));
+  Result := Result + AddField('supportsSNI', BoolToJSONStr(LCaps.SupportsSNI));
+  Result := Result + AddField('supportsOCSPStapling', BoolToJSONStr(LCaps.SupportsOCSPStapling));
+  Result := Result + AddField('supportsCertificateTransparency', BoolToJSONStr(LCaps.SupportsCertificateTransparency));
+  Result := Result + AddField('supportsSessionTickets', BoolToJSONStr(LCaps.SupportsSessionTickets));
+  Result := Result + AddField('supportsECDHE', BoolToJSONStr(LCaps.SupportsECDHE));
+  Result := Result + AddField('supportsChaChaPoly', BoolToJSONStr(LCaps.SupportsChaChaPoly));
+  Result := Result + AddField('supportsPEMPrivateKey', BoolToJSONStr(LCaps.SupportsPEMPrivateKey));
+  Result := Result + AddField('minTLSVersion', IntToStr(Ord(LCaps.MinTLSVersion)));
+  Result := Result + AddField('maxTLSVersion', IntToStr(Ord(LCaps.MaxTLSVersion)));
 
   // v1.2.0 字段
-  Result := Result + AddField('backendType', IntToStr(Ord(ACaps.BackendType)));
-  Result := Result + AddField('backendImplType', IntToStr(Ord(ACaps.BackendImplType)));
-  Result := Result + AddField('backendVersion', '"' + EscapeJSON(ACaps.BackendVersion) + '"');
-  Result := Result + AddField('supportsDTLS', BoolToJSONStr(ACaps.SupportsDTLS));
+  Result := Result + AddField('backendType', IntToStr(Ord(LCaps.BackendType)));
+  Result := Result + AddField('backendImplType', IntToStr(Ord(LCaps.BackendImplType)));
+  Result := Result + AddField('backendVersion', '"' + EscapeJSON(LCaps.BackendVersion) + '"');
+  Result := Result + AddField('supportsDTLS', BoolToJSONStr(LCaps.SupportsDTLS));
 
   // 功能支持级别
-  Result := Result + AddField('sniSupport', FeatureSupportLevelToStr(ACaps.SNISupport));
-  Result := Result + AddField('alpnSupport', FeatureSupportLevelToStr(ACaps.ALPNSupport));
-  Result := Result + AddField('ocspStaplingSupport', FeatureSupportLevelToStr(ACaps.OCSPStaplingSupport));
-  Result := Result + AddField('certTransparencySupport', FeatureSupportLevelToStr(ACaps.CertTransparencySupport));
-  Result := Result + AddField('sessionTicketsSupport', FeatureSupportLevelToStr(ACaps.SessionTicketsSupport));
-  Result := Result + AddField('sessionCacheSupport', FeatureSupportLevelToStr(ACaps.SessionCacheSupport));
-  Result := Result + AddField('zeroRTTSupport', FeatureSupportLevelToStr(ACaps.ZeroRTTSupport));
-  Result := Result + AddField('earlyDataSupport', FeatureSupportLevelToStr(ACaps.EarlyDataSupport));
-  Result := Result + AddField('renegotiationSupport', FeatureSupportLevelToStr(ACaps.RenegotiationSupport));
-  Result := Result + AddField('postHandshakeAuthSupport', FeatureSupportLevelToStr(ACaps.PostHandshakeAuthSupport));
+  Result := Result + AddField('sniSupport', FeatureSupportLevelToStr(LCaps.SNISupport));
+  Result := Result + AddField('alpnSupport', FeatureSupportLevelToStr(LCaps.ALPNSupport));
+  Result := Result + AddField('ocspStaplingSupport', FeatureSupportLevelToStr(LCaps.OCSPStaplingSupport));
+  Result := Result + AddField('certTransparencySupport', FeatureSupportLevelToStr(LCaps.CertTransparencySupport));
+  Result := Result + AddField('sessionTicketsSupport', FeatureSupportLevelToStr(LCaps.SessionTicketsSupport));
+  Result := Result + AddField('sessionCacheSupport', FeatureSupportLevelToStr(LCaps.SessionCacheSupport));
+  Result := Result + AddField('zeroRTTSupport', FeatureSupportLevelToStr(LCaps.ZeroRTTSupport));
+  Result := Result + AddField('earlyDataSupport', FeatureSupportLevelToStr(LCaps.EarlyDataSupport));
+  Result := Result + AddField('renegotiationSupport', FeatureSupportLevelToStr(LCaps.RenegotiationSupport));
+  Result := Result + AddField('postHandshakeAuthSupport', FeatureSupportLevelToStr(LCaps.PostHandshakeAuthSupport));
 
   // 算法支持
-  Result := Result + AddField('supportedCiphers', '"' + EncodeCipherSet(ACaps.SupportedCiphers) + '"');
-  Result := Result + AddField('supportedHashes', '"' + EncodeHashSet(ACaps.SupportedHashes) + '"');
-  Result := Result + AddField('supportedKeyExchanges', '"' + EncodeKeyExchangeSet(ACaps.SupportedKeyExchanges) + '"');
+  Result := Result + AddField('supportedCiphers', '"' + EncodeCipherSet(LCaps.SupportedCiphers) + '"');
+  Result := Result + AddField('supportedHashes', '"' + EncodeHashSet(LCaps.SupportedHashes) + '"');
+  Result := Result + AddField('supportedKeyExchanges', '"' + EncodeKeyExchangeSet(LCaps.SupportedKeyExchanges) + '"');
 
   // 性能特性
-  Result := Result + AddField('hasHardwareAcceleration', BoolToJSONStr(ACaps.HasHardwareAcceleration));
-  Result := Result + AddField('hasSIMDOptimization', BoolToJSONStr(ACaps.HasSIMDOptimization));
-  Result := Result + AddField('hasAssemblyOptimization', BoolToJSONStr(ACaps.HasAssemblyOptimization));
+  Result := Result + AddField('hasHardwareAcceleration', BoolToJSONStr(LCaps.HasHardwareAcceleration));
+  Result := Result + AddField('hasSIMDOptimization', BoolToJSONStr(LCaps.HasSIMDOptimization));
+  Result := Result + AddField('hasAssemblyOptimization', BoolToJSONStr(LCaps.HasAssemblyOptimization));
 
   // 平台特性
-  Result := Result + AddField('requiresExternalLibrary', BoolToJSONStr(ACaps.RequiresExternalLibrary));
-  Result := Result + AddField('supportsSystemCertStore', BoolToJSONStr(ACaps.SupportsSystemCertStore));
-  Result := Result + AddField('supportsPKCS11', BoolToJSONStr(ACaps.SupportsPKCS11));
-  Result := Result + AddField('supportsTPM', BoolToJSONStr(ACaps.SupportsTPM));
+  Result := Result + AddField('requiresExternalLibrary', BoolToJSONStr(LCaps.RequiresExternalLibrary));
+  Result := Result + AddField('supportsSystemCertStore', BoolToJSONStr(LCaps.SupportsSystemCertStore));
+  Result := Result + AddField('supportsPKCS11', BoolToJSONStr(LCaps.SupportsPKCS11));
+  Result := Result + AddField('supportsTPM', BoolToJSONStr(LCaps.SupportsTPM));
 
   // 安全特性
-  Result := Result + AddField('hasConstantTimeOperations', BoolToJSONStr(ACaps.HasConstantTimeOperations));
-  Result := Result + AddField('supportsFIPSMode', BoolToJSONStr(ACaps.SupportsFIPSMode));
-  Result := Result + AddField('hasSecureMemoryWipe', BoolToJSONStr(ACaps.HasSecureMemoryWipe));
+  Result := Result + AddField('hasConstantTimeOperations', BoolToJSONStr(LCaps.HasConstantTimeOperations));
+  Result := Result + AddField('supportsFIPSMode', BoolToJSONStr(LCaps.SupportsFIPSMode));
+  Result := Result + AddField('hasSecureMemoryWipe', BoolToJSONStr(LCaps.HasSecureMemoryWipe));
 
   // 证书和密钥支持
-  Result := Result + AddField('supportsDERPrivateKey', BoolToJSONStr(ACaps.SupportsDERPrivateKey));
-  Result := Result + AddField('supportsPKCS8PrivateKey', BoolToJSONStr(ACaps.SupportsPKCS8PrivateKey));
-  Result := Result + AddField('supportsPKCS12', BoolToJSONStr(ACaps.SupportsPKCS12));
-  Result := Result + AddField('supportsPasswordProtectedKeys', BoolToJSONStr(ACaps.SupportsPasswordProtectedKeys));
+  Result := Result + AddField('supportsDERPrivateKey', BoolToJSONStr(LCaps.SupportsDERPrivateKey));
+  Result := Result + AddField('supportsPKCS8PrivateKey', BoolToJSONStr(LCaps.SupportsPKCS8PrivateKey));
+  Result := Result + AddField('supportsPKCS12', BoolToJSONStr(LCaps.SupportsPKCS12));
+  Result := Result + AddField('supportsPasswordProtectedKeys', BoolToJSONStr(LCaps.SupportsPasswordProtectedKeys));
 
   // 扩展性
-  Result := Result + AddField('supportsCustomCipherSuites', BoolToJSONStr(ACaps.SupportsCustomCipherSuites));
-  Result := Result + AddField('supportsCallbacks', BoolToJSONStr(ACaps.SupportsCallbacks));
+  Result := Result + AddField('supportsCustomCipherSuites', BoolToJSONStr(LCaps.SupportsCustomCipherSuites));
+  Result := Result + AddField('supportsCallbacks', BoolToJSONStr(LCaps.SupportsCallbacks));
 
   // 兼容性
-  Result := Result + AddField('compatibilityLevel', IntToStr(ACaps.CompatibilityLevel));
-  Result := Result + AddField('knownIssues', '"' + EscapeJSON(ACaps.KnownIssues) + '"', True);
+  Result := Result + AddField('compatibilityLevel', IntToStr(LCaps.CompatibilityLevel));
+  Result := Result + AddField('knownIssues', '"' + EscapeJSON(LCaps.KnownIssues) + '"', True);
 
   Result := Result + '}';
 end;
@@ -660,6 +690,7 @@ end;
 function CapabilitiesToXML(const ACaps: TSSLBackendCapabilities;
                           const APretty: Boolean = True): string;
 var
+  LCaps: TSSLBackendCapabilities;
   Indent: string;
   NL: string;
 
@@ -704,6 +735,8 @@ var
   end;
 
 begin
+  PrepareCapabilitiesForSerialization(ACaps, LCaps);
+
   if APretty then
   begin
     Indent := '  ';
@@ -719,70 +752,70 @@ begin
   Result := Result + '<SSLBackendCapabilities>' + NL;
 
   // v1.1.0 字段
-  Result := Result + AddElement('supportsTLS13', BoolToStr(ACaps.SupportsTLS13, True));
-  Result := Result + AddElement('supportsALPN', BoolToStr(ACaps.SupportsALPN, True));
-  Result := Result + AddElement('supportsSNI', BoolToStr(ACaps.SupportsSNI, True));
-  Result := Result + AddElement('supportsOCSPStapling', BoolToStr(ACaps.SupportsOCSPStapling, True));
-  Result := Result + AddElement('supportsCertificateTransparency', BoolToStr(ACaps.SupportsCertificateTransparency, True));
-  Result := Result + AddElement('supportsSessionTickets', BoolToStr(ACaps.SupportsSessionTickets, True));
-  Result := Result + AddElement('supportsECDHE', BoolToStr(ACaps.SupportsECDHE, True));
-  Result := Result + AddElement('supportsChaChaPoly', BoolToStr(ACaps.SupportsChaChaPoly, True));
-  Result := Result + AddElement('supportsPEMPrivateKey', BoolToStr(ACaps.SupportsPEMPrivateKey, True));
-  Result := Result + AddElement('minTLSVersion', IntToStr(Ord(ACaps.MinTLSVersion)));
-  Result := Result + AddElement('maxTLSVersion', IntToStr(Ord(ACaps.MaxTLSVersion)));
+  Result := Result + AddElement('supportsTLS13', BoolToStr(LCaps.SupportsTLS13, True));
+  Result := Result + AddElement('supportsALPN', BoolToStr(LCaps.SupportsALPN, True));
+  Result := Result + AddElement('supportsSNI', BoolToStr(LCaps.SupportsSNI, True));
+  Result := Result + AddElement('supportsOCSPStapling', BoolToStr(LCaps.SupportsOCSPStapling, True));
+  Result := Result + AddElement('supportsCertificateTransparency', BoolToStr(LCaps.SupportsCertificateTransparency, True));
+  Result := Result + AddElement('supportsSessionTickets', BoolToStr(LCaps.SupportsSessionTickets, True));
+  Result := Result + AddElement('supportsECDHE', BoolToStr(LCaps.SupportsECDHE, True));
+  Result := Result + AddElement('supportsChaChaPoly', BoolToStr(LCaps.SupportsChaChaPoly, True));
+  Result := Result + AddElement('supportsPEMPrivateKey', BoolToStr(LCaps.SupportsPEMPrivateKey, True));
+  Result := Result + AddElement('minTLSVersion', IntToStr(Ord(LCaps.MinTLSVersion)));
+  Result := Result + AddElement('maxTLSVersion', IntToStr(Ord(LCaps.MaxTLSVersion)));
 
   // v1.2.0 字段
-  Result := Result + AddElement('backendType', IntToStr(Ord(ACaps.BackendType)));
-  Result := Result + AddElement('backendImplType', IntToStr(Ord(ACaps.BackendImplType)));
-  Result := Result + AddElement('backendVersion', XMLEscape(ACaps.BackendVersion));
-  Result := Result + AddElement('supportsDTLS', BoolToStr(ACaps.SupportsDTLS, True));
+  Result := Result + AddElement('backendType', IntToStr(Ord(LCaps.BackendType)));
+  Result := Result + AddElement('backendImplType', IntToStr(Ord(LCaps.BackendImplType)));
+  Result := Result + AddElement('backendVersion', XMLEscape(LCaps.BackendVersion));
+  Result := Result + AddElement('supportsDTLS', BoolToStr(LCaps.SupportsDTLS, True));
 
   // 功能支持级别
-  Result := Result + AddElement('sniSupport', FeatureSupportLevelToStr(ACaps.SNISupport));
-  Result := Result + AddElement('alpnSupport', FeatureSupportLevelToStr(ACaps.ALPNSupport));
-  Result := Result + AddElement('ocspStaplingSupport', FeatureSupportLevelToStr(ACaps.OCSPStaplingSupport));
-  Result := Result + AddElement('certTransparencySupport', FeatureSupportLevelToStr(ACaps.CertTransparencySupport));
-  Result := Result + AddElement('sessionTicketsSupport', FeatureSupportLevelToStr(ACaps.SessionTicketsSupport));
-  Result := Result + AddElement('sessionCacheSupport', FeatureSupportLevelToStr(ACaps.SessionCacheSupport));
-  Result := Result + AddElement('zeroRTTSupport', FeatureSupportLevelToStr(ACaps.ZeroRTTSupport));
-  Result := Result + AddElement('earlyDataSupport', FeatureSupportLevelToStr(ACaps.EarlyDataSupport));
-  Result := Result + AddElement('renegotiationSupport', FeatureSupportLevelToStr(ACaps.RenegotiationSupport));
-  Result := Result + AddElement('postHandshakeAuthSupport', FeatureSupportLevelToStr(ACaps.PostHandshakeAuthSupport));
+  Result := Result + AddElement('sniSupport', FeatureSupportLevelToStr(LCaps.SNISupport));
+  Result := Result + AddElement('alpnSupport', FeatureSupportLevelToStr(LCaps.ALPNSupport));
+  Result := Result + AddElement('ocspStaplingSupport', FeatureSupportLevelToStr(LCaps.OCSPStaplingSupport));
+  Result := Result + AddElement('certTransparencySupport', FeatureSupportLevelToStr(LCaps.CertTransparencySupport));
+  Result := Result + AddElement('sessionTicketsSupport', FeatureSupportLevelToStr(LCaps.SessionTicketsSupport));
+  Result := Result + AddElement('sessionCacheSupport', FeatureSupportLevelToStr(LCaps.SessionCacheSupport));
+  Result := Result + AddElement('zeroRTTSupport', FeatureSupportLevelToStr(LCaps.ZeroRTTSupport));
+  Result := Result + AddElement('earlyDataSupport', FeatureSupportLevelToStr(LCaps.EarlyDataSupport));
+  Result := Result + AddElement('renegotiationSupport', FeatureSupportLevelToStr(LCaps.RenegotiationSupport));
+  Result := Result + AddElement('postHandshakeAuthSupport', FeatureSupportLevelToStr(LCaps.PostHandshakeAuthSupport));
 
   // 算法支持
-  Result := Result + AddElement('supportedCiphers', EncodeCipherSet(ACaps.SupportedCiphers));
-  Result := Result + AddElement('supportedHashes', EncodeHashSet(ACaps.SupportedHashes));
-  Result := Result + AddElement('supportedKeyExchanges', EncodeKeyExchangeSet(ACaps.SupportedKeyExchanges));
+  Result := Result + AddElement('supportedCiphers', EncodeCipherSet(LCaps.SupportedCiphers));
+  Result := Result + AddElement('supportedHashes', EncodeHashSet(LCaps.SupportedHashes));
+  Result := Result + AddElement('supportedKeyExchanges', EncodeKeyExchangeSet(LCaps.SupportedKeyExchanges));
 
   // 性能特性
-  Result := Result + AddElement('hasHardwareAcceleration', BoolToStr(ACaps.HasHardwareAcceleration, True));
-  Result := Result + AddElement('hasSIMDOptimization', BoolToStr(ACaps.HasSIMDOptimization, True));
-  Result := Result + AddElement('hasAssemblyOptimization', BoolToStr(ACaps.HasAssemblyOptimization, True));
+  Result := Result + AddElement('hasHardwareAcceleration', BoolToStr(LCaps.HasHardwareAcceleration, True));
+  Result := Result + AddElement('hasSIMDOptimization', BoolToStr(LCaps.HasSIMDOptimization, True));
+  Result := Result + AddElement('hasAssemblyOptimization', BoolToStr(LCaps.HasAssemblyOptimization, True));
 
   // 平台特性
-  Result := Result + AddElement('requiresExternalLibrary', BoolToStr(ACaps.RequiresExternalLibrary, True));
-  Result := Result + AddElement('supportsSystemCertStore', BoolToStr(ACaps.SupportsSystemCertStore, True));
-  Result := Result + AddElement('supportsPKCS11', BoolToStr(ACaps.SupportsPKCS11, True));
-  Result := Result + AddElement('supportsTPM', BoolToStr(ACaps.SupportsTPM, True));
+  Result := Result + AddElement('requiresExternalLibrary', BoolToStr(LCaps.RequiresExternalLibrary, True));
+  Result := Result + AddElement('supportsSystemCertStore', BoolToStr(LCaps.SupportsSystemCertStore, True));
+  Result := Result + AddElement('supportsPKCS11', BoolToStr(LCaps.SupportsPKCS11, True));
+  Result := Result + AddElement('supportsTPM', BoolToStr(LCaps.SupportsTPM, True));
 
   // 安全特性
-  Result := Result + AddElement('hasConstantTimeOperations', BoolToStr(ACaps.HasConstantTimeOperations, True));
-  Result := Result + AddElement('supportsFIPSMode', BoolToStr(ACaps.SupportsFIPSMode, True));
-  Result := Result + AddElement('hasSecureMemoryWipe', BoolToStr(ACaps.HasSecureMemoryWipe, True));
+  Result := Result + AddElement('hasConstantTimeOperations', BoolToStr(LCaps.HasConstantTimeOperations, True));
+  Result := Result + AddElement('supportsFIPSMode', BoolToStr(LCaps.SupportsFIPSMode, True));
+  Result := Result + AddElement('hasSecureMemoryWipe', BoolToStr(LCaps.HasSecureMemoryWipe, True));
 
   // 证书和密钥支持
-  Result := Result + AddElement('supportsDERPrivateKey', BoolToStr(ACaps.SupportsDERPrivateKey, True));
-  Result := Result + AddElement('supportsPKCS8PrivateKey', BoolToStr(ACaps.SupportsPKCS8PrivateKey, True));
-  Result := Result + AddElement('supportsPKCS12', BoolToStr(ACaps.SupportsPKCS12, True));
-  Result := Result + AddElement('supportsPasswordProtectedKeys', BoolToStr(ACaps.SupportsPasswordProtectedKeys, True));
+  Result := Result + AddElement('supportsDERPrivateKey', BoolToStr(LCaps.SupportsDERPrivateKey, True));
+  Result := Result + AddElement('supportsPKCS8PrivateKey', BoolToStr(LCaps.SupportsPKCS8PrivateKey, True));
+  Result := Result + AddElement('supportsPKCS12', BoolToStr(LCaps.SupportsPKCS12, True));
+  Result := Result + AddElement('supportsPasswordProtectedKeys', BoolToStr(LCaps.SupportsPasswordProtectedKeys, True));
 
   // 扩展性
-  Result := Result + AddElement('supportsCustomCipherSuites', BoolToStr(ACaps.SupportsCustomCipherSuites, True));
-  Result := Result + AddElement('supportsCallbacks', BoolToStr(ACaps.SupportsCallbacks, True));
+  Result := Result + AddElement('supportsCustomCipherSuites', BoolToStr(LCaps.SupportsCustomCipherSuites, True));
+  Result := Result + AddElement('supportsCallbacks', BoolToStr(LCaps.SupportsCallbacks, True));
 
   // 兼容性
-  Result := Result + AddElement('compatibilityLevel', IntToStr(ACaps.CompatibilityLevel));
-  Result := Result + AddElement('knownIssues', XMLEscape(ACaps.KnownIssues));
+  Result := Result + AddElement('compatibilityLevel', IntToStr(LCaps.CompatibilityLevel));
+  Result := Result + AddElement('knownIssues', XMLEscape(LCaps.KnownIssues));
 
   Result := Result + '</SSLBackendCapabilities>';
 end;

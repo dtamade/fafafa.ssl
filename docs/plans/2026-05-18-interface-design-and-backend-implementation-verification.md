@@ -106,7 +106,12 @@ git diff --check
   - capability diff 已补上 support-level truth，比对不再只盯 legacy boolean
   - 旧 round-trip 测试仍保持绿色
 
+- 已完成批次 4：serializer 输出 truth projection
+  - 新增直接检查 JSON/XML 输出字符串的 focused RED，而不是只依赖 round-trip
+  - v1.2-aware record 现在会在导出前先把 legacy boolean 回填成 support-level compatibility projection
+  - 纯 legacy-only in-memory record 的无信号歧义被明确记录，但本批不在 serializer 内部瞎猜
+
 - 下一批建议
-  1. 决定 serializer 输出面是否需要对“手工构造但不一致的 capability record”做受控归一化
-  2. 单独规划 context-level `ServerName` 兼容迁移
-  3. 最后再处理 `TSSLConfig` 跨层字段瘦身
+  1. 单独规划 context-level `ServerName` 兼容迁移
+  2. 再处理 `TSSLConfig` 跨层字段瘦身
+  3. 如果未来要彻底消灭 capability serializer 在 pure legacy-only record 上的歧义，需要先给 capability model 补 presence/truth 元信息

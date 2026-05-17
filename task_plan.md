@@ -39,6 +39,10 @@
   - `tests/contract/test_capabilities_contract.pas` 已固定为当前 deprecated warning compile probe
   - `wolfssl` / `mbedtls` / `winssl` 的兼容 fallback 读取点已加局部 warning quarantine
   - 没有改动 factory / builder / runtime compatibility 语义
+- [completed] serializer 输出面的 truth projection 已对齐到 v1.2 support-level 真相：
+  - 新增 `tests/test_capability_serialization_truth_projection.pas`，直接检查 JSON/XML 输出字符串
+  - serializer 现在会在 record 已携带 support-level truth 时，先回填 legacy boolean 再输出
+  - 既有 JSON/XML round-trip 兼容保持绿色
 
 ## Scope
 
@@ -66,13 +70,11 @@
 
 ## Current Queue
 
-1. 决定 serializer 输出面是否还需要“受控归一化”：
-   - 当前 runtime / deserializer / diff 的主真相已对齐
-   - 但对“手工构造且本身不一致的 in-memory capability record”，序列化仍基本保持原样输出
-2. 为 context-level `ServerName` 兼容路径继续保留迁移计划，但不要回退到 warning 噪音治理：
+1. 为 context-level `ServerName` 兼容路径继续保留迁移计划，但不要回退到 warning 噪音治理：
    - warning quarantine 已完成，不再重复围绕旧 compile 入口开工
    - 下一步只讨论 compatibility migration 本身：factory / builder / connection constructors / tests 的拆迁顺序
-3. 在 capability 与 SNI 迁移边界稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。
+2. 在 capability 与 SNI 迁移边界稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。
+3. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
 
 ## Verification Discipline
 

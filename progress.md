@@ -146,6 +146,33 @@
 - `git diff --check`
   - result: PASS
 
+### Capability Serialization Truth Projection
+
+- add `tests/test_capability_serialization_truth_projection.pas`
+  - purpose:
+    - directly assert JSON/XML emitted payload truth instead of relying on deserialize round-trip
+    - catch cases where serializer leaks contradictory `supports*` and `*Support` fields
+
+- `mkdir -p tmp/test_capability_serialization_truth_projection && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_capability_serialization_truth_projection -FEtmp/test_capability_serialization_truth_projection -otmp/test_capability_serialization_truth_projection/test_capability_serialization_truth_projection tests/test_capability_serialization_truth_projection.pas && ./tmp/test_capability_serialization_truth_projection/test_capability_serialization_truth_projection`
+  - result: RED -> GREEN
+  - summary:
+    - initial failure proved `CapabilitiesToJSON(...)` still emitted `"supportsSNI": false` while `sniSupport` was already `"stable"`
+    - after the fix, JSON/XML serialization now projects legacy boolean output from support-level truth whenever the record already carries v1.2 support-level signals
+
+- update `src/fafafa.ssl.capability.serializer.pas`
+  - change:
+    - add `HasAnySupportLevelTruth(...)` and `PrepareCapabilitiesForSerialization(...)`
+    - normalize a local copy before JSON/XML emission when the record is already support-level-aware
+    - keep pure legacy-only in-memory records untouched because serializer still has no presence bits to distinguish default `none` from explicit `none`
+
+- `mkdir -p tmp/test_capability_deserialization_roundtrip && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_capability_deserialization_roundtrip -FEtmp/test_capability_deserialization_roundtrip -otmp/test_capability_deserialization_roundtrip/test_capability_deserialization_roundtrip tests/test_capability_deserialization_roundtrip.pas && ./tmp/test_capability_deserialization_roundtrip/test_capability_deserialization_roundtrip`
+  - result: PASS
+  - summary:
+    - existing JSON/XML round-trip compatibility remained green after the serializer projection fix
+
+- `git diff --check`
+  - result: PASS
+
 ### Capability Runtime Truth Alignment
 
 - `git diff -- src/fafafa.ssl.base.pas src/fafafa.ssl.freepascal.lib.pas src/fafafa.ssl.openssl.backed.pas src/fafafa.ssl.winssl.lib.pas src/fafafa.ssl.mbedtls.lib.pas src/fafafa.ssl.wolfssl.lib.pas`
