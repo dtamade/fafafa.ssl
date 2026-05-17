@@ -280,3 +280,29 @@
 - 这让剩余 client-side 迁移面再次收窄：
   - `sslCtxBoth` 不再需要挂在 intentional compatibility label 集合里
   - 下一步真正要碰的就是 `sslCtxClient` direct / builder / factory 这组还在显式锁 inherited fallback 的测试与路径
+
+- cross-backend consistency / errors 这两份网络合同此前也被错误混进了 intentional compatibility 视角：
+  - 它们真正要证明的是跨 backend 的结果一致性 / 错误归一化
+  - 不是真正要保护 deprecated context-level SNI fallback
+  - 因而把它们继续留在 intentional-compat label 集合里，只会让后续 `sslCtxClient` 迁移继续被假锁点拖慢
+
+- 这两份合同现在已经统一迁到 per-connection SNI：
+  - `tests/integration/test_cross_backend_consistency_contract.pas`
+  - `tests/integration/test_cross_backend_errors_contract.pas`
+  - 路径都是 `CreateConnection(...) -> ISSLClientConnection.SetServerName(...) -> Connect`
+  - 连 `HTTP:80` 的握手失败分支也同步改掉了 context-level setter
+
+- 这也让 intentional compatibility label 集合再次缩小到真正还在锁 inherited fallback 或兼容语义的文件：
+  - `tests/test_connection_builder_hostname_precedence.pas`
+  - `tests/test_tls_connector_hostname_override_precedence.pas`
+  - `tests/test_freepascal_context_server_name_inheritance.pas`
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+
+- focused source contract 与 integration compile/runtime shape 共同说明：
+  - cross-backend 网络合同已经不再教 deprecated context-level SNI
+  - 但它们在当前 host 上的 live network execution 仍受 `FAFAFA_RUN_NETWORK_TESTS!=1` gate 保护
+  - 因此这批证明的是“合同语义与编译/runtime shape 已对齐”，不是重新做一次外网联机证明
+
+- 这一步之后，下一条最自然的 `sslCtxClient` behavior migration RED 更清楚了：
+  - 首选应转向 `tests/test_freepascal_context_server_name_inheritance.pas`
+  - 因为它比 precedence/override 类测试更直接地锁住 inherited context fallback 本体

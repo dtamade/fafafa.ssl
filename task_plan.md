@@ -97,6 +97,13 @@
     - `tests/test_sslctxboth_client_capability_clarification.pas`
     - `tests/test_sslctxboth_roleless_handshake_clarification.pas`
     - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+- [completed] 跨 backend 网络合同已不再把 deprecated context-level SNI 当成普通指导路径：
+  - `tests/integration/test_cross_backend_consistency_contract.pas`
+  - `tests/integration/test_cross_backend_errors_contract.pas`
+    已统一迁到 `CreateConnection(...) -> ISSLClientConnection.SetServerName(...)`
+  - 它们已从 `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh` 的 intentional-compat 集合中移除
+  - 新增 `tests/scripts/test_cross_backend_network_contracts_no_context_level_sni_guidance.sh`，直接守住“不再教 `Ctx.SetServerName(...)`”
+  - focused compile/runtime shape 保持绿色；本机 live network path 仍因 `FAFAFA_RUN_NETWORK_TESTS!=1` 保持 gate skip
 
 ## Scope
 
@@ -125,7 +132,8 @@
 ## Current Queue
 
 1. 继续选择下一条 `sslCtxClient` behavior migration RED：
-   - 优先评估 direct context / builder client 上直接锁 inherited context fallback 的 intentional tests
+   - 第一优先级改为 `tests/test_freepascal_context_server_name_inheritance.pas`
+   - 然后再评估 `tests/test_connection_builder_hostname_precedence.pas` / `tests/test_tls_connector_hostname_override_precedence.pas` 是否仍需要继续锁 inherited context fallback
    - 明确 connector / connection-builder / factory / builder 四层的新优先级和失败语义
 2. 在 dedicated client-side RED 明确后，再评估最终 public surface cleanup：
    - `TSSLConfig.ServerName` 是否继续留在当前 record 上

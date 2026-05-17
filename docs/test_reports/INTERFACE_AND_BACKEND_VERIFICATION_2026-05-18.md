@@ -206,8 +206,6 @@
       - `test_tls_connector_hostname_override_precedence`
       - `test_freepascal_context_server_name_inheritance`
       - `test_context_builder_server_servername_runtime_consistency`
-      - `test_cross_backend_consistency_contract`
-      - `test_cross_backend_errors_contract`
   - 这些测试现在都必须带 `INTENTIONAL_COMPAT:` 标签
 
 - 这一步的价值不在于“又修了个 bug”，而在于：
@@ -474,6 +472,43 @@
   - `sslCtxBoth` 不再是未处理的兼容面
   - 剩下主要是 `sslCtxClient` direct / builder / factory 这组 still-intentional inherited fallback
 
+## 增量收口：cross-backend 网络合同改用 per-connection SNI
+
+- 再往下审之后，发现还有两份文件虽然已经不是普通客户端流，但也不应该继续挂在 intentional compatibility 集合里：
+  - `test_cross_backend_consistency_contract`
+  - `test_cross_backend_errors_contract`
+
+- 这两份合同真正要锁的是：
+  - 跨 backend 的结果一致性
+  - 跨 backend 的错误归一化
+  - 而不是 deprecated context-level SNI fallback 本身
+
+- 因而本批把它们统一迁到更准确的连接语义：
+  - `CreateConnection(...)`
+  - `ISSLClientConnection.SetServerName(...)`
+  - `Connect`
+  - `test_cross_backend_errors_contract` 里的 `www.google.com:80` 握手失败分支也同步改成同一路径
+
+- 这一步之后，它们已经从 `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh` 移除，不再要求 `INTENTIONAL_COMPAT:` 标签
+
+- focused 证据：
+  - `tests/scripts/test_cross_backend_network_contracts_no_context_level_sni_guidance.sh`
+    - RED -> GREEN
+    - 直接守住“两份 cross-backend 网络合同不再教 `Ctx.SetServerName(...)`”
+  - `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+    - PASS
+    - 说明 intentional compatibility 集合在收缩后仍然稳定
+  - `tests/integration/test_cross_backend_consistency_contract.pas`
+    - PASS
+    - compile/run shape 保持绿色；本机因 `FAFAFA_RUN_NETWORK_TESTS!=1` 跳过 live network probe
+  - `tests/integration/test_cross_backend_errors_contract.pas`
+    - PASS
+    - compile/run shape 保持绿色；本机因 `FAFAFA_RUN_NETWORK_TESTS!=1` 跳过 live network probe
+
+- 这一步的意义是：
+  - cross-backend 网络合同不再继续给 `sslCtxClient` inherited fallback 当假锁点
+  - 下一步真正的 client-side behavior migration 可以更直接地瞄准 `tests/test_freepascal_context_server_name_inheritance.pas`
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -483,6 +518,12 @@
 - `tests/test_factory_server_name_scope_clarification.pas`
   - PASS
 - `tests/test_sslctxboth_client_capability_clarification.pas`
+  - PASS
+- `bash tests/scripts/test_cross_backend_network_contracts_no_context_level_sni_guidance.sh`
+  - PASS
+- `tests/integration/test_cross_backend_consistency_contract.pas`
+  - PASS
+- `tests/integration/test_cross_backend_errors_contract.pas`
   - PASS
 - `git diff --check`
   - PASS
@@ -498,7 +539,8 @@
 ### 下一批最值得做的事
 
 1. 再决定 `sslCtxClient` behavior migration 的第一条 RED
-   - 明确哪些 intentional-compat tests 会被改写
+   - 第一优先级改为 `tests/test_freepascal_context_server_name_inheritance.pas`
+   - 再明确哪些 precedence-style intentional-compat tests 会被改写
    - 明确新优先级应该怎样从 context-level 迁到 per-connection hostname 路径
 
 2. `TSSLConfig` 拆层与 capability model presence bits 仍然排在后面

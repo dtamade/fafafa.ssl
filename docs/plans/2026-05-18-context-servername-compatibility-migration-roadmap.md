@@ -55,8 +55,6 @@
 - `tests/test_tls_connector_hostname_override_precedence.pas`
 - `tests/test_freepascal_context_server_name_inheritance.pas`
 - `tests/test_context_builder_server_servername_runtime_consistency.pas`
-- `tests/integration/test_cross_backend_consistency_contract.pas`
-- `tests/integration/test_cross_backend_errors_contract.pas`
 
 #### Scope / warning semantics already tightened
 
@@ -184,6 +182,17 @@ Delivered second cut:
 - the real handshake path inside `test_winssl_mtls_skeleton` moved from `Ctx.SetServerName(ServerHost)` to per-connection `ISSLClientConnection.SetServerName(ServerHost)`
 - focused residual contract is green, Linux-safe focused compiles are green, and Win64 cross-compiles for the two WinSSL files are green
 
+Delivered third cut:
+
+- `tests/integration/test_cross_backend_consistency_contract.pas`
+  and `tests/integration/test_cross_backend_errors_contract.pas`
+  no longer use deprecated context-level SNI guidance
+- both contracts now require `ISSLClientConnection` and set hostname via `ClientConn.SetServerName(...)` before `Connect`
+- the `www.google.com:80` handshake-failure branch in the error contract was migrated to the same per-connection path
+- they were removed from `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+- new focused source contract `tests/scripts/test_cross_backend_network_contracts_no_context_level_sni_guidance.sh` now guards that these files do not regress back to `Ctx.SetServerName(...)`
+- compile/run shape stayed green; live network execution remained env-gated by `FAFAFA_RUN_NETWORK_TESTS!=1`
+
 ## Progress Report
 
 ### Workstream status
@@ -200,6 +209,7 @@ Delivered second cut:
   - Phase C `sslCtxBoth` ambiguity cut complete
   - Phase E first WinSSL client-flow migration cut complete
   - Phase E residual ambiguous test-surface classification cut complete
+  - Phase E cross-backend network contract migration cut complete
 - `TSSLConfig` cross-layer slimming: intentionally deferred until SNI migration stabilizes
 
 ### What This Means Operationally
@@ -212,13 +222,14 @@ Delivered second cut:
 Choose one bounded implementation family only:
 
 1. **`sslCtxClient` behavior migration RED selection**
-   - decide which remaining `sslCtxClient` intentional-compat tests will be rewritten before any real fallback deletion
+   - start with `tests/test_freepascal_context_server_name_inheritance.pas`
+   - then decide which remaining precedence-style intentional-compat tests will be rewritten before any real fallback deletion
    - explicitly define new precedence between builder/factory/context and per-connection hostname paths
 2. **Final surface cleanup prep**
    - re-evaluate whether `TSSLConfig.ServerName` and builder `WithSNI(...)` still need their current naming/placement now that builder/factory/runtime paths all expose compatibility warnings
 3. **Wider public-surface cleanup**
    - stage follow-up work only after the first behavior-migration RED is pinned and verified
-Recommended first pick: **`sslCtxClient` behavior migration RED selection**.
+Recommended first pick: **`tests/test_freepascal_context_server_name_inheritance.pas` as the first `sslCtxClient` behavior-migration RED**.
 
 Builder/factory/shared-shim warning work, residual test-surface classification, the first server-side dead-compat cut, and the `sslCtxBoth` ambiguity cut are no longer the blocker; the next highest-value work is choosing the first `sslCtxClient` behavior-migration RED.
 

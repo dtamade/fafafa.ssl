@@ -225,6 +225,80 @@
 
 - `git diff --check`
   - result: PASS
+
+### Cross-Backend Network Contracts Per-Connection SNI
+
+- add `docs/plans/2026-05-18-cross-backend-network-contracts-per-connection-sni.md`
+  - purpose:
+    - define the bounded batch that removes deprecated context-level SNI guidance from the two cross-backend network contracts
+    - separate real cross-backend result/error contracts from intentional compatibility coverage
+
+- add `tests/scripts/test_cross_backend_network_contracts_no_context_level_sni_guidance.sh`
+  - purpose:
+    - fail if the two cross-backend integration contracts still teach `Ctx.SetServerName(...)`
+    - require an explicit `SetServerName(...)` call to remain, so the SNI step does not disappear silently
+
+- `bash -n tests/scripts/test_cross_backend_network_contracts_no_context_level_sni_guidance.sh`
+  - result: PASS
+  - summary:
+    - the new focused source contract is syntactically valid
+
+- `bash tests/scripts/test_cross_backend_network_contracts_no_context_level_sni_guidance.sh`
+  - result: PASS
+  - summary:
+    - both cross-backend network contracts now use explicit per-connection SNI instead of `Ctx.SetServerName(...)`
+
+- update cross-backend network contracts:
+  - `tests/integration/test_cross_backend_consistency_contract.pas`
+  - `tests/integration/test_cross_backend_errors_contract.pas`
+  - change:
+    - remove `Ctx.SetServerName(...)`
+    - require `ISSLClientConnection`
+    - move SNI setup to `ClientConn.SetServerName(...)` before `Connect`
+    - migrate the `www.google.com:80` handshake-failure branch to the same per-connection path
+
+- update `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - change:
+    - remove `test_cross_backend_consistency_contract`
+    - remove `test_cross_backend_errors_contract`
+    - keep the intentional-compat label set aligned with the smaller remaining real compatibility boundary
+
+- `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - result: PASS
+  - summary:
+    - the intentional compatibility label set stayed green after removing the two cross-backend network contracts
+
+- `mkdir -p tmp/test_cross_backend_consistency_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_cross_backend_consistency_contract -FEtmp/test_cross_backend_consistency_contract -otmp/test_cross_backend_consistency_contract/test_cross_backend_consistency_contract tests/integration/test_cross_backend_consistency_contract.pas && ./tmp/test_cross_backend_consistency_contract/test_cross_backend_consistency_contract`
+  - result: PASS
+  - summary:
+    - compile/run shape stayed green after the per-connection SNI migration
+    - runtime network probe remained skipped on this host because `FAFAFA_RUN_NETWORK_TESTS!=1`
+
+- `mkdir -p tmp/test_cross_backend_errors_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_cross_backend_errors_contract -FEtmp/test_cross_backend_errors_contract -otmp/test_cross_backend_errors_contract/test_cross_backend_errors_contract tests/integration/test_cross_backend_errors_contract.pas && ./tmp/test_cross_backend_errors_contract/test_cross_backend_errors_contract`
+  - result: PASS
+  - summary:
+    - compile/run shape stayed green after the per-connection SNI migration
+    - runtime network probe remained skipped on this host because `FAFAFA_RUN_NETWORK_TESTS!=1`
+
+- update `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - change:
+    - remove the two cross-backend network contracts from the intentional compatibility set
+    - record the new Phase E cut that migrates them to per-connection SNI
+
+- update `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - change:
+    - remove the old claim that the two cross-backend network contracts must carry `INTENTIONAL_COMPAT`
+    - add a dedicated closeout section for the per-connection SNI migration
+    - refresh the next recommended batch toward `tests/test_freepascal_context_server_name_inheritance.pas`
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync this batch into persistent repo working memory so future sessions do not reopen the old misclassification
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remained after the cross-backend per-connection SNI batch
   - summary:
     - no whitespace or patch-format issues remained after the residual classification batch
 

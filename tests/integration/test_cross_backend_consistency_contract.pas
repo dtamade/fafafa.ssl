@@ -121,7 +121,13 @@ end;
 {$ENDIF}
 
 function RunProbe(aSide: TSide; const Host: string; out Proto: TSSLProtocolVersion; out Cipher, Alpn: string; out VerifyCode: Integer): Boolean;
-var Lib: ISSLLibrary; Ctx: ISSLContext; Conn: ISSLConnection; S: THandle; ok: Boolean;
+var
+  Lib: ISSLLibrary;
+  Ctx: ISSLContext;
+  Conn: ISSLConnection;
+  ClientConn: ISSLClientConnection;
+  S: THandle;
+  ok: Boolean;
 begin
   Result := False; Proto := sslProtocolTLS12; Cipher := ''; Alpn := ''; VerifyCode := 0;
   Lib := CreateLib(aSide);
@@ -129,15 +135,14 @@ begin
   if not Lib.Initialize then Exit;
   Ctx := Lib.CreateContext(sslCtxClient);
   if Ctx = nil then Exit;
-  // INTENTIONAL_COMPAT: legacy context-level SNI coverage. This cross-backend
-  // contract compares inherited fallback behavior on purpose.
-  Ctx.SetServerName(Host);
   Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
   Ctx.SetALPNProtocols('h2,http/1.1');
   if not ConnectTCP(Host, 443, S) then Exit;
   try
     Conn := Ctx.CreateConnection(S);
     if Conn = nil then Exit;
+    if not Supports(Conn, ISSLClientConnection, ClientConn) then Exit;
+    ClientConn.SetServerName(Host);
     ok := Conn.Connect;
     if not ok then Exit;
     Proto := Conn.GetProtocolVersion;
@@ -230,4 +235,3 @@ begin
     Runner.Free;
   end;
 end.
-

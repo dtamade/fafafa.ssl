@@ -116,21 +116,26 @@ end;
 {$ENDIF}
 
 procedure Probe(const Host: string; out Code: Integer; out Str: string; SideIsWin: Boolean);
-var Lib: ISSLLibrary; Ctx: ISSLContext; Conn: ISSLConnection; S: THandle; ok: Boolean;
+var
+  Lib: ISSLLibrary;
+  Ctx: ISSLContext;
+  Conn: ISSLConnection;
+  ClientConn: ISSLClientConnection;
+  S: THandle;
+  ok: Boolean;
 begin
   Code := 0; Str := '';
   Lib := {$IFDEF WINDOWS}CreateWinSSLLibrary{$ELSE}TOpenSSLLibrary.Create{$ENDIF};
   if (Lib = nil) or (not Lib.Initialize) then Exit;
   Ctx := Lib.CreateContext(sslCtxClient);
   if Ctx = nil then Exit;
-  // INTENTIONAL_COMPAT: legacy context-level SNI coverage. This error contract
-  // intentionally drives the deprecated context fallback to compare backends.
-  Ctx.SetServerName(Host);
   Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
   if not ConnectTCP(Host, 443, S) then Exit;
   try
     Conn := Ctx.CreateConnection(S);
     if Conn = nil then Exit;
+    if not Supports(Conn, ISSLClientConnection, ClientConn) then Exit;
+    ClientConn.SetServerName(Host);
     ok := Conn.Connect;
     if not ok then Exit;
     Code := Conn.GetVerifyResult;
@@ -144,7 +149,7 @@ end;
 var
   c: Integer; s: string; k: TErrorKind;
   failCode: Integer; failStr: string;
-  Lib: ISSLLibrary; Ctx: ISSLContext; Conn: ISSLConnection;
+  Lib: ISSLLibrary; Ctx: ISSLContext; Conn: ISSLConnection; ClientConn: ISSLClientConnection;
   Sfd, SockRefused, SockNX: THandle; ok: Boolean;
 
 procedure RunErrorTests;
@@ -168,14 +173,13 @@ begin
     Ctx := Lib.CreateContext(sslCtxClient);
     if Ctx <> nil then
     begin
-      // INTENTIONAL_COMPAT: legacy context-level SNI coverage for the
-      // handshake-failure branch; keep legacy fallback visible on purpose.
-      Ctx.SetServerName('www.google.com');
       Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
       if ConnectTCP('www.google.com', 80, Sfd) then
       begin
         try
           Conn := Ctx.CreateConnection(Sfd);
+          if (Conn <> nil) and Supports(Conn, ISSLClientConnection, ClientConn) then
+            ClientConn.SetServerName('www.google.com');
           ok := (Conn <> nil) and Conn.Connect;
           Check('HTTP:80 握手应失败', not ok);
         finally
