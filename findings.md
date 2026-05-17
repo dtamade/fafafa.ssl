@@ -318,3 +318,23 @@
 - 新增 `tests/scripts/test_workflow_performance_linux_truth_contract.sh` 后，这条 dormant workflow truth 也进入了持续守护面：
   - 它要求 workflow 的 runner 声明、build 入口、shell 语义和 summary 结论彼此一致
   - 推送 `1d4f346` 后，自动 `CI` run `25970919173` 继续 SUCCESS，说明这次 truth 收紧没有误伤活跃 Linux 主线
+
+- 继续审 dormant 多平台模板时，`test-all-platforms.yml.disabled` 又暴露出一组静态确定的 truth bug：
+  - 三个平台 job 都声称跑 `3.2.2` 和 `3.3.1` 双版本矩阵
+  - 但安装步骤并没有使用 `matrix.fpc-version`，只是重复跑同一套 runner 默认工具链
+  - `test-summary` 还硬编码 6 行 `✅`，即使真实 job 结果和 artifact 数量并不支持这些结论
+
+- 这组问题里最硬的一条不是“矩阵写大了”，而是 summary 已经在静态层面误报成功：
+  - `test-macos` 在修复前根本没有 artifact upload step
+  - 但 summary 依旧给出两行 macOS 成功记录
+  - 这意味着哪怕 workflow 以后恢复启用，汇总页也可能在缺证据时继续产出看似完整的全绿摘要
+
+- 这次最小可信修法延续了前一波 performance truth 的原则：
+  - 不去假装补齐 `3.3.1` 真验证
+  - 而是删除未真正生效的假版本矩阵，让 job 名称、cache key、artifact 名称都回到 runner-default truth
+  - summary 改为读取 `needs.<job>.result` 与实际下载到的 artifact 目录，不再硬编码平台成功结论
+
+- 新增 `tests/scripts/test_workflow_test_all_platforms_truth_contract.sh` 后，这条 dormant 多平台模板也进入了持续守护面：
+  - 它会阻止假 `fpc-version` 矩阵回流
+  - 也会阻止再次出现“没有 macOS artifact 但 summary 硬写 macOS success”这类误导性 closeout
+  - 推送 `b7c76aa` 后，自动 `CI` run `25979379612` 继续 SUCCESS，说明这次收紧没有误伤当前活跃 Linux 主线

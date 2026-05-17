@@ -1424,3 +1424,83 @@
     - `Minimal Gate (Linux)` SUCCESS
     - `FreePascal TLS 1.3 Completeness` SUCCESS
     - this batch only touched dormant `performance.yml.disabled`, and the auto-triggered active CI path remained green
+
+### Seventeenth-Order Route Review
+
+- `rg -n "matrix\\.|fpc-version|openssl|apt_package|skip_macos|skip_windows" .github/workflows/test-all-platforms.yml.disabled .github/workflows/ci-matrix-draft.yml.disabled`
+  - result: PASS
+  - summary:
+    - `ci-matrix-draft.yml.disabled` still exposed a likely fake OpenSSL version matrix
+    - `test-all-platforms.yml.disabled` exposed an even harder truth bug because its FPC version matrix and summary claims were already internally inconsistent
+
+- `tail -n 80 .github/workflows/test-all-platforms.yml.disabled`
+  - result: PASS
+  - summary:
+    - `test-summary` hardcoded six success rows for Windows/Linux/macOS and FPC 3.2.2/3.3.1
+    - the summary did not derive status from `needs.*.result` or from the actual downloaded artifacts
+
+- `rg -n "Upload.*macOS|Test-Results-macOS|test-summary|Download all artifacts" .github/workflows/test-all-platforms.yml.disabled`
+  - result: PASS
+  - summary:
+    - the macOS job did not upload any artifact before the seventeenth fix
+    - this made the hardcoded macOS success rows a static false summary rather than a merely stale placeholder
+
+### Seventeenth-Order RED Contract
+
+- `bash tests/scripts/test_workflow_test_all_platforms_truth_contract.sh`
+  - result before seventeenth fix: FAIL
+  - summary:
+    - the workflow was missing truthful multi-platform fragments such as `name: Test-Results-macOS`
+
+### Seventeenth-Order Repairs
+
+- add `tests/scripts/test_workflow_test_all_platforms_truth_contract.sh`
+  - purpose: ensure the dormant multi-platform workflow does not keep fake FPC version matrices, missing macOS artifacts, or hardcoded all-green summary rows
+
+- update `.github/workflows/test-all-platforms.yml.disabled`
+  - change: remove the unused `3.2.2` / `3.3.1` FPC version matrices from Windows/Linux/macOS jobs
+  - change: normalize cache keys and artifact names back to runner-default truth
+  - change: add macOS artifact upload and rewrite the summary to use `needs.test-*.result` plus the downloaded artifact directories
+
+### Local Revalidation After Seventeenth Fix
+
+- `bash tests/scripts/test_workflow_test_all_platforms_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_action_sha_pinning_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_checkout_credentials_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_upload_artifact_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_download_artifact_node24_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+### Seventeenth Push Success Revalidation
+
+- `git commit -m "chore: tighten multi-platform workflow truth"`
+  - result: PASS
+  - commit: `b7c76aa`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `29ce803..b7c76aa`
+
+- `gh run list --branch master --limit 4 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest run for head `b7c76aa` was `CI` run `25979379612`
+
+- `gh run watch 25979379612 --exit-status`
+  - result: PASS
+  - summary:
+    - `Code Quality (Light)` SUCCESS
+    - `Minimal Gate (Linux)` SUCCESS
+    - `FreePascal TLS 1.3 Completeness` SUCCESS
+    - this batch only touched dormant `test-all-platforms.yml.disabled`, and the auto-triggered active CI path remained green

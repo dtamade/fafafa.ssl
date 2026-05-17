@@ -30,6 +30,9 @@
 - 在 mixed-trigger 上下文风险收口后，又暴露出下一层 dormant workflow truth 风险：
   - `performance.yml.disabled` 声称 `ubuntu-latest` / `windows-latest` / `macos-latest` 三平台 matrix
   - 但 benchmark project file 目标仍锁在 `linux`，run / report 步骤又直接写成 PowerShell 语法
+- 在 dormant performance truth 收口后，又暴露出下一层 multi-platform matrix truth 风险：
+  - `test-all-platforms.yml.disabled` 三个平台 job 都声称覆盖 `3.2.2` / `3.3.1`
+  - 但安装步骤并未真正使用 `matrix.fpc-version`，summary 还硬编码多行成功结论
 - 活跃 workflow 绿了以后，最高价值的问题已不是运行时逻辑，而是 workflow runtime hygiene
 - 只修活跃 workflow 不够：
   - `release.yml.disabled`
@@ -68,6 +71,7 @@
 - `tests/scripts/test_workflow_pr_checks_history_contract.sh`
 - `tests/scripts/test_workflow_pr_checks_dispatch_context_contract.sh`
 - `tests/scripts/test_workflow_performance_linux_truth_contract.sh`
+- `tests/scripts/test_workflow_test_all_platforms_truth_contract.sh`
 - `task_plan.md`
 - `findings.md`
 - `progress.md`
@@ -102,6 +106,8 @@
 26. 新增 dispatch-context contract，并为手动触发路径补上显式 fallback 元数据。
 27. 审查 dormant `performance` 模板的 runner 声明、toolchain、project target 与 shell 语义是否一致。
 28. 新增 performance linux-truth contract，并把模板声明范围收紧到真实可支持的 Linux-only benchmark lane。
+29. 审查 dormant `test-all-platforms` 模板是否保留了未真正生效的假版本矩阵与硬编码成功 summary。
+30. 新增 multi-platform truth contract，并把 `test-all-platforms` 的 artifact / summary / toolchain 标签收紧到真实可证明的范围。
 
 ## Commands
 
@@ -118,6 +124,7 @@ bash tests/scripts/test_workflow_checkout_credentials_contract.sh
 bash tests/scripts/test_workflow_pr_checks_history_contract.sh
 bash tests/scripts/test_workflow_pr_checks_dispatch_context_contract.sh
 bash tests/scripts/test_workflow_performance_linux_truth_contract.sh
+bash tests/scripts/test_workflow_test_all_platforms_truth_contract.sh
 bash tests/scripts/test_release_workflow_v1_5_0_contract.sh
 bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh
 bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh
@@ -135,6 +142,7 @@ git diff --check
 - `pr-checks.yml.disabled` 中真正依赖 `HEAD~1` 的 job 显式使用 `fetch-depth: 2`
 - `pr-checks.yml.disabled` 中 mixed-trigger 手动路径不再直接依赖 PR-only 上下文
 - `performance.yml.disabled` 不再硬写虚假的全平台 benchmark 覆盖面，改为 Linux-only truth
+- `test-all-platforms.yml.disabled` 不再保留假 FPC 版本矩阵，也不再在缺证据时硬写成功 summary
 - release / signer / completeness 合同继续通过
 - 不再把无关自动 workflow 的绿灯误判成 `download-artifact` 的 runtime 证明
 
@@ -154,3 +162,4 @@ git diff --check
   - 最新又补上 dormant `pr-checks` 的 dispatch-context fallback；`cbd86d0` 对应的 `CI` run `25970607766` 继续 SUCCESS
   - 随后 docs closeout `083c057` 也通过了 `CI` run `25970738320`，说明 working-memory truth sync 没有带偏自动主线
   - 最新又补上 dormant `performance` workflow 的 Linux-only truth 收紧；`1d4f346` 对应的 `CI` run `25970919173` 继续 SUCCESS
+  - 再随后又补上 dormant `test-all-platforms` 的 multi-platform truth 收紧；`b7c76aa` 对应的 `CI` run `25979379612` 继续 SUCCESS
