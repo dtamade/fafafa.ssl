@@ -306,6 +306,31 @@
   - `Minimal Gate (Linux)` SUCCESS
   - `FreePascal TLS 1.3 Completeness` SUCCESS
   - 这次改动命中的是 dormant `performance.yml.disabled` 与 `ci-matrix-draft.yml.disabled`，自动主线继续全绿；manual/dormant lane 仍保持 `static-only`
+- [completed] 继续静态审查 dormant/manual summary truth 后确认新的 `pr-checks` 报告缺口：
+  - `pr-checks.yml.disabled` 的 `pr-report` 明明已经有 `needs: [pr-info, quick-build, test-coverage-check, code-stats]`
+  - 但状态表仍硬编码 4 行 `✅ Passed / ✅ Complete`
+  - 同一段里还硬编码 `Reviewers required: 2`、`Checks required: 4`、`Auto-merge: Disabled`，这些都不来自 workflow 可证明事实
+- [completed] 新增 focused contract，并先在当前模板上观测到红灯：
+  - `tests/scripts/test_workflow_pr_checks_summary_truth_contract.sh`
+- [completed] `pr-checks.yml.disabled` 已收紧为 truthful summary lane：
+  - `pr-report` 状态表改为直接读取 `needs.pr-info.result`、`needs.quick-build.result`、`needs.test-coverage-check.result`、`needs.code-stats.result`
+  - 删除 workflow 无法证明的 reviewer / branch-protection / auto-merge 断言
+  - notes 改为只声明“当前 run 的 job 结果真相”和查看对应 job log 的动作
+- [completed] 第二十一波 dormant summary truth 修复本地复核通过：
+  - `test_workflow_pr_checks_summary_truth_contract.sh` PASS
+  - `test_workflow_pr_checks_history_contract.sh` PASS
+  - `test_workflow_pr_checks_dispatch_context_contract.sh` PASS
+  - `test_workflow_action_sha_pinning_contract.sh` PASS
+  - `test_workflow_checkout_credentials_contract.sh` PASS
+  - `test_workflow_permissions_contract.sh` PASS
+  - `git diff --check` PASS
+- [completed] 第二十一次提交 `b98625e` 已完成，pr-checks summary truth batch 已推送到 `master`
+- [completed] 第二十一次 push 后的远端复核通过：
+  - `CI` run `25980879737` SUCCESS
+  - `Code Quality (Light)` SUCCESS
+  - `Minimal Gate (Linux)` SUCCESS
+  - `FreePascal TLS 1.3 Completeness` SUCCESS
+  - 这次改动命中的是 dormant `pr-checks.yml.disabled`，自动主线继续全绿；pr-checks lane 仍保持 `static-only`
 
 ## Current Blocker
 
@@ -322,15 +347,16 @@
 - 当前也没有已知仍保留未消费 dispatch 输入、缺 Lazarus 却调用 `lazbuild`、或硬编码 `PRODUCTION READY` / 固定 grade 的 `winssl-tests` / `code-quality` 残留。
 - 当前也没有已知仍保留“手动输入只改标签、不改执行范围”的 dormant performance lane 残留。
 - 当前也没有已知仍保留“manual skip 生效但 summary 不承认 skipped 语义”的 dormant ci-matrix lane 残留。
+- 当前也没有已知仍保留 `pr-checks` 硬编码全绿状态表、或在 workflow 内伪装 branch-protection / review policy 的残留。
 - 当前剩余边界只在验证层：
   - `release.yml`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled`、`wave-b-b2-manual.yml.disabled` 等 dormant/manual 路径没有在远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
-  - `pr-checks.yml.disabled` 的 `pr-report` 仍硬编码所有 checks 为 `✅ Passed / ✅ Complete`，这是当前下一条最明确的 summary truth 缺口
+  - 当前下一条更明确的 summary truth 缺口已经前移到 `basic-checks.yml.disabled` 与 `linux-ci.yml.disabled`
 
 ## Current Queue
 
-1. 继续静态审查 dormant/manual workflow 的 summary truth，下一站优先收 `pr-checks.yml.disabled` 里硬编码全绿状态表的问题。
-2. 继续静态审查 mixed-trigger / manual workflow 的输入模型，但重点转向“summary 是否真实反映 `needs.*.result` 和手动模式语义”。
+1. 继续静态审查 dormant summary-heavy workflow，下一站优先看 `basic-checks.yml.disabled` 与 `linux-ci.yml.disabled` 里的硬编码成功结论和泛化状态断言。
+2. 继续静态审查 mixed-trigger / manual workflow 的 summary truth，但重点转向“summary 是否真实反映 job result，而不是把环境假设或仓库策略写成事实”。
 3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
 
 ## Decision Locks
@@ -355,6 +381,7 @@
 - 第十八批 dormant ci-matrix truth batch commit / push 完成，且自动远端主线复核通过
 - 第十九批 dormant winssl/code-quality truth batch commit / push 完成，且自动远端主线复核通过
 - 第二十批 manual workflow input truth batch commit / push 完成，且自动远端主线复核通过
+- 第二十一批 pr-checks summary truth batch commit / push 完成，且自动远端主线复核通过
 - `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
 - `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
 - `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用

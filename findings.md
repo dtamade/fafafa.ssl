@@ -421,3 +421,27 @@
 - 当前下一条最明确的 dormant summary truth 缺口已经收缩到 `pr-checks.yml.disabled`：
   - `pr-report` 仍硬编码 `PR Information / Quick Build / Test Coverage / Code Statistics` 全部 `✅ Passed / ✅ Complete`
   - 但它本身已经有 `needs`，完全应该改成从真实 `needs.*.result` 生成表格
+
+- `pr-checks.yml.disabled` 这条 summary 问题的关键不只是“状态表写死了”，而是它把 workflow 之外的策略也冒充成了 workflow 真相：
+  - `Reviewers required: 2`
+  - `Checks required: 4`
+  - `Auto-merge: Disabled`
+  - 这些都属于仓库配置或团队流程，不能从当前 YAML 自证
+
+- 对 `pr-checks` 来说，最小可信修法也不需要额外脚本层：
+  - 它已经有 `needs: [pr-info, quick-build, test-coverage-check, code-stats]`
+  - 直接把 summary 状态表改成 `needs.*.result`
+  - 再把无法由 workflow 自证的 reviewer / merge / required checks 叙述删掉即可
+
+- 这类修法的价值不只是“报告更真实”，还会减少 continuation 的误导：
+  - 以后就算某个 job 是 `failure`、`cancelled`、`skipped`
+  - summary 也不会继续伪装成四行 `✅`
+  - 对 dormant/manual workflow 尤其重要，因为后续人往往只先看 summary
+
+- 新增 `test_workflow_pr_checks_summary_truth_contract.sh` 后，`pr-checks` 这条 summary lane 也进入了持续守护面：
+  - 它会阻止硬编码全绿状态表和假 branch-protection/merge-policy 断言回流
+  - 推送 `b98625e` 后，自动 `CI` run `25980879737` 继续 SUCCESS，说明这次 summary 收紧没有误伤当前活跃 Linux 主线
+
+- 当前下一条更明确的 dormant summary truth 缺口已经前移到：
+  - `basic-checks.yml.disabled` 的 `Generate report` 仍硬编码 `Project structure valid` / `Required files present` / `Basic syntax check passed`
+  - `linux-ci.yml.disabled` 的 `check-success` 仍硬编码 `Project is ready for integration`

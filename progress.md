@@ -1808,3 +1808,79 @@
     - `Minimal Gate (Linux)` SUCCESS
     - `FreePascal TLS 1.3 Completeness` SUCCESS
     - this batch only touched dormant `performance.yml.disabled` and `ci-matrix-draft.yml.disabled`, and the auto-triggered active CI path remained green
+
+### Twenty-First-Order Route Review
+
+- `sed -n '180,260p' .github/workflows/pr-checks.yml.disabled`
+  - result: PASS
+  - summary:
+    - the `pr-report` job still hardcoded `PR Information / Quick Build / Test Coverage / Code Statistics` as `✅ Passed / ✅ Complete`
+    - the same summary block also hardcoded reviewer/check-policy text that the workflow itself could not prove
+
+- `rg -n "✅ Passed|✅ Complete|Reviewers required|Checks required|Auto-merge" .github/workflows/pr-checks.yml.disabled`
+  - result: PASS
+  - summary:
+    - the stale summary-truth fragments were isolated to the `pr-report` step
+
+### Twenty-First-Order RED Contract
+
+- `bash tests/scripts/test_workflow_pr_checks_summary_truth_contract.sh`
+  - result before twenty-first fix: FAIL
+  - summary:
+    - missing truthful fragment `echo "| PR Information | ${{ needs.pr-info.result }} |" >> $GITHUB_STEP_SUMMARY`
+
+### Twenty-First-Order Repairs
+
+- add `tests/scripts/test_workflow_pr_checks_summary_truth_contract.sh`
+  - purpose: ensure the dormant PR checks report derives status from `needs.*.result` and does not hardcode branch-protection / reviewer policy claims as workflow truth
+
+- update `.github/workflows/pr-checks.yml.disabled`
+  - change: rewrite the status table to use `needs.pr-info.result`, `needs.quick-build.result`, `needs.test-coverage-check.result`, and `needs.code-stats.result`
+  - change: remove hardcoded reviewer/check-policy/auto-merge statements
+  - change: replace generic next-steps prose with notes that clearly scope the report to this run's workflow results
+
+### Local Revalidation After Twenty-First Fix
+
+- `bash tests/scripts/test_workflow_pr_checks_summary_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_pr_checks_history_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_pr_checks_dispatch_context_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_action_sha_pinning_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_checkout_credentials_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_permissions_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+### Twenty-First Push Success Revalidation
+
+- `git commit -m "chore: tighten pr checks summary truth"`
+  - result: PASS
+  - commit: `b98625e`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `0aac4e6..b98625e`
+
+- `gh run list --branch master --limit 8 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest run for head `b98625e` was `CI` run `25980879737`
+
+- `gh run watch 25980879737 --exit-status`
+  - result: PASS
+  - summary:
+    - `Code Quality (Light)` SUCCESS
+    - `Minimal Gate (Linux)` SUCCESS
+    - `FreePascal TLS 1.3 Completeness` SUCCESS
+    - this batch only touched dormant `pr-checks.yml.disabled`, and the auto-triggered active CI path remained green
