@@ -108,8 +108,8 @@ jobs:
           echo "### 📦 Compilation" >> $GITHUB_STEP_SUMMARY
           TOTAL_FILES=$(find src/ -name "*.pas" | wc -l)
           echo "- Total source files: $TOTAL_FILES" >> $GITHUB_STEP_SUMMARY
-          echo "- Expected compile: ~75 (excludes WinSSL)" >> $GITHUB_STEP_SUMMARY
-          echo "- Status: ✅ See job output" >> $GITHUB_STEP_SUMMARY
+          echo "- Compilation details: review the \`compile_all_modules.py\` job output for the exact module set compiled on this runner." >> $GITHUB_STEP_SUMMARY
+          echo "- Compilation result for this run is reflected by the job status and logs above." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           echo "### 🧪 Testing" >> $GITHUB_STEP_SUMMARY
@@ -124,7 +124,7 @@ jobs:
           echo "### 📝 Notes" >> $GITHUB_STEP_SUMMARY
           echo "- WinSSL modules skipped on Linux (expected)" >> $GITHUB_STEP_SUMMARY
           echo "- Some tests may require network access" >> $GITHUB_STEP_SUMMARY
-          echo "- Full test coverage requires Windows runner for WinSSL" >> $GITHUB_STEP_SUMMARY
+          echo "- WinSSL-specific evidence requires a Windows lane; this Linux run does not prove WinSSL behavior." >> $GITHUB_STEP_SUMMARY
 
       - name: 📦 Upload test artifacts
         if: always()
