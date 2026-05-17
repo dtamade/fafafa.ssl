@@ -140,11 +140,14 @@ IInterface (FreePascal 内置)
     ├─ ISSLContext          (上下文管理)
     ├─ ISSLConnection       (连接管理)
     │   ├─ ISSLClientConnection  (客户端扩展)
-    │   └─ ISSLServerConnection  (服务端扩展)
     ├─ ISSLCertificate      (证书管理)
     ├─ ISSLCertificateStore (证书存储)
     └─ ISSLSession          (会话管理)
 ```
+
+> 当前 public Pascal surface 只声明了 `ISSLClientConnection`；
+> 服务端特有能力目前主要通过可选 context 扩展接口暴露，
+> 而不是通过单独的 `ISSLServerConnection` 公开接口。
 
 ### ISSLLibrary - 库管理
 

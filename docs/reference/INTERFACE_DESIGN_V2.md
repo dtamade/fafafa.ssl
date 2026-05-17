@@ -13,10 +13,13 @@
 ```
 ISSLConnection (核心 - 18 个方法)
 ├── ISSLClientConnection (客户端扩展 - SNI)
-├── ISSLServerConnection (服务端扩展 - 未来)
 ├── ISSLDiagnostics (诊断扩展)
 └── ISSLAdvanced (高级功能扩展)
 ```
+
+> 注：当前 public Pascal source 尚未声明 `ISSLServerConnection`。
+> 现阶段服务端特有能力主要通过 `ISSLContext` 的可选扩展接口暴露，
+> 例如 `ISSLServerOCSPStaplingContext` 和 early-data 相关 server-side context surface。
 
 ---
 
