@@ -506,7 +506,7 @@
 
 - 这一步的意义是：
   - cross-backend 网络合同不再继续给 `sslCtxClient` inherited fallback 当假锁点
-  - 下一步真正的 client-side behavior migration 可以更直接地瞄准 `tests/test_freepascal_context_server_name_inheritance.pas`
+  - 在当时的迁移队列里，下一步真正的 client-side behavior migration 已经可以更直接地瞄准 `tests/test_freepascal_context_server_name_inheritance.pas`
 
 ## 增量收口：FreePascal 客户端连接不再继承 context-level SNI fallback
 

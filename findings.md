@@ -303,7 +303,7 @@
   - 但它们在当前 host 上的 live network execution 仍受 `FAFAFA_RUN_NETWORK_TESTS!=1` gate 保护
   - 因此这批证明的是“合同语义与编译/runtime shape 已对齐”，不是重新做一次外网联机证明
 
-- 这一步之后，下一条最自然的 `sslCtxClient` behavior migration RED 更清楚了：
+- 在 cross-backend 网络合同收口完成的那个时点，下一条最自然的 `sslCtxClient` behavior migration RED 已经更清楚：
   - 首选应转向 `tests/test_freepascal_context_server_name_inheritance.pas`
   - 因为它比 precedence/override 类测试更直接地锁住 inherited context fallback 本体
 
