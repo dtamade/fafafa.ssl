@@ -21,6 +21,7 @@
 - Modify: `.github/README.md`
 - Modify: `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md`
 - Modify: `tests/windows/VALIDATION_BUNDLE.md`
+- Add: `tests/scripts/test_winssl_windows_runtime_project_target_contract.sh`
 - Update: `task_plan.md`
 - Update: `findings.md`
 - Update: `progress.md`
@@ -73,12 +74,28 @@ Run:
 bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh
 bash tests/scripts/test_winssl_windows_validation_bundle_contract.sh
 bash tests/scripts/test_wave_b_windows_gate_pwsh_and_verbose_contract.sh
+bash tests/scripts/test_winssl_windows_runtime_project_target_contract.sh
 git diff --check -- .github/workflows/wave-b-b2-manual.yml .github/workflows/wave-b-b2-manual.yml.disabled .github/README.md tests/windows/WINDOWS_VALIDATION_CHECKLIST.md tests/windows/VALIDATION_BUNDLE.md tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh docs/plans/2026-05-05-wave-b-b2-winssl-runtime-workflow-alignment.md task_plan.md findings.md progress.md
 ```
+
+## Task 4: Runtime truth follow-up after the first real Windows runs
+
+As of `2026-05-17`, this plan is no longer hypothetical:
+
+- real manual run `25985103443` proved the workflow could reach the Windows lane and exposed a shell/encoding blocker
+- commit `d32ab3a` fixed that by switching the workflow WinSSL script entrypoints to `pwsh`
+- real manual run `25985356670` then moved the failure boundary into `tests/quick_winssl_validation.ps1`
+- the new first hard blocker was not shell/runtime policy anymore, but the checked-in Lazarus project files forcing `TargetOS=linux`
+
+Current follow-up scope:
+
+- keep using GitHub manual dispatch as the source of truth for Windows runtime proof
+- guard the quick smoke + broader suite project set with `tests/scripts/test_winssl_windows_runtime_project_target_contract.sh`
+- remove the hardcoded Linux target from the runtime-entry `.lpi` files so Windows runners build with host target truth
+- after push, re-dispatch `wave-b-b2-manual.yml` and record the next real Windows failure boundary
 
 ### Definition Of Done
 
 - 当前手动 Windows workflow 被锁定为覆盖 quick smoke + Wave B gate + broader suite transcript
 - Windows checklist / bundle / GitHub workflow docs 不再互相漂移
 - 仓库在没有本地 Windows 主机时，仍有一条明确的 CI lane 去推进 `WinSSL` runtime proof
-

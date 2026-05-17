@@ -1,5 +1,90 @@
 # Progress - CI Runtime Gate Repair
 
+## 2026-05-17
+
+### Context Recovery
+
+- `git status --short --branch`
+  - result: `## master...origin/master`
+  - summary: current head already moved to `d32ab3a`; worktree started clean before this batch
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+  - result: no output
+
+### Windows Runtime Failure Revalidation
+
+- `gh run view 25985356670 --log-failed`
+  - result: PASS
+  - summary:
+    - `windows-gate` moved past the old PowerShell parser/encoding boundary
+    - `Run quick WinSSL smoke` reached `lazbuild test_winssl_certificate_loading.lpi`
+    - failure showed `Param[0]="-Tlinux"` and `Target OS: Linux for x86-64`
+    - terminal compiler error was `Fatal: (10022) Can't find unit system used by test_winssl_certificate_loading`
+
+- `rg -n -- '-Tlinux|test_winssl_certificate_loading|quick_winssl_validation|run_winssl_tests' .github/workflows tests scripts`
+  - result: PASS
+  - summary:
+    - confirmed quick smoke runs `tests/quick_winssl_validation.ps1`
+    - confirmed broader suite runs `tests/run_winssl_tests.ps1`
+    - confirmed the runtime path depends on Lazarus `.lpi` projects rather than only the minimal `fpc`-based gate
+
+- `rg -n '<TargetOS Value=|<TargetCPU Value=' tests/winssl tests/integration`
+  - result: PASS
+  - summary:
+    - the quick/broader Windows runtime entry projects all pinned `TargetOS` to `linux`
+    - the issue was systemic across the current WinSSL runtime project set, not isolated to one project file
+
+### RED Proof Against Pre-Fix Head
+
+- `python3 - <<'PY' ... git show d32ab3a:<project> ...`
+  - result: PASS
+  - summary:
+    - historical check proved all 7 runtime-entry `.lpi` files still had `TargetOS=linux` at `d32ab3a`
+    - this provides the RED baseline for the new focused contract without rewriting history
+
+### Production Fixes Applied
+
+- add `tests/scripts/test_winssl_windows_runtime_project_target_contract.sh`
+  - change: lock quick smoke + broader WinSSL suite project files to host/Windows target truth
+
+- update `tests/winssl/test_winssl_certificate_loading.lpi`
+  - change: remove hardcoded `TargetCPU/TargetOS=linux`
+
+- update `tests/winssl/test_winssl_unit_comprehensive.lpi`
+  - change: remove hardcoded `TargetCPU/TargetOS=linux`
+
+- update `tests/winssl/test_winssl_integration_multi.lpi`
+  - change: remove hardcoded `TargetCPU/TargetOS=linux`
+
+- update `tests/winssl/test_winssl_performance.lpi`
+  - change: remove hardcoded `TargetCPU/TargetOS=linux`
+
+- update `tests/winssl/test_winssl_handshake_debug.lpi`
+  - change: remove hardcoded `TargetCPU/TargetOS=linux`
+
+- update `tests/winssl/test_winssl_https_client.lpi`
+  - change: remove hardcoded `TargetCPU/TargetOS=linux`
+
+- update `tests/integration/test_backend_comparison.lpi`
+  - change: remove hardcoded `TargetCPU/TargetOS=linux` while preserving optimization settings
+
+### Local Revalidation After Fix
+
+- `bash tests/scripts/test_winssl_windows_runtime_project_target_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
 ## 2026-05-15
 
 ### Context Recovery

@@ -1,11 +1,30 @@
-# Task Plan - Workflow Truth And Evidence Hardening
+# Task Plan - Windows Runtime Proof And Workflow Truth
 
 ## Goal
 
-当前主目标不再是 runtime 救火，而是把仓库剩余 dormant/manual workflow 的 summary、capability claim、输入语义与证据边界继续收紧到可证明范围：优先移除固定能力宣告、固定覆盖率数字和超出当前 run 的泛化结论，并把 working-memory / queue 同步到这一条 truth-first 路线。
+当前主目标已经切换为用 GitHub Actions 的真实 Windows runner 持续推进 WinSSL runtime proof：先让 `wave-b-b2-manual.yml` 真正跑过 quick smoke、Wave B Windows gate、broader WinSSL suite，再把每次暴露出的第一硬故障收口到 focused contract + 最小修复，不再把 Windows/WinSSL 笼统停在 `static-only` 假设上。
 
 ## Current Status
 
+- [completed] 当前路线已经从“Windows/WinSSL 保持 `static-only`”纠偏为“GitHub manual workflow 可提供真实 Windows runtime 证据”：
+  - 仓库公开后，`wave-b-b2-manual.yml` 已可真实 dispatch
+  - 真实运行时验证不再受旧的额度/私有仓库假设阻塞
+- [completed] 第一次手动 runtime run `25985103443` 暴露的第一硬故障已收口：
+  - `windows-gate` 在 `Run quick WinSSL smoke` 之前就因 `powershell` 执行 UTF-8/Unicode WinSSL 脚本而失败
+  - 已通过提交 `d32ab3a` 把相关 workflow 入口切到 `pwsh`
+- [completed] 第二次手动 runtime run `25985356670` 证明 `pwsh` 修复真实生效，并把故障边界前移到 WinSSL 工程目标配置：
+  - quick smoke 已经真正进入 `lazbuild test_winssl_certificate_loading.lpi`
+  - 新的第一硬故障是 Lazarus 在 Windows runner 上仍按 `-Tlinux` 编译，最终报 `Can't find unit system`
+- [in_progress] 当前批次已经为 Windows runtime 入口工程补上 focused contract，并移除 quick/broader suite 所用 `.lpi` 的硬编码 Linux 目标：
+  - 新增 `tests/scripts/test_winssl_windows_runtime_project_target_contract.sh`
+  - 已修复 `tests/winssl/test_winssl_certificate_loading.lpi`
+  - 已修复 `tests/winssl/test_winssl_unit_comprehensive.lpi`
+  - 已修复 `tests/winssl/test_winssl_integration_multi.lpi`
+  - 已修复 `tests/winssl/test_winssl_performance.lpi`
+  - 已修复 `tests/winssl/test_winssl_handshake_debug.lpi`
+  - 已修复 `tests/winssl/test_winssl_https_client.lpi`
+  - 已修复 `tests/integration/test_backend_comparison.lpi`
+  - 下一步是提交、push，并重新 dispatch `wave-b-b2-manual.yml` 观察新的 Windows 第一硬故障边界
 - [completed] 复核远端失败证据（CI run `25893971783` / signer run `25901035350`）
 - [completed] 把 3 个真实问题写成 focused contract tests，并先观测到红灯
 - [completed] 修复 `.github/workflows/ci.yml` / `release.yml` / `release.yml.disabled` 的 WolfSSL 依赖缺口

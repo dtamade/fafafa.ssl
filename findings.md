@@ -1,5 +1,37 @@
 # Findings - CI Runtime Gate Repair
 
+## 2026-05-17
+
+- Windows/WinSSL 不应再被整体描述为 `static-only`：
+  - 仓库公开后，GitHub Actions 已能真实执行 `wave-b-b2-manual.yml`
+  - 当前剩余问题是 Windows runner 上的真实 runtime/blocker，而不是“没有验证条件”
+
+- 第一次 Windows manual run `25985103443`（`windows-gate`）暴露的第一硬故障不是 WinSSL 逻辑，而是 workflow shell 入口：
+  - `Run quick WinSSL smoke` 在真正测试前就失败
+  - 根因是 workflow 用 `powershell` 执行 UTF-8/Unicode-heavy WinSSL 脚本
+  - 这已经通过 `d32ab3a` 收口：相关 workflow 入口统一改为 `pwsh`
+
+- 第二次 Windows manual run `25985356670` 证明 `pwsh` 修复有效，并把第一硬故障前移到 Lazarus 工程目标配置：
+  - quick smoke 已经执行到 `lazbuild test_winssl_certificate_loading.lpi`
+  - 失败日志显示 Lazarus 在 Windows runner 上仍被项目文件拉成 `-Tlinux`
+  - 关键后果是 FPC 以 `Target OS: Linux for x86-64` 编译，最终报 `Fatal: (10022) Can't find unit system`
+
+- 这不是单个 quick smoke 工程的孤立脏数据，而是当前 Windows runtime 入口工程集的真实配置漂移：
+  - `tests/quick_winssl_validation.ps1` 用到的 `tests/winssl/test_winssl_certificate_loading.lpi`
+  - `tests/run_winssl_tests.ps1` 用到的
+    - `tests/winssl/test_winssl_unit_comprehensive.lpi`
+    - `tests/winssl/test_winssl_integration_multi.lpi`
+    - `tests/integration/test_backend_comparison.lpi`
+    - `tests/winssl/test_winssl_performance.lpi`
+    - `tests/winssl/test_winssl_handshake_debug.lpi`
+    - `tests/winssl/test_winssl_https_client.lpi`
+  - 在修复前都把 `TargetOS` 写死为 `linux`
+
+- 当前批次的最小正确修法不是再猜 workflow shell，而是把 Windows runtime 入口工程恢复成 host-truth：
+  - 新增 `tests/scripts/test_winssl_windows_runtime_project_target_contract.sh`
+  - 该合同显式守护 quick smoke 与 broader suite 所用 `.lpi` 不得再硬编码非 Windows 目标
+  - 当前实现选择移除这些工程文件里的 `TargetCPU/TargetOS=linux` 硬编码，让 Windows runner 回到 host target truth
+
 ## 2026-05-15
 
 - GitHub Actions 账户额度不再是当前 blocker：
@@ -54,9 +86,8 @@
     - `src/fafafa.ssl.wolfssl.api.pas` 不能只赌 `LoadLibrary('libwolfssl.so')`
     - 在 Linux 上需要回退扫描常见系统库目录与版本化 `libwolfssl.so*`
 
-- Windows/WinSSL 仍保持 `static-only`：
-  - 用户明确不要走 Windows 条件
-  - 这批只处理 Linux / GitHub Actions 可直接复核的 CI/runtime blocker
+- 历史说明：这一批当时仍按用户约束把 Windows/WinSSL 视为 `static-only`。
+  - 该假设已在 `2026-05-17` 被真实 GitHub Windows runtime run 推翻，后续 continuation 必须以新的 runtime 证据为准。
 
 - 第二次推送 `18f154f` 后，远端状态继续收敛：
   - signer run `25902255923`（head `18f154f`）已经 SUCCESS
