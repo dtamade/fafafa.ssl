@@ -267,6 +267,40 @@
     - previous docs closeout head `c38298e` had already finished `success` as run `25983797036`
     - per the incremental verification discipline, this truth-fix batch recorded the run id without a blocking watch
 
+### Thirty-First-Order Route Review
+
+- `sed -n '548,576p' task_plan.md`
+  - result: PASS
+  - summary:
+    - current queue explicitly pointed to `check_wave_b_b2_evidence_consistency.sh` `cross_summary missing` focused contract
+    - route stayed on consistency evidence-truth refinement instead of reopening earlier handoff-bundle or workflow lanes
+
+- `sed -n '690,725p' scripts/check_wave_b_b2_evidence_consistency.sh`
+  - result: PASS
+  - summary:
+    - missing cross summary already produced `required_missing += 1`
+    - row note already showed `missing`
+    - no immediate evidence of a production bug before adding a focused contract
+
+### Thirty-First-Order Contract Expansion
+
+- add `tests/scripts/test_wave_b_b2_consistency_cross_summary_missing_contract.sh`
+  - purpose: require `required_missing=1`, `runid_mismatch_or_parse_issue=0`, truthful missing-row rendering, and truthful IN_PROGRESS next-actions guidance when the cross summary file is absent
+
+### Local Revalidation After Thirty-First Contract Expansion
+
+- `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_missing_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_missing_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_metadata_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
 ### Eleventh Push Success Revalidation
 
 - `git commit -m "chore: pin workflow actions to commits"`

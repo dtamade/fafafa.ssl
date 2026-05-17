@@ -195,3 +195,4 @@ git diff --check
   - 最新又补上 `check_wave_b_b2_evidence_consistency.sh` 的 closure-report missing 顶层摘要 truth；当前确认这里是一个真实脚本缺口，不是单纯 coverage gap
   - 上一轮 docs closeout `c38298e` 对应 `CI` run `25983797036` 继续 SUCCESS，说明 missing-report closeout 没有误伤自动主线
   - 对应脚本修复批次提交 `6562f13` 已推送，并记录自动 `CI` run `25983911908`
+  - 最新又补上 `check_wave_b_b2_evidence_consistency.sh` 的 cross-summary missing focused contract；当前确认这里是 coverage 缺口而不是新的生产脚本 bug

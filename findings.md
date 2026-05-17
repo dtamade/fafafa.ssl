@@ -663,3 +663,20 @@
   - 但修法仍然是最小的，只补 `closure_report missing -> closure_status_note=closure_report missing`
   - 因此远端自动 `CI` run `25983911908` 仍按增量 run id 记账即可
   - 除非自动主线转红，否则不需要把这类 truth batch 升级成阻塞式盯跑
+
+- 再往下一层补 `cross_summary missing` focused contract 后，当前结论回到了“coverage gap 已补齐”，不是新的 prod bug：
+  - `check_wave_b_b2_evidence_consistency.sh` 本身已经会把 cross-summary 缺失记成 `required_missing`
+  - row 也已经是 `missing`
+  - 在 closure report 仍然有效且 `closure_status_note=IN_PROGRESS` 时，next actions 继续走 in-progress closure guidance 也是 truthful 的
+  - 缺口只在于此前没有 focused contract 把这条分支固定下来
+
+- 新增 `test_wave_b_b2_consistency_cross_summary_missing_contract.sh` 后，这条缺失分支也进入了持续守护：
+  - 它同时钉住 `required_missing=1`
+  - `runid_mismatch_or_parse_issue=0`
+  - `closure_status_note=IN_PROGRESS`
+  - cross-summary row 的 `missing`
+  - 以及 next actions 继续走 IN_PROGRESS closure guidance
+
+- 因而当前 `wave-b-b2` 线上更合理的下一跳，已经从 cross-summary missing 前移到 cross-summary 顶层 run_id 漂移：
+  - 优先补 `check_wave_b_b2_evidence_consistency.sh` 的 `cross_summary run_id missing/mismatch` focused contract
+  - 目标是确认 row note 与 `runid_mismatch_or_parse_issue` 在 cross-summary 顶层元数据漂移时也保持对称 truthful
