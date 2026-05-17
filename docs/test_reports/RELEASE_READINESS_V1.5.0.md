@@ -2,19 +2,19 @@
 
 Date: 2026-05-17
 
-Status: `PASS_PENDING_APPROVAL`
+Status: `RELEASED`
 
 ## Summary
 
-The local release-control gates for `v1.5.0` are green, the static Pascal audit passes, and the current GitHub Actions runtime truth is also green on the same head. There is no active technical blocker left on the current release surface.
+`v1.5.0` has been published successfully. The local release-control gates were green, the static Pascal audit passed, the cross-platform runtime truth was already green, and the final release workflow completed successfully on the published head.
 
-What remains is the explicit human approval gate for creating the `v1.5.0` tag and GitHub Release. The latest existing tag is still `v1.4.3`.
+The approval gate is no longer pending: the `v1.5.0` tag now points to the published head, and the GitHub Release plus source archive are live.
 
 ## Version Truth
 
 | Item | Result |
 | --- | --- |
-| Latest existing tag | `v1.4.3` |
+| Latest existing tag | `v1.5.0` |
 | Source version | `FAFAFA_SSL_VERSION_STRING = '1.5.0'` |
 | Interface version | `FAFAFA_SSL_INTERFACE_VERSION = 10500` |
 | Lazarus package version | `1.5.0` |
@@ -27,6 +27,8 @@ What remains is the explicit human approval gate for creating the `v1.5.0` tag a
 | --- | --- | --- |
 | Manual cross-platform runtime workflow | PASS | `wave-b-b2-manual.yml` run `25989095571` on head `b95044d` completed with `windows-gate` / `macos-gate` / `linux-gate` / `summary` all `SUCCESS` |
 | Default CI workflow | PASS | `CI` run `25989090032` on head `b95044d` completed `SUCCESS` |
+| Release workflow | PASS | `Release v1.5.0` run `25991977801` on head `e775ac5` completed `SUCCESS` |
+| Published GitHub Release | PASS | `fafafa.ssl v1.5.0` at `https://github.com/dtamade/fafafa.ssl/releases/tag/v1.5.0` with asset `fafafa-ssl-v1.5.0-source.tar.gz` |
 
 ## Local Release Gates
 
@@ -59,8 +61,8 @@ The static audit confirms:
 - the active `src/fafafa.ssl*.pas` tree has no unresolved `TODO`, `FIXME`, `skeleton`, or `placeholder` markers
 - the two WinSSL skeleton harnesses remain explicitly Windows-only and are outside the Linux release path
 
-## Approval Gate
+## Release State
 
-Release-control status: `PASS_PENDING_APPROVAL`.
+Release-control status: `RELEASED`.
 
-Do not create the `v1.5.0` tag or GitHub Release until the user explicitly approves it.
+Published tag: `v1.5.0` on head `e775ac5`.

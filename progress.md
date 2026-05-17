@@ -216,6 +216,37 @@
 - `bash tests/scripts/test_release_workflow_v1_5_0_contract_no_rg_fallback.sh`
   - result after second fix: PASS
 
+- `git commit -m "fix: stage release archive outside repo tree"`
+  - result: PASS
+  - commit: `e775ac5`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `f7173f9..e775ac5`
+
+- `git tag -f -a v1.5.0 -m "Release v1.5.0" e775ac5c5886373bedba1313ae7c6230ea82cd6c && git push --force origin refs/tags/v1.5.0`
+  - result: PASS
+  - summary:
+    - retargeted the still-unreleased `v1.5.0` tag from `f7173f9` to `e775ac5`
+
+- `gh run watch 25991977801 --exit-status`
+  - result: PASS
+  - summary:
+    - `Release v1.5.0` run `25991977801` completed `SUCCESS`
+    - `Run release gates`, `Create source archive`, `Upload release archive evidence`, `Publish GitHub Release`, and `Summary` all passed
+
+- `gh release view v1.5.0 --json tagName,name,isDraft,isPrerelease,url,assets`
+  - result: PASS
+  - summary:
+    - published release: `fafafa.ssl v1.5.0`
+    - url: `https://github.com/dtamade/fafafa.ssl/releases/tag/v1.5.0`
+    - uploaded asset: `fafafa-ssl-v1.5.0-source.tar.gz`
+
+- `git rev-parse HEAD && git rev-parse v1.5.0^{}`
+  - result: PASS
+  - summary:
+    - current head and published `v1.5.0` tag both point to `e775ac5c5886373bedba1313ae7c6230ea82cd6c`
+
 ### Windows Runtime Failure Revalidation
 
 - `gh run view 25985356670 --log-failed`

@@ -28,6 +28,7 @@ FreePascal TLS 1.3 completeness 主线门禁（push / PR 自动触发）
 
 - 入口：`.github/workflows/release.yml`
 - 覆盖：版本真值校验、compile gate、minimal gate、FreePascal TLS 1.3 focused gate、style gate、Phase 2 dry-run、`RELEASE_NOTES_V1.5.0.md`
+- 最新已确认真相：run `25991977801` 在 head `e775ac5` 上 `SUCCESS`，并已发布 `https://github.com/dtamade/fafafa.ssl/releases/tag/v1.5.0`
 - 产物：source archive + GitHub release body
 
 ### 4) `tls13-signer-gate.yml`

@@ -45,6 +45,20 @@
   - 归档完成后再 `mv` 回工作目录，保持 upload / publish step 的既有输入名不变
   - 同时用 focused contract 把“不能直接往被归档目录里写 tarball”固定下来
 
+- 第三次 release run `25991977801` 已完成最终发布闭环：
+  - `Run release gates` SUCCESS
+  - `Create source archive` SUCCESS
+  - `Upload release archive evidence` SUCCESS
+  - `Publish GitHub Release` SUCCESS
+  - `v1.5.0` tag 现指向 `e775ac5`
+  - GitHub Release `fafafa.ssl v1.5.0` 已发布，source archive `fafafa-ssl-v1.5.0-source.tar.gz` 已上传
+
+- 这次正式发布的关键流程结论是：
+  - 第一次失败暴露的是 release contract portability 盲区
+  - 第二次失败暴露的是 archive staging 盲区
+  - 两条都不是产品实现或发布权限本身的问题，而是 release-control 工作流边界条件
+  - 当前 `release-control / v1.5.0 formalization` 已经真正闭环，后续不应再围绕这个版本做重复验证
+
 - 第一次 Windows manual run `25985103443`（`windows-gate`）暴露的第一硬故障不是 WinSSL 逻辑，而是 workflow shell 入口：
   - `Run quick WinSSL smoke` 在真正测试前就失败
   - 根因是 workflow 用 `powershell` 执行 UTF-8/Unicode-heavy WinSSL 脚本

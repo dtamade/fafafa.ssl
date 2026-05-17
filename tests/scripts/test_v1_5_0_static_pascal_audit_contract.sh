@@ -85,10 +85,12 @@ require_fixed "docs/test_reports/STATIC_AUDIT_V1.5.0.md" "TSSLFactory" \
   "static audit report mentions the public facade"
 require_fixed "docs/test_reports/STATIC_AUDIT_V1.5.0.md" "WinSSL skeleton harnesses" \
   "static audit report documents the Windows-only skeleton tests"
-require_fixed "docs/test_reports/RELEASE_READINESS_V1.5.0.md" 'Status: `PASS_PENDING_APPROVAL`' \
-  "release readiness records pass pending approval"
+require_fixed "docs/test_reports/RELEASE_READINESS_V1.5.0.md" 'Status: `RELEASED`' \
+  "release readiness records released status"
 require_fixed "docs/test_reports/RELEASE_READINESS_V1.5.0.md" "Static Audit" \
   "release readiness references the static audit"
+require_fixed "docs/test_reports/RELEASE_READINESS_V1.5.0.md" 'Release-control status: `RELEASED`.' \
+  "release readiness records released control-plane status"
 
 require_fixed "RELEASE_NOTES_V1.5.0.md" "GitHub Actions cross-platform runtime evidence is already green on the current head" \
   "release notes describe the current cross-platform runtime truth"
