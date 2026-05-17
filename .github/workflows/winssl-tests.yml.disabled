@@ -6,16 +6,6 @@ on:
   pull_request:
     branches: [ master, develop ]
   workflow_dispatch:
-    inputs:
-      test_suite:
-        description: 'Test suite to run'
-        required: true
-        default: 'all'
-        type: choice
-        options:
-          - all
-          - winssl
-          - performance
 
 permissions:
   contents: read
@@ -32,13 +22,48 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: 🚀 Setup FPC
+      - name: 🚀 Setup FPC and Lazarus
+        shell: powershell
         run: |
-          # 在 Windows 上使用 chocolatey 安装 FPC
-          choco install freepascal
-          fpc -iV
+          choco install -y freepascal lazarus
 
-      - name: 📦 Cache FPC packages
+          $fpcCandidates = @(
+            "C:\tools\freepascal\bin\x86_64-win64",
+            "C:\tools\freepascal\bin\i386-win32",
+            "C:\tools\freepascal\bin"
+          )
+          foreach ($p in $fpcCandidates) {
+            if (Test-Path $p) {
+              $env:PATH = "$p;$env:PATH"
+              $p | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+              Write-Host ("[INFO] Added to PATH: " + $p)
+            }
+          }
+          if (-not (Get-Command fpc -ErrorAction SilentlyContinue)) {
+            Write-Host "[ERROR] fpc not found in PATH after installation" -ForegroundColor Red
+            exit 1
+          }
+          Write-Host ("[INFO] system fpc: " + (& fpc -iV))
+
+          $lazarusCandidates = @(
+            "C:\lazarus",
+            "C:\Program Files\Lazarus",
+            "C:\tools\lazarus"
+          )
+          foreach ($p in $lazarusCandidates) {
+            if (Test-Path $p) {
+              $env:PATH = "$p;$env:PATH"
+              $p | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+              Write-Host ("[INFO] Added to PATH: " + $p)
+            }
+          }
+          if (-not (Get-Command lazbuild -ErrorAction SilentlyContinue)) {
+            Write-Host "[ERROR] lazbuild not found in PATH after Lazarus installation" -ForegroundColor Red
+            exit 1
+          }
+          Write-Host ("[INFO] system lazbuild: " + (& lazbuild --version | Select-Object -First 1))
+
+      - name: 📦 Cache Lazarus state
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: |
@@ -48,7 +73,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-lazarus-
 
-      - name: 🔍 Check Windows Version
+      - name: 🔍 Check Windows version
+        shell: powershell
         run: |
           Write-Host "=== Windows Environment Info ===" -ForegroundColor Green
           Write-Host "OS: $((Get-CimInstance Win32_OperatingSystem).Caption)" -ForegroundColor Yellow
@@ -56,273 +82,62 @@ jobs:
           Write-Host "Architecture: $env:PROCESSOR_ARCHITECTURE" -ForegroundColor Yellow
           Write-Host "Schannel available: $(Test-Path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL')" -ForegroundColor Yellow
 
-      - name: 🏗️ Build WinSSL Library
+      - name: 🧪 Run quick WinSSL smoke
+        id: quick_smoke
+        shell: powershell
         run: |
-          Write-Host "=== Building WinSSL Library ===" -ForegroundColor Green
-          lazbuild src/fafafa.ssl.winssl.lpk
-
-      - name: 🏗️ Build WinSSL Test Suite
-        run: |
-          Write-Host "=== Building WinSSL Tests ===" -ForegroundColor Green
-          lazbuild tests/test_winssl_comprehensive.lpi
-          if (Test-Path "tests\bin\test_winssl_comprehensive.exe") {
-            Write-Host "✅ WinSSL test compiled successfully" -ForegroundColor Green
-          } else {
-            Write-Host "❌ WinSSL test compilation failed" -ForegroundColor Red
-            exit 1
+          New-Item -ItemType Directory -Force -Path test-reports | Out-Null
+          $quickLog = "test-reports/winssl_quick_smoke_${{ github.run_id }}.log"
+          powershell -ExecutionPolicy Bypass -File tests/quick_winssl_validation.ps1 *>&1 | Tee-Object -FilePath $quickLog
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
           }
 
-      - name: 🧪 Run WinSSL API Tests
+      - name: 🧪 Run broader WinSSL runtime suite
+        id: runtime_suite
+        shell: powershell
         run: |
-          Write-Host "=== Testing WinSSL API ===" -ForegroundColor Cyan
-          Write-Host "Testing Windows Schannel API bindings..." -ForegroundColor Yellow
-          .\tests\bin\test_winssl_comprehensive.exe
-          if ($LASTEXITCODE -eq 0) {
-            Write-Host "✅ WinSSL API tests PASSED" -ForegroundColor Green
-          } else {
-            Write-Host "❌ WinSSL API tests FAILED" -ForegroundColor Red
-            exit 1
+          New-Item -ItemType Directory -Force -Path test-reports | Out-Null
+          $runtimeLog = "test-reports/winssl_runtime_suite_${{ github.run_id }}.log"
+          $exitCode = 0
+          Start-Transcript -Path $runtimeLog
+          try {
+            powershell -ExecutionPolicy Bypass -File tests/run_winssl_tests.ps1
+            $exitCode = $LASTEXITCODE
+          } finally {
+            Stop-Transcript
+          }
+          if ($exitCode -ne 0) {
+            exit $exitCode
           }
 
-      - name: 🧪 Test WinSSL Client Mode
+      - name: 📊 Generate WinSSL workflow summary
+        if: always()
+        shell: powershell
         run: |
-          Write-Host "=== Testing WinSSL Client Mode ===" -ForegroundColor Cyan
-          # 创建简单的客户端测试
-          $testCode = @'
-          program test_winssl_client;
-          uses
-            SysUtils, fafafa.ssl.factory, fafafa.ssl.abstract.intf, fafafa.ssl.winssl.lib;
-          var
-            Lib: ISSLLibrary;
-            Ctx: ISSLContext;
-            Conn: ISSLConnection;
-          begin
-            try
-              WriteLn('Creating WinSSL library instance...');
-              Lib := TWinSSLLibrary.Create;
-              if not Lib.Initialize then
-              begin
-                WriteLn('❌ Failed to initialize WinSSL');
-                Halt(1);
-              end;
-              WriteLn('✅ WinSSL initialized successfully');
-              WriteLn('Library type: ', Lib.GetLibraryType);
-              WriteLn('Version: ', Lib.GetVersion);
+          $summary = @"
+          ## 🪟 WinSSL Workflow Report
 
-              WriteLn('Creating client context...');
-              Ctx := Lib.CreateContext(sslContextClient);
-              WriteLn('✅ Client context created');
+          - Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+          - Platform: Windows $([System.Environment]::OSVersion.Version)
+          - Workflow file: .github/workflows/winssl-tests.yml.disabled
 
-              WriteLn('Testing session management...');
-              if Assigned(Ctx) then
-                WriteLn('✅ Session management available');
+          | Lane | Outcome | Evidence |
+          |------|---------|----------|
+          | Quick smoke | ${{ steps.quick_smoke.outcome }} | test-reports/winssl_quick_smoke_${{ github.run_id }}.log |
+          | Broader runtime suite | ${{ steps.runtime_suite.outcome }} | test-reports/winssl_runtime_suite_${{ github.run_id }}.log |
 
-              WriteLn('');
-              WriteLn('🎉 WinSSL Client Mode Test PASSED');
-            except
-              on E: Exception do
-              begin
-                WriteLn('❌ Error: ', E.Message);
-                Halt(1);
-              end;
-            end;
-          end.
-          '@
-
-          $testCode | Out-File -FilePath "test_client.pas" -Encoding UTF8
-          fpc -Fusrc -FE. -Fi"src" test_client.pas
-          .\test_client.exe
-
-      - name: 🧪 Test WinSSL Server Mode
-        run: |
-          Write-Host "=== Testing WinSSL Server Mode ===" -ForegroundColor Cyan
-          # 创建简单的服务器测试
-          $testCode = @'
-          program test_winssl_server;
-          uses
-            SysUtils, fafafa.ssl.factory, fafafa.ssl.abstract.intf, fafafa.ssl.winssl.lib;
-          var
-            Lib: ISSLLibrary;
-            Ctx: ISSLContext;
-          begin
-            try
-              WriteLn('Creating WinSSL library instance...');
-              Lib := TWinSSLLibrary.Create;
-              if not Lib.Initialize then
-              begin
-                WriteLn('❌ Failed to initialize WinSSL');
-                Halt(1);
-              end;
-              WriteLn('✅ WinSSL initialized successfully');
-
-              WriteLn('Creating server context...');
-              Ctx := Lib.CreateContext(sslContextServer);
-              if Ctx = nil then
-              begin
-                WriteLn('⚠️  Server context not yet implemented (expected)');
-              end
-              else
-              begin
-                WriteLn('✅ Server context created');
-              end;
-
-              WriteLn('');
-              WriteLn('🎉 WinSSL Server Mode Test PASSED');
-            except
-              on E: Exception do
-              begin
-                WriteLn('❌ Error: ', E.Message);
-                Halt(1);
-              end;
-            end;
-          end.
-          '@
-
-          $testCode | Out-File -FilePath "test_server.pas" -Encoding UTF8
-          fpc -Fusrc -FE. -Fi"src" test_server.pas
-          .\test_server.exe
-
-      - name: 🧪 Test WinSSL Session Management
-        run: |
-          Write-Host "=== Testing WinSSL Session Management ===" -ForegroundColor Cyan
-
-          $testCode = @'
-          program test_winssl_session;
-          uses
-            SysUtils, fafafa.ssl.winssl.connection, fafafa.ssl.abstract.intf;
-          var
-            Session: TWinSSLSession;
-          begin
-            try
-              WriteLn('Creating WinSSL session...');
-              Session := TWinSSLSession.Create;
-              try
-                WriteLn('✅ Session created');
-                WriteLn('Session ID: ', Session.GetID);
-                WriteLn('Creation Time: ', DateTimeToStr(Session.GetCreationTime));
-                WriteLn('Timeout: ', Session.GetTimeout, ' seconds');
-                WriteLn('Is Valid: ', Session.IsValid);
-                WriteLn('Is Resumable: ', Session.IsResumable);
-
-                WriteLn('Setting timeout...');
-                Session.SetTimeout(600);
-                WriteLn('New timeout: ', Session.GetTimeout, ' seconds');
-
-                WriteLn('');
-                WriteLn('🎉 WinSSL Session Management Test PASSED');
-              finally
-                Session.Free;
-              end;
-            except
-              on E: Exception do
-              begin
-                WriteLn('❌ Error: ', E.Message);
-                Halt(1);
-              end;
-            end;
-          end.
-          '@
-
-          $testCode | Out-File -FilePath "test_session.pas" -Encoding UTF8
-          fpc -Fusrc -FE. -Fi"src" test_session.pas
-          .\test_session.exe
-
-      - name: 🧪 Test WinSSL Certificate Support
-        run: |
-          Write-Host "=== Testing WinSSL Certificate Support ===" -ForegroundColor Cyan
-
-          $testCode = @'
-          program test_winssl_cert;
-          uses
-            SysUtils, fafafa.ssl.winssl.certificate, fafafa.ssl.abstract.intf;
-          var
-            Cert: TWinSSLCertificate;
-          begin
-            try
-              WriteLn('Testing certificate management...');
-              WriteLn('✅ Certificate module loaded');
-
-              WriteLn('');
-              WriteLn('🎉 WinSSL Certificate Test PASSED');
-            except
-              on E: Exception do
-              begin
-                WriteLn('❌ Error: ', E.Message);
-                Halt(1);
-              end;
-            end;
-          end.
-          '@
-
-          $testCode | Out-File -FilePath "test_cert.pas" -Encoding UTF8
-          fpc -Fusrc -FE. -Fi"src" test_cert.pas
-          .\test_cert.exe
-
-      - name: 📊 Generate WinSSL Test Report
-        run: |
-          Write-Host "=== Generating WinSSL Test Report ===" -ForegroundColor Green
-          $Report = @"
-          ## 🪟 WinSSL Test Report
-
-          **Date**: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
-          **Platform**: Windows $([System.Environment]::OSVersion.Version)
-
-          ### ✅ Test Results
-
-          | Test Suite | Status | Duration |
-          |------------|--------|----------|
-          | WinSSL API | PASS | < 1 min |
-          | Client Mode | PASS | < 1 min |
-          | Server Mode | PASS | < 1 min |
-          | Session Management | PASS | < 1 min |
-          | Certificate Support | PASS | < 1 min |
-
-          ### 📋 Coverage Summary
-
-          - ✅ **Library Initialization**: 100%
-          - ✅ **Context Creation**: 100%
-          - ✅ **Connection Management**: 100%
-          - ✅ **Session Management**: 100%
-          - ✅ **Certificate Handling**: 100%
-
-          ### 🎯 WinSSL Status
-
-          **Production Ready**: ✅ YES
-
-          The WinSSL backend is fully functional and production-ready for:
-          - ✅ Zero-dependency deployment on Windows
-          - ✅ Client-side TLS connections
-          - ✅ Server-side TLS connections (via AcceptSecurityContext)
-          - ✅ Session caching and reuse
-          - ✅ Certificate validation
-
-          ### 🔗 Next Steps
-
-          1. ✅ All core features implemented
-          2. ✅ Full test coverage achieved
-          3. 🔄 Integration testing with real servers
-          4. 📚 Documentation complete
-
-          **Overall Assessment**: 🌟 EXCELLENT
+          This template records the observed results of the repository WinSSL scripts for the current run only.
+          Review the uploaded transcripts before making backend readiness or production support claims.
           "@
+          $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
 
-          $Report | Out-File -FilePath "Winssl-Test-Report.md" -Encoding UTF8
-          Write-Host $Report
-
-      - name: 📤 Upload WinSSL Report
+      - name: 📤 Upload WinSSL evidence
+        if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: WinSSL-Test-Report
-          path: Winssl-Test-Report.md
-
-      - name: 📊 Mark as Success
-        run: |
-          Write-Host ""
-          Write-Host "========================================" -ForegroundColor Green
-          Write-Host "🎉 WinSSL Integration Tests COMPLETE" -ForegroundColor Green
-          Write-Host "========================================" -ForegroundColor Green
-          Write-Host ""
-          Write-Host "✅ All WinSSL tests PASSED" -ForegroundColor Green
-          Write-Host "✅ WinSSL backend is PRODUCTION READY" -ForegroundColor Green
-          Write-Host "✅ Zero-dependency Windows deployment SUPPORTED" -ForegroundColor Green
-          Write-Host ""
+          name: winssl-windows-evidence-${{ github.run_id }}
+          path: |
+            test-reports/winssl_quick_smoke_${{ github.run_id }}.log
+            test-reports/winssl_runtime_suite_${{ github.run_id }}.log
+          if-no-files-found: warn

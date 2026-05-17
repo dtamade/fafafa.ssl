@@ -110,17 +110,9 @@ jobs:
   # 编译检查
   # ==============================================================================
   build-check:
-    name: 🏗️ Build Verification
+    name: 🏗️ Build Verification (System Toolchain)
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            fpc: '3.2.2'
-          - os: ubuntu-latest
-            fpc: '3.3.1'
 
     steps:
       - name: 📥 Checkout code
@@ -128,13 +120,14 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: 🔧 Setup FPC
+      - name: 🔧 Setup FPC and Lazarus
         run: |
           sudo apt-get update
-          sudo apt-get install -y fpc
-          fpc -iV
+          sudo apt-get install -y fpc lazarus
+          echo "[INFO] system fpc: $(fpc -iV)"
+          echo "[INFO] system lazbuild: $(lazbuild --version | head -n 1)"
 
-      - name: 📦 Install dependencies
+      - name: 📦 Install OpenSSL build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libssl-dev pkg-config
@@ -266,36 +259,18 @@ jobs:
           echo "Generated on: $(date)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "### ✅ Quality Checks" >> $GITHUB_STEP_SUMMARY
-          echo "- Code style validation" >> $GITHUB_STEP_SUMMARY
-          echo "- Documentation completeness" >> $GITHUB_STEP_SUMMARY
-          echo "- Build verification" >> $GITHUB_STEP_SUMMARY
-          echo "- Module integrity" >> $GITHUB_STEP_SUMMARY
-          echo "- Security scan" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Workflow Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Style | ${{ needs.code-style.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Documentation | ${{ needs.docs-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Verification | ${{ needs.build-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Module Integrity | ${{ needs.module-integrity.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Check | ${{ needs.security-check.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "### 📈 Project Status" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Test Coverage | ~85% |" >> $GITHUB_STEP_SUMMARY
-          echo "| Code Quality | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Documentation | ✅ Complete |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build Status | ✅ Passing |" >> $GITHUB_STEP_SUMMARY
+          echo "### 📌 Toolchain Truth" >> $GITHUB_STEP_SUMMARY
+          echo "- Build verification uses the runner system toolchain installed in this workflow." >> $GITHUB_STEP_SUMMARY
+          echo "- Review individual job logs and uploaded artifacts for concrete findings." >> $GITHUB_STEP_SUMMARY
+          echo "- This dormant template does not assert fixed coverage percentages, backend completeness, or a release grade." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### 🎯 Quality Score" >> $GITHUB_STEP_SUMMARY
-          echo "**Overall Grade: A** ✅" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "<details>" >> $GITHUB_STEP_SUMMARY
-          echo "<summary>View detailed metrics</summary>" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "P0 Modules:        6/6   (100%) ✅" >> $GITHUB_STEP_SUMMARY
-          echo "P1 Modules:        14/14 (100%) ✅" >> $GITHUB_STEP_SUMMARY
-          echo "P2 Modules:        11/11 (100%) ✅" >> $GITHUB_STEP_SUMMARY
-          echo "P3 Modules:        15/15 (100%) ✅" >> $GITHUB_STEP_SUMMARY
-          echo "WinSSL Backend:    100% ✅" >> $GITHUB_STEP_SUMMARY
-          echo "Test Programs:     7+ (419+ tests) ✅" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "</details>" >> $GITHUB_STEP_SUMMARY
