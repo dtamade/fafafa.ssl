@@ -285,6 +285,61 @@
   - change:
     - sync the builder explicit-hostname cut into persistent repo working memory
 
+### TLS Connector Override Without Context Fallback
+
+- add `docs/plans/2026-05-18-tls-connector-override-no-context-fallback.md`
+  - purpose:
+    - define the bounded contract-cleanup batch that removes inherited context fallback from the connector override precedence test
+    - keep production `TSSLConnector` code untouched because it already uses pure per-connection `SetServerName(...)`
+
+- add `tests/scripts/test_tls_connector_override_no_context_level_sni_guidance.sh`
+  - purpose:
+    - fail if `tests/test_tls_connector_hostname_override_precedence.pas` still teaches `Ctx.SetServerName(...)`
+
+- update `tests/test_tls_connector_hostname_override_precedence.pas`
+  - change:
+    - remove the mock context-level `SetServerName('ctx.example.com')` setup
+    - rename the empty case text so it no longer talks about clearing inherited fallback
+
+- update `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - change:
+    - remove `tests/test_tls_connector_hostname_override_precedence.pas`
+    - keep the intentional compatibility label set aligned with the smaller remaining boundary
+
+- `bash -n tests/scripts/test_tls_connector_override_no_context_level_sni_guidance.sh`
+  - result: PASS
+  - summary:
+    - the new focused source contract is syntactically valid
+
+- `bash tests/scripts/test_tls_connector_override_no_context_level_sni_guidance.sh`
+  - result: PASS
+  - summary:
+    - connector override precedence test no longer teaches context-level SNI
+
+- `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - result: PASS
+  - summary:
+    - the intentional compatibility label set stayed green after removing the connector override test
+
+- `mkdir -p tmp/test_tls_connector_hostname_override_precedence && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_tls_connector_hostname_override_precedence -FEtmp/test_tls_connector_hostname_override_precedence -otmp/test_tls_connector_hostname_override_precedence/test_tls_connector_hostname_override_precedence tests/test_tls_connector_hostname_override_precedence.pas && ./tmp/test_tls_connector_hostname_override_precedence/test_tls_connector_hostname_override_precedence`
+  - result: PASS
+  - summary:
+    - connector override precedence behavior stayed green without the inherited context fallback input
+
+- update `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - change:
+    - remove `tests/test_tls_connector_hostname_override_precedence.pas` from the intentional compatibility set
+    - move the next recommendation to `tests/test_tls_connector_early_data_contract.pas`
+
+- update `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - change:
+    - add a dedicated closeout section for the connector override contract cleanup
+    - shrink the remaining client-side intentional compatibility surface again
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the connector override contract cleanup into persistent repo working memory
+
 ### Residual Context SNI Classification And WinSSL mTLS Skeleton Cleanup
 
 - add `docs/plans/2026-05-18-residual-context-sni-classification-and-mtls-skeleton-cleanup.md`

@@ -356,3 +356,23 @@
 - 所以下一条最合理的 `sslCtxClient` behavior migration RED 已再次前移：
   - 首选应转向 `tests/test_tls_connector_hostname_override_precedence.pas`
   - 然后再评估 `tests/test_tls_connector_early_data_contract.pas` 是否还需要继续以 inherited context fallback 作为 intentional 输入
+
+- 这条 connector override precedence 契约现在也已经脱离了 inherited context fallback 输入：
+  - `tests/test_tls_connector_hostname_override_precedence.pas` 不再需要先做 `Ctx.SetServerName('ctx.example.com')`
+  - 它真正锁住的只是：
+    - 非空 override 仍然胜出
+    - 空 override 仍然保持空字符串
+  - 这说明 connector 本身作为高层门面，已经可以完全独立地证明自己的 per-connection hostname override 语义
+
+- focused evidence 也说明这批只是测试/合同真相同步，没有新的生产实现变更：
+  - `bash tests/scripts/test_tls_connector_override_no_context_level_sni_guidance.sh` PASS
+  - `tests/test_tls_connector_hostname_override_precedence.pas` PASS
+  - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh` PASS
+
+- 因而当前剩余最直接的 connector-side intentional compatibility 输入再次收窄：
+  - `tests/test_tls_connector_early_data_contract.pas`
+  - 以及服务端兼容语义的 `tests/test_context_builder_server_servername_runtime_consistency.pas`
+
+- 所以下一条最合理的 `sslCtxClient` behavior migration RED 已再次前移：
+  - 首选应转向 `tests/test_tls_connector_early_data_contract.pas`
+  - 再决定 server-side compatibility control case 何时从当前 intentional 集合中拆开

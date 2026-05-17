@@ -505,9 +505,6 @@ var
 begin
   WriteLn('=== ', ACaseName, ' ===');
   Ctx := TMockContext.Create(sslCtxClient);
-  // INTENTIONAL_COMPAT: legacy context-level SNI coverage. This connector
-  // precedence contract deliberately starts from inherited context fallback.
-  Ctx.SetServerName('ctx.example.com');
   Connector := TSSLConnector.FromContext(Ctx);
   Transport := TMemoryStream.Create;
   TLSStream := nil;
@@ -528,7 +525,7 @@ begin
   WriteLn('[TEST] TLS connector hostname override precedence');
 
   RunCase('Case 1: non-empty override wins', 'override.example', 'override.example');
-  RunCase('Case 2: empty override clears inherited fallback', '', '');
+  RunCase('Case 2: empty override remains empty', '', '');
 
   WriteLn('---');
   WriteLn('Passed: ', TestsPassed);

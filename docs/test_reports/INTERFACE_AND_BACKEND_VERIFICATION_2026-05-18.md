@@ -202,7 +202,6 @@
 - 为了避免以后迁移时又漏掉“其实是故意保留的兼容语义”，这轮还把兼容锁点统一固化了：
   - `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
     - 现在覆盖：
-      - `test_tls_connector_hostname_override_precedence`
       - `test_context_builder_server_servername_runtime_consistency`
   - 这些测试现在都必须带 `INTENTIONAL_COMPAT:` 标签
 
@@ -581,6 +580,37 @@
   - `tests/test_tls_connector_hostname_override_precedence.pas`
   - 然后再评估 `tests/test_tls_connector_early_data_contract.pas` 是否还需要继续从 inherited context fallback 起步
 
+## 增量收口：connector override precedence 不再依赖 context fallback 输入
+
+- 继续往上收之后，`TSSLConnector` 的 override precedence 契约也已经不再需要 inherited context fallback 这个历史搭景：
+  - `tests/test_tls_connector_hostname_override_precedence.pas`
+  - 现在只保留 connector 自己真正需要证明的两件事：
+    - 非空 override 胜出
+    - 空 override 保持空字符串
+
+- 这批没有改生产 `TSSLConnector` 实现：
+  - `src/fafafa.ssl.tls.pas` 本来就走纯连接级 `ISSLClientConnection.SetServerName(...)`
+  - 这次只是把测试和合同真相收回到这个事实上
+
+- focused 证据：
+  - `tests/scripts/test_tls_connector_override_no_context_level_sni_guidance.sh`
+    - PASS
+    - 直接守住这份测试不再教 `Ctx.SetServerName(...)`
+  - `tests/test_tls_connector_hostname_override_precedence.pas`
+    - PASS
+    - 去掉 inherited fallback 输入后，override precedence 仍然稳定
+  - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+    - PASS
+    - 说明 intentional compatibility 集合在继续收缩后仍然稳定
+
+- 这一步之后，剩余最直接的 connector-side intentional compatibility 输入再次收窄：
+  - `test_tls_connector_early_data_contract`
+  - 以及服务端兼容语义的 `test_context_builder_server_servername_runtime_consistency`
+
+- 因而下一批最合理的 RED 已再次前移：
+  - `tests/test_tls_connector_early_data_contract.pas`
+  - 再决定 `test_context_builder_server_servername_runtime_consistency` 何时从当前 intentional 集合中拆开
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -611,8 +641,8 @@
 ### 下一批最值得做的事
 
 1. 再决定 `sslCtxClient` behavior migration 的第一条 RED
-   - 第一优先级改为 `tests/test_tls_connector_hostname_override_precedence.pas`
-   - 再明确 `tests/test_tls_connector_early_data_contract.pas` 是否还要继续保留 inherited context fallback 作为 intentional connector-side 输入
+   - 第一优先级改为 `tests/test_tls_connector_early_data_contract.pas`
+   - 再决定 `tests/test_context_builder_server_servername_runtime_consistency.pas` 何时从当前 intentional 集合中拆开
    - 明确新优先级应该怎样从 context-level 迁到 per-connection hostname 路径
 
 2. `TSSLConfig` 拆层与 capability model presence bits 仍然排在后面

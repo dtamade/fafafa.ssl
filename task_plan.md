@@ -125,6 +125,14 @@
     - `tests/test_connection_builder_hostname_precedence.pas`
     - `tests/test_tls_connector_hostname_override_precedence.pas`
     - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+- [completed] `TSSLConnector` override precedence 契约已不再依赖 inherited context fallback 输入：
+  - `tests/test_tls_connector_hostname_override_precedence.pas` 已移除 mock `Ctx.SetServerName('ctx.example.com')`
+  - 新增 `tests/scripts/test_tls_connector_override_no_context_level_sni_guidance.sh`
+  - `tests/test_tls_connector_hostname_override_precedence.pas` 已从 intentional-compat label 集合中移除
+  - focused 验证：
+    - `bash tests/scripts/test_tls_connector_override_no_context_level_sni_guidance.sh`
+    - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+    - `tests/test_tls_connector_hostname_override_precedence.pas`
 
 ## Scope
 
@@ -153,8 +161,8 @@
 ## Current Queue
 
 1. 继续选择下一条 `sslCtxClient` behavior migration RED：
-   - 第一优先级改为 `tests/test_tls_connector_hostname_override_precedence.pas`
-   - 然后再评估 `tests/test_tls_connector_early_data_contract.pas` 是否还需要继续从 inherited context fallback 起步
+   - 第一优先级改为 `tests/test_tls_connector_early_data_contract.pas`
+   - 然后再评估 `tests/test_context_builder_server_servername_runtime_consistency.pas` 与剩余 connector-side intentional 输入的收口顺序
    - 明确 connector / connection-builder / factory / builder 四层的新优先级和失败语义
 2. 在 dedicated client-side RED 明确后，再评估最终 public surface cleanup：
    - `TSSLConfig.ServerName` 是否继续留在当前 record 上
