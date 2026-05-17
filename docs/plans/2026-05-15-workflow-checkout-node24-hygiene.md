@@ -200,3 +200,4 @@ git diff --check
   - 对应 coverage batch 提交 `00428c8` 已推送，并记录自动 `CI` run `25984057687`
   - 上一轮 docs closeout `e85cf18` 对应 `CI` run `25984086002` 继续 SUCCESS，说明 cross-summary-missing closeout 没有误伤自动主线
   - 最新又补上 `check_wave_b_b2_evidence_consistency.sh` 的 cross-summary run_id focused contract；当前确认这里同样是 coverage 缺口而不是新的生产脚本 bug
+  - 对应 coverage batch 提交 `c148889` 已推送，并记录自动 `CI` run `25984350085`

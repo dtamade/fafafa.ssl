@@ -706,6 +706,11 @@
   - `closure_status_note=IN_PROGRESS`
   - 以及 IN_PROGRESS 分支的 next-actions truth
 
+- 这次提交 `c148889` 再次证明当前 `cross_summary run_id missing/mismatch` 这条线也只是 coverage gap，不是 prod bug：
+  - 脚本行为本身没变
+  - focused contract 只是把 row note、parse 计数和 IN_PROGRESS 分支的 next-actions truth 固化下来
+  - 因此远端自动 `CI` run `25984350085` 继续按增量 run id 记账即可
+
 - 因而当前 `wave-b-b2` 线上更合理的下一跳，已经从 cross-summary run_id 基本计数前移到 closed-closure guidance：
   - 优先补 cross-summary run_id issue 在 `closure_status=CLOSED` 分支下的 focused next-actions contract
   - 目标是确认它会继续落在 “closure 已闭环，但 evidence consistency 未对齐” 这条 truthful guidance，而不是混回 generic 或 IN_PROGRESS 分支
