@@ -340,6 +340,61 @@
   - change:
     - sync the connector override contract cleanup into persistent repo working memory
 
+### TLS Connector Early-Data Without Context Fallback
+
+- add `docs/plans/2026-05-18-tls-connector-early-data-no-context-fallback.md`
+  - purpose:
+    - define the bounded contract-cleanup batch that removes inherited context fallback from the connector early-data contract
+    - keep production `TSSLConnector` code untouched because it already applies explicit per-connection hostname before early-data queueing
+
+- add `tests/scripts/test_tls_connector_early_data_no_context_level_sni_guidance.sh`
+  - purpose:
+    - fail if `tests/test_tls_connector_early_data_contract.pas` still teaches `Ctx.SetServerName(...)`
+
+- update `tests/test_tls_connector_early_data_contract.pas`
+  - change:
+    - remove the mock context-level `SetServerName('ctx.example.com')` setup
+    - rename the server-name assertion so it describes explicit hostname application instead of overriding inherited fallback
+
+- `bash -n tests/scripts/test_tls_connector_early_data_no_context_level_sni_guidance.sh`
+  - result: PASS
+  - summary:
+    - the new focused source contract is syntactically valid
+
+- `bash tests/scripts/test_tls_connector_early_data_no_context_level_sni_guidance.sh`
+  - result: PASS
+  - summary:
+    - connector early-data contract no longer teaches context-level SNI
+
+- `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - result: PASS
+  - summary:
+    - the intentional compatibility label set stayed green while shrinking to the remaining server-side control case
+
+- `mkdir -p tmp/test_tls_connector_early_data_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_tls_connector_early_data_contract -FEtmp/test_tls_connector_early_data_contract -otmp/test_tls_connector_early_data_contract/test_tls_connector_early_data_contract tests/test_tls_connector_early_data_contract.pas && ./tmp/test_tls_connector_early_data_contract/test_tls_connector_early_data_contract`
+  - result: PASS
+  - summary:
+    - connector early-data ordering and unsupported-path behavior stayed green without the inherited context fallback input
+
+- update `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - change:
+    - add the connector early-data contract cleanup as the fifth cut
+    - move the next recommendation to `tests/test_context_builder_server_servername_runtime_consistency.pas`
+
+- update `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - change:
+    - add a dedicated closeout section for the connector early-data contract cleanup
+    - record that the remaining intentional compatibility label set is now only the server-side control case
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the connector early-data contract cleanup into persistent repo working memory
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current early-data contract cleanup batch has no whitespace or patch-format issues
+
 ### Residual Context SNI Classification And WinSSL mTLS Skeleton Cleanup
 
 - add `docs/plans/2026-05-18-residual-context-sni-classification-and-mtls-skeleton-cleanup.md`

@@ -133,6 +133,13 @@
     - `bash tests/scripts/test_tls_connector_override_no_context_level_sni_guidance.sh`
     - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
     - `tests/test_tls_connector_hostname_override_precedence.pas`
+- [completed] `TSSLConnector` early-data 合同已不再依赖 inherited context fallback 输入：
+  - `tests/test_tls_connector_early_data_contract.pas` 已移除 mock `Ctx.SetServerName('ctx.example.com')`
+  - 新增 `tests/scripts/test_tls_connector_early_data_no_context_level_sni_guidance.sh`
+  - focused 验证：
+    - `bash tests/scripts/test_tls_connector_early_data_no_context_level_sni_guidance.sh`
+    - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+    - `tests/test_tls_connector_early_data_contract.pas`
 
 ## Scope
 
@@ -161,9 +168,9 @@
 ## Current Queue
 
 1. 继续选择下一条 `sslCtxClient` behavior migration RED：
-   - 第一优先级改为 `tests/test_tls_connector_early_data_contract.pas`
-   - 然后再评估 `tests/test_context_builder_server_servername_runtime_consistency.pas` 与剩余 connector-side intentional 输入的收口顺序
-   - 明确 connector / connection-builder / factory / builder 四层的新优先级和失败语义
+   - 第一优先级改为 `tests/test_context_builder_server_servername_runtime_consistency.pas`
+   - 然后再评估最后一条 intentional compatibility control case 应继续保留多少 server-side 兼容语义
+   - 明确 public compatibility surface 的最终边界与失败语义
 2. 在 dedicated client-side RED 明确后，再评估最终 public surface cleanup：
    - `TSSLConfig.ServerName` 是否继续留在当前 record 上
    - builder `WithSNI(...)` 是否继续保留当前命名/入口

@@ -376,3 +376,24 @@
 - 所以下一条最合理的 `sslCtxClient` behavior migration RED 已再次前移：
   - 首选应转向 `tests/test_tls_connector_early_data_contract.pas`
   - 再决定 server-side compatibility control case 何时从当前 intentional 集合中拆开
+
+- 这条 connector early-data contract 现在也已经脱离了 inherited context fallback 输入：
+  - `tests/test_tls_connector_early_data_contract.pas` 不再需要先做 `Ctx.SetServerName('ctx.example.com')`
+  - 它真正锁住的是：
+    - session 先被应用
+    - 显式 server name 被写到连接
+    - early data 在 connect 前排队
+    - unsupported early-data 路径继续返回既有错误语义
+  - 这说明 connector 的 early-data convenience surface 和 override precedence 一样，都已经可以完全独立地证明自己的 per-connection hostname 语义
+
+- focused evidence 同样说明这批只是测试/合同真相同步，没有新的生产实现变更：
+  - `bash tests/scripts/test_tls_connector_early_data_no_context_level_sni_guidance.sh` PASS
+  - `tests/test_tls_connector_early_data_contract.pas` PASS
+  - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh` PASS
+
+- 因而当前剩余显式 intentional compatibility label 集合已经收窄到最后一个服务端控制案例：
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+
+- 所以下一条最合理的 bounded review 已再次前移：
+  - 首选应转向 `tests/test_context_builder_server_servername_runtime_consistency.pas`
+  - 再决定 public compatibility surface 还能保留到什么边界

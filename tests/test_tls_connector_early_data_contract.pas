@@ -736,9 +736,6 @@ begin
 
   CtxObj := TMockContext.Create(sslCtxClient, True);
   Ctx := CtxObj;
-  // INTENTIONAL_COMPAT: legacy context-level SNI coverage. This connector
-  // early-data contract deliberately starts from inherited context fallback.
-  Ctx.SetServerName('ctx.example.com');
 
   Connector := TSSLConnector.FromContext(Ctx)
     .WithSession(TMockSession.Create('connector-session'))
@@ -752,7 +749,7 @@ begin
 
     Probe := TLSStream.Connection as IMockConnectorProbe;
     Check(Probe.WasSessionApplied, 'Connector should apply the configured session before connect');
-    CheckEqualsStr('Connector should override inherited server name',
+    CheckEqualsStr('Connector should apply the explicit server name',
       'early.example.com', Probe.GetObservedServerName);
     CheckEqualsStr('Connector should queue early data before connect',
       'PING', Probe.GetObservedEarlyDataText);

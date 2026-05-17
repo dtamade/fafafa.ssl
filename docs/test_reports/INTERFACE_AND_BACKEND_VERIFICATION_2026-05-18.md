@@ -611,6 +611,40 @@
   - `tests/test_tls_connector_early_data_contract.pas`
   - 再决定 `test_context_builder_server_servername_runtime_consistency` 何时从当前 intentional 集合中拆开
 
+## 增量收口：connector early-data 合同不再依赖 context fallback 输入
+
+- 继续沿着 connector 真相收之后，`TSSLConnector` 的 early-data convenience contract 也已经不再需要 inherited context fallback 这个旧搭景：
+  - `tests/test_tls_connector_early_data_contract.pas`
+  - 现在真正锁住的是：
+    - session 先被应用
+    - 显式 server name 被写入连接
+    - early data 在 connect 前排队
+    - unsupported early-data 路径继续给出既有失败语义
+
+- 这批同样没有改生产 `TSSLConnector` 实现：
+  - `src/fafafa.ssl.tls.pas` 的正式语义本来就是 `ApplyClientOptions(..., AServerName)` 后再尝试 `TryQueueEarlyData(...)`
+  - 这次只是把测试和合同真相继续收回到这条显式连接级路径
+
+- focused 证据：
+  - `tests/scripts/test_tls_connector_early_data_no_context_level_sni_guidance.sh`
+    - PASS
+    - 直接守住这份测试不再教 `Ctx.SetServerName(...)`
+  - `tests/test_tls_connector_early_data_contract.pas`
+    - PASS
+    - 去掉 inherited fallback 输入后，session/servername/earlydata/connect 顺序仍然稳定
+  - `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+    - PASS
+    - 说明 intentional compatibility label 集合继续稳定缩到服务端控制案例
+
+- 这一步之后，connector-side 的 inherited context fallback 输入已经全部从普通 contract 真相里移出：
+  - override precedence 已收口
+  - early-data convenience contract 已收口
+  - 剩余 intentional compatibility label 集合只剩 `test_context_builder_server_servername_runtime_consistency`
+
+- 因而下一批最合理的 bounded review 再次前移：
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+  - 再决定 `TSSLConfig.ServerName` / `WithSNI(...)` 这类 public compatibility surface 何时继续收紧
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -627,6 +661,10 @@
   - PASS
 - `tests/integration/test_cross_backend_errors_contract.pas`
   - PASS
+- `bash tests/scripts/test_tls_connector_early_data_no_context_level_sni_guidance.sh`
+  - PASS
+- `tests/test_tls_connector_early_data_contract.pas`
+  - PASS
 - `git diff --check`
   - PASS
 
@@ -641,9 +679,9 @@
 ### 下一批最值得做的事
 
 1. 再决定 `sslCtxClient` behavior migration 的第一条 RED
-   - 第一优先级改为 `tests/test_tls_connector_early_data_contract.pas`
-   - 再决定 `tests/test_context_builder_server_servername_runtime_consistency.pas` 何时从当前 intentional 集合中拆开
-   - 明确新优先级应该怎样从 context-level 迁到 per-connection hostname 路径
+   - 第一优先级改为 `tests/test_context_builder_server_servername_runtime_consistency.pas`
+   - 再决定最后这条 intentional compatibility control case 应该继续保留多少 server-side 兼容语义
+   - 明确 public compatibility surface 还能保留到什么边界
 
 2. `TSSLConfig` 拆层与 capability model presence bits 仍然排在后面
    - 它们是更大的设计债，不是当前 SNI 迁移主线的下一刀

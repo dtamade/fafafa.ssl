@@ -213,6 +213,13 @@ Delivered fourth cut:
 - new focused source contract `tests/scripts/test_tls_connector_override_no_context_level_sni_guidance.sh` now guards that this test does not regress back to context-level SNI guidance
 - connector override precedence behavior stayed green without the old compatibility setup, proving the contract only needs explicit per-connection override semantics
 
+Delivered fifth cut:
+
+- `tests/test_tls_connector_early_data_contract.pas` no longer uses inherited context fallback as an intentional input
+- the mock context-level `SetServerName('ctx.example.com')` setup was removed
+- new focused source contract `tests/scripts/test_tls_connector_early_data_no_context_level_sni_guidance.sh` now guards that this test does not regress back to context-level SNI guidance
+- connector early-data ordering behavior stayed green without the old compatibility setup, proving the contract only needs explicit per-connection hostname plus early-data sequencing
+
 ## Progress Report
 
 ### Workstream status
@@ -244,16 +251,16 @@ Delivered fourth cut:
 Choose one bounded implementation family only:
 
 1. **`sslCtxClient` behavior migration RED selection**
-   - start with `tests/test_tls_connector_early_data_contract.pas`
-   - then decide whether `tests/test_context_builder_server_servername_runtime_consistency.pas` should remain the last intentional compatibility-locking control case in this label set
-   - explicitly define new precedence between builder/factory/context and per-connection hostname paths
+   - start with `tests/test_context_builder_server_servername_runtime_consistency.pas`
+   - then decide whether any remaining client-side compatibility surfaces still deserve dedicated coverage or should move fully to explicit per-connection/server-side semantics
+   - explicitly define the final boundary between deprecated context-level compatibility and the supported high-level APIs
 2. **Final surface cleanup prep**
    - re-evaluate whether `TSSLConfig.ServerName` and builder `WithSNI(...)` still need their current naming/placement now that builder/factory/runtime paths all expose compatibility warnings
 3. **Wider public-surface cleanup**
    - stage follow-up work only after the first behavior-migration RED is pinned and verified
-Recommended first pick: **`tests/test_tls_connector_early_data_contract.pas` as the next `sslCtxClient` behavior-migration RED**.
+Recommended first pick: **`tests/test_context_builder_server_servername_runtime_consistency.pas` as the next bounded compatibility-control review**.
 
-Builder/factory/shared-shim warning work, residual test-surface classification, the first server-side dead-compat cut, and the `sslCtxBoth` ambiguity cut are no longer the blocker; the next highest-value work is choosing the first `sslCtxClient` behavior-migration RED.
+Builder/factory/shared-shim warning work, residual test-surface classification, connector-side contract cleanup, and the `sslCtxBoth` ambiguity cut are no longer the blocker; the next highest-value work is deciding how much of the last server-side compatibility control case still deserves to survive.
 
 ## Verification
 
