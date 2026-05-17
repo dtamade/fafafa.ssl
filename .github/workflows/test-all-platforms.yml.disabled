@@ -23,12 +23,6 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 60
 
-    strategy:
-      fail-fast: false
-      matrix:
-        fpc-version: [ '3.2.2', '3.3.1' ]
-        # OpenSSL version: '1.1', '3.0'
-
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -88,9 +82,8 @@ jobs:
           path: |
             ~/.lazarus
             ~/.fpcpkg
-          key: ${{ runner.os }}-fpc${{ matrix.fpc-version }}-lazarus-${{ hashFiles('**/*.lpi', '**/*.lpk') }}
+          key: ${{ runner.os }}-lazarus-${{ hashFiles('**/*.lpi', '**/*.lpk') }}
           restore-keys: |
-            ${{ runner.os }}-fpc${{ matrix.fpc-version }}-
             ${{ runner.os }}-lazarus-
 
       - name: 🔍 Install OpenSSL (Windows)
@@ -179,7 +172,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: Test-Results-Windows-FPC${{ matrix.fpc-version }}
+          name: Test-Results-Windows
           path: |
             tests/bin/*.exe
             tests/bin/*.log
@@ -191,11 +184,6 @@ jobs:
     name: 🐧 Linux Tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
-
-    strategy:
-      fail-fast: false
-      matrix:
-        fpc-version: [ '3.2.2', '3.3.1' ]
 
     steps:
       - name: 📥 Checkout code
@@ -228,9 +216,8 @@ jobs:
           path: |
             ~/.lazarus
             ~/.fpcpkg
-          key: ${{ runner.os }}-fpc${{ matrix.fpc-version }}-lazarus-${{ hashFiles('**/*.lpi', '**/*.lpk') }}
+          key: ${{ runner.os }}-lazarus-${{ hashFiles('**/*.lpi', '**/*.lpk') }}
           restore-keys: |
-            ${{ runner.os }}-fpc${{ matrix.fpc-version }}-
             ${{ runner.os }}-lazarus-
 
       - name: 🏗️ Compile tests
@@ -259,7 +246,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: Test-Results-Linux-FPC${{ matrix.fpc-version }}
+          name: Test-Results-Linux
           path: tests/bin/*.exe
 
   # ==============================================================================
@@ -269,11 +256,6 @@ jobs:
     name: 🍎 macOS Tests
     runs-on: macos-latest
     timeout-minutes: 60
-
-    strategy:
-      fail-fast: false
-      matrix:
-        fpc-version: [ '3.2.2', '3.3.1' ]
 
     steps:
       - name: 📥 Checkout code
@@ -331,6 +313,13 @@ jobs:
             fi
           done
 
+      - name: 📊 Upload test results
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: Test-Results-macOS
+          path: tests/bin/*
+
   # ==============================================================================
   # 汇总所有测试结果
   # ==============================================================================
@@ -355,14 +344,22 @@ jobs:
         run: |
           echo "## 🧪 fafafa.ssl Multi-Platform Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | Status | FPC Version | Artifacts |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|--------|-------------|-----------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Windows | ✅ | 3.2.2 | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Windows | ✅ | 3.3.1 | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Linux | ✅ | 3.2.2 | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Linux | ✅ | 3.3.1 | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS | ✅ | 3.2.2 | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS | ✅ | 3.3.1 | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Result | Artifact |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|----------|" >> $GITHUB_STEP_SUMMARY
+
+          WINDOWS_RESULT="${{ needs.test-windows.result }}"
+          LINUX_RESULT="${{ needs.test-linux.result }}"
+          MACOS_RESULT="${{ needs.test-macos.result }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          echo "| Windows | ${WINDOWS_RESULT} | [Download](${RUN_URL}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux | ${LINUX_RESULT} | [Download](${RUN_URL}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | ${MACOS_RESULT} | [Download](${RUN_URL}) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Downloaded artifacts" >> $GITHUB_STEP_SUMMARY
+          find test-results -mindepth 1 -maxdepth 1 -type d | sort | while read -r artifact_dir; do
+            echo "- $(basename "$artifact_dir")" >> $GITHUB_STEP_SUMMARY
+          done
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📋 Test Coverage" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Core modules (P0): 6/6" >> $GITHUB_STEP_SUMMARY
