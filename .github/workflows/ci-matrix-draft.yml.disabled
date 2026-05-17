@@ -63,17 +63,6 @@ jobs:
   linux-matrix:
     needs: compile-gate
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        openssl: ['3.0', '3.1', '3.2']
-        include:
-          - openssl: '3.0'
-            apt_package: 'libssl3'
-          - openssl: '3.1'
-            apt_package: 'libssl3'
-          - openssl: '3.2'
-            apt_package: 'libssl3'
 
     steps:
     - name: Checkout
@@ -85,7 +74,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y fpc libssl-dev
-        openssl version
+        echo "[INFO] system OpenSSL: $(openssl version)"
 
     - name: Run P2 module tests
       run: |
@@ -97,7 +86,7 @@ jobs:
       if: always()
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
       with:
-        name: linux-openssl-${{ matrix.openssl }}-reports
+        name: linux-system-openssl-reports
         path: test-reports/
         retention-days: 14
 
