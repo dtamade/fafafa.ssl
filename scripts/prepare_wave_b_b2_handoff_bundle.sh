@@ -399,6 +399,12 @@ report_chain_note="ok"
 if [[ ! -f "$closure_abs" ]]; then
   report_chain_issues+=("closure_report missing")
 else
+  closure_report_run_id="$(parse_run_id_md "$closure_abs")"
+  if [[ -z "$closure_report_run_id" ]]; then
+    report_chain_issues+=("closure_report run_id missing")
+  elif [[ "$closure_report_run_id" != "$RUN_ID" ]]; then
+    report_chain_issues+=("closure_report run_id mismatch")
+  fi
   closure_status="$(parse_closure_status_md "$closure_abs")"
   if [[ -z "$closure_status" ]]; then
     report_chain_issues+=("closure_status missing")
@@ -410,6 +416,12 @@ fi
 if [[ ! -f "$consistency_abs" ]]; then
   report_chain_issues+=("consistency_report missing")
 else
+  consistency_report_run_id="$(parse_run_id_md "$consistency_abs")"
+  if [[ -z "$consistency_report_run_id" ]]; then
+    report_chain_issues+=("consistency_report run_id missing")
+  elif [[ "$consistency_report_run_id" != "$RUN_ID" ]]; then
+    report_chain_issues+=("consistency_report run_id mismatch")
+  fi
   consistency_status="$(parse_consistency_status_md "$consistency_abs")"
   if [[ -z "$consistency_status" ]]; then
     report_chain_issues+=("consistency_status missing")
