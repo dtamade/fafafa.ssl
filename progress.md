@@ -104,6 +104,65 @@
 - `git diff --check`
   - result: PASS
 
+### Thirty-Fourth-Order Route Review
+
+- `sed -n '900,945p' scripts/check_wave_b_b2_evidence_consistency.sh`
+  - result: PASS
+  - summary:
+    - inconsistent-consistency next actions still key off `closure_status_note`
+    - when that note is `CLOSED`, the script already routes to the truthful closed-closure guidance branch
+
+- `sed -n '1,220p' tests/scripts/test_wave_b_b2_consistency_cross_summary_missing_contract.sh`
+  - result: PASS
+  - summary:
+    - the existing neighboring contract already covered `cross_summary missing` under `closure_status=IN_PROGRESS`
+    - the missing symmetry was the same artifact-loss branch under `closure_status=CLOSED`
+
+### Thirty-Fourth-Order Contract Expansion
+
+- add `tests/scripts/test_wave_b_b2_consistency_cross_summary_missing_closed_next_actions_contract.sh`
+  - purpose: require `cross_summary missing` to keep `closure_status_note=CLOSED`, `required_missing=1`, and closed-closure next-actions truth when the closure report is otherwise valid
+
+### Local Revalidation After Thirty-Fourth Contract Expansion
+
+- `bash -n tests/scripts/test_wave_b_b2_consistency_cross_summary_missing_closed_next_actions_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_missing_closed_next_actions_contract.sh`
+  - result: PASS
+  - summary:
+    - missing `cross_summary` still downgraded consistency to `INCONSISTENT`
+    - `closure_status_note` stayed `CLOSED`
+    - next actions stayed on the closed-closure guidance path
+
+- `bash tests/scripts/test_wave_b_b2_consistency_cross_summary_missing_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+### Thirty-Fourth Push Recording
+
+- `git commit -m "test: cover closed cross-summary missing guidance"`
+  - result: PASS
+  - commit: `e2df815`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `20d6010..e2df815`
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - worktree returned to `## master...origin/master`
+
+- `gh run list --branch master --limit 5 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest observed run for head `e2df815` was `CI` run `25984769630`
+    - status at record time: `in_progress`
+    - per the incremental verification discipline, this contract-expansion batch recorded the run id without a blocking watch
+
 ### Twenty-Eighth Push Recording
 
 - `git commit -m "test: cover wave-b handoff missing run ids"`
