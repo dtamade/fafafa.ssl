@@ -276,6 +276,36 @@
   - `Minimal Gate (Linux)` SUCCESS
   - `FreePascal TLS 1.3 Completeness` SUCCESS
   - 这次改动命中的是 dormant `winssl-tests.yml.disabled` 与 `code-quality.yml.disabled`，自动主线继续全绿；Windows / dormant lane 仍保持 `static-only`
+- [completed] 继续静态审查 mixed-trigger / manual workflow 输入模型后确认新的双 lane 语义缺口：
+  - `performance.yml.disabled` 的 `workflow_dispatch.benchmark` 只是被写进日志和报告，根本不改变 `./tests/bin/test_performance_comparison` 的执行范围
+  - `ci-matrix-draft.yml.disabled` 的 `skip_windows` / `skip_macos` 确实能改变 job 是否运行，但 `test-summary` 只是遍历 artifact 目录，无法显式区分 `skipped` 与 `missing evidence`
+- [completed] 新增 focused contracts，并先在当前模板上观测到红灯：
+  - `tests/scripts/test_workflow_performance_dispatch_truth_contract.sh`
+  - `tests/scripts/test_workflow_ci_matrix_dispatch_truth_contract.sh`
+- [completed] `performance.yml.disabled` 已收紧为 truthful manual-input lane：
+  - 删除死输入 `benchmark`
+  - workflow dispatch 保留手动触发，但明确当前 Linux benchmark lane 始终跑完整对比程序
+  - benchmark report 改成显式说明“full checked-in comparison suite”，并声明在程序真正支持前不再暴露 per-category input
+- [completed] `ci-matrix-draft.yml.disabled` 已收紧为 truthful skip-summary lane：
+  - `test-summary` 改为读取 `needs.linux-matrix.result` / `needs.macos-test.result` / `needs.windows-test.result`
+  - 显式展示 manual `skip_macos` / `skip_windows` 输入值
+  - 不再通过 artifact 目录和 `PASS/SUCCESS` grep 去猜测 lane 状态
+- [completed] 第二十波 manual-input truth 修复本地复核通过：
+  - `test_workflow_performance_dispatch_truth_contract.sh` PASS
+  - `test_workflow_performance_linux_truth_contract.sh` PASS
+  - `test_workflow_ci_matrix_dispatch_truth_contract.sh` PASS
+  - `test_workflow_ci_matrix_draft_truth_contract.sh` PASS
+  - `test_workflow_action_sha_pinning_contract.sh` PASS
+  - `test_workflow_checkout_credentials_contract.sh` PASS
+  - `test_workflow_download_artifact_node24_contract.sh` PASS
+  - `git diff --check` PASS
+- [completed] 第二十次提交 `c8b3000` 已完成，manual workflow input truth batch 已推送到 `master`
+- [completed] 第二十次 push 后的远端复核通过：
+  - `CI` run `25980651893` SUCCESS
+  - `Code Quality (Light)` SUCCESS
+  - `Minimal Gate (Linux)` SUCCESS
+  - `FreePascal TLS 1.3 Completeness` SUCCESS
+  - 这次改动命中的是 dormant `performance.yml.disabled` 与 `ci-matrix-draft.yml.disabled`，自动主线继续全绿；manual/dormant lane 仍保持 `static-only`
 
 ## Current Blocker
 
@@ -290,14 +320,17 @@
 - 当前也没有已知仍保留假 FPC 版本矩阵、缺 artifact 却硬写成功 summary 的 dormant `test-all-platforms` 残留。
 - 当前也没有已知仍保留假 OpenSSL 版本矩阵、但实际只跑 system OpenSSL 的 dormant `ci-matrix-draft` Linux lane 残留。
 - 当前也没有已知仍保留未消费 dispatch 输入、缺 Lazarus 却调用 `lazbuild`、或硬编码 `PRODUCTION READY` / 固定 grade 的 `winssl-tests` / `code-quality` 残留。
+- 当前也没有已知仍保留“手动输入只改标签、不改执行范围”的 dormant performance lane 残留。
+- 当前也没有已知仍保留“manual skip 生效但 summary 不承认 skipped 语义”的 dormant ci-matrix lane 残留。
 - 当前剩余边界只在验证层：
   - `release.yml`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled`、`wave-b-b2-manual.yml.disabled` 等 dormant/manual 路径没有在远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
+  - `pr-checks.yml.disabled` 的 `pr-report` 仍硬编码所有 checks 为 `✅ Passed / ✅ Complete`，这是当前下一条最明确的 summary truth 缺口
 
 ## Current Queue
 
-1. 继续静态审查 mixed-trigger / manual workflow 的输入模型，优先找 `workflow_dispatch` 默认值、`github.event.inputs` 回退、skip 开关和手动模式语义缺口。
-2. 继续静态审查 dormant/manual workflow 的 truth surface，但重点从“旧 action / 假矩阵”转向“输入模型、summary 语义、和实际脚本真源是否一致”。
+1. 继续静态审查 dormant/manual workflow 的 summary truth，下一站优先收 `pr-checks.yml.disabled` 里硬编码全绿状态表的问题。
+2. 继续静态审查 mixed-trigger / manual workflow 的输入模型，但重点转向“summary 是否真实反映 `needs.*.result` 和手动模式语义”。
 3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
 
 ## Decision Locks
@@ -321,6 +354,7 @@
 - 第十七批 dormant multi-platform truth batch commit / push 完成，且自动远端主线复核通过
 - 第十八批 dormant ci-matrix truth batch commit / push 完成，且自动远端主线复核通过
 - 第十九批 dormant winssl/code-quality truth batch commit / push 完成，且自动远端主线复核通过
+- 第二十批 manual workflow input truth batch commit / push 完成，且自动远端主线复核通过
 - `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
 - `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
 - `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用

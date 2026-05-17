@@ -1698,3 +1698,113 @@
     - `Minimal Gate (Linux)` SUCCESS
     - `FreePascal TLS 1.3 Completeness` SUCCESS
     - this batch only touched dormant `winssl-tests.yml.disabled` and `code-quality.yml.disabled`, and the auto-triggered active CI path remained green
+
+### Twentieth-Order Route Review
+
+- `sed -n '1,260p' .github/workflows/performance.yml.disabled`
+  - result: PASS
+  - summary:
+    - the workflow still exposed a `workflow_dispatch.benchmark` input
+    - but the run path always executed the same `./tests/bin/test_performance_comparison` binary
+    - the input only changed log/report text and was therefore a dead manual control
+
+- `sed -n '1,260p' tests/test_performance_comparison.pas`
+  - result: PASS
+  - summary:
+    - the benchmark program defined one fixed checked-in comparison suite
+    - there was no CLI or environment-based category selector for `crypto` / `ssl` / `memory`
+
+- `sed -n '1,260p' .github/workflows/ci-matrix-draft.yml.disabled`
+  - result: PASS
+  - summary:
+    - `skip_windows` / `skip_macos` did control job execution
+    - but `test-summary` only walked artifact directories and grepped `PASS/SUCCESS`
+    - this meant manually skipped lanes disappeared instead of being reported as `skipped`
+
+- `rg -n "✅ Passed|✅ Complete|Check logs" .github/workflows/pr-checks.yml.disabled .github/workflows/ci-matrix-draft.yml.disabled`
+  - result: PASS
+  - summary:
+    - `ci-matrix-draft` still guessed platform status from artifacts before the twentieth fix
+    - `pr-checks` still keeps a separate hardcoded status-table issue for the next batch
+
+### Twentieth-Order RED Contracts
+
+- `bash tests/scripts/test_workflow_performance_dispatch_truth_contract.sh`
+  - result before twentieth fix: FAIL
+  - summary:
+    - missing truthful fragment `- Benchmark scope: full checked-in comparison suite`
+
+- `bash tests/scripts/test_workflow_ci_matrix_dispatch_truth_contract.sh`
+  - result before twentieth fix: FAIL
+  - summary:
+    - missing truthful fragment `echo "| Linux(system OpenSSL) | ${{ needs.linux-matrix.result }} | n/a |" >> $GITHUB_STEP_SUMMARY`
+
+### Twentieth-Order Repairs
+
+- add `tests/scripts/test_workflow_performance_dispatch_truth_contract.sh`
+  - purpose: ensure the dormant performance workflow does not expose dead per-category dispatch inputs before the benchmark binary actually supports them
+
+- add `tests/scripts/test_workflow_ci_matrix_dispatch_truth_contract.sh`
+  - purpose: ensure the draft CI matrix workflow reports skipped manual lanes explicitly from `needs.*.result` instead of inferring status from artifact directories
+
+- update `.github/workflows/performance.yml.disabled`
+  - change: remove the dead `benchmark` dispatch input
+  - change: make the run/report text explicit that this dormant Linux lane always runs the full checked-in comparison suite
+  - change: state plainly that per-category dispatch inputs should only return after the benchmark binary supports them
+
+- update `.github/workflows/ci-matrix-draft.yml.disabled`
+  - change: rewrite `test-summary` to use `needs.linux-matrix.result`, `needs.macos-test.result`, and `needs.windows-test.result`
+  - change: surface `skip_macos` / `skip_windows` input values explicitly for manual dispatch
+  - change: remove artifact-directory `PASS/SUCCESS` guessing from the summary path
+
+- update `tests/scripts/test_workflow_performance_linux_truth_contract.sh`
+  - change: align the older performance truth contract with the new “full checked-in comparison suite” wording
+
+### Local Revalidation After Twentieth Fix
+
+- `bash tests/scripts/test_workflow_performance_dispatch_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_performance_linux_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_ci_matrix_dispatch_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_ci_matrix_draft_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_action_sha_pinning_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_checkout_credentials_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_download_artifact_node24_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+### Twentieth Push Success Revalidation
+
+- `git commit -m "chore: tighten manual workflow input truth"`
+  - result: PASS
+  - commit: `c8b3000`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `9acd04b..c8b3000`
+
+- `gh run list --branch master --limit 8 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest run for head `c8b3000` was `CI` run `25980651893`
+
+- `gh run watch 25980651893 --exit-status`
+  - result: PASS
+  - summary:
+    - `Code Quality (Light)` SUCCESS
+    - `Minimal Gate (Linux)` SUCCESS
+    - `FreePascal TLS 1.3 Completeness` SUCCESS
+    - this batch only touched dormant `performance.yml.disabled` and `ci-matrix-draft.yml.disabled`, and the auto-triggered active CI path remained green

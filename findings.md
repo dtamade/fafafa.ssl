@@ -392,3 +392,32 @@
 - 当前 workflow 审查的高价值面已经继续前移：
   - 旧 action 版本、SHA pinning、permissions、checkout persistence、假矩阵、假 summary 这一层已经基本收口
   - 下一站更值得深挖的是 mixed-trigger/manual workflow 的输入模型和手动模式语义边界
+
+- 继续静态审查 mixed-trigger/manual workflow 时，`performance.yml.disabled` 暴露出一种更隐蔽的“假输入”问题：
+  - `workflow_dispatch.benchmark` 表面上被读到了 shell 里
+  - 但它既不改变编译入口，也不改变执行入口
+  - 实际运行始终是同一个 `./tests/bin/test_performance_comparison`
+  - 这类问题比“完全没引用输入”更容易误导，因为看起来像是“已经接上了”
+
+- 对当前 performance lane，最小可信修法不是去捏造一个 per-category 执行协议，而是把 truth 收回到程序现状：
+  - 保留 `workflow_dispatch` 手动触发
+  - 删除死输入 `benchmark`
+  - 报告明确写成 “full checked-in comparison suite”
+  - 在 benchmark binary 真正支持前，不再暴露 category 选择 UI
+
+- `ci-matrix-draft.yml.disabled` 则暴露出另一种 manual 语义漂移：
+  - `skip_windows` / `skip_macos` 确实会改变 job 是否运行
+  - 但 `test-summary` 只是遍历 artifact 目录和 grep `PASS/SUCCESS`
+  - 这样手动 skip 的 lane 会在 summary 中悄悄消失，而不是被显式标成 `skipped`
+
+- 这类 summary 问题的关键不是“输出不好看”，而是它把操作者的手动决策抹掉了：
+  - 对 manual workflow 来说，`skipped by input` 和 `no artifact / check logs` 是两种完全不同的语义
+  - 如果 summary 不显式区分，后续 continuation 很容易把“故意没跑”误读成“跑了但没证据”
+
+- 新增 `test_workflow_performance_dispatch_truth_contract.sh` 与 `test_workflow_ci_matrix_dispatch_truth_contract.sh` 后，这两条 manual-input lane 也进入了持续守护面：
+  - 它们会阻止死 benchmark 输入和 artifact-dir 猜状态逻辑回流
+  - 推送 `c8b3000` 后，自动 `CI` run `25980651893` 继续 SUCCESS，说明这次 manual-input 收紧没有误伤当前活跃 Linux 主线
+
+- 当前下一条最明确的 dormant summary truth 缺口已经收缩到 `pr-checks.yml.disabled`：
+  - `pr-report` 仍硬编码 `PR Information / Quick Build / Test Coverage / Code Statistics` 全部 `✅ Passed / ✅ Complete`
+  - 但它本身已经有 `needs`，完全应该改成从真实 `needs.*.result` 生成表格
