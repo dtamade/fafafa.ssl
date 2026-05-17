@@ -507,3 +507,19 @@
   - `workflow truth and evidence hardening`
   - 也就是继续清理 dormant/manual workflow 中剩余的固定能力宣告、固定数字和超范围结论
   - 而不是回到已经完成的 runtime blocker 叙事
+
+- `linux-ci.yml.disabled` 这次又暴露出一类更细的 evidence wording 漂移：
+  - 它已经不再写 `All Checks Passed` / `ready for integration`
+  - 但 summary 里还残留 `Expected compile: ~75 (excludes WinSSL)`、`Status: ✅ See job output`
+  - 以及 `Full test coverage requires Windows runner for WinSSL`
+  - 这些文案虽然比旧的全局结论轻，但仍然会把“本次 Linux lane 观察到的事实”说成近似能力模型
+
+- 对这条 lane，最小可信修法也仍然是收窄到当前 run 证据：
+  - 不保留近似模块数
+  - 不保留硬编码 `✅`
+  - 不再说“full coverage requires Windows”，而是直接说“WinSSL-specific evidence requires a Windows lane; this Linux run does not prove WinSSL behavior”
+
+- 这说明当前最高价值的剩余风险已经进一步从 YAML 常量前移到了“脚本/文案生成层”：
+  - 纯 YAML 里的固定 summary claim 基本已经收得差不多
+  - 下一站更值得审的是 `wave-b-b2-manual.yml(.disabled)` 及其 handoff/closure 脚本
+  - 因为那一条 lane 的 summary 不是写在 YAML 常量里，而是由 `prepare_wave_b_b2_handoff_bundle.sh` 等脚本生成

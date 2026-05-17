@@ -380,6 +380,31 @@
 - [completed] 第二十三次 push 已记录远端自动 run：
   - `CI` run `25981582057`
   - 按新的增量验证纪律，这批只记录 run id，不同步阻塞式等待整条自动主线收口
+- [completed] 第二十三波 docs closeout 已同步入库并推送：
+  - `task_plan.md` / `findings.md` / `progress.md` / `docs/plans/2026-05-15-workflow-checkout-node24-hygiene.md` 已补齐 goal reset 与 multi-platform summary claim batch 真相
+- [completed] 第二十三次 docs closeout 提交 `0719b34` 已完成，并推送到 `master`
+- [completed] 第二十三次 docs closeout push 已记录远端自动 run：
+  - `CI` run `25981634187`
+  - 该批只同步 planning/docs 与 goal reset，按增量验证纪律不再阻塞式等待整条自动主线
+- [completed] 继续 route-local 探索后确认新的相邻 truth gap 已从“硬编码结论”收缩到 `linux-ci` 的证据文案：
+  - `Generate test report` 虽然已是 `if: always()`
+  - 但仍保留 `Expected compile: ~75 (excludes WinSSL)`、`Status: ✅ See job output`
+  - 以及 `Full test coverage requires Windows runner for WinSSL`
+  - 这些要么是易漂移近似值，要么会把当前 Linux lane 的证据边界说大
+- [completed] 强化相邻 focused contract，并先在当前模板上观测到红灯：
+  - `tests/scripts/test_workflow_linux_ci_summary_truth_contract.sh` 现在显式要求 evidence-scoped compilation / WinSSL wording，并拒绝近似编译计数与硬编码 `✅`
+- [completed] `linux-ci.yml.disabled` 已进一步收紧为 evidence-scoped Linux lane：
+  - 删除 `Expected compile: ~75 (excludes WinSSL)`
+  - 删除 `Status: ✅ See job output`
+  - 删除 `Full test coverage requires Windows runner for WinSSL`
+  - 改为明确指向 `compile_all_modules.py` 日志与“本次 Linux run 不证明 WinSSL 行为”的边界说明
+- [completed] 第二十四波 dormant Linux evidence wording 修复本地复核通过：
+  - `test_workflow_linux_ci_summary_truth_contract.sh` PASS
+  - `git diff --check` PASS
+- [completed] 第二十四次提交 `94e1817` 已完成，linux-ci evidence wording batch 已推送到 `master`
+- [completed] 第二十四次 push 已记录远端自动 run：
+  - `CI` run `25981696547`
+  - 按新的增量验证纪律，这批只记录 run id，不同步阻塞式等待整条自动主线收口
 
 ## Current Blocker
 
@@ -401,11 +426,11 @@
 - 当前剩余边界只在验证层：
   - `release.yml`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled`、`wave-b-b2-manual.yml.disabled` 等 dormant/manual 路径没有在远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
-- 当前没有新的同等级 summary truth 热点 blocker；上一条最明确的 `test-all-platforms` 固定 coverage/support 断言已被收掉
+- 当前没有新的同等级 YAML-summary 热点 blocker；最近两条 `test-all-platforms` 固定 coverage/support 断言与 `linux-ci` 证据文案过界都已被收掉
 
 ## Current Queue
 
-1. 继续做一次 route-local 静态审查，找剩余 dormant/manual workflow 里是否还存在“固定能力数字、固定完备度标签、或超出当前 run 范围的结论性 notes”。
+1. 继续做一次 route-local 静态审查，但重点前移到 `wave-b-b2-manual.yml(.disabled)` 及其 handoff/closure 脚本，确认脚本生成 summary 是否也存在超出当前 run 证据范围的能力结论。
 2. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
 3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
 
@@ -429,7 +454,7 @@
 - 不创建 `v1.5.0` tag，不发 GitHub Release。
 - Windows/WinSSL 继续保持 `static-only / deferred runtime proof`，不混入本批。
 - dormant workflow 不允许继续声称比已提交 toolchain / shell / project target 更宽的运行覆盖面。
-- 本批只修真实已复现的 CI/runtime blocker 与 workflow runtime hygiene，不扩展到新功能或重新开 PR 流。
+- 本批只修 dormant/manual workflow 的 truth/evidence 边界与相邻 hygiene 问题，不扩展到新功能或重新开 PR 流。
 - 发布主线仍以当前 `master` 为准。
 
 ## Stop Condition
@@ -449,6 +474,7 @@
 - 第二十一批 pr-checks summary truth batch commit / push 完成，且自动远端主线复核通过
 - 第二十二批 dormant basic/linux summary truth batch commit / push 完成，且自动远端主线复核通过
 - 第二十三批 dormant multi-platform summary claim batch commit / push 完成，且远端自动 run 已记录
+- 第二十四批 dormant Linux evidence wording batch commit / push 完成，且远端自动 run 已记录
 - `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
 - `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
 - `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用

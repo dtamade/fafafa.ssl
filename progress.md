@@ -2068,3 +2068,69 @@
     - latest observed run for head `3edcaac` was `CI` run `25981582057`
     - status at record time: `in_progress`
     - per the new incremental verification discipline, this dormant-summary batch recorded the run id without blocking on a full watch
+
+### Twenty-Third Docs Closeout Recording
+
+- `git commit -m "docs: reset workflow truth hardening goal"`
+  - result: PASS
+  - commit: `0719b34`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `3edcaac..0719b34`
+
+- `gh run list --branch master --limit 4 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest observed run for head `0719b34` was `CI` run `25981634187`
+    - this docs-only batch recorded the run id without a blocking watch
+
+### Twenty-Fourth-Order Route Review
+
+- `sed -n '70,140p' .github/workflows/linux-ci.yml.disabled`
+  - result: PASS
+  - summary:
+    - the Linux summary step was already `if: always()`
+    - but it still carried `Expected compile: ~75 (excludes WinSSL)`, `Status: ✅ See job output`, and `Full test coverage requires Windows runner for WinSSL`
+
+- `bash tests/scripts/test_workflow_linux_ci_summary_truth_contract.sh`
+  - result before twenty-fourth fix: FAIL
+  - summary:
+    - missing truthful fragment `echo "- Compilation details: review the \`compile_all_modules.py\` job output for the exact module set compiled on this runner." >> $GITHUB_STEP_SUMMARY`
+
+### Twenty-Fourth-Order Repairs
+
+- update `tests/scripts/test_workflow_linux_ci_summary_truth_contract.sh`
+  - change: require evidence-scoped compilation wording
+  - change: require explicit wording that the Linux lane does not prove WinSSL behavior
+  - change: forbid approximate compile-count and hardcoded-success fragments
+
+- update `.github/workflows/linux-ci.yml.disabled`
+  - change: replace the approximate compile-count line with an exact pointer to `compile_all_modules.py` output
+  - change: replace the hardcoded `✅` status line with job/log scoped wording
+  - change: replace the full-coverage statement with explicit WinSSL evidence scoping
+
+### Local Revalidation After Twenty-Fourth Fix
+
+- `bash tests/scripts/test_workflow_linux_ci_summary_truth_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+### Twenty-Fourth Push Recording
+
+- `git commit -m "chore: tighten linux ci evidence wording"`
+  - result: PASS
+  - commit: `94e1817`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `0719b34..94e1817`
+
+- `gh run list --branch master --limit 4 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest observed run for head `94e1817` was `CI` run `25981696547`
+    - status at record time: `in_progress`
+    - per the incremental verification discipline, this adjacent truth batch recorded the run id without a blocking watch
