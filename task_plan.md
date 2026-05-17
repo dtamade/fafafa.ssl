@@ -224,6 +224,22 @@
 - [completed] 第十七次 push 后的远端复核通过：
   - `CI` run `25979379612` SUCCESS
   - 这次改动命中的是 dormant `test-all-platforms.yml.disabled`，自动主线继续全绿；multi-platform lane 仍保持 `static-only`
+- [completed] 继续静态审查 dormant matrix truth 后确认新的 Linux 假 OpenSSL 版本矩阵缺口：
+  - `ci-matrix-draft.yml.disabled` 的 Linux lane 声称覆盖 `3.0` / `3.1` / `3.2`
+  - 但 `matrix.openssl` 和 `apt_package` 并未真正进入安装或执行路径
+  - 结果只是重复跑同一个 system OpenSSL，再用 artifact 名称伪装成多版本验证
+- [completed] 新增 ci-matrix-draft truth contract，并先在当前模板上观测到红灯
+- [completed] `ci-matrix-draft.yml.disabled` 已收紧为 truthful Linux system-OpenSSL lane：
+  - 删除未生效的 OpenSSL 假矩阵
+  - Linux artifact 改名为 `linux-system-openssl-reports`
+  - 安装步骤显式输出当前 runner 的 `system OpenSSL`
+- [completed] 第十八波 dormant ci-matrix truth 修复本地复核通过：
+  - 新增 `tests/scripts/test_workflow_ci_matrix_draft_truth_contract.sh` PASS
+  - workflow action SHA pinning / checkout credential / upload-artifact / download-artifact contracts继续 PASS
+- [completed] 第十八次提交 `5b55193` 已完成，ci-matrix truth batch 已推送到 `master`
+- [completed] 第十八次 push 后的远端复核通过：
+  - `CI` run `25979777225` SUCCESS
+  - 这次改动命中的是 dormant `ci-matrix-draft.yml.disabled`，自动主线继续全绿；ci-matrix lane 仍保持 `static-only`
 
 ## Current Blocker
 
@@ -236,13 +252,14 @@
 - 当前也没有已知仍混用 `workflow_dispatch` 与未加 fallback 的 PR-only 上下文残留。
 - 当前也没有已知仍虚报为“跨平台可跑”但实际 shell / toolchain / project target 不匹配的 dormant performance lane 残留。
 - 当前也没有已知仍保留假 FPC 版本矩阵、缺 artifact 却硬写成功 summary 的 dormant `test-all-platforms` 残留。
+- 当前也没有已知仍保留假 OpenSSL 版本矩阵、但实际只跑 system OpenSSL 的 dormant `ci-matrix-draft` Linux lane 残留。
 - 当前剩余边界只在验证层：
   - `release.yml`、`code-quality.yml.disabled`、`test-all-platforms.yml.disabled`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled` 这些被改到的路径没有在本轮远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
 
 ## Current Queue
 
-1. 继续静态审查 dormant/manual workflow 的 truth surface，优先找仍保留假矩阵或声明覆盖面大于真实 runner/toolchain 的模板，下一站重点看 `ci-matrix-draft.yml.disabled` 的 OpenSSL 版本矩阵真相。
+1. 继续静态审查 dormant/manual workflow 的 truth surface，优先找仍保留假矩阵、假成功 summary、或声明覆盖面大于真实 runner/toolchain 的模板，下一站重点看 `winssl-tests.yml.disabled` 和 `code-quality.yml.disabled`。
 2. 继续静态审查 mixed-trigger workflow 的输入模型，优先找 `workflow_dispatch` 与 push/pull_request 共存时的默认值、`github.event.inputs` 回退或手动模式语义缺口。
 3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把它们误报成当前 runtime blocker。
 
@@ -265,6 +282,7 @@
 - 第十五批 dormant PR dispatch-context batch commit / push 完成，且自动远端主线复核通过
 - 第十六批 dormant performance truth batch commit / push 完成，且自动远端主线复核通过
 - 第十七批 dormant multi-platform truth batch commit / push 完成，且自动远端主线复核通过
+- 第十八批 dormant ci-matrix truth batch commit / push 完成，且自动远端主线复核通过
 - `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
 - `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
 - `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用

@@ -33,6 +33,9 @@
 - 在 dormant performance truth 收口后，又暴露出下一层 multi-platform matrix truth 风险：
   - `test-all-platforms.yml.disabled` 三个平台 job 都声称覆盖 `3.2.2` / `3.3.1`
   - 但安装步骤并未真正使用 `matrix.fpc-version`，summary 还硬编码多行成功结论
+- 在 dormant multi-platform truth 收口后，又暴露出下一层 Linux fake-matrix 风险：
+  - `ci-matrix-draft.yml.disabled` 声称验证 OpenSSL `3.0` / `3.1` / `3.2`
+  - 但 `matrix.openssl` / `apt_package` 没有真正进入安装或执行路径
 - 活跃 workflow 绿了以后，最高价值的问题已不是运行时逻辑，而是 workflow runtime hygiene
 - 只修活跃 workflow 不够：
   - `release.yml.disabled`
@@ -72,6 +75,7 @@
 - `tests/scripts/test_workflow_pr_checks_dispatch_context_contract.sh`
 - `tests/scripts/test_workflow_performance_linux_truth_contract.sh`
 - `tests/scripts/test_workflow_test_all_platforms_truth_contract.sh`
+- `tests/scripts/test_workflow_ci_matrix_draft_truth_contract.sh`
 - `task_plan.md`
 - `findings.md`
 - `progress.md`
@@ -108,6 +112,8 @@
 28. 新增 performance linux-truth contract，并把模板声明范围收紧到真实可支持的 Linux-only benchmark lane。
 29. 审查 dormant `test-all-platforms` 模板是否保留了未真正生效的假版本矩阵与硬编码成功 summary。
 30. 新增 multi-platform truth contract，并把 `test-all-platforms` 的 artifact / summary / toolchain 标签收紧到真实可证明的范围。
+31. 审查 dormant `ci-matrix-draft` 模板是否保留了未真正生效的 OpenSSL 假版本矩阵。
+32. 新增 ci-matrix truth contract，并把 Linux lane 收紧到真实可证明的 system-OpenSSL 范围。
 
 ## Commands
 
@@ -125,6 +131,7 @@ bash tests/scripts/test_workflow_pr_checks_history_contract.sh
 bash tests/scripts/test_workflow_pr_checks_dispatch_context_contract.sh
 bash tests/scripts/test_workflow_performance_linux_truth_contract.sh
 bash tests/scripts/test_workflow_test_all_platforms_truth_contract.sh
+bash tests/scripts/test_workflow_ci_matrix_draft_truth_contract.sh
 bash tests/scripts/test_release_workflow_v1_5_0_contract.sh
 bash tests/scripts/test_tls13_signer_gate_workflow_contract.sh
 bash tests/scripts/test_freepascal_tls13_completeness_gate_contract.sh
@@ -143,6 +150,7 @@ git diff --check
 - `pr-checks.yml.disabled` 中 mixed-trigger 手动路径不再直接依赖 PR-only 上下文
 - `performance.yml.disabled` 不再硬写虚假的全平台 benchmark 覆盖面，改为 Linux-only truth
 - `test-all-platforms.yml.disabled` 不再保留假 FPC 版本矩阵，也不再在缺证据时硬写成功 summary
+- `ci-matrix-draft.yml.disabled` 不再保留假的 OpenSSL 3.0/3.1/3.2 Linux 矩阵，改为 system-OpenSSL truth
 - release / signer / completeness 合同继续通过
 - 不再把无关自动 workflow 的绿灯误判成 `download-artifact` 的 runtime 证明
 
@@ -163,3 +171,4 @@ git diff --check
   - 随后 docs closeout `083c057` 也通过了 `CI` run `25970738320`，说明 working-memory truth sync 没有带偏自动主线
   - 最新又补上 dormant `performance` workflow 的 Linux-only truth 收紧；`1d4f346` 对应的 `CI` run `25970919173` 继续 SUCCESS
   - 再随后又补上 dormant `test-all-platforms` 的 multi-platform truth 收紧；`b7c76aa` 对应的 `CI` run `25979379612` 继续 SUCCESS
+  - 再随后又补上 dormant `ci-matrix-draft` 的 system-OpenSSL truth 收紧；`5b55193` 对应的 `CI` run `25979777225` 继续 SUCCESS

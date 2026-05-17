@@ -338,3 +338,23 @@
   - 它会阻止假 `fpc-version` 矩阵回流
   - 也会阻止再次出现“没有 macOS artifact 但 summary 硬写 macOS success”这类误导性 closeout
   - 推送 `b7c76aa` 后，自动 `CI` run `25979379612` 继续 SUCCESS，说明这次收紧没有误伤当前活跃 Linux 主线
+
+- 继续往下看 `ci-matrix-draft.yml.disabled` 时，Linux lane 也暴露出一条更“静态确定”的假矩阵问题：
+  - workflow 声称测试 OpenSSL `3.0` / `3.1` / `3.2`
+  - 但 `matrix.openssl` 和 `apt_package` 完全没有进入安装或运行路径
+  - 三个 job 实际都只是重复安装同一个 `libssl-dev` / system OpenSSL，再把 artifact 名字伪装成不同版本
+
+- 这条问题和上一波 `test-all-platforms` 很像，但边界更清楚：
+  - 它不是 summary 层误报，而是 job 标识层误报
+  - 如果以后有人重新启用这个 draft，会误以为 Linux lane 做过跨 OpenSSL 版本验证
+  - 实际上仓库当前只证明了“runner 默认 system OpenSSL”这一个事实
+
+- 这次最小可信修法同样没有去“猜着补齐多版本验证”：
+  - 直接删掉未生效的 `openssl` 假矩阵
+  - Linux artifact 改名为 `linux-system-openssl-reports`
+  - 安装步骤显式输出 `system OpenSSL` 版本，把 lane truth 固定成当前 runner 默认库
+
+- 新增 `tests/scripts/test_workflow_ci_matrix_draft_truth_contract.sh` 后，`ci-matrix-draft` 也进入了持续守护面：
+  - 它会阻止假的 OpenSSL 3.0/3.1/3.2 矩阵重新回流
+  - 也会阻止 artifact 名称继续借 `matrix.openssl` 冒充多版本验证
+  - 推送 `5b55193` 后，自动 `CI` run `25979777225` 继续 SUCCESS，说明这次收紧没有误伤当前活跃 Linux 主线

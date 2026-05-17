@@ -1504,3 +1504,77 @@
     - `Minimal Gate (Linux)` SUCCESS
     - `FreePascal TLS 1.3 Completeness` SUCCESS
     - this batch only touched dormant `test-all-platforms.yml.disabled`, and the auto-triggered active CI path remained green
+
+### Eighteenth-Order Route Review
+
+- `sed -n '1,260p' .github/workflows/ci-matrix-draft.yml.disabled`
+  - result: PASS
+  - summary:
+    - the Linux lane declared OpenSSL `3.0` / `3.1` / `3.2`
+    - but installation still used a single `libssl-dev` path and only printed the runner's current OpenSSL version
+
+- `rg -n "matrix\\.|apt_package|openssl|skip_macos|skip_windows|github\\.event\\.inputs" .github/workflows/ci-matrix-draft.yml.disabled`
+  - result: PASS
+  - summary:
+    - `matrix.openssl` only affected the artifact label
+    - `apt_package` was dead metadata and never entered the install or test path
+
+### Eighteenth-Order RED Contract
+
+- `bash tests/scripts/test_workflow_ci_matrix_draft_truth_contract.sh`
+  - result before eighteenth fix: FAIL
+  - summary:
+    - the workflow was missing truthful Linux system-OpenSSL fragments such as `name: linux-system-openssl-reports`
+
+### Eighteenth-Order Repairs
+
+- add `tests/scripts/test_workflow_ci_matrix_draft_truth_contract.sh`
+  - purpose: ensure the draft CI matrix workflow does not keep a fake OpenSSL version matrix when the Linux lane only exercises the runner's default system OpenSSL
+
+- update `.github/workflows/ci-matrix-draft.yml.disabled`
+  - change: remove the dead Linux `openssl` matrix and `apt_package` metadata
+  - change: rename the Linux artifact to `linux-system-openssl-reports`
+  - change: make the dependency step print the current runner `system OpenSSL` explicitly
+
+### Local Revalidation After Eighteenth Fix
+
+- `bash tests/scripts/test_workflow_ci_matrix_draft_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_action_sha_pinning_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_checkout_credentials_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_upload_artifact_node24_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_download_artifact_node24_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+### Eighteenth Push Success Revalidation
+
+- `git commit -m "chore: tighten ci matrix workflow truth"`
+  - result: PASS
+  - commit: `5b55193`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `d7ae58a..5b55193`
+
+- `gh run list --branch master --limit 4 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest run for head `5b55193` was `CI` run `25979777225`
+
+- `gh run watch 25979777225 --exit-status`
+  - result: PASS
+  - summary:
+    - `Code Quality (Light)` SUCCESS
+    - `Minimal Gate (Linux)` SUCCESS
+    - `FreePascal TLS 1.3 Completeness` SUCCESS
+    - this batch only touched dormant `ci-matrix-draft.yml.disabled`, and the auto-triggered active CI path remained green
