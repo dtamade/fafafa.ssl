@@ -15,7 +15,11 @@
 - [completed] 第二次手动 runtime run `25985356670` 证明 `pwsh` 修复真实生效，并把故障边界前移到 WinSSL 工程目标配置：
   - quick smoke 已经真正进入 `lazbuild test_winssl_certificate_loading.lpi`
   - 新的第一硬故障是 Lazarus 在 Windows runner 上仍按 `-Tlinux` 编译，最终报 `Can't find unit system`
-- [in_progress] 当前批次已经为 Windows runtime 入口工程补上 focused contract，并移除 quick/broader suite 所用 `.lpi` 的硬编码 Linux 目标：
+- [completed] `9598c91` 对应的第三次手动 runtime run `25985680381` 已证明 `.lpi` 目标修复真实生效：
+  - `windows-gate` 的 `Install dependencies` SUCCESS
+  - `Run quick WinSSL smoke` 已经把 `test_winssl_certificate_loading.lpi` 编译到 `[OK]`
+  - 这说明当前 Windows runtime 已经跨过上一轮的 `-Tlinux` / `Can't find unit system` 边界
+- [completed] 上一批 Windows runtime 入口工程目标修复已经落地并经远端 run 复证：
   - 新增 `tests/scripts/test_winssl_windows_runtime_project_target_contract.sh`
   - 已修复 `tests/winssl/test_winssl_certificate_loading.lpi`
   - 已修复 `tests/winssl/test_winssl_unit_comprehensive.lpi`
@@ -24,7 +28,12 @@
   - 已修复 `tests/winssl/test_winssl_handshake_debug.lpi`
   - 已修复 `tests/winssl/test_winssl_https_client.lpi`
   - 已修复 `tests/integration/test_backend_comparison.lpi`
-  - 下一步是提交、push，并重新 dispatch `wave-b-b2-manual.yml` 观察新的 Windows 第一硬故障边界
+- [in_progress] 当前新的第一硬故障已经前移到 quick smoke 的进程启动阶段：
+  - 远端 quick smoke 运行 `test_winssl_certificate_loading.exe` 后立刻以 `-1073741511` (`0xC0000139`) 退出
+  - 结合 live 源码审查，当前最可疑根因是 `src/fafafa.ssl.winssl.api.pas` 把 SSPI 的 `AcceptSecurityContext` 误绑定成了不存在的 `AcceptSecurityContextW`
+  - 本地已新增 `tests/scripts/test_winssl_acceptsecuritycontext_import_contract.sh`
+  - 本地已把 live 绑定与调用点改为未后缀的 `AcceptSecurityContext`
+  - 下一步是提交、push，并第四次 dispatch `wave-b-b2-manual.yml` 观察新的 Windows 第一硬故障边界
 - [completed] 复核远端失败证据（CI run `25893971783` / signer run `25901035350`）
 - [completed] 把 3 个真实问题写成 focused contract tests，并先观测到红灯
 - [completed] 修复 `.github/workflows/ci.yml` / `release.yml` / `release.yml.disabled` 的 WolfSSL 依赖缺口

@@ -1191,7 +1191,7 @@ begin
   end
   else
   begin
-    Status := AcceptSecurityContextW(
+    Status := AcceptSecurityContext(
       LCredHandle,
       @FCtxtHandle,
       nil,
@@ -2065,7 +2065,7 @@ begin
     PrepareInputBufferDesc(InBuffers, InBufferDesc, @IoBuffer[0], cbIoBuffer);
     PrepareOutputBufferDesc(OutBuffers, OutBufferDesc);
 
-    Status := AcceptSecurityContextW(
+    Status := AcceptSecurityContext(
       PCredHandle(GetNativeHandleSafe(FContext, 'TWinSSLConnection.ServerHandshake')),
       phContext,
       @InBufferDesc,

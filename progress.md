@@ -85,6 +85,80 @@
 - `git diff --check`
   - result: PASS
 
+### Third Windows Manual Runtime Revalidation
+
+- `gh workflow run .github/workflows/wave-b-b2-manual.yml -f run_id=codex_winssl_20260517_161900 -f strict_closure=false`
+  - result: PASS
+  - summary:
+    - dispatched new manual Windows runtime proof run on head `9598c91`
+
+- `gh run view 25985680381 --json databaseId,status,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - run=`25985680381`
+    - head=`9598c91`
+    - `linux-gate` SUCCESS
+    - `macos-gate` still FAIL (same separate lane)
+    - `windows-gate` FAIL but failure boundary moved forward
+
+- `gh run view 25985680381 --job 76382418762 --log | tail -n 220`
+  - result: PASS
+  - summary:
+    - `Install dependencies` SUCCESS
+    - quick smoke compile now reports `Compiling test_winssl_certificate_loading.lpi... [OK]`
+    - runtime immediately failed with exit code `-1073741511`
+    - no test-body output appeared before the process exited
+
+### Second RED Proof And Source Audit
+
+- `python3 - <<'PY' ... \"name 'AcceptSecurityContextW'\" in src/fafafa.ssl.winssl.api.pas ...`
+  - result: PASS
+  - summary:
+    - current live source still imported `AcceptSecurityContextW`
+    - this established the RED baseline for the new SSPI import contract
+
+- `python3 - <<'PY' ... (-1073741511 -> 0xc0000139) ...`
+  - result: PASS
+  - summary:
+    - translated the quick smoke process exit code to hex `0xc0000139` for Windows-loader triage
+
+- `sed -n '1180,1215p' src/fafafa.ssl.winssl.connection.pas`
+  - result: PASS
+  - summary:
+    - live server-handshake path called `AcceptSecurityContextW`
+
+- `sed -n '2050,2085p' src/fafafa.ssl.winssl.connection.pas`
+  - result: PASS
+  - summary:
+    - second live handshake path also called `AcceptSecurityContextW`
+
+### Second Production Fixes Applied
+
+- add `tests/scripts/test_winssl_acceptsecuritycontext_import_contract.sh`
+  - change: require unsuffixed SSPI `AcceptSecurityContext` import + callsites in live code
+
+- update `src/fafafa.ssl.winssl.api.pas`
+  - change: bind the live SSPI import to `AcceptSecurityContext` instead of nonexistent `AcceptSecurityContextW`
+
+- update `src/fafafa.ssl.winssl.connection.pas`
+  - change: switch live callsites from `AcceptSecurityContextW` to `AcceptSecurityContext`
+
+### Second Local Revalidation After Fix
+
+- `bash tests/scripts/test_winssl_acceptsecuritycontext_import_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_windows_runtime_project_target_contract.sh`
+  - result: PASS
+
+- `python3 scripts/compile_all_modules.py`
+  - result: PASS
+  - summary:
+    - compiled `185/185` core modules successfully
+
+- `git diff --check`
+  - result: PASS
+
 ## 2026-05-15
 
 ### Context Recovery

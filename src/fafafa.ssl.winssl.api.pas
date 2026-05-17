@@ -74,8 +74,8 @@ function InitializeSecurityContextW(
 // ----------------------------------------------------------------------------
 
 // 接受安全上下文（服务器端握手）
-// 接受安全上下文（服务器端握手）
-function AcceptSecurityContextW(
+// SSPI 这里没有 A/W 后缀导出名，必须绑定未后缀的 AcceptSecurityContext。
+function AcceptSecurityContext(
   phCredential: PCredHandle;         // 凭据句柄
   phContext: PCtxtHandle;            // [in/out] 上下文句柄（首次调用为 nil）
   pInput: PSecBufferDesc;            // [in] 输入缓冲区（客户端请求）
@@ -85,7 +85,7 @@ function AcceptSecurityContextW(
   pOutput: PSecBufferDesc;           // [out] 输出缓冲区（发送给客户端）
   pfContextAttr: PULONG;             // [out] 上下文属性
   ptsExpiry: PTimeStamp              // [out] 过期时间
-): SECURITY_STATUS; stdcall; external SECUR32_DLL name 'AcceptSecurityContextW';
+): SECURITY_STATUS; stdcall; external SECUR32_DLL name 'AcceptSecurityContext';
 
 // ----------------------------------------------------------------------------
 // 上下文操作函数

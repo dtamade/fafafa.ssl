@@ -94,6 +94,22 @@ Current follow-up scope:
 - remove the hardcoded Linux target from the runtime-entry `.lpi` files so Windows runners build with host target truth
 - after push, re-dispatch `wave-b-b2-manual.yml` and record the next real Windows failure boundary
 
+## Task 5: Fix the next startup-time Windows import truth exposed by run `25985680381`
+
+Observed runtime update:
+
+- quick smoke compile now succeeds on Windows
+- the new failure is process startup exit `-1073741511` (`0xC0000139`) before any test-body output
+- source audit points to a likely import-table mismatch: live code binds SSPI `AcceptSecurityContext` as `AcceptSecurityContextW`
+
+Changes for this batch:
+
+- add `tests/scripts/test_winssl_acceptsecuritycontext_import_contract.sh`
+- change `src/fafafa.ssl.winssl.api.pas` to bind the unsuffixed `AcceptSecurityContext`
+- change `src/fafafa.ssl.winssl.connection.pas` live callsites to use `AcceptSecurityContext`
+- re-run `python3 scripts/compile_all_modules.py`
+- push and dispatch another `wave-b-b2-manual.yml` run to verify whether quick smoke now gets past process startup
+
 ### Definition Of Done
 
 - 当前手动 Windows workflow 被锁定为覆盖 quick smoke + Wave B gate + broader suite transcript

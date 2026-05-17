@@ -32,6 +32,25 @@
   - 该合同显式守护 quick smoke 与 broader suite 所用 `.lpi` 不得再硬编码非 Windows 目标
   - 当前实现选择移除这些工程文件里的 `TargetCPU/TargetOS=linux` 硬编码，让 Windows runner 回到 host target truth
 
+- 第三次 Windows manual run `25985680381` 已经证明这条 `.lpi` 修法真实生效：
+  - quick smoke 编译阶段已变成 `Compiling test_winssl_certificate_loading.lpi... [OK]`
+  - 旧的 `-Tlinux` / `Can't find unit system` 边界已经消失
+
+- 新的 quick smoke 失败形态不再是编译错误，而是进程启动即退：
+  - `test_winssl_certificate_loading.exe` 在没有任何测试正文输出的情况下以 `-1073741511` (`0xC0000139`) 退出
+  - 这里关于 `0xC0000139` 属于“入口点缺失”的判断，是根据 Windows 常见状态码对该退出值的推断
+
+- 结合当前 live 源码，最可疑的启动前崩点是 SSPI 导入表而不是测试逻辑本身：
+  - `src/fafafa.ssl.winssl.api.pas` 把服务端握手 API 声明成了 `AcceptSecurityContextW`
+  - 但该 SSPI API 的真实导出名应为未后缀的 `AcceptSecurityContext`
+  - 因为 WinSSL 程序启动时会先解析整张导入表，所以哪怕 quick smoke 本身不立刻走到服务端握手，也可能在进入 `main` 前就因不存在的导出名崩掉
+
+- 当前第二批修法采用的是最小 live-source truth 修正：
+  - 新增 `tests/scripts/test_winssl_acceptsecuritycontext_import_contract.sh`
+  - `src/fafafa.ssl.winssl.api.pas` 改为绑定未后缀的 `AcceptSecurityContext`
+  - `src/fafafa.ssl.winssl.connection.pas` 的 live 调用点同步改成 `AcceptSecurityContext`
+  - 本地 `python3 scripts/compile_all_modules.py` 仍保持 `185/185` 通过
+
 ## 2026-05-15
 
 - GitHub Actions 账户额度不再是当前 blocker：
