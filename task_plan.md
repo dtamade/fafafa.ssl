@@ -426,6 +426,26 @@
 - [completed] 第二十五次 push 已记录远端自动 run：
   - `CI` run `25982459723`
   - 该批命中的是 manual/handoff 脚本文案层，按增量验证纪律只记录 run id，不同步阻塞式等待整条自动主线收口
+- [completed] 继续沿 `wave-b-b2` 的 report-metadata parse 做静态加深后，确认 handoff bundle 仍有真实降级漏洞：
+  - `scripts/prepare_wave_b_b2_handoff_bundle.sh` 会检查 `closure_status`、`consistency_status` 与 closure platform matrix
+  - 但修复前不会验证 closure / consistency report 自己的 `run_id` 是否属于当前批次
+  - 这意味着串批次 report 仍可能被误判为正常 report chain，甚至继续落到 `CLOSED`
+- [completed] 新增 focused contract，并先在当前脚本上观测到红灯：
+  - `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_run_id_contract.sh` 现在显式要求 closure / consistency report `run_id` mismatch 必须降级为 `NEEDS_REPORT_REPAIR`
+- [completed] `scripts/prepare_wave_b_b2_handoff_bundle.sh` 已收紧 report-chain run_id metadata 校验：
+  - 若 closure report 缺失 `run_id` 或 `run_id` 不等于当前 `RUN_ID`，记录 `closure_report run_id missing/mismatch`
+  - 若 consistency report 缺失 `run_id` 或 `run_id` 不等于当前 `RUN_ID`，记录 `consistency_report run_id missing/mismatch`
+  - 上述问题统一经由 `report_chain_issues` 降级到 `NEEDS_REPORT_REPAIR`
+- [completed] 第二十六波 wave-b handoff report-chain run_id 修复本地复核通过：
+  - `test_prepare_wave_b_b2_handoff_bundle_report_run_id_contract.sh` PASS
+  - `test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh` PASS
+  - `test_prepare_wave_b_b2_handoff_bundle_closure_platform_matrix_contract.sh` PASS
+  - `test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh` PASS
+  - `git diff --check` PASS
+- [completed] 第二十六次提交 `7a496b7` 已完成，wave-b handoff report-chain run_id batch 已推送到 `master`
+- [completed] 第二十六次 push 已记录远端自动 run：
+  - `CI` run `25983122179`
+  - 该批命中的是 manual/handoff report-chain metadata 层，按增量验证纪律只记录 run id，不同步阻塞式等待整条自动主线收口
 
 ## Current Blocker
 
@@ -447,14 +467,16 @@
 - 当前也没有已知仍把 summary 层 truth 伪装成 full handoff closure 的 `wave-b-b2` 脚本文案残留：
   - `cross-platform summary` 与 `closure readiness` 的 closed wording 已回收到 summary scope
   - `prepare_wave_b_b2_handoff_bundle.sh` / `check_wave_b_b2_evidence_consistency.sh` 继续保留更高层聚合职责
+- 当前也没有已知仍会因为 closure / consistency report `run_id` 串批次而把 `wave-b-b2` handoff 误判成正常 report chain 的残留：
+  - handoff bundle 现在会把这类 report metadata 漂移降级到 `NEEDS_REPORT_REPAIR`
 - 当前剩余边界只在验证层：
   - `release.yml`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled`、`wave-b-b2-manual.yml.disabled` 等 dormant/manual 路径没有在远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
-- 当前没有新的同等级 YAML/script summary 热点 blocker；最近相邻的 `test-all-platforms` 固定 coverage/support、`linux-ci` 证据文案，以及 `wave-b-b2` closed wording 过界都已被收掉
+- 当前没有新的同等级 YAML/script/report-chain 热点 blocker；最近相邻的 `test-all-platforms` 固定 coverage/support、`linux-ci` 证据文案、`wave-b-b2` closed wording，以及 handoff report run_id 漂移都已被收掉
 
 ## Current Queue
 
-1. 如果继续沿 `wave-b-b2` 这条线做静态加深，优先审 `prepare_wave_b_b2_handoff_bundle.sh` / `check_wave_b_b2_evidence_consistency.sh` 的 report-metadata parse 与降级状态边界，而不是重复审已经收掉的 closed wording。
+1. 如果继续沿 `wave-b-b2` 这条线做静态加深，优先补 report metadata 的剩余“缺失分支”合同，例如 `closure_report run_id missing` / `consistency_report run_id missing`，以及 consistency 顶层 note/count 是否对这些 parse issue 保持 truthful。
 2. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
 3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
 
@@ -500,6 +522,7 @@
 - 第二十三批 dormant multi-platform summary claim batch commit / push 完成，且远端自动 run 已记录
 - 第二十四批 dormant Linux evidence wording batch commit / push 完成，且远端自动 run 已记录
 - 第二十五批 wave-b handoff summary wording batch commit / push 完成，且远端自动 run 已记录
+- 第二十六批 wave-b handoff report-chain run_id batch commit / push 完成，且远端自动 run 已记录
 - `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
 - `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
 - `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用

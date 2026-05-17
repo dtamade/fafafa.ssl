@@ -552,3 +552,26 @@
 - 因此如果下一轮还要沿 `wave-b-b2` 深挖，重点应该前移到 report metadata parse / downgrade semantics：
   - 比如 malformed closure-platform matrix、缺 metadata、或 run_id mismatch 的降级路径是否都能 truthful 地落到 `NEEDS_REPORT_REPAIR` / `NEEDS_EVIDENCE_SYNC`
   - 而不是回头重复审已经收掉的 closed wording
+
+- 沿这条 queue 继续深挖后，`prepare_wave_b_b2_handoff_bundle.sh` 暴露出一个真实的 report-chain metadata 漏洞：
+  - 它修复前会验证 `closure_status`、`consistency_status` 和 closure platform matrix
+  - 但不会验证 closure / consistency report 自己的 `run_id` 是否真等于当前批次 `RUN_ID`
+  - 因此旧 report 或串批次 report 只要 status 字段看起来合法，handoff bundle 仍可能继续落到 `CLOSED`
+
+- 这类问题和之前的 wording drift 不同，已经不是“说大了”，而是会直接影响最终降级状态：
+  - 如果 report chain 顶层 `run_id` 都不对，这不是 `READY_FOR_RUNNER`、也不是 `CLOSED`
+  - 它本质上属于 downstream report metadata 损坏，应当归入 `NEEDS_REPORT_REPAIR`
+
+- 对这个问题的最小安全修法仍然不需要重写状态机：
+  - 只在 `prepare_wave_b_b2_handoff_bundle.sh` 里补 closure / consistency report 的 `run_id` 解析与比对
+  - 缺失时记录 `*_report run_id missing`
+  - 不匹配时记录 `*_report run_id mismatch`
+  - 继续复用现有 `report_chain_issues -> NEEDS_REPORT_REPAIR` 降级通道
+
+- 新增 `test_prepare_wave_b_b2_handoff_bundle_report_run_id_contract.sh` 后，这个分支也进入了持续守护面：
+  - 它覆盖 closure report 串批次和 consistency report 串批次两个场景
+  - 并要求 handoff bundle 同时给出 `NEEDS_REPORT_REPAIR` 和可读的 `report_chain_note`
+
+- 这次修复还说明当前 `wave-b-b2` 线下一步最值得继续补的是“缺失分支”，而不是再追 wording：
+  - `run_id mismatch` 已经有了 focused contract
+  - 接下来更像相邻高价值面的，是 `run_id missing` 这种 parse-hole 是否也都有对称合同

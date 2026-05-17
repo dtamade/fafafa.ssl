@@ -2223,3 +2223,69 @@
     - latest observed run for head `fb28511` was `CI` run `25982459723`
     - status at record time: `in_progress`
     - per the incremental verification discipline, this manual/handoff-script batch recorded the run id without a blocking watch
+
+### Twenty-Sixth-Order Route Review
+
+- `rg -n "report_chain_issues|NEEDS_REPORT_REPAIR|runid_mismatch|closure_status missing|consistency_status missing" scripts/prepare_wave_b_b2_handoff_bundle.sh scripts/check_wave_b_b2_evidence_consistency.sh tests/scripts/test_prepare_wave_b_b2_handoff_bundle*.sh tests/scripts/test_wave_b_b2_consistency*.sh`
+  - result: PASS
+  - summary:
+    - existing contracts already covered malformed closure platform matrix and missing `consistency_status`
+    - but no focused contract covered a closure/consistency report whose top-level `run_id` itself belongs to a different batch
+
+- `sed -n '390,570p' scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - result: PASS
+  - summary:
+    - the handoff bundle parsed `closure_status`, `consistency_status`, and closure platform states
+    - but it did not validate the downstream reports' own `run_id` metadata before deciding between `NEEDS_REPORT_REPAIR`, `NEEDS_EVIDENCE_SYNC`, `NEEDS_GATE_REPAIR`, and `CLOSED`
+
+### Twenty-Sixth-Order RED Contract
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_run_id_contract.sh`
+  - result before twenty-sixth fix: FAIL
+  - summary:
+    - handoff bundle still allowed a mismatched closure report `run_id` to survive as a normal report chain instead of degrading to `NEEDS_REPORT_REPAIR`
+
+### Twenty-Sixth-Order Repairs
+
+- add `tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_run_id_contract.sh`
+  - purpose: require `NEEDS_REPORT_REPAIR` when closure or consistency report `run_id` metadata mismatches the current batch `RUN_ID`
+
+- update `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - change: parse closure report `run_id` and flag `closure_report run_id missing/mismatch`
+  - change: parse consistency report `run_id` and flag `consistency_report run_id missing/mismatch`
+  - change: keep these issues inside the existing `report_chain_issues` downgrade path so they land at `NEEDS_REPORT_REPAIR`
+
+### Local Revalidation After Twenty-Sixth Fix
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_run_id_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_report_chain_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_closure_platform_matrix_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_explicit_missing_evidence_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+### Twenty-Sixth Push Recording
+
+- `git commit -m "chore: validate wave-b handoff report run ids"`
+  - result: PASS
+  - commit: `7a496b7`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `dfa12c3..7a496b7`
+
+- `gh run list --branch master --limit 4 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS after retry
+  - summary:
+    - first attempt hit transient `EOF`; retried without treating it as a repo/workflow regression
+    - latest observed run for head `7a496b7` was `CI` run `25983122179`
+    - status at record time: `in_progress`
+    - per the incremental verification discipline, this manual/handoff metadata batch recorded the run id without a blocking watch
