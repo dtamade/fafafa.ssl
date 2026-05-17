@@ -380,6 +380,47 @@
   - WinSSL comprehensive / library-basic / skeleton 这类更偏 API-surface 或未完成分类的文件
   - 因而下一步已经不是继续随机扫普通流，而是把剩余活跃测试面彻底分清 intentional 与 ordinary
 
+## 增量收口：残余模糊测试面分类与 WinSSL mTLS skeleton 握手迁移
+
+- 上一刀之后，仍有一小批活跃 context-level `SetServerName(...)` 命中处在“看起来像普通用法，但其实有些是 intentional coverage”的模糊状态：
+  - `test_tls_connector_early_data_contract`
+  - `test_mbedtls_context_contract`
+  - `test_wolfssl_context_contract`
+  - `test_winssl_library_basic`
+  - `test_winssl_mtls_skeleton`
+
+- 这批已经把它们彻底分清：
+  - `test_tls_connector_early_data_contract`
+    - 补 `INTENTIONAL_COMPAT`
+    - 说明该 connector early-data contract 故意从 inherited context fallback 起步
+  - `test_mbedtls_context_contract`
+  - `test_wolfssl_context_contract`
+  - `test_winssl_library_basic`
+    - 补 `INTENTIONAL_API_SURFACE`
+    - 说明它们是在覆盖 deprecated context setter/getter surface，而不是推荐客户端主路径
+  - `test_winssl_mtls_skeleton`
+    - 配置 smoke 段的 `SetServerName('test.example.com')` 补 `INTENTIONAL_API_SURFACE`
+    - 真实 `TestMTLSHandshake` 路径改成：
+      - `CreateConnection(...)`
+      - `ISSLClientConnection.SetServerName(ServerHost)`
+      - `DoHandshake`
+
+- focused 证据说明这批既不是纸面标签，也没有把 WinSSL 骨架编坏：
+  - `tests/scripts/test_residual_context_sni_classification_contract.sh`
+    - RED -> GREEN
+    - 直接守住显式分类与 `test_winssl_mtls_skeleton` 握手流不再使用 `Ctx.SetServerName(ServerHost)`
+  - Linux-safe focused compile:
+    - `tests/test_tls_connector_early_data_contract.pas`
+    - `tests/mbedtls/test_mbedtls_context_contract.pas`
+    - `tests/wolfssl/test_wolfssl_context_contract.pas`
+    - 全部通过
+  - Win64 focused cross-compile:
+    - `tests/winssl/test_winssl_library_basic.pas`
+    - `tests/winssl/test_winssl_mtls_skeleton.pas`
+    - 全部通过
+
+- 这一步完成后，残余活跃 context-level `SetServerName(...)` 命中已经基本不再混着普通客户端流指导语义，而主要是 intentional compatibility / API-surface coverage
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -403,15 +444,11 @@
 
 ### 下一批最值得做的事
 
-1. 继续 **残余活跃测试面分类**
-   - 现在一批真正的 WinSSL 普通客户端流已经迁完
-   - 下一步应把剩余 context-level `SetServerName(...)` 命中明确分成 intentional compatibility / API-surface coverage 与 residual ordinary flow
-
-2. 再决定 behavior migration 的第一条 RED
+1. 再决定 behavior migration 的第一条 RED
    - 明确哪些 intentional-compat tests 会被改写
    - 明确新优先级应该怎样从 context-level 迁到 per-connection hostname 路径
 
-3. `TSSLConfig` 拆层与 capability model presence bits 仍然排在后面
+2. `TSSLConfig` 拆层与 capability model presence bits 仍然排在后面
    - 它们是更大的设计债，不是当前 SNI 迁移主线的下一刀
 
 ## 总结

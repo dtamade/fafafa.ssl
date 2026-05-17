@@ -736,6 +736,8 @@ begin
 
   CtxObj := TMockContext.Create(sslCtxClient, True);
   Ctx := CtxObj;
+  // INTENTIONAL_COMPAT: legacy context-level SNI coverage. This connector
+  // early-data contract deliberately starts from inherited context fallback.
   Ctx.SetServerName('ctx.example.com');
 
   Connector := TSSLConnector.FromContext(Ctx)

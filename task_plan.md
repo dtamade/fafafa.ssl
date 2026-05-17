@@ -72,6 +72,15 @@
   - `tests/winssl/test_winssl_mtls_e2e_local.pas`
   - 这些文件不再通过 context-level `SetServerName(...)` 教客户端连接流
   - focused source contract 绿灯，Win64 交叉编译也已通过
+- [completed] 残余 `context-level SetServerName(...)` 模糊测试面已完成分类/收口：
+  - `tests/test_tls_connector_early_data_contract.pas` 已显式标记为 `INTENTIONAL_COMPAT`
+  - `tests/mbedtls/test_mbedtls_context_contract.pas`
+  - `tests/wolfssl/test_wolfssl_context_contract.pas`
+  - `tests/winssl/test_winssl_library_basic.pas`
+  - `tests/winssl/test_winssl_mtls_skeleton.pas`
+    已显式标记为 `INTENTIONAL_API_SURFACE`
+  - `tests/winssl/test_winssl_mtls_skeleton.pas` 的真实握手路径已迁到 per-connection SNI
+  - focused residual contract 绿灯，Linux-safe / Win64 focused 编译验证已通过
 
 ## Scope
 
@@ -99,19 +108,14 @@
 
 ## Current Queue
 
-1. 继续把剩余活跃 `context-level SetServerName(...)` 使用点分成两类：
-   - intentional compatibility / API-surface coverage：补显式标签
-   - 普通客户端连接流：继续迁到 per-connection SNI
-2. 优先处理下一批边界最清晰的剩余普通流：
-   - `tests/winssl/test_winssl_mtls_skeleton.pas` 的真实握手路径
-3. 在分类稳定后，再补第一条真正的 behavior migration RED：
+1. 设计并钉住第一条真正的 behavior migration RED：
    - 明确哪些 intentional-compat tests 会被改写
    - 明确 connector / connection-builder / factory / builder 四层的新优先级和失败语义
-4. 在 dedicated RED 明确后，再评估最终 public surface cleanup：
+2. 在 dedicated RED 明确后，再评估最终 public surface cleanup：
    - `TSSLConfig.ServerName` 是否继续留在当前 record 上
    - builder `WithSNI(...)` 是否继续保留当前命名/入口
-5. 在 capability 与 SNI 迁移边界都稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。
-6. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
+3. 在 capability 与 SNI 迁移边界都稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。
+4. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
 
 ## Verification Discipline
 

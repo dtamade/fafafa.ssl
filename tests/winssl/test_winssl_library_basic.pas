@@ -230,6 +230,8 @@ begin
     
     // Test 5: Set server name
     try
+      // INTENTIONAL_API_SURFACE: context-level SNI setter coverage. This
+      // WinSSL smoke test intentionally keeps the deprecated context API visible.
       Context.SetServerName('example.com');
       if Context.GetServerName = 'example.com' then
         TestPass('Context SetServerName/GetServerName')
@@ -372,4 +374,3 @@ begin
   WriteLn('Press Enter to exit...');
   ReadLn;
 end.
-

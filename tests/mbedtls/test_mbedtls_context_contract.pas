@@ -121,6 +121,8 @@ begin
   // Test 7: SNI
   if LCtx <> nil then
   begin
+    // INTENTIONAL_API_SURFACE: context-level SNI setter coverage. This
+    // context contract intentionally exercises the deprecated setter/getter API.
     LCtx.SetServerName('test.example.com');
     Check('SNI set', LCtx.GetServerName = 'test.example.com',
       'expected "test.example.com", got "' + LCtx.GetServerName + '"');

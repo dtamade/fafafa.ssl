@@ -285,6 +285,8 @@ begin
     Check('设置协议版本 (TLS 1.2/1.3)', True);
 
     // 测试服务器名称设置
+    // INTENTIONAL_API_SURFACE: context-level SNI setter coverage. This
+    // configuration smoke keeps the deprecated context setter visible on purpose.
     Ctx.SetServerName('test.example.com');
     Check('设置服务器名称 (SNI)', True);
 
@@ -304,6 +306,7 @@ var
   Lib: ISSLLibrary;
   Ctx: ISSLContext;
   Conn: ISSLConnection;
+  ClientConn: ISSLClientConnection;
   Socket: TSocket;
   ServerHost: string;
   ServerPort: Word;
@@ -348,7 +351,6 @@ begin
       Exit;
     end;
 
-    Ctx.SetServerName(ServerHost);
     Ctx.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
 
     // 加载客户端证书
@@ -388,6 +390,13 @@ begin
 
       if Conn <> nil then
       begin
+        Check('连接支持 ISSLClientConnection',
+          Supports(Conn, ISSLClientConnection, ClientConn));
+        if not Supports(Conn, ISSLClientConnection, ClientConn) then
+          Exit;
+
+        ClientConn.SetServerName(ServerHost);
+
         if Conn.DoHandshake = sslHsCompleted then
           Check('mTLS 握手', True)
         else

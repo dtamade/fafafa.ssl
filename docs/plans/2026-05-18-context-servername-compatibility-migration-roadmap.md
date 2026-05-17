@@ -162,6 +162,17 @@ Delivered first cut:
 - focused shell contract now proves those files no longer teach context-level SNI
 - Win64 cross-compile proof succeeded for the selected files
 
+Delivered second cut:
+
+- residual ambiguous files are now explicitly classified:
+  - `test_tls_connector_early_data_contract` -> `INTENTIONAL_COMPAT`
+  - `test_mbedtls_context_contract` -> `INTENTIONAL_API_SURFACE`
+  - `test_wolfssl_context_contract` -> `INTENTIONAL_API_SURFACE`
+  - `test_winssl_library_basic` -> `INTENTIONAL_API_SURFACE`
+  - `test_winssl_mtls_skeleton` config smoke -> `INTENTIONAL_API_SURFACE`
+- the real handshake path inside `test_winssl_mtls_skeleton` moved from `Ctx.SetServerName(ServerHost)` to per-connection `ISSLClientConnection.SetServerName(ServerHost)`
+- focused residual contract is green, Linux-safe focused compiles are green, and Win64 cross-compiles for the two WinSSL files are green
+
 ## Progress Report
 
 ### Workstream status
@@ -175,6 +186,7 @@ Delivered first cut:
   - builder runtime warning alignment complete
   - Phase C shared compatibility shim first cut complete
   - Phase E first WinSSL client-flow migration cut complete
+  - Phase E residual ambiguous test-surface classification cut complete
 - `TSSLConfig` cross-layer slimming: intentionally deferred until SNI migration stabilizes
 
 ### What This Means Operationally
@@ -186,17 +198,16 @@ Delivered first cut:
 
 Choose one bounded implementation family only:
 
-1. **Final surface cleanup prep**
-   - re-evaluate whether `TSSLConfig.ServerName` and builder `WithSNI(...)` still need their current naming/placement now that builder/factory/runtime paths all expose compatibility warnings
-2. **Behavior migration RED selection**
+1. **Behavior migration RED selection**
    - decide which intentional-compat tests will be rewritten before any real fallback deletion
    - explicitly define new precedence between builder/factory/context and per-connection hostname paths
-3. **Residual active test classification**
-   - label remaining API-surface / compatibility coverage explicitly
-   - continue migrating any leftover normal client-flow files such as the real handshake path inside `test_winssl_mtls_skeleton`
-Recommended first pick: **Residual active test classification**.
+2. **Final surface cleanup prep**
+   - re-evaluate whether `TSSLConfig.ServerName` and builder `WithSNI(...)` still need their current naming/placement now that builder/factory/runtime paths all expose compatibility warnings
+3. **Wider public-surface cleanup**
+   - stage follow-up work only after the first behavior-migration RED is pinned and verified
+Recommended first pick: **Behavior migration RED selection**.
 
-Builder/factory/shared-shim warning work is no longer the blocker; the next highest-value work is shrinking the ambiguous residual test surface before choosing the first real behavior-migration RED.
+Builder/factory/shared-shim warning work and residual test-surface classification are no longer the blocker; the next highest-value work is choosing the first real behavior-migration RED.
 
 ## Verification
 

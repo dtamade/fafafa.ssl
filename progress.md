@@ -146,6 +146,88 @@
 - `git diff --check`
   - result: PASS
 
+### Residual Context SNI Classification And WinSSL mTLS Skeleton Cleanup
+
+- add `docs/plans/2026-05-18-residual-context-sni-classification-and-mtls-skeleton-cleanup.md`
+  - purpose:
+    - define the bounded residual classification batch after the first WinSSL client-flow migration cut
+    - separate intentional compatibility / API-surface coverage from the last small ordinary handshake path
+
+- add `tests/scripts/test_residual_context_sni_classification_contract.sh`
+  - purpose:
+    - require explicit `INTENTIONAL_*` labels in the residual ambiguous files
+    - fail if `tests/winssl/test_winssl_mtls_skeleton.pas` still uses `Ctx.SetServerName(ServerHost)` in the real handshake path
+
+- `bash -n tests/scripts/test_residual_context_sni_classification_contract.sh && bash tests/scripts/test_residual_context_sni_classification_contract.sh`
+  - result: RED
+  - summary:
+    - initial failure proved `tests/winssl/test_winssl_mtls_skeleton.pas` still lacked explicit `INTENTIONAL_API_SURFACE` classification
+    - the residual batch was still real work, not duplicate governance
+
+- update residual classification files:
+  - `tests/test_tls_connector_early_data_contract.pas`
+  - `tests/mbedtls/test_mbedtls_context_contract.pas`
+  - `tests/wolfssl/test_wolfssl_context_contract.pas`
+  - `tests/winssl/test_winssl_library_basic.pas`
+  - `tests/winssl/test_winssl_mtls_skeleton.pas`
+  - change:
+    - add explicit `INTENTIONAL_COMPAT` / `INTENTIONAL_API_SURFACE` markers to the residual ambiguous coverage files
+    - move the real `TestMTLSHandshake` flow from context-level `SetServerName(ServerHost)` to per-connection `ISSLClientConnection.SetServerName(ServerHost)`
+
+- `bash -n tests/scripts/test_residual_context_sni_classification_contract.sh && bash tests/scripts/test_residual_context_sni_classification_contract.sh`
+  - result: RED -> GREEN
+  - summary:
+    - residual files are now explicitly classified
+    - `test_winssl_mtls_skeleton.pas` no longer uses context-level SNI in the real handshake path
+
+- `mkdir -p tmp/test_tls_connector_early_data_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_tls_connector_early_data_contract -FEtmp/test_tls_connector_early_data_contract -otmp/test_tls_connector_early_data_contract/test_tls_connector_early_data_contract tests/test_tls_connector_early_data_contract.pas`
+  - result: PASS
+  - summary:
+    - compile succeeded
+    - the new `INTENTIONAL_COMPAT` marker only produced the expected deprecated context-level SNI warning at the labeled coverage site
+
+- `mkdir -p tmp/test_mbedtls_context_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_context_contract -FEtmp/test_mbedtls_context_contract -otmp/test_mbedtls_context_contract/test_mbedtls_context_contract tests/mbedtls/test_mbedtls_context_contract.pas`
+  - result: PASS
+  - summary:
+    - compile succeeded
+    - the labeled context contract still only emits the expected deprecated setter/getter warnings
+
+- `mkdir -p tmp/test_wolfssl_context_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_context_contract -FEtmp/test_wolfssl_context_contract -otmp/test_wolfssl_context_contract/test_wolfssl_context_contract tests/wolfssl/test_wolfssl_context_contract.pas`
+  - result: PASS
+  - summary:
+    - compile succeeded
+    - the labeled context contract still only emits the expected deprecated setter/getter warnings
+
+- `fpc -Twin64 -B -Fu./src -Fu./tests -Fu./tests/framework -otmp/test_winssl_library_basic.exe tests/winssl/test_winssl_library_basic.pas`
+  - result: PASS
+  - summary:
+    - Win64 cross-compile succeeded after adding the explicit API-surface label
+
+- `fpc -Twin64 -B -Fu./src -Fu./tests -Fu./tests/framework -otmp/test_winssl_mtls_skeleton.exe tests/winssl/test_winssl_mtls_skeleton.pas`
+  - result: PASS
+  - summary:
+    - Win64 cross-compile succeeded after migrating the real handshake path to per-connection SNI
+    - the remaining context-level setter use in the file is now limited to the labeled configuration smoke coverage
+
+- update `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - change:
+    - record the residual classification cut as Phase E delivered second cut
+    - move the next recommended batch from residual classification to behavior-migration RED selection
+
+- update `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - change:
+    - add a dedicated residual-classification closeout section
+    - refresh the next-step recommendation so future sessions continue from behavior-migration RED selection
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the residual classification closeout into persistent repo working memory
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - no whitespace or patch-format issues remained after the residual classification batch
+
 ### Context ServerName Shared Compatibility Shim
 
 - add `docs/plans/2026-05-18-context-servername-shared-compatibility-shim.md`

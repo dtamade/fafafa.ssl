@@ -247,3 +247,21 @@
   - backend context contracts / framework tests
   - WinSSL comprehensive / library-basic / skeleton 这类更偏 API-surface 或未完成分类的文件
   - 剩下真正还像普通客户端流的主要残留，已经缩到 `test_winssl_mtls_skeleton.pas` 的握手路径这类更小的面
+
+- 这批 residual 分类/收口之后，上述“更小的面”也已经被真正消化掉：
+  - `tests/test_tls_connector_early_data_contract.pas`
+    - 已补 `INTENTIONAL_COMPAT`，明确它故意从 inherited context fallback 起步
+  - `tests/mbedtls/test_mbedtls_context_contract.pas`
+  - `tests/wolfssl/test_wolfssl_context_contract.pas`
+  - `tests/winssl/test_winssl_library_basic.pas`
+    - 已补 `INTENTIONAL_API_SURFACE`，明确它们是在覆盖 deprecated context setter/getter surface
+  - `tests/winssl/test_winssl_mtls_skeleton.pas`
+    - 配置段 `SetServerName('test.example.com')` 已补 `INTENTIONAL_API_SURFACE`
+    - 真实 `TestMTLSHandshake` 路径已改成 `CreateConnection(...) -> ISSLClientConnection.SetServerName(ServerHost) -> DoHandshake`
+
+- focused contract 与编译证据共同说明：当前剩余活跃 context-level `SetServerName(...)` 命中已经基本不再混着普通客户端流指导语义，而主要是 intentional compatibility / API-surface coverage
+
+- 因而 SNI 主线的下一步已经可以正式前移到：
+  - 选择第一组要改写的 intentional-compat tests
+  - 定义第一条真正的 behavior migration RED
+  - 而不是继续做 residual 分类考古
