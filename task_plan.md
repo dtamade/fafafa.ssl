@@ -525,6 +525,15 @@
   - `test_wave_b_b2_consistency_closure_report_run_id_contract.sh` PASS
   - `test_wave_b_b2_consistency_next_actions_contract.sh` PASS
   - `git diff --check` PASS
+- [completed] 第二十九次 docs closeout push 对应远端自动 run `25983797036` 已 SUCCESS：
+  - `Code Quality (Light)` SUCCESS
+  - `Minimal Gate (Linux)` SUCCESS
+  - `FreePascal TLS 1.3 Completeness` SUCCESS
+  - 说明 wave-b missing-report closeout 没有误伤自动主线
+- [completed] 第三十次提交 `6562f13` 已完成，wave-b consistency closure-report missing truth batch 已推送到 `master`
+- [completed] 第三十次 push 已记录远端自动 run：
+  - `CI` run `25983911908`
+  - 该批补的是顶层摘要 truth；按增量验证纪律记录 run id，不同步阻塞式等待整条自动主线收口
 
 ## Current Blocker
 
@@ -565,10 +574,9 @@
 
 ## Current Queue
 
-1. 先提交并推送当前 `wave-b-b2` consistency closure-report missing truth batch，并记录自动 `CI` run id；该批只补顶层摘要 truth，不扩状态机范围。
-2. 如果继续沿 `wave-b-b2` 这条线做静态加深，下一跳优先补 `check_wave_b_b2_evidence_consistency.sh` 的 `cross_summary missing` focused contract，确认 cross-summary 整个文件缺失时 row note、`required_missing` 与 next actions 也保持 truthful。
-3. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
-4. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
+1. 如果继续沿 `wave-b-b2` 这条线做静态加深，下一跳优先补 `check_wave_b_b2_evidence_consistency.sh` 的 `cross_summary missing` focused contract，确认 cross-summary 整个文件缺失时 row note、`required_missing` 与 next actions 也保持 truthful。
+2. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
+3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
 
 ## Verification Discipline
 

@@ -654,3 +654,12 @@
 - 因而当前 `wave-b-b2` 线上更合理的下一跳，已经从 closure-report missing 前移到 cross-summary missing：
   - 优先补 `check_wave_b_b2_evidence_consistency.sh` 的 `cross_summary missing` focused contract
   - 目标是确认 cross-summary 整个文件缺失时，row note、`required_missing` 和 next actions 也不会漂成含糊的默认态
+
+- `c38298e` 对应的 docs closeout run `25983797036` 已经 SUCCESS：
+  - `Code Quality (Light)`、`Minimal Gate (Linux)`、`FreePascal TLS 1.3 Completeness` 全部 SUCCESS
+  - 说明上一轮 missing-report closeout 也没有把自动主线带偏
+
+- 这次提交 `6562f13` 同时修的是一个真实脚本缺口，而不只是 coverage：
+  - 但修法仍然是最小的，只补 `closure_report missing -> closure_status_note=closure_report missing`
+  - 因此远端自动 `CI` run `25983911908` 仍按增量 run id 记账即可
+  - 除非自动主线转红，否则不需要把这类 truth batch 升级成阻塞式盯跑
