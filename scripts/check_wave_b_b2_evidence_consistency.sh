@@ -637,12 +637,14 @@ check_closure_report_artifact() {
   parsed="$(parse_run_id_md "$abs_path")"
 
   local match="NO"
-  local note="run_id mismatch"
+  local note="ok"
+  local closure_report_issues=()
   if [[ -n "$parsed" && "$parsed" == "$RUN_ID" ]]; then
     match="YES"
-    note="ok"
   elif [[ -z "$parsed" ]]; then
-    note="run_id not found"
+    closure_report_issues+=("closure_report run_id missing")
+  else
+    closure_report_issues+=("closure_report run_id mismatch")
   fi
 
   if [[ "$match" == "NO" ]]; then
@@ -652,23 +654,12 @@ check_closure_report_artifact() {
   local parsed_closure_status
   parsed_closure_status="$(parse_closure_status_md "$abs_path")"
   if [[ -z "$parsed_closure_status" ]]; then
-    closure_status_note="closure_status missing"
+    closure_report_issues+=("closure_status missing")
     runid_mismatch=$((runid_mismatch + 1))
-    if [[ "$note" == "ok" ]]; then
-      note="$closure_status_note"
-    else
-      note="$note; $closure_status_note"
-    fi
   elif ! is_valid_closure_status "$parsed_closure_status"; then
-    closure_status_note="invalid closure_status: $parsed_closure_status"
+    closure_report_issues+=("invalid closure_status: $parsed_closure_status")
     runid_mismatch=$((runid_mismatch + 1))
-    if [[ "$note" == "ok" ]]; then
-      note="$closure_status_note"
-    else
-      note="$note; $closure_status_note"
-    fi
   else
-    closure_status_note="$parsed_closure_status"
     local platform_issues=()
     local platform
     local state
@@ -682,17 +673,21 @@ check_closure_report_artifact() {
     done
 
     if [[ ${#platform_issues[@]} -gt 0 ]]; then
-      local joined_issues
-      joined_issues="$(printf '%s; ' "${platform_issues[@]}")"
-      joined_issues="${joined_issues%; }"
-      closure_status_note="$joined_issues"
+      closure_report_issues+=("${platform_issues[@]}")
       runid_mismatch=$((runid_mismatch + ${#platform_issues[@]}))
-      if [[ "$note" == "ok" ]]; then
-        note="$joined_issues"
-      else
-        note="$note; $joined_issues"
-      fi
     fi
+
+    if [[ ${#closure_report_issues[@]} -eq 0 ]]; then
+      closure_status_note="$parsed_closure_status"
+    fi
+  fi
+
+  if [[ ${#closure_report_issues[@]} -gt 0 ]]; then
+    local joined_issues
+    joined_issues="$(printf '%s; ' "${closure_report_issues[@]}")"
+    joined_issues="${joined_issues%; }"
+    closure_status_note="$joined_issues"
+    note="$joined_issues"
   fi
 
   rows+=("| closure_report | $rel_path | YES | ${parsed:-n/a} | $match | $note |")
