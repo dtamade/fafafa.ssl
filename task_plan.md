@@ -1,8 +1,8 @@
-# Task Plan - CI Runtime Gate Repair
+# Task Plan - Workflow Truth And Evidence Hardening
 
 ## Goal
 
-修复 GitHub Actions 恢复执行后暴露出来的真实远端阻塞，并继续把 completeness lane 收口到最新的退出期崩溃：先解决 WolfSSL / MbedTLS runtime 依赖与 signer workflow 问题，再修复 `FreePascal TLS 1.3 Completeness` 在所有测试完成后触发的 shutdown-time `EAccessViolation`，随后完成本地验证、提交并推送到 `master` 复核远端状态。
+当前主目标不再是 runtime 救火，而是把仓库剩余 dormant/manual workflow 的 summary、capability claim、输入语义与证据边界继续收紧到可证明范围：优先移除固定能力宣告、固定覆盖率数字和超出当前 run 的泛化结论，并把 working-memory / queue 同步到这一条 truth-first 路线。
 
 ## Current Status
 
@@ -363,6 +363,23 @@
   - `Minimal Gate (Linux)` SUCCESS
   - `FreePascal TLS 1.3 Completeness` SUCCESS
   - 这次改动命中的是 dormant `basic-checks.yml.disabled` 与 `linux-ci.yml.disabled`，自动主线继续全绿；两条 lane 仍保持 `static-only`
+- [completed] 继续探索后确认当前最像“开发方向跑偏”的残余点，已经不在 runtime，而在 dormant multi-platform summary claim：
+  - `test-all-platforms.yml.disabled` 的平台结果表虽然已经 truthful
+  - 但 summary 尾部仍固定输出 coverage 数字和 `WinSSL backend: Full support`
+  - 这会把“平台 job 结果”重新放大成“能力完备度宣告”，与当前 truth-first 路线冲突
+- [completed] 强化现有 focused contract，并先在当前模板上观测到红灯：
+  - `tests/scripts/test_workflow_test_all_platforms_truth_contract.sh` 现在显式拒绝固定 coverage/support 断言，并要求 truth-scoped notes
+- [completed] `test-all-platforms.yml.disabled` 已进一步收紧为 evidence-scoped summary lane：
+  - 删除固定 `Core modules / High priority / Medium priority / Low priority` 数字
+  - 删除固定 `WinSSL backend: Full support`
+  - notes 改为只声明“当前 run 的平台结果、artifact 与日志证据边界”
+- [completed] 第二十三波 dormant multi-platform summary claim 修复本地复核通过：
+  - `test_workflow_test_all_platforms_truth_contract.sh` PASS
+  - `git diff --check` PASS
+- [completed] 第二十三次提交 `3edcaac` 已完成，multi-platform summary claim batch 已推送到 `master`
+- [completed] 第二十三次 push 已记录远端自动 run：
+  - `CI` run `25981582057`
+  - 按新的增量验证纪律，这批只记录 run id，不同步阻塞式等待整条自动主线收口
 
 ## Current Blocker
 
@@ -384,12 +401,12 @@
 - 当前剩余边界只在验证层：
   - `release.yml`、`winssl-tests.yml.disabled`、`pr-checks.yml.disabled`、`wave-b-b2-manual.yml.disabled` 等 dormant/manual 路径没有在远端自动 push run 中被实际执行
   - 其中 Windows / dormant 路径继续保持 `static-only`，符合用户当前约束
-  - 当前下一条更明确的 summary truth 缺口已经前移到 `test-all-platforms.yml.disabled` 的固定覆盖率/WinSSL 完整支持断言
+- 当前没有新的同等级 summary truth 热点 blocker；上一条最明确的 `test-all-platforms` 固定 coverage/support 断言已被收掉
 
 ## Current Queue
 
-1. 继续静态审查 dormant summary-heavy workflow，下一站优先收 `test-all-platforms.yml.disabled` 里固定覆盖率数字与 `WinSSL backend: Full support` 这类超出当前 run 可证明范围的断言。
-2. 继续静态审查 mixed-trigger / manual workflow 的 summary truth，但重点转向“summary 是否真实反映 `needs.*.result`、artifact 真相和当前 lane 范围，而不是固定能力宣告”。
+1. 继续做一次 route-local 静态审查，找剩余 dormant/manual workflow 里是否还存在“固定能力数字、固定完备度标签、或超出当前 run 范围的结论性 notes”。
+2. 继续把工作目标维持在 truth/evidence 收口，而不是回到已经完成的 runtime gate 修复叙事。
 3. 持续保持 Windows/WinSSL 与 dormant workflow 的 `static-only` 边界，不把任何自动主线绿灯误报成这些路径的 runtime 证明。
 
 ## Verification Discipline
@@ -431,6 +448,7 @@
 - 第二十批 manual workflow input truth batch commit / push 完成，且自动远端主线复核通过
 - 第二十一批 pr-checks summary truth batch commit / push 完成，且自动远端主线复核通过
 - 第二十二批 dormant basic/linux summary truth batch commit / push 完成，且自动远端主线复核通过
+- 第二十三批 dormant multi-platform summary claim batch commit / push 完成，且远端自动 run 已记录
 - `.github/workflows` 下不再残留 `gcarreno/setup-lazarus`
 - `.github/workflows` 下不再残留可直接升级但仍停在 Node20 默认线的 GitHub Action 引用
 - `.github/workflows` 下不再残留浮动 major tag / branch-like ref 的外部 action 引用

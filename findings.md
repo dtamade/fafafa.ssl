@@ -486,3 +486,24 @@
   - 后续只有在触碰对应治理面或合同脚本本身时才重跑
   - dormant summary-only 批次只跑新合同、最近邻合同和 `git diff --check`
   - docs closeout 批次不再同步阻塞等待整条自动 CI，除非触碰活跃链路或自动 CI 已红
+
+- 继续探索后，当前更需要纠偏的不是某个运行时实现，而是总目标叙述本身：
+  - `task_plan.md` 还沿用了 `CI Runtime Gate Repair` 这一旧标题和旧目标
+  - 但当前真实工作已经从 runtime 救火切到了 dormant/manual workflow 的 truth/evidence 收口
+  - 如果 goal 不改，后续 continuation 很容易又回到“重新证明已经修完的 runtime 问题”这条老路
+
+- `test-all-platforms.yml.disabled` 暴露的是这一类“方向偏差”的典型例子：
+  - 平台结果表已经 truthful
+  - 但 summary 末尾仍固定写 `Core modules (P0): 6/6`、`High priority (P1): 14/14`、`Medium priority (P2): 11/11`、`Low priority (P3): 15/15`
+  - 还固定写 `WinSSL backend: Full support`
+  - 这会把“本次平台 job 的执行结果”偷换成“整个能力面已经被证明”
+
+- 对这条 lane 的最小可信修法，不是再发明一套新的 coverage 统计，而是删掉这些超范围断言：
+  - summary 保留 `needs.*.result` 与下载到的 artifact
+  - notes 只说明“当前 run 的证据边界”
+  - WinSSL 能力必须回到 Windows lane 的实际日志和 artifact，而不是 summary 常量
+
+- 这次收口之后，workflow 路线的总目标应该明确改成：
+  - `workflow truth and evidence hardening`
+  - 也就是继续清理 dormant/manual workflow 中剩余的固定能力宣告、固定数字和超范围结论
+  - 而不是回到已经完成的 runtime blocker 叙事

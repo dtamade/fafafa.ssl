@@ -178,3 +178,4 @@ git diff --check
   - 随后 `pr-checks` summary truth docs closeout `81a7b50` 也通过了 `CI` run `25980995605`，说明 working-memory truth sync 继续保持稳定
   - 最新又补上 dormant `basic-checks` / `linux-ci` 的 summary truth 收紧；`6615b69` 对应的 `CI` run `25981061685` 继续 SUCCESS
   - 后续又锁定了增量验证纪律：workflow 治理基线合同进入缓存绿灯集合，docs closeout 不再默认同步阻塞式重跑/盯跑整条自动 CI
+  - 最新又补上 dormant `test-all-platforms` 的固定 coverage / WinSSL support claim 收紧；`3edcaac` 已推送并记录 `CI` run `25981582057`

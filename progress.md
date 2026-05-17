@@ -2012,3 +2012,59 @@
 
 - update `progress.md`
   - change: persist this workflow correction so later continuation does not drift back into repetitive governance-script reruns
+
+### Twenty-Third-Order Route Review
+
+- `sed -n '320,390p' .github/workflows/test-all-platforms.yml.disabled`
+  - result: PASS
+  - summary:
+    - platform result rows were already truthful
+    - but the summary still ended with fixed coverage counts and `WinSSL backend: Full support`, which exceeded what the current run could actually prove
+
+- `rg -n "Core modules \\(P0\\)|High priority \\(P1\\)|Medium priority \\(P2\\)|Low priority \\(P3\\)|WinSSL backend: Full support" .github/workflows/test-all-platforms.yml.disabled`
+  - result: PASS
+  - summary:
+    - the remaining over-claim surface was isolated to the final summary notes block
+
+### Twenty-Third-Order RED Contract
+
+- `bash tests/scripts/test_workflow_test_all_platforms_truth_contract.sh`
+  - result before twenty-third fix: FAIL
+  - summary:
+    - missing truthful fragment `echo "### Notes" >> $GITHUB_STEP_SUMMARY`
+
+### Twenty-Third-Order Repairs
+
+- update `tests/scripts/test_workflow_test_all_platforms_truth_contract.sh`
+  - change: require evidence-scoped notes
+  - change: forbid fixed coverage counts and fixed WinSSL support claims in the multi-platform summary
+
+- update `.github/workflows/test-all-platforms.yml.disabled`
+  - change: remove fixed coverage/module-count lines
+  - change: remove fixed `WinSSL backend: Full support`
+  - change: replace the ending block with notes that explicitly scope the summary to this run's platform results, artifacts, and logs
+
+### Local Revalidation After Twenty-Third Fix
+
+- `bash tests/scripts/test_workflow_test_all_platforms_truth_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+
+### Twenty-Third Push Recording
+
+- `git commit -m "chore: tighten multi-platform summary claims"`
+  - result: PASS
+  - commit: `3edcaac`
+
+- `git push origin master`
+  - result: PASS
+  - remote update: `bd604d0..3edcaac`
+
+- `gh run list --branch master --limit 4 --json databaseId,workflowName,status,conclusion,headSha,displayTitle,url,createdAt,updatedAt`
+  - result: PASS
+  - summary:
+    - latest observed run for head `3edcaac` was `CI` run `25981582057`
+    - status at record time: `in_progress`
+    - per the new incremental verification discipline, this dormant-summary batch recorded the run id without blocking on a full watch
