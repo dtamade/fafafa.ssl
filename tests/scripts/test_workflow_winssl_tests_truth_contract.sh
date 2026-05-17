@@ -21,8 +21,8 @@ text = workflow.read_text(encoding="utf-8")
 required_fragments = [
     "choco install -y freepascal lazarus",
     "Get-Command lazbuild",
-    "tests/quick_winssl_validation.ps1",
-    "tests/run_winssl_tests.ps1",
+    "pwsh -NoProfile -ExecutionPolicy Bypass -File tests/quick_winssl_validation.ps1",
+    "pwsh -NoProfile -ExecutionPolicy Bypass -File tests/run_winssl_tests.ps1",
     "test-reports/winssl_quick_smoke_${{ github.run_id }}.log",
     "test-reports/winssl_runtime_suite_${{ github.run_id }}.log",
     "This template records the observed results of the repository WinSSL scripts for the current run only.",

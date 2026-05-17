@@ -206,7 +206,7 @@ jobs:
           $runId = "${{ needs.setup.outputs.run_id }}"
           New-Item -ItemType Directory -Force -Path test-reports | Out-Null
           $quickLog = "test-reports/winssl_quick_smoke_${runId}.log"
-          powershell -ExecutionPolicy Bypass -File tests/quick_winssl_validation.ps1 *>&1 | Tee-Object -FilePath $quickLog
+          pwsh -NoProfile -ExecutionPolicy Bypass -File tests/quick_winssl_validation.ps1 *>&1 | Tee-Object -FilePath $quickLog
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
@@ -215,7 +215,7 @@ jobs:
         shell: powershell
         run: |
           $runId = "${{ needs.setup.outputs.run_id }}"
-          powershell -ExecutionPolicy Bypass -File scripts/run_wave_b_windows_gate.ps1 -RunId $runId -OutputDir test-reports
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/run_wave_b_windows_gate.ps1 -RunId $runId -OutputDir test-reports
 
       - name: Run broader WinSSL runtime suite
         shell: powershell
@@ -225,7 +225,7 @@ jobs:
           $exitCode = 0
           Start-Transcript -Path "test-reports/winssl_runtime_suite_${runId}.log"
           try {
-            powershell -ExecutionPolicy Bypass -File tests/run_winssl_tests.ps1
+            pwsh -NoProfile -ExecutionPolicy Bypass -File tests/run_winssl_tests.ps1
             $exitCode = $LASTEXITCODE
           } finally {
             Stop-Transcript
