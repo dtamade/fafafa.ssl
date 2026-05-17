@@ -99,8 +99,9 @@ begin
   TestHeader('Direct server context keeps legacy ServerName state off new connections');
 
   Ctx := TSSLFactory.CreateContext(sslCtxServer, sslFreePascal);
-  // INTENTIONAL_COMPAT: keep the deprecated context-level setter observable
-  // while proving server-side CreateConnection no longer inherits it.
+  // INTENTIONAL_COMPAT: legacy context-level SNI coverage. Keep the
+  // deprecated context-level setter observable while proving server-side
+  // CreateConnection no longer inherits it.
   Ctx.SetServerName('direct-server.example.com');
 
   Assert(Ctx.GetServerName = 'direct-server.example.com',

@@ -111,7 +111,13 @@ git diff --check
   - v1.2-aware record 现在会在导出前先把 legacy boolean 回填成 support-level compatibility projection
   - 纯 legacy-only in-memory record 的无信号歧义被明确记录，但本批不在 serializer 内部瞎猜
 
+- 已完成批次 5：context ServerName 兼容迁移路线图固化
+  - 新增 `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - 把 factory / builder / connector / 5 backend fallback / focused compatibility tests 的当前真相压成单一路线图
+  - 把 intentional compatibility label contract 扩展到 builder-server 与 sslCtxBoth 两条额外锁点
+
 - 下一批建议
   1. 单独规划 context-level `ServerName` 兼容迁移
+     - 路线图已形成，下一步直接进入第一批实现：builder surface narrowing
   2. 再处理 `TSSLConfig` 跨层字段瘦身
   3. 如果未来要彻底消灭 capability serializer 在 pure legacy-only record 上的歧义，需要先给 capability model 补 presence/truth 元信息

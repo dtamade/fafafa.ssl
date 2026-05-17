@@ -125,3 +125,24 @@
   - 现在已经解决的是“v1.2-aware record 导出不应自相矛盾”
   - 尚未、也不能在本批假装解决的是“纯 legacy-only record 在缺少 presence bit 时，是否应该把 `none` 当作显式不支持”
   - 如果将来想彻底消灭这类歧义，需要 capability model 自身增加 presence/truth 元信息，而不是继续在 serializer 里猜
+
+- 在继续推进前，`context-level ServerName` 这条主线的路线图也已经被压实成当前可执行真相：
+  - 高层写入面：
+    - factory client path 仍会把 `TSSLConfig.ServerName` 写回 context
+    - factory server path 已经禁止 `ServerName`
+    - builder `BuildClient` / `BuildServer` 仍都会保留 `WithSNI(...) -> context.SetServerName(...)` 的兼容写入
+    - connector 已经是正确方向，直接把 hostname 写到 `ISSLClientConnection.SetServerName(...)`
+  - backend 继承面：
+    - OpenSSL / FreePascal / WolfSSL / MbedTLS / WinSSL 五个 connection constructor 仍会从 context fallback 读取 `GetServerName`
+  - 合同锁点：
+    - precedence / inheritance / cross-backend consistency / error normalization 这些测试都仍在有意保留旧兼容语义
+
+- 这意味着最合理的迁移顺序不是“先删 backend fallback”，而是：
+  - 先收高层 surface，减少继续写入 deprecated context-level SNI 的入口
+  - 再把 backend constructor 里的 fallback 提取成共享 compatibility shim
+  - 最后才考虑真正删除历史继承语义
+
+- 兼容测试的“显式标签”也需要当成一等资产维护：
+  - 这次映射证明不只最初那几份测试在锁兼容语义，`test_context_builder_server_servername_runtime_consistency.pas` 与 `test_sslctxboth_client_capability_clarification.pas` 也同样在锁住旧 fallback
+  - 已经把这些文件纳入 `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - 以后做迁移时，谁要改掉这些行为，就必须先面对这些标签与合同，而不是“顺手改了再说”

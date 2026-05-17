@@ -43,6 +43,10 @@
   - 新增 `tests/test_capability_serialization_truth_projection.pas`，直接检查 JSON/XML 输出字符串
   - serializer 现在会在 record 已携带 support-level truth 时，先回填 legacy boolean 再输出
   - 既有 JSON/XML round-trip 兼容保持绿色
+- [completed] `context-level ServerName` 迁移路线图与兼容锁点地图已固化：
+  - 新增 `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - intentional compatibility tests 已统一纳入 `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - 当前已明确下一批应优先做 builder surface narrowing，而不是直接硬删 backend fallback
 
 ## Scope
 
@@ -70,9 +74,10 @@
 
 ## Current Queue
 
-1. 为 context-level `ServerName` 兼容路径继续保留迁移计划，但不要回退到 warning 噪音治理：
-   - warning quarantine 已完成，不再重复围绕旧 compile 入口开工
-   - 下一步只讨论 compatibility migration 本身：factory / builder / connection constructors / tests 的拆迁顺序
+1. 开启 `context-level ServerName` 兼容迁移的第一批实现：
+   - 优先做 builder surface narrowing
+   - 不要回退到 warning 噪音治理
+   - 也不要第一刀就直接硬删五个 backend constructor fallback
 2. 在 capability 与 SNI 迁移边界稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。
 3. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
 

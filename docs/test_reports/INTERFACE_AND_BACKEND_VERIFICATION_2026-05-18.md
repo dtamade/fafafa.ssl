@@ -186,6 +186,35 @@
     - PASS
     - 说明外部输出 truth 收口后，既有 round-trip 兼容链路仍保持绿色
 
+## 增量收口：context ServerName 兼容迁移路线图
+
+- 继续向前推进后，这条线的“当前真相”和“下一步顺序”终于不再含糊：
+  - factory client path 仍会写入 context-level `ServerName`
+  - factory server path 已 reject `ServerName`
+  - builder `BuildClient` / `BuildServer` 仍都会保留 `WithSNI(...)` 的兼容写入
+  - connector 已经走 per-connection `SetServerName(...)`，是目标形态
+  - 五个 backend connection constructor 仍共同实现 context fallback 继承
+
+- 因此主线已经明确：
+  - 现在不该直接硬删 backend fallback
+  - 应先缩窄高层写入面，再把 backend fallback 提成共享 compatibility shim，最后再谈真正删除历史继承
+
+- 为了避免以后迁移时又漏掉“其实是故意保留的兼容语义”，这轮还把兼容锁点统一固化了：
+  - `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+    - 现在覆盖：
+      - `test_connection_builder_hostname_precedence`
+      - `test_tls_connector_hostname_override_precedence`
+      - `test_freepascal_context_server_name_inheritance`
+      - `test_context_builder_server_servername_runtime_consistency`
+      - `test_sslctxboth_client_capability_clarification`
+      - `test_cross_backend_consistency_contract`
+      - `test_cross_backend_errors_contract`
+  - 这些测试现在都必须带 `INTENTIONAL_COMPAT:` 标签
+
+- 这一步的价值不在于“又修了个 bug”，而在于：
+  - 我们已经把 SNI 迁移从一团历史行为，压成了一条有 phase、有锁点、有执行顺序的主路线
+  - 下次继续时，不需要再重新考古“哪些行为是现状，哪些是故意保留”
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -209,10 +238,10 @@
 
 ### 下一批最值得做的事
 
-1. 设计一份 **context-level SNI compatibility migration plan**
-   - 先定义 compatibility shim 和 deprecation boundary
-   - warning quarantine 已完成，不要再回到旧的 compile 噪音治理
-   - 再分批清理 factory / builder / connection constructor / tests
+1. 开始 **context-level SNI compatibility migration** 的第一批实现
+   - 首选 builder surface narrowing
+   - warning quarantine 与 capability 真相线都已完成，不要再回到旧收口
+   - backend constructor fallback 暂不第一刀直删
 
 2. 再决定是否拆 `TSSLConfig`
    - 当前它更多是设计债，不是第一优先级实现 bug

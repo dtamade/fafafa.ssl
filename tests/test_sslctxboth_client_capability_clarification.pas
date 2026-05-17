@@ -79,6 +79,8 @@ begin
   if LCtx = nil then
     Exit;
 
+  // INTENTIONAL_COMPAT: legacy context-level SNI coverage. This dual-context
+  // regression keeps inherited context ServerName fallback observable on purpose.
   {$PUSH}{$WARN 6058 off}
   LCtx.SetServerName('both.example.com');
   {$POP}
@@ -112,6 +114,8 @@ begin
   if LCtx = nil then
     Exit;
 
+  // INTENTIONAL_COMPAT: legacy context-level SNI coverage. This dual-context
+  // socket path also keeps inherited context ServerName fallback observable.
   {$PUSH}{$WARN 6058 off}
   LCtx.SetServerName('both.example.com');
   {$POP}

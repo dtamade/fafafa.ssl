@@ -146,6 +146,44 @@
 - `git diff --check`
   - result: PASS
 
+### Context ServerName Compatibility Roadmap Freeze
+
+- `rg -n "SetServerName\\(|GetServerName\\(|WithSNI\\(|ServerName\\b" src tests docs | sed -n '1,320p'`
+  - result: PASS
+  - summary:
+    - mapped the remaining `context-level ServerName` write paths, backend fallback read paths, active docs guidance, and focused tests that still lock compatibility semantics
+
+- update `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - change:
+    - record the real migration map across factory, builder, connector, five backend constructors, and intentional compatibility tests
+    - define the next execution order as builder surface narrowing -> shared compatibility shim -> final surface cleanup
+    - include a route-level progress report so future sessions resume from the current main line instead of reopening finished capability work
+
+- update `tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - change:
+    - add `tests/test_context_builder_server_servername_runtime_consistency.pas`
+    - add `tests/test_sslctxboth_client_capability_clarification.pas`
+    - accept the unified `INTENTIONAL_COMPAT:` label across the curated compatibility-locking tests
+
+- update `tests/test_context_builder_server_servername_runtime_consistency.pas`
+  - change:
+    - align the direct server-context compatibility note to the shared `INTENTIONAL_COMPAT:` label family
+
+- update `tests/test_sslctxboth_client_capability_clarification.pas`
+  - change:
+    - label the dual-context fallback checks as explicit intentional compatibility coverage
+
+- `bash -n tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_intentional_context_level_sni_compatibility_labels_contract.sh`
+  - result: PASS
+  - summary:
+    - the curated context-level SNI compatibility tests are now explicitly labeled, including the newly mapped builder-server and sslCtxBoth fallback regressions
+
+- `git diff --check`
+  - result: PASS
+
 ### Capability Serialization Truth Projection
 
 - add `tests/test_capability_serialization_truth_projection.pas`
