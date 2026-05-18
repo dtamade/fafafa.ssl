@@ -55,6 +55,9 @@ type
    * - `GetConnectionInfo` / `GetContext` / `GetSelectedALPNProtocol` / `GetStateString`
    *   当前同时存在于 `ISSLConnection` 与 `ISSLConnectionInfo`，属于 v1.x compatibility-core
    *   duplicates；Stage-A demotion target 已固定为 `ISSLConnectionInfo`。
+   * - `GetStateString` 当前共享同一条基类实现；ordinary docs/tests 已转向
+   *   `ISSLConnectionInfo.GetStateString`，direct core `GetStateString` 当前只剩
+   *   contract mirror proof 和 backend-specific runtime residuals。
    * - `GetContext` 当前通过一条共享基类实现同时服务于 core mirror 和
    *   `ISSLConnectionInfo` owner；active docs 已转向 `ISSLConnectionInfo.GetContext`，
    *   direct core `GetContext` 只剩 contract mirror proof。

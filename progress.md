@@ -3345,3 +3345,69 @@
   - summary:
     - reran the lightweight `GetStateString` active-test proof after the final planning-file sync
     - no extra compile rerun was needed because only planning files changed after the focused tests passed
+
+### GetStateString Residual Classification Freeze
+
+- `rg -n "\\.GetStateString\\b|GetStateString\\(" tests docs src --glob '!docs/archive/**' --glob '!docs/plans/**' --glob '!tests/scripts/**'`
+  - result: PASS
+  - summary:
+    - confirmed ordinary docs/tests no longer used direct core `GetStateString`
+    - confirmed the remaining direct-core residuals had shrunk to backend-contract mirror proof plus OpenSSL/WolfSSL backend-specific runtime tests
+
+- add `docs/plans/2026-05-18-getstatestring-residual-classification-freeze.md`
+  - purpose:
+    - define a bounded allowlist-freeze batch so `GetStateString` no longer requires repeated residual-hit archaeology
+
+- update:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.connection.base.pas`
+  - change:
+    - add explicit preferred-access / owner notes for `GetStateString`
+    - spell out the current residual direct-core surface at the shared base-class comment level
+
+- add `tests/scripts/test_isslconnectioninfo_getstatestring_residual_classification_contract.sh`
+  - purpose:
+    - freeze the current `GetStateString` direct-core residual file set into a cheap allowlist contract
+    - fail if ordinary docs/tests or new files reintroduce direct core `GetStateString`
+
+- update `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - mark the residual-classification freeze as delivered
+    - move the next route decision to stronger `GetStateString` wording vs. `GetSelectedALPNProtocol`
+
+- first run of `bash tests/scripts/test_isslconnectioninfo_getstatestring_residual_classification_contract.sh`
+  - result: RED
+  - summary:
+    - the initial comment-pattern check was too strict for the wrapped base-class comment layout
+    - relaxed the residual-note matching to the real multiline source shape before re-running
+
+- second run of `bash tests/scripts/test_isslconnectioninfo_getstatestring_residual_classification_contract.sh`
+  - result: RED
+  - summary:
+    - the allowlist count initially expected 8 direct core hits, but the real residual set is 9 including the contract mirror-proof hit
+    - corrected the expected residual count before the final re-run
+
+- `bash -n tests/scripts/test_isslconnectioninfo_getstatestring_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - new `GetStateString` residual-classification contract script is syntactically valid
+
+- `bash tests/scripts/test_isslconnectioninfo_getstatestring_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - `GetStateString` residual direct-core surface now matches the expected allowlist
+    - ordinary docs/tests no longer reintroduce direct core `GetStateString`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `GetStateString residual classification freeze` batch has no whitespace or patch-format issues
+
+- closeout revalidation before commit:
+  - `bash -n tests/scripts/test_isslconnectioninfo_getstatestring_residual_classification_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_getstatestring_residual_classification_contract.sh`
+  - `git diff --check`
+  - result: PASS
+  - summary:
+    - reran the lightweight `GetStateString` residual allowlist proof after the final planning-file sync
+    - no extra Pascal rerun was needed because only planning files changed after the allowlist contract passed

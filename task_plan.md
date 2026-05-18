@@ -830,6 +830,21 @@
       - `git diff --check`
       - focused contract 当前 PASS
     - 当前批收口后，下一刀就可以决定是收 residual runtime uses，还是切到 `GetSelectedALPNProtocol`
+30. `GetStateString residual classification freeze` 现在应作为 active-test 之后的 allowlist 固化：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getstatestring-residual-classification-freeze.md`
+    - 当前 remaining surface：
+      - direct core `GetStateString` 已从 ordinary docs/tests 退出
+      - 当前 residual 只剩 backend contract mirror proof 与 OpenSSL / WolfSSL backend-specific runtime files
+    - 当前修法：
+      - 在 source comments 中补 `GetStateString` 的 preferred-access / owner / residual-surface 说明
+      - 新增 focused allowlist contract，守住 direct core residual file set
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_isslconnectioninfo_getstatestring_residual_classification_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_getstatestring_residual_classification_contract.sh`
+      - `git diff --check`
+      - 新 contract 当前 PASS
+    - 当前批收口后，`GetStateString` 就不再需要继续做 evidence cleanup，可以决定是进入更强 deprecation wording 还是切到 `GetSelectedALPNProtocol`
 
 ## Verification Discipline
 

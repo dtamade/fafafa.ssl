@@ -1260,6 +1260,7 @@ type
 
     {** 获取状态描述字符串
         @returns 人类可读的状态描述
+        @preferred-access 新代码优先通过 ISSLConnectionInfo.GetStateString 获取
         @compatibility-note v1.x compatibility-core mirror; Stage-A demotion target is ISSLConnectionInfo *}
     function GetStateString: string;
 
@@ -1553,7 +1554,8 @@ type
     {** 获取 ALPN 协商结果 *}
     function GetSelectedALPNProtocol: string;
 
-    {** 获取状态描述字符串 *}
+    {** 获取状态描述字符串
+        @owner-note 当前状态描述字符串的默认 owner；ISSLConnection.GetStateString 保留为 v1.x compatibility mirror *}
     function GetStateString: string;
   end;
 

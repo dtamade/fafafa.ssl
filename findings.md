@@ -1633,3 +1633,11 @@
 - 这类 drift 值得在同一批里一起修：
   - 因为它们都属于“普通 generic test 还在教旧 public surface”
   - 修完后 `test_connection_basic` 才重新变成可用的 focused proof，而不是一个本身就带着旧接口假设的弱信号
+
+- `GetStateString` active-test de-emphasis 完成后，再看 residual 命中，范围已经很窄：
+  - 普通测试和活跃文档都只剩 `ISSLConnectionInfo.GetStateString`
+  - direct core `GetStateString` 只剩 backend contract mirror proof 与 OpenSSL / WolfSSL backend-specific runtime tests
+
+- 这意味着 `GetStateString` 也已经到了适合直接 freeze allowlist 的时点：
+  - 没必要再重复扫“普通路径到底还有没有 core getter”
+  - 更合理的是把 residual file set 固定下来，然后把路线切到更强 wording 或下一条 mirror
