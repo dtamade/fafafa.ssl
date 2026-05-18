@@ -421,6 +421,29 @@
     - 下一条相关路线不该再回到“先补一份 migration map”：
       - 若继续推进，应在上述 buckets 中挑第一条最小实现切片
       - 当前最优先候选是 `LogLevel` / `LogCallback` 的 library-default detachment
+14. `TSSLConfig logging surface truth freeze` 当前也已完成第一轮收口：
+    - 新 plan：
+      - `docs/plans/2026-05-18-tsslconfig-logging-surface-truth-freeze.md`
+    - 新验证：
+      - `tests/scripts/test_tsslconfig_logging_surface_truth_contract.sh`
+      - `tests/test_factory_logging_scope_clarification.pas`
+      - `tests/config/test_default_config.pas`
+    - 当前已收口的真实 drift：
+      - `docs/guides/USER_GUIDE.md`
+      - `docs/guides/TROUBLESHOOTING.md`
+        不再把“只调用 `ISSLLibrary.SetLogCallback(...)`”教成足以看到 `sslLogInfo` / `sslLogDebug` 输出的完整配置
+      - `docs/reference/API_REFERENCE.md`
+      - `docs/reference/ARCHITECTURE.md`
+        现在明确拆开：
+        - `LogLevel` 走 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)`
+        - `LogCallback` 走 `ISSLLibrary.SetLogCallback(...)`
+        - fresh/request config 仍回到 `sslLogError` + `nil` baseline
+    - 当前 focused proof 已覆盖：
+      - 新 docs contract 先 RED 后 GREEN，直接证明活跃 guidance 曾经和 runtime truth 冲突
+      - 既有 Pascal logging 回归继续保持绿色，说明这次收口只修 guidance truth，没有扰动 runtime/source contract
+    - 下一条相关路线不该再回到 logging guidance 漂移：
+      - 若继续沿 `TSSLConfig` buckets 推进，应优先寻找新的 live bug 信号
+      - 不要再把 `LogLevel` / `LogCallback` 的 active docs truth 当成未收口问题反复拉起
 
 ## Verification Discipline
 

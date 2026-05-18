@@ -1104,3 +1104,47 @@
     - 它们已经被 factory request path 明确拒绝
     - 替代入口也已经稳定存在于 `ISSLLibrary` defaults surface
     - 因而最适合作为 `TSSLConfig` slimming 的第一条真正实现切片
+
+- 顺着这条 logging detachment 继续往下看后，这轮又挖出了一个真正会误导调用方的 active-doc bug：
+  - `docs/guides/USER_GUIDE.md`
+  - `docs/guides/TROUBLESHOOTING.md`
+    都曾经只演示 `ISSLLibrary.SetLogCallback(...)`
+    然后立刻调用 `LLib.Log(sslLogInfo, ...)`
+  - 但当前 runtime truth 早已固定为：
+    - default `LogLevel = sslLogError`
+    - backend `Log(...)` 只有在 `ALevel <= configured LogLevel` 时才会 dispatch
+  - 因而这些 snippet 不是“讲得不完整”，而是“照着写也看不到示例里的 info/debug 输出”
+
+- 这也进一步澄清了 `LogLevel` / `LogCallback` 这两个字段在 public surface 上最容易失真的点：
+  - `LogCallback` 的 owner 不等于 `LogLevel` 的 owner
+  - 更准确的说法是：
+    - `LogLevel` 通过 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` 调整
+    - `LogCallback` 通过 `ISSLLibrary.SetLogCallback(...)` 安装
+    - `CreateDefaultConfig(...)` / factory request path 继续回到 request-safe baseline
+  - 之前 reference/guides 把这两个动作混成一句“设置日志回调”，正是 drift 的来源
+
+- 当前修法刻意保持在 truth freeze 层，不动 runtime：
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/ARCHITECTURE.md`
+    现在都明确拆开了 logging level 与 callback 的入口
+  - `docs/guides/USER_GUIDE.md`
+  - `docs/guides/TROUBLESHOOTING.md`
+    在演示 `sslLogInfo` / `sslLogDebug` 前，都会先通过 default-config path 抬高 library default `LogLevel`
+  - 新增 `tests/scripts/test_tsslconfig_logging_surface_truth_contract.sh`
+    防止 active docs 再退回“只设 callback 就应该看到 info/debug”这条假指导
+
+- 这轮的 focused evidence 也证明这不是一次“为了文档而猜实现”的收口：
+  - 新 docs contract 首次运行 RED，直接暴露 API/reference/guides 还没把 logging level 入口说清楚
+  - 修正后同一条 contract GREEN
+  - `tests/test_factory_logging_scope_clarification.pas`
+    继续证明：
+    - request path 拒绝 `LogLevel` / `LogCallback`
+    - library default snapshot / dispatch truth 保持不变
+  - `tests/config/test_default_config.pas`
+    继续证明：
+    - `CreateDefaultConfig(...)` 仍然强制返回 `sslLogError` + `nil`
+
+- 因而 `LogLevel` / `LogCallback` 这条线当前在 `v1.x` 下已经足够清晰：
+  - runtime/source truth 已稳
+  - active docs truth 已稳
+  - 后续不该再把 logging guidance 漂移当成未验证区域反复拉起

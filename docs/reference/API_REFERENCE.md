@@ -40,7 +40,8 @@
 - library-scoped defaults
   - `LogLevel`
   - `LogCallback`
-  - 通过 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` 使用；`TSSLFactory.CreateContext(const AConfig)` 会拒绝 request-local 覆盖。
+  - 通过 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` 调整 `LogLevel`，通过 `ISSLLibrary.SetLogCallback(...)` 安装回调；fresh request config 仍会回到 `sslLogError` + `nil` baseline。
+  - `TSSLFactory.CreateContext(const AConfig)` 会拒绝 request-local 覆盖。
 - context-scoped
   - `SessionCacheSize`
   - `SessionTimeout`

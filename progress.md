@@ -2322,3 +2322,61 @@
   - result: PASS
   - summary:
     - current slimming-roadmap batch has no whitespace or patch-format issues
+
+### TSSLConfig Logging Surface Truth Freeze
+
+- add `docs/plans/2026-05-18-tsslconfig-logging-surface-truth-freeze.md`
+  - purpose:
+    - define a bounded batch for freezing the remaining active logging guidance truth around `TSSLConfig.LogLevel` / `LogCallback`
+    - keep scope on docs/reference/examples + focused contracts, not runtime redesign
+
+- add `tests/scripts/test_tsslconfig_logging_surface_truth_contract.sh`
+  - purpose:
+    - fail if active docs drift back toward teaching callback-only logging as a complete way to see info/debug output
+    - keep API/reference/guides synchronized on the split between log-level defaults and callback installation
+
+- `bash -n tests/scripts/test_tsslconfig_logging_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new docs contract is syntactically valid before repo truth checks
+
+- `bash tests/scripts/test_tsslconfig_logging_surface_truth_contract.sh`
+  - RED result: FAIL
+  - summary:
+    - first failure proved `docs/reference/API_REFERENCE.md` still lacked the explicit split between:
+      - `LogLevel` via `GetDefaultConfig(...)` / `SetDefaultConfig(...)`
+      - `LogCallback` via `SetLogCallback(...)`
+    - the same active-doc drift also still existed in `USER_GUIDE` / `TROUBLESHOOTING`, where callback-only snippets immediately emitted `sslLogInfo` even though the default runtime threshold is still `sslLogError`
+
+- update:
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/ARCHITECTURE.md`
+  - `docs/guides/USER_GUIDE.md`
+  - `docs/guides/TROUBLESHOOTING.md`
+  - change:
+    - make the library-default logging truth explicit in reference docs
+    - require guide snippets to raise `LLogConfig.LogLevel` through `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` before showing `sslLogInfo` / `sslLogDebug` dispatch
+    - keep callback installation on `ISSLLibrary.SetLogCallback(...)`
+
+- `bash -n tests/scripts/test_tsslconfig_logging_surface_truth_contract.sh && bash tests/scripts/test_tsslconfig_logging_surface_truth_contract.sh`
+  - GREEN result: PASS
+  - summary:
+    - active docs/reference now agree on the logging owner boundary
+    - callback-only examples no longer pretend info/debug output works under the default `sslLogError` threshold
+
+- `mkdir -p tmp/test_factory_logging_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_logging_scope_clarification -FEtmp/test_factory_logging_scope_clarification -otmp/test_factory_logging_scope_clarification/test_factory_logging_scope_clarification tests/test_factory_logging_scope_clarification.pas && ./tmp/test_factory_logging_scope_clarification/test_factory_logging_scope_clarification`
+  - result: PASS
+  - summary:
+    - focused logging scope suite finished `12 passed, 0 failed`
+    - request-path rejection, library-default round-trip, and callback dispatch gating all stayed green after the doc truth cleanup
+
+- `mkdir -p tmp/test_default_config && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_default_config -FEtmp/test_default_config -otmp/test_default_config/test_default_config tests/config/test_default_config.pas && ./tmp/test_default_config/test_default_config`
+  - result: PASS
+  - summary:
+    - focused default-config suite kept the logging baseline truth green
+    - `CreateDefaultConfig(...)` still returns request-safe `LogLevel = sslLogError` and `LogCallback = nil`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current logging-surface-truth batch has no whitespace or patch-format issues

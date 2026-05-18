@@ -480,7 +480,12 @@ begin
   end;
 end;
 
+var
+  LLogConfig: TSSLConfig;
 begin
+  LLogConfig := LLib.GetDefaultConfig;
+  LLogConfig.LogLevel := sslLogInfo;
+  LLib.SetDefaultConfig(LLogConfig);
   LLib.SetLogCallback(@MyLogCallback);
   LLib.Log(sslLogInfo, '应用程序启动');
 end;

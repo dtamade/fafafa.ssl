@@ -242,6 +242,9 @@ begin
 end;
 
 // 3. 启用调试日志
+var LLogConfig := LLib.GetDefaultConfig;
+LLogConfig.LogLevel := sslLogDebug;
+LLib.SetDefaultConfig(LLogConfig);
 LLib.SetLogCallback(@MyLogCallback);
 ```
 
@@ -926,7 +929,12 @@ begin
   ]));
 end;
 
+var
+  LLogConfig: TSSLConfig;
 begin
+  LLogConfig := LLib.GetDefaultConfig;
+  LLogConfig.LogLevel := sslLogDebug;
+  LLib.SetDefaultConfig(LLogConfig);
   LLib.SetLogCallback(@MyLogCallback);
   LLib.Log(sslLogInfo, 'Application started');
 end;

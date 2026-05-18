@@ -263,7 +263,7 @@ end;
 - **library-scoped defaults**
   - `LogLevel`
   - `LogCallback`
-  - 通过 `ISSLLibrary.SetDefaultConfig(...)` 使用；factory request path 不接受 request-local 覆盖。
+  - 通过 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` 调整 `LogLevel`，通过 `ISSLLibrary.SetLogCallback(...)` 安装回调；factory request path 不接受 request-local 覆盖。
 - **context-scoped**
   - `ProtocolVersions` / `PreferredVersion`
   - `CertificateFile` / `PrivateKeyFile` / `CAFile` / `CAPath`
