@@ -109,6 +109,10 @@ require_match "$proof_file" \
   'WinSSL session-resumption proof supports a strict native-reuse-observed mode'
 
 require_match "$proof_file" \
+  'FAFAFA_WINSSL_ENABLE_NATIVE_PROBE' \
+  'WinSSL session-resumption proof gates the native probe behind an explicit opt-in switch'
+
+require_match "$proof_file" \
   'native_probe label=initial_handshake' \
   'WinSSL session-resumption proof emits native-probe evidence for the initial handshake'
 
@@ -117,8 +121,12 @@ require_match "$proof_file" \
   'WinSSL session-resumption proof emits native-probe evidence for resumed attempts'
 
 require_match "$proof_file" \
-  'native_observed_reuse=%s native_probe_succeeded=%s require_reuse=%s require_native_reuse=%s session_configured=%s' \
+  'native_probe_enabled=%s native_observed_reuse=%s native_probe_succeeded=%s require_reuse=%s require_native_reuse=%s session_configured=%s' \
   'WinSSL session-resumption summary separates public reuse truth from native probe truth'
+
+require_match "$proof_file" \
+  'reason=disabled_by_default' \
+  'WinSSL session-resumption proof keeps the risky native probe disabled by default on the broader suite lane'
 
 require_match "$checklist_file" \
   'test_winssl_session_resumption\.lpi' \

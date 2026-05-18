@@ -5770,3 +5770,89 @@
   - result: PASS
   - summary:
     - current `WinSSL native probe evidence lane` batch has no whitespace or patch-format issues
+
+- `gh workflow run wave-b-b2-manual.yml --ref master -f run_id=wave_b_b2_20260518_231137_winssl_native_probe`
+  - result: INVALID EVIDENCE
+  - summary:
+    - this dispatch landed on old remote head `ad72904`
+    - root cause was that the first `git push` had raced ahead of the new local commit
+    - the run was cancelled and not used as evidence
+
+- `git push origin master`
+  - result: PASS
+  - summary:
+    - pushed commit `5d2d599` (`test/winssl: add native reconnect probe`) to `origin/master`
+
+- `gh run cancel 26042288209`
+  - result: PASS
+  - summary:
+    - cancelled the stale workflow-dispatch run that had started from `ad72904`
+
+- `gh workflow run wave-b-b2-manual.yml --ref master -f run_id=wave_b_b2_20260518_231405_winssl_native_probe_commit_5d2d599`
+  - result: PASS
+  - summary:
+    - dispatched the corrected Windows evidence run against commit `5d2d599`
+
+- `gh run download 26042437486 -D tmp/gh-run-26042437486`
+  - result: PASS
+  - summary:
+    - downloaded Linux / macOS / Windows / summary artifacts for direct offline inspection
+
+- `gh run view 26042437486 --job 76557534257 --log`
+  - result: PASS
+  - summary:
+    - `windows-gate` completed quick smoke and Windows Wave B gate
+    - failure narrowed to `Run broader WinSSL runtime suite`
+    - dedicated `WinSSL Session Resumption Truth` now crashes after the initial public reuse checks and before the first `native_probe` marker, with `exit_code=-1073741819`
+
+- `sed -n '1,220p' tmp/gh-run-26042437486/.../winssl_runtime_suite_wave_b_b2_20260518_231405_winssl_native_probe_commit_5d2d599.log`
+  - result: PASS
+  - summary:
+    - compile phase stayed green across all 7 WinSSL runtime programs
+    - runtime phase recorded:
+      - `[WINSSL-RUNTIME] session_resumption signal label=initial_handshake reused=false info_resumed=false perf_reused=false`
+      - then immediate process crash
+    - no `native_probe` marker or final session-resumption summary was emitted before the crash
+
+- `sed -n '1,220p' tmp/gh-run-26042437486/.../wave_b_b2_evidence_consistency_wave_b_b2_20260518_231405_winssl_native_probe_commit_5d2d599.md`
+  - result: PASS
+  - summary:
+    - evidence chain itself remained consistent
+    - Windows runtime artifact is substantive and explicitly records `suite_end_status=FAIL`
+
+- real Windows conclusion from run `26042437486`
+  - result: RED
+  - summary:
+    - the new dedicated native probe is not safe to keep enabled by default on the broader suite lane
+    - the next safe fix is to quarantine it behind an explicit opt-in env gate while preserving the public-truth markers
+
+- update `tests/winssl/test_winssl_session_resumption.pas`
+  - change:
+    - add explicit `FAFAFA_WINSSL_ENABLE_NATIVE_PROBE` gating
+    - broader suite default lane now emits `reason=disabled_by_default` instead of executing the risky native probe
+    - summary now includes `native_probe_enabled=...`
+
+- update `tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - change:
+    - lock the new opt-in gating switch
+    - lock `reason=disabled_by_default`
+    - lock the `native_probe_enabled=...` summary field
+
+- `bash -n tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the focused runtime-truth contract now guards the native-probe quarantine semantics
+
+- `mkdir -p tmp/winssl_native_probe_quarantine_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_native_probe_quarantine_win64 -FEtmp/winssl_native_probe_quarantine_win64 -otmp/winssl_native_probe_quarantine_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - the broader-suite-safe follow-up still cross-compiles for Win64
+    - compile finished with the pre-existing warning set only
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `WinSSL native probe quarantine` follow-up has no whitespace or patch-format issues

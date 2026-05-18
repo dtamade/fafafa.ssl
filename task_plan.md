@@ -73,13 +73,24 @@
 - [in_progress] WinSSL native resumed-handshake 调查已切到 dedicated native probe evidence lane：
   - 新增计划：`docs/plans/2026-05-18-winssl-native-probe-evidence-lane.md`
   - `tests/winssl/test_winssl_session_resumption.pas` 现在会把 public truth 与 native Schannel observation 分开输出
-  - 当前已新增：
+  - 第一轮已新增：
     - `native_probe label=... available=... reused=...`
     - `native_observed_reuse=...`
     - `native_probe_succeeded=...`
     - `require_native_reuse=...`
   - focused source contract / Win64 cross-target compile / `git diff --check` 已通过
-  - 下一步只需要看 GitHub Windows artifact 给出的 native probe 真实结果，不再回头重开 shared probe / client reconnect truth / capability/docs truth 旧 lane
+  - 但 GitHub Windows live run `26042437486` 已给出新的更窄真相：
+    - `WinSSL Session Resumption Truth` 在首个 public signal 后、第一条 `native_probe` marker 前就以 `exit_code=-1073741819` 退出
+    - 这说明当前 public-handle probe 方式在 broader suite 默认开启时并不安全
+  - 当前最小安全修法已明确：
+    - broader suite 默认 lane 先把 native probe 维持为 `opt-in`
+    - 默认记录 `reason=disabled_by_default`
+    - 不再回头重开 shared probe / client reconnect truth / capability/docs truth 旧 lane
+  - 本地 follow-up 已实现并通过：
+    - `FAFAFA_WINSSL_ENABLE_NATIVE_PROBE` 显式 opt-in
+    - summary 追加 `native_probe_enabled=...`
+    - focused contract / Win64 compile / `git diff --check` 重新转绿
+  - 当前只剩下一步：重新跑 GitHub Windows runner，确认 broader suite 默认 lane 恢复 green 且 artifact 如实记录 `disabled_by_default`
 - [in_progress] 当前 repo-level 下一步应回到更高价值的 completeness 路线：
   - 继续审查各 backend implementation completeness / optional surface completeness
   - 若继续深挖 WinSSL，则优先扩展真实 resumed handshake / session tickets / certstore / OCSP / enterprise 等高风险 lane，而不是再重复治理 runtime capture、shared probe crash 或已修掉的 semantic false positive
@@ -1540,7 +1551,8 @@
       - 最新 follow-up 已切到 `docs/plans/2026-05-18-winssl-native-probe-evidence-lane.md`：
         - dedicated proof 程序现在会单独记录 `native_probe` markers
         - summary 会分开记录 `observed_reuse` 与 `native_observed_reuse`
-        - 这条 lane 只扩 evidence，不再修改 production reconnect logic
+        - GitHub Windows live run `26042437486` 已证明这条 probe 默认开启会触发 `-1073741819`
+        - 因而当前默认 broader suite lane 需要先把 native probe 降为 opt-in evidence
 57. `WinSSL session serialization roundtrip alignment` 已完成并应作为当前 WinSSL session-object completeness 基线保留：
     - 新 plan：
       - `docs/plans/2026-05-18-winssl-session-serialization-roundtrip-alignment.md`

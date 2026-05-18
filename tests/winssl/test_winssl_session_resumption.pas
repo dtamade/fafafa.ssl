@@ -224,6 +224,7 @@ var
   LRequireReuse: Boolean;
   LObservedReuse: Boolean;
   LObservedNativeReuse: Boolean;
+  LNativeProbeEnabled: Boolean;
   LNativeProbeSucceeded: Boolean;
   LRequireNativeReuse: Boolean;
   LSessionConfigured: Boolean;
@@ -250,6 +251,8 @@ begin
     LAttemptCount := 1;
   LRequireReuse := EnvEnabled('FAFAFA_WINSSL_REQUIRE_REUSE');
   LRequireNativeReuse := EnvEnabled('FAFAFA_WINSSL_REQUIRE_NATIVE_REUSE');
+  LNativeProbeEnabled := EnvEnabled('FAFAFA_WINSSL_ENABLE_NATIVE_PROBE') or
+    LRequireNativeReuse;
   LObservedReuse := False;
   LObservedNativeReuse := False;
   LNativeProbeSucceeded := False;
@@ -329,19 +332,25 @@ begin
       Check('initial handshake must not report reuse', not LReused,
         'fresh handshake unexpectedly reported session reuse');
 
-      if TryQueryNativeSessionReuse(LConn, LNativeReused, LNativeDetails) then
+      if LNativeProbeEnabled then
       begin
-        LNativeProbeSucceeded := True;
-        Check('initial native probe must not report reconnect', not LNativeReused,
-          LNativeDetails);
-        EmitResumeMarker(Format(
-          'native_probe label=initial_handshake available=true reused=%s %s',
-          [BoolText(LNativeReused), LNativeDetails]));
+        if TryQueryNativeSessionReuse(LConn, LNativeReused, LNativeDetails) then
+        begin
+          LNativeProbeSucceeded := True;
+          Check('initial native probe must not report reconnect', not LNativeReused,
+            LNativeDetails);
+          EmitResumeMarker(Format(
+            'native_probe label=initial_handshake available=true reused=%s %s',
+            [BoolText(LNativeReused), LNativeDetails]));
+        end
+        else
+          EmitResumeMarker(Format(
+            'native_probe label=initial_handshake available=false reason=%s',
+            [LNativeDetails]));
       end
       else
-        EmitResumeMarker(Format(
-          'native_probe label=initial_handshake available=false reason=%s',
-          [LNativeDetails]));
+        EmitResumeMarker(
+          'native_probe label=initial_handshake available=false reason=disabled_by_default');
 
       LSession := LResumption1.GetSession;
       LSessionConfigured := LSession <> nil;
@@ -397,19 +406,26 @@ begin
         if LReused then
           LObservedReuse := True;
 
-        if TryQueryNativeSessionReuse(LConn, LNativeReused, LNativeDetails) then
+        if LNativeProbeEnabled then
         begin
-          LNativeProbeSucceeded := True;
-          EmitResumeMarker(Format(
-            'native_probe label=same_context_attempt_%d available=true reused=%s %s',
-            [LAttempt, BoolText(LNativeReused), LNativeDetails]));
-          if LNativeReused then
-            LObservedNativeReuse := True;
+          if TryQueryNativeSessionReuse(LConn, LNativeReused, LNativeDetails) then
+          begin
+            LNativeProbeSucceeded := True;
+            EmitResumeMarker(Format(
+              'native_probe label=same_context_attempt_%d available=true reused=%s %s',
+              [LAttempt, BoolText(LNativeReused), LNativeDetails]));
+            if LNativeReused then
+              LObservedNativeReuse := True;
+          end
+          else
+            EmitResumeMarker(Format(
+              'native_probe label=same_context_attempt_%d available=false reason=%s',
+              [LAttempt, LNativeDetails]));
         end
         else
           EmitResumeMarker(Format(
-            'native_probe label=same_context_attempt_%d available=false reason=%s',
-            [LAttempt, LNativeDetails]));
+            'native_probe label=same_context_attempt_%d available=false reason=disabled_by_default',
+            [LAttempt]));
 
         LConn.Shutdown;
       finally
@@ -422,9 +438,10 @@ begin
     end;
 
     EmitResumeMarker(Format(
-      'summary host=%s attempts=%d observed_reuse=%s native_observed_reuse=%s native_probe_succeeded=%s require_reuse=%s require_native_reuse=%s session_configured=%s',
-      [AHost, LAttemptCount, BoolText(LObservedReuse), BoolText(LObservedNativeReuse),
-       BoolText(LNativeProbeSucceeded), BoolText(LRequireReuse),
+      'summary host=%s attempts=%d observed_reuse=%s native_probe_enabled=%s native_observed_reuse=%s native_probe_succeeded=%s require_reuse=%s require_native_reuse=%s session_configured=%s',
+      [AHost, LAttemptCount, BoolText(LObservedReuse), BoolText(LNativeProbeEnabled),
+       BoolText(LObservedNativeReuse), BoolText(LNativeProbeSucceeded),
+       BoolText(LRequireReuse),
        BoolText(LRequireNativeReuse), BoolText(LSessionConfigured)]));
 
     if LRequireReuse then

@@ -2573,3 +2573,30 @@
   - `native_probe label=same_context_attempt_N ...`
   - `summary ... observed_reuse=... native_observed_reuse=... native_probe_succeeded=... require_native_reuse=...`
   - 因而接下来真正需要的新事实，只剩 GitHub Windows live artifact
+
+- GitHub Windows live run `26042437486` 现在已经把这个问题压到了更窄、也更直接的一层：
+  - broader suite 的 `WinSSL Session Resumption Truth` 先成功输出：
+    - `initial_handshake` 的 public reuse signal
+    - `initial handshake must not report reuse: PASS`
+  - 但在第一条 `native_probe` marker 之前就以 `exit_code=-1073741819` 退出
+  - 这说明当前这版 native probe 不是“观测不到结果”，而是“调用方式本身不安全”
+
+- 因而当前更准确的结论已经变化了：
+  - `ISSLNativeHandleAccess.GetNativeHandle -> PCtxtHandle -> QueryContextAttributesW(..., SECPKG_ATTR_SESSION_INFO, ...)`
+    这条 public-handle probe 路径，至少在 GitHub Windows runner 的 broader suite 默认 lane 上还不能直接开启
+  - public truth 与 native observation 的分离方向本身没错
+  - 但 native observation 目前必须退回 opt-in experimental lane，不能默认挂到 broader suite
+
+- 这也让下一步修法变得很明确：
+  - 默认 broader suite 只保留 public truth + `native_probe disabled_by_default` 记录
+  - `FAFAFA_WINSSL_ENABLE_NATIVE_PROBE=1` 只留给未来更安全的专门重跑
+  - 未来若还要继续追 native observation，优先要解决的是“如何做一个不会把 dedicated process 打崩的 WinSSL-specific probe seam”，而不是继续重写 public truth 或 reconnect 文档
+
+- 当前这条更安全的 follow-up 也已经在本地落成：
+  - native probe 不再在 broader suite 默认 lane 自动开启
+  - 只有显式设置 `FAFAFA_WINSSL_ENABLE_NATIVE_PROBE=1` 或 `FAFAFA_WINSSL_REQUIRE_NATIVE_REUSE=1` 才会真正执行 risky probe
+  - 默认 lane 继续保留：
+    - public signal markers
+    - `native_probe ... reason=disabled_by_default`
+    - `summary ... native_probe_enabled=false`
+  - 这让 broader suite 可以继续提供稳定 public truth，同时把 risky probe 明确降格成 opt-in experimental evidence

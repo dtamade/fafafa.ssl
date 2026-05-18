@@ -32,6 +32,10 @@
   - `PCtxtHandle`
   - `QueryContextAttributesW(..., SECPKG_ATTR_SESSION_INFO, ...)`
   - `dwFlags and SSL_SESSION_RECONNECT`
+- 但 GitHub Windows live run `26042437486` 证明：
+  - 这条 public-handle probe 方式在 broader suite 默认开启时并不安全
+  - dedicated test 在首个 public signal 之后、第一条 `native_probe` marker 之前就会以 `-1073741819` 退出
+  - 因而 broader suite 默认 lane 只能把 native probe 维持为 opt-in evidence，不得默认开启
 - 因而同一条 Windows runtime evidence 里应该同时记录两类真相：
   - public truth：`observed_reuse`
   - native observation：`native_observed_reuse` / `native_probe_succeeded`
@@ -71,8 +75,19 @@ gh workflow run wave-b-b2-manual.yml --ref master -f run_id=<custom-id>
   - focused source contract 已扩到 native probe evidence surface
   - Win64 cross-target compile 通过
   - `git diff --check` 通过
+- RED:
+  - GitHub Windows live run `26042437486` 证明当前 probe 调用方式仍然不安全：
+    - `WinSSL Session Resumption Truth` 在 `initial handshake must not report reuse: PASS` 后立刻以 `exit_code=-1073741819` 退出
+    - artifact 中连第一条 `native_probe` marker 都没有来得及写出
+- FOLLOW-UP:
+  - broader suite 默认 lane 先把 native probe 改成 opt-in
+  - 默认记录 `reason=disabled_by_default`
+  - 未来若要继续追 native observation，必须先设计更安全的 WinSSL-specific probe seam，而不是再次默认开启 public-handle probe
+- GREEN:
+  - 本地 follow-up 已落地：
+    - `FAFAFA_WINSSL_ENABLE_NATIVE_PROBE` 变成显式 opt-in 开关
+    - 未开启时 dedicated proof 会继续输出 `native_probe ... reason=disabled_by_default`
+    - summary 新增 `native_probe_enabled=...`
+  - focused source contract / Win64 cross-target compile / `git diff --check` 再次通过
 - PENDING:
-  - GitHub Windows runner 还需要给出 live artifact，回答：
-    - `native_probe_succeeded=true|false`
-    - `native_observed_reuse=true|false`
-  - 在这之前，不再把 public `observed_reuse=false` 当成 native reconnect 未命中的铁证
+  - 还需要重新触发 GitHub Windows runner，确认 broader suite 默认 lane 已恢复绿色，并把 `disabled_by_default` summary 真实写进 artifact
