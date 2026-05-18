@@ -749,6 +749,7 @@ var
   EVP_blake2b512: TEVP_blake2b512 = nil;
   EVP_blake2s256: TEVP_blake2s256 = nil;
   EVP_get_digestbyname: TEVP_get_digestbyname = nil;
+  EVP_get_digestbynid: TEVP_get_digestbynid = nil;
   
   // OpenSSL 3.x EVP_MD fetch API
   EVP_MD_fetch: TEVP_MD_fetch = nil;
@@ -888,7 +889,7 @@ uses
 
 const
   // EVP function bindings for batch loading
-  EVP_BINDINGS: array[0..97] of TFunctionBinding = (
+  EVP_BINDINGS: array[0..98] of TFunctionBinding = (
     // MD Context functions
     (Name: 'EVP_MD_CTX_new'; FuncPtr: @EVP_MD_CTX_new; Required: True),
     (Name: 'EVP_MD_CTX_free'; FuncPtr: @EVP_MD_CTX_free; Required: True),
@@ -911,6 +912,7 @@ const
     (Name: 'EVP_blake2b512'; FuncPtr: @EVP_blake2b512; Required: False),
     (Name: 'EVP_blake2s256'; FuncPtr: @EVP_blake2s256; Required: False),
     (Name: 'EVP_get_digestbyname'; FuncPtr: @EVP_get_digestbyname; Required: False),
+    (Name: 'EVP_get_digestbynid'; FuncPtr: @EVP_get_digestbynid; Required: False),
     // OpenSSL 3.x EVP_MD fetch API
     (Name: 'EVP_MD_fetch'; FuncPtr: @EVP_MD_fetch; Required: False),
     (Name: 'EVP_MD_free'; FuncPtr: @EVP_MD_free; Required: False),

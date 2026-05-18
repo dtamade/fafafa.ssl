@@ -408,6 +408,32 @@ Recommended first bounded batch:
     1. 继续做 legacy/non-AEAD `MacSize` truth feasibility
     2. 把主线切回更强的 owner / deprecation wording route
 
+## Progress Since The OpenSSL GetConnectionInfo Legacy MacSize Truth Batch
+
+- 已交付：
+  - OpenSSL legacy/non-AEAD `MacSize` low-level truth
+  - active export/binding chain for:
+    - `SSL_CIPHER_is_aead`
+    - `SSL_CIPHER_get_digest_nid`
+    - `EVP_get_digestbynid`
+  - focused OpenSSL contract now explicitly covers:
+    - helper unavailable safe degrade
+    - digest-truth non-AEAD `MacSize`
+    - AEAD `MacSize` owner primacy
+
+- 当前更准确的 next step：
+  - 不再把 OpenSSL 当成 “只有 shared AEAD `MacSize` truth” 的 backend
+  - 当前 `MacSize` 线上已经形成的稳定真相是：
+    - shared AEAD suite-name truth
+    - OpenSSL non-AEAD digest truth
+    - WinSSL guarded legacy fallback
+  - 剩余更窄的未统一边界是：
+    1. WinSSL fallback 是否还值得继续强化成更强 legacy truth
+    2. MbedTLS / WolfSSL 是否存在同等级、且值得接入的 low-level `MacSize` source
+  - 若继续推进，应优先在两条路径里二选一：
+    1. 先做剩余 backend 的 static `MacSize` low-level feasibility
+    2. 把主线切回更强的 owner / deprecation wording route
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

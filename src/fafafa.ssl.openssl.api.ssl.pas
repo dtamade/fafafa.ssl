@@ -54,6 +54,8 @@ type
   TSSL_CIPHER_get_bits = function(const c: PSSL_CIPHER; alg_bits: PInteger): Integer; cdecl;
   TSSL_CIPHER_get_version = function(const c: PSSL_CIPHER): PAnsiChar; cdecl;
   TSSL_CIPHER_description = function(c: PSSL_CIPHER; buf: PAnsiChar; size: Integer): PAnsiChar; cdecl;
+  TSSL_CIPHER_get_digest_nid = function(const c: PSSL_CIPHER): Integer; cdecl;
+  TSSL_CIPHER_is_aead = function(const c: PSSL_CIPHER): Integer; cdecl;
   TSSL_CIPHER_get_id = function(const c: PSSL_CIPHER): UInt32; cdecl;
   TSSL_CIPHER_get_protocol_id = function(const c: PSSL_CIPHER): UInt16; cdecl;
 
@@ -195,6 +197,8 @@ var
   SSL_CIPHER_get_bits: TSSL_CIPHER_get_bits;
   SSL_CIPHER_get_version: TSSL_CIPHER_get_version;
   SSL_CIPHER_description: TSSL_CIPHER_description;
+  SSL_CIPHER_get_digest_nid: TSSL_CIPHER_get_digest_nid;
+  SSL_CIPHER_is_aead: TSSL_CIPHER_is_aead;
   SSL_CIPHER_get_id: TSSL_CIPHER_get_id;
   SSL_CIPHER_get_protocol_id: TSSL_CIPHER_get_protocol_id;
 
@@ -359,6 +363,8 @@ begin
   SSL_CIPHER_get_bits := nil;
   SSL_CIPHER_get_version := nil;
   SSL_CIPHER_description := nil;
+  SSL_CIPHER_get_digest_nid := nil;
+  SSL_CIPHER_is_aead := nil;
   SSL_CIPHER_get_id := nil;
   SSL_CIPHER_get_protocol_id := nil;
   SSL_set_tlsext_host_name := nil;
@@ -506,6 +512,8 @@ begin
   SSL_CIPHER_get_bits := TSSL_CIPHER_get_bits(GetSSLProcAddress('SSL_CIPHER_get_bits'));
   SSL_CIPHER_get_version := TSSL_CIPHER_get_version(GetSSLProcAddress('SSL_CIPHER_get_version'));
   SSL_CIPHER_description := TSSL_CIPHER_description(GetSSLProcAddress('SSL_CIPHER_description'));
+  SSL_CIPHER_get_digest_nid := TSSL_CIPHER_get_digest_nid(GetSSLProcAddress('SSL_CIPHER_get_digest_nid'));
+  SSL_CIPHER_is_aead := TSSL_CIPHER_is_aead(GetSSLProcAddress('SSL_CIPHER_is_aead'));
   SSL_CIPHER_get_id := TSSL_CIPHER_get_id(GetSSLProcAddress('SSL_CIPHER_get_id'));
   SSL_CIPHER_get_protocol_id := TSSL_CIPHER_get_protocol_id(GetSSLProcAddress('SSL_CIPHER_get_protocol_id'));
   

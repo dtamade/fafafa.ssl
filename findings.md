@@ -1865,3 +1865,26 @@
   - 还没统一的不是 AEAD/TLS 1.3 这组场景
   - 而是 legacy non-AEAD suites 是否值得继续补更强 low-level `MacSize` truth
   - 如果后续不想继续在 connection-info completeness 上深挖，就可以比较放心地把主线切回 owner / deprecation wording route
+
+- OpenSSL 这条 legacy/non-AEAD `MacSize` 路径现在也已经从“理论上能做”落成了真实实现：
+  - 在这批之前，OpenSSL connection-info 虽然已经能拿到 current cipher，但并没有把：
+    - `SSL_CIPHER_is_aead`
+    - `SSL_CIPHER_get_digest_nid`
+    - `EVP_get_digestbynid`
+    - `EVP_MD_size`
+    这组能力接进 `MacSize`
+  - 而且问题不只在 connection unit：
+    - `api.ssl` 的 active export/binding path 缺 `is_aead` / `digest_nid`
+    - `api.evp` 的 active export/binding path 缺 `EVP_get_digestbynid`
+
+- 当前修完后的更准确结论是：
+  - shared 仍然是 AEAD `MacSize` 的第一 owner
+  - OpenSSL 现在额外补齐了 legacy/non-AEAD digest truth
+  - 因而 OpenSSL 已经不再属于“legacy `MacSize` 完全空白”的 backend
+
+- 这也进一步缩小了剩余未统一面：
+  - 高价值未完成项不再是 “OpenSSL 要不要补”
+  - 而是：
+    - WinSSL fallback 是否还值得强化
+    - MbedTLS / WolfSSL 是否有同等级 low-level source
+  - 如果这几条静态盘点后收益不高，就应该把默认主线切回 owner / deprecation wording，而不是继续在 `MacSize` 这一个字段上无限细抠

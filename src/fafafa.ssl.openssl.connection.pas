@@ -30,6 +30,7 @@ uses
   fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.native_handle,  // 原生句柄辅助函数
   fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.ssl,
   fafafa.ssl.openssl.api.consts,
   fafafa.ssl.openssl.api.x509,
@@ -1287,6 +1288,8 @@ var
   AlgBits: Integer;
   ServerNamePtr: PAnsiChar;
   CipherId: UInt32;
+  DigestMd: PEVP_MD;
+  DigestNid: Integer;
 begin
   // 调用基类获取基本信息
   Result := inherited GetConnectionInfo;
@@ -1321,6 +1324,25 @@ begin
       begin
         CipherId := SSL_CIPHER_get_id(Cipher);
         Result.CipherSuiteId := Word(CipherId and $FFFF);
+      end;
+
+      if (Result.MacSize = 0) and
+         Assigned(SSL_CIPHER_is_aead) and
+         (SSL_CIPHER_is_aead(Cipher) = 0) and
+         Assigned(SSL_CIPHER_get_digest_nid) and
+         Assigned(EVP_get_digestbynid) then
+      begin
+        DigestNid := SSL_CIPHER_get_digest_nid(Cipher);
+        if DigestNid > 0 then
+        begin
+          DigestMd := EVP_get_digestbynid(DigestNid);
+          if DigestMd <> nil then
+          begin
+            Result.MacSize := EVP_MD_size(DigestMd);
+            if Result.MacSize < 0 then
+              Result.MacSize := 0;
+          end;
+        end;
       end;
     end;
   end;

@@ -1110,6 +1110,7 @@ end;
 - `MacSize` 现在会先由共享连接层对可识别的 AEAD suite name 做 best-effort 推导：
   - `...GCM` / `...POLY1305` / `...OCB` / `...CCM` -> `16`
   - `...CCM_8` -> `8`
+- OpenSSL 在明确识别到 legacy/non-AEAD cipher 且底层 digest truth 可用时，也会补回真实 `MacSize`
 - WinSSL 只有在共享层无法从 suite name 得到稳定值时，才回退到 `dwHashStrength div 8`
 - legacy non-AEAD suites 以及后端未提供稳定 truth 的场景，`MacSize` 仍返回默认值 `0`
 

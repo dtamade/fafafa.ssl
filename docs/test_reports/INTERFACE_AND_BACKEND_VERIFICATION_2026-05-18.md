@@ -1632,3 +1632,35 @@
       - legacy non-AEAD -> `MacSize = 0`
   - `tests/scripts/test_winssl_connectioninfo_macsize_semantics_contract.sh`
     - 静态守住 shared AEAD-first 规则与 WinSSL guarded fallback 形态
+
+## 增量收口：OpenSSL legacy/non-AEAD `MacSize` truth
+
+- 在 shared AEAD `MacSize` truth 与 WinSSL guarded fallback 收口之后，OpenSSL 这边也确认存在一条边界清晰的实现缺口：
+  - connection 层已经持有 current cipher
+  - 但 active export/binding path 还没有把：
+    - `SSL_CIPHER_is_aead`
+    - `SSL_CIPHER_get_digest_nid`
+    - `EVP_get_digestbynid`
+    - `EVP_MD_size`
+    接到 `MacSize`
+
+- 当前修法没有把 legacy `MacSize` 猜值扩散进 shared parser，而是保持 owner 分层：
+  - shared 继续负责 AEAD suite-name `MacSize`
+  - OpenSSL 只在 shared path 仍无值、且 cipher 明确是 non-AEAD 时，才用 digest truth 回填
+
+- 这一步的意义是：
+  - OpenSSL 不再是“legacy `MacSize` 完全空白”的 backend
+  - `MacSize` 当前已经形成：
+    - shared AEAD truth
+    - OpenSSL non-AEAD digest truth
+    - WinSSL guarded fallback
+    这三层更稳定的现实结构
+
+- focused 证据：
+  - `tests/scripts/test_openssl_connectioninfo_macsize_truth_contract.sh`
+    - 静态守住 SSL/EVP export chain 与 OpenSSL digest-truth write path
+  - `tests/test_openssl_connection_info_cipher_contract.pas`
+    - 明确覆盖：
+      - helper unavailable safe degrade
+      - non-AEAD digest truth -> `MacSize = 32`
+      - AEAD digest size 不覆盖 shared `MacSize = 16`

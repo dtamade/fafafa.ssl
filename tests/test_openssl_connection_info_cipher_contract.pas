@@ -10,6 +10,7 @@ uses
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.loader,
   fafafa.ssl.openssl.api.core,
+  fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.ssl,
   fafafa.ssl.openssl.connection;
@@ -20,6 +21,8 @@ var
   PassedTests: Integer = 0;
   FailedTests: Integer = 0;
   SkippedTests: Integer = 0;
+  GLegacyCipherName: AnsiString = 'ECDHE-RSA-AES128-SHA256';
+  GTLS13CipherName: AnsiString = 'TLS_AES_128_GCM_SHA256';
 
 procedure AssertTrue(const AName: string; ACondition: Boolean; const ADetail: string = '');
 begin
@@ -65,6 +68,41 @@ end;
 function StubSSLCipherGetId(const cipher: PSSL_CIPHER): UInt32; cdecl;
 begin
   Result := $03001301;
+end;
+
+function StubSSLCipherGetDigestNid(const cipher: PSSL_CIPHER): Integer; cdecl;
+begin
+  Result := 42;
+end;
+
+function StubSSLCipherIsNotAead(const cipher: PSSL_CIPHER): Integer; cdecl;
+begin
+  Result := 0;
+end;
+
+function StubSSLCipherIsAead(const cipher: PSSL_CIPHER): Integer; cdecl;
+begin
+  Result := 1;
+end;
+
+function StubEVPGetDigestByNid(nid: Integer): PEVP_MD; cdecl;
+begin
+  Result := PEVP_MD(Pointer(PtrUInt(2)));
+end;
+
+function StubEVPMDGetSize(const md: PEVP_MD): Integer; cdecl;
+begin
+  Result := 32;
+end;
+
+function StubSSLCipherGetNameLegacyNonAead(const cipher: PSSL_CIPHER): PAnsiChar; cdecl;
+begin
+  Result := PAnsiChar(GLegacyCipherName);
+end;
+
+function StubSSLCipherGetNameTLS13Aead(const cipher: PSSL_CIPHER): PAnsiChar; cdecl;
+begin
+  Result := PAnsiChar(GTLS13CipherName);
 end;
 
 procedure WarmupStreamConnectionConstructor(AContext: ISSLContext);
@@ -194,6 +232,47 @@ begin
   end;
 end;
 
+procedure AssertConnectionInfoMacSize(
+  const AName: string;
+  AContext: ISSLContext;
+  const AExpectedMacSize: Integer
+);
+var
+  LStream: TMemoryStream;
+  LConn: TOpenSSLConnection;
+  LRaised: Boolean;
+  LInfo: TSSLConnectionInfo;
+  LDetail: string;
+begin
+  LStream := TMemoryStream.Create;
+  LConn := nil;
+  try
+    LConn := TOpenSSLConnection.Create(AContext, LStream);
+
+    LRaised := False;
+    FillChar(LInfo, SizeOf(LInfo), 0);
+    LDetail := '';
+    try
+      LInfo := LConn.GetConnectionInfo;
+    except
+      on E: Exception do
+      begin
+        LRaised := True;
+        LDetail := E.ClassName + ': ' + E.Message;
+      end;
+    end;
+
+    AssertTrue(AName + ' should not raise', not LRaised, LDetail);
+    AssertTrue(AName + ' should set MacSize',
+      LInfo.MacSize = AExpectedMacSize,
+      Format('expected MacSize %d but got %d', [AExpectedMacSize, LInfo.MacSize]));
+  finally
+    if Assigned(LConn) then
+      LConn.Free;
+    LStream.Free;
+  end;
+end;
+
 procedure TestGetConnectionInfoShouldDegradeSafelyWhenCipherHelpersAreUnavailable;
 var
   LContext: ISSLContext;
@@ -203,6 +282,9 @@ var
   LOriginalSSLCipherGetBits: TSSL_CIPHER_get_bits;
   LOriginalSSLCipherGetProtocolId: TSSL_CIPHER_get_protocol_id;
   LOriginalSSLCipherGetId: TSSL_CIPHER_get_id;
+  LOriginalSSLCipherIsAead: TSSL_CIPHER_is_aead;
+  LOriginalSSLCipherGetDigestNid: TSSL_CIPHER_get_digest_nid;
+  LOriginalEVPGetDigestByNid: TEVP_get_digestbynid;
 begin
   WriteLn;
   WriteLn('=== OpenSSL connection info cipher guard ===');
@@ -229,12 +311,18 @@ begin
   LOriginalSSLCipherGetBits := SSL_CIPHER_get_bits;
   LOriginalSSLCipherGetProtocolId := SSL_CIPHER_get_protocol_id;
   LOriginalSSLCipherGetId := SSL_CIPHER_get_id;
+  LOriginalSSLCipherIsAead := SSL_CIPHER_is_aead;
+  LOriginalSSLCipherGetDigestNid := SSL_CIPHER_get_digest_nid;
+  LOriginalEVPGetDigestByNid := EVP_get_digestbynid;
   try
     SSL_get_current_cipher := nil;
     SSL_CIPHER_get_name := LOriginalSSLCipherGetName;
     SSL_CIPHER_get_bits := LOriginalSSLCipherGetBits;
     SSL_CIPHER_get_protocol_id := LOriginalSSLCipherGetProtocolId;
     SSL_CIPHER_get_id := LOriginalSSLCipherGetId;
+    SSL_CIPHER_is_aead := LOriginalSSLCipherIsAead;
+    SSL_CIPHER_get_digest_nid := LOriginalSSLCipherGetDigestNid;
+    EVP_get_digestbynid := LOriginalEVPGetDigestByNid;
     AssertConnectionInfoSafeDegrade(
       'GetConnectionInfo when SSL_get_current_cipher is unavailable',
       LContext,
@@ -246,6 +334,9 @@ begin
     SSL_CIPHER_get_bits := @StubSSLCipherGetBits;
     SSL_CIPHER_get_protocol_id := nil;
     SSL_CIPHER_get_id := nil;
+    SSL_CIPHER_is_aead := nil;
+    SSL_CIPHER_get_digest_nid := nil;
+    EVP_get_digestbynid := nil;
     AssertConnectionInfoSafeDegrade(
       'GetConnectionInfo when SSL_CIPHER_get_name is unavailable',
       LContext,
@@ -257,6 +348,9 @@ begin
     SSL_CIPHER_get_bits := LOriginalSSLCipherGetBits;
     SSL_CIPHER_get_protocol_id := LOriginalSSLCipherGetProtocolId;
     SSL_CIPHER_get_id := LOriginalSSLCipherGetId;
+    SSL_CIPHER_is_aead := LOriginalSSLCipherIsAead;
+    SSL_CIPHER_get_digest_nid := LOriginalSSLCipherGetDigestNid;
+    EVP_get_digestbynid := LOriginalEVPGetDigestByNid;
   end;
 end;
 
@@ -268,6 +362,9 @@ var
   LOriginalSSLCipherGetBits: TSSL_CIPHER_get_bits;
   LOriginalSSLCipherGetProtocolId: TSSL_CIPHER_get_protocol_id;
   LOriginalSSLCipherGetId: TSSL_CIPHER_get_id;
+  LOriginalSSLCipherIsAead: TSSL_CIPHER_is_aead;
+  LOriginalSSLCipherGetDigestNid: TSSL_CIPHER_get_digest_nid;
+  LOriginalEVPGetDigestByNid: TEVP_get_digestbynid;
 begin
   WriteLn;
   WriteLn('=== OpenSSL connection info cipher-suite id truth ===');
@@ -293,10 +390,16 @@ begin
   LOriginalSSLCipherGetBits := SSL_CIPHER_get_bits;
   LOriginalSSLCipherGetProtocolId := SSL_CIPHER_get_protocol_id;
   LOriginalSSLCipherGetId := SSL_CIPHER_get_id;
+  LOriginalSSLCipherIsAead := SSL_CIPHER_is_aead;
+  LOriginalSSLCipherGetDigestNid := SSL_CIPHER_get_digest_nid;
+  LOriginalEVPGetDigestByNid := EVP_get_digestbynid;
   try
     SSL_get_current_cipher := @StubSSLGetCurrentCipherNonNil;
     SSL_CIPHER_get_name := nil;
     SSL_CIPHER_get_bits := @StubSSLCipherGetBits;
+    SSL_CIPHER_is_aead := nil;
+    SSL_CIPHER_get_digest_nid := nil;
+    EVP_get_digestbynid := nil;
 
     SSL_CIPHER_get_protocol_id := @StubSSLCipherGetProtocolId;
     SSL_CIPHER_get_id := nil;
@@ -317,6 +420,101 @@ begin
     SSL_get_current_cipher := LOriginalSSLGetCurrentCipher;
     SSL_CIPHER_get_name := LOriginalSSLCipherGetName;
     SSL_CIPHER_get_bits := LOriginalSSLCipherGetBits;
+    SSL_CIPHER_get_protocol_id := LOriginalSSLCipherGetProtocolId;
+    SSL_CIPHER_get_id := LOriginalSSLCipherGetId;
+    SSL_CIPHER_is_aead := LOriginalSSLCipherIsAead;
+    SSL_CIPHER_get_digest_nid := LOriginalSSLCipherGetDigestNid;
+    EVP_get_digestbynid := LOriginalEVPGetDigestByNid;
+  end;
+end;
+
+procedure TestGetConnectionInfoMacSizeTruth;
+var
+  LContext: ISSLContext;
+  LOriginalSSLGetCurrentCipher: TSSL_get_current_cipher;
+  LOriginalSSLCipherGetName: TSSL_CIPHER_get_name;
+  LOriginalSSLCipherGetBits: TSSL_CIPHER_get_bits;
+  LOriginalSSLCipherIsAead: TSSL_CIPHER_is_aead;
+  LOriginalSSLCipherGetDigestNid: TSSL_CIPHER_get_digest_nid;
+  LOriginalEVPGetDigestByNid: TEVP_get_digestbynid;
+  LOriginalEVPMDGetSize: TEVP_MD_get_size;
+  LOriginalSSLCipherGetProtocolId: TSSL_CIPHER_get_protocol_id;
+  LOriginalSSLCipherGetId: TSSL_CIPHER_get_id;
+begin
+  WriteLn;
+  WriteLn('=== OpenSSL connection info mac-size truth ===');
+
+  if (not Assigned(SSL_new)) or
+     (not Assigned(SSL_set_bio)) or
+     (not Assigned(BIO_new)) or
+     (not Assigned(BIO_s_mem)) then
+  begin
+    MarkSkip('openssl connection info mac-size contract',
+      'required baseline OpenSSL SSL/BIO helpers are unavailable');
+    Exit;
+  end;
+
+  LContext := GLib.CreateContext(sslCtxClient);
+  if LContext = nil then
+    raise Exception.Create('failed to create OpenSSL client context');
+
+  WarmupStreamConnectionConstructor(LContext);
+
+  LOriginalSSLGetCurrentCipher := SSL_get_current_cipher;
+  LOriginalSSLCipherGetName := SSL_CIPHER_get_name;
+  LOriginalSSLCipherGetBits := SSL_CIPHER_get_bits;
+  LOriginalSSLCipherIsAead := SSL_CIPHER_is_aead;
+  LOriginalSSLCipherGetDigestNid := SSL_CIPHER_get_digest_nid;
+  LOriginalEVPGetDigestByNid := EVP_get_digestbynid;
+  LOriginalEVPMDGetSize := EVP_MD_get_size;
+  LOriginalSSLCipherGetProtocolId := SSL_CIPHER_get_protocol_id;
+  LOriginalSSLCipherGetId := SSL_CIPHER_get_id;
+  try
+    SSL_get_current_cipher := @StubSSLGetCurrentCipherNonNil;
+    SSL_CIPHER_get_bits := @StubSSLCipherGetBits;
+    SSL_CIPHER_get_protocol_id := nil;
+    SSL_CIPHER_get_id := nil;
+
+    SSL_CIPHER_get_name := @StubSSLCipherGetNameLegacyNonAead;
+    SSL_CIPHER_is_aead := nil;
+    SSL_CIPHER_get_digest_nid := nil;
+    EVP_get_digestbynid := nil;
+    EVP_MD_get_size := nil;
+    AssertConnectionInfoMacSize(
+      'GetConnectionInfo should degrade safely when non-AEAD MacSize helpers are unavailable',
+      LContext,
+      0
+    );
+
+    SSL_CIPHER_get_name := @StubSSLCipherGetNameLegacyNonAead;
+    SSL_CIPHER_is_aead := @StubSSLCipherIsNotAead;
+    SSL_CIPHER_get_digest_nid := @StubSSLCipherGetDigestNid;
+    EVP_get_digestbynid := @StubEVPGetDigestByNid;
+    EVP_MD_get_size := @StubEVPMDGetSize;
+    AssertConnectionInfoMacSize(
+      'GetConnectionInfo should derive legacy non-AEAD MacSize from digest truth',
+      LContext,
+      32
+    );
+
+    SSL_CIPHER_get_name := @StubSSLCipherGetNameTLS13Aead;
+    SSL_CIPHER_is_aead := @StubSSLCipherIsAead;
+    SSL_CIPHER_get_digest_nid := @StubSSLCipherGetDigestNid;
+    EVP_get_digestbynid := @StubEVPGetDigestByNid;
+    EVP_MD_get_size := @StubEVPMDGetSize;
+    AssertConnectionInfoMacSize(
+      'GetConnectionInfo should keep shared AEAD MacSize when digest truth differs',
+      LContext,
+      16
+    );
+  finally
+    SSL_get_current_cipher := LOriginalSSLGetCurrentCipher;
+    SSL_CIPHER_get_name := LOriginalSSLCipherGetName;
+    SSL_CIPHER_get_bits := LOriginalSSLCipherGetBits;
+    SSL_CIPHER_is_aead := LOriginalSSLCipherIsAead;
+    SSL_CIPHER_get_digest_nid := LOriginalSSLCipherGetDigestNid;
+    EVP_get_digestbynid := LOriginalEVPGetDigestByNid;
+    EVP_MD_get_size := LOriginalEVPMDGetSize;
     SSL_CIPHER_get_protocol_id := LOriginalSSLCipherGetProtocolId;
     SSL_CIPHER_get_id := LOriginalSSLCipherGetId;
   end;
@@ -346,6 +544,9 @@ begin
 
     if SkippedTests = 0 then
       TestGetConnectionInfoShouldPreferProtocolIdThenFallbackToCipherId;
+
+    if SkippedTests = 0 then
+      TestGetConnectionInfoMacSizeTruth;
 
     WriteLn;
     WriteLn('========================================');

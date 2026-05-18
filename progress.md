@@ -3859,6 +3859,59 @@
   - summary:
     - current `MacSize` semantics batch has no whitespace or patch-format issues
 
+### OpenSSL GetConnectionInfo Legacy MacSize Truth
+
+- add `docs/plans/2026-05-18-openssl-connectioninfo-macsize-legacy-truth-feasibility.md`
+  - purpose:
+    - capture the next bounded `MacSize` batch after the shared AEAD semantics matrix
+    - keep the scope on OpenSSL low-level truth instead of spreading legacy `MacSize` guesses into the shared parser
+
+- implementation:
+  - `src/fafafa.ssl.openssl.api.ssl.pas`
+  - `src/fafafa.ssl.openssl.api.evp.pas`
+  - `src/fafafa.ssl.openssl.connection.pas`
+  - `tests/test_openssl_connection_info_cipher_contract.pas`
+  - `tests/scripts/test_openssl_connectioninfo_macsize_truth_contract.sh`
+  - change:
+    - active SSL API export/binding chain now includes:
+      - `SSL_CIPHER_is_aead`
+      - `SSL_CIPHER_get_digest_nid`
+    - active EVP export/binding chain now includes:
+      - `EVP_get_digestbynid`
+    - OpenSSL `GetConnectionInfo` now fills `MacSize` from digest truth only when:
+      - shared path still leaves `MacSize = 0`
+      - current cipher is explicitly non-AEAD
+    - AEAD `MacSize` remains owned by the shared suite-name derivation path
+
+- `bash tests/scripts/test_openssl_connectioninfo_macsize_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - verified the new SSL/EVP export chain and the OpenSSL digest-truth `MacSize` write path
+
+- `mkdir -p tmp/test_openssl_connection_info_cipher_contract && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_connection_info_cipher_contract -FEtmp/test_openssl_connection_info_cipher_contract -otmp/test_openssl_connection_info_cipher_contract/test_openssl_connection_info_cipher_contract tests/test_openssl_connection_info_cipher_contract.pas && ./tmp/test_openssl_connection_info_cipher_contract/test_openssl_connection_info_cipher_contract`
+  - result: RED -> GREEN
+  - summary:
+    - first run exposed a stale contract assumption:
+      - old fake-cipher-pointer scenarios only nulled `protocol_id` / `get_id`
+      - after the new `MacSize` path landed, `is_aead` / `digest_nid` / `EVP_get_digestbynid` also had to be nulled in those fake-pointer branches
+    - after aligning the contract, final result was:
+      - `20 passed, 0 failed`
+    - the expanded suite now explicitly proves:
+      - helper unavailable safe degrade
+      - legacy non-AEAD digest truth -> `MacSize = 32`
+      - AEAD digest size does not override shared `MacSize = 16`
+
+- `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+  - result: PASS
+  - summary:
+    - shared connection-info proof remained green at `26 passed, 0 failed`
+    - the OpenSSL legacy `MacSize` addition did not disturb the earlier shared AEAD semantics
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current OpenSSL legacy `MacSize` batch has no whitespace or patch-format issues
+
 ### WinSSL GetConnectionInfo Cipher Truth Correction
 
 - add `docs/plans/2026-05-18-winssl-connectioninfo-cipher-truth-correction.md`

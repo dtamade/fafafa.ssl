@@ -1017,6 +1017,28 @@
       - legacy non-AEAD `MacSize` 是否值得补更强 low-level truth
       - 无法只靠 shared suite-name 路径稳定归一的更细平台差异
       - 更强 owner / deprecation wording route
+40. `OpenSSL GetConnectionInfo legacy MacSize truth` 已完成并应作为当前 implementation-completeness 主线的进一步收口保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-openssl-connectioninfo-macsize-legacy-truth-feasibility.md`
+    - 当前已确认的 OpenSSL truth：
+      - `TOpenSSLConnection.GetConnectionInfo` 现在在 shared path 已无 `MacSize` 且 cipher 明确 non-AEAD 时，会使用：
+        - `SSL_CIPHER_get_digest_nid`
+        - `EVP_get_digestbynid`
+        - `EVP_MD_size`
+      - AEAD cipher 继续保持 shared `MacSize` owner truth，不会被 digest size 覆盖
+      - `api.ssl` 与 `api.evp` 的 active export/binding chain 现在已经补齐：
+        - `SSL_CIPHER_is_aead`
+        - `SSL_CIPHER_get_digest_nid`
+        - `EVP_get_digestbynid`
+    - 当前 focused proof 已覆盖：
+      - `bash tests/scripts/test_openssl_connectioninfo_macsize_truth_contract.sh`
+      - `tests/test_openssl_connection_info_cipher_contract.pas`
+      - `tests/test_connection_builder_hostname_precedence.pas`
+      - `git diff --check`
+    - 当前批收口后，`GetConnectionInfo` implementation-completeness 主线已进一步收缩到：
+      - WinSSL / MbedTLS / WolfSSL 是否存在值得接入的更强 legacy `MacSize` truth
+      - 无法只靠 shared or current low-level helpers 稳定归一的更细平台差异
+      - 更强 owner / deprecation wording route
 
 ## Verification Discipline
 
