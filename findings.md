@@ -2,6 +2,28 @@
 
 ## 2026-05-19
 
+- `OpenSSL` / `WolfSSL` 这边剩余的 verify-result 命中并没有散开，而是已经压成一对很窄的 server-side OCSP stapling runtime diagnostics：
+  - `tests/openssl/test_openssl_server_ocsp_stapling_runtime.pas`
+  - `tests/wolfssl/test_wolfssl_server_ocsp_stapling_runtime.pas`
+
+- 这对 residual duo 的性质也很明确：
+  - 它们都属于 backend-specific server-side stapling diagnostics
+  - 不是 ordinary docs、generic examples 或 generic tests
+  - 所以最小正确动作同样不是改 owner path，而是做 diagnostics subgroup freeze
+
+- 这批收口因此也落在“写明保留原因 + 锁住 duo 文件集”：
+  - 两个文件都补 `INTENTIONAL_VERIFY_RESULT_CORE_SURFACE`
+  - 新增 focused source contract，锁住当前 `tests/openssl` / `tests/wolfssl` 的 verify-result residual 面恰好只等于这两个文件
+  - 同时区分它们各自应继续保留的 diagnostics 覆盖：
+    - OpenSSL: `GetVerifyResultString`
+    - WolfSSL: `GetVerifyResult` + `GetVerifyResultString`
+
+- 到这里，`ISSLCertificateVerification` 残余面已经进一步缩成：
+  - 已冻结的 WinSSL runtime trio
+  - 已冻结的 MbedTLS residual cluster
+  - 已冻结的 OpenSSL/WolfSSL OCSP runtime duo
+  - 剩下主要是 root-test residual subgroup，更适合作为下一刀继续收
+
 - `MbedTLS` 这组 verify-result residual 命中和 WinSSL trio 不同，不是 3 个文件，而是一个完整 backend-specific cluster：
   - `tests/mbedtls/benchmark_handshake_simple.pas`
   - `tests/mbedtls/test_mbedtls_safe.pas`

@@ -31,6 +31,11 @@ const
   MIN_WOLFSSL_TLS13_OCSP_EMISSION_MINOR = 9;
   MIN_WOLFSSL_TLS13_OCSP_EMISSION_PATCH = 1;
 
+// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this backend-specific
+// OCSP stapling runtime file intentionally keeps direct core verify-result
+// diagnostics as server-side proof. Generic ISSLCertificateVerification
+// owner-path guidance is frozen elsewhere.
+
 var
   GOriginalWolfSSLSetStatusOCSPResp: TwolfSSL_set_tlsext_status_ocsp_resp = nil;
   GStatusOCSPRespCallCount: Integer = 0;

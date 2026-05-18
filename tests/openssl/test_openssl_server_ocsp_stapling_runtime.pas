@@ -28,6 +28,11 @@ const
   CERT_FILE = 'tests/certificate/test_certs/signer_cert.pem';
   KEY_FILE = 'tests/certificate/test_certs/signer_key.pem';
 
+// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this backend-specific
+// OCSP stapling runtime file intentionally keeps direct core verify-result
+// diagnostics as server-side proof. Generic ISSLCertificateVerification
+// owner-path guidance is frozen elsewhere.
+
 var
   GOriginalSSLSetStatusOCSPResp: TSSL_set_tlsext_status_ocsp_resp = nil;
   GStatusOCSPRespCallCount: Integer = 0;

@@ -176,6 +176,23 @@
   - 当前结论：
     - MbedTLS verify-result residual cluster 现在可以视为关闭，不应再作为 generic guidance 漂移反复拉起
     - 下一刀更适合继续 root-test / OpenSSL / WolfSSL 剩余 residual subgroup
+- [completed] `ISSLCertificateVerification` OpenSSL/WolfSSL OCSP runtime duo 已冻结成 diagnostics proof：
+  - 新增计划：`docs/plans/2026-05-19-isslcertificateverification-ocsp-runtime-duo-freeze.md`
+  - 新增 focused source contract：`tests/scripts/test_isslcertificateverification_ocsp_runtime_duo_contract.sh`
+  - 当前 direct-core verify-result residual duo 已锁住为：
+    - `tests/openssl/test_openssl_server_ocsp_stapling_runtime.pas`
+    - `tests/wolfssl/test_wolfssl_server_ocsp_stapling_runtime.pas`
+  - 两个文件现在都已显式标记为 `INTENTIONAL_VERIFY_RESULT_CORE_SURFACE`
+  - 当前用途被固定为 backend-specific server-side OCSP stapling runtime diagnostics
+  - `ISSLCertificateVerification` owner-path guidance 已明确由 generic/contract 路径在别处守住
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_isslcertificateverification_ocsp_runtime_duo_contract.sh`
+    - `bash tests/scripts/test_isslcertificateverification_ocsp_runtime_duo_contract.sh`
+    - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - OpenSSL/WolfSSL server-side OCSP runtime duo 现在可以视为关闭，不应再作为 generic guidance 漂移反复拉起
+    - 下一刀更适合继续 root-test residual subgroup
 - [completed] GitHub Actions Windows runner 已重新纳入当前 truth surface：
   - `wave-b-b2-manual.yml` 的 live run `26030261335` 已证实 `windows-gate` 三层都能在 GitHub CI 上实际执行
   - 当前 WinSSL lane 不再允许退回“本地没 Windows，只能静态审查”的旧入口

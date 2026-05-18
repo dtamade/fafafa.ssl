@@ -2,6 +2,48 @@
 
 ## 2026-05-19
 
+### ISSLCertificateVerification OCSP Runtime Duo Freeze
+
+- add `docs/plans/2026-05-19-isslcertificateverification-ocsp-runtime-duo-freeze.md`
+  - change:
+    - define the bounded OpenSSL/WolfSSL OCSP runtime residual duo freeze
+
+- add `tests/scripts/test_isslcertificateverification_ocsp_runtime_duo_contract.sh`
+  - change:
+    - lock the OpenSSL/WolfSSL direct-core verify-result residual file set to the current duo
+    - require intentional residual notes plus the expected diagnostics coverage in each file
+
+- update OCSP runtime residual proof files:
+  - `tests/openssl/test_openssl_server_ocsp_stapling_runtime.pas`
+  - `tests/wolfssl/test_wolfssl_server_ocsp_stapling_runtime.pas`
+  - change:
+    - add unified `INTENTIONAL_VERIFY_RESULT_CORE_SURFACE` notes
+    - record these files as backend-specific server-side OCSP stapling diagnostics proof
+
+- `bash -n tests/scripts/test_isslcertificateverification_ocsp_runtime_duo_contract.sh`
+  - result: PASS
+  - summary:
+    - OCSP runtime residual duo contract syntax is valid
+
+- `bash tests/scripts/test_isslcertificateverification_ocsp_runtime_duo_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - the focused contract over-matched a wrapped residual-comment line instead of stable substrings
+    - GREEN:
+      - OpenSSL/WolfSSL direct-core verify-result residual file set stayed frozen to the expected duo
+      - each file still carries the intentional residual note and expected diagnostics coverage
+
+- `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - the broader certificate-verification residual allowlist remained aligned after the OCSP runtime duo freeze
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current OCSP runtime duo freeze batch has no whitespace or patch-format issues
+
 ### ISSLCertificateVerification MbedTLS Residual Cluster Freeze
 
 - add `docs/plans/2026-05-19-isslcertificateverification-mbedtls-residual-cluster-freeze.md`
