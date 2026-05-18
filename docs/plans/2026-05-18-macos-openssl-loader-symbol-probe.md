@@ -74,9 +74,13 @@ git diff --check
     - `test_wave_b_macos_gate_loader_symbol_probe_contract.sh`
     - 以及受影响的 macOS gate 合同回归集
   - 本地 `local_probe.json` 已成功产出，并证明 probe 结构可读
-- NEXT:
-  - push 后重跑 `wave-b-b2-manual.yml`
-  - 重点观察新的 `wave_b_macos_loader_symbol_probe_<run_id>.json`
-  - 用它判断：
-    - 是 loader 仍然拿错库
-    - 还是 direct symbols 本身存在、但 batch-wrapper/binding table 漂移
+- LIVE PASS:
+  - GitHub Actions run `26048015976` 已完成 `success`
+  - `linux-gate` / `macos-gate` / `windows-gate` / `summary` 全部 `success`
+  - macOS probe artifact 已证明：
+    - `loader_version_string = OpenSSL 3.6.2 7 Apr 2026`
+    - direct symbols 全部为 `true`
+    - `evp/pem/pkcs12/cms/ocsp/ts/ct/store` module truth 全部为 `true`
+- CLOSEOUT:
+  - 这条 lane 已完成从“环境猜测”到“loader/symbol 真相”的收口
+  - 后续不要再把 macOS loader/path 或 batch-binding 漂移当成当前默认 blocker 反复拉起

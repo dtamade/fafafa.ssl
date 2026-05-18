@@ -6126,3 +6126,67 @@
     - `setup` already passed
     - `linux-gate` / `windows-gate` / `macos-gate` all started
     - `macos-gate` has advanced to `Run macOS Wave B gate`, so the new probe is now in the live execution path
+
+## 2026-05-19
+
+### macOS Probe Closeout
+
+- `gh run view 26048015976 --json status,conclusion,jobs,url`
+  - result: PASS
+  - summary:
+    - run `26048015976` finished `success`
+    - `linux-gate` / `macos-gate` / `windows-gate` / `summary` all passed
+
+- `gh run download 26048015976 -D tmp/gh-run-26048015976`
+  - result: PASS
+  - summary:
+    - downloaded the live artifacts for direct offline inspection
+
+- `jq . tmp/gh-run-26048015976/.../wave_b_macos_loader_symbol_probe_wave_b_b2_20260518_macos_loader_symbol_probe_07e526b.json`
+  - result: PASS
+  - summary:
+    - macOS loader/symbol probe proved:
+      - `loader_version_string = OpenSSL 3.6.2 7 Apr 2026`
+      - direct symbol truth all `true`
+      - `evp/pem/pkcs12/cms/ocsp/ts/ct/store` module truth all `true`
+    - macOS loader/path or batch-binding drift is no longer the current blocker
+
+- `mkdir -p tmp/test_backend_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_backend_contract -FEtmp/test_backend_contract -otmp/test_backend_contract/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/test_backend_contract/test_backend_contract`
+  - result: PASS
+  - summary:
+    - `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+    - current backend optional-surface contract truth is still green on Linux host
+
+- `mkdir -p tmp/test_capabilities_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_capabilities_contract -FEtmp/test_capabilities_contract -otmp/test_capabilities_contract/test_capabilities_contract tests/contract/test_capabilities_contract.pas && ./tmp/test_capabilities_contract/test_capabilities_contract`
+  - result: PASS
+  - summary:
+    - `63 passed / 0 failed / 1 skipped`
+    - current capability truth did not expose a new cross-backend drift
+
+### Session Cache Persistence Count Truth
+
+- add `docs/plans/2026-05-19-session-cache-persistence-count-truth.md`
+  - purpose:
+    - record the new generic session-cache persistence bug and its focused repair path
+
+- add `tests/test_session_cache_persistence_contract.pas`
+  - result: RED -> GREEN
+  - summary:
+    - new focused contract locks mixed valid/invalid session persistence
+    - it proves `LoadFromFile(...)` must remain readable after `SaveToFile(...)` skips invalid entries
+
+- `mkdir -p tmp/test_session_cache_persistence_contract && fpc -B -Fu./src -Fu./tests -FUtmp/test_session_cache_persistence_contract -FEtmp/test_session_cache_persistence_contract -otmp/test_session_cache_persistence_contract/test_session_cache_persistence_contract tests/test_session_cache_persistence_contract.pas && ./tmp/test_session_cache_persistence_contract/test_session_cache_persistence_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - RED: `LoadFromFile succeeds after SaveToFile skipped invalid entries`
+    - GREEN: valid entry now loads back cleanly while skipped invalid entry no longer corrupts the file header
+
+- update `src/fafafa.ssl.session.cache.pas`
+  - change:
+    - `SaveToFile(...)` now writes a placeholder count and backfills the real number of written entries
+    - skipped invalid/expired sessions no longer desynchronize the file header from the payload
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current session-cache persistence fix batch has no whitespace or patch-format issues

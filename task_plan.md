@@ -119,7 +119,7 @@
     - `Store/TS/CT` 继续 PASS
     - `PEM/EVP/PKCS12/CMS/OCSP` 仍成片失败
   - 当前这条线应保留为“已做过且有价值的 loader hardening”，而不是继续被当成主根因反复拉起
-- [in_progress] macOS loader/symbol probe evidence lane 已成为新的 first hard blocker：
+- [completed] macOS loader/symbol probe evidence lane 已完成 live truth 收口，不再是当前 blocker：
   - 新增计划：`docs/plans/2026-05-18-macos-openssl-loader-symbol-probe.md`
   - 当前静态真相已经压清：
     - `TS/CT/Store` 主要走 direct `GetCryptoProcAddress(...)`
@@ -132,14 +132,30 @@
     - `.github/workflows/wave-b-b2-manual.yml` active + disabled template 现会上传新的 probe JSON
     - focused workflow/gate contracts 已通过
     - commit `07e526b` (`ci/macos: add openssl loader symbol probe`) 已推送到 `origin/master`
-    - live workflow run `26048015976` 已启动，当前正由 `macos-gate` 取证新的 loader-symbol probe artifact
-  - 当前批收口后的默认下一步应为：
-    - 直接读取 run `26048015976` 的 `wave_b_macos_loader_symbol_probe_wave_b_b2_20260518_macos_loader_symbol_probe_07e526b.json`
-    - 根据 probe 真相判断应继续修 loader 路径、symbol name 假设，还是 batch-binding wrapper/binding table
+    - live workflow run `26048015976` 已完成 `success`
+    - `wave_b_macos_loader_symbol_probe_wave_b_b2_20260518_macos_loader_symbol_probe_07e526b.json` 已证明：
+      - `loader_version_string = OpenSSL 3.6.2 7 Apr 2026`
+      - direct symbols 全部为 `true`
+      - `evp/pem/pkcs12/cms/ocsp/ts/ct/store` module truth 全部为 `true`
+    - 同一 run 的 `linux-gate` / `windows-gate` / `summary` 也全部 `success`
+  - 当前结论：
+    - 不要再把 macOS loader/path、symbol export、batch-binding 漂移当成当前主线 blocker 重复拉起
 - [in_progress] 当前 repo-level 下一步应回到更高价值的 completeness 路线：
   - 继续审查各 backend implementation completeness / optional surface completeness
-  - 但在 macOS gate 重新拿到 loader/symbol 真相前，不要再凭环境探测或请求名字符串重开 `OPENSSL_ROOT` 怀疑
+  - 不再凭环境探测或请求名字符串重开 `OPENSSL_ROOT` / macOS loader 怀疑
   - 若继续深挖 WinSSL，则优先扩展真实 resumed handshake / session tickets / certstore / OCSP / enterprise 等高风险 lane，而不是再重复治理 runtime capture、shared probe crash 或已修掉的 semantic false positive
+- [completed] generic session-cache persistence count truth 已完成 focused 修复并形成新基线：
+  - 新增计划：`docs/plans/2026-05-19-session-cache-persistence-count-truth.md`
+  - 新增 focused test：`tests/test_session_cache_persistence_contract.pas`
+  - 修复：`src/fafafa.ssl.session.cache.pas`
+    - `SaveToFile(...)` 不再把 `FCache.Count` 直接写进文件头
+    - 现在会回填真实写入条目数，避免跳过 invalid/expired session 后把文件结构写坏
+  - focused verification 已通过：
+    - 新契约先 `RED` 后 `GREEN`
+    - `git diff --check` 通过
+  - 当前结论：
+    - 这条缺口说明“后端实现完整性”之外，generic persistence seam 也需要持续审查
+    - 但这次问题已收口，不再把 session-cache 持久化偶发损坏当成未定位噪声
 - [completed] `v1.5.0` release / workflow / cross-platform runtime closeout 已经不再是当前主线：
   - 当前默认控制面应保持在 `post-release route selection`
   - 不再围绕 release lane 或旧的 Windows runtime blocker 重复开工

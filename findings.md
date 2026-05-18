@@ -2689,3 +2689,34 @@
   - 这再次证明：
     - `loader_version_string` 才是实际加载句柄上的版本真相
     - `api_version_string` 只是历史请求名/分类字符串，不能再单独拿来判断 macOS 是否真加载到了 Homebrew OpenSSL 3.x
+
+## 2026-05-19
+
+- GitHub Actions live run `26048015976` 现已把 macOS loader/symbol lane 真正关掉：
+  - `linux-gate` / `macos-gate` / `windows-gate` / `summary` 全部 `success`
+  - `wave_b_macos_loader_symbol_probe_wave_b_b2_20260518_macos_loader_symbol_probe_07e526b.json` 直接证明：
+    - `loader_version_string = OpenSSL 3.6.2 7 Apr 2026`
+    - direct symbol truth 全部为 `true`
+    - `evp/pem/pkcs12/cms/ocsp/ts/ct/store` module truth 全部为 `true`
+  - 因而当前主线不该再回头怀疑 macOS loader/path、symbol export、或 batch-binding 漂移
+
+- 在继续做 interface/backend completeness 审查时，generic session persistence seam 暴露出一个独立真 bug：
+  - `src/fafafa.ssl.session.cache.pas` 的 `SaveToFile(...)` 先把 `FCache.Count` 写进文件头
+  - 但写 payload 时又会 `Continue` 跳过 invalid/expired session
+  - 这会让文件头条目数大于真实写入条目数，后续 `LoadFromFile(...)` 直接读坏文件
+
+- 这条问题的价值在于它不是单 backend 噪声，而是公共 persistence 路径的结构性缺口：
+  - 任何把 invalid/expired session 与 valid session 混存后再持久化的路径，都可能写出自相矛盾的 cache 文件
+  - 表面现象会像“偶发 load 失败”或“缓存文件有时损坏”，很容易被误判成 backend-specific session 问题
+
+- 当前最小正确修法已经明确且落地：
+  - `SaveToFile(...)` 改成先写占位计数
+  - 只对真实写出的条目递增 `WrittenCount`
+  - 最后回填真实计数，而不是继续相信 `FCache.Count`
+
+- 新增 focused contract 也把这条真相锁死了：
+  - `tests/test_session_cache_persistence_contract.pas` 先用一个 valid + 一个 invalid session 打出 fresh RED
+  - 修复后同一契约转绿，并直接证明：
+    - `LoadFromFile(...)` 不再因为 skipped entry 把文件头读坏
+    - valid persisted session 能恢复
+    - invalid skipped session 不会被 materialize

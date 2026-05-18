@@ -457,10 +457,11 @@ end;
 function TSSLSessionCache.SaveToFile(const AFileName: string): Boolean;
 var
   Stream: TFileStream;
-  I, Count, DataLen: Integer;
+  I, Count, DataLen, WrittenCount: Integer;
   Key: string;
   Entry: TSessionCacheEntry;
   SessionData: TBytes;
+  CountPosition: Int64;
 begin
   Result := False;
   
@@ -473,9 +474,11 @@ begin
         I := 1;
         Stream.WriteBuffer(I, SizeOf(Integer));
         
-        // 写入条目数
-        Count := FCache.Count;
+        // 先写占位计数；真实条目数只统计实际写入的有效记录。
+        CountPosition := Stream.Position;
+        Count := 0;
         Stream.WriteBuffer(Count, SizeOf(Integer));
+        WrittenCount := 0;
         
         // 写入每个条目
         for I := 0 to FCache.Count - 1 do
@@ -507,7 +510,11 @@ begin
           Stream.WriteBuffer(Entry.CreatedAt, SizeOf(TDateTime));
           Stream.WriteBuffer(Entry.LastAccessedAt, SizeOf(TDateTime));
           Stream.WriteBuffer(Entry.AccessCount, SizeOf(Integer));
+          Inc(WrittenCount);
         end;
+
+        Stream.Position := CountPosition;
+        Stream.WriteBuffer(WrittenCount, SizeOf(Integer));
         
         Result := True;
       finally
