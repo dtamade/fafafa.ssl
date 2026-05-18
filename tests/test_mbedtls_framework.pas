@@ -40,6 +40,9 @@ var
   GTestCount: Integer = 0;
   GPassCount: Integer = 0;
   GFailCount: Integer = 0;
+  GStubMbedTLSPeerCert: Pmbedtls_x509_crt = nil;
+  GStubMbedTLSVersionTLS13: AnsiString = 'TLSv1.3';
+  GStubMbedTLSCipherTLS13: AnsiString = 'TLS_AES_128_GCM_SHA256';
 
 type
   TTestMbedTLSConnection = class(TMbedTLSConnection)
@@ -83,6 +86,29 @@ begin
   Move(STUB_MBEDTLS_SERIALIZED_SESSION[0], buf^,
     Length(STUB_MBEDTLS_SERIALIZED_SESSION));
   Result := 0;
+end;
+
+function StubMbedTLSSSLGetSessionOk(ssl: Pmbedtls_ssl_context;
+  session: Pmbedtls_ssl_session): Integer; cdecl;
+begin
+  if (ssl = nil) or (session = nil) then
+    Exit(-$7100);
+  Result := 0;
+end;
+
+function StubMbedTLSSSLGetVersionTLS13(ssl: Pmbedtls_ssl_context): PAnsiChar; cdecl;
+begin
+  Result := PAnsiChar(GStubMbedTLSVersionTLS13);
+end;
+
+function StubMbedTLSSSLGetCipherSuiteTLS13(ssl: Pmbedtls_ssl_context): PAnsiChar; cdecl;
+begin
+  Result := PAnsiChar(GStubMbedTLSCipherTLS13);
+end;
+
+function StubMbedTLSSSLGetPeerCert(ssl: Pmbedtls_ssl_context): Pmbedtls_x509_crt; cdecl;
+begin
+  Result := GStubMbedTLSPeerCert;
 end;
 
 procedure TTestMbedTLSConnection.MarkHandshakeCompleteForTest;
@@ -457,6 +483,131 @@ begin
   end;
 end;
 
+procedure TestMbedTLSSessionMetadataCompletenessContract;
+var
+  LLib: ISSLLibrary;
+  LFixtureCert: TMbedTLSCertificate;
+  LSession: ISSLSession;
+  LClone: ISSLSession;
+  LPeerCert: ISSLCertificate;
+  LClonePeerCert: ISSLCertificate;
+  LExpectedFingerprint: string;
+  LOriginalGetSession: Tmbedtls_ssl_get_session;
+  LOriginalGetVersion: Tmbedtls_ssl_get_version;
+  LOriginalGetCipherSuite: Tmbedtls_ssl_get_ciphersuite;
+  LOriginalGetPeerCert: Tmbedtls_ssl_get_peer_cert;
+  LOriginalSessionLoad: Tmbedtls_ssl_session_load;
+  LOriginalSessionSave: Tmbedtls_ssl_session_save;
+  LOriginalX509Parse: Tmbedtls_x509_crt_parse;
+begin
+  WriteLn('');
+  WriteLn('=== MbedTLS Session Metadata Completeness Contract ===');
+
+  LLib := CreateMbedTLSLibrary;
+  if not LLib.Initialize then
+  begin
+    WriteLn('  (Skipped - MbedTLS library not available)');
+    Test('Session metadata completeness skipped', True);
+    Exit;
+  end;
+
+  LFixtureCert := TMbedTLSCertificate.Create;
+  try
+    if not LFixtureCert.LoadFromFile('tests/certs/server-cert.pem') then
+    begin
+      WriteLn('  (Skipped - fixture certificate unavailable)');
+      Test('Session metadata completeness skipped', True);
+      Exit;
+    end;
+
+    GStubMbedTLSPeerCert := Pmbedtls_x509_crt(LFixtureCert.GetNativeHandle);
+    LExpectedFingerprint := LFixtureCert.GetFingerprintSHA256;
+
+    LOriginalGetSession := mbedtls_ssl_get_session;
+    LOriginalGetVersion := mbedtls_ssl_get_version;
+    LOriginalGetCipherSuite := mbedtls_ssl_get_ciphersuite;
+    LOriginalGetPeerCert := mbedtls_ssl_get_peer_cert;
+    LOriginalSessionLoad := mbedtls_ssl_session_load;
+    LOriginalSessionSave := mbedtls_ssl_session_save;
+    LOriginalX509Parse := mbedtls_x509_crt_parse;
+    try
+      mbedtls_ssl_get_session := @StubMbedTLSSSLGetSessionOk;
+      mbedtls_ssl_get_version := @StubMbedTLSSSLGetVersionTLS13;
+      mbedtls_ssl_get_ciphersuite := @StubMbedTLSSSLGetCipherSuiteTLS13;
+      mbedtls_ssl_get_peer_cert := @StubMbedTLSSSLGetPeerCert;
+      mbedtls_ssl_session_load := @StubMbedTLSSessionLoadOk;
+      mbedtls_ssl_session_save := @StubMbedTLSSessionSaveOk;
+
+      LSession := TMbedTLSSession.FromContext(Pmbedtls_ssl_context(Pointer(1)));
+      Test('FromContext returns session when session helper succeeds', LSession <> nil);
+      Test('FromContext extracts protocol version truth',
+        (LSession <> nil) and (LSession.GetProtocolVersion = sslProtocolTLS13));
+      Test('FromContext extracts cipher truth',
+        (LSession <> nil) and (LSession.GetCipherName = string(GStubMbedTLSCipherTLS13)));
+
+      LPeerCert := nil;
+      if LSession <> nil then
+        LPeerCert := LSession.GetPeerCertificate;
+      Test('FromContext materializes peer certificate as owned copy',
+        LPeerCert <> nil);
+      Test('FromContext peer certificate matches fixture fingerprint',
+        (LPeerCert <> nil) and
+        SameText(LPeerCert.GetFingerprintSHA256, LExpectedFingerprint));
+
+      LClone := nil;
+      if LSession <> nil then
+        LClone := LSession.Clone;
+      LClonePeerCert := nil;
+      if LClone <> nil then
+        LClonePeerCert := LClone.GetPeerCertificate;
+      Test('Session clone preserves peer certificate truth',
+        (LClone <> nil) and (LClonePeerCert <> nil) and
+        SameText(LClonePeerCert.GetFingerprintSHA256, LExpectedFingerprint));
+    finally
+      mbedtls_ssl_get_session := LOriginalGetSession;
+      mbedtls_ssl_get_version := LOriginalGetVersion;
+      mbedtls_ssl_get_ciphersuite := LOriginalGetCipherSuite;
+      mbedtls_ssl_get_peer_cert := LOriginalGetPeerCert;
+      mbedtls_ssl_session_load := LOriginalSessionLoad;
+      mbedtls_ssl_session_save := LOriginalSessionSave;
+      mbedtls_x509_crt_parse := LOriginalX509Parse;
+    end;
+
+    LSession := nil;
+    LPeerCert := nil;
+    try
+      mbedtls_ssl_get_session := @StubMbedTLSSSLGetSessionOk;
+      mbedtls_ssl_get_version := @StubMbedTLSSSLGetVersionTLS13;
+      mbedtls_ssl_get_ciphersuite := @StubMbedTLSSSLGetCipherSuiteTLS13;
+      mbedtls_ssl_get_peer_cert := @StubMbedTLSSSLGetPeerCert;
+      mbedtls_ssl_session_load := @StubMbedTLSSessionLoadOk;
+      mbedtls_ssl_session_save := @StubMbedTLSSessionSaveOk;
+      mbedtls_x509_crt_parse := nil;
+
+      LSession := TMbedTLSSession.FromContext(Pmbedtls_ssl_context(Pointer(1)));
+      if LSession <> nil then
+        LPeerCert := LSession.GetPeerCertificate;
+
+      Test('FromContext keeps session truth when peer-cert copy helper is unavailable',
+        LSession <> nil);
+      Test('FromContext fails closed when peer certificate cannot be materialized',
+        LPeerCert = nil);
+    finally
+      mbedtls_ssl_get_session := LOriginalGetSession;
+      mbedtls_ssl_get_version := LOriginalGetVersion;
+      mbedtls_ssl_get_ciphersuite := LOriginalGetCipherSuite;
+      mbedtls_ssl_get_peer_cert := LOriginalGetPeerCert;
+      mbedtls_ssl_session_load := LOriginalSessionLoad;
+      mbedtls_ssl_session_save := LOriginalSessionSave;
+      mbedtls_x509_crt_parse := LOriginalX509Parse;
+    end;
+  finally
+    GStubMbedTLSPeerCert := nil;
+    LFixtureCert.Free;
+    LLib.Finalize;
+  end;
+end;
+
 procedure TestMbedTLSContextCreation;
 var
   LLib: ISSLLibrary;
@@ -754,6 +905,7 @@ begin
 
   // Session class tests (no library required)
   TestMbedTLSSessionClass;
+  TestMbedTLSSessionMetadataCompletenessContract;
 
   // Context tests (require MbedTLS library)
   TestMbedTLSContextCreation;

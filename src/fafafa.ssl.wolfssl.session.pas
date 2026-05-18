@@ -34,6 +34,7 @@ type
     FSessionID: string;
     FProtocolVersion: TSSLProtocolVersion;
     FCipherName: string;
+    FPeerCertificate: ISSLCertificate;
     FSerializedData: TBytes;
 
     procedure ExtractSessionInfo;
@@ -122,6 +123,36 @@ begin
   Result := wolfSSL_d2i_SSL_SESSION(nil, @LBufPtr, Length(LSerialized));
 end;
 
+function MaterializeWolfSSLCertificate(AX509: PWOLFSSL_X509): ISSLCertificate;
+var
+  LDER: TBytes;
+  LTemp: TWolfSSLCertificate;
+  LOwned: TWolfSSLCertificate;
+begin
+  Result := nil;
+  if AX509 = nil then
+    Exit;
+
+  LTemp := TWolfSSLCertificate.Create(AX509);
+  try
+    LDER := LTemp.SaveToDER;
+    if Length(LDER) = 0 then
+      Exit;
+
+    LOwned := TWolfSSLCertificate.Create;
+    try
+      if not LOwned.LoadFromDER(LDER) then
+        Exit;
+      Result := LOwned;
+      LOwned := nil;
+    finally
+      LOwned.Free;
+    end;
+  finally
+    LTemp.Free;
+  end;
+end;
+
 { TWolfSSLSession }
 
 constructor TWolfSSLSession.Create;
@@ -134,6 +165,7 @@ begin
   FSessionID := GenerateSessionID;  // 总是生成会话 ID
   FProtocolVersion := sslProtocolUnknown;
   FCipherName := 'unknown';
+  FPeerCertificate := nil;
   SetLength(FSerializedData, 0);
 end;
 
@@ -230,8 +262,10 @@ end;
 
 function TWolfSSLSession.GetPeerCertificate: ISSLCertificate;
 begin
-  Result := nil;
-  // WolfSSL 会话不直接存储对端证书
+  if FPeerCertificate <> nil then
+    Result := FPeerCertificate.Clone
+  else
+    Result := nil;
 end;
 
 function TWolfSSLSession.Serialize: TBytes;
@@ -291,6 +325,7 @@ begin
       FOwnsSession := True;
       FSerializedData := Copy(AData);
       ExtractSessionInfo;
+      FPeerCertificate := nil;
       Result := True;
     end;
   end
@@ -324,6 +359,10 @@ begin
     LClone.FSessionID := FSessionID;
     LClone.FProtocolVersion := FProtocolVersion;
     LClone.FCipherName := FCipherName;
+    if FPeerCertificate <> nil then
+      LClone.FPeerCertificate := FPeerCertificate.Clone
+    else
+      LClone.FPeerCertificate := nil;
     LClone.FSerializedData := Copy(FSerializedData);
 
     if FSession <> nil then
@@ -337,6 +376,10 @@ begin
       LClone.FSessionID := FSessionID;
       LClone.FProtocolVersion := FProtocolVersion;
       LClone.FCipherName := FCipherName;
+      if FPeerCertificate <> nil then
+        LClone.FPeerCertificate := FPeerCertificate.Clone
+      else
+        LClone.FPeerCertificate := nil;
       LClone.FSerializedData := Copy(LSerialized);
     end;
 
@@ -354,6 +397,7 @@ var
   LVersion: PAnsiChar;
   LCipher: Pointer;
   LCipherName: PAnsiChar;
+  LPeerCert: PWOLFSSL_X509;
   LWrapped: TWolfSSLSession;
 begin
   Result := nil;
@@ -385,6 +429,13 @@ begin
         if LCipherName <> nil then
           LWrapped.FCipherName := string(LCipherName);
       end;
+    end;
+
+    if Assigned(wolfSSL_get_peer_certificate) then
+    begin
+      LPeerCert := wolfSSL_get_peer_certificate(ASSL);
+      if LPeerCert <> nil then
+        LWrapped.FPeerCertificate := MaterializeWolfSSLCertificate(LPeerCert);
     end;
 
     Result := LWrapped;

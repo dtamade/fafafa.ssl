@@ -34,6 +34,7 @@ type
     FSessionID: string;
     FProtocolVersion: TSSLProtocolVersion;
     FCipherName: string;
+    FPeerCertificate: ISSLCertificate;
     FSerializedData: TBytes;
 
     procedure AllocateSession;
@@ -83,6 +84,21 @@ const
   MBEDTLS_SSL_SESSION_SIZE = 512;  // 估算大小
   MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL_LOCAL = -$6A00;
 
+function ParseMbedTLSVersionString(const AVersion: string): TSSLProtocolVersion;
+begin
+  if Pos('TLSv1.3', AVersion) > 0 then
+    Exit(sslProtocolTLS13);
+  if Pos('TLSv1.2', AVersion) > 0 then
+    Exit(sslProtocolTLS12);
+  if Pos('TLSv1.1', AVersion) > 0 then
+    Exit(sslProtocolTLS11);
+  if Pos('TLSv1.0', AVersion) > 0 then
+    Exit(sslProtocolTLS10);
+  if Pos('SSLv3', AVersion) > 0 then
+    Exit(sslProtocolSSL3);
+  Result := sslProtocolUnknown;
+end;
+
 function HasSessionSerializeHelpers: Boolean;
 begin
   Result := Assigned(mbedtls_ssl_session_save);
@@ -91,6 +107,36 @@ end;
 function HasSessionDeserializeHelpers: Boolean;
 begin
   Result := Assigned(mbedtls_ssl_session_load);
+end;
+
+function MaterializeMbedTLSPeerCertificate(ACert: Pmbedtls_x509_crt): ISSLCertificate;
+var
+  LDER: TBytes;
+  LTemp: TMbedTLSCertificate;
+  LOwned: TMbedTLSCertificate;
+begin
+  Result := nil;
+  if ACert = nil then
+    Exit;
+
+  LTemp := TMbedTLSCertificate.Create(ACert, False);
+  try
+    LDER := LTemp.SaveToDER;
+    if Length(LDER) = 0 then
+      Exit;
+
+    LOwned := TMbedTLSCertificate.Create;
+    try
+      if not LOwned.LoadFromDER(LDER) then
+        Exit;
+      Result := LOwned;
+      LOwned := nil;
+    finally
+      LOwned.Free;
+    end;
+  finally
+    LTemp.Free;
+  end;
 end;
 
 { TMbedTLSSession }
@@ -105,6 +151,7 @@ begin
   FSessionID := GenerateSessionID;
   FProtocolVersion := sslProtocolTLS12;
   FCipherName := '';
+  FPeerCertificate := nil;
   SetLength(FSerializedData, 0);
 end;
 
@@ -215,7 +262,10 @@ end;
 
 function TMbedTLSSession.GetPeerCertificate: ISSLCertificate;
 begin
-  Result := nil;
+  if FPeerCertificate <> nil then
+    Result := FPeerCertificate.Clone
+  else
+    Result := nil;
 end;
 
 function TMbedTLSSession.Serialize: TBytes;
@@ -283,6 +333,7 @@ begin
   FOwnsSession := True;
   FSerializedData := Copy(AData);
   ExtractSessionInfo;
+  FPeerCertificate := nil;
   Result := True;
 end;
 
@@ -314,6 +365,10 @@ begin
     LClone.FSessionID := FSessionID;
     LClone.FProtocolVersion := FProtocolVersion;
     LClone.FCipherName := FCipherName;
+    if FPeerCertificate <> nil then
+      LClone.FPeerCertificate := FPeerCertificate.Clone
+    else
+      LClone.FPeerCertificate := nil;
     LClone.FSerializedData := Copy(FSerializedData);
 
     if FSession <> nil then
@@ -327,6 +382,10 @@ begin
       LClone.FSessionID := FSessionID;
       LClone.FProtocolVersion := FProtocolVersion;
       LClone.FCipherName := FCipherName;
+      if FPeerCertificate <> nil then
+        LClone.FPeerCertificate := FPeerCertificate.Clone
+      else
+        LClone.FPeerCertificate := nil;
       LClone.FSerializedData := Copy(LSerialized);
     end;
 
@@ -340,6 +399,10 @@ end;
 class function TMbedTLSSession.FromContext(ASSLCtx: Pmbedtls_ssl_context): ISSLSession;
 var
   LSession: TMbedTLSSession;
+  LVersion: PAnsiChar;
+  LCipherName: PAnsiChar;
+  LPeerCert: Pmbedtls_x509_crt;
+  LParsedVersion: TSSLProtocolVersion;
 begin
   Result := nil;
   if ASSLCtx = nil then Exit;
@@ -351,6 +414,32 @@ begin
   if mbedtls_ssl_get_session(ASSLCtx, LSession.FSession) = 0 then
   begin
     LSession.ExtractSessionInfo;
+
+    if Assigned(mbedtls_ssl_get_version) then
+    begin
+      LVersion := mbedtls_ssl_get_version(ASSLCtx);
+      if LVersion <> nil then
+      begin
+        LParsedVersion := ParseMbedTLSVersionString(string(LVersion));
+        if LParsedVersion <> sslProtocolUnknown then
+          LSession.FProtocolVersion := LParsedVersion;
+      end;
+    end;
+
+    if Assigned(mbedtls_ssl_get_ciphersuite) then
+    begin
+      LCipherName := mbedtls_ssl_get_ciphersuite(ASSLCtx);
+      if LCipherName <> nil then
+        LSession.FCipherName := string(LCipherName);
+    end;
+
+    if Assigned(mbedtls_ssl_get_peer_cert) then
+    begin
+      LPeerCert := mbedtls_ssl_get_peer_cert(ASSLCtx);
+      if LPeerCert <> nil then
+        LSession.FPeerCertificate := MaterializeMbedTLSPeerCertificate(LPeerCert);
+    end;
+
     Result := LSession;
   end
   else

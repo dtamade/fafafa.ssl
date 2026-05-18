@@ -2816,3 +2816,33 @@
   - 不再泛化地怀疑所有 c-library session extraction 都有 lifetime 问题
   - `OpenSSL` / `MbedTLS` 当前没有同类硬缺口
   - 下一刀更适合查 `GetPeerCertificate` / metadata extraction completeness 是否仍弱于其它 backend
+
+- `MbedTLS/WolfSSL` session metadata / peer-certificate completeness 这批已经形成新的可复用真相：
+  - `TMbedTLSSession.FromContext(...)` 之前虽然拿到了独立 session，但 metadata 仍停在：
+    - `FProtocolVersion := sslProtocolTLS12`
+    - `FCipherName := ''`
+    - `GetPeerCertificate = nil`
+  - `TWolfSSLSession.FromConnection(...)` 之前虽然已补 protocol / cipher，但 peer cert 仍完全缺席
+  - focused RED 证明这不是“文档味道”，而是 live surface 缺口：
+    - `MbedTLS` 先红在 protocol / cipher / peer cert / peer-cert-preserving clone
+    - `WolfSSL` 先红在 peer cert / peer-cert-preserving clone
+
+- 本机头文件也把两条 ownership/materialization 边界钉得更明确了：
+  - `/usr/include/mbedtls/ssl.h` 对 `mbedtls_ssl_get_peer_cert()` 直接写明：
+    - 若要跨后续 SSL API 调用继续使用该指针，调用方必须自己复制
+  - `/usr/include/wolfssl/test.h` 的示例路径对 `wolfSSL_get_peer_certificate(ssl)` 会在使用后显式 `wolfSSL_FreeX509(peer)`
+  - 因而这批的安全做法不是继续保留 borrowed/live native handle，而是：
+    - `MbedTLS`: `DER copy -> owned reload`
+    - `WolfSSL`: `native X509 -> DER export -> owned reload`
+
+- `MbedTLS` 这批还顺手暴露并修掉了一个更底层的证书 clone 真 bug：
+  - `TMbedTLSCertificate.Clone()` 之前只复制 `FPEMData/FDERData/FInfo`
+  - 但不会重新 materialize `FX509Crt`
+  - 结果 clone 后很多读取路径虽然带着缓存字节，却仍然是 native-handle 空壳
+  - 这条 bug 正是 session peer-cert clone 断言最后两盏红灯的真实根因
+
+- 当前收口后的 route truth 已明确：
+  - `TMbedTLSSession.GetPeerCertificate()` / `TWolfSSLSession.GetPeerCertificate()` 现在都返回可独立持有的 cert clone
+  - `TMbedTLSSession.Clone()` / `TWolfSSLSession.Clone()` 会继续保留 peer-cert truth
+  - `TWolfSSLCertificate.SaveToDER()` 现在不再只依赖缓存数据；native `WOLFSSL_X509` 也能真实导出
+  - 这意味着 c-library session object 当前终于不再弱于连接态真相太多，至少 protocol / cipher / peer cert 三条已经做实

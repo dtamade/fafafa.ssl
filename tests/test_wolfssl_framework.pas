@@ -40,6 +40,9 @@ var
   GFailCount: Integer = 0;
   GStubWolfSSLBorrowedSession: PWOLFSSL_SESSION = nil;
   GStubWolfSSLSessionDupCalls: Integer = 0;
+  GStubWolfSSLPeerCertificateDER: TBytes;
+  GStubWolfSSLVersionTLS13: AnsiString = 'TLSv1.3';
+  GStubWolfSSLCipherTLS13: AnsiString = 'TLS_AES_128_GCM_SHA256';
 
 const
   STUB_WOLFSSL_SERIALIZED_SESSION: array[0..3] of Byte = (4, 3, 2, 1);
@@ -91,6 +94,32 @@ begin
 
   GetMem(Result, 1);
   PByte(Result)^ := PByte(session)^;
+end;
+
+function StubWolfSSLGetVersionTLS13(ssl: PWOLFSSL): PAnsiChar; cdecl;
+begin
+  Result := PAnsiChar(GStubWolfSSLVersionTLS13);
+end;
+
+function StubWolfSSLGetCurrentCipherNonNil(ssl: PWOLFSSL): Pointer; cdecl;
+begin
+  Result := Pointer(PtrUInt(1));
+end;
+
+function StubWolfSSLCipherGetNameTLS13(cipher: Pointer): PAnsiChar; cdecl;
+begin
+  Result := PAnsiChar(GStubWolfSSLCipherTLS13);
+end;
+
+function StubWolfSSLGetPeerCertificateFromDER(ssl: PWOLFSSL): PWOLFSSL_X509; cdecl;
+begin
+  Result := nil;
+  if (ssl = nil) or (Length(GStubWolfSSLPeerCertificateDER) = 0) or
+     (not Assigned(wolfSSL_X509_d2i)) then
+    Exit;
+
+  Result := wolfSSL_X509_d2i(nil, @GStubWolfSSLPeerCertificateDER[0],
+    Length(GStubWolfSSLPeerCertificateDER));
 end;
 
 function HasNativeHandleContext(const AObject: ISSLContext): Boolean;
@@ -755,6 +784,161 @@ begin
   end;
 end;
 
+procedure TestWolfSSLSessionMetadataCompletenessContract;
+var
+  LLib: ISSLLibrary;
+  LFixtureCert: TWolfSSLCertificate;
+  LSession: ISSLSession;
+  LClone: ISSLSession;
+  LPeerCert: ISSLCertificate;
+  LClonePeerCert: ISSLCertificate;
+  LExpectedFingerprint: string;
+  LOriginalGetSession: TwolfSSL_get_session;
+  LOriginalSessionDup: TwolfSSL_SESSION_dup;
+  LOriginalD2ISession: TwolfSSL_d2i_SSL_SESSION;
+  LOriginalI2DSession: TwolfSSL_i2d_SSL_SESSION;
+  LOriginalSessionFree: TwolfSSL_SESSION_free;
+  LOriginalGetVersion: TwolfSSL_get_version;
+  LOriginalGetCurrentCipher: TwolfSSL_get_current_cipher;
+  LOriginalCipherGetName: TwolfSSL_CIPHER_get_name;
+  LOriginalGetPeerCertificate: TwolfSSL_get_peer_certificate;
+  LOriginalX509D2I: TwolfSSL_X509_d2i;
+begin
+  WriteLn('');
+  WriteLn('=== WolfSSL Session Metadata Completeness Contract ===');
+
+  LLib := CreateWolfSSLLibrary;
+  if not LLib.Initialize then
+  begin
+    WriteLn('  (Skipped - WolfSSL library not available)');
+    Test('Session metadata completeness skipped', True);
+    Exit;
+  end;
+
+  LFixtureCert := TWolfSSLCertificate.Create;
+  try
+    if not LFixtureCert.LoadFromFile('tests/certificate/test_certs/signer_cert.pem') then
+    begin
+      WriteLn('  (Skipped - fixture certificate unavailable)');
+      Test('Session metadata completeness skipped', True);
+      Exit;
+    end;
+
+    GStubWolfSSLPeerCertificateDER := LFixtureCert.SaveToDER;
+    LExpectedFingerprint := LFixtureCert.GetFingerprintSHA256;
+
+    GetMem(GStubWolfSSLBorrowedSession, 1);
+    PByte(GStubWolfSSLBorrowedSession)^ := $A5;
+
+    LOriginalGetSession := wolfSSL_get_session;
+    LOriginalSessionDup := wolfSSL_SESSION_dup;
+    LOriginalD2ISession := wolfSSL_d2i_SSL_SESSION;
+    LOriginalI2DSession := wolfSSL_i2d_SSL_SESSION;
+    LOriginalSessionFree := wolfSSL_SESSION_free;
+    LOriginalGetVersion := wolfSSL_get_version;
+    LOriginalGetCurrentCipher := wolfSSL_get_current_cipher;
+    LOriginalCipherGetName := wolfSSL_CIPHER_get_name;
+    LOriginalGetPeerCertificate := wolfSSL_get_peer_certificate;
+    LOriginalX509D2I := wolfSSL_X509_d2i;
+    try
+      GStubWolfSSLSessionDupCalls := 0;
+      wolfSSL_get_session := @StubWolfSSLGetBorrowedSession;
+      wolfSSL_SESSION_dup := @StubWolfSSLSessionDupOk;
+      wolfSSL_d2i_SSL_SESSION := @StubWolfSSLD2ISessionOk;
+      wolfSSL_i2d_SSL_SESSION := @StubWolfSSLI2DSessionOk;
+      wolfSSL_SESSION_free := @StubWolfSSLSessionFree;
+      wolfSSL_get_version := @StubWolfSSLGetVersionTLS13;
+      wolfSSL_get_current_cipher := @StubWolfSSLGetCurrentCipherNonNil;
+      wolfSSL_CIPHER_get_name := @StubWolfSSLCipherGetNameTLS13;
+      wolfSSL_get_peer_certificate := @StubWolfSSLGetPeerCertificateFromDER;
+
+      LSession := TWolfSSLSession.FromConnection(PWOLFSSL(Pointer(1)));
+      Test('FromConnection returns session when ownership is secured',
+        LSession <> nil);
+      Test('FromConnection preserves source-lifetime secure duplication',
+        GStubWolfSSLSessionDupCalls = 1);
+      Test('FromConnection extracts protocol version truth',
+        (LSession <> nil) and (LSession.GetProtocolVersion = sslProtocolTLS13));
+      Test('FromConnection extracts cipher truth',
+        (LSession <> nil) and (LSession.GetCipherName = string(GStubWolfSSLCipherTLS13)));
+
+      LPeerCert := nil;
+      if LSession <> nil then
+        LPeerCert := LSession.GetPeerCertificate;
+      Test('FromConnection materializes peer certificate as owned copy',
+        LPeerCert <> nil);
+      Test('FromConnection peer certificate matches fixture fingerprint',
+        (LPeerCert <> nil) and
+        SameText(LPeerCert.GetFingerprintSHA256, LExpectedFingerprint));
+
+      LClone := nil;
+      if LSession <> nil then
+        LClone := LSession.Clone;
+      LClonePeerCert := nil;
+      if LClone <> nil then
+        LClonePeerCert := LClone.GetPeerCertificate;
+      Test('Session clone preserves peer certificate truth',
+        (LClone <> nil) and (LClonePeerCert <> nil) and
+        SameText(LClonePeerCert.GetFingerprintSHA256, LExpectedFingerprint));
+    finally
+      wolfSSL_get_session := LOriginalGetSession;
+      wolfSSL_SESSION_dup := LOriginalSessionDup;
+      wolfSSL_d2i_SSL_SESSION := LOriginalD2ISession;
+      wolfSSL_i2d_SSL_SESSION := LOriginalI2DSession;
+      wolfSSL_SESSION_free := LOriginalSessionFree;
+      wolfSSL_get_version := LOriginalGetVersion;
+      wolfSSL_get_current_cipher := LOriginalGetCurrentCipher;
+      wolfSSL_CIPHER_get_name := LOriginalCipherGetName;
+      wolfSSL_get_peer_certificate := LOriginalGetPeerCertificate;
+      wolfSSL_X509_d2i := LOriginalX509D2I;
+    end;
+
+    LSession := nil;
+    LPeerCert := nil;
+    try
+      wolfSSL_get_session := @StubWolfSSLGetBorrowedSession;
+      wolfSSL_SESSION_dup := @StubWolfSSLSessionDupOk;
+      wolfSSL_d2i_SSL_SESSION := @StubWolfSSLD2ISessionOk;
+      wolfSSL_i2d_SSL_SESSION := @StubWolfSSLI2DSessionOk;
+      wolfSSL_SESSION_free := @StubWolfSSLSessionFree;
+      wolfSSL_get_version := @StubWolfSSLGetVersionTLS13;
+      wolfSSL_get_current_cipher := @StubWolfSSLGetCurrentCipherNonNil;
+      wolfSSL_CIPHER_get_name := @StubWolfSSLCipherGetNameTLS13;
+      wolfSSL_get_peer_certificate := @StubWolfSSLGetPeerCertificateFromDER;
+      wolfSSL_X509_d2i := nil;
+
+      LSession := TWolfSSLSession.FromConnection(PWOLFSSL(Pointer(1)));
+      if LSession <> nil then
+        LPeerCert := LSession.GetPeerCertificate;
+
+      Test('FromConnection keeps session truth when peer-cert materialization helper is unavailable',
+        LSession <> nil);
+      Test('FromConnection fails closed when peer certificate cannot be materialized',
+        LPeerCert = nil);
+    finally
+      wolfSSL_get_session := LOriginalGetSession;
+      wolfSSL_SESSION_dup := LOriginalSessionDup;
+      wolfSSL_d2i_SSL_SESSION := LOriginalD2ISession;
+      wolfSSL_i2d_SSL_SESSION := LOriginalI2DSession;
+      wolfSSL_SESSION_free := LOriginalSessionFree;
+      wolfSSL_get_version := LOriginalGetVersion;
+      wolfSSL_get_current_cipher := LOriginalGetCurrentCipher;
+      wolfSSL_CIPHER_get_name := LOriginalCipherGetName;
+      wolfSSL_get_peer_certificate := LOriginalGetPeerCertificate;
+      wolfSSL_X509_d2i := LOriginalX509D2I;
+    end;
+  finally
+    if GStubWolfSSLBorrowedSession <> nil then
+    begin
+      FreeMem(GStubWolfSSLBorrowedSession);
+      GStubWolfSSLBorrowedSession := nil;
+    end;
+    SetLength(GStubWolfSSLPeerCertificateDER, 0);
+    LFixtureCert.Free;
+    LLib.Finalize;
+  end;
+end;
+
 procedure PrintSummary;
 var
   LPassRate: Double;
@@ -797,6 +981,7 @@ begin
   // Session class tests (no library required)
   TestWolfSSLSessionClass;
   TestWolfSSLSessionSourceLifetimeOwnershipContract;
+  TestWolfSSLSessionMetadataCompletenessContract;
 
   // Context tests (require WolfSSL library)
   TestWolfSSLContextCreation;

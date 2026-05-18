@@ -390,8 +390,25 @@ begin
 end;
 
 function TWolfSSLCertificate.SaveToDER: TBytes;
+var
+  LDERLen: Integer;
+  LDERPtr: PByte;
 begin
   Result := Copy(FDERData);
+  if (Length(Result) = 0) and (FX509 <> nil) and Assigned(wolfSSL_i2d_X509) then
+  begin
+    LDERLen := wolfSSL_i2d_X509(FX509, nil);
+    if LDERLen > 0 then
+    begin
+      SetLength(Result, LDERLen);
+      LDERPtr := @Result[0];
+      if wolfSSL_i2d_X509(FX509, @LDERPtr) = LDERLen then
+        FDERData := Copy(Result)
+      else
+        SetLength(Result, 0);
+    end;
+  end;
+
   if (Length(Result) = 0) and (FPEMData <> '') then
     Result := TSSLUtils.PEMToDER(FPEMData);
 end;

@@ -98,6 +98,7 @@ type
   TwolfSSL_X509_load_certificate_file = function(const filename: PAnsiChar;
     format: Integer): PWOLFSSL_X509; cdecl;
   TwolfSSL_X509_free = procedure(x509: PWOLFSSL_X509); cdecl;
+  TwolfSSL_i2d_X509 = function(x509: PWOLFSSL_X509; out_: PPByte): Integer; cdecl;
   TwolfSSL_X509_d2i = function(x509: PPWOLFSSL_X509; const data: Pointer;
     len: Integer): PWOLFSSL_X509; cdecl;
   TwolfSSL_X509_get_subject_name = function(x509: PWOLFSSL_X509): Pointer; cdecl;
@@ -248,6 +249,7 @@ var
   wolfSSL_X509_load_certificate_file: TwolfSSL_X509_load_certificate_file = nil;
   wolfSSL_X509_get_next_altname: TwolfSSL_X509_get_next_altname = nil;
   wolfSSL_X509_free: TwolfSSL_X509_free = nil;
+  wolfSSL_i2d_X509: TwolfSSL_i2d_X509 = nil;
   wolfSSL_X509_d2i: TwolfSSL_X509_d2i = nil;
   wolfSSL_X509_get_subject_name: TwolfSSL_X509_get_subject_name = nil;
   wolfSSL_X509_get_issuer_name: TwolfSSL_X509_get_issuer_name = nil;
@@ -509,6 +511,7 @@ begin
   wolfSSL_X509_get_next_altname := TwolfSSL_X509_get_next_altname(
     GetProc('wolfSSL_X509_get_next_altname'));
   wolfSSL_X509_free := TwolfSSL_X509_free(GetProc('wolfSSL_X509_free'));
+  wolfSSL_i2d_X509 := TwolfSSL_i2d_X509(GetProc('wolfSSL_i2d_X509'));
   wolfSSL_X509_d2i := TwolfSSL_X509_d2i(GetProc('wolfSSL_X509_d2i'));
   wolfSSL_X509_get_subject_name := TwolfSSL_X509_get_subject_name(
     GetProc('wolfSSL_X509_get_subject_name'));
@@ -687,6 +690,7 @@ begin
   wolfSSL_X509_load_certificate_file := nil;
   wolfSSL_X509_get_next_altname := nil;
   wolfSSL_X509_free := nil;
+  wolfSSL_i2d_X509 := nil;
   wolfSSL_X509_d2i := nil;
   wolfSSL_X509_get_subject_name := nil;
   wolfSSL_X509_get_issuer_name := nil;

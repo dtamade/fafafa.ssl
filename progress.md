@@ -6326,3 +6326,73 @@
   - result: PASS
   - summary:
     - current WolfSSL session source-lifetime batch has no whitespace or patch-format issues
+
+### C-Library Session Metadata And Peer-Certificate Completeness
+
+- add `docs/plans/2026-05-19-clibrary-session-metadata-peer-cert-completeness.md`
+  - purpose:
+    - record the MbedTLS/WolfSSL session metadata + peer-certificate completeness batch
+
+- update `tests/test_mbedtls_framework.pas`
+  - change:
+    - add `MbedTLS Session Metadata Completeness Contract`
+    - lock protocol/cipher/peer-cert truth plus helper-loss fail-closed behavior
+
+- update `tests/test_wolfssl_framework.pas`
+  - change:
+    - add `WolfSSL Session Metadata Completeness Contract`
+    - lock peer-cert materialization plus clone-preservation truth
+
+- `mkdir -p tmp/test_mbedtls_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas && ./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `FromContext` protocol truth
+      - `FromContext` cipher truth
+      - `FromContext` peer-certificate materialization
+      - peer-cert-preserving clone
+    - GREEN after fix:
+      - `Total: 116 / Passed: 116 / Failed: 0`
+
+- `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - session peer-certificate materialization
+      - peer-cert-preserving clone
+    - GREEN after fix:
+      - `Total: 136 / Passed: 136 / Failed: 0`
+
+- update `src/fafafa.ssl.mbedtls.session.pas`
+  - change:
+    - add protocol/cipher extraction from `mbedtls_ssl_get_version` / `mbedtls_ssl_get_ciphersuite`
+    - add borrowed peer-cert materialization via `DER copy -> owned reload`
+    - `GetPeerCertificate()` / `Clone()` now preserve peer-cert truth
+
+- update `src/fafafa.ssl.mbedtls.certificate.pas`
+  - change:
+    - `Clone()` now re-materializes a native cert from DER instead of returning a cached-field shell
+
+- update `src/fafafa.ssl.wolfssl.api.pas`
+  - change:
+    - bind `wolfSSL_i2d_X509` into the dynamic API layer
+
+- update `src/fafafa.ssl.wolfssl.certificate.pas`
+  - change:
+    - `SaveToDER()` now exports real DER from a native `WOLFSSL_X509` when cache is empty
+
+- update `src/fafafa.ssl.wolfssl.session.pas`
+  - change:
+    - `FromConnection()` now materializes peer cert into an owned cert object
+    - `GetPeerCertificate()` / `Clone()` preserve peer-cert truth
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+    - cross-backend session/certificate optional surfaces remained green after the completeness fix
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current c-library session metadata/peer-certificate batch has no whitespace or patch-format issues

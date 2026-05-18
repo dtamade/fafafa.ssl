@@ -144,6 +144,26 @@
   - 继续审查各 backend implementation completeness / optional surface completeness
   - 不再凭环境探测或请求名字符串重开 `OPENSSL_ROOT` / macOS loader 怀疑
   - 若继续深挖 WinSSL，则优先扩展真实 resumed handshake / session tickets / certstore / OCSP / enterprise 等高风险 lane，而不是再重复治理 runtime capture、shared probe crash 或已修掉的 semantic false positive
+- [completed] `MbedTLS/WolfSSL` c-library session metadata 与 peer-certificate completeness 已完成 focused 收口：
+  - 新增计划：`docs/plans/2026-05-19-clibrary-session-metadata-peer-cert-completeness.md`
+  - `src/fafafa.ssl.mbedtls.session.pas`
+    - `FromContext(...)` 现在会真实回填 protocol / cipher
+    - 对 `mbedtls_ssl_get_peer_cert(...)` 返回的 borrowed cert 走 `DER copy -> owned reload`
+    - helper 不足时继续 `fail-closed`
+  - `src/fafafa.ssl.wolfssl.certificate.pas`
+    - `SaveToDER()` 现在可直接从 native `WOLFSSL_X509` 导出 DER
+  - `src/fafafa.ssl.wolfssl.session.pas`
+    - `FromConnection(...)` 现在会 materialize peer cert，并在 clone 后保留这条 truth
+  - `src/fafafa.ssl.mbedtls.certificate.pas`
+    - `Clone()` 不再只复制缓存字段；现在会重新 materialize native cert，避免 clone 成空壳
+  - focused verification 已通过：
+    - `tests/test_mbedtls_framework.pas`: `116 passed / 0 failed`
+    - `tests/test_wolfssl_framework.pas`: `136 passed / 0 failed`
+    - `tests/contract/test_backend_contract.pas`: `135 total / 111 passed / 0 failed / 24 skipped`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - session completeness 的主缺口已从 “version/cipher/peer cert 缺失” 收口
+    - 下一刀更适合继续横向审其它 backend 的 session/certificate clone semantics，而不是再重开本批
 - [completed] generic session-cache persistence count truth 已完成 focused 修复并形成新基线：
   - 新增计划：`docs/plans/2026-05-19-session-cache-persistence-count-truth.md`
   - 新增 focused test：`tests/test_session_cache_persistence_contract.pas`
