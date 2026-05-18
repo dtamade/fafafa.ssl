@@ -1508,6 +1508,38 @@
       - 在这个新的 context/runtime 基线上继续追 native resumed-handshake 观测
       - 优先调查为什么 current Windows proof 仍停在 `observed_reuse=false`
       - 不再把 session cache / ticket option runtime wiring 当成未知缺口重复拉起
+57. `WinSSL session serialization roundtrip alignment` 已完成并应作为当前 WinSSL session-object completeness 基线保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-winssl-session-serialization-roundtrip-alignment.md`
+    - 当前已确认的 route truth：
+      - `src/fafafa.ssl.winssl.connection.pas` 中的 `TWinSSLSession`
+        现在不再只是：
+        - `Serialize -> FSessionData`
+        - `Deserialize -> FSessionData := AData`
+        这种空壳实现
+      - `TWinSSLSession` 现在已经具备：
+        - `BuildSerializedSessionData`
+        - `TryLoadSerializedSessionData`
+        两个 helper，用于 round-trip：
+        - `ID`
+        - `creation time`
+        - `timeout`
+        - `protocol`
+        - `cipher`
+        - `resumed flag`
+      - `SetSessionMetadata(...)` 与 `SetTimeout(...)`
+        现在也会同步刷新 serialized payload，不再让 `Serialize` 吐出 stale bytes
+      - 这说明 WinSSL `ISSLSession` 的 serialization surface 现在至少对自身 metadata 自洽；
+        但它仍不等于 native resumed-handshake 已经能靠 serialized payload 直接恢复
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_winssl_session_serialization_roundtrip_contract.sh`
+      - `bash tests/scripts/test_winssl_session_serialization_roundtrip_contract.sh`
+      - `mkdir -p tmp/test_session_metadata_win64 && fpc -Twin64 -Fu./src -Fu./tests -FUtmp/test_session_metadata_win64 -FEtmp/test_session_metadata_win64 -otmp/test_session_metadata_win64/test_session_metadata.exe tests/winssl/test_session_metadata.pas`
+      - `git diff --check`
+    - 当前批收口后默认下一步应为：
+      - 不再把 WinSSL session serialization surface 当成“基本空壳”重复拉起
+      - 继续回到 native resumed-handshake / Windows runtime 观测主线
+      - 或转向其他 backend 的 session object completeness 横向审查
 
 ## Verification Discipline
 

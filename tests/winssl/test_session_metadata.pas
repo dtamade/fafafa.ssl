@@ -237,6 +237,58 @@ begin
   end;
 end;
 
+{ 测试序列化 round-trip }
+procedure TestSessionSerializationRoundTrip;
+var
+  LSession1, LSession2: TWinSSLSession;
+  LData: TBytes;
+begin
+  BeginSection('测试序列化 round-trip');
+
+  LSession1 := TWinSSLSession.Create;
+  LSession2 := TWinSSLSession.Create;
+  try
+    LSession1.SetSessionMetadata('roundtrip-session', sslProtocolTLS13,
+      'TLS_AES_256_GCM_SHA384', True);
+    LSession1.SetTimeout(7200);
+
+    LData := LSession1.Serialize;
+    Check('序列化后的 payload 非空', Length(LData) > 0);
+    Check('反序列化成功', LSession2.Deserialize(LData));
+
+    Check('round-trip 后 ID 一致', LSession2.GetID = LSession1.GetID);
+    Check('round-trip 后协议版本一致',
+      LSession2.GetProtocolVersion = LSession1.GetProtocolVersion);
+    Check('round-trip 后密码套件一致',
+      LSession2.GetCipherName = LSession1.GetCipherName);
+    Check('round-trip 后超时时间一致',
+      LSession2.GetTimeout = LSession1.GetTimeout);
+    Check('round-trip 后 resumed 标记一致',
+      LSession2.WasResumed = LSession1.WasResumed);
+    Check('round-trip 后会话仍有效', LSession2.IsValid);
+  finally
+    LSession1.Free;
+    LSession2.Free;
+  end;
+end;
+
+{ 测试无效序列化数据 }
+procedure TestSessionDeserializeRejectsInvalidPayload;
+var
+  LSession: TWinSSLSession;
+begin
+  BeginSection('测试无效序列化数据');
+
+  LSession := TWinSSLSession.Create;
+  try
+    Check('空 payload 拒绝', not LSession.Deserialize(nil));
+    Check('垃圾 payload 拒绝',
+      not LSession.Deserialize(TBytes.Create($FF, $00, $AA, $55)));
+  finally
+    LSession.Free;
+  end;
+end;
+
 procedure PrintSummary;
 begin
   WriteLn;
@@ -270,6 +322,8 @@ begin
   TestSessionClone;
   TestSessionResumedFlag;
   TestSessionCreationTime;
+  TestSessionSerializationRoundTrip;
+  TestSessionDeserializeRejectsInvalidPayload;
   
   PrintSummary;
   

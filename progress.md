@@ -5603,3 +5603,75 @@
   - result: PASS
   - summary:
     - current `WinSSL session cache runtime flag alignment` batch has no whitespace or patch-format issues
+
+### WinSSL Session Serialization Roundtrip Alignment
+
+- `rg -n "Serialize|Deserialize|SetSessionMetadata|SetTimeout|FSessionData" src/fafafa.ssl.winssl.connection.pas tests/winssl/test_session_metadata.pas`
+  - result: PASS
+  - summary:
+    - confirmed the session-object gap lived in `TWinSSLSession` itself
+    - confirmed the current implementation was still effectively:
+      - `Serialize -> FSessionData`
+      - `Deserialize -> FSessionData := AData`
+    - confirmed no stable metadata payload builder existed yet
+
+- add `docs/plans/2026-05-18-winssl-session-serialization-roundtrip-alignment.md`
+  - purpose:
+    - define a bounded WinSSL session-object completeness batch around serialization round-trip
+    - keep scope off native resumed-handshake claims
+
+- update `tests/winssl/test_session_metadata.pas`
+  - change:
+    - add focused round-trip expectations for:
+      - non-empty serialized payload
+      - metadata restoration after deserialize
+      - invalid payload rejection
+    - local Linux host still cannot execute this test binary directly because the WinSSL unit chain depends on `unit Windows`
+
+- first run of `mkdir -p tmp/test_session_metadata && fpc -B -Fu./src -Fu./tests -FUtmp/test_session_metadata -FEtmp/test_session_metadata -otmp/test_session_metadata/test_session_metadata tests/winssl/test_session_metadata.pas`
+  - result: ENVIRONMENT BLOCKED
+  - summary:
+    - Linux-host native compile pulled `fafafa.ssl.winssl.context.pas` and stopped at `Can't find unit Windows`
+    - this was an environment boundary, not a reason to reopen Windows-host-only runtime debugging
+
+- add `tests/scripts/test_winssl_session_serialization_roundtrip_contract.sh`
+  - purpose:
+    - lock the object-level serialization gap with a cheap focused source contract that can run on Linux
+
+- first run of `bash -n tests/scripts/test_winssl_session_serialization_roundtrip_contract.sh && bash tests/scripts/test_winssl_session_serialization_roundtrip_contract.sh`
+  - result: RED
+  - summary:
+    - immediately failed on the absence of a serialized metadata payload builder helper
+    - this confirmed the batch target was a real implementation gap, not just a weak test
+
+- `mkdir -p tmp/test_session_metadata_win64 && fpc -Twin64 -Fu./src -Fu./tests -FUtmp/test_session_metadata_win64 -FEtmp/test_session_metadata_win64 -otmp/test_session_metadata_win64/test_session_metadata.exe tests/winssl/test_session_metadata.pas`
+  - result: PASS
+  - summary:
+    - the focused metadata test itself remains Win64-compilable, so the RED is not a broken test artifact
+
+- update `src/fafafa.ssl.winssl.connection.pas`
+  - change:
+    - add `BuildSerializedSessionData`
+    - add `TryLoadSerializedSessionData`
+    - `Serialize` now returns a metadata-backed payload
+    - `Deserialize` now parses and restores metadata with real success/failure semantics
+    - `SetTimeout(...)` / `SetSessionMetadata(...)` now refresh the serialized payload
+
+- final run of `bash tests/scripts/test_winssl_session_serialization_roundtrip_contract.sh`
+  - result: PASS
+  - summary:
+    - WinSSL session-object serialization is no longer a field-only shell
+
+- second run of `mkdir -p tmp/test_session_metadata_win64 && fpc -Twin64 -Fu./src -Fu./tests -FUtmp/test_session_metadata_win64 -FEtmp/test_session_metadata_win64 -otmp/test_session_metadata_win64/test_session_metadata.exe tests/winssl/test_session_metadata.pas`
+  - result: PASS
+  - summary:
+    - Win64 metadata regression test still compiles cleanly after the object-level serialization fix
+
+- update `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+  - change:
+    - record that WinSSL session metadata serialization now round-trips on the session object, while still not being treated as proof of native resumed-handshake
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `WinSSL session serialization roundtrip alignment` batch has no whitespace or patch-format issues

@@ -78,6 +78,7 @@
   - wider suite artifact 可直接检索 `[WINSSL-RUNTIME] session_resumption ...`
   - final green run `26037518301` 的 `windows-gate` 证明 broader suite 7/7 PASS，shared crash 已消失
   - `TWinSSLContext` 现在会把 `session cache / session tickets` 的 disable truth 下沉到 Schannel `SCH_CRED_DISABLE_RECONNECTS`，且相关设置变更会触发 credential rebuild，不再只是停留在 Pascal 字段层
+  - `TWinSSLSession` 现在能 round-trip 自身 metadata serialization，但这仍只证明 WinSSL session object 自洽，不等于 native resumed-handshake 已被证实
 
 ## 当前还没有证实的部分
 

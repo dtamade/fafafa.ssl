@@ -2510,3 +2510,20 @@
     - `not (ssoEnableSessionTickets in FOptions)`
     映射成 `SCH_CRED_DISABLE_RECONNECTS`
   - 这还不等于 WinSSL 已经稳定命中 resumed handshake，但至少把“context-level session controls 其实没接到 runtime”这条实现缺口先关掉了
+
+- 在继续审查 WinSSL `ISSLSession` 时，又确认了一条更细但同样真实的对象层实现缺口：
+  - `TWinSSLSession.Serialize` 原先只返回 `FSessionData`
+  - `SetSessionMetadata(...)` 并不会刷新 `FSessionData`
+  - `Deserialize(...)` 也不会恢复 `ID/timeout/protocol/cipher/resumed`
+  - 这让 WinSSL session object 的 serialization surface 基本处于“接口存在但对象不自洽”的状态
+
+- 这条缺口虽然不直接等于 Windows native resumed-handshake，但仍然很值得先收：
+  - `TWinSSLSession` 是 WinSSL backend 对外暴露的 canonical `ISSLSession`
+  - 如果它自身的 serialize/deserialize 都不能 round-trip metadata，那么调用方连“缓存/传递这个 session object 的元数据”都拿不到稳定语义
+  - 这会持续污染对 WinSSL session surface 完整性的判断
+
+- 当前修完后的更准确结论是：
+  - WinSSL session object 现在已经能 round-trip 自身 metadata
+  - `SetTimeout(...)` / `SetSessionMetadata(...)` 也会同步刷新 serialized payload
+  - 这仍不等于 serialized payload 可以直接驱动 Schannel native reconnect
+  - 但至少把“WinSSL `ISSLSession` 序列化接口几乎是空壳”这条对象层缺口先关掉了

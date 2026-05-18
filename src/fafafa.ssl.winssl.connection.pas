@@ -59,6 +59,8 @@ type
     FSessionData: TBytes;
     FPeerCertificate: ISSLCertificate;
     FIsResumed: Boolean;
+    function BuildSerializedSessionData: TBytes;
+    function TryLoadSerializedSessionData(const AData: TBytes): Boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -247,6 +249,90 @@ begin
   FIsResumed := False;
 end;
 
+function TWinSSLSession.BuildSerializedSessionData: TBytes;
+const
+  WINSSL_SESSION_SERIALIZATION_MAGIC = 'fafafa-winssl-session-v1';
+var
+  LData: TStringList;
+begin
+  SetLength(Result, 0);
+  if FID = '' then
+    Exit;
+
+  LData := TStringList.Create;
+  try
+    LData.Values['magic'] := WINSSL_SESSION_SERIALIZATION_MAGIC;
+    LData.Values['id'] := FID;
+    LData.Values['created_unix'] := IntToStr(DateTimeToUnix(FCreationTime));
+    LData.Values['timeout'] := IntToStr(FTimeout);
+    LData.Values['protocol'] := IntToStr(Ord(FProtocolVersion));
+    LData.Values['cipher'] := FCipherName;
+    if FIsResumed then
+      LData.Values['resumed'] := '1'
+    else
+      LData.Values['resumed'] := '0';
+    Result := BytesOf(UTF8String(LData.Text));
+  finally
+    LData.Free;
+  end;
+end;
+
+function TWinSSLSession.TryLoadSerializedSessionData(const AData: TBytes): Boolean;
+const
+  WINSSL_SESSION_SERIALIZATION_MAGIC = 'fafafa-winssl-session-v1';
+var
+  LData: TStringList;
+  LText: RawByteString;
+  LID: string;
+  LCipher: string;
+  LCreatedUnix: Int64;
+  LTimeout: Integer;
+  LProtocolOrdinal: Integer;
+  LResumed: string;
+begin
+  Result := False;
+  if Length(AData) = 0 then
+    Exit;
+
+  SetString(LText, PAnsiChar(@AData[0]), Length(AData));
+  LData := TStringList.Create;
+  try
+    LData.Text := string(UTF8String(LText));
+    if LData.Values['magic'] <> WINSSL_SESSION_SERIALIZATION_MAGIC then
+      Exit;
+
+    LID := LData.Values['id'];
+    if LID = '' then
+      Exit;
+
+    if not TryStrToInt64(LData.Values['created_unix'], LCreatedUnix) then
+      Exit;
+    if not TryStrToInt(LData.Values['timeout'], LTimeout) then
+      Exit;
+    if not TryStrToInt(LData.Values['protocol'], LProtocolOrdinal) then
+      Exit;
+    if (LProtocolOrdinal < Ord(Low(TSSLProtocolVersion))) or
+       (LProtocolOrdinal > Ord(High(TSSLProtocolVersion))) then
+      Exit;
+
+    LCipher := LData.Values['cipher'];
+    LResumed := LData.Values['resumed'];
+    if (LResumed <> '0') and (LResumed <> '1') then
+      Exit;
+
+    FID := LID;
+    FCreationTime := UnixToDateTime(LCreatedUnix);
+    FTimeout := LTimeout;
+    FProtocolVersion := TSSLProtocolVersion(LProtocolOrdinal);
+    FCipherName := LCipher;
+    FIsResumed := LResumed = '1';
+    FSessionData := Copy(AData);
+    Result := True;
+  finally
+    LData.Free;
+  end;
+end;
+
 destructor TWinSSLSession.Destroy;
 begin
   inherited Destroy;
@@ -270,6 +356,7 @@ end;
 procedure TWinSSLSession.SetTimeout(ATimeout: Integer);
 begin
   FTimeout := ATimeout;
+  FSessionData := BuildSerializedSessionData;
 end;
 
 function TWinSSLSession.IsValid: Boolean;
@@ -304,13 +391,14 @@ end;
 
 function TWinSSLSession.Serialize: TBytes;
 begin
-  Result := FSessionData;
+  if (Length(FSessionData) = 0) and (FID <> '') then
+    FSessionData := BuildSerializedSessionData;
+  Result := Copy(FSessionData);
 end;
 
 function TWinSSLSession.Deserialize(const AData: TBytes): Boolean;
 begin
-  FSessionData := AData;
-  Result := Length(FSessionData) > 0;
+  Result := TryLoadSerializedSessionData(AData);
 end;
 
 function TWinSSLSession.Clone: ISSLSession;
@@ -339,6 +427,7 @@ begin
   FProtocolVersion := AProtocol;
   FCipherName := ACipher;
   FIsResumed := AResumed;
+  FSessionData := BuildSerializedSessionData;
 end;
 
 function TWinSSLSession.WasResumed: Boolean;
