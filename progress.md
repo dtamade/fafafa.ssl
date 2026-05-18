@@ -2,6 +2,40 @@
 
 ## 2026-05-19
 
+### Certificate Verification Chain Issuer-Link Contract
+
+- add `docs/plans/2026-05-19-certificate-verification-chain-issuer-link-contract.md`
+  - change:
+    - define the bounded `Contract 21` batch that promotes optional/core peer-chain issuer-link truth into the unified backend contract
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+  - result: PASS
+  - summary:
+    - no unsynced session catchup output was needed before this batch
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp -otmp/tmp_backend_contract tests/contract/test_backend_contract.pas && ./tmp/tmp_backend_contract`
+  - result: PASS
+  - summary:
+    - pre-change baseline stayed green at `135 total / 111 passed / 0 failed / 24 skipped`
+    - confirmed `Contract 21` still had no issuer-link truth assertions before this batch
+
+- update `tests/contract/test_backend_contract.pas`
+  - change:
+    - add `CertificatePublicIdentityMatches(...)` helper
+    - extend `Contract 21` to compare optional/core `GetIssuerCertificate()` nilness
+    - extend `Contract 21` to compare issuer-link public identity when present
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp -otmp/tmp_backend_contract tests/contract/test_backend_contract.pas && ./tmp/tmp_backend_contract`
+  - result: PASS
+  - summary:
+    - strengthened `Contract 21` remained green at `135 total / 111 passed / 0 failed / 24 skipped`
+    - no new backend implementation drift surfaced after issuer-link truth entered the unified contract
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `Contract 21` issuer-link contract batch has no whitespace or patch-format issues
+
 ### ISSLCertificateVerification High-Visibility Owner Path
 
 - add `docs/plans/2026-05-19-isslcertificateverification-high-visibility-owner-path.md`

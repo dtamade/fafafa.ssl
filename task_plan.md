@@ -75,6 +75,17 @@
     - `tests/contract/test_backend_contract.pas`: `135 total / 111 passed / 0 failed / 24 skipped`
     - `git diff --check`: PASS
   - 下一刀应继续盘点 verify-result mirrors 的 residual runtime/core uses，准备后续 compiler-deprecated 收口，而不是重开这条高可见 owner-path lane
+- [completed] `ISSLCertificateVerification` peer-chain issuer-link truth 已进入统一 backend contract：
+  - 新增计划：`docs/plans/2026-05-19-certificate-verification-chain-issuer-link-contract.md`
+  - `tests/contract/test_backend_contract.pas`
+    - `Contract 21` 现在额外锁住：
+      - optional/core peer-chain entry 的 `GetIssuerCertificate()` nil/non-nil truth
+      - issuer-link 存在时的 issuer cert public identity truth
+  - 这次统一 contract 补强后的验证结果仍保持 green：
+    - `tests/contract/test_backend_contract.pas`: `135 total / 111 passed / 0 failed / 24 skipped`
+    - `git diff --check`: PASS
+  - 这说明前面已经修好的 cross-backend issuer-link completeness 现在不再只靠 focused tests 保着，也已经进入 repo-level backend consistency truth
+  - 下一刀不应再重开 peer-cert / issuer-link completeness lane，而应回到更大的 verification / optional-surface completeness 审查
 - [completed] GitHub Actions Windows runner 已重新纳入当前 truth surface：
   - `wave-b-b2-manual.yml` 的 live run `26030261335` 已证实 `windows-gate` 三层都能在 GitHub CI 上实际执行
   - 当前 WinSSL lane 不再允许退回“本地没 Windows，只能静态审查”的旧入口

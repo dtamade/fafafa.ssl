@@ -222,6 +222,18 @@ begin
   end;
 end;
 
+function CertificatePublicIdentityMatches(const ALeft,
+  ARight: ISSLCertificate): Boolean;
+begin
+  if (ALeft = nil) or (ARight = nil) then
+    Exit((ALeft = nil) and (ARight = nil));
+
+  Result :=
+    SameText(ALeft.GetSubject, ARight.GetSubject) and
+    SameText(ALeft.GetIssuer, ARight.GetIssuer) and
+    SameText(ALeft.GetSerialNumber, ARight.GetSerialNumber);
+end;
+
 {**
  * 契约测试 1: 直接创建后端库实例（不调用 Initialize）时，CreateContext 必须 fail-fast
  *
@@ -2050,6 +2062,8 @@ var
   LProbeStream: TMemoryStream;
   LCoreChain: TSSLCertificateArray;
   LOptionalChain: TSSLCertificateArray;
+  LCoreIssuerCert: ISSLCertificate;
+  LOptionalIssuerCert: ISSLCertificate;
   I: Integer;
 begin
   PrintSubHeader(Format('Contract 21: Certificate-verification interface alignment - %s',
@@ -2137,6 +2151,26 @@ begin
           WriteLn('  [FAIL] Optional interface peer certificate serial drifted from core getter');
           AddResult('CertificateVerificationInterfaceAligned', ABackend, False,
             'ISSLCertificateVerification.GetPeerCertificateChain serial does not match ISSLConnection.GetPeerCertificateChain');
+          Exit;
+        end;
+
+        LCoreIssuerCert := LCoreChain[I].GetIssuerCertificate;
+        LOptionalIssuerCert := LOptionalChain[I].GetIssuerCertificate;
+
+        if (LOptionalIssuerCert = nil) <> (LCoreIssuerCert = nil) then
+        begin
+          WriteLn('  [FAIL] Optional interface peer certificate issuer-link nilness drifted from core getter');
+          AddResult('CertificateVerificationInterfaceAligned', ABackend, False,
+            'ISSLCertificateVerification.GetPeerCertificateChain issuer-link nil/non-nil result does not match ISSLConnection.GetPeerCertificateChain');
+          Exit;
+        end;
+
+        if (LCoreIssuerCert <> nil) and
+           (not CertificatePublicIdentityMatches(LOptionalIssuerCert, LCoreIssuerCert)) then
+        begin
+          WriteLn('  [FAIL] Optional interface peer certificate issuer-link truth drifted from core getter');
+          AddResult('CertificateVerificationInterfaceAligned', ABackend, False,
+            'ISSLCertificateVerification.GetPeerCertificateChain issuer-link certificate identity does not match ISSLConnection.GetPeerCertificateChain');
           Exit;
         end;
       end;

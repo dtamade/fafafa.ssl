@@ -2,6 +2,31 @@
 
 ## 2026-05-19
 
+- `tests/contract/test_backend_contract.pas` 的 `Contract 21` 之前虽然已经锁住：
+  - `GetVerifyResult`
+  - `GetVerifyResultString`
+  - peer-chain length / nilness / subject / issuer / serial
+  - 但它还没有真正把 `GetPeerCertificateChain()[i].GetIssuerCertificate()` 这层 issuer-link truth 纳入统一 backend contract
+
+- 这个缺口的重要性不在于“又找到一个新 bug”，而在于：
+  - 我们前面已经分别在 `FreePascal` / `OpenSSL` / `WolfSSL` / `MbedTLS` / `WinSSL` 修掉过 peer-cert issuer-link completeness
+  - 但如果统一 backend contract 不锁这层 truth，后续这些修复仍主要依赖 focused tests 存活
+  - 一旦有人改 optional/core wiring，repo-level contract 并不会第一时间报警
+
+- 这批最小安全收口因此很明确，并已落地：
+  - 在 `Contract 21` 的 chain loop 里追加 issuer-link nil/non-nil 对齐断言
+  - issuer-link 存在时，再比较 issuer cert 的 public identity（subject / issuer / serial）
+  - 这让 `ISSLCertificateVerification.GetPeerCertificateChain()` 与 core getter 的对齐范围，从“entry 表层字段一致”扩大到“entry 间 link truth 也一致”
+
+- 更关键的是，这次 contract 补强后没有炸出新的 backend 红点：
+  - `tests/contract/test_backend_contract.pas` 继续 green：`135 total / 111 passed / 0 failed / 24 skipped`
+  - 这说明前面分 backend 收掉的 issuer-link completeness 并不是局部测试偶然转绿
+  - 它们现在已经通过了统一 optional/core alignment contract 的回归
+
+- 因而 peer-cert / certificate-verification issuer-link 这条 lane 现在可以视为真正关闭：
+  - 后续不应再把“issuer-link truth 有没有进入统一 backend contract”当成未完成问题反复拉起
+  - 下一刀更适合回到更大的 verification / optional surface completeness 审查，或者继续盘点 verify-result mirrors 的 residual runtime/core uses
+
 - `ISSLCertificateVerification` 这条线虽然前面已经完成了 ordinary docs/tests 的 owner-path de-emphasis，但这次又压出一条更贴近真实入口的残余：
   - `src/fafafa.ssl.connection.builder.pas` 仍在 client/server handshake failure path 直接读 core `GetVerifyResult / GetVerifyResultString`
   - `src/fafafa.ssl.tls.pas` 的 connector/acceptor 也还是同样的 direct core 读取
