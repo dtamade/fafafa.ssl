@@ -42,10 +42,16 @@
     - `Run broader WinSSL runtime suite` 的 compile phase 已全部通过
     - 新的 first hard blocker 已收敛到 shared runtime helper `UpdateSessionReuseTruthFromContext(...)`
     - `WinSSL Integration Tests (Multi-Scenario)` / `Backend Comparison Tests` / `WinSSL Session Resumption Truth` / `WinSSL Performance Benchmark` / `WinSSL HTTPS Client` 都在握手后观测 session info 时触发同类 `EAccessViolation`
+  - GitHub Actions live rerun `26034948820` 已把这个 Windows crash 进一步压缩到更窄的 shared path：
+    - `linux-gate` / `macos-gate` 持续 green，compile phase 继续全部通过
+    - `windows-gate` 仍只失败在 `Run broader WinSSL runtime suite`
+    - crash 顶点已收敛到 canonical `src/fafafa.ssl.winssl.connection.pas` 里的 `SessionIdBytesToHex(LSessionInfo)` 读取
+    - 当前 Windows runner 上可继续相信 `dwFlags and SSL_SESSION_RECONNECT`，但 raw session-id byte buffer 不能再放进共享握手后路径
   - 当前这批的最小收口是：
-    - 去掉 `test_winssl_session_resumption.lpi` 的硬编码 Linux target
-    - 把 `tests/scripts/test_winssl_windows_runtime_project_target_contract.sh` 扩到该新 `.lpi`
-    - 把 `TryGetCurrentSessionInfo(...)` / `UpdateSessionReuseTruthFromContext(...)` 降成 best-effort observation，不允许 session-info 读取打崩成功握手
+    - 保留 `.lpi` target 修复与 project-target guard，不再回头重开旧问题
+    - 保留 `TryGetCurrentSessionInfo(...)` / `UpdateSessionReuseTruthFromContext(...)` 的 best-effort boundary，不允许 session-info 读取打崩成功握手
+    - 停止在 canonical shared path 里读取 raw session-id bytes
+    - 继续只用 `dwFlags and SSL_SESSION_RECONNECT` 作为 reuse truth，并复用现有 session-id fallback
     - push 后重新看 Windows artifact 刷新的 `observed_reuse=true|false` 真实结论
 - [in_progress] 当前 repo-level 下一步应回到更高价值的 completeness 路线：
   - 继续审查各 backend implementation completeness / optional surface completeness

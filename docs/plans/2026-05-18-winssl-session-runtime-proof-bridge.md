@@ -93,6 +93,17 @@ git diff --check
   - 把 `TryGetCurrentSessionInfo(...)` / `UpdateSessionReuseTruthFromContext(...)` 降成 best-effort observation
   - 保留 `SECPKG_ATTR_SESSION_INFO` 作为 truth source，但任何异常都只能回落成 `session_id='' / reused=false`
   - 重新触发 `wave-b-b2-manual.yml`，确认 broader suite 不再因 session-info observation 崩溃
+- GREEN:
+  - GitHub Actions live rerun `26034948820` 已确认 compile phase 继续全部通过
+  - `linux-gate` / `macos-gate` 继续 green，当前唯一 blocker 仍是 Windows broader suite
+- RED:
+  - 这次 Windows crash 顶点又进一步收敛到更具体的共享读取点：
+    - `UpdateSessionReuseTruthFromContext(...)` 里的 `SessionIdBytesToHex(LSessionInfo)`
+    - GitHub Windows runner 证据表明 `raw session-id byte buffer` 不能安全留在 canonical shared handshake path
+- FOLLOW-UP:
+  - 保留 `dwFlags and SSL_SESSION_RECONNECT` 作为 WinSSL reuse truth
+  - 停止在 canonical shared path 中读取 raw session-id bytes
+  - 继续依赖现有 fallback session-id 路径，再次触发 `wave-b-b2-manual.yml`
 - PENDING:
   - GitHub Windows runner live run 尚未刷新
   - 是否稳定观测到 `observed_reuse=true` 仍待 Windows artifact 给出结论

@@ -127,6 +127,25 @@
   - `macos-gate` 在 `26034303732` 已经转绿
   - 所以当前 workflow 唯一剩余 blocker 是 Windows broader suite 的 shared session-info `AV`
 
+- GitHub Actions live rerun `26034948820` 又把这条 Windows blocker 往下压了一层：
+  - `linux-gate` / `macos-gate` 继续保持 green
+  - broader suite 的所有 compile phase 继续通过
+  - 共享 crash 顶点不再只是泛指 `UpdateSessionReuseTruthFromContext(...)`
+  - 而是明确落在 canonical `src/fafafa.ssl.winssl.connection.pas` 的 `SessionIdBytesToHex(LSessionInfo)` 读取
+
+- 这给了当前实现边界一个更具体、也更可靠的真相：
+  - `SECPKG_ATTR_SESSION_INFO.dwFlags` 仍可作为 `IsSessionReused` 的 Schannel runtime truth
+  - 但同一结构里的 raw session-id byte buffer 在 GitHub Windows runner 上并不稳定
+  - 所以 canonical shared connection flow 不能再把 “读到了 session info” 自动延伸成 “可以安全读取 raw session-id bytes”
+
+- 因而当前这批最小正确修法也进一步收紧了：
+  - 保留 `TryGetCurrentSessionInfo(...)` / `UpdateSessionReuseTruthFromContext(...)` 的 best-effort 边界
+  - 继续用 `dwFlags and SSL_SESSION_RECONNECT` 写入 `FSessionReused`
+  - 不再在共享路径里做 `SessionIdBytesToHex(LSessionInfo)`
+  - `ASessionId` 留空，继续走现有 fallback：
+    - `SaveSessionAfterHandshake(...)` 的 `Format('winssl-session-%p', ...)`
+    - `DoGetSession()` 里的 timestamp-based fallback
+
 - 根因已被压缩到 evidence capture 层，而不是 WinSSL 实现层：
   - workflow 用 `Start-Transcript` 包住父 PowerShell
   - broader suite 则在子 `pwsh -File tests/run_winssl_tests.ps1` 里执行

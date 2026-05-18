@@ -430,6 +430,60 @@
     - Win64 focused cross-target compile 继续通过
     - 新的 best-effort session-info guard 没有破坏 WinSSL connection / session-resumption 专项程序的编译面
 
+- `gh workflow run .github/workflows/wave-b-b2-manual.yml -f run_id=wave_b_b2_20260518_205739_session_guard_fix`
+  - result: PASS
+  - summary:
+    - 触发新的 GitHub Actions live rerun `26034948820`
+    - head sha: `a5a16508fbb5d2216f0634d0cd07a3484817ffe8`
+
+- `gh run view 26034948820 --json status,conclusion,jobs,headSha,createdAt,updatedAt,url`
+  - result: PASS
+  - summary:
+    - workflow run `26034948820` 最终 overall `failure`
+    - `windows-gate`: failure
+    - `linux-gate`: success
+    - `macos-gate`: success
+    - `summary`: success
+
+- `gh run view 26034948820 --job $(gh run view 26034948820 --json jobs --jq '.jobs[] | select(.name=="windows-gate") | .databaseId') --log | rg -n "SessionIdBytesToHex|UpdateSessionReuseTruthFromContext|EAccessViolation|WinSSL Session Resumption Truth|HTTPS Client|Performance Benchmark|Integration Tests" -n -C 2`
+  - result: PASS
+  - summary:
+    - Windows broader suite 的 compile phase 这次继续全部通过
+    - shared crash 顶点已从泛化的 session-info helper 收敛到 `UpdateSessionReuseTruthFromContext(...)` 内部的 raw session-id byte 读取
+    - 关键证据是多条失败都把栈顶压到 `line 839 of ../../src/fafafa.ssl.winssl.connection.pas`
+    - 受影响 lane 继续集中在 `Integration Multi` / `Backend Comparison` / `Session Resumption Truth` / `Performance Benchmark` / `HTTPS Client`
+
+- update `src/fafafa.ssl.winssl.connection.pas`
+  - change:
+    - `UpdateSessionReuseTruthFromContext(...)` 不再在共享路径里读取 `SessionIdBytesToHex(LSessionInfo)`
+    - 当前 canonical path 只保留 `dwFlags and SSL_SESSION_RECONNECT` 作为 reuse truth
+    - raw session-id 改成留空，继续复用既有 fallback session-id 生成路径
+
+- update `tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - change:
+    - contract 现在直接锁住新的更窄边界：
+      - reconnect flag 仍是 runtime truth source
+      - raw session-id byte buffer 已被证明不稳定，不能留在 canonical shared path
+      - session-info observation 继续保持 best-effort 且不得破坏 handshake path
+
+- `bash -n tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh && bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_windows_runtime_project_target_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_session_reused_semantic_truth_contract.sh`
+  - result: PASS
+
+- `mkdir -p tmp/winssl_session_resumption_win64_fix3 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_session_resumption_win64_fix3 -FEtmp/winssl_session_resumption_win64_fix3 -otmp/winssl_session_resumption_win64_fix3/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - focused Win64 cross-target compile 继续通过
+    - 停止读取 raw session-id bytes 后，没有破坏 WinSSL session-resumption proof 程序的编译面
+
+- `git diff --check`
+  - result: PASS
+
 ### Interface And Backend Truth Cross-Check
 
 - `rg -n "ISSLConnection = interface|ISSLClientConnection = interface|ISSLServerConnection|SetServerName|TSSLConfig = record|Supports[A-Z][A-Za-z]+: Boolean|[A-Za-z]+Support: TSSLSupportLevel" src/fafafa.ssl.base.pas src/fafafa.ssl.factory.pas src/fafafa.ssl.context.builder.pas src/fafafa.ssl.pas docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md docs/ARCHITECTURE.md docs/reference/INTERFACE_DESIGN_V2.md`

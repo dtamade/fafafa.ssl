@@ -53,11 +53,11 @@ require_match "$connection_file" \
   'WinSSL current-session-info helper degrades to false instead of propagating runtime exceptions'
 
 require_match "$connection_file" \
-  'FSessionReused := \(LSessionInfo\.dwFlags and SSL_SESSION_RECONNECT\) <> 0;' \
+  'LSessionReused := \(LSessionInfo\.dwFlags and SSL_SESSION_RECONNECT\) <> 0;' \
   'WinSSL reuse state is now derived from Schannel session flags'
 
 require_match "$connection_file" \
-  'procedure TWinSSLConnection\.UpdateSessionReuseTruthFromContext\(.*?try.*?if not TryGetCurrentSessionInfo\(LSessionInfo\) then.*?FSessionReused := \(LSessionInfo\.dwFlags and SSL_SESSION_RECONNECT\) <> 0;.*?ASessionId := SessionIdBytesToHex\(LSessionInfo\);.*?except.*?FSessionReused := False;.*?must never break a successful handshake path' \
+  'procedure TWinSSLConnection\.UpdateSessionReuseTruthFromContext\(.*?LSessionId: string;.*?LSessionReused: Boolean;.*?ASessionId := \x27\x27;.*?FSessionReused := False;.*?LSessionId := \x27\x27;.*?LSessionReused := False;.*?try.*?if not TryGetCurrentSessionInfo\(LSessionInfo\) then.*?LSessionReused := \(LSessionInfo\.dwFlags and SSL_SESSION_RECONNECT\) <> 0;.*?raw session-id byte buffer has proven unstable.*?except.*?must never break a successful handshake path.*?Exit;.*?end;.*?FSessionReused := LSessionReused;.*?ASessionId := LSessionId;' \
   'WinSSL session-info observation stays best-effort and cannot crash the handshake path'
 
 require_match "$connection_file" \
