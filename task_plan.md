@@ -334,6 +334,27 @@
    - 是否继续推进 `TSSLConfig` option-bridge freeze / slimming
    - 还是进入 `ISSLConnection` 核心 surface slimming roadmap
 8. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
+9. `TSSLConfig option-bridge default truth parity` 当前也已完成第一轮收口：
+   - 新 plan：
+     - `docs/plans/2026-05-18-tsslconfig-option-bridge-default-truth-parity.md`
+   - 新验证：
+     - `tests/test_tsslconfig_option_bridge_default_truth.pas`
+     - `tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh`
+   - 当前已对齐的 fresh default-config surfaces：
+     - factory-held `ISSLLibrary.GetDefaultConfig(...)`
+     - `CreateDefaultConfig(...)`
+     - `Lib.SetDefaultConfig(Lib.GetDefaultConfig)` round-trip
+   - 当前已确认的真实根因：
+     - `factory` 对真实 backend 仍走 raw registered-class instantiation
+     - 这条路径会丢失 backend constructor 内部建立的 `FDefaultConfig` 真相
+     - 因而问题不只是 “constructor normalization 不够”，而是 “生产实例化路径本身不保真”
+   - 当前修法：
+     - `TSSLFactory` 增加 explicit creator-function registration path
+     - `openssl` / `freepascal` / `winssl` / `mbedtls` / `wolfssl`
+       真实 backend 注册统一改走 `Create*SSLLibrary(...)`
+   - 下一条相关路线不该再回到这个 fresh default-config surface：
+     - 若继续推进，应讨论 `Options vs legacy booleans` 的 broader precedence/slimming 规则
+     - 而不是重新怀疑 `CreateDefaultConfig(...)` 单点
 
 ## Verification Discipline
 

@@ -171,6 +171,8 @@ begin
     LogLevel := sslLogError;
     LogCallback := nil;
   end;
+
+  TSSLFactory.NormalizeConfig(FDefaultConfig);
   
   // 初始化统计信息
   FillChar(FStatistics, SizeOf(FStatistics), 0);
@@ -892,7 +894,7 @@ begin
   try
     // 在 Windows 平台上注册 WinSSL 后端
     // 优先级设为 200，高于 OpenSSL 的 100，使其成为 Windows 上的默认选择
-    TSSLFactory.RegisterLibrary(sslWinSSL, TWinSSLLibrary,
+    TSSLFactory.RegisterLibrary(sslWinSSL, @CreateWinSSLLibrary,
       'Windows Schannel (Native SSL/TLS)', 200);
   except
     on E: Exception do

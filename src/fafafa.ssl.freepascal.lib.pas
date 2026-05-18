@@ -1372,7 +1372,11 @@ begin
   FDefaultConfig.HandshakeTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
   FDefaultConfig.SessionCacheSize := SSL_DEFAULT_SESSION_CACHE_SIZE;
   FDefaultConfig.SessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
+  FDefaultConfig.EnableCompression := False;
+  FDefaultConfig.EnableSessionTickets := True;
+  FDefaultConfig.EnableOCSPStapling := False;
   FDefaultConfig.LogLevel := sslLogError;
+  TSSLFactory.NormalizeConfig(FDefaultConfig);
 
   FillChar(FStatistics, SizeOf(FStatistics), 0);
   FillChar(FCapabilitiesCache, SizeOf(FCapabilitiesCache), 0);
@@ -1699,7 +1703,7 @@ end;
 procedure RegisterFreePascalBackend;
 begin
   try
-    TSSLFactory.RegisterLibrary(sslFreePascal, TFreePascalSSLLibrary,
+    TSSLFactory.RegisterLibrary(sslFreePascal, @CreateFreePascalSSLLibrary,
       'FreePascal Native TLS Backend (in progress)', 50);
   except
   end;

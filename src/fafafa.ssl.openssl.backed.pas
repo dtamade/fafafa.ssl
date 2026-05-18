@@ -1432,7 +1432,7 @@ procedure RegisterOpenSSLBackend;
 begin
   // 在非Windows平台上注册 OpenSSL 后端
   // 优先级设为 100，作为默认选择
-  TSSLFactory.RegisterLibrary(sslOpenSSL, TOpenSSLLibrary,
+  TSSLFactory.RegisterLibrary(sslOpenSSL, @CreateOpenSSLLibrary,
     'OpenSSL (Cross-platform SSL/TLS)', 100);
 end;
 

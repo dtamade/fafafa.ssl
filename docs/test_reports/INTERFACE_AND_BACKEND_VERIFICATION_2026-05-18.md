@@ -1352,3 +1352,52 @@
   - deprecated `ServerName`
   - `early-data / replay-store`
   - 下一条路线应回到 broader interface debt，而不是继续补 direct-library 小口子
+
+## 增量收口：fresh default-config option-bridge truth
+
+- 继续往 `TSSLConfig` compatibility surface 深挖后，这轮确认还有一条更隐蔽但很真实的实现漂移：
+  - fresh default-config surfaces 看起来像同一条语义：
+    - direct-library `ISSLLibrary.GetDefaultConfig(...)`
+    - factory-held `ISSLLibrary.GetDefaultConfig(...)`
+    - `CreateDefaultConfig(...)`
+  - 但修复前它们并不共用同一套 truth：
+    - direct-library FreePascal path 已经能保住 `EnableSessionTickets = True`
+    - factory-held / auto-detect / `CreateDefaultConfig(...)` 路径却会把 session-ticket default 掉成 `False`
+
+- 继续把测试收细后，根因被缩到了一个更准确的位置：
+  - 问题不只是 backend constructor 有没有 `NormalizeConfig(FDefaultConfig)`
+  - 真正的问题是：
+    - `factory` 对真实 backend 的生产实例化路径没有稳定保住 backend constructor truth
+    - 因而 factory-held library defaults 可以在 fresh surface 上先天漂移
+
+- 这轮修法刻意没有去复制默认值逻辑，也没有继续赌 metaclass 行为：
+  - `src/fafafa.ssl.factory.pas`
+    - `TSSLLibraryRegistration` 新增 `CreateFunc`
+    - `CreateLibraryInstance(...)` 优先走 explicit creator function
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+    - 真实 backend 注册统一改成 `@Create*SSLLibrary`
+
+- 这样做的收益是明确且可复用的：
+  - factory-held instance 与 direct-library instance 重新回到同一条 backend-owned constructor path
+  - fresh default-config surface 不再依赖 “另外一份 factory 侧补丁逻辑” 保持真相
+  - 后续若继续推进 `TSSLConfig` slimming，可以直接建立在这条稳定实例化路径上
+
+- focused 验证：
+  - `tests/test_tsslconfig_option_bridge_default_truth.pas`
+    - PASS (`20 passed, 0 failed`)
+    - 直接覆盖：
+      - direct-library `GetDefaultConfig(...)`
+      - factory-held `GetDefaultConfig(...)`
+      - auto-detect `GetDefaultConfig(...)`
+      - `CreateDefaultConfig(...)`
+      - `SetDefaultConfig(GetDefaultConfig)` round-trip
+  - `tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh`
+    - PASS
+    - 守住 constructor normalization + explicit creator registration truth
+  - `tests/config/test_default_config.pas`
+    - PASS
+    - 说明既有 `CreateDefaultConfig(...)` baseline 没被 creator-path fix 误伤

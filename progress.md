@@ -2037,3 +2037,92 @@
   - result: PASS
   - summary:
     - the earlier direct-library default-config and `ServerName` parity batches remain intact after adding early-data / replay-store parity
+
+### TSSLConfig Option-Bridge Default Truth Parity
+
+- add `docs/plans/2026-05-18-tsslconfig-option-bridge-default-truth-parity.md`
+  - purpose:
+    - define a bounded batch for fresh default-config surface truth on the three option-bridge compatibility booleans
+
+- add `tests/test_tsslconfig_option_bridge_default_truth.pas`
+  - purpose:
+    - prove a real runtime RED across:
+      - direct-library `GetDefaultConfig(...)`
+      - factory-held `GetDefaultConfig(...)`
+      - `CreateDefaultConfig(...)`
+      - `SetDefaultConfig(GetDefaultConfig)` round-trip
+
+- add `tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh`
+  - purpose:
+    - keep constructor-level normalization and backend registration truth cheap to re-verify
+
+- `bash -n tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh && bash tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - constructor normalization and the API-reference truth note were present before the runtime narrowing continued
+
+- `mkdir -p tmp/test_tsslconfig_option_bridge_default_truth && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_tsslconfig_option_bridge_default_truth -FEtmp/test_tsslconfig_option_bridge_default_truth -otmp/test_tsslconfig_option_bridge_default_truth/test_tsslconfig_option_bridge_default_truth tests/test_tsslconfig_option_bridge_default_truth.pas && ./tmp/test_tsslconfig_option_bridge_default_truth/test_tsslconfig_option_bridge_default_truth`
+  - RED result: FAIL
+  - summary:
+    - direct `CreateFreePascalSSLLibrary` default-config truth was already green
+    - `SetDefaultConfig(GetDefaultConfig)` direct-library round-trip was already green
+    - only the factory-held / auto-detect / `CreateDefaultConfig(...)` lane still dropped `EnableSessionTickets`
+
+- update `tests/test_tsslconfig_option_bridge_default_truth.pas`
+  - change:
+    - add narrowing assertions for:
+      - `TSSLFactory.GetLibrary(sslFreePascal).GetDefaultConfig`
+      - `TSSLFactory.GetLibrary(sslAutoDetect).GetDefaultConfig`
+  - summary:
+    - this isolated the real source from `CreateDefaultConfig(...)` down to the factory-held backend instance itself
+
+- `mkdir -p tmp/test_tsslconfig_option_bridge_default_truth && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_tsslconfig_option_bridge_default_truth -FEtmp/test_tsslconfig_option_bridge_default_truth -otmp/test_tsslconfig_option_bridge_default_truth/test_tsslconfig_option_bridge_default_truth tests/test_tsslconfig_option_bridge_default_truth.pas && ./tmp/test_tsslconfig_option_bridge_default_truth/test_tsslconfig_option_bridge_default_truth`
+  - RED result: FAIL
+  - summary:
+    - `TSSLFactory.GetLibrary(sslFreePascal).GetDefaultConfig`
+      and `TSSLFactory.GetLibrary(sslAutoDetect).GetDefaultConfig`
+      were already stale before `CreateDefaultConfig(...)` ran
+    - this proved the root cause lived in production backend instantiation, not only in the helper surface
+
+- update:
+  - `src/fafafa.ssl.factory.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh`
+  - change:
+    - add explicit backend creator-function registration to `TSSLFactory`
+    - prefer `CreateFunc` over raw registered-class instantiation in `CreateLibraryInstance(...)`
+    - switch real backend registrations to `@Create*SSLLibrary`
+    - extend the contract so creator-function registration truth is also guarded
+
+- `bash -n tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh && bash tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh`
+  - GREEN result: PASS
+  - summary:
+    - constructor normalization is still present
+    - real backend registrations now go through explicit creator functions
+
+- `mkdir -p tmp/test_tsslconfig_option_bridge_default_truth && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_tsslconfig_option_bridge_default_truth -FEtmp/test_tsslconfig_option_bridge_default_truth -otmp/test_tsslconfig_option_bridge_default_truth/test_tsslconfig_option_bridge_default_truth tests/test_tsslconfig_option_bridge_default_truth.pas && ./tmp/test_tsslconfig_option_bridge_default_truth/test_tsslconfig_option_bridge_default_truth`
+  - GREEN result: PASS
+  - summary:
+    - factory-held `GetDefaultConfig(...)`, auto-detect `GetDefaultConfig(...)`,
+      and `CreateDefaultConfig(...)` now all preserve the FreePascal session-ticket truth
+    - full focused suite finished `20 passed, 0 failed`
+
+- `bash tests/scripts/test_direct_library_default_config_parity_contract.sh`
+  - result: PASS
+  - summary:
+    - the earlier direct-library default-config parity batch remains intact after the creator-path fix
+
+- `mkdir -p tmp/test_default_config && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_default_config -FEtmp/test_default_config -otmp/test_default_config/test_default_config tests/config/test_default_config.pas && ./tmp/test_default_config/test_default_config`
+  - result: PASS
+  - summary:
+    - the existing `CreateDefaultConfig(...)` baseline suite remains green after the factory creator-path change
+    - logging-safe default behavior was not regressed
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current option-bridge default-truth batch has no whitespace or patch-format issues

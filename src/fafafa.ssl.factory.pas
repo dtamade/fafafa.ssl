@@ -49,6 +49,7 @@ uses
 type
   {** SSL库类类型 (用于内部注册) *}
   TSSLLibraryClass = class of TInterfacedObject;
+  TSSLLibraryCreateFunc = function: ISSLLibrary;
 
   {**
    * SSL库注册信息
@@ -58,6 +59,7 @@ type
   TSSLLibraryRegistration = record
     LibraryType: TSSLLibraryType;      // 库类型标识
     LibraryClass: TSSLLibraryClass;    // 库类（必须实现 ISSLLibrary）
+    CreateFunc: TSSLLibraryCreateFunc; // 显式 creator path；用于保留 backend constructor truth
     Description: string;                // 库描述
     Priority: Integer;                  // 优先级（数字越大越优先）
   end;
@@ -128,6 +130,13 @@ type
     class procedure RegisterLibrary(
       ALibType: TSSLLibraryType;
       ALibraryClass: TSSLLibraryClass;
+      const ADescription: string = '';
+      APriority: Integer = 0
+    );
+
+    class procedure RegisterLibrary(
+      ALibType: TSSLLibraryType;
+      ACreateFunc: TSSLLibraryCreateFunc;
       const ADescription: string = '';
       APriority: Integer = 0
     );
@@ -422,6 +431,12 @@ begin
 
   if AConfig.CipherSuites = '' then
     AConfig.CipherSuites := SSL_DEFAULT_TLS13_CIPHERSUITES;
+
+  // Keep compatibility bridge booleans aligned with the final option truth
+  // after normalization has finished mutating the option set.
+  AConfig.EnableCompression := not (ssoDisableCompression in AConfig.Options);
+  AConfig.EnableSessionTickets := ssoEnableSessionTickets in AConfig.Options;
+  AConfig.EnableOCSPStapling := ssoEnableOCSPStapling in AConfig.Options;
 end;
 
 procedure ValidateRequestLoggingScope(const AConfig: TSSLConfig);
@@ -699,6 +714,27 @@ begin
     // P0: 使用 Map 接口，O(1) 查找（当使用 HashMap 实现时）
     LReg.LibraryType := ALibType;
     LReg.LibraryClass := ALibraryClass;
+    LReg.CreateFunc := nil;
+    LReg.Description := ADescription;
+    LReg.Priority := APriority;
+    FRegistrationMap.Put(Ord(ALibType), LReg);
+  finally
+    LeaveCriticalSection(GFactoryLock);
+  end;
+end;
+
+class procedure TSSLFactory.RegisterLibrary(ALibType: TSSLLibraryType;
+  ACreateFunc: TSSLLibraryCreateFunc; const ADescription: string;
+  APriority: Integer);
+var
+  LReg: TSSLLibraryRegistration;
+begin
+  CheckInitialized;
+  EnterCriticalSection(GFactoryLock);
+  try
+    LReg.LibraryType := ALibType;
+    LReg.LibraryClass := nil;
+    LReg.CreateFunc := ACreateFunc;
     LReg.Description := ADescription;
     LReg.Priority := APriority;
     FRegistrationMap.Put(Ord(ALibType), LReg);
@@ -914,13 +950,31 @@ class function TSSLFactory.CreateLibraryInstance(ALibType: TSSLLibraryType): ISS
 var
   LReg: TSSLLibraryRegistration;
   LClass: TSSLLibraryClass;
+  LCreateFunc: TSSLLibraryCreateFunc;
 begin
   Result := nil;
 
   // P0: 使用 Map 接口查找注册信息
   LClass := nil;
+  LCreateFunc := nil;
   if FRegistrationMap.TryGet(Ord(ALibType), LReg) then
+  begin
     LClass := LReg.LibraryClass;
+    LCreateFunc := LReg.CreateFunc;
+  end;
+
+  if Assigned(LCreateFunc) then
+  begin
+    try
+      Result := LCreateFunc();
+    except
+      Result := nil;
+    end;
+    if Assigned(Result) then
+      Exit;
+
+    Exit;
+  end;
 
   if Assigned(LClass) then
   begin

@@ -884,3 +884,64 @@
   - 下一条路线不该再回到 “继续补 direct-library 小口子”，而应回到 broader interface debt 的选择：
     - `TSSLConfig` option-bridge freeze / slimming
     - 或 `ISSLConnection` 核心 surface slimming roadmap
+
+- `TSSLConfig option-bridge default truth parity` 这轮也已经被进一步缩到一个更准确的根因：
+  - 初看像是：
+    - `CreateDefaultConfig(...)` 单点丢了 `EnableSessionTickets`
+  - 但继续把测试缩细后确认：
+    - direct `CreateFreePascalSSLLibrary` 路径是对的
+    - `Lib.SetDefaultConfig(Lib.GetDefaultConfig)` direct-library round-trip 也是对的
+    - 真正错误的是 factory-held backend instance 的 `GetDefaultConfig(...)`
+  - 这说明问题不只在 `NormalizeConfig(...)` 或某个 public helper，而在“生产实例化路径是否真的保留了 backend constructor truth”
+
+- 新增的 runtime narrowing 已经把这条根因钉实：
+  - `TSSLFactory.GetLibrary(sslFreePascal).GetDefaultConfig`
+    在修复前就已经丢了 `EnableSessionTickets = True`
+  - `TSSLFactory.GetLibrary(sslAutoDetect).GetDefaultConfig`
+    在 `SetDefaultLibrary(sslFreePascal)` 后同样丢失
+  - 因而 `CreateDefaultConfig(...)` 的失败只是 downstream symptom，不是 upstream source
+
+- 本批最终确认的实现问题是：
+  - `factory` 对真实 backend 仍主要依赖 raw registered-class instantiation
+  - 这条 path 不足以保住 backend constructor 内建立的 `FDefaultConfig` 真相
+  - 所以即便 source 里各 backend constructor 已经补了：
+    - `TSSLFactory.NormalizeConfig(FDefaultConfig)`
+    - FreePascal `EnableSessionTickets := True`
+    - 生产实例化得到的 library defaults 仍可能失真
+
+- 当前修法没有去赌 Pascal metaclass semantics，也没有再把默认配置逻辑复制一份到 factory：
+  - `TSSLFactory` 新增 explicit creator-function registration path
+  - `TSSLLibraryRegistration` 现在允许直接存 `CreateFunc`
+  - `CreateLibraryInstance(...)` 优先走 `CreateFunc`
+  - `openssl` / `freepascal` / `winssl` / `mbedtls` / `wolfssl`
+    的真实 backend 注册统一改成 `@Create*SSLLibrary`
+  - 这样 factory-held instance 与 direct-library instance 回到了同一条 backend-owned constructor truth
+
+- 这也纠正了原本 plan 里的一个误导点：
+  - “多个 backend library constructor 仍是未归一化 mixed truth” 只说对了一半
+  - 更准确的说法应是：
+    - constructor normalization 的确必要
+    - 但如果生产实例化路径不走 backend creator truth，fresh default-config surface 依然会漂移
+
+- 当前 focused evidence 已经闭环：
+  - `tests/test_tsslconfig_option_bridge_default_truth.pas`
+    - PASS
+    - 直接覆盖：
+      - direct library default-config truth
+      - factory-held `GetDefaultConfig(...)`
+      - auto-detect `GetDefaultConfig(...)`
+      - `CreateDefaultConfig(...)`
+  - `tests/config/test_default_config.pas`
+    - PASS
+    - 说明既有 `CreateDefaultConfig(...)` baseline 没被这次 creator-path fix 打穿
+  - `tests/scripts/test_tsslconfig_option_bridge_default_truth_contract.sh`
+    - PASS
+    - 现在同时守住：
+      - constructor normalization
+      - backend 注册必须走 explicit creator function
+
+- 因而这条线的 next queue 也变得更清楚：
+  - 不需要再反复怀疑 factory-held default-config 是否 stale
+  - 之后若继续推进，应讨论：
+    - `Options vs legacy booleans` 冲突优先级是否要进一步单真相化
+    - `TSSLConfig` option-bridge surface 是否要继续 freeze/slim

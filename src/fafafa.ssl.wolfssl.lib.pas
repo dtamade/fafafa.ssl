@@ -143,8 +143,13 @@ begin
     HandshakeTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
     SessionCacheSize := SSL_DEFAULT_SESSION_CACHE_SIZE;
     SessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
+    EnableCompression := False;
+    EnableSessionTickets := False;
+    EnableOCSPStapling := False;
     LogLevel := sslLogError;
   end;
+
+  TSSLFactory.NormalizeConfig(FDefaultConfig);
 
   FillChar(FStatistics, SizeOf(FStatistics), 0);
   FillChar(FCapabilities, SizeOf(FCapabilities), 0);
@@ -679,7 +684,7 @@ procedure RegisterWolfSSLBackend;
 begin
   try
     // 注册 WolfSSL 后端，优先级 150（介于 OpenSSL 100 和 WinSSL 200 之间）
-    TSSLFactory.RegisterLibrary(sslWolfSSL, TWolfSSLLibrary,
+    TSSLFactory.RegisterLibrary(sslWolfSSL, @CreateWolfSSLLibrary,
       'WolfSSL (Lightweight TLS)', 150);
   except
     // 注册失败时静默处理

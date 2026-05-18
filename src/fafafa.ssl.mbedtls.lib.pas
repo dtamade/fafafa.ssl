@@ -164,8 +164,13 @@ begin
     HandshakeTimeout := SSL_DEFAULT_HANDSHAKE_TIMEOUT;
     SessionCacheSize := SSL_DEFAULT_SESSION_CACHE_SIZE;
     SessionTimeout := SSL_DEFAULT_SESSION_TIMEOUT;
+    EnableCompression := False;
+    EnableSessionTickets := False;
+    EnableOCSPStapling := False;
     LogLevel := sslLogError;
   end;
+
+  TSSLFactory.NormalizeConfig(FDefaultConfig);
 
   FillChar(FStatistics, SizeOf(FStatistics), 0);
   FillChar(FCapabilities, SizeOf(FCapabilities), 0);
@@ -718,7 +723,7 @@ end;
 procedure RegisterMbedTLSBackend;
 begin
   try
-    TSSLFactory.RegisterLibrary(sslMbedTLS, TMbedTLSLibrary,
+    TSSLFactory.RegisterLibrary(sslMbedTLS, @CreateMbedTLSLibrary,
       'MbedTLS (Embedded TLS)', 175);
   except
   end;

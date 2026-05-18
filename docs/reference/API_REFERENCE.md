@@ -63,6 +63,7 @@
   - `EnableSessionTickets`
   - `EnableOCSPStapling`
   - 这几个布尔字段当前仍保留在 `v1.x` public record 中，但 factory 会把它们归一化进 `Options`，不应继续把它们扩成新的 backend-private 配置槽。
+  - fresh default-config surfaces (`ISSLLibrary.GetDefaultConfig(...)` / `CreateDefaultConfig(...)`) should now expose option-bridge booleans that stay aligned with the final `Options` truth.
 
 ---
 
