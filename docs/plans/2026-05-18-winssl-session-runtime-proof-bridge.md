@@ -118,6 +118,21 @@ git diff --check
   - 把 canonical shared handshake path 上的 live `SECPKG_ATTR_SESSION_INFO` probe 整体撤下
   - 共享真相先回到 `reused=false` + fallback session-id generators
   - 后续若还要拿 WinSSL runtime truth，必须转到 dedicated Windows proof lane 单独验证
-- PENDING:
-  - GitHub Windows runner live run 尚未刷新
-  - 是否稳定观测到 `observed_reuse=true` 仍待 Windows artifact 给出结论
+- GREEN:
+  - GitHub Actions live rerun `26037518301` 已完成最终验收：
+    - `linux-gate` / `macos-gate` / `windows-gate` / `summary` 全部 success
+    - Windows broader suite `suite_summary passed=7 failed=0 total=7 success_rate=100`
+    - shared session-info crash 已消失
+- TRUTH:
+  - 当前 dedicated runtime artifact 给出的 WinSSL session-resumption 真相是：
+    - `host=www.cloudflare.com`
+    - `attempts=4`
+    - `observed_reuse=false`
+    - `require_reuse=false`
+    - `session_configured=true`
+- CLOSEOUT:
+  - 这条 bridge lane 的目标已经达成：
+    - Windows CI 能稳定跑完整条 proof surface
+    - current runtime truth 已被记录下来
+    - 普通 shared connection flow 不再被 session-info probe 打崩
+  - 若后续还要推进 WinSSL 真正的 resumed handshake，实现面应转去 backend native resumption，而不是继续重复 workflow / capture / shared-path guard 工作

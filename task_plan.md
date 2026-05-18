@@ -28,9 +28,10 @@
   - 新增 `tests/test_mbedtls_connection_session_reused_contract.pas`
   - `src/fafafa.ssl.winssl.connection.pas` / `src/fafafa.ssl.mbedtls.connection.pas` 不再把 `SetSession(...)` 直接等价成“当前握手已复用”
   - 当前真相已重新对齐到：`SetSession` 只配置待恢复 session；`IsSessionReused` 只报告 post-handshake 实际结果
-- [in_progress] WinSSL session-resumption runtime proof bridge 已进入下一批 focused 收口：
+- [completed] WinSSL session-resumption runtime proof bridge 已完成本轮 truth-extraction 收口：
   - 新增 `docs/plans/2026-05-18-winssl-session-runtime-proof-bridge.md`
-  - canonical `src/fafafa.ssl.winssl.connection.pas` 现在会读取 `SECPKG_ATTR_SESSION_INFO` 并把 `FSessionReused` 对齐到 Schannel reconnect truth
+  - canonical `src/fafafa.ssl.winssl.connection.pas` 当前已把 shared `SECPKG_ATTR_SESSION_INFO` probe 撤下，避免 shared handshake path 再次被打崩
+  - `TryGetCurrentSessionInfo(...)` 仍保留为后续 dedicated Windows proof lane 的实验入口
   - client `DoConnect(...)` 成功后也会保存 session metadata，不再只有 server path 落 `SaveSessionAfterHandshake`
   - `tests/run_winssl_tests.ps1` 现在已接入 `test_winssl_session_resumption.lpi`
   - broader suite 会把 `[WINSSL-SESSION-RESUME]` 原始观测行提升成 `[WINSSL-RUNTIME] session_resumption ...` evidence markers
@@ -58,10 +59,20 @@
     - 把 canonical shared path 上的 `SECPKG_ATTR_SESSION_INFO` probe 整体撤下
     - 当前共享真相先回到 `reused=false` + existing fallback session-id generators
     - 仅把 `TryGetCurrentSessionInfo(...)` 保留成后续 dedicated Windows runtime proof lane 的实验入口，而不是继续放在共享握手后路径
-    - push 后重新看 Windows artifact 刷新的 `observed_reuse=true|false` 真实结论
+  - GitHub Actions live rerun `26037518301` 已完成这条 bridge lane 的最终验收：
+    - `linux-gate` / `macos-gate` / `windows-gate` / `summary` 全部 success
+    - Windows broader suite `suite_summary passed=7 failed=0 total=7 success_rate=100`
+    - `WinSSL Session Resumption Truth` lane 当前真实 runtime 结论已固定为：
+      - `host=www.cloudflare.com`
+      - `attempts=4`
+      - `observed_reuse=false`
+      - `require_reuse=false`
+      - `session_configured=true`
+    - 这说明当前 bridge 已经把“会不会 crash / 会不会误报”这个问题关掉了
+    - 当前剩下的不再是 workflow 或 shared-path 安全性，而是“WinSSL backend 是否要继续实现真正的 native resumed handshake”
 - [in_progress] 当前 repo-level 下一步应回到更高价值的 completeness 路线：
   - 继续审查各 backend implementation completeness / optional surface completeness
-  - 若继续深挖 WinSSL，则优先扩展真实 resumed handshake / session tickets / certstore / OCSP / enterprise 等高风险 lane，而不是再重复治理 runtime capture 或已修掉的 semantic false positive
+  - 若继续深挖 WinSSL，则优先扩展真实 resumed handshake / session tickets / certstore / OCSP / enterprise 等高风险 lane，而不是再重复治理 runtime capture、shared probe crash 或已修掉的 semantic false positive
 - [completed] `v1.5.0` release / workflow / cross-platform runtime closeout 已经不再是当前主线：
   - 当前默认控制面应保持在 `post-release route selection`
   - 不再围绕 release lane 或旧的 Windows runtime blocker 重复开工

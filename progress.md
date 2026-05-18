@@ -538,6 +538,32 @@
       - canonical shared path 必须停用 live session-info probing
       - 当前共享真相必须回到 conservative fallback
 
+- `gh run view 26037518301 --json status,conclusion,jobs,headSha,createdAt,updatedAt,url`
+  - result: PASS
+  - summary:
+    - workflow run `26037518301` 最终 overall `success`
+    - `linux-gate`: success
+    - `macos-gate`: success
+    - `windows-gate`: success
+    - `summary`: success
+
+- `gh api repos/dtamade/fafafa.ssl/actions/jobs/76539716869/logs > tmp/windows-job-76539716869.log`
+  - result: PASS
+  - summary:
+    - 下载最终 green run 的 Windows job 原始日志，确认 broader suite runtime truth，而不只看 job conclusion
+
+- `rg -n "session_resumption|observed_reuse|suite_summary|suite_end|WinSSL Session Resumption Truth|test_result index=4|signal label|summary attempts" tmp/windows-job-76539716869.log -n -C 2`
+  - result: PASS
+  - summary:
+    - Windows broader suite 最终 `suite_summary passed=7 failed=0 total=7 success_rate=100`
+    - `WinSSL Session Resumption Truth` 已稳定 PASS
+    - 当前 artifact 中的 dedicated runtime truth 为：
+      - `observed_reuse=false`
+      - `require_reuse=false`
+      - `session_configured=true`
+      - `attempts=4`
+    - shared crash 已消失，当前真实剩余问题只剩 native resumed-handshake behavior 本身
+
 ### Interface And Backend Truth Cross-Check
 
 - `rg -n "ISSLConnection = interface|ISSLClientConnection = interface|ISSLServerConnection|SetServerName|TSSLConfig = record|Supports[A-Z][A-Za-z]+: Boolean|[A-Za-z]+Support: TSSLSupportLevel" src/fafafa.ssl.base.pas src/fafafa.ssl.factory.pas src/fafafa.ssl.context.builder.pas src/fafafa.ssl.pas docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md docs/ARCHITECTURE.md docs/reference/INTERFACE_DESIGN_V2.md`

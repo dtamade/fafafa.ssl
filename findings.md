@@ -166,6 +166,25 @@
   - `macos-gate` 的失败回到了独立的 `run_all_module_tests.sh` module lane
   - 它不改变当前 WinSSL shared-crash 的根因判断，只是提示另有一条平台回归需要单独排队
 
+- GitHub Actions live rerun `26037518301` 终于把这条 bridge lane 真正跑通了：
+  - `linux-gate` / `macos-gate` / `windows-gate` / `summary` 全部 success
+  - `windows-gate` 的 broader suite 已经 7/7 PASS，不再有 shared session-info crash
+  - 这说明“停用 canonical shared path 的 live session-info probe”是当前正确而且足够的收口
+
+- 同一份 Windows runtime artifact 也给出了当前最重要的产品真相：
+  - `WinSSL Session Resumption Truth` 当前是稳定通过的
+  - 但 marker 明确记录：
+    - `attempts=4`
+    - `observed_reuse=false`
+    - `require_reuse=false`
+    - `session_configured=true`
+  - 也就是说：当前 backend 已能稳定表达“配置了 session，但没有在这条 CI runtime 里观测到真实 resumed handshake”
+
+- 这让后续方向变得非常清楚：
+  - “不会 crash、不会误报、证据链完整” 这一层已经完成
+  - 若产品目标是让 WinSSL 真正命中 resumed handshake，下一条工作就不该再碰 workflow/contract capture
+  - 而应直接进入 WinSSL backend native resumption implementation / platform-behavior investigation
+
 - 根因已被压缩到 evidence capture 层，而不是 WinSSL 实现层：
   - workflow 用 `Start-Transcript` 包住父 PowerShell
   - broader suite 则在子 `pwsh -File tests/run_winssl_tests.ps1` 里执行
