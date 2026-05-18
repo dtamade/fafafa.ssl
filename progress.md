@@ -3488,3 +3488,63 @@
   - summary:
     - reran the lightweight `GetSelectedALPNProtocol` active-test proof after the final planning-file sync
     - no extra Pascal rerun was needed because only planning files changed after the focused tests passed
+
+### GetSelectedALPNProtocol Residual Classification Freeze
+
+- `rg -n '\b(?:Conn|LConn|LConnection)\.GetSelectedALPNProtocol\b|GetSelectedALPNProtocol\(' tests docs src --glob '!docs/archive/**' --glob '!docs/plans/**' --glob '!tests/scripts/**'`
+  - result: PASS
+  - summary:
+    - confirmed ordinary docs/tests no longer used direct core `GetSelectedALPNProtocol`
+    - confirmed the remaining direct-core residuals had shrunk to backend-contract mirror proof plus MbedTLS/WinSSL backend-specific runtime ALPN files
+
+- add `docs/plans/2026-05-18-getselectedalpn-residual-classification-freeze.md`
+  - purpose:
+    - define a bounded allowlist-freeze batch so `GetSelectedALPNProtocol` no longer requires repeated residual-hit archaeology
+
+- add `tests/scripts/test_isslconnectioninfo_getselectedalpn_residual_classification_contract.sh`
+  - purpose:
+    - freeze the current `GetSelectedALPNProtocol` direct-core residual file set into a cheap allowlist contract
+    - fail if ordinary docs/tests or new files reintroduce direct core `GetSelectedALPNProtocol`
+
+- first run of `bash tests/scripts/test_isslconnectioninfo_getselectedalpn_residual_classification_contract.sh`
+  - result: RED
+  - summary:
+    - the new residual contract correctly caught the missing source-level preferred-access note in `src/fafafa.ssl.base.pas`
+    - this confirmed the batch still had real source-facing truth drift before comment updates
+
+- update:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.connection.base.pas`
+  - change:
+    - add explicit preferred-access / owner notes for `GetSelectedALPNProtocol`
+    - spell out the current residual direct-core surface at the shared base-class comment level
+
+- `bash -n tests/scripts/test_isslconnectioninfo_getselectedalpn_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - new `GetSelectedALPNProtocol` residual-classification contract script is syntactically valid
+
+- `bash tests/scripts/test_isslconnectioninfo_getselectedalpn_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - `GetSelectedALPNProtocol` residual direct-core surface now matches the expected allowlist
+    - ordinary docs/tests no longer reintroduce direct core `GetSelectedALPNProtocol`
+
+- update `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - mark the residual-classification freeze as delivered
+    - move the next route decision to stronger `GetSelectedALPNProtocol` wording vs. `GetConnectionInfo`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `GetSelectedALPNProtocol residual classification freeze` batch has no whitespace or patch-format issues
+
+- closeout revalidation before commit:
+  - `bash -n tests/scripts/test_isslconnectioninfo_getselectedalpn_residual_classification_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_getselectedalpn_residual_classification_contract.sh`
+  - `git diff --check`
+  - result: PASS
+  - summary:
+    - reran the lightweight `GetSelectedALPNProtocol` residual allowlist proof after the final planning-file sync
+    - no extra Pascal rerun was needed because only planning files changed after the allowlist contract passed

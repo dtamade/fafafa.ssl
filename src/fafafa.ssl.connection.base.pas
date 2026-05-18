@@ -58,6 +58,10 @@ type
    * - `GetStateString` 当前共享同一条基类实现；ordinary docs/tests 已转向
    *   `ISSLConnectionInfo.GetStateString`，direct core `GetStateString` 当前只剩
    *   contract mirror proof 和 backend-specific runtime residuals。
+   * - `GetSelectedALPNProtocol` 当前通过一条共享基类实现同时服务于 core mirror 和
+   *   `ISSLConnectionInfo` owner；active docs/tests 已转向
+   *   `ISSLConnectionInfo.GetSelectedALPNProtocol`，direct core
+   *   `GetSelectedALPNProtocol` 当前只剩 contract mirror proof 和 backend-specific runtime residuals。
    * - `GetContext` 当前通过一条共享基类实现同时服务于 core mirror 和
    *   `ISSLConnectionInfo` owner；active docs 已转向 `ISSLConnectionInfo.GetContext`，
    *   direct core `GetContext` 只剩 contract mirror proof。

@@ -236,6 +236,23 @@ Recommended first bounded batch:
     1. 把这些 residual uses 做 intentional classification / allowlist freeze
     2. 讨论 `GetSelectedALPNProtocol` 的更强 client-owner / deprecation wording route
 
+## Progress Since The GetSelectedALPN Active-Test Batch
+
+- 已交付：
+  - `GetSelectedALPNProtocol` residual classification freeze
+  - `src/fafafa.ssl.base.pas` / `src/fafafa.ssl.connection.base.pas` 已补 preferred-access / owner / residual-surface notes
+  - focused allowlist contract `tests/scripts/test_isslconnectioninfo_getselectedalpn_residual_classification_contract.sh`
+
+- 当前更准确的 next step：
+  - `GetSelectedALPNProtocol` 的 remaining direct-core surface 已稳定冻结到：
+    - backend contract mirror proof
+    - MbedTLS backend-specific runtime ALPN test
+    - WinSSL backend-specific runtime ALPN tests
+  - 这说明 `GetSelectedALPNProtocol` 当前也不再需要继续做 evidence cleanup
+  - 下一批应在两条路径里二选一：
+    1. 讨论 `GetSelectedALPNProtocol` 的更强 client-owner / deprecation wording route
+    2. 把主线切到 `GetConnectionInfo`
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

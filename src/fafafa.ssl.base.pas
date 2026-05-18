@@ -1247,6 +1247,7 @@ type
 
     {** 获取 ALPN 协商结果
         @returns 协商的协议名称（如 "h2"），未协商返回空
+        @preferred-access 新代码优先通过 ISSLConnectionInfo.GetSelectedALPNProtocol 获取
         @compatibility-note v1.x compatibility-core mirror; Stage-A demotion target is ISSLConnectionInfo *}
     function GetSelectedALPNProtocol: string;
 
@@ -1551,7 +1552,8 @@ type
         @owner-note 当前 context 引用的默认 owner；ISSLConnection.GetContext 保留为 v1.x compatibility mirror *}
     function GetContext: ISSLContext;
 
-    {** 获取 ALPN 协商结果 *}
+    {** 获取 ALPN 协商结果
+        @owner-note 当前 ALPN 协商结果的默认 owner；ISSLConnection.GetSelectedALPNProtocol 保留为 v1.x compatibility mirror *}
     function GetSelectedALPNProtocol: string;
 
     {** 获取状态描述字符串

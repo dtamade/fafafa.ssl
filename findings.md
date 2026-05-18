@@ -1659,3 +1659,17 @@
   - `tests/integration/test_real_https_connection.pas` 现在通过 helper 走 `ISSLConnectionInfo`
   - `tests/integration/test_cross_backend_consistency_contract.pas` 也不再直接读 core getter
   - 当前 residual direct-core `GetSelectedALPNProtocol` 已收缩到 backend contract mirror proof 与 MbedTLS/WinSSL backend-specific runtime files
+
+- 当 `GetSelectedALPNProtocol` 的 residual surface 缩到这 4 个文件后，继续重复扫 ordinary 路径的收益已经很低：
+  - `tests/contract/test_backend_contract.pas` 属于 connection-info mirror proof
+  - `tests/mbedtls/test_mbedtls_alpn.pas` 与两份 WinSSL 测试都属于 backend-specific runtime residuals
+
+- 这意味着 ALPN 这条线已经到了适合直接 freeze allowlist 的时点：
+  - source comments 需要把 preferred-access / owner / residual-surface truth 写明
+  - focused contract 需要把剩余 direct-core file set 固定下来
+  - 做完后，这条线就不再需要反复拉起 residual archaeology
+
+- 当前这层 freeze 落下后，`GetSelectedALPNProtocol` 的 design state 已经更明确：
+  - ordinary docs/tests 全部优先走 `ISSLConnectionInfo.GetSelectedALPNProtocol`
+  - direct core getter 只剩 contract mirror proof 与 backend-specific runtime residuals
+  - 因而下一刀更适合讨论 stronger client-owner / deprecation wording，或者把主线切到 `GetConnectionInfo`
