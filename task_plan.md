@@ -28,6 +28,14 @@
   - 新增 `tests/test_mbedtls_connection_session_reused_contract.pas`
   - `src/fafafa.ssl.winssl.connection.pas` / `src/fafafa.ssl.mbedtls.connection.pas` 不再把 `SetSession(...)` 直接等价成“当前握手已复用”
   - 当前真相已重新对齐到：`SetSession` 只配置待恢复 session；`IsSessionReused` 只报告 post-handshake 实际结果
+- [in_progress] WinSSL session-resumption runtime proof bridge 已进入下一批 focused 收口：
+  - 新增 `docs/plans/2026-05-18-winssl-session-runtime-proof-bridge.md`
+  - canonical `src/fafafa.ssl.winssl.connection.pas` 现在会读取 `SECPKG_ATTR_SESSION_INFO` 并把 `FSessionReused` 对齐到 Schannel reconnect truth
+  - client `DoConnect(...)` 成功后也会保存 session metadata，不再只有 server path 落 `SaveSessionAfterHandshake`
+  - `tests/run_winssl_tests.ps1` 现在已接入 `test_winssl_session_resumption.lpi`
+  - broader suite 会把 `[WINSSL-SESSION-RESUME]` 原始观测行提升成 `[WINSSL-RUNTIME] session_resumption ...` evidence markers
+  - focused source contracts + Win64 cross-target compile 已通过
+  - 仍待 GitHub Windows runner live artifact 刷新 `observed_reuse=true|false` 的真实 runtime 结论
 - [in_progress] 当前 repo-level 下一步应回到更高价值的 completeness 路线：
   - 继续审查各 backend implementation completeness / optional surface completeness
   - 若继续深挖 WinSSL，则优先扩展真实 resumed handshake / session tickets / certstore / OCSP / enterprise 等高风险 lane，而不是再重复治理 runtime capture 或已修掉的 semantic false positive

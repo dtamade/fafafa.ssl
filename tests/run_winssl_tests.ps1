@@ -46,6 +46,16 @@ $tests = @(
         Description = "WinSSL vs OpenSSL 后端对比测试"
     },
     @{
+        Name = "WinSSL Session Resumption Truth"
+        Lpi = "test_winssl_session_resumption.lpi"
+        Exe = "bin\test_winssl_session_resumption.exe"
+        Description = "同一 Context 下的 resumed-handshake truth / evidence 测试"
+        Env = @{
+            FAFAFA_RUN_NETWORK_TESTS = "1"
+            FAFAFA_WINSSL_SESSION_ATTEMPTS = "4"
+        }
+    },
+    @{
         Name = "WinSSL Performance Benchmark"
         Lpi = "test_winssl_performance.lpi"
         Exe = "bin\test_winssl_performance.exe"
@@ -126,6 +136,7 @@ Write-Host ""
 
 foreach ($test in $tests) {
     $testIndex = $passedTests + $failedTests + 1
+    $originalEnv = @{}
     Write-Host "[$testIndex/$totalTests] $($test.Name)" -ForegroundColor Cyan
     Write-Host "  描述: $($test.Description)" -ForegroundColor Gray
     Write-Host ""
@@ -139,14 +150,24 @@ foreach ($test in $tests) {
     }
 
     try {
+        if ($test.ContainsKey('Env') -and $null -ne $test.Env) {
+            foreach ($envName in $test.Env.Keys) {
+                $originalEnv[$envName] = [System.Environment]::GetEnvironmentVariable($envName, 'Process')
+                [System.Environment]::SetEnvironmentVariable($envName, $test.Env[$envName], 'Process')
+                Write-Host ("  环境: " + $envName + "=" + $test.Env[$envName]) -ForegroundColor Gray
+            }
+            Write-Host ""
+        }
+
         # 运行测试并捕获输出
         $startTime = Get-Date
         $output = & ".\$($test.Exe)" 2>&1
         $exitCode = $LASTEXITCODE
         $duration = (Get-Date) - $startTime
+        $hasSessionResumeMarkers = ($output | Select-String -SimpleMatch "[WINSSL-SESSION-RESUME]" | Measure-Object).Count -gt 0
 
         # 显示输出
-        if ($PSBoundParameters.ContainsKey('Verbose') -or $exitCode -ne 0) {
+        if ($PSBoundParameters.ContainsKey('Verbose') -or $exitCode -ne 0 -or $hasSessionResumeMarkers) {
             Write-Host "  测试输出:" -ForegroundColor Gray
             Write-Host "  ---" -ForegroundColor Gray
             $output | ForEach-Object {
@@ -159,6 +180,15 @@ foreach ($test in $tests) {
                 }
             }
             Write-Host "  ---" -ForegroundColor Gray
+        }
+
+        if ($hasSessionResumeMarkers) {
+            $output | ForEach-Object {
+                $line = [string]$_
+                if ($line -match '^\[WINSSL-SESSION-RESUME\]\s*(.+)$') {
+                    Write-EvidenceMarker ("session_resumption " + $matches[1].Trim())
+                }
+            }
         }
 
         # 检查结果
@@ -177,6 +207,12 @@ foreach ($test in $tests) {
         Write-EvidenceMarker ("test_result index=" + $testIndex + " status=FAIL reason=exception")
         $failedTests++
         $failedTestNames += $test.Name
+    } finally {
+        if ($originalEnv.Count -gt 0) {
+            foreach ($envName in $originalEnv.Keys) {
+                [System.Environment]::SetEnvironmentVariable($envName, $originalEnv[$envName], 'Process')
+            }
+        }
     }
 
     Write-Host ""

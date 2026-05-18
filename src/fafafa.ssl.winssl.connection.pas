@@ -167,6 +167,11 @@ type
 
     // 会话保存
     procedure SaveSessionAfterHandshake;
+    function TryGetCurrentSessionInfo(
+      out ASessionInfo: SecPkgContext_SessionInfo): Boolean;
+    function SessionIdBytesToHex(
+      const ASessionInfo: SecPkgContext_SessionInfo): string;
+    procedure UpdateSessionReuseTruthFromContext(out ASessionId: string);
 
     // WinSSL 内部 access interface helper
     function TryGetContextAccess(out AContextAccess: IWinSSLContextAccess): Boolean;
@@ -774,6 +779,54 @@ begin
   end;
 end;
 
+function TWinSSLConnection.TryGetCurrentSessionInfo(
+  out ASessionInfo: SecPkgContext_SessionInfo): Boolean;
+begin
+  FillChar(ASessionInfo, SizeOf(ASessionInfo), 0);
+  Result := IsSuccess(QueryContextAttributesW(@FCtxtHandle,
+    SECPKG_ATTR_SESSION_INFO, @ASessionInfo));
+end;
+
+function TWinSSLConnection.SessionIdBytesToHex(
+  const ASessionInfo: SecPkgContext_SessionInfo): string;
+const
+  HexDigits: array[0..15] of Char = '0123456789ABCDEF';
+var
+  I: Integer;
+  LSessionIdLength: Integer;
+begin
+  Result := '';
+
+  LSessionIdLength := Integer(ASessionInfo.cbSessionId);
+  if LSessionIdLength <= 0 then
+    Exit;
+
+  if LSessionIdLength > Length(ASessionInfo.rgbSessionId) then
+    LSessionIdLength := Length(ASessionInfo.rgbSessionId);
+
+  SetLength(Result, LSessionIdLength * 2);
+  for I := 0 to LSessionIdLength - 1 do
+  begin
+    Result[I * 2 + 1] := HexDigits[(ASessionInfo.rgbSessionId[I] shr 4) and $0F];
+    Result[I * 2 + 2] := HexDigits[ASessionInfo.rgbSessionId[I] and $0F];
+  end;
+end;
+
+procedure TWinSSLConnection.UpdateSessionReuseTruthFromContext(
+  out ASessionId: string);
+var
+  LSessionInfo: SecPkgContext_SessionInfo;
+begin
+  ASessionId := '';
+  FSessionReused := False;
+
+  if not TryGetCurrentSessionInfo(LSessionInfo) then
+    Exit;
+
+  ASessionId := SessionIdBytesToHex(LSessionInfo);
+  FSessionReused := (LSessionInfo.dwFlags and SSL_SESSION_RECONNECT) <> 0;
+end;
+
 procedure TWinSSLConnection.SaveSessionAfterHandshake;
 var
   LSession: TWinSSLSession;
@@ -782,14 +835,17 @@ var
   LCipher: string;
   LPeerCert: ISSLCertificate;
 begin
-  LSessionID := Format('winssl-session-%p', [Pointer(@FCtxtHandle)]);
+  UpdateSessionReuseTruthFromContext(LSessionID);
+  if LSessionID = '' then
+    LSessionID := Format('winssl-session-%p', [Pointer(@FCtxtHandle)]);
+
   LProtocol := DoGetProtocolVersion;
   LCipher := DoGetCipherName;
   LPeerCert := DoGetPeerCertificate;
 
   LSession := TWinSSLSession.Create;
   try
-    LSession.SetSessionMetadata(LSessionID, LProtocol, LCipher, False);
+    LSession.SetSessionMetadata(LSessionID, LProtocol, LCipher, FSessionReused);
     if LPeerCert <> nil then
       LSession.SetPeerCertificate(LPeerCert);
     FCurrentSession := LSession;
@@ -1068,6 +1124,7 @@ end;
 function TWinSSLConnection.DoConnect: Boolean;
 var
   LVerifyError: Integer;
+  LFrequency: Int64;
 begin
   NotifyInfoCallback(1, 0, 'handshake_start');
   RememberPeerValidationRole(True);
@@ -1092,6 +1149,13 @@ begin
   end;
 
   FHandshakeState := sslHsCompleted;
+
+  QueryPerformanceCounter(FHandshakeEndCounter);
+  QueryPerformanceFrequency(LFrequency);
+  if LFrequency > 0 then
+    FHandshakeDuration := ((FHandshakeEndCounter - FHandshakeStartCounter) * 1000) / LFrequency;
+
+  SaveSessionAfterHandshake;
 
   TryUpdateLibraryStatistics;
 
@@ -1726,6 +1790,7 @@ function TWinSSLConnection.DoGetSession: ISSLSession;
 var
   LSession: TWinSSLSession;
   LPeerCert: ISSLCertificate;
+  LSessionID: string;
 begin
   if FCurrentSession <> nil then
   begin
@@ -1740,11 +1805,11 @@ begin
   end;
 
   LSession := TWinSSLSession.Create;
-  LSession.FID := FormatDateTime('yyyymmddhhnnsszzz', Now);
-  LSession.FCreationTime := Now;
-  LSession.FTimeout := 300;
-  LSession.FProtocolVersion := DoGetProtocolVersion;
-  LSession.FCipherName := DoGetCipherName;
+  UpdateSessionReuseTruthFromContext(LSessionID);
+  if LSessionID = '' then
+    LSessionID := FormatDateTime('yyyymmddhhnnsszzz', Now);
+  LSession.SetSessionMetadata(LSessionID, DoGetProtocolVersion,
+    DoGetCipherName, FSessionReused);
 
   LPeerCert := DoGetPeerCertificate;
   if LPeerCert <> nil then
@@ -1824,6 +1889,7 @@ var
   LIsClient: Boolean;
   LHandshakeOk: Boolean;
   LVerifyError: Integer;
+  LFrequency: Int64;
 begin
   if FHandshakeState = sslHsCompleted then
     Exit(sslHsCompleted);
@@ -1861,6 +1927,12 @@ begin
   end;
 
   FHandshakeState := sslHsCompleted;
+  QueryPerformanceCounter(FHandshakeEndCounter);
+  QueryPerformanceFrequency(LFrequency);
+  if LFrequency > 0 then
+    FHandshakeDuration := ((FHandshakeEndCounter - FHandshakeStartCounter) * 1000) / LFrequency;
+  SaveSessionAfterHandshake;
+  TryUpdateLibraryStatistics;
   NotifyInfoCallback(3, 0, 'handshake_done');
   Result := FHandshakeState;
 end;

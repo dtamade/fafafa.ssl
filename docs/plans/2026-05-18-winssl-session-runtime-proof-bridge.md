@@ -1,0 +1,75 @@
+# 2026-05-18 WinSSL Session Runtime Proof Bridge
+
+## Goal
+
+把 WinSSL 的 session-resumption lane 从“只有设计意图和零散测试文件”推进到“源码已读取 Schannel session truth，broader suite 已有 dedicated proof lane，Windows CI 只差 live run”。
+
+## Scope
+
+- 不重开已经闭环的 Windows runtime evidence capture。
+- 不在本批强行承诺 `SetSession(...)` 已经完整驱动 WinSSL native resume。
+- 先修三件更基础也更确定的真问题：
+  1. client `DoConnect` 成功后没有保存 session metadata
+  2. canonical `winssl.connection` 没有读取 `SECPKG_ATTR_SESSION_INFO`
+  3. broader `tests/run_winssl_tests.ps1` 没有真正跑 dedicated session-resumption proof lane
+
+## Files
+
+- `src/fafafa.ssl.winssl.base.pas`
+- `src/fafafa.ssl.winssl.connection.pas`
+- `tests/winssl/test_winssl_session_resumption.pas`
+- `tests/run_winssl_tests.ps1`
+- `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md`
+- `tests/windows/VALIDATION_BUNDLE.md`
+- `tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+- `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+- `task_plan.md`
+- `findings.md`
+- `progress.md`
+
+## Architecture Truth
+
+- `IsSessionReused` 的 WinSSL truth source 不应是内存标志臆测，而应来自 Schannel `QueryContextAttributesW(..., SECPKG_ATTR_SESSION_INFO, ...)`。
+- `SaveSessionAfterHandshake` 必须在 client handshake 成功后也执行，否则 `GetSession()` / resumed metadata 只在 server path 有保存机会。
+- broader suite 若声称覆盖 `session resumption / tickets`，就必须真的跑 dedicated `test_winssl_session_resumption.lpi`，并把结果写进 runtime artifact。
+
+## Steps
+
+1. 在 canonical `winssl.connection` 中补 `SECPKG_ATTR_SESSION_INFO` 真值读取。
+2. 让 client `DoConnect` / generic `PerformHandshake` 与 server path 一样在成功后保存 session metadata。
+3. 重写 `test_winssl_session_resumption.pas`，聚焦：
+   - owner/core/info/perf 四路 reuse truth 一致性
+   - same-context repeated handshake evidence
+   - stable `[WINSSL-SESSION-RESUME]` markers
+4. 把该测试接入 `tests/run_winssl_tests.ps1` broader suite，并提升成 `[WINSSL-RUNTIME] session_resumption ...` evidence markers。
+5. 先做本地 source contract + Win64 focused cross-target compile。
+6. 提交推送后，再用 GitHub Windows runner 取真实 live proof。
+
+## Commands
+
+```bash
+bash -n tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh
+bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh
+bash tests/scripts/test_winssl_windows_validation_bundle_contract.sh
+bash tests/scripts/test_winssl_runtime_suite_markers_contract.sh
+bash tests/scripts/test_workflow_winssl_tests_truth_contract.sh
+bash tests/scripts/test_session_reused_semantic_truth_contract.sh
+mkdir -p tmp/winssl_session_resumption_win64
+fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework \
+  -FUtmp/winssl_session_resumption_win64 \
+  -FEtmp/winssl_session_resumption_win64 \
+  -otmp/winssl_session_resumption_win64/test_winssl_session_resumption.exe \
+  tests/winssl/test_winssl_session_resumption.pas
+git diff --check
+```
+
+## Execution Result
+
+- GREEN:
+  - 新增 dedicated source contract 通过
+  - Windows validation docs contracts 继续通过
+  - `session_reused_semantic_truth_contract` 继续通过
+  - focused Win64 cross-target compile 通过
+- PENDING:
+  - GitHub Windows runner live run 尚未刷新
+  - 是否稳定观测到 `observed_reuse=true` 仍待 Windows artifact 给出结论

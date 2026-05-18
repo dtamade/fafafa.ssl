@@ -48,7 +48,7 @@
 | caller-provided server OCSP stapling | 不支持                    | 当前不暴露 `ISSLServerOCSPStaplingContext` public surface               |
 | SNI                                  | 支持                      | public capability 已对齐                                                |
 | ALPN                                 | 条件支持                  | 受 Windows 版本影响                                                     |
-| Session resumption / tickets         | public capability 存在    | `SetSession(...)` 已不再提前误报 `IsSessionReused=True`；真实 Windows runtime 行为仍需独立证明 |
+| Session resumption / tickets         | public capability 存在    | `IsSessionReused` 现在读取 Schannel session info；真实 Windows runtime 行为仍需独立证明 |
 | Native handle access                 | context / connection 暴露 | session 不暴露 `ISSLNativeHandleAccess`                                 |
 
 ## GitHub Windows runner 当前真相
@@ -71,6 +71,13 @@
   - WinSSL `DoSetSession(...)` 已不再把“配置了 session”直接写成 `IsSessionReused=True`
   - 当前 `IsSessionReused` 的剩余问题，已经收敛成“Windows 上真实 resumed handshake 如何落 proof”，而不是 public semantic 自相矛盾
 
+- 当前 repo-side implementation bridge 也已经补上：
+  - canonical `src/fafafa.ssl.winssl.connection.pas` 现在直接查询 `SECPKG_ATTR_SESSION_INFO`
+  - `FSessionReused` 对齐到 `SSL_SESSION_RECONNECT`
+  - client `DoConnect(...)` 成功后也会保存 session metadata
+  - broader `tests/run_winssl_tests.ps1` 现在已接入 dedicated `test_winssl_session_resumption.lpi`
+  - wider suite artifact 里可直接检索 `[WINSSL-RUNTIME] session_resumption ...`
+
 ## 当前还没有证实的部分
 
 - Windows 主机上的真实握手路径
@@ -91,6 +98,7 @@
 - **代码结构和 compile surface 持续收口中，且当前已通过选定的 source contract 与 Win64 交叉编译验证**
 - **仓库级 Linux gate 继续全绿**
 - **GitHub Windows runner 现在已经同时给出“实际执行 + substantive artifact evidence”**
+- **WinSSL session-resumption lane 现在已有 dedicated runtime proof harness，但 live result 仍待刷新**
 - **WinSSL / MbedTLS 的 `IsSessionReused` preclaim semantic false positive 已修掉**
 - **真正剩余的高风险未证实区域，已经前移到实际 resumed handshake / session tickets 等 runtime lane 的逐项结论，而不再是 workflow capture 本身**
 

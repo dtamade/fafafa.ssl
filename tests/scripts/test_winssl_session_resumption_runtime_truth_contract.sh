@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$repo_root"
+
+pass() {
+  printf '[PASS] %s\n' "$1"
+}
+
+fail() {
+  printf '[FAIL] %s\n' "$1"
+  if [[ $# -ge 2 ]]; then
+    printf '       %s\n' "$2"
+  fi
+  exit 1
+}
+
+require_match() {
+  local file="$1"
+  local pattern="$2"
+  local name="$3"
+  if rg -n --multiline --multiline-dotall "$pattern" "$file" >/dev/null; then
+    pass "$name"
+  else
+    fail "$name" "pattern not found in $file: $pattern"
+  fi
+}
+
+base_file="src/fafafa.ssl.winssl.base.pas"
+connection_file="src/fafafa.ssl.winssl.connection.pas"
+suite_file="tests/run_winssl_tests.ps1"
+proof_file="tests/winssl/test_winssl_session_resumption.pas"
+checklist_file="tests/windows/WINDOWS_VALIDATION_CHECKLIST.md"
+bundle_file="tests/windows/VALIDATION_BUNDLE.md"
+
+printf '[TEST] WinSSL session-resumption runtime-truth contract\n'
+
+require_match "$base_file" \
+  'SSL_SESSION_RECONNECT\s*=\s*1;' \
+  'WinSSL base defines the Schannel reconnect session flag'
+
+require_match "$connection_file" \
+  'function TWinSSLConnection\.TryGetCurrentSessionInfo\(' \
+  'WinSSL connection owns a dedicated current-session-info helper'
+
+require_match "$connection_file" \
+  'QueryContextAttributesW\(@FCtxtHandle,\s*SECPKG_ATTR_SESSION_INFO,\s*@ASessionInfo\)' \
+  'WinSSL connection reads Schannel session info from the live context'
+
+require_match "$connection_file" \
+  'FSessionReused := \(LSessionInfo\.dwFlags and SSL_SESSION_RECONNECT\) <> 0;' \
+  'WinSSL reuse state is now derived from Schannel session flags'
+
+require_match "$connection_file" \
+  'LSession\.SetSessionMetadata\(LSessionID,\s*LProtocol,\s*LCipher,\s*FSessionReused\);' \
+  'saved WinSSL session metadata now carries the actual resumed-handshake flag'
+
+require_match "$connection_file" \
+  'function TWinSSLConnection\.DoConnect: Boolean;.*?SaveSessionAfterHandshake;' \
+  'client Connect path saves WinSSL session metadata after a successful handshake'
+
+require_match "$connection_file" \
+  'function TWinSSLConnection\.PerformHandshake: TSSLHandshakeState;.*?SaveSessionAfterHandshake;' \
+  'generic WinSSL handshake path also saves session metadata'
+
+require_match "$connection_file" \
+  'Result\.IsResumed := FSessionReused;' \
+  'GetConnectionInfo still mirrors the connection-level reuse truth'
+
+require_match "$suite_file" \
+  'test_winssl_session_resumption\.lpi' \
+  'broader WinSSL runtime suite includes the session-resumption proof lane'
+
+require_match "$suite_file" \
+  'FAFAFA_RUN_NETWORK_TESTS = "1"' \
+  'session-resumption lane opts into the real network path'
+
+require_match "$suite_file" \
+  '\[WINSSL-SESSION-RESUME\]' \
+  'broader suite promotes session-resumption proof markers into runtime evidence'
+
+require_match "$proof_file" \
+  '\[WINSSL-SESSION-RESUME\]' \
+  'WinSSL session-resumption proof program emits stable session-resume markers'
+
+require_match "$proof_file" \
+  'GetConnectionInfo' \
+  'WinSSL session-resumption proof checks connection-info reuse truth'
+
+require_match "$proof_file" \
+  'GetPerformanceMetrics' \
+  'WinSSL session-resumption proof checks performance-metric reuse truth'
+
+require_match "$proof_file" \
+  'FAFAFA_WINSSL_REQUIRE_REUSE' \
+  'WinSSL session-resumption proof supports a strict reuse-observed mode'
+
+require_match "$checklist_file" \
+  'test_winssl_session_resumption\.lpi' \
+  'Windows checklist names the dedicated session-resumption proof project'
+
+require_match "$checklist_file" \
+  '\[WINSSL-RUNTIME\] session_resumption summary' \
+  'Windows checklist documents the promoted session-resumption runtime marker'
+
+require_match "$bundle_file" \
+  'test_winssl_session_resumption\.lpi' \
+  'validation bundle inventory includes the session-resumption proof project'
+
+require_match "$bundle_file" \
+  '\[WINSSL-RUNTIME\] session_resumption summary' \
+  'validation bundle inventory documents the promoted session-resumption marker'
+
+printf '[PASS] WinSSL session-resumption runtime-truth contract passed\n'

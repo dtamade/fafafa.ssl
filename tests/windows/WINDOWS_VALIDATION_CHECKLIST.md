@@ -123,6 +123,7 @@ powershell -ExecutionPolicy Bypass -File .\tests\run_winssl_tests.ps1
 - `test_winssl_unit_comprehensive.lpi`
 - `test_winssl_integration_multi.lpi`
 - `test_backend_comparison.lpi`
+- `test_winssl_session_resumption.lpi`
 - `test_winssl_performance.lpi`
 - `test_winssl_handshake_debug.lpi`
 - `test_winssl_https_client.lpi`
@@ -139,9 +140,12 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\tests\run_winssl_tests.ps1 *>&1 
 
 ```text
 [WINSSL-RUNTIME] suite_start total=...
+[WINSSL-RUNTIME] session_resumption summary host=... attempts=... observed_reuse=...
 [WINSSL-RUNTIME] suite_summary passed=... failed=... total=... success_rate=...
 [WINSSL-RUNTIME] suite_end status=PASS|FAIL
 ```
+
+其中 `test_winssl_session_resumption.lpi` 会额外输出 `[WINSSL-SESSION-RESUME] ...` 细粒度行；`tests/run_winssl_tests.ps1` 会把它们二次汇总成 `[WINSSL-RUNTIME] session_resumption ...` marker，方便后续直接在 artifact 里检索是否真的观测到 resumed handshake。
 
 ## 高风险区域要单独盯
 

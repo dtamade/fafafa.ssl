@@ -63,9 +63,12 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\tests\run_winssl_tests.ps1 *>&1 
 
 ```text
 [WINSSL-RUNTIME] suite_start total=...
+[WINSSL-RUNTIME] session_resumption summary host=... attempts=... observed_reuse=...
 [WINSSL-RUNTIME] suite_summary passed=... failed=... total=... success_rate=...
 [WINSSL-RUNTIME] suite_end status=PASS|FAIL
 ```
+
+`test_winssl_session_resumption.lpi` 还会输出 `[WINSSL-SESSION-RESUME] ...` 原始观测行；wrapper 会把它们提升成 `[WINSSL-RUNTIME] session_resumption ...` evidence marker。
 
 如果只留下“我跑过了”，没有这些 summary / log / runtime markers，后续审查仍然会回到猜。
 

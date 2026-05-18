@@ -4,9 +4,10 @@ program test_winssl_session_resumption;
 {$IFDEF WINDOWS}{$CODEPAGE UTF8}{$ENDIF}
 
 uses
-  {$IFDEF WINDOWS}Windows, WinSock2,{$ENDIF}
+  {$IFDEF WINDOWS}
+  Windows, WinSock2,
+  {$ENDIF}
   SysUtils, Classes,
-  
   fafafa.ssl.base,
   fafafa.ssl.winssl.lib;
 
@@ -14,162 +15,353 @@ var
   Total, Passed, Failed: Integer;
   Section: string;
 
-procedure BeginSection(const aName: string);
+function ResolveSessionHost: string;
 begin
-  Section := aName;
-  WriteLn; WriteLn('=== ', aName, ' ===');
+  Result := Trim(GetEnvironmentVariable('FAFAFA_WINSSL_SESSION_HOST'));
+  if Result = '' then
+    Result := 'www.cloudflare.com';
 end;
 
-procedure Check(const aName: string; ok: Boolean; const details: string = '');
+procedure BeginSection(const AName: string);
+begin
+  Section := AName;
+  WriteLn;
+  WriteLn('=== ', AName, ' ===');
+end;
+
+procedure Check(const AName: string; AOk: Boolean; const ADetails: string = '');
 begin
   Inc(Total);
-  Write('  [', Section, '] ', aName, ': ');
-  if ok then begin Inc(Passed); WriteLn('PASS'); end
-  else begin Inc(Failed); WriteLn('FAIL'); if details <> '' then WriteLn('    ', details); end;
+  Write('  [', Section, '] ', AName, ': ');
+  if AOk then
+  begin
+    Inc(Passed);
+    WriteLn('PASS');
+  end
+  else
+  begin
+    Inc(Failed);
+    WriteLn('FAIL');
+    if ADetails <> '' then
+      WriteLn('    ', ADetails);
+  end;
 end;
 
-function InitWinsock: Boolean; var W: TWSAData; begin Result := WSAStartup(MAKEWORD(2,2), W) = 0; end;
-procedure CleanupWinsock; begin WSACleanup; end;
-
-function ConnectToHost(const aHost: string; aPort: Word; out aSocket: TSocket): Boolean;
-var A: TSockAddrIn; H: PHostEnt; InAddr: TInAddr; Tm: Integer;
+procedure EmitResumeMarker(const AMarker: string);
 begin
-  Result := False; aSocket := INVALID_SOCKET;
-  aSocket := socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if aSocket = INVALID_SOCKET then Exit;
-  Tm := 10000; setsockopt(aSocket, SOL_SOCKET, SO_RCVTIMEO, @Tm, SizeOf(Tm));
-  setsockopt(aSocket, SOL_SOCKET, SO_SNDTIMEO, @Tm, SizeOf(Tm));
-  H := gethostbyname(PAnsiChar(AnsiString(aHost)));
-  if H = nil then begin closesocket(aSocket); aSocket := INVALID_SOCKET; Exit; end;
-  FillChar(A, SizeOf(A), 0); A.sin_family := AF_INET; A.sin_port := htons(aPort);
-  Move(H^.h_addr_list^^, InAddr, SizeOf(InAddr)); A.sin_addr := InAddr;
-  Result := connect(aSocket, @A, SizeOf(A)) = 0;
-  if not Result then begin closesocket(aSocket); aSocket := INVALID_SOCKET; end;
+  WriteLn('[WINSSL-SESSION-RESUME] ', AMarker);
 end;
 
-function NowMs: Int64; begin Result := Round(Now * 86400000.0); end;
+function BoolText(AValue: Boolean): string;
+begin
+  if AValue then
+    Result := 'true'
+  else
+    Result := 'false';
+end;
 
-procedure TestSessionResumptionBaseline(const Host: string);
+function EnvEnabled(const AName: string): Boolean;
 var
-  Lib: ISSLLibrary; Ctx1, Ctx2: ISSLContext; Conn: ISSLConnection; S: TSocket;
-  t1s, t1e, t2s, t2e: Int64; runNet: Boolean; ok: Boolean;
-  thresh, dt1, dt2, thresh2, dt1b, dt2b: Integer;
+  LValue: string;
 begin
-  BeginSection('会话复用（基线：连续两次握手）');
+  LValue := LowerCase(Trim(GetEnvironmentVariable(AName)));
+  Result := (LValue = '1') or (LValue = 'true') or
+    (LValue = 'yes') or (LValue = 'on');
+end;
 
-  runNet := GetEnvironmentVariable('FAFAFA_RUN_NETWORK_TESTS') = '1';
-  if not runNet then begin
-    Check('跳过网络测试 (FAFAFA_RUN_NETWORK_TESTS!=1)', True);
+function EnvInt(const AName: string; ADefault: Integer): Integer;
+begin
+  Result := StrToIntDef(Trim(GetEnvironmentVariable(AName)), ADefault);
+end;
+
+function InitWinsock: Boolean;
+var
+  LWSAData: TWSAData;
+begin
+  Result := WSAStartup(MAKEWORD(2, 2), LWSAData) = 0;
+end;
+
+procedure CleanupWinsock;
+begin
+  WSACleanup;
+end;
+
+function ConnectToHost(const AHost: string; APort: Word; out ASocket: TSocket): Boolean;
+var
+  LAddr: TSockAddrIn;
+  LHostEnt: PHostEnt;
+  LInAddr: TInAddr;
+  LTimeout: Integer;
+begin
+  Result := False;
+  ASocket := INVALID_SOCKET;
+
+  ASocket := socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if ASocket = INVALID_SOCKET then
+    Exit;
+
+  LTimeout := 10000;
+  setsockopt(ASocket, SOL_SOCKET, SO_RCVTIMEO, @LTimeout, SizeOf(LTimeout));
+  setsockopt(ASocket, SOL_SOCKET, SO_SNDTIMEO, @LTimeout, SizeOf(LTimeout));
+
+  LHostEnt := gethostbyname(PAnsiChar(AnsiString(AHost)));
+  if LHostEnt = nil then
+  begin
+    closesocket(ASocket);
+    ASocket := INVALID_SOCKET;
     Exit;
   end;
 
-  if not InitWinsock then begin Check('初始化 Winsock', False); Exit; end;
-  try
-    Lib := CreateWinSSLLibrary;
-    if not Lib.Initialize then begin Check('初始化 WinSSL 库', False, Lib.GetLastErrorString); Exit; end;
-    Check('初始化 WinSSL 库', True);
+  FillChar(LAddr, SizeOf(LAddr), 0);
+  LAddr.sin_family := AF_INET;
+  LAddr.sin_port := htons(APort);
+  Move(LHostEnt^.h_addr_list^^, LInAddr, SizeOf(LInAddr));
+  LAddr.sin_addr := LInAddr;
 
-    // First handshake
-    Ctx1 := Lib.CreateContext(sslCtxClient);
-    Ctx1.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
-    if not ConnectToHost(Host, 443, S) then begin Check('TCP 连接到 ' + Host, False); Exit; end;
-    try
-      Conn := Ctx1.CreateConnection(S);
-      Check('创建 SSL 连接对象(1)', Conn <> nil);
-      if Conn <> nil then
-        (Conn as ISSLClientConnection).SetServerName(Host);
-      t1s := NowMs; ok := (Conn <> nil) and Conn.Connect; t1e := NowMs;
-      Check('握手 #1 完成', ok, Format('耗时: %d ms', [t1e - t1s]));
-      if ok then Conn.Shutdown;
-    finally
-      if S <> INVALID_SOCKET then closesocket(S);
-    end;
-
-    // Second handshake (fresh context; true resumption尚未接入)
-    Ctx2 := Lib.CreateContext(sslCtxClient);
-    Ctx2.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
-    if not ConnectToHost(Host, 443, S) then begin Check('TCP 连接到 ' + Host, False); Exit; end;
-    try
-      Conn := Ctx2.CreateConnection(S);
-      Check('创建 SSL 连接对象(2)', Conn <> nil);
-      if Conn <> nil then
-        (Conn as ISSLClientConnection).SetServerName(Host);
-      t2s := NowMs; ok := (Conn <> nil) and Conn.Connect; t2e := NowMs;
-      Check('握手 #2 完成', ok, Format('耗时: %d ms', [t2e - t2s]));
-      if ok then Conn.Shutdown;
-    finally
-      if S <> INVALID_SOCKET then closesocket(S);
-    end;
-
-  // Baseline metric: ensure both handshakes succeeded
-  Check('两次握手均成功', True);
-
-  // 可选阈值断言（启用时若二次握手耗时显著降低则视为通过，不满足也不失败）
-  if GetEnvironmentVariable('FAFAFA_WINSSL_SESSION_THRESHOLD_MS') <> '' then
+  Result := connect(ASocket, @LAddr, SizeOf(LAddr)) = 0;
+  if not Result then
   begin
-    thresh := StrToIntDef(GetEnvironmentVariable('FAFAFA_WINSSL_SESSION_THRESHOLD_MS'), 0);
-    if (thresh > 0) and (t1e - t1s >= 0) and (t2e - t2s >= 0) then
-    begin
-      dt1 := t1e - t1s;
-      dt2 := t2e - t2s;
-      if dt2 <= dt1 - thresh then
-        Check(Format('二次握手加速 (≥%d ms)', [thresh]), True, Format('t1=%d, t2=%d', [dt1, dt2]))
-      else
-        Check(Format('二次握手未达加速阈值 (≥%d ms, 不判失败)', [thresh]), True, Format('t1=%d, t2=%d', [dt1, dt2]));
-    end;
+    closesocket(ASocket);
+    ASocket := INVALID_SOCKET;
+  end;
+end;
+
+procedure ValidateReuseTruth(const ALabel: string; const AConn: ISSLConnection;
+  out AReused: Boolean);
+var
+  LResumption: ISSLSessionResumption;
+  LInfo: TSSLConnectionInfo;
+  LPerf: TSSLPerformanceMetrics;
+begin
+  AReused := AConn.IsSessionReused;
+  LInfo := AConn.GetConnectionInfo;
+  LPerf := AConn.GetPerformanceMetrics;
+
+  Check(ALabel + ' exposes ISSLSessionResumption',
+    Supports(AConn, ISSLSessionResumption, LResumption));
+  if Supports(AConn, ISSLSessionResumption, LResumption) then
+    Check(ALabel + ' optional/core reuse truth aligns',
+      LResumption.IsSessionReused = AReused,
+      Format('optional=%s core=%s',
+        [BoolText(LResumption.IsSessionReused), BoolText(AReused)]));
+
+  Check(ALabel + ' connection info mirrors reuse truth',
+    LInfo.IsResumed = AReused,
+    Format('info=%s core=%s',
+      [BoolText(LInfo.IsResumed), BoolText(AReused)]));
+
+  Check(ALabel + ' performance metrics mirror reuse truth',
+    LPerf.SessionReused = AReused,
+    Format('perf=%s core=%s',
+      [BoolText(LPerf.SessionReused), BoolText(AReused)]));
+
+  EmitResumeMarker(Format(
+    'signal label=%s reused=%s info_resumed=%s perf_reused=%s',
+    [ALabel, BoolText(AReused), BoolText(LInfo.IsResumed),
+     BoolText(LPerf.SessionReused)]));
+end;
+
+procedure TestSameContextResumptionTruth(const AHost: string);
+var
+  LLib: ISSLLibrary;
+  LCtx: ISSLContext;
+  LConn: ISSLConnection;
+  LResumption1, LResumptionN: ISSLSessionResumption;
+  LSession: ISSLSession;
+  LSocket: TSocket;
+  LRunNet: Boolean;
+  LRequireReuse: Boolean;
+  LObservedReuse: Boolean;
+  LSessionConfigured: Boolean;
+  LAttemptCount: Integer;
+  LAttempt: Integer;
+  LOk: Boolean;
+  LReused: Boolean;
+  LInitError: string;
+begin
+  BeginSection('WinSSL session resumption truth');
+
+  LRunNet := EnvEnabled('FAFAFA_RUN_NETWORK_TESTS');
+  if not LRunNet then
+  begin
+    Check('skip network test (FAFAFA_RUN_NETWORK_TESTS!=1)', True);
+    EmitResumeMarker('summary skipped=true reason=network_gate');
+    Exit;
   end;
 
-  // Same-context resumption attempt (更贴近 SChannel 进程级缓存)
-  BeginSection('会话复用（同一上下文复用）');
-  Ctx1 := Lib.CreateContext(sslCtxClient);
-  Ctx1.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
-  if not ConnectToHost(Host, 443, S) then begin Check('TCP 连接', False); Exit; end;
-  try
-    Conn := Ctx1.CreateConnection(S);
-    Check('创建 SSL 连接对象(3)', Conn <> nil);
-    if Conn <> nil then
-      (Conn as ISSLClientConnection).SetServerName(Host);
-    t1s := NowMs; ok := (Conn <> nil) and Conn.Connect; t1e := NowMs;
-    Check('握手 #3 完成', ok, Format('耗时: %d ms', [t1e - t1s]));
-    if ok then Conn.Shutdown;
-  finally
-    if S <> INVALID_SOCKET then closesocket(S);
-  end;
-  if not ConnectToHost(Host, 443, S) then begin Check('TCP 连接', False); Exit; end;
-  try
-    Conn := Ctx1.CreateConnection(S);
-    Check('创建 SSL 连接对象(4)', Conn <> nil);
-    if Conn <> nil then
-      (Conn as ISSLClientConnection).SetServerName(Host);
-    t2s := NowMs; ok := (Conn <> nil) and Conn.Connect; t2e := NowMs;
-    Check('握手 #4 完成', ok, Format('耗时: %d ms', [t2e - t2s]));
-    if ok then Conn.Shutdown;
-  finally
-    if S <> INVALID_SOCKET then closesocket(S);
-  end;
-  if GetEnvironmentVariable('FAFAFA_WINSSL_SESSION_THRESHOLD_MS') <> '' then
+  LAttemptCount := EnvInt('FAFAFA_WINSSL_SESSION_ATTEMPTS', 4);
+  if LAttemptCount < 1 then
+    LAttemptCount := 1;
+  LRequireReuse := EnvEnabled('FAFAFA_WINSSL_REQUIRE_REUSE');
+  LObservedReuse := False;
+  LSessionConfigured := False;
+  LSession := nil;
+
+  if not InitWinsock then
   begin
-    thresh2 := StrToIntDef(GetEnvironmentVariable('FAFAFA_WINSSL_SESSION_THRESHOLD_MS'), 0);
-    if (thresh2 > 0) and (t1e - t1s >= 0) and (t2e - t2s >= 0) then
-    begin
-      dt1b := t1e - t1s;
-      dt2b := t2e - t2s;
-      if dt2b <= dt1b - thresh2 then
-        Check(Format('同上下文二次握手加速 (≥%d ms)', [thresh2]), True, Format('t1=%d, t2=%d', [dt1b, dt2b]))
-      else
-        Check(Format('同上下文未达加速阈值 (≥%d ms, 不判失败)', [thresh2]), True, Format('t1=%d, t2=%d', [dt1b, dt2b]));
-    end;
+    Check('initialize Winsock', False);
+    EmitResumeMarker('summary skipped=false phase=init_winsock status=fail');
+    Exit;
   end;
+
+  try
+    LLib := CreateWinSSLLibrary;
+    LOk := (LLib <> nil) and LLib.Initialize;
+    if LOk then
+      LInitError := ''
+    else if LLib <> nil then
+      LInitError := LLib.GetLastErrorString
+    else
+      LInitError := 'library instance is nil';
+    Check('initialize WinSSL library', LOk, LInitError);
+    if not LOk then
+    begin
+      EmitResumeMarker('summary skipped=false phase=initialize_library status=fail');
+      Exit;
+    end;
+
+    LCtx := LLib.CreateContext(sslCtxClient);
+    Check('create client context', LCtx <> nil);
+    if LCtx = nil then
+    begin
+      EmitResumeMarker('summary skipped=false phase=create_context status=fail');
+      Exit;
+    end;
+
+    // Prefer TLS 1.2 here because classic session-ID/ticket reconnects are
+    // more stable across public servers and CI runners.
+    LCtx.SetProtocolVersions([sslProtocolTLS12]);
+
+    LSocket := INVALID_SOCKET;
+    if not ConnectToHost(AHost, 443, LSocket) then
+    begin
+      Check('TCP connect for initial handshake', False, AHost);
+      EmitResumeMarker('summary skipped=false phase=initial_tcp_connect status=fail');
+      Exit;
+    end;
+
+    try
+      LConn := LCtx.CreateConnection(LSocket);
+      Check('create SSL connection for initial handshake', LConn <> nil);
+      if LConn = nil then
+      begin
+        EmitResumeMarker('summary skipped=false phase=initial_create_connection status=fail');
+        Exit;
+      end;
+
+      Check('initial connection exposes ISSLSessionResumption',
+        Supports(LConn, ISSLSessionResumption, LResumption1));
+      if not Supports(LConn, ISSLSessionResumption, LResumption1) then
+      begin
+        EmitResumeMarker('summary skipped=false phase=initial_owner_surface status=fail');
+        Exit;
+      end;
+
+      (LConn as ISSLClientConnection).SetServerName(AHost);
+      LOk := LConn.Connect;
+      Check('initial handshake completes', LOk, AHost);
+      if not LOk then
+      begin
+        EmitResumeMarker('summary skipped=false phase=initial_handshake status=fail');
+        Exit;
+      end;
+
+      ValidateReuseTruth('initial_handshake', LConn, LReused);
+      Check('initial handshake must not report reuse', not LReused,
+        'fresh handshake unexpectedly reported session reuse');
+
+      LSession := LResumption1.GetSession;
+      LSessionConfigured := LSession <> nil;
+      Check('initial handshake captures session metadata', LSessionConfigured);
+      if LSessionConfigured then
+        Check('captured session metadata is resumable',
+          LSession.IsResumable,
+          'captured session should remain resumable for the next attempt');
+
+      LConn.Shutdown;
+    finally
+      if LSocket <> INVALID_SOCKET then
+        closesocket(LSocket);
+    end;
+
+    for LAttempt := 1 to LAttemptCount do
+    begin
+      LSocket := INVALID_SOCKET;
+      if not ConnectToHost(AHost, 443, LSocket) then
+      begin
+        Check(Format('TCP connect for resumed attempt #%d', [LAttempt]), False, AHost);
+        Continue;
+      end;
+
+      try
+        LConn := LCtx.CreateConnection(LSocket);
+        Check(Format('create SSL connection for resumed attempt #%d', [LAttempt]),
+          LConn <> nil);
+        if LConn = nil then
+          Continue;
+
+        Check(Format('resumed attempt #%d exposes ISSLSessionResumption', [LAttempt]),
+          Supports(LConn, ISSLSessionResumption, LResumptionN));
+        if not Supports(LConn, ISSLSessionResumption, LResumptionN) then
+          Continue;
+
+        if LSessionConfigured then
+          LResumptionN.SetSession(LSession);
+
+        Check(Format('pre-handshake attempt #%d does not preclaim reuse', [LAttempt]),
+          not LResumptionN.IsSessionReused,
+          'reuse state must remain false until the handshake actually completes');
+
+        (LConn as ISSLClientConnection).SetServerName(AHost);
+        LOk := LConn.Connect;
+        Check(Format('same-context resumed attempt #%d completes', [LAttempt]), LOk, AHost);
+        if not LOk then
+          Continue;
+
+        ValidateReuseTruth(Format('same_context_attempt_%d', [LAttempt]), LConn, LReused);
+        EmitResumeMarker(Format('attempt index=%d reused=%s session_configured=%s',
+          [LAttempt, BoolText(LReused), BoolText(LSessionConfigured)]));
+        if LReused then
+          LObservedReuse := True;
+
+        LConn.Shutdown;
+      finally
+        if LSocket <> INVALID_SOCKET then
+          closesocket(LSocket);
+      end;
+
+      if LObservedReuse then
+        Break;
+    end;
+
+    EmitResumeMarker(Format(
+      'summary host=%s attempts=%d observed_reuse=%s require_reuse=%s session_configured=%s',
+      [AHost, LAttemptCount, BoolText(LObservedReuse), BoolText(LRequireReuse),
+       BoolText(LSessionConfigured)]));
+
+    if LRequireReuse then
+      Check('same-context reconnect eventually observes session reuse',
+        LObservedReuse,
+        Format('host=%s attempts=%d', [AHost, LAttemptCount]))
+    else
+      Check('same-context reconnect evidence recorded', True,
+        Format('observed_reuse=%s attempts=%d',
+          [BoolText(LObservedReuse), LAttemptCount]));
   finally
     CleanupWinsock;
   end;
 end;
 
 begin
-  Total := 0; Passed := 0; Failed := 0;
-  WriteLn('WinSSL 会话复用基线测试');
-  TestSessionResumptionBaseline('www.cloudflare.com');
-  WriteLn; WriteLn('总计: ', Total, ' 通过: ', Passed, ' 失败: ', Failed);
-  if Failed > 0 then Halt(1);
-end.
+  Total := 0;
+  Passed := 0;
+  Failed := 0;
 
+  WriteLn('WinSSL session resumption runtime truth test');
+  TestSameContextResumptionTruth(ResolveSessionHost);
+
+  WriteLn;
+  WriteLn('总计: ', Total, ' 通过: ', Passed, ' 失败: ', Failed);
+  if Failed > 0 then
+    Halt(1);
+end.

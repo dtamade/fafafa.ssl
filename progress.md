@@ -247,6 +247,91 @@
   - summary:
     - 当前 session-reused semantic batch 没有 whitespace 或 patch-format 问题
 
+### WinSSL Session Runtime Proof Bridge
+
+- `rg -n "FSessionReused :=|FCurrentSession|SaveSessionAfterHandshake|WasResumed|SetSessionMetadata|GetSession|DoSetSession|DoIsSessionReused|IsResumed|session" src/fafafa.ssl.winssl.connection.pas`
+  - result: PASS
+  - summary:
+    - 确认 canonical WinSSL connection 当时持有 `FSessionReused` / `FCurrentSession`
+    - 但 client `DoConnect(...)` 成功后没有调用 `SaveSessionAfterHandshake`
+
+- `nl -ba src/fafafa.ssl.winssl.session.pas | sed -n '48,83p'`
+  - result: PASS
+  - summary:
+    - 兼容 shim `winssl.session` 早就会查询 `SECPKG_ATTR_SESSION_INFO`
+    - 这进一步证明 canonical `winssl.connection` 与设计意图脱节
+
+- update `src/fafafa.ssl.winssl.base.pas`
+  - change:
+    - 新增 `SSL_SESSION_RECONNECT = 1`
+
+- update `src/fafafa.ssl.winssl.connection.pas`
+  - change:
+    - 新增 current-session-info helper，直接读取 `SECPKG_ATTR_SESSION_INFO`
+    - `FSessionReused` 现在来源于 Schannel reconnect flag
+    - `SaveSessionAfterHandshake(...)` 会把真实 resumed flag 写回 saved session metadata
+    - client `DoConnect(...)` / generic `PerformHandshake(...)` 成功后也会保存 session metadata
+
+- update `tests/winssl/test_winssl_session_resumption.pas`
+  - change:
+    - 从“只是计时基线”切到 dedicated runtime truth proof
+    - 新增：
+      - owner/core/info/perf reuse truth 一致性检查
+      - same-context repeated handshake attempts
+      - stable `[WINSSL-SESSION-RESUME] ...` markers
+      - `FAFAFA_WINSSL_REQUIRE_REUSE` strict mode
+
+- update `tests/run_winssl_tests.ps1`
+  - change:
+    - broader suite 新增 `test_winssl_session_resumption.lpi`
+    - session-resumption lane 会自动设置 `FAFAFA_RUN_NETWORK_TESTS=1`
+    - wrapper 会把 `[WINSSL-SESSION-RESUME] ...` 提升成 `[WINSSL-RUNTIME] session_resumption ...`
+    - 成功场景下只要出现这些 proof markers，也会把原始输出保留进 artifact
+
+- update `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md`
+  - change:
+    - broader suite 列表新增 `test_winssl_session_resumption.lpi`
+    - runtime markers 现在显式要求 `[WINSSL-RUNTIME] session_resumption summary ...`
+
+- update `tests/windows/VALIDATION_BUNDLE.md`
+  - change:
+    - inventory 同步记录 dedicated session-resumption proof lane
+    - 同步记录 promoted session-resumption runtime marker
+
+- add `tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - 锁住 canonical WinSSL connection 必须读取 `SECPKG_ATTR_SESSION_INFO`
+    - 锁住 broader suite 必须真正跑 `test_winssl_session_resumption.lpi`
+    - 锁住 checklist/bundle 必须记录 dedicated session-resumption proof lane
+
+- `bash -n tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh && bash tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_runtime_suite_markers_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_session_reused_semantic_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - 之前修好的 “SetSession 不得提前误报 reused=true” 语义仍保持绿色
+
+- `mkdir -p tmp/winssl_session_resumption_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_session_resumption_win64 -FEtmp/winssl_session_resumption_win64 -otmp/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+  - result: FAIL -> PASS
+  - summary:
+    - RED: 新 helper 初版把 `Assigned(QueryContextAttributesW)` 写成了不适合当前 binding 的表达式，focused Win64 compile 直接抓到编译错误
+    - GREEN: 修正后 focused Win64 cross-target compile 通过
+
+- add `docs/plans/2026-05-18-winssl-session-runtime-proof-bridge.md`
+  - change:
+    - 固化本批目标、source/runtime 边界、验证命令与 live-proof pending 状态
+
 ### Interface And Backend Truth Cross-Check
 
 - `rg -n "ISSLConnection = interface|ISSLClientConnection = interface|ISSLServerConnection|SetServerName|TSSLConfig = record|Supports[A-Z][A-Za-z]+: Boolean|[A-Za-z]+Support: TSSLSupportLevel" src/fafafa.ssl.base.pas src/fafafa.ssl.factory.pas src/fafafa.ssl.context.builder.pas src/fafafa.ssl.pas docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md docs/ARCHITECTURE.md docs/reference/INTERFACE_DESIGN_V2.md`

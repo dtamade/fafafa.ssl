@@ -39,6 +39,38 @@
   - `IsSessionReused` semantic false positive：已修复
   - 真正剩下的高风险问题：Windows 上实际 resumed handshake / session tickets 行为是否成立，以及如何给出 live runtime proof
 
+- 在继续往前推 WinSSL runtime proof 时，又发现了一条更底层的实现缺口：
+  - canonical `src/fafafa.ssl.winssl.connection.pas` 虽然维护 `FSessionReused` / `FCurrentSession`
+  - 但 client `DoConnect(...)` 成功后此前并不会调用 `SaveSessionAfterHandshake`
+  - 因此 client path 上的 session metadata 主要依赖 `DoGetSession()` 事后临时拼装，不是真正的 post-handshake 保存
+
+- 还有一条更关键的 source drift 也被证实了：
+  - `src/fafafa.ssl.winssl.session.pas` 这个兼容 shim 里早就有 `QueryContextAttributesW(..., SECPKG_ATTR_SESSION_INFO, ...)`
+  - 但 canonical `src/fafafa.ssl.winssl.connection.pas` 却没有把它用于 `FSessionReused` / saved session metadata
+  - 这让设计文档里“WinSSL session truth 来自 Schannel session info”的说法和真实实现再次脱节
+
+- 当前批次因此把 WinSSL session truth 重新压回了 canonical 实现：
+  - `src/fafafa.ssl.winssl.base.pas` 现在显式发布 `SSL_SESSION_RECONNECT = 1`
+  - `src/fafafa.ssl.winssl.connection.pas` 新增 current-session-info helper，直接读取 `SECPKG_ATTR_SESSION_INFO`
+  - `FSessionReused` 现在来源于 `dwFlags and SSL_SESSION_RECONNECT`
+  - `SaveSessionAfterHandshake(...)` 会把真实 resumed flag 写进 `TWinSSLSession.SetSessionMetadata(...)`
+
+- broader WinSSL runtime suite 之前也确实没有真正覆盖 dedicated session-resumption proof lane：
+  - `tests/run_winssl_tests.ps1` 原先只跑 comprehensive / integration / backend-comparison / performance / handshake-debug / https-client
+  - `test_winssl_session_resumption.lpi` 虽然存在，但没有被 broader suite 触发
+  - 这意味着 checklist/bundle 里虽然说“高风险区域要单独盯 session resumption”，但活跃 CI/手动主路径还没有一条 dedicated proof
+
+- 这批已经把 broader proof surface 向前推进了一步，但仍没有假装“WinSSL runtime proof 已经完成”：
+  - `tests/winssl/test_winssl_session_resumption.pas` 现在聚焦同一 context repeated handshake 的 reuse truth
+  - 它会同时检查：
+    - `ISSLSessionResumption.IsSessionReused`
+    - core `ISSLConnection.IsSessionReused`
+    - `GetConnectionInfo.IsResumed`
+    - `GetPerformanceMetrics.SessionReused`
+  - 并输出稳定的 `[WINSSL-SESSION-RESUME] ...` markers
+  - `tests/run_winssl_tests.ps1` 会把这些观测提升成 `[WINSSL-RUNTIME] session_resumption ...` markers
+  - 但是否稳定观测到 `observed_reuse=true`，仍然必须由 GitHub Windows runner 的 live artifact 给出最终结论
+
 - 根因已被压缩到 evidence capture 层，而不是 WinSSL 实现层：
   - workflow 用 `Start-Transcript` 包住父 PowerShell
   - broader suite 则在子 `pwsh -File tests/run_winssl_tests.ps1` 里执行

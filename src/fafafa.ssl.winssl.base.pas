@@ -555,6 +555,7 @@ const
   
   // Schannel 控制令牌
   SCHANNEL_SHUTDOWN               = 1;
+  SSL_SESSION_RECONNECT           = 1;
   
   // AcceptSecurityContext 请求标志
   ASC_REQ_DELEGATE                = $00000001;
