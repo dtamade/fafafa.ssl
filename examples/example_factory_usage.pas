@@ -205,9 +205,6 @@ begin
   Config.VerifyMode := [sslVerifyPeer];
   Config.VerifyDepth := 10;
   Config.ALPNProtocols := 'h2,http/1.1';
-  Config.BufferSize := 16384;
-  Config.HandshakeTimeout := 30000;
-
   WriteLn('配置项:');
   WriteLn('  库类型: ', SSL_LIBRARY_NAMES[Config.LibraryType]);
   WriteLn('  上下文类型: 客户端');
@@ -215,6 +212,8 @@ begin
   WriteLn('  验证深度: ', Config.VerifyDepth);
   WriteLn('  服务器名称: 在连接上单独设置');
   WriteLn('  ALPN: ', Config.ALPNProtocols);
+  WriteLn('  握手超时: 通过 TSSLConnector.WithTimeout / ISSLConnection.SetTimeout 配置');
+  WriteLn('  缓冲策略: 通过外围 socket / stream / transport 配置');
 
   WriteLn('');
   WriteLn('使用配置创建上下文...');

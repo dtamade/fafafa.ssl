@@ -2256,3 +2256,39 @@
   - result: PASS
   - summary:
     - current option-bridge surface-truth batch has no whitespace or patch-format issues
+
+### TSSLConfig Active Guidance Cleanup
+
+- add `docs/plans/2026-05-18-tsslconfig-active-guidance-cleanup.md`
+  - purpose:
+    - define a bounded batch for cleaning up high-visibility TSSLConfig guidance drift in active example/reference surfaces
+
+- update:
+  - `examples/example_factory_usage.pas`
+  - `docs/reference/ARCHITECTURE.md`
+  - change:
+    - remove `BufferSize` / `HandshakeTimeout` from the factory/config example path
+    - redirect timeout/buffering guidance to connection / transport-level APIs
+    - replace the stale pseudo-`TSSLConfig` record in architecture docs with current scope buckets
+
+- add `tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - purpose:
+    - keep active example usage and architecture reference aligned with the current TSSLConfig scope truth
+    - also keep the example-surface direct-context API coverage explicitly labeled
+
+- `bash -n tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh && bash tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+  - RED -> GREEN result: PASS
+  - summary:
+    - the first failure was only an over-broad contract needle that accidentally matched an unrelated `ProtocolVersion` symbol elsewhere in the architecture doc
+    - the final contract now stays focused on the real guidance truth instead of creating false reds
+
+- `mkdir -p tmp/example_factory_usage && fpc -B -Fu./src -Fu./examples -FUtmp/example_factory_usage -FEtmp/example_factory_usage -otmp/example_factory_usage/example_factory_usage examples/example_factory_usage.pas`
+  - result: PASS
+  - summary:
+    - active factory-usage example still compiles after removing the mixed-scope guidance drift
+    - compile finished with existing repo warnings only; no new example breakage was introduced
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current active-guidance-cleanup batch has no whitespace or patch-format issues

@@ -258,25 +258,35 @@ end;
 ## 8. 配置管理
 
 ### 8.1 配置层次
-```pascal
-TSSLConfig = record
-  // 全局配置
-  DefaultLibraryType: TSSLLibraryType;
-  BufferSize: Integer;
-  LogLevel: TSSLLogLevel;
-  
-  // 上下文配置  
-  ProtocolVersion: TSSLProtocolVersion;
-  VerifyMode: TSSLVerifyMode;
-  CertificatePath: string;
-  PrivateKeyPath: string;
-  
-  // 连接配置
-  HandshakeTimeout: Integer;
-  ReadTimeout: Integer;
-  WriteTimeout: Integer;
-end;
-```
+`TSSLConfig` 并不是“所有字段都在同一层直接生效”的纯层级配置。当前 public truth 已经明确分成几类作用域：
+
+- **library-scoped defaults**
+  - `LogLevel`
+  - `LogCallback`
+  - 通过 `ISSLLibrary.SetDefaultConfig(...)` 使用；factory request path 不接受 request-local 覆盖。
+- **context-scoped**
+  - `ProtocolVersions` / `PreferredVersion`
+  - `CertificateFile` / `PrivateKeyFile` / `CAFile` / `CAPath`
+  - `VerifyMode` / `VerifyDepth`
+  - `CipherList` / `CipherSuites` / `Options`
+  - `SessionCacheSize` / `SessionTimeout`
+  - `ALPNProtocols`
+  - `ClientEarlyDataEnabled`
+  - `ServerEarlyDataPolicy` / `ServerMaxEarlyDataSize`
+  - `ServerEarlyDataReplayStoreFile` / `ServerEarlyDataReplayStoreDirectory`
+- **connection-scoped**
+  - `HandshakeTimeout`
+  - `BufferSize`
+  - 这两个字段不属于 context/factory config 主路径，应改走 `TSSLConnector.WithTimeout` / `ISSLConnection.SetTimeout` 或外围 IO/transport 配置。
+- **compatibility-only**
+  - `ServerName`
+    - 当前是 deprecated context-level compatibility field；client 侧主路径应改走 per-connection SNI。
+  - `EnableCompression`
+  - `EnableSessionTickets`
+  - `EnableOCSPStapling`
+    - 这三个字段仍作为 option-bridge compatibility surface 保留，但新代码应优先直接写 `Options`。
+
+更细的字段真相以 `src/fafafa.ssl.base.pas` 与 `docs/reference/API_REFERENCE.md` 为准。
 
 ### 8.2 配置来源优先级
 1. 代码中显式设置的参数

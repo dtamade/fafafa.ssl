@@ -394,6 +394,19 @@
     - 下一条相关路线不该再回到“这些字段是不是普通主路径”的讨论：
       - 若继续推进，应进入真正的 `TSSLConfig` slimming / migration design
       - 而不是重复补 public wording 或兼容测试标签
+12. `TSSLConfig active guidance cleanup` 当前也已完成第一轮收口：
+    - 新 plan：
+      - `docs/plans/2026-05-18-tsslconfig-active-guidance-cleanup.md`
+    - 新验证：
+      - `tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+      - `examples/example_factory_usage.pas` focused compile
+    - 当前已收口的 active guidance 漂移：
+      - 活跃 example 不再把 `BufferSize` / `HandshakeTimeout` 教成 factory/config 主路径
+      - `docs/reference/ARCHITECTURE.md` 不再描述过时的伪 `TSSLConfig` 结构
+      - `tests/examples/test_lib_core_functionality.pas` 的 direct context `SetServerName(...)` example-surface coverage 继续显式带 `INTENTIONAL_API_SURFACE`
+    - 下一条相关路线不该再回到高可见度 guidance cleanup：
+      - 若继续推进，应进入真正的 `TSSLConfig` public-surface slimming / migration design
+      - 而不是继续修 example/reference 漂移
 
 ## Verification Discipline
 

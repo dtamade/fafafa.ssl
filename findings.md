@@ -1028,3 +1028,51 @@
   - 真正值得开的下一批，应是：
     - `TSSLConfig` public-surface slimming / migration design
     - 明确哪些 compatibility-only 字段在 `v2` 继续保留、改挂、还是迁到更窄入口
+
+- 在 option-bridge surface 收紧之后，活跃指导面里又暴露出两条更直接的漂移：
+  - `examples/example_factory_usage.pas`
+    - 还在通过 `Config.BufferSize := ...` / `Config.HandshakeTimeout := ...`
+      演示 `TSSLFactory.CreateContext(...)` 的配置写法
+    - 但这两个字段当前早已被 factory 明确判定为 connection-scoped / transport-adjacent，不属于 context/factory 主路径
+  - `docs/reference/ARCHITECTURE.md`
+    - 还保留一段过时的伪 `TSSLConfig` 结构
+    - 字段名例如 `DefaultLibraryType` / `ProtocolVersion` / `CertificatePath` / `ReadTimeout` / `WriteTimeout`
+      已与当前 public source 明显脱节
+
+- 这说明 `TSSLConfig` 当前不只存在“内部设计债”，还存在“高可见度用户入口仍在教旧模型”的问题：
+  - 如果不先收掉这些 example/reference 漂移，后续即使开始做 slimming design，用户也还会继续从活跃入口学到 mixed-scope 旧写法
+
+- 当前修法刻意保持在 guidance 层，不去碰 runtime：
+  - `examples/example_factory_usage.pas`
+    - 移除 `BufferSize` / `HandshakeTimeout` 的错误示例
+    - 明确把 timeout 导向 `TSSLConnector.WithTimeout` / `ISSLConnection.SetTimeout`
+    - 明确把 buffering 导向外围 socket / stream / transport 配置
+  - `docs/reference/ARCHITECTURE.md`
+    - 把“伪 record 结构”改成当前真实 scope buckets：
+      - library-scoped defaults
+      - context-scoped
+      - connection-scoped
+      - compatibility-only
+
+- 与此同时，example-surface 上故意保留的 direct context API coverage 仍然保持显式分类：
+  - `tests/examples/test_lib_core_functionality.pas`
+    - 继续保留 `INTENTIONAL_API_SURFACE`
+    - 这说明我们这轮修的是“活跃用户指导面”，不是把所有 direct context API 命中都误当成 bug
+
+- 这轮的 focused evidence 也足够干净：
+  - `tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+    - PASS
+    - 守住：
+      - 活跃 example 不得再教 `BufferSize` / `HandshakeTimeout` factory/config 写法
+      - 活跃 architecture reference 不得再回到过时伪结构
+      - example-surface 的 direct context API coverage 继续显式带标签
+  - `examples/example_factory_usage.pas`
+    - focused compile PASS
+    - 说明这次 guidance cleanup 没把示例代码本身改坏
+
+- 因而现在 `TSSLConfig` 这条线又进一步少掉了一个常见重复入口：
+  - 后续不该再回到
+    - “example 里还在教错字段”
+    - “architecture reference 里还是旧 record”
+  - 真正值得开的下一批，已经更明确地只剩：
+    - `TSSLConfig` public-surface slimming / migration design

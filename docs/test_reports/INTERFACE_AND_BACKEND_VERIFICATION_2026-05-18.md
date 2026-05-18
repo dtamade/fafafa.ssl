@@ -1516,3 +1516,51 @@
   - 下一条真正值得开的批次，应进入：
     - `TSSLConfig` slimming / migration design
     - 再往后才是 `ISSLConnection` 核心 surface slimming
+
+## 增量收口：active guidance cleanup
+
+- 在 option-bridge surface truth freeze 之后继续扫活跃 example/reference，可以确认还有一类更直接影响用户理解的漂移：
+  - runtime truth 已经固定
+  - public wording 已经收紧
+  - 但高可见度 example / reference 仍可能继续教 mixed-scope 旧写法
+
+- 这轮 focused audit 命中了两处活跃入口：
+  1. `examples/example_factory_usage.pas`
+     - 还在通过 `Config.BufferSize := 16384`
+       / `Config.HandshakeTimeout := 30000`
+       演示 `TSSLFactory.CreateContext(...)` 的配置写法
+     - 但当前真相里，这两个字段都已被明确定义为 connection-scoped / transport-adjacent，不属于 context/factory 主路径
+  2. `docs/reference/ARCHITECTURE.md`
+     - 还保留一段过时的伪 `TSSLConfig` 结构
+     - 字段名与当前 public source 已明显脱节
+
+- 当前修法保持在 guidance 层：
+  - `examples/example_factory_usage.pas`
+    - 移除 `BufferSize` / `HandshakeTimeout` 的错误配置示例
+    - 明确改成：
+      - timeout -> `TSSLConnector.WithTimeout` / `ISSLConnection.SetTimeout`
+      - buffering -> 外围 socket / stream / transport 配置
+  - `docs/reference/ARCHITECTURE.md`
+    - 不再伪造 `TSSLConfig` record
+    - 改成直接列出当前真实 scope buckets：
+      - library-scoped defaults
+      - context-scoped
+      - connection-scoped
+      - compatibility-only
+
+- 这轮也刻意保留了“example-surface 的 direct context API coverage ≠ 活跃用户指导”的区分：
+  - `tests/examples/test_lib_core_functionality.pas`
+    - 继续显式带 `INTENTIONAL_API_SURFACE`
+    - 所以这次 cleanup 没有误伤被故意保留的 API-surface 覆盖
+
+- focused 验证：
+  - `tests/scripts/test_tsslconfig_active_guidance_truth_contract.sh`
+    - RED -> GREEN
+    - 第一轮只是在合同里误用了过宽的 absence needle，不是 repo truth 回退
+    - 收紧合同后 PASS
+  - `examples/example_factory_usage.pas`
+    - focused compile PASS
+
+- 这一步之后，`TSSLConfig` 这条线已经不只在 source/runtime 上统一，也开始在高可见度活跃指导面上统一：
+  - 后续不该再回到 example/reference guidance cleanup
+  - 下一条真正值得开的批次，已经更明确地只剩 `TSSLConfig` public-surface slimming / migration design
