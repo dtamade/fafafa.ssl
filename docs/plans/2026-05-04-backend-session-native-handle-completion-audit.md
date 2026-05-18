@@ -64,3 +64,17 @@ bash scripts/run_minimal_ci_gate.sh --fast-local
 - `WinSSL` 平台边界与风险已明确记录，不被误写成已证实
 - 若无 RED，形成 completion audit 证据
 - 若有 RED，完成最小修复并让 focused contract、compile gate、minimal CI gate 全绿
+
+## Focused Revalidation Result (2026-05-18)
+
+- `tests/contract/test_backend_contract.pas` 当前已包含 `Contract 15: Session native-handle interface alignment`
+- focused revalidation command：
+  - `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+- 结果：
+  - `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+  - OpenSSL / WolfSSL / MbedTLS 的 session native-handle contract PASS
+  - FreePascal 继续保持 session-level `ISSLNativeHandleAccess` absent 并 PASS
+  - WinSSL 继续按当前 plan 的专门平台边界 SKIP，不把 Linux 主机结果外推成 Windows session truth
+- 本批没有打出 implementation drift，因此不改 `src/` 下 session 类实现
+- 说明：
+  - 本次只补 focused revalidation 证据，不重复重跑 `compile_all_modules.py` / `run_minimal_ci_gate.sh --fast-local`

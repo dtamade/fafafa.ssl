@@ -55,3 +55,17 @@ bash scripts/run_minimal_ci_gate.sh --fast-local
 - context-level early-data / server-OCSP optional interface 已被 capability 双向锁定
 - 若无 RED，形成 completion audit 证据
 - 若有 RED，完成最小修复并让 focused contract、compile gate、minimal CI gate 全绿
+
+## Focused Revalidation Result (2026-05-18)
+
+- `tests/contract/test_backend_contract.pas` 当前已包含 `Contract 12: Context optional interface alignment`
+- focused revalidation command：
+  - `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+- 结果：
+  - `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+  - OpenSSL / WolfSSL / MbedTLS / FreePascal 的 `Contract 12` 全部 PASS
+  - WinSSL 在当前 Linux 主机继续按平台边界 SKIP
+- 本批没有打出 implementation drift，因此不改 `src/` 下 context 类实现
+- 说明：
+  - 本次只补 focused revalidation 证据，不重复重跑 `compile_all_modules.py` / `run_minimal_ci_gate.sh --fast-local`
+  - 因为这批没有生产代码改动，且用户当前明确偏好避免重复拉重门禁

@@ -40,6 +40,23 @@
   - 新增 `docs/plans/2026-05-18-noninteractive-winssl-active-tests.md`
   - `run_winssl_tests.ps1` 的 non-interactive 意图已经与源码重新对齐
   - 剩余 `ReadLn` 命中已主要收缩到 examples / diagnostics / benchmark，而不再是活跃 core/WinSSL 测试主面
+- [completed] backend optional public surface 的 focused completion-audit revalidation 已补齐：
+  - `tests/contract/test_backend_contract.pas` 当前已实际覆盖：
+    - Contract 12: context optional interface alignment
+    - Contract 13: context native-handle interface alignment
+    - Contract 14: context HTTP hooks interface alignment
+    - Contract 15: session native-handle interface alignment
+    - Contract 17: certificate-store native-handle interface alignment
+    - Contract 18: diagnostics interface alignment
+  - 新增 `docs/plans/2026-05-18-backend-optional-surface-completion-audit-revalidation.md`
+  - 6 份旧 plan 中原本缺失的 execution result 现已补成 focused revalidation result
+  - focused 合同当前结果：
+    - `Total Tests: 135`
+    - `Passed: 111`
+    - `Failed: 0`
+    - `Skipped: 24`
+  - OpenSSL / WolfSSL / MbedTLS / FreePascal 的上述 optional surface 当前都已有 live contract 证据
+  - WinSSL 继续按当前 Linux 主机的既有平台边界保持 skip truth，不误写成已本机证实
 - [completed] 第一轮接口/后端真相交叉验证已经完成：
   - 已确认 `ISSLServerConnection` 只存在于活跃文档承诺，不存在于 public source
   - 已确认 context-level `ServerName` 仍由 factory / builder / connection constructors / tests 一起固化
@@ -611,6 +628,37 @@
       - 这条线现在已有 focused contract 护栏
       - 若继续清理 `ReadLn` 残留，只应处理 examples / diagnostics / benchmark 等明确非活跃测试面
       - 更高优先级则应回到 broader interface debt，而不是继续沉在已收口的 active test prompt cleanup
+20. `backend optional-surface completion-audit revalidation` 当前也已完成第一轮收口：
+    - 新 plan：
+      - `docs/plans/2026-05-18-backend-optional-surface-completion-audit-revalidation.md`
+    - 新验证：
+      - `tests/contract/test_backend_contract.pas`
+      - `docs/plans/2026-05-04-backend-context-optional-interface-completion-audit.md`
+      - `docs/plans/2026-05-04-backend-context-native-handle-completion-audit.md`
+      - `docs/plans/2026-05-04-backend-http-hooks-interface-completion-audit.md`
+      - `docs/plans/2026-05-04-backend-session-native-handle-completion-audit.md`
+      - `docs/plans/2026-05-04-backend-certificate-store-native-handle-completion-audit.md`
+      - `docs/plans/2026-05-04-backend-diagnostics-interface-completion-audit.md`
+    - 当前已收口的真实问题：
+      - 上述 6 份 plan 文档虽然对应的 contract 已经实际存在于 `tests/contract/test_backend_contract.pas`
+      - 但文档本身仍缺 execution result，容易让后续会话误判这些 optional public surface 还没真的验证过
+    - 当前修法：
+      - focused 重新编译并运行 `tests/contract/test_backend_contract.pas`
+      - 把 contracts 12-18 的现状证据回写到缺结果的 plan 文档
+      - 明确标成 `Focused Revalidation Result (2026-05-18)`，不虚报未重跑的重门禁
+    - 当前 focused proof 已覆盖：
+      - `tests/contract/test_backend_contract.pas` 当前结果：
+        - `Total Tests: 135`
+        - `Passed: 111`
+        - `Failed: 0`
+        - `Skipped: 24`
+      - OpenSSL / WolfSSL / MbedTLS / FreePascal 的 context optional/native-handle、HTTP hooks、session native-handle、certificate-store native-handle、diagnostics surface 全部 PASS
+      - WinSSL 继续按 Linux 主机平台边界 SKIP；`Contract 15` 也继续明确 session truth 需要 dedicated Windows batch
+    - 下一条相关路线不该再回到“这些 optional surface 可能还没验证过”的怀疑：
+      - 当前缺口已经从“缺 contract/缺结果”收成“已有 focused live proof”
+      - 更高优先级应回到 broader interface debt：
+        - `TSSLConfig` public-surface slimming 后续
+        - `ISSLConnection` 核心 surface slimming / completion audit
 
 ## Verification Discipline
 

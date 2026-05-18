@@ -72,3 +72,17 @@ bash scripts/run_minimal_ci_gate.sh --fast-local
 - certificate/store native-handle truth 已被 cross-backend contract 锁住
 - 若 RED 暴露真实漂移，最小修复已经完成并验证通过
 - `task_plan.md` / `findings.md` / `progress.md` 已写回本批证据
+
+## Focused Revalidation Result (2026-05-18)
+
+- `tests/contract/test_backend_contract.pas` 当前已包含 `Contract 17: Certificate-store native-handle interface alignment`
+- focused revalidation command：
+  - `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+- 结果：
+  - `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+  - OpenSSL / WolfSSL / MbedTLS 的 certificate-store native-handle contract PASS
+  - FreePascal 继续保持 certificate-store `ISSLNativeHandleAccess` absent 并 PASS
+  - WinSSL 在当前 Linux 主机继续按平台边界 SKIP
+- 本批没有打出 implementation drift，因此不改 `src/` 下 certificate/store 实现
+- 说明：
+  - 本次只补 focused revalidation 证据，不重复重跑 `compile_all_modules.py` / `run_minimal_ci_gate.sh --fast-local`

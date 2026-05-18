@@ -1376,4 +1376,60 @@
 - 反过来讲，这也意味着总体主路线可以重新抬回更高层：
   - `TSSLConfig` broader slimming / freeze 后续
   - 或 `ISSLConnection` 核心 surface slimming roadmap
+
+- 在把主测试面的交互尾巴收干净之后，这轮又确认了另一个“看起来像未完成、其实主要缺 execution receipt”的文档缺口：
+  - `docs/plans/2026-05-04-backend-context-optional-interface-completion-audit.md`
+  - `docs/plans/2026-05-04-backend-context-native-handle-completion-audit.md`
+  - `docs/plans/2026-05-04-backend-http-hooks-interface-completion-audit.md`
+  - `docs/plans/2026-05-04-backend-session-native-handle-completion-audit.md`
+  - `docs/plans/2026-05-04-backend-certificate-store-native-handle-completion-audit.md`
+  - `docs/plans/2026-05-04-backend-diagnostics-interface-completion-audit.md`
+  - 这些 plan 都已经对应到 `tests/contract/test_backend_contract.pas` 里的真实 contract，
+    但文档本身还缺 execution result
+
+- live 代码检查把这一点说得很明确：
+  - `tests/contract/test_backend_contract.pas` 当前已包含：
+    - Contract 12: Context optional interface alignment
+    - Contract 13: Context native-handle interface alignment
+    - Contract 14: Context HTTP hooks interface alignment
+    - Contract 15: Session native-handle interface alignment
+    - Contract 17: Certificate-store native-handle interface alignment
+    - Contract 18: Diagnostics interface alignment
+  - 换句话说，问题不在“contract 还没写”，而在“文档还没留下当前验证结果”
+
+- 这条缺口如果不收，会继续误导总路线图判断：
+  - 后续新会话很容易把这些 interface surface 当成“也许还没真正审过”
+  - 结果就是重复拉起同一批 optional-surface 审计，而不是继续推进更高层的 design debt
+
+- 当前最合适的修法因此不是重开大设计，而是做一次 focused completion-audit revalidation：
+  - 重新编译并运行 `tests/contract/test_backend_contract.pas`
+  - 直接用 live 结果给这 6 份 plan 补 `Focused Revalidation Result (2026-05-18)`
+  - 同时明确说明：本批没有重跑 `compile_all_modules.py` / `run_minimal_ci_gate.sh --fast-local`，因为没有生产代码改动，且当前工作流明确避免重复拉重门禁
+
+- focused evidence 进一步确认这批不是在补“纸面文档”：
+  - 6 份 plan 全部被 source scan 证实 `MISSING_RESULT`
+  - `tests/contract/test_backend_contract.pas` 当前 focused run 结果：
+    - `Total Tests: 135`
+    - `Passed: 111`
+    - `Failed: 0`
+    - `Skipped: 24`
+  - OpenSSL / WolfSSL / MbedTLS / FreePascal 上述 optional public surface 全部 PASS
+  - WinSSL 继续保持已有平台边界 truth：
+    - 当前 Linux 主机不把 WinSSL backend 当作 live runtime truth
+    - session native-handle 仍明确需要 dedicated Windows batch
+
+- 这让“接口设计/实现完整性”的证据盘又收紧了一层：
+  - context optional interfaces
+  - context native-handle
+  - context HTTP hooks
+  - session native-handle
+  - certificate-store native-handle
+  - diagnostics
+  这些 surface 现在不只是“有计划”，而是已经有 focused live contract 结果
+
+- 因而总体路线图可以更安心地继续前移：
+  - 不需要再怀疑这些 optional surface 是否缺 backend contract
+  - 下一条高优先级应重新回到 broader interface debt：
+    - `TSSLConfig` public-surface slimming 后续
+    - 或 `ISSLConnection` 核心 surface slimming / completion audit
   - 这些现在比继续清手工示例程序的 `ReadLn` 更接近“接口设计完整”这个总目标

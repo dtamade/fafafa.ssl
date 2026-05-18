@@ -2768,3 +2768,51 @@
   - result: PASS
   - summary:
     - current noninteractive WinSSL active test batch has no whitespace or patch-format issues
+
+### Backend Optional-Surface Completion-Audit Revalidation
+
+- `for f in docs/plans/2026-05-04-backend-context-optional-interface-completion-audit.md docs/plans/2026-05-04-backend-context-native-handle-completion-audit.md docs/plans/2026-05-04-backend-http-hooks-interface-completion-audit.md docs/plans/2026-05-04-backend-session-native-handle-completion-audit.md docs/plans/2026-05-04-backend-certificate-store-native-handle-completion-audit.md docs/plans/2026-05-04-backend-diagnostics-interface-completion-audit.md; do ...; done`
+  - result: PASS
+  - summary:
+    - all 6 targeted backend completion-audit plans were confirmed to be missing execution-result sections
+    - this proved the next gap was documentation/evidence completeness, not missing contract code
+
+- `rg -n "Contract [0-9]+:|ISSLHttpHooksAccess|ISSLDiagnostics|ISSLNativeHandleAccess|ISSLEarlyDataContext|ISSLServerOCSPStaplingContext" tests/contract/test_backend_contract.pas`
+  - result: PASS
+  - summary:
+    - `tests/contract/test_backend_contract.pas` already contains Contracts 12-18 for the targeted optional surfaces
+    - the repo therefore already had the right focused verifier; it just lacked current execution receipts in the plan docs
+
+- add `docs/plans/2026-05-18-backend-optional-surface-completion-audit-revalidation.md`
+  - purpose:
+    - define a bounded evidence-closeout batch for backend optional public surfaces already covered by `test_backend_contract`
+    - keep scope on focused revalidation instead of reopening broader design work
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - GREEN result: PASS
+  - summary:
+    - focused contract suite finished `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+    - OpenSSL / WolfSSL / MbedTLS / FreePascal all passed:
+      - Contract 12: context optional interface alignment
+      - Contract 13: context native-handle interface alignment
+      - Contract 14: context HTTP hooks interface alignment
+      - Contract 15: session native-handle interface alignment
+      - Contract 17: certificate-store native-handle interface alignment
+      - Contract 18: diagnostics interface alignment
+    - WinSSL continued to skip on the current Linux host, and session native-handle kept the dedicated Windows-batch boundary
+
+- update:
+  - `docs/plans/2026-05-04-backend-context-optional-interface-completion-audit.md`
+  - `docs/plans/2026-05-04-backend-context-native-handle-completion-audit.md`
+  - `docs/plans/2026-05-04-backend-http-hooks-interface-completion-audit.md`
+  - `docs/plans/2026-05-04-backend-session-native-handle-completion-audit.md`
+  - `docs/plans/2026-05-04-backend-certificate-store-native-handle-completion-audit.md`
+  - `docs/plans/2026-05-04-backend-diagnostics-interface-completion-audit.md`
+  - change:
+    - add `Focused Revalidation Result (2026-05-18)` sections
+    - record the live `test_backend_contract` outcome without falsely claiming the heavy compile/minimal-ci gates were rerun in this batch
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current backend optional-surface completion-audit revalidation batch has no whitespace or patch-format issues
