@@ -5543,3 +5543,63 @@
   - result: PASS
   - summary:
     - current `WinSSL session capability/docs truth alignment` batch has no whitespace or patch-format issues
+
+### WinSSL Session Cache Runtime Flag Alignment
+
+- `rg -n "FCredHandle|EnsureCredentialsAcquired|SetSessionCacheMode|SetOptions|SCH_CRED_DISABLE_RECONNECTS|InitializeSecurityContextW" src/fafafa.ssl.winssl.context.pas src/fafafa.ssl.winssl.connection.pas`
+  - result: PASS
+  - summary:
+    - confirmed WinSSL reuses the context-level `CredHandle` across connections
+    - confirmed this handle is the canonical runtime carrier for Schannel reconnect behavior
+    - confirmed the real implementation gap lived in the context layer, not in a per-connection credential re-acquire path
+
+- add `docs/plans/2026-05-18-winssl-session-cache-runtime-flag-alignment.md`
+  - purpose:
+    - define a bounded WinSSL implementation-completeness batch for session-cache/ticket runtime flag wiring
+    - keep scope off already-closed shared crash / docs truth lanes
+
+- add `tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`
+  - purpose:
+    - fail if WinSSL session-cache/ticket context controls still stay at Pascal-field level
+    - lock credential-rebuild and `SCH_CRED_DISABLE_RECONNECTS` mapping truth with a cheap focused contract
+
+- first run of `bash -n tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh && bash tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`
+  - result: RED
+  - summary:
+    - first failure was a contract bug only: the regex missed the no-argument `EnsureCredentialsAcquired;` declaration
+    - this was fixed before production edits so the RED would target real implementation drift
+
+- update `tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`
+  - change:
+    - widen the procedure matcher to handle no-argument context methods correctly
+
+- second run of `bash tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`
+  - result: RED
+  - summary:
+    - confirmed the real implementation gap: `SetSessionCacheMode(...)` still did not force credential rebuild
+
+- update `src/fafafa.ssl.winssl.context.pas`
+  - change:
+    - `SetSessionCacheMode(...)` now marks `FCredentialsNeedRebuild := True`
+    - `SetOptions(...)` now also marks `FCredentialsNeedRebuild := True`
+    - `EnsureCredentialsAcquired` now maps disabled session-cache or disabled session-tickets truth to `SCH_CRED_DISABLE_RECONNECTS`
+
+- final run of `bash tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`
+  - result: PASS
+  - summary:
+    - WinSSL session-cache/ticket controls now affect credential acquisition instead of staying as field-only bookkeeping
+
+- `mkdir -p tmp/winssl_session_cache_runtime_flag_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_session_cache_runtime_flag_win64 -FEtmp/winssl_session_cache_runtime_flag_win64 -otmp/winssl_session_cache_runtime_flag_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - Win64 cross-target session-resumption proof still compiles after the context-layer wiring fix
+    - compile completed with the repo's existing warning baseline only
+
+- update `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+  - change:
+    - record that session-cache / session-ticket disablement now flows into `SCH_CRED_DISABLE_RECONNECTS` and triggers credential rebuild
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `WinSSL session cache runtime flag alignment` batch has no whitespace or patch-format issues

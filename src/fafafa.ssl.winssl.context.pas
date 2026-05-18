@@ -329,6 +329,14 @@ begin
   SchannelCred.dwFlags := SCH_CRED_NO_DEFAULT_CREDS or
                           SCH_CRED_MANUAL_CRED_VALIDATION;
 
+  // Schannel only exposes one reconnect toggle on the credential surface.
+  // When session cache or session tickets are disabled at the fafafa.ssl
+  // context layer, map both truths to "disable reconnects" so the acquired
+  // credential handle no longer advertises resumable reconnect behavior.
+  if (not FSessionCacheEnabled) or
+     (not (ssoEnableSessionTickets in FOptions)) then
+    SchannelCred.dwFlags := SchannelCred.dwFlags or SCH_CRED_DISABLE_RECONNECTS;
+
   // 任务 2.1: 服务端凭据配置 - 服务端必须包含证书
   if FContextType = sslCtxServer then
   begin
@@ -1051,8 +1059,11 @@ end;
 
 procedure TWinSSLContext.SetSessionCacheMode(AEnabled: Boolean);
 begin
+  if FSessionCacheEnabled = AEnabled then
+    Exit;
+
   FSessionCacheEnabled := AEnabled;
-  // Schannel自动管理会话缓存
+  FCredentialsNeedRebuild := True;
 end;
 
 function TWinSSLContext.GetSessionCacheMode: Boolean;
@@ -1087,6 +1098,7 @@ end;
 procedure TWinSSLContext.SetOptions(const AOptions: TSSLOptions);
 begin
   FOptions := AOptions;
+  FCredentialsNeedRebuild := True;
   ApplyOptions;
 end;
 

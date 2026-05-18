@@ -1483,6 +1483,31 @@
       - 不再重开 capability/docs truth alignment 或 shared-crash proof lane
       - 直接进入 WinSSL backend native resumed-handshake / session tickets 行为调查
       - 或切回更大的 backend implementation completeness 横向审查
+56. `WinSSL session cache runtime flag alignment` 已完成并应作为当前 WinSSL context-level session-control truth 基线保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-winssl-session-cache-runtime-flag-alignment.md`
+    - 当前已确认的 route truth：
+      - `src/fafafa.ssl.winssl.context.pas`
+        当前 context-level `CredHandle` 仍是 WinSSL reconnect/runtime 的 canonical carrier
+      - `SetSessionCacheMode(...)`
+        不再只是改 `FSessionCacheEnabled`，现在会显式触发 `FCredentialsNeedRebuild := True`
+      - `SetOptions(...)`
+        不再只是改 `FOptions`，现在会在 session/ticket-related option 变化后显式触发 credential rebuild
+      - `EnsureCredentialsAcquired`
+        现在会在：
+        - `not FSessionCacheEnabled`
+        - 或 `not (ssoEnableSessionTickets in FOptions)`
+        时把 disable truth 映射到 `SCH_CRED_DISABLE_RECONNECTS`
+      - 这说明 WinSSL 的 `session cache / session tickets` context surface 已不再只是 Pascal-level bookkeeping，而是开始真实影响 Schannel credential acquisition
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`
+      - `bash tests/scripts/test_winssl_session_cache_runtime_flag_contract.sh`
+      - `mkdir -p tmp/winssl_session_cache_runtime_flag_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_session_cache_runtime_flag_win64 -FEtmp/winssl_session_cache_runtime_flag_win64 -otmp/winssl_session_cache_runtime_flag_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+      - `git diff --check`
+    - 当前批收口后默认下一步应为：
+      - 在这个新的 context/runtime 基线上继续追 native resumed-handshake 观测
+      - 优先调查为什么 current Windows proof 仍停在 `observed_reuse=false`
+      - 不再把 session cache / ticket option runtime wiring 当成未知缺口重复拉起
 
 ## Verification Discipline
 

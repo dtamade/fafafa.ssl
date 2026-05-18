@@ -2490,3 +2490,23 @@
     - shared crash 已关闭
     - native resumed-handshake 仍未在 fafafa.ssl 中被 dedicated Windows proof 证实
   - 因而下一步不该再反复做 docs/capability truth 清扫，而应直接转向 native resumed-handshake / session tickets 行为调查
+
+- 在继续往 WinSSL native resumed-handshake 深挖时，又确认了一条真正的 context/runtime 实现缺口：
+  - `TWinSSLContext` 虽然暴露了 `SetSessionCacheMode(...)`、`SetOptions(...)`、`ssoEnableSessionTickets`
+  - 但 `EnsureCredentialsAcquired` 原先没有把这些 truth 映射到 Schannel `dwFlags`
+  - setter 也没有触发 credential rebuild
+  - 这意味着 session cache / tickets 在 WinSSL 上一度只是“Pascal 字段有值”，而不是“runtime credential path 真的响应”
+
+- 这条缺口比继续猜测 server/runtime 行为更值得先收，因为它位于更上游的 canonical context layer：
+  - `TWinSSLContext` 复用同一个 `CredHandle` 给多条连接
+  - 这正是 Schannel reconnect / session cache 的关键 carrier
+  - 如果这里的 option truth 都没下沉到 credential acquisition，那么后面看到的 `observed_reuse=false` 至少一部分会被这个 wiring 缺口污染
+
+- 当前修完后的更准确结论是：
+  - `SetSessionCacheMode(...)` 改变后会要求重建 credential
+  - `SetOptions(...)` 改变后也会要求重建 credential
+  - `EnsureCredentialsAcquired` 会把：
+    - `not FSessionCacheEnabled`
+    - `not (ssoEnableSessionTickets in FOptions)`
+    映射成 `SCH_CRED_DISABLE_RECONNECTS`
+  - 这还不等于 WinSSL 已经稳定命中 resumed handshake，但至少把“context-level session controls 其实没接到 runtime”这条实现缺口先关掉了
