@@ -1564,3 +1564,45 @@
 - 这一步之后，`TSSLConfig` 这条线已经不只在 source/runtime 上统一，也开始在高可见度活跃指导面上统一：
   - 后续不该再回到 example/reference guidance cleanup
   - 下一条真正值得开的批次，已经更明确地只剩 `TSSLConfig` public-surface slimming / migration design
+
+## 增量收口：public-surface slimming roadmap
+
+- 在 scope truth、compatibility surface、active guidance 都收口之后，`TSSLConfig` 这条线仍然缺最后一块执行资料：
+  - 我们已经知道哪些字段是 mixed-scope / compatibility debt
+  - 但如果没有字段级 migration map，后续每次继续都还要先重答一遍：
+    - 这个字段现在推荐怎么用？
+    - `v2` 要迁去哪？
+    - 哪条线最适合先动实现？
+
+- 这轮因此没有直接开 removal / refactor，而是把当前真相压成一份真正可执行的 migration matrix：
+  - `docs/reference/API_REFERENCE.md`
+    - 新增 `TSSLConfig Migration Targets`
+  - `docs/plans/2026-05-18-tsslconfig-public-surface-slimming-roadmap.md`
+    - 新增 dedicated roadmap
+
+- 当前已固定的字段级迁移决策：
+  - `LogLevel` / `LogCallback`
+    - library defaults surface
+  - `HandshakeTimeout` / `BufferSize`
+    - connection / transport surface
+  - `ServerName`
+    - per-connection SNI surface
+  - `EnableCompression` / `EnableSessionTickets` / `EnableOCSPStapling`
+    - `Options` / builder `WithOption(...)`
+  - 其余 context-safe 字段
+    - 继续留在 `TSSLConfig` 主路径
+
+- 这一步的真正价值不是“又多了一份文档”，而是：
+  - 后续不需要再重新分析 mixed-scope 字段的替代入口
+  - `TSSLConfig` slimming 已经从抽象方向变成字段级实施队列
+
+- focused 验证：
+  - `tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+    - PASS
+
+- 这一步之后，`TSSLConfig` 主线的 next route 也终于更具体了：
+  - 不再是泛泛地说“开始 slimming”
+  - 而是从 migration matrix 里挑第一条真正的实现切片
+  - 当前最优先候选是：
+    - `LogLevel` / `LogCallback` library-default detachment
+    - 因为它们已经被 factory request path reject，且替代入口稳定存在，兼容风险比 `ServerName` / option-bridge 更低

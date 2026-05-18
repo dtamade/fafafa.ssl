@@ -1076,3 +1076,31 @@
     - “architecture reference 里还是旧 record”
   - 真正值得开的下一批，已经更明确地只剩：
     - `TSSLConfig` public-surface slimming / migration design
+
+- 这轮已经把 `TSSLConfig` 的 slimming / migration design 从“抽象建议”推进成了字段级决策：
+  - `docs/reference/API_REFERENCE.md`
+    - 新增 `TSSLConfig Migration Targets`
+    - 把 mixed-scope / compatibility 字段逐一映射到当前推荐入口与 `v2` 方向
+  - `docs/plans/2026-05-18-tsslconfig-public-surface-slimming-roadmap.md`
+    - 把这份 map 落成了可执行 roadmap，而不是只留一句“以后再 slimming”
+
+- 这份 migration matrix 当前已经明确了 4 条后续实现主线：
+  - `LogLevel` / `LogCallback`
+    - library defaults surface
+  - `HandshakeTimeout` / `BufferSize`
+    - connection / transport surface
+  - `ServerName`
+    - per-connection SNI surface
+  - `EnableCompression` / `EnableSessionTickets` / `EnableOCSPStapling`
+    - `Options` / builder `WithOption(...)`
+
+- 这一步的价值在于：
+  - 后续不需要每次先重做“这些字段该迁去哪”的分析
+  - 真正的实现批次可以直接从这 4 条线里挑最小切片
+
+- 当前最适合率先进入实现的，不再是 `ServerName` 或 option-bridge：
+  - 这两条线虽然已经冻结 truth，但兼容历史更重
+  - 更稳的第一刀应是 `LogLevel` / `LogCallback`：
+    - 它们已经被 factory request path 明确拒绝
+    - 替代入口也已经稳定存在于 `ISSLLibrary` defaults surface
+    - 因而最适合作为 `TSSLConfig` slimming 的第一条真正实现切片

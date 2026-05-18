@@ -73,12 +73,15 @@ Recommended first bounded batch:
   - option-bridge conflict precedence freeze
   - option-bridge surface truth freeze
   - active guidance cleanup
+  - public-surface slimming roadmap
 
 - 当前更准确的 next step：
   - 不再继续讨论 “`Options` vs legacy booleans 到底谁赢”
   - 不再继续补 option-bridge public wording / test labels
   - 不再继续补 example/reference guidance cleanup
-  - 转向真正的 `TSSLConfig` public-surface slimming / migration 设计
+  - 不再继续停留在抽象 slimming 讨论；字段级 migration map 已就位
+  - 转向第一条真正的 `TSSLConfig` slimming 实现切片
+  - 当前最优先候选：`LogLevel` / `LogCallback` library-default detachment
   - 只有这条线稳定后，再考虑是否进入 `ISSLConnection` 核心 surface slimming
 
 ## Not The Next Step

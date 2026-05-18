@@ -407,6 +407,20 @@
     - 下一条相关路线不该再回到高可见度 guidance cleanup：
       - 若继续推进，应进入真正的 `TSSLConfig` public-surface slimming / migration design
       - 而不是继续修 example/reference 漂移
+13. `TSSLConfig public-surface slimming roadmap` 当前也已完成第一轮收口：
+    - 新 plan：
+      - `docs/plans/2026-05-18-tsslconfig-public-surface-slimming-roadmap.md`
+    - 新验证：
+      - `tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+    - 当前已固定的字段级迁移决策：
+      - `LogLevel` / `LogCallback` -> library defaults surface
+      - `HandshakeTimeout` / `BufferSize` -> connection / transport surface
+      - `ServerName` -> per-connection SNI surface
+      - `EnableCompression` / `EnableSessionTickets` / `EnableOCSPStapling` -> `Options` / `WithOption(...)`
+      - context-safe 字段继续留在 `TSSLConfig` 主路径
+    - 下一条相关路线不该再回到“先补一份 migration map”：
+      - 若继续推进，应在上述 buckets 中挑第一条最小实现切片
+      - 当前最优先候选是 `LogLevel` / `LogCallback` 的 library-default detachment
 
 ## Verification Discipline
 

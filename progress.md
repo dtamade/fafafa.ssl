@@ -2292,3 +2292,33 @@
   - result: PASS
   - summary:
     - current active-guidance-cleanup batch has no whitespace or patch-format issues
+
+### TSSLConfig Public-Surface Slimming Roadmap
+
+- add `docs/plans/2026-05-18-tsslconfig-public-surface-slimming-roadmap.md`
+  - purpose:
+    - turn the already-proved TSSLConfig scope truth into a field-level migration matrix that can drive future implementation batches
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - add `TSSLConfig Migration Targets`
+    - map:
+      - `LogLevel` / `LogCallback` -> library defaults surface
+      - `HandshakeTimeout` / `BufferSize` -> connection / transport surface
+      - `ServerName` -> per-connection SNI surface
+      - option-bridge booleans -> `Options` / `WithOption(...)`
+    - record the current `v1.x` status and the intended `v2` direction for each family
+
+- add `tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+  - purpose:
+    - keep the API migration map and the dedicated slimming roadmap synchronized
+
+- `bash -n tests/scripts/test_tsslconfig_migration_targets_contract.sh && bash tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+  - result: PASS
+  - summary:
+    - the migration matrix holds across both the API reference and the dedicated roadmap doc
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current slimming-roadmap batch has no whitespace or patch-format issues

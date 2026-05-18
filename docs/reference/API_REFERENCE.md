@@ -70,6 +70,53 @@
 
 ---
 
+## TSSLConfig Migration Targets
+
+`TSSLConfig` 在 `v1.x` 仍然保留为 public record，但 mixed-scope / compatibility 字段已经不再适合作为未来主路径。当前推荐把迁移方向理解成下面这张 field-to-surface map。
+
+- 继续保留在 context-safe `TSSLConfig` 主路径
+  - `ProtocolVersions` / `PreferredVersion`
+  - `CertificateFile` / `PrivateKeyFile` / `PrivateKeyPassword`
+  - `CAFile` / `CAPath` / `VerifyMode` / `VerifyDepth`
+  - `CipherList` / `CipherSuites` / `Options`
+  - `SessionCacheSize` / `SessionTimeout`
+  - `ALPNProtocols`
+  - `ClientEarlyDataEnabled`
+  - `ServerEarlyDataPolicy` / `ServerMaxEarlyDataSize`
+  - `ServerEarlyDataReplayStoreFile` / `ServerEarlyDataReplayStoreDirectory`
+- 迁移到 library defaults surface
+  - `LogLevel`
+    - 当前推荐入口：`ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)`
+  - `LogCallback`
+    - 当前推荐入口：`ISSLLibrary.SetLogCallback(...)`
+  - `v2` 方向：不再把 library defaults 混在 context/request config record 中。
+- 迁移到 connection / transport surface
+  - `HandshakeTimeout`
+    - 当前推荐入口：`TSSLConnector.WithTimeout(...)` / `TSSLAcceptor.WithTimeout(...)` / `ISSLConnection.SetTimeout(...)`
+  - `BufferSize`
+    - 当前推荐入口：外围 socket / stream / transport / app-level buffer policy
+  - `v2` 方向：从 context factory record 中移出这类 connection-adjacent 字段。
+- 迁移到 per-connection SNI surface
+  - `ServerName`
+    - 当前推荐入口：`TSSLConnectionBuilder.WithHostname(...)` / `ISSLClientConnection.SetServerName(...)` / `TSSLConnector.Connect*(..., ServerName)`
+  - `v1.x` 状态：冻结为 deprecated compatibility-only context field
+  - `v2` 方向：不再作为 context-level config field 继续主挂载。
+- 迁移到 option-set surface
+  - `EnableCompression`
+  - `EnableSessionTickets`
+  - `EnableOCSPStapling`
+  - 当前推荐入口：直接写 `Options`，或 builder 的 `WithOption(...)` / option snapshot path
+  - `v1.x` 状态：冻结为 compatibility-only option-bridge booleans
+  - `v2` 方向：不再把这组三个 legacy booleans 当成正常首选写入口。
+
+这个 migration map 的目的不是立即删字段，而是把后续 slimming / redesign 的执行顺序稳定下来：
+
+1. 先停止把 mixed-scope / compatibility 字段继续当成主路径教给调用方。
+2. 再决定 `v2` 是拆成独立 config type，还是改成更窄的 dedicated surface。
+3. 最后才做真正的 public API removal / remount。
+
+---
+
 ## Direct-Library Default Config Note
 
 `ISSLLibrary.SetDefaultConfig(...)` + `ISSLLibrary.CreateContext(AType)` 这条 direct-library path 现在也按统一规则应用一组 context-safe 默认配置，不再只在 OpenSSL 上看起来“比较完整”。
