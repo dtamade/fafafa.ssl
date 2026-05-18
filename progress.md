@@ -3548,3 +3548,63 @@
   - summary:
     - reran the lightweight `GetSelectedALPNProtocol` residual allowlist proof after the final planning-file sync
     - no extra Pascal rerun was needed because only planning files changed after the allowlist contract passed
+
+### GetConnectionInfo Residual Classification Freeze
+
+- `rg -n '\b(?:Conn|LConn|LConnection)\.GetConnectionInfo\b|GetConnectionInfo\(' tests docs src --glob '!docs/archive/**' --glob '!docs/plans/**' --glob '!tests/scripts/**'`
+  - result: PASS
+  - summary:
+    - confirmed active docs and ordinary tests no longer used direct core `GetConnectionInfo`
+    - confirmed the remaining direct-core residuals were already limited to backend-contract mirror proof plus OpenSSL/WinSSL backend-specific files
+
+- add `docs/plans/2026-05-18-getconnectioninfo-residual-classification-freeze.md`
+  - purpose:
+    - define a bounded allowlist-freeze batch so `GetConnectionInfo` no longer requires repeated residual-hit archaeology
+
+- add `tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - purpose:
+    - freeze the current `GetConnectionInfo` direct-core residual file set into a cheap allowlist contract
+    - fail if active docs/tests or new files reintroduce direct core `GetConnectionInfo`
+
+- first run of `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - result: RED
+  - summary:
+    - the new residual contract correctly caught the missing source-level preferred-access note in `src/fafafa.ssl.base.pas`
+    - this confirmed the batch still had real source-facing truth drift before comment updates
+
+- update:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.connection.base.pas`
+  - change:
+    - add explicit preferred-access / owner notes for `GetConnectionInfo`
+    - spell out the current residual direct-core surface at the shared base-class comment level
+
+- `bash -n tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - new `GetConnectionInfo` residual-classification contract script is syntactically valid
+
+- `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - `GetConnectionInfo` residual direct-core surface now matches the expected allowlist
+    - active docs/tests no longer reintroduce direct core `GetConnectionInfo`
+
+- update `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - mark the residual-classification freeze as delivered
+    - move the next route decision to stronger wording vs. backend implementation-completeness review
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `GetConnectionInfo residual classification freeze` batch has no whitespace or patch-format issues
+
+- closeout revalidation before commit:
+  - `bash -n tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - `git diff --check`
+  - result: PASS
+  - summary:
+    - reran the lightweight `GetConnectionInfo` residual allowlist proof after the final planning-file sync
+    - no extra Pascal rerun was needed because only planning files changed after the allowlist contract passed

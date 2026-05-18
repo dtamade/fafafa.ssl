@@ -1673,3 +1673,19 @@
   - ordinary docs/tests 全部优先走 `ISSLConnectionInfo.GetSelectedALPNProtocol`
   - direct core getter 只剩 contract mirror proof 与 backend-specific runtime residuals
   - 因而下一刀更适合讨论 stronger client-owner / deprecation wording，或者把主线切到 `GetConnectionInfo`
+
+- `GetConnectionInfo` 和前 3 条 mirror 不一样，它在开始这批之前就已经没有 ordinary docs/tests 的 direct-core 教学残留：
+  - direct core `GetConnectionInfo` 命中一开始就只剩 backend contract mirror proof 与 backend-specific OpenSSL/WinSSL files
+  - 这意味着它不需要再走一轮 active-test de-emphasis，可以直接 freeze allowlist
+
+- 当 `GetConnectionInfo` 的 residual surface 缩到这组 backend-specific / contract files 后，这条线也进入了和另外 3 条 mirror 相同的状态：
+  - ordinary docs/tests 全部优先走 `ISSLConnectionInfo.GetConnectionInfo`
+  - source comments 明确 preferred-access / owner / residual-surface truth
+  - direct core getter 只剩 contract mirror proof 与 backend-specific runtime/contract residuals
+
+- 到这一步，`ISSLConnectionInfo` 这 4 条 Stage-A mirror 路线已经全部完成 residual freeze：
+  - `GetConnectionInfo`
+  - `GetContext`
+  - `GetSelectedALPNProtocol`
+  - `GetStateString`
+  - 因而主线应从“继续找残余”切换成“更强 owner/deprecation 决策”或“backend implementation-completeness 审查”

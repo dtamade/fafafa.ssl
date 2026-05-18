@@ -877,6 +877,21 @@
       - `git diff --check`
       - 新 contract 当前 PASS
     - 当前批收口后，`GetSelectedALPNProtocol` 就不再需要继续做 evidence cleanup，可以决定是进入更强 client-owner / deprecation wording，还是切到 `GetConnectionInfo`
+33. `GetConnectionInfo residual classification freeze` 现在应作为这组 mirrors 的最后一条 allowlist 固化：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getconnectioninfo-residual-classification-freeze.md`
+    - 当前 remaining surface：
+      - direct core `GetConnectionInfo` 已从 active docs 与 ordinary tests 退出
+      - 当前 residual 只剩 backend contract mirror proof、OpenSSL backend-specific connection-info contract test 与 WinSSL backend-specific runtime/edge-case tests
+    - 当前修法：
+      - 在 source comments 中补 `GetConnectionInfo` 的 preferred-access / owner / residual-surface 说明
+      - 新增 focused allowlist contract，守住 direct core residual file set
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+      - `git diff --check`
+      - 新 contract 当前 PASS
+    - 当前批收口后，`GetConnectionInfo` 也不再需要继续做 evidence cleanup，`ISSLConnectionInfo` 这 4 条 Stage-A mirror 路线将全部进入 post-freeze 决策阶段
 
 ## Verification Discipline
 

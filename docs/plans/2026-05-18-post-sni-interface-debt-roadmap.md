@@ -253,6 +253,25 @@ Recommended first bounded batch:
     1. 讨论 `GetSelectedALPNProtocol` 的更强 client-owner / deprecation wording route
     2. 把主线切到 `GetConnectionInfo`
 
+## Progress Since The GetSelectedALPN Residual-Classification Batch
+
+- 已交付：
+  - `GetConnectionInfo` residual classification freeze
+  - `src/fafafa.ssl.base.pas` / `src/fafafa.ssl.connection.base.pas` 已补 preferred-access / owner / residual-surface notes
+  - focused allowlist contract `tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+
+- 当前更准确的 next step：
+  - `GetConnectionInfo` 的 remaining direct-core surface 已稳定冻结到：
+    - backend contract mirror proof
+    - OpenSSL backend-specific connection-info contract test
+    - WinSSL backend-specific connection-info / edge-case tests
+  - 这说明 `GetConnectionInfo` 当前也不再需要继续做 evidence cleanup
+  - 并且 `GetConnectionInfo` / `GetContext` / `GetSelectedALPNProtocol` / `GetStateString`
+    这 4 条 `ISSLConnectionInfo` Stage-A mirror 路线都已完成 residual freeze
+  - 下一批应在两条路径里二选一：
+    1. 进入更强的 owner / deprecation wording route
+    2. 转向基于这些 residual files 的 backend implementation-completeness 审查
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

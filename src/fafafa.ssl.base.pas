@@ -1206,6 +1206,7 @@ type
 
     {** 获取连接详细信息
         @returns 连接信息记录
+        @preferred-access 新代码优先通过 ISSLConnectionInfo.GetConnectionInfo 获取
         @compatibility-note v1.x compatibility-core mirror; Stage-A demotion target is ISSLConnectionInfo *}
     function GetConnectionInfo: TSSLConnectionInfo;
 
@@ -1545,7 +1546,8 @@ type
   ISSLConnectionInfo = interface
     ['{C2D3E4F5-A6B7-8C9D-0E1F-2A3B4C5D6E7F}']
 
-    {** 获取连接详细信息 *}
+    {** 获取连接详细信息
+        @owner-note 当前连接信息记录的默认 owner；ISSLConnection.GetConnectionInfo 保留为 v1.x compatibility mirror *}
     function GetConnectionInfo: TSSLConnectionInfo;
 
     {** 获取关联的上下文
