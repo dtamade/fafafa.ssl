@@ -946,14 +946,13 @@
 ### 下一批最值得做的事
 
 1. 进入 final public surface cleanup prep
-   - builder / factory 的高层写入面已经全部变成 `warning + ignore`
+   - `TSSLConfig.ServerName` 这条线现在已经冻结成 `v1.x` compatibility-only field，不再是当前待定项
    - `WithSNI(...)` 现在也已经是 compiler-level `deprecated`
    - direct OpenSSL library default-config path 也已完成对齐
    - direct `ISSLContext.SetServerName/GetServerName` 已成为最后仍可观察的 context-level compatibility surface
    - 下一步应优先评估：
-     - `TSSLConfig.ServerName` 是否继续保留当前字段位置
-     - `WithSNI(...)` 是否继续保留当前命名/入口，还是继续朝更窄的 compatibility surface 收口
      - direct context compatibility API 未来如何降格、替代或加 contract 护栏
+     - `WithSNI(...)` 是否继续保留当前命名/入口，还是继续朝更窄的 compatibility surface 收口
 
 2. `TSSLConfig` 拆层与 capability model presence bits 仍然排在后面
    - 它们是更大的设计债，不是当前 SNI 迁移主线的下一刀
@@ -1014,7 +1013,43 @@
 ## 当前最重要的路线判断补充
 
 - `WithSNI(...)` 已不再属于“还要继续证明它是不是 compatibility-only”的问题
-- 下一步真正未决的只剩最终 public surface 取舍：
-  - `TSSLConfig.ServerName` 是否继续留在当前 record 上
+- `TSSLConfig.ServerName` 也已不再属于“当前版本线要不要立刻改名/移除”的问题
+- 下一步真正未决的只剩：
   - `WithSNI(...)` 是否继续保留当前 fluent naming / placement
   - direct `ISSLContext.SetServerName/GetServerName` 是否继续作为最后 compatibility API 保留
+
+## 增量收口：TSSLConfig.ServerName v1.x surface truth freeze
+
+- 在 `WithSNI(...)` 已经收成 compiler-deprecated 之后，`TSSLConfig.ServerName` 还剩的核心问题不再是 runtime 行为，而是 public surface 会不会再次漂回“普通推荐字段”：
+  - 当前高层 runtime path 已经全部对齐：
+    - generic factory = warning + ignore / reject
+    - OpenSSL direct-library default-config = warning + ignore / reject
+  - ordinary tests 与 active docs guidance 也已经基本收干净
+  - 真正还缺的是一个 durable 的 source/doc truth freeze
+
+- 这批收口做出的 `v1.x` 设计决定是：
+  - 不在当前版本线直接移除或改名 `TSSLConfig.ServerName`
+  - 保持 source compatibility
+  - 但把它冻结成 compatibility-only field，不再把它当成待恢复的 client config surface
+
+- 具体落地：
+  - 新增 `tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+    - 钉住 `src/fafafa.ssl.base.pas` 的 compatibility-only field comment
+    - 钉住 `src/fafafa.ssl.factory.pas` 与 `src/fafafa.ssl.openssl.backed.pas` 的 warning wording
+    - 钉住 active docs 只允许 `docs/reference/API_REFERENCE.md` 提及 `TSSLConfig.ServerName`
+  - `docs/reference/API_REFERENCE.md`
+    - 现在不只在顶层 compatibility note 说明它
+    - 还在 `Use TSSLConfig with TSSLFactory.CreateContext(...)` 附近明确写出：client-side 是 warning + ignore，应改走 per-connection / connector 路径
+
+- focused 结果：
+  - `bash tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+    - PASS
+  - `git diff --check`
+    - PASS
+
+- 这一步之后，`TSSLConfig.ServerName` 对当前主路线的意义已经改变：
+  - 它不再是“下一刀必须先改掉”的问题
+  - 它已经变成一个被 source/doc contract 锁住的 `v1.x` frozen compatibility surface
+  - 因而下一批应直接前移到 direct context compatibility API 的最终收口

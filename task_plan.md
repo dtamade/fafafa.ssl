@@ -213,6 +213,14 @@
     守住源码层 truth，不允许 `WithSNI(...)` 重新退回“只有注释/运行时 warning”的状态
   - 刻意保留 `.WithSNI(...)` 的 compatibility tests 现在都做了局部 warning quarantine，
     避免 focused compile 输出被这条已知 deprecated surface 反复刷屏
+- [completed] `TSSLConfig.ServerName` 的 `v1.x` surface truth freeze 已收口：
+  - 当前设计决定是不在 `v1.x` 直接移除或改名这个字段，避免破坏现有源码兼容
+  - 但 active source/doc truth 现在已经被锁成 compatibility-only：
+    - `src/fafafa.ssl.base.pas` 字段注释明确指向 `ISSLClientConnection.SetServerName`
+    - generic factory / OpenSSL direct-library warning 明确点名 `TSSLConfig.ServerName`
+    - active docs 只允许 `docs/reference/API_REFERENCE.md` 以 compatibility note 形式提及它
+  - 新增 `tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+    守住这条 `v1.x freeze` truth，不允许它重新漂回普通主路径
 
 ## Scope
 
@@ -241,19 +249,16 @@
 ## Current Queue
 
 1. 进入 final public surface cleanup prep：
-   - 当前 builder / factory 的高层输入都已经是 `warning + ignore`
-   - `WithSNI(...)` 也已经进入 compiler-level `deprecated` truth
-   - OpenSSL backend-specific direct library default-config path 也已完成对齐
-   - 普通测试面也已不再继续示范 deprecated builder/config ServerName surface
-   - active direct-context `SetServerName(...)` 测试面也已不再存在未分类命中
-   - 现在应直接进入最终 API 形状决策：
-     - `TSSLConfig.ServerName` 是否还应继续留在当前 record 上
-     - builder `WithSNI(...)` 是否还应继续保留当前命名/挂载位置，还是继续朝更窄的 compatibility surface 收口
-     - direct `ISSLContext.SetServerName/GetServerName` 是否需要更明确的替代/降格方案
-2. 在 public surface prep 明确后，再决定 direct context compatibility API 的后续收口方式：
+   - `TSSLConfig.ServerName` 已冻结为 `v1.x` compatibility-only field，不再作为当前批次待定项反复重开
+   - `WithSNI(...)` 已进入 compiler-level `deprecated` truth
+   - direct `ISSLContext.SetServerName/GetServerName` 已成为当前最值得继续收口的最后 context-level compatibility API
+   - 下一批应优先进入：
+     - direct context compatibility API 的最终保留边界
+     - builder `WithSNI(...)` 是否还应继续保留当前命名/挂载位置
+2. 在 direct context compatibility API 明确后，再决定是否需要进一步收窄 builder naming / placement：
    - direct `SetServerName/GetServerName` 是否继续原样保留
    - 是否需要新的替代入口、文档降格和 focused source contract
-3. 在 capability 与 SNI 迁移边界都稳定后，再评估 `TSSLConfig` 跨层字段拆分时机。
+3. 在 capability 与 SNI 迁移边界都稳定后，再评估 `TSSLConfig` 的更大跨层字段拆分时机。
 4. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
 
 ## Verification Discipline

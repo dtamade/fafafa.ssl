@@ -38,6 +38,8 @@ FreePascal server-side `0-RTT / early data` 默认 shipped path 已经会把 rep
 - `TSSLConfig.ServerEarlyDataReplayStoreFile`
 - `TSSLConfig.ServerEarlyDataReplayStoreDirectory`
 
+`TSSLConfig.ServerName` 不属于推荐的 client SNI 配置路径。当前 `TSSLFactory.CreateContext(...)` 对它的 client-side 行为是 warning + ignore；客户端请改用 `ISSLClientConnection.SetServerName(...)` 或 `TSSLConnector.Connect*(..., ServerName)`。
+
 这两个字段用于 `TSSLFactory.CreateContext(const AConfig)` 的 FreePascal server path。它们是 mutually exclusive 配置，不能同时设置；同时设置时，factory 会 fail fast。
 
 ```pascal

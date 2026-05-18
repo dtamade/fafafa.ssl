@@ -614,3 +614,25 @@
     - compiler-level deprecated truth
     - explicit compatibility-test classification
   - 剩下真正未决的，只是最终 public surface 是否继续保留它当前的命名/挂载位置
+
+- 对 `TSSLConfig.ServerName` 的最新静态审查进一步说明：
+  - 当前已经不存在“还有某条高层 runtime path 会偷偷消费它”的实现漏口
+  - generic factory、OpenSSL direct-library、ordinary tests、active docs guidance 都已经被收干净
+  - 真正剩下的问题不是行为真相，而是要不要在 `v1.x` 直接改掉它的字段位置/命名
+
+- 当前最稳妥的 `v1.x` 设计决定已经明确：
+  - 不在当前版本线直接移除或改名 `TSSLConfig.ServerName`
+  - 保持 source compatibility
+  - 但把它冻结成一个“仅剩 compatibility truth 的 record field”
+
+- 这条 `v1.x freeze` 现在也不再只是口头结论：
+  - `src/fafafa.ssl.base.pas` 字段注释明确指向 per-connection `ISSLClientConnection.SetServerName`
+  - `src/fafafa.ssl.factory.pas` 与 `src/fafafa.ssl.openssl.backed.pas` 的 warning wording 都继续点名 `TSSLConfig.ServerName`
+  - `docs/reference/API_REFERENCE.md` 现在不只在顶层 compatibility note 说明它，还在 `Use TSSLConfig with TSSLFactory.CreateContext(...)` 段落旁边明确写出 client-side warning + ignore truth
+  - 新增 `tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+    把 source comment、warning wording、以及 active docs confinement 一起钉住
+
+- 因而 `TSSLConfig.ServerName` 这条线对当前主路线的意义已经变化：
+  - 它不再是“下一刀要不要删/改”的首要候选
+  - 它已经被降成 `v1.x` compatibility-only frozen surface
+  - 下一步真正该继续收口的，已经前移到 direct `ISSLContext.SetServerName/GetServerName` 这组最后的 context-level compatibility API

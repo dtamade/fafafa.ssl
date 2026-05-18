@@ -1633,3 +1633,42 @@
   - result: PASS
   - summary:
     - current `WithSNI` compiler-deprecation batch has no whitespace or patch-format issues
+
+### TSSLConfig ServerName Surface Truth Freeze
+
+- add `docs/plans/2026-05-18-tsslconfig-servername-surface-truth-freeze.md`
+  - purpose:
+    - define the bounded `v1.x` surface-freeze batch for `TSSLConfig.ServerName`
+    - keep runtime behavior unchanged while preventing the record field from drifting back into ordinary client-path guidance
+
+- add `tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+  - purpose:
+    - fail if the `TSSLConfig.ServerName` source comment, warning wording, or active-doc confinement drifts away from the current compatibility-only truth
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - repeat the client-side warning + ignore truth next to `Use TSSLConfig with TSSLFactory.CreateContext(...)`
+    - explicitly redirect callers back to `ISSLClientConnection.SetServerName(...)` / `TSSLConnector.Connect*(..., ServerName)`
+
+- `bash -n tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the new TSSLConfig surface-truth contract script is syntactically valid
+
+- `bash tests/scripts/test_tsslconfig_servername_surface_truth_contract.sh`
+  - result: RED -> GREEN
+  - summary:
+    - first run failed because markdown backticks inside double-quoted `rg` patterns triggered shell command substitution
+    - the script was corrected to use fixed-string matching for the API reference bullets
+    - `TSSLConfig.ServerName` source comment, warning wording, and active-doc confinement all match the intended compatibility-only truth
+    - active docs currently mention `TSSLConfig.ServerName` only in `docs/reference/API_REFERENCE.md`
+
+- `bash tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+  - result: PASS
+  - summary:
+    - the existing builder/config compatibility allowlist stays green after the TSSLConfig source/doc freeze batch
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current TSSLConfig surface-freeze batch has no whitespace or patch-format issues
