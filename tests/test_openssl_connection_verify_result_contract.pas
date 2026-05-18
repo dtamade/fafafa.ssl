@@ -21,6 +21,11 @@ var
   FailedTests: Integer = 0;
   SkippedTests: Integer = 0;
 
+// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this root-test backend contract
+// file intentionally keeps direct core GetVerifyResult/GetVerifyResultString
+// coverage as backend proof. Generic ISSLCertificateVerification owner-path
+// guidance is frozen elsewhere.
+
 procedure AssertTrue(const AName: string; ACondition: Boolean; const ADetail: string = '');
 begin
   Inc(TotalTests);

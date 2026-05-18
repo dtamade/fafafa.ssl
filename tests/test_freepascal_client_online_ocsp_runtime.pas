@@ -70,6 +70,11 @@ type
     CheckValidity: TOCSP_check_validity;
   end;
 
+// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this root-test runtime file
+// intentionally keeps direct core GetVerifyResult/GetVerifyResultString
+// coverage as fail-closed/backend proof. Generic ISSLCertificateVerification
+// owner-path guidance is frozen elsewhere.
+
   TScriptedOnlineOCSPServerStream = class(TStream)
   private
     FCipherSuite: Word;

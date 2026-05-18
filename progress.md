@@ -2,6 +2,56 @@
 
 ## 2026-05-19
 
+### ISSLCertificateVerification Root-Test Residual Freeze
+
+- add `docs/plans/2026-05-19-isslcertificateverification-root-test-residual-freeze.md`
+  - change:
+    - define the bounded root-test verify-result residual subgroup freeze
+
+- add `tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - change:
+    - lock the root-test direct-core verify-result residual file set
+    - require intentional residual notes plus the expected verify-result coverage in each file
+
+- update root-test residual proof files:
+  - `tests/test_freepascal_backend_basic.pas`
+  - `tests/test_freepascal_client_cert_verify_flags_runtime.pas`
+  - `tests/test_freepascal_client_certificate_flight_requirements.pas`
+  - `tests/test_freepascal_client_chain_trust_runtime.pas`
+  - `tests/test_freepascal_client_ct_sct_surface.pas`
+  - `tests/test_freepascal_client_ocsp_stapling_runtime.pas`
+  - `tests/test_freepascal_client_online_ocsp_runtime.pas`
+  - `tests/test_freepascal_server_accept_skeleton.pas`
+  - `tests/test_openssl_connection_verify_result_contract.pas`
+  - `tests/test_wolfssl_framework.pas`
+  - change:
+    - add unified `INTENTIONAL_VERIFY_RESULT_CORE_SURFACE` notes
+    - record these files as root-test runtime / backend-contract proof
+
+- `bash -n tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - result: PASS
+  - summary:
+    - root-test residual subgroup contract syntax is valid
+
+- `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - the focused contract over-matched a wrapped residual-comment line instead of a stable substring
+    - GREEN:
+      - root-test direct-core verify-result residual file set stayed frozen to the expected subgroup
+      - each file still carries the intentional residual note and expected verify-result coverage
+
+- `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - the broader certificate-verification residual allowlist remained aligned after the root-test subgroup freeze
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current root-test residual freeze batch has no whitespace or patch-format issues
+
 ### ISSLCertificateVerification OCSP Runtime Duo Freeze
 
 - add `docs/plans/2026-05-19-isslcertificateverification-ocsp-runtime-duo-freeze.md`

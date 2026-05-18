@@ -44,6 +44,11 @@ var
   GStubWolfSSLVersionTLS13: AnsiString = 'TLSv1.3';
   GStubWolfSSLCipherTLS13: AnsiString = 'TLS_AES_128_GCM_SHA256';
 
+// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this root-test backend contract
+// file intentionally keeps direct core GetVerifyResult/GetVerifyResultString
+// coverage as backend proof. Generic ISSLCertificateVerification owner-path
+// guidance is frozen elsewhere.
+
 const
   STUB_WOLFSSL_SERIALIZED_SESSION: array[0..3] of Byte = (4, 3, 2, 1);
 

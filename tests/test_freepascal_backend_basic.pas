@@ -8,6 +8,11 @@ uses
   fafafa.ssl.factory,
   fafafa.ssl.base;
 
+// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this root-test runtime file
+// intentionally keeps direct core GetVerifyResult/GetVerifyResultString
+// coverage as fail-closed/backend proof. Generic ISSLCertificateVerification
+// owner-path guidance is frozen elsewhere.
+
 procedure AssertTrue(ACondition: Boolean; const AMessage: string);
 begin
   if not ACondition then

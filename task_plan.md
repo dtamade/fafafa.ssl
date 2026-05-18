@@ -193,6 +193,32 @@
   - 当前结论：
     - OpenSSL/WolfSSL server-side OCSP runtime duo 现在可以视为关闭，不应再作为 generic guidance 漂移反复拉起
     - 下一刀更适合继续 root-test residual subgroup
+- [completed] `ISSLCertificateVerification` root-test residual subgroup 已冻结成 runtime / backend-contract proof：
+  - 新增计划：`docs/plans/2026-05-19-isslcertificateverification-root-test-residual-freeze.md`
+  - 新增 focused source contract：`tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+  - 当前 direct-core verify-result residual file set 已锁住为：
+    - `tests/test_freepascal_backend_basic.pas`
+    - `tests/test_freepascal_client_cert_verify_flags_runtime.pas`
+    - `tests/test_freepascal_client_certificate_flight_requirements.pas`
+    - `tests/test_freepascal_client_chain_trust_runtime.pas`
+    - `tests/test_freepascal_client_ct_sct_surface.pas`
+    - `tests/test_freepascal_client_ocsp_stapling_runtime.pas`
+    - `tests/test_freepascal_client_online_ocsp_runtime.pas`
+    - `tests/test_freepascal_server_accept_skeleton.pas`
+    - `tests/test_mbedtls_framework.pas`
+    - `tests/test_openssl_connection_verify_result_contract.pas`
+    - `tests/test_wolfssl_framework.pas`
+  - 上述文件现在都已显式标记为 `INTENTIONAL_VERIFY_RESULT_CORE_SURFACE`
+  - 当前用途被固定为 FreePascal runtime contracts + backend framework / verify-result contracts
+  - `ISSLCertificateVerification` owner-path guidance 已明确由 generic/contract 路径在别处守住
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+    - `bash tests/scripts/test_isslcertificateverification_root_test_residual_contract.sh`
+    - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - root-test verify-result residual subgroup 现在可以视为关闭，不应再作为 generic guidance 漂移反复拉起
+    - `ISSLCertificateVerification` 当前 residual 面已经基本全部完成 backend-specific / contract-specific 分类冻结
 - [completed] GitHub Actions Windows runner 已重新纳入当前 truth surface：
   - `wave-b-b2-manual.yml` 的 live run `26030261335` 已证实 `windows-gate` 三层都能在 GitHub CI 上实际执行
   - 当前 WinSSL lane 不再允许退回“本地没 Windows，只能静态审查”的旧入口

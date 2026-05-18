@@ -2,6 +2,36 @@
 
 ## 2026-05-19
 
+- 当前剩余的 root-level verify-result 命中也已经被证实不是“普通入口漏改”，而是一组 runtime / backend-contract residual subgroup：
+  - `tests/test_freepascal_backend_basic.pas`
+  - `tests/test_freepascal_client_cert_verify_flags_runtime.pas`
+  - `tests/test_freepascal_client_certificate_flight_requirements.pas`
+  - `tests/test_freepascal_client_chain_trust_runtime.pas`
+  - `tests/test_freepascal_client_ct_sct_surface.pas`
+  - `tests/test_freepascal_client_ocsp_stapling_runtime.pas`
+  - `tests/test_freepascal_client_online_ocsp_runtime.pas`
+  - `tests/test_freepascal_server_accept_skeleton.pas`
+  - `tests/test_mbedtls_framework.pas`
+  - `tests/test_openssl_connection_verify_result_contract.pas`
+  - `tests/test_wolfssl_framework.pas`
+
+- 这组文件虽然都在 `tests/*.pas` 根层，但实际语义已经很清楚：
+  - FreePascal runtime contracts
+  - OpenSSL / WolfSSL / MbedTLS backend framework or verify-result contracts
+  - 所以最小正确动作同样不是改 owner path，而是做 root-test residual subgroup freeze
+
+- 这批最小安全收口也因此落在“写明保留原因 + 锁住 file set”：
+  - 在当前尚未标注的 root-test residual 文件里补 `INTENTIONAL_VERIFY_RESULT_CORE_SURFACE`
+  - 新增 focused source contract，锁住当前 `tests/*.pas` verify-result residual file set
+  - 并继续要求每个文件保留各自预期的 verify-result coverage
+
+- 到这里，`ISSLCertificateVerification` 这条 residual 路线已经基本完成了剩余面分类：
+  - WinSSL runtime trio
+  - MbedTLS residual cluster
+  - OpenSSL/WolfSSL OCSP runtime duo
+  - root-test runtime / backend-contract subgroup
+  - 后续更应该把注意力从“verify-result residual archaeology”切回更大的接口设计 / backend completeness 审查
+
 - `OpenSSL` / `WolfSSL` 这边剩余的 verify-result 命中并没有散开，而是已经压成一对很窄的 server-side OCSP stapling runtime diagnostics：
   - `tests/openssl/test_openssl_server_ocsp_stapling_runtime.pas`
   - `tests/wolfssl/test_wolfssl_server_ocsp_stapling_runtime.pas`
