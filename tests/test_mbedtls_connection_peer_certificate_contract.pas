@@ -58,20 +58,46 @@ begin
     Result := LNative.GetNativeHandle;
 end;
 
+function ReadTextFile(const AFileName: string): string;
+var
+  LStream: TFileStream;
+  LBytes: TBytes;
+begin
+  Result := '';
+  LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyNone);
+  try
+    SetLength(LBytes, LStream.Size);
+    if LStream.Size > 0 then
+      LStream.ReadBuffer(LBytes[0], LStream.Size);
+  finally
+    LStream.Free;
+  end;
+
+  if Length(LBytes) > 0 then
+    SetString(Result, PAnsiChar(@LBytes[0]), Length(LBytes));
+end;
+
 procedure TestConnectionPeerCertificateMustMaterializeOwnedCopy;
 var
   LFixture: TMbedTLSCertificate;
+  LLeafFixture: TMbedTLSCertificate;
+  LIssuerFixture: TMbedTLSCertificate;
   LStream: TMemoryStream;
   LConn: TMbedTLSConnection;
   LCert: ISSLCertificate;
+  LIssuerFromPeerCert: ISSLCertificate;
   LChain: TSSLCertificateArray;
-  LExpectedFingerprint: string;
+  LLeafPEM: string;
+  LIssuerPEM: string;
+  LCombinedPEM: string;
+  LExpectedLeafFingerprint: string;
+  LExpectedIssuerFingerprint: string;
   LFixtureHandle: Pointer;
   LOriginalGetPeerCert: Tmbedtls_ssl_get_peer_cert;
   LOriginalParse: Tmbedtls_x509_crt_parse;
 begin
   WriteLn;
-  WriteLn('=== MbedTLS connection peer certificate materialization ===');
+  WriteLn('=== MbedTLS connection peer certificate chain completeness ===');
 
   if (not Assigned(mbedtls_ssl_set_bio)) or
      (not Assigned(mbedtls_x509_crt_parse)) then
@@ -81,16 +107,48 @@ begin
     Exit;
   end;
 
-  LFixture := TMbedTLSCertificate.Create;
-  if not LFixture.LoadFromFile('tests/certs/server-cert.pem') then
+  LLeafPEM := ReadTextFile('tests/certificate/test_certs/signer_cert.pem');
+  LIssuerPEM := ReadTextFile('tests/certificate/test_certs/ca_cert.pem');
+  if (LLeafPEM = '') or (LIssuerPEM = '') then
   begin
-    LFixture.Free;
     MarkSkip('mbedtls connection peer certificate contract',
-      'failed to load tests/certs/server-cert.pem fixture');
+      'failed to read signer/issuer PEM fixtures');
     Exit;
   end;
 
-  LExpectedFingerprint := LFixture.GetFingerprintSHA256;
+  LLeafFixture := TMbedTLSCertificate.Create;
+  if not LLeafFixture.LoadFromPEM(LLeafPEM) then
+  begin
+    LLeafFixture.Free;
+    MarkSkip('mbedtls connection peer certificate contract',
+      'failed to load signer_cert.pem fixture');
+    Exit;
+  end;
+
+  LIssuerFixture := TMbedTLSCertificate.Create;
+  if not LIssuerFixture.LoadFromPEM(LIssuerPEM) then
+  begin
+    LLeafFixture.Free;
+    LIssuerFixture.Free;
+    MarkSkip('mbedtls connection peer certificate contract',
+      'failed to load ca_cert.pem fixture');
+    Exit;
+  end;
+
+  LFixture := TMbedTLSCertificate.Create;
+  LCombinedPEM := LLeafPEM + LineEnding + LIssuerPEM;
+  if not LFixture.LoadFromPEM(LCombinedPEM) then
+  begin
+    LLeafFixture.Free;
+    LIssuerFixture.Free;
+    LFixture.Free;
+    MarkSkip('mbedtls connection peer certificate contract',
+      'failed to load combined signer/issuer PEM chain fixture');
+    Exit;
+  end;
+
+  LExpectedLeafFingerprint := LLeafFixture.GetFingerprintSHA256;
+  LExpectedIssuerFingerprint := LIssuerFixture.GetFingerprintSHA256;
   LFixtureHandle := LFixture.GetNativeHandle;
   GStubPeerCert := Pmbedtls_x509_crt(LFixtureHandle);
 
@@ -107,20 +165,37 @@ begin
     AssertTrue('GetPeerCertificate should materialize a certificate',
       LCert <> nil);
     AssertTrue('GetPeerCertificate fingerprint should match the fixture',
-      (LCert <> nil) and SameText(LCert.GetFingerprintSHA256, LExpectedFingerprint));
+      (LCert <> nil) and SameText(LCert.GetFingerprintSHA256, LExpectedLeafFingerprint));
     AssertTrue('GetPeerCertificate must return an owned copy instead of the borrowed source handle',
       (LCert <> nil) and (CaptureCertHandle(LCert) <> nil) and
       (CaptureCertHandle(LCert) <> LFixtureHandle));
+    LIssuerFromPeerCert := nil;
+    if LCert <> nil then
+      LIssuerFromPeerCert := LCert.GetIssuerCertificate;
+    AssertTrue('GetPeerCertificate should preserve issuer link',
+      LIssuerFromPeerCert <> nil);
+    AssertTrue('GetPeerCertificate issuer link should match the issuer fixture',
+      (LIssuerFromPeerCert <> nil) and
+      SameText(LIssuerFromPeerCert.GetFingerprintSHA256, LExpectedIssuerFingerprint));
 
     LChain := LConn.GetPeerCertificateChain;
-    AssertTrue('GetPeerCertificateChain should expose exactly the peer leaf',
-      Length(LChain) = 1,
-      Format('expected chain length 1 but got %d', [Length(LChain)]));
+    AssertTrue('GetPeerCertificateChain should expose the peer leaf and issuer',
+      Length(LChain) = 2,
+      Format('expected chain length 2 but got %d', [Length(LChain)]));
     AssertTrue('GetPeerCertificateChain leaf fingerprint should match the fixture',
-      (Length(LChain) = 1) and SameText(LChain[0].GetFingerprintSHA256, LExpectedFingerprint));
+      (Length(LChain) >= 1) and SameText(LChain[0].GetFingerprintSHA256, LExpectedLeafFingerprint));
     AssertTrue('GetPeerCertificateChain leaf must also be an owned copy',
-      (Length(LChain) = 1) and (CaptureCertHandle(LChain[0]) <> nil) and
+      (Length(LChain) >= 1) and (CaptureCertHandle(LChain[0]) <> nil) and
       (CaptureCertHandle(LChain[0]) <> LFixtureHandle));
+    AssertTrue('GetPeerCertificateChain issuer entry should match the fixture',
+      (Length(LChain) >= 2) and SameText(LChain[1].GetFingerprintSHA256, LExpectedIssuerFingerprint));
+    AssertTrue('GetPeerCertificateChain leaf should preserve issuer link',
+      (Length(LChain) >= 1) and (LChain[0].GetIssuerCertificate <> nil));
+    AssertTrue('GetPeerCertificateChain leaf issuer link should match the issuer entry',
+      (Length(LChain) >= 1) and (LChain[0].GetIssuerCertificate <> nil) and
+      SameText(LChain[0].GetIssuerCertificate.GetFingerprintSHA256, LExpectedIssuerFingerprint));
+    AssertTrue('GetPeerCertificateChain issuer entry should not invent a higher issuer link',
+      (Length(LChain) >= 2) and (LChain[1].GetIssuerCertificate = nil));
 
     mbedtls_x509_crt_parse := nil;
     LCert := LConn.GetPeerCertificate;
@@ -136,6 +211,8 @@ begin
     if Assigned(LConn) then
       LConn.Free;
     LStream.Free;
+    LIssuerFixture.Free;
+    LLeafFixture.Free;
     LFixture.Free;
     GStubPeerCert := nil;
   end;

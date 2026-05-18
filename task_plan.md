@@ -19,12 +19,25 @@
     - `GetPeerCertificateChain()` 现在会给 returned chain entries 接上 issuer link
   - `tests/run_winssl_tests.ps1` 现在已接入 `WinSSL Peer Certificate Surface` runtime lane
   - 本地 `Win64 cross-target + wine` 已先 RED 后 GREEN，`tests/contract/test_backend_contract.pas` 继续 green
-- [in_progress] connection-level peer-certificate issuer-link completeness 现在已经覆盖：
-  - `FreePascal`
-  - `OpenSSL`
-  - `WolfSSL`
-  - `WinSSL`
-  - 下一刀应转向“各 backend 的 connection / verification / optional surface 还有没有剩余 completeness seam”，而不是重开已关掉的 issuer-link lane
+- [completed] connection-level peer-certificate issuer-link completeness 已完成 cross-backend 收口：
+  - 已覆盖：
+    - `FreePascal`
+    - `OpenSSL`
+    - `WolfSSL`
+    - `MbedTLS`
+    - `WinSSL`
+  - `MbedTLS` 新增计划：`docs/plans/2026-05-19-mbedtls-peer-cert-chain-issuer-link.md`
+  - `tests/test_mbedtls_connection_peer_certificate_contract.pas`
+    - 现在已锁住 leaf+issuer chain materialization 与 leaf issuer-link truth
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+    - `GetPeerCertificate()` 现在会从 native peer chain materialize leaf，并补回 issuer link
+    - `GetPeerCertificateChain()` 不再把 native chain 截断成单个 leaf
+    - chain entries 现在会顺序保留 `GetIssuerCertificate()` truth
+  - focused verification 已通过：
+    - `tests/test_mbedtls_connection_peer_certificate_contract.pas`: `14 passed / 0 failed`
+    - `tests/contract/test_backend_contract.pas`: `135 total / 111 passed / 0 failed / 24 skipped`
+    - `git diff --check`: PASS
+  - 下一刀应转向“各 backend 的 verification / optional surface 还有没有剩余 completeness seam”，而不是重开已关掉的 peer-cert issuer-link lane
 - [completed] cross-backend `ISSLCertificate.Clone()` issuer-link completeness 已完成 focused 收口：
   - 新增计划：`docs/plans/2026-05-19-certificate-clone-issuer-link.md`
   - 新增 focused contract：`tests/test_certificate_clone_issuer_link_contract.pas`

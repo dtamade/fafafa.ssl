@@ -2,6 +2,61 @@
 
 ## 2026-05-19
 
+### MbedTLS Peer Certificate Chain Issuer Link
+
+- add `docs/plans/2026-05-19-mbedtls-peer-cert-chain-issuer-link.md`
+  - change:
+    - define the bounded MbedTLS connection-level peer-chain completeness batch, commands, scope, and expected closeout
+
+- update `tests/test_mbedtls_connection_peer_certificate_contract.pas`
+  - result: RED
+  - summary:
+    - extend the focused contract from “owned leaf copy exists” to “leaf+issuer chain materializes and leaf issuer-link truth is preserved”
+    - first failures landed on:
+      - `GetPeerCertificate should preserve issuer link`
+      - `GetPeerCertificateChain should expose the peer leaf and issuer`
+      - `GetPeerCertificateChain leaf should preserve issuer link`
+
+- `sed -n '41,95p' /usr/include/mbedtls/x509_crt.h`
+  - result: PASS
+  - summary:
+    - confirmed upstream `mbedtls_x509_crt` exposes a native `next` pointer for peer-chain traversal
+    - confirmed current Pascal connection layer was not yet using that native chain truth
+
+- `nl -ba src/fafafa.ssl.mbedtls.connection.pas | sed -n '398,442p'`
+  - result: PASS
+  - summary:
+    - confirmed `DoGetPeerCertificate()` was cloning only the borrowed leaf wrapper
+    - confirmed `DoGetPeerCertificateChain()` was hard-coding a single-entry result
+
+- update `src/fafafa.ssl.mbedtls.connection.pas`
+  - change:
+    - add native peer-chain materialization helper for `mbedtls_x509_crt.next`
+    - `GetPeerCertificate()` now materializes the native chain leaf and supplements issuer-link truth
+    - `GetPeerCertificateChain()` no longer truncates the native peer chain to a single leaf
+    - sequential chain entries now preserve `GetIssuerCertificate()` truth while keeping existing fail-closed behavior
+
+- `mkdir -p tmp/test_mbedtls_connection_peer_certificate_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_mbedtls_connection_peer_certificate_contract_units -FEtmp/test_mbedtls_connection_peer_certificate_contract_units -otmp/test_mbedtls_connection_peer_certificate_contract_units/test_mbedtls_connection_peer_certificate_contract tests/test_mbedtls_connection_peer_certificate_contract.pas && ./tmp/test_mbedtls_connection_peer_certificate_contract_units/test_mbedtls_connection_peer_certificate_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - `GetPeerCertificate should preserve issuer link`
+      - `GetPeerCertificateChain should expose the peer leaf and issuer`
+      - `GetPeerCertificateChain leaf should preserve issuer link`
+    - GREEN:
+      - `14 passed / 0 failed`
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp -otmp/tmp_backend_contract tests/contract/test_backend_contract.pas && ./tmp/tmp_backend_contract`
+  - result: PASS
+  - summary:
+    - backend contract stayed green at `135 total / 111 passed / 0 failed / 24 skipped`
+    - existing backend interface alignment did not regress after the MbedTLS peer-chain completeness repair
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current MbedTLS peer-chain completeness batch has no whitespace or patch-format issues
+
 ### Certificate Clone Issuer Link
 
 - add `docs/plans/2026-05-19-certificate-clone-issuer-link.md`

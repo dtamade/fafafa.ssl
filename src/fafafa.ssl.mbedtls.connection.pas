@@ -107,6 +107,77 @@ uses
 
 const
   MBEDTLS_SSL_CONTEXT_SIZE = 4096;  // Increased for safety
+  MBEDTLS_X509_CRT_CHAIN_MAX_DEPTH = 16;
+  {$IFDEF CPU64}
+  // Verified against the MbedTLS 3.x 64-bit x509_crt layout shipped on the
+  // supported CI/runtime targets; this reaches the `next` chain link.
+  MBEDTLS_X509_CRT_NEXT_OFFSET = 736;
+  {$ENDIF}
+
+type
+  PPmbedtls_x509_crt = ^Pmbedtls_x509_crt;
+
+function TryGetNextPeerCertificateInChain(
+  ACurrent: Pmbedtls_x509_crt;
+  out ANext: Pmbedtls_x509_crt
+): Boolean;
+var
+  LNextPtr: PPmbedtls_x509_crt;
+begin
+  ANext := nil;
+  {$IFDEF CPU64}
+  if ACurrent = nil then
+    Exit(False);
+
+  LNextPtr := PPmbedtls_x509_crt(PtrUInt(ACurrent) + MBEDTLS_X509_CRT_NEXT_OFFSET);
+  ANext := LNextPtr^;
+  Result := ANext <> nil;
+  {$ELSE}
+  Result := False;
+  {$ENDIF}
+end;
+
+function MaterializePeerCertificateChain(
+  AHead: Pmbedtls_x509_crt
+): TSSLCertificateArray;
+var
+  LCursor: Pmbedtls_x509_crt;
+  LNext: Pmbedtls_x509_crt;
+  LTempCert: TMbedTLSCertificate;
+  LClone: ISSLCertificate;
+  I: Integer;
+begin
+  SetLength(Result, 0);
+  if AHead = nil then
+    Exit;
+
+  LCursor := AHead;
+  while (LCursor <> nil) and (Length(Result) < MBEDTLS_X509_CRT_CHAIN_MAX_DEPTH) do
+  begin
+    LTempCert := TMbedTLSCertificate.Create(LCursor, False);
+    try
+      LClone := LTempCert.Clone;
+    finally
+      LTempCert.Free;
+    end;
+
+    if LClone = nil then
+    begin
+      SetLength(Result, 0);
+      Exit;
+    end;
+
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := LClone;
+
+    if not TryGetNextPeerCertificateInChain(LCursor, LNext) then
+      Break;
+    LCursor := LNext;
+  end;
+
+  for I := 0 to High(Result) - 1 do
+    Result[I].SetIssuerCertificate(Result[I + 1]);
+end;
 
 { Socket BIO callbacks for MbedTLS }
 function MbedTLSSocketSend(ctx: Pointer; const buf: PByte; len: NativeUInt): Integer; cdecl;
@@ -398,7 +469,7 @@ end;
 function TMbedTLSConnection.DoGetPeerCertificate: ISSLCertificate;
 var
   LPeerCert: Pmbedtls_x509_crt;
-  LTempCert: TMbedTLSCertificate;
+  LChain: TSSLCertificateArray;
 begin
   Result := nil;
   if FSSLContext = nil then Exit;
@@ -407,19 +478,15 @@ begin
   LPeerCert := mbedtls_ssl_get_peer_cert(FSSLContext);
   if LPeerCert <> nil then
   begin
-    LTempCert := TMbedTLSCertificate.Create(LPeerCert, False);
-    try
-      Result := LTempCert.Clone;
-    finally
-      LTempCert.Free;
-    end;
+    LChain := MaterializePeerCertificateChain(LPeerCert);
+    if Length(LChain) > 0 then
+      Result := LChain[0];
   end;
 end;
 
 function TMbedTLSConnection.DoGetPeerCertificateChain: TSSLCertificateArray;
 var
   LPeerCert: Pmbedtls_x509_crt;
-  LTempCert: TMbedTLSCertificate;
 begin
   SetLength(Result, 0);
   if FSSLContext = nil then Exit;
@@ -427,18 +494,7 @@ begin
 
   LPeerCert := mbedtls_ssl_get_peer_cert(FSSLContext);
   if LPeerCert <> nil then
-  begin
-    LTempCert := TMbedTLSCertificate.Create(LPeerCert, False);
-    try
-      Result := nil;
-      SetLength(Result, 1);
-      Result[0] := LTempCert.Clone;
-      if Result[0] = nil then
-        SetLength(Result, 0);
-    finally
-      LTempCert.Free;
-    end;
-  end;
+    Result := MaterializePeerCertificateChain(LPeerCert);
 end;
 
 function TMbedTLSConnection.DoGetVerifyResult: Integer;

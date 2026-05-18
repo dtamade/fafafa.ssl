@@ -2,6 +2,39 @@
 
 ## 2026-05-19
 
+- `MbedTLS` 连接态 peer-certificate public surface 这次被证实还留着一条更窄但更真实的 completeness seam：
+  - 之前这条线虽然已经修过 borrowed-cert materialization
+  - 但 `DoGetPeerCertificateChain()` 仍然只返回一个 leaf clone
+  - `DoGetPeerCertificate()` 与 returned chain leaf 因而都拿不到 `GetIssuerCertificate()` truth
+  - 这说明问题不只是“link 没补”，而是 public chain truth 直接被截断了
+
+- 这条问题也已经通过 focused contract 的明确 RED 锁实，而不是阅读代码猜测：
+  - `GetPeerCertificate should preserve issuer link`
+  - `GetPeerCertificateChain should expose the peer leaf and issuer`
+  - `GetPeerCertificateChain leaf should preserve issuer link`
+  - 这几条都在同一个本地 Linux focused run 上先红了
+
+- 更关键的是，这次 static/runtime truth 已经压出真正原因：
+  - 系统头文件里的 `mbedtls_x509_crt` 本来就带 `next` 链
+  - 但我们当前 Pascal connection layer 根本没有走这条 native chain link
+  - 所以 current public surface 才会退化成“只拿 leaf”
+
+- 因而这批最小安全修法也已经明确并落地：
+  - connection layer 新增 native peer-chain materialization helper
+  - 在支持的 64-bit MbedTLS 3.x ABI 上读取 `mbedtls_x509_crt.next`
+  - 逐个 cert materialize owned copies，并按顺序补回 issuer link
+  - 既有 fail-closed 边界保持不变：copy helper 不可用时，`GetPeerCertificate()` 返回 `nil`，chain 返回空数组
+
+- focused 回归结果说明这次修法边界正确：
+  - `tests/test_mbedtls_connection_peer_certificate_contract.pas` 已从 `7 failed` 转成 `14 passed / 0 failed`
+  - `tests/contract/test_backend_contract.pas` 继续 green：`135 total / 111 passed / 0 failed / 24 skipped`
+  - 这说明这次不是“为了补 MbedTLS chain 引入新的 materialization 回归”，而是单纯补齐了 connection-level chain truth
+
+- 当前 peer-certificate issuer-link 这条横向 completeness lane 现在已经可以视为全部关闭：
+  - `FreePascal` / `OpenSSL` / `WolfSSL` / `MbedTLS` / `WinSSL` 都已有 focused evidence
+  - 下一刀更适合继续横向审剩余 verification / optional surface completeness seam
+  - 不应再把 `MbedTLS` peer chain truncation 当成未定位问题反复拉起
+
 - 这次新的 focused contract 又压出了一条跨 backend 的 certificate-object completeness 漏口：
   - `OpenSSL` / `WolfSSL` / `MbedTLS` / `WinSSL` 的 `ISSLCertificate.Clone()` 此前都能保留 leaf 本体
   - 但 clone 后会把 `GetIssuerCertificate()` 这层 link truth 丢掉
