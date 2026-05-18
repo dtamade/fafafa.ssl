@@ -12,6 +12,33 @@
   - summary job 生成的 `wave_b_b2_evidence_consistency_...md` 已把 Windows runtime log 记成 `substantive runtime evidence; suite_end_status=PASS`
   - 这说明本批修复已经把“CI 控制台真跑但 artifact 丢真相”的流程缺口真正堵上了
 
+- 当前 WinSSL / MbedTLS session-resumption lane 又暴露出一条更像真 bug 的语义偏差：
+  - `src/fafafa.ssl.winssl.connection.pas` 之前在 `DoSetSession(...)` 里执行 `FCurrentSession := ASession` 后立刻把 `FSessionReused := True`
+  - `src/fafafa.ssl.mbedtls.connection.pas` 之前在 `mbedtls_ssl_set_session(...) = 0` 成功后，也立刻把 `FSessionReused := True`
+  - 但 `docs/reference/API_REFERENCE.md` 与通用 E2E 场景都把 `IsSessionReused` 定义成“握手后是否实际命中了恢复路径”，不是“是否曾配置 session”
+
+- 交叉对照进一步证明这不是设计口味问题，而是实现真相漂移：
+  - `OpenSSL` 的 `DoIsSessionReused` 继续直接读 `SSL_session_reused`
+  - `WolfSSL` 的 `DoIsSessionReused` 继续直接读 `wolfSSL_session_reused`
+  - `FreePascal` 的 `DoSetSession(...)` 会先清空 `FSessionReused`，只在真实恢复路径命中后再翻成 `True`
+  - `tests/winssl/test_winssl_session_resumption.pas` 也明确写着 `true resumption尚未接入`
+
+- 因而本批最小安全修法已经明确：
+  - `SetSession(...)` 只能表示“配置了待恢复 session”
+  - `IsSessionReused` / `GetConnectionInfo.IsResumed` 只能表示“当前握手的实际结果”
+  - 在真正的 WinSSL Schannel resumption runtime proof 做出来之前，至少不能再让 `DoSetSession(...)` 提前误报 `True`
+
+- 新增的 focused contracts 也把这个结论钉成了可重复证据，而不只是人工阅读判断：
+  - `tests/scripts/test_session_reused_semantic_truth_contract.sh` 先以源码合同形式直接抓到 WinSSL / MbedTLS 的 preclaim 行为
+  - `tests/test_mbedtls_connection_session_reused_contract.pas` 用 fake `mbedtls_ssl_set_session(...) = 0` 成功返回，先红后绿地证明：
+    - “native helper 成功执行”
+    - 不等于 “当前握手已经 resumed”
+
+- 这也把 WinSSL session-resumption lane 的剩余真问题压缩得更清楚了：
+  - workflow capture / artifact evidence：已闭环
+  - `IsSessionReused` semantic false positive：已修复
+  - 真正剩下的高风险问题：Windows 上实际 resumed handshake / session tickets 行为是否成立，以及如何给出 live runtime proof
+
 - 根因已被压缩到 evidence capture 层，而不是 WinSSL 实现层：
   - workflow 用 `Start-Transcript` 包住父 PowerShell
   - broader suite 则在子 `pwsh -File tests/run_winssl_tests.ps1` 里执行

@@ -1757,8 +1757,7 @@ end;
 procedure TWinSSLConnection.DoSetSession(ASession: ISSLSession);
 begin
   FCurrentSession := ASession;
-  if ASession <> nil then
-    FSessionReused := True;
+  FSessionReused := False;
 end;
 
 function TWinSSLConnection.DoIsSessionReused: Boolean;

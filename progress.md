@@ -164,6 +164,89 @@
     - previous plan was still anchored on the older WinSSL capability-truth batch
     - a new plan entrypoint is required to avoid reopening the wrong lane next time
 
+### Session Reused Semantic Truth Audit
+
+- `nl -ba src/fafafa.ssl.winssl.connection.pas | sed -n '1748,1772p'`
+  - result: PASS
+  - summary:
+    - WinSSL `DoSetSession(...)` 当时在 `FCurrentSession := ASession` 后立刻 `FSessionReused := True`
+
+- `nl -ba src/fafafa.ssl.mbedtls.connection.pas | sed -n '468,488p'`
+  - result: PASS
+  - summary:
+    - MbedTLS `DoSetSession(...)` 当时在 `mbedtls_ssl_set_session(...) = 0` 后立刻 `FSessionReused := True`
+
+- `nl -ba src/fafafa.ssl.openssl.connection.pas | sed -n '946,1025p'`
+  - result: PASS
+  - summary:
+    - OpenSSL `DoIsSessionReused(...)` 继续直接读取 native `SSL_session_reused`
+
+- `nl -ba src/fafafa.ssl.wolfssl.connection.pas | sed -n '816,842p'`
+  - result: PASS
+  - summary:
+    - WolfSSL `DoIsSessionReused(...)` 继续直接读取 native `wolfSSL_session_reused`
+
+- `nl -ba src/fafafa.ssl.freepascal.connection.pas | sed -n '4838,4870p'`
+  - result: PASS
+  - summary:
+    - FreePascal `DoSetSession(...)` 会先清空 `FSessionReused`，不把 configured session 等价成 resumed handshake
+
+- `nl -ba tests/winssl/test_winssl_session_resumption.pas | sed -n '1,260p'`
+  - result: PASS
+  - summary:
+    - WinSSL 会话复用基线测试源码明确保留 `true resumption尚未接入` 注释
+
+- add `docs/plans/2026-05-18-session-reused-semantic-truth-audit.md`
+  - change:
+    - 固化本批目标、真值语义、验证命令和 RED -> GREEN 收口标准
+
+- add `tests/scripts/test_session_reused_semantic_truth_contract.sh`
+  - result: RED -> GREEN
+  - summary:
+    - 先直接抓到 WinSSL `DoSetSession(...)` 里预置 `FSessionReused := True`
+    - 修复后继续锁住：
+      - WinSSL / MbedTLS 不得在 `DoSetSession(...)` 提前误报 reuse
+      - OpenSSL / WolfSSL 继续读 native reused truth
+      - FreePascal 继续在 `DoSetSession(...)` 清空 reuse 状态
+
+- add `tests/test_mbedtls_connection_session_reused_contract.pas`
+  - result: RED -> GREEN
+  - summary:
+    - 用 fake `mbedtls_ssl_set_session(...) = 0` 模拟 native helper 成功
+    - 修复前 `SetSession(...)` 会把 `IsSessionReused` 提前翻成 `True`
+    - 修复后 `SetSession(...)` 仍会调用 helper，但握手前 `IsSessionReused` 保持 `False`
+
+- `bash -n tests/scripts/test_session_reused_semantic_truth_contract.sh && bash tests/scripts/test_session_reused_semantic_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED: `[FAIL] WinSSL DoSetSession still preclaims session reuse before handshake truth exists`
+    - GREEN: session reused semantics 现在能区分 “configured session” 与 “actual resumed handshake”
+
+- `mkdir -p tmp/test_mbedtls_connection_session_reused_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_connection_session_reused_contract -FEtmp/test_mbedtls_connection_session_reused_contract -otmp/test_mbedtls_connection_session_reused_contract/test_mbedtls_connection_session_reused_contract tests/test_mbedtls_connection_session_reused_contract.pas && ./tmp/test_mbedtls_connection_session_reused_contract/test_mbedtls_connection_session_reused_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - RED: `SetSession must not claim a resumed handshake before Connect/DoHandshake`
+    - GREEN: 3/3 PASS
+
+- update `src/fafafa.ssl.winssl.connection.pas`
+  - change:
+    - `DoSetSession(...)` 现在只更新当前配置 session，并显式把 `FSessionReused` 复位为 `False`
+
+- update `src/fafafa.ssl.mbedtls.connection.pas`
+  - change:
+    - `DoSetSession(...)` 现在先清空 `FSessionReused`
+    - native `mbedtls_ssl_set_session(...)` 成功不再被误当成“当前握手已复用”
+
+- update `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+  - change:
+    - 明确 Windows runtime artifact evidence 已闭环
+    - 明确当前剩余的是“真实 resumed handshake / session tickets runtime proof”，而不是 `IsSessionReused` 的 preclaim 语义
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - 当前 session-reused semantic batch 没有 whitespace 或 patch-format 问题
+
 ### Interface And Backend Truth Cross-Check
 
 - `rg -n "ISSLConnection = interface|ISSLClientConnection = interface|ISSLServerConnection|SetServerName|TSSLConfig = record|Supports[A-Z][A-Za-z]+: Boolean|[A-Za-z]+Support: TSSLSupportLevel" src/fafafa.ssl.base.pas src/fafafa.ssl.factory.pas src/fafafa.ssl.context.builder.pas src/fafafa.ssl.pas docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md docs/ARCHITECTURE.md docs/reference/INTERFACE_DESIGN_V2.md`

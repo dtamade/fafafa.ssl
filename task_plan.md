@@ -22,9 +22,15 @@
   - `winssl_runtime_suite_wave_b_b2_20260518_193941_evidence_fix.log` 已直接包含 `[WINSSL-RUNTIME] suite_start / suite_summary / suite_end`
   - `wave_b_b2_evidence_consistency_wave_b_b2_20260518_193941_evidence_fix.md` 已把 `windows_runtime_transcript` 记成 `substantive runtime evidence; suite_end_status=PASS`
   - 当前 Wave B/B2 manual lane 的 Windows runtime evidence gap 已从“artifact 空壳”切换成“substantive proof available”
+- [completed] WinSSL / MbedTLS `IsSessionReused` semantic false positive 已完成 focused 收口：
+  - 新增 `docs/plans/2026-05-18-session-reused-semantic-truth-audit.md`
+  - 新增 `tests/scripts/test_session_reused_semantic_truth_contract.sh`
+  - 新增 `tests/test_mbedtls_connection_session_reused_contract.pas`
+  - `src/fafafa.ssl.winssl.connection.pas` / `src/fafafa.ssl.mbedtls.connection.pas` 不再把 `SetSession(...)` 直接等价成“当前握手已复用”
+  - 当前真相已重新对齐到：`SetSession` 只配置待恢复 session；`IsSessionReused` 只报告 post-handshake 实际结果
 - [in_progress] 当前 repo-level 下一步应回到更高价值的 completeness 路线：
   - 继续审查各 backend implementation completeness / optional surface completeness
-  - 若继续深挖 WinSSL，则优先扩展 session resumption / certstore / OCSP / enterprise 等高风险 lane，而不是再重复治理 runtime capture
+  - 若继续深挖 WinSSL，则优先扩展真实 resumed handshake / session tickets / certstore / OCSP / enterprise 等高风险 lane，而不是再重复治理 runtime capture 或已修掉的 semantic false positive
 - [completed] `v1.5.0` release / workflow / cross-platform runtime closeout 已经不再是当前主线：
   - 当前默认控制面应保持在 `post-release route selection`
   - 不再围绕 release lane 或旧的 Windows runtime blocker 重复开工

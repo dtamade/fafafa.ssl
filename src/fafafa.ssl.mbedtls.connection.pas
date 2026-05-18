@@ -472,13 +472,14 @@ procedure TMbedTLSConnection.DoSetSession(ASession: ISSLSession);
 var
   LRet: Integer;
 begin
+  FSessionReused := False;
   if ASession = nil then Exit;
   if FSSLContext = nil then Exit;
   if not Assigned(mbedtls_ssl_set_session) then Exit;
 
   LRet := mbedtls_ssl_set_session(FSSLContext, Pmbedtls_ssl_session(GetNativeHandleSafe(ASession, 'TMbedTLSConnection.DoSetSession')));
-  if LRet = 0 then
-    FSessionReused := True;  // Mark session as potentially reused
+  if LRet <> 0 then
+    Exit;
 end;
 
 function TMbedTLSConnection.DoIsSessionReused: Boolean;
