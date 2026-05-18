@@ -395,6 +395,7 @@ var
   LConn: ISSLConnection;
   LStream: TScriptedPeerCertificateServerStream;
   LPeerCert: ISSLCertificate;
+  LIssuerFromPeerCert: ISSLCertificate;
   LChain: TSSLCertificateArray;
   LExpectedLeaf: ISSLCertificate;
   LExpectedIssuer: ISSLCertificate;
@@ -438,6 +439,14 @@ begin
       SameText(LPeerCert.GetSubject, LExpectedLeaf.GetSubject),
       'Peer leaf certificate subject should match the scripted server leaf fixture'
     );
+    LIssuerFromPeerCert := LPeerCert.GetIssuerCertificate;
+    AssertTrue(LIssuerFromPeerCert <> nil,
+      'Peer leaf certificate should preserve issuer link');
+    AssertTrue(
+      (LIssuerFromPeerCert <> nil) and
+      SameText(LIssuerFromPeerCert.GetFingerprintSHA256, LExpectedIssuer.GetFingerprintSHA256),
+      'Peer leaf certificate issuer link should match the scripted issuer fixture'
+    );
 
     LChain := LConn.GetPeerCertificateChain;
     AssertEqualsInt(2, Length(LChain),
@@ -451,6 +460,13 @@ begin
     AssertTrue(
       SameText(LChain[1].GetFingerprintSHA256, LExpectedIssuer.GetFingerprintSHA256),
       'Peer chain issuer entry should match the scripted issuer fixture'
+    );
+    AssertTrue(LChain[0].GetIssuerCertificate <> nil,
+      'Peer chain leaf entry should preserve issuer link');
+    AssertTrue(
+      (LChain[0].GetIssuerCertificate <> nil) and
+      SameText(LChain[0].GetIssuerCertificate.GetFingerprintSHA256, LExpectedIssuer.GetFingerprintSHA256),
+      'Peer chain leaf issuer link should match the scripted issuer fixture'
     );
   finally
     LStream.Free;

@@ -6525,3 +6525,38 @@
   - result: PASS
   - summary:
     - current WolfSSL connection peer-cert batch has no whitespace or patch-format issues
+
+### FreePascal Peer Certificate Issuer Link
+
+- add `docs/plans/2026-05-19-freepascal-peer-cert-issuer-link.md`
+  - purpose:
+    - record the FreePascal connection peer-cert issuer-link completeness batch
+
+- update `tests/test_freepascal_client_peer_certificate_surface.pas`
+  - change:
+    - add leaf/chain issuer-link truth checks on top of the existing scripted TLS 1.3 handshake fixture
+
+- `mkdir -p tmp/test_freepascal_client_peer_certificate_surface_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_freepascal_client_peer_certificate_surface_units -FEtmp/test_freepascal_client_peer_certificate_surface_units -otmp/test_freepascal_client_peer_certificate_surface_units/test_freepascal_client_peer_certificate_surface tests/test_freepascal_client_peer_certificate_surface.pas && ./tmp/test_freepascal_client_peer_certificate_surface_units/test_freepascal_client_peer_certificate_surface`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `Peer leaf certificate should preserve issuer link`
+    - GREEN after fix:
+      - scripted handshake still succeeded
+      - leaf and chain leaf issuer-link truth both passed
+
+- update `src/fafafa.ssl.freepascal.connection.pas`
+  - change:
+    - after building `FPeerCertificateChain`, link each certificate to its immediate issuer
+    - last chain entry now explicitly clears issuer link
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+    - cross-backend optional/core surfaces remained green after the FreePascal issuer-link fix
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current FreePascal issuer-link batch has no whitespace or patch-format issues

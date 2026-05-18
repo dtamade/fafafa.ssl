@@ -211,6 +211,20 @@
   - 当前结论：
     - `WolfSSL` 连接态单证书 public surface 已与现有 chain/session materialization truth 对齐
     - 下一刀更适合继续横向审其它 backend 的 connection-level completeness seam，而不是再重开这条单证书 materialization 缺口
+- [completed] `FreePascal` peer-certificate issuer link 已完成 focused 收口：
+  - 新增计划：`docs/plans/2026-05-19-freepascal-peer-cert-issuer-link.md`
+  - `src/fafafa.ssl.freepascal.connection.pas`
+    - 构建 `FPeerCertificateChain` 后现在会显式接上相邻 issuer link
+    - leaf cert 与 chain leaf 都不再丢失 `GetIssuerCertificate()` truth
+  - `tests/test_freepascal_client_peer_certificate_surface.pas`
+    - 新增 leaf/chain issuer-link truth 断言
+  - focused verification 已通过：
+    - `tests/test_freepascal_client_peer_certificate_surface.pas`: PASS
+    - `tests/contract/test_backend_contract.pas`: `135 total / 111 passed / 0 failed / 24 skipped`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - `FreePascal` 连接态 peer cert surface 已不再出现“leaf/chain 都有了，但 issuer link 仍为空”的链真相缺口
+    - 下一刀更适合横向审其它 backend 是否也存在同类 issuer-link completeness seam
 - [completed] generic session-cache persistence count truth 已完成 focused 修复并形成新基线：
   - 新增计划：`docs/plans/2026-05-19-session-cache-persistence-count-truth.md`
   - 新增 focused test：`tests/test_session_cache_persistence_contract.pas`
@@ -1842,6 +1856,34 @@
     - 当前批收口后默认下一步应为：
       - 横向继续审其它 backend 的 connection-level certificate ownership/completeness seam
       - 不再把 WolfSSL connection single-cert materialization gap 当成未定位问题重复拉起
+64. `FreePascal peer-certificate issuer link` 已完成 focused 收口，并应作为当前 connection-level chain-truth 新基线保留：
+    - 新 plan：
+      - `docs/plans/2026-05-19-freepascal-peer-cert-issuer-link.md`
+    - 当前已确认的 route truth：
+      - `ISSLCertificate` 公共接口明确暴露：
+        - `SetIssuerCertificate(...)`
+        - `GetIssuerCertificate(...)`
+      - `TFreePascalConnection` 之前虽然已经构建了：
+        - `FPeerCertificateChain`
+        - `FPeerCertificate := FPeerCertificateChain[0]`
+      - 但没有把 chain 相邻证书之间的 issuer link 接起来
+      - 所以曾出现：
+        - `GetPeerCertificate()` 返回 leaf cert
+        - `GetPeerCertificateChain()` 返回完整 chain
+        - 但 leaf 上的 `GetIssuerCertificate()` 仍为空
+      - 当前修复后：
+        - 构建 `FPeerCertificateChain` 后会显式把 `chain[i].issuer = chain[i+1]`
+        - 最后一个 cert 的 issuer link 归零
+      - 这说明当前 `FreePascal` connection-level peer cert truth 已重新对齐为：
+        - public leaf cert 可以沿 issuer link 继续追到 chain issuer
+        - chain leaf 也保留同一条 issuer-link truth
+    - 当前 focused proof 已覆盖：
+      - `mkdir -p tmp/test_freepascal_client_peer_certificate_surface_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_freepascal_client_peer_certificate_surface_units -FEtmp/test_freepascal_client_peer_certificate_surface_units -otmp/test_freepascal_client_peer_certificate_surface_units/test_freepascal_client_peer_certificate_surface tests/test_freepascal_client_peer_certificate_surface.pas && ./tmp/test_freepascal_client_peer_certificate_surface_units/test_freepascal_client_peer_certificate_surface`
+      - `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+      - `git diff --check`
+    - 当前批收口后默认下一步应为：
+      - 横向审其它 backend 是否仍缺 issuer-link completeness
+      - 不再把 FreePascal peer-cert issuer-link gap 当成未定位问题重复拉起
 
 ## Verification Discipline
 

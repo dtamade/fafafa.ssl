@@ -2937,3 +2937,33 @@
   - `TWolfSSLConnection.GetPeerCertificate()` 现在返回的 cert handle 不再与 source native handle 同指针
   - helper-loss 时也不再继续返回 fake-complete wrapper
   - 这说明 `WolfSSL` connection single-cert surface 现在终于和 chain/session/certificate clone 的 public truth 口径一致了
+
+- 继续沿着 connection-level certificate completeness 往下压后，`FreePascal` 又暴露出一条更像“链真相缺失”的问题：
+  - `ISSLCertificate` 公共接口明确公开了：
+    - `SetIssuerCertificate(...)`
+    - `GetIssuerCertificate(...)`
+  - `TFreePascalConnection` 握手后也已经能同时构建：
+    - `FPeerCertificateChain`
+    - `FPeerCertificate := FPeerCertificateChain[0]`
+  - 但之前没有把 chain 相邻证书之间的 issuer link 接起来
+  - 所以当时会出现：
+    - `GetPeerCertificate()` 能拿到 leaf
+    - `GetPeerCertificateChain()` 能拿到 leaf + issuer
+    - 但 leaf 上的 `GetIssuerCertificate()` 仍为空
+
+- focused RED 也把这条缺口钉得很实，而不是“文档味道”：
+  - `Peer leaf certificate should preserve issuer link` 先红
+  - `Peer chain leaf entry should preserve issuer link` 也会跟着红
+  - 这说明当前缺口不是 handshake 没产出链，而是 public chain truth 没有沿 `ISSLCertificate` surface 对外接通
+
+- 当前最小正确修法已经明确并落地：
+  - 不重开 scripted TLS 1.3 handshake 主路径
+  - 不动 OCSP / verify / certstore 流程
+  - 只在 `TFreePascalConnection` 构建完 `FPeerCertificateChain` 后：
+    - `chain[i].issuer := chain[i+1]`
+    - 最后一个 cert 的 issuer link 置空
+
+- 当前收口后的 route truth 已明确：
+  - `GetPeerCertificate()` 返回的 leaf cert 现在会保留 issuer link
+  - `GetPeerCertificateChain()[0]` 也会保留同一条 issuer-link truth
+  - 这说明 `FreePascal` 连接态 peer cert public surface 已不再出现“leaf/chain 都在，但 issuer link 断掉”的 completeness 漂移

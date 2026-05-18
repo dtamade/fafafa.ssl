@@ -1394,6 +1394,17 @@ begin
     FPeerCertificateChain[I] := LCertificate;
   end;
 
+  for I := 0 to High(FPeerCertificateChain) do
+  begin
+    if FPeerCertificateChain[I] = nil then
+      Continue;
+
+    if I < High(FPeerCertificateChain) then
+      FPeerCertificateChain[I].SetIssuerCertificate(FPeerCertificateChain[I + 1])
+    else
+      FPeerCertificateChain[I].SetIssuerCertificate(nil);
+  end;
+
   FPeerCertificate := FPeerCertificateChain[0];
 
   if ACertificateTransparencyRequested and
