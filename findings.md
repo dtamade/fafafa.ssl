@@ -1251,3 +1251,35 @@
   - callback owner 已单一
   - dedicated setter 与 default-config 的职责已分开
   - 后续不该再把“`SetDefaultConfig(...)` 还能不能安装 callback”当成未验证区域重新拉起
+
+- 继续顺着 mixed-scope / compatibility 测试面往下看后，这轮确认了一个更偏“测试完整性”但依然真实的问题：
+  - `tests/test_factory_logic.pas`
+  - `tests/test_data_structures.pas`
+    已经承担了核心 `TSSLConfig` record-shape coverage：
+    - deprecated `ServerName`
+    - option-bridge booleans
+    - `BufferSize` / `HandshakeTimeout` 这类 mixed-scope field visibility
+  - 但它们在测试结束后仍保留：
+    - `WriteLn('按回车键退出...')`
+    - `ReadLn`
+
+- 这条问题没有造成当前 headless run 卡死，但它会留下两个负面信号：
+  - 自动化输出始终带着“手工程序尾巴”
+  - 核心测试继续看起来像 demo，而不是 CI-friendly test binary
+
+- 这轮修法保持得很克制：
+  - 不改任何断言和 coverage 目标
+  - 只移除交互式退出逻辑
+  - 并把 `INTENTIONAL_COMPAT` 注释补完整：
+    - 不只说明 `ServerName` / option-bridge booleans
+    - 也明确说明 `BufferSize` / `HandshakeTimeout` 这类 mixed-scope record-shape 字段仍是故意保留的可见面
+
+- focused evidence 也足够直接：
+  - 修复前 direct run 的最终输出都以“按回车键退出...”收尾
+  - 修复后同样两份测试都可直接在 `timeout 2 ./...` 下跑完
+  - 输出尾部只剩测试总结，不再要求或暗示手工输入
+
+- 因而这两份 core compat tests 当前已经重新回到更合理的位置：
+  - 仍然保留需要的 `v1.x` record-shape / compatibility coverage
+  - 但不再把自己伪装成必须手工退出的演示程序
+  - 后续不该再把这两份文件的交互尾巴当成未验证区域重新拉起

@@ -2546,3 +2546,62 @@
   - result: PASS
   - summary:
     - current library-default callback detachment batch has no whitespace or patch-format issues
+
+### Noninteractive Core Compat Tests
+
+- add `docs/plans/2026-05-18-noninteractive-core-compat-tests.md`
+  - purpose:
+    - define a bounded cleanup batch for turning two core compat/record-shape tests into real noninteractive test programs
+    - keep scope on `tests/test_factory_logic.pas` and `tests/test_data_structures.pas`
+
+- `rg -n "ReadLn\\;|按回车键退出" tests/test_factory_logic.pas tests/test_data_structures.pas`
+  - result: PASS
+  - summary:
+    - both files still contained interactive exit prompts and `ReadLn`
+
+- `zsh -lc "mkdir -p tmp/test_factory_logic && fpc ... && printf '\\n' | ./tmp/test_factory_logic/test_factory_logic"`
+  - result: PASS
+  - summary:
+    - pre-fix direct run finished only after feeding stdin
+    - output ended with `按回车键退出...`, confirming the remaining manual-exit tail in the core factory test
+
+- `zsh -lc "mkdir -p tmp/test_data_structures && fpc ... && printf '\\n' | ./tmp/test_data_structures/test_data_structures"`
+  - result: PASS
+  - summary:
+    - pre-fix direct run finished only after feeding stdin
+    - output ended with `按回车键退出...`, confirming the remaining manual-exit tail in the core data-structure test
+
+- `timeout 2 ./tmp/test_factory_logic/test_factory_logic`
+  - result: PASS
+  - summary:
+    - headless run did not hard-hang on this host
+    - but it still printed the interactive exit prompt, proving the test binary remained automation-noisy even when stdin was absent
+
+- `timeout 2 ./tmp/test_data_structures/test_data_structures`
+  - result: PASS
+  - summary:
+    - same result for the core data-structure test: no hard hang here, but the interactive exit tail still polluted automated output
+
+- update:
+  - `tests/test_factory_logic.pas`
+  - `tests/test_data_structures.pas`
+  - change:
+    - remove `按回车键退出...` + `ReadLn`
+    - extend the `INTENTIONAL_COMPAT` header note so it explicitly includes mixed-scope record-shape fields such as `BufferSize` / `HandshakeTimeout`
+
+- `zsh -lc "mkdir -p tmp/test_factory_logic && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_logic -FEtmp/test_factory_logic -otmp/test_factory_logic/test_factory_logic tests/test_factory_logic.pas >/tmp/test_factory_logic.build.log && timeout 2 ./tmp/test_factory_logic/test_factory_logic"`
+  - GREEN result: PASS
+  - summary:
+    - core factory logic suite finished `80 passed, 0 failed`
+    - output now ends cleanly at the test summary without the old interactive-exit tail
+
+- `zsh -lc "mkdir -p tmp/test_data_structures && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_data_structures -FEtmp/test_data_structures -otmp/test_data_structures/test_data_structures tests/test_data_structures.pas >/tmp/test_data_structures.build.log && timeout 2 ./tmp/test_data_structures/test_data_structures"`
+  - GREEN result: PASS
+  - summary:
+    - core data-structure suite finished `102 passed, 0 failed`
+    - output now ends cleanly at the test summary without the old interactive-exit tail
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current noninteractive core compat test batch has no whitespace or patch-format issues

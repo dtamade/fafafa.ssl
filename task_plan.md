@@ -505,6 +505,30 @@
     - 下一条相关路线不该再回到 `LogCallback` owner 模糊地带：
       - `LogLevel` / `LogCallback` 这条线当前已从 docs freeze 进入 runtime/source truth
       - 后续应继续找新的 live interface/implementation gap，而不是再把 callback default-config owner 当成未收口问题反复拉起
+17. `noninteractive core compat tests` 当前也已完成第一轮收口：
+    - 新 plan：
+      - `docs/plans/2026-05-18-noninteractive-core-compat-tests.md`
+    - 新验证：
+      - `tests/test_factory_logic.pas`
+      - `tests/test_data_structures.pas`
+    - 当前已收口的真实问题：
+      - 这两份核心 `TSSLConfig` record-shape / compatibility 测试此前虽然能跑通，
+        但末尾仍保留：
+        - `WriteLn('按回车键退出...')`
+        - `ReadLn`
+      - 结果就是它们继续表现得像“手工演示程序”，而不是直接适合自动化执行的测试
+    - 当前修法：
+      - 移除两份文件末尾的交互式退出逻辑
+      - 头部 `INTENTIONAL_COMPAT` 注释同步补清：
+        - deprecated `ServerName`
+        - option-bridge booleans
+        - mixed-scope record-shape fields（`BufferSize` / `HandshakeTimeout`）
+    - 当前 focused proof 已覆盖：
+      - 修复前 direct run 输出会以“按回车键退出...”收尾
+      - 修复后两份测试都可直接 `timeout 2 ./...` 跑完，且输出不再留下交互式退出尾巴
+    - 下一条相关路线不该再回到这两份 core test 的交互尾巴：
+      - 它们当前已可作为自动化测试程序直接执行
+      - 后续应继续找新的 live interface/implementation gap，而不是再把这两份文件的手工退出逻辑当成未收口问题反复拉起
 
 ## Verification Discipline
 

@@ -3,9 +3,11 @@ program test_data_structures;
 {$mode objfpc}{$H+}
 
 { INTENTIONAL_COMPAT: this file intentionally keeps deprecated
-  TSSLConfig.ServerName plus the remaining option-bridge boolean field surface
-  (`EnableCompression` / `EnableSessionTickets` / `EnableOCSPStapling`)
-  explicit so the v1.x compatibility record shape stays visible. }
+  TSSLConfig.ServerName, the remaining option-bridge boolean field surface
+  (`EnableCompression` / `EnableSessionTickets` / `EnableOCSPStapling`),
+  and mixed-scope record-shape fields such as `BufferSize` /
+  `HandshakeTimeout` explicit so the v1.x compatibility record shape
+  stays visible. }
 
 {
   test_data_structures - 数据结构测试
@@ -544,16 +546,10 @@ begin
     WriteLn;
     PrintSummary;
 
-    WriteLn;
-    WriteLn('按回车键退出...');
-    ReadLn;
   except
     on E: Exception do
     begin
       WriteLn('错误: ', E.Message);
-      WriteLn;
-      WriteLn('按回车键退出...');
-      ReadLn;
       Halt(1);
     end;
   end;
