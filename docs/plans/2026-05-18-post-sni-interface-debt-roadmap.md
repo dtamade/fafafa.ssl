@@ -154,6 +154,19 @@ Recommended first bounded batch:
     1. 先决定 contract 层是否继续把 core getter 视为强 owner，还是只保留 mirror-equality 约束
     2. 再决定是否进入更强的 deprecation / removal 路线
 
+## Progress Since The GetContext Guidance Cut
+
+- 已交付：
+  - `GetContext` contract owner primacy
+  - `tests/contract/test_backend_contract.pas` 现在先验证 `ISSLConnectionInfo.GetContext` 对创建 context 的 owner truth
+  - `ISSLConnection.GetContext` 只保留为 mirror-equality proof
+  - focused source guard `tests/scripts/test_isslconnectioninfo_getcontext_contract_owner_contract.sh`
+
+- 当前更准确的 next step：
+  - `GetContext` 已经不再被 active docs 或 contract 叙事当作双 owner 路径
+  - 下一批可以直接进入更强的 `GetContext` source/class split feasibility
+  - 如果 focused feasibility 继续支持当前方向，再决定是否进入 public deprecation / removal route
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

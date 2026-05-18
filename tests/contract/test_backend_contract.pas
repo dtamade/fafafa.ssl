@@ -1792,7 +1792,6 @@ begin
 
       LCoreInfo := LConn.GetConnectionInfo;
       LOptionalInfo := LConnInfoAccess.GetConnectionInfo;
-      LCoreCtx := LConn.GetContext;
       LOptionalCtx := LConnInfoAccess.GetContext;
 
       if LOptionalInfo.ProtocolVersion <> LCoreInfo.ProtocolVersion then
@@ -1831,17 +1830,11 @@ begin
         AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
           'ISSLConnectionInfo.GetStateString returned an empty string');
       end
-      else if (LOptionalCtx = nil) or (LCoreCtx = nil) then
+      else if LOptionalCtx = nil then
       begin
-        WriteLn('  [FAIL] Optional/core context getter returned nil');
+        WriteLn('  [FAIL] Optional context owner returned nil');
         AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
-          'ISSLConnectionInfo.GetContext or ISSLConnection.GetContext returned nil');
-      end
-      else if LOptionalCtx.GetContextType <> LCoreCtx.GetContextType then
-      begin
-        WriteLn('  [FAIL] Optional interface context type drifted from core getter');
-        AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
-          'ISSLConnectionInfo.GetContext.GetContextType does not match ISSLConnection.GetContext');
+          'ISSLConnectionInfo.GetContext returned nil');
       end
       else if LOptionalCtx.GetContextType <> LCtx.GetContextType then
       begin
@@ -1851,8 +1844,24 @@ begin
       end
       else
       begin
-        WriteLn('  [PASS] Connection-info surface is self-consistent');
-        AddResult('ConnectionInfoInterfaceAligned', ABackend, True);
+        LCoreCtx := LConn.GetContext;
+        if LCoreCtx = nil then
+        begin
+          WriteLn('  [FAIL] Core GetContext mirror returned nil');
+          AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+            'ISSLConnection.GetContext mirror returned nil');
+        end
+        else if LCoreCtx.GetContextType <> LOptionalCtx.GetContextType then
+        begin
+          WriteLn('  [FAIL] Core GetContext mirror drifted from optional owner');
+          AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+            'ISSLConnection.GetContext does not mirror ISSLConnectionInfo.GetContext');
+        end
+        else
+        begin
+          WriteLn('  [PASS] Connection-info surface is self-consistent');
+          AddResult('ConnectionInfoInterfaceAligned', ABackend, True);
+        end;
       end;
     except
       on E: Exception do

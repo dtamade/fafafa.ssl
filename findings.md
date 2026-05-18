@@ -1578,3 +1578,25 @@
   - 让 capability 示例改走 `ISSLConnectionInfo.GetContext`
   - 把 API reference 的 first guidance 明确扩展到 `GetContext`
   - 这样下一批才适合进入 `GetContext` 的 source/class split feasibility
+
+- `GetContext` active guidance 收掉之后，剩下最关键的 live coupling 就集中到了 contract 层：
+  - `tests/contract/test_backend_contract.pas` 还在并列读取 `LConn.GetContext` 与 `LConnInfoAccess.GetContext`
+  - 这让测试叙事看起来像在承认双 owner，而不是“optional owner + core mirror”
+
+- 这也是为什么下一刀不该直接讨论 public deprecation：
+  - 如果测试层还保留双 owner 话术，后续任何 `GetContext` 路线讨论都会继续模糊
+  - 先把 contract 改成 `ISSLConnectionInfo.GetContext` 为主、`ISSLConnection.GetContext` 为 mirror proof，才算真正把 owner 语义压实
+
+- 这一刀落下之后，`GetContext` 的 owner 语义终于在测试层也和路线图一致了：
+  - `tests/contract/test_backend_contract.pas` 现在先验证 `ISSLConnectionInfo.GetContext` 对创建 context 的 owner truth
+  - `ISSLConnection.GetContext` 只在 owner truth 通过后再做 mirror-equality proof
+  - focused `test_backend_contract` 结果仍保持：
+    - `Total Tests: 135`
+    - `Passed: 111`
+    - `Failed: 0`
+    - `Skipped: 24`
+
+- 这说明当前并没有引出新的 backend 行为漂移：
+  - OpenSSL / WolfSSL / MbedTLS / FreePascal 的 connection-info contract 继续 PASS
+  - WinSSL 继续保持 Linux 主机上的平台 skip truth
+  - 因而下一批可以更放心地讨论 `GetContext` 的更强 feasibility / deprecation 路线，而不是回头怀疑 contract 是否已跟上

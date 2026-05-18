@@ -779,6 +779,24 @@
       - `git diff --check`
       - 新 contract 当前 PASS
     - 当前批收口后，下一刀就可以直接进入 `GetContext` 的 source/class split feasibility
+27. `GetContext contract owner primacy` 现在应作为第一条测试层真实收窄：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getcontext-contract-owner-primacy.md`
+    - 当前 residual coupling：
+      - `tests/contract/test_backend_contract.pas` 仍把 `ISSLConnection.GetContext` 和
+        `ISSLConnectionInfo.GetContext` 写成并列 owner
+      - 失败文案也仍然是双 owner 叙事，不利于后续真正讨论 `GetContext` 离开 core 的路线
+    - 当前修法：
+      - 先验证 `ISSLConnectionInfo.GetContext` 与创建 context type 一致
+      - 再把 `ISSLConnection.GetContext` 降为 mirror-equality proof
+      - 新增 focused source guard，防止 contract 语义回流
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_isslconnectioninfo_getcontext_contract_owner_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_getcontext_contract_owner_contract.sh`
+      - `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+      - `git diff --check`
+      - focused contract 当前 PASS
+    - 当前批收口后，下一刀就可以直接进入 `GetContext` 的更强 feasibility / deprecation 讨论
 
 ## Verification Discipline
 

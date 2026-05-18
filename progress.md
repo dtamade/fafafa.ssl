@@ -3143,3 +3143,62 @@
   - summary:
     - reran the focused `GetContext` guidance proof during final commit preparation
     - current batch is ready to commit without reopening heavier verification lanes
+
+### GetContext Contract Owner Primacy
+
+- `sed -n '1788,1856p' tests/contract/test_backend_contract.pas` / `rg -n \"test_backend_contract\\.pas|GetContext\" progress.md docs/plans tests/scripts`
+  - result: PASS
+  - summary:
+    - confirmed the remaining live `GetContext` coupling had shrunk to the contract layer
+    - confirmed the contract still narrated `ISSLConnection.GetContext` and `ISSLConnectionInfo.GetContext` as a dual-owner pair
+
+- add `docs/plans/2026-05-18-getcontext-contract-owner-primacy.md`
+  - purpose:
+    - define a bounded contract-semantics batch that promotes `ISSLConnectionInfo.GetContext` to the primary owner without touching runtime implementation
+
+- update `tests/contract/test_backend_contract.pas`
+  - change:
+    - check `ISSLConnectionInfo.GetContext` against the creation context before consulting the core mirror
+    - keep `ISSLConnection.GetContext` only as a mirror-equality proof after optional-owner truth is established
+
+- add `tests/scripts/test_isslconnectioninfo_getcontext_contract_owner_contract.sh`
+  - purpose:
+    - fail if the backend contract drifts back to legacy dual-owner `GetContext` wording
+    - keep the new optional-owner/core-mirror semantics cheap to revalidate
+
+- update `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - mark `GetContext` contract owner primacy as delivered
+    - move the next route to stronger `GetContext` feasibility / deprecation discussion
+
+- `bash -n tests/scripts/test_isslconnectioninfo_getcontext_contract_owner_contract.sh`
+  - result: PASS
+  - summary:
+    - new `GetContext` contract-owner guard script is syntactically valid
+
+- `bash tests/scripts/test_isslconnectioninfo_getcontext_contract_owner_contract.sh`
+  - result: PASS
+  - summary:
+    - backend contract source now treats `ISSLConnectionInfo.GetContext` as the primary owner
+    - legacy dual-owner `GetContext` wording is no longer present in the guarded contract block
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - focused backend contract suite finished `135 total / 111 passed / 0 failed / 24 skipped`
+    - OpenSSL / WolfSSL / MbedTLS / FreePascal kept `Contract 19: Connection-info interface alignment` green after the owner-primacy change
+    - WinSSL continued to follow the current Linux-host skip truth
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `GetContext contract owner primacy` batch has no whitespace or patch-format issues
+
+- closeout revalidation before commit:
+  - `bash -n tests/scripts/test_isslconnectioninfo_getcontext_contract_owner_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_getcontext_contract_owner_contract.sh`
+  - `git diff --check`
+  - result: PASS
+  - summary:
+    - reran the lightweight `GetContext` contract-owner proof after the final planning-file sync
+    - no heavy recompile was needed because only planning files changed after the last focused Pascal contract run
