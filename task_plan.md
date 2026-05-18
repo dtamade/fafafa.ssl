@@ -191,6 +191,14 @@
   - 剩余 builder/config compatibility surface 测试现在全部显式带 `INTENTIONAL_COMPAT`
   - 新增 `tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
     守住 deprecated `WithSNI(...)` / `TSSLConfig.ServerName` 只存在于 allowlist compatibility tests
+- [completed] final public surface cleanup prep 的第二刀 active direct-context classification cleanup 已收口：
+  - active tests 中剩余 real `Ctx.SetServerName(...)` 命中已经全部显式分类
+  - 新增 `tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
+    守住 direct-context `SetServerName(...)` 只存在于 allowlist compatibility / API-surface tests
+  - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+  - `tests/test_sslctxboth_client_capability_clarification.pas`
+  - `tests/test_connection_builder_hostname_precedence.pas`
+    现在都显式带 `INTENTIONAL_COMPAT`
 
 ## Scope
 
@@ -222,6 +230,7 @@
    - 当前 builder / factory 的高层输入都已经是 `warning + ignore`
    - OpenSSL backend-specific direct library default-config path 也已完成对齐
    - 普通测试面也已不再继续示范 deprecated builder/config ServerName surface
+   - active direct-context `SetServerName(...)` 测试面也已不再存在未分类命中
    - 现在应直接进入最终 API 形状决策：
      - `TSSLConfig.ServerName` 是否还应继续留在当前 record 上
      - builder `WithSNI(...)` 是否还应继续保留当前命名/挂载位置

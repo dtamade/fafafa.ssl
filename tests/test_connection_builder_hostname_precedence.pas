@@ -2,6 +2,10 @@ program test_connection_builder_hostname_precedence;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally seeds deprecated direct context
+  ServerName state so the connection builder can prove it clears legacy
+  fallback unless callers set an explicit hostname. }
+
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
@@ -539,6 +543,8 @@ var
   ClientConn: ISSLClientConnection;
 begin
   Ctx := TMockContext.Create(sslCtxClient);
+  // INTENTIONAL_COMPAT: keep legacy direct-context input here so the builder
+  // precedence contract can prove the client connection no longer inherits it.
   {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   Ctx.SetServerName('ctx.example.com');
   {$POP}

@@ -845,6 +845,45 @@
   - `git diff --check`
     - PASS
 
+## 增量收口：active direct-context ServerName surface classification
+
+- 在普通 builder/config 测试面收干净后，public compatibility surface 还剩最后一类容易反复拉起的噪音：
+  - active tests 里残余的 `Ctx.SetServerName(...)`
+  - 其中有些已经带 `INTENTIONAL_API_SURFACE`
+  - 但也有一批关键 compatibility regressions 还没有被统一纳入 repo-level 分类护栏
+
+- 这会留下一个工作流漏洞：
+  - 我们知道 runtime 已经不再把 context-level `ServerName` 传播进新连接
+  - 但如果这些 direct-context 测试命中没有统一分类，下次重新审查时仍会先花时间判断它们是不是“普通流程又漏教旧入口”
+
+- 当前这一刀做的是 direct-context 测试面的总分类，而不是行为迁移：
+  - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+  - `tests/test_sslctxboth_client_capability_clarification.pas`
+  - `tests/test_connection_builder_hostname_precedence.pas`
+    现在都显式带上 `INTENTIONAL_COMPAT`
+  - 新增 `tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
+    直接守住：
+    - active tests 里所有 real direct-context `SetServerName(...)` 命中都必须在 allowlist 中
+    - 每个 allowlist 文件都必须带正确分类：`INTENTIONAL_COMPAT` 或 `INTENTIONAL_API_SURFACE`
+    - allowlist 外若重新出现 direct context setter，直接红灯
+
+- 这意味着 final public surface cleanup prep 已经再往前推进了一步：
+  - 普通 builder/config 旧入口不再泄漏到 ordinary tests
+  - active direct-context 命中也全部变成了“明确知道自己在测什么”的显式集合
+  - 因而下一步可以不再做测试面排查，直接进入最终 API 形状决策
+
+- focused 结果：
+  - `bash tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
+    - PASS
+  - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+    - PASS (`20 passed, 0 failed, 1 skipped`)
+  - `tests/test_connection_builder_hostname_precedence.pas`
+    - PASS (`9 passed, 0 failed`)
+  - `tests/test_sslctxboth_client_capability_clarification.pas`
+    - PASS (`28 passed, 0 failed, 1 skipped`)
+  - `git diff --check`
+    - PASS
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -869,7 +908,13 @@
   - PASS
 - `bash tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
   - PASS
+- `bash tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
+  - PASS
 - `tests/test_quick.pas`
+  - PASS
+- `tests/test_connection_builder_hostname_precedence.pas`
+  - PASS
+- `tests/test_sslctxboth_client_capability_clarification.pas`
   - PASS
 - `tests/test_context_builder_server_servername_runtime_consistency.pas`
   - PASS

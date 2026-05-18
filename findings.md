@@ -543,3 +543,33 @@
     - `TSSLConfig.ServerName`
     - `WithSNI(...)`
     - direct `ISSLContext.SetServerName/GetServerName`
+
+- 继续把 active direct-context `SetServerName(...)` 命中全盘出来后，又确认了一个此前缺少 repo-level 合同的空档：
+  - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+  - `tests/test_sslctxboth_client_capability_clarification.pas`
+  - `tests/test_connection_builder_hostname_precedence.pas`
+    这些文件实际上都在故意保留 direct-context legacy input
+  - 但在本批之前，它们还没有像 WinSSL comprehensive / backend framework / diagnostic/security files 那样，被统一纳入 active-surface 分类合同
+
+- 这意味着当时 direct context surface 还不算真正“收口”：
+  - 旧命中虽然多数已经带局部注释
+  - 但 repo 还没有一个 focused truth 能回答：
+    - “active tests 里到底哪些 direct-context `SetServerName(...)` 是允许的？”
+    - “它们是 compatibility 还是 API-surface coverage？”
+
+- 新增的 `tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh` 已经把这个空档补上：
+  - 它枚举 active tests 里所有 real direct-context `SetServerName(...)` 文件
+  - 每个文件都必须带正确标签：
+    - `INTENTIONAL_COMPAT`
+    - 或 `INTENTIONAL_API_SURFACE`
+  - allowlist 外若重新出现 direct context setter，会直接红灯
+
+- 因而到当前为止，public compatibility surface 的测试面已经分成两层稳定护栏：
+  - builder/config compatibility-only surface：
+    - `tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+  - direct-context compatibility/API-surface：
+    - `tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
+
+- 这进一步确认了路线已经真正前移：
+  - 现在不再需要继续做测试面排污或分类普查
+  - 下一步的最高价值工作已经纯粹是最终 API 形状决策，而不是再找“还有没有哪个文件偷偷示范旧入口”

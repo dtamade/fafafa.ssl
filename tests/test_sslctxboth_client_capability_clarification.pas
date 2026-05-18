@@ -2,6 +2,10 @@ program test_sslctxboth_client_capability_clarification;
 
 {$mode ObjFPC}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally keeps direct context
+  ServerName setup on sslCtxBoth while proving dual-role connections no longer
+  inherit it implicitly. }
+
 uses
   SysUtils, Classes,
   fafafa.ssl,

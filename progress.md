@@ -1495,3 +1495,62 @@
   - change:
     - sync the new truth that remaining deprecated builder/config ServerName usage is now explicitly classified
     - record that the next highest-value work is final API-shape decisions, not more ordinary-test cleanup
+
+### Active Direct Context ServerName Surface Classification
+
+- add `docs/plans/2026-05-18-active-direct-context-servername-surface-classification.md`
+  - purpose:
+    - define the second static cleanup cut inside final public surface cleanup prep
+    - keep scope on active direct-context `SetServerName(...)` classification only
+
+- update selected compatibility tests
+  - change:
+    - add explicit `INTENTIONAL_COMPAT` labels to:
+      - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+      - `tests/test_sslctxboth_client_capability_clarification.pas`
+      - `tests/test_connection_builder_hostname_precedence.pas`
+    - keep runtime semantics unchanged; the batch is classification-only
+
+- add `tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
+  - purpose:
+    - classify every active real direct-context `SetServerName(...)` hit
+    - fail if an active ordinary test reintroduces an unclassified direct-context ServerName setter
+
+- `bash tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - all active real direct-context `SetServerName(...)` tests are now explicitly classified
+    - no unexpected active ordinary test still uses a direct-context ServerName setter
+
+- `mkdir -p tmp/test_cross_backend_client_context_server_name_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_cross_backend_client_context_server_name_clarification -FEtmp/test_cross_backend_client_context_server_name_clarification -otmp/test_cross_backend_client_context_server_name_clarification/test_cross_backend_client_context_server_name_clarification tests/test_cross_backend_client_context_server_name_clarification.pas && ./tmp/test_cross_backend_client_context_server_name_clarification/test_cross_backend_client_context_server_name_clarification`
+  - result: PASS
+  - summary:
+    - focused cross-backend clarification stayed green (`20 passed, 0 failed, 1 skipped`)
+    - direct context state is still observable while new client connections stay no-inheritance across available backends
+
+- `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+  - result: PASS
+  - summary:
+    - focused builder precedence contract stayed green (`9 passed, 0 failed`)
+    - explicit hostname override/clear rules remain correct after the classification-only batch
+
+- `mkdir -p tmp/test_sslctxboth_client_capability_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_sslctxboth_client_capability_clarification -FEtmp/test_sslctxboth_client_capability_clarification -otmp/test_sslctxboth_client_capability_clarification/test_sslctxboth_client_capability_clarification tests/test_sslctxboth_client_capability_clarification.pas && ./tmp/test_sslctxboth_client_capability_clarification/test_sslctxboth_client_capability_clarification`
+  - result: PASS
+  - summary:
+    - focused `sslCtxBoth` clarification stayed green (`28 passed, 0 failed, 1 skipped`)
+    - dual-role contexts still expose client capability without reintroducing implicit ServerName inheritance
+
+- update `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - change:
+    - mark the active direct-context surface classification cut complete
+    - keep the next recommended batch on final API-shape decisions
+
+- update `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - change:
+    - add a dedicated closeout section for active direct-context ServerName surface classification
+    - record that the next blocker is final public API shape, not more test-surface triage
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the new truth that all active real direct-context `SetServerName(...)` hits are now explicitly classified
+    - record that the next highest-value work is final API-shape decisions, not more direct-context surface census

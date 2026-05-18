@@ -2,6 +2,10 @@ program test_cross_backend_client_context_server_name_clarification;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally keeps direct context
+  ServerName state observable while proving new client connections across
+  backends no longer inherit it. }
+
 uses
   SysUtils, Classes,
   fafafa.ssl,
