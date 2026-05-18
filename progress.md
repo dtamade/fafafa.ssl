@@ -1768,3 +1768,61 @@
       - several option-style fields still normalize into `Options`
     - `ISSLConnection` slimming remains larger-risk because it would touch every backend connection implementation plus many tests/helpers
     - next recommended bounded batch is therefore `TSSLConfig` cross-layer slimming roadmap, not immediate `ISSLConnection` surgery
+
+### TSSLConfig Scope Buckets
+
+- add `docs/plans/2026-05-18-tsslconfig-scope-buckets.md`
+  - purpose:
+    - define the first bounded post-SNI `TSSLConfig` truth batch
+    - freeze mixed-scope field buckets before any larger slimming or backend refactor
+
+- update `src/fafafa.ssl.base.pas`
+  - change:
+    - rewrite mixed-scope field comments so `BufferSize` / `HandshakeTimeout` / `Session*` / `ALPN` / early-data / logging / option-bridge fields now carry explicit scope truth
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - add `TSSLConfig Scope Buckets`
+    - align the replay-store note so it explicitly says `context-scoped, server-only opt-in`
+
+- add `tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - purpose:
+    - fail if the new source/doc bucket truth drifts away from current factory / OpenSSL direct-path evidence
+
+- `bash -n tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - the new TSSLConfig scope bucket contract script is syntactically valid
+
+- `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - first result: FAIL
+  - summary:
+    - shell interpreted backtick-bearing double-quoted fixed-string assertions as command substitution
+    - fix:
+      - switch those fixed-string assertions to single-quoted literals
+      - add `--` to `rg` invocations so bullet-like patterns are not parsed as flags
+
+- `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - rerun result: PASS
+  - summary:
+    - source comments, API reference bucket section, factory scope checks, and OpenSSL direct-path apply points stay aligned
+
+- `mkdir -p tmp/test_factory_connection_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_connection_scope_clarification -FEtmp/test_factory_connection_scope_clarification -otmp/test_factory_connection_scope_clarification/test_factory_connection_scope_clarification tests/test_factory_connection_scope_clarification.pas && ./tmp/test_factory_connection_scope_clarification/test_factory_connection_scope_clarification`
+  - result: PASS
+  - summary:
+    - focused factory connection-scope clarification test remains green
+
+- `mkdir -p tmp/test_factory_logging_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_logging_scope_clarification -FEtmp/test_factory_logging_scope_clarification -otmp/test_factory_logging_scope_clarification/test_factory_logging_scope_clarification tests/test_factory_logging_scope_clarification.pas && ./tmp/test_factory_logging_scope_clarification/test_factory_logging_scope_clarification`
+  - result: PASS
+  - summary:
+    - focused factory logging-scope clarification test remains green
+
+### Cross-backend Direct-Library Default-Config Parity Audit
+
+- read-only static audit:
+  - summary:
+    - OpenSSL direct-library `CreateContext(AType)` explicitly applies `SessionCacheSize` / `SessionTimeout` / `ALPNProtocols` and handles deprecated `ServerName`
+    - WinSSL direct-library `CreateContext(AType)` currently only applies `Options`
+    - FreePascal / MbedTLS / WolfSSL direct-library `CreateContext(AType)` currently just create contexts
+    - those same libraries still store `FDefaultConfig`, while their context classes expose `SessionCacheSize` / `SessionTimeout` / `ALPNProtocols`
+    - this is the next highest-value parity risk to verify/fix before broader interface slimming

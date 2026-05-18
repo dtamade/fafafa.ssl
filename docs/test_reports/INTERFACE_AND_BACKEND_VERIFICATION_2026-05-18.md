@@ -1149,3 +1149,72 @@
 - 因而当前最优先的下一批建议是：
   - **先做 `TSSLConfig` 跨层字段拆分 / slimming roadmap**
   - 暂不直接开 `ISSLConnection` 大重构
+
+## TSSLConfig scope bucket truth
+
+- 新增 bounded batch：
+  - `docs/plans/2026-05-18-tsslconfig-scope-buckets.md`
+  - 目标：
+    - 不改 runtime
+    - 先把 `TSSLConfig` mixed-scope 字段的 public truth 固化成 buckets
+
+- 这批已落下来的 truth：
+  - `library-scoped defaults`
+    - `LogLevel`
+    - `LogCallback`
+  - `context-scoped`
+    - `SessionCacheSize`
+    - `SessionTimeout`
+    - `ALPNProtocols`
+    - `ClientEarlyDataEnabled`
+    - `ServerEarlyDataPolicy`
+    - `ServerMaxEarlyDataSize`
+    - `ServerEarlyDataReplayStoreFile`
+    - `ServerEarlyDataReplayStoreDirectory`
+  - `connection-scoped`
+    - `HandshakeTimeout`
+    - `BufferSize`
+  - `compatibility-only`
+    - `ServerName`
+  - `option-bridge`
+    - `EnableCompression`
+    - `EnableSessionTickets`
+    - `EnableOCSPStapling`
+
+- source/doc/contract 收口：
+  - `src/fafafa.ssl.base.pas`
+    mixed-scope 字段注释改成直接写 scope truth
+  - `docs/reference/API_REFERENCE.md`
+    新增 `TSSLConfig Scope Buckets`
+  - `tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+    守住 source/doc/factory/OpenSSL direct-path 的 truth
+
+- focused 结果：
+  - `bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+    - PASS
+  - `tests/test_factory_connection_scope_clarification.pas`
+    - PASS
+  - `tests/test_factory_logging_scope_clarification.pas`
+    - PASS
+
+## 新发现：direct-library default-config parity gap
+
+- 在做 `TSSLConfig` scope bucket truth 时，新的静态横查发现：
+  - `ISSLLibrary.CreateContext(AType)` 对 library default config 的套用在 backend 间并不一致
+
+- 当前静态证据：
+  - OpenSSL direct-library path
+    - 显式套用：
+      - `SessionCacheSize`
+      - `SessionTimeout`
+      - `ALPNProtocols`
+    - 也显式处理 `ServerName` 的 compatibility warning / reject
+  - WinSSL direct-library path
+    - 当前只显式套用 `Options`
+  - FreePascal / MbedTLS / WolfSSL direct-library path
+    - 当前静态上只看到直接创建 context
+    - 没看到 parallel 的 default-config apply block
+
+- 这条问题现在是下一优先级：
+  - 先做 `direct-library default-config parity audit/fix`
+  - 再决定是否继续推进 broader `TSSLConfig` slimming 或 `ISSLConnection` surgery

@@ -28,6 +28,44 @@
 
 ---
 
+## TSSLConfig Scope Buckets
+
+`TSSLConfig` 不是“所有字段都在同一层直接生效”的纯 context record。当前最容易反复失真的，是 performance / advanced / logging 这一段 mixed-scope 字段；它们的 public truth 已经收敛为下面几个 buckets。
+
+- ordinary context/config fields
+  - `LibraryType` / `ContextType` / `ProtocolVersions` / `PreferredVersion`
+  - `CertificateFile` / `PrivateKeyFile` / `PrivateKeyPassword`
+  - `CAFile` / `CAPath` / `VerifyMode` / `VerifyDepth`
+  - `CipherList` / `CipherSuites` / `Options`
+- library-scoped defaults
+  - `LogLevel`
+  - `LogCallback`
+  - 通过 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` 使用；`TSSLFactory.CreateContext(const AConfig)` 会拒绝 request-local 覆盖。
+- context-scoped
+  - `SessionCacheSize`
+  - `SessionTimeout`
+  - `ALPNProtocols`
+  - `ClientEarlyDataEnabled`
+  - `ServerEarlyDataPolicy`
+  - `ServerMaxEarlyDataSize`
+  - `ServerEarlyDataReplayStoreFile`
+  - `ServerEarlyDataReplayStoreDirectory`
+  - 这些字段会被 `TSSLFactory.CreateContext(...)` 等 context 创建路径消费；其中 replay-store 两个字段还带有 server-only 约束。
+- connection-scoped
+  - `HandshakeTimeout`
+  - `BufferSize`
+  - factory request path 不接受它们的自定义值；请改走 `TSSLConnector.WithTimeout` / `TSSLAcceptor.WithTimeout` / `ISSLConnection.SetTimeout` 或外围 transport / IO 配置。
+- compatibility-only
+  - `ServerName`
+  - 当前 client context 创建路径是 warning + ignore，server context 创建路径会 reject；新代码应改走 per-connection SNI。
+- option-bridge compatibility flags
+  - `EnableCompression`
+  - `EnableSessionTickets`
+  - `EnableOCSPStapling`
+  - 这几个布尔字段当前仍保留在 `v1.x` public record 中，但 factory 会把它们归一化进 `Options`，不应继续把它们扩成新的 backend-private 配置槽。
+
+---
+
 ## FreePascal early-data replay-store opt-in
 
 FreePascal server-side `0-RTT / early data` 默认 shipped path 已经会把 replay truth 落到本地持久化 replay-store 路径。当前 capability 仍保持 `experimental`；如果默认路径不可用或不可写，恢复的 early data 会 fail-closed reject。public API 仍然开放 file / directory 两条 opt-in 路径，用来显式指定 replay-store 的落点。
@@ -41,7 +79,7 @@ FreePascal server-side `0-RTT / early data` 默认 shipped path 已经会把 rep
 
 `TSSLConfig.ServerName` 不属于推荐的 client SNI 配置路径。当前 `TSSLFactory.CreateContext(...)` 对它的 client-side 行为是 warning + ignore；客户端请改用 `ISSLClientConnection.SetServerName(...)` 或 `TSSLConnector.Connect*(..., ServerName)`。
 
-这两个字段用于 `TSSLFactory.CreateContext(const AConfig)` 的 FreePascal server path。它们是 mutually exclusive 配置，不能同时设置；同时设置时，factory 会 fail fast。
+这两个字段属于 context-scoped、server-only opt-in，用于 `TSSLFactory.CreateContext(const AConfig)` 的 FreePascal server path。它们是 mutually exclusive 配置，不能同时设置；同时设置时，factory 会 fail fast。
 
 ```pascal
 var

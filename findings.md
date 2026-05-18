@@ -708,3 +708,60 @@
 - 因而当前最值得执行的 post-SNI 第一条主线是：
   - 先把 `TSSLConfig` 做成明确分桶的跨层字段 roadmap
   - 再决定是否以及如何进入 `ISSLConnection` core surface slimming
+
+- `TSSLConfig` 的 mixed-scope truth 现在已经可以稳定分成 5 个 buckets：
+  - `library-scoped defaults`
+    - `LogLevel`
+    - `LogCallback`
+  - `context-scoped`
+    - `SessionCacheSize`
+    - `SessionTimeout`
+    - `ALPNProtocols`
+    - `ClientEarlyDataEnabled`
+    - `ServerEarlyDataPolicy`
+    - `ServerMaxEarlyDataSize`
+    - `ServerEarlyDataReplayStoreFile`
+    - `ServerEarlyDataReplayStoreDirectory`
+  - `connection-scoped`
+    - `HandshakeTimeout`
+    - `BufferSize`
+  - `compatibility-only`
+    - `ServerName`
+  - `option-bridge`
+    - `EnableCompression`
+    - `EnableSessionTickets`
+    - `EnableOCSPStapling`
+
+- 这份 bucket truth 现在已经落进 durable source/doc surface：
+  - `src/fafafa.ssl.base.pas`
+    关键 mixed-scope 字段注释不再是泛泛中文描述，而是直接带 scope truth
+  - `docs/reference/API_REFERENCE.md`
+    新增 `TSSLConfig Scope Buckets` 段，避免后续审查再反复翻 factory/backend source
+  - `tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+    用 focused contract 固定 source/doc/factory/OpenSSL direct-path 的 truth
+
+- 当前这一轮静态横查还额外暴露出一个更实质的 backend parity risk：
+  - `ISSLLibrary.CreateContext(AType)` 的 default-config 套用在各 backend 间并不一致
+  - OpenSSL direct-library path：
+    - 在 `TOpenSSLLibrary.CreateContext` 中显式应用：
+      - `SessionCacheSize`
+      - `SessionTimeout`
+      - `ALPNProtocols`
+    - 也显式处理 deprecated `ServerName` 的 warning/reject truth
+  - WinSSL direct-library path：
+    - 当前只看到 `Options` 被显式套用
+  - FreePascal / MbedTLS / WolfSSL direct-library path：
+    - 当前静态上只看到直接创建 context
+    - 没看到 parallel 的 default-config replay/apply block
+
+- 由于这些 backend 同时都满足下面两点，这个差异目前更像真实实现缺口，而不是“字段本来没打算支持”：
+  - library side 都持有 `FDefaultConfig`
+  - context side 都公开并维护：
+    - `SessionCacheSize`
+    - `SessionTimeout`
+    - `ALPNProtocols`
+
+- 因而当前最优先的下一批不该直接跳去 `ISSLConnection` slimming，而应先做：
+  - `direct-library default-config parity audit/fix`
+  - 先把 `ISSLLibrary.CreateContext(AType)` 在各 backend 的 default-config 套用 truth 守住
+  - 再继续 broader `TSSLConfig` slimming 或 `ISSLConnection` surgery

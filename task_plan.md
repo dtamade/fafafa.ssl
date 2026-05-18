@@ -270,14 +270,26 @@
    - direct `ISSLContext.SetServerName/GetServerName` 已冻结为 `v1.x` deprecated compatibility API
    - `WithSNI(...)` 已冻结为 `v1.x` deprecated compatibility-only fluent surface
    - 当前 `context-level SNI` 兼容家族在 `v1.x` 已无新的即时 surface 收口项
-2. 下一批应切回更大的 interface-design debt：
-   - 首选 `TSSLConfig` 跨层字段拆分 / slimming roadmap
-   - 次选 `ISSLConnection` 核心 surface slimming roadmap
-   - 当前证据更支持先做 `TSSLConfig`，因为 scope-gate truth 已清楚、写入面更小、较不容易把 backend/runtime 一起拖进重构
-3. 在 broader interface debt 路线明确后，再决定是否需要为 `v2` 预留 breaking cleanup 方案：
-   - deprecated context-level SNI surfaces 何时在 breaking window 中真正移除或重命名
-   - 是否需要新的迁移文档或 v2 contract 预留
-4. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
+2. `TSSLConfig` post-SNI 第一批已经落成 `scope buckets` truth：
+   - `docs/plans/2026-05-18-tsslconfig-scope-buckets.md`
+   - `src/fafafa.ssl.base.pas` 和 `docs/reference/API_REFERENCE.md` 现在直接写明 mixed-scope buckets：
+     - `library-scoped defaults`
+     - `context-scoped`
+     - `connection-scoped`
+     - `compatibility-only`
+     - `option-bridge`
+   - 新增 `tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+     守住 source/doc/factory/OpenSSL direct-path 的 bucket truth
+3. 新暴露的下一优先级问题不是 `ISSLConnection`，而是更具体的 backend parity gap：
+   - `ISSLLibrary.CreateContext(AType)` 的 default-config 套用在各 backend 间并不一致
+   - OpenSSL direct-library path 已明确套用 `SessionCacheSize` / `SessionTimeout` / `ALPNProtocols`
+   - WinSSL direct-library path 当前只显式套用 `Options`
+   - FreePascal / MbedTLS / WolfSSL 的 direct-library `CreateContext` 静态上仍只是直接创建 context
+   - 下一批应先验证并修正这条 direct-library default-config parity，而不是立刻切去 `ISSLConnection` 大手术
+4. 在 direct-library default-config parity 收口后，再决定 broader interface debt 的后续路线：
+   - 是否继续推进 `TSSLConfig` option-bridge freeze / slimming
+   - 还是进入 `ISSLConnection` 核心 surface slimming roadmap
+5. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
 
 ## Verification Discipline
 

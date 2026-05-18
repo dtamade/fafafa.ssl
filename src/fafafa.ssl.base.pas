@@ -404,27 +404,28 @@ type
     // SSL 选项
     Options: TSSLOptions;                    // SSL 选项集合
     
-    // 性能配置
-    BufferSize: Integer;                     // 缓冲区大小
-    HandshakeTimeout: Integer;               // 握手超时（毫秒）
-    SessionCacheSize: Integer;              // 会话缓存大小
-    SessionTimeout: Integer;                // 会话超时（秒）
+    // Mixed-scope configuration buckets:
+    // ordinary protocol/certificate/cipher fields above stay context-facing unless noted otherwise.
+    BufferSize: Integer;                     // Connection-scoped buffering hint; factory paths reject custom values
+    HandshakeTimeout: Integer;               // Connection-scoped timeout; use connector/acceptor/connection timeout APIs
+    SessionCacheSize: Integer;               // Context-scoped session cache sizing
+    SessionTimeout: Integer;                 // Context-scoped session lifetime（秒）
     
     // 高级配置
     ServerName: string;                      // Deprecated compatibility-only context-level SNI; prefer ISSLClientConnection.SetServerName
-    ALPNProtocols: string;                   // ALPN协议列表（逗号分隔）
-    EnableCompression: Boolean;              // 启用压缩
-    EnableSessionTickets: Boolean;           // 启用会话票据
-    EnableOCSPStapling: Boolean;             // 启用OCSP装订
-    ClientEarlyDataEnabled: Boolean;         // TLS 1.3 客户端 early-data 默认开关
-    ServerEarlyDataPolicy: TSSLEarlyDataServerPolicy; // 服务端 early-data 默认策略
-    ServerMaxEarlyDataSize: Cardinal;        // 服务端 early-data 默认上限
-    ServerEarlyDataReplayStoreFile: string;  // 服务端 early-data replay-store file opt-in
-    ServerEarlyDataReplayStoreDirectory: string;  // 服务端 early-data replay-store directory opt-in
+    ALPNProtocols: string;                   // Context-scoped ALPN defaults（逗号分隔）
+    EnableCompression: Boolean;              // Option-bridge compatibility flag; normalized into Options
+    EnableSessionTickets: Boolean;           // Option-bridge compatibility flag; normalized into Options
+    EnableOCSPStapling: Boolean;             // Option-bridge compatibility flag; normalized into Options
+    ClientEarlyDataEnabled: Boolean;         // Context-scoped TLS 1.3 client early-data default
+    ServerEarlyDataPolicy: TSSLEarlyDataServerPolicy; // Context-scoped TLS 1.3 server early-data policy
+    ServerMaxEarlyDataSize: Cardinal;        // Context-scoped TLS 1.3 server early-data limit
+    ServerEarlyDataReplayStoreFile: string;  // Server-context-scoped replay-store file opt-in
+    ServerEarlyDataReplayStoreDirectory: string;  // Server-context-scoped replay-store directory opt-in
     
     // 日志配置
-    LogLevel: TSSLLogLevel;                  // 日志级别
-    LogCallback: TSSLLogCallback;            // 日志回调
+    LogLevel: TSSLLogLevel;                  // Library-scoped default log level; factory request paths reject overrides
+    LogCallback: TSSLLogCallback;            // Library-scoped default logger; factory request paths reject callbacks
   end;
   PSSLConfig = ^TSSLConfig;
 
