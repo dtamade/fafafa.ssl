@@ -4441,3 +4441,86 @@
   - result: PASS
   - summary:
     - current `GetConnectionInfo` compiler-deprecation batch has no whitespace or patch-format issues
+
+### GetContext Compiler Deprecation Alignment
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - current branch started from clean `master...origin/master`
+    - the new batch could be scoped directly on top of the already-pushed GetConnectionInfo compiler-surface closeout
+
+- `rg -n "GetContext|ISSLConnectionInfo|deprecated 'Use ISSLConnectionInfo.GetContext|compiler.*deprecated|active guidance de-emphasis|owner primacy" src docs/reference docs/plans tests/scripts task_plan.md findings.md progress.md --glob '!docs/archive/**'`
+  - result: PASS
+  - summary:
+    - confirmed `GetContext` had already finished active-guidance, contract-owner, and source/class-split freeze work
+    - the remaining gap was the public core declaration itself still not being compiler deprecated
+
+- `sed -n '1280,1294p' src/fafafa.ssl.base.pas`
+  - result: PASS
+  - summary:
+    - source comment already had preferred-access wording for `ISSLConnectionInfo.GetContext`
+    - but the public core declaration still lacked compiler deprecation and stronger owner/de-emphasis wording
+
+- `sed -n '1828,1854p' tests/contract/test_backend_contract.pas`
+  - result: PASS
+  - summary:
+    - confirmed the remaining direct core `GetContext` usage had shrunk to a single backend-contract mirror proof
+    - this made local warning quarantine a small, bounded change
+
+- add `docs/plans/2026-05-18-getcontext-compiler-deprecation-alignment.md`
+  - purpose:
+    - capture the bounded source-truth batch that upgrades `ISSLConnection.GetContext` from source/doc de-emphasis to compiler-level deprecation
+    - keep runtime behavior unchanged while aligning the public core mirror surface with current owner truth
+
+- add `tests/scripts/test_getcontext_compiler_deprecated_contract.sh`
+  - purpose:
+    - fail if the core `GetContext` declaration loses its compiler `deprecated` marker
+    - guard the new doc wording and residual warning-quarantine boundary
+
+- implementation:
+  - `src/fafafa.ssl.base.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/INTERFACE_DESIGN_V2.md`
+  - `tests/contract/test_backend_contract.pas`
+  - change:
+    - mark `ISSLConnection.GetContext` as compiler `deprecated 'Use ISSLConnectionInfo.GetContext'`
+    - upgrade active docs to say the core getter is now compiler deprecated
+    - add local warning suppression around the remaining direct-core `GetContext` mirror proof
+
+- `bash tests/scripts/test_getcontext_compiler_deprecated_contract.sh`
+  - result: PASS
+  - summary:
+    - the core declaration is compiler deprecated
+    - active docs and the residual backend-contract proof all match the expected source-truth boundary
+
+- `bash tests/scripts/test_isslconnectioninfo_getcontext_active_guidance_contract.sh`
+  - result: RED -> GREEN
+  - summary:
+    - first run failed only because the API reference no longer contained the exact shared guidance sentence the older contract still expected
+    - after restoring that sentence while keeping the stronger compiler-deprecated `GetContext` wording, the contract passed
+    - active docs still de-emphasize direct core `GetContext`
+    - the compiler-deprecation upgrade did not reintroduce `Conn.GetContext` teaching
+
+- `bash tests/scripts/test_isslconnectioninfo_getcontext_contract_owner_contract.sh`
+  - result: PASS
+  - summary:
+    - backend contract still treats `ISSLConnectionInfo.GetContext` as the primary owner
+    - the remaining core getter usage stayed a pure mirror proof
+
+- `bash tests/scripts/test_isslconnectioninfo_getcontext_source_class_split_contract.sh`
+  - result: PASS
+  - summary:
+    - `GetContext` live surface stayed frozen to the expected allowlist
+    - compiler deprecation did not re-expand direct-core usage
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - focused backend contract still finished `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+    - the single direct-core `GetContext` mirror proof stayed green after local deprecation-warning quarantine
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `GetContext` compiler-deprecation batch has no whitespace or patch-format issues

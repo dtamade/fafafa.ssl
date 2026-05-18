@@ -1857,7 +1857,12 @@ begin
         end
         else
         begin
+          // INTENTIONAL_CORE_SURFACE: keep this direct core GetContext read as
+          // the single mirror-equality proof while the public core declaration
+          // is compiler-deprecated in favor of ISSLConnectionInfo.GetContext.
+          {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
           LCoreCtx := LConn.GetContext;
+          {$POP}
           if LCoreCtx = nil then
           begin
             WriteLn('  [FAIL] Core GetContext mirror returned nil');

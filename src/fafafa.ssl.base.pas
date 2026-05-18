@@ -1288,8 +1288,11 @@ type
     {** 获取关联的上下文
         @returns 创建此连接的上下文接口
         @preferred-access 新代码优先通过 ISSLConnectionInfo.GetContext 获取
-        @compatibility-note v1.x compatibility-core mirror; Stage-A demotion target is ISSLConnectionInfo *}
+        @owner-note 默认 owner 为 ISSLConnectionInfo.GetContext；此入口仅兼容保留
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLConnectionInfo
+        @deprecated 推荐使用 ISSLConnectionInfo.GetContext *}
     function GetContext: ISSLContext;
+      deprecated 'Use ISSLConnectionInfo.GetContext';
 
     // Phase 3.3: 监控和诊断接口
 

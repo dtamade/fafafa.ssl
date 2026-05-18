@@ -2060,3 +2060,24 @@
   - `ISSLConnection.GetConnectionInfo` 现在在 source/doc/compiler 三层都被明确定义为 compatibility-only mirror
   - 这条 getter 的第一条真正 public slimming slice 已经落地
   - 后续不该再在它身上反复做 wording/deprecation archaeology，而应切去下一条 mirror 的 feasibility / slimming 选择
+
+- `GetContext` 这条线在这一轮之前，其实已经比 `GetConnectionInfo` 更“干净”：
+  - active docs 不再教 `Conn.GetContext`
+  - owner primacy 已固定为 `ISSLConnectionInfo.GetContext`
+  - source/class split allowlist 也已经 freeze 到只剩：
+    - core/interface declarations
+    - shared base implementation
+    - backend contract mirror proof
+
+- 这意味着它真正还缺的不是新的实现迁移，而是最后一层 compiler-surface truth：
+  - public declaration 自身还不是 compiler `deprecated`
+  - 因而 source/doc 虽然已经说它只是 compatibility mirror，但编译器层面还没有把这件事说死
+
+- 当前这一刀需要处理的风险也很小：
+  - non-script direct core `GetContext` 已只剩 backend contract 一处
+  - 因而只要给这处 mirror proof 做本地 warning quarantine，就不会像更大的 surface 那样带来到处补 suppression 的副作用
+
+- 当前修完后的更准确结论是：
+  - `ISSLConnection.GetContext` 现在也已经在 source/doc/compiler 三层都被明确定义为 compatibility-only mirror
+  - `GetContext` 的第一条真正 public slimming slice 已经落地
+  - 后续不该再在它身上反复做 wording/deprecation archaeology，而应把主线切去下一条 mirror 的 feasibility / slimming 选择

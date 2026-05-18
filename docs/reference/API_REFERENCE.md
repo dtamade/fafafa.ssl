@@ -456,7 +456,7 @@ ISSLConnection = interface
   function GetTimeout: Integer;
   procedure SetBlocking(ABlocking: Boolean);
   function GetBlocking: Boolean;
-  function GetContext: ISSLContext;
+  function GetContext: ISSLContext; // 编译期 deprecated，仅兼容保留；新代码优先走 ISSLConnectionInfo.GetContext
 
   function GetHealthStatus: TSSLHealthStatus;
   function IsHealthy: Boolean;
@@ -483,7 +483,8 @@ end;
 
 - `ISSLConnection` 当前仍保留一批未来可能继续下沉到可选接口的能力面；当前文档只记录 **源码真相**，不等于推荐把更多能力继续塞回核心接口。
 - `GetConnectionInfo` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要完整连接信息记录时，新代码优先通过 `ISSLConnectionInfo.GetConnectionInfo`。
-- `GetContext` / `GetSelectedALPNProtocol` / `GetStateString` 也由 `ISSLConnectionInfo` 暴露。
+- `GetContext` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；当前源码声明已经是编译期 `deprecated`，需要连接所属 context 引用时，新代码优先通过 `ISSLConnectionInfo.GetContext`。
+- `GetSelectedALPNProtocol` / `GetStateString` 也由 `ISSLConnectionInfo` 暴露。
 - `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics` 也由 `ISSLDiagnostics` 暴露。
 - `GetSession` / `SetSession` / `IsSessionReused` 也由 `ISSLSessionResumption` 暴露。
 - `GetPeerCertificateChain` / `GetVerifyResult` / `GetVerifyResultString` 也由 `ISSLCertificateVerification` 暴露。
@@ -577,8 +578,10 @@ begin
 end;
 ```
 
-如果你在写新代码，`GetConnectionInfo` 不再应被当作核心 `ISSLConnection` 的主入口；它当前在源码声明里也已经是编译期 `deprecated`。拿完整连接信息记录请优先通过 `ISSLConnectionInfo.GetConnectionInfo`。
-同一组 mirrors 里的上下文引用 / ALPN / 状态字符串也优先通过 `ISSLConnectionInfo` 获取。
+如果你在写新代码，并且需要连接信息 / 上下文引用 / ALPN / 状态字符串这组 mirrors，优先通过 `ISSLConnectionInfo` 获取。
+`GetConnectionInfo` 不再应被当作核心 `ISSLConnection` 的主入口；它当前在源码声明里也已经是编译期 `deprecated`。拿完整连接信息记录请优先通过 `ISSLConnectionInfo.GetConnectionInfo`。
+`GetContext` 也不再应被当作核心 `ISSLConnection` 的主入口；它当前在源码声明里同样已经是编译期 `deprecated`。需要连接所属 context 引用时，请优先通过 `ISSLConnectionInfo.GetContext`。
+同一组 mirrors 里的 ALPN / 状态字符串也优先通过 `ISSLConnectionInfo` 获取。
 
 #### Session 复用
 
