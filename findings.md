@@ -1,5 +1,38 @@
 # Findings - Interface Design And Backend Implementation Verification
 
+## 2026-05-19
+
+- `OpenSSL` 连接态 peer-certificate public surface 这次被证实存在一条真实 completeness 缺口：
+  - `DoGetPeerCertificate()` 只包 `SSL_get_peer_certificate(...)` 返回的 leaf wrapper
+  - `DoGetPeerCertificateChain()` 只包 `SSL_get_peer_cert_chain(...)` 返回的 chain wrappers
+  - 但两条路径此前都没有把 `ISSLCertificate.GetIssuerCertificate()` 链接起来
+
+- 新增 focused RED `tests/test_openssl_connection_peer_certificate_surface.pas` 后，第一处失败直接落在：
+  - `OpenSSL peer leaf certificate should preserve issuer link`
+  - 这说明问题不是“测试猜测”，而是 public chain truth 真缺了一层
+
+- 这批最小安全修法也已经明确并落地：
+  - 在 `src/fafafa.ssl.openssl.connection.pas` 增加 retained-certificate helper
+  - `GetPeerCertificate()` 现在会从 peer chain 优先、verified chain 次级地补 issuer link
+  - `GetPeerCertificateChain()` 现在会用现有 `FindIssuerX509InChain(...)` 给 returned chain entries 接上 issuer link
+  - 既有 safe-degrade contract 没有被放宽或改口
+
+- 这也把 `OpenSSL` 这条线的性质说清楚了：
+  - 它不是 `MbedTLS` / `WolfSSL` 那种 borrowed-lifetime materialization 问题
+  - `SSL_get_peer_certificate(...)` 本身已经给 leaf 做了安全 ownership
+  - 真正缺的是 public `issuer-link truth`
+
+- 这次 focused contract 还暴露出一个值得记下来的测试夹具细节：
+  - 首轮 `GetPeerCertificateChain()` 返回空数组不是产品逻辑回归，而是 harness 没桥接 `sk_X509_num/value`
+  - 在部分 OpenSSL 构建上，typed `sk_X509_*` 仍可能退回到 generic `OPENSSL_sk_*` 路径
+  - focused test 现在已显式桥接这层 ABI 真相，避免未来把夹具问题误判成实现回归
+
+- focused 回归结果也说明这次修法边界正确：
+  - `tests/test_openssl_connection_peer_certificate_contract.pas` 继续 green
+  - `tests/test_openssl_connection_peer_certificate_chain_contract.pas` 继续 green
+  - `tests/contract/test_backend_contract.pas` 继续 green
+  - 所以这次不是“用更激进的 chain 逻辑换来新回归”，而是单纯补全了 OpenSSL public cert surface
+
 ## 2026-05-18
 
 - GitHub Actions live run `26030261335` 已给出一个很重要的新事实：

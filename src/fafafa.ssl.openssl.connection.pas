@@ -62,6 +62,11 @@ type
     function HasStreamTransport: Boolean;
     function PumpStreamToBIO: Integer;
     function PumpBIOToStream: Integer;
+    function CreateCertificateFromOwnedRef(AX509: PX509): ISSLCertificate;
+    function CreateRetainedCertificate(AX509: PX509): ISSLCertificate;
+    function FindRetainedPeerIssuerCertificate(APeerX509: PX509): ISSLCertificate;
+    procedure LinkPeerCertificateChainIssuerLinks(const AChain: PSTACK_OF_X509;
+      const ACertificates: TSSLCertificateArray);
     function InternalHandshake(AIsClient: Boolean): Boolean;
     function ValidatePostHandshake(AIsClient: Boolean): Boolean;
     procedure ApplyPreHandshakeOCSPStatusRequest(AIsClient: Boolean);
@@ -827,9 +832,105 @@ begin
   end;
 end;
 
+function TOpenSSLConnection.CreateCertificateFromOwnedRef(AX509: PX509): ISSLCertificate;
+begin
+  Result := nil;
+  if AX509 = nil then
+    Exit;
+
+  Result := TOpenSSLCertificate.Create(AX509, True);
+end;
+
+function TOpenSSLConnection.CreateRetainedCertificate(AX509: PX509): ISSLCertificate;
+begin
+  Result := nil;
+  if (AX509 = nil) or (not Assigned(X509_up_ref)) then
+    Exit;
+
+  X509_up_ref(AX509);
+  try
+    Result := CreateCertificateFromOwnedRef(AX509);
+  except
+    if Assigned(X509_free) then
+      X509_free(AX509);
+    raise;
+  end;
+end;
+
+function TOpenSSLConnection.FindRetainedPeerIssuerCertificate(APeerX509: PX509): ISSLCertificate;
+var
+  PeerChain: PSTACK_OF_X509;
+  VerifiedChain: PSTACK_OF_X509;
+  IssuerX509: PX509;
+begin
+  Result := nil;
+  if (FSSL = nil) or (APeerX509 = nil) then
+    Exit;
+
+  IssuerX509 := nil;
+  PeerChain := nil;
+  if Assigned(SSL_get_peer_cert_chain) then
+    PeerChain := SSL_get_peer_cert_chain(FSSL);
+
+  if PeerChain <> nil then
+    IssuerX509 := FindIssuerX509InChain(APeerX509, PeerChain);
+
+  if (IssuerX509 = nil) and Assigned(SSL_get0_verified_chain) then
+  begin
+    VerifiedChain := SSL_get0_verified_chain(FSSL);
+    if VerifiedChain <> nil then
+      IssuerX509 := FindIssuerX509InChain(APeerX509, VerifiedChain);
+  end;
+
+  Result := CreateRetainedCertificate(IssuerX509);
+end;
+
+procedure TOpenSSLConnection.LinkPeerCertificateChainIssuerLinks(
+  const AChain: PSTACK_OF_X509;
+  const ACertificates: TSSLCertificateArray
+);
+var
+  Count: Integer;
+  I: Integer;
+  J: Integer;
+  LeafX509: PX509;
+  IssuerX509: PX509;
+begin
+  if (AChain = nil) or (Length(ACertificates) = 0) or
+     (not Assigned(sk_X509_num)) or (not Assigned(sk_X509_value)) then
+    Exit;
+
+  Count := sk_X509_num(AChain);
+  if Count <= 0 then
+    Exit;
+
+  for I := 0 to Count - 1 do
+  begin
+    if (I > High(ACertificates)) or (ACertificates[I] = nil) then
+      Continue;
+
+    ACertificates[I].SetIssuerCertificate(nil);
+    LeafX509 := sk_X509_value(AChain, I);
+    if LeafX509 = nil then
+      Continue;
+
+    IssuerX509 := FindIssuerX509InChain(LeafX509, AChain);
+    if IssuerX509 = nil then
+      Continue;
+
+    for J := 0 to Count - 1 do
+      if (J <= High(ACertificates)) and (sk_X509_value(AChain, J) = IssuerX509) then
+      begin
+        ACertificates[I].SetIssuerCertificate(ACertificates[J]);
+        Break;
+      end;
+  end;
+end;
+
 function TOpenSSLConnection.DoGetPeerCertificate: ISSLCertificate;
 var
   X509Cert: PX509;
+  IssuerCert: ISSLCertificate;
 begin
   Result := nil;
 
@@ -841,7 +942,13 @@ begin
     Exit;
 
   // 创建证书对象（SSL_get_peer_certificate已增加引用计数）
-  Result := TOpenSSLCertificate.Create(X509Cert, True);
+  Result := CreateCertificateFromOwnedRef(X509Cert);
+  if Result = nil then
+    Exit;
+
+  IssuerCert := FindRetainedPeerIssuerCertificate(X509Cert);
+  if IssuerCert <> nil then
+    Result.SetIssuerCertificate(IssuerCert);
 end;
 
 function TOpenSSLConnection.DoGetPeerCertificateChain: TSSLCertificateArray;
@@ -872,12 +979,10 @@ begin
   begin
     X509Cert := sk_X509_value(Chain, I);
     if X509Cert <> nil then
-    begin
-      // sk_X509_value不增加引用计数，需要手动增加
-      X509_up_ref(X509Cert);
-      Result[I] := TOpenSSLCertificate.Create(X509Cert, True);
-    end;
+      Result[I] := CreateRetainedCertificate(X509Cert);
   end;
+
+  LinkPeerCertificateChainIssuerLinks(Chain, Result);
 end;
 
 function TOpenSSLConnection.DoGetVerifyResult: Integer;

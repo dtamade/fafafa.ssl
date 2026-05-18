@@ -1,5 +1,66 @@
 # Progress - Interface Design And Backend Implementation Verification
 
+## 2026-05-19
+
+### OpenSSL Peer Certificate Issuer Link
+
+- `rg -n "GetPeerCertificate|GetPeerCertificateChain|issuer|Clone|SSL_get_peer_certificate|SSL_get_peer_cert_chain|FindIssuerX509InChain" src/fafafa.ssl.openssl.connection.pas src/fafafa.ssl.openssl.certificate.pas tests/test_openssl_connection_peer_certificate_contract.pas tests/test_openssl_connection_peer_certificate_chain_contract.pas`
+  - result: PASS
+  - summary:
+    - confirmed `OpenSSL` connection leaf / chain surfaces existed
+    - confirmed `TOpenSSLCertificate` already had `SetIssuerCertificate/GetIssuerCertificate`
+    - confirmed the connection layer was still not wiring that issuer-link truth
+
+- add `docs/plans/2026-05-19-openssl-peer-cert-issuer-link.md`
+  - change:
+    - define the bounded OpenSSL issuer-link completeness batch, commands, scope, and expected closeout
+
+- add `tests/test_openssl_connection_peer_certificate_surface.pas`
+  - result: RED
+  - summary:
+    - new focused surface contract first failed on
+      `OpenSSL peer leaf certificate should preserve issuer link`
+    - this locked the real public-surface completeness gap before any production edit
+
+- update `src/fafafa.ssl.openssl.connection.pas`
+  - change:
+    - add retained-certificate helpers
+    - `GetPeerCertificate()` now materializes issuer link from peer chain / verified chain
+    - `GetPeerCertificateChain()` now preserves issuer links across returned chain entries
+
+- update `tests/test_openssl_connection_peer_certificate_surface.pas`
+  - change:
+    - bridge typed `sk_X509_num/value` expectations onto generic `OPENSSL_sk_*` helpers
+    - avoid false-negative empty-chain results on OpenSSL builds where typed stack symbols are macro-style
+
+- `mkdir -p tmp/test_openssl_connection_peer_certificate_surface_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_connection_peer_certificate_surface_units -FEtmp/test_openssl_connection_peer_certificate_surface_units -otmp/test_openssl_connection_peer_certificate_surface_units/test_openssl_connection_peer_certificate_surface tests/test_openssl_connection_peer_certificate_surface.pas && ./tmp/test_openssl_connection_peer_certificate_surface_units/test_openssl_connection_peer_certificate_surface`
+  - result: FAIL -> FAIL -> PASS
+  - summary:
+    - RED 1: `OpenSSL peer leaf certificate should preserve issuer link`
+    - intermediate harness mismatch: `OpenSSL peer chain surface should materialize the scripted leaf and issuer entries (expected=2 actual=0)`
+    - GREEN after harness bridge + implementation fix: `PASS: OpenSSL client peer certificate surface contract passed`
+
+- `mkdir -p tmp/test_openssl_connection_peer_certificate_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_connection_peer_certificate_contract_units -FEtmp/test_openssl_connection_peer_certificate_contract_units -otmp/test_openssl_connection_peer_certificate_contract_units/test_openssl_connection_peer_certificate_contract tests/test_openssl_connection_peer_certificate_contract.pas && ./tmp/test_openssl_connection_peer_certificate_contract_units/test_openssl_connection_peer_certificate_contract`
+  - result: PASS
+  - summary:
+    - existing OpenSSL peer leaf safe-degrade contract stayed green at `2 passed / 0 failed`
+
+- `mkdir -p tmp/test_openssl_connection_peer_certificate_chain_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_connection_peer_certificate_chain_contract_units -FEtmp/test_openssl_connection_peer_certificate_chain_contract_units -otmp/test_openssl_connection_peer_certificate_chain_contract_units/test_openssl_connection_peer_certificate_chain_contract tests/test_openssl_connection_peer_certificate_chain_contract.pas && ./tmp/test_openssl_connection_peer_certificate_chain_contract_units/test_openssl_connection_peer_certificate_chain_contract`
+  - result: PASS
+  - summary:
+    - existing OpenSSL peer chain safe-degrade contract stayed green at `8 passed / 0 failed`
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - backend contract stayed green at `135 total / 111 passed / 0 failed / 24 skipped`
+    - `Contract 21: Certificate-verification interface alignment - OpenSSL` remained self-consistent after the issuer-link repair
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current OpenSSL issuer-link batch has no whitespace or patch-format issues
+
 ## 2026-05-18
 
 ### GitHub Windows Runtime Evidence Strengthening
