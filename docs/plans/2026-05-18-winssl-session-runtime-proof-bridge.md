@@ -104,6 +104,20 @@ git diff --check
   - 保留 `dwFlags and SSL_SESSION_RECONNECT` 作为 WinSSL reuse truth
   - 停止在 canonical shared path 中读取 raw session-id bytes
   - 继续依赖现有 fallback session-id 路径，再次触发 `wave-b-b2-manual.yml`
+- GREEN:
+  - GitHub Actions live rerun `26035941452` 已确认：
+    - `Run quick WinSSL smoke` 通过
+    - `Run Windows Wave B gate` 通过
+    - broader suite compile phase 继续全部通过
+    - 旧的 `SessionIdBytesToHex(...)` 崩点不再出现
+- RED:
+  - 同一个 rerun 也证明“只去掉 raw session-id bytes”还不够：
+    - `UpdateSessionReuseTruthFromContext(...)` 仍在 line `850` 触发 `EAccessViolation`
+    - 当前 canonical shared path 上整条 `SECPKG_ATTR_SESSION_INFO` probe 仍然不安全
+- FOLLOW-UP:
+  - 把 canonical shared handshake path 上的 live `SECPKG_ATTR_SESSION_INFO` probe 整体撤下
+  - 共享真相先回到 `reused=false` + fallback session-id generators
+  - 后续若还要拿 WinSSL runtime truth，必须转到 dedicated Windows proof lane 单独验证
 - PENDING:
   - GitHub Windows runner live run 尚未刷新
   - 是否稳定观测到 `observed_reuse=true` 仍待 Windows artifact 给出结论

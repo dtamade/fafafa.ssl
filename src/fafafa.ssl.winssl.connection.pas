@@ -821,34 +821,16 @@ end;
 
 procedure TWinSSLConnection.UpdateSessionReuseTruthFromContext(
   out ASessionId: string);
-var
-  LSessionInfo: SecPkgContext_SessionInfo;
-  LSessionId: string;
-  LSessionReused: Boolean;
 begin
   ASessionId := '';
   FSessionReused := False;
-  LSessionId := '';
-  LSessionReused := False;
-
-  try
-    if not TryGetCurrentSessionInfo(LSessionInfo) then
-      Exit;
-
-    LSessionReused := (LSessionInfo.dwFlags and SSL_SESSION_RECONNECT) <> 0;
-    // Keep the Schannel reconnect flag as the runtime truth source.
-    // The raw session-id byte buffer has proven unstable on GitHub Windows runners,
-    // so canonical connection paths leave the ID empty and rely on the existing fallback.
-  except
-    on Exception do
-    begin
-      // Session-info observation is best-effort only; it must never break a successful handshake path.
-      Exit;
-    end;
-  end;
-
-  FSessionReused := LSessionReused;
-  ASessionId := LSessionId;
+  // GitHub Windows runtime proof still shows AVs inside/after the
+  // SECPKG_ATTR_SESSION_INFO probe on canonical shared handshake paths.
+  // Until that binding is reintroduced through a dedicated safe proof lane,
+  // shared flows must stay on the conservative truth:
+  //   - reused = False
+  //   - session_id = ''
+  // and rely on the existing fallback session-id generators.
 end;
 
 procedure TWinSSLConnection.SaveSessionAfterHandshake;

@@ -146,6 +146,26 @@
     - `SaveSessionAfterHandshake(...)` 的 `Format('winssl-session-%p', ...)`
     - `DoGetSession()` 里的 timestamp-based fallback
 
+- GitHub Actions live rerun `26035941452` 证明上面的收口还不够：
+  - `windows-gate` 已经稳定通过 `Run quick WinSSL smoke` 与 `Run Windows Wave B gate`
+  - dedicated session-resumption lane 的 compile phase 也继续通过
+  - 但 broader suite 仍在 `UpdateSessionReuseTruthFromContext(...)` 的 line `850` 触发 `EAccessViolation`
+  - 也就是：删掉 raw session-id byte 读取，只是把 crash 从 helper 里更早的读点推到了更后的写回点
+
+- 这让当前根因判断再次收缩了一层：
+  - 问题不再只是 `SessionIdBytesToHex(...)`
+  - 而是 canonical shared path 上整条 `SECPKG_ATTR_SESSION_INFO` probe 仍然不安全
+  - 更直白地说：在当前 binding / GitHub Windows runner 组合下，`QueryContextAttributesW(..., SECPKG_ATTR_SESSION_INFO, ...)` 这件事本身还不能放进共享握手后路径
+
+- 因而第三层收口也已经明确，不应该继续在线上重复“更温柔地读取同一 probe”：
+  - canonical shared handshake path 当前必须完全停用 live `SECPKG_ATTR_SESSION_INFO`
+  - 共享真相退回到 `FSessionReused=False` 与现有 fallback session-id 生成逻辑
+  - `TryGetCurrentSessionInfo(...)` 最多保留成后续 dedicated Windows proof lane 的实验入口，而不是继续影响普通连接流
+
+- 同一个 rerun 还确认了一件范围控制上的事：
+  - `macos-gate` 的失败回到了独立的 `run_all_module_tests.sh` module lane
+  - 它不改变当前 WinSSL shared-crash 的根因判断，只是提示另有一条平台回归需要单独排队
+
 - 根因已被压缩到 evidence capture 层，而不是 WinSSL 实现层：
   - workflow 用 `Start-Transcript` 包住父 PowerShell
   - broader suite 则在子 `pwsh -File tests/run_winssl_tests.ps1` 里执行

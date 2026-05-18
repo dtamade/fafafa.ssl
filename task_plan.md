@@ -47,11 +47,17 @@
     - `windows-gate` 仍只失败在 `Run broader WinSSL runtime suite`
     - crash 顶点已收敛到 canonical `src/fafafa.ssl.winssl.connection.pas` 里的 `SessionIdBytesToHex(LSessionInfo)` 读取
     - 当前 Windows runner 上可继续相信 `dwFlags and SSL_SESSION_RECONNECT`，但 raw session-id byte buffer 不能再放进共享握手后路径
+  - GitHub Actions live rerun `26035941452` 继续把这个问题往真实根因压缩：
+    - `windows-gate` 这次已经稳定通过 `Run quick WinSSL smoke` 与 `Run Windows Wave B gate`
+    - broader suite compile phase 继续全部通过，旧的 `SessionIdBytesToHex(...)` 崩点也不再出现
+    - 但 `Run broader WinSSL runtime suite` 仍在 canonical `UpdateSessionReuseTruthFromContext(...)` 的 line `850` 触发 `EAccessViolation`
+    - 这说明当前不只是 raw session-id bytes 不稳，而是整条 `SECPKG_ATTR_SESSION_INFO` shared probe 仍不适合放在 canonical 握手后路径
+    - 同一次 rerun 中 `macos-gate` 失败已确认回到了独立的 `run_all_module_tests.sh` lane，不是 WinSSL session-resumption 当前这批的直接回归
   - 当前这批的最小收口是：
     - 保留 `.lpi` target 修复与 project-target guard，不再回头重开旧问题
-    - 保留 `TryGetCurrentSessionInfo(...)` / `UpdateSessionReuseTruthFromContext(...)` 的 best-effort boundary，不允许 session-info 读取打崩成功握手
-    - 停止在 canonical shared path 里读取 raw session-id bytes
-    - 继续只用 `dwFlags and SSL_SESSION_RECONNECT` 作为 reuse truth，并复用现有 session-id fallback
+    - 把 canonical shared path 上的 `SECPKG_ATTR_SESSION_INFO` probe 整体撤下
+    - 当前共享真相先回到 `reused=false` + existing fallback session-id generators
+    - 仅把 `TryGetCurrentSessionInfo(...)` 保留成后续 dedicated Windows runtime proof lane 的实验入口，而不是继续放在共享握手后路径
     - push 后重新看 Windows artifact 刷新的 `observed_reuse=true|false` 真实结论
 - [in_progress] 当前 repo-level 下一步应回到更高价值的 completeness 路线：
   - 继续审查各 backend implementation completeness / optional surface completeness

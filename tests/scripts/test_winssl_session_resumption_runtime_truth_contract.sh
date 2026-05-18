@@ -53,12 +53,8 @@ require_match "$connection_file" \
   'WinSSL current-session-info helper degrades to false instead of propagating runtime exceptions'
 
 require_match "$connection_file" \
-  'LSessionReused := \(LSessionInfo\.dwFlags and SSL_SESSION_RECONNECT\) <> 0;' \
-  'WinSSL reuse state is now derived from Schannel session flags'
-
-require_match "$connection_file" \
-  'procedure TWinSSLConnection\.UpdateSessionReuseTruthFromContext\(.*?LSessionId: string;.*?LSessionReused: Boolean;.*?ASessionId := \x27\x27;.*?FSessionReused := False;.*?LSessionId := \x27\x27;.*?LSessionReused := False;.*?try.*?if not TryGetCurrentSessionInfo\(LSessionInfo\) then.*?LSessionReused := \(LSessionInfo\.dwFlags and SSL_SESSION_RECONNECT\) <> 0;.*?raw session-id byte buffer has proven unstable.*?except.*?must never break a successful handshake path.*?Exit;.*?end;.*?FSessionReused := LSessionReused;.*?ASessionId := LSessionId;' \
-  'WinSSL session-info observation stays best-effort and cannot crash the handshake path'
+  'procedure TWinSSLConnection\.UpdateSessionReuseTruthFromContext\(.*?ASessionId := \x27\x27;.*?FSessionReused := False;.*?SECPKG_ATTR_SESSION_INFO probe on canonical shared handshake paths.*?reused = False.*?session_id = \x27\x27.*?existing fallback session-id generators' \
+  'WinSSL canonical shared paths stay off live session-info probing until Windows runtime proof is safe'
 
 require_match "$connection_file" \
   'LSession\.SetSessionMetadata\(LSessionID,\s*LProtocol,\s*LCipher,\s*FSessionReused\);' \

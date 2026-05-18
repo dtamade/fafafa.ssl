@@ -484,6 +484,60 @@
 - `git diff --check`
   - result: PASS
 
+- `gh workflow run .github/workflows/wave-b-b2-manual.yml -f run_id=wave_b_b2_20260518_211710_session_id_fallback`
+  - result: PASS
+  - summary:
+    - 触发新的 GitHub Actions live rerun `26035941452`
+    - head sha: `4715efc0cbd0d1e89ba5159c1c63b9938713fb98`
+
+- `gh run view 26035941452 --json status,conclusion,jobs,headSha,createdAt,updatedAt,url`
+  - result: PASS
+  - summary:
+    - workflow run `26035941452` 最终 overall `failure`
+    - `windows-gate`: failure
+    - `macos-gate`: failure
+    - `linux-gate`: success
+    - `summary`: success
+
+- `gh api repos/dtamade/fafafa.ssl/actions/jobs/76533985560/logs > tmp/windows-job-76533985560.log`
+  - result: PASS
+  - summary:
+    - 直接绕过 `gh run view --log` 的 in-progress 限制，把 Windows job 原始日志下载到本地
+
+- `rg -n "SessionIdBytesToHex|UpdateSessionReuseTruthFromContext|EAccessViolation|suite_summary|suite_end|observed_reuse|WinSSL Session Resumption Truth|WinSSL HTTPS Client|Performance Benchmark|Backend Comparison Tests|Integration Tests" tmp/windows-job-76533985560.log -n -C 2`
+  - result: PASS
+  - summary:
+    - `windows-gate` 已通过 `Run quick WinSSL smoke` 与 `Run Windows Wave B gate`
+    - broader suite compile phase 继续全部通过
+    - 旧的 `SessionIdBytesToHex(LSessionInfo)` 崩点不再出现
+    - 新崩点已收敛到 `UpdateSessionReuseTruthFromContext(...)` 的 `line 850`
+    - 这说明 canonical shared path 上整条 `SECPKG_ATTR_SESSION_INFO` probe 仍然不安全
+
+- `gh api repos/dtamade/fafafa.ssl/actions/jobs/76533985587/logs > tmp/macos-job-76533985587.log`
+  - result: PASS
+  - summary:
+    - 直接下载 macOS job 原始日志，避免把这次 Windows 调查误写成“所有失败都是同一根因”
+
+- `tail -n 220 tmp/macos-job-76533985587.log`
+  - result: PASS
+  - summary:
+    - `macos-gate` 失败在独立的 `scripts/run_all_module_tests.sh --modules PKCS7,PKCS12,CMS,Store,OCSP,TS,CT`
+    - `compile_all_modules.py` 与 examples compile 仍然通过
+    - 这条回退当前不属于 WinSSL session-resumption shared-crash 本批直接修复面
+
+- update `src/fafafa.ssl.winssl.connection.pas`
+  - change:
+    - `UpdateSessionReuseTruthFromContext(...)` 不再在 canonical shared path 上调用 live `SECPKG_ATTR_SESSION_INFO` probe
+    - 当前共享真相先回到 `reused=false` 与现有 fallback session-id generators
+    - `TryGetCurrentSessionInfo(...)` 保留为后续 dedicated Windows proof lane 的实验入口
+
+- update `tests/scripts/test_winssl_session_resumption_runtime_truth_contract.sh`
+  - change:
+    - contract 现在锁住新的第三层边界：
+      - lower-level session-info helper 仍保留
+      - canonical shared path 必须停用 live session-info probing
+      - 当前共享真相必须回到 conservative fallback
+
 ### Interface And Backend Truth Cross-Check
 
 - `rg -n "ISSLConnection = interface|ISSLClientConnection = interface|ISSLServerConnection|SetServerName|TSSLConfig = record|Supports[A-Z][A-Za-z]+: Boolean|[A-Za-z]+Support: TSSLSupportLevel" src/fafafa.ssl.base.pas src/fafafa.ssl.factory.pas src/fafafa.ssl.context.builder.pas src/fafafa.ssl.pas docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md docs/ARCHITECTURE.md docs/reference/INTERFACE_DESIGN_V2.md`
