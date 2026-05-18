@@ -2,6 +2,39 @@
 
 ## 2026-05-19
 
+- 当前最容易把新读者直接带回旧 public surface 的，并不是 runtime 实现，而是 highest-visibility main-entry truth source：
+  - `docs/README.md`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.factory.pas`
+  - `docs/guides/INTEGRATION_GUIDE.md`
+
+- 这批文件之前的漂移形态也已经明确：
+  - `README` 仍教 `uses fafafa.ssl.factory, fafafa.ssl.base;`
+  - `README` / `INTEGRATION_GUIDE` / `factory` 注释仍使用旧的 `sslClient`
+  - `src/fafafa.ssl.pas` 顶部示例还停留在 context-only 路径，没有体现当前 facade connector 主入口
+
+- 因而这批最小正确动作不是改实现逻辑，而是做 facade / main-entry truth freeze：
+  - 新增 focused source contract，锁住这 4 个高可见入口文件不再回退到 `sslClient` / `sslServer`
+  - `README` 切到 `uses fafafa.ssl` + `TSSLConnector.FromContext(...)`
+  - direct 路径继续明确 `ISSLClientConnection.SetServerName(...)` 是连接级 SNI/hostname 真相
+  - `factory` 注释与 `INTEGRATION_GUIDE` 统一对齐到 `sslCtxClient` / `sslCtxServer`
+
+- focused 结果也说明这批边界已经正确收住：
+  - 新 contract 先 RED 在 `docs/README.md`
+  - 修复后 contract 转绿
+  - `git diff --check` 继续 PASS
+
+- 这样一来，当前 public 最显眼的一层入口真相已经统一：
+  - main facade entry = `uses fafafa.ssl`
+  - recommended client path = `TSSLConnector.FromContext(...)`
+  - direct per-connection SNI truth = `ISSLClientConnection.SetServerName(...)`
+  - context enum truth = `sslCtxClient` / `sslCtxServer`
+
+- 因而下一刀不应再回头重扫 `sslClient` / split-unit main-entry 漂移，而更适合转去 session-resumption 旧命名文档组：
+  - `docs/guides/QUICKSTART.md`
+  - `docs/guides/TROUBLESHOOTING.md`
+  - `docs/guides/USER_GUIDE.md`
+
 - 当前剩余的 root-level verify-result 命中也已经被证实不是“普通入口漏改”，而是一组 runtime / backend-contract residual subgroup：
   - `tests/test_freepascal_backend_basic.pas`
   - `tests/test_freepascal_client_cert_verify_flags_runtime.pas`

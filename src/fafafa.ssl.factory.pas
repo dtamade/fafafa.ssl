@@ -17,14 +17,14 @@
  * @example
  * <code>
  *   // 自动检测并创建SSL Context
- *   LCtx := TSSLFactory.CreateContext(sslClient);
+ *   LCtx := TSSLFactory.CreateContext(sslCtxClient);
  *
  *   // 指定使用OpenSSL后端
- *   LCtx := TSSLFactory.CreateContext(sslClient, sslOpenSSL);
+ *   LCtx := TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL);
  *
  *   // 使用配置对象创建
  *   LConfig := TSSLConfig.Create;
- *   LConfig.ContextType := sslClient;
+ *   LConfig.ContextType := sslCtxClient;
  *   LCtx := TSSLFactory.CreateContext(LConfig);
  * </code>
  *}
@@ -78,10 +78,10 @@ type
    * 使用模式:
    * <code>
    *   // 最简单：自动检测后端
-   *   LCtx := TSSLFactory.CreateContext(sslClient);
+   *   LCtx := TSSLFactory.CreateContext(sslCtxClient);
    *
    *   // 指定后端
-   *   LCtx := TSSLFactory.CreateContext(sslClient, sslOpenSSL);
+   *   LCtx := TSSLFactory.CreateContext(sslCtxClient, sslOpenSSL);
    *
    *   // 高级：使用配置
    *   LCtx := TSSLFactory.CreateContext(LConfig);
@@ -226,7 +226,7 @@ type
     {**
      * 创建SSL Context
      *
-     * @param AContextType 上下文类型（sslClient或sslServer）
+     * @param AContextType 上下文类型（sslCtxClient 或 sslCtxServer）
      * @param ALibType 库类型（默认sslAutoDetect自动选择）
      * @return SSL Context接口
      * @raises ESSLInitializationException 初始化失败时
@@ -234,10 +234,10 @@ type
      * @example
      * <code>
      *   // 自动检测库
-     *   LCtx := TSSLFactory.CreateContext(sslClient);
+     *   LCtx := TSSLFactory.CreateContext(sslCtxClient);
      *
      *   // 指定使用OpenSSL
-     *   LCtx := TSSLFactory.CreateContext(sslServer, sslOpenSSL);
+     *   LCtx := TSSLFactory.CreateContext(sslCtxServer, sslOpenSSL);
      * </code>
      *}
     class function CreateContext(
@@ -255,7 +255,7 @@ type
      * @example
      * <code>
      *   LConfig := TSSLConfig.Create;
-     *   LConfig.ContextType := sslClient;
+     *   LConfig.ContextType := sslCtxClient;
      *   LConfig.ProtocolVersions := [sslTLS12, sslTLS13];
      *   LCtx := TSSLFactory.CreateContext(LConfig);
      * </code>

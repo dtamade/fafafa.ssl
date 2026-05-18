@@ -10,6 +10,25 @@
 
 ## Current Status
 
+- [completed] facade / main-entry truth freeze 已完成 focused 收口：
+  - 新增计划：`docs/plans/2026-05-19-facade-main-entry-truth-freeze.md`
+  - 新增 focused source contract：`tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - `docs/README.md`
+    - 快速开始现已切到 `uses fafafa.ssl` 的门面入口
+    - 推荐路径现已展示 `TSSLConnector.FromContext(Ctx)`，同时保留 direct `ISSLClientConnection.SetServerName(...)` 真相
+  - `src/fafafa.ssl.pas`
+    - 头部示例现已切到 facade connector 主路径
+  - `src/fafafa.ssl.factory.pas`
+    - 头部示例与参数说明现已统一为 `sslCtxClient` / `sslCtxServer`
+  - `docs/guides/INTEGRATION_GUIDE.md`
+    - 当前已不再教学旧的 `sslClient` 枚举名
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_facade_main_entry_truth_contract.sh`
+    - `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - highest-visibility facade/main-entry truth source 已对齐到当前 public 真相
+    - 下一刀更适合转向 session-resumption 旧命名文档漂移，而不是再回头重扫 `sslClient` / split-unit main entry
 - [completed] `WinSSL` connection peer-certificate issuer-link completeness 已完成 focused 收口：
   - 新增计划：`docs/plans/2026-05-19-winssl-peer-cert-issuer-link.md`
   - 新增 focused runtime test：`tests/winssl/test_winssl_peer_certificate_surface.pas`

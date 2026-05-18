@@ -13,7 +13,8 @@
     
     var
       LContext: ISSLContext;
-      LConnection: ISSLConnection;
+      LConnector: TSSLConnector;
+      LStream: TSSLStream;
     begin
       // 创建客户端上下文
       LContext := TSSLFactory.CreateContext(sslCtxClient);
@@ -22,7 +23,14 @@
       LContext.SetProtocolVersions([sslProtocolTLS12, sslProtocolTLS13]);
       LContext.SetVerifyMode([sslVerifyPeer]);
       
-      // 创建连接...
+      // 推荐入口：通过 facade connector 建立 TLS
+      LConnector := TSSLConnector.FromContext(LContext);
+      LStream := LConnector.ConnectSocket(YourConnectedSocket, 'example.com');
+      try
+        // 通过 LStream 进行读写
+      finally
+        LStream.Free;
+      end;
     end;
 }
 

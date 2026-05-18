@@ -41,7 +41,7 @@ var
   LSocket: TSocket;  // 你的框架提供的 socket
 begin
   // 创建 SSL 上下文
-  LCtx := TSSLFactory.CreateContext(sslClient);
+  LCtx := TSSLFactory.CreateContext(sslCtxClient);
   LCtx.SetVerifyMode(sslVerifyPeer);
 
   // 创建 SSL 连接（包装现有 socket）
@@ -332,12 +332,12 @@ LCtx.SetSessionCacheMode(scmClient);
 // 不好：每次连接创建新上下文
 for I := 1 to 1000 do
 begin
-  LCtx := TSSLFactory.CreateContext(sslClient);  // 开销大
+  LCtx := TSSLFactory.CreateContext(sslCtxClient);  // 开销大
   LConn := LCtx.CreateConnection(Socket);
 end;
 
 // 好：复用上下文
-LCtx := TSSLFactory.CreateContext(sslClient);
+LCtx := TSSLFactory.CreateContext(sslCtxClient);
 for I := 1 to 1000 do
 begin
   LConn := LCtx.CreateConnection(Socket);  // 快速

@@ -2,6 +2,51 @@
 
 ## 2026-05-19
 
+### Facade Main-Entry Truth Freeze
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+  - result: PASS
+  - summary:
+    - no unsynced catchup output was needed before the facade/main-entry truth batch
+
+- add `docs/plans/2026-05-19-facade-main-entry-truth-freeze.md`
+  - change:
+    - define the bounded high-visibility facade/main-entry truth-freeze batch
+
+- add `tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - change:
+    - lock README, facade header, factory comments, and integration guide to current `sslCtx*` + facade entry truth
+    - require the recommended `TSSLConnector.FromContext(...)` path and direct `ISSLClientConnection.SetServerName(...)` path in `docs/README.md`
+
+- `bash -n tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - facade/main-entry truth contract syntax is valid
+
+- `bash tests/scripts/test_facade_main_entry_truth_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - `docs/README.md` still exposed stale `sslClient` and split-unit main-entry guidance
+    - GREEN:
+      - `docs/README.md`, `src/fafafa.ssl.pas`, `src/fafafa.ssl.factory.pas`, and `docs/guides/INTEGRATION_GUIDE.md` now align on current facade/main-entry truth
+
+- update main-entry truth sources:
+  - `docs/README.md`
+  - `src/fafafa.ssl.pas`
+  - `src/fafafa.ssl.factory.pas`
+  - `docs/guides/INTEGRATION_GUIDE.md`
+  - change:
+    - switch the highest-visibility entry docs to `uses fafafa.ssl`
+    - publish `TSSLConnector.FromContext(...)` as the recommended client entry
+    - keep `ISSLClientConnection.SetServerName(...)` as the explicit direct per-connection SNI path
+    - replace stale `sslClient` / `sslServer` wording with `sslCtxClient` / `sslCtxServer`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current facade/main-entry truth batch has no whitespace or patch-format issues
+
 ### ISSLCertificateVerification Root-Test Residual Freeze
 
 - add `docs/plans/2026-05-19-isslcertificateverification-root-test-residual-freeze.md`
