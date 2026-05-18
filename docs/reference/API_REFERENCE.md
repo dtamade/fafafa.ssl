@@ -1099,7 +1099,7 @@ end;
 
 - `GetConnectionInfo` 方法返回此结构，包含连接的完整信息
 - 用于监控、诊断和安全审计
-- WinSSL 后端通过 `QueryContextAttributesW` API 获取这些信息
+- WinSSL 后端通过 `QueryContextAttributesW` API best-effort 获取这些信息；真实 cipher-suite id/name 会优先走 Schannel `SECPKG_ATTR_CIPHER_INFO`
 - `ProtocolVersion` / `CipherSuite` / `IsResumed` / `ALPNProtocol` 这组通用字段由共享连接层保证最小可观测语义
 - `ServerName` 在连接对象已持有该 metadata 时由共享连接层补齐
 - `SessionId` 在连接/握手已经建立且后端可返回当前 session 时由共享连接层补齐
@@ -1107,7 +1107,7 @@ end;
 - `CipherSuiteId` 对标准 TLS 1.3 suite name 会先由共享层做 best-effort 推导；OpenSSL / WinSSL 这类后端也可能直接提供 low-level truth
 - `Cipher` / `Hash` / `KeySize` 这组字段会先由共享连接层基于 negotiated cipher-suite name 做 best-effort 推导
 - `KeyExchange` 在 cipher-suite name 显式携带旧式密钥交换前缀时，也会由共享层做 best-effort 推导
-- `MacSize` 等更细的平台/库专属字段仍按后端能力 best-effort 填充，未连接或后端未提供时返回默认值
+- `MacSize` 等更细的平台/库专属字段仍按后端能力 best-effort 填充；在 AEAD / TLS 1.3 场景不承诺等于记录层 auth tag，未连接或后端未提供时返回默认值
 
 ---
 

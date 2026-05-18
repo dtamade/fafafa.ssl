@@ -3801,3 +3801,58 @@
   - result: PASS
   - summary:
     - current batch has no whitespace or patch-format issues
+
+### WinSSL GetConnectionInfo Cipher Truth Correction
+
+- add `docs/plans/2026-05-18-winssl-connectioninfo-cipher-truth-correction.md`
+  - purpose:
+    - capture the WinSSL truth-correction batch that was discovered while auditing `MacSize`
+    - keep scope on the deterministic `CipherSuiteId` source bug before reopening broader field-completeness work
+
+- static audit result:
+  - `SecPkgContext_ConnectionInfo.aiCipher` in `src/fafafa.ssl.winssl.base.pas` is explicitly documented as an encryption algorithm ID
+  - the same WinSSL unit uses it to derive algorithm-level cipher names and enums
+  - therefore the previous `Result.CipherSuiteId := Word(ConnInfo.aiCipher)` path was a wrong truth source, not a benign best-effort approximation
+
+- implementation:
+  - `src/fafafa.ssl.winssl.base.pas`
+  - `src/fafafa.ssl.winssl.connection.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/WINSSL_DESIGN.md`
+  - change:
+    - add `SECPKG_ATTR_CIPHER_INFO`
+    - add a minimal WinSSL cipher-info helper that reads Schannel `dwCipherSuite`
+    - let WinSSL `GetConnectionInfo` stop writing `CipherSuiteId` from `ConnInfo.aiCipher`
+    - let WinSSL `DoGetCipherName` prefer the real suite name when Schannel exposes it
+    - narrow the active docs so `MacSize` is explicitly described as still best-effort and not guaranteed to equal the AEAD auth tag length
+
+- `bash tests/scripts/test_winssl_connectioninfo_cipher_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - verified `SECPKG_ATTR_CIPHER_INFO` is defined
+    - verified WinSSL now queries `SECPKG_ATTR_CIPHER_INFO`
+    - verified the old `ConnInfo.aiCipher -> CipherSuiteId` write is gone
+
+- `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+  - result: PASS
+  - summary:
+    - focused builder/hostname suite remained green at `21 passed, 0 failed`
+    - the WinSSL correction did not disturb the shared `GetConnectionInfo` truth already established on other backends
+
+- `mkdir -p tmp/test_openssl_connection_info_cipher_contract && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_connection_info_cipher_contract -FEtmp/test_openssl_connection_info_cipher_contract -otmp/test_openssl_connection_info_cipher_contract/test_openssl_connection_info_cipher_contract tests/test_openssl_connection_info_cipher_contract.pas && ./tmp/test_openssl_connection_info_cipher_contract/test_openssl_connection_info_cipher_contract`
+  - result: PASS
+  - summary:
+    - focused OpenSSL connection-info suite remained green at `14 passed, 0 failed`
+    - the WinSSL correction did not regress the OpenSSL `CipherSuiteId` truth or safe-degrade guard
+
+- `gh auth status`
+  - result: PASS
+  - summary:
+    - GitHub CLI is installed
+    - authenticated account has `workflow` scope
+    - Windows gate can be dispatched from this environment after the batch lands
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current batch has no whitespace or patch-format issues

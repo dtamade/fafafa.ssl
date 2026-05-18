@@ -974,6 +974,27 @@
       - `MacSize`
       - 无法只靠名字或统一 low-level helper 稳定归一的更细平台差异
       - 更强 owner / deprecation wording route
+38. WinSSL `GetConnectionInfo` cipher truth correction 已完成并应作为当前 WinSSL-specific 审查纠偏记录保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-winssl-connectioninfo-cipher-truth-correction.md`
+    - 当前已确认的 WinSSL truth:
+      - `SecPkgContext_ConnectionInfo.aiCipher`
+        - 只是算法级字段
+        - 不应直接写入 `CipherSuiteId`
+      - WinSSL `CipherSuiteId` 现在会优先走：
+        - `SECPKG_ATTR_CIPHER_INFO`
+        - `dwCipherSuite`
+      - 当 Schannel 可返回真实 suite name 时：
+        - `DoGetCipherName` / `GetConnectionInfo.CipherSuite` 会优先对齐该 truth
+    - 当前 focused proof 已覆盖：
+      - `bash tests/scripts/test_winssl_connectioninfo_cipher_truth_contract.sh`
+      - `tests/test_connection_builder_hostname_precedence.pas`
+      - `tests/test_openssl_connection_info_cipher_contract.pas`
+      - `git diff --check`
+    - 当前批收口后，`GetConnectionInfo` implementation-completeness 主线更准确地收缩到：
+      - `MacSize`
+      - 无法只靠名字或统一 low-level helper 稳定归一的更细平台差异
+      - 更强 owner / deprecation wording route
 
 ## Verification Discipline
 

@@ -372,6 +372,23 @@ Recommended first bounded batch:
        - 还是先补更高层的 owner / deprecation wording
   - 更强 owner / deprecation wording route 继续保留为平行候选，但当前不应压过 implementation-completeness 主线
 
+## Progress Since The GetConnectionInfo WinSSL Cipher Truth Correction
+
+- 已交付：
+  - WinSSL `GetConnectionInfo` cipher truth correction
+  - static audit proved `SecPkgContext_ConnectionInfo.aiCipher` is only an algorithm-level field, not a real TLS cipher-suite id source
+  - WinSSL 现在会优先走 Schannel `SECPKG_ATTR_CIPHER_INFO` / `dwCipherSuite`
+  - 当 Schannel 可返回真实 suite name 时，WinSSL `CipherSuite` 也会优先对齐该 truth
+
+- 当前更准确的 next step：
+  - 不再把 “WinSSL 已经直接掌握 `CipherSuiteId`” 当成既定事实
+  - `CipherSuiteId` 这条线现在更稳了，但 `MacSize` 仍没有同等级的统一 truth
+  - 若继续推进，应优先做一条新的 bounded batch：
+    1. 先盘清 `MacSize` 在 WinSSL 当前是否只是 `dwHashStrength` proxy
+    2. 再横向对 OpenSSL / FreePascal / MbedTLS / WolfSSL 形成语义矩阵
+    3. 只有在口径统一后再决定是否补实现
+  - 更强 owner / deprecation wording route 继续保留为平行候选，但当前不应压过 implementation-completeness 主线
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

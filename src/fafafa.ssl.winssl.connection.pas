@@ -38,6 +38,13 @@ uses
   fafafa.ssl.winssl.context;
 
 type
+  TSecPkgContext_CipherInfoPrefix = packed record
+    dwVersion: DWORD;
+    dwProtocol: DWORD;
+    dwCipherSuite: DWORD;
+    dwBaseCipherSuite: DWORD;
+  end;
+
   { TWinSSLSession - Windows Schannel 会话实现
     P0-4: 安全化重构 - 不再持有 CtxtHandle，改为元数据模式
     Schannel 的会话复用由系统自动管理，此类仅保存会话元数据。
@@ -165,6 +172,8 @@ type
     function TryGetContextAccess(out AContextAccess: IWinSSLContextAccess): Boolean;
     function TryGetLibraryStatsAccess(out ALibraryStatsAccess: IWinSSLLibraryStatsAccess): Boolean;
     procedure TryUpdateLibraryStatistics;
+    function TryGetCipherInfo(out ACipherSuiteId: Word;
+      out ACipherSuiteName: string): Boolean;
 
   protected
     { TBaseSSLConnection 抽象方法实现 }
@@ -1500,16 +1509,55 @@ begin
     Result := sslProtocolSSL2;
 end;
 
+function TWinSSLConnection.TryGetCipherInfo(out ACipherSuiteId: Word;
+  out ACipherSuiteName: string): Boolean;
+const
+  WINSSL_CIPHER_INFO_BUFFER_SIZE = 1024;
+var
+  Status: SECURITY_STATUS;
+  CipherInfoBuffer: array[0..WINSSL_CIPHER_INFO_BUFFER_SIZE - 1] of Byte;
+  CipherInfo: ^TSecPkgContext_CipherInfoPrefix;
+  CipherSuiteName: PWideChar;
+begin
+  Result := False;
+  ACipherSuiteId := 0;
+  ACipherSuiteName := '';
+
+  if not FConnected then
+    Exit;
+
+  FillChar(CipherInfoBuffer, SizeOf(CipherInfoBuffer), 0);
+  Status := QueryContextAttributesW(@FCtxtHandle, SECPKG_ATTR_CIPHER_INFO,
+    @CipherInfoBuffer[0]);
+  if not IsSuccess(Status) then
+    Exit;
+
+  CipherInfo := @CipherInfoBuffer[0];
+  ACipherSuiteId := Word(CipherInfo^.dwCipherSuite and $FFFF);
+
+  CipherSuiteName := PWideChar(@CipherInfoBuffer[SizeOf(TSecPkgContext_CipherInfoPrefix)]);
+  if (CipherSuiteName <> nil) and (CipherSuiteName^ <> #0) then
+    ACipherSuiteName := WideCharToString(CipherSuiteName);
+
+  Result := (ACipherSuiteId <> 0) or (ACipherSuiteName <> '');
+end;
+
 function TWinSSLConnection.DoGetCipherName: string;
 var
   ConnInfo: TSecPkgContext_ConnectionInfo;
   Status: SECURITY_STATUS;
   CipherName, HashName: string;
+  CipherSuiteId: Word;
+  CipherSuiteName: string;
 begin
   Result := '';
 
   if not FConnected then
     Exit;
+
+  if TryGetCipherInfo(CipherSuiteId, CipherSuiteName) and
+     (CipherSuiteName <> '') then
+    Exit(CipherSuiteName);
 
   Status := QueryContextAttributesW(@FCtxtHandle, SECPKG_ATTR_CONNECTION_INFO, @ConnInfo);
   if not IsSuccess(Status) then
@@ -2229,6 +2277,8 @@ end;
 function TWinSSLConnection.GetConnectionInfo: TSSLConnectionInfo;
 var
   ConnInfo: TSecPkgContext_ConnectionInfo;
+  CipherSuiteId: Word;
+  CipherSuiteName: string;
   Status: SECURITY_STATUS;
   PeerCert: ISSLCertificate;
 begin
@@ -2243,7 +2293,6 @@ begin
   Status := QueryContextAttributesW(@FCtxtHandle, SECPKG_ATTR_CONNECTION_INFO, @ConnInfo);
   if IsSuccess(Status) then
   begin
-    Result.CipherSuiteId := Word(ConnInfo.aiCipher);
     Result.KeySize := ConnInfo.dwCipherStrength;
     Result.MacSize := ConnInfo.dwHashStrength div 8;
 
@@ -2275,6 +2324,14 @@ begin
     else
       Result.Hash := sslHashSHA256;
     end;
+  end;
+
+  if TryGetCipherInfo(CipherSuiteId, CipherSuiteName) then
+  begin
+    if CipherSuiteId <> 0 then
+      Result.CipherSuiteId := CipherSuiteId;
+    if CipherSuiteName <> '' then
+      Result.CipherSuite := CipherSuiteName;
   end;
 
   Result.IsResumed := FSessionReused;

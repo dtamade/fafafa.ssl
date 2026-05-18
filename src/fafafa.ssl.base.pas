@@ -365,7 +365,7 @@ type
     Cipher: TSSLCipher;                    // 加密算法
     Hash: TSSLHash;                        // 哈希算法
     KeySize: Integer;                      // 密钥长度（位）
-    MacSize: Integer;                      // MAC长度（字节）
+    MacSize: Integer;                      // 认证/MAC长度（字节，best-effort）
     IsResumed: Boolean;                    // 是否为恢复的会话
     SessionId: string;                     // 会话ID
     CompressionMethod: string;             // 压缩方法

@@ -95,6 +95,12 @@ type
 
 - `ISSLNativeHandleAccess` 是 public optional interface
 - `IWinSSLContextAccess` 是 WinSSL 内部 seam，只用于 connection 与 context 协作，不扩张 public `ISSLContext`
+- `SECPKG_ATTR_CONNECTION_INFO`
+  - 提供的是算法级字段，如 `aiCipher` / `aiHash` / `dwCipherStrength`
+  - 适合回填 `Cipher` / `Hash` / `KeySize` 这类算法 detail
+- `SECPKG_ATTR_CIPHER_INFO`
+  - 才是 WinSSL 侧真实 cipher-suite id/name 的首选 truth source
+  - `CipherSuiteId` 不应继续从 `ConnectionInfo.aiCipher` 这种算法 ID 直接推回
 
 ## 4. 实现细节
 

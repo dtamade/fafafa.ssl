@@ -1812,3 +1812,28 @@
 - 因而当前 `GetConnectionInfo` implementation-completeness 主线再往下推进时，最合理的剩余焦点已经变成：
   - `MacSize`
   - 以及无法只靠名字或统一 low-level helper 稳定归一的更细平台差异
+
+- 在继续盘 `MacSize` 时，静态审查暴露出一个比“字段未统一”更先要修的 WinSSL truth bug：
+  - `TSecPkgContext_ConnectionInfo.aiCipher` 在仓库定义里明确是“加密算法 ID”
+  - 同一份 WinSSL 代码也一直把它当算法字段来生成 cipher 名称和 `Cipher` 枚举
+  - 但 `GetConnectionInfo` 之前却直接执行：
+    - `Result.CipherSuiteId := Word(ConnInfo.aiCipher)`
+  - 这说明当前问题不是“WinSSL 还没补 suite id”，而是“已经把错误来源写进了 suite id”
+
+- 这也修正了我们上一批对 WinSSL 的一个过度乐观假设：
+  - 之前把 WinSSL 视为“已经直接掌握 `CipherSuiteId` / `MacSize` 的 backend”
+  - 但从当前静态证据看：
+    - WinSSL 通过 `SECPKG_ATTR_CONNECTION_INFO` 掌握的是算法级字段
+    - 真实 cipher-suite id/name 更应该走 Schannel `SECPKG_ATTR_CIPHER_INFO`
+  - 因而 WinSSL 这条线需要先做 truth correction，不能直接拿旧实现当 completeness 参考
+
+- 这次 WinSSL 修复后的更准确结论是：
+  - `CipherSuiteId`
+    - shared TLS 1.3 路径已有 name-derived truth
+    - OpenSSL 路径已有 low-level truth
+    - WinSSL 路径现在也改为官方 `CipherInfo.dwCipherSuite` truth
+  - `MacSize`
+    - 当前全仓只有 WinSSL 在填值
+    - 但它用的是 `dwHashStrength div 8`
+    - 这更像 hash-strength proxy，而不是已经跨 backend 统一定义好的“记录层 MAC/tag 长度”
+  - 因而下一批不该直接照着 WinSSL 现值去扩散实现，而应先把语义矩阵盘清楚
