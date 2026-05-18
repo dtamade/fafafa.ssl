@@ -2,6 +2,9 @@ program test_factory_server_name_scope_clarification;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally covers deprecated
+  TSSLConfig.ServerName compatibility-only semantics on factory paths. }
+
 uses
   SysUtils,
   fafafa.ssl,

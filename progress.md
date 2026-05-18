@@ -1449,3 +1449,49 @@
 - update `task_plan.md`, `findings.md`, `progress.md`
   - change:
     - sync the new truth that builder, generic factory, and direct OpenSSL library paths no longer inject deprecated `ServerName` into newly created contexts
+
+### Deprecated Builder/Config ServerName Surface Classification
+
+- add `docs/plans/2026-05-18-deprecated-context-servername-compat-surface-classification.md`
+  - purpose:
+    - define the first static cleanup cut inside final public surface cleanup prep
+    - keep scope on ordinary-test de-guidance plus explicit compatibility classification
+
+- update selected tests under `tests/` and `tests/config/`
+  - change:
+    - remove ordinary `.WithSNI(...)` usage from `tests/test_quick.pas`
+    - remove stale `LConfig.ServerName := ...` setup from `tests/winssl/test_winssl_connection_edge_cases.pas`
+    - add `INTENTIONAL_COMPAT` labels to remaining builder/config compatibility coverage files
+    - clarify `tests/test_data_structures.pas` and `tests/test_factory_logic.pas` messages so `ServerName` is framed as a compatibility field, not recommended flow guidance
+
+- add `tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+  - purpose:
+    - confine deprecated builder/config ServerName surface to an explicit allowlist
+    - fail if active ordinary tests reintroduce `.WithSNI(...)` or builder-config `ServerName :=`
+
+- `bash tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+  - result: PASS
+  - summary:
+    - remaining deprecated builder/config ServerName usage is confined to explicitly labeled compatibility tests
+    - ordinary active tests no longer leak deprecated builder/config guidance
+
+- `mkdir -p tmp/test_quick && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_quick -FEtmp/test_quick -otmp/test_quick/test_quick tests/test_quick.pas && ./tmp/test_quick/test_quick`
+  - result: PASS
+  - summary:
+    - normal builder smoke still builds client and server contexts without `.WithSNI(...)`
+    - quick smoke output stayed green after removing deprecated builder guidance from the ordinary path
+
+- update `docs/plans/2026-05-18-context-servername-compatibility-migration-roadmap.md`
+  - change:
+    - mark the public compatibility-surface classification cut complete
+    - move the next recommended batch from test-surface cleanup prep to final API-shape decisions
+
+- update `docs/test_reports/INTERFACE_AND_BACKEND_VERIFICATION_2026-05-18.md`
+  - change:
+    - add a dedicated closeout section for deprecated builder/config ServerName surface classification
+    - record that ordinary smoke/edge-case tests no longer teach deprecated builder/config guidance
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the new truth that remaining deprecated builder/config ServerName usage is now explicitly classified
+    - record that the next highest-value work is final API-shape decisions, not more ordinary-test cleanup

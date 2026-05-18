@@ -2,6 +2,10 @@ program test_data_structures;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally keeps deprecated
+  TSSLConfig.ServerName field-surface coverage so the remaining public record
+  shape stays explicit. }
+
 {
   test_data_structures - 数据结构测试
 
@@ -194,7 +198,7 @@ begin
   Assert(LConfig.CAFile = '/path/to/ca.pem', 'CAFile 字段可访问');
 
   LConfig.ServerName := 'example.com';
-  Assert(LConfig.ServerName = 'example.com', 'ServerName 字段可访问');
+  Assert(LConfig.ServerName = 'example.com', '兼容字段 ServerName 仍可访问');
 
   LConfig.ALPNProtocols := 'h2,http/1.1';
   Assert(LConfig.ALPNProtocols = 'h2,http/1.1', 'ALPNProtocols 字段可访问');
@@ -484,7 +488,7 @@ begin
   Assert(LConfig2.LibraryType = sslOpenSSL, '结构复制后 LibraryType 正确');
   Assert(LConfig2.ContextType = sslCtxClient, '结构复制后 ContextType 正确');
   Assert(LConfig2.BufferSize = 16384, '结构复制后 BufferSize 正确');
-  Assert(LConfig2.ServerName = 'example.com', '结构复制后 ServerName 正确');
+  Assert(LConfig2.ServerName = 'example.com', '结构复制后兼容字段 ServerName 正确');
 
   // 修改副本不影响原始
   LConfig2.BufferSize := 32768;

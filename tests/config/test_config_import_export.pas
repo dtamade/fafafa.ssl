@@ -2,6 +2,9 @@ program test_config_import_export;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally keeps deprecated WithSNI
+  import/export coverage for the compatibility-only builder surface. }
+
 {**
  * Test suite for Phase 2.1.3 - Configuration Import/Export
  *

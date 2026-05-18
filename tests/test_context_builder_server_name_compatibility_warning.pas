@@ -2,6 +2,9 @@ program test_context_builder_server_name_compatibility_warning;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally covers deprecated
+  WithSNI compatibility warnings on builder paths. }
+
 uses
   SysUtils,
   fafafa.ssl,

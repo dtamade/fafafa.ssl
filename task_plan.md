@@ -185,6 +185,12 @@
   - focused 验证：
     - `tests/test_openssl_library_default_config_server_name_clarification.pas`
     - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+- [completed] final public surface cleanup prep 的第一刀 static classification cleanup 已收口：
+  - `tests/test_quick.pas` 不再把 `.WithSNI('example.com')` 当普通 builder smoke 用法
+  - `tests/winssl/test_winssl_connection_edge_cases.pas` 不再顺手写无行为意义的 `LConfig.ServerName := ...`
+  - 剩余 builder/config compatibility surface 测试现在全部显式带 `INTENTIONAL_COMPAT`
+  - 新增 `tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+    守住 deprecated `WithSNI(...)` / `TSSLConfig.ServerName` 只存在于 allowlist compatibility tests
 
 ## Scope
 
@@ -215,10 +221,11 @@
 1. 进入 final public surface cleanup prep：
    - 当前 builder / factory 的高层输入都已经是 `warning + ignore`
    - OpenSSL backend-specific direct library default-config path 也已完成对齐
-   - direct `ISSLContext.SetServerName/GetServerName` 已成为最后仍可观察的 context-level compatibility surface
-   - 下一步优先评估：
+   - 普通测试面也已不再继续示范 deprecated builder/config ServerName surface
+   - 现在应直接进入最终 API 形状决策：
      - `TSSLConfig.ServerName` 是否还应继续留在当前 record 上
      - builder `WithSNI(...)` 是否还应继续保留当前命名/挂载位置
+     - direct `ISSLContext.SetServerName/GetServerName` 是否需要更明确的替代/降格方案
 2. 在 public surface prep 明确后，再决定 direct context compatibility API 的后续收口方式：
    - direct `SetServerName/GetServerName` 是否继续原样保留
    - 是否需要新的替代入口、文档降格和 focused source contract

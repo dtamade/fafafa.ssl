@@ -297,7 +297,6 @@ begin
   LConfig.LibraryType := sslWinSSL;
   LConfig.ContextType := sslCtxClient;
   LConfig.VerifyMode := [sslVerifyPeer, sslVerifyFailIfNoPeerCert];
-  LConfig.ServerName := 'invalid.example.com';
 
   try
     LContext := TSSLFactory.CreateContext(LConfig);

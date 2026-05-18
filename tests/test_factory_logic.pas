@@ -2,6 +2,10 @@ program test_factory_logic;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally keeps deprecated
+  TSSLConfig.ServerName field-surface coverage so the remaining public record
+  shape stays explicit. }
+
 {
   test_factory_logic - 工厂模式逻辑测试
 
@@ -432,7 +436,7 @@ begin
   Assert(LConfig.CAFile = '/path/to/ca.pem', 'CAFile 可设置');
 
   LConfig.ServerName := 'example.com';
-  Assert(LConfig.ServerName = 'example.com', 'ServerName 可设置');
+  Assert(LConfig.ServerName = 'example.com', '兼容字段 ServerName 仍可设置');
 
   LConfig.ALPNProtocols := 'h2,http/1.1';
   Assert(LConfig.ALPNProtocols = 'h2,http/1.1', 'ALPNProtocols 可设置');

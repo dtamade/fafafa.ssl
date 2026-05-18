@@ -2,6 +2,9 @@ program test_context_builder_merge_advanced_option_snapshot_semantics;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally keeps deprecated WithSNI
+  merge semantics coverage for the compatibility-only builder surface. }
+
 uses
   SysUtils,
   fpjson, jsonparser,

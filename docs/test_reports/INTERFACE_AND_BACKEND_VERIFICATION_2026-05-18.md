@@ -811,6 +811,40 @@
       PASS (`20 passed, 0 failed, 1 skipped`)
     - 说明 OpenSSL direct-library 对齐没有碰坏当前 cross-backend no-inheritance 真相
 
+## 增量收口：deprecated builder/config ServerName surface classification
+
+- 在继续 final public surface cleanup prep 时，静态审查又暴露出一个工作流层面的残余漂移：
+  - `tests/test_quick.pas` 这种普通 smoke 测试还在链式调用 `.WithSNI('example.com')`
+  - `tests/winssl/test_winssl_connection_edge_cases.pas` 这种普通 edge-case 也还在顺手写 `LConfig.ServerName := ...`
+  - 它们并不是在测 compatibility 语义本身，却会持续把 deprecated builder/config surface 伪装成正常主路径
+
+- 这不是新的 backend bug，而是“public compatibility surface 还没有被彻底分类清楚”的工作流问题：
+  - runtime 真相早已变成 `warning + ignore`
+  - 但普通测试文本如果继续示范旧入口，后续审查仍会被反复拉回旧语义
+
+- 当前这一刀的修法保持纯静态、纯护栏：
+  - `tests/test_quick.pas` 去掉普通 builder smoke 里的 `.WithSNI('example.com')`
+  - `tests/winssl/test_winssl_connection_edge_cases.pas` 去掉不再参与行为语义的 `LConfig.ServerName := ...`
+  - 剩余必须保留 `WithSNI(...)` / `TSSLConfig.ServerName` 的测试文件，全部补上 `INTENTIONAL_COMPAT`
+  - 新增 `tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+    直接守住：
+    - allowlist 文件必须显式带 `INTENTIONAL_COMPAT`
+    - 普通测试若重新出现 deprecated builder/config ServerName surface，立刻红灯
+
+- 这让 final public surface cleanup prep 真正进入了下一阶段：
+  - 普通测试面已经不再教旧入口
+  - 剩余命中都变成“明确知道自己在测 compatibility surface”的显式集合
+  - 因而下一步终于可以直接讨论最终 API 形状，而不是继续做测试面排污
+
+- focused 结果：
+  - `bash tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+    - PASS
+  - `tests/test_quick.pas`
+    - PASS
+    - 普通 builder smoke 在不依赖 `.WithSNI(...)` 的情况下仍正常构建 client/server context
+  - `git diff --check`
+    - PASS
+
 ## 验证证据
 
 - `bash tests/scripts/test_interface_docs_no_nonexistent_isserverconnection_contract.sh`
@@ -832,6 +866,10 @@
 - `tests/test_cross_backend_client_context_server_name_clarification.pas`
   - PASS
 - `tests/test_openssl_library_default_config_server_name_clarification.pas`
+  - PASS
+- `bash tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+  - PASS
+- `tests/test_quick.pas`
   - PASS
 - `tests/test_context_builder_server_servername_runtime_consistency.pas`
   - PASS

@@ -302,6 +302,7 @@ Delivered fifth cut:
   - Phase B server-side BuildServer ignore cut complete
   - Phase B client-side high-level ignore cut complete
   - Phase B OpenSSL direct-library default-config alignment complete
+  - Phase D public compatibility-surface classification cut complete
   - Phase C shared compatibility shim first cut complete
   - Phase C `sslCtxBoth` ambiguity cut complete
   - Phase C FreePascal client runtime fallback cut complete
@@ -316,23 +317,26 @@ Delivered fifth cut:
 
 - we are no longer blocked on “what is true now”
 - we are no longer blocked on “which high-level path still preserves context state”
-- we are now blocked on “how to clean up the remaining public compatibility surface”
+- ordinary smoke / edge-case tests no longer teach deprecated builder/config ServerName surfaces
+- remaining builder/config compatibility coverage is now explicitly labeled and confined by source contract
+- we are now blocked on “which final API shape to keep for the remaining public compatibility surface”
 
 ## Next Recommended Batch
 
 Choose one bounded implementation family only:
 
-1. **Final surface cleanup prep**
-   - re-evaluate whether `TSSLConfig.ServerName` and builder `WithSNI(...)` still need their current naming/placement now that builder/factory/runtime paths are all `warning + ignore`
-   - define the next focused contracts/docs that distinguish compatibility-only public surface from recommended client-flow surface
+1. **Final surface shape decision**
+   - decide whether `TSSLConfig.ServerName` still deserves its current record placement now that ordinary tests no longer teach it
+   - decide whether builder `WithSNI(...)` should stay on the fluent public surface with its current naming
+   - decide whether direct `ISSLContext.SetServerName/GetServerName` needs a narrower replacement story before any stronger shrink
 2. **Direct context compatibility API cleanup staging**
    - decide how long direct `ISSLContext.SetServerName/GetServerName` should remain
    - decide whether it needs a clearer replacement path, narrower docs, or dedicated source contracts before any further shrink
 3. **Wider public-surface cleanup**
    - stage follow-up work only after the compatibility-only public surface has a stable prep plan
-Recommended first pick: **final public surface cleanup prep around `TSSLConfig.ServerName`, `WithSNI(...)`, and the remaining direct context compatibility API**.
+Recommended first pick: **final surface shape decision around `TSSLConfig.ServerName`, `WithSNI(...)`, and the remaining direct context compatibility API**.
 
-Builder/factory/shared-shim warning work, residual test-surface classification, connector-side contract cleanup, the `sslCtxBoth` ambiguity cut, the shared client fallback divergence, and the final high-level direct-state control cut are no longer the blocker; the next highest-value work is shaping the final public compatibility surface.
+Builder/factory/shared-shim warning work, residual test-surface classification, connector-side contract cleanup, the `sslCtxBoth` ambiguity cut, the shared client fallback divergence, the final high-level direct-state control cut, and ordinary-test de-guidance are no longer the blocker; the next highest-value work is shaping the final public compatibility surface.
 
 ## Verification
 

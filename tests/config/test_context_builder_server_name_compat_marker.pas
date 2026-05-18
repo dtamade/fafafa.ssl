@@ -2,6 +2,9 @@ program test_context_builder_server_name_compat_marker;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally keeps deprecated WithSNI
+  marker coverage for the compatibility-only builder surface. }
+
 uses
   SysUtils,
   fpjson, jsonparser,

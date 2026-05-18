@@ -2,6 +2,9 @@ program test_openssl_library_default_config_server_name_clarification;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally covers deprecated
+  TSSLConfig.ServerName compatibility on the OpenSSL direct-library path. }
+
 uses
   SysUtils,
   fafafa.ssl.base,

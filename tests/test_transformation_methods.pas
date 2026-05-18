@@ -2,6 +2,10 @@ program test_transformation_methods;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally keeps deprecated WithSNI /
+  server_name transformation coverage for the compatibility-only builder
+  surface. }
+
 {**
  * Test suite for Phase 2.2.4 - Configuration Transformation
  *

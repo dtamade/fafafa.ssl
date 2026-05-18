@@ -2,6 +2,9 @@ program test_context_builder_server_servername_runtime_consistency;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally covers deprecated
+  WithSNI / direct context ServerName compatibility behavior. }
+
 uses
   SysUtils,
   fafafa.ssl.base,

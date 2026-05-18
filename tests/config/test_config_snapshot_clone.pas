@@ -2,6 +2,9 @@ program test_config_snapshot_clone;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally keeps deprecated WithSNI
+  snapshot/clone coverage for the compatibility-only builder surface. }
+
 {**
  * Test suite for Phase 2.1.4 - Configuration Snapshot and Clone
  *

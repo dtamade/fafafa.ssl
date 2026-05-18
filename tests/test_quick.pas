@@ -22,7 +22,6 @@ begin
   LClient := TSSLContextBuilder.CreateWithSafeDefaults
     .WithTLS12And13
     .WithVerifyPeer
-    .WithSNI('example.com')
     .BuildClient;
 
   if LClient = nil then

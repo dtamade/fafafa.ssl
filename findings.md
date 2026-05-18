@@ -522,3 +522,24 @@
   - “high-level write surfaces” 现在不仅包括 builder / generic factory
   - 也包括 direct OpenSSL library default-config path，且这几条都已经不再把 deprecated `ServerName` 流入新 context
   - 剩下的 public-surface 主问题，确实只剩最后的 compatibility API 形状，而不是还有某个 backend-specific 高层入口继续偷写旧 state
+
+- 当主线进入 final public surface cleanup prep 后，新的高价值问题已经不是 backend 行为，而是工作流漂移：
+  - `tests/test_quick.pas` 这种普通 smoke 还在顺手示范 `.WithSNI('example.com')`
+  - `tests/winssl/test_winssl_connection_edge_cases.pas` 这种普通 edge-case 也还在顺手写 `LConfig.ServerName := ...`
+  - 这些命中不再承担 compatibility 行为断言，却会持续把 deprecated builder/config surface 伪装成正常主路径
+
+- 因而 public-surface prep 的第一刀应该是“先做静态分类，再谈 API 形状”：
+  - 普通测试里的旧入口示范要迁掉
+  - 真正还需要保留 `WithSNI(...)` / `TSSLConfig.ServerName` 的文件，要显式标成 `INTENTIONAL_COMPAT`
+  - 否则每次重新审查时，都会被这些普通测试文本重新拉回“是不是还有 runtime 主路径”的旧问题
+
+- 新增的 `tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh` 已经把这条工作流护栏固化：
+  - allowlist compatibility tests 必须带 `INTENTIONAL_COMPAT`
+  - active `tests/*.pas` 里若重新出现 `.WithSNI(...)` 或 builder-config `ServerName :=`，会直接红灯
+
+- 这也把“下一步该做什么”压缩得更清楚：
+  - 现在已经不需要继续排 ordinary test guidance
+  - 下一步可以直接讨论最终 API 形状：
+    - `TSSLConfig.ServerName`
+    - `WithSNI(...)`
+    - direct `ISSLContext.SetServerName/GetServerName`

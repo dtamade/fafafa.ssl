@@ -2,6 +2,9 @@ program test_config_validation;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally keeps deprecated WithSNI
+  validation coverage so the warning path stays explicit. }
+
 {**
  * Test suite for Phase 2.1.2 - Configuration Validation
  *

@@ -2,6 +2,9 @@ program test_freepascal_context_server_name_inheritance;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_COMPAT: this file intentionally covers deprecated
+  WithSNI / direct context ServerName compatibility on FreePascal. }
+
 uses
   SysUtils, Classes,
   fafafa.ssl.base,
