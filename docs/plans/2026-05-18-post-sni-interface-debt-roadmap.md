@@ -138,6 +138,22 @@ Recommended first bounded batch:
     1. 先做某个 mirror 的 de-emphasis / deprecation 路线
     2. 或先做更细的 source/class split feasibility batch
 
+## Progress Since The Source-Classification Freeze
+
+- 已交付：
+  - residual `GetContext` active-guidance cut
+  - `docs/CAPABILITY_MATRIX_GUIDE.md` 不再把 `Conn.GetContext` 当 capability example 的推荐路径
+  - `docs/reference/API_REFERENCE.md` 已把 `GetContext` 明确纳入 `ISSLConnectionInfo` first guidance
+  - focused contract `tests/scripts/test_isslconnectioninfo_getcontext_active_guidance_contract.sh`
+
+- 当前更准确的 next step：
+  - `GetContext` 现在已经是 4 个 mirrors 里最干净、最适合先开的第一优先对象
+  - 活跃文档不再教 `Conn.GetContext`
+  - 生产源码里除基类实现外，残余 live coupling 已收缩到 contract mirror-equality proof
+  - 下一批应优先做 `GetContext` 的 source/class split feasibility：
+    1. 先决定 contract 层是否继续把 core getter 视为强 owner，还是只保留 mirror-equality 约束
+    2. 再决定是否进入更强的 deprecation / removal 路线
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

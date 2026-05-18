@@ -394,9 +394,13 @@ end;
 procedure ConfigureConnection(Conn: ISSLConnection);
 var
   Caps: TSSLBackendCapabilities;
+  ConnInfo: ISSLConnectionInfo;
   ClientConn: ISSLClientConnection;
 begin
-  Caps := Conn.GetContext.GetLibrary.GetCapabilities;
+  if not Supports(Conn, ISSLConnectionInfo, ConnInfo) then
+    Exit;
+
+  Caps := ConnInfo.GetContext.GetLibrary.GetCapabilities;
 
   // 只在支持时启用 ALPN
   if IsFeatureStable(Caps.ALPNSupport) then

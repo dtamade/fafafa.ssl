@@ -3088,3 +3088,58 @@
   - summary:
     - reran the focused source-classification proof during final commit preparation
     - current batch is ready to commit without reopening heavier verification lanes
+
+### GetContext Active Guidance De-emphasis
+
+- `sed -n '388,410p' docs/CAPABILITY_MATRIX_GUIDE.md` / `sed -n '548,586p' docs/reference/API_REFERENCE.md` / `rg -n "\\.GetContext\\b|GetContext\\(" src tests docs`
+  - result: PASS
+  - summary:
+    - confirmed the last active-doc example still teaching direct core `GetContext` was in `CAPABILITY_MATRIX_GUIDE.md`
+    - confirmed `API_REFERENCE.md` had not yet explicitly grouped `GetContext` into the `ISSLConnectionInfo`-first guidance sentence
+    - confirmed production source had no extra live callers beyond the base implementation and mirror-equality contract coverage
+
+- add `docs/plans/2026-05-18-getcontext-active-guidance-deemphasis.md`
+  - purpose:
+    - define a bounded `GetContext` batch that keeps the work on active guidance and route selection instead of prematurely changing the public signature
+
+- update:
+  - `docs/CAPABILITY_MATRIX_GUIDE.md`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - switch the capability example from `Conn.GetContext` to `ISSLConnectionInfo.GetContext`
+    - explicitly include `GetContext` in the API reference's `ISSLConnectionInfo`-first note
+
+- add `tests/scripts/test_isslconnectioninfo_getcontext_active_guidance_contract.sh`
+  - purpose:
+    - fail if active docs reintroduce direct core `GetContext` teaching
+    - keep `GetContext` aligned with the current `ISSLConnectionInfo` owner route
+
+- update `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - mark the `GetContext` active-guidance cut as delivered
+    - record `GetContext` as the current first-priority mirror for the next real implementation slice
+
+- `bash -n tests/scripts/test_isslconnectioninfo_getcontext_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - new `GetContext` active-guidance contract script is syntactically valid
+
+- `bash tests/scripts/test_isslconnectioninfo_getcontext_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - active docs no longer teach `Conn.GetContext` as the preferred path
+    - `GetContext` is now explicitly aligned with `ISSLConnectionInfo`-first guidance
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `GetContext active guidance de-emphasis` batch has no whitespace or patch-format issues
+
+- closeout revalidation before commit:
+  - `bash -n tests/scripts/test_isslconnectioninfo_getcontext_active_guidance_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_getcontext_active_guidance_contract.sh`
+  - `git diff --check`
+  - result: PASS
+  - summary:
+    - reran the focused `GetContext` guidance proof during final commit preparation
+    - current batch is ready to commit without reopening heavier verification lanes

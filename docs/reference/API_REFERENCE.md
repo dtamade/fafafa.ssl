@@ -576,7 +576,7 @@ begin
 end;
 ```
 
-如果你在写新代码，并且需要连接信息 / ALPN / 状态字符串这组 mirrors，优先通过 `ISSLConnectionInfo` 获取；核心 `ISSLConnection` 上的同名 getter 当前仍主要是 `v1.x` compatibility-core duplicates。
+如果你在写新代码，并且需要连接信息 / 上下文引用 / ALPN / 状态字符串这组 mirrors，优先通过 `ISSLConnectionInfo` 获取；核心 `ISSLConnection` 上的同名 getter 当前仍主要是 `v1.x` compatibility-core duplicates。
 
 #### Session 复用
 

@@ -763,6 +763,22 @@
       - `git diff --check`
       - 新 contract 当前 PASS
     - 当前批收口后，`ISSLConnection` 主线会更接近第一条真正的实现切片
+26. `GetContext active guidance de-emphasis` 现在应作为第一条 mirror-specific route selection prep：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getcontext-active-guidance-deemphasis.md`
+    - 当前 residual drift：
+      - `docs/CAPABILITY_MATRIX_GUIDE.md` 仍直接示例 `Conn.GetContext.GetLibrary.GetCapabilities`
+      - `API_REFERENCE.md` 的优先路径说明还没把 `GetContext` 明确并入 `ISSLConnectionInfo` first guidance
+    - 当前修法：
+      - 把 capability 示例改成先 `Supports(..., ISSLConnectionInfo, ConnInfo)` 再用 `ConnInfo.GetContext`
+      - 新增 focused contract，防止活跃文档把 core `GetContext` 教回推荐路径
+      - 在路线图中把 `GetContext` 固定成当前第一优先 mirror
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_isslconnectioninfo_getcontext_active_guidance_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_getcontext_active_guidance_contract.sh`
+      - `git diff --check`
+      - 新 contract 当前 PASS
+    - 当前批收口后，下一刀就可以直接进入 `GetContext` 的 source/class split feasibility
 
 ## Verification Discipline
 

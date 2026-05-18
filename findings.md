@@ -1563,3 +1563,18 @@
   - 在 source comments 里把 Stage-A target 和 duplicate truth 写明
   - 让 source / 设计文档 / active docs 三层都对齐
   - 这样后续第一条真实实现切片才不会失去锚点
+
+- source classification freeze 之后，再看 4 个 mirrors 的 live coupling，`GetContext` 已明显成为第一优先对象：
+  - 活跃文档里只剩 `CAPABILITY_MATRIX_GUIDE.md` 一处仍直接教 `Conn.GetContext`
+  - `API_REFERENCE.md` 虽然已经承认 `GetContext` 也由 `ISSLConnectionInfo` 暴露，但优先路径说明还没把它明确点出来
+  - 生产源码里除 `TBaseSSLConnection.GetContext` 实现外，不再有额外活跃调用点
+
+- 这和另外 3 个 mirrors 有明显差别：
+  - `GetStateString` 还连着多份 integration/runtime 日志路径
+  - `GetSelectedALPNProtocol` 带客户端 owner 语义
+  - `GetConnectionInfo` 的使用面最广
+
+- 因此当前最安全、也最有推进价值的动作不是直接碰 public signature，而是先收掉 `GetContext` 的 active guidance：
+  - 让 capability 示例改走 `ISSLConnectionInfo.GetContext`
+  - 把 API reference 的 first guidance 明确扩展到 `GetContext`
+  - 这样下一批才适合进入 `GetContext` 的 source/class split feasibility
