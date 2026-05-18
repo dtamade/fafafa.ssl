@@ -23,6 +23,11 @@ const
   TEST_PORT = 443;
   ITERATIONS = 10;
 
+// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this MbedTLS-specific runtime
+// file intentionally keeps direct core GetVerifyResult/GetVerifyResultString
+// coverage as backend proof. Generic ISSLCertificateVerification owner-path
+// guidance is frozen elsewhere.
+
 function BenchmarkBackend(const ABackendName: string; ALib: ISSLLibrary): Double;
 var
   LCtx: ISSLContext;

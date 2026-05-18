@@ -44,6 +44,11 @@ var
   GStubMbedTLSVersionTLS13: AnsiString = 'TLSv1.3';
   GStubMbedTLSCipherTLS13: AnsiString = 'TLS_AES_128_GCM_SHA256';
 
+// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this MbedTLS-specific contract
+// file intentionally keeps direct core GetVerifyResult/GetVerifyResultString
+// coverage as backend proof. Generic ISSLCertificateVerification owner-path
+// guidance is frozen elsewhere.
+
 type
   TTestMbedTLSConnection = class(TMbedTLSConnection)
   public

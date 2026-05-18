@@ -2,6 +2,31 @@
 
 ## 2026-05-19
 
+- `MbedTLS` 这组 verify-result residual 命中和 WinSSL trio 不同，不是 3 个文件，而是一个完整 backend-specific cluster：
+  - `tests/mbedtls/benchmark_handshake_simple.pas`
+  - `tests/mbedtls/test_mbedtls_safe.pas`
+  - `tests/mbedtls/test_mbedtls_simple_connection.pas`
+  - `tests/mbedtls/test_mbedtls_lowlevel.pas`
+  - `tests/mbedtls/test_mbedtls_cert_chain.pas`
+  - `tests/mbedtls/test_mbedtls_cert_errors.pas`
+  - `tests/mbedtls/test_mbedtls_cert_verify_flags.pas`
+  - `tests/test_mbedtls_framework.pas`
+
+- 这批文件的共同点也已经很清楚：
+  - 它们都属于 backend-specific benchmark / runtime diagnostics / framework contract
+  - 它们不是 ordinary docs，也不是 generic examples，更不是 generic tests
+  - 所以这里最小正确动作不是把它们再改成 owner path，而是像 WinSSL 一样做 residual subgroup freeze
+
+- 这批最小安全收口也因此落在“写明保留原因 + 锁住文件集”，而不是“改行为”：
+  - 在 8 个文件中统一补 `INTENTIONAL_VERIFY_RESULT_CORE_SURFACE`
+  - 新增 focused source contract，锁住这 8 个文件就是当前全部 MbedTLS verify-result residual cluster
+  - 同时要求这些文件继续保留各自预期的 direct core verify-result coverage
+
+- 这样一来，`ISSLCertificateVerification` 这条线现在已经不仅完成 broad residual allowlist，还进一步把两个 backend-specific subgroup 固化了：
+  - WinSSL online certificate-error trio
+  - MbedTLS benchmark / runtime / framework cluster
+  - 下一刀更适合继续 root-test / OpenSSL / WolfSSL 剩余 subgroup，而不是再重扫这两组 backend residual
+
 - `ISSLCertificateVerification` 的 broad residual allowlist 虽然已经把 `tests/winssl/` 收缩到只剩 3 个 `GetVerifyResult*` 命中，但如果不把这 3 个文件再单独标成 intentional proof，它们看起来仍会像 accidental drift：
   - `tests/winssl/test_winssl_error_mapping_online.pas`
   - `tests/winssl/test_winssl_hostname_mismatch_online.pas`

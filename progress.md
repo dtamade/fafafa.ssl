@@ -2,6 +2,54 @@
 
 ## 2026-05-19
 
+### ISSLCertificateVerification MbedTLS Residual Cluster Freeze
+
+- add `docs/plans/2026-05-19-isslcertificateverification-mbedtls-residual-cluster-freeze.md`
+  - change:
+    - define the bounded MbedTLS residual subgroup freeze for backend-specific verify-result proof files
+
+- add `tests/scripts/test_isslcertificateverification_mbedtls_residual_contract.sh`
+  - change:
+    - lock the MbedTLS direct-core verify-result residual file set to the current 8-file cluster
+    - require intentional residual notes plus expected verify-result coverage in each file
+
+- update MbedTLS residual proof files:
+  - `tests/mbedtls/benchmark_handshake_simple.pas`
+  - `tests/mbedtls/test_mbedtls_safe.pas`
+  - `tests/mbedtls/test_mbedtls_simple_connection.pas`
+  - `tests/mbedtls/test_mbedtls_lowlevel.pas`
+  - `tests/mbedtls/test_mbedtls_cert_chain.pas`
+  - `tests/mbedtls/test_mbedtls_cert_errors.pas`
+  - `tests/mbedtls/test_mbedtls_cert_verify_flags.pas`
+  - `tests/test_mbedtls_framework.pas`
+  - change:
+    - add unified `INTENTIONAL_VERIFY_RESULT_CORE_SURFACE` notes
+    - record these files as MbedTLS-specific benchmark / runtime diagnostics / framework contract proof
+
+- `bash -n tests/scripts/test_isslcertificateverification_mbedtls_residual_contract.sh`
+  - result: PASS
+  - summary:
+    - MbedTLS residual contract syntax is valid
+
+- `bash tests/scripts/test_isslcertificateverification_mbedtls_residual_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED:
+      - the focused contract over-matched a wrapped residual-comment line instead of the stable substrings
+    - GREEN:
+      - MbedTLS direct-core verify-result file set stayed frozen to the expected 8-file cluster
+      - each file still carries the intentional residual note and expected direct verify-result coverage
+
+- `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - the broader certificate-verification residual allowlist remained aligned after the MbedTLS subgroup freeze
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current MbedTLS residual freeze batch has no whitespace or patch-format issues
+
 ### ISSLCertificateVerification WinSSL Runtime Residual Freeze
 
 - `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`

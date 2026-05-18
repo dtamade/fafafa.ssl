@@ -30,6 +30,11 @@ var
   GResults: array of TTestResult;
   GLib: ISSLLibrary;
 
+// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this MbedTLS-specific runtime
+// file intentionally keeps direct core GetVerifyResult/GetVerifyResultString
+// coverage as backend proof. Generic ISSLCertificateVerification owner-path
+// guidance is frozen elsewhere.
+
 procedure AddResult(const AName: string; ASuccess: Boolean; const AMessage: string = '');
 begin
   SetLength(GResults, Length(GResults) + 1);

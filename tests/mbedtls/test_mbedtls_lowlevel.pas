@@ -24,6 +24,11 @@ const
   TEST_HOST = 'www.google.com';
   TEST_PORT = 443;
 
+// INTENTIONAL_VERIFY_RESULT_CORE_SURFACE: this MbedTLS-specific runtime
+// file intentionally keeps direct core GetVerifyResult/GetVerifyResultString
+// coverage as backend proof. Generic ISSLCertificateVerification owner-path
+// guidance is frozen elsewhere.
+
 procedure TestConnection;
 var
   LLib: ISSLLibrary;  // 使用接口引用
