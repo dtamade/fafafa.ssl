@@ -1131,3 +1131,21 @@
 - 因而下一步最值得做的事不再是继续围绕这条旧兼容主线转圈，而是回到更大的 interface-design debt：
   - `TSSLConfig` 跨层字段拆分 / slimming
   - `ISSLConnection` 核心 surface slimming
+
+## post-SNI 路线优先级补充
+
+- 当前证据更支持先做 `TSSLConfig`，再考虑 `ISSLConnection`：
+  - `TSSLConfig` 已经有大量现成 scope truth：
+    - `BufferSize` / `HandshakeTimeout` 已证实为 connection-scoped
+    - `LogLevel` / `LogCallback` 已证实为 library-scoped
+    - 仍有若干 option-style / compatibility-style 字段混在 public record 中
+  - 这条线更适合先做 buckets / roadmap / contract，再决定轻量收紧
+
+- `ISSLConnection` slimming 仍是更大的手术：
+  - 影响 core public interface
+  - 影响所有 backend connection 实现
+  - 影响大量 tests / mocks / helpers
+
+- 因而当前最优先的下一批建议是：
+  - **先做 `TSSLConfig` 跨层字段拆分 / slimming roadmap**
+  - 暂不直接开 `ISSLConnection` 大重构

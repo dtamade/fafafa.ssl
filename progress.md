@@ -1752,3 +1752,19 @@
   - result: PASS
   - summary:
     - current WithSNI surface-freeze batch has no whitespace or patch-format issues
+
+### Post-SNI Interface Debt Triage
+
+- add `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - purpose:
+    - capture the next recommended route after the entire context-level SNI compatibility family was frozen for `v1.x`
+    - avoid reopening old SNI cleanup when the broader interface-design debt should now move to `TSSLConfig` vs `ISSLConnection`
+
+- read-only evidence triage:
+  - summary:
+    - `TSSLConfig` already has multiple field-scope truths on disk:
+      - `BufferSize` / `HandshakeTimeout` = connection-scoped and rejected by factory
+      - `LogLevel` / `LogCallback` = library-scoped and rejected by factory
+      - several option-style fields still normalize into `Options`
+    - `ISSLConnection` slimming remains larger-risk because it would touch every backend connection implementation plus many tests/helpers
+    - next recommended bounded batch is therefore `TSSLConfig` cross-layer slimming roadmap, not immediate `ISSLConnection` surgery

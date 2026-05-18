@@ -271,9 +271,9 @@
    - `WithSNI(...)` 已冻结为 `v1.x` deprecated compatibility-only fluent surface
    - 当前 `context-level SNI` 兼容家族在 `v1.x` 已无新的即时 surface 收口项
 2. 下一批应切回更大的 interface-design debt：
-   - `TSSLConfig` 跨层字段拆分 / slimming roadmap
-   - `ISSLConnection` 核心 surface slimming roadmap
-   - 选择一个最可执行、最不容易把我们重新拖回旧兼容语义的入口
+   - 首选 `TSSLConfig` 跨层字段拆分 / slimming roadmap
+   - 次选 `ISSLConnection` 核心 surface slimming roadmap
+   - 当前证据更支持先做 `TSSLConfig`，因为 scope-gate truth 已清楚、写入面更小、较不容易把 backend/runtime 一起拖进重构
 3. 在 broader interface debt 路线明确后，再决定是否需要为 `v2` 预留 breaking cleanup 方案：
    - deprecated context-level SNI surfaces 何时在 breaking window 中真正移除或重命名
    - 是否需要新的迁移文档或 v2 contract 预留

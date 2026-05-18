@@ -692,3 +692,19 @@
 - 因而下一批最值得做的事不再是继续绕着 SNI 旧兼容语义打转，而是回到更大的 interface-design debt：
   - `TSSLConfig` 跨层字段拆分 / slimming
   - `ISSLConnection` 核心 surface slimming
+
+- 对 post-SNI 路线的最新筛选也已经有了更清楚的优先级：
+  - `TSSLConfig` 路线已经积累了足够多的 scope truth：
+    - `BufferSize` / `HandshakeTimeout` = connection-scoped
+    - `LogLevel` / `LogCallback` = library-scoped
+    - 多个 option-style 字段仍承担 compatibility bridge
+  - 这意味着它更适合先做“field buckets + slimming roadmap”的 bounded batch
+
+- 相比之下，`ISSLConnection` 核心 surface slimming 现在仍然更像下一阶段的大手术：
+  - public interface 影响面更广
+  - 会直接打到各 backend connection 实现与大量 tests/helpers
+  - 如果马上动手，风险明显高于先做 `TSSLConfig` 路线
+
+- 因而当前最值得执行的 post-SNI 第一条主线是：
+  - 先把 `TSSLConfig` 做成明确分桶的跨层字段 roadmap
+  - 再决定是否以及如何进入 `ISSLConnection` core surface slimming
