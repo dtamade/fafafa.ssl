@@ -90,6 +90,38 @@ begin
   Result := sslProtocolUnknown;
 end;
 
+function DuplicateWolfSSLSessionHandle(ASession: PWOLFSSL_SESSION): PWOLFSSL_SESSION;
+var
+  LLen: Integer;
+  LBufPtr: PByte;
+  LSerialized: TBytes;
+begin
+  Result := nil;
+  if ASession = nil then
+    Exit;
+
+  if Assigned(wolfSSL_SESSION_dup) then
+    Exit(wolfSSL_SESSION_dup(ASession));
+
+  if not Assigned(wolfSSL_i2d_SSL_SESSION) or
+     not Assigned(wolfSSL_d2i_SSL_SESSION) then
+    Exit;
+
+  LLen := wolfSSL_i2d_SSL_SESSION(ASession, nil);
+  if LLen <= 0 then
+    Exit;
+
+  SetLength(LSerialized, LLen);
+  LBufPtr := @LSerialized[0];
+  LLen := wolfSSL_i2d_SSL_SESSION(ASession, @LBufPtr);
+  if LLen <= 0 then
+    Exit;
+
+  SetLength(LSerialized, LLen);
+  LBufPtr := @LSerialized[0];
+  Result := wolfSSL_d2i_SSL_SESSION(nil, @LBufPtr, Length(LSerialized));
+end;
+
 { TWolfSSLSession }
 
 constructor TWolfSSLSession.Create;
@@ -318,6 +350,7 @@ end;
 class function TWolfSSLSession.FromConnection(ASSL: PWOLFSSL): ISSLSession;
 var
   LSession: PWOLFSSL_SESSION;
+  LOwnedSession: PWOLFSSL_SESSION;
   LVersion: PAnsiChar;
   LCipher: Pointer;
   LCipherName: PAnsiChar;
@@ -330,7 +363,11 @@ begin
   LSession := wolfSSL_get_session(ASSL);
   if LSession <> nil then
   begin
-    LWrapped := TWolfSSLSession.Create(LSession, False);  // 不拥有会话
+    LOwnedSession := DuplicateWolfSSLSessionHandle(LSession);
+    if LOwnedSession = nil then
+      Exit;
+
+    LWrapped := TWolfSSLSession.Create(LOwnedSession, True);
 
     if Assigned(wolfSSL_get_version) then
     begin

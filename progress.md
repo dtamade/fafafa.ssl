@@ -6283,3 +6283,46 @@
   - result: PASS
   - summary:
     - current c-library session clone truth batch has no whitespace or patch-format issues
+
+### WolfSSL Session Source Lifetime Truth Alignment
+
+- add `docs/plans/2026-05-19-wolfssl-session-source-lifetime-truth-alignment.md`
+  - purpose:
+    - record the WolfSSL session source-lifetime ownership repair batch
+
+- update `src/fafafa.ssl.wolfssl.api.pas`
+  - change:
+    - bind `wolfSSL_SESSION_dup` into the WolfSSL dynamic API layer
+
+- update `src/fafafa.ssl.wolfssl.session.pas`
+  - change:
+    - add `DuplicateWolfSSLSessionHandle(...)`
+    - `FromConnection()` now secures session ownership before returning:
+      - prefer `wolfSSL_SESSION_dup`
+      - fallback to `i2d/d2i`
+      - fail closed if neither path is available
+
+- update `tests/test_wolfssl_framework.pas`
+  - change:
+    - add `WolfSSL Session Source Lifetime Contract`
+    - prove borrowed session duplication and fail-closed behavior when ownership cannot be secured
+
+- `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: PASS
+  - summary:
+    - `WolfSSL Framework Test Summary`
+    - `Total: 127 / Passed: 127 / Failed: 0`
+    - new `WolfSSL Session Source Lifetime Contract` stayed green:
+      - duplicates borrowed session when dup helper exists
+      - rejects borrowed session when ownership cannot be secured
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+    - cross-backend session/native-handle contracts remained green after the WolfSSL lifetime fix
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WolfSSL session source-lifetime batch has no whitespace or patch-format issues

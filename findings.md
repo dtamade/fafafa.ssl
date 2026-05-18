@@ -2787,3 +2787,32 @@
   - c-library session object 不只要“能 serialize/deserialize”
   - 还必须保证 `Clone()` 不会把一个可用 session 降级成不可用壳对象
   - 下一刀最值得继续压的是 source-lifetime/ownership 边界，而不是再回头重开 clone validity 本身
+
+- 沿着 source-lifetime 继续压后，当前真正的硬缺口被进一步收缩成了 `WolfSSL.FromConnection()`：
+  - `OpenSSL.DoGetSession()` 当前用的是 `SSL_get1_session`，本身已经 secure ownership
+  - `MbedTLS.FromContext()` 当前会先分配独立 session，再调用 `mbedtls_ssl_get_session(...)`
+  - 但 `WolfSSL.FromConnection()` 之前是直接包住 `wolfSSL_get_session()` 返回的内部 session 指针，并标成 `AOwnsSession=False`
+  - 这意味着源连接一旦释放，public `ISSLSession` 里的 native handle 就可能悬空
+
+- 这条问题和之前的 clone truth 一样，不是“实现风格不同”，而是 public interface 真实可用性漂移：
+  - 调用方拿到 `GetSession()` 返回值时，自然会认为它是可独立持有的 session object
+  - 如果它仍绑定在源连接 lifetime 上，这个对象管理语义就是假的
+
+- 当前最小正确修法已经落地：
+  - 新增 `wolfSSL_SESSION_dup` 绑定
+  - `TWolfSSLSession.FromConnection()` 现在会先 secure ownership：
+    - 优先 `wolfSSL_SESSION_dup`
+    - 否则退到 `i2d/d2i` duplication
+    - 两条都不可用时直接 `fail-closed`
+
+- focused RED/GREEN 也把这条 ownership truth 钉住了：
+  - 新增 `WolfSSL Session Source Lifetime Contract`
+  - 先证明：
+    - 有 duplication helper 时必须复制 borrowed session
+    - 没有 ownership helper 时不能继续把 borrowed handle 递出去
+  - 修复后两条都转绿
+
+- 当前更值得继续推进的方向也再次收敛：
+  - 不再泛化地怀疑所有 c-library session extraction 都有 lifetime 问题
+  - `OpenSSL` / `MbedTLS` 当前没有同类硬缺口
+  - 下一刀更适合查 `GetPeerCertificate` / metadata extraction completeness 是否仍弱于其它 backend

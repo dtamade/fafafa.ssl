@@ -124,6 +124,7 @@ type
   // 会话管理 (新增)
   TwolfSSL_get_session = function(ssl: PWOLFSSL): PWOLFSSL_SESSION; cdecl;
   TwolfSSL_set_session = function(ssl: PWOLFSSL; session: PWOLFSSL_SESSION): Integer; cdecl;
+  TwolfSSL_SESSION_dup = function(session: PWOLFSSL_SESSION): PWOLFSSL_SESSION; cdecl;
   TwolfSSL_SESSION_free = procedure(session: PWOLFSSL_SESSION); cdecl;
   TwolfSSL_session_reused = function(ssl: PWOLFSSL): Integer; cdecl;
 
@@ -266,6 +267,7 @@ var
   // 会话管理 (新增)
   wolfSSL_get_session: TwolfSSL_get_session = nil;
   wolfSSL_set_session: TwolfSSL_set_session = nil;
+  wolfSSL_SESSION_dup: TwolfSSL_SESSION_dup = nil;
   wolfSSL_SESSION_free: TwolfSSL_SESSION_free = nil;
   wolfSSL_session_reused: TwolfSSL_session_reused = nil;
 
@@ -536,6 +538,7 @@ begin
   // 会话管理 (新增)
   wolfSSL_get_session := TwolfSSL_get_session(GetProc('wolfSSL_get_session'));
   wolfSSL_set_session := TwolfSSL_set_session(GetProc('wolfSSL_set_session'));
+  wolfSSL_SESSION_dup := TwolfSSL_SESSION_dup(GetProc('wolfSSL_SESSION_dup'));
   wolfSSL_SESSION_free := TwolfSSL_SESSION_free(GetProc('wolfSSL_SESSION_free'));
   wolfSSL_session_reused := TwolfSSL_session_reused(GetProc('wolfSSL_session_reused'));
 
@@ -703,6 +706,7 @@ begin
   // 会话管理
   wolfSSL_get_session := nil;
   wolfSSL_set_session := nil;
+  wolfSSL_SESSION_dup := nil;
   wolfSSL_SESSION_free := nil;
   wolfSSL_session_reused := nil;
 

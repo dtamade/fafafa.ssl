@@ -1695,6 +1695,29 @@
     - 当前批收口后默认下一步应为：
       - 横向继续审 `FromContext/FromConnection` ownership 与 source-lifetime 边界
       - 不再把 MbedTLS/WolfSSL session clone surface 当成“valid clone 会失效”的未定位问题重复拉起
+61. `WolfSSL session source-lifetime truth` 已完成 focused 收口，并应作为当前 session-extraction 新基线保留：
+    - 新 plan：
+      - `docs/plans/2026-05-19-wolfssl-session-source-lifetime-truth-alignment.md`
+    - 当前已确认的 route truth：
+      - `OpenSSL.DoGetSession()`
+        当前仍通过 `SSL_get1_session` secure ownership
+      - `MbedTLS.FromContext()`
+        当前仍通过 `mbedtls_ssl_get_session` 复制到独立 session 存储
+      - `WolfSSL.FromConnection()`
+        之前是直接包 `wolfSSL_get_session()` 返回的 borrowed handle
+      - `TWolfSSLSession.FromConnection()`
+        现在会先 secure ownership：
+        - 优先 `wolfSSL_SESSION_dup`
+        - 否则退到 `i2d/d2i` duplication
+        - 如果 ownership 无法保障则 `fail-closed`
+      - 这说明当前真正存在 lifetime 漂移的点已经从“泛化怀疑 c-library session 提取”收缩成“WolfSSL 已修，OpenSSL/MbedTLS 当前无同类硬缺口”
+    - 当前 focused proof 已覆盖：
+      - `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+      - `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+      - `git diff --check`
+    - 当前批收口后默认下一步应为：
+      - 横向继续审 `GetPeerCertificate` / metadata extraction completeness
+      - 不再把 WolfSSL source-session lifetime gap 当成未定位问题重复拉起
 
 ## Verification Discipline
 

@@ -38,6 +38,8 @@ var
   GTestCount: Integer = 0;
   GPassCount: Integer = 0;
   GFailCount: Integer = 0;
+  GStubWolfSSLBorrowedSession: PWOLFSSL_SESSION = nil;
+  GStubWolfSSLSessionDupCalls: Integer = 0;
 
 const
   STUB_WOLFSSL_SERIALIZED_SESSION: array[0..3] of Byte = (4, 3, 2, 1);
@@ -74,6 +76,21 @@ procedure StubWolfSSLSessionFree(session: PWOLFSSL_SESSION); cdecl;
 begin
   if session <> nil then
     FreeMem(session);
+end;
+
+function StubWolfSSLGetBorrowedSession(ssl: PWOLFSSL): PWOLFSSL_SESSION; cdecl;
+begin
+  Result := GStubWolfSSLBorrowedSession;
+end;
+
+function StubWolfSSLSessionDupOk(session: PWOLFSSL_SESSION): PWOLFSSL_SESSION; cdecl;
+begin
+  Inc(GStubWolfSSLSessionDupCalls);
+  if session = nil then
+    Exit(nil);
+
+  GetMem(Result, 1);
+  PByte(Result)^ := PByte(session)^;
 end;
 
 function HasNativeHandleContext(const AObject: ISSLContext): Boolean;
@@ -655,6 +672,89 @@ begin
   end;
 end;
 
+procedure TestWolfSSLSessionSourceLifetimeOwnershipContract;
+var
+  LOriginalGetSession: TwolfSSL_get_session;
+  LOriginalSessionDup: TwolfSSL_SESSION_dup;
+  LOriginalD2I: TwolfSSL_d2i_SSL_SESSION;
+  LOriginalI2D: TwolfSSL_i2d_SSL_SESSION;
+  LOriginalFree: TwolfSSL_SESSION_free;
+  LSession: ISSLSession;
+  LNativeAccess: ISSLNativeHandleAccess;
+  LNativeHandle: Pointer;
+begin
+  WriteLn('');
+  WriteLn('=== WolfSSL Session Source Lifetime Contract ===');
+
+  GetMem(GStubWolfSSLBorrowedSession, 1);
+  PByte(GStubWolfSSLBorrowedSession)^ := $A5;
+  LSession := nil;
+  try
+    LOriginalGetSession := wolfSSL_get_session;
+    LOriginalSessionDup := wolfSSL_SESSION_dup;
+    LOriginalD2I := wolfSSL_d2i_SSL_SESSION;
+    LOriginalI2D := wolfSSL_i2d_SSL_SESSION;
+    LOriginalFree := wolfSSL_SESSION_free;
+
+    try
+      GStubWolfSSLSessionDupCalls := 0;
+      wolfSSL_get_session := @StubWolfSSLGetBorrowedSession;
+      wolfSSL_SESSION_dup := @StubWolfSSLSessionDupOk;
+      wolfSSL_d2i_SSL_SESSION := nil;
+      wolfSSL_i2d_SSL_SESSION := nil;
+      wolfSSL_SESSION_free := @StubWolfSSLSessionFree;
+
+      LSession := TWolfSSLSession.FromConnection(PWOLFSSL(Pointer(1)));
+      Test('FromConnection duplicates borrowed session when dup helper exists',
+        LSession <> nil);
+      Test('FromConnection uses session duplication helper',
+        GStubWolfSSLSessionDupCalls = 1);
+      Test('Duplicated session stays valid',
+        (LSession <> nil) and LSession.IsValid);
+      Test('Duplicated session stays resumable',
+        (LSession <> nil) and LSession.IsResumable);
+
+      LNativeHandle := nil;
+      if (LSession <> nil) and Supports(LSession, ISSLNativeHandleAccess, LNativeAccess) then
+        LNativeHandle := LNativeAccess.GetNativeHandle;
+      Test('Duplicated session keeps native handle', LNativeHandle <> nil);
+      Test('Duplicated session no longer aliases source handle',
+        LNativeHandle <> GStubWolfSSLBorrowedSession);
+      LSession := nil;
+    finally
+      wolfSSL_get_session := LOriginalGetSession;
+      wolfSSL_SESSION_dup := LOriginalSessionDup;
+      wolfSSL_d2i_SSL_SESSION := LOriginalD2I;
+      wolfSSL_i2d_SSL_SESSION := LOriginalI2D;
+      wolfSSL_SESSION_free := LOriginalFree;
+    end;
+
+    try
+      wolfSSL_get_session := @StubWolfSSLGetBorrowedSession;
+      wolfSSL_SESSION_dup := nil;
+      wolfSSL_d2i_SSL_SESSION := nil;
+      wolfSSL_i2d_SSL_SESSION := nil;
+      wolfSSL_SESSION_free := @StubWolfSSLSessionFree;
+
+      LSession := TWolfSSLSession.FromConnection(PWOLFSSL(Pointer(1)));
+      Test('FromConnection rejects borrowed session when ownership cannot be secured',
+        LSession = nil);
+    finally
+      wolfSSL_get_session := LOriginalGetSession;
+      wolfSSL_SESSION_dup := LOriginalSessionDup;
+      wolfSSL_d2i_SSL_SESSION := LOriginalD2I;
+      wolfSSL_i2d_SSL_SESSION := LOriginalI2D;
+      wolfSSL_SESSION_free := LOriginalFree;
+    end;
+  finally
+    if GStubWolfSSLBorrowedSession <> nil then
+    begin
+      FreeMem(GStubWolfSSLBorrowedSession);
+      GStubWolfSSLBorrowedSession := nil;
+    end;
+  end;
+end;
+
 procedure PrintSummary;
 var
   LPassRate: Double;
@@ -696,6 +796,7 @@ begin
 
   // Session class tests (no library required)
   TestWolfSSLSessionClass;
+  TestWolfSSLSessionSourceLifetimeOwnershipContract;
 
   // Context tests (require WolfSSL library)
   TestWolfSSLContextCreation;
