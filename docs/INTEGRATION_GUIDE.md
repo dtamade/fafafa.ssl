@@ -111,6 +111,7 @@ uses
 var
   Conn: ISSLConnection;
   ClientConn: ISSLClientConnection;
+  CertVerify: ISSLCertificateVerification;
 begin
   Conn := Ctx.CreateConnection(YourConnectedSocket);
 
@@ -123,7 +124,12 @@ begin
   Conn.SetBlocking(True);
 
   if not Conn.Connect then
-    raise Exception.Create('TLS handshake failed: ' + Conn.GetVerifyResultString);
+  begin
+    if Supports(Conn, ISSLCertificateVerification, CertVerify) then
+      raise Exception.Create('TLS handshake failed: ' + CertVerify.GetVerifyResultString)
+    else
+      raise Exception.Create('TLS handshake failed');
+  end;
 end;
 ```
 
@@ -138,6 +144,7 @@ uses
 
 var
   State: TSSLHandshakeState;
+  CertVerify: ISSLCertificateVerification;
 begin
   Conn.SetBlocking(False);
 
@@ -155,7 +162,12 @@ begin
             WaitSocketWritable(YourConnectedSocket, Conn.GetTimeout);
         end;
     else
-      raise Exception.Create('TLS handshake failed: ' + Conn.GetVerifyResultString);
+      begin
+        if Supports(Conn, ISSLCertificateVerification, CertVerify) then
+          raise Exception.Create('TLS handshake failed: ' + CertVerify.GetVerifyResultString)
+        else
+          raise Exception.Create('TLS handshake failed');
+      end;
     end;
   end;
 end;
@@ -330,7 +342,7 @@ if Supports(Conn, ISSLConnectionInfo, ConnInfo) then
 
 握手失败时，优先看这些：
 
-- `Conn.GetVerifyResult` / `Conn.GetVerifyResultString`（证书验证结果）
+- `CertVerify.GetVerifyResult` / `CertVerify.GetVerifyResultString`（证书验证结果；通过 `ISSLCertificateVerification` 获取）
 - `Conn.GetProtocolVersion` / `Conn.GetCipherName`
 - `ConnInfo.GetStateString`（后端相关的状态描述；通过 `ISSLConnectionInfo` 获取）
 

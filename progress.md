@@ -4758,3 +4758,67 @@
   - result: PASS
   - summary:
     - current `ISSLDiagnostics active-guidance de-emphasis` batch has no whitespace or patch-format issues
+
+### ISSLCertificateVerification Active Guidance De-emphasis
+
+- `rg -n "GetVerifyResultString|GetVerifyResult|ISSLCertificateVerification" docs/INTEGRATION_GUIDE.md docs/reference/API_DOCUMENTATION.md tests/integration/test_cross_backend_consistency_contract.pas tests/integration/test_cross_backend_errors_contract.pas`
+  - result: PASS
+  - summary:
+    - confirmed the ordinary certificate-verification guidance drift lived in `INTEGRATION_GUIDE`, `API_DOCUMENTATION`, and the two generic integration/contract tests
+    - confirmed this was a docs/tests owner-path issue, not a new production implementation gap
+
+- add `docs/plans/2026-05-18-isslcertificateverification-active-guidance-deemphasis.md`
+  - purpose:
+    - define a bounded certificate-verification batch that moves ordinary docs/tests onto `ISSLCertificateVerification`
+    - keep scope off backend-specific runtime proofs and production implementation
+
+- add `tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+  - purpose:
+    - fail if ordinary certificate-verification docs/tests reintroduce direct core `GetVerifyResult / GetVerifyResultString`
+    - keep this owner-path guidance change cheap to verify
+
+- update:
+  - `docs/INTEGRATION_GUIDE.md`
+  - `docs/reference/API_DOCUMENTATION.md`
+  - `tests/integration/test_cross_backend_consistency_contract.pas`
+  - `tests/integration/test_cross_backend_errors_contract.pas`
+  - change:
+    - route ordinary handshake-failure guidance through `Supports(Conn, ISSLCertificateVerification, CertVerify)`
+    - route the generic consistency/error probes through helper functions backed by `ISSLCertificateVerification`
+    - keep protocol / cipher / ALPN reads unchanged so the batch stays on certificate-verification only
+
+- first run of `bash -n tests/scripts/test_isslcertificateverification_active_guidance_contract.sh && bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+  - result: RED
+  - summary:
+    - the new script used double-quoted patterns containing backticks, so shell command substitution mangled the expected integration-guide string
+    - this was a script quoting bug only, not a source/docs route regression
+
+- update `tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+  - change:
+    - switch the two backtick-containing integration-guide patterns to single-quoted literals
+    - keep the rest of the guard unchanged
+
+- second run of `bash -n tests/scripts/test_isslcertificateverification_active_guidance_contract.sh && bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - active docs/tests now prefer `ISSLCertificateVerification` for verify-result surfaces
+    - ordinary guidance no longer reintroduces direct core verify-result getters
+
+- `mkdir -p tmp/test_cross_backend_consistency_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_cross_backend_consistency_contract -FEtmp/test_cross_backend_consistency_contract -otmp/test_cross_backend_consistency_contract/test_cross_backend_consistency_contract tests/integration/test_cross_backend_consistency_contract.pas && ./tmp/test_cross_backend_consistency_contract/test_cross_backend_consistency_contract`
+  - result: PASS
+  - summary:
+    - focused consistency contract compiled and ran successfully
+    - runtime result remained the expected network skip: `FAFAFA_RUN_NETWORK_TESTS!=1`
+    - verify-result helper switch did not disturb protocol / cipher / ALPN normalization logic
+
+- `mkdir -p tmp/test_cross_backend_errors_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_cross_backend_errors_contract -FEtmp/test_cross_backend_errors_contract -otmp/test_cross_backend_errors_contract/test_cross_backend_errors_contract tests/integration/test_cross_backend_errors_contract.pas && ./tmp/test_cross_backend_errors_contract/test_cross_backend_errors_contract`
+  - result: PASS
+  - summary:
+    - focused error contract compiled and ran successfully
+    - runtime result remained the expected environment skip taxonomy: `Network tests gate / environment`
+    - verify-result helper switch did not change the generic error normalization path under the current gate
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `ISSLCertificateVerification active-guidance de-emphasis` batch has no whitespace or patch-format issues

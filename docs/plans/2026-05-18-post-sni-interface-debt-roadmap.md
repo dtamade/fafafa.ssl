@@ -685,6 +685,27 @@ Recommended first bounded batch:
   - 默认下一步不该再重复做 diagnostics active-guidance 清扫
   - 若继续沿同一类 optional-owner surface 推进，应把注意力转向下一组普通 guidance 仍然偏 core 的接口，或切回更大的 interface-design completeness 选择
 
+## Progress Since The `ISSLCertificateVerification` Active Guidance De-emphasis Batch
+
+- 已交付：
+  - ordinary certificate-verification guidance now prefers `ISSLCertificateVerification`
+  - focused active-guidance guard:
+    - `tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+  - `docs/INTEGRATION_GUIDE.md` 的 verify-result examples 已同步：
+    - 阻塞/非阻塞握手失败路径走 `ISSLCertificateVerification.GetVerifyResultString`
+    - 排错条目也改成 `CertVerify.GetVerifyResult / GetVerifyResultString`
+  - `docs/reference/API_DOCUMENTATION.md` 的 CT 示例失败路径已同步：
+    - 不再直接读取 `Conn.GetVerifyResultString`
+  - generic integration/contract proofs 已同步：
+    - `tests/integration/test_cross_backend_consistency_contract.pas`
+    - `tests/integration/test_cross_backend_errors_contract.pas`
+      不再把 verify-result mirrors 当普通 core 读取路径
+
+- 当前更准确的 next step：
+  - `ISSLCertificateVerification` 的 contract owner truth 已有，ordinary docs/tests 也已不再优先教 core getters
+  - 默认下一步不该再重复做 certificate-verification active-guidance 清扫
+  - 若继续沿同一类 optional-owner surface 推进，应把注意力转向下一组普通 guidance 仍偏 core 的接口，或切回更大的 interface-design completeness 选择
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

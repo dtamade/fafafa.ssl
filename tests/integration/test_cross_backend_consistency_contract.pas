@@ -70,6 +70,16 @@ begin
     Result := '';
 end;
 
+function GetVerificationResult(AConn: ISSLConnection): Integer;
+var
+  LCertVerify: ISSLCertificateVerification;
+begin
+  if Supports(AConn, ISSLCertificateVerification, LCertVerify) then
+    Result := LCertVerify.GetVerifyResult
+  else
+    Result := 0;
+end;
+
 function CreateLib(aSide: TSide): ISSLLibrary;
 begin
   Result := nil;
@@ -158,7 +168,7 @@ begin
     Proto := Conn.GetProtocolVersion;
     Cipher := Conn.GetCipherName;
     Alpn := GetNegotiatedALPN(Conn);
-    VerifyCode := Conn.GetVerifyResult;
+    VerifyCode := GetVerificationResult(Conn);
     Result := True;
     Conn.Shutdown;
   finally

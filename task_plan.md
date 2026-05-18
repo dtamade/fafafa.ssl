@@ -1306,6 +1306,30 @@
     - 当前批收口后默认下一步应为：
       - 继续盘点下一个 ordinary guidance 仍偏 core 的 optional-owner surface
       - 或切回更大的 interface-design completeness 选择
+52. `ISSLCertificateVerification` active-guidance de-emphasis 已完成并应作为当前 optional-owner surface 的下一条普通路径收口保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-isslcertificateverification-active-guidance-deemphasis.md`
+    - 当前已确认的 route truth：
+      - `docs/INTEGRATION_GUIDE.md`
+        的握手失败示例与排错条目现在统一优先走：
+        - `ISSLCertificateVerification.GetVerifyResult`
+        - `ISSLCertificateVerification.GetVerifyResultString`
+      - `docs/reference/API_DOCUMENTATION.md`
+        的 CT 示例失败路径现在也统一优先走：
+        - `ISSLCertificateVerification.GetVerifyResultString`
+      - `tests/integration/test_cross_backend_consistency_contract.pas`
+        与 `tests/integration/test_cross_backend_errors_contract.pas`
+        现在都通过 helper 改走 `ISSLCertificateVerification` owner path
+      - backend-specific certificate-verification runtime tests 继续保留为 residual proof，不属于这批收口范围
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+      - `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+      - `mkdir -p tmp/test_cross_backend_consistency_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_cross_backend_consistency_contract -FEtmp/test_cross_backend_consistency_contract -otmp/test_cross_backend_consistency_contract/test_cross_backend_consistency_contract tests/integration/test_cross_backend_consistency_contract.pas && ./tmp/test_cross_backend_consistency_contract/test_cross_backend_consistency_contract`
+      - `mkdir -p tmp/test_cross_backend_errors_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_cross_backend_errors_contract -FEtmp/test_cross_backend_errors_contract -otmp/test_cross_backend_errors_contract/test_cross_backend_errors_contract tests/integration/test_cross_backend_errors_contract.pas && ./tmp/test_cross_backend_errors_contract/test_cross_backend_errors_contract`
+      - `git diff --check`
+    - 当前批收口后默认下一步应为：
+      - 继续盘点下一个 ordinary guidance 仍偏 core 的 optional-owner surface
+      - 或切回更大的 interface-design completeness 选择
 
 ## Verification Discipline
 

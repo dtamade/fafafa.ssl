@@ -546,6 +546,7 @@ uses
 var
   Ctx: ISSLContext;
   Conn: ISSLConnection;
+  CertVerify: ISSLCertificateVerification;
   CT: ISSLCertificateTransparency;
   CTValidation: ISSLCertificateTransparencyValidation;
 begin
@@ -561,7 +562,12 @@ begin
   (Conn as ISSLClientConnection).SetServerName('example.com');
 
   if not Conn.Connect then
-    raise Exception.Create(Conn.GetVerifyResultString);
+  begin
+    if Supports(Conn, ISSLCertificateVerification, CertVerify) then
+      raise Exception.Create(CertVerify.GetVerifyResultString)
+    else
+      raise Exception.Create('TLS handshake failed');
+  end;
 
   if Supports(Conn, ISSLCertificateTransparency, CT) then
   begin

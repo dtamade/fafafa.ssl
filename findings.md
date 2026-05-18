@@ -2175,3 +2175,25 @@
   - `sslCtxBoth` 这份 generic dual-context boundary test 也不再把 `GetHealthStatus` 当默认 core 读取路径
   - 所有当前本机可用 backend 的该测试都已证明 `ISSLDiagnostics` owner interface 可直接用于这条边界
   - 因而 `ISSLDiagnostics` 这组能力面暂时不再是“普通路径仍在教回 core”的残余点
+
+- 沿着“普通 guidance 仍偏 core”的盘点再往下看，下一组最值钱的不是生产实现层，而是 certificate-verification 这条 owner path：
+  - `docs/INTEGRATION_GUIDE.md`
+    的阻塞/非阻塞握手失败示例仍直接用 `Conn.GetVerifyResultString`
+  - 同一文档的排错条目也仍写 `Conn.GetVerifyResult / Conn.GetVerifyResultString`
+  - `docs/reference/API_DOCUMENTATION.md` 的 CT 示例失败路径也还直接抛 `Conn.GetVerifyResultString`
+  - `tests/integration/test_cross_backend_consistency_contract.pas`
+    与 `tests/integration/test_cross_backend_errors_contract.pas`
+    也还把 verify-result mirrors 当普通 core 读取路径
+
+- 这条线之所以适合先收 guidance，而不是先碰 runtime，是因为 owner truth 已经先有了：
+  - `tests/contract/test_backend_contract.pas` 的 `Contract 21: Certificate-verification interface alignment`
+    已经证明：
+    - `Supports(LConn, ISSLCertificateVerification, ...)` 对当前可用 backend 成立
+    - `GetVerifyResult` / `GetVerifyResultString` / `GetPeerCertificateChain`
+      的 owner path 已有 cross-backend 自洽性证据
+  - 因而当前更值钱的不是再补实现，而是把 ordinary docs/tests 也切到同一条 owner path
+
+- 当前修完后的更准确结论是：
+  - ordinary certificate-verification guidance 现在已经优先走 `ISSLCertificateVerification`
+  - 两份通用 integration/contract 测试也不再把 `GetVerifyResult / GetVerifyResultString` 当默认 core 读取路径
+  - 因而 `ISSLCertificateVerification` 这组能力面暂时也不再是“普通路径仍在教回 core”的残余点

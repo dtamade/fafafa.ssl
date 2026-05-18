@@ -82,6 +82,26 @@ begin
   Runner.Check(Name, ok, details);
 end;
 
+function GetVerificationResult(AConn: ISSLConnection): Integer;
+var
+  LCertVerify: ISSLCertificateVerification;
+begin
+  if Supports(AConn, ISSLCertificateVerification, LCertVerify) then
+    Result := LCertVerify.GetVerifyResult
+  else
+    Result := 0;
+end;
+
+function GetVerificationResultString(AConn: ISSLConnection): string;
+var
+  LCertVerify: ISSLCertificateVerification;
+begin
+  if Supports(AConn, ISSLCertificateVerification, LCertVerify) then
+    Result := LCertVerify.GetVerifyResultString
+  else
+    Result := '';
+end;
+
 {$IFDEF WINDOWS}
 function ConnectTCP(const H: string; Port: Word; out Sock: THandle): Boolean;
 var A: TSockAddrIn; WSA: TWSAData; HE: PHostEnt; InA: TInAddr; Tm: Integer;
@@ -138,8 +158,8 @@ begin
     ClientConn.SetServerName(Host);
     ok := Conn.Connect;
     if not ok then Exit;
-    Code := Conn.GetVerifyResult;
-    Str := Conn.GetVerifyResultString;
+    Code := GetVerificationResult(Conn);
+    Str := GetVerificationResultString(Conn);
     Conn.Shutdown;
   finally
     {$IFDEF WINDOWS} if S <> INVALID_HANDLE_VALUE then closesocket(S) {$ELSE} if S <> THandle(-1) then fpClose(S) {$ENDIF};
