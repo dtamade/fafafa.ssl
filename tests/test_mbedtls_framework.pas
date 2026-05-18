@@ -382,6 +382,7 @@ var
   LData: TBytes;
   LOriginalSessionLoad: Tmbedtls_ssl_session_load;
   LOriginalSessionSave: Tmbedtls_ssl_session_save;
+  LCloneNative: ISSLNativeHandleAccess;
 begin
   WriteLn('');
   WriteLn('=== MbedTLS Session Class ===');
@@ -437,6 +438,16 @@ begin
         (Length(LData) = Length(STUB_MBEDTLS_SERIALIZED_SESSION)) and
         CompareMem(@LData[0], @STUB_MBEDTLS_SERIALIZED_SESSION[0],
           Length(STUB_MBEDTLS_SERIALIZED_SESSION)));
+
+      LClone := LSession.Clone;
+      Test('Clone keeps deserialized session available', LClone <> nil);
+      Test('Clone keeps deserialized session valid',
+        (LClone <> nil) and LClone.IsValid);
+      Test('Clone keeps deserialized session resumable',
+        (LClone <> nil) and LClone.IsResumable);
+      Test('Clone keeps native handle after deserialize',
+        (LClone <> nil) and Supports(LClone, ISSLNativeHandleAccess, LCloneNative) and
+        (LCloneNative.GetNativeHandle <> nil));
     finally
       mbedtls_ssl_session_load := LOriginalSessionLoad;
       mbedtls_ssl_session_save := LOriginalSessionSave;

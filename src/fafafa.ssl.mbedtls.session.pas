@@ -304,17 +304,37 @@ end;
 function TMbedTLSSession.Clone: ISSLSession;
 var
   LClone: TMbedTLSSession;
+  LSerialized: TBytes;
 begin
+  Result := nil;
   LClone := TMbedTLSSession.Create;
-  LClone.FCreationTime := FCreationTime;
-  LClone.FTimeout := FTimeout;
-  LClone.FSessionID := FSessionID;
-  LClone.FProtocolVersion := FProtocolVersion;
-  LClone.FCipherName := FCipherName;
-  LClone.FSerializedData := Copy(FSerializedData);
-  LClone.FSession := nil;
-  LClone.FOwnsSession := False;
-  Result := LClone;
+  try
+    LClone.FCreationTime := FCreationTime;
+    LClone.FTimeout := FTimeout;
+    LClone.FSessionID := FSessionID;
+    LClone.FProtocolVersion := FProtocolVersion;
+    LClone.FCipherName := FCipherName;
+    LClone.FSerializedData := Copy(FSerializedData);
+
+    if FSession <> nil then
+    begin
+      LSerialized := Serialize;
+      if (Length(LSerialized) = 0) or (not LClone.Deserialize(LSerialized)) then
+        Exit(nil);
+
+      LClone.FCreationTime := FCreationTime;
+      LClone.FTimeout := FTimeout;
+      LClone.FSessionID := FSessionID;
+      LClone.FProtocolVersion := FProtocolVersion;
+      LClone.FCipherName := FCipherName;
+      LClone.FSerializedData := Copy(LSerialized);
+    end;
+
+    Result := LClone;
+    LClone := nil;
+  finally
+    LClone.Free;
+  end;
 end;
 
 class function TMbedTLSSession.FromContext(ASSLCtx: Pmbedtls_ssl_context): ISSLSession;

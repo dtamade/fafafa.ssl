@@ -1674,6 +1674,27 @@
     - 当前批收口后默认下一步应为：
       - 横向继续审 `Clone()` / metadata/native-handle ownership 语义
       - 不再把 MbedTLS/WolfSSL session serialization surface 当成“helper 缺失也能成功”的未定位问题重复拉起
+60. `MbedTLS/WolfSSL c-library session clone truth` 已完成 focused 收口，并应作为当前 session-object completeness 新基线保留：
+    - 新 plan：
+      - `docs/plans/2026-05-19-clibrary-session-clone-truth-alignment.md`
+    - 当前已确认的 route truth：
+      - `TMbedTLSSession.Clone()`
+        不再把 valid session 克隆成 `FSession=nil` 的 metadata shell
+      - `TWolfSSLSession.Clone()`
+        现在也会保留 valid/resumable/native-handle truth
+      - `TWolfSSLSession.Serialize()`
+        当前优先输出 native `i2d` bytes，而不是先回放 stale cached bytes
+      - 这说明当前 c-library backend session clone surface 的最小真相已经重新对齐为：
+        - clone 后仍保留可用 session object
+        - valid session 不会因为 clone 而被降级成 invalid shell
+    - 当前 focused proof 已覆盖：
+      - `mkdir -p tmp/test_mbedtls_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas && ./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+      - `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+      - `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+      - `git diff --check`
+    - 当前批收口后默认下一步应为：
+      - 横向继续审 `FromContext/FromConnection` ownership 与 source-lifetime 边界
+      - 不再把 MbedTLS/WolfSSL session clone surface 当成“valid clone 会失效”的未定位问题重复拉起
 
 ## Verification Discipline
 

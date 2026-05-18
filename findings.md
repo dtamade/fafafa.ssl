@@ -2754,3 +2754,36 @@
 - 当前更高价值的下一刀也因此更清楚：
   - 不是继续重审 helper-less fake success
   - 而是去看 `Clone()` / ownership / metadata-vs-native-handle 这类更深一层的 session object 语义是否仍有漂移
+
+- 继续沿这条线深挖后，`MbedTLS/WolfSSL` 的 `Clone()` 又暴露出另一条 public interface drift：
+  - `TMbedTLSSession.Clone()` 之前只复制字段和 `FSerializedData`，但把 `FSession=nil`
+  - `TWolfSSLSession.Clone()` 之前也同样把 clone 降成 metadata shell
+  - 结果是同一个 valid/resumable session，clone 后立刻变成：
+    - `IsValid=False`
+    - `IsResumable=False`
+    - native handle 消失
+
+- 这和其它 backend 当前真相已经明显不一致：
+  - `OpenSSL.Clone()` 通过 `SSL_SESSION_up_ref` 保留 native session
+  - `FreePascal.Clone()` 做完整深拷贝
+  - `WinSSL.Clone()` 至少不会把 metadata/session object 本身降级成 invalid
+  - 因而 `MbedTLS/WolfSSL` 这条不是“实现风格不同”，而是 `ISSLSession.Clone()` contract drift
+
+- focused RED 也把这个问题钉得非常直接：
+  - `MbedTLS` 在 deserialized session 上新增 clone 断言后，先红在：
+    - clone valid
+    - clone resumable
+    - clone native handle
+  - `WolfSSL` 同样先红在这三条
+
+- 当前最小正确修法已经落地并通过验证：
+  - `TMbedTLSSession.Clone()` 现在会在 native session 存在时，基于 serialize/deserialize 重新 materialize clone session
+  - `TWolfSSLSession.Clone()` 也改成同一路径，避免继续吐出 invalid metadata shell
+  - `TWolfSSLSession.Serialize()` 同时收紧为：
+    - native session 存在时优先输出真实 `i2d` bytes
+    - 不再在已有 cached bytes 时无条件优先回放 stale payload
+
+- 当前这批收口后的可复用结论是：
+  - c-library session object 不只要“能 serialize/deserialize”
+  - 还必须保证 `Clone()` 不会把一个可用 session 降级成不可用壳对象
+  - 下一刀最值得继续压的是 source-lifetime/ownership 边界，而不是再回头重开 clone validity 本身

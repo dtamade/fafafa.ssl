@@ -6227,3 +6227,59 @@
   - result: PASS
   - summary:
     - current c-library session serialization truth batch has no whitespace or patch-format issues
+
+### C-Library Session Clone Truth Alignment
+
+- add `docs/plans/2026-05-19-clibrary-session-clone-truth-alignment.md`
+  - purpose:
+    - record the MbedTLS/WolfSSL session clone truth-alignment batch
+
+- update `tests/test_mbedtls_framework.pas`
+  - change:
+    - add clone truth checks for deserialized MbedTLS sessions
+    - clone must stay valid, resumable, and keep a native handle
+
+- update `tests/test_wolfssl_framework.pas`
+  - change:
+    - add clone truth checks for deserialized WolfSSL sessions
+    - add focused i2d/d2i stubs to prove clone/session serialization route truth
+
+- `mkdir -p tmp/test_mbedtls_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas && ./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - clone valid
+      - clone resumable
+      - clone native-handle truth
+    - GREEN after fix:
+      - `Total: 108 / Passed: 108 / Failed: 0`
+
+- `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - serialize after deserialize was still replaying stale cached bytes
+      - clone valid/resumable/native-handle truth all drifted
+    - GREEN after fix:
+      - `Total: 120 / Passed: 120 / Failed: 0`
+
+- update `src/fafafa.ssl.mbedtls.session.pas`
+  - change:
+    - `Clone()` now re-materializes a native session when the source session is valid
+    - clone no longer degrades a valid session into an invalid metadata shell
+
+- update `src/fafafa.ssl.wolfssl.session.pas`
+  - change:
+    - `Clone()` now re-materializes a native session when the source session is valid
+    - `Serialize()` now prefers native `i2d` bytes over stale cached payload
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+    - cross-backend session/native-handle contracts remained green after the clone truth fix
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current c-library session clone truth batch has no whitespace or patch-format issues

@@ -205,37 +205,30 @@ end;
 function TWolfSSLSession.Serialize: TBytes;
 var
   LLen: Integer;
-  LBuf: PByte;
   LBufPtr: PByte;
 begin
+  if (Length(FSerializedData) > 0) and
+     ((FSession = nil) or (not Assigned(wolfSSL_i2d_SSL_SESSION))) then
+    Exit(Copy(FSerializedData));
+
   SetLength(Result, 0);
-
-  // 如果有缓存的序列化数据，直接返回
-  if Length(FSerializedData) > 0 then
-  begin
-    Result := Copy(FSerializedData);
+  if (FSession = nil) or (not Assigned(wolfSSL_i2d_SSL_SESSION)) then
     Exit;
-  end;
-
-  if FSession = nil then Exit;
 
   // 使用 WolfSSL 的 i2d 函数序列化会话
-  if Assigned(wolfSSL_i2d_SSL_SESSION) then
+  // 优先输出当前 native session 的真实序列化结果，避免回放 stale cache bytes
+  LLen := wolfSSL_i2d_SSL_SESSION(FSession, nil);
+  if LLen > 0 then
   begin
-    // 首先获取所需的缓冲区大小
-    LLen := wolfSSL_i2d_SSL_SESSION(FSession, nil);
-    if LLen > 0 then
+    SetLength(Result, LLen);
+    LBufPtr := @Result[0];
+    LLen := wolfSSL_i2d_SSL_SESSION(FSession, @LBufPtr);
+    if LLen <= 0 then
+      SetLength(Result, 0)
+    else
     begin
       SetLength(Result, LLen);
-      LBufPtr := @Result[0];
-      LLen := wolfSSL_i2d_SSL_SESSION(FSession, @LBufPtr);
-      if LLen <= 0 then
-        SetLength(Result, 0)
-      else
-      begin
-        SetLength(Result, LLen);
-        FSerializedData := Copy(Result);  // 缓存序列化数据
-      end;
+      FSerializedData := Copy(Result);
     end;
   end;
 end;
@@ -289,18 +282,37 @@ end;
 function TWolfSSLSession.Clone: ISSLSession;
 var
   LClone: TWolfSSLSession;
+  LSerialized: TBytes;
 begin
+  Result := nil;
   LClone := TWolfSSLSession.Create;
-  LClone.FCreationTime := FCreationTime;
-  LClone.FTimeout := FTimeout;
-  LClone.FSessionID := FSessionID;
-  LClone.FProtocolVersion := FProtocolVersion;
-  LClone.FCipherName := FCipherName;
-  LClone.FSerializedData := Copy(FSerializedData);
-  // 注意：不复制原生会话句柄，克隆不拥有会话
-  LClone.FSession := nil;
-  LClone.FOwnsSession := False;
-  Result := LClone;
+  try
+    LClone.FCreationTime := FCreationTime;
+    LClone.FTimeout := FTimeout;
+    LClone.FSessionID := FSessionID;
+    LClone.FProtocolVersion := FProtocolVersion;
+    LClone.FCipherName := FCipherName;
+    LClone.FSerializedData := Copy(FSerializedData);
+
+    if FSession <> nil then
+    begin
+      LSerialized := Serialize;
+      if (Length(LSerialized) = 0) or (not LClone.Deserialize(LSerialized)) then
+        Exit(nil);
+
+      LClone.FCreationTime := FCreationTime;
+      LClone.FTimeout := FTimeout;
+      LClone.FSessionID := FSessionID;
+      LClone.FProtocolVersion := FProtocolVersion;
+      LClone.FCipherName := FCipherName;
+      LClone.FSerializedData := Copy(LSerialized);
+    end;
+
+    Result := LClone;
+    LClone := nil;
+  finally
+    LClone.Free;
+  end;
 end;
 
 class function TWolfSSLSession.FromConnection(ASSL: PWOLFSSL): ISSLSession;
