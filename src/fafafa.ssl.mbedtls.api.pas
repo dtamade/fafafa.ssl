@@ -117,6 +117,10 @@ type
     session: Pmbedtls_ssl_session): Integer; cdecl;
   Tmbedtls_ssl_set_session = function(ssl: Pmbedtls_ssl_context;
     session: Pmbedtls_ssl_session): Integer; cdecl;
+  Tmbedtls_ssl_session_load = function(session: Pmbedtls_ssl_session;
+    const buf: PByte; len: NativeUInt): Integer; cdecl;
+  Tmbedtls_ssl_session_save = function(const session: Pmbedtls_ssl_session;
+    buf: PByte; buf_len: NativeUInt; olen: PNativeUInt): Integer; cdecl;
 
   // 证书
   Tmbedtls_x509_crt_init = procedure(crt: Pmbedtls_x509_crt); cdecl;
@@ -212,6 +216,8 @@ var
   mbedtls_ssl_session_free: Tmbedtls_ssl_session_free = nil;
   mbedtls_ssl_get_session: Tmbedtls_ssl_get_session = nil;
   mbedtls_ssl_set_session: Tmbedtls_ssl_set_session = nil;
+  mbedtls_ssl_session_load: Tmbedtls_ssl_session_load = nil;
+  mbedtls_ssl_session_save: Tmbedtls_ssl_session_save = nil;
 
   { 函数指针 - 证书 }
   mbedtls_x509_crt_init: Tmbedtls_x509_crt_init = nil;
@@ -306,6 +312,8 @@ begin
   mbedtls_ssl_session_free := nil;
   mbedtls_ssl_get_session := nil;
   mbedtls_ssl_set_session := nil;
+  mbedtls_ssl_session_load := nil;
+  mbedtls_ssl_session_save := nil;
   // 证书
   mbedtls_x509_crt_init := nil;
   mbedtls_x509_crt_parse := nil;
@@ -451,6 +459,10 @@ begin
     GetProc(GMbedTLSHandle, 'mbedtls_ssl_get_session'));
   mbedtls_ssl_set_session := Tmbedtls_ssl_set_session(
     GetProc(GMbedTLSHandle, 'mbedtls_ssl_set_session'));
+  mbedtls_ssl_session_load := Tmbedtls_ssl_session_load(
+    GetProc(GMbedTLSHandle, 'mbedtls_ssl_session_load'));
+  mbedtls_ssl_session_save := Tmbedtls_ssl_session_save(
+    GetProc(GMbedTLSHandle, 'mbedtls_ssl_session_save'));
 
   // 加载证书函数（从 mbedx509）
   mbedtls_x509_crt_init := Tmbedtls_x509_crt_init(

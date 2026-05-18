@@ -574,10 +574,10 @@ begin
 
     try
       wolfSSL_d2i_SSL_SESSION := nil;
-      Test('Deserialize accepts data when d2i API unavailable',
-        LSession.Deserialize(TBytes.Create(5, 6, 7, 8)));
-      Test('Serialize returns cached data when d2i API unavailable',
-        Length(LSession.Serialize) = 4);
+      Test('Deserialize rejects payload when d2i API unavailable',
+        not LSession.Deserialize(TBytes.Create(5, 6, 7, 8)));
+      Test('Serialize remains empty when d2i API unavailable',
+        Length(LSession.Serialize) = 0);
     finally
       wolfSSL_d2i_SSL_SESSION := LOriginalD2I;
     end;

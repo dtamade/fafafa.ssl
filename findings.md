@@ -2720,3 +2720,37 @@
     - `LoadFromFile(...)` 不再因为 skipped entry 把文件头读坏
     - valid persisted session 能恢复
     - invalid skipped session 不会被 materialize
+
+- 在继续横向审 session object completeness 时，`MbedTLS/WolfSSL` 的 c-library session serialization 又暴露出一类更隐蔽的实现漂移：
+  - `TMbedTLSSession.Deserialize(...)` 之前只要收到非空字节就会把 payload 缓存进 `FSerializedData` 并返回 `True`
+  - `TWolfSSLSession.Deserialize(...)` 在 `wolfSSL_d2i_SSL_SESSION` 缺失时也会走同类“缓存成功”路径
+  - 这会把“helper 缺失、根本没恢复 native session”伪装成 public `ISSLSession` 已成功 deserialize
+
+- 这不是单纯的风格问题，而是 public interface 对外撒谎：
+  - `Deserialize(...) = True` 会让调用方自然认为 backend 已 materialize 出可继续使用的 session object
+  - 但 helper 缺失时，真实状态只是“把原始字节留在了一个 Pascal 字段里”
+  - 后续 `Serialize(...)` 若再把这些字节回放出来，会进一步制造“这条 round-trip 能力存在”的假象
+
+- `MbedTLS` 当前 actually 有官方 helper 可以接线：
+  - 本机头文件 `/usr/include/mbedtls/ssl.h` 已提供：
+    - `mbedtls_ssl_session_load`
+    - `mbedtls_ssl_session_save`
+  - 因而当前更正确的修法不是继续接受 fake success，而是把 helper 真正绑定进来
+
+- 当前这批修复后，c-library session serialization 的最小真相已明确：
+  - `TMbedTLSSession`
+    - helper 缺失时 fail-closed
+    - helper 存在时会真实 load/save native session
+  - `TWolfSSLSession`
+    - `wolfSSL_d2i_SSL_SESSION` 缺失时 fail-closed
+  - 这意味着 public `ISSLSession` 现在至少不会再宣称一条并不存在的 deserialize 路径
+
+- focused + cross-contract 结果也支持把这条问题标记为“已收口，而非待继续猜测”：
+  - `tests/test_mbedtls_framework.pas` 当前 `104 passed / 0 failed`
+  - `tests/test_wolfssl_framework.pas` 当前 `112 passed / 0 failed`
+  - `tests/contract/test_backend_contract.pas` 当前 `135 total / 111 passed / 0 failed / 24 skipped`
+  - 这说明本批修法没有把现有 backend completeness contract 打回去
+
+- 当前更高价值的下一刀也因此更清楚：
+  - 不是继续重审 helper-less fake success
+  - 而是去看 `Clone()` / ownership / metadata-vs-native-handle 这类更深一层的 session object 语义是否仍有漂移

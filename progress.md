@@ -6190,3 +6190,40 @@
   - result: PASS
   - summary:
     - current session-cache persistence fix batch has no whitespace or patch-format issues
+
+### C-Library Session Serialization Truth Alignment
+
+- add `docs/plans/2026-05-19-clibrary-session-serialization-truth-alignment.md`
+  - purpose:
+    - record the MbedTLS/WolfSSL session serialize/deserialize truth-alignment batch
+
+- `git diff -- src/fafafa.ssl.mbedtls.api.pas src/fafafa.ssl.mbedtls.session.pas src/fafafa.ssl.wolfssl.session.pas tests/test_mbedtls_framework.pas tests/test_wolfssl_framework.pas`
+  - result: PASS
+  - summary:
+    - current worktree was focused on c-library session serialize/deserialize truth
+    - no unrelated production files were mixed into this batch
+
+- `mkdir -p tmp/test_mbedtls_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas && ./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: PASS
+  - summary:
+    - `MbedTLS Framework Test Summary`
+    - `Total: 104 / Passed: 104 / Failed: 0`
+    - helper-less deserialize rejection and helper-backed serialize/deserialize path both stayed green
+
+- `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: PASS
+  - summary:
+    - `WolfSSL Framework Test Summary`
+    - `Total: 112 / Passed: 112 / Failed: 0`
+    - helper-less deserialize path now fails closed instead of faking success
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+    - cross-backend optional-surface and session-resumption contracts remained green after the c-library session changes
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current c-library session serialization truth batch has no whitespace or patch-format issues

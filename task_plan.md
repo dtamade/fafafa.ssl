@@ -1647,6 +1647,33 @@
       - 不再把 WinSSL session serialization surface 当成“基本空壳”重复拉起
       - 继续回到 native resumed-handshake / Windows runtime 观测主线
       - 或转向其他 backend 的 session object completeness 横向审查
+59. `MbedTLS/WolfSSL c-library session serialization truth` 已完成 focused 收口，并应作为当前 session-object completeness 新基线保留：
+    - 新 plan：
+      - `docs/plans/2026-05-19-clibrary-session-serialization-truth-alignment.md`
+    - 当前已确认的 route truth：
+      - `src/fafafa.ssl.mbedtls.api.pas`
+        已正式绑定：
+        - `mbedtls_ssl_session_load`
+        - `mbedtls_ssl_session_save`
+      - `src/fafafa.ssl.mbedtls.session.pas`
+        不再把 `Deserialize(...)` 实现成“只缓存传入字节”
+      - `TMbedTLSSession.Deserialize(...)`
+        在 helper 缺失时现在明确 `fail-closed`
+      - `TMbedTLSSession.Serialize(...)`
+        现在优先通过 native helper 生成真实 payload，而不是回放 stale cached bytes
+      - `src/fafafa.ssl.wolfssl.session.pas`
+        在 `wolfSSL_d2i_SSL_SESSION` 缺失时也改为 `fail-closed`
+      - 这说明当前 c-library backend session surface 的最小真相已经重新对齐为：
+        - 有 native helper 才承认 deserialize/serialize
+        - 没有 helper 时公开返回失败，而不是制造“假成功”
+    - 当前 focused proof 已覆盖：
+      - `mkdir -p tmp/test_mbedtls_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas && ./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+      - `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+      - `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+      - `git diff --check`
+    - 当前批收口后默认下一步应为：
+      - 横向继续审 `Clone()` / metadata/native-handle ownership 语义
+      - 不再把 MbedTLS/WolfSSL session serialization surface 当成“helper 缺失也能成功”的未定位问题重复拉起
 
 ## Verification Discipline
 

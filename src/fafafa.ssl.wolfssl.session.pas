@@ -269,12 +269,6 @@ begin
       Result := True;
     end;
   end
-  else
-  begin
-    // 如果没有反序列化 API，仅保存数据
-    FSerializedData := Copy(AData);
-    Result := True;
-  end;
 end;
 
 function TWolfSSLSession.GetNativeHandle: Pointer;

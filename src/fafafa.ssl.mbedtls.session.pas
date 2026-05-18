@@ -81,6 +81,17 @@ uses
 
 const
   MBEDTLS_SSL_SESSION_SIZE = 512;  // 估算大小
+  MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL_LOCAL = -$6A00;
+
+function HasSessionSerializeHelpers: Boolean;
+begin
+  Result := Assigned(mbedtls_ssl_session_save);
+end;
+
+function HasSessionDeserializeHelpers: Boolean;
+begin
+  Result := Assigned(mbedtls_ssl_session_load);
+end;
 
 { TMbedTLSSession }
 
@@ -208,16 +219,70 @@ begin
 end;
 
 function TMbedTLSSession.Serialize: TBytes;
+var
+  LRequiredSize: NativeUInt;
+  LResultCode: Integer;
 begin
-  Result := Copy(FSerializedData);
+  if (Length(FSerializedData) > 0) and
+     ((FSession = nil) or not HasSessionSerializeHelpers()) then
+    Exit(Copy(FSerializedData));
+
+  SetLength(Result, 0);
+  if (FSession = nil) or not HasSessionSerializeHelpers() then
+    Exit;
+
+  LRequiredSize := 0;
+  LResultCode := mbedtls_ssl_session_save(FSession, nil, 0, @LRequiredSize);
+  if (LResultCode <> 0) and
+     (LResultCode <> MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL_LOCAL) then
+    Exit;
+
+  if LRequiredSize = 0 then
+    Exit;
+
+  SetLength(Result, LRequiredSize);
+  LResultCode := mbedtls_ssl_session_save(FSession, @Result[0],
+    Length(Result), @LRequiredSize);
+  if LResultCode <> 0 then
+  begin
+    SetLength(Result, 0);
+    Exit;
+  end;
+
+  SetLength(Result, LRequiredSize);
+  FSerializedData := Copy(Result);
 end;
 
 function TMbedTLSSession.Deserialize(const AData: TBytes): Boolean;
+var
+  LSession: Pmbedtls_ssl_session;
 begin
   Result := False;
-  if Length(AData) = 0 then Exit;
+  if (Length(AData) = 0) or not HasSessionDeserializeHelpers() then
+    Exit;
 
+  LSession := nil;
+  GetMem(LSession, MBEDTLS_SSL_SESSION_SIZE);
+  FillChar(LSession^, MBEDTLS_SSL_SESSION_SIZE, 0);
+
+  if Assigned(mbedtls_ssl_session_init) then
+    mbedtls_ssl_session_init(LSession);
+
+  if mbedtls_ssl_session_load(LSession, @AData[0], Length(AData)) <> 0 then
+  begin
+    if Assigned(mbedtls_ssl_session_free) then
+      mbedtls_ssl_session_free(LSession);
+    FreeMem(LSession);
+    Exit;
+  end;
+
+  if FOwnsSession then
+    FreeSession;
+
+  FSession := LSession;
+  FOwnsSession := True;
   FSerializedData := Copy(AData);
+  ExtractSessionInfo;
   Result := True;
 end;
 
