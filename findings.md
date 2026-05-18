@@ -7,6 +7,11 @@
   - Windows job console log 里实际有 6 个 suite 的编译/运行/汇总输出
   - 弱的是 artifact，不是执行本身
 
+- 新的 live rerun `26031191987` 也已经把这条怀疑真正打实：
+  - 新 artifact `winssl_runtime_suite_wave_b_b2_20260518_193941_evidence_fix.log` 直接保存了 broader suite 的编译、逐项执行、汇总和 `[WINSSL-RUNTIME]` markers
+  - summary job 生成的 `wave_b_b2_evidence_consistency_...md` 已把 Windows runtime log 记成 `substantive runtime evidence; suite_end_status=PASS`
+  - 这说明本批修复已经把“CI 控制台真跑但 artifact 丢真相”的流程缺口真正堵上了
+
 - 根因已被压缩到 evidence capture 层，而不是 WinSSL 实现层：
   - workflow 用 `Start-Transcript` 包住父 PowerShell
   - broader suite 则在子 `pwsh -File tests/run_winssl_tests.ps1` 里执行
@@ -22,6 +27,10 @@
   - `tests/run_winssl_tests.ps1` 输出稳定的 ASCII `[WINSSL-RUNTIME]` markers
   - consistency / handoff 报告改成检查 `suite_start` / `suite_summary` / `suite_end`
   - 这样下一次 CI 只要 artifact 仍然是空壳，就会被脚本直接判成 `INCONSISTENT`
+
+- 这批收口后的真实结论也因此改变了：
+  - Wave B/B2 manual lane 上的 Windows runtime evidence blocker 已经不再是 capture/handoff
+  - 剩余真正值得继续投入的，是更深的 backend/runtime completeness 本身
 
 - 本轮新的审查目标不是 release / workflow / runtime closeout，而是：
   - 公共接口设计是否已经失真

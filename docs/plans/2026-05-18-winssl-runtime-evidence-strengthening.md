@@ -67,3 +67,12 @@ git diff --check
 - `tests/run_winssl_tests.ps1` 源码内存在 `[WINSSL-RUNTIME]` markers
 - Windows checklist / bundle 明确要求 runtime log 包含 markers
 - push 后新的 Actions artifact 应能直接包含 substantive runtime evidence
+
+## Verification Outcome
+
+- commit: `fa7f5af` (`ci/winssl: strengthen windows runtime evidence`)
+- live rerun: `26031191987`
+- result:
+  - Windows broader runtime artifact 已直接包含 `[WINSSL-RUNTIME] suite_start / suite_summary / suite_end`
+  - consistency report 已把 Windows runtime log 记成 `substantive runtime evidence; suite_end_status=PASS`
+  - 这条 workflow/evidence gap 已闭环

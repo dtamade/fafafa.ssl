@@ -94,6 +94,45 @@
   - summary:
     - current Windows runtime evidence strengthening batch has no whitespace or patch-format issues
 
+- `git push origin master`
+  - result: PASS
+  - summary:
+    - pushed commit `fa7f5af` (`ci/winssl: strengthen windows runtime evidence`) to `origin/master`
+
+- `gh workflow run wave-b-b2-manual.yml --ref master -f run_id=wave_b_b2_20260518_193941_evidence_fix`
+  - result: PASS
+  - summary:
+    - dispatched a live rerun against commit `fa7f5af` to verify the repaired Windows evidence chain
+
+- `gh api repos/dtamade/fafafa.ssl/actions/runs/26031191987/jobs`
+  - result: PASS
+  - summary:
+    - live rerun `26031191987` finished green across `linux-gate` / `macos-gate` / `windows-gate` / `summary`
+    - `windows-gate` completed quick smoke, Wave B Windows gate, and broader WinSSL runtime suite
+
+- `gh run download 26031191987 -D tmp/gh-run-26031191987`
+  - result: PASS
+  - summary:
+    - downloaded the repaired live artifacts for direct offline inspection
+
+- `sed -n '1,220p' tmp/gh-run-26031191987/.../winssl_runtime_suite_wave_b_b2_20260518_193941_evidence_fix.log`
+  - result: PASS
+  - summary:
+    - runtime artifact now contains compile output, per-test execution results, final summary, and stable `[WINSSL-RUNTIME]` markers
+    - this is no longer a transcript-only shell
+
+- `sed -n '1,220p' tmp/gh-run-26031191987/.../wave_b_b2_evidence_consistency_wave_b_b2_20260518_193941_evidence_fix.md`
+  - result: PASS
+  - summary:
+    - report now records `windows_runtime_transcript` as `substantive runtime evidence; suite_end_status=PASS`
+    - run-level consistency stayed `CONSISTENT`
+
+- `sed -n '1,220p' tmp/gh-run-26031191987/.../wave_b_b2_handoff_bundle_wave_b_b2_20260518_193941_evidence_fix.md`
+  - result: PASS
+  - summary:
+    - handoff bundle closed green on the repaired evidence chain
+    - replay command was preserved for future revalidation
+
 ### Context Recovery
 
 - `git status --short --branch`

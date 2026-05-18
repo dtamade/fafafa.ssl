@@ -62,6 +62,11 @@
 
 这说明当时的问题不是“Windows runtime 根本没跑”，而是“artifact 证据强度不够”。
 
+- 修复后的 live rerun `26031191987`（head `fa7f5af`）已经把这个缺口补上：
+  - `winssl_runtime_suite_wave_b_b2_20260518_193941_evidence_fix.log` 直接保存了 broader suite 的编译、逐项执行、汇总输出
+  - 日志中明确包含 `[WINSSL-RUNTIME] suite_start / suite_summary / suite_end status=PASS`
+  - `wave_b_b2_evidence_consistency_wave_b_b2_20260518_193941_evidence_fix.md` 也已把 `windows_runtime_transcript` 记成 `substantive runtime evidence; suite_end_status=PASS`
+
 ## 当前还没有证实的部分
 
 - Windows 主机上的真实握手路径
@@ -82,15 +87,14 @@
 
 - **代码结构和 compile surface 持续收口中，且当前已通过选定的 source contract 与 Win64 交叉编译验证**
 - **仓库级 Linux gate 继续全绿**
-- **GitHub Windows runner 已经能实际跑 WinSSL runtime，但旧 artifact capture 曾经偏弱**
-- **真正剩余的高风险未证实区域，是新的 Windows artifact 是否已经带回足够强的 runtime 证据，以及高风险 lane 的逐项结论**
+- **GitHub Windows runner 现在已经同时给出“实际执行 + substantive artifact evidence”**
+- **真正剩余的高风险未证实区域，已经前移到高风险 runtime lane 的逐项结论，而不再是 workflow capture 本身**
 
 ## 下一步
 
-1. push 当前 runtime-evidence strengthening 修复，并重新 dispatch `wave-b-b2-manual.yml`
-2. 检查新的 `winssl_runtime_suite_<run_id>.log` 是否直接包含 `[WINSSL-RUNTIME] suite_start / suite_summary / suite_end`
-3. 若 artifact 已 substantive，再继续判定握手、证书链验证、session resumption、server/client 行为的 runtime truth
-4. 继续保持 Linux 侧 source contract 和 Win64 compile 作为前置守门，不把它们误写成 runtime 证明
+1. 以 run `26031191987` 的 artifact 作为当前 Wave B/B2 manual lane 的 Windows runtime baseline
+2. 若继续深挖 WinSSL，优先扩展 session resumption / certstore / OCSP / enterprise / error-mapping 等高风险 lane 的 live proof
+3. 继续保持 Linux 侧 source contract 和 Win64 compile 作为前置守门，不把它们误写成 runtime 证明
 
 ## 相关文档
 
