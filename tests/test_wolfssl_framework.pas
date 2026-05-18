@@ -332,6 +332,67 @@ begin
   end;
 end;
 
+procedure TestWolfSSLCertificateCloneMaterializationContract;
+var
+  LLib: ISSLLibrary;
+  LCert: TWolfSSLCertificate;
+  LClone: ISSLCertificate;
+  LCloneNative: ISSLNativeHandleAccess;
+  LExpectedSubject: string;
+  LExpectedIssuer: string;
+  LExpectedFingerprint: string;
+  LOriginalX509D2I: TwolfSSL_X509_d2i;
+begin
+  WriteLn('');
+  WriteLn('=== WolfSSL Certificate Clone Materialization Contract ===');
+
+  LLib := CreateWolfSSLLibrary;
+  if not LLib.Initialize then
+  begin
+    WriteLn('  (Skipped - WolfSSL library not available)');
+    Test('Certificate clone materialization skipped', True);
+    Exit;
+  end;
+
+  LCert := TWolfSSLCertificate.Create;
+  try
+    if not LCert.LoadFromFile('tests/certificate/test_certs/signer_cert.pem') then
+    begin
+      WriteLn('  (Skipped - fixture certificate unavailable)');
+      Test('Certificate clone materialization skipped', True);
+      Exit;
+    end;
+
+    LExpectedSubject := LCert.GetSubject;
+    LExpectedIssuer := LCert.GetIssuer;
+    LExpectedFingerprint := LCert.GetFingerprintSHA256;
+
+    LClone := LCert.Clone;
+    Test('Clone keeps native handle for loaded certificate',
+      (LClone <> nil) and Supports(LClone, ISSLNativeHandleAccess, LCloneNative) and
+      (LCloneNative.GetNativeHandle <> nil));
+    Test('Clone preserves subject truth',
+      (LClone <> nil) and (LClone.GetSubject = LExpectedSubject));
+    Test('Clone preserves issuer truth',
+      (LClone <> nil) and (LClone.GetIssuer = LExpectedIssuer));
+    Test('Clone preserves fingerprint truth',
+      (LClone <> nil) and SameText(LClone.GetFingerprintSHA256, LExpectedFingerprint));
+
+    LOriginalX509D2I := wolfSSL_X509_d2i;
+    try
+      wolfSSL_X509_d2i := nil;
+      LClone := LCert.Clone;
+      Test('Clone fails closed when X509 materialization helper is unavailable',
+        LClone = nil);
+    finally
+      wolfSSL_X509_d2i := LOriginalX509D2I;
+    end;
+  finally
+    LCert.Free;
+    LLib.Finalize;
+  end;
+end;
+
 procedure TestWolfSSLCertificateStore;
 var
   LStore: TWolfSSLCertificateStore;
@@ -976,6 +1037,7 @@ begin
 
   // Certificate class tests (no library required)
   TestWolfSSLCertificateClass;
+  TestWolfSSLCertificateCloneMaterializationContract;
   TestWolfSSLCertificateStore;
 
   // Session class tests (no library required)

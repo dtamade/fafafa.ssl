@@ -180,6 +180,22 @@
   - 当前结论：
     - `MbedTLS` 连接态 public cert surface 已不再泄漏 backend-internal lifetime 约束
     - 下一刀更适合继续横向审 `WolfSSL` / `OpenSSL` / `MbedTLS` 其它 connection-level completeness seam，而不是再回头重开这条 borrowed-peer-cert 问题
+- [completed] `WolfSSL` certificate clone materialization 已完成 focused 收口：
+  - 新增计划：`docs/plans/2026-05-19-wolfssl-certificate-clone-materialization.md`
+  - `src/fafafa.ssl.wolfssl.certificate.pas`
+    - `Clone()` 不再只复制 `FPEMData/FDERData/FInfo`
+    - loaded cert 现在统一走 `DER copy -> owned reload`
+    - X509 materialization helper 缺失时改为 `fail-closed`
+  - `tests/test_wolfssl_framework.pas`
+    - 新增 `WolfSSL Certificate Clone Materialization Contract`
+    - 锁住 native handle、subject/issuer、fingerprint 与 helper-loss truth
+  - focused verification 已通过：
+    - `tests/test_wolfssl_framework.pas`: `141 passed / 0 failed`
+    - `tests/contract/test_backend_contract.pas`: `135 total / 111 passed / 0 failed / 24 skipped`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - `WolfSSL` loaded certificate 的 public clone surface 已不再退化成 metadata shell
+    - 下一刀更适合继续横向审其它 backend 的 certificate clone / connection completeness seam，而不是再重开这条 clone 空壳问题
 - [completed] generic session-cache persistence count truth 已完成 focused 修复并形成新基线：
   - 新增计划：`docs/plans/2026-05-19-session-cache-persistence-count-truth.md`
   - 新增 focused test：`tests/test_session_cache_persistence_contract.pas`
@@ -1754,6 +1770,34 @@
     - 当前批收口后默认下一步应为：
       - 横向继续审 `GetPeerCertificate` / metadata extraction completeness
       - 不再把 WolfSSL source-session lifetime gap 当成未定位问题重复拉起
+62. `WolfSSL certificate clone materialization` 已完成 focused 收口，并应作为当前 certificate-object completeness 新基线保留：
+    - 新 plan：
+      - `docs/plans/2026-05-19-wolfssl-certificate-clone-materialization.md`
+    - 当前已确认的 route truth：
+      - `TWolfSSLCertificate.Clone()`
+        之前只复制：
+        - `FPEMData`
+        - `FDERData`
+        - `FInfo`
+      - 但不会重新 materialize `FX509`
+      - 结果 loaded cert clone 后曾出现：
+        - native handle 丢失
+        - `GetSubject` / `GetIssuer` 退化成 shell truth
+        - fingerprint 仍可能继续来自缓存 DER
+      - 当前修复后：
+        - clone 会优先拿可用 DER
+        - 再 `LoadFromDER(...)` 重建 owned native cert
+        - helper 不足时 `fail-closed`
+      - 这说明当前 `WolfSSL` certificate clone surface 的最小真相已经重新对齐为：
+        - loaded certificate clone 后仍保留可用 native X509
+        - public metadata truth 不再因为 clone 而退化
+    - 当前 focused proof 已覆盖：
+      - `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+      - `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+      - `git diff --check`
+    - 当前批收口后默认下一步应为：
+      - 横向继续审其它 backend 的 certificate clone / connection completeness seam
+      - 不再把 WolfSSL loaded-certificate clone shell gap 当成未定位问题重复拉起
 
 ## Verification Discipline
 

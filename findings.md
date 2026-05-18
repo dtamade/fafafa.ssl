@@ -2873,3 +2873,36 @@
   - `TMbedTLSConnection.GetPeerCertificate()` 现在返回的 cert handle 不再与 source fixture handle 同指针
   - `TMbedTLSConnection.GetPeerCertificateChain()` 的单叶子 cert 也一样
   - 这说明 `MbedTLS` 的 connection-level peer-cert surface 已经从“borrowed wrapper”收口为“owned public object”
+
+- 继续沿着 c-library certificate object completeness 深挖后，`WolfSSL` 又暴露出一条真实的 clone-truth 漂移：
+  - `TWolfSSLCertificate.Clone()` 之前只复制：
+    - `FPEMData`
+    - `FDERData`
+    - `FInfo`
+  - 但不会重新 materialize `FX509`
+  - 这意味着 loaded cert clone 后虽然还可能保留缓存字节和部分摘要语义，却会丢掉 native X509 真相
+
+- focused RED 也把这条问题钉得很硬，而不是实现风格差异：
+  - `Clone keeps native handle for loaded certificate` 先红
+  - `Clone preserves subject truth` 先红
+  - `Clone preserves issuer truth` 先红
+  - `Clone preserves fingerprint truth` 当时继续 PASS
+  - `Clone fails closed when X509 materialization helper is unavailable` 先红
+  - 这说明当前缺口不是“所有 metadata 都错”，而是 loaded clone 退化成了带缓存 DER 的 metadata shell
+
+- 当前最小正确修法也已经明确并落地：
+  - 不继续暴露 borrowed/native alias
+  - 也不手写额外字段级复制逻辑
+  - 直接复用已经存在的证书载入路径：
+    - 优先使用 `FDERData`
+    - 否则从 `FPEMData` 转 DER
+    - 再不行就从 native `WOLFSSL_X509` 导出 DER
+    - 最后统一 `LoadFromDER(...)` 重建 owned cert
+  - 如果 `wolfSSL_X509_d2i` 等 materialization helper 不可用，则直接 `fail-closed`
+
+- 当前收口后的 route truth 已明确：
+  - `TWolfSSLCertificate.Clone()` 现在不再把 loaded cert clone 成 native-handle 空壳
+  - `GetSubject` / `GetIssuer` / `GetFingerprintSHA256` 这类 public metadata truth 现在会在 clone 后继续保留
+  - 这也把 `WolfSSL` certificate completeness 的剩余边界说清了：
+    - 当前问题已经不是 clone 会不会退化
+    - 下一刀更适合横向审其它 backend 的 certificate clone / connection-level completeness，而不是再重开这条 WolfSSL clone 空壳问题

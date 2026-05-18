@@ -6440,3 +6440,43 @@
   - result: PASS
   - summary:
     - current MbedTLS connection peer-cert batch has no whitespace or patch-format issues
+
+### WolfSSL Certificate Clone Materialization
+
+- add `docs/plans/2026-05-19-wolfssl-certificate-clone-materialization.md`
+  - purpose:
+    - record the WolfSSL certificate clone materialization batch
+
+- update `tests/test_wolfssl_framework.pas`
+  - change:
+    - add `WolfSSL Certificate Clone Materialization Contract`
+    - lock native-handle preservation, subject/issuer/fingerprint truth, and helper-loss fail-closed behavior
+
+- `mkdir -p tmp/test_wolfssl_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_wolfssl_framework_units -FEtmp/test_wolfssl_framework_units -otmp/test_wolfssl_framework_units/test_wolfssl_framework tests/test_wolfssl_framework.pas && ./tmp/test_wolfssl_framework_units/test_wolfssl_framework`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - `Clone keeps native handle for loaded certificate`
+      - `Clone preserves subject truth`
+      - `Clone preserves issuer truth`
+      - `Clone fails closed when X509 materialization helper is unavailable`
+      - `Clone preserves fingerprint truth` remained PASS
+    - GREEN after fix:
+      - `Total: 141 / Passed: 141 / Failed: 0`
+
+- update `src/fafafa.ssl.wolfssl.certificate.pas`
+  - change:
+    - `Clone()` now performs `DER copy -> owned reload` for loaded certificates
+    - cached-field shell clones are no longer returned for loaded certs
+    - helper-loss path now fails closed instead of returning a fake-complete clone
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+    - cross-backend certificate/session optional surfaces remained green after the WolfSSL clone fix
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WolfSSL certificate clone batch has no whitespace or patch-format issues

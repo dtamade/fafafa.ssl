@@ -938,13 +938,40 @@ end;
 function TWolfSSLCertificate.Clone: ISSLCertificate;
 var
   LClone: TWolfSSLCertificate;
+  LDER: TBytes;
 begin
+  Result := nil;
   LClone := TWolfSSLCertificate.Create;
-  LClone.FPEMData := FPEMData;
-  LClone.FDERData := Copy(FDERData);
-  LClone.FInfo := FInfo;
-  // X509 需要深拷贝，暂时不复制原生句柄
-  Result := LClone;
+  try
+    LClone.FInfo := FInfo;
+    if Length(FDERData) > 0 then
+      LDER := Copy(FDERData)
+    else if FPEMData <> '' then
+      LDER := TSSLUtils.PEMToDER(FPEMData)
+    else
+      LDER := SaveToDER;
+
+    if Length(LDER) > 0 then
+    begin
+      if not LClone.LoadFromDER(LDER) then
+        Exit;
+      LClone.FDERData := Copy(LDER);
+      if FPEMData <> '' then
+        LClone.FPEMData := FPEMData
+      else
+        LClone.FPEMData := TSSLUtils.DERToPEM(LDER);
+    end
+    else
+    begin
+      LClone.FPEMData := FPEMData;
+      LClone.FDERData := Copy(FDERData);
+    end;
+
+    Result := LClone;
+    LClone := nil;
+  finally
+    LClone.Free;
+  end;
 end;
 
 { TWolfSSLCertificateStore }
