@@ -3608,3 +3608,53 @@
   - summary:
     - reran the lightweight `GetConnectionInfo` residual allowlist proof after the final planning-file sync
     - no extra Pascal rerun was needed because only planning files changed after the allowlist contract passed
+
+### GetConnectionInfo Base Enrichment From Residual Audit
+
+- update:
+  - `src/fafafa.ssl.connection.base.pas`
+  - `src/fafafa.ssl.openssl.connection.pas`
+  - `src/fafafa.ssl.freepascal.connection.pas`
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+  - `src/fafafa.ssl.wolfssl.connection.pas`
+  - `src/fafafa.ssl.winssl.connection.pas`
+  - `tests/test_connection_builder_hostname_precedence.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - add shared `DoGetConnectionInfoServerName` hook on `TBaseSSLConnection`
+    - enrich shared `GetConnectionInfo` with `ServerName`
+    - enrich shared `GetConnectionInfo` with `SessionId` when connected/handshake-complete and session metadata is available
+    - extend the focused hostname-precedence mock test with `ConnectionInfo.ServerName` / `ConnectionInfo.SessionId` behavior coverage
+    - narrow the active API wording from “all fields are fully populated” to shared-minimum + best-effort backend detail truth
+
+- implementation note:
+  - the final shared-layer design intentionally avoids `Supports(Self, ISSLClientConnection, ...)` inside `TBaseSSLConnection.GetConnectionInfo`
+  - summary:
+    - a prior attempt had already shown that the naive self-cast route could destabilize OpenSSL fresh-connection access
+    - the landed design uses backend overrides of `DoGetConnectionInfoServerName` instead, which is safe for direct concrete-object test construction paths
+
+- `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+  - result: PASS
+  - summary:
+    - focused builder/hostname suite finished `13 passed, 0 failed`
+    - new `ConnectionInfo.ServerName` and `ConnectionInfo.SessionId` checks both stayed green
+
+- `mkdir -p tmp/test_openssl_connection_info_cipher_contract && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_connection_info_cipher_contract -FEtmp/test_openssl_connection_info_cipher_contract -otmp/test_openssl_connection_info_cipher_contract/test_openssl_connection_info_cipher_contract tests/test_openssl_connection_info_cipher_contract.pas && ./tmp/test_openssl_connection_info_cipher_contract/test_openssl_connection_info_cipher_contract`
+  - result: PASS
+  - summary:
+    - focused OpenSSL connection-info cipher guard finished `10 passed, 0 failed`
+    - fresh-connection `GetConnectionInfo` no longer reproduced the prior `EAccessViolation`
+    - shared `ServerName` enrichment preserved the cipher-guard baseline fields
+
+- update `tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - change:
+    - raise the expected direct-core hit count from `7` to `9`
+    - add `tests/test_connection_builder_hostname_precedence.pas` to the intentional direct-core allowlist
+    - rationale:
+      - the new mock test intentionally reads core `Conn.GetConnectionInfo` to verify shared-layer mirror truth
+
+- `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - updated residual contract now matches the expanded intentional allowlist
+    - no unexpected direct-core `GetConnectionInfo` files were introduced

@@ -79,6 +79,7 @@ type
     function DoGetSession: ISSLSession; override;
     procedure DoSetSession(ASession: ISSLSession); override;
     function DoIsSessionReused: Boolean; override;
+    function DoGetConnectionInfoServerName: string; override;
     function DoGetSelectedALPNProtocol: string; override;
     function DoGetState: string; override;
     function DoGetNativeHandle: Pointer; override;
@@ -838,6 +839,11 @@ begin
   if not Assigned(wolfSSL_session_reused) then Exit;
 
   Result := wolfSSL_session_reused(FWolfSSL) = 1;
+end;
+
+function TWolfSSLConnection.DoGetConnectionInfoServerName: string;
+begin
+  Result := FServerName;
 end;
 
 function TWolfSSLConnection.DoGetSelectedALPNProtocol: string;

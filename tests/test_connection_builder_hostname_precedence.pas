@@ -13,9 +13,30 @@ uses
   fafafa.ssl.connection.builder;
 
 type
+  TMockSession = class(TInterfacedObject, ISSLSession)
+  private
+    FID: string;
+  public
+    constructor Create(const AID: string);
+
+    function GetID: string;
+    function GetCreationTime: TDateTime;
+    function GetTimeout: Integer;
+    procedure SetTimeout(ATimeout: Integer);
+    function IsValid: Boolean;
+    function IsResumable: Boolean;
+    function GetProtocolVersion: TSSLProtocolVersion;
+    function GetCipherName: string;
+    function GetPeerCertificate: ISSLCertificate;
+    function Serialize: TBytes;
+    function Deserialize(const AData: TBytes): Boolean;
+    function Clone: ISSLSession;
+  end;
+
   TMockClientConnection = class(TBaseSSLConnection, ISSLClientConnection)
   private
     FServerName: string;
+    FSession: ISSLSession;
   protected
     function DoRead(var ABuffer; ACount: Integer): Integer; override;
     function DoWrite(const ABuffer; ACount: Integer): Integer; override;
@@ -37,6 +58,7 @@ type
     function DoGetSession: ISSLSession; override;
     procedure DoSetSession(ASession: ISSLSession); override;
     function DoIsSessionReused: Boolean; override;
+    function DoGetConnectionInfoServerName: string; override;
     function DoGetSelectedALPNProtocol: string; override;
     function DoGetState: string; override;
     function DoGetNativeHandle: Pointer; override;
@@ -146,12 +168,81 @@ begin
   Check(AExpected = AActual, AMessage + ' (expected="' + AExpected + '", actual="' + AActual + '")');
 end;
 
+{ TMockSession }
+
+constructor TMockSession.Create(const AID: string);
+begin
+  inherited Create;
+  FID := AID;
+end;
+
+function TMockSession.GetID: string;
+begin
+  Result := FID;
+end;
+
+function TMockSession.GetCreationTime: TDateTime;
+begin
+  Result := 0;
+end;
+
+function TMockSession.GetTimeout: Integer;
+begin
+  Result := 0;
+end;
+
+procedure TMockSession.SetTimeout(ATimeout: Integer);
+begin
+  // no-op
+end;
+
+function TMockSession.IsValid: Boolean;
+begin
+  Result := True;
+end;
+
+function TMockSession.IsResumable: Boolean;
+begin
+  Result := True;
+end;
+
+function TMockSession.GetProtocolVersion: TSSLProtocolVersion;
+begin
+  Result := sslProtocolTLS13;
+end;
+
+function TMockSession.GetCipherName: string;
+begin
+  Result := 'MOCK-CIPHER';
+end;
+
+function TMockSession.GetPeerCertificate: ISSLCertificate;
+begin
+  Result := nil;
+end;
+
+function TMockSession.Serialize: TBytes;
+begin
+  SetLength(Result, 0);
+end;
+
+function TMockSession.Deserialize(const AData: TBytes): Boolean;
+begin
+  Result := True;
+end;
+
+function TMockSession.Clone: ISSLSession;
+begin
+  Result := TMockSession.Create(FID);
+end;
+
 { TMockClientConnection }
 
 constructor TMockClientConnection.Create(AContext: ISSLContext);
 begin
   inherited Create(AContext);
   FServerName := '';
+  FSession := nil;
 end;
 
 procedure TMockClientConnection.SetServerName(const AServerName: string);
@@ -251,17 +342,22 @@ end;
 
 function TMockClientConnection.DoGetSession: ISSLSession;
 begin
-  Result := nil;
+  Result := FSession;
 end;
 
 procedure TMockClientConnection.DoSetSession(ASession: ISSLSession);
 begin
-  // no-op
+  FSession := ASession;
 end;
 
 function TMockClientConnection.DoIsSessionReused: Boolean;
 begin
   Result := False;
+end;
+
+function TMockClientConnection.DoGetConnectionInfoServerName: string;
+begin
+  Result := FServerName;
 end;
 
 function TMockClientConnection.DoGetSelectedALPNProtocol: string;
@@ -541,6 +637,7 @@ var
   Conn: ISSLConnection;
   Res: TSSLOperationResult;
   ClientConn: ISSLClientConnection;
+  Info: TSSLConnectionInfo;
 begin
   Ctx := TMockContext.Create(sslCtxClient);
   // INTENTIONAL_COMPAT: keep legacy direct-context input here so the builder
@@ -577,6 +674,24 @@ begin
   Check(Res.Success, 'TryBuildClient should succeed');
   Check(Supports(Conn, ISSLClientConnection, ClientConn), 'Connection supports ISSLClientConnection');
   CheckEqualsStr('ServerName cleared', '', ClientConn.GetServerName);
+
+  WriteLn('=== Case 4: GetConnectionInfo preserves client server name ===');
+  Builder := TSSLConnectionBuilder.Create
+    .WithContext(Ctx)
+    .WithSocket(THandle(1))
+    .WithHostname('info.example.com');
+  Res := Builder.TryBuildClient(Conn);
+  Check(Res.Success, 'TryBuildClient should succeed');
+  Info := Conn.GetConnectionInfo;
+  CheckEqualsStr('ConnectionInfo.ServerName mirrors ISSLClientConnection.GetServerName',
+    'info.example.com', Info.ServerName);
+
+  WriteLn('=== Case 5: GetConnectionInfo preserves session identifier ===');
+  Conn.SetSession(TMockSession.Create('session-123'));
+  Check(Conn.Connect, 'Mock connection connect should succeed before reading SessionId');
+  Info := Conn.GetConnectionInfo;
+  CheckEqualsStr('ConnectionInfo.SessionId mirrors ISSLSession.GetID',
+    'session-123', Info.SessionId);
 end;
 
 begin

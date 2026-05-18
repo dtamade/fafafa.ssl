@@ -169,6 +169,9 @@ type
     {** 检查会话是否复用 *}
     function DoIsSessionReused: Boolean; virtual; abstract;
 
+    {** 获取可折叠进 ConnectionInfo 的 server name metadata *}
+    function DoGetConnectionInfoServerName: string; virtual;
+
     {** 获取 ALPN 协商结果 *}
     function DoGetSelectedALPNProtocol: string; virtual; abstract;
 
@@ -567,6 +570,8 @@ end;
 { 连接信息 }
 
 function TBaseSSLConnection.GetConnectionInfo: TSSLConnectionInfo;
+var
+  LSession: ISSLSession;
 begin
   FillChar(Result, SizeOf(Result), 0);
   Result.ProtocolVersion := GetProtocolVersion;
@@ -575,6 +580,14 @@ begin
   Result.CompressionMethod := 'NONE';
   Result.IsResumed := IsSessionReused;
   Result.ALPNProtocol := GetSelectedALPNProtocol;
+  Result.ServerName := DoGetConnectionInfoServerName;
+
+  if FConnected or FHandshakeComplete then
+  begin
+    LSession := GetSession;
+    if LSession <> nil then
+      Result.SessionId := LSession.GetID;
+  end;
 end;
 
 function TBaseSSLConnection.GetProtocolVersion: TSSLProtocolVersion;
@@ -624,6 +637,11 @@ end;
 function TBaseSSLConnection.IsSessionReused: Boolean;
 begin
   Result := DoIsSessionReused;
+end;
+
+function TBaseSSLConnection.DoGetConnectionInfoServerName: string;
+begin
+  Result := '';
 end;
 
 { ALPN }

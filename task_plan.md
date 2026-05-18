@@ -892,6 +892,26 @@
       - `git diff --check`
       - 新 contract 当前 PASS
     - 当前批收口后，`GetConnectionInfo` 也不再需要继续做 evidence cleanup，`ISSLConnectionInfo` 这 4 条 Stage-A mirror 路线将全部进入 post-freeze 决策阶段
+34. `GetConnectionInfo base enrichment from residual audit` 已完成并应作为当前默认下一步的完成记录保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getconnectioninfo-base-enrichment-from-residual-audit.md`
+    - 当前已确认的共享层 completeness 修复：
+      - `TBaseSSLConnection.GetConnectionInfo` 现在会统一补齐 `ServerName`
+      - `SessionId` 现在会在 `FConnected or FHandshakeComplete` 且后端可返回当前 session 时补齐
+      - OpenSSL / FreePascal / MbedTLS / WolfSSL / WinSSL 已通过 `DoGetConnectionInfoServerName` hook 暴露各自连接对象持有的 `FServerName`
+    - 当前根因与实现约束：
+      - 不应在 `TBaseSSLConnection.GetConnectionInfo` 对 `Self` 走 `Supports(Self, ISSLClientConnection, ...)`
+      - 具体类直接以 object ref 使用时，这种临时 interface ref 在 `TInterfacedObject` 路径上可能触发错误的自释放
+      - 因此本批使用 protected virtual hook，而不是 shared base 里的 interface cast
+    - 当前 focused proof 已覆盖：
+      - `tests/test_connection_builder_hostname_precedence.pas`
+      - `tests/test_openssl_connection_info_cipher_contract.pas`
+      - `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+      - `git diff --check`
+    - 当前批收口后，`GetConnectionInfo` 线上的高优先级下一步不再是 residual archaeology，而是剩余 completeness debt：
+      - `PeerCertificate`
+      - `CipherSuiteId` / `KeyExchange` / `Cipher` / `Hash` / `KeySize` / `MacSize`
+      - 更强 owner / deprecation wording route
 
 ## Verification Discipline
 

@@ -165,6 +165,7 @@ type
     function DoGetSession: ISSLSession; override;
     procedure DoSetSession(ASession: ISSLSession); override;
     function DoIsSessionReused: Boolean; override;
+    function DoGetConnectionInfoServerName: string; override;
     function DoGetSelectedALPNProtocol: string; override;
     function DoGetState: string; override;
     function DoGetNativeHandle: Pointer; override;
@@ -4864,6 +4865,11 @@ end;
 function TFreePascalConnection.DoIsSessionReused: Boolean;
 begin
   Result := FSessionReused;
+end;
+
+function TFreePascalConnection.DoGetConnectionInfoServerName: string;
+begin
+  Result := FServerName;
 end;
 
 function TFreePascalConnection.DoGetSelectedALPNProtocol: string;

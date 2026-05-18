@@ -1689,3 +1689,36 @@
   - `GetSelectedALPNProtocol`
   - `GetStateString`
   - 因而主线应从“继续找残余”切换成“更强 owner/deprecation 决策”或“backend implementation-completeness 审查”
+
+- 当前把主线真正切到 backend implementation-completeness 审查后，`GetConnectionInfo` 立刻暴露出一个共享层缺口：
+  - `TSSLConnectionInfo` 活跃文档仍容易给人“完整信息”的印象
+  - 但共享基类 `TBaseSSLConnection.GetConnectionInfo` 之前只填最小字段
+  - 这不是某个 backend override 漏写，而是 shared layer 没有把已存在的 connection metadata 折进 record
+
+- 这批最小且真实的共享层补齐点已经明确并落地：
+  - `ServerName`
+    - 对所有 client-capable backend 来说，连接对象自身已经持有 `FServerName`
+    - 共享 `GetConnectionInfo` 可以安全补齐，不需要等待 backend-specific cipher/path 信息
+  - `SessionId`
+    - 对已经 connected / handshake-complete 且当前 session 可用的连接，`ISSLSession.GetID` 已足够作为 shared metadata 来源
+    - 因而它也适合在 shared layer 补齐，而不是留空等 backend override
+
+- 这次实现还确认了一个重要的 Pascal/接口引用计数边界：
+  - 不应在 `TBaseSSLConnection.GetConnectionInfo` 中直接对 `Self` 执行 `Supports(Self, ISSLClientConnection, ...)`
+  - `TBaseSSLConnection` 与 backend connection 都是 `TInterfacedObject`
+  - 多份 focused test 会直接以 concrete object 实例创建连接，而不是先拿 interface ref
+  - 在这种路径下，临时 interface 引用可能把对象推入错误的 `_Release` 生命周期，从而触发 fresh-connection `EAccessViolation`
+  - 更安全的 shared design 是让基类走 protected virtual hook，由各 backend override 返回已有 `FServerName`
+
+- 当前这条 `GetConnectionInfo` completeness 路线已经不再需要反复验证“ServerName/SessionId 到底能不能从共享层拿”：
+  - focused mock contract 已证明 `ConnectionInfo.ServerName` 会镜像 `ISSLClientConnection.GetServerName`
+  - focused OpenSSL cipher guard contract 已证明这次 shared enrichment 没有重新引入 fresh-connection AV
+  - 因此下一批真正剩下的不是这两项 metadata，而是：
+    - `PeerCertificate`
+    - backend-specific crypto detail fields：
+      - `CipherSuiteId`
+      - `KeyExchange`
+      - `Cipher`
+      - `Hash`
+      - `KeySize`
+      - `MacSize`

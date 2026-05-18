@@ -272,6 +272,31 @@ Recommended first bounded batch:
     1. 进入更强的 owner / deprecation wording route
     2. 转向基于这些 residual files 的 backend implementation-completeness 审查
 
+## Progress Since The GetConnectionInfo Residual-Classification Batch
+
+- 已交付：
+  - `GetConnectionInfo` shared-layer completeness enrichment for `ServerName` / `SessionId`
+  - focused mock behavior proof in `tests/test_connection_builder_hostname_precedence.pas`
+  - OpenSSL fresh-connection guard revalidation in `tests/test_openssl_connection_info_cipher_contract.pas`
+
+- 当前更准确的 next step：
+  - 不再继续拉起 `GetConnectionInfo` residual archaeology
+  - 当前已经确认，共享层能安全补齐的低风险 metadata 已经先补完：
+    - `ServerName`
+    - `SessionId`
+  - 这条线剩余的才是真正需要 backend-specific completeness 审查的字段：
+    - `PeerCertificate`
+    - `CipherSuiteId`
+    - `KeyExchange`
+    - `Cipher`
+    - `Hash`
+    - `KeySize`
+    - `MacSize`
+  - 若继续推进，应优先做一条 bounded batch：
+    1. 先静态盘点这些字段在哪些 backend 已有现成来源
+    2. 再挑一组最能共享或最容易 contract proof 的字段做下一刀
+  - 更强 owner / deprecation wording route 继续保留为平行候选，但不应盖过当前 implementation-completeness 主线
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

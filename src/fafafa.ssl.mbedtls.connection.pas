@@ -66,6 +66,7 @@ type
     function DoGetSession: ISSLSession; override;
     procedure DoSetSession(ASession: ISSLSession); override;
     function DoIsSessionReused: Boolean; override;
+    function DoGetConnectionInfoServerName: string; override;
     function DoGetSelectedALPNProtocol: string; override;
     function DoGetState: string; override;
     function DoGetNativeHandle: Pointer; override;
@@ -481,6 +482,11 @@ end;
 function TMbedTLSConnection.DoIsSessionReused: Boolean;
 begin
   Result := FSessionReused;
+end;
+
+function TMbedTLSConnection.DoGetConnectionInfoServerName: string;
+begin
+  Result := FServerName;
 end;
 
 function TMbedTLSConnection.DoGetSelectedALPNProtocol: string;

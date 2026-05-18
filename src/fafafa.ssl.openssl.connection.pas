@@ -93,6 +93,7 @@ type
     function DoGetSession: ISSLSession; override;
     procedure DoSetSession(ASession: ISSLSession); override;
     function DoIsSessionReused: Boolean; override;
+    function DoGetConnectionInfoServerName: string; override;
     function DoGetSelectedALPNProtocol: string; override;
     function DoGetState: string; override;
     function DoGetNativeHandle: Pointer; override;
@@ -1018,6 +1019,11 @@ function TOpenSSLConnection.DoIsSessionReused: Boolean;
 begin
   if (FSSL = nil) or (not Assigned(SSL_session_reused)) then Exit(False);
   Result := (SSL_session_reused(FSSL) = 1);
+end;
+
+function TOpenSSLConnection.DoGetConnectionInfoServerName: string;
+begin
+  Result := FServerName;
 end;
 
 function TOpenSSLConnection.DoGetSelectedALPNProtocol: string;

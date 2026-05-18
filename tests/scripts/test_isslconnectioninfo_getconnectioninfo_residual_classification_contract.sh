@@ -52,14 +52,15 @@ if grep -F -q -- "Conn.GetConnectionInfo" "tests/integration/test_cross_backend_
 fi
 
 direct_core_hits=$(rg -n '\b(?:Conn|LConn|LConnection)\.GetConnectionInfo\b' tests --glob '!tests/scripts/**' | wc -l | tr -d ' ')
-if [ "$direct_core_hits" -ne 7 ]; then
-  echo "[FAIL] expected exactly 7 direct core GetConnectionInfo test hits, found $direct_core_hits"
+if [ "$direct_core_hits" -ne 9 ]; then
+  echo "[FAIL] expected exactly 9 direct core GetConnectionInfo test hits, found $direct_core_hits"
   rg -n '\b(?:Conn|LConn|LConnection)\.GetConnectionInfo\b' tests --glob '!tests/scripts/**' || true
   exit 1
 fi
 
 for expected in \
   "tests/contract/test_backend_contract.pas" \
+  "tests/test_connection_builder_hostname_precedence.pas" \
   "tests/test_openssl_connection_info_cipher_contract.pas" \
   "tests/winssl/test_winssl_connection_info.pas" \
   "tests/winssl/test_winssl_connection_edge_cases.pas"; do
