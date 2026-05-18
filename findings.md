@@ -2846,3 +2846,30 @@
   - `TMbedTLSSession.Clone()` / `TWolfSSLSession.Clone()` 会继续保留 peer-cert truth
   - `TWolfSSLCertificate.SaveToDER()` 现在不再只依赖缓存数据；native `WOLFSSL_X509` 也能真实导出
   - 这意味着 c-library session object 当前终于不再弱于连接态真相太多，至少 protocol / cipher / peer cert 三条已经做实
+
+- 继续往 connection-level surface 深挖后，`MbedTLS` 又暴露出一条真实 lifetime trap：
+  - `/usr/include/mbedtls/ssl.h` 已明确警告 `mbedtls_ssl_get_peer_cert()` 返回的是会随 дальнейший SSL API 调用变化的指针
+  - 但 `TMbedTLSConnection.DoGetPeerCertificate()` / `DoGetPeerCertificateChain()` 之前仍直接：
+    - `TMbedTLSCertificate.Create(LPeerCert, False)`
+  - 这意味着 public `ISSLCertificate` / `TSSLCertificateArray` surface 还在把 backend-internal borrowed pointer 直接递出去
+
+- focused RED 也把这条问题钉得很硬，而不是风格争议：
+  - 新增 contract 先红在 4 个点：
+    - `GetPeerCertificate()` native handle 仍等于源 fixture handle
+    - `GetPeerCertificateChain()[0]` native handle 仍等于源 fixture handle
+    - cert-copy helper 缺失时 `GetPeerCertificate()` 没有 fail-closed
+    - cert-copy helper 缺失时 `GetPeerCertificateChain()` 也没有 fail-closed
+
+- 当前最小正确修法已经落地，并且保持了低风险：
+  - 不新造额外 native-copy helper
+  - 直接复用上一批已修好的 `TMbedTLSCertificate.Clone()` materialization 路线
+  - connection surface 当前变成：
+    - borrowed `Pmbedtls_x509_crt`
+    - 临时包一层 non-owning cert
+    - 立刻 `Clone()` 成 owned cert
+    - helper 不足时自然 `nil` / empty chain
+
+- 当前收口后的 connection truth 已明确：
+  - `TMbedTLSConnection.GetPeerCertificate()` 现在返回的 cert handle 不再与 source fixture handle 同指针
+  - `TMbedTLSConnection.GetPeerCertificateChain()` 的单叶子 cert 也一样
+  - 这说明 `MbedTLS` 的 connection-level peer-cert surface 已经从“borrowed wrapper”收口为“owned public object”

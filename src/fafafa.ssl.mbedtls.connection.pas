@@ -398,6 +398,7 @@ end;
 function TMbedTLSConnection.DoGetPeerCertificate: ISSLCertificate;
 var
   LPeerCert: Pmbedtls_x509_crt;
+  LTempCert: TMbedTLSCertificate;
 begin
   Result := nil;
   if FSSLContext = nil then Exit;
@@ -405,12 +406,20 @@ begin
 
   LPeerCert := mbedtls_ssl_get_peer_cert(FSSLContext);
   if LPeerCert <> nil then
-    Result := TMbedTLSCertificate.Create(LPeerCert, False);  // Don't own the handle
+  begin
+    LTempCert := TMbedTLSCertificate.Create(LPeerCert, False);
+    try
+      Result := LTempCert.Clone;
+    finally
+      LTempCert.Free;
+    end;
+  end;
 end;
 
 function TMbedTLSConnection.DoGetPeerCertificateChain: TSSLCertificateArray;
 var
   LPeerCert: Pmbedtls_x509_crt;
+  LTempCert: TMbedTLSCertificate;
 begin
   SetLength(Result, 0);
   if FSSLContext = nil then Exit;
@@ -419,9 +428,16 @@ begin
   LPeerCert := mbedtls_ssl_get_peer_cert(FSSLContext);
   if LPeerCert <> nil then
   begin
-    // Return at least the peer certificate
-    SetLength(Result, 1);
-    Result[0] := TMbedTLSCertificate.Create(LPeerCert, False);
+    LTempCert := TMbedTLSCertificate.Create(LPeerCert, False);
+    try
+      Result := nil;
+      SetLength(Result, 1);
+      Result[0] := LTempCert.Clone;
+      if Result[0] = nil then
+        SetLength(Result, 0);
+    finally
+      LTempCert.Free;
+    end;
   end;
 end;
 

@@ -6396,3 +6396,47 @@
   - result: PASS
   - summary:
     - current c-library session metadata/peer-certificate batch has no whitespace or patch-format issues
+
+### MbedTLS Connection Peer-Certificate Materialization
+
+- add `docs/plans/2026-05-19-mbedtls-connection-peer-cert-materialization.md`
+  - purpose:
+    - record the MbedTLS connection peer-cert ownership/materialization batch
+
+- add `tests/test_mbedtls_connection_peer_certificate_contract.pas`
+  - change:
+    - lock that `GetPeerCertificate()` / `GetPeerCertificateChain()` must return owned copies
+    - lock helper-loss fail-closed behavior
+
+- `mkdir -p tmp/test_mbedtls_connection_peer_certificate_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/test_mbedtls_connection_peer_certificate_contract_units -FEtmp/test_mbedtls_connection_peer_certificate_contract_units -otmp/test_mbedtls_connection_peer_certificate_contract_units/test_mbedtls_connection_peer_certificate_contract tests/test_mbedtls_connection_peer_certificate_contract.pas && ./tmp/test_mbedtls_connection_peer_certificate_contract_units/test_mbedtls_connection_peer_certificate_contract`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - returned cert handle still aliased the source fixture handle
+      - returned chain leaf still aliased the source fixture handle
+      - helper-loss path did not fail closed
+    - GREEN after fix:
+      - `Total: 8 / Passed: 8 / Failed: 0`
+
+- update `src/fafafa.ssl.mbedtls.connection.pas`
+  - change:
+    - `GetPeerCertificate()` now materializes an owned cert via `TMbedTLSCertificate.Clone()`
+    - `GetPeerCertificateChain()` now does the same for the single-leaf path
+    - helper-loss path now naturally degrades to `nil` / empty chain
+
+- `mkdir -p tmp/test_mbedtls_framework_units && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_mbedtls_framework_units -FEtmp/test_mbedtls_framework_units -otmp/test_mbedtls_framework_units/test_mbedtls_framework tests/test_mbedtls_framework.pas && ./tmp/test_mbedtls_framework_units/test_mbedtls_framework`
+  - result: PASS
+  - summary:
+    - `Total: 116 / Passed: 116 / Failed: 0`
+    - MbedTLS backend framework coverage remained green after the connection peer-cert fix
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+    - cross-backend optional/core surfaces remained green after the MbedTLS connection materialization change
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current MbedTLS connection peer-cert batch has no whitespace or patch-format issues

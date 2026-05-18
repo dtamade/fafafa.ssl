@@ -164,6 +164,22 @@
   - 当前结论：
     - session completeness 的主缺口已从 “version/cipher/peer cert 缺失” 收口
     - 下一刀更适合继续横向审其它 backend 的 session/certificate clone semantics，而不是再重开本批
+- [completed] `MbedTLS` connection peer-certificate materialization 已完成 focused 收口：
+  - 新增计划：`docs/plans/2026-05-19-mbedtls-connection-peer-cert-materialization.md`
+  - 新增 focused contract：`tests/test_mbedtls_connection_peer_certificate_contract.pas`
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+    - `GetPeerCertificate()` 不再直接返回 borrowed cert wrapper
+    - `GetPeerCertificateChain()` 的单叶子入口也不再暴露 borrowed handle
+    - 两条 surface 现在统一走 `TMbedTLSCertificate.Clone()` materialize owned copy
+    - helper 不足时继续 fail-closed
+  - focused verification 已通过：
+    - `tests/test_mbedtls_connection_peer_certificate_contract.pas`: `8 passed / 0 failed`
+    - `tests/test_mbedtls_framework.pas`: `116 passed / 0 failed`
+    - `tests/contract/test_backend_contract.pas`: `135 total / 111 passed / 0 failed / 24 skipped`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - `MbedTLS` 连接态 public cert surface 已不再泄漏 backend-internal lifetime 约束
+    - 下一刀更适合继续横向审 `WolfSSL` / `OpenSSL` / `MbedTLS` 其它 connection-level completeness seam，而不是再回头重开这条 borrowed-peer-cert 问题
 - [completed] generic session-cache persistence count truth 已完成 focused 修复并形成新基线：
   - 新增计划：`docs/plans/2026-05-19-session-cache-persistence-count-truth.md`
   - 新增 focused test：`tests/test_session_cache_persistence_contract.pas`
