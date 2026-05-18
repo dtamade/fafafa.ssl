@@ -1207,7 +1207,8 @@ type
     {** 获取连接详细信息
         @returns 连接信息记录
         @preferred-access 新代码优先通过 ISSLConnectionInfo.GetConnectionInfo 获取
-        @compatibility-note v1.x compatibility-core mirror; Stage-A demotion target is ISSLConnectionInfo *}
+        @owner-note 默认 owner 为 ISSLConnectionInfo.GetConnectionInfo；此入口仅兼容保留
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLConnectionInfo *}
     function GetConnectionInfo: TSSLConnectionInfo;
 
     {** 获取协商的协议版本

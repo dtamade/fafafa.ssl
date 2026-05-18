@@ -2023,3 +2023,23 @@
   - backend contract 负责 mirror/owner proof
   - WinSSL residual files 负责 intentional direct-core surface proof
   - 默认下一步就可以直接进入更强的 wording / deprecation 路线，而不必再在 residual 分类上打转
+
+- 顺着这条 route 再看 source/doc truth，当前剩下的真实问题已经不是实现漂移，而是公开表述仍然偏弱：
+  - `src/fafafa.ssl.base.pas` 虽然已经写了 preferred-access / compatibility note
+  - 但 `API_REFERENCE` 与 `INTERFACE_DESIGN_V2` 仍可能让读者把 `ISSLConnection.GetConnectionInfo` 理解成“还在 core 上，所以还是正常主入口”
+  - 尤其 `INTERFACE_DESIGN_V2` 的旧例子只写了 `LConn.GetConnectionInfo;  // 仍然存在`
+
+- 这类漂移不需要动 runtime/ABI 就能修：
+  - 只要把 source comment、公开 API 文档、v2 迁移文档统一成更强的 owner/mirror wording
+  - 再用 focused shell contract 守住
+  - 就能避免后续从“它还在 core 里”这个误区重新拉起路线讨论
+
+- 当前修完后的更准确结论是：
+  - `ISSLConnectionInfo.GetConnectionInfo` 已经不只是“推荐路径”
+  - 它现在在 source/doc truth 上都明确成为默认 owner
+  - `ISSLConnection.GetConnectionInfo` 则只作为 `v1.x` compatibility-core mirror 保留
+
+- 因而 `GetConnectionInfo` 路线下一步不该再重复做 wording 清扫：
+  - 真正还剩的路线问题已经变成：
+    - 是否要进入第一条 public slimming slice
+    - 以及这条 slice 是 compiler-level deprecation feasibility，还是到此为止后转去下一条 mirror

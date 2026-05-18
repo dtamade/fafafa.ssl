@@ -4309,3 +4309,56 @@
   - result: PASS
   - summary:
     - current batch has no whitespace or patch-format issues
+
+### GetConnectionInfo Public Wording De-emphasis
+
+- `python3 /home/dtamade/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"`
+  - result: PASS
+  - summary:
+    - script produced no recovery output
+    - there was no extra unsynced session context before the wording batch
+
+- `sed -n '1198,1220p' src/fafafa.ssl.base.pas`
+  - result: PASS
+  - summary:
+    - source comment already had preferred-access wording
+    - but it still lacked a stronger owner/de-emphasis note for `ISSLConnection.GetConnectionInfo`
+
+- `sed -n '430,590p' docs/reference/API_REFERENCE.md`
+  - result: PASS
+  - summary:
+    - active API reference still declared `GetConnectionInfo` in the core interface without an inline de-emphasis marker
+    - the connection-info example still taught `LConn.GetProtocolVersion` / `LConn.GetCipherName` right beside `ISSLConnectionInfo.GetConnectionInfo`
+
+- `sed -n '90,180p' docs/reference/INTERFACE_DESIGN_V2.md`
+  - result: PASS
+  - summary:
+    - migration example still said `LConn.GetConnectionInfo;  // 仍然存在`
+    - this was weaker than the current owner/mirror truth already established elsewhere
+
+- add `docs/plans/2026-05-18-getconnectioninfo-public-wording-deemphasis.md`
+  - purpose:
+    - capture the bounded source/doc wording batch after owner-primacy and WinSSL residual classification were already closed
+    - keep scope on public-facing truth instead of reopening runtime or backend implementation work
+
+- implementation:
+  - `src/fafafa.ssl.base.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/INTERFACE_DESIGN_V2.md`
+  - `tests/scripts/test_getconnectioninfo_public_wording_deemphasis_contract.sh`
+  - `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - add an explicit owner-note plus a stronger compatibility note to `ISSLConnection.GetConnectionInfo`
+    - mark the active API declaration as compatibility-only and move the connection-info example to `LInfo.ProtocolVersion` / `LInfo.CipherSuite`
+    - strengthen the v2 migration wording so `GetConnectionInfo` is explicitly treated as a compatibility mirror rather than merely "still exists"
+
+- `bash tests/scripts/test_getconnectioninfo_public_wording_deemphasis_contract.sh`
+  - result: PASS
+  - summary:
+    - source comment, active API docs, and v2 migration doc all carry the stronger owner/de-emphasis wording
+    - stale `LConn.GetConnectionInfo;  // 仍然存在` wording is gone
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `GetConnectionInfo public wording de-emphasis` batch has no whitespace or patch-format issues

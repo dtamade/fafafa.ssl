@@ -1162,6 +1162,24 @@
     - 当前批收口后，`GetConnectionInfo` route 的默认下一步应为：
       - 更强 owner / deprecation wording route
       - 不再继续停留在 residual classification 清扫
+46. `GetConnectionInfo` public wording de-emphasis 已完成并应作为当前 source/doc owner truth 对齐的正式收口保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getconnectioninfo-public-wording-deemphasis.md`
+    - 当前已确认的 route truth：
+      - `src/fafafa.ssl.base.pas`
+        现在明确写出：
+        - 默认 owner 为 `ISSLConnectionInfo.GetConnectionInfo`
+        - `ISSLConnection.GetConnectionInfo` 仅兼容保留，不再作为新代码 primary entry
+      - `docs/reference/API_REFERENCE.md`
+        现在在声明、示例、结构说明三处统一同一叙事
+      - `docs/reference/INTERFACE_DESIGN_V2.md`
+        不再只写“仍然存在”，而是明确把 `GetConnectionInfo` 视为 compatibility mirror
+    - 当前 focused proof 已覆盖：
+      - `bash tests/scripts/test_getconnectioninfo_public_wording_deemphasis_contract.sh`
+      - `git diff --check`
+    - 当前批收口后，`GetConnectionInfo` route 的默认下一步应为：
+      - 第一条真正的 public slimming slice feasibility selection
+      - 不再重复做 wording / residual classification 清扫
 
 ## Verification Discipline
 

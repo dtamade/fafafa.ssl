@@ -564,6 +564,26 @@ Recommended first bounded batch:
     1. 讨论 `ISSLConnection.GetConnectionInfo` 的更强 de-emphasis / deprecation wording
     2. 再决定第一条真正的 public slimming slice
 
+## Progress Since The GetConnectionInfo Public Wording De-emphasis Batch
+
+- 已交付：
+  - stronger public wording / de-emphasis for `ISSLConnection.GetConnectionInfo`
+  - focused source/doc guard:
+    - `tests/scripts/test_getconnectioninfo_public_wording_deemphasis_contract.sh`
+  - `src/fafafa.ssl.base.pas` 现在明确写出：
+    - 默认 owner 为 `ISSLConnectionInfo.GetConnectionInfo`
+    - core getter 仅兼容保留，不再作为新代码推荐入口
+  - active docs / v2 doc 已同步：
+    - `API_REFERENCE` 在 `ISSLConnection` 声明、连接信息示例、`TSSLConnectionInfo` 说明三处统一同一叙事
+    - `INTERFACE_DESIGN_V2` 不再只写“仍然存在”，而是明确把 `GetConnectionInfo` 视为 compatibility mirror
+
+- 当前更准确的 next step：
+  - `GetConnectionInfo` 的 source/doc owner truth 已对齐
+  - 默认下一步不该再重复 wording batch
+  - 应开始决定第一条真正的 public slimming slice：
+    1. 评估 `ISSLConnection.GetConnectionInfo` 是否值得进入 compiler-level deprecation feasibility freeze
+    2. 或确认 source/doc de-emphasis 已足够，然后把主线切到下一条 mirror 的 slimming 选择
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

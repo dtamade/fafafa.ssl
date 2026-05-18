@@ -436,7 +436,7 @@ ISSLConnection = interface
   function WantWrite: Boolean;
   function GetError(ARet: Integer): TSSLErrorCode;
 
-  function GetConnectionInfo: TSSLConnectionInfo;
+  function GetConnectionInfo: TSSLConnectionInfo; // 仅兼容保留；新代码优先走 ISSLConnectionInfo.GetConnectionInfo
   function GetProtocolVersion: TSSLProtocolVersion;
   function GetCipherName: string;
   function GetPeerCertificate: ISSLCertificate;
@@ -482,7 +482,8 @@ end;
 #### `v1.x` compatibility-core note
 
 - `ISSLConnection` 当前仍保留一批未来可能继续下沉到可选接口的能力面；当前文档只记录 **源码真相**，不等于推荐把更多能力继续塞回核心接口。
-- `GetConnectionInfo` / `GetContext` / `GetSelectedALPNProtocol` / `GetStateString` 也由 `ISSLConnectionInfo` 暴露。
+- `GetConnectionInfo` 在 `ISSLConnection` 上仅作为 `v1.x` compatibility-core mirror 保留；需要完整连接信息记录时，新代码优先通过 `ISSLConnectionInfo.GetConnectionInfo`。
+- `GetContext` / `GetSelectedALPNProtocol` / `GetStateString` 也由 `ISSLConnectionInfo` 暴露。
 - `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics` 也由 `ISSLDiagnostics` 暴露。
 - `GetSession` / `SetSession` / `IsSessionReused` 也由 `ISSLSessionResumption` 暴露。
 - `GetPeerCertificateChain` / `GetVerifyResult` / `GetVerifyResultString` 也由 `ISSLCertificateVerification` 暴露。
@@ -566,8 +567,8 @@ begin
   if LConn.Connect and Supports(LConn, ISSLConnectionInfo, LConnInfoAccess) then
   begin
     LInfo := LConnInfoAccess.GetConnectionInfo;
-    WriteLn('协议版本: ', GetProtocolName(LConn.GetProtocolVersion));
-    WriteLn('密码套件: ', LConn.GetCipherName);
+    WriteLn('协议版本: ', GetProtocolName(LInfo.ProtocolVersion));
+    WriteLn('密码套件: ', LInfo.CipherSuite);
     WriteLn('ALPN: ', LConnInfoAccess.GetSelectedALPNProtocol);
     WriteLn('状态: ', LConnInfoAccess.GetStateString);
     WriteLn('连接信息里的 ServerName: ', LInfo.ServerName);
@@ -576,7 +577,8 @@ begin
 end;
 ```
 
-如果你在写新代码，并且需要连接信息 / 上下文引用 / ALPN / 状态字符串这组 mirrors，优先通过 `ISSLConnectionInfo` 获取；核心 `ISSLConnection` 上的同名 getter 当前仍主要是 `v1.x` compatibility-core duplicates。
+如果你在写新代码，`GetConnectionInfo` 不再应被当作核心 `ISSLConnection` 的主入口；拿完整连接信息记录请优先通过 `ISSLConnectionInfo.GetConnectionInfo`。
+同一组 mirrors 里的上下文引用 / ALPN / 状态字符串也优先通过 `ISSLConnectionInfo` 获取。
 
 #### Session 复用
 
@@ -1097,6 +1099,7 @@ end;
 
 **说明**:
 
+- 新代码若要获取这份结构，优先通过 `ISSLConnectionInfo.GetConnectionInfo`；`ISSLConnection.GetConnectionInfo` 当前只作为 `v1.x` compatibility-core mirror 保留
 - `GetConnectionInfo` 方法返回此结构，包含连接的完整信息
 - 用于监控、诊断和安全审计
 - WinSSL 后端通过 `QueryContextAttributesW` API best-effort 获取这些信息；真实 cipher-suite id/name 会优先走 Schannel `SECPKG_ATTR_CIPHER_INFO`

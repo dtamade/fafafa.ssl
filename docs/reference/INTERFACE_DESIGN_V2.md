@@ -146,7 +146,7 @@ end;
 ```pascal
 // 旧代码仍然有效
 var LConn: ISSLConnection;
-LConn.GetConnectionInfo;  // 仍然存在
+LConn.GetConnectionInfo;  // 仅兼容保留，不再作为新代码推荐入口
 
 // Stage A demotion target
 var LInfoExt: ISSLConnectionInfo;
@@ -231,7 +231,7 @@ if Supports(FSSLConn, ISSLSessionResumption, LSession) then
 | GetPeerCertificate | ISSLConnection | 保留 |
 | GetNativeHandle | ISSLConnection | 保留 |
 | ReadString, WriteString | **移除** | 使用 Read/Write |
-| GetConnectionInfo | ISSLConnectionInfo | Stage A 先 demote 出 core |
+| GetConnectionInfo | ISSLConnectionInfo | 默认 owner 已切到 ISSLConnectionInfo；core 侧仅兼容保留 |
 | GetStateString | ISSLConnectionInfo | Stage A 先 demote 出 core，后续再决定是否进一步收窄 |
 | SetTimeout, GetTimeout | **移除** | 由外部框架控制 |
 | SetBlocking, GetBlocking | **移除** | 由外部框架控制 |
@@ -271,6 +271,8 @@ if Supports(FSSLConn, ISSLSessionResumption, LSession) then
    - `GetSelectedALPNProtocol` 是否进一步收窄到 `ISSLClientConnection`
    - `GetStateString` 是否并入 `GetState`
    - `GetContext` 是否最终彻底退出 public surface
+
+换句话说，`GetConnectionInfo` 在 `ISSLConnection` core 上虽然仍存在，但这里只把它视为 compatibility mirror，不再把它当作新代码默认入口。
 
 也就是说，这一版文档不再提前把 Stage-B/Stage-C 的选择写死。
 
