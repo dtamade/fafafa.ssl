@@ -84,14 +84,24 @@ end;
 function CaptureFreshConnectionInfo(AContext: ISSLContext): TSSLConnectionInfo;
 var
   LConn: TWolfSSLConnection;
+  LConnInfoAccess: ISSLConnectionInfo;
+  LManagedByInterface: Boolean;
 begin
   LConn := nil;
+  LConnInfoAccess := nil;
+  LManagedByInterface := False;
   try
     LConn := TWolfSSLConnection.Create(AContext, THandle(-1));
-    Result := LConn.GetConnectionInfo;
+    if not Supports(LConn, ISSLConnectionInfo, LConnInfoAccess) then
+      raise Exception.Create('WolfSSL connection does not expose ISSLConnectionInfo');
+    LManagedByInterface := True;
+    Result := LConnInfoAccess.GetConnectionInfo;
   finally
-    if Assigned(LConn) then
+    if LManagedByInterface then
+      LConn := nil
+    else if Assigned(LConn) then
       LConn.Free;
+    LConnInfoAccess := nil;
   end;
 end;
 

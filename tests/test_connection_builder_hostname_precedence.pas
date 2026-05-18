@@ -220,6 +220,15 @@ begin
   Check(AExpected = AActual, AMessage + ' (expected="' + AExpected + '", actual="' + AActual + '")');
 end;
 
+function ReadConnectionInfo(AConn: ISSLConnection): TSSLConnectionInfo;
+var
+  LConnInfoAccess: ISSLConnectionInfo;
+begin
+  Check(Supports(AConn, ISSLConnectionInfo, LConnInfoAccess),
+    'Connection supports ISSLConnectionInfo');
+  Result := LConnInfoAccess.GetConnectionInfo;
+end;
+
 { TMockSession }
 
 { TMockCertificate }
@@ -983,7 +992,7 @@ begin
     .WithHostname('info.example.com');
   Res := Builder.TryBuildClient(Conn);
   Check(Res.Success, 'TryBuildClient should succeed');
-  Info := Conn.GetConnectionInfo;
+  Info := ReadConnectionInfo(Conn);
   CheckEqualsStr('ConnectionInfo.ServerName mirrors ISSLClientConnection.GetServerName',
     'info.example.com', Info.ServerName);
   Check(Info.CipherSuiteId = $1301,
@@ -1010,7 +1019,7 @@ begin
     TMockCertificate.Create('CN=peer.example.com', 'CN=Mock Root CA', '01')
   ));
   Check(Conn.Connect, 'Mock connection connect should succeed before reading SessionId');
-  Info := Conn.GetConnectionInfo;
+  Info := ReadConnectionInfo(Conn);
   Check(Info.KeyExchange = sslKexECDHE_RSA,
     'ConnectionInfo.KeyExchange is derived from the negotiated legacy cipher-suite name');
   Check(Info.MacSize = 16,
@@ -1030,7 +1039,7 @@ begin
     .WithHostname('legacy.example.com');
   Res := Builder.TryBuildClient(Conn);
   Check(Res.Success, 'TryBuildClient should succeed');
-  Info := Conn.GetConnectionInfo;
+  Info := ReadConnectionInfo(Conn);
   Check(Info.Hash = sslHashSHA256,
     'ConnectionInfo.Hash still reflects the negotiated legacy cipher-suite name');
   Check(Info.MacSize = 0,

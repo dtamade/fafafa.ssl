@@ -3802,6 +3802,108 @@
   - summary:
     - current batch has no whitespace or patch-format issues
 
+### GetConnectionInfo Contract Owner Primacy
+
+- add `docs/plans/2026-05-18-getconnectioninfo-contract-owner-primacy.md`
+  - purpose:
+    - close the stale residual-allowlist drift on the `GetConnectionInfo` route
+    - turn `Contract 19` into explicit `ISSLConnectionInfo` owner primacy instead of implicit dual-owner comparison
+
+- `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - result: RED
+  - summary:
+    - stale source contract still expected exactly `10` direct core `GetConnectionInfo` test hits
+    - live repo truth had already drifted to `15` hits across:
+      - shared builder proof
+      - OpenSSL / WolfSSL / MbedTLS completeness proof
+      - FreePascal completion proof
+    - this confirmed a real route/workflow gap instead of just a missing note
+
+- implementation:
+  - `tests/contract/test_backend_contract.pas`
+  - `tests/scripts/test_isslconnectioninfo_getconnectioninfo_contract_owner_contract.sh`
+  - `tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - `tests/test_connection_builder_hostname_precedence.pas`
+  - `tests/test_openssl_connection_info_cipher_contract.pas`
+  - `tests/test_wolfssl_connection_info_macsize_contract.pas`
+  - `tests/test_mbedtls_connection_info_ciphersuite_contract.pas`
+  - `tests/test_freepascal_server_accept_skeleton.pas`
+  - `tests/test_freepascal_client_session_resumption.pas`
+  - change:
+    - `Contract 19` now reads `ISSLConnectionInfo.GetConnectionInfo` first, then checks direct core `GetConnectionInfo` as a mirror
+    - new shell contract freezes the owner-primacy wording
+    - completeness / proof tests now read connection info through `ISSLConnectionInfo`
+    - residual allowlist now shrinks to the true remaining direct-core files:
+      - `tests/contract/test_backend_contract.pas`
+      - `tests/winssl/test_winssl_connection_info.pas`
+      - `tests/winssl/test_winssl_connection_edge_cases.pas`
+
+- `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_contract_owner_contract.sh`
+  - result: PASS
+  - summary:
+    - backend contract now treats `ISSLConnectionInfo.GetConnectionInfo` as the primary owner
+
+- `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - result: RED -> GREEN
+  - summary:
+    - after shrinking ordinary proof/test usage, residual direct-core surface now matches the expected `5`-hit allowlist
+
+- `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+  - result: PASS
+  - summary:
+    - shared builder proof stayed green at `29 passed, 0 failed`
+    - moving the proof to `ISSLConnectionInfo` did not change the shared truth already covered in this test
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - `Contract 19` stayed green on OpenSSL / WolfSSL / MbedTLS / FreePascal
+    - overall backend contract result remained:
+      - `Total Tests: 135`
+      - `Passed: 111`
+      - `Failed: 0`
+      - `Skipped: 24`
+
+- `mkdir -p tmp/test_freepascal_server_accept_skeleton && fpc -B -Fu./src -Fu./tests -FUtmp/test_freepascal_server_accept_skeleton -FEtmp/test_freepascal_server_accept_skeleton -otmp/test_freepascal_server_accept_skeleton/test_freepascal_server_accept_skeleton tests/test_freepascal_server_accept_skeleton.pas && ./tmp/test_freepascal_server_accept_skeleton/test_freepascal_server_accept_skeleton`
+  - result: PASS
+  - summary:
+    - FreePascal server completion proof remained green after switching to `ISSLConnectionInfo`
+
+- `mkdir -p tmp/test_freepascal_client_session_resumption && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_client_session_resumption -FEtmp/test_freepascal_client_session_resumption -otmp/test_freepascal_client_session_resumption/test_freepascal_client_session_resumption tests/test_freepascal_client_session_resumption.pas && ./tmp/test_freepascal_client_session_resumption/test_freepascal_client_session_resumption`
+  - result: PASS
+  - summary:
+    - FreePascal session-resumption completion proof remained green after switching to `ISSLConnectionInfo`
+
+- `mkdir -p tmp/test_mbedtls_connection_info_ciphersuite_contract && fpc -B -Fu./src -Fu./tests -FUtmp/test_mbedtls_connection_info_ciphersuite_contract -FEtmp/test_mbedtls_connection_info_ciphersuite_contract -otmp/test_mbedtls_connection_info_ciphersuite_contract/test_mbedtls_connection_info_ciphersuite_contract tests/test_mbedtls_connection_info_ciphersuite_contract.pas && ./tmp/test_mbedtls_connection_info_ciphersuite_contract/test_mbedtls_connection_info_ciphersuite_contract`
+  - result: PASS
+  - summary:
+    - MbedTLS completeness proof remained green at `15 passed, 0 failed`
+
+- `mkdir -p tmp/test_openssl_connection_info_cipher_contract && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_connection_info_cipher_contract -FEtmp/test_openssl_connection_info_cipher_contract -otmp/test_openssl_connection_info_cipher_contract/test_openssl_connection_info_cipher_contract tests/test_openssl_connection_info_cipher_contract.pas && ./tmp/test_openssl_connection_info_cipher_contract/test_openssl_connection_info_cipher_contract`
+  - result: RED -> GREEN
+  - summary:
+    - first owner-path conversion exposed a real test-lifetime bug:
+      - concrete `TOpenSSLConnection` was still manually freed after `ISSLConnectionInfo` had taken over lifetime
+      - test failed with `EInvalidPointer` / `EAccessViolation`
+    - after switching the helper to interface-owned lifetime, final result returned to:
+      - `20 passed, 0 failed`
+
+- `mkdir -p tmp/test_wolfssl_connection_info_macsize_contract && fpc -B -Fu./src -Fu./tests -FUtmp/test_wolfssl_connection_info_macsize_contract -FEtmp/test_wolfssl_connection_info_macsize_contract -otmp/test_wolfssl_connection_info_macsize_contract/test_wolfssl_connection_info_macsize_contract tests/test_wolfssl_connection_info_macsize_contract.pas && ./tmp/test_wolfssl_connection_info_macsize_contract/test_wolfssl_connection_info_macsize_contract`
+  - result: RED -> GREEN
+  - summary:
+    - the same lifecycle pit also existed in the WolfSSL helper after the owner-path conversion
+    - after aligning it to interface-owned lifetime, final result returned to:
+      - `3 passed, 0 failed`
+
+- update `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - mark `GetConnectionInfo` contract owner primacy as delivered
+    - move the default mainline to stronger wording / slimming discussion instead of more residual allowlist cleanup
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the owner-primacy closeout, the residual shrink, and the concrete-object/interface lifetime pit into persistent repo working memory
+
 ### FreePascal GetConnectionInfo Completion Audit
 
 - add `docs/plans/2026-05-18-freepascal-getconnectioninfo-completion-audit.md`

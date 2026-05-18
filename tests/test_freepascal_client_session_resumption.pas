@@ -66,6 +66,15 @@ begin
     ALabel + ' connection info should mirror the active session identifier');
 end;
 
+function CaptureConnectionInfo(const ALabel: string; AConn: ISSLConnection): TSSLConnectionInfo;
+var
+  LConnInfoAccess: ISSLConnectionInfo;
+begin
+  AssertTrue(Supports(AConn, ISSLConnectionInfo, LConnInfoAccess),
+    ALabel + ' connection should expose ISSLConnectionInfo');
+  Result := LConnInfoAccess.GetConnectionInfo;
+end;
+
 function BytesEqual(const ALeft, ARight: TBytes): Boolean;
 var
   I: Integer;
@@ -604,7 +613,7 @@ begin
       'Captured session should preserve max_early_data_size from NewSessionTicket');
     LSerialized := LSession.Serialize;
     AssertTrue(Length(LSerialized) > 0, 'Captured session should serialize to non-empty bytes');
-    LInfo := LConn1.GetConnectionInfo;
+    LInfo := CaptureConnectionInfo('Initial handshake', LConn1);
     AssertConnectionInfo(
       'Initial handshake',
       LInfo,
@@ -635,7 +644,7 @@ begin
       'Resumed client handshake should send pre_shared_key in ClientHello');
     AssertTrue(LStream2.ObservedTicketIdentityMatch,
       'Resumed ClientHello identity should match previous ticket');
-    LInfo := LConn2.GetConnectionInfo;
+    LInfo := CaptureConnectionInfo('Resumed handshake', LConn2);
     AssertConnectionInfo(
       'Resumed handshake',
       LInfo,

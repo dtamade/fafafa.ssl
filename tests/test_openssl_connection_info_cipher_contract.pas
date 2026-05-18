@@ -127,15 +127,25 @@ function CaptureFreshConnectionInfo(AContext: ISSLContext): TSSLConnectionInfo;
 var
   LStream: TMemoryStream;
   LConn: TOpenSSLConnection;
+  LConnInfoAccess: ISSLConnectionInfo;
+  LManagedByInterface: Boolean;
 begin
   LStream := TMemoryStream.Create;
   LConn := nil;
+  LConnInfoAccess := nil;
+  LManagedByInterface := False;
   try
     LConn := TOpenSSLConnection.Create(AContext, LStream);
-    Result := LConn.GetConnectionInfo;
+    if not Supports(LConn, ISSLConnectionInfo, LConnInfoAccess) then
+      raise Exception.Create('OpenSSL connection does not expose ISSLConnectionInfo');
+    LManagedByInterface := True;
+    Result := LConnInfoAccess.GetConnectionInfo;
   finally
-    if Assigned(LConn) then
+    if LManagedByInterface then
+      LConn := nil
+    else if Assigned(LConn) then
       LConn.Free;
+    LConnInfoAccess := nil;
     LStream.Free;
   end;
 end;
@@ -148,12 +158,16 @@ procedure AssertConnectionInfoSafeDegrade(
 var
   LStream: TMemoryStream;
   LConn: TOpenSSLConnection;
+  LConnInfoAccess: ISSLConnectionInfo;
+  LManagedByInterface: Boolean;
   LRaised: Boolean;
   LInfo: TSSLConnectionInfo;
   LDetail: string;
 begin
   LStream := TMemoryStream.Create;
   LConn := nil;
+  LConnInfoAccess := nil;
+  LManagedByInterface := False;
   try
     LConn := TOpenSSLConnection.Create(AContext, LStream);
 
@@ -161,7 +175,10 @@ begin
     FillChar(LInfo, SizeOf(LInfo), 0);
     LDetail := '';
     try
-      LInfo := LConn.GetConnectionInfo;
+      if not Supports(LConn, ISSLConnectionInfo, LConnInfoAccess) then
+        raise Exception.Create('OpenSSL connection does not expose ISSLConnectionInfo');
+      LManagedByInterface := True;
+      LInfo := LConnInfoAccess.GetConnectionInfo;
     except
       on E: Exception do
       begin
@@ -184,8 +201,11 @@ begin
       LInfo.ServerName = AExpected.ServerName,
       'expected GetConnectionInfo to preserve inherited server-name baseline');
   finally
-    if Assigned(LConn) then
+    if LManagedByInterface then
+      LConn := nil
+    else if Assigned(LConn) then
       LConn.Free;
+    LConnInfoAccess := nil;
     LStream.Free;
   end;
 end;
@@ -198,12 +218,16 @@ procedure AssertConnectionInfoCipherSuiteId(
 var
   LStream: TMemoryStream;
   LConn: TOpenSSLConnection;
+  LConnInfoAccess: ISSLConnectionInfo;
+  LManagedByInterface: Boolean;
   LRaised: Boolean;
   LInfo: TSSLConnectionInfo;
   LDetail: string;
 begin
   LStream := TMemoryStream.Create;
   LConn := nil;
+  LConnInfoAccess := nil;
+  LManagedByInterface := False;
   try
     LConn := TOpenSSLConnection.Create(AContext, LStream);
 
@@ -211,7 +235,10 @@ begin
     FillChar(LInfo, SizeOf(LInfo), 0);
     LDetail := '';
     try
-      LInfo := LConn.GetConnectionInfo;
+      if not Supports(LConn, ISSLConnectionInfo, LConnInfoAccess) then
+        raise Exception.Create('OpenSSL connection does not expose ISSLConnectionInfo');
+      LManagedByInterface := True;
+      LInfo := LConnInfoAccess.GetConnectionInfo;
     except
       on E: Exception do
       begin
@@ -226,8 +253,11 @@ begin
       Format('expected CipherSuiteId %.4x but got %.4x',
         [AExpectedCipherSuiteId, LInfo.CipherSuiteId]));
   finally
-    if Assigned(LConn) then
+    if LManagedByInterface then
+      LConn := nil
+    else if Assigned(LConn) then
       LConn.Free;
+    LConnInfoAccess := nil;
     LStream.Free;
   end;
 end;
@@ -240,12 +270,16 @@ procedure AssertConnectionInfoMacSize(
 var
   LStream: TMemoryStream;
   LConn: TOpenSSLConnection;
+  LConnInfoAccess: ISSLConnectionInfo;
+  LManagedByInterface: Boolean;
   LRaised: Boolean;
   LInfo: TSSLConnectionInfo;
   LDetail: string;
 begin
   LStream := TMemoryStream.Create;
   LConn := nil;
+  LConnInfoAccess := nil;
+  LManagedByInterface := False;
   try
     LConn := TOpenSSLConnection.Create(AContext, LStream);
 
@@ -253,7 +287,10 @@ begin
     FillChar(LInfo, SizeOf(LInfo), 0);
     LDetail := '';
     try
-      LInfo := LConn.GetConnectionInfo;
+      if not Supports(LConn, ISSLConnectionInfo, LConnInfoAccess) then
+        raise Exception.Create('OpenSSL connection does not expose ISSLConnectionInfo');
+      LManagedByInterface := True;
+      LInfo := LConnInfoAccess.GetConnectionInfo;
     except
       on E: Exception do
       begin
@@ -267,8 +304,11 @@ begin
       LInfo.MacSize = AExpectedMacSize,
       Format('expected MacSize %d but got %d', [AExpectedMacSize, LInfo.MacSize]));
   finally
-    if Assigned(LConn) then
+    if LManagedByInterface then
+      LConn := nil
+    else if Assigned(LConn) then
       LConn.Free;
+    LConnInfoAccess := nil;
     LStream.Free;
   end;
 end;

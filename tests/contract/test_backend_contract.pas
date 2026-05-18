@@ -1790,39 +1790,14 @@ begin
         Exit;
       end;
 
-      LCoreInfo := LConn.GetConnectionInfo;
       LOptionalInfo := LConnInfoAccess.GetConnectionInfo;
       LOptionalCtx := LConnInfoAccess.GetContext;
 
-      if LOptionalInfo.ProtocolVersion <> LCoreInfo.ProtocolVersion then
+      if LOptionalInfo.ALPNProtocol <> LConnInfoAccess.GetSelectedALPNProtocol then
       begin
-        WriteLn('  [FAIL] Optional interface protocol version drifted from core getter');
+        WriteLn('  [FAIL] Optional owner ALPN field drifted from optional ALPN getter');
         AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
-          'ISSLConnectionInfo.GetConnectionInfo.ProtocolVersion does not match ISSLConnection.GetConnectionInfo');
-      end
-      else if LOptionalInfo.CipherSuite <> LCoreInfo.CipherSuite then
-      begin
-        WriteLn('  [FAIL] Optional interface cipher suite drifted from core getter');
-        AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
-          'ISSLConnectionInfo.GetConnectionInfo.CipherSuite does not match ISSLConnection.GetConnectionInfo');
-      end
-      else if LOptionalInfo.ALPNProtocol <> LCoreInfo.ALPNProtocol then
-      begin
-        WriteLn('  [FAIL] Optional interface ALPN drifted from core getter');
-        AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
-          'ISSLConnectionInfo.GetConnectionInfo.ALPNProtocol does not match ISSLConnection.GetConnectionInfo');
-      end
-      else if LConnInfoAccess.GetSelectedALPNProtocol <> LConn.GetSelectedALPNProtocol then
-      begin
-        WriteLn('  [FAIL] Optional interface ALPN getter drifted from core getter');
-        AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
-          'ISSLConnectionInfo.GetSelectedALPNProtocol does not match ISSLConnection.GetSelectedALPNProtocol');
-      end
-      else if LConnInfoAccess.GetStateString <> LConn.GetStateString then
-      begin
-        WriteLn('  [FAIL] Optional interface state string drifted from core getter');
-        AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
-          'ISSLConnectionInfo.GetStateString does not match ISSLConnection.GetStateString');
+          'ISSLConnectionInfo.GetConnectionInfo.ALPNProtocol does not match ISSLConnectionInfo.GetSelectedALPNProtocol');
       end
       else if Trim(LConnInfoAccess.GetStateString) = '' then
       begin
@@ -1844,23 +1819,57 @@ begin
       end
       else
       begin
-        LCoreCtx := LConn.GetContext;
-        if LCoreCtx = nil then
+        LCoreInfo := LConn.GetConnectionInfo;
+        if LCoreInfo.ProtocolVersion <> LOptionalInfo.ProtocolVersion then
         begin
-          WriteLn('  [FAIL] Core GetContext mirror returned nil');
+          WriteLn('  [FAIL] Core GetConnectionInfo mirror drifted from optional owner protocol version');
           AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
-            'ISSLConnection.GetContext mirror returned nil');
+            'ISSLConnection.GetConnectionInfo.ProtocolVersion does not mirror ISSLConnectionInfo.GetConnectionInfo');
         end
-        else if LCoreCtx.GetContextType <> LOptionalCtx.GetContextType then
+        else if LCoreInfo.CipherSuite <> LOptionalInfo.CipherSuite then
         begin
-          WriteLn('  [FAIL] Core GetContext mirror drifted from optional owner');
+          WriteLn('  [FAIL] Core GetConnectionInfo mirror drifted from optional owner cipher suite');
           AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
-            'ISSLConnection.GetContext does not mirror ISSLConnectionInfo.GetContext');
+            'ISSLConnection.GetConnectionInfo.CipherSuite does not mirror ISSLConnectionInfo.GetConnectionInfo');
+        end
+        else if LCoreInfo.ALPNProtocol <> LOptionalInfo.ALPNProtocol then
+        begin
+          WriteLn('  [FAIL] Core GetConnectionInfo mirror drifted from optional owner ALPN field');
+          AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+            'ISSLConnection.GetConnectionInfo.ALPNProtocol does not mirror ISSLConnectionInfo.GetConnectionInfo');
+        end
+        else if LConnInfoAccess.GetSelectedALPNProtocol <> LConn.GetSelectedALPNProtocol then
+        begin
+          WriteLn('  [FAIL] Optional interface ALPN getter drifted from core getter');
+          AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+            'ISSLConnectionInfo.GetSelectedALPNProtocol does not match ISSLConnection.GetSelectedALPNProtocol');
+        end
+        else if LConnInfoAccess.GetStateString <> LConn.GetStateString then
+        begin
+          WriteLn('  [FAIL] Optional interface state string drifted from core getter');
+          AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+            'ISSLConnectionInfo.GetStateString does not match ISSLConnection.GetStateString');
         end
         else
         begin
-          WriteLn('  [PASS] Connection-info surface is self-consistent');
-          AddResult('ConnectionInfoInterfaceAligned', ABackend, True);
+          LCoreCtx := LConn.GetContext;
+          if LCoreCtx = nil then
+          begin
+            WriteLn('  [FAIL] Core GetContext mirror returned nil');
+            AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+              'ISSLConnection.GetContext mirror returned nil');
+          end
+          else if LCoreCtx.GetContextType <> LOptionalCtx.GetContextType then
+          begin
+            WriteLn('  [FAIL] Core GetContext mirror drifted from optional owner');
+            AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+              'ISSLConnection.GetContext does not mirror ISSLConnectionInfo.GetContext');
+          end
+          else
+          begin
+            WriteLn('  [PASS] Connection-info surface is self-consistent');
+            AddResult('ConnectionInfoInterfaceAligned', ABackend, True);
+          end;
         end;
       end;
     except

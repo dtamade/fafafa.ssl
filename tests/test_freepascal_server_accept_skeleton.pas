@@ -31,6 +31,15 @@ begin
     Fail(Format('%s (expected=0x%.4x actual=0x%.4x)', [AMessage, AExpected, AActual]));
 end;
 
+function CaptureConnectionInfo(AConn: ISSLConnection): TSSLConnectionInfo;
+var
+  LConnInfoAccess: ISSLConnectionInfo;
+begin
+  AssertTrue(Supports(AConn, ISSLConnectionInfo, LConnInfoAccess),
+    'Server skeleton connection should expose ISSLConnectionInfo');
+  Result := LConnInfoAccess.GetConnectionInfo;
+end;
+
 function BuildClientHelloRecordWithSingleCipher(
   const AServerName: string;
   const AALPN: string;
@@ -134,7 +143,7 @@ begin
       'Server skeleton should at least negotiate TLS 1.3 before stopping');
     AssertTrue(LConn.GetCipherName = 'TLS_AES_128_GCM_SHA256',
       'Server skeleton should select AES-128-GCM when client offers it');
-    LInfo := LConn.GetConnectionInfo;
+    LInfo := CaptureConnectionInfo(LConn);
     AssertEqualsWord(TLS13_CIPHER_AES_128_GCM_SHA256, LInfo.CipherSuiteId,
       'Server skeleton connection info should derive the TLS 1.3 cipher-suite id');
     AssertTrue(LInfo.KeySize = 128,

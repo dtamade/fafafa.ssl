@@ -518,6 +518,34 @@ Recommended first bounded batch:
     2. public surface slimming / de-emphasis 顺序
     3. route-level next-slice selection
 
+## Progress Since The GetConnectionInfo Contract Owner-Primacy Batch
+
+- 已交付：
+  - `GetConnectionInfo` contract owner primacy
+  - focused source guards:
+    - `tests/scripts/test_isslconnectioninfo_getconnectioninfo_contract_owner_contract.sh`
+    - `tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - `Contract 19` 现在先验证：
+    - `ISSLConnectionInfo.GetConnectionInfo`
+    - 再验证 `ISSLConnection.GetConnectionInfo` 只是 mirror
+  - new completeness / proof tests 已切到 `ISSLConnectionInfo` owner path：
+    - FreePascal server / session-resumption proof
+    - OpenSSL cipher contract
+    - WolfSSL MacSize contract
+    - MbedTLS ciphersuite contract
+    - shared builder proof
+
+- 当前更准确的 next step：
+  - `GetConnectionInfo` 这条 owner/mirror 路线已经不再被 stale residual allowlist 拖住
+  - residual direct-core surface 现在只剩：
+    - backend contract mirror proof
+    - WinSSL dedicated core-surface tests
+  - 默认下一步不该再继续做普通 proof 的 owner-path 迁移
+  - 应切到更强的 wording / slimming route：
+    1. 讨论 `ISSLConnection.GetConnectionInfo` 的更强 deprecation wording
+    2. 或先判断剩余 WinSSL direct-core tests 是否属于 intentional core-surface proof
+  - 若两者都稳定，再决定第一条真正的 public slimming slice
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

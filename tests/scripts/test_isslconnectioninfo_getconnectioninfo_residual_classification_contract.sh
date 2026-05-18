@@ -52,20 +52,31 @@ if grep -F -q -- "Conn.GetConnectionInfo" "tests/integration/test_cross_backend_
 fi
 
 direct_core_hits=$(rg -n '\b(?:Conn|LConn|LConnection)\.GetConnectionInfo\b' tests --glob '!tests/scripts/**' | wc -l | tr -d ' ')
-if [ "$direct_core_hits" -ne 10 ]; then
-  echo "[FAIL] expected exactly 10 direct core GetConnectionInfo test hits, found $direct_core_hits"
+if [ "$direct_core_hits" -ne 5 ]; then
+  echo "[FAIL] expected exactly 5 direct core GetConnectionInfo test hits, found $direct_core_hits"
   rg -n '\b(?:Conn|LConn|LConnection)\.GetConnectionInfo\b' tests --glob '!tests/scripts/**' || true
   exit 1
 fi
 
 for expected in \
   "tests/contract/test_backend_contract.pas" \
-  "tests/test_connection_builder_hostname_precedence.pas" \
-  "tests/test_openssl_connection_info_cipher_contract.pas" \
   "tests/winssl/test_winssl_connection_info.pas" \
   "tests/winssl/test_winssl_connection_edge_cases.pas"; do
   if ! rg -F -q -- "$expected" <(rg -n '\b(?:Conn|LConn|LConnection)\.GetConnectionInfo\b' tests --glob '!tests/scripts/**'); then
     echo "[FAIL] missing expected direct core GetConnectionInfo residual file: $expected"
+    exit 1
+  fi
+done
+
+for forbidden in \
+  "tests/test_connection_builder_hostname_precedence.pas" \
+  "tests/test_openssl_connection_info_cipher_contract.pas" \
+  "tests/test_wolfssl_connection_info_macsize_contract.pas" \
+  "tests/test_mbedtls_connection_info_ciphersuite_contract.pas" \
+  "tests/test_freepascal_server_accept_skeleton.pas" \
+  "tests/test_freepascal_client_session_resumption.pas"; do
+  if rg -F -q -- "$forbidden" <(rg -n '\b(?:Conn|LConn|LConnection)\.GetConnectionInfo\b' tests --glob '!tests/scripts/**'); then
+    echo "[FAIL] direct core GetConnectionInfo residual surface was re-expanded: $forbidden"
     exit 1
   fi
 done

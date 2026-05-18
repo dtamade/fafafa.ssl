@@ -1110,6 +1110,40 @@
       - 不再默认继续往 backend 里盲补 low-level helper
       - 下一步应先切回 route-level completion audit / next-route selection
       - 默认主线回到更强 owner / deprecation wording route
+44. `GetConnectionInfo contract owner primacy` 已完成并应作为当前 owner/mirror route 的正式收紧保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getconnectioninfo-contract-owner-primacy.md`
+    - 当前已确认的 route truth：
+      - `Contract 19` 现在先验证：
+        - `ISSLConnectionInfo.GetConnectionInfo`
+      - 再验证：
+        - `ISSLConnection.GetConnectionInfo`
+          只是 v1.x compatibility-core mirror
+      - 新 completeness / proof tests 已不再默认走 direct core getter：
+        - FreePascal server / session-resumption proof
+        - OpenSSL cipher contract
+        - WolfSSL MacSize contract
+        - MbedTLS ciphersuite contract
+        - shared builder proof
+      - residual direct-core `GetConnectionInfo` surface 现在只剩 5 个命中：
+        - `tests/contract/test_backend_contract.pas`
+        - `tests/winssl/test_winssl_connection_info.pas`
+        - `tests/winssl/test_winssl_connection_edge_cases.pas`
+    - 当前 focused proof 已覆盖：
+      - `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_contract_owner_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+      - `tests/contract/test_backend_contract.pas`
+      - `tests/test_connection_builder_hostname_precedence.pas`
+      - `tests/test_freepascal_server_accept_skeleton.pas`
+      - `tests/test_freepascal_client_session_resumption.pas`
+      - `tests/test_mbedtls_connection_info_ciphersuite_contract.pas`
+      - `tests/test_openssl_connection_info_cipher_contract.pas`
+      - `tests/test_wolfssl_connection_info_macsize_contract.pas`
+      - `git diff --check`
+    - 当前批收口后，`GetConnectionInfo` route 的默认下一步应为：
+      - 更强 owner / deprecation wording route
+      - 或判定剩余 WinSSL direct-core tests 是否属于 intentional core-surface proof
+      - 不再继续把普通 completeness proof 留在 direct core getter 上
 
 ## Verification Discipline
 

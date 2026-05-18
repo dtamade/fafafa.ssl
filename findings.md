@@ -1975,3 +1975,31 @@
   - `FreePascal` 不需要像 `OpenSSL` / `WolfSSL` / `MbedTLS` 那样继续补 backend-local helper
   - 当前 `GetConnectionInfo` implementation-completeness 主线已经可以视为基本完成
   - 默认主线应切回 owner / deprecation wording route，而不是继续按 backend 名单机械深挖
+
+- 顺着这条主线继续审查后，又暴露出一个更偏 workflow 的真问题：
+  - `tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+    之前仍假定 direct core `GetConnectionInfo` 只剩 10 个命中
+  - 但后续 completeness / proof 批次已经把这个 residual surface 扩张到了 15 个命中
+  - 这说明路线图说“`ISSLConnectionInfo` 是 owner”，测试面却还在默默扩大 direct core getter 的使用
+
+- 当前修法没有去“改大数字掩盖问题”，而是把 owner/mirror 路线真正收紧：
+  - `tests/contract/test_backend_contract.pas` 的 `Contract 19` 现在先验证：
+    - `ISSLConnectionInfo.GetConnectionInfo`
+  - 再验证：
+    - `ISSLConnection.GetConnectionInfo`
+      只是 mirror
+  - FreePascal / OpenSSL / WolfSSL / MbedTLS 的 completeness proof 与 shared builder proof
+    也都改成优先走 `ISSLConnectionInfo`
+
+- 这批还顺手确认了一个测试层面的生命周期坑：
+  - 在 OpenSSL / WolfSSL focused tests 里，
+    concrete connection object 一旦被 `ISSLConnectionInfo` 接口引用接管，
+    就不能再继续走手工 `Free`
+  - 否则会在测试自身打出 `EInvalidPointer` / `EAccessViolation`
+  - 当前已经把这些 helper 收成“接口接管生命周期，失败分支才手工释放”的模式
+
+- 因而当前更准确的 `GetConnectionInfo` route 结论是：
+  - stale residual allowlist 已被修正
+  - residual direct-core surface 已缩回真正值得保留的少量 mirror/core-surface proof
+  - 下一步应进入更强的 owner / deprecation wording route，
+    而不是继续容忍普通 completeness proof 留在 direct core getter 上

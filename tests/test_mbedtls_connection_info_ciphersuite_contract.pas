@@ -125,9 +125,12 @@ end;
 function CaptureFreshConnectionInfo(AContext: ISSLContext): TSSLConnectionInfo;
 var
   LConn: ISSLConnection;
+  LConnInfoAccess: ISSLConnectionInfo;
 begin
   LConn := AContext.CreateConnection(THandle(-1));
-  Result := LConn.GetConnectionInfo;
+  if not Supports(LConn, ISSLConnectionInfo, LConnInfoAccess) then
+    raise Exception.Create('MbedTLS connection does not expose ISSLConnectionInfo');
+  Result := LConnInfoAccess.GetConnectionInfo;
 end;
 
 procedure AssertConnectionInfoTruth(
