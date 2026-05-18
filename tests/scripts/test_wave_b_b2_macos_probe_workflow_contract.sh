@@ -32,6 +32,9 @@ require_match 'wave_b_macos_gate_summary_\$\{\{ needs\.setup\.outputs\.run_id \}
 require_match 'wave_b_macos_gate_probe_\$\{\{ needs\.setup\.outputs\.run_id \}\}\.json' \
   'workflow should upload the macOS probe artifact for probe-fallback handling'
 
+require_match 'wave_b_macos_loader_symbol_probe_\$\{\{ needs\.setup\.outputs\.run_id \}\}\.json' \
+  'workflow should upload the macOS loader symbol probe artifact for loader/symbol truth debugging'
+
 require_match 'prepare_wave_b_b2_handoff_bundle\.sh' \
   'summary workflow should route macOS evidence through prepare_wave_b_b2_handoff_bundle.sh as the single handoff truth source'
 

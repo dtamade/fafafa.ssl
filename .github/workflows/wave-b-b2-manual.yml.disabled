@@ -121,6 +121,7 @@ jobs:
           path: |
             test-reports/wave_b_macos_gate_summary_${{ needs.setup.outputs.run_id }}.md
             test-reports/wave_b_macos_gate_probe_${{ needs.setup.outputs.run_id }}.json
+            test-reports/wave_b_macos_loader_symbol_probe_${{ needs.setup.outputs.run_id }}.json
             test-reports/wave_b_macos_*.log
             test-reports/examples_compile_gate_macos_${{ needs.setup.outputs.run_id }}.json
             test-reports/module_tests_${{ needs.setup.outputs.run_id }}

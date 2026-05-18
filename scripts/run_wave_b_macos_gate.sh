@@ -173,6 +173,8 @@ mkdir -p "$OUTPUT_DIR"
 
 PROBE_LOG_REL="$OUTPUT_DIR_REL/wave_b_macos_probe_${RUN_ID}.log"
 PROBE_JSON_REL="$OUTPUT_DIR_REL/wave_b_macos_gate_probe_${RUN_ID}.json"
+LOADER_SYMBOL_PROBE_LOG_REL="$OUTPUT_DIR_REL/wave_b_macos_loader_symbol_probe_${RUN_ID}.log"
+LOADER_SYMBOL_PROBE_JSON_REL="$OUTPUT_DIR_REL/wave_b_macos_loader_symbol_probe_${RUN_ID}.json"
 PATH_CHECK_LOG_REL="$OUTPUT_DIR_REL/wave_b_macos_path_check_${RUN_ID}.log"
 COMPILE_LOG_REL="$OUTPUT_DIR_REL/wave_b_macos_compile_${RUN_ID}.log"
 MODULES_LOG_REL="$OUTPUT_DIR_REL/wave_b_macos_modules_${RUN_ID}.log"
@@ -239,6 +241,26 @@ fi
 probe_cmd="$(build_step_command "${probe_words[@]}") > $(printf '%q' "$PROBE_JSON_REL")"
 
 if [[ ${#step_env_assignments[@]} -gt 0 ]]; then
+  loader_symbol_probe_words=(
+    env
+    "${step_env_assignments[@]}"
+    bash scripts/run_macos_openssl_loader_symbol_probe.sh
+    --run-id "$RUN_ID"
+    --output "$LOADER_SYMBOL_PROBE_JSON_REL"
+  )
+else
+  loader_symbol_probe_words=(
+    bash scripts/run_macos_openssl_loader_symbol_probe.sh
+    --run-id "$RUN_ID"
+    --output "$LOADER_SYMBOL_PROBE_JSON_REL"
+  )
+fi
+if [[ -n "$OPENSSL_ROOT" ]]; then
+  loader_symbol_probe_words+=(--openssl-root "$OPENSSL_ROOT")
+fi
+loader_symbol_probe_cmd="$(build_step_command "${loader_symbol_probe_words[@]}")"
+
+if [[ ${#step_env_assignments[@]} -gt 0 ]]; then
   path_check_words=(env "${step_env_assignments[@]}" bash scripts/run_macos_openssl_path_check_draft.sh)
 else
   path_check_words=(bash scripts/run_macos_openssl_path_check_draft.sh)
@@ -292,6 +314,7 @@ fi
 examples_cmd="$(build_step_command "${examples_words[@]}")"
 
 probe_exit=$(run_step "probe" "$probe_cmd" "$PROBE_LOG_REL" "$PROBE_JSON_REL" "${probe_words[@]}")
+loader_symbol_probe_exit=$(run_step "loader-symbol-probe" "$loader_symbol_probe_cmd" "$LOADER_SYMBOL_PROBE_LOG_REL" "" "${loader_symbol_probe_words[@]}")
 path_check_exit=$(run_step "path-check" "$path_check_cmd" "$PATH_CHECK_LOG_REL" "" "${path_check_words[@]}")
 compile_exit=$(run_step "compile" "$compile_cmd" "$COMPILE_LOG_REL" "" "${compile_words[@]}")
 modules_exit=$(run_step "modules" "$modules_cmd" "$MODULES_LOG_REL" "" "${modules_words[@]}")
@@ -318,6 +341,7 @@ if [[ "$DRY_RUN" == "false" && -f "$PROJECT_ROOT/$EXAMPLES_JSON_REL" ]]; then
 fi
 
 probe_status="FAIL"
+loader_symbol_probe_status="FAIL"
 path_check_status="FAIL"
 compile_status="FAIL"
 modules_status="FAIL"
@@ -326,6 +350,7 @@ overall_status="FAIL"
 
 if [[ "$DRY_RUN" == "true" ]]; then
   probe_status="DRY_RUN"
+  loader_symbol_probe_status="DRY_RUN"
   path_check_status="DRY_RUN"
   compile_status="DRY_RUN"
   modules_status="DRY_RUN"
@@ -333,6 +358,7 @@ if [[ "$DRY_RUN" == "true" ]]; then
   overall_status="DRY_RUN"
 else
   [[ "$probe_exit" == "0" ]] && probe_status="PASS"
+  [[ "$loader_symbol_probe_exit" == "0" ]] && loader_symbol_probe_status="PASS"
   [[ "$path_check_exit" == "0" ]] && path_check_status="PASS"
   [[ "$compile_exit" == "0" ]] && compile_status="PASS"
   [[ "$modules_exit" == "0" ]] && modules_status="PASS"
@@ -350,7 +376,7 @@ PY
     fi
   fi
 
-  if [[ "$probe_status" == "PASS" && "$path_check_status" == "PASS" && "$compile_status" == "PASS" && "$modules_status" == "PASS" && "$examples_status" == "PASS" ]]; then
+  if [[ "$probe_status" == "PASS" && "$loader_symbol_probe_status" == "PASS" && "$path_check_status" == "PASS" && "$compile_status" == "PASS" && "$modules_status" == "PASS" && "$examples_status" == "PASS" ]]; then
     overall_status="PASS"
   fi
 fi
@@ -373,6 +399,7 @@ cat > "$PROJECT_ROOT/$SUMMARY_REL" <<EOF_SUMMARY
 | step | exit | status | evidence |
 |------|------|--------|----------|
 | probe | $probe_exit | $probe_status | $PROBE_JSON_REL |
+| loader-symbol-probe | $loader_symbol_probe_exit | $loader_symbol_probe_status | $LOADER_SYMBOL_PROBE_JSON_REL |
 | path-check | $path_check_exit | $path_check_status | $PATH_CHECK_LOG_REL |
 | compile | $compile_exit | $compile_status | $COMPILE_LOG_REL |
 | modules | $modules_exit | $modules_status | $MODULES_LOG_REL |

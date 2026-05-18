@@ -29,6 +29,22 @@ set -euo pipefail
 echo '{"status":"ok"}'
 EOF
 
+cat > "$WORK_DIR/scripts/run_macos_openssl_loader_symbol_probe.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+out=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --output) out="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+mkdir -p "$(dirname "$out")"
+cat > "$out" <<'JSON'
+{"status":"ok"}
+JSON
+EOF
+
 cat > "$WORK_DIR/scripts/run_macos_openssl_path_check_draft.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail

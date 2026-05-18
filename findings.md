@@ -2653,3 +2653,39 @@
   - focused source contract 已完成 `RED -> GREEN`
   - 现有 loader Pascal contract 编译与运行继续 PASS
   - 真正的 done 条件仍然是新的 GitHub macOS rerun 把 `PEM/EVP/PKCS12/CMS/OCSP` 的成片缺失压掉
+
+- 后续 live rerun 进一步说明这条 `OPENSSL_ROOT` 优先级修法不是最终根因：
+  - 新 commit 已把 `OPENSSL_ROOT/lib/...` 绝对候选优先级落地
+  - 但新的 macOS module artifact 与旧 artifact 失败模式基本一致
+  - 所以这条线应保留为“已做过且合理的 loader hardening”，而不是继续当成主怀疑反复深挖
+
+- 当前更高置信度的结构性事实已经压清：
+  - 继续 PASS 的 `TS/CT/Store` 主要是 direct `GetCryptoProcAddress(...)` / `GetSSLProcAddress(...)` 手工绑定
+  - 持续失败的 `EVP/PEM/PKCS12/CMS/OCSP` 主要走 `LoadFunctions(...)` 或 batch-binding 表
+  - 因而失败面更像“batch binding / symbol-name 假设 / wrapper drift”而不是单纯路径问题
+
+- 旧的 macOS probe 设计也确实有一个证据盲区：
+  - `wave_b_macos_gate_probe_*.json` 只报告环境和 `OPENSSL_ROOT`
+  - 它并不会告诉我们：
+    - `TOpenSSLLoader` 最终识别出的真实版本字符串
+    - direct `PEM_read_bio_X509` / `PKCS12_new` / `CMS_sign` / `OCSP_REQUEST_new` 是否真的能从当前句柄解析
+    - wrapper `LoadOpenSSLPEM` / `LoadOpenSSLCMS` / `LoadOpenSSLOCSP` 是否与 direct symbol truth 一致
+
+- 当前这批新增的 loader/symbol probe 因而改变了下一步调试方法：
+  - 新 probe 会直接产出：
+    - `loader_version_string`
+    - `api_version_string`
+    - direct symbol truth
+    - wrapper/module truth
+  - 这能把后续判断压缩成三种可操作分支：
+    - `loader_version_string` 就不对：继续查 loader/path 选择
+    - direct symbols 存在但 wrapper/module 失败：继续查 batch-binding 表或 wrapper 逻辑
+    - direct symbols 本身不存在但 loader 版本又是 Homebrew OpenSSL 3.x：继续查 symbol-name/export 假设
+
+- 本地新 probe 的结果也验证了它的诊断价值，而不只是“新增了一个文件”：
+  - 在本机 Linux/OpenSSL 3.5.5 上，probe 成功同时给出：
+    - `loader_version_string = OpenSSL 3.5.5 27 Jan 2026`
+    - `api_version_string = 3.x (libcrypto.so.3)`
+  - 这再次证明：
+    - `loader_version_string` 才是实际加载句柄上的版本真相
+    - `api_version_string` 只是历史请求名/分类字符串，不能再单独拿来判断 macOS 是否真加载到了 Homebrew OpenSSL 3.x

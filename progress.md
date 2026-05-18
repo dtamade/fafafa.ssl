@@ -5999,3 +5999,101 @@
   - result: PASS
   - summary:
     - current `macOS OPENSSL_ROOT loader priority` batch has no whitespace or patch-format issues
+
+### macOS Loader Symbol Probe Evidence Lane
+
+- `rg -n "LoadFunctions\\(|GetFunction\\(|GetCryptoProcAddress\\(|GetSSLProcAddress\\(" src/fafafa.ssl.openssl.api.*.pas`
+  - result: PASS
+  - summary:
+    - static source truth now clearly separates the failure split:
+      - `TS/CT/Store` rely on direct symbol lookups
+      - `EVP/PEM/PKCS12/CMS/OCSP` rely on batch binding / `LoadFunctions(...)`
+
+- add `docs/plans/2026-05-18-macos-openssl-loader-symbol-probe.md`
+  - purpose:
+    - replace environment-only macOS probing with actual loader/symbol truth
+    - stop reopening the `OPENSSL_ROOT` hypothesis without fresh runtime evidence
+
+- add `tests/diagnostic/test_macos_openssl_loader_symbol_probe.pas`
+  - change:
+    - new diagnostic probe now emits:
+      - loader version truth
+      - api-version label
+      - direct symbol availability
+      - wrapper/module load results
+
+- add `scripts/run_macos_openssl_loader_symbol_probe.sh`
+  - change:
+    - compiles and runs the new Pascal probe
+    - writes a run-scoped JSON artifact for Wave B macOS gate reuse
+
+- update `scripts/run_wave_b_macos_gate.sh`
+  - change:
+    - add a new `loader-symbol-probe` step
+    - keep the new JSON path in the summary evidence table
+
+- update `.github/workflows/wave-b-b2-manual.yml`
+  - change:
+    - macOS artifact upload now includes `wave_b_macos_loader_symbol_probe_<run_id>.json`
+
+- update `.github/workflows/wave-b-b2-manual.yml.disabled`
+  - change:
+    - mirror the same macOS loader-symbol probe artifact upload into the dormant template
+
+- add/update focused contracts
+  - result: PASS
+  - summary:
+    - `tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`
+      now also locks the new loader symbol probe artifact upload
+    - `tests/scripts/test_wave_b_macos_gate_loader_symbol_probe_contract.sh`
+      proves the macOS gate actually invokes the probe and records the evidence row
+    - the existing macOS gate fake-run contracts were updated with the new probe stub and all stayed green
+
+- `bash -n scripts/run_macos_openssl_loader_symbol_probe.sh scripts/run_wave_b_macos_gate.sh tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh tests/scripts/test_wave_b_macos_gate_loader_symbol_probe_contract.sh tests/scripts/test_wave_b_macos_gate_empty_run_id_fallback_contract.sh tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh tests/scripts/test_wave_b_macos_gate_invalid_examples_json_contract.sh tests/scripts/test_wave_b_macos_gate_module_injection_contract.sh tests/scripts/test_wave_b_macos_gate_openssl_root_injection_contract.sh tests/scripts/test_wave_b_macos_gate_path_check_live_passthrough_contract.sh tests/scripts/test_wave_b_macos_gate_shell_startup_hook_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_macos_probe_workflow_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_macos_gate_loader_symbol_probe_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_macos_gate_empty_run_id_fallback_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_macos_gate_examples_threshold_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_macos_gate_invalid_examples_json_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_macos_gate_module_injection_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_macos_gate_openssl_root_injection_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_macos_gate_path_check_live_passthrough_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_macos_gate_shell_startup_hook_contract.sh`
+  - result: PASS
+
+- `bash scripts/run_macos_openssl_loader_symbol_probe.sh --run-id local_probe --output tmp/local_probe.json`
+  - result: PASS
+  - summary:
+    - the new probe compiles and runs locally
+    - it produced a concrete JSON sample under `tmp/local_probe.json`
+
+- `sed -n '1,220p' tmp/local_probe.json`
+  - result: PASS
+  - summary:
+    - local Linux sample proved the new fields are useful:
+      - `loader_version_string = OpenSSL 3.5.5 27 Jan 2026`
+      - `api_version_string = 3.x (libcrypto.so.3)`
+      - direct/batch probe fields all emitted as structured booleans
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `macOS loader symbol probe evidence lane` batch has no whitespace or patch-format issues
