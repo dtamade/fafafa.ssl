@@ -23,7 +23,7 @@
 - `TSSLContextBuilder.WithSNI(...)` 也仍然保留为 compatibility-only 入口；它现在已经是编译期 `deprecated`，且 `BuildClient` / `BuildServer` 都会发出 warning 并忽略它。
 - `ISSLContext.SetServerName(...)` / `GetServerName(...)` 仍保留为 deprecated direct context compatibility API；普通 client 流不应再通过它们传递 SNI/hostname。
 - `TSSLFactory.CreateContext(...)` 现在也不再把这个字段写进新建 context；若传入 `TSSLConfig.ServerName`，factory 会发出 warning 并忽略它。
-- `CreateOpenSSLLibrary` / `TOpenSSLLibrary.CreateContext(...)` 这条 direct library path 现在也已对齐：client default-config 会 warning + ignore，server default-config 会 reject。
+- `ISSLLibrary.SetDefaultConfig(...)` + `ISSLLibrary.CreateContext(AType)` 这条 direct-library path 现在也已对齐：client default-config 会 warning + ignore，server default-config 会 reject。
 - 新代码请优先使用 `TSSLConnectionBuilder.WithHostname(...)`、`ISSLClientConnection.SetServerName(...)`，或直接走 `TSSLConnector.Connect*(..., ServerName)`。
 
 ---
@@ -82,7 +82,11 @@
   - `SessionTimeout`
   - `ALPNProtocols`
 - `SetDefaultConfig(...)` 会先归一化 `TSSLConfig`，所以 `EnableCompression` / `EnableSessionTickets` / `EnableOCSPStapling` 这类 option-bridge 字段也会先折叠进 `Options`，再由 direct-library `CreateContext(AType)` 应用到新 context。
-- 这条对齐当前只覆盖 context-safe 默认配置；`ServerName` compatibility 语义和 early-data / replay-store direct-library parity 仍按各自的专门收口批次继续推进。
+- 同一条 direct-library path 现在也已对齐 deprecated `ServerName` compatibility 语义：
+  - client default-config = warning + ignore
+  - server default-config = reject
+- direct-library special-case parity 当前剩余的重点只剩：
+  - early-data / replay-store
 
 ---
 

@@ -814,3 +814,31 @@
 - 因而当前更准确的 next queue 是：
   - 先继续做 direct-library special-case parity
   - 再决定是否进入 broader `TSSLConfig` slimming 或 `ISSLConnection` surgery
+
+- `direct-library ServerName compatibility parity` 现在也已经完成第一轮收口：
+  - RED 证据：
+    - `tests/scripts/test_direct_library_servername_compatibility_contract.sh`
+      初次运行即证明 `freepascal` library unit 还没有：
+      - server reject
+      - client warning + ignore
+    - `tests/test_freepascal_library_default_config_server_name_clarification.pas`
+      初次运行即证明 FreePascal direct-library path 当前只是静默忽略 client `ServerName`，server 也不 reject
+
+- 当前已修正的实现 truth：
+  - `TFreePascalSSLLibrary`
+  - `TWinSSLLibrary`
+  - `TMbedTLSLibrary`
+  - `TWolfSSLLibrary`
+  - 以上 4 个 backend library units 现在都已对齐 OpenSSL 的这条专门兼容语义：
+    - client default-config = warning + ignore
+    - server default-config = reject
+
+- 这一轮 direct-library `ServerName` parity 没有再回退去“恢复 context-level SNI 正常主路径”：
+  - context 上的 `GetServerName = ''` 仍保持 compatibility-only truth
+  - warning message 仍明确要求迁移到：
+    - `ISSLClientConnection.SetServerName`
+    - `TSSLConnector.Connect*(..., ServerName)`
+
+- 因而当前 direct-library special-case parity 的剩余重点已经进一步缩窄为：
+  - early-data / replay-store direct-library parity
+  - 这应当是下一条高价值、边界依然清楚的小批次

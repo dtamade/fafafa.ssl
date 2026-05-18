@@ -1903,3 +1903,71 @@
   - result: PASS
   - summary:
     - library-scoped logging truth on factory paths remains green after the direct-library parity fix
+
+### Direct-Library ServerName Compatibility Parity
+
+- add `docs/plans/2026-05-18-direct-library-servername-compatibility-parity.md`
+  - purpose:
+    - define the bounded TDD batch for direct-library `ServerName` compatibility warning/reject parity
+
+- add `tests/test_freepascal_library_default_config_server_name_clarification.pas`
+  - purpose:
+    - prove a real runtime RED on the FreePascal direct-library path before touching production code
+
+- add `tests/scripts/test_direct_library_servername_compatibility_contract.sh`
+  - purpose:
+    - prove a source RED across backend library units before touching production code
+
+- update `tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+  - change:
+    - allowlist the new intentional direct-library compatibility test
+
+- `bash -n tests/scripts/test_direct_library_servername_compatibility_contract.sh`
+  - result: PASS
+  - summary:
+    - the new direct-library ServerName parity contract script is syntactically valid
+
+- `bash tests/scripts/test_direct_library_servername_compatibility_contract.sh`
+  - RED result: FAIL
+  - summary:
+    - `src/fafafa.ssl.freepascal.lib.pas` was still missing server reject / client warning logic
+
+- `mkdir -p tmp/test_freepascal_library_default_config_server_name_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_library_default_config_server_name_clarification -FEtmp/test_freepascal_library_default_config_server_name_clarification -otmp/test_freepascal_library_default_config_server_name_clarification/test_freepascal_library_default_config_server_name_clarification tests/test_freepascal_library_default_config_server_name_clarification.pas && ./tmp/test_freepascal_library_default_config_server_name_clarification/test_freepascal_library_default_config_server_name_clarification`
+  - RED result: FAIL
+  - summary:
+    - FreePascal direct-library path was still:
+      - client silent ignore
+      - server non-reject
+
+- update:
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - change:
+    - align direct-library deprecated `ServerName` compatibility behavior to OpenSSL:
+      - client default-config warning + ignore
+      - server default-config reject
+
+- `bash tests/scripts/test_direct_library_servername_compatibility_contract.sh`
+  - GREEN result: PASS
+  - summary:
+    - direct-library `ServerName` compatibility source truth is now aligned across all targeted backend library units
+
+- `mkdir -p tmp/test_freepascal_library_default_config_server_name_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_library_default_config_server_name_clarification -FEtmp/test_freepascal_library_default_config_server_name_clarification -otmp/test_freepascal_library_default_config_server_name_clarification/test_freepascal_library_default_config_server_name_clarification tests/test_freepascal_library_default_config_server_name_clarification.pas && ./tmp/test_freepascal_library_default_config_server_name_clarification/test_freepascal_library_default_config_server_name_clarification`
+  - GREEN result: PASS
+  - summary:
+    - FreePascal direct-library path now:
+      - warns and ignores client default-config `ServerName`
+      - rejects server default-config `ServerName`
+      - stays quiet when `ServerName` is empty
+
+- `bash tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+  - result: PASS
+  - summary:
+    - the new intentional direct-library compatibility test is properly confined in the allowlist
+
+- `bash tests/scripts/test_direct_library_default_config_parity_contract.sh`
+  - result: PASS
+  - summary:
+    - the previous direct-library default-config parity batch remains intact after adding the `ServerName` special-case parity

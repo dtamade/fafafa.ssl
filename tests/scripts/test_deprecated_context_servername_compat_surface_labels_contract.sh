@@ -21,6 +21,7 @@ declare -A allowed_files=(
   ["tests/test_factory_server_name_compatibility_warning.pas"]=1
   ["tests/test_factory_server_name_scope_clarification.pas"]=1
   ["tests/test_freepascal_context_server_name_inheritance.pas"]=1
+  ["tests/test_freepascal_library_default_config_server_name_clarification.pas"]=1
   ["tests/test_openssl_library_default_config_server_name_clarification.pas"]=1
   ["tests/test_transformation_methods.pas"]=1
 )

@@ -299,14 +299,23 @@
      - `SessionCacheMode`
      - `ALPNProtocols`
    - `SetDefaultConfig(...)` 也已在 `freepascal` / `winssl` / `mbedtls` / `wolfssl` library units 中补齐 normalization
-4. direct-library path 的下一优先级不再是“默认配置应用缺口”，而是尚未统一的剩余专门语义：
-   - `ServerName` compatibility warning/reject parity
+4. direct-library `ServerName` compatibility parity 也已完成第一轮收口：
+   - 新 plan：
+     - `docs/plans/2026-05-18-direct-library-servername-compatibility-parity.md`
+   - 新验证：
+     - `tests/test_freepascal_library_default_config_server_name_clarification.pas`
+     - `tests/scripts/test_direct_library_servername_compatibility_contract.sh`
+   - 当前 direct-library path 已对齐：
+     - client default-config = warning + ignore
+     - server default-config = reject
+   - 这条规则现在已在 `openssl` / `freepascal` / `winssl` / `mbedtls` / `wolfssl` library units 上保持同一条 source truth
+5. direct-library path 尚未统一的剩余专门语义现在只剩：
    - early-data / replay-store direct-library parity
-   - 这两类问题仍不适合和 `ISSLConnection` 大手术混成一批
-5. 在 direct-library special-case parity 收口后，再决定 broader interface debt 的后续路线：
+   - 这类问题仍不适合和 `ISSLConnection` 大手术混成一批
+6. 在 direct-library special-case parity 收口后，再决定 broader interface debt 的后续路线：
    - 是否继续推进 `TSSLConfig` option-bridge freeze / slimming
    - 还是进入 `ISSLConnection` 核心 surface slimming roadmap
-6. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
+7. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
 
 ## Verification Discipline
 

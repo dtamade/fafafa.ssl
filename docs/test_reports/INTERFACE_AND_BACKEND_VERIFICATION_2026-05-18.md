@@ -1269,3 +1269,40 @@
 - 下一条仍未收口的 direct-library special-case parity：
   - `ServerName` compatibility warning/reject parity
   - early-data / replay-store direct-library parity
+
+## direct-library ServerName compatibility parity
+
+- 新增 bounded batch：
+  - `docs/plans/2026-05-18-direct-library-servername-compatibility-parity.md`
+  - 目标：
+    - 把 OpenSSL 已经具备的 direct-library `ServerName` compatibility 语义推平到其余 backend library paths
+
+- RED 证据：
+  - `tests/scripts/test_direct_library_servername_compatibility_contract.sh`
+    - 初次运行 FAIL
+    - 证明 `freepascal` library unit 还没有 server reject / client warning logic
+  - `tests/test_freepascal_library_default_config_server_name_clarification.pas`
+    - 初次运行 FAIL
+    - 证明 FreePascal direct-library path 当前还是 client silent ignore / server non-reject
+
+- 本批 production fix：
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - 统一补齐：
+    - client default-config `ServerName` = warning + ignore
+    - server default-config `ServerName` = reject
+
+- focused 结果：
+  - `bash tests/scripts/test_direct_library_servername_compatibility_contract.sh`
+    - PASS
+  - `tests/test_freepascal_library_default_config_server_name_clarification.pas`
+    - PASS
+  - `bash tests/scripts/test_deprecated_context_servername_compat_surface_labels_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_direct_library_default_config_parity_contract.sh`
+    - PASS
+
+- direct-library special-case parity 当前剩余重点：
+  - early-data / replay-store

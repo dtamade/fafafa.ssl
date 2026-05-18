@@ -1603,6 +1603,16 @@ begin
   LConfig := FDefaultConfig;
   LConfig.ContextType := AType;
 
+  if (AType = sslCtxServer) and (Trim(LConfig.ServerName) <> '') then
+    raise ESSLConfigurationException.CreateWithContext(
+      'ServerName is client-scoped. Server-side connections ignore context-level ServerName; ' +
+      'remove it from TFreePascalSSLLibrary.CreateContext when creating server contexts.',
+      sslErrConfiguration,
+      'TFreePascalSSLLibrary.CreateContext',
+      0,
+      sslFreePascal
+    );
+
   Result := TFreePascalContext.Create(Self, AType);
   if Result <> nil then
   begin
@@ -1628,6 +1638,14 @@ begin
     Result.SetSessionCacheSize(LConfig.SessionCacheSize);
     Result.SetSessionTimeout(LConfig.SessionTimeout);
     Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
+
+    if LConfig.ServerName <> '' then
+      InternalLog(
+        sslLogWarning,
+        'TFreePascalSSLLibrary.CreateContext received TSSLConfig.ServerName as deprecated context-level ' +
+        'SNI compatibility; CreateContext ignores it for new contexts; prefer per-connection SNI via ' +
+        'ISSLClientConnection.SetServerName or TSSLConnector.Connect*(..., ServerName).'
+      );
 
     if LConfig.ALPNProtocols <> '' then
       Result.SetALPNProtocols(LConfig.ALPNProtocols);

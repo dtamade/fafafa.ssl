@@ -785,6 +785,16 @@ begin
   LConfig := FDefaultConfig;
   LConfig.ContextType := AType;
 
+  if (AType = sslCtxServer) and (Trim(LConfig.ServerName) <> '') then
+    raise ESSLConfigurationException.CreateWithContext(
+      'ServerName is client-scoped. Server-side connections ignore context-level ServerName; ' +
+      'remove it from TWinSSLLibrary.CreateContext when creating server contexts.',
+      sslErrConfiguration,
+      'TWinSSLLibrary.CreateContext',
+      0,
+      sslWinSSL
+    );
+
   // 让异常传播 - 调用方必须显式处理错误
   Result := TWinSSLContext.Create(Self, AType);
 
@@ -812,6 +822,14 @@ begin
     Result.SetSessionCacheSize(LConfig.SessionCacheSize);
     Result.SetSessionTimeout(LConfig.SessionTimeout);
     Result.SetSessionCacheMode(ssoEnableSessionCache in LConfig.Options);
+
+    if LConfig.ServerName <> '' then
+      InternalLog(
+        sslLogWarning,
+        'TWinSSLLibrary.CreateContext received TSSLConfig.ServerName as deprecated context-level ' +
+        'SNI compatibility; CreateContext ignores it for new contexts; prefer per-connection SNI via ' +
+        'ISSLClientConnection.SetServerName or TSSLConnector.Connect*(..., ServerName).'
+      );
 
     if LConfig.ALPNProtocols <> '' then
       Result.SetALPNProtocols(LConfig.ALPNProtocols);
