@@ -546,6 +546,24 @@ Recommended first bounded batch:
     2. 或先判断剩余 WinSSL direct-core tests 是否属于 intentional core-surface proof
   - 若两者都稳定，再决定第一条真正的 public slimming slice
 
+## Progress Since The GetConnectionInfo WinSSL Direct-Core Classification Batch
+
+- 已交付：
+  - WinSSL residual direct-core `GetConnectionInfo` classification
+  - focused source guard:
+    - `tests/scripts/test_getconnectioninfo_winssl_direct_core_classification_contract.sh`
+  - current WinSSL residual files now explicitly carry:
+    - `INTENTIONAL_CORE_SURFACE`
+
+- 当前更准确的 next step：
+  - `GetConnectionInfo` route 的 remaining direct-core surface 已完成定性：
+    - backend contract mirror proof
+    - WinSSL intentional core-surface proof
+  - 因此默认下一步不该再继续做 residual classification
+  - 应直接转入更强的 owner / deprecation wording route：
+    1. 讨论 `ISSLConnection.GetConnectionInfo` 的更强 de-emphasis / deprecation wording
+    2. 再决定第一条真正的 public slimming slice
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

@@ -2003,3 +2003,23 @@
   - residual direct-core surface 已缩回真正值得保留的少量 mirror/core-surface proof
   - 下一步应进入更强的 owner / deprecation wording route，
     而不是继续容忍普通 completeness proof 留在 direct core getter 上
+
+- 继续静态审剩余 residual 之后，WinSSL 这两份 direct-core 文件的性质也已经更清楚：
+  - `tests/winssl/test_winssl_connection_info.pas`
+  - `tests/winssl/test_winssl_connection_edge_cases.pas`
+  - 它们不是普通 completeness proof 漏迁移
+  - 它们实际在覆盖的是 WinSSL compatibility-core surface 本身：
+    - `GetConnectionInfo`
+    - `GetProtocolVersion`
+    - `GetCipherName`
+    的 direct core 行为与一致性
+
+- 因而当前更准确的收口方式不是继续把这两份文件也迁到 `ISSLConnectionInfo`：
+  - 而是把它们显式归类为：
+    - `INTENTIONAL_CORE_SURFACE`
+  - 然后用 focused source contract 守住这条边界
+
+- 这也把 `GetConnectionInfo` route 的残余不确定性进一步降到最小：
+  - backend contract 负责 mirror/owner proof
+  - WinSSL residual files 负责 intentional direct-core surface proof
+  - 默认下一步就可以直接进入更强的 wording / deprecation 路线，而不必再在 residual 分类上打转

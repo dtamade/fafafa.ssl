@@ -556,6 +556,10 @@ begin
   WriteLn('【测试 10】连接信息获取');
   WriteLn('---');
 
+  // INTENTIONAL_CORE_SURFACE: keep this direct core GetConnectionInfo path as
+  // a WinSSL-specific compatibility-core surface proof. The owner-path checks
+  // now live in ISSLConnectionInfo-focused contracts elsewhere.
+
   {$IFDEF WINDOWS}
   FillChar(LConfig, SizeOf(LConfig), 0);
   LConfig.LibraryType := sslWinSSL;

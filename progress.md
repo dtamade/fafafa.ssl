@@ -3904,6 +3904,51 @@
   - change:
     - sync the owner-primacy closeout, the residual shrink, and the concrete-object/interface lifetime pit into persistent repo working memory
 
+### GetConnectionInfo WinSSL Direct-Core Classification
+
+- add `docs/plans/2026-05-18-getconnectioninfo-winssl-direct-core-classification.md`
+  - purpose:
+    - settle the last residual-classification question on the current `GetConnectionInfo` route
+    - decide whether the remaining WinSSL direct-core files are intentional core-surface proof or stale owner-path drift
+
+- static audit result:
+  - `tests/winssl/test_winssl_connection_info.pas`
+    intentionally verifies:
+    - direct core `GetConnectionInfo`
+    - direct core `GetProtocolVersion`
+    - direct core `GetCipherName`
+    - consistency between `GetConnectionInfo` and the individual core getters
+  - `tests/winssl/test_winssl_connection_edge_cases.pas`
+    keeps one direct core `GetConnectionInfo` path inside the broader WinSSL edge-case suite
+  - this means the remaining WinSSL residuals are core-surface proof, not ordinary completeness tests that were forgotten during the owner-path migration
+
+- implementation:
+  - `tests/winssl/test_winssl_connection_info.pas`
+  - `tests/winssl/test_winssl_connection_edge_cases.pas`
+  - `tests/scripts/test_getconnectioninfo_winssl_direct_core_classification_contract.sh`
+  - change:
+    - marked the two WinSSL residual files as `INTENTIONAL_CORE_SURFACE`
+    - added a focused source guard that freezes the WinSSL residual file set and the classification marker
+
+- `bash tests/scripts/test_getconnectioninfo_winssl_direct_core_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - the remaining WinSSL direct-core `GetConnectionInfo` files are explicitly classified and confined
+
+- `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - the global residual direct-core `GetConnectionInfo` allowlist stayed green after the WinSSL classification closeout
+
+- update `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - mark WinSSL residual classification as delivered
+    - move the default mainline fully onto stronger owner / deprecation wording work
+
+- update `task_plan.md`, `findings.md`, `progress.md`
+  - change:
+    - sync the WinSSL residual classification closeout into persistent repo working memory
+
 ### FreePascal GetConnectionInfo Completion Audit
 
 - add `docs/plans/2026-05-18-freepascal-getconnectioninfo-completion-audit.md`

@@ -1144,6 +1144,24 @@
       - 更强 owner / deprecation wording route
       - 或判定剩余 WinSSL direct-core tests 是否属于 intentional core-surface proof
       - 不再继续把普通 completeness proof 留在 direct core getter 上
+45. `GetConnectionInfo` WinSSL direct-core classification 已完成并应作为当前 residual route 的最终定性保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getconnectioninfo-winssl-direct-core-classification.md`
+    - 当前已确认的 route truth：
+      - WinSSL residual direct-core `GetConnectionInfo` file set 已稳定收缩到：
+        - `tests/winssl/test_winssl_connection_info.pas`
+        - `tests/winssl/test_winssl_connection_edge_cases.pas`
+      - 它们当前都已显式标记为：
+        - `INTENTIONAL_CORE_SURFACE`
+      - 这说明剩余 WinSSL direct-core 面属于 intentional core-surface proof，
+        不是遗漏迁移的普通 completeness test
+    - 当前 focused proof 已覆盖：
+      - `bash tests/scripts/test_getconnectioninfo_winssl_direct_core_classification_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+      - `git diff --check`
+    - 当前批收口后，`GetConnectionInfo` route 的默认下一步应为：
+      - 更强 owner / deprecation wording route
+      - 不再继续停留在 residual classification 清扫
 
 ## Verification Discipline
 

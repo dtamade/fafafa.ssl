@@ -2,6 +2,11 @@ program test_winssl_connection_info;
 
 {$mode objfpc}{$H+}
 
+{ INTENTIONAL_CORE_SURFACE: this file intentionally keeps direct core
+  GetConnectionInfo / GetProtocolVersion / GetCipherName coverage for the
+  WinSSL compatibility-core surface. Owner-path coverage lives in
+  ISSLConnectionInfo-focused proofs and backend contract checks. }
+
 uses
   {$IFDEF WINDOWS}
   Windows, WinSock2,
