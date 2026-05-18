@@ -1433,3 +1433,42 @@
     - `TSSLConfig` public-surface slimming 后续
     - 或 `ISSLConnection` 核心 surface slimming / completion audit
   - 这些现在比继续清手工示例程序的 `ReadLn` 更接近“接口设计完整”这个总目标
+
+- 继续对照最新提交与活跃文档后，一个新的 workflow drift 也已经很明确：
+  - `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md` 仍把 `TSSLConfig` 写成默认 immediate next step
+  - 但 `docs/reference/API_REFERENCE.md` 的 `ISSLConnection` 区块其实还停留在旧接口世界
+  - 这会直接误导调用方，也会把后续会话拉回错误的路线优先级
+
+- `docs/reference/API_REFERENCE.md` 当前在 `ISSLConnection` / `WinSSL Session 管理` 上的 active-doc drift 是真实且高价值的：
+  - 文档仍承诺：
+    - `GetCipherBits`
+    - `VerifyPeerCertificate`
+    - `GetSessionID`
+    - `IsSessionResumed`
+    - `GetSessionData`
+    - `SetSessionData`
+  - 但当前源码真相实际是：
+    - `DoHandshake` / `IsHandshakeComplete` / `Renegotiate`
+    - `WantRead` / `WantWrite` / `GetError`
+    - `GetSelectedALPNProtocol`
+    - `SetTimeout` / `GetTimeout`
+    - `SetBlocking` / `GetBlocking`
+    - `GetContext`
+    - `GetStateString`
+    - `GetSession` / `SetSession` / `IsSessionReused`
+    - `GetVerifyResult` / `GetVerifyResultString`
+    - `GetOCSPStaplingEnabled` / `GetOCSPResponse` / `IsOCSPResponseVerified` / `GetOCSPResponseStatus`
+
+- 这个 drift 不只是“签名列表旧了”：
+  - `GetNativeHandle` 已经不是核心 `ISSLConnection`，而属于可选 `ISSLNativeHandleAccess`
+  - `ISSLConnectionInfo` 当前也已经承接：
+    - `GetConnectionInfo`
+    - `GetContext`
+    - `GetSelectedALPNProtocol`
+    - `GetStateString`
+  - `WinSSL Session 管理` 示例里对 `ISSLSession` 的说明也还没跟上当前 `GetID` / `Serialize` / `Clone` surface
+
+- 因此当前最安全也最值得立即落地的一批，不是直接动 `ISSLConnection` public signature，而是先做 `surface truth freeze`：
+  - 把活跃文档修回当前源码真相
+  - 把 compatibility-core mirrors 与 optional owners 说明写清楚
+  - 用 focused shell contract 把旧接口名回流风险钉住

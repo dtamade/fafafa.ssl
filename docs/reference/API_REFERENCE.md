@@ -414,62 +414,83 @@ end;
 
 SSL/TLS 连接接口。
 
+当前 `v1.5.0` 活跃文档以 `src/fafafa.ssl.base.pas` 为准。下面是当前 shipped source truth，而不是旧审查阶段留下的过时签名。
+
 ```pascal
 ISSLConnection = interface
-  // 连接管理
   function Connect: Boolean;
   function Accept: Boolean;
-  procedure Shutdown;
+  function Shutdown: Boolean;
   procedure Close;
 
-  // 数据传输
-  function Read(var aBuffer; aCount: Integer): Integer;
-  function Write(const aBuffer; aCount: Integer): Integer;
+  function DoHandshake: TSSLHandshakeState;
+  function IsHandshakeComplete: Boolean;
+  function Renegotiate: Boolean;
 
-  // 字符串便捷方法
-  // ReadString: 从 SSL 连接读取数据到字符串
-  //   - AStr: 输出参数，接收读取的数据
-  //   - 返回: True 表示成功读取数据，False 表示无数据或错误
-  //   - 缓冲区大小: 4096 字节
-  //   - 编码: 支持 UTF-8，使用 SetString 直接转换
-  //   - 注意: 对于大于 4096 字节的数据，需要多次调用
+  function Read(var ABuffer; ACount: Integer): Integer;
+  function Write(const ABuffer; ACount: Integer): Integer;
   function ReadString(out AStr: string): Boolean;
-
-  // WriteString: 将字符串写入 SSL 连接
-  //   - AStr: 要写入的字符串数据
-  //   - 返回: True 表示完整写入成功，False 表示部分写入或失败
-  //   - 编码: 直接发送字符串字节，支持 UTF-8
-  //   - 注意: 确保完整写入，部分写入视为失败
   function WriteString(const AStr: string): Boolean;
 
-  // 状态查询
-  function IsConnected: Boolean;
-  function GetState: TSSLConnectionState;
+  function WantRead: Boolean;
+  function WantWrite: Boolean;
+  function GetError(ARet: Integer): TSSLErrorCode;
+
   function GetConnectionInfo: TSSLConnectionInfo;
   function GetProtocolVersion: TSSLProtocolVersion;
   function GetCipherName: string;
-  function GetCipherBits: Integer;
-
-  // 证书信息
   function GetPeerCertificate: ISSLCertificate;
   function GetPeerCertificateChain: TSSLCertificateArray;
-  function VerifyPeerCertificate: Boolean;
+  function GetVerifyResult: Integer;
+  function GetVerifyResultString: string;
 
-  // 会话信息
-  function GetSessionID: string;
+  function GetSession: ISSLSession;
+  procedure SetSession(ASession: ISSLSession);
   function IsSessionReused: Boolean;
+  function GetSelectedALPNProtocol: string;
 
-  // Phase 3.3: 监控和诊断
+  function IsConnected: Boolean;
+  function GetState: string;
+  function GetStateString: string;
+  procedure SetTimeout(ATimeout: Integer);
+  function GetTimeout: Integer;
+  procedure SetBlocking(ABlocking: Boolean);
+  function GetBlocking: Boolean;
+  function GetContext: ISSLContext;
+
   function GetHealthStatus: TSSLHealthStatus;
   function IsHealthy: Boolean;
   function GetDiagnosticInfo: TSSLDiagnosticInfo;
   function GetPerformanceMetrics: TSSLPerformanceMetrics;
+
+  function GetOCSPStaplingEnabled: Boolean;
+  function GetOCSPResponse: TBytes;
+  function IsOCSPResponseVerified: Boolean;
+  function GetOCSPResponseStatus: string;
 end;
 ```
 
-**使用示例**:
+客户端特有的 per-connection SNI surface 仍通过扩展接口暴露：
 
-**基本用法**:
+```pascal
+ISSLClientConnection = interface(ISSLConnection)
+  procedure SetServerName(const AServerName: string);
+  function GetServerName: string;
+end;
+```
+
+#### `v1.x` compatibility-core note
+
+- `ISSLConnection` 当前仍保留一批未来可能继续下沉到可选接口的能力面；当前文档只记录 **源码真相**，不等于推荐把更多能力继续塞回核心接口。
+- `GetConnectionInfo` / `GetContext` / `GetSelectedALPNProtocol` / `GetStateString` 也由 `ISSLConnectionInfo` 暴露。
+- `GetHealthStatus` / `IsHealthy` / `GetDiagnosticInfo` / `GetPerformanceMetrics` 也由 `ISSLDiagnostics` 暴露。
+- `GetSession` / `SetSession` / `IsSessionReused` 也由 `ISSLSessionResumption` 暴露。
+- `GetPeerCertificateChain` / `GetVerifyResult` / `GetVerifyResultString` 也由 `ISSLCertificateVerification` 暴露。
+- `GetOCSPStaplingEnabled` / `GetOCSPResponse` / `IsOCSPResponseVerified` / `GetOCSPResponseStatus` 也由 `ISSLOCSPStapling` 暴露。
+- `GetNativeHandle` 不属于核心 `ISSLConnection`；当前应通过可选接口 `ISSLNativeHandleAccess` 访问。
+- 下列旧名字不是当前活跃源码：`GetCipherBits`、`VerifyPeerCertificate`、`GetSessionID`、`IsSessionResumed`、`GetSessionData`、`SetSessionData`。
+
+#### 基本用法
 
 ```pascal
 var
@@ -499,7 +520,7 @@ begin
 end;
 ```
 
-**读取大数据**:
+#### 读取大数据
 
 ```pascal
 var
@@ -529,41 +550,7 @@ begin
 end;
 ```
 
-**错误处理**:
-
-```pascal
-var
-  LConn: ISSLConnection;
-  LRequest, LResponse: string;
-  LServerName: string;
-begin
-  LServerName := 'example.com';
-  LConn := LContext.CreateConnection(MySocket);
-  (LConn as ISSLClientConnection).SetServerName(LServerName);
-
-  try
-    if not LConn.Connect then
-      raise Exception.Create('连接失败');
-
-    LRequest := 'GET / HTTP/1.1'#13#10 +
-                'Host: ' + LServerName + #13#10 +
-                'Connection: close'#13#10#13#10;
-
-    if not LConn.WriteString(LRequest) then
-      raise Exception.Create('发送请求失败');
-
-    if not LConn.ReadString(LResponse) then
-      raise Exception.Create('读取响应失败');
-
-    WriteLn('响应: ', LResponse);
-
-  finally
-    LConn.Shutdown;
-  end;
-end;
-```
-
-**获取连接详细信息**:
+#### 连接信息与状态
 
 ```pascal
 var
@@ -577,82 +564,70 @@ begin
 
   if LConn.Connect then
   begin
-    // 获取完整的连接信息
     LInfo := LConn.GetConnectionInfo;
-
-    WriteLn('=== SSL/TLS 连接信息 ===');
-    WriteLn('协议版本: ', GetProtocolName(LInfo.ProtocolVersion));
-    WriteLn('密码套件: ', LInfo.CipherSuite);
-    WriteLn('密钥长度: ', LInfo.KeySize, ' bits');
-    WriteLn('MAC 长度: ', LInfo.MacSize, ' bytes');
-    WriteLn('Session 复用: ', BoolToStr(LInfo.IsResumed, True));
-    WriteLn('服务器名称: ', LInfo.ServerName);
-
-    if LInfo.ALPNProtocol <> '' then
-      WriteLn('ALPN 协议: ', LInfo.ALPNProtocol);
-
+    WriteLn('协议版本: ', GetProtocolName(LConn.GetProtocolVersion));
+    WriteLn('密码套件: ', LConn.GetCipherName);
+    WriteLn('ALPN: ', LConn.GetSelectedALPNProtocol);
+    WriteLn('状态: ', LConn.GetStateString);
+    WriteLn('连接信息里的 ServerName: ', LInfo.ServerName);
     LConn.Shutdown;
   end;
 end;
 ```
 
-**监控和诊断**:
+#### Session 复用
 
 ```pascal
 var
-  LConn: ISSLConnection;
-  LInfo: TSSLConnectionInfo;
-  LStartTime: TDateTime;
-  LServerName: string;
+  LConn1, LConn2: ISSLConnection;
+  LSession: ISSLSession;
 begin
-  LStartTime := Now;
-  LServerName := 'example.com';
-  LConn := LContext.CreateConnection(MySocket);
-  (LConn as ISSLClientConnection).SetServerName(LServerName);
-
-  if LConn.Connect then
+  LConn1 := LContext.CreateConnection(Socket1);
+  (LConn1 as ISSLClientConnection).SetServerName('api.example.com');
+  if LConn1.Connect then
   begin
-    LInfo := LConn.GetConnectionInfo;
+    LSession := LConn1.GetSession;
+    if Assigned(LSession) then
+      WriteLn('Session ID: ', LSession.GetID);
+    LConn1.Shutdown;
+  end;
 
-    // 记录连接性能指标
-    WriteLn('=== 连接性能指标 ===');
-    WriteLn('连接时间: ', MilliSecondsBetween(Now, LStartTime), ' ms');
-    WriteLn('协议: ', GetProtocolName(LInfo.ProtocolVersion));
-    WriteLn('密码套件: ', LInfo.CipherSuite);
-    WriteLn('密钥强度: ', LInfo.KeySize, ' bits');
+  LConn2 := LContext.CreateConnection(Socket2);
+  if Assigned(LSession) and LSession.IsValid and LSession.IsResumable then
+    LConn2.SetSession(LSession);
+  (LConn2 as ISSLClientConnection).SetServerName('api.example.com');
 
-    // 检查是否使用了强加密
-    if LInfo.KeySize >= 256 then
-      WriteLn('✓ 使用强加密')
-    else if LInfo.KeySize >= 128 then
-      WriteLn('⚠ 使用中等强度加密')
-    else
-      WriteLn('✗ 加密强度不足');
-
-    // 检查协议版本
-    if LInfo.ProtocolVersion in [sslProtocolTLS12, sslProtocolTLS13] then
-      WriteLn('✓ 使用现代 TLS 协议')
-    else
-      WriteLn('⚠ 使用旧版 TLS 协议');
-
-    LConn.Shutdown;
+  if LConn2.Connect then
+  begin
+    WriteLn('是否复用: ', BoolToStr(LConn2.IsSessionReused, True));
+    LConn2.Shutdown;
   end;
 end;
 ```
 
 ### WinSSL Session 管理
 
-WinSSL 后端提供完整的 TLS Session 复用功能，通过 Windows Schannel 的凭据句柄缓存机制实现。Session 复用可以显著提升 HTTPS 连接性能（预期提升 70-90%），特别适合需要频繁建立连接的场景。
+WinSSL 后端提供 `ISSLSession` 复用能力，但活跃公共接口以当前源码为准，不再使用旧的 `GetSessionID` / `GetSessionData` 风格。
 
 #### 核心接口
 
 ```pascal
 ISSLSession = interface
-  function GetSessionData: TBytes;
-  procedure SetSessionData(const aData: TBytes);
-  function IsValid: Boolean;
+  function GetID: string;
   function GetCreationTime: TDateTime;
-  function GetLastAccessTime: TDateTime;
+  function GetTimeout: Integer;
+  procedure SetTimeout(ATimeout: Integer);
+  function IsValid: Boolean;
+  function IsResumable: Boolean;
+
+  function GetProtocolVersion: TSSLProtocolVersion;
+  function GetCipherName: string;
+  function GetPeerCertificate: ISSLCertificate;
+
+  function Serialize: TBytes;
+  function Deserialize(const AData: TBytes): Boolean;
+
+  function Clone: ISSLSession;
 end;
 ```
 
@@ -687,24 +662,23 @@ begin
   begin
     WriteLn('第一次连接成功');
 
-    // 获取 Session
     LSession := LConn1.GetSession;
-    WriteLn('Session ID: ', LConn1.GetSessionID);
+    if Assigned(LSession) then
+      WriteLn('Session ID: ', LSession.GetID);
 
     LConn1.Shutdown;
   end;
 
-  // 第二次连接 - 复用 Session
   LConn2 := LContext.CreateConnection(Socket2);
-  LConn2.SetSession(LSession);  // 设置之前保存的 Session
+  if Assigned(LSession) then
+    LConn2.SetSession(LSession);  // 设置之前保存的 Session
   (LConn2 as ISSLClientConnection).SetServerName('api.example.com');
 
   if LConn2.Connect then
   begin
     WriteLn('第二次连接成功');
 
-    // 检查是否复用了 Session
-    if LConn2.IsSessionResumed then
+    if LConn2.IsSessionReused then
       WriteLn('✓ Session 复用成功 - 握手时间大幅减少')
     else
       WriteLn('✗ Session 未复用 - 执行了完整握手');
@@ -714,53 +688,26 @@ begin
 end;
 ```
 
-**多连接 Session 缓存**:
+**Session 序列化缓存**:
 
 ```pascal
 var
-  LLib: ISSLLibrary;
-  LContext: ISSLContext;
-  LSessionCache: TDictionary<string, ISSLSession>;
   LConn: ISSLConnection;
-  LHost: string;
+  LSession: ISSLSession;
+  LSerialized: TBytes;
 begin
-  LLib := CreateWinSSLLibrary;
-  LLib.Initialize;
-  LContext := LLib.CreateContext(sslCtxClient);
+  LConn := LContext.CreateConnection(MySocket);
+  (LConn as ISSLClientConnection).SetServerName('api.example.com');
 
-  // 创建 Session 缓存
-  LSessionCache := TDictionary<string, ISSLSession>.Create;
-  try
-    // 连接到多个主机
-    for LHost in ['api.example.com', 'cdn.example.com', 'www.example.com'] do
+  if LConn.Connect then
+  begin
+    LSession := LConn.GetSession;
+    if Assigned(LSession) and LSession.IsResumable then
     begin
-      LConn := LContext.CreateConnection(ConnectToHost(LHost, 443));
-
-      // 尝试复用缓存的 Session
-      if LSessionCache.ContainsKey(LHost) then
-        LConn.SetSession(LSessionCache[LHost]);
-
-      (LConn as ISSLClientConnection).SetServerName(LHost);
-
-      if LConn.Connect then
-      begin
-        WriteLn(Format('连接到 %s: Session %s',
-          [LHost,
-           IfThen(LConn.IsSessionResumed, '复用', '新建')]));
-
-        // 保存 Session 供后续使用
-        LSessionCache.AddOrSetValue(LHost, LConn.GetSession);
-
-        // 执行业务逻辑
-        LConn.WriteString('GET / HTTP/1.1'#13#10 +
-                         'Host: ' + LHost + #13#10#13#10);
-        WriteLn(LConn.ReadString);
-
-        LConn.Shutdown;
-      end;
+      LSerialized := LSession.Serialize;
+      WriteLn('序列化后的 Session 字节数: ', Length(LSerialized));
     end;
-  finally
-    LSessionCache.Free;
+    LConn.Shutdown;
   end;
 end;
 ```
@@ -792,8 +739,7 @@ begin
   LServerName := 'example.com';
   LConn := LContext.CreateConnection(MySocket);
 
-  // 尝试设置 Session
-  if Assigned(LSession) and LSession.IsValid then
+  if Assigned(LSession) and LSession.IsValid and LSession.IsResumable then
     LConn.SetSession(LSession)
   else
     WriteLn('警告: Session 无效或已过期，将执行完整握手');
@@ -802,8 +748,8 @@ begin
 
   if LConn.Connect then
   begin
-    // 连接成功
-    if not LConn.IsSessionResumed then
+    if not LConn.IsSessionReused then
+    begin
       WriteLn('注意: Session 未复用，可能原因：');
       WriteLn('  - Session 已过期');
       WriteLn('  - 服务器不支持 Session 复用');
@@ -829,14 +775,17 @@ begin
   begin
     LSession := LConn.GetSession;
 
-    // 输出 Session 信息
-    WriteLn('Session 信息:');
-    WriteLn('  ID: ', LConn.GetSessionID);
-    WriteLn('  创建时间: ', DateTimeToStr(LSession.GetCreationTime));
-    WriteLn('  最后访问: ', DateTimeToStr(LSession.GetLastAccessTime));
-    WriteLn('  是否复用: ', BoolToStr(LConn.IsSessionResumed, True));
-    WriteLn('  协议版本: ', GetProtocolName(LConn.GetProtocolVersion));
-    WriteLn('  密码套件: ', LConn.GetCipherName);
+    if Assigned(LSession) then
+    begin
+      WriteLn('Session 信息:');
+      WriteLn('  ID: ', LSession.GetID);
+      WriteLn('  创建时间: ', DateTimeToStr(LSession.GetCreationTime));
+      WriteLn('  超时(秒): ', LSession.GetTimeout);
+      WriteLn('  是否可复用: ', BoolToStr(LSession.IsResumable, True));
+      WriteLn('  是否已复用: ', BoolToStr(LConn.IsSessionReused, True));
+      WriteLn('  协议版本: ', GetProtocolName(LSession.GetProtocolVersion));
+      WriteLn('  密码套件: ', LSession.GetCipherName);
+    end;
   end;
 end;
 ```

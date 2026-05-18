@@ -2816,3 +2816,70 @@
   - result: PASS
   - summary:
     - current backend optional-surface completion-audit revalidation batch has no whitespace or patch-format issues
+
+### ISSLConnection Surface Truth Freeze
+
+- `git status --short --branch && git log -1 --oneline --decorate`
+  - result: PASS
+  - summary:
+    - worktree was clean at batch start
+    - latest synced commit was `992382d docs/audit: record backend optional-surface revalidation`
+
+- `rg -n "ISSLConnection|GetCipherBits|VerifyPeerCertificate|GetSessionID|IsSessionResumed|GetSessionData|SetSessionData|GetSelectedALPNProtocol|GetSession\\b|SetSession\\b|IsSessionReused|GetVerifyResult|GetOCSPResponseStatus|GetNativeHandle" src/fafafa.ssl.base.pas docs/reference/API_REFERENCE.md docs/reference/INTERFACE_DESIGN_V2.md docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - result: PASS
+  - summary:
+    - source and active docs were confirmed to be out of sync in the `ISSLConnection` area
+    - `API_REFERENCE.md` still documented obsolete methods while the source exposed a larger current surface plus optional-owner splits
+
+- `sed -n '1122,1555p' src/fafafa.ssl.base.pas`
+  - result: PASS
+  - summary:
+    - established the current source truth for `ISSLConnection`, `ISSLClientConnection`, `ISSLDiagnostics`, `ISSLSessionResumption`, `ISSLCertificateVerification`, `ISSLOCSPStapling`, and `ISSLConnectionInfo`
+
+- `sed -n '1663,1684p' src/fafafa.ssl.base.pas`
+  - result: PASS
+  - summary:
+    - established the current source truth for `ISSLSession`
+    - confirmed the active session surface is `GetID` / `Serialize` / `Clone`, not `GetSessionData` / `GetLastAccessTime`
+
+- `nl -ba docs/reference/API_REFERENCE.md | sed -n '413,930p'`
+  - result: PASS
+  - summary:
+    - confirmed the active docs still promised stale `ISSLConnection` and `ISSLSession` methods
+    - example code still used `GetSessionID` and `IsSessionResumed`
+
+- add `docs/plans/2026-05-18-isslconnection-surface-truth-freeze.md`
+  - purpose:
+    - define a bounded doc/contract truth-freeze batch before any public-interface slimming work
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - replace stale `ISSLConnection` signature block with the current source truth
+    - add `v1.x` compatibility-core / optional-owner notes
+    - rewrite session examples to use `GetID`, `Serialize`, and `IsSessionReused`
+
+- add `tests/scripts/test_isslconnection_surface_truth_contract.sh`
+  - purpose:
+    - fail if active docs reintroduce stale `ISSLConnection` / `ISSLSession` names
+    - require current source-truth methods and optional-owner notes to remain visible
+
+- update `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - correct the stale route priority
+    - make `ISSLConnection surface truth freeze` the immediate next batch instead of defaulting back to `TSSLConfig`
+
+- `bash -n tests/scripts/test_isslconnection_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - new focused contract script is syntactically valid
+
+- `bash tests/scripts/test_isslconnection_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - active `ISSLConnection` / `ISSLSession` docs now match current source truth
+    - stale names no longer appear in the guarded active-doc section
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `ISSLConnection surface truth freeze` batch has no whitespace or patch-format issues

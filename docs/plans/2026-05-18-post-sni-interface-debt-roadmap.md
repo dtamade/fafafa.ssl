@@ -78,11 +78,14 @@ Recommended first bounded batch:
 - 当前更准确的 next step：
   - 不再继续讨论 “`Options` vs legacy booleans 到底谁赢”
   - 不再继续补 option-bridge public wording / test labels
-  - 不再继续补 example/reference guidance cleanup
-  - 不再继续停留在抽象 slimming 讨论；字段级 migration map 已就位
-  - 转向第一条真正的 `TSSLConfig` slimming 实现切片
-  - 当前最优先候选：`LogLevel` / `LogCallback` library-default detachment
-  - 只有这条线稳定后，再考虑是否进入 `ISSLConnection` 核心 surface slimming
+  - 不再继续把 `TSSLConfig` 线当成默认下一步
+  - 当前最新暴露出来的高优先级问题，是活跃 `API_REFERENCE` 中 `ISSLConnection` / `ISSLSession` source truth 明显漂移
+  - 因此应先做 `ISSLConnection surface truth freeze`：
+    - 修正文档签名和示例
+    - 明确 compatibility-core mirrors 与 optional owners
+    - 加 focused contract，防止旧接口名回流
+  - 只有在这条文档/contract 真相冻结稳定后，再决定第一条真实 slimming slice
+  - `LogLevel` / `LogCallback` library-default detachment 继续保留为后续候选，但不再是默认 immediate next batch
 
 ## Not The Next Step
 

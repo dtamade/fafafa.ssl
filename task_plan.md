@@ -656,9 +656,28 @@
       - WinSSL 继续按 Linux 主机平台边界 SKIP；`Contract 15` 也继续明确 session truth 需要 dedicated Windows batch
     - 下一条相关路线不该再回到“这些 optional surface 可能还没验证过”的怀疑：
       - 当前缺口已经从“缺 contract/缺结果”收成“已有 focused live proof”
-      - 更高优先级应回到 broader interface debt：
+    - 更高优先级应回到 broader interface debt：
         - `TSSLConfig` public-surface slimming 后续
         - `ISSLConnection` 核心 surface slimming / completion audit
+21. `ISSLConnection surface truth freeze` 现在应作为当前默认主线：
+    - 新 plan：
+      - `docs/plans/2026-05-18-isslconnection-surface-truth-freeze.md`
+    - 当前已确认的工作流偏差：
+      - `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md` 仍把 `TSSLConfig` 写成默认 immediate next step
+      - 但仓库当前更急的误导源其实是 `docs/reference/API_REFERENCE.md`
+        中 `ISSLConnection` / `ISSLSession` active docs 与源码真相漂移
+    - 当前批的目标：
+      - 先冻结活跃文档真相，不直接修改 public signature
+      - 把 `ISSLConnection` 的 compatibility-core mirrors 与 optional owner 说明写清楚
+      - 新增 focused contract，阻止旧方法名再次回流到 active docs
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_isslconnection_surface_truth_contract.sh`
+      - `bash tests/scripts/test_isslconnection_surface_truth_contract.sh`
+      - `git diff --check`
+      - 当前结果均为 PASS，说明这批已经在文档/contract 层完成收口
+    - 当前批收口后，下一步才适合从稳定真相上选择第一条真正的 slimming slice：
+      - `ISSLConnection` compatibility-core slimming
+      - 或回到 `TSSLConfig` 的更小实现切片
 
 ## Verification Discipline
 
