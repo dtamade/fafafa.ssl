@@ -3034,3 +3034,57 @@
   - result: PASS
   - summary:
     - current `ISSLConnectionInfo active guidance de-emphasis` batch has no whitespace or patch-format issues
+
+### ISSLConnectionInfo Source Classification Freeze
+
+- `sed -n '1188,1295p' src/fafafa.ssl.base.pas` / `sed -n '1520,1548p' src/fafafa.ssl.base.pas` / `sed -n '36,72p' src/fafafa.ssl.connection.base.pas`
+  - result: PASS
+  - summary:
+    - confirmed source comments still lacked an explicit Stage-A classification note for the `ISSLConnectionInfo` mirror group
+    - confirmed the next source-facing gap was classification truth, not implementation behavior
+
+- add `docs/plans/2026-05-18-isslconnectioninfo-source-classification-freeze.md`
+  - purpose:
+    - define a bounded source-facing prep batch that freezes the `compatibility-core duplicate` classification in source comments before any implementation cut
+
+- update:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.connection.base.pas`
+  - change:
+    - add Stage-A classification notes for `GetConnectionInfo` / `GetContext` / `GetSelectedALPNProtocol` / `GetStateString`
+    - clarify that `ISSLConnectionInfo` is the current owner used to carry these `v1.x` compatibility-core duplicates
+
+- add `tests/scripts/test_isslconnectioninfo_source_classification_contract.sh`
+  - purpose:
+    - fail if source comments lose the Stage-A classification notes
+    - keep source-facing truth aligned with the roadmap and active docs
+
+- update `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - mark source classification freeze as delivered
+    - move the next route to the first real implementation slice decision
+
+- `bash -n tests/scripts/test_isslconnectioninfo_source_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - new source-classification contract script is syntactically valid
+
+- `bash tests/scripts/test_isslconnectioninfo_source_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - source comments now keep the `ISSLConnectionInfo` mirror group aligned with the Stage-A roadmap
+    - source-facing duplicate-owner truth no longer depends only on external docs
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `ISSLConnectionInfo source classification freeze` batch has no whitespace or patch-format issues
+
+- closeout revalidation before commit:
+  - `bash -n tests/scripts/test_isslconnectioninfo_source_classification_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_source_classification_contract.sh`
+  - `git diff --check`
+  - result: PASS
+  - summary:
+    - reran the focused source-classification proof during final commit preparation
+    - current batch is ready to commit without reopening heavier verification lanes

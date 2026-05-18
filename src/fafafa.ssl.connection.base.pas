@@ -47,14 +47,17 @@ type
    * 实现的接口：
    * - ISSLConnection: 核心连接功能
    * - ISSLDiagnostics: 诊断功能
- * - ISSLSessionResumption: 会话复用
- * - ISSLCertificateVerification: 证书验证
- * - ISSLConnectionInfo: 连接信息
- *
- * 说明:
- * - OCSP / CT / CT validation getter/stub 仍保留在基类里，供显式支持这些可选接口
- *   的后端连接类复用；但基类本身不再无条件暴露对应 interface。
- *}
+   * - ISSLSessionResumption: 会话复用
+   * - ISSLCertificateVerification: 证书验证
+   * - ISSLConnectionInfo: 连接信息 / compatibility-core mirrors
+   *
+   * 说明:
+   * - `GetConnectionInfo` / `GetContext` / `GetSelectedALPNProtocol` / `GetStateString`
+   *   当前同时存在于 `ISSLConnection` 与 `ISSLConnectionInfo`，属于 v1.x compatibility-core
+   *   duplicates；Stage-A demotion target 已固定为 `ISSLConnectionInfo`。
+   * - OCSP / CT / CT validation getter/stub 仍保留在基类里，供显式支持这些可选接口
+   *   的后端连接类复用；但基类本身不再无条件暴露对应 interface。
+   *}
   TBaseSSLConnection = class(TInterfacedObject,
     ISSLConnection,
     ISSLDiagnostics,

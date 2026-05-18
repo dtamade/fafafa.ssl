@@ -118,11 +118,25 @@ Recommended first bounded batch:
   - `ISSLConnectionInfo` 这组 mirrors 的 Stage-A demotion map 已有稳定设计锚点
   - active docs 也已开始把 connection-info mirrors 从 core teaching 路径切到 `ISSLConnectionInfo`
   - 下一批应进入 source-facing slimming prep：
-    1. 先给 `TBaseSSLConnection` / active docs 补一条 focused source-truth contract，
+    1. 先给 `TBaseSSLConnection` / source comments 补一条 focused source-truth contract，
        锁住这 4 个 mirrors 当前确实是 compatibility-core duplicates
     2. 然后再决定第一条真正的实现切片是：
        - 先只做 source/classification freeze
        - 还是直接开某个 mirror 的 de-emphasis / deprecation 路线
+
+## Progress Since The Active-Guidance Batch
+
+- 已交付：
+  - source-facing classification freeze for the `ISSLConnectionInfo` mirror group
+  - `src/fafafa.ssl.base.pas` 与 `src/fafafa.ssl.connection.base.pas` 已补 Stage-A classification notes
+  - focused contract `tests/scripts/test_isslconnectioninfo_source_classification_contract.sh`
+
+- 当前更准确的 next step：
+  - 不再继续补 source comments / owner labels
+  - 设计文档、active docs、source comments 现在都已经承认这 4 个 mirrors 是 `compatibility-core duplicates`
+  - 下一批应真正决定第一条实现切片：
+    1. 先做某个 mirror 的 de-emphasis / deprecation 路线
+    2. 或先做更细的 source/class split feasibility batch
 
 ## Not The Next Step
 

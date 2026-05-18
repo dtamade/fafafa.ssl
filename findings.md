@@ -1549,3 +1549,17 @@
   - 先把用户可见示例统一成 `Supports(..., ISSLConnectionInfo, ...)`
   - 让公开教学路径开始与 Stage-A demotion map 同向
   - 然后再进入 source-facing slimming prep
+
+- active guidance 对齐之后，source-facing gap 也变得更可见了：
+  - 设计文档已经说清了 Stage-A map
+  - 用户文档也已经开始优先走 `ISSLConnectionInfo`
+  - 但 source 本身还没有明确说明这 4 个 mirrors 当前属于 `compatibility-core duplicates`
+
+- 这会带来一个现实问题：
+  - 下一批如果直接从 source 开刀，很容易又退回“这到底是正式 owner 还是偶然重复”的争论
+  - 特别是 `src/fafafa.ssl.base.pas` 和 `src/fafafa.ssl.connection.base.pas` 本身还没把这件事写死
+
+- 所以下一个安全动作是 source classification freeze：
+  - 在 source comments 里把 Stage-A target 和 duplicate truth 写明
+  - 让 source / 设计文档 / active docs 三层都对齐
+  - 这样后续第一条真实实现切片才不会失去锚点

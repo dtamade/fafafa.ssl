@@ -1205,7 +1205,8 @@ type
     function GetError(ARet: Integer): TSSLErrorCode;
 
     {** 获取连接详细信息
-        @returns 连接信息记录 *}
+        @returns 连接信息记录
+        @compatibility-note v1.x compatibility-core mirror; Stage-A demotion target is ISSLConnectionInfo *}
     function GetConnectionInfo: TSSLConnectionInfo;
 
     {** 获取协商的协议版本
@@ -1245,7 +1246,8 @@ type
     function IsSessionReused: Boolean;
 
     {** 获取 ALPN 协商结果
-        @returns 协商的协议名称（如 "h2"），未协商返回空 *}
+        @returns 协商的协议名称（如 "h2"），未协商返回空
+        @compatibility-note v1.x compatibility-core mirror; Stage-A demotion target is ISSLConnectionInfo *}
     function GetSelectedALPNProtocol: string;
 
     {** 检查连接是否活动
@@ -1257,7 +1259,8 @@ type
     function GetState: string;
 
     {** 获取状态描述字符串
-        @returns 人类可读的状态描述 *}
+        @returns 人类可读的状态描述
+        @compatibility-note v1.x compatibility-core mirror; Stage-A demotion target is ISSLConnectionInfo *}
     function GetStateString: string;
 
     {** 设置操作超时
@@ -1277,7 +1280,8 @@ type
     function GetBlocking: Boolean;
 
     {** 获取关联的上下文
-        @returns 创建此连接的上下文接口 *}
+        @returns 创建此连接的上下文接口
+        @compatibility-note v1.x compatibility-core mirror; Stage-A demotion target is ISSLConnectionInfo *}
     function GetContext: ISSLContext;
 
     // Phase 3.3: 监控和诊断接口
@@ -1523,7 +1527,14 @@ type
   {**
    * ISSLConnectionInfo - 连接信息扩展接口
    *
-   * 提供连接的详细配置和状态信息。
+   * 承接 `ISSLConnection` 中这组 v1.x compatibility-core mirrors：
+   * - GetConnectionInfo
+   * - GetContext
+   * - GetSelectedALPNProtocol
+   * - GetStateString
+   *
+   * 这是当前 Stage-A demotion target，用来在不立即改动 core signature 的前提下，
+   * 为后续 slimming 提供稳定的 owner。
    *
    * @stable 1.0
    * @since 2026-02-05

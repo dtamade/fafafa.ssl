@@ -746,6 +746,23 @@
       - `git diff --check`
       - 新 contract 当前 PASS
     - 当前批收口后，用户可见路径会开始和 `ISSLConnectionInfo` 的 Stage-A demotion map 真正同向
+25. `ISSLConnectionInfo source classification freeze` 现在应作为 source-facing slimming prep：
+    - 新 plan：
+      - `docs/plans/2026-05-18-isslconnectioninfo-source-classification-freeze.md`
+    - 当前 source-facing 缺口：
+      - 设计文档和 active docs 已经写明 Stage-A demotion map
+      - 但 `src/fafafa.ssl.base.pas` / `src/fafafa.ssl.connection.base.pas` 还没明确写出
+        这 4 个 mirrors 当前是 `compatibility-core duplicates`
+    - 当前修法：
+      - 在 source comments 中补出 `GetConnectionInfo` / `GetContext` /
+        `GetSelectedALPNProtocol` / `GetStateString` 的 Stage-A classification note
+      - 新增 focused source contract，防止 source-facing truth 再次回流丢失
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_isslconnectioninfo_source_classification_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_source_classification_contract.sh`
+      - `git diff --check`
+      - 新 contract 当前 PASS
+    - 当前批收口后，`ISSLConnection` 主线会更接近第一条真正的实现切片
 
 ## Verification Discipline
 
