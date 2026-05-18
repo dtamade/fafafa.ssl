@@ -26,6 +26,20 @@
   - 新增 `docs/plans/2026-05-18-noninteractive-top-level-core-tests.md`
   - 当前这两份测试已不再输出“按回车键退出...”或依赖 `ReadLn`
   - repo-wide `ReadLn` 扫描表明剩余命中主要位于 examples / diagnostic / benchmark / WinSSL 专项程序，不属于这批顶层 core automation 收口范围
+- [completed] WinSSL 活跃测试程序也已完成非交互收口：
+  - `tests/unit/test_winssl_comprehensive.pas`
+  - `tests/winssl/test_winssl_context_comprehensive.pas`
+  - `tests/winssl/test_winssl_errors_comprehensive.pas`
+  - `tests/winssl/test_winssl_monitoring.pas`
+  - `tests/winssl/test_winssl_connection_edge_cases.pas`
+  - `tests/winssl/test_winssl_certstore.pas`
+  - `tests/winssl/test_winssl_session_management.pas`
+  - `tests/winssl/test_winssl_library_basic.pas`
+  - `tests/winssl/test_winssl_certificate_loading.pas`
+  - 新增 `tests/scripts/test_winssl_active_tests_noninteractive_contract.sh`
+  - 新增 `docs/plans/2026-05-18-noninteractive-winssl-active-tests.md`
+  - `run_winssl_tests.ps1` 的 non-interactive 意图已经与源码重新对齐
+  - 剩余 `ReadLn` 命中已主要收缩到 examples / diagnostics / benchmark，而不再是活跃 core/WinSSL 测试主面
 - [completed] 第一轮接口/后端真相交叉验证已经完成：
   - 已确认 `ISSLServerConnection` 只存在于活跃文档承诺，不存在于 public source
   - 已确认 context-level `ServerName` 仍由 factory / builder / connection constructors / tests 一起固化
@@ -559,6 +573,44 @@
     - 下一条相关路线不该再回到这两份顶层 core test 的交互尾巴：
       - 这条线现在已经有 source contract 护栏
       - 若继续清理 `ReadLn` 残留，应优先按 `top-level test -> WinSSL specialized test -> examples/diagnostics` 分层，而不是重新混做一批
+19. `WinSSL active tests noninteractive` 当前也已完成第一轮收口：
+    - 新 plan：
+      - `docs/plans/2026-05-18-noninteractive-winssl-active-tests.md`
+    - 新验证：
+      - `tests/scripts/test_winssl_active_tests_noninteractive_contract.sh`
+      - `run_winssl_tests.ps1`
+      - `tests/unit/test_winssl_comprehensive.pas`
+      - `tests/winssl/test_winssl_context_comprehensive.pas`
+      - `tests/winssl/test_winssl_errors_comprehensive.pas`
+      - `tests/winssl/test_winssl_monitoring.pas`
+      - `tests/winssl/test_winssl_connection_edge_cases.pas`
+      - `tests/winssl/test_winssl_certstore.pas`
+      - `tests/winssl/test_winssl_session_management.pas`
+      - `tests/winssl/test_winssl_library_basic.pas`
+      - `tests/winssl/test_winssl_certificate_loading.pas`
+    - 当前已收口的真实问题：
+      - 这批文件虽然属于活跃 WinSSL 测试程序，并且仍被脚本/验证清单引用，
+        但源码末尾仍保留：
+        - `WriteLn('按回车键退出...')`
+        - `WriteLn('Press Enter to exit...')`
+        - `ReadLn`
+      - 其中 `run_winssl_tests.ps1` 甚至明确把 `tests/unit/test_winssl_comprehensive.pas`
+        归类为 `Minimal, non-network, non-interactive tests`
+    - 当前修法：
+      - 移除这批 WinSSL 活跃测试程序的交互式退出逻辑
+      - 新增 focused source contract，禁止这些文件重新带回交互尾巴
+      - 不混入 examples / diagnostics / benchmark
+    - 当前 focused proof 已覆盖：
+      - 新合同先 RED，直接命中 `tests/unit/test_winssl_comprehensive.pas`
+      - 修复后新合同 GREEN
+      - `tests/unit/test_winssl_comprehensive.pas` 的 Linux 非 Windows 分支可直接编译运行，输出不再带手工退出提示
+      - `tests/unit/test_winssl_comprehensive.pas`
+      - `tests/winssl/test_winssl_session_management.pas`
+        的 Win64 交叉编译都已通过，说明这次尾部清理没有破坏 Windows 语法面
+    - 下一条相关路线不该再回到 WinSSL 活跃测试程序的交互尾巴：
+      - 这条线现在已有 focused contract 护栏
+      - 若继续清理 `ReadLn` 残留，只应处理 examples / diagnostics / benchmark 等明确非活跃测试面
+      - 更高优先级则应回到 broader interface debt，而不是继续沉在已收口的 active test prompt cleanup
 
 ## Verification Discipline
 

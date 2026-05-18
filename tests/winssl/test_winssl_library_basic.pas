@@ -369,8 +369,4 @@ begin
       ExitCode := 2;
     end;
   end;
-  
-  WriteLn;
-  WriteLn('Press Enter to exit...');
-  ReadLn;
 end.

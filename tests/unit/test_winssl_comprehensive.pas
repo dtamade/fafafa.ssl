@@ -696,10 +696,6 @@ begin
     WriteLn('❌ Some tests failed!');
     ExitCode := 1;
   end;
-  
-  WriteLn;
-  WriteLn('Press Enter to exit...');
-  ReadLn;
 end.
 
 {$ELSE}
@@ -707,8 +703,5 @@ end.
 begin
   WriteLn('This test is for Windows only (WinSSL)');
   WriteLn('On Linux/macOS, use OpenSSL backend instead');
-  WriteLn;
-  WriteLn('Press Enter to exit...');
-  ReadLn;
 end.
 {$ENDIF}

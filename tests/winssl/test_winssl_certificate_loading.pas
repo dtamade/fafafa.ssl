@@ -539,8 +539,4 @@ begin
     WriteLn('Please review failed tests and fix issues before production use.');
     ExitCode := 1;
   end;
-  
-  WriteLn;
-  WriteLn('Press Enter to exit...');
-  ReadLn;
 end.

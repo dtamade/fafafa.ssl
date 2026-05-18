@@ -2673,3 +2673,98 @@
   - result: PASS
   - summary:
     - current noninteractive top-level core test batch has no whitespace or patch-format issues
+
+### Noninteractive WinSSL Active Tests
+
+- `sed -n '80,110p' run_winssl_tests.ps1`
+  - result: PASS
+  - summary:
+    - current Windows-focused runner explicitly classifies `tests\\unit\\test_winssl_comprehensive.pas` as `Minimal, non-network, non-interactive tests`
+    - this proved the remaining interactive tail in that file was a real workflow contradiction, not just a cosmetic annoyance
+
+- `sed -n '55,80p' scripts/run_tests_windows.ps1`
+  - result: PASS
+  - summary:
+    - legacy Windows run script still attempts to auto-run WinSSL unit-level tests
+    - this further confirmed the batch should stay on active WinSSL test programs, not examples/diagnostics
+
+- `rg -n "ReadLn|按回车键退出" tests/unit/*.pas tests/winssl/*.pas tests/examples/*.pas tests/diagnostic/*.pas`
+  - result: PASS
+  - summary:
+    - after the top-level core cleanup, remaining interactive tails were concentrated in WinSSL-specialized tests plus examples/diagnostics
+    - this narrowed the next bounded batch to WinSSL active tests only
+
+- `tail -n 35 tests/unit/test_winssl_comprehensive.pas`
+  - result: PASS
+  - summary:
+    - both the Windows main path and the non-Windows fallback still ended with `Press Enter to exit...` + `ReadLn`
+
+- `tail -n 35 tests/winssl/test_winssl_context_comprehensive.pas`
+- `tail -n 35 tests/winssl/test_winssl_errors_comprehensive.pas`
+- `tail -n 35 tests/winssl/test_winssl_monitoring.pas`
+- `tail -n 35 tests/winssl/test_winssl_connection_edge_cases.pas`
+- `tail -n 35 tests/winssl/test_winssl_certstore.pas`
+- `tail -n 35 tests/winssl/test_winssl_session_management.pas`
+- `tail -n 35 tests/winssl/test_winssl_library_basic.pas`
+- `tail -n 35 tests/winssl/test_winssl_certificate_loading.pas`
+  - result: PASS
+  - summary:
+    - each active WinSSL test still carried the same interactive exit tail
+    - this confirmed the issue was systematic across the active WinSSL automation layer
+
+- add `docs/plans/2026-05-18-noninteractive-winssl-active-tests.md`
+  - purpose:
+    - define a bounded cleanup batch for active WinSSL test programs only
+    - keep examples / diagnostics / benchmark out of scope
+
+- add `tests/scripts/test_winssl_active_tests_noninteractive_contract.sh`
+  - purpose:
+    - guard the active WinSSL test set against reintroducing `ReadLn` / `Press Enter to exit...` / `按回车键退出...`
+
+- `bash -n tests/scripts/test_winssl_active_tests_noninteractive_contract.sh && bash tests/scripts/test_winssl_active_tests_noninteractive_contract.sh`
+  - result: RED
+  - summary:
+    - new contract immediately failed on `tests/unit/test_winssl_comprehensive.pas`
+    - the failure proved the active WinSSL noninteractive drift was still real at source level
+
+- update:
+  - `tests/unit/test_winssl_comprehensive.pas`
+  - `tests/winssl/test_winssl_context_comprehensive.pas`
+  - `tests/winssl/test_winssl_errors_comprehensive.pas`
+  - `tests/winssl/test_winssl_monitoring.pas`
+  - `tests/winssl/test_winssl_connection_edge_cases.pas`
+  - `tests/winssl/test_winssl_certstore.pas`
+  - `tests/winssl/test_winssl_session_management.pas`
+  - `tests/winssl/test_winssl_library_basic.pas`
+  - `tests/winssl/test_winssl_certificate_loading.pas`
+  - change:
+    - remove the interactive exit tail
+    - keep all assertions and test bodies unchanged
+
+- `bash tests/scripts/test_winssl_active_tests_noninteractive_contract.sh`
+  - GREEN result: PASS
+  - summary:
+    - active WinSSL tests are now source-guarded as noninteractive
+
+- `mkdir -p tmp/test_unit_winssl_comprehensive_nonwindows && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_unit_winssl_comprehensive_nonwindows -FEtmp/test_unit_winssl_comprehensive_nonwindows -otmp/test_unit_winssl_comprehensive_nonwindows/test_winssl_comprehensive tests/unit/test_winssl_comprehensive.pas && timeout 2 ./tmp/test_unit_winssl_comprehensive_nonwindows/test_winssl_comprehensive`
+  - GREEN result: PASS
+  - summary:
+    - the non-Windows fallback branch compiled and exited cleanly on Linux
+    - output no longer ended with `Press Enter to exit...`
+
+- `mkdir -p tmp/winssl_unit_comp_win64 && fpc -Twin64 -B -Fu./src -Fu./tests -FUtmp/winssl_unit_comp_win64 -FEtmp/winssl_unit_comp_win64 -otmp/winssl_unit_comp_win64/test_winssl_comprehensive.exe tests/unit/test_winssl_comprehensive.pas`
+  - GREEN result: PASS
+  - summary:
+    - Win64 cross-compile succeeded and linked `tmp/winssl_unit_comp_win64/test_winssl_comprehensive.exe`
+    - warnings were pre-existing compile noise unrelated to the interactive-tail cleanup
+
+- `mkdir -p tmp/winssl_session_mgmt_win64 && fpc -Twin64 -B -Fu./src -Fu./tests -FUtmp/winssl_session_mgmt_win64 -FEtmp/winssl_session_mgmt_win64 -otmp/winssl_session_mgmt_win64/test_winssl_session_management.exe tests/winssl/test_winssl_session_management.pas`
+  - GREEN result: PASS
+  - summary:
+    - Win64 cross-compile succeeded and linked `tmp/winssl_session_mgmt_win64/test_winssl_session_management.exe`
+    - this gave a second Windows-side syntax proof on a dedicated WinSSL test program
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current noninteractive WinSSL active test batch has no whitespace or patch-format issues

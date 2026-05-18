@@ -1321,3 +1321,59 @@
     - benchmark / file-read helpers
     - 多份 WinSSL 专项程序
   - 因而当前这批保持在“顶层 core tests 自动化面”是正确收口，不应把 examples/diagnostics/Windows-specialized 程序混进同一批
+
+- 在顶层 core tests 收口之后，repo-wide 剩余交互尾巴的下一层主面也已经被压实：
+  - `tests/unit/test_winssl_comprehensive.pas`
+  - `tests/winssl/test_winssl_context_comprehensive.pas`
+  - `tests/winssl/test_winssl_errors_comprehensive.pas`
+  - `tests/winssl/test_winssl_monitoring.pas`
+  - `tests/winssl/test_winssl_connection_edge_cases.pas`
+  - `tests/winssl/test_winssl_certstore.pas`
+  - `tests/winssl/test_winssl_session_management.pas`
+  - `tests/winssl/test_winssl_library_basic.pas`
+  - `tests/winssl/test_winssl_certificate_loading.pas`
+
+- 这批文件不是 examples / benchmark，而是真正仍有自动化入口和验证角色的 WinSSL 测试程序：
+  - `run_winssl_tests.ps1` 明确把 `tests/unit/test_winssl_comprehensive.pas`
+    归类成 `Minimal, non-network, non-interactive tests`
+  - `scripts/run_tests_windows.ps1` 仍试图自动编译运行 WinSSL unit-level tests
+  - 多个文件仍有 `.lpi`、validation bundle、Windows checklist 引用
+
+- 因而它们保留 `Press Enter to exit...` / `按回车键退出...` / `ReadLn` 的问题，已经不只是“输出不太好看”：
+  - 这会直接让 active Windows test path 的 non-interactive 承诺失真
+  - 也会让真正的自动化 runner 与源码语义对不上
+
+- 当前最合适的修法仍然是 focused source contract，而不是假装在 Linux 本地能完整跑 WinSSL runtime：
+  - 新增 `tests/scripts/test_winssl_active_tests_noninteractive_contract.sh`
+  - 只守住这批活跃 WinSSL 测试程序
+  - 不把 examples / diagnostics / benchmark 混成同一批
+
+- 这条合同首次运行立即 RED，直接命中 `tests/unit/test_winssl_comprehensive.pas`：
+  - 证明问题不是历史残影，而是当前源码仍在主动保留交互式退出逻辑
+
+- 修复后，这条线的验证比前两批还更完整了一层：
+  - source contract 转 GREEN
+  - `tests/unit/test_winssl_comprehensive.pas` 在 Linux 下可编译运行其非 Windows 分支，并且退出不再依赖 `ReadLn`
+  - `tests/unit/test_winssl_comprehensive.pas`
+  - `tests/winssl/test_winssl_session_management.pas`
+    的 Win64 交叉编译也通过，说明这次尾部清理没有破坏 Windows 语法面
+
+- 这也让测试完整性路线图更清楚了一步：
+  - 活跃自动化测试面的交互尾巴，当前已经从
+    - 顶层 core tests
+    - WinSSL 活跃测试程序
+    这两层基本收干净
+  - 剩余 `ReadLn` 命中主要收缩到：
+    - examples
+    - diagnostics
+    - benchmark
+    - 少量非自动化/手工验证型程序
+
+- 因而如果继续沿“测试完整性”推进，下一层已经不该再和主测试面混做：
+  - 那会是 examples / diagnostics / benchmark 的单独分类清理
+  - 而不是继续把 active test automation 问题当成未收口区域
+
+- 反过来讲，这也意味着总体主路线可以重新抬回更高层：
+  - `TSSLConfig` broader slimming / freeze 后续
+  - 或 `ISSLConnection` 核心 surface slimming roadmap
+  - 这些现在比继续清手工示例程序的 `ReadLn` 更接近“接口设计完整”这个总目标
