@@ -82,6 +82,8 @@ type
     constructor Create(AContext: ISSLContext; ASSLConfig: Pmbedtls_ssl_config; AStream: TStream); overload;
     destructor Destroy; override;
 
+    function GetConnectionInfo: TSSLConnectionInfo; override;
+
     { SNI/ALPN 设置 }
     procedure SetServerName(const AServerName: string);
     function GetServerName: string;
@@ -487,6 +489,54 @@ end;
 function TMbedTLSConnection.DoGetConnectionInfoServerName: string;
 begin
   Result := FServerName;
+end;
+
+function TMbedTLSConnection.GetConnectionInfo: TSSLConnectionInfo;
+var
+  LCipherSuiteId: Integer;
+  LCipherSuiteName: PAnsiChar;
+  LCipherSuiteInfo: Pmbedtls_ssl_ciphersuite_info;
+  LMdInfo: Pointer;
+begin
+  Result := inherited GetConnectionInfo;
+
+  if FSSLContext = nil then
+    Exit;
+
+  LCipherSuiteId := 0;
+  if Assigned(mbedtls_ssl_get_ciphersuite_id_from_ssl) then
+    LCipherSuiteId := mbedtls_ssl_get_ciphersuite_id_from_ssl(FSSLContext);
+
+  if (LCipherSuiteId <= 0) and Assigned(mbedtls_ssl_get_ciphersuite) and
+     Assigned(mbedtls_ssl_get_ciphersuite_id) then
+  begin
+    LCipherSuiteName := mbedtls_ssl_get_ciphersuite(FSSLContext);
+    if LCipherSuiteName <> nil then
+      LCipherSuiteId := mbedtls_ssl_get_ciphersuite_id(LCipherSuiteName);
+  end;
+
+  if LCipherSuiteId <= 0 then
+    Exit;
+
+  Result.CipherSuiteId := Word(LCipherSuiteId and $FFFF);
+
+  if not Assigned(mbedtls_ssl_ciphersuite_from_id) then
+    Exit;
+
+  LCipherSuiteInfo := mbedtls_ssl_ciphersuite_from_id(LCipherSuiteId);
+  if LCipherSuiteInfo = nil then
+    Exit;
+
+  if (Result.KeySize = 0) and Assigned(mbedtls_ssl_ciphersuite_get_cipher_key_bitlen) then
+    Result.KeySize := Integer(mbedtls_ssl_ciphersuite_get_cipher_key_bitlen(LCipherSuiteInfo));
+
+  if (Result.MacSize = 0) and (LCipherSuiteInfo^.mac <> MBEDTLS_MD_NONE) and
+     Assigned(mbedtls_md_info_from_type) and Assigned(mbedtls_md_get_size) then
+  begin
+    LMdInfo := mbedtls_md_info_from_type(LCipherSuiteInfo^.mac);
+    if LMdInfo <> nil then
+      Result.MacSize := Integer(mbedtls_md_get_size(LMdInfo));
+  end;
 end;
 
 function TMbedTLSConnection.DoGetSelectedALPNProtocol: string;

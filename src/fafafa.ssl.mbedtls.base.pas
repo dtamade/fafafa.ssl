@@ -90,8 +90,8 @@ const
   { 消息摘要类型 - MbedTLS 3.x 值 }
   MBEDTLS_MD_NONE = 0;
   MBEDTLS_MD_MD5 = 3;
-  MBEDTLS_MD_SHA1 = 4;
-  MBEDTLS_MD_RIPEMD160 = 5;
+  MBEDTLS_MD_RIPEMD160 = 4;
+  MBEDTLS_MD_SHA1 = 5;
   MBEDTLS_MD_SHA224 = 8;
   MBEDTLS_MD_SHA256 = 9;
   MBEDTLS_MD_SHA384 = 10;
@@ -102,6 +102,8 @@ const
   MBEDTLS_MD_SHA3_384 = 18;
   MBEDTLS_MD_SHA3_512 = 19;
 
+  { Ciphersuite flags }
+  MBEDTLS_CIPHERSUITE_SHORT_TAG = $02;
 type
   { MbedTLS 不透明指针类型 }
   Pmbedtls_ssl_context = Pointer;
@@ -111,6 +113,23 @@ type
   Pmbedtls_pk_context = Pointer;
   Pmbedtls_entropy_context = Pointer;
   Pmbedtls_ctr_drbg_context = Pointer;
+  Pmbedtls_ssl_ciphersuite_info = ^Tmbedtls_ssl_ciphersuite_info;
+
+  {$PUSH}
+  {$PACKRECORDS C}
+  { MbedTLS ciphersuite descriptor fields that are stable and needed for
+    connection-info truth derivation. }
+  Tmbedtls_ssl_ciphersuite_info = record
+    id: Integer;
+    name: PAnsiChar;
+    cipher: Byte;
+    mac: Byte;
+    key_exchange: Byte;
+    flags: Byte;
+    min_tls_version: Word;
+    max_tls_version: Word;
+  end;
+  {$POP}
 
   { MbedTLS x509_buf 结构 - 用于访问原始证书数据 }
   Tmbedtls_x509_buf = record

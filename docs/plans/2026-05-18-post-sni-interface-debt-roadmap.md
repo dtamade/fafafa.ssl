@@ -459,6 +459,38 @@ Recommended first bounded batch:
     1. MbedTLS static `MacSize` feasibility
     2. 再根据 binding 复杂度决定是实现还是收线
 
+## Progress Since The MbedTLS GetConnectionInfo Ciphersuite Truth Batch
+
+- 已交付：
+  - MbedTLS ciphersuite-info low-level truth
+  - corrected `MBEDTLS_MD_SHA1` / `MBEDTLS_MD_RIPEMD160` constant truth
+  - `mbedtls.api` active export/binding chain now includes:
+    - `mbedtls_ssl_get_ciphersuite_id`
+    - `mbedtls_ssl_get_ciphersuite_id_from_ssl`
+    - `mbedtls_ssl_ciphersuite_from_id`
+    - `mbedtls_ssl_ciphersuite_get_cipher_key_bitlen`
+  - focused MbedTLS contract now explicitly covers:
+    - runtime SHA1 constant truth
+    - helper unavailable safe degrade
+    - direct ciphersuite-id truth
+    - name-based fallback truth
+    - legacy digest-truth `MacSize`
+    - shared AEAD owner primacy
+  - shared parser now also accepts MbedTLS-style hyphenated AES / TLS-RSA suite names
+
+- 当前更准确的 next step：
+  - 不再把 MbedTLS 当成 “只有 shared AEAD `MacSize` truth” 的 backend
+  - 当前 `GetConnectionInfo` implementation-completeness 线上已经形成的稳定真相是：
+    - shared AEAD suite-name truth
+    - OpenSSL non-AEAD digest truth
+    - WolfSSL non-AEAD HMAC truth
+    - MbedTLS ciphersuite-info + digest truth
+    - WinSSL guarded legacy fallback
+  - 剩余更值得做的，已经不再是盲目继续补 helper，而是：
+    1. 对这条 `GetConnectionInfo` implementation-completeness 路线做一次 completion audit
+    2. 明确 FreePascal 是否还有必须单独补的 low-level truth
+    3. 若没有新的高价值真问题，就把默认主线切回 owner / deprecation wording route
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

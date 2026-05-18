@@ -594,7 +594,8 @@ begin
     AInfo.KeyExchange := sslKexDHE_PSK
   else if Pos('-PSK', LName) > 0 then
     AInfo.KeyExchange := sslKexPSK
-  else if (Pos('TLS_RSA_', LName) = 1) or (Pos('RSA-', LName) = 1) then
+  else if (Pos('TLS_RSA_', LName) = 1) or (Pos('TLS-RSA-', LName) = 1) or
+          (Pos('RSA-', LName) = 1) then
     AInfo.KeyExchange := sslKexRSA;
 
   if Pos('CHACHA20', LName) > 0 then
@@ -604,6 +605,7 @@ begin
       AInfo.KeySize := 256;
   end
   else if (Pos('AES_256_GCM', LName) > 0) or
+          (Pos('AES-256-GCM', LName) > 0) or
           (Pos('AES256-GCM', LName) > 0) or
           (Pos('AES256GCM', LName) > 0) then
   begin
@@ -612,6 +614,7 @@ begin
       AInfo.KeySize := 256;
   end
   else if (Pos('AES_128_GCM', LName) > 0) or
+          (Pos('AES-128-GCM', LName) > 0) or
           (Pos('AES128-GCM', LName) > 0) or
           (Pos('AES128GCM', LName) > 0) then
   begin
@@ -619,13 +622,15 @@ begin
     if AInfo.KeySize = 0 then
       AInfo.KeySize := 128;
   end
-  else if (Pos('AES_256', LName) > 0) or (Pos('AES256', LName) > 0) then
+  else if (Pos('AES_256', LName) > 0) or (Pos('AES-256', LName) > 0) or
+          (Pos('AES256', LName) > 0) then
   begin
     AInfo.Cipher := sslCipherAES256;
     if AInfo.KeySize = 0 then
       AInfo.KeySize := 256;
   end
-  else if (Pos('AES_128', LName) > 0) or (Pos('AES128', LName) > 0) then
+  else if (Pos('AES_128', LName) > 0) or (Pos('AES-128', LName) > 0) or
+          (Pos('AES128', LName) > 0) then
   begin
     AInfo.Cipher := sslCipherAES128;
     if AInfo.KeySize = 0 then

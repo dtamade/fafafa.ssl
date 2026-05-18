@@ -1057,6 +1057,34 @@
     - 当前批收口后，`GetConnectionInfo` implementation-completeness 主线已进一步收缩到：
       - MbedTLS 是否存在值得接入的更强 legacy `MacSize` truth
       - 若收益不高，是否切回更强 owner / deprecation wording route
+42. `MbedTLS GetConnectionInfo ciphersuite truth` 已完成并应作为当前 implementation-completeness 主线的进一步收口保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-mbedtls-connectioninfo-ciphersuite-truth-feasibility.md`
+    - 当前已确认的 MbedTLS truth：
+      - `TMbedTLSConnection.GetConnectionInfo` 现在会优先走：
+        - `mbedtls_ssl_get_ciphersuite_id_from_ssl`
+      - direct helper 不可用时，会回退到：
+        - `mbedtls_ssl_get_ciphersuite`
+        - `mbedtls_ssl_get_ciphersuite_id`
+      - ciphersuite info 现在会补齐：
+        - `CipherSuiteId`
+        - `KeySize`
+        - legacy/non-AEAD `MacSize`
+      - shared AEAD `MacSize` 继续保持 owner truth，不会被 digest size 覆盖
+      - shared parser 现在也额外接受：
+        - `TLS-RSA-...`
+        - `AES-128[-GCM]`
+        - `AES-256[-GCM]`
+      - `mbedtls.base` 的 `MBEDTLS_MD_SHA1` / `MBEDTLS_MD_RIPEMD160` 常量真相也已修正
+    - 当前 focused proof 已覆盖：
+      - `bash tests/scripts/test_mbedtls_connectioninfo_ciphersuite_truth_contract.sh`
+      - `tests/test_mbedtls_connection_info_ciphersuite_contract.pas`
+      - `tests/test_connection_builder_hostname_precedence.pas`
+      - `git diff --check`
+    - 当前批收口后，`GetConnectionInfo` implementation-completeness 主线已进一步收缩到：
+      - 是否需要对这条 route 做一次 completion audit
+      - FreePascal 是否还有必须单独补的 low-level truth
+      - 若没有新的高价值实现缺口，是否切回更强 owner / deprecation wording route
 
 ## Verification Discipline
 

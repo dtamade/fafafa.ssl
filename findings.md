@@ -1915,3 +1915,45 @@
 - 因而当前 `GetConnectionInfo` implementation-completeness 主线剩余的 `MacSize` 面，又进一步缩小到了：
   - MbedTLS 是否也有值得接入的 low-level source
   - 如果 MbedTLS 实现成本高或真相不够稳，就该收住这条线并切回 owner / deprecation wording route
+
+- MbedTLS 这条 `GetConnectionInfo` 路径现在也已经从“头文件里有 source，但仓库没接 runtime truth”落成了真实实现：
+  - active binding 现在已经把：
+    - `mbedtls_ssl_get_ciphersuite_id`
+    - `mbedtls_ssl_get_ciphersuite_id_from_ssl`
+    - `mbedtls_ssl_ciphersuite_from_id`
+    - `mbedtls_ssl_ciphersuite_get_cipher_key_bitlen`
+    接进 `TMbedTLSConnection.GetConnectionInfo`
+  - MbedTLS 现在不只补 `MacSize`：
+    - 也补了更稳的 `CipherSuiteId`
+    - 以及 `KeySize`
+
+- 这批还暴露并修正了一个更底层的 MbedTLS interface truth bug：
+  - `src/fafafa.ssl.mbedtls.base.pas` 里原先把：
+    - `MBEDTLS_MD_SHA1`
+    - `MBEDTLS_MD_RIPEMD160`
+    的枚举值写反了
+  - 这不一定会立刻打出长度错误，因为 SHA1 / RIPEMD160 都是 20 字节
+  - 但它会让任何依赖 `mbedtls_md_info_from_type(MBEDTLS_MD_SHA1)` 的真实摘要路径走到错误算法
+  - 当前 focused runtime proof 已用 canonical SHA1(`abc`) 把这条常量真相钉住
+
+- 这批还顺手确认了一个 shared completeness gap：
+  - shared cipher-suite parser 虽然已经能理解很多 OpenSSL/WolfSSL 风格名字
+  - 但对 MbedTLS 常见的连字符命名：
+    - `TLS-RSA-...`
+    - `AES-128[-GCM]`
+    - `AES-256[-GCM]`
+    之前并不完整
+  - 当前已经补齐
+  - 因而 helpers unavailable 时，MbedTLS 的 shared baseline 也比之前更接近统一 truth
+
+- 当前修完后的更准确结论是：
+  - shared 继续拥有 AEAD `MacSize` truth
+  - OpenSSL 现在拥有 legacy digest truth
+  - WolfSSL 现在拥有 legacy HMAC truth
+  - MbedTLS 现在拥有 ciphersuite-info + digest truth
+  - WinSSL 保留 guarded fallback
+
+- 因而当前 `GetConnectionInfo` implementation-completeness 这条 backend-truth 路线，已经接近一个自然收口点：
+  - 下一步更应该做一次 completion audit
+  - 确认 FreePascal 是否仍然存在必须单独补的缺口
+  - 如果没有，就该把默认主线切回 owner / deprecation wording route，而不是继续机械地往每个 backend 里找新 helper

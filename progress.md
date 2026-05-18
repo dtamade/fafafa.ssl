@@ -3850,6 +3850,67 @@
   - summary:
     - current WolfSSL legacy `MacSize` batch has no whitespace or patch-format issues
 
+### MbedTLS GetConnectionInfo Ciphersuite Truth
+
+- add `docs/plans/2026-05-18-mbedtls-connectioninfo-ciphersuite-truth-feasibility.md`
+  - purpose:
+    - capture the MbedTLS batch that finishes the remaining high-value backend truth source on the current `GetConnectionInfo` route
+    - keep scope on ciphersuite-info runtime truth and a blocking MD-constant correction
+
+- implementation:
+  - `src/fafafa.ssl.mbedtls.base.pas`
+  - `src/fafafa.ssl.mbedtls.api.pas`
+  - `src/fafafa.ssl.mbedtls.connection.pas`
+  - `src/fafafa.ssl.connection.base.pas`
+  - `tests/test_mbedtls_connection_info_ciphersuite_contract.pas`
+  - `tests/scripts/test_mbedtls_connectioninfo_ciphersuite_truth_contract.sh`
+  - change:
+    - fixed `MBEDTLS_MD_SHA1` / `MBEDTLS_MD_RIPEMD160` constant truth
+    - active MbedTLS API export/binding chain now includes:
+      - `mbedtls_ssl_get_ciphersuite_id`
+      - `mbedtls_ssl_get_ciphersuite_id_from_ssl`
+      - `mbedtls_ssl_ciphersuite_from_id`
+      - `mbedtls_ssl_ciphersuite_get_cipher_key_bitlen`
+    - MbedTLS `GetConnectionInfo` now fills:
+      - direct or fallback `CipherSuiteId`
+      - `KeySize` from ciphersuite info
+      - legacy/non-AEAD `MacSize` from digest truth only when shared AEAD truth still leaves `MacSize = 0`
+    - shared cipher-suite parser now recognizes MbedTLS-style hyphenated AES / TLS-RSA names
+
+- `bash tests/scripts/test_mbedtls_connectioninfo_ciphersuite_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - verified the corrected MD constants
+    - verified the new MbedTLS ciphersuite-info export chain
+    - verified the runtime write path for `CipherSuiteId` / `KeySize` / `MacSize`
+    - verified the shared hyphenated-name compatibility guard
+
+- `mkdir -p tmp/test_mbedtls_connection_info_ciphersuite_contract && fpc -B -Fu./src -Fu./tests -FUtmp/test_mbedtls_connection_info_ciphersuite_contract -FEtmp/test_mbedtls_connection_info_ciphersuite_contract -otmp/test_mbedtls_connection_info_ciphersuite_contract/test_mbedtls_connection_info_ciphersuite_contract tests/test_mbedtls_connection_info_ciphersuite_contract.pas && ./tmp/test_mbedtls_connection_info_ciphersuite_contract/test_mbedtls_connection_info_ciphersuite_contract`
+  - result: RED -> GREEN
+  - summary:
+    - first run exposed a real shared baseline gap:
+      - MbedTLS-style hyphenated AES suite names were not fully parsed by the shared cipher-suite derivation path
+    - after aligning the shared parser, final result was:
+      - `15 passed, 0 failed`
+    - the suite now explicitly proves:
+      - corrected runtime SHA1 constant truth against canonical SHA1(`abc`)
+      - helper unavailable safe degrade
+      - direct ciphersuite-id truth
+      - name-based ciphersuite-id fallback
+      - legacy non-AEAD digest truth -> `MacSize = 32` / `20`
+      - AEAD digest truth does not override shared `MacSize = 16`
+
+- `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+  - result: PASS
+  - summary:
+    - shared connection-info proof remained green at `26 passed, 0 failed`
+    - the MbedTLS truth additions and shared hyphenated-name support did not regress earlier semantics
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current MbedTLS ciphersuite-truth batch has no whitespace or patch-format issues
+
 ### GetConnectionInfo MacSize Semantics Matrix
 
 - add `docs/plans/2026-05-18-getconnectioninfo-macsize-semantics-matrix.md`

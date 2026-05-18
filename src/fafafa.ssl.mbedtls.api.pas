@@ -101,6 +101,11 @@ type
   Tmbedtls_ssl_close_notify = function(ssl: Pmbedtls_ssl_context): Integer; cdecl;
   Tmbedtls_ssl_get_verify_result = function(ssl: Pmbedtls_ssl_context): Cardinal; cdecl;
   Tmbedtls_ssl_get_ciphersuite = function(ssl: Pmbedtls_ssl_context): PAnsiChar; cdecl;
+  Tmbedtls_ssl_get_ciphersuite_id = function(const ciphersuite_name: PAnsiChar): Integer; cdecl;
+  Tmbedtls_ssl_get_ciphersuite_id_from_ssl = function(const ssl: Pmbedtls_ssl_context): Integer; cdecl;
+  Tmbedtls_ssl_ciphersuite_from_id = function(ciphersuite_id: Integer): Pmbedtls_ssl_ciphersuite_info; cdecl;
+  Tmbedtls_ssl_ciphersuite_get_cipher_key_bitlen = function(
+    const info: Pmbedtls_ssl_ciphersuite_info): NativeUInt; cdecl;
   Tmbedtls_ssl_get_alpn_protocol = function(ssl: Pmbedtls_ssl_context): PAnsiChar; cdecl;
   Tmbedtls_ssl_conf_alpn_protocols = function(conf: Pmbedtls_ssl_config;
     protos: PPAnsiChar): Integer; cdecl;
@@ -195,6 +200,10 @@ var
   mbedtls_ssl_close_notify: Tmbedtls_ssl_close_notify = nil;
   mbedtls_ssl_get_verify_result: Tmbedtls_ssl_get_verify_result = nil;
   mbedtls_ssl_get_ciphersuite: Tmbedtls_ssl_get_ciphersuite = nil;
+  mbedtls_ssl_get_ciphersuite_id: Tmbedtls_ssl_get_ciphersuite_id = nil;
+  mbedtls_ssl_get_ciphersuite_id_from_ssl: Tmbedtls_ssl_get_ciphersuite_id_from_ssl = nil;
+  mbedtls_ssl_ciphersuite_from_id: Tmbedtls_ssl_ciphersuite_from_id = nil;
+  mbedtls_ssl_ciphersuite_get_cipher_key_bitlen: Tmbedtls_ssl_ciphersuite_get_cipher_key_bitlen = nil;
   mbedtls_ssl_get_alpn_protocol: Tmbedtls_ssl_get_alpn_protocol = nil;
   mbedtls_ssl_conf_alpn_protocols: Tmbedtls_ssl_conf_alpn_protocols = nil;
 
@@ -286,6 +295,10 @@ begin
   mbedtls_ssl_close_notify := nil;
   mbedtls_ssl_get_verify_result := nil;
   mbedtls_ssl_get_ciphersuite := nil;
+  mbedtls_ssl_get_ciphersuite_id := nil;
+  mbedtls_ssl_get_ciphersuite_id_from_ssl := nil;
+  mbedtls_ssl_ciphersuite_from_id := nil;
+  mbedtls_ssl_ciphersuite_get_cipher_key_bitlen := nil;
   mbedtls_ssl_get_alpn_protocol := nil;
   mbedtls_ssl_conf_alpn_protocols := nil;
   // SSL 会话
@@ -416,6 +429,14 @@ begin
     GetProc(GMbedTLSHandle, 'mbedtls_ssl_get_verify_result'));
   mbedtls_ssl_get_ciphersuite := Tmbedtls_ssl_get_ciphersuite(
     GetProc(GMbedTLSHandle, 'mbedtls_ssl_get_ciphersuite'));
+  mbedtls_ssl_get_ciphersuite_id := Tmbedtls_ssl_get_ciphersuite_id(
+    GetProc(GMbedTLSHandle, 'mbedtls_ssl_get_ciphersuite_id'));
+  mbedtls_ssl_get_ciphersuite_id_from_ssl := Tmbedtls_ssl_get_ciphersuite_id_from_ssl(
+    GetProc(GMbedTLSHandle, 'mbedtls_ssl_get_ciphersuite_id_from_ssl'));
+  mbedtls_ssl_ciphersuite_from_id := Tmbedtls_ssl_ciphersuite_from_id(
+    GetProc(GMbedTLSHandle, 'mbedtls_ssl_ciphersuite_from_id'));
+  mbedtls_ssl_ciphersuite_get_cipher_key_bitlen := Tmbedtls_ssl_ciphersuite_get_cipher_key_bitlen(
+    GetProc(GMbedTLSHandle, 'mbedtls_ssl_ciphersuite_get_cipher_key_bitlen'));
   mbedtls_ssl_get_alpn_protocol := Tmbedtls_ssl_get_alpn_protocol(
     GetProc(GMbedTLSHandle, 'mbedtls_ssl_get_alpn_protocol'));
   mbedtls_ssl_conf_alpn_protocols := Tmbedtls_ssl_conf_alpn_protocols(
