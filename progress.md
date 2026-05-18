@@ -2,6 +2,51 @@
 
 ## 2026-05-19
 
+### ISSLCertificateVerification Residual Classification Freeze
+
+- add `docs/plans/2026-05-19-isslcertificateverification-residual-classification-freeze.md`
+  - change:
+    - define the bounded residual-allowlist batch for direct core certificate-verification getters
+
+- add `tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - result: FAIL -> FAIL -> PASS
+  - summary:
+    - RED 1:
+      - `src/fafafa.ssl.base.pas` still lacked preferred-access / owner notes for certificate verification
+    - RED 2:
+      - the new `ISSLConnection.GetVerifyResult*` owner notes in `src/fafafa.ssl.base.pas` legitimately expanded the `src/` allowlist by one file
+    - GREEN:
+      - residual direct-core surface now matches the expected allowlist
+
+- update `src/fafafa.ssl.base.pas`
+  - change:
+    - add preferred-access / owner-note wording for `GetVerifyResult`
+    - add preferred-access / owner-note wording for `GetVerifyResultString`
+
+- update `src/fafafa.ssl.connection.base.pas`
+  - change:
+    - add residual-surface note for the shared `GetVerifyResult` / `GetVerifyResultString` mirror implementation
+
+- `bash -n tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - residual classification contract syntax is valid
+
+- `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - active docs direct-core file set stayed at `0`
+    - `examples/` direct-core file set stayed frozen to `examples/fafafa.examples.tcp.pas`
+    - `tests/examples/` direct-core file set stayed at `0`
+    - `tests/connection/` direct-core file set stayed frozen to `tests/connection/test_ssl_client_connection.pas`
+    - `tests/contract/` direct-core file set stayed frozen to `tests/contract/test_backend_contract.pas`
+    - backend-specific runtime / contract residual file set stayed frozen to the current allowlist
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current certificate-verification residual freeze batch has no whitespace or patch-format issues
+
 ### ISSLCertificateVerification Generic Examples Owner Path
 
 - add `docs/plans/2026-05-19-isslcertificateverification-generic-examples-owner-path.md`

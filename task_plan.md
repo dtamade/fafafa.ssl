@@ -112,6 +112,29 @@
   - 当前结论：
     - generic examples/tests 这条 verify-result guidance lane 现在可以视为关闭
     - 下一刀更适合继续盘点 backend-specific runtime / residual deprecation lane，而不是再回头清 generic examples
+- [completed] `ISSLCertificateVerification` residual direct-core surface 已冻结成 allowlist：
+  - 新增计划：`docs/plans/2026-05-19-isslcertificateverification-residual-classification-freeze.md`
+  - 新增 source contract：`tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+  - `src/fafafa.ssl.base.pas`
+    - `GetVerifyResult` / `GetVerifyResultString` 注释现已明确：
+      - preferred-access 是 `ISSLCertificateVerification`
+      - `ISSLConnection` core getter 仅为 v1.x compatibility mirror
+  - `src/fafafa.ssl.connection.base.pas`
+    - 现已写明 shared mirror implementation 的 residual surface truth
+  - 当前 allowlist 已锁住：
+    - active docs direct-core file set = `0`
+    - `examples/` direct-core file set = `examples/fafafa.examples.tcp.pas`
+    - `tests/examples/` direct-core file set = `0`
+    - `tests/connection/` direct-core file set = `tests/connection/test_ssl_client_connection.pas`
+    - `tests/contract/` direct-core file set = `tests/contract/test_backend_contract.pas`
+    - backend-specific runtime / contract residual file set = 当前 23 条剩余 proof 文件
+  - focused verification 已通过：
+    - `bash -n tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+    - `bash tests/scripts/test_isslcertificateverification_residual_classification_contract.sh`
+    - `git diff --check`: PASS
+  - 当前结论：
+    - `ISSLCertificateVerification` 这条 ordinary guidance / generic examples / residual freeze 路线当前已完整收口
+    - 下一刀更适合继续 backend-specific runtime / residual deprecation lane，而不是再回头做 residual archaeology
 - [completed] GitHub Actions Windows runner 已重新纳入当前 truth surface：
   - `wave-b-b2-manual.yml` 的 live run `26030261335` 已证实 `windows-gate` 三层都能在 GitHub CI 上实际执行
   - 当前 WinSSL lane 不再允许退回“本地没 Windows，只能静态审查”的旧入口

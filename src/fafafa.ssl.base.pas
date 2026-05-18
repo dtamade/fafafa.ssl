@@ -1230,10 +1230,14 @@ type
     function GetPeerCertificateChain: TSSLCertificateArray;
 
     {** 获取证书验证结果码
+        @preferred-access 新代码优先通过 ISSLCertificateVerification.GetVerifyResult 获取
+        @owner-note 当前默认 owner 为 ISSLCertificateVerification；ISSLConnection.GetVerifyResult 保留为 v1.x compatibility mirror
         @returns 平台相关的验证结果码 *}
     function GetVerifyResult: Integer;
 
     {** 获取证书验证结果描述
+        @preferred-access 新代码优先通过 ISSLCertificateVerification.GetVerifyResultString 获取
+        @owner-note 当前默认 owner 为 ISSLCertificateVerification；ISSLConnection.GetVerifyResultString 保留为 v1.x compatibility mirror
         @returns 验证结果的文字描述 *}
     function GetVerifyResultString: string;
 

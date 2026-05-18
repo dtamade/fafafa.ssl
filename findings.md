@@ -2,6 +2,34 @@
 
 ## 2026-05-19
 
+- generic examples 收口后，`ISSLCertificateVerification` 这条线当前真正剩下的已经不是“还有没有普通入口直读 core”，而是 residual direct-core file set 还没有被正式冻结：
+  - active docs 已经是 owner path
+  - generic examples / `tests/examples` 已经是 owner path
+  - 但如果不把 residual allowlist 固化下来，后续完全可能又有新的 direct-core `GetVerifyResult` / `GetVerifyResultString` 文件悄悄混进来
+
+- 这批最小安全收口因此很明确，并已落地：
+  - 在 `src/fafafa.ssl.base.pas` 给 `GetVerifyResult` / `GetVerifyResultString` 补 preferred-access 与 owner note
+  - 在 `src/fafafa.ssl.connection.base.pas` 明确 shared mirror implementation 的 residual-surface truth
+  - 新增 focused source contract，把当前 direct-core surface freeze 成稳定 allowlist
+
+- 这次 allowlist 也把 residual 分类真正说清楚了：
+  - active docs direct-core file set = `0`
+  - `examples/` 只剩 `examples/fafafa.examples.tcp.pas` 共享 helper fallback
+  - `tests/examples/` direct-core file set = `0`
+  - `tests/connection/` 只剩 `tests/connection/test_ssl_client_connection.pas` 本地 helper fallback
+  - `tests/contract/` 只剩 `tests/contract/test_backend_contract.pas` 的 optional/core mirror proof
+  - 其余 direct-core 命中全部属于 backend-specific runtime / contract residual proof
+
+- 这也说明当前 `ISSLCertificateVerification` 路线的状态已经和之前 `GetStateString` / `GetSelectedALPNProtocol` 很接近：
+  - ordinary guidance 已经切完
+  - generic examples 已经切完
+  - residual surface 也已经 freeze
+  - 后续再重复扫同一批 `GetVerifyResult*` 命中的收益已经很低
+
+- 因而这条 certificate-verification lane 现在可以视为阶段性关闭：
+  - 后续不应再把“ordinary/generic 路径是否还在教 direct core verify getters”当成未完成问题反复拉起
+  - 下一刀更适合继续 backend-specific runtime / residual deprecation lane，或者切回更大的 interface-design / backend completeness seam
+
 - 在继续追 `verify-result mirrors` 的残余入口时，这次最值得优先收的已经不是 docs，也不是 high-visibility facade，而是 generic examples / 通用测试示例：
   - `examples/01_tls_client.pas`
   - `examples/example_https_api.pas`
@@ -31,7 +59,7 @@
   - generic examples/tests 如果不重新编译验证，连 compile-liveness 都不一定还成立
   - 所以这批必须同时做 owner-path 收口和目标编译，而不能只做 source grep
 
-- focused 结果说明这批边界已经正确收住：
+  - focused 结果说明这批边界已经正确收住：
   - source contract 已 green
   - 9 个目标程序 compile 全绿
   - 现在 `examples` / `tests/examples` / `tests/connection` 下的 direct verify-result 命中已只剩 helper 本身
