@@ -124,6 +124,7 @@ var
   StartMs: QWord;
   Request: RawByteString;
   RespHead: RawByteString;
+  LVerifyResult: Integer;
 begin
   Result.Success := False;
   Result.Skipped := False;
@@ -139,42 +140,44 @@ begin
   TLS := nil;
   try
     try
-      Sock := ConnectTCP(ATest.Host, ATest.Port);
+      try
+        Sock := ConnectTCP(ATest.Host, ATest.Port);
+      except
+        on E: Exception do
+        begin
+          Result.Skipped := True;
+          Result.ErrorMessage := E.Message;
+          Exit;
+        end;
+      end;
+
+      TLS := AConnector.ConnectSocket(THandle(Sock), ATest.Host);
+      Result.Protocol := ProtocolVersionToString(TLS.Connection.GetProtocolVersion);
+      Result.Cipher := TLS.Connection.GetCipherName;
+      GetCertificateVerificationInfo(TLS.Connection, LVerifyResult, Result.VerifyResult);
+
+      Request := 'GET ' + ATest.Path + ' HTTP/1.1'#13#10 +
+                 'Host: ' + ATest.Host + #13#10 +
+                 'User-Agent: fafafa.ssl-test_real_websites_enhanced/1.0'#13#10 +
+                 'Accept: */*'#13#10 +
+                 'Connection: close'#13#10 +
+                 #13#10;
+
+      if Length(Request) > 0 then
+        TLS.WriteBuffer(Request[1], Length(Request));
+
+      RespHead := ReadFirstBytes(TLS, 4096);
+      Result.ResponseCode := ExtractStatusCode(RespHead);
+      if Result.ResponseCode = '' then
+        raise Exception.Create('无法解析 HTTP 状态行');
+
+      Result.Success := True;
     except
       on E: Exception do
       begin
-        Result.Skipped := True;
+        Result.Success := False;
         Result.ErrorMessage := E.Message;
-        Exit;
       end;
-    end;
-
-    TLS := AConnector.ConnectSocket(THandle(Sock), ATest.Host);
-    Result.Protocol := ProtocolVersionToString(TLS.Connection.GetProtocolVersion);
-    Result.Cipher := TLS.Connection.GetCipherName;
-    Result.VerifyResult := TLS.Connection.GetVerifyResultString;
-
-    Request := 'GET ' + ATest.Path + ' HTTP/1.1'#13#10 +
-               'Host: ' + ATest.Host + #13#10 +
-               'User-Agent: fafafa.ssl-test_real_websites_enhanced/1.0'#13#10 +
-               'Accept: */*'#13#10 +
-               'Connection: close'#13#10 +
-               #13#10;
-
-    if Length(Request) > 0 then
-      TLS.WriteBuffer(Request[1], Length(Request));
-
-    RespHead := ReadFirstBytes(TLS, 4096);
-    Result.ResponseCode := ExtractStatusCode(RespHead);
-    if Result.ResponseCode = '' then
-      raise Exception.Create('无法解析 HTTP 状态行');
-
-    Result.Success := True;
-  except
-    on E: Exception do
-    begin
-      Result.Success := False;
-      Result.ErrorMessage := E.Message;
     end;
   finally
     Result.ResponseTime := GetTickCount64 - StartMs;

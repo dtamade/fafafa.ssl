@@ -157,6 +157,8 @@ var
   RawResp: RawByteString;
   Cert: ISSLCertificate;
   Lib: ISSLLibrary;
+  LVerifyResult: Integer;
+  LVerifyResultString: string;
   DelimLen, HeaderEnd: Integer;
   BodyLen: Integer;
 begin
@@ -206,7 +208,8 @@ begin
 
     WriteLn('TLS 版本: ', ProtocolVersionToString(TLS.Connection.GetProtocolVersion));
     WriteLn('密码套件: ', TLS.Connection.GetCipherName);
-    WriteLn('证书验证: ', TLS.Connection.GetVerifyResultString);
+    GetCertificateVerificationInfo(TLS.Connection, LVerifyResult, LVerifyResultString);
+    WriteLn('证书验证: ', LVerifyResultString);
 
     Cert := TLS.Connection.GetPeerCertificate;
     if Cert <> nil then

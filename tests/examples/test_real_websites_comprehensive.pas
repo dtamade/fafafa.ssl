@@ -121,6 +121,7 @@ var
   TLS: TSSLStream;
   StartMs: QWord;
   Request: RawByteString;
+  LVerifyResult: Integer;
 begin
   Result.Success := False;
   Result.Skipped := False;
@@ -135,37 +136,39 @@ begin
   TLS := nil;
   try
     try
-      Sock := ConnectTCP(ATest.Host, ATest.Port);
+      try
+        Sock := ConnectTCP(ATest.Host, ATest.Port);
+      except
+        on E: Exception do
+        begin
+          Result.Skipped := True;
+          Result.ErrorMessage := E.Message;
+          Exit;
+        end;
+      end;
+
+      TLS := AConnector.ConnectSocket(THandle(Sock), ATest.Host);
+      Result.Protocol := ProtocolVersionToString(TLS.Connection.GetProtocolVersion);
+      Result.Cipher := TLS.Connection.GetCipherName;
+      GetCertificateVerificationInfo(TLS.Connection, LVerifyResult, Result.VerifyResult);
+
+      // 发送一个轻量 HEAD 请求（只验证加密通道可写即可）
+      Request := 'HEAD / HTTP/1.1'#13#10 +
+                 'Host: ' + ATest.Host + #13#10 +
+                 'User-Agent: fafafa.ssl-test_real_websites_comprehensive/1.0'#13#10 +
+                 'Connection: close'#13#10 +
+                 #13#10;
+
+      if Length(Request) > 0 then
+        TLS.WriteBuffer(Request[1], Length(Request));
+
+      Result.Success := True;
     except
       on E: Exception do
       begin
-        Result.Skipped := True;
+        Result.Success := False;
         Result.ErrorMessage := E.Message;
-        Exit;
       end;
-    end;
-
-    TLS := AConnector.ConnectSocket(THandle(Sock), ATest.Host);
-    Result.Protocol := ProtocolVersionToString(TLS.Connection.GetProtocolVersion);
-    Result.Cipher := TLS.Connection.GetCipherName;
-    Result.VerifyResult := TLS.Connection.GetVerifyResultString;
-
-    // 发送一个轻量 HEAD 请求（只验证加密通道可写即可）
-    Request := 'HEAD / HTTP/1.1'#13#10 +
-               'Host: ' + ATest.Host + #13#10 +
-               'User-Agent: fafafa.ssl-test_real_websites_comprehensive/1.0'#13#10 +
-               'Connection: close'#13#10 +
-               #13#10;
-
-    if Length(Request) > 0 then
-      TLS.WriteBuffer(Request[1], Length(Request));
-
-    Result.Success := True;
-  except
-    on E: Exception do
-    begin
-      Result.Success := False;
-      Result.ErrorMessage := E.Message;
     end;
   finally
     Result.ResponseTime := GetTickCount64 - StartMs;

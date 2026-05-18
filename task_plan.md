@@ -86,6 +86,32 @@
     - `git diff --check`: PASS
   - 这说明前面已经修好的 cross-backend issuer-link completeness 现在不再只靠 focused tests 保着，也已经进入 repo-level backend consistency truth
   - 下一刀不应再重开 peer-cert / issuer-link completeness lane，而应回到更大的 verification / optional-surface completeness 审查
+- [completed] generic examples / 通用测试示例的 `ISSLCertificateVerification` owner path 已收口：
+  - 新增计划：`docs/plans/2026-05-19-isslcertificateverification-generic-examples-owner-path.md`
+  - 新增 source contract：`tests/scripts/test_isslcertificateverification_generic_examples_contract.sh`
+  - `examples/fafafa.examples.tcp.pas`
+    - 新增 `GetCertificateVerificationInfo(...)` 共享 helper
+    - 优先走 `ISSLCertificateVerification`，仅在接口不可用时回退 core getters
+  - 已切换的 generic examples / tests：
+    - `examples/01_tls_client.pas`
+    - `examples/example_https_api.pas`
+    - `examples/production/https_client_auth.pas`
+    - `examples/validation/real_world_test.pas`
+    - `tests/examples/test_openssl.pas`
+    - `tests/examples/test_real_websites.pas`
+    - `tests/examples/test_real_websites_enhanced.pas`
+    - `tests/examples/test_real_websites_comprehensive.pas`
+    - `tests/connection/test_ssl_client_connection.pas`
+  - 这批 target compile 过程中还顺手压出并修掉了两条真实 compile-liveness 问题：
+    - `test_real_websites*` 三个程序原本仍是 FPC 不接受的 `try..except..finally` 结构
+    - `test_ssl_client_connection.pas` 仍按旧 socket/native-handle API 书写
+  - focused verification 已通过：
+    - `bash tests/scripts/test_isslcertificateverification_generic_examples_contract.sh`
+    - 9 个目标程序 compile 全绿
+    - `git diff --check`: PASS
+  - 当前结论：
+    - generic examples/tests 这条 verify-result guidance lane 现在可以视为关闭
+    - 下一刀更适合继续盘点 backend-specific runtime / residual deprecation lane，而不是再回头清 generic examples
 - [completed] GitHub Actions Windows runner 已重新纳入当前 truth surface：
   - `wave-b-b2-manual.yml` 的 live run `26030261335` 已证实 `windows-gate` 三层都能在 GitHub CI 上实际执行
   - 当前 WinSSL lane 不再允许退回“本地没 Windows，只能静态审查”的旧入口

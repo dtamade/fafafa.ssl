@@ -43,6 +43,8 @@ var
   BytesRead, TotalBytes: Integer;
   Cert: ISSLCertificate;
   NetErr: string;
+  LVerifyResult: Integer;
+  LVerifyResultString: string;
 begin
   WriteLn('=== OpenSSL Backend Test ===');
   WriteLn;
@@ -84,7 +86,8 @@ begin
 
       if not Conn.Connect then
       begin
-        WriteLn('TLS handshake failed: ', Conn.GetVerifyResultString);
+        GetCertificateVerificationInfo(Conn, LVerifyResult, LVerifyResultString);
+        WriteLn('TLS handshake failed: ', LVerifyResultString);
         Exit;
       end;
 

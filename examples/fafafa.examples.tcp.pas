@@ -12,7 +12,8 @@ uses
   {$ELSE}
   BaseUnix, Unix, Sockets, NetDB,
   {$ENDIF}
-  Classes;
+  Classes,
+  fafafa.ssl.base;
 
 type
   TSocketHandle = {$IFDEF MSWINDOWS}TSocket{$ELSE}TSocket{$ENDIF};
@@ -28,6 +29,8 @@ function ConnectTCP(const AHost: string; APort: Word): TSocketHandle;
 function ListenTCP(APort: Word; const AAddress: string = '0.0.0.0'): TSocketHandle;
 function AcceptConnection(AListenSocket: TSocketHandle): TSocketHandle;
 procedure CloseSocket(var ASocket: TSocketHandle);
+procedure GetCertificateVerificationInfo(AConnection: ISSLConnection;
+  out AVerifyResult: Integer; out AVerifyResultString: string);
 
 implementation
 
@@ -256,5 +259,28 @@ begin
   ASocket := INVALID_SOCKET;
 end;
 {$ENDIF}
+
+procedure GetCertificateVerificationInfo(AConnection: ISSLConnection;
+  out AVerifyResult: Integer; out AVerifyResultString: string);
+var
+  LCertVerify: ISSLCertificateVerification;
+begin
+  AVerifyResult := -1;
+  AVerifyResultString := 'Not verified';
+
+  if AConnection = nil then
+    Exit;
+
+  if Supports(AConnection, ISSLCertificateVerification, LCertVerify) then
+  begin
+    AVerifyResult := LCertVerify.GetVerifyResult;
+    AVerifyResultString := LCertVerify.GetVerifyResultString;
+  end
+  else
+  begin
+    AVerifyResult := AConnection.GetVerifyResult;
+    AVerifyResultString := AConnection.GetVerifyResultString;
+  end;
+end;
 
 end.

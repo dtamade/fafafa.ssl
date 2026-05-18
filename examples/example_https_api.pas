@@ -315,8 +315,7 @@ begin
     // collect TLS info
     Result.TLSVersion := ProtocolVersionToString(TLS.Connection.GetProtocolVersion);
     Result.CipherSuite := TLS.Connection.GetCipherName;
-    Result.VerifyResult := TLS.Connection.GetVerifyResult;
-    Result.VerifyResultString := TLS.Connection.GetVerifyResultString;
+    GetCertificateVerificationInfo(TLS.Connection, Result.VerifyResult, Result.VerifyResultString);
 
     Request := AMethod + ' ' + Path + ' HTTP/1.1'#13#10 +
                'Host: ' + Host + #13#10 +

@@ -2,6 +2,44 @@
 
 ## 2026-05-19
 
+- 在继续追 `verify-result mirrors` 的残余入口时，这次最值得优先收的已经不是 docs，也不是 high-visibility facade，而是 generic examples / 通用测试示例：
+  - `examples/01_tls_client.pas`
+  - `examples/example_https_api.pas`
+  - `examples/production/https_client_auth.pas`
+  - `examples/validation/real_world_test.pas`
+  - `tests/examples/test_openssl.pas`
+  - `tests/examples/test_real_websites*.pas`
+  - `tests/connection/test_ssl_client_connection.pas`
+  - 这些文件都更像“开发者会直接照着写”的入口，比 backend-specific runtime test 更容易把 verify-result core getters 再教回去
+
+- 这批最小安全收口也已经落地：
+  - 在 `examples/fafafa.examples.tcp.pas` 增加共享 `GetCertificateVerificationInfo(...)`
+  - helper 优先走 `ISSLCertificateVerification`
+  - 只有 optional owner interface 不可用时，才回退 core `GetVerifyResult` / `GetVerifyResultString`
+  - `tests/connection/test_ssl_client_connection.pas` 因为不依赖 examples helper，所以保留同名本地 helper
+
+- 这次 target compile 还顺手压出了两个之前没被正式记下来的 compile-liveness 真相：
+  - `tests/examples/test_real_websites.pas`、`test_real_websites_enhanced.pas`、`test_real_websites_comprehensive.pas`
+    原本都还写着 FPC 不接受的 `try..except..finally` 结构
+  - `tests/connection/test_ssl_client_connection.pas`
+    也还停留在旧的 `ssockets` / native-handle API 预期：
+    - 把 `TInetSocket.Connect` 当返回布尔值
+    - 把 `TSocketStream.Create` 当作接收整个 socket 对象
+    - 把 native handle 当 `ISSLConnection` 核心方法而不是 helper 获取
+
+- 这也说明当前问题不只是“guidance 顺序不优雅”，而是：
+  - generic examples/tests 如果不重新编译验证，连 compile-liveness 都不一定还成立
+  - 所以这批必须同时做 owner-path 收口和目标编译，而不能只做 source grep
+
+- focused 结果说明这批边界已经正确收住：
+  - source contract 已 green
+  - 9 个目标程序 compile 全绿
+  - 现在 `examples` / `tests/examples` / `tests/connection` 下的 direct verify-result 命中已只剩 helper 本身
+
+- 因而 generic examples / tests 这条 verify-result guidance lane 现在可以视为关闭：
+  - 后续不应再把“generic examples 还在直读 core verify getters”当作未完成问题反复拉起
+  - 下一刀更适合继续盘点 backend-specific runtime / residual deprecation lane
+
 - `tests/contract/test_backend_contract.pas` 的 `Contract 21` 之前虽然已经锁住：
   - `GetVerifyResult`
   - `GetVerifyResultString`

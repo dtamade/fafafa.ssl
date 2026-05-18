@@ -162,6 +162,8 @@ var
   LRequest: RawByteString;
   LStartTime: TDateTime;
   LCertPEM, LKeyPEM: string;
+  LVerifyResult: Integer;
+  LVerifyResultString: string;
 begin
   Result := False;
   
@@ -275,12 +277,13 @@ begin
       Log(Format('TLS版本: %s', [
         ProtocolVersionToString(LConnection.GetProtocolVersion)]));
       Log(Format('密码套件: %s', [LConnection.GetCipherName]));
-      
+
       // 验证服务器证书
-      if LConnection.GetVerifyResult = 0 then
+      GetCertificateVerificationInfo(LConnection, LVerifyResult, LVerifyResultString);
+      if LVerifyResult = 0 then
         WriteLn('服务器证书验证: 成功')
       else
-        WriteLn('服务器证书验证: 失败');
+        WriteLn('服务器证书验证: 失败 (', LVerifyResultString, ')');
     except
       Log('警告: 无法获取连接信息');
     end;
@@ -443,5 +446,3 @@ end;
 begin
   Main;
 end.
-
-

@@ -51,6 +51,8 @@ procedure TestWebsite(const ATest: TWebsiteTest; const AConnector: TSSLConnector
 var
   Sock: TSocketHandle;
   TLS: TSSLStream;
+  LVerifyResult: Integer;
+  LVerifyResultString: string;
 begin
   Inc(GTotalTests);
   Write(Format('[%2d/%2d] %-12s (%s:%d) ... ',
@@ -60,29 +62,32 @@ begin
   TLS := nil;
   try
     try
-      Sock := ConnectTCP(ATest.Host, ATest.Port);
+      try
+        Sock := ConnectTCP(ATest.Host, ATest.Port);
+      except
+        on E: Exception do
+        begin
+          Inc(GSkippedTests);
+          WriteLn('⊘ 跳过: ', E.Message);
+          Exit;
+        end;
+      end;
+
+      TLS := AConnector.ConnectSocket(THandle(Sock), ATest.Host);
+      GetCertificateVerificationInfo(TLS.Connection, LVerifyResult, LVerifyResultString);
+
+      WriteLn('✓ ',
+        ProtocolVersionToString(TLS.Connection.GetProtocolVersion), ' / ',
+        TLS.Connection.GetCipherName, ' | ',
+        LVerifyResultString);
+
+      Inc(GPassedTests);
     except
       on E: Exception do
       begin
-        Inc(GSkippedTests);
-        WriteLn('⊘ 跳过: ', E.Message);
-        Exit;
+        Inc(GFailedTests);
+        WriteLn('✗ ', E.Message);
       end;
-    end;
-
-    TLS := AConnector.ConnectSocket(THandle(Sock), ATest.Host);
-
-    WriteLn('✓ ',
-      ProtocolVersionToString(TLS.Connection.GetProtocolVersion), ' / ',
-      TLS.Connection.GetCipherName, ' | ',
-      TLS.Connection.GetVerifyResultString);
-
-    Inc(GPassedTests);
-  except
-    on E: Exception do
-    begin
-      Inc(GFailedTests);
-      WriteLn('✗ ', E.Message);
     end;
   finally
     if TLS <> nil then

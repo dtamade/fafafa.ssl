@@ -2,6 +2,70 @@
 
 ## 2026-05-19
 
+### ISSLCertificateVerification Generic Examples Owner Path
+
+- add `docs/plans/2026-05-19-isslcertificateverification-generic-examples-owner-path.md`
+  - change:
+    - define the bounded generic examples/tests owner-path batch for residual verify-result guidance
+
+- add `tests/scripts/test_isslcertificateverification_generic_examples_contract.sh`
+  - result: FAIL -> PASS
+  - summary:
+    - RED first exposed:
+      - generic examples/tests still lacked a shared `ISSLCertificateVerification` owner-path helper
+    - GREEN after fix:
+      - generic examples/tests now prefer the shared/local owner-path helper
+
+- update `examples/fafafa.examples.tcp.pas`
+  - change:
+    - add shared `GetCertificateVerificationInfo(...)`
+    - prefer `ISSLCertificateVerification` and keep core getter fallback only as compatibility backstop
+
+- update generic examples/tests:
+  - `examples/01_tls_client.pas`
+  - `examples/example_https_api.pas`
+  - `examples/production/https_client_auth.pas`
+  - `examples/validation/real_world_test.pas`
+  - `tests/examples/test_openssl.pas`
+  - `tests/examples/test_real_websites.pas`
+  - `tests/examples/test_real_websites_enhanced.pas`
+  - `tests/examples/test_real_websites_comprehensive.pas`
+  - `tests/connection/test_ssl_client_connection.pas`
+  - change:
+    - route generic verify-result reads through shared/local owner-path helper instead of direct core getter calls
+
+- `bash -n tests/scripts/test_isslcertificateverification_generic_examples_contract.sh`
+  - result: PASS
+  - summary:
+    - source contract syntax is valid
+
+- `bash tests/scripts/test_isslcertificateverification_generic_examples_contract.sh`
+  - result: PASS
+  - summary:
+    - generic examples/tests now prefer `ISSLCertificateVerification` for verify-result surfaces
+
+- target compile verification
+  - result: PASS with focused FAIL -> PASS inside the batch
+  - summary:
+    - initial compile RED also exposed pre-existing compile-liveness issues:
+      - `tests/examples/test_real_websites*.pas` still used FPC-invalid `try..except..finally`
+      - `tests/connection/test_ssl_client_connection.pas` still assumed older `ssockets` / native-handle API shapes
+    - after fixing those narrow issues, all focused targets compiled:
+      - `examples/01_tls_client.pas`
+      - `examples/example_https_api.pas`
+      - `examples/production/https_client_auth.pas`
+      - `examples/validation/real_world_test.pas`
+      - `tests/examples/test_openssl.pas`
+      - `tests/examples/test_real_websites.pas`
+      - `tests/examples/test_real_websites_enhanced.pas`
+      - `tests/examples/test_real_websites_comprehensive.pas`
+      - `tests/connection/test_ssl_client_connection.pas`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current generic examples/tests owner-path batch has no whitespace or patch-format issues
+
 ### Certificate Verification Chain Issuer-Link Contract
 
 - add `docs/plans/2026-05-19-certificate-verification-chain-issuer-link-contract.md`

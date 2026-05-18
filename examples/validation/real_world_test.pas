@@ -114,6 +114,8 @@ var
   LBuffer: array[0..BUFFER_SIZE-1] of Byte;
   LBytesRead: Integer;
   LStartTime: TDateTime;
+  LVerifyResult: Integer;
+  LVerifyResultString: string;
 begin
   FillChar(Result, SizeOf(Result), 0);
   Result.URL := AURL;
@@ -186,7 +188,8 @@ begin
     try
       Result.TLSVersion := ProtocolVersionToString(LConnection.GetProtocolVersion);
       Result.CipherSuite := LConnection.GetCipherName;
-      Result.CertValid := (LConnection.GetVerifyResult = 0);
+      GetCertificateVerificationInfo(LConnection, LVerifyResult, LVerifyResultString);
+      Result.CertValid := (LVerifyResult = 0);
     except
       Result.TLSVersion := '未知';
       Result.CipherSuite := '未知';
@@ -476,5 +479,3 @@ end;
 begin
   Main;
 end.
-
-

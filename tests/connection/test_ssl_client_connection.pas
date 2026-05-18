@@ -3,15 +3,15 @@ program test_ssl_client_connection;
 {$mode objfpc}{$H+}
 
 uses
-  SysUtils, Classes, Sockets,
+  SysUtils, Classes, Sockets, ssockets,
   fafafa.ssl.openssl.backed,
   fafafa.ssl.openssl.base,
   fafafa.ssl.openssl.api.core,
   fafafa.ssl.openssl.api.bio,
   fafafa.ssl.openssl.api.evp,
   fafafa.ssl.openssl.api.x509,
-  
-  fafafa.ssl.base;
+  fafafa.ssl.base,
+  fafafa.ssl.native_handle;
 
 const
   TEST_HOST = 'www.google.com';
@@ -55,13 +55,37 @@ begin
   Result := False;
   try
     Socket := TInetSocket.Create(Host, Port);
-    Result := Socket.Connect;
+    Socket.Connect;
+    Result := True;
   except
     on E: Exception do
     begin
       WriteLn('Connection error: ', E.Message);
       Result := False;
     end;
+  end;
+end;
+
+procedure GetCertificateVerificationInfo(AConnection: ISSLConnection;
+  out AVerifyResult: Integer; out AVerifyResultString: string);
+var
+  LCertVerify: ISSLCertificateVerification;
+begin
+  AVerifyResult := -1;
+  AVerifyResultString := 'Not verified';
+
+  if AConnection = nil then
+    Exit;
+
+  if Supports(AConnection, ISSLCertificateVerification, LCertVerify) then
+  begin
+    AVerifyResult := LCertVerify.GetVerifyResult;
+    AVerifyResultString := LCertVerify.GetVerifyResultString;
+  end
+  else
+  begin
+    AVerifyResult := AConnection.GetVerifyResult;
+    AVerifyResultString := AConnection.GetVerifyResultString;
   end;
 end;
 
@@ -120,7 +144,7 @@ begin
     if ConnectToServer(TEST_HOST, TEST_PORT) then
     begin
       TestResult('TCP connection', True);
-      Stream := TSocketStream.Create(Socket);
+      Stream := TSocketStream.Create(Socket.Handle);
       TestResult('Create socket stream', True);
     end
     else
@@ -153,7 +177,7 @@ begin
     begin
       TestResult('Create SSL connection object', True);
       
-      if Connection.GetNativeHandle <> nil then
+      if GetNativeHandle(Connection) <> nil then
         TestResult('SSL native handle is valid', True)
       else
         TestResult('SSL native handle is valid', False);
@@ -221,6 +245,7 @@ procedure Test6_VerifyConnection;
 var
   PeerCert: ISSLCertificate;
   VerifyResult: Integer;
+  VerifyResultString: string;
 begin
   WriteLn('Test 6: Verify SSL Connection');
   try
@@ -271,14 +296,14 @@ begin
     
     // Get verify result
     try
-      VerifyResult := Connection.GetVerifyResult;
+      GetCertificateVerificationInfo(Connection, VerifyResult, VerifyResultString);
       WriteLn('Verify result: ', VerifyResult);
       if VerifyResult = 0 then
         TestResult('Certificate verification', True)
       else
       begin
         TestResult('Certificate verification', False, 
-          'Verify failed: ' + Connection.GetVerifyResultString);
+          'Verify failed: ' + VerifyResultString);
       end;
     except
       on E: Exception do
