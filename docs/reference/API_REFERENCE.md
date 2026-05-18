@@ -626,6 +626,10 @@ end;
 
 WinSSL 后端提供 `ISSLSession` 复用能力，但活跃公共接口以当前源码为准，不再使用旧的 `GetSessionID` / `GetSessionData` 风格。
 
+> 当前 dedicated Windows CI runtime truth 已由 run `26037518301` 固定：
+> `observed_reuse=false`，`session_configured=true`。
+> 这意味着 WinSSL 的 session-resumption public surface 已可安全使用，但 native resumed-handshake 行为在 fafafa.ssl 中仍应视为实验性能力，而不是已稳定命中的 runtime 结论。
+
 #### 核心接口
 
 ```pascal
@@ -697,9 +701,9 @@ begin
     WriteLn('第二次连接成功');
 
     if LResumption2.IsSessionReused then
-      WriteLn('✓ Session 复用成功 - 握手时间大幅减少')
+      WriteLn('✓ 当前连接命中了 resumed handshake')
     else
-      WriteLn('✗ Session 未复用 - 执行了完整握手');
+      WriteLn('✗ 当前 dedicated Windows CI runtime truth 仍可能是 observed_reuse=false / session_configured=true');
 
     LConn2.Shutdown;
   end;
@@ -733,19 +737,19 @@ end;
 
 #### 性能优化建议
 
-1. **长连接场景**: 对于需要频繁连接同一服务器的应用（如 REST API 客户端），始终保存和复用 Session
+1. **长连接场景**: 对于需要频繁连接同一服务器的应用（如 REST API 客户端），可以先保留 Session capture/injection 路径；等 Windows runtime 真正证实 resumed handshake 命中后，再把它当作稳定优化项
 2. **Session 有效期**: WinSSL Session 默认有效期由 Windows 系统策略控制，通常为 10 小时
 3. **内存管理**: Session 数据较小（通常 < 1KB），可以安全缓存大量 Session
 4. **线程安全**: TWinSSLSession 对象是线程安全的，可以在多线程环境中共享
 
 #### 与 OpenSSL 的差异
 
-| 特性           | WinSSL               | OpenSSL            |
-| -------------- | -------------------- | ------------------ |
-| Session 存储   | 自动（凭据句柄缓存） | 手动（需要序列化） |
-| Session 有效期 | 系统策略控制         | 应用程序控制       |
-| 跨进程共享     | 不支持               | 支持（通过序列化） |
-| 性能提升       | 70-90%               | 70-90%             |
+| 特性             | WinSSL                                            | OpenSSL            |
+| ---------------- | ------------------------------------------------- | ------------------ |
+| Session 存储     | 自动（凭据句柄缓存）                              | 手动（需要序列化） |
+| Session 有效期   | 系统策略控制                                      | 应用程序控制       |
+| 跨进程共享       | 不支持                                            | 支持（通过序列化） |
+| 当前 runtime truth | `observed_reuse=false` / `session_configured=true` | 常见场景可见收益   |
 
 #### 错误处理
 

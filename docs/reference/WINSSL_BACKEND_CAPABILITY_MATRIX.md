@@ -90,10 +90,14 @@ Ctx := TSSLContextBuilder.Create
 
 | 功能 | 支持状态 | 说明 |
 |------|----------|------|
-| Session 复用 | ✅ 支持 | 完整支持 |
-| Session Ticket | ✅ 支持 | TLS 1.2+ |
-| Session Cache | ✅ 支持 | 系统管理；`SessionCacheSupport=sslSupportStable` |
+| Session 复用 | ⚠️ 实验性 | public surface 存在；当前 dedicated Windows CI runtime truth 为 `observed_reuse=false` / `session_configured=true` |
+| Session Ticket | ⚠️ 实验性 | Schannel surface 存在，但 fafafa.ssl 尚未在 dedicated Windows proof 中观测到真实 resumed handshake |
+| Session Cache | ✅ 支持 | 系统管理；`SessionCacheSupport=sslSupportStable`，但这不等于当前已 runtime-proven 的 resumed handshake |
 | 0-RTT | ⚠️ 部分 | TLS 1.3（Schannel 有限支持；fafafa.ssl 封装层不暴露 ISSLEarlyDataContext） |
+
+> 当前 dedicated Windows CI runtime truth 以 run `26037518301` 为准：
+> `observed_reuse=false`，`session_configured=true`。
+> 因此 WinSSL `session resumption / tickets` 当前只能作为实验性 public surface 使用，不能再写成“完整支持”。
 
 ### 高级功能
 
@@ -174,6 +178,7 @@ program winssl_session_reuse;
 var
   Ctx: ISSLContext;
   Conn1, Conn2: ISSLConnection;
+  Resumption1, Resumption2: ISSLSessionResumption;
   Session: ISSLSession;
 begin
   Ctx := TSSLContextBuilder.Create
@@ -184,18 +189,25 @@ begin
   // 第一次连接
   Conn1 := Ctx.CreateConnection(Socket1);
   (Conn1 as ISSLClientConnection).SetServerName('api.example.com');
-  Conn1.Connect;
-  Session := Conn1.GetSession;  // 保存 Session
-  Conn1.Shutdown;
+  if Conn1.Connect and Supports(Conn1, ISSLSessionResumption, Resumption1) then
+  begin
+    Session := Resumption1.GetSession;  // 保存 Session
+    Conn1.Shutdown;
+  end;
 
-  // 第二次连接（复用 Session）
+  // 第二次连接（尝试复用 Session）
   Conn2 := Ctx.CreateConnection(Socket2);
-  Conn2.SetSession(Session);  // 设置 Session
   (Conn2 as ISSLClientConnection).SetServerName('api.example.com');
-  Conn2.Connect;
+  if Supports(Conn2, ISSLSessionResumption, Resumption2) and Assigned(Session) then
+    Resumption2.SetSession(Session);
 
-  if Conn2.IsSessionResumed then
-    WriteLn('Session 复用成功！');
+  if Conn2.Connect and Supports(Conn2, ISSLSessionResumption, Resumption2) then
+  begin
+    if Resumption2.IsSessionReused then
+      WriteLn('当前连接命中了 resumed handshake')
+    else
+      WriteLn('当前 dedicated Windows CI runtime truth 仍可能是 observed_reuse=false / session_configured=true');
+  end;
 end.
 ```
 

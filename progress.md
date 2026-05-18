@@ -5463,3 +5463,83 @@
   - result: PASS
   - summary:
     - current `ISSLOCSPStapling active-guidance de-emphasis` batch has no whitespace or patch-format issues
+
+### WinSSL Session Capability Truth Alignment
+
+- `git diff -- src/fafafa.ssl.winssl.lib.pas tests/scripts/test_winssl_capability_source_contract.sh tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh docs/reference/API_REFERENCE.md docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md docs/reference/WINSSL_PERFORMANCE_TUNING.md docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+  - result: PASS
+  - summary:
+    - confirmed this batch was correctly scoped to WinSSL session capability/docs truth alignment
+    - initial inspection already showed the intended direction: tighten capability truth, tighten docs truth, and add a dedicated docs contract
+
+- `rg -n "IsSessionResumed|GetSession\\(|SetSession\\(|70-90%|性能提升|快速握手|完整支持|observed_reuse=false|session_configured=true|ISSLSessionResumption" docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md docs/reference/WINSSL_PERFORMANCE_TUNING.md docs/reference/API_REFERENCE.md docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+  - result: PASS
+  - summary:
+    - manual sweep found two additional truth drifts before verification:
+      - `API_REFERENCE.md` still claimed WinSSL `性能提升 70-90%`
+      - `WINSSL_PERFORMANCE_TUNING.md` still mixed direct-core `GetSession` / `IsSessionResumed` into active WinSSL guidance
+    - this justified one more small docs cleanup pass before the focused contracts
+
+- update:
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+  - `docs/reference/WINSSL_PERFORMANCE_TUNING.md`
+  - `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+  - `tests/scripts/test_winssl_capability_source_contract.sh`
+  - `tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - `docs/plans/2026-05-18-winssl-session-capability-truth-alignment.md`
+  - change:
+    - tighten `SessionTicketsSupport` from `sslSupportStable` to `sslSupportExperimental`
+    - record `observed_reuse=false` / `session_configured=true` in WinSSL `KnownIssues`
+    - remove WinSSL docs claims that presented session resumption as already runtime-proven stable or already yielding generic `70-90%` gains
+    - align active WinSSL session examples to `ISSLSessionResumption` owner-path guidance
+    - expand the dedicated docs truth contract to catch stale performance-table / direct-core-example regressions
+
+- `bash -n tests/scripts/test_winssl_capability_source_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_capability_source_contract.sh`
+  - result: PASS
+  - summary:
+    - WinSSL capability source now publishes stable session-cache support, experimental session-ticket support, and the current dedicated runtime truth in `KnownIssues`
+
+- `bash -n tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - result: PASS
+
+- first run of `bash tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - result: RED
+  - summary:
+    - failed only because `WINSSL_BACKEND_STATUS_REPORT.md` had not yet written `windows-gate` explicitly into the final green truth section
+    - this was a wording/evidence-source drift, not a remaining implementation or API-guidance regression
+
+- update `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+  - change:
+    - pin final green run `26037518301` to the explicit `windows-gate` truth source wording so the docs contract can guard it
+
+- second run of `bash tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - WinSSL session-resumption docs now consistently publish the post-bridge truth:
+      - `observed_reuse=false`
+      - `session_configured=true`
+      - no more “完整支持” or generic stable-gain claims in active WinSSL docs
+
+- `bash -n tests/scripts/test_isslsessionresumption_active_guidance_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_isslsessionresumption_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - the WinSSL doc tightening did not regress the wider repo rule that active session-resumption guidance should prefer `ISSLSessionResumption`
+
+- `mkdir -p tmp/winssl_session_capability_truth_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_session_capability_truth_win64 -FEtmp/winssl_session_capability_truth_win64 -otmp/winssl_session_capability_truth_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+  - result: PASS
+  - summary:
+    - dedicated Win64 cross-target session-resumption proof compiled successfully
+    - compile completed with existing repo warnings only; this batch introduced no new compile blocker
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `WinSSL session capability/docs truth alignment` batch has no whitespace or patch-format issues

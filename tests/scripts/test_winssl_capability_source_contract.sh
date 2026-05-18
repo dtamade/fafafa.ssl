@@ -52,6 +52,12 @@ for token in [
 
 require("Result.SessionCacheSupport := sslSupportStable;" in text,
         "WinSSL GetCapabilities must publish stable SessionCacheSupport")
+
+require("Result.SessionTicketsSupport := sslSupportExperimental;" in text,
+        "WinSSL GetCapabilities must publish experimental SessionTicketsSupport until native resumed-handshake proof closes")
+
+require("observed_reuse=false" in text and "session_configured=true" in text,
+        "WinSSL KnownIssues must record the current dedicated runtime truth for session resumption")
 PY
 
 echo "[PASS] WinSSL capability source contract passed"

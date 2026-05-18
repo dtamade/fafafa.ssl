@@ -2457,3 +2457,36 @@
     - `ISSLSessionResumption`
     - `ISSLOCSPStapling`
   - 因而下一步不该再继续围绕这几组 surface 做同类文案清扫，而应把主线切回更大的 interface-design completeness / backend implementation completeness 审查
+
+- 当前 WinSSL session-resumption lane 的下一条真实问题已经从“会不会 crash / 会不会误报”收缩成了“public truth 会不会继续过强承诺”：
+  - `src/fafafa.ssl.winssl.lib.pas` 原先仍把 `SessionTicketsSupport` 写成 `sslSupportStable`
+  - `KnownIssues` 也没有写入当前 dedicated Windows truth
+  - 这会让 capability 发布继续暗示“WinSSL tickets/resumption 已稳定闭环”
+
+- 活跃 WinSSL 参考文档里也确实残留了多处旧时代承诺，而不是只有一处 wording 漂移：
+  - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md` 还把 `Session 复用` 写成“✅ 支持 | 完整支持”
+  - `docs/reference/WINSSL_PERFORMANCE_TUNING.md` 还在写 `减少握手时间 70-90%`
+  - 同一性能文档里还混着 direct core `GetSession` / `IsSessionResumed`
+  - `docs/reference/API_REFERENCE.md` 甚至还保留了 WinSSL `性能提升 70-90%` 的对比表
+
+- 这说明当前真正要守住的不是“有没有 session-resumption public surface”，而是“不要把 public surface 误写成 runtime-proven stable behavior”：
+  - `SupportsSessionTickets=True` 仍然可以保留，因为 Schannel / public surface 确实存在
+  - 但 `SessionTicketsSupport` 必须降到 `sslSupportExperimental`
+  - `SessionCacheSupport` 可以继续保持 `sslSupportStable`
+  - 活跃文档必须同步明确：
+    - `observed_reuse=false`
+    - `session_configured=true`
+    - run `26037518301`
+
+- focused docs truth contract 也顺手揭示了一条很有价值的流程细节：
+  - 状态报告第一次 RED 并不是因为实现或主文档仍然错
+  - 而是 `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md` 没把 `windows-gate` 这个最终 truth source 关键词显式写出来
+  - 这类 failure 很便宜，但价值很高，因为它能把“口头知道 Windows CI 是真相来源”固定成可回归检查的文字证据
+
+- 当前这批收口后的更准确结论是：
+  - WinSSL session-resumption / tickets 的 public surface 现在已与当前 GitHub Windows runtime truth 对齐
+  - 当前默认真相是：
+    - surface 存在
+    - shared crash 已关闭
+    - native resumed-handshake 仍未在 fafafa.ssl 中被 dedicated Windows proof 证实
+  - 因而下一步不该再反复做 docs/capability truth 清扫，而应直接转向 native resumed-handshake / session tickets 行为调查

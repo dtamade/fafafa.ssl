@@ -1442,6 +1442,48 @@
       - 不再重复拉起 optional-owner ordinary-guidance 清扫
       - 切回更大的 interface-design completeness / implementation-completeness 审查
 
+55. `WinSSL session capability/docs truth alignment` 已完成并应作为当前 WinSSL session-resumption lane 的最新 public truth 基线保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-winssl-session-capability-truth-alignment.md`
+    - 当前已确认的 route truth：
+      - `src/fafafa.ssl.winssl.lib.pas`
+        现在继续保留：
+        - `SessionCacheSupport := sslSupportStable`
+        - `SupportsSessionTickets := True`
+        但已经把：
+        - `SessionTicketsSupport`
+          收紧到 `sslSupportExperimental`
+        - `KnownIssues`
+          显式写入当前 dedicated Windows runtime truth：
+          - `observed_reuse=false`
+          - `session_configured=true`
+      - `docs/reference/API_REFERENCE.md`
+      - `docs/reference/WINSSL_BACKEND_CAPABILITY_MATRIX.md`
+      - `docs/reference/WINSSL_PERFORMANCE_TUNING.md`
+      - `docs/test_reports/WINSSL_BACKEND_STATUS_REPORT.md`
+        现在都已统一收紧到：
+        - public surface 存在
+        - shared crash 已关闭
+        - native resumed-handshake 仍未被当前 GitHub Windows proof 证实
+      - WinSSL performance/session 示例也已经统一优先走：
+        - `ISSLSessionResumption.GetSession`
+        - `ISSLSessionResumption.SetSession`
+        - `ISSLSessionResumption.IsSessionReused`
+        不再混回 direct core `GetSession` / `SetSession` / `IsSessionResumed`
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_winssl_capability_source_contract.sh`
+      - `bash tests/scripts/test_winssl_capability_source_contract.sh`
+      - `bash -n tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+      - `bash tests/scripts/test_winssl_session_resumption_docs_truth_contract.sh`
+      - `bash -n tests/scripts/test_isslsessionresumption_active_guidance_contract.sh`
+      - `bash tests/scripts/test_isslsessionresumption_active_guidance_contract.sh`
+      - `mkdir -p tmp/winssl_session_capability_truth_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_session_capability_truth_win64 -FEtmp/winssl_session_capability_truth_win64 -otmp/winssl_session_capability_truth_win64/test_winssl_session_resumption.exe tests/winssl/test_winssl_session_resumption.pas`
+      - `git diff --check`
+    - 当前批收口后默认下一步应为：
+      - 不再重开 capability/docs truth alignment 或 shared-crash proof lane
+      - 直接进入 WinSSL backend native resumed-handshake / session tickets 行为调查
+      - 或切回更大的 backend implementation completeness 横向审查
+
 ## Verification Discipline
 
 - 默认先做静态审查与 focused contract，不重跑整条重型门禁。

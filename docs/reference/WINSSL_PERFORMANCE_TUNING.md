@@ -19,12 +19,14 @@
 
 ## Session 复用优化
 
+> 当前 dedicated Windows CI runtime truth 以 run `26037518301` 为准：
+> `observed_reuse=false`，`session_configured=true`。
+> 因此本节只描述 WinSSL session-resumption 的候选优化路径，不再把它当作当前已经 runtime-proven 的稳定收益。
+
 ### 为什么重要
 
-TLS 握手是连接建立中最耗时的部分。Session 复用可以：
-- **减少握手时间 70-90%**
-- **降低 CPU 使用率**
-- **减少网络往返次数**
+TLS 握手是连接建立中最耗时的部分。
+一旦 WinSSL native resumed-handshake proof 真正闭环，session resumption 才可能进一步减少重复握手成本、CPU 开销和网络往返次数。
 
 ### 实现方式
 
@@ -34,6 +36,7 @@ var
   LLib: ISSLLibrary;
   LContext: ISSLContext;
   LConn1, LConn2: ISSLConnection;
+  LResumption1, LResumption2: ISSLSessionResumption;
   LSession: ISSLSession;
 begin
   LLib := CreateWinSSLLibrary;
@@ -50,18 +53,21 @@ begin
     WriteLn('第一次连接: ', MilliSecondsBetween(Now, LStartTime), ' ms');
 
     // 获取 Session
-    LSession := LConn1.GetSession;
+    if Supports(LConn1, ISSLSessionResumption, LResumption1) then
+      LSession := LResumption1.GetSession;
     LConn1.Shutdown;
   end;
 
-  // 第二次连接 - 复用 Session（快速握手）
+  // 第二次连接 - 尝试复用 Session
   LConn2 := LContext.CreateConnection(Socket2);
-  LConn2.SetSession(LSession);  // 设置 Session
   (LConn2 as ISSLClientConnection).SetServerName('api.example.com');
+  if Supports(LConn2, ISSLSessionResumption, LResumption2) and Assigned(LSession) then
+    LResumption2.SetSession(LSession);
   if LConn2.Connect then
   begin
     WriteLn('第二次连接: ', MilliSecondsBetween(Now, LStartTime), ' ms');
-    WriteLn('Session 复用: ', LConn2.IsSessionResumed);
+    if Supports(LConn2, ISSLSessionResumption, LResumption2) then
+      WriteLn('Session 复用: ', LResumption2.IsSessionReused);
     LConn2.Shutdown;
   end;
 end;
@@ -87,21 +93,24 @@ type
 // 使用示例
 var
   LCache: TSessionCache;
+  LConn1, LConn2: ISSLConnection;
+  LResumption1, LResumption2: ISSLSessionResumption;
   LSession: ISSLSession;
 begin
   LCache := TSessionCache.Create(36000);  // 10 小时
   try
     // 假设 LConn1/LConn2 在创建时已经按 example.com 完成连接级 SNI 配置。
     // 首次连接
-    if LConn1.Connect then
-      LCache.Add('example.com', LConn1.GetSession);
+    if LConn1.Connect and Supports(LConn1, ISSLSessionResumption, LResumption1) then
+      LCache.Add('example.com', LResumption1.GetSession);
 
     // 后续连接 - 从缓存获取
     LSession := LCache.Get('example.com');
     if Assigned(LSession) and LSession.IsValid then
     begin
-      LConn2.SetSession(LSession);
-      LConn2.Connect;  // 快速握手
+      if Supports(LConn2, ISSLSessionResumption, LResumption2) then
+        LResumption2.SetSession(LSession);
+      LConn2.Connect;  // 候选复用路径
     end;
 
     // 定期清理过期 Session
@@ -112,13 +121,13 @@ begin
 end;
 ```
 
-### 性能对比
+### 当前运行时观测
 
-| 场景 | 首次连接 | Session 复用 | 性能提升 |
-|------|---------|-------------|---------|
-| 本地网络 | 50-100ms | 10-20ms | 70-80% |
-| 互联网 | 200-500ms | 30-80ms | 80-90% |
-| 高延迟 | 1000ms+ | 100-200ms | 85-90% |
+- 当前 dedicated Windows CI runtime truth：
+  - `observed_reuse=false`
+  - `session_configured=true`
+- 因此仓库当前不再对 WinSSL session resumption 发布通用百分比收益表。
+- 如果后续 native resumed-handshake proof 闭环，再回到真实 benchmark 结果更新本节。
 
 ---
 
@@ -448,6 +457,7 @@ type
 function MeasureConnection(AConn: ISSLConnection): TConnectionMetrics;
 var
   LStart, LConnected, LHandshake, LFirstByte: TDateTime;
+  LResumption: ISSLSessionResumption;
 begin
   LStart := Now;
 
@@ -474,7 +484,9 @@ begin
     end;
 
     Result.TotalTime := MilliSecondsBetween(Now, LStart);
-    Result.SessionReused := AConn.IsSessionResumed;
+    Result.SessionReused :=
+      Supports(AConn, ISSLSessionResumption, LResumption) and
+      LResumption.IsSessionReused;
   end;
 end;
 ```
@@ -544,6 +556,7 @@ procedure BenchmarkSessionReuse;
 var
   LContext: ISSLContext;
   LConn: ISSLConnection;
+  LResumption, LResumption1: ISSLSessionResumption;
   LSession: ISSLSession;
   LMetrics: array[0..99] of TConnectionMetrics;
   LAvgWithSession, LAvgWithoutSession: Int64;
@@ -573,19 +586,20 @@ begin
 
   // 测试 2: 有 Session 复用
   WriteLn('');
-  WriteLn('测试 2: 有 Session 复用（100 次连接）');
+  WriteLn('测试 2: 注入 Session（100 次连接）');
 
   // 首次连接获取 Session
   LConn := LContext.CreateConnection(CreateSocket(LHost, 443));
   (LConn as ISSLClientConnection).SetServerName(LHost);
-  LConn.Connect;
-  LSession := LConn.GetSession;
+  if LConn.Connect and Supports(LConn, ISSLSessionResumption, LResumption1) then
+    LSession := LResumption1.GetSession;
   LConn.Shutdown;
 
   for var i := 0 to 99 do
   begin
     LConn := LContext.CreateConnection(CreateSocket(LHost, 443));
-    LConn.SetSession(LSession);
+    if Supports(LConn, ISSLSessionResumption, LResumption) and Assigned(LSession) then
+      LResumption.SetSession(LSession);
     (LConn as ISSLClientConnection).SetServerName(LHost);
     LMetrics[i] := MeasureConnection(LConn);
     LConn.Shutdown;
@@ -598,8 +612,8 @@ begin
 
   WriteLn('平均连接时间: ', LAvgWithSession, ' ms');
   WriteLn('');
-  WriteLn('性能提升: ',
-    Round((1 - LAvgWithSession / LAvgWithoutSession) * 100), '%');
+  WriteLn('当前 dedicated Windows CI runtime truth: observed_reuse=false / session_configured=true');
+  WriteLn('时间差: ', LAvgWithoutSession - LAvgWithSession, ' ms');
 end;
 
 begin
@@ -613,13 +627,15 @@ end.
 
 ### 性能问题诊断
 
-**问题**: Session 复用不工作
+**问题**: Session resumption 当前没有观测到真实 reused handshake
 
 **检查**:
 ```pascal
-if not LConn.IsSessionResumed then
+if Supports(LConn, ISSLSessionResumption, LResumption) and
+   (not LResumption.IsSessionReused) then
 begin
   WriteLn('Session 未复用，可能原因：');
+  WriteLn('  - 当前 dedicated Windows CI runtime truth 仍是 observed_reuse=false');
   WriteLn('  - 服务器不支持 Session 复用');
   WriteLn('  - Session 已过期（默认 10 小时）');
   WriteLn('  - 服务器要求重新验证');

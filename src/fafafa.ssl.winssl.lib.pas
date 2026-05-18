@@ -527,7 +527,8 @@ begin
   // Certificate Transparency Schannel 不原生支持
   Result.SupportsCertificateTransparency := False;
 
-  // 会话票据是 Schannel 原生支持的
+  // Schannel 原生提供 session tickets/surface, but fafafa.ssl's
+  // native resumed-handshake bridge is still only experimentally proven.
   Result.SupportsSessionTickets := True;
 
   // ECDHE 需要 Windows Vista+ (版本 6.0+)
@@ -562,7 +563,7 @@ begin
     Result.ALPNSupport := sslSupportNone;
   Result.OCSPStaplingSupport := sslSupportNone;
   Result.CertTransparencySupport := sslSupportNone;
-  Result.SessionTicketsSupport := sslSupportStable;
+  Result.SessionTicketsSupport := sslSupportExperimental;
   Result.SessionCacheSupport := sslSupportStable;
   Result.ZeroRTTSupport := sslSupportNone;
   Result.EarlyDataSupport := sslSupportNone;
@@ -615,7 +616,10 @@ begin
 
   // 兼容性（WinSSL 行为依赖 Windows 版本）
   Result.CompatibilityLevel := 90;  // 90% 兼容性
-  Result.KnownIssues := 'Feature availability depends on Windows version; does not support PEM private keys directly';
+  Result.KnownIssues :=
+    'Feature availability depends on Windows version; session resumption / session tickets remain experimental ' +
+    'in fafafa.ssl WinSSL runtime proof (current dedicated Windows CI recorded observed_reuse=false with session_configured=true); ' +
+    'does not support PEM private keys directly';
 
   NormalizeLegacyCapabilityBooleans(Result);
 
