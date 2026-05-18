@@ -70,6 +70,16 @@ $passedTests = 0
 $failedTests = 0
 $failedTestNames = @()
 
+function Write-EvidenceMarker {
+    param(
+        [string]$Marker
+    )
+
+    Write-Host ("[WINSSL-RUNTIME] " + $Marker) -ForegroundColor DarkCyan
+}
+
+Write-EvidenceMarker ("suite_start total=" + $totalTests)
+
 # 编译测试
 if (-not $SkipCompile) {
     Write-Host "编译测试程序..." -ForegroundColor Yellow
@@ -83,6 +93,7 @@ if (-not $SkipCompile) {
 
             if ($LASTEXITCODE -eq 0) {
                 Write-Host " [OK]" -ForegroundColor Green
+                Write-EvidenceMarker ("compile_result status=PASS lpi=" + $test.Lpi)
                 if ($PSBoundParameters.ContainsKey('Verbose')) {
                     Write-Host "    输出: $($output -join "`n    ")" -ForegroundColor Gray
                 }
@@ -90,11 +101,15 @@ if (-not $SkipCompile) {
                 Write-Host " [失败]" -ForegroundColor Red
                 Write-Host "    编译错误:" -ForegroundColor Red
                 Write-Host "    $($output -join "`n    ")" -ForegroundColor Red
+                Write-EvidenceMarker ("compile_result status=FAIL lpi=" + $test.Lpi)
+                Write-EvidenceMarker "suite_end status=FAIL phase=compile"
                 exit 1
             }
         } catch {
             Write-Host " [错误]" -ForegroundColor Red
             Write-Host "    异常: $($_.Exception.Message)" -ForegroundColor Red
+            Write-EvidenceMarker ("compile_result status=FAIL lpi=" + $test.Lpi + " reason=exception")
+            Write-EvidenceMarker "suite_end status=FAIL phase=compile"
             exit 1
         }
     }
@@ -102,6 +117,7 @@ if (-not $SkipCompile) {
     Write-Host ""
     Write-Host "所有测试编译完成！" -ForegroundColor Green
     Write-Host ""
+    Write-EvidenceMarker ("compile_phase status=PASS total=" + $totalTests)
 }
 
 # 运行测试
@@ -109,12 +125,14 @@ Write-Host "运行测试..." -ForegroundColor Yellow
 Write-Host ""
 
 foreach ($test in $tests) {
-    Write-Host "[$($passedTests + $failedTests + 1)/$totalTests] $($test.Name)" -ForegroundColor Cyan
+    $testIndex = $passedTests + $failedTests + 1
+    Write-Host "[$testIndex/$totalTests] $($test.Name)" -ForegroundColor Cyan
     Write-Host "  描述: $($test.Description)" -ForegroundColor Gray
     Write-Host ""
 
     if (-not (Test-Path $test.Exe)) {
         Write-Host "  错误: 可执行文件不存在: $($test.Exe)" -ForegroundColor Red
+        Write-EvidenceMarker ("test_result index=" + $testIndex + " status=FAIL reason=missing_exe")
         $failedTests++
         $failedTestNames += $test.Name
         continue
@@ -146,14 +164,17 @@ foreach ($test in $tests) {
         # 检查结果
         if ($exitCode -eq 0) {
             Write-Host "  ✓ 通过 (耗时: $($duration.TotalSeconds.ToString("F2"))s)" -ForegroundColor Green
+            Write-EvidenceMarker ("test_result index=" + $testIndex + " status=PASS duration_seconds=" + $duration.TotalSeconds.ToString("F2"))
             $passedTests++
         } else {
             Write-Host "  ✗ 失败 (退出码: $exitCode)" -ForegroundColor Red
+            Write-EvidenceMarker ("test_result index=" + $testIndex + " status=FAIL exit_code=" + $exitCode + " duration_seconds=" + $duration.TotalSeconds.ToString("F2"))
             $failedTests++
             $failedTestNames += $test.Name
         }
     } catch {
         Write-Host "  ✗ 运行异常: $($_.Exception.Message)" -ForegroundColor Red
+        Write-EvidenceMarker ("test_result index=" + $testIndex + " status=FAIL reason=exception")
         $failedTests++
         $failedTestNames += $test.Name
     }
@@ -182,6 +203,7 @@ if ($failedTests -gt 0) {
 $successRate = [math]::Round(($passedTests / $totalTests) * 100, 1)
 Write-Host "成功率: $successRate%" -ForegroundColor $(if ($successRate -eq 100) { "Green" } else { "Yellow" })
 Write-Host ""
+Write-EvidenceMarker ("suite_summary passed=" + $passedTests + " failed=" + $failedTests + " total=" + $totalTests + " success_rate=" + $successRate)
 
 # 恢复编码
 [Console]::OutputEncoding = $OriginalEncoding
@@ -189,9 +211,11 @@ Write-Host ""
 # 返回退出码
 if ($failedTests -eq 0) {
     Write-Host "🎉 所有测试通过！" -ForegroundColor Green
+    Write-EvidenceMarker "suite_end status=PASS"
     exit 0
 } else {
     Write-Host "⚠️ 有测试失败" -ForegroundColor Red
+    Write-EvidenceMarker "suite_end status=FAIL phase=runtime"
     exit 1
 }
 }

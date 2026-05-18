@@ -23,10 +23,12 @@ required_fragments = [
     "Get-Command lazbuild",
     "pwsh -NoProfile -ExecutionPolicy Bypass -File tests/quick_winssl_validation.ps1",
     "pwsh -NoProfile -ExecutionPolicy Bypass -File tests/run_winssl_tests.ps1",
+    "Tee-Object -Variable runtimeOutput",
+    "Out-File -FilePath $runtimeLog -Encoding utf8",
     "test-reports/winssl_quick_smoke_${{ github.run_id }}.log",
     "test-reports/winssl_runtime_suite_${{ github.run_id }}.log",
     "This template records the observed results of the repository WinSSL scripts for the current run only.",
-    "Review the uploaded transcripts before making backend readiness or production support claims.",
+    "Review the uploaded runtime logs before making backend readiness or production support claims.",
 ]
 
 forbidden_fragments = [

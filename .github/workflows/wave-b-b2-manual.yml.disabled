@@ -209,9 +209,12 @@ jobs:
           $runId = "${{ needs.setup.outputs.run_id }}"
           New-Item -ItemType Directory -Force -Path test-reports | Out-Null
           $quickLog = "test-reports/winssl_quick_smoke_${runId}.log"
-          pwsh -NoProfile -ExecutionPolicy Bypass -File tests/quick_winssl_validation.ps1 *>&1 | Tee-Object -FilePath $quickLog
-          if ($LASTEXITCODE -ne 0) {
-            exit $LASTEXITCODE
+          $quickOutput = @()
+          pwsh -NoProfile -ExecutionPolicy Bypass -File tests/quick_winssl_validation.ps1 *>&1 | Tee-Object -Variable quickOutput
+          $quickExitCode = $LASTEXITCODE
+          @($quickOutput) | Out-File -FilePath $quickLog -Encoding utf8
+          if ($quickExitCode -ne 0) {
+            exit $quickExitCode
           }
 
       - name: Run Windows Wave B gate
@@ -225,16 +228,13 @@ jobs:
         run: |
           $runId = "${{ needs.setup.outputs.run_id }}"
           New-Item -ItemType Directory -Force -Path test-reports | Out-Null
-          $exitCode = 0
-          Start-Transcript -Path "test-reports/winssl_runtime_suite_${runId}.log"
-          try {
-            pwsh -NoProfile -ExecutionPolicy Bypass -File tests/run_winssl_tests.ps1
-            $exitCode = $LASTEXITCODE
-          } finally {
-            Stop-Transcript
-          }
-          if ($exitCode -ne 0) {
-            exit $exitCode
+          $runtimeLog = "test-reports/winssl_runtime_suite_${runId}.log"
+          $runtimeOutput = @()
+          pwsh -NoProfile -ExecutionPolicy Bypass -File tests/run_winssl_tests.ps1 *>&1 | Tee-Object -Variable runtimeOutput
+          $runtimeExitCode = $LASTEXITCODE
+          @($runtimeOutput) | Out-File -FilePath $runtimeLog -Encoding utf8
+          if ($runtimeExitCode -ne 0) {
+            exit $runtimeExitCode
           }
 
       - name: Upload Windows evidence

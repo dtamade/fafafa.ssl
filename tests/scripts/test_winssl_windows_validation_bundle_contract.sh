@@ -74,6 +74,8 @@ require_match "$checklist" 'scripts/run_wave_b_windows_gate\.ps1' \
   'checklist points to current Wave B Windows gate'
 require_match "$checklist" 'tests/run_winssl_tests\.ps1' \
   'checklist points to broader manual WinSSL suite'
+require_match "$checklist" '\[WINSSL-RUNTIME\]' \
+  'checklist documents the stable broader-suite evidence markers'
 require_match "$checklist" 'test-reports/wave_b_windows_gate_summary_' \
   'checklist documents current gate summary artifact'
 require_absent "$checklist" 'Run-WindowsValidation\.ps1' \
@@ -103,6 +105,8 @@ require_match "$bundle" 'tests/winssl/' \
   'bundle inventory points to actual WinSSL test directory'
 require_match "$bundle" 'tests/integration/test_backend_comparison\.lpi' \
   'bundle inventory points to cross-backend comparison project'
+require_match "$bundle" '\[WINSSL-RUNTIME\]' \
+  'bundle inventory documents the stable broader-suite evidence markers'
 require_match "$bundle" 'test-reports/wave_b_windows_gate_summary_' \
   'bundle inventory documents current Windows gate artifact'
 require_match "$bundle" '不属于当前 bundle 的旧模板名称' \

@@ -3,9 +3,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-WORK_REL="tmp/test_wave_b_b2_consistency_windows_companion_$(date +%s)"
+WORK_REL="tmp/test_wave_b_b2_consistency_windows_runtime_substantive_$(date +%s)"
 WORK_DIR="$ROOT_DIR/$WORK_REL"
-RUN_ID="consistency_windows_companion"
+RUN_ID="consistency_windows_runtime_substantive"
 WINDOWS_DIR="$WORK_DIR/windows_evidence"
 WINDOWS_SUMMARY_REL="$WORK_REL/windows_evidence/wave_b_windows_gate_summary_${RUN_ID}.md"
 WINDOWS_QUICK_REL="$WORK_REL/windows_evidence/winssl_quick_smoke_${RUN_ID}.log"
@@ -48,11 +48,7 @@ cat > "$ROOT_DIR/$WINDOWS_SUMMARY_REL" <<EOF
 EOF
 
 printf 'quick ok\n' > "$ROOT_DIR/$WINDOWS_QUICK_REL"
-cat > "$ROOT_DIR/$WINDOWS_RUNTIME_REL" <<'EOF'
-[WINSSL-RUNTIME] suite_start total=6
-[WINSSL-RUNTIME] suite_summary passed=6 failed=0 total=6 success_rate=100
-[WINSSL-RUNTIME] suite_end status=PASS
-EOF
+printf 'presence only\n' > "$ROOT_DIR/$WINDOWS_RUNTIME_REL"
 
 cat > "$WORK_DIR/cross_summary.md" <<EOF
 # Wave B Cross-Platform Summary
@@ -103,24 +99,16 @@ if [[ ! -f "$OUTPUT_ABS" ]]; then
   fail "expected consistency report to be generated"
 fi
 
-if [[ "$exit_code" -ne 0 ]]; then
-  fail "custom windows summary sibling runtime artifacts should keep strict consistency green"
+if [[ "$exit_code" -eq 0 ]]; then
+  fail "strict consistency should reject Windows runtime logs that only prove file presence"
 fi
 
-if ! rg -n "^\\| windows_quick_log \\| $WINDOWS_QUICK_REL \\| YES \\|" "$OUTPUT_ABS" >/dev/null; then
-  fail "consistency report should derive windows_quick_log from the custom windows summary directory"
+if ! rg -n "runtime evidence markers missing" "$OUTPUT_ABS" >/dev/null; then
+  fail "consistency report should explain that the Windows runtime log is missing substantive suite markers"
 fi
 
-if ! rg -n "^\\| windows_runtime_transcript \\| $WINDOWS_RUNTIME_REL \\| YES \\|" "$OUTPUT_ABS" >/dev/null; then
-  fail "consistency report should derive windows_runtime_transcript from the custom windows summary directory"
+if ! rg -n "consistency_status: \\*\\*INCONSISTENT\\*\\*" "$OUTPUT_ABS" >/dev/null; then
+  fail "consistency report should flip to INCONSISTENT when runtime markers are absent"
 fi
 
-if ! rg -n "substantive runtime evidence; suite_end_status=PASS" "$OUTPUT_ABS" >/dev/null; then
-  fail "consistency report should record substantive Windows runtime evidence when suite markers exist"
-fi
-
-if ! rg -n "consistency_status: \\*\\*CONSISTENT\\*\\*" "$OUTPUT_ABS" >/dev/null; then
-  fail "consistency report should stay CONSISTENT when sibling Windows runtime artifacts exist"
-fi
-
-echo "[PASS] wave-b-b2 consistency windows companion path contract passed"
+echo "[PASS] wave-b-b2 consistency Windows runtime substantive contract passed"

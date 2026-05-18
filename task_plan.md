@@ -10,6 +10,18 @@
 
 ## Current Status
 
+- [completed] GitHub Actions Windows runner 已重新纳入当前 truth surface：
+  - `wave-b-b2-manual.yml` 的 live run `26030261335` 已证实 `windows-gate` 三层都能在 GitHub CI 上实际执行
+  - 当前 WinSSL lane 不再允许退回“本地没 Windows，只能静态审查”的旧入口
+- [completed] Windows runtime evidence strengthening 批次已落地：
+  - broader suite 不再只依赖 `Start-Transcript` 壳，而是改为 UTF-8 console capture
+  - `tests/run_winssl_tests.ps1` 现在会输出稳定的 `[WINSSL-RUNTIME]` markers
+  - `check_wave_b_b2_evidence_consistency.sh` / `prepare_wave_b_b2_handoff_bundle.sh` 不再把 marker-less runtime log 当成合格 evidence
+  - `tests/windows/WINDOWS_VALIDATION_CHECKLIST.md` / `tests/windows/VALIDATION_BUNDLE.md` 已同步更新到新的 runtime-evidence 口径
+- [in_progress] 当前最直接的下一步不是重开接口/SNI 审查，而是：
+  - push 当前 runtime-evidence strengthening 修复
+  - 重新 dispatch `wave-b-b2-manual.yml`
+  - 检查新的 `winssl_runtime_suite_<run_id>.log` 是否真正包含 `[WINSSL-RUNTIME] suite_start / suite_summary / suite_end`
 - [completed] `v1.5.0` release / workflow / cross-platform runtime closeout 已经不再是当前主线：
   - 当前默认控制面应保持在 `post-release route selection`
   - 不再围绕 release lane 或旧的 Windows runtime blocker 重复开工

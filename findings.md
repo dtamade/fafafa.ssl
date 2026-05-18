@@ -2,6 +2,27 @@
 
 ## 2026-05-18
 
+- GitHub Actions live run `26030261335` 已给出一个很重要的新事实：
+  - broader WinSSL suite 并不是“根本没跑”
+  - Windows job console log 里实际有 6 个 suite 的编译/运行/汇总输出
+  - 弱的是 artifact，不是执行本身
+
+- 根因已被压缩到 evidence capture 层，而不是 WinSSL 实现层：
+  - workflow 用 `Start-Transcript` 包住父 PowerShell
+  - broader suite 则在子 `pwsh -File tests/run_winssl_tests.ps1` 里执行
+  - 结果是 GitHub Actions 控制台看得到子进程输出，但上传下来的 `winssl_runtime_suite_*.log` 只剩 transcript 开头/结尾壳
+
+- 之前的 handoff/consistency 链条也确实有一个设计缺口：
+  - `check_wave_b_b2_evidence_consistency.sh` 对 `windows_runtime_transcript` 只做 presence check
+  - 这会把“文件存在但没有实质 runtime 内容”的 artifact 也记成 `CONSISTENT`
+  - 因而旧的 `CLOSED` / `CONSISTENT` 结论证据强度偏弱，不足以直接当作 WinSSL runtime proof
+
+- 当前这批修复的正确边界已经明确，不需要误伤 WinSSL 实现本身：
+  - workflow 改成 UTF-8 console capture 落盘
+  - `tests/run_winssl_tests.ps1` 输出稳定的 ASCII `[WINSSL-RUNTIME]` markers
+  - consistency / handoff 报告改成检查 `suite_start` / `suite_summary` / `suite_end`
+  - 这样下一次 CI 只要 artifact 仍然是空壳，就会被脚本直接判成 `INCONSISTENT`
+
 - 本轮新的审查目标不是 release / workflow / runtime closeout，而是：
   - 公共接口设计是否已经失真
   - facade / factory / builder / config 是否把旧语义继续传播进新入口

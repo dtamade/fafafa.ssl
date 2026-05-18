@@ -49,9 +49,25 @@ powershell -ExecutionPolicy Bypass -File .\tests\run_winssl_tests.ps1
 | `test-reports/wave_b_windows_openssl_<run_id>.log`     | `scripts/run_wave_b_windows_gate.ps1` |
 | `test-reports/wave_b_windows_modules_<run_id>.log`     | `scripts/run_wave_b_windows_gate.ps1` |
 | `test-reports/validate_all_modules_report_<run_id>.md` | `scripts/validate_all_modules.ps1`    |
-| wider suite transcript / console capture               | `tests/run_winssl_tests.ps1`          |
+| wider suite UTF-8 console capture with `[WINSSL-RUNTIME]` markers | `tests/run_winssl_tests.ps1` |
 
-如果只留下“我跑过了”，没有这些 summary / log / transcript，后续审查仍然会回到猜。
+如果需要在 Windows 主机上把 broader suite 控制台输出落盘，推荐这样做:
+
+```powershell
+$runtimeOutput = @()
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\tests\run_winssl_tests.ps1 *>&1 | Tee-Object -Variable runtimeOutput
+@($runtimeOutput) | Out-File -FilePath .\test-reports\winssl_runtime_suite_20260505.log -Encoding utf8
+```
+
+最少要能在日志里看到:
+
+```text
+[WINSSL-RUNTIME] suite_start total=...
+[WINSSL-RUNTIME] suite_summary passed=... failed=... total=... success_rate=...
+[WINSSL-RUNTIME] suite_end status=PASS|FAIL
+```
+
+如果只留下“我跑过了”，没有这些 summary / log / runtime markers，后续审查仍然会回到猜。
 
 ## 高风险区域和对应入口
 

@@ -1,7 +1,7 @@
 # WinSSL 后端实现状态报告
 
 > **Status**: draft
-> **Updated**: 2026-05-04
+> **Updated**: 2026-05-18
 
 ## 概述
 
@@ -9,7 +9,7 @@
 
 1. public surface 和源码结构
 2. Linux 主机上可重复的 source/compile proof
-3. 仍然需要 Windows 主机的 runtime proof
+3. 仍然需要 Windows 主机的 runtime proof，以及足够强的 artifact evidence
 
 这意味着报告不会再把“代码存在”直接写成“Windows runtime 已验证”。
 
@@ -51,18 +51,30 @@
 | Session resumption / tickets         | public capability 存在    | 真实 Windows runtime 行为仍需独立证明                                   |
 | Native handle access                 | context / connection 暴露 | session 不暴露 `ISSLNativeHandleAccess`                                 |
 
+## GitHub Windows runner 当前真相
+
+- `wave-b-b2-manual.yml` 的 live run `26030261335` 已证明 GitHub Actions `windows-latest` 能真实执行：
+  - quick smoke
+  - WinSSL minimal gate
+  - broader `tests/run_winssl_tests.ps1`
+- 但下载下来的 `winssl_runtime_suite_wave_b_b2_20260518_191939.log` 只有 transcript 壳
+- 同一次 run 的 job console log 则明确显示 broader suite 编译并运行了 6 个 lane
+
+这说明当时的问题不是“Windows runtime 根本没跑”，而是“artifact 证据强度不够”。
+
 ## 当前还没有证实的部分
 
 - Windows 主机上的真实握手路径
 - 真实系统证书存储加载与企业策略交互
 - 真实 session resumption / session tickets 行为
 - 真实 server/client runtime 的 OCSP、证书验证、错误映射细节
+- 新 workflow 产出的 runtime artifact 是否已经从 transcript 壳升级成 substantive evidence
 
 **原因**:
 
 - 本机 Linux 上的 `wine` 当前直接退出 `159`
-- 本机没有 `pwsh`
-- 因此本地环境不能承担 WinSSL runtime proof
+- 因此本地 Linux 仍不能独立承担 WinSSL runtime proof
+- 但 GitHub Actions Windows runner 已经是当前可用的 live proof surface
 
 ## 结论
 
@@ -70,13 +82,14 @@
 
 - **代码结构和 compile surface 持续收口中，且当前已通过选定的 source contract 与 Win64 交叉编译验证**
 - **仓库级 Linux gate 继续全绿**
-- **真正剩余的高风险未证实区域，是 Windows 主机上的 runtime proof**
+- **GitHub Windows runner 已经能实际跑 WinSSL runtime，但旧 artifact capture 曾经偏弱**
+- **真正剩余的高风险未证实区域，是新的 Windows artifact 是否已经带回足够强的 runtime 证据，以及高风险 lane 的逐项结论**
 
 ## 下一步
 
-1. 在可用的 Windows 主机或 CI 上，按 [Windows 运行时验证清单](../../tests/windows/WINDOWS_VALIDATION_CHECKLIST.md) 执行 quick smoke -> WinSSL minimal gate -> Wave B Windows gate -> broader suite
-2. 保存 `test-reports/wave_b_windows_gate_summary_<run_id>.md` 和对应 step logs；需要 wider suite 证据时，补充 `tests/run_winssl_tests.ps1` 的 transcript
-3. 优先验证握手、证书链验证、session resumption、server/client 行为
+1. push 当前 runtime-evidence strengthening 修复，并重新 dispatch `wave-b-b2-manual.yml`
+2. 检查新的 `winssl_runtime_suite_<run_id>.log` 是否直接包含 `[WINSSL-RUNTIME] suite_start / suite_summary / suite_end`
+3. 若 artifact 已 substantive，再继续判定握手、证书链验证、session resumption、server/client 行为的 runtime truth
 4. 继续保持 Linux 侧 source contract 和 Win64 compile 作为前置守门，不把它们误写成 runtime 证明
 
 ## 相关文档

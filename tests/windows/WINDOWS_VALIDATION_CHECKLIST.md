@@ -127,12 +127,20 @@ powershell -ExecutionPolicy Bypass -File .\tests\run_winssl_tests.ps1
 - `test_winssl_handshake_debug.lpi`
 - `test_winssl_https_client.lpi`
 
-如果需要把控制台输出也落盘，建议在 PowerShell 里用:
+如果需要把 broader suite 控制台输出落成可审查 artifact，建议在 PowerShell 里用 UTF-8 console capture，而不是只依赖 transcript 壳:
 
 ```powershell
-Start-Transcript -Path .\test-reports\winssl_runtime_suite_20260505.log
-powershell -ExecutionPolicy Bypass -File .\tests\run_winssl_tests.ps1
-Stop-Transcript
+$runtimeOutput = @()
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\tests\run_winssl_tests.ps1 *>&1 | Tee-Object -Variable runtimeOutput
+@($runtimeOutput) | Out-File -FilePath .\test-reports\winssl_runtime_suite_20260505.log -Encoding utf8
+```
+
+日志里至少应能看到这些稳定 marker，后续 CI / handoff 才能把它当成 substantive runtime evidence:
+
+```text
+[WINSSL-RUNTIME] suite_start total=...
+[WINSSL-RUNTIME] suite_summary passed=... failed=... total=... success_rate=...
+[WINSSL-RUNTIME] suite_end status=PASS|FAIL
 ```
 
 ## 高风险区域要单独盯
@@ -153,7 +161,7 @@ Stop-Transcript
 
 - quick smoke 退出码为 `0`
 - `scripts/run_wave_b_windows_gate.ps1` 产出 summary 和三份 step log
-- wider suite 的通过/失败项被明确记录
+- wider suite 的通过/失败项被明确记录，且日志里带有 `[WINSSL-RUNTIME]` markers
 - 对高风险区域有逐项说明，而不是只写一句“整体通过”
 
 不要把下面这些情况误写成“WinSSL 已完整 runtime proof”:

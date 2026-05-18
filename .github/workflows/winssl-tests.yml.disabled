@@ -91,9 +91,12 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path test-reports | Out-Null
           $quickLog = "test-reports/winssl_quick_smoke_${{ github.run_id }}.log"
-          pwsh -NoProfile -ExecutionPolicy Bypass -File tests/quick_winssl_validation.ps1 *>&1 | Tee-Object -FilePath $quickLog
-          if ($LASTEXITCODE -ne 0) {
-            exit $LASTEXITCODE
+          $quickOutput = @()
+          pwsh -NoProfile -ExecutionPolicy Bypass -File tests/quick_winssl_validation.ps1 *>&1 | Tee-Object -Variable quickOutput
+          $quickExitCode = $LASTEXITCODE
+          @($quickOutput) | Out-File -FilePath $quickLog -Encoding utf8
+          if ($quickExitCode -ne 0) {
+            exit $quickExitCode
           }
 
       - name: 🧪 Run broader WinSSL runtime suite
@@ -102,16 +105,12 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path test-reports | Out-Null
           $runtimeLog = "test-reports/winssl_runtime_suite_${{ github.run_id }}.log"
-          $exitCode = 0
-          Start-Transcript -Path $runtimeLog
-          try {
-            pwsh -NoProfile -ExecutionPolicy Bypass -File tests/run_winssl_tests.ps1
-            $exitCode = $LASTEXITCODE
-          } finally {
-            Stop-Transcript
-          }
-          if ($exitCode -ne 0) {
-            exit $exitCode
+          $runtimeOutput = @()
+          pwsh -NoProfile -ExecutionPolicy Bypass -File tests/run_winssl_tests.ps1 *>&1 | Tee-Object -Variable runtimeOutput
+          $runtimeExitCode = $LASTEXITCODE
+          @($runtimeOutput) | Out-File -FilePath $runtimeLog -Encoding utf8
+          if ($runtimeExitCode -ne 0) {
+            exit $runtimeExitCode
           }
 
       - name: 📊 Generate WinSSL workflow summary
@@ -131,7 +130,7 @@ jobs:
           | Broader runtime suite | ${{ steps.runtime_suite.outcome }} | test-reports/winssl_runtime_suite_${{ github.run_id }}.log |
 
           This template records the observed results of the repository WinSSL scripts for the current run only.
-          Review the uploaded transcripts before making backend readiness or production support claims.
+          Review the uploaded runtime logs before making backend readiness or production support claims.
           "@
           $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
 

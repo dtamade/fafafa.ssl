@@ -422,6 +422,7 @@ is_valid_cross_summary_platform_state() {
 
 required_missing=0
 runid_mismatch=0
+windows_runtime_transcript_marker_issue=false
 rows=()
 cross_summary_abs="$(resolve_path "$CROSS_SUMMARY")"
 cross_summary_linux_summary=""
@@ -616,6 +617,42 @@ check_presence_artifact() {
   fi
 
   rows+=("| $label | $rel_path | YES | n/a | n/a | presence-only evidence |")
+}
+
+check_windows_runtime_artifact() {
+  local label="$1"
+  local rel_path="$2"
+  local required="$3"
+  local abs_path
+  abs_path="$(resolve_path "$rel_path")"
+
+  if [[ ! -f "$abs_path" ]]; then
+    local missing_note="optional missing"
+    if [[ "$required" == "true" ]]; then
+      missing_note="missing"
+      required_missing=$((required_missing + 1))
+    fi
+    rows+=("| $label | $rel_path | NO | n/a | n/a | $missing_note |")
+    return 0
+  fi
+
+  local note="runtime evidence markers missing"
+  local suite_end_status=""
+  if grep -aF --quiet "[WINSSL-RUNTIME] suite_start" "$abs_path" \
+    && grep -aF --quiet "[WINSSL-RUNTIME] suite_summary" "$abs_path" \
+    && grep -aE --quiet "\\[WINSSL-RUNTIME\\] suite_end status=(PASS|FAIL)" "$abs_path"; then
+    suite_end_status="$(
+      grep -aE "\\[WINSSL-RUNTIME\\] suite_end status=(PASS|FAIL)" "$abs_path" \
+        | tail -1 \
+        | sed -E 's/.*status=([A-Z]+).*/\1/'
+    )"
+    note="substantive runtime evidence; suite_end_status=${suite_end_status:-unknown}"
+  else
+    windows_runtime_transcript_marker_issue=true
+    runid_mismatch=$((runid_mismatch + 1))
+  fi
+
+  rows+=("| $label | $rel_path | YES | n/a | n/a | $note |")
 }
 
 check_closure_report_artifact() {
@@ -914,7 +951,7 @@ if [[ "$WINDOWS_RUNTIME_TRANSCRIPT_EXPLICIT" == "true" || "$windows_runtime_requ
   windows_runtime_transcript_required=true
 fi
 check_presence_artifact "windows_quick_log" "$WINDOWS_QUICK_LOG" "$windows_quick_log_required"
-check_presence_artifact "windows_runtime_transcript" "$WINDOWS_RUNTIME_TRANSCRIPT" "$windows_runtime_transcript_required"
+check_windows_runtime_artifact "windows_runtime_transcript" "$WINDOWS_RUNTIME_TRANSCRIPT" "$windows_runtime_transcript_required"
 check_cross_summary_artifact "$CROSS_SUMMARY" true
 closure_status_note="n/a"
 check_closure_report_artifact "$CLOSURE_REPORT" true
@@ -925,6 +962,9 @@ if [[ "$required_missing" -gt 0 || "$runid_mismatch" -gt 0 ]]; then
 fi
 
 NEXT_ACTIONS=()
+if [[ "$windows_runtime_transcript_marker_issue" == "true" ]]; then
+  NEXT_ACTIONS+=("当前 Windows broader runtime log 只有文件存在性，缺少 '[WINSSL-RUNTIME]' suite_start / suite_summary / suite_end markers；请用 UTF-8 console capture 重新回填 runtime evidence。")
+fi
 if [[ "$consistency_status" != "CONSISTENT" ]]; then
   if [[ "$closure_status_note" == "CLOSED" ]]; then
     NEXT_ACTIONS+=("当前 closure 已闭环，但 evidence consistency 仍未对齐；修复缺失/不一致 evidence 后，复跑 Wave B/B2 handoff bundle 准备流程（'scripts/prepare_wave_b_b2_handoff_bundle.sh'）。")

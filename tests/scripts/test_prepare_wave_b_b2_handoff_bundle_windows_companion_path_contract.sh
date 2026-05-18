@@ -63,8 +63,10 @@ cat > "$WINDOWS_EVIDENCE_DIR/winssl_quick_smoke_${RUN_ID}.log" <<EOF
 [quick-smoke] run_id=$RUN_ID
 EOF
 
-cat > "$WINDOWS_EVIDENCE_DIR/winssl_runtime_suite_${RUN_ID}.log" <<EOF
-[runtime-suite] run_id=$RUN_ID
+cat > "$WINDOWS_EVIDENCE_DIR/winssl_runtime_suite_${RUN_ID}.log" <<'EOF'
+[WINSSL-RUNTIME] suite_start total=6
+[WINSSL-RUNTIME] suite_summary passed=6 failed=0 total=6 success_rate=100
+[WINSSL-RUNTIME] suite_end status=PASS
 EOF
 
 ABS_WINDOWS_SUMMARY="$WINDOWS_EVIDENCE_DIR/wave_b_windows_gate_summary_${RUN_ID}.md"
@@ -98,6 +100,10 @@ fi
 
 if ! rg -n "\\| windows_runtime_transcript \\| $WINDOWS_EVIDENCE_DIR/winssl_runtime_suite_${RUN_ID}\\.log \\| YES \\|" "$CONSISTENCY_REPORT" >/dev/null; then
   fail "consistency report should track the sibling windows runtime transcript path"
+fi
+
+if ! rg -n "substantive runtime evidence; suite_end_status=PASS" "$CONSISTENCY_REPORT" >/dev/null; then
+  fail "consistency report should mark the sibling Windows runtime transcript as substantive evidence"
 fi
 
 if ! rg -n "handoff_state: \\*\\*READY_FOR_RUNNER\\*\\*" "$HANDOFF_REPORT" >/dev/null; then

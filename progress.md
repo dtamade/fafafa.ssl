@@ -2,6 +2,98 @@
 
 ## 2026-05-18
 
+### GitHub Windows Runtime Evidence Strengthening
+
+- `gh run view 26030261335 --json status,conclusion,workflowName,createdAt,updatedAt,jobs,url`
+  - result: PASS
+  - summary:
+    - `Wave B B2 Manual Gate (Template)` run `26030261335` finished `success`
+    - `windows-gate` completed `Run quick WinSSL smoke` / `Run Windows Wave B gate` / `Run broader WinSSL runtime suite`
+
+- `gh run download 26030261335 -D tmp/gh-run-26030261335`
+  - result: PASS
+  - summary:
+    - downloaded Linux / macOS / Windows / summary artifacts for direct offline inspection
+
+- `sed -n '1,220p' tmp/gh-run-26030261335/.../winssl_runtime_suite_wave_b_b2_20260518_191939.log`
+  - result: PASS
+  - summary:
+    - downloaded runtime log only contained transcript start/end shell
+    - broader suite artifact still lacked substantive runtime details
+
+- `gh run view 26030261335 --job 76514096222 --log`
+  - result: PASS
+  - summary:
+    - job console log proved broader suite actually compiled and ran all 6 lanes
+    - root cause narrowed to evidence capture, not missing runtime execution
+
+- update `.github/workflows/wave-b-b2-manual.yml`
+  - change:
+    - quick smoke and broader suite now stream live output through `Tee-Object -Variable ...`
+    - both artifacts are rewritten with `Out-File -Encoding utf8`
+    - broader suite no longer relies on transcript-only capture
+
+- update `.github/workflows/wave-b-b2-manual.yml.disabled`
+  - change:
+    - mirror the same UTF-8 Windows evidence capture fix into the dormant template
+
+- update `.github/workflows/winssl-tests.yml.disabled`
+  - change:
+    - sync quick/runtime UTF-8 log capture with the active workflow truth
+    - summary wording now says `runtime logs` instead of stale `transcripts`
+
+- update `tests/run_winssl_tests.ps1`
+  - change:
+    - add stable `[WINSSL-RUNTIME] suite_start / test_result / suite_summary / suite_end` markers
+    - compile-failure and runtime-failure paths now both emit machine-readable end markers
+
+- update `scripts/check_wave_b_b2_evidence_consistency.sh`
+  - change:
+    - `windows_runtime_transcript` no longer uses presence-only acceptance
+    - runtime log must contain `[WINSSL-RUNTIME]` start/summary/end markers or the report flips to `INCONSISTENT`
+
+- update `scripts/prepare_wave_b_b2_handoff_bundle.sh`
+  - change:
+    - handoff next-actions now distinguish between missing runtime log and marker-less runtime log
+
+- add/update focused contracts
+  - result: RED -> GREEN
+  - summary:
+    - new/updated contracts now lock:
+      - workflow UTF-8 runtime log capture
+      - substantive Windows runtime evidence requirement
+      - runtime marker emission in `tests/run_winssl_tests.ps1`
+      - checklist/bundle docs truth about `[WINSSL-RUNTIME]` markers
+
+- `bash tests/scripts/test_wave_b_b2_windows_runtime_workflow_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_windows_runtime_substantive_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_consistency_windows_companion_path_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_prepare_wave_b_b2_handoff_bundle_windows_companion_path_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_workflow_winssl_tests_truth_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_windows_validation_bundle_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_runtime_suite_markers_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_wave_b_b2_evidence_consistency_windows_runtime_artifacts_contract.sh`
+  - result: PASS
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current Windows runtime evidence strengthening batch has no whitespace or patch-format issues
+
 ### Context Recovery
 
 - `git status --short --branch`

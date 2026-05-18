@@ -490,12 +490,17 @@ REPLAY_COMMAND="$(build_shell_command scripts/prepare_wave_b_b2_handoff_bundle.s
 
 windows_quick_log_missing=false
 windows_runtime_transcript_missing=false
+windows_runtime_transcript_marker_issue=false
 if [[ ${#WINDOWS_EVIDENCE_ARGS[@]} -gt 0 ]]; then
   if [[ ! -f "$(resolve_path "${WINDOWS_EVIDENCE_ARGS[1]}")" ]]; then
     windows_quick_log_missing=true
   fi
   if [[ ! -f "$(resolve_path "${WINDOWS_EVIDENCE_ARGS[3]}")" ]]; then
     windows_runtime_transcript_missing=true
+  elif ! grep -aF --quiet "[WINSSL-RUNTIME] suite_start" "$(resolve_path "${WINDOWS_EVIDENCE_ARGS[3]}")" \
+    || ! grep -aF --quiet "[WINSSL-RUNTIME] suite_summary" "$(resolve_path "${WINDOWS_EVIDENCE_ARGS[3]}")" \
+    || ! grep -aE --quiet "\\[WINSSL-RUNTIME\\] suite_end status=(PASS|FAIL)" "$(resolve_path "${WINDOWS_EVIDENCE_ARGS[3]}")"; then
+    windows_runtime_transcript_marker_issue=true
   fi
 fi
 
@@ -516,6 +521,8 @@ else
     NEXT_ACTIONS+=("在 Windows runner 执行 live gate 并回填 Windows summary。")
   elif [[ "$windows_quick_log_missing" == "true" || "$windows_runtime_transcript_missing" == "true" ]]; then
     NEXT_ACTIONS+=("在 Windows runner 回填 WinSSL quick smoke 与 runtime suite artifacts。")
+  elif [[ "$windows_runtime_transcript_marker_issue" == "true" ]]; then
+    NEXT_ACTIONS+=("在 Windows runner 重新生成 broader runtime log，并确认其中包含 '[WINSSL-RUNTIME]' suite markers（UTF-8 console capture），不要只留下 transcript 壳。")
   fi
   NEXT_ACTIONS+=("回填后重新执行 '$REPLAY_COMMAND'。")
 fi
