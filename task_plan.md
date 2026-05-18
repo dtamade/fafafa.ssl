@@ -1180,6 +1180,31 @@
     - 当前批收口后，`GetConnectionInfo` route 的默认下一步应为：
       - 第一条真正的 public slimming slice feasibility selection
       - 不再重复做 wording / residual classification 清扫
+47. `GetConnectionInfo` compiler deprecation alignment 已完成并应作为当前第一条 public slimming slice 的正式收口保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getconnectioninfo-compiler-deprecation-alignment.md`
+    - 当前已确认的 route truth：
+      - `src/fafafa.ssl.base.pas`
+        现在把 `ISSLConnection.GetConnectionInfo` 声明成：
+        - `deprecated 'Use ISSLConnectionInfo.GetConnectionInfo'`
+      - `docs/reference/API_REFERENCE.md`
+        与 `docs/reference/INTERFACE_DESIGN_V2.md`
+        现在都明确记录：
+        - core getter 仅兼容保留
+        - 当前源码声明已经是编译期 deprecated
+      - residual intentional direct-core tests 已带局部 warning quarantine：
+        - `tests/contract/test_backend_contract.pas`
+        - `tests/winssl/test_winssl_connection_info.pas`
+        - `tests/winssl/test_winssl_connection_edge_cases.pas`
+    - 当前 focused proof 已覆盖：
+      - `bash tests/scripts/test_getconnectioninfo_compiler_deprecated_contract.sh`
+      - `bash tests/scripts/test_getconnectioninfo_public_wording_deemphasis_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+      - `tests/contract/test_backend_contract.pas`
+      - `git diff --check`
+    - 当前批收口后，`GetConnectionInfo` route 的默认下一步应为：
+      - 切到下一条 mirror 的 feasibility / slimming 选择
+      - 不再重复做这条 getter 的 wording / deprecation 清扫
 
 ## Verification Discipline
 

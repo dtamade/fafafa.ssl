@@ -584,6 +584,26 @@ Recommended first bounded batch:
     1. 评估 `ISSLConnection.GetConnectionInfo` 是否值得进入 compiler-level deprecation feasibility freeze
     2. 或确认 source/doc de-emphasis 已足够，然后把主线切到下一条 mirror 的 slimming 选择
 
+## Progress Since The GetConnectionInfo Compiler Deprecation Alignment Batch
+
+- 已交付：
+  - compiler-level deprecation alignment for `ISSLConnection.GetConnectionInfo`
+  - focused source/doc/residual guard:
+    - `tests/scripts/test_getconnectioninfo_compiler_deprecated_contract.sh`
+  - `src/fafafa.ssl.base.pas` 现在明确把 core getter 声明成：
+    - `deprecated 'Use ISSLConnectionInfo.GetConnectionInfo'`
+  - active docs / v2 doc 已同步：
+    - `API_REFERENCE` 直接写明 core getter 当前是编译期 `deprecated`
+    - `INTERFACE_DESIGN_V2` 也把 fallback 例子与表格同步成 compiler-deprecated truth
+  - residual intentional direct-core tests 已加局部 warning quarantine：
+    - backend contract mirror proof
+    - WinSSL dedicated core-surface tests
+
+- 当前更准确的 next step：
+  - `GetConnectionInfo` 的 source/doc/compiler truth 已基本完成第一条 public slimming slice
+  - 默认下一步不该再重复做这条 getter 的 wording/deprecation archaeology
+  - 若继续沿同一组 mirrors 推进，应把注意力切到下一条 mirror 的 feasibility / slimming 选择
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

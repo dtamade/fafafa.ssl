@@ -573,7 +573,9 @@ begin
       LConnection := TWinSSLConnection.Create(LContext, LSocket);
 
       // 在未连接时获取连接信息
+      {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
       LConnInfo := LConnection.GetConnectionInfo;
+      {$POP}
       Assert(LConnInfo.ProtocolVersion = sslProtocolUnknown, '未连接时协议版本为未知');
       Assert(LConnInfo.CipherSuite = '', '未连接时密码套件为空');
       Assert(not LConnInfo.IsResumed, '未连接时会话未复用');

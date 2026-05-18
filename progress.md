@@ -4362,3 +4362,82 @@
   - result: PASS
   - summary:
     - current `GetConnectionInfo public wording de-emphasis` batch has no whitespace or patch-format issues
+
+### GetConnectionInfo Compiler Deprecation Alignment
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - current branch started from clean `master...origin/master`
+    - the new batch could be scoped on top of the already-pushed public-wording closeout
+
+- `rg -n "deprecated '|'deprecated;|SYMBOL_DEPRECATED|WARN 6058|WithSNI|SetServerName\\(|GetConnectionInfo" src tests docs/reference docs/plans task_plan.md findings.md progress.md --glob '!docs/archive/**'`
+  - result: PASS
+  - summary:
+    - existing `.WithSNI(...)` and direct-context `ServerName` work already showed a stable compiler-deprecation + local-warning-quarantine pattern
+    - `GetConnectionInfo` residual direct-core use was now small enough to evaluate the same route safely
+
+- `sed -n '1188,1222p' src/fafafa.ssl.base.pas`
+  - result: PASS
+  - summary:
+    - source comment already had preferred-access, owner-note, and stronger compatibility wording
+    - but the declaration itself still was not compiler deprecated yet
+
+- `rg -n '\\b(?:Conn|LConn|LConnection)\\.GetConnectionInfo\\b|\\.GetConnectionInfo\\(' tests src docs --glob '!docs/archive/**' --glob '!docs/plans/**' --glob '!tests/scripts/**'`
+  - result: PASS
+  - summary:
+    - production source did not show new direct-core `GetConnectionInfo` callers
+    - the remaining direct-core residual set stayed confined to backend contract and WinSSL intentional core-surface tests
+
+- add `docs/plans/2026-05-18-getconnectioninfo-compiler-deprecation-alignment.md`
+  - purpose:
+    - capture the bounded source-truth batch that upgrades `ISSLConnection.GetConnectionInfo` from source/doc de-emphasis to compiler-level deprecation
+    - keep runtime behavior unchanged while aligning the public core mirror surface with current owner truth
+
+- add `tests/scripts/test_getconnectioninfo_compiler_deprecated_contract.sh`
+  - purpose:
+    - fail if the core `GetConnectionInfo` declaration loses its compiler `deprecated` marker
+    - guard the new doc wording and intentional warning-quarantine boundary
+
+- implementation:
+  - `src/fafafa.ssl.base.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/INTERFACE_DESIGN_V2.md`
+  - `tests/contract/test_backend_contract.pas`
+  - `tests/winssl/test_winssl_connection_info.pas`
+  - `tests/winssl/test_winssl_connection_edge_cases.pas`
+  - change:
+    - mark `ISSLConnection.GetConnectionInfo` as compiler `deprecated 'Use ISSLConnectionInfo.GetConnectionInfo'`
+    - upgrade active docs to say the core getter is now compiler deprecated
+    - add local warning suppression around the remaining intentional direct-core `GetConnectionInfo` callsites
+
+- `bash tests/scripts/test_getconnectioninfo_compiler_deprecated_contract.sh`
+  - result: PASS
+  - summary:
+    - the core declaration is compiler deprecated
+    - active docs and intentional residual tests all match the expected source-truth boundary
+
+- `bash tests/scripts/test_getconnectioninfo_public_wording_deemphasis_contract.sh`
+  - result: PASS
+  - summary:
+    - the earlier wording contract stayed green after the compiler-deprecation upgrade
+    - source/doc de-emphasis and compiler deprecation now tell the same story
+
+- `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - residual direct-core `GetConnectionInfo` surface stayed confined to the existing allowlist
+    - compiler deprecation did not re-expand direct-core usage
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: RED -> GREEN
+  - summary:
+    - first compile failed with `test_backend_contract.pas(... ) Fatal: Syntax error, ";" expected but "ELSE" found`
+    - root cause was a stray semicolon before the fallback `else` branch in the new session-resumption mirror-proof restructuring
+    - after removing that stray semicolon, the focused backend contract finished `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+    - intentional direct-core mirror proof stayed green after local deprecation-warning quarantine
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `GetConnectionInfo` compiler-deprecation batch has no whitespace or patch-format issues

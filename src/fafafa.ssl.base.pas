@@ -1208,8 +1208,10 @@ type
         @returns 连接信息记录
         @preferred-access 新代码优先通过 ISSLConnectionInfo.GetConnectionInfo 获取
         @owner-note 默认 owner 为 ISSLConnectionInfo.GetConnectionInfo；此入口仅兼容保留
-        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLConnectionInfo *}
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLConnectionInfo
+        @deprecated 推荐使用 ISSLConnectionInfo.GetConnectionInfo *}
     function GetConnectionInfo: TSSLConnectionInfo;
+      deprecated 'Use ISSLConnectionInfo.GetConnectionInfo';
 
     {** 获取协商的协议版本
         @returns 协议版本枚举 *}

@@ -95,7 +95,9 @@ begin
     LConn := LContext.CreateConnection(LSocket);
 
     // 获取连接信息（应该返回默认值）
+    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
     LInfo := LConn.GetConnectionInfo;
+    {$POP}
 
     // 验证默认值
     if (LInfo.ProtocolVersion = sslProtocolTLS12) and  // 默认协议版本
@@ -291,7 +293,9 @@ begin
     LConn := LContext.CreateConnection(LSocket);
 
     // 获取连接信息
+    {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
     LInfo := LConn.GetConnectionInfo;
+    {$POP}
     LProtocol := LConn.GetProtocolVersion;
     LCipherName := LConn.GetCipherName;
 

@@ -2043,3 +2043,20 @@
   - 真正还剩的路线问题已经变成：
     - 是否要进入第一条 public slimming slice
     - 以及这条 slice 是 compiler-level deprecation feasibility，还是到此为止后转去下一条 mirror
+
+- 对这条 feasibility 再继续静态审后，结论已经足够明确：
+  - production source 当前没有继续扩散 `.GetConnectionInfo(...)` 调用
+  - active docs 也已经不再把它当主入口
+  - direct core residual 调用只剩：
+    - backend contract mirror proof
+    - WinSSL intentional core-surface tests
+  - 因而 `ISSLConnection.GetConnectionInfo` 进入 compiler-level deprecation 是可行的，而不是会打穿普通实现面的大动作
+
+- 当前这一刀真正需要处理的风险不是 runtime，而是 compile noise：
+  - 如果直接把声明标成 `deprecated`，intentional residual tests 会重新开始吐 warning
+  - 但这些 residual 文件已经足够小，完全可以像 `.WithSNI(...)` 一样做局部 warning quarantine
+
+- 当前修完后的更准确结论是：
+  - `ISSLConnection.GetConnectionInfo` 现在在 source/doc/compiler 三层都被明确定义为 compatibility-only mirror
+  - 这条 getter 的第一条真正 public slimming slice 已经落地
+  - 后续不该再在它身上反复做 wording/deprecation archaeology，而应切去下一条 mirror 的 feasibility / slimming 选择
