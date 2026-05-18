@@ -2605,3 +2605,71 @@
   - result: PASS
   - summary:
     - current noninteractive core compat test batch has no whitespace or patch-format issues
+
+### Noninteractive Top-Level Core Tests
+
+- `rg -n "ReadLn|按回车键退出" tests/test_exceptions.pas tests/test_base_interface_contract.pas`
+  - result: PASS
+  - summary:
+    - both top-level core tests still contained interactive exit prompts and `ReadLn`
+
+- `mkdir -p tmp/test_exceptions && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_exceptions -FEtmp/test_exceptions -otmp/test_exceptions/test_exceptions tests/test_exceptions.pas && timeout 2 ./tmp/test_exceptions/test_exceptions`
+  - result: PASS
+  - summary:
+    - headless run did not hard-hang on this host because stdin EOF let the program exit
+    - but the output still ended with `按回车键退出...`, proving the test remained automation-noisy
+
+- `mkdir -p tmp/test_base_interface_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_base_interface_contract -FEtmp/test_base_interface_contract -otmp/test_base_interface_contract/test_base_interface_contract tests/test_base_interface_contract.pas && timeout 2 ./tmp/test_base_interface_contract/test_base_interface_contract`
+  - result: PASS
+  - summary:
+    - same result for the base-interface core test: no hard hang here, but the interactive-exit tail still polluted automated output
+
+- `rg -n "ReadLn|按回车键退出" tests`
+  - result: PASS
+  - summary:
+    - repo-wide scan showed more `ReadLn` hits remain
+    - the residual set is mainly examples, diagnostics, benchmarks/file readers, and WinSSL-specialized programs rather than top-level core tests
+
+- add `docs/plans/2026-05-18-noninteractive-top-level-core-tests.md`
+  - purpose:
+    - define a bounded cleanup batch for turning the remaining top-level core interactive tests into real noninteractive test programs
+    - keep scope on `tests/test_exceptions.pas` and `tests/test_base_interface_contract.pas`
+
+- add `tests/scripts/test_top_level_core_tests_noninteractive_contract.sh`
+  - purpose:
+    - guard the two top-level core tests against reintroducing `ReadLn` or `按回车键退出...`
+
+- `bash -n tests/scripts/test_top_level_core_tests_noninteractive_contract.sh && bash tests/scripts/test_top_level_core_tests_noninteractive_contract.sh`
+  - result: RED
+  - summary:
+    - new contract immediately failed on `tests/test_exceptions.pas`
+    - the failure proved the remaining interactive exit tail was still real at source level
+
+- update:
+  - `tests/test_exceptions.pas`
+  - `tests/test_base_interface_contract.pas`
+  - change:
+    - remove `按回车键退出...` + `ReadLn`
+    - keep all assertions and coverage targets unchanged
+
+- `bash tests/scripts/test_top_level_core_tests_noninteractive_contract.sh`
+  - GREEN result: PASS
+  - summary:
+    - the new source contract now confirms both top-level core tests are noninteractive
+
+- `mkdir -p tmp/test_exceptions && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_exceptions -FEtmp/test_exceptions -otmp/test_exceptions/test_exceptions tests/test_exceptions.pas && timeout 2 ./tmp/test_exceptions/test_exceptions`
+  - GREEN result: PASS
+  - summary:
+    - exception core suite finished `64 passed, 0 failed`
+    - output now ends cleanly at the summary without the old interactive-exit tail
+
+- `mkdir -p tmp/test_base_interface_contract && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_base_interface_contract -FEtmp/test_base_interface_contract -otmp/test_base_interface_contract/test_base_interface_contract tests/test_base_interface_contract.pas && timeout 2 ./tmp/test_base_interface_contract/test_base_interface_contract`
+  - GREEN result: PASS
+  - summary:
+    - base-interface core suite finished `89 passed, 0 failed`
+    - output now ends cleanly at the summary without the old interactive-exit tail
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current noninteractive top-level core test batch has no whitespace or patch-format issues

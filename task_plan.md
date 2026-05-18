@@ -19,6 +19,13 @@
 - [in_progress] 当前批次已切换到新的 repo-level goal：
   - 先建立新的计划/记录入口
   - 再按“公共接口 -> facade/factory/builder/config -> capability matrix -> backend implementation truth -> focused fix”顺序推进
+- [completed] 两份顶层 core test 也已完成非交互收口：
+  - `tests/test_exceptions.pas`
+  - `tests/test_base_interface_contract.pas`
+  - 新增 `tests/scripts/test_top_level_core_tests_noninteractive_contract.sh`
+  - 新增 `docs/plans/2026-05-18-noninteractive-top-level-core-tests.md`
+  - 当前这两份测试已不再输出“按回车键退出...”或依赖 `ReadLn`
+  - repo-wide `ReadLn` 扫描表明剩余命中主要位于 examples / diagnostic / benchmark / WinSSL 专项程序，不属于这批顶层 core automation 收口范围
 - [completed] 第一轮接口/后端真相交叉验证已经完成：
   - 已确认 `ISSLServerConnection` 只存在于活跃文档承诺，不存在于 public source
   - 已确认 context-level `ServerName` 仍由 factory / builder / connection constructors / tests 一起固化
@@ -529,6 +536,29 @@
     - 下一条相关路线不该再回到这两份 core test 的交互尾巴：
       - 它们当前已可作为自动化测试程序直接执行
       - 后续应继续找新的 live interface/implementation gap，而不是再把这两份文件的手工退出逻辑当成未收口问题反复拉起
+18. `top-level core tests noninteractive` 当前也已完成第一轮收口：
+    - 新 plan：
+      - `docs/plans/2026-05-18-noninteractive-top-level-core-tests.md`
+    - 新验证：
+      - `tests/scripts/test_top_level_core_tests_noninteractive_contract.sh`
+      - `tests/test_exceptions.pas`
+      - `tests/test_base_interface_contract.pas`
+    - 当前已收口的真实问题：
+      - 这两份顶层 core test 在当前 headless shell 下虽然会因 stdin EOF 直接退出，
+        但源码末尾仍保留：
+        - `WriteLn('按回车键退出...')`
+        - `ReadLn`
+      - 结果就是自动化输出会持续带着手工演示尾巴，且退出行为依赖运行方式
+    - 当前修法：
+      - 移除两份文件末尾的交互式退出逻辑
+      - 新增 focused shell contract，禁止这两份文件重新带回交互尾巴
+    - 当前 focused proof 已覆盖：
+      - 新合同先 RED，直接命中 `tests/test_exceptions.pas` 的残余 `ReadLn`
+      - 修复后新合同 GREEN
+      - 两份测试都可直接 `timeout 2 ./...` 跑完，且输出尾部只保留测试总结
+    - 下一条相关路线不该再回到这两份顶层 core test 的交互尾巴：
+      - 这条线现在已经有 source contract 护栏
+      - 若继续清理 `ReadLn` 残留，应优先按 `top-level test -> WinSSL specialized test -> examples/diagnostics` 分层，而不是重新混做一批
 
 ## Verification Discipline
 

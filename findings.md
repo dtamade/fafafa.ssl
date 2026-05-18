@@ -1283,3 +1283,41 @@
   - 仍然保留需要的 `v1.x` record-shape / compatibility coverage
   - 但不再把自己伪装成必须手工退出的演示程序
   - 后续不该再把这两份文件的交互尾巴当成未验证区域重新拉起
+
+- 继续往下扫后，这轮又确认了第二组同类但更“顶层核心”的非交互残留：
+  - `tests/test_exceptions.pas`
+  - `tests/test_base_interface_contract.pas`
+  - 它们分别锁住异常层级/构造语义，以及 `fafafa.ssl.base` 的接口/常量/record-shape 契约
+
+- 这两份文件的细节和前一批 core compat tests 不完全一样：
+  - 在当前 headless shell 里，末尾 `ReadLn` 会因为 stdin EOF 直接返回，因此 `timeout 2 ./...` 并不会稳定超时
+  - 但源码仍保留：
+    - `WriteLn('按回车键退出...')`
+    - `ReadLn`
+  - 结果就是自动化输出仍然带着“按回车键退出...”尾巴，而且退出行为继续依赖运行方式
+
+- 因而这条问题的真实边界不是“必卡死”，而是：
+  - 顶层 core tests 仍残留手工演示语义
+  - 自动化输出被无意义提示污染
+  - 是否需要人工输入不应由 shell/pipe/tty 形态来决定
+
+- 这轮最合适的护栏不是再假装造一个 runtime hang，而是直接把自动化要求写成 focused source contract：
+  - 新增 `tests/scripts/test_top_level_core_tests_noninteractive_contract.sh`
+  - 专门禁止：
+    - `tests/test_exceptions.pas`
+    - `tests/test_base_interface_contract.pas`
+    重新出现 `ReadLn` 或“按回车键退出...”
+
+- focused evidence 也说明这条合同是有价值的，不是形式主义：
+  - 新脚本首次运行立即 RED，直接命中 `tests/test_exceptions.pas`
+  - 移除两份文件末尾交互逻辑后，脚本转 GREEN
+  - 重新编译并 direct run 后，输出尾部只剩测试总结，不再留下交互提示
+
+- repo-wide 扫描也顺手给出了范围真相：
+  - `ReadLn` 残留并不只这两处
+  - 但其余命中主要落在：
+    - `tests/examples/*`
+    - `tests/diagnostic/*`
+    - benchmark / file-read helpers
+    - 多份 WinSSL 专项程序
+  - 因而当前这批保持在“顶层 core tests 自动化面”是正确收口，不应把 examples/diagnostics/Windows-specialized 程序混进同一批

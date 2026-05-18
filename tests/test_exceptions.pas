@@ -550,17 +550,10 @@ begin
 
     WriteLn;
     PrintSummary;
-
-    WriteLn;
-    WriteLn('按回车键退出...');
-    ReadLn;
   except
     on E: Exception do
     begin
       WriteLn('错误: ', E.Message);
-      WriteLn;
-      WriteLn('按回车键退出...');
-      ReadLn;
       Halt(1);
     end;
   end;
