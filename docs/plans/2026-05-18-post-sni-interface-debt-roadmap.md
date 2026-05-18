@@ -706,6 +706,33 @@ Recommended first bounded batch:
   - 默认下一步不该再重复做 certificate-verification active-guidance 清扫
   - 若继续沿同一类 optional-owner surface 推进，应把注意力转向下一组普通 guidance 仍偏 core 的接口，或切回更大的 interface-design completeness 选择
 
+## Progress Since The `ISSLSessionResumption` Active Guidance De-emphasis Batch
+
+- 已交付：
+  - ordinary session-resumption guidance now prefers `ISSLSessionResumption`
+  - focused active-guidance guard:
+    - `tests/scripts/test_isslsessionresumption_active_guidance_contract.sh`
+  - `docs/reference/API_REFERENCE.md` 的 session-resumption / WinSSL session examples 已同步：
+    - 保存会话走 `ISSLSessionResumption.GetSession`
+    - 注入待恢复会话走 `ISSLSessionResumption.SetSession`
+    - 检查是否命中恢复路径走 `ISSLSessionResumption.IsSessionReused`
+  - `docs/reference/API_DOCUMENTATION.md` 的会话缓存 / 性能问题示例已同步：
+    - 先 `Supports(Connection, ISSLSessionResumption, SessionResumption)`
+    - 再走 `SessionResumption.GetSession / SetSession`
+  - `docs/INTEGRATION_GUIDE.md` 的 resumed-session + early-data 例子已同步：
+    - 从 `InitialStream.Connection` 上先取 `ISSLSessionResumption`
+  - generic E2E proof 已同步：
+    - `tests/integration/test_e2e_scenarios.pas`
+      不再把 `Conn.GetSession / SetSession / IsSessionReused` 当普通 core 路径
+
+- 当前更准确的 next step：
+  - `ISSLSessionResumption` 的 contract owner truth 已有，ordinary docs/tests 也已不再优先教 core getters
+  - 默认下一步不该再重复做 session-resumption active-guidance 清扫
+  - 若继续沿同一类 optional-owner surface 推进，当前最像下一批的是 `ISSLOCSPStapling`：
+    - `docs/reference/API_DOCUMENTATION.md` 仍保留 `Connection.GetOCSPStaplingEnabled / IsOCSPResponseVerified / GetOCSPResponseStatus` direct-core 示例
+    - 同文件虽已有 `ISSLOCSPStapling` 示例，但 ordinary guidance 仍是双真相并存
+  - 若不继续 optional-owner guidance 线，再回到 interface-design completeness 选择也可以，但默认优先级已低于 OCSP 这条清晰残余
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

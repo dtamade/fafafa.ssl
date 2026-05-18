@@ -104,6 +104,7 @@ procedure TestSessionResumption;
 var
   Ctx: ISSLContext;
   Conn1, Conn2: ISSLConnection;
+  Resumption1, Resumption2: ISSLSessionResumption;
   Sock1, Sock2: TSocket;
   Sess: ISSLSession;
   Buf: array[0..1023] of Byte;
@@ -144,6 +145,14 @@ begin
     begin
       Runner.Check('Session Resumption - Handshake 1', True);
 
+      if not Supports(Conn1, ISSLSessionResumption, Resumption1) then
+      begin
+        Runner.Check('Session Resumption - Owner Surface 1', False,
+          'Connection does not expose ISSLSessionResumption');
+        Exit;
+      end;
+      Runner.Check('Session Resumption - Owner Surface 1', True);
+
       // For TLS 1.3, NewSessionTicket can be delivered post-handshake.
       // Drive a small request/response so OpenSSL can process post-handshake messages
       // before we snapshot the session.
@@ -159,7 +168,7 @@ begin
       end;
 
       // Extract session for reuse
-      Sess := Conn1.GetSession;
+      Sess := Resumption1.GetSession;
       Runner.Check('Session Resumption - Extract Session', Sess <> nil,
         Format('Read %d bytes before GetSession', [ReadBytes]));
     end
@@ -184,13 +193,20 @@ begin
 
   try
     Conn2 := Ctx.CreateConnection(Sock2);
-    Conn2.SetSession(Sess);  // Set session before Connect
+    if not Supports(Conn2, ISSLSessionResumption, Resumption2) then
+    begin
+      Runner.Check('Session Resumption - Owner Surface 2', False,
+        'Connection does not expose ISSLSessionResumption');
+      Exit;
+    end;
+    Runner.Check('Session Resumption - Owner Surface 2', True);
+    Resumption2.SetSession(Sess);  // Set session before Connect
     (Conn2 as ISSLClientConnection).SetServerName('www.cloudflare.com');
     if Conn2.Connect then
     begin
       Runner.Check('Session Resumption - Handshake 2', True);
-      Runner.Check('Session Resumption - Reused', Conn2.IsSessionReused,
-        Format('Was reused: %s', [BoolToStr(Conn2.IsSessionReused, True)]));
+      Runner.Check('Session Resumption - Reused', Resumption2.IsSessionReused,
+        Format('Was reused: %s', [BoolToStr(Resumption2.IsSessionReused, True)]));
     end
     else
       Runner.Check('Session Resumption - Handshake 2', False, GLib.GetLastErrorString);

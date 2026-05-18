@@ -249,6 +249,7 @@ uses
 var
   Ctx: ISSLContext;
   Session: ISSLSession;
+  Resumption: ISSLSessionResumption;
   TLS: TSSLConnector;
   InitialStream: TSSLStream;
   Stream: TSSLStream;
@@ -262,7 +263,8 @@ begin
   InitialStream := TSSLConnector.FromContext(Ctx)
     .ConnectStream(InitialTransport, 'example.com');
   try
-    Session := InitialStream.Connection.GetSession;
+    if Supports(InitialStream.Connection, ISSLSessionResumption, Resumption) then
+      Session := Resumption.GetSession;
   finally
     InitialStream.Free;
   end;

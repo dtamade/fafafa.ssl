@@ -2197,3 +2197,44 @@
   - ordinary certificate-verification guidance 现在已经优先走 `ISSLCertificateVerification`
   - 两份通用 integration/contract 测试也不再把 `GetVerifyResult / GetVerifyResultString` 当默认 core 读取路径
   - 因而 `ISSLCertificateVerification` 这组能力面暂时也不再是“普通路径仍在教回 core”的残余点
+
+- 沿着“普通 guidance 仍偏 core”的盘点继续往下，session-resumption 这一组当时最适合先收的点也已经被证实：
+  - `docs/reference/API_REFERENCE.md`
+    的 session-resumption / WinSSL session 示例原本还直接使用：
+    - `LConn.GetSession`
+    - `LConn.SetSession`
+    - `LConn.IsSessionReused`
+  - `docs/reference/API_DOCUMENTATION.md`
+    的会话缓存 / 性能问题示例也还直接写：
+    - `Connection.GetSession`
+    - `Connection.SetSession`
+  - `docs/INTEGRATION_GUIDE.md`
+    的 resumed-session + early-data 例子原本也还直接读：
+    - `InitialStream.Connection.GetSession`
+  - `tests/integration/test_e2e_scenarios.pas`
+    也还把：
+    - `Conn1.GetSession`
+    - `Conn2.SetSession`
+    - `Conn2.IsSessionReused`
+    当普通 e2e 路径
+
+- 这条线之所以适合先收 guidance，而不是先碰实现，是因为 owner truth 本来就已经先有了：
+  - `tests/contract/test_backend_contract.pas` 的 `Contract 20: Session-resumption interface alignment`
+    已经证明：
+    - `Supports(LConn, ISSLSessionResumption, ...)` 对当前可用 backend 成立
+    - `GetSession / SetSession / IsSessionReused` 的 owner path 已有 cross-backend 自洽性证据
+  - 因而当前更值钱的不是再补 backend runtime，而是把 ordinary docs/tests 也切到同一条 owner path
+
+- 当前修完后的更准确结论是：
+  - ordinary session-resumption guidance 现在已经优先走 `ISSLSessionResumption`
+  - 通用 E2E session-resumption 场景也不再把 `GetSession / SetSession / IsSessionReused` 当默认 core 路径
+  - 因而 `ISSLSessionResumption` 这组能力面暂时也不再是“普通路径仍在教回 core”的残余点
+
+- 顺手做的轻量下一队列扫描也给出了一个更清楚的后继候选：
+  - `docs/reference/API_DOCUMENTATION.md`
+    仍保留多处 direct core OCSP 示例：
+    - `Connection.GetOCSPStaplingEnabled`
+    - `Connection.IsOCSPResponseVerified`
+    - `Connection.GetOCSPResponseStatus`
+  - 同文件里虽然已经有 `ISSLOCSPStapling` owner-path 示例，但 ordinary surface 仍是“双真相并存”
+  - 因而若继续沿 optional-owner surface 推进，`ISSLOCSPStapling` active-guidance de-emphasis 当前是最像下一批的边界清晰候选

@@ -591,30 +591,36 @@ end;
 ```pascal
 var
   LConn1, LConn2: ISSLConnection;
+  LResumption1, LResumption2: ISSLSessionResumption;
   LSession: ISSLSession;
 begin
   LConn1 := LContext.CreateConnection(Socket1);
   (LConn1 as ISSLClientConnection).SetServerName('api.example.com');
-  if LConn1.Connect then
+  if LConn1.Connect and Supports(LConn1, ISSLSessionResumption, LResumption1) then
   begin
-    LSession := LConn1.GetSession;
+    LSession := LResumption1.GetSession;
     if Assigned(LSession) then
       WriteLn('Session ID: ', LSession.GetID);
     LConn1.Shutdown;
   end;
 
   LConn2 := LContext.CreateConnection(Socket2);
-  if Assigned(LSession) and LSession.IsValid and LSession.IsResumable then
-    LConn2.SetSession(LSession);
   (LConn2 as ISSLClientConnection).SetServerName('api.example.com');
+  if Supports(LConn2, ISSLSessionResumption, LResumption2) and
+     Assigned(LSession) and LSession.IsValid and LSession.IsResumable then
+    LResumption2.SetSession(LSession);
 
   if LConn2.Connect then
   begin
-    WriteLn('是否复用: ', BoolToStr(LConn2.IsSessionReused, True));
+    WriteLn('是否复用: ', BoolToStr(LResumption2.IsSessionReused, True));
     LConn2.Shutdown;
   end;
 end;
 ```
+
+如果你在写新代码，并且需要保存/恢复 TLS 会话，优先通过 `ISSLSessionResumption.GetSession` 获取会话对象。
+需要在下一条连接上注入待恢复会话时，也优先通过 `ISSLSessionResumption.SetSession`。
+检查当前握手是否实际命中了恢复路径时，也优先通过 `ISSLSessionResumption.IsSessionReused`。
 
 ### WinSSL Session 管理
 
@@ -658,6 +664,7 @@ var
   LLib: ISSLLibrary;
   LContext: ISSLContext;
   LConn1, LConn2: ISSLConnection;
+  LResumption1, LResumption2: ISSLSessionResumption;
   LSession: ISSLSession;
 begin
   // 创建 WinSSL 库
@@ -669,11 +676,11 @@ begin
   // 第一次连接 - 完整握手
   LConn1 := LContext.CreateConnection(Socket1);
   (LConn1 as ISSLClientConnection).SetServerName('api.example.com');
-  if LConn1.Connect then
+  if LConn1.Connect and Supports(LConn1, ISSLSessionResumption, LResumption1) then
   begin
     WriteLn('第一次连接成功');
 
-    LSession := LConn1.GetSession;
+    LSession := LResumption1.GetSession;
     if Assigned(LSession) then
       WriteLn('Session ID: ', LSession.GetID);
 
@@ -681,15 +688,15 @@ begin
   end;
 
   LConn2 := LContext.CreateConnection(Socket2);
-  if Assigned(LSession) then
-    LConn2.SetSession(LSession);  // 设置之前保存的 Session
   (LConn2 as ISSLClientConnection).SetServerName('api.example.com');
+  if Supports(LConn2, ISSLSessionResumption, LResumption2) and Assigned(LSession) then
+    LResumption2.SetSession(LSession);  // 设置之前保存的 Session
 
   if LConn2.Connect then
   begin
     WriteLn('第二次连接成功');
 
-    if LConn2.IsSessionReused then
+    if LResumption2.IsSessionReused then
       WriteLn('✓ Session 复用成功 - 握手时间大幅减少')
     else
       WriteLn('✗ Session 未复用 - 执行了完整握手');
@@ -704,15 +711,16 @@ end;
 ```pascal
 var
   LConn: ISSLConnection;
+  LResumption: ISSLSessionResumption;
   LSession: ISSLSession;
   LSerialized: TBytes;
 begin
   LConn := LContext.CreateConnection(MySocket);
   (LConn as ISSLClientConnection).SetServerName('api.example.com');
 
-  if LConn.Connect then
+  if LConn.Connect and Supports(LConn, ISSLSessionResumption, LResumption) then
   begin
-    LSession := LConn.GetSession;
+    LSession := LResumption.GetSession;
     if Assigned(LSession) and LSession.IsResumable then
     begin
       LSerialized := LSession.Serialize;
@@ -744,22 +752,24 @@ end;
 ```pascal
 var
   LConn: ISSLConnection;
+  LResumption: ISSLSessionResumption;
   LSession: ISSLSession;
   LServerName: string;
 begin
   LServerName := 'example.com';
   LConn := LContext.CreateConnection(MySocket);
 
-  if Assigned(LSession) and LSession.IsValid and LSession.IsResumable then
-    LConn.SetSession(LSession)
+  if Supports(LConn, ISSLSessionResumption, LResumption) and
+     Assigned(LSession) and LSession.IsValid and LSession.IsResumable then
+    LResumption.SetSession(LSession)
   else
     WriteLn('警告: Session 无效或已过期，将执行完整握手');
 
   (LConn as ISSLClientConnection).SetServerName(LServerName);
 
-  if LConn.Connect then
+  if LConn.Connect and Supports(LConn, ISSLSessionResumption, LResumption) then
   begin
-    if not LConn.IsSessionReused then
+    if not LResumption.IsSessionReused then
     begin
       WriteLn('注意: Session 未复用，可能原因：');
       WriteLn('  - Session 已过期');
@@ -775,6 +785,7 @@ end;
 ```pascal
 var
   LConn: ISSLConnection;
+  LResumption: ISSLSessionResumption;
   LSession: ISSLSession;
   LServerName: string;
 begin
@@ -782,9 +793,9 @@ begin
   LConn := LContext.CreateConnection(MySocket);
   (LConn as ISSLClientConnection).SetServerName(LServerName);
 
-  if LConn.Connect then
+  if LConn.Connect and Supports(LConn, ISSLSessionResumption, LResumption) then
   begin
-    LSession := LConn.GetSession;
+    LSession := LResumption.GetSession;
 
     if Assigned(LSession) then
     begin
@@ -793,7 +804,7 @@ begin
       WriteLn('  创建时间: ', DateTimeToStr(LSession.GetCreationTime));
       WriteLn('  超时(秒): ', LSession.GetTimeout);
       WriteLn('  是否可复用: ', BoolToStr(LSession.IsResumable, True));
-      WriteLn('  是否已复用: ', BoolToStr(LConn.IsSessionReused, True));
+      WriteLn('  是否已复用: ', BoolToStr(LResumption.IsSessionReused, True));
       WriteLn('  协议版本: ', GetProtocolName(LSession.GetProtocolVersion));
       WriteLn('  密码套件: ', LSession.GetCipherName);
     end;

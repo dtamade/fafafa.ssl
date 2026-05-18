@@ -663,20 +663,24 @@ uses
 
 var
   SessionCache: TSSLSessionCache;
+  SessionResumption: ISSLSessionResumption;
   Session: ISSLSession;
 begin
   // 创建会话缓存
   SessionCache := TSSLSessionCache.Create(1000);  // 最多 1000 个会话
   try
     // 保存会话
-    Session := Connection.GetSession;
-    SessionCache.Put('example.com', 443, Session);
+    if Supports(Connection, ISSLSessionResumption, SessionResumption) then
+    begin
+      Session := SessionResumption.GetSession;
+      SessionCache.Put('example.com', 443, Session);
+    end;
 
     // 复用会话
     Session := SessionCache.Get('example.com', 443);
-    if Session <> nil then
+    if (Session <> nil) and Supports(Connection, ISSLSessionResumption, SessionResumption) then
     begin
-      Connection.SetSession(Session);
+      SessionResumption.SetSession(Session);
       WriteLn('会话复用成功');
     end;
 
@@ -870,8 +874,8 @@ end;
 // 启用会话复用
 SessionCache := TSSLSessionCache.Create(1000);
 Session := SessionCache.Get(Host, Port);
-if Session <> nil then
-  Connection.SetSession(Session);
+if (Session <> nil) and Supports(Connection, ISSLSessionResumption, SessionResumption) then
+  SessionResumption.SetSession(Session);
 
 // 启用 OCSP Stapling
 Builder.WithOCSPStapling(True);

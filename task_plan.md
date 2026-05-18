@@ -1330,6 +1330,33 @@
     - 当前批收口后默认下一步应为：
       - 继续盘点下一个 ordinary guidance 仍偏 core 的 optional-owner surface
       - 或切回更大的 interface-design completeness 选择
+53. `ISSLSessionResumption` active-guidance de-emphasis 已完成并应作为当前 optional-owner surface 的下一条普通路径收口保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-isslsessionresumption-active-guidance-deemphasis.md`
+    - 当前已确认的 route truth：
+      - `docs/reference/API_REFERENCE.md`
+        的 session-resumption / WinSSL session 示例现在统一优先走：
+        - `ISSLSessionResumption.GetSession`
+        - `ISSLSessionResumption.SetSession`
+        - `ISSLSessionResumption.IsSessionReused`
+      - `docs/reference/API_DOCUMENTATION.md`
+        的会话缓存 / 性能问题示例现在先 capability-gate：
+        - `Supports(Connection, ISSLSessionResumption, SessionResumption)`
+      - `docs/INTEGRATION_GUIDE.md`
+        的 resumed-session + early-data 例子现在先验证：
+        - `Supports(InitialStream.Connection, ISSLSessionResumption, Resumption)`
+      - `tests/integration/test_e2e_scenarios.pas`
+        不再把 `Conn1.GetSession / Conn2.SetSession / Conn2.IsSessionReused`
+        当普通读取/写入路径
+      - backend-specific session runtime / benchmark proof 继续保留为 residual proof，不属于这批收口范围
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_isslsessionresumption_active_guidance_contract.sh`
+      - `bash tests/scripts/test_isslsessionresumption_active_guidance_contract.sh`
+      - `mkdir -p tmp/test_e2e_scenarios && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_e2e_scenarios -FEtmp/test_e2e_scenarios -otmp/test_e2e_scenarios/test_e2e_scenarios tests/integration/test_e2e_scenarios.pas && ./tmp/test_e2e_scenarios/test_e2e_scenarios`
+      - `git diff --check`
+    - 当前批收口后默认下一步应为：
+      - 优先盘点 `ISSLOCSPStapling` ordinary guidance 是否仍在 direct core `GetOCSP*` 路径上漂移
+      - 不再重复拉起 session-resumption active-guidance 清扫
 
 ## Verification Discipline
 

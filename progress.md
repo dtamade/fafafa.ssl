@@ -4822,3 +4822,64 @@
   - result: PASS
   - summary:
     - current `ISSLCertificateVerification active-guidance de-emphasis` batch has no whitespace or patch-format issues
+
+### ISSLSessionResumption Active Guidance De-emphasis
+
+- `rg -n "\\.GetSession\\b|\\.SetSession\\b|\\.IsSessionReused\\b|ISSLSessionResumption" docs/reference/API_REFERENCE.md docs/reference/API_DOCUMENTATION.md docs/INTEGRATION_GUIDE.md tests/integration/test_e2e_scenarios.pas tests/contract/test_backend_contract.pas`
+  - result: PASS
+  - summary:
+    - confirmed the ordinary session-resumption guidance drift lived in `API_REFERENCE`, `API_DOCUMENTATION`, `INTEGRATION_GUIDE`, and the generic E2E session-resumption scenario
+    - confirmed this was a docs/tests owner-path issue, not a new production implementation gap
+    - confirmed `tests/contract/test_backend_contract.pas` already held the owner truth via `Contract 20`
+
+- add `docs/plans/2026-05-18-isslsessionresumption-active-guidance-deemphasis.md`
+  - purpose:
+    - define a bounded session-resumption batch that moves ordinary docs/tests onto `ISSLSessionResumption`
+    - keep scope off backend-specific runtime proofs and production implementation
+
+- add `tests/scripts/test_isslsessionresumption_active_guidance_contract.sh`
+  - purpose:
+    - fail if ordinary session-resumption docs/tests reintroduce direct core `GetSession / SetSession / IsSessionReused`
+    - keep this owner-path guidance change cheap to verify
+
+- first run of `bash -n tests/scripts/test_isslsessionresumption_active_guidance_contract.sh && bash tests/scripts/test_isslsessionresumption_active_guidance_contract.sh`
+  - result: RED
+  - summary:
+    - the new guard immediately failed on `API_REFERENCE` still teaching `LSession := LConn1.GetSession;`
+    - this confirmed the batch target was real ordinary-guidance drift rather than speculative cleanup
+
+- update:
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/API_DOCUMENTATION.md`
+  - `docs/INTEGRATION_GUIDE.md`
+  - `tests/integration/test_e2e_scenarios.pas`
+  - change:
+    - route session save/restore/reuse examples through `Supports(..., ISSLSessionResumption, ...)`
+    - add explicit note lines in `API_REFERENCE` that new code should prefer `ISSLSessionResumption.GetSession / SetSession / IsSessionReused`
+    - route the generic E2E session-resumption proof through `ISSLSessionResumption` owner access without changing the actual runtime flow
+
+- second run of `bash -n tests/scripts/test_isslsessionresumption_active_guidance_contract.sh && bash tests/scripts/test_isslsessionresumption_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - active docs/tests now prefer `ISSLSessionResumption` for session-resumption surfaces
+    - ordinary guidance no longer reintroduces direct core session mirrors
+
+- `mkdir -p tmp/test_e2e_scenarios && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_e2e_scenarios -FEtmp/test_e2e_scenarios -otmp/test_e2e_scenarios/test_e2e_scenarios tests/integration/test_e2e_scenarios.pas && ./tmp/test_e2e_scenarios/test_e2e_scenarios`
+  - result: PASS
+  - summary:
+    - focused E2E suite compiled and ran successfully
+    - finished `Total: 9 / Passed: 9 / Failed: 0 / Skipped: 0`
+    - the session-resumption scenario now explicitly proves both connections expose `ISSLSessionResumption`
+    - the owner-path switch did not regress handshake, session extraction, session reuse, or the large-data / client-cert companion scenarios
+
+- `rg -n "GetOCSPStaplingEnabled|GetOCSPResponse\\(|IsOCSPResponseVerified|GetOCSPResponseStatus|ISSLOCSPStapling" docs/reference/API_REFERENCE.md docs/reference/API_DOCUMENTATION.md docs/INTEGRATION_GUIDE.md tests`
+  - result: PASS
+  - summary:
+    - quick next-route scan found the clearest remaining ordinary-guidance drift in `docs/reference/API_DOCUMENTATION.md`
+    - direct core OCSP examples (`Connection.GetOCSPStaplingEnabled`, `Connection.IsOCSPResponseVerified`, `Connection.GetOCSPResponseStatus`) still coexist beside owner-path `ISSLOCSPStapling` examples
+    - this makes `ISSLOCSPStapling active-guidance de-emphasis` the best next bounded optional-owner candidate
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `ISSLSessionResumption active-guidance de-emphasis` batch has no whitespace or patch-format issues
