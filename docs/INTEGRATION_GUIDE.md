@@ -319,7 +319,9 @@ Ctx.SetALPNProtocols('h2,http/1.1');
 握手成功后：
 
 ```pascal
-WriteLn('Selected ALPN: ', Conn.GetSelectedALPNProtocol);
+var ConnInfo: ISSLConnectionInfo;
+if Supports(Conn, ISSLConnectionInfo, ConnInfo) then
+  WriteLn('Selected ALPN: ', ConnInfo.GetSelectedALPNProtocol);
 ```
 
 ---
@@ -330,7 +332,7 @@ WriteLn('Selected ALPN: ', Conn.GetSelectedALPNProtocol);
 
 - `Conn.GetVerifyResult` / `Conn.GetVerifyResultString`（证书验证结果）
 - `Conn.GetProtocolVersion` / `Conn.GetCipherName`
-- `Conn.GetStateString`（后端相关的状态描述）
+- `ConnInfo.GetStateString`（后端相关的状态描述；通过 `ISSLConnectionInfo` 获取）
 
 ---
 

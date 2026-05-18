@@ -1535,3 +1535,17 @@
     - `GetSelectedALPNProtocol` 是否只留给客户端扩展
     - `GetStateString` 是否并入 `GetState`
     - `GetContext` 是否最终彻底退出 public surface
+
+- 但仅有 migration map 还不够，因为 active docs 仍然会把用户拉回 core mirrors：
+  - `API_REFERENCE.md` 还在示例 `LConn.GetConnectionInfo` / `LConn.GetSelectedALPNProtocol` / `LConn.GetStateString`
+  - `INTEGRATION_GUIDE.md` 也还在直接教 `Conn.GetSelectedALPNProtocol` / `Conn.GetStateString`
+
+- 这会形成一个典型的“设计和公开教学互相打架”的问题：
+  - 设计文档在说“Stage A 先 demote 到 `ISSLConnectionInfo`”
+  - 用户文档却还在教“直接从 core 上拿”
+  - 后续一旦真的开始收 core，这类 active guidance 会立刻成为回流点
+
+- 因此这条线的下一步应该是 active guidance de-emphasis，而不是再补一层抽象路线：
+  - 先把用户可见示例统一成 `Supports(..., ISSLConnectionInfo, ...)`
+  - 让公开教学路径开始与 Stage-A demotion map 同向
+  - 然后再进入 source-facing slimming prep

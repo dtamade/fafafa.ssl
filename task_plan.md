@@ -731,6 +731,21 @@
       - `git diff --check`
       - 新 contract 当前 PASS
     - 当前批收口后，`ISSLConnection` 真正剩下的问题会更聚焦到 source-facing slimming prep
+24. `ISSLConnectionInfo active guidance de-emphasis` 现在应作为紧随其后的用户面收口：
+    - 新 plan：
+      - `docs/plans/2026-05-18-isslconnectioninfo-active-guidance-deemphasis.md`
+    - 当前 active-doc drift：
+      - `API_REFERENCE.md` 仍直接示例 `LConn.GetConnectionInfo` / `LConn.GetSelectedALPNProtocol` / `LConn.GetStateString`
+      - `INTEGRATION_GUIDE.md` 也仍把 `Conn.GetSelectedALPNProtocol` / `Conn.GetStateString` 当推荐排错路径
+    - 当前修法：
+      - 把这组用户可见示例改成先 `Supports(..., ISSLConnectionInfo, ...)`
+      - 新增 focused contract，防止 active guidance 回流到 direct core mirror teaching
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`
+      - `git diff --check`
+      - 新 contract 当前 PASS
+    - 当前批收口后，用户可见路径会开始和 `ISSLConnectionInfo` 的 Stage-A demotion map 真正同向
 
 ## Verification Discipline
 

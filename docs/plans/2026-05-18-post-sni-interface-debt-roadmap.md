@@ -116,6 +116,7 @@ Recommended first bounded batch:
 - 当前更准确的 next step：
   - 不再继续修正 `INTERFACE_DESIGN_V2` 内部 owner 冲突
   - `ISSLConnectionInfo` 这组 mirrors 的 Stage-A demotion map 已有稳定设计锚点
+  - active docs 也已开始把 connection-info mirrors 从 core teaching 路径切到 `ISSLConnectionInfo`
   - 下一批应进入 source-facing slimming prep：
     1. 先给 `TBaseSSLConnection` / active docs 补一条 focused source-truth contract，
        锁住这 4 个 mirrors 当前确实是 compatibility-core duplicates

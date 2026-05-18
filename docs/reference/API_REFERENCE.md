@@ -555,6 +555,7 @@ end;
 ```pascal
 var
   LConn: ISSLConnection;
+  LConnInfoAccess: ISSLConnectionInfo;
   LInfo: TSSLConnectionInfo;
   LServerName: string;
 begin
@@ -562,18 +563,20 @@ begin
   LConn := LContext.CreateConnection(MySocket);
   (LConn as ISSLClientConnection).SetServerName(LServerName);
 
-  if LConn.Connect then
+  if LConn.Connect and Supports(LConn, ISSLConnectionInfo, LConnInfoAccess) then
   begin
-    LInfo := LConn.GetConnectionInfo;
+    LInfo := LConnInfoAccess.GetConnectionInfo;
     WriteLn('协议版本: ', GetProtocolName(LConn.GetProtocolVersion));
     WriteLn('密码套件: ', LConn.GetCipherName);
-    WriteLn('ALPN: ', LConn.GetSelectedALPNProtocol);
-    WriteLn('状态: ', LConn.GetStateString);
+    WriteLn('ALPN: ', LConnInfoAccess.GetSelectedALPNProtocol);
+    WriteLn('状态: ', LConnInfoAccess.GetStateString);
     WriteLn('连接信息里的 ServerName: ', LInfo.ServerName);
     LConn.Shutdown;
   end;
 end;
 ```
+
+如果你在写新代码，并且需要连接信息 / ALPN / 状态字符串这组 mirrors，优先通过 `ISSLConnectionInfo` 获取；核心 `ISSLConnection` 上的同名 getter 当前仍主要是 `v1.x` compatibility-core duplicates。
 
 #### Session 复用
 

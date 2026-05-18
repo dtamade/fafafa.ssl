@@ -2988,3 +2988,49 @@
   - result: PASS
   - summary:
     - current `ISSLConnectionInfo mirror demotion / migration-map` batch has no whitespace or patch-format issues
+
+### ISSLConnectionInfo Active Guidance De-emphasis
+
+- `rg -n -F "GetSelectedALPNProtocol" ...` / `rg -n -F "GetStateString" ...` / `rg -n -F "GetConnectionInfo" ...`
+  - result: PASS
+  - summary:
+    - confirmed active docs still taught direct core mirror usage in `API_REFERENCE.md` and `INTEGRATION_GUIDE.md`
+    - this remained misaligned with the just-frozen Stage-A `ISSLConnectionInfo` demotion map
+
+- add `docs/plans/2026-05-18-isslconnectioninfo-active-guidance-deemphasis.md`
+  - purpose:
+    - define a bounded user-facing doc batch that switches connection-info mirrors from core teaching to `ISSLConnectionInfo`-first guidance
+
+- update:
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/INTEGRATION_GUIDE.md`
+  - change:
+    - replace direct `LConn.GetConnectionInfo` / `LConn.GetSelectedALPNProtocol` / `LConn.GetStateString` example guidance
+    - switch examples to `Supports(..., ISSLConnectionInfo, ...)`
+    - add an explicit note that new code should prefer `ISSLConnectionInfo` for this mirror group
+
+- add `tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`
+  - purpose:
+    - fail if active docs reintroduce direct core mirror teaching for connection-info mirrors
+    - require `ISSLConnectionInfo`-first guidance in the guarded active docs
+
+- update `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - mark active-guidance de-emphasis as delivered
+    - keep the next route on source-facing slimming prep
+
+- `bash -n tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - new active-guidance contract script is syntactically valid
+
+- `bash tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - active docs now prefer `ISSLConnectionInfo` for the connection-info mirror group
+    - direct core mirror teaching no longer appears in the guarded examples
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `ISSLConnectionInfo active guidance de-emphasis` batch has no whitespace or patch-format issues
