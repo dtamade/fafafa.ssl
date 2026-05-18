@@ -99,6 +99,31 @@ type
 
 implementation
 
+procedure ReadConnectionVerificationSurface(
+  AConn: ISSLConnection;
+  out AVerifyRes: Integer;
+  out AVerifyStr: string
+);
+var
+  LCertVerify: ISSLCertificateVerification;
+begin
+  AVerifyRes := 0;
+  AVerifyStr := '';
+  if AConn = nil then
+    Exit;
+
+  if Supports(AConn, ISSLCertificateVerification, LCertVerify) then
+  begin
+    AVerifyRes := LCertVerify.GetVerifyResult;
+    AVerifyStr := LCertVerify.GetVerifyResultString;
+  end
+  else
+  begin
+    AVerifyRes := AConn.GetVerifyResult;
+    AVerifyStr := AConn.GetVerifyResultString;
+  end;
+end;
+
 { TSSLStream }
 
 constructor TSSLStream.Create(AConnection: ISSLConnection);
@@ -304,8 +329,7 @@ begin
 
     if not Conn.Connect then
     begin
-      VerifyRes := Conn.GetVerifyResult;
-      VerifyStr := Conn.GetVerifyResultString;
+      ReadConnectionVerificationSurface(Conn, VerifyRes, VerifyStr);
 
       try
         Conn.Close;
@@ -376,8 +400,7 @@ begin
 
     if not Conn.Connect then
     begin
-      VerifyRes := Conn.GetVerifyResult;
-      VerifyStr := Conn.GetVerifyResultString;
+      ReadConnectionVerificationSurface(Conn, VerifyRes, VerifyStr);
 
       try
         Conn.Close;
@@ -470,8 +493,7 @@ begin
 
     if not Conn.Accept then
     begin
-      VerifyRes := Conn.GetVerifyResult;
-      VerifyStr := Conn.GetVerifyResultString;
+      ReadConnectionVerificationSurface(Conn, VerifyRes, VerifyStr);
 
       try
         Conn.Close;
@@ -530,8 +552,7 @@ begin
 
     if not Conn.Accept then
     begin
-      VerifyRes := Conn.GetVerifyResult;
-      VerifyStr := Conn.GetVerifyResultString;
+      ReadConnectionVerificationSurface(Conn, VerifyRes, VerifyStr);
 
       try
         Conn.Close;

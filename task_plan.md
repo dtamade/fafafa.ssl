@@ -58,6 +58,23 @@
     - `tests/contract/test_backend_contract.pas`：`135 total / 111 passed / 0 failed / 24 skipped`
     - `git diff --check`：PASS
   - 下一刀应继续横向审剩余 certificate-verification / optional surface completeness seam，而不是重开这条 clone issuer-link lane
+- [completed] `ISSLCertificateVerification` high-visibility owner path 已完成 focused 收口：
+  - 新增计划：`docs/plans/2026-05-19-isslcertificateverification-high-visibility-owner-path.md`
+  - `src/fafafa.ssl.connection.builder.pas`
+    - client/server handshake failure path 现在优先走 `ISSLCertificateVerification`
+  - `src/fafafa.ssl.tls.pas`
+    - connector/acceptor handshake failure path 现在优先走 `ISSLCertificateVerification`
+  - `docs/guides/OCSP_USAGE_GUIDE.md` / `docs/guides/CT_IMPLEMENTATION_GUIDE.md`
+    - 高可见失败示例不再教学 direct core `GetVerifyResultString`
+  - `tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+    - 现在额外锁住 builder / TLS facade / OCSP guide / CT guide 的 owner-path truth
+  - focused verification 已通过：
+    - `bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+    - `tests/test_connection_builder_hostname_precedence.pas`: `29 passed / 0 failed`
+    - `tests/test_tls_connector_hostname_override_precedence.pas`: `6 passed / 0 failed`
+    - `tests/contract/test_backend_contract.pas`: `135 total / 111 passed / 0 failed / 24 skipped`
+    - `git diff --check`: PASS
+  - 下一刀应继续盘点 verify-result mirrors 的 residual runtime/core uses，准备后续 compiler-deprecated 收口，而不是重开这条高可见 owner-path lane
 - [completed] GitHub Actions Windows runner 已重新纳入当前 truth surface：
   - `wave-b-b2-manual.yml` 的 live run `26030261335` 已证实 `windows-gate` 三层都能在 GitHub CI 上实际执行
   - 当前 WinSSL lane 不再允许退回“本地没 Windows，只能静态审查”的旧入口

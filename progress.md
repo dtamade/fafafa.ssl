@@ -2,6 +2,74 @@
 
 ## 2026-05-19
 
+### ISSLCertificateVerification High-Visibility Owner Path
+
+- add `docs/plans/2026-05-19-isslcertificateverification-high-visibility-owner-path.md`
+  - change:
+    - define the bounded certificate-verification owner-path batch for builder / TLS facade / OCSP guide / CT guide
+
+- `rg -n "\\.GetVerifyResultString\\b|\\.GetVerifyResult\\b" src/fafafa.ssl.connection.builder.pas src/fafafa.ssl.tls.pas docs/guides/OCSP_USAGE_GUIDE.md docs/guides/CT_IMPLEMENTATION_GUIDE.md`
+  - result: PASS
+  - summary:
+    - confirmed both high-visibility facade units still read direct core verify-result mirrors
+    - confirmed OCSP / CT guides still taught direct core `GetVerifyResultString`
+
+- update `src/fafafa.ssl.connection.builder.pas`
+  - change:
+    - add local verification-surface helper
+    - client/server handshake failure paths now prefer `ISSLCertificateVerification`
+
+- update `src/fafafa.ssl.tls.pas`
+  - change:
+    - add local verification-surface helper
+    - connector/acceptor handshake failure paths now prefer `ISSLCertificateVerification`
+
+- update `docs/guides/OCSP_USAGE_GUIDE.md`
+  - change:
+    - handshake-failure example now capability-gates `ISSLCertificateVerification`
+    - no longer teaches direct core `GetVerifyResultString`
+
+- update `docs/guides/CT_IMPLEMENTATION_GUIDE.md`
+  - change:
+    - handshake-failure example now capability-gates `ISSLCertificateVerification`
+    - no longer teaches direct core `GetVerifyResultString`
+
+- update `tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+  - result: FAIL -> FAIL -> PASS
+  - summary:
+    - RED 1:
+      - OCSP guide still contained direct core `GetVerifyResultString`
+    - RED 2:
+      - source contract substring-matched helper-local `AVerifyRes` and falsely flagged it as old direct-core usage
+    - GREEN:
+      - contract now correctly covers builder / TLS facade / OCSP guide / CT guide owner-path truth
+
+- `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+  - result: PASS
+  - summary:
+    - builder-focused compile/run stayed green at `29 passed / 0 failed`
+
+- `mkdir -p tmp/test_tls_connector_hostname_override_precedence && fpc -B -Fu./src -Fu./tests -FUtmp/test_tls_connector_hostname_override_precedence -FEtmp/test_tls_connector_hostname_override_precedence -otmp/test_tls_connector_hostname_override_precedence/test_tls_connector_hostname_override_precedence tests/test_tls_connector_hostname_override_precedence.pas && ./tmp/test_tls_connector_hostname_override_precedence/test_tls_connector_hostname_override_precedence`
+  - result: PASS
+  - summary:
+    - TLS facade focused compile/run stayed green at `6 passed / 0 failed`
+
+- `bash -n tests/scripts/test_isslcertificateverification_active_guidance_contract.sh && bash tests/scripts/test_isslcertificateverification_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - active docs/source contract now prefers `ISSLCertificateVerification` across high-visibility paths
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp -otmp/tmp_backend_contract tests/contract/test_backend_contract.pas && ./tmp/tmp_backend_contract`
+  - result: PASS
+  - summary:
+    - backend contract stayed green at `135 total / 111 passed / 0 failed / 24 skipped`
+    - existing backend interface alignment did not regress after the owner-path refactor
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current high-visibility owner-path batch has no whitespace or patch-format issues
+
 ### MbedTLS Peer Certificate Chain Issuer Link
 
 - add `docs/plans/2026-05-19-mbedtls-peer-cert-chain-issuer-link.md`

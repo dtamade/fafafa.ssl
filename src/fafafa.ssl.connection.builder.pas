@@ -108,6 +108,31 @@ type
     function TryBuildServer(out AConnection: ISSLConnection): TSSLOperationResult;
   end;
 
+procedure ReadConnectionVerificationSurface(
+  AConnection: ISSLConnection;
+  out AVerifyRes: Integer;
+  out AVerifyStr: string
+);
+var
+  LCertVerify: ISSLCertificateVerification;
+begin
+  AVerifyRes := 0;
+  AVerifyStr := '';
+  if AConnection = nil then
+    Exit;
+
+  if Supports(AConnection, ISSLCertificateVerification, LCertVerify) then
+  begin
+    AVerifyRes := LCertVerify.GetVerifyResult;
+    AVerifyStr := LCertVerify.GetVerifyResultString;
+  end
+  else
+  begin
+    AVerifyRes := AConnection.GetVerifyResult;
+    AVerifyStr := AConnection.GetVerifyResultString;
+  end;
+end;
+
 { TSSLConnectionBuilder }
 
 class function TSSLConnectionBuilder.Create: ISSLConnectionBuilder;
@@ -284,8 +309,7 @@ begin
     // Perform client handshake
     if not AConnection.Connect then
     begin
-      VerifyRes := AConnection.GetVerifyResult;
-      VerifyStr := AConnection.GetVerifyResultString;
+      ReadConnectionVerificationSurface(AConnection, VerifyRes, VerifyStr);
 
       try
         AConnection.Close;
@@ -374,8 +398,7 @@ begin
     // Perform server accept
     if not AConnection.Accept then
     begin
-      VerifyRes := AConnection.GetVerifyResult;
-      VerifyStr := AConnection.GetVerifyResultString;
+      ReadConnectionVerificationSurface(AConnection, VerifyRes, VerifyStr);
 
       try
         AConnection.Close;

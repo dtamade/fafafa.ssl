@@ -2,6 +2,37 @@
 
 ## 2026-05-19
 
+- `ISSLCertificateVerification` 这条线虽然前面已经完成了 ordinary docs/tests 的 owner-path de-emphasis，但这次又压出一条更贴近真实入口的残余：
+  - `src/fafafa.ssl.connection.builder.pas` 仍在 client/server handshake failure path 直接读 core `GetVerifyResult / GetVerifyResultString`
+  - `src/fafafa.ssl.tls.pas` 的 connector/acceptor 也还是同样的 direct core 读取
+  - `docs/guides/OCSP_USAGE_GUIDE.md` / `docs/guides/CT_IMPLEMENTATION_GUIDE.md` 这两份高可见指南也还在教学 direct core verify-result mirrors
+
+- 这说明当前缺的已经不是 owner truth 有没有，而是高可见入口有没有真正切过去：
+  - contract 21 早就证明 `ISSLCertificateVerification` owner interface 存在且与 core 自洽
+  - 但如果 builder / facade / 高可见指南仍回头读 core，后续就没法自然进入 compiler-deprecated 收口
+
+- 因而这批最小安全修法也很明确，并已落地：
+  - builder / TLS facade 新增本地 owner-path helper
+  - 在 `ISSLCertificateVerification` 可用时，优先读 owner `GetVerifyResult / GetVerifyResultString`
+  - 只有 owner interface 不可用时，才回退到现有 core mirror
+  - OCSP / CT 高可见指南示例也同步改成先 capability-gate `ISSLCertificateVerification`
+
+- 这批 focused contract 还顺手压出一个有价值的小真相：
+  - source contract 若直接用子串匹配 `VerifyRes := ...`
+  - 会把 helper 里的 `AVerifyRes := ...` 误判成 direct core 旧路径
+  - 当前已把 shell contract 收紧到真正的 token-boundary 匹配，避免后续再被这种误报反复拉起
+
+- focused 回归结果说明这次修法边界正确：
+  - `tests/scripts/test_isslcertificateverification_active_guidance_contract.sh` 已覆盖 builder / TLS facade / OCSP guide / CT guide，并转绿
+  - `tests/test_connection_builder_hostname_precedence.pas`: `29 passed / 0 failed`
+  - `tests/test_tls_connector_hostname_override_precedence.pas`: `6 passed / 0 failed`
+  - `tests/contract/test_backend_contract.pas` 继续 green：`135 total / 111 passed / 0 failed / 24 skipped`
+  - 这说明这次不是“为 owner path 重写行为逻辑”，而是单纯把高可见默认入口对齐到既有 owner surface
+
+- 当前这条 high-visibility owner-path lane 已可以视为关闭：
+  - 后续继续审查时，不应再把 builder / TLS facade / CT/OCSP guide 当成 certificate-verification 的 direct-core 漂移点反复拉起
+  - 下一刀更适合继续盘点 verify-result mirrors 的 residual runtime/core uses，准备进入 compiler-deprecated 收口
+
 - `MbedTLS` 连接态 peer-certificate public surface 这次被证实还留着一条更窄但更真实的 completeness seam：
   - 之前这条线虽然已经修过 borrowed-cert materialization
   - 但 `DoGetPeerCertificateChain()` 仍然只返回一个 leaf clone

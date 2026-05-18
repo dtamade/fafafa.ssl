@@ -24,6 +24,7 @@ uses
 var
   Ctx: ISSLContext;
   Conn: ISSLConnection;
+  CertVerify: ISSLCertificateVerification;
   OCSP: ISSLOCSPStapling;
 begin
   Ctx := TSSLContextBuilder.Create
@@ -33,7 +34,11 @@ begin
 
   Conn := Ctx.CreateConnection(Socket);
   if not Conn.Connect then
-    raise Exception.Create(Conn.GetVerifyResultString);
+  begin
+    if Supports(Conn, ISSLCertificateVerification, CertVerify) then
+      raise Exception.Create(CertVerify.GetVerifyResultString);
+    raise Exception.Create('TLS handshake failed and ISSLCertificateVerification is unavailable');
+  end;
 
   if Supports(Conn, ISSLOCSPStapling, OCSP) then
   begin

@@ -102,6 +102,7 @@ var
   Ctx: ISSLContext;
   Conn: ISSLConnection;
   ClientConn: ISSLClientConnection;
+  CertVerify: ISSLCertificateVerification;
   CT: ISSLCertificateTransparency;
   CTValidation: ISSLCertificateTransparencyValidation;
   Socket: THandle;
@@ -119,7 +120,11 @@ begin
   ClientConn.SetServerName('example.com');
 
   if not Conn.Connect then
-    raise Exception.Create('TLS handshake failed: ' + Conn.GetVerifyResultString);
+  begin
+    if Supports(Conn, ISSLCertificateVerification, CertVerify) then
+      raise Exception.Create('TLS handshake failed: ' + CertVerify.GetVerifyResultString);
+    raise Exception.Create('TLS handshake failed and ISSLCertificateVerification is unavailable');
+  end;
 
   if Supports(Conn, ISSLCertificateTransparency, CT) then
   begin
