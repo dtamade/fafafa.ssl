@@ -79,6 +79,20 @@ git diff --check
   - 去掉 `test_winssl_session_resumption.lpi` 的硬编码 Linux target
   - 把现有 `test_winssl_windows_runtime_project_target_contract.sh` 扩到该新 `.lpi`
   - push 后重新触发 `wave-b-b2-manual.yml`，再看 live runtime artifact 给出的 `observed_reuse=true|false`
+- GREEN:
+  - GitHub Actions live rerun `26034303732` 已证明 `.lpi` target 漂移修复有效：
+    - `test_winssl_session_resumption.lpi` 在 Windows broader suite compile phase 成功通过
+    - `windows-gate` 已重新推进到真正的 runtime phase
+  - 同一 rerun 中 `macos-gate` 也已转绿，当前 workflow 只剩 Windows broader suite blocker
+- RED:
+  - 新的 Windows first hard blocker 已压缩到 shared runtime helper：
+    - `UpdateSessionReuseTruthFromContext(...)` 在 `Run broader WinSSL runtime suite` 中触发 `EAccessViolation`
+    - 它不仅打倒 `WinSSL Session Resumption Truth`，也连带打倒 `Integration Multi` / `Performance Benchmark` / `HTTPS Client`
+  - 这说明问题不在某个专项测试，而在“握手后读取 `SECPKG_ATTR_SESSION_INFO` 的共享实现”本身
+- FOLLOW-UP:
+  - 把 `TryGetCurrentSessionInfo(...)` / `UpdateSessionReuseTruthFromContext(...)` 降成 best-effort observation
+  - 保留 `SECPKG_ATTR_SESSION_INFO` 作为 truth source，但任何异常都只能回落成 `session_id='' / reused=false`
+  - 重新触发 `wave-b-b2-manual.yml`，确认 broader suite 不再因 session-info observation 崩溃
 - PENDING:
   - GitHub Windows runner live run 尚未刷新
   - 是否稳定观测到 `observed_reuse=true` 仍待 Windows artifact 给出结论

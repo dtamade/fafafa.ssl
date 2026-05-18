@@ -98,6 +98,35 @@
   - 这说明当前 `.lpi` 已不再偷带错误平台目标，而是回到了“宿主是谁就按谁编”的正确形态
   - 这也再次证明 dedicated WinSSL session-resumption lane 的最终验收必须继续看 GitHub Windows runner，而不是把 Linux 本地 Lazarus 结果误当成目标真相
 
+- GitHub Actions live rerun `26034303732` 已把上一个问题真正关掉：
+  - `test_winssl_session_resumption.lpi` 在 Windows broader suite 的 compile phase 这次已经通过
+  - 所以 `.lpi` target drift 的修复是有效的，不再是当前 blocker
+
+- 同一个 rerun 也把新的 shared runtime defect 压得很集中：
+  - `WinSSL Integration Tests (Multi-Scenario)`
+  - `WinSSL Session Resumption Truth`
+  - `WinSSL Performance Benchmark`
+  - `WinSSL HTTPS Client`
+  都在握手后落到 `src/fafafa.ssl.winssl.connection.pas` 的
+  `UpdateSessionReuseTruthFromContext(...)` 并触发 `EAccessViolation`
+
+- 这说明当前真正的问题不是“某个专项测试写错”，而是新接入的 session-info observation 破坏了共享握手后路径：
+  - `SaveSessionAfterHandshake(...)` 现在在 client/generic handshake 成功后都会调用
+  - `UpdateSessionReuseTruthFromContext(...)` 也会被普通 `GetSession()` 路径复用
+  - 因而只要这条 helper 不安全，就会把多条 WinSSL broader-suite runtime path 一起打崩
+
+- 当前最小正确修法因此也很明确：
+  - `SECPKG_ATTR_SESSION_INFO` 继续保留为 truth source
+  - 但 `TryGetCurrentSessionInfo(...)` 必须把异常吞掉并返回 `False`
+  - `UpdateSessionReuseTruthFromContext(...)` 必须降成 best-effort：
+    - 能读到就更新 `FSessionReused` / `session_id`
+    - 读不到或异常就回落成 `session_id=''` / `FSessionReused=False`
+    - 绝不允许 session-info observation 破坏已成功的握手路径
+
+- 同一个 rerun 还有一条重要的范围收敛事实：
+  - `macos-gate` 在 `26034303732` 已经转绿
+  - 所以当前 workflow 唯一剩余 blocker 是 Windows broader suite 的 shared session-info `AV`
+
 - 根因已被压缩到 evidence capture 层，而不是 WinSSL 实现层：
   - workflow 用 `Start-Transcript` 包住父 PowerShell
   - broader suite 则在子 `pwsh -File tests/run_winssl_tests.ps1` 里执行

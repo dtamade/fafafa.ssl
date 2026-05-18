@@ -49,8 +49,16 @@ require_match "$connection_file" \
   'WinSSL connection reads Schannel session info from the live context'
 
 require_match "$connection_file" \
+  'function TWinSSLConnection\.TryGetCurrentSessionInfo\(.*?try.*?QueryContextAttributesW\(@FCtxtHandle,\s*SECPKG_ATTR_SESSION_INFO,\s*@ASessionInfo\).*?except.*?Result := False;' \
+  'WinSSL current-session-info helper degrades to false instead of propagating runtime exceptions'
+
+require_match "$connection_file" \
   'FSessionReused := \(LSessionInfo\.dwFlags and SSL_SESSION_RECONNECT\) <> 0;' \
   'WinSSL reuse state is now derived from Schannel session flags'
+
+require_match "$connection_file" \
+  'procedure TWinSSLConnection\.UpdateSessionReuseTruthFromContext\(.*?try.*?if not TryGetCurrentSessionInfo\(LSessionInfo\) then.*?FSessionReused := \(LSessionInfo\.dwFlags and SSL_SESSION_RECONNECT\) <> 0;.*?ASessionId := SessionIdBytesToHex\(LSessionInfo\);.*?except.*?FSessionReused := False;.*?must never break a successful handshake path' \
+  'WinSSL session-info observation stays best-effort and cannot crash the handshake path'
 
 require_match "$connection_file" \
   'LSession\.SetSessionMetadata\(LSessionID,\s*LProtocol,\s*LCipher,\s*FSessionReused\);' \

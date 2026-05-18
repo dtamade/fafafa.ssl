@@ -783,8 +783,15 @@ function TWinSSLConnection.TryGetCurrentSessionInfo(
   out ASessionInfo: SecPkgContext_SessionInfo): Boolean;
 begin
   FillChar(ASessionInfo, SizeOf(ASessionInfo), 0);
-  Result := IsSuccess(QueryContextAttributesW(@FCtxtHandle,
-    SECPKG_ATTR_SESSION_INFO, @ASessionInfo));
+  try
+    Result := IsSuccess(QueryContextAttributesW(@FCtxtHandle,
+      SECPKG_ATTR_SESSION_INFO, @ASessionInfo));
+  except
+    on Exception do
+    begin
+      Result := False;
+    end;
+  end;
 end;
 
 function TWinSSLConnection.SessionIdBytesToHex(
@@ -820,11 +827,20 @@ begin
   ASessionId := '';
   FSessionReused := False;
 
-  if not TryGetCurrentSessionInfo(LSessionInfo) then
-    Exit;
+  try
+    if not TryGetCurrentSessionInfo(LSessionInfo) then
+      Exit;
 
-  ASessionId := SessionIdBytesToHex(LSessionInfo);
-  FSessionReused := (LSessionInfo.dwFlags and SSL_SESSION_RECONNECT) <> 0;
+    FSessionReused := (LSessionInfo.dwFlags and SSL_SESSION_RECONNECT) <> 0;
+    ASessionId := SessionIdBytesToHex(LSessionInfo);
+  except
+    on Exception do
+    begin
+      ASessionId := '';
+      FSessionReused := False;
+      // Session-info observation is best-effort only; it must never break a successful handshake path.
+    end;
+  end;
 end;
 
 procedure TWinSSLConnection.SaveSessionAfterHandshake;

@@ -38,9 +38,14 @@
   - GitHub Actions live run `26033545656` 已先暴露出一个 workflow-entry 漂移，而不是 runtime 语义失败：
     - `test_winssl_session_resumption.lpi` 仍硬编码 `TargetOS=linux`
     - Windows `Run broader WinSSL runtime suite` 因此把这条 dedicated lane 当成 Linux 项目编译，卡在 compile phase
+  - GitHub Actions live rerun `26034303732` 已证明这条 `.lpi` 漂移修复有效：
+    - `Run broader WinSSL runtime suite` 的 compile phase 已全部通过
+    - 新的 first hard blocker 已收敛到 shared runtime helper `UpdateSessionReuseTruthFromContext(...)`
+    - `WinSSL Integration Tests (Multi-Scenario)` / `Backend Comparison Tests` / `WinSSL Session Resumption Truth` / `WinSSL Performance Benchmark` / `WinSSL HTTPS Client` 都在握手后观测 session info 时触发同类 `EAccessViolation`
   - 当前这批的最小收口是：
     - 去掉 `test_winssl_session_resumption.lpi` 的硬编码 Linux target
     - 把 `tests/scripts/test_winssl_windows_runtime_project_target_contract.sh` 扩到该新 `.lpi`
+    - 把 `TryGetCurrentSessionInfo(...)` / `UpdateSessionReuseTruthFromContext(...)` 降成 best-effort observation，不允许 session-info 读取打崩成功握手
     - push 后重新看 Windows artifact 刷新的 `observed_reuse=true|false` 真实结论
 - [in_progress] 当前 repo-level 下一步应回到更高价值的 completeness 路线：
   - 继续审查各 backend implementation completeness / optional surface completeness
