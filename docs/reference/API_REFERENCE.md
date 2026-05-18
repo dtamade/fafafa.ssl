@@ -1103,7 +1103,8 @@ end;
 - `ProtocolVersion` / `CipherSuite` / `IsResumed` / `ALPNProtocol` 这组通用字段由共享连接层保证最小可观测语义
 - `ServerName` 在连接对象已持有该 metadata 时由共享连接层补齐
 - `SessionId` 在连接/握手已经建立且后端可返回当前 session 时由共享连接层补齐
-- `CipherSuiteId` / `KeyExchange` / `Cipher` / `Hash` / `KeySize` / `MacSize` / `PeerCertificate` 等字段按后端能力 best-effort 填充，未连接或后端未提供时返回默认值
+- `PeerCertificate` 在连接对象可暴露当前对端证书时由共享连接层补齐
+- `CipherSuiteId` / `KeyExchange` / `Cipher` / `Hash` / `KeySize` / `MacSize` 等字段按后端能力 best-effort 填充，未连接或后端未提供时返回默认值
 
 ---
 

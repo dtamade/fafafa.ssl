@@ -1722,3 +1722,32 @@
       - `Hash`
       - `KeySize`
       - `MacSize`
+
+- 继续沿着 implementation-completeness 主线盘点后，`PeerCertificate` 被证实和 `ServerName` / `SessionId` 属于同一类共享层缺口：
+  - OpenSSL / WinSSL / FreePascal / MbedTLS / WolfSSL 都已经实现了 `DoGetPeerCertificate`
+  - 各 backend 的 `ISSLCertificate.GetInfo` 也都已经存在
+  - 当前只有 WinSSL override 会显式把 `PeerCertificate` 写回 `TSSLConnectionInfo`
+  - 因而这不是“底层能力不够”，而是 shared `GetConnectionInfo` 还没有统一折叠当前对端证书信息
+
+- 这使得 `PeerCertificate` 成为当前最值得优先修的 completeness 字段：
+  - 它不要求先做每个 backend 的 cipher ID / kex / hash 枚举映射
+  - 它也不需要引入新的 backend-specific runtime patch
+  - shared base 只要在 `GetPeerCertificate <> nil` 时取 `GetInfo`，就能让非 WinSSL 路径不再继续空着
+
+- focused mock proof 现在已经把这条 shared truth 钉住：
+  - `ConnectionInfo.PeerCertificate.Subject` 会镜像 `ISSLCertificate.GetInfo.Subject`
+  - `ConnectionInfo.PeerCertificate.Issuer` 会镜像 `ISSLCertificate.GetInfo.Issuer`
+  - 这说明 `PeerCertificate` 不再只是 WinSSL override 局部拥有的 metadata，而是共享 `GetConnectionInfo` 的通用输出
+
+- 当前 `GetConnectionInfo` 剩余的 completeness debt 因而又收缩了一层：
+  - 已经由 shared layer 补齐：
+    - `ServerName`
+    - `SessionId`
+    - `PeerCertificate`
+  - 真正还需要 backend-specific 审查/修补的只剩：
+    - `CipherSuiteId`
+    - `KeyExchange`
+    - `Cipher`
+    - `Hash`
+    - `KeySize`
+    - `MacSize`

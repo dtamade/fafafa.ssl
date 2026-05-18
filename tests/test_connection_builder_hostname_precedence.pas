@@ -13,11 +13,59 @@ uses
   fafafa.ssl.connection.builder;
 
 type
+  TMockCertificate = class(TInterfacedObject, ISSLCertificate)
+  private
+    FInfo: TSSLCertificateInfo;
+    FIssuerCertificate: ISSLCertificate;
+  public
+    constructor Create(const ASubject, AIssuer, ASerial: string);
+
+    function LoadFromFile(const AFileName: string): Boolean;
+    function LoadFromStream(AStream: TStream): Boolean;
+    function LoadFromMemory(const AData: Pointer; ASize: Integer): Boolean;
+    function LoadFromPEM(const APEM: string): Boolean;
+    function LoadFromDER(const ADER: TBytes): Boolean;
+    function SaveToFile(const AFileName: string): Boolean;
+    function SaveToStream(AStream: TStream): Boolean;
+    function SaveToPEM: string;
+    function SaveToDER: TBytes;
+    function GetInfo: TSSLCertificateInfo;
+    function GetSubject: string;
+    function GetIssuer: string;
+    function GetSerialNumber: string;
+    function GetNotBefore: TDateTime;
+    function GetNotAfter: TDateTime;
+    function GetPublicKey: string;
+    function GetPublicKeyAlgorithm: string;
+    function GetSignatureAlgorithm: string;
+    function GetVersion: Integer;
+    function Verify(ACAStore: ISSLCertificateStore): Boolean;
+    function VerifyEx(ACAStore: ISSLCertificateStore;
+      AFlags: TSSLCertVerifyFlags; out AResult: TSSLCertVerifyResult): Boolean;
+    function VerifyHostname(const AHostname: string): Boolean;
+    function IsExpired: Boolean;
+    function IsSelfSigned: Boolean;
+    function IsCA: Boolean;
+    function GetDaysUntilExpiry: Integer;
+    function GetSubjectCN: string;
+    function GetExtension(const AOID: string): string;
+    function GetSubjectAltNames: TSSLStringArray;
+    function GetKeyUsage: TSSLStringArray;
+    function GetExtendedKeyUsage: TSSLStringArray;
+    function GetFingerprint(AHashType: TSSLHash): string;
+    function GetFingerprintSHA1: string;
+    function GetFingerprintSHA256: string;
+    procedure SetIssuerCertificate(ACert: ISSLCertificate);
+    function GetIssuerCertificate: ISSLCertificate;
+    function Clone: ISSLCertificate;
+  end;
+
   TMockSession = class(TInterfacedObject, ISSLSession)
   private
     FID: string;
+    FPeerCertificate: ISSLCertificate;
   public
-    constructor Create(const AID: string);
+    constructor Create(const AID: string; APeerCertificate: ISSLCertificate = nil);
 
     function GetID: string;
     function GetCreationTime: TDateTime;
@@ -170,10 +218,237 @@ end;
 
 { TMockSession }
 
-constructor TMockSession.Create(const AID: string);
+{ TMockCertificate }
+
+constructor TMockCertificate.Create(const ASubject, AIssuer, ASerial: string);
+begin
+  inherited Create;
+  FillChar(FInfo, SizeOf(FInfo), 0);
+  FInfo.Subject := ASubject;
+  FInfo.Issuer := AIssuer;
+  FInfo.SerialNumber := ASerial;
+  FInfo.NotBefore := EncodeDate(2026, 1, 1);
+  FInfo.NotAfter := EncodeDate(2030, 1, 1);
+  FInfo.FingerprintSHA1 := 'mock-sha1';
+  FInfo.FingerprintSHA256 := 'mock-sha256';
+  FInfo.PublicKeyAlgorithm := 'RSA';
+  FInfo.PublicKeySize := 2048;
+  FInfo.SignatureAlgorithm := 'sha256WithRSAEncryption';
+  FInfo.Version := 3;
+  FInfo.IsCA := False;
+  FInfo.PathLength := -1;
+  FInfo.PathLenConstraint := -1;
+  FInfo.KeyUsage := 0;
+  SetLength(FInfo.SubjectAltNames, 1);
+  FInfo.SubjectAltNames[0] := 'DNS:peer.example.com';
+end;
+
+function TMockCertificate.LoadFromFile(const AFileName: string): Boolean;
+begin
+  Result := False;
+end;
+
+function TMockCertificate.LoadFromStream(AStream: TStream): Boolean;
+begin
+  Result := False;
+end;
+
+function TMockCertificate.LoadFromMemory(const AData: Pointer; ASize: Integer): Boolean;
+begin
+  Result := False;
+end;
+
+function TMockCertificate.LoadFromPEM(const APEM: string): Boolean;
+begin
+  Result := False;
+end;
+
+function TMockCertificate.LoadFromDER(const ADER: TBytes): Boolean;
+begin
+  Result := False;
+end;
+
+function TMockCertificate.SaveToFile(const AFileName: string): Boolean;
+begin
+  Result := False;
+end;
+
+function TMockCertificate.SaveToStream(AStream: TStream): Boolean;
+begin
+  Result := False;
+end;
+
+function TMockCertificate.SaveToPEM: string;
+begin
+  Result := '';
+end;
+
+function TMockCertificate.SaveToDER: TBytes;
+begin
+  SetLength(Result, 0);
+end;
+
+function TMockCertificate.GetInfo: TSSLCertificateInfo;
+begin
+  Result := FInfo;
+end;
+
+function TMockCertificate.GetSubject: string;
+begin
+  Result := FInfo.Subject;
+end;
+
+function TMockCertificate.GetIssuer: string;
+begin
+  Result := FInfo.Issuer;
+end;
+
+function TMockCertificate.GetSerialNumber: string;
+begin
+  Result := FInfo.SerialNumber;
+end;
+
+function TMockCertificate.GetNotBefore: TDateTime;
+begin
+  Result := FInfo.NotBefore;
+end;
+
+function TMockCertificate.GetNotAfter: TDateTime;
+begin
+  Result := FInfo.NotAfter;
+end;
+
+function TMockCertificate.GetPublicKey: string;
+begin
+  Result := FInfo.PublicKeyAlgorithm;
+end;
+
+function TMockCertificate.GetPublicKeyAlgorithm: string;
+begin
+  Result := FInfo.PublicKeyAlgorithm;
+end;
+
+function TMockCertificate.GetSignatureAlgorithm: string;
+begin
+  Result := FInfo.SignatureAlgorithm;
+end;
+
+function TMockCertificate.GetVersion: Integer;
+begin
+  Result := FInfo.Version;
+end;
+
+function TMockCertificate.Verify(ACAStore: ISSLCertificateStore): Boolean;
+begin
+  Result := False;
+end;
+
+function TMockCertificate.VerifyEx(ACAStore: ISSLCertificateStore;
+  AFlags: TSSLCertVerifyFlags; out AResult: TSSLCertVerifyResult): Boolean;
+begin
+  FillChar(AResult, SizeOf(AResult), 0);
+  Result := False;
+end;
+
+function TMockCertificate.VerifyHostname(const AHostname: string): Boolean;
+begin
+  Result := False;
+end;
+
+function TMockCertificate.IsExpired: Boolean;
+begin
+  Result := False;
+end;
+
+function TMockCertificate.IsSelfSigned: Boolean;
+begin
+  Result := SameText(FInfo.Subject, FInfo.Issuer);
+end;
+
+function TMockCertificate.IsCA: Boolean;
+begin
+  Result := FInfo.IsCA;
+end;
+
+function TMockCertificate.GetDaysUntilExpiry: Integer;
+begin
+  Result := Trunc(FInfo.NotAfter - Date);
+end;
+
+function TMockCertificate.GetSubjectCN: string;
+begin
+  Result := FInfo.Subject;
+end;
+
+function TMockCertificate.GetExtension(const AOID: string): string;
+begin
+  Result := '';
+end;
+
+function TMockCertificate.GetSubjectAltNames: TSSLStringArray;
+begin
+  Result := FInfo.SubjectAltNames;
+end;
+
+function TMockCertificate.GetKeyUsage: TSSLStringArray;
+begin
+  Result := nil;
+end;
+
+function TMockCertificate.GetExtendedKeyUsage: TSSLStringArray;
+begin
+  Result := nil;
+end;
+
+function TMockCertificate.GetFingerprint(AHashType: TSSLHash): string;
+begin
+  case AHashType of
+    sslHashSHA1:
+      Result := FInfo.FingerprintSHA1;
+    sslHashSHA256:
+      Result := FInfo.FingerprintSHA256;
+  else
+    Result := '';
+  end;
+end;
+
+function TMockCertificate.GetFingerprintSHA1: string;
+begin
+  Result := FInfo.FingerprintSHA1;
+end;
+
+function TMockCertificate.GetFingerprintSHA256: string;
+begin
+  Result := FInfo.FingerprintSHA256;
+end;
+
+procedure TMockCertificate.SetIssuerCertificate(ACert: ISSLCertificate);
+begin
+  FIssuerCertificate := ACert;
+end;
+
+function TMockCertificate.GetIssuerCertificate: ISSLCertificate;
+begin
+  Result := FIssuerCertificate;
+end;
+
+function TMockCertificate.Clone: ISSLCertificate;
+var
+  LClone: TMockCertificate;
+begin
+  LClone := TMockCertificate.Create(FInfo.Subject, FInfo.Issuer, FInfo.SerialNumber);
+  LClone.FInfo := FInfo;
+  LClone.FIssuerCertificate := FIssuerCertificate;
+  Result := LClone;
+end;
+
+{ TMockSession }
+
+constructor TMockSession.Create(const AID: string; APeerCertificate: ISSLCertificate);
 begin
   inherited Create;
   FID := AID;
+  FPeerCertificate := APeerCertificate;
 end;
 
 function TMockSession.GetID: string;
@@ -218,7 +493,10 @@ end;
 
 function TMockSession.GetPeerCertificate: ISSLCertificate;
 begin
-  Result := nil;
+  if FPeerCertificate <> nil then
+    Result := FPeerCertificate.Clone
+  else
+    Result := nil;
 end;
 
 function TMockSession.Serialize: TBytes;
@@ -233,7 +511,7 @@ end;
 
 function TMockSession.Clone: ISSLSession;
 begin
-  Result := TMockSession.Create(FID);
+  Result := TMockSession.Create(FID, FPeerCertificate);
 end;
 
 { TMockClientConnection }
@@ -322,7 +600,10 @@ end;
 
 function TMockClientConnection.DoGetPeerCertificate: ISSLCertificate;
 begin
-  Result := nil;
+  if FSession <> nil then
+    Result := FSession.GetPeerCertificate
+  else
+    Result := nil;
 end;
 
 function TMockClientConnection.DoGetPeerCertificateChain: TSSLCertificateArray;
@@ -686,12 +967,19 @@ begin
   CheckEqualsStr('ConnectionInfo.ServerName mirrors ISSLClientConnection.GetServerName',
     'info.example.com', Info.ServerName);
 
-  WriteLn('=== Case 5: GetConnectionInfo preserves session identifier ===');
-  Conn.SetSession(TMockSession.Create('session-123'));
+  WriteLn('=== Case 5: GetConnectionInfo preserves session identifier and peer certificate ===');
+  Conn.SetSession(TMockSession.Create(
+    'session-123',
+    TMockCertificate.Create('CN=peer.example.com', 'CN=Mock Root CA', '01')
+  ));
   Check(Conn.Connect, 'Mock connection connect should succeed before reading SessionId');
   Info := Conn.GetConnectionInfo;
   CheckEqualsStr('ConnectionInfo.SessionId mirrors ISSLSession.GetID',
     'session-123', Info.SessionId);
+  CheckEqualsStr('ConnectionInfo.PeerCertificate.Subject mirrors ISSLCertificate.GetInfo',
+    'CN=peer.example.com', Info.PeerCertificate.Subject);
+  CheckEqualsStr('ConnectionInfo.PeerCertificate.Issuer mirrors ISSLCertificate.GetInfo',
+    'CN=Mock Root CA', Info.PeerCertificate.Issuer);
 end;
 
 begin

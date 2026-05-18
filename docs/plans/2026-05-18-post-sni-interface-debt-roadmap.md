@@ -297,6 +297,31 @@ Recommended first bounded batch:
     2. 再挑一组最能共享或最容易 contract proof 的字段做下一刀
   - 更强 owner / deprecation wording route 继续保留为平行候选，但不应盖过当前 implementation-completeness 主线
 
+## Progress Since The GetConnectionInfo ServerName-SessionId Batch
+
+- 已交付：
+  - `GetConnectionInfo` shared-layer completeness enrichment for `PeerCertificate`
+  - focused mock proof still anchored in `tests/test_connection_builder_hostname_precedence.pas`
+  - API truth updated so `PeerCertificate` is no longer described as purely backend-specific best-effort
+
+- 当前更准确的 next step：
+  - 不再把 `PeerCertificate` 当作剩余 completeness debt
+  - shared layer 现在已经补齐的 `GetConnectionInfo` 字段是：
+    - `ServerName`
+    - `SessionId`
+    - `PeerCertificate`
+  - implementation-completeness 主线真正剩下的已经进一步收缩到 backend-specific crypto detail：
+    - `CipherSuiteId`
+    - `KeyExchange`
+    - `Cipher`
+    - `Hash`
+    - `KeySize`
+    - `MacSize`
+  - 若继续推进，应优先做一条新的 bounded batch：
+    1. 先静态盘点上述 6 个字段在 OpenSSL / WinSSL / FreePascal / MbedTLS / WolfSSL 里各自已有多少真实来源
+    2. 再挑一组最容易共享归一或最适合 contract proof 的字段落第一刀
+  - 更强 owner / deprecation wording route 继续保留为平行候选，但当前不应压过 implementation-completeness 主线
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

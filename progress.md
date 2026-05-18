@@ -3658,3 +3658,38 @@
   - summary:
     - updated residual contract now matches the expanded intentional allowlist
     - no unexpected direct-core `GetConnectionInfo` files were introduced
+
+### GetConnectionInfo PeerCertificate Base Enrichment
+
+- add `docs/plans/2026-05-18-getconnectioninfo-peercertificate-base-enrichment.md`
+  - purpose:
+    - define the next bounded implementation-completeness batch after `ServerName` / `SessionId`
+    - keep scope on the shared `PeerCertificate` field instead of prematurely diving into backend-specific cipher detail mapping
+
+- update:
+  - `src/fafafa.ssl.connection.base.pas`
+  - `tests/test_connection_builder_hostname_precedence.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - enrich shared `GetConnectionInfo` with `PeerCertificate` when `GetPeerCertificate` returns a current certificate
+    - extend the focused mock contract so the existing shared `GetConnectionInfo` read also proves `PeerCertificate.Subject` / `Issuer` mirror truth
+    - narrow the active API wording so `PeerCertificate` is now documented as a shared-layer field when the connection can expose the current peer certificate
+
+- `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+  - result: PASS
+  - summary:
+    - focused builder/hostname suite finished `15 passed, 0 failed`
+    - the existing `GetConnectionInfo` proof still covered `ServerName` / `SessionId`
+    - the same intentional direct-core read now also proved `PeerCertificate.Subject` / `Issuer` mirror truth without expanding the residual allowlist
+
+- `mkdir -p tmp/test_openssl_connection_info_cipher_contract && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_connection_info_cipher_contract -FEtmp/test_openssl_connection_info_cipher_contract -otmp/test_openssl_connection_info_cipher_contract/test_openssl_connection_info_cipher_contract tests/test_openssl_connection_info_cipher_contract.pas && ./tmp/test_openssl_connection_info_cipher_contract/test_openssl_connection_info_cipher_contract`
+  - result: PASS
+  - summary:
+    - focused OpenSSL connection-info guard finished `10 passed, 0 failed`
+    - fresh-connection `GetConnectionInfo` remained safe after the new shared `GetPeerCertificate` path was introduced
+
+- `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - the intentional direct-core `GetConnectionInfo` surface stayed unchanged at the current allowlist
+    - no new residual archaeology was needed for this batch

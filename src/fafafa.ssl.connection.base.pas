@@ -572,6 +572,7 @@ end;
 function TBaseSSLConnection.GetConnectionInfo: TSSLConnectionInfo;
 var
   LSession: ISSLSession;
+  LPeerCertificate: ISSLCertificate;
 begin
   FillChar(Result, SizeOf(Result), 0);
   Result.ProtocolVersion := GetProtocolVersion;
@@ -588,6 +589,10 @@ begin
     if LSession <> nil then
       Result.SessionId := LSession.GetID;
   end;
+
+  LPeerCertificate := GetPeerCertificate;
+  if LPeerCertificate <> nil then
+    Result.PeerCertificate := LPeerCertificate.GetInfo;
 end;
 
 function TBaseSSLConnection.GetProtocolVersion: TSSLProtocolVersion;

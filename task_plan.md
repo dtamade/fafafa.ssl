@@ -912,6 +912,25 @@
       - `PeerCertificate`
       - `CipherSuiteId` / `KeyExchange` / `Cipher` / `Hash` / `KeySize` / `MacSize`
       - 更强 owner / deprecation wording route
+35. `GetConnectionInfo` shared `PeerCertificate` enrichment 已完成并应作为当前 implementation-completeness 主线的继续收口保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getconnectioninfo-peercertificate-base-enrichment.md`
+    - 当前已确认的共享层 completeness 修复：
+      - `TBaseSSLConnection.GetConnectionInfo` 现在会在连接可暴露当前对端证书时统一补齐 `PeerCertificate`
+      - OpenSSL / WinSSL / FreePascal / MbedTLS / WolfSSL 的既有 `DoGetPeerCertificate` / `ISSLCertificate.GetInfo` 能力现在都能被共享层折进 `TSSLConnectionInfo`
+    - 当前 focused proof 已覆盖：
+      - `tests/test_connection_builder_hostname_precedence.pas`
+      - `tests/test_openssl_connection_info_cipher_contract.pas`
+      - `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+      - `git diff --check`
+    - 当前批收口后，`GetConnectionInfo` 线上真正剩下的 completeness debt 已进一步收缩到：
+      - `CipherSuiteId`
+      - `KeyExchange`
+      - `Cipher`
+      - `Hash`
+      - `KeySize`
+      - `MacSize`
+      - 更强 owner / deprecation wording route
 
 ## Verification Discipline
 
