@@ -931,6 +931,30 @@
       - `KeySize`
       - `MacSize`
       - 更强 owner / deprecation wording route
+36. `GetConnectionInfo` crypto detail name-derived first slice 已完成并应作为当前 shared/detail 分层路线的完成记录保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getconnectioninfo-crypto-detail-name-derived-first-slice.md`
+    - 当前已确认的共享层 completeness 修复：
+      - shared `GetConnectionInfo` 现在会基于 negotiated `CipherSuite` 名称 best-effort 推导：
+        - `Cipher`
+        - `Hash`
+        - `KeySize`
+      - 当 cipher-suite name 显式携带 legacy key-exchange 前缀时，也会 best-effort 推导：
+        - `KeyExchange`
+    - 当前 static audit 结论：
+      - `CipherSuiteId` / `MacSize` 仍主要属于 backend/platform-specific detail
+      - `Cipher` / `Hash` / `KeySize` 更适合先走 shared name-derived normalization
+      - WinSSL 继续保留自己的 override，不依赖 shared parser
+    - 当前 focused proof 已覆盖：
+      - `tests/test_connection_builder_hostname_precedence.pas`
+      - `tests/test_openssl_connection_info_cipher_contract.pas`
+      - `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+      - `git diff --check`
+    - 当前批收口后，`GetConnectionInfo` implementation-completeness 主线已进一步收缩到：
+      - `CipherSuiteId`
+      - `MacSize`
+      - 无法只靠名字稳定推导的更细平台差异
+      - 更强 owner / deprecation wording route
 
 ## Verification Discipline
 

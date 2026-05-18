@@ -85,6 +85,7 @@ type
   private
     FServerName: string;
     FSession: ISSLSession;
+    FCipherName: string;
   protected
     function DoRead(var ABuffer; ACount: Integer): Integer; override;
     function DoWrite(const ABuffer; ACount: Integer): Integer; override;
@@ -521,6 +522,7 @@ begin
   inherited Create(AContext);
   FServerName := '';
   FSession := nil;
+  FCipherName := 'ECDHE-RSA-AES128-GCM-SHA256';
 end;
 
 procedure TMockClientConnection.SetServerName(const AServerName: string);
@@ -595,7 +597,7 @@ end;
 
 function TMockClientConnection.DoGetCipherName: string;
 begin
-  Result := 'MOCK-CIPHER';
+  Result := FCipherName;
 end;
 
 function TMockClientConnection.DoGetPeerCertificate: ISSLCertificate;
@@ -966,6 +968,14 @@ begin
   Info := Conn.GetConnectionInfo;
   CheckEqualsStr('ConnectionInfo.ServerName mirrors ISSLClientConnection.GetServerName',
     'info.example.com', Info.ServerName);
+  Check(Info.KeyExchange = sslKexECDHE_RSA,
+    'ConnectionInfo.KeyExchange is derived from the negotiated cipher-suite name');
+  Check(Info.Cipher = sslCipherAES128GCM,
+    'ConnectionInfo.Cipher is derived from the negotiated cipher-suite name');
+  Check(Info.Hash = sslHashSHA256,
+    'ConnectionInfo.Hash is derived from the negotiated cipher-suite name');
+  Check(Info.KeySize = 128,
+    'ConnectionInfo.KeySize is derived from the negotiated cipher-suite name');
 
   WriteLn('=== Case 5: GetConnectionInfo preserves session identifier and peer certificate ===');
   Conn.SetSession(TMockSession.Create(

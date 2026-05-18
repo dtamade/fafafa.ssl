@@ -1751,3 +1751,42 @@
     - `Hash`
     - `KeySize`
     - `MacSize`
+
+- 对剩余 6 个 crypto detail 字段做静态盘点后，shared-vs-backend 的边界已经更清楚了：
+  - `CipherSuiteId` / `MacSize`
+    - 当前更偏底层库/平台专属 detail
+    - WinSSL override 已经直接掌握这些信息
+    - OpenSSL 也有部分低层来源，但这条线不适合先做 shared 归一
+  - `Cipher` / `Hash` / `KeySize`
+    - 在 OpenSSL / MbedTLS / WolfSSL / FreePascal 上，很多时候已经能从 negotiated `CipherSuite` 名称稳定推导
+    - 因而它们更适合作为 implementation-completeness 的 first shared slice
+  - `KeyExchange`
+    - 只在 cipher-suite name 仍显式携带 legacy prefix 时适合 shared 推导
+    - TLS 1.3 标准名字本身不会给出这项 detail，因此不应在 shared layer 里假装“总能推出来”
+
+- 这使得当前最稳妥的修法不再是“一次补全 6 项”，而是先做 name-derived normalization：
+  - `Cipher`
+  - `Hash`
+  - `KeySize`
+  - 以及带 legacy prefix 时的 `KeyExchange`
+
+- focused mock proof 现在已经把这条新 shared truth 钉住：
+  - 对 negotiated cipher-suite name `ECDHE-RSA-AES128-GCM-SHA256`
+  - `ConnectionInfo.KeyExchange` 会推导为 `sslKexECDHE_RSA`
+  - `ConnectionInfo.Cipher` 会推导为 `sslCipherAES128GCM`
+  - `ConnectionInfo.Hash` 会推导为 `sslHashSHA256`
+  - `ConnectionInfo.KeySize` 会推导为 `128`
+
+- 因而当前 `GetConnectionInfo` implementation-completeness 主线又收缩了一层：
+  - 已由 shared layer 补齐：
+    - `ServerName`
+    - `SessionId`
+    - `PeerCertificate`
+    - `Cipher`
+    - `Hash`
+    - `KeySize`
+    - 以及 legacy-prefix case 的 `KeyExchange`
+  - 更值得继续深入的剩余问题已经缩到：
+    - `CipherSuiteId`
+    - `MacSize`
+    - 以及无法只靠名字稳定推导的更细平台差异

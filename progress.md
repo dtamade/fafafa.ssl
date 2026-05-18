@@ -3693,3 +3693,40 @@
   - summary:
     - the intentional direct-core `GetConnectionInfo` surface stayed unchanged at the current allowlist
     - no new residual archaeology was needed for this batch
+
+### GetConnectionInfo Crypto Detail Name-Derived First Slice
+
+- add `docs/plans/2026-05-18-getconnectioninfo-crypto-detail-name-derived-first-slice.md`
+  - purpose:
+    - define the first bounded shared-crypto-detail batch after `PeerCertificate`
+    - keep scope on name-derived `Cipher` / `Hash` / `KeySize` normalization instead of reopening backend-specific ID/MAC detail
+
+- update:
+  - `src/fafafa.ssl.connection.base.pas`
+  - `tests/test_connection_builder_hostname_precedence.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - add a shared cipher-suite-name normalization helper for `GetConnectionInfo`
+    - derive `Cipher`, `Hash`, and `KeySize` from the negotiated cipher-suite name
+    - derive `KeyExchange` when the cipher-suite name still carries a legacy prefix such as `ECDHE-RSA`
+    - update the focused mock proof to use a real parseable suite name: `ECDHE-RSA-AES128-GCM-SHA256`
+    - narrow the active API wording so these fields are now documented as shared best-effort derivations when the backend already exposes a stable cipher-suite name
+
+- `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+  - result: PASS
+  - summary:
+    - focused builder/hostname suite finished `19 passed, 0 failed`
+    - the existing intentional direct-core `GetConnectionInfo` proof still covered `ServerName`, `SessionId`, and `PeerCertificate`
+    - the same read now also proved shared name-derived `KeyExchange`, `Cipher`, `Hash`, and `KeySize` truth
+
+- `mkdir -p tmp/test_openssl_connection_info_cipher_contract && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_connection_info_cipher_contract -FEtmp/test_openssl_connection_info_cipher_contract -otmp/test_openssl_connection_info_cipher_contract/test_openssl_connection_info_cipher_contract tests/test_openssl_connection_info_cipher_contract.pas && ./tmp/test_openssl_connection_info_cipher_contract/test_openssl_connection_info_cipher_contract`
+  - result: PASS
+  - summary:
+    - focused OpenSSL connection-info guard finished `10 passed, 0 failed`
+    - fresh-connection `GetConnectionInfo` remained safe after the new shared cipher-suite-name parser was introduced
+
+- `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - the intentional direct-core `GetConnectionInfo` surface stayed unchanged at the current allowlist
+    - this batch did not require any new residual file or hit-count changes

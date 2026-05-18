@@ -567,6 +567,94 @@ begin
   FLastErrorCode := Result;
 end;
 
+procedure TryDeriveConnectionInfoFromCipherSuiteName(const ACipherSuite: string;
+  var AInfo: TSSLConnectionInfo);
+var
+  LName: string;
+begin
+  if ACipherSuite = '' then
+    Exit;
+
+  LName := UpperCase(ACipherSuite);
+
+  if Pos('ECDHE-ECDSA', LName) > 0 then
+    AInfo.KeyExchange := sslKexECDHE_ECDSA
+  else if Pos('ECDHE-RSA', LName) > 0 then
+    AInfo.KeyExchange := sslKexECDHE_RSA
+  else if Pos('DHE-RSA', LName) > 0 then
+    AInfo.KeyExchange := sslKexDHE_RSA
+  else if Pos('DHE-DSS', LName) > 0 then
+    AInfo.KeyExchange := sslKexDHE_DSS
+  else if Pos('RSA-PSK', LName) > 0 then
+    AInfo.KeyExchange := sslKexRSA_PSK
+  else if Pos('DHE-PSK', LName) > 0 then
+    AInfo.KeyExchange := sslKexDHE_PSK
+  else if Pos('-PSK', LName) > 0 then
+    AInfo.KeyExchange := sslKexPSK
+  else if (Pos('TLS_RSA_', LName) = 1) or (Pos('RSA-', LName) = 1) then
+    AInfo.KeyExchange := sslKexRSA;
+
+  if Pos('CHACHA20', LName) > 0 then
+  begin
+    AInfo.Cipher := sslCipherCHACHA20_POLY1305;
+    if AInfo.KeySize = 0 then
+      AInfo.KeySize := 256;
+  end
+  else if (Pos('AES_256_GCM', LName) > 0) or
+          (Pos('AES256-GCM', LName) > 0) or
+          (Pos('AES256GCM', LName) > 0) then
+  begin
+    AInfo.Cipher := sslCipherAES256GCM;
+    if AInfo.KeySize = 0 then
+      AInfo.KeySize := 256;
+  end
+  else if (Pos('AES_128_GCM', LName) > 0) or
+          (Pos('AES128-GCM', LName) > 0) or
+          (Pos('AES128GCM', LName) > 0) then
+  begin
+    AInfo.Cipher := sslCipherAES128GCM;
+    if AInfo.KeySize = 0 then
+      AInfo.KeySize := 128;
+  end
+  else if (Pos('AES_256', LName) > 0) or (Pos('AES256', LName) > 0) then
+  begin
+    AInfo.Cipher := sslCipherAES256;
+    if AInfo.KeySize = 0 then
+      AInfo.KeySize := 256;
+  end
+  else if (Pos('AES_128', LName) > 0) or (Pos('AES128', LName) > 0) then
+  begin
+    AInfo.Cipher := sslCipherAES128;
+    if AInfo.KeySize = 0 then
+      AInfo.KeySize := 128;
+  end
+  else if Pos('3DES', LName) > 0 then
+    AInfo.Cipher := sslCipher3DES
+  else if Pos('RC4', LName) > 0 then
+    AInfo.Cipher := sslCipherRC4
+  else if Pos('DES', LName) > 0 then
+    AInfo.Cipher := sslCipherDES;
+
+  if (Pos('SHA3_512', LName) > 0) or (Pos('SHA3-512', LName) > 0) then
+    AInfo.Hash := sslHashSHA3_512
+  else if (Pos('SHA3_256', LName) > 0) or (Pos('SHA3-256', LName) > 0) then
+    AInfo.Hash := sslHashSHA3_256
+  else if Pos('SHA512', LName) > 0 then
+    AInfo.Hash := sslHashSHA512
+  else if Pos('SHA384', LName) > 0 then
+    AInfo.Hash := sslHashSHA384
+  else if Pos('SHA256', LName) > 0 then
+    AInfo.Hash := sslHashSHA256
+  else if Pos('SHA224', LName) > 0 then
+    AInfo.Hash := sslHashSHA224
+  else if Pos('SHA1', LName) > 0 then
+    AInfo.Hash := sslHashSHA1
+  else if Pos('MD5', LName) > 0 then
+    AInfo.Hash := sslHashMD5
+  else if Pos('SHA', LName) > 0 then
+    AInfo.Hash := sslHashSHA1;
+end;
+
 { 连接信息 }
 
 function TBaseSSLConnection.GetConnectionInfo: TSSLConnectionInfo;
@@ -582,6 +670,7 @@ begin
   Result.IsResumed := IsSessionReused;
   Result.ALPNProtocol := GetSelectedALPNProtocol;
   Result.ServerName := DoGetConnectionInfoServerName;
+  TryDeriveConnectionInfoFromCipherSuiteName(Result.CipherSuite, Result);
 
   if FConnected or FHandshakeComplete then
   begin

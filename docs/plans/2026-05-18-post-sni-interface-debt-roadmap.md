@@ -322,6 +322,31 @@ Recommended first bounded batch:
     2. 再挑一组最容易共享归一或最适合 contract proof 的字段落第一刀
   - 更强 owner / deprecation wording route 继续保留为平行候选，但当前不应压过 implementation-completeness 主线
 
+## Progress Since The GetConnectionInfo PeerCertificate Batch
+
+- 已交付：
+  - shared name-derived first slice for `GetConnectionInfo` crypto detail
+  - shared `CipherSuite`-name normalization now derives:
+    - `Cipher`
+    - `Hash`
+    - `KeySize`
+    - `KeyExchange` when the negotiated suite name still carries a legacy prefix
+  - focused mock proof still anchored in `tests/test_connection_builder_hostname_precedence.pas`
+
+- 当前更准确的 next step：
+  - 不再把 `Cipher` / `Hash` / `KeySize` 当作 shared-layer completeness debt
+  - `KeyExchange` 也已经在 legacy-prefix case 上有了 shared best-effort truth
+  - 当前真正还值得继续深挖的，已经更聚焦到：
+    - `CipherSuiteId`
+    - `MacSize`
+    - 以及无法只靠名字稳定推导的更细平台差异
+  - 若继续推进，应优先做一条新的 bounded batch：
+    1. 先把 OpenSSL / WinSSL 已有的 low-level detail truth 做成静态矩阵
+    2. 再决定下一刀是：
+       - 收 `CipherSuiteId`
+       - 还是先收 `MacSize`
+  - 更强 owner / deprecation wording route 继续保留为平行候选，但当前不应压过 implementation-completeness 主线
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理
