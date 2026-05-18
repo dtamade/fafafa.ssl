@@ -40,7 +40,7 @@
 - library-scoped defaults
   - `LogLevel`
   - `LogCallback`
-  - 通过 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` 调整 `LogLevel`，通过 `ISSLLibrary.SetLogCallback(...)` 安装回调；fresh request config 仍会回到 `sslLogError` + `nil` baseline。
+  - 通过 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` 调整 `LogLevel`，通过 `ISSLLibrary.SetLogCallback(...)` 安装回调；`SetDefaultConfig(...)` 不再安装或替换回调；fresh request config 仍会回到 `sslLogError` + `nil` baseline。
   - `TSSLFactory.CreateContext(const AConfig)` 会拒绝 request-local 覆盖。
 - context-scoped
   - `SessionCacheSize`
@@ -89,7 +89,7 @@
   - `LogLevel`
     - 当前推荐入口：`ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)`
   - `LogCallback`
-    - 当前推荐入口：`ISSLLibrary.SetLogCallback(...)`
+    - 当前推荐入口：`ISSLLibrary.SetLogCallback(...)`（`SetDefaultConfig(...)` 不再安装或替换回调）
   - `v2` 方向：不再把 library defaults 混在 context/request config record 中。
 - 迁移到 connection / transport surface
   - `HandshakeTimeout`

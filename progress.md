@@ -2445,3 +2445,104 @@
   - result: PASS
   - summary:
     - current direct-library connection-scope clarification batch has no whitespace or patch-format issues
+
+### Library-Default LogCallback Detachment
+
+- add `docs/plans/2026-05-18-library-default-logcallback-detachment.md`
+  - purpose:
+    - define the first runtime/source implementation slice under the `LogLevel` / `LogCallback` slimming route
+    - keep scope on callback ownership between `SetDefaultConfig(...)` and `SetLogCallback(...)`
+
+- add `tests/scripts/test_library_default_logcallback_detachment_contract.sh`
+  - purpose:
+    - fail if any backend still lets `SetDefaultConfig(...)` install the runtime callback
+    - keep `SetLogCallback(...)` as the only source-guarded callback owner
+
+- update `tests/test_factory_logging_scope_clarification.pas`
+  - change:
+    - strengthen the focused runtime proof so it now requires:
+      - `SetDefaultConfig(LogCallback)` does not install the callback
+      - `SetLogCallback(...)` remains the only owner
+      - later `SetDefaultConfig(LogLevel)` updates filtering without clearing the installed callback
+
+- `bash -n tests/scripts/test_library_default_logcallback_detachment_contract.sh && bash tests/scripts/test_library_default_logcallback_detachment_contract.sh`
+  - RED result: FAIL
+  - summary:
+    - first source-contract failure immediately proved `src/fafafa.ssl.openssl.backed.pas` still let `SetDefaultConfig(...)` install `FLogCallback`
+    - the same drift existed across the other backend library units as well
+
+- `mkdir -p tmp/test_factory_logging_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_logging_scope_clarification -FEtmp/test_factory_logging_scope_clarification -otmp/test_factory_logging_scope_clarification/test_factory_logging_scope_clarification tests/test_factory_logging_scope_clarification.pas && ./tmp/test_factory_logging_scope_clarification/test_factory_logging_scope_clarification`
+  - RED result: FAIL
+  - summary:
+    - strengthened runtime proof showed two concrete failures:
+      - `SetDefaultConfig(...)` still visibleized callback input in `GetDefaultConfig(...)`
+      - `SetDefaultConfig(LogCallback)` alone already made `Log(...)` dispatch
+
+- update:
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `tests/test_factory_logging_scope_clarification.pas`
+  - `tests/test_freepascal_library_default_config_server_name_clarification.pas`
+  - `tests/test_openssl_library_default_config_server_name_clarification.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/ARCHITECTURE.md`
+  - `src/fafafa.ssl.base.pas`
+  - `tests/scripts/test_tsslconfig_logging_surface_truth_contract.sh`
+  - `tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - change:
+    - `SetDefaultConfig(...)` now preserves the current callback snapshot instead of installing/replacing it from `LConfig.LogCallback`
+    - `SetLogCallback(...)` stays the only callback owner
+    - direct-library warning tests now install callbacks through `SetLogCallback(...)`
+    - docs/source comments now explicitly state that `SetDefaultConfig(...)` no longer installs or replaces callbacks
+
+- `bash -n tests/scripts/test_library_default_logcallback_detachment_contract.sh && bash tests/scripts/test_library_default_logcallback_detachment_contract.sh`
+  - GREEN result: PASS
+  - summary:
+    - all five backend library paths now keep callback ownership detached from `SetDefaultConfig(...)`
+
+- `mkdir -p tmp/test_factory_logging_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_logging_scope_clarification -FEtmp/test_factory_logging_scope_clarification -otmp/test_factory_logging_scope_clarification/test_factory_logging_scope_clarification tests/test_factory_logging_scope_clarification.pas && ./tmp/test_factory_logging_scope_clarification/test_factory_logging_scope_clarification`
+  - GREEN result: PASS
+  - summary:
+    - focused logging scope suite finished `17 passed, 0 failed`
+    - callback installation, visibility, filtering, and ownership are now aligned around the dedicated setter path
+
+- `mkdir -p tmp/test_freepascal_library_default_config_server_name_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_library_default_config_server_name_clarification -FEtmp/test_freepascal_library_default_config_server_name_clarification -otmp/test_freepascal_library_default_config_server_name_clarification/test_freepascal_library_default_config_server_name_clarification tests/test_freepascal_library_default_config_server_name_clarification.pas && ./tmp/test_freepascal_library_default_config_server_name_clarification/test_freepascal_library_default_config_server_name_clarification`
+  - result: PASS
+  - summary:
+    - direct-library FreePascal warning/reject suite finished `13 passed, 0 failed`
+    - moving warning capture to `SetLogCallback(...)` did not regress the existing ServerName parity truth
+
+- `mkdir -p tmp/test_openssl_library_default_config_server_name_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_openssl_library_default_config_server_name_clarification -FEtmp/test_openssl_library_default_config_server_name_clarification -otmp/test_openssl_library_default_config_server_name_clarification/test_openssl_library_default_config_server_name_clarification tests/test_openssl_library_default_config_server_name_clarification.pas && ./tmp/test_openssl_library_default_config_server_name_clarification/test_openssl_library_default_config_server_name_clarification`
+  - result: PASS
+  - summary:
+    - direct-library OpenSSL warning/reject suite finished `13 passed, 0 failed`
+    - the callback-owner cut did not disturb the existing OpenSSL ServerName compatibility path
+
+- `bash -n tests/scripts/test_tsslconfig_logging_surface_truth_contract.sh && bash tests/scripts/test_tsslconfig_logging_surface_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - active docs now state the stronger truth that `SetDefaultConfig(...)` no longer installs or replaces callbacks
+
+- `bash -n tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh && bash tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - source comments, scope buckets, factory wording, and backend source still agree after the callback-owner cut
+
+- `bash -n tests/scripts/test_tsslconfig_migration_targets_contract.sh && bash tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+  - result: PASS
+  - summary:
+    - the public slimming roadmap still agrees with the updated callback detachment truth
+
+- `mkdir -p tmp/test_default_config && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_default_config -FEtmp/test_default_config -otmp/test_default_config/test_default_config tests/config/test_default_config.pas && ./tmp/test_default_config/test_default_config`
+  - result: PASS
+  - summary:
+    - default-config suite remained green
+    - `CreateDefaultConfig(...)` still returns request-safe `LogLevel = sslLogError` and `LogCallback = nil`
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current library-default callback detachment batch has no whitespace or patch-format issues

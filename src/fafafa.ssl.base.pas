@@ -425,7 +425,7 @@ type
     
     // 日志配置
     LogLevel: TSSLLogLevel;                  // Library-scoped default log level; factory request paths reject overrides
-    LogCallback: TSSLLogCallback;            // Library-scoped default logger; factory request paths reject callbacks
+    LogCallback: TSSLLogCallback;            // Library-scoped callback snapshot; SetLogCallback owns replacements and factory request paths reject callbacks
   end;
   PSSLConfig = ^TSSLConfig;
 

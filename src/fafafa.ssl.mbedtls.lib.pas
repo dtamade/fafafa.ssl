@@ -573,9 +573,9 @@ begin
   LConfig := AConfig;
   TSSLFactory.NormalizeConfig(LConfig);
 
-  FDefaultConfig := LConfig;
   FLogLevel := LConfig.LogLevel;
-  FLogCallback := LConfig.LogCallback;
+  LConfig.LogCallback := FLogCallback;
+  FDefaultConfig := LConfig;
 end;
 
 function TMbedTLSLibrary.GetDefaultConfig: TSSLConfig;

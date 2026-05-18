@@ -135,14 +135,19 @@ begin
   try
     DefaultConfig := OriginalConfig;
     DefaultConfig.LogLevel := sslLogWarning;
-    DefaultConfig.LogCallback := nil;
+    DefaultConfig.LogCallback := @Recorder.HandleLog;
     Lib.SetDefaultConfig(DefaultConfig);
 
     SnapshotConfig := Lib.GetDefaultConfig;
     Assert(SnapshotConfig.LogLevel = sslLogWarning,
       'SetDefaultConfig visibleizes LogLevel in GetDefaultConfig');
     Assert(not Assigned(SnapshotConfig.LogCallback),
-      'SetDefaultConfig keeps LogCallback cleared in GetDefaultConfig');
+      'SetDefaultConfig keeps LogCallback detached from the default-config write surface');
+
+    Recorder.Reset;
+    Lib.Log(sslLogWarning, 'warning should stay muted before SetLogCallback');
+    Assert(Recorder.CallCount = 0,
+      'SetDefaultConfig(LogCallback) alone does not install the runtime callback');
 
     Callback := @Recorder.HandleLog;
     Lib.SetLogCallback(Callback);
@@ -165,7 +170,28 @@ begin
       'Log dispatch preserves the requested log level');
     Assert(Pos('warning should be delivered', Recorder.LastMessage) > 0,
       'Log dispatch preserves the message content');
+
+    DefaultConfig := SnapshotConfig;
+    DefaultConfig.LogLevel := sslLogError;
+    DefaultConfig.LogCallback := nil;
+    Lib.SetDefaultConfig(DefaultConfig);
+
+    SnapshotConfig := Lib.GetDefaultConfig;
+    Assert(SnapshotConfig.LogLevel = sslLogError,
+      'SetDefaultConfig still updates LogLevel after callback detachment');
+    Assert(CallbackEquals(Callback, SnapshotConfig.LogCallback),
+      'SetDefaultConfig does not clear the installed callback; SetLogCallback remains the owner');
+
+    Recorder.Reset;
+    Lib.Log(sslLogWarning, 'warning should stay filtered at error level');
+    Assert(Recorder.CallCount = 0,
+      'SetDefaultConfig(LogLevel) can tighten filtering without clearing the callback');
+
+    Lib.Log(sslLogError, 'error should still be delivered');
+    Assert(Recorder.CallCount = 1,
+      'Installed callback still receives logs after SetDefaultConfig updates LogLevel');
   finally
+    Lib.SetLogCallback(OriginalConfig.LogCallback);
     Lib.SetDefaultConfig(OriginalConfig);
     Recorder.Free;
   end;

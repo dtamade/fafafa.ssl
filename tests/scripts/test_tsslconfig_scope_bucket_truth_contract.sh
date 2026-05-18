@@ -62,7 +62,7 @@ require_rg "ServerEarlyDataReplayStoreDirectory: string;[[:space:]]+// Server-co
   "$base_file" "TSSLConfig.ServerEarlyDataReplayStoreDirectory source comment no longer states its server-context scope"
 require_rg "LogLevel: TSSLLogLevel;[[:space:]]+// Library-scoped default log level; factory request paths reject overrides" \
   "$base_file" "TSSLConfig.LogLevel source comment no longer states its library scope"
-require_rg "LogCallback: TSSLLogCallback;[[:space:]]+// Library-scoped default logger; factory request paths reject callbacks" \
+require_rg "LogCallback: TSSLLogCallback;[[:space:]]+// Library-scoped callback snapshot; SetLogCallback owns replacements and factory request paths reject callbacks" \
   "$base_file" "TSSLConfig.LogCallback source comment no longer states its library scope"
 
 require_fixed '## TSSLConfig Scope Buckets' "$api_ref" \

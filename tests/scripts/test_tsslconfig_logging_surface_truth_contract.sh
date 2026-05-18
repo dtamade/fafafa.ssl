@@ -18,11 +18,11 @@ require_fixed() {
   fi
 }
 
-require_fixed '通过 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` 调整 `LogLevel`，通过 `ISSLLibrary.SetLogCallback(...)` 安装回调；fresh request config 仍会回到 `sslLogError` + `nil` baseline。' \
+require_fixed '通过 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` 调整 `LogLevel`，通过 `ISSLLibrary.SetLogCallback(...)` 安装回调；`SetDefaultConfig(...)` 不再安装或替换回调；fresh request config 仍会回到 `sslLogError` + `nil` baseline。' \
   "$api_ref" \
   "API reference no longer explains the library-default logging entrypoints and request-safe baseline"
 
-require_fixed '通过 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` 调整 `LogLevel`，通过 `ISSLLibrary.SetLogCallback(...)` 安装回调；factory request path 不接受 request-local 覆盖。' \
+require_fixed '通过 `ISSLLibrary.GetDefaultConfig(...)` / `SetDefaultConfig(...)` 调整 `LogLevel`，通过 `ISSLLibrary.SetLogCallback(...)` 安装回调；`SetDefaultConfig(...)` 不再安装或替换回调；factory request path 不接受 request-local 覆盖。' \
   "$arch_ref" \
   "Architecture reference no longer states the split logging entrypoints"
 

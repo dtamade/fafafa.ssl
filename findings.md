@@ -1196,3 +1196,58 @@
   - factory-held library default path：reject
   - direct-library default-config path：reject
   - 后续不该再把这条 direct-library silent-ignore drift 当成未验证区域重新拉起
+
+- 继续沿 `TSSLConfig` 的第一条真正实现切片往下做后，这轮又确认了一条 live runtime drift：
+  - public docs / migration map / active guides 已经把 logging owner 说成：
+    - `LogLevel` 走 `GetDefaultConfig(...)` / `SetDefaultConfig(...)`
+    - `LogCallback` 走 `ISSLLibrary.SetLogCallback(...)`
+  - 但 5 个 backend 的 `SetDefaultConfig(...)` 在修复前仍会直接执行：
+    - `FLogCallback := LConfig.LogCallback`
+  - 这意味着 callback owner 其实还是双挂：
+    - default-config path 可以安装/替换 callback
+    - dedicated setter path 也可以安装/替换 callback
+
+- 这条 drift 和前面的 logging docs truth 不同，它已经不是 wording 问题，而是 runtime/source 仍未兑现“owner 单一”的接口语义：
+  - 旧的 `tests/test_factory_logging_scope_clarification.pas`
+    原本只证明 request path reject + dedicated setter dispatch
+  - 当它被增强成：
+    - `SetDefaultConfig(LogCallback)` 不应再安装 callback
+    - 已安装 callback 后续不应被 `SetDefaultConfig(...)` 顺手清掉
+    就立即 RED
+
+- 当前修法继续遵循前面 `ServerName` / option-bridge 那条“先收高层 owner，再保留 source compatibility”的路线：
+  - 不移除 `TSSLConfig.LogCallback` 字段
+  - 但把 active owner 收到唯一入口：
+    - `SetDefaultConfig(...)` 只继续更新 `LogLevel` 和其他 default-config 字段
+    - `SetLogCallback(...)` 独占 runtime callback state
+  - `GetDefaultConfig(...)` 仍然反映当前 callback 真相，因此 snapshot 读面没被掐掉
+
+- 这也让 callback 的 runtime 规则终于变得可预测：
+  - 如果没有显式 `SetLogCallback(...)`
+    - 即使有人把 method pointer 塞进 `DefaultConfig.LogCallback`
+    - 后续 `Log(...)` 也不会开始 dispatch
+  - 如果 callback 已通过 `SetLogCallback(...)` 安装
+    - 后续再用 `SetDefaultConfig(...)` 调 `LogLevel`
+    - callback 会继续保持，不会被顺手清掉
+
+- 这轮顺手也修掉了两份 focused test 自己的旧混合入口：
+  - `tests/test_freepascal_library_default_config_server_name_clarification.pas`
+  - `tests/test_openssl_library_default_config_server_name_clarification.pas`
+    之前都还借 `DefaultConfig.LogCallback := ...` 来抓 warning
+  - 现在已经改成：
+    - `DefaultConfig.LogLevel := ...`
+    - `Lib.SetLogCallback(...)`
+  - 因而这些 direct-library warning 测试本身也不再反向把旧 owner 教回去
+
+- focused evidence 说明这批不是“为了设计洁癖而收口”：
+  - 新 source contract 首次运行 RED，直接点出 OpenSSL 仍在让 `SetDefaultConfig(...)` 装 callback；其余 backend 同样存在
+  - 强化后的 `tests/test_factory_logging_scope_clarification.pas`
+    首次运行 RED，直接暴露：
+    - `GetDefaultConfig(...)` 仍回显了来自 `SetDefaultConfig(LogCallback)` 的 callback
+    - `Log(...)` 也会立刻开始 dispatch
+  - 修复后同一批 focused runtime/source/docs contracts 全部 GREEN
+
+- 因而 `LogLevel` / `LogCallback` 这条线现在不只 docs truth 已稳，runtime/source truth 也已真正对齐：
+  - callback owner 已单一
+  - dedicated setter 与 default-config 的职责已分开
+  - 后续不该再把“`SetDefaultConfig(...)` 还能不能安装 callback”当成未验证区域重新拉起

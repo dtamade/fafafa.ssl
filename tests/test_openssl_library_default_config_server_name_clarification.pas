@@ -86,9 +86,9 @@ begin
     OriginalConfig := Lib.GetDefaultConfig;
     DefaultConfig := OriginalConfig;
     DefaultConfig.LogLevel := sslLogWarning;
-    DefaultConfig.LogCallback := @Recorder.HandleLog;
     DefaultConfig.ServerName := 'library-client.example.com';
     Lib.SetDefaultConfig(DefaultConfig);
+    Lib.SetLogCallback(@Recorder.HandleLog);
 
     Recorder.Reset;
     Ctx := Lib.CreateContext(sslCtxClient);
@@ -110,6 +110,7 @@ begin
       'OpenSSL direct-library warning identifies the library callsite');
   finally
     Ctx := nil;
+    Lib.SetLogCallback(OriginalConfig.LogCallback);
     Lib.SetDefaultConfig(OriginalConfig);
     Lib.Finalize;
     Recorder.Free;
@@ -132,9 +133,9 @@ begin
     OriginalConfig := Lib.GetDefaultConfig;
     DefaultConfig := OriginalConfig;
     DefaultConfig.LogLevel := sslLogWarning;
-    DefaultConfig.LogCallback := @Recorder.HandleLog;
     DefaultConfig.ServerName := 'library-server.example.com';
     Lib.SetDefaultConfig(DefaultConfig);
+    Lib.SetLogCallback(@Recorder.HandleLog);
 
     Recorder.Reset;
     try
@@ -158,6 +159,7 @@ begin
           E.ClassName + ': ' + E.Message);
     end;
   finally
+    Lib.SetLogCallback(OriginalConfig.LogCallback);
     Lib.SetDefaultConfig(OriginalConfig);
     Lib.Finalize;
     Recorder.Free;
@@ -180,9 +182,9 @@ begin
     OriginalConfig := Lib.GetDefaultConfig;
     DefaultConfig := OriginalConfig;
     DefaultConfig.LogLevel := sslLogWarning;
-    DefaultConfig.LogCallback := @Recorder.HandleLog;
     DefaultConfig.ServerName := '';
     Lib.SetDefaultConfig(DefaultConfig);
+    Lib.SetLogCallback(@Recorder.HandleLog);
 
     Recorder.Reset;
     Ctx := Lib.CreateContext(sslCtxClient);
@@ -192,6 +194,7 @@ begin
       'OpenSSL direct-library client context without ServerName emits no warning');
   finally
     Ctx := nil;
+    Lib.SetLogCallback(OriginalConfig.LogCallback);
     Lib.SetDefaultConfig(OriginalConfig);
     Lib.Finalize;
     Recorder.Free;

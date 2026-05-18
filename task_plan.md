@@ -469,6 +469,42 @@
     - 下一条相关路线不该再回到 direct-library `HandshakeTimeout` / `BufferSize` 漂移：
       - 后续应继续找新的 live interface/implementation gap
       - 不要再把 direct-library connection-scope 静默忽略当成未收口问题反复拉起
+16. `library-default LogCallback detachment` 当前也已完成第一轮收口：
+    - 新 plan：
+      - `docs/plans/2026-05-18-library-default-logcallback-detachment.md`
+    - 新验证：
+      - `tests/scripts/test_library_default_logcallback_detachment_contract.sh`
+      - `tests/test_factory_logging_scope_clarification.pas`
+      - `tests/test_freepascal_library_default_config_server_name_clarification.pas`
+      - `tests/test_openssl_library_default_config_server_name_clarification.pas`
+      - `tests/config/test_default_config.pas`
+      - `tests/scripts/test_tsslconfig_logging_surface_truth_contract.sh`
+      - `tests/scripts/test_tsslconfig_scope_bucket_truth_contract.sh`
+      - `tests/scripts/test_tsslconfig_migration_targets_contract.sh`
+    - 当前已收口的真实 drift：
+      - public truth 已经把 callback owner 收到 `ISSLLibrary.SetLogCallback(...)`
+      - 但五个 backend 的 `SetDefaultConfig(...)` 之前仍会直接把 `LConfig.LogCallback` 装进 runtime `FLogCallback`
+      - 结果就是 `LogCallback` 同时挂在 default-config path 和 dedicated setter path 上，owner 不单一
+    - 当前修法：
+      - `openssl` / `freepascal` / `winssl` / `mbedtls` / `wolfssl`
+        的 `SetDefaultConfig(...)` 现在只继续更新 `LogLevel` 和其他 default-config 字段
+      - runtime callback 改为只由 `SetLogCallback(...)` 维护
+      - `GetDefaultConfig(...)` 仍然镜像当前 callback 真相，但 `SetDefaultConfig(...)` 不再安装或替换它
+      - `docs/reference/API_REFERENCE.md`
+      - `docs/reference/ARCHITECTURE.md`
+      - `src/fafafa.ssl.base.pas`
+        也同步写明这条 detachment truth
+    - 当前 focused proof 已覆盖：
+      - 新 source contract 先 RED 后 GREEN，直接证明 5 个 backend 曾经都还让 `SetDefaultConfig(...)` 安装 callback
+      - 强化后的 logging runtime 回归先 RED 后 GREEN，直接证明：
+        - `SetDefaultConfig(LogCallback)` 不再安装 callback
+        - `SetLogCallback(...)` 仍是唯一 owner
+        - 后续 `SetDefaultConfig(LogLevel)` 不会顺手清掉已安装 callback
+      - 受影响的 direct-library `ServerName` warning 测试继续绿色，说明这次 detachment 没把已有 warning/reject 路线带歪
+      - default-config / docs / scope-bucket / migration-targets focused contracts 继续绿色
+    - 下一条相关路线不该再回到 `LogCallback` owner 模糊地带：
+      - `LogLevel` / `LogCallback` 这条线当前已从 docs freeze 进入 runtime/source truth
+      - 后续应继续找新的 live interface/implementation gap，而不是再把 callback default-config owner 当成未收口问题反复拉起
 
 ## Verification Discipline
 
