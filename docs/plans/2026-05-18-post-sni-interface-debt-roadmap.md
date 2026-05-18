@@ -106,6 +106,23 @@ Recommended first bounded batch:
     1. 先做 `ISSLConnectionInfo` mirror demotion / migration-map batch
     2. 再决定是否进入 `GetStateString` / `GetContext` / `GetSelectedALPNProtocol` 这组 convenience mirror 的实际收瘦路线
 
+## Progress Since The Connection-Surface Revalidation Batch
+
+- 已交付：
+  - `ISSLConnectionInfo` mirror demotion / migration-map batch
+  - `INTERFACE_DESIGN_V2` 已补出 `ISSLConnectionInfo`，并纠正 Stage-A demotion target
+  - focused contract `tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+
+- 当前更准确的 next step：
+  - 不再继续修正 `INTERFACE_DESIGN_V2` 内部 owner 冲突
+  - `ISSLConnectionInfo` 这组 mirrors 的 Stage-A demotion map 已有稳定设计锚点
+  - 下一批应进入 source-facing slimming prep：
+    1. 先给 `TBaseSSLConnection` / active docs 补一条 focused source-truth contract，
+       锁住这 4 个 mirrors 当前确实是 compatibility-core duplicates
+    2. 然后再决定第一条真正的实现切片是：
+       - 先只做 source/classification freeze
+       - 还是直接开某个 mirror 的 de-emphasis / deprecation 路线
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

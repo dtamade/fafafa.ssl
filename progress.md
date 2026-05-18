@@ -2936,3 +2936,55 @@
   - change:
     - mark the remaining connection-layer execution-receipt gap as closed
     - move the next route forward to a real `ISSLConnection` slimming slice
+
+### ISSLConnectionInfo Mirror Demotion Migration Map
+
+- `rg -n "ISSLConnectionInfo|GetConnectionInfo|GetContext\\b|GetSelectedALPNProtocol|GetStateString" src/fafafa.ssl.base.pas src/fafafa.ssl.connection.base.pas tests/contract/test_backend_contract.pas docs/reference/API_REFERENCE.md docs/reference/INTERFACE_DESIGN_V2.md docs/test_reports/INTERFACE_DESIGN_AUDIT_V1.5.0.md`
+  - result: PASS
+  - summary:
+    - confirmed current source truth, active API docs, contract proof, and v2 design doc were no longer aligned on the `ISSLConnectionInfo` mirror group
+    - the design doc still omitted `ISSLConnectionInfo` from the hierarchy and misrouted part of the migration table
+
+- `sed -n '1,220p' docs/reference/INTERFACE_DESIGN_V2.md`
+  - result: PASS
+  - summary:
+    - confirmed `INTERFACE_DESIGN_V2.md` still used the empty `ISSLAdvanced` bucket
+    - confirmed the class example omitted `ISSLConnectionInfo`
+    - confirmed the migration table still mapped `GetConnectionInfo` to `ISSLDiagnostics`
+
+- add `docs/plans/2026-05-18-isslconnectioninfo-mirror-demotion-migration-map.md`
+  - purpose:
+    - define a bounded design-only batch that freezes the Stage-A demotion route for the `ISSLConnectionInfo` mirrors before any source-facing slimming work
+
+- update `docs/reference/INTERFACE_DESIGN_V2.md`
+  - change:
+    - add `ISSLConnectionInfo` to the hierarchy and extension definitions
+    - remove the stale `ISSLAdvanced` bucket
+    - correct the implementation example and migration snippet
+    - freeze `GetConnectionInfo` / `GetContext` / `GetSelectedALPNProtocol` / `GetStateString` to `ISSLConnectionInfo` as the Stage-A demotion target
+
+- add `tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+  - purpose:
+    - fail if `INTERFACE_DESIGN_V2.md` reintroduces stale owner targets or the empty `ISSLAdvanced` bucket
+    - require the Stage-A `ISSLConnectionInfo` demotion map to remain visible
+
+- update `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - mark the migration-map batch as delivered
+    - move the next route to source-facing slimming prep
+
+- `bash -n tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+  - result: PASS
+  - summary:
+    - new migration-target contract script is syntactically valid
+
+- `bash tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+  - result: PASS
+  - summary:
+    - `INTERFACE_DESIGN_V2.md` now keeps the Stage-A `ISSLConnectionInfo` demotion map consistent
+    - stale owner targets and the empty `ISSLAdvanced` bucket are no longer present
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `ISSLConnectionInfo mirror demotion / migration-map` batch has no whitespace or patch-format issues

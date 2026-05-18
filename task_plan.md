@@ -711,6 +711,26 @@
         - WinSSL SKIP
     - 当前批收口后，连接层历史 execution receipt 的主要缺口将被清空
     - 下一条应优先进入真正的 `ISSLConnection` slimming，而不是继续补旧计划结果
+23. `ISSLConnectionInfo mirror demotion / migration-map` 现在应作为下一条 design 主线：
+    - 新 plan：
+      - `docs/plans/2026-05-18-isslconnectioninfo-mirror-demotion-migration-map.md`
+    - 当前重新核对后确认的设计 drift：
+      - `docs/reference/INTERFACE_DESIGN_V2.md` 仍漏掉 `ISSLConnectionInfo`
+      - 仍保留 `ISSLAdvanced` 这个当前无实际落点的空壳名
+      - `TBaseSSLConnection` 示例没列出 `ISSLConnectionInfo`
+      - 迁移对照表把 `GetConnectionInfo` 错归给 `ISSLDiagnostics`
+      - 还过早把 `GetStateString` / `GetContext` / `GetSelectedALPNProtocol` 直接写死到其它路线
+    - 当前修法：
+      - 在 `INTERFACE_DESIGN_V2.md` 中补出 `ISSLConnectionInfo`
+      - 把 `GetConnectionInfo` / `GetContext` / `GetSelectedALPNProtocol` / `GetStateString`
+        的 Stage-A demotion target 统一写成 `ISSLConnectionInfo`
+      - 新增 focused contract，禁止错误 owner / `ISSLAdvanced` 回流
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_migration_targets_contract.sh`
+      - `git diff --check`
+      - 新 contract 当前 PASS
+    - 当前批收口后，`ISSLConnection` 真正剩下的问题会更聚焦到 source-facing slimming prep
 
 ## Verification Discipline
 

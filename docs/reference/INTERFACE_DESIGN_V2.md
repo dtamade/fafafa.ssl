@@ -13,8 +13,11 @@
 ```
 ISSLConnection (核心 - 18 个方法)
 ├── ISSLClientConnection (客户端扩展 - SNI)
+├── ISSLConnectionInfo (连接信息 mirrors)
 ├── ISSLDiagnostics (诊断扩展)
-└── ISSLAdvanced (高级功能扩展)
+├── ISSLSessionResumption (会话扩展)
+├── ISSLCertificateVerification (证书验证扩展)
+└── ISSLOCSPStapling (OCSP 扩展)
 ```
 
 > 注：当前 public Pascal source 尚未声明 `ISSLServerConnection`。
@@ -92,6 +95,17 @@ ISSLDiagnostics = interface
 end;
 ```
 
+### ISSLConnectionInfo (连接信息 mirrors)
+
+```pascal
+ISSLConnectionInfo = interface
+  function GetConnectionInfo: TSSLConnectionInfo;
+  function GetContext: ISSLContext;
+  function GetSelectedALPNProtocol: string;
+  function GetStateString: string;
+end;
+```
+
 ### ISSLSessionResumption (会话复用)
 
 ```pascal
@@ -134,7 +148,12 @@ end;
 var LConn: ISSLConnection;
 LConn.GetConnectionInfo;  // 仍然存在
 
-// 新代码推荐
+// Stage A demotion target
+var LInfoExt: ISSLConnectionInfo;
+if Supports(LConn, ISSLConnectionInfo, LInfoExt) then
+  LInfoExt.GetConnectionInfo;
+
+// diagnostics 仍走自己的扩展接口
 var LDiag: ISSLDiagnostics;
 if Supports(LConn, ISSLDiagnostics, LDiag) then
   LDiag.GetHealthStatus;
@@ -146,6 +165,7 @@ if Supports(LConn, ISSLDiagnostics, LDiag) then
 TBaseSSLConnection = class(TInterfacedObject,
   ISSLConnection,
   ISSLClientConnection,
+  ISSLConnectionInfo,
   ISSLDiagnostics,
   ISSLSessionResumption,
   ISSLCertificateVerification,
@@ -211,13 +231,13 @@ if Supports(FSSLConn, ISSLSessionResumption, LSession) then
 | GetPeerCertificate | ISSLConnection | 保留 |
 | GetNativeHandle | ISSLConnection | 保留 |
 | ReadString, WriteString | **移除** | 使用 Read/Write |
-| GetConnectionInfo | **移除** | 使用 ISSLDiagnostics |
-| GetStateString | **移除** | 合并到 GetState |
+| GetConnectionInfo | ISSLConnectionInfo | Stage A 先 demote 出 core |
+| GetStateString | ISSLConnectionInfo | Stage A 先 demote 出 core，后续再决定是否进一步收窄 |
 | SetTimeout, GetTimeout | **移除** | 由外部框架控制 |
 | SetBlocking, GetBlocking | **移除** | 由外部框架控制 |
-| GetContext | **移除** | 通常不需要 |
+| GetContext | ISSLConnectionInfo | Stage A 先 demote 出 core |
 | SetServerName, GetServerName | ISSLClientConnection | 客户端特有 |
-| GetSelectedALPNProtocol | ISSLClientConnection | 客户端特有 |
+| GetSelectedALPNProtocol | ISSLConnectionInfo | Stage A 先 demote 出 core，后续再评估是否只留给客户端扩展 |
 | GetHealthStatus, IsHealthy | ISSLDiagnostics | 诊断扩展 |
 | GetPerformanceMetrics | ISSLDiagnostics | 诊断扩展 |
 | GetDiagnosticInfo | ISSLDiagnostics | 诊断扩展 |
@@ -238,6 +258,21 @@ if Supports(FSSLConn, ISSLSessionResumption, LSession) then
 5. **Phase 5**: 标记旧方法为 deprecated（保持兼容）
 
 ---
+
+## Stage-A Note
+
+当前 `v1.x` source truth 里，`GetConnectionInfo` / `GetContext` / `GetSelectedALPNProtocol` / `GetStateString`
+既存在于核心 `ISSLConnection`，也存在于 `ISSLConnectionInfo`。
+
+这份 v2 设计文档当前只冻结 **第一步 demotion 路线**：
+
+1. 先把这 4 个 mirrors 的默认 owner 统一成 `ISSLConnectionInfo`
+2. 只在这一步稳定后，再决定：
+   - `GetSelectedALPNProtocol` 是否进一步收窄到 `ISSLClientConnection`
+   - `GetStateString` 是否并入 `GetState`
+   - `GetContext` 是否最终彻底退出 public surface
+
+也就是说，这一版文档不再提前把 Stage-B/Stage-C 的选择写死。
 
 *设计版本: 2.0*
 *创建日期: 2026-02-05*

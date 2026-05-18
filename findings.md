@@ -1511,3 +1511,27 @@
   - 大部分连接层旧 plan 的 execution evidence 也不再缺
   - 真正残留的 connection-layer evidence gap，当前已经收缩到这 3 份旧 plan 的 focused receipt write-back
   - 这批补完之后，`ISSLConnection` 主线就可以更干净地转向真实的 `compatibility-core slimming`
+
+- 在继续往 `ISSLConnection` slimming 主线推进时，又暴露出一个更纯粹的设计文档 drift：
+  - `INTERFACE_DESIGN_V2.md` 里虽然已经在谈“最小 core + 扩展接口”
+  - 但它自己对 `ISSLConnectionInfo` 这组 mirrors 的 owner 和迁移顺序并不自洽
+
+- 当前 drift 主要集中在 4 个点：
+  - 层次图漏掉 `ISSLConnectionInfo`
+  - 仍保留 `ISSLAdvanced` 这个当前没有明确 public 落点的空壳名
+  - `TBaseSSLConnection` 实现类示例没把 `ISSLConnectionInfo` 列进去
+  - migration table 把 `GetConnectionInfo` 错归给 `ISSLDiagnostics`
+
+- 更关键的是，设计文档在还没完成 Stage-A demotion 前，就过早把后续路线写死了：
+  - `GetStateString` 直接写成“合并到 GetState”
+  - `GetContext` 直接写成“通常不需要”
+  - `GetSelectedALPNProtocol` 直接写成 `ISSLClientConnection`
+  - 这会让下一批实现很容易跳过必要的中间层，直接做过度激进的收瘦
+
+- 当前最安全的修法因此不是马上改 source，而是先冻结 Stage-A migration map：
+  - 先承认这 4 个方法在当前 `v1.x` 里是 compatibility-core duplicates
+  - 先把它们统一 demote 到 `ISSLConnectionInfo` 作为第一步设计锚点
+  - 只有在这一步稳定后，才继续决定：
+    - `GetSelectedALPNProtocol` 是否只留给客户端扩展
+    - `GetStateString` 是否并入 `GetState`
+    - `GetContext` 是否最终彻底退出 public surface
