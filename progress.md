@@ -6097,3 +6097,32 @@
   - result: PASS
   - summary:
     - current `macOS loader symbol probe evidence lane` batch has no whitespace or patch-format issues
+
+- `git commit -m "ci/macos: add openssl loader symbol probe"`
+  - result: PASS
+  - summary:
+    - committed the macOS loader/symbol probe evidence lane as `07e526b`
+
+- `git push origin master`
+  - result: PASS
+  - summary:
+    - pushed `07e526b` to `origin/master`
+
+- `gh workflow run wave-b-b2-manual.yml --ref master -f run_id=wave_b_b2_20260518_macos_loader_symbol_probe_07e526b`
+  - result: PASS
+  - summary:
+    - dispatched a new live cross-platform gate to collect the new macOS loader-symbol probe artifact on GitHub runner truth
+
+- `gh run list --workflow wave-b-b2-manual.yml --limit 5 --json databaseId,headSha,status,conclusion,createdAt,displayTitle,event,headBranch,url`
+  - result: PASS
+  - summary:
+    - latest run is now `26048015976`
+    - head sha matches `07e526bf2e719b361a6c2d8a85922a58e6a7ff3d`
+    - workflow is currently `in_progress`
+
+- `gh api repos/dtamade/fafafa.ssl/actions/runs/26048015976/jobs`
+  - result: PASS
+  - summary:
+    - `setup` already passed
+    - `linux-gate` / `windows-gate` / `macos-gate` all started
+    - `macos-gate` has advanced to `Run macOS Wave B gate`, so the new probe is now in the live execution path

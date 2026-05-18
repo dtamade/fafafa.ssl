@@ -131,9 +131,10 @@
     - `scripts/run_wave_b_macos_gate.sh` 新增 `loader-symbol-probe` step
     - `.github/workflows/wave-b-b2-manual.yml` active + disabled template 现会上传新的 probe JSON
     - focused workflow/gate contracts 已通过
+    - commit `07e526b` (`ci/macos: add openssl loader symbol probe`) 已推送到 `origin/master`
+    - live workflow run `26048015976` 已启动，当前正由 `macos-gate` 取证新的 loader-symbol probe artifact
   - 当前批收口后的默认下一步应为：
-    - push 并重跑 `wave-b-b2-manual.yml`
-    - 直接读取新的 `wave_b_macos_loader_symbol_probe_<run_id>.json`
+    - 直接读取 run `26048015976` 的 `wave_b_macos_loader_symbol_probe_wave_b_b2_20260518_macos_loader_symbol_probe_07e526b.json`
     - 根据 probe 真相判断应继续修 loader 路径、symbol name 假设，还是 batch-binding wrapper/binding table
 - [in_progress] 当前 repo-level 下一步应回到更高价值的 completeness 路线：
   - 继续审查各 backend implementation completeness / optional surface completeness
