@@ -81,12 +81,16 @@
   - `SessionCacheSize`
   - `SessionTimeout`
   - `ALPNProtocols`
+  - `ClientEarlyDataEnabled`
+  - `ServerEarlyDataPolicy`
+  - `ServerMaxEarlyDataSize`
+  - `ServerEarlyDataReplayStoreFile`
+  - `ServerEarlyDataReplayStoreDirectory`
 - `SetDefaultConfig(...)` 会先归一化 `TSSLConfig`，所以 `EnableCompression` / `EnableSessionTickets` / `EnableOCSPStapling` 这类 option-bridge 字段也会先折叠进 `Options`，再由 direct-library `CreateContext(AType)` 应用到新 context。
 - 同一条 direct-library path 现在也已对齐 deprecated `ServerName` compatibility 语义：
   - client default-config = warning + ignore
   - server default-config = reject
-- direct-library special-case parity 当前剩余的重点只剩：
-  - early-data / replay-store
+- replay-store 仍保持 server-only 约束；若 backend 不实现 installer seam，则 direct-library server path 会 fail-fast。
 
 ---
 

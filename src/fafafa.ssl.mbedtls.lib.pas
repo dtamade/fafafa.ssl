@@ -116,6 +116,7 @@ procedure UnregisterMbedTLSBackend;
 implementation
 
 uses
+  fafafa.ssl.context.config,
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
   fafafa.ssl.factory,
@@ -633,6 +634,12 @@ begin
       sslMbedTLS
     );
 
+  ValidateContextReplayStoreConfigScope(
+    LConfig,
+    AType,
+    'TMbedTLSLibrary.CreateContext'
+  );
+
   Result := TMbedTLSContext.Create(Self, AType);
   if Result <> nil then
   begin
@@ -669,6 +676,10 @@ begin
 
     if LConfig.ALPNProtocols <> '' then
       Result.SetALPNProtocols(LConfig.ALPNProtocols);
+
+    ApplyEarlyDataContextConfig(Result, LConfig);
+    ApplyEarlyDataReplayStoreConfig(Result, LConfig,
+      'TMbedTLSLibrary.CreateContext');
   end;
   InternalLog(sslLogDebug, 'Created MbedTLS context');
 end;

@@ -1306,3 +1306,49 @@
 
 - direct-library special-case parity 当前剩余重点：
   - early-data / replay-store
+
+## direct-library early-data / replay-store parity
+
+- 新增 bounded batch：
+  - `docs/plans/2026-05-18-direct-library-early-data-replay-store-parity.md`
+  - 目标：
+    - 把 direct-library path 上最后一组未对齐的 early-data / replay-store 语义拉回和 factory/context path 同一套 truth
+
+- RED 证据：
+  - `tests/scripts/test_direct_library_early_data_replay_store_parity_contract.sh`
+    - 初次运行 FAIL
+    - 证明 5 个 backend library path 还没统一接 replay-store scope 校验与 early-data/replay-store apply
+  - `tests/test_direct_library_early_data_replay_store_parity.pas`
+    - 初次运行 FAIL
+    - 证明 FreePascal direct-library path 当前还没有应用 early-data / replay-store truth，也没有拒绝 replay-store misuse
+
+- 本批 production fix：
+  - 新增 `src/fafafa.ssl.context.config.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - 统一补齐：
+    - replay-store client/server scope validation
+    - `ClientEarlyDataEnabled`
+    - `ServerEarlyDataPolicy`
+    - `ServerMaxEarlyDataSize`
+    - replay-store file / directory apply
+    - backend-missing installer fail-fast
+
+- focused 结果：
+  - `bash tests/scripts/test_direct_library_early_data_replay_store_parity_contract.sh`
+    - PASS
+  - `tests/test_direct_library_early_data_replay_store_parity.pas`
+    - PASS
+  - `bash tests/scripts/test_direct_library_default_config_parity_contract.sh`
+    - PASS
+  - `bash tests/scripts/test_direct_library_servername_compatibility_contract.sh`
+    - PASS
+
+- 这一步之后，direct-library special-case parity 已全部收口：
+  - `default-config`
+  - deprecated `ServerName`
+  - `early-data / replay-store`
+  - 下一条路线应回到 broader interface debt，而不是继续补 direct-library 小口子

@@ -140,6 +140,7 @@ procedure UnregisterOpenSSLBackend;
 implementation
 
 uses
+  fafafa.ssl.context.config,
   fafafa.ssl.openssl.context,
   fafafa.ssl.openssl.certstore,
   fafafa.ssl.openssl.api.bio,
@@ -1325,6 +1326,12 @@ begin
       sslOpenSSL
     );
 
+  ValidateContextReplayStoreConfigScope(
+    LConfig,
+    AType,
+    'TOpenSSLLibrary.CreateContext'
+  );
+
   // Let exceptions propagate - caller must handle errors explicitly
   Result := TOpenSSLContext.Create(Self, AType);
 
@@ -1372,6 +1379,10 @@ begin
 
     if (LConfig.ALPNProtocols <> '') and (LConfig.ALPNProtocols <> Result.GetALPNProtocols) then
       Result.SetALPNProtocols(LConfig.ALPNProtocols);
+
+    ApplyEarlyDataContextConfig(Result, LConfig);
+    ApplyEarlyDataReplayStoreConfig(Result, LConfig,
+      'TOpenSSLLibrary.CreateContext');
   end;
 
   Inc(FStatistics.ConnectionsTotal);

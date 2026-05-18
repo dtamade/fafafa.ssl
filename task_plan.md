@@ -309,13 +309,31 @@
      - client default-config = warning + ignore
      - server default-config = reject
    - 这条规则现在已在 `openssl` / `freepascal` / `winssl` / `mbedtls` / `wolfssl` library units 上保持同一条 source truth
-5. direct-library path 尚未统一的剩余专门语义现在只剩：
-   - early-data / replay-store direct-library parity
-   - 这类问题仍不适合和 `ISSLConnection` 大手术混成一批
-6. 在 direct-library special-case parity 收口后，再决定 broader interface debt 的后续路线：
+5. direct-library `early-data / replay-store` parity 也已完成第一轮收口：
+   - 新 plan：
+     - `docs/plans/2026-05-18-direct-library-early-data-replay-store-parity.md`
+   - 新验证：
+     - `tests/test_direct_library_early_data_replay_store_parity.pas`
+     - `tests/scripts/test_direct_library_early_data_replay_store_parity_contract.sh`
+   - 当前 direct-library path 已对齐：
+     - `ClientEarlyDataEnabled`
+     - `ServerEarlyDataPolicy`
+     - `ServerMaxEarlyDataSize`
+     - `ServerEarlyDataReplayStoreFile`
+     - `ServerEarlyDataReplayStoreDirectory`
+   - replay-store 语义现在也与 factory/context path 同步：
+     - client path = reject
+     - server file/directory = mutually exclusive
+     - backend 不实现 installer seam = fail-fast
+   - 这条规则现在已通过 shared helper 固定在
+     `openssl` / `freepascal` / `winssl` / `mbedtls` / `wolfssl`
+     的 library `CreateContext(AType)` 路径上
+6. direct-library special-case parity 当前已全部收口，下一条不该再回到这条线：
+   - 这类问题已经不需要和 `ISSLConnection` 大手术混成一批
+7. 在 direct-library special-case parity 收口后，再决定 broader interface debt 的后续路线：
    - 是否继续推进 `TSSLConfig` option-bridge freeze / slimming
    - 还是进入 `ISSLConnection` 核心 surface slimming roadmap
-7. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
+8. 若未来要让 serializer 对“纯 legacy-only in-memory record”也具备完全无歧义的 projection，需要先为 capability model 补 presence/truth 元信息；当前批次不在无信号状态下瞎猜。
 
 ## Verification Discipline
 

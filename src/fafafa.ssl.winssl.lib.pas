@@ -120,6 +120,7 @@ uses
   fafafa.ssl.winssl.context,
   fafafa.ssl.winssl.certificate,
   fafafa.ssl.winssl.certstore,
+  fafafa.ssl.context.config,
   fafafa.ssl.errors,   // P0 后端语义统一：引入统一的错误抛出函数
   fafafa.ssl.factory;  // 在 implementation 中导入以调用 RegisterLibrary
 
@@ -795,6 +796,12 @@ begin
       sslWinSSL
     );
 
+  ValidateContextReplayStoreConfigScope(
+    LConfig,
+    AType,
+    'TWinSSLLibrary.CreateContext'
+  );
+
   // 让异常传播 - 调用方必须显式处理错误
   Result := TWinSSLContext.Create(Self, AType);
 
@@ -833,6 +840,10 @@ begin
 
     if LConfig.ALPNProtocols <> '' then
       Result.SetALPNProtocols(LConfig.ALPNProtocols);
+
+    ApplyEarlyDataContextConfig(Result, LConfig);
+    ApplyEarlyDataReplayStoreConfig(Result, LConfig,
+      'TWinSSLLibrary.CreateContext');
   end;
 
   Inc(FStatistics.ConnectionsTotal);

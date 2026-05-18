@@ -103,6 +103,7 @@ procedure UnregisterWolfSSLBackend;
 implementation
 
 uses
+  fafafa.ssl.context.config,
   fafafa.ssl.errors,
   fafafa.ssl.exceptions,
   fafafa.ssl.factory,
@@ -595,6 +596,12 @@ begin
       sslWolfSSL
     );
 
+  ValidateContextReplayStoreConfigScope(
+    LConfig,
+    AType,
+    'TWolfSSLLibrary.CreateContext'
+  );
+
   if GetCapabilities.EarlyDataSupport <> sslSupportNone then
     Result := TWolfSSLEarlyDataContext.Create(Self, AType)
   else
@@ -635,6 +642,10 @@ begin
 
     if LConfig.ALPNProtocols <> '' then
       Result.SetALPNProtocols(LConfig.ALPNProtocols);
+
+    ApplyEarlyDataContextConfig(Result, LConfig);
+    ApplyEarlyDataReplayStoreConfig(Result, LConfig,
+      'TWolfSSLLibrary.CreateContext');
   end;
 end;
 

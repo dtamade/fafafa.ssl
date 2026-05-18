@@ -842,3 +842,45 @@
 - 因而当前 direct-library special-case parity 的剩余重点已经进一步缩窄为：
   - early-data / replay-store direct-library parity
   - 这应当是下一条高价值、边界依然清楚的小批次
+
+- `direct-library early-data / replay-store parity` 现在也已经完成第一轮收口：
+  - RED 证据：
+    - `tests/scripts/test_direct_library_early_data_replay_store_parity_contract.sh`
+      初次运行即证明 5 个 backend library path 还没统一接 replay-store scope 校验与 early-data/replay-store apply helper
+    - `tests/test_direct_library_early_data_replay_store_parity.pas`
+      初次运行即证明 FreePascal direct-library path 当前还没有：
+      - 应用 `ClientEarlyDataEnabled`
+      - 应用 `ServerEarlyDataPolicy` / `ServerMaxEarlyDataSize`
+      - 安装 replay-store file / directory
+      - 拒绝 client replay-store config
+      - 拒绝 conflicting replay-store file + directory
+
+- 这轮 production fix 刻意没有把逻辑再复制进 5 份 backend：
+  - 新增 `src/fafafa.ssl.context.config.pas`
+  - 先把 replay-store client/server scope 校验、early-data context apply、replay-store installer apply 收成 shared internal helper
+  - 再让 `TOpenSSLLibrary` / `TFreePascalSSLLibrary` / `TWinSSLLibrary` / `TMbedTLSLibrary` / `TWolfSSLLibrary`
+    的 `CreateContext(AType)` 一起接回这条 helper
+
+- 这也把 direct-library path 和 factory/context path 的关系重新说清楚了：
+  - client path：
+    - `ClientEarlyDataEnabled` 若 backend 暴露 `ISSLEarlyDataContext`，就会应用
+    - replay-store file / directory 继续 fail-fast reject
+  - server path：
+    - `ServerEarlyDataPolicy` / `ServerMaxEarlyDataSize` 若 backend 暴露 `ISSLEarlyDataContext`，就会应用
+    - replay-store file / directory 保持 mutually exclusive
+    - 若 backend 不实现 installer seam，则保持 fail-fast，而不是静默忽略
+
+- 当前 FreePascal runtime 已给出完整的 live proof：
+  - direct-library client context 会正确反映 `ClientEarlyDataEnabled`
+  - direct-library server context 会正确反映 `ServerEarlyDataPolicy` / `ServerMaxEarlyDataSize`
+  - replay-store file / directory 都会真实 materialize 到配置路径
+  - cross-context replay rejection 继续成立
+  - client replay-store config 与 conflicting file+directory 都会抛出 `ESSLConfigurationException`
+
+- 因而 direct-library special-case parity 当前已经全部收口：
+  - `default-config`
+  - deprecated `ServerName`
+  - `early-data / replay-store`
+  - 下一条路线不该再回到 “继续补 direct-library 小口子”，而应回到 broader interface debt 的选择：
+    - `TSSLConfig` option-bridge freeze / slimming
+    - 或 `ISSLConnection` 核心 surface slimming roadmap

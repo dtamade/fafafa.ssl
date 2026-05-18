@@ -1971,3 +1971,69 @@
   - result: PASS
   - summary:
     - the previous direct-library default-config parity batch remains intact after adding the `ServerName` special-case parity
+
+### Direct-Library Early-Data And Replay-Store Parity
+
+- add `docs/plans/2026-05-18-direct-library-early-data-replay-store-parity.md`
+  - purpose:
+    - define the bounded TDD batch for the last remaining direct-library special-case parity lane
+
+- add `src/fafafa.ssl.context.config.pas`
+  - purpose:
+    - hold shared internal helper logic for replay-store scope validation, early-data apply, and replay-store installer apply
+    - avoid re-copying the same logic into five backend library units
+
+- add `tests/test_direct_library_early_data_replay_store_parity.pas`
+  - purpose:
+    - prove a real runtime RED on the FreePascal direct-library path before touching production code
+
+- add `tests/scripts/test_direct_library_early_data_replay_store_parity_contract.sh`
+  - purpose:
+    - prove a source RED across backend library units before touching production code
+
+- `bash -n tests/scripts/test_direct_library_early_data_replay_store_parity_contract.sh && bash tests/scripts/test_direct_library_early_data_replay_store_parity_contract.sh`
+  - RED result: FAIL
+  - summary:
+    - `src/fafafa.ssl.openssl.backed.pas` still had no replay-store scope validation / early-data apply / replay-store apply on the direct-library path
+
+- `mkdir -p tmp/test_direct_library_early_data_replay_store_parity && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_direct_library_early_data_replay_store_parity -FEtmp/test_direct_library_early_data_replay_store_parity -otmp/test_direct_library_early_data_replay_store_parity/test_direct_library_early_data_replay_store_parity tests/test_direct_library_early_data_replay_store_parity.pas && ./tmp/test_direct_library_early_data_replay_store_parity/test_direct_library_early_data_replay_store_parity`
+  - RED result: FAIL
+  - summary:
+    - FreePascal direct-library path was still missing:
+      - client `ClientEarlyDataEnabled` apply
+      - server `ServerEarlyDataPolicy` / `ServerMaxEarlyDataSize` apply
+      - replay-store file / directory install
+      - client replay-store rejection
+      - conflicting replay-store file + directory rejection
+
+- update:
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - connect all five backend library `CreateContext(AType)` paths to the shared helper
+    - align direct-library early-data / replay-store behavior to the factory/context truth
+    - update API reference so the direct-library note no longer says early-data / replay-store is still pending
+
+- `bash -n tests/scripts/test_direct_library_early_data_replay_store_parity_contract.sh && bash tests/scripts/test_direct_library_early_data_replay_store_parity_contract.sh`
+  - GREEN result: PASS
+  - summary:
+    - all targeted backend library units now validate replay-store scope and apply early-data / replay-store defaults on the direct-library path
+
+- `mkdir -p tmp/test_direct_library_early_data_replay_store_parity && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_direct_library_early_data_replay_store_parity -FEtmp/test_direct_library_early_data_replay_store_parity -otmp/test_direct_library_early_data_replay_store_parity/test_direct_library_early_data_replay_store_parity tests/test_direct_library_early_data_replay_store_parity.pas && ./tmp/test_direct_library_early_data_replay_store_parity/test_direct_library_early_data_replay_store_parity`
+  - GREEN result: PASS
+  - summary:
+    - FreePascal direct-library path now:
+      - applies `ClientEarlyDataEnabled`
+      - applies `ServerEarlyDataPolicy` / `ServerMaxEarlyDataSize`
+      - installs replay-store file / directory at the configured path
+      - rejects client replay-store config
+      - rejects conflicting replay-store file + directory
+
+- `bash tests/scripts/test_direct_library_default_config_parity_contract.sh && bash tests/scripts/test_direct_library_servername_compatibility_contract.sh`
+  - result: PASS
+  - summary:
+    - the earlier direct-library default-config and `ServerName` parity batches remain intact after adding early-data / replay-store parity

@@ -72,6 +72,7 @@ implementation
 
 uses
   Classes,
+  fafafa.ssl.context.config,
   fafafa.ssl.exceptions,
   fafafa.ssl.crypto.hash,
   fafafa.ssl.factory,
@@ -1613,6 +1614,12 @@ begin
       sslFreePascal
     );
 
+  ValidateContextReplayStoreConfigScope(
+    LConfig,
+    AType,
+    'TFreePascalSSLLibrary.CreateContext'
+  );
+
   Result := TFreePascalContext.Create(Self, AType);
   if Result <> nil then
   begin
@@ -1649,6 +1656,10 @@ begin
 
     if LConfig.ALPNProtocols <> '' then
       Result.SetALPNProtocols(LConfig.ALPNProtocols);
+
+    ApplyEarlyDataContextConfig(Result, LConfig);
+    ApplyEarlyDataReplayStoreConfig(Result, LConfig,
+      'TFreePascalSSLLibrary.CreateContext');
   end;
 end;
 
