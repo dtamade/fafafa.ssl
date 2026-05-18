@@ -349,8 +349,12 @@ function GetOCSPStaplingEnabled: Boolean;
 **示例:**
 
 ```pascal
-if Connection.GetOCSPStaplingEnabled then
-  WriteLn('OCSP Stapling 已启用');
+var
+  OCSP: ISSLOCSPStapling;
+begin
+  if Supports(Connection, ISSLOCSPStapling, OCSP) and OCSP.GetOCSPStaplingEnabled then
+    WriteLn('OCSP Stapling 已启用');
+end;
 ```
 
 ##### GetOCSPResponse
@@ -368,9 +372,17 @@ function GetOCSPResponse: TBytes;
 **示例:**
 
 ```pascal
-OCSPResponse := Connection.GetOCSPResponse;
-if Length(OCSPResponse) > 0 then
-  WriteLn('收到 OCSP 响应: ', Length(OCSPResponse), ' 字节');
+var
+  OCSP: ISSLOCSPStapling;
+  OCSPResponse: TBytes;
+begin
+  if Supports(Connection, ISSLOCSPStapling, OCSP) then
+  begin
+    OCSPResponse := OCSP.GetOCSPResponse;
+    if Length(OCSPResponse) > 0 then
+      WriteLn('收到 OCSP 响应: ', Length(OCSPResponse), ' 字节');
+  end;
+end;
 ```
 
 ##### IsOCSPResponseVerified
@@ -389,8 +401,12 @@ function IsOCSPResponseVerified: Boolean;
 **示例:**
 
 ```pascal
-if Connection.IsOCSPResponseVerified then
-  WriteLn('OCSP 响应已验证,证书有效');
+var
+  OCSP: ISSLOCSPStapling;
+begin
+  if Supports(Connection, ISSLOCSPStapling, OCSP) and OCSP.IsOCSPResponseVerified then
+    WriteLn('OCSP 响应已验证,证书有效');
+end;
 ```
 
 ##### GetOCSPResponseStatus
@@ -408,7 +424,12 @@ function GetOCSPResponseStatus: string;
 **示例:**
 
 ```pascal
-WriteLn('OCSP 状态: ', Connection.GetOCSPResponseStatus);
+var
+  OCSP: ISSLOCSPStapling;
+begin
+  if Supports(Connection, ISSLOCSPStapling, OCSP) then
+    WriteLn('OCSP 状态: ', OCSP.GetOCSPResponseStatus);
+end;
 ```
 
 ---
@@ -512,7 +533,11 @@ begin
 end;
 ```
 
-如果你已经直接依赖 `Connection.GetOCSP*` 方法，也仍然可以继续用；`ISSLOCSPStapling` 更适合 capability-gated 访问。
+如果你在写新代码，优先通过 `ISSLOCSPStapling.GetOCSPStaplingEnabled` 判断当前连接是否启用了 stapling 读取面。
+需要读取 stapled response bytes 时，优先通过 `ISSLOCSPStapling.GetOCSPResponse`。
+需要检查当前 stapled response 是否已经过当前实现的验证路径时，优先通过 `ISSLOCSPStapling.IsOCSPResponseVerified`。
+需要读取状态描述字符串时，优先通过 `ISSLOCSPStapling.GetOCSPResponseStatus`。
+如果你已经直接依赖 `Connection.GetOCSP*` 方法，也仍然可以继续把它们当作 compatibility-core mirrors 使用。
 
 ### 性能指标
 

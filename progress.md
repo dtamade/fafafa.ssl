@@ -4883,3 +4883,52 @@
   - result: PASS
   - summary:
     - current `ISSLSessionResumption active-guidance de-emphasis` batch has no whitespace or patch-format issues
+
+### ISSLOCSPStapling Active Guidance De-emphasis
+
+- `rg -n "GetOCSPStaplingEnabled|GetOCSPResponse\\(|IsOCSPResponseVerified|GetOCSPResponseStatus|ISSLOCSPStapling" docs/reference/API_REFERENCE.md docs/reference/API_DOCUMENTATION.md docs/INTEGRATION_GUIDE.md tests`
+  - result: PASS
+  - summary:
+    - confirmed the current ordinary OCSP guidance drift lived mainly in `docs/reference/API_DOCUMENTATION.md`
+    - confirmed this was a docs-only owner-path issue, not a new production implementation gap
+    - confirmed backend-specific runtime / contract proofs should stay out of this batch
+
+- add `docs/plans/2026-05-18-isslocspstapling-active-guidance-deemphasis.md`
+  - purpose:
+    - define a bounded OCSP batch that moves ordinary docs onto `ISSLOCSPStapling`
+    - keep scope off backend-specific runtime proofs and production implementation
+
+- add `tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+  - purpose:
+    - fail if ordinary OCSP docs reintroduce direct core `GetOCSP*` usage
+    - keep this owner-path guidance change cheap to verify
+
+- first run of `bash -n tests/scripts/test_isslocspstapling_active_guidance_contract.sh && bash tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+  - result: RED
+  - summary:
+    - the new guard immediately failed on `API_DOCUMENTATION` still teaching `if Connection.GetOCSPStaplingEnabled then`
+    - this confirmed the batch target was real ordinary-guidance drift rather than speculative cleanup
+
+- update `docs/reference/API_DOCUMENTATION.md`
+  - change:
+    - route the 4 direct-core OCSP method examples through `Supports(Connection, ISSLOCSPStapling, OCSP)`
+    - add explicit note lines that new code should prefer `ISSLOCSPStapling.GetOCSPStaplingEnabled / GetOCSPResponse / IsOCSPResponseVerified / GetOCSPResponseStatus`
+    - keep `Connection.GetOCSP*` only as compatibility-core mirror truth
+
+- second run of `bash -n tests/scripts/test_isslocspstapling_active_guidance_contract.sh && bash tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - active docs now prefer `ISSLOCSPStapling` for OCSP stapling surfaces
+    - ordinary guidance no longer reintroduces direct core OCSP mirrors
+
+- `rg -n "GetHealthStatus|GetPerformanceMetrics|GetDiagnosticInfo|GetVerifyResult|GetVerifyResultString|GetPeerCertificateChain|GetSession\\(|SetSession\\(|IsSessionReused|GetOCSPStaplingEnabled|GetOCSPResponse\\(|IsOCSPResponseVerified|GetOCSPResponseStatus" docs/reference/API_REFERENCE.md docs/reference/API_DOCUMENTATION.md docs/INTEGRATION_GUIDE.md tests/integration tests/test_sslctxboth_roleless_handshake_clarification.pas tests/integration/test_e2e_scenarios.pas`
+  - result: PASS
+  - summary:
+    - quick next-route scan showed the current high-value optional-owner ordinary-guidance sweep is now clean
+    - remaining hits in active docs/tests are either owner-path examples, public source-truth signatures, or intentional compatibility notes
+    - this makes a return to broader interface-design / implementation-completeness work the right next default lane
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `ISSLOCSPStapling active-guidance de-emphasis` batch has no whitespace or patch-format issues

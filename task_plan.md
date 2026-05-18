@@ -1357,6 +1357,27 @@
     - 当前批收口后默认下一步应为：
       - 优先盘点 `ISSLOCSPStapling` ordinary guidance 是否仍在 direct core `GetOCSP*` 路径上漂移
       - 不再重复拉起 session-resumption active-guidance 清扫
+54. `ISSLOCSPStapling` active-guidance de-emphasis 已完成并应作为当前 optional-owner surface 的下一条普通路径收口保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-isslocspstapling-active-guidance-deemphasis.md`
+    - 当前已确认的 route truth：
+      - `docs/reference/API_DOCUMENTATION.md`
+        的 ordinary OCSP method examples 现在统一优先走：
+        - `ISSLOCSPStapling.GetOCSPStaplingEnabled`
+        - `ISSLOCSPStapling.GetOCSPResponse`
+        - `ISSLOCSPStapling.IsOCSPResponseVerified`
+        - `ISSLOCSPStapling.GetOCSPResponseStatus`
+      - 同一文档现在明确把：
+        - `Connection.GetOCSP*`
+        标成 compatibility-core mirrors，而不是新代码推荐路径
+      - backend-specific OCSP runtime / contract proof 继续保留为 residual proof，不属于这批收口范围
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+      - `bash tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+      - `git diff --check`
+    - 当前批收口后默认下一步应为：
+      - 不再重复拉起 optional-owner ordinary-guidance 清扫
+      - 切回更大的 interface-design completeness / implementation-completeness 审查
 
 ## Verification Discipline
 

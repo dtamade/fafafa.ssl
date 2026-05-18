@@ -2238,3 +2238,19 @@
     - `Connection.GetOCSPResponseStatus`
   - 同文件里虽然已经有 `ISSLOCSPStapling` owner-path 示例，但 ordinary surface 仍是“双真相并存”
   - 因而若继续沿 optional-owner surface 推进，`ISSLOCSPStapling` active-guidance de-emphasis 当前是最像下一批的边界清晰候选
+
+- 这条 OCSP 线之所以适合先收 guidance，而不是先碰 runtime，同样是因为 owner truth 本来就已经先有了：
+  - `tests/contract/test_backend_contract.pas`
+    已经锁住 `ISSLOCSPStapling` 的 capability / owner interface 边界
+  - `docs/reference/API_DOCUMENTATION.md`
+    也早已有一套 `Supports(Connection, ISSLOCSPStapling, OCSP)` 的 owner-path 示例
+  - 真正的问题只是同一文档还并存着 4 段 direct-core ordinary 示例，容易把读者重新带回 core mirrors
+
+- 当前修完后的更准确结论是：
+  - ordinary OCSP stapling guidance 现在已经优先走 `ISSLOCSPStapling`
+  - 当前已识别的高价值 optional-owner ordinary-guidance sweep 已全部完成：
+    - `ISSLDiagnostics`
+    - `ISSLCertificateVerification`
+    - `ISSLSessionResumption`
+    - `ISSLOCSPStapling`
+  - 因而下一步不该再继续围绕这几组 surface 做同类文案清扫，而应把主线切回更大的 interface-design completeness / backend implementation completeness 审查

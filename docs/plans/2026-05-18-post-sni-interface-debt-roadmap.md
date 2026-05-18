@@ -733,6 +733,33 @@ Recommended first bounded batch:
     - 同文件虽已有 `ISSLOCSPStapling` 示例，但 ordinary guidance 仍是双真相并存
   - 若不继续 optional-owner guidance 线，再回到 interface-design completeness 选择也可以，但默认优先级已低于 OCSP 这条清晰残余
 
+## Progress Since The `ISSLOCSPStapling` Active Guidance De-emphasis Batch
+
+- 已交付：
+  - ordinary OCSP stapling guidance now prefers `ISSLOCSPStapling`
+  - focused active-guidance guard:
+    - `tests/scripts/test_isslocspstapling_active_guidance_contract.sh`
+  - `docs/reference/API_DOCUMENTATION.md` 的 4 段 OCSP method examples 已同步：
+    - `GetOCSPStaplingEnabled` 示例走 `ISSLOCSPStapling.GetOCSPStaplingEnabled`
+    - `GetOCSPResponse` 示例走 `ISSLOCSPStapling.GetOCSPResponse`
+    - `IsOCSPResponseVerified` 示例走 `ISSLOCSPStapling.IsOCSPResponseVerified`
+    - `GetOCSPResponseStatus` 示例走 `ISSLOCSPStapling.GetOCSPResponseStatus`
+  - 同一文档现在明确记录：
+    - 新代码优先走 `ISSLOCSPStapling`
+    - `Connection.GetOCSP*` 只作为 compatibility-core mirrors 保留
+
+- 当前更准确的 next step：
+  - 当前已识别的高价值 optional-owner ordinary-guidance sweep 已完成：
+    - `ISSLDiagnostics`
+    - `ISSLCertificateVerification`
+    - `ISSLSessionResumption`
+    - `ISSLOCSPStapling`
+  - 默认下一步不该再重复做这 4 组 surface 的普通文档清扫
+  - 若继续推进主线，默认应切回更大的 interface-design completeness / implementation-completeness 审查
+  - 也就是说，下一批更像：
+    - 重新盘点 public interface 仍有哪些结构性设计债
+    - 以及各 backend implementation / docs / tests 是否还有 completion gap
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理
