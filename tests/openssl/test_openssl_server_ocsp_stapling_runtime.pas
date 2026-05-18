@@ -705,7 +705,9 @@ begin
         'Builder-built server accept should succeed without stapled response file ' +
         '(state=%s verify=%s ctx_status=%d conn_status=%d)',
         [
+          {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
           LConn.GetStateString,
+          {$POP}
           LConn.GetVerifyResultString,
           GetOpenSSLContextStatusType(LCtx),
           GetOpenSSLConnectionStatusType(LConn)
@@ -763,7 +765,9 @@ begin
         'Builder-built server accept should succeed with stapled response file ' +
         '(state=%s verify=%s ctx_status=%d conn_status=%d status_call_delta=%d)',
         [
+          {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
           LConn.GetStateString,
+          {$POP}
           LConn.GetVerifyResultString,
           GetOpenSSLContextStatusType(LCtx),
           GetOpenSSLConnectionStatusType(LConn),

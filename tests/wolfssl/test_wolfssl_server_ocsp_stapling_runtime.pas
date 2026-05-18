@@ -766,7 +766,9 @@ begin
         'WolfSSL server accept should succeed when stapled response is configured ' +
         '(state=%s verify=%d/%s conn_status=%d status_call_delta=%d last_set_resp_result=%d)',
         [
+          {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
           LConn.GetStateString,
+          {$POP}
           LConn.GetVerifyResult,
           LConn.GetVerifyResultString,
           GetWolfSSLConnectionStatusType(LConn),
@@ -819,7 +821,9 @@ begin
         'WolfSSL server accept should succeed without OCSP configuration or request ' +
         '(state=%s verify=%d/%s want_read=%s want_write=%s stream_error=%s)',
         [
+          {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
           LConn.GetStateString,
+          {$POP}
           LConn.GetVerifyResult,
           LConn.GetVerifyResultString,
           BoolToStr(LConn.WantRead, True),
@@ -860,7 +864,9 @@ begin
         'WolfSSL server accept should succeed without client status_request ' +
         '(state=%s verify=%d/%s want_read=%s want_write=%s stream_error=%s)',
         [
+          {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
           LConn.GetStateString,
+          {$POP}
           LConn.GetVerifyResult,
           LConn.GetVerifyResultString,
           BoolToStr(LConn.WantRead, True),
@@ -895,7 +901,9 @@ begin
         'WolfSSL server accept should succeed without configured stapled response ' +
         '(state=%s verify=%d/%s want_read=%s want_write=%s stream_error=%s)',
         [
+          {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
           LConn.GetStateString,
+          {$POP}
           LConn.GetVerifyResult,
           LConn.GetVerifyResultString,
           BoolToStr(LConn.WantRead, True),
@@ -931,7 +939,9 @@ begin
         'Builder-built WolfSSL server accept should succeed without stapled response file ' +
         '(state=%s verify=%d/%s conn_status=%d)',
         [
+          {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
           LConn.GetStateString,
+          {$POP}
           LConn.GetVerifyResult,
           LConn.GetVerifyResultString,
           GetWolfSSLConnectionStatusType(LConn)
@@ -989,7 +999,9 @@ begin
         'Builder-built WolfSSL server accept should succeed with stapled response file ' +
         '(state=%s verify=%d/%s conn_status=%d status_call_delta=%d)',
         [
+          {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
           LConn.GetStateString,
+          {$POP}
           LConn.GetVerifyResult,
           LConn.GetVerifyResultString,
           GetWolfSSLConnectionStatusType(LConn),

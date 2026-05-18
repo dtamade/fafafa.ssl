@@ -2081,3 +2081,41 @@
   - `ISSLConnection.GetContext` 现在也已经在 source/doc/compiler 三层都被明确定义为 compatibility-only mirror
   - `GetContext` 的第一条真正 public slimming slice 已经落地
   - 后续不该再在它身上反复做 wording/deprecation archaeology，而应把主线切去下一条 mirror 的 feasibility / slimming 选择
+
+- `GetStateString` 这条线在进入 compiler deprecation 之前，其实也已经足够“干净”：
+  - active generic/integration tests 已经切到 `ISSLConnectionInfo.GetStateString`
+  - residual direct-core surface 已 freeze 到：
+    - backend contract mirror proof
+    - OpenSSL server OCSP stapling runtime proof
+    - WolfSSL server OCSP stapling runtime proof
+  - ordinary docs/tests 已不再把 `Conn.GetStateString` 当推荐路径
+
+- 这意味着它真正还缺的，也不是新的 backend/runtime 迁移，而是最后一层 compiler-surface truth：
+  - source/doc 虽然已经写明 owner 是 `ISSLConnectionInfo.GetStateString`
+  - 但 public core declaration 自身还没进入 compiler `deprecated`
+  - 因而编译器层面还没有把“compatibility-only mirror”这件事彻底说死
+
+- 当前这一刀的风险同样是 compile noise，而不是 runtime 行为：
+  - non-script direct core `GetStateString` 已只剩 3 个 residual 文件
+  - 它们都属于 intentional mirror/runtime proof，不需要迁移行为
+  - 因而完全适合沿用前两批模式：
+    - declaration 做 compiler `deprecated`
+    - residual callsite 做局部 warning quarantine
+    - 用 focused shell contract + backend contract proof 收口
+
+- 因而当前更准确的路线判断是：
+  - `GetStateString` 的下一步不是继续做 residual archaeology
+  - 而是直接进入 compiler deprecation alignment
+  - 做完之后，这条 getter 也应像 `GetConnectionInfo` / `GetContext` 一样，退出反复拉起的 wording/compiler 治理队列
+
+- 当前修完后的更准确结论是：
+  - `ISSLConnection.GetStateString` 现在也已经在 source/doc/compiler 三层都被明确定义为 compatibility-only mirror
+  - `GetStateString` 的第一条真正 public slimming slice 已经落地
+  - 这条线后续不该再继续做 wording/deprecation archaeology，而应把主线切去下一条 mirror 的 feasibility / slimming 选择
+
+- 这批还顺手暴露出一个 workflow 层的小真相：
+  - `tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`
+    仍依赖一条较旧的共享 guidance 句式：
+    - “如果你在写新代码，并且需要连接信息 / ALPN / 状态字符串这组 mirrors”
+  - 我们在强化 `GetContext` 时把总句拆散了，但脚本契约还没跟着调整
+  - 当前做法不是弱化新文案，而是补回这条总句，同时保留单独的 `GetContext` / `GetStateString` compiler-deprecated guidance

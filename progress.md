@@ -4524,3 +4524,98 @@
   - result: PASS
   - summary:
     - current `GetContext` compiler-deprecation batch has no whitespace or patch-format issues
+
+### GetStateString Compiler Deprecation Alignment
+
+- `git status --short --branch`
+  - result: PASS
+  - summary:
+    - current branch started from clean `master...origin/master`
+    - the new batch could be scoped directly on top of the already-pushed GetContext compiler-surface closeout
+
+- `rg -n "GetStateString|ISSLConnectionInfo|deprecated 'Use ISSLConnectionInfo.GetStateString|compiler.*deprecated|active test de-emphasis|residual classification" src docs/reference docs/plans tests/scripts task_plan.md findings.md progress.md --glob '!docs/archive/**'`
+  - result: PASS
+  - summary:
+    - confirmed `GetStateString` had already finished active-test de-emphasis and residual-classification freeze work
+    - the remaining gap was the public core declaration itself still not being compiler deprecated
+
+- `sed -n '1254,1276p' src/fafafa.ssl.base.pas`
+  - result: PASS
+  - summary:
+    - source comment already had preferred-access wording for `ISSLConnectionInfo.GetStateString`
+    - but the public core declaration still lacked compiler deprecation and stronger owner/de-emphasis wording
+
+- `rg -n "\\.GetStateString\\b|GetStateString\\(" tests docs src --glob '!docs/archive/**' --glob '!docs/plans/**' --glob '!tests/scripts/**'`
+  - result: PASS
+  - summary:
+    - confirmed ordinary docs/tests no longer used direct core `GetStateString`
+    - confirmed the remaining direct-core residuals had stayed confined to backend-contract mirror proof plus OpenSSL/WolfSSL backend-specific runtime proofs
+
+- add `docs/plans/2026-05-18-getstatestring-compiler-deprecation-alignment.md`
+  - purpose:
+    - capture the bounded source-truth batch that upgrades `ISSLConnection.GetStateString` from source/doc de-emphasis to compiler-level deprecation
+    - keep runtime behavior unchanged while aligning the public core mirror surface with current owner truth
+
+- add `tests/scripts/test_getstatestring_compiler_deprecated_contract.sh`
+  - purpose:
+    - fail if the core `GetStateString` declaration loses its compiler `deprecated` marker
+    - guard the new doc wording and residual warning-quarantine boundary
+
+- implementation:
+  - `src/fafafa.ssl.base.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/INTERFACE_DESIGN_V2.md`
+  - `tests/contract/test_backend_contract.pas`
+  - `tests/openssl/test_openssl_server_ocsp_stapling_runtime.pas`
+  - `tests/wolfssl/test_wolfssl_server_ocsp_stapling_runtime.pas`
+  - change:
+    - mark `ISSLConnection.GetStateString` as compiler `deprecated 'Use ISSLConnectionInfo.GetStateString'`
+    - upgrade active docs to say the core getter is now compiler deprecated
+    - add local warning suppression around the remaining direct-core `GetStateString` mirror/runtime proofs
+
+- `bash -n tests/scripts/test_getstatestring_compiler_deprecated_contract.sh && bash tests/scripts/test_getstatestring_compiler_deprecated_contract.sh`
+  - result: PASS
+  - summary:
+    - the core declaration is compiler deprecated
+    - active docs and the residual backend/runtime proofs all match the expected source-truth boundary
+
+- `bash tests/scripts/test_isslconnectioninfo_getstatestring_active_test_contract.sh`
+  - result: PASS
+  - summary:
+    - active generic/integration tests still prefer `ISSLConnectionInfo.GetStateString`
+    - the compiler-deprecation upgrade did not reintroduce direct core guidance
+
+- `bash tests/scripts/test_isslconnectioninfo_getstatestring_residual_classification_contract.sh`
+  - result: PASS
+  - summary:
+    - `GetStateString` residual direct-core surface stayed confined to the existing allowlist
+    - compiler deprecation did not re-expand direct-core usage
+
+- first run of `bash tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`
+  - result: RED
+  - summary:
+    - the API reference no longer contained the exact shared guidance sentence the older contract still expected
+    - this was wording drift only, not a route regression
+
+- update `docs/reference/API_REFERENCE.md`
+  - change:
+    - restore the shared `连接信息 / ALPN / 状态字符串` guidance sentence expected by the active-doc contract
+    - keep the stronger standalone `GetContext` / `GetStateString` compiler-deprecated guidance intact
+
+- second run of `bash tests/scripts/test_isslconnectioninfo_active_guidance_contract.sh`
+  - result: PASS
+  - summary:
+    - active docs still de-emphasize direct core mirror usage
+    - the shared guidance sentence and the stronger compiler-deprecation wording now both tell the same story
+
+- `mkdir -p tmp/backend_contract_units && fpc -B -Fu./src -Fu./tests -FUtmp/backend_contract_units -FEtmp/backend_contract_units -otmp/backend_contract_units/test_backend_contract tests/contract/test_backend_contract.pas && ./tmp/backend_contract_units/test_backend_contract`
+  - result: PASS
+  - summary:
+    - focused backend contract still finished `Total Tests: 135 / Passed: 111 / Failed: 0 / Skipped: 24`
+    - the direct-core `GetStateString` mirror proof stayed green after local deprecation-warning quarantine
+    - WinSSL continued to keep the expected Linux-host skip truth
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `GetStateString` compiler-deprecation batch has no whitespace or patch-format issues

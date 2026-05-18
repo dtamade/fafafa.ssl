@@ -1849,14 +1849,18 @@ begin
           AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
             'ISSLConnectionInfo.GetSelectedALPNProtocol does not match ISSLConnection.GetSelectedALPNProtocol');
         end
-        else if LConnInfoAccess.GetStateString <> LConn.GetStateString then
-        begin
-          WriteLn('  [FAIL] Optional interface state string drifted from core getter');
-          AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
-            'ISSLConnectionInfo.GetStateString does not match ISSLConnection.GetStateString');
-        end
         else
         begin
+          {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
+          if LConnInfoAccess.GetStateString <> LConn.GetStateString then
+          {$POP}
+          begin
+            WriteLn('  [FAIL] Optional interface state string drifted from core getter');
+            AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
+              'ISSLConnectionInfo.GetStateString does not match ISSLConnection.GetStateString');
+          end
+          else
+          begin
           // INTENTIONAL_CORE_SURFACE: keep this direct core GetContext read as
           // the single mirror-equality proof while the public core declaration
           // is compiler-deprecated in favor of ISSLConnectionInfo.GetContext.
@@ -1875,10 +1879,11 @@ begin
             AddResult('ConnectionInfoInterfaceAligned', ABackend, False,
               'ISSLConnection.GetContext does not mirror ISSLConnectionInfo.GetContext');
           end
-          else
-          begin
-            WriteLn('  [PASS] Connection-info surface is self-consistent');
-            AddResult('ConnectionInfoInterfaceAligned', ABackend, True);
+            else
+            begin
+              WriteLn('  [PASS] Connection-info surface is self-consistent');
+              AddResult('ConnectionInfoInterfaceAligned', ABackend, True);
+            end;
           end;
         end;
       end;

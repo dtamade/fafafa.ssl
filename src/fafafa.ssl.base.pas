@@ -1266,8 +1266,11 @@ type
     {** 获取状态描述字符串
         @returns 人类可读的状态描述
         @preferred-access 新代码优先通过 ISSLConnectionInfo.GetStateString 获取
-        @compatibility-note v1.x compatibility-core mirror; Stage-A demotion target is ISSLConnectionInfo *}
+        @owner-note 默认 owner 为 ISSLConnectionInfo.GetStateString；此入口仅兼容保留
+        @compatibility-note v1.x compatibility-core mirror; not recommended as the primary entry for new code; Stage-A demotion target is ISSLConnectionInfo
+        @deprecated 推荐使用 ISSLConnectionInfo.GetStateString *}
     function GetStateString: string;
+      deprecated 'Use ISSLConnectionInfo.GetStateString';
 
     {** 设置操作超时
         @param ATimeout 超时毫秒数 *}

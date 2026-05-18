@@ -232,7 +232,7 @@ if Supports(FSSLConn, ISSLSessionResumption, LSession) then
 | GetNativeHandle | ISSLConnection | 保留 |
 | ReadString, WriteString | **移除** | 使用 Read/Write |
 | GetConnectionInfo | ISSLConnectionInfo | 默认 owner 已切到 ISSLConnectionInfo；core 侧仅兼容保留，源码声明已是编译期 deprecated |
-| GetStateString | ISSLConnectionInfo | Stage A 先 demote 出 core，后续再决定是否进一步收窄 |
+| GetStateString | ISSLConnectionInfo | 默认 owner 已切到 ISSLConnectionInfo；core 侧仅兼容保留，源码声明已是编译期 deprecated |
 | SetTimeout, GetTimeout | **移除** | 由外部框架控制 |
 | SetBlocking, GetBlocking | **移除** | 由外部框架控制 |
 | GetContext | ISSLConnectionInfo | 默认 owner 已切到 ISSLConnectionInfo；core 侧仅兼容保留，源码声明已是编译期 deprecated |
@@ -271,6 +271,8 @@ if Supports(FSSLConn, ISSLSessionResumption, LSession) then
    - `GetSelectedALPNProtocol` 是否进一步收窄到 `ISSLClientConnection`
    - `GetStateString` 是否并入 `GetState`
    - `GetContext` 是否最终彻底退出 public surface
+
+其中 `GetStateString` 在核心 `ISSLConnection` 上当前也只保留为 compatibility mirror，源码声明已经进入编译期 `deprecated`；后续仍可再评估是否并入 `GetState`。
 
 其中 `GetContext` 在核心 `ISSLConnection` 上当前也只保留为 compatibility mirror，源码声明已经进入编译期 `deprecated`。
 
