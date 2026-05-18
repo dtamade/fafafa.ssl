@@ -3802,6 +3802,54 @@
   - summary:
     - current batch has no whitespace or patch-format issues
 
+### WolfSSL GetConnectionInfo Legacy MacSize Truth
+
+- add `docs/plans/2026-05-18-wolfssl-connectioninfo-macsize-legacy-truth-feasibility.md`
+  - purpose:
+    - capture the next bounded `MacSize` batch after OpenSSL legacy truth landed
+    - keep scope on WolfSSL low-level HMAC truth instead of reopening shared parser guesses
+
+- implementation:
+  - `src/fafafa.ssl.wolfssl.api.pas`
+  - `src/fafafa.ssl.wolfssl.connection.pas`
+  - `tests/test_wolfssl_connection_info_macsize_contract.pas`
+  - `tests/scripts/test_wolfssl_connectioninfo_macsize_truth_contract.sh`
+  - change:
+    - active WolfSSL API export/binding chain now includes:
+      - `wolfSSL_GetHmacSize`
+    - WolfSSL `GetConnectionInfo` now fills `MacSize` from HMAC truth only when:
+      - shared path still leaves `MacSize = 0`
+    - AEAD `MacSize` remains owned by the shared suite-name derivation path
+
+- `bash tests/scripts/test_wolfssl_connectioninfo_macsize_truth_contract.sh`
+  - result: PASS
+  - summary:
+    - verified the new WolfSSL API export chain and the guarded HMAC-truth `MacSize` write path
+
+- `mkdir -p tmp/test_wolfssl_connection_info_macsize_contract && fpc -B -Fu./src -Fu./tests -FUtmp/test_wolfssl_connection_info_macsize_contract -FEtmp/test_wolfssl_connection_info_macsize_contract -otmp/test_wolfssl_connection_info_macsize_contract/test_wolfssl_connection_info_macsize_contract tests/test_wolfssl_connection_info_macsize_contract.pas && ./tmp/test_wolfssl_connection_info_macsize_contract/test_wolfssl_connection_info_macsize_contract`
+  - result: RED -> GREEN
+  - summary:
+    - first run exposed a focused contract harness precondition:
+      - optional WolfSSL backend tests must define `ENABLE_WOLFSSL`
+      - and must pull in `fafafa.ssl.wolfssl.lib` so factory registration is active
+    - after aligning the test harness, final result was:
+      - `3 passed, 0 failed`
+    - the suite now explicitly proves:
+      - helper unavailable safe degrade
+      - legacy non-AEAD HMAC truth -> `MacSize = 32`
+      - AEAD HMAC truth does not override shared `MacSize = 16`
+
+- `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+  - result: PASS
+  - summary:
+    - shared connection-info proof remained green at `26 passed, 0 failed`
+    - the WolfSSL legacy `MacSize` addition did not disturb the earlier shared AEAD semantics
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current WolfSSL legacy `MacSize` batch has no whitespace or patch-format issues
+
 ### GetConnectionInfo MacSize Semantics Matrix
 
 - add `docs/plans/2026-05-18-getconnectioninfo-macsize-semantics-matrix.md`

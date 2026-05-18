@@ -1039,6 +1039,24 @@
       - WinSSL / MbedTLS / WolfSSL 是否存在值得接入的更强 legacy `MacSize` truth
       - 无法只靠 shared or current low-level helpers 稳定归一的更细平台差异
       - 更强 owner / deprecation wording route
+41. `WolfSSL GetConnectionInfo legacy MacSize truth` 已完成并应作为当前 implementation-completeness 主线的进一步收口保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-wolfssl-connectioninfo-macsize-legacy-truth-feasibility.md`
+    - 当前已确认的 WolfSSL truth：
+      - `TWolfSSLConnection.GetConnectionInfo` 现在会先走 inherited shared path
+      - 仅当 shared path 仍未给出 `MacSize` 时，才回退：
+        - `wolfSSL_GetHmacSize(FWolfSSL)`
+      - shared AEAD `MacSize` 继续保持 owner truth，不会被 backend helper 覆盖
+      - `wolfssl.api` 的 active export/binding chain 现在已经补齐：
+        - `wolfSSL_GetHmacSize`
+    - 当前 focused proof 已覆盖：
+      - `bash tests/scripts/test_wolfssl_connectioninfo_macsize_truth_contract.sh`
+      - `tests/test_wolfssl_connection_info_macsize_contract.pas`
+      - `tests/test_connection_builder_hostname_precedence.pas`
+      - `git diff --check`
+    - 当前批收口后，`GetConnectionInfo` implementation-completeness 主线已进一步收缩到：
+      - MbedTLS 是否存在值得接入的更强 legacy `MacSize` truth
+      - 若收益不高，是否切回更强 owner / deprecation wording route
 
 ## Verification Discipline
 

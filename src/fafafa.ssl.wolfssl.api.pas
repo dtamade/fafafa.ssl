@@ -141,6 +141,7 @@ type
   // 连接信息 (新增)
   TwolfSSL_get_current_cipher = function(ssl: PWOLFSSL): Pointer; cdecl;
   TwolfSSL_CIPHER_get_name = function(cipher: Pointer): PAnsiChar; cdecl;
+  TwolfSSL_GetHmacSize = function(ssl: PWOLFSSL): Integer; cdecl;
   TwolfSSL_get_version = function(ssl: PWOLFSSL): PAnsiChar; cdecl;
   TwolfSSL_get_peer_certificate = function(ssl: PWOLFSSL): PWOLFSSL_X509; cdecl;
   TwolfSSL_get_peer_chain = function(ssl: PWOLFSSL): PWOLFSSL_X509_CHAIN; cdecl;
@@ -280,6 +281,7 @@ var
   // 连接信息 (新增)
   wolfSSL_get_current_cipher: TwolfSSL_get_current_cipher = nil;
   wolfSSL_CIPHER_get_name: TwolfSSL_CIPHER_get_name = nil;
+  wolfSSL_GetHmacSize: TwolfSSL_GetHmacSize = nil;
   wolfSSL_get_version: TwolfSSL_get_version = nil;
   wolfSSL_get_peer_certificate: TwolfSSL_get_peer_certificate = nil;
   wolfSSL_get_peer_chain: TwolfSSL_get_peer_chain = nil;
@@ -555,6 +557,8 @@ begin
     GetProc('wolfSSL_get_current_cipher'));
   wolfSSL_CIPHER_get_name := TwolfSSL_CIPHER_get_name(
     GetProc('wolfSSL_CIPHER_get_name'));
+  wolfSSL_GetHmacSize := TwolfSSL_GetHmacSize(
+    GetProc('wolfSSL_GetHmacSize'));
   wolfSSL_get_version := TwolfSSL_get_version(GetProc('wolfSSL_get_version'));
   wolfSSL_get_peer_certificate := TwolfSSL_get_peer_certificate(
     GetProc('wolfSSL_get_peer_certificate'));
@@ -714,6 +718,7 @@ begin
   // 连接信息
   wolfSSL_get_current_cipher := nil;
   wolfSSL_CIPHER_get_name := nil;
+  wolfSSL_GetHmacSize := nil;
   wolfSSL_get_version := nil;
   wolfSSL_get_peer_certificate := nil;
   wolfSSL_get_peer_chain := nil;

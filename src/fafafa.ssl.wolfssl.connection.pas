@@ -95,6 +95,8 @@ type
     constructor Create(AContext: ISSLContext; AStream: TStream); overload;
     destructor Destroy; override;
 
+    function GetConnectionInfo: TSSLConnectionInfo; override;
+
     { SNI/ALPN 设置 }
     procedure SetServerName(const AServerName: string);
     function GetServerName: string;
@@ -844,6 +846,21 @@ end;
 function TWolfSSLConnection.DoGetConnectionInfoServerName: string;
 begin
   Result := FServerName;
+end;
+
+function TWolfSSLConnection.GetConnectionInfo: TSSLConnectionInfo;
+begin
+  Result := inherited GetConnectionInfo;
+
+  if FWolfSSL = nil then
+    Exit;
+
+  if (Result.MacSize = 0) and Assigned(wolfSSL_GetHmacSize) then
+  begin
+    Result.MacSize := wolfSSL_GetHmacSize(FWolfSSL);
+    if Result.MacSize < 0 then
+      Result.MacSize := 0;
+  end;
 end;
 
 function TWolfSSLConnection.DoGetSelectedALPNProtocol: string;

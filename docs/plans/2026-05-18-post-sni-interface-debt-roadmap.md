@@ -434,6 +434,31 @@ Recommended first bounded batch:
     1. 先做剩余 backend 的 static `MacSize` low-level feasibility
     2. 把主线切回更强的 owner / deprecation wording route
 
+## Progress Since The WolfSSL GetConnectionInfo Legacy MacSize Truth Batch
+
+- 已交付：
+  - WolfSSL legacy/non-AEAD `MacSize` low-level truth
+  - `wolfssl.api` active export/binding chain now includes:
+    - `wolfSSL_GetHmacSize`
+  - focused WolfSSL contract now explicitly covers:
+    - helper unavailable safe degrade
+    - HMAC-truth non-AEAD `MacSize`
+    - shared AEAD owner primacy
+
+- 当前更准确的 next step：
+  - 不再把 WolfSSL 当成 “只有 shared AEAD `MacSize` truth” 的 backend
+  - 当前 `MacSize` 线上已经形成的稳定真相是：
+    - shared AEAD suite-name truth
+    - OpenSSL non-AEAD digest truth
+    - WolfSSL non-AEAD HMAC truth
+    - WinSSL guarded legacy fallback
+  - 剩余更窄的未统一边界是：
+    1. MbedTLS 是否也存在同等级、且值得接入的 low-level `MacSize` source
+    2. 如果 MbedTLS 收益不高，是否就此结束 `MacSize` 深挖并切回 owner / deprecation wording route
+  - 若继续推进，应优先做：
+    1. MbedTLS static `MacSize` feasibility
+    2. 再根据 binding 复杂度决定是实现还是收线
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

@@ -1888,3 +1888,30 @@
     - WinSSL fallback 是否还值得强化
     - MbedTLS / WolfSSL 是否有同等级 low-level source
   - 如果这几条静态盘点后收益不高，就应该把默认主线切回 owner / deprecation wording，而不是继续在 `MacSize` 这一个字段上无限细抠
+
+- WolfSSL 这条 legacy/non-AEAD `MacSize` 路径现在也已经从“头文件里有线索”落成了真实实现：
+  - active binding 现在已经把：
+    - `wolfSSL_GetHmacSize`
+    接进 `TWolfSSLConnection.GetConnectionInfo`
+  - 而且保持了与前两批一致的 owner discipline：
+    - shared 仍然是 AEAD `MacSize` 第一 owner
+    - WolfSSL 只在 shared path 仍未给值时，才回退到 backend-local HMAC truth
+
+- 这次 WolfSSL focused proof 也补出了一条值得记住的测试前置条件：
+  - optional backend 的 focused contract 不能只引 `wolfssl.api` / `wolfssl.connection`
+  - 如果测试要经过 `TSSLFactory.CreateContext(..., sslWolfSSL)`，还必须：
+    - define `ENABLE_WOLFSSL`
+    - `uses fafafa.ssl.wolfssl.lib`
+  - 否则工厂按设计会直接拒绝：
+    - `WolfSSL backend is not enabled (define ENABLE_WOLFSSL)`
+  - 这不是产品 bug，而是 optional backend registration truth，后续不该再重复误判
+
+- 当前修完后的更准确结论是：
+  - shared 仍然拥有 AEAD `MacSize` truth
+  - OpenSSL 现在拥有 legacy digest truth
+  - WolfSSL 现在拥有 legacy HMAC truth
+  - WinSSL 保留 guarded fallback
+
+- 因而当前 `GetConnectionInfo` implementation-completeness 主线剩余的 `MacSize` 面，又进一步缩小到了：
+  - MbedTLS 是否也有值得接入的 low-level source
+  - 如果 MbedTLS 实现成本高或真相不够稳，就该收住这条线并切回 owner / deprecation wording route
