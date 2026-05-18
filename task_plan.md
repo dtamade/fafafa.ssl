@@ -70,7 +70,7 @@
       - `session_configured=true`
     - 这说明当前 bridge 已经把“会不会 crash / 会不会误报”这个问题关掉了
     - 当前剩下的不再是 workflow 或 shared-path 安全性，而是“WinSSL backend 是否要继续实现真正的 native resumed handshake”
-- [in_progress] WinSSL native resumed-handshake 调查已切到 dedicated native probe evidence lane：
+- [completed] WinSSL native probe quarantine 已完成并得到新的 Windows artifact 证实：
   - 新增计划：`docs/plans/2026-05-18-winssl-native-probe-evidence-lane.md`
   - `tests/winssl/test_winssl_session_resumption.pas` 现在会把 public truth 与 native Schannel observation 分开输出
   - 第一轮已新增：
@@ -90,7 +90,23 @@
     - `FAFAFA_WINSSL_ENABLE_NATIVE_PROBE` 显式 opt-in
     - summary 追加 `native_probe_enabled=...`
     - focused contract / Win64 compile / `git diff --check` 重新转绿
-  - 当前只剩下一步：重新跑 GitHub Windows runner，确认 broader suite 默认 lane 恢复 green 且 artifact 如实记录 `disabled_by_default`
+  - GitHub Windows live rerun `26043523820` 已证实 quarantine 生效：
+    - `WinSSL Session Resumption Truth` lane 已恢复 PASS
+    - runtime artifact 真实写出：
+      - `native_probe ... reason=disabled_by_default`
+      - `summary ... native_probe_enabled=false native_observed_reuse=false native_probe_succeeded=false`
+  - 这条 lane 当前已完成：
+    - broader suite 默认 lane 不再被 risky native probe 打崩
+    - native probe 明确降格成 opt-in experimental evidence
+- [in_progress] Windows broader suite 的当前新 first hard blocker 已切到 integration-multi 外部 HTTP 状态断言：
+  - 新增计划：`docs/plans/2026-05-18-winssl-integration-multi-http-status-stability.md`
+  - GitHub Windows live run `26043523820` 已证明：
+    - `api.github.com` 的 TCP/TLS/send/receive/status-line 都 PASS
+    - 只有“响应状态码正常 (2xx/3xx)”断言失败
+  - 当前最小正确修法已在本地落地：
+    - 状态码改成 `可解析 + 非 5xx`
+    - focused contract / Win64 compile / `git diff --check` 已通过
+  - 下一步是 push 后重新取 Windows artifact，确认 broader suite 不再因为这条 flaky external-status 断言而失败
 - [in_progress] 当前 repo-level 下一步应回到更高价值的 completeness 路线：
   - 继续审查各 backend implementation completeness / optional surface completeness
   - 若继续深挖 WinSSL，则优先扩展真实 resumed handshake / session tickets / certstore / OCSP / enterprise 等高风险 lane，而不是再重复治理 runtime capture、shared probe crash 或已修掉的 semantic false positive

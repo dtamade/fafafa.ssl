@@ -5856,3 +5856,60 @@
   - result: PASS
   - summary:
     - current `WinSSL native probe quarantine` follow-up has no whitespace or patch-format issues
+
+- `gh workflow run wave-b-b2-manual.yml --ref master -f run_id=wave_b_b2_20260518_233322_winssl_native_probe_quarantine_f786757`
+  - result: PASS
+  - summary:
+    - dispatched the quarantine follow-up evidence run against commit `f786757`
+
+- `gh run view 26043523820 --job 76561451793 --log`
+  - result: PASS
+  - summary:
+    - `WinSSL Session Resumption Truth` now passes on the Windows runner
+    - runtime artifact now records `native_probe ... reason=disabled_by_default` and `native_probe_enabled=false`
+    - the new Windows first hard blocker moved to `WinSSL Integration Tests (Multi-Scenario)`
+
+- real Windows conclusion from run `26043523820`
+  - result: MIXED
+  - summary:
+    - fixed:
+      - native-probe quarantine worked as intended on Windows
+      - macOS gate also returned to PASS in this rerun
+    - new blocker:
+      - `api.github.com` response assertion in `integration_multi` still expected `2xx/3xx` only
+      - transport-level checks were green before that assertion failed
+
+- add `docs/plans/2026-05-18-winssl-integration-multi-http-status-stability.md`
+  - purpose:
+    - isolate the new broader-suite blocker as a separate flaky-external-status lane
+    - keep it distinct from the native-probe/session-resumption route
+
+- update `tests/winssl/test_winssl_integration_multi.pas`
+  - change:
+    - add `TryExtractHTTPStatusCode(...)`
+    - replace the old `2xx/3xx` string-match oracle with:
+      - `响应状态码可解析`
+      - `响应状态码不是 5xx`
+
+- add `tests/scripts/test_winssl_integration_multi_http_status_contract.sh`
+  - purpose:
+    - lock the relaxed non-5xx oracle and block regression back to `2xx/3xx`-only matching
+
+- `bash -n tests/scripts/test_winssl_integration_multi_http_status_contract.sh`
+  - result: PASS
+
+- `bash tests/scripts/test_winssl_integration_multi_http_status_contract.sh`
+  - result: PASS
+  - summary:
+    - the new focused contract guards the external-HTTP-status stability fix
+
+- `mkdir -p tmp/winssl_integration_multi_http_status_win64 && fpc -Twin64 -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/winssl_integration_multi_http_status_win64 -FEtmp/winssl_integration_multi_http_status_win64 -otmp/winssl_integration_multi_http_status_win64/test_winssl_integration_multi.exe tests/winssl/test_winssl_integration_multi.pas`
+  - result: PASS
+  - summary:
+    - the integration-multi HTTP-status stability follow-up cross-compiles cleanly for Win64
+    - compile finished with the pre-existing warning set only
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `WinSSL integration-multi HTTP status stability` batch has no whitespace or patch-format issues

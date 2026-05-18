@@ -2598,5 +2598,30 @@
   - 默认 lane 继续保留：
     - public signal markers
     - `native_probe ... reason=disabled_by_default`
-    - `summary ... native_probe_enabled=false`
+  - `summary ... native_probe_enabled=false`
   - 这让 broader suite 可以继续提供稳定 public truth，同时把 risky probe 明确降格成 opt-in experimental evidence
+
+- GitHub Windows live rerun `26043523820` 已把这条 quarantine 真正闭环：
+  - `WinSSL Session Resumption Truth` lane 已恢复 PASS
+  - runtime artifact 真实记录了：
+    - `native_probe label=initial_handshake available=false reason=disabled_by_default`
+    - `native_probe label=same_context_attempt_N available=false reason=disabled_by_default`
+    - `summary ... native_probe_enabled=false native_observed_reuse=false native_probe_succeeded=false`
+  - 这说明 broader suite 默认 lane 当前已经安全，且记录语义与实现对齐
+
+- 同一个 rerun 也把新的 first hard blocker 压得非常清楚：
+  - 失败已经不在 `session_resumption`
+  - 而在 `WinSSL Integration Tests (Multi-Scenario)` 对 `api.github.com` 的“必须 2xx/3xx”假设
+  - 但该 host 的：
+    - TCP connect
+    - TLS handshake
+    - request send
+    - response receive
+    - status-line parse
+    都是成功的
+  - 因而当前失败不是 WinSSL transport/handshake 失败，而是 test oracle 过强
+
+- 这让当前更准确的修法也很明确：
+  - 外部 HTTP 集成测试应该验证“状态行可解析且不是 5xx”
+  - 而不是把外部 API 的鉴权/限流/策略响应强行约束成 `2xx/3xx`
+  - 当前这条修法已在本地落地，并补了 focused contract 防止回归

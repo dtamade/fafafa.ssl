@@ -194,6 +194,42 @@ begin
   until False;
 end;
 
+function TryExtractHTTPStatusCode(const AResponse: string; out AStatusCode: Integer;
+  out AStatusLine: string): Boolean;
+var
+  LBreakPos: Integer;
+  LSpacePos: Integer;
+  LStatusText: string;
+begin
+  Result := False;
+  AStatusCode := 0;
+  AStatusLine := '';
+
+  if AResponse = '' then
+    Exit;
+
+  AStatusLine := AResponse;
+  LBreakPos := Pos(#13#10, AStatusLine);
+  if LBreakPos = 0 then
+    LBreakPos := Pos(#10, AStatusLine);
+  if LBreakPos > 0 then
+    SetLength(AStatusLine, LBreakPos - 1);
+
+  if Pos('HTTP/', AStatusLine) <> 1 then
+    Exit;
+
+  LSpacePos := Pos(' ', AStatusLine);
+  if LSpacePos <= 0 then
+    Exit;
+
+  LStatusText := Copy(AStatusLine, LSpacePos + 1, 3);
+  if Length(LStatusText) <> 3 then
+    Exit;
+
+  AStatusCode := StrToIntDef(LStatusText, 0);
+  Result := AStatusCode >= 100;
+end;
+
 procedure TestHTTPSServer(const aName, aHost: string; aPort: Word; const aPath: string = '/');
 var
   LLib: ISSLLibrary;
@@ -204,6 +240,8 @@ var
   LProtocol: TSSLProtocolVersion;
   LCipherName: string;
   LConnected: Boolean;
+  LStatusCode: Integer;
+  LStatusLine: string;
 begin
   BeginSection(aName);
 
@@ -276,12 +314,13 @@ begin
     Test('响应包含 HTTP 状态行', Pos('HTTP/', LResponse) > 0);
     Test('响应大小 > 0', Length(LResponse) > 0, Format('Size: %d bytes', [Length(LResponse)]));
 
-    // Check for successful status code (200 or 301/302 redirect)
-    Test('响应状态码正常 (2xx/3xx)',
-      (Pos('HTTP/1.1 200', LResponse) > 0) or
-      (Pos('HTTP/1.1 301', LResponse) > 0) or
-      (Pos('HTTP/1.1 302', LResponse) > 0) or
-      (Pos('HTTP/2 200', LResponse) > 0));
+    Test('响应状态码可解析',
+      TryExtractHTTPStatusCode(LResponse, LStatusCode, LStatusLine),
+      LStatusLine);
+    if LStatusCode > 0 then
+      Test('响应状态码不是 5xx',
+        LStatusCode < 500,
+        Format('Status: %d line=%s', [LStatusCode, LStatusLine]));
 
     // Graceful shutdown
     LConn.Shutdown;
