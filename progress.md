@@ -2380,3 +2380,68 @@
   - result: PASS
   - summary:
     - current logging-surface-truth batch has no whitespace or patch-format issues
+
+### Direct-Library Connection-Scope Clarification
+
+- add `docs/plans/2026-05-18-direct-library-connection-scope-clarification.md`
+  - purpose:
+    - define a bounded batch for aligning direct-library `SetDefaultConfig(...)` + `CreateContext(AType)` with the existing connection-scope truth of `HandshakeTimeout` / `BufferSize`
+
+- add:
+  - `tests/test_freepascal_library_default_config_connection_scope_clarification.pas`
+  - `tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+  - purpose:
+    - prove the remaining direct-library silent-ignore drift with one runtime-focused FreePascal test and one cross-backend source/docs contract
+
+- `bash -n tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+  - result: PASS
+  - summary:
+    - new direct-library connection-scope contract is syntactically valid before repo truth checks
+
+- `bash tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+  - RED result: FAIL
+  - summary:
+    - first failure proved `docs/reference/API_REFERENCE.md` still described `HandshakeTimeout` / `BufferSize` only in factory terms
+    - the same contract would also have failed because no shared direct-library connection-scope validator existed yet
+
+- `mkdir -p tmp/test_freepascal_library_default_config_connection_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_library_default_config_connection_scope_clarification -FEtmp/test_freepascal_library_default_config_connection_scope_clarification -otmp/test_freepascal_library_default_config_connection_scope_clarification/test_freepascal_library_default_config_connection_scope_clarification tests/test_freepascal_library_default_config_connection_scope_clarification.pas && ./tmp/test_freepascal_library_default_config_connection_scope_clarification/test_freepascal_library_default_config_connection_scope_clarification`
+  - RED result: FAIL
+  - summary:
+    - initial FreePascal direct-library runtime proof showed both custom `HandshakeTimeout` and custom `BufferSize` were silently accepted on `Lib.CreateContext(sslCtxClient)` instead of raising `ESSLConfigurationException`
+
+- update:
+  - `src/fafafa.ssl.context.config.pas`
+  - `src/fafafa.ssl.openssl.backed.pas`
+  - `src/fafafa.ssl.freepascal.lib.pas`
+  - `src/fafafa.ssl.winssl.lib.pas`
+  - `src/fafafa.ssl.mbedtls.lib.pas`
+  - `src/fafafa.ssl.wolfssl.lib.pas`
+  - `docs/reference/API_REFERENCE.md`
+  - `docs/reference/ARCHITECTURE.md`
+  - change:
+    - add shared `ValidateDirectLibraryConnectionScope(...)`
+    - wire all five backend `CreateContext(AType)` paths through that shared validator
+    - update reference wording so direct-library path is explicitly covered by the same connection-scope truth
+
+- `bash -n tests/scripts/test_direct_library_connection_scope_clarification_contract.sh && bash tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+  - RED -> GREEN result: PASS
+  - summary:
+    - first post-fix failure was only a false red from line-oriented grep against a multiline helper call
+    - after tightening the contract to match the real helper invocation semantics, source/docs truth stayed green across all backend library paths
+
+- `mkdir -p tmp/test_freepascal_library_default_config_connection_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_freepascal_library_default_config_connection_scope_clarification -FEtmp/test_freepascal_library_default_config_connection_scope_clarification -otmp/test_freepascal_library_default_config_connection_scope_clarification/test_freepascal_library_default_config_connection_scope_clarification tests/test_freepascal_library_default_config_connection_scope_clarification.pas && ./tmp/test_freepascal_library_default_config_connection_scope_clarification/test_freepascal_library_default_config_connection_scope_clarification`
+  - GREEN result: PASS
+  - summary:
+    - focused direct-library runtime suite finished `9 passed, 0 failed`
+    - custom `HandshakeTimeout` / `BufferSize` now fail-fast on `ISSLLibrary.CreateContext(AType)` and request-safe defaults still build
+
+- `mkdir -p tmp/test_factory_connection_scope_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_factory_connection_scope_clarification -FEtmp/test_factory_connection_scope_clarification -otmp/test_factory_connection_scope_clarification/test_factory_connection_scope_clarification tests/test_factory_connection_scope_clarification.pas && ./tmp/test_factory_connection_scope_clarification/test_factory_connection_scope_clarification`
+  - result: PASS
+  - summary:
+    - existing factory connection-scope suite finished `12 passed, 0 failed`
+    - the new shared direct-library validator did not disturb the already-frozen factory reject path
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current direct-library connection-scope clarification batch has no whitespace or patch-format issues

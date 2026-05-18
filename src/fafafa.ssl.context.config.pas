@@ -10,6 +10,8 @@ uses
 
 procedure ValidateContextReplayStoreConfigScope(const AConfig: TSSLConfig;
   AContextType: TSSLContextType; const ACallSite: string);
+procedure ValidateDirectLibraryConnectionScope(const AConfig: TSSLConfig;
+  const ACallSite: string);
 procedure ApplyEarlyDataContextConfig(const AContext: ISSLContext;
   const AConfig: TSSLConfig);
 procedure ApplyEarlyDataReplayStoreConfig(const AContext: ISSLContext;
@@ -72,6 +74,32 @@ begin
         'server_early_data_replay_store_directory',
         ACallSite
       ),
+      sslErrConfiguration,
+      ACallSite,
+      0,
+      AConfig.LibraryType
+    );
+end;
+
+procedure ValidateDirectLibraryConnectionScope(const AConfig: TSSLConfig;
+  const ACallSite: string);
+begin
+  if (AConfig.HandshakeTimeout <> 0) and
+    (AConfig.HandshakeTimeout <> SSL_DEFAULT_HANDSHAKE_TIMEOUT) then
+    raise ESSLConfigurationException.CreateWithContext(
+      'HandshakeTimeout is connection-scoped. Use TSSLConnector.WithTimeout, ' +
+      'TSSLAcceptor.WithTimeout, or ISSLConnection.SetTimeout instead of ' + ACallSite + '.',
+      sslErrConfiguration,
+      ACallSite,
+      0,
+      AConfig.LibraryType
+    );
+
+  if (AConfig.BufferSize <> 0) and
+    (AConfig.BufferSize <> SSL_DEFAULT_BUFFER_SIZE) then
+    raise ESSLConfigurationException.CreateWithContext(
+      'BufferSize is not a context-scoped direct-library option. Configure buffering in the surrounding ' +
+      'transport/IO layer instead of ' + ACallSite + '.',
       sslErrConfiguration,
       ACallSite,
       0,

@@ -629,6 +629,11 @@ begin
   LConfig := FDefaultConfig;
   LConfig.ContextType := AType;
 
+  ValidateDirectLibraryConnectionScope(
+    LConfig,
+    'TMbedTLSLibrary.CreateContext'
+  );
+
   if (AType = sslCtxServer) and (Trim(LConfig.ServerName) <> '') then
     raise ESSLConfigurationException.CreateWithContext(
       'ServerName is client-scoped. Server-side connections ignore context-level ServerName; ' +

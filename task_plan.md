@@ -444,6 +444,31 @@
     - 下一条相关路线不该再回到 logging guidance 漂移：
       - 若继续沿 `TSSLConfig` buckets 推进，应优先寻找新的 live bug 信号
       - 不要再把 `LogLevel` / `LogCallback` 的 active docs truth 当成未收口问题反复拉起
+15. `direct-library connection-scope clarification` 当前也已完成第一轮收口：
+    - 新 plan：
+      - `docs/plans/2026-05-18-direct-library-connection-scope-clarification.md`
+    - 新验证：
+      - `tests/scripts/test_direct_library_connection_scope_clarification_contract.sh`
+      - `tests/test_freepascal_library_default_config_connection_scope_clarification.pas`
+      - `tests/test_factory_connection_scope_clarification.pas`
+    - 当前已收口的真实 drift：
+      - `ISSLLibrary.SetDefaultConfig(...)` 之前可以保存自定义 `HandshakeTimeout` / `BufferSize`
+      - 五个 backend 的 `CreateContext(AType)` 又不会消费这两个 connection-scoped 字段
+      - 因而 direct-library path 曾经留下了“default-config 可写、CreateContext 静默忽略”的假可用入口
+    - 当前修法：
+      - 在 `src/fafafa.ssl.context.config.pas` 新增 shared `ValidateDirectLibraryConnectionScope(...)`
+      - `openssl` / `freepascal` / `winssl` / `mbedtls` / `wolfssl`
+        的 library `CreateContext(AType)` 统一接入这条 helper
+      - `docs/reference/API_REFERENCE.md`
+      - `docs/reference/ARCHITECTURE.md`
+        也同步改成 direct-library path reject 这两个字段
+    - 当前 focused proof 已覆盖：
+      - 新 contract 先 RED 后 GREEN，直接证明 docs/source 曾经没有把 direct-library connection-scope truth 说清楚
+      - 新 FreePascal direct-library runtime test 先 RED 后 GREEN，直接证明生产路径从 silent accept 变成 fail-fast reject
+      - 既有 factory connection-scope 回归继续绿色，说明 shared helper 没扰动原有 factory truth
+    - 下一条相关路线不该再回到 direct-library `HandshakeTimeout` / `BufferSize` 漂移：
+      - 后续应继续找新的 live interface/implementation gap
+      - 不要再把 direct-library connection-scope 静默忽略当成未收口问题反复拉起
 
 ## Verification Discipline
 

@@ -1148,3 +1148,51 @@
   - runtime/source truth 已稳
   - active docs truth 已稳
   - 后续不该再把 logging guidance 漂移当成未验证区域反复拉起
+
+- 沿着 `TSSLConfig` mixed-scope buckets 继续往下查后，这轮又确认了一个真正属于“实现没收干净”的 direct-library 缺口：
+  - `TSSLFactory.CreateContext(...)` 路径早已 reject 自定义 `HandshakeTimeout` / `BufferSize`
+  - 但 `ISSLLibrary.SetDefaultConfig(...)` + `CreateContext(AType)` 之前还会留下另一套行为：
+    - default-config 可写入自定义 `HandshakeTimeout` / `BufferSize`
+    - backend `CreateContext(AType)` 又完全不消费这两个字段
+  - 这不是单纯 wording 问题，而是一条真实的 silent-ignore drift
+
+- 这条 drift 的根因也很清楚：
+  - five backend library units 都会：
+    - `SetDefaultConfig(...)` 存下归一化后的 `TSSLConfig`
+    - `CreateContext(AType)` 手工把 context-safe 字段套到新 context
+  - 但在本批修复前，这条 handoff 缺少和 factory 对齐的 connection-scope validator
+  - 结果就是 direct-library path 比 factory 多留了一块“看起来能配、实际上不生效”的历史面
+
+- 当前修法刻意走 shared seam，而不是五份散改：
+  - `src/fafafa.ssl.context.config.pas`
+    新增 `ValidateDirectLibraryConnectionScope(...)`
+  - 统一在五个 backend 的 `CreateContext(AType)` 入口 fail-fast：
+    - `TOpenSSLLibrary.CreateContext`
+    - `TFreePascalSSLLibrary.CreateContext`
+    - `TWinSSLLibrary.CreateContext`
+    - `TMbedTLSLibrary.CreateContext`
+    - `TWolfSSLLibrary.CreateContext`
+  - 这样后续若继续做 `TSSLConfig` slimming，不需要再分别担心 backend library path 会不会偷偷回退
+
+- 这也让 public truth 更完整了一步：
+  - `docs/reference/API_REFERENCE.md`
+    现在明确：
+    - `HandshakeTimeout` / `BufferSize`
+      在 factory request path 和 direct-library context path 都 reject 自定义值
+  - `docs/reference/ARCHITECTURE.md`
+    也同步改成：
+    - 这两个字段不属于 context/factory/direct-library config 主路径
+
+- focused evidence 说明这批不是“为了统一而统一”：
+  - 新 shell contract 首次运行 RED，直接暴露 docs/source 还没把 direct-library connection-scope truth 固定下来
+  - 新 `tests/test_freepascal_library_default_config_connection_scope_clarification.pas`
+    首次运行 RED，直接暴露 FreePascal direct-library path 还在 silent accept
+  - 修复后两者 GREEN
+  - `tests/test_factory_connection_scope_clarification.pas`
+    继续 GREEN，说明 shared helper 没有把已冻结的 factory 行为拉歪
+
+- 因而 `HandshakeTimeout` / `BufferSize` 这两个字段现在已经把三条高层入口都收到了同一套 truth：
+  - one-shot factory request path：reject
+  - factory-held library default path：reject
+  - direct-library default-config path：reject
+  - 后续不该再把这条 direct-library silent-ignore drift 当成未验证区域重新拉起

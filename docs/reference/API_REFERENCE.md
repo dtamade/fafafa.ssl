@@ -55,7 +55,7 @@
 - connection-scoped
   - `HandshakeTimeout`
   - `BufferSize`
-  - factory request path 不接受它们的自定义值；请改走 `TSSLConnector.WithTimeout` / `TSSLAcceptor.WithTimeout` / `ISSLConnection.SetTimeout` 或外围 transport / IO 配置。
+  - factory request path 和 direct-library context path 都不接受它们的自定义值；请改走 `TSSLConnector.WithTimeout` / `TSSLAcceptor.WithTimeout` / `ISSLConnection.SetTimeout` 或外围 transport / IO 配置。
 - compatibility-only
   - `ServerName`
   - 当前 client context 创建路径是 warning + ignore，server context 创建路径会 reject；新代码应改走 per-connection SNI。
@@ -142,6 +142,7 @@
 - 同一条 direct-library path 现在也已对齐 deprecated `ServerName` compatibility 语义：
   - client default-config = warning + ignore
   - server default-config = reject
+- `HandshakeTimeout` / `BufferSize` 仍保持 connection-scoped；如果 default-config 给它们写了自定义值，`CreateContext(AType)` 会 fail-fast reject，并把调用方导向 connector/connection timeout 或外围 transport/IO 配置。
 - replay-store 仍保持 server-only 约束；若 backend 不实现 installer seam，则 direct-library server path 会 fail-fast。
 
 ---
