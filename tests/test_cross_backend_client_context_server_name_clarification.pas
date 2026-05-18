@@ -53,6 +53,13 @@ begin
     Fail(AName, ADetail);
 end;
 
+function LegacyContextServerName(ACtx: ISSLContext): string;
+begin
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
+  Result := ACtx.GetServerName;
+  {$POP}
+end;
+
 procedure TestClientContextServerNameNotInherited(ABackend: TSSLLibraryType);
 var
   LName: string;
@@ -81,8 +88,8 @@ begin
   {$POP}
 
   CheckTrue(LName + ' client context still retains deprecated ServerName state',
-    LCtx.GetServerName = 'client.example.com',
-    'expected context state "client.example.com", actual="' + LCtx.GetServerName + '"');
+    LegacyContextServerName(LCtx) = 'client.example.com',
+    'expected context state "client.example.com", actual="' + LegacyContextServerName(LCtx) + '"');
 
   LStream := TMemoryStream.Create;
   try

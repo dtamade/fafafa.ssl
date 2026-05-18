@@ -1554,3 +1554,29 @@
   - change:
     - sync the new truth that all active real direct-context `SetServerName(...)` hits are now explicitly classified
     - record that the next highest-value work is final API-shape decisions, not more direct-context surface census
+
+- update selected intentional compatibility tests
+  - change:
+    - add local deprecated getter/setter warning suppression to:
+      - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+      - `tests/test_sslctxboth_client_capability_clarification.pas`
+      - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+    - keep runtime semantics unchanged; the batch is warning-noise cleanup only
+
+- `mkdir -p tmp/test_cross_backend_client_context_server_name_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_cross_backend_client_context_server_name_clarification -FEtmp/test_cross_backend_client_context_server_name_clarification -otmp/test_cross_backend_client_context_server_name_clarification/test_cross_backend_client_context_server_name_clarification tests/test_cross_backend_client_context_server_name_clarification.pas && ./tmp/test_cross_backend_client_context_server_name_clarification/test_cross_backend_client_context_server_name_clarification`
+  - result: PASS
+  - summary:
+    - focused cross-backend clarification stayed green after local warning quarantine (`20 passed, 0 failed, 1 skipped`)
+    - compile output no longer emits the direct-context `GetServerName` deprecated warnings from this test
+
+- `mkdir -p tmp/test_sslctxboth_client_capability_clarification && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_sslctxboth_client_capability_clarification -FEtmp/test_sslctxboth_client_capability_clarification -otmp/test_sslctxboth_client_capability_clarification/test_sslctxboth_client_capability_clarification tests/test_sslctxboth_client_capability_clarification.pas && ./tmp/test_sslctxboth_client_capability_clarification/test_sslctxboth_client_capability_clarification`
+  - result: PASS
+  - summary:
+    - focused `sslCtxBoth` clarification stayed green after local warning quarantine (`28 passed, 0 failed, 1 skipped`)
+    - compile output no longer emits the direct-context `SetServerName` deprecated warnings from this test
+
+- `mkdir -p tmp/test_context_builder_server_servername_runtime_consistency && fpc -B -Fu./src -Fu./tests -Fu./tests/framework -FUtmp/test_context_builder_server_servername_runtime_consistency -FEtmp/test_context_builder_server_servername_runtime_consistency -otmp/test_context_builder_server_servername_runtime_consistency/test_context_builder_server_servername_runtime_consistency tests/test_context_builder_server_servername_runtime_consistency.pas && ./tmp/test_context_builder_server_servername_runtime_consistency/test_context_builder_server_servername_runtime_consistency`
+  - result: PASS
+  - summary:
+    - focused builder/direct-context consistency contract stayed green after local warning quarantine (`6 passed, 0 failed`)
+    - compile output no longer emits the direct-context `GetServerName` deprecated warnings from this test

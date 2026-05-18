@@ -86,7 +86,7 @@ begin
   // BEHAVIOR_MIGRATION_RED: sslCtxBoth already requires an explicit handshake
   // role, so its deprecated context-level ServerName should no longer auto-flow
   // into new client-capable connections.
-  {$PUSH}{$WARN 6058 off}
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   LCtx.SetServerName('both.example.com');
   {$POP}
 
@@ -121,7 +121,7 @@ begin
 
   // BEHAVIOR_MIGRATION_RED: socket-based sslCtxBoth connections should follow
   // the same no-implicit-fallback rule as stream-based ones.
-  {$PUSH}{$WARN 6058 off}
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   LCtx.SetServerName('both.example.com');
   {$POP}
 

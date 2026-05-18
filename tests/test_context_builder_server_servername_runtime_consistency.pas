@@ -52,6 +52,13 @@ begin
   end;
 end;
 
+function LegacyContextServerName(ACtx: ISSLContext): string;
+begin
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
+  Result := ACtx.GetServerName;
+  {$POP}
+end;
+
 procedure Test_BuilderClientWithSNI_IsIgnoredForClientContexts;
 var
   Ctx: ISSLContext;
@@ -63,7 +70,7 @@ begin
     .WithSNI('builder-client.example.com')
     .BuildClient;
 
-  Assert(Ctx.GetServerName = '',
+  Assert(LegacyContextServerName(Ctx) = '',
     'BuildClient no longer preserves explicit WithSNI ServerName on the built context');
   Assert(ConnectionServerName(Ctx) = '',
     'FreePascal client connection still keeps empty ServerName after BuildClient ignores WithSNI');
@@ -89,7 +96,7 @@ begin
     .WithSNI('builder-server.example.com')
     .BuildServer;
 
-  Assert(Ctx.GetServerName = '',
+  Assert(LegacyContextServerName(Ctx) = '',
     'BuildServer no longer preserves explicit WithSNI ServerName on the built context');
   Assert(ConnectionServerName(Ctx) = '',
     'Server connection still ignores the builder-configured client-only ServerName');
@@ -105,9 +112,11 @@ begin
   // INTENTIONAL_COMPAT: legacy context-level SNI coverage. Keep the
   // deprecated context-level setter observable while proving server-side
   // CreateConnection no longer inherits it.
+  {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
   Ctx.SetServerName('direct-server.example.com');
+  {$POP}
 
-  Assert(Ctx.GetServerName = 'direct-server.example.com',
+  Assert(LegacyContextServerName(Ctx) = 'direct-server.example.com',
     'Direct server context still retains the configured legacy ServerName');
   Assert(ConnectionServerName(Ctx) = '',
     'Server connection ignores direct-context legacy ServerName');

@@ -199,6 +199,12 @@
   - `tests/test_sslctxboth_client_capability_clarification.pas`
   - `tests/test_connection_builder_hostname_precedence.pas`
     现在都显式带 `INTENTIONAL_COMPAT`
+- [completed] intentional direct-context compatibility tests 的 local warning quarantine 已补齐：
+  - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+  - `tests/test_sslctxboth_client_capability_clarification.pas`
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+    现在对刻意保留的 deprecated context getter/setter 做局部 warning suppression
+  - focused compile outputs 已不再额外夹带这些 direct-context deprecation 噪音
 
 ## Scope
 

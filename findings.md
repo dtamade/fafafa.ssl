@@ -570,6 +570,21 @@
   - direct-context compatibility/API-surface：
     - `tests/scripts/test_active_direct_context_servername_surface_classification_contract.sh`
 
+- 再往前一步后，还确认了一条很实用的工作流细节：
+  - 即便 active direct-context hits 已被分类，如果 intentional compatibility tests 不做局部 warning quarantine
+  - focused compile 时仍会冒出我们明知故意保留的 deprecated getter/setter warning
+  - 这会让后续验证输出继续混着“已知旧 API 噪音”和“真正新的实现 warning”
+
+- 当前已经把这批 intentional compatibility tests 的 direct-context getter/setter 都包进局部 suppression：
+  - `tests/test_cross_backend_client_context_server_name_clarification.pas`
+  - `tests/test_sslctxboth_client_capability_clarification.pas`
+  - `tests/test_context_builder_server_servername_runtime_consistency.pas`
+  - 结果是 focused compile 里不再反复提示这几处已知 intentional deprecated surface
+
+- 这也让后续审查信号更干净：
+  - 剩下的 compile warnings 更接近真正值得继续治理的实现/类型问题
+  - 而不是被我们有意保留的 compatibility API 使用反复刷屏
+
 - 这进一步确认了路线已经真正前移：
   - 现在不再需要继续做测试面排污或分类普查
   - 下一步的最高价值工作已经纯粹是最终 API 形状决策，而不是再找“还有没有哪个文件偷偷示范旧入口”
