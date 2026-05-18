@@ -311,6 +311,9 @@ type
 
 implementation
 
+uses
+  fafafa.ssl.tls13.wire;
+
 function ContextTypeSupportsClientConnectionRole(
   AContextType: TSSLContextType): Boolean; inline;
 begin
@@ -653,6 +656,13 @@ begin
     AInfo.Hash := sslHashMD5
   else if Pos('SHA', LName) > 0 then
     AInfo.Hash := sslHashSHA1;
+
+  if SameText(ACipherSuite, TLS13CipherSuiteToString(TLS13_CIPHER_AES_128_GCM_SHA256)) then
+    AInfo.CipherSuiteId := TLS13_CIPHER_AES_128_GCM_SHA256
+  else if SameText(ACipherSuite, TLS13CipherSuiteToString(TLS13_CIPHER_AES_256_GCM_SHA384)) then
+    AInfo.CipherSuiteId := TLS13_CIPHER_AES_256_GCM_SHA384
+  else if SameText(ACipherSuite, TLS13CipherSuiteToString(TLS13_CIPHER_CHACHA20_POLY1305_SHA256)) then
+    AInfo.CipherSuiteId := TLS13_CIPHER_CHACHA20_POLY1305_SHA256;
 end;
 
 { 连接信息 }

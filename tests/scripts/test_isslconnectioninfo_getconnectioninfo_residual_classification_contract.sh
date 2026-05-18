@@ -52,8 +52,8 @@ if grep -F -q -- "Conn.GetConnectionInfo" "tests/integration/test_cross_backend_
 fi
 
 direct_core_hits=$(rg -n '\b(?:Conn|LConn|LConnection)\.GetConnectionInfo\b' tests --glob '!tests/scripts/**' | wc -l | tr -d ' ')
-if [ "$direct_core_hits" -ne 9 ]; then
-  echo "[FAIL] expected exactly 9 direct core GetConnectionInfo test hits, found $direct_core_hits"
+if [ "$direct_core_hits" -ne 10 ]; then
+  echo "[FAIL] expected exactly 10 direct core GetConnectionInfo test hits, found $direct_core_hits"
   rg -n '\b(?:Conn|LConn|LConnection)\.GetConnectionInfo\b' tests --glob '!tests/scripts/**' || true
   exit 1
 fi

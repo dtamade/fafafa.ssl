@@ -3730,3 +3730,74 @@
   - summary:
     - the intentional direct-core `GetConnectionInfo` surface stayed unchanged at the current allowlist
     - this batch did not require any new residual file or hit-count changes
+
+### GetConnectionInfo CipherSuiteId First Slice
+
+- add `docs/plans/2026-05-18-getconnectioninfo-ciphersuiteid-first-slice.md`
+  - purpose:
+    - define the next bounded `GetConnectionInfo` completeness batch after the shared name-derived crypto-detail slice
+    - keep scope on `CipherSuiteId` instead of reopening `MacSize` or broader backend runtime refactors
+
+- update:
+  - `src/fafafa.ssl.connection.base.pas`
+  - `src/fafafa.ssl.openssl.api.ssl.pas`
+  - `src/fafafa.ssl.openssl.connection.pas`
+  - `tests/test_connection_builder_hostname_precedence.pas`
+  - `tests/test_openssl_connection_info_cipher_contract.pas`
+  - `tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - `docs/reference/API_REFERENCE.md`
+  - change:
+    - keep the shared TLS 1.3 standard-name derivation for `CipherSuiteId`
+    - export and load `SSL_CIPHER_get_protocol_id` from the active OpenSSL SSL API unit
+    - let `TOpenSSLConnection.GetConnectionInfo` prefer `SSL_CIPHER_get_protocol_id` and fall back to `SSL_CIPHER_get_id and $FFFF`
+    - extend the focused OpenSSL contract with explicit `CipherSuiteId` truth checks
+    - sync the residual allowlist count after adding one more intentional direct-core `GetConnectionInfo` proof site
+
+- error encountered:
+  - the carry-over uncommitted implementation initially did not compile because `SSL_CIPHER_get_protocol_id` was not exported from the active `fafafa.ssl.openssl.api.ssl` loader path
+  - resolution:
+    - add the missing type / var / nil-reset / loader assignment in `src/fafafa.ssl.openssl.api.ssl.pas`
+
+- `mkdir -p tmp/test_connection_builder_hostname_precedence && fpc -B -Fu./src -Fu./tests -FUtmp/test_connection_builder_hostname_precedence -FEtmp/test_connection_builder_hostname_precedence -otmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence tests/test_connection_builder_hostname_precedence.pas && ./tmp/test_connection_builder_hostname_precedence/test_connection_builder_hostname_precedence`
+  - result: PASS
+  - summary:
+    - focused builder/hostname suite finished `21 passed, 0 failed`
+    - the existing intentional direct-core `GetConnectionInfo` proof still covered `ServerName`, `SessionId`, `PeerCertificate`, and legacy `KeyExchange`
+    - the same read now also proved shared TLS 1.3 `CipherSuiteId` truth on `TLS_AES_128_GCM_SHA256`
+
+- `mkdir -p tmp/test_openssl_connection_info_cipher_contract && fpc -B -Fu./src -Fu./tests -FUtmp/test_openssl_connection_info_cipher_contract -FEtmp/test_openssl_connection_info_cipher_contract -otmp/test_openssl_connection_info_cipher_contract/test_openssl_connection_info_cipher_contract tests/test_openssl_connection_info_cipher_contract.pas && ./tmp/test_openssl_connection_info_cipher_contract/test_openssl_connection_info_cipher_contract`
+  - first result:
+    - compile became green after the loader/export fix
+    - runtime contract exposed one new failure:
+      - `GetConnectionInfo when SSL_CIPHER_get_name is unavailable should not raise`
+      - `EAccessViolation: Access violation`
+  - diagnosis:
+    - the old guard uses a fake non-nil cipher pointer to model “current cipher exists but helpers are unavailable”
+    - once `CipherSuiteId` low-level helpers were added, leaving real `SSL_CIPHER_get_protocol_id` assigned made the test exercise an invalid-pointer artifact instead of a real product path
+  - follow-up fix:
+    - extend the degrade branch to nil both `SSL_CIPHER_get_protocol_id` and `SSL_CIPHER_get_id`
+    - add a separate truth contract that proves:
+      - `SSL_CIPHER_get_protocol_id` is preferred
+      - `SSL_CIPHER_get_id` low word is the fallback
+  - final result: PASS
+  - summary:
+    - focused OpenSSL connection-info suite finished `14 passed, 0 failed`
+    - fresh-connection `GetConnectionInfo` still degrades safely when cipher helpers are unavailable
+    - low-level `CipherSuiteId` backfill now has explicit contract coverage
+
+- `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+  - first result:
+    - FAIL: expected exactly `9` direct core `GetConnectionInfo` test hits, found `10`
+  - resolution:
+    - update the expected count to `10`
+    - rationale:
+      - the new OpenSSL focused `CipherSuiteId` truth proof intentionally adds one direct-core `GetConnectionInfo` site in an already-allowlisted test file
+  - final result: PASS
+  - summary:
+    - the intentional direct-core `GetConnectionInfo` surface remains controlled
+    - this batch did require a small allowlist count sync, but no new residual file family
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current batch has no whitespace or patch-format issues

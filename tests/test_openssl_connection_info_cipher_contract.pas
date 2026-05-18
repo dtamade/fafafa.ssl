@@ -57,6 +57,16 @@ begin
   Result := 0;
 end;
 
+function StubSSLCipherGetProtocolId(const cipher: PSSL_CIPHER): UInt16; cdecl;
+begin
+  Result := $1301;
+end;
+
+function StubSSLCipherGetId(const cipher: PSSL_CIPHER): UInt32; cdecl;
+begin
+  Result := $03001301;
+end;
+
 procedure WarmupStreamConnectionConstructor(AContext: ISSLContext);
 var
   LStream: TMemoryStream;
@@ -142,6 +152,48 @@ begin
   end;
 end;
 
+procedure AssertConnectionInfoCipherSuiteId(
+  const AName: string;
+  AContext: ISSLContext;
+  const AExpectedCipherSuiteId: Word
+);
+var
+  LStream: TMemoryStream;
+  LConn: TOpenSSLConnection;
+  LRaised: Boolean;
+  LInfo: TSSLConnectionInfo;
+  LDetail: string;
+begin
+  LStream := TMemoryStream.Create;
+  LConn := nil;
+  try
+    LConn := TOpenSSLConnection.Create(AContext, LStream);
+
+    LRaised := False;
+    FillChar(LInfo, SizeOf(LInfo), 0);
+    LDetail := '';
+    try
+      LInfo := LConn.GetConnectionInfo;
+    except
+      on E: Exception do
+      begin
+        LRaised := True;
+        LDetail := E.ClassName + ': ' + E.Message;
+      end;
+    end;
+
+    AssertTrue(AName + ' should not raise', not LRaised, LDetail);
+    AssertTrue(AName + ' should set CipherSuiteId',
+      LInfo.CipherSuiteId = AExpectedCipherSuiteId,
+      Format('expected CipherSuiteId %.4x but got %.4x',
+        [AExpectedCipherSuiteId, LInfo.CipherSuiteId]));
+  finally
+    if Assigned(LConn) then
+      LConn.Free;
+    LStream.Free;
+  end;
+end;
+
 procedure TestGetConnectionInfoShouldDegradeSafelyWhenCipherHelpersAreUnavailable;
 var
   LContext: ISSLContext;
@@ -149,6 +201,8 @@ var
   LOriginalSSLGetCurrentCipher: TSSL_get_current_cipher;
   LOriginalSSLCipherGetName: TSSL_CIPHER_get_name;
   LOriginalSSLCipherGetBits: TSSL_CIPHER_get_bits;
+  LOriginalSSLCipherGetProtocolId: TSSL_CIPHER_get_protocol_id;
+  LOriginalSSLCipherGetId: TSSL_CIPHER_get_id;
 begin
   WriteLn;
   WriteLn('=== OpenSSL connection info cipher guard ===');
@@ -173,10 +227,14 @@ begin
   LOriginalSSLGetCurrentCipher := SSL_get_current_cipher;
   LOriginalSSLCipherGetName := SSL_CIPHER_get_name;
   LOriginalSSLCipherGetBits := SSL_CIPHER_get_bits;
+  LOriginalSSLCipherGetProtocolId := SSL_CIPHER_get_protocol_id;
+  LOriginalSSLCipherGetId := SSL_CIPHER_get_id;
   try
     SSL_get_current_cipher := nil;
     SSL_CIPHER_get_name := LOriginalSSLCipherGetName;
     SSL_CIPHER_get_bits := LOriginalSSLCipherGetBits;
+    SSL_CIPHER_get_protocol_id := LOriginalSSLCipherGetProtocolId;
+    SSL_CIPHER_get_id := LOriginalSSLCipherGetId;
     AssertConnectionInfoSafeDegrade(
       'GetConnectionInfo when SSL_get_current_cipher is unavailable',
       LContext,
@@ -186,6 +244,8 @@ begin
     SSL_get_current_cipher := @StubSSLGetCurrentCipherNonNil;
     SSL_CIPHER_get_name := nil;
     SSL_CIPHER_get_bits := @StubSSLCipherGetBits;
+    SSL_CIPHER_get_protocol_id := nil;
+    SSL_CIPHER_get_id := nil;
     AssertConnectionInfoSafeDegrade(
       'GetConnectionInfo when SSL_CIPHER_get_name is unavailable',
       LContext,
@@ -195,6 +255,70 @@ begin
     SSL_get_current_cipher := LOriginalSSLGetCurrentCipher;
     SSL_CIPHER_get_name := LOriginalSSLCipherGetName;
     SSL_CIPHER_get_bits := LOriginalSSLCipherGetBits;
+    SSL_CIPHER_get_protocol_id := LOriginalSSLCipherGetProtocolId;
+    SSL_CIPHER_get_id := LOriginalSSLCipherGetId;
+  end;
+end;
+
+procedure TestGetConnectionInfoShouldPreferProtocolIdThenFallbackToCipherId;
+var
+  LContext: ISSLContext;
+  LOriginalSSLGetCurrentCipher: TSSL_get_current_cipher;
+  LOriginalSSLCipherGetName: TSSL_CIPHER_get_name;
+  LOriginalSSLCipherGetBits: TSSL_CIPHER_get_bits;
+  LOriginalSSLCipherGetProtocolId: TSSL_CIPHER_get_protocol_id;
+  LOriginalSSLCipherGetId: TSSL_CIPHER_get_id;
+begin
+  WriteLn;
+  WriteLn('=== OpenSSL connection info cipher-suite id truth ===');
+
+  if (not Assigned(SSL_new)) or
+     (not Assigned(SSL_set_bio)) or
+     (not Assigned(BIO_new)) or
+     (not Assigned(BIO_s_mem)) then
+  begin
+    MarkSkip('openssl connection info cipher-suite id contract',
+      'required baseline OpenSSL SSL/BIO helpers are unavailable');
+    Exit;
+  end;
+
+  LContext := GLib.CreateContext(sslCtxClient);
+  if LContext = nil then
+    raise Exception.Create('failed to create OpenSSL client context');
+
+  WarmupStreamConnectionConstructor(LContext);
+
+  LOriginalSSLGetCurrentCipher := SSL_get_current_cipher;
+  LOriginalSSLCipherGetName := SSL_CIPHER_get_name;
+  LOriginalSSLCipherGetBits := SSL_CIPHER_get_bits;
+  LOriginalSSLCipherGetProtocolId := SSL_CIPHER_get_protocol_id;
+  LOriginalSSLCipherGetId := SSL_CIPHER_get_id;
+  try
+    SSL_get_current_cipher := @StubSSLGetCurrentCipherNonNil;
+    SSL_CIPHER_get_name := nil;
+    SSL_CIPHER_get_bits := @StubSSLCipherGetBits;
+
+    SSL_CIPHER_get_protocol_id := @StubSSLCipherGetProtocolId;
+    SSL_CIPHER_get_id := nil;
+    AssertConnectionInfoCipherSuiteId(
+      'GetConnectionInfo should prefer SSL_CIPHER_get_protocol_id when available',
+      LContext,
+      $1301
+    );
+
+    SSL_CIPHER_get_protocol_id := nil;
+    SSL_CIPHER_get_id := @StubSSLCipherGetId;
+    AssertConnectionInfoCipherSuiteId(
+      'GetConnectionInfo should fall back to SSL_CIPHER_get_id low word',
+      LContext,
+      $1301
+    );
+  finally
+    SSL_get_current_cipher := LOriginalSSLGetCurrentCipher;
+    SSL_CIPHER_get_name := LOriginalSSLCipherGetName;
+    SSL_CIPHER_get_bits := LOriginalSSLCipherGetBits;
+    SSL_CIPHER_get_protocol_id := LOriginalSSLCipherGetProtocolId;
+    SSL_CIPHER_get_id := LOriginalSSLCipherGetId;
   end;
 end;
 
@@ -219,6 +343,9 @@ begin
 
     if SkippedTests = 0 then
       TestGetConnectionInfoShouldDegradeSafelyWhenCipherHelpersAreUnavailable;
+
+    if SkippedTests = 0 then
+      TestGetConnectionInfoShouldPreferProtocolIdThenFallbackToCipherId;
 
     WriteLn;
     WriteLn('========================================');

@@ -1790,3 +1790,25 @@
     - `CipherSuiteId`
     - `MacSize`
     - 以及无法只靠名字稳定推导的更细平台差异
+
+- `CipherSuiteId` 之所以适合作为下一刀，是因为它已经具备了比 `MacSize` 更强的双重 truth：
+  - shared layer 能对标准 TLS 1.3 suite name 稳定推导 `CipherSuiteId`
+  - OpenSSL 也能通过 low-level helper 给出直接值
+  - 这使它适合先形成一个 shared + backend 双闭环，而不是继续停留在“待盘点”状态
+
+- 这批还确认了一个具体的 OpenSSL API 结构性小坑：
+  - `TSSL_CIPHER_get_protocol_id` 之前只在 `fafafa.ssl.openssl.api.core` 中出现了类型声明
+  - 但 `TOpenSSLConnection` 实际使用的 active loader / var export 路径在 `fafafa.ssl.openssl.api.ssl`
+  - 结果就是 connection 层一旦直接引用 `SSL_CIPHER_get_protocol_id`，会先遇到编译时符号缺口
+  - 因而真正需要补的是 `api.ssl` 的导出与加载链，而不是只在 connection unit 侧增加 `uses`
+
+- OpenSSL focused guard 也暴露出一个值得记录的 contract 细节：
+  - 旧测试用 `StubSSLGetCurrentCipherNonNil` 返回假指针 `Pointer(1)` 来模拟 “有 current cipher，但 helper 缺失”
+  - 在引入 `CipherSuiteId` low-level helper 之后，如果仍保留真实 `SSL_CIPHER_get_protocol_id` / `SSL_CIPHER_get_id`，测试会因为对假指针做 low-level 解引用而触发 AV
+  - 这不是产品路径新崩溃，而是 contract 需要同步扩展：
+    - 当测试场景声明 cipher helper unavailable 时，也必须一并置空 `protocol_id` / `get_id`
+  - 单独的 truth contract 再去证明 low-level helper 可用时的 `CipherSuiteId` 回填行为
+
+- 因而当前 `GetConnectionInfo` implementation-completeness 主线再往下推进时，最合理的剩余焦点已经变成：
+  - `MacSize`
+  - 以及无法只靠名字或统一 low-level helper 稳定归一的更细平台差异

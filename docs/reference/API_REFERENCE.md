@@ -1104,9 +1104,10 @@ end;
 - `ServerName` 在连接对象已持有该 metadata 时由共享连接层补齐
 - `SessionId` 在连接/握手已经建立且后端可返回当前 session 时由共享连接层补齐
 - `PeerCertificate` 在连接对象可暴露当前对端证书时由共享连接层补齐
+- `CipherSuiteId` 对标准 TLS 1.3 suite name 会先由共享层做 best-effort 推导；OpenSSL / WinSSL 这类后端也可能直接提供 low-level truth
 - `Cipher` / `Hash` / `KeySize` 这组字段会先由共享连接层基于 negotiated cipher-suite name 做 best-effort 推导
 - `KeyExchange` 在 cipher-suite name 显式携带旧式密钥交换前缀时，也会由共享层做 best-effort 推导
-- `CipherSuiteId` / `MacSize` 等更细的平台/库专属字段仍按后端能力 best-effort 填充，未连接或后端未提供时返回默认值
+- `MacSize` 等更细的平台/库专属字段仍按后端能力 best-effort 填充，未连接或后端未提供时返回默认值
 
 ---
 

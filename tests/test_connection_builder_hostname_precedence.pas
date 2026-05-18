@@ -113,6 +113,7 @@ type
     function DoGetNativeHandle: Pointer; override;
   public
     constructor Create(AContext: ISSLContext); override;
+    procedure SetNegotiatedCipherName(const ACipherName: string);
 
     { ISSLClientConnection }
     procedure SetServerName(const AServerName: string);
@@ -123,8 +124,10 @@ type
   private
     FContextType: TSSLContextType;
     FServerName: string;
+    FNextCipherName: string;
   public
     constructor Create(AContextType: TSSLContextType);
+    procedure SetNextCipherName(const ACipherName: string);
 
     function GetContextType: TSSLContextType;
 
@@ -530,6 +533,11 @@ begin
   FServerName := AServerName;
 end;
 
+procedure TMockClientConnection.SetNegotiatedCipherName(const ACipherName: string);
+begin
+  FCipherName := ACipherName;
+end;
+
 function TMockClientConnection.GetServerName: string;
 begin
   Result := FServerName;
@@ -665,11 +673,17 @@ begin
   inherited Create;
   FContextType := AContextType;
   FServerName := '';
+  FNextCipherName := 'ECDHE-RSA-AES128-GCM-SHA256';
 end;
 
 function TMockContext.GetContextType: TSSLContextType;
 begin
   Result := FContextType;
+end;
+
+procedure TMockContext.SetNextCipherName(const ACipherName: string);
+begin
+  FNextCipherName := ACipherName;
 end;
 
 procedure TMockContext.SetProtocolVersions(AVersions: TSSLProtocolVersions);
@@ -900,6 +914,7 @@ var
 begin
   Conn := TMockClientConnection.Create(Self);
   Conn.SetServerName(FServerName); // simulate context default inheritance
+  Conn.SetNegotiatedCipherName(FNextCipherName);
   Result := Conn;
 end;
 
@@ -915,6 +930,7 @@ end;
 
 procedure RunCases;
 var
+  MockCtx: TMockContext;
   Ctx: ISSLContext;
   Builder: ISSLConnectionBuilder;
   Conn: ISSLConnection;
@@ -922,7 +938,8 @@ var
   ClientConn: ISSLClientConnection;
   Info: TSSLConnectionInfo;
 begin
-  Ctx := TMockContext.Create(sslCtxClient);
+  MockCtx := TMockContext.Create(sslCtxClient);
+  Ctx := MockCtx;
   // INTENTIONAL_COMPAT: keep legacy direct-context input here so the builder
   // precedence contract can prove the client connection no longer inherits it.
   {$PUSH}{$WARN 6058 off}{$WARN SYMBOL_DEPRECATED OFF}
@@ -958,7 +975,8 @@ begin
   Check(Supports(Conn, ISSLClientConnection, ClientConn), 'Connection supports ISSLClientConnection');
   CheckEqualsStr('ServerName cleared', '', ClientConn.GetServerName);
 
-  WriteLn('=== Case 4: GetConnectionInfo preserves client server name ===');
+  WriteLn('=== Case 4: GetConnectionInfo derives shared cipher-suite id and crypto detail ===');
+  MockCtx.SetNextCipherName('TLS_AES_128_GCM_SHA256');
   Builder := TSSLConnectionBuilder.Create
     .WithContext(Ctx)
     .WithSocket(THandle(1))
@@ -968,8 +986,8 @@ begin
   Info := Conn.GetConnectionInfo;
   CheckEqualsStr('ConnectionInfo.ServerName mirrors ISSLClientConnection.GetServerName',
     'info.example.com', Info.ServerName);
-  Check(Info.KeyExchange = sslKexECDHE_RSA,
-    'ConnectionInfo.KeyExchange is derived from the negotiated cipher-suite name');
+  Check(Info.CipherSuiteId = $1301,
+    'ConnectionInfo.CipherSuiteId is derived from the negotiated TLS 1.3 cipher-suite name');
   Check(Info.Cipher = sslCipherAES128GCM,
     'ConnectionInfo.Cipher is derived from the negotiated cipher-suite name');
   Check(Info.Hash = sslHashSHA256,
@@ -977,13 +995,22 @@ begin
   Check(Info.KeySize = 128,
     'ConnectionInfo.KeySize is derived from the negotiated cipher-suite name');
 
-  WriteLn('=== Case 5: GetConnectionInfo preserves session identifier and peer certificate ===');
+  WriteLn('=== Case 5: GetConnectionInfo preserves legacy key exchange, session identifier and peer certificate ===');
+  MockCtx.SetNextCipherName('ECDHE-RSA-AES128-GCM-SHA256');
+  Builder := TSSLConnectionBuilder.Create
+    .WithContext(Ctx)
+    .WithSocket(THandle(1))
+    .WithHostname('peer.example.com');
+  Res := Builder.TryBuildClient(Conn);
+  Check(Res.Success, 'TryBuildClient should succeed');
   Conn.SetSession(TMockSession.Create(
     'session-123',
     TMockCertificate.Create('CN=peer.example.com', 'CN=Mock Root CA', '01')
   ));
   Check(Conn.Connect, 'Mock connection connect should succeed before reading SessionId');
   Info := Conn.GetConnectionInfo;
+  Check(Info.KeyExchange = sslKexECDHE_RSA,
+    'ConnectionInfo.KeyExchange is derived from the negotiated legacy cipher-suite name');
   CheckEqualsStr('ConnectionInfo.SessionId mirrors ISSLSession.GetID',
     'session-123', Info.SessionId);
   CheckEqualsStr('ConnectionInfo.PeerCertificate.Subject mirrors ISSLCertificate.GetInfo',

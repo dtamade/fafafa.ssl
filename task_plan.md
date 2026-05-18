@@ -955,6 +955,25 @@
       - `MacSize`
       - 无法只靠名字稳定推导的更细平台差异
       - 更强 owner / deprecation wording route
+37. `GetConnectionInfo` `CipherSuiteId` first slice 已完成并应作为当前 implementation-completeness 主线的继续收口保留：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getconnectioninfo-ciphersuiteid-first-slice.md`
+    - 当前已确认的 shared + backend truth：
+      - shared `GetConnectionInfo` 现在会对标准 TLS 1.3 cipher-suite name best-effort 推导：
+        - `CipherSuiteId`
+      - OpenSSL `GetConnectionInfo` 现在会优先走：
+        - `SSL_CIPHER_get_protocol_id`
+      - 若该 helper 不可用，则会回退：
+        - `SSL_CIPHER_get_id and $FFFF`
+    - 当前 focused proof 已覆盖：
+      - `tests/test_connection_builder_hostname_precedence.pas`
+      - `tests/test_openssl_connection_info_cipher_contract.pas`
+      - `bash tests/scripts/test_isslconnectioninfo_getconnectioninfo_residual_classification_contract.sh`
+      - `git diff --check`
+    - 当前批收口后，`GetConnectionInfo` implementation-completeness 主线已进一步收缩到：
+      - `MacSize`
+      - 无法只靠名字或统一 low-level helper 稳定归一的更细平台差异
+      - 更强 owner / deprecation wording route
 
 ## Verification Discipline
 

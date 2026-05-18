@@ -1286,6 +1286,7 @@ var
   CipherName: PAnsiChar;
   AlgBits: Integer;
   ServerNamePtr: PAnsiChar;
+  CipherId: UInt32;
 begin
   // 调用基类获取基本信息
   Result := inherited GetConnectionInfo;
@@ -1312,6 +1313,14 @@ begin
       begin
         AlgBits := 0;
         Result.KeySize := SSL_CIPHER_get_bits(Cipher, @AlgBits);
+      end;
+
+      if Assigned(SSL_CIPHER_get_protocol_id) then
+        Result.CipherSuiteId := SSL_CIPHER_get_protocol_id(Cipher)
+      else if Assigned(SSL_CIPHER_get_id) then
+      begin
+        CipherId := SSL_CIPHER_get_id(Cipher);
+        Result.CipherSuiteId := Word(CipherId and $FFFF);
       end;
     end;
   end;

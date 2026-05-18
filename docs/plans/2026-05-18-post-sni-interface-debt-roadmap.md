@@ -347,6 +347,31 @@ Recommended first bounded batch:
        - 还是先收 `MacSize`
   - 更强 owner / deprecation wording route 继续保留为平行候选，但当前不应压过 implementation-completeness 主线
 
+## Progress Since The GetConnectionInfo Crypto Detail Name-Derived First Slice
+
+- 已交付：
+  - `GetConnectionInfo` `CipherSuiteId` first slice
+  - shared layer 对标准 TLS 1.3 suite name 的 `CipherSuiteId` best-effort derivation
+  - OpenSSL low-level truth：
+    - 优先 `SSL_CIPHER_get_protocol_id`
+    - 回退 `SSL_CIPHER_get_id` 低 16 位
+  - focused mock proof 仍锚定在 `tests/test_connection_builder_hostname_precedence.pas`
+  - focused OpenSSL contract 现在同时覆盖：
+    - fresh-connection safe-degrade guard
+    - low-level `CipherSuiteId` truth
+
+- 当前更准确的 next step：
+  - 不再把 `CipherSuiteId` 当作剩余 completeness debt
+  - 当前真正还值得继续深挖的，已经进一步收缩到：
+    - `MacSize`
+    - 以及无法只靠名字或统一 low-level helper 稳定归一的更细平台差异
+  - 若继续推进，应优先做一条新的 bounded batch：
+    1. 先静态盘点 `MacSize` 在 OpenSSL / WinSSL / FreePascal / MbedTLS / WolfSSL 中到底有哪些真实来源与口径差异
+    2. 再决定是：
+       - 收 `MacSize`
+       - 还是先补更高层的 owner / deprecation wording
+  - 更强 owner / deprecation wording route 继续保留为平行候选，但当前不应压过 implementation-completeness 主线
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理
