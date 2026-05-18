@@ -55,6 +55,9 @@ type
    * - `GetConnectionInfo` / `GetContext` / `GetSelectedALPNProtocol` / `GetStateString`
    *   当前同时存在于 `ISSLConnection` 与 `ISSLConnectionInfo`，属于 v1.x compatibility-core
    *   duplicates；Stage-A demotion target 已固定为 `ISSLConnectionInfo`。
+   * - `GetContext` 当前通过一条共享基类实现同时服务于 core mirror 和
+   *   `ISSLConnectionInfo` owner；active docs 已转向 `ISSLConnectionInfo.GetContext`，
+   *   direct core `GetContext` 只剩 contract mirror proof。
    * - OCSP / CT / CT validation getter/stub 仍保留在基类里，供显式支持这些可选接口
    *   的后端连接类复用；但基类本身不再无条件暴露对应 interface。
    *}

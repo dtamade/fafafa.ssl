@@ -1281,6 +1281,7 @@ type
 
     {** 获取关联的上下文
         @returns 创建此连接的上下文接口
+        @preferred-access 新代码优先通过 ISSLConnectionInfo.GetContext 获取
         @compatibility-note v1.x compatibility-core mirror; Stage-A demotion target is ISSLConnectionInfo *}
     function GetContext: ISSLContext;
 
@@ -1545,7 +1546,8 @@ type
     {** 获取连接详细信息 *}
     function GetConnectionInfo: TSSLConnectionInfo;
 
-    {** 获取关联的上下文 *}
+    {** 获取关联的上下文
+        @owner-note 当前 context 引用的默认 owner；ISSLConnection.GetContext 保留为 v1.x compatibility mirror *}
     function GetContext: ISSLContext;
 
     {** 获取 ALPN 协商结果 *}

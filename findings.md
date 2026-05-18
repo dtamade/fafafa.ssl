@@ -1600,3 +1600,14 @@
   - OpenSSL / WolfSSL / MbedTLS / FreePascal 的 connection-info contract 继续 PASS
   - WinSSL 继续保持 Linux 主机上的平台 skip truth
   - 因而下一批可以更放心地讨论 `GetContext` 的更强 feasibility / deprecation 路线，而不是回头怀疑 contract 是否已跟上
+
+- 当前再做一层 source/class split 扫描后，`GetContext` 的 remaining live surface 已经小到足够直接 freeze：
+  - 生产源码里没有新的 direct call dependency
+  - 活跃文档只剩 `ConnInfo.GetContext`
+  - non-script direct core `LConn.GetContext` 只剩 backend contract 的 mirror proof
+
+- 这很关键，因为它意味着 `GetContext` 这条线已经不再是“还要继续考古”的状态：
+  - 继续补 evidence 的收益已经很低
+  - 更合理的下一步会是：
+    - 要么真正进入 public deprecation wording route
+    - 要么确认 `GetContext` 已足够干净，然后把主线切到下一条 mirror

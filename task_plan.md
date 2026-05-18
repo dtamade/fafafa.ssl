@@ -797,6 +797,22 @@
       - `git diff --check`
       - focused contract 当前 PASS
     - 当前批收口后，下一刀就可以直接进入 `GetContext` 的更强 feasibility / deprecation 讨论
+28. `GetContext source/class split feasibility freeze` 现在应作为第一条实现切片前的 allowlist 固化：
+    - 新 plan：
+      - `docs/plans/2026-05-18-getcontext-source-class-split-feasibility-freeze.md`
+    - 当前 remaining surface：
+      - 生产源码里只剩接口声明与 `TBaseSSLConnection.GetContext` 共享实现
+      - 活跃文档只剩 `ConnInfo.GetContext`
+      - direct core `LConn.GetContext` 只剩 `tests/contract/test_backend_contract.pas` 的 mirror proof
+    - 当前修法：
+      - 在 source comments 中补 `GetContext` 的 preferred-access / owner / mirror 语义
+      - 新增 focused allowlist contract，守住当前 remaining live surface
+    - 当前 focused proof 已覆盖：
+      - `bash -n tests/scripts/test_isslconnectioninfo_getcontext_source_class_split_contract.sh`
+      - `bash tests/scripts/test_isslconnectioninfo_getcontext_source_class_split_contract.sh`
+      - `git diff --check`
+      - 新 contract 当前 PASS
+    - 当前批收口后，`GetContext` 就不再需要继续做 evidence cleanup，可以决定是进入 public deprecation wording 还是切到下一条 mirror
 
 ## Verification Discipline
 

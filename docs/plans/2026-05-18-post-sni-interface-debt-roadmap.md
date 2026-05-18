@@ -167,6 +167,24 @@ Recommended first bounded batch:
   - 下一批可以直接进入更强的 `GetContext` source/class split feasibility
   - 如果 focused feasibility 继续支持当前方向，再决定是否进入 public deprecation / removal route
 
+## Progress Since The GetContext Owner-Primacy Batch
+
+- 已交付：
+  - `GetContext` source/class split feasibility freeze
+  - `src/fafafa.ssl.base.pas` / `src/fafafa.ssl.connection.base.pas` 已明确写出 owner / mirror / preferred-access 语义
+  - focused allowlist contract `tests/scripts/test_isslconnectioninfo_getcontext_source_class_split_contract.sh`
+
+- 当前更准确的 next step：
+  - `GetContext` 的 remaining live surface 已稳定冻结到：
+    - base/interface declarations
+    - one shared base implementation
+    - one backend-contract core mirror proof
+    - one active-doc `ConnInfo.GetContext` example
+  - 这说明它已经不再需要继续做 evidence cleanup
+  - 下一批应在两条路径里二选一：
+    1. 直接进入 `GetContext` 的 public deprecation wording route
+    2. 把主线切到下一条 mirror（更可能是 `GetStateString`）
+
 ## Not The Next Step
 
 - 不要现在就重开 `context-level SNI` 清理

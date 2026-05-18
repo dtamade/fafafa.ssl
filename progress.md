@@ -3202,3 +3202,63 @@
   - summary:
     - reran the lightweight `GetContext` contract-owner proof after the final planning-file sync
     - no heavy recompile was needed because only planning files changed after the last focused Pascal contract run
+
+### GetContext Source/Class Split Feasibility Freeze
+
+- `rg -n "\\.GetContext\\b|GetContext\\(" src tests docs --glob '!docs/archive/**' --glob '!docs/plans/**'` / `rg -n "function .*GetContext: ISSLContext" src`
+  - result: PASS
+  - summary:
+    - confirmed the remaining live `GetContext` surface had shrunk to interface declarations, one shared base implementation, one active-doc `ConnInfo.GetContext` path, and one backend-contract core mirror proof
+    - confirmed production source had no extra direct `GetContext` call dependency to block a future class/surface split discussion
+
+- add `docs/plans/2026-05-18-getcontext-source-class-split-feasibility-freeze.md`
+  - purpose:
+    - define a bounded allowlist-freeze batch so the next route decision no longer depends on repeating the same `GetContext` source archaeology
+
+- update:
+  - `src/fafafa.ssl.base.pas`
+  - `src/fafafa.ssl.connection.base.pas`
+  - change:
+    - add explicit preferred-access / owner / mirror notes for `GetContext`
+    - spell out that the shared base implementation now mainly exists to support the compatibility mirror plus the current `ISSLConnectionInfo` owner
+
+- add `tests/scripts/test_isslconnectioninfo_getcontext_source_class_split_contract.sh`
+  - purpose:
+    - freeze the current `GetContext` remaining live surface into a cheap allowlist contract
+    - fail if active docs, source, or non-script tests reintroduce new direct core `GetContext` dependencies
+
+- update `docs/plans/2026-05-18-post-sni-interface-debt-roadmap.md`
+  - change:
+    - mark the source/class split feasibility freeze as delivered
+    - move the next route decision to public deprecation wording vs. the next mirror
+
+- first run of `bash tests/scripts/test_isslconnectioninfo_getcontext_source_class_split_contract.sh`
+  - result: RED
+  - summary:
+    - the initial script exited early because zero-hit `rg` pipelines still returned status `1` under `set -euo pipefail`
+    - adjusted the counting branches to tolerate zero-hit scans explicitly before re-running
+
+- `bash -n tests/scripts/test_isslconnectioninfo_getcontext_source_class_split_contract.sh`
+  - result: PASS
+  - summary:
+    - new `GetContext` source/class split contract script is syntactically valid
+
+- `bash tests/scripts/test_isslconnectioninfo_getcontext_source_class_split_contract.sh`
+  - result: PASS
+  - summary:
+    - `GetContext` live surface is now frozen to the expected allowlist
+    - no new active-doc, source, or non-script test dependency escaped the guarded boundary
+
+- `git diff --check`
+  - result: PASS
+  - summary:
+    - current `GetContext source/class split feasibility freeze` batch has no whitespace or patch-format issues
+
+- closeout revalidation before commit:
+  - `bash -n tests/scripts/test_isslconnectioninfo_getcontext_source_class_split_contract.sh`
+  - `bash tests/scripts/test_isslconnectioninfo_getcontext_source_class_split_contract.sh`
+  - `git diff --check`
+  - result: PASS
+  - summary:
+    - reran the lightweight `GetContext` allowlist proof after the final planning-file sync
+    - no heavy Pascal contract rerun was needed because only planning files changed after the source/class split freeze passed
